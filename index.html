@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Crownlands - Medieval Island Conquest V20</title>
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <meta name="theme-color" content="#0c1018" />
+</head>
+<body>
+  <main class="phone-shell" aria-label="Crownlands real-time medieval conquest prototype">
+    <section id="setupScreen" class="setup-screen visible">
+      <div class="setup-card">
+        <span class="eyebrow">Prototype 20</span>
+        <h1>Crownlands</h1>
+        <p>Medieval island conquest foundation with a 100-city hand-painted island map, four far-apart starting kingdoms, hero leveling, and terrain-aware pathfinding.</p>
+        <label for="playerName">Ruler name</label>
+        <input id="playerName" maxlength="18" placeholder="Ricky" autocomplete="nickname" />
+        <button id="startBtn" class="primary-btn">Start / Continue</button>
+        <button id="freshBtn" class="ghost-btn">Fresh New Map</button>
+        <p class="tiny-note">Saves locally on this device. No accounts yet.</p>
+      </div>
+    </section>
+
+    <section class="game-view" aria-label="Game map">
+      <header class="top-hud">
+        <div class="profile-stack" aria-label="Character placeholder and gold">
+          <div class="portrait-placeholder" aria-label="Character placeholder"><span id="characterLevelBadge" class="character-level-badge">Lv 1</span></div>
+          <div class="profile-gold"><span>🪙</span><strong id="goldText">0</strong></div>
+          <span id="lordNameText" class="sr-only">Ruler</span>
+          <span id="statusText" class="sr-only">Live conquest</span>
+        </div>
+        <div class="resource-bar">
+          <div class="resource-pill"><span>🏰</span><strong id="cityText">1</strong></div>
+          <button id="pauseBtn" class="hud-btn" type="button" aria-label="Pause or resume game">Ⅱ</button>
+        </div>
+      </header>
+
+      <section id="mapFrame" class="map-frame" aria-label="Drag to move around the map">
+        <div id="mapWorld" class="map-world">
+          <div class="map-bg" aria-hidden="true"></div>
+          <svg id="pathsSvg" class="paths" viewBox="0 0 2800 1575" preserveAspectRatio="none" aria-hidden="true"></svg>
+          <div id="cityLayer" class="city-layer"></div>
+          <div id="armyLayer" class="army-layer"></div>
+        </div>
+      </section>
+
+      <aside id="toast" class="toast" role="status" aria-live="polite"></aside>
+
+      <section class="commander-panel">
+        <div class="panel-header">
+          <div>
+            <strong id="panelTitle">Select a blue city</strong>
+            <small id="panelSubtitle">Tap a blue city, then tap any target.</small>
+          </div>
+          <button id="clearSelectBtn" class="clear-btn" type="button" aria-label="Close panel">×</button>
+        </div>
+        <div id="selectedInfo" class="selected-info"></div>
+        <div id="actionButtons" class="action-buttons"></div>
+      </section>
+
+      <nav class="bottom-nav" aria-label="Game menu">
+        <button id="empireBtn" class="nav-btn" type="button"><span>⚔️</span>Skills</button>
+        <button id="logBtn" class="nav-btn" type="button"><span>📜</span>Log</button>
+      </nav>
+    </section>
+    <div class="rotate-warning" aria-hidden="true">
+      <div>
+        <strong>Rotate your phone</strong>
+        <span>This version is built for horizontal play.</span>
+      </div>
+    </div>
+  </main>
+
+  <dialog id="modal" class="modal">
+    <article class="modal-card">
+      <button id="closeModalBtn" class="modal-close" type="button" aria-label="Close">×</button>
+      <h2 id="modalTitle">Info</h2>
+      <div id="modalBody"></div>
+    </article>
+  </dialog>
+
+  <script src="game.js"></script>
+</body>
+</html>
