@@ -1398,6 +1398,7 @@ let onlineSaveQueued = false;
 let onlineSaveInFlight = false;
 let onlineLastSaveAt = 0;
 let onlineLastError = "";
+let loginStartInFlight = false;
 let toastTimer = null;
 let attackIdCounter = 1;
 let flagDraft = null;
@@ -2530,13 +2531,25 @@ function updateOnlineUi() {
     return;
   }
 
-  onlineStatusText.textContent = "Guest mode";
-  onlineStatusDetail.textContent = "Sign in to save this kingdom to Firebase.";
+  onlineStatusText.textContent = "Sign in to play";
+  onlineStatusDetail.textContent = "Use Google to load your kingdom.";
   if (googleSignInBtn) {
     googleSignInBtn.hidden = false;
     googleSignInBtn.disabled = false;
   }
   if (googleSignOutBtn) googleSignOutBtn.hidden = true;
+}
+
+async function startAfterLoginIfNeeded() {
+  const api = getOnlineApi();
+  if (loginStartInFlight || state || !setupScreen?.classList.contains("visible")) return;
+  if (!api?.isSignedIn?.()) return;
+  loginStartInFlight = true;
+  try {
+    await startFromInput(false);
+  } finally {
+    loginStartInFlight = false;
+  }
 }
 
 async function handleGoogleSignIn() {
@@ -2550,6 +2563,7 @@ async function handleGoogleSignIn() {
     if (googleSignInBtn) googleSignInBtn.disabled = true;
     await api.signInWithGoogle();
     updateOnlineUi();
+    await startAfterLoginIfNeeded();
     if (state) {
       queueOnlineSave();
       await flushOnlineSave(true);
@@ -2600,8 +2614,16 @@ function readSavedName() {
   return "";
 }
 
+function getPreferredPlayerName() {
+  const api = getOnlineApi();
+  return cleanName(playerNameInput?.value)
+    || cleanName(api?.getUser?.()?.displayName)
+    || readSavedName()
+    || "Ricky";
+}
+
 async function startFromInput(forceFresh = false) {
-  const playerName = cleanName(playerNameInput.value) || readSavedName() || "Ricky";
+  const playerName = getPreferredPlayerName();
   const originalStartText = startBtn?.textContent || "";
   try {
     if (startBtn) {
@@ -5042,13 +5064,14 @@ function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
 }
 
-startBtn.addEventListener("click", () => startFromInput(false));
-freshBtn.addEventListener("click", () => startFromInput(true));
+if (startBtn) startBtn.addEventListener("click", () => startFromInput(false));
+if (freshBtn) freshBtn.addEventListener("click", () => startFromInput(true));
 if (googleSignInBtn) googleSignInBtn.addEventListener("click", handleGoogleSignIn);
 if (googleSignOutBtn) googleSignOutBtn.addEventListener("click", handleGoogleSignOut);
 window.addEventListener("crownlands:online-ready", updateOnlineUi);
-window.addEventListener("crownlands:auth", () => {
+window.addEventListener("crownlands:auth", async () => {
   updateOnlineUi();
+  await startAfterLoginIfNeeded();
   if (state) {
     queueOnlineSave();
     flushOnlineSave(true);
@@ -5058,9 +5081,11 @@ window.addEventListener("crownlands:online-error", event => {
   onlineLastError = event.detail?.message || "Firebase could not start.";
   updateOnlineUi();
 });
-playerNameInput.addEventListener("keydown", event => {
-  if (event.key === "Enter") startFromInput(false);
-});
+if (playerNameInput) {
+  playerNameInput.addEventListener("keydown", event => {
+    if (event.key === "Enter") startFromInput(false);
+  });
+}
 pauseBtn.addEventListener("click", togglePause);
 if (fullscreenBtn) fullscreenBtn.addEventListener("click", toggleFullscreen);
 if (profileBtn) profileBtn.addEventListener("click", showProfileScreen);
@@ -5112,7 +5137,7 @@ modal.addEventListener("close", () => {
 
 const saved = loadGame();
 const savedName = saved?.playerName || readSavedName();
-playerNameInput.value = savedName || "Ricky";
+if (playerNameInput) playerNameInput.value = savedName || "Ricky";
 updateFullscreenButton();
 updateOnlineUi();
 requestAnimationFrame(frame);

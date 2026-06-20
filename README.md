@@ -54,9 +54,9 @@ This build has the first Firebase layer added without breaking guest play.
 
 - `firebase-config.js` holds the Firebase web app config placeholders.
 - `firebaseClient.js` loads Firebase Auth and Firestore only after real config values are pasted in.
-- The setup screen now has Google sign-in controls.
+- The setup screen now uses Google sign-in as the only entry button.
 - Signed-in players save a private cloud snapshot to `players/{uid}/saves/default`.
-- Start / Continue checks Firebase first when signed in, then falls back to the browser's local save.
+- After sign-in, the game automatically checks Firebase first, then falls back to the browser's local save.
 - `firestore.rules` currently allows private player saves and keeps shared island writes locked until combat/city transactions are implemented.
 
 See `FIREBASE_SETUP.md` for the Firebase project steps and the planned shared-world collections.
