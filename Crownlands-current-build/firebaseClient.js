@@ -1,0 +1,204 @@
+(function () {
+  const FIREBASE_VERSION = "10.12.5";
+  const REQUIRED_CONFIG_KEYS = ["apiKey", "authDomain", "projectId", "appId"];
+
+  const client = {
+    configured: false,
+    ready: false,
+    user: null,
+    error: null,
+    app: null,
+    auth: null,
+    db: null,
+    provider: null,
+    modules: null,
+    initPromise: null,
+  };
+
+  function hasRealFirebaseConfig(config) {
+    if (!config || typeof config !== "object") return false;
+    return REQUIRED_CONFIG_KEYS.every(key => {
+      const value = String(config[key] || "").trim();
+      return value && !value.startsWith("PASTE_");
+    });
+  }
+
+  function serializeUser(user) {
+    if (!user) return null;
+    return {
+      uid: user.uid,
+      displayName: user.displayName || "",
+      email: user.email || "",
+      photoURL: user.photoURL || "",
+    };
+  }
+
+  function dispatch(name, detail = {}) {
+    window.dispatchEvent(new CustomEvent(`crownlands:${name}`, { detail }));
+  }
+
+  async function loadModules() {
+    const [app, auth, firestore] = await Promise.all([
+      import(`https://www.gstatic.com/firebasejs/${FIREBASE_VERSION}/firebase-app.js`),
+      import(`https://www.gstatic.com/firebasejs/${FIREBASE_VERSION}/firebase-auth.js`),
+      import(`https://www.gstatic.com/firebasejs/${FIREBASE_VERSION}/firebase-firestore.js`),
+    ]);
+    return { app, auth, firestore };
+  }
+
+  async function init() {
+    if (client.initPromise) return client.initPromise;
+
+    client.initPromise = (async () => {
+      const config = window.CROWNLANDS_FIREBASE_CONFIG;
+      client.configured = hasRealFirebaseConfig(config);
+
+      if (!client.configured) {
+        client.ready = true;
+        dispatch("online-ready", { configured: false });
+        return client;
+      }
+
+      try {
+        client.modules = await loadModules();
+        client.app = client.modules.app.initializeApp(config);
+        client.auth = client.modules.auth.getAuth(client.app);
+        client.db = client.modules.firestore.getFirestore(client.app);
+        client.provider = new client.modules.auth.GoogleAuthProvider();
+
+        client.modules.auth.onAuthStateChanged(client.auth, user => {
+          client.user = serializeUser(user);
+          dispatch("auth", { user: client.user });
+        });
+
+        client.ready = true;
+        dispatch("online-ready", { configured: true });
+      } catch (error) {
+        client.error = error;
+        client.ready = true;
+        dispatch("online-error", { message: error.message || String(error) });
+      }
+
+      return client;
+    })();
+
+    return client.initPromise;
+  }
+
+  function requireSignedIn() {
+    if (!client.configured || !client.db || !client.user?.uid) return null;
+    return client.user.uid;
+  }
+
+  async function signInWithGoogle() {
+    await init();
+    if (!client.configured) {
+      throw new Error("Firebase config is still using placeholder values.");
+    }
+    if (client.error) throw client.error;
+    const result = await client.modules.auth.signInWithPopup(client.auth, client.provider);
+    client.user = serializeUser(result.user);
+    await savePlayerProfile({ lastLoginAt: Date.now() });
+    return client.user;
+  }
+
+  async function signOut() {
+    await init();
+    if (!client.auth) return;
+    await client.modules.auth.signOut(client.auth);
+    client.user = null;
+    dispatch("auth", { user: null });
+  }
+
+  async function savePlayerProfile(profile = {}) {
+    await init();
+    const uid = requireSignedIn();
+    if (!uid) return false;
+    const { doc, setDoc, serverTimestamp } = client.modules.firestore;
+    const ref = doc(client.db, "players", uid);
+    await setDoc(ref, {
+      uid,
+      displayName: client.user.displayName || "",
+      email: client.user.email || "",
+      photoURL: client.user.photoURL || "",
+      ...profile,
+      updatedAt: serverTimestamp(),
+    }, { merge: true });
+    return true;
+  }
+
+  async function loadPlayerProfile() {
+    await init();
+    const uid = requireSignedIn();
+    if (!uid) return null;
+    const { doc, getDoc } = client.modules.firestore;
+    const snap = await getDoc(doc(client.db, "players", uid));
+    return snap.exists() ? snap.data() : null;
+  }
+
+  async function saveGameSnapshot(snapshot, slot = "default") {
+    await init();
+    const uid = requireSignedIn();
+    if (!uid || !snapshot) return false;
+    const { doc, setDoc, serverTimestamp } = client.modules.firestore;
+    const ref = doc(client.db, "players", uid, "saves", slot);
+    await setDoc(ref, {
+      version: Number(snapshot.version) || 0,
+      playerName: snapshot.playerName || "",
+      gameSeconds: Number(snapshot.gameSeconds) || 0,
+      state: snapshot,
+      updatedAt: serverTimestamp(),
+    }, { merge: true });
+    return true;
+  }
+
+  async function loadGameSnapshot(slot = "default") {
+    await init();
+    const uid = requireSignedIn();
+    if (!uid) return null;
+    const { doc, getDoc } = client.modules.firestore;
+    const snap = await getDoc(doc(client.db, "players", uid, "saves", slot));
+    if (!snap.exists()) return null;
+    return snap.data().state || null;
+  }
+
+  function subscribeIsland(islandId, handlers = {}) {
+    if (!client.configured || !client.db || !islandId) return () => {};
+    const { collection, onSnapshot } = client.modules.firestore;
+    const unsubscribers = [];
+
+    if (typeof handlers.onCities === "function") {
+      unsubscribers.push(onSnapshot(
+        collection(client.db, "islands", islandId, "cities"),
+        snapshot => handlers.onCities(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })))
+      ));
+    }
+
+    if (typeof handlers.onArmies === "function") {
+      unsubscribers.push(onSnapshot(
+        collection(client.db, "islands", islandId, "armies"),
+        snapshot => handlers.onArmies(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })))
+      ));
+    }
+
+    return () => unsubscribers.forEach(unsubscribe => unsubscribe());
+  }
+
+  window.CrownlandsOnline = {
+    init,
+    signInWithGoogle,
+    signOut,
+    savePlayerProfile,
+    loadPlayerProfile,
+    saveGameSnapshot,
+    loadGameSnapshot,
+    subscribeIsland,
+    isConfigured: () => client.configured,
+    isReady: () => client.ready,
+    isSignedIn: () => Boolean(client.user?.uid),
+    getUser: () => client.user,
+    getLastError: () => client.error,
+  };
+
+  init();
+})();
