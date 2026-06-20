@@ -5,6 +5,8 @@ const ONLINE_SAVE_SECONDS = 8;
 const ONLINE_ISLAND_ID = "main";
 const ONLINE_CITY_SYNC_SECONDS = 6;
 const ONLINE_ARMY_EXPIRY_GRACE_SECONDS = 8;
+const HUD_RENDER_INTERVAL_MS = 250;
+const MAP_RENDER_INTERVAL_MS = 1600;
 const WORLD_WIDTH = 2800;
 const WORLD_HEIGHT = 1575;
 const GRID_SIZE = 40;
@@ -1395,6 +1397,7 @@ let pinchState = null;
 let suppressMapClick = false;
 let lastFrameTime = performance.now();
 let lastRenderTime = 0;
+let lastHudRenderTime = 0;
 let saveTimer = 0;
 let onlineSaveTimer = 0;
 let onlineSaveQueued = false;
@@ -1407,6 +1410,7 @@ let onlineWorldLoading = false;
 let onlineWorldConnected = false;
 let onlineCitySyncTimer = 0;
 let onlineCitySyncInFlight = false;
+let onlineCitySyncQueued = false;
 let onlineArmies = [];
 let toastTimer = null;
 let attackIdCounter = 1;
@@ -1865,6 +1869,7 @@ function addCharacterXp(amount, reason = "progress") {
     if (mainCity && totalTroopReward > 0) {
       mainCity.troopFloat = Math.max(0, Number(mainCity.troopFloat) || mainCity.troops || 0) + totalTroopReward;
       mainCity.troops = Math.floor(mainCity.troopFloat);
+      markOwnedCityChanged(mainCity, false);
     }
 
     addLog(`Hero leveled to ${state.character.level}. Reward: ${formatNumber(levelsGained)} skill point, ${formatNumber(totalGoldReward)} gold, and ${formatNumber(totalTroopReward)} troops to ${mainCity ? mainCity.name : "the main city"}.`);
@@ -2797,24 +2802,36 @@ function applyOnlineCities(onlineCities) {
       : ownerKind === "npc" || ownerKind === "enemy"
         ? "enemy"
         : "neutral";
+    const currentIsLocalPlayerCity = current.owner === "player" && (!current.ownerUid || current.ownerUid === currentUid);
+    const onlineBelongsToAnotherPlayer = ownerKind === "player" && ownerUid && ownerUid !== currentUid;
+    const keepLocalPlayerCity = currentIsLocalPlayerCity && !onlineBelongsToAnotherPlayer;
 
     return {
       ...base,
-      name: online.name || current.name || base.name,
-      owner: OWNER[localOwner] ? localOwner : "neutral",
-      ownerKind,
-      ownerUid,
-      ownerName,
-      ownerFlag,
-      level: clampCityLevel(online.level ?? current.level ?? base.level),
-      troops: Math.max(0, Math.floor(Number(online.troops ?? current.troops ?? base.troops) || 0)),
-      troopFloat: Math.max(0, Number(online.troopFloat ?? current.troopFloat ?? online.troops ?? current.troops ?? base.troops) || 0),
+      name: keepLocalPlayerCity ? current.name || online.name || base.name : online.name || current.name || base.name,
+      owner: keepLocalPlayerCity ? "player" : OWNER[localOwner] ? localOwner : "neutral",
+      ownerKind: keepLocalPlayerCity ? "player" : ownerKind,
+      ownerUid: keepLocalPlayerCity ? currentUid || current.ownerUid || ownerUid || null : ownerUid,
+      ownerName: keepLocalPlayerCity ? state.playerName : ownerName,
+      ownerFlag: keepLocalPlayerCity ? state.flag : ownerFlag,
+      level: clampCityLevel(keepLocalPlayerCity ? current.level ?? online.level ?? base.level : online.level ?? current.level ?? base.level),
+      troops: Math.max(0, Math.floor(Number(keepLocalPlayerCity ? current.troops ?? online.troops ?? base.troops : online.troops ?? current.troops ?? base.troops) || 0)),
+      troopFloat: Math.max(0, Number(keepLocalPlayerCity ? current.troopFloat ?? current.troops ?? online.troopFloat ?? online.troops ?? base.troops : online.troopFloat ?? current.troopFloat ?? online.troops ?? current.troops ?? base.troops) || 0),
       defense: 1,
-      investedGold: Math.max(0, Math.floor(Number(online.investedGold ?? current.investedGold) || 0)),
-      lastCapturedAt: online.lastCapturedAt ?? current.lastCapturedAt ?? null,
+      investedGold: Math.max(0, Math.floor(Number(keepLocalPlayerCity ? current.investedGold ?? online.investedGold : online.investedGold ?? current.investedGold) || 0)),
+      lastCapturedAt: keepLocalPlayerCity ? current.lastCapturedAt ?? online.lastCapturedAt ?? null : online.lastCapturedAt ?? current.lastCapturedAt ?? null,
       startPool: base.startPool,
     };
   });
+}
+
+function markOwnedCityChanged(city, syncNow = true) {
+  if (!state || !city || city.owner !== "player") return;
+  city.ownerKind = "player";
+  city.ownerUid = getCurrentOnlineUid() || city.ownerUid || null;
+  city.ownerName = state.playerName;
+  city.ownerFlag = state.flag;
+  if (syncNow && isOnlineWorldActive()) syncOwnedCitiesToOnline(true);
 }
 
 function toOnlineOwnedCity(city) {
@@ -2838,7 +2855,11 @@ function toOnlineOwnedCity(city) {
 }
 
 async function syncOwnedCitiesToOnline(force = false) {
-  if (onlineCitySyncInFlight || !isOnlineWorldActive()) return false;
+  if (!isOnlineWorldActive()) return false;
+  if (onlineCitySyncInFlight) {
+    if (force) onlineCitySyncQueued = true;
+    return false;
+  }
   const api = getOnlineApi();
   if (!api?.savePlayerCities) return false;
   const currentUid = getCurrentOnlineUid();
@@ -2857,6 +2878,10 @@ async function syncOwnedCitiesToOnline(force = false) {
     return false;
   } finally {
     onlineCitySyncInFlight = false;
+    if (onlineCitySyncQueued) {
+      onlineCitySyncQueued = false;
+      syncOwnedCitiesToOnline(true);
+    }
   }
 }
 
@@ -3407,9 +3432,15 @@ function frame(now) {
 
   if (state) {
     renderArmies();
-    if (now - lastRenderTime > 250 && now >= interactionRenderLockUntil) {
+    if (now - lastHudRenderTime > HUD_RENDER_INTERVAL_MS) {
+      lastHudRenderTime = now;
+      renderHud();
+    }
+    if (now - lastRenderTime > MAP_RENDER_INTERVAL_MS && now >= interactionRenderLockUntil) {
       lastRenderTime = now;
-      renderAll();
+      renderPaths();
+      renderCities();
+      renderPanel();
     }
   }
 
@@ -3731,6 +3762,9 @@ function checkGameOver() {
 
 function renderAll() {
   if (!state) return;
+  const now = performance.now();
+  lastHudRenderTime = now;
+  lastRenderTime = now;
   updateCameraTransform();
   renderHud();
   renderPaths();
@@ -4899,8 +4933,10 @@ function recruit(cityId) {
   const amount = getRecruitAmount(city);
   city.troopFloat += amount;
   city.troops = Math.floor(city.troopFloat);
+  markOwnedCityChanged(city);
   addLog(`Recruited ${formatNumber(amount)} troops at ${city.name}.`);
   showToast(`Recruited at ${city.name}`);
+  saveGame();
   renderAll();
 }
 
@@ -4928,6 +4964,8 @@ function upgradeCity(cityId, levels = 1) {
   addLog(`${city.name} upgraded to level ${city.level}.`);
   showToast(`${city.name} upgraded`);
   addCharacterXp(xpAward, `${city.name} upgrade`);
+  markOwnedCityChanged(city);
+  saveGame();
   renderAll();
 }
 
@@ -5215,6 +5253,7 @@ function giveDeveloperTroops(amount) {
   if (!grant) return;
   city.troopFloat = Math.max(0, Number(city.troopFloat) || city.troops || 0) + grant;
   city.troops = Math.floor(city.troopFloat);
+  markOwnedCityChanged(city);
   addLog(`Developer: added ${formatNumber(grant)} troops to ${city.name}.`);
   saveGame();
   renderAll();
@@ -5249,6 +5288,7 @@ function levelDeveloperSelectedCity(levels) {
     return;
   }
   city.level = nextLevel;
+  markOwnedCityChanged(city);
   addLog(`Developer: leveled ${city.name} from ${previousLevel} to ${city.level}.`);
   saveGame();
   renderAll();
