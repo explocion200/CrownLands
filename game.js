@@ -2,6 +2,8 @@ const STORAGE_KEY = "crownlands-realtime-v20";
 const LEGACY_STORAGE_KEYS = ["crownlands-realtime-v19", "crownlands-realtime-v18", "crownlands-realtime-v17", "crownlands-realtime-v16", "crownlands-realtime-v15", "realm-lords-realtime-v14", "realm-lords-realtime-v13", "realm-lords-realtime-v12", "realm-lords-realtime-v11", "realm-lords-realtime-v10", "realm-lords-realtime-v9", "realm-lords-realtime-v8", "realm-lords-realtime-v7", "realm-lords-realtime-v6", "realm-lords-realtime-v5", "realm-lords-realtime-v4", "realm-lords-realtime-v3"];
 const SAVE_EVERY_SECONDS = 1.5;
 const ONLINE_SAVE_SECONDS = 8;
+const ONLINE_ISLAND_ID = "main";
+const ONLINE_CITY_SYNC_SECONDS = 6;
 const WORLD_WIDTH = 2800;
 const WORLD_HEIGHT = 1575;
 const GRID_SIZE = 40;
@@ -1399,6 +1401,11 @@ let onlineSaveInFlight = false;
 let onlineLastSaveAt = 0;
 let onlineLastError = "";
 let loginStartInFlight = false;
+let onlineIslandUnsubscribe = null;
+let onlineWorldLoading = false;
+let onlineWorldConnected = false;
+let onlineCitySyncTimer = 0;
+let onlineCitySyncInFlight = false;
 let toastTimer = null;
 let attackIdCounter = 1;
 let flagDraft = null;
@@ -1590,6 +1597,86 @@ function pickStartCities(cities) {
   }
 
   return result;
+}
+
+function pickDeterministicStartCities(cities) {
+  const anchors = {
+    player: { x: 560, y: 1220, pool: "p1" },
+    player2: { x: 660, y: 310, pool: "p2" },
+    player3: { x: 2350, y: 470, pool: "p3" },
+    npc: { x: 2230, y: 1180, pool: "npc" },
+  };
+  const used = new Set();
+  const result = {};
+
+  for (const [key, config] of Object.entries(anchors)) {
+    const chosen = cities
+      .filter(city => city.startPool === config.pool && !used.has(city.id))
+      .sort((a, b) => Math.hypot(a.x - config.x, a.y - config.y) - Math.hypot(b.x - config.x, b.y - config.y))[0];
+    if (chosen) {
+      used.add(chosen.id);
+      result[key] = chosen.id;
+    }
+  }
+
+  return result;
+}
+
+function createOnlineIslandSeed() {
+  const baseCities = getPlayableBaseCities();
+  const startIds = pickDeterministicStartCities(baseCities);
+  const cities = baseCities.map(city => {
+    const isNpc = city.id === startIds.npc;
+    return {
+      ...city,
+      ownerKind: isNpc ? "npc" : "neutral",
+      ownerUid: null,
+      ownerName: isNpc ? "NPC" : "",
+      ownerFlag: null,
+      level: 1,
+      troops: isNpc ? NPC_START_TROOPS : NEUTRAL_START_TROOPS,
+      troopFloat: isNpc ? NPC_START_TROOPS : NEUTRAL_START_TROOPS,
+      defense: 1,
+      investedGold: 0,
+      lastCapturedAt: null,
+    };
+  });
+
+  return {
+    cities,
+    startIds,
+    claimCandidateIds: getOnlineClaimCandidateIds(cities, startIds),
+  };
+}
+
+function getOnlineClaimCandidateIds(cities, startIds) {
+  const selected = [startIds.player, startIds.player2, startIds.player3]
+    .filter(Boolean)
+    .filter(id => id !== startIds.npc);
+  const used = new Set([...selected, startIds.npc].filter(Boolean));
+
+  while (selected.length < cities.length - 1) {
+    let bestCity = null;
+    let bestSpacing = -Infinity;
+    for (const city of cities) {
+      if (used.has(city.id)) continue;
+      const nearest = selected.length
+        ? Math.min(...selected.map(id => {
+            const other = cities.find(item => item.id === id);
+            return other ? Math.hypot(city.x - other.x, city.y - other.y) : Infinity;
+          }))
+        : Infinity;
+      if (nearest > bestSpacing) {
+        bestSpacing = nearest;
+        bestCity = city;
+      }
+    }
+    if (!bestCity) break;
+    selected.push(bestCity.id);
+    used.add(bestCity.id);
+  }
+
+  return selected;
 }
 
 function newGame(playerName) {
@@ -2353,6 +2440,7 @@ function createScoutReportSnapshot(target) {
     troops: baseTroopDefense,
     totalDefense: Math.floor(stats.totalDefense),
     owner: target.owner,
+    ownerName: getCityOwnerDisplayName(target),
     cityLevel: stats.level,
     defensePercent: stats.defensePercent,
     cityWalls: stats.cityWalls,
@@ -2472,6 +2560,7 @@ async function flushOnlineSave(force = false) {
   try {
     await api.savePlayerProfile(getPlayerProfileSnapshot());
     await api.saveGameSnapshot(getSerializableGameState());
+    await syncOwnedCitiesToOnline();
     onlineLastSaveAt = Date.now();
     onlineLastError = "";
     updateOnlineUi();
@@ -2583,6 +2672,7 @@ async function handleGoogleSignOut() {
   const api = getOnlineApi();
   if (!api?.signOut) return;
   try {
+    disconnectOnlineWorld();
     await flushOnlineSave(true);
     await api.signOut();
     onlineLastSaveAt = 0;
@@ -2593,6 +2683,168 @@ async function handleGoogleSignOut() {
     onlineLastError = error?.message || String(error);
     updateOnlineUi();
     showToast("Could not sign out.");
+  }
+}
+
+function getCurrentOnlineUid() {
+  return getOnlineApi()?.getUser?.()?.uid || "";
+}
+
+function isOnlineWorldActive() {
+  return Boolean(state?.online?.islandId && getOnlineApi()?.isSignedIn?.());
+}
+
+function disconnectOnlineWorld() {
+  if (typeof onlineIslandUnsubscribe === "function") onlineIslandUnsubscribe();
+  onlineIslandUnsubscribe = null;
+  onlineWorldConnected = false;
+  onlineWorldLoading = false;
+}
+
+async function setupOnlineWorld() {
+  const api = getOnlineApi();
+  if (!state || !api?.isConfigured?.() || !api?.isSignedIn?.()) return false;
+  if (onlineWorldLoading || onlineWorldConnected) return onlineWorldConnected;
+
+  onlineWorldLoading = true;
+  onlineStatusDetail.textContent = "Loading the shared island...";
+  try {
+    const seed = createOnlineIslandSeed();
+    await api.ensureMainIsland({
+      islandId: ONLINE_ISLAND_ID,
+      cities: seed.cities,
+      meta: {
+        version: 20,
+        name: "Crownlands Main Island",
+        cityCount: seed.cities.length,
+        worldWidth: WORLD_WIDTH,
+        worldHeight: WORLD_HEIGHT,
+        npcCityId: seed.startIds.npc || null,
+      },
+    });
+
+    const claim = await api.claimStartingCity({
+      islandId: ONLINE_ISLAND_ID,
+      candidateCityIds: seed.claimCandidateIds,
+      playerName: state.playerName,
+      flag: state.flag,
+    });
+
+    state.online = {
+      islandId: ONLINE_ISLAND_ID,
+      playerUid: getCurrentOnlineUid(),
+      mainCityId: claim?.cityId || state.mainCityId,
+    };
+    if (claim?.cityId) state.mainCityId = claim.cityId;
+    if (claim?.alreadyClaimed) addLog("Online island connected. Your claimed city was restored.");
+    else if (claim?.cityId) addLog(`Online island connected. ${cityById(claim.cityId)?.name || "A city"} joined your kingdom.`);
+
+    if (onlineIslandUnsubscribe) onlineIslandUnsubscribe();
+    onlineIslandUnsubscribe = api.subscribeIsland(ONLINE_ISLAND_ID, {
+      onCities: onlineCities => {
+        applyOnlineCities(onlineCities);
+        if (state?.mainCityId && cityById(state.mainCityId)?.owner !== "player") {
+          const nextOwned = playerCities()[0];
+          state.mainCityId = nextOwned?.id || state.mainCityId;
+        }
+        renderAll();
+      },
+    });
+
+    onlineWorldConnected = true;
+    onlineStatusDetail.textContent = "Shared island connected.";
+    showToast("Shared island connected.");
+    saveGame();
+    return true;
+  } catch (error) {
+    onlineLastError = error?.message || String(error);
+    updateOnlineUi();
+    showToast("Could not connect shared island.");
+    console.warn("Online island setup failed", error);
+    return false;
+  } finally {
+    onlineWorldLoading = false;
+  }
+}
+
+function applyOnlineCities(onlineCities) {
+  if (!state || !Array.isArray(onlineCities)) return;
+  const byId = new Map(onlineCities.map(city => [city.id, city]));
+  const currentUid = getCurrentOnlineUid();
+  const localById = new Map(state.cities.map(city => [city.id, city]));
+
+  state.cities = getPlayableBaseCities().map(base => {
+    const current = localById.get(base.id) || {};
+    const online = byId.get(base.id) || {};
+    const ownerKind = online.ownerKind || online.owner || current.ownerKind || "neutral";
+    const ownerUid = online.ownerUid || null;
+    const ownerName = online.ownerName || "";
+    const ownerFlag = online.ownerFlag || null;
+    const localOwner = ownerKind === "player"
+      ? ownerUid === currentUid ? "player" : "enemy"
+      : ownerKind === "npc" || ownerKind === "enemy"
+        ? "enemy"
+        : "neutral";
+
+    return {
+      ...base,
+      name: online.name || current.name || base.name,
+      owner: OWNER[localOwner] ? localOwner : "neutral",
+      ownerKind,
+      ownerUid,
+      ownerName,
+      ownerFlag,
+      level: clampCityLevel(online.level ?? current.level ?? base.level),
+      troops: Math.max(0, Math.floor(Number(online.troops ?? current.troops ?? base.troops) || 0)),
+      troopFloat: Math.max(0, Number(online.troopFloat ?? current.troopFloat ?? online.troops ?? current.troops ?? base.troops) || 0),
+      defense: 1,
+      investedGold: Math.max(0, Math.floor(Number(online.investedGold ?? current.investedGold) || 0)),
+      lastCapturedAt: online.lastCapturedAt ?? current.lastCapturedAt ?? null,
+      startPool: base.startPool,
+    };
+  });
+}
+
+function toOnlineOwnedCity(city) {
+  return {
+    id: city.id,
+    name: city.name,
+    x: city.x,
+    y: city.y,
+    startPool: city.startPool || "",
+    ownerKind: "player",
+    ownerUid: getCurrentOnlineUid(),
+    ownerName: state.playerName,
+    ownerFlag: state.flag,
+    level: clampCityLevel(city.level),
+    troops: Math.max(0, Math.floor(Number(city.troops) || 0)),
+    troopFloat: Math.max(0, Number(city.troopFloat) || Number(city.troops) || 0),
+    defense: 1,
+    investedGold: Math.max(0, Math.floor(Number(city.investedGold) || 0)),
+    lastCapturedAt: city.lastCapturedAt ?? null,
+  };
+}
+
+async function syncOwnedCitiesToOnline(force = false) {
+  if (onlineCitySyncInFlight || !isOnlineWorldActive()) return false;
+  const api = getOnlineApi();
+  if (!api?.savePlayerCities) return false;
+  const currentUid = getCurrentOnlineUid();
+  const cities = playerCities()
+    .filter(city => !city.ownerUid || city.ownerUid === currentUid)
+    .map(toOnlineOwnedCity);
+  if (!cities.length && !force) return false;
+
+  onlineCitySyncInFlight = true;
+  try {
+    await api.savePlayerCities(ONLINE_ISLAND_ID, cities);
+    return true;
+  } catch (error) {
+    onlineLastError = error?.message || String(error);
+    console.warn("Could not sync owned cities", error);
+    return false;
+  } finally {
+    onlineCitySyncInFlight = false;
   }
 }
 
@@ -2637,6 +2889,7 @@ async function startFromInput(forceFresh = false) {
     state = saved || newGame(playerName);
     if (!saved) state.playerName = playerName;
     selectedMarchPercent = normalizeMarchPercent(state.marchPercent);
+    if (getOnlineApi()?.isSignedIn?.()) await setupOnlineWorld();
     setupScreen.classList.remove("visible");
     clearSelection(false);
     saveGame();
@@ -2936,6 +3189,13 @@ function frame(now) {
         flushOnlineSave();
       }
     }
+    if (isOnlineWorldActive()) {
+      onlineCitySyncTimer += dt;
+      if (onlineCitySyncTimer >= ONLINE_CITY_SYNC_SECONDS) {
+        onlineCitySyncTimer = 0;
+        syncOwnedCitiesToOnline();
+      }
+    }
   }
 
   if (state) {
@@ -2953,13 +3213,14 @@ function updateGame(dt) {
   state.gameSeconds += dt;
   updateEconomy(dt);
   updateAttacks(dt);
-  updateEnemyAI(dt);
+  if (!isOnlineWorldActive()) updateEnemyAI(dt);
   checkGameOver();
 }
 
 function updateEconomy(dt) {
   for (const city of state.cities) {
     if (city.owner === "neutral") continue;
+    if (isOnlineWorldActive() && city.owner !== "player") continue;
     const stats = getCityStats(city);
     const growth = stats.troopProductionPerSecond;
     city.troopFloat += growth * dt;
@@ -2968,8 +3229,10 @@ function updateEconomy(dt) {
 
   const goldPerSecond = getGoldPerSecond();
   state.gold += goldPerSecond * dt;
-  state.ai = normalizeAiState(state.ai);
-  state.ai.gold += getAiGoldPerSecond() * dt;
+  if (!isOnlineWorldActive()) {
+    state.ai = normalizeAiState(state.ai);
+    state.ai.gold += getAiGoldPerSecond() * dt;
+  }
 }
 
 function getGoldPerSecond() {
@@ -3117,6 +3380,7 @@ function launchAttack(sourceId, targetId, percent, owner, exactTroops = null) {
     pathLength: route.length,
     targetOwnerAtLaunch: target.owner,
   });
+  if (isOnlineWorldActive() && owner === "player") syncOwnedCitiesToOnline(true);
 
   if (owner === "player" && kind === "transfer") {
     addLog(`You moved ${formatNumber(send)} troops from ${source.name} to ${target.name}.`);
@@ -3180,6 +3444,17 @@ function resolveAttack(attack) {
     const cautiousRefund = oldOwner === "player" && attack.owner !== "player" ? grantCautiousRefund(target) : 0;
 
     target.owner = attack.owner;
+    if (attack.owner === "player") {
+      target.ownerKind = "player";
+      target.ownerUid = getCurrentOnlineUid() || target.ownerUid || null;
+      target.ownerName = state.playerName;
+      target.ownerFlag = state.flag;
+    } else {
+      target.ownerKind = attack.owner === "enemy" ? "npc" : attack.owner;
+      target.ownerUid = null;
+      target.ownerName = OWNER[attack.owner]?.label || "";
+      target.ownerFlag = null;
+    }
     target.troopFloat = result.survivors;
     target.troops = result.survivors;
     target.defense = 1;
@@ -3227,6 +3502,7 @@ function resolveAttack(attack) {
   if (selectedSourceId && cityById(selectedSourceId)?.owner !== "player") {
     clearSelection(false);
   }
+  if (isOnlineWorldActive() && attack.owner === "player") syncOwnedCitiesToOnline(true);
 }
 
 function checkGameOver() {
@@ -3289,6 +3565,13 @@ function applyFlagToElement(element, flag) {
   const symbol = FLAG_SYMBOLS.find(option => option.key === normalized.symbol) || FLAG_SYMBOLS[0];
   const symbolElement = element.querySelector(".flag-symbol");
   if (symbolElement) symbolElement.textContent = symbol.glyph;
+}
+
+function getCityOwnerDisplayName(city) {
+  if (!city) return "";
+  if (city.owner === "player") return state.playerName;
+  if (city.ownerKind === "player" && city.ownerName) return city.ownerName;
+  return OWNER[city.owner]?.label || "Unknown";
 }
 
 function getKingdomSummary() {
@@ -3431,6 +3714,7 @@ function saveProfileName() {
   if (mainCity?.name === `${previousName} Keep`) mainCity.name = `${nextName} Keep`;
   cancelProfileNameEdit();
   saveGame();
+  syncOwnedCitiesToOnline(true);
   renderAll();
   renderProfileScreen();
   showToast("Ruler name updated.");
@@ -3487,6 +3771,7 @@ function saveFlagEditor() {
   if (!state || !flagDraft) return;
   state.flag = normalizeFlag(flagDraft);
   saveGame();
+  syncOwnedCitiesToOnline(true);
   renderHud();
   showProfileView();
   showToast("Kingdom flag saved.");
@@ -3542,6 +3827,7 @@ function renderCities() {
     btn.style.top = `${city.y}px`;
     const scoutReport = city.owner === "player" ? null : getScoutReport(city.id);
     const isSelectedForeign = city.owner !== "player" && city.id === selectedTargetId && !sendMode;
+    const ownerName = getCityOwnerDisplayName(city);
     const ownerFlag = city.owner === "player"
       ? `<span class="kingdom-flag city-owner-flag player-kingdom-flag" aria-hidden="true"><span class="flag-symbol"></span></span>`
       : `<span class="city-owner-flag owner-flag" aria-hidden="true">${OWNER[city.owner].flag}</span>`;
@@ -3563,7 +3849,7 @@ function renderCities() {
       : isSelectedForeign
         ? `
         <span class="city-label foreign-city-label selected-foreign-label">
-          <strong class="foreign-ruler-name">${escapeHtml(OWNER[city.owner].label)}</strong>
+          <strong class="foreign-ruler-name">${escapeHtml(ownerName)}</strong>
           <span class="foreign-selected-banner">
             <span class="foreign-selected-level">${city.level}</span>
             <span class="foreign-selected-crest">${ownerFlag}</span>
@@ -3582,7 +3868,7 @@ function renderCities() {
           </span>
         </span>`;
     const knownTroops = city.owner === "player" ? city.troops : scoutReport?.troops;
-    btn.setAttribute("aria-label", `${city.name}. ${OWNER[city.owner].label}. Level ${city.level}. ${knownTroops === undefined ? "Unknown troops" : `${formatNumber(knownTroops)} troops`}.`);
+    btn.setAttribute("aria-label", `${city.name}. ${ownerName}. Level ${city.level}. ${knownTroops === undefined ? "Unknown troops" : `${formatNumber(knownTroops)} troops`}.`);
     btn.innerHTML = `
       <span class="city-ring"></span>
       <span class="city-castle stage-${castleStage}" aria-hidden="true"><img class="city-art" src="${getCastleAsset(castleStage)}" alt="" draggable="false" /></span>
@@ -3721,6 +4007,7 @@ function showScoutReportModal(cityId) {
   const remaining = Math.max(0, Math.ceil(report.expiresAt - state.gameSeconds));
   const age = Math.max(0, Math.floor(state.gameSeconds - report.scoutedAt));
   const reportedOwner = OWNER[report.owner] ? report.owner : city.owner;
+  const reportedOwnerName = report.ownerName || getCityOwnerDisplayName(city);
   const cityLevel = clampCityLevel(report.cityLevel || city.level);
   const defensePercent = Math.max(0, Number(report.defensePercent) || cityLevel * CITY_LEVEL_STATS.defensePercentPerLevel);
   const cityWalls = Math.max(0, Math.floor(Number(report.cityWalls) || getCityStats({ ...city, level: cityLevel, troops: report.troops }).cityWalls));
@@ -3737,7 +4024,7 @@ function showScoutReportModal(cityId) {
         </div>
         <div class="scout-report-mark" aria-label="Scout mission"><span aria-hidden="true">&#128301;</span><strong>Scout</strong><small>1 troop</small></div>
         <div class="scout-report-ruler enemy">
-          <div><strong>${escapeHtml(OWNER[reportedOwner].label)}</strong><small>City Lv ${formatNumber(cityLevel)}</small></div>
+          <div><strong>${escapeHtml(reportedOwnerName)}</strong><small>City Lv ${formatNumber(cityLevel)}</small></div>
           <span class="scout-report-enemy-flag" aria-hidden="true">${OWNER[reportedOwner].flag}</span>
         </div>
       </div>
@@ -4224,7 +4511,7 @@ function showCityInfoModal(cityId) {
     modalTitle.textContent = `${city.name} - Level ${city.level}`;
     modalBody.innerHTML = `
       <div class="city-stat-panel modal-city-stats">
-        <div class="stat-wide"><span>Owner</span><strong>${escapeHtml(OWNER[city.owner].label)}</strong></div>
+        <div class="stat-wide"><span>Owner</span><strong>${escapeHtml(getCityOwnerDisplayName(city))}</strong></div>
         <div class="stat-chip"><span>City level</span><strong>${formatNumber(city.level)}</strong></div>
         <div class="stat-chip"><span>Victory points</span><strong>${formatNumber(stats.victoryPoints)}</strong></div>
         <div class="stat-chip"><span>Troops</span><strong>${report ? formatNumber(report.troops) : "Unknown"}</strong></div>
@@ -4256,7 +4543,7 @@ function showCityInfoModal(cityId) {
   modalBody.innerHTML = `
     <div class="city-stat-panel modal-city-stats">
       <div class="stat-wide"><span>Total defense</span><strong>${formatNumber(stats.totalDefense)}</strong></div>
-      <div class="stat-chip"><span>Owner</span><strong>${OWNER[city.owner].label}</strong></div>
+      <div class="stat-chip"><span>Owner</span><strong>${escapeHtml(getCityOwnerDisplayName(city))}</strong></div>
       <div class="stat-chip"><span>Troops</span><strong>${formatNumber(city.troops)}</strong></div>
       <div class="stat-chip"><span>Victory points</span><strong>${formatNumber(stats.victoryPoints)}</strong><small>Drives growth and XP value</small></div>
       <div class="stat-chip"><span>City defense</span><strong>${stats.defensePercent}%</strong><small>${CITY_LEVEL_STATS.defensePercentPerLevel}% per level</small></div>

@@ -46,7 +46,7 @@ Landscape / horizontal medieval island-conquest prototype inspired by the core l
 
 ## Testing Locally
 
-Open `index.html` in a browser, choose `Fresh New Map`, then use the `Dev` panel to grant gold, troops, skill points, or city levels.
+Open the Netlify site, sign in with Google, then use the `Dev` panel to grant gold, troops, skill points, or city levels.
 
 ## Online Multiplayer Foundation
 
@@ -57,7 +57,9 @@ This build has the first Firebase layer added without breaking guest play.
 - The setup screen now uses Google sign-in as the only entry button.
 - Signed-in players save a private cloud snapshot to `players/{uid}/saves/default`.
 - After sign-in, the game automatically checks Firebase first, then falls back to the browser's local save.
-- `firestore.rules` currently allows private player saves and keeps shared island writes locked until combat/city transactions are implemented.
+- `firestore.rules` allows private player saves and signed-in shared-island writes for this prototype phase.
+- Phase 2 creates `islands/main`, seeds the 70 city docs, subscribes to city changes in realtime, and claims one starting city for each signed-in player.
+- While online, the browser syncs the signed-in player's owned cities back to Firestore and pauses local NPC AI until combat is moved into transactions.
 
 See `FIREBASE_SETUP.md` for the Firebase project steps and the planned shared-world collections.
 
