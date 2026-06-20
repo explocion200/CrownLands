@@ -3778,6 +3778,27 @@ function applyFlagToElement(element, flag) {
   if (symbolElement) symbolElement.textContent = symbol.glyph;
 }
 
+function getCityOwnerFlag(city) {
+  if (!city) return null;
+  if (city.owner === "player") return state.flag;
+  if (city.ownerKind === "player") return city.ownerFlag || createDefaultFlag();
+  return null;
+}
+
+function renderCityOwnerFlag(city) {
+  const flag = getCityOwnerFlag(city);
+  if (flag) {
+    return `<span class="kingdom-flag city-owner-flag city-kingdom-flag" aria-hidden="true"><span class="flag-symbol"></span></span>`;
+  }
+  return `<span class="city-owner-flag owner-flag" aria-hidden="true">${OWNER[city.owner]?.flag || OWNER.neutral.flag}</span>`;
+}
+
+function applyCityOwnerFlags(container, city) {
+  const flag = getCityOwnerFlag(city);
+  if (!flag) return;
+  container.querySelectorAll(".city-kingdom-flag").forEach(element => applyFlagToElement(element, flag));
+}
+
 function getCityOwnerDisplayName(city) {
   if (!city) return "";
   if (city.owner === "player") return state.playerName;
@@ -4039,9 +4060,7 @@ function renderCities() {
     const scoutReport = city.owner === "player" ? null : getScoutReport(city.id);
     const isSelectedForeign = city.owner !== "player" && city.id === selectedTargetId && !sendMode;
     const ownerName = getCityOwnerDisplayName(city);
-    const ownerFlag = city.owner === "player"
-      ? `<span class="kingdom-flag city-owner-flag player-kingdom-flag" aria-hidden="true"><span class="flag-symbol"></span></span>`
-      : `<span class="city-owner-flag owner-flag" aria-hidden="true">${OWNER[city.owner].flag}</span>`;
+    const ownerFlag = renderCityOwnerFlag(city);
     const cityLabel = city.owner === "player"
       ? `
         <span class="city-label player-city-label">
@@ -4085,7 +4104,7 @@ function renderCities() {
       <span class="city-castle stage-${castleStage}" aria-hidden="true"><img class="city-art" src="${getCastleAsset(castleStage)}" alt="" draggable="false" /></span>
       ${cityLabel}
     `;
-    if (city.owner === "player") applyFlagToElement(btn.querySelector(".player-kingdom-flag"), state.flag);
+    applyCityOwnerFlags(btn, city);
     btn.addEventListener("click", event => {
       event.stopPropagation();
       selectCity(city.id);
