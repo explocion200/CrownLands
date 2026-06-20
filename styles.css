@@ -332,8 +332,10 @@ input {
   transform: translateX(-50%);
   width: max-content;
   z-index: 3;
-  pointer-events: none;
+  cursor: pointer;
+  pointer-events: auto;
 }
+.city-label * { pointer-events: none; }
 .city-label::after {
   content: "";
   position: absolute;

@@ -179,6 +179,7 @@
       defense: 1,
       investedGold: Math.max(0, Math.floor(Number(city.investedGold) || 0)),
       lastCapturedAt: city.lastCapturedAt ?? null,
+      isMainCity: Boolean(city.isMainCity),
     };
   }
 
@@ -269,9 +270,18 @@
       const playerSnap = await transaction.get(playerRef);
       const playerData = playerSnap.exists() ? playerSnap.data() : {};
       if (playerData.mainIslandId === islandId && playerData.mainCityId) {
+        const mainCityRef = doc(client.db, "islands", islandId, "cities", playerData.mainCityId);
         transaction.set(playerRef, {
           playerName: safePlayerName,
           flag: flag || playerData.flag || null,
+          updatedAt: serverTimestamp(),
+        }, { merge: true });
+        transaction.set(mainCityRef, {
+          ownerKind: "player",
+          ownerUid: uid,
+          ownerName: safePlayerName,
+          ownerFlag: flag || playerData.flag || null,
+          isMainCity: true,
           updatedAt: serverTimestamp(),
         }, { merge: true });
         return { cityId: playerData.mainCityId, alreadyClaimed: true };
@@ -314,6 +324,7 @@
         ownerFlag: flag || null,
         troops: Math.max(50, Math.floor(Number(chosenData.troops) || 0)),
         troopFloat: Math.max(50, Number(chosenData.troopFloat) || Number(chosenData.troops) || 0),
+        isMainCity: true,
         claimedAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
       }, { merge: true });
@@ -347,6 +358,19 @@
     }
 
     await batch.commit();
+    return true;
+  }
+
+  async function saveCityState(islandId = "main", city = {}) {
+    await init();
+    const uid = requireSignedIn();
+    if (!uid || !city?.id) return false;
+    const { doc, setDoc, serverTimestamp } = client.modules.firestore;
+    await setDoc(doc(client.db, "islands", islandId, "cities", city.id), {
+      ...cleanCitySeed(city),
+      updatedBy: uid,
+      updatedAt: serverTimestamp(),
+    }, { merge: true });
     return true;
   }
 
@@ -418,6 +442,7 @@
     ensureMainIsland,
     claimStartingCity,
     savePlayerCities,
+    saveCityState,
     saveArmyMovement,
     deleteArmyMovement,
     subscribeIsland,

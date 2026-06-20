@@ -7,6 +7,7 @@ const ONLINE_CITY_SYNC_SECONDS = 6;
 const ONLINE_ARMY_EXPIRY_GRACE_SECONDS = 8;
 const HUD_RENDER_INTERVAL_MS = 250;
 const MAP_RENDER_INTERVAL_MS = 1600;
+const MAX_OFFLINE_PROGRESS_SECONDS = 7 * 24 * 60 * 60;
 const WORLD_WIDTH = 2800;
 const WORLD_HEIGHT = 1575;
 const GRID_SIZE = 40;
@@ -1408,10 +1409,14 @@ let loginStartInFlight = false;
 let onlineIslandUnsubscribe = null;
 let onlineWorldLoading = false;
 let onlineWorldConnected = false;
+let onlineCitiesLoaded = false;
+let onlineFreshClaimCityId = "";
 let onlineCitySyncTimer = 0;
 let onlineCitySyncInFlight = false;
 let onlineCitySyncQueued = false;
 let onlineArmies = [];
+let pendingOfflineProgressSeconds = 0;
+let localDirtyCityIds = new Set();
 let toastTimer = null;
 let attackIdCounter = 1;
 let flagDraft = null;
@@ -1550,6 +1555,7 @@ function createIslandStartLayout(playerName) {
     troopFloat: NEUTRAL_START_TROOPS,
     investedGold: 0,
     lastCapturedAt: null,
+    isMainCity: false,
   }));
 
   const startIds = pickStartCities(cities);
@@ -1571,6 +1577,7 @@ function createIslandStartLayout(playerName) {
     city.defense = 1;
     city.investedGold = 0;
     city.lastCapturedAt = null;
+    city.isMainCity = slot.key === "player";
   }
 
   return { cities, startIds };
@@ -1645,6 +1652,7 @@ function createOnlineIslandSeed() {
       defense: 1,
       investedGold: 0,
       lastCapturedAt: null,
+      isMainCity: false,
     };
   });
 
@@ -1694,6 +1702,7 @@ function newGame(playerName) {
     flag: createDefaultFlag(),
     gold: TEST_STARTING_GOLD,
     gameSeconds: 0,
+    lastRealTimeMs: Date.now(),
     paused: false,
     aiCooldown: 5.5,
     ai: createAiState(),
@@ -2113,6 +2122,7 @@ function loadGame() {
         city.troops = Math.max(0, Math.floor(Number(city.troops) || 0));
         city.troopFloat = Number.isFinite(city.troopFloat) ? Math.max(0, city.troopFloat) : city.troops;
         city.investedGold = Math.max(0, Math.floor(Number(city.investedGold) || 0));
+        city.isMainCity = Boolean(city.isMainCity || city.id === loaded.mainCityId);
         if (city.lastCapturedAt === null || city.lastCapturedAt === undefined || city.lastCapturedAt === "") {
           city.lastCapturedAt = null;
         } else {
@@ -2197,6 +2207,7 @@ function normalizeOnlineGameSnapshot(snapshot, fallbackPlayerName = "Ricky") {
       city.troops = Math.max(0, Math.floor(Number(city.troops) || 0));
       city.troopFloat = Number.isFinite(city.troopFloat) ? Math.max(0, city.troopFloat) : city.troops;
       city.investedGold = Math.max(0, Math.floor(Number(city.investedGold) || 0));
+      city.isMainCity = Boolean(city.isMainCity || city.id === loaded.mainCityId);
       if (city.lastCapturedAt === null || city.lastCapturedAt === undefined || city.lastCapturedAt === "") {
         city.lastCapturedAt = null;
       } else {
@@ -2322,6 +2333,7 @@ function launchScoutMission(source, target, route) {
   if (!source || !target || source.owner !== "player" || source.troops < 1 || !route?.points?.length) return null;
   source.troopFloat = Math.max(0, (Number(source.troopFloat) || source.troops) - 1);
   source.troops = Math.floor(source.troopFloat);
+  markOwnedCityChanged(source, false);
   const duration = travelTime(source, target, "player", route.length);
   const mission = {
     id: attackIdCounter++,
@@ -2371,6 +2383,12 @@ function toggleScoutNearby(cityId) {
     renderAll();
     return;
   }
+  if (source.troops < 1) {
+    scoutNearbySourceId = null;
+    renderAll();
+    showToast(`${source.name} needs at least 1 soldier to send scouts.`);
+    return;
+  }
 
   if (scoutNearbySourceId !== source.id) {
     scoutNearbySourceId = source.id;
@@ -2414,7 +2432,7 @@ function getPendingScoutMission(cityId) {
 
 function findNearestScoutSource(target) {
   return playerCities()
-    .filter(city => city.troops >= 1 && city.id !== target.id)
+    .filter(city => Math.floor(Number(city.troops) || 0) >= 1 && city.id !== target.id)
     .map(city => ({ city, route: findRoute(city, target) }))
     .filter(option => option.route?.points?.length)
     .sort((a, b) => a.route.length - b.route.length)[0] || null;
@@ -2528,6 +2546,7 @@ function recordNeutralCapture() {
 
 function saveGame() {
   if (!state) return;
+  state.lastRealTimeMs = Date.now();
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   queueOnlineSave();
 }
@@ -2710,6 +2729,8 @@ function disconnectOnlineWorld() {
   onlineIslandUnsubscribe = null;
   onlineArmies = [];
   onlineWorldConnected = false;
+  onlineCitiesLoaded = false;
+  onlineFreshClaimCityId = "";
   onlineWorldLoading = false;
 }
 
@@ -2719,6 +2740,7 @@ async function setupOnlineWorld() {
   if (onlineWorldLoading || onlineWorldConnected) return onlineWorldConnected;
 
   onlineWorldLoading = true;
+  onlineCitiesLoaded = false;
   onlineStatusDetail.textContent = "Loading the shared island...";
   try {
     const seed = createOnlineIslandSeed();
@@ -2748,18 +2770,36 @@ async function setupOnlineWorld() {
       mainCityId: claim?.cityId || state.mainCityId,
     };
     if (claim?.cityId) state.mainCityId = claim.cityId;
+    onlineFreshClaimCityId = !claim?.alreadyClaimed && claim?.cityId ? claim.cityId : "";
+    const claimedCity = claim?.cityId ? cityById(claim.cityId) : null;
+    if (claimedCity) claimedCity.isMainCity = true;
     if (claim?.alreadyClaimed) addLog("Online island connected. Your claimed city was restored.");
     else if (claim?.cityId) addLog(`Online island connected. ${cityById(claim.cityId)?.name || "A city"} joined your kingdom.`);
 
     if (onlineIslandUnsubscribe) onlineIslandUnsubscribe();
+    let initialCitiesReady = false;
+    let resolveInitialCities = () => {};
+    const initialCitiesPromise = new Promise(resolve => {
+      const timer = setTimeout(resolve, 5000);
+      resolveInitialCities = () => {
+        if (initialCitiesReady) return;
+        initialCitiesReady = true;
+        clearTimeout(timer);
+        resolve();
+      };
+    });
     onlineIslandUnsubscribe = api.subscribeIsland(ONLINE_ISLAND_ID, {
       onCities: onlineCities => {
         applyOnlineCities(onlineCities);
+        onlineCitiesLoaded = true;
+        if (pendingOfflineProgressSeconds > 0) applyPendingOfflineProgress();
         if (state?.mainCityId && cityById(state.mainCityId)?.owner !== "player") {
           const nextOwned = playerCities()[0];
           state.mainCityId = nextOwned?.id || state.mainCityId;
         }
         renderAll();
+        resolveInitialCities();
+        onlineFreshClaimCityId = "";
       },
       onArmies: armies => {
         applyOnlineArmies(armies);
@@ -2768,6 +2808,7 @@ async function setupOnlineWorld() {
       },
     });
 
+    await initialCitiesPromise;
     onlineWorldConnected = true;
     onlineStatusDetail.textContent = "Shared island connected.";
     showToast("Shared island connected.");
@@ -2804,7 +2845,12 @@ function applyOnlineCities(onlineCities) {
         : "neutral";
     const currentIsLocalPlayerCity = current.owner === "player" && (!current.ownerUid || current.ownerUid === currentUid);
     const onlineBelongsToAnotherPlayer = ownerKind === "player" && ownerUid && ownerUid !== currentUid;
-    const keepLocalPlayerCity = currentIsLocalPlayerCity && !onlineBelongsToAnotherPlayer;
+    const onlineBelongsToCurrentPlayer = ownerKind === "player" && ownerUid === currentUid;
+    const isFreshClaimCity = onlineFreshClaimCityId === base.id;
+    const keepLocalPlayerCity = currentIsLocalPlayerCity
+      && !onlineBelongsToAnotherPlayer
+      && !isFreshClaimCity
+      && (onlineBelongsToCurrentPlayer || localDirtyCityIds.has(base.id));
 
     return {
       ...base,
@@ -2820,6 +2866,7 @@ function applyOnlineCities(onlineCities) {
       defense: 1,
       investedGold: Math.max(0, Math.floor(Number(keepLocalPlayerCity ? current.investedGold ?? online.investedGold : online.investedGold ?? current.investedGold) || 0)),
       lastCapturedAt: keepLocalPlayerCity ? current.lastCapturedAt ?? online.lastCapturedAt ?? null : online.lastCapturedAt ?? current.lastCapturedAt ?? null,
+      isMainCity: Boolean(keepLocalPlayerCity ? current.isMainCity || online.isMainCity : online.isMainCity || current.isMainCity),
       startPool: base.startPool,
     };
   });
@@ -2827,10 +2874,12 @@ function applyOnlineCities(onlineCities) {
 
 function markOwnedCityChanged(city, syncNow = true) {
   if (!state || !city || city.owner !== "player") return;
+  localDirtyCityIds.add(city.id);
   city.ownerKind = "player";
   city.ownerUid = getCurrentOnlineUid() || city.ownerUid || null;
   city.ownerName = state.playerName;
   city.ownerFlag = state.flag;
+  city.isMainCity = Boolean(city.isMainCity || city.id === state.mainCityId);
   if (syncNow && isOnlineWorldActive()) syncOwnedCitiesToOnline(true);
 }
 
@@ -2851,11 +2900,47 @@ function toOnlineOwnedCity(city) {
     defense: 1,
     investedGold: Math.max(0, Math.floor(Number(city.investedGold) || 0)),
     lastCapturedAt: city.lastCapturedAt ?? null,
+    isMainCity: Boolean(city.isMainCity || city.id === state.mainCityId),
   };
+}
+
+function toOnlineCityState(city) {
+  return {
+    id: city.id,
+    name: city.name,
+    x: city.x,
+    y: city.y,
+    startPool: city.startPool || "",
+    ownerKind: city.ownerKind || (city.owner === "player" ? "player" : city.owner === "enemy" ? "npc" : city.owner || "neutral"),
+    ownerUid: city.ownerKind === "player" ? city.ownerUid || null : null,
+    ownerName: city.ownerName || "",
+    ownerFlag: city.ownerFlag || null,
+    level: clampCityLevel(city.level),
+    troops: Math.max(0, Math.floor(Number(city.troops) || 0)),
+    troopFloat: Math.max(0, Number(city.troopFloat) || Number(city.troops) || 0),
+    defense: 1,
+    investedGold: Math.max(0, Math.floor(Number(city.investedGold) || 0)),
+    lastCapturedAt: city.lastCapturedAt ?? null,
+    isMainCity: Boolean(city.isMainCity || city.id === state.mainCityId),
+  };
+}
+
+function syncSharedCityState(city) {
+  if (!city || !isOnlineWorldActive()) return;
+  const api = getOnlineApi();
+  if (!api?.saveCityState) return;
+  api.saveCityState(ONLINE_ISLAND_ID, toOnlineCityState(city)).catch(error => {
+    onlineLastError = error?.message || String(error);
+    console.warn("Could not sync city battle state", error);
+  });
 }
 
 async function syncOwnedCitiesToOnline(force = false) {
   if (!isOnlineWorldActive()) return false;
+  if (!onlineCitiesLoaded) {
+    if (force) onlineCitySyncQueued = true;
+    return false;
+  }
   if (onlineCitySyncInFlight) {
     if (force) onlineCitySyncQueued = true;
     return false;
@@ -3120,8 +3205,12 @@ async function startFromInput(forceFresh = false) {
     const saved = onlineSaved || (forceFresh ? null : loadGame());
     state = saved || newGame(playerName);
     if (!saved) state.playerName = playerName;
+    localDirtyCityIds = new Set();
+    pendingOfflineProgressSeconds = getOfflineProgressSeconds(state);
+    state.lastRealTimeMs = Date.now();
     selectedMarchPercent = normalizeMarchPercent(state.marchPercent);
-    if (getOnlineApi()?.isSignedIn?.()) await setupOnlineWorld();
+    const onlineConnected = getOnlineApi()?.isSignedIn?.() ? await setupOnlineWorld() : false;
+    if (!onlineConnected) applyPendingOfflineProgress();
     setupScreen.classList.remove("visible");
     clearSelection(false);
     saveGame();
@@ -3477,6 +3566,44 @@ function getGoldPerSecond() {
   return playerCities().reduce((sum, city) => sum + getCityStats(city).goldProductionPerSecond, 0);
 }
 
+function getOfflineProgressSeconds(snapshot = state) {
+  const lastRealTimeMs = Math.max(0, Number(snapshot?.lastRealTimeMs) || 0);
+  if (!lastRealTimeMs) return 0;
+  const elapsed = (Date.now() - lastRealTimeMs) / 1000;
+  if (!Number.isFinite(elapsed) || elapsed < 10) return 0;
+  return clamp(elapsed, 0, MAX_OFFLINE_PROGRESS_SECONDS);
+}
+
+function applyPendingOfflineProgress() {
+  if (!state || pendingOfflineProgressSeconds <= 0) return;
+  const elapsed = pendingOfflineProgressSeconds;
+  pendingOfflineProgressSeconds = 0;
+
+  const cities = playerCities();
+  if (!cities.length) return;
+
+  const goldGained = Math.floor(getGoldPerSecond() * elapsed);
+  let troopsGained = 0;
+  for (const city of cities) {
+    const before = Math.floor(Number(city.troopFloat) || city.troops || 0);
+    const growth = getCityStats(city).troopProductionPerSecond * elapsed;
+    if (growth <= 0) continue;
+    city.troopFloat = Math.max(0, Number(city.troopFloat) || city.troops || 0) + growth;
+    city.troops = Math.floor(city.troopFloat);
+    troopsGained += Math.max(0, city.troops - before);
+    markOwnedCityChanged(city, false);
+  }
+  if (goldGained > 0) state.gold += goldGained;
+  state.gameSeconds += elapsed;
+
+  if (goldGained > 0 || troopsGained > 0) {
+    addLog(`Offline production: +${formatNumber(goldGained)} gold and +${formatNumber(troopsGained)} troops.`);
+    showToast(`Offline production: +${formatNumber(goldGained)} gold, +${formatNumber(troopsGained)} troops`);
+    syncOwnedCitiesToOnline(true);
+    saveGame();
+  }
+}
+
 function getAiGoldPerSecond() {
   return enemyCities().reduce((sum, city) => sum + getCityStats(city).goldProductionPerSecond, 0);
 }
@@ -3577,6 +3704,10 @@ function targetPriority(city) {
   return city.level * 10 - city.troops * 0.03;
 }
 
+function isProtectedMainCity(city) {
+  return Boolean(city && (city.isMainCity || city.id === state?.mainCityId));
+}
+
 function launchAttack(sourceId, targetId, percent, owner, exactTroops = null) {
   const source = cityById(sourceId);
   const target = cityById(targetId);
@@ -3604,6 +3735,7 @@ function launchAttack(sourceId, targetId, percent, owner, exactTroops = null) {
 
   source.troopFloat = Math.max(0, source.troopFloat - send);
   source.troops = Math.floor(source.troopFloat);
+  if (owner === "player") markOwnedCityChanged(source, false);
 
   const duration = travelTime(source, target, owner, route.length);
   const mission = {
@@ -3659,6 +3791,7 @@ function resolveAttack(attack) {
     target.troopFloat += attack.troops;
     target.troops = Math.floor(target.troopFloat);
     if (attack.owner === "player") {
+      markOwnedCityChanged(target);
       addLog(`Reinforcements arrived at ${target.name}: +${formatNumber(attack.troops)} troops.`);
       showToast(`Reinforced ${target.name}`);
     }
@@ -3678,6 +3811,22 @@ function resolveAttack(attack) {
       addLog(`${attackerName} defeated the defenders at ${target.name}, but could not capture it. ${neutralBlockReason}`);
       if (attack.owner === "player") showNeutralCaptureLimitModal(neutralBlockReason);
       else showToast(neutralBlockReason);
+      return;
+    }
+
+    if (isProtectedMainCity(target) && oldOwner !== attack.owner) {
+      target.troopFloat = 0;
+      target.troops = 0;
+      target.lastCapturedAt = state.gameSeconds;
+      if (oldOwner === "player") {
+        markOwnedCityChanged(target);
+        addLog(`${target.name} is your main city and cannot be captured, but its defending army was destroyed.`);
+        showToast(`${target.name} held. Garrison destroyed.`);
+      } else {
+        syncSharedCityState(target);
+        addLog(`${attackerName} destroyed the garrison at ${target.name}, but main cities cannot be captured.`);
+        if (attack.owner === "player") showToast(`${target.name} held as a protected main city.`);
+      }
       return;
     }
 
@@ -3744,7 +3893,14 @@ function resolveAttack(attack) {
   if (selectedSourceId && cityById(selectedSourceId)?.owner !== "player") {
     clearSelection(false);
   }
-  if (isOnlineWorldActive() && attack.owner === "player") syncOwnedCitiesToOnline(true);
+  if (isOnlineWorldActive()) {
+    if (target.owner === "player") {
+      markOwnedCityChanged(target, false);
+      syncOwnedCitiesToOnline(true);
+    } else {
+      syncSharedCityState(target);
+    }
+  }
 }
 
 function checkGameOver() {
