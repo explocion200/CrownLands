@@ -14,19 +14,32 @@
       <div class="setup-card">
         <span class="eyebrow">Prototype 20</span>
         <h1>Crownlands</h1>
-        <p>Medieval island conquest foundation with a 100-city hand-painted island map, four far-apart starting kingdoms, hero leveling, and terrain-aware pathfinding.</p>
+        <p>Medieval island conquest foundation with a 70-city hand-painted island map, four far-apart starting kingdoms, hero leveling, and terrain-aware pathfinding.</p>
         <label for="playerName">Ruler name</label>
         <input id="playerName" maxlength="18" placeholder="Ricky" autocomplete="nickname" />
+        <div class="online-login" aria-label="Online account status">
+          <div>
+            <strong id="onlineStatusText">Guest mode</strong>
+            <small id="onlineStatusDetail">Local save only until Firebase is connected.</small>
+          </div>
+          <div class="online-login-actions">
+            <button id="googleSignInBtn" class="ghost-btn" type="button">Sign in with Google</button>
+            <button id="googleSignOutBtn" class="ghost-btn" type="button" hidden>Sign out</button>
+          </div>
+        </div>
         <button id="startBtn" class="primary-btn">Start / Continue</button>
         <button id="freshBtn" class="ghost-btn">Fresh New Map</button>
-        <p class="tiny-note">Saves locally on this device. No accounts yet.</p>
+        <p class="tiny-note">Guest saves stay on this device. Google sign-in enables Firebase cloud saves.</p>
       </div>
     </section>
 
     <section class="game-view" aria-label="Game map">
       <header class="top-hud">
-        <div class="profile-stack" aria-label="Character placeholder and gold">
-          <div class="portrait-placeholder" aria-label="Character placeholder"><span id="characterLevelBadge" class="character-level-badge">Lv 1</span></div>
+        <div class="profile-stack" aria-label="Kingdom profile and gold">
+          <button id="profileBtn" class="portrait-placeholder profile-button" type="button" aria-label="Open kingdom profile">
+            <span id="hudKingdomFlag" class="kingdom-flag kingdom-flag-small" aria-hidden="true"><span class="flag-symbol"></span></span>
+            <span id="characterLevelBadge" class="character-level-badge">Lv 1</span>
+          </button>
           <div class="profile-gold"><span>🪙</span><strong id="goldText">0</strong></div>
           <span id="lordNameText" class="sr-only">Ruler</span>
           <span id="statusText" class="sr-only">Live conquest</span>
@@ -34,12 +47,13 @@
         <div class="resource-bar">
           <div class="resource-pill"><span>🏰</span><strong id="cityText">1</strong></div>
           <button id="pauseBtn" class="hud-btn" type="button" aria-label="Pause or resume game">Ⅱ</button>
+          <button id="fullscreenBtn" class="hud-btn fullscreen-btn" type="button" aria-label="Enter fullscreen"><span aria-hidden="true">&#x26F6;</span></button>
         </div>
       </header>
 
       <section id="mapFrame" class="map-frame" aria-label="Drag to move around the map">
         <div id="mapWorld" class="map-world">
-          <div class="map-bg" aria-hidden="true"></div>
+          <div class="map-bg" aria-hidden="true"><img src="assets/island-map-v17.png" alt="" draggable="false" /></div>
           <svg id="pathsSvg" class="paths" viewBox="0 0 2800 1575" preserveAspectRatio="none" aria-hidden="true"></svg>
           <div id="cityLayer" class="city-layer"></div>
           <div id="armyLayer" class="army-layer"></div>
@@ -61,9 +75,78 @@
       </section>
 
       <nav class="bottom-nav" aria-label="Game menu">
-        <button id="empireBtn" class="nav-btn" type="button"><span>⚔️</span>Skills</button>
+        <button id="devBtn" class="nav-btn" type="button"><span>⚙</span>Dev</button>
         <button id="logBtn" class="nav-btn" type="button"><span>📜</span>Log</button>
       </nav>
+
+      <section id="profileScreen" class="profile-screen" aria-hidden="true" aria-label="Kingdom profile">
+        <header class="profile-screen-header">
+          <div class="profile-screen-heading"><span>Kingdom</span><h2 id="profileScreenTitle">Profile</h2></div>
+          <div class="profile-tabs" role="tablist" aria-label="Kingdom sections">
+            <button id="profileTabBtn" class="active" type="button" role="tab" aria-selected="true" aria-controls="profileView">Profile</button>
+            <button id="skillsTabBtn" type="button" role="tab" aria-selected="false" aria-controls="skillsView">Skills</button>
+          </div>
+          <button id="profileCloseBtn" class="profile-icon-btn profile-screen-close" type="button" aria-label="Close profile">&times;</button>
+        </header>
+
+        <div id="profileView" class="profile-view">
+          <section class="profile-identity" aria-label="Ruler identity">
+            <button id="profileFlagBtn" class="profile-flag-button" type="button" aria-label="Edit kingdom flag">
+              <span id="profileKingdomFlag" class="kingdom-flag kingdom-flag-large" aria-hidden="true"><span class="flag-symbol"></span></span>
+              <span class="profile-flag-edit">Edit flag</span>
+            </button>
+
+            <div class="profile-name-block">
+              <div id="profileNameDisplay" class="profile-name-row">
+                <h3 id="profileNameText">Ruler</h3>
+                <button id="profileNameEditBtn" class="profile-icon-btn profile-edit-btn" type="button" aria-label="Edit ruler name">&#9998;</button>
+              </div>
+              <div id="profileNameEditor" class="profile-name-editor" hidden>
+                <input id="profileNameInput" maxlength="18" aria-label="Ruler name" />
+                <button id="profileNameSaveBtn" class="profile-icon-btn confirm" type="button" aria-label="Save ruler name">&#10003;</button>
+                <button id="profileNameCancelBtn" class="profile-icon-btn" type="button" aria-label="Cancel name edit">&times;</button>
+              </div>
+
+              <div class="profile-level-row">
+                <strong id="profileLevelText">Level 1</strong>
+                <span id="profileXpLabel">0 / 250 XP</span>
+              </div>
+              <div class="profile-xp-track" aria-label="XP progress"><span id="profileXpFill"></span></div>
+            </div>
+          </section>
+
+          <section class="kingdom-overview" aria-label="Kingdom totals">
+            <div class="profile-section-heading"><span>Kingdom</span><h3>Overview</h3></div>
+            <div class="kingdom-stat-grid">
+              <div class="kingdom-stat kingdom-stat-wide"><span>Cities</span><strong id="profileCitiesStat">1</strong></div>
+              <div class="kingdom-stat"><span>Gold</span><strong id="profileGoldStat">500</strong></div>
+              <div class="kingdom-stat"><span>Troops</span><strong id="profileTroopsStat">50</strong></div>
+              <div class="kingdom-stat"><span>Gold production</span><strong id="profileGoldProductionStat">0/h</strong></div>
+              <div class="kingdom-stat"><span>Troops production</span><strong id="profileTroopProductionStat">0/h</strong></div>
+            </div>
+          </section>
+        </div>
+
+        <div id="skillsView" class="profile-skills-view" role="tabpanel" aria-labelledby="skillsTabBtn" hidden></div>
+
+        <div id="flagEditorView" class="flag-editor-view" hidden>
+          <section class="flag-editor-preview">
+            <span id="flagEditorPreview" class="kingdom-flag kingdom-flag-editor" aria-hidden="true"><span class="flag-symbol"></span></span>
+            <div><span>Kingdom identity</span><h3>Flag Editor</h3></div>
+          </section>
+
+          <section class="flag-control-group"><h4>Primary color</h4><div id="flagPrimaryColors" class="flag-swatch-grid"></div></section>
+          <section class="flag-control-group"><h4>Accent color</h4><div id="flagSecondaryColors" class="flag-swatch-grid"></div></section>
+          <section class="flag-control-group"><h4>Pattern</h4><div id="flagPatternOptions" class="flag-option-grid"></div></section>
+          <section class="flag-control-group"><h4>Symbol</h4><div id="flagSymbolOptions" class="flag-symbol-grid"></div></section>
+
+          <div class="flag-editor-actions">
+            <button id="flagSaveBtn" class="profile-primary-btn" type="button">Save Flag</button>
+            <button id="flagBackBtn" class="profile-secondary-btn" type="button">Back</button>
+            <button id="flagExitBtn" class="profile-secondary-btn" type="button">Exit</button>
+          </div>
+        </div>
+      </section>
     </section>
     <div class="rotate-warning" aria-hidden="true">
       <div>
@@ -81,6 +164,8 @@
     </article>
   </dialog>
 
+  <script src="firebase-config.js"></script>
+  <script src="firebaseClient.js"></script>
   <script src="game.js"></script>
 </body>
 </html>
