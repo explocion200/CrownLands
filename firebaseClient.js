@@ -182,6 +182,34 @@
     };
   }
 
+  function cleanArmyMovement(army) {
+    const path = Array.isArray(army?.path)
+      ? army.path
+          .map(point => ({ x: Number(point?.x) || 0, y: Number(point?.y) || 0 }))
+          .filter(point => Number.isFinite(point.x) && Number.isFinite(point.y))
+      : [];
+    return {
+      id: String(army?.id || "").slice(0, 96),
+      ownerKind: army?.ownerKind || "player",
+      ownerUid: army?.ownerUid || client.user?.uid || null,
+      ownerName: String(army?.ownerName || client.user?.displayName || "Ruler").slice(0, 32),
+      ownerFlag: army?.ownerFlag || null,
+      kind: ["attack", "transfer", "scout"].includes(army?.kind) ? army.kind : "attack",
+      fromId: String(army?.fromId || ""),
+      toId: String(army?.toId || ""),
+      fromName: String(army?.fromName || "").slice(0, 40),
+      toName: String(army?.toName || "").slice(0, 40),
+      troops: Math.max(0, Math.floor(Number(army?.troops) || 0)),
+      total: Math.max(0.1, Number(army?.total) || 0.1),
+      path,
+      pathLength: Math.max(0, Number(army?.pathLength) || 0),
+      targetOwnerAtLaunch: String(army?.targetOwnerAtLaunch || "neutral"),
+      launchedAtMs: Math.max(0, Number(army?.launchedAtMs) || Date.now()),
+      arrivesAtMs: Math.max(0, Number(army?.arrivesAtMs) || Date.now()),
+      status: army?.status || "active",
+    };
+  }
+
   async function ensureMainIsland({ islandId = "main", cities = [], meta = {} } = {}) {
     await init();
     const uid = requireSignedIn();
@@ -322,6 +350,34 @@
     return true;
   }
 
+  async function saveArmyMovement(islandId = "main", army = {}) {
+    await init();
+    const uid = requireSignedIn();
+    if (!uid || !army?.id) return false;
+    const { doc, setDoc, serverTimestamp } = client.modules.firestore;
+    const cleanArmy = cleanArmyMovement({ ...army, ownerUid: uid });
+    if (!cleanArmy.id || !cleanArmy.fromId || !cleanArmy.toId) return false;
+    await setDoc(doc(client.db, "islands", islandId, "armies", cleanArmy.id), {
+      ...cleanArmy,
+      updatedAt: serverTimestamp(),
+    }, { merge: true });
+    return true;
+  }
+
+  async function deleteArmyMovement(islandId = "main", armyId = "") {
+    await init();
+    const uid = requireSignedIn();
+    const safeArmyId = String(armyId || "");
+    if (!uid || !safeArmyId) return false;
+    const { doc, setDoc, serverTimestamp } = client.modules.firestore;
+    await setDoc(doc(client.db, "islands", islandId, "armies", safeArmyId), {
+      status: "resolved",
+      resolvedAtMs: Date.now(),
+      updatedAt: serverTimestamp(),
+    }, { merge: true });
+    return true;
+  }
+
   function subscribeIsland(islandId, handlers = {}) {
     if (!client.configured || !client.db || !islandId) return () => {};
     const { collection, doc, onSnapshot } = client.modules.firestore;
@@ -362,6 +418,8 @@
     ensureMainIsland,
     claimStartingCity,
     savePlayerCities,
+    saveArmyMovement,
+    deleteArmyMovement,
     subscribeIsland,
     isConfigured: () => client.configured,
     isReady: () => client.ready,

@@ -4,6 +4,7 @@ const SAVE_EVERY_SECONDS = 1.5;
 const ONLINE_SAVE_SECONDS = 8;
 const ONLINE_ISLAND_ID = "main";
 const ONLINE_CITY_SYNC_SECONDS = 6;
+const ONLINE_ARMY_EXPIRY_GRACE_SECONDS = 8;
 const WORLD_WIDTH = 2800;
 const WORLD_HEIGHT = 1575;
 const GRID_SIZE = 40;
@@ -1406,6 +1407,7 @@ let onlineWorldLoading = false;
 let onlineWorldConnected = false;
 let onlineCitySyncTimer = 0;
 let onlineCitySyncInFlight = false;
+let onlineArmies = [];
 let toastTimer = null;
 let attackIdCounter = 1;
 let flagDraft = null;
@@ -2304,6 +2306,7 @@ function scoutCity(cityId) {
 
   const source = sourceOption.city;
   launchScoutMission(source, target, sourceOption.route);
+  if (isOnlineWorldActive()) syncOwnedCitiesToOnline(true);
   addLog(`One scout left ${source.name} for ${target.name}.`);
   saveGame();
   renderAll();
@@ -2328,7 +2331,9 @@ function launchScoutMission(source, target, route) {
     pathLength: route.length,
     targetOwnerAtLaunch: target.owner,
   };
+  prepareOnlineArmyMission(mission);
   state.attacks.push(mission);
+  publishOnlineArmyMovement(mission);
   return mission;
 }
 
@@ -2391,6 +2396,7 @@ function toggleScoutNearby(cityId) {
   state.gold -= SCOUT_NEARBY_COST;
   for (const option of options) launchScoutMission(source, option.city, option.route);
   scoutNearbySourceId = null;
+  if (isOnlineWorldActive()) syncOwnedCitiesToOnline(true);
   addLog(`${source.name} dispatched ${formatNumber(options.length)} nearby scouts for ${formatNumber(SCOUT_NEARBY_COST)} gold.`);
   saveGame();
   renderAll();
@@ -2697,6 +2703,7 @@ function isOnlineWorldActive() {
 function disconnectOnlineWorld() {
   if (typeof onlineIslandUnsubscribe === "function") onlineIslandUnsubscribe();
   onlineIslandUnsubscribe = null;
+  onlineArmies = [];
   onlineWorldConnected = false;
   onlineWorldLoading = false;
 }
@@ -2748,6 +2755,11 @@ async function setupOnlineWorld() {
           state.mainCityId = nextOwned?.id || state.mainCityId;
         }
         renderAll();
+      },
+      onArmies: armies => {
+        applyOnlineArmies(armies);
+        renderPaths();
+        renderArmies();
       },
     });
 
@@ -2846,6 +2858,201 @@ async function syncOwnedCitiesToOnline(force = false) {
   } finally {
     onlineCitySyncInFlight = false;
   }
+}
+
+function normalizeArmyPath(points) {
+  if (!Array.isArray(points)) return [];
+  return points
+    .map(point => ({
+      x: Number(point?.x),
+      y: Number(point?.y),
+    }))
+    .filter(point => Number.isFinite(point.x) && Number.isFinite(point.y));
+}
+
+function createOnlineArmyId(kind = "army") {
+  const uidPart = String(getCurrentOnlineUid() || "player").replace(/[^a-z0-9_-]/gi, "").slice(0, 32) || "player";
+  const kindPart = String(kind || "army").replace(/[^a-z0-9_-]/gi, "").slice(0, 16) || "army";
+  return `${uidPart}_${kindPart}_${Date.now().toString(36)}_${attackIdCounter}`;
+}
+
+function prepareOnlineArmyMission(mission) {
+  if (!mission || !isOnlineWorldActive() || mission.owner !== "player") return mission;
+  const nowMs = Date.now();
+  mission.onlineId = mission.onlineId || createOnlineArmyId(mission.kind);
+  mission.ownerKind = "player";
+  mission.ownerUid = getCurrentOnlineUid();
+  mission.ownerName = state.playerName;
+  mission.ownerFlag = state.flag;
+  mission.launchedAtMs = mission.launchedAtMs || nowMs;
+  mission.arrivesAtMs = mission.arrivesAtMs || nowMs + Math.max(0, Number(mission.total) || 0) * 1000;
+  return mission;
+}
+
+function toOnlineArmyMovement(mission) {
+  const onlineId = mission?.onlineId || "";
+  if (!mission || !onlineId) return null;
+  const from = cityById(mission.fromId);
+  const to = cityById(mission.toId);
+  return {
+    id: onlineId,
+    ownerKind: "player",
+    ownerUid: mission.ownerUid || getCurrentOnlineUid(),
+    ownerName: mission.ownerName || state.playerName,
+    ownerFlag: mission.ownerFlag || state.flag,
+    kind: mission.kind || "attack",
+    fromId: mission.fromId,
+    toId: mission.toId,
+    fromName: from?.name || "",
+    toName: to?.name || "",
+    troops: Math.max(0, Math.floor(Number(mission.troops) || 0)),
+    total: Math.max(0.1, Number(mission.total) || 0.1),
+    path: normalizeArmyPath(mission.path),
+    pathLength: Math.max(0, Number(mission.pathLength) || routeLength(normalizeArmyPath(mission.path))),
+    targetOwnerAtLaunch: mission.targetOwnerAtLaunch || "neutral",
+    launchedAtMs: Math.max(0, Number(mission.launchedAtMs) || Date.now()),
+    arrivesAtMs: Math.max(0, Number(mission.arrivesAtMs) || Date.now()),
+    status: "active",
+  };
+}
+
+function publishOnlineArmyMovement(mission) {
+  if (!isOnlineWorldActive() || mission?.owner !== "player") return;
+  const api = getOnlineApi();
+  if (!api?.saveArmyMovement) return;
+  prepareOnlineArmyMission(mission);
+  const movement = toOnlineArmyMovement(mission);
+  if (!movement) return;
+  api.saveArmyMovement(ONLINE_ISLAND_ID, movement).catch(error => {
+    onlineLastError = error?.message || String(error);
+    console.warn("Could not sync army movement", error);
+  });
+}
+
+function deleteOnlineArmyMovement(mission) {
+  if (!mission?.onlineId || mission.owner !== "player") return;
+  const api = getOnlineApi();
+  if (!api?.deleteArmyMovement) return;
+  api.deleteArmyMovement(ONLINE_ISLAND_ID, mission.onlineId).catch(error => {
+    onlineLastError = error?.message || String(error);
+    console.warn("Could not delete army movement", error);
+  });
+}
+
+function getOnlineArmyRemainingSeconds(army) {
+  if (!army) return 0;
+  if (Number.isFinite(army.arrivesAtMs) && army.arrivesAtMs > 0) {
+    return (army.arrivesAtMs - Date.now()) / 1000;
+  }
+  return Number(army.remaining) || 0;
+}
+
+function resolveOnlineArmyOwner(army) {
+  if (army?.ownerUid && army.ownerUid === getCurrentOnlineUid()) return "player";
+  if (army?.ownerKind === "neutral") return "neutral";
+  return "enemy";
+}
+
+function normalizeOnlineArmyMovement(raw) {
+  if (!raw || typeof raw !== "object") return null;
+  const id = String(raw.id || "").trim();
+  if (!id) return null;
+  const total = Math.max(0.1, Number(raw.total) || 0.1);
+  const launchedAtMs = Math.max(0, Number(raw.launchedAtMs) || 0);
+  const arrivesAtMs = Math.max(
+    0,
+    Number(raw.arrivesAtMs) || (launchedAtMs ? launchedAtMs + total * 1000 : Date.now() + total * 1000)
+  );
+  const path = normalizeArmyPath(raw.path);
+  return {
+    id,
+    onlineId: id,
+    owner: resolveOnlineArmyOwner(raw),
+    ownerKind: raw.ownerKind || raw.owner || "player",
+    ownerUid: raw.ownerUid || "",
+    ownerName: raw.ownerName || "",
+    ownerFlag: raw.ownerFlag || null,
+    kind: ["attack", "transfer", "scout"].includes(raw.kind) ? raw.kind : "attack",
+    fromId: raw.fromId || "",
+    toId: raw.toId || "",
+    troops: Math.max(0, Math.floor(Number(raw.troops) || 0)),
+    total,
+    remaining: Math.max(0, (arrivesAtMs - Date.now()) / 1000),
+    path,
+    pathLength: Math.max(0, Number(raw.pathLength) || routeLength(path)),
+    targetOwnerAtLaunch: raw.targetOwnerAtLaunch || "neutral",
+    launchedAtMs,
+    arrivesAtMs,
+    status: raw.status || "active",
+  };
+}
+
+function isOnlineArmyVisible(army) {
+  if (!army || army.status !== "active") return false;
+  if (!army.fromId || !army.toId) return false;
+  return getOnlineArmyRemainingSeconds(army) > -ONLINE_ARMY_EXPIRY_GRACE_SECONDS;
+}
+
+function adoptOwnOnlineArmies() {
+  if (!state || !Array.isArray(onlineArmies)) return;
+  const uid = getCurrentOnlineUid();
+  if (!uid) return;
+  const localOnlineIds = new Set(state.attacks.map(attack => attack.onlineId).filter(Boolean));
+  for (const army of onlineArmies) {
+    if (army.ownerUid !== uid || localOnlineIds.has(army.id)) continue;
+    const remaining = getOnlineArmyRemainingSeconds(army);
+    if (remaining <= 0) continue;
+    state.attacks.push({
+      id: attackIdCounter++,
+      onlineId: army.id,
+      owner: "player",
+      ownerKind: "player",
+      ownerUid: uid,
+      ownerName: army.ownerName || state.playerName,
+      ownerFlag: army.ownerFlag || state.flag,
+      kind: army.kind,
+      fromId: army.fromId,
+      toId: army.toId,
+      troops: army.troops,
+      total: army.total,
+      remaining: clamp(remaining, 0, army.total),
+      path: army.path,
+      pathLength: army.pathLength,
+      targetOwnerAtLaunch: army.targetOwnerAtLaunch,
+      launchedAtMs: army.launchedAtMs,
+      arrivesAtMs: army.arrivesAtMs,
+    });
+    localOnlineIds.add(army.id);
+  }
+}
+
+function applyOnlineArmies(rawArmies) {
+  if (!Array.isArray(rawArmies)) {
+    onlineArmies = [];
+    return;
+  }
+  onlineArmies = rawArmies
+    .map(normalizeOnlineArmyMovement)
+    .filter(isOnlineArmyVisible);
+  adoptOwnOnlineArmies();
+}
+
+function getRenderableArmies() {
+  if (!state) return [];
+  const localOnlineIds = new Set();
+  const localArmies = state.attacks.map(attack => {
+    if (attack.onlineId) localOnlineIds.add(attack.onlineId);
+    return attack;
+  });
+  const remoteArmies = onlineArmies
+    .filter(isOnlineArmyVisible)
+    .filter(army => !(army.ownerUid === getCurrentOnlineUid() && localOnlineIds.has(army.id)))
+    .map(army => ({
+      ...army,
+      owner: resolveOnlineArmyOwner(army),
+      remaining: Math.max(0, getOnlineArmyRemainingSeconds(army)),
+    }));
+  return [...localArmies, ...remoteArmies];
 }
 
 function hardReset() {
@@ -3252,6 +3459,7 @@ function updateAttacks(dt) {
 
   for (const attack of completed) {
     resolveAttack(attack);
+    deleteOnlineArmyMovement(attack);
   }
 
   if (completed.length) {
@@ -3367,7 +3575,7 @@ function launchAttack(sourceId, targetId, percent, owner, exactTroops = null) {
   source.troops = Math.floor(source.troopFloat);
 
   const duration = travelTime(source, target, owner, route.length);
-  state.attacks.push({
+  const mission = {
     id: attackIdCounter++,
     owner,
     kind,
@@ -3379,7 +3587,10 @@ function launchAttack(sourceId, targetId, percent, owner, exactTroops = null) {
     path: route.points,
     pathLength: route.length,
     targetOwnerAtLaunch: target.owner,
-  });
+  };
+  prepareOnlineArmyMission(mission);
+  state.attacks.push(mission);
+  publishOnlineArmyMovement(mission);
   if (isOnlineWorldActive() && owner === "player") syncOwnedCitiesToOnline(true);
 
   if (owner === "player" && kind === "transfer") {
@@ -3779,7 +3990,7 @@ function saveFlagEditor() {
 
 function renderPaths() {
   pathsSvg.innerHTML = "";
-  for (const attack of state.attacks) {
+  for (const attack of getRenderableArmies()) {
     const from = cityById(attack.fromId);
     const to = cityById(attack.toId);
     if (!from || !to) continue;
@@ -4162,7 +4373,7 @@ function layoutCityLabels() {
 function renderArmies() {
   if (!state) return;
   armyLayer.innerHTML = "";
-  for (const attack of state.attacks) {
+  for (const attack of getRenderableArmies()) {
     const from = cityById(attack.fromId);
     const to = cityById(attack.toId);
     if (!from || !to) continue;
@@ -4172,11 +4383,12 @@ function renderArmies() {
     const x = point.x;
     const y = point.y;
     const token = document.createElement("div");
-    token.className = `army-token ${OWNER[attack.owner].css}`;
+    token.className = `army-token ${(OWNER[attack.owner] || OWNER.enemy).css}`;
     token.style.left = `${x}px`;
     token.style.top = `${y}px`;
     const armyIcon = attack.kind === "scout" ? "🔭" : attack.kind === "transfer" ? "👟" : "⚔";
     token.innerHTML = `<span>${armyIcon}</span><strong>${formatNumber(attack.troops)}</strong><small>${Math.ceil(attack.remaining)}s</small>`;
+    if (attack.ownerName) token.title = `${attack.ownerName}: ${attack.kind} to ${to.name}`;
     armyLayer.appendChild(token);
   }
 }
