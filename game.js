@@ -1442,7 +1442,6 @@ const cityText = document.getElementById("cityText");
 const neutralCapText = document.getElementById("neutralCapText");
 const characterLevelBadge = document.getElementById("characterLevelBadge");
 const characterXpText = document.getElementById("characterXpText");
-const pauseBtn = document.getElementById("pauseBtn");
 const fullscreenBtn = document.getElementById("fullscreenBtn");
 const mainCityReturnBtn = document.getElementById("mainCityReturnBtn");
 const profileBtn = document.getElementById("profileBtn");
@@ -1699,7 +1698,6 @@ function newGame(playerName) {
     gold: TEST_STARTING_GOLD,
     gameSeconds: 0,
     lastRealTimeMs: Date.now(),
-    paused: false,
     upgrades: createDefaultSkills(),
     daily: { date: currentLocalDateKey(), neutralCaptures: 0 },
     scoutReports: {},
@@ -2162,7 +2160,6 @@ function loadGame() {
           attack.pathLength = route?.length || 0;
         }
       });
-      loaded.paused = false;
       loaded.gameOver = loaded.gameOver || null;
       loaded.log = Array.isArray(loaded.log) ? loaded.log : [];
       loaded.gold = Math.max(TEST_STARTING_GOLD, Number(loaded.gold) || 0);
@@ -2253,7 +2250,6 @@ function normalizeOnlineGameSnapshot(snapshot, fallbackPlayerName = "Ricky") {
         attack.pathLength = route?.length || 0;
       }
     });
-    loaded.paused = false;
     loaded.gameOver = loaded.gameOver || null;
     loaded.log = Array.isArray(loaded.log) ? loaded.log : [];
     loaded.gold = Math.max(TEST_STARTING_GOLD, Number(loaded.gold) || 0);
@@ -2728,7 +2724,7 @@ function updateOnlineUi() {
   if (signedIn) {
     onlineStatusText.textContent = user?.displayName ? `Signed in: ${user.displayName}` : "Signed in";
     if (onlineLastError) {
-      onlineStatusDetail.textContent = `Cloud save paused: ${onlineLastError}`;
+      onlineStatusDetail.textContent = `Cloud save waiting: ${onlineLastError}`;
     } else if (onlineLastSaveAt) {
       onlineStatusDetail.textContent = `Cloud save ready. Last synced ${new Date(onlineLastSaveAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}. Press Enter Kingdom.`;
     } else {
@@ -3576,7 +3572,7 @@ function frame(now) {
   lastFrameTime = now;
   const dt = Math.min(rawDt, 0.25);
 
-  if (state && !state.paused && !state.gameOver) {
+  if (state && !state.gameOver) {
     updateGame(dt);
     saveTimer += dt;
     if (saveTimer >= SAVE_EVERY_SECONDS) {
@@ -4116,15 +4112,12 @@ function renderHud() {
   if (characterXpText) characterXpText.textContent = "";
   applyFlagToElement(hudKingdomFlag, state.flag);
   cityText.textContent = `${playerCities().length}`;
-  pauseBtn.textContent = state.paused ? "▶" : "Ⅱ";
 
   if (!statusText) return;
   if (state.gameOver === "victory") {
     statusText.textContent = "Victory";
   } else if (state.gameOver === "defeat") {
     statusText.textContent = "Defeat";
-  } else if (state.paused) {
-    statusText.textContent = "Paused";
   } else {
     statusText.textContent = `+${getGoldPerSecond().toFixed(1)} gold/s`;
   }
@@ -5727,7 +5720,7 @@ function getBattleReportSummary(report) {
 function showHelpModal() {
   modalTitle.textContent = "How this prototype works";
   modalBody.innerHTML = `
-    <p>This is real-time, not turn-based. Gold, troop growth, player actions, and army travel keep running while the game is unpaused.</p>
+    <p>This is real-time, not turn-based. Gold, troop growth, player actions, and army travel keep running while the game is active.</p>
     <ul>
       <li>Drag empty land to move around the larger map.</li>
       <li>Use the mouse wheel on PC or pinch on phone to zoom in and out.</li>
@@ -5763,13 +5756,6 @@ function showHelpModal() {
     </ul>
   `;
   modal.showModal();
-}
-
-function togglePause() {
-  if (!state || state.gameOver) return;
-  state.paused = !state.paused;
-  showToast(state.paused ? "Paused" : "Resumed");
-  renderAll();
 }
 
 async function toggleFullscreen() {
@@ -6135,7 +6121,6 @@ if (playerNameInput) {
     if (event.key === "Enter") startFromInput(false);
   });
 }
-pauseBtn.addEventListener("click", togglePause);
 if (fullscreenBtn) fullscreenBtn.addEventListener("click", toggleFullscreen);
 if (profileBtn) profileBtn.addEventListener("click", showProfileScreen);
 if (profileCloseBtn) profileCloseBtn.addEventListener("click", closeProfileScreen);
