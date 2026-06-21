@@ -223,7 +223,7 @@
       "level": 1,
       "troops": 10,
       "defense": 1,
-      "startPool": "npc"
+      "startPool": "east"
     },
     {
       "id": "npc_2",
@@ -234,7 +234,7 @@
       "level": 1,
       "troops": 10,
       "defense": 1,
-      "startPool": "npc"
+      "startPool": "east"
     },
     {
       "id": "npc_3",
@@ -245,7 +245,7 @@
       "level": 1,
       "troops": 10,
       "defense": 1,
-      "startPool": "npc"
+      "startPool": "east"
     },
     {
       "id": "npc_4",
@@ -256,7 +256,7 @@
       "level": 1,
       "troops": 10,
       "defense": 1,
-      "startPool": "npc"
+      "startPool": "east"
     },
     {
       "id": "npc_5",
@@ -267,7 +267,7 @@
       "level": 1,
       "troops": 10,
       "defense": 1,
-      "startPool": "npc"
+      "startPool": "east"
     },
     {
       "id": "town_021",

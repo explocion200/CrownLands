@@ -13,7 +13,7 @@ Landscape / horizontal medieval island-conquest prototype inspired by the core l
 - Gold production uses `VP x 8`, plus Prosperous skill bonus.
 - City defense uses `city level x 3%`, city walls, troop count, and Guardian skill.
 - Neutral captures are limited to 30 per local day.
-- Neutral captures are also blocked once the player owns 30 cities; after that, expansion must come from NPC/player-owned cities.
+- Neutral captures are also blocked once the player owns 30 cities; after that, expansion must come from player-owned cities.
 - Captured cities enter a 1-hour XP cooldown. Attacking still works, but capture XP is reduced during cooldown.
 - Hero levels award skill points.
 - Skill tree now includes Striker, Fearless, Brave, Guardian, Prosperous, Recruiter, Rusher, Scavenger, Salvager, and Cautious.
@@ -55,7 +55,7 @@ This build has the first Firebase layer added without breaking guest play.
 - After sign-in, the game automatically checks Firebase first, then falls back to the browser's local save.
 - `firestore.rules` allows private player saves and signed-in shared-island writes for this prototype phase.
 - Phase 2 creates `islands/main`, seeds the 70 city docs, subscribes to city changes in realtime, and claims one starting city for each signed-in player.
-- While online, the browser syncs the signed-in player's owned cities back to Firestore and pauses local NPC AI until combat is moved into transactions.
+- While online, the browser syncs the signed-in player's owned cities back to Firestore for the shared island.
 
 See `FIREBASE_SETUP.md` for the Firebase project steps and the planned shared-world collections.
 

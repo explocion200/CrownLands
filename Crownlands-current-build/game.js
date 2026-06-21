@@ -22,18 +22,12 @@ const DAILY_NEUTRAL_CAPTURE_LIMIT = 30;
 const NEUTRAL_CITY_COUNT_LIMIT = 30;
 const PLAYER_START_TROOPS = 50;
 const PLAYER_SLOT_START_TROOPS = 50;
-const NPC_START_TROOPS = 50;
 const NEUTRAL_START_TROOPS = 10;
 const TEST_STARTING_GOLD = 500;
-const AI_STARTING_GOLD = 500;
-const AI_MIN_WIN_RATIO = 1.12;
-const AI_GOLD_RESERVE = 120;
-const AI_MAX_UPGRADES_PER_TURN = 1;
 const ISLAND_CITY_COUNT = 70;
 const SCOUT_REPORT_SECONDS = 120;
 const SCOUT_NEARBY_COST = 1000;
 const SCOUT_NEARBY_RADIUS = 300;
-const START_POOLS = ["p1", "p2", "p3", "npc"];
 const BASE_TROOP_ATTACK_POWER = 2;
 const CHARACTER_START_LEVEL = 1;
 const CHARACTER_START_XP = 0;
@@ -114,7 +108,7 @@ const OWNER = {
   player: { label: "You", css: "player", flag: "◆" },
   player2: { label: "Player 2", css: "player2", flag: "Ⅱ" },
   player3: { label: "Player 3", css: "player3", flag: "Ⅲ" },
-  enemy: { label: "NPC", css: "enemy", flag: "♜" },
+  enemy: { label: "Enemy", css: "enemy", flag: "♜" },
   neutral: { label: "Neutral", css: "neutral", flag: "•" },
 };
 
@@ -293,7 +287,7 @@ const BASE_CITIES = [
     "level": 1,
     "troops": 10,
     "defense": 1,
-    "startPool": "npc"
+    "startPool": "east"
   },
   {
     "id": "npc_2",
@@ -304,7 +298,7 @@ const BASE_CITIES = [
     "level": 1,
     "troops": 10,
     "defense": 1,
-    "startPool": "npc"
+    "startPool": "east"
   },
   {
     "id": "npc_3",
@@ -315,7 +309,7 @@ const BASE_CITIES = [
     "level": 1,
     "troops": 10,
     "defense": 1,
-    "startPool": "npc"
+    "startPool": "east"
   },
   {
     "id": "npc_4",
@@ -326,7 +320,7 @@ const BASE_CITIES = [
     "level": 1,
     "troops": 10,
     "defense": 1,
-    "startPool": "npc"
+    "startPool": "east"
   },
   {
     "id": "npc_5",
@@ -337,7 +331,7 @@ const BASE_CITIES = [
     "level": 1,
     "troops": 10,
     "defense": 1,
-    "startPool": "npc"
+    "startPool": "east"
   },
   {
     "id": "town_021",
@@ -1507,7 +1501,7 @@ function getPlayableBaseCities() {
     { x: 560, y: 1220, pool: "p1" },
     { x: 660, y: 310, pool: "p2" },
     { x: 2350, y: 470, pool: "p3" },
-    { x: 2230, y: 1180, pool: "npc" },
+    { x: 2230, y: 1180, pool: "east" },
   ];
   const selected = [];
   const used = new Set();
@@ -1563,7 +1557,6 @@ function createIslandStartLayout(playerName) {
     { key: "player", owner: "player", troops: PLAYER_START_TROOPS },
     { key: "player2", owner: "player2", name: "Player 2 Keep", troops: PLAYER_SLOT_START_TROOPS },
     { key: "player3", owner: "player3", name: "Player 3 Keep", troops: PLAYER_SLOT_START_TROOPS },
-    { key: "npc", owner: "enemy", name: "NPC Stronghold", troops: NPC_START_TROOPS },
   ];
 
   for (const slot of assignments) {
@@ -1588,7 +1581,6 @@ function pickStartCities(cities) {
     player: { x: 560, y: 1220, pool: "p1" },
     player2: { x: 660, y: 310, pool: "p2" },
     player3: { x: 2350, y: 470, pool: "p3" },
-    npc: { x: 2230, y: 1180, pool: "npc" },
   };
 
   const used = new Set();
@@ -1617,7 +1609,6 @@ function pickDeterministicStartCities(cities) {
     player: { x: 560, y: 1220, pool: "p1" },
     player2: { x: 660, y: 310, pool: "p2" },
     player3: { x: 2350, y: 470, pool: "p3" },
-    npc: { x: 2230, y: 1180, pool: "npc" },
   };
   const used = new Set();
   const result = {};
@@ -1638,23 +1629,20 @@ function pickDeterministicStartCities(cities) {
 function createOnlineIslandSeed() {
   const baseCities = getPlayableBaseCities();
   const startIds = pickDeterministicStartCities(baseCities);
-  const cities = baseCities.map(city => {
-    const isNpc = city.id === startIds.npc;
-    return {
-      ...city,
-      ownerKind: isNpc ? "npc" : "neutral",
-      ownerUid: null,
-      ownerName: isNpc ? "NPC" : "",
-      ownerFlag: null,
-      level: 1,
-      troops: isNpc ? NPC_START_TROOPS : NEUTRAL_START_TROOPS,
-      troopFloat: isNpc ? NPC_START_TROOPS : NEUTRAL_START_TROOPS,
-      defense: 1,
-      investedGold: 0,
-      lastCapturedAt: null,
-      isMainCity: false,
-    };
-  });
+  const cities = baseCities.map(city => ({
+    ...city,
+    ownerKind: "neutral",
+    ownerUid: null,
+    ownerName: "",
+    ownerFlag: null,
+    level: 1,
+    troops: NEUTRAL_START_TROOPS,
+    troopFloat: NEUTRAL_START_TROOPS,
+    defense: 1,
+    investedGold: 0,
+    lastCapturedAt: null,
+    isMainCity: false,
+  }));
 
   return {
     cities,
@@ -1665,11 +1653,10 @@ function createOnlineIslandSeed() {
 
 function getOnlineClaimCandidateIds(cities, startIds) {
   const selected = [startIds.player, startIds.player2, startIds.player3]
-    .filter(Boolean)
-    .filter(id => id !== startIds.npc);
-  const used = new Set([...selected, startIds.npc].filter(Boolean));
+    .filter(Boolean);
+  const used = new Set(selected);
 
-  while (selected.length < cities.length - 1) {
+  while (selected.length < cities.length) {
     let bestCity = null;
     let bestSpacing = -Infinity;
     for (const city of cities) {
@@ -1704,8 +1691,6 @@ function newGame(playerName) {
     gameSeconds: 0,
     lastRealTimeMs: Date.now(),
     paused: false,
-    aiCooldown: 5.5,
-    ai: createAiState(),
     upgrades: createDefaultSkills(),
     daily: { date: currentLocalDateKey(), neutralCaptures: 0 },
     scoutReports: {},
@@ -1715,7 +1700,7 @@ function newGame(playerName) {
     islandSlots: island.startIds,
     cities: island.cities,
     attacks: [],
-    log: [`Island conquest started with ${ISLAND_CITY_COUNT} cities. Player 1, Player 2, Player 3, and the NPC are spread across the island.`],
+    log: [`Island conquest started with ${ISLAND_CITY_COUNT} cities. Player 1, Player 2, and Player 3 are spread across the island.`],
     gameOver: null,
   };
 }
@@ -1761,18 +1746,6 @@ function normalizeMarchPercent(value) {
   const percent = Number(value);
   const allowed = [0.25, 0.5, 0.8, 1];
   return allowed.includes(percent) ? percent : DEFAULT_MARCH_PERCENT;
-}
-
-function createAiState() {
-  return { gold: AI_STARTING_GOLD, upgradesPurchased: 0 };
-}
-
-function normalizeAiState(ai) {
-  const savedGold = Number(ai?.gold);
-  return {
-    gold: Number.isFinite(savedGold) ? Math.max(0, savedGold) : AI_STARTING_GOLD,
-    upgradesPurchased: Math.max(0, Math.floor(Number(ai?.upgradesPurchased) || 0)),
-  };
 }
 
 function createDefaultFlag() {
@@ -2089,7 +2062,6 @@ function loadGame() {
       loaded.upgrades = normalizeUpgrades(loaded.upgrades, sourceSaveVersion);
       syncCharacterSkillPoints(loaded.character, loaded.upgrades, savedSkillPoints);
       loaded.flag = normalizeFlag(loaded.flag);
-      loaded.ai = normalizeAiState(loaded.ai);
       loaded.marchPercent = normalizeMarchPercent(loaded.marchPercent);
       loaded.daily = normalizeDailyCaptureTracker(loaded.daily);
       loaded.scoutReports = normalizeScoutReports(loaded.scoutReports);
@@ -2117,6 +2089,15 @@ function loadGame() {
         }
         delete city.adj;
         city.owner = OWNER[city.owner] ? city.owner : "neutral";
+        if (city.owner === "enemy" && city.ownerKind !== "player") {
+          city.owner = "neutral";
+          city.ownerKind = "neutral";
+          city.ownerUid = null;
+          city.ownerName = "";
+          city.ownerFlag = null;
+        } else if (city.owner !== "enemy" && city.ownerKind !== "player") {
+          city.ownerKind = city.owner;
+        }
         city.level = clampCityLevel(city.level);
         city.defense = 1;
         city.troops = Math.max(0, Math.floor(Number(city.troops) || 0));
@@ -2174,7 +2155,6 @@ function normalizeOnlineGameSnapshot(snapshot, fallbackPlayerName = "Ricky") {
     loaded.upgrades = normalizeUpgrades(loaded.upgrades, sourceSaveVersion);
     syncCharacterSkillPoints(loaded.character, loaded.upgrades, savedSkillPoints);
     loaded.flag = normalizeFlag(loaded.flag);
-    loaded.ai = normalizeAiState(loaded.ai);
     loaded.marchPercent = normalizeMarchPercent(loaded.marchPercent);
     loaded.daily = normalizeDailyCaptureTracker(loaded.daily);
     loaded.scoutReports = normalizeScoutReports(loaded.scoutReports);
@@ -2202,6 +2182,15 @@ function normalizeOnlineGameSnapshot(snapshot, fallbackPlayerName = "Ricky") {
       }
       delete city.adj;
       city.owner = OWNER[city.owner] ? city.owner : "neutral";
+      if (city.owner === "enemy" && city.ownerKind !== "player") {
+        city.owner = "neutral";
+        city.ownerKind = "neutral";
+        city.ownerUid = null;
+        city.ownerName = "";
+        city.ownerFlag = null;
+      } else if (city.owner !== "enemy" && city.ownerKind !== "player") {
+        city.ownerKind = city.owner;
+      }
       city.level = clampCityLevel(city.level);
       city.defense = 1;
       city.troops = Math.max(0, Math.floor(Number(city.troops) || 0));
@@ -2580,7 +2569,7 @@ function getNeutralCaptureBlockReason(target, owner = "player", excludeAttackId 
   if (owner !== "player" || target?.owner !== "neutral") return "";
   const status = neutralCaptureStatus(excludeAttackId);
   if (status.remainingByCityCount <= 0) {
-    return `Neutral expansion is capped while you own ${NEUTRAL_CITY_COUNT_LIMIT} or more cities. Attack NPC or player-owned cities to keep expanding.`;
+    return `Neutral expansion is capped while you own ${NEUTRAL_CITY_COUNT_LIMIT} or more cities. Attack player-owned cities to keep expanding.`;
   }
   if (status.remainingToday <= 0) {
     return `You cannot conquer more neutral towns today. Daily neutral capture limit reached: ${DAILY_NEUTRAL_CAPTURE_LIMIT}/${DAILY_NEUTRAL_CAPTURE_LIMIT}.`;
@@ -2595,7 +2584,7 @@ function showNeutralCaptureLimitModal(message) {
     <div class="send-outcome lose">
       <strong>You cannot conquer that neutral town right now.</strong>
       <span>${escapeHtml(message)}</span>
-      <small>${status.capturesToday}/${DAILY_NEUTRAL_CAPTURE_LIMIT} neutral captures used today. ${status.cityCount}/${NEUTRAL_CITY_COUNT_LIMIT} owned cities count toward the neutral-city cap. You can still attack NPC or player-owned cities and move troops between your owned cities.</small>
+      <small>${status.capturesToday}/${DAILY_NEUTRAL_CAPTURE_LIMIT} neutral captures used today. ${status.cityCount}/${NEUTRAL_CITY_COUNT_LIMIT} owned cities count toward the neutral-city cap. You can still attack player-owned cities and move troops between your owned cities.</small>
     </div>
     <div class="modal-actions">
       <button id="neutralLimitCloseBtn" class="safe-action" type="button">Close</button>
@@ -2820,7 +2809,6 @@ async function setupOnlineWorld() {
         cityCount: seed.cities.length,
         worldWidth: WORLD_WIDTH,
         worldHeight: WORLD_HEIGHT,
-        npcCityId: seed.startIds.npc || null,
       },
     });
 
@@ -2907,9 +2895,8 @@ function applyOnlineCities(onlineCities) {
     const ownerFlag = online.ownerFlag || null;
     const localOwner = ownerKind === "player"
       ? ownerUid === currentUid ? "player" : "enemy"
-      : ownerKind === "npc" || ownerKind === "enemy"
-        ? "enemy"
-        : "neutral";
+      : ownerKind === "enemy" ? "enemy" : "neutral";
+    const normalizedOwnerKind = ownerKind === "player" || ownerKind === "enemy" ? ownerKind : "neutral";
     const currentIsLocalPlayerCity = current.owner === "player" && (!current.ownerUid || current.ownerUid === currentUid);
     const onlineBelongsToAnotherPlayer = ownerKind === "player" && ownerUid && ownerUid !== currentUid;
     const onlineBelongsToCurrentPlayer = ownerKind === "player" && ownerUid === currentUid;
@@ -2923,7 +2910,7 @@ function applyOnlineCities(onlineCities) {
       ...base,
       name: keepLocalPlayerCity ? current.name || online.name || base.name : online.name || current.name || base.name,
       owner: keepLocalPlayerCity ? "player" : OWNER[localOwner] ? localOwner : "neutral",
-      ownerKind: keepLocalPlayerCity ? "player" : ownerKind,
+      ownerKind: keepLocalPlayerCity ? "player" : normalizedOwnerKind,
       ownerUid: keepLocalPlayerCity ? currentUid || current.ownerUid || ownerUid || null : ownerUid,
       ownerName: keepLocalPlayerCity ? state.playerName : ownerName,
       ownerFlag: keepLocalPlayerCity ? state.flag : ownerFlag,
@@ -2978,7 +2965,7 @@ function toOnlineCityState(city) {
     x: city.x,
     y: city.y,
     startPool: city.startPool || "",
-    ownerKind: city.ownerKind || (city.owner === "player" ? "player" : city.owner === "enemy" ? "npc" : city.owner || "neutral"),
+    ownerKind: city.ownerKind || (city.owner === "player" ? "player" : city.owner === "enemy" ? "enemy" : city.owner || "neutral"),
     ownerUid: city.ownerKind === "player" ? city.ownerUid || null : null,
     ownerName: city.ownerName || "",
     ownerFlag: city.ownerFlag || null,
@@ -3308,10 +3295,6 @@ function playerCities() {
   return state.cities.filter(city => city.owner === "player");
 }
 
-function enemyCities() {
-  return state.cities.filter(city => city.owner === "enemy");
-}
-
 function ownedCities(owner) {
   return state.cities.filter(city => city.owner === owner);
 }
@@ -3607,7 +3590,6 @@ function updateGame(dt) {
   state.gameSeconds += dt;
   updateEconomy(dt);
   updateAttacks(dt);
-  if (!isOnlineWorldActive()) updateEnemyAI(dt);
   checkGameOver();
 }
 
@@ -3623,10 +3605,6 @@ function updateEconomy(dt) {
 
   const goldPerSecond = getGoldPerSecond();
   state.gold += goldPerSecond * dt;
-  if (!isOnlineWorldActive()) {
-    state.ai = normalizeAiState(state.ai);
-    state.ai.gold += getAiGoldPerSecond() * dt;
-  }
 }
 
 function getGoldPerSecond() {
@@ -3671,10 +3649,6 @@ function applyPendingOfflineProgress() {
   }
 }
 
-function getAiGoldPerSecond() {
-  return enemyCities().reduce((sum, city) => sum + getCityStats(city).goldProductionPerSecond, 0);
-}
-
 function updateAttacks(dt) {
   const completed = [];
   for (const attack of state.attacks) {
@@ -3690,85 +3664,6 @@ function updateAttacks(dt) {
   if (completed.length) {
     state.attacks = state.attacks.filter(attack => attack.remaining > 0);
   }
-}
-
-function updateEnemyAI(dt) {
-  state.aiCooldown -= dt;
-  if (state.aiCooldown > 0) return;
-
-  state.ai = normalizeAiState(state.ai);
-  const upgraded = upgradeEnemyCities();
-  const order = chooseEnemyAttackOrder();
-  const launched = order ? launchAttack(order.source.id, order.target.id, order.percent, "enemy") : false;
-
-  if (launched) {
-    addLog(`NPC expanded from ${order.source.name} toward ${order.target.name} with a ${order.ratio.toFixed(2)}x combat advantage.`);
-  }
-  state.aiCooldown = launched ? randomBetween(7.5, 11.5) : upgraded ? randomBetween(4.5, 7) : randomBetween(3.5, 5.5);
-}
-
-function chooseEnemyAttackOrder() {
-  const sources = enemyCities()
-    .filter(city => city.troops >= 12)
-    .sort((a, b) => b.troops - a.troops);
-  if (!sources.length) return null;
-
-  const neutralTargets = state.cities.filter(city => city.owner === "neutral");
-  const hostileTargets = state.cities.filter(city => city.owner !== "enemy" && city.owner !== "neutral");
-  return findBestEnemyAttack(sources, neutralTargets) || findBestEnemyAttack(sources, hostileTargets);
-}
-
-function findBestEnemyAttack(sources, targets) {
-  let best = null;
-  for (const source of sources) {
-    const nearby = targets
-      .filter(target => target.id !== source.id)
-      .sort((a, b) => Math.hypot(source.x - a.x, source.y - a.y) - Math.hypot(source.x - b.x, source.y - b.y))
-      .slice(0, 14);
-
-    for (const target of nearby) {
-      const percent = target.owner === "neutral" ? 0.8 : 0.9;
-      const send = clamp(Math.floor(source.troops * percent), 1, source.troops);
-      const result = calculateCombatResult(send, "enemy", target);
-      if (!result.success || result.ratio < AI_MIN_WIN_RATIO) continue;
-      const score = aiTargetScore(source, target, result);
-      if (!best || score > best.score) {
-        best = { source, target, percent, ratio: result.ratio, score };
-      }
-    }
-  }
-  return best;
-}
-
-function upgradeEnemyCities() {
-  let upgraded = 0;
-  while (upgraded < AI_MAX_UPGRADES_PER_TURN) {
-    const candidate = enemyCities()
-      .filter(city => city.level < MAX_CITY_LEVEL)
-      .map(city => ({ city, cost: getLevelCost(city) }))
-      .filter(option => option.cost <= Math.max(0, state.ai.gold - AI_GOLD_RESERVE))
-      .sort((a, b) => a.city.level - b.city.level || b.city.troops - a.city.troops)[0];
-    if (!candidate) break;
-
-    state.ai.gold -= candidate.cost;
-    candidate.city.level = clampCityLevel(candidate.city.level + 1);
-    state.ai.upgradesPurchased += 1;
-    upgraded += 1;
-    addLog(`NPC upgraded ${candidate.city.name} to level ${candidate.city.level}.`);
-  }
-  return upgraded;
-}
-
-function aiTargetScore(source, city, combatResult = null) {
-  const distance = Math.hypot(source.x - city.x, source.y - city.y);
-  const ownerScore = city.owner === "neutral" ? 1800 : city.owner === "player" ? 620 : 480;
-  const ratioScore = (combatResult?.ratio || 1) * 180;
-  return ownerScore + getCityStats(city).victoryPoints * 2 + ratioScore - distance * 0.14 - city.troops * 0.08;
-}
-
-function targetPriority(city) {
-  if (city.owner === "player") return 1000 + city.level * 8 + city.troops * 0.05;
-  return city.level * 10 - city.troops * 0.03;
 }
 
 function isProtectedMainCity(city) {
@@ -3830,7 +3725,7 @@ function launchAttack(sourceId, targetId, percent, owner, exactTroops = null) {
     addLog(`You sent ${formatNumber(send)} troops from ${source.name} to attack ${target.name}.`);
     showToast(`Attack moving: ${source.name} → ${target.name}`);
   } else if (target.owner === "player") {
-    addLog(`NPC army is attacking ${target.name} with ${formatNumber(send)} troops.`);
+    addLog(`Enemy army is attacking ${target.name} with ${formatNumber(send)} troops.`);
     showToast(`Incoming attack on ${target.name}`);
   }
 
@@ -3865,7 +3760,7 @@ function resolveAttack(attack) {
     return;
   }
 
-  const attackerName = attack.owner === "player" ? "You" : "NPC";
+  const attackerName = attack.owner === "player" ? "You" : "Enemy";
   const oldOwner = target.owner;
   const defenderName = getBattleReportOwnerName(target, oldOwner);
   const attackerReportName = getBattleReportOwnerName(null, attack.owner);
@@ -3965,7 +3860,7 @@ function resolveAttack(attack) {
       target.ownerName = state.playerName;
       target.ownerFlag = state.flag;
     } else {
-      target.ownerKind = attack.owner === "enemy" ? "npc" : attack.owner;
+      target.ownerKind = attack.owner === "enemy" ? "enemy" : attack.owner;
       target.ownerUid = null;
       target.ownerName = OWNER[attack.owner]?.label || "";
       target.ownerFlag = null;
@@ -4022,7 +3917,7 @@ function resolveAttack(attack) {
         opponentName: attackerReportName,
         summary: `${target.name} was captured by ${attackerReportName}.`,
       });
-      addLog(`Lost: the NPC captured ${target.name}. ${formatNumber(savedDefenders)} defenders escaped and ${formatNumber(cautiousRefund + salvagedGold)} gold was recovered.`);
+      addLog(`Lost: the enemy captured ${target.name}. ${formatNumber(savedDefenders)} defenders escaped and ${formatNumber(cautiousRefund + salvagedGold)} gold was recovered.`);
       showToast(`You lost ${target.name}`);
     }
   } else {
@@ -4069,7 +3964,7 @@ function resolveAttack(attack) {
         opponentName: attackerReportName,
         summary: `${target.name} survived with ${formatNumber(result.defendersLeft)} defenders.`,
       });
-      addLog(`Defense held: ${target.name} survived the NPC attack.`);
+      addLog(`Defense held: ${target.name} survived the enemy attack.`);
       if (savedDefenders > 0 || salvagedGold > 0) {
         addLog(`Defense rewards: ${formatNumber(savedDefenders)} defenders regrouped and ${formatNumber(salvagedGold)} gold was salvaged.`);
       }
@@ -4097,10 +3992,6 @@ function checkGameOver() {
     state.gameOver = "defeat";
     addLog("Defeat: you lost your final city.");
     showToast("Defeat. Start a fresh map to retry.");
-  } else if (enemyCities().length === 0) {
-    state.gameOver = "victory";
-    addLog("Victory: the NPC kingdom was defeated.");
-    showToast("Victory. The NPC kingdom was defeated.");
   }
 }
 
@@ -4797,11 +4688,9 @@ function renderPanel() {
 
   if (state.gameOver) {
     if (commanderPanel) commanderPanel.classList.add("visible");
-    panelTitle.textContent = state.gameOver === "victory" ? "NPC defeated" : "Kingdom defeated";
-    panelSubtitle.textContent = state.gameOver === "victory" ? "You defeated the NPC kingdom." : "You lost your final city.";
-    selectedInfo.innerHTML = state.gameOver === "victory"
-      ? `<strong>Victory.</strong> Start fresh to test the loop again.`
-      : `<strong>Defeat.</strong> The NPC took your last city.`;
+    panelTitle.textContent = "Kingdom defeated";
+    panelSubtitle.textContent = "You lost your final city.";
+    selectedInfo.innerHTML = `<strong>Defeat.</strong> Start fresh to retry.`;
     actionButtons.appendChild(button("Fresh Map", hardReset, false, "danger"));
     return;
   }
@@ -5614,7 +5503,7 @@ function getBattleReportSummary(report) {
 function showHelpModal() {
   modalTitle.textContent = "How this prototype works";
   modalBody.innerHTML = `
-    <p>This is real-time, not turn-based. Gold, troop growth, enemy decisions, and army travel keep running while the game is unpaused.</p>
+    <p>This is real-time, not turn-based. Gold, troop growth, player actions, and army travel keep running while the game is unpaused.</p>
     <ul>
       <li>Drag empty land to move around the larger map.</li>
       <li>Use the mouse wheel on PC or pinch on phone to zoom in and out.</li>
@@ -5623,13 +5512,13 @@ function showHelpModal() {
       <li>Use the left button to level that exact city one level at a time.</li>
       <li>Use the center ! button to inspect that city's full stat panel.</li>
       <li>Use Send Troops, choose 25%, 50%, 80%, or 100%, then tap one destination city to launch immediately.</li>
-      <li>Blue destinations receive transfers. Neutral, NPC, Player 2, and Player 3 destinations receive attacks.</li>
+      <li>Blue destinations receive transfers. Neutral and player-owned destinations receive attacks.</li>
       <li>There are no fixed roads. Active army routes appear only after troops are sent.</li>
       <li>Armies calculate the shortest land route around lakes and mountains, then resolve when they arrive.</li>
       <li>All cities start at Level 1 and can upgrade to Level 100.</li>
-      <li>Your main city starts with 50 troops. Gray cities start with 10 defending troops. Player 2, Player 3, and the NPC each start with one city on far sides of the island.</li>
+      <li>Your main city starts with 50 troops. Gray cities start with 10 defending troops. Player 2 and Player 3 start with one city on far sides of the island.</li>
       <li>Use Recruit, Level Up, and Skills to grow faster. Leveling increases walls, defense %, troop production, and gold production.</li>
-      <li>For this local prototype, the NPC is the active AI. Player 2 and Player 3 are placeholder real-player slots until multiplayer is added.</li>
+      <li>Player 2 and Player 3 are placeholder real-player slots until multiplayer fills the shared island.</li>
     </ul>
   `;
   modalBody.innerHTML = `
@@ -5637,7 +5526,7 @@ function showHelpModal() {
     <ul>
       <li>You start with one main city, 50 troops, and 500 gold.</li>
       <li>Neutral expansion has two limits: 30 neutral captures per local day, and neutral captures stop once you own 30 cities.</li>
-      <li>After that, expand by attacking NPC or player-owned cities.</li>
+      <li>After that, expand by attacking player-owned cities.</li>
       <li>Send Troops is single-click after setup: pick a march percent, then tap one destination to launch.</li>
       <li>The top-right fullscreen button expands the game surface and the game disables page text selection while playing.</li>
       <li>City level creates victory points, and victory points drive gold production, troop production, and capture XP value.</li>
@@ -5911,10 +5800,6 @@ function handleMapClick(event) {
   if (event.target.closest(".city-node")) return;
   clearSelection();
 }
-function randomBetween(min, max) {
-  return min + Math.random() * (max - min);
-}
-
 function randomChoice(items) {
   if (!Array.isArray(items) || !items.length) return null;
   return items[Math.floor(Math.random() * items.length)];
