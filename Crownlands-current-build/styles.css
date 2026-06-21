@@ -273,7 +273,49 @@ input {
 .ridge-b { left: 680px; top: 1145px; width: 500px; height: 270px; transform: rotate(37deg); }
 .ridge-c { left: 1775px; top: 440px; width: 410px; height: 260px; transform: rotate(14deg); }
 .ridge-d { left: 460px; top: 405px; width: 320px; height: 230px; transform: rotate(-20deg); }
-.paths { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.territory-svg,
+.paths { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
+.territory-svg {
+  opacity: .96;
+}
+.territory-region path {
+  pointer-events: none;
+}
+.territory-fill {
+  fill: rgba(61, 177, 255, .18);
+}
+.territory-hatch {
+  fill: url(#playerTerritoryHatch);
+  opacity: .78;
+}
+.territory-outline-glow {
+  fill: none;
+  stroke: rgba(215, 244, 255, .84);
+  stroke-width: 10;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+  filter: url(#playerTerritoryGlow);
+  vector-effect: non-scaling-stroke;
+}
+.territory-outline-core {
+  fill: none;
+  stroke: rgba(80, 190, 255, .98);
+  stroke-width: 5;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+  stroke-dasharray: 14 10;
+  vector-effect: non-scaling-stroke;
+}
+.territory-svg.zoomed-out .territory-fill {
+  fill: rgba(84, 192, 255, .38);
+}
+.territory-svg.zoomed-out .territory-hatch {
+  opacity: .24;
+}
+.territory-svg.zoomed-out .territory-outline-core {
+  stroke-width: 4;
+  stroke-dasharray: 0;
+}
 .paths polyline { fill: none; stroke-width: 9; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 20 14; animation: dash 1.1s linear infinite; filter: drop-shadow(0 3px 0 rgba(0,0,0,.28)); }
 .paths polyline.player-route { stroke: rgba(255,218,111,.92); }
 .paths polyline.enemy-route { stroke: rgba(255,101,91,.84); }

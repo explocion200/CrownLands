@@ -8,6 +8,10 @@ const ONLINE_ARMY_EXPIRY_GRACE_SECONDS = 8;
 const HUD_RENDER_INTERVAL_MS = 250;
 const MAP_RENDER_INTERVAL_MS = 1600;
 const CITY_LIST_PAGE_SIZE = 5;
+const TERRITORY_CLUSTER_DISTANCE = 350;
+const TERRITORY_SINGLE_RADIUS = 118;
+const TERRITORY_GROUP_RADIUS = 146;
+const TERRITORY_POINT_COUNT = 72;
 const MAX_OFFLINE_PROGRESS_SECONDS = 7 * 24 * 60 * 60;
 const WORLD_WIDTH = 2800;
 const WORLD_HEIGHT = 1575;
@@ -1481,6 +1485,7 @@ const flagBackBtn = document.getElementById("flagBackBtn");
 const flagExitBtn = document.getElementById("flagExitBtn");
 const mapFrame = document.getElementById("mapFrame");
 const mapWorld = document.getElementById("mapWorld");
+const territorySvg = document.getElementById("territorySvg");
 const pathsSvg = document.getElementById("pathsSvg");
 const cityLayer = document.getElementById("cityLayer");
 const armyLayer = document.getElementById("armyLayer");
@@ -3603,6 +3608,7 @@ function frame(now) {
     }
     if (now - lastRenderTime > MAP_RENDER_INTERVAL_MS && now >= interactionRenderLockUntil) {
       lastRenderTime = now;
+      renderTerritories();
       renderPaths();
       renderCities();
       renderPanel();
@@ -4096,6 +4102,7 @@ function renderAll() {
   lastRenderTime = now;
   updateCameraTransform();
   renderHud();
+  renderTerritories();
   renderPaths();
   renderCities();
   renderPanel();
@@ -4366,6 +4373,166 @@ function saveFlagEditor() {
   renderHud();
   showProfileView();
   showToast("Kingdom flag saved.");
+}
+
+function renderTerritories() {
+  if (!territorySvg) return;
+  ensureTerritorySvgContent();
+  updateTerritoryZoomStyle();
+  const content = territorySvg.querySelector("#territoryLayerContent");
+  if (!content) return;
+  content.innerHTML = "";
+  if (!state) return;
+
+  const groups = groupTerritoryCities(playerCities());
+  groups.forEach((group, index) => {
+    const pathData = createTerritoryPath(group);
+    if (!pathData) return;
+    const region = document.createElementNS("http://www.w3.org/2000/svg", "g");
+    region.classList.add("territory-region");
+    region.dataset.territoryIndex = String(index);
+    ["territory-fill", "territory-hatch", "territory-outline-glow", "territory-outline-core"].forEach(className => {
+      const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+      path.setAttribute("d", pathData);
+      path.classList.add(className);
+      region.appendChild(path);
+    });
+    content.appendChild(region);
+  });
+}
+
+function ensureTerritorySvgContent() {
+  if (!territorySvg || territorySvg.querySelector("#territoryLayerContent")) return;
+  territorySvg.innerHTML = `
+    <defs>
+      <pattern id="playerTerritoryHatch" width="22" height="22" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+        <rect width="22" height="22" fill="#4ab9ff" opacity="0.13"></rect>
+        <rect x="0" y="0" width="8" height="22" fill="#99dbff" opacity="0.32"></rect>
+      </pattern>
+      <filter id="playerTerritoryGlow" x="-16%" y="-16%" width="132%" height="132%">
+        <feDropShadow dx="0" dy="0" stdDeviation="6" flood-color="#67c7ff" flood-opacity="0.58"></feDropShadow>
+      </filter>
+    </defs>
+    <g id="territoryLayerContent"></g>
+  `;
+}
+
+function updateTerritoryZoomStyle() {
+  if (!territorySvg) return;
+  territorySvg.classList.toggle("zoomed-out", zoom <= 0.82);
+}
+
+function groupTerritoryCities(cities) {
+  const groups = [];
+  const visited = new Set();
+  for (const city of cities) {
+    if (visited.has(city.id)) continue;
+    const group = [];
+    const stack = [city];
+    visited.add(city.id);
+    while (stack.length) {
+      const current = stack.pop();
+      group.push(current);
+      for (const other of cities) {
+        if (visited.has(other.id) || other.id === current.id) continue;
+        const distance = Math.hypot(current.x - other.x, current.y - other.y);
+        if (distance > TERRITORY_CLUSTER_DISTANCE) continue;
+        if (!linePassable(current, other)) continue;
+        visited.add(other.id);
+        stack.push(other);
+      }
+    }
+    groups.push(group);
+  }
+  return groups;
+}
+
+function createTerritoryPath(cities) {
+  if (!cities.length) return "";
+  const center = getTerritoryCenter(cities);
+  const radius = cities.length > 1 ? TERRITORY_GROUP_RADIUS : TERRITORY_SINGLE_RADIUS;
+  const points = [];
+
+  for (let i = 0; i < TERRITORY_POINT_COUNT; i++) {
+    const angle = (Math.PI * 2 * i) / TERRITORY_POINT_COUNT;
+    const cos = Math.cos(angle);
+    const sin = Math.sin(angle);
+    let bestDistance = radius;
+    let anchor = cities[0];
+
+    for (const city of cities) {
+      const dx = city.x - center.x;
+      const dy = city.y - center.y;
+      const along = dx * cos + dy * sin;
+      const across = Math.abs(dx * -sin + dy * cos);
+      if (across > radius) continue;
+      const reach = along + Math.sqrt(Math.max(0, radius * radius - across * across));
+      if (reach > bestDistance) {
+        bestDistance = reach;
+        anchor = city;
+      }
+    }
+
+    const softenedDistance = bestDistance + getTerritoryEdgeVariation(i, cities.length);
+    const rawPoint = {
+      x: center.x + cos * softenedDistance,
+      y: center.y + sin * softenedDistance,
+    };
+    points.push(pullTerritoryPointToLand(rawPoint, anchor || center));
+  }
+
+  return smoothClosedPath(points);
+}
+
+function getTerritoryCenter(cities) {
+  return {
+    x: cities.reduce((sum, city) => sum + city.x, 0) / cities.length,
+    y: cities.reduce((sum, city) => sum + city.y, 0) / cities.length,
+  };
+}
+
+function getTerritoryEdgeVariation(index, count) {
+  const strength = count > 1 ? 12 : 7;
+  return Math.sin(index * 1.73) * strength + Math.cos(index * 0.91) * strength * 0.45;
+}
+
+function pullTerritoryPointToLand(point, anchor) {
+  const target = anchor || point;
+  for (let i = 0; i <= 12; i++) {
+    const t = 1 - i * 0.065;
+    const x = target.x + (point.x - target.x) * t;
+    const y = target.y + (point.y - target.y) * t;
+    if (isTerritoryPaintPoint(x, y)) return { x, y };
+  }
+  return point;
+}
+
+function isTerritoryPaintPoint(x, y) {
+  if (!isBaseLandPoint(x, y)) return false;
+  return !TERRAIN_BLOCKERS.some(shape => {
+    const extra = shape.type === "mountain" ? 10 : 4;
+    return pointInEllipse(x, y, shape, extra);
+  });
+}
+
+function smoothClosedPath(points) {
+  if (!points.length) return "";
+  if (points.length < 3) return `M ${points.map(point => `${formatPathNumber(point.x)} ${formatPathNumber(point.y)}`).join(" L ")} Z`;
+  let path = `M ${formatPathNumber(points[0].x)} ${formatPathNumber(points[0].y)}`;
+  for (let i = 0; i < points.length; i++) {
+    const p0 = points[(i - 1 + points.length) % points.length];
+    const p1 = points[i];
+    const p2 = points[(i + 1) % points.length];
+    const p3 = points[(i + 2) % points.length];
+    const c1 = { x: p1.x + (p2.x - p0.x) / 6, y: p1.y + (p2.y - p0.y) / 6 };
+    const c2 = { x: p2.x - (p3.x - p1.x) / 6, y: p2.y - (p3.y - p1.y) / 6 };
+    path += ` C ${formatPathNumber(c1.x)} ${formatPathNumber(c1.y)}, ${formatPathNumber(c2.x)} ${formatPathNumber(c2.y)}, ${formatPathNumber(p2.x)} ${formatPathNumber(p2.y)}`;
+  }
+  return `${path} Z`;
+}
+
+function formatPathNumber(value) {
+  return Number(value).toFixed(1);
 }
 
 function renderPaths() {
@@ -5856,6 +6023,7 @@ function updateCameraTransform() {
   camera.x = clamp(camera.x, 0, maxX);
   camera.y = clamp(camera.y, 0, maxY);
   mapWorld.style.transform = `translate3d(${-camera.x * zoom}px, ${-camera.y * zoom}px, 0) scale(${zoom})`;
+  updateTerritoryZoomStyle();
   updateMainCityReturnButton(rect);
 }
 
