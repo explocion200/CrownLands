@@ -183,6 +183,18 @@
     };
   }
 
+  function cleanCityLayoutSeed(city) {
+    return {
+      id: city.id,
+      name: city.name || city.id,
+      x: Number(city.x) || 0,
+      y: Number(city.y) || 0,
+      startPool: city.startPool || "",
+      regionId: city.regionId || city.startPool || "",
+      defense: 1,
+    };
+  }
+
   function cleanArmyMovement(army) {
     const path = Array.isArray(army?.path)
       ? army.path
@@ -215,32 +227,36 @@
     await init();
     const uid = requireSignedIn();
     if (!uid) return false;
-    const { collection, doc, getDocs, setDoc, writeBatch, serverTimestamp } = client.modules.firestore;
+    const { doc, getDoc, setDoc, writeBatch, serverTimestamp } = client.modules.firestore;
     const islandRef = doc(client.db, "islands", islandId);
     const citySeeds = cities.map(cleanCitySeed);
+    const islandSnap = await getDoc(islandRef);
+    const islandData = islandSnap.exists() ? islandSnap.data() : {};
+    const targetVersion = Number(meta.version) || 21;
+    const targetCityCount = citySeeds.length;
+    const needsCitySeed = !islandSnap.exists()
+      || Number(islandData.layoutSeedVersion) < targetVersion
+      || Number(islandData.seededCityCount) < targetCityCount;
 
     await setDoc(islandRef, {
       id: islandId,
-      version: Number(meta.version) || 21,
-      cityCount: citySeeds.length,
+      version: targetVersion,
+      cityCount: targetCityCount,
       createdBy: uid,
       updatedAt: serverTimestamp(),
       ...meta,
     }, { merge: true });
 
-    const existingCityIds = new Set();
-    const citySnapshot = await getDocs(collection(client.db, "islands", islandId, "cities"));
-    citySnapshot.forEach(cityDoc => existingCityIds.add(cityDoc.id));
+    if (!needsCitySeed) return true;
 
     let batch = writeBatch(client.db);
     let writes = 0;
     for (const city of citySeeds) {
-      if (existingCityIds.has(city.id)) continue;
       batch.set(doc(client.db, "islands", islandId, "cities", city.id), {
-        ...city,
+        ...cleanCityLayoutSeed(city),
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
-      });
+      }, { merge: true });
       writes += 1;
       if (writes >= 450) {
         await batch.commit();
@@ -249,6 +265,12 @@
       }
     }
     if (writes > 0) await batch.commit();
+
+    await setDoc(islandRef, {
+      layoutSeedVersion: targetVersion,
+      seededCityCount: targetCityCount,
+      updatedAt: serverTimestamp(),
+    }, { merge: true });
 
     return true;
   }

@@ -3106,6 +3106,16 @@ function disconnectOnlineWorld() {
   onlineWorldLoading = false;
 }
 
+function withTimeout(promise, timeoutMs, message) {
+  let timer = null;
+  const timeout = new Promise((_, reject) => {
+    timer = window.setTimeout(() => reject(new Error(message)), timeoutMs);
+  });
+  return Promise.race([promise, timeout]).finally(() => {
+    if (timer) window.clearTimeout(timer);
+  });
+}
+
 async function setupOnlineWorld() {
   const api = getOnlineApi();
   if (!state || !api?.isConfigured?.() || !api?.isSignedIn?.()) return false;
@@ -3116,7 +3126,8 @@ async function setupOnlineWorld() {
   onlineStatusDetail.textContent = "Loading the shared island...";
   try {
     const seed = createOnlineIslandSeed();
-    await api.ensureMainIsland({
+    onlineStatusDetail.textContent = "Preparing the shared world...";
+    await withTimeout(api.ensureMainIsland({
       islandId: ONLINE_ISLAND_ID,
       cities: seed.cities,
       meta: {
@@ -3128,14 +3139,15 @@ async function setupOnlineWorld() {
         worldWidth: WORLD_WIDTH,
         worldHeight: WORLD_HEIGHT,
       },
-    });
+    }), 25000, "Shared world setup is taking too long.");
 
-    const claim = await api.claimStartingCity({
+    onlineStatusDetail.textContent = "Claiming your starting city...";
+    const claim = await withTimeout(api.claimStartingCity({
       islandId: ONLINE_ISLAND_ID,
       candidateCityIds: seed.claimCandidateIds,
       playerName: state.playerName,
       flag: state.flag,
-    });
+    }), 12000, "Starting city claim is taking too long.");
 
     state.online = {
       islandId: ONLINE_ISLAND_ID,
@@ -3161,6 +3173,7 @@ async function setupOnlineWorld() {
         resolve();
       };
     });
+    onlineStatusDetail.textContent = "Opening the shared island...";
     onlineIslandUnsubscribe = api.subscribeIsland(ONLINE_ISLAND_ID, {
       onCities: onlineCities => {
         applyOnlineCities(onlineCities);
