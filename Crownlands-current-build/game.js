@@ -1,10 +1,10 @@
 const WORLD_CONFIG = window.CROWNLANDS_WORLD_CONFIG || {};
-const WORLD_SCHEMA_VERSION = Number(WORLD_CONFIG.version) || 21;
+const WORLD_SCHEMA_VERSION = Number(WORLD_CONFIG.version) || 23;
 const WORLD_REGIONS = Array.isArray(WORLD_CONFIG.regions) ? WORLD_CONFIG.regions : [];
 const LAND_BRIDGES = Array.isArray(WORLD_CONFIG.landBridges) ? WORLD_CONFIG.landBridges : [];
-const REGION_CITY_COUNT = Math.max(1, Math.floor(Number(WORLD_CONFIG.cityCountPerRegion) || 100));
-const STORAGE_KEY = "crownlands-realtime-v21";
-const LEGACY_STORAGE_KEYS = ["crownlands-realtime-v20", "crownlands-realtime-v19", "crownlands-realtime-v18", "crownlands-realtime-v17", "crownlands-realtime-v16", "crownlands-realtime-v15", "realm-lords-realtime-v14", "realm-lords-realtime-v13", "realm-lords-realtime-v12", "realm-lords-realtime-v11", "realm-lords-realtime-v10", "realm-lords-realtime-v9", "realm-lords-realtime-v8", "realm-lords-realtime-v7", "realm-lords-realtime-v6", "realm-lords-realtime-v5", "realm-lords-realtime-v4", "realm-lords-realtime-v3"];
+const REGION_CITY_COUNT = Math.max(1, Math.floor(Number(WORLD_CONFIG.cityCountPerRegion) || 50));
+const STORAGE_KEY = "crownlands-realtime-v23";
+const LEGACY_STORAGE_KEYS = ["crownlands-realtime-v22", "crownlands-realtime-v21", "crownlands-realtime-v20", "crownlands-realtime-v19", "crownlands-realtime-v18", "crownlands-realtime-v17", "crownlands-realtime-v16", "crownlands-realtime-v15", "realm-lords-realtime-v14", "realm-lords-realtime-v13", "realm-lords-realtime-v12", "realm-lords-realtime-v11", "realm-lords-realtime-v10", "realm-lords-realtime-v9", "realm-lords-realtime-v8", "realm-lords-realtime-v7", "realm-lords-realtime-v6", "realm-lords-realtime-v5", "realm-lords-realtime-v4", "realm-lords-realtime-v3"];
 const SAVE_EVERY_SECONDS = 1.5;
 const ONLINE_SAVE_SECONDS = 8;
 const ONLINE_ISLAND_ID = "main";
@@ -1389,6 +1389,7 @@ const WALKABLE_TERRAIN_ROWS = [
 const TERRAIN_BLOCKERS = createWorldTerrainBlockers();
 const NO_CITY_TERRAIN = createWorldNoCityTerrain();
 const routeCache = new Map();
+const pathMetricCache = new WeakMap();
 
 
 let state;
@@ -1436,6 +1437,9 @@ let cityListSortDirection = "desc";
 let cityListPage = 0;
 let playableBaseCitiesCache = null;
 let interactionRenderLockUntil = 0;
+let cityRenderSignature = "";
+let territoryRenderSignature = "";
+let pathRenderSignature = "";
 
 const setupScreen = document.getElementById("setupScreen");
 const gameView = document.querySelector(".game-view");
@@ -1653,19 +1657,41 @@ function generateRegionCitySlots(region, count) {
 }
 
 function findFallbackCityPoint(region, existingCities, random, spacing) {
+  let anyValidPoint = null;
   for (let attempt = 0; attempt < 800; attempt++) {
     const angle = random() * Math.PI * 2;
-    const radius = Math.sqrt(random()) * 0.96;
+    const reserveRatio = getRegionStrongholdReserveRatio(region);
+    const radius = reserveRatio + (Math.sqrt(random()) * Math.max(0, 0.96 - reserveRatio));
     const candidate = {
       x: Math.round(region.x + Math.cos(angle) * region.cityRx * radius),
       y: Math.round(region.y + Math.sin(angle) * region.cityRy * radius),
     };
     if (!isValidCityPlacementPoint(candidate.x, candidate.y)) continue;
+    anyValidPoint = anyValidPoint || candidate;
     if (existingCities.some(city => Math.hypot(city.x - candidate.x, city.y - candidate.y) < spacing)) continue;
     return candidate;
   }
 
-  return { x: Math.round(region.x), y: Math.round(region.y) };
+  return anyValidPoint || { x: Math.round(region.x), y: Math.round(region.y + region.cityRy * 0.45) };
+}
+
+function getRegionStrongholdReserveRatio(region) {
+  const ratio = Number(region?.strongholdReserveRatio ?? WORLD_CONFIG.strongholdReserveRatio ?? 0);
+  return clamp(ratio, 0, 0.7);
+}
+
+function isWorldStrongholdReservePoint(x, y) {
+  return WORLD_REGIONS.some(region => {
+    const ratio = getRegionStrongholdReserveRatio(region);
+    if (ratio <= 0) return false;
+    return pointInEllipse(x, y, {
+      x: region.x,
+      y: region.y,
+      rx: region.cityRx * ratio,
+      ry: region.cityRy * ratio,
+      rot: region.rot || 0,
+    }, 76);
+  });
 }
 
 function generateCityName(region, index) {
@@ -1918,11 +1944,11 @@ function getStartCityAnchors() {
   const east = getRegionById("east") || center;
   const south = getRegionById("south") || center;
   return {
-    player: { x: center.x - center.cityRx * 0.34, y: center.y + center.cityRy * 0.28, pool: center.id },
-    north: { x: north.x, y: north.y, pool: north.id },
-    west: { x: west.x, y: west.y, pool: west.id },
-    east: { x: east.x, y: east.y, pool: east.id },
-    south: { x: south.x, y: south.y, pool: south.id },
+    player: { x: west.x - west.cityRx * 0.18, y: west.y, pool: west.id },
+    north: { x: north.x, y: north.y - north.cityRy * 0.26, pool: north.id },
+    west: { x: west.x - west.cityRx * 0.24, y: west.y, pool: west.id },
+    east: { x: east.x + east.cityRx * 0.24, y: east.y, pool: east.id },
+    south: { x: south.x, y: south.y + south.cityRy * 0.26, pool: south.id },
   };
 }
 
@@ -1952,11 +1978,26 @@ function createOnlineIslandSeed() {
 }
 
 function getOnlineClaimCandidateIds(cities, startIds) {
-  const selected = [startIds.player, startIds.north, startIds.west, startIds.east, startIds.south]
-    .filter(Boolean);
-  const used = new Set(selected);
+  const selected = [];
+  const used = new Set();
+  [startIds.north, startIds.south, startIds.west, startIds.east, startIds.player]
+    .filter(Boolean)
+    .forEach(cityId => {
+      if (used.has(cityId)) return;
+      selected.push(cityId);
+      used.add(cityId);
+    });
+  const outerCities = cities.filter(city => city.regionId !== "center");
+  const centerCities = cities.filter(city => city.regionId === "center");
 
-  while (selected.length < cities.length) {
+  appendSpacedClaimCandidates(outerCities, selected, used);
+  appendSpacedClaimCandidates(centerCities, selected, used);
+
+  return selected;
+}
+
+function appendSpacedClaimCandidates(cities, selected, used) {
+  while (true) {
     let bestCity = null;
     let bestSpacing = -Infinity;
     for (const city of cities) {
@@ -1976,8 +2017,6 @@ function getOnlineClaimCandidateIds(cities, startIds) {
     selected.push(bestCity.id);
     used.add(bestCity.id);
   }
-
-  return selected;
 }
 
 function newGame(playerName) {
@@ -2401,7 +2440,7 @@ function loadGame() {
         loaded.islandSlots = island.startIds;
         loaded.attacks = [];
         loaded.log = Array.isArray(loaded.log) ? loaded.log : [];
-        loaded.log.push("0:00 - World layout upgraded to the five-island 500-city map.");
+        loaded.log.push("0:00 - World layout upgraded to the five-island 250-city map.");
       }
       loaded.cities.forEach(city => {
         const base = playableBases.find(item => item.id === city.id);
@@ -2493,7 +2532,7 @@ function normalizeOnlineGameSnapshot(snapshot, fallbackPlayerName = "Ricky") {
       loaded.islandSlots = island.startIds;
       loaded.attacks = [];
       loaded.log = Array.isArray(loaded.log) ? loaded.log : [];
-      loaded.log.push("0:00 - Cloud save layout was updated to the five-island 500-city map.");
+      loaded.log.push("0:00 - Cloud save layout was updated to the five-island 250-city map.");
     }
 
     loaded.cities.forEach(city => {
@@ -3126,7 +3165,7 @@ async function setupOnlineWorld() {
   onlineStatusDetail.textContent = "Loading the shared island...";
   try {
     const seed = createOnlineIslandSeed();
-    onlineStatusDetail.textContent = "Preparing the shared world...";
+    onlineStatusDetail.textContent = `Preparing ${seed.cities.length} city slots...`;
     await withTimeout(api.ensureMainIsland({
       islandId: ONLINE_ISLAND_ID,
       cities: seed.cities,
@@ -3139,7 +3178,7 @@ async function setupOnlineWorld() {
         worldWidth: WORLD_WIDTH,
         worldHeight: WORLD_HEIGHT,
       },
-    }), 25000, "Shared world setup is taking too long.");
+    }), 20000, "Shared world setup is taking too long.");
 
     onlineStatusDetail.textContent = "Claiming your starting city...";
     const claim = await withTimeout(api.claimStartingCity({
@@ -3165,7 +3204,7 @@ async function setupOnlineWorld() {
     let initialCitiesReady = false;
     let resolveInitialCities = () => {};
     const initialCitiesPromise = new Promise(resolve => {
-      const timer = setTimeout(resolve, 5000);
+      const timer = setTimeout(resolve, 3500);
       resolveInitialCities = () => {
         if (initialCitiesReady) return;
         initialCitiesReady = true;
@@ -3684,6 +3723,7 @@ function isWalkablePoint(x, y, padding = 0) {
 
 function isValidCityPlacementPoint(x, y) {
   if (!isWalkablePoint(x, y, 0)) return false;
+  if (isWorldStrongholdReservePoint(x, y)) return false;
   for (const [dx, dy] of [[0, 0], [32, 0], [-32, 0], [0, 32], [0, -32], [24, 24], [-24, 24], [24, -24], [-24, -24]]) {
     if (!isBaseLandPoint(x + dx, y + dy)) return false;
   }
@@ -3853,19 +3893,36 @@ function cloneRoute(route) {
 
 function pointAlongRoute(points, progress) {
   if (!Array.isArray(points) || points.length < 2) return { x: 0, y: 0 };
-  const total = routeLength(points);
-  let wanted = total * clamp(progress, 0, 1);
-  for (let i = 1; i < points.length; i++) {
-    const a = points[i - 1];
-    const b = points[i];
-    const segment = Math.hypot(b.x - a.x, b.y - a.y);
-    if (wanted <= segment) {
-      const t = segment <= 0 ? 0 : wanted / segment;
-      return { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t };
+  const metrics = getPathMetrics(points);
+  let wanted = metrics.total * clamp(progress, 0, 1);
+  for (const segment of metrics.segments) {
+    if (wanted <= segment.length) {
+      const t = segment.length <= 0 ? 0 : wanted / segment.length;
+      return {
+        x: segment.from.x + (segment.to.x - segment.from.x) * t,
+        y: segment.from.y + (segment.to.y - segment.from.y) * t,
+      };
     }
-    wanted -= segment;
+    wanted -= segment.length;
   }
   return points[points.length - 1];
+}
+
+function getPathMetrics(points) {
+  const cached = pathMetricCache.get(points);
+  if (cached) return cached;
+  let total = 0;
+  const segments = [];
+  for (let i = 1; i < points.length; i += 1) {
+    const from = points[i - 1];
+    const to = points[i];
+    const length = Math.hypot(to.x - from.x, to.y - from.y);
+    total += length;
+    segments.push({ from, to, length });
+  }
+  const metrics = { total, segments };
+  pathMetricCache.set(points, metrics);
+  return metrics;
 }
 
 function frame(now) {
@@ -4400,7 +4457,7 @@ function renderAll() {
   renderHud();
   renderTerritories();
   renderPaths();
-  renderCities();
+  renderCities(true);
   renderPanel();
   renderArmies();
 }
@@ -4677,10 +4734,24 @@ function renderTerritories() {
   updateTerritoryZoomStyle();
   const content = territorySvg.querySelector("#territoryLayerContent");
   if (!content) return;
-  content.innerHTML = "";
-  if (!state) return;
+  if (!state) {
+    if (territoryRenderSignature) {
+      territoryRenderSignature = "";
+      content.innerHTML = "";
+    }
+    return;
+  }
 
-  const groups = groupTerritoryCities(playerCities());
+  const ownedCities = playerCities();
+  const signature = ownedCities
+    .map(city => `${city.id}:${Math.round(city.x)}:${Math.round(city.y)}`)
+    .sort()
+    .join("|");
+  if (signature === territoryRenderSignature) return;
+  territoryRenderSignature = signature;
+  content.innerHTML = "";
+
+  const groups = groupTerritoryCities(ownedCities);
   groups.forEach((group, index) => {
     const pathData = createTerritoryPath(group);
     if (!pathData) return;
@@ -4870,8 +4941,14 @@ function formatPathNumber(value) {
 }
 
 function renderPaths() {
+  const armies = getRenderableArmies();
+  const signature = armies
+    .map(attack => `${attack.id}:${attack.kind || ""}:${attack.owner || ""}:${attack.fromId}:${attack.toId}:${attack.pathLength || 0}:${Array.isArray(attack.path) ? attack.path.length : 0}`)
+    .join("|");
+  if (signature === pathRenderSignature) return;
+  pathRenderSignature = signature;
   pathsSvg.innerHTML = "";
-  for (const attack of getRenderableArmies()) {
+  for (const attack of armies) {
     const from = cityById(attack.fromId);
     const to = cityById(attack.toId);
     if (!from || !to) continue;
@@ -4917,19 +4994,60 @@ function shouldRenderCityNode(city, bounds) {
   return isPointInBounds(city.x, city.y, bounds);
 }
 
-function renderCities() {
+function getFlagSignature(flag) {
+  if (!flag) return "";
+  const normalized = normalizeFlag(flag);
+  return `${normalized.primary}:${normalized.secondary}:${normalized.pattern}:${normalized.symbol}`;
+}
+
+function getCityRenderSignature(visibleCities) {
+  const playerFlag = getFlagSignature(state.flag);
+  const cityTokens = visibleCities.map(city => {
+    const report = city.owner === "player" ? null : getScoutReport(city.id);
+    return [
+      city.id,
+      city.owner,
+      city.ownerKind || "",
+      city.ownerUid || "",
+      city.ownerName || "",
+      getFlagSignature(city.ownerFlag),
+      city.level,
+      Math.floor(Number(city.troops) || 0),
+      city.isMainCity ? 1 : 0,
+      report ? `${Math.floor(Number(report.troops) || 0)}:${report.expiresAt > state.gameSeconds ? 1 : 0}` : "",
+    ].join(":");
+  }).join("|");
+
+  return [
+    Math.round(zoom * 100),
+    selectedSourceId || "",
+    selectedTargetId || "",
+    sendMode ? 1 : 0,
+    scoutNearbySourceId || "",
+    state.mainCityId || "",
+    state.playerName || "",
+    playerFlag,
+    cityTokens,
+  ].join(";");
+}
+
+function renderCities(force = false) {
   const source = selectedSourceId ? cityById(selectedSourceId) : null;
   let scoutNearbySource = scoutNearbySourceId ? cityById(scoutNearbySourceId) : null;
   if (scoutNearbySource?.owner !== "player") {
     scoutNearbySourceId = null;
     scoutNearbySource = null;
   }
+  const visibleBounds = getVisibleWorldBounds();
+  const visibleCities = state.cities.filter(city => shouldRenderCityNode(city, visibleBounds));
+  const signature = getCityRenderSignature(visibleCities);
+  if (!force && signature === cityRenderSignature) return;
+  cityRenderSignature = signature;
+
   cityLayer.innerHTML = "";
   if (scoutNearbySource) renderScoutNearbyRadius(scoutNearbySource);
-  const visibleBounds = getVisibleWorldBounds();
 
-  state.cities.forEach(city => {
-    if (!shouldRenderCityNode(city, visibleBounds)) return;
+  visibleCities.forEach(city => {
     const btn = document.createElement("button");
     btn.type = "button";
     btn.dataset.cityId = city.id;
@@ -4992,10 +5110,6 @@ function renderCities() {
       ${cityLabel}
     `;
     applyCityOwnerFlags(btn, city);
-    btn.addEventListener("click", event => {
-      event.stopPropagation();
-      selectCity(city.id);
-    });
     cityLayer.appendChild(btn);
   });
 
@@ -6263,7 +6377,9 @@ function showHelpModal() {
       <li>There are no fixed roads. Active army routes appear only after troops are sent.</li>
       <li>Armies calculate the shortest land route around lakes and mountains, then resolve when they arrive.</li>
       <li>All cities start at Level 1 and can upgrade to Level 100.</li>
-      <li>The world has five large islands, 500 total city slots, and natural land bridges connecting every outer island to the center battleground.</li>
+      <li>The world has five large islands, 250 total city slots, and natural land bridges connecting every outer island to the center battleground.</li>
+      <li>Each island keeps its middle clear for a future island stronghold.</li>
+      <li>New online players claim starting cities on the outer islands first; the center island is a fallback once those are full.</li>
       <li>Your main city starts with 50 troops. Gray cities start with 10 defending troops.</li>
       <li>Use Recruit, Level Up, and Skills to grow faster. Leveling increases walls, defense %, troop production, and gold production.</li>
       <li>Every signed-in player claims one starting city, then expands through neutral captures and player combat.</li>
@@ -6674,6 +6790,12 @@ if (flagExitBtn) flagExitBtn.addEventListener("click", closeProfileScreen);
 clearSelectBtn.addEventListener("click", () => clearSelection());
 cityLayer.addEventListener("pointerdown", event => {
   if (event.target.closest(".city-node, .city-wheel-action")) interactionRenderLockUntil = performance.now() + 600;
+});
+cityLayer.addEventListener("click", event => {
+  const cityButton = event.target.closest(".city-node");
+  if (!cityButton || !cityLayer.contains(cityButton)) return;
+  event.stopPropagation();
+  selectCity(cityButton.dataset.cityId);
 });
 mapFrame.addEventListener("pointerdown", startPan);
 mapFrame.addEventListener("pointermove", movePan);

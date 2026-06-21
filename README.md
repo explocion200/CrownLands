@@ -6,7 +6,9 @@ Landscape / horizontal medieval island-conquest prototype inspired by the core l
 
 - Player starts with 1 main city, 50 troops, and 500 gold.
 - Google sign-in connects the account first; the player enters the live kingdom with a separate Enter Kingdom button.
-- The world contains 5 large islands with 500 total dynamic city slots: 100 on the center island and 100 on each outer island.
+- The world contains 5 large islands with 250 total dynamic city slots: 50 on the center island and 50 on each outer island.
+- Each island keeps its middle clear for a future island stronghold.
+- New online players claim starting cities on the outer islands first; the center island is only used when the outer islands are full.
 - Cities produce troops and gold in real time while the game is active.
 - Offline production catches up when the player returns: troops stay in the cities that produced them, while troops from cities lost offline rally to the main city.
 - City level creates victory points.
@@ -38,7 +40,7 @@ Landscape / horizontal medieval island-conquest prototype inspired by the core l
 - The map is rendered from `world-config.js` as one large 10000 x 7600 world.
 - The center island is the largest battleground, with north, south, west, and east islands around it.
 - Each outer island connects to the center island through two natural land bridges / causeways.
-- Cities are placed on open land or clearings only.
+- Cities are placed on open land or clearings only, with each island center reserved for a future stronghold.
 - Cities are not placed on ocean, lakes, mountains, dense forests, or swamp.
 - Troops cannot walk through ocean, lakes, or mountains. All cross-island movement must use land bridges.
 - Troops can walk through forests and swamp at normal speed.
@@ -63,7 +65,7 @@ This build has the first Firebase layer added without breaking guest play.
 - Signed-in players save a private cloud snapshot to `players/{uid}/saves/default`.
 - After sign-in, the game automatically checks Firebase first, then falls back to the browser's local save.
 - `firestore.rules` allows private player saves and signed-in shared-island writes for this prototype phase.
-- Phase 2 creates or upgrades `islands/main`, seeds the 500 city docs, subscribes to city changes in realtime, and claims one starting city for each signed-in player.
+- Phase 2 creates or upgrades `islands/main`, seeds the 250 active city docs, subscribes to city changes in realtime, and claims one starting city for each signed-in player.
 - While online, the browser syncs the signed-in player's owned cities back to Firestore for the shared island.
 
 See `FIREBASE_SETUP.md` for the Firebase project steps and the planned shared-world collections.

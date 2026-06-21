@@ -1,10 +1,11 @@
 window.CROWNLANDS_WORLD_CONFIG = {
-  version: 21,
+  version: 23,
   name: "Five Island Crownlands",
   width: 10000,
   height: 7600,
   gridSize: 50,
-  cityCountPerRegion: 100,
+  cityCountPerRegion: 50,
+  strongholdReserveRatio: 0.3,
   regions: [
     {
       id: "center",
