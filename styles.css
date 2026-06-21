@@ -197,34 +197,103 @@ input {
 
 .map-frame { position: absolute; inset: 0 0 164px 0; overflow: hidden; touch-action: none; cursor: grab; }
 .map-frame.dragging { cursor: grabbing; }
-.map-world { position: absolute; left: 0; top: 0; width: 2800px; height: 1575px; transform-origin: 0 0; will-change: transform; }
+.map-world { position: absolute; left: 0; top: 0; width: 10000px; height: 7600px; transform-origin: 0 0; will-change: transform; }
 .map-bg {
   position: absolute; inset: 0;
   overflow: hidden;
-  background-image: url("assets/island-map-v17.png");
-  background-size: 100% 100%;
-  background-position: center;
-  background-repeat: no-repeat;
-  background-color: #0f385b;
+  background:
+    radial-gradient(circle at 48% 45%, rgba(118, 194, 255, .16), transparent 42%),
+    linear-gradient(180deg, #2b76a8 0%, #215f8d 48%, #164b75 100%);
 }
-.map-bg > img {
+.world-map-svg {
   display: block;
   width: 100%;
   height: 100%;
-  object-fit: fill;
   pointer-events: none;
   user-select: none;
-  -webkit-user-drag: none;
 }
 .map-bg::before {
   content: "";
   position: absolute; inset: 0;
   pointer-events: none;
-  background: radial-gradient(circle at 50% 45%, transparent 55%, rgba(0,0,0,.14) 100%);
+  background:
+    radial-gradient(circle at 50% 46%, transparent 56%, rgba(0,0,0,.2) 100%),
+    linear-gradient(135deg, rgba(255,255,255,.08), transparent 22%, rgba(6,22,38,.12) 74%, transparent);
+}
+.world-sea-ripple {
+  fill: none;
+  stroke: rgba(218, 244, 255, .34);
+  stroke-width: 5;
+  stroke-linecap: round;
+  stroke-dasharray: 16 30;
+}
+.world-shore-glow {
+  fill: none;
+  stroke: rgba(255, 247, 196, .46);
+  stroke-width: 74;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+  filter: url(#worldShoreGlow);
+}
+.world-shore-line {
+  fill: none;
+  stroke: rgba(255, 246, 194, .86);
+  stroke-width: 22;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+.world-land {
+  stroke: rgba(59, 109, 54, .6);
+  stroke-width: 8;
+  filter: url(#worldLandShadow);
+}
+.world-land.heartland { fill: url(#landHeartland); }
+.world-land.pine { fill: url(#landPine); }
+.world-land.marsh { fill: url(#landMarsh); }
+.world-land.woodland { fill: url(#landWoodland); }
+.world-land.golden { fill: url(#landGolden); }
+.world-causeway {
+  fill: none;
+  stroke: url(#causewayGradient);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  filter: url(#worldLandShadow);
+}
+.world-causeway-shore {
+  fill: none;
+  stroke: rgba(255, 246, 194, .75);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.world-forest {
+  fill: rgba(40, 104, 55, .38);
+  stroke: rgba(29, 79, 46, .28);
+  stroke-width: 6;
+}
+.world-swamp {
+  fill: rgba(81, 119, 74, .44);
+  stroke: rgba(57, 91, 70, .32);
+  stroke-width: 6;
+}
+.world-mountain {
+  fill: url(#mountainGradient);
+  stroke: rgba(71, 60, 51, .52);
+  stroke-width: 7;
+  filter: drop-shadow(0 18px 18px rgba(22,28,24,.24));
+}
+.world-region-label {
+  fill: rgba(255, 247, 215, .78);
+  font-size: 88px;
+  font-weight: 950;
+  letter-spacing: 0;
+  text-anchor: middle;
+  paint-order: stroke;
+  stroke: rgba(8, 22, 32, .54);
+  stroke-width: 12px;
 }
 .island-land {
   position: absolute;
-  left: 0; top: 0; width: 2800px; height: 1575px;
+  left: 0; top: 0; width: 10000px; height: 7600px;
   clip-path: polygon(50% 4.5%, 71.8% 8.5%, 88.2% 21.5%, 96.6% 43%, 93% 64.25%, 80.7% 84.75%, 61.1% 95.75%, 37.9% 92%, 18% 80.25%, 6.6% 59%, 12.3% 33%, 26.1% 13.5%);
   background:
     radial-gradient(circle at 27% 72%, rgba(255,226,133,.22), transparent 17%),
@@ -243,7 +312,7 @@ input {
   opacity: .36;
 }
 .shore-glow {
-  position: absolute; left: 0; top: 0; width: 2800px; height: 1575px;
+  position: absolute; left: 0; top: 0; width: 10000px; height: 7600px;
   clip-path: polygon(50% 4.5%, 71.8% 8.5%, 88.2% 21.5%, 96.6% 43%, 93% 64.25%, 80.7% 84.75%, 61.1% 95.75%, 37.9% 92%, 18% 80.25%, 6.6% 59%, 12.3% 33%, 26.1% 13.5%);
   pointer-events: none;
   box-shadow: inset 0 0 0 34px rgba(255,238,171,.28);
@@ -322,7 +391,7 @@ input {
 .paths polyline.transfer-route { stroke: rgba(82,170,255,.9); }
 .paths polyline.scout-route { stroke: rgba(88,198,255,.95); stroke-dasharray: 9 16; }
 @keyframes dash { to { stroke-dashoffset: -12; } }
-.city-layer, .army-layer { position: absolute; left: 0; top: 0; width: 2800px; height: 1575px; }
+.city-layer, .army-layer { position: absolute; left: 0; top: 0; width: 10000px; height: 7600px; }
 
 .city-node {
   position: absolute;
@@ -2216,5 +2285,5 @@ input {
 }
 .action-buttons .city-action-row { flex: 1 0 100%; }
 
-/* Version 17 uses the painted island background. These old procedural terrain layers stay hidden. */
+/* The Version 21 world is rendered by the generated SVG map. These older terrain layers stay hidden. */
 .island-land, .shore-glow, .terrain { display: none; }

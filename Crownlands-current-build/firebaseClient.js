@@ -215,38 +215,40 @@
     await init();
     const uid = requireSignedIn();
     if (!uid) return false;
-    const { doc, runTransaction, serverTimestamp } = client.modules.firestore;
+    const { collection, doc, getDocs, setDoc, writeBatch, serverTimestamp } = client.modules.firestore;
     const islandRef = doc(client.db, "islands", islandId);
     const citySeeds = cities.map(cleanCitySeed);
 
-    await runTransaction(client.db, async transaction => {
-      const islandSnap = await transaction.get(islandRef);
-      if (islandSnap.exists()) {
-        transaction.set(islandRef, {
-          ...meta,
-          updatedAt: serverTimestamp(),
-        }, { merge: true });
-        return;
-      }
+    await setDoc(islandRef, {
+      id: islandId,
+      version: Number(meta.version) || 21,
+      cityCount: citySeeds.length,
+      createdBy: uid,
+      updatedAt: serverTimestamp(),
+      ...meta,
+    }, { merge: true });
 
-      transaction.set(islandRef, {
-        id: islandId,
-        version: Number(meta.version) || 20,
-        cityCount: citySeeds.length,
-        createdBy: uid,
+    const existingCityIds = new Set();
+    const citySnapshot = await getDocs(collection(client.db, "islands", islandId, "cities"));
+    citySnapshot.forEach(cityDoc => existingCityIds.add(cityDoc.id));
+
+    let batch = writeBatch(client.db);
+    let writes = 0;
+    for (const city of citySeeds) {
+      if (existingCityIds.has(city.id)) continue;
+      batch.set(doc(client.db, "islands", islandId, "cities", city.id), {
+        ...city,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
-        ...meta,
       });
-
-      for (const city of citySeeds) {
-        transaction.set(doc(client.db, "islands", islandId, "cities", city.id), {
-          ...city,
-          createdAt: serverTimestamp(),
-          updatedAt: serverTimestamp(),
-        });
+      writes += 1;
+      if (writes >= 450) {
+        await batch.commit();
+        batch = writeBatch(client.db);
+        writes = 0;
       }
-    });
+    }
+    if (writes > 0) await batch.commit();
 
     return true;
   }
@@ -269,8 +271,13 @@
     return runTransaction(client.db, async transaction => {
       const playerSnap = await transaction.get(playerRef);
       const playerData = playerSnap.exists() ? playerSnap.data() : {};
-      if (playerData.mainIslandId === islandId && playerData.mainCityId) {
-        const mainCityRef = doc(client.db, "islands", islandId, "cities", playerData.mainCityId);
+      const existingMainCityId = String(playerData.mainCityId || "");
+      if (playerData.mainIslandId === islandId && existingMainCityId && uniqueCandidateIds.includes(existingMainCityId)) {
+        const mainCityRef = doc(client.db, "islands", islandId, "cities", existingMainCityId);
+        const mainCitySnap = await transaction.get(mainCityRef);
+        if (!mainCitySnap.exists()) {
+          // Continue below and claim a fresh city from the current world layout.
+        } else {
         transaction.set(playerRef, {
           playerName: safePlayerName,
           flag: flag || playerData.flag || null,
@@ -284,7 +291,8 @@
           isMainCity: true,
           updatedAt: serverTimestamp(),
         }, { merge: true });
-        return { cityId: playerData.mainCityId, alreadyClaimed: true };
+        return { cityId: existingMainCityId, alreadyClaimed: true };
+        }
       }
 
       let chosenRef = null;
