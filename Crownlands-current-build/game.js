@@ -13,12 +13,6 @@ const ONLINE_ARMY_EXPIRY_GRACE_SECONDS = 8;
 const HUD_RENDER_INTERVAL_MS = 250;
 const MAP_RENDER_INTERVAL_MS = 1600;
 const CITY_LIST_PAGE_SIZE = 5;
-const TERRITORY_CLUSTER_DISTANCE = 330;
-const TERRITORY_SINGLE_RADIUS = 96;
-const TERRITORY_GROUP_RADIUS = 122;
-const TERRITORY_POINT_COUNT = 72;
-const TERRITORY_LAND_INSET = 18;
-const TERRITORY_SMOOTHING_PASSES = 2;
 const MAX_OFFLINE_PROGRESS_SECONDS = 7 * 24 * 60 * 60;
 const WORLD_WIDTH = Math.max(1, Math.floor(Number(WORLD_CONFIG.width) || 10000));
 const WORLD_HEIGHT = Math.max(1, Math.floor(Number(WORLD_CONFIG.height) || 7600));
@@ -1438,7 +1432,6 @@ let cityListPage = 0;
 let playableBaseCitiesCache = null;
 let interactionRenderLockUntil = 0;
 let cityRenderSignature = "";
-let territoryRenderSignature = "";
 let pathRenderSignature = "";
 
 const setupScreen = document.getElementById("setupScreen");
@@ -1499,7 +1492,6 @@ const flagExitBtn = document.getElementById("flagExitBtn");
 const mapFrame = document.getElementById("mapFrame");
 const mapWorld = document.getElementById("mapWorld");
 const mapBg = document.getElementById("mapBg");
-const territorySvg = document.getElementById("territorySvg");
 const pathsSvg = document.getElementById("pathsSvg");
 const cityLayer = document.getElementById("cityLayer");
 const armyLayer = document.getElementById("armyLayer");
@@ -1746,7 +1738,7 @@ function applyWorldDimensions() {
     element.style.width = width;
     element.style.height = height;
   });
-  [territorySvg, pathsSvg].forEach(svg => {
+  [pathsSvg].forEach(svg => {
     if (!svg) return;
     svg.setAttribute("viewBox", `0 0 ${WORLD_WIDTH} ${WORLD_HEIGHT}`);
   });
@@ -1757,11 +1749,12 @@ function renderWorldMap() {
   mapBg.innerHTML = `
     <svg class="world-map-svg" viewBox="0 0 ${WORLD_WIDTH} ${WORLD_HEIGHT}" preserveAspectRatio="none" aria-hidden="true">
       ${renderWorldDefs()}
-      <g class="world-sea-layer">${renderSeaRipples()}</g>
+      <g class="world-sea-layer">${renderSeaRipples()}${renderSeaSparkles()}</g>
       <g class="world-bridge-shores">${LAND_BRIDGES.map(renderWorldBridgeShore).join("")}</g>
       <g class="world-island-shores">${WORLD_REGIONS.map(renderWorldRegionShore).join("")}</g>
       <g class="world-bridges">${LAND_BRIDGES.map(renderWorldBridge).join("")}</g>
       <g class="world-islands">${WORLD_REGIONS.map(renderWorldRegion).join("")}</g>
+      <g class="world-land-texture">${WORLD_REGIONS.map(renderWorldRegionTexture).join("")}</g>
       <g class="world-details">${NO_CITY_TERRAIN.map(renderWorldSoftTerrain).join("")}${TERRAIN_BLOCKERS.map(renderWorldMountain).join("")}</g>
       <g class="world-labels">${WORLD_REGIONS.map(renderWorldRegionLabel).join("")}</g>
     </svg>
@@ -1777,20 +1770,23 @@ function renderWorldDefs() {
       <filter id="worldShoreGlow" x="-12%" y="-12%" width="124%" height="124%">
         <feDropShadow dx="0" dy="0" stdDeviation="16" flood-color="#fff1a7" flood-opacity="0.46"></feDropShadow>
       </filter>
+      <filter id="worldTerrainShadow" x="-18%" y="-18%" width="136%" height="136%">
+        <feDropShadow dx="0" dy="8" stdDeviation="8" flood-color="#1b3b29" flood-opacity="0.18"></feDropShadow>
+      </filter>
       <radialGradient id="landHeartland" cx="44%" cy="35%" r="68%">
-        <stop offset="0%" stop-color="#a8cb73"></stop><stop offset="58%" stop-color="#79aa5e"></stop><stop offset="100%" stop-color="#5c8b4d"></stop>
+        <stop offset="0%" stop-color="#b8d784"></stop><stop offset="46%" stop-color="#88b968"></stop><stop offset="78%" stop-color="#66994f"></stop><stop offset="100%" stop-color="#507d47"></stop>
       </radialGradient>
       <radialGradient id="landPine" cx="42%" cy="34%" r="70%">
-        <stop offset="0%" stop-color="#a7c979"></stop><stop offset="60%" stop-color="#6f9e62"></stop><stop offset="100%" stop-color="#4f7d55"></stop>
+        <stop offset="0%" stop-color="#afcf82"></stop><stop offset="48%" stop-color="#79aa67"></stop><stop offset="76%" stop-color="#5a8d57"></stop><stop offset="100%" stop-color="#416e4f"></stop>
       </radialGradient>
       <radialGradient id="landMarsh" cx="47%" cy="36%" r="72%">
-        <stop offset="0%" stop-color="#a8c977"></stop><stop offset="56%" stop-color="#7fa764"></stop><stop offset="100%" stop-color="#66875d"></stop>
+        <stop offset="0%" stop-color="#b5cf80"></stop><stop offset="52%" stop-color="#86aa69"></stop><stop offset="80%" stop-color="#6c8e63"></stop><stop offset="100%" stop-color="#58765a"></stop>
       </radialGradient>
       <radialGradient id="landWoodland" cx="45%" cy="35%" r="70%">
-        <stop offset="0%" stop-color="#98bf6e"></stop><stop offset="58%" stop-color="#6c9c5a"></stop><stop offset="100%" stop-color="#48754c"></stop>
+        <stop offset="0%" stop-color="#a4c978"></stop><stop offset="48%" stop-color="#77a95e"></stop><stop offset="76%" stop-color="#568949"></stop><stop offset="100%" stop-color="#3f6a43"></stop>
       </radialGradient>
       <radialGradient id="landGolden" cx="46%" cy="35%" r="70%">
-        <stop offset="0%" stop-color="#c4c174"></stop><stop offset="58%" stop-color="#90aa5f"></stop><stop offset="100%" stop-color="#6f8e51"></stop>
+        <stop offset="0%" stop-color="#d5cf83"></stop><stop offset="48%" stop-color="#a7b966"></stop><stop offset="78%" stop-color="#819a55"></stop><stop offset="100%" stop-color="#647d49"></stop>
       </radialGradient>
       <linearGradient id="causewayGradient" x1="0%" y1="0%" x2="100%" y2="100%">
         <stop offset="0%" stop-color="#c6bf76"></stop><stop offset="52%" stop-color="#8fb25f"></stop><stop offset="100%" stop-color="#c6bf76"></stop>
@@ -1819,8 +1815,30 @@ function renderSeaRipples() {
   }).join("");
 }
 
+function renderSeaSparkles() {
+  const random = createSeededRandom(`sea:${WORLD_SCHEMA_VERSION}:${WORLD_WIDTH}:${WORLD_HEIGHT}`);
+  const sparkles = [];
+  const count = 76;
+  for (let i = 0; i < count; i += 1) {
+    let x = 0;
+    let y = 0;
+    for (let attempt = 0; attempt < 24; attempt += 1) {
+      x = Math.round(random() * WORLD_WIDTH);
+      y = Math.round(random() * WORLD_HEIGHT);
+      if (!isWorldLandPoint(x, y, 120)) break;
+    }
+    const rx = 10 + random() * 22;
+    const ry = 2.5 + random() * 5;
+    const rot = random() * 180;
+    const opacity = 0.22 + random() * 0.34;
+    sparkles.push(`<ellipse class="world-sea-sparkle" cx="${x}" cy="${y}" rx="${formatPathNumber(rx)}" ry="${formatPathNumber(ry)}" opacity="${formatPathNumber(opacity)}" transform="rotate(${formatPathNumber(rot)} ${x} ${y})"></ellipse>`);
+  }
+  return sparkles.join("");
+}
+
 function renderWorldRegionShore(region) {
   return `<ellipse class="world-shore-glow" cx="${region.x}" cy="${region.y}" rx="${region.rx}" ry="${region.ry}" transform="rotate(${((region.rot || 0) * 180 / Math.PI).toFixed(2)} ${region.x} ${region.y})"></ellipse>
+    <ellipse class="world-beach" cx="${region.x}" cy="${region.y}" rx="${region.rx}" ry="${region.ry}" transform="rotate(${((region.rot || 0) * 180 / Math.PI).toFixed(2)} ${region.x} ${region.y})"></ellipse>
     <ellipse class="world-shore-line" cx="${region.x}" cy="${region.y}" rx="${region.rx}" ry="${region.ry}" transform="rotate(${((region.rot || 0) * 180 / Math.PI).toFixed(2)} ${region.x} ${region.y})"></ellipse>`;
 }
 
@@ -1834,6 +1852,46 @@ function renderWorldBridgeShore(bridge) {
 
 function renderWorldBridge(bridge) {
   return `<line class="world-causeway" x1="${bridge.from.x}" y1="${bridge.from.y}" x2="${bridge.to.x}" y2="${bridge.to.y}" stroke-width="${bridge.width}"></line>`;
+}
+
+function renderWorldRegionTexture(region) {
+  const random = createSeededRandom(`region-texture:${WORLD_SCHEMA_VERSION}:${region.id}`);
+  const details = [];
+  const clearingRatio = getRegionStrongholdReserveRatio(region);
+  if (clearingRatio > 0) {
+    details.push(`<ellipse class="world-center-clearing" cx="${region.x}" cy="${region.y}" rx="${formatPathNumber(region.cityRx * clearingRatio * 0.8)}" ry="${formatPathNumber(region.cityRy * clearingRatio * 0.72)}" transform="rotate(${((region.rot || 0) * 180 / Math.PI).toFixed(2)} ${region.x} ${region.y})"></ellipse>`);
+  }
+
+  for (let i = 0; i < 10; i += 1) {
+    const point = getRegionTexturePoint(region, random, 0.26, 0.82);
+    const rx = region.rx * (0.035 + random() * 0.045);
+    const ry = region.ry * (0.025 + random() * 0.04);
+    const rot = ((region.rot || 0) + (random() - 0.5) * 1.1) * 180 / Math.PI;
+    details.push(`<ellipse class="world-meadow" cx="${formatPathNumber(point.x)}" cy="${formatPathNumber(point.y)}" rx="${formatPathNumber(rx)}" ry="${formatPathNumber(ry)}" transform="rotate(${formatPathNumber(rot)} ${formatPathNumber(point.x)} ${formatPathNumber(point.y)})"></ellipse>`);
+  }
+
+  for (let i = 0; i < 8; i += 1) {
+    const point = getRegionTexturePoint(region, random, 0.35, 0.88);
+    const rx = region.rx * (0.05 + random() * 0.05);
+    const ry = region.ry * (0.018 + random() * 0.025);
+    const rot = ((region.rot || 0) + (random() - 0.5) * 1.6) * 180 / Math.PI;
+    details.push(`<ellipse class="world-hill" cx="${formatPathNumber(point.x)}" cy="${formatPathNumber(point.y)}" rx="${formatPathNumber(rx)}" ry="${formatPathNumber(ry)}" transform="rotate(${formatPathNumber(rot)} ${formatPathNumber(point.x)} ${formatPathNumber(point.y)})"></ellipse>`);
+  }
+
+  return details.join("");
+}
+
+function getRegionTexturePoint(region, random, minRadius, maxRadius) {
+  const angle = random() * Math.PI * 2;
+  const radius = minRadius + random() * (maxRadius - minRadius);
+  const cos = Math.cos(region.rot || 0);
+  const sin = Math.sin(region.rot || 0);
+  const localX = Math.cos(angle) * region.cityRx * radius;
+  const localY = Math.sin(angle) * region.cityRy * radius;
+  return {
+    x: region.x + localX * cos - localY * sin,
+    y: region.y + localX * sin + localY * cos,
+  };
 }
 
 function renderWorldSoftTerrain(shape) {
@@ -3961,7 +4019,6 @@ function frame(now) {
     }
     if (now - lastRenderTime > MAP_RENDER_INTERVAL_MS && now >= interactionRenderLockUntil) {
       lastRenderTime = now;
-      renderTerritories();
       renderPaths();
       renderCities();
       renderPanel();
@@ -4455,7 +4512,6 @@ function renderAll() {
   lastRenderTime = now;
   updateCameraTransform();
   renderHud();
-  renderTerritories();
   renderPaths();
   renderCities(true);
   renderPanel();
@@ -4726,214 +4782,6 @@ function saveFlagEditor() {
   renderHud();
   showProfileView();
   showToast("Kingdom flag saved.");
-}
-
-function renderTerritories() {
-  if (!territorySvg) return;
-  ensureTerritorySvgContent();
-  updateTerritoryZoomStyle();
-  const content = territorySvg.querySelector("#territoryLayerContent");
-  if (!content) return;
-  if (!state) {
-    if (territoryRenderSignature) {
-      territoryRenderSignature = "";
-      content.innerHTML = "";
-    }
-    return;
-  }
-
-  const ownedCities = playerCities();
-  const signature = ownedCities
-    .map(city => `${city.id}:${Math.round(city.x)}:${Math.round(city.y)}`)
-    .sort()
-    .join("|");
-  if (signature === territoryRenderSignature) return;
-  territoryRenderSignature = signature;
-  content.innerHTML = "";
-
-  const groups = groupTerritoryCities(ownedCities);
-  groups.forEach((group, index) => {
-    const pathData = createTerritoryPath(group);
-    if (!pathData) return;
-    const region = document.createElementNS("http://www.w3.org/2000/svg", "g");
-    region.classList.add("territory-region");
-    region.dataset.territoryIndex = String(index);
-    ["territory-fill", "territory-hatch", "territory-outline-glow", "territory-outline-core"].forEach(className => {
-      const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
-      path.setAttribute("d", pathData);
-      path.classList.add(className);
-      region.appendChild(path);
-    });
-    content.appendChild(region);
-  });
-}
-
-function ensureTerritorySvgContent() {
-  if (!territorySvg || territorySvg.querySelector("#territoryLayerContent")) return;
-  territorySvg.innerHTML = `
-    <defs>
-      <pattern id="playerTerritoryHatch" width="22" height="22" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
-        <rect width="22" height="22" fill="#4ab9ff" opacity="0.13"></rect>
-        <rect x="0" y="0" width="8" height="22" fill="#99dbff" opacity="0.32"></rect>
-      </pattern>
-      <filter id="playerTerritoryGlow" x="-16%" y="-16%" width="132%" height="132%">
-        <feDropShadow dx="0" dy="0" stdDeviation="6" flood-color="#67c7ff" flood-opacity="0.58"></feDropShadow>
-      </filter>
-    </defs>
-    <g id="territoryLayerContent"></g>
-  `;
-}
-
-function updateTerritoryZoomStyle() {
-  if (!territorySvg) return;
-  territorySvg.classList.toggle("zoomed-out", zoom <= 0.82);
-}
-
-function groupTerritoryCities(cities) {
-  const groups = [];
-  const visited = new Set();
-  for (const city of cities) {
-    if (visited.has(city.id)) continue;
-    const group = [];
-    const stack = [city];
-    visited.add(city.id);
-    while (stack.length) {
-      const current = stack.pop();
-      group.push(current);
-      for (const other of cities) {
-        if (visited.has(other.id) || other.id === current.id) continue;
-        const distance = Math.hypot(current.x - other.x, current.y - other.y);
-        if (distance > TERRITORY_CLUSTER_DISTANCE) continue;
-        if (!linePassable(current, other)) continue;
-        visited.add(other.id);
-        stack.push(other);
-      }
-    }
-    groups.push(group);
-  }
-  return groups;
-}
-
-function createTerritoryPath(cities) {
-  if (!cities.length) return "";
-  const center = getTerritoryCenter(cities);
-  const radius = cities.length > 1 ? TERRITORY_GROUP_RADIUS : TERRITORY_SINGLE_RADIUS;
-  const points = [];
-
-  for (let i = 0; i < TERRITORY_POINT_COUNT; i++) {
-    const angle = (Math.PI * 2 * i) / TERRITORY_POINT_COUNT;
-    const cos = Math.cos(angle);
-    const sin = Math.sin(angle);
-    let bestDistance = radius;
-    let anchor = cities[0];
-
-    for (const city of cities) {
-      const dx = city.x - center.x;
-      const dy = city.y - center.y;
-      const along = dx * cos + dy * sin;
-      const across = Math.abs(dx * -sin + dy * cos);
-      if (across > radius) continue;
-      const reach = along + Math.sqrt(Math.max(0, radius * radius - across * across));
-      if (reach > bestDistance) {
-        bestDistance = reach;
-        anchor = city;
-      }
-    }
-
-    const softenedDistance = bestDistance + getTerritoryEdgeVariation(i, cities.length);
-    const rawPoint = {
-      x: center.x + cos * softenedDistance,
-      y: center.y + sin * softenedDistance,
-    };
-    points.push(pullTerritoryPointToLand(rawPoint, anchor || center));
-  }
-
-  return smoothClosedPath(smoothTerritoryPoints(points, cities));
-}
-
-function getTerritoryCenter(cities) {
-  return {
-    x: cities.reduce((sum, city) => sum + city.x, 0) / cities.length,
-    y: cities.reduce((sum, city) => sum + city.y, 0) / cities.length,
-  };
-}
-
-function getTerritoryEdgeVariation(index, count) {
-  const strength = count > 1 ? 6 : 4;
-  return Math.sin(index * 1.73) * strength + Math.cos(index * 0.91) * strength * 0.45;
-}
-
-function pullTerritoryPointToLand(point, anchor) {
-  const target = anchor || point;
-  for (let i = 0; i <= 12; i++) {
-    const t = 1 - i * 0.065;
-    const x = target.x + (point.x - target.x) * t;
-    const y = target.y + (point.y - target.y) * t;
-    if (isTerritoryPaintPoint(x, y)) return insetTerritoryPoint({ x, y }, target);
-  }
-  return insetTerritoryPoint(point, target);
-}
-
-function isTerritoryPaintPoint(x, y) {
-  if (!isBaseLandPoint(x, y)) return false;
-  return !TERRAIN_BLOCKERS.some(shape => {
-    const extra = shape.type === "mountain" ? 10 : 4;
-    return pointInEllipse(x, y, shape, extra);
-  });
-}
-
-function insetTerritoryPoint(point, anchor) {
-  const dx = anchor.x - point.x;
-  const dy = anchor.y - point.y;
-  const distance = Math.hypot(dx, dy);
-  if (distance <= TERRITORY_LAND_INSET || distance <= 0) return point;
-  const inset = TERRITORY_LAND_INSET / distance;
-  return {
-    x: point.x + dx * inset,
-    y: point.y + dy * inset,
-  };
-}
-
-function smoothTerritoryPoints(points, cities) {
-  if (points.length < 4) return points;
-  let smoothed = points;
-  for (let pass = 0; pass < TERRITORY_SMOOTHING_PASSES; pass++) {
-    smoothed = smoothed.map((point, index) => {
-      const previous = smoothed[(index - 1 + smoothed.length) % smoothed.length];
-      const next = smoothed[(index + 1) % smoothed.length];
-      const candidate = {
-        x: point.x * 0.52 + previous.x * 0.24 + next.x * 0.24,
-        y: point.y * 0.52 + previous.y * 0.24 + next.y * 0.24,
-      };
-      return pullTerritoryPointToLand(candidate, getNearestTerritoryCity(candidate, cities));
-    });
-  }
-  return smoothed;
-}
-
-function getNearestTerritoryCity(point, cities) {
-  return cities.reduce((nearest, city) => {
-    if (!nearest) return city;
-    const nearestDistance = Math.hypot(point.x - nearest.x, point.y - nearest.y);
-    const cityDistance = Math.hypot(point.x - city.x, point.y - city.y);
-    return cityDistance < nearestDistance ? city : nearest;
-  }, null);
-}
-
-function smoothClosedPath(points) {
-  if (!points.length) return "";
-  if (points.length < 3) return `M ${points.map(point => `${formatPathNumber(point.x)} ${formatPathNumber(point.y)}`).join(" L ")} Z`;
-  let path = `M ${formatPathNumber(points[0].x)} ${formatPathNumber(points[0].y)}`;
-  for (let i = 0; i < points.length; i++) {
-    const p0 = points[(i - 1 + points.length) % points.length];
-    const p1 = points[i];
-    const p2 = points[(i + 1) % points.length];
-    const p3 = points[(i + 2) % points.length];
-    const c1 = { x: p1.x + (p2.x - p0.x) / 6, y: p1.y + (p2.y - p0.y) / 6 };
-    const c2 = { x: p2.x - (p3.x - p1.x) / 6, y: p2.y - (p3.y - p1.y) / 6 };
-    path += ` C ${formatPathNumber(c1.x)} ${formatPathNumber(c1.y)}, ${formatPathNumber(c2.x)} ${formatPathNumber(c2.y)}, ${formatPathNumber(p2.x)} ${formatPathNumber(p2.y)}`;
-  }
-  return `${path} Z`;
 }
 
 function formatPathNumber(value) {
@@ -6503,7 +6351,6 @@ function updateCameraTransform() {
   camera.x = clamp(camera.x, 0, maxX);
   camera.y = clamp(camera.y, 0, maxY);
   mapWorld.style.transform = `translate3d(${-camera.x * zoom}px, ${-camera.y * zoom}px, 0) scale(${zoom})`;
-  updateTerritoryZoomStyle();
   updateMainCityReturnButton(rect);
 }
 

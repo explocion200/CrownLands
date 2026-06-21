@@ -15,7 +15,6 @@ Landscape / horizontal medieval island-conquest prototype inspired by the core l
 - Victory points drive troop production, gold production, and capture XP value.
 - The city counter opens a city list with the main city pinned first and level/troop sorting.
 - A small floating home indicator appears when the main city is off-screen and recenters the map on click.
-- Player-owned cities draw a private blue kingdom-border overlay; close zoom shows smooth outlines, while zoomed-out territory fills in more solidly.
 - Troop production uses `VP x 3`, plus Recruiter skill bonus.
 - Gold production uses `VP x 8`, plus Prosperous skill bonus.
 - City defense uses `city level x 3%`, city walls, troop count, and Guardian skill.
