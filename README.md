@@ -5,6 +5,7 @@ Landscape / horizontal medieval island-conquest prototype inspired by the core l
 ## Current Mechanics Pass
 
 - Player starts with 1 main city, 50 troops, and 500 gold.
+- Google sign-in connects the account first; the player enters the live kingdom with a separate Enter Kingdom button.
 - The island contains 70 evenly spaced cities on the generated medieval map.
 - Cities produce troops and gold in real time while unpaused.
 - Offline production catches up when the player returns: troops stay in the cities that produced them, while troops from cities lost offline rally to the main city.

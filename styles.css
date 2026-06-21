@@ -105,7 +105,8 @@ input {
   grid-template-columns: 1fr;
   gap: .45rem;
 }
-.online-login .ghost-btn {
+.online-login .ghost-btn,
+.online-login .primary-btn {
   min-height: 42px;
   margin-top: .65rem;
   border-radius: 12px;

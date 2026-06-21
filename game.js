@@ -1400,7 +1400,6 @@ let onlineSaveQueued = false;
 let onlineSaveInFlight = false;
 let onlineLastSaveAt = 0;
 let onlineLastError = "";
-let loginStartInFlight = false;
 let onlineIslandUnsubscribe = null;
 let onlineWorldLoading = false;
 let onlineWorldConnected = false;
@@ -1428,6 +1427,7 @@ const freshBtn = document.getElementById("freshBtn");
 const onlineStatusText = document.getElementById("onlineStatusText");
 const onlineStatusDetail = document.getElementById("onlineStatusDetail");
 const googleSignInBtn = document.getElementById("googleSignInBtn");
+const enterKingdomBtn = document.getElementById("enterKingdomBtn");
 const googleSignOutBtn = document.getElementById("googleSignOutBtn");
 const lordNameText = document.getElementById("lordNameText");
 const statusText = document.getElementById("statusText");
@@ -2697,6 +2697,7 @@ function updateOnlineUi() {
     onlineStatusText.textContent = "Guest mode";
     onlineStatusDetail.textContent = "Firebase client did not load.";
     if (googleSignInBtn) googleSignInBtn.disabled = true;
+    if (enterKingdomBtn) enterKingdomBtn.hidden = true;
     if (googleSignOutBtn) googleSignOutBtn.hidden = true;
     return;
   }
@@ -2712,6 +2713,7 @@ function updateOnlineUi() {
       googleSignInBtn.hidden = false;
       googleSignInBtn.disabled = true;
     }
+    if (enterKingdomBtn) enterKingdomBtn.hidden = true;
     if (googleSignOutBtn) googleSignOutBtn.hidden = true;
     return;
   }
@@ -2721,11 +2723,15 @@ function updateOnlineUi() {
     if (onlineLastError) {
       onlineStatusDetail.textContent = `Cloud save paused: ${onlineLastError}`;
     } else if (onlineLastSaveAt) {
-      onlineStatusDetail.textContent = `Cloud save ready. Last synced ${new Date(onlineLastSaveAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}.`;
+      onlineStatusDetail.textContent = `Cloud save ready. Last synced ${new Date(onlineLastSaveAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}. Press Enter Kingdom.`;
     } else {
-      onlineStatusDetail.textContent = "Cloud save ready. Start or continue to sync this kingdom.";
+      onlineStatusDetail.textContent = "Cloud save ready. Press Enter Kingdom to join the game.";
     }
     if (googleSignInBtn) googleSignInBtn.hidden = true;
+    if (enterKingdomBtn) {
+      enterKingdomBtn.hidden = false;
+      enterKingdomBtn.disabled = false;
+    }
     if (googleSignOutBtn) {
       googleSignOutBtn.hidden = false;
       googleSignOutBtn.disabled = false;
@@ -2739,19 +2745,8 @@ function updateOnlineUi() {
     googleSignInBtn.hidden = false;
     googleSignInBtn.disabled = false;
   }
+  if (enterKingdomBtn) enterKingdomBtn.hidden = true;
   if (googleSignOutBtn) googleSignOutBtn.hidden = true;
-}
-
-async function startAfterLoginIfNeeded() {
-  const api = getOnlineApi();
-  if (loginStartInFlight || state || !setupScreen?.classList.contains("visible")) return;
-  if (!api?.isSignedIn?.()) return;
-  loginStartInFlight = true;
-  try {
-    await startFromInput(false);
-  } finally {
-    loginStartInFlight = false;
-  }
 }
 
 async function handleGoogleSignIn() {
@@ -2765,12 +2760,11 @@ async function handleGoogleSignIn() {
     if (googleSignInBtn) googleSignInBtn.disabled = true;
     await api.signInWithGoogle();
     updateOnlineUi();
-    await startAfterLoginIfNeeded();
     if (state) {
       queueOnlineSave();
       await flushOnlineSave(true);
     }
-    showToast("Google sign-in connected.");
+    showToast("Google connected. Press Enter Kingdom to play.");
   } catch (error) {
     onlineLastError = error?.message || String(error);
     updateOnlineUi();
@@ -3274,11 +3268,12 @@ function getPreferredPlayerName() {
 
 async function startFromInput(forceFresh = false) {
   const playerName = getPreferredPlayerName();
-  const originalStartText = startBtn?.textContent || "";
+  const launchBtn = enterKingdomBtn || startBtn;
+  const originalStartText = launchBtn?.textContent || "";
   try {
-    if (startBtn) {
-      startBtn.disabled = true;
-      startBtn.textContent = forceFresh ? "Creating..." : "Loading...";
+    if (launchBtn) {
+      launchBtn.disabled = true;
+      launchBtn.textContent = forceFresh ? "Creating..." : "Entering...";
     }
     if (freshBtn) freshBtn.disabled = true;
 
@@ -3299,9 +3294,9 @@ async function startFromInput(forceFresh = false) {
     renderAll();
     requestAnimationFrame(() => centerOnCity(selectedSourceId || state.mainCityId || playerCities()[0]?.id));
   } finally {
-    if (startBtn) {
-      startBtn.disabled = false;
-      startBtn.textContent = originalStartText || "Start / Continue";
+    if (launchBtn) {
+      launchBtn.disabled = false;
+      launchBtn.textContent = originalStartText || "Enter Kingdom";
     }
     if (freshBtn) freshBtn.disabled = false;
   }
@@ -5912,11 +5907,11 @@ function clamp(value, min, max) {
 if (startBtn) startBtn.addEventListener("click", () => startFromInput(false));
 if (freshBtn) freshBtn.addEventListener("click", () => startFromInput(true));
 if (googleSignInBtn) googleSignInBtn.addEventListener("click", handleGoogleSignIn);
+if (enterKingdomBtn) enterKingdomBtn.addEventListener("click", () => startFromInput(false));
 if (googleSignOutBtn) googleSignOutBtn.addEventListener("click", handleGoogleSignOut);
 window.addEventListener("crownlands:online-ready", updateOnlineUi);
 window.addEventListener("crownlands:auth", async () => {
   updateOnlineUi();
-  await startAfterLoginIfNeeded();
   if (state) {
     queueOnlineSave();
     flushOnlineSave(true);
