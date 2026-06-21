@@ -21,7 +21,9 @@ Landscape / horizontal medieval island-conquest prototype inspired by the core l
 - Fearless and Brave return some losses to the main city.
 - Scavenger and Salvager recover gold from kills.
 - Cautious refunds part of invested city upgrade gold when a player city is lost.
-- Combat preview shows attack power, defense power, estimated losses/survivors, capture XP, and XP efficiency.
+- Failed player attacks and lost defenses still award one-third of the matching victory XP.
+- Captured cities lose 1 level on takeover, but never drop below Level 1.
+- Combat preview shows attack power, defense power, estimated losses/survivors, capture or defeat XP, and XP efficiency.
 - The bottom `Reports` button opens battle reports filtered by attack, defense, and scout results.
 - Attack reports show victory or defeat based on the final combat result.
 - Defense reports show held defenses or lost cities.

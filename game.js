@@ -41,6 +41,7 @@ const CAPTURE_XP_COOLDOWN_SECONDS = 3600;
 const RECENT_CAPTURE_XP_MULTIPLIER = 0.25;
 const DEFENSE_HELD_XP_BASE = 80;
 const DEFENSE_HELD_XP_PER_ATTACKER = 0.45;
+const FAILED_BATTLE_XP_RATE = 1 / 3;
 const KILL_GOLD_BASE = 5;
 const CITY_LEVEL_STATS = {
   victoryPointsBase: 6,
@@ -1877,6 +1878,18 @@ function getDefenseHeldXpAward(attackingTroops) {
   return Math.floor(DEFENSE_HELD_XP_BASE + Math.max(0, Number(attackingTroops) || 0) * DEFENSE_HELD_XP_PER_ATTACKER);
 }
 
+function getPartialBattleXpAward(fullWinXp) {
+  return Math.floor(Math.max(0, Number(fullWinXp) || 0) * FAILED_BATTLE_XP_RATE);
+}
+
+function getFailedAttackXpAward(target, oldOwner, defendersAtStart, attackerOwner = "player") {
+  return getPartialBattleXpAward(getCaptureXpAward(target, oldOwner, defendersAtStart, attackerOwner));
+}
+
+function getLostDefenseXpAward(attackingTroops) {
+  return getPartialBattleXpAward(getDefenseHeldXpAward(attackingTroops));
+}
+
 function getCaptureXpEfficiency(target, oldOwner = target?.owner) {
   if (!target || !state) return 1;
   const heroLevel = Math.max(1, Math.floor(Number(state.character?.level) || 1));
@@ -1918,6 +1931,19 @@ function skillMultiplier(skill) {
 
 function clampCityLevel(level) {
   return clamp(Math.floor(Number(level) || 1), 1, MAX_CITY_LEVEL);
+}
+
+function dropCapturedCityLevel(city) {
+  const previousLevel = clampCityLevel(city?.level);
+  const nextLevel = Math.max(1, previousLevel - 1);
+  if (city) city.level = nextLevel;
+  return { previousLevel, nextLevel };
+}
+
+function formatCapturedCityLevelDrop(levelDrop) {
+  if (!levelDrop) return "";
+  if (levelDrop.previousLevel === levelDrop.nextLevel) return `Level stayed ${formatNumber(levelDrop.nextLevel)}.`;
+  return `Level ${formatNumber(levelDrop.previousLevel)} to ${formatNumber(levelDrop.nextLevel)}.`;
 }
 
 function getCityStats(city) {
@@ -3930,6 +3956,7 @@ function resolveAttack(attack) {
       target.ownerName = OWNER[attack.owner]?.label || "";
       target.ownerFlag = null;
     }
+    const levelDrop = dropCapturedCityLevel(target);
     target.troopFloat = result.survivors;
     target.troops = result.survivors;
     target.defense = 1;
@@ -3954,18 +3981,19 @@ function resolveAttack(attack) {
         defenderLosses: result.defenderLosses,
         totalDefense: targetDefenseAtStart,
         opponentName: defenderName,
-        summary: `Captured with ${formatNumber(result.survivors)} survivors.`,
+        summary: `Captured with ${formatNumber(result.survivors)} survivors. ${formatCapturedCityLevelDrop(levelDrop)} +${formatNumber(xpAward)} XP.`,
       });
-      addLog(`Victory: you captured ${target.name} with ${formatNumber(result.survivors)} survivors. XP efficiency ${Math.round(xpEfficiency * 100)}%.`);
-      if (savedAttackers > 0 || scavengedGold > 0) {
+      addLog(`Victory: you captured ${target.name} with ${formatNumber(result.survivors)} survivors. ${formatCapturedCityLevelDrop(levelDrop)} XP efficiency ${Math.round(xpEfficiency * 100)}%.`);
+      if (scavengedGold > 0) {
         showToast(`Captured ${target.name}: +${formatNumber(xpAward)} XP, +${formatNumber(scavengedGold)} gold`);
       } else {
-        showToast(`Captured ${target.name}`);
+        showToast(`Captured ${target.name}: +${formatNumber(xpAward)} XP`);
       }
       addCharacterXp(xpAward, `${target.name} capture`);
     } else if (oldOwner === "player") {
       const savedDefenders = returnSavedTroops("brave", result.defenderLosses, `${target.name} defense`, target.id);
       const salvagedGold = grantKillGold("salvager", result.killedAttackers, `${target.name} defense`);
+      const defenseLossXp = getLostDefenseXpAward(attack.troops);
       addBattleReport({
         type: "defense",
         outcome: "lost",
@@ -3980,10 +4008,11 @@ function resolveAttack(attack) {
         defenderLosses: result.defenderLosses,
         totalDefense: targetDefenseAtStart,
         opponentName: attackerReportName,
-        summary: `${target.name} was captured by ${attackerReportName}.`,
+        summary: `${target.name} was captured by ${attackerReportName}. ${formatCapturedCityLevelDrop(levelDrop)} +${formatNumber(defenseLossXp)} XP.`,
       });
-      addLog(`Lost: the enemy captured ${target.name}. ${formatNumber(savedDefenders)} defenders escaped and ${formatNumber(cautiousRefund + salvagedGold)} gold was recovered.`);
-      showToast(`You lost ${target.name}`);
+      addLog(`Lost: the enemy captured ${target.name}. ${formatCapturedCityLevelDrop(levelDrop)} ${formatNumber(savedDefenders)} defenders escaped, ${formatNumber(cautiousRefund + salvagedGold)} gold was recovered, and you gained ${formatNumber(defenseLossXp)} XP.`);
+      showToast(`You lost ${target.name}: +${formatNumber(defenseLossXp)} XP`);
+      addCharacterXp(defenseLossXp, `${target.name} lost defense`);
     }
   } else {
     target.troopFloat = result.defendersLeft;
@@ -3992,6 +4021,7 @@ function resolveAttack(attack) {
     if (attack.owner === "player") {
       const savedAttackers = returnSavedTroops("fearless", result.attackerLosses, `${target.name} failed attack`);
       const scavengedGold = grantKillGold("scavenger", result.killedDefenders, `${target.name} failed attack`);
+      const failedAttackXp = getFailedAttackXpAward(target, oldOwner, defendersAtStart, attack.owner);
       addBattleReport({
         type: "attack",
         outcome: "defeat",
@@ -4006,10 +4036,11 @@ function resolveAttack(attack) {
         defenderLosses: result.defenderLosses,
         totalDefense: targetDefenseAtStart,
         opponentName: defenderName,
-        summary: `${formatNumber(result.defendersLeft)} defenders remained.`,
+        summary: `${formatNumber(result.defendersLeft)} defenders remained. +${formatNumber(failedAttackXp)} XP.`,
       });
-      addLog(`Defeat: your attack on ${target.name} failed. ${formatNumber(result.defendersLeft)} defenders remain. ${formatNumber(savedAttackers)} attackers regrouped and ${formatNumber(scavengedGold)} gold was recovered.`);
-      showToast(`Attack failed at ${target.name}`);
+      addLog(`Defeat: your attack on ${target.name} failed. ${formatNumber(result.defendersLeft)} defenders remain. ${formatNumber(savedAttackers)} attackers regrouped, ${formatNumber(scavengedGold)} gold was recovered, and you gained ${formatNumber(failedAttackXp)} XP.`);
+      showToast(`Attack failed at ${target.name}: +${formatNumber(failedAttackXp)} XP`);
+      addCharacterXp(failedAttackXp, `${target.name} failed attack`);
     } else if (oldOwner === "player") {
       const savedDefenders = returnSavedTroops("brave", result.defenderLosses, `${target.name} defense`);
       const salvagedGold = grantKillGold("salvager", result.killedAttackers, `${target.name} defense`);
@@ -4805,8 +4836,8 @@ function renderSendConfirmPanel(source, target) {
         <strong>${preview.success ? "Likely Victory" : "Likely Defeat"}</strong>
         <span>${preview.label} - ${Math.round(preview.xpEfficiency * 100)}% XP</span>
         <small>${preview.success
-          ? `Est. survivors: ${formatNumber(preview.survivors)} - XP ${formatNumber(preview.captureXp)}`
-          : `Est. defenders left: ${formatNumber(preview.defendersLeft)} - losses ${formatNumber(preview.attackerLosses)}`}</small>
+          ? `Est. survivors: ${formatNumber(preview.survivors)} - ${preview.xpLabel} ${formatNumber(preview.captureXp)}`
+          : `Est. defenders left: ${formatNumber(preview.defendersLeft)} - ${preview.xpLabel} ${formatNumber(preview.captureXp)}`}</small>
       </div>
     `;
   }
@@ -5169,7 +5200,7 @@ function showAttackPreview(source, target) {
         <div class="stat-card"><strong>${formatNumber(target.troops)}</strong><small>target troops</small></div>
         <div class="stat-card"><strong>${formatNumber(preview.attackPower)}</strong><small>attack power</small></div>
         <div class="stat-card"><strong>${formatNumber(preview.defensePower)}</strong><small>defense power</small></div>
-        <div class="stat-card"><strong>${formatNumber(preview.captureXp)}</strong><small>capture XP</small></div>
+        <div class="stat-card"><strong>${formatNumber(preview.captureXp)}</strong><small>${preview.xpLabel}</small></div>
         <div class="stat-card"><strong>${formatNumber(preview.attackerLosses)}</strong><small>est. attacker losses</small></div>
       </div>
       <p><strong>${escapeHtml(source.name)}</strong> to <strong>${escapeHtml(target.name)}</strong> - ${formatPercent(selectedMarchPercent)} march - about ${Math.ceil(preview.travel)}s travel.</p>
@@ -5308,7 +5339,10 @@ function calculateBattlePreviewForTroops(source, target, amount, knownRoute = nu
   const send = clamp(Math.floor(amount), 1, source.troops);
   const result = calculateCombatResult(send, "player", target);
   const xpEfficiency = getCaptureXpEfficiency(target, target.owner);
-  const captureXp = result.success ? getCaptureXpAward(target, target.owner, result.defenderLosses, "player") : 0;
+  const captureXp = result.success
+    ? getCaptureXpAward(target, target.owner, result.defenderLosses, "player")
+    : getFailedAttackXpAward(target, target.owner, Math.max(0, Math.floor(Number(target.troops) || 0)), "player");
+  const xpLabel = result.success ? "capture XP" : "defeat XP";
   const cooldownRemaining = getCaptureCooldownRemaining(target);
   let label = "Weak odds";
   if (result.ratio >= 1.35) label = "Overwhelming advantage";
@@ -5329,6 +5363,7 @@ function calculateBattlePreviewForTroops(source, target, amount, knownRoute = nu
     defenderLosses: result.defenderLosses,
     xpEfficiency,
     captureXp,
+    xpLabel,
     cooldownRemaining,
     label,
     travel,
