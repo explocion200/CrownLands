@@ -8,10 +8,12 @@ const ONLINE_ARMY_EXPIRY_GRACE_SECONDS = 8;
 const HUD_RENDER_INTERVAL_MS = 250;
 const MAP_RENDER_INTERVAL_MS = 1600;
 const CITY_LIST_PAGE_SIZE = 5;
-const TERRITORY_CLUSTER_DISTANCE = 350;
-const TERRITORY_SINGLE_RADIUS = 118;
-const TERRITORY_GROUP_RADIUS = 146;
+const TERRITORY_CLUSTER_DISTANCE = 330;
+const TERRITORY_SINGLE_RADIUS = 96;
+const TERRITORY_GROUP_RADIUS = 122;
 const TERRITORY_POINT_COUNT = 72;
+const TERRITORY_LAND_INSET = 18;
+const TERRITORY_SMOOTHING_PASSES = 2;
 const MAX_OFFLINE_PROGRESS_SECONDS = 7 * 24 * 60 * 60;
 const WORLD_WIDTH = 2800;
 const WORLD_HEIGHT = 1575;
@@ -4481,7 +4483,7 @@ function createTerritoryPath(cities) {
     points.push(pullTerritoryPointToLand(rawPoint, anchor || center));
   }
 
-  return smoothClosedPath(points);
+  return smoothClosedPath(smoothTerritoryPoints(points, cities));
 }
 
 function getTerritoryCenter(cities) {
@@ -4492,7 +4494,7 @@ function getTerritoryCenter(cities) {
 }
 
 function getTerritoryEdgeVariation(index, count) {
-  const strength = count > 1 ? 12 : 7;
+  const strength = count > 1 ? 6 : 4;
   return Math.sin(index * 1.73) * strength + Math.cos(index * 0.91) * strength * 0.45;
 }
 
@@ -4502,9 +4504,9 @@ function pullTerritoryPointToLand(point, anchor) {
     const t = 1 - i * 0.065;
     const x = target.x + (point.x - target.x) * t;
     const y = target.y + (point.y - target.y) * t;
-    if (isTerritoryPaintPoint(x, y)) return { x, y };
+    if (isTerritoryPaintPoint(x, y)) return insetTerritoryPoint({ x, y }, target);
   }
-  return point;
+  return insetTerritoryPoint(point, target);
 }
 
 function isTerritoryPaintPoint(x, y) {
@@ -4513,6 +4515,44 @@ function isTerritoryPaintPoint(x, y) {
     const extra = shape.type === "mountain" ? 10 : 4;
     return pointInEllipse(x, y, shape, extra);
   });
+}
+
+function insetTerritoryPoint(point, anchor) {
+  const dx = anchor.x - point.x;
+  const dy = anchor.y - point.y;
+  const distance = Math.hypot(dx, dy);
+  if (distance <= TERRITORY_LAND_INSET || distance <= 0) return point;
+  const inset = TERRITORY_LAND_INSET / distance;
+  return {
+    x: point.x + dx * inset,
+    y: point.y + dy * inset,
+  };
+}
+
+function smoothTerritoryPoints(points, cities) {
+  if (points.length < 4) return points;
+  let smoothed = points;
+  for (let pass = 0; pass < TERRITORY_SMOOTHING_PASSES; pass++) {
+    smoothed = smoothed.map((point, index) => {
+      const previous = smoothed[(index - 1 + smoothed.length) % smoothed.length];
+      const next = smoothed[(index + 1) % smoothed.length];
+      const candidate = {
+        x: point.x * 0.52 + previous.x * 0.24 + next.x * 0.24,
+        y: point.y * 0.52 + previous.y * 0.24 + next.y * 0.24,
+      };
+      return pullTerritoryPointToLand(candidate, getNearestTerritoryCity(candidate, cities));
+    });
+  }
+  return smoothed;
+}
+
+function getNearestTerritoryCity(point, cities) {
+  return cities.reduce((nearest, city) => {
+    if (!nearest) return city;
+    const nearestDistance = Math.hypot(point.x - nearest.x, point.y - nearest.y);
+    const cityDistance = Math.hypot(point.x - city.x, point.y - city.y);
+    return cityDistance < nearestDistance ? city : nearest;
+  }, null);
 }
 
 function smoothClosedPath(points) {
