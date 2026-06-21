@@ -1421,6 +1421,7 @@ let toastTimer = null;
 let attackIdCounter = 1;
 let flagDraft = null;
 let activeProfileTab = "profile";
+let battleReportFilter = "all";
 let playableBaseCitiesCache = null;
 let interactionRenderLockUntil = 0;
 
@@ -1492,7 +1493,6 @@ const modal = document.getElementById("modal");
 const modalTitle = document.getElementById("modalTitle");
 const modalBody = document.getElementById("modalBody");
 const closeModalBtn = document.getElementById("closeModalBtn");
-const devBtn = document.getElementById("devBtn");
 const logBtn = document.getElementById("logBtn");
 const helpBtn = document.getElementById("helpBtn");
 
@@ -1709,8 +1709,8 @@ function newGame(playerName) {
     upgrades: createDefaultSkills(),
     daily: { date: currentLocalDateKey(), neutralCaptures: 0 },
     scoutReports: {},
+    battleReports: [],
     marchPercent: DEFAULT_MARCH_PERCENT,
-    devToolsEnabled: false,
     mainCityId: island.startIds.player,
     islandSlots: island.startIds,
     cities: island.cities,
@@ -2091,9 +2091,9 @@ function loadGame() {
       loaded.flag = normalizeFlag(loaded.flag);
       loaded.ai = normalizeAiState(loaded.ai);
       loaded.marchPercent = normalizeMarchPercent(loaded.marchPercent);
-      loaded.devToolsEnabled = Boolean(loaded.devToolsEnabled);
       loaded.daily = normalizeDailyCaptureTracker(loaded.daily);
       loaded.scoutReports = normalizeScoutReports(loaded.scoutReports);
+      loaded.battleReports = normalizeBattleReports(loaded.battleReports);
       const playableBases = getPlayableBaseCities();
       const savedCitiesAreCurrent = Array.isArray(loaded.cities)
         && loaded.cities.length === playableBases.length
@@ -2176,9 +2176,9 @@ function normalizeOnlineGameSnapshot(snapshot, fallbackPlayerName = "Ricky") {
     loaded.flag = normalizeFlag(loaded.flag);
     loaded.ai = normalizeAiState(loaded.ai);
     loaded.marchPercent = normalizeMarchPercent(loaded.marchPercent);
-    loaded.devToolsEnabled = Boolean(loaded.devToolsEnabled);
     loaded.daily = normalizeDailyCaptureTracker(loaded.daily);
     loaded.scoutReports = normalizeScoutReports(loaded.scoutReports);
+    loaded.battleReports = normalizeBattleReports(loaded.battleReports);
 
     const playableBases = getPlayableBaseCities();
     const savedCitiesAreCurrent = loaded.cities.length === playableBases.length
@@ -2293,6 +2293,41 @@ function normalizeScoutReports(reports) {
     normalized[cityId] = { ...report, troops, totalDefense, scoutedAt, expiresAt };
   }
   return normalized;
+}
+
+function normalizeBattleReports(reports) {
+  if (!Array.isArray(reports)) return [];
+  return reports
+    .map(report => {
+      if (!report || typeof report !== "object") return null;
+      const type = ["attack", "defense", "scout"].includes(report.type) ? report.type : "";
+      if (!type) return null;
+      const fallbackOutcome = type === "scout" ? "scout" : "defeat";
+      const outcome = ["victory", "defeat", "held", "lost", "scout"].includes(report.outcome)
+        ? report.outcome
+        : fallbackOutcome;
+      return {
+        id: String(report.id || `report_${Math.random().toString(36).slice(2)}`),
+        type,
+        outcome,
+        createdAt: Math.max(0, Number(report.createdAt) || 0),
+        cityId: String(report.cityId || ""),
+        cityName: String(report.cityName || "Unknown city").slice(0, 40),
+        cityLevel: clampCityLevel(report.cityLevel || 1),
+        troopCount: Math.max(0, Math.floor(Number(report.troopCount) || 0)),
+        sentTroops: Math.max(0, Math.floor(Number(report.sentTroops) || 0)),
+        survivors: Math.max(0, Math.floor(Number(report.survivors) || 0)),
+        defendersLeft: Math.max(0, Math.floor(Number(report.defendersLeft) || 0)),
+        attackerLosses: Math.max(0, Math.floor(Number(report.attackerLosses) || 0)),
+        defenderLosses: Math.max(0, Math.floor(Number(report.defenderLosses) || 0)),
+        totalDefense: Math.max(0, Math.floor(Number(report.totalDefense) || 0)),
+        opponentName: String(report.opponentName || "").slice(0, 40),
+        ownerName: String(report.ownerName || "").slice(0, 40),
+        summary: String(report.summary || "").slice(0, 120),
+      };
+    })
+    .filter(Boolean)
+    .slice(-120);
 }
 
 function getScoutReport(cityId) {
@@ -2446,7 +2481,20 @@ function completeScoutMission(attack, target) {
     return;
   }
   state.scoutReports = normalizeScoutReports(state.scoutReports);
-  state.scoutReports[target.id] = createScoutReportSnapshot(target);
+  const report = createScoutReportSnapshot(target);
+  state.scoutReports[target.id] = report;
+  addBattleReport({
+    type: "scout",
+    outcome: "scout",
+    cityId: target.id,
+    cityName: target.name,
+    cityLevel: report.cityLevel,
+    troopCount: report.troops,
+    totalDefense: report.totalDefense,
+    ownerName: report.ownerName,
+    opponentName: report.ownerName,
+    summary: `Scout revealed ${formatNumber(report.troops)} troops at ${target.name}.`,
+  });
   addLog(`Scouts reported ${formatNumber(target.troops)} troops stationed at ${target.name}.`);
   showToast(`Scout report received from ${target.name}`);
 }
@@ -2481,6 +2529,25 @@ function createScoutReportSnapshot(target) {
     scoutedAt: state.gameSeconds,
     expiresAt: state.gameSeconds + SCOUT_REPORT_SECONDS,
   };
+}
+
+function getBattleReportOwnerName(city, owner = city?.owner) {
+  if (owner === "player") return state?.playerName || "You";
+  if (city?.ownerKind === "player" && city.ownerName) return city.ownerName;
+  return OWNER[owner]?.label || "Unknown";
+}
+
+function addBattleReport(report) {
+  if (!state) return;
+  state.battleReports = normalizeBattleReports(state.battleReports);
+  const entry = normalizeBattleReports([{
+    id: `report_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`,
+    createdAt: state.gameSeconds,
+    ...report,
+  }])[0];
+  if (!entry) return;
+  state.battleReports.push(entry);
+  if (state.battleReports.length > 120) state.battleReports = state.battleReports.slice(-120);
 }
 
 function pendingNeutralCaptureCount(owner = "player", excludeAttackId = null) {
@@ -3800,6 +3867,11 @@ function resolveAttack(attack) {
 
   const attackerName = attack.owner === "player" ? "You" : "NPC";
   const oldOwner = target.owner;
+  const defenderName = getBattleReportOwnerName(target, oldOwner);
+  const attackerReportName = getBattleReportOwnerName(null, attack.owner);
+  const targetLevel = clampCityLevel(target.level);
+  const defendersAtStart = Math.max(0, Math.floor(Number(target.troops) || 0));
+  const targetDefenseAtStart = getCityStats(target).totalDefense;
   const result = calculateCombatResult(attack.troops, attack.owner, target);
 
   if (result.success) {
@@ -3808,6 +3880,24 @@ function resolveAttack(attack) {
     if (neutralBlockReason) {
       target.troopFloat = Math.max(1, target.troopFloat);
       target.troops = Math.floor(target.troopFloat);
+      if (attack.owner === "player") {
+        addBattleReport({
+          type: "attack",
+          outcome: "defeat",
+          cityId: target.id,
+          cityName: target.name,
+          cityLevel: targetLevel,
+          sentTroops: attack.troops,
+          troopCount: defendersAtStart,
+          survivors: result.survivors,
+          defendersLeft: target.troops,
+          attackerLosses: result.attackerLosses,
+          defenderLosses: result.defenderLosses,
+          totalDefense: targetDefenseAtStart,
+          opponentName: defenderName,
+          summary: neutralBlockReason,
+        });
+      }
       addLog(`${attackerName} defeated the defenders at ${target.name}, but could not capture it. ${neutralBlockReason}`);
       if (attack.owner === "player") showNeutralCaptureLimitModal(neutralBlockReason);
       else showToast(neutralBlockReason);
@@ -3820,10 +3910,44 @@ function resolveAttack(attack) {
       target.lastCapturedAt = state.gameSeconds;
       if (oldOwner === "player") {
         markOwnedCityChanged(target);
+        addBattleReport({
+          type: "defense",
+          outcome: "held",
+          cityId: target.id,
+          cityName: target.name,
+          cityLevel: targetLevel,
+          sentTroops: attack.troops,
+          troopCount: defendersAtStart,
+          survivors: 0,
+          defendersLeft: 0,
+          attackerLosses: result.attackerLosses,
+          defenderLosses: result.defenderLosses,
+          totalDefense: targetDefenseAtStart,
+          opponentName: attackerReportName,
+          summary: "Main city protected. Garrison was destroyed, but the city held.",
+        });
         addLog(`${target.name} is your main city and cannot be captured, but its defending army was destroyed.`);
         showToast(`${target.name} held. Garrison destroyed.`);
       } else {
         syncSharedCityState(target);
+        if (attack.owner === "player") {
+          addBattleReport({
+            type: "attack",
+            outcome: "defeat",
+            cityId: target.id,
+            cityName: target.name,
+            cityLevel: targetLevel,
+            sentTroops: attack.troops,
+            troopCount: defendersAtStart,
+            survivors: result.survivors,
+            defendersLeft: 0,
+            attackerLosses: result.attackerLosses,
+            defenderLosses: result.defenderLosses,
+            totalDefense: targetDefenseAtStart,
+            opponentName: defenderName,
+            summary: "Protected main city. Garrison destroyed, but ownership did not change.",
+          });
+        }
         addLog(`${attackerName} destroyed the garrison at ${target.name}, but main cities cannot be captured.`);
         if (attack.owner === "player") showToast(`${target.name} held as a protected main city.`);
       }
@@ -3856,6 +3980,22 @@ function resolveAttack(attack) {
     if (attack.owner === "player") {
       const savedAttackers = returnSavedTroops("fearless", result.attackerLosses, `${target.name} attack`);
       const scavengedGold = grantKillGold("scavenger", result.killedDefenders, `${target.name} attack`);
+      addBattleReport({
+        type: "attack",
+        outcome: "victory",
+        cityId: target.id,
+        cityName: target.name,
+        cityLevel: targetLevel,
+        sentTroops: attack.troops,
+        troopCount: defendersAtStart,
+        survivors: result.survivors,
+        defendersLeft: 0,
+        attackerLosses: result.attackerLosses,
+        defenderLosses: result.defenderLosses,
+        totalDefense: targetDefenseAtStart,
+        opponentName: defenderName,
+        summary: `Captured with ${formatNumber(result.survivors)} survivors.`,
+      });
       addLog(`Victory: you captured ${target.name} with ${formatNumber(result.survivors)} survivors. XP efficiency ${Math.round(xpEfficiency * 100)}%.`);
       if (savedAttackers > 0 || scavengedGold > 0) {
         showToast(`Captured ${target.name}: +${formatNumber(xpAward)} XP, +${formatNumber(scavengedGold)} gold`);
@@ -3866,6 +4006,22 @@ function resolveAttack(attack) {
     } else if (oldOwner === "player") {
       const savedDefenders = returnSavedTroops("brave", result.defenderLosses, `${target.name} defense`, target.id);
       const salvagedGold = grantKillGold("salvager", result.killedAttackers, `${target.name} defense`);
+      addBattleReport({
+        type: "defense",
+        outcome: "lost",
+        cityId: target.id,
+        cityName: target.name,
+        cityLevel: targetLevel,
+        sentTroops: attack.troops,
+        troopCount: defendersAtStart,
+        survivors: result.survivors,
+        defendersLeft: 0,
+        attackerLosses: result.attackerLosses,
+        defenderLosses: result.defenderLosses,
+        totalDefense: targetDefenseAtStart,
+        opponentName: attackerReportName,
+        summary: `${target.name} was captured by ${attackerReportName}.`,
+      });
       addLog(`Lost: the NPC captured ${target.name}. ${formatNumber(savedDefenders)} defenders escaped and ${formatNumber(cautiousRefund + salvagedGold)} gold was recovered.`);
       showToast(`You lost ${target.name}`);
     }
@@ -3876,11 +4032,43 @@ function resolveAttack(attack) {
     if (attack.owner === "player") {
       const savedAttackers = returnSavedTroops("fearless", result.attackerLosses, `${target.name} failed attack`);
       const scavengedGold = grantKillGold("scavenger", result.killedDefenders, `${target.name} failed attack`);
+      addBattleReport({
+        type: "attack",
+        outcome: "defeat",
+        cityId: target.id,
+        cityName: target.name,
+        cityLevel: targetLevel,
+        sentTroops: attack.troops,
+        troopCount: defendersAtStart,
+        survivors: 0,
+        defendersLeft: result.defendersLeft,
+        attackerLosses: result.attackerLosses,
+        defenderLosses: result.defenderLosses,
+        totalDefense: targetDefenseAtStart,
+        opponentName: defenderName,
+        summary: `${formatNumber(result.defendersLeft)} defenders remained.`,
+      });
       addLog(`Defeat: your attack on ${target.name} failed. ${formatNumber(result.defendersLeft)} defenders remain. ${formatNumber(savedAttackers)} attackers regrouped and ${formatNumber(scavengedGold)} gold was recovered.`);
       showToast(`Attack failed at ${target.name}`);
     } else if (oldOwner === "player") {
       const savedDefenders = returnSavedTroops("brave", result.defenderLosses, `${target.name} defense`);
       const salvagedGold = grantKillGold("salvager", result.killedAttackers, `${target.name} defense`);
+      addBattleReport({
+        type: "defense",
+        outcome: "held",
+        cityId: target.id,
+        cityName: target.name,
+        cityLevel: targetLevel,
+        sentTroops: attack.troops,
+        troopCount: defendersAtStart,
+        survivors: 0,
+        defendersLeft: result.defendersLeft,
+        attackerLosses: result.attackerLosses,
+        defenderLosses: result.defenderLosses,
+        totalDefense: targetDefenseAtStart,
+        opponentName: attackerReportName,
+        summary: `${target.name} survived with ${formatNumber(result.defendersLeft)} defenders.`,
+      });
       addLog(`Defense held: ${target.name} survived the NPC attack.`);
       if (savedDefenders > 0 || salvagedGold > 0) {
         addLog(`Defense rewards: ${formatNumber(savedDefenders)} defenders regrouped and ${formatNumber(salvagedGold)} gold was salvaged.`);
@@ -3940,7 +4128,6 @@ function renderHud() {
   applyFlagToElement(hudKingdomFlag, state.flag);
   cityText.textContent = `${playerCities().length}`;
   pauseBtn.textContent = state.paused ? "▶" : "Ⅱ";
-  if (devBtn) devBtn.classList.toggle("active", Boolean(state.devToolsEnabled));
 
   if (!statusText) return;
   if (state.gameOver === "victory") {
@@ -5284,185 +5471,144 @@ function buySkill(skill) {
   renderAll();
 }
 
-function showDeveloperModal() {
-  if (!state) {
-    showToast("Start a map first.");
-    return;
-  }
-
-  const enabled = Boolean(state.devToolsEnabled);
-  const mainCity = getMainRewardCity();
-  const selectedCity = getDeveloperSelectedCity();
-  const disabled = enabled ? "" : "disabled";
-  const selectedDisabled = enabled && selectedCity ? "" : "disabled";
-  const toggleClass = enabled ? "dev-off" : "";
-
-  modalTitle.textContent = "Developer Test Panel";
-  modalBody.innerHTML = `
-    <div class="dev-panel">
-      <div class="dev-toggle-row">
-        <div>
-          <strong>Developer tools are ${enabled ? "on" : "off"}</strong>
-          <small>Toggle this on before using test grants or instant levels.</small>
-        </div>
-        <button id="devToggleBtn" class="${toggleClass}" type="button">${enabled ? "Turn Off" : "Turn On"}</button>
-      </div>
-
-      <div class="dev-test-group">
-        <strong>Gold</strong>
-        <small>Current gold: ${formatNumber(Math.floor(state.gold))}</small>
-        <div class="dev-button-grid">
-          <button data-dev-gold="500" ${disabled}>+500 Gold</button>
-          <button data-dev-gold="5000" ${disabled}>+5,000 Gold</button>
-          <button data-dev-gold="50000" ${disabled}>+50,000 Gold</button>
-          <button data-dev-gold="500000" ${disabled}>+500,000 Gold</button>
-        </div>
-      </div>
-
-      <div class="dev-test-group">
-        <strong>Main city troops</strong>
-        <small>${mainCity ? `${escapeHtml(mainCity.name)} has ${formatNumber(mainCity.troops)} troops.` : "No player city is available."}</small>
-        <div class="dev-button-grid">
-          <button data-dev-troops="100" ${enabled && mainCity ? "" : "disabled"}>+100 Troops</button>
-          <button data-dev-troops="1000" ${enabled && mainCity ? "" : "disabled"}>+1,000 Troops</button>
-        </div>
-      </div>
-
-      <div class="dev-test-group">
-        <strong>Hero skill points</strong>
-        <small>Available points: ${formatNumber(state.character?.skillPoints || 0)}</small>
-        <div class="dev-button-grid">
-          <button data-dev-skillpoints="1" ${disabled}>+1 Point</button>
-          <button data-dev-skillpoints="10" ${disabled}>+10 Points</button>
-        </div>
-      </div>
-
-      <div class="dev-test-group">
-        <strong>Selected city level</strong>
-        <small>${selectedCity ? `${escapeHtml(selectedCity.name)} is level ${selectedCity.level}.` : "Select a city first, or select a target while sending troops."}</small>
-        <div class="dev-button-grid">
-          <button data-dev-level="1" ${selectedDisabled}>+1 Level</button>
-          <button data-dev-level="10" ${selectedDisabled}>+10 Levels</button>
-          <button data-dev-level="max" ${selectedDisabled}>Level 100</button>
-        </div>
-      </div>
-    </div>
-  `;
-
-  modalBody.querySelector("#devToggleBtn").addEventListener("click", () => setDeveloperToolsEnabled(!enabled));
-  modalBody.querySelectorAll("button[data-dev-gold]").forEach(btn => {
-    btn.addEventListener("click", () => giveDeveloperGold(Number(btn.dataset.devGold)));
-  });
-  modalBody.querySelectorAll("button[data-dev-troops]").forEach(btn => {
-    btn.addEventListener("click", () => giveDeveloperTroops(Number(btn.dataset.devTroops)));
-  });
-  modalBody.querySelectorAll("button[data-dev-skillpoints]").forEach(btn => {
-    btn.addEventListener("click", () => giveDeveloperSkillPoints(Number(btn.dataset.devSkillpoints)));
-  });
-  modalBody.querySelectorAll("button[data-dev-level]").forEach(btn => {
-    const value = btn.dataset.devLevel;
-    btn.addEventListener("click", () => levelDeveloperSelectedCity(value === "max" ? "max" : Number(value)));
-  });
-
-  if (!modal.open) modal.showModal();
-}
-
-function setDeveloperToolsEnabled(enabled) {
-  if (!state) return;
-  state.devToolsEnabled = Boolean(enabled);
-  addLog(`Developer tools ${state.devToolsEnabled ? "enabled" : "disabled"}.`);
-  saveGame();
-  renderAll();
-  showDeveloperModal();
-}
-
-function canUseDeveloperTools() {
-  if (state?.devToolsEnabled) return true;
-  showToast("Turn on Developer tools first.");
-  return false;
-}
-
-function getDeveloperSelectedCity() {
-  return (selectedTargetId ? cityById(selectedTargetId) : null)
-    || (selectedSourceId ? cityById(selectedSourceId) : null);
-}
-
-function giveDeveloperGold(amount) {
-  if (!canUseDeveloperTools()) return;
-  const grant = Math.max(0, Math.floor(Number(amount) || 0));
-  if (!grant) return;
-  state.gold += grant;
-  addLog(`Developer: added ${formatNumber(grant)} gold.`);
-  saveGame();
-  renderAll();
-  showDeveloperModal();
-}
-
-function giveDeveloperTroops(amount) {
-  if (!canUseDeveloperTools()) return;
-  const city = getMainRewardCity();
-  if (!city) {
-    showToast("No main city available.");
-    return;
-  }
-  const grant = Math.max(0, Math.floor(Number(amount) || 0));
-  if (!grant) return;
-  city.troopFloat = Math.max(0, Number(city.troopFloat) || city.troops || 0) + grant;
-  city.troops = Math.floor(city.troopFloat);
-  markOwnedCityChanged(city);
-  addLog(`Developer: added ${formatNumber(grant)} troops to ${city.name}.`);
-  saveGame();
-  renderAll();
-  showDeveloperModal();
-}
-
-function giveDeveloperSkillPoints(amount) {
-  if (!canUseDeveloperTools()) return;
-  const grant = Math.max(0, Math.floor(Number(amount) || 0));
-  if (!grant) return;
-  state.character = normalizeCharacterProgress(state.character);
-  state.character.skillPoints += grant;
-  addLog(`Developer: added ${formatNumber(grant)} hero skill points.`);
-  saveGame();
-  renderAll();
-  showDeveloperModal();
-}
-
-function levelDeveloperSelectedCity(levels) {
-  if (!canUseDeveloperTools()) return;
-  const city = getDeveloperSelectedCity();
-  if (!city) {
-    showToast("Select a city first.");
-    return;
-  }
-  const previousLevel = clampCityLevel(city.level);
-  const nextLevel = levels === "max"
-    ? MAX_CITY_LEVEL
-    : clampCityLevel(previousLevel + Math.max(0, Math.floor(Number(levels) || 0)));
-  if (nextLevel === previousLevel) {
-    showToast(`${city.name} is already level ${city.level}.`);
-    return;
-  }
-  city.level = nextLevel;
-  markOwnedCityChanged(city);
-  addLog(`Developer: leveled ${city.name} from ${previousLevel} to ${city.level}.`);
-  saveGame();
-  renderAll();
-  showDeveloperModal();
-}
-
 function getSkillCost(skill) {
   const level = Math.max(0, Number(state.upgrades[skill]) || 0);
   return Math.floor(450 * Math.pow(level + 1, 1.85));
 }
 
 function showLogModal() {
-  modalTitle.textContent = "Battle Log";
-  const entries = state.log.slice(-18).reverse();
-  modalBody.innerHTML = entries.length
-    ? `<ul>${entries.map(item => `<li>${escapeHtml(item)}</li>`).join("")}</ul>`
-    : `<p>No events yet.</p>`;
-  modal.showModal();
+  if (!state) return;
+  state.battleReports = normalizeBattleReports(state.battleReports);
+  modal.classList.add("battle-report-modal");
+  modalTitle.textContent = "Battle Reports";
+  const filters = [
+    { key: "all", label: "All" },
+    { key: "attack", label: "Attacks" },
+    { key: "defense", label: "Defenses" },
+    { key: "scout", label: "Scouts" },
+  ];
+  const filteredReports = state.battleReports
+    .filter(report => battleReportFilter === "all" || report.type === battleReportFilter)
+    .slice()
+    .reverse();
+
+  modalBody.innerHTML = `
+    <div class="battle-report-panel">
+      <div class="battle-report-toolbar">
+        <span>Filter</span>
+        <div class="battle-report-filters">
+          ${filters.map(filter => `
+            <button class="${battleReportFilter === filter.key ? "active" : ""}" data-report-filter="${filter.key}" type="button">${filter.label}</button>
+          `).join("")}
+        </div>
+      </div>
+      <div class="battle-report-list">
+        ${filteredReports.length
+          ? filteredReports.map(renderBattleReportCard).join("")
+          : `<div class="battle-report-empty">No ${battleReportFilter === "all" ? "battle" : battleReportFilter} reports yet.</div>`}
+      </div>
+    </div>
+  `;
+
+  modalBody.querySelectorAll("[data-report-filter]").forEach(button => {
+    button.addEventListener("click", () => {
+      battleReportFilter = button.dataset.reportFilter || "all";
+      showLogModal();
+    });
+  });
+  modalBody.querySelectorAll("[data-report-detail]").forEach(button => {
+    button.addEventListener("click", () => showBattleReportDetail(button.dataset.reportDetail));
+  });
+  if (!modal.open) modal.showModal();
+}
+
+function renderBattleReportCard(report) {
+  const badge = getBattleReportBadge(report);
+  const age = formatDuration(Math.max(0, state.gameSeconds - report.createdAt));
+  const troopValue = report.type === "scout"
+    ? report.troopCount
+    : (report.sentTroops || report.troopCount || report.defendersLeft);
+  const opponent = report.opponentName || report.ownerName || "Unknown";
+  const troopLabel = report.type === "scout" ? "reported" : "sent";
+  return `
+    <article class="battle-report-card ${badge.tone}">
+      <div class="battle-report-result">
+        <strong>${badge.label}</strong>
+        <small>${age} ago</small>
+      </div>
+      <div class="battle-report-city">
+        <span>Lv ${formatNumber(report.cityLevel)}</span>
+        <strong>${escapeHtml(report.cityName)}</strong>
+      </div>
+      <div class="battle-report-troops">
+        <span aria-hidden="true">${report.type === "scout" ? "&#128301;" : "&#9817;"}</span>
+        <strong>${formatNumber(troopValue)}</strong>
+        <small>${troopLabel}</small>
+      </div>
+      <div class="battle-report-opponent">
+        <strong>${escapeHtml(opponent)}</strong>
+        <small>${escapeHtml(report.summary || getBattleReportSummary(report))}</small>
+      </div>
+      <button class="battle-report-detail-btn" data-report-detail="${escapeHtml(report.id)}" type="button" aria-label="Open report details">&#128203;</button>
+    </article>
+  `;
+}
+
+function showBattleReportDetail(reportId) {
+  const report = normalizeBattleReports(state?.battleReports || []).find(item => item.id === reportId);
+  if (!report) {
+    showToast("That report is no longer available.");
+    showLogModal();
+    return;
+  }
+  const badge = getBattleReportBadge(report);
+  modal.classList.add("battle-report-modal");
+  modalTitle.textContent = "Report Details";
+  modalBody.innerHTML = `
+    <div class="battle-report-detail ${badge.tone}">
+      <button id="battleReportBackBtn" class="battle-report-back" type="button">Back to reports</button>
+      <div class="battle-report-detail-head">
+        <span>${badge.label}</span>
+        <strong>${escapeHtml(report.cityName)}</strong>
+        <small>Level ${formatNumber(report.cityLevel)} - ${formatDuration(Math.max(0, state.gameSeconds - report.createdAt))} ago</small>
+      </div>
+      <div class="battle-report-detail-grid">
+        <div><span>Type</span><strong>${escapeHtml(getBattleReportTypeLabel(report.type))}</strong></div>
+        <div><span>Opponent</span><strong>${escapeHtml(report.opponentName || report.ownerName || "Unknown")}</strong></div>
+        <div><span>${report.type === "scout" ? "Scouted troops" : "Troops sent"}</span><strong>${formatNumber(report.type === "scout" ? report.troopCount : report.sentTroops)}</strong></div>
+        <div><span>Total defense</span><strong>${formatNumber(report.totalDefense)}</strong></div>
+        <div><span>Survivors</span><strong>${formatNumber(report.survivors)}</strong></div>
+        <div><span>Defenders left</span><strong>${formatNumber(report.defendersLeft)}</strong></div>
+        <div><span>Attackers lost</span><strong>${formatNumber(report.attackerLosses)}</strong></div>
+        <div><span>Defenders lost</span><strong>${formatNumber(report.defenderLosses)}</strong></div>
+      </div>
+      <p>${escapeHtml(report.summary || getBattleReportSummary(report))}</p>
+    </div>
+  `;
+  modalBody.querySelector("#battleReportBackBtn")?.addEventListener("click", showLogModal);
+  if (!modal.open) modal.showModal();
+}
+
+function getBattleReportBadge(report) {
+  if (report.type === "scout") return { label: "SCOUT", tone: "scout" };
+  if (report.outcome === "victory") return { label: "VICTORY", tone: "victory" };
+  if (report.outcome === "held") return { label: "VICTORY", tone: "victory" };
+  return { label: "DEFEAT", tone: "defeat" };
+}
+
+function getBattleReportTypeLabel(type) {
+  if (type === "attack") return "Attack report";
+  if (type === "defense") return "Defense report";
+  if (type === "scout") return "Scout report";
+  return "Battle report";
+}
+
+function getBattleReportSummary(report) {
+  if (report.type === "scout") return `${formatNumber(report.troopCount)} troops reported.`;
+  if (report.outcome === "victory") return `Captured with ${formatNumber(report.survivors)} survivors.`;
+  if (report.outcome === "held") return `${formatNumber(report.defendersLeft)} defenders held the city.`;
+  if (report.outcome === "lost") return "The city was captured.";
+  return `${formatNumber(report.defendersLeft)} defenders remained.`;
 }
 
 function showHelpModal() {
@@ -5837,13 +5983,13 @@ document.addEventListener("keydown", event => {
   if (!flagEditorView.hidden) showProfileView();
   else closeProfileScreen();
 });
-if (devBtn) devBtn.addEventListener("click", showDeveloperModal);
 logBtn.addEventListener("click", showLogModal);
 if (helpBtn) helpBtn.addEventListener("click", showHelpModal);
 closeModalBtn.addEventListener("click", () => modal.close());
 modal.addEventListener("close", () => {
   modal.classList.remove("troop-slider-modal");
   modal.classList.remove("scout-report-modal");
+  modal.classList.remove("battle-report-modal");
   if (!troopSliderActive) return;
   troopSliderActive = false;
   cancelSendMode();

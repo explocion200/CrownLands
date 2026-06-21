@@ -20,26 +20,31 @@ service cloud.firestore {
       }
     }
 
-    // Phase 2 multiplayer collections. Keep writes locked until city/army
-    // transactions are implemented and tested against real Firebase rules.
+    // Phase 2 multiplayer collections. Signed-in users can create the shared
+    // island and update city docs for the browser prototype. Tighten these
+    // rules when combat moves into server-verified transactions.
     match /islands/{islandId} {
       allow read: if signedIn();
       allow create: if signedIn();
-      allow update, delete: if false;
+      allow update: if signedIn();
+      allow delete: if false;
 
       match /cities/{cityId} {
         allow read: if signedIn();
-        allow write: if false;
+        allow create, update: if signedIn();
+        allow delete: if false;
       }
 
       match /armies/{armyId} {
         allow read: if signedIn();
-        allow write: if false;
+        allow create, update: if signedIn();
+        allow delete: if false;
       }
 
       match /reports/{reportId} {
         allow read: if signedIn();
-        allow write: if false;
+        allow create, update: if signedIn();
+        allow delete: if false;
       }
 
       match /presence/{uid} {

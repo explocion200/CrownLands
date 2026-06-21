@@ -2,6 +2,12 @@ const STORAGE_KEY = "crownlands-realtime-v20";
 const LEGACY_STORAGE_KEYS = ["crownlands-realtime-v19", "crownlands-realtime-v18", "crownlands-realtime-v17", "crownlands-realtime-v16", "crownlands-realtime-v15", "realm-lords-realtime-v14", "realm-lords-realtime-v13", "realm-lords-realtime-v12", "realm-lords-realtime-v11", "realm-lords-realtime-v10", "realm-lords-realtime-v9", "realm-lords-realtime-v8", "realm-lords-realtime-v7", "realm-lords-realtime-v6", "realm-lords-realtime-v5", "realm-lords-realtime-v4", "realm-lords-realtime-v3"];
 const SAVE_EVERY_SECONDS = 1.5;
 const ONLINE_SAVE_SECONDS = 8;
+const ONLINE_ISLAND_ID = "main";
+const ONLINE_CITY_SYNC_SECONDS = 6;
+const ONLINE_ARMY_EXPIRY_GRACE_SECONDS = 8;
+const HUD_RENDER_INTERVAL_MS = 250;
+const MAP_RENDER_INTERVAL_MS = 1600;
+const MAX_OFFLINE_PROGRESS_SECONDS = 7 * 24 * 60 * 60;
 const WORLD_WIDTH = 2800;
 const WORLD_HEIGHT = 1575;
 const GRID_SIZE = 40;
@@ -1392,16 +1398,30 @@ let pinchState = null;
 let suppressMapClick = false;
 let lastFrameTime = performance.now();
 let lastRenderTime = 0;
+let lastHudRenderTime = 0;
 let saveTimer = 0;
 let onlineSaveTimer = 0;
 let onlineSaveQueued = false;
 let onlineSaveInFlight = false;
 let onlineLastSaveAt = 0;
 let onlineLastError = "";
+let loginStartInFlight = false;
+let onlineIslandUnsubscribe = null;
+let onlineWorldLoading = false;
+let onlineWorldConnected = false;
+let onlineCitiesLoaded = false;
+let onlineFreshClaimCityId = "";
+let onlineCitySyncTimer = 0;
+let onlineCitySyncInFlight = false;
+let onlineCitySyncQueued = false;
+let onlineArmies = [];
+let pendingOfflineProgressSeconds = 0;
+let localDirtyCityIds = new Set();
 let toastTimer = null;
 let attackIdCounter = 1;
 let flagDraft = null;
 let activeProfileTab = "profile";
+let battleReportFilter = "all";
 let playableBaseCitiesCache = null;
 let interactionRenderLockUntil = 0;
 
@@ -1473,7 +1493,6 @@ const modal = document.getElementById("modal");
 const modalTitle = document.getElementById("modalTitle");
 const modalBody = document.getElementById("modalBody");
 const closeModalBtn = document.getElementById("closeModalBtn");
-const devBtn = document.getElementById("devBtn");
 const logBtn = document.getElementById("logBtn");
 const helpBtn = document.getElementById("helpBtn");
 
@@ -1536,6 +1555,7 @@ function createIslandStartLayout(playerName) {
     troopFloat: NEUTRAL_START_TROOPS,
     investedGold: 0,
     lastCapturedAt: null,
+    isMainCity: false,
   }));
 
   const startIds = pickStartCities(cities);
@@ -1557,6 +1577,7 @@ function createIslandStartLayout(playerName) {
     city.defense = 1;
     city.investedGold = 0;
     city.lastCapturedAt = null;
+    city.isMainCity = slot.key === "player";
   }
 
   return { cities, startIds };
@@ -1591,6 +1612,87 @@ function pickStartCities(cities) {
   return result;
 }
 
+function pickDeterministicStartCities(cities) {
+  const anchors = {
+    player: { x: 560, y: 1220, pool: "p1" },
+    player2: { x: 660, y: 310, pool: "p2" },
+    player3: { x: 2350, y: 470, pool: "p3" },
+    npc: { x: 2230, y: 1180, pool: "npc" },
+  };
+  const used = new Set();
+  const result = {};
+
+  for (const [key, config] of Object.entries(anchors)) {
+    const chosen = cities
+      .filter(city => city.startPool === config.pool && !used.has(city.id))
+      .sort((a, b) => Math.hypot(a.x - config.x, a.y - config.y) - Math.hypot(b.x - config.x, b.y - config.y))[0];
+    if (chosen) {
+      used.add(chosen.id);
+      result[key] = chosen.id;
+    }
+  }
+
+  return result;
+}
+
+function createOnlineIslandSeed() {
+  const baseCities = getPlayableBaseCities();
+  const startIds = pickDeterministicStartCities(baseCities);
+  const cities = baseCities.map(city => {
+    const isNpc = city.id === startIds.npc;
+    return {
+      ...city,
+      ownerKind: isNpc ? "npc" : "neutral",
+      ownerUid: null,
+      ownerName: isNpc ? "NPC" : "",
+      ownerFlag: null,
+      level: 1,
+      troops: isNpc ? NPC_START_TROOPS : NEUTRAL_START_TROOPS,
+      troopFloat: isNpc ? NPC_START_TROOPS : NEUTRAL_START_TROOPS,
+      defense: 1,
+      investedGold: 0,
+      lastCapturedAt: null,
+      isMainCity: false,
+    };
+  });
+
+  return {
+    cities,
+    startIds,
+    claimCandidateIds: getOnlineClaimCandidateIds(cities, startIds),
+  };
+}
+
+function getOnlineClaimCandidateIds(cities, startIds) {
+  const selected = [startIds.player, startIds.player2, startIds.player3]
+    .filter(Boolean)
+    .filter(id => id !== startIds.npc);
+  const used = new Set([...selected, startIds.npc].filter(Boolean));
+
+  while (selected.length < cities.length - 1) {
+    let bestCity = null;
+    let bestSpacing = -Infinity;
+    for (const city of cities) {
+      if (used.has(city.id)) continue;
+      const nearest = selected.length
+        ? Math.min(...selected.map(id => {
+            const other = cities.find(item => item.id === id);
+            return other ? Math.hypot(city.x - other.x, city.y - other.y) : Infinity;
+          }))
+        : Infinity;
+      if (nearest > bestSpacing) {
+        bestSpacing = nearest;
+        bestCity = city;
+      }
+    }
+    if (!bestCity) break;
+    selected.push(bestCity.id);
+    used.add(bestCity.id);
+  }
+
+  return selected;
+}
+
 function newGame(playerName) {
   const island = createIslandStartLayout(playerName);
   return {
@@ -1600,14 +1702,15 @@ function newGame(playerName) {
     flag: createDefaultFlag(),
     gold: TEST_STARTING_GOLD,
     gameSeconds: 0,
+    lastRealTimeMs: Date.now(),
     paused: false,
     aiCooldown: 5.5,
     ai: createAiState(),
     upgrades: createDefaultSkills(),
     daily: { date: currentLocalDateKey(), neutralCaptures: 0 },
     scoutReports: {},
+    battleReports: [],
     marchPercent: DEFAULT_MARCH_PERCENT,
-    devToolsEnabled: false,
     mainCityId: island.startIds.player,
     islandSlots: island.startIds,
     cities: island.cities,
@@ -1775,6 +1878,7 @@ function addCharacterXp(amount, reason = "progress") {
     if (mainCity && totalTroopReward > 0) {
       mainCity.troopFloat = Math.max(0, Number(mainCity.troopFloat) || mainCity.troops || 0) + totalTroopReward;
       mainCity.troops = Math.floor(mainCity.troopFloat);
+      markOwnedCityChanged(mainCity, false);
     }
 
     addLog(`Hero leveled to ${state.character.level}. Reward: ${formatNumber(levelsGained)} skill point, ${formatNumber(totalGoldReward)} gold, and ${formatNumber(totalTroopReward)} troops to ${mainCity ? mainCity.name : "the main city"}.`);
@@ -1987,9 +2091,9 @@ function loadGame() {
       loaded.flag = normalizeFlag(loaded.flag);
       loaded.ai = normalizeAiState(loaded.ai);
       loaded.marchPercent = normalizeMarchPercent(loaded.marchPercent);
-      loaded.devToolsEnabled = Boolean(loaded.devToolsEnabled);
       loaded.daily = normalizeDailyCaptureTracker(loaded.daily);
       loaded.scoutReports = normalizeScoutReports(loaded.scoutReports);
+      loaded.battleReports = normalizeBattleReports(loaded.battleReports);
       const playableBases = getPlayableBaseCities();
       const savedCitiesAreCurrent = Array.isArray(loaded.cities)
         && loaded.cities.length === playableBases.length
@@ -2018,6 +2122,7 @@ function loadGame() {
         city.troops = Math.max(0, Math.floor(Number(city.troops) || 0));
         city.troopFloat = Number.isFinite(city.troopFloat) ? Math.max(0, city.troopFloat) : city.troops;
         city.investedGold = Math.max(0, Math.floor(Number(city.investedGold) || 0));
+        city.isMainCity = Boolean(city.isMainCity || city.id === loaded.mainCityId);
         if (city.lastCapturedAt === null || city.lastCapturedAt === undefined || city.lastCapturedAt === "") {
           city.lastCapturedAt = null;
         } else {
@@ -2071,9 +2176,9 @@ function normalizeOnlineGameSnapshot(snapshot, fallbackPlayerName = "Ricky") {
     loaded.flag = normalizeFlag(loaded.flag);
     loaded.ai = normalizeAiState(loaded.ai);
     loaded.marchPercent = normalizeMarchPercent(loaded.marchPercent);
-    loaded.devToolsEnabled = Boolean(loaded.devToolsEnabled);
     loaded.daily = normalizeDailyCaptureTracker(loaded.daily);
     loaded.scoutReports = normalizeScoutReports(loaded.scoutReports);
+    loaded.battleReports = normalizeBattleReports(loaded.battleReports);
 
     const playableBases = getPlayableBaseCities();
     const savedCitiesAreCurrent = loaded.cities.length === playableBases.length
@@ -2102,6 +2207,7 @@ function normalizeOnlineGameSnapshot(snapshot, fallbackPlayerName = "Ricky") {
       city.troops = Math.max(0, Math.floor(Number(city.troops) || 0));
       city.troopFloat = Number.isFinite(city.troopFloat) ? Math.max(0, city.troopFloat) : city.troops;
       city.investedGold = Math.max(0, Math.floor(Number(city.investedGold) || 0));
+      city.isMainCity = Boolean(city.isMainCity || city.id === loaded.mainCityId);
       if (city.lastCapturedAt === null || city.lastCapturedAt === undefined || city.lastCapturedAt === "") {
         city.lastCapturedAt = null;
       } else {
@@ -2189,6 +2295,41 @@ function normalizeScoutReports(reports) {
   return normalized;
 }
 
+function normalizeBattleReports(reports) {
+  if (!Array.isArray(reports)) return [];
+  return reports
+    .map(report => {
+      if (!report || typeof report !== "object") return null;
+      const type = ["attack", "defense", "scout"].includes(report.type) ? report.type : "";
+      if (!type) return null;
+      const fallbackOutcome = type === "scout" ? "scout" : "defeat";
+      const outcome = ["victory", "defeat", "held", "lost", "scout"].includes(report.outcome)
+        ? report.outcome
+        : fallbackOutcome;
+      return {
+        id: String(report.id || `report_${Math.random().toString(36).slice(2)}`),
+        type,
+        outcome,
+        createdAt: Math.max(0, Number(report.createdAt) || 0),
+        cityId: String(report.cityId || ""),
+        cityName: String(report.cityName || "Unknown city").slice(0, 40),
+        cityLevel: clampCityLevel(report.cityLevel || 1),
+        troopCount: Math.max(0, Math.floor(Number(report.troopCount) || 0)),
+        sentTroops: Math.max(0, Math.floor(Number(report.sentTroops) || 0)),
+        survivors: Math.max(0, Math.floor(Number(report.survivors) || 0)),
+        defendersLeft: Math.max(0, Math.floor(Number(report.defendersLeft) || 0)),
+        attackerLosses: Math.max(0, Math.floor(Number(report.attackerLosses) || 0)),
+        defenderLosses: Math.max(0, Math.floor(Number(report.defenderLosses) || 0)),
+        totalDefense: Math.max(0, Math.floor(Number(report.totalDefense) || 0)),
+        opponentName: String(report.opponentName || "").slice(0, 40),
+        ownerName: String(report.ownerName || "").slice(0, 40),
+        summary: String(report.summary || "").slice(0, 120),
+      };
+    })
+    .filter(Boolean)
+    .slice(-120);
+}
+
 function getScoutReport(cityId) {
   if (!state || !cityId) return null;
   state.scoutReports = normalizeScoutReports(state.scoutReports);
@@ -2216,6 +2357,7 @@ function scoutCity(cityId) {
 
   const source = sourceOption.city;
   launchScoutMission(source, target, sourceOption.route);
+  if (isOnlineWorldActive()) syncOwnedCitiesToOnline(true);
   addLog(`One scout left ${source.name} for ${target.name}.`);
   saveGame();
   renderAll();
@@ -2226,6 +2368,7 @@ function launchScoutMission(source, target, route) {
   if (!source || !target || source.owner !== "player" || source.troops < 1 || !route?.points?.length) return null;
   source.troopFloat = Math.max(0, (Number(source.troopFloat) || source.troops) - 1);
   source.troops = Math.floor(source.troopFloat);
+  markOwnedCityChanged(source, false);
   const duration = travelTime(source, target, "player", route.length);
   const mission = {
     id: attackIdCounter++,
@@ -2240,7 +2383,9 @@ function launchScoutMission(source, target, route) {
     pathLength: route.length,
     targetOwnerAtLaunch: target.owner,
   };
+  prepareOnlineArmyMission(mission);
   state.attacks.push(mission);
+  publishOnlineArmyMovement(mission);
   return mission;
 }
 
@@ -2273,6 +2418,12 @@ function toggleScoutNearby(cityId) {
     renderAll();
     return;
   }
+  if (source.troops < 1) {
+    scoutNearbySourceId = null;
+    renderAll();
+    showToast(`${source.name} needs at least 1 soldier to send scouts.`);
+    return;
+  }
 
   if (scoutNearbySourceId !== source.id) {
     scoutNearbySourceId = source.id;
@@ -2303,6 +2454,7 @@ function toggleScoutNearby(cityId) {
   state.gold -= SCOUT_NEARBY_COST;
   for (const option of options) launchScoutMission(source, option.city, option.route);
   scoutNearbySourceId = null;
+  if (isOnlineWorldActive()) syncOwnedCitiesToOnline(true);
   addLog(`${source.name} dispatched ${formatNumber(options.length)} nearby scouts for ${formatNumber(SCOUT_NEARBY_COST)} gold.`);
   saveGame();
   renderAll();
@@ -2315,7 +2467,7 @@ function getPendingScoutMission(cityId) {
 
 function findNearestScoutSource(target) {
   return playerCities()
-    .filter(city => city.troops >= 1 && city.id !== target.id)
+    .filter(city => Math.floor(Number(city.troops) || 0) >= 1 && city.id !== target.id)
     .map(city => ({ city, route: findRoute(city, target) }))
     .filter(option => option.route?.points?.length)
     .sort((a, b) => a.route.length - b.route.length)[0] || null;
@@ -2329,7 +2481,20 @@ function completeScoutMission(attack, target) {
     return;
   }
   state.scoutReports = normalizeScoutReports(state.scoutReports);
-  state.scoutReports[target.id] = createScoutReportSnapshot(target);
+  const report = createScoutReportSnapshot(target);
+  state.scoutReports[target.id] = report;
+  addBattleReport({
+    type: "scout",
+    outcome: "scout",
+    cityId: target.id,
+    cityName: target.name,
+    cityLevel: report.cityLevel,
+    troopCount: report.troops,
+    totalDefense: report.totalDefense,
+    ownerName: report.ownerName,
+    opponentName: report.ownerName,
+    summary: `Scout revealed ${formatNumber(report.troops)} troops at ${target.name}.`,
+  });
   addLog(`Scouts reported ${formatNumber(target.troops)} troops stationed at ${target.name}.`);
   showToast(`Scout report received from ${target.name}`);
 }
@@ -2352,6 +2517,7 @@ function createScoutReportSnapshot(target) {
     troops: baseTroopDefense,
     totalDefense: Math.floor(stats.totalDefense),
     owner: target.owner,
+    ownerName: getCityOwnerDisplayName(target),
     cityLevel: stats.level,
     defensePercent: stats.defensePercent,
     cityWalls: stats.cityWalls,
@@ -2363,6 +2529,25 @@ function createScoutReportSnapshot(target) {
     scoutedAt: state.gameSeconds,
     expiresAt: state.gameSeconds + SCOUT_REPORT_SECONDS,
   };
+}
+
+function getBattleReportOwnerName(city, owner = city?.owner) {
+  if (owner === "player") return state?.playerName || "You";
+  if (city?.ownerKind === "player" && city.ownerName) return city.ownerName;
+  return OWNER[owner]?.label || "Unknown";
+}
+
+function addBattleReport(report) {
+  if (!state) return;
+  state.battleReports = normalizeBattleReports(state.battleReports);
+  const entry = normalizeBattleReports([{
+    id: `report_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`,
+    createdAt: state.gameSeconds,
+    ...report,
+  }])[0];
+  if (!entry) return;
+  state.battleReports.push(entry);
+  if (state.battleReports.length > 120) state.battleReports = state.battleReports.slice(-120);
 }
 
 function pendingNeutralCaptureCount(owner = "player", excludeAttackId = null) {
@@ -2428,6 +2613,7 @@ function recordNeutralCapture() {
 
 function saveGame() {
   if (!state) return;
+  state.lastRealTimeMs = Date.now();
   localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   queueOnlineSave();
 }
@@ -2471,6 +2657,7 @@ async function flushOnlineSave(force = false) {
   try {
     await api.savePlayerProfile(getPlayerProfileSnapshot());
     await api.saveGameSnapshot(getSerializableGameState());
+    await syncOwnedCitiesToOnline();
     onlineLastSaveAt = Date.now();
     onlineLastError = "";
     updateOnlineUi();
@@ -2530,13 +2717,25 @@ function updateOnlineUi() {
     return;
   }
 
-  onlineStatusText.textContent = "Guest mode";
-  onlineStatusDetail.textContent = "Sign in to save this kingdom to Firebase.";
+  onlineStatusText.textContent = "Sign in to play";
+  onlineStatusDetail.textContent = "Use Google to load your kingdom.";
   if (googleSignInBtn) {
     googleSignInBtn.hidden = false;
     googleSignInBtn.disabled = false;
   }
   if (googleSignOutBtn) googleSignOutBtn.hidden = true;
+}
+
+async function startAfterLoginIfNeeded() {
+  const api = getOnlineApi();
+  if (loginStartInFlight || state || !setupScreen?.classList.contains("visible")) return;
+  if (!api?.isSignedIn?.()) return;
+  loginStartInFlight = true;
+  try {
+    await startFromInput(false);
+  } finally {
+    loginStartInFlight = false;
+  }
 }
 
 async function handleGoogleSignIn() {
@@ -2550,6 +2749,7 @@ async function handleGoogleSignIn() {
     if (googleSignInBtn) googleSignInBtn.disabled = true;
     await api.signInWithGoogle();
     updateOnlineUi();
+    await startAfterLoginIfNeeded();
     if (state) {
       queueOnlineSave();
       await flushOnlineSave(true);
@@ -2569,6 +2769,7 @@ async function handleGoogleSignOut() {
   const api = getOnlineApi();
   if (!api?.signOut) return;
   try {
+    disconnectOnlineWorld();
     await flushOnlineSave(true);
     await api.signOut();
     onlineLastSaveAt = 0;
@@ -2580,6 +2781,455 @@ async function handleGoogleSignOut() {
     updateOnlineUi();
     showToast("Could not sign out.");
   }
+}
+
+function getCurrentOnlineUid() {
+  return getOnlineApi()?.getUser?.()?.uid || "";
+}
+
+function isOnlineWorldActive() {
+  return Boolean(state?.online?.islandId && getOnlineApi()?.isSignedIn?.());
+}
+
+function disconnectOnlineWorld() {
+  if (typeof onlineIslandUnsubscribe === "function") onlineIslandUnsubscribe();
+  onlineIslandUnsubscribe = null;
+  onlineArmies = [];
+  onlineWorldConnected = false;
+  onlineCitiesLoaded = false;
+  onlineFreshClaimCityId = "";
+  onlineWorldLoading = false;
+}
+
+async function setupOnlineWorld() {
+  const api = getOnlineApi();
+  if (!state || !api?.isConfigured?.() || !api?.isSignedIn?.()) return false;
+  if (onlineWorldLoading || onlineWorldConnected) return onlineWorldConnected;
+
+  onlineWorldLoading = true;
+  onlineCitiesLoaded = false;
+  onlineStatusDetail.textContent = "Loading the shared island...";
+  try {
+    const seed = createOnlineIslandSeed();
+    await api.ensureMainIsland({
+      islandId: ONLINE_ISLAND_ID,
+      cities: seed.cities,
+      meta: {
+        version: 20,
+        name: "Crownlands Main Island",
+        cityCount: seed.cities.length,
+        worldWidth: WORLD_WIDTH,
+        worldHeight: WORLD_HEIGHT,
+        npcCityId: seed.startIds.npc || null,
+      },
+    });
+
+    const claim = await api.claimStartingCity({
+      islandId: ONLINE_ISLAND_ID,
+      candidateCityIds: seed.claimCandidateIds,
+      playerName: state.playerName,
+      flag: state.flag,
+    });
+
+    state.online = {
+      islandId: ONLINE_ISLAND_ID,
+      playerUid: getCurrentOnlineUid(),
+      mainCityId: claim?.cityId || state.mainCityId,
+    };
+    if (claim?.cityId) state.mainCityId = claim.cityId;
+    onlineFreshClaimCityId = !claim?.alreadyClaimed && claim?.cityId ? claim.cityId : "";
+    const claimedCity = claim?.cityId ? cityById(claim.cityId) : null;
+    if (claimedCity) claimedCity.isMainCity = true;
+    if (claim?.alreadyClaimed) addLog("Online island connected. Your claimed city was restored.");
+    else if (claim?.cityId) addLog(`Online island connected. ${cityById(claim.cityId)?.name || "A city"} joined your kingdom.`);
+
+    if (onlineIslandUnsubscribe) onlineIslandUnsubscribe();
+    let initialCitiesReady = false;
+    let resolveInitialCities = () => {};
+    const initialCitiesPromise = new Promise(resolve => {
+      const timer = setTimeout(resolve, 5000);
+      resolveInitialCities = () => {
+        if (initialCitiesReady) return;
+        initialCitiesReady = true;
+        clearTimeout(timer);
+        resolve();
+      };
+    });
+    onlineIslandUnsubscribe = api.subscribeIsland(ONLINE_ISLAND_ID, {
+      onCities: onlineCities => {
+        applyOnlineCities(onlineCities);
+        onlineCitiesLoaded = true;
+        if (pendingOfflineProgressSeconds > 0) applyPendingOfflineProgress();
+        if (state?.mainCityId && cityById(state.mainCityId)?.owner !== "player") {
+          const nextOwned = playerCities()[0];
+          state.mainCityId = nextOwned?.id || state.mainCityId;
+        }
+        renderAll();
+        resolveInitialCities();
+        onlineFreshClaimCityId = "";
+      },
+      onArmies: armies => {
+        applyOnlineArmies(armies);
+        renderPaths();
+        renderArmies();
+      },
+    });
+
+    await initialCitiesPromise;
+    onlineWorldConnected = true;
+    onlineStatusDetail.textContent = "Shared island connected.";
+    showToast("Shared island connected.");
+    saveGame();
+    return true;
+  } catch (error) {
+    onlineLastError = error?.message || String(error);
+    updateOnlineUi();
+    showToast("Could not connect shared island.");
+    console.warn("Online island setup failed", error);
+    return false;
+  } finally {
+    onlineWorldLoading = false;
+  }
+}
+
+function applyOnlineCities(onlineCities) {
+  if (!state || !Array.isArray(onlineCities)) return;
+  const byId = new Map(onlineCities.map(city => [city.id, city]));
+  const currentUid = getCurrentOnlineUid();
+  const localById = new Map(state.cities.map(city => [city.id, city]));
+
+  state.cities = getPlayableBaseCities().map(base => {
+    const current = localById.get(base.id) || {};
+    const online = byId.get(base.id) || {};
+    const ownerKind = online.ownerKind || online.owner || current.ownerKind || "neutral";
+    const ownerUid = online.ownerUid || null;
+    const ownerName = online.ownerName || "";
+    const ownerFlag = online.ownerFlag || null;
+    const localOwner = ownerKind === "player"
+      ? ownerUid === currentUid ? "player" : "enemy"
+      : ownerKind === "npc" || ownerKind === "enemy"
+        ? "enemy"
+        : "neutral";
+    const currentIsLocalPlayerCity = current.owner === "player" && (!current.ownerUid || current.ownerUid === currentUid);
+    const onlineBelongsToAnotherPlayer = ownerKind === "player" && ownerUid && ownerUid !== currentUid;
+    const onlineBelongsToCurrentPlayer = ownerKind === "player" && ownerUid === currentUid;
+    const isFreshClaimCity = onlineFreshClaimCityId === base.id;
+    const keepLocalPlayerCity = currentIsLocalPlayerCity
+      && !onlineBelongsToAnotherPlayer
+      && !isFreshClaimCity
+      && (onlineBelongsToCurrentPlayer || localDirtyCityIds.has(base.id));
+
+    return {
+      ...base,
+      name: keepLocalPlayerCity ? current.name || online.name || base.name : online.name || current.name || base.name,
+      owner: keepLocalPlayerCity ? "player" : OWNER[localOwner] ? localOwner : "neutral",
+      ownerKind: keepLocalPlayerCity ? "player" : ownerKind,
+      ownerUid: keepLocalPlayerCity ? currentUid || current.ownerUid || ownerUid || null : ownerUid,
+      ownerName: keepLocalPlayerCity ? state.playerName : ownerName,
+      ownerFlag: keepLocalPlayerCity ? state.flag : ownerFlag,
+      level: clampCityLevel(keepLocalPlayerCity ? current.level ?? online.level ?? base.level : online.level ?? current.level ?? base.level),
+      troops: Math.max(0, Math.floor(Number(keepLocalPlayerCity ? current.troops ?? online.troops ?? base.troops : online.troops ?? current.troops ?? base.troops) || 0)),
+      troopFloat: Math.max(0, Number(keepLocalPlayerCity ? current.troopFloat ?? current.troops ?? online.troopFloat ?? online.troops ?? base.troops : online.troopFloat ?? current.troopFloat ?? online.troops ?? current.troops ?? base.troops) || 0),
+      defense: 1,
+      investedGold: Math.max(0, Math.floor(Number(keepLocalPlayerCity ? current.investedGold ?? online.investedGold : online.investedGold ?? current.investedGold) || 0)),
+      lastCapturedAt: keepLocalPlayerCity ? current.lastCapturedAt ?? online.lastCapturedAt ?? null : online.lastCapturedAt ?? current.lastCapturedAt ?? null,
+      isMainCity: Boolean(keepLocalPlayerCity ? current.isMainCity || online.isMainCity : online.isMainCity || current.isMainCity),
+      startPool: base.startPool,
+    };
+  });
+}
+
+function markOwnedCityChanged(city, syncNow = true) {
+  if (!state || !city || city.owner !== "player") return;
+  localDirtyCityIds.add(city.id);
+  city.ownerKind = "player";
+  city.ownerUid = getCurrentOnlineUid() || city.ownerUid || null;
+  city.ownerName = state.playerName;
+  city.ownerFlag = state.flag;
+  city.isMainCity = Boolean(city.isMainCity || city.id === state.mainCityId);
+  if (syncNow && isOnlineWorldActive()) syncOwnedCitiesToOnline(true);
+}
+
+function toOnlineOwnedCity(city) {
+  return {
+    id: city.id,
+    name: city.name,
+    x: city.x,
+    y: city.y,
+    startPool: city.startPool || "",
+    ownerKind: "player",
+    ownerUid: getCurrentOnlineUid(),
+    ownerName: state.playerName,
+    ownerFlag: state.flag,
+    level: clampCityLevel(city.level),
+    troops: Math.max(0, Math.floor(Number(city.troops) || 0)),
+    troopFloat: Math.max(0, Number(city.troopFloat) || Number(city.troops) || 0),
+    defense: 1,
+    investedGold: Math.max(0, Math.floor(Number(city.investedGold) || 0)),
+    lastCapturedAt: city.lastCapturedAt ?? null,
+    isMainCity: Boolean(city.isMainCity || city.id === state.mainCityId),
+  };
+}
+
+function toOnlineCityState(city) {
+  return {
+    id: city.id,
+    name: city.name,
+    x: city.x,
+    y: city.y,
+    startPool: city.startPool || "",
+    ownerKind: city.ownerKind || (city.owner === "player" ? "player" : city.owner === "enemy" ? "npc" : city.owner || "neutral"),
+    ownerUid: city.ownerKind === "player" ? city.ownerUid || null : null,
+    ownerName: city.ownerName || "",
+    ownerFlag: city.ownerFlag || null,
+    level: clampCityLevel(city.level),
+    troops: Math.max(0, Math.floor(Number(city.troops) || 0)),
+    troopFloat: Math.max(0, Number(city.troopFloat) || Number(city.troops) || 0),
+    defense: 1,
+    investedGold: Math.max(0, Math.floor(Number(city.investedGold) || 0)),
+    lastCapturedAt: city.lastCapturedAt ?? null,
+    isMainCity: Boolean(city.isMainCity || city.id === state.mainCityId),
+  };
+}
+
+function syncSharedCityState(city) {
+  if (!city || !isOnlineWorldActive()) return;
+  const api = getOnlineApi();
+  if (!api?.saveCityState) return;
+  api.saveCityState(ONLINE_ISLAND_ID, toOnlineCityState(city)).catch(error => {
+    onlineLastError = error?.message || String(error);
+    console.warn("Could not sync city battle state", error);
+  });
+}
+
+async function syncOwnedCitiesToOnline(force = false) {
+  if (!isOnlineWorldActive()) return false;
+  if (!onlineCitiesLoaded) {
+    if (force) onlineCitySyncQueued = true;
+    return false;
+  }
+  if (onlineCitySyncInFlight) {
+    if (force) onlineCitySyncQueued = true;
+    return false;
+  }
+  const api = getOnlineApi();
+  if (!api?.savePlayerCities) return false;
+  const currentUid = getCurrentOnlineUid();
+  const cities = playerCities()
+    .filter(city => !city.ownerUid || city.ownerUid === currentUid)
+    .map(toOnlineOwnedCity);
+  if (!cities.length && !force) return false;
+
+  onlineCitySyncInFlight = true;
+  try {
+    await api.savePlayerCities(ONLINE_ISLAND_ID, cities);
+    return true;
+  } catch (error) {
+    onlineLastError = error?.message || String(error);
+    console.warn("Could not sync owned cities", error);
+    return false;
+  } finally {
+    onlineCitySyncInFlight = false;
+    if (onlineCitySyncQueued) {
+      onlineCitySyncQueued = false;
+      syncOwnedCitiesToOnline(true);
+    }
+  }
+}
+
+function normalizeArmyPath(points) {
+  if (!Array.isArray(points)) return [];
+  return points
+    .map(point => ({
+      x: Number(point?.x),
+      y: Number(point?.y),
+    }))
+    .filter(point => Number.isFinite(point.x) && Number.isFinite(point.y));
+}
+
+function createOnlineArmyId(kind = "army") {
+  const uidPart = String(getCurrentOnlineUid() || "player").replace(/[^a-z0-9_-]/gi, "").slice(0, 32) || "player";
+  const kindPart = String(kind || "army").replace(/[^a-z0-9_-]/gi, "").slice(0, 16) || "army";
+  return `${uidPart}_${kindPart}_${Date.now().toString(36)}_${attackIdCounter}`;
+}
+
+function prepareOnlineArmyMission(mission) {
+  if (!mission || !isOnlineWorldActive() || mission.owner !== "player") return mission;
+  const nowMs = Date.now();
+  mission.onlineId = mission.onlineId || createOnlineArmyId(mission.kind);
+  mission.ownerKind = "player";
+  mission.ownerUid = getCurrentOnlineUid();
+  mission.ownerName = state.playerName;
+  mission.ownerFlag = state.flag;
+  mission.launchedAtMs = mission.launchedAtMs || nowMs;
+  mission.arrivesAtMs = mission.arrivesAtMs || nowMs + Math.max(0, Number(mission.total) || 0) * 1000;
+  return mission;
+}
+
+function toOnlineArmyMovement(mission) {
+  const onlineId = mission?.onlineId || "";
+  if (!mission || !onlineId) return null;
+  const from = cityById(mission.fromId);
+  const to = cityById(mission.toId);
+  return {
+    id: onlineId,
+    ownerKind: "player",
+    ownerUid: mission.ownerUid || getCurrentOnlineUid(),
+    ownerName: mission.ownerName || state.playerName,
+    ownerFlag: mission.ownerFlag || state.flag,
+    kind: mission.kind || "attack",
+    fromId: mission.fromId,
+    toId: mission.toId,
+    fromName: from?.name || "",
+    toName: to?.name || "",
+    troops: Math.max(0, Math.floor(Number(mission.troops) || 0)),
+    total: Math.max(0.1, Number(mission.total) || 0.1),
+    path: normalizeArmyPath(mission.path),
+    pathLength: Math.max(0, Number(mission.pathLength) || routeLength(normalizeArmyPath(mission.path))),
+    targetOwnerAtLaunch: mission.targetOwnerAtLaunch || "neutral",
+    launchedAtMs: Math.max(0, Number(mission.launchedAtMs) || Date.now()),
+    arrivesAtMs: Math.max(0, Number(mission.arrivesAtMs) || Date.now()),
+    status: "active",
+  };
+}
+
+function publishOnlineArmyMovement(mission) {
+  if (!isOnlineWorldActive() || mission?.owner !== "player") return;
+  const api = getOnlineApi();
+  if (!api?.saveArmyMovement) return;
+  prepareOnlineArmyMission(mission);
+  const movement = toOnlineArmyMovement(mission);
+  if (!movement) return;
+  api.saveArmyMovement(ONLINE_ISLAND_ID, movement).catch(error => {
+    onlineLastError = error?.message || String(error);
+    console.warn("Could not sync army movement", error);
+  });
+}
+
+function deleteOnlineArmyMovement(mission) {
+  if (!mission?.onlineId || mission.owner !== "player") return;
+  const api = getOnlineApi();
+  if (!api?.deleteArmyMovement) return;
+  api.deleteArmyMovement(ONLINE_ISLAND_ID, mission.onlineId).catch(error => {
+    onlineLastError = error?.message || String(error);
+    console.warn("Could not delete army movement", error);
+  });
+}
+
+function getOnlineArmyRemainingSeconds(army) {
+  if (!army) return 0;
+  if (Number.isFinite(army.arrivesAtMs) && army.arrivesAtMs > 0) {
+    return (army.arrivesAtMs - Date.now()) / 1000;
+  }
+  return Number(army.remaining) || 0;
+}
+
+function resolveOnlineArmyOwner(army) {
+  if (army?.ownerUid && army.ownerUid === getCurrentOnlineUid()) return "player";
+  if (army?.ownerKind === "neutral") return "neutral";
+  return "enemy";
+}
+
+function normalizeOnlineArmyMovement(raw) {
+  if (!raw || typeof raw !== "object") return null;
+  const id = String(raw.id || "").trim();
+  if (!id) return null;
+  const total = Math.max(0.1, Number(raw.total) || 0.1);
+  const launchedAtMs = Math.max(0, Number(raw.launchedAtMs) || 0);
+  const arrivesAtMs = Math.max(
+    0,
+    Number(raw.arrivesAtMs) || (launchedAtMs ? launchedAtMs + total * 1000 : Date.now() + total * 1000)
+  );
+  const path = normalizeArmyPath(raw.path);
+  return {
+    id,
+    onlineId: id,
+    owner: resolveOnlineArmyOwner(raw),
+    ownerKind: raw.ownerKind || raw.owner || "player",
+    ownerUid: raw.ownerUid || "",
+    ownerName: raw.ownerName || "",
+    ownerFlag: raw.ownerFlag || null,
+    kind: ["attack", "transfer", "scout"].includes(raw.kind) ? raw.kind : "attack",
+    fromId: raw.fromId || "",
+    toId: raw.toId || "",
+    troops: Math.max(0, Math.floor(Number(raw.troops) || 0)),
+    total,
+    remaining: Math.max(0, (arrivesAtMs - Date.now()) / 1000),
+    path,
+    pathLength: Math.max(0, Number(raw.pathLength) || routeLength(path)),
+    targetOwnerAtLaunch: raw.targetOwnerAtLaunch || "neutral",
+    launchedAtMs,
+    arrivesAtMs,
+    status: raw.status || "active",
+  };
+}
+
+function isOnlineArmyVisible(army) {
+  if (!army || army.status !== "active") return false;
+  if (!army.fromId || !army.toId) return false;
+  return getOnlineArmyRemainingSeconds(army) > -ONLINE_ARMY_EXPIRY_GRACE_SECONDS;
+}
+
+function adoptOwnOnlineArmies() {
+  if (!state || !Array.isArray(onlineArmies)) return;
+  const uid = getCurrentOnlineUid();
+  if (!uid) return;
+  const localOnlineIds = new Set(state.attacks.map(attack => attack.onlineId).filter(Boolean));
+  for (const army of onlineArmies) {
+    if (army.ownerUid !== uid || localOnlineIds.has(army.id)) continue;
+    const remaining = getOnlineArmyRemainingSeconds(army);
+    if (remaining <= 0) continue;
+    state.attacks.push({
+      id: attackIdCounter++,
+      onlineId: army.id,
+      owner: "player",
+      ownerKind: "player",
+      ownerUid: uid,
+      ownerName: army.ownerName || state.playerName,
+      ownerFlag: army.ownerFlag || state.flag,
+      kind: army.kind,
+      fromId: army.fromId,
+      toId: army.toId,
+      troops: army.troops,
+      total: army.total,
+      remaining: clamp(remaining, 0, army.total),
+      path: army.path,
+      pathLength: army.pathLength,
+      targetOwnerAtLaunch: army.targetOwnerAtLaunch,
+      launchedAtMs: army.launchedAtMs,
+      arrivesAtMs: army.arrivesAtMs,
+    });
+    localOnlineIds.add(army.id);
+  }
+}
+
+function applyOnlineArmies(rawArmies) {
+  if (!Array.isArray(rawArmies)) {
+    onlineArmies = [];
+    return;
+  }
+  onlineArmies = rawArmies
+    .map(normalizeOnlineArmyMovement)
+    .filter(isOnlineArmyVisible);
+  adoptOwnOnlineArmies();
+}
+
+function getRenderableArmies() {
+  if (!state) return [];
+  const localOnlineIds = new Set();
+  const localArmies = state.attacks.map(attack => {
+    if (attack.onlineId) localOnlineIds.add(attack.onlineId);
+    return attack;
+  });
+  const remoteArmies = onlineArmies
+    .filter(isOnlineArmyVisible)
+    .filter(army => !(army.ownerUid === getCurrentOnlineUid() && localOnlineIds.has(army.id)))
+    .map(army => ({
+      ...army,
+      owner: resolveOnlineArmyOwner(army),
+      remaining: Math.max(0, getOnlineArmyRemainingSeconds(army)),
+    }));
+  return [...localArmies, ...remoteArmies];
 }
 
 function hardReset() {
@@ -2600,8 +3250,16 @@ function readSavedName() {
   return "";
 }
 
+function getPreferredPlayerName() {
+  const api = getOnlineApi();
+  return cleanName(playerNameInput?.value)
+    || cleanName(api?.getUser?.()?.displayName)
+    || readSavedName()
+    || "Ricky";
+}
+
 async function startFromInput(forceFresh = false) {
-  const playerName = cleanName(playerNameInput.value) || readSavedName() || "Ricky";
+  const playerName = getPreferredPlayerName();
   const originalStartText = startBtn?.textContent || "";
   try {
     if (startBtn) {
@@ -2614,7 +3272,12 @@ async function startFromInput(forceFresh = false) {
     const saved = onlineSaved || (forceFresh ? null : loadGame());
     state = saved || newGame(playerName);
     if (!saved) state.playerName = playerName;
+    localDirtyCityIds = new Set();
+    pendingOfflineProgressSeconds = getOfflineProgressSeconds(state);
+    state.lastRealTimeMs = Date.now();
     selectedMarchPercent = normalizeMarchPercent(state.marchPercent);
+    const onlineConnected = getOnlineApi()?.isSignedIn?.() ? await setupOnlineWorld() : false;
+    if (!onlineConnected) applyPendingOfflineProgress();
     setupScreen.classList.remove("visible");
     clearSelection(false);
     saveGame();
@@ -2914,13 +3577,26 @@ function frame(now) {
         flushOnlineSave();
       }
     }
+    if (isOnlineWorldActive()) {
+      onlineCitySyncTimer += dt;
+      if (onlineCitySyncTimer >= ONLINE_CITY_SYNC_SECONDS) {
+        onlineCitySyncTimer = 0;
+        syncOwnedCitiesToOnline();
+      }
+    }
   }
 
   if (state) {
     renderArmies();
-    if (now - lastRenderTime > 250 && now >= interactionRenderLockUntil) {
+    if (now - lastHudRenderTime > HUD_RENDER_INTERVAL_MS) {
+      lastHudRenderTime = now;
+      renderHud();
+    }
+    if (now - lastRenderTime > MAP_RENDER_INTERVAL_MS && now >= interactionRenderLockUntil) {
       lastRenderTime = now;
-      renderAll();
+      renderPaths();
+      renderCities();
+      renderPanel();
     }
   }
 
@@ -2931,13 +3607,14 @@ function updateGame(dt) {
   state.gameSeconds += dt;
   updateEconomy(dt);
   updateAttacks(dt);
-  updateEnemyAI(dt);
+  if (!isOnlineWorldActive()) updateEnemyAI(dt);
   checkGameOver();
 }
 
 function updateEconomy(dt) {
   for (const city of state.cities) {
     if (city.owner === "neutral") continue;
+    if (isOnlineWorldActive() && city.owner !== "player") continue;
     const stats = getCityStats(city);
     const growth = stats.troopProductionPerSecond;
     city.troopFloat += growth * dt;
@@ -2946,12 +3623,52 @@ function updateEconomy(dt) {
 
   const goldPerSecond = getGoldPerSecond();
   state.gold += goldPerSecond * dt;
-  state.ai = normalizeAiState(state.ai);
-  state.ai.gold += getAiGoldPerSecond() * dt;
+  if (!isOnlineWorldActive()) {
+    state.ai = normalizeAiState(state.ai);
+    state.ai.gold += getAiGoldPerSecond() * dt;
+  }
 }
 
 function getGoldPerSecond() {
   return playerCities().reduce((sum, city) => sum + getCityStats(city).goldProductionPerSecond, 0);
+}
+
+function getOfflineProgressSeconds(snapshot = state) {
+  const lastRealTimeMs = Math.max(0, Number(snapshot?.lastRealTimeMs) || 0);
+  if (!lastRealTimeMs) return 0;
+  const elapsed = (Date.now() - lastRealTimeMs) / 1000;
+  if (!Number.isFinite(elapsed) || elapsed < 10) return 0;
+  return clamp(elapsed, 0, MAX_OFFLINE_PROGRESS_SECONDS);
+}
+
+function applyPendingOfflineProgress() {
+  if (!state || pendingOfflineProgressSeconds <= 0) return;
+  const elapsed = pendingOfflineProgressSeconds;
+  pendingOfflineProgressSeconds = 0;
+
+  const cities = playerCities();
+  if (!cities.length) return;
+
+  const goldGained = Math.floor(getGoldPerSecond() * elapsed);
+  let troopsGained = 0;
+  for (const city of cities) {
+    const before = Math.floor(Number(city.troopFloat) || city.troops || 0);
+    const growth = getCityStats(city).troopProductionPerSecond * elapsed;
+    if (growth <= 0) continue;
+    city.troopFloat = Math.max(0, Number(city.troopFloat) || city.troops || 0) + growth;
+    city.troops = Math.floor(city.troopFloat);
+    troopsGained += Math.max(0, city.troops - before);
+    markOwnedCityChanged(city, false);
+  }
+  if (goldGained > 0) state.gold += goldGained;
+  state.gameSeconds += elapsed;
+
+  if (goldGained > 0 || troopsGained > 0) {
+    addLog(`Offline production: +${formatNumber(goldGained)} gold and +${formatNumber(troopsGained)} troops.`);
+    showToast(`Offline production: +${formatNumber(goldGained)} gold, +${formatNumber(troopsGained)} troops`);
+    syncOwnedCitiesToOnline(true);
+    saveGame();
+  }
 }
 
 function getAiGoldPerSecond() {
@@ -2967,6 +3684,7 @@ function updateAttacks(dt) {
 
   for (const attack of completed) {
     resolveAttack(attack);
+    deleteOnlineArmyMovement(attack);
   }
 
   if (completed.length) {
@@ -3053,6 +3771,10 @@ function targetPriority(city) {
   return city.level * 10 - city.troops * 0.03;
 }
 
+function isProtectedMainCity(city) {
+  return Boolean(city && (city.isMainCity || city.id === state?.mainCityId));
+}
+
 function launchAttack(sourceId, targetId, percent, owner, exactTroops = null) {
   const source = cityById(sourceId);
   const target = cityById(targetId);
@@ -3080,9 +3802,10 @@ function launchAttack(sourceId, targetId, percent, owner, exactTroops = null) {
 
   source.troopFloat = Math.max(0, source.troopFloat - send);
   source.troops = Math.floor(source.troopFloat);
+  if (owner === "player") markOwnedCityChanged(source, false);
 
   const duration = travelTime(source, target, owner, route.length);
-  state.attacks.push({
+  const mission = {
     id: attackIdCounter++,
     owner,
     kind,
@@ -3094,7 +3817,11 @@ function launchAttack(sourceId, targetId, percent, owner, exactTroops = null) {
     path: route.points,
     pathLength: route.length,
     targetOwnerAtLaunch: target.owner,
-  });
+  };
+  prepareOnlineArmyMission(mission);
+  state.attacks.push(mission);
+  publishOnlineArmyMovement(mission);
+  if (isOnlineWorldActive() && owner === "player") syncOwnedCitiesToOnline(true);
 
   if (owner === "player" && kind === "transfer") {
     addLog(`You moved ${formatNumber(send)} troops from ${source.name} to ${target.name}.`);
@@ -3131,6 +3858,7 @@ function resolveAttack(attack) {
     target.troopFloat += attack.troops;
     target.troops = Math.floor(target.troopFloat);
     if (attack.owner === "player") {
+      markOwnedCityChanged(target);
       addLog(`Reinforcements arrived at ${target.name}: +${formatNumber(attack.troops)} troops.`);
       showToast(`Reinforced ${target.name}`);
     }
@@ -3139,6 +3867,11 @@ function resolveAttack(attack) {
 
   const attackerName = attack.owner === "player" ? "You" : "NPC";
   const oldOwner = target.owner;
+  const defenderName = getBattleReportOwnerName(target, oldOwner);
+  const attackerReportName = getBattleReportOwnerName(null, attack.owner);
+  const targetLevel = clampCityLevel(target.level);
+  const defendersAtStart = Math.max(0, Math.floor(Number(target.troops) || 0));
+  const targetDefenseAtStart = getCityStats(target).totalDefense;
   const result = calculateCombatResult(attack.troops, attack.owner, target);
 
   if (result.success) {
@@ -3147,9 +3880,77 @@ function resolveAttack(attack) {
     if (neutralBlockReason) {
       target.troopFloat = Math.max(1, target.troopFloat);
       target.troops = Math.floor(target.troopFloat);
+      if (attack.owner === "player") {
+        addBattleReport({
+          type: "attack",
+          outcome: "defeat",
+          cityId: target.id,
+          cityName: target.name,
+          cityLevel: targetLevel,
+          sentTroops: attack.troops,
+          troopCount: defendersAtStart,
+          survivors: result.survivors,
+          defendersLeft: target.troops,
+          attackerLosses: result.attackerLosses,
+          defenderLosses: result.defenderLosses,
+          totalDefense: targetDefenseAtStart,
+          opponentName: defenderName,
+          summary: neutralBlockReason,
+        });
+      }
       addLog(`${attackerName} defeated the defenders at ${target.name}, but could not capture it. ${neutralBlockReason}`);
       if (attack.owner === "player") showNeutralCaptureLimitModal(neutralBlockReason);
       else showToast(neutralBlockReason);
+      return;
+    }
+
+    if (isProtectedMainCity(target) && oldOwner !== attack.owner) {
+      target.troopFloat = 0;
+      target.troops = 0;
+      target.lastCapturedAt = state.gameSeconds;
+      if (oldOwner === "player") {
+        markOwnedCityChanged(target);
+        addBattleReport({
+          type: "defense",
+          outcome: "held",
+          cityId: target.id,
+          cityName: target.name,
+          cityLevel: targetLevel,
+          sentTroops: attack.troops,
+          troopCount: defendersAtStart,
+          survivors: 0,
+          defendersLeft: 0,
+          attackerLosses: result.attackerLosses,
+          defenderLosses: result.defenderLosses,
+          totalDefense: targetDefenseAtStart,
+          opponentName: attackerReportName,
+          summary: "Main city protected. Garrison was destroyed, but the city held.",
+        });
+        addLog(`${target.name} is your main city and cannot be captured, but its defending army was destroyed.`);
+        showToast(`${target.name} held. Garrison destroyed.`);
+      } else {
+        syncSharedCityState(target);
+        if (attack.owner === "player") {
+          addBattleReport({
+            type: "attack",
+            outcome: "defeat",
+            cityId: target.id,
+            cityName: target.name,
+            cityLevel: targetLevel,
+            sentTroops: attack.troops,
+            troopCount: defendersAtStart,
+            survivors: result.survivors,
+            defendersLeft: 0,
+            attackerLosses: result.attackerLosses,
+            defenderLosses: result.defenderLosses,
+            totalDefense: targetDefenseAtStart,
+            opponentName: defenderName,
+            summary: "Protected main city. Garrison destroyed, but ownership did not change.",
+          });
+        }
+        addLog(`${attackerName} destroyed the garrison at ${target.name}, but main cities cannot be captured.`);
+        if (attack.owner === "player") showToast(`${target.name} held as a protected main city.`);
+      }
       return;
     }
 
@@ -3158,6 +3959,17 @@ function resolveAttack(attack) {
     const cautiousRefund = oldOwner === "player" && attack.owner !== "player" ? grantCautiousRefund(target) : 0;
 
     target.owner = attack.owner;
+    if (attack.owner === "player") {
+      target.ownerKind = "player";
+      target.ownerUid = getCurrentOnlineUid() || target.ownerUid || null;
+      target.ownerName = state.playerName;
+      target.ownerFlag = state.flag;
+    } else {
+      target.ownerKind = attack.owner === "enemy" ? "npc" : attack.owner;
+      target.ownerUid = null;
+      target.ownerName = OWNER[attack.owner]?.label || "";
+      target.ownerFlag = null;
+    }
     target.troopFloat = result.survivors;
     target.troops = result.survivors;
     target.defense = 1;
@@ -3168,6 +3980,22 @@ function resolveAttack(attack) {
     if (attack.owner === "player") {
       const savedAttackers = returnSavedTroops("fearless", result.attackerLosses, `${target.name} attack`);
       const scavengedGold = grantKillGold("scavenger", result.killedDefenders, `${target.name} attack`);
+      addBattleReport({
+        type: "attack",
+        outcome: "victory",
+        cityId: target.id,
+        cityName: target.name,
+        cityLevel: targetLevel,
+        sentTroops: attack.troops,
+        troopCount: defendersAtStart,
+        survivors: result.survivors,
+        defendersLeft: 0,
+        attackerLosses: result.attackerLosses,
+        defenderLosses: result.defenderLosses,
+        totalDefense: targetDefenseAtStart,
+        opponentName: defenderName,
+        summary: `Captured with ${formatNumber(result.survivors)} survivors.`,
+      });
       addLog(`Victory: you captured ${target.name} with ${formatNumber(result.survivors)} survivors. XP efficiency ${Math.round(xpEfficiency * 100)}%.`);
       if (savedAttackers > 0 || scavengedGold > 0) {
         showToast(`Captured ${target.name}: +${formatNumber(xpAward)} XP, +${formatNumber(scavengedGold)} gold`);
@@ -3178,6 +4006,22 @@ function resolveAttack(attack) {
     } else if (oldOwner === "player") {
       const savedDefenders = returnSavedTroops("brave", result.defenderLosses, `${target.name} defense`, target.id);
       const salvagedGold = grantKillGold("salvager", result.killedAttackers, `${target.name} defense`);
+      addBattleReport({
+        type: "defense",
+        outcome: "lost",
+        cityId: target.id,
+        cityName: target.name,
+        cityLevel: targetLevel,
+        sentTroops: attack.troops,
+        troopCount: defendersAtStart,
+        survivors: result.survivors,
+        defendersLeft: 0,
+        attackerLosses: result.attackerLosses,
+        defenderLosses: result.defenderLosses,
+        totalDefense: targetDefenseAtStart,
+        opponentName: attackerReportName,
+        summary: `${target.name} was captured by ${attackerReportName}.`,
+      });
       addLog(`Lost: the NPC captured ${target.name}. ${formatNumber(savedDefenders)} defenders escaped and ${formatNumber(cautiousRefund + salvagedGold)} gold was recovered.`);
       showToast(`You lost ${target.name}`);
     }
@@ -3188,11 +4032,43 @@ function resolveAttack(attack) {
     if (attack.owner === "player") {
       const savedAttackers = returnSavedTroops("fearless", result.attackerLosses, `${target.name} failed attack`);
       const scavengedGold = grantKillGold("scavenger", result.killedDefenders, `${target.name} failed attack`);
+      addBattleReport({
+        type: "attack",
+        outcome: "defeat",
+        cityId: target.id,
+        cityName: target.name,
+        cityLevel: targetLevel,
+        sentTroops: attack.troops,
+        troopCount: defendersAtStart,
+        survivors: 0,
+        defendersLeft: result.defendersLeft,
+        attackerLosses: result.attackerLosses,
+        defenderLosses: result.defenderLosses,
+        totalDefense: targetDefenseAtStart,
+        opponentName: defenderName,
+        summary: `${formatNumber(result.defendersLeft)} defenders remained.`,
+      });
       addLog(`Defeat: your attack on ${target.name} failed. ${formatNumber(result.defendersLeft)} defenders remain. ${formatNumber(savedAttackers)} attackers regrouped and ${formatNumber(scavengedGold)} gold was recovered.`);
       showToast(`Attack failed at ${target.name}`);
     } else if (oldOwner === "player") {
       const savedDefenders = returnSavedTroops("brave", result.defenderLosses, `${target.name} defense`);
       const salvagedGold = grantKillGold("salvager", result.killedAttackers, `${target.name} defense`);
+      addBattleReport({
+        type: "defense",
+        outcome: "held",
+        cityId: target.id,
+        cityName: target.name,
+        cityLevel: targetLevel,
+        sentTroops: attack.troops,
+        troopCount: defendersAtStart,
+        survivors: 0,
+        defendersLeft: result.defendersLeft,
+        attackerLosses: result.attackerLosses,
+        defenderLosses: result.defenderLosses,
+        totalDefense: targetDefenseAtStart,
+        opponentName: attackerReportName,
+        summary: `${target.name} survived with ${formatNumber(result.defendersLeft)} defenders.`,
+      });
       addLog(`Defense held: ${target.name} survived the NPC attack.`);
       if (savedDefenders > 0 || salvagedGold > 0) {
         addLog(`Defense rewards: ${formatNumber(savedDefenders)} defenders regrouped and ${formatNumber(salvagedGold)} gold was salvaged.`);
@@ -3204,6 +4080,14 @@ function resolveAttack(attack) {
 
   if (selectedSourceId && cityById(selectedSourceId)?.owner !== "player") {
     clearSelection(false);
+  }
+  if (isOnlineWorldActive()) {
+    if (target.owner === "player") {
+      markOwnedCityChanged(target, false);
+      syncOwnedCitiesToOnline(true);
+    } else {
+      syncSharedCityState(target);
+    }
   }
 }
 
@@ -3222,6 +4106,9 @@ function checkGameOver() {
 
 function renderAll() {
   if (!state) return;
+  const now = performance.now();
+  lastHudRenderTime = now;
+  lastRenderTime = now;
   updateCameraTransform();
   renderHud();
   renderPaths();
@@ -3241,7 +4128,6 @@ function renderHud() {
   applyFlagToElement(hudKingdomFlag, state.flag);
   cityText.textContent = `${playerCities().length}`;
   pauseBtn.textContent = state.paused ? "▶" : "Ⅱ";
-  if (devBtn) devBtn.classList.toggle("active", Boolean(state.devToolsEnabled));
 
   if (!statusText) return;
   if (state.gameOver === "victory") {
@@ -3267,6 +4153,34 @@ function applyFlagToElement(element, flag) {
   const symbol = FLAG_SYMBOLS.find(option => option.key === normalized.symbol) || FLAG_SYMBOLS[0];
   const symbolElement = element.querySelector(".flag-symbol");
   if (symbolElement) symbolElement.textContent = symbol.glyph;
+}
+
+function getCityOwnerFlag(city) {
+  if (!city) return null;
+  if (city.owner === "player") return state.flag;
+  if (city.ownerKind === "player") return city.ownerFlag || createDefaultFlag();
+  return null;
+}
+
+function renderCityOwnerFlag(city) {
+  const flag = getCityOwnerFlag(city);
+  if (flag) {
+    return `<span class="kingdom-flag city-owner-flag city-kingdom-flag" aria-hidden="true"><span class="flag-symbol"></span></span>`;
+  }
+  return `<span class="city-owner-flag owner-flag" aria-hidden="true">${OWNER[city.owner]?.flag || OWNER.neutral.flag}</span>`;
+}
+
+function applyCityOwnerFlags(container, city) {
+  const flag = getCityOwnerFlag(city);
+  if (!flag) return;
+  container.querySelectorAll(".city-kingdom-flag").forEach(element => applyFlagToElement(element, flag));
+}
+
+function getCityOwnerDisplayName(city) {
+  if (!city) return "";
+  if (city.owner === "player") return state.playerName;
+  if (city.ownerKind === "player" && city.ownerName) return city.ownerName;
+  return OWNER[city.owner]?.label || "Unknown";
 }
 
 function getKingdomSummary() {
@@ -3409,6 +4323,7 @@ function saveProfileName() {
   if (mainCity?.name === `${previousName} Keep`) mainCity.name = `${nextName} Keep`;
   cancelProfileNameEdit();
   saveGame();
+  syncOwnedCitiesToOnline(true);
   renderAll();
   renderProfileScreen();
   showToast("Ruler name updated.");
@@ -3465,6 +4380,7 @@ function saveFlagEditor() {
   if (!state || !flagDraft) return;
   state.flag = normalizeFlag(flagDraft);
   saveGame();
+  syncOwnedCitiesToOnline(true);
   renderHud();
   showProfileView();
   showToast("Kingdom flag saved.");
@@ -3472,7 +4388,7 @@ function saveFlagEditor() {
 
 function renderPaths() {
   pathsSvg.innerHTML = "";
-  for (const attack of state.attacks) {
+  for (const attack of getRenderableArmies()) {
     const from = cityById(attack.fromId);
     const to = cityById(attack.toId);
     if (!from || !to) continue;
@@ -3520,9 +4436,8 @@ function renderCities() {
     btn.style.top = `${city.y}px`;
     const scoutReport = city.owner === "player" ? null : getScoutReport(city.id);
     const isSelectedForeign = city.owner !== "player" && city.id === selectedTargetId && !sendMode;
-    const ownerFlag = city.owner === "player"
-      ? `<span class="kingdom-flag city-owner-flag player-kingdom-flag" aria-hidden="true"><span class="flag-symbol"></span></span>`
-      : `<span class="city-owner-flag owner-flag" aria-hidden="true">${OWNER[city.owner].flag}</span>`;
+    const ownerName = getCityOwnerDisplayName(city);
+    const ownerFlag = renderCityOwnerFlag(city);
     const cityLabel = city.owner === "player"
       ? `
         <span class="city-label player-city-label">
@@ -3541,7 +4456,7 @@ function renderCities() {
       : isSelectedForeign
         ? `
         <span class="city-label foreign-city-label selected-foreign-label">
-          <strong class="foreign-ruler-name">${escapeHtml(OWNER[city.owner].label)}</strong>
+          <strong class="foreign-ruler-name">${escapeHtml(ownerName)}</strong>
           <span class="foreign-selected-banner">
             <span class="foreign-selected-level">${city.level}</span>
             <span class="foreign-selected-crest">${ownerFlag}</span>
@@ -3560,13 +4475,13 @@ function renderCities() {
           </span>
         </span>`;
     const knownTroops = city.owner === "player" ? city.troops : scoutReport?.troops;
-    btn.setAttribute("aria-label", `${city.name}. ${OWNER[city.owner].label}. Level ${city.level}. ${knownTroops === undefined ? "Unknown troops" : `${formatNumber(knownTroops)} troops`}.`);
+    btn.setAttribute("aria-label", `${city.name}. ${ownerName}. Level ${city.level}. ${knownTroops === undefined ? "Unknown troops" : `${formatNumber(knownTroops)} troops`}.`);
     btn.innerHTML = `
       <span class="city-ring"></span>
       <span class="city-castle stage-${castleStage}" aria-hidden="true"><img class="city-art" src="${getCastleAsset(castleStage)}" alt="" draggable="false" /></span>
       ${cityLabel}
     `;
-    if (city.owner === "player") applyFlagToElement(btn.querySelector(".player-kingdom-flag"), state.flag);
+    applyCityOwnerFlags(btn, city);
     btn.addEventListener("click", event => {
       event.stopPropagation();
       selectCity(city.id);
@@ -3699,6 +4614,7 @@ function showScoutReportModal(cityId) {
   const remaining = Math.max(0, Math.ceil(report.expiresAt - state.gameSeconds));
   const age = Math.max(0, Math.floor(state.gameSeconds - report.scoutedAt));
   const reportedOwner = OWNER[report.owner] ? report.owner : city.owner;
+  const reportedOwnerName = report.ownerName || getCityOwnerDisplayName(city);
   const cityLevel = clampCityLevel(report.cityLevel || city.level);
   const defensePercent = Math.max(0, Number(report.defensePercent) || cityLevel * CITY_LEVEL_STATS.defensePercentPerLevel);
   const cityWalls = Math.max(0, Math.floor(Number(report.cityWalls) || getCityStats({ ...city, level: cityLevel, troops: report.troops }).cityWalls));
@@ -3715,7 +4631,7 @@ function showScoutReportModal(cityId) {
         </div>
         <div class="scout-report-mark" aria-label="Scout mission"><span aria-hidden="true">&#128301;</span><strong>Scout</strong><small>1 troop</small></div>
         <div class="scout-report-ruler enemy">
-          <div><strong>${escapeHtml(OWNER[reportedOwner].label)}</strong><small>City Lv ${formatNumber(cityLevel)}</small></div>
+          <div><strong>${escapeHtml(reportedOwnerName)}</strong><small>City Lv ${formatNumber(cityLevel)}</small></div>
           <span class="scout-report-enemy-flag" aria-hidden="true">${OWNER[reportedOwner].flag}</span>
         </div>
       </div>
@@ -3853,7 +4769,7 @@ function layoutCityLabels() {
 function renderArmies() {
   if (!state) return;
   armyLayer.innerHTML = "";
-  for (const attack of state.attacks) {
+  for (const attack of getRenderableArmies()) {
     const from = cityById(attack.fromId);
     const to = cityById(attack.toId);
     if (!from || !to) continue;
@@ -3863,11 +4779,12 @@ function renderArmies() {
     const x = point.x;
     const y = point.y;
     const token = document.createElement("div");
-    token.className = `army-token ${OWNER[attack.owner].css}`;
+    token.className = `army-token ${(OWNER[attack.owner] || OWNER.enemy).css}`;
     token.style.left = `${x}px`;
     token.style.top = `${y}px`;
     const armyIcon = attack.kind === "scout" ? "🔭" : attack.kind === "transfer" ? "👟" : "⚔";
     token.innerHTML = `<span>${armyIcon}</span><strong>${formatNumber(attack.troops)}</strong><small>${Math.ceil(attack.remaining)}s</small>`;
+    if (attack.ownerName) token.title = `${attack.ownerName}: ${attack.kind} to ${to.name}`;
     armyLayer.appendChild(token);
   }
 }
@@ -4202,7 +5119,7 @@ function showCityInfoModal(cityId) {
     modalTitle.textContent = `${city.name} - Level ${city.level}`;
     modalBody.innerHTML = `
       <div class="city-stat-panel modal-city-stats">
-        <div class="stat-wide"><span>Owner</span><strong>${escapeHtml(OWNER[city.owner].label)}</strong></div>
+        <div class="stat-wide"><span>Owner</span><strong>${escapeHtml(getCityOwnerDisplayName(city))}</strong></div>
         <div class="stat-chip"><span>City level</span><strong>${formatNumber(city.level)}</strong></div>
         <div class="stat-chip"><span>Victory points</span><strong>${formatNumber(stats.victoryPoints)}</strong></div>
         <div class="stat-chip"><span>Troops</span><strong>${report ? formatNumber(report.troops) : "Unknown"}</strong></div>
@@ -4234,7 +5151,7 @@ function showCityInfoModal(cityId) {
   modalBody.innerHTML = `
     <div class="city-stat-panel modal-city-stats">
       <div class="stat-wide"><span>Total defense</span><strong>${formatNumber(stats.totalDefense)}</strong></div>
-      <div class="stat-chip"><span>Owner</span><strong>${OWNER[city.owner].label}</strong></div>
+      <div class="stat-chip"><span>Owner</span><strong>${escapeHtml(getCityOwnerDisplayName(city))}</strong></div>
       <div class="stat-chip"><span>Troops</span><strong>${formatNumber(city.troops)}</strong></div>
       <div class="stat-chip"><span>Victory points</span><strong>${formatNumber(stats.victoryPoints)}</strong><small>Drives growth and XP value</small></div>
       <div class="stat-chip"><span>City defense</span><strong>${stats.defensePercent}%</strong><small>${CITY_LEVEL_STATS.defensePercentPerLevel}% per level</small></div>
@@ -4359,8 +5276,10 @@ function recruit(cityId) {
   const amount = getRecruitAmount(city);
   city.troopFloat += amount;
   city.troops = Math.floor(city.troopFloat);
+  markOwnedCityChanged(city);
   addLog(`Recruited ${formatNumber(amount)} troops at ${city.name}.`);
   showToast(`Recruited at ${city.name}`);
+  saveGame();
   renderAll();
 }
 
@@ -4388,6 +5307,8 @@ function upgradeCity(cityId, levels = 1) {
   addLog(`${city.name} upgraded to level ${city.level}.`);
   showToast(`${city.name} upgraded`);
   addCharacterXp(xpAward, `${city.name} upgrade`);
+  markOwnedCityChanged(city);
+  saveGame();
   renderAll();
 }
 
@@ -4550,183 +5471,144 @@ function buySkill(skill) {
   renderAll();
 }
 
-function showDeveloperModal() {
-  if (!state) {
-    showToast("Start a map first.");
-    return;
-  }
-
-  const enabled = Boolean(state.devToolsEnabled);
-  const mainCity = getMainRewardCity();
-  const selectedCity = getDeveloperSelectedCity();
-  const disabled = enabled ? "" : "disabled";
-  const selectedDisabled = enabled && selectedCity ? "" : "disabled";
-  const toggleClass = enabled ? "dev-off" : "";
-
-  modalTitle.textContent = "Developer Test Panel";
-  modalBody.innerHTML = `
-    <div class="dev-panel">
-      <div class="dev-toggle-row">
-        <div>
-          <strong>Developer tools are ${enabled ? "on" : "off"}</strong>
-          <small>Toggle this on before using test grants or instant levels.</small>
-        </div>
-        <button id="devToggleBtn" class="${toggleClass}" type="button">${enabled ? "Turn Off" : "Turn On"}</button>
-      </div>
-
-      <div class="dev-test-group">
-        <strong>Gold</strong>
-        <small>Current gold: ${formatNumber(Math.floor(state.gold))}</small>
-        <div class="dev-button-grid">
-          <button data-dev-gold="500" ${disabled}>+500 Gold</button>
-          <button data-dev-gold="5000" ${disabled}>+5,000 Gold</button>
-          <button data-dev-gold="50000" ${disabled}>+50,000 Gold</button>
-          <button data-dev-gold="500000" ${disabled}>+500,000 Gold</button>
-        </div>
-      </div>
-
-      <div class="dev-test-group">
-        <strong>Main city troops</strong>
-        <small>${mainCity ? `${escapeHtml(mainCity.name)} has ${formatNumber(mainCity.troops)} troops.` : "No player city is available."}</small>
-        <div class="dev-button-grid">
-          <button data-dev-troops="100" ${enabled && mainCity ? "" : "disabled"}>+100 Troops</button>
-          <button data-dev-troops="1000" ${enabled && mainCity ? "" : "disabled"}>+1,000 Troops</button>
-        </div>
-      </div>
-
-      <div class="dev-test-group">
-        <strong>Hero skill points</strong>
-        <small>Available points: ${formatNumber(state.character?.skillPoints || 0)}</small>
-        <div class="dev-button-grid">
-          <button data-dev-skillpoints="1" ${disabled}>+1 Point</button>
-          <button data-dev-skillpoints="10" ${disabled}>+10 Points</button>
-        </div>
-      </div>
-
-      <div class="dev-test-group">
-        <strong>Selected city level</strong>
-        <small>${selectedCity ? `${escapeHtml(selectedCity.name)} is level ${selectedCity.level}.` : "Select a city first, or select a target while sending troops."}</small>
-        <div class="dev-button-grid">
-          <button data-dev-level="1" ${selectedDisabled}>+1 Level</button>
-          <button data-dev-level="10" ${selectedDisabled}>+10 Levels</button>
-          <button data-dev-level="max" ${selectedDisabled}>Level 100</button>
-        </div>
-      </div>
-    </div>
-  `;
-
-  modalBody.querySelector("#devToggleBtn").addEventListener("click", () => setDeveloperToolsEnabled(!enabled));
-  modalBody.querySelectorAll("button[data-dev-gold]").forEach(btn => {
-    btn.addEventListener("click", () => giveDeveloperGold(Number(btn.dataset.devGold)));
-  });
-  modalBody.querySelectorAll("button[data-dev-troops]").forEach(btn => {
-    btn.addEventListener("click", () => giveDeveloperTroops(Number(btn.dataset.devTroops)));
-  });
-  modalBody.querySelectorAll("button[data-dev-skillpoints]").forEach(btn => {
-    btn.addEventListener("click", () => giveDeveloperSkillPoints(Number(btn.dataset.devSkillpoints)));
-  });
-  modalBody.querySelectorAll("button[data-dev-level]").forEach(btn => {
-    const value = btn.dataset.devLevel;
-    btn.addEventListener("click", () => levelDeveloperSelectedCity(value === "max" ? "max" : Number(value)));
-  });
-
-  if (!modal.open) modal.showModal();
-}
-
-function setDeveloperToolsEnabled(enabled) {
-  if (!state) return;
-  state.devToolsEnabled = Boolean(enabled);
-  addLog(`Developer tools ${state.devToolsEnabled ? "enabled" : "disabled"}.`);
-  saveGame();
-  renderAll();
-  showDeveloperModal();
-}
-
-function canUseDeveloperTools() {
-  if (state?.devToolsEnabled) return true;
-  showToast("Turn on Developer tools first.");
-  return false;
-}
-
-function getDeveloperSelectedCity() {
-  return (selectedTargetId ? cityById(selectedTargetId) : null)
-    || (selectedSourceId ? cityById(selectedSourceId) : null);
-}
-
-function giveDeveloperGold(amount) {
-  if (!canUseDeveloperTools()) return;
-  const grant = Math.max(0, Math.floor(Number(amount) || 0));
-  if (!grant) return;
-  state.gold += grant;
-  addLog(`Developer: added ${formatNumber(grant)} gold.`);
-  saveGame();
-  renderAll();
-  showDeveloperModal();
-}
-
-function giveDeveloperTroops(amount) {
-  if (!canUseDeveloperTools()) return;
-  const city = getMainRewardCity();
-  if (!city) {
-    showToast("No main city available.");
-    return;
-  }
-  const grant = Math.max(0, Math.floor(Number(amount) || 0));
-  if (!grant) return;
-  city.troopFloat = Math.max(0, Number(city.troopFloat) || city.troops || 0) + grant;
-  city.troops = Math.floor(city.troopFloat);
-  addLog(`Developer: added ${formatNumber(grant)} troops to ${city.name}.`);
-  saveGame();
-  renderAll();
-  showDeveloperModal();
-}
-
-function giveDeveloperSkillPoints(amount) {
-  if (!canUseDeveloperTools()) return;
-  const grant = Math.max(0, Math.floor(Number(amount) || 0));
-  if (!grant) return;
-  state.character = normalizeCharacterProgress(state.character);
-  state.character.skillPoints += grant;
-  addLog(`Developer: added ${formatNumber(grant)} hero skill points.`);
-  saveGame();
-  renderAll();
-  showDeveloperModal();
-}
-
-function levelDeveloperSelectedCity(levels) {
-  if (!canUseDeveloperTools()) return;
-  const city = getDeveloperSelectedCity();
-  if (!city) {
-    showToast("Select a city first.");
-    return;
-  }
-  const previousLevel = clampCityLevel(city.level);
-  const nextLevel = levels === "max"
-    ? MAX_CITY_LEVEL
-    : clampCityLevel(previousLevel + Math.max(0, Math.floor(Number(levels) || 0)));
-  if (nextLevel === previousLevel) {
-    showToast(`${city.name} is already level ${city.level}.`);
-    return;
-  }
-  city.level = nextLevel;
-  addLog(`Developer: leveled ${city.name} from ${previousLevel} to ${city.level}.`);
-  saveGame();
-  renderAll();
-  showDeveloperModal();
-}
-
 function getSkillCost(skill) {
   const level = Math.max(0, Number(state.upgrades[skill]) || 0);
   return Math.floor(450 * Math.pow(level + 1, 1.85));
 }
 
 function showLogModal() {
-  modalTitle.textContent = "Battle Log";
-  const entries = state.log.slice(-18).reverse();
-  modalBody.innerHTML = entries.length
-    ? `<ul>${entries.map(item => `<li>${escapeHtml(item)}</li>`).join("")}</ul>`
-    : `<p>No events yet.</p>`;
-  modal.showModal();
+  if (!state) return;
+  state.battleReports = normalizeBattleReports(state.battleReports);
+  modal.classList.add("battle-report-modal");
+  modalTitle.textContent = "Battle Reports";
+  const filters = [
+    { key: "all", label: "All" },
+    { key: "attack", label: "Attacks" },
+    { key: "defense", label: "Defenses" },
+    { key: "scout", label: "Scouts" },
+  ];
+  const filteredReports = state.battleReports
+    .filter(report => battleReportFilter === "all" || report.type === battleReportFilter)
+    .slice()
+    .reverse();
+
+  modalBody.innerHTML = `
+    <div class="battle-report-panel">
+      <div class="battle-report-toolbar">
+        <span>Filter</span>
+        <div class="battle-report-filters">
+          ${filters.map(filter => `
+            <button class="${battleReportFilter === filter.key ? "active" : ""}" data-report-filter="${filter.key}" type="button">${filter.label}</button>
+          `).join("")}
+        </div>
+      </div>
+      <div class="battle-report-list">
+        ${filteredReports.length
+          ? filteredReports.map(renderBattleReportCard).join("")
+          : `<div class="battle-report-empty">No ${battleReportFilter === "all" ? "battle" : battleReportFilter} reports yet.</div>`}
+      </div>
+    </div>
+  `;
+
+  modalBody.querySelectorAll("[data-report-filter]").forEach(button => {
+    button.addEventListener("click", () => {
+      battleReportFilter = button.dataset.reportFilter || "all";
+      showLogModal();
+    });
+  });
+  modalBody.querySelectorAll("[data-report-detail]").forEach(button => {
+    button.addEventListener("click", () => showBattleReportDetail(button.dataset.reportDetail));
+  });
+  if (!modal.open) modal.showModal();
+}
+
+function renderBattleReportCard(report) {
+  const badge = getBattleReportBadge(report);
+  const age = formatDuration(Math.max(0, state.gameSeconds - report.createdAt));
+  const troopValue = report.type === "scout"
+    ? report.troopCount
+    : (report.sentTroops || report.troopCount || report.defendersLeft);
+  const opponent = report.opponentName || report.ownerName || "Unknown";
+  const troopLabel = report.type === "scout" ? "reported" : "sent";
+  return `
+    <article class="battle-report-card ${badge.tone}">
+      <div class="battle-report-result">
+        <strong>${badge.label}</strong>
+        <small>${age} ago</small>
+      </div>
+      <div class="battle-report-city">
+        <span>Lv ${formatNumber(report.cityLevel)}</span>
+        <strong>${escapeHtml(report.cityName)}</strong>
+      </div>
+      <div class="battle-report-troops">
+        <span aria-hidden="true">${report.type === "scout" ? "&#128301;" : "&#9817;"}</span>
+        <strong>${formatNumber(troopValue)}</strong>
+        <small>${troopLabel}</small>
+      </div>
+      <div class="battle-report-opponent">
+        <strong>${escapeHtml(opponent)}</strong>
+        <small>${escapeHtml(report.summary || getBattleReportSummary(report))}</small>
+      </div>
+      <button class="battle-report-detail-btn" data-report-detail="${escapeHtml(report.id)}" type="button" aria-label="Open report details">&#128203;</button>
+    </article>
+  `;
+}
+
+function showBattleReportDetail(reportId) {
+  const report = normalizeBattleReports(state?.battleReports || []).find(item => item.id === reportId);
+  if (!report) {
+    showToast("That report is no longer available.");
+    showLogModal();
+    return;
+  }
+  const badge = getBattleReportBadge(report);
+  modal.classList.add("battle-report-modal");
+  modalTitle.textContent = "Report Details";
+  modalBody.innerHTML = `
+    <div class="battle-report-detail ${badge.tone}">
+      <button id="battleReportBackBtn" class="battle-report-back" type="button">Back to reports</button>
+      <div class="battle-report-detail-head">
+        <span>${badge.label}</span>
+        <strong>${escapeHtml(report.cityName)}</strong>
+        <small>Level ${formatNumber(report.cityLevel)} - ${formatDuration(Math.max(0, state.gameSeconds - report.createdAt))} ago</small>
+      </div>
+      <div class="battle-report-detail-grid">
+        <div><span>Type</span><strong>${escapeHtml(getBattleReportTypeLabel(report.type))}</strong></div>
+        <div><span>Opponent</span><strong>${escapeHtml(report.opponentName || report.ownerName || "Unknown")}</strong></div>
+        <div><span>${report.type === "scout" ? "Scouted troops" : "Troops sent"}</span><strong>${formatNumber(report.type === "scout" ? report.troopCount : report.sentTroops)}</strong></div>
+        <div><span>Total defense</span><strong>${formatNumber(report.totalDefense)}</strong></div>
+        <div><span>Survivors</span><strong>${formatNumber(report.survivors)}</strong></div>
+        <div><span>Defenders left</span><strong>${formatNumber(report.defendersLeft)}</strong></div>
+        <div><span>Attackers lost</span><strong>${formatNumber(report.attackerLosses)}</strong></div>
+        <div><span>Defenders lost</span><strong>${formatNumber(report.defenderLosses)}</strong></div>
+      </div>
+      <p>${escapeHtml(report.summary || getBattleReportSummary(report))}</p>
+    </div>
+  `;
+  modalBody.querySelector("#battleReportBackBtn")?.addEventListener("click", showLogModal);
+  if (!modal.open) modal.showModal();
+}
+
+function getBattleReportBadge(report) {
+  if (report.type === "scout") return { label: "SCOUT", tone: "scout" };
+  if (report.outcome === "victory") return { label: "VICTORY", tone: "victory" };
+  if (report.outcome === "held") return { label: "VICTORY", tone: "victory" };
+  return { label: "DEFEAT", tone: "defeat" };
+}
+
+function getBattleReportTypeLabel(type) {
+  if (type === "attack") return "Attack report";
+  if (type === "defense") return "Defense report";
+  if (type === "scout") return "Scout report";
+  return "Battle report";
+}
+
+function getBattleReportSummary(report) {
+  if (report.type === "scout") return `${formatNumber(report.troopCount)} troops reported.`;
+  if (report.outcome === "victory") return `Captured with ${formatNumber(report.survivors)} survivors.`;
+  if (report.outcome === "held") return `${formatNumber(report.defendersLeft)} defenders held the city.`;
+  if (report.outcome === "lost") return "The city was captured.";
+  return `${formatNumber(report.defendersLeft)} defenders remained.`;
 }
 
 function showHelpModal() {
@@ -5042,13 +5924,14 @@ function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
 }
 
-startBtn.addEventListener("click", () => startFromInput(false));
-freshBtn.addEventListener("click", () => startFromInput(true));
+if (startBtn) startBtn.addEventListener("click", () => startFromInput(false));
+if (freshBtn) freshBtn.addEventListener("click", () => startFromInput(true));
 if (googleSignInBtn) googleSignInBtn.addEventListener("click", handleGoogleSignIn);
 if (googleSignOutBtn) googleSignOutBtn.addEventListener("click", handleGoogleSignOut);
 window.addEventListener("crownlands:online-ready", updateOnlineUi);
-window.addEventListener("crownlands:auth", () => {
+window.addEventListener("crownlands:auth", async () => {
   updateOnlineUi();
+  await startAfterLoginIfNeeded();
   if (state) {
     queueOnlineSave();
     flushOnlineSave(true);
@@ -5058,9 +5941,11 @@ window.addEventListener("crownlands:online-error", event => {
   onlineLastError = event.detail?.message || "Firebase could not start.";
   updateOnlineUi();
 });
-playerNameInput.addEventListener("keydown", event => {
-  if (event.key === "Enter") startFromInput(false);
-});
+if (playerNameInput) {
+  playerNameInput.addEventListener("keydown", event => {
+    if (event.key === "Enter") startFromInput(false);
+  });
+}
 pauseBtn.addEventListener("click", togglePause);
 if (fullscreenBtn) fullscreenBtn.addEventListener("click", toggleFullscreen);
 if (profileBtn) profileBtn.addEventListener("click", showProfileScreen);
@@ -5098,13 +5983,13 @@ document.addEventListener("keydown", event => {
   if (!flagEditorView.hidden) showProfileView();
   else closeProfileScreen();
 });
-if (devBtn) devBtn.addEventListener("click", showDeveloperModal);
 logBtn.addEventListener("click", showLogModal);
 if (helpBtn) helpBtn.addEventListener("click", showHelpModal);
 closeModalBtn.addEventListener("click", () => modal.close());
 modal.addEventListener("close", () => {
   modal.classList.remove("troop-slider-modal");
   modal.classList.remove("scout-report-modal");
+  modal.classList.remove("battle-report-modal");
   if (!troopSliderActive) return;
   troopSliderActive = false;
   cancelSendMode();
@@ -5112,7 +5997,7 @@ modal.addEventListener("close", () => {
 
 const saved = loadGame();
 const savedName = saved?.playerName || readSavedName();
-playerNameInput.value = savedName || "Ricky";
+if (playerNameInput) playerNameInput.value = savedName || "Ricky";
 updateFullscreenButton();
 updateOnlineUi();
 requestAnimationFrame(frame);

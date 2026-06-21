@@ -21,19 +21,23 @@ The game currently writes private account data here:
 - `players/{uid}`: display name, email, ruler name, flag, character, skill data, city count, gold.
 - `players/{uid}/saves/default`: the current full game state snapshot.
 
-Start / Continue tries Firebase first when signed in, then falls back to local browser storage.
+After Google sign-in, the game tries Firebase first and then falls back to local browser storage.
 
 ## Phase 2 Multiplayer Shape
 
-The shared-world collections are reserved but locked from writes in the starter rules:
+The game now creates and subscribes to a shared island:
 
-- `islands/{islandId}`: island metadata, seed, season, created time.
-- `islands/{islandId}/cities/{cityId}`: city owner, level, troop count, production timestamps.
+- `islands/main`: shared island metadata.
+- `islands/main/cities/{cityId}`: city owner, level, troop count, owner UID, owner name, owner flag, and production state.
 - `islands/{islandId}/armies/{armyId}`: moving troops, route, owner, arrival time, mission type.
 - `islands/{islandId}/reports/{reportId}`: attack, defense, and scout reports.
 - `islands/{islandId}/presence/{uid}`: who is online.
 
-The next implementation pass should move city ownership, army creation, army arrival, combat, scouting, and production collection into Firestore transactions so two players cannot overwrite the same city at the same time.
+On first sign-in, the browser seeds `islands/main` if it does not exist, then claims one unowned starting city for the signed-in player. City docs are watched in realtime, so ownership changes from Firestore update the map without refreshing.
+
+The next implementation pass should move army creation, army arrival, combat, scouting, and production collection into Firestore transactions so two players cannot overwrite the same city at the same time.
+
+Important: publish the latest `firestore.rules` after this update. Older rules block shared island writes.
 
 ## Netlify
 

@@ -1,6 +1,6 @@
 # Crownlands - Medieval Browser Strategy Prototype
 
-Landscape / horizontal medieval island-conquest prototype inspired by the core loop of Million Lords. This pass focuses on XP, troops, city levels, attack, defense, economy, skills, saves, and testing tools. Items and advisors are intentionally excluded.
+Landscape / horizontal medieval island-conquest prototype inspired by the core loop of Million Lords. This pass focuses on XP, troops, city levels, attack, defense, economy, skills, saves, scouting, and battle reports. Items and advisors are intentionally excluded.
 
 ## Current Mechanics Pass
 
@@ -21,14 +21,10 @@ Landscape / horizontal medieval island-conquest prototype inspired by the core l
 - Scavenger and Salvager recover gold from kills.
 - Cautious refunds part of invested city upgrade gold when a player city is lost.
 - Combat preview shows attack power, defense power, estimated losses/survivors, capture XP, and XP efficiency.
-
-## Developer Test Panel
-
-- Dev tools can be toggled on/off from the bottom `Dev` button.
-- Grants gold.
-- Grants troops to the main city.
-- Grants hero skill points for testing skills.
-- Instantly levels the selected city.
+- The bottom `Reports` button opens battle reports filtered by attack, defense, and scout results.
+- Attack reports show victory or defeat based on the final combat result.
+- Defense reports show held defenses or lost cities.
+- Scout reports show the latest revealed troop and defense totals.
 
 ## Map Rules
 
@@ -46,7 +42,7 @@ Landscape / horizontal medieval island-conquest prototype inspired by the core l
 
 ## Testing Locally
 
-Open `index.html` in a browser, choose `Fresh New Map`, then use the `Dev` panel to grant gold, troops, skill points, or city levels.
+Open the Netlify site, sign in with Google, then use the live map to scout, attack, defend, and confirm reports in the bottom `Reports` menu.
 
 ## Online Multiplayer Foundation
 
@@ -54,10 +50,12 @@ This build has the first Firebase layer added without breaking guest play.
 
 - `firebase-config.js` holds the Firebase web app config placeholders.
 - `firebaseClient.js` loads Firebase Auth and Firestore only after real config values are pasted in.
-- The setup screen now has Google sign-in controls.
+- The setup screen now uses Google sign-in as the only entry button.
 - Signed-in players save a private cloud snapshot to `players/{uid}/saves/default`.
-- Start / Continue checks Firebase first when signed in, then falls back to the browser's local save.
-- `firestore.rules` currently allows private player saves and keeps shared island writes locked until combat/city transactions are implemented.
+- After sign-in, the game automatically checks Firebase first, then falls back to the browser's local save.
+- `firestore.rules` allows private player saves and signed-in shared-island writes for this prototype phase.
+- Phase 2 creates `islands/main`, seeds the 70 city docs, subscribes to city changes in realtime, and claims one starting city for each signed-in player.
+- While online, the browser syncs the signed-in player's owned cities back to Firestore and pauses local NPC AI until combat is moved into transactions.
 
 See `FIREBASE_SETUP.md` for the Firebase project steps and the planned shared-world collections.
 
