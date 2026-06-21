@@ -1425,6 +1425,7 @@ let playableBaseCitiesCache = null;
 let interactionRenderLockUntil = 0;
 
 const setupScreen = document.getElementById("setupScreen");
+const gameView = document.querySelector(".game-view");
 const playerNameInput = document.getElementById("playerName");
 const startBtn = document.getElementById("startBtn");
 const freshBtn = document.getElementById("freshBtn");
@@ -1443,6 +1444,7 @@ const characterLevelBadge = document.getElementById("characterLevelBadge");
 const characterXpText = document.getElementById("characterXpText");
 const pauseBtn = document.getElementById("pauseBtn");
 const fullscreenBtn = document.getElementById("fullscreenBtn");
+const mainCityReturnBtn = document.getElementById("mainCityReturnBtn");
 const profileBtn = document.getElementById("profileBtn");
 const hudKingdomFlag = document.getElementById("hudKingdomFlag");
 const profileScreen = document.getElementById("profileScreen");
@@ -5868,6 +5870,7 @@ function updateCameraTransform() {
   camera.x = clamp(camera.x, 0, maxX);
   camera.y = clamp(camera.y, 0, maxY);
   mapWorld.style.transform = `translate3d(${-camera.x * zoom}px, ${-camera.y * zoom}px, 0) scale(${zoom})`;
+  updateMainCityReturnButton(rect);
 }
 
 function centerOnCity(cityId) {
@@ -5877,6 +5880,85 @@ function centerOnCity(cityId) {
   camera.x = city.x - rect.width / (2 * zoom);
   camera.y = city.y - rect.height / (2 * zoom);
   updateCameraTransform();
+}
+
+function updateMainCityReturnButton(frameRect = null) {
+  if (!mainCityReturnBtn || !gameView || !state || setupScreen?.classList.contains("visible")) {
+    if (mainCityReturnBtn) mainCityReturnBtn.hidden = true;
+    return;
+  }
+
+  const mainCity = getMainRewardCity();
+  const rect = frameRect || mapFrame?.getBoundingClientRect();
+  if (!mainCity || !rect) {
+    mainCityReturnBtn.hidden = true;
+    return;
+  }
+
+  const targetFrameX = (mainCity.x - camera.x) * zoom;
+  const targetFrameY = (mainCity.y - camera.y) * zoom;
+  const visibleMargin = 56;
+  const isVisible = targetFrameX >= visibleMargin
+    && targetFrameX <= rect.width - visibleMargin
+    && targetFrameY >= visibleMargin
+    && targetFrameY <= rect.height - visibleMargin;
+  if (isVisible) {
+    mainCityReturnBtn.hidden = true;
+    return;
+  }
+
+  const viewRect = gameView.getBoundingClientRect();
+  const frameLeft = rect.left - viewRect.left;
+  const frameTop = rect.top - viewRect.top;
+  const centerX = frameLeft + rect.width / 2;
+  const centerY = frameTop + rect.height / 2;
+  const targetX = frameLeft + targetFrameX;
+  const targetY = frameTop + targetFrameY;
+  const dx = targetX - centerX;
+  const dy = targetY - centerY;
+  const distance = Math.hypot(dx, dy);
+  if (distance < 1) {
+    mainCityReturnBtn.hidden = true;
+    return;
+  }
+
+  const edgePadding = 32;
+  const topPadding = 72;
+  const left = frameLeft + edgePadding;
+  const right = frameLeft + rect.width - edgePadding;
+  const top = frameTop + topPadding;
+  const bottom = frameTop + rect.height - edgePadding;
+  const halfW = Math.max(1, (right - left) / 2);
+  const halfH = Math.max(1, (bottom - top) / 2);
+  const boxCenterX = (left + right) / 2;
+  const boxCenterY = (top + bottom) / 2;
+  const scaleX = Math.abs(dx) > 0.001 ? halfW / Math.abs(dx) : Infinity;
+  const scaleY = Math.abs(dy) > 0.001 ? halfH / Math.abs(dy) : Infinity;
+  const scale = Math.min(scaleX, scaleY);
+  const x = clamp(boxCenterX + dx * scale, left, right);
+  const y = clamp(boxCenterY + dy * scale, top, bottom);
+  const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+
+  mainCityReturnBtn.hidden = false;
+  mainCityReturnBtn.style.left = `${x}px`;
+  mainCityReturnBtn.style.top = `${y}px`;
+  mainCityReturnBtn.style.setProperty("--main-city-angle", `${angle}deg`);
+}
+
+function returnToMainCity() {
+  if (!state) return;
+  const mainCity = getMainRewardCity();
+  if (!mainCity) {
+    showToast("No main city to return to.");
+    return;
+  }
+  scoutNearbySourceId = null;
+  sendMode = false;
+  selectedSourceId = mainCity.id;
+  selectedTargetId = null;
+  centerOnCity(mainCity.id);
+  renderAll();
+  showToast(`Returned to ${mainCity.name}`);
 }
 
 function screenToWorld(clientX, clientY) {
@@ -6093,6 +6175,7 @@ document.addEventListener("keydown", event => {
 logBtn.addEventListener("click", showLogModal);
 if (cityListBtn) cityListBtn.addEventListener("click", showCityListModal);
 if (helpBtn) helpBtn.addEventListener("click", showHelpModal);
+if (mainCityReturnBtn) mainCityReturnBtn.addEventListener("click", returnToMainCity);
 closeModalBtn.addEventListener("click", () => modal.close());
 modal.addEventListener("close", () => {
   modal.classList.remove("troop-slider-modal");
