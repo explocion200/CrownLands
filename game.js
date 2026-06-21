@@ -3,11 +3,13 @@ const WORLD_SCHEMA_VERSION = Number(WORLD_CONFIG.version) || 23;
 const WORLD_REGIONS = Array.isArray(WORLD_CONFIG.regions) ? WORLD_CONFIG.regions : [];
 const LAND_BRIDGES = Array.isArray(WORLD_CONFIG.landBridges) ? WORLD_CONFIG.landBridges : [];
 const REGION_CITY_COUNT = Math.max(1, Math.floor(Number(WORLD_CONFIG.cityCountPerRegion) || 50));
-const STORAGE_KEY = "crownlands-realtime-v23";
-const LEGACY_STORAGE_KEYS = ["crownlands-realtime-v22", "crownlands-realtime-v21", "crownlands-realtime-v20", "crownlands-realtime-v19", "crownlands-realtime-v18", "crownlands-realtime-v17", "crownlands-realtime-v16", "crownlands-realtime-v15", "realm-lords-realtime-v14", "realm-lords-realtime-v13", "realm-lords-realtime-v12", "realm-lords-realtime-v11", "realm-lords-realtime-v10", "realm-lords-realtime-v9", "realm-lords-realtime-v8", "realm-lords-realtime-v7", "realm-lords-realtime-v6", "realm-lords-realtime-v5", "realm-lords-realtime-v4", "realm-lords-realtime-v3"];
+const RESET_GENERATION = "fresh-2026-06-21";
+const STORAGE_KEY = `crownlands-realtime-${RESET_GENERATION}`;
+const LEGACY_STORAGE_KEYS = [];
 const SAVE_EVERY_SECONDS = 1.5;
 const ONLINE_SAVE_SECONDS = 8;
-const ONLINE_ISLAND_ID = "main";
+const ONLINE_SAVE_SLOT = `default-${RESET_GENERATION}`;
+const ONLINE_ISLAND_ID = `main-${RESET_GENERATION}`;
 const ONLINE_CITY_SYNC_SECONDS = 6;
 const ONLINE_PRESENCE_SECONDS = 10;
 const ONLINE_PRESENCE_STALE_SECONDS = 90;
@@ -2661,7 +2663,7 @@ async function loadOnlineGame(playerName) {
   const api = getOnlineApi();
   if (!api?.isConfigured?.() || !api?.isSignedIn?.()) return null;
   try {
-    const snapshot = await api.loadGameSnapshot();
+    const snapshot = await api.loadGameSnapshot(ONLINE_SAVE_SLOT);
     return normalizeOnlineGameSnapshot(snapshot, playerName);
   } catch (error) {
     onlineLastError = error?.message || String(error);
@@ -3044,6 +3046,9 @@ function getSerializableGameState() {
 function getPlayerProfileSnapshot() {
   const profileName = state?.playerName || cleanName(playerNameInput?.value) || "Ricky";
   return {
+    resetGeneration: RESET_GENERATION,
+    cloudSaveSlot: ONLINE_SAVE_SLOT,
+    mainIslandId: ONLINE_ISLAND_ID,
     playerName: profileName,
     flag: state?.flag || createDefaultFlag(),
     character: state?.character ? normalizeCharacterProgress(state.character) : createCharacterProgress(),
@@ -3070,7 +3075,7 @@ async function flushOnlineSave(force = false) {
   onlineSaveQueued = false;
   try {
     await api.savePlayerProfile(getPlayerProfileSnapshot());
-    await api.saveGameSnapshot(getSerializableGameState());
+    await api.saveGameSnapshot(getSerializableGameState(), ONLINE_SAVE_SLOT);
     await syncOwnedCitiesToOnline();
     onlineLastSaveAt = Date.now();
     onlineLastError = "";
@@ -3383,7 +3388,7 @@ async function setupOnlineWorld() {
         initialCitiesReady = true;
         reject(error);
       };
-    }), 15000, "Shared city sync did not start. Check Firestore rules for islands/main/cities.");
+    }), 15000, `Shared city sync did not start. Check Firestore rules for islands/${ONLINE_ISLAND_ID}/cities.`);
     onlineStatusDetail.textContent = "Opening the shared island...";
     onlineIslandUnsubscribe = api.subscribeIsland(ONLINE_ISLAND_ID, {
       onCities: onlineCities => {
