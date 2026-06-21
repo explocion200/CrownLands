@@ -3628,25 +3628,45 @@ function applyPendingOfflineProgress() {
   if (!cities.length) return;
 
   const goldGained = Math.floor(getGoldPerSecond() * elapsed);
-  let troopsGained = 0;
+  let troopGrowth = 0;
   for (const city of cities) {
-    const before = Math.floor(Number(city.troopFloat) || city.troops || 0);
     const growth = getCityStats(city).troopProductionPerSecond * elapsed;
     if (growth <= 0) continue;
-    city.troopFloat = Math.max(0, Number(city.troopFloat) || city.troops || 0) + growth;
-    city.troops = Math.floor(city.troopFloat);
-    troopsGained += Math.max(0, city.troops - before);
-    markOwnedCityChanged(city, false);
+    troopGrowth += growth;
   }
+  const troopsGained = Math.floor(troopGrowth);
   if (goldGained > 0) state.gold += goldGained;
+  const mainCity = getMainRewardCity();
+  if (mainCity && troopsGained > 0) {
+    mainCity.troopFloat = Math.max(0, Number(mainCity.troopFloat) || mainCity.troops || 0) + troopsGained;
+    mainCity.troops = Math.floor(mainCity.troopFloat);
+    markOwnedCityChanged(mainCity, false);
+  }
   state.gameSeconds += elapsed;
 
   if (goldGained > 0 || troopsGained > 0) {
-    addLog(`Offline production: +${formatNumber(goldGained)} gold and +${formatNumber(troopsGained)} troops.`);
-    showToast(`Offline production: +${formatNumber(goldGained)} gold, +${formatNumber(troopsGained)} troops`);
+    addLog(`Offline production: +${formatNumber(goldGained)} gold and +${formatNumber(troopsGained)} troops to ${mainCity ? mainCity.name : "the main city"}.`);
+    showOfflineRewardsModal({ goldGained, troopsGained, elapsed, cityName: mainCity?.name || "main city" });
     syncOwnedCitiesToOnline(true);
     saveGame();
   }
+}
+
+function showOfflineRewardsModal({ goldGained = 0, troopsGained = 0, elapsed = 0, cityName = "main city" } = {}) {
+  modal.classList.add("offline-reward-modal");
+  modalTitle.textContent = "Welcome back";
+  modalBody.innerHTML = `
+    <div class="offline-reward-panel">
+      <p>Your kingdom kept producing while you were away for ${formatDuration(elapsed)}.</p>
+      <div class="offline-reward-grid">
+        <div><span>Gold collected</span><strong>${formatNumber(goldGained)}</strong></div>
+        <div><span>Troops rallied</span><strong>${formatNumber(troopsGained)}</strong><small>Sent to ${escapeHtml(cityName)}</small></div>
+      </div>
+      <button id="offlineCollectBtn" class="offline-collect-btn" type="button">Collect</button>
+    </div>
+  `;
+  modalBody.querySelector("#offlineCollectBtn")?.addEventListener("click", () => modal.close());
+  if (!modal.open) modal.showModal();
 }
 
 function updateAttacks(dt) {
@@ -5875,6 +5895,7 @@ modal.addEventListener("close", () => {
   modal.classList.remove("troop-slider-modal");
   modal.classList.remove("scout-report-modal");
   modal.classList.remove("battle-report-modal");
+  modal.classList.remove("offline-reward-modal");
   if (!troopSliderActive) return;
   troopSliderActive = false;
   cancelSendMode();

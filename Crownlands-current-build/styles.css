@@ -926,6 +926,59 @@ input {
 .modal-actions .danger-action { color: white; background: linear-gradient(#ff665e, #bd302a); }
 .modal-actions .safe-action { color: var(--ink); background: rgba(255,255,255,.1); border: 1px solid var(--line); }
 
+.offline-reward-modal.modal { width: min(520px, calc(100% - 1.3rem)); }
+.offline-reward-modal .modal-card {
+  background: linear-gradient(180deg, #102b44, #132033 68%, #11151f);
+  border-color: rgba(255, 214, 126, .55);
+}
+.offline-reward-panel {
+  display: grid;
+  gap: .78rem;
+}
+.offline-reward-panel p {
+  margin: 0;
+}
+.offline-reward-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: .55rem;
+}
+.offline-reward-grid div {
+  min-width: 0;
+  padding: .8rem;
+  border-radius: 14px;
+  background: rgba(5, 16, 28, .72);
+  border: 1px solid rgba(255,255,255,.12);
+}
+.offline-reward-grid span,
+.offline-reward-grid strong,
+.offline-reward-grid small {
+  display: block;
+}
+.offline-reward-grid span,
+.offline-reward-grid small {
+  color: var(--muted);
+  font-size: .78rem;
+}
+.offline-reward-grid strong {
+  margin-top: .15rem;
+  color: #fff4c8;
+  font-size: 1.55rem;
+  line-height: 1.1;
+}
+.offline-collect-btn {
+  min-height: 46px;
+  border-radius: 14px;
+  color: #211508;
+  background: linear-gradient(#ffe58e, #e5a83b);
+  font-weight: 950;
+}
+@media (max-width: 420px) {
+  .offline-reward-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 .modal.troop-slider-modal { width: min(720px, calc(100% - 1.3rem)); }
 .modal.scout-report-modal { width: min(820px, calc(100% - 1.3rem)); }
 .detailed-scout-report { display: grid; gap: .72rem; }
