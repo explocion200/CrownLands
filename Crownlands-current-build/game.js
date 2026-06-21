@@ -7,6 +7,7 @@ const ONLINE_CITY_SYNC_SECONDS = 6;
 const ONLINE_ARMY_EXPIRY_GRACE_SECONDS = 8;
 const HUD_RENDER_INTERVAL_MS = 250;
 const MAP_RENDER_INTERVAL_MS = 1600;
+const CITY_LIST_PAGE_SIZE = 5;
 const MAX_OFFLINE_PROGRESS_SECONDS = 7 * 24 * 60 * 60;
 const WORLD_WIDTH = 2800;
 const WORLD_HEIGHT = 1575;
@@ -1417,6 +1418,9 @@ let attackIdCounter = 1;
 let flagDraft = null;
 let activeProfileTab = "profile";
 let battleReportFilter = "all";
+let cityListSortKey = "level";
+let cityListSortDirection = "desc";
+let cityListPage = 0;
 let playableBaseCitiesCache = null;
 let interactionRenderLockUntil = 0;
 
@@ -1432,6 +1436,7 @@ const googleSignOutBtn = document.getElementById("googleSignOutBtn");
 const lordNameText = document.getElementById("lordNameText");
 const statusText = document.getElementById("statusText");
 const goldText = document.getElementById("goldText");
+const cityListBtn = document.getElementById("cityListBtn");
 const cityText = document.getElementById("cityText");
 const neutralCapText = document.getElementById("neutralCapText");
 const characterLevelBadge = document.getElementById("characterLevelBadge");
@@ -5146,6 +5151,128 @@ function showCityInfoModal(cityId) {
   if (!modal.open) modal.showModal();
 }
 
+function showCityListModal() {
+  if (!state) return;
+  modal.classList.add("city-list-modal");
+  renderCityListModal();
+  if (!modal.open) modal.showModal();
+}
+
+function renderCityListModal() {
+  const cities = getSortedCityList();
+  const pageCount = Math.max(1, Math.ceil(cities.length / CITY_LIST_PAGE_SIZE));
+  cityListPage = clamp(cityListPage, 0, pageCount - 1);
+  const start = cityListPage * CITY_LIST_PAGE_SIZE;
+  const pageCities = cities.slice(start, start + CITY_LIST_PAGE_SIZE);
+  modalTitle.textContent = "City list";
+  modalBody.innerHTML = `
+    <div class="city-list-panel">
+      <div class="city-list-toolbar" aria-label="City list filters">
+        <button class="${cityListSortKey === "level" ? "active" : ""}" data-city-list-sort="level" type="button" aria-pressed="${cityListSortKey === "level"}">
+          <span>Lv.</span><small>${getCityListSortLabel("level")}</small>
+        </button>
+        <button class="${cityListSortKey === "troops" ? "active" : ""}" data-city-list-sort="troops" type="button" aria-pressed="${cityListSortKey === "troops"}">
+          <span>&#9817;</span><small>${getCityListSortLabel("troops")}</small>
+        </button>
+      </div>
+
+      <div class="city-list-rows">
+        ${pageCities.length
+          ? pageCities.map(renderCityListRow).join("")
+          : `<div class="city-list-empty">No cities owned yet.</div>`}
+      </div>
+
+      <div class="city-list-pager">
+        <button data-city-list-page="prev" type="button" ${cityListPage <= 0 ? "disabled" : ""} aria-label="Previous city page">&#10094;</button>
+        <strong>${formatNumber(cityListPage + 1)}/${formatNumber(pageCount)}</strong>
+        <button data-city-list-page="next" type="button" ${cityListPage >= pageCount - 1 ? "disabled" : ""} aria-label="Next city page">&#10095;</button>
+      </div>
+    </div>
+  `;
+
+  modalBody.querySelectorAll("[data-city-list-sort]").forEach(button => {
+    button.addEventListener("click", () => {
+      const key = button.dataset.cityListSort;
+      if (cityListSortKey === key) {
+        cityListSortDirection = cityListSortDirection === "desc" ? "asc" : "desc";
+      } else {
+        cityListSortKey = key;
+        cityListSortDirection = "desc";
+      }
+      cityListPage = 0;
+      renderCityListModal();
+    });
+  });
+
+  modalBody.querySelectorAll("[data-city-list-page]").forEach(button => {
+    button.addEventListener("click", () => {
+      cityListPage += button.dataset.cityListPage === "next" ? 1 : -1;
+      renderCityListModal();
+    });
+  });
+
+  modalBody.querySelectorAll("[data-city-list-jump]").forEach(button => {
+    button.addEventListener("click", () => {
+      const cityId = button.dataset.cityListJump;
+      modal.close();
+      selectCity(cityId);
+    });
+  });
+
+  modalBody.querySelectorAll("[data-city-list-info]").forEach(button => {
+    button.addEventListener("click", () => {
+      modal.classList.remove("city-list-modal");
+      showCityInfoModal(button.dataset.cityListInfo);
+    });
+  });
+}
+
+function getSortedCityList() {
+  const cities = playerCities().slice();
+  const mainCities = cities.filter(isMainCityForList);
+  const otherCities = cities.filter(city => !isMainCityForList(city));
+  otherCities.sort(compareCityListEntries);
+  return [...mainCities.sort((a, b) => a.name.localeCompare(b.name)), ...otherCities];
+}
+
+function isMainCityForList(city) {
+  return Boolean(city && (city.id === state?.mainCityId || city.isMainCity));
+}
+
+function compareCityListEntries(a, b) {
+  const valueA = cityListSortKey === "troops" ? Math.floor(Number(a.troops) || 0) : clampCityLevel(a.level);
+  const valueB = cityListSortKey === "troops" ? Math.floor(Number(b.troops) || 0) : clampCityLevel(b.level);
+  const primary = cityListSortDirection === "desc" ? valueB - valueA : valueA - valueB;
+  if (primary !== 0) return primary;
+  const secondary = cityListSortKey === "troops"
+    ? clampCityLevel(b.level) - clampCityLevel(a.level)
+    : Math.floor(Number(b.troops) || 0) - Math.floor(Number(a.troops) || 0);
+  if (secondary !== 0) return secondary;
+  return a.name.localeCompare(b.name);
+}
+
+function getCityListSortLabel(key) {
+  if (cityListSortKey !== key) return "Sort";
+  if (key === "level") return cityListSortDirection === "desc" ? "High" : "Low";
+  return cityListSortDirection === "desc" ? "Most" : "Fewest";
+}
+
+function renderCityListRow(city) {
+  const isMain = isMainCityForList(city);
+  const troops = Math.floor(Number(city.troops) || 0);
+  return `
+    <article class="city-list-row ${isMain ? "main-city" : ""}">
+      <button class="city-list-locate" data-city-list-jump="${escapeHtml(city.id)}" type="button" aria-label="Center on ${escapeHtml(city.name)}">${isMain ? "&#8962;" : "&#128205;"}</button>
+      <span class="city-list-art" aria-hidden="true">&#127984;</span>
+      <span class="city-list-level"><b>${formatNumber(clampCityLevel(city.level))}</b></span>
+      <strong class="city-list-troops">${formatNumber(troops)} <span aria-hidden="true">&#9817;</span></strong>
+      <span class="city-list-name">${escapeHtml(city.name)}</span>
+      <span class="city-list-main-label">${isMain ? "Main city" : ""}</span>
+      <button class="city-list-info" data-city-list-info="${escapeHtml(city.id)}" type="button" aria-label="Open ${escapeHtml(city.name)} info">&#9432;</button>
+    </article>
+  `;
+}
+
 function showAttackPreview(source, target) {
   if (!source || !target || source.owner !== "player" || target.owner === "player") return;
   if (source.troops < 1) {
@@ -5964,6 +6091,7 @@ document.addEventListener("keydown", event => {
   else closeProfileScreen();
 });
 logBtn.addEventListener("click", showLogModal);
+if (cityListBtn) cityListBtn.addEventListener("click", showCityListModal);
 if (helpBtn) helpBtn.addEventListener("click", showHelpModal);
 closeModalBtn.addEventListener("click", () => modal.close());
 modal.addEventListener("close", () => {
@@ -5971,6 +6099,7 @@ modal.addEventListener("close", () => {
   modal.classList.remove("scout-report-modal");
   modal.classList.remove("battle-report-modal");
   modal.classList.remove("offline-reward-modal");
+  modal.classList.remove("city-list-modal");
   if (!troopSliderActive) return;
   troopSliderActive = false;
   cancelSendMode();
