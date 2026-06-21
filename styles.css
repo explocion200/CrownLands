@@ -282,16 +282,16 @@ input {
   pointer-events: none;
 }
 .territory-fill {
-  fill: rgba(61, 177, 255, .18);
+  fill: transparent;
 }
 .territory-hatch {
   fill: url(#playerTerritoryHatch);
-  opacity: .78;
+  opacity: 0;
 }
 .territory-outline-glow {
   fill: none;
-  stroke: rgba(215, 244, 255, .84);
-  stroke-width: 10;
+  stroke: rgba(210, 243, 255, .78);
+  stroke-width: 8;
   stroke-linejoin: round;
   stroke-linecap: round;
   filter: url(#playerTerritoryGlow);
@@ -303,14 +303,14 @@ input {
   stroke-width: 5;
   stroke-linejoin: round;
   stroke-linecap: round;
-  stroke-dasharray: 14 10;
+  stroke-dasharray: 0;
   vector-effect: non-scaling-stroke;
 }
 .territory-svg.zoomed-out .territory-fill {
-  fill: rgba(84, 192, 255, .38);
+  fill: rgba(84, 192, 255, .36);
 }
 .territory-svg.zoomed-out .territory-hatch {
-  opacity: .24;
+  opacity: 0;
 }
 .territory-svg.zoomed-out .territory-outline-core {
   stroke-width: 4;
