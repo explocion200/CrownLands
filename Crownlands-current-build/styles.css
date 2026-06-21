@@ -940,7 +940,7 @@ input {
 }
 .offline-reward-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: .55rem;
 }
 .offline-reward-grid div {
@@ -973,7 +973,7 @@ input {
   background: linear-gradient(#ffe58e, #e5a83b);
   font-weight: 950;
 }
-@media (max-width: 420px) {
+@media (max-width: 540px) {
   .offline-reward-grid {
     grid-template-columns: 1fr;
   }

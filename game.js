@@ -1410,6 +1410,7 @@ let onlineCitySyncInFlight = false;
 let onlineCitySyncQueued = false;
 let onlineArmies = [];
 let pendingOfflineProgressSeconds = 0;
+let pendingOfflineProductionCities = [];
 let localDirtyCityIds = new Set();
 let toastTimer = null;
 let attackIdCounter = 1;
@@ -3261,6 +3262,7 @@ async function startFromInput(forceFresh = false) {
     if (!saved) state.playerName = playerName;
     localDirtyCityIds = new Set();
     pendingOfflineProgressSeconds = getOfflineProgressSeconds(state);
+    pendingOfflineProductionCities = pendingOfflineProgressSeconds > 0 ? createOfflineProductionSnapshot(state) : [];
     state.lastRealTimeMs = Date.now();
     selectedMarchPercent = normalizeMarchPercent(state.marchPercent);
     const onlineConnected = getOnlineApi()?.isSignedIn?.() ? await setupOnlineWorld() : false;
@@ -3619,40 +3621,82 @@ function getOfflineProgressSeconds(snapshot = state) {
   return clamp(elapsed, 0, MAX_OFFLINE_PROGRESS_SECONDS);
 }
 
+function createOfflineProductionSnapshot(snapshot = state) {
+  if (!snapshot || !Array.isArray(snapshot.cities)) return [];
+  return snapshot.cities
+    .filter(city => city.owner === "player")
+    .map(city => ({
+      id: city.id,
+      name: city.name,
+      owner: "player",
+      level: clampCityLevel(city.level),
+      troops: Math.max(0, Math.floor(Number(city.troops) || 0)),
+      troopFloat: Math.max(0, Number(city.troopFloat) || Number(city.troops) || 0),
+    }));
+}
+
 function applyPendingOfflineProgress() {
   if (!state || pendingOfflineProgressSeconds <= 0) return;
   const elapsed = pendingOfflineProgressSeconds;
   pendingOfflineProgressSeconds = 0;
 
-  const cities = playerCities();
-  if (!cities.length) return;
+  const productionCities = pendingOfflineProductionCities.length
+    ? pendingOfflineProductionCities
+    : createOfflineProductionSnapshot(state);
+  pendingOfflineProductionCities = [];
+  if (!productionCities.length) return;
 
-  const goldGained = Math.floor(getGoldPerSecond() * elapsed);
-  let troopGrowth = 0;
-  for (const city of cities) {
-    const growth = getCityStats(city).troopProductionPerSecond * elapsed;
+  const goldGained = Math.floor(productionCities.reduce((sum, city) => sum + getCityStats(city).goldProductionPerSecond, 0) * elapsed);
+  let troopsKeptInCities = 0;
+  let troopsRalliedToMain = 0;
+  const changedOwnedCities = new Set();
+  for (const offlineCity of productionCities) {
+    const growth = getCityStats(offlineCity).troopProductionPerSecond * elapsed;
     if (growth <= 0) continue;
-    troopGrowth += growth;
+    const gained = Math.floor(growth);
+    if (gained <= 0) continue;
+
+    const currentCity = cityById(offlineCity.id);
+    if (currentCity?.owner === "player") {
+      currentCity.troopFloat = Math.max(0, Number(currentCity.troopFloat) || currentCity.troops || 0) + gained;
+      currentCity.troops = Math.floor(currentCity.troopFloat);
+      changedOwnedCities.add(currentCity.id);
+      troopsKeptInCities += gained;
+    } else {
+      troopsRalliedToMain += gained;
+    }
   }
-  const troopsGained = Math.floor(troopGrowth);
+  const troopsGained = troopsKeptInCities + troopsRalliedToMain;
   if (goldGained > 0) state.gold += goldGained;
   const mainCity = getMainRewardCity();
-  if (mainCity && troopsGained > 0) {
-    mainCity.troopFloat = Math.max(0, Number(mainCity.troopFloat) || mainCity.troops || 0) + troopsGained;
+  if (mainCity && troopsRalliedToMain > 0) {
+    mainCity.troopFloat = Math.max(0, Number(mainCity.troopFloat) || mainCity.troops || 0) + troopsRalliedToMain;
     mainCity.troops = Math.floor(mainCity.troopFloat);
-    markOwnedCityChanged(mainCity, false);
+    changedOwnedCities.add(mainCity.id);
   }
+  changedOwnedCities.forEach(cityId => {
+    const city = cityById(cityId);
+    if (city) markOwnedCityChanged(city, false);
+  });
   state.gameSeconds += elapsed;
 
   if (goldGained > 0 || troopsGained > 0) {
-    addLog(`Offline production: +${formatNumber(goldGained)} gold and +${formatNumber(troopsGained)} troops to ${mainCity ? mainCity.name : "the main city"}.`);
-    showOfflineRewardsModal({ goldGained, troopsGained, elapsed, cityName: mainCity?.name || "main city" });
+    const rallyText = troopsRalliedToMain > 0 ? ` ${formatNumber(troopsRalliedToMain)} troops from lost cities rallied to ${mainCity ? mainCity.name : "the main city"}.` : "";
+    addLog(`Offline production: +${formatNumber(goldGained)} gold and +${formatNumber(troopsGained)} troops.${rallyText}`);
+    showOfflineRewardsModal({
+      goldGained,
+      troopsGained,
+      troopsKeptInCities,
+      troopsRalliedToMain,
+      elapsed,
+      cityName: mainCity?.name || "main city",
+    });
     syncOwnedCitiesToOnline(true);
     saveGame();
   }
 }
 
-function showOfflineRewardsModal({ goldGained = 0, troopsGained = 0, elapsed = 0, cityName = "main city" } = {}) {
+function showOfflineRewardsModal({ goldGained = 0, troopsGained = 0, troopsKeptInCities = 0, troopsRalliedToMain = 0, elapsed = 0, cityName = "main city" } = {}) {
   modal.classList.add("offline-reward-modal");
   modalTitle.textContent = "Welcome back";
   modalBody.innerHTML = `
@@ -3660,7 +3704,8 @@ function showOfflineRewardsModal({ goldGained = 0, troopsGained = 0, elapsed = 0
       <p>Your kingdom kept producing while you were away for ${formatDuration(elapsed)}.</p>
       <div class="offline-reward-grid">
         <div><span>Gold collected</span><strong>${formatNumber(goldGained)}</strong></div>
-        <div><span>Troops rallied</span><strong>${formatNumber(troopsGained)}</strong><small>Sent to ${escapeHtml(cityName)}</small></div>
+        <div><span>Troops produced</span><strong>${formatNumber(troopsGained)}</strong><small>${formatNumber(troopsKeptInCities)} stayed in their cities</small></div>
+        <div><span>Rallied home</span><strong>${formatNumber(troopsRalliedToMain)}</strong><small>${troopsRalliedToMain > 0 ? `Sent to ${escapeHtml(cityName)}` : "No cities lost offline"}</small></div>
       </div>
       <button id="offlineCollectBtn" class="offline-collect-btn" type="button">Collect</button>
     </div>

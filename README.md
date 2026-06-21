@@ -7,7 +7,7 @@ Landscape / horizontal medieval island-conquest prototype inspired by the core l
 - Player starts with 1 main city, 50 troops, and 500 gold.
 - The island contains 70 evenly spaced cities on the generated medieval map.
 - Cities produce troops and gold in real time while unpaused.
-- Offline production catches up when the player returns, with gold collected immediately and all offline troops rallied to the main city.
+- Offline production catches up when the player returns: troops stay in the cities that produced them, while troops from cities lost offline rally to the main city.
 - City level creates victory points.
 - Victory points drive troop production, gold production, and capture XP value.
 - Troop production uses `VP x 3`, plus Recruiter skill bonus.
