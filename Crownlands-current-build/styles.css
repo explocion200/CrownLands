@@ -153,6 +153,24 @@ input {
 .resource-pill strong { font-size: .92rem; }
 .city-list-btn { color: var(--ink); }
 .city-list-btn:active { transform: translateY(1px); }
+.online-players-pill {
+  height: 32px;
+  min-width: 72px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 .6rem;
+  font-size: .72rem;
+  font-weight: 950;
+  color: #dff6ff;
+  background: linear-gradient(#17476b, #0b263d);
+  border: 1px solid rgba(136,213,255,.55);
+  box-shadow: inset 0 -3px 0 rgba(0,0,0,.22), 0 3px 9px rgba(0,0,0,.22);
+  text-shadow: 0 2px 0 rgba(0,0,0,.45);
+  white-space: nowrap;
+}
+.online-players-pill[hidden] { display: none; }
 .hud-btn { width: 38px; height: 38px; border-radius: 13px; color: var(--ink); font-weight: 950; }
 .fullscreen-btn.active { color: #211508; background: linear-gradient(#fff0a7, #f2b84b); }
 

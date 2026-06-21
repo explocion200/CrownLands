@@ -9,6 +9,8 @@ const SAVE_EVERY_SECONDS = 1.5;
 const ONLINE_SAVE_SECONDS = 8;
 const ONLINE_ISLAND_ID = "main";
 const ONLINE_CITY_SYNC_SECONDS = 6;
+const ONLINE_PRESENCE_SECONDS = 10;
+const ONLINE_PRESENCE_STALE_SECONDS = 90;
 const ONLINE_ARMY_EXPIRY_GRACE_SECONDS = 8;
 const HUD_RENDER_INTERVAL_MS = 250;
 const MAP_RENDER_INTERVAL_MS = 1600;
@@ -1418,6 +1420,9 @@ let onlineCitySyncTimer = 0;
 let onlineCitySyncInFlight = false;
 let onlineCitySyncQueued = false;
 let onlineArmies = [];
+let onlinePresence = [];
+let onlinePresenceTimer = 0;
+let onlinePresenceInFlight = false;
 let pendingOfflineProgressSeconds = 0;
 let pendingOfflineProductionCities = [];
 let localDirtyCityIds = new Set();
@@ -1449,6 +1454,7 @@ const statusText = document.getElementById("statusText");
 const goldText = document.getElementById("goldText");
 const cityListBtn = document.getElementById("cityListBtn");
 const cityText = document.getElementById("cityText");
+const onlinePlayersText = document.getElementById("onlinePlayersText");
 const neutralCapText = document.getElementById("neutralCapText");
 const characterLevelBadge = document.getElementById("characterLevelBadge");
 const characterXpText = document.getElementById("characterXpText");
@@ -3081,8 +3087,108 @@ async function flushOnlineSave(force = false) {
   }
 }
 
+function getOnlinePresenceSnapshot() {
+  return {
+    displayName: state?.playerName || getOnlineApi()?.getUser?.()?.displayName || "Ruler",
+    playerName: state?.playerName || "Ruler",
+    flag: state?.flag || createDefaultFlag(),
+    mainCityId: state?.mainCityId || "",
+    cityCount: state ? playerCities().length : 0,
+    updatedAtMs: Date.now(),
+  };
+}
+
+function normalizePresence(raw) {
+  if (!raw || typeof raw !== "object") return null;
+  const uid = String(raw.uid || raw.id || "").trim();
+  if (!uid) return null;
+  return {
+    uid,
+    displayName: cleanName(raw.playerName || raw.displayName || "Ruler") || "Ruler",
+    flag: raw.flag || null,
+    mainCityId: String(raw.mainCityId || ""),
+    cityCount: Math.max(0, Math.floor(Number(raw.cityCount) || 0)),
+    updatedAtMs: Math.max(0, Number(raw.updatedAtMs) || 0),
+  };
+}
+
+function getActiveOnlinePlayers() {
+  const now = Date.now();
+  const activeByUid = new Map();
+  for (const presence of onlinePresence) {
+    if (!presence?.uid) continue;
+    if (presence.updatedAtMs && now - presence.updatedAtMs > ONLINE_PRESENCE_STALE_SECONDS * 1000) continue;
+    activeByUid.set(presence.uid, presence);
+  }
+  const currentUid = getCurrentOnlineUid();
+  if (currentUid && (onlineWorldConnected || isOnlineWorldActive()) && !activeByUid.has(currentUid)) {
+    activeByUid.set(currentUid, {
+      ...getOnlinePresenceSnapshot(),
+      uid: currentUid,
+      updatedAtMs: now,
+    });
+  }
+  return Array.from(activeByUid.values()).sort((a, b) => a.displayName.localeCompare(b.displayName));
+}
+
+function updateOnlinePlayersUi() {
+  if (!onlinePlayersText) return;
+  if (!onlineWorldConnected && !isOnlineWorldActive()) {
+    onlinePlayersText.hidden = true;
+    onlinePlayersText.textContent = "Online 0";
+    onlinePlayersText.title = "";
+    return;
+  }
+  const activePlayers = getActiveOnlinePlayers();
+  const count = Math.max(1, activePlayers.length);
+  onlinePlayersText.hidden = false;
+  onlinePlayersText.textContent = `Online ${formatNumber(count)}`;
+  onlinePlayersText.title = activePlayers.map(player => player.displayName).join(", ");
+}
+
+function applyOnlinePresence(rawPresence) {
+  if (!Array.isArray(rawPresence)) {
+    onlinePresence = [];
+    updateOnlinePlayersUi();
+    return;
+  }
+  onlinePresence = rawPresence.map(normalizePresence).filter(Boolean);
+  updateOnlinePlayersUi();
+}
+
+async function publishOnlinePresence(force = false) {
+  if (onlinePresenceInFlight) return false;
+  if (!isOnlineWorldActive()) return false;
+  const api = getOnlineApi();
+  if (!api?.savePresence) return false;
+  onlinePresenceInFlight = true;
+  try {
+    await api.savePresence(ONLINE_ISLAND_ID, getOnlinePresenceSnapshot());
+    onlineLastError = "";
+    updateOnlinePlayersUi();
+    return true;
+  } catch (error) {
+    onlineLastError = error?.message || String(error);
+    updateOnlineUi();
+    console.warn("Could not sync online presence", error);
+    return false;
+  } finally {
+    onlinePresenceInFlight = false;
+  }
+}
+
+function handleOnlineSnapshotError(error, rejectInitialCities = null) {
+  onlineLastError = error?.message || String(error);
+  updateOnlineUi();
+  updateOnlinePlayersUi();
+  if (typeof rejectInitialCities === "function") rejectInitialCities(error);
+  showToast("Shared island sync error.");
+  console.warn("Shared island snapshot failed", error);
+}
+
 function updateOnlineUi() {
   const api = getOnlineApi();
+  updateOnlinePlayersUi();
   if (!onlineStatusText || !onlineStatusDetail) return;
 
   if (!api) {
@@ -3197,10 +3303,14 @@ function disconnectOnlineWorld() {
   if (typeof onlineIslandUnsubscribe === "function") onlineIslandUnsubscribe();
   onlineIslandUnsubscribe = null;
   onlineArmies = [];
+  onlinePresence = [];
+  onlinePresenceTimer = 0;
+  onlinePresenceInFlight = false;
   onlineWorldConnected = false;
   onlineCitiesLoaded = false;
   onlineFreshClaimCityId = "";
   onlineWorldLoading = false;
+  updateOnlinePlayersUi();
 }
 
 function withTimeout(promise, timeoutMs, message) {
@@ -3261,24 +3371,33 @@ async function setupOnlineWorld() {
     if (onlineIslandUnsubscribe) onlineIslandUnsubscribe();
     let initialCitiesReady = false;
     let resolveInitialCities = () => {};
-    const initialCitiesPromise = new Promise(resolve => {
-      const timer = setTimeout(resolve, 3500);
+    let rejectInitialCities = () => {};
+    const initialCitiesPromise = withTimeout(new Promise((resolve, reject) => {
       resolveInitialCities = () => {
         if (initialCitiesReady) return;
         initialCitiesReady = true;
-        clearTimeout(timer);
         resolve();
       };
-    });
+      rejectInitialCities = error => {
+        if (initialCitiesReady) return;
+        initialCitiesReady = true;
+        reject(error);
+      };
+    }), 15000, "Shared city sync did not start. Check Firestore rules for islands/main/cities.");
     onlineStatusDetail.textContent = "Opening the shared island...";
     onlineIslandUnsubscribe = api.subscribeIsland(ONLINE_ISLAND_ID, {
       onCities: onlineCities => {
+        const firstCitiesSnapshot = !onlineCitiesLoaded;
         applyOnlineCities(onlineCities);
         onlineCitiesLoaded = true;
         if (pendingOfflineProgressSeconds > 0) applyPendingOfflineProgress();
         if (state?.mainCityId && cityById(state.mainCityId)?.owner !== "player") {
           const nextOwned = playerCities()[0];
           state.mainCityId = nextOwned?.id || state.mainCityId;
+        }
+        if (firstCitiesSnapshot) {
+          syncOwnedCitiesToOnline(true);
+          publishOnlinePresence(true);
         }
         renderAll();
         resolveInitialCities();
@@ -3289,16 +3408,28 @@ async function setupOnlineWorld() {
         renderPaths();
         renderArmies();
       },
+      onPresence: presence => {
+        applyOnlinePresence(presence);
+      },
+      onError: (error, source) => {
+        const shouldRejectInitial = source === "cities" && !initialCitiesReady;
+        handleOnlineSnapshotError(error, shouldRejectInitial ? rejectInitialCities : null);
+      },
     });
 
     await initialCitiesPromise;
     onlineWorldConnected = true;
-    onlineStatusDetail.textContent = "Shared island connected.";
+    await publishOnlinePresence(true);
+    updateOnlinePlayersUi();
+    const activeCount = Math.max(1, getActiveOnlinePlayers().length);
+    onlineStatusDetail.textContent = `Shared island connected. ${formatNumber(activeCount)} ruler${activeCount === 1 ? "" : "s"} online.`;
     showToast("Shared island connected.");
     saveGame();
     return true;
   } catch (error) {
     onlineLastError = error?.message || String(error);
+    if (state?.online?.islandId === ONLINE_ISLAND_ID) state.online = null;
+    disconnectOnlineWorld();
     updateOnlineUi();
     showToast("Could not connect shared island.");
     console.warn("Online island setup failed", error);
@@ -3693,7 +3824,9 @@ async function startFromInput(forceFresh = false) {
     pendingOfflineProductionCities = pendingOfflineProgressSeconds > 0 ? createOfflineProductionSnapshot(state) : [];
     state.lastRealTimeMs = Date.now();
     selectedMarchPercent = normalizeMarchPercent(state.marchPercent);
-    const onlineConnected = getOnlineApi()?.isSignedIn?.() ? await setupOnlineWorld() : false;
+    const requiresOnlineWorld = Boolean(getOnlineApi()?.isSignedIn?.());
+    const onlineConnected = requiresOnlineWorld ? await setupOnlineWorld() : false;
+    if (requiresOnlineWorld && !onlineConnected) return;
     if (!onlineConnected) applyPendingOfflineProgress();
     setupScreen.classList.remove("visible");
     clearSelection(false);
@@ -4008,6 +4141,11 @@ function frame(now) {
         onlineCitySyncTimer = 0;
         syncOwnedCitiesToOnline();
       }
+      onlinePresenceTimer += dt;
+      if (onlinePresenceTimer >= ONLINE_PRESENCE_SECONDS) {
+        onlinePresenceTimer = 0;
+        publishOnlinePresence();
+      }
     }
   }
 
@@ -4016,6 +4154,7 @@ function frame(now) {
     if (now - lastHudRenderTime > HUD_RENDER_INTERVAL_MS) {
       lastHudRenderTime = now;
       renderHud();
+      updateOnlinePlayersUi();
     }
     if (now - lastRenderTime > MAP_RENDER_INTERVAL_MS && now >= interactionRenderLockUntil) {
       lastRenderTime = now;

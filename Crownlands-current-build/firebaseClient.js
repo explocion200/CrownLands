@@ -223,6 +223,19 @@
     };
   }
 
+  function cleanPresence(presence = {}) {
+    return {
+      uid: client.user?.uid || "",
+      displayName: String(presence.displayName || client.user?.displayName || "Ruler").slice(0, 32),
+      playerName: String(presence.playerName || presence.displayName || client.user?.displayName || "Ruler").slice(0, 32),
+      islandId: String(presence.islandId || "main").slice(0, 64),
+      mainCityId: String(presence.mainCityId || ""),
+      cityCount: Math.max(0, Math.floor(Number(presence.cityCount) || 0)),
+      flag: presence.flag || null,
+      updatedAtMs: Math.max(0, Number(presence.updatedAtMs) || Date.now()),
+    };
+  }
+
   async function ensureMainIsland({ islandId = "main", cities = [], meta = {} } = {}) {
     await init();
     const uid = requireSignedIn();
@@ -432,29 +445,56 @@
     return true;
   }
 
+  async function savePresence(islandId = "main", presence = {}) {
+    await init();
+    const uid = requireSignedIn();
+    if (!uid) return false;
+    const { doc, setDoc, serverTimestamp } = client.modules.firestore;
+    await setDoc(doc(client.db, "islands", islandId, "presence", uid), {
+      ...cleanPresence({ ...presence, islandId, updatedAtMs: Date.now() }),
+      uid,
+      updatedAt: serverTimestamp(),
+    }, { merge: true });
+    return true;
+  }
+
   function subscribeIsland(islandId, handlers = {}) {
     if (!client.configured || !client.db || !islandId) return () => {};
     const { collection, doc, onSnapshot } = client.modules.firestore;
     const unsubscribers = [];
+    const onError = source => error => {
+      if (typeof handlers.onError === "function") handlers.onError(error, source);
+    };
 
     if (typeof handlers.onIsland === "function") {
       unsubscribers.push(onSnapshot(
         doc(client.db, "islands", islandId),
-        snapshot => handlers.onIsland(snapshot.exists() ? { id: snapshot.id, ...snapshot.data() } : null)
+        snapshot => handlers.onIsland(snapshot.exists() ? { id: snapshot.id, ...snapshot.data() } : null),
+        onError("island")
       ));
     }
 
     if (typeof handlers.onCities === "function") {
       unsubscribers.push(onSnapshot(
         collection(client.db, "islands", islandId, "cities"),
-        snapshot => handlers.onCities(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })))
+        snapshot => handlers.onCities(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))),
+        onError("cities")
       ));
     }
 
     if (typeof handlers.onArmies === "function") {
       unsubscribers.push(onSnapshot(
         collection(client.db, "islands", islandId, "armies"),
-        snapshot => handlers.onArmies(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })))
+        snapshot => handlers.onArmies(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))),
+        onError("armies")
+      ));
+    }
+
+    if (typeof handlers.onPresence === "function") {
+      unsubscribers.push(onSnapshot(
+        collection(client.db, "islands", islandId, "presence"),
+        snapshot => handlers.onPresence(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))),
+        onError("presence")
       ));
     }
 
@@ -475,6 +515,7 @@
     saveCityState,
     saveArmyMovement,
     deleteArmyMovement,
+    savePresence,
     subscribeIsland,
     isConfigured: () => client.configured,
     isReady: () => client.ready,
