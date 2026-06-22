@@ -285,6 +285,8 @@ const SCOUT_NEARBY_RADIUS = 420;
 const BASE_TROOP_ATTACK_POWER = 2;
 const CHARACTER_START_LEVEL = 1;
 const CHARACTER_START_XP = 0;
+const LEVEL_UP_TROOP_REWARD_BASE = 50;
+const LEVEL_UP_TROOP_REWARD_MULTIPLIER = 1.15;
 const CITY_UPGRADE_XP_BASE = 18;
 const CITY_UPGRADE_XP_PER_LEVEL = 4;
 const CAPTURE_XP_BASE = 120;
@@ -3198,7 +3200,7 @@ function getLevelUpGoldReward(level) {
 
 function getLevelUpTroopReward(level) {
   const current = Math.max(1, Math.floor(Number(level) || 1));
-  return Math.floor(10 + current * 2 + Math.pow(current, 1.15));
+  return Math.floor(LEVEL_UP_TROOP_REWARD_BASE * Math.pow(LEVEL_UP_TROOP_REWARD_MULTIPLIER, current - 1));
 }
 
 function getMainRewardCity(excludeCityId = null) {
@@ -3339,7 +3341,7 @@ function addCharacterXp(amount, reason = "progress") {
     }
 
     addLog(`Hero leveled to ${state.character.level}. Reward: ${formatNumber(levelsGained)} skill point, ${formatNumber(totalGoldReward)} gold, and ${formatNumber(totalTroopReward)} troops to ${mainCity ? mainCity.name : "the main city"}.`);
-    showToast(`Hero Lv ${state.character.level}: +${formatNumber(levelsGained)} skill point, +${formatNumber(totalGoldReward)} gold`);
+    showToast(`Hero Lv ${state.character.level}: +${formatNumber(levelsGained)} skill point, +${formatNumber(totalGoldReward)} gold, +${formatNumber(totalTroopReward)} troops`);
   }
 }
 
