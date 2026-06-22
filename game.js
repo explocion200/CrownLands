@@ -46,19 +46,19 @@ const WEST_ISLAND_LAND_POLYGON = [
   { x: 285, y: 135 },
 ];
 const WEST_ISLAND_CITY_POINTS = [
-  { x: 545, y: 150 }, { x: 615, y: 185 }, { x: 690, y: 230 }, { x: 485, y: 245 },
-  { x: 575, y: 285 }, { x: 735, y: 315 }, { x: 445, y: 345 }, { x: 535, y: 365 },
-  { x: 625, y: 405 }, { x: 710, y: 445 }, { x: 795, y: 485 }, { x: 465, y: 485 },
-  { x: 555, y: 525 }, { x: 650, y: 560 }, { x: 745, y: 600 }, { x: 840, y: 645 },
-  { x: 400, y: 670 }, { x: 605, y: 640 }, { x: 640, y: 695 }, { x: 700, y: 745 },
-  { x: 605, y: 890 }, { x: 665, y: 895 }, { x: 680, y: 835 }, { x: 735, y: 890 },
-  { x: 835, y: 930 }, { x: 420, y: 895 }, { x: 555, y: 980 }, { x: 620, y: 965 },
-  { x: 710, y: 1010 }, { x: 805, y: 1045 }, { x: 900, y: 1085 }, { x: 395, y: 1015 },
-  { x: 485, y: 1060 }, { x: 575, y: 1100 }, { x: 665, y: 1140 }, { x: 755, y: 1180 },
-  { x: 845, y: 1215 }, { x: 380, y: 1165 }, { x: 450, y: 1210 }, { x: 540, y: 1250 },
-  { x: 630, y: 1285 }, { x: 720, y: 1320 }, { x: 780, y: 1280 }, { x: 410, y: 1350 },
-  { x: 500, y: 1385 }, { x: 590, y: 1415 }, { x: 680, y: 1445 }, { x: 835, y: 385 },
-  { x: 880, y: 555 }, { x: 440, y: 620 },
+  { x: 520, y: 250 }, { x: 620, y: 250 }, { x: 720, y: 260 }, { x: 500, y: 350 },
+  { x: 600, y: 350 }, { x: 690, y: 360 }, { x: 760, y: 390 }, { x: 470, y: 450 },
+  { x: 570, y: 450 }, { x: 670, y: 450 }, { x: 770, y: 450 }, { x: 450, y: 560 },
+  { x: 550, y: 560 }, { x: 650, y: 560 }, { x: 750, y: 560 }, { x: 430, y: 630 },
+  { x: 580, y: 620 }, { x: 660, y: 670 }, { x: 760, y: 670 }, { x: 410, y: 890 },
+  { x: 650, y: 800 }, { x: 700, y: 780 }, { x: 760, y: 790 }, { x: 470, y: 930 },
+  { x: 580, y: 910 }, { x: 670, y: 900 }, { x: 770, y: 900 }, { x: 460, y: 1020 },
+  { x: 560, y: 1020 }, { x: 660, y: 1020 }, { x: 760, y: 1020 }, { x: 470, y: 1140 },
+  { x: 570, y: 1140 }, { x: 670, y: 1140 }, { x: 760, y: 1140 }, { x: 490, y: 1260 },
+  { x: 580, y: 1250 }, { x: 690, y: 1260 }, { x: 760, y: 1280 }, { x: 510, y: 600 },
+  { x: 650, y: 730 }, { x: 710, y: 720 }, { x: 530, y: 930 }, { x: 630, y: 860 },
+  { x: 720, y: 860 }, { x: 390, y: 680 }, { x: 420, y: 950 }, { x: 400, y: 1000 },
+  { x: 810, y: 620 }, { x: 810, y: 940 },
 ];
 const NORTH_ISLAND_ART_SRC = "assets/north-island.png";
 const NORTH_ISLAND_IMAGE_WIDTH = 1448;
@@ -77,19 +77,19 @@ const NORTH_ISLAND_LAND_POLYGON = [
   { x: 145, y: 220 },
 ];
 const NORTH_ISLAND_CITY_POINTS = [
-  { x: 180, y: 310 }, { x: 300, y: 315 }, { x: 1155, y: 305 }, { x: 1280, y: 345 },
-  { x: 145, y: 430 }, { x: 285, y: 450 }, { x: 1085, y: 455 }, { x: 1225, y: 450 },
-  { x: 1350, y: 500 }, { x: 165, y: 555 }, { x: 310, y: 560 }, { x: 455, y: 555 },
-  { x: 1000, y: 555 }, { x: 1150, y: 565 }, { x: 1300, y: 600 }, { x: 90, y: 600 },
-  { x: 230, y: 665 }, { x: 380, y: 665 }, { x: 520, y: 675 }, { x: 585, y: 615 },
-  { x: 650, y: 690 }, { x: 720, y: 720 }, { x: 800, y: 690 }, { x: 860, y: 615 },
-  { x: 930, y: 665 }, { x: 1080, y: 675 }, { x: 1235, y: 700 }, { x: 1320, y: 690 },
-  { x: 175, y: 770 }, { x: 315, y: 770 }, { x: 465, y: 775 }, { x: 610, y: 775 },
-  { x: 735, y: 790 }, { x: 860, y: 775 }, { x: 1000, y: 770 }, { x: 1145, y: 775 },
-  { x: 1285, y: 780 }, { x: 245, y: 865 }, { x: 390, y: 865 }, { x: 535, y: 865 },
-  { x: 650, y: 845 }, { x: 805, y: 850 }, { x: 945, y: 865 }, { x: 1090, y: 865 },
-  { x: 1230, y: 865 }, { x: 330, y: 950 }, { x: 475, y: 945 }, { x: 610, y: 980 },
-  { x: 845, y: 980 }, { x: 985, y: 945 },
+  { x: 400, y: 400 }, { x: 520, y: 400 }, { x: 580, y: 420 }, { x: 830, y: 450 },
+  { x: 890, y: 400 }, { x: 1000, y: 400 }, { x: 330, y: 430 }, { x: 440, y: 440 },
+  { x: 540, y: 460 }, { x: 630, y: 460 }, { x: 880, y: 470 }, { x: 930, y: 440 },
+  { x: 1040, y: 440 }, { x: 1120, y: 430 }, { x: 330, y: 520 }, { x: 440, y: 520 },
+  { x: 560, y: 520 }, { x: 870, y: 530 }, { x: 960, y: 520 }, { x: 1080, y: 520 },
+  { x: 1140, y: 520 }, { x: 330, y: 640 }, { x: 440, y: 640 }, { x: 560, y: 640 },
+  { x: 840, y: 640 }, { x: 960, y: 640 }, { x: 1080, y: 640 }, { x: 1130, y: 660 },
+  { x: 340, y: 740 }, { x: 460, y: 740 }, { x: 580, y: 740 }, { x: 700, y: 740 },
+  { x: 820, y: 740 }, { x: 940, y: 740 }, { x: 1060, y: 740 }, { x: 1130, y: 740 },
+  { x: 420, y: 810 }, { x: 540, y: 810 }, { x: 660, y: 810 }, { x: 800, y: 810 },
+  { x: 920, y: 810 }, { x: 1040, y: 810 }, { x: 480, y: 810 }, { x: 600, y: 810 },
+  { x: 720, y: 810 }, { x: 860, y: 810 }, { x: 980, y: 810 }, { x: 1100, y: 810 },
+  { x: 490, y: 480 }, { x: 760, y: 770 },
 ];
 const EAST_ISLAND_ART_SRC = "assets/east-island.png";
 const EAST_ISLAND_IMAGE_WIDTH = 1086;
@@ -107,19 +107,19 @@ const EAST_ISLAND_LAND_POLYGON = [
   { x: 85, y: 560 }, { x: 105, y: 380 }, { x: 170, y: 220 }, { x: 300, y: 100 },
 ];
 const EAST_ISLAND_CITY_POINTS = [
-  { x: 420, y: 145 }, { x: 520, y: 135 }, { x: 630, y: 155 }, { x: 725, y: 195 },
-  { x: 300, y: 205 }, { x: 385, y: 235 }, { x: 500, y: 245 }, { x: 615, y: 255 },
-  { x: 740, y: 285 }, { x: 255, y: 335 }, { x: 365, y: 345 }, { x: 480, y: 350 },
-  { x: 600, y: 360 }, { x: 720, y: 390 }, { x: 210, y: 470 }, { x: 335, y: 465 },
-  { x: 455, y: 470 }, { x: 580, y: 485 }, { x: 760, y: 455 }, { x: 815, y: 535 },
-  { x: 245, y: 585 }, { x: 370, y: 590 }, { x: 735, y: 680 }, { x: 825, y: 650 },
-  { x: 180, y: 700 }, { x: 385, y: 665 }, { x: 710, y: 825 }, { x: 690, y: 740 },
-  { x: 830, y: 760 }, { x: 230, y: 875 }, { x: 360, y: 890 }, { x: 675, y: 915 },
-  { x: 735, y: 890 }, { x: 860, y: 910 }, { x: 270, y: 1000 }, { x: 405, y: 1005 },
-  { x: 535, y: 1000 }, { x: 675, y: 1010 }, { x: 870, y: 980 }, { x: 320, y: 1120 },
-  { x: 455, y: 1135 }, { x: 590, y: 1125 }, { x: 720, y: 1145 }, { x: 790, y: 1215 },
-  { x: 370, y: 1260 }, { x: 500, y: 1275 }, { x: 635, y: 1265 }, { x: 730, y: 1220 },
-  { x: 580, y: 1380 }, { x: 600, y: 1325 },
+  { x: 420, y: 220 }, { x: 530, y: 220 }, { x: 640, y: 220 }, { x: 350, y: 270 },
+  { x: 450, y: 270 }, { x: 560, y: 280 }, { x: 670, y: 300 }, { x: 350, y: 380 },
+  { x: 410, y: 380 }, { x: 520, y: 390 }, { x: 630, y: 400 }, { x: 700, y: 410 },
+  { x: 350, y: 500 }, { x: 400, y: 480 }, { x: 490, y: 490 }, { x: 610, y: 500 },
+  { x: 700, y: 520 }, { x: 350, y: 620 }, { x: 400, y: 600 }, { x: 680, y: 620 },
+  { x: 730, y: 640 }, { x: 410, y: 740 }, { x: 440, y: 820 }, { x: 680, y: 740 },
+  { x: 730, y: 720 }, { x: 350, y: 860 }, { x: 420, y: 870 }, { x: 540, y: 880 },
+  { x: 650, y: 860 }, { x: 710, y: 860 }, { x: 350, y: 980 }, { x: 420, y: 980 },
+  { x: 540, y: 980 }, { x: 650, y: 980 }, { x: 710, y: 980 }, { x: 350, y: 1090 },
+  { x: 460, y: 1090 }, { x: 580, y: 1090 }, { x: 690, y: 1090 }, { x: 400, y: 1160 },
+  { x: 520, y: 1160 }, { x: 640, y: 1160 }, { x: 700, y: 1160 }, { x: 460, y: 1160 },
+  { x: 580, y: 1160 }, { x: 640, y: 1070 }, { x: 360, y: 690 }, { x: 420, y: 660 },
+  { x: 660, y: 800 }, { x: 720, y: 790 },
 ];
 const SOUTH_ISLAND_ART_SRC = "assets/south-island.png";
 const SOUTH_ISLAND_IMAGE_WIDTH = 1446;
@@ -139,19 +139,19 @@ const SOUTH_ISLAND_LAND_POLYGON = [
   { x: 120, y: 285 }, { x: 205, y: 160 },
 ];
 const SOUTH_ISLAND_CITY_POINTS = [
-  { x: 260, y: 170 }, { x: 380, y: 165 }, { x: 515, y: 155 }, { x: 885, y: 155 },
-  { x: 1030, y: 165 }, { x: 1190, y: 210 }, { x: 180, y: 285 }, { x: 320, y: 280 },
-  { x: 460, y: 290 }, { x: 590, y: 295 }, { x: 860, y: 295 }, { x: 1010, y: 290 },
-  { x: 1160, y: 300 }, { x: 1310, y: 350 }, { x: 140, y: 420 }, { x: 310, y: 395 },
-  { x: 450, y: 410 }, { x: 610, y: 420 }, { x: 790, y: 410 }, { x: 950, y: 405 },
-  { x: 1080, y: 410 }, { x: 1270, y: 445 }, { x: 160, y: 540 }, { x: 350, y: 525 },
-  { x: 490, y: 525 }, { x: 960, y: 520 }, { x: 1090, y: 570 }, { x: 1300, y: 560 },
-  { x: 210, y: 660 }, { x: 350, y: 645 }, { x: 1030, y: 650 }, { x: 1210, y: 670 },
-  { x: 180, y: 760 }, { x: 330, y: 750 }, { x: 560, y: 820 }, { x: 900, y: 850 },
-  { x: 1060, y: 820 }, { x: 1220, y: 760 }, { x: 280, y: 850 }, { x: 380, y: 900 },
-  { x: 520, y: 930 }, { x: 650, y: 965 }, { x: 850, y: 965 }, { x: 990, y: 930 },
-  { x: 1120, y: 900 }, { x: 1180, y: 840 }, { x: 450, y: 950 }, { x: 585, y: 970 },
-  { x: 750, y: 1025 }, { x: 900, y: 1015 },
+  { x: 430, y: 230 }, { x: 540, y: 230 }, { x: 630, y: 245 }, { x: 850, y: 230 },
+  { x: 960, y: 230 }, { x: 1040, y: 235 }, { x: 360, y: 315 }, { x: 480, y: 315 },
+  { x: 600, y: 315 }, { x: 720, y: 315 }, { x: 840, y: 315 }, { x: 960, y: 315 },
+  { x: 1040, y: 315 }, { x: 360, y: 400 }, { x: 480, y: 400 }, { x: 600, y: 400 },
+  { x: 720, y: 400 }, { x: 840, y: 400 }, { x: 960, y: 400 }, { x: 1040, y: 400 },
+  { x: 380, y: 480 }, { x: 500, y: 480 }, { x: 590, y: 480 }, { x: 860, y: 480 },
+  { x: 970, y: 480 }, { x: 1040, y: 480 }, { x: 390, y: 560 }, { x: 500, y: 560 },
+  { x: 550, y: 560 }, { x: 900, y: 560 }, { x: 990, y: 560 }, { x: 1060, y: 560 },
+  { x: 430, y: 640 }, { x: 530, y: 640 }, { x: 570, y: 640 }, { x: 880, y: 640 },
+  { x: 980, y: 640 }, { x: 1040, y: 640 }, { x: 430, y: 720 }, { x: 540, y: 720 },
+  { x: 590, y: 770 }, { x: 840, y: 780 }, { x: 880, y: 730 }, { x: 980, y: 720 },
+  { x: 1060, y: 720 }, { x: 420, y: 360 }, { x: 540, y: 360 }, { x: 900, y: 360 },
+  { x: 1020, y: 360 }, { x: 640, y: 800 },
 ];
 const CENTER_REGION_CITY_COUNT = 70;
 const CENTER_ISLAND_ART_SRC = "assets/center-island.png";
@@ -176,24 +176,24 @@ const CENTER_ISLAND_LAND_POLYGON = [
   { x: 62, y: 470 }, { x: 88, y: 292 }, { x: 122, y: 168 },
 ];
 const CENTER_ISLAND_CITY_POINTS = [
-  { x: 420, y: 170 }, { x: 500, y: 170 }, { x: 745, y: 165 }, { x: 830, y: 185 },
-  { x: 930, y: 210 }, { x: 340, y: 230 }, { x: 420, y: 260 }, { x: 510, y: 260 },
-  { x: 735, y: 255 }, { x: 830, y: 270 }, { x: 940, y: 300 }, { x: 1040, y: 350 },
-  { x: 260, y: 340 }, { x: 365, y: 360 }, { x: 475, y: 365 }, { x: 555, y: 360 },
-  { x: 720, y: 365 }, { x: 825, y: 380 }, { x: 940, y: 410 }, { x: 1080, y: 450 },
-  { x: 250, y: 470 }, { x: 360, y: 480 }, { x: 470, y: 495 }, { x: 520, y: 505 },
-  { x: 760, y: 500 }, { x: 860, y: 500 }, { x: 970, y: 500 }, { x: 1100, y: 540 },
-  { x: 330, y: 590 }, { x: 430, y: 600 }, { x: 470, y: 635 }, { x: 800, y: 595 },
-  { x: 910, y: 590 }, { x: 1130, y: 640 }, { x: 350, y: 700 }, { x: 730, y: 755 },
-  { x: 880, y: 730 }, { x: 960, y: 700 }, { x: 1080, y: 750 }, { x: 290, y: 815 },
-  { x: 390, y: 820 }, { x: 500, y: 835 }, { x: 610, y: 835 }, { x: 730, y: 845 },
-  { x: 840, y: 820 }, { x: 955, y: 820 }, { x: 1060, y: 870 }, { x: 220, y: 930 },
-  { x: 330, y: 940 }, { x: 445, y: 945 }, { x: 545, y: 930 }, { x: 720, y: 930 },
-  { x: 835, y: 940 }, { x: 950, y: 950 }, { x: 1050, y: 985 }, { x: 270, y: 1030 },
-  { x: 370, y: 1070 }, { x: 485, y: 1085 }, { x: 760, y: 1085 }, { x: 890, y: 1075 },
-  { x: 1030, y: 1030 }, { x: 335, y: 1130 }, { x: 400, y: 1160 }, { x: 500, y: 1165 },
-  { x: 710, y: 1095 }, { x: 760, y: 1160 }, { x: 880, y: 1150 }, { x: 1030, y: 1170 },
-  { x: 182, y: 760 }, { x: 1125, y: 355 },
+  { x: 400, y: 290 }, { x: 490, y: 290 }, { x: 720, y: 290 }, { x: 880, y: 290 },
+  { x: 320, y: 300 }, { x: 440, y: 320 }, { x: 540, y: 300 }, { x: 680, y: 320 },
+  { x: 820, y: 300 }, { x: 930, y: 300 }, { x: 320, y: 400 }, { x: 390, y: 390 },
+  { x: 500, y: 380 }, { x: 600, y: 430 }, { x: 740, y: 380 }, { x: 850, y: 380 },
+  { x: 930, y: 350 }, { x: 320, y: 460 }, { x: 390, y: 460 }, { x: 500, y: 460 },
+  { x: 760, y: 460 }, { x: 870, y: 460 }, { x: 930, y: 440 }, { x: 320, y: 540 },
+  { x: 460, y: 540 }, { x: 510, y: 510 }, { x: 750, y: 520 }, { x: 840, y: 540 },
+  { x: 930, y: 540 }, { x: 320, y: 690 }, { x: 430, y: 690 }, { x: 510, y: 710 },
+  { x: 760, y: 680 }, { x: 840, y: 690 }, { x: 930, y: 690 }, { x: 320, y: 770 },
+  { x: 390, y: 780 }, { x: 500, y: 780 }, { x: 610, y: 780 }, { x: 740, y: 780 },
+  { x: 850, y: 780 }, { x: 930, y: 770 }, { x: 330, y: 870 }, { x: 430, y: 860 },
+  { x: 540, y: 860 }, { x: 710, y: 860 }, { x: 830, y: 850 }, { x: 920, y: 870 },
+  { x: 360, y: 920 }, { x: 500, y: 940 }, { x: 750, y: 930 }, { x: 860, y: 940 },
+  { x: 470, y: 900 }, { x: 560, y: 950 }, { x: 690, y: 960 }, { x: 810, y: 950 },
+  { x: 350, y: 620 }, { x: 470, y: 620 }, { x: 780, y: 620 }, { x: 900, y: 620 },
+  { x: 310, y: 350 }, { x: 900, y: 390 }, { x: 310, y: 930 }, { x: 930, y: 940 },
+  { x: 590, y: 300 }, { x: 640, y: 290 }, { x: 590, y: 840 }, { x: 660, y: 840 },
+  { x: 550, y: 350 }, { x: 760, y: 320 },
 ];
 const BITMAP_ISLAND_IDS = ["west", "north", "east", "south", "center"];
 const IMAGE_TERRAIN_BLOCKERS = normalizeImageTerrainShapes({
@@ -1671,6 +1671,7 @@ let renderedMapBoundsSignature = "";
 let interactionRenderLockUntil = 0;
 let cityRenderSignature = "";
 let pathRenderSignature = "";
+let cityTapState = null;
 
 const setupScreen = document.getElementById("setupScreen");
 const gameView = document.querySelector(".game-view");
@@ -8064,7 +8065,35 @@ if (flagBackBtn) flagBackBtn.addEventListener("click", showProfileView);
 if (flagExitBtn) flagExitBtn.addEventListener("click", closeProfileScreen);
 clearSelectBtn.addEventListener("click", () => clearSelection());
 cityLayer.addEventListener("pointerdown", event => {
+  const cityButton = event.target.closest(".city-node");
+  if (cityButton && cityLayer.contains(cityButton)) {
+    cityTapState = {
+      pointerId: event.pointerId,
+      cityId: cityButton.dataset.cityId,
+      x: event.clientX,
+      y: event.clientY,
+      selected: false,
+    };
+  }
   if (event.target.closest(".city-node, .city-wheel-action")) interactionRenderLockUntil = performance.now() + 600;
+});
+cityLayer.addEventListener("pointerup", event => {
+  if (!cityTapState || cityTapState.pointerId !== event.pointerId) return;
+  const cityButton = event.target.closest(".city-node");
+  const moved = Math.hypot(event.clientX - cityTapState.x, event.clientY - cityTapState.y) > 12;
+  const sameCity = cityButton && cityLayer.contains(cityButton) && cityButton.dataset.cityId === cityTapState.cityId;
+  if (!moved && sameCity) {
+    event.stopPropagation();
+    cityTapState.selected = true;
+    suppressMapClick = true;
+    selectCity(cityTapState.cityId);
+    window.setTimeout(() => { suppressMapClick = false; }, 80);
+  } else {
+    cityTapState = null;
+  }
+});
+cityLayer.addEventListener("pointercancel", event => {
+  if (cityTapState?.pointerId === event.pointerId) cityTapState = null;
 });
 if (portalLayer) {
   portalLayer.addEventListener("pointerdown", event => {
@@ -8077,6 +8106,11 @@ cityLayer.addEventListener("click", event => {
   const cityButton = event.target.closest(".city-node");
   if (!cityButton || !cityLayer.contains(cityButton)) return;
   event.stopPropagation();
+  if (cityTapState?.selected && cityTapState.cityId === cityButton.dataset.cityId) {
+    cityTapState = null;
+    return;
+  }
+  cityTapState = null;
   selectCity(cityButton.dataset.cityId);
 });
 mapFrame.addEventListener("pointerdown", startPan);
