@@ -3952,12 +3952,16 @@ function getPendingScoutMission(cityId) {
   return state?.attacks?.find(attack => attack.owner === "player" && attack.kind === "scout" && attack.toId === cityId) || null;
 }
 
-function findNearestScoutSource(target) {
+function findNearestOwnedSource(target, minimumTroops = 1) {
   return playerCities()
-    .filter(city => Math.floor(Number(city.troops) || 0) >= 1 && city.id !== target.id)
+    .filter(city => Math.floor(Number(city.troops) || 0) >= minimumTroops && city.id !== target.id)
     .map(city => ({ city, route: findRoute(city, target) }))
     .filter(option => option.route?.points?.length)
     .sort((a, b) => a.route.length - b.route.length)[0] || null;
+}
+
+function findNearestScoutSource(target) {
+  return findNearestOwnedSource(target, 1);
 }
 
 function completeScoutMission(attack, target) {
@@ -7056,18 +7060,8 @@ function scoutSkillRow(label, level = 0, percent = 0) {
   return `<div class="scout-skill-row"><span>${label}</span><small>Lv ${formatNumber(level || 0)}</small><strong>+${formatNumber(percent || 0)}%</strong></div>`;
 }
 
-function findPreferredAttackSource(target) {
-  const selected = selectedSourceId ? cityById(selectedSourceId) : null;
-  if (selected?.owner === "player" && selected.troops > 0 && selected.id !== target.id) {
-    const route = findRoute(selected, target);
-    if (route?.points?.length) return { city: selected, route };
-  }
-
-  return playerCities()
-    .filter(city => city.troops > 0 && city.id !== target.id)
-    .map(city => ({ city, route: findRoute(city, target) }))
-    .filter(option => option.route?.points?.length)
-    .sort((a, b) => a.route.length - b.route.length)[0] || null;
+function findNearestAttackSource(target) {
+  return findNearestOwnedSource(target, 1);
 }
 
 function attackForeignCity(cityId) {
@@ -7078,7 +7072,7 @@ function attackForeignCity(cityId) {
     showNeutralCaptureLimitModal(neutralBlockReason);
     return;
   }
-  const sourceOption = findPreferredAttackSource(target);
+  const sourceOption = findNearestAttackSource(target);
   if (!sourceOption) {
     showToast("No owned city with troops can reach this target.");
     return;
