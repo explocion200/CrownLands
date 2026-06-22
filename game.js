@@ -310,6 +310,8 @@ const HARVEST_BONUS_PORTAL_CLEARANCE = 148;
 const HARVEST_BONUS_PICKUP_CLEARANCE = 116;
 const HARVEST_BONUS_TERRAIN_PADDING = 22;
 const HARVEST_BONUS_LAND_CLEARANCE = 64;
+const HARVEST_BONUS_CITY_SPAWN_MIN_DISTANCE = 170;
+const HARVEST_BONUS_CITY_SPAWN_MAX_DISTANCE = 420;
 const NEUTRAL_CITY_COUNT_LIMIT = 30;
 const PLAYER_START_TROOPS = 50;
 const PLAYER_SLOT_START_TROOPS = 50;
@@ -6510,6 +6512,18 @@ function getActiveHarvestBonuses(regionId = getActiveMapRegionId()) {
     .filter(bonus => normalizeRegionId(bonus.regionId) === activeRegionId);
 }
 
+function getHarvestBonusOwnedCityAnchors(regionId) {
+  const activeRegionId = normalizeRegionId(regionId);
+  if (!state || !Array.isArray(state.cities)) return [];
+  return state.cities
+    .filter(city => city.owner === "player" && !isStronghold(city) && getCityRegionId(city) === activeRegionId);
+}
+
+function isHarvestBonusNearOwnedCity(x, y, regionId) {
+  return getHarvestBonusOwnedCityAnchors(regionId)
+    .some(city => Math.hypot(city.x - x, city.y - y) <= HARVEST_BONUS_CITY_SPAWN_MAX_DISTANCE);
+}
+
 function pruneExpiredHarvestBonuses() {
   if (!state) return;
   const now = Math.max(0, Number(state.gameSeconds) || 0);
@@ -6518,6 +6532,7 @@ function pruneExpiredHarvestBonuses() {
     .filter(bonus => (
       now - bonus.createdAt <= HARVEST_BONUS_EXPIRE_SECONDS
       && isHarvestBonusTerrainSafePoint(bonus.x, bonus.y, bonus.regionId)
+      && isHarvestBonusNearOwnedCity(bonus.x, bonus.y, bonus.regionId)
     ));
   if (state.harvestBonuses.length !== before) renderHarvestBonuses();
 }
@@ -6581,6 +6596,7 @@ function isHarvestBonusTerrainSafePoint(x, y, regionId) {
 
 function isValidHarvestBonusPoint(x, y, regionId) {
   const activeRegionId = normalizeRegionId(regionId);
+  if (!isHarvestBonusNearOwnedCity(x, y, activeRegionId)) return false;
   if (!isHarvestBonusTerrainSafePoint(x, y, activeRegionId)) return false;
   if (!isHarvestBonusFarFromCities(x, y, activeRegionId)) return false;
   if (!isHarvestBonusFarFromPortals(x, y, activeRegionId)) return false;
@@ -6590,11 +6606,15 @@ function isValidHarvestBonusPoint(x, y, regionId) {
 
 function createHarvestBonusPoint(regionId) {
   const activeRegionId = normalizeRegionId(regionId);
-  const bounds = getIslandMapBounds(activeRegionId);
-  const margin = Math.max(128, HARVEST_BONUS_LAND_CLEARANCE * 2);
-  for (let attempt = 0; attempt < 700; attempt += 1) {
-    const x = bounds.left + margin + Math.random() * Math.max(1, bounds.width - margin * 2);
-    const y = bounds.top + margin + Math.random() * Math.max(1, bounds.height - margin * 2);
+  const anchors = getHarvestBonusOwnedCityAnchors(activeRegionId);
+  if (!anchors.length) return null;
+  const radiusRange = HARVEST_BONUS_CITY_SPAWN_MAX_DISTANCE - HARVEST_BONUS_CITY_SPAWN_MIN_DISTANCE;
+  for (let attempt = 0; attempt < 900; attempt += 1) {
+    const city = anchors[Math.floor(Math.random() * anchors.length)];
+    const angle = Math.random() * Math.PI * 2;
+    const radius = HARVEST_BONUS_CITY_SPAWN_MIN_DISTANCE + Math.random() * Math.max(1, radiusRange);
+    const x = city.x + Math.cos(angle) * radius;
+    const y = city.y + Math.sin(angle) * radius;
     if (isValidHarvestBonusPoint(x, y, activeRegionId)) return { x, y };
   }
   return null;
@@ -9175,7 +9195,7 @@ function showHelpModal() {
       <li>City defense is level x 3%, plus wall strength and any Guardian skill bonus for your defending troops.</li>
       <li>Troop production is VP x 3, with Recruiter adding more production from VP. Passive gold uses the Million Lords level curve x 15, with Prosperous added on top.</li>
       <li>Army travel uses route distance plus troop-size bands. Larger armies march slower, scouts move as one troop, and Rusher reduces travel time.</li>
-      <li>Glowing pickups appear on the current island during active play once per minute, alternating between gold and troop-hour rewards. Daily pickup limits are ${formatNumber(HARVEST_BONUS_DAILY_GOLD_LIMIT)} gold and ${formatNumber(HARVEST_BONUS_DAILY_TROOP_LIMIT)} troop pickups.</li>
+      <li>Glowing pickups appear near your owned cities on the current island during active play once per minute, alternating between gold and troop-hour rewards. Daily pickup limits are ${formatNumber(HARVEST_BONUS_DAILY_GOLD_LIMIT)} gold and ${formatNumber(HARVEST_BONUS_DAILY_TROOP_LIMIT)} troop pickups.</li>
       <li>Prosperous boosts gold, Rusher boosts travel speed, and Striker boosts attacking combat power.</li>
       <li>Fearless saves some attacking losses, Brave saves some defending losses, Scavenger and Salvager recover gold from kills, and Cautious refunds some invested gold when you lose a city.</li>
       <li>Captured cities enter a one-hour XP cooldown. Attacking during cooldown still works, but capture XP is reduced.</li>
