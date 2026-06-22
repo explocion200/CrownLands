@@ -1623,6 +1623,7 @@ const pathMetricCache = new WeakMap();
 
 let state;
 let selectedSourceId = null;
+let lastSelectedOwnedCityId = null;
 let selectedTargetId = null;
 let sendMode = false;
 let selectedMarchPercent = DEFAULT_MARCH_PERCENT;
@@ -3964,6 +3965,16 @@ function findNearestScoutSource(target) {
   return findNearestOwnedSource(target, 1);
 }
 
+function rememberOwnedAttackSource(cityOrId) {
+  const city = typeof cityOrId === "string" ? cityById(cityOrId) : cityOrId;
+  if (city?.owner === "player") lastSelectedOwnedCityId = city.id;
+}
+
+function getLastSelectedOwnedAttackCity() {
+  const source = lastSelectedOwnedCityId ? cityById(lastSelectedOwnedCityId) : null;
+  return source?.owner === "player" ? source : null;
+}
+
 function completeScoutMission(attack, target) {
   if (target.owner === "player") {
     target.troopFloat = Math.max(0, Number(target.troopFloat) || target.troops || 0) + 1;
@@ -5314,6 +5325,7 @@ async function startFromInput(forceFresh = false) {
     if (!onlineConnected) applyPendingOfflineProgress();
     setupScreen.classList.remove("visible");
     clearSelection(false);
+    rememberOwnedAttackSource(state.mainCityId || playerCities()[0]?.id);
     saveGame();
     renderAll();
     requestAnimationFrame(() => centerOnCity(selectedSourceId || state.mainCityId || playerCities()[0]?.id));
@@ -7060,7 +7072,16 @@ function scoutSkillRow(label, level = 0, percent = 0) {
   return `<div class="scout-skill-row"><span>${label}</span><small>Lv ${formatNumber(level || 0)}</small><strong>+${formatNumber(percent || 0)}%</strong></div>`;
 }
 
-function findNearestAttackSource(target) {
+function findLastSelectedAttackSource(target) {
+  const source = getLastSelectedOwnedAttackCity();
+  if (!source || source.id === target.id || Math.floor(Number(source.troops) || 0) < 1) return null;
+  const route = findRoute(source, target);
+  return route?.points?.length ? { city: source, route } : null;
+}
+
+function findPreferredAttackSource(target) {
+  const rememberedSource = getLastSelectedOwnedAttackCity();
+  if (rememberedSource) return findLastSelectedAttackSource(target);
   return findNearestOwnedSource(target, 1);
 }
 
@@ -7072,12 +7093,16 @@ function attackForeignCity(cityId) {
     showNeutralCaptureLimitModal(neutralBlockReason);
     return;
   }
-  const sourceOption = findNearestAttackSource(target);
+  const sourceOption = findPreferredAttackSource(target);
   if (!sourceOption) {
-    showToast("No owned city with troops can reach this target.");
+    const rememberedSource = getLastSelectedOwnedAttackCity();
+    showToast(rememberedSource
+      ? `${rememberedSource.name} needs troops and a valid route to attack this target.`
+      : "No owned city with troops can reach this target.");
     return;
   }
   selectedSourceId = sourceOption.city.id;
+  rememberOwnedAttackSource(sourceOption.city);
   selectedTargetId = target.id;
   sendMode = true;
   selectedTroopAmount = clamp(Math.floor(sourceOption.city.troops / 2), 1, sourceOption.city.troops);
@@ -7279,6 +7304,7 @@ function selectCity(id) {
 
   if (clicked.owner === "player") {
     selectedSourceId = clicked.id;
+    rememberOwnedAttackSource(clicked);
     selectedTargetId = null;
     sendMode = false;
     renderAll();
@@ -7300,6 +7326,7 @@ function beginSendMode(sourceId) {
     return;
   }
   selectedSourceId = source.id;
+  rememberOwnedAttackSource(source);
   selectedTargetId = null;
   scoutNearbySourceId = null;
   sendMode = true;
@@ -8521,6 +8548,7 @@ async function returnToMainCity() {
   scoutNearbySourceId = null;
   sendMode = false;
   selectedSourceId = mainCity.owner === "player" ? mainCity.id : null;
+  rememberOwnedAttackSource(mainCity);
   selectedTargetId = null;
   centerOnCity(mainCity.id);
   renderAll();
