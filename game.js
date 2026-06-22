@@ -324,8 +324,9 @@ const SCOUT_NEARBY_RADIUS = 420;
 const BASE_TROOP_ATTACK_POWER = 2;
 const ARMY_TRAVEL_SECONDS_PER_MAP_UNIT = 0.13;
 const ARMY_TRAVEL_MIN_SECONDS = 30;
+const ARMY_TRAVEL_SCOUT_MIN_SECONDS = 10;
 const ARMY_TRAVEL_MAX_SECONDS = 1800;
-const ARMY_TRAVEL_KIND_MULTIPLIERS = { scout: 0.75, transfer: 0.95, attack: 1 };
+const ARMY_TRAVEL_KIND_MULTIPLIERS = { scout: 0.35, transfer: 0.95, attack: 1 };
 const ARMY_TRAVEL_TROOP_BAND_LIMITS = [10, 100, 1000, 10000, 100000, 1000000, 10000000, 100000000];
 const ARMY_TRAVEL_TROOP_BAND_MULTIPLIERS = [1, 1.18, 1.38, 1.62, 1.9, 2.24, 2.62, 3.06, 3.5];
 const CHARACTER_START_LEVEL = 1;
@@ -6915,9 +6916,10 @@ function travelTime(source, target, owner, pathLength = null, troopCount = 1, ki
   const speed = owner === "player" ? skillMultiplier("rusher") * getStrongholdMarchSpeedMultiplier(owner) : 1;
   const kindMultiplier = ARMY_TRAVEL_KIND_MULTIPLIERS[kind] || ARMY_TRAVEL_KIND_MULTIPLIERS.attack;
   const troopMultiplier = getTroopTravelMultiplier(troopCount);
+  const minSeconds = kind === "scout" ? ARMY_TRAVEL_SCOUT_MIN_SECONDS : ARMY_TRAVEL_MIN_SECONDS;
   return clamp(
     distance * ARMY_TRAVEL_SECONDS_PER_MAP_UNIT * kindMultiplier * troopMultiplier / Math.max(0.1, speed),
-    ARMY_TRAVEL_MIN_SECONDS,
+    minSeconds,
     ARMY_TRAVEL_MAX_SECONDS,
   );
 }
