@@ -288,6 +288,12 @@ const SCOUT_REPORT_SECONDS = 120;
 const SCOUT_NEARBY_COST = 1000;
 const SCOUT_NEARBY_RADIUS = 420;
 const BASE_TROOP_ATTACK_POWER = 2;
+const ARMY_TRAVEL_SECONDS_PER_MAP_UNIT = 0.18;
+const ARMY_TRAVEL_MIN_SECONDS = 30;
+const ARMY_TRAVEL_MAX_SECONDS = 1800;
+const ARMY_TRAVEL_KIND_MULTIPLIERS = { scout: 0.75, transfer: 0.95, attack: 1 };
+const ARMY_TRAVEL_TROOP_BAND_LIMITS = [10, 100, 1000, 10000, 100000, 1000000, 10000000, 100000000];
+const ARMY_TRAVEL_TROOP_BAND_MULTIPLIERS = [1, 1.18, 1.38, 1.62, 1.9, 2.24, 2.62, 3.06, 3.5];
 const CHARACTER_START_LEVEL = 1;
 const CHARACTER_START_XP = 0;
 const LEVEL_UP_TROOP_REWARD_BASE = 50;
@@ -3979,7 +3985,7 @@ function launchScoutMission(source, target, route) {
   source.troops = Math.floor(source.troopFloat);
   markOwnedCityChanged(source, false);
   syncCityStateToOnline(source);
-  const duration = travelTime(source, target, "player", route.length);
+  const duration = travelTime(source, target, "player", route.length, 1, "scout");
   const mission = {
     id: attackIdCounter++,
     owner: "player",
@@ -6406,7 +6412,7 @@ function launchAttack(sourceId, targetId, percent, owner, exactTroops = null) {
     syncCityStateToOnline(source);
   }
 
-  const duration = travelTime(source, target, owner, route.length);
+  const duration = travelTime(source, target, owner, route.length, send, kind);
   const mission = {
     id: attackIdCounter++,
     owner,
@@ -6440,12 +6446,29 @@ function launchAttack(sourceId, targetId, percent, owner, exactTroops = null) {
   return true;
 }
 
-function travelTime(source, target, owner, pathLength = null) {
+function getTroopTravelBandIndex(troops) {
+  const count = Math.max(1, Math.floor(Number(troops) || 1));
+  const index = ARMY_TRAVEL_TROOP_BAND_LIMITS.findIndex(limit => count <= limit);
+  return index >= 0 ? index : ARMY_TRAVEL_TROOP_BAND_MULTIPLIERS.length - 1;
+}
+
+function getTroopTravelMultiplier(troops) {
+  const index = getTroopTravelBandIndex(troops);
+  return ARMY_TRAVEL_TROOP_BAND_MULTIPLIERS[index] || 1;
+}
+
+function travelTime(source, target, owner, pathLength = null, troopCount = 1, kind = "attack") {
   const distance = Number.isFinite(pathLength) && pathLength > 0
     ? pathLength
     : Math.hypot(source.x - target.x, source.y - target.y);
   const speed = owner === "player" ? skillMultiplier("rusher") : 1;
-  return clamp(distance * 0.014 / speed, 3.5, 42);
+  const kindMultiplier = ARMY_TRAVEL_KIND_MULTIPLIERS[kind] || ARMY_TRAVEL_KIND_MULTIPLIERS.attack;
+  const troopMultiplier = getTroopTravelMultiplier(troopCount);
+  return clamp(
+    distance * ARMY_TRAVEL_SECONDS_PER_MAP_UNIT * kindMultiplier * troopMultiplier / Math.max(0.1, speed),
+    ARMY_TRAVEL_MIN_SECONDS,
+    ARMY_TRAVEL_MAX_SECONDS,
+  );
 }
 
 function resolveAttack(attack) {
@@ -7580,7 +7603,7 @@ function renderSendConfirmPanel(source, target) {
   const label = isTransfer ? "Move" : "Attack";
   const route = findRoute(source, target);
   const sendAmount = source.troops > 0 ? clamp(Math.floor(source.troops * selectedMarchPercent), 1, source.troops) : 0;
-  const travel = route ? travelTime(source, target, "player", route.length) : Infinity;
+  const travel = route ? travelTime(source, target, "player", route.length, sendAmount, isTransfer ? "transfer" : "attack") : Infinity;
   let outcomeHtml = "";
 
   if (!isTransfer && route) {
@@ -7605,7 +7628,7 @@ function renderSendConfirmPanel(source, target) {
       <div class="send-main">
         <strong>${escapeHtml(source.name)} \u2192 ${escapeHtml(target.name)}</strong>
         <span>${formatPercent(selectedMarchPercent)} selected \u00B7 ${formatNumber(sendAmount)} troops</span>
-        <span>${route ? `${Math.ceil(travel)}s travel \u00B7 ${formatNumber(route.length)} distance` : "No valid land route"}</span>
+        <span>${route ? `${formatDuration(travel)} travel \u00B7 ${formatNumber(route.length)} distance` : "No valid land route"}</span>
       </div>
     </div>
     ${outcomeHtml}
@@ -7762,13 +7785,13 @@ function updateTroopSliderModal(source, target, route) {
   modalBody.querySelector("#troopSliderAmount").textContent = formatNumber(selectedTroopAmount);
   modalBody.querySelector("#troopSliderRemaining").textContent = formatNumber(source.troops - selectedTroopAmount);
 
-  const travel = travelTime(source, target, "player", route.length);
+  const travel = travelTime(source, target, "player", route.length, selectedTroopAmount, target.owner === "player" ? "transfer" : "attack");
   const previewEl = modalBody.querySelector("#troopSliderPreview");
   if (target.owner === "player") {
     previewEl.className = "troop-slider-preview transfer";
     previewEl.innerHTML = `
       <div><span>Arrival</span><strong>${formatNumber(target.troops + selectedTroopAmount)} troops</strong></div>
-      <div><span>Travel time</span><strong>About ${Math.ceil(travel)}s</strong></div>
+      <div><span>Travel time</span><strong>About ${formatDuration(travel)}</strong></div>
     `;
     return;
   }
@@ -7778,7 +7801,7 @@ function updateTroopSliderModal(source, target, route) {
     previewEl.className = "troop-slider-preview unknown";
     previewEl.innerHTML = `
       <div><span>Battle forecast</span><strong>Garrison unknown</strong><small>Scout report required</small></div>
-      <div><span>Travel time</span><strong>About ${Math.ceil(travel)}s</strong><small>Attack is still available</small></div>
+      <div><span>Travel time</span><strong>About ${formatDuration(travel)}</strong><small>Attack is still available</small></div>
     `;
     return;
   }
@@ -7788,7 +7811,7 @@ function updateTroopSliderModal(source, target, route) {
   previewEl.className = `troop-slider-preview ${preview.success ? "win" : "lose"}`;
   previewEl.innerHTML = `
     <div><span>Scouted forecast</span><strong>${preview.success ? "Likely victory" : "Likely defeat"}</strong><small>${preview.label}</small></div>
-    <div><span>${preview.success ? "Estimated survivors" : "Defenders left"}</span><strong>${formatNumber(preview.success ? preview.survivors : preview.defendersLeft)}</strong><small>About ${Math.ceil(travel)}s travel</small></div>
+    <div><span>${preview.success ? "Estimated survivors" : "Defenders left"}</span><strong>${formatNumber(preview.success ? preview.survivors : preview.defendersLeft)}</strong><small>About ${formatDuration(travel)} travel</small></div>
   `;
 }
 
@@ -8080,7 +8103,7 @@ function showAttackPreview(source, target) {
         <div class="stat-card"><strong>${formatNumber(preview.attackPower)}</strong><small>attack power</small></div>
         <div class="stat-card"><strong>${formatNumber(preview.defensePower)}</strong><small>defense power</small></div>
       </div>
-      <p><strong>${source.name}</strong> \u2192 <strong>${target.name}</strong> \u00B7 ${formatPercent(selectedMarchPercent)} march \u00B7 about ${Math.ceil(preview.travel)}s travel.</p>
+      <p><strong>${source.name}</strong> \u2192 <strong>${target.name}</strong> \u00B7 ${formatPercent(selectedMarchPercent)} march \u00B7 about ${formatDuration(preview.travel)} travel.</p>
       <p>Route distance: <strong>${formatNumber(preview.pathLength)}</strong> map units. Troops avoid water, lakes, and mountains. Swamp and forests are walkable.</p>
       <p>${preview.success
         ? `Expected capture with about <strong>${formatNumber(preview.survivors)}</strong> surviving troops.`
@@ -8104,7 +8127,7 @@ function showAttackPreview(source, target) {
         <div class="stat-card"><strong>${formatNumber(preview.captureXp)}</strong><small>${preview.xpLabel}</small></div>
         <div class="stat-card"><strong>${formatNumber(preview.attackerLosses)}</strong><small>est. attacker losses</small></div>
       </div>
-      <p><strong>${escapeHtml(source.name)}</strong> to <strong>${escapeHtml(target.name)}</strong> - ${formatPercent(selectedMarchPercent)} march - about ${Math.ceil(preview.travel)}s travel.</p>
+      <p><strong>${escapeHtml(source.name)}</strong> to <strong>${escapeHtml(target.name)}</strong> - ${formatPercent(selectedMarchPercent)} march - about ${formatDuration(preview.travel)} travel.</p>
       <p>Route distance: <strong>${formatNumber(preview.pathLength)}</strong> map units. Troops avoid water, lakes, and mountains.</p>
       <p>${preview.success
         ? `Expected capture with about <strong>${formatNumber(preview.survivors)}</strong> surviving troops.`
@@ -8253,7 +8276,7 @@ function calculateBattlePreviewForTroops(source, target, amount, knownRoute = nu
   else if (result.ratio > 1) label = "Close win";
   else if (result.ratio >= .82) label = "Risky attack";
   const route = knownRoute || findRoute(source, target);
-  const travel = route ? travelTime(source, target, "player", route.length) : Infinity;
+  const travel = route ? travelTime(source, target, "player", route.length, send, "attack") : Infinity;
   return {
     send,
     attackPower: result.attackPower,
@@ -8546,6 +8569,7 @@ function showHelpModal() {
       <li>City level creates victory points for combat value, while passive gold follows the Million Lords city production curve.</li>
       <li>City defense is level x 3%, plus wall strength and any Guardian skill bonus for your defending troops.</li>
       <li>Troop production is VP x 3, with Recruiter adding more production from VP. Passive gold uses the Million Lords level curve x 15, with Prosperous added on top.</li>
+      <li>Army travel uses route distance plus troop-size bands. Larger armies march slower, scouts move as one troop, and Rusher reduces travel time.</li>
       <li>Glowing pickups appear on the current island during active play once per minute, alternating between gold and troop-hour rewards. Daily pickup limits are ${formatNumber(HARVEST_BONUS_DAILY_GOLD_LIMIT)} gold and ${formatNumber(HARVEST_BONUS_DAILY_TROOP_LIMIT)} troop pickups.</li>
       <li>Prosperous boosts gold, Rusher boosts travel speed, and Striker boosts attacking combat power.</li>
       <li>Fearless saves some attacking losses, Brave saves some defending losses, Scavenger and Salvager recover gold from kills, and Cautious refunds some invested gold when you lose a city.</li>
