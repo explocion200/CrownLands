@@ -36,10 +36,17 @@ const LOW_ZOOM_PERFORMANCE_THRESHOLD = 0.72;
 const ISLAND_MAP_PADDING = 560;
 const TROOP_PICKUP_ICON_SRC = "assets/troop-pickup.png";
 const GOLD_PICKUP_ICON_SRC = "assets/gold-pickup.png";
+const GOLD_STRONGHOLD_ID = "west_gold_stronghold";
+const GOLD_STRONGHOLD_NAME = "Gold Stronghold";
+const GOLD_STRONGHOLD_ART_SRC = "assets/gold-stronghold.png";
+const GOLD_STRONGHOLD_BONUS_PERCENT = 15;
+const GOLD_STRONGHOLD_LEVEL = 30;
+const GOLD_STRONGHOLD_START_TROOPS = 10000;
 const WEST_ISLAND_ART_SRC = "assets/west-island.png";
 const WEST_ISLAND_IMAGE_WIDTH = 1024;
 const WEST_ISLAND_IMAGE_HEIGHT = 1536;
 const WEST_CENTER_TELEPORT_IMAGE_POINT = { x: 802, y: 795 };
+const WEST_GOLD_STRONGHOLD_IMAGE_POINT = { x: 520, y: 760 };
 const WEST_ISLAND_LAND_POLYGON = [
   { x: 390, y: 40 }, { x: 520, y: 42 }, { x: 635, y: 78 }, { x: 720, y: 155 },
   { x: 785, y: 240 }, { x: 890, y: 305 }, { x: 940, y: 430 }, { x: 905, y: 575 },
@@ -373,6 +380,89 @@ function getCastleAsset(stage) {
     5: "assets/castles/city.png",
   };
   return assets[stage] || assets[1];
+}
+
+function isStronghold(city) {
+  return Boolean(city && (city.kind === "stronghold" || city.id === GOLD_STRONGHOLD_ID));
+}
+
+function isGoldStronghold(city) {
+  return isStronghold(city) && (city.strongholdType === "gold" || city.id === GOLD_STRONGHOLD_ID);
+}
+
+function getStrongholdArtSrc(city) {
+  return isGoldStronghold(city) ? GOLD_STRONGHOLD_ART_SRC : "";
+}
+
+function getStrongholdBonusPercent(city) {
+  return isGoldStronghold(city) ? GOLD_STRONGHOLD_BONUS_PERCENT : 0;
+}
+
+function getStrongholdDefenseLevel(city) {
+  return isStronghold(city) ? GOLD_STRONGHOLD_LEVEL : 0;
+}
+
+function getBaseCityInitialLevel(base) {
+  return isStronghold(base) ? getStrongholdDefenseLevel(base) : 1;
+}
+
+function getBaseCityInitialTroops(base) {
+  return isStronghold(base) ? GOLD_STRONGHOLD_START_TROOPS : NEUTRAL_START_TROOPS;
+}
+
+function createNeutralCityFromBase(base) {
+  const troops = getBaseCityInitialTroops(base);
+  return {
+    ...base,
+    owner: "neutral",
+    ownerKind: "neutral",
+    ownerUid: null,
+    ownerName: "",
+    ownerFlag: null,
+    level: getBaseCityInitialLevel(base),
+    troops,
+    troopFloat: troops,
+    defense: 1,
+    investedGold: 0,
+    lastCapturedAt: null,
+    isMainCity: false,
+  };
+}
+
+function applyBaseCityMetadata(city, base) {
+  if (!city || !base) return;
+  city.x = base.x;
+  city.y = base.y;
+  city.startPool = base.startPool;
+  city.regionId = base.regionId;
+  city.kind = base.kind || "";
+  city.strongholdType = base.strongholdType || "";
+  city.bonus = base.bonus || "";
+  city.bonusPercent = Number(base.bonusPercent) || 0;
+  if (isStronghold(base)) {
+    city.name = city.name || base.name;
+    city.level = getStrongholdDefenseLevel(base);
+    city.investedGold = 0;
+  }
+}
+
+function appendMissingBaseCities(cities, bases) {
+  if (!Array.isArray(cities) || !Array.isArray(bases)) return false;
+  const ids = new Set(cities.map(city => city.id));
+  let changed = false;
+  for (const base of bases) {
+    if (ids.has(base.id)) continue;
+    cities.push(createNeutralCityFromBase(base));
+    ids.add(base.id);
+    changed = true;
+  }
+  return changed;
+}
+
+function canMigrateCitySetToBases(cities, bases) {
+  if (!Array.isArray(cities) || !Array.isArray(bases) || !cities.length) return false;
+  const baseIds = new Set(bases.map(base => base.id));
+  return cities.every(city => baseIds.has(city.id));
 }
 
 const OWNER = {
@@ -2307,7 +2397,38 @@ function generateWorldCitySlots() {
     const regionCities = generateRegionCitySlots(region, getRegionCityCount(region));
     cities.push(...regionCities);
   }
+  cities.push(...generateStrongholdSlots());
   return cities;
+}
+
+function generateStrongholdSlots() {
+  const west = getRegionById("west");
+  if (!west) return [];
+  const chosen = westImagePointToWorld(WEST_GOLD_STRONGHOLD_IMAGE_POINT);
+  return [{
+    id: GOLD_STRONGHOLD_ID,
+    name: GOLD_STRONGHOLD_NAME,
+    regionId: west.id,
+    startPool: west.id,
+    x: Math.round(chosen.x),
+    y: Math.round(chosen.y),
+    owner: "neutral",
+    ownerKind: "neutral",
+    ownerUid: null,
+    ownerName: "",
+    ownerFlag: null,
+    level: GOLD_STRONGHOLD_LEVEL,
+    troops: GOLD_STRONGHOLD_START_TROOPS,
+    troopFloat: GOLD_STRONGHOLD_START_TROOPS,
+    defense: 1,
+    investedGold: 0,
+    lastCapturedAt: null,
+    isMainCity: false,
+    kind: "stronghold",
+    strongholdType: "gold",
+    bonus: "goldProduction",
+    bonusPercent: GOLD_STRONGHOLD_BONUS_PERCENT,
+  }];
 }
 
 function getRegionCityCount(region) {
@@ -2930,17 +3051,7 @@ function getPlayableBaseCities() {
 }
 
 function createIslandStartLayout(playerName) {
-  const cities = getPlayableBaseCities().map(city => ({
-    ...city,
-    owner: "neutral",
-    level: 1,
-    troops: NEUTRAL_START_TROOPS,
-    defense: 1,
-    troopFloat: NEUTRAL_START_TROOPS,
-    investedGold: 0,
-    lastCapturedAt: null,
-    isMainCity: false,
-  }));
+  const cities = getPlayableBaseCities().map(createNeutralCityFromBase);
 
   const startIds = pickStartCities(cities);
   const assignments = [
@@ -2971,11 +3082,11 @@ function pickStartCities(cities) {
   const result = {};
 
   for (const [key, config] of Object.entries(fallbackAnchors)) {
-    const pool = cities.filter(city => city.startPool === config.pool && !used.has(city.id));
+    const pool = cities.filter(city => city.startPool === config.pool && !used.has(city.id) && !isStronghold(city));
     let chosen = randomChoice(pool);
     if (!chosen) {
       const available = cities
-        .filter(city => !used.has(city.id))
+        .filter(city => !used.has(city.id) && !isStronghold(city))
         .sort((a, b) => Math.hypot(a.x - config.x, a.y - config.y) - Math.hypot(b.x - config.x, b.y - config.y));
       chosen = available[0];
     }
@@ -2995,7 +3106,7 @@ function pickDeterministicStartCities(cities) {
 
   for (const [key, config] of Object.entries(anchors)) {
     const chosen = cities
-      .filter(city => city.startPool === config.pool && !used.has(city.id))
+      .filter(city => city.startPool === config.pool && !used.has(city.id) && !isStronghold(city))
       .sort((a, b) => Math.hypot(a.x - config.x, a.y - config.y) - Math.hypot(b.x - config.x, b.y - config.y))[0];
     if (chosen) {
       used.add(chosen.id);
@@ -3024,20 +3135,7 @@ function getStartCityAnchors() {
 function createOnlineIslandSeed(regionId = DEFAULT_ONLINE_REGION_ID) {
   const baseCities = getOnlineIslandBaseCities(regionId);
   const startIds = pickDeterministicStartCities(baseCities);
-  const cities = baseCities.map(city => ({
-    ...city,
-    ownerKind: "neutral",
-    ownerUid: null,
-    ownerName: "",
-    ownerFlag: null,
-    level: 1,
-    troops: NEUTRAL_START_TROOPS,
-    troopFloat: NEUTRAL_START_TROOPS,
-    defense: 1,
-    investedGold: 0,
-    lastCapturedAt: null,
-    isMainCity: false,
-  }));
+  const cities = baseCities.map(createNeutralCityFromBase);
 
   return {
     regionId: normalizeRegionId(regionId),
@@ -3057,8 +3155,8 @@ function getOnlineClaimCandidateIds(cities, startIds) {
       selected.push(cityId);
       used.add(cityId);
     });
-  const outerCities = cities.filter(city => city.regionId !== "center");
-  const centerCities = cities.filter(city => city.regionId === "center");
+  const outerCities = cities.filter(city => city.regionId !== "center" && !isStronghold(city));
+  const centerCities = cities.filter(city => city.regionId === "center" && !isStronghold(city));
 
   appendSpacedClaimCandidates(outerCities, selected, used);
   appendSpacedClaimCandidates(centerCities, selected, used);
@@ -3228,22 +3326,23 @@ function getLevelUpTroopReward(level) {
 
 function getMainRewardCity(excludeCityId = null) {
   const main = state?.mainCityId ? cityById(state.mainCityId) : null;
-  if (main?.owner === "player" && main.id !== excludeCityId) return main;
-  return playerCities().find(city => city.id !== excludeCityId) || null;
+  if (main?.owner === "player" && main.id !== excludeCityId && !isStronghold(main)) return main;
+  return playerRegularCities().find(city => city.id !== excludeCityId) || null;
 }
 
 function getLoadedMainCity() {
   if (!state?.mainCityId) return null;
   const main = cityById(state.mainCityId);
-  return main?.owner === "player" ? main : null;
+  return main?.owner === "player" && !isStronghold(main) ? main : null;
 }
 
 function getMainCityReference() {
   if (!state?.mainCityId) return null;
   const loaded = cityById(state.mainCityId);
-  if (loaded?.owner === "player") return loaded;
+  if (loaded?.owner === "player" && !isStronghold(loaded)) return loaded;
   if (loaded && getCityRegionId(loaded) === getActiveMapRegionId()) return null;
   const base = getPlayableBaseCities().find(city => city.id === state.mainCityId);
+  if (isStronghold(base)) return null;
   return base ? { ...base, owner: "player", isMainCity: true } : null;
 }
 
@@ -3263,19 +3362,20 @@ function getMainCityChangeCooldownRemainingMs(now = Date.now()) {
 function getMainCityChangeStatus(city, now = Date.now()) {
   const cooldownMs = getMainCityChangeCooldownRemainingMs(now);
   const cooldownText = cooldownMs > 0 ? formatDuration(Math.ceil(cooldownMs / 1000)) : "";
-  const ownedCount = state ? playerCities().length : 0;
+  const ownedCount = state ? playerRegularCities().length : 0;
   const isMain = isMainCityForList(city);
   let reason = "";
 
   if (!state) reason = "Game is not ready.";
   else if (!city) reason = "City is not available.";
   else if (city.owner !== "player") reason = "Only owned cities can become your main city.";
+  else if (isStronghold(city)) reason = "Strongholds cannot become your main city.";
   else if (isMain) reason = "This city is already your main city.";
   else if (ownedCount >= MAIN_CITY_CHANGE_CITY_LIMIT) reason = `You can only move your main city while you own fewer than ${MAIN_CITY_CHANGE_CITY_LIMIT} cities.`;
   else if (cooldownMs > 0) reason = `Main city can change again in ${cooldownText}.`;
 
   return {
-    canChange: Boolean(state && city && city.owner === "player" && !isMain && ownedCount < MAIN_CITY_CHANGE_CITY_LIMIT && cooldownMs <= 0),
+    canChange: Boolean(state && city && city.owner === "player" && !isStronghold(city) && !isMain && ownedCount < MAIN_CITY_CHANGE_CITY_LIMIT && cooldownMs <= 0),
     cooldownMs,
     cooldownText,
     ownedCount,
@@ -3400,7 +3500,7 @@ function getLostDefenseXpAward(attackingTroops) {
 function getCaptureXpEfficiency(target, oldOwner = target?.owner) {
   if (!target || !state) return 1;
   const heroLevel = Math.max(1, Math.floor(Number(state.character?.level) || 1));
-  const empirePressure = 48 + heroLevel * 20 + playerCities().length * 2;
+  const empirePressure = 48 + heroLevel * 20 + playerRegularCities().length * 2;
   const targetScore = getCityXpScore(target, oldOwner);
   const strengthEfficiency = clamp(0.35 + targetScore / Math.max(1, empirePressure), 0.25, 2);
   const cooldownMultiplier = getCaptureCooldownRemaining(target) > 0 ? RECENT_CAPTURE_XP_MULTIPLIER : 1;
@@ -3447,6 +3547,14 @@ function skillMultiplier(skill) {
   return Number((1 + getSkillPercent(skill) / 100).toFixed(3));
 }
 
+function getControlledStrongholdGoldBonusPercent(owner = "player") {
+  if (!state || !Array.isArray(state.cities)) return 0;
+  return state.cities.reduce((total, city) => {
+    if (city.owner !== owner || !isGoldStronghold(city)) return total;
+    return total + getStrongholdBonusPercent(city);
+  }, 0);
+}
+
 function clampCityLevel(level) {
   return clamp(Math.floor(Number(level) || 1), 1, MAX_CITY_LEVEL);
 }
@@ -3464,6 +3572,7 @@ function getMillionLordsPassiveGoldPerHour(level) {
 
 function dropCapturedCityLevel(city) {
   const previousLevel = clampCityLevel(city?.level);
+  if (isStronghold(city)) return { previousLevel, nextLevel: previousLevel };
   const nextLevel = Math.max(1, previousLevel - 1);
   if (city) city.level = nextLevel;
   return { previousLevel, nextLevel };
@@ -3476,7 +3585,8 @@ function formatCapturedCityLevelDrop(levelDrop) {
 }
 
 function getCityStats(city) {
-  const level = clampCityLevel(city?.level);
+  const stronghold = isStronghold(city);
+  const level = stronghold ? getStrongholdDefenseLevel(city) : clampCityLevel(city?.level);
   const step = level - 1;
   const victoryPoints = Math.floor(
     CITY_LEVEL_STATS.victoryPointsBase
@@ -3488,12 +3598,13 @@ function getCityStats(city) {
   const guardianPercent = city?.owner === "player" ? getSkillPercent("guardian") : 0;
   const recruiterPercent = city?.owner === "player" ? getSkillPercent("recruiter") : 0;
   const prosperousPercent = city?.owner === "player" ? getSkillPercent("prosperous") : 0;
-  const baseTroopProductionPerHour = victoryPoints * CITY_LEVEL_STATS.troopProductionPerVictoryPoint;
-  const recruiterBonusPerHour = victoryPoints * recruiterPercent / 100;
+  const strongholdGoldBonusPercent = !stronghold && city?.owner === "player" ? getControlledStrongholdGoldBonusPercent("player") : 0;
+  const baseTroopProductionPerHour = stronghold ? 0 : victoryPoints * CITY_LEVEL_STATS.troopProductionPerVictoryPoint;
+  const recruiterBonusPerHour = stronghold ? 0 : victoryPoints * recruiterPercent / 100;
   const troopProductionPerHour = baseTroopProductionPerHour + recruiterBonusPerHour;
   const millionLordsProductionVp = getMillionLordsCityProductionVp(level);
-  const baseGoldProductionPerHour = getMillionLordsPassiveGoldPerHour(level);
-  const goldProductionPerHour = baseGoldProductionPerHour * (1 + prosperousPercent / 100);
+  const baseGoldProductionPerHour = stronghold ? 0 : getMillionLordsPassiveGoldPerHour(level);
+  const goldProductionPerHour = baseGoldProductionPerHour * (1 + prosperousPercent / 100) * (1 + strongholdGoldBonusPercent / 100);
   const troopDefense = Math.floor((Number(city?.troops) || 0) * (1 + defensePercent / 100) * (1 + guardianPercent / 100));
   const totalDefense = Math.floor(cityWalls + troopDefense);
 
@@ -3506,6 +3617,7 @@ function getCityStats(city) {
     guardianPercent,
     recruiterPercent,
     prosperousPercent,
+    strongholdGoldBonusPercent,
     baseTroopProductionPerHour,
     recruiterBonusPerHour,
     troopProductionPerHour,
@@ -3627,8 +3739,9 @@ function loadGame() {
       loaded.battleReports = normalizeBattleReports(loaded.battleReports);
       loaded.mainCityChangedAtMs = normalizeTimestampMs(loaded.mainCityChangedAtMs);
       const playableBases = getPlayableBaseCities();
-      const savedCitiesAreCurrent = Array.isArray(loaded.cities)
-        && loaded.cities.length === playableBases.length
+      const canMigrateLoadedCities = canMigrateCitySetToBases(loaded.cities, playableBases);
+      if (canMigrateLoadedCities) appendMissingBaseCities(loaded.cities, playableBases);
+      const savedCitiesAreCurrent = canMigrateLoadedCities
         && playableBases.every(base => loaded.cities.some(city => city.id === base.id));
       if (!savedCitiesAreCurrent) {
         const island = createIslandStartLayout(loaded.playerName || "Ricky");
@@ -3642,9 +3755,7 @@ function loadGame() {
       loaded.cities.forEach(city => {
         const base = playableBases.find(item => item.id === city.id);
         if (base) {
-          city.x = base.x;
-          city.y = base.y;
-          city.startPool = base.startPool;
+          applyBaseCityMetadata(city, base);
           if (city.id === loaded.mainCityId && city.name === `${loaded.playerName} Keep`) city.name = base.name;
         }
         delete city.adj;
@@ -3658,12 +3769,14 @@ function loadGame() {
         } else if (city.owner !== "enemy" && city.ownerKind !== "player") {
           city.ownerKind = city.owner;
         }
-        city.level = clampCityLevel(city.level);
+        city.level = isStronghold(city) ? getStrongholdDefenseLevel(city) : clampCityLevel(city.level);
         city.defense = 1;
         city.troops = Math.max(0, Math.floor(Number(city.troops) || 0));
         city.troopFloat = Number.isFinite(city.troopFloat) ? Math.max(0, city.troopFloat) : city.troops;
         city.investedGold = Math.max(0, Math.floor(Number(city.investedGold) || 0));
+        if (isStronghold(city)) city.investedGold = 0;
         city.isMainCity = Boolean(city.isMainCity || city.id === loaded.mainCityId);
+        if (isStronghold(city)) city.isMainCity = false;
         if (city.lastCapturedAt === null || city.lastCapturedAt === undefined || city.lastCapturedAt === "") {
           city.lastCapturedAt = null;
         } else {
@@ -3671,13 +3784,13 @@ function loadGame() {
           city.lastCapturedAt = Number.isFinite(capturedAt) ? capturedAt : null;
         }
       });
-      if (!loaded.mainCityId || cityByIdSafe(loaded.cities, loaded.mainCityId)?.owner !== "player") {
+      if (!loaded.mainCityId || cityByIdSafe(loaded.cities, loaded.mainCityId)?.owner !== "player" || isStronghold(cityByIdSafe(loaded.cities, loaded.mainCityId))) {
         loaded.mainCityId = loaded.cities.find(city => city.owner === "player" && city.isMainCity)?.id
-          || loaded.cities.find(city => city.owner === "player")?.id
+          || loaded.cities.find(city => city.owner === "player" && !isStronghold(city))?.id
           || null;
       }
       loaded.cities.forEach(city => {
-        city.isMainCity = Boolean(city.owner === "player" && city.id === loaded.mainCityId);
+        city.isMainCity = Boolean(city.owner === "player" && city.id === loaded.mainCityId && !isStronghold(city));
       });
       loaded.attacks = Array.isArray(loaded.attacks) ? loaded.attacks : [];
       if (sourceSaveVersion < 17) {
@@ -3733,10 +3846,19 @@ function normalizeOnlineGameSnapshot(snapshot, fallbackPlayerName = "Ricky") {
     const playableBases = getPlayableBaseCities();
     const activeRegionId = normalizeRegionId(loaded.activeRegionId || loaded.online?.activeRegionId || DEFAULT_ONLINE_REGION_ID);
     const activeBases = getOnlineIslandBaseCities(activeRegionId);
-    const savedCitiesAreFullWorld = loaded.cities.length === playableBases.length
+    let savedCitiesAreFullWorld = loaded.cities.length === playableBases.length
       && playableBases.every(base => loaded.cities.some(city => city.id === base.id));
-    const savedCitiesAreActiveIsland = loaded.cities.length === activeBases.length
+    let savedCitiesAreActiveIsland = loaded.cities.length === activeBases.length
       && activeBases.every(base => loaded.cities.some(city => city.id === base.id));
+    if (!savedCitiesAreFullWorld && !savedCitiesAreActiveIsland) {
+      if (canMigrateCitySetToBases(loaded.cities, activeBases)) {
+        appendMissingBaseCities(loaded.cities, activeBases);
+        savedCitiesAreActiveIsland = activeBases.every(base => loaded.cities.some(city => city.id === base.id));
+      } else if (canMigrateCitySetToBases(loaded.cities, playableBases)) {
+        appendMissingBaseCities(loaded.cities, playableBases);
+        savedCitiesAreFullWorld = playableBases.every(base => loaded.cities.some(city => city.id === base.id));
+      }
+    }
     if (!savedCitiesAreFullWorld && !savedCitiesAreActiveIsland) {
       const island = createIslandStartLayout(loaded.playerName || fallbackPlayerName);
       loaded.cities = island.cities;
@@ -3751,10 +3873,7 @@ function normalizeOnlineGameSnapshot(snapshot, fallbackPlayerName = "Ricky") {
     loaded.cities.forEach(city => {
       const base = basesForLoadedCities.find(item => item.id === city.id) || playableBases.find(item => item.id === city.id);
       if (base) {
-        city.x = base.x;
-        city.y = base.y;
-        city.startPool = base.startPool;
-        city.regionId = base.regionId;
+        applyBaseCityMetadata(city, base);
       }
       delete city.adj;
       city.owner = OWNER[city.owner] ? city.owner : "neutral";
@@ -3767,12 +3886,14 @@ function normalizeOnlineGameSnapshot(snapshot, fallbackPlayerName = "Ricky") {
       } else if (city.owner !== "enemy" && city.ownerKind !== "player") {
         city.ownerKind = city.owner;
       }
-      city.level = clampCityLevel(city.level);
+      city.level = isStronghold(city) ? getStrongholdDefenseLevel(city) : clampCityLevel(city.level);
       city.defense = 1;
       city.troops = Math.max(0, Math.floor(Number(city.troops) || 0));
       city.troopFloat = Number.isFinite(city.troopFloat) ? Math.max(0, city.troopFloat) : city.troops;
       city.investedGold = Math.max(0, Math.floor(Number(city.investedGold) || 0));
+      if (isStronghold(city)) city.investedGold = 0;
       city.isMainCity = Boolean(city.isMainCity || city.id === loaded.mainCityId);
+      if (isStronghold(city)) city.isMainCity = false;
       if (city.lastCapturedAt === null || city.lastCapturedAt === undefined || city.lastCapturedAt === "") {
         city.lastCapturedAt = null;
       } else {
@@ -3781,13 +3902,13 @@ function normalizeOnlineGameSnapshot(snapshot, fallbackPlayerName = "Ricky") {
       }
     });
 
-    if (!loaded.mainCityId || cityByIdSafe(loaded.cities, loaded.mainCityId)?.owner !== "player") {
+    if (!loaded.mainCityId || cityByIdSafe(loaded.cities, loaded.mainCityId)?.owner !== "player" || isStronghold(cityByIdSafe(loaded.cities, loaded.mainCityId))) {
       loaded.mainCityId = loaded.cities.find(city => city.owner === "player" && city.isMainCity)?.id
-        || loaded.cities.find(city => city.owner === "player")?.id
+        || loaded.cities.find(city => city.owner === "player" && !isStronghold(city))?.id
         || null;
     }
     loaded.cities.forEach(city => {
-      city.isMainCity = Boolean(city.owner === "player" && city.id === loaded.mainCityId);
+      city.isMainCity = Boolean(city.owner === "player" && city.id === loaded.mainCityId && !isStronghold(city));
     });
     loaded.attacks = Array.isArray(loaded.attacks) ? loaded.attacks : [];
     loaded.attacks.forEach(attack => {
@@ -4197,6 +4318,7 @@ function pendingNeutralCaptureCount(owner = "player", excludeAttackId = null) {
     if (attack.id === excludeAttackId) return false;
     if (attack.owner !== owner || attack.kind !== "attack") return false;
     const target = cityById(attack.toId);
+    if (isStronghold(target)) return false;
     return attack.targetOwnerAtLaunch === "neutral" || (!attack.targetOwnerAtLaunch && target?.owner === "neutral");
   }).length;
 }
@@ -4204,7 +4326,7 @@ function pendingNeutralCaptureCount(owner = "player", excludeAttackId = null) {
 function neutralCaptureStatus(excludeAttackId = null) {
   const daily = ensureDailyCaptureTracker();
   const pending = pendingNeutralCaptureCount("player", excludeAttackId);
-  const owned = playerCities().length;
+  const owned = playerRegularCities().length;
   const remainingByCityCount = Math.max(0, NEUTRAL_CITY_COUNT_LIMIT - owned - pending);
   const remainingToday = Math.max(0, DAILY_NEUTRAL_CAPTURE_LIMIT - daily.neutralCaptures - pending);
   return {
@@ -4219,6 +4341,7 @@ function neutralCaptureStatus(excludeAttackId = null) {
 
 function getNeutralCaptureBlockReason(target, owner = "player", excludeAttackId = null) {
   if (owner !== "player" || target?.owner !== "neutral") return "";
+  if (isStronghold(target)) return "";
   const status = neutralCaptureStatus(excludeAttackId);
   if (status.remainingByCityCount <= 0) {
     return `Neutral expansion is capped while you own ${NEUTRAL_CITY_COUNT_LIMIT} or more cities. Attack player-owned cities to keep expanding.`;
@@ -4287,7 +4410,7 @@ function getPlayerProfileSnapshot() {
     flag: state?.flag || createDefaultFlag(),
     character: state?.character ? normalizeCharacterProgress(state.character) : createCharacterProgress(),
     upgrades: state?.upgrades ? normalizeUpgrades(state.upgrades, state.version || 20) : createDefaultSkills(),
-    cityCount: state ? playerCities().length : 0,
+    cityCount: state ? playerRegularCities().length : 0,
     gold: state ? Math.floor(Number(state.gold) || 0) : 0,
     localGameSeconds: state ? Number(state.gameSeconds) || 0 : 0,
   };
@@ -4332,7 +4455,7 @@ function getOnlinePresenceSnapshot() {
     playerName: state?.playerName || "Ruler",
     flag: state?.flag || createDefaultFlag(),
     mainCityId: state?.mainCityId || "",
-    cityCount: state ? playerCities().length : 0,
+    cityCount: state ? playerRegularCities().length : 0,
     updatedAtMs: Date.now(),
   };
 }
@@ -4400,7 +4523,7 @@ function centerOnRegion(regionId) {
 
 function getIslandOwnedCityCount(regionId) {
   const targetRegionId = normalizeRegionId(regionId);
-  return state ? playerCities().filter(city => getCityRegionId(city) === targetRegionId).length : 0;
+  return state ? playerRegularCities().filter(city => getCityRegionId(city) === targetRegionId).length : 0;
 }
 
 function getIslandPreviewArtSrc(regionId) {
@@ -4948,7 +5071,7 @@ function applyOnlineCities(onlineCities, regionId = getActiveOnlineRegionId()) {
           defense: 1,
           investedGold: 0,
           lastCapturedAt: null,
-          isMainCity: base.id === state.mainCityId,
+          isMainCity: !isStronghold(base) && base.id === state.mainCityId,
           startPool: base.startPool,
           regionId: base.regionId,
         };
@@ -4962,13 +5085,13 @@ function applyOnlineCities(onlineCities, regionId = getActiveOnlineRegionId()) {
         ownerUid: current.ownerUid || null,
         ownerName: current.ownerName || "",
         ownerFlag: current.ownerFlag || null,
-        level: clampCityLevel(current.level ?? base.level),
+        level: isStronghold(base) ? getStrongholdDefenseLevel(base) : clampCityLevel(current.level ?? base.level),
         troops: Math.max(0, Math.floor(Number(current.troops ?? base.troops) || 0)),
         troopFloat: Math.max(0, Number(current.troopFloat ?? current.troops ?? base.troops) || 0),
         defense: 1,
-        investedGold: Math.max(0, Math.floor(Number(current.investedGold) || 0)),
+        investedGold: isStronghold(base) ? 0 : Math.max(0, Math.floor(Number(current.investedGold) || 0)),
         lastCapturedAt: current.lastCapturedAt ?? null,
-        isMainCity: owner === "player" ? base.id === state.mainCityId : Boolean(current.isMainCity),
+        isMainCity: !isStronghold(base) && (owner === "player" ? base.id === state.mainCityId : Boolean(current.isMainCity)),
         startPool: base.startPool,
         regionId: base.regionId,
       };
@@ -5000,13 +5123,13 @@ function applyOnlineCities(onlineCities, regionId = getActiveOnlineRegionId()) {
       ownerUid: keepLocalPlayerCity ? currentUid || current.ownerUid || ownerUid || null : ownerUid,
       ownerName: keepLocalPlayerCity ? state.playerName : ownerName,
       ownerFlag: keepLocalPlayerCity ? state.flag : ownerFlag,
-      level: clampCityLevel(keepLocalPlayerCity ? current.level ?? online.level ?? base.level : online.level ?? current.level ?? base.level),
+      level: isStronghold(base) ? getStrongholdDefenseLevel(base) : clampCityLevel(keepLocalPlayerCity ? current.level ?? online.level ?? base.level : online.level ?? current.level ?? base.level),
       troops: Math.max(0, Math.floor(Number(keepLocalPlayerCity ? current.troops ?? online.troops ?? base.troops : online.troops ?? current.troops ?? base.troops) || 0)),
       troopFloat: Math.max(0, Number(keepLocalPlayerCity ? current.troopFloat ?? current.troops ?? online.troopFloat ?? online.troops ?? base.troops : online.troopFloat ?? current.troopFloat ?? online.troops ?? current.troops ?? base.troops) || 0),
       defense: 1,
-      investedGold: Math.max(0, Math.floor(Number(keepLocalPlayerCity ? current.investedGold ?? online.investedGold : online.investedGold ?? current.investedGold) || 0)),
+      investedGold: isStronghold(base) ? 0 : Math.max(0, Math.floor(Number(keepLocalPlayerCity ? current.investedGold ?? online.investedGold : online.investedGold ?? current.investedGold) || 0)),
       lastCapturedAt: keepLocalPlayerCity ? current.lastCapturedAt ?? online.lastCapturedAt ?? null : online.lastCapturedAt ?? current.lastCapturedAt ?? null,
-      isMainCity: localOwner === "player" ? base.id === state.mainCityId : Boolean(online.isMainCity || current.isMainCity),
+      isMainCity: !isStronghold(base) && (localOwner === "player" ? base.id === state.mainCityId : Boolean(online.isMainCity || current.isMainCity)),
       startPool: base.startPool,
       regionId: base.regionId,
     };
@@ -5026,7 +5149,7 @@ function ensureLoadedMainCityForRegion(regionId) {
   if (activeRegionId !== homeRegionId) return;
 
   const currentMain = state.mainCityId ? cityById(state.mainCityId) : null;
-  if (currentMain?.owner === "player") {
+  if (currentMain?.owner === "player" && !isStronghold(currentMain)) {
     currentMain.isMainCity = true;
     if (state.online) {
       state.online.mainCityId = currentMain.id;
@@ -5036,7 +5159,8 @@ function ensureLoadedMainCityForRegion(regionId) {
     return;
   }
 
-  const fallbackMain = playerCities().find(city => city.isMainCity) || playerCities()[0];
+  const fallbackMain = playerCities().find(city => city.isMainCity && !isStronghold(city))
+    || playerCities().find(city => !isStronghold(city));
   if (!fallbackMain) return;
   state.mainCityId = fallbackMain.id;
   fallbackMain.isMainCity = true;
@@ -5054,7 +5178,7 @@ function markOwnedCityChanged(city, syncNow = true) {
   city.ownerUid = getCurrentOnlineUid() || city.ownerUid || null;
   city.ownerName = state.playerName;
   city.ownerFlag = state.flag;
-  city.isMainCity = city.id === state.mainCityId;
+  city.isMainCity = !isStronghold(city) && city.id === state.mainCityId;
   if (syncNow && isOnlineWorldActive()) syncOwnedCitiesToOnline(true);
 }
 
@@ -5066,17 +5190,21 @@ function toOnlineOwnedCity(city) {
     y: city.y,
     startPool: city.startPool || "",
     regionId: city.regionId || city.startPool || getCityRegionId(city),
+    kind: city.kind || "",
+    strongholdType: city.strongholdType || "",
+    bonus: city.bonus || "",
+    bonusPercent: Number(city.bonusPercent) || 0,
     ownerKind: "player",
     ownerUid: getCurrentOnlineUid(),
     ownerName: state.playerName,
     ownerFlag: state.flag,
-    level: clampCityLevel(city.level),
+    level: isStronghold(city) ? getStrongholdDefenseLevel(city) : clampCityLevel(city.level),
     troops: Math.max(0, Math.floor(Number(city.troops) || 0)),
     troopFloat: Math.max(0, Number(city.troopFloat) || Number(city.troops) || 0),
     defense: 1,
-    investedGold: Math.max(0, Math.floor(Number(city.investedGold) || 0)),
+    investedGold: isStronghold(city) ? 0 : Math.max(0, Math.floor(Number(city.investedGold) || 0)),
     lastCapturedAt: city.lastCapturedAt ?? null,
-    isMainCity: city.owner === "player" ? city.id === state.mainCityId : Boolean(city.isMainCity),
+    isMainCity: !isStronghold(city) && (city.owner === "player" ? city.id === state.mainCityId : Boolean(city.isMainCity)),
   };
 }
 
@@ -5088,17 +5216,21 @@ function toOnlineCityState(city) {
     y: city.y,
     startPool: city.startPool || "",
     regionId: city.regionId || city.startPool || getCityRegionId(city),
+    kind: city.kind || "",
+    strongholdType: city.strongholdType || "",
+    bonus: city.bonus || "",
+    bonusPercent: Number(city.bonusPercent) || 0,
     ownerKind: city.ownerKind || (city.owner === "player" ? "player" : city.owner === "enemy" ? "enemy" : city.owner || "neutral"),
     ownerUid: city.ownerKind === "player" ? city.ownerUid || null : null,
     ownerName: city.ownerName || "",
     ownerFlag: city.ownerFlag || null,
-    level: clampCityLevel(city.level),
+    level: isStronghold(city) ? getStrongholdDefenseLevel(city) : clampCityLevel(city.level),
     troops: Math.max(0, Math.floor(Number(city.troops) || 0)),
     troopFloat: Math.max(0, Number(city.troopFloat) || Number(city.troops) || 0),
     defense: 1,
-    investedGold: Math.max(0, Math.floor(Number(city.investedGold) || 0)),
+    investedGold: isStronghold(city) ? 0 : Math.max(0, Math.floor(Number(city.investedGold) || 0)),
     lastCapturedAt: city.lastCapturedAt ?? null,
-    isMainCity: city.owner === "player" ? city.id === state.mainCityId : Boolean(city.isMainCity),
+    isMainCity: !isStronghold(city) && (city.owner === "player" ? city.id === state.mainCityId : Boolean(city.isMainCity)),
   };
 }
 
@@ -5567,6 +5699,10 @@ function cityByIdSafe(cities, id) {
 
 function playerCities() {
   return state.cities.filter(city => city.owner === "player");
+}
+
+function playerRegularCities() {
+  return playerCities().filter(city => !isStronghold(city));
 }
 
 function ownedCities(owner) {
@@ -6399,9 +6535,13 @@ function createOfflineProductionSnapshot(snapshot = state) {
       id: city.id,
       name: city.name,
       owner: "player",
-      level: clampCityLevel(city.level),
+      level: isStronghold(city) ? getStrongholdDefenseLevel(city) : clampCityLevel(city.level),
       troops: Math.max(0, Math.floor(Number(city.troops) || 0)),
       troopFloat: Math.max(0, Number(city.troopFloat) || Number(city.troops) || 0),
+      kind: city.kind || "",
+      strongholdType: city.strongholdType || "",
+      bonus: city.bonus || "",
+      bonusPercent: Number(city.bonusPercent) || 0,
     }));
 }
 
@@ -6627,7 +6767,7 @@ function resolveAttack(attack) {
   const result = calculateCombatResult(attack.troops, attack.owner, target);
 
   if (result.success) {
-    const neutralCapture = attack.owner === "player" && oldOwner === "neutral";
+    const neutralCapture = attack.owner === "player" && oldOwner === "neutral" && !isStronghold(target);
     const neutralBlockReason = neutralCapture ? getNeutralCaptureBlockReason(target, "player", attack.id) : "";
     if (neutralBlockReason) {
       target.troopFloat = Math.max(1, target.troopFloat);
@@ -6883,7 +7023,7 @@ function renderHud() {
   if (characterLevelBadge) characterLevelBadge.textContent = `Lv ${formatNumber(state.character.level)}`;
   if (characterXpText) characterXpText.textContent = "";
   applyFlagToElement(hudKingdomFlag, state.flag);
-  cityText.textContent = `${playerCities().length}`;
+  cityText.textContent = `${playerRegularCities().length}`;
   updateIslandSwitcherUi();
   updateIncomingAttackUi();
 
@@ -6941,11 +7081,12 @@ function getCityOwnerDisplayName(city) {
 
 function getKingdomSummary() {
   const cities = playerCities();
+  const regularCities = playerRegularCities();
   const marchingTroops = state.attacks
     .filter(attack => attack.owner === "player")
     .reduce((total, attack) => total + Math.max(0, Number(attack.troops) || 0), 0);
   return {
-    cities: cities.length,
+    cities: regularCities.length,
     troops: cities.reduce((total, city) => total + Math.max(0, Number(city.troops) || 0), marchingTroops),
     gold: Math.floor(state.gold),
     goldProductionPerHour: cities.reduce((total, city) => total + getCityStats(city).goldProductionPerHour, 0),
@@ -7263,6 +7404,8 @@ function getCityRenderSignature(visibleCities) {
       city.ownerUid || "",
       city.ownerName || "",
       getFlagSignature(city.ownerFlag),
+      city.kind || "",
+      city.strongholdType || "",
       city.level,
       Math.floor(Number(city.troops) || 0),
       city.isMainCity ? 1 : 0,
@@ -7306,6 +7449,7 @@ function renderCities(force = false) {
     btn.dataset.cityId = city.id;
     const castleStage = getCastleStage(city.level);
     btn.className = `city-node ${OWNER[city.owner].css} castle-stage-${castleStage}`;
+    if (isStronghold(city)) btn.classList.add("stronghold-node", `stronghold-${city.strongholdType || "generic"}`);
     if (city.id === selectedSourceId) btn.classList.add("selected");
     if (city.id === selectedTargetId) btn.classList.add("targeted");
     if (scoutNearbySource?.id === city.id) btn.classList.add("scout-radius-source");
@@ -7356,10 +7500,17 @@ function renderCities(force = false) {
           </span>
         </span>`;
     const knownTroops = city.owner === "player" ? city.troops : scoutReport?.troops;
-    btn.setAttribute("aria-label", `${city.name}. ${ownerName}. Level ${city.level}. ${knownTroops === undefined ? "Unknown troops" : `${formatNumber(knownTroops)} troops`}.`);
-    btn.innerHTML = `
+    const locationType = isStronghold(city) ? "Stronghold" : `Level ${city.level}`;
+    const structureHtml = isStronghold(city)
+      ? `
+      <span class="stronghold-glow" aria-hidden="true"></span>
+      <span class="stronghold-building" aria-hidden="true"><img class="stronghold-art" src="${getStrongholdArtSrc(city)}" alt="" draggable="false" /></span>`
+      : `
       <span class="city-ring"></span>
-      <span class="city-castle stage-${castleStage}" aria-hidden="true"><img class="city-art" src="${getCastleAsset(castleStage)}" alt="" draggable="false" /></span>
+      <span class="city-castle stage-${castleStage}" aria-hidden="true"><img class="city-art" src="${getCastleAsset(castleStage)}" alt="" draggable="false" /></span>`;
+    btn.setAttribute("aria-label", `${city.name}. ${ownerName}. ${locationType}. ${knownTroops === undefined ? "Unknown troops" : `${formatNumber(knownTroops)} troops`}.`);
+    btn.innerHTML = `
+      ${structureHtml}
       ${cityLabel}
     `;
     applyCityOwnerFlags(btn, city);
@@ -7389,7 +7540,7 @@ function renderSelectedCityWheel(city) {
   const mapPoint = worldToMapPoint(city);
   const wheel = document.createElement("div");
   const levelCost = getLevelCost(city);
-  const levelDisabled = city.level >= MAX_CITY_LEVEL || state.gold < levelCost;
+  const levelDisabled = isStronghold(city) || city.level >= MAX_CITY_LEVEL || state.gold < levelCost;
   const scoutNearbyActive = scoutNearbySourceId === city.id;
   const nearbyCount = scoutNearbyActive ? getNearbyScoutCandidates(city).length : 0;
   wheel.className = "city-action-wheel";
@@ -7400,7 +7551,7 @@ function renderSelectedCityWheel(city) {
     <button class="city-wheel-action wheel-level" type="button" aria-label="Level up ${escapeHtml(city.name)}" ${levelDisabled ? "disabled" : ""}>
       <span class="wheel-icon" aria-hidden="true">\u265C\u2191</span>
       <span class="wheel-action-name">Level</span>
-      <span class="wheel-cost">${city.level >= MAX_CITY_LEVEL ? "MAX" : `${formatNumber(levelCost)}g`}</span>
+      <span class="wheel-cost">${isStronghold(city) ? "Fixed" : city.level >= MAX_CITY_LEVEL ? "MAX" : `${formatNumber(levelCost)}g`}</span>
     </button>
     <button class="city-wheel-action wheel-send" type="button" aria-label="Send troops from ${escapeHtml(city.name)}" ${city.troops < 1 ? "disabled" : ""}>
       <span class="wheel-icon" aria-hidden="true">\u2694</span>
@@ -8002,18 +8153,21 @@ function playerMarchTo(targetId) {
 function showCityInfoModal(cityId) {
   const city = cityById(cityId);
   if (!city) return;
+  const stronghold = isStronghold(city);
   if (city.owner !== "player") {
     const report = getScoutReport(city.id);
     const stats = getCityStats(city);
     const remaining = report ? Math.max(0, Math.ceil(report.expiresAt - state.gameSeconds)) : 0;
-    modalTitle.textContent = `${city.name} - Level ${city.level}`;
+    modalTitle.textContent = stronghold ? `${city.name} - Stronghold` : `${city.name} - Level ${city.level}`;
     modalBody.innerHTML = `
       <div class="city-stat-panel modal-city-stats">
+        ${stronghold ? `<div class="stat-wide"><span>Stronghold bonus</span><strong>+${formatNumber(getStrongholdBonusPercent(city))}% gold production</strong><small>Bonus is active only for the current controller.</small></div>` : ""}
         <div class="stat-wide"><span>Owner</span><strong>${escapeHtml(getCityOwnerDisplayName(city))}</strong></div>
-        <div class="stat-chip"><span>City level</span><strong>${formatNumber(city.level)}</strong></div>
+        <div class="stat-chip"><span>${stronghold ? "Defense level" : "City level"}</span><strong>${formatNumber(stats.level)}</strong></div>
         <div class="stat-chip"><span>Victory points</span><strong>${formatNumber(stats.victoryPoints)}</strong></div>
         <div class="stat-chip"><span>Troops</span><strong>${report ? formatNumber(report.troops) : "Unknown"}</strong></div>
         <div class="stat-chip"><span>Total defense</span><strong>${report ? formatNumber(report.totalDefense) : "Unknown"}</strong></div>
+        ${stronghold ? `<div class="stat-chip"><span>Neutral base</span><strong>${formatNumber(GOLD_STRONGHOLD_START_TROOPS)}</strong><small>starting defenders</small></div>` : ""}
         ${report
           ? `<div class="stat-wide"><span>Scout report expires</span><strong>${formatDuration(remaining)}</strong></div>`
           : `<div class="stat-wide scout-required"><span>Scout report</span><strong>Not available</strong></div>`}
@@ -8023,6 +8177,23 @@ function showCityInfoModal(cityId) {
     return;
   }
   const stats = getCityStats(city);
+  if (stronghold) {
+    modalTitle.textContent = `${city.name} - Stronghold`;
+    modalBody.innerHTML = `
+      <div class="city-stat-panel modal-city-stats stronghold-stat-panel">
+        <div class="stat-wide stronghold-status"><span>Controlled bonus</span><strong>+${formatNumber(getStrongholdBonusPercent(city))}% gold production</strong><small>Active while you control this Stronghold.</small></div>
+        <div class="stat-wide"><span>Total defense</span><strong>${formatNumber(stats.totalDefense)}</strong></div>
+        <div class="stat-chip"><span>Owner</span><strong>${escapeHtml(getCityOwnerDisplayName(city))}</strong></div>
+        <div class="stat-chip"><span>Troops stationed</span><strong>${formatNumber(city.troops)}</strong></div>
+        <div class="stat-chip"><span>Defense level</span><strong>${formatNumber(stats.level)}</strong><small>matches a level ${formatNumber(GOLD_STRONGHOLD_LEVEL)} city</small></div>
+        <div class="stat-chip"><span>City walls</span><strong>${formatNumber(stats.cityWalls)}</strong></div>
+        <div class="stat-chip"><span>Garrison limit</span><strong>Unlimited</strong><small>station as many troops as you can send</small></div>
+        <div class="stat-chip"><span>Own production</span><strong>0/h</strong><small>Strongholds boost towns instead</small></div>
+      </div>
+    `;
+    if (!modal.open) modal.showModal();
+    return;
+  }
   modalTitle.textContent = `${city.name} \u00B7 Level ${city.level}`;
   modalBody.innerHTML = `
     <div class="city-stat-panel modal-city-stats">
@@ -8033,7 +8204,7 @@ function showCityInfoModal(cityId) {
       <div class="stat-chip"><span>Defense</span><strong>${stats.defensePercent}%</strong><small>+${CITY_LEVEL_STATS.defensePercentPerLevel}%/level</small></div>
       <div class="stat-chip"><span>Troops production</span><strong>${formatNumber(stats.troopProductionPerHour)}/h</strong><small>VP x ${CITY_LEVEL_STATS.troopProductionPerVictoryPoint}</small></div>
       <div class="stat-chip"><span>City walls</span><strong>${formatNumber(stats.cityWalls)}</strong><small>+${CITY_LEVEL_STATS.cityWallsPerLevel}/level</small></div>
-      <div class="stat-chip"><span>Gold production</span><strong>${formatNumber(stats.goldProductionPerHour)}/h</strong><small>ML ${formatNumber(stats.millionLordsProductionVp)} x ${CITY_LEVEL_STATS.goldProductionPerMillionLordsVp}</small></div>
+      <div class="stat-chip"><span>Gold production</span><strong>${formatNumber(stats.goldProductionPerHour)}/h</strong><small>ML ${formatNumber(stats.millionLordsProductionVp)} x ${CITY_LEVEL_STATS.goldProductionPerMillionLordsVp}${stats.strongholdGoldBonusPercent ? ` + Stronghold ${formatNumber(stats.strongholdGoldBonusPercent)}%` : ""}</small></div>
     </div>
   `;
   const cooldownRemaining = getCaptureCooldownRemaining(city);
@@ -8068,7 +8239,7 @@ function showCityInfoModal(cityId) {
       <div class="stat-chip"><span>City walls</span><strong>${formatNumber(stats.cityWalls)}</strong><small>Level-based static defense</small></div>
       <div class="stat-chip"><span>Guardian</span><strong>${stats.guardianPercent}%</strong><small>Player defense skill</small></div>
       <div class="stat-chip"><span>Troops production</span><strong>${formatNumber(stats.troopProductionPerHour)}/h</strong><small>VP x ${CITY_LEVEL_STATS.troopProductionPerVictoryPoint} + Recruiter</small></div>
-      <div class="stat-chip"><span>Gold production</span><strong>${formatNumber(stats.goldProductionPerHour)}/h</strong><small>ML ${formatNumber(stats.millionLordsProductionVp)} x ${CITY_LEVEL_STATS.goldProductionPerMillionLordsVp} + Prosperous</small></div>
+      <div class="stat-chip"><span>Gold production</span><strong>${formatNumber(stats.goldProductionPerHour)}/h</strong><small>ML ${formatNumber(stats.millionLordsProductionVp)} x ${CITY_LEVEL_STATS.goldProductionPerMillionLordsVp} + Prosperous${stats.strongholdGoldBonusPercent ? ` + Stronghold ${formatNumber(stats.strongholdGoldBonusPercent)}%` : ""}</small></div>
       <div class="stat-chip"><span>Invested gold</span><strong>${formatNumber(city.investedGold || 0)}</strong><small>Cautious can refund part</small></div>
       ${cooldownRemaining > 0 ? `<div class="stat-wide"><span>Capture XP cooldown</span><strong>${formatDuration(cooldownRemaining)}</strong></div>` : ""}
     </div>
@@ -8180,6 +8351,7 @@ function getSortedCityList() {
 
 function isMainCityForList(city) {
   if (!city) return false;
+  if (isStronghold(city)) return false;
   if (state?.mainCityId) return city.id === state.mainCityId;
   return Boolean(city.isMainCity);
 }
@@ -8204,15 +8376,16 @@ function getCityListSortLabel(key) {
 
 function renderCityListRow(city) {
   const isMain = isMainCityForList(city);
+  const stronghold = isStronghold(city);
   const troops = Math.floor(Number(city.troops) || 0);
   return `
-    <article class="city-list-row ${isMain ? "main-city" : ""}">
+    <article class="city-list-row ${isMain ? "main-city" : ""} ${stronghold ? "stronghold-city-row" : ""}">
       <button class="city-list-locate" data-city-list-jump="${escapeHtml(city.id)}" type="button" aria-label="Center on ${escapeHtml(city.name)}">${isMain ? "&#8962;" : "&#128205;"}</button>
-      <span class="city-list-art" aria-hidden="true">&#127984;</span>
-      <span class="city-list-level"><b>${formatNumber(clampCityLevel(city.level))}</b></span>
+      <span class="city-list-art" aria-hidden="true">${stronghold ? `<img src="${getStrongholdArtSrc(city)}" alt="" draggable="false" />` : "&#127984;"}</span>
+      <span class="city-list-level"><b>${stronghold ? "SH" : formatNumber(clampCityLevel(city.level))}</b></span>
       <strong class="city-list-troops">${formatNumber(troops)} <span aria-hidden="true">&#9817;</span></strong>
       <span class="city-list-name">${escapeHtml(city.name)}</span>
-      <span class="city-list-main-label">${isMain ? "Main city" : ""}</span>
+      <span class="city-list-main-label">${stronghold ? `+${formatNumber(getStrongholdBonusPercent(city))}% gold` : isMain ? "Main city" : ""}</span>
       <button class="city-list-info" data-city-list-info="${escapeHtml(city.id)}" type="button" aria-label="Open ${escapeHtml(city.name)} info">&#9432;</button>
     </article>
   `;
@@ -8338,6 +8511,11 @@ function recruit(cityId) {
 function upgradeCity(cityId, levels = 1) {
   const city = cityById(cityId);
   if (!city) return;
+  if (isStronghold(city)) {
+    showToast("Strongholds cannot be upgraded.");
+    renderAll();
+    return;
+  }
   let upgraded = 0;
   let xpAward = 0;
   while (upgraded < levels && city.level < MAX_CITY_LEVEL) {
@@ -8379,6 +8557,7 @@ function getRecruitCost(city) {
 }
 
 function getMultiLevelCost(city, levels) {
+  if (isStronghold(city)) return Infinity;
   if (!city || city.level >= MAX_CITY_LEVEL) return Infinity;
   const startLevel = clampCityLevel(city.level);
   const levelCount = Math.max(0, Math.floor(Number(levels) || 0));
@@ -8455,7 +8634,7 @@ function showLegacyEmpireModal() {
     <div class="stat-grid">
       <div class="stat-card"><strong>${formatNumber(Math.floor(state.gold))}</strong><small>gold available</small></div>
       <div class="stat-card"><strong>+${getGoldPerSecond().toFixed(1)}/s</strong><small>gold income</small></div>
-      <div class="stat-card"><strong>${playerCities().length}</strong><small>cities owned</small></div>
+      <div class="stat-card"><strong>${playerRegularCities().length}</strong><small>cities owned</small></div>
     </div>
     ${skillRow("Attack", "attack", "Army attack power", attackCost)}
     ${skillRow("Income", "income", "Gold and troop growth", incomeCost)}
