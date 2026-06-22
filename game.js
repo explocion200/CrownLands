@@ -313,8 +313,8 @@ const CITY_LEVEL_STATS = {
 
 const SKILL_CONFIG = {
   striker: { label: "Striker", percentPerLevel: 2, description: "Attack combat bonus for outgoing armies." },
-  fearless: { label: "Fearless", percentPerLevel: 2, maxPercent: 90, description: "Saves a share of attacking losses back to your main city." },
-  brave: { label: "Brave", percentPerLevel: 2, maxPercent: 90, description: "Saves a share of defending losses back to your main city." },
+  fearless: { label: "Fearless", percentPerLevel: 2, maxPercent: 75, description: "Saves a share of attacking losses back to your main city." },
+  brave: { label: "Brave", percentPerLevel: 2, maxPercent: 75, description: "Saves a share of defending losses back to your main city." },
   guardian: { label: "Guardian", percentPerLevel: 3, description: "Defending troop bonus in your cities." },
   prosperous: { label: "Prosperous", percentPerLevel: 3, description: "Gold production bonus from your cities." },
   recruiter: { label: "Recruiter", percentPerLevel: 3, description: "Extra troop production based on city VP." },
@@ -3405,8 +3405,19 @@ function getSkillLevel(skill) {
 function getSkillPercent(skill) {
   const config = SKILL_CONFIG[skill];
   if (!config) return 0;
-  const raw = getSkillLevel(skill) * config.percentPerLevel;
+  const raw = getSkillRawPercent(skill);
   return Number.isFinite(config.maxPercent) ? Math.min(raw, config.maxPercent) : raw;
+}
+
+function getSkillRawPercent(skill) {
+  const config = SKILL_CONFIG[skill];
+  if (!config) return 0;
+  return getSkillLevel(skill) * config.percentPerLevel;
+}
+
+function isSkillAtCap(skill) {
+  const config = SKILL_CONFIG[skill];
+  return Boolean(config && Number.isFinite(config.maxPercent) && getSkillRawPercent(skill) >= config.maxPercent);
 }
 
 function skillMultiplier(skill) {
@@ -8196,18 +8207,25 @@ function skillRow(key) {
   const level = getSkillLevel(key);
   const percent = getSkillPercent(key);
   const capText = Number.isFinite(config.maxPercent) ? `, cap ${config.maxPercent}%` : "";
-  const disabled = Math.max(0, Math.floor(Number(state.character?.skillPoints) || 0)) < 1 ? "disabled" : "";
+  const capped = isSkillAtCap(key);
+  const disabled = Math.max(0, Math.floor(Number(state.character?.skillPoints) || 0)) < 1 || capped ? "disabled" : "";
+  const buttonLabel = capped ? "Max" : "+1";
   return `
     <div class="skill-row">
       <div><strong>${config.label} Lv ${level} - +${percent}%</strong><br><small>${config.description}${capText}</small></div>
-      <button data-skill="${key}" ${disabled}>+1</button>
+      <button data-skill="${key}" ${disabled}>${buttonLabel}</button>
     </div>
   `;
 }
 
 function buySkill(skill) {
-  if (!SKILL_CONFIG[skill]) return;
+  const config = SKILL_CONFIG[skill];
+  if (!config) return;
   state.character = normalizeCharacterProgress(state.character);
+  if (isSkillAtCap(skill)) {
+    showToast(`${config.label} is capped at ${config.maxPercent}%.`);
+    return;
+  }
   if (state.character.skillPoints < 1) {
     showToast("Earn a hero level for another skill point.");
     return;
