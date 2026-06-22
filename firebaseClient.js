@@ -202,6 +202,26 @@
           .map(point => ({ x: Number(point?.x) || 0, y: Number(point?.y) || 0 }))
           .filter(point => Number.isFinite(point.x) && Number.isFinite(point.y))
       : [];
+    const pathSegments = Array.isArray(army?.pathSegments)
+      ? army.pathSegments
+          .map(segment => {
+            const points = Array.isArray(segment?.points)
+              ? segment.points
+                  .map(point => ({ x: Number(point?.x) || 0, y: Number(point?.y) || 0 }))
+                  .filter(point => Number.isFinite(point.x) && Number.isFinite(point.y))
+              : [];
+            if (points.length < 2) return null;
+            return {
+              regionId: String(segment.regionId || "").slice(0, 64),
+              points,
+              length: Math.max(0, Number(segment.length) || 0),
+            };
+          })
+          .filter(Boolean)
+      : [];
+    const routeRegionIds = Array.isArray(army?.routeRegionIds)
+      ? [...new Set(army.routeRegionIds.map(regionId => String(regionId || "").slice(0, 64)).filter(Boolean))]
+      : [];
     return {
       id: String(army?.id || "").slice(0, 96),
       ownerKind: army?.ownerKind || "player",
@@ -216,6 +236,8 @@
       troops: Math.max(0, Math.floor(Number(army?.troops) || 0)),
       total: Math.max(0.1, Number(army?.total) || 0.1),
       path,
+      pathSegments,
+      routeRegionIds,
       pathLength: Math.max(0, Number(army?.pathLength) || 0),
       targetOwnerAtLaunch: String(army?.targetOwnerAtLaunch || "neutral"),
       launchedAtMs: Math.max(0, Number(army?.launchedAtMs) || Date.now()),

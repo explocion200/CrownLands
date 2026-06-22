@@ -1,4 +1,4 @@
-const WORLD_CONFIG = window.CROWNLANDS_WORLD_CONFIG || {};
+﻿const WORLD_CONFIG = window.CROWNLANDS_WORLD_CONFIG || {};
 const WORLD_SCHEMA_VERSION = Number(WORLD_CONFIG.version) || 23;
 const WORLD_REGIONS = Array.isArray(WORLD_CONFIG.regions) ? WORLD_CONFIG.regions : [];
 const LAND_BRIDGES = Array.isArray(WORLD_CONFIG.landBridges) ? WORLD_CONFIG.landBridges : [];
@@ -19,6 +19,8 @@ const ONLINE_ARMY_EXPIRY_GRACE_SECONDS = 8;
 const HUD_RENDER_INTERVAL_MS = 250;
 const MAP_RENDER_INTERVAL_MS = 1600;
 const CITY_LIST_PAGE_SIZE = 5;
+const MAIN_CITY_CHANGE_CITY_LIMIT = 30;
+const MAIN_CITY_CHANGE_COOLDOWN_MS = 24 * 60 * 60 * 1000;
 const MAX_OFFLINE_PROGRESS_SECONDS = 7 * 24 * 60 * 60;
 const WORLD_WIDTH = Math.max(1, Math.floor(Number(WORLD_CONFIG.width) || 10000));
 const WORLD_HEIGHT = Math.max(1, Math.floor(Number(WORLD_CONFIG.height) || 7600));
@@ -188,10 +190,10 @@ const CENTER_ISLAND_CITY_POINTS = [
   { x: 390, y: 780 }, { x: 500, y: 780 }, { x: 610, y: 780 }, { x: 740, y: 780 },
   { x: 850, y: 780 }, { x: 930, y: 770 }, { x: 330, y: 870 }, { x: 430, y: 860 },
   { x: 540, y: 860 }, { x: 710, y: 860 }, { x: 830, y: 850 }, { x: 920, y: 870 },
-  { x: 360, y: 920 }, { x: 500, y: 940 }, { x: 750, y: 930 }, { x: 860, y: 940 },
+  { x: 370, y: 910 }, { x: 500, y: 940 }, { x: 750, y: 930 }, { x: 860, y: 940 },
   { x: 470, y: 900 }, { x: 560, y: 950 }, { x: 690, y: 960 }, { x: 810, y: 950 },
   { x: 350, y: 620 }, { x: 470, y: 620 }, { x: 780, y: 620 }, { x: 900, y: 620 },
-  { x: 310, y: 350 }, { x: 900, y: 390 }, { x: 310, y: 930 }, { x: 930, y: 940 },
+  { x: 310, y: 350 }, { x: 900, y: 390 }, { x: 270, y: 890 }, { x: 930, y: 910 },
   { x: 590, y: 300 }, { x: 640, y: 290 }, { x: 590, y: 840 }, { x: 660, y: 840 },
   { x: 550, y: 350 }, { x: 760, y: 320 },
 ];
@@ -314,10 +316,10 @@ const FLAG_PATTERNS = [
   { key: "cross", label: "Cross" },
 ];
 const FLAG_SYMBOLS = [
-  { key: "crown", label: "Crown", glyph: "♛" },
-  { key: "castle", label: "Castle", glyph: "♜" },
-  { key: "star", label: "Star", glyph: "✦" },
-  { key: "swords", label: "Swords", glyph: "⚔" },
+  { key: "crown", label: "Crown", glyph: "â™›" },
+  { key: "castle", label: "Castle", glyph: "â™œ" },
+  { key: "star", label: "Star", glyph: "âœ¦" },
+  { key: "swords", label: "Swords", glyph: "âš”" },
 ];
 
 
@@ -342,11 +344,11 @@ function getCastleAsset(stage) {
 }
 
 const OWNER = {
-  player: { label: "You", css: "player", flag: "◆" },
-  player2: { label: "Player 2", css: "player2", flag: "Ⅱ" },
-  player3: { label: "Player 3", css: "player3", flag: "Ⅲ" },
-  enemy: { label: "Enemy", css: "enemy", flag: "♜" },
-  neutral: { label: "Neutral", css: "neutral", flag: "•" },
+  player: { label: "You", css: "player", flag: "â—†" },
+  player2: { label: "Player 2", css: "player2", flag: "â…¡" },
+  player3: { label: "Player 3", css: "player3", flag: "â…¢" },
+  enemy: { label: "Enemy", css: "enemy", flag: "â™œ" },
+  neutral: { label: "Neutral", css: "neutral", flag: "â€¢" },
 };
 
 const BASE_CITIES = [
@@ -1690,7 +1692,6 @@ const islandSwitchBtn = document.getElementById("islandSwitchBtn");
 const islandSwitchLabel = document.getElementById("islandSwitchLabel");
 const cityListBtn = document.getElementById("cityListBtn");
 const cityText = document.getElementById("cityText");
-const onlinePlayersText = document.getElementById("onlinePlayersText");
 const neutralCapText = document.getElementById("neutralCapText");
 const characterLevelBadge = document.getElementById("characterLevelBadge");
 const characterXpText = document.getElementById("characterXpText");
@@ -2673,6 +2674,33 @@ function getActiveIslandTeleporters() {
   return [];
 }
 
+function getCenterTeleportForRegion(regionId) {
+  const targetRegionId = normalizeRegionId(regionId);
+  return CENTER_ISLAND_TELEPORTS.find(teleport => teleport.targetRegionId === targetRegionId) || null;
+}
+
+function getPortalWorldPoint(regionId, targetRegionId = "center") {
+  const fromRegionId = normalizeRegionId(regionId);
+  const toRegionId = normalizeRegionId(targetRegionId);
+  if (fromRegionId === "west" && toRegionId === "center") return westImagePointToWorld(WEST_CENTER_TELEPORT_IMAGE_POINT);
+  if (fromRegionId === "north" && toRegionId === "center") return northImagePointToWorld(NORTH_CENTER_TELEPORT_IMAGE_POINT);
+  if (fromRegionId === "east" && toRegionId === "center") return eastImagePointToWorld(EAST_CENTER_TELEPORT_IMAGE_POINT);
+  if (fromRegionId === "south" && toRegionId === "center") return southImagePointToWorld(SOUTH_CENTER_TELEPORT_IMAGE_POINT);
+  if (fromRegionId === "center") {
+    const teleport = getCenterTeleportForRegion(toRegionId);
+    if (teleport) return centerImagePointToWorld(teleport.point);
+  }
+  return null;
+}
+
+function getPortalRouteRegionChain(fromRegionId, toRegionId) {
+  const sourceRegionId = normalizeRegionId(fromRegionId);
+  const targetRegionId = normalizeRegionId(toRegionId);
+  if (sourceRegionId === targetRegionId) return [sourceRegionId];
+  if (sourceRegionId === "center" || targetRegionId === "center") return [sourceRegionId, targetRegionId];
+  return [sourceRegionId, "center", targetRegionId];
+}
+
 function renderWorldDefs() {
   return `
     <defs>
@@ -3006,6 +3034,7 @@ function newGame(playerName) {
     battleReports: [],
     marchPercent: DEFAULT_MARCH_PERCENT,
     mainCityId: island.startIds.player,
+    mainCityChangedAtMs: 0,
     islandSlots: island.startIds,
     cities: island.cities,
     attacks: [],
@@ -3131,9 +3160,99 @@ function getMainRewardCity(excludeCityId = null) {
 
 function getLoadedMainCity() {
   if (!state?.mainCityId) return null;
-  if (isOnlineWorldActive() && getCityRegionId(state.mainCityId) !== getActiveOnlineRegionId()) return null;
   const main = cityById(state.mainCityId);
   return main?.owner === "player" ? main : null;
+}
+
+function getMainCityReference() {
+  if (!state?.mainCityId) return null;
+  const loaded = cityById(state.mainCityId);
+  if (loaded?.owner === "player") return loaded;
+  if (loaded && getCityRegionId(loaded) === getActiveMapRegionId()) return null;
+  const base = getPlayableBaseCities().find(city => city.id === state.mainCityId);
+  return base ? { ...base, owner: "player", isMainCity: true } : null;
+}
+
+function getMainCityRegionId() {
+  return normalizeRegionId(state?.mainCityId ? getCityRegionId(state.mainCityId) : state?.online?.mainRegionId || getActiveOnlineRegionId());
+}
+
+function getMainCityChangeCooldownRemainingMs(now = Date.now()) {
+  if (!state) return 0;
+  const lastChangedAt = normalizeTimestampMs(state.mainCityChangedAtMs);
+  if (!lastChangedAt) return 0;
+  const currentTime = Math.max(0, Number(now) || Date.now());
+  const elapsed = Math.max(0, currentTime - Math.min(lastChangedAt, currentTime));
+  return Math.max(0, MAIN_CITY_CHANGE_COOLDOWN_MS - elapsed);
+}
+
+function getMainCityChangeStatus(city, now = Date.now()) {
+  const cooldownMs = getMainCityChangeCooldownRemainingMs(now);
+  const cooldownText = cooldownMs > 0 ? formatDuration(Math.ceil(cooldownMs / 1000)) : "";
+  const ownedCount = state ? playerCities().length : 0;
+  const isMain = isMainCityForList(city);
+  let reason = "";
+
+  if (!state) reason = "Game is not ready.";
+  else if (!city) reason = "City is not available.";
+  else if (city.owner !== "player") reason = "Only owned cities can become your main city.";
+  else if (isMain) reason = "This city is already your main city.";
+  else if (ownedCount >= MAIN_CITY_CHANGE_CITY_LIMIT) reason = `You can only move your main city while you own fewer than ${MAIN_CITY_CHANGE_CITY_LIMIT} cities.`;
+  else if (cooldownMs > 0) reason = `Main city can change again in ${cooldownText}.`;
+
+  return {
+    canChange: Boolean(state && city && city.owner === "player" && !isMain && ownedCount < MAIN_CITY_CHANGE_CITY_LIMIT && cooldownMs <= 0),
+    cooldownMs,
+    cooldownText,
+    ownedCount,
+    isMain,
+    reason,
+  };
+}
+
+function changeMainCity(cityId) {
+  if (!state) return false;
+  const city = cityById(cityId);
+  const status = getMainCityChangeStatus(city);
+  if (!status.canChange) {
+    if (status.reason) showToast(status.reason);
+    if (city) showCityInfoModal(city.id);
+    return false;
+  }
+
+  const previousMain = getLoadedMainCity() || (state.mainCityId ? cityById(state.mainCityId) : null);
+  state.cities.forEach(item => {
+    item.isMainCity = item.id === city.id;
+  });
+  city.isMainCity = true;
+  state.mainCityId = city.id;
+  state.mainCityChangedAtMs = Date.now();
+
+  const mainRegionId = getCityRegionId(city);
+  if (state.online) {
+    state.online.mainCityId = city.id;
+    state.online.mainRegionId = mainRegionId;
+    state.online.mainIslandId = getOnlineIslandId(mainRegionId);
+  }
+
+  if (previousMain && previousMain.id !== city.id) {
+    markOwnedCityChanged(previousMain, false);
+    syncCityStateToOnline(previousMain);
+  }
+  markOwnedCityChanged(city, false);
+  syncCityStateToOnline(city);
+
+  addLog(`${city.name} is now your main city.`);
+  saveGame();
+  if (isOnlineWorldActive()) {
+    syncOwnedCitiesToOnline(true);
+    publishOnlinePresence(true);
+    flushOnlineSave(true);
+  }
+  renderAll();
+  showCityInfoModal(city.id);
+  showToast(`${city.name} is now your main city.`);
+  return true;
 }
 
 function addCharacterXp(amount, reason = "progress") {
@@ -3407,6 +3526,7 @@ function loadGame() {
       loaded.daily = normalizeDailyCaptureTracker(loaded.daily);
       loaded.scoutReports = normalizeScoutReports(loaded.scoutReports);
       loaded.battleReports = normalizeBattleReports(loaded.battleReports);
+      loaded.mainCityChangedAtMs = normalizeTimestampMs(loaded.mainCityChangedAtMs);
       const playableBases = getPlayableBaseCities();
       const savedCitiesAreCurrent = Array.isArray(loaded.cities)
         && loaded.cities.length === playableBases.length
@@ -3453,8 +3573,13 @@ function loadGame() {
         }
       });
       if (!loaded.mainCityId || cityByIdSafe(loaded.cities, loaded.mainCityId)?.owner !== "player") {
-        loaded.mainCityId = loaded.cities.find(city => city.owner === "player")?.id || null;
+        loaded.mainCityId = loaded.cities.find(city => city.owner === "player" && city.isMainCity)?.id
+          || loaded.cities.find(city => city.owner === "player")?.id
+          || null;
       }
+      loaded.cities.forEach(city => {
+        city.isMainCity = Boolean(city.owner === "player" && city.id === loaded.mainCityId);
+      });
       loaded.attacks = Array.isArray(loaded.attacks) ? loaded.attacks : [];
       if (sourceSaveVersion < 17) {
         loaded.attacks = [];
@@ -3467,6 +3592,10 @@ function loadGame() {
           const route = from && to ? findRoute(from, to) : null;
           attack.path = route?.points || [];
           attack.pathLength = route?.length || 0;
+          attack.pathSegments = getRouteSegments(route, from ? getCityRegionId(from) : "");
+        } else {
+          attack.path = normalizeArmyPath(attack.path);
+          attack.pathSegments = normalizeArmyPathSegments(attack.pathSegments);
         }
       });
       loaded.gameOver = loaded.gameOver || null;
@@ -3499,6 +3628,7 @@ function normalizeOnlineGameSnapshot(snapshot, fallbackPlayerName = "Ricky") {
     loaded.daily = normalizeDailyCaptureTracker(loaded.daily);
     loaded.scoutReports = normalizeScoutReports(loaded.scoutReports);
     loaded.battleReports = normalizeBattleReports(loaded.battleReports);
+    loaded.mainCityChangedAtMs = normalizeTimestampMs(loaded.mainCityChangedAtMs);
 
     const playableBases = getPlayableBaseCities();
     const activeRegionId = normalizeRegionId(loaded.activeRegionId || loaded.online?.activeRegionId || DEFAULT_ONLINE_REGION_ID);
@@ -3552,8 +3682,13 @@ function normalizeOnlineGameSnapshot(snapshot, fallbackPlayerName = "Ricky") {
     });
 
     if (!loaded.mainCityId || cityByIdSafe(loaded.cities, loaded.mainCityId)?.owner !== "player") {
-      loaded.mainCityId = loaded.cities.find(city => city.owner === "player")?.id || null;
+      loaded.mainCityId = loaded.cities.find(city => city.owner === "player" && city.isMainCity)?.id
+        || loaded.cities.find(city => city.owner === "player")?.id
+        || null;
     }
+    loaded.cities.forEach(city => {
+      city.isMainCity = Boolean(city.owner === "player" && city.id === loaded.mainCityId);
+    });
     loaded.attacks = Array.isArray(loaded.attacks) ? loaded.attacks : [];
     loaded.attacks.forEach(attack => {
       attack.targetOwnerAtLaunch = attack.targetOwnerAtLaunch || loaded.cities.find(city => city.id === attack.toId)?.owner || "neutral";
@@ -3563,6 +3698,10 @@ function normalizeOnlineGameSnapshot(snapshot, fallbackPlayerName = "Ricky") {
         const route = from && to ? findRoute(from, to) : null;
         attack.path = route?.points || [];
         attack.pathLength = route?.length || 0;
+        attack.pathSegments = getRouteSegments(route, from ? getCityRegionId(from) : "");
+      } else {
+        attack.path = normalizeArmyPath(attack.path);
+        attack.pathSegments = normalizeArmyPathSegments(attack.pathSegments);
       }
     });
     loaded.gameOver = loaded.gameOver || null;
@@ -3669,6 +3808,11 @@ function normalizeBattleReports(reports) {
     .slice(-120);
 }
 
+function normalizeTimestampMs(value) {
+  const timestamp = Number(value);
+  return Number.isFinite(timestamp) && timestamp > 0 ? Math.floor(timestamp) : 0;
+}
+
 function getScoutReport(cityId) {
   if (!state || !cityId) return null;
   state.scoutReports = normalizeScoutReports(state.scoutReports);
@@ -3708,6 +3852,7 @@ function launchScoutMission(source, target, route) {
   source.troopFloat = Math.max(0, (Number(source.troopFloat) || source.troops) - 1);
   source.troops = Math.floor(source.troopFloat);
   markOwnedCityChanged(source, false);
+  syncCityStateToOnline(source);
   const duration = travelTime(source, target, "player", route.length);
   const mission = {
     id: attackIdCounter++,
@@ -3719,6 +3864,7 @@ function launchScoutMission(source, target, route) {
     total: duration,
     remaining: duration,
     path: route.points,
+    pathSegments: getRouteSegments(route, getCityRegionId(source)),
     pathLength: route.length,
     targetOwnerAtLaunch: target.owner,
   };
@@ -3975,6 +4121,8 @@ function getPlayerProfileSnapshot() {
     resetGeneration: RESET_GENERATION,
     cloudSaveSlot: ONLINE_SAVE_SLOT,
     worldId: ONLINE_WORLD_ID,
+    mainCityId: state?.mainCityId || "",
+    mainCityChangedAtMs: state ? normalizeTimestampMs(state.mainCityChangedAtMs) : 0,
     mainIslandId: state?.online?.mainIslandId || getOnlineIslandId(mainRegionId),
     activeIslandId,
     mainRegionId,
@@ -4067,18 +4215,6 @@ function getActiveOnlinePlayers() {
 }
 
 function updateOnlinePlayersUi() {
-  if (!onlinePlayersText) return;
-  if (!onlineWorldConnected && !isOnlineWorldActive()) {
-    onlinePlayersText.hidden = true;
-    onlinePlayersText.textContent = "Online 0";
-    onlinePlayersText.title = "";
-    return;
-  }
-  const activePlayers = getActiveOnlinePlayers();
-  const count = Math.max(1, activePlayers.length);
-  onlinePlayersText.hidden = false;
-  onlinePlayersText.textContent = `Online ${formatNumber(count)}`;
-  onlinePlayersText.title = activePlayers.map(player => player.displayName).join(", ");
 }
 
 function updateIslandSwitcherUi() {
@@ -4106,28 +4242,69 @@ function centerOnRegion(regionId) {
   centerOnMap();
 }
 
+function getIslandOwnedCityCount(regionId) {
+  const targetRegionId = normalizeRegionId(regionId);
+  return state ? playerCities().filter(city => getCityRegionId(city) === targetRegionId).length : 0;
+}
+
+function getIslandPreviewArtSrc(regionId) {
+  const targetRegionId = normalizeRegionId(regionId);
+  if (targetRegionId === "west") return WEST_ISLAND_ART_SRC;
+  if (targetRegionId === "north") return NORTH_ISLAND_ART_SRC;
+  if (targetRegionId === "east") return EAST_ISLAND_ART_SRC;
+  if (targetRegionId === "south") return SOUTH_ISLAND_ART_SRC;
+  if (targetRegionId === "center") return CENTER_ISLAND_ART_SRC;
+  return CENTER_ISLAND_ART_SRC;
+}
+
 function getIslandSwitcherSummary(regionId) {
-  const active = regionId === getActiveOnlineRegionId();
-  const resolvedHomeRegionId = state?.online?.mainRegionId || (state?.mainCityId ? getCityRegionId(state.mainCityId) : "");
-  const resolvedHome = resolvedHomeRegionId && regionId === resolvedHomeRegionId;
-  const activeOwnedCount = state ? playerCities().filter(city => getCityRegionId(city) === regionId).length : 0;
-  if (active) return `${formatNumber(activeOwnedCount)} owned here${resolvedHome ? " - home island" : ""}`;
-  if (resolvedHome) return "Home island";
-  const home = state?.online?.mainRegionId && regionId === state.online.mainRegionId;
-  const loadedCities = active && state ? playerCities().length : 0;
-  if (active && home) return `${formatNumber(loadedCities)} owned here · home island`;
-  if (active) return `${formatNumber(loadedCities)} owned here`;
-  if (home) return "Home island";
-  return "Tap to load";
+  const ownedCount = getIslandOwnedCityCount(regionId);
+  return `${formatNumber(ownedCount)} ${ownedCount === 1 ? "city" : "cities"} owned`;
 }
 
 function getIslandMapIconStyle(region) {
-  const x = clamp((Number(region.x) || 0) / WORLD_WIDTH * 100, 8, 92);
-  const y = clamp((Number(region.y) || 0) / WORLD_HEIGHT * 100, 8, 92);
-  const width = clamp((Number(region.rx) || 800) * 2 / WORLD_WIDTH * 120, 18, 34);
-  const height = clamp((Number(region.ry) || 800) * 2 / WORLD_HEIGHT * 112, 16, 30);
+  const layout = {
+    center: { x: 50, y: 50, w: 25, h: 31 },
+    north: { x: 50, y: 18, w: 32, h: 24 },
+    south: { x: 50, y: 82, w: 32, h: 24 },
+    west: { x: 20, y: 50, w: 24, h: 37 },
+    east: { x: 80, y: 50, w: 24, h: 37 },
+  }[normalizeRegionId(region.id)];
+  const x = layout ? layout.x : clamp((Number(region.x) || 0) / WORLD_WIDTH * 100, 8, 92);
+  const y = layout ? layout.y : clamp((Number(region.y) || 0) / WORLD_HEIGHT * 100, 8, 92);
+  const width = layout ? layout.w : clamp((Number(region.rx) || 800) * 2 / WORLD_WIDTH * 120, 18, 34);
+  const height = layout ? layout.h : clamp((Number(region.ry) || 800) * 2 / WORLD_HEIGHT * 112, 16, 30);
   const rot = ((Number(region.rot) || 0) * 180 / Math.PI).toFixed(2);
   return `--island-x:${formatPathNumber(x)}%;--island-y:${formatPathNumber(y)}%;--island-w:${formatPathNumber(width)}%;--island-h:${formatPathNumber(height)}%;--island-rot:${rot}deg;`;
+}
+
+function renderIslandMapTile(region, activeRegionId, homeRegionId) {
+  const regionId = normalizeRegionId(region.id);
+  const label = region.label || regionId;
+  const ownedText = getIslandSwitcherSummary(regionId);
+  const isActive = regionId === activeRegionId;
+  const isHome = regionId === homeRegionId;
+  const ariaParts = [label, ownedText];
+  if (isActive) ariaParts.push("currently loaded");
+  if (isHome) ariaParts.push("home island");
+  return `
+    <button
+      class="island-map-icon ${isActive ? "active" : ""} ${isHome ? "home" : ""} ${escapeHtml(region.palette || "heartland")}"
+      data-island-region="${escapeHtml(regionId)}"
+      style="${getIslandMapIconStyle(region)}"
+      type="button"
+      ${onlineWorldLoading ? "disabled" : ""}
+      aria-label="${escapeHtml(ariaParts.join(", "))}"
+    >
+      <span class="island-map-thumb" aria-hidden="true">
+        <img src="${escapeHtml(getIslandPreviewArtSrc(regionId))}" alt="" draggable="false" />
+      </span>
+      <span class="island-map-name">${escapeHtml(label)}</span>
+      <span class="island-map-owned">${escapeHtml(ownedText)}</span>
+      ${isActive ? `<span class="island-map-active-label">Loaded</span>` : ""}
+      ${isHome ? `<span class="island-map-home-label">Home</span>` : ""}
+    </button>
+  `;
 }
 
 function showIslandSwitcherModal() {
@@ -4135,28 +4312,30 @@ function showIslandSwitcherModal() {
   modal.classList.add("island-switcher-modal");
   modalTitle.textContent = "Map";
   const activeRegionId = getActiveOnlineRegionId();
-  const homeRegionId = state?.online?.mainRegionId || (state?.mainCityId ? getCityRegionId(state.mainCityId) : "");
+  const homeRegionId = getMainCityRegionId();
   modalBody.innerHTML = `
     <div class="island-map-picker" aria-label="Island map picker">
-      ${WORLD_REGIONS.map(region => `
-        <button
-          class="island-map-icon ${region.id === activeRegionId ? "active" : ""} ${homeRegionId === region.id ? "home" : ""} ${escapeHtml(region.palette || "heartland")}"
-          data-island-region="${escapeHtml(region.id)}"
-          style="${getIslandMapIconStyle(region)}"
-          type="button"
-          ${onlineWorldLoading ? "disabled" : ""}
-          aria-label="${escapeHtml(region.label || region.id)}"
-        >
-          <span class="island-map-name">${escapeHtml(region.label || region.id)}</span>
-          <small>${escapeHtml(getIslandSwitcherSummary(region.id))}</small>
-        </button>
-      `).join("")}
+      <span class="island-map-connector north" aria-hidden="true"></span>
+      <span class="island-map-connector south" aria-hidden="true"></span>
+      <span class="island-map-connector west" aria-hidden="true"></span>
+      <span class="island-map-connector east" aria-hidden="true"></span>
+      ${WORLD_REGIONS.map(region => renderIslandMapTile(region, activeRegionId, homeRegionId)).join("")}
     </div>
   `;
   if (!modal.open) modal.showModal();
   modalBody.querySelectorAll("[data-island-region]").forEach(button => {
     button.addEventListener("click", () => switchOnlineIsland(button.dataset.islandRegion));
   });
+}
+
+function prepareSelectionForIslandSwitch() {
+  const source = selectedSourceId ? cityById(selectedSourceId) : null;
+  if (sendMode && source?.owner === "player") {
+    selectedTargetId = null;
+    scoutNearbySourceId = null;
+    return;
+  }
+  clearSelection(false);
 }
 
 async function switchOnlineIsland(regionId) {
@@ -4176,7 +4355,7 @@ async function switchOnlineIsland(regionId) {
   if (!getOnlineApi()?.isSignedIn?.()) {
     state.activeRegionId = targetRegionId;
     onlineActiveRegionId = targetRegionId;
-    clearSelection(false);
+    prepareSelectionForIslandSwitch();
     updateIslandSwitcherUi();
     if (modal.open) modal.close();
     centerOnRegion(targetRegionId);
@@ -4195,7 +4374,7 @@ async function switchOnlineIsland(regionId) {
   onlinePresence = [];
   onlineCitiesLoaded = false;
   onlineWorldConnected = false;
-  clearSelection(false);
+  prepareSelectionForIslandSwitch();
   pathsSvg.innerHTML = "";
   armyLayer.innerHTML = "";
   cityLayer.innerHTML = "";
@@ -4513,7 +4692,7 @@ async function connectOnlineIsland(regionId, { claimHome = false, homeRegionId =
     onlineIslandUnsubscribe = null;
     onlineArmies = [];
     onlinePresence = [];
-    state.attacks = state.attacks.filter(attack => getCityRegionId(attack.fromId) === targetRegionId && getCityRegionId(attack.toId) === targetRegionId);
+    state.attacks = state.attacks.filter(attack => getKnownCityId(attack.fromId) && getKnownCityId(attack.toId));
     let initialCitiesReady = false;
     let resolveInitialCities = () => {};
     let rejectInitialCities = () => {};
@@ -4592,7 +4771,49 @@ function applyOnlineCities(onlineCities, regionId = getActiveOnlineRegionId()) {
   const localById = new Map(state.cities.map(city => [city.id, city]));
   const activeRegionId = normalizeRegionId(regionId);
 
-  state.cities = getOnlineIslandBaseCities(activeRegionId).map(base => {
+  state.cities = getPlayableBaseCities().map(base => {
+    const isActiveRegionCity = getCityRegionId(base) === activeRegionId;
+    if (!isActiveRegionCity) {
+      const current = localById.get(base.id);
+      if (!current) {
+        return {
+          ...base,
+          owner: "neutral",
+          ownerKind: "neutral",
+          ownerUid: null,
+          ownerName: "",
+          ownerFlag: null,
+          level: clampCityLevel(base.level),
+          troops: Math.max(0, Math.floor(Number(base.troops) || NEUTRAL_START_TROOPS)),
+          troopFloat: Math.max(0, Number(base.troops) || NEUTRAL_START_TROOPS),
+          defense: 1,
+          investedGold: 0,
+          lastCapturedAt: null,
+          isMainCity: base.id === state.mainCityId,
+          startPool: base.startPool,
+          regionId: base.regionId,
+        };
+      }
+      const owner = OWNER[current.owner] ? current.owner : "neutral";
+      return {
+        ...base,
+        name: current.name || base.name,
+        owner,
+        ownerKind: current.ownerKind || (owner === "player" ? "player" : owner === "enemy" ? "enemy" : "neutral"),
+        ownerUid: current.ownerUid || null,
+        ownerName: current.ownerName || "",
+        ownerFlag: current.ownerFlag || null,
+        level: clampCityLevel(current.level ?? base.level),
+        troops: Math.max(0, Math.floor(Number(current.troops ?? base.troops) || 0)),
+        troopFloat: Math.max(0, Number(current.troopFloat ?? current.troops ?? base.troops) || 0),
+        defense: 1,
+        investedGold: Math.max(0, Math.floor(Number(current.investedGold) || 0)),
+        lastCapturedAt: current.lastCapturedAt ?? null,
+        isMainCity: owner === "player" ? base.id === state.mainCityId : Boolean(current.isMainCity),
+        startPool: base.startPool,
+        regionId: base.regionId,
+      };
+    }
     const current = localById.get(base.id) || {};
     const online = byId.get(base.id) || {};
     const ownerKind = online.ownerKind || online.owner || current.ownerKind || "neutral";
@@ -4626,7 +4847,7 @@ function applyOnlineCities(onlineCities, regionId = getActiveOnlineRegionId()) {
       defense: 1,
       investedGold: Math.max(0, Math.floor(Number(keepLocalPlayerCity ? current.investedGold ?? online.investedGold : online.investedGold ?? current.investedGold) || 0)),
       lastCapturedAt: keepLocalPlayerCity ? current.lastCapturedAt ?? online.lastCapturedAt ?? null : online.lastCapturedAt ?? current.lastCapturedAt ?? null,
-      isMainCity: Boolean(keepLocalPlayerCity ? current.isMainCity || online.isMainCity : online.isMainCity || current.isMainCity),
+      isMainCity: localOwner === "player" ? base.id === state.mainCityId : Boolean(online.isMainCity || current.isMainCity),
       startPool: base.startPool,
       regionId: base.regionId,
     };
@@ -4674,7 +4895,7 @@ function markOwnedCityChanged(city, syncNow = true) {
   city.ownerUid = getCurrentOnlineUid() || city.ownerUid || null;
   city.ownerName = state.playerName;
   city.ownerFlag = state.flag;
-  city.isMainCity = Boolean(city.isMainCity || city.id === state.mainCityId);
+  city.isMainCity = city.id === state.mainCityId;
   if (syncNow && isOnlineWorldActive()) syncOwnedCitiesToOnline(true);
 }
 
@@ -4696,7 +4917,7 @@ function toOnlineOwnedCity(city) {
     defense: 1,
     investedGold: Math.max(0, Math.floor(Number(city.investedGold) || 0)),
     lastCapturedAt: city.lastCapturedAt ?? null,
-    isMainCity: Boolean(city.isMainCity || city.id === state.mainCityId),
+    isMainCity: city.owner === "player" ? city.id === state.mainCityId : Boolean(city.isMainCity),
   };
 }
 
@@ -4718,7 +4939,7 @@ function toOnlineCityState(city) {
     defense: 1,
     investedGold: Math.max(0, Math.floor(Number(city.investedGold) || 0)),
     lastCapturedAt: city.lastCapturedAt ?? null,
-    isMainCity: Boolean(city.isMainCity || city.id === state.mainCityId),
+    isMainCity: city.owner === "player" ? city.id === state.mainCityId : Boolean(city.isMainCity),
   };
 }
 
@@ -4726,10 +4947,15 @@ function syncSharedCityState(city) {
   if (!city || !isOnlineWorldActive()) return;
   const api = getOnlineApi();
   if (!api?.saveCityState) return;
-  api.saveCityState(getActiveOnlineIslandId(), toOnlineCityState(city)).catch(error => {
+  api.saveCityState(getOnlineIslandId(getCityRegionId(city)), toOnlineCityState(city)).catch(error => {
     onlineLastError = error?.message || String(error);
     console.warn("Could not sync city battle state", error);
   });
+}
+
+function syncCityStateToOnline(city) {
+  if (!city || !isOnlineWorldActive()) return;
+  syncSharedCityState(city);
 }
 
 async function syncOwnedCitiesToOnline(force = false) {
@@ -4779,6 +5005,56 @@ function normalizeArmyPath(points) {
     .filter(point => Number.isFinite(point.x) && Number.isFinite(point.y));
 }
 
+function normalizeArmyPathSegments(segments) {
+  if (!Array.isArray(segments)) return [];
+  return segments
+    .map(segment => {
+      const points = normalizeArmyPath(segment?.points);
+      if (points.length < 2) return null;
+      return {
+        regionId: normalizeRegionId(segment.regionId),
+        points,
+        length: Math.max(0, Number(segment.length) || routeLength(points)),
+      };
+    })
+    .filter(Boolean);
+}
+
+function getRouteSegments(route, fallbackRegionId = "") {
+  const segments = normalizeArmyPathSegments(route?.segments);
+  if (segments.length) return segments;
+  const points = normalizeArmyPath(route?.points);
+  if (points.length < 2) return [];
+  return [{
+    regionId: normalizeRegionId(fallbackRegionId || getActiveMapRegionId()),
+    points,
+    length: Math.max(0, Number(route?.length) || routeLength(points)),
+  }];
+}
+
+function getMissionRouteSegments(mission) {
+  const segments = normalizeArmyPathSegments(mission?.pathSegments);
+  if (segments.length) return segments;
+  const from = cityById(mission?.fromId);
+  const to = cityById(mission?.toId);
+  const fromRegionId = from ? getCityRegionId(from) : (getKnownCityId(mission?.fromId) ? getCityRegionId(mission.fromId) : "");
+  const toRegionId = to ? getCityRegionId(to) : (getKnownCityId(mission?.toId) ? getCityRegionId(mission.toId) : "");
+  const points = normalizeArmyPath(mission?.path);
+  if (points.length >= 2 && fromRegionId === toRegionId) {
+    return [{ regionId: fromRegionId, points, length: Math.max(0, Number(mission?.pathLength) || routeLength(points)) }];
+  }
+  return [];
+}
+
+function getMissionRegionIds(mission) {
+  const ids = getMissionRouteSegments(mission).map(segment => segment.regionId);
+  const fromRegionId = getKnownCityId(mission?.fromId) ? getCityRegionId(mission.fromId) : "";
+  const toRegionId = getKnownCityId(mission?.toId) ? getCityRegionId(mission.toId) : "";
+  if (fromRegionId) ids.push(fromRegionId);
+  if (toRegionId) ids.push(toRegionId);
+  return [...new Set(ids.map(normalizeRegionId).filter(Boolean))];
+}
+
 function createOnlineArmyId(kind = "army") {
   const uidPart = String(getCurrentOnlineUid() || "player").replace(/[^a-z0-9_-]/gi, "").slice(0, 32) || "player";
   const kindPart = String(kind || "army").replace(/[^a-z0-9_-]/gi, "").slice(0, 16) || "army";
@@ -4803,6 +5079,7 @@ function toOnlineArmyMovement(mission) {
   if (!mission || !onlineId) return null;
   const from = cityById(mission.fromId);
   const to = cityById(mission.toId);
+  const pathSegments = getMissionRouteSegments(mission);
   return {
     id: onlineId,
     ownerKind: "player",
@@ -4817,7 +5094,9 @@ function toOnlineArmyMovement(mission) {
     troops: Math.max(0, Math.floor(Number(mission.troops) || 0)),
     total: Math.max(0.1, Number(mission.total) || 0.1),
     path: normalizeArmyPath(mission.path),
-    pathLength: Math.max(0, Number(mission.pathLength) || routeLength(normalizeArmyPath(mission.path))),
+    pathSegments,
+    routeRegionIds: getMissionRegionIds(mission),
+    pathLength: Math.max(0, Number(mission.pathLength) || pathSegments.reduce((total, segment) => total + segment.length, 0) || routeLength(normalizeArmyPath(mission.path))),
     targetOwnerAtLaunch: mission.targetOwnerAtLaunch || "neutral",
     launchedAtMs: Math.max(0, Number(mission.launchedAtMs) || Date.now()),
     arrivesAtMs: Math.max(0, Number(mission.arrivesAtMs) || Date.now()),
@@ -4832,9 +5111,13 @@ function publishOnlineArmyMovement(mission) {
   prepareOnlineArmyMission(mission);
   const movement = toOnlineArmyMovement(mission);
   if (!movement) return;
-  api.saveArmyMovement(getActiveOnlineIslandId(), movement).catch(error => {
-    onlineLastError = error?.message || String(error);
-    console.warn("Could not sync army movement", error);
+  const regionIds = movement.routeRegionIds?.length ? movement.routeRegionIds : getMissionRegionIds(mission);
+  mission.onlineRegionIds = regionIds;
+  regionIds.forEach(regionId => {
+    api.saveArmyMovement(getOnlineIslandId(regionId), movement).catch(error => {
+      onlineLastError = error?.message || String(error);
+      console.warn("Could not sync army movement", error);
+    });
   });
 }
 
@@ -4842,9 +5125,12 @@ function deleteOnlineArmyMovement(mission) {
   if (!mission?.onlineId || mission.owner !== "player") return;
   const api = getOnlineApi();
   if (!api?.deleteArmyMovement) return;
-  api.deleteArmyMovement(getActiveOnlineIslandId(), mission.onlineId).catch(error => {
-    onlineLastError = error?.message || String(error);
-    console.warn("Could not delete army movement", error);
+  const regionIds = mission.onlineRegionIds?.length ? mission.onlineRegionIds : getMissionRegionIds(mission);
+  regionIds.forEach(regionId => {
+    api.deleteArmyMovement(getOnlineIslandId(regionId), mission.onlineId).catch(error => {
+      onlineLastError = error?.message || String(error);
+      console.warn("Could not delete army movement", error);
+    });
   });
 }
 
@@ -4873,6 +5159,7 @@ function normalizeOnlineArmyMovement(raw) {
     Number(raw.arrivesAtMs) || (launchedAtMs ? launchedAtMs + total * 1000 : Date.now() + total * 1000)
   );
   const path = normalizeArmyPath(raw.path);
+  const pathSegments = normalizeArmyPathSegments(raw.pathSegments);
   return {
     id,
     onlineId: id,
@@ -4888,11 +5175,13 @@ function normalizeOnlineArmyMovement(raw) {
     total,
     remaining: Math.max(0, (arrivesAtMs - Date.now()) / 1000),
     path,
-    pathLength: Math.max(0, Number(raw.pathLength) || routeLength(path)),
+    pathSegments,
+    pathLength: Math.max(0, Number(raw.pathLength) || pathSegments.reduce((total, segment) => total + segment.length, 0) || routeLength(path)),
     targetOwnerAtLaunch: raw.targetOwnerAtLaunch || "neutral",
     launchedAtMs,
     arrivesAtMs,
     status: raw.status || "active",
+    onlineRegionIds: Array.isArray(raw.routeRegionIds) ? raw.routeRegionIds.map(normalizeRegionId) : [],
   };
 }
 
@@ -4926,10 +5215,12 @@ function adoptOwnOnlineArmies() {
       total: army.total,
       remaining: clamp(remaining, 0, army.total),
       path: army.path,
+      pathSegments: army.pathSegments,
       pathLength: army.pathLength,
       targetOwnerAtLaunch: army.targetOwnerAtLaunch,
       launchedAtMs: army.launchedAtMs,
       arrivesAtMs: army.arrivesAtMs,
+      onlineRegionIds: army.onlineRegionIds,
     });
     localOnlineIds.add(army.id);
   }
@@ -5102,6 +5393,58 @@ function isWalkablePoint(x, y, padding = 0) {
   });
 }
 
+function isBitmapRegionLandPoint(regionId, x, y, padding = 0) {
+  const normalizedRegionId = normalizeRegionId(regionId);
+  const bounds = getIslandMapBounds(normalizedRegionId);
+  const insideBounds = x >= bounds.left - padding
+    && x <= bounds.right + padding
+    && y >= bounds.top - padding
+    && y <= bounds.bottom + padding;
+  if (!insideBounds) return false;
+  if (normalizedRegionId === "west") return isWestIslandLandPoint(x, y);
+  if (normalizedRegionId === "north") return isNorthIslandLandPoint(x, y);
+  if (normalizedRegionId === "east") return isEastIslandLandPoint(x, y);
+  if (normalizedRegionId === "south") return isSouthIslandLandPoint(x, y);
+  if (normalizedRegionId === "center") return isCenterIslandLandPoint(x, y);
+  return false;
+}
+
+function isRegionLandPoint(x, y, regionId, padding = 0) {
+  const normalizedRegionId = normalizeRegionId(regionId);
+  if (BITMAP_ISLAND_IDS.includes(normalizedRegionId)) {
+    return isBitmapRegionLandPoint(normalizedRegionId, x, y, padding);
+  }
+  const region = getRegionById(normalizedRegionId);
+  return Boolean(region && pointInWorldRegion(x, y, region, padding));
+}
+
+function isBitmapTerrainBlockedForRegion(x, y, regionId, padding = 0) {
+  const normalizedRegionId = normalizeRegionId(regionId);
+  const point = worldToIslandImagePoint(normalizedRegionId, x, y);
+  return (IMAGE_TERRAIN_BLOCKERS[normalizedRegionId] || []).some(shape => pointInImageEllipse(point, shape, padding));
+}
+
+function isRegionWalkablePoint(x, y, regionId, padding = 0) {
+  const normalizedRegionId = normalizeRegionId(regionId);
+  const samples = padding > 0
+    ? [[0, 0], [padding, 0], [-padding, 0], [0, padding], [0, -padding]]
+    : [[0, 0]];
+
+  for (const [dx, dy] of samples) {
+    if (!isRegionLandPoint(x + dx, y + dy, normalizedRegionId, 0)) return false;
+  }
+
+  if (BITMAP_ISLAND_IDS.includes(normalizedRegionId)) {
+    return !isBitmapTerrainBlockedForRegion(x, y, normalizedRegionId, padding);
+  }
+
+  return !TERRAIN_BLOCKERS.some(shape => {
+    if (normalizeRegionId(shape.regionId) !== normalizedRegionId) return false;
+    const extra = shape.type === "mountain" ? 20 : 10;
+    return pointInEllipse(x, y, shape, padding + extra);
+  });
+}
+
 
 function isValidCityPlacementPoint(x, y) {
   if (!isWalkablePoint(x, y, 0)) return false;
@@ -5122,6 +5465,11 @@ function isValidCityPlacementPoint(x, y) {
 function isWalkableCell(gx, gy) {
   if (gx < 0 || gy < 0 || gx >= GRID_COLS || gy >= GRID_ROWS) return false;
   return isWalkablePoint(gx * GRID_SIZE + GRID_SIZE / 2, gy * GRID_SIZE + GRID_SIZE / 2, 0);
+}
+
+function isWalkableCellForRegion(gx, gy, regionId) {
+  if (gx < 0 || gy < 0 || gx >= GRID_COLS || gy >= GRID_ROWS) return false;
+  return isRegionWalkablePoint(gx * GRID_SIZE + GRID_SIZE / 2, gy * GRID_SIZE + GRID_SIZE / 2, regionId, 0);
 }
 
 function worldToGrid(x, y) {
@@ -5152,6 +5500,23 @@ function nearestWalkableCell(x, y) {
   return null;
 }
 
+function nearestWalkableCellInRegion(x, y, regionId) {
+  const start = worldToGrid(x, y);
+  if (isWalkableCellForRegion(start.gx, start.gy, regionId)) return start;
+
+  for (let radius = 1; radius <= 12; radius++) {
+    for (let dy = -radius; dy <= radius; dy++) {
+      for (let dx = -radius; dx <= radius; dx++) {
+        if (Math.abs(dx) !== radius && Math.abs(dy) !== radius) continue;
+        const gx = start.gx + dx;
+        const gy = start.gy + dy;
+        if (isWalkableCellForRegion(gx, gy, regionId)) return { gx, gy };
+      }
+    }
+  }
+  return null;
+}
+
 function linePassable(a, b) {
   const distance = Math.hypot(a.x - b.x, a.y - b.y);
   const steps = Math.max(2, Math.ceil(distance / 22));
@@ -5160,6 +5525,18 @@ function linePassable(a, b) {
     const x = a.x + (b.x - a.x) * t;
     const y = a.y + (b.y - a.y) * t;
     if (!isWalkablePoint(x, y, 6)) return false;
+  }
+  return true;
+}
+
+function linePassableInRegion(a, b, regionId) {
+  const distance = Math.hypot(a.x - b.x, a.y - b.y);
+  const steps = Math.max(2, Math.ceil(distance / 22));
+  for (let i = 0; i <= steps; i++) {
+    const t = i / steps;
+    const x = a.x + (b.x - a.x) * t;
+    const y = a.y + (b.y - a.y) * t;
+    if (!isRegionWalkablePoint(x, y, regionId, 6)) return false;
   }
   return true;
 }
@@ -5175,27 +5552,124 @@ function gridEdgePassable(cx, cy, nx, ny) {
   return passable;
 }
 
+function gridEdgePassableInRegion(cx, cy, nx, ny, regionId) {
+  const currentIndex = cy * GRID_COLS + cx;
+  const nextIndex = ny * GRID_COLS + nx;
+  const baseKey = currentIndex < nextIndex ? `${currentIndex}|${nextIndex}` : `${nextIndex}|${currentIndex}`;
+  const key = `${normalizeRegionId(regionId)}:${baseKey}`;
+  if (routeEdgePassableCache.has(key)) return routeEdgePassableCache.get(key);
+  if (routeEdgePassableCache.size > 400000) routeEdgePassableCache.clear();
+  const passable = linePassableInRegion(gridToWorld(cx, cy), gridToWorld(nx, ny), regionId);
+  routeEdgePassableCache.set(key, passable);
+  return passable;
+}
+
+function getRoutePointId(point, fallback = "point") {
+  return point?.id || `${fallback}:${Math.round(Number(point?.x) || 0)},${Math.round(Number(point?.y) || 0)}`;
+}
+
+function makeRoutePoint(id, point) {
+  return {
+    id,
+    x: Number(point?.x) || 0,
+    y: Number(point?.y) || 0,
+  };
+}
+
+function reverseRoute(route) {
+  const reversed = cloneRoute(route);
+  reversed.points.reverse();
+  if (Array.isArray(reversed.segments)) {
+    reversed.segments.reverse();
+    reversed.segments.forEach(segment => segment.points.reverse());
+  }
+  return reversed;
+}
+
 function findRoute(source, target) {
-  const cacheKey = `${source.id}|${target.id}`;
-  const reverseKey = `${target.id}|${source.id}`;
+  const sourceRegionId = getCityRegionId(source);
+  const targetRegionId = getCityRegionId(target);
+  if (sourceRegionId !== targetRegionId) return findPortalRoute(source, target, sourceRegionId, targetRegionId);
+  return findLandRoute(source, target, sourceRegionId);
+}
+
+function findPortalRoute(source, target, sourceRegionId = getCityRegionId(source), targetRegionId = getCityRegionId(target)) {
+  const normalizedSourceRegionId = normalizeRegionId(sourceRegionId);
+  const normalizedTargetRegionId = normalizeRegionId(targetRegionId);
+  const cacheKey = `portal:${normalizedSourceRegionId}:${normalizedTargetRegionId}:${getRoutePointId(source, "source")}|${getRoutePointId(target, "target")}`;
+  const reverseKey = `portal:${normalizedTargetRegionId}:${normalizedSourceRegionId}:${getRoutePointId(target, "target")}|${getRoutePointId(source, "source")}`;
   if (routeCache.has(cacheKey)) return cloneRoute(routeCache.get(cacheKey));
   if (routeCache.has(reverseKey)) {
-    const reverse = cloneRoute(routeCache.get(reverseKey));
-    reverse.points.reverse();
+    const reverse = reverseRoute(routeCache.get(reverseKey));
+    routeCache.set(cacheKey, cloneRoute(reverse));
+    return reverse;
+  }
+
+  const chain = getPortalRouteRegionChain(normalizedSourceRegionId, normalizedTargetRegionId);
+  let current = makeRoutePoint(getRoutePointId(source, "source"), source);
+  const segments = [];
+  const points = [];
+  let length = 0;
+
+  for (let index = 0; index < chain.length; index += 1) {
+    const regionId = chain[index];
+    const isLastRegion = index === chain.length - 1;
+    const portalExitPoint = isLastRegion ? null : getPortalWorldPoint(regionId, chain[index + 1]);
+    if (!isLastRegion && !portalExitPoint) return null;
+    const segmentEnd = isLastRegion
+      ? makeRoutePoint(getRoutePointId(target, "target"), target)
+      : makeRoutePoint(`portal:${regionId}->${chain[index + 1]}`, portalExitPoint);
+    if (!segmentEnd || !Number.isFinite(segmentEnd.x) || !Number.isFinite(segmentEnd.y)) return null;
+
+    const route = findLandRoute(current, segmentEnd, regionId);
+    if (!route?.points?.length) return null;
+    const segment = {
+      regionId,
+      points: route.points.map(point => ({ x: point.x, y: point.y })),
+      length: route.length,
+    };
+    segments.push(segment);
+    length += route.length;
+    if (!points.length) points.push(...segment.points);
+    else points.push(...segment.points.slice(1));
+
+    if (!isLastRegion) {
+      const arrivalPoint = getPortalWorldPoint(chain[index + 1], regionId);
+      if (!arrivalPoint) return null;
+      current = makeRoutePoint(`portal:${chain[index + 1]}<-${regionId}`, arrivalPoint);
+    }
+  }
+
+  const route = { points, segments, length };
+  routeCache.set(cacheKey, cloneRoute(route));
+  return route;
+}
+
+function findLandRoute(source, target, regionId = getCityRegionId(source)) {
+  const normalizedRegionId = normalizeRegionId(regionId);
+  const cacheKey = `land:${normalizedRegionId}:${getRoutePointId(source, "source")}|${getRoutePointId(target, "target")}`;
+  const reverseKey = `land:${normalizedRegionId}:${getRoutePointId(target, "target")}|${getRoutePointId(source, "source")}`;
+  if (routeCache.has(cacheKey)) return cloneRoute(routeCache.get(cacheKey));
+  if (routeCache.has(reverseKey)) {
+    const reverse = reverseRoute(routeCache.get(reverseKey));
     routeCache.set(cacheKey, cloneRoute(reverse));
     return reverse;
   }
 
   const startPoint = { x: source.x, y: source.y };
   const endPoint = { x: target.x, y: target.y };
-  if (linePassable(startPoint, endPoint)) {
-    const direct = { points: [startPoint, endPoint], length: Math.hypot(source.x - target.x, source.y - target.y) };
+  if (linePassableInRegion(startPoint, endPoint, normalizedRegionId)) {
+    const direct = {
+      points: [startPoint, endPoint],
+      segments: [{ regionId: normalizedRegionId, points: [startPoint, endPoint], length: Math.hypot(source.x - target.x, source.y - target.y) }],
+      length: Math.hypot(source.x - target.x, source.y - target.y),
+    };
     routeCache.set(cacheKey, cloneRoute(direct));
     return direct;
   }
 
-  const start = nearestWalkableCell(source.x, source.y);
-  const goal = nearestWalkableCell(target.x, target.y);
+  const start = nearestWalkableCellInRegion(source.x, source.y, normalizedRegionId);
+  const goal = nearestWalkableCellInRegion(target.x, target.y, normalizedRegionId);
   if (!start || !goal) return null;
 
   const startIndex = start.gy * GRID_COLS + start.gx;
@@ -5214,7 +5688,8 @@ function findRoute(source, target) {
     const current = open.pop();
     if (!current || closed.has(current.index)) continue;
     if (current.index === goalIndex) {
-      const route = buildRouteFromCells(cameFrom, current.index, startPoint, endPoint);
+      const route = buildRouteFromCells(cameFrom, current.index, startPoint, endPoint, normalizedRegionId);
+      route.segments = [{ regionId: normalizedRegionId, points: route.points.map(point => ({ x: point.x, y: point.y })), length: route.length }];
       routeCache.set(cacheKey, cloneRoute(route));
       return route;
     }
@@ -5227,9 +5702,9 @@ function findRoute(source, target) {
     for (const [dx, dy, cost] of dirs) {
       const nx = cx + dx;
       const ny = cy + dy;
-      if (!isWalkableCell(nx, ny)) continue;
-      if (dx && dy && (!isWalkableCell(cx + dx, cy) || !isWalkableCell(cx, cy + dy))) continue;
-      if (!gridEdgePassable(cx, cy, nx, ny)) continue;
+      if (!isWalkableCellForRegion(nx, ny, normalizedRegionId)) continue;
+      if (dx && dy && (!isWalkableCellForRegion(cx + dx, cy, normalizedRegionId) || !isWalkableCellForRegion(cx, cy + dy, normalizedRegionId))) continue;
+      if (!gridEdgePassableInRegion(cx, cy, nx, ny, normalizedRegionId)) continue;
       const nextIndex = ny * GRID_COLS + nx;
       if (closed.has(nextIndex)) continue;
       const tentative = currentG + cost;
@@ -5244,7 +5719,7 @@ function findRoute(source, target) {
   return null;
 }
 
-function buildRouteFromCells(cameFrom, currentIndex, startPoint, endPoint) {
+function buildRouteFromCells(cameFrom, currentIndex, startPoint, endPoint, regionId = "") {
   const cells = [];
   let current = currentIndex;
   cells.push(current);
@@ -5255,18 +5730,25 @@ function buildRouteFromCells(cameFrom, currentIndex, startPoint, endPoint) {
   cells.reverse();
 
   let points = [startPoint, ...cells.map(index => gridToWorld(index % GRID_COLS, Math.floor(index / GRID_COLS))), endPoint];
-  points = simplifyRoute(points);
+  points = simplifyRoute(points, regionId);
   return { points, length: routeLength(points) };
 }
 
-function simplifyRoute(points) {
+function simplifyRoute(points, regionId = "") {
   if (points.length <= 2) return points;
   const simplified = [points[0]];
   let anchor = 0;
+  const normalizedRegionId = regionId ? normalizeRegionId(regionId) : "";
 
   while (anchor < points.length - 1) {
     let next = points.length - 1;
-    while (next > anchor + 1 && !linePassable(points[anchor], points[next])) next--;
+    while (next > anchor + 1) {
+      const passable = normalizedRegionId
+        ? linePassableInRegion(points[anchor], points[next], normalizedRegionId)
+        : linePassable(points[anchor], points[next]);
+      if (passable) break;
+      next--;
+    }
     simplified.push(points[next]);
     anchor = next;
   }
@@ -5285,6 +5767,13 @@ function cloneRoute(route) {
   return {
     length: route.length,
     points: route.points.map(point => ({ x: point.x, y: point.y })),
+    segments: Array.isArray(route.segments)
+      ? route.segments.map(segment => ({
+          regionId: normalizeRegionId(segment.regionId),
+          length: Number(segment.length) || routeLength(segment.points || []),
+          points: (segment.points || []).map(point => ({ x: point.x, y: point.y })),
+        }))
+      : undefined,
   };
 }
 
@@ -5547,7 +6036,10 @@ function launchAttack(sourceId, targetId, percent, owner, exactTroops = null) {
 
   source.troopFloat = Math.max(0, source.troopFloat - send);
   source.troops = Math.floor(source.troopFloat);
-  if (owner === "player") markOwnedCityChanged(source, false);
+  if (owner === "player") {
+    markOwnedCityChanged(source, false);
+    syncCityStateToOnline(source);
+  }
 
   const duration = travelTime(source, target, owner, route.length);
   const mission = {
@@ -5560,6 +6052,7 @@ function launchAttack(sourceId, targetId, percent, owner, exactTroops = null) {
     total: duration,
     remaining: duration,
     path: route.points,
+    pathSegments: getRouteSegments(route, getCityRegionId(source)),
     pathLength: route.length,
     targetOwnerAtLaunch: target.owner,
   };
@@ -5570,10 +6063,10 @@ function launchAttack(sourceId, targetId, percent, owner, exactTroops = null) {
 
   if (owner === "player" && kind === "transfer") {
     addLog(`You moved ${formatNumber(send)} troops from ${source.name} to ${target.name}.`);
-    showToast(`Reinforcements moving: ${source.name} → ${target.name}`);
+    showToast(`Reinforcements moving: ${source.name} â†’ ${target.name}`);
   } else if (owner === "player") {
     addLog(`You sent ${formatNumber(send)} troops from ${source.name} to attack ${target.name}.`);
-    showToast(`Attack moving: ${source.name} → ${target.name}`);
+    showToast(`Attack moving: ${source.name} â†’ ${target.name}`);
   } else if (target.owner === "player") {
     addLog(`Enemy army is attacking ${target.name} with ${formatNumber(send)} troops.`);
     showToast(`Incoming attack on ${target.name}`);
@@ -5604,6 +6097,7 @@ function resolveAttack(attack) {
     target.troops = Math.floor(target.troopFloat);
     if (attack.owner === "player") {
       markOwnedCityChanged(target);
+      syncCityStateToOnline(target);
       addLog(`Reinforcements arrived at ${target.name}: +${formatNumber(attack.troops)} troops.`);
       showToast(`Reinforced ${target.name}`);
     }
@@ -5655,6 +6149,7 @@ function resolveAttack(attack) {
       target.lastCapturedAt = state.gameSeconds;
       if (oldOwner === "player") {
         markOwnedCityChanged(target);
+        syncCityStateToOnline(target);
         addBattleReport({
           type: "defense",
           outcome: "held",
@@ -5834,10 +6329,9 @@ function resolveAttack(attack) {
   if (isOnlineWorldActive()) {
     if (target.owner === "player") {
       markOwnedCityChanged(target, false);
-      syncOwnedCitiesToOnline(true);
-    } else {
-      syncSharedCityState(target);
     }
+    syncCityStateToOnline(target);
+    if (target.owner === "player") syncOwnedCitiesToOnline(true);
   }
 }
 
@@ -6137,41 +6631,70 @@ function formatPathNumber(value) {
   return Number(value).toFixed(1);
 }
 
+function getMissionSegmentsForRegion(mission, regionId = getActiveMapRegionId()) {
+  const activeRegionId = normalizeRegionId(regionId);
+  const segments = getMissionRouteSegments(mission).filter(segment => segment.regionId === activeRegionId);
+  if (segments.length) return segments;
+  const from = cityById(mission?.fromId);
+  const to = cityById(mission?.toId);
+  if (!from || !to || getCityRegionId(from) !== activeRegionId || getCityRegionId(to) !== activeRegionId) return [];
+  const path = normalizeArmyPath(mission?.path);
+  if (path.length >= 2) return [{ regionId: activeRegionId, points: path, length: Math.max(0, Number(mission?.pathLength) || routeLength(path)) }];
+  const route = findRoute(from, to);
+  return getRouteSegments(route, activeRegionId).filter(segment => segment.regionId === activeRegionId);
+}
+
+function getMissionPointAtProgress(mission, progress) {
+  const segments = getMissionRouteSegments(mission);
+  if (!segments.length) {
+    const path = normalizeArmyPath(mission?.path);
+    return path.length >= 2
+      ? { regionId: getCityRegionId(mission?.fromId), point: pointAlongRoute(path, progress) }
+      : null;
+  }
+  const totalLength = Math.max(0.1, Number(mission?.pathLength) || segments.reduce((total, segment) => total + segment.length, 0));
+  let wanted = totalLength * clamp(progress, 0, 1);
+  for (const segment of segments) {
+    const length = Math.max(0.1, segment.length || routeLength(segment.points));
+    if (wanted <= length) {
+      return { regionId: segment.regionId, point: pointAlongRoute(segment.points, wanted / length) };
+    }
+    wanted -= length;
+  }
+  const lastSegment = segments[segments.length - 1];
+  return { regionId: lastSegment.regionId, point: lastSegment.points[lastSegment.points.length - 1] };
+}
+
 function renderPaths() {
   const armies = getRenderableArmies();
   const activeRegionId = getActiveMapRegionId();
+  const visibleArmySegments = armies
+    .map(attack => ({
+      attack,
+      segments: getMissionSegmentsForRegion(attack, activeRegionId),
+    }))
+    .filter(entry => entry.segments.length);
   const signature = [
     activeRegionId,
-    armies
-      .filter(attack => getCityRegionId(attack.fromId) === activeRegionId && getCityRegionId(attack.toId) === activeRegionId)
-    .map(attack => `${attack.id}:${attack.kind || ""}:${attack.owner || ""}:${attack.fromId}:${attack.toId}:${attack.pathLength || 0}:${Array.isArray(attack.path) ? attack.path.length : 0}`)
+    visibleArmySegments
+      .map(({ attack, segments }) => `${attack.id}:${attack.kind || ""}:${attack.owner || ""}:${attack.fromId}:${attack.toId}:${attack.pathLength || 0}:${segments.map(segment => segment.points.length).join(",")}`)
       .join("|"),
   ].join(";");
   if (signature === pathRenderSignature) return;
   pathRenderSignature = signature;
   pathsSvg.innerHTML = "";
-  for (const attack of armies) {
-    const from = cityById(attack.fromId);
-    const to = cityById(attack.toId);
-    if (!from || !to) continue;
-    if (getCityRegionId(from) !== activeRegionId || getCityRegionId(to) !== activeRegionId) continue;
-    let path = Array.isArray(attack.path) && attack.path.length >= 2 ? attack.path : null;
-    if (!path) {
-      const route = findRoute(from, to);
-      path = route?.points || [{ x: from.x, y: from.y }, { x: to.x, y: to.y }];
-      attack.path = path;
-      attack.pathLength = route?.length || routeLength(path);
+  for (const { attack, segments } of visibleArmySegments) {
+    for (const segment of segments) {
+      const polyline = document.createElementNS("http://www.w3.org/2000/svg", "polyline");
+      polyline.setAttribute("points", segment.points.map(point => {
+        const mapPoint = worldToMapPoint(point);
+        return `${mapPoint.x},${mapPoint.y}`;
+      }).join(" "));
+      polyline.classList.add("army-route", attack.owner === "player" ? "player-route" : "enemy-route");
+      if (attack.kind === "transfer") polyline.classList.add("transfer-route");
+      if (attack.kind === "scout") polyline.classList.add("scout-route");
+      pathsSvg.appendChild(polyline);
     }
-
-    const polyline = document.createElementNS("http://www.w3.org/2000/svg", "polyline");
-    polyline.setAttribute("points", path.map(point => {
-      const mapPoint = worldToMapPoint(point);
-      return `${mapPoint.x},${mapPoint.y}`;
-    }).join(" "));
-    polyline.classList.add("army-route", attack.owner === "player" ? "player-route" : "enemy-route");
-    if (attack.kind === "transfer") polyline.classList.add("transfer-route");
-    if (attack.kind === "scout") polyline.classList.add("scout-route");
-    pathsSvg.appendChild(polyline);
   }
 }
 
@@ -6187,11 +6710,12 @@ function getVisibleWorldBounds(margin = 420) {
   }
   const rect = mapFrame.getBoundingClientRect();
   const worldMargin = margin / Math.max(zoom, 0.1);
+  const offset = getMapViewportOffset(rect, getActiveMapDimensions());
   return {
-    left: mapBounds.left + camera.x - worldMargin,
-    top: mapBounds.top + camera.y - worldMargin,
-    right: mapBounds.left + camera.x + rect.width / Math.max(zoom, 0.1) + worldMargin,
-    bottom: mapBounds.top + camera.y + rect.height / Math.max(zoom, 0.1) + worldMargin,
+    left: mapBounds.left + camera.x - offset.x / Math.max(zoom, 0.1) - worldMargin,
+    top: mapBounds.top + camera.y - offset.y / Math.max(zoom, 0.1) - worldMargin,
+    right: mapBounds.left + camera.x + (rect.width - offset.x) / Math.max(zoom, 0.1) + worldMargin,
+    bottom: mapBounds.top + camera.y + (rect.height - offset.y) / Math.max(zoom, 0.1) + worldMargin,
   };
 }
 
@@ -6359,12 +6883,12 @@ function renderSelectedCityWheel(city) {
   wheel.innerHTML = `
     <span class="city-wheel-ring" aria-hidden="true"></span>
     <button class="city-wheel-action wheel-level" type="button" aria-label="Level up ${escapeHtml(city.name)}" ${levelDisabled ? "disabled" : ""}>
-      <span class="wheel-icon" aria-hidden="true">♜↑</span>
+      <span class="wheel-icon" aria-hidden="true">â™œâ†‘</span>
       <span class="wheel-action-name">Level</span>
       <span class="wheel-cost">${city.level >= MAX_CITY_LEVEL ? "MAX" : `${formatNumber(levelCost)}g`}</span>
     </button>
     <button class="city-wheel-action wheel-send" type="button" aria-label="Send troops from ${escapeHtml(city.name)}" ${city.troops < 1 ? "disabled" : ""}>
-      <span class="wheel-icon" aria-hidden="true">⚔</span>
+      <span class="wheel-icon" aria-hidden="true">âš”</span>
       <span class="wheel-action-name">Send</span>
     </button>
     <button class="city-wheel-action wheel-info" type="button" aria-label="View ${escapeHtml(city.name)} information">
@@ -6618,10 +7142,10 @@ function renderArmies() {
     const from = cityById(attack.fromId);
     const to = cityById(attack.toId);
     if (!from || !to) continue;
-    if (getCityRegionId(from) !== activeRegionId || getCityRegionId(to) !== activeRegionId) continue;
     const progress = clamp(1 - attack.remaining / attack.total, 0, 1);
-    const path = Array.isArray(attack.path) && attack.path.length >= 2 ? attack.path : [{ x: from.x, y: from.y }, { x: to.x, y: to.y }];
-    const point = pointAlongRoute(path, progress);
+    const segmentPoint = getMissionPointAtProgress(attack, progress);
+    if (!segmentPoint || segmentPoint.regionId !== activeRegionId) continue;
+    const point = segmentPoint.point;
     const x = point.x;
     const y = point.y;
     if (!isPointInBounds(x, y, visibleBounds)) continue;
@@ -6630,7 +7154,7 @@ function renderArmies() {
     token.className = `army-token ${(OWNER[attack.owner] || OWNER.enemy).css}`;
     token.style.left = `${mapPoint.x}px`;
     token.style.top = `${mapPoint.y}px`;
-    const armyIcon = attack.kind === "scout" ? "🔭" : attack.kind === "transfer" ? "👟" : "⚔";
+    const armyIcon = attack.kind === "scout" ? "ðŸ”­" : attack.kind === "transfer" ? "ðŸ‘Ÿ" : "âš”";
     token.innerHTML = `<span>${armyIcon}</span><strong>${formatNumber(attack.troops)}</strong><small>${Math.ceil(attack.remaining)}s</small>`;
     if (attack.ownerName) token.title = `${attack.ownerName}: ${attack.kind} to ${to.name}`;
     armyLayer.appendChild(token);
@@ -6683,7 +7207,7 @@ function renderSendConfirmPanel(source, target) {
 
   const isTransfer = target.owner === "player";
   const neutralBlockReason = getNeutralCaptureBlockReason(target, "player");
-  const icon = isTransfer ? "👟" : "⚔️";
+  const icon = isTransfer ? "ðŸ‘Ÿ" : "âš”ï¸";
   const label = isTransfer ? "Move" : "Attack";
   const route = findRoute(source, target);
   const sendAmount = source.troops > 0 ? clamp(Math.floor(source.troops * selectedMarchPercent), 1, source.troops) : 0;
@@ -6705,14 +7229,14 @@ function renderSendConfirmPanel(source, target) {
 
 
   panelTitle.textContent = `${icon} ${label} troops`;
-  panelSubtitle.textContent = `${source.name} → ${target.name}`;
+  panelSubtitle.textContent = `${source.name} â†’ ${target.name}`;
   selectedInfo.innerHTML = `
     <div class="send-confirm-card">
       <div class="send-icon">${icon}</div>
       <div class="send-main">
-        <strong>${escapeHtml(source.name)} → ${escapeHtml(target.name)}</strong>
-        <span>${formatPercent(selectedMarchPercent)} selected · ${formatNumber(sendAmount)} troops</span>
-        <span>${route ? `${Math.ceil(travel)}s travel · ${formatNumber(route.length)} distance` : "No valid land route"}</span>
+        <strong>${escapeHtml(source.name)} â†’ ${escapeHtml(target.name)}</strong>
+        <span>${formatPercent(selectedMarchPercent)} selected Â· ${formatNumber(sendAmount)} troops</span>
+        <span>${route ? `${Math.ceil(travel)}s travel Â· ${formatNumber(route.length)} distance` : "No valid land route"}</span>
       </div>
     </div>
     ${outcomeHtml}
@@ -6979,7 +7503,7 @@ function showCityInfoModal(cityId) {
     return;
   }
   const stats = getCityStats(city);
-  modalTitle.textContent = `${city.name} · Level ${city.level}`;
+  modalTitle.textContent = `${city.name} Â· Level ${city.level}`;
   modalBody.innerHTML = `
     <div class="city-stat-panel modal-city-stats">
       <div class="stat-wide"><span>Total defense</span><strong>${formatNumber(stats.totalDefense)}</strong></div>
@@ -6993,9 +7517,29 @@ function showCityInfoModal(cityId) {
     </div>
   `;
   const cooldownRemaining = getCaptureCooldownRemaining(city);
+  const mainCityStatus = getMainCityChangeStatus(city);
+  const mainCityBlock = mainCityStatus.isMain
+    ? `
+      <div class="stat-wide main-city-status">
+        <span>Home status</span>
+        <strong>Main city</strong>
+      </div>`
+    : `
+      <div class="main-city-action-panel">
+        <div class="main-city-action-copy">
+          <strong>Move main city here</strong>
+          <small>Allowed while you own fewer than ${MAIN_CITY_CHANGE_CITY_LIMIT} cities. Once every 24 hours.</small>
+        </div>
+        <button id="changeMainCityBtn" class="main-city-change-btn" type="button"${mainCityStatus.canChange ? "" : " disabled"}>
+          <span>Change main city</span>
+          ${mainCityStatus.cooldownText ? `<small>${escapeHtml(mainCityStatus.cooldownText)}</small>` : ""}
+        </button>
+        ${!mainCityStatus.canChange && mainCityStatus.reason ? `<p class="main-city-change-reason">${escapeHtml(mainCityStatus.reason)}</p>` : ""}
+      </div>`;
   modalTitle.textContent = `${city.name} - Level ${city.level}`;
   modalBody.innerHTML = `
     <div class="city-stat-panel modal-city-stats">
+      ${mainCityBlock}
       <div class="stat-wide"><span>Total defense</span><strong>${formatNumber(stats.totalDefense)}</strong></div>
       <div class="stat-chip"><span>Owner</span><strong>${escapeHtml(getCityOwnerDisplayName(city))}</strong></div>
       <div class="stat-chip"><span>Troops</span><strong>${formatNumber(city.troops)}</strong></div>
@@ -7009,6 +7553,7 @@ function showCityInfoModal(cityId) {
       ${cooldownRemaining > 0 ? `<div class="stat-wide"><span>Capture XP cooldown</span><strong>${formatDuration(cooldownRemaining)}</strong></div>` : ""}
     </div>
   `;
+  modalBody.querySelector("#changeMainCityBtn")?.addEventListener("click", () => changeMainCity(city.id));
   if (!modal.open) modal.showModal();
 }
 
@@ -7097,7 +7642,9 @@ function getSortedCityList() {
 }
 
 function isMainCityForList(city) {
-  return Boolean(city && (city.id === state?.mainCityId || city.isMainCity));
+  if (!city) return false;
+  if (state?.mainCityId) return city.id === state.mainCityId;
+  return Boolean(city.isMainCity);
 }
 
 function compareCityListEntries(a, b) {
@@ -7162,7 +7709,7 @@ function showAttackPreview(source, target) {
         <div class="stat-card"><strong>${formatNumber(preview.attackPower)}</strong><small>attack power</small></div>
         <div class="stat-card"><strong>${formatNumber(preview.defensePower)}</strong><small>defense power</small></div>
       </div>
-      <p><strong>${source.name}</strong> → <strong>${target.name}</strong> · ${formatPercent(selectedMarchPercent)} march · about ${Math.ceil(preview.travel)}s travel.</p>
+      <p><strong>${source.name}</strong> â†’ <strong>${target.name}</strong> Â· ${formatPercent(selectedMarchPercent)} march Â· about ${Math.ceil(preview.travel)}s travel.</p>
       <p>Route distance: <strong>${formatNumber(preview.pathLength)}</strong> map units. Troops avoid water, lakes, and mountains. Swamp and forests are walkable.</p>
       <p>${preview.success
         ? `Expected capture with about <strong>${formatNumber(preview.survivors)}</strong> surviving troops.`
@@ -7388,7 +7935,7 @@ function legacySkillRow(label, key, description, cost) {
   const disabled = state.gold < cost ? "disabled" : "";
   return `
     <div class="skill-row">
-      <div><strong>${label} Lv ${level} · x${multiplier}</strong><br><small>${description}</small></div>
+      <div><strong>${label} Lv ${level} Â· x${multiplier}</strong><br><small>${description}</small></div>
       <button data-skill="${key}" ${disabled}>${formatNumber(cost)}</button>
     </div>
   `;
@@ -7628,7 +8175,7 @@ function showHelpModal() {
 }
 
 async function toggleFullscreen() {
-  const fullscreenTarget = document.querySelector(".phone-shell") || document.documentElement;
+  const fullscreenTarget = document.documentElement;
   try {
     if (document.fullscreenElement) {
       await document.exitFullscreen();
@@ -7662,7 +8209,7 @@ function button(label, onClick, disabled = false, extraClass = "") {
 }
 
 function addLog(message) {
-  const stamped = `${formatClock(state.gameSeconds)} · ${message}`;
+  const stamped = `${formatClock(state.gameSeconds)} Â· ${message}`;
   state.log.push(stamped);
   if (state.log.length > 80) state.log = state.log.slice(-80);
 }
@@ -7721,6 +8268,16 @@ function updateZoomPerformanceClasses() {
   mapFrame.classList.toggle("low-zoom", zoom <= LOW_ZOOM_PERFORMANCE_THRESHOLD);
 }
 
+function getMapViewportOffset(frameRect = null, dimensions = null) {
+  const rect = frameRect || mapFrame?.getBoundingClientRect();
+  const mapDimensions = dimensions || getActiveMapDimensions();
+  if (!rect || !mapDimensions) return { x: 0, y: 0 };
+  return {
+    x: Math.max(0, (rect.width - mapDimensions.width * zoom) / 2),
+    y: Math.max(0, (rect.height - mapDimensions.height * zoom) / 2),
+  };
+}
+
 function isZoomInteractionActive() {
   return Boolean(mapFrame?.classList.contains("zooming"));
 }
@@ -7752,7 +8309,8 @@ function updateCameraTransform() {
   const maxY = Math.max(0, dimensions.height - rect.height / zoom);
   camera.x = clamp(camera.x, 0, maxX);
   camera.y = clamp(camera.y, 0, maxY);
-  mapWorld.style.transform = `translate3d(${-camera.x * zoom}px, ${-camera.y * zoom}px, 0) scale(${zoom})`;
+  const offset = getMapViewportOffset(rect, dimensions);
+  mapWorld.style.transform = `translate3d(${offset.x - camera.x * zoom}px, ${offset.y - camera.y * zoom}px, 0) scale(${zoom})`;
   updateMainCityReturnButton(rect);
 }
 
@@ -7760,8 +8318,9 @@ function centerOnMap() {
   if (!mapFrame) return;
   const rect = mapFrame.getBoundingClientRect();
   const dimensions = getActiveMapDimensions();
-  camera.x = dimensions.width / 2 - rect.width / (2 * zoom);
-  camera.y = dimensions.height / 2 - rect.height / (2 * zoom);
+  const offset = getMapViewportOffset(rect, dimensions);
+  camera.x = dimensions.width / 2 - (rect.width / 2 - offset.x) / zoom;
+  camera.y = dimensions.height / 2 - (rect.height / 2 - offset.y) / zoom;
   updateCameraTransform();
 }
 
@@ -7774,9 +8333,103 @@ function centerOnCity(cityId) {
   }
   const rect = mapFrame.getBoundingClientRect();
   const mapPoint = worldToMapPoint(city);
-  camera.x = mapPoint.x - rect.width / (2 * zoom);
-  camera.y = mapPoint.y - rect.height / (2 * zoom);
+  const dimensions = getActiveMapDimensions();
+  const offset = getMapViewportOffset(rect, dimensions);
+  camera.x = mapPoint.x - (rect.width / 2 - offset.x) / zoom;
+  camera.y = mapPoint.y - (rect.height / 2 - offset.y) / zoom;
   updateCameraTransform();
+}
+
+function getElementAvoidRect(element, viewRect, padding = 12) {
+  if (!element || !viewRect) return null;
+  const style = window.getComputedStyle(element);
+  if (style.display === "none" || style.visibility === "hidden") return null;
+  const rect = element.getBoundingClientRect();
+  if (rect.width <= 1 || rect.height <= 1) return null;
+  return {
+    left: rect.left - viewRect.left - padding,
+    top: rect.top - viewRect.top - padding,
+    right: rect.right - viewRect.left + padding,
+    bottom: rect.bottom - viewRect.top + padding,
+  };
+}
+
+function getMainCityReturnAvoidRects(viewRect) {
+  return [
+    document.querySelector(".profile-stack"),
+    document.querySelector(".resource-bar"),
+    document.querySelector(".commander-panel.visible"),
+    document.querySelector(".bottom-nav"),
+    document.querySelector(".toast.visible"),
+  ].map(element => getElementAvoidRect(element, viewRect)).filter(Boolean);
+}
+
+function getMainCityReturnButtonSize() {
+  const rect = mainCityReturnBtn?.getBoundingClientRect();
+  return {
+    width: Math.max(36, Math.ceil(rect?.width || 42)),
+    height: Math.max(36, Math.ceil(rect?.height || 42)),
+  };
+}
+
+function getMainCityReturnRectAt(x, y, size, padding = 4) {
+  return {
+    left: x - size.width / 2 - padding,
+    top: y - size.height / 2 - padding,
+    right: x + size.width / 2 + padding,
+    bottom: y + size.height / 2 + padding,
+  };
+}
+
+function rectsOverlap(a, b) {
+  return a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
+}
+
+function isMainCityReturnPointClear(x, y, size, avoidRects) {
+  const buttonRect = getMainCityReturnRectAt(x, y, size);
+  return !avoidRects.some(rect => rectsOverlap(buttonRect, rect));
+}
+
+function findClearMainCityReturnPoint(preferred, bounds, size, avoidRects) {
+  const start = {
+    x: clamp(preferred.x, bounds.left, bounds.right),
+    y: clamp(preferred.y, bounds.top, bounds.bottom),
+  };
+  if (isMainCityReturnPointClear(start.x, start.y, size, avoidRects)) return start;
+
+  const candidates = [start];
+  const step = 14;
+  const addCandidate = (x, y) => {
+    candidates.push({
+      x: clamp(x, bounds.left, bounds.right),
+      y: clamp(y, bounds.top, bounds.bottom),
+    });
+  };
+
+  addCandidate(start.x, bounds.top);
+  addCandidate(start.x, bounds.bottom);
+  addCandidate(bounds.left, start.y);
+  addCandidate(bounds.right, start.y);
+
+  for (let x = bounds.left; x <= bounds.right; x += step) {
+    addCandidate(x, bounds.top);
+    addCandidate(x, bounds.bottom);
+  }
+  addCandidate(bounds.right, bounds.top);
+  addCandidate(bounds.right, bounds.bottom);
+
+  for (let y = bounds.top + step; y < bounds.bottom; y += step) {
+    addCandidate(bounds.left, y);
+    addCandidate(bounds.right, y);
+  }
+
+  candidates.sort((a, b) => {
+    const da = Math.hypot(a.x - start.x, a.y - start.y);
+    const db = Math.hypot(b.x - start.x, b.y - start.y);
+    return da - db;
+  });
+
+  return candidates.find(candidate => isMainCityReturnPointClear(candidate.x, candidate.y, size, avoidRects)) || start;
 }
 
 function updateMainCityReturnButton(frameRect = null) {
@@ -7785,18 +8438,22 @@ function updateMainCityReturnButton(frameRect = null) {
     return;
   }
 
-  const mainCity = getLoadedMainCity();
+  const mainCity = getMainCityReference();
   const rect = frameRect || mapFrame?.getBoundingClientRect();
   if (!mainCity || !rect) {
     mainCityReturnBtn.hidden = true;
     return;
   }
 
+  const homeRegionId = getMainCityRegionId();
+  const isHomeIslandActive = homeRegionId === getActiveMapRegionId();
   const mainCityMapPoint = worldToMapPoint(mainCity);
-  const targetFrameX = (mainCityMapPoint.x - camera.x) * zoom;
-  const targetFrameY = (mainCityMapPoint.y - camera.y) * zoom;
+  const offset = getMapViewportOffset(rect);
+  const targetFrameX = offset.x + (mainCityMapPoint.x - camera.x) * zoom;
+  const targetFrameY = offset.y + (mainCityMapPoint.y - camera.y) * zoom;
   const visibleMargin = 56;
-  const isVisible = targetFrameX >= visibleMargin
+  const isVisible = isHomeIslandActive
+    && targetFrameX >= visibleMargin
     && targetFrameX <= rect.width - visibleMargin
     && targetFrameY >= visibleMargin
     && targetFrameY <= rect.height - visibleMargin;
@@ -7826,6 +8483,7 @@ function updateMainCityReturnButton(frameRect = null) {
   const right = frameLeft + rect.width - edgePadding;
   const top = frameTop + topPadding;
   const bottom = frameTop + rect.height - edgePadding;
+  const bounds = { left, right, top, bottom };
   const halfW = Math.max(1, (right - left) / 2);
   const halfH = Math.max(1, (bottom - top) / 2);
   const boxCenterX = (left + right) / 2;
@@ -7833,8 +8491,13 @@ function updateMainCityReturnButton(frameRect = null) {
   const scaleX = Math.abs(dx) > 0.001 ? halfW / Math.abs(dx) : Infinity;
   const scaleY = Math.abs(dy) > 0.001 ? halfH / Math.abs(dy) : Infinity;
   const scale = Math.min(scaleX, scaleY);
-  const x = clamp(boxCenterX + dx * scale, left, right);
-  const y = clamp(boxCenterY + dy * scale, top, bottom);
+  const preferred = {
+    x: clamp(boxCenterX + dx * scale, left, right),
+    y: clamp(boxCenterY + dy * scale, top, bottom),
+  };
+  const buttonSize = getMainCityReturnButtonSize();
+  const avoidRects = getMainCityReturnAvoidRects(viewRect);
+  const { x, y } = findClearMainCityReturnPoint(preferred, bounds, buttonSize, avoidRects);
   const angle = Math.atan2(dy, dx) * 180 / Math.PI;
 
   mainCityReturnBtn.hidden = false;
@@ -7843,20 +8506,21 @@ function updateMainCityReturnButton(frameRect = null) {
   mainCityReturnBtn.style.setProperty("--main-city-angle", `${angle}deg`);
 }
 
-function returnToMainCity() {
+async function returnToMainCity() {
   if (!state) return;
-  const mainCity = getLoadedMainCity();
+  const targetRegionId = getMainCityRegionId();
+  if (targetRegionId !== getActiveMapRegionId()) {
+    await switchOnlineIsland(targetRegionId);
+    if (targetRegionId !== getActiveMapRegionId()) return;
+  }
+  const mainCity = getLoadedMainCity() || getMainCityReference();
   if (!mainCity) {
-    if (isOnlineWorldActive() && state.online?.mainRegionId && state.online.mainRegionId !== getActiveOnlineRegionId()) {
-      switchOnlineIsland(state.online.mainRegionId);
-      return;
-    }
     showToast("No main city to return to.");
     return;
   }
   scoutNearbySourceId = null;
   sendMode = false;
-  selectedSourceId = mainCity.id;
+  selectedSourceId = mainCity.owner === "player" ? mainCity.id : null;
   selectedTargetId = null;
   centerOnCity(mainCity.id);
   renderAll();
@@ -7865,9 +8529,10 @@ function returnToMainCity() {
 
 function screenToMap(clientX, clientY) {
   const rect = mapFrame.getBoundingClientRect();
+  const offset = getMapViewportOffset(rect);
   return {
-    x: camera.x + (clientX - rect.left) / zoom,
-    y: camera.y + (clientY - rect.top) / zoom,
+    x: camera.x + (clientX - rect.left - offset.x) / zoom,
+    y: camera.y + (clientY - rect.top - offset.y) / zoom,
   };
 }
 
@@ -7879,8 +8544,9 @@ function setZoomAroundPoint(nextZoom, clientX, clientY) {
   const rect = mapFrame.getBoundingClientRect();
   const before = screenToMap(clientX, clientY);
   zoom = clamp(nextZoom, MIN_ZOOM, MAX_ZOOM);
-  camera.x = before.x - (clientX - rect.left) / zoom;
-  camera.y = before.y - (clientY - rect.top) / zoom;
+  const offset = getMapViewportOffset(rect);
+  camera.x = before.x - (clientX - rect.left - offset.x) / zoom;
+  camera.y = before.y - (clientY - rect.top - offset.y) / zoom;
   updateCameraTransform();
   markZoomInteraction();
   renderPanel();
@@ -7932,8 +8598,9 @@ function updatePinch() {
   const scale = nextDistance / pinchState.startDistance;
   const rect = mapFrame.getBoundingClientRect();
   zoom = clamp(pinchState.startZoom * scale, MIN_ZOOM, MAX_ZOOM);
-  camera.x = pinchState.mapPoint.x - (mid.x - rect.left) / zoom;
-  camera.y = pinchState.mapPoint.y - (mid.y - rect.top) / zoom;
+  const offset = getMapViewportOffset(rect);
+  camera.x = pinchState.mapPoint.x - (mid.x - rect.left - offset.x) / zoom;
+  camera.y = pinchState.mapPoint.y - (mid.y - rect.top - offset.y) / zoom;
   updateCameraTransform();
   markZoomInteraction();
 }

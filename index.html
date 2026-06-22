@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Crownlands - Medieval Island Conquest</title>
-  <link rel="stylesheet" href="styles.css?v=20260622-city-select-fix" />
+  <link rel="stylesheet" href="styles.css?v=20260622-no-online-pill" />
   <link rel="icon" href="data:," />
   <link rel="manifest" href="manifest.webmanifest" />
   <meta name="theme-color" content="#0c1018" />
@@ -44,7 +44,6 @@
         <div class="resource-bar">
           <button id="islandSwitchBtn" class="resource-pill island-switch-btn" type="button" aria-label="Switch island" hidden><span id="islandSwitchLabel">Westmark</span></button>
           <button id="cityListBtn" class="resource-pill city-list-btn" type="button" aria-label="Open city list"><span>🏰</span><strong id="cityText">1</strong></button>
-          <span id="onlinePlayersText" class="online-players-pill" hidden>Online 1</span>
           <button id="fullscreenBtn" class="hud-btn fullscreen-btn" type="button" aria-label="Enter fullscreen"><span aria-hidden="true">&#x26F6;</span></button>
         </div>
       </header>
@@ -169,7 +168,7 @@
 
   <script src="world-config.js"></script>
   <script src="firebase-config.js"></script>
-  <script src="firebaseClient.js"></script>
-  <script src="game.js?v=20260622-city-select-fix"></script>
+  <script src="firebaseClient.js?v=20260622-cross-island-routing"></script>
+  <script src="game.js?v=20260622-home-avoid-ui"></script>
 </body>
 </html>
