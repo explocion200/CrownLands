@@ -673,8 +673,8 @@ input {
 .city-node.selected { z-index: 10; }
 .city-node.targeted { z-index: 9; }
 .city-node.stronghold-node {
-  width: 138px;
-  height: 124px;
+  width: 154px;
+  height: 138px;
   transform: translate(-50%, -62%);
   border-radius: 0;
   z-index: 6;
@@ -687,8 +687,8 @@ input {
   position: absolute;
   left: 50%;
   bottom: 4px;
-  width: 112px;
-  height: 36px;
+  width: 126px;
+  height: 42px;
   transform: translateX(-50%);
   border: 2px solid rgba(255, 219, 116, .78);
   border-radius: 50%;
@@ -700,8 +700,8 @@ input {
   position: absolute;
   left: 50%;
   bottom: 0;
-  width: 132px;
-  height: 124px;
+  width: 148px;
+  height: 138px;
   display: grid;
   place-items: center;
   transform: translateX(-50%);
@@ -752,7 +752,7 @@ input {
   animation: supportPulse .75s infinite alternate;
 }
 .city-node.stronghold-node .city-label {
-  bottom: 118px;
+  bottom: 132px;
 }
 .scout-nearby-radius {
   position: absolute;
