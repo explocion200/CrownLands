@@ -35,6 +35,7 @@ const ZOOM_RENDER_SETTLE_MS = 260;
 const LOW_ZOOM_PERFORMANCE_THRESHOLD = 0.72;
 const ISLAND_MAP_PADDING = 560;
 const TROOP_PICKUP_ICON_SRC = "assets/troop-pickup.png";
+const GOLD_PICKUP_ICON_SRC = "assets/gold-pickup.png";
 const WEST_ISLAND_ART_SRC = "assets/west-island.png";
 const WEST_ISLAND_IMAGE_WIDTH = 1024;
 const WEST_ISLAND_IMAGE_HEIGHT = 1536;
@@ -6137,7 +6138,7 @@ function getHarvestBonusTroopReward() {
 function getHarvestBonusIcon(type) {
   return normalizeHarvestBonusType(type) === "troops"
     ? `<img class="harvest-bonus-icon" src="${TROOP_PICKUP_ICON_SRC}" alt="" draggable="false">`
-    : "&#129689;";
+    : `<img class="harvest-bonus-icon" src="${GOLD_PICKUP_ICON_SRC}" alt="" draggable="false">`;
 }
 
 function getHarvestBonusDailyLimit(type) {
