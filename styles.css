@@ -494,6 +494,9 @@ input {
   z-index: 14;
   pointer-events: none;
 }
+.army-layer {
+  pointer-events: none;
+}
 .teleport-node {
   position: absolute;
   width: 96px;
