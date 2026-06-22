@@ -4291,7 +4291,7 @@ function renderIslandMapTile(region, activeRegionId, homeRegionId) {
   const isActive = regionId === activeRegionId;
   const isHome = regionId === homeRegionId;
   const ariaParts = [label, ownedText];
-  if (isActive) ariaParts.push("currently loaded");
+  if (isActive) ariaParts.push("current map");
   if (isHome) ariaParts.push("home island");
   return `
     <button
@@ -4307,7 +4307,7 @@ function renderIslandMapTile(region, activeRegionId, homeRegionId) {
       </span>
       <span class="island-map-name">${escapeHtml(label)}</span>
       <span class="island-map-owned">${escapeHtml(ownedText)}</span>
-      ${isActive ? `<span class="island-map-active-label">Loaded</span>` : ""}
+      ${isActive ? `<span class="island-map-active-label">Current</span>` : ""}
       ${isHome ? `<span class="island-map-home-label">Home</span>` : ""}
     </button>
   `;
