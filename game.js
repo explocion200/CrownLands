@@ -48,7 +48,13 @@ const TRAINING_STRONGHOLD_ART_SRC = "assets/training-stronghold.png";
 const TRAINING_STRONGHOLD_BONUS_PERCENT = 15;
 const TRAINING_STRONGHOLD_LEVEL = 30;
 const TRAINING_STRONGHOLD_START_TROOPS = 10000;
-const STRONGHOLD_IDS = new Set([GOLD_STRONGHOLD_ID, TRAINING_STRONGHOLD_ID]);
+const SPEED_STRONGHOLD_ID = "east_speed_stronghold";
+const SPEED_STRONGHOLD_NAME = "Speed Stronghold";
+const SPEED_STRONGHOLD_ART_SRC = "assets/speed-stronghold.png";
+const SPEED_STRONGHOLD_BONUS_PERCENT = 15;
+const SPEED_STRONGHOLD_LEVEL = 30;
+const SPEED_STRONGHOLD_START_TROOPS = 10000;
+const STRONGHOLD_IDS = new Set([GOLD_STRONGHOLD_ID, TRAINING_STRONGHOLD_ID, SPEED_STRONGHOLD_ID]);
 const WEST_ISLAND_ART_SRC = "assets/west-island.png";
 const WEST_ISLAND_IMAGE_WIDTH = 1024;
 const WEST_ISLAND_IMAGE_HEIGHT = 1536;
@@ -113,9 +119,10 @@ const NORTH_ISLAND_CITY_POINTS = [
 const EAST_ISLAND_ART_SRC = "assets/east-island.png";
 const EAST_ISLAND_IMAGE_WIDTH = 1086;
 const EAST_ISLAND_IMAGE_HEIGHT = 1448;
+const EAST_SPEED_STRONGHOLD_IMAGE_POINT = { x: 540, y: 605 };
 const EAST_CENTER_TELEPORT_IMAGE_POINT = { x: 305, y: 760 };
 const EAST_ISLAND_RESERVED_CIRCLES = [
-  { x: 540, y: 605, r: 125 },
+  { x: EAST_SPEED_STRONGHOLD_IMAGE_POINT.x, y: EAST_SPEED_STRONGHOLD_IMAGE_POINT.y, r: 125 },
   { x: EAST_CENTER_TELEPORT_IMAGE_POINT.x, y: EAST_CENTER_TELEPORT_IMAGE_POINT.y, r: 82 },
 ];
 const EAST_ISLAND_LAND_POLYGON = [
@@ -402,31 +409,41 @@ function isTrainingStronghold(city) {
   return isStronghold(city) && (city.strongholdType === "training" || city.id === TRAINING_STRONGHOLD_ID);
 }
 
+function isSpeedStronghold(city) {
+  return isStronghold(city) && (city.strongholdType === "speed" || city.id === SPEED_STRONGHOLD_ID);
+}
+
 function getStrongholdArtSrc(city) {
+  if (isSpeedStronghold(city)) return SPEED_STRONGHOLD_ART_SRC;
   if (isTrainingStronghold(city)) return TRAINING_STRONGHOLD_ART_SRC;
   return isGoldStronghold(city) ? GOLD_STRONGHOLD_ART_SRC : "";
 }
 
 function getStrongholdBonusPercent(city) {
+  if (isSpeedStronghold(city)) return SPEED_STRONGHOLD_BONUS_PERCENT;
   if (isTrainingStronghold(city)) return TRAINING_STRONGHOLD_BONUS_PERCENT;
   return isGoldStronghold(city) ? GOLD_STRONGHOLD_BONUS_PERCENT : 0;
 }
 
 function getStrongholdDefenseLevel(city) {
+  if (isSpeedStronghold(city)) return SPEED_STRONGHOLD_LEVEL;
   if (isTrainingStronghold(city)) return TRAINING_STRONGHOLD_LEVEL;
   return isStronghold(city) ? GOLD_STRONGHOLD_LEVEL : 0;
 }
 
 function getStrongholdStartTroops(city) {
+  if (isSpeedStronghold(city)) return SPEED_STRONGHOLD_START_TROOPS;
   if (isTrainingStronghold(city)) return TRAINING_STRONGHOLD_START_TROOPS;
   return isStronghold(city) ? GOLD_STRONGHOLD_START_TROOPS : 0;
 }
 
 function getStrongholdProductionLabel(city) {
+  if (isSpeedStronghold(city)) return "march speed";
   return isTrainingStronghold(city) ? "troop production" : "gold production";
 }
 
 function getStrongholdShortBonusLabel(city) {
+  if (isSpeedStronghold(city)) return `+${formatNumber(getStrongholdBonusPercent(city))}% speed`;
   return isTrainingStronghold(city)
     ? `+${formatNumber(getStrongholdBonusPercent(city))}% troops`
     : `+${formatNumber(getStrongholdBonusPercent(city))}% gold`;
@@ -2434,6 +2451,7 @@ function generateWorldCitySlots() {
 function generateStrongholdSlots() {
   const west = getRegionById("west");
   const north = getRegionById("north");
+  const east = getRegionById("east");
   return [
     west ? createStrongholdSlot({
       id: GOLD_STRONGHOLD_ID,
@@ -2456,6 +2474,17 @@ function generateStrongholdSlots() {
       bonusPercent: TRAINING_STRONGHOLD_BONUS_PERCENT,
       level: TRAINING_STRONGHOLD_LEVEL,
       troops: TRAINING_STRONGHOLD_START_TROOPS,
+    }) : null,
+    east ? createStrongholdSlot({
+      id: SPEED_STRONGHOLD_ID,
+      name: SPEED_STRONGHOLD_NAME,
+      region: east,
+      point: eastImagePointToWorld(EAST_SPEED_STRONGHOLD_IMAGE_POINT),
+      type: "speed",
+      bonus: "marchSpeed",
+      bonusPercent: SPEED_STRONGHOLD_BONUS_PERCENT,
+      level: SPEED_STRONGHOLD_LEVEL,
+      troops: SPEED_STRONGHOLD_START_TROOPS,
     }) : null,
   ].filter(Boolean);
 }
@@ -3617,6 +3646,18 @@ function getControlledStrongholdTroopBonusPercent(owner = "player") {
     if (city.owner !== owner || !isTrainingStronghold(city)) return total;
     return total + getStrongholdBonusPercent(city);
   }, 0);
+}
+
+function getControlledStrongholdMarchSpeedPercent(owner = "player") {
+  if (!state || !Array.isArray(state.cities)) return 0;
+  return state.cities.reduce((total, city) => {
+    if (city.owner !== owner || !isSpeedStronghold(city)) return total;
+    return total + getStrongholdBonusPercent(city);
+  }, 0);
+}
+
+function getStrongholdMarchSpeedMultiplier(owner = "player") {
+  return 1 + getControlledStrongholdMarchSpeedPercent(owner) / 100;
 }
 
 function clampCityLevel(level) {
@@ -6792,7 +6833,7 @@ function travelTime(source, target, owner, pathLength = null, troopCount = 1, ki
   const distance = Number.isFinite(pathLength) && pathLength > 0
     ? pathLength
     : Math.hypot(source.x - target.x, source.y - target.y);
-  const speed = owner === "player" ? skillMultiplier("rusher") : 1;
+  const speed = owner === "player" ? skillMultiplier("rusher") * getStrongholdMarchSpeedMultiplier(owner) : 1;
   const kindMultiplier = ARMY_TRAVEL_KIND_MULTIPLIERS[kind] || ARMY_TRAVEL_KIND_MULTIPLIERS.attack;
   const troopMultiplier = getTroopTravelMultiplier(troopCount);
   return clamp(
@@ -8246,6 +8287,14 @@ function showCityInfoModal(cityId) {
   const stats = getCityStats(city);
   if (stronghold) {
     const strongholdBonusLabel = `+${formatNumber(getStrongholdBonusPercent(city))}% ${getStrongholdProductionLabel(city)}`;
+    const effectTargetLabel = isSpeedStronghold(city)
+      ? "March time"
+      : isTrainingStronghold(city)
+        ? "Troop production"
+        : "Gold production";
+    const effectHelp = isSpeedStronghold(city)
+      ? "reduces travel time, not attack power"
+      : "boosts owned towns while held";
     modalTitle.textContent = `${city.name} - Stronghold`;
     modalBody.innerHTML = `
       <div class="city-stat-panel modal-city-stats stronghold-stat-panel">
@@ -8256,7 +8305,7 @@ function showCityInfoModal(cityId) {
         <div class="stat-chip"><span>Defense level</span><strong>${formatNumber(stats.level)}</strong><small>matches a level ${formatNumber(stats.level)} city</small></div>
         <div class="stat-chip"><span>City walls</span><strong>${formatNumber(stats.cityWalls)}</strong></div>
         <div class="stat-chip"><span>Garrison limit</span><strong>Unlimited</strong><small>station as many troops as you can send</small></div>
-        <div class="stat-chip"><span>Own production</span><strong>0/h</strong><small>Strongholds boost towns instead</small></div>
+        <div class="stat-chip"><span>Effect target</span><strong>${effectTargetLabel}</strong><small>${effectHelp}</small></div>
       </div>
     `;
     if (!modal.open) modal.showModal();
