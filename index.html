@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Crownlands - Medieval Island Conquest</title>
-  <link rel="stylesheet" href="styles.css?v=20260622-harvest-troops" />
+  <link rel="stylesheet" href="styles.css?v=20260622-incoming-attacks" />
   <link rel="icon" href="data:," />
   <link rel="manifest" href="manifest.webmanifest" />
   <meta name="theme-color" content="#0c1018" />
@@ -80,6 +80,11 @@
 
       <nav class="bottom-nav" aria-label="Game menu">
         <button id="logBtn" class="nav-btn" type="button"><span>&#128220;</span>Reports</button>
+        <button id="incomingAttackBtn" class="nav-btn incoming-attack-btn" type="button" aria-label="Incoming attacks" hidden>
+          <span aria-hidden="true">&#9876;</span>
+          <strong id="incomingAttackCount">0</strong>
+          <small id="incomingAttackTime">Incoming</small>
+        </button>
       </nav>
 
       <section id="profileScreen" class="profile-screen" aria-hidden="true" aria-label="Kingdom profile">
@@ -170,6 +175,6 @@
   <script src="world-config.js"></script>
   <script src="firebase-config.js"></script>
   <script src="firebaseClient.js?v=20260622-cross-island-routing"></script>
-  <script src="game.js?v=20260622-harvest-land-only"></script>
+  <script src="game.js?v=20260622-incoming-attacks"></script>
 </body>
 </html>

@@ -1684,6 +1684,8 @@ let onlineCitySyncTimer = 0;
 let onlineCitySyncInFlight = false;
 let onlineCitySyncQueued = false;
 let onlineArmies = [];
+let onlineArmiesByIsland = new Map();
+let onlineArmyUnsubscribes = [];
 let onlinePresence = [];
 let onlinePresenceTimer = 0;
 let onlinePresenceInFlight = false;
@@ -1783,6 +1785,9 @@ const modalTitle = document.getElementById("modalTitle");
 const modalBody = document.getElementById("modalBody");
 const closeModalBtn = document.getElementById("closeModalBtn");
 const logBtn = document.getElementById("logBtn");
+const incomingAttackBtn = document.getElementById("incomingAttackBtn");
+const incomingAttackCount = document.getElementById("incomingAttackCount");
+const incomingAttackTime = document.getElementById("incomingAttackTime");
 const helpBtn = document.getElementById("helpBtn");
 
 function getRegionById(regionId) {
@@ -4519,7 +4524,7 @@ async function switchOnlineIsland(regionId) {
   await flushOnlineSave(true);
   if (typeof onlineIslandUnsubscribe === "function") onlineIslandUnsubscribe();
   onlineIslandUnsubscribe = null;
-  onlineArmies = [];
+  clearOnlineArmyWatchers();
   onlinePresence = [];
   onlineCitiesLoaded = false;
   onlineWorldConnected = false;
@@ -4699,7 +4704,7 @@ function isOnlineWorldActive() {
 function disconnectOnlineWorld() {
   if (typeof onlineIslandUnsubscribe === "function") onlineIslandUnsubscribe();
   onlineIslandUnsubscribe = null;
-  onlineArmies = [];
+  clearOnlineArmyWatchers();
   onlinePresence = [];
   onlinePresenceTimer = 0;
   onlinePresenceInFlight = false;
@@ -4840,7 +4845,7 @@ async function connectOnlineIsland(regionId, { claimHome = false, homeRegionId =
 
     if (onlineIslandUnsubscribe) onlineIslandUnsubscribe();
     onlineIslandUnsubscribe = null;
-    onlineArmies = [];
+    clearOnlineArmyWatchers();
     onlinePresence = [];
     state.attacks = state.attacks.filter(attack => getKnownCityId(attack.fromId) && getKnownCityId(attack.toId));
     let initialCitiesReady = false;
@@ -4859,6 +4864,7 @@ async function connectOnlineIsland(regionId, { claimHome = false, homeRegionId =
       };
     }), 12000, `${getRegionLabel(targetRegionId)} city sync did not start. Check Firestore rules for islands/${islandId}/cities.`);
     onlineStatusDetail.textContent = `Opening ${getRegionLabel(targetRegionId)}...`;
+    subscribeOnlineArmyWatchers(islandId);
     onlineIslandUnsubscribe = api.subscribeIsland(islandId, {
       onCities: onlineCities => {
         const firstCitiesSnapshot = !onlineCitiesLoaded;
@@ -4878,9 +4884,10 @@ async function connectOnlineIsland(regionId, { claimHome = false, homeRegionId =
         onlineFreshClaimCityId = "";
       },
       onArmies: armies => {
-        applyOnlineArmies(armies);
+        applyOnlineArmies(armies, islandId);
         renderPaths();
         renderArmies();
+        updateIncomingAttackUi();
       },
       onPresence: presence => {
         applyOnlinePresence(presence);
@@ -5335,6 +5342,49 @@ function normalizeOnlineArmyMovement(raw) {
   };
 }
 
+function rebuildOnlineArmies() {
+  const seen = new Set();
+  onlineArmies = Array.from(onlineArmiesByIsland.values())
+    .flat()
+    .filter(army => {
+      const key = String(army?.id || army?.onlineId || "");
+      if (!key) return false;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+}
+
+function clearOnlineArmyWatchers() {
+  onlineArmyUnsubscribes.forEach(unsubscribe => {
+    if (typeof unsubscribe === "function") unsubscribe();
+  });
+  onlineArmyUnsubscribes = [];
+  onlineArmiesByIsland = new Map();
+  onlineArmies = [];
+}
+
+function subscribeOnlineArmyWatchers(activeIslandId) {
+  clearOnlineArmyWatchers();
+  const api = getOnlineApi();
+  if (!api?.subscribeIsland || !isOnlineWorldActive()) return;
+  const activeId = String(activeIslandId || getActiveOnlineIslandId());
+  const islandIds = [...new Set(getRegionIds().map(getOnlineIslandId).filter(Boolean))]
+    .filter(islandId => islandId !== activeId);
+
+  islandIds.forEach(islandId => {
+    const unsubscribe = api.subscribeIsland(islandId, {
+      onArmies: armies => {
+        applyOnlineArmies(armies, islandId);
+        renderPaths();
+        renderArmies();
+        updateIncomingAttackUi();
+      },
+    });
+    if (typeof unsubscribe === "function") onlineArmyUnsubscribes.push(unsubscribe);
+  });
+}
+
 function isOnlineArmyVisible(army) {
   if (!army || army.status !== "active") return false;
   if (!army.fromId || !army.toId) return false;
@@ -5376,14 +5426,17 @@ function adoptOwnOnlineArmies() {
   }
 }
 
-function applyOnlineArmies(rawArmies) {
+function applyOnlineArmies(rawArmies, islandId = getActiveOnlineIslandId()) {
+  const normalizedIslandId = String(islandId || getActiveOnlineIslandId());
   if (!Array.isArray(rawArmies)) {
-    onlineArmies = [];
+    onlineArmiesByIsland.delete(normalizedIslandId);
+    rebuildOnlineArmies();
     return;
   }
-  onlineArmies = rawArmies
+  onlineArmiesByIsland.set(normalizedIslandId, rawArmies
     .map(normalizeOnlineArmyMovement)
-    .filter(isOnlineArmyVisible);
+    .filter(isOnlineArmyVisible));
+  rebuildOnlineArmies();
   adoptOwnOnlineArmies();
 }
 
@@ -5403,6 +5456,33 @@ function getRenderableArmies() {
       remaining: Math.max(0, getOnlineArmyRemainingSeconds(army)),
     }));
   return [...localArmies, ...remoteArmies];
+}
+
+function getIncomingAttacks() {
+  if (!state) return [];
+  const seen = new Set();
+  return getRenderableArmies()
+    .map(attack => {
+      if (!attack || attack.kind !== "attack" || attack.owner === "player") return null;
+      const target = cityById(attack.toId);
+      if (!target || target.owner !== "player") return null;
+      const remaining = Math.max(0, Number(attack.remaining) || 0);
+      if (remaining <= 0) return null;
+      const key = String(attack.onlineId || attack.id || `${attack.fromId}:${attack.toId}:${attack.launchedAtMs || ""}`);
+      if (seen.has(key)) return null;
+      seen.add(key);
+      const source = cityById(attack.fromId);
+      return {
+        ...attack,
+        key,
+        target,
+        source,
+        remaining,
+        attackerName: attack.ownerName || getBattleReportOwnerName(source, attack.owner),
+      };
+    })
+    .filter(Boolean)
+    .sort((a, b) => a.remaining - b.remaining);
 }
 
 function hardReset() {
@@ -6801,6 +6881,7 @@ function renderHud() {
   applyFlagToElement(hudKingdomFlag, state.flag);
   cityText.textContent = `${playerCities().length}`;
   updateIslandSwitcherUi();
+  updateIncomingAttackUi();
 
   if (!statusText) return;
   if (state.gameOver === "victory") {
@@ -8439,6 +8520,109 @@ function getSkillCost(skill) {
   return Math.floor(450 * Math.pow(level + 1, 1.85));
 }
 
+function updateIncomingAttackUi() {
+  if (!incomingAttackBtn) return;
+  const incoming = getIncomingAttacks();
+  incomingAttackBtn.hidden = incoming.length === 0;
+  incomingAttackBtn.classList.toggle("active", incoming.length > 0);
+  if (!incoming.length) {
+    if (incomingAttackCount) incomingAttackCount.textContent = "0";
+    if (incomingAttackTime) incomingAttackTime.textContent = "Incoming";
+    if (modal.open && modal.classList.contains("incoming-attack-modal")) modal.close();
+    return;
+  }
+
+  if (incomingAttackCount) incomingAttackCount.textContent = formatNumber(incoming.length);
+  if (incomingAttackTime) incomingAttackTime.textContent = formatDuration(incoming[0].remaining);
+  incomingAttackBtn.title = `${formatNumber(incoming.length)} incoming ${incoming.length === 1 ? "attack" : "attacks"} - soonest ${formatDuration(incoming[0].remaining)}`;
+  incomingAttackBtn.setAttribute("aria-label", incomingAttackBtn.title);
+
+  if (modal.open && modal.classList.contains("incoming-attack-modal")) {
+    renderIncomingAttacksModalContent(incoming);
+  }
+}
+
+function showIncomingAttacksModal() {
+  const incoming = getIncomingAttacks();
+  if (!incoming.length) {
+    showToast("No incoming attacks right now.");
+    updateIncomingAttackUi();
+    return;
+  }
+  modal.classList.add("incoming-attack-modal");
+  renderIncomingAttacksModalContent(incoming);
+  if (!modal.open) modal.showModal();
+}
+
+function renderIncomingAttacksModalContent(incoming = getIncomingAttacks()) {
+  if (!incoming.length) {
+    modalTitle.textContent = "Incoming Attacks";
+    modalBody.innerHTML = `<div class="incoming-attack-empty">No active incoming attacks.</div>`;
+    return;
+  }
+
+  modalTitle.textContent = incoming.length === 1 ? "Incoming Attack" : "Incoming Attacks";
+  modalBody.innerHTML = `
+    <div class="incoming-attack-panel">
+      <div class="incoming-attack-summary">
+        <strong>${formatNumber(incoming.length)}</strong>
+        <span>${incoming.length === 1 ? "army is" : "armies are"} marching on your cities.</span>
+        <small>Soonest arrival: ${formatDuration(incoming[0].remaining)}</small>
+      </div>
+      <div class="incoming-attack-list">
+        ${incoming.map(renderIncomingAttackCard).join("")}
+      </div>
+    </div>
+  `;
+
+  modalBody.querySelectorAll("[data-incoming-city]").forEach(button => {
+    button.addEventListener("click", () => focusIncomingAttackCity(button.dataset.incomingCity));
+  });
+}
+
+function renderIncomingAttackCard(attack) {
+  const city = attack.target;
+  const sourceName = attack.source?.name || "Unknown city";
+  const regionName = getRegionLabel(getCityRegionId(city));
+  const defense = getCityStats(city).totalDefense;
+  return `
+    <article class="incoming-attack-card">
+      <div class="incoming-attack-badge">
+        <strong>${formatDuration(attack.remaining)}</strong>
+        <small>arrival</small>
+      </div>
+      <div class="incoming-attack-city">
+        <span>${escapeHtml(regionName)}</span>
+        <strong>${escapeHtml(city.name)}</strong>
+        <small>Lv ${formatNumber(city.level)} - ${formatNumber(city.troops)} troops - ${formatNumber(defense)} defense</small>
+      </div>
+      <div class="incoming-attack-force">
+        <span>Attacker</span>
+        <strong>${escapeHtml(attack.attackerName || "Enemy")}</strong>
+        <small>${formatNumber(attack.troops)} troops from ${escapeHtml(sourceName)}</small>
+      </div>
+      <button class="incoming-attack-locate" data-incoming-city="${escapeHtml(city.id)}" type="button" aria-label="Go to ${escapeHtml(city.name)}">&#8982;</button>
+    </article>
+  `;
+}
+
+async function focusIncomingAttackCity(cityId) {
+  const city = cityById(cityId);
+  if (!city) {
+    showToast("That city is no longer available.");
+    return;
+  }
+  const regionId = getCityRegionId(city);
+  if (modal.open) modal.close();
+  if (regionId !== getActiveMapRegionId()) {
+    await switchOnlineIsland(regionId);
+  }
+  requestAnimationFrame(() => {
+    centerOnCity(city.id);
+    showToast(`Viewing ${city.name}`);
+  });
+}
+
 function showLogModal() {
   if (!state) return;
   state.battleReports = normalizeBattleReports(state.battleReports);
@@ -9275,6 +9459,7 @@ document.addEventListener("keydown", event => {
   else closeProfileScreen();
 });
 logBtn.addEventListener("click", showLogModal);
+if (incomingAttackBtn) incomingAttackBtn.addEventListener("click", showIncomingAttacksModal);
 if (cityListBtn) cityListBtn.addEventListener("click", showCityListModal);
 if (helpBtn) helpBtn.addEventListener("click", showHelpModal);
 if (mainCityReturnBtn) mainCityReturnBtn.addEventListener("click", returnToMainCity);
@@ -9286,6 +9471,7 @@ modal.addEventListener("close", () => {
   modal.classList.remove("offline-reward-modal");
   modal.classList.remove("city-list-modal");
   modal.classList.remove("island-switcher-modal");
+  modal.classList.remove("incoming-attack-modal");
   if (!troopSliderActive) return;
   troopSliderActive = false;
   cancelSendMode();

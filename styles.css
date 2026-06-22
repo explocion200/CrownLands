@@ -1048,15 +1048,41 @@ input {
   left: 0; right: 0; bottom: 0;
   height: calc(74px + env(safe-area-inset-bottom));
   padding: .42rem .58rem calc(.42rem + env(safe-area-inset-bottom));
-  display: grid;
-  grid-template-columns: 1fr;
+  display: flex;
   gap: .42rem;
   background: linear-gradient(180deg, rgba(25,22,29,.98), #0f0d14);
   border-top: 1px solid rgba(255,255,255,.14);
 }
-.nav-btn { border-radius: 16px; color: var(--muted); background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.11); display: grid; place-items: center; align-content: center; gap: .06rem; font-size: .72rem; font-weight: 900; }
+.nav-btn { flex: 1 1 0; min-width: 0; border-radius: 16px; color: var(--muted); background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.11); display: grid; place-items: center; align-content: center; gap: .06rem; font-size: .72rem; font-weight: 900; }
 .nav-btn span { display: block; color: var(--ink); font-size: 1rem; }
+.nav-btn strong,
+.nav-btn small { display: block; line-height: 1; }
+.nav-btn small { overflow: hidden; max-width: 100%; text-overflow: ellipsis; white-space: nowrap; font-size: .58rem; }
 .nav-btn.active { color: white; background: linear-gradient(#2169bd, #15376c); border-color: rgba(158,213,255,.8); }
+.incoming-attack-btn {
+  color: #ffe9df;
+  background: linear-gradient(#a81722, #5f1019);
+  border-color: rgba(255, 181, 141, .68);
+  box-shadow: 0 0 0 0 rgba(255, 82, 58, .46), inset 0 -5px 0 rgba(0,0,0,.24);
+}
+.incoming-attack-btn[hidden] { display: none; }
+.incoming-attack-btn.active {
+  animation: incomingAttackPulse 1.05s ease-in-out infinite;
+}
+.incoming-attack-btn span {
+  color: #fff2d4;
+}
+.incoming-attack-btn strong {
+  color: #fff;
+  font-size: .82rem;
+}
+.incoming-attack-btn small {
+  color: #ffd2bf;
+}
+@keyframes incomingAttackPulse {
+  0%, 100% { filter: brightness(1); box-shadow: 0 0 0 0 rgba(255, 82, 58, .44), inset 0 -5px 0 rgba(0,0,0,.24); }
+  50% { filter: brightness(1.28); box-shadow: 0 0 0 7px rgba(255, 82, 58, .16), 0 0 24px rgba(255, 78, 58, .48), inset 0 -5px 0 rgba(0,0,0,.2); }
+}
 
 .modal { width: min(460px, calc(100% - 1.3rem)); padding: 0; border: 0; color: var(--ink); background: transparent; }
 .modal::backdrop { background: rgba(0,0,0,.68); }
@@ -1697,6 +1723,134 @@ input {
   font-size: .78rem;
 }
 
+.incoming-attack-modal.modal {
+  width: min(900px, calc(100vw - 1.4rem));
+}
+.incoming-attack-modal .modal-card {
+  background: linear-gradient(180deg, #3b1218, #151018 68%, #07131f);
+  border-color: rgba(255, 112, 86, .62);
+  box-shadow: 0 28px 80px rgba(0,0,0,.58), 0 0 36px rgba(255, 58, 42, .16);
+}
+.incoming-attack-panel {
+  display: grid;
+  gap: .7rem;
+}
+.incoming-attack-summary {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: .1rem .65rem;
+  align-items: center;
+  padding: .72rem .82rem;
+  border-radius: 14px;
+  background: linear-gradient(90deg, rgba(185, 31, 37, .34), rgba(255,255,255,.06));
+  border: 1px solid rgba(255, 155, 121, .26);
+}
+.incoming-attack-summary strong {
+  grid-row: span 2;
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  border-radius: 13px;
+  color: #fff;
+  background: linear-gradient(#f24b38, #8b1522);
+  box-shadow: inset 0 -5px 0 rgba(0,0,0,.26);
+}
+.incoming-attack-summary span {
+  color: #fff2d4;
+  font-weight: 950;
+}
+.incoming-attack-summary small {
+  color: #ffc6b3;
+  font-weight: 850;
+}
+.incoming-attack-list {
+  display: grid;
+  gap: .52rem;
+}
+.incoming-attack-card {
+  display: grid;
+  grid-template-columns: 94px minmax(0, 1.25fr) minmax(0, 1fr) 48px;
+  gap: .55rem;
+  align-items: stretch;
+  padding: .58rem;
+  border-radius: 14px;
+  background: rgba(255,255,255,.065);
+  border: 1px solid rgba(255, 155, 121, .2);
+}
+.incoming-attack-badge,
+.incoming-attack-city,
+.incoming-attack-force {
+  min-width: 0;
+  padding: .5rem .58rem;
+  border-radius: 11px;
+  background: rgba(0,0,0,.22);
+}
+.incoming-attack-badge {
+  display: grid;
+  place-items: center;
+  text-align: center;
+  background: linear-gradient(#f6b252, #9d2b24);
+}
+.incoming-attack-badge strong {
+  color: #231005;
+  font-size: .9rem;
+  font-weight: 1000;
+}
+.incoming-attack-badge small {
+  color: rgba(35, 16, 5, .74);
+  font-size: .58rem;
+  font-weight: 1000;
+  text-transform: uppercase;
+}
+.incoming-attack-city span,
+.incoming-attack-force span {
+  display: block;
+  color: #ffc0aa;
+  font-size: .62rem;
+  font-weight: 1000;
+  text-transform: uppercase;
+}
+.incoming-attack-city strong,
+.incoming-attack-force strong {
+  display: block;
+  overflow: hidden;
+  color: #fff4c8;
+  font-size: .92rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.incoming-attack-city small,
+.incoming-attack-force small {
+  display: block;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: .66rem;
+  font-weight: 850;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.incoming-attack-locate {
+  width: 48px;
+  min-height: 48px;
+  align-self: stretch;
+  border-radius: 12px;
+  color: #1b0e05;
+  background: linear-gradient(#fff1a5, #f2a83c);
+  border: 1px solid rgba(255,255,255,.38);
+  box-shadow: inset 0 -5px 0 rgba(0,0,0,.18);
+  font-size: 1.35rem;
+  font-weight: 1000;
+}
+.incoming-attack-empty {
+  padding: .9rem;
+  border-radius: 14px;
+  color: var(--muted);
+  background: rgba(255,255,255,.07);
+  border: 1px solid var(--line);
+  text-align: center;
+}
+
 @media (max-width: 760px) {
   .battle-report-modal.modal {
     width: min(560px, calc(100vw - 1rem));
@@ -1725,6 +1879,19 @@ input {
   }
   .battle-report-detail-grid {
     grid-template-columns: 1fr;
+  }
+  .incoming-attack-modal.modal {
+    width: min(560px, calc(100vw - 1rem));
+  }
+  .incoming-attack-card {
+    grid-template-columns: 78px minmax(0, 1fr) 46px;
+  }
+  .incoming-attack-force {
+    grid-column: 2 / 3;
+  }
+  .incoming-attack-locate {
+    grid-column: 3;
+    grid-row: 1 / span 2;
   }
 }
 
@@ -2220,6 +2387,10 @@ input {
   border-radius: 20px;
   box-shadow: 0 12px 35px rgba(0,0,0,.36);
 }
+.bottom-nav:has(.incoming-attack-btn:not([hidden])) {
+  width: 260px;
+  min-width: 260px;
+}
 .nav-btn {
   border-radius: 14px;
   grid-auto-flow: column;
@@ -2318,6 +2489,10 @@ input {
     height: 52px;
     padding: .32rem;
   }
+  .bottom-nav:has(.incoming-attack-btn:not([hidden])) {
+    width: 238px;
+    min-width: 238px;
+  }
   .nav-btn {
     font-size: .66rem;
   }
@@ -2334,6 +2509,10 @@ input {
   }
   .bottom-nav {
     width: 190px;
+  }
+  .bottom-nav:has(.incoming-attack-btn:not([hidden])) {
+    width: 282px;
+    min-width: 282px;
   }
   .toast {
     left: calc((100vw - 410px) / 2);
