@@ -281,7 +281,7 @@ const TEST_STARTING_GOLD = 500;
 const ISLAND_CITY_COUNT = WORLD_REGIONS.reduce((total, region) => total + (region.id === "center" ? CENTER_REGION_CITY_COUNT : REGION_CITY_COUNT), 0);
 const SCOUT_REPORT_SECONDS = 120;
 const SCOUT_NEARBY_COST = 1000;
-const SCOUT_NEARBY_RADIUS = 300;
+const SCOUT_NEARBY_RADIUS = 420;
 const BASE_TROOP_ATTACK_POWER = 2;
 const CHARACTER_START_LEVEL = 1;
 const CHARACTER_START_XP = 0;
@@ -3966,6 +3966,7 @@ function isNearbyScoutCandidate(source, city) {
     source &&
     city &&
     city.id !== source.id &&
+    getCityRegionId(city) === getCityRegionId(source) &&
     city.owner !== "player" &&
     !getPendingScoutMission(city.id) &&
     Math.hypot(city.x - source.x, city.y - source.y) <= SCOUT_NEARBY_RADIUS
@@ -3977,8 +3978,9 @@ function getNearbyScoutCandidates(source) {
 }
 
 function getNearbyScoutOptions(source) {
+  const sourceRegionId = getCityRegionId(source);
   return getNearbyScoutCandidates(source)
-    .map(city => ({ city, route: findRoute(source, city) }))
+    .map(city => ({ city, route: findLandRoute(source, city, sourceRegionId) }))
     .filter(option => option.route?.points?.length)
     .sort((a, b) => a.route.length - b.route.length);
 }
@@ -8386,6 +8388,7 @@ function showHelpModal() {
       <li>Neutral expansion has two limits: 30 neutral captures per local day, and neutral captures stop once you own 30 cities.</li>
       <li>After that, expand by attacking player-owned cities.</li>
       <li>Send Troops is single-click after setup: pick a march percent, then tap one destination to launch.</li>
+      <li>Scout Nearby costs ${formatNumber(SCOUT_NEARBY_COST)} gold, covers the current island only, and never routes scouts through portals.</li>
       <li>The top-right fullscreen button expands the game surface and the game disables page text selection while playing.</li>
       <li>City level creates victory points for combat value, while passive gold follows the Million Lords city production curve.</li>
       <li>City defense is level x 3%, plus wall strength and any Guardian skill bonus for your defending troops.</li>
