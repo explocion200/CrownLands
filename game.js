@@ -316,10 +316,10 @@ const FLAG_PATTERNS = [
   { key: "cross", label: "Cross" },
 ];
 const FLAG_SYMBOLS = [
-  { key: "crown", label: "Crown", glyph: "â™›" },
-  { key: "castle", label: "Castle", glyph: "â™œ" },
-  { key: "star", label: "Star", glyph: "âœ¦" },
-  { key: "swords", label: "Swords", glyph: "âš”" },
+  { key: "crown", label: "Crown", glyph: "\u265B" },
+  { key: "castle", label: "Castle", glyph: "\u265C" },
+  { key: "star", label: "Star", glyph: "\u2726" },
+  { key: "swords", label: "Swords", glyph: "\u2694" },
 ];
 
 
@@ -344,11 +344,11 @@ function getCastleAsset(stage) {
 }
 
 const OWNER = {
-  player: { label: "You", css: "player", flag: "â—†" },
-  player2: { label: "Player 2", css: "player2", flag: "â…¡" },
-  player3: { label: "Player 3", css: "player3", flag: "â…¢" },
-  enemy: { label: "Enemy", css: "enemy", flag: "â™œ" },
-  neutral: { label: "Neutral", css: "neutral", flag: "â€¢" },
+  player: { label: "You", css: "player", flag: "\u25C6" },
+  player2: { label: "Player 2", css: "player2", flag: "\u2161" },
+  player3: { label: "Player 3", css: "player3", flag: "\u2162" },
+  enemy: { label: "Enemy", css: "enemy", flag: "\u265C" },
+  neutral: { label: "Neutral", css: "neutral", flag: "\u2022" },
 };
 
 const BASE_CITIES = [
@@ -6063,10 +6063,10 @@ function launchAttack(sourceId, targetId, percent, owner, exactTroops = null) {
 
   if (owner === "player" && kind === "transfer") {
     addLog(`You moved ${formatNumber(send)} troops from ${source.name} to ${target.name}.`);
-    showToast(`Reinforcements moving: ${source.name} â†’ ${target.name}`);
+    showToast(`Reinforcements moving: ${source.name} \u2192 ${target.name}`);
   } else if (owner === "player") {
     addLog(`You sent ${formatNumber(send)} troops from ${source.name} to attack ${target.name}.`);
-    showToast(`Attack moving: ${source.name} â†’ ${target.name}`);
+    showToast(`Attack moving: ${source.name} \u2192 ${target.name}`);
   } else if (target.owner === "player") {
     addLog(`Enemy army is attacking ${target.name} with ${formatNumber(send)} troops.`);
     showToast(`Incoming attack on ${target.name}`);
@@ -6883,12 +6883,12 @@ function renderSelectedCityWheel(city) {
   wheel.innerHTML = `
     <span class="city-wheel-ring" aria-hidden="true"></span>
     <button class="city-wheel-action wheel-level" type="button" aria-label="Level up ${escapeHtml(city.name)}" ${levelDisabled ? "disabled" : ""}>
-      <span class="wheel-icon" aria-hidden="true">â™œâ†‘</span>
+      <span class="wheel-icon" aria-hidden="true">\u265C\u2191</span>
       <span class="wheel-action-name">Level</span>
       <span class="wheel-cost">${city.level >= MAX_CITY_LEVEL ? "MAX" : `${formatNumber(levelCost)}g`}</span>
     </button>
     <button class="city-wheel-action wheel-send" type="button" aria-label="Send troops from ${escapeHtml(city.name)}" ${city.troops < 1 ? "disabled" : ""}>
-      <span class="wheel-icon" aria-hidden="true">âš”</span>
+      <span class="wheel-icon" aria-hidden="true">\u2694</span>
       <span class="wheel-action-name">Send</span>
     </button>
     <button class="city-wheel-action wheel-info" type="button" aria-label="View ${escapeHtml(city.name)} information">
@@ -7154,7 +7154,7 @@ function renderArmies() {
     token.className = `army-token ${(OWNER[attack.owner] || OWNER.enemy).css}`;
     token.style.left = `${mapPoint.x}px`;
     token.style.top = `${mapPoint.y}px`;
-    const armyIcon = attack.kind === "scout" ? "ðŸ”­" : attack.kind === "transfer" ? "ðŸ‘Ÿ" : "âš”";
+    const armyIcon = attack.kind === "scout" ? "\u{1F52D}" : attack.kind === "transfer" ? "\u{1F45F}" : "\u2694";
     token.innerHTML = `<span>${armyIcon}</span><strong>${formatNumber(attack.troops)}</strong><small>${Math.ceil(attack.remaining)}s</small>`;
     if (attack.ownerName) token.title = `${attack.ownerName}: ${attack.kind} to ${to.name}`;
     armyLayer.appendChild(token);
@@ -7207,7 +7207,7 @@ function renderSendConfirmPanel(source, target) {
 
   const isTransfer = target.owner === "player";
   const neutralBlockReason = getNeutralCaptureBlockReason(target, "player");
-  const icon = isTransfer ? "ðŸ‘Ÿ" : "âš”ï¸";
+  const icon = isTransfer ? "\u{1F45F}" : "\u2694";
   const label = isTransfer ? "Move" : "Attack";
   const route = findRoute(source, target);
   const sendAmount = source.troops > 0 ? clamp(Math.floor(source.troops * selectedMarchPercent), 1, source.troops) : 0;
@@ -7229,14 +7229,14 @@ function renderSendConfirmPanel(source, target) {
 
 
   panelTitle.textContent = `${icon} ${label} troops`;
-  panelSubtitle.textContent = `${source.name} â†’ ${target.name}`;
+  panelSubtitle.textContent = `${source.name} \u2192 ${target.name}`;
   selectedInfo.innerHTML = `
     <div class="send-confirm-card">
       <div class="send-icon">${icon}</div>
       <div class="send-main">
-        <strong>${escapeHtml(source.name)} â†’ ${escapeHtml(target.name)}</strong>
-        <span>${formatPercent(selectedMarchPercent)} selected Â· ${formatNumber(sendAmount)} troops</span>
-        <span>${route ? `${Math.ceil(travel)}s travel Â· ${formatNumber(route.length)} distance` : "No valid land route"}</span>
+        <strong>${escapeHtml(source.name)} \u2192 ${escapeHtml(target.name)}</strong>
+        <span>${formatPercent(selectedMarchPercent)} selected \u00B7 ${formatNumber(sendAmount)} troops</span>
+        <span>${route ? `${Math.ceil(travel)}s travel \u00B7 ${formatNumber(route.length)} distance` : "No valid land route"}</span>
       </div>
     </div>
     ${outcomeHtml}
@@ -7503,7 +7503,7 @@ function showCityInfoModal(cityId) {
     return;
   }
   const stats = getCityStats(city);
-  modalTitle.textContent = `${city.name} Â· Level ${city.level}`;
+  modalTitle.textContent = `${city.name} \u00B7 Level ${city.level}`;
   modalBody.innerHTML = `
     <div class="city-stat-panel modal-city-stats">
       <div class="stat-wide"><span>Total defense</span><strong>${formatNumber(stats.totalDefense)}</strong></div>
@@ -7709,7 +7709,7 @@ function showAttackPreview(source, target) {
         <div class="stat-card"><strong>${formatNumber(preview.attackPower)}</strong><small>attack power</small></div>
         <div class="stat-card"><strong>${formatNumber(preview.defensePower)}</strong><small>defense power</small></div>
       </div>
-      <p><strong>${source.name}</strong> â†’ <strong>${target.name}</strong> Â· ${formatPercent(selectedMarchPercent)} march Â· about ${Math.ceil(preview.travel)}s travel.</p>
+      <p><strong>${source.name}</strong> \u2192 <strong>${target.name}</strong> \u00B7 ${formatPercent(selectedMarchPercent)} march \u00B7 about ${Math.ceil(preview.travel)}s travel.</p>
       <p>Route distance: <strong>${formatNumber(preview.pathLength)}</strong> map units. Troops avoid water, lakes, and mountains. Swamp and forests are walkable.</p>
       <p>${preview.success
         ? `Expected capture with about <strong>${formatNumber(preview.survivors)}</strong> surviving troops.`
@@ -7935,7 +7935,7 @@ function legacySkillRow(label, key, description, cost) {
   const disabled = state.gold < cost ? "disabled" : "";
   return `
     <div class="skill-row">
-      <div><strong>${label} Lv ${level} Â· x${multiplier}</strong><br><small>${description}</small></div>
+      <div><strong>${label} Lv ${level} \u00B7 x${multiplier}</strong><br><small>${description}</small></div>
       <button data-skill="${key}" ${disabled}>${formatNumber(cost)}</button>
     </div>
   `;
@@ -8209,7 +8209,7 @@ function button(label, onClick, disabled = false, extraClass = "") {
 }
 
 function addLog(message) {
-  const stamped = `${formatClock(state.gameSeconds)} Â· ${message}`;
+  const stamped = `${formatClock(state.gameSeconds)} \u00B7 ${message}`;
   state.log.push(stamped);
   if (state.log.length > 80) state.log = state.log.slice(-80);
 }

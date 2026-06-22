@@ -37,13 +37,13 @@
             <span id="hudKingdomFlag" class="kingdom-flag kingdom-flag-small" aria-hidden="true"><span class="flag-symbol"></span></span>
             <span id="characterLevelBadge" class="character-level-badge">Lv 1</span>
           </button>
-          <div class="profile-gold"><span>🪙</span><strong id="goldText">0</strong></div>
+          <div class="profile-gold"><span>&#129689;</span><strong id="goldText">0</strong></div>
           <span id="lordNameText" class="sr-only">Ruler</span>
           <span id="statusText" class="sr-only">Live conquest</span>
         </div>
         <div class="resource-bar">
           <button id="islandSwitchBtn" class="resource-pill island-switch-btn" type="button" aria-label="Switch island" hidden><span id="islandSwitchLabel">Westmark</span></button>
-          <button id="cityListBtn" class="resource-pill city-list-btn" type="button" aria-label="Open city list"><span>🏰</span><strong id="cityText">1</strong></button>
+          <button id="cityListBtn" class="resource-pill city-list-btn" type="button" aria-label="Open city list"><span>&#127984;</span><strong id="cityText">1</strong></button>
           <button id="fullscreenBtn" class="hud-btn fullscreen-btn" type="button" aria-label="Enter fullscreen"><span aria-hidden="true">&#x26F6;</span></button>
         </div>
       </header>
@@ -71,14 +71,14 @@
             <strong id="panelTitle">Select a blue city</strong>
             <small id="panelSubtitle">Tap a blue city, then tap any target.</small>
           </div>
-          <button id="clearSelectBtn" class="clear-btn" type="button" aria-label="Close panel">×</button>
+          <button id="clearSelectBtn" class="clear-btn" type="button" aria-label="Close panel">&times;</button>
         </div>
         <div id="selectedInfo" class="selected-info"></div>
         <div id="actionButtons" class="action-buttons"></div>
       </section>
 
       <nav class="bottom-nav" aria-label="Game menu">
-        <button id="logBtn" class="nav-btn" type="button"><span>📜</span>Reports</button>
+        <button id="logBtn" class="nav-btn" type="button"><span>&#128220;</span>Reports</button>
       </nav>
 
       <section id="profileScreen" class="profile-screen" aria-hidden="true" aria-label="Kingdom profile">
@@ -160,7 +160,7 @@
 
   <dialog id="modal" class="modal">
     <article class="modal-card">
-      <button id="closeModalBtn" class="modal-close" type="button" aria-label="Close">×</button>
+      <button id="closeModalBtn" class="modal-close" type="button" aria-label="Close">&times;</button>
       <h2 id="modalTitle">Info</h2>
       <div id="modalBody"></div>
     </article>
@@ -169,6 +169,6 @@
   <script src="world-config.js"></script>
   <script src="firebase-config.js"></script>
   <script src="firebaseClient.js?v=20260622-cross-island-routing"></script>
-  <script src="game.js?v=20260622-home-avoid-ui"></script>
+  <script src="game.js?v=20260622-flag-icons"></script>
 </body>
 </html>
