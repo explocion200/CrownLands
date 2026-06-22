@@ -329,6 +329,8 @@ const ARMY_TRAVEL_MAX_SECONDS = 1800;
 const ARMY_TRAVEL_KIND_MULTIPLIERS = { scout: 0.35, transfer: 0.95, attack: 1 };
 const ARMY_TRAVEL_TROOP_BAND_LIMITS = [10, 100, 1000, 10000, 100000, 1000000, 10000000, 100000000];
 const ARMY_TRAVEL_TROOP_BAND_MULTIPLIERS = [1, 1.18, 1.38, 1.62, 1.9, 2.24, 2.62, 3.06, 3.5];
+const ROUTE_CITY_CLEARANCE = 46;
+const ROUTE_STRONGHOLD_CLEARANCE = 88;
 const CHARACTER_START_LEVEL = 1;
 const CHARACTER_START_XP = 0;
 const LEVEL_UP_TROOP_REWARD_BASE = 50;
@@ -6005,9 +6007,44 @@ function isWalkableCell(gx, gy) {
   return isWalkablePoint(gx * GRID_SIZE + GRID_SIZE / 2, gy * GRID_SIZE + GRID_SIZE / 2, 0);
 }
 
-function isWalkableCellForRegion(gx, gy, regionId) {
+function createRouteContext(regionId, source = null, target = null) {
+  const normalizedRegionId = normalizeRegionId(regionId);
+  const ignoredIds = new Set([source?.id, target?.id].filter(Boolean));
+  const obstacles = state?.cities
+    ?.filter(city => getCityRegionId(city) === normalizedRegionId && !ignoredIds.has(city.id))
+    .map(city => ({
+      id: city.id,
+      x: city.x,
+      y: city.y,
+      radius: isStronghold(city) ? ROUTE_STRONGHOLD_CLEARANCE : ROUTE_CITY_CLEARANCE,
+    })) || [];
+  return {
+    regionId: normalizedRegionId,
+    ignoredIds,
+    obstacles,
+    cacheKey: `cityblock:${normalizedRegionId}:${[...ignoredIds].sort().join(",")}`,
+  };
+}
+
+function isRouteCityBlockedPoint(x, y, context, padding = 0) {
+  if (!context?.obstacles?.length) return false;
+  for (const obstacle of context.obstacles) {
+    const radius = obstacle.radius + padding;
+    const dx = obstacle.x - x;
+    const dy = obstacle.y - y;
+    if (dx * dx + dy * dy < radius * radius) return true;
+  }
+  return false;
+}
+
+function isRouteWalkablePointInRegion(x, y, regionId, context = null, padding = 0) {
+  return isRegionWalkablePoint(x, y, regionId, padding)
+    && !isRouteCityBlockedPoint(x, y, context, padding);
+}
+
+function isWalkableCellForRegion(gx, gy, regionId, context = null) {
   if (gx < 0 || gy < 0 || gx >= GRID_COLS || gy >= GRID_ROWS) return false;
-  return isRegionWalkablePoint(gx * GRID_SIZE + GRID_SIZE / 2, gy * GRID_SIZE + GRID_SIZE / 2, regionId, 0);
+  return isRouteWalkablePointInRegion(gx * GRID_SIZE + GRID_SIZE / 2, gy * GRID_SIZE + GRID_SIZE / 2, regionId, context, 0);
 }
 
 function worldToGrid(x, y) {
@@ -6038,9 +6075,9 @@ function nearestWalkableCell(x, y) {
   return null;
 }
 
-function nearestWalkableCellInRegion(x, y, regionId) {
+function nearestWalkableCellInRegion(x, y, regionId, context = null) {
   const start = worldToGrid(x, y);
-  if (isWalkableCellForRegion(start.gx, start.gy, regionId)) return start;
+  if (isWalkableCellForRegion(start.gx, start.gy, regionId, context)) return start;
 
   for (let radius = 1; radius <= 12; radius++) {
     for (let dy = -radius; dy <= radius; dy++) {
@@ -6048,7 +6085,7 @@ function nearestWalkableCellInRegion(x, y, regionId) {
         if (Math.abs(dx) !== radius && Math.abs(dy) !== radius) continue;
         const gx = start.gx + dx;
         const gy = start.gy + dy;
-        if (isWalkableCellForRegion(gx, gy, regionId)) return { gx, gy };
+        if (isWalkableCellForRegion(gx, gy, regionId, context)) return { gx, gy };
       }
     }
   }
@@ -6067,14 +6104,14 @@ function linePassable(a, b) {
   return true;
 }
 
-function linePassableInRegion(a, b, regionId) {
+function linePassableInRegion(a, b, regionId, context = null) {
   const distance = Math.hypot(a.x - b.x, a.y - b.y);
   const steps = Math.max(2, Math.ceil(distance / 22));
   for (let i = 0; i <= steps; i++) {
     const t = i / steps;
     const x = a.x + (b.x - a.x) * t;
     const y = a.y + (b.y - a.y) * t;
-    if (!isRegionWalkablePoint(x, y, regionId, 6)) return false;
+    if (!isRouteWalkablePointInRegion(x, y, regionId, context, 6)) return false;
   }
   return true;
 }
@@ -6090,14 +6127,14 @@ function gridEdgePassable(cx, cy, nx, ny) {
   return passable;
 }
 
-function gridEdgePassableInRegion(cx, cy, nx, ny, regionId) {
+function gridEdgePassableInRegion(cx, cy, nx, ny, regionId, context = null) {
   const currentIndex = cy * GRID_COLS + cx;
   const nextIndex = ny * GRID_COLS + nx;
   const baseKey = currentIndex < nextIndex ? `${currentIndex}|${nextIndex}` : `${nextIndex}|${currentIndex}`;
-  const key = `${normalizeRegionId(regionId)}:${baseKey}`;
+  const key = `${normalizeRegionId(regionId)}:${context?.cacheKey || "terrain"}:${baseKey}`;
   if (routeEdgePassableCache.has(key)) return routeEdgePassableCache.get(key);
   if (routeEdgePassableCache.size > 400000) routeEdgePassableCache.clear();
-  const passable = linePassableInRegion(gridToWorld(cx, cy), gridToWorld(nx, ny), regionId);
+  const passable = linePassableInRegion(gridToWorld(cx, cy), gridToWorld(nx, ny), regionId, context);
   routeEdgePassableCache.set(key, passable);
   return passable;
 }
@@ -6134,8 +6171,8 @@ function findRoute(source, target) {
 function findPortalRoute(source, target, sourceRegionId = getCityRegionId(source), targetRegionId = getCityRegionId(target)) {
   const normalizedSourceRegionId = normalizeRegionId(sourceRegionId);
   const normalizedTargetRegionId = normalizeRegionId(targetRegionId);
-  const cacheKey = `portal:${normalizedSourceRegionId}:${normalizedTargetRegionId}:${getRoutePointId(source, "source")}|${getRoutePointId(target, "target")}`;
-  const reverseKey = `portal:${normalizedTargetRegionId}:${normalizedSourceRegionId}:${getRoutePointId(target, "target")}|${getRoutePointId(source, "source")}`;
+  const cacheKey = `portal-cityblock-v1:${normalizedSourceRegionId}:${normalizedTargetRegionId}:${getRoutePointId(source, "source")}|${getRoutePointId(target, "target")}`;
+  const reverseKey = `portal-cityblock-v1:${normalizedTargetRegionId}:${normalizedSourceRegionId}:${getRoutePointId(target, "target")}|${getRoutePointId(source, "source")}`;
   if (routeCache.has(cacheKey)) return cloneRoute(routeCache.get(cacheKey));
   if (routeCache.has(reverseKey)) {
     const reverse = reverseRoute(routeCache.get(reverseKey));
@@ -6185,8 +6222,9 @@ function findPortalRoute(source, target, sourceRegionId = getCityRegionId(source
 
 function findLandRoute(source, target, regionId = getCityRegionId(source)) {
   const normalizedRegionId = normalizeRegionId(regionId);
-  const cacheKey = `land:${normalizedRegionId}:${getRoutePointId(source, "source")}|${getRoutePointId(target, "target")}`;
-  const reverseKey = `land:${normalizedRegionId}:${getRoutePointId(target, "target")}|${getRoutePointId(source, "source")}`;
+  const routeContext = createRouteContext(normalizedRegionId, source, target);
+  const cacheKey = `land-cityblock-v1:${normalizedRegionId}:${getRoutePointId(source, "source")}|${getRoutePointId(target, "target")}`;
+  const reverseKey = `land-cityblock-v1:${normalizedRegionId}:${getRoutePointId(target, "target")}|${getRoutePointId(source, "source")}`;
   if (routeCache.has(cacheKey)) return cloneRoute(routeCache.get(cacheKey));
   if (routeCache.has(reverseKey)) {
     const reverse = reverseRoute(routeCache.get(reverseKey));
@@ -6196,7 +6234,7 @@ function findLandRoute(source, target, regionId = getCityRegionId(source)) {
 
   const startPoint = { x: source.x, y: source.y };
   const endPoint = { x: target.x, y: target.y };
-  if (linePassableInRegion(startPoint, endPoint, normalizedRegionId)) {
+  if (linePassableInRegion(startPoint, endPoint, normalizedRegionId, routeContext)) {
     const direct = {
       points: [startPoint, endPoint],
       segments: [{ regionId: normalizedRegionId, points: [startPoint, endPoint], length: Math.hypot(source.x - target.x, source.y - target.y) }],
@@ -6206,8 +6244,8 @@ function findLandRoute(source, target, regionId = getCityRegionId(source)) {
     return direct;
   }
 
-  const start = nearestWalkableCellInRegion(source.x, source.y, normalizedRegionId);
-  const goal = nearestWalkableCellInRegion(target.x, target.y, normalizedRegionId);
+  const start = nearestWalkableCellInRegion(source.x, source.y, normalizedRegionId, routeContext);
+  const goal = nearestWalkableCellInRegion(target.x, target.y, normalizedRegionId, routeContext);
   if (!start || !goal) return null;
 
   const startIndex = start.gy * GRID_COLS + start.gx;
@@ -6226,7 +6264,7 @@ function findLandRoute(source, target, regionId = getCityRegionId(source)) {
     const current = open.pop();
     if (!current || closed.has(current.index)) continue;
     if (current.index === goalIndex) {
-      const route = buildRouteFromCells(cameFrom, current.index, startPoint, endPoint, normalizedRegionId);
+      const route = buildRouteFromCells(cameFrom, current.index, startPoint, endPoint, normalizedRegionId, routeContext);
       route.segments = [{ regionId: normalizedRegionId, points: route.points.map(point => ({ x: point.x, y: point.y })), length: route.length }];
       routeCache.set(cacheKey, cloneRoute(route));
       return route;
@@ -6240,9 +6278,9 @@ function findLandRoute(source, target, regionId = getCityRegionId(source)) {
     for (const [dx, dy, cost] of dirs) {
       const nx = cx + dx;
       const ny = cy + dy;
-      if (!isWalkableCellForRegion(nx, ny, normalizedRegionId)) continue;
-      if (dx && dy && (!isWalkableCellForRegion(cx + dx, cy, normalizedRegionId) || !isWalkableCellForRegion(cx, cy + dy, normalizedRegionId))) continue;
-      if (!gridEdgePassableInRegion(cx, cy, nx, ny, normalizedRegionId)) continue;
+      if (!isWalkableCellForRegion(nx, ny, normalizedRegionId, routeContext)) continue;
+      if (dx && dy && (!isWalkableCellForRegion(cx + dx, cy, normalizedRegionId, routeContext) || !isWalkableCellForRegion(cx, cy + dy, normalizedRegionId, routeContext))) continue;
+      if (!gridEdgePassableInRegion(cx, cy, nx, ny, normalizedRegionId, routeContext)) continue;
       const nextIndex = ny * GRID_COLS + nx;
       if (closed.has(nextIndex)) continue;
       const tentative = currentG + cost;
@@ -6257,7 +6295,7 @@ function findLandRoute(source, target, regionId = getCityRegionId(source)) {
   return null;
 }
 
-function buildRouteFromCells(cameFrom, currentIndex, startPoint, endPoint, regionId = "") {
+function buildRouteFromCells(cameFrom, currentIndex, startPoint, endPoint, regionId = "", context = null) {
   const cells = [];
   let current = currentIndex;
   cells.push(current);
@@ -6268,11 +6306,11 @@ function buildRouteFromCells(cameFrom, currentIndex, startPoint, endPoint, regio
   cells.reverse();
 
   let points = [startPoint, ...cells.map(index => gridToWorld(index % GRID_COLS, Math.floor(index / GRID_COLS))), endPoint];
-  points = simplifyRoute(points, regionId);
+  points = simplifyRoute(points, regionId, context);
   return { points, length: routeLength(points) };
 }
 
-function simplifyRoute(points, regionId = "") {
+function simplifyRoute(points, regionId = "", context = null) {
   if (points.length <= 2) return points;
   const simplified = [points[0]];
   let anchor = 0;
@@ -6282,7 +6320,7 @@ function simplifyRoute(points, regionId = "") {
     let next = points.length - 1;
     while (next > anchor + 1) {
       const passable = normalizedRegionId
-        ? linePassableInRegion(points[anchor], points[next], normalizedRegionId)
+        ? linePassableInRegion(points[anchor], points[next], normalizedRegionId, context)
         : linePassable(points[anchor], points[next]);
       if (passable) break;
       next--;
@@ -8622,7 +8660,7 @@ function showAttackPreview(source, target) {
         <div class="stat-card"><strong>${formatNumber(preview.defensePower)}</strong><small>defense power</small></div>
       </div>
       <p><strong>${source.name}</strong> \u2192 <strong>${target.name}</strong> \u00B7 ${formatPercent(selectedMarchPercent)} march \u00B7 about ${formatDuration(preview.travel)} travel.</p>
-      <p>Route distance: <strong>${formatNumber(preview.pathLength)}</strong> map units. Troops avoid water, lakes, and mountains. Swamp and forests are walkable.</p>
+      <p>Route distance: <strong>${formatNumber(preview.pathLength)}</strong> map units. Troops avoid water, lakes, mountains, cities, and strongholds. Swamp and forests are walkable.</p>
       <p>${preview.success
         ? `Expected capture with about <strong>${formatNumber(preview.survivors)}</strong> surviving troops.`
         : `Expected failure with about <strong>${formatNumber(preview.defendersLeft)}</strong> defenders left.`}</p>
@@ -8646,7 +8684,7 @@ function showAttackPreview(source, target) {
         <div class="stat-card"><strong>${formatNumber(preview.attackerLosses)}</strong><small>est. attacker losses</small></div>
       </div>
       <p><strong>${escapeHtml(source.name)}</strong> to <strong>${escapeHtml(target.name)}</strong> - ${formatPercent(selectedMarchPercent)} march - about ${formatDuration(preview.travel)} travel.</p>
-      <p>Route distance: <strong>${formatNumber(preview.pathLength)}</strong> map units. Troops avoid water, lakes, and mountains.</p>
+      <p>Route distance: <strong>${formatNumber(preview.pathLength)}</strong> map units. Troops avoid water, lakes, mountains, cities, and strongholds.</p>
       <p>${preview.success
         ? `Expected capture with about <strong>${formatNumber(preview.survivors)}</strong> surviving troops.`
         : `Expected failure with about <strong>${formatNumber(preview.defendersLeft)}</strong> defenders left.`}</p>
@@ -9197,7 +9235,7 @@ function showHelpModal() {
       <li>Use Send Troops, choose 25%, 50%, 80%, or 100%, then tap one destination city to launch immediately.</li>
       <li>Blue destinations receive transfers. Neutral and player-owned destinations receive attacks.</li>
       <li>There are no fixed roads. Active army routes appear only after troops are sent.</li>
-      <li>Armies calculate the shortest land route around lakes and mountains, then resolve when they arrive.</li>
+      <li>Armies calculate the shortest land route around lakes, mountains, cities, and strongholds, then resolve when they arrive.</li>
       <li>All cities start at Level 1 and can upgrade to Level 100.</li>
       <li>The world has five island maps and ${formatNumber(ISLAND_CITY_COUNT)} total city slots.</li>
       <li>The center island keeps its middle clear for a future feature.</li>
