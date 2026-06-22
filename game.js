@@ -320,7 +320,7 @@ const SCOUT_REPORT_SECONDS = 120;
 const SCOUT_NEARBY_COST = 1000;
 const SCOUT_NEARBY_RADIUS = 420;
 const BASE_TROOP_ATTACK_POWER = 2;
-const ARMY_TRAVEL_SECONDS_PER_MAP_UNIT = 0.18;
+const ARMY_TRAVEL_SECONDS_PER_MAP_UNIT = 0.13;
 const ARMY_TRAVEL_MIN_SECONDS = 30;
 const ARMY_TRAVEL_MAX_SECONDS = 1800;
 const ARMY_TRAVEL_KIND_MULTIPLIERS = { scout: 0.75, transfer: 0.95, attack: 1 };
@@ -7990,7 +7990,7 @@ function renderArmies() {
     token.style.left = `${mapPoint.x}px`;
     token.style.top = `${mapPoint.y}px`;
     const armyIcon = attack.kind === "scout" ? "\u{1F52D}" : attack.kind === "transfer" ? "\u{1F45F}" : "\u2694";
-    token.innerHTML = `<span>${armyIcon}</span><strong>${formatNumber(attack.troops)}</strong><small>${Math.ceil(attack.remaining)}s</small>`;
+    token.innerHTML = `<span>${armyIcon}</span><strong>${formatNumber(attack.troops)}</strong><small>${formatDuration(attack.remaining)}</small>`;
     if (attack.ownerName) token.title = `${attack.ownerName}: ${attack.kind} to ${to.name}`;
     armyLayer.appendChild(token);
   }
@@ -9243,13 +9243,19 @@ function formatNumber(value) {
 }
 
 function formatDuration(seconds) {
-  const total = Math.max(0, Math.ceil(Number(seconds) || 0));
-  if (total >= 3600) {
+  const raw = Math.max(0, Number(seconds) || 0);
+  const total = Math.ceil(raw);
+  if (raw >= 3600) {
     const hours = Math.floor(total / 3600);
-    const minutes = Math.ceil((total % 3600) / 60);
+    const minutes = Math.floor((total % 3600) / 60);
     return `${hours}h${minutes > 0 ? ` ${minutes}m` : ""}`;
   }
-  if (total >= 60) return `${Math.ceil(total / 60)}m`;
+  if (raw >= 60) {
+    const underHourTotal = Math.min(total, 3599);
+    const minutes = Math.floor(underHourTotal / 60);
+    const secondsRemainder = underHourTotal % 60;
+    return `${minutes}m ${secondsRemainder}s`;
+  }
   return `${total}s`;
 }
 
