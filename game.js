@@ -258,6 +258,9 @@ const IMAGE_NO_CITY_TERRAIN = normalizeImageTerrainShapes({
 const MAX_CITY_LEVEL = 100;
 const MILLION_LORDS_CITY_COST_BASE = 50;
 const MILLION_LORDS_CITY_COST_GROWTH = 1.2;
+const MILLION_LORDS_CITY_PRODUCTION_VP_BASE = 20;
+const MILLION_LORDS_CITY_PRODUCTION_VP_GROWTH = 1.115;
+const MILLION_LORDS_PASSIVE_GOLD_PER_CITY_VP = 15;
 const DAILY_NEUTRAL_CAPTURE_LIMIT = 30;
 const NEUTRAL_CITY_COUNT_LIMIT = 30;
 const PLAYER_START_TROOPS = 50;
@@ -292,7 +295,7 @@ const CITY_LEVEL_STATS = {
   cityWallsBase: 30,
   cityWallsPerLevel: 32,
   troopProductionPerVictoryPoint: 3,
-  goldProductionPerVictoryPoint: 8,
+  goldProductionPerMillionLordsVp: MILLION_LORDS_PASSIVE_GOLD_PER_CITY_VP,
 };
 
 const SKILL_CONFIG = {
@@ -3369,6 +3372,17 @@ function clampCityLevel(level) {
   return clamp(Math.floor(Number(level) || 1), 1, MAX_CITY_LEVEL);
 }
 
+function getMillionLordsCityProductionVp(level) {
+  const normalizedLevel = clampCityLevel(level);
+  const rawValue = MILLION_LORDS_CITY_PRODUCTION_VP_BASE
+    * Math.pow(MILLION_LORDS_CITY_PRODUCTION_VP_GROWTH, normalizedLevel - 1);
+  return Math.max(0, Math.floor(rawValue + 0.000001));
+}
+
+function getMillionLordsPassiveGoldPerHour(level) {
+  return Math.floor(getMillionLordsCityProductionVp(level) * MILLION_LORDS_PASSIVE_GOLD_PER_CITY_VP);
+}
+
 function dropCapturedCityLevel(city) {
   const previousLevel = clampCityLevel(city?.level);
   const nextLevel = Math.max(1, previousLevel - 1);
@@ -3398,7 +3412,8 @@ function getCityStats(city) {
   const baseTroopProductionPerHour = victoryPoints * CITY_LEVEL_STATS.troopProductionPerVictoryPoint;
   const recruiterBonusPerHour = victoryPoints * recruiterPercent / 100;
   const troopProductionPerHour = baseTroopProductionPerHour + recruiterBonusPerHour;
-  const baseGoldProductionPerHour = victoryPoints * CITY_LEVEL_STATS.goldProductionPerVictoryPoint;
+  const millionLordsProductionVp = getMillionLordsCityProductionVp(level);
+  const baseGoldProductionPerHour = getMillionLordsPassiveGoldPerHour(level);
   const goldProductionPerHour = baseGoldProductionPerHour * (1 + prosperousPercent / 100);
   const troopDefense = Math.floor((Number(city?.troops) || 0) * (1 + defensePercent / 100) * (1 + guardianPercent / 100));
   const totalDefense = Math.floor(cityWalls + troopDefense);
@@ -3415,6 +3430,7 @@ function getCityStats(city) {
     baseTroopProductionPerHour,
     recruiterBonusPerHour,
     troopProductionPerHour,
+    millionLordsProductionVp,
     baseGoldProductionPerHour,
     goldProductionPerHour,
     troopProductionPerSecond: troopProductionPerHour / 3600,
@@ -7536,7 +7552,7 @@ function showCityInfoModal(cityId) {
       <div class="stat-chip"><span>Defense</span><strong>${stats.defensePercent}%</strong><small>+${CITY_LEVEL_STATS.defensePercentPerLevel}%/level</small></div>
       <div class="stat-chip"><span>Troops production</span><strong>${formatNumber(stats.troopProductionPerHour)}/h</strong><small>VP x ${CITY_LEVEL_STATS.troopProductionPerVictoryPoint}</small></div>
       <div class="stat-chip"><span>City walls</span><strong>${formatNumber(stats.cityWalls)}</strong><small>+${CITY_LEVEL_STATS.cityWallsPerLevel}/level</small></div>
-      <div class="stat-chip"><span>Gold production</span><strong>${formatNumber(stats.goldProductionPerHour)}/h</strong><small>VP x ${CITY_LEVEL_STATS.goldProductionPerVictoryPoint}</small></div>
+      <div class="stat-chip"><span>Gold production</span><strong>${formatNumber(stats.goldProductionPerHour)}/h</strong><small>ML ${formatNumber(stats.millionLordsProductionVp)} x ${CITY_LEVEL_STATS.goldProductionPerMillionLordsVp}</small></div>
     </div>
   `;
   const cooldownRemaining = getCaptureCooldownRemaining(city);
@@ -7571,7 +7587,7 @@ function showCityInfoModal(cityId) {
       <div class="stat-chip"><span>City walls</span><strong>${formatNumber(stats.cityWalls)}</strong><small>Level-based static defense</small></div>
       <div class="stat-chip"><span>Guardian</span><strong>${stats.guardianPercent}%</strong><small>Player defense skill</small></div>
       <div class="stat-chip"><span>Troops production</span><strong>${formatNumber(stats.troopProductionPerHour)}/h</strong><small>VP x ${CITY_LEVEL_STATS.troopProductionPerVictoryPoint} + Recruiter</small></div>
-      <div class="stat-chip"><span>Gold production</span><strong>${formatNumber(stats.goldProductionPerHour)}/h</strong><small>VP x ${CITY_LEVEL_STATS.goldProductionPerVictoryPoint} + Prosperous</small></div>
+      <div class="stat-chip"><span>Gold production</span><strong>${formatNumber(stats.goldProductionPerHour)}/h</strong><small>ML ${formatNumber(stats.millionLordsProductionVp)} x ${CITY_LEVEL_STATS.goldProductionPerMillionLordsVp} + Prosperous</small></div>
       <div class="stat-chip"><span>Invested gold</span><strong>${formatNumber(city.investedGold || 0)}</strong><small>Cautious can refund part</small></div>
       ${cooldownRemaining > 0 ? `<div class="stat-wide"><span>Capture XP cooldown</span><strong>${formatDuration(cooldownRemaining)}</strong></div>` : ""}
     </div>
@@ -8187,9 +8203,9 @@ function showHelpModal() {
       <li>After that, expand by attacking player-owned cities.</li>
       <li>Send Troops is single-click after setup: pick a march percent, then tap one destination to launch.</li>
       <li>The top-right fullscreen button expands the game surface and the game disables page text selection while playing.</li>
-      <li>City level creates victory points, and victory points drive gold production, troop production, and capture XP value.</li>
+      <li>City level creates victory points for combat value, while passive gold follows the Million Lords city production curve.</li>
       <li>City defense is level x 3%, plus wall strength and any Guardian skill bonus for your defending troops.</li>
-      <li>Troop production is VP x 3, with Recruiter adding more production from VP.</li>
+      <li>Troop production is VP x 3, with Recruiter adding more production from VP. Passive gold uses the Million Lords level curve x 15, with Prosperous added on top.</li>
       <li>Prosperous boosts gold, Rusher boosts travel speed, and Striker boosts attacking combat power.</li>
       <li>Fearless saves some attacking losses, Brave saves some defending losses, Scavenger and Salvager recover gold from kills, and Cautious refunds some invested gold when you lose a city.</li>
       <li>Captured cities enter a one-hour XP cooldown. Attacking during cooldown still works, but capture XP is reduced.</li>
