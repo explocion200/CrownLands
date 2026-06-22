@@ -553,6 +553,17 @@ input {
   border: 2px solid rgba(255, 236, 146, .34);
   animation: harvestRing 1.55s ease-out infinite;
 }
+.harvest-bonus-node.harvest-bonus-troops {
+  border-color: rgba(177, 227, 255, .92);
+  color: #e7f8ff;
+  background:
+    radial-gradient(circle at 34% 28%, rgba(255,255,255,.95), rgba(119, 210, 255, .95) 25%, rgba(37, 120, 181, .96) 60%, rgba(17, 48, 86, .95) 100%);
+  box-shadow: 0 0 0 7px rgba(102, 196, 255, .2), 0 0 24px rgba(110, 205, 255, .66), 0 10px 18px rgba(0,0,0,.28);
+  text-shadow: 0 2px 0 rgba(15, 45, 79, .7);
+}
+.harvest-bonus-node.harvest-bonus-troops::before {
+  border-color: rgba(155, 220, 255, .34);
+}
 .harvest-bonus-node:active {
   transform: translate(-50%, -50%) scale(.92);
 }

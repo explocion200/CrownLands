@@ -263,12 +263,17 @@ const MILLION_LORDS_CITY_PRODUCTION_VP_GROWTH = 1.115;
 const MILLION_LORDS_PASSIVE_GOLD_PER_CITY_VP = 15;
 const DAILY_NEUTRAL_CAPTURE_LIMIT = 30;
 const HARVEST_BONUS_DAILY_LIMIT = 200;
-const HARVEST_BONUS_SPAWN_INTERVAL_SECONDS = 45;
-const HARVEST_BONUS_INITIAL_SPAWN_SECONDS = 8;
+const HARVEST_BONUS_DAILY_GOLD_LIMIT = 100;
+const HARVEST_BONUS_DAILY_TROOP_LIMIT = 100;
+const HARVEST_BONUS_TYPES = ["gold", "troops"];
+const HARVEST_BONUS_SPAWN_INTERVAL_SECONDS = 60;
+const HARVEST_BONUS_INITIAL_SPAWN_SECONDS = 60;
 const HARVEST_BONUS_MAX_ACTIVE_PER_ISLAND = 6;
 const HARVEST_BONUS_EXPIRE_SECONDS = 1800;
 const HARVEST_BONUS_GOLD_SECONDS = 300;
 const HARVEST_BONUS_MIN_GOLD = 500;
+const HARVEST_BONUS_TROOP_SECONDS = 3600;
+const HARVEST_BONUS_MIN_TROOPS = 50;
 const HARVEST_BONUS_CITY_CLEARANCE = 132;
 const HARVEST_BONUS_PORTAL_CLEARANCE = 148;
 const HARVEST_BONUS_PICKUP_CLEARANCE = 116;
@@ -2655,21 +2660,24 @@ function renderHarvestBonuses() {
   if (!state) return;
   const activeRegionId = getActiveMapRegionId();
   const daily = ensureDailyCaptureTracker();
-  const remaining = Math.max(0, HARVEST_BONUS_DAILY_LIMIT - daily.harvestedBonuses);
   getActiveHarvestBonuses(activeRegionId).forEach(bonus => {
+    const type = normalizeHarvestBonusType(bonus.type);
+    const remaining = getHarvestBonusRemaining(type, daily);
+    const label = type === "troops" ? "troop bonus" : "gold bonus";
     const mapPoint = worldToMapPoint(bonus);
     const buttonElement = document.createElement("button");
     buttonElement.type = "button";
-    buttonElement.className = "harvest-bonus-node";
+    buttonElement.className = `harvest-bonus-node harvest-bonus-${type}`;
     buttonElement.dataset.harvestBonusId = bonus.id;
+    buttonElement.dataset.harvestBonusType = type;
     buttonElement.style.left = `${mapPoint.x}px`;
     buttonElement.style.top = `${mapPoint.y}px`;
     buttonElement.disabled = remaining <= 0;
-    buttonElement.setAttribute("aria-label", remaining > 0 ? "Harvest gold bonus" : "Daily harvest limit reached");
+    buttonElement.setAttribute("aria-label", remaining > 0 ? `Harvest ${label}` : `Daily ${label} limit reached`);
     buttonElement.title = remaining > 0
-      ? `Harvest gold bonus - ${formatNumber(remaining)} left today`
-      : "Daily harvest limit reached";
-    buttonElement.innerHTML = `<span aria-hidden="true">&#129689;</span>`;
+      ? `Harvest ${label} - ${formatNumber(remaining)} left today`
+      : `Daily ${label} limit reached`;
+    buttonElement.innerHTML = `<span aria-hidden="true">${getHarvestBonusIcon(type)}</span>`;
     buttonElement.addEventListener("click", event => {
       event.stopPropagation();
       collectHarvestBonus(bonus.id);
@@ -3078,9 +3086,10 @@ function newGame(playerName) {
     gameSeconds: 0,
     lastRealTimeMs: Date.now(),
     upgrades: createDefaultSkills(),
-    daily: { date: currentLocalDateKey(), neutralCaptures: 0, harvestedBonuses: 0 },
+    daily: { date: currentLocalDateKey(), neutralCaptures: 0, harvestedBonuses: 0, harvestedGoldBonuses: 0, harvestedTroopBonuses: 0 },
     harvestBonuses: [],
     harvestSpawnTimer: HARVEST_BONUS_INITIAL_SPAWN_SECONDS,
+    harvestNextBonusType: "gold",
     scoutReports: {},
     battleReports: [],
     marchPercent: DEFAULT_MARCH_PERCENT,
@@ -3822,19 +3831,34 @@ function currentLocalDateKey() {
 function normalizeDailyCaptureTracker(daily) {
   const today = currentLocalDateKey();
   if (!daily || typeof daily !== "object" || daily.date !== today) {
-    return { date: today, neutralCaptures: 0, harvestedBonuses: 0 };
+    return { date: today, neutralCaptures: 0, harvestedBonuses: 0, harvestedGoldBonuses: 0, harvestedTroopBonuses: 0 };
   }
+  const legacyHarvested = clamp(Math.floor(Number(daily.harvestedBonuses) || 0), 0, HARVEST_BONUS_DAILY_LIMIT);
+  const hasTypedCounts = Number.isFinite(Number(daily.harvestedGoldBonuses)) || Number.isFinite(Number(daily.harvestedTroopBonuses));
+  const harvestedGoldBonuses = hasTypedCounts
+    ? clamp(Math.floor(Number(daily.harvestedGoldBonuses) || 0), 0, HARVEST_BONUS_DAILY_GOLD_LIMIT)
+    : clamp(legacyHarvested, 0, HARVEST_BONUS_DAILY_GOLD_LIMIT);
+  const harvestedTroopBonuses = hasTypedCounts
+    ? clamp(Math.floor(Number(daily.harvestedTroopBonuses) || 0), 0, HARVEST_BONUS_DAILY_TROOP_LIMIT)
+    : clamp(legacyHarvested - harvestedGoldBonuses, 0, HARVEST_BONUS_DAILY_TROOP_LIMIT);
+  const harvestedBonuses = clamp(harvestedGoldBonuses + harvestedTroopBonuses, 0, HARVEST_BONUS_DAILY_LIMIT);
   return {
     date: today,
     neutralCaptures: clamp(Math.floor(Number(daily.neutralCaptures) || 0), 0, DAILY_NEUTRAL_CAPTURE_LIMIT),
-    harvestedBonuses: clamp(Math.floor(Number(daily.harvestedBonuses) || 0), 0, HARVEST_BONUS_DAILY_LIMIT),
+    harvestedBonuses,
+    harvestedGoldBonuses,
+    harvestedTroopBonuses,
   };
 }
 
 function ensureDailyCaptureTracker() {
-  if (!state) return { date: currentLocalDateKey(), neutralCaptures: 0, harvestedBonuses: 0 };
+  if (!state) return { date: currentLocalDateKey(), neutralCaptures: 0, harvestedBonuses: 0, harvestedGoldBonuses: 0, harvestedTroopBonuses: 0 };
   state.daily = normalizeDailyCaptureTracker(state.daily);
   return state.daily;
+}
+
+function normalizeHarvestBonusType(type) {
+  return HARVEST_BONUS_TYPES.includes(type) ? type : "gold";
 }
 
 function normalizeHarvestBonuses(bonuses) {
@@ -3842,6 +3866,7 @@ function normalizeHarvestBonuses(bonuses) {
   return bonuses
     .map(bonus => ({
       id: String(bonus?.id || ""),
+      type: normalizeHarvestBonusType(bonus?.type),
       regionId: normalizeRegionId(bonus?.regionId),
       x: Number(bonus?.x),
       y: Number(bonus?.y),
@@ -3857,6 +3882,7 @@ function normalizeHarvestState(snapshot) {
   snapshot.harvestSpawnTimer = Number.isFinite(timer)
     ? clamp(timer, 0, HARVEST_BONUS_SPAWN_INTERVAL_SECONDS)
     : HARVEST_BONUS_INITIAL_SPAWN_SECONDS;
+  snapshot.harvestNextBonusType = normalizeHarvestBonusType(snapshot.harvestNextBonusType);
 }
 
 function normalizeScoutReports(reports) {
@@ -6006,9 +6032,83 @@ function getGoldPerSecond() {
   return playerCities().reduce((sum, city) => sum + getCityStats(city).goldProductionPerSecond, 0);
 }
 
+function getTroopProductionPerSecond() {
+  return playerCities().reduce((sum, city) => sum + getCityStats(city).troopProductionPerSecond, 0);
+}
+
 function getHarvestBonusGoldReward() {
   const passiveGold = Math.floor(getGoldPerSecond() * HARVEST_BONUS_GOLD_SECONDS);
   return Math.max(HARVEST_BONUS_MIN_GOLD, passiveGold);
+}
+
+function getHarvestBonusTroopReward() {
+  const passiveTroops = Math.floor(getTroopProductionPerSecond() * HARVEST_BONUS_TROOP_SECONDS);
+  return Math.max(HARVEST_BONUS_MIN_TROOPS, passiveTroops);
+}
+
+function getHarvestBonusIcon(type) {
+  return normalizeHarvestBonusType(type) === "troops" ? "&#9817;" : "&#129689;";
+}
+
+function getHarvestBonusDailyLimit(type) {
+  return normalizeHarvestBonusType(type) === "troops"
+    ? HARVEST_BONUS_DAILY_TROOP_LIMIT
+    : HARVEST_BONUS_DAILY_GOLD_LIMIT;
+}
+
+function getHarvestBonusDailyCount(type, daily = ensureDailyCaptureTracker()) {
+  return normalizeHarvestBonusType(type) === "troops"
+    ? Math.max(0, Math.floor(Number(daily.harvestedTroopBonuses) || 0))
+    : Math.max(0, Math.floor(Number(daily.harvestedGoldBonuses) || 0));
+}
+
+function getHarvestBonusRemaining(type, daily = ensureDailyCaptureTracker()) {
+  const normalizedType = normalizeHarvestBonusType(type);
+  const typeRemaining = getHarvestBonusDailyLimit(normalizedType) - getHarvestBonusDailyCount(normalizedType, daily);
+  const totalRemaining = HARVEST_BONUS_DAILY_LIMIT - Math.max(0, Math.floor(Number(daily.harvestedBonuses) || 0));
+  return Math.max(0, Math.min(typeRemaining, totalRemaining));
+}
+
+function canHarvestBonusType(type, daily = ensureDailyCaptureTracker()) {
+  return getHarvestBonusRemaining(type, daily) > 0;
+}
+
+function getAlternateHarvestBonusType(type) {
+  return normalizeHarvestBonusType(type) === "troops" ? "gold" : "troops";
+}
+
+function getNextAvailableHarvestBonusType(daily = ensureDailyCaptureTracker()) {
+  const preferred = normalizeHarvestBonusType(state?.harvestNextBonusType);
+  if (canHarvestBonusType(preferred, daily)) return preferred;
+  const alternate = getAlternateHarvestBonusType(preferred);
+  return canHarvestBonusType(alternate, daily) ? alternate : "";
+}
+
+function incrementHarvestBonusDailyCount(type, daily = ensureDailyCaptureTracker()) {
+  const normalizedType = normalizeHarvestBonusType(type);
+  if (normalizedType === "troops") {
+    daily.harvestedTroopBonuses = clamp(
+      Math.floor(Number(daily.harvestedTroopBonuses) || 0) + 1,
+      0,
+      HARVEST_BONUS_DAILY_TROOP_LIMIT,
+    );
+  } else {
+    daily.harvestedGoldBonuses = clamp(
+      Math.floor(Number(daily.harvestedGoldBonuses) || 0) + 1,
+      0,
+      HARVEST_BONUS_DAILY_GOLD_LIMIT,
+    );
+  }
+  daily.harvestedBonuses = clamp(
+    Math.floor(Number(daily.harvestedGoldBonuses) || 0) + Math.floor(Number(daily.harvestedTroopBonuses) || 0),
+    0,
+    HARVEST_BONUS_DAILY_LIMIT,
+  );
+  return daily.harvestedBonuses;
+}
+
+function getHarvestBonusTroopTargetCity() {
+  return getMainRewardCity() || playerCities().find(city => getCityRegionId(city) === getActiveMapRegionId()) || playerCities()[0] || null;
 }
 
 function getActiveHarvestBonuses(regionId = getActiveMapRegionId()) {
@@ -6067,10 +6167,11 @@ function createHarvestBonusPoint(regionId) {
   return null;
 }
 
-function spawnHarvestBonus(regionId = getActiveMapRegionId()) {
+function spawnHarvestBonus(regionId = getActiveMapRegionId(), type = getNextAvailableHarvestBonusType()) {
   if (!state) return false;
   const daily = ensureDailyCaptureTracker();
-  if (daily.harvestedBonuses >= HARVEST_BONUS_DAILY_LIMIT) return false;
+  const bonusType = normalizeHarvestBonusType(type);
+  if (!canHarvestBonusType(bonusType, daily)) return false;
   const activeRegionId = normalizeRegionId(regionId);
   if (getActiveHarvestBonuses(activeRegionId).length >= HARVEST_BONUS_MAX_ACTIVE_PER_ISLAND) return false;
   const point = createHarvestBonusPoint(activeRegionId);
@@ -6078,6 +6179,7 @@ function spawnHarvestBonus(regionId = getActiveMapRegionId()) {
   state.harvestBonuses = normalizeHarvestBonuses(state.harvestBonuses);
   state.harvestBonuses.push({
     id: `harvest-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
+    type: bonusType,
     regionId: activeRegionId,
     x: Math.round(point.x),
     y: Math.round(point.y),
@@ -6091,32 +6193,63 @@ function updateHarvestBonuses(dt) {
   const daily = ensureDailyCaptureTracker();
   pruneExpiredHarvestBonuses();
   if (daily.harvestedBonuses >= HARVEST_BONUS_DAILY_LIMIT) return;
+  const nextType = getNextAvailableHarvestBonusType(daily);
+  if (!nextType) return;
   const activeRegionId = getActiveMapRegionId();
   if (getActiveHarvestBonuses(activeRegionId).length >= HARVEST_BONUS_MAX_ACTIVE_PER_ISLAND) return;
   state.harvestSpawnTimer = Math.max(0, Number(state.harvestSpawnTimer) || 0) - dt;
   if (state.harvestSpawnTimer > 0) return;
-  const spawned = spawnHarvestBonus(activeRegionId);
+  const spawned = spawnHarvestBonus(activeRegionId, nextType);
   state.harvestSpawnTimer = HARVEST_BONUS_SPAWN_INTERVAL_SECONDS;
-  if (spawned) renderHarvestBonuses();
+  if (spawned) {
+    state.harvestNextBonusType = getAlternateHarvestBonusType(nextType);
+    renderHarvestBonuses();
+  }
 }
 
 function collectHarvestBonus(bonusId) {
   if (!state || state.gameOver) return;
-  const index = (state.harvestBonuses || []).findIndex(bonus => bonus.id === bonusId);
+  state.harvestBonuses = normalizeHarvestBonuses(state.harvestBonuses);
+  const index = state.harvestBonuses.findIndex(bonus => bonus.id === bonusId);
   if (index < 0) return;
+  const bonus = state.harvestBonuses[index];
+  const type = normalizeHarvestBonusType(bonus.type);
   const daily = ensureDailyCaptureTracker();
-  if (daily.harvestedBonuses >= HARVEST_BONUS_DAILY_LIMIT) {
-    showToast("Daily harvest limit reached.");
+  if (!canHarvestBonusType(type, daily)) {
+    showToast(`Daily ${type === "troops" ? "troop" : "gold"} harvest limit reached.`);
     return;
   }
   state.harvestBonuses.splice(index, 1);
+
+  if (type === "troops") {
+    const troopReward = getHarvestBonusTroopReward();
+    const rewardCity = getHarvestBonusTroopTargetCity();
+    if (!rewardCity) {
+      showToast("Claim a city before collecting troop bonuses.");
+      state.harvestBonuses.splice(index, 0, bonus);
+      return;
+    }
+    rewardCity.troopFloat = Math.max(0, Number(rewardCity.troopFloat) || rewardCity.troops || 0) + troopReward;
+    rewardCity.troops = Math.floor(rewardCity.troopFloat);
+    markOwnedCityChanged(rewardCity, getCityRegionId(rewardCity) === getActiveOnlineRegionId());
+    incrementHarvestBonusDailyCount(type, daily);
+    addLog(`Harvested one hour of troop production: ${formatNumber(troopReward)} troops to ${rewardCity.name}.`);
+    saveGame();
+    renderHud();
+    renderCities();
+    renderPanel();
+    renderHarvestBonuses();
+    showToast(`Harvested +${formatNumber(troopReward)} troops (${formatNumber(daily.harvestedTroopBonuses)}/${HARVEST_BONUS_DAILY_TROOP_LIMIT})`);
+    return;
+  }
+
   const goldReward = getHarvestBonusGoldReward();
   state.gold += goldReward;
-  daily.harvestedBonuses = clamp(daily.harvestedBonuses + 1, 0, HARVEST_BONUS_DAILY_LIMIT);
+  incrementHarvestBonusDailyCount(type, daily);
   saveGame();
   renderHud();
   renderHarvestBonuses();
-  showToast(`Harvested +${formatNumber(goldReward)} gold (${formatNumber(daily.harvestedBonuses)}/${HARVEST_BONUS_DAILY_LIMIT})`);
+  showToast(`Harvested +${formatNumber(goldReward)} gold (${formatNumber(daily.harvestedGoldBonuses)}/${HARVEST_BONUS_DAILY_GOLD_LIMIT})`);
 }
 
 function getOfflineProgressSeconds(snapshot = state) {
@@ -8413,7 +8546,7 @@ function showHelpModal() {
       <li>City level creates victory points for combat value, while passive gold follows the Million Lords city production curve.</li>
       <li>City defense is level x 3%, plus wall strength and any Guardian skill bonus for your defending troops.</li>
       <li>Troop production is VP x 3, with Recruiter adding more production from VP. Passive gold uses the Million Lords level curve x 15, with Prosperous added on top.</li>
-      <li>Glowing gold pickups appear on the current island during active play. Tap them to harvest bonus gold, up to ${formatNumber(HARVEST_BONUS_DAILY_LIMIT)} per local day.</li>
+      <li>Glowing pickups appear on the current island during active play once per minute, alternating between gold and troop-hour rewards. Daily pickup limits are ${formatNumber(HARVEST_BONUS_DAILY_GOLD_LIMIT)} gold and ${formatNumber(HARVEST_BONUS_DAILY_TROOP_LIMIT)} troop pickups.</li>
       <li>Prosperous boosts gold, Rusher boosts travel speed, and Striker boosts attacking combat power.</li>
       <li>Fearless saves some attacking losses, Brave saves some defending losses, Scavenger and Salvager recover gold from kills, and Cautious refunds some invested gold when you lose a city.</li>
       <li>Captured cities enter a one-hour XP cooldown. Attacking during cooldown still works, but capture XP is reduced.</li>
