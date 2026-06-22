@@ -504,6 +504,7 @@ input {
 }
 .city-layer {
   z-index: 16;
+  pointer-events: none;
 }
 .army-layer {
   z-index: 18;
@@ -611,6 +612,7 @@ input {
   background: transparent;
   color: var(--ink);
   z-index: 5;
+  pointer-events: auto;
 }
 .city-node.selected { z-index: 10; }
 .city-node.targeted { z-index: 9; }
