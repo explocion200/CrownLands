@@ -5766,7 +5766,7 @@ function getIncomingAttacks() {
   const seen = new Set();
   return getRenderableArmies()
     .map(attack => {
-      if (!attack || attack.kind !== "attack" || attack.owner === "player") return null;
+      if (!attack || !["attack", "scout"].includes(attack.kind) || attack.owner === "player") return null;
       const target = cityById(attack.toId);
       if (!target || target.owner !== "player") return null;
       const remaining = Math.max(0, Number(attack.remaining) || 0);
@@ -8936,7 +8936,7 @@ function updateIncomingAttackUi() {
 
   if (incomingAttackCount) incomingAttackCount.textContent = formatNumber(incoming.length);
   if (incomingAttackTime) incomingAttackTime.textContent = formatDuration(incoming[0].remaining);
-  incomingAttackBtn.title = `${formatNumber(incoming.length)} incoming ${incoming.length === 1 ? "attack" : "attacks"} - soonest ${formatDuration(incoming[0].remaining)}`;
+  incomingAttackBtn.title = `${formatIncomingThreatSummary(incoming)} - soonest ${formatDuration(incoming[0].remaining)}`;
   incomingAttackBtn.setAttribute("aria-label", incomingAttackBtn.title);
 
   if (modal.open && modal.classList.contains("incoming-attack-modal")) {
@@ -8944,10 +8944,26 @@ function updateIncomingAttackUi() {
   }
 }
 
+function getIncomingThreatCounts(incoming) {
+  return incoming.reduce((counts, threat) => {
+    if (threat.kind === "scout") counts.scouts += 1;
+    else counts.attacks += 1;
+    return counts;
+  }, { attacks: 0, scouts: 0 });
+}
+
+function formatIncomingThreatSummary(incoming) {
+  const counts = getIncomingThreatCounts(incoming);
+  const parts = [];
+  if (counts.attacks) parts.push(`${formatNumber(counts.attacks)} incoming ${counts.attacks === 1 ? "attack" : "attacks"}`);
+  if (counts.scouts) parts.push(`${formatNumber(counts.scouts)} incoming ${counts.scouts === 1 ? "scout" : "scouts"}`);
+  return parts.join(", ") || "No incoming threats";
+}
+
 function showIncomingAttacksModal() {
   const incoming = getIncomingAttacks();
   if (!incoming.length) {
-    showToast("No incoming attacks right now.");
+    showToast("No incoming attacks or scouts right now.");
     updateIncomingAttackUi();
     return;
   }
@@ -8958,17 +8974,18 @@ function showIncomingAttacksModal() {
 
 function renderIncomingAttacksModalContent(incoming = getIncomingAttacks()) {
   if (!incoming.length) {
-    modalTitle.textContent = "Incoming Attacks";
-    modalBody.innerHTML = `<div class="incoming-attack-empty">No active incoming attacks.</div>`;
+    modalTitle.textContent = "Incoming Threats";
+    modalBody.innerHTML = `<div class="incoming-attack-empty">No active incoming attacks or scouts.</div>`;
     return;
   }
 
-  modalTitle.textContent = incoming.length === 1 ? "Incoming Attack" : "Incoming Attacks";
+  modalTitle.textContent = incoming.length === 1 ? "Incoming Threat" : "Incoming Threats";
+  const summary = formatIncomingThreatSummary(incoming);
   modalBody.innerHTML = `
     <div class="incoming-attack-panel">
       <div class="incoming-attack-summary">
         <strong>${formatNumber(incoming.length)}</strong>
-        <span>${incoming.length === 1 ? "army is" : "armies are"} marching on your cities.</span>
+        <span>${summary} ${incoming.length === 1 ? "is" : "are"} heading toward your cities.</span>
         <small>Soonest arrival: ${formatDuration(incoming[0].remaining)}</small>
       </div>
       <div class="incoming-attack-list">
@@ -8987,11 +9004,17 @@ function renderIncomingAttackCard(attack) {
   const sourceName = attack.source?.name || "Unknown city";
   const regionName = getRegionLabel(getCityRegionId(city));
   const defense = getCityStats(city).totalDefense;
+  const isScout = attack.kind === "scout";
+  const threatLabel = isScout ? "Scout" : "Attack";
+  const forceLabel = isScout ? "Scout" : "Attacker";
+  const forceDetails = isScout
+    ? `1 scout from ${escapeHtml(sourceName)}`
+    : `${formatNumber(attack.troops)} troops from ${escapeHtml(sourceName)}`;
   return `
-    <article class="incoming-attack-card">
+    <article class="incoming-attack-card ${isScout ? "incoming-scout-card" : ""}">
       <div class="incoming-attack-badge">
         <strong>${formatDuration(attack.remaining)}</strong>
-        <small>arrival</small>
+        <small>${threatLabel}</small>
       </div>
       <div class="incoming-attack-city">
         <span>${escapeHtml(regionName)}</span>
@@ -8999,9 +9022,9 @@ function renderIncomingAttackCard(attack) {
         <small>Lv ${formatNumber(city.level)} - ${formatNumber(city.troops)} troops - ${formatNumber(defense)} defense</small>
       </div>
       <div class="incoming-attack-force">
-        <span>Attacker</span>
+        <span>${forceLabel}</span>
         <strong>${escapeHtml(attack.attackerName || "Enemy")}</strong>
-        <small>${formatNumber(attack.troops)} troops from ${escapeHtml(sourceName)}</small>
+        <small>${forceDetails}</small>
       </div>
       <button class="incoming-attack-locate" data-incoming-city="${escapeHtml(city.id)}" type="button" aria-label="Go to ${escapeHtml(city.name)}">&#8982;</button>
     </article>

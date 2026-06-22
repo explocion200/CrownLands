@@ -1903,6 +1903,9 @@ input {
   background: rgba(255,255,255,.065);
   border: 1px solid rgba(255, 155, 121, .2);
 }
+.incoming-attack-card.incoming-scout-card {
+  border-color: rgba(122, 203, 255, .26);
+}
 .incoming-attack-badge,
 .incoming-attack-city,
 .incoming-attack-force {
@@ -1917,16 +1920,25 @@ input {
   text-align: center;
   background: linear-gradient(#f6b252, #9d2b24);
 }
+.incoming-scout-card .incoming-attack-badge {
+  background: linear-gradient(#8bd7ff, #1d5f9f);
+}
 .incoming-attack-badge strong {
   color: #231005;
   font-size: .9rem;
   font-weight: 1000;
+}
+.incoming-scout-card .incoming-attack-badge strong {
+  color: #061527;
 }
 .incoming-attack-badge small {
   color: rgba(35, 16, 5, .74);
   font-size: .58rem;
   font-weight: 1000;
   text-transform: uppercase;
+}
+.incoming-scout-card .incoming-attack-badge small {
+  color: rgba(6, 21, 39, .78);
 }
 .incoming-attack-city span,
 .incoming-attack-force span {
