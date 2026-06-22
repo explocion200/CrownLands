@@ -54,7 +54,13 @@ const SPEED_STRONGHOLD_ART_SRC = "assets/speed-stronghold.png";
 const SPEED_STRONGHOLD_BONUS_PERCENT = 15;
 const SPEED_STRONGHOLD_LEVEL = 30;
 const SPEED_STRONGHOLD_START_TROOPS = 10000;
-const STRONGHOLD_IDS = new Set([GOLD_STRONGHOLD_ID, TRAINING_STRONGHOLD_ID, SPEED_STRONGHOLD_ID]);
+const DEFENSE_STRONGHOLD_ID = "south_defense_stronghold";
+const DEFENSE_STRONGHOLD_NAME = "Defense Stronghold";
+const DEFENSE_STRONGHOLD_ART_SRC = "assets/defense-stronghold.png";
+const DEFENSE_STRONGHOLD_BONUS_PERCENT = 15;
+const DEFENSE_STRONGHOLD_LEVEL = 30;
+const DEFENSE_STRONGHOLD_START_TROOPS = 10000;
+const STRONGHOLD_IDS = new Set([GOLD_STRONGHOLD_ID, TRAINING_STRONGHOLD_ID, SPEED_STRONGHOLD_ID, DEFENSE_STRONGHOLD_ID]);
 const WEST_ISLAND_ART_SRC = "assets/west-island.png";
 const WEST_ISLAND_IMAGE_WIDTH = 1024;
 const WEST_ISLAND_IMAGE_HEIGHT = 1536;
@@ -151,9 +157,10 @@ const SOUTH_ISLAND_ART_SRC = "assets/south-island.png";
 const SOUTH_ISLAND_IMAGE_WIDTH = 1446;
 const SOUTH_ISLAND_IMAGE_HEIGHT = 1087;
 const SOUTH_CENTER_TELEPORT_IMAGE_POINT = { x: 724, y: 205 };
+const SOUTH_DEFENSE_STRONGHOLD_IMAGE_POINT = { x: 724, y: 550 };
 const SOUTH_ISLAND_RESERVED_CIRCLES = [
   { x: SOUTH_CENTER_TELEPORT_IMAGE_POINT.x, y: SOUTH_CENTER_TELEPORT_IMAGE_POINT.y, r: 92 },
-  { x: 724, y: 550, r: 145 },
+  { x: SOUTH_DEFENSE_STRONGHOLD_IMAGE_POINT.x, y: SOUTH_DEFENSE_STRONGHOLD_IMAGE_POINT.y, r: 145 },
   { x: 750, y: 850, r: 100 },
 ];
 const SOUTH_ISLAND_LAND_POLYGON = [
@@ -413,36 +420,46 @@ function isSpeedStronghold(city) {
   return isStronghold(city) && (city.strongholdType === "speed" || city.id === SPEED_STRONGHOLD_ID);
 }
 
+function isDefenseStronghold(city) {
+  return isStronghold(city) && (city.strongholdType === "defense" || city.id === DEFENSE_STRONGHOLD_ID);
+}
+
 function getStrongholdArtSrc(city) {
+  if (isDefenseStronghold(city)) return DEFENSE_STRONGHOLD_ART_SRC;
   if (isSpeedStronghold(city)) return SPEED_STRONGHOLD_ART_SRC;
   if (isTrainingStronghold(city)) return TRAINING_STRONGHOLD_ART_SRC;
   return isGoldStronghold(city) ? GOLD_STRONGHOLD_ART_SRC : "";
 }
 
 function getStrongholdBonusPercent(city) {
+  if (isDefenseStronghold(city)) return DEFENSE_STRONGHOLD_BONUS_PERCENT;
   if (isSpeedStronghold(city)) return SPEED_STRONGHOLD_BONUS_PERCENT;
   if (isTrainingStronghold(city)) return TRAINING_STRONGHOLD_BONUS_PERCENT;
   return isGoldStronghold(city) ? GOLD_STRONGHOLD_BONUS_PERCENT : 0;
 }
 
 function getStrongholdDefenseLevel(city) {
+  if (isDefenseStronghold(city)) return DEFENSE_STRONGHOLD_LEVEL;
   if (isSpeedStronghold(city)) return SPEED_STRONGHOLD_LEVEL;
   if (isTrainingStronghold(city)) return TRAINING_STRONGHOLD_LEVEL;
   return isStronghold(city) ? GOLD_STRONGHOLD_LEVEL : 0;
 }
 
 function getStrongholdStartTroops(city) {
+  if (isDefenseStronghold(city)) return DEFENSE_STRONGHOLD_START_TROOPS;
   if (isSpeedStronghold(city)) return SPEED_STRONGHOLD_START_TROOPS;
   if (isTrainingStronghold(city)) return TRAINING_STRONGHOLD_START_TROOPS;
   return isStronghold(city) ? GOLD_STRONGHOLD_START_TROOPS : 0;
 }
 
 function getStrongholdProductionLabel(city) {
+  if (isDefenseStronghold(city)) return "city defense";
   if (isSpeedStronghold(city)) return "march speed";
   return isTrainingStronghold(city) ? "troop production" : "gold production";
 }
 
 function getStrongholdShortBonusLabel(city) {
+  if (isDefenseStronghold(city)) return `+${formatNumber(getStrongholdBonusPercent(city))}% defense`;
   if (isSpeedStronghold(city)) return `+${formatNumber(getStrongholdBonusPercent(city))}% speed`;
   return isTrainingStronghold(city)
     ? `+${formatNumber(getStrongholdBonusPercent(city))}% troops`
@@ -2452,6 +2469,7 @@ function generateStrongholdSlots() {
   const west = getRegionById("west");
   const north = getRegionById("north");
   const east = getRegionById("east");
+  const south = getRegionById("south");
   return [
     west ? createStrongholdSlot({
       id: GOLD_STRONGHOLD_ID,
@@ -2485,6 +2503,17 @@ function generateStrongholdSlots() {
       bonusPercent: SPEED_STRONGHOLD_BONUS_PERCENT,
       level: SPEED_STRONGHOLD_LEVEL,
       troops: SPEED_STRONGHOLD_START_TROOPS,
+    }) : null,
+    south ? createStrongholdSlot({
+      id: DEFENSE_STRONGHOLD_ID,
+      name: DEFENSE_STRONGHOLD_NAME,
+      region: south,
+      point: southImagePointToWorld(SOUTH_DEFENSE_STRONGHOLD_IMAGE_POINT),
+      type: "defense",
+      bonus: "cityDefense",
+      bonusPercent: DEFENSE_STRONGHOLD_BONUS_PERCENT,
+      level: DEFENSE_STRONGHOLD_LEVEL,
+      troops: DEFENSE_STRONGHOLD_START_TROOPS,
     }) : null,
   ].filter(Boolean);
 }
@@ -3660,6 +3689,31 @@ function getStrongholdMarchSpeedMultiplier(owner = "player") {
   return 1 + getControlledStrongholdMarchSpeedPercent(owner) / 100;
 }
 
+function getCityControllerKey(city) {
+  if (!city || city.owner === "neutral" || city.ownerKind === "neutral") return "";
+  if (city.ownerKind === "player") {
+    if (city.ownerUid) return `player:${city.ownerUid}`;
+    if (city.ownerName) return `player:${city.ownerName}`;
+  }
+  if (city.owner === "player") return "player:local";
+  if (city.owner === "enemy") {
+    if (city.ownerUid) return `player:${city.ownerUid}`;
+    if (city.ownerName) return `enemy:${city.ownerName}`;
+    return "enemy";
+  }
+  return city.owner || "";
+}
+
+function getControlledStrongholdCityDefenseBonusPercentForCity(target) {
+  if (!state || !Array.isArray(state.cities)) return 0;
+  const targetControllerKey = getCityControllerKey(target);
+  if (!targetControllerKey) return 0;
+  return state.cities.reduce((total, city) => {
+    if (!isDefenseStronghold(city) || getCityControllerKey(city) !== targetControllerKey) return total;
+    return total + getStrongholdBonusPercent(city);
+  }, 0);
+}
+
 function clampCityLevel(level) {
   return clamp(Math.floor(Number(level) || 1), 1, MAX_CITY_LEVEL);
 }
@@ -3705,6 +3759,7 @@ function getCityStats(city) {
   const prosperousPercent = city?.owner === "player" ? getSkillPercent("prosperous") : 0;
   const strongholdGoldBonusPercent = !stronghold && city?.owner === "player" ? getControlledStrongholdGoldBonusPercent("player") : 0;
   const strongholdTroopBonusPercent = !stronghold && city?.owner === "player" ? getControlledStrongholdTroopBonusPercent("player") : 0;
+  const strongholdDefenseBonusPercent = !stronghold ? getControlledStrongholdCityDefenseBonusPercentForCity(city) : 0;
   const baseTroopProductionPerHour = stronghold ? 0 : victoryPoints * CITY_LEVEL_STATS.troopProductionPerVictoryPoint;
   const recruiterBonusPerHour = stronghold ? 0 : victoryPoints * recruiterPercent / 100;
   const troopProductionPerHour = (baseTroopProductionPerHour + recruiterBonusPerHour) * (1 + strongholdTroopBonusPercent / 100);
@@ -3712,7 +3767,9 @@ function getCityStats(city) {
   const baseGoldProductionPerHour = stronghold ? 0 : getMillionLordsPassiveGoldPerHour(level);
   const goldProductionPerHour = baseGoldProductionPerHour * (1 + prosperousPercent / 100) * (1 + strongholdGoldBonusPercent / 100);
   const troopDefense = Math.floor((Number(city?.troops) || 0) * (1 + defensePercent / 100) * (1 + guardianPercent / 100));
-  const totalDefense = Math.floor(cityWalls + troopDefense);
+  const baseTotalDefense = Math.floor(cityWalls + troopDefense);
+  const strongholdDefenseBonus = Math.floor(baseTotalDefense * strongholdDefenseBonusPercent / 100);
+  const totalDefense = baseTotalDefense + strongholdDefenseBonus;
 
   return {
     level,
@@ -3725,6 +3782,8 @@ function getCityStats(city) {
     prosperousPercent,
     strongholdGoldBonusPercent,
     strongholdTroopBonusPercent,
+    strongholdDefenseBonusPercent,
+    strongholdDefenseBonus,
     baseTroopProductionPerHour,
     recruiterBonusPerHour,
     troopProductionPerHour,
@@ -8287,12 +8346,16 @@ function showCityInfoModal(cityId) {
   const stats = getCityStats(city);
   if (stronghold) {
     const strongholdBonusLabel = `+${formatNumber(getStrongholdBonusPercent(city))}% ${getStrongholdProductionLabel(city)}`;
-    const effectTargetLabel = isSpeedStronghold(city)
+    const effectTargetLabel = isDefenseStronghold(city)
+      ? "City defense"
+      : isSpeedStronghold(city)
       ? "March time"
       : isTrainingStronghold(city)
         ? "Troop production"
         : "Gold production";
-    const effectHelp = isSpeedStronghold(city)
+    const effectHelp = isDefenseStronghold(city)
+      ? "boosts defending power, not attack power"
+      : isSpeedStronghold(city)
       ? "reduces travel time, not attack power"
       : "boosts owned towns while held";
     modalTitle.textContent = `${city.name} - Stronghold`;
@@ -8318,7 +8381,7 @@ function showCityInfoModal(cityId) {
       <div class="stat-chip"><span>Troops</span><strong>${formatNumber(city.troops)}</strong></div>
       <div class="stat-chip"><span>Guardian</span><strong>${stats.guardianPercent}%</strong></div>
       <div class="stat-chip"><span>City power</span><strong>${formatNumber(stats.cityPower)}</strong><small>+${CITY_LEVEL_STATS.victoryPointsPerLevel}/level</small></div>
-      <div class="stat-chip"><span>Defense</span><strong>${stats.defensePercent}%</strong><small>+${CITY_LEVEL_STATS.defensePercentPerLevel}%/level</small></div>
+      <div class="stat-chip"><span>Defense</span><strong>${stats.defensePercent}%</strong><small>+${CITY_LEVEL_STATS.defensePercentPerLevel}%/level${stats.strongholdDefenseBonusPercent ? ` + Stronghold ${formatNumber(stats.strongholdDefenseBonusPercent)}%` : ""}</small></div>
       <div class="stat-chip"><span>Troops production</span><strong>${formatNumber(stats.troopProductionPerHour)}/h</strong><small>VP x ${CITY_LEVEL_STATS.troopProductionPerVictoryPoint}${stats.strongholdTroopBonusPercent ? ` + Stronghold ${formatNumber(stats.strongholdTroopBonusPercent)}%` : ""}</small></div>
       <div class="stat-chip"><span>City walls</span><strong>${formatNumber(stats.cityWalls)}</strong><small>+${CITY_LEVEL_STATS.cityWallsPerLevel}/level</small></div>
       <div class="stat-chip"><span>Gold production</span><strong>${formatNumber(stats.goldProductionPerHour)}/h</strong><small>ML ${formatNumber(stats.millionLordsProductionVp)} x ${CITY_LEVEL_STATS.goldProductionPerMillionLordsVp}${stats.strongholdGoldBonusPercent ? ` + Stronghold ${formatNumber(stats.strongholdGoldBonusPercent)}%` : ""}</small></div>
@@ -8352,7 +8415,7 @@ function showCityInfoModal(cityId) {
       <div class="stat-chip"><span>Owner</span><strong>${escapeHtml(getCityOwnerDisplayName(city))}</strong></div>
       <div class="stat-chip"><span>Troops</span><strong>${formatNumber(city.troops)}</strong></div>
       <div class="stat-chip"><span>Victory points</span><strong>${formatNumber(stats.victoryPoints)}</strong><small>Drives growth and XP value</small></div>
-      <div class="stat-chip"><span>City defense</span><strong>${stats.defensePercent}%</strong><small>${CITY_LEVEL_STATS.defensePercentPerLevel}% per level</small></div>
+      <div class="stat-chip"><span>City defense</span><strong>${stats.defensePercent}%</strong><small>${CITY_LEVEL_STATS.defensePercentPerLevel}% per level${stats.strongholdDefenseBonusPercent ? ` + Stronghold ${formatNumber(stats.strongholdDefenseBonusPercent)}%` : ""}</small></div>
       <div class="stat-chip"><span>City walls</span><strong>${formatNumber(stats.cityWalls)}</strong><small>Level-based static defense</small></div>
       <div class="stat-chip"><span>Guardian</span><strong>${stats.guardianPercent}%</strong><small>Player defense skill</small></div>
       <div class="stat-chip"><span>Troops production</span><strong>${formatNumber(stats.troopProductionPerHour)}/h</strong><small>VP x ${CITY_LEVEL_STATS.troopProductionPerVictoryPoint} + Recruiter${stats.strongholdTroopBonusPercent ? ` + Stronghold ${formatNumber(stats.strongholdTroopBonusPercent)}%` : ""}</small></div>
