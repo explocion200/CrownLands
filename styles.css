@@ -527,20 +527,20 @@ input {
 }
 .harvest-bonus-node {
   position: absolute;
-  width: 58px;
-  height: 58px;
+  width: 66px;
+  height: 66px;
   transform: translate(-50%, -50%);
   display: grid;
   place-items: center;
-  border: 2px solid rgba(255, 243, 178, .92);
+  padding: 0;
+  border: 0;
   border-radius: 50%;
-  color: #fff4b8;
-  background:
-    radial-gradient(circle at 34% 28%, rgba(255,255,255,.95), rgba(255, 222, 95, .95) 24%, rgba(217, 136, 33, .96) 58%, rgba(95, 53, 13, .95) 100%);
-  box-shadow: 0 0 0 7px rgba(255, 212, 84, .2), 0 0 24px rgba(255, 214, 96, .72), 0 10px 18px rgba(0,0,0,.28);
-  font-size: 1.55rem;
+  color: transparent;
+  background: transparent;
+  box-shadow: none;
+  font-size: 0;
   line-height: 1;
-  text-shadow: 0 2px 0 rgba(88, 47, 8, .65);
+  text-shadow: none;
   cursor: pointer;
   pointer-events: auto;
   animation: harvestPulse 1.55s ease-in-out infinite;
@@ -548,10 +548,20 @@ input {
 .harvest-bonus-node::before {
   content: "";
   position: absolute;
-  inset: -11px;
+  inset: 3px;
   border-radius: 50%;
-  border: 2px solid rgba(255, 236, 146, .34);
+  background: radial-gradient(circle, rgba(255, 226, 103, .64), rgba(255, 178, 50, .34) 48%, transparent 72%);
+  box-shadow: 0 0 16px rgba(255, 212, 84, .8), 0 0 34px rgba(255, 170, 45, .48);
+  pointer-events: none;
+}
+.harvest-bonus-node::after {
+  content: "";
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 236, 146, .42);
   animation: harvestRing 1.55s ease-out infinite;
+  pointer-events: none;
 }
 .harvest-bonus-node > span {
   position: relative;
@@ -563,24 +573,26 @@ input {
 }
 .harvest-bonus-icon {
   display: block;
-  width: 54px;
-  height: 54px;
-  border-radius: 50%;
+  width: 58px;
+  height: 58px;
+  border-radius: 0;
   object-fit: contain;
   pointer-events: none;
   user-select: none;
-  filter: drop-shadow(0 2px 2px rgba(0,0,0,.42));
+  filter: drop-shadow(0 0 7px rgba(255, 226, 103, .8)) drop-shadow(0 4px 4px rgba(0,0,0,.42));
 }
 .harvest-bonus-node.harvest-bonus-troops {
-  border-color: rgba(177, 227, 255, .92);
   color: #e7f8ff;
-  background:
-    radial-gradient(circle at 34% 28%, rgba(255,255,255,.95), rgba(119, 210, 255, .95) 25%, rgba(37, 120, 181, .96) 60%, rgba(17, 48, 86, .95) 100%);
-  box-shadow: 0 0 0 7px rgba(102, 196, 255, .2), 0 0 24px rgba(110, 205, 255, .66), 0 10px 18px rgba(0,0,0,.28);
-  text-shadow: 0 2px 0 rgba(15, 45, 79, .7);
 }
 .harvest-bonus-node.harvest-bonus-troops::before {
-  border-color: rgba(155, 220, 255, .34);
+  background: radial-gradient(circle, rgba(139, 218, 255, .62), rgba(75, 178, 255, .34) 48%, transparent 72%);
+  box-shadow: 0 0 16px rgba(110, 205, 255, .76), 0 0 34px rgba(75, 178, 255, .48);
+}
+.harvest-bonus-node.harvest-bonus-troops::after {
+  border-color: rgba(155, 220, 255, .42);
+}
+.harvest-bonus-node.harvest-bonus-troops .harvest-bonus-icon {
+  filter: drop-shadow(0 0 7px rgba(139, 218, 255, .8)) drop-shadow(0 4px 4px rgba(0,0,0,.42));
 }
 .harvest-bonus-node:active {
   transform: translate(-50%, -50%) scale(.92);
