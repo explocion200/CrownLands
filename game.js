@@ -50,15 +50,15 @@ const WEST_ISLAND_CITY_POINTS = [
   { x: 575, y: 285 }, { x: 735, y: 315 }, { x: 445, y: 345 }, { x: 535, y: 365 },
   { x: 625, y: 405 }, { x: 710, y: 445 }, { x: 795, y: 485 }, { x: 465, y: 485 },
   { x: 555, y: 525 }, { x: 650, y: 560 }, { x: 745, y: 600 }, { x: 840, y: 645 },
-  { x: 430, y: 700 }, { x: 545, y: 720 }, { x: 610, y: 705 }, { x: 700, y: 745 },
-  { x: 475, y: 760 }, { x: 565, y: 815 }, { x: 680, y: 835 }, { x: 735, y: 890 },
-  { x: 835, y: 930 }, { x: 440, y: 885 }, { x: 555, y: 980 }, { x: 620, y: 965 },
+  { x: 400, y: 670 }, { x: 605, y: 640 }, { x: 640, y: 695 }, { x: 700, y: 745 },
+  { x: 605, y: 890 }, { x: 665, y: 895 }, { x: 680, y: 835 }, { x: 735, y: 890 },
+  { x: 835, y: 930 }, { x: 420, y: 895 }, { x: 555, y: 980 }, { x: 620, y: 965 },
   { x: 710, y: 1010 }, { x: 805, y: 1045 }, { x: 900, y: 1085 }, { x: 395, y: 1015 },
   { x: 485, y: 1060 }, { x: 575, y: 1100 }, { x: 665, y: 1140 }, { x: 755, y: 1180 },
-  { x: 845, y: 1215 }, { x: 360, y: 1165 }, { x: 450, y: 1210 }, { x: 540, y: 1250 },
+  { x: 845, y: 1215 }, { x: 380, y: 1165 }, { x: 450, y: 1210 }, { x: 540, y: 1250 },
   { x: 630, y: 1285 }, { x: 720, y: 1320 }, { x: 780, y: 1280 }, { x: 410, y: 1350 },
   { x: 500, y: 1385 }, { x: 590, y: 1415 }, { x: 680, y: 1445 }, { x: 835, y: 385 },
-  { x: 880, y: 555 }, { x: 360, y: 760 },
+  { x: 880, y: 555 }, { x: 440, y: 620 },
 ];
 const NORTH_ISLAND_ART_SRC = "assets/north-island.png";
 const NORTH_ISLAND_IMAGE_WIDTH = 1448;
@@ -80,7 +80,7 @@ const NORTH_ISLAND_CITY_POINTS = [
   { x: 180, y: 310 }, { x: 300, y: 315 }, { x: 1155, y: 305 }, { x: 1280, y: 345 },
   { x: 145, y: 430 }, { x: 285, y: 450 }, { x: 1085, y: 455 }, { x: 1225, y: 450 },
   { x: 1350, y: 500 }, { x: 165, y: 555 }, { x: 310, y: 560 }, { x: 455, y: 555 },
-  { x: 1000, y: 555 }, { x: 1150, y: 565 }, { x: 1300, y: 600 }, { x: 80, y: 600 },
+  { x: 1000, y: 555 }, { x: 1150, y: 565 }, { x: 1300, y: 600 }, { x: 90, y: 600 },
   { x: 230, y: 665 }, { x: 380, y: 665 }, { x: 520, y: 675 }, { x: 585, y: 615 },
   { x: 650, y: 690 }, { x: 720, y: 720 }, { x: 800, y: 690 }, { x: 860, y: 615 },
   { x: 930, y: 665 }, { x: 1080, y: 675 }, { x: 1235, y: 700 }, { x: 1320, y: 690 },
@@ -115,9 +115,9 @@ const EAST_ISLAND_CITY_POINTS = [
   { x: 245, y: 585 }, { x: 370, y: 590 }, { x: 735, y: 680 }, { x: 825, y: 650 },
   { x: 180, y: 700 }, { x: 385, y: 665 }, { x: 710, y: 825 }, { x: 690, y: 740 },
   { x: 830, y: 760 }, { x: 230, y: 875 }, { x: 360, y: 890 }, { x: 675, y: 915 },
-  { x: 745, y: 900 }, { x: 860, y: 910 }, { x: 270, y: 1000 }, { x: 405, y: 1005 },
-  { x: 535, y: 1000 }, { x: 675, y: 1010 }, { x: 810, y: 1030 }, { x: 320, y: 1120 },
-  { x: 455, y: 1135 }, { x: 590, y: 1125 }, { x: 720, y: 1145 }, { x: 830, y: 1165 },
+  { x: 735, y: 890 }, { x: 860, y: 910 }, { x: 270, y: 1000 }, { x: 405, y: 1005 },
+  { x: 535, y: 1000 }, { x: 675, y: 1010 }, { x: 870, y: 980 }, { x: 320, y: 1120 },
+  { x: 455, y: 1135 }, { x: 590, y: 1125 }, { x: 720, y: 1145 }, { x: 790, y: 1215 },
   { x: 370, y: 1260 }, { x: 500, y: 1275 }, { x: 635, y: 1265 }, { x: 730, y: 1220 },
   { x: 580, y: 1380 }, { x: 600, y: 1325 },
 ];
@@ -142,10 +142,10 @@ const SOUTH_ISLAND_CITY_POINTS = [
   { x: 260, y: 170 }, { x: 380, y: 165 }, { x: 515, y: 155 }, { x: 885, y: 155 },
   { x: 1030, y: 165 }, { x: 1190, y: 210 }, { x: 180, y: 285 }, { x: 320, y: 280 },
   { x: 460, y: 290 }, { x: 590, y: 295 }, { x: 860, y: 295 }, { x: 1010, y: 290 },
-  { x: 1160, y: 300 }, { x: 1310, y: 350 }, { x: 150, y: 420 }, { x: 300, y: 405 },
+  { x: 1160, y: 300 }, { x: 1310, y: 350 }, { x: 140, y: 420 }, { x: 310, y: 395 },
   { x: 450, y: 410 }, { x: 610, y: 420 }, { x: 790, y: 410 }, { x: 950, y: 405 },
-  { x: 1110, y: 420 }, { x: 1260, y: 445 }, { x: 180, y: 540 }, { x: 330, y: 525 },
-  { x: 490, y: 525 }, { x: 960, y: 520 }, { x: 1120, y: 540 }, { x: 1300, y: 560 },
+  { x: 1080, y: 410 }, { x: 1270, y: 445 }, { x: 160, y: 540 }, { x: 350, y: 525 },
+  { x: 490, y: 525 }, { x: 960, y: 520 }, { x: 1090, y: 570 }, { x: 1300, y: 560 },
   { x: 210, y: 660 }, { x: 350, y: 645 }, { x: 1030, y: 650 }, { x: 1210, y: 670 },
   { x: 180, y: 760 }, { x: 330, y: 750 }, { x: 560, y: 820 }, { x: 900, y: 850 },
   { x: 1060, y: 820 }, { x: 1220, y: 760 }, { x: 280, y: 850 }, { x: 380, y: 900 },
@@ -179,22 +179,80 @@ const CENTER_ISLAND_CITY_POINTS = [
   { x: 420, y: 170 }, { x: 500, y: 170 }, { x: 745, y: 165 }, { x: 830, y: 185 },
   { x: 930, y: 210 }, { x: 340, y: 230 }, { x: 420, y: 260 }, { x: 510, y: 260 },
   { x: 735, y: 255 }, { x: 830, y: 270 }, { x: 940, y: 300 }, { x: 1040, y: 350 },
-  { x: 260, y: 340 }, { x: 365, y: 360 }, { x: 475, y: 365 }, { x: 575, y: 360 },
+  { x: 260, y: 340 }, { x: 365, y: 360 }, { x: 475, y: 365 }, { x: 555, y: 360 },
   { x: 720, y: 365 }, { x: 825, y: 380 }, { x: 940, y: 410 }, { x: 1080, y: 450 },
-  { x: 250, y: 470 }, { x: 360, y: 480 }, { x: 470, y: 495 }, { x: 530, y: 505 },
+  { x: 250, y: 470 }, { x: 360, y: 480 }, { x: 470, y: 495 }, { x: 520, y: 505 },
   { x: 760, y: 500 }, { x: 860, y: 500 }, { x: 970, y: 500 }, { x: 1100, y: 540 },
-  { x: 330, y: 590 }, { x: 430, y: 600 }, { x: 480, y: 605 }, { x: 800, y: 595 },
+  { x: 330, y: 590 }, { x: 430, y: 600 }, { x: 470, y: 635 }, { x: 800, y: 595 },
   { x: 910, y: 590 }, { x: 1130, y: 640 }, { x: 350, y: 700 }, { x: 730, y: 755 },
   { x: 880, y: 730 }, { x: 960, y: 700 }, { x: 1080, y: 750 }, { x: 290, y: 815 },
-  { x: 390, y: 820 }, { x: 500, y: 835 }, { x: 610, y: 845 }, { x: 730, y: 845 },
+  { x: 390, y: 820 }, { x: 500, y: 835 }, { x: 610, y: 835 }, { x: 730, y: 845 },
   { x: 840, y: 820 }, { x: 955, y: 820 }, { x: 1060, y: 870 }, { x: 220, y: 930 },
-  { x: 330, y: 940 }, { x: 445, y: 945 }, { x: 555, y: 930 }, { x: 720, y: 930 },
-  { x: 835, y: 940 }, { x: 950, y: 950 }, { x: 1050, y: 985 }, { x: 250, y: 1060 },
+  { x: 330, y: 940 }, { x: 445, y: 945 }, { x: 545, y: 930 }, { x: 720, y: 930 },
+  { x: 835, y: 940 }, { x: 950, y: 950 }, { x: 1050, y: 985 }, { x: 270, y: 1030 },
   { x: 370, y: 1070 }, { x: 485, y: 1085 }, { x: 760, y: 1085 }, { x: 890, y: 1075 },
-  { x: 1000, y: 1070 }, { x: 305, y: 1130 }, { x: 400, y: 1160 }, { x: 520, y: 1165 },
-  { x: 640, y: 1165 }, { x: 760, y: 1160 }, { x: 880, y: 1150 }, { x: 980, y: 1130 },
+  { x: 1030, y: 1030 }, { x: 335, y: 1130 }, { x: 400, y: 1160 }, { x: 500, y: 1165 },
+  { x: 710, y: 1095 }, { x: 760, y: 1160 }, { x: 880, y: 1150 }, { x: 1030, y: 1170 },
   { x: 182, y: 760 }, { x: 1125, y: 355 },
 ];
+const BITMAP_ISLAND_IDS = ["west", "north", "east", "south", "center"];
+const IMAGE_TERRAIN_BLOCKERS = normalizeImageTerrainShapes({
+  west: [
+    { x: 282, y: 350, rx: 78, ry: 235, rot: -0.2 },
+    { x: 300, y: 770, rx: 82, ry: 300, rot: -0.08 },
+    { x: 286, y: 1120, rx: 76, ry: 245, rot: -0.14 },
+  ],
+  north: [
+    { x: 480, y: 135, rx: 220, ry: 82, rot: -0.04 },
+    { x: 780, y: 120, rx: 185, ry: 82, rot: 0.08 },
+    { x: 1065, y: 185, rx: 160, ry: 88, rot: 0.18 },
+  ],
+  east: [
+    { x: 890, y: 305, rx: 72, ry: 210, rot: 0.08 },
+    { x: 915, y: 650, rx: 70, ry: 270, rot: -0.03 },
+    { x: 820, y: 1080, rx: 72, ry: 195, rot: -0.28 },
+  ],
+  south: [
+    { x: 245, y: 485, rx: 90, ry: 125, rot: -0.3 },
+    { x: 1165, y: 465, rx: 90, ry: 125, rot: 0.24 },
+  ],
+  center: [
+    { x: 205, y: 250, rx: 120, ry: 100, rot: -0.18 },
+    { x: 825, y: 185, rx: 140, ry: 95, rot: 0.12 },
+    { x: 985, y: 1000, rx: 105, ry: 95, rot: -0.08 },
+    { x: 300, y: 990, rx: 110, ry: 90, rot: 0.08 },
+  ],
+});
+const IMAGE_NO_CITY_TERRAIN = normalizeImageTerrainShapes({
+  west: [
+    ...IMAGE_TERRAIN_BLOCKERS.west,
+    { x: 165, y: 755, rx: 72, ry: 170, rot: -0.22 },
+  ],
+  north: [
+    ...IMAGE_TERRAIN_BLOCKERS.north,
+    { x: 724, y: 560, rx: 150, ry: 125, rot: 0 },
+    { x: 724, y: 915, rx: 92, ry: 82, rot: 0 },
+  ],
+  east: [
+    ...IMAGE_TERRAIN_BLOCKERS.east,
+    { x: 305, y: 760, rx: 92, ry: 82, rot: 0 },
+    { x: 540, y: 605, rx: 135, ry: 120, rot: 0 },
+  ],
+  south: [
+    ...IMAGE_TERRAIN_BLOCKERS.south,
+    { x: 724, y: 205, rx: 100, ry: 90, rot: 0 },
+    { x: 724, y: 550, rx: 155, ry: 135, rot: 0 },
+    { x: 750, y: 850, rx: 115, ry: 100, rot: 0 },
+  ],
+  center: [
+    ...IMAGE_TERRAIN_BLOCKERS.center,
+    { x: 625, y: 610, rx: 150, ry: 145, rot: 0 },
+    { x: 210, y: 610, rx: 82, ry: 74, rot: 0 },
+    { x: 625, y: 156, rx: 82, ry: 74, rot: 0 },
+    { x: 1028, y: 610, rx: 82, ry: 74, rot: 0 },
+    { x: 625, y: 1018, rx: 82, ry: 74, rot: 0 },
+  ],
+});
 const MAX_CITY_LEVEL = 100;
 const DAILY_NEUTRAL_CAPTURE_LIMIT = 30;
 const NEUTRAL_CITY_COUNT_LIMIT = 30;
@@ -1555,6 +1613,7 @@ const WALKABLE_TERRAIN_ROWS = [
 const TERRAIN_BLOCKERS = createWorldTerrainBlockers();
 const NO_CITY_TERRAIN = createWorldNoCityTerrain();
 const routeCache = new Map();
+const routeEdgePassableCache = new Map();
 const pathMetricCache = new WeakMap();
 
 
@@ -1716,6 +1775,12 @@ function getCityRegionId(cityOrId) {
   const cityId = String(cityOrId || "");
   const base = getPlayableBaseCities().find(city => city.id === cityId);
   return normalizeRegionId(base?.regionId || base?.startPool);
+}
+
+function getKnownCityId(cityId) {
+  const value = String(cityId || "");
+  if (!value) return "";
+  return getPlayableBaseCities().some(city => city.id === value) ? value : "";
 }
 
 function getOnlineIslandId(regionId = DEFAULT_ONLINE_REGION_ID) {
@@ -1979,6 +2044,67 @@ function isSouthIslandLandPoint(x, y) {
   return pointInPolygon(point.x, point.y, SOUTH_ISLAND_LAND_POLYGON);
 }
 
+function normalizeImageTerrainShapes(terrainByRegion) {
+  return Object.fromEntries(Object.entries(terrainByRegion).map(([regionId, shapes]) => [
+    regionId,
+    shapes.map(shape => {
+      const rot = shape.rot || 0;
+      return {
+        ...shape,
+        cos: Math.cos(-rot),
+        sin: Math.sin(-rot),
+      };
+    }),
+  ]));
+}
+
+function getBitmapIslandRegionIdAtWorldPoint(x, y, padding = 0) {
+  for (const regionId of BITMAP_ISLAND_IDS) {
+    const bounds = getIslandMapBounds(regionId);
+    if (x >= bounds.left - padding
+      && x <= bounds.right + padding
+      && y >= bounds.top - padding
+      && y <= bounds.bottom + padding) {
+      return regionId;
+    }
+  }
+  return "";
+}
+
+function worldToIslandImagePoint(regionId, pointOrX, yValue = null) {
+  if (regionId === "west") return worldToWestImagePoint(pointOrX, yValue);
+  if (regionId === "north") return worldToNorthImagePoint(pointOrX, yValue);
+  if (regionId === "east") return worldToEastImagePoint(pointOrX, yValue);
+  if (regionId === "south") return worldToSouthImagePoint(pointOrX, yValue);
+  if (regionId === "center") return worldToCenterImagePoint(pointOrX, yValue);
+  return { x: 0, y: 0 };
+}
+
+function pointInImageEllipse(point, shape, padding = 0) {
+  const dx = point.x - shape.x;
+  const dy = point.y - shape.y;
+  const xr = dx * shape.cos - dy * shape.sin;
+  const yr = dx * shape.sin + dy * shape.cos;
+  const rx = shape.rx + padding;
+  const ry = shape.ry + padding;
+  return ((xr * xr) / (rx * rx)) + ((yr * yr) / (ry * ry)) <= 1;
+}
+
+function isImageTerrainPoint(x, y, terrainByRegion, padding = 0) {
+  const regionId = getBitmapIslandRegionIdAtWorldPoint(x, y, padding);
+  if (!regionId) return false;
+  const point = worldToIslandImagePoint(regionId, x, y);
+  return (terrainByRegion[regionId] || []).some(shape => pointInImageEllipse(point, shape, padding));
+}
+
+function isBitmapTerrainBlockedPoint(x, y, padding = 0) {
+  return isImageTerrainPoint(x, y, IMAGE_TERRAIN_BLOCKERS, padding);
+}
+
+function isBitmapNoCityTerrainPoint(x, y, padding = 0) {
+  return isImageTerrainPoint(x, y, IMAGE_NO_CITY_TERRAIN, padding);
+}
+
 function centerImagePointToWorld(point) {
   const bounds = getIslandMapBounds("center");
   return {
@@ -2040,10 +2166,14 @@ function pickStartingRegionId() {
 function resolveHomeRegionId(profile = null) {
   const profileRegion = normalizeRegionId(profile?.mainRegionId || getRegionIdFromOnlineIslandId(profile?.mainIslandId));
   if (profile?.mainRegionId || getRegionIdFromOnlineIslandId(profile?.mainIslandId)) return profileRegion;
-  if (profile?.mainCityId) return getCityRegionId(profile.mainCityId);
+  const profileMainCityId = getKnownCityId(profile?.mainCityId);
+  if (profileMainCityId) return getCityRegionId(profileMainCityId);
   if (state?.online?.mainRegionId) return normalizeRegionId(state.online.mainRegionId);
-  if (state?.online?.mainCityId) return getCityRegionId(state.online.mainCityId);
+  const onlineMainCityId = getKnownCityId(state?.online?.mainCityId);
+  if (onlineMainCityId) return getCityRegionId(onlineMainCityId);
   if (state?.online?.mainIslandId) return normalizeRegionId(getRegionIdFromOnlineIslandId(state.online.mainIslandId));
+  const savedMainCityId = getKnownCityId(state?.mainCityId);
+  if (savedMainCityId) return getCityRegionId(savedMainCityId);
   return pickStartingRegionId();
 }
 
@@ -4280,7 +4410,10 @@ async function setupOnlineWorld() {
   const homeRegionId = resolveHomeRegionId(profile);
   const activeRegionId = homeRegionId;
   const mainIslandId = getOnlineIslandId(homeRegionId);
-  const mainCityId = profile?.mainCityId || state.online?.mainCityId || state.mainCityId || "";
+  const mainCityId = getKnownCityId(profile?.mainCityId)
+    || getKnownCityId(state.online?.mainCityId)
+    || getKnownCityId(state.mainCityId)
+    || "";
 
   state.activeRegionId = activeRegionId;
   state.online = {
@@ -4292,7 +4425,7 @@ async function setupOnlineWorld() {
     mainCityId,
     playerUid: getCurrentOnlineUid(),
   };
-  if (mainCityId) state.mainCityId = mainCityId;
+  state.mainCityId = mainCityId || "";
 
   return connectOnlineIsland(activeRegionId, {
     claimHome: activeRegionId === homeRegionId,
@@ -4323,7 +4456,10 @@ async function connectOnlineIsland(regionId, { claimHome = false, homeRegionId =
     activeRegionId: targetRegionId,
     mainIslandId,
     mainRegionId: homeRegion,
-    mainCityId: state.online?.mainCityId || profile?.mainCityId || state.mainCityId || "",
+    mainCityId: getKnownCityId(state.online?.mainCityId)
+      || getKnownCityId(profile?.mainCityId)
+      || getKnownCityId(state.mainCityId)
+      || "",
     playerUid: getCurrentOnlineUid(),
   };
 
@@ -4360,6 +4496,7 @@ async function connectOnlineIsland(regionId, { claimHome = false, homeRegionId =
         mainRegionId: targetRegionId,
       }), 12000, "Starting city claim is taking too long.");
 
+      if (!claim?.cityId) throw new Error("No starting city was claimed.");
       state.online.mainIslandId = islandId;
       state.online.mainRegionId = targetRegionId;
       state.online.mainCityId = claim?.cityId || state.online.mainCityId || state.mainCityId;
@@ -4954,6 +5091,10 @@ function isWalkablePoint(x, y, padding = 0) {
     if (!isBaseLandPoint(x + dx, y + dy)) return false;
   }
 
+  if (getBitmapIslandRegionIdAtWorldPoint(x, y, padding)) {
+    return !isBitmapTerrainBlockedPoint(x, y, padding);
+  }
+
   return !TERRAIN_BLOCKERS.some(shape => {
     const extra = shape.type === "mountain" ? 20 : 10;
     return pointInEllipse(x, y, shape, padding + extra);
@@ -4966,6 +5107,9 @@ function isValidCityPlacementPoint(x, y) {
   if (isWorldStrongholdReservePoint(x, y)) return false;
   for (const [dx, dy] of [[0, 0], [32, 0], [-32, 0], [0, 32], [0, -32], [24, 24], [-24, 24], [24, -24], [-24, -24]]) {
     if (!isBaseLandPoint(x + dx, y + dy)) return false;
+  }
+  if (getBitmapIslandRegionIdAtWorldPoint(x, y, 32)) {
+    return !isBitmapTerrainBlockedPoint(x, y, 8) && !isBitmapNoCityTerrainPoint(x, y, 0);
   }
   for (const shape of [...TERRAIN_BLOCKERS, ...NO_CITY_TERRAIN]) {
     const extra = shape.type === "mountain" ? 70 : 62;
@@ -5017,6 +5161,17 @@ function linePassable(a, b) {
     if (!isWalkablePoint(x, y, 6)) return false;
   }
   return true;
+}
+
+function gridEdgePassable(cx, cy, nx, ny) {
+  const currentIndex = cy * GRID_COLS + cx;
+  const nextIndex = ny * GRID_COLS + nx;
+  const key = currentIndex < nextIndex ? `${currentIndex}|${nextIndex}` : `${nextIndex}|${currentIndex}`;
+  if (routeEdgePassableCache.has(key)) return routeEdgePassableCache.get(key);
+  if (routeEdgePassableCache.size > 400000) routeEdgePassableCache.clear();
+  const passable = linePassable(gridToWorld(cx, cy), gridToWorld(nx, ny));
+  routeEdgePassableCache.set(key, passable);
+  return passable;
 }
 
 function findRoute(source, target) {
@@ -5073,6 +5228,7 @@ function findRoute(source, target) {
       const ny = cy + dy;
       if (!isWalkableCell(nx, ny)) continue;
       if (dx && dy && (!isWalkableCell(cx + dx, cy) || !isWalkableCell(cx, cy + dy))) continue;
+      if (!gridEdgePassable(cx, cy, nx, ny)) continue;
       const nextIndex = ny * GRID_COLS + nx;
       if (closed.has(nextIndex)) continue;
       const tentative = currentG + cost;

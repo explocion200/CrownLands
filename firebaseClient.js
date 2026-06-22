@@ -312,35 +312,82 @@
       const playerSnap = await transaction.get(playerRef);
       const playerData = playerSnap.exists() ? playerSnap.data() : {};
       const existingMainCityId = String(playerData.mainCityId || "");
+      const playerFlag = flag || playerData.flag || null;
+      const playerWorldId = safeWorldId || playerData.worldId || "";
+      const playerRegionId = safeMainRegionId || playerData.mainRegionId || "";
+      const writePlayerMainCity = cityId => {
+        transaction.set(playerRef, {
+          uid,
+          displayName: client.user.displayName || "",
+          email: client.user.email || "",
+          photoURL: client.user.photoURL || "",
+          playerName: safePlayerName,
+          flag: playerFlag,
+          worldId: playerWorldId,
+          mainIslandId: islandId,
+          mainRegionId: playerRegionId,
+          mainCityId: cityId,
+          updatedAt: serverTimestamp(),
+        }, { merge: true });
+      };
+      const writeCityOwner = (cityRef, cityData = {}, { includeTroops = false, minTroops = 0, setClaimedAt = false } = {}) => {
+        const troops = Math.max(minTroops, Math.floor(Number(cityData.troops) || 0));
+        const troopFloat = Math.max(minTroops, Number(cityData.troopFloat) || Number(cityData.troops) || 0);
+        transaction.set(cityRef, {
+          ownerKind: "player",
+          ownerUid: uid,
+          ownerName: safePlayerName,
+          ownerFlag: playerFlag,
+          ...(includeTroops ? { troops, troopFloat } : {}),
+          ...(setClaimedAt ? { claimedAt: cityData.claimedAt || serverTimestamp() } : {}),
+          isMainCity: true,
+          updatedAt: serverTimestamp(),
+        }, { merge: true });
+      };
+      const countNewPlayerOnIsland = () => {
+        transaction.set(islandRef, {
+          playerCount: increment(1),
+          updatedAt: serverTimestamp(),
+        }, { merge: true });
+      };
+
       if (playerData.mainIslandId === islandId && existingMainCityId && uniqueCandidateIds.includes(existingMainCityId)) {
         const mainCityRef = doc(client.db, "islands", islandId, "cities", existingMainCityId);
         const mainCitySnap = await transaction.get(mainCityRef);
         if (!mainCitySnap.exists()) {
           // Continue below and claim a fresh city from the current world layout.
         } else {
-        transaction.set(playerRef, {
-          playerName: safePlayerName,
-          flag: flag || playerData.flag || null,
-          worldId: safeWorldId || playerData.worldId || "",
-          mainIslandId: islandId,
-          mainRegionId: safeMainRegionId || playerData.mainRegionId || "",
-          mainCityId: existingMainCityId,
-          updatedAt: serverTimestamp(),
-        }, { merge: true });
-        transaction.set(mainCityRef, {
-          ownerKind: "player",
-          ownerUid: uid,
-          ownerName: safePlayerName,
-          ownerFlag: flag || playerData.flag || null,
-          isMainCity: true,
-          updatedAt: serverTimestamp(),
-        }, { merge: true });
-        return { cityId: existingMainCityId, alreadyClaimed: true };
+          const mainCityData = mainCitySnap.data() || {};
+          const mainOwnerKind = mainCityData.ownerKind || mainCityData.owner || "neutral";
+          const mainOwnedByUser = mainCityData.ownerUid === uid;
+          const mainClaimable = !mainCityData.ownerUid && mainOwnerKind === "neutral";
+          if (mainOwnedByUser || mainClaimable) {
+            writePlayerMainCity(existingMainCityId);
+            writeCityOwner(mainCityRef, mainCityData, {
+              includeTroops: true,
+              minTroops: mainOwnedByUser ? 0 : 50,
+              setClaimedAt: true,
+            });
+            if (!mainOwnedByUser) countNewPlayerOnIsland();
+            return { cityId: existingMainCityId, alreadyClaimed: mainOwnedByUser };
+          }
         }
+      }
+
+      for (const cityId of uniqueCandidateIds) {
+        const cityRef = doc(client.db, "islands", islandId, "cities", cityId);
+        const citySnap = await transaction.get(cityRef);
+        if (!citySnap.exists()) continue;
+        const data = citySnap.data() || {};
+        if (data.ownerUid !== uid) continue;
+        writePlayerMainCity(cityId);
+        writeCityOwner(cityRef, data);
+        return { cityId, alreadyClaimed: true };
       }
 
       let chosenRef = null;
       let chosenData = null;
+      let chosenCityId = "";
       for (const cityId of uniqueCandidateIds) {
         const cityRef = doc(client.db, "islands", islandId, "cities", cityId);
         const citySnap = await transaction.get(cityRef);
@@ -349,46 +396,24 @@
         if (!data.ownerUid && (data.ownerKind || "neutral") === "neutral") {
           chosenRef = cityRef;
           chosenData = data;
+          chosenCityId = cityId;
           break;
         }
       }
 
-      if (!chosenRef || !chosenData) {
+      if (!chosenRef || !chosenData || !chosenCityId) {
         throw new Error("No unclaimed starting city is available.");
       }
 
-      transaction.set(playerRef, {
-        uid,
-        displayName: client.user.displayName || "",
-        email: client.user.email || "",
-        photoURL: client.user.photoURL || "",
-        playerName: safePlayerName,
-        flag: flag || null,
-        worldId: safeWorldId,
-        mainIslandId: islandId,
-        mainRegionId: safeMainRegionId,
-        mainCityId: chosenData.id,
-        updatedAt: serverTimestamp(),
-      }, { merge: true });
+      writePlayerMainCity(chosenCityId);
+      writeCityOwner(chosenRef, chosenData, {
+        includeTroops: true,
+        minTroops: 50,
+        setClaimedAt: true,
+      });
+      countNewPlayerOnIsland();
 
-      transaction.set(chosenRef, {
-        ownerKind: "player",
-        ownerUid: uid,
-        ownerName: safePlayerName,
-        ownerFlag: flag || null,
-        troops: Math.max(50, Math.floor(Number(chosenData.troops) || 0)),
-        troopFloat: Math.max(50, Number(chosenData.troopFloat) || Number(chosenData.troops) || 0),
-        isMainCity: true,
-        claimedAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-      }, { merge: true });
-
-      transaction.set(islandRef, {
-        playerCount: increment(1),
-        updatedAt: serverTimestamp(),
-      }, { merge: true });
-
-      return { cityId: chosenData.id, alreadyClaimed: false };
+      return { cityId: chosenCityId, alreadyClaimed: false };
     });
   }
 
