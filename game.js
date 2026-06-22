@@ -278,6 +278,7 @@ const HARVEST_BONUS_CITY_CLEARANCE = 132;
 const HARVEST_BONUS_PORTAL_CLEARANCE = 148;
 const HARVEST_BONUS_PICKUP_CLEARANCE = 116;
 const HARVEST_BONUS_TERRAIN_PADDING = 22;
+const HARVEST_BONUS_LAND_CLEARANCE = 64;
 const NEUTRAL_CITY_COUNT_LIMIT = 30;
 const PLAYER_START_TROOPS = 50;
 const PLAYER_SLOT_START_TROOPS = 50;
@@ -6128,7 +6129,10 @@ function pruneExpiredHarvestBonuses() {
   const now = Math.max(0, Number(state.gameSeconds) || 0);
   const before = state.harvestBonuses?.length || 0;
   state.harvestBonuses = normalizeHarvestBonuses(state.harvestBonuses)
-    .filter(bonus => now - bonus.createdAt <= HARVEST_BONUS_EXPIRE_SECONDS);
+    .filter(bonus => (
+      now - bonus.createdAt <= HARVEST_BONUS_EXPIRE_SECONDS
+      && isHarvestBonusTerrainSafePoint(bonus.x, bonus.y, bonus.regionId)
+    ));
   if (state.harvestBonuses.length !== before) renderHarvestBonuses();
 }
 
@@ -6150,11 +6154,48 @@ function isHarvestBonusFarFromOtherPickups(x, y, regionId) {
     .every(bonus => Math.hypot(bonus.x - x, bonus.y - y) >= HARVEST_BONUS_PICKUP_CLEARANCE);
 }
 
-function isValidHarvestBonusPoint(x, y, regionId) {
+function getHarvestBonusLandSampleOffsets(radius = HARVEST_BONUS_LAND_CLEARANCE) {
+  const diagonal = radius * 0.707;
+  const half = radius * 0.5;
+  return [
+    [0, 0],
+    [radius, 0],
+    [-radius, 0],
+    [0, radius],
+    [0, -radius],
+    [diagonal, diagonal],
+    [-diagonal, diagonal],
+    [diagonal, -diagonal],
+    [-diagonal, -diagonal],
+    [half, 0],
+    [-half, 0],
+    [0, half],
+    [0, -half],
+  ];
+}
+
+function isHarvestBonusFullyOnLand(x, y, regionId) {
   const activeRegionId = normalizeRegionId(regionId);
-  if (!isRegionLandPoint(x, y, activeRegionId, HARVEST_BONUS_TERRAIN_PADDING)) return false;
+  for (const [dx, dy] of getHarvestBonusLandSampleOffsets()) {
+    const sampleX = x + dx;
+    const sampleY = y + dy;
+    if (!isRegionLandPoint(sampleX, sampleY, activeRegionId, 0)) return false;
+    if (!isRegionWalkablePoint(sampleX, sampleY, activeRegionId, 0)) return false;
+  }
+  return true;
+}
+
+function isHarvestBonusTerrainSafePoint(x, y, regionId) {
+  const activeRegionId = normalizeRegionId(regionId);
+  if (!isHarvestBonusFullyOnLand(x, y, activeRegionId)) return false;
   if (!isRegionWalkablePoint(x, y, activeRegionId, HARVEST_BONUS_TERRAIN_PADDING)) return false;
   if (!isValidCityPlacementPoint(x, y)) return false;
+  return true;
+}
+
+function isValidHarvestBonusPoint(x, y, regionId) {
+  const activeRegionId = normalizeRegionId(regionId);
+  if (!isHarvestBonusTerrainSafePoint(x, y, activeRegionId)) return false;
   if (!isHarvestBonusFarFromCities(x, y, activeRegionId)) return false;
   if (!isHarvestBonusFarFromPortals(x, y, activeRegionId)) return false;
   if (!isHarvestBonusFarFromOtherPickups(x, y, activeRegionId)) return false;
@@ -6164,8 +6205,8 @@ function isValidHarvestBonusPoint(x, y, regionId) {
 function createHarvestBonusPoint(regionId) {
   const activeRegionId = normalizeRegionId(regionId);
   const bounds = getIslandMapBounds(activeRegionId);
-  const margin = 96;
-  for (let attempt = 0; attempt < 420; attempt += 1) {
+  const margin = Math.max(128, HARVEST_BONUS_LAND_CLEARANCE * 2);
+  for (let attempt = 0; attempt < 700; attempt += 1) {
     const x = bounds.left + margin + Math.random() * Math.max(1, bounds.width - margin * 2);
     const y = bounds.top + margin + Math.random() * Math.max(1, bounds.height - margin * 2);
     if (isValidHarvestBonusPoint(x, y, activeRegionId)) return { x, y };
