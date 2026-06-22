@@ -8762,7 +8762,7 @@ function setMainCityReturnHudMode(enabled) {
   mainCityReturnBtn.classList.toggle("hud-home-return", Boolean(enabled));
   if (enabled) {
     if (resourceBar && mainCityReturnBtn.parentElement !== resourceBar) {
-      const anchor = islandSwitchBtn?.nextSibling || resourceBar.firstChild;
+      const anchor = islandSwitchBtn || resourceBar.firstChild;
       resourceBar.insertBefore(mainCityReturnBtn, anchor);
     }
     return;
