@@ -8139,9 +8139,7 @@ function renderCityListModal() {
 
   modalBody.querySelectorAll("[data-city-list-jump]").forEach(button => {
     button.addEventListener("click", () => {
-      const cityId = button.dataset.cityListJump;
-      modal.close();
-      selectCity(cityId);
+      focusCityListLocation(button.dataset.cityListJump);
     });
   });
 
@@ -8151,6 +8149,25 @@ function renderCityListModal() {
       showCityInfoModal(button.dataset.cityListInfo);
     });
   });
+}
+
+async function focusCityListLocation(cityId) {
+  const city = cityById(cityId);
+  if (!city) {
+    showToast("That city is no longer available.");
+    return;
+  }
+  const regionId = getCityRegionId(city);
+  if (modal.open) modal.close();
+  scoutNearbySourceId = null;
+  sendMode = false;
+  selectedTargetId = null;
+  if (regionId !== getActiveMapRegionId()) {
+    await switchOnlineIsland(regionId);
+    if (regionId !== getActiveMapRegionId()) return;
+  }
+  selectCity(city.id);
+  showToast(`Viewing ${city.name}`);
 }
 
 function getSortedCityList() {
