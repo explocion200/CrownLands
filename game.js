@@ -8603,6 +8603,22 @@ function getMainCityReturnButtonSize() {
   };
 }
 
+function setMainCityReturnHudMode(enabled) {
+  if (!mainCityReturnBtn) return;
+  const resourceBar = document.querySelector(".resource-bar");
+  mainCityReturnBtn.classList.toggle("hud-home-return", Boolean(enabled));
+  if (enabled) {
+    if (resourceBar && mainCityReturnBtn.parentElement !== resourceBar) {
+      const anchor = islandSwitchBtn?.nextSibling || resourceBar.firstChild;
+      resourceBar.insertBefore(mainCityReturnBtn, anchor);
+    }
+    return;
+  }
+  if (gameView && mainCityReturnBtn.parentElement !== gameView) {
+    gameView.insertBefore(mainCityReturnBtn, mapFrame);
+  }
+}
+
 function getMainCityReturnRectAt(x, y, size, padding = 4) {
   return {
     left: x - size.width / 2 - padding,
@@ -8665,6 +8681,7 @@ function findClearMainCityReturnPoint(preferred, bounds, size, avoidRects) {
 
 function updateMainCityReturnButton(frameRect = null) {
   if (!mainCityReturnBtn || !gameView || !state || setupScreen?.classList.contains("visible")) {
+    setMainCityReturnHudMode(false);
     if (mainCityReturnBtn) mainCityReturnBtn.hidden = true;
     return;
   }
@@ -8672,12 +8689,25 @@ function updateMainCityReturnButton(frameRect = null) {
   const mainCity = getMainCityReference();
   const rect = frameRect || mapFrame?.getBoundingClientRect();
   if (!mainCity || !rect) {
+    setMainCityReturnHudMode(false);
     mainCityReturnBtn.hidden = true;
     return;
   }
 
   const homeRegionId = getMainCityRegionId();
   const isHomeIslandActive = homeRegionId === getActiveMapRegionId();
+  if (!isHomeIslandActive) {
+    setMainCityReturnHudMode(true);
+    mainCityReturnBtn.hidden = false;
+    mainCityReturnBtn.title = `Return to ${getRegionLabel(homeRegionId)}`;
+    mainCityReturnBtn.style.removeProperty("left");
+    mainCityReturnBtn.style.removeProperty("top");
+    mainCityReturnBtn.style.removeProperty("--main-city-angle");
+    return;
+  }
+
+  setMainCityReturnHudMode(false);
+  mainCityReturnBtn.title = "Return to main city";
   const mainCityMapPoint = worldToMapPoint(mainCity);
   const offset = getMapViewportOffset(rect);
   const targetFrameX = offset.x + (mainCityMapPoint.x - camera.x) * zoom;

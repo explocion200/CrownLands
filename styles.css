@@ -229,6 +229,21 @@ input {
 .main-city-return:active {
   transform: translate(-50%, -50%) scale(.95);
 }
+.main-city-return.hud-home-return {
+  position: static;
+  z-index: auto;
+  width: 38px;
+  height: 38px;
+  border-radius: 13px;
+  transform: none;
+  flex: 0 0 auto;
+}
+.main-city-return.hud-home-return .main-city-return-arrow {
+  display: none;
+}
+.main-city-return.hud-home-return:active {
+  transform: translateY(1px);
+}
 
 .map-frame { position: absolute; inset: 0 0 164px 0; overflow: hidden; touch-action: none; cursor: grab; background: var(--ocean-bg); }
 .map-frame.dragging { cursor: grabbing; }
