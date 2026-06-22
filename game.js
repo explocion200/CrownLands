@@ -42,6 +42,13 @@ const GOLD_STRONGHOLD_ART_SRC = "assets/gold-stronghold.png";
 const GOLD_STRONGHOLD_BONUS_PERCENT = 15;
 const GOLD_STRONGHOLD_LEVEL = 30;
 const GOLD_STRONGHOLD_START_TROOPS = 10000;
+const TRAINING_STRONGHOLD_ID = "north_training_stronghold";
+const TRAINING_STRONGHOLD_NAME = "Training Stronghold";
+const TRAINING_STRONGHOLD_ART_SRC = "assets/training-stronghold.png";
+const TRAINING_STRONGHOLD_BONUS_PERCENT = 15;
+const TRAINING_STRONGHOLD_LEVEL = 30;
+const TRAINING_STRONGHOLD_START_TROOPS = 10000;
+const STRONGHOLD_IDS = new Set([GOLD_STRONGHOLD_ID, TRAINING_STRONGHOLD_ID]);
 const WEST_ISLAND_ART_SRC = "assets/west-island.png";
 const WEST_ISLAND_IMAGE_WIDTH = 1024;
 const WEST_ISLAND_IMAGE_HEIGHT = 1536;
@@ -74,6 +81,7 @@ const WEST_ISLAND_CITY_POINTS = [
 const NORTH_ISLAND_ART_SRC = "assets/north-island.png";
 const NORTH_ISLAND_IMAGE_WIDTH = 1448;
 const NORTH_ISLAND_IMAGE_HEIGHT = 1086;
+const NORTH_TRAINING_STRONGHOLD_IMAGE_POINT = { x: 724, y: 560 };
 const NORTH_CENTER_TELEPORT_IMAGE_POINT = { x: 724, y: 915 };
 const NORTH_ISLAND_RESERVED_CIRCLES = [
   { x: 724, y: 560, r: 135 },
@@ -383,23 +391,45 @@ function getCastleAsset(stage) {
 }
 
 function isStronghold(city) {
-  return Boolean(city && (city.kind === "stronghold" || city.id === GOLD_STRONGHOLD_ID));
+  return Boolean(city && (city.kind === "stronghold" || STRONGHOLD_IDS.has(city.id)));
 }
 
 function isGoldStronghold(city) {
   return isStronghold(city) && (city.strongholdType === "gold" || city.id === GOLD_STRONGHOLD_ID);
 }
 
+function isTrainingStronghold(city) {
+  return isStronghold(city) && (city.strongholdType === "training" || city.id === TRAINING_STRONGHOLD_ID);
+}
+
 function getStrongholdArtSrc(city) {
+  if (isTrainingStronghold(city)) return TRAINING_STRONGHOLD_ART_SRC;
   return isGoldStronghold(city) ? GOLD_STRONGHOLD_ART_SRC : "";
 }
 
 function getStrongholdBonusPercent(city) {
+  if (isTrainingStronghold(city)) return TRAINING_STRONGHOLD_BONUS_PERCENT;
   return isGoldStronghold(city) ? GOLD_STRONGHOLD_BONUS_PERCENT : 0;
 }
 
 function getStrongholdDefenseLevel(city) {
+  if (isTrainingStronghold(city)) return TRAINING_STRONGHOLD_LEVEL;
   return isStronghold(city) ? GOLD_STRONGHOLD_LEVEL : 0;
+}
+
+function getStrongholdStartTroops(city) {
+  if (isTrainingStronghold(city)) return TRAINING_STRONGHOLD_START_TROOPS;
+  return isStronghold(city) ? GOLD_STRONGHOLD_START_TROOPS : 0;
+}
+
+function getStrongholdProductionLabel(city) {
+  return isTrainingStronghold(city) ? "troop production" : "gold production";
+}
+
+function getStrongholdShortBonusLabel(city) {
+  return isTrainingStronghold(city)
+    ? `+${formatNumber(getStrongholdBonusPercent(city))}% troops`
+    : `+${formatNumber(getStrongholdBonusPercent(city))}% gold`;
 }
 
 function getBaseCityInitialLevel(base) {
@@ -407,7 +437,7 @@ function getBaseCityInitialLevel(base) {
 }
 
 function getBaseCityInitialTroops(base) {
-  return isStronghold(base) ? GOLD_STRONGHOLD_START_TROOPS : NEUTRAL_START_TROOPS;
+  return isStronghold(base) ? getStrongholdStartTroops(base) : NEUTRAL_START_TROOPS;
 }
 
 function createNeutralCityFromBase(base) {
@@ -2403,32 +2433,58 @@ function generateWorldCitySlots() {
 
 function generateStrongholdSlots() {
   const west = getRegionById("west");
-  if (!west) return [];
-  const chosen = westImagePointToWorld(WEST_GOLD_STRONGHOLD_IMAGE_POINT);
-  return [{
-    id: GOLD_STRONGHOLD_ID,
-    name: GOLD_STRONGHOLD_NAME,
-    regionId: west.id,
-    startPool: west.id,
-    x: Math.round(chosen.x),
-    y: Math.round(chosen.y),
+  const north = getRegionById("north");
+  return [
+    west ? createStrongholdSlot({
+      id: GOLD_STRONGHOLD_ID,
+      name: GOLD_STRONGHOLD_NAME,
+      region: west,
+      point: westImagePointToWorld(WEST_GOLD_STRONGHOLD_IMAGE_POINT),
+      type: "gold",
+      bonus: "goldProduction",
+      bonusPercent: GOLD_STRONGHOLD_BONUS_PERCENT,
+      level: GOLD_STRONGHOLD_LEVEL,
+      troops: GOLD_STRONGHOLD_START_TROOPS,
+    }) : null,
+    north ? createStrongholdSlot({
+      id: TRAINING_STRONGHOLD_ID,
+      name: TRAINING_STRONGHOLD_NAME,
+      region: north,
+      point: northImagePointToWorld(NORTH_TRAINING_STRONGHOLD_IMAGE_POINT),
+      type: "training",
+      bonus: "troopProduction",
+      bonusPercent: TRAINING_STRONGHOLD_BONUS_PERCENT,
+      level: TRAINING_STRONGHOLD_LEVEL,
+      troops: TRAINING_STRONGHOLD_START_TROOPS,
+    }) : null,
+  ].filter(Boolean);
+}
+
+function createStrongholdSlot({ id, name, region, point, type, bonus, bonusPercent, level, troops }) {
+  return {
+    id,
+    name,
+    regionId: region.id,
+    startPool: region.id,
+    x: Math.round(point.x),
+    y: Math.round(point.y),
     owner: "neutral",
     ownerKind: "neutral",
     ownerUid: null,
     ownerName: "",
     ownerFlag: null,
-    level: GOLD_STRONGHOLD_LEVEL,
-    troops: GOLD_STRONGHOLD_START_TROOPS,
-    troopFloat: GOLD_STRONGHOLD_START_TROOPS,
+    level,
+    troops,
+    troopFloat: troops,
     defense: 1,
     investedGold: 0,
     lastCapturedAt: null,
     isMainCity: false,
     kind: "stronghold",
-    strongholdType: "gold",
-    bonus: "goldProduction",
-    bonusPercent: GOLD_STRONGHOLD_BONUS_PERCENT,
-  }];
+    strongholdType: type,
+    bonus,
+    bonusPercent,
+  };
 }
 
 function getRegionCityCount(region) {
@@ -3555,6 +3611,14 @@ function getControlledStrongholdGoldBonusPercent(owner = "player") {
   }, 0);
 }
 
+function getControlledStrongholdTroopBonusPercent(owner = "player") {
+  if (!state || !Array.isArray(state.cities)) return 0;
+  return state.cities.reduce((total, city) => {
+    if (city.owner !== owner || !isTrainingStronghold(city)) return total;
+    return total + getStrongholdBonusPercent(city);
+  }, 0);
+}
+
 function clampCityLevel(level) {
   return clamp(Math.floor(Number(level) || 1), 1, MAX_CITY_LEVEL);
 }
@@ -3599,9 +3663,10 @@ function getCityStats(city) {
   const recruiterPercent = city?.owner === "player" ? getSkillPercent("recruiter") : 0;
   const prosperousPercent = city?.owner === "player" ? getSkillPercent("prosperous") : 0;
   const strongholdGoldBonusPercent = !stronghold && city?.owner === "player" ? getControlledStrongholdGoldBonusPercent("player") : 0;
+  const strongholdTroopBonusPercent = !stronghold && city?.owner === "player" ? getControlledStrongholdTroopBonusPercent("player") : 0;
   const baseTroopProductionPerHour = stronghold ? 0 : victoryPoints * CITY_LEVEL_STATS.troopProductionPerVictoryPoint;
   const recruiterBonusPerHour = stronghold ? 0 : victoryPoints * recruiterPercent / 100;
-  const troopProductionPerHour = baseTroopProductionPerHour + recruiterBonusPerHour;
+  const troopProductionPerHour = (baseTroopProductionPerHour + recruiterBonusPerHour) * (1 + strongholdTroopBonusPercent / 100);
   const millionLordsProductionVp = getMillionLordsCityProductionVp(level);
   const baseGoldProductionPerHour = stronghold ? 0 : getMillionLordsPassiveGoldPerHour(level);
   const goldProductionPerHour = baseGoldProductionPerHour * (1 + prosperousPercent / 100) * (1 + strongholdGoldBonusPercent / 100);
@@ -3618,6 +3683,7 @@ function getCityStats(city) {
     recruiterPercent,
     prosperousPercent,
     strongholdGoldBonusPercent,
+    strongholdTroopBonusPercent,
     baseTroopProductionPerHour,
     recruiterBonusPerHour,
     troopProductionPerHour,
@@ -8158,16 +8224,17 @@ function showCityInfoModal(cityId) {
     const report = getScoutReport(city.id);
     const stats = getCityStats(city);
     const remaining = report ? Math.max(0, Math.ceil(report.expiresAt - state.gameSeconds)) : 0;
+    const strongholdBonusLabel = stronghold ? `+${formatNumber(getStrongholdBonusPercent(city))}% ${getStrongholdProductionLabel(city)}` : "";
     modalTitle.textContent = stronghold ? `${city.name} - Stronghold` : `${city.name} - Level ${city.level}`;
     modalBody.innerHTML = `
       <div class="city-stat-panel modal-city-stats">
-        ${stronghold ? `<div class="stat-wide"><span>Stronghold bonus</span><strong>+${formatNumber(getStrongholdBonusPercent(city))}% gold production</strong><small>Bonus is active only for the current controller.</small></div>` : ""}
+        ${stronghold ? `<div class="stat-wide"><span>Stronghold bonus</span><strong>${strongholdBonusLabel}</strong><small>Bonus is active only for the current controller.</small></div>` : ""}
         <div class="stat-wide"><span>Owner</span><strong>${escapeHtml(getCityOwnerDisplayName(city))}</strong></div>
         <div class="stat-chip"><span>${stronghold ? "Defense level" : "City level"}</span><strong>${formatNumber(stats.level)}</strong></div>
         <div class="stat-chip"><span>Victory points</span><strong>${formatNumber(stats.victoryPoints)}</strong></div>
         <div class="stat-chip"><span>Troops</span><strong>${report ? formatNumber(report.troops) : "Unknown"}</strong></div>
         <div class="stat-chip"><span>Total defense</span><strong>${report ? formatNumber(report.totalDefense) : "Unknown"}</strong></div>
-        ${stronghold ? `<div class="stat-chip"><span>Neutral base</span><strong>${formatNumber(GOLD_STRONGHOLD_START_TROOPS)}</strong><small>starting defenders</small></div>` : ""}
+        ${stronghold ? `<div class="stat-chip"><span>Neutral base</span><strong>${formatNumber(getStrongholdStartTroops(city))}</strong><small>starting defenders</small></div>` : ""}
         ${report
           ? `<div class="stat-wide"><span>Scout report expires</span><strong>${formatDuration(remaining)}</strong></div>`
           : `<div class="stat-wide scout-required"><span>Scout report</span><strong>Not available</strong></div>`}
@@ -8178,14 +8245,15 @@ function showCityInfoModal(cityId) {
   }
   const stats = getCityStats(city);
   if (stronghold) {
+    const strongholdBonusLabel = `+${formatNumber(getStrongholdBonusPercent(city))}% ${getStrongholdProductionLabel(city)}`;
     modalTitle.textContent = `${city.name} - Stronghold`;
     modalBody.innerHTML = `
       <div class="city-stat-panel modal-city-stats stronghold-stat-panel">
-        <div class="stat-wide stronghold-status"><span>Controlled bonus</span><strong>+${formatNumber(getStrongholdBonusPercent(city))}% gold production</strong><small>Active while you control this Stronghold.</small></div>
+        <div class="stat-wide stronghold-status"><span>Controlled bonus</span><strong>${strongholdBonusLabel}</strong><small>Active while you control this Stronghold.</small></div>
         <div class="stat-wide"><span>Total defense</span><strong>${formatNumber(stats.totalDefense)}</strong></div>
         <div class="stat-chip"><span>Owner</span><strong>${escapeHtml(getCityOwnerDisplayName(city))}</strong></div>
         <div class="stat-chip"><span>Troops stationed</span><strong>${formatNumber(city.troops)}</strong></div>
-        <div class="stat-chip"><span>Defense level</span><strong>${formatNumber(stats.level)}</strong><small>matches a level ${formatNumber(GOLD_STRONGHOLD_LEVEL)} city</small></div>
+        <div class="stat-chip"><span>Defense level</span><strong>${formatNumber(stats.level)}</strong><small>matches a level ${formatNumber(stats.level)} city</small></div>
         <div class="stat-chip"><span>City walls</span><strong>${formatNumber(stats.cityWalls)}</strong></div>
         <div class="stat-chip"><span>Garrison limit</span><strong>Unlimited</strong><small>station as many troops as you can send</small></div>
         <div class="stat-chip"><span>Own production</span><strong>0/h</strong><small>Strongholds boost towns instead</small></div>
@@ -8202,7 +8270,7 @@ function showCityInfoModal(cityId) {
       <div class="stat-chip"><span>Guardian</span><strong>${stats.guardianPercent}%</strong></div>
       <div class="stat-chip"><span>City power</span><strong>${formatNumber(stats.cityPower)}</strong><small>+${CITY_LEVEL_STATS.victoryPointsPerLevel}/level</small></div>
       <div class="stat-chip"><span>Defense</span><strong>${stats.defensePercent}%</strong><small>+${CITY_LEVEL_STATS.defensePercentPerLevel}%/level</small></div>
-      <div class="stat-chip"><span>Troops production</span><strong>${formatNumber(stats.troopProductionPerHour)}/h</strong><small>VP x ${CITY_LEVEL_STATS.troopProductionPerVictoryPoint}</small></div>
+      <div class="stat-chip"><span>Troops production</span><strong>${formatNumber(stats.troopProductionPerHour)}/h</strong><small>VP x ${CITY_LEVEL_STATS.troopProductionPerVictoryPoint}${stats.strongholdTroopBonusPercent ? ` + Stronghold ${formatNumber(stats.strongholdTroopBonusPercent)}%` : ""}</small></div>
       <div class="stat-chip"><span>City walls</span><strong>${formatNumber(stats.cityWalls)}</strong><small>+${CITY_LEVEL_STATS.cityWallsPerLevel}/level</small></div>
       <div class="stat-chip"><span>Gold production</span><strong>${formatNumber(stats.goldProductionPerHour)}/h</strong><small>ML ${formatNumber(stats.millionLordsProductionVp)} x ${CITY_LEVEL_STATS.goldProductionPerMillionLordsVp}${stats.strongholdGoldBonusPercent ? ` + Stronghold ${formatNumber(stats.strongholdGoldBonusPercent)}%` : ""}</small></div>
     </div>
@@ -8238,7 +8306,7 @@ function showCityInfoModal(cityId) {
       <div class="stat-chip"><span>City defense</span><strong>${stats.defensePercent}%</strong><small>${CITY_LEVEL_STATS.defensePercentPerLevel}% per level</small></div>
       <div class="stat-chip"><span>City walls</span><strong>${formatNumber(stats.cityWalls)}</strong><small>Level-based static defense</small></div>
       <div class="stat-chip"><span>Guardian</span><strong>${stats.guardianPercent}%</strong><small>Player defense skill</small></div>
-      <div class="stat-chip"><span>Troops production</span><strong>${formatNumber(stats.troopProductionPerHour)}/h</strong><small>VP x ${CITY_LEVEL_STATS.troopProductionPerVictoryPoint} + Recruiter</small></div>
+      <div class="stat-chip"><span>Troops production</span><strong>${formatNumber(stats.troopProductionPerHour)}/h</strong><small>VP x ${CITY_LEVEL_STATS.troopProductionPerVictoryPoint} + Recruiter${stats.strongholdTroopBonusPercent ? ` + Stronghold ${formatNumber(stats.strongholdTroopBonusPercent)}%` : ""}</small></div>
       <div class="stat-chip"><span>Gold production</span><strong>${formatNumber(stats.goldProductionPerHour)}/h</strong><small>ML ${formatNumber(stats.millionLordsProductionVp)} x ${CITY_LEVEL_STATS.goldProductionPerMillionLordsVp} + Prosperous${stats.strongholdGoldBonusPercent ? ` + Stronghold ${formatNumber(stats.strongholdGoldBonusPercent)}%` : ""}</small></div>
       <div class="stat-chip"><span>Invested gold</span><strong>${formatNumber(city.investedGold || 0)}</strong><small>Cautious can refund part</small></div>
       ${cooldownRemaining > 0 ? `<div class="stat-wide"><span>Capture XP cooldown</span><strong>${formatDuration(cooldownRemaining)}</strong></div>` : ""}
@@ -8385,7 +8453,7 @@ function renderCityListRow(city) {
       <span class="city-list-level"><b>${stronghold ? "SH" : formatNumber(clampCityLevel(city.level))}</b></span>
       <strong class="city-list-troops">${formatNumber(troops)} <span aria-hidden="true">&#9817;</span></strong>
       <span class="city-list-name">${escapeHtml(city.name)}</span>
-      <span class="city-list-main-label">${stronghold ? `+${formatNumber(getStrongholdBonusPercent(city))}% gold` : isMain ? "Main city" : ""}</span>
+      <span class="city-list-main-label">${stronghold ? getStrongholdShortBonusLabel(city) : isMain ? "Main city" : ""}</span>
       <button class="city-list-info" data-city-list-info="${escapeHtml(city.id)}" type="button" aria-label="Open ${escapeHtml(city.name)} info">&#9432;</button>
     </article>
   `;

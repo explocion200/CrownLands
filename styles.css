@@ -706,6 +706,15 @@ input {
   border-color: rgba(255, 244, 184, .96);
   box-shadow: 0 0 0 5px rgba(242,184,75,.28), 0 0 30px rgba(255, 218, 105, .74);
 }
+.city-node.stronghold-training .stronghold-glow {
+  border-color: rgba(203, 235, 255, .86);
+  background: radial-gradient(ellipse at center, rgba(126, 207, 255, .3), rgba(16, 49, 86, .16) 62%, transparent 72%);
+  box-shadow: 0 0 24px rgba(126, 207, 255, .48);
+}
+.city-node.stronghold-training.selected .stronghold-glow {
+  border-color: rgba(238, 249, 255, .98);
+  box-shadow: 0 0 0 5px rgba(126, 207, 255, .28), 0 0 30px rgba(176, 228, 255, .72);
+}
 .city-node.stronghold-node.attackable .stronghold-glow {
   animation: targetPulse .75s infinite alternate;
 }
