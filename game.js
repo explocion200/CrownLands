@@ -262,6 +262,17 @@ const MILLION_LORDS_CITY_PRODUCTION_VP_BASE = 20;
 const MILLION_LORDS_CITY_PRODUCTION_VP_GROWTH = 1.115;
 const MILLION_LORDS_PASSIVE_GOLD_PER_CITY_VP = 15;
 const DAILY_NEUTRAL_CAPTURE_LIMIT = 30;
+const HARVEST_BONUS_DAILY_LIMIT = 200;
+const HARVEST_BONUS_SPAWN_INTERVAL_SECONDS = 45;
+const HARVEST_BONUS_INITIAL_SPAWN_SECONDS = 8;
+const HARVEST_BONUS_MAX_ACTIVE_PER_ISLAND = 6;
+const HARVEST_BONUS_EXPIRE_SECONDS = 1800;
+const HARVEST_BONUS_GOLD_SECONDS = 300;
+const HARVEST_BONUS_MIN_GOLD = 500;
+const HARVEST_BONUS_CITY_CLEARANCE = 132;
+const HARVEST_BONUS_PORTAL_CLEARANCE = 148;
+const HARVEST_BONUS_PICKUP_CLEARANCE = 116;
+const HARVEST_BONUS_TERRAIN_PADDING = 22;
 const NEUTRAL_CITY_COUNT_LIMIT = 30;
 const PLAYER_START_TROOPS = 50;
 const PLAYER_SLOT_START_TROOPS = 50;
@@ -1742,6 +1753,7 @@ const mapFrame = document.getElementById("mapFrame");
 const mapWorld = document.getElementById("mapWorld");
 const mapBg = document.getElementById("mapBg");
 const pathsSvg = document.getElementById("pathsSvg");
+const harvestLayer = document.getElementById("harvestLayer");
 const portalLayer = document.getElementById("portalLayer");
 const cityLayer = document.getElementById("cityLayer");
 const armyLayer = document.getElementById("armyLayer");
@@ -2537,7 +2549,7 @@ function applyWorldDimensions() {
   const bounds = getActiveMapBounds();
   const width = `${bounds.width}px`;
   const height = `${bounds.height}px`;
-  [mapWorld, portalLayer, cityLayer, armyLayer].forEach(element => {
+  [mapWorld, harvestLayer, portalLayer, cityLayer, armyLayer].forEach(element => {
     if (!element) return;
     element.style.width = width;
     element.style.height = height;
@@ -2632,6 +2644,35 @@ function renderIslandTeleporters() {
       switchOnlineIsland(teleport.targetRegionId);
     });
     portalLayer.appendChild(buttonElement);
+  });
+}
+
+function renderHarvestBonuses() {
+  if (!harvestLayer) return;
+  harvestLayer.innerHTML = "";
+  if (!state) return;
+  const activeRegionId = getActiveMapRegionId();
+  const daily = ensureDailyCaptureTracker();
+  const remaining = Math.max(0, HARVEST_BONUS_DAILY_LIMIT - daily.harvestedBonuses);
+  getActiveHarvestBonuses(activeRegionId).forEach(bonus => {
+    const mapPoint = worldToMapPoint(bonus);
+    const buttonElement = document.createElement("button");
+    buttonElement.type = "button";
+    buttonElement.className = "harvest-bonus-node";
+    buttonElement.dataset.harvestBonusId = bonus.id;
+    buttonElement.style.left = `${mapPoint.x}px`;
+    buttonElement.style.top = `${mapPoint.y}px`;
+    buttonElement.disabled = remaining <= 0;
+    buttonElement.setAttribute("aria-label", remaining > 0 ? "Harvest gold bonus" : "Daily harvest limit reached");
+    buttonElement.title = remaining > 0
+      ? `Harvest gold bonus - ${formatNumber(remaining)} left today`
+      : "Daily harvest limit reached";
+    buttonElement.innerHTML = `<span aria-hidden="true">&#129689;</span>`;
+    buttonElement.addEventListener("click", event => {
+      event.stopPropagation();
+      collectHarvestBonus(bonus.id);
+    });
+    harvestLayer.appendChild(buttonElement);
   });
 }
 
@@ -3035,7 +3076,9 @@ function newGame(playerName) {
     gameSeconds: 0,
     lastRealTimeMs: Date.now(),
     upgrades: createDefaultSkills(),
-    daily: { date: currentLocalDateKey(), neutralCaptures: 0 },
+    daily: { date: currentLocalDateKey(), neutralCaptures: 0, harvestedBonuses: 0 },
+    harvestBonuses: [],
+    harvestSpawnTimer: HARVEST_BONUS_INITIAL_SPAWN_SECONDS,
     scoutReports: {},
     battleReports: [],
     marchPercent: DEFAULT_MARCH_PERCENT,
@@ -3543,6 +3586,7 @@ function loadGame() {
       loaded.flag = normalizeFlag(loaded.flag);
       loaded.marchPercent = normalizeMarchPercent(loaded.marchPercent);
       loaded.daily = normalizeDailyCaptureTracker(loaded.daily);
+      normalizeHarvestState(loaded);
       loaded.scoutReports = normalizeScoutReports(loaded.scoutReports);
       loaded.battleReports = normalizeBattleReports(loaded.battleReports);
       loaded.mainCityChangedAtMs = normalizeTimestampMs(loaded.mainCityChangedAtMs);
@@ -3645,6 +3689,7 @@ function normalizeOnlineGameSnapshot(snapshot, fallbackPlayerName = "Ricky") {
     loaded.flag = normalizeFlag(loaded.flag);
     loaded.marchPercent = normalizeMarchPercent(loaded.marchPercent);
     loaded.daily = normalizeDailyCaptureTracker(loaded.daily);
+    normalizeHarvestState(loaded);
     loaded.scoutReports = normalizeScoutReports(loaded.scoutReports);
     loaded.battleReports = normalizeBattleReports(loaded.battleReports);
     loaded.mainCityChangedAtMs = normalizeTimestampMs(loaded.mainCityChangedAtMs);
@@ -3764,18 +3809,41 @@ function currentLocalDateKey() {
 function normalizeDailyCaptureTracker(daily) {
   const today = currentLocalDateKey();
   if (!daily || typeof daily !== "object" || daily.date !== today) {
-    return { date: today, neutralCaptures: 0 };
+    return { date: today, neutralCaptures: 0, harvestedBonuses: 0 };
   }
   return {
     date: today,
     neutralCaptures: clamp(Math.floor(Number(daily.neutralCaptures) || 0), 0, DAILY_NEUTRAL_CAPTURE_LIMIT),
+    harvestedBonuses: clamp(Math.floor(Number(daily.harvestedBonuses) || 0), 0, HARVEST_BONUS_DAILY_LIMIT),
   };
 }
 
 function ensureDailyCaptureTracker() {
-  if (!state) return { date: currentLocalDateKey(), neutralCaptures: 0 };
+  if (!state) return { date: currentLocalDateKey(), neutralCaptures: 0, harvestedBonuses: 0 };
   state.daily = normalizeDailyCaptureTracker(state.daily);
   return state.daily;
+}
+
+function normalizeHarvestBonuses(bonuses) {
+  if (!Array.isArray(bonuses)) return [];
+  return bonuses
+    .map(bonus => ({
+      id: String(bonus?.id || ""),
+      regionId: normalizeRegionId(bonus?.regionId),
+      x: Number(bonus?.x),
+      y: Number(bonus?.y),
+      createdAt: Math.max(0, Number(bonus?.createdAt) || 0),
+    }))
+    .filter(bonus => bonus.id && Number.isFinite(bonus.x) && Number.isFinite(bonus.y));
+}
+
+function normalizeHarvestState(snapshot) {
+  if (!snapshot || typeof snapshot !== "object") return;
+  snapshot.harvestBonuses = normalizeHarvestBonuses(snapshot.harvestBonuses);
+  const timer = Number(snapshot.harvestSpawnTimer);
+  snapshot.harvestSpawnTimer = Number.isFinite(timer)
+    ? clamp(timer, 0, HARVEST_BONUS_SPAWN_INTERVAL_SECONDS)
+    : HARVEST_BONUS_INITIAL_SPAWN_SECONDS;
 }
 
 function normalizeScoutReports(reports) {
@@ -4409,6 +4477,7 @@ async function switchOnlineIsland(regionId) {
   onlineWorldConnected = false;
   prepareSelectionForIslandSwitch();
   pathsSvg.innerHTML = "";
+  if (harvestLayer) harvestLayer.innerHTML = "";
   armyLayer.innerHTML = "";
   cityLayer.innerHTML = "";
   if (modal.open) modal.close();
@@ -5899,6 +5968,7 @@ function frame(now) {
 function updateGame(dt) {
   state.gameSeconds += dt;
   updateEconomy(dt);
+  updateHarvestBonuses(dt);
   updateAttacks(dt);
   checkGameOver();
 }
@@ -5919,6 +5989,119 @@ function updateEconomy(dt) {
 
 function getGoldPerSecond() {
   return playerCities().reduce((sum, city) => sum + getCityStats(city).goldProductionPerSecond, 0);
+}
+
+function getHarvestBonusGoldReward() {
+  const passiveGold = Math.floor(getGoldPerSecond() * HARVEST_BONUS_GOLD_SECONDS);
+  return Math.max(HARVEST_BONUS_MIN_GOLD, passiveGold);
+}
+
+function getActiveHarvestBonuses(regionId = getActiveMapRegionId()) {
+  const activeRegionId = normalizeRegionId(regionId);
+  return normalizeHarvestBonuses(state?.harvestBonuses || [])
+    .filter(bonus => normalizeRegionId(bonus.regionId) === activeRegionId);
+}
+
+function pruneExpiredHarvestBonuses() {
+  if (!state) return;
+  const now = Math.max(0, Number(state.gameSeconds) || 0);
+  const before = state.harvestBonuses?.length || 0;
+  state.harvestBonuses = normalizeHarvestBonuses(state.harvestBonuses)
+    .filter(bonus => now - bonus.createdAt <= HARVEST_BONUS_EXPIRE_SECONDS);
+  if (state.harvestBonuses.length !== before) renderHarvestBonuses();
+}
+
+function isHarvestBonusFarFromCities(x, y, regionId) {
+  return state.cities
+    .filter(city => getCityRegionId(city) === regionId)
+    .every(city => Math.hypot(city.x - x, city.y - y) >= HARVEST_BONUS_CITY_CLEARANCE);
+}
+
+function isHarvestBonusFarFromPortals(x, y, regionId) {
+  const activeRegionId = getActiveMapRegionId();
+  if (normalizeRegionId(regionId) !== activeRegionId) return true;
+  return getActiveIslandTeleporters()
+    .every(teleport => Math.hypot(teleport.worldPoint.x - x, teleport.worldPoint.y - y) >= HARVEST_BONUS_PORTAL_CLEARANCE);
+}
+
+function isHarvestBonusFarFromOtherPickups(x, y, regionId) {
+  return getActiveHarvestBonuses(regionId)
+    .every(bonus => Math.hypot(bonus.x - x, bonus.y - y) >= HARVEST_BONUS_PICKUP_CLEARANCE);
+}
+
+function isValidHarvestBonusPoint(x, y, regionId) {
+  const activeRegionId = normalizeRegionId(regionId);
+  if (!isRegionLandPoint(x, y, activeRegionId, HARVEST_BONUS_TERRAIN_PADDING)) return false;
+  if (!isRegionWalkablePoint(x, y, activeRegionId, HARVEST_BONUS_TERRAIN_PADDING)) return false;
+  if (!isValidCityPlacementPoint(x, y)) return false;
+  if (!isHarvestBonusFarFromCities(x, y, activeRegionId)) return false;
+  if (!isHarvestBonusFarFromPortals(x, y, activeRegionId)) return false;
+  if (!isHarvestBonusFarFromOtherPickups(x, y, activeRegionId)) return false;
+  return true;
+}
+
+function createHarvestBonusPoint(regionId) {
+  const activeRegionId = normalizeRegionId(regionId);
+  const bounds = getIslandMapBounds(activeRegionId);
+  const margin = 96;
+  for (let attempt = 0; attempt < 420; attempt += 1) {
+    const x = bounds.left + margin + Math.random() * Math.max(1, bounds.width - margin * 2);
+    const y = bounds.top + margin + Math.random() * Math.max(1, bounds.height - margin * 2);
+    if (isValidHarvestBonusPoint(x, y, activeRegionId)) return { x, y };
+  }
+  return null;
+}
+
+function spawnHarvestBonus(regionId = getActiveMapRegionId()) {
+  if (!state) return false;
+  const daily = ensureDailyCaptureTracker();
+  if (daily.harvestedBonuses >= HARVEST_BONUS_DAILY_LIMIT) return false;
+  const activeRegionId = normalizeRegionId(regionId);
+  if (getActiveHarvestBonuses(activeRegionId).length >= HARVEST_BONUS_MAX_ACTIVE_PER_ISLAND) return false;
+  const point = createHarvestBonusPoint(activeRegionId);
+  if (!point) return false;
+  state.harvestBonuses = normalizeHarvestBonuses(state.harvestBonuses);
+  state.harvestBonuses.push({
+    id: `harvest-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
+    regionId: activeRegionId,
+    x: Math.round(point.x),
+    y: Math.round(point.y),
+    createdAt: Math.max(0, Number(state.gameSeconds) || 0),
+  });
+  return true;
+}
+
+function updateHarvestBonuses(dt) {
+  if (!state || state.gameOver || onlineWorldLoading) return;
+  const daily = ensureDailyCaptureTracker();
+  pruneExpiredHarvestBonuses();
+  if (daily.harvestedBonuses >= HARVEST_BONUS_DAILY_LIMIT) return;
+  const activeRegionId = getActiveMapRegionId();
+  if (getActiveHarvestBonuses(activeRegionId).length >= HARVEST_BONUS_MAX_ACTIVE_PER_ISLAND) return;
+  state.harvestSpawnTimer = Math.max(0, Number(state.harvestSpawnTimer) || 0) - dt;
+  if (state.harvestSpawnTimer > 0) return;
+  const spawned = spawnHarvestBonus(activeRegionId);
+  state.harvestSpawnTimer = HARVEST_BONUS_SPAWN_INTERVAL_SECONDS;
+  if (spawned) renderHarvestBonuses();
+}
+
+function collectHarvestBonus(bonusId) {
+  if (!state || state.gameOver) return;
+  const index = (state.harvestBonuses || []).findIndex(bonus => bonus.id === bonusId);
+  if (index < 0) return;
+  const daily = ensureDailyCaptureTracker();
+  if (daily.harvestedBonuses >= HARVEST_BONUS_DAILY_LIMIT) {
+    showToast("Daily harvest limit reached.");
+    return;
+  }
+  state.harvestBonuses.splice(index, 1);
+  const goldReward = getHarvestBonusGoldReward();
+  state.gold += goldReward;
+  daily.harvestedBonuses = clamp(daily.harvestedBonuses + 1, 0, HARVEST_BONUS_DAILY_LIMIT);
+  saveGame();
+  renderHud();
+  renderHarvestBonuses();
+  showToast(`Harvested +${formatNumber(goldReward)} gold (${formatNumber(daily.harvestedBonuses)}/${HARVEST_BONUS_DAILY_LIMIT})`);
 }
 
 function getOfflineProgressSeconds(snapshot = state) {
@@ -6387,6 +6570,7 @@ function renderAll() {
   syncMapSurfaceToActiveIsland();
   updateCameraTransform();
   renderHud();
+  renderHarvestBonuses();
   renderIslandTeleporters();
   renderPaths();
   renderCities(true);
@@ -8206,6 +8390,7 @@ function showHelpModal() {
       <li>City level creates victory points for combat value, while passive gold follows the Million Lords city production curve.</li>
       <li>City defense is level x 3%, plus wall strength and any Guardian skill bonus for your defending troops.</li>
       <li>Troop production is VP x 3, with Recruiter adding more production from VP. Passive gold uses the Million Lords level curve x 15, with Prosperous added on top.</li>
+      <li>Glowing gold pickups appear on the current island during active play. Tap them to harvest bonus gold, up to ${formatNumber(HARVEST_BONUS_DAILY_LIMIT)} per local day.</li>
       <li>Prosperous boosts gold, Rusher boosts travel speed, and Striker boosts attacking combat power.</li>
       <li>Fearless saves some attacking losses, Brave saves some defending losses, Scavenger and Salvager recover gold from kills, and Cautious refunds some invested gold when you lose a city.</li>
       <li>Captured cities enter a one-hour XP cooldown. Attacking during cooldown still works, but capture XP is reduced.</li>
@@ -8655,7 +8840,7 @@ function startPan(event) {
   // City taps must stay owned by the city button.
   // V6 was capturing the pointer on mapFrame before this check, which could
   // steal the final click from blue cities after zoom/pan was added.
-  if (event.target.closest(".city-node, .city-action-wheel, .teleport-node")) {
+  if (event.target.closest(".city-node, .city-action-wheel, .teleport-node, .harvest-bonus-node")) {
     suppressMapClick = false;
     return;
   }
