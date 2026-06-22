@@ -256,6 +256,8 @@ const IMAGE_NO_CITY_TERRAIN = normalizeImageTerrainShapes({
   ],
 });
 const MAX_CITY_LEVEL = 100;
+const MILLION_LORDS_CITY_COST_BASE = 50;
+const MILLION_LORDS_CITY_COST_GROWTH = 1.2;
 const DAILY_NEUTRAL_CAPTURE_LIMIT = 30;
 const NEUTRAL_CITY_COUNT_LIMIT = 30;
 const PLAYER_START_TROOPS = 50;
@@ -7843,13 +7845,15 @@ function getRecruitCost(city) {
 
 function getMultiLevelCost(city, levels) {
   if (!city || city.level >= MAX_CITY_LEVEL) return Infinity;
-  let cost = 0;
-  let tempLevel = clampCityLevel(city.level);
-  for (let i = 0; i < levels && tempLevel < MAX_CITY_LEVEL; i += 1) {
-    cost += Math.floor(10 * tempLevel);
-    tempLevel += 1;
-  }
-  return cost;
+  const startLevel = clampCityLevel(city.level);
+  const levelCount = Math.max(0, Math.floor(Number(levels) || 0));
+  const targetLevel = clamp(startLevel + levelCount, startLevel, MAX_CITY_LEVEL);
+  if (targetLevel <= startLevel) return 0;
+  const totalCost = MILLION_LORDS_CITY_COST_BASE * (
+    Math.pow(MILLION_LORDS_CITY_COST_GROWTH, targetLevel - 1)
+    - Math.pow(MILLION_LORDS_CITY_COST_GROWTH, startLevel - 1)
+  );
+  return Math.max(0, Math.floor(totalCost + 0.000001));
 }
 
 function getLevelCost(city) {
@@ -8223,6 +8227,8 @@ function showToast(message) {
 
 function formatNumber(value) {
   const n = Math.floor(Number(value) || 0);
+  if (n >= 1_000_000_000_000) return `${(n / 1_000_000_000_000).toFixed(n >= 10_000_000_000_000 ? 0 : 1)}T`;
+  if (n >= 1_000_000_000) return `${(n / 1_000_000_000).toFixed(n >= 10_000_000_000 ? 0 : 1)}B`;
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(n >= 10_000_000 ? 0 : 1)}M`;
   if (n >= 10_000) return `${Math.floor(n / 1000)}K`;
   if (n >= 1_000) return `${(n / 1000).toFixed(1)}K`;
