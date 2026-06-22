@@ -64,8 +64,10 @@ This build has the first Firebase layer added without breaking guest play.
 - Signed-in players save a private cloud snapshot to the current reset slot, `players/{uid}/saves/default-fresh-2026-06-21`.
 - After sign-in, the game automatically checks the current reset slot in Firebase first, then falls back to the current browser save key.
 - `firestore.rules` allows private player saves and signed-in shared-island writes for this prototype phase.
-- Phase 2 creates or upgrades the current reset island, `islands/main-fresh-2026-06-21`, seeds the 250 active city docs, subscribes to city changes in realtime, and claims one starting city for each signed-in player.
-- While online, the browser syncs the signed-in player's owned cities back to Firestore for the shared island.
+- Phase 2 now shards the world into one Firestore island per region, such as `islands/main-fresh-2026-06-21-west`.
+- The browser loads and subscribes to one active island at a time, starting with the player's home island.
+- The island switcher lets signed-in players load a different island, unsubscribing from the previous island before opening the next one.
+- While online, the browser syncs the signed-in player's owned cities back to Firestore for the currently loaded island.
 
 See `FIREBASE_SETUP.md` for the Firebase project steps and the planned shared-world collections.
 

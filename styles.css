@@ -153,6 +153,21 @@ input {
 .resource-pill strong { font-size: .92rem; }
 .city-list-btn { color: var(--ink); }
 .city-list-btn:active { transform: translateY(1px); }
+.island-switch-btn {
+  min-width: 88px;
+  max-width: 118px;
+  color: #fff7d7;
+  font-size: .72rem;
+  font-weight: 950;
+  overflow: hidden;
+}
+.island-switch-btn span {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.island-switch-btn[hidden] { display: none; }
 .online-players-pill {
   height: 32px;
   min-width: 72px;
@@ -215,7 +230,27 @@ input {
 
 .map-frame { position: absolute; inset: 0 0 164px 0; overflow: hidden; touch-action: none; cursor: grab; }
 .map-frame.dragging { cursor: grabbing; }
-.map-world { position: absolute; left: 0; top: 0; width: 10000px; height: 7600px; transform-origin: 0 0; will-change: transform; }
+.map-world {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 10000px;
+  height: 7600px;
+  transform-origin: 0 0;
+  will-change: transform;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  transform-style: preserve-3d;
+  contain: layout paint size;
+}
+.map-bg,
+.paths,
+.city-layer,
+.army-layer {
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  transform: translateZ(0);
+}
 .map-bg {
   position: absolute; inset: 0;
   overflow: hidden;
@@ -333,6 +368,27 @@ input {
   stroke-width: 7;
   filter: drop-shadow(0 18px 18px rgba(22,28,24,.24));
 }
+.map-frame.zooming .world-sea-sparkle,
+.map-frame.zooming .world-shore-glow,
+.map-frame.zooming .world-land,
+.map-frame.zooming .world-causeway,
+.map-frame.zooming .world-forest,
+.map-frame.zooming .world-swamp,
+.map-frame.zooming .world-mountain,
+.map-frame.low-zoom .world-sea-sparkle,
+.map-frame.low-zoom .world-shore-glow,
+.map-frame.low-zoom .world-land,
+.map-frame.low-zoom .world-causeway,
+.map-frame.low-zoom .world-forest,
+.map-frame.low-zoom .world-swamp,
+.map-frame.low-zoom .world-mountain {
+  filter: none;
+}
+.map-frame.zooming .map-bg::before,
+.map-frame.low-zoom .map-bg::before {
+  mix-blend-mode: normal;
+  opacity: .45;
+}
 .world-region-label {
   fill: rgba(255, 247, 215, .78);
   font-size: 88px;
@@ -396,6 +452,11 @@ input {
 .ridge-d { left: 460px; top: 405px; width: 320px; height: 230px; transform: rotate(-20deg); }
 .paths { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
 .paths polyline { fill: none; stroke-width: 9; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 20 14; animation: dash 1.1s linear infinite; filter: drop-shadow(0 3px 0 rgba(0,0,0,.28)); }
+.map-frame.zooming .paths polyline,
+.map-frame.low-zoom .paths polyline {
+  animation: none;
+  filter: none;
+}
 .paths polyline.player-route { stroke: rgba(255,218,111,.92); }
 .paths polyline.enemy-route { stroke: rgba(255,101,91,.84); }
 .paths polyline.transfer-route { stroke: rgba(82,170,255,.9); }
@@ -479,6 +540,22 @@ input {
   filter: drop-shadow(0 5px 5px rgba(0,0,0,.35));
   z-index: 1;
   pointer-events: none;
+}
+.map-frame.zooming .city-ring,
+.map-frame.zooming .city-castle,
+.map-frame.low-zoom .city-ring,
+.map-frame.low-zoom .city-castle,
+.map-frame.low-zoom .player-city-label,
+.map-frame.low-zoom .foreign-city-label,
+.map-frame.low-zoom .foreign-selected-banner,
+.map-frame.low-zoom .city-wheel-ring {
+  filter: none;
+  box-shadow: none;
+}
+.map-frame.zooming .city-label,
+.map-frame.zooming .city-action-wheel,
+.map-frame.zooming .scout-nearby-radius {
+  opacity: 0;
 }
 .city-castle.stage-1,
 .city-castle.stage-2,
@@ -913,6 +990,42 @@ input {
   justify-self: end;
   font-size: 1.35rem;
   background: linear-gradient(#1b6fb6, #063761);
+}
+.island-switcher-modal .modal-card {
+  max-height: min(80vh, 560px);
+}
+.island-switcher-panel {
+  display: grid;
+  gap: .55rem;
+  padding-top: .4rem;
+}
+.island-switch-row {
+  min-height: 58px;
+  padding: .65rem .75rem;
+  display: grid;
+  gap: .16rem;
+  text-align: left;
+  border-radius: 14px;
+  color: var(--ink);
+  background: rgba(8, 15, 28, .74);
+  border: 1px solid rgba(255,255,255,.12);
+}
+.island-switch-row.active {
+  color: #211508;
+  background: linear-gradient(#ffe293, #e9a83b);
+  border-color: rgba(255,255,255,.65);
+}
+.island-switch-row:disabled {
+  opacity: .58;
+}
+.island-switch-name {
+  font-size: .95rem;
+  font-weight: 1000;
+}
+.island-switch-row small {
+  color: inherit;
+  opacity: .78;
+  font-weight: 850;
 }
 .city-list-art {
   width: 54px;

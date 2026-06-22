@@ -169,6 +169,7 @@
       x: Number(city.x) || 0,
       y: Number(city.y) || 0,
       startPool: city.startPool || "",
+      regionId: city.regionId || city.startPool || "",
       ownerKind: city.ownerKind || "neutral",
       ownerUid: city.ownerUid || null,
       ownerName: city.ownerName || "",
@@ -293,6 +294,8 @@
     candidateCityIds = [],
     playerName = "",
     flag = null,
+    worldId = "",
+    mainRegionId = "",
   } = {}) {
     await init();
     const uid = requireSignedIn();
@@ -302,6 +305,8 @@
     const islandRef = doc(client.db, "islands", islandId);
     const uniqueCandidateIds = [...new Set(candidateCityIds.filter(Boolean))];
     const safePlayerName = String(playerName || client.user.displayName || "Ruler").slice(0, 32);
+    const safeWorldId = String(worldId || "").slice(0, 64);
+    const safeMainRegionId = String(mainRegionId || "").slice(0, 64);
 
     return runTransaction(client.db, async transaction => {
       const playerSnap = await transaction.get(playerRef);
@@ -316,6 +321,10 @@
         transaction.set(playerRef, {
           playerName: safePlayerName,
           flag: flag || playerData.flag || null,
+          worldId: safeWorldId || playerData.worldId || "",
+          mainIslandId: islandId,
+          mainRegionId: safeMainRegionId || playerData.mainRegionId || "",
+          mainCityId: existingMainCityId,
           updatedAt: serverTimestamp(),
         }, { merge: true });
         transaction.set(mainCityRef, {
@@ -355,7 +364,9 @@
         photoURL: client.user.photoURL || "",
         playerName: safePlayerName,
         flag: flag || null,
+        worldId: safeWorldId,
         mainIslandId: islandId,
+        mainRegionId: safeMainRegionId,
         mainCityId: chosenData.id,
         updatedAt: serverTimestamp(),
       }, { merge: true });
