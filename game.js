@@ -1946,6 +1946,9 @@ const modalTitle = document.getElementById("modalTitle");
 const modalBody = document.getElementById("modalBody");
 const closeModalBtn = document.getElementById("closeModalBtn");
 const logBtn = document.getElementById("logBtn");
+const outgoingAttackBtn = document.getElementById("outgoingAttackBtn");
+const outgoingAttackCount = document.getElementById("outgoingAttackCount");
+const outgoingAttackTime = document.getElementById("outgoingAttackTime");
 const incomingAttackBtn = document.getElementById("incomingAttackBtn");
 const incomingAttackCount = document.getElementById("incomingAttackCount");
 const incomingAttackTime = document.getElementById("incomingAttackTime");
@@ -5184,6 +5187,7 @@ async function connectOnlineIsland(regionId, { claimHome = false, homeRegionId =
         renderPaths();
         renderArmies();
         updateIncomingAttackUi();
+        updateOutgoingAttackUi();
       },
       onPresence: presence => {
         applyOnlinePresence(presence);
@@ -5684,6 +5688,7 @@ function subscribeOnlineArmyWatchers(activeIslandId) {
         renderPaths();
         renderArmies();
         updateIncomingAttackUi();
+        updateOutgoingAttackUi();
       },
     });
     if (typeof unsubscribe === "function") onlineArmyUnsubscribes.push(unsubscribe);
@@ -5784,6 +5789,29 @@ function getIncomingAttacks() {
         source,
         remaining,
         attackerName: attack.ownerName || getBattleReportOwnerName(source, attack.owner),
+      };
+    })
+    .filter(Boolean)
+    .sort((a, b) => a.remaining - b.remaining);
+}
+
+function getOutgoingAttacks() {
+  if (!state) return [];
+  const seen = new Set();
+  return getRenderableArmies()
+    .map(attack => {
+      if (!attack || !["attack", "scout"].includes(attack.kind) || attack.owner !== "player") return null;
+      const remaining = Math.max(0, Number(attack.remaining) || 0);
+      if (remaining <= 0) return null;
+      const key = String(attack.onlineId || attack.id || `${attack.fromId}:${attack.toId}:${attack.launchedAtMs || ""}`);
+      if (seen.has(key)) return null;
+      seen.add(key);
+      return {
+        ...attack,
+        key,
+        target: cityById(attack.toId),
+        source: cityById(attack.fromId),
+        remaining,
       };
     })
     .filter(Boolean)
@@ -7252,6 +7280,7 @@ function renderHud() {
   cityText.textContent = `${playerRegularCities().length}`;
   updateIslandSwitcherUi();
   updateIncomingAttackUi();
+  updateOutgoingAttackUi();
 
   if (!statusText) return;
   if (state.gameOver === "victory") {
@@ -8982,12 +9011,41 @@ function updateIncomingAttackUi() {
   }
 }
 
-function getIncomingThreatCounts(incoming) {
-  return incoming.reduce((counts, threat) => {
-    if (threat.kind === "scout") counts.scouts += 1;
+function updateOutgoingAttackUi() {
+  if (!outgoingAttackBtn) return;
+  const outgoing = getOutgoingAttacks();
+  outgoingAttackBtn.hidden = outgoing.length === 0;
+  outgoingAttackBtn.classList.toggle("active", outgoing.length > 0);
+  if (!outgoing.length) {
+    if (outgoingAttackCount) outgoingAttackCount.textContent = "0";
+    if (outgoingAttackTime) outgoingAttackTime.textContent = "Outgoing";
+    outgoingAttackBtn.removeAttribute("title");
+    outgoingAttackBtn.setAttribute("aria-label", "Outgoing armies");
+    if (modal.open && modal.classList.contains("outgoing-attack-modal")) modal.close();
+    return;
+  }
+
+  const soonest = formatDuration(outgoing[0].remaining);
+  if (outgoingAttackCount) outgoingAttackCount.textContent = formatNumber(outgoing.length);
+  if (outgoingAttackTime) outgoingAttackTime.textContent = soonest;
+  outgoingAttackBtn.title = `${formatOutgoingMissionSummary(outgoing)} - soonest ${soonest}`;
+  outgoingAttackBtn.setAttribute("aria-label", outgoingAttackBtn.title);
+
+  if (modal.open && modal.classList.contains("outgoing-attack-modal")) {
+    renderOutgoingAttacksModalContent(outgoing);
+  }
+}
+
+function getArmyKindCounts(missions) {
+  return missions.reduce((counts, mission) => {
+    if (mission.kind === "scout") counts.scouts += 1;
     else counts.attacks += 1;
     return counts;
   }, { attacks: 0, scouts: 0 });
+}
+
+function getIncomingThreatCounts(incoming) {
+  return getArmyKindCounts(incoming);
 }
 
 function formatIncomingThreatSummary(incoming) {
@@ -8998,6 +9056,14 @@ function formatIncomingThreatSummary(incoming) {
   return parts.join(", ") || "No incoming threats";
 }
 
+function formatOutgoingMissionSummary(outgoing) {
+  const counts = getArmyKindCounts(outgoing);
+  const parts = [];
+  if (counts.attacks) parts.push(`${formatNumber(counts.attacks)} outgoing ${counts.attacks === 1 ? "attack" : "attacks"}`);
+  if (counts.scouts) parts.push(`${formatNumber(counts.scouts)} outgoing ${counts.scouts === 1 ? "scout" : "scouts"}`);
+  return parts.join(", ") || "No outgoing armies";
+}
+
 function showIncomingAttacksModal() {
   const incoming = getIncomingAttacks();
   if (!incoming.length) {
@@ -9005,6 +9071,7 @@ function showIncomingAttacksModal() {
     updateIncomingAttackUi();
     return;
   }
+  modal.classList.remove("outgoing-attack-modal");
   modal.classList.add("incoming-attack-modal");
   renderIncomingAttacksModalContent(incoming);
   if (!modal.open) modal.showModal();
@@ -9073,6 +9140,102 @@ async function focusIncomingAttackCity(cityId) {
   const city = cityById(cityId);
   if (!city) {
     showToast("That city is no longer available.");
+    return;
+  }
+  const regionId = getCityRegionId(city);
+  if (modal.open) modal.close();
+  if (regionId !== getActiveMapRegionId()) {
+    await switchOnlineIsland(regionId);
+  }
+  requestAnimationFrame(() => {
+    centerOnCity(city.id);
+    showToast(`Viewing ${city.name}`);
+  });
+}
+
+function showOutgoingAttacksModal() {
+  const outgoing = getOutgoingAttacks();
+  if (!outgoing.length) {
+    showToast("No outgoing attacks or scouts right now.");
+    updateOutgoingAttackUi();
+    return;
+  }
+  modal.classList.remove("incoming-attack-modal");
+  modal.classList.add("outgoing-attack-modal");
+  renderOutgoingAttacksModalContent(outgoing);
+  if (!modal.open) modal.showModal();
+}
+
+function renderOutgoingAttacksModalContent(outgoing = getOutgoingAttacks()) {
+  if (!outgoing.length) {
+    modalTitle.textContent = "Outgoing Armies";
+    modalBody.innerHTML = `<div class="incoming-attack-empty">No active outgoing attacks or scouts.</div>`;
+    return;
+  }
+
+  modalTitle.textContent = outgoing.length === 1 ? "Outgoing Army" : "Outgoing Armies";
+  const summary = formatOutgoingMissionSummary(outgoing);
+  modalBody.innerHTML = `
+    <div class="incoming-attack-panel">
+      <div class="incoming-attack-summary">
+        <strong>${formatNumber(outgoing.length)}</strong>
+        <span>${summary} ${outgoing.length === 1 ? "is" : "are"} traveling now.</span>
+        <small>Soonest arrival: ${formatDuration(outgoing[0].remaining)}</small>
+      </div>
+      <div class="incoming-attack-list">
+        ${outgoing.map(renderOutgoingAttackCard).join("")}
+      </div>
+    </div>
+  `;
+
+  modalBody.querySelectorAll("[data-outgoing-city]").forEach(button => {
+    button.addEventListener("click", () => focusOutgoingAttackCity(button.dataset.outgoingCity));
+  });
+}
+
+function renderOutgoingAttackCard(mission) {
+  const city = mission.target;
+  const sourceName = mission.source?.name || "Unknown city";
+  const targetName = city?.name || "Unknown target";
+  const regionName = getRegionLabel(city ? getCityRegionId(city) : getCityRegionId(mission.toId));
+  const ownerName = city ? getBattleReportOwnerName(city, city.owner) : "Unknown owner";
+  const isScout = mission.kind === "scout";
+  const missionLabel = isScout ? "Scout" : "Attack";
+  const forceDetails = isScout
+    ? `1 scout from ${escapeHtml(sourceName)}`
+    : `${formatNumber(mission.troops)} troops from ${escapeHtml(sourceName)}`;
+  const targetDetails = city
+    ? `${escapeHtml(ownerName)} - ${formatNumber(city.troops)} troops`
+    : "Target details are loading";
+  const locateButton = city
+    ? `<button class="incoming-attack-locate" data-outgoing-city="${escapeHtml(city.id)}" type="button" aria-label="Go to ${escapeHtml(city.name)}">&#8982;</button>`
+    : `<button class="incoming-attack-locate" type="button" aria-label="Target unavailable" disabled>&#8982;</button>`;
+
+  return `
+    <article class="incoming-attack-card outgoing-attack-card ${isScout ? "outgoing-scout-card" : ""}">
+      <div class="incoming-attack-badge">
+        <strong>${formatDuration(mission.remaining)}</strong>
+        <small>${missionLabel}</small>
+      </div>
+      <div class="incoming-attack-city">
+        <span>${escapeHtml(regionName)}</span>
+        <strong>${escapeHtml(targetName)}</strong>
+        <small>${targetDetails}</small>
+      </div>
+      <div class="incoming-attack-force">
+        <span>Origin</span>
+        <strong>${escapeHtml(sourceName)}</strong>
+        <small>${forceDetails}</small>
+      </div>
+      ${locateButton}
+    </article>
+  `;
+}
+
+async function focusOutgoingAttackCity(cityId) {
+  const city = cityById(cityId);
+  if (!city) {
+    showToast("That target is no longer available.");
     return;
   }
   const regionId = getCityRegionId(city);
@@ -9928,6 +10091,7 @@ document.addEventListener("keydown", event => {
   else closeProfileScreen();
 });
 logBtn.addEventListener("click", showLogModal);
+if (outgoingAttackBtn) outgoingAttackBtn.addEventListener("click", showOutgoingAttacksModal);
 if (incomingAttackBtn) incomingAttackBtn.addEventListener("click", showIncomingAttacksModal);
 if (cityListBtn) cityListBtn.addEventListener("click", showCityListModal);
 if (helpBtn) helpBtn.addEventListener("click", showHelpModal);
@@ -9941,6 +10105,7 @@ modal.addEventListener("close", () => {
   modal.classList.remove("city-list-modal");
   modal.classList.remove("island-switcher-modal");
   modal.classList.remove("incoming-attack-modal");
+  modal.classList.remove("outgoing-attack-modal");
   if (!troopSliderActive) return;
   troopSliderActive = false;
   cancelSendMode();

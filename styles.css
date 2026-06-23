@@ -1193,9 +1193,33 @@ input {
 .incoming-attack-btn small {
   color: #ffd2bf;
 }
+.outgoing-attack-btn {
+  color: #e5f6ff;
+  background: linear-gradient(#176fb4, #12365f);
+  border-color: rgba(151, 216, 255, .68);
+  box-shadow: 0 0 0 0 rgba(79, 177, 255, .42), inset 0 -5px 0 rgba(0,0,0,.24);
+}
+.outgoing-attack-btn[hidden] { display: none; }
+.outgoing-attack-btn.active {
+  animation: outgoingAttackPulse 1.2s ease-in-out infinite;
+}
+.outgoing-attack-btn span {
+  color: #eaf8ff;
+}
+.outgoing-attack-btn strong {
+  color: #fff;
+  font-size: .82rem;
+}
+.outgoing-attack-btn small {
+  color: #bfe7ff;
+}
 @keyframes incomingAttackPulse {
   0%, 100% { filter: brightness(1); box-shadow: 0 0 0 0 rgba(255, 82, 58, .44), inset 0 -5px 0 rgba(0,0,0,.24); }
   50% { filter: brightness(1.28); box-shadow: 0 0 0 7px rgba(255, 82, 58, .16), 0 0 24px rgba(255, 78, 58, .48), inset 0 -5px 0 rgba(0,0,0,.2); }
+}
+@keyframes outgoingAttackPulse {
+  0%, 100% { filter: brightness(1); box-shadow: 0 0 0 0 rgba(79, 177, 255, .38), inset 0 -5px 0 rgba(0,0,0,.24); }
+  50% { filter: brightness(1.22); box-shadow: 0 0 0 7px rgba(79, 177, 255, .14), 0 0 24px rgba(79, 177, 255, .42), inset 0 -5px 0 rgba(0,0,0,.2); }
 }
 
 .modal { width: min(460px, calc(100% - 1.3rem)); padding: 0; border: 0; color: var(--ink); background: transparent; }
@@ -1848,13 +1872,19 @@ input {
   font-size: .78rem;
 }
 
-.incoming-attack-modal.modal {
+.incoming-attack-modal.modal,
+.outgoing-attack-modal.modal {
   width: min(900px, calc(100vw - 1.4rem));
 }
 .incoming-attack-modal .modal-card {
   background: linear-gradient(180deg, #3b1218, #151018 68%, #07131f);
   border-color: rgba(255, 112, 86, .62);
   box-shadow: 0 28px 80px rgba(0,0,0,.58), 0 0 36px rgba(255, 58, 42, .16);
+}
+.outgoing-attack-modal .modal-card {
+  background: linear-gradient(180deg, #102c4b, #121827 68%, #07131f);
+  border-color: rgba(122, 203, 255, .58);
+  box-shadow: 0 28px 80px rgba(0,0,0,.58), 0 0 36px rgba(79, 177, 255, .16);
 }
 .incoming-attack-panel {
   display: grid;
@@ -1889,6 +1919,19 @@ input {
   color: #ffc6b3;
   font-weight: 850;
 }
+.outgoing-attack-modal .incoming-attack-summary {
+  background: linear-gradient(90deg, rgba(31, 112, 185, .34), rgba(255,255,255,.06));
+  border-color: rgba(122, 203, 255, .28);
+}
+.outgoing-attack-modal .incoming-attack-summary strong {
+  background: linear-gradient(#72d1ff, #1e67b3);
+}
+.outgoing-attack-modal .incoming-attack-summary span {
+  color: #eaf8ff;
+}
+.outgoing-attack-modal .incoming-attack-summary small {
+  color: #bfe7ff;
+}
 .incoming-attack-list {
   display: grid;
   gap: .52rem;
@@ -1905,6 +1948,9 @@ input {
 }
 .incoming-attack-card.incoming-scout-card {
   border-color: rgba(122, 203, 255, .26);
+}
+.incoming-attack-card.outgoing-attack-card {
+  border-color: rgba(122, 203, 255, .24);
 }
 .incoming-attack-badge,
 .incoming-attack-city,
@@ -1923,12 +1969,19 @@ input {
 .incoming-scout-card .incoming-attack-badge {
   background: linear-gradient(#8bd7ff, #1d5f9f);
 }
+.outgoing-attack-card .incoming-attack-badge {
+  background: linear-gradient(#8bd7ff, #1d5f9f);
+}
+.outgoing-scout-card .incoming-attack-badge {
+  background: linear-gradient(#8fffd7, #188a75);
+}
 .incoming-attack-badge strong {
   color: #231005;
   font-size: .9rem;
   font-weight: 1000;
 }
-.incoming-scout-card .incoming-attack-badge strong {
+.incoming-scout-card .incoming-attack-badge strong,
+.outgoing-attack-card .incoming-attack-badge strong {
   color: #061527;
 }
 .incoming-attack-badge small {
@@ -1937,7 +1990,8 @@ input {
   font-weight: 1000;
   text-transform: uppercase;
 }
-.incoming-scout-card .incoming-attack-badge small {
+.incoming-scout-card .incoming-attack-badge small,
+.outgoing-attack-card .incoming-attack-badge small {
   color: rgba(6, 21, 39, .78);
 }
 .incoming-attack-city span,
@@ -1947,6 +2001,10 @@ input {
   font-size: .62rem;
   font-weight: 1000;
   text-transform: uppercase;
+}
+.outgoing-attack-card .incoming-attack-city span,
+.outgoing-attack-card .incoming-attack-force span {
+  color: #aee3ff;
 }
 .incoming-attack-city strong,
 .incoming-attack-force strong {
@@ -1967,6 +2025,10 @@ input {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+.outgoing-attack-card .incoming-attack-city strong,
+.outgoing-attack-card .incoming-attack-force strong {
+  color: #eaf8ff;
+}
 .incoming-attack-locate {
   width: 48px;
   min-height: 48px;
@@ -1978,6 +2040,10 @@ input {
   box-shadow: inset 0 -5px 0 rgba(0,0,0,.18);
   font-size: 1.35rem;
   font-weight: 1000;
+}
+.outgoing-attack-card .incoming-attack-locate {
+  color: #061527;
+  background: linear-gradient(#d8f7ff, #66bdf0);
 }
 .incoming-attack-empty {
   padding: .9rem;
@@ -2017,7 +2083,8 @@ input {
   .battle-report-detail-grid {
     grid-template-columns: 1fr;
   }
-  .incoming-attack-modal.modal {
+  .incoming-attack-modal.modal,
+  .outgoing-attack-modal.modal {
     width: min(560px, calc(100vw - 1rem));
   }
   .incoming-attack-card {
@@ -2524,9 +2591,14 @@ input {
   border-radius: 20px;
   box-shadow: 0 12px 35px rgba(0,0,0,.36);
 }
-.bottom-nav:has(.incoming-attack-btn:not([hidden])) {
+.bottom-nav:has(.incoming-attack-btn:not([hidden])),
+.bottom-nav:has(.outgoing-attack-btn:not([hidden])) {
   width: 260px;
   min-width: 260px;
+}
+.bottom-nav:has(.incoming-attack-btn:not([hidden])):has(.outgoing-attack-btn:not([hidden])) {
+  width: 340px;
+  min-width: 340px;
 }
 .nav-btn {
   border-radius: 14px;
@@ -2626,9 +2698,14 @@ input {
     height: 52px;
     padding: .32rem;
   }
-  .bottom-nav:has(.incoming-attack-btn:not([hidden])) {
+  .bottom-nav:has(.incoming-attack-btn:not([hidden])),
+  .bottom-nav:has(.outgoing-attack-btn:not([hidden])) {
     width: 238px;
     min-width: 238px;
+  }
+  .bottom-nav:has(.incoming-attack-btn:not([hidden])):has(.outgoing-attack-btn:not([hidden])) {
+    width: 300px;
+    min-width: 300px;
   }
   .nav-btn {
     font-size: .66rem;
@@ -2647,9 +2724,14 @@ input {
   .bottom-nav {
     width: 190px;
   }
-  .bottom-nav:has(.incoming-attack-btn:not([hidden])) {
+  .bottom-nav:has(.incoming-attack-btn:not([hidden])),
+  .bottom-nav:has(.outgoing-attack-btn:not([hidden])) {
     width: 282px;
     min-width: 282px;
+  }
+  .bottom-nav:has(.incoming-attack-btn:not([hidden])):has(.outgoing-attack-btn:not([hidden])) {
+    width: 360px;
+    min-width: 360px;
   }
   .toast {
     left: calc((100vw - 410px) / 2);
