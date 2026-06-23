@@ -3092,32 +3092,15 @@ input {
 }
 
 .profile-stack {
-  pointer-events: none;
-  position: relative;
-  isolation: isolate;
-  display: grid;
-  gap: .3rem;
-  justify-items: center;
-  padding: 17px 27px 18px;
-}
-.profile-stack::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-  background: url("assets/profile-hud-frame.png?v=20260623-profile-frame") center / 100% 100% no-repeat;
-  filter: drop-shadow(0 10px 22px rgba(0,0,0,.34));
-}
-.profile-stack > * {
-  position: relative;
-  z-index: 1;
   pointer-events: auto;
+  display: grid;
+  gap: .32rem;
+  justify-items: start;
 }
 .profile-action-row {
   display: flex;
   align-items: center;
-  gap: .34rem;
+  gap: .72rem;
 }
 
 [hidden] { display: none !important; }
@@ -3135,10 +3118,24 @@ input {
 }
 
 .profile-button {
+  isolation: isolate;
   display: grid;
   place-items: center;
   padding: 5px;
   color: var(--ink);
+}
+.profile-button::before {
+  content: "";
+  position: absolute;
+  inset: -10px -13px -11px;
+  z-index: 0;
+  pointer-events: none;
+  background: url("assets/profile-hud-frame.png?v=20260623-profile-picture-frame") center / 100% 100% no-repeat;
+  filter: drop-shadow(0 8px 16px rgba(0,0,0,.34));
+}
+.profile-button > * {
+  position: relative;
+  z-index: 1;
 }
 .profile-rank-btn {
   width: 50px;
@@ -3470,7 +3467,7 @@ input {
 .profile-gold {
   min-width: 78px;
   height: 28px;
-  margin-left: 0;
+  margin-left: -9px;
   padding: 0 .45rem;
   border-radius: 999px;
   display: flex;
@@ -3642,7 +3639,8 @@ input {
 .city-node.targeted .city-ring { box-shadow: 0 0 0 6px rgba(255, 255, 255, .26), 0 14px 25px rgba(0,0,0,.42); }
 
 @media (max-width: 780px) and (orientation: landscape) {
-  .profile-stack { gap: .24rem; padding: 13px 18px 15px; }
+  .profile-action-row { gap: .58rem; }
+  .profile-button::before { inset: -8px -10px -9px; }
   .portrait-placeholder { width: 46px; height: 46px; border-radius: 14px; }
   .profile-rank-btn { width: 40px; height: 40px; border-radius: 13px; }
   .resource-pill.city-list-btn,
