@@ -4659,11 +4659,14 @@ async function flushOnlineSave(force = false) {
 }
 
 function getOnlinePresenceSnapshot() {
+  const mainRegionId = state?.online?.mainRegionId || (state?.mainCityId ? getCityRegionId(state.mainCityId) : getActiveOnlineRegionId());
   return {
     displayName: state?.playerName || getOnlineApi()?.getUser?.()?.displayName || "Ruler",
     playerName: state?.playerName || "Ruler",
     flag: state?.flag || createDefaultFlag(),
     mainCityId: state?.mainCityId || "",
+    mainRegionId,
+    mainIslandId: state?.online?.mainIslandId || getOnlineIslandId(mainRegionId),
     cityCount: state ? playerRegularCities().length : 0,
     kingPower: state ? getKingPower() : 0,
     updatedAtMs: Date.now(),
@@ -4729,6 +4732,8 @@ function normalizePresence(raw) {
     displayName: cleanName(raw.playerName || raw.displayName || "Ruler") || "Ruler",
     flag: raw.flag || null,
     mainCityId: String(raw.mainCityId || ""),
+    mainRegionId: normalizeRegionId(raw.mainRegionId || getRegionIdFromOnlineIslandId(raw.mainIslandId)),
+    mainIslandId: String(raw.mainIslandId || ""),
     cityCount: Math.max(0, Math.floor(Number(raw.cityCount) || 0)),
     kingPower: Math.max(0, Math.floor(Number(raw.kingPower) || 0)),
     updatedAtMs: Math.max(0, Number(raw.updatedAtMs) || 0),
@@ -10204,16 +10209,51 @@ function normalizeLeaderboardEntry(raw) {
   if (!raw || typeof raw !== "object") return null;
   const uid = String(raw.uid || raw.id || "").trim();
   if (!uid) return null;
+  const mainCityId = String(raw.mainCityId || "");
+  const mainRegionId = normalizeRegionId(
+    raw.mainRegionId
+    || getRegionIdFromOnlineIslandId(raw.mainIslandId)
+    || (getKnownCityId(mainCityId) ? getCityRegionId(mainCityId) : "")
+    || raw.islandId
+  );
   return {
     uid,
     displayName: cleanName(raw.playerName || raw.displayName || "Ruler") || "Ruler",
     flag: raw.flag || null,
     kingPower: Math.max(0, Math.floor(Number(raw.kingPower) || 0)),
     cityCount: Math.max(0, Math.floor(Number(raw.cityCount) || 0)),
-    mainCityId: String(raw.mainCityId || ""),
-    mainRegionId: normalizeRegionId(raw.mainRegionId || getRegionIdFromOnlineIslandId(raw.mainIslandId)),
+    mainCityId,
+    mainRegionId,
     updatedAtMs: normalizeTimestampMs(raw.updatedAtMs) || timestampToMs(raw.updatedAt),
   };
+}
+
+function getCurrentLeaderboardEntry() {
+  const uid = getCurrentOnlineUid();
+  if (!uid || !state) return null;
+  return normalizeLeaderboardEntry({
+    uid,
+    ...getKingPowerLeaderboardSnapshot(),
+  });
+}
+
+function mergeLeaderboardEntries(rows = []) {
+  const byUid = new Map();
+  const currentEntry = getCurrentLeaderboardEntry();
+  if (currentEntry) byUid.set(currentEntry.uid, currentEntry);
+
+  (Array.isArray(rows) ? rows : []).forEach(row => {
+    const entry = normalizeLeaderboardEntry(row);
+    if (!entry) return;
+    const existing = byUid.get(entry.uid);
+    if (!existing || entry.kingPower > existing.kingPower || entry.updatedAtMs > existing.updatedAtMs) {
+      byUid.set(entry.uid, entry);
+    }
+  });
+
+  return Array.from(byUid.values())
+    .sort((a, b) => (b.kingPower - a.kingPower) || (b.updatedAtMs - a.updatedAtMs) || a.displayName.localeCompare(b.displayName))
+    .slice(0, KING_POWER_LEADERBOARD_LIMIT);
 }
 
 function formatLeaderboardAge(updatedAtMs) {
@@ -10244,13 +10284,18 @@ function renderLeaderboardRows(rows) {
   const list = modalBody?.querySelector("#leaderboardRows");
   if (!list) return;
   const currentUid = getCurrentOnlineUid();
-  const entries = rows.map(normalizeLeaderboardEntry).filter(Boolean);
+  const entries = mergeLeaderboardEntries(rows);
   list.innerHTML = entries.length
     ? entries.map((entry, index) => renderLeaderboardRow(entry, index, currentUid)).join("")
     : `<div class="leaderboard-empty">No King Power scores have been published yet.</div>`;
   entries.forEach((entry, index) => {
     applyFlagToElement(list.querySelector(`[data-leaderboard-flag="${index}"]`), entry.flag || createDefaultFlag());
   });
+}
+
+function setLeaderboardStatus(message) {
+  const status = modalBody?.querySelector("#leaderboardStatus");
+  if (status) status.textContent = message;
 }
 
 async function refreshLeaderboardRows({ forcePublish = false } = {}) {
@@ -10263,14 +10308,45 @@ async function refreshLeaderboardRows({ forcePublish = false } = {}) {
   }
   if (refreshBtn) refreshBtn.disabled = true;
   list.innerHTML = `<div class="leaderboard-empty">Loading King Power ranks...</div>`;
+  setLeaderboardStatus("Publishing your score...");
   try {
-    await publishKingPowerLeaderboard({ force: forcePublish });
-    const rows = await api.loadKingPowerLeaderboard(KING_POWER_LEADERBOARD_LIMIT);
+    let rows = [];
+    let usedFallback = false;
+    let globalError = null;
+    try {
+      await publishOnlinePresence(true);
+      const published = await publishKingPowerLeaderboard({ force: forcePublish });
+      rows = await api.loadKingPowerLeaderboard(KING_POWER_LEADERBOARD_LIMIT);
+      if (!published && !rows.length) {
+        globalError = new Error("King Power leaderboard entry was not published.");
+      }
+    } catch (error) {
+      globalError = error;
+      console.warn("Could not load King Power leaderboard; trying online presence fallback", error);
+    }
+
+    if (!rows.length && api?.loadKingPowerPresenceLeaderboard) {
+      try {
+        usedFallback = true;
+        setLeaderboardStatus("Showing live online ranks.");
+        const islandIds = getRegionIds().map(getOnlineIslandId);
+        rows = await api.loadKingPowerPresenceLeaderboard(islandIds, KING_POWER_LEADERBOARD_LIMIT);
+      } catch (fallbackError) {
+        console.warn("Could not load presence leaderboard fallback", fallbackError);
+      }
+    }
+
     if (!modal.open || !modal.classList.contains("leaderboard-modal")) return;
+
     renderLeaderboardRows(rows);
-  } catch (error) {
-    console.warn("Could not load King Power leaderboard", error);
-    list.innerHTML = `<div class="leaderboard-empty">Could not load King Power ranks right now.</div>`;
+    if (usedFallback) {
+      setLeaderboardStatus(globalError ? "Live online ranks shown. Deploy Firestore rules for saved global ranks." : "Live online ranks shown.");
+    } else {
+      setLeaderboardStatus("Global King Power ranks.");
+    }
+    if (!mergeLeaderboardEntries(rows).length) {
+      list.innerHTML = `<div class="leaderboard-empty">Could not load King Power ranks right now.</div>`;
+    }
   } finally {
     if (refreshBtn) refreshBtn.disabled = false;
   }
@@ -10287,6 +10363,7 @@ function showLeaderboardModal() {
         <div>
           <strong>Top ${formatNumber(KING_POWER_LEADERBOARD_LIMIT)}</strong>
           <small>King Power = troops + city VP x ${formatNumber(KING_POWER_PER_CITY_VP)}</small>
+          <small id="leaderboardStatus">Loading ranks...</small>
         </div>
         <button id="leaderboardRefreshBtn" type="button">Refresh</button>
       </div>

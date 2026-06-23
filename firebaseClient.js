@@ -284,6 +284,8 @@
       playerName: String(presence.playerName || presence.displayName || client.user?.displayName || "Ruler").slice(0, 32),
       islandId: String(presence.islandId || "main").slice(0, 64),
       mainCityId: String(presence.mainCityId || ""),
+      mainRegionId: String(presence.mainRegionId || "").slice(0, 64),
+      mainIslandId: String(presence.mainIslandId || "").slice(0, 64),
       cityCount: Math.max(0, Math.floor(Number(presence.cityCount) || 0)),
       kingPower: Math.max(0, Math.floor(Number(presence.kingPower) || 0)),
       flag: presence.flag || null,
@@ -665,6 +667,39 @@
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
   }
 
+  async function loadKingPowerPresenceLeaderboard(islandIds = [], limitCount = 100) {
+    await init();
+    const uid = requireSignedIn();
+    if (!uid) return [];
+    const { collection, getDocs } = client.modules.firestore;
+    const safeLimit = Math.max(1, Math.min(100, Math.floor(Number(limitCount) || 100)));
+    const uniqueIslandIds = [...new Set((Array.isArray(islandIds) ? islandIds : [])
+      .map(islandId => String(islandId || "").trim())
+      .filter(Boolean))];
+    const byUid = new Map();
+
+    for (const islandId of uniqueIslandIds) {
+      const snapshot = await getDocs(collection(client.db, "islands", islandId, "presence"));
+      snapshot.docs.forEach(presenceDoc => {
+        const row = { id: presenceDoc.id, islandId, ...presenceDoc.data() };
+        const rowUid = String(row.uid || row.id || "").trim();
+        if (!rowUid) return;
+        const existing = byUid.get(rowUid);
+        const rowPower = Math.max(0, Math.floor(Number(row.kingPower) || 0));
+        const rowUpdatedAtMs = Math.max(0, Number(row.updatedAtMs) || 0);
+        const existingUpdatedAtMs = Math.max(0, Number(existing?.updatedAtMs) || 0);
+        if (!existing || rowPower > Math.max(0, Number(existing.kingPower) || 0) || rowUpdatedAtMs > existingUpdatedAtMs) {
+          byUid.set(rowUid, row);
+        }
+      });
+    }
+
+    return Array.from(byUid.values())
+      .sort((a, b) => (Math.max(0, Number(b.kingPower) || 0) - Math.max(0, Number(a.kingPower) || 0))
+        || (Math.max(0, Number(b.updatedAtMs) || 0) - Math.max(0, Number(a.updatedAtMs) || 0)))
+      .slice(0, safeLimit);
+  }
+
   async function loadIslandCitySummary(islandId = "main") {
     await init();
     const uid = requireSignedIn();
@@ -799,6 +834,7 @@
     savePresence,
     saveKingPowerLeaderboardEntry,
     loadKingPowerLeaderboard,
+    loadKingPowerPresenceLeaderboard,
     loadIslandCitySummary,
     loadOwnedCitiesAcrossIslands,
     subscribeIsland,
