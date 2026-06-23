@@ -304,7 +304,7 @@ const HARVEST_BONUS_DAILY_TROOP_LIMIT = 100;
 const HARVEST_BONUS_TYPES = ["gold", "troops"];
 const HARVEST_BONUS_SPAWN_INTERVAL_SECONDS = 60;
 const HARVEST_BONUS_INITIAL_SPAWN_SECONDS = 60;
-const HARVEST_BONUS_MAX_ACTIVE_PER_ISLAND = 6;
+const HARVEST_BONUS_MAX_ACTIVE_PER_ISLAND = 1;
 const HARVEST_BONUS_EXPIRE_SECONDS = 1800;
 const HARVEST_BONUS_GOLD_SECONDS = 300;
 const HARVEST_BONUS_MIN_GOLD = 500;
@@ -4270,7 +4270,7 @@ function normalizeHarvestBonuses(bonuses) {
 
 function normalizeHarvestState(snapshot) {
   if (!snapshot || typeof snapshot !== "object") return;
-  snapshot.harvestBonuses = normalizeHarvestBonuses(snapshot.harvestBonuses);
+  snapshot.harvestBonuses = enforceHarvestBonusActiveLimit(snapshot.harvestBonuses);
   const timer = Number(snapshot.harvestSpawnTimer);
   snapshot.harvestSpawnTimer = Number.isFinite(timer)
     ? clamp(timer, 0, HARVEST_BONUS_SPAWN_INTERVAL_SECONDS)
@@ -6908,6 +6908,22 @@ function getActiveHarvestBonuses(regionId = getActiveMapRegionId()) {
     .filter(bonus => normalizeRegionId(bonus.regionId) === activeRegionId);
 }
 
+function enforceHarvestBonusActiveLimit(bonuses) {
+  const keptByRegion = new Map();
+  normalizeHarvestBonuses(bonuses)
+    .sort((a, b) => b.createdAt - a.createdAt)
+    .forEach(bonus => {
+      const regionId = normalizeRegionId(bonus.regionId);
+      const current = keptByRegion.get(regionId) || [];
+      if (current.length >= HARVEST_BONUS_MAX_ACTIVE_PER_ISLAND) return;
+      current.push(bonus);
+      keptByRegion.set(regionId, current);
+    });
+  return Array.from(keptByRegion.values())
+    .flat()
+    .sort((a, b) => a.createdAt - b.createdAt);
+}
+
 function getHarvestBonusOwnedCityAnchors(regionId) {
   const activeRegionId = normalizeRegionId(regionId);
   if (!state || !Array.isArray(state.cities)) return [];
@@ -6930,6 +6946,7 @@ function pruneExpiredHarvestBonuses() {
       && isHarvestBonusTerrainSafePoint(bonus.x, bonus.y, bonus.regionId)
       && isHarvestBonusNearOwnedCity(bonus.x, bonus.y, bonus.regionId)
     ));
+  state.harvestBonuses = enforceHarvestBonusActiveLimit(state.harvestBonuses);
   if (state.harvestBonuses.length !== before) renderHarvestBonuses();
 }
 
@@ -7056,6 +7073,11 @@ function updateHarvestBonuses(dt) {
   }
 }
 
+function resetHarvestSpawnTimer() {
+  if (!state) return;
+  state.harvestSpawnTimer = HARVEST_BONUS_SPAWN_INTERVAL_SECONDS;
+}
+
 function collectHarvestBonus(bonusId) {
   if (!state || state.gameOver) return;
   state.harvestBonuses = normalizeHarvestBonuses(state.harvestBonuses);
@@ -7082,6 +7104,7 @@ function collectHarvestBonus(bonusId) {
     rewardCity.troops = Math.floor(rewardCity.troopFloat);
     markOwnedCityChanged(rewardCity, getCityRegionId(rewardCity) === getActiveOnlineRegionId());
     incrementHarvestBonusDailyCount(type, daily);
+    resetHarvestSpawnTimer();
     addLog(`Harvested one hour of troop production: ${formatNumber(troopReward)} troops to ${rewardCity.name}.`);
     saveGame();
     renderHud();
@@ -7095,6 +7118,7 @@ function collectHarvestBonus(bonusId) {
   const goldReward = getHarvestBonusGoldReward();
   state.gold += goldReward;
   incrementHarvestBonusDailyCount(type, daily);
+  resetHarvestSpawnTimer();
   saveGame();
   renderHud();
   renderHarvestBonuses();
