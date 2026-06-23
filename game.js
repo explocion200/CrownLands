@@ -310,8 +310,9 @@ const HARVEST_BONUS_MAX_ACTIVE_PER_ISLAND = 1;
 const HARVEST_BONUS_EXPIRE_SECONDS = 1800;
 const HARVEST_BONUS_GOLD_SECONDS = 300;
 const HARVEST_BONUS_MIN_GOLD = 500;
-const HARVEST_BONUS_TROOP_SECONDS = 3600;
+const HARVEST_BONUS_TROOP_SECONDS = 300;
 const HARVEST_BONUS_MIN_TROOPS = 50;
+const HARVEST_BONUS_MAX_TROOPS = 2500;
 const HARVEST_BONUS_CITY_CLEARANCE = 132;
 const HARVEST_BONUS_PORTAL_CLEARANCE = 148;
 const HARVEST_BONUS_PICKUP_CLEARANCE = 116;
@@ -6858,7 +6859,7 @@ function getHarvestBonusGoldReward() {
 
 function getHarvestBonusTroopReward() {
   const passiveTroops = Math.floor(getTroopProductionPerSecond() * HARVEST_BONUS_TROOP_SECONDS);
-  return Math.max(HARVEST_BONUS_MIN_TROOPS, passiveTroops);
+  return clamp(Math.max(HARVEST_BONUS_MIN_TROOPS, passiveTroops), HARVEST_BONUS_MIN_TROOPS, HARVEST_BONUS_MAX_TROOPS);
 }
 
 function getHarvestBonusIcon(type) {
@@ -9808,7 +9809,7 @@ function showHelpModal() {
       <li>City defense is level x 3%, plus wall strength and any Guardian skill bonus for your defending troops.</li>
       <li>Troop production is VP x 3, with Recruiter adding more production from VP. Passive gold uses the Million Lords level curve x 15, with Prosperous added on top.</li>
       <li>Army travel uses route distance plus troop-size bands. Larger armies march slower, scouts move as one troop, and Rusher reduces travel time.</li>
-      <li>Glowing pickups appear near your owned cities on the current island during active play once per minute, alternating between gold and troop-hour rewards. Daily pickup limits are ${formatNumber(HARVEST_BONUS_DAILY_GOLD_LIMIT)} gold and ${formatNumber(HARVEST_BONUS_DAILY_TROOP_LIMIT)} troop pickups.</li>
+      <li>Glowing pickups appear near your owned cities on the current island during active play once per minute, alternating between gold and stored troop-production rewards. Daily pickup limits are ${formatNumber(HARVEST_BONUS_DAILY_GOLD_LIMIT)} gold and ${formatNumber(HARVEST_BONUS_DAILY_TROOP_LIMIT)} troop pickups.</li>
       <li>Prosperous boosts gold, Rusher boosts travel speed, and Striker boosts attacking combat power.</li>
       <li>Fearless saves some attacking losses, Brave saves some defending losses, Scavenger and Salvager recover gold from kills, and Cautious refunds some invested gold when you lose a city.</li>
       <li>Captured cities enter a one-hour XP cooldown. Attacking during cooldown still works, but capture XP is reduced.</li>
