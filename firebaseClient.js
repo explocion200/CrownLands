@@ -406,9 +406,12 @@
           updatedAt: serverTimestamp(),
         }, { merge: true });
       };
-      const writeCityOwner = (cityRef, cityData = {}, { includeTroops = false, minTroops = 0, setClaimedAt = false } = {}) => {
-        const troops = Math.max(minTroops, Math.floor(Number(cityData.troops) || 0));
-        const troopFloat = Math.max(minTroops, Number(cityData.troopFloat) || Number(cityData.troops) || 0);
+      const writeCityOwner = (cityRef, cityData = {}, { includeTroops = false, minTroops = 0, setClaimedAt = false, troopsOverride = null } = {}) => {
+        const hasTroopOverride = Number.isFinite(Number(troopsOverride));
+        const baseTroops = hasTroopOverride ? Number(troopsOverride) : Number(cityData.troops);
+        const baseTroopFloat = hasTroopOverride ? Number(troopsOverride) : (Number(cityData.troopFloat) || Number(cityData.troops));
+        const troops = Math.max(minTroops, Math.floor(baseTroops || 0));
+        const troopFloat = Math.max(minTroops, baseTroopFloat || 0);
         transaction.set(cityRef, {
           ownerKind: "player",
           ownerUid: uid,
@@ -437,7 +440,7 @@
         };
       }
 
-      if (playerData.mainIslandId === islandId && existingMainCityId && uniqueCandidateIds.includes(existingMainCityId)) {
+      if (playerData.mainIslandId === islandId && existingMainCityId) {
         const mainCityRef = doc(client.db, "islands", islandId, "cities", existingMainCityId);
         const mainCitySnap = await transaction.get(mainCityRef);
         if (!mainCitySnap.exists()) {
@@ -446,16 +449,19 @@
           const mainCityData = mainCitySnap.data() || {};
           const mainOwnedByUser = mainCityData.ownerUid === uid;
           const mainClaimable = !mainCityData.ownerUid;
-          if (mainOwnedByUser || mainClaimable) {
-            writePlayerMainCity(existingMainCityId);
-            writeCityOwner(mainCityRef, mainCityData, {
-              includeTroops: true,
-              minTroops: mainOwnedByUser ? 0 : 50,
-              setClaimedAt: true,
-            });
-            if (!mainOwnedByUser) countNewPlayerOnIsland();
-            return { cityId: existingMainCityId, alreadyClaimed: mainOwnedByUser };
-          }
+          writePlayerMainCity(existingMainCityId);
+          writeCityOwner(mainCityRef, mainCityData, {
+            includeTroops: true,
+            minTroops: mainOwnedByUser ? 0 : mainClaimable ? 50 : 0,
+            setClaimedAt: true,
+            troopsOverride: !mainOwnedByUser && !mainClaimable ? 0 : null,
+          });
+          if (mainClaimable) countNewPlayerOnIsland();
+          return {
+            cityId: existingMainCityId,
+            alreadyClaimed: mainOwnedByUser,
+            repairedMainCity: !mainOwnedByUser && !mainClaimable,
+          };
         }
       }
 

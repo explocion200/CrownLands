@@ -4071,6 +4071,16 @@ function normalizeHarvestState(snapshot) {
   snapshot.harvestNextBonusType = normalizeHarvestBonusType(snapshot.harvestNextBonusType);
 }
 
+function normalizeGameOverState(snapshot = state) {
+  if (!snapshot || typeof snapshot !== "object") return;
+  if (snapshot.gameOver === "defeat") snapshot.gameOver = null;
+}
+
+function isGamePausedByOutcome() {
+  normalizeGameOverState();
+  return state?.gameOver === "victory";
+}
+
 function normalizeScoutReports(reports) {
   if (!reports || typeof reports !== "object" || Array.isArray(reports)) return {};
   const normalized = {};
@@ -4439,6 +4449,7 @@ function getOnlineApi() {
 
 function getSerializableGameState() {
   if (!state) return null;
+  normalizeGameOverState(state);
   return JSON.parse(JSON.stringify(state));
 }
 
@@ -5300,7 +5311,8 @@ async function connectOnlineIsland(regionId, { claimHome = false, homeRegionId =
       onlineFreshClaimCityId = !claim?.alreadyClaimed && claim?.cityId ? claim.cityId : "";
       const claimedCity = claim?.cityId ? cityById(claim.cityId) : null;
       if (claimedCity) claimedCity.isMainCity = true;
-      if (claim?.alreadyClaimed) addLog(`Online ${getRegionLabel(targetRegionId)} connected. Your claimed city was restored.`);
+      if (claim?.repairedMainCity) addLog(`${cityById(claim.cityId)?.name || "Your main city"} was restored. Main cities cannot be captured.`);
+      else if (claim?.alreadyClaimed) addLog(`Online ${getRegionLabel(targetRegionId)} connected. Your claimed city was restored.`);
       else if (claim?.cityId) addLog(`Online ${getRegionLabel(targetRegionId)} connected. ${cityById(claim.cityId)?.name || "A city"} joined your kingdom.`);
     }
 
@@ -5492,7 +5504,8 @@ function ensureLoadedMainCityForRegion(regionId) {
   if (activeRegionId !== homeRegionId) return;
 
   const currentMain = state.mainCityId ? cityById(state.mainCityId) : null;
-  if (currentMain?.owner === "player" && !isStronghold(currentMain)) {
+  if (currentMain && !isStronghold(currentMain)) {
+    restoreMainCityOwnership(currentMain);
     currentMain.isMainCity = true;
     if (state.online) {
       state.online.mainCityId = currentMain.id;
@@ -5512,6 +5525,29 @@ function ensureLoadedMainCityForRegion(regionId) {
     state.online.mainRegionId = activeRegionId;
     state.online.mainIslandId = getOnlineIslandId(activeRegionId);
   }
+}
+
+function restoreMainCityOwnership(city) {
+  if (!state || !city || isStronghold(city)) return false;
+  const uid = getCurrentOnlineUid();
+  const foreignOwner = city.owner !== "player" || (uid && city.ownerUid && city.ownerUid !== uid);
+  const needsRestore = foreignOwner || city.ownerKind !== "player" || city.ownerUid !== (uid || city.ownerUid || null);
+  city.owner = "player";
+  city.ownerKind = "player";
+  city.ownerUid = uid || city.ownerUid || null;
+  city.ownerName = state.playerName;
+  city.ownerFlag = state.flag;
+  city.isMainCity = true;
+  if (foreignOwner) {
+    city.troopFloat = 0;
+    city.troops = 0;
+  }
+  if (needsRestore && isOnlineWorldActive()) {
+    markOwnedCityChanged(city, false);
+    syncCityStateToOnline(city);
+    syncOwnedCitiesToOnline(true);
+  }
+  return needsRestore;
 }
 
 function getCityRecordOwnership(record = {}, currentUid = getCurrentOnlineUid(), { allowLocalPlayerFallback = false } = {}) {
@@ -6653,7 +6689,7 @@ function frame(now) {
   lastFrameTime = now;
   const dt = Math.min(rawDt, 0.25);
 
-  if (state && !state.gameOver) {
+  if (state && !isGamePausedByOutcome()) {
     updateGame(dt);
     saveTimer += dt;
     if (saveTimer >= SAVE_EVERY_SECONDS) {
@@ -6959,7 +6995,7 @@ function spawnHarvestBonus(regionId = getActiveMapRegionId(), type = getNextAvai
 }
 
 function updateHarvestBonuses(dt) {
-  if (!state || state.gameOver || onlineWorldLoading) return;
+  if (!state || isGamePausedByOutcome() || onlineWorldLoading) return;
   const daily = ensureDailyCaptureTracker();
   pruneExpiredHarvestBonuses();
   if (daily.harvestedBonuses >= HARVEST_BONUS_DAILY_LIMIT) return;
@@ -6983,7 +7019,7 @@ function resetHarvestSpawnTimer() {
 }
 
 function collectHarvestBonus(bonusId) {
-  if (!state || state.gameOver) return;
+  if (!state || isGamePausedByOutcome()) return;
   state.harvestBonuses = normalizeHarvestBonuses(state.harvestBonuses);
   const index = state.harvestBonuses.findIndex(bonus => bonus.id === bonusId);
   if (index < 0) return;
@@ -7158,7 +7194,7 @@ function isProtectedMainCity(city) {
 function launchAttack(sourceId, targetId, percent, owner, exactTroops = null) {
   const source = cityById(sourceId);
   const target = cityById(targetId);
-  if (!source || !target || state.gameOver) return false;
+  if (!source || !target || isGamePausedByOutcome()) return false;
   if (source.owner !== owner) return false;
   if (source.id === target.id) return false;
   if (source.troops < 1) return false;
@@ -7518,13 +7554,7 @@ function resolveAttack(attack) {
 }
 
 function checkGameOver() {
-  if (state.gameOver) return;
-  if (isOnlineWorldActive() && playerCities().length === 0) return;
-  if (playerCities().length === 0) {
-    state.gameOver = "defeat";
-    addLog("Defeat: you lost your final city.");
-    showToast("Defeat. Start a fresh map to retry.");
-  }
+  normalizeGameOverState();
 }
 
 function renderAll() {
@@ -7560,8 +7590,6 @@ function renderHud() {
   if (!statusText) return;
   if (state.gameOver === "victory") {
     statusText.textContent = "Victory";
-  } else if (state.gameOver === "defeat") {
-    statusText.textContent = "Defeat";
   } else {
     statusText.textContent = `+${getGoldPerSecond().toFixed(1)} gold/s`;
   }
@@ -8371,14 +8399,7 @@ function renderPanel() {
 
   if (commanderPanel) commanderPanel.classList.remove("visible");
 
-  if (state.gameOver) {
-    if (commanderPanel) commanderPanel.classList.add("visible");
-    panelTitle.textContent = "Kingdom defeated";
-    panelSubtitle.textContent = "You lost your final city.";
-    selectedInfo.innerHTML = `<strong>Defeat.</strong> Start fresh to retry.`;
-    actionButtons.appendChild(button("Fresh Map", hardReset, false, "danger"));
-    return;
-  }
+  normalizeGameOverState();
 
   if (!source) {
     panelTitle.textContent = "";
@@ -8458,7 +8479,7 @@ function renderMarchButtons() {
 }
 
 function selectCity(id) {
-  if (!state || state.gameOver) return;
+  if (!state || isGamePausedByOutcome()) return;
   const clicked = cityById(id);
   if (!clicked) return;
   if (scoutNearbySourceId && scoutNearbySourceId !== clicked.id) scoutNearbySourceId = null;
