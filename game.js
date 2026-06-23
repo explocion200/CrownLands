@@ -1879,6 +1879,7 @@ let updateRefreshInProgress = false;
 const islandImageLoadPromises = new Map();
 let pendingOfflineProgressSeconds = 0;
 let pendingOfflineProductionCities = [];
+let pendingOfflineOwnedCityIds = null;
 let localDirtyCityIds = new Set();
 let toastTimer = null;
 let attackIdCounter = 1;
@@ -4490,6 +4491,8 @@ function getPlayerProfileSnapshot() {
     cityCount: state ? playerRegularCities().length : 0,
     gold: state ? Math.floor(Number(state.gold) || 0) : 0,
     localGameSeconds: state ? Number(state.gameSeconds) || 0 : 0,
+    lastSeenAtMs: Date.now(),
+    offlineProductionCities: state ? createOfflineProductionSnapshot(state) : [],
   };
 }
 
@@ -4503,6 +4506,111 @@ function applyOnlineProfileSnapshot(profile = null, fallbackPlayerName = "Ricky"
   state.gold = Math.max(TEST_STARTING_GOLD, Math.floor(Number(profile.gold) || 0));
   state.mainCityChangedAtMs = normalizeTimestampMs(profile.mainCityChangedAtMs);
   state.gameSeconds = Math.max(0, Number(profile.localGameSeconds) || Number(state.gameSeconds) || 0);
+}
+
+function timestampToMs(value) {
+  if (!value) return 0;
+  if (typeof value.toMillis === "function") return normalizeTimestampMs(value.toMillis());
+  if (Number.isFinite(Number(value))) return normalizeTimestampMs(value);
+  if (Number.isFinite(Number(value.seconds))) {
+    return normalizeTimestampMs(Number(value.seconds) * 1000 + Math.floor((Number(value.nanoseconds) || 0) / 1_000_000));
+  }
+  return 0;
+}
+
+function getProfileLastSeenMs(profile = null) {
+  if (!profile || typeof profile !== "object") return 0;
+  return normalizeTimestampMs(profile.lastSeenAtMs)
+    || timestampToMs(profile.updatedAt)
+    || normalizeTimestampMs(profile.lastRealTimeMs);
+}
+
+function normalizeOfflineProductionCities(cities = []) {
+  if (!Array.isArray(cities)) return [];
+  const seen = new Set();
+  return cities
+    .map(city => {
+      const id = getKnownCityId(city?.id);
+      if (!id || seen.has(id)) return null;
+      seen.add(id);
+      const base = getPlayableBaseCities().find(city => city.id === id) || {};
+      return {
+        id,
+        name: city.name || base.name || id,
+        owner: "player",
+        ownerKind: "player",
+        ownerUid: city.ownerUid || getCurrentOnlineUid() || null,
+        ownerName: city.ownerName || state?.playerName || "",
+        ownerFlag: city.ownerFlag || state?.flag || null,
+        level: isStronghold(city) ? getStrongholdDefenseLevel(city) : clampCityLevel(city.level ?? base.level),
+        troops: Math.max(0, Math.floor(Number(city.troops) || 0)),
+        troopFloat: Math.max(0, Number(city.troopFloat) || Number(city.troops) || 0),
+        kind: city.kind || base.kind || "",
+        strongholdType: city.strongholdType || base.strongholdType || "",
+        bonus: city.bonus || base.bonus || "",
+        bonusPercent: Number(city.bonusPercent ?? base.bonusPercent) || 0,
+        regionId: city.regionId || base.regionId || getCityRegionId(id),
+      };
+    })
+    .filter(Boolean);
+}
+
+function restoreOfflineProductionCitiesToLocalState(cities = []) {
+  if (!state || !Array.isArray(state.cities)) return;
+  const currentUid = getCurrentOnlineUid();
+  const byId = new Map(normalizeOfflineProductionCities(cities).map(city => [city.id, city]));
+  if (!byId.size) return;
+  state.cities = state.cities.map(city => {
+    const snapshot = byId.get(city.id);
+    if (!snapshot || city.owner === "enemy") return city;
+    return {
+      ...city,
+      owner: "player",
+      ownerKind: "player",
+      ownerUid: currentUid || snapshot.ownerUid || city.ownerUid || null,
+      ownerName: state.playerName,
+      ownerFlag: state.flag,
+      level: snapshot.level,
+      troops: snapshot.troops,
+      troopFloat: snapshot.troopFloat,
+      investedGold: Math.max(0, Math.floor(Number(city.investedGold) || 0)),
+      lastCapturedAt: city.lastCapturedAt ?? null,
+      isMainCity: !isStronghold(city) && city.id === state.mainCityId,
+    };
+  });
+}
+
+async function prepareOfflineProgressFromProfile(profile = null) {
+  pendingOfflineProgressSeconds = 0;
+  pendingOfflineProductionCities = [];
+  pendingOfflineOwnedCityIds = null;
+  if (!state || !profile || !isCurrentResetProfile(profile)) return false;
+
+  const productionCities = normalizeOfflineProductionCities(profile.offlineProductionCities);
+  if (!productionCities.length) return false;
+  const lastSeenAtMs = getProfileLastSeenMs(profile);
+  const elapsed = getOfflineProgressSeconds({ lastRealTimeMs: lastSeenAtMs });
+  if (elapsed <= 0) return false;
+
+  pendingOfflineProgressSeconds = elapsed;
+  pendingOfflineProductionCities = productionCities;
+  restoreOfflineProductionCitiesToLocalState(productionCities);
+
+  const api = getOnlineApi();
+  if (api?.loadOwnedCitiesAcrossIslands && api?.isSignedIn?.()) {
+    try {
+      const islandIds = getRegionIds().map(getOnlineIslandId);
+      const ownedCities = await withTimeout(
+        api.loadOwnedCitiesAcrossIslands(islandIds),
+        4500,
+        "Owned city check is taking too long."
+      );
+      pendingOfflineOwnedCityIds = new Set((Array.isArray(ownedCities) ? ownedCities : []).map(city => getKnownCityId(city.id)).filter(Boolean));
+    } catch (error) {
+      console.warn("Could not check owned cities for offline summary", error);
+    }
+  }
+  return true;
 }
 
 function queueOnlineSave() {
@@ -5389,6 +5497,7 @@ async function setupOnlineWorld({ requireOnlineProfile = false } = {}) {
 
   const hasCurrentProfile = Boolean(profile);
   if (hasCurrentProfile) applyOnlineProfileSnapshot(profile, state.playerName);
+  if (hasCurrentProfile) await prepareOfflineProgressFromProfile(profile);
   const homeRegionId = resolveHomeRegionId(profile, { trustLocalState: hasCurrentProfile });
   const activeRegionId = homeRegionId;
   const mainIslandId = getOnlineIslandId(homeRegionId);
@@ -7480,6 +7589,11 @@ function createOfflineProductionSnapshot(snapshot = state) {
       id: city.id,
       name: city.name,
       owner: "player",
+      ownerKind: "player",
+      ownerUid: city.ownerUid || getCurrentOnlineUid() || null,
+      ownerName: city.ownerName || state?.playerName || "",
+      ownerFlag: city.ownerFlag || state?.flag || null,
+      regionId: city.regionId || city.startPool || getCityRegionId(city),
       level: isStronghold(city) ? getStrongholdDefenseLevel(city) : clampCityLevel(city.level),
       troops: Math.max(0, Math.floor(Number(city.troops) || 0)),
       troopFloat: Math.max(0, Number(city.troopFloat) || Number(city.troops) || 0),
@@ -7488,6 +7602,28 @@ function createOfflineProductionSnapshot(snapshot = state) {
       bonus: city.bonus || "",
       bonusPercent: Number(city.bonusPercent) || 0,
     }));
+}
+
+function isOfflineCityStillOwned(offlineCity) {
+  const cityId = getKnownCityId(offlineCity?.id);
+  if (!cityId) return false;
+  if (pendingOfflineOwnedCityIds instanceof Set) return pendingOfflineOwnedCityIds.has(cityId);
+  return cityById(cityId)?.owner === "player";
+}
+
+function restoreOfflineCityOwnership(offlineCity) {
+  const currentCity = cityById(offlineCity?.id);
+  if (!currentCity || currentCity.owner === "player") return currentCity;
+  currentCity.owner = "player";
+  currentCity.ownerKind = "player";
+  currentCity.ownerUid = getCurrentOnlineUid() || offlineCity.ownerUid || null;
+  currentCity.ownerName = state.playerName;
+  currentCity.ownerFlag = state.flag;
+  currentCity.level = offlineCity.level;
+  currentCity.troops = Math.max(0, Math.floor(Number(offlineCity.troops) || 0));
+  currentCity.troopFloat = Math.max(0, Number(offlineCity.troopFloat) || currentCity.troops);
+  currentCity.isMainCity = !isStronghold(currentCity) && currentCity.id === state.mainCityId;
+  return currentCity;
 }
 
 function applyPendingOfflineProgress() {
@@ -7499,20 +7635,35 @@ function applyPendingOfflineProgress() {
     ? pendingOfflineProductionCities
     : createOfflineProductionSnapshot(state);
   pendingOfflineProductionCities = [];
-  if (!productionCities.length) return;
+  if (!productionCities.length) {
+    pendingOfflineOwnedCityIds = null;
+    return;
+  }
 
   const goldGained = Math.floor(productionCities.reduce((sum, city) => sum + getCityStats(city).goldProductionPerSecond, 0) * elapsed);
   let troopsKeptInCities = 0;
   let troopsRalliedToMain = 0;
   const changedOwnedCities = new Set();
+  const lostCities = [];
+  const lostCityIds = new Set();
   for (const offlineCity of productionCities) {
+    const stillOwned = isOfflineCityStillOwned(offlineCity);
+    if (!stillOwned && !lostCityIds.has(offlineCity.id)) {
+      lostCityIds.add(offlineCity.id);
+      lostCities.push({
+        id: offlineCity.id,
+        name: offlineCity.name || offlineCity.id,
+        regionId: offlineCity.regionId || getCityRegionId(offlineCity.id),
+      });
+    }
+
     const growth = getCityStats(offlineCity).troopProductionPerSecond * elapsed;
     if (growth <= 0) continue;
     const gained = Math.floor(growth);
     if (gained <= 0) continue;
 
-    const currentCity = cityById(offlineCity.id);
-    if (currentCity?.owner === "player") {
+    const currentCity = stillOwned ? restoreOfflineCityOwnership(offlineCity) : cityById(offlineCity.id);
+    if (stillOwned && currentCity) {
       currentCity.troopFloat = Math.max(0, Number(currentCity.troopFloat) || currentCity.troops || 0) + gained;
       currentCity.troops = Math.floor(currentCity.troopFloat);
       changedOwnedCities.add(currentCity.id);
@@ -7534,10 +7685,12 @@ function applyPendingOfflineProgress() {
     if (city) markOwnedCityChanged(city, false);
   });
   state.gameSeconds += elapsed;
+  pendingOfflineOwnedCityIds = null;
 
-  if (goldGained > 0 || troopsGained > 0) {
+  if (goldGained > 0 || troopsGained > 0 || lostCities.length > 0) {
     const rallyText = troopsRalliedToMain > 0 ? ` ${formatNumber(troopsRalliedToMain)} troops from lost cities rallied to ${mainCity ? mainCity.name : "the main city"}.` : "";
-    addLog(`Offline production: +${formatNumber(goldGained)} gold and +${formatNumber(troopsGained)} troops.${rallyText}`);
+    const lostText = lostCities.length ? ` Lost cities: ${lostCities.map(city => city.name).join(", ")}.` : "";
+    addLog(`Offline production: +${formatNumber(goldGained)} gold and +${formatNumber(troopsGained)} troops.${rallyText}${lostText}`);
     showOfflineRewardsModal({
       goldGained,
       troopsGained,
@@ -7545,13 +7698,18 @@ function applyPendingOfflineProgress() {
       troopsRalliedToMain,
       elapsed,
       cityName: mainCity?.name || "main city",
+      lostCities,
     });
     syncOwnedCitiesToOnline(true);
     saveGame();
   }
 }
 
-function showOfflineRewardsModal({ goldGained = 0, troopsGained = 0, troopsKeptInCities = 0, troopsRalliedToMain = 0, elapsed = 0, cityName = "main city" } = {}) {
+function showOfflineRewardsModal({ goldGained = 0, troopsGained = 0, troopsKeptInCities = 0, troopsRalliedToMain = 0, elapsed = 0, cityName = "main city", lostCities = [] } = {}) {
+  const lostList = Array.isArray(lostCities) ? lostCities : [];
+  const lostSummary = lostList.length
+    ? `<section class="offline-lost-cities"><span>Cities lost while away</span><strong>${formatNumber(lostList.length)}</strong><ul>${lostList.slice(0, 8).map(city => `<li>${escapeHtml(city.name || city.id)} <small>${escapeHtml(getRegionLabel(city.regionId || getCityRegionId(city.id)))}</small></li>`).join("")}</ul>${lostList.length > 8 ? `<small>+${formatNumber(lostList.length - 8)} more</small>` : ""}</section>`
+    : `<section class="offline-lost-cities safe"><span>Cities lost while away</span><strong>0</strong><small>No cities were lost.</small></section>`;
   modal.classList.add("offline-reward-modal");
   modalTitle.textContent = "Welcome back";
   modalBody.innerHTML = `
@@ -7562,6 +7720,7 @@ function showOfflineRewardsModal({ goldGained = 0, troopsGained = 0, troopsKeptI
         <div><span>Troops produced</span><strong>${formatNumber(troopsGained)}</strong><small>${formatNumber(troopsKeptInCities)} stayed in their cities</small></div>
         <div><span>Rallied home</span><strong>${formatNumber(troopsRalliedToMain)}</strong><small>${troopsRalliedToMain > 0 ? `Sent to ${escapeHtml(cityName)}` : "No cities lost offline"}</small></div>
       </div>
+      ${lostSummary}
       <button id="offlineCollectBtn" class="offline-collect-btn" type="button">Collect</button>
     </div>
   `;

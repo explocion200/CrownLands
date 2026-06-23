@@ -2299,6 +2299,46 @@ input {
   font-size: 1.55rem;
   line-height: 1.1;
 }
+.offline-lost-cities {
+  padding: .78rem;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 167, 126, .32);
+  background: rgba(54, 18, 18, .38);
+}
+.offline-lost-cities.safe {
+  border-color: rgba(126, 179, 95, .28);
+  background: rgba(17, 47, 32, .36);
+}
+.offline-lost-cities span,
+.offline-lost-cities small {
+  display: block;
+  color: var(--muted);
+  font-size: .78rem;
+}
+.offline-lost-cities strong {
+  display: block;
+  margin-top: .12rem;
+  color: #fff4c8;
+  font-size: 1.25rem;
+}
+.offline-lost-cities ul {
+  list-style: none;
+  display: grid;
+  gap: .32rem;
+  margin: .5rem 0 0;
+  padding: 0;
+}
+.offline-lost-cities li {
+  display: flex;
+  justify-content: space-between;
+  gap: .75rem;
+  min-width: 0;
+  color: #fff;
+  font-weight: 900;
+}
+.offline-lost-cities li small {
+  flex: 0 0 auto;
+}
 .offline-collect-btn {
   min-height: 46px;
   border-radius: 14px;

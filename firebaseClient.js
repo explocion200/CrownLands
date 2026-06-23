@@ -670,6 +670,27 @@
     };
   }
 
+  async function loadOwnedCitiesAcrossIslands(islandIds = []) {
+    await init();
+    const uid = requireSignedIn();
+    if (!uid) return [];
+    const { collection, getDocs, query: firestoreQuery, where } = client.modules.firestore;
+    if (!firestoreQuery || !where) return [];
+    const uniqueIslandIds = [...new Set((Array.isArray(islandIds) ? islandIds : [])
+      .map(islandId => String(islandId || "").trim())
+      .filter(Boolean))];
+    const results = [];
+    for (const islandId of uniqueIslandIds) {
+      const citiesRef = collection(client.db, "islands", islandId, "cities");
+      const ownedRef = firestoreQuery(citiesRef, where("ownerUid", "==", uid));
+      const snapshot = await getDocs(ownedRef);
+      snapshot.docs.forEach(cityDoc => {
+        results.push({ islandId, id: cityDoc.id, ...cityDoc.data() });
+      });
+    }
+    return results;
+  }
+
   function subscribeIsland(islandId, handlers = {}) {
     if (!client.configured || !client.db || !islandId) return () => {};
     const { collection, doc, onSnapshot, query: firestoreQuery, where } = client.modules.firestore;
@@ -734,6 +755,7 @@
     deleteArmyMovement,
     savePresence,
     loadIslandCitySummary,
+    loadOwnedCitiesAcrossIslands,
     subscribeIsland,
     isConfigured: () => client.configured,
     isReady: () => client.ready,
