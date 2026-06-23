@@ -1847,6 +1847,7 @@ let onlineCitiesLoaded = false;
 let onlineFreshClaimCityId = "";
 let onlineActiveRegionId = DEFAULT_ONLINE_REGION_ID;
 let mapSwitchLoading = false;
+let onlineSetupBackgroundInFlight = false;
 let onlineCitySyncTimer = 0;
 let onlineCitySyncInFlight = false;
 let onlineCitySyncQueued = false;
@@ -5165,6 +5166,50 @@ async function setupOnlineWorld() {
   });
 }
 
+function startOnlineSetupInBackground() {
+  const api = getOnlineApi();
+  if (!state || !api?.isConfigured?.() || !api?.isSignedIn?.()) return;
+  if (onlineSetupBackgroundInFlight || onlineWorldConnected) return;
+
+  onlineSetupBackgroundInFlight = true;
+  onlineLastError = "";
+  updateOnlineUi();
+  if (onlineStatusDetail) onlineStatusDetail.textContent = "Kingdom loaded. Connecting online in the background...";
+  showToast("Kingdom loaded. Connecting online...");
+
+  setupOnlineWorld()
+    .then(async connected => {
+      if (!state) return;
+      if (!connected) {
+        state.online = null;
+        onlineWorldConnected = false;
+        onlineCitiesLoaded = false;
+        updateOnlineUi();
+        showToast("Playing locally. Online setup will retry next time.");
+        return;
+      }
+
+      rememberOwnedAttackSource(state.mainCityId || playerCities()[0]?.id);
+      saveGame();
+      await flushOnlineSave(true);
+      renderAll();
+      requestAnimationFrame(() => centerOnCity(selectedSourceId || state.mainCityId || playerCities()[0]?.id));
+      showToast("Online world connected.");
+    })
+    .catch(error => {
+      onlineLastError = error?.message || String(error);
+      state.online = null;
+      onlineWorldConnected = false;
+      onlineCitiesLoaded = false;
+      updateOnlineUi();
+      showToast("Playing locally. Online setup is still having trouble.");
+      console.warn("Background online setup failed", error);
+    })
+    .finally(() => {
+      onlineSetupBackgroundInFlight = false;
+    });
+}
+
 async function connectOnlineIsland(regionId, { claimHome = false, homeRegionId = null, profile = null, activateOnFirstSnapshot = false } = {}) {
   const api = getOnlineApi();
   if (!state || !api?.isConfigured?.() || !api?.isSignedIn?.()) return false;
@@ -5982,32 +6027,29 @@ async function startFromInput(forceFresh = false) {
     }
     if (freshBtn) freshBtn.disabled = true;
 
-    const onlineSaved = forceFresh ? null : await loadOnlineGame(playerName);
-    const saved = onlineSaved || (forceFresh ? null : loadGame());
+    const shouldConnectOnline = Boolean(getOnlineApi()?.isSignedIn?.());
+    const saved = forceFresh ? null : loadGame();
     state = saved || newGame(playerName);
     if (!saved) state.playerName = playerName;
     if (state.mainCityId) state.activeRegionId = getCityRegionId(state.mainCityId);
+    if (shouldConnectOnline) {
+      state.online = null;
+      onlineWorldConnected = false;
+      onlineCitiesLoaded = false;
+    }
     localDirtyCityIds = new Set();
     pendingOfflineProgressSeconds = getOfflineProgressSeconds(state);
     pendingOfflineProductionCities = pendingOfflineProgressSeconds > 0 ? createOfflineProductionSnapshot(state) : [];
     state.lastRealTimeMs = Date.now();
     selectedMarchPercent = normalizeMarchPercent(state.marchPercent);
-    const requiresOnlineWorld = Boolean(getOnlineApi()?.isSignedIn?.());
-    const onlineConnected = requiresOnlineWorld ? await setupOnlineWorld() : false;
-    if (requiresOnlineWorld && !onlineConnected) {
-      state.online = null;
-      onlineWorldConnected = false;
-      onlineCitiesLoaded = false;
-      showToast("Online setup is still having trouble. Entering fresh local kingdom.");
-    }
-    if (!onlineConnected) applyPendingOfflineProgress();
+    applyPendingOfflineProgress();
     setupScreen.classList.remove("visible");
     clearSelection(false);
     rememberOwnedAttackSource(state.mainCityId || playerCities()[0]?.id);
     saveGame();
-    if (onlineConnected) await flushOnlineSave(true);
     renderAll();
     requestAnimationFrame(() => centerOnCity(selectedSourceId || state.mainCityId || playerCities()[0]?.id));
+    if (shouldConnectOnline) startOnlineSetupInBackground();
   } finally {
     if (launchBtn) {
       launchBtn.disabled = false;
