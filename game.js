@@ -16,6 +16,7 @@ const ONLINE_CITY_SYNC_SECONDS = 6;
 const ONLINE_PRESENCE_SECONDS = 10;
 const ONLINE_PRESENCE_STALE_SECONDS = 90;
 const ONLINE_ARMY_EXPIRY_GRACE_SECONDS = 8;
+const SETUP_LOADING_MIN_MS = 450;
 const HUD_RENDER_INTERVAL_MS = 250;
 const MAP_RENDER_INTERVAL_MS = 1600;
 const CITY_LIST_PAGE_SIZE = 5;
@@ -2908,6 +2909,18 @@ function setSetupLoading(active, detail = "") {
   if (isActive && detail && onlineStatusDetail) {
     onlineStatusDetail.textContent = detail;
   }
+}
+
+function waitForSetupLoadingPaint(minMs = SETUP_LOADING_MIN_MS) {
+  const startedAt = performance.now();
+  return new Promise(resolve => {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        const remainingMs = Math.max(0, minMs - (performance.now() - startedAt));
+        window.setTimeout(resolve, remainingMs);
+      });
+    });
+  });
 }
 
 function setMapSwitchLoading(label = "") {
@@ -6176,6 +6189,7 @@ async function startFromInput(forceFresh = false) {
     }
     if (freshBtn) freshBtn.disabled = true;
     setSetupLoading(true, forceFresh ? "Creating kingdom..." : "Entering kingdom...");
+    await waitForSetupLoadingPaint();
 
     const shouldConnectOnline = Boolean(getOnlineApi()?.isSignedIn?.());
     const saved = forceFresh ? null : loadGame();
