@@ -1856,6 +1856,8 @@ let onlineCitySyncQueued = false;
 let onlineArmies = [];
 let onlineArmiesByIsland = new Map();
 let onlineArmyUnsubscribes = [];
+let resolvingOnlineArmyIds = new Set();
+let resolvedOnlineArmyIds = new Set();
 let onlinePresence = [];
 let onlineIslandSummaries = new Map();
 let onlineIslandSummaryRefreshInFlight = false;
@@ -5954,7 +5956,107 @@ function subscribeOnlineArmyWatchers(activeIslandId) {
 function isOnlineArmyVisible(army) {
   if (!army || army.status !== "active") return false;
   if (!army.fromId || !army.toId) return false;
+  if (army.ownerUid && army.ownerUid === getCurrentOnlineUid()) return true;
   return getOnlineArmyRemainingSeconds(army) > -ONLINE_ARMY_EXPIRY_GRACE_SECONDS;
+}
+
+function createLocalAttackFromOnlineArmy(army, remaining = getOnlineArmyRemainingSeconds(army)) {
+  if (!army) return null;
+  const uid = getCurrentOnlineUid();
+  return {
+    id: attackIdCounter++,
+    onlineId: army.id,
+    owner: "player",
+    ownerKind: "player",
+    ownerUid: uid,
+    ownerName: army.ownerName || state.playerName,
+    ownerFlag: army.ownerFlag || state.flag,
+    kind: army.kind,
+    fromId: army.fromId,
+    toId: army.toId,
+    troops: army.troops,
+    total: army.total,
+    remaining: clamp(remaining, 0, army.total),
+    path: army.path,
+    pathSegments: army.pathSegments,
+    pathLength: army.pathLength,
+    targetOwnerAtLaunch: army.targetOwnerAtLaunch,
+    launchedAtMs: army.launchedAtMs,
+    arrivesAtMs: army.arrivesAtMs,
+    onlineRegionIds: army.onlineRegionIds?.length ? army.onlineRegionIds : getMissionRegionIds(army),
+  };
+}
+
+function restoreOnlineActiveRegionSnapshot(snapshot) {
+  if (!state || !snapshot) return;
+  onlineActiveRegionId = snapshot.onlineActiveRegionId;
+  state.activeRegionId = snapshot.activeRegionId;
+  if (state.online) {
+    state.online.activeRegionId = snapshot.onlineState?.activeRegionId || snapshot.activeRegionId;
+    state.online.islandId = snapshot.onlineState?.islandId || getOnlineIslandId(snapshot.activeRegionId);
+  }
+}
+
+async function loadOnlineRegionCitiesForResolution(regionId) {
+  const api = getOnlineApi();
+  if (!state || !api?.loadIslandCities || !api?.isSignedIn?.()) return false;
+  const targetRegionId = normalizeRegionId(regionId);
+  const activeSnapshot = {
+    activeRegionId: getActiveOnlineRegionId(),
+    onlineActiveRegionId,
+    onlineState: state.online ? {
+      activeRegionId: state.online.activeRegionId,
+      islandId: state.online.islandId,
+    } : null,
+  };
+
+  const onlineCities = await withTimeout(
+    api.loadIslandCities(getOnlineIslandId(targetRegionId)),
+    9000,
+    `${getRegionLabel(targetRegionId)} city list is taking too long.`
+  );
+  if (!Array.isArray(onlineCities)) return false;
+  applyOnlineCities(onlineCities, targetRegionId);
+  restoreOnlineActiveRegionSnapshot(activeSnapshot);
+  return true;
+}
+
+function resolveOverdueOnlineArmy(army) {
+  const onlineId = String(army?.id || army?.onlineId || "");
+  if (!onlineId || resolvingOnlineArmyIds.has(onlineId) || resolvedOnlineArmyIds.has(onlineId)) return;
+  resolvingOnlineArmyIds.add(onlineId);
+  resolveOverdueOnlineArmyAsync(army)
+    .catch(error => {
+      onlineLastError = error?.message || String(error);
+      console.warn("Could not resolve overdue online army", error);
+    })
+    .finally(() => {
+      resolvingOnlineArmyIds.delete(onlineId);
+    });
+}
+
+async function resolveOverdueOnlineArmyAsync(army) {
+  if (!state || army?.ownerUid !== getCurrentOnlineUid()) return false;
+  const onlineId = String(army.id || army.onlineId || "");
+  if (!onlineId || resolvedOnlineArmyIds.has(onlineId)) return false;
+  const targetRegionId = getCityRegionId(army.toId);
+  const loadedTargetRegion = await loadOnlineRegionCitiesForResolution(targetRegionId);
+  if (!loadedTargetRegion) return false;
+  const target = cityById(army.toId);
+  if (!target) return false;
+
+  const mission = createLocalAttackFromOnlineArmy(army, 0);
+  if (!mission) return false;
+  resolveAttack(mission);
+  deleteOnlineArmyMovement(mission);
+  resolvedOnlineArmyIds.add(onlineId);
+  state.attacks = state.attacks.filter(attack => attack.onlineId !== onlineId);
+  saveGame();
+  flushOnlineSave(true);
+  renderAll();
+  updateIncomingAttackUi();
+  updateOutgoingAttackUi();
+  return true;
 }
 
 function adoptOwnOnlineArmies() {
@@ -5963,31 +6065,15 @@ function adoptOwnOnlineArmies() {
   if (!uid) return;
   const localOnlineIds = new Set(state.attacks.map(attack => attack.onlineId).filter(Boolean));
   for (const army of onlineArmies) {
-    if (army.ownerUid !== uid || localOnlineIds.has(army.id)) continue;
+    if (army.ownerUid !== uid || localOnlineIds.has(army.id) || resolvedOnlineArmyIds.has(army.id)) continue;
     const remaining = getOnlineArmyRemainingSeconds(army);
-    if (remaining <= 0) continue;
-    state.attacks.push({
-      id: attackIdCounter++,
-      onlineId: army.id,
-      owner: "player",
-      ownerKind: "player",
-      ownerUid: uid,
-      ownerName: army.ownerName || state.playerName,
-      ownerFlag: army.ownerFlag || state.flag,
-      kind: army.kind,
-      fromId: army.fromId,
-      toId: army.toId,
-      troops: army.troops,
-      total: army.total,
-      remaining: clamp(remaining, 0, army.total),
-      path: army.path,
-      pathSegments: army.pathSegments,
-      pathLength: army.pathLength,
-      targetOwnerAtLaunch: army.targetOwnerAtLaunch,
-      launchedAtMs: army.launchedAtMs,
-      arrivesAtMs: army.arrivesAtMs,
-      onlineRegionIds: army.onlineRegionIds,
-    });
+    if (remaining <= 0) {
+      resolveOverdueOnlineArmy(army);
+      continue;
+    }
+    const mission = createLocalAttackFromOnlineArmy(army, remaining);
+    if (!mission) continue;
+    state.attacks.push(mission);
     localOnlineIds.add(army.id);
   }
 }
