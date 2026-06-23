@@ -4,8 +4,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Crownlands - Medieval Island Conquest</title>
-  <meta name="crownlands-build" content="20260623-leaderboard" />
-  <link rel="stylesheet" href="styles.css?v=20260623-leaderboard" />
+  <meta name="crownlands-build" content="20260623-leaderboard-profile" />
+  <link rel="stylesheet" href="styles.css?v=20260623-leaderboard-profile" />
   <link rel="preload" as="image" href="assets/loading-ring.png" />
   <link rel="preload" as="image" href="assets/loading-crown.png" />
   <link rel="icon" href="data:," />
@@ -39,10 +39,16 @@
     <section class="game-view" aria-label="Game map">
       <header class="top-hud">
         <div class="profile-stack" aria-label="Kingdom profile and gold">
-          <button id="profileBtn" class="portrait-placeholder profile-button" type="button" aria-label="Open kingdom profile">
-            <span id="hudKingdomFlag" class="kingdom-flag kingdom-flag-small" aria-hidden="true"><span class="flag-symbol"></span></span>
-            <span id="characterLevelBadge" class="character-level-badge">Lv 1</span>
-          </button>
+          <div class="profile-action-row">
+            <button id="profileBtn" class="portrait-placeholder profile-button" type="button" aria-label="Open kingdom profile">
+              <span id="hudKingdomFlag" class="kingdom-flag kingdom-flag-small" aria-hidden="true"><span class="flag-symbol"></span></span>
+              <span id="characterLevelBadge" class="character-level-badge">Lv 1</span>
+            </button>
+            <button id="leaderboardBtn" class="profile-rank-btn" type="button" aria-label="Open King Power ranks">
+              <span aria-hidden="true">&#9812;</span>
+              <small>Ranks</small>
+            </button>
+          </div>
           <div class="profile-gold"><span>&#129689;</span><strong id="goldText">0</strong></div>
           <span id="lordNameText" class="sr-only">Ruler</span>
           <span id="statusText" class="sr-only">Live conquest</span>
@@ -95,7 +101,6 @@
 
       <nav class="bottom-nav" aria-label="Game menu">
         <button id="logBtn" class="nav-btn" type="button"><span>&#128220;</span>Reports</button>
-        <button id="leaderboardBtn" class="nav-btn leaderboard-btn" type="button"><span>&#9812;</span>Ranks</button>
         <button id="outgoingAttackBtn" class="nav-btn outgoing-attack-btn" type="button" aria-label="Outgoing armies" hidden>
           <span aria-hidden="true">&#10148;</span>
           <strong id="outgoingAttackCount">0</strong>
@@ -196,7 +201,7 @@
 
   <script src="world-config.js"></script>
   <script src="firebase-config.js"></script>
-  <script src="firebaseClient.js?v=20260623-leaderboard"></script>
-  <script src="game.js?v=20260623-leaderboard"></script>
+  <script src="firebaseClient.js?v=20260623-leaderboard-profile"></script>
+  <script src="game.js?v=20260623-leaderboard-profile"></script>
 </body>
 </html>

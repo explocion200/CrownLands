@@ -2872,8 +2872,8 @@ input {
   left: max(.75rem, env(safe-area-inset-left));
   right: auto;
   bottom: max(.75rem, env(safe-area-inset-bottom));
-  width: 180px;
-  min-width: 180px;
+  width: 112px;
+  min-width: 112px;
   height: 62px;
   padding: .42rem;
   border: 1px solid rgba(255,255,255,.14);
@@ -2882,12 +2882,12 @@ input {
 }
 .bottom-nav:has(.incoming-attack-btn:not([hidden])),
 .bottom-nav:has(.outgoing-attack-btn:not([hidden])) {
-  width: 260px;
-  min-width: 260px;
+  width: 220px;
+  min-width: 220px;
 }
 .bottom-nav:has(.incoming-attack-btn:not([hidden])):has(.outgoing-attack-btn:not([hidden])) {
-  width: 340px;
-  min-width: 340px;
+  width: 314px;
+  min-width: 314px;
 }
 .nav-btn {
   border-radius: 14px;
@@ -2983,18 +2983,19 @@ input {
     font-size: .72rem;
   }
   .bottom-nav {
-    width: 170px;
+    width: 106px;
+    min-width: 106px;
     height: 52px;
     padding: .32rem;
   }
   .bottom-nav:has(.incoming-attack-btn:not([hidden])),
   .bottom-nav:has(.outgoing-attack-btn:not([hidden])) {
-    width: 238px;
-    min-width: 238px;
+    width: 204px;
+    min-width: 204px;
   }
   .bottom-nav:has(.incoming-attack-btn:not([hidden])):has(.outgoing-attack-btn:not([hidden])) {
-    width: 300px;
-    min-width: 300px;
+    width: 286px;
+    min-width: 286px;
   }
   .nav-btn {
     font-size: .66rem;
@@ -3011,16 +3012,17 @@ input {
     min-width: 410px;
   }
   .bottom-nav {
-    width: 190px;
+    width: 122px;
+    min-width: 122px;
   }
   .bottom-nav:has(.incoming-attack-btn:not([hidden])),
   .bottom-nav:has(.outgoing-attack-btn:not([hidden])) {
-    width: 282px;
-    min-width: 282px;
+    width: 232px;
+    min-width: 232px;
   }
   .bottom-nav:has(.incoming-attack-btn:not([hidden])):has(.outgoing-attack-btn:not([hidden])) {
-    width: 360px;
-    min-width: 360px;
+    width: 322px;
+    min-width: 322px;
   }
   .toast {
     left: calc((100vw - 410px) / 2);
@@ -3047,6 +3049,11 @@ input {
   gap: .32rem;
   justify-items: center;
 }
+.profile-action-row {
+  display: flex;
+  align-items: stretch;
+  gap: .34rem;
+}
 
 [hidden] { display: none !important; }
 
@@ -3068,7 +3075,36 @@ input {
   padding: 5px;
   color: var(--ink);
 }
+.profile-rank-btn {
+  width: 48px;
+  height: 58px;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: .05rem;
+  border-radius: 16px;
+  color: #211508;
+  background: linear-gradient(#ffe293, #d9962e);
+  border: 2px solid rgba(255,255,255,.62);
+  box-shadow: 0 10px 28px rgba(0,0,0,.36), inset 0 -5px 0 rgba(0,0,0,.16);
+  font-weight: 1000;
+}
+.profile-rank-btn span {
+  display: block;
+  font-size: 1.32rem;
+  line-height: 1;
+}
+.profile-rank-btn small {
+  display: block;
+  font-size: .55rem;
+  line-height: 1;
+  text-transform: uppercase;
+}
+.profile-rank-btn:active {
+  transform: translateY(1px);
+}
 .profile-button:focus-visible,
+.profile-rank-btn:focus-visible,
 .profile-flag-button:focus-visible,
 .profile-icon-btn:focus-visible,
 .flag-option-grid button:focus-visible,
