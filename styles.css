@@ -246,11 +246,12 @@ input {
 .resource-pill { min-width: 70px; height: 38px; border-radius: 999px; padding: 0 .55rem; display: flex; align-items: center; justify-content: center; gap: .25rem; }
 .resource-pill strong { font-size: .92rem; }
 .city-list-btn { color: var(--ink); }
-.city-list-btn:active { transform: translateY(1px); }
+.city-list-btn:active,
+.island-switch-btn:active { transform: translateY(1px); }
+.resource-pill.city-list-btn,
 .resource-pill.island-switch-btn {
   position: absolute;
   z-index: 55;
-  right: max(.75rem, env(safe-area-inset-right));
   bottom: max(.75rem, env(safe-area-inset-bottom));
   width: 64px;
   min-width: 64px;
@@ -263,6 +264,13 @@ input {
   box-shadow: 0 10px 25px rgba(0,0,0,.25), 0 0 14px rgba(242,184,75,.14);
   overflow: hidden;
 }
+.resource-pill.city-list-btn {
+  right: calc(max(.75rem, env(safe-area-inset-right)) + 76px);
+}
+.resource-pill.island-switch-btn {
+  right: max(.75rem, env(safe-area-inset-right));
+}
+.city-list-icon,
 .island-switch-icon {
   display: block;
   width: 100%;
@@ -1391,6 +1399,29 @@ input {
 .city-list-panel {
   display: grid;
   gap: .78rem;
+}
+.city-list-summary {
+  min-height: 54px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .8rem;
+  padding: .58rem .82rem;
+  border-radius: 12px;
+  background: rgba(5, 20, 36, .72);
+  border: 1px solid rgba(158,213,255,.16);
+  box-shadow: inset 0 -4px 0 rgba(0,0,0,.13);
+}
+.city-list-summary span {
+  color: #cfe9ff;
+  font-size: .78rem;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+.city-list-summary strong {
+  color: #fff0a7;
+  font-size: 1.35rem;
+  line-height: 1;
 }
 .city-list-toolbar {
   display: flex;
@@ -3596,7 +3627,9 @@ input {
 @media (max-width: 780px) and (orientation: landscape) {
   .portrait-placeholder { width: 46px; height: 46px; border-radius: 14px; }
   .profile-rank-btn { width: 40px; height: 40px; border-radius: 13px; }
+  .resource-pill.city-list-btn,
   .resource-pill.island-switch-btn { width: 56px; min-width: 56px; max-width: 56px; height: 56px; border-radius: 16px; }
+  .resource-pill.city-list-btn { right: calc(max(.75rem, env(safe-area-inset-right)) + 66px); }
   .character-level-badge { min-width: 34px; height: 19px; right: -7px; bottom: -7px; font-size: .58rem; }
   .profile-gold { height: 24px; min-width: 66px; font-size: .74rem; }
   .profile-xp { min-width: 76px; font-size: .52rem; padding: .1rem .3rem; }

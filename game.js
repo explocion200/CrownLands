@@ -8215,7 +8215,9 @@ function renderHud() {
   if (characterLevelBadge) characterLevelBadge.textContent = `Lv ${formatNumber(state.character.level)}`;
   if (characterXpText) characterXpText.textContent = "";
   applyFlagToElement(hudKingdomFlag, state.flag);
-  cityText.textContent = `${playerRegularCities().length}`;
+  const regularCityCount = playerRegularCities().length;
+  if (cityText) cityText.textContent = `${formatNumber(regularCityCount)} cities`;
+  if (cityListBtn) cityListBtn.setAttribute("aria-label", `Open city list, ${formatNumber(regularCityCount)} cities owned`);
   updateIslandSwitcherUi();
   updateIncomingAttackUi();
   updateOutgoingAttackUi();
@@ -9482,6 +9484,7 @@ function showCityListModal() {
 
 function renderCityListModal() {
   const cities = getSortedCityList();
+  const regularCityCount = playerRegularCities().length;
   const pageCount = Math.max(1, Math.ceil(cities.length / CITY_LIST_PAGE_SIZE));
   cityListPage = clamp(cityListPage, 0, pageCount - 1);
   const start = cityListPage * CITY_LIST_PAGE_SIZE;
@@ -9489,6 +9492,10 @@ function renderCityListModal() {
   modalTitle.textContent = "City list";
   modalBody.innerHTML = `
     <div class="city-list-panel">
+      <div class="city-list-summary">
+        <span>Cities owned</span>
+        <strong>${formatNumber(regularCityCount)}</strong>
+      </div>
       <div class="city-list-toolbar" aria-label="City list filters">
         <button class="${cityListSortKey === "level" ? "active" : ""}" data-city-list-sort="level" type="button" aria-pressed="${cityListSortKey === "level"}">
           <span>Lv.</span><small>${getCityListSortLabel("level")}</small>
@@ -10751,6 +10758,7 @@ function getMainCityReturnAvoidRects(viewRect) {
   return [
     document.querySelector(".profile-stack"),
     document.querySelector(".resource-bar"),
+    cityListBtn,
     islandSwitchBtn,
     document.querySelector(".commander-panel.visible"),
     document.querySelector(".bottom-nav"),
