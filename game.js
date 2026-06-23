@@ -5,6 +5,7 @@ const LAND_BRIDGES = Array.isArray(WORLD_CONFIG.landBridges) ? WORLD_CONFIG.land
 const REGION_CITY_COUNT = Math.max(1, Math.floor(Number(WORLD_CONFIG.cityCountPerRegion) || 50));
 const RESET_GENERATION = "fresh-2026-06-23";
 const STORAGE_KEY = `crownlands-realtime-${RESET_GENERATION}`;
+const PENDING_ARMY_STORAGE_KEY = `crownlands-pending-armies-${RESET_GENERATION}`;
 const LEGACY_STORAGE_KEYS = [];
 const SAVE_EVERY_SECONDS = 30;
 const ONLINE_SAVE_SECONDS = 20;
@@ -16,6 +17,8 @@ const ONLINE_CITY_SYNC_SECONDS = 20;
 const ONLINE_PRESENCE_SECONDS = 30;
 const ONLINE_PRESENCE_STALE_SECONDS = 90;
 const ONLINE_ARMY_EXPIRY_GRACE_SECONDS = 8;
+const ONLINE_ARMY_RESOLVE_RETRY_SECONDS = 5;
+const PENDING_ARMY_MAX_AGE_MS = 3 * 24 * 60 * 60 * 1000;
 const SETUP_LOADING_MIN_MS = 180;
 const IMAGE_PRELOAD_TIMEOUT_MS = 15000;
 const HUD_RENDER_INTERVAL_MS = 250;
@@ -1843,6 +1846,8 @@ let onlineSaveQueued = false;
 let onlineSaveInFlight = false;
 let onlineLastSaveAt = 0;
 let onlineLastError = "";
+let onlineArmySavePromises = new Set();
+let onlineCityStateSavePromises = new Set();
 let onlineIslandUnsubscribe = null;
 let onlineWorldLoading = false;
 let onlineWorldConnected = false;
@@ -1864,6 +1869,8 @@ let onlineIslandSummaries = new Map();
 let onlineIslandSummaryRefreshInFlight = false;
 let onlinePresenceTimer = 0;
 let onlinePresenceInFlight = false;
+let overdueArmyResolveTimer = 0;
+let pendingArmyRecoveryInFlight = false;
 const islandImageLoadPromises = new Map();
 let pendingOfflineProgressSeconds = 0;
 let pendingOfflineProductionCities = [];
@@ -5044,8 +5051,17 @@ async function handleGoogleSignOut() {
   const api = getOnlineApi();
   if (!api?.signOut) return;
   try {
-    disconnectOnlineWorld();
+    if (onlineArmySavePromises.size || onlineCityStateSavePromises.size) {
+      showToast("Finishing army orders...");
+      try {
+        await waitForPendingOnlineWrites(5000);
+      } catch (error) {
+        onlineLastError = error?.message || String(error);
+        console.warn("Continuing sign-out while some online writes are still pending", error);
+      }
+    }
     await flushOnlineSave(true);
+    disconnectOnlineWorld();
     await api.signOut();
     onlineLastSaveAt = 0;
     onlineLastError = "";
@@ -5075,6 +5091,8 @@ function disconnectOnlineWorld() {
   onlineIslandSummaryRefreshInFlight = false;
   onlinePresenceTimer = 0;
   onlinePresenceInFlight = false;
+  overdueArmyResolveTimer = 0;
+  pendingArmyRecoveryInFlight = false;
   onlineWorldConnected = false;
   onlineCitiesLoaded = false;
   onlineFreshClaimCityId = "";
@@ -5091,6 +5109,110 @@ function withTimeout(promise, timeoutMs, message) {
   return Promise.race([promise, timeout]).finally(() => {
     if (timer) window.clearTimeout(timer);
   });
+}
+
+function readPendingOnlineArmyMovements() {
+  try {
+    const raw = localStorage.getItem(PENDING_ARMY_STORAGE_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed.filter(entry => entry?.movement?.id) : [];
+  } catch (error) {
+    console.warn("Could not read pending army queue", error);
+    return [];
+  }
+}
+
+function writePendingOnlineArmyMovements(entries) {
+  try {
+    const cutoff = Date.now() - PENDING_ARMY_MAX_AGE_MS;
+    const cleaned = (Array.isArray(entries) ? entries : [])
+      .filter(entry => entry?.movement?.id && Math.max(0, Number(entry.updatedAtMs) || 0) >= cutoff)
+      .slice(-40);
+    if (cleaned.length) localStorage.setItem(PENDING_ARMY_STORAGE_KEY, JSON.stringify(cleaned));
+    else localStorage.removeItem(PENDING_ARMY_STORAGE_KEY);
+  } catch (error) {
+    console.warn("Could not save pending army queue", error);
+  }
+}
+
+function rememberPendingOnlineArmyMovement(movement, regionIds = []) {
+  const uid = getCurrentOnlineUid();
+  if (!uid || !movement?.id) return;
+  const entries = readPendingOnlineArmyMovements();
+  const key = `${uid}:${movement.id}`;
+  const nextEntry = {
+    key,
+    uid,
+    movement,
+    regionIds: [...new Set((regionIds.length ? regionIds : movement.routeRegionIds || []).map(normalizeRegionId).filter(Boolean))],
+    updatedAtMs: Date.now(),
+  };
+  const nextEntries = entries.filter(entry => entry.key !== key);
+  nextEntries.push(nextEntry);
+  writePendingOnlineArmyMovements(nextEntries);
+}
+
+function forgetPendingOnlineArmyMovement(onlineId) {
+  const uid = getCurrentOnlineUid();
+  if (!uid || !onlineId) return;
+  const key = `${uid}:${onlineId}`;
+  writePendingOnlineArmyMovements(readPendingOnlineArmyMovements().filter(entry => entry.key !== key));
+}
+
+async function saveOnlineArmyMovementToRegions(movement, regionIds = []) {
+  const api = getOnlineApi();
+  if (!api?.saveArmyMovement || !movement?.id) return false;
+  const normalizedRegionIds = [...new Set((regionIds.length ? regionIds : movement.routeRegionIds || []).map(normalizeRegionId).filter(Boolean))];
+  if (!normalizedRegionIds.length) return false;
+  await Promise.all(normalizedRegionIds.map(regionId => api.saveArmyMovement(getOnlineIslandId(regionId), movement)));
+  return true;
+}
+
+async function waitForPendingOnlineWrites(timeoutMs = 4500) {
+  const pending = [...onlineArmySavePromises, ...onlineCityStateSavePromises];
+  if (!pending.length) return true;
+  await withTimeout(Promise.allSettled(pending), timeoutMs, "Online orders are still syncing.");
+  return true;
+}
+
+async function recoverPendingOnlineArmyMovements() {
+  if (pendingArmyRecoveryInFlight) return false;
+  if (!isOnlineWorldActive()) return false;
+  const uid = getCurrentOnlineUid();
+  if (!uid) return false;
+  const entries = readPendingOnlineArmyMovements();
+  const mine = entries.filter(entry => entry.uid === uid && entry?.movement?.id);
+  if (!mine.length) return false;
+
+  let recovered = 0;
+  pendingArmyRecoveryInFlight = true;
+  try {
+    for (const entry of mine) {
+      const movement = {
+        ...(entry.movement || {}),
+        ownerUid: uid,
+        ownerKind: "player",
+        status: "active",
+      };
+      const regionIds = entry.regionIds?.length ? entry.regionIds : movement.routeRegionIds || [];
+      try {
+        await saveOnlineArmyMovementToRegions(movement, regionIds);
+        forgetPendingOnlineArmyMovement(movement.id);
+        recovered += 1;
+      } catch (error) {
+        onlineLastError = error?.message || String(error);
+        console.warn("Could not recover pending army movement", error);
+      }
+    }
+
+    if (recovered > 0) {
+      addLog(`${formatNumber(recovered)} pending army order${recovered === 1 ? "" : "s"} synced after reconnecting.`);
+      showToast(`${formatNumber(recovered)} army order${recovered === 1 ? "" : "s"} synced.`);
+    }
+    return recovered > 0;
+  } finally {
+    pendingArmyRecoveryInFlight = false;
+  }
 }
 
 async function subscribeOnlineIslandWithInitialCities(api, islandId, handlers = {}, timeoutMs = 9000, timeoutMessage = "City list is taking too long.") {
@@ -5408,6 +5530,7 @@ async function connectOnlineIsland(regionId, { claimHome = false, homeRegionId =
     onlineWorldConnected = true;
     onlineLastError = "";
     subscribeOnlineArmyWatchers(islandId);
+    await recoverPendingOnlineArmyMovements();
     await publishOnlinePresence(true);
     updateOnlinePlayersUi();
     updateIslandSwitcherUi();
@@ -5698,14 +5821,19 @@ function syncSharedCityState(city) {
   if (!api?.saveCityState) return;
   const cityId = city.id;
   const ownedAtSave = city.owner === "player";
-  api.saveCityState(getOnlineIslandId(getCityRegionId(city)), toOnlineCityState(city))
+  const savePromise = api.saveCityState(getOnlineIslandId(getCityRegionId(city)), toOnlineCityState(city))
     .then(() => {
       if (ownedAtSave) localDirtyCityIds.delete(cityId);
     })
     .catch(error => {
       onlineLastError = error?.message || String(error);
       console.warn("Could not sync city battle state", error);
+    })
+    .finally(() => {
+      onlineCityStateSavePromises.delete(savePromise);
     });
+  onlineCityStateSavePromises.add(savePromise);
+  return savePromise;
 }
 
 function syncCityStateToOnline(city) {
@@ -5872,12 +6000,22 @@ function publishOnlineArmyMovement(mission) {
   if (!movement) return;
   const regionIds = movement.routeRegionIds?.length ? movement.routeRegionIds : getMissionRegionIds(mission);
   mission.onlineRegionIds = regionIds;
-  regionIds.forEach(regionId => {
-    api.saveArmyMovement(getOnlineIslandId(regionId), movement).catch(error => {
+  rememberPendingOnlineArmyMovement(movement, regionIds);
+  const savePromise = saveOnlineArmyMovementToRegions(movement, regionIds)
+    .then(() => {
+      forgetPendingOnlineArmyMovement(movement.id);
+      return true;
+    })
+    .catch(error => {
       onlineLastError = error?.message || String(error);
       console.warn("Could not sync army movement", error);
+      return false;
+    })
+    .finally(() => {
+      onlineArmySavePromises.delete(savePromise);
     });
-  });
+  onlineArmySavePromises.add(savePromise);
+  return savePromise;
 }
 
 function deleteOnlineArmyMovement(mission) {
@@ -5885,6 +6023,7 @@ function deleteOnlineArmyMovement(mission) {
   const api = getOnlineApi();
   if (!api?.deleteArmyMovement) return;
   const regionIds = mission.onlineRegionIds?.length ? mission.onlineRegionIds : getMissionRegionIds(mission);
+  forgetPendingOnlineArmyMovement(mission.onlineId);
   regionIds.forEach(regionId => {
     api.deleteArmyMovement(getOnlineIslandId(regionId), mission.onlineId).catch(error => {
       onlineLastError = error?.message || String(error);
@@ -6122,6 +6261,17 @@ function adoptOwnOnlineArmies() {
   }
 }
 
+function retryOverdueOnlineArmyResolutions() {
+  if (!state || !Array.isArray(onlineArmies)) return;
+  const uid = getCurrentOnlineUid();
+  if (!uid) return;
+  onlineArmies
+    .filter(army => army?.ownerUid === uid)
+    .filter(army => !resolvedOnlineArmyIds.has(army.id))
+    .filter(army => getOnlineArmyRemainingSeconds(army) <= 0)
+    .forEach(resolveOverdueOnlineArmy);
+}
+
 function applyOnlineArmies(rawArmies, islandId = getActiveOnlineIslandId()) {
   const normalizedIslandId = String(islandId || getActiveOnlineIslandId());
   if (!Array.isArray(rawArmies)) {
@@ -6135,6 +6285,7 @@ function applyOnlineArmies(rawArmies, islandId = getActiveOnlineIslandId()) {
     .filter(isOnlineArmyVisible));
   rebuildOnlineArmies();
   adoptOwnOnlineArmies();
+  retryOverdueOnlineArmyResolutions();
 }
 
 function getRenderableArmies() {
@@ -6188,17 +6339,19 @@ function getOutgoingAttacks() {
   return getRenderableArmies()
     .map(attack => {
       if (!attack || !["attack", "scout"].includes(attack.kind) || attack.owner !== "player") return null;
-      const remaining = Math.max(0, Number(attack.remaining) || 0);
-      if (remaining <= 0) return null;
       const key = String(attack.onlineId || attack.id || `${attack.fromId}:${attack.toId}:${attack.launchedAtMs || ""}`);
       if (seen.has(key)) return null;
       seen.add(key);
+      const remaining = Math.max(0, Number(attack.remaining) || 0);
+      const isResolving = remaining <= 0 && Boolean(attack.onlineId) && !resolvedOnlineArmyIds.has(key);
+      if (remaining <= 0 && !isResolving) return null;
       return {
         ...attack,
         key,
         target: cityById(attack.toId),
         source: cityById(attack.fromId),
         remaining,
+        isResolving,
       };
     })
     .filter(Boolean)
@@ -6843,6 +6996,12 @@ function frame(now) {
       if (onlinePresenceTimer >= ONLINE_PRESENCE_SECONDS) {
         onlinePresenceTimer = 0;
         publishOnlinePresence();
+      }
+      overdueArmyResolveTimer += dt;
+      if (overdueArmyResolveTimer >= ONLINE_ARMY_RESOLVE_RETRY_SECONDS) {
+        overdueArmyResolveTimer = 0;
+        recoverPendingOnlineArmyMovements();
+        retryOverdueOnlineArmyResolutions();
       }
     }
   }
@@ -9611,7 +9770,7 @@ function renderOutgoingAttacksModalContent(outgoing = getOutgoingAttacks()) {
       <div class="incoming-attack-summary">
         <strong>${formatNumber(outgoing.length)}</strong>
         <span>${summary} ${outgoing.length === 1 ? "is" : "are"} traveling now.</span>
-        <small>Soonest arrival: ${formatDuration(outgoing[0].remaining)}</small>
+        <small>${outgoing[0].isResolving ? "Resolving arrived order" : `Soonest arrival: ${formatDuration(outgoing[0].remaining)}`}</small>
       </div>
       <div class="incoming-attack-list">
         ${outgoing.map(renderOutgoingAttackCard).join("")}
@@ -9645,7 +9804,7 @@ function renderOutgoingAttackCard(mission) {
   return `
     <article class="incoming-attack-card outgoing-attack-card ${isScout ? "outgoing-scout-card" : ""}">
       <div class="incoming-attack-badge">
-        <strong>${formatDuration(mission.remaining)}</strong>
+        <strong>${mission.isResolving ? "Resolving" : formatDuration(mission.remaining)}</strong>
         <small>${missionLabel}</small>
       </div>
       <div class="incoming-attack-city">
