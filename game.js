@@ -1,5 +1,6 @@
 ﻿const WORLD_CONFIG = window.CROWNLANDS_WORLD_CONFIG || {};
 const WORLD_SCHEMA_VERSION = Number(WORLD_CONFIG.version) || 23;
+const APP_BUILD_ID = getCurrentDocumentBuildId();
 const WORLD_REGIONS = Array.isArray(WORLD_CONFIG.regions) ? WORLD_CONFIG.regions : [];
 const LAND_BRIDGES = Array.isArray(WORLD_CONFIG.landBridges) ? WORLD_CONFIG.landBridges : [];
 const REGION_CITY_COUNT = Math.max(1, Math.floor(Number(WORLD_CONFIG.cityCountPerRegion) || 50));
@@ -19,6 +20,7 @@ const ONLINE_PRESENCE_STALE_SECONDS = 90;
 const ONLINE_ARMY_EXPIRY_GRACE_SECONDS = 8;
 const ONLINE_ARMY_RESOLVE_RETRY_SECONDS = 5;
 const PENDING_ARMY_MAX_AGE_MS = 3 * 24 * 60 * 60 * 1000;
+const UPDATE_CHECK_INTERVAL_SECONDS = 45;
 const SETUP_LOADING_MIN_MS = 180;
 const IMAGE_PRELOAD_TIMEOUT_MS = 15000;
 const HUD_RENDER_INTERVAL_MS = 250;
@@ -1871,6 +1873,9 @@ let onlinePresenceTimer = 0;
 let onlinePresenceInFlight = false;
 let overdueArmyResolveTimer = 0;
 let pendingArmyRecoveryInFlight = false;
+let updateCheckTimer = 0;
+let updateCheckInFlight = false;
+let updateRefreshInProgress = false;
 const islandImageLoadPromises = new Map();
 let pendingOfflineProgressSeconds = 0;
 let pendingOfflineProductionCities = [];
@@ -5111,6 +5116,110 @@ function withTimeout(promise, timeoutMs, message) {
   });
 }
 
+function getScriptVersionFromDocument(doc) {
+  const scripts = Array.from(doc?.querySelectorAll?.("script[src]") || []);
+  const gameScript = scripts.find(script => String(script.getAttribute("src") || "").includes("game.js"));
+  if (!gameScript) return "";
+  try {
+    const url = new URL(gameScript.getAttribute("src"), window.location.href);
+    return url.searchParams.get("v") || "";
+  } catch (_) {
+    return "";
+  }
+}
+
+function getBuildIdFromDocument(doc) {
+  const metaBuild = String(doc?.querySelector?.('meta[name="crownlands-build"]')?.getAttribute("content") || "").trim();
+  return metaBuild || getScriptVersionFromDocument(doc);
+}
+
+function getCurrentDocumentBuildId() {
+  return getBuildIdFromDocument(document) || "dev";
+}
+
+function getUpdateCheckUrl() {
+  const url = new URL("index.html", `${window.location.origin}${window.location.pathname.replace(/[^/]*$/, "")}`);
+  url.searchParams.set("updateCheck", Date.now().toString());
+  return url;
+}
+
+function getBuildIdFromHtml(html) {
+  try {
+    const doc = new DOMParser().parseFromString(String(html || ""), "text/html");
+    return getBuildIdFromDocument(doc);
+  } catch (_) {
+    return "";
+  }
+}
+
+async function fetchDeployedBuildId() {
+  const response = await fetch(getUpdateCheckUrl(), {
+    cache: "no-store",
+    credentials: "same-origin",
+  });
+  if (!response.ok) return "";
+  return getBuildIdFromHtml(await response.text());
+}
+
+async function checkForDeployedUpdate(force = false) {
+  const api = getOnlineApi();
+  if (updateRefreshInProgress || updateCheckInFlight || !api?.isSignedIn?.()) return false;
+  if (!force && document.visibilityState === "hidden") return false;
+  updateCheckInFlight = true;
+  try {
+    const deployedBuildId = await fetchDeployedBuildId();
+    if (!deployedBuildId || deployedBuildId === APP_BUILD_ID) return false;
+    await handleDeployedUpdate(deployedBuildId);
+    return true;
+  } catch (error) {
+    console.warn("Could not check for Crownlands updates", error);
+    return false;
+  } finally {
+    updateCheckInFlight = false;
+  }
+}
+
+function updateDeploymentCheck(dt) {
+  if (updateRefreshInProgress) return;
+  updateCheckTimer += dt;
+  if (updateCheckTimer < UPDATE_CHECK_INTERVAL_SECONDS) return;
+  updateCheckTimer = 0;
+  checkForDeployedUpdate();
+}
+
+async function handleDeployedUpdate(deployedBuildId) {
+  if (updateRefreshInProgress) return;
+  updateRefreshInProgress = true;
+  showToast("New update detected. Relogging...");
+  if (onlineStatusDetail) onlineStatusDetail.textContent = "New update detected. Relog required.";
+  setSetupLoading(true, "New update detected. Relogging...");
+  if (modal.open) modal.close();
+
+  try {
+    await waitForPendingOnlineWrites(5000);
+  } catch (error) {
+    console.warn("Continuing update reload while online writes are still pending", error);
+  }
+
+  try {
+    await flushOnlineSave(true);
+  } catch (error) {
+    console.warn("Could not finish cloud save before update reload", error);
+  }
+
+  const api = getOnlineApi();
+  try {
+    disconnectOnlineWorld();
+    if (api?.isSignedIn?.() && api?.signOut) await api.signOut();
+  } catch (error) {
+    console.warn("Could not sign out before update reload", error);
+  }
+
+  window.setTimeout(() => {
+    window.location.reload();
+  }, 700);
+}
+
 function readPendingOnlineArmyMovements() {
   try {
     const raw = localStorage.getItem(PENDING_ARMY_STORAGE_KEY);
@@ -6971,6 +7080,7 @@ function frame(now) {
   const rawDt = (now - lastFrameTime) / 1000;
   lastFrameTime = now;
   const dt = Math.min(rawDt, 0.25);
+  updateDeploymentCheck(dt);
 
   if (state && !isGamePausedByOutcome()) {
     updateGame(dt);
@@ -10683,6 +10793,10 @@ mapFrame.addEventListener("click", handleMapClick);
 mapFrame.addEventListener("wheel", handleWheelZoom, { passive: false });
 window.addEventListener("resize", updateCameraTransform);
 document.addEventListener("fullscreenchange", updateFullscreenButton);
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible") checkForDeployedUpdate(true);
+});
+window.addEventListener("online", () => checkForDeployedUpdate(true));
 document.addEventListener("keydown", event => {
   if (event.key !== "Escape" || !profileScreen?.classList.contains("open")) return;
   if (event.target === profileNameInput) return;
