@@ -4,10 +4,11 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Crownlands - Medieval Island Conquest</title>
-  <meta name="crownlands-build" content="20260623-profile-fit" />
-  <link rel="stylesheet" href="styles.css?v=20260623-profile-fit" />
+  <meta name="crownlands-build" content="20260623-leaderboard-icon" />
+  <link rel="stylesheet" href="styles.css?v=20260623-leaderboard-icon" />
   <link rel="preload" as="image" href="assets/loading-ring.png" />
   <link rel="preload" as="image" href="assets/loading-crown.png" />
+  <link rel="preload" as="image" href="assets/leaderboard-icon.jpg" />
   <link rel="icon" href="data:," />
   <link rel="manifest" href="manifest.webmanifest" />
   <meta name="theme-color" content="#0c1018" />
@@ -45,8 +46,7 @@
               <span id="characterLevelBadge" class="character-level-badge">Lv 1</span>
             </button>
             <button id="leaderboardBtn" class="profile-rank-btn" type="button" aria-label="Open King Power ranks">
-              <span aria-hidden="true">&#9812;</span>
-              <small>Ranks</small>
+              <img class="profile-rank-icon" src="assets/leaderboard-icon.jpg" alt="" draggable="false" decoding="async" />
             </button>
           </div>
           <div class="profile-gold"><span>&#129689;</span><strong id="goldText">0</strong></div>
@@ -201,7 +201,7 @@
 
   <script src="world-config.js"></script>
   <script src="firebase-config.js"></script>
-  <script src="firebaseClient.js?v=20260623-profile-fit"></script>
-  <script src="game.js?v=20260623-profile-fit"></script>
+  <script src="firebaseClient.js?v=20260623-leaderboard-icon"></script>
+  <script src="game.js?v=20260623-leaderboard-icon"></script>
 </body>
 </html>

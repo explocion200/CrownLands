@@ -3076,29 +3076,25 @@ input {
   color: var(--ink);
 }
 .profile-rank-btn {
-  width: 48px;
+  width: 58px;
   height: 58px;
   display: grid;
   place-items: center;
-  align-content: center;
-  gap: .05rem;
+  overflow: hidden;
+  padding: 0;
   border-radius: 16px;
-  color: #211508;
-  background: linear-gradient(#ffe293, #d9962e);
-  border: 2px solid rgba(255,255,255,.62);
-  box-shadow: 0 10px 28px rgba(0,0,0,.36), inset 0 -5px 0 rgba(0,0,0,.16);
-  font-weight: 1000;
+  background: #081421;
+  border: 2px solid rgba(255, 226, 147, .7);
+  box-shadow: 0 10px 28px rgba(0,0,0,.36), 0 0 16px rgba(242,184,75,.18);
 }
-.profile-rank-btn span {
+.profile-rank-icon {
   display: block;
-  font-size: 1.32rem;
-  line-height: 1;
-}
-.profile-rank-btn small {
-  display: block;
-  font-size: .55rem;
-  line-height: 1;
-  text-transform: uppercase;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  pointer-events: none;
+  user-select: none;
 }
 .profile-rank-btn:active {
   transform: translateY(1px);
@@ -3581,6 +3577,7 @@ input {
 
 @media (max-width: 780px) and (orientation: landscape) {
   .portrait-placeholder { width: 46px; height: 46px; border-radius: 14px; }
+  .profile-rank-btn { width: 46px; height: 46px; border-radius: 14px; }
   .character-level-badge { min-width: 34px; height: 19px; right: -7px; bottom: -7px; font-size: .58rem; }
   .profile-gold { height: 24px; min-width: 66px; font-size: .74rem; }
   .profile-xp { min-width: 76px; font-size: .52rem; padding: .1rem .3rem; }
