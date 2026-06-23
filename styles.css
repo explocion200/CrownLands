@@ -252,12 +252,12 @@ input {
   z-index: 55;
   right: max(.75rem, env(safe-area-inset-right));
   bottom: max(.75rem, env(safe-area-inset-bottom));
-  width: 52px;
-  min-width: 52px;
-  max-width: 52px;
-  height: 52px;
+  width: 64px;
+  min-width: 64px;
+  max-width: 64px;
+  height: 64px;
   padding: 0;
-  border-radius: 16px;
+  border-radius: 18px;
   background: #081421;
   border-color: rgba(255, 226, 147, .6);
   box-shadow: 0 10px 25px rgba(0,0,0,.25), 0 0 14px rgba(242,184,75,.14);
@@ -3596,7 +3596,7 @@ input {
 @media (max-width: 780px) and (orientation: landscape) {
   .portrait-placeholder { width: 46px; height: 46px; border-radius: 14px; }
   .profile-rank-btn { width: 40px; height: 40px; border-radius: 13px; }
-  .resource-pill.island-switch-btn { width: 46px; min-width: 46px; max-width: 46px; height: 46px; border-radius: 14px; }
+  .resource-pill.island-switch-btn { width: 56px; min-width: 56px; max-width: 56px; height: 56px; border-radius: 16px; }
   .character-level-badge { min-width: 34px; height: 19px; right: -7px; bottom: -7px; font-size: .58rem; }
   .profile-gold { height: 24px; min-width: 66px; font-size: .74rem; }
   .profile-xp { min-width: 76px; font-size: .52rem; padding: .1rem .3rem; }
