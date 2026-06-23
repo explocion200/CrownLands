@@ -285,6 +285,7 @@
       islandId: String(presence.islandId || "main").slice(0, 64),
       mainCityId: String(presence.mainCityId || ""),
       cityCount: Math.max(0, Math.floor(Number(presence.cityCount) || 0)),
+      kingPower: Math.max(0, Math.floor(Number(presence.kingPower) || 0)),
       flag: presence.flag || null,
       updatedAtMs: Math.max(0, Number(presence.updatedAtMs) || Date.now()),
     };

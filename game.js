@@ -371,6 +371,8 @@ const CITY_LEVEL_STATS = {
   troopProductionPerVictoryPoint: 3,
   goldProductionPerMillionLordsVp: MILLION_LORDS_PASSIVE_GOLD_PER_CITY_VP,
 };
+const KING_POWER_PER_TROOP = 1;
+const KING_POWER_PER_CITY_VP = 10;
 
 const SKILL_CONFIG = {
   striker: { label: "Striker", percentPerLevel: 2, description: "Attack combat bonus for outgoing armies." },
@@ -1942,6 +1944,7 @@ const profileNameCancelBtn = document.getElementById("profileNameCancelBtn");
 const profileLevelText = document.getElementById("profileLevelText");
 const profileXpLabel = document.getElementById("profileXpLabel");
 const profileXpFill = document.getElementById("profileXpFill");
+const profileKingPowerStat = document.getElementById("profileKingPowerStat");
 const profileCitiesStat = document.getElementById("profileCitiesStat");
 const profileGoldStat = document.getElementById("profileGoldStat");
 const profileTroopsStat = document.getElementById("profileTroopsStat");
@@ -4489,6 +4492,7 @@ function getPlayerProfileSnapshot() {
     character: state?.character ? normalizeCharacterProgress(state.character) : createCharacterProgress(),
     upgrades: state?.upgrades ? normalizeUpgrades(state.upgrades, state.version || 20) : createDefaultSkills(),
     cityCount: state ? playerRegularCities().length : 0,
+    kingPower: state ? getKingPower() : 0,
     gold: state ? Math.floor(Number(state.gold) || 0) : 0,
     localGameSeconds: state ? Number(state.gameSeconds) || 0 : 0,
     lastSeenAtMs: Date.now(),
@@ -4652,6 +4656,7 @@ function getOnlinePresenceSnapshot() {
     flag: state?.flag || createDefaultFlag(),
     mainCityId: state?.mainCityId || "",
     cityCount: state ? playerRegularCities().length : 0,
+    kingPower: state ? getKingPower() : 0,
     updatedAtMs: Date.now(),
   };
 }
@@ -4666,6 +4671,7 @@ function normalizePresence(raw) {
     flag: raw.flag || null,
     mainCityId: String(raw.mainCityId || ""),
     cityCount: Math.max(0, Math.floor(Number(raw.cityCount) || 0)),
+    kingPower: Math.max(0, Math.floor(Number(raw.kingPower) || 0)),
     updatedAtMs: Math.max(0, Number(raw.updatedAtMs) || 0),
   };
 }
@@ -8196,13 +8202,34 @@ function getCityOwnerDisplayName(city) {
   return OWNER[city.owner]?.label || "Unknown";
 }
 
+function getPlayerMarchingTroops() {
+  if (!state || !Array.isArray(state.attacks)) return 0;
+  return state.attacks
+    .filter(attack => attack.owner === "player")
+    .reduce((total, attack) => total + Math.max(0, Math.floor(Number(attack.troops) || 0)), 0);
+}
+
+function getCityKingPower(city) {
+  if (!city || city.owner !== "player") return 0;
+  const stats = getCityStats(city);
+  const troopPower = Math.max(0, Math.floor(Number(city.troops) || 0)) * KING_POWER_PER_TROOP;
+  const cityPower = Math.max(0, Math.floor(Number(stats.victoryPoints) || 0)) * KING_POWER_PER_CITY_VP;
+  return troopPower + cityPower;
+}
+
+function getKingPower() {
+  if (!state || !Array.isArray(state.cities)) return 0;
+  const stationedPower = playerCities().reduce((total, city) => total + getCityKingPower(city), 0);
+  const marchingPower = getPlayerMarchingTroops() * KING_POWER_PER_TROOP;
+  return Math.max(0, Math.floor(stationedPower + marchingPower));
+}
+
 function getKingdomSummary() {
   const cities = playerCities();
   const regularCities = playerRegularCities();
-  const marchingTroops = state.attacks
-    .filter(attack => attack.owner === "player")
-    .reduce((total, attack) => total + Math.max(0, Number(attack.troops) || 0), 0);
+  const marchingTroops = getPlayerMarchingTroops();
   return {
+    kingPower: getKingPower(),
     cities: regularCities.length,
     troops: cities.reduce((total, city) => total + Math.max(0, Number(city.troops) || 0), marchingTroops),
     gold: Math.floor(state.gold),
@@ -8281,6 +8308,7 @@ function renderProfileScreen() {
   if (profileLevelText) profileLevelText.textContent = `Level ${formatNumber(state.character.level)}`;
   if (profileXpLabel) profileXpLabel.textContent = `${formatNumber(state.character.xp)} / ${formatNumber(xpRequired)} XP`;
   if (profileXpFill) profileXpFill.style.width = `${Math.round(xpProgress * 100)}%`;
+  if (profileKingPowerStat) profileKingPowerStat.textContent = formatNumber(summary.kingPower);
   if (profileCitiesStat) profileCitiesStat.textContent = formatNumber(summary.cities);
   if (profileGoldStat) profileGoldStat.textContent = formatNumber(summary.gold);
   if (profileTroopsStat) profileTroopsStat.textContent = formatNumber(summary.troops);
