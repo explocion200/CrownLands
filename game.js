@@ -10753,6 +10753,7 @@ function getMainCityReturnAvoidRects(viewRect) {
   return [
     document.querySelector(".profile-stack"),
     document.querySelector(".resource-bar"),
+    islandSwitchBtn,
     document.querySelector(".commander-panel.visible"),
     document.querySelector(".bottom-nav"),
     document.querySelector(".toast.visible"),
@@ -10773,7 +10774,7 @@ function setMainCityReturnHudMode(enabled) {
   mainCityReturnBtn.classList.toggle("hud-home-return", Boolean(enabled));
   if (enabled) {
     if (resourceBar && mainCityReturnBtn.parentElement !== resourceBar) {
-      const anchor = islandSwitchBtn || resourceBar.firstChild;
+      const anchor = cityListBtn?.parentElement === resourceBar ? cityListBtn : resourceBar.firstChild;
       resourceBar.insertBefore(mainCityReturnBtn, anchor);
     }
     return;

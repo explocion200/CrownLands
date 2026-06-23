@@ -4,11 +4,11 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Crownlands - Medieval Island Conquest</title>
-  <meta name="crownlands-build" content="20260623-map-icon" />
-  <link rel="stylesheet" href="styles.css?v=20260623-map-icon" />
+  <meta name="crownlands-build" content="20260623-hud-icon-tune" />
+  <link rel="stylesheet" href="styles.css?v=20260623-hud-icon-tune" />
   <link rel="preload" as="image" href="assets/loading-ring.png" />
   <link rel="preload" as="image" href="assets/loading-crown.png" />
-  <link rel="preload" as="image" href="assets/leaderboard-icon.jpg" />
+  <link rel="preload" as="image" href="assets/leaderboard-icon.png" />
   <link rel="preload" as="image" href="assets/map-icon.jpg" />
   <link rel="icon" href="data:," />
   <link rel="manifest" href="manifest.webmanifest" />
@@ -47,7 +47,7 @@
               <span id="characterLevelBadge" class="character-level-badge">Lv 1</span>
             </button>
             <button id="leaderboardBtn" class="profile-rank-btn" type="button" aria-label="Open King Power ranks">
-              <img class="profile-rank-icon" src="assets/leaderboard-icon.jpg" alt="" draggable="false" decoding="async" />
+              <img class="profile-rank-icon" src="assets/leaderboard-icon.png" alt="" draggable="false" decoding="async" />
             </button>
           </div>
           <div class="profile-gold"><span>&#129689;</span><strong id="goldText">0</strong></div>
@@ -55,10 +55,6 @@
           <span id="statusText" class="sr-only">Live conquest</span>
         </div>
         <div class="resource-bar">
-          <button id="islandSwitchBtn" class="resource-pill island-switch-btn" type="button" aria-label="Switch island" hidden>
-            <img class="island-switch-icon" src="assets/map-icon.jpg" alt="" draggable="false" decoding="async" />
-            <span id="islandSwitchLabel" class="sr-only">Map</span>
-          </button>
           <button id="cityListBtn" class="resource-pill city-list-btn" type="button" aria-label="Open city list"><span>&#127984;</span><strong id="cityText">1</strong></button>
           <button id="fullscreenBtn" class="hud-btn fullscreen-btn" type="button" aria-label="Enter fullscreen"><span aria-hidden="true">&#x26F6;</span></button>
         </div>
@@ -67,6 +63,10 @@
       <button id="mainCityReturnBtn" class="main-city-return" type="button" hidden aria-label="Return to main city">
         <span class="main-city-return-arrow" aria-hidden="true">&#9658;</span>
         <span class="main-city-return-house" aria-hidden="true">&#8962;</span>
+      </button>
+      <button id="islandSwitchBtn" class="resource-pill island-switch-btn" type="button" aria-label="Switch island" hidden>
+        <img class="island-switch-icon" src="assets/map-icon.jpg" alt="" draggable="false" decoding="async" />
+        <span id="islandSwitchLabel" class="sr-only">Map</span>
       </button>
 
       <section id="mapFrame" class="map-frame" aria-label="Drag to move around the map">
@@ -205,7 +205,7 @@
 
   <script src="world-config.js"></script>
   <script src="firebase-config.js"></script>
-  <script src="firebaseClient.js?v=20260623-map-icon"></script>
-  <script src="game.js?v=20260623-map-icon"></script>
+  <script src="firebaseClient.js?v=20260623-hud-icon-tune"></script>
+  <script src="game.js?v=20260623-hud-icon-tune"></script>
 </body>
 </html>

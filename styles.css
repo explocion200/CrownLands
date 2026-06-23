@@ -247,10 +247,15 @@ input {
 .resource-pill strong { font-size: .92rem; }
 .city-list-btn { color: var(--ink); }
 .city-list-btn:active { transform: translateY(1px); }
-.island-switch-btn {
-  width: 42px;
-  min-width: 42px;
-  max-width: 42px;
+.resource-pill.island-switch-btn {
+  position: absolute;
+  z-index: 55;
+  right: max(.75rem, env(safe-area-inset-right));
+  bottom: max(.75rem, env(safe-area-inset-bottom));
+  width: 38px;
+  min-width: 38px;
+  max-width: 38px;
+  height: 38px;
   padding: 0;
   border-radius: 13px;
   background: #081421;
@@ -3059,7 +3064,7 @@ input {
   pointer-events: auto;
   display: grid;
   gap: .32rem;
-  justify-items: center;
+  justify-items: start;
 }
 .profile-action-row {
   display: flex;
@@ -3088,8 +3093,8 @@ input {
   color: var(--ink);
 }
 .profile-rank-btn {
-  width: 58px;
-  height: 58px;
+  width: 50px;
+  height: 50px;
   display: grid;
   place-items: center;
   overflow: hidden;
@@ -3417,6 +3422,7 @@ input {
 .profile-gold {
   min-width: 78px;
   height: 28px;
+  margin-left: -9px;
   padding: 0 .45rem;
   border-radius: 999px;
   display: flex;
@@ -3589,7 +3595,8 @@ input {
 
 @media (max-width: 780px) and (orientation: landscape) {
   .portrait-placeholder { width: 46px; height: 46px; border-radius: 14px; }
-  .profile-rank-btn { width: 46px; height: 46px; border-radius: 14px; }
+  .profile-rank-btn { width: 40px; height: 40px; border-radius: 13px; }
+  .resource-pill.island-switch-btn { width: 34px; min-width: 34px; max-width: 34px; height: 34px; border-radius: 12px; }
   .character-level-badge { min-width: 34px; height: 19px; right: -7px; bottom: -7px; font-size: .58rem; }
   .profile-gold { height: 24px; min-width: 66px; font-size: .74rem; }
   .profile-xp { min-width: 76px; font-size: .52rem; padding: .1rem .3rem; }
