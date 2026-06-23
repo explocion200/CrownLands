@@ -258,11 +258,12 @@ input {
   max-width: 64px;
   height: 64px;
   padding: 0;
-  border-radius: 18px;
-  background: #081421;
-  border-color: rgba(255, 226, 147, .6);
-  box-shadow: 0 10px 25px rgba(0,0,0,.25), 0 0 14px rgba(242,184,75,.14);
-  overflow: hidden;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  backdrop-filter: none;
+  box-shadow: none;
+  overflow: visible;
 }
 .resource-pill.city-list-btn {
   right: calc(max(.75rem, env(safe-area-inset-right)) + 76px);
@@ -3147,12 +3148,12 @@ input {
   height: 50px;
   display: grid;
   place-items: center;
-  overflow: hidden;
+  overflow: visible;
   padding: 0;
-  border-radius: 16px;
-  background: #081421;
-  border: 2px solid rgba(255, 226, 147, .7);
-  box-shadow: 0 10px 28px rgba(0,0,0,.36), 0 0 16px rgba(242,184,75,.18);
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
 }
 .profile-rank-icon {
   display: block;
@@ -3649,9 +3650,9 @@ input {
   .profile-action-row { gap: .44rem; }
   .portrait-placeholder { width: 68px; height: 53px; border-radius: 14px; }
   .profile-button .kingdom-flag-small { width: 100%; height: 100%; border-radius: 12px; }
-  .profile-rank-btn { width: 40px; height: 40px; border-radius: 13px; }
+  .profile-rank-btn { width: 40px; height: 40px; }
   .resource-pill.city-list-btn,
-  .resource-pill.island-switch-btn { width: 56px; min-width: 56px; max-width: 56px; height: 56px; border-radius: 16px; }
+  .resource-pill.island-switch-btn { width: 56px; min-width: 56px; max-width: 56px; height: 56px; }
   .resource-pill.city-list-btn { right: calc(max(.75rem, env(safe-area-inset-right)) + 66px); }
   .character-level-badge { min-width: 28px; height: 16px; right: 7px; bottom: 6px; font-size: .5rem; }
   .profile-gold { height: 24px; min-width: 66px; margin-top: .12rem; font-size: .74rem; }
