@@ -3997,246 +3997,6 @@ function grantCautiousRefund(city) {
   return refund;
 }
 
-function loadGame() {
-  const keysToTry = [STORAGE_KEY, ...LEGACY_STORAGE_KEYS];
-
-  for (const key of keysToTry) {
-    try {
-      const raw = localStorage.getItem(key);
-      if (!raw) continue;
-      const loaded = JSON.parse(raw);
-      if (!loaded || !Array.isArray(loaded.cities)) continue;
-
-      const sourceSaveVersion = Number(loaded.version) || 0;
-      const savedSkillPoints = loaded.character?.skillPoints;
-      loaded.version = WORLD_SCHEMA_VERSION;
-      loaded.character = normalizeCharacterProgress(loaded.character);
-      loaded.upgrades = normalizeUpgrades(loaded.upgrades, sourceSaveVersion);
-      syncCharacterSkillPoints(loaded.character, loaded.upgrades, savedSkillPoints);
-      loaded.flag = normalizeFlag(loaded.flag);
-      loaded.marchPercent = normalizeMarchPercent(loaded.marchPercent);
-      loaded.daily = normalizeDailyCaptureTracker(loaded.daily);
-      normalizeHarvestState(loaded);
-      loaded.scoutReports = normalizeScoutReports(loaded.scoutReports);
-      loaded.battleReports = normalizeBattleReports(loaded.battleReports);
-      loaded.mainCityChangedAtMs = normalizeTimestampMs(loaded.mainCityChangedAtMs);
-      const playableBases = getPlayableBaseCities();
-      const canMigrateLoadedCities = canMigrateCitySetToBases(loaded.cities, playableBases);
-      if (canMigrateLoadedCities) appendMissingBaseCities(loaded.cities, playableBases);
-      const savedCitiesAreCurrent = canMigrateLoadedCities
-        && playableBases.every(base => loaded.cities.some(city => city.id === base.id));
-      if (!savedCitiesAreCurrent) {
-        const island = createIslandStartLayout(loaded.playerName || "Ricky");
-        loaded.cities = island.cities;
-        loaded.mainCityId = island.startIds.player;
-        loaded.islandSlots = island.startIds;
-        loaded.attacks = [];
-        loaded.log = Array.isArray(loaded.log) ? loaded.log : [];
-        loaded.log.push("0:00 - World layout upgraded to the five-island 250-city map.");
-      }
-      loaded.cities.forEach(city => {
-        const base = playableBases.find(item => item.id === city.id);
-        if (base) {
-          applyBaseCityMetadata(city, base);
-          if (city.id === loaded.mainCityId && city.name === `${loaded.playerName} Keep`) city.name = base.name;
-        }
-        delete city.adj;
-        city.owner = OWNER[city.owner] ? city.owner : "neutral";
-        if (city.owner === "enemy" && city.ownerKind !== "player") {
-          city.owner = "neutral";
-          city.ownerKind = "neutral";
-          city.ownerUid = null;
-          city.ownerName = "";
-          city.ownerFlag = null;
-        } else if (city.owner !== "enemy" && city.ownerKind !== "player") {
-          city.ownerKind = city.owner;
-        }
-        city.level = isStronghold(city) ? getStrongholdDefenseLevel(city) : clampCityLevel(city.level);
-        city.defense = 1;
-        city.troops = Math.max(0, Math.floor(Number(city.troops) || 0));
-        city.troopFloat = Number.isFinite(city.troopFloat) ? Math.max(0, city.troopFloat) : city.troops;
-        city.investedGold = Math.max(0, Math.floor(Number(city.investedGold) || 0));
-        if (isStronghold(city)) city.investedGold = 0;
-        city.isMainCity = Boolean(city.isMainCity || city.id === loaded.mainCityId);
-        if (isStronghold(city)) city.isMainCity = false;
-        if (city.lastCapturedAt === null || city.lastCapturedAt === undefined || city.lastCapturedAt === "") {
-          city.lastCapturedAt = null;
-        } else {
-          const capturedAt = Number(city.lastCapturedAt);
-          city.lastCapturedAt = Number.isFinite(capturedAt) ? capturedAt : null;
-        }
-      });
-      if (!loaded.mainCityId || cityByIdSafe(loaded.cities, loaded.mainCityId)?.owner !== "player" || isStronghold(cityByIdSafe(loaded.cities, loaded.mainCityId))) {
-        loaded.mainCityId = loaded.cities.find(city => city.owner === "player" && city.isMainCity)?.id
-          || loaded.cities.find(city => city.owner === "player" && !isStronghold(city))?.id
-          || null;
-      }
-      loaded.cities.forEach(city => {
-        city.isMainCity = Boolean(city.owner === "player" && city.id === loaded.mainCityId && !isStronghold(city));
-      });
-      loaded.attacks = Array.isArray(loaded.attacks) ? loaded.attacks : [];
-      if (sourceSaveVersion < 17) {
-        loaded.attacks = [];
-      }
-      loaded.attacks.forEach(attack => {
-        attack.targetOwnerAtLaunch = attack.targetOwnerAtLaunch || loaded.cities.find(city => city.id === attack.toId)?.owner || "neutral";
-        if (!Array.isArray(attack.path) || attack.path.length < 2) {
-          const from = loaded.cities.find(city => city.id === attack.fromId);
-          const to = loaded.cities.find(city => city.id === attack.toId);
-          const route = from && to ? findRoute(from, to) : null;
-          attack.path = route?.points || [];
-          attack.pathLength = route?.length || 0;
-          attack.pathSegments = getRouteSegments(route, from ? getCityRegionId(from) : "");
-        } else {
-          attack.path = normalizeArmyPath(attack.path);
-          attack.pathSegments = normalizeArmyPathSegments(attack.pathSegments);
-        }
-      });
-      loaded.gameOver = loaded.gameOver || null;
-      loaded.log = Array.isArray(loaded.log) ? loaded.log : [];
-      loaded.gold = Math.max(TEST_STARTING_GOLD, Number(loaded.gold) || 0);
-      attackIdCounter = Math.max(1, ...loaded.attacks.map(attack => Number(attack.id) || 1)) + 1;
-      return loaded;
-    } catch (error) {
-      console.warn("Could not load save", key, error);
-    }
-  }
-
-  return null;
-}
-
-function normalizeOnlineGameSnapshot(snapshot, fallbackPlayerName = "Ricky") {
-  try {
-    const loaded = JSON.parse(JSON.stringify(snapshot));
-    if (!loaded || !Array.isArray(loaded.cities)) return null;
-
-    const sourceSaveVersion = Number(loaded.version) || 0;
-    const savedSkillPoints = loaded.character?.skillPoints;
-      loaded.version = WORLD_SCHEMA_VERSION;
-    loaded.playerName = cleanName(loaded.playerName) || fallbackPlayerName;
-    loaded.character = normalizeCharacterProgress(loaded.character);
-    loaded.upgrades = normalizeUpgrades(loaded.upgrades, sourceSaveVersion);
-    syncCharacterSkillPoints(loaded.character, loaded.upgrades, savedSkillPoints);
-    loaded.flag = normalizeFlag(loaded.flag);
-    loaded.marchPercent = normalizeMarchPercent(loaded.marchPercent);
-    loaded.daily = normalizeDailyCaptureTracker(loaded.daily);
-    normalizeHarvestState(loaded);
-    loaded.scoutReports = normalizeScoutReports(loaded.scoutReports);
-    loaded.battleReports = normalizeBattleReports(loaded.battleReports);
-    loaded.mainCityChangedAtMs = normalizeTimestampMs(loaded.mainCityChangedAtMs);
-
-    const playableBases = getPlayableBaseCities();
-    const activeRegionId = normalizeRegionId(loaded.activeRegionId || loaded.online?.activeRegionId || DEFAULT_ONLINE_REGION_ID);
-    const activeBases = getOnlineIslandBaseCities(activeRegionId);
-    let savedCitiesAreFullWorld = loaded.cities.length === playableBases.length
-      && playableBases.every(base => loaded.cities.some(city => city.id === base.id));
-    let savedCitiesAreActiveIsland = loaded.cities.length === activeBases.length
-      && activeBases.every(base => loaded.cities.some(city => city.id === base.id));
-    if (!savedCitiesAreFullWorld && !savedCitiesAreActiveIsland) {
-      if (canMigrateCitySetToBases(loaded.cities, activeBases)) {
-        appendMissingBaseCities(loaded.cities, activeBases);
-        savedCitiesAreActiveIsland = activeBases.every(base => loaded.cities.some(city => city.id === base.id));
-      } else if (canMigrateCitySetToBases(loaded.cities, playableBases)) {
-        appendMissingBaseCities(loaded.cities, playableBases);
-        savedCitiesAreFullWorld = playableBases.every(base => loaded.cities.some(city => city.id === base.id));
-      }
-    }
-    if (!savedCitiesAreFullWorld && !savedCitiesAreActiveIsland) {
-      const island = createIslandStartLayout(loaded.playerName || fallbackPlayerName);
-      loaded.cities = island.cities;
-      loaded.mainCityId = island.startIds.player;
-      loaded.islandSlots = island.startIds;
-      loaded.attacks = [];
-      loaded.log = Array.isArray(loaded.log) ? loaded.log : [];
-      loaded.log.push("0:00 - Cloud save layout was updated to the five-island 250-city map.");
-    }
-
-    const basesForLoadedCities = savedCitiesAreActiveIsland ? activeBases : playableBases;
-    loaded.cities.forEach(city => {
-      const base = basesForLoadedCities.find(item => item.id === city.id) || playableBases.find(item => item.id === city.id);
-      if (base) {
-        applyBaseCityMetadata(city, base);
-      }
-      delete city.adj;
-      city.owner = OWNER[city.owner] ? city.owner : "neutral";
-      if (city.owner === "enemy" && city.ownerKind !== "player") {
-        city.owner = "neutral";
-        city.ownerKind = "neutral";
-        city.ownerUid = null;
-        city.ownerName = "";
-        city.ownerFlag = null;
-      } else if (city.owner !== "enemy" && city.ownerKind !== "player") {
-        city.ownerKind = city.owner;
-      }
-      city.level = isStronghold(city) ? getStrongholdDefenseLevel(city) : clampCityLevel(city.level);
-      city.defense = 1;
-      city.troops = Math.max(0, Math.floor(Number(city.troops) || 0));
-      city.troopFloat = Number.isFinite(city.troopFloat) ? Math.max(0, city.troopFloat) : city.troops;
-      city.investedGold = Math.max(0, Math.floor(Number(city.investedGold) || 0));
-      if (isStronghold(city)) city.investedGold = 0;
-      city.isMainCity = Boolean(city.isMainCity || city.id === loaded.mainCityId);
-      if (isStronghold(city)) city.isMainCity = false;
-      if (city.lastCapturedAt === null || city.lastCapturedAt === undefined || city.lastCapturedAt === "") {
-        city.lastCapturedAt = null;
-      } else {
-        const capturedAt = Number(city.lastCapturedAt);
-        city.lastCapturedAt = Number.isFinite(capturedAt) ? capturedAt : null;
-      }
-    });
-
-    if (!loaded.mainCityId || cityByIdSafe(loaded.cities, loaded.mainCityId)?.owner !== "player" || isStronghold(cityByIdSafe(loaded.cities, loaded.mainCityId))) {
-      loaded.mainCityId = loaded.cities.find(city => city.owner === "player" && city.isMainCity)?.id
-        || loaded.cities.find(city => city.owner === "player" && !isStronghold(city))?.id
-        || null;
-    }
-    loaded.cities.forEach(city => {
-      city.isMainCity = Boolean(city.owner === "player" && city.id === loaded.mainCityId && !isStronghold(city));
-    });
-    loaded.attacks = Array.isArray(loaded.attacks) ? loaded.attacks : [];
-    loaded.attacks.forEach(attack => {
-      attack.targetOwnerAtLaunch = attack.targetOwnerAtLaunch || loaded.cities.find(city => city.id === attack.toId)?.owner || "neutral";
-      if (!Array.isArray(attack.path) || attack.path.length < 2) {
-        const from = loaded.cities.find(city => city.id === attack.fromId);
-        const to = loaded.cities.find(city => city.id === attack.toId);
-        const route = from && to ? findRoute(from, to) : null;
-        attack.path = route?.points || [];
-        attack.pathLength = route?.length || 0;
-        attack.pathSegments = getRouteSegments(route, from ? getCityRegionId(from) : "");
-      } else {
-        attack.path = normalizeArmyPath(attack.path);
-        attack.pathSegments = normalizeArmyPathSegments(attack.pathSegments);
-      }
-    });
-    loaded.gameOver = loaded.gameOver || null;
-    loaded.log = Array.isArray(loaded.log) ? loaded.log : [];
-    loaded.gold = Math.max(TEST_STARTING_GOLD, Number(loaded.gold) || 0);
-    loaded.gameSeconds = Math.max(0, Number(loaded.gameSeconds) || 0);
-    loaded.activeRegionId = activeRegionId;
-    if (loaded.online) {
-      loaded.online.activeRegionId = normalizeRegionId(loaded.online.activeRegionId || activeRegionId);
-      loaded.online.islandId = loaded.online.islandId || getOnlineIslandId(loaded.online.activeRegionId);
-    }
-    attackIdCounter = Math.max(1, ...loaded.attacks.map(attack => Number(attack.id) || 1)) + 1;
-    return loaded;
-  } catch (error) {
-    console.warn("Could not normalize cloud save", error);
-    return null;
-  }
-}
-
-async function loadOnlineGame(playerName) {
-  const api = getOnlineApi();
-  if (!api?.isConfigured?.() || !api?.isSignedIn?.()) return null;
-  try {
-    const snapshot = await api.loadGameSnapshot(ONLINE_SAVE_SLOT);
-    return normalizeOnlineGameSnapshot(snapshot, playerName);
-  } catch (error) {
-    onlineLastError = error?.message || String(error);
-    updateOnlineUi();
-    console.warn("Could not load cloud save", error);
-    return null;
-  }
-}
 function currentLocalDateKey() {
   const now = new Date();
   const year = now.getFullYear();
@@ -4660,7 +4420,6 @@ function recordNeutralCapture() {
 function saveGame() {
   if (!state) return;
   state.lastRealTimeMs = Date.now();
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   queueOnlineSave();
 }
 
@@ -4696,6 +4455,18 @@ function getPlayerProfileSnapshot() {
     gold: state ? Math.floor(Number(state.gold) || 0) : 0,
     localGameSeconds: state ? Number(state.gameSeconds) || 0 : 0,
   };
+}
+
+function applyOnlineProfileSnapshot(profile = null, fallbackPlayerName = "Ricky") {
+  if (!state || !profile || typeof profile !== "object") return;
+  state.playerName = cleanName(profile.playerName || profile.displayName) || fallbackPlayerName;
+  state.flag = normalizeFlag(profile.flag);
+  state.character = normalizeCharacterProgress(profile.character);
+  state.upgrades = normalizeUpgrades(profile.upgrades, state.version || WORLD_SCHEMA_VERSION);
+  syncCharacterSkillPoints(state.character, state.upgrades, profile.character?.skillPoints);
+  state.gold = Math.max(TEST_STARTING_GOLD, Math.floor(Number(profile.gold) || 0));
+  state.mainCityChangedAtMs = normalizeTimestampMs(profile.mainCityChangedAtMs);
+  state.gameSeconds = Math.max(0, Number(profile.localGameSeconds) || Number(state.gameSeconds) || 0);
 }
 
 function queueOnlineSave() {
@@ -5164,7 +4935,7 @@ function updateOnlineUi() {
   if (!onlineStatusText || !onlineStatusDetail) return;
 
   if (!api) {
-    onlineStatusText.textContent = "Guest mode";
+    onlineStatusText.textContent = "Online unavailable";
     onlineStatusDetail.textContent = "Firebase client did not load.";
     if (googleSignInBtn) googleSignInBtn.disabled = true;
     if (enterKingdomBtn) enterKingdomBtn.hidden = true;
@@ -5191,11 +4962,11 @@ function updateOnlineUi() {
   if (signedIn) {
     onlineStatusText.textContent = user?.displayName ? `Signed in: ${user.displayName}` : "Signed in";
     if (onlineLastError) {
-      onlineStatusDetail.textContent = `Cloud save waiting: ${onlineLastError}`;
+      onlineStatusDetail.textContent = `Online waiting: ${onlineLastError}`;
     } else if (onlineLastSaveAt) {
-      onlineStatusDetail.textContent = `Cloud save ready. Last synced ${new Date(onlineLastSaveAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}. Press Enter Kingdom.`;
+      onlineStatusDetail.textContent = `Online ready. Last synced ${new Date(onlineLastSaveAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}. Press Enter Kingdom.`;
     } else {
-      onlineStatusDetail.textContent = "Cloud save ready. Press Enter Kingdom to join the game.";
+      onlineStatusDetail.textContent = "Online ready. Press Enter Kingdom to join the game.";
     }
     if (googleSignInBtn) googleSignInBtn.hidden = true;
     if (enterKingdomBtn) {
@@ -5256,7 +5027,7 @@ async function handleGoogleSignOut() {
     onlineLastSaveAt = 0;
     onlineLastError = "";
     updateOnlineUi();
-    showToast("Signed out. Guest local save is still available.");
+    showToast("Signed out.");
   } catch (error) {
     onlineLastError = error?.message || String(error);
     updateOnlineUi();
@@ -5326,6 +5097,7 @@ async function setupOnlineWorld({ requireOnlineProfile = false } = {}) {
   }
 
   const hasCurrentProfile = Boolean(profile);
+  if (hasCurrentProfile) applyOnlineProfileSnapshot(profile, state.playerName);
   const homeRegionId = resolveHomeRegionId(profile, { trustLocalState: hasCurrentProfile });
   const activeRegionId = homeRegionId;
   const mainIslandId = getOnlineIslandId(homeRegionId);
@@ -6191,23 +5963,10 @@ function hardReset() {
   location.reload();
 }
 
-function readSavedName() {
-  for (const key of [STORAGE_KEY, ...LEGACY_STORAGE_KEYS]) {
-    try {
-      const raw = localStorage.getItem(key);
-      if (!raw) continue;
-      const parsed = JSON.parse(raw);
-      if (parsed?.playerName) return cleanName(parsed.playerName);
-    } catch (_) {}
-  }
-  return "";
-}
-
 function getPreferredPlayerName() {
   const api = getOnlineApi();
   return cleanName(playerNameInput?.value)
     || cleanName(api?.getUser?.()?.displayName)
-    || readSavedName()
     || "Ricky";
 }
 
@@ -6228,56 +5987,40 @@ async function startFromInput(forceFresh = false) {
     await waitForSetupLoadingPaint();
 
     shouldConnectOnline = Boolean(getOnlineApi()?.isSignedIn?.());
-    const saved = forceFresh ? null : loadGame();
-    state = saved || newGame(playerName);
-    if (!saved) state.playerName = playerName;
-    if (state.mainCityId) state.activeRegionId = getCityRegionId(state.mainCityId);
-    if (shouldConnectOnline) {
-      state.online = null;
-      onlineWorldConnected = false;
-      onlineCitiesLoaded = false;
+    if (!shouldConnectOnline) {
+      throw new Error("Sign in with Google to play online.");
     }
+    state = newGame(playerName);
+    state.online = null;
+    onlineWorldConnected = false;
+    onlineCitiesLoaded = false;
     localDirtyCityIds = new Set();
-    pendingOfflineProgressSeconds = getOfflineProgressSeconds(state);
-    pendingOfflineProductionCities = pendingOfflineProgressSeconds > 0 ? createOfflineProductionSnapshot(state) : [];
+    pendingOfflineProgressSeconds = 0;
+    pendingOfflineProductionCities = [];
     state.lastRealTimeMs = Date.now();
     selectedMarchPercent = normalizeMarchPercent(state.marchPercent);
 
-    if (shouldConnectOnline) {
-      if (onlineStatusDetail) onlineStatusDetail.textContent = "Loading your online city...";
-      const connected = await setupOnlineWorld({ requireOnlineProfile: true });
-      if (!connected) throw new Error(onlineLastError || "Online city setup did not finish.");
-      if (pendingOfflineProgressSeconds > 0) applyPendingOfflineProgress();
-      setupScreen.classList.remove("visible");
-      clearSelection(false);
-      rememberOwnedAttackSource(state.mainCityId || playerCities()[0]?.id);
-      saveGame();
-      renderAll();
-      requestAnimationFrame(() => centerOnCity(selectedSourceId || state.mainCityId || playerCities()[0]?.id));
-      flushOnlineSave(true);
-      showToast("Online kingdom loaded.");
-      return;
-    }
-
-    applyPendingOfflineProgress();
+    if (onlineStatusDetail) onlineStatusDetail.textContent = "Loading your online city...";
+    const connected = await setupOnlineWorld({ requireOnlineProfile: true });
+    if (!connected) throw new Error(onlineLastError || "Online city setup did not finish.");
     setupScreen.classList.remove("visible");
     clearSelection(false);
     rememberOwnedAttackSource(state.mainCityId || playerCities()[0]?.id);
     saveGame();
     renderAll();
     requestAnimationFrame(() => centerOnCity(selectedSourceId || state.mainCityId || playerCities()[0]?.id));
+    flushOnlineSave(true);
+    showToast("Online kingdom loaded.");
   } catch (error) {
     onlineLastError = error?.message || String(error);
-    statusOverride = shouldConnectOnline
-      ? `Online setup failed: ${onlineLastError}`
-      : `Could not enter kingdom: ${onlineLastError}`;
-    if (shouldConnectOnline && setupScreen?.classList.contains("visible")) {
+    statusOverride = shouldConnectOnline ? `Online setup failed: ${onlineLastError}` : onlineLastError;
+    if (setupScreen?.classList.contains("visible")) {
       disconnectOnlineWorld();
       state = null;
     }
     updateOnlineUi();
     if (onlineStatusDetail) onlineStatusDetail.textContent = statusOverride;
-    showToast(shouldConnectOnline ? "Online setup failed. Try again." : "Could not enter kingdom.");
+    showToast(shouldConnectOnline ? "Online setup failed. Try again." : "Sign in with Google to play.");
     console.warn("Could not start Crown Lands", error);
   } finally {
     setSetupLoading(false);
@@ -10556,9 +10299,7 @@ modal.addEventListener("close", () => {
   cancelSendMode();
 });
 
-const saved = loadGame();
-const savedName = saved?.playerName || readSavedName();
-if (playerNameInput) playerNameInput.value = savedName || "Ricky";
+if (playerNameInput) playerNameInput.value = cleanName(getOnlineApi()?.getUser?.()?.displayName) || "Ricky";
 applyWorldDimensions();
 renderWorldMap();
 renderIslandTeleporters();
