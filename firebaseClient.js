@@ -183,7 +183,20 @@
     return snap.data().state || null;
   }
 
+  function cleanCityOwner(city = {}) {
+    const ownerUid = String(city.ownerUid || "").trim();
+    const rawOwnerKind = city.ownerKind || city.owner || "neutral";
+    const hasPlayerOwner = rawOwnerKind === "player" && ownerUid;
+    return {
+      ownerKind: hasPlayerOwner ? "player" : "neutral",
+      ownerUid: hasPlayerOwner ? ownerUid : null,
+      ownerName: hasPlayerOwner ? city.ownerName || "" : "",
+      ownerFlag: hasPlayerOwner ? city.ownerFlag || null : null,
+    };
+  }
+
   function cleanCitySeed(city) {
+    const owner = cleanCityOwner(city);
     return {
       id: city.id,
       name: city.name || city.id,
@@ -191,10 +204,7 @@
       y: Number(city.y) || 0,
       startPool: city.startPool || "",
       regionId: city.regionId || city.startPool || "",
-      ownerKind: city.ownerKind || "neutral",
-      ownerUid: city.ownerUid || null,
-      ownerName: city.ownerName || "",
-      ownerFlag: city.ownerFlag || null,
+      ...owner,
       level: Math.max(1, Math.floor(Number(city.level) || 1)),
       troops: Math.max(0, Math.floor(Number(city.troops) || 0)),
       troopFloat: Math.max(0, Number(city.troopFloat) || Number(city.troops) || 0),
@@ -434,9 +444,8 @@
           // Continue below and claim a fresh city from the current world layout.
         } else {
           const mainCityData = mainCitySnap.data() || {};
-          const mainOwnerKind = mainCityData.ownerKind || mainCityData.owner || "neutral";
           const mainOwnedByUser = mainCityData.ownerUid === uid;
-          const mainClaimable = !mainCityData.ownerUid && mainOwnerKind === "neutral";
+          const mainClaimable = !mainCityData.ownerUid;
           if (mainOwnedByUser || mainClaimable) {
             writePlayerMainCity(existingMainCityId);
             writeCityOwner(mainCityRef, mainCityData, {
@@ -469,7 +478,7 @@
         const citySnap = await transaction.get(cityRef);
         if (!citySnap.exists()) continue;
         const data = citySnap.data();
-        if (!data.ownerUid && (data.ownerKind || "neutral") === "neutral") {
+        if (!data.ownerUid) {
           chosenRef = cityRef;
           chosenData = data;
           chosenCityId = cityId;

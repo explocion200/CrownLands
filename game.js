@@ -3818,13 +3818,13 @@ function getCityControllerKey(city) {
   if (!city || city.owner === "neutral" || city.ownerKind === "neutral") return "";
   if (city.ownerKind === "player") {
     if (city.ownerUid) return `player:${city.ownerUid}`;
-    if (city.ownerName) return `player:${city.ownerName}`;
+    if (city.owner === "player") return "player:local";
+    return "";
   }
   if (city.owner === "player") return "player:local";
   if (city.owner === "enemy") {
     if (city.ownerUid) return `player:${city.ownerUid}`;
-    if (city.ownerName) return `enemy:${city.ownerName}`;
-    return "enemy";
+    return "";
   }
   return city.owner || "";
 }
@@ -4346,7 +4346,8 @@ function createScoutReportSnapshot(target) {
 
 function getBattleReportOwnerName(city, owner = city?.owner) {
   if (owner === "player") return state?.playerName || "You";
-  if (city?.ownerKind === "player" && city.ownerName) return city.ownerName;
+  if (city?.ownerKind === "player" && city.ownerUid && city.ownerName) return city.ownerName;
+  if (city?.ownerKind === "player" && city.ownerUid) return "Rival ruler";
   return OWNER[owner]?.label || "Unknown";
 }
 
@@ -4604,10 +4605,10 @@ function summarizeIslandOccupancy(regionId, cities = state?.cities || []) {
 
   cities.forEach(city => {
     if (!city || isStronghold(city) || getCityRegionId(city) !== activeRegionId) return;
-    const ownerKind = city.ownerKind || (city.owner === "player" || city.owner === "enemy" ? "player" : city.owner || "neutral");
-    const ownerUid = String(city.ownerUid || "");
-    const isLocalPlayerCity = city.owner === "player" && (!ownerUid || ownerUid === currentUid);
-    if (ownerKind !== "player" && !isLocalPlayerCity) return;
+    const ownership = getCityRecordOwnership(city, currentUid, { allowLocalPlayerFallback: true });
+    const ownerUid = String(ownership.ownerUid || "");
+    const isLocalPlayerCity = ownership.owner === "player";
+    if (ownership.ownerKind !== "player" && !isLocalPlayerCity) return;
 
     playerHeldCityCount += 1;
     if (ownerUid) owners.add(ownerUid);
@@ -5419,39 +5420,37 @@ function applyOnlineCities(onlineCities, regionId = getActiveOnlineRegionId()) {
           regionId: base.regionId,
         };
       }
-      const owner = OWNER[current.owner] ? current.owner : "neutral";
+      const currentOwnership = getCityRecordOwnership(current, currentUid, { allowLocalPlayerFallback: true });
       return {
         ...base,
         name: current.name || base.name,
-        owner,
-        ownerKind: current.ownerKind || (owner === "player" ? "player" : owner === "enemy" ? "enemy" : "neutral"),
-        ownerUid: current.ownerUid || null,
-        ownerName: current.ownerName || "",
-        ownerFlag: current.ownerFlag || null,
+        owner: currentOwnership.owner,
+        ownerKind: currentOwnership.ownerKind,
+        ownerUid: currentOwnership.ownerUid,
+        ownerName: currentOwnership.ownerName,
+        ownerFlag: currentOwnership.ownerFlag,
         level: isStronghold(base) ? getStrongholdDefenseLevel(base) : clampCityLevel(current.level ?? base.level),
         troops: Math.max(0, Math.floor(Number(current.troops ?? base.troops) || 0)),
         troopFloat: Math.max(0, Number(current.troopFloat ?? current.troops ?? base.troops) || 0),
         defense: 1,
         investedGold: isStronghold(base) ? 0 : Math.max(0, Math.floor(Number(current.investedGold) || 0)),
         lastCapturedAt: current.lastCapturedAt ?? null,
-        isMainCity: !isStronghold(base) && (owner === "player" ? base.id === state.mainCityId : Boolean(current.isMainCity)),
+        isMainCity: !isStronghold(base) && (currentOwnership.owner === "player" ? base.id === state.mainCityId : Boolean(current.isMainCity)),
         startPool: base.startPool,
         regionId: base.regionId,
       };
     }
     const current = localById.get(base.id) || {};
     const online = byId.get(base.id) || {};
-    const ownerKind = online.ownerKind || online.owner || current.ownerKind || "neutral";
-    const ownerUid = online.ownerUid || null;
-    const ownerName = online.ownerName || "";
-    const ownerFlag = online.ownerFlag || null;
-    const localOwner = ownerKind === "player"
-      ? ownerUid === currentUid ? "player" : "enemy"
-      : ownerKind === "enemy" ? "enemy" : "neutral";
-    const normalizedOwnerKind = ownerKind === "player" || ownerKind === "enemy" ? ownerKind : "neutral";
+    const onlineOwnership = getCityRecordOwnership(online, currentUid);
+    const ownerUid = onlineOwnership.ownerUid;
+    const ownerName = onlineOwnership.ownerName;
+    const ownerFlag = onlineOwnership.ownerFlag;
+    const localOwner = onlineOwnership.owner;
+    const normalizedOwnerKind = onlineOwnership.ownerKind;
     const currentIsLocalPlayerCity = current.owner === "player" && (!current.ownerUid || current.ownerUid === currentUid);
-    const onlineBelongsToAnotherPlayer = ownerKind === "player" && ownerUid && ownerUid !== currentUid;
-    const onlineBelongsToCurrentPlayer = ownerKind === "player" && ownerUid === currentUid;
+    const onlineBelongsToAnotherPlayer = normalizedOwnerKind === "player" && ownerUid && ownerUid !== currentUid;
+    const onlineBelongsToCurrentPlayer = normalizedOwnerKind === "player" && ownerUid === currentUid;
     const isFreshClaimCity = onlineFreshClaimCityId === base.id;
     const keepLocalPlayerCity = currentIsLocalPlayerCity
       && !onlineBelongsToAnotherPlayer
@@ -5515,6 +5514,42 @@ function ensureLoadedMainCityForRegion(regionId) {
   }
 }
 
+function getCityRecordOwnership(record = {}, currentUid = getCurrentOnlineUid(), { allowLocalPlayerFallback = false } = {}) {
+  const rawOwnerKind = record.ownerKind || (record.owner === "player" || record.owner === "enemy" ? "player" : record.owner || "neutral");
+  const ownerUid = String(record.ownerUid || "").trim();
+  const hasPlayerOwner = Boolean(ownerUid) && (rawOwnerKind === "player" || record.owner === "player" || record.owner === "enemy");
+  if (hasPlayerOwner) {
+    return {
+      owner: ownerUid === currentUid ? "player" : "enemy",
+      ownerKind: "player",
+      ownerUid,
+      ownerName: record.ownerName || "",
+      ownerFlag: record.ownerFlag || null,
+      hasPlayerOwner: true,
+    };
+  }
+
+  if (allowLocalPlayerFallback && record.owner === "player" && (!record.ownerUid || record.ownerUid === currentUid)) {
+    return {
+      owner: "player",
+      ownerKind: "player",
+      ownerUid: currentUid || record.ownerUid || null,
+      ownerName: record.ownerName || state?.playerName || "",
+      ownerFlag: record.ownerFlag || state?.flag || null,
+      hasPlayerOwner: Boolean(currentUid || record.ownerUid),
+    };
+  }
+
+  return {
+    owner: "neutral",
+    ownerKind: "neutral",
+    ownerUid: null,
+    ownerName: "",
+    ownerFlag: null,
+    hasPlayerOwner: false,
+  };
+}
+
 function markOwnedCityChanged(city, syncNow = true) {
   if (!state || !city || city.owner !== "player") return;
   localDirtyCityIds.add(city.id);
@@ -5553,6 +5588,18 @@ function toOnlineOwnedCity(city) {
 }
 
 function toOnlineCityState(city) {
+  const currentUid = getCurrentOnlineUid();
+  const ownerUid = city.owner === "player"
+    ? currentUid || city.ownerUid || null
+    : city.ownerUid || null;
+  const hasPlayerOwner = Boolean(ownerUid) && (city.owner === "player" || city.owner === "enemy" || city.ownerKind === "player");
+  const ownerKind = hasPlayerOwner ? "player" : "neutral";
+  const ownerName = hasPlayerOwner
+    ? city.owner === "player" ? state.playerName : city.ownerName || ""
+    : "";
+  const ownerFlag = hasPlayerOwner
+    ? city.owner === "player" ? state.flag : city.ownerFlag || null
+    : null;
   return {
     id: city.id,
     name: city.name,
@@ -5564,10 +5611,10 @@ function toOnlineCityState(city) {
     strongholdType: city.strongholdType || "",
     bonus: city.bonus || "",
     bonusPercent: Number(city.bonusPercent) || 0,
-    ownerKind: city.ownerKind || (city.owner === "player" ? "player" : city.owner === "enemy" ? "enemy" : city.owner || "neutral"),
-    ownerUid: city.ownerKind === "player" ? city.ownerUid || null : null,
-    ownerName: city.ownerName || "",
-    ownerFlag: city.ownerFlag || null,
+    ownerKind,
+    ownerUid: hasPlayerOwner ? ownerUid : null,
+    ownerName,
+    ownerFlag,
     level: isStronghold(city) ? getStrongholdDefenseLevel(city) : clampCityLevel(city.level),
     troops: Math.max(0, Math.floor(Number(city.troops) || 0)),
     troopFloat: Math.max(0, Number(city.troopFloat) || Number(city.troops) || 0),
@@ -5779,6 +5826,7 @@ function getOnlineArmyRemainingSeconds(army) {
 
 function resolveOnlineArmyOwner(army) {
   if (army?.ownerUid && army.ownerUid === getCurrentOnlineUid()) return "player";
+  if (!army?.ownerUid) return "neutral";
   if (army?.ownerKind === "neutral") return "neutral";
   return "enemy";
 }
@@ -5787,6 +5835,9 @@ function normalizeOnlineArmyMovement(raw) {
   if (!raw || typeof raw !== "object") return null;
   const id = String(raw.id || "").trim();
   if (!id) return null;
+  const ownerUid = String(raw.ownerUid || "").trim();
+  const rawOwnerKind = raw.ownerKind || raw.owner || "player";
+  if (rawOwnerKind !== "neutral" && !ownerUid) return null;
   const total = Math.max(0.1, Number(raw.total) || 0.1);
   const launchedAtMs = Math.max(0, Number(raw.launchedAtMs) || 0);
   const arrivesAtMs = Math.max(
@@ -5799,8 +5850,8 @@ function normalizeOnlineArmyMovement(raw) {
     id,
     onlineId: id,
     owner: resolveOnlineArmyOwner(raw),
-    ownerKind: raw.ownerKind || raw.owner || "player",
-    ownerUid: raw.ownerUid || "",
+    ownerKind: ownerUid ? "player" : "neutral",
+    ownerUid,
     ownerName: raw.ownerName || "",
     ownerFlag: raw.ownerFlag || null,
     kind: ["attack", "transfer", "scout"].includes(raw.kind) ? raw.kind : "attack",
@@ -5914,6 +5965,7 @@ function applyOnlineArmies(rawArmies, islandId = getActiveOnlineIslandId()) {
   }
   onlineArmiesByIsland.set(normalizedIslandId, rawArmies
     .map(normalizeOnlineArmyMovement)
+    .filter(Boolean)
     .filter(isOnlineArmyVisible));
   rebuildOnlineArmies();
   adoptOwnOnlineArmies();
@@ -7199,6 +7251,15 @@ function resolveAttack(attack) {
   const target = cityById(attack.toId);
   if (!target) return;
 
+  if (
+    isOnlineWorldActive()
+    && attack.owner !== "player"
+    && !(attack.ownerKind === "player" && attack.ownerUid)
+  ) {
+    console.warn("Ignored online combat without a player owner identity", attack);
+    return;
+  }
+
   if (attack.kind === "scout") {
     completeScoutMission(attack, target);
     return;
@@ -7216,10 +7277,12 @@ function resolveAttack(attack) {
     return;
   }
 
-  const attackerName = attack.owner === "player" ? "You" : "Enemy";
+  const attackerName = attack.owner === "player" ? "You" : attack.ownerName || "Enemy";
   const oldOwner = target.owner;
   const defenderName = getBattleReportOwnerName(target, oldOwner);
-  const attackerReportName = getBattleReportOwnerName(null, attack.owner);
+  const attackerReportName = attack.owner === "player"
+    ? getBattleReportOwnerName(null, attack.owner)
+    : attack.ownerName || getBattleReportOwnerName(null, attack.owner);
   const targetLevel = clampCityLevel(target.level);
   const defendersAtStart = Math.max(0, Math.floor(Number(target.troops) || 0));
   const targetDefenseAtStart = getCityStats(target).totalDefense;
@@ -7310,13 +7373,20 @@ function resolveAttack(attack) {
     const xpAward = attack.owner === "player" ? getCaptureXpAward(target, oldOwner, result.defenderLosses, attack.owner) : 0;
     const cautiousRefund = oldOwner === "player" && attack.owner !== "player" ? grantCautiousRefund(target) : 0;
 
-    target.owner = attack.owner;
     if (attack.owner === "player") {
+      target.owner = "player";
       target.ownerKind = "player";
       target.ownerUid = getCurrentOnlineUid() || target.ownerUid || null;
       target.ownerName = state.playerName;
       target.ownerFlag = state.flag;
+    } else if (attack.ownerKind === "player" && attack.ownerUid) {
+      target.owner = "enemy";
+      target.ownerKind = "player";
+      target.ownerUid = attack.ownerUid;
+      target.ownerName = attack.ownerName || "Rival ruler";
+      target.ownerFlag = attack.ownerFlag || createDefaultFlag();
     } else {
+      target.owner = attack.owner;
       target.ownerKind = attack.owner === "enemy" ? "enemy" : attack.owner;
       target.ownerUid = null;
       target.ownerName = OWNER[attack.owner]?.label || "";
@@ -7514,7 +7584,7 @@ function applyFlagToElement(element, flag) {
 function getCityOwnerFlag(city) {
   if (!city) return null;
   if (city.owner === "player") return state.flag;
-  if (city.ownerKind === "player") return city.ownerFlag || createDefaultFlag();
+  if (city.ownerKind === "player" && city.ownerUid) return city.ownerFlag || createDefaultFlag();
   return null;
 }
 
@@ -7535,7 +7605,8 @@ function applyCityOwnerFlags(container, city) {
 function getCityOwnerDisplayName(city) {
   if (!city) return "";
   if (city.owner === "player") return state.playerName;
-  if (city.ownerKind === "player" && city.ownerName) return city.ownerName;
+  if (city.ownerKind === "player" && city.ownerUid && city.ownerName) return city.ownerName;
+  if (city.ownerKind === "player" && city.ownerUid) return "Rival ruler";
   return OWNER[city.owner]?.label || "Unknown";
 }
 
