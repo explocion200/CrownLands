@@ -3,7 +3,7 @@ const WORLD_SCHEMA_VERSION = Number(WORLD_CONFIG.version) || 23;
 const WORLD_REGIONS = Array.isArray(WORLD_CONFIG.regions) ? WORLD_CONFIG.regions : [];
 const LAND_BRIDGES = Array.isArray(WORLD_CONFIG.landBridges) ? WORLD_CONFIG.landBridges : [];
 const REGION_CITY_COUNT = Math.max(1, Math.floor(Number(WORLD_CONFIG.cityCountPerRegion) || 50));
-const RESET_GENERATION = "fresh-2026-06-21";
+const RESET_GENERATION = "fresh-2026-06-23";
 const STORAGE_KEY = `crownlands-realtime-${RESET_GENERATION}`;
 const LEGACY_STORAGE_KEYS = [];
 const SAVE_EVERY_SECONDS = 1.5;
@@ -2371,6 +2371,10 @@ function pickStartingRegionId() {
   if (!regions.length) return DEFAULT_ONLINE_REGION_ID;
   const uid = getCurrentOnlineUid() || getOnlineApi()?.getUser?.()?.email || "guest";
   return regions[hashString(uid) % regions.length] || DEFAULT_ONLINE_REGION_ID;
+}
+
+function isCurrentResetProfile(profile) {
+  return Boolean(profile && profile.resetGeneration === RESET_GENERATION);
 }
 
 function resolveHomeRegionId(profile = null) {
@@ -5130,6 +5134,9 @@ async function setupOnlineWorld() {
   } catch (error) {
     console.warn("Could not load online profile before island setup", error);
   }
+  if (profile && !isCurrentResetProfile(profile)) {
+    profile = null;
+  }
 
   const homeRegionId = resolveHomeRegionId(profile);
   const activeRegionId = homeRegionId;
@@ -5993,6 +6000,7 @@ async function startFromInput(forceFresh = false) {
     clearSelection(false);
     rememberOwnedAttackSource(state.mainCityId || playerCities()[0]?.id);
     saveGame();
+    if (onlineConnected) await flushOnlineSave(true);
     renderAll();
     requestAnimationFrame(() => centerOnCity(selectedSourceId || state.mainCityId || playerCities()[0]?.id));
   } finally {
