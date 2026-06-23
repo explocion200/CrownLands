@@ -2384,11 +2384,12 @@ function isCurrentResetProfile(profile) {
   return Boolean(profile && profile.resetGeneration === RESET_GENERATION);
 }
 
-function resolveHomeRegionId(profile = null) {
+function resolveHomeRegionId(profile = null, { trustLocalState = true } = {}) {
   const profileRegion = normalizeRegionId(profile?.mainRegionId || getRegionIdFromOnlineIslandId(profile?.mainIslandId));
   if (profile?.mainRegionId || getRegionIdFromOnlineIslandId(profile?.mainIslandId)) return profileRegion;
   const profileMainCityId = getKnownCityId(profile?.mainCityId);
   if (profileMainCityId) return getCityRegionId(profileMainCityId);
+  if (!trustLocalState) return pickStartingRegionId();
   if (state?.online?.mainRegionId) return normalizeRegionId(state.online.mainRegionId);
   const onlineMainCityId = getKnownCityId(state?.online?.mainCityId);
   if (onlineMainCityId) return getCityRegionId(onlineMainCityId);
@@ -5298,7 +5299,7 @@ function withTimeout(promise, timeoutMs, message) {
   });
 }
 
-async function setupOnlineWorld() {
+async function setupOnlineWorld({ requireOnlineProfile = false } = {}) {
   const api = getOnlineApi();
   if (!state || !api?.isConfigured?.() || !api?.isSignedIn?.()) return false;
 
@@ -5308,23 +5309,29 @@ async function setupOnlineWorld() {
   updateOnlineUi();
   onlineStatusDetail.textContent = "Finding your home island...";
   let profile = null;
+  let profileLoadFailed = false;
   try {
     if (api.loadPlayerProfile) {
       profile = await withTimeout(api.loadPlayerProfile(), 8000, "Player profile lookup is taking too long.");
     }
   } catch (error) {
+    profileLoadFailed = true;
     console.warn("Could not load online profile before island setup", error);
+  }
+  if (profileLoadFailed && requireOnlineProfile) {
+    throw new Error("Online profile lookup is taking too long. Try again in a moment.");
   }
   if (profile && !isCurrentResetProfile(profile)) {
     profile = null;
   }
 
-  const homeRegionId = resolveHomeRegionId(profile);
+  const hasCurrentProfile = Boolean(profile);
+  const homeRegionId = resolveHomeRegionId(profile, { trustLocalState: hasCurrentProfile });
   const activeRegionId = homeRegionId;
   const mainIslandId = getOnlineIslandId(homeRegionId);
   const mainCityId = getKnownCityId(profile?.mainCityId)
-    || getKnownCityId(state.online?.mainCityId)
-    || getKnownCityId(state.mainCityId)
+    || (hasCurrentProfile ? getKnownCityId(state.online?.mainCityId) : "")
+    || (hasCurrentProfile ? getKnownCityId(state.mainCityId) : "")
     || "";
 
   state.activeRegionId = activeRegionId;
@@ -6209,6 +6216,8 @@ async function startFromInput(forceFresh = false) {
   const launchBtn = enterKingdomBtn || startBtn;
   const originalStartText = launchBtn?.textContent || "";
   const originalStatusDetail = onlineStatusDetail?.textContent || "";
+  let shouldConnectOnline = false;
+  let statusOverride = "";
   try {
     if (launchBtn) {
       launchBtn.disabled = true;
@@ -6218,7 +6227,7 @@ async function startFromInput(forceFresh = false) {
     setSetupLoading(true, forceFresh ? "Creating kingdom..." : "Entering kingdom...");
     await waitForSetupLoadingPaint();
 
-    const shouldConnectOnline = Boolean(getOnlineApi()?.isSignedIn?.());
+    shouldConnectOnline = Boolean(getOnlineApi()?.isSignedIn?.());
     const saved = forceFresh ? null : loadGame();
     state = saved || newGame(playerName);
     if (!saved) state.playerName = playerName;
@@ -6233,6 +6242,23 @@ async function startFromInput(forceFresh = false) {
     pendingOfflineProductionCities = pendingOfflineProgressSeconds > 0 ? createOfflineProductionSnapshot(state) : [];
     state.lastRealTimeMs = Date.now();
     selectedMarchPercent = normalizeMarchPercent(state.marchPercent);
+
+    if (shouldConnectOnline) {
+      if (onlineStatusDetail) onlineStatusDetail.textContent = "Loading your online city...";
+      const connected = await setupOnlineWorld({ requireOnlineProfile: true });
+      if (!connected) throw new Error(onlineLastError || "Online city setup did not finish.");
+      if (pendingOfflineProgressSeconds > 0) applyPendingOfflineProgress();
+      setupScreen.classList.remove("visible");
+      clearSelection(false);
+      rememberOwnedAttackSource(state.mainCityId || playerCities()[0]?.id);
+      saveGame();
+      renderAll();
+      requestAnimationFrame(() => centerOnCity(selectedSourceId || state.mainCityId || playerCities()[0]?.id));
+      flushOnlineSave(true);
+      showToast("Online kingdom loaded.");
+      return;
+    }
+
     applyPendingOfflineProgress();
     setupScreen.classList.remove("visible");
     clearSelection(false);
@@ -6240,10 +6266,22 @@ async function startFromInput(forceFresh = false) {
     saveGame();
     renderAll();
     requestAnimationFrame(() => centerOnCity(selectedSourceId || state.mainCityId || playerCities()[0]?.id));
-    if (shouldConnectOnline) startOnlineSetupInBackground();
+  } catch (error) {
+    onlineLastError = error?.message || String(error);
+    statusOverride = shouldConnectOnline
+      ? `Online setup failed: ${onlineLastError}`
+      : `Could not enter kingdom: ${onlineLastError}`;
+    if (shouldConnectOnline && setupScreen?.classList.contains("visible")) {
+      disconnectOnlineWorld();
+      state = null;
+    }
+    updateOnlineUi();
+    if (onlineStatusDetail) onlineStatusDetail.textContent = statusOverride;
+    showToast(shouldConnectOnline ? "Online setup failed. Try again." : "Could not enter kingdom.");
+    console.warn("Could not start Crown Lands", error);
   } finally {
     setSetupLoading(false);
-    if (setupScreen?.classList.contains("visible") && onlineStatusDetail && originalStatusDetail) {
+    if (setupScreen?.classList.contains("visible") && onlineStatusDetail && originalStatusDetail && !statusOverride) {
       onlineStatusDetail.textContent = originalStatusDetail;
     }
     if (launchBtn) {
