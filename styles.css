@@ -3126,9 +3126,9 @@ input {
   content: "";
   position: absolute;
   inset: 0;
-  z-index: 0;
+  z-index: 2;
   pointer-events: none;
-  background: url("assets/profile-hud-frame.png?v=20260623-profile-avatar-fit") center / 100% 100% no-repeat;
+  background: url("assets/profile-hud-frame.png?v=20260623-profile-avatar-fill") center / 100% 100% no-repeat;
   filter: drop-shadow(0 8px 16px rgba(0,0,0,.34));
 }
 .profile-button > * {
@@ -3136,8 +3136,11 @@ input {
   z-index: 1;
 }
 .profile-button .kingdom-flag-small {
-  width: 46px;
-  height: 34px;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  border-radius: 14px;
+  box-shadow: none;
 }
 .profile-rank-btn {
   width: 50px;
@@ -3488,6 +3491,7 @@ input {
 
 .character-level-badge {
   position: absolute;
+  z-index: 3;
   right: 9px;
   bottom: 8px;
   min-width: 32px;
@@ -3644,7 +3648,7 @@ input {
 @media (max-width: 780px) and (orientation: landscape) {
   .profile-action-row { gap: .44rem; }
   .portrait-placeholder { width: 68px; height: 53px; border-radius: 14px; }
-  .profile-button .kingdom-flag-small { width: 38px; height: 28px; }
+  .profile-button .kingdom-flag-small { width: 100%; height: 100%; border-radius: 12px; }
   .profile-rank-btn { width: 40px; height: 40px; border-radius: 13px; }
   .resource-pill.city-list-btn,
   .resource-pill.island-switch-btn { width: 56px; min-width: 56px; max-width: 56px; height: 56px; border-radius: 16px; }
