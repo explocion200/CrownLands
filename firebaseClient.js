@@ -275,6 +275,10 @@
     const needsCitySeed = !islandSnap.exists()
       || seededCityCount < targetCityCount;
 
+    if (islandSnap.exists() && !needsCitySeed && layoutSeedVersion >= targetVersion && seededCityCount === targetCityCount) {
+      return true;
+    }
+
     await setDoc(islandRef, {
       id: islandId,
       version: targetVersion,
@@ -492,6 +496,15 @@
     return true;
   }
 
+  async function loadIslandCities(islandId = "main") {
+    await init();
+    const uid = requireSignedIn();
+    if (!uid || !islandId) return [];
+    const { collection, getDocs } = client.modules.firestore;
+    const snapshot = await getDocs(collection(client.db, "islands", islandId, "cities"));
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  }
+
   async function saveArmyMovement(islandId = "main", army = {}) {
     await init();
     const uid = requireSignedIn();
@@ -628,6 +641,7 @@
     claimStartingCity,
     savePlayerCities,
     saveCityState,
+    loadIslandCities,
     saveArmyMovement,
     deleteArmyMovement,
     savePresence,

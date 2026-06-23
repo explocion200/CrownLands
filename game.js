@@ -16,7 +16,8 @@ const ONLINE_CITY_SYNC_SECONDS = 6;
 const ONLINE_PRESENCE_SECONDS = 10;
 const ONLINE_PRESENCE_STALE_SECONDS = 90;
 const ONLINE_ARMY_EXPIRY_GRACE_SECONDS = 8;
-const SETUP_LOADING_MIN_MS = 450;
+const SETUP_LOADING_MIN_MS = 180;
+const IMAGE_PRELOAD_TIMEOUT_MS = 15000;
 const HUD_RENDER_INTERVAL_MS = 250;
 const MAP_RENDER_INTERVAL_MS = 1600;
 const CITY_LIST_PAGE_SIZE = 5;
@@ -2885,13 +2886,22 @@ function preloadImage(src) {
 
   const promise = new Promise(resolve => {
     const image = new Image();
+    let settled = false;
+    const finish = success => {
+      if (settled) return;
+      settled = true;
+      window.clearTimeout(timeoutId);
+      if (!success) islandImageLoadPromises.delete(imageSrc);
+      resolve(success);
+    };
+    const timeoutId = window.setTimeout(() => finish(false), IMAGE_PRELOAD_TIMEOUT_MS);
     image.decoding = "async";
     image.loading = "eager";
     image.onload = () => {
       const decodePromise = typeof image.decode === "function" ? image.decode().catch(() => {}) : Promise.resolve();
-      decodePromise.finally(() => resolve(true));
+      decodePromise.finally(() => finish(true));
     };
-    image.onerror = () => resolve(false);
+    image.onerror = () => finish(false);
     image.src = imageSrc;
   });
   islandImageLoadPromises.set(imageSrc, promise);
@@ -4907,14 +4917,18 @@ async function refreshOnlineIslandSummaries(force = false) {
   try {
     const now = Date.now();
     const regions = getRegionIds();
-    const requests = regions
-      .filter(regionId => force || !onlineIslandSummaries.get(regionId) || now - onlineIslandSummaries.get(regionId).updatedAtMs > 30000)
-      .map(async regionId => {
+    const staleRegions = regions
+      .filter(regionId => force || !onlineIslandSummaries.get(regionId) || now - onlineIslandSummaries.get(regionId).updatedAtMs > 30000);
+    if (!staleRegions.length) return true;
+    for (const regionId of staleRegions) {
+      if (mapSwitchLoading || onlineWorldLoading) break;
+      try {
         const summary = await api.loadIslandCitySummary(getOnlineIslandId(regionId));
         if (summary) cacheIslandOccupancySummary(regionId, summary);
-      });
-    if (!requests.length) return true;
-    await Promise.allSettled(requests);
+      } catch (error) {
+        console.warn(`Could not load ${getRegionLabel(regionId)} ownership summary`, error);
+      }
+    }
     rerenderIslandSwitcherModalIfOpen();
     return true;
   } catch (error) {
@@ -5060,8 +5074,14 @@ async function switchOnlineIsland(regionId) {
     }
 
     onlineStatusDetail.textContent = `Leaving ${previousLabel}...`;
-    await syncOwnedCitiesToOnline(true);
-    await flushOnlineSave(true);
+    try {
+      await withTimeout(syncOwnedCitiesToOnline(true), 4500, `${previousLabel} city save is taking too long.`);
+    } catch (error) {
+      onlineLastError = error?.message || String(error);
+      console.warn("Continuing island switch before city sync finished", error);
+    }
+    queueOnlineSave();
+    saveGame();
     if (typeof onlineIslandUnsubscribe === "function") onlineIslandUnsubscribe();
     onlineIslandUnsubscribe = null;
     clearOnlineArmyWatchers();
@@ -5421,23 +5441,35 @@ async function connectOnlineIsland(regionId, { claimHome = false, homeRegionId =
   try {
     const seed = createOnlineIslandSeed(targetRegionId);
     onlineStatusDetail.textContent = `Preparing ${getRegionLabel(targetRegionId)} (${seed.cities.length} city slots)...`;
-    await withTimeout(api.ensureMainIsland({
-      islandId,
-      cities: seed.cities,
-      meta: {
-        worldId: ONLINE_WORLD_ID,
-        legacyWorldId: ONLINE_LEGACY_ISLAND_ID,
-        regionId: targetRegionId,
-        regionName: getRegionLabel(targetRegionId),
-        version: WORLD_SCHEMA_VERSION,
-        name: `${getRegionLabel(targetRegionId)} - ${WORLD_CONFIG.name || "Crownlands"}`,
-        cityCount: seed.cities.length,
-        regionCount: WORLD_REGIONS.length,
-        cityCountPerRegion: REGION_CITY_COUNT,
-        worldWidth: WORLD_WIDTH,
-        worldHeight: WORLD_HEIGHT,
-      },
-    }), 30000, `${getRegionLabel(targetRegionId)} setup is taking too long.`);
+    const islandSetupPromise = api.ensureMainIsland
+      ? withTimeout(api.ensureMainIsland({
+        islandId,
+        cities: seed.cities,
+        meta: {
+          worldId: ONLINE_WORLD_ID,
+          legacyWorldId: ONLINE_LEGACY_ISLAND_ID,
+          regionId: targetRegionId,
+          regionName: getRegionLabel(targetRegionId),
+          version: WORLD_SCHEMA_VERSION,
+          name: `${getRegionLabel(targetRegionId)} - ${WORLD_CONFIG.name || "Crownlands"}`,
+          cityCount: seed.cities.length,
+          regionCount: WORLD_REGIONS.length,
+          cityCountPerRegion: REGION_CITY_COUNT,
+          worldWidth: WORLD_WIDTH,
+          worldHeight: WORLD_HEIGHT,
+        },
+      }), claimHome ? 20000 : 10000, `${getRegionLabel(targetRegionId)} setup is taking too long.`)
+      : Promise.resolve(false);
+
+    if (claimHome) {
+      await islandSetupPromise;
+    } else {
+      islandSetupPromise.catch(error => {
+        onlineLastError = error?.message || String(error);
+        updateOnlineUi();
+        console.warn(`${getRegionLabel(targetRegionId)} background setup is still pending`, error);
+      });
+    }
 
     if (claimHome) {
       onlineStatusDetail.textContent = "Claiming your starting city...";
@@ -5467,47 +5499,44 @@ async function connectOnlineIsland(regionId, { claimHome = false, homeRegionId =
     clearOnlineArmyWatchers();
     onlinePresence = [];
     state.attacks = state.attacks.filter(attack => getKnownCityId(attack.fromId) && getKnownCityId(attack.toId));
-    let initialCitiesReady = false;
-    let resolveInitialCities = () => {};
-    let rejectInitialCities = () => {};
-    const initialCitiesPromise = withTimeout(new Promise((resolve, reject) => {
-      resolveInitialCities = () => {
-        if (initialCitiesReady) return;
-        initialCitiesReady = true;
-        resolve();
-      };
-      rejectInitialCities = error => {
-        if (initialCitiesReady) return;
-        initialCitiesReady = true;
-        reject(error);
-      };
-    }), 12000, `${getRegionLabel(targetRegionId)} city sync did not start. Check Firestore rules for islands/${islandId}/cities.`);
+
+    const applyOnlineCityPayload = (onlineCities, { render = true } = {}) => {
+      const firstCitiesSnapshot = !onlineCitiesLoaded;
+      if (activateOnFirstSnapshot && firstCitiesSnapshot) {
+        onlineActiveRegionId = targetRegionId;
+        state.activeRegionId = targetRegionId;
+        state.online = { ...(state.online || {}), ...nextOnlineState };
+        delete state.online.pendingIslandId;
+        delete state.online.pendingRegionId;
+      }
+      applyOnlineCities(onlineCities, targetRegionId);
+      onlineCitiesLoaded = true;
+      if (pendingOfflineProgressSeconds > 0) applyPendingOfflineProgress();
+      if (state?.mainCityId && getCityRegionId(state.mainCityId) === targetRegionId && cityById(state.mainCityId)?.owner !== "player") {
+        const nextOwned = playerCities()[0];
+        state.mainCityId = nextOwned?.id || state.mainCityId;
+      }
+      if (firstCitiesSnapshot) {
+        syncOwnedCitiesToOnline(true);
+        publishOnlinePresence(true);
+      }
+      if (render) renderAll();
+      onlineFreshClaimCityId = "";
+    };
+
     onlineStatusDetail.textContent = `Opening ${getRegionLabel(targetRegionId)}...`;
+    const initialCities = api.loadIslandCities
+      ? await withTimeout(api.loadIslandCities(islandId), 9000, `${getRegionLabel(targetRegionId)} city list is taking too long.`)
+      : [];
+    if (!Array.isArray(initialCities)) {
+      throw new Error(`${getRegionLabel(targetRegionId)} city list did not load.`);
+    }
+    applyOnlineCityPayload(initialCities);
+
     subscribeOnlineArmyWatchers(islandId);
     onlineIslandUnsubscribe = api.subscribeIsland(islandId, {
       onCities: onlineCities => {
-        const firstCitiesSnapshot = !onlineCitiesLoaded;
-        if (activateOnFirstSnapshot && firstCitiesSnapshot) {
-          onlineActiveRegionId = targetRegionId;
-          state.activeRegionId = targetRegionId;
-          state.online = { ...(state.online || {}), ...nextOnlineState };
-          delete state.online.pendingIslandId;
-          delete state.online.pendingRegionId;
-        }
-        applyOnlineCities(onlineCities, targetRegionId);
-        onlineCitiesLoaded = true;
-        if (pendingOfflineProgressSeconds > 0) applyPendingOfflineProgress();
-        if (state?.mainCityId && getCityRegionId(state.mainCityId) === targetRegionId && cityById(state.mainCityId)?.owner !== "player") {
-          const nextOwned = playerCities()[0];
-          state.mainCityId = nextOwned?.id || state.mainCityId;
-        }
-        if (firstCitiesSnapshot) {
-          syncOwnedCitiesToOnline(true);
-          publishOnlinePresence(true);
-        }
-        renderAll();
-        resolveInitialCities();
-        onlineFreshClaimCityId = "";
+        applyOnlineCityPayload(onlineCities);
       },
       onArmies: armies => {
         applyOnlineArmies(armies, islandId);
@@ -5520,12 +5549,10 @@ async function connectOnlineIsland(regionId, { claimHome = false, homeRegionId =
         applyOnlinePresence(presence);
       },
       onError: (error, source) => {
-        const shouldRejectInitial = source === "cities" && !initialCitiesReady;
-        handleOnlineSnapshotError(error, shouldRejectInitial ? rejectInitialCities : null);
+        handleOnlineSnapshotError(error, null);
       },
     });
 
-    await initialCitiesPromise;
     onlineWorldConnected = true;
     onlineLastError = "";
     await publishOnlinePresence(true);
