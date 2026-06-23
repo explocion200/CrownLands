@@ -17,6 +17,9 @@ const DEFAULT_ONLINE_REGION_ID = WORLD_REGIONS.find(region => region.id === "wes
 const ONLINE_CITY_SYNC_SECONDS = 20;
 const ONLINE_PRESENCE_SECONDS = 30;
 const ONLINE_PRESENCE_STALE_SECONDS = 90;
+const LEADERBOARD_SAVE_SECONDS = 60;
+const LEADERBOARD_STALE_REFRESH_MS = 5 * 60 * 1000;
+const KING_POWER_LEADERBOARD_LIMIT = 100;
 const ONLINE_ARMY_EXPIRY_GRACE_SECONDS = 8;
 const ONLINE_ARMY_RESOLVE_RETRY_SECONDS = 5;
 const PENDING_ARMY_MAX_AGE_MS = 3 * 24 * 60 * 60 * 1000;
@@ -1873,6 +1876,10 @@ let onlineIslandSummaries = new Map();
 let onlineIslandSummaryRefreshInFlight = false;
 let onlinePresenceTimer = 0;
 let onlinePresenceInFlight = false;
+let leaderboardSaveTimer = 0;
+let leaderboardSaveInFlight = false;
+let leaderboardLastSignature = "";
+let leaderboardLastSaveAt = 0;
 let overdueArmyResolveTimer = 0;
 let pendingArmyRecoveryInFlight = false;
 let updateCheckTimer = 0;
@@ -1979,6 +1986,7 @@ const modalTitle = document.getElementById("modalTitle");
 const modalBody = document.getElementById("modalBody");
 const closeModalBtn = document.getElementById("closeModalBtn");
 const logBtn = document.getElementById("logBtn");
+const leaderboardBtn = document.getElementById("leaderboardBtn");
 const outgoingAttackBtn = document.getElementById("outgoingAttackBtn");
 const outgoingAttackCount = document.getElementById("outgoingAttackCount");
 const outgoingAttackTime = document.getElementById("outgoingAttackTime");
@@ -4634,6 +4642,7 @@ async function flushOnlineSave(force = false) {
   try {
     await api.savePlayerProfile(getPlayerProfileSnapshot());
     await syncOwnedCitiesToOnline();
+    publishKingPowerLeaderboard();
     onlineLastSaveAt = Date.now();
     onlineLastError = "";
     updateOnlineUi();
@@ -4659,6 +4668,56 @@ function getOnlinePresenceSnapshot() {
     kingPower: state ? getKingPower() : 0,
     updatedAtMs: Date.now(),
   };
+}
+
+function getKingPowerLeaderboardSnapshot() {
+  const mainRegionId = state?.online?.mainRegionId || (state?.mainCityId ? getCityRegionId(state.mainCityId) : getActiveOnlineRegionId());
+  return {
+    displayName: state?.playerName || getOnlineApi()?.getUser?.()?.displayName || "Ruler",
+    playerName: state?.playerName || "Ruler",
+    flag: state?.flag || createDefaultFlag(),
+    kingPower: getKingPower(),
+    cityCount: state ? playerRegularCities().length : 0,
+    mainCityId: state?.mainCityId || "",
+    mainRegionId,
+    mainIslandId: state?.online?.mainIslandId || getOnlineIslandId(mainRegionId),
+    updatedAtMs: Date.now(),
+  };
+}
+
+function getLeaderboardEntrySignature(entry) {
+  return [
+    entry.playerName,
+    entry.kingPower,
+    entry.cityCount,
+    entry.mainCityId,
+    entry.mainRegionId,
+    JSON.stringify(normalizeFlag(entry.flag)),
+  ].join("|");
+}
+
+async function publishKingPowerLeaderboard({ force = false } = {}) {
+  if (!state || leaderboardSaveInFlight) return false;
+  if (!isOnlineWorldActive()) return false;
+  const api = getOnlineApi();
+  if (!api?.saveKingPowerLeaderboardEntry || !api?.isSignedIn?.()) return false;
+  const entry = getKingPowerLeaderboardSnapshot();
+  const signature = getLeaderboardEntrySignature(entry);
+  const needsStaleRefresh = Date.now() - leaderboardLastSaveAt >= LEADERBOARD_STALE_REFRESH_MS;
+  if (!force && signature === leaderboardLastSignature && !needsStaleRefresh) return false;
+
+  leaderboardSaveInFlight = true;
+  try {
+    await api.saveKingPowerLeaderboardEntry(entry);
+    leaderboardLastSignature = signature;
+    leaderboardLastSaveAt = Date.now();
+    return true;
+  } catch (error) {
+    console.warn("Could not publish King Power leaderboard entry", error);
+    return false;
+  } finally {
+    leaderboardSaveInFlight = false;
+  }
 }
 
 function normalizePresence(raw) {
@@ -7221,6 +7280,11 @@ function frame(now) {
       if (onlinePresenceTimer >= ONLINE_PRESENCE_SECONDS) {
         onlinePresenceTimer = 0;
         publishOnlinePresence();
+      }
+      leaderboardSaveTimer += dt;
+      if (leaderboardSaveTimer >= LEADERBOARD_SAVE_SECONDS) {
+        leaderboardSaveTimer = 0;
+        publishKingPowerLeaderboard();
       }
       overdueArmyResolveTimer += dt;
       if (overdueArmyResolveTimer >= ONLINE_ARMY_RESOLVE_RETRY_SECONDS) {
@@ -10136,6 +10200,108 @@ async function focusOutgoingAttackCity(cityId) {
   });
 }
 
+function normalizeLeaderboardEntry(raw) {
+  if (!raw || typeof raw !== "object") return null;
+  const uid = String(raw.uid || raw.id || "").trim();
+  if (!uid) return null;
+  return {
+    uid,
+    displayName: cleanName(raw.playerName || raw.displayName || "Ruler") || "Ruler",
+    flag: raw.flag || null,
+    kingPower: Math.max(0, Math.floor(Number(raw.kingPower) || 0)),
+    cityCount: Math.max(0, Math.floor(Number(raw.cityCount) || 0)),
+    mainCityId: String(raw.mainCityId || ""),
+    mainRegionId: normalizeRegionId(raw.mainRegionId || getRegionIdFromOnlineIslandId(raw.mainIslandId)),
+    updatedAtMs: normalizeTimestampMs(raw.updatedAtMs) || timestampToMs(raw.updatedAt),
+  };
+}
+
+function formatLeaderboardAge(updatedAtMs) {
+  const ageSeconds = Math.max(0, (Date.now() - normalizeTimestampMs(updatedAtMs)) / 1000);
+  if (!updatedAtMs || ageSeconds < 45) return "just now";
+  return `${formatDuration(ageSeconds)} ago`;
+}
+
+function renderLeaderboardRow(entry, index, currentUid) {
+  const isCurrent = entry.uid === currentUid;
+  return `
+    <article class="leaderboard-row ${isCurrent ? "current" : ""}">
+      <span class="leaderboard-rank">#${formatNumber(index + 1)}</span>
+      <span class="kingdom-flag kingdom-flag-small leaderboard-flag" data-leaderboard-flag="${index}" aria-hidden="true"><span class="flag-symbol"></span></span>
+      <div class="leaderboard-ruler">
+        <strong>${escapeHtml(entry.displayName)}</strong>
+        <small>${escapeHtml(getRegionLabel(entry.mainRegionId))} - ${formatNumber(entry.cityCount)} ${entry.cityCount === 1 ? "city" : "cities"}${isCurrent ? " - You" : ""}</small>
+      </div>
+      <div class="leaderboard-power">
+        <strong>${formatNumber(entry.kingPower)}</strong>
+        <small>${escapeHtml(formatLeaderboardAge(entry.updatedAtMs))}</small>
+      </div>
+    </article>
+  `;
+}
+
+function renderLeaderboardRows(rows) {
+  const list = modalBody?.querySelector("#leaderboardRows");
+  if (!list) return;
+  const currentUid = getCurrentOnlineUid();
+  const entries = rows.map(normalizeLeaderboardEntry).filter(Boolean);
+  list.innerHTML = entries.length
+    ? entries.map((entry, index) => renderLeaderboardRow(entry, index, currentUid)).join("")
+    : `<div class="leaderboard-empty">No King Power scores have been published yet.</div>`;
+  entries.forEach((entry, index) => {
+    applyFlagToElement(list.querySelector(`[data-leaderboard-flag="${index}"]`), entry.flag || createDefaultFlag());
+  });
+}
+
+async function refreshLeaderboardRows({ forcePublish = false } = {}) {
+  const api = getOnlineApi();
+  const list = modalBody?.querySelector("#leaderboardRows");
+  const refreshBtn = modalBody?.querySelector("#leaderboardRefreshBtn");
+  if (!list || !api?.loadKingPowerLeaderboard || !api?.isSignedIn?.()) {
+    if (list) list.innerHTML = `<div class="leaderboard-empty">Sign in online to view King Power ranks.</div>`;
+    return;
+  }
+  if (refreshBtn) refreshBtn.disabled = true;
+  list.innerHTML = `<div class="leaderboard-empty">Loading King Power ranks...</div>`;
+  try {
+    await publishKingPowerLeaderboard({ force: forcePublish });
+    const rows = await api.loadKingPowerLeaderboard(KING_POWER_LEADERBOARD_LIMIT);
+    if (!modal.open || !modal.classList.contains("leaderboard-modal")) return;
+    renderLeaderboardRows(rows);
+  } catch (error) {
+    console.warn("Could not load King Power leaderboard", error);
+    list.innerHTML = `<div class="leaderboard-empty">Could not load King Power ranks right now.</div>`;
+  } finally {
+    if (refreshBtn) refreshBtn.disabled = false;
+  }
+}
+
+function showLeaderboardModal() {
+  if (!state) return;
+  modal.classList.remove("battle-report-modal");
+  modal.classList.add("leaderboard-modal");
+  modalTitle.textContent = "King Power Ranks";
+  modalBody.innerHTML = `
+    <div class="leaderboard-panel">
+      <div class="leaderboard-toolbar">
+        <div>
+          <strong>Top ${formatNumber(KING_POWER_LEADERBOARD_LIMIT)}</strong>
+          <small>King Power = troops + city VP x ${formatNumber(KING_POWER_PER_CITY_VP)}</small>
+        </div>
+        <button id="leaderboardRefreshBtn" type="button">Refresh</button>
+      </div>
+      <div id="leaderboardRows" class="leaderboard-list">
+        <div class="leaderboard-empty">Loading King Power ranks...</div>
+      </div>
+    </div>
+  `;
+  modalBody.querySelector("#leaderboardRefreshBtn")?.addEventListener("click", () => {
+    refreshLeaderboardRows({ forcePublish: true });
+  });
+  if (!modal.open) modal.showModal();
+  refreshLeaderboardRows({ forcePublish: true });
+}
+
 function showLogModal() {
   if (!state) return;
   state.battleReports = normalizeBattleReports(state.battleReports);
@@ -10991,6 +11157,7 @@ document.addEventListener("keydown", event => {
   else closeProfileScreen();
 });
 logBtn.addEventListener("click", showLogModal);
+if (leaderboardBtn) leaderboardBtn.addEventListener("click", showLeaderboardModal);
 if (outgoingAttackBtn) outgoingAttackBtn.addEventListener("click", showOutgoingAttacksModal);
 if (incomingAttackBtn) incomingAttackBtn.addEventListener("click", showIncomingAttacksModal);
 if (cityListBtn) cityListBtn.addEventListener("click", showCityListModal);
@@ -11004,6 +11171,7 @@ modal.addEventListener("close", () => {
   modal.classList.remove("offline-reward-modal");
   modal.classList.remove("city-list-modal");
   modal.classList.remove("island-switcher-modal");
+  modal.classList.remove("leaderboard-modal");
   modal.classList.remove("incoming-attack-modal");
   modal.classList.remove("outgoing-attack-modal");
   if (!troopSliderActive) return;

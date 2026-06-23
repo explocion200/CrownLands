@@ -623,6 +623,48 @@
     return true;
   }
 
+  function cleanLeaderboardEntry(entry = {}) {
+    return {
+      uid: client.user?.uid || "",
+      displayName: String(entry.displayName || entry.playerName || client.user?.displayName || "Ruler").slice(0, 32),
+      playerName: String(entry.playerName || entry.displayName || client.user?.displayName || "Ruler").slice(0, 32),
+      flag: entry.flag || null,
+      kingPower: Math.max(0, Math.floor(Number(entry.kingPower) || 0)),
+      cityCount: Math.max(0, Math.floor(Number(entry.cityCount) || 0)),
+      mainCityId: String(entry.mainCityId || "").slice(0, 80),
+      mainRegionId: String(entry.mainRegionId || "").slice(0, 64),
+      mainIslandId: String(entry.mainIslandId || "").slice(0, 64),
+      updatedAtMs: Math.max(0, Number(entry.updatedAtMs) || Date.now()),
+    };
+  }
+
+  async function saveKingPowerLeaderboardEntry(entry = {}) {
+    await init();
+    const uid = requireSignedIn();
+    if (!uid) return false;
+    const { doc, setDoc, serverTimestamp } = client.modules.firestore;
+    await setDoc(doc(client.db, "leaderboards", "kingPower", "entries", uid), {
+      ...cleanLeaderboardEntry({ ...entry, updatedAtMs: Date.now() }),
+      uid,
+      updatedAt: serverTimestamp(),
+    }, { merge: true });
+    return true;
+  }
+
+  async function loadKingPowerLeaderboard(limitCount = 100) {
+    await init();
+    const uid = requireSignedIn();
+    if (!uid) return [];
+    const { collection, getDocs, query: firestoreQuery, orderBy, limit: firestoreLimit } = client.modules.firestore;
+    const entriesRef = collection(client.db, "leaderboards", "kingPower", "entries");
+    const safeLimit = Math.max(1, Math.min(100, Math.floor(Number(limitCount) || 100)));
+    const queryRef = firestoreQuery && orderBy && firestoreLimit
+      ? firestoreQuery(entriesRef, orderBy("kingPower", "desc"), firestoreLimit(safeLimit))
+      : entriesRef;
+    const snapshot = await getDocs(queryRef);
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  }
+
   async function loadIslandCitySummary(islandId = "main") {
     await init();
     const uid = requireSignedIn();
@@ -755,6 +797,8 @@
     saveArmyMovement,
     deleteArmyMovement,
     savePresence,
+    saveKingPowerLeaderboardEntry,
+    loadKingPowerLeaderboard,
     loadIslandCitySummary,
     loadOwnedCitiesAcrossIslands,
     subscribeIsland,
