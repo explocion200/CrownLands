@@ -38,7 +38,7 @@ service cloud.firestore {
       match /armies/{armyId} {
         allow read: if signedIn();
         allow create, update: if signedIn();
-        allow delete: if false;
+        allow delete: if signedIn();
       }
 
       match /reports/{reportId} {
