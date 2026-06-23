@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Crownlands - Medieval Island Conquest</title>
-  <link rel="stylesheet" href="styles.css?v=20260623-game-menu" />
+  <link rel="stylesheet" href="styles.css?v=20260623-loading-wheel" />
   <link rel="icon" href="data:," />
   <link rel="manifest" href="manifest.webmanifest" />
   <meta name="theme-color" content="#0c1018" />
@@ -15,6 +15,10 @@
       <div class="setup-card">
         <h1 class="sr-only">Crownlands</h1>
         <p class="sr-only">Sign in with Google, then enter your kingdom.</p>
+        <div id="menuLoadingWheel" class="loading-wheel menu-loading-wheel" hidden aria-hidden="true">
+          <img class="loading-wheel-ring" src="assets/loading-ring.png" alt="" draggable="false" />
+          <img class="loading-wheel-crown" src="assets/loading-crown.png" alt="" draggable="false" />
+        </div>
         <div class="online-login" aria-label="Online account status">
           <div>
             <strong id="onlineStatusText">Guest mode</strong>
@@ -60,6 +64,15 @@
           <div id="portalLayer" class="portal-layer"></div>
           <div id="cityLayer" class="city-layer"></div>
           <div id="armyLayer" class="army-layer"></div>
+        </div>
+        <div id="mapLoadingOverlay" class="map-loading-overlay" aria-hidden="true">
+          <div class="map-loading-panel">
+            <div class="loading-wheel map-loading-wheel">
+              <img class="loading-wheel-ring" src="assets/loading-ring.png" alt="" draggable="false" />
+              <img class="loading-wheel-crown" src="assets/loading-crown.png" alt="" draggable="false" />
+            </div>
+            <span id="mapLoadingLabel" class="map-loading-label">Loading island...</span>
+          </div>
         </div>
       </section>
 
@@ -179,6 +192,6 @@
   <script src="world-config.js"></script>
   <script src="firebase-config.js"></script>
   <script src="firebaseClient.js?v=20260623-background-online"></script>
-  <script src="game.js?v=20260623-background-online"></script>
+  <script src="game.js?v=20260623-loading-wheel"></script>
 </body>
 </html>

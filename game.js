@@ -1879,6 +1879,7 @@ let cityTapState = null;
 
 const setupScreen = document.getElementById("setupScreen");
 const gameView = document.querySelector(".game-view");
+const menuLoadingWheel = document.getElementById("menuLoadingWheel");
 const playerNameInput = document.getElementById("playerName");
 const startBtn = document.getElementById("startBtn");
 const freshBtn = document.getElementById("freshBtn");
@@ -1935,6 +1936,7 @@ const flagSaveBtn = document.getElementById("flagSaveBtn");
 const flagBackBtn = document.getElementById("flagBackBtn");
 const flagExitBtn = document.getElementById("flagExitBtn");
 const mapFrame = document.getElementById("mapFrame");
+const mapLoadingLabel = document.getElementById("mapLoadingLabel");
 const mapWorld = document.getElementById("mapWorld");
 const mapBg = document.getElementById("mapBg");
 const pathsSvg = document.getElementById("pathsSvg");
@@ -2897,6 +2899,15 @@ function preloadIslandMap(regionId) {
   return preloadImage(getIslandMapArtSrc(regionId));
 }
 
+function setSetupLoading(active, detail = "") {
+  const isActive = Boolean(active);
+  if (setupScreen) setupScreen.classList.toggle("loading", isActive);
+  if (menuLoadingWheel) menuLoadingWheel.hidden = !isActive;
+  if (isActive && detail && onlineStatusDetail) {
+    onlineStatusDetail.textContent = detail;
+  }
+}
+
 function setMapSwitchLoading(label = "") {
   if (!mapFrame) return;
   mapSwitchLoading = true;
@@ -2906,6 +2917,7 @@ function setMapSwitchLoading(label = "") {
   mapFrame.classList.remove("dragging");
   const loadingLabel = label ? String(label) : "Loading island...";
   mapFrame.dataset.loadingLabel = loadingLabel;
+  if (mapLoadingLabel) mapLoadingLabel.textContent = loadingLabel;
   mapFrame.classList.add("map-switching");
 }
 
@@ -2914,6 +2926,7 @@ function clearMapSwitchLoading() {
   if (!mapFrame) return;
   mapFrame.classList.remove("map-switching");
   delete mapFrame.dataset.loadingLabel;
+  if (mapLoadingLabel) mapLoadingLabel.textContent = "Loading island...";
 }
 
 function isMapInteractionBlocked() {
@@ -6020,12 +6033,14 @@ async function startFromInput(forceFresh = false) {
   const playerName = getPreferredPlayerName();
   const launchBtn = enterKingdomBtn || startBtn;
   const originalStartText = launchBtn?.textContent || "";
+  const originalStatusDetail = onlineStatusDetail?.textContent || "";
   try {
     if (launchBtn) {
       launchBtn.disabled = true;
       launchBtn.textContent = forceFresh ? "Creating..." : "Entering...";
     }
     if (freshBtn) freshBtn.disabled = true;
+    setSetupLoading(true, forceFresh ? "Creating kingdom..." : "Entering kingdom...");
 
     const shouldConnectOnline = Boolean(getOnlineApi()?.isSignedIn?.());
     const saved = forceFresh ? null : loadGame();
@@ -6051,6 +6066,10 @@ async function startFromInput(forceFresh = false) {
     requestAnimationFrame(() => centerOnCity(selectedSourceId || state.mainCityId || playerCities()[0]?.id));
     if (shouldConnectOnline) startOnlineSetupInBackground();
   } finally {
+    setSetupLoading(false);
+    if (setupScreen?.classList.contains("visible") && onlineStatusDetail && originalStatusDetail) {
+      onlineStatusDetail.textContent = originalStatusDetail;
+    }
     if (launchBtn) {
       launchBtn.disabled = false;
       launchBtn.textContent = originalStartText || "Enter Kingdom";
