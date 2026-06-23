@@ -3445,6 +3445,15 @@ function newGame(playerName) {
   };
 }
 
+function createOnlineEntryState(playerName) {
+  const entry = newGame(playerName);
+  entry.mainCityId = "";
+  entry.cities = getPlayableBaseCities().map(createNeutralCityFromBase);
+  entry.attacks = [];
+  entry.log = ["Connecting to the live Crownlands world."];
+  return entry;
+}
+
 function normalizeUpgrades(upgrades, sourceVersion = 6) {
   const normalized = createDefaultSkills();
 
@@ -5083,14 +5092,14 @@ async function setupOnlineWorld({ requireOnlineProfile = false } = {}) {
   let profileLoadFailed = false;
   try {
     if (api.loadPlayerProfile) {
-      profile = await withTimeout(api.loadPlayerProfile(), 8000, "Player profile lookup is taking too long.");
+      profile = await withTimeout(api.loadPlayerProfile(), 5000, "Player profile lookup is taking too long.");
     }
   } catch (error) {
     profileLoadFailed = true;
     console.warn("Could not load online profile before island setup", error);
   }
   if (profileLoadFailed && requireOnlineProfile) {
-    throw new Error("Online profile lookup is taking too long. Try again in a moment.");
+    console.warn("Continuing online setup without the player profile.");
   }
   if (profile && !isCurrentResetProfile(profile)) {
     profile = null;
@@ -5262,6 +5271,27 @@ async function connectOnlineIsland(regionId, { claimHome = false, homeRegionId =
       }), 12000, "Starting city claim is taking too long.");
 
       if (!claim?.cityId) throw new Error("No starting city was claimed.");
+      const redirectedRegionId = claim?.redirected && claim?.islandId
+        ? getRegionIdFromOnlineIslandId(claim.islandId)
+        : "";
+      if (redirectedRegionId && redirectedRegionId !== targetRegionId) {
+        onlineStatusDetail.textContent = `Opening your ${getRegionLabel(redirectedRegionId)} main island...`;
+        state.online.mainIslandId = claim.islandId;
+        state.online.mainRegionId = redirectedRegionId;
+        state.online.mainCityId = claim.cityId;
+        state.mainCityId = claim.cityId;
+        onlineWorldLoading = false;
+        return connectOnlineIsland(redirectedRegionId, {
+          claimHome: true,
+          homeRegionId: redirectedRegionId,
+          profile: {
+            ...(profile || {}),
+            mainIslandId: claim.islandId,
+            mainRegionId: redirectedRegionId,
+            mainCityId: claim.cityId,
+          },
+        });
+      }
       state.online.mainIslandId = islandId;
       state.online.mainRegionId = targetRegionId;
       state.online.mainCityId = claim?.cityId || state.online.mainCityId || state.mainCityId;
@@ -5990,7 +6020,7 @@ async function startFromInput(forceFresh = false) {
     if (!shouldConnectOnline) {
       throw new Error("Sign in with Google to play online.");
     }
-    state = newGame(playerName);
+    state = createOnlineEntryState(playerName);
     state.online = null;
     onlineWorldConnected = false;
     onlineCitiesLoaded = false;
@@ -6001,7 +6031,7 @@ async function startFromInput(forceFresh = false) {
     selectedMarchPercent = normalizeMarchPercent(state.marchPercent);
 
     if (onlineStatusDetail) onlineStatusDetail.textContent = "Loading your online city...";
-    const connected = await setupOnlineWorld({ requireOnlineProfile: true });
+    const connected = await setupOnlineWorld();
     if (!connected) throw new Error(onlineLastError || "Online city setup did not finish.");
     setupScreen.classList.remove("visible");
     clearSelection(false);

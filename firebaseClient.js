@@ -90,16 +90,37 @@
     return client.user.uid;
   }
 
+  function rememberLogin() {
+    savePlayerProfile({ lastLoginAt: Date.now() }).catch(error => {
+      console.warn("Could not update login timestamp", error);
+    });
+  }
+
+  function shouldUseRedirectFallback(error) {
+    const code = String(error?.code || "");
+    return code === "auth/popup-blocked"
+      || code === "auth/cancelled-popup-request"
+      || code === "auth/operation-not-supported-in-this-environment";
+  }
+
   async function signInWithGoogle() {
     await init();
     if (!client.configured) {
       throw new Error("Firebase config is still using placeholder values.");
     }
     if (client.error) throw client.error;
-    const result = await client.modules.auth.signInWithPopup(client.auth, client.provider);
-    client.user = serializeUser(result.user);
-    await savePlayerProfile({ lastLoginAt: Date.now() });
-    return client.user;
+    try {
+      const result = await client.modules.auth.signInWithPopup(client.auth, client.provider);
+      client.user = serializeUser(result.user);
+      rememberLogin();
+      return client.user;
+    } catch (error) {
+      if (shouldUseRedirectFallback(error) && client.modules.auth.signInWithRedirect) {
+        await client.modules.auth.signInWithRedirect(client.auth, client.provider);
+        return client.user;
+      }
+      throw error;
+    }
   }
 
   async function signOut() {
@@ -355,6 +376,8 @@
       const playerSnap = await transaction.get(playerRef);
       const playerData = playerSnap.exists() ? playerSnap.data() : {};
       const existingMainCityId = String(playerData.mainCityId || "");
+      const existingMainIslandId = String(playerData.mainIslandId || "");
+      const existingWorldId = String(playerData.worldId || "");
       const playerFlag = flag || playerData.flag || null;
       const playerWorldId = safeWorldId || playerData.worldId || "";
       const playerRegionId = safeMainRegionId || playerData.mainRegionId || "";
@@ -393,6 +416,16 @@
           updatedAt: serverTimestamp(),
         }, { merge: true });
       };
+
+      if (existingMainCityId && existingMainIslandId && existingMainIslandId !== islandId && (!safeWorldId || existingWorldId === safeWorldId)) {
+        return {
+          cityId: existingMainCityId,
+          islandId: existingMainIslandId,
+          mainRegionId: String(playerData.mainRegionId || ""),
+          alreadyClaimed: true,
+          redirected: true,
+        };
+      }
 
       if (playerData.mainIslandId === islandId && existingMainCityId && uniqueCandidateIds.includes(existingMainCityId)) {
         const mainCityRef = doc(client.db, "islands", islandId, "cities", existingMainCityId);
