@@ -10362,8 +10362,6 @@ function showLeaderboardModal() {
       <div class="leaderboard-toolbar">
         <div>
           <strong>Top ${formatNumber(KING_POWER_LEADERBOARD_LIMIT)}</strong>
-          <small>King Power = troops + city VP x ${formatNumber(KING_POWER_PER_CITY_VP)}</small>
-          <small id="leaderboardStatus">Loading ranks...</small>
         </div>
         <button id="leaderboardRefreshBtn" type="button">Refresh</button>
       </div>
