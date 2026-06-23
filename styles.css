@@ -3100,42 +3100,44 @@ input {
 .profile-action-row {
   display: flex;
   align-items: center;
-  gap: .72rem;
+  gap: .52rem;
 }
 
 [hidden] { display: none !important; }
 
 .portrait-placeholder {
   position: relative;
-  width: 58px;
-  height: 58px;
+  width: 82px;
+  height: 64px;
   border-radius: 16px;
-  border: 2px solid rgba(126, 196, 255, .72);
-  background:
-    linear-gradient(135deg, rgba(255,255,255,.12), transparent 42%),
-    linear-gradient(180deg, rgba(12, 28, 48, .96), rgba(4, 11, 23, .96));
-  box-shadow: 0 10px 28px rgba(0,0,0,.42), inset 0 0 0 3px rgba(255,255,255,.06);
+  border: 0;
+  background: transparent;
+  box-shadow: none;
 }
 
 .profile-button {
   isolation: isolate;
   display: grid;
   place-items: center;
-  padding: 5px;
+  padding: 0;
   color: var(--ink);
 }
 .profile-button::before {
   content: "";
   position: absolute;
-  inset: -10px -13px -11px;
+  inset: 0;
   z-index: 0;
   pointer-events: none;
-  background: url("assets/profile-hud-frame.png?v=20260623-profile-picture-frame") center / 100% 100% no-repeat;
+  background: url("assets/profile-hud-frame.png?v=20260623-profile-avatar-fit") center / 100% 100% no-repeat;
   filter: drop-shadow(0 8px 16px rgba(0,0,0,.34));
 }
 .profile-button > * {
   position: relative;
   z-index: 1;
+}
+.profile-button .kingdom-flag-small {
+  width: 46px;
+  height: 34px;
 }
 .profile-rank-btn {
   width: 50px;
@@ -3468,6 +3470,7 @@ input {
   min-width: 78px;
   height: 28px;
   margin-left: -9px;
+  margin-top: .16rem;
   padding: 0 .45rem;
   border-radius: 999px;
   display: flex;
@@ -3485,16 +3488,16 @@ input {
 
 .character-level-badge {
   position: absolute;
-  right: -8px;
-  bottom: -8px;
-  min-width: 38px;
-  height: 22px;
+  right: 9px;
+  bottom: 8px;
+  min-width: 32px;
+  height: 18px;
   padding: 0 .32rem;
   border-radius: 999px;
   display: grid;
   place-items: center;
   color: #211508;
-  font-size: .68rem;
+  font-size: .56rem;
   font-weight: 1000;
   border: 2px solid rgba(255, 248, 220, .9);
   background: linear-gradient(#ffd977, #e99a26);
@@ -3639,15 +3642,15 @@ input {
 .city-node.targeted .city-ring { box-shadow: 0 0 0 6px rgba(255, 255, 255, .26), 0 14px 25px rgba(0,0,0,.42); }
 
 @media (max-width: 780px) and (orientation: landscape) {
-  .profile-action-row { gap: .58rem; }
-  .profile-button::before { inset: -8px -10px -9px; }
-  .portrait-placeholder { width: 46px; height: 46px; border-radius: 14px; }
+  .profile-action-row { gap: .44rem; }
+  .portrait-placeholder { width: 68px; height: 53px; border-radius: 14px; }
+  .profile-button .kingdom-flag-small { width: 38px; height: 28px; }
   .profile-rank-btn { width: 40px; height: 40px; border-radius: 13px; }
   .resource-pill.city-list-btn,
   .resource-pill.island-switch-btn { width: 56px; min-width: 56px; max-width: 56px; height: 56px; border-radius: 16px; }
   .resource-pill.city-list-btn { right: calc(max(.75rem, env(safe-area-inset-right)) + 66px); }
-  .character-level-badge { min-width: 34px; height: 19px; right: -7px; bottom: -7px; font-size: .58rem; }
-  .profile-gold { height: 24px; min-width: 66px; font-size: .74rem; }
+  .character-level-badge { min-width: 28px; height: 16px; right: 7px; bottom: 6px; font-size: .5rem; }
+  .profile-gold { height: 24px; min-width: 66px; margin-top: .12rem; font-size: .74rem; }
   .profile-xp { min-width: 76px; font-size: .52rem; padding: .1rem .3rem; }
   .profile-cap { min-width: 76px; font-size: .56rem; padding: .12rem .3rem; }
   .selected-mini { grid-template-columns: 1fr; }
