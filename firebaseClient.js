@@ -533,6 +533,46 @@
     return true;
   }
 
+  async function loadIslandCitySummary(islandId = "main") {
+    await init();
+    const uid = requireSignedIn();
+    if (!uid || !islandId) return null;
+    const { collection, getDocs } = client.modules.firestore;
+    const snapshot = await getDocs(collection(client.db, "islands", islandId, "cities"));
+    const owners = new Set();
+    const rivalOwners = new Set();
+    let playerHeldCityCount = 0;
+    let ownCityCount = 0;
+    let rivalCityCount = 0;
+
+    snapshot.docs.forEach(cityDoc => {
+      const city = cityDoc.data() || {};
+      if (city.kind === "stronghold" || city.strongholdType) return;
+      const ownerKind = city.ownerKind || city.owner || "neutral";
+      const ownerUid = String(city.ownerUid || "");
+      if (ownerKind !== "player" || !ownerUid) return;
+      playerHeldCityCount += 1;
+      owners.add(ownerUid);
+      if (ownerUid === uid) {
+        ownCityCount += 1;
+      } else {
+        rivalCityCount += 1;
+        rivalOwners.add(ownerUid);
+      }
+    });
+
+    return {
+      islandId,
+      cityCount: snapshot.size,
+      playerHeldCityCount,
+      ownCityCount,
+      rivalCityCount,
+      rulerCount: owners.size,
+      rivalRulerCount: rivalOwners.size,
+      updatedAtMs: Date.now(),
+    };
+  }
+
   function subscribeIsland(islandId, handlers = {}) {
     if (!client.configured || !client.db || !islandId) return () => {};
     const { collection, doc, onSnapshot } = client.modules.firestore;
@@ -591,6 +631,7 @@
     saveArmyMovement,
     deleteArmyMovement,
     savePresence,
+    loadIslandCitySummary,
     subscribeIsland,
     isConfigured: () => client.configured,
     isReady: () => client.ready,

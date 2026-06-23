@@ -1084,6 +1084,16 @@ input {
   white-space: nowrap;
   text-shadow: -1px -1px 0 #090909, 1px -1px 0 #090909, -1px 1px 0 #090909, 1px 1px 0 #090909;
 }
+.foreign-ruler-name-inline {
+  max-width: 132px;
+  padding: .08rem .24rem;
+  border-radius: 999px;
+  color: #ffe8e5;
+  background: rgba(96, 18, 22, .72);
+  border: 1px solid rgba(255, 178, 170, .42);
+  font-size: .58rem;
+  line-height: 1;
+}
 .foreign-selected-banner {
   display: grid;
   grid-template-columns: 52px 46px max-content;

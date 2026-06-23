@@ -1855,6 +1855,8 @@ let onlineArmies = [];
 let onlineArmiesByIsland = new Map();
 let onlineArmyUnsubscribes = [];
 let onlinePresence = [];
+let onlineIslandSummaries = new Map();
+let onlineIslandSummaryRefreshInFlight = false;
 let onlinePresenceTimer = 0;
 let onlinePresenceInFlight = false;
 const islandImageLoadPromises = new Map();
@@ -4784,7 +4786,131 @@ function getIslandOwnedCityCount(regionId) {
 
 function getIslandSwitcherSummary(regionId) {
   const ownedCount = getIslandOwnedCityCount(regionId);
-  return `${formatNumber(ownedCount)} ${ownedCount === 1 ? "city" : "cities"} owned`;
+  return `${formatNumber(ownedCount)} yours`;
+}
+
+function summarizeIslandOccupancy(regionId, cities = state?.cities || []) {
+  const activeRegionId = normalizeRegionId(regionId);
+  const currentUid = getCurrentOnlineUid();
+  const owners = new Set();
+  const rivalOwners = new Set();
+  let playerHeldCityCount = 0;
+  let ownCityCount = 0;
+  let rivalCityCount = 0;
+
+  cities.forEach(city => {
+    if (!city || isStronghold(city) || getCityRegionId(city) !== activeRegionId) return;
+    const ownerKind = city.ownerKind || (city.owner === "player" || city.owner === "enemy" ? "player" : city.owner || "neutral");
+    const ownerUid = String(city.ownerUid || "");
+    const isLocalPlayerCity = city.owner === "player" && (!ownerUid || ownerUid === currentUid);
+    if (ownerKind !== "player" && !isLocalPlayerCity) return;
+
+    playerHeldCityCount += 1;
+    if (ownerUid) owners.add(ownerUid);
+    if (isLocalPlayerCity || (currentUid && ownerUid === currentUid)) {
+      ownCityCount += 1;
+    } else {
+      rivalCityCount += 1;
+      if (ownerUid) rivalOwners.add(ownerUid);
+    }
+  });
+
+  return {
+    regionId: activeRegionId,
+    islandId: getOnlineIslandId(activeRegionId),
+    playerHeldCityCount,
+    ownCityCount,
+    rivalCityCount,
+    rulerCount: owners.size || (playerHeldCityCount > 0 ? 1 : 0),
+    rivalRulerCount: rivalOwners.size || (rivalCityCount > 0 ? 1 : 0),
+    updatedAtMs: Date.now(),
+  };
+}
+
+function cacheIslandOccupancySummary(regionId, summary = null) {
+  const activeRegionId = normalizeRegionId(regionId);
+  const normalized = summary
+    ? {
+        regionId: activeRegionId,
+        islandId: summary.islandId || getOnlineIslandId(activeRegionId),
+        cityCount: Math.max(0, Math.floor(Number(summary.cityCount) || 0)),
+        playerHeldCityCount: Math.max(0, Math.floor(Number(summary.playerHeldCityCount) || 0)),
+        ownCityCount: Math.max(0, Math.floor(Number(summary.ownCityCount) || 0)),
+        rivalCityCount: Math.max(0, Math.floor(Number(summary.rivalCityCount) || 0)),
+        rulerCount: Math.max(0, Math.floor(Number(summary.rulerCount) || 0)),
+        rivalRulerCount: Math.max(0, Math.floor(Number(summary.rivalRulerCount) || 0)),
+        updatedAtMs: Math.max(0, Number(summary.updatedAtMs) || Date.now()),
+      }
+    : summarizeIslandOccupancy(activeRegionId);
+  onlineIslandSummaries.set(activeRegionId, normalized);
+  return normalized;
+}
+
+function getIslandOccupancySummary(regionId) {
+  const activeRegionId = normalizeRegionId(regionId);
+  if (state && activeRegionId === getActiveOnlineRegionId() && onlineCitiesLoaded) {
+    return cacheIslandOccupancySummary(activeRegionId);
+  }
+  return onlineIslandSummaries.get(activeRegionId) || null;
+}
+
+function getIslandRivalSummaryText(regionId) {
+  if (!getOnlineApi()?.isSignedIn?.()) return "";
+  const summary = getIslandOccupancySummary(regionId);
+  if (!summary) return "checking";
+  const rivals = Math.max(0, Number(summary.rivalRulerCount) || 0);
+  return `${formatNumber(rivals)} ${rivals === 1 ? "rival" : "rivals"}`;
+}
+
+function getIslandTileSummaryText(regionId) {
+  const ownedText = getIslandSwitcherSummary(regionId);
+  const rivalText = getIslandRivalSummaryText(regionId);
+  return rivalText ? `${ownedText} • ${rivalText}` : ownedText;
+}
+
+function getIslandTileAriaSummary(regionId) {
+  const parts = [getIslandSwitcherSummary(regionId)];
+  const summary = getIslandOccupancySummary(regionId);
+  if (summary) {
+    const rivals = Math.max(0, Number(summary.rivalRulerCount) || 0);
+    const rivalCities = Math.max(0, Number(summary.rivalCityCount) || 0);
+    parts.push(`${formatNumber(rivals)} rival ${rivals === 1 ? "ruler" : "rulers"}`);
+    parts.push(`${formatNumber(rivalCities)} rival-held ${rivalCities === 1 ? "city" : "cities"}`);
+  } else if (getOnlineApi()?.isSignedIn?.()) {
+    parts.push("checking rival presence");
+  }
+  return parts.join(", ");
+}
+
+function rerenderIslandSwitcherModalIfOpen() {
+  if (!modal.open || !modal.classList.contains("island-switcher-modal")) return;
+  renderIslandSwitcherModalContent();
+}
+
+async function refreshOnlineIslandSummaries(force = false) {
+  const api = getOnlineApi();
+  if (onlineIslandSummaryRefreshInFlight || !api?.loadIslandCitySummary || !api?.isSignedIn?.()) return false;
+  onlineIslandSummaryRefreshInFlight = true;
+  try {
+    const now = Date.now();
+    const regions = getRegionIds();
+    const requests = regions
+      .filter(regionId => force || !onlineIslandSummaries.get(regionId) || now - onlineIslandSummaries.get(regionId).updatedAtMs > 30000)
+      .map(async regionId => {
+        const summary = await api.loadIslandCitySummary(getOnlineIslandId(regionId));
+        if (summary) cacheIslandOccupancySummary(regionId, summary);
+      });
+    if (!requests.length) return true;
+    await Promise.allSettled(requests);
+    rerenderIslandSwitcherModalIfOpen();
+    return true;
+  } catch (error) {
+    onlineLastError = error?.message || String(error);
+    console.warn("Could not load island ownership summaries", error);
+    return false;
+  } finally {
+    onlineIslandSummaryRefreshInFlight = false;
+  }
 }
 
 function getIslandMapIconStyle(region) {
@@ -4806,10 +4932,10 @@ function getIslandMapIconStyle(region) {
 function renderIslandMapTile(region, activeRegionId, homeRegionId) {
   const regionId = normalizeRegionId(region.id);
   const label = region.label || regionId;
-  const ownedText = getIslandSwitcherSummary(regionId);
+  const summaryText = getIslandTileSummaryText(regionId);
   const isActive = regionId === activeRegionId;
   const isHome = regionId === homeRegionId;
-  const ariaParts = [label, ownedText];
+  const ariaParts = [label, getIslandTileAriaSummary(regionId)];
   if (isActive) ariaParts.push("current map");
   if (isHome) ariaParts.push("home island");
   return `
@@ -4825,17 +4951,14 @@ function renderIslandMapTile(region, activeRegionId, homeRegionId) {
         <img src="${escapeHtml(getIslandPreviewArtSrc(regionId))}" alt="" draggable="false" loading="lazy" decoding="async" fetchpriority="low" />
       </span>
       <span class="island-map-name">${escapeHtml(label)}</span>
-      <span class="island-map-owned">${escapeHtml(ownedText)}</span>
+      <span class="island-map-owned">${escapeHtml(summaryText)}</span>
       ${isActive ? `<span class="island-map-active-label">Current</span>` : ""}
       ${isHome ? `<span class="island-map-home-label">Home</span>` : ""}
     </button>
   `;
 }
 
-function showIslandSwitcherModal() {
-  if (!state) return;
-  modal.classList.add("island-switcher-modal");
-  modalTitle.textContent = "Map";
+function renderIslandSwitcherModalContent() {
   const activeRegionId = getActiveOnlineRegionId();
   const homeRegionId = getMainCityRegionId();
   modalBody.innerHTML = `
@@ -4851,6 +4974,15 @@ function showIslandSwitcherModal() {
   modalBody.querySelectorAll("[data-island-region]").forEach(button => {
     button.addEventListener("click", () => switchOnlineIsland(button.dataset.islandRegion));
   });
+}
+
+function showIslandSwitcherModal() {
+  if (!state) return;
+  modal.classList.add("island-switcher-modal");
+  modalTitle.textContent = "Map";
+  renderIslandSwitcherModalContent();
+  if (!modal.open) modal.showModal();
+  refreshOnlineIslandSummaries();
 }
 
 function prepareSelectionForIslandSwitch() {
@@ -5111,6 +5243,8 @@ function disconnectOnlineWorld() {
   onlineIslandUnsubscribe = null;
   clearOnlineArmyWatchers();
   onlinePresence = [];
+  onlineIslandSummaries = new Map();
+  onlineIslandSummaryRefreshInFlight = false;
   onlinePresenceTimer = 0;
   onlinePresenceInFlight = false;
   onlineWorldConnected = false;
@@ -5499,6 +5633,7 @@ function applyOnlineCities(onlineCities, regionId = getActiveOnlineRegionId()) {
     state.online.activeRegionId = activeRegionId;
     state.online.islandId = getOnlineIslandId(activeRegionId);
   }
+  cacheIslandOccupancySummary(activeRegionId);
   ensureLoadedMainCityForRegion(activeRegionId);
 }
 
@@ -7912,6 +8047,9 @@ function renderCities(force = false) {
     const isSelectedForeign = city.owner !== "player" && city.id === selectedTargetId && !sendMode;
     const ownerName = getCityOwnerDisplayName(city);
     const ownerFlag = renderCityOwnerFlag(city);
+    const rivalOwnerName = city.owner === "enemy" && ownerName && ownerName !== OWNER.enemy.label
+      ? `<strong class="foreign-ruler-name foreign-ruler-name-inline">${escapeHtml(ownerName)}</strong>`
+      : "";
     const cityLabel = city.owner === "player"
       ? `
         <span class="city-label player-city-label">
@@ -7942,6 +8080,7 @@ function renderCities(force = false) {
         </span>`
         : `
         <span class="city-label foreign-city-label">
+          ${rivalOwnerName}
           <strong class="city-name">${escapeHtml(city.name)}</strong>
           <span class="foreign-city-shield">
             ${ownerFlag}
