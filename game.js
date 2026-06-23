@@ -29,6 +29,26 @@ const IMAGE_PRELOAD_TIMEOUT_MS = 15000;
 const HUD_RENDER_INTERVAL_MS = 250;
 const MAP_RENDER_INTERVAL_MS = 1600;
 const CITY_LIST_PAGE_SIZE = 5;
+const SHOP_ITEMS = [
+  {
+    id: "shield_12h",
+    label: "12 hour shield",
+    description: "Placeholder defensive item. Shield mechanics will be added later.",
+    cost: 50_000,
+  },
+  {
+    id: "troop_boost_1h",
+    label: "1h troop boost",
+    description: "Placeholder production boost item. Troop boost mechanics will be added later.",
+    cost: 10_000,
+  },
+  {
+    id: "anti_scout_1h",
+    label: "1h anti scout",
+    description: "Placeholder anti-scout item. Scout-blocking mechanics will be added later.",
+    cost: 10_000,
+  },
+];
 const MAIN_CITY_CHANGE_CITY_LIMIT = 30;
 const MAIN_CITY_CHANGE_COOLDOWN_MS = 24 * 60 * 60 * 1000;
 const MAX_OFFLINE_PROGRESS_SECONDS = 7 * 24 * 60 * 60;
@@ -1924,6 +1944,7 @@ const islandSwitchBtn = document.getElementById("islandSwitchBtn");
 const islandSwitchLabel = document.getElementById("islandSwitchLabel");
 const cityListBtn = document.getElementById("cityListBtn");
 const cityText = document.getElementById("cityText");
+const shopBtn = document.getElementById("shopBtn");
 const neutralCapText = document.getElementById("neutralCapText");
 const characterLevelBadge = document.getElementById("characterLevelBadge");
 const characterXpText = document.getElementById("characterXpText");
@@ -3455,6 +3476,7 @@ function newGame(playerName) {
     gameSeconds: 0,
     lastRealTimeMs: Date.now(),
     upgrades: createDefaultSkills(),
+    shopItems: createDefaultShopItems(),
     daily: { date: currentLocalDateKey(), neutralCaptures: 0, harvestedBonuses: 0, harvestedGoldBonuses: 0, harvestedTroopBonuses: 0 },
     harvestBonuses: [],
     harvestSpawnTimer: HARVEST_BONUS_INITIAL_SPAWN_SECONDS,
@@ -3470,6 +3492,28 @@ function newGame(playerName) {
     log: [`Five-island conquest started with ${ISLAND_CITY_COUNT} city slots across individual island maps.`],
     gameOver: null,
   };
+}
+
+function createDefaultShopItems() {
+  return SHOP_ITEMS.reduce((inventory, item) => {
+    inventory[item.id] = 0;
+    return inventory;
+  }, {});
+}
+
+function normalizeShopItems(items) {
+  const normalized = createDefaultShopItems();
+  if (!items || typeof items !== "object") return normalized;
+  SHOP_ITEMS.forEach(item => {
+    normalized[item.id] = Math.max(0, Math.floor(Number(items[item.id]) || 0));
+  });
+  return normalized;
+}
+
+function ensureShopItems() {
+  if (!state) return createDefaultShopItems();
+  state.shopItems = normalizeShopItems(state.shopItems);
+  return state.shopItems;
 }
 
 function createOnlineEntryState(playerName) {
@@ -4499,6 +4543,7 @@ function getPlayerProfileSnapshot() {
     flag: state?.flag || createDefaultFlag(),
     character: state?.character ? normalizeCharacterProgress(state.character) : createCharacterProgress(),
     upgrades: state?.upgrades ? normalizeUpgrades(state.upgrades, state.version || 20) : createDefaultSkills(),
+    shopItems: state ? normalizeShopItems(state.shopItems) : createDefaultShopItems(),
     cityCount: state ? playerRegularCities().length : 0,
     kingPower: state ? getKingPower() : 0,
     gold: state ? Math.floor(Number(state.gold) || 0) : 0,
@@ -4514,6 +4559,7 @@ function applyOnlineProfileSnapshot(profile = null, fallbackPlayerName = "Ricky"
   state.flag = normalizeFlag(profile.flag);
   state.character = normalizeCharacterProgress(profile.character);
   state.upgrades = normalizeUpgrades(profile.upgrades, state.version || WORLD_SCHEMA_VERSION);
+  state.shopItems = normalizeShopItems(profile.shopItems);
   syncCharacterSkillPoints(state.character, state.upgrades, profile.character?.skillPoints);
   state.gold = Math.max(TEST_STARTING_GOLD, Math.floor(Number(profile.gold) || 0));
   state.mainCityChangedAtMs = normalizeTimestampMs(profile.mainCityChangedAtMs);
@@ -9623,6 +9669,74 @@ function renderCityListRow(city) {
   `;
 }
 
+function getShopItemById(itemId) {
+  return SHOP_ITEMS.find(item => item.id === itemId) || null;
+}
+
+function renderShopItem(item, inventory) {
+  const owned = Math.max(0, Math.floor(Number(inventory[item.id]) || 0));
+  const canBuy = state && Math.floor(Number(state.gold) || 0) >= item.cost;
+  return `
+    <article class="shop-item">
+      <div>
+        <strong>${escapeHtml(item.label)}</strong>
+        <span>${formatNumber(item.cost)} gold</span>
+        <small>Owned: ${formatNumber(owned)}</small>
+        <small>${escapeHtml(item.description)}</small>
+      </div>
+      <button class="shop-buy-btn" data-shop-buy="${escapeHtml(item.id)}" type="button" ${canBuy ? "" : "disabled"}>Buy</button>
+    </article>
+  `;
+}
+
+function renderShopModal() {
+  if (!state) return;
+  const inventory = ensureShopItems();
+  modalTitle.textContent = "Shop";
+  modalBody.innerHTML = `
+    <div class="shop-panel">
+      <section class="shop-balance">
+        <span>Gold available</span>
+        <strong>${formatNumber(Math.floor(Number(state.gold) || 0))}</strong>
+      </section>
+      <div class="shop-items">
+        ${SHOP_ITEMS.map(item => renderShopItem(item, inventory)).join("")}
+      </div>
+    </div>
+  `;
+  modalBody.querySelectorAll("[data-shop-buy]").forEach(button => {
+    button.addEventListener("click", () => buyShopItem(button.dataset.shopBuy));
+  });
+}
+
+function showShopModal() {
+  if (!state) return;
+  modal.classList.remove("battle-report-modal", "city-list-modal", "island-switcher-modal", "leaderboard-modal", "incoming-attack-modal", "outgoing-attack-modal");
+  modal.classList.add("shop-modal");
+  renderShopModal();
+  if (!modal.open) modal.showModal();
+}
+
+function buyShopItem(itemId) {
+  if (!state) return;
+  const item = getShopItemById(itemId);
+  if (!item) return;
+  const currentGold = Math.floor(Number(state.gold) || 0);
+  if (currentGold < item.cost) {
+    showToast(`${item.label} costs ${formatNumber(item.cost)} gold.`);
+    renderShopModal();
+    return;
+  }
+  const inventory = ensureShopItems();
+  state.gold = currentGold - item.cost;
+  inventory[item.id] = Math.max(0, Math.floor(Number(inventory[item.id]) || 0)) + 1;
+  addLog(`Bought ${item.label} for ${formatNumber(item.cost)} gold.`);
+  saveGame();
+  renderHud();
+  renderShopModal();
+  showToast(`Bought ${item.label}`);
+}
+
 function showAttackPreview(source, target) {
   if (!source || !target || source.owner !== "player" || target.owner === "player") return;
   if (source.troops < 1) {
@@ -11150,6 +11264,7 @@ if (playerNameInput) {
   });
 }
 if (fullscreenBtn) fullscreenBtn.addEventListener("click", toggleFullscreen);
+if (shopBtn) shopBtn.addEventListener("click", showShopModal);
 if (islandSwitchBtn) islandSwitchBtn.addEventListener("click", showIslandSwitcherModal);
 if (profileBtn) profileBtn.addEventListener("click", showProfileScreen);
 if (profileCloseBtn) profileCloseBtn.addEventListener("click", closeProfileScreen);
@@ -11256,6 +11371,7 @@ modal.addEventListener("close", () => {
   modal.classList.remove("city-list-modal");
   modal.classList.remove("island-switcher-modal");
   modal.classList.remove("leaderboard-modal");
+  modal.classList.remove("shop-modal");
   modal.classList.remove("incoming-attack-modal");
   modal.classList.remove("outgoing-attack-modal");
   if (!troopSliderActive) return;
