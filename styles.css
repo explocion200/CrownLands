@@ -3437,6 +3437,48 @@ input {
 .profile-skill-summary strong { display: block; }
 .profile-skill-summary span { overflow: hidden; color: #9ed5ff; font-size: .68rem; font-weight: 900; text-overflow: ellipsis; white-space: nowrap; }
 .profile-skill-summary strong { overflow: hidden; color: #fff4c8; font-size: 1rem; text-overflow: ellipsis; white-space: nowrap; }
+.profile-skill-reset {
+  min-height: 54px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: .65rem;
+  margin-bottom: .7rem;
+  padding: .58rem .68rem;
+  border-radius: 8px;
+  background: linear-gradient(90deg, rgba(64,35,24,.84), rgba(13,44,69,.72));
+  border: 1px solid rgba(246,190,82,.36);
+}
+.profile-skill-reset strong,
+.profile-skill-reset small {
+  display: block;
+}
+.profile-skill-reset strong {
+  color: #fff4c8;
+  font-size: .95rem;
+}
+.profile-skill-reset small {
+  margin-top: .08rem;
+  color: #cfe9ff;
+  font-size: .68rem;
+  font-weight: 850;
+  line-height: 1.25;
+}
+.profile-skill-reset button {
+  min-width: 82px;
+  min-height: 40px;
+  padding: 0 .7rem;
+  border-radius: 10px;
+  color: #211508;
+  background: linear-gradient(#ffd878, #e69627);
+  box-shadow: inset 0 -4px 0 rgba(0,0,0,.18), 0 7px 14px rgba(0,0,0,.22);
+  font-weight: 950;
+}
+.profile-skill-reset button:disabled {
+  color: rgba(255,255,255,.72);
+  background: rgba(255,255,255,.12);
+  box-shadow: none;
+}
 .profile-skill-list {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -3577,6 +3619,8 @@ input {
   .profile-skills-view { padding-top: .55rem; }
   .profile-skill-summary { margin-bottom: .45rem; }
   .profile-skill-summary > div { padding: .42rem .55rem; }
+  .profile-skill-reset { min-height: 46px; margin-bottom: .45rem; padding: .42rem .55rem; }
+  .profile-skill-reset button { min-height: 34px; min-width: 72px; }
   .profile-skill-list { gap: .35rem .55rem; }
   .profile-skill-list .skill-row { padding: .42rem .55rem; }
 }

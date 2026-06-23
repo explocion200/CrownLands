@@ -396,6 +396,7 @@ const CITY_LEVEL_STATS = {
 };
 const KING_POWER_PER_TROOP = 1;
 const KING_POWER_PER_CITY_VP = 10;
+const SKILL_RESET_COST = 10_000;
 
 const SKILL_CONFIG = {
   striker: { label: "Striker", percentPerLevel: 2, description: "Attack combat bonus for outgoing armies." },
@@ -8440,11 +8441,20 @@ function renderProfileSkills() {
   state.character = normalizeCharacterProgress(state.character);
   state.upgrades = normalizeUpgrades(state.upgrades, state.version);
   const points = Math.max(0, Math.floor(Number(state.character.skillPoints) || 0));
+  const spentPoints = getSpentSkillPoints();
+  const canResetSkills = spentPoints > 0 && Math.floor(Number(state.gold) || 0) >= SKILL_RESET_COST;
   skillsView.innerHTML = `
     <div class="profile-skill-summary" aria-label="Hero skill progress">
       <div><span>Skill points</span><strong>${formatNumber(points)}</strong></div>
-      <div><span>Points spent</span><strong>${formatNumber(getSpentSkillPoints())}</strong></div>
+      <div><span>Points spent</span><strong>${formatNumber(spentPoints)}</strong></div>
     </div>
+    <section class="profile-skill-reset">
+      <div>
+        <strong>Reset skills</strong>
+        <small>Costs ${formatNumber(SKILL_RESET_COST)} gold and returns ${formatNumber(spentPoints)} spent ${spentPoints === 1 ? "point" : "points"}.</small>
+      </div>
+      <button id="resetSkillsBtn" type="button" ${canResetSkills ? "" : "disabled"}>Reset</button>
+    </section>
     <div class="profile-skill-list">
       ${SKILL_ORDER.map(skillRow).join("")}
     </div>
@@ -8452,6 +8462,7 @@ function renderProfileSkills() {
   skillsView.querySelectorAll("button[data-skill]").forEach(buttonElement => {
     buttonElement.addEventListener("click", () => buySkill(buttonElement.dataset.skill));
   });
+  skillsView.querySelector("#resetSkillsBtn")?.addEventListener("click", resetSkills);
 }
 
 function beginProfileNameEdit() {
@@ -10046,6 +10057,7 @@ function buySkill(skill) {
   const config = SKILL_CONFIG[skill];
   if (!config) return;
   state.character = normalizeCharacterProgress(state.character);
+  state.upgrades = normalizeUpgrades(state.upgrades, state.version);
   if (isSkillAtCap(skill)) {
     showToast(`${config.label} is capped at ${config.maxPercent}%.`);
     return;
@@ -10059,6 +10071,31 @@ function buySkill(skill) {
   addLog(`${SKILL_CONFIG[skill].label} improved to level ${state.upgrades[skill]}.`);
   saveGame();
   renderAll();
+}
+
+function resetSkills() {
+  if (!state) return;
+  state.character = normalizeCharacterProgress(state.character);
+  state.upgrades = normalizeUpgrades(state.upgrades, state.version);
+  const spentPoints = getSpentSkillPoints();
+  if (spentPoints < 1) {
+    showToast("No spent skill points to reset.");
+    renderProfileSkills();
+    return;
+  }
+  const currentGold = Math.floor(Number(state.gold) || 0);
+  if (currentGold < SKILL_RESET_COST) {
+    showToast(`Skill reset costs ${formatNumber(SKILL_RESET_COST)} gold.`);
+    renderProfileSkills();
+    return;
+  }
+  state.gold = currentGold - SKILL_RESET_COST;
+  state.character.skillPoints = Math.max(0, Math.floor(Number(state.character.skillPoints) || 0)) + spentPoints;
+  state.upgrades = createDefaultSkills();
+  addLog(`Skills reset for ${formatNumber(SKILL_RESET_COST)} gold. Refunded ${formatNumber(spentPoints)} skill ${spentPoints === 1 ? "point" : "points"}.`);
+  saveGame();
+  renderAll();
+  showToast(`Skills reset: +${formatNumber(spentPoints)} points`);
 }
 
 function getSkillCost(skill) {
