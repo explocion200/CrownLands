@@ -5994,7 +5994,12 @@ async function startFromInput(forceFresh = false) {
     selectedMarchPercent = normalizeMarchPercent(state.marchPercent);
     const requiresOnlineWorld = Boolean(getOnlineApi()?.isSignedIn?.());
     const onlineConnected = requiresOnlineWorld ? await setupOnlineWorld() : false;
-    if (requiresOnlineWorld && !onlineConnected) return;
+    if (requiresOnlineWorld && !onlineConnected) {
+      state.online = null;
+      onlineWorldConnected = false;
+      onlineCitiesLoaded = false;
+      showToast("Online setup is still having trouble. Entering fresh local kingdom.");
+    }
     if (!onlineConnected) applyPendingOfflineProgress();
     setupScreen.classList.remove("visible");
     clearSelection(false);
