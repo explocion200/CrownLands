@@ -62,6 +62,7 @@ const DEFENSE_STRONGHOLD_LEVEL = 30;
 const DEFENSE_STRONGHOLD_START_TROOPS = 10000;
 const STRONGHOLD_IDS = new Set([GOLD_STRONGHOLD_ID, TRAINING_STRONGHOLD_ID, SPEED_STRONGHOLD_ID, DEFENSE_STRONGHOLD_ID]);
 const WEST_ISLAND_ART_SRC = "assets/west-island.png";
+const WEST_ISLAND_THUMB_SRC = "assets/thumbnails/west-island-thumb.jpg";
 const WEST_ISLAND_IMAGE_WIDTH = 1024;
 const WEST_ISLAND_IMAGE_HEIGHT = 1536;
 const WEST_CENTER_TELEPORT_IMAGE_POINT = { x: 802, y: 795 };
@@ -91,6 +92,7 @@ const WEST_ISLAND_CITY_POINTS = [
   { x: 810, y: 620 }, { x: 810, y: 940 },
 ];
 const NORTH_ISLAND_ART_SRC = "assets/north-island.png";
+const NORTH_ISLAND_THUMB_SRC = "assets/thumbnails/north-island-thumb.jpg";
 const NORTH_ISLAND_IMAGE_WIDTH = 1448;
 const NORTH_ISLAND_IMAGE_HEIGHT = 1086;
 const NORTH_TRAINING_STRONGHOLD_IMAGE_POINT = { x: 724, y: 560 };
@@ -123,6 +125,7 @@ const NORTH_ISLAND_CITY_POINTS = [
   { x: 490, y: 480 }, { x: 760, y: 770 },
 ];
 const EAST_ISLAND_ART_SRC = "assets/east-island.png";
+const EAST_ISLAND_THUMB_SRC = "assets/thumbnails/east-island-thumb.jpg";
 const EAST_ISLAND_IMAGE_WIDTH = 1086;
 const EAST_ISLAND_IMAGE_HEIGHT = 1448;
 const EAST_SPEED_STRONGHOLD_IMAGE_POINT = { x: 540, y: 605 };
@@ -154,6 +157,7 @@ const EAST_ISLAND_CITY_POINTS = [
   { x: 660, y: 800 }, { x: 720, y: 790 },
 ];
 const SOUTH_ISLAND_ART_SRC = "assets/south-island.png";
+const SOUTH_ISLAND_THUMB_SRC = "assets/thumbnails/south-island-thumb.jpg";
 const SOUTH_ISLAND_IMAGE_WIDTH = 1446;
 const SOUTH_ISLAND_IMAGE_HEIGHT = 1087;
 const SOUTH_CENTER_TELEPORT_IMAGE_POINT = { x: 724, y: 205 };
@@ -188,6 +192,7 @@ const SOUTH_ISLAND_CITY_POINTS = [
 ];
 const CENTER_REGION_CITY_COUNT = 70;
 const CENTER_ISLAND_ART_SRC = "assets/center-island.png";
+const CENTER_ISLAND_THUMB_SRC = "assets/thumbnails/center-island-thumb.jpg";
 const CENTER_ISLAND_IMAGE_WIDTH = 1254;
 const CENTER_ISLAND_IMAGE_HEIGHT = 1254;
 const CENTER_ISLAND_TELEPORTS = [
@@ -1841,6 +1846,7 @@ let onlineWorldConnected = false;
 let onlineCitiesLoaded = false;
 let onlineFreshClaimCityId = "";
 let onlineActiveRegionId = DEFAULT_ONLINE_REGION_ID;
+let mapSwitchLoading = false;
 let onlineCitySyncTimer = 0;
 let onlineCitySyncInFlight = false;
 let onlineCitySyncQueued = false;
@@ -1850,6 +1856,7 @@ let onlineArmyUnsubscribes = [];
 let onlinePresence = [];
 let onlinePresenceTimer = 0;
 let onlinePresenceInFlight = false;
+const islandImageLoadPromises = new Map();
 let pendingOfflineProgressSeconds = 0;
 let pendingOfflineProductionCities = [];
 let localDirtyCityIds = new Set();
@@ -2841,6 +2848,73 @@ function syncMapSurfaceToActiveIsland(force = false) {
   pathRenderSignature = "";
 }
 
+function getIslandMapArtSrc(regionId) {
+  const targetRegionId = normalizeRegionId(regionId);
+  if (targetRegionId === "west") return WEST_ISLAND_ART_SRC;
+  if (targetRegionId === "north") return NORTH_ISLAND_ART_SRC;
+  if (targetRegionId === "east") return EAST_ISLAND_ART_SRC;
+  if (targetRegionId === "south") return SOUTH_ISLAND_ART_SRC;
+  if (targetRegionId === "center") return CENTER_ISLAND_ART_SRC;
+  return "";
+}
+
+function getIslandPreviewArtSrc(regionId) {
+  const targetRegionId = normalizeRegionId(regionId);
+  if (targetRegionId === "west") return WEST_ISLAND_THUMB_SRC;
+  if (targetRegionId === "north") return NORTH_ISLAND_THUMB_SRC;
+  if (targetRegionId === "east") return EAST_ISLAND_THUMB_SRC;
+  if (targetRegionId === "south") return SOUTH_ISLAND_THUMB_SRC;
+  if (targetRegionId === "center") return CENTER_ISLAND_THUMB_SRC;
+  return CENTER_ISLAND_THUMB_SRC;
+}
+
+function preloadImage(src) {
+  const imageSrc = String(src || "");
+  if (!imageSrc) return Promise.resolve(false);
+  if (islandImageLoadPromises.has(imageSrc)) return islandImageLoadPromises.get(imageSrc);
+
+  const promise = new Promise(resolve => {
+    const image = new Image();
+    image.decoding = "async";
+    image.loading = "eager";
+    image.onload = () => {
+      const decodePromise = typeof image.decode === "function" ? image.decode().catch(() => {}) : Promise.resolve();
+      decodePromise.finally(() => resolve(true));
+    };
+    image.onerror = () => resolve(false);
+    image.src = imageSrc;
+  });
+  islandImageLoadPromises.set(imageSrc, promise);
+  return promise;
+}
+
+function preloadIslandMap(regionId) {
+  return preloadImage(getIslandMapArtSrc(regionId));
+}
+
+function setMapSwitchLoading(label = "") {
+  if (!mapFrame) return;
+  mapSwitchLoading = true;
+  activePointers.clear();
+  panState = null;
+  pinchState = null;
+  mapFrame.classList.remove("dragging");
+  const loadingLabel = label ? String(label) : "Loading island...";
+  mapFrame.dataset.loadingLabel = loadingLabel;
+  mapFrame.classList.add("map-switching");
+}
+
+function clearMapSwitchLoading() {
+  mapSwitchLoading = false;
+  if (!mapFrame) return;
+  mapFrame.classList.remove("map-switching");
+  delete mapFrame.dataset.loadingLabel;
+}
+
+function isMapInteractionBlocked() {
+  return Boolean(onlineWorldLoading || mapSwitchLoading);
+}
+
 function renderWorldMap() {
   if (!mapBg) return;
   const bounds = getActiveMapBounds();
@@ -2849,26 +2923,16 @@ function renderWorldMap() {
   mapBg.classList.toggle("east-image-map", bounds.regionId === "east");
   mapBg.classList.toggle("south-image-map", bounds.regionId === "south");
   mapBg.classList.toggle("center-image-map", bounds.regionId === "center");
-  if (bounds.regionId === "west") {
-    mapBg.innerHTML = `<img class="island-art-map west-island-art" src="${WEST_ISLAND_ART_SRC}" alt="" draggable="false" />`;
+  const islandArtSrc = getIslandMapArtSrc(bounds.regionId);
+  if (islandArtSrc) {
+    if (mapBg.dataset.imageRegion === bounds.regionId && mapBg.dataset.imageSrc === islandArtSrc && mapBg.firstElementChild?.tagName === "IMG") return;
+    mapBg.dataset.imageRegion = bounds.regionId;
+    mapBg.dataset.imageSrc = islandArtSrc;
+    mapBg.innerHTML = `<img class="island-art-map ${escapeHtml(bounds.regionId)}-island-art" src="${escapeHtml(islandArtSrc)}" alt="" draggable="false" decoding="async" loading="eager" fetchpriority="high" />`;
     return;
   }
-  if (bounds.regionId === "north") {
-    mapBg.innerHTML = `<img class="island-art-map north-island-art" src="${NORTH_ISLAND_ART_SRC}" alt="" draggable="false" />`;
-    return;
-  }
-  if (bounds.regionId === "east") {
-    mapBg.innerHTML = `<img class="island-art-map east-island-art" src="${EAST_ISLAND_ART_SRC}" alt="" draggable="false" />`;
-    return;
-  }
-  if (bounds.regionId === "south") {
-    mapBg.innerHTML = `<img class="island-art-map south-island-art" src="${SOUTH_ISLAND_ART_SRC}" alt="" draggable="false" />`;
-    return;
-  }
-  if (bounds.regionId === "center") {
-    mapBg.innerHTML = `<img class="island-art-map center-island-art" src="${CENTER_ISLAND_ART_SRC}" alt="" draggable="false" />`;
-    return;
-  }
+  delete mapBg.dataset.imageRegion;
+  delete mapBg.dataset.imageSrc;
   const activeRegion = bounds.region;
   const regionTerrain = NO_CITY_TERRAIN.filter(shape => shape.regionId === bounds.regionId);
   const regionMountains = TERRAIN_BLOCKERS.filter(shape => shape.regionId === bounds.regionId);
@@ -2904,7 +2968,7 @@ function renderIslandTeleporters() {
     `;
     buttonElement.addEventListener("click", event => {
       event.stopPropagation();
-      if (onlineWorldLoading) return;
+      if (isMapInteractionBlocked()) return;
       switchOnlineIsland(teleport.targetRegionId);
     });
     portalLayer.appendChild(buttonElement);
@@ -4700,16 +4764,6 @@ function getIslandOwnedCityCount(regionId) {
   return state ? playerRegularCities().filter(city => getCityRegionId(city) === targetRegionId).length : 0;
 }
 
-function getIslandPreviewArtSrc(regionId) {
-  const targetRegionId = normalizeRegionId(regionId);
-  if (targetRegionId === "west") return WEST_ISLAND_ART_SRC;
-  if (targetRegionId === "north") return NORTH_ISLAND_ART_SRC;
-  if (targetRegionId === "east") return EAST_ISLAND_ART_SRC;
-  if (targetRegionId === "south") return SOUTH_ISLAND_ART_SRC;
-  if (targetRegionId === "center") return CENTER_ISLAND_ART_SRC;
-  return CENTER_ISLAND_ART_SRC;
-}
-
 function getIslandSwitcherSummary(regionId) {
   const ownedCount = getIslandOwnedCityCount(regionId);
   return `${formatNumber(ownedCount)} ${ownedCount === 1 ? "city" : "cities"} owned`;
@@ -4746,11 +4800,11 @@ function renderIslandMapTile(region, activeRegionId, homeRegionId) {
       data-island-region="${escapeHtml(regionId)}"
       style="${getIslandMapIconStyle(region)}"
       type="button"
-      ${onlineWorldLoading ? "disabled" : ""}
+      ${isMapInteractionBlocked() ? "disabled" : ""}
       aria-label="${escapeHtml(ariaParts.join(", "))}"
     >
       <span class="island-map-thumb" aria-hidden="true">
-        <img src="${escapeHtml(getIslandPreviewArtSrc(regionId))}" alt="" draggable="false" />
+        <img src="${escapeHtml(getIslandPreviewArtSrc(regionId))}" alt="" draggable="false" loading="lazy" decoding="async" fetchpriority="low" />
       </span>
       <span class="island-map-name">${escapeHtml(label)}</span>
       <span class="island-map-owned">${escapeHtml(ownedText)}</span>
@@ -4792,9 +4846,10 @@ function prepareSelectionForIslandSwitch() {
 }
 
 async function switchOnlineIsland(regionId) {
-  if (onlineWorldLoading) return;
+  if (isMapInteractionBlocked()) return;
   const targetRegionId = normalizeRegionId(regionId);
   if (!state) {
+    await preloadIslandMap(targetRegionId);
     centerOnRegion(targetRegionId);
     if (modal.open) modal.close();
     return;
@@ -4806,42 +4861,74 @@ async function switchOnlineIsland(regionId) {
   }
 
   if (!getOnlineApi()?.isSignedIn?.()) {
-    state.activeRegionId = targetRegionId;
-    onlineActiveRegionId = targetRegionId;
-    prepareSelectionForIslandSwitch();
-    updateIslandSwitcherUi();
-    if (modal.open) modal.close();
-    centerOnRegion(targetRegionId);
-    renderAll();
+    setMapSwitchLoading(`Loading ${getRegionLabel(targetRegionId)}...`);
+    try {
+      const ready = await preloadIslandMap(targetRegionId);
+      if (!ready) {
+        showToast(`Could not load ${getRegionLabel(targetRegionId)} map art.`);
+        return;
+      }
+      state.activeRegionId = targetRegionId;
+      onlineActiveRegionId = targetRegionId;
+      prepareSelectionForIslandSwitch();
+      updateIslandSwitcherUi();
+      if (modal.open) modal.close();
+      centerOnRegion(targetRegionId);
+      renderAll();
+    } finally {
+      clearMapSwitchLoading();
+    }
     return;
   }
 
-  const previousLabel = getRegionLabel(getActiveOnlineRegionId());
+  const previousRegionId = getActiveOnlineRegionId();
+  const previousLabel = getRegionLabel(previousRegionId);
   const targetLabel = getRegionLabel(targetRegionId);
-  onlineStatusDetail.textContent = `Leaving ${previousLabel}...`;
-  await syncOwnedCitiesToOnline(true);
-  await flushOnlineSave(true);
-  if (typeof onlineIslandUnsubscribe === "function") onlineIslandUnsubscribe();
-  onlineIslandUnsubscribe = null;
-  clearOnlineArmyWatchers();
-  onlinePresence = [];
-  onlineCitiesLoaded = false;
-  onlineWorldConnected = false;
-  prepareSelectionForIslandSwitch();
-  pathsSvg.innerHTML = "";
-  if (harvestLayer) harvestLayer.innerHTML = "";
-  armyLayer.innerHTML = "";
-  cityLayer.innerHTML = "";
-  if (modal.open) modal.close();
-  const connected = await connectOnlineIsland(targetRegionId, {
-    claimHome: false,
-    homeRegionId: state.online?.mainRegionId || targetRegionId,
-  });
-  if (connected) {
-    centerOnRegion(targetRegionId);
-    renderAll();
-  } else {
-    showToast(`Could not load ${targetLabel}.`);
+  const homeRegionId = state.online?.mainRegionId || previousRegionId;
+  let leftPreviousIsland = false;
+  setMapSwitchLoading(`Loading ${targetLabel}...`);
+  try {
+    onlineStatusDetail.textContent = `Preparing ${targetLabel}...`;
+    const mapReady = await preloadIslandMap(targetRegionId);
+    if (!mapReady) {
+      showToast(`Could not load ${targetLabel} map art.`);
+      onlineStatusDetail.textContent = `${previousLabel} connected.`;
+      return;
+    }
+
+    onlineStatusDetail.textContent = `Leaving ${previousLabel}...`;
+    await syncOwnedCitiesToOnline(true);
+    await flushOnlineSave(true);
+    if (typeof onlineIslandUnsubscribe === "function") onlineIslandUnsubscribe();
+    onlineIslandUnsubscribe = null;
+    clearOnlineArmyWatchers();
+    leftPreviousIsland = true;
+    onlinePresence = [];
+    onlineCitiesLoaded = false;
+    onlineWorldConnected = false;
+    prepareSelectionForIslandSwitch();
+    if (modal.open) modal.close();
+    const connected = await connectOnlineIsland(targetRegionId, {
+      claimHome: false,
+      homeRegionId,
+      activateOnFirstSnapshot: true,
+    });
+    if (connected) {
+      centerOnRegion(targetRegionId);
+      renderAll();
+    } else {
+      if (leftPreviousIsland) {
+        await connectOnlineIsland(previousRegionId, {
+          claimHome: false,
+          homeRegionId,
+        });
+      }
+      centerOnRegion(previousRegionId);
+      renderAll();
+      showToast(`Could not load ${targetLabel}.`);
+    }
+  } finally {
+    clearMapSwitchLoading();
   }
 }
 
@@ -5068,7 +5155,7 @@ async function setupOnlineWorld() {
   });
 }
 
-async function connectOnlineIsland(regionId, { claimHome = false, homeRegionId = null, profile = null } = {}) {
+async function connectOnlineIsland(regionId, { claimHome = false, homeRegionId = null, profile = null, activateOnFirstSnapshot = false } = {}) {
   const api = getOnlineApi();
   if (!state || !api?.isConfigured?.() || !api?.isSignedIn?.()) return false;
   if (onlineWorldLoading) return false;
@@ -5081,9 +5168,7 @@ async function connectOnlineIsland(regionId, { claimHome = false, homeRegionId =
   onlineWorldLoading = true;
   onlineCitiesLoaded = false;
   onlineWorldConnected = false;
-  onlineActiveRegionId = targetRegionId;
-  state.activeRegionId = targetRegionId;
-  state.online = {
+  const nextOnlineState = {
     ...(state.online || {}),
     worldId: ONLINE_WORLD_ID,
     islandId,
@@ -5096,6 +5181,24 @@ async function connectOnlineIsland(regionId, { claimHome = false, homeRegionId =
       || "",
     playerUid: getCurrentOnlineUid(),
   };
+  if (!activateOnFirstSnapshot) {
+    onlineActiveRegionId = targetRegionId;
+    state.activeRegionId = targetRegionId;
+  }
+  state.online = activateOnFirstSnapshot
+    ? {
+        ...(state.online || {}),
+        worldId: ONLINE_WORLD_ID,
+        islandId: state.online?.islandId || getOnlineIslandId(getActiveOnlineRegionId()),
+        activeRegionId: state.online?.activeRegionId || getActiveOnlineRegionId(),
+        mainIslandId,
+        mainRegionId: homeRegion,
+        mainCityId: nextOnlineState.mainCityId,
+        playerUid: getCurrentOnlineUid(),
+        pendingIslandId: islandId,
+        pendingRegionId: targetRegionId,
+      }
+    : nextOnlineState;
 
   onlineStatusDetail.textContent = `Loading ${getRegionLabel(targetRegionId)}...`;
   try {
@@ -5167,6 +5270,13 @@ async function connectOnlineIsland(regionId, { claimHome = false, homeRegionId =
     onlineIslandUnsubscribe = api.subscribeIsland(islandId, {
       onCities: onlineCities => {
         const firstCitiesSnapshot = !onlineCitiesLoaded;
+        if (activateOnFirstSnapshot && firstCitiesSnapshot) {
+          onlineActiveRegionId = targetRegionId;
+          state.activeRegionId = targetRegionId;
+          state.online = { ...(state.online || {}), ...nextOnlineState };
+          delete state.online.pendingIslandId;
+          delete state.online.pendingRegionId;
+        }
         applyOnlineCities(onlineCities, targetRegionId);
         onlineCitiesLoaded = true;
         if (pendingOfflineProgressSeconds > 0) applyPendingOfflineProgress();
@@ -5210,7 +5320,11 @@ async function connectOnlineIsland(regionId, { claimHome = false, homeRegionId =
     return true;
   } catch (error) {
     onlineLastError = error?.message || String(error);
-    if (state?.online?.islandId === islandId) state.online = null;
+    if (state?.online?.pendingIslandId === islandId) {
+      delete state.online.pendingIslandId;
+      delete state.online.pendingRegionId;
+    }
+    if (!activateOnFirstSnapshot && state?.online?.islandId === islandId) state.online = null;
     disconnectOnlineWorld();
     updateOnlineUi();
     showToast(`Could not connect ${getRegionLabel(targetRegionId)}.`);
@@ -9851,6 +9965,7 @@ function setZoomAroundPoint(nextZoom, clientX, clientY) {
 function handleWheelZoom(event) {
   if (!state) return;
   event.preventDefault();
+  if (isMapInteractionBlocked()) return;
   const factor = event.deltaY < 0 ? WHEEL_ZOOM_STEP : 1 / WHEEL_ZOOM_STEP;
   setZoomAroundPoint(zoom * factor, event.clientX, event.clientY);
 }
@@ -9870,6 +9985,7 @@ function midpointBetween(a, b) {
 }
 
 function beginPinch() {
+  if (isMapInteractionBlocked()) return;
   const pair = getPointerPair();
   if (!pair) return;
   const [a, b] = pair;
@@ -9886,6 +10002,7 @@ function beginPinch() {
 }
 
 function updatePinch() {
+  if (isMapInteractionBlocked()) return;
   const pair = getPointerPair();
   if (!pair || !pinchState) return;
   const [a, b] = pair;
@@ -9902,7 +10019,7 @@ function updatePinch() {
 }
 
 function startPan(event) {
-  if (!state || event.button > 0) return;
+  if (!state || event.button > 0 || isMapInteractionBlocked()) return;
 
   // City taps must stay owned by the city button.
   // V6 was capturing the pointer on mapFrame before this check, which could
@@ -9933,6 +10050,7 @@ function startPan(event) {
 }
 
 function movePan(event) {
+  if (isMapInteractionBlocked()) return;
   if (activePointers.has(event.pointerId)) {
     activePointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
   }
@@ -9972,6 +10090,7 @@ function endPan(event) {
 }
 
 function handleMapClick(event) {
+  if (isMapInteractionBlocked()) return;
   if (suppressMapClick) return;
   if (event.target.closest(".city-node")) return;
   clearSelection();
@@ -10028,6 +10147,7 @@ if (flagBackBtn) flagBackBtn.addEventListener("click", showProfileView);
 if (flagExitBtn) flagExitBtn.addEventListener("click", closeProfileScreen);
 clearSelectBtn.addEventListener("click", () => clearSelection());
 cityLayer.addEventListener("pointerdown", event => {
+  if (isMapInteractionBlocked()) return;
   const cityButton = event.target.closest(".city-node");
   if (cityButton && cityLayer.contains(cityButton)) {
     cityTapState = {
@@ -10041,6 +10161,7 @@ cityLayer.addEventListener("pointerdown", event => {
   if (event.target.closest(".city-node, .city-wheel-action")) interactionRenderLockUntil = performance.now() + 600;
 });
 cityLayer.addEventListener("pointerup", event => {
+  if (isMapInteractionBlocked()) return;
   if (!cityTapState || cityTapState.pointerId !== event.pointerId) return;
   const cityButton = event.target.closest(".city-node");
   const moved = Math.hypot(event.clientX - cityTapState.x, event.clientY - cityTapState.y) > 12;
@@ -10060,12 +10181,14 @@ cityLayer.addEventListener("pointercancel", event => {
 });
 if (portalLayer) {
   portalLayer.addEventListener("pointerdown", event => {
+    if (isMapInteractionBlocked()) return;
     if (!event.target.closest(".teleport-node")) return;
     event.stopPropagation();
     interactionRenderLockUntil = performance.now() + 600;
   });
 }
 cityLayer.addEventListener("click", event => {
+  if (isMapInteractionBlocked()) return;
   const cityButton = event.target.closest(".city-node");
   if (!cityButton || !cityLayer.contains(cityButton)) return;
   event.stopPropagation();
