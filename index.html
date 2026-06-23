@@ -4,11 +4,12 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Crownlands - Medieval Island Conquest</title>
-  <meta name="crownlands-build" content="20260623-leaderboard-icon" />
-  <link rel="stylesheet" href="styles.css?v=20260623-leaderboard-icon" />
+  <meta name="crownlands-build" content="20260623-map-icon" />
+  <link rel="stylesheet" href="styles.css?v=20260623-map-icon" />
   <link rel="preload" as="image" href="assets/loading-ring.png" />
   <link rel="preload" as="image" href="assets/loading-crown.png" />
   <link rel="preload" as="image" href="assets/leaderboard-icon.jpg" />
+  <link rel="preload" as="image" href="assets/map-icon.jpg" />
   <link rel="icon" href="data:," />
   <link rel="manifest" href="manifest.webmanifest" />
   <meta name="theme-color" content="#0c1018" />
@@ -54,7 +55,10 @@
           <span id="statusText" class="sr-only">Live conquest</span>
         </div>
         <div class="resource-bar">
-          <button id="islandSwitchBtn" class="resource-pill island-switch-btn" type="button" aria-label="Switch island" hidden><span id="islandSwitchLabel">Westmark</span></button>
+          <button id="islandSwitchBtn" class="resource-pill island-switch-btn" type="button" aria-label="Switch island" hidden>
+            <img class="island-switch-icon" src="assets/map-icon.jpg" alt="" draggable="false" decoding="async" />
+            <span id="islandSwitchLabel" class="sr-only">Map</span>
+          </button>
           <button id="cityListBtn" class="resource-pill city-list-btn" type="button" aria-label="Open city list"><span>&#127984;</span><strong id="cityText">1</strong></button>
           <button id="fullscreenBtn" class="hud-btn fullscreen-btn" type="button" aria-label="Enter fullscreen"><span aria-hidden="true">&#x26F6;</span></button>
         </div>
@@ -201,7 +205,7 @@
 
   <script src="world-config.js"></script>
   <script src="firebase-config.js"></script>
-  <script src="firebaseClient.js?v=20260623-leaderboard-icon"></script>
-  <script src="game.js?v=20260623-leaderboard-icon"></script>
+  <script src="firebaseClient.js?v=20260623-map-icon"></script>
+  <script src="game.js?v=20260623-map-icon"></script>
 </body>
 </html>
