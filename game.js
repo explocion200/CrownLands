@@ -5045,6 +5045,7 @@ async function handleGoogleSignIn() {
   try {
     if (googleSignInBtn) googleSignInBtn.disabled = true;
     await api.signInWithGoogle();
+    onlineLastError = "";
     updateOnlineUi();
     if (state) {
       queueOnlineSave();
@@ -5118,6 +5119,8 @@ async function setupOnlineWorld() {
 
   if (onlineWorldConnected && isOnlineWorldActive()) return true;
 
+  onlineLastError = "";
+  updateOnlineUi();
   onlineStatusDetail.textContent = "Finding your home island...";
   let profile = null;
   try {
@@ -5160,6 +5163,8 @@ async function connectOnlineIsland(regionId, { claimHome = false, homeRegionId =
   if (!state || !api?.isConfigured?.() || !api?.isSignedIn?.()) return false;
   if (onlineWorldLoading) return false;
 
+  onlineLastError = "";
+  updateOnlineUi();
   const targetRegionId = normalizeRegionId(regionId);
   const islandId = getOnlineIslandId(targetRegionId);
   const homeRegion = normalizeRegionId(homeRegionId || state.online?.mainRegionId || targetRegionId);
@@ -5220,7 +5225,7 @@ async function connectOnlineIsland(regionId, { claimHome = false, homeRegionId =
         worldWidth: WORLD_WIDTH,
         worldHeight: WORLD_HEIGHT,
       },
-    }), 16000, `${getRegionLabel(targetRegionId)} setup is taking too long.`);
+    }), 30000, `${getRegionLabel(targetRegionId)} setup is taking too long.`);
 
     if (claimHome) {
       onlineStatusDetail.textContent = "Claiming your starting city...";
@@ -5310,6 +5315,7 @@ async function connectOnlineIsland(regionId, { claimHome = false, homeRegionId =
 
     await initialCitiesPromise;
     onlineWorldConnected = true;
+    onlineLastError = "";
     await publishOnlinePresence(true);
     updateOnlinePlayersUi();
     updateIslandSwitcherUi();

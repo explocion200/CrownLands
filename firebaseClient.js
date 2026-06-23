@@ -263,16 +263,17 @@
     await init();
     const uid = requireSignedIn();
     if (!uid) return false;
-    const { doc, getDoc, setDoc, writeBatch, serverTimestamp } = client.modules.firestore;
+    const { collection, doc, getDoc, getDocs, setDoc, writeBatch, serverTimestamp } = client.modules.firestore;
     const islandRef = doc(client.db, "islands", islandId);
     const citySeeds = cities.map(cleanCitySeed);
     const islandSnap = await getDoc(islandRef);
     const islandData = islandSnap.exists() ? islandSnap.data() : {};
     const targetVersion = Number(meta.version) || 21;
     const targetCityCount = citySeeds.length;
+    const seededCityCount = Math.max(0, Number(islandData.seededCityCount) || 0);
+    const layoutSeedVersion = Math.max(0, Number(islandData.layoutSeedVersion) || 0);
     const needsCitySeed = !islandSnap.exists()
-      || Number(islandData.layoutSeedVersion) < targetVersion
-      || Number(islandData.seededCityCount) < targetCityCount;
+      || seededCityCount < targetCityCount;
 
     await setDoc(islandRef, {
       id: islandId,
@@ -283,11 +284,27 @@
       ...meta,
     }, { merge: true });
 
-    if (!needsCitySeed) return true;
+    if (!needsCitySeed) {
+      if (layoutSeedVersion < targetVersion || seededCityCount !== targetCityCount) {
+        await setDoc(islandRef, {
+          layoutSeedVersion: targetVersion,
+          seededCityCount: targetCityCount,
+          updatedAt: serverTimestamp(),
+        }, { merge: true });
+      }
+      return true;
+    }
+
+    let seedsToWrite = citySeeds;
+    if (islandSnap.exists()) {
+      const citiesSnap = await getDocs(collection(client.db, "islands", islandId, "cities"));
+      const existingCityIds = new Set(citiesSnap.docs.map(cityDoc => cityDoc.id));
+      seedsToWrite = citySeeds.filter(city => !existingCityIds.has(city.id));
+    }
 
     let batch = writeBatch(client.db);
     let writes = 0;
-    for (const city of citySeeds) {
+    for (const city of seedsToWrite) {
       batch.set(doc(client.db, "islands", islandId, "cities", city.id), {
         ...cleanCityLayoutSeed(city),
         createdAt: serverTimestamp(),
