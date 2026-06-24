@@ -36,6 +36,7 @@ const SHOP_ITEMS = [
     label: "Royal Peace Shield",
     description: "Protects your kingdom from attacks for 12 hours.",
     cost: 50_000,
+    icon: "assets/royal-peace-shield-icon.jpg",
   },
   {
     id: "war_drums_30m",
@@ -9809,13 +9810,22 @@ function getShopItemById(itemId) {
   return SHOP_ITEMS.find(item => item.id === itemId) || null;
 }
 
+function renderItemIcon(item, imageClass = "") {
+  const label = item?.label || "?";
+  if (item?.icon) {
+    const classAttr = imageClass ? ` class="${escapeHtml(imageClass)}"` : "";
+    return `<img${classAttr} src="${escapeHtml(item.icon)}" alt="" draggable="false" decoding="async" />`;
+  }
+  return `<span>${escapeHtml(label.slice(0, 1))}</span>`;
+}
+
 function renderShopItem(item, inventory) {
   const owned = Math.max(0, Math.floor(Number(inventory[item.id]) || 0));
   const canBuy = state && Math.floor(Number(state.gold) || 0) >= item.cost;
   return `
     <article class="shop-item">
-      <div class="shop-item-image-placeholder" aria-hidden="true">
-        <span>${escapeHtml(item.label.slice(0, 1))}</span>
+      <div class="shop-item-image-placeholder ${item.icon ? "has-image" : ""}" aria-hidden="true">
+        ${renderItemIcon(item, "shop-item-image")}
       </div>
       <div class="shop-item-copy">
         <strong>${escapeHtml(item.label)}</strong>
@@ -9902,6 +9912,7 @@ function renderInventorySlot(entry, index) {
   return `
     <article class="inventory-slot filled">
       <span class="inventory-slot-index">${formatNumber(index + 1)}</span>
+      <span class="inventory-slot-icon ${entry.icon ? "has-image" : ""}" aria-hidden="true">${renderItemIcon(entry, "inventory-slot-image")}</span>
       <strong class="inventory-slot-name">${escapeHtml(entry.label)}</strong>
       <span class="inventory-slot-count">x${formatNumber(entry.count)}</span>
     </article>

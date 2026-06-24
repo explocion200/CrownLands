@@ -1492,6 +1492,17 @@ input {
   border: 1px solid rgba(246,190,82,.34);
   box-shadow: inset 0 -4px 0 rgba(0,0,0,.18), 0 6px 12px rgba(0,0,0,.2);
 }
+.shop-item-image-placeholder.has-image {
+  overflow: hidden;
+  padding: 0;
+  background: rgba(5, 20, 36, .88);
+}
+.shop-item-image {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+}
 .shop-item-image-placeholder span {
   width: 30px;
   height: 30px;
@@ -1597,6 +1608,39 @@ input {
 .inventory-slot.filled {
   border-color: rgba(246,190,82,.42);
   background: linear-gradient(180deg, rgba(32, 52, 78, .92), rgba(6, 25, 44, .86));
+}
+.inventory-slot-icon {
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border-radius: 12px;
+  background:
+    radial-gradient(circle at 42% 32%, rgba(255, 229, 145, .22), transparent 48%),
+    linear-gradient(180deg, rgba(24, 59, 91, .92), rgba(5, 20, 36, .82));
+  border: 1px solid rgba(246,190,82,.34);
+  box-shadow: inset 0 -4px 0 rgba(0,0,0,.18), 0 6px 12px rgba(0,0,0,.2);
+}
+.inventory-slot-icon.has-image {
+  background: rgba(5, 20, 36, .88);
+}
+.inventory-slot-icon span {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  color: #211508;
+  background: linear-gradient(#ffd878, #e69627);
+  font-size: .95rem;
+  font-weight: 1000;
+}
+.inventory-slot-image {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
 }
 .inventory-slot-index {
   width: 26px;
@@ -3968,6 +4012,8 @@ input {
   .resource-pill.city-list-btn { right: calc(max(.75rem, env(safe-area-inset-right)) + 66px); }
   .inventory-slots { gap: .38rem; }
   .inventory-slot { min-height: 88px; padding: .46rem .32rem; }
+  .inventory-slot-icon { width: 34px; height: 34px; border-radius: 9px; }
+  .inventory-slot-icon span { width: 22px; height: 22px; font-size: .74rem; }
   .inventory-slot-index { width: 22px; height: 22px; font-size: .66rem; }
   .inventory-slot-name { font-size: .7rem; }
   .character-level-badge { min-width: 28px; height: 16px; right: 7px; bottom: 6px; font-size: .5rem; }
