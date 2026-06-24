@@ -1642,17 +1642,6 @@ input {
   display: block;
   object-fit: cover;
 }
-.inventory-slot-index {
-  width: 26px;
-  height: 26px;
-  display: grid;
-  place-items: center;
-  border-radius: 999px;
-  color: #211508;
-  background: linear-gradient(#ffd878, #e69627);
-  font-size: .76rem;
-  font-weight: 1000;
-}
 .inventory-slot-name {
   max-width: 100%;
   overflow: hidden;
@@ -4014,7 +4003,6 @@ input {
   .inventory-slot { min-height: 88px; padding: .46rem .32rem; }
   .inventory-slot-icon { width: 34px; height: 34px; border-radius: 9px; }
   .inventory-slot-icon span { width: 22px; height: 22px; font-size: .74rem; }
-  .inventory-slot-index { width: 22px; height: 22px; font-size: .66rem; }
   .inventory-slot-name { font-size: .7rem; }
   .character-level-badge { min-width: 28px; height: 16px; right: 7px; bottom: 6px; font-size: .5rem; }
   .profile-gold { height: 24px; min-width: 66px; margin-top: .12rem; font-size: .74rem; }

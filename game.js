@@ -9904,18 +9904,16 @@ function getInventorySlotEntries() {
   return entries;
 }
 
-function renderInventorySlot(entry, index) {
+function renderInventorySlot(entry) {
   if (!entry) {
     return `
       <article class="inventory-slot empty">
-        <span class="inventory-slot-index">${formatNumber(index + 1)}</span>
         <span class="inventory-slot-empty">Empty</span>
       </article>
     `;
   }
   return `
     <article class="inventory-slot filled">
-      <span class="inventory-slot-index">${formatNumber(index + 1)}</span>
       <span class="inventory-slot-icon ${entry.icon ? "has-image" : ""}" aria-hidden="true">${renderItemIcon(entry, "inventory-slot-image")}</span>
       <strong class="inventory-slot-name">${escapeHtml(entry.label)}</strong>
       <span class="inventory-slot-count">x${formatNumber(entry.count)}</span>
