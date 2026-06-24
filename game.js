@@ -66,6 +66,7 @@ const SHOP_ITEMS = [
     label: "Recall Horn",
     description: "Cancels one active march before it reaches the target.",
     cost: 10_000,
+    icon: "assets/recall-horn-icon.jpg",
   },
 ];
 const MAIN_CITY_CHANGE_CITY_LIMIT = 30;
