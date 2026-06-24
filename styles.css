@@ -271,8 +271,10 @@ input {
 .resource-pill { min-width: 70px; height: 38px; border-radius: 999px; padding: 0 .55rem; display: flex; align-items: center; justify-content: center; gap: .25rem; }
 .resource-pill strong { font-size: .92rem; }
 .city-list-btn { color: var(--ink); }
+.bag-btn:active,
 .city-list-btn:active,
 .island-switch-btn:active { transform: translateY(1px); }
+.resource-pill.bag-btn,
 .resource-pill.city-list-btn,
 .resource-pill.island-switch-btn {
   position: absolute;
@@ -290,6 +292,9 @@ input {
   box-shadow: none;
   overflow: visible;
 }
+.resource-pill.bag-btn {
+  right: calc(max(.75rem, env(safe-area-inset-right)) + 152px);
+}
 .resource-pill.city-list-btn {
   right: calc(max(.75rem, env(safe-area-inset-right)) + 76px);
 }
@@ -297,6 +302,7 @@ input {
   right: max(.75rem, env(safe-area-inset-right));
 }
 .city-list-icon,
+.bag-icon,
 .island-switch-icon {
   display: block;
   width: 100%;
@@ -1499,6 +1505,93 @@ input {
   color: rgba(255,255,255,.72);
   background: rgba(255,255,255,.12);
   box-shadow: none;
+}
+
+.inventory-modal.modal {
+  width: min(620px, calc(100vw - 1.3rem));
+}
+.inventory-modal .modal-card {
+  background: linear-gradient(180deg, #071a2d, #132f56 72%, #1a416d);
+  border-color: rgba(246, 190, 82, .62);
+}
+.inventory-panel {
+  display: grid;
+  gap: .72rem;
+}
+.inventory-summary {
+  min-height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .8rem;
+  padding: .58rem .82rem;
+  border-radius: 12px;
+  background: rgba(5, 20, 36, .72);
+  border: 1px solid rgba(158,213,255,.16);
+  box-shadow: inset 0 -4px 0 rgba(0,0,0,.13);
+}
+.inventory-summary span {
+  color: #cfe9ff;
+  font-size: .78rem;
+  font-weight: 950;
+  text-transform: uppercase;
+}
+.inventory-summary strong {
+  color: #fff0a7;
+  font-size: 1.25rem;
+  line-height: 1;
+}
+.inventory-slots {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: .55rem;
+}
+.inventory-slot {
+  min-height: 116px;
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: .28rem;
+  padding: .62rem .46rem;
+  border-radius: 14px;
+  text-align: center;
+  background: rgba(5, 20, 36, .78);
+  border: 1px solid rgba(158,213,255,.12);
+  box-shadow: inset 0 -4px 0 rgba(0,0,0,.13);
+}
+.inventory-slot.filled {
+  border-color: rgba(246,190,82,.42);
+  background: linear-gradient(180deg, rgba(32, 52, 78, .92), rgba(6, 25, 44, .86));
+}
+.inventory-slot-index {
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  color: #211508;
+  background: linear-gradient(#ffd878, #e69627);
+  font-size: .76rem;
+  font-weight: 1000;
+}
+.inventory-slot-name {
+  max-width: 100%;
+  overflow: hidden;
+  color: #fff0a7;
+  font-size: .82rem;
+  font-weight: 950;
+  text-overflow: ellipsis;
+}
+.inventory-slot-count {
+  color: #cfe9ff;
+  font-size: .72rem;
+  font-weight: 900;
+}
+.inventory-slot-empty {
+  color: rgba(207,233,255,.58);
+  font-size: .76rem;
+  font-weight: 900;
+  text-transform: uppercase;
 }
 
 .city-list-modal.modal {
@@ -3807,9 +3900,15 @@ input {
   .profile-button .kingdom-flag-small { width: 100%; height: 100%; border-radius: 12px; }
   .profile-rank-btn { width: 40px; height: 40px; }
   .shop-btn { width: 42px; height: 42px; }
+  .resource-pill.bag-btn,
   .resource-pill.city-list-btn,
   .resource-pill.island-switch-btn { width: 56px; min-width: 56px; max-width: 56px; height: 56px; }
+  .resource-pill.bag-btn { right: calc(max(.75rem, env(safe-area-inset-right)) + 132px); }
   .resource-pill.city-list-btn { right: calc(max(.75rem, env(safe-area-inset-right)) + 66px); }
+  .inventory-slots { gap: .38rem; }
+  .inventory-slot { min-height: 88px; padding: .46rem .32rem; }
+  .inventory-slot-index { width: 22px; height: 22px; font-size: .66rem; }
+  .inventory-slot-name { font-size: .7rem; }
   .character-level-badge { min-width: 28px; height: 16px; right: 7px; bottom: 6px; font-size: .5rem; }
   .profile-gold { height: 24px; min-width: 66px; margin-top: .12rem; font-size: .74rem; }
   .profile-xp { min-width: 76px; font-size: .52rem; padding: .1rem .3rem; }

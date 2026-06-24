@@ -29,6 +29,7 @@ const IMAGE_PRELOAD_TIMEOUT_MS = 15000;
 const HUD_RENDER_INTERVAL_MS = 250;
 const MAP_RENDER_INTERVAL_MS = 1600;
 const CITY_LIST_PAGE_SIZE = 5;
+const INVENTORY_SLOT_COUNT = 5;
 const SHOP_ITEMS = [
   {
     id: "shield_12h",
@@ -1945,6 +1946,7 @@ const islandSwitchBtn = document.getElementById("islandSwitchBtn");
 const islandSwitchLabel = document.getElementById("islandSwitchLabel");
 const cityListBtn = document.getElementById("cityListBtn");
 const cityText = document.getElementById("cityText");
+const inventoryBtn = document.getElementById("inventoryBtn");
 const shopBtn = document.getElementById("shopBtn");
 const neutralCapText = document.getElementById("neutralCapText");
 const characterLevelBadge = document.getElementById("characterLevelBadge");
@@ -9749,7 +9751,7 @@ function renderShopModal() {
 
 function showShopModal() {
   if (!state) return;
-  modal.classList.remove("battle-report-modal", "city-list-modal", "island-switcher-modal", "leaderboard-modal", "incoming-attack-modal", "outgoing-attack-modal");
+  modal.classList.remove("battle-report-modal", "city-list-modal", "island-switcher-modal", "leaderboard-modal", "inventory-modal", "incoming-attack-modal", "outgoing-attack-modal");
   modal.classList.add("shop-modal");
   renderShopModal();
   if (!modal.open) modal.showModal();
@@ -9773,6 +9775,59 @@ function buyShopItem(itemId) {
   renderHud();
   renderShopModal();
   showToast(`Bought ${item.label}`);
+}
+
+function getInventorySlotEntries() {
+  const inventory = ensureShopItems();
+  const entries = SHOP_ITEMS
+    .map(item => ({
+      ...item,
+      count: Math.max(0, Math.floor(Number(inventory[item.id]) || 0)),
+    }))
+    .filter(item => item.count > 0)
+    .slice(0, INVENTORY_SLOT_COUNT);
+
+  while (entries.length < INVENTORY_SLOT_COUNT) entries.push(null);
+  return entries;
+}
+
+function renderInventorySlot(entry, index) {
+  if (!entry) {
+    return `
+      <article class="inventory-slot empty">
+        <span class="inventory-slot-index">${formatNumber(index + 1)}</span>
+        <span class="inventory-slot-empty">Empty</span>
+      </article>
+    `;
+  }
+  return `
+    <article class="inventory-slot filled">
+      <span class="inventory-slot-index">${formatNumber(index + 1)}</span>
+      <strong class="inventory-slot-name">${escapeHtml(entry.label)}</strong>
+      <span class="inventory-slot-count">x${formatNumber(entry.count)}</span>
+    </article>
+  `;
+}
+
+function showInventoryModal() {
+  if (!state) return;
+  const slots = getInventorySlotEntries();
+  const filledSlots = slots.filter(Boolean).length;
+  modal.classList.remove("battle-report-modal", "city-list-modal", "island-switcher-modal", "leaderboard-modal", "shop-modal", "incoming-attack-modal", "outgoing-attack-modal");
+  modal.classList.add("inventory-modal");
+  modalTitle.textContent = "Bag";
+  modalBody.innerHTML = `
+    <div class="inventory-panel">
+      <section class="inventory-summary">
+        <span>Item slots</span>
+        <strong>${formatNumber(filledSlots)}/${formatNumber(INVENTORY_SLOT_COUNT)}</strong>
+      </section>
+      <div class="inventory-slots">
+        ${slots.map(renderInventorySlot).join("")}
+      </div>
+    </div>
+  `;
+  if (!modal.open) modal.showModal();
 }
 
 function showAttackPreview(source, target) {
@@ -10936,6 +10991,7 @@ function getMainCityReturnAvoidRects(viewRect) {
   return [
     document.querySelector(".profile-stack"),
     document.querySelector(".resource-bar"),
+    inventoryBtn,
     cityListBtn,
     islandSwitchBtn,
     document.querySelector(".commander-panel.visible"),
@@ -11423,6 +11479,7 @@ logBtn.addEventListener("click", showLogModal);
 if (leaderboardBtn) leaderboardBtn.addEventListener("click", showLeaderboardModal);
 if (outgoingAttackBtn) outgoingAttackBtn.addEventListener("click", showOutgoingAttacksModal);
 if (incomingAttackBtn) incomingAttackBtn.addEventListener("click", showIncomingAttacksModal);
+if (inventoryBtn) inventoryBtn.addEventListener("click", showInventoryModal);
 if (cityListBtn) cityListBtn.addEventListener("click", showCityListModal);
 if (helpBtn) helpBtn.addEventListener("click", showHelpModal);
 if (mainCityReturnBtn) mainCityReturnBtn.addEventListener("click", returnToMainCity);
@@ -11436,6 +11493,7 @@ modal.addEventListener("close", () => {
   modal.classList.remove("island-switcher-modal");
   modal.classList.remove("leaderboard-modal");
   modal.classList.remove("shop-modal");
+  modal.classList.remove("inventory-modal");
   modal.classList.remove("incoming-attack-modal");
   modal.classList.remove("outgoing-attack-modal");
   if (!troopSliderActive) return;

@@ -4,8 +4,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Crownlands - Medieval Island Conquest</title>
-  <meta name="crownlands-build" content="20260623-transfer-dedupe" />
-  <link rel="stylesheet" href="styles.css?v=20260623-transfer-dedupe" />
+  <meta name="crownlands-build" content="20260623-bag-inventory" />
+  <link rel="stylesheet" href="styles.css?v=20260623-bag-inventory" />
   <link rel="preload" as="image" href="assets/loading-ring.png" />
   <link rel="preload" as="image" href="assets/loading-crown.png" />
   <link rel="preload" as="image" href="assets/leaderboard-icon.png?v=20260623-leaderboard-icon-new" />
@@ -13,6 +13,7 @@
   <link rel="preload" as="image" href="assets/city-list-icon.png?v=20260623-city-icon-hud" />
   <link rel="preload" as="image" href="assets/map-icon.png?v=20260623-map-icon-framed" />
   <link rel="preload" as="image" href="assets/shop-icon.png?v=20260623-shop-ui" />
+  <link rel="preload" as="image" href="assets/bag-icon.png?v=20260623-bag-inventory" />
   <link rel="icon" href="data:," />
   <link rel="manifest" href="manifest.webmanifest" />
   <meta name="theme-color" content="#0c1018" />
@@ -68,6 +69,9 @@
       <button id="mainCityReturnBtn" class="main-city-return" type="button" hidden aria-label="Return to main city">
         <span class="main-city-return-arrow" aria-hidden="true">&#9658;</span>
         <span class="main-city-return-house" aria-hidden="true">&#8962;</span>
+      </button>
+      <button id="inventoryBtn" class="resource-pill bag-btn" type="button" aria-label="Open bag">
+        <img class="bag-icon" src="assets/bag-icon.png?v=20260623-bag-inventory" alt="" draggable="false" decoding="async" />
       </button>
       <button id="cityListBtn" class="resource-pill city-list-btn" type="button" aria-label="Open city list">
         <img class="city-list-icon" src="assets/city-list-icon.png?v=20260623-city-icon-hud" alt="" draggable="false" decoding="async" />
@@ -214,7 +218,7 @@
 
   <script src="world-config.js"></script>
   <script src="firebase-config.js"></script>
-  <script src="firebaseClient.js?v=20260623-transfer-dedupe"></script>
-  <script src="game.js?v=20260623-transfer-dedupe"></script>
+  <script src="firebaseClient.js?v=20260623-bag-inventory"></script>
+  <script src="game.js?v=20260623-bag-inventory"></script>
 </body>
 </html>
