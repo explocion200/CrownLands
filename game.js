@@ -44,6 +44,7 @@ const SHOP_ITEMS = [
     label: "War Drums",
     description: "Increases troop production for 30 minutes.",
     cost: 10_000,
+    icon: "assets/war-drums-icon.jpg",
   },
   {
     id: "veil_of_silence_30m",
