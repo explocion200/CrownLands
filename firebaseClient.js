@@ -192,6 +192,7 @@
       ownerUid: hasPlayerOwner ? ownerUid : null,
       ownerName: hasPlayerOwner ? city.ownerName || "" : "",
       ownerFlag: hasPlayerOwner ? city.ownerFlag || null : null,
+      ownerKingPower: hasPlayerOwner ? Math.max(0, Math.floor(Number(city.ownerKingPower) || 0)) : 0,
     };
   }
 
@@ -227,6 +228,24 @@
     };
   }
 
+  function cleanDemoAttack(demo = null) {
+    if (!demo || typeof demo !== "object" || !demo.active) return null;
+    return {
+      active: true,
+      label: String(demo.label || "Demo Attack").slice(0, 32),
+      attackerKingPower: Math.max(0, Math.floor(Number(demo.attackerKingPower) || 0)),
+      defenderKingPower: Math.max(1, Math.floor(Number(demo.defenderKingPower) || 1)),
+      powerRatio: Math.max(0, Number(demo.powerRatio) || 0),
+      requestedTroops: Math.max(1, Math.floor(Number(demo.requestedTroops) || 1)),
+      effectiveTroops: Math.max(1, Math.floor(Number(demo.effectiveTroops) || 1)),
+      maxTroops: Math.max(1, Math.floor(Number(demo.maxTroops) || 1)),
+      troopCapPercent: Math.max(1, Math.floor(Number(demo.troopCapPercent) || 100)),
+      attackPowerPercent: Math.max(1, Math.floor(Number(demo.attackPowerPercent) || 100)),
+      travelMultiplier: Math.max(1, Number(demo.travelMultiplier) || 1),
+      defenderXpMultiplier: Math.max(1, Number(demo.defenderXpMultiplier) || 1),
+    };
+  }
+
   function cleanArmyMovement(army) {
     const path = Array.isArray(army?.path)
       ? army.path
@@ -259,6 +278,7 @@
       ownerUid: army?.ownerUid || client.user?.uid || null,
       ownerName: String(army?.ownerName || client.user?.displayName || "Ruler").slice(0, 32),
       ownerFlag: army?.ownerFlag || null,
+      ownerKingPower: Math.max(0, Math.floor(Number(army?.ownerKingPower) || 0)),
       kind: ["attack", "transfer", "scout"].includes(army?.kind) ? army.kind : "attack",
       fromId: String(army?.fromId || ""),
       toId: String(army?.toId || ""),
@@ -271,6 +291,10 @@
       routeRegionIds,
       pathLength: Math.max(0, Number(army?.pathLength) || 0),
       targetOwnerAtLaunch: String(army?.targetOwnerAtLaunch || "neutral"),
+      requestedTroops: Math.max(0, Math.floor(Number(army?.requestedTroops) || 0)),
+      attackerKingPower: Math.max(0, Math.floor(Number(army?.attackerKingPower) || 0)),
+      defenderKingPower: Math.max(0, Math.floor(Number(army?.defenderKingPower) || 0)),
+      demoAttack: cleanDemoAttack(army?.demoAttack),
       launchedAtMs: Math.max(0, Number(army?.launchedAtMs) || Date.now()),
       arrivesAtMs: Math.max(0, Number(army?.arrivesAtMs) || Date.now()),
       status: army?.status || "active",
@@ -407,6 +431,7 @@
       const playerFlag = flag || playerData.flag || null;
       const playerWorldId = safeWorldId || playerData.worldId || "";
       const playerRegionId = safeMainRegionId || playerData.mainRegionId || "";
+      const playerKingPower = Math.max(0, Math.floor(Number(playerData.kingPower) || 0));
       const writePlayerMainCity = cityId => {
         transaction.set(playerRef, {
           uid,
@@ -433,6 +458,7 @@
           ownerUid: uid,
           ownerName: safePlayerName,
           ownerFlag: playerFlag,
+          ownerKingPower: playerKingPower,
           ...(includeTroops ? { troops, troopFloat } : {}),
           ...(setClaimedAt ? { claimedAt: cityData.claimedAt || serverTimestamp() } : {}),
           isMainCity: true,

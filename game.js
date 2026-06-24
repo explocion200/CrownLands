@@ -402,6 +402,13 @@ const RECENT_CAPTURE_XP_MULTIPLIER = 0.25;
 const DEFENSE_HELD_XP_BASE = 80;
 const DEFENSE_HELD_XP_PER_ATTACKER = 0.45;
 const FAILED_BATTLE_XP_RATE = 1 / 3;
+const DEMO_ATTACK_MIN_POWER_RATIO = 3;
+const DEMO_ATTACK_DEFENDER_XP_MULTIPLIER = 2;
+const DEMO_ATTACK_TIERS = [
+  { minRatio: 10, label: "Severe Demo Attack", troopCapPercent: 30, attackPowerPercent: 30, travelMultiplier: 2.5 },
+  { minRatio: 5, label: "Heavy Demo Attack", troopCapPercent: 40, attackPowerPercent: 40, travelMultiplier: 2 },
+  { minRatio: DEMO_ATTACK_MIN_POWER_RATIO, label: "Demo Attack", troopCapPercent: 50, attackPowerPercent: 50, travelMultiplier: 1.6 },
+];
 const KILL_GOLD_BASE = 5;
 const CITY_LEVEL_STATS = {
   victoryPointsBase: 6,
@@ -561,6 +568,7 @@ function createNeutralCityFromBase(base) {
     ownerUid: null,
     ownerName: "",
     ownerFlag: null,
+    ownerKingPower: 0,
     level: getBaseCityInitialLevel(base),
     troops,
     troopFloat: troops,
@@ -2642,6 +2650,7 @@ function createStrongholdSlot({ id, name, region, point, type, bonus, bonusPerce
     ownerUid: null,
     ownerName: "",
     ownerFlag: null,
+    ownerKingPower: 0,
     level,
     troops,
     troopFloat: troops,
@@ -3886,6 +3895,128 @@ function getCaptureCooldownRemaining(city) {
   return Math.max(0, CAPTURE_XP_COOLDOWN_SECONDS - elapsed);
 }
 
+function normalizePowerValue(value) {
+  return Math.max(0, Math.floor(Number(value) || 0));
+}
+
+function getPresenceKingPowerByUid(uid) {
+  const ownerUid = String(uid || "").trim();
+  if (!ownerUid || !Array.isArray(onlinePresence)) return 0;
+  const presence = onlinePresence.find(entry => entry?.uid === ownerUid);
+  return normalizePowerValue(presence?.kingPower);
+}
+
+function getCityPowerFloor(city) {
+  if (!city) return 0;
+  const stats = getCityStats(city);
+  const troopPower = Math.max(0, Math.floor(Number(city.troops) || 0)) * KING_POWER_PER_TROOP;
+  const cityPower = Math.max(0, Math.floor(Number(stats.victoryPoints) || 0)) * KING_POWER_PER_CITY_VP;
+  return troopPower + cityPower;
+}
+
+function getCityOwnerKingPowerSnapshot(city) {
+  if (!city) return 0;
+  const currentUid = getCurrentOnlineUid();
+  if (city.owner === "player" && (!city.ownerUid || city.ownerUid === currentUid)) return getKingPower();
+  const stored = normalizePowerValue(city.ownerKingPower);
+  if (stored > 0) return stored;
+  const presence = getPresenceKingPowerByUid(city.ownerUid);
+  if (presence > 0) return presence;
+  return getCityPowerFloor(city);
+}
+
+function getDemoAttackTier(powerRatio) {
+  const ratio = Number(powerRatio) || 0;
+  return DEMO_ATTACK_TIERS.find(tier => ratio >= tier.minRatio) || null;
+}
+
+function normalizeDemoAttackSnapshot(demo = null) {
+  if (!demo || typeof demo !== "object" || !demo.active) return null;
+  const attackerKingPower = normalizePowerValue(demo.attackerKingPower);
+  const defenderKingPower = Math.max(1, normalizePowerValue(demo.defenderKingPower));
+  const powerRatio = Number.isFinite(Number(demo.powerRatio))
+    ? Number(demo.powerRatio)
+    : attackerKingPower / Math.max(1, defenderKingPower);
+  const tier = getDemoAttackTier(powerRatio);
+  if (!tier) return null;
+  const maxTroops = Math.max(1, Math.floor(Number(demo.maxTroops) || 1));
+  const requestedTroops = Math.max(1, Math.floor(Number(demo.requestedTroops) || maxTroops));
+  const effectiveTroops = Math.max(1, Math.min(maxTroops, Math.floor(Number(demo.effectiveTroops) || maxTroops)));
+  const attackPowerPercent = clamp(Math.floor(Number(demo.attackPowerPercent) || tier.attackPowerPercent), 1, 100);
+  const troopCapPercent = clamp(Math.floor(Number(demo.troopCapPercent) || tier.troopCapPercent), 1, 100);
+  const travelMultiplier = Math.max(1, Number(demo.travelMultiplier) || tier.travelMultiplier);
+  return {
+    active: true,
+    label: String(demo.label || tier.label || "Demo Attack"),
+    attackerKingPower,
+    defenderKingPower,
+    powerRatio: Number(powerRatio.toFixed(2)),
+    requestedTroops,
+    effectiveTroops,
+    maxTroops,
+    troopCapPercent,
+    attackPowerPercent,
+    attackPowerMultiplier: attackPowerPercent / 100,
+    travelMultiplier,
+    attackerXpMultiplier: 0,
+    defenderXpMultiplier: DEMO_ATTACK_DEFENDER_XP_MULTIPLIER,
+  };
+}
+
+function createDemoAttackSnapshot(source, target, requestedTroops, owner = "player", overrides = {}) {
+  if (!source || !target || owner !== "player") return null;
+  if (target.owner === owner) return null;
+  const targetOwnerUid = String(target.ownerUid || "").trim();
+  const currentUid = getCurrentOnlineUid();
+  const targetOwnedByPlayer = target.ownerKind === "player" || target.owner === "enemy";
+  const targetOwnedByCurrentPlayer = target.owner === "player" || (targetOwnerUid && currentUid && targetOwnerUid === currentUid);
+  if (!targetOwnedByPlayer || targetOwnedByCurrentPlayer) return null;
+
+  const attackerKingPower = normalizePowerValue(overrides.attackerKingPower ?? getKingPower());
+  const defenderKingPower = Math.max(1, normalizePowerValue(overrides.defenderKingPower ?? getCityOwnerKingPowerSnapshot(target)));
+  const powerRatio = attackerKingPower / Math.max(1, defenderKingPower);
+  const tier = getDemoAttackTier(powerRatio);
+  if (!tier) return null;
+
+  const sourceTroops = Math.max(1, Math.floor(Number(source.troops) || 1));
+  const requested = clamp(Math.floor(Number(requestedTroops) || 1), 1, sourceTroops);
+  const capByPower = Math.max(1, Math.floor(defenderKingPower * tier.troopCapPercent / 100));
+  const maxTroops = Math.max(1, Math.min(sourceTroops, capByPower));
+  return normalizeDemoAttackSnapshot({
+    active: true,
+    label: tier.label,
+    attackerKingPower,
+    defenderKingPower,
+    powerRatio,
+    requestedTroops: requested,
+    effectiveTroops: Math.min(requested, maxTroops),
+    maxTroops,
+    troopCapPercent: tier.troopCapPercent,
+    attackPowerPercent: tier.attackPowerPercent,
+    travelMultiplier: tier.travelMultiplier,
+  });
+}
+
+function applyDemoDefenderXpMultiplier(xp, demoAttack) {
+  const base = Math.max(0, Math.floor(Number(xp) || 0));
+  const demo = normalizeDemoAttackSnapshot(demoAttack);
+  return demo ? Math.floor(base * demo.defenderXpMultiplier) : base;
+}
+
+function getDemoAttackNotice(demoAttack) {
+  const demo = normalizeDemoAttackSnapshot(demoAttack);
+  if (!demo) return "";
+  const cappedText = demo.requestedTroops > demo.effectiveTroops
+    ? `${formatNumber(demo.effectiveTroops)} of ${formatNumber(demo.requestedTroops)} selected troops will march`
+    : `${formatNumber(demo.effectiveTroops)} troops will march`;
+  return `${demo.label}: weaker kingdom protection is active. ${cappedText}, attack power is ${formatNumber(demo.attackPowerPercent)}%, march time is x${demo.travelMultiplier.toFixed(1)}, attacker earns 0 XP, defender XP is x${demo.defenderXpMultiplier}.`;
+}
+
+function getDemoAttackReportSuffix(demoAttack) {
+  const demo = normalizeDemoAttackSnapshot(demoAttack);
+  return demo ? ` ${demo.label}: attacker XP blocked and defender XP x${demo.defenderXpMultiplier}.` : "";
+}
+
 function getSkillLevel(skill) {
   return Math.max(0, Math.floor(Number(state?.upgrades?.[skill]) || 0));
 }
@@ -4059,10 +4190,11 @@ function getAttackPower(troops, owner) {
   return troops * BASE_TROOP_ATTACK_POWER * ownerBoost;
 }
 
-function calculateCombatResult(attackTroops, attackOwner, target) {
+function calculateCombatResult(attackTroops, attackOwner, target, options = {}) {
   const troops = Math.max(0, Math.floor(Number(attackTroops) || 0));
   const defendersAtStart = Math.max(0, Math.floor(Number(target?.troops) || 0));
-  const attackPower = getAttackPower(troops, attackOwner);
+  const demoAttack = normalizeDemoAttackSnapshot(options.demoAttack);
+  const attackPower = getAttackPower(troops, attackOwner) * (demoAttack?.attackPowerMultiplier || 1);
   const defensePower = getBattleDefensePower(target);
   const ratio = attackPower / Math.max(1, defensePower);
   const success = attackPower > defensePower;
@@ -4095,6 +4227,7 @@ function calculateCombatResult(attackTroops, attackOwner, target) {
     defenderLosses,
     killedAttackers: attackerLosses,
     killedDefenders: defenderLosses,
+    demoAttack,
   };
 }
 
@@ -4279,7 +4412,7 @@ function normalizeBattleReports(reports) {
         totalDefense: Math.max(0, Math.floor(Number(report.totalDefense) || 0)),
         opponentName: String(report.opponentName || "").slice(0, 40),
         ownerName: String(report.ownerName || "").slice(0, 40),
-        summary: String(report.summary || "").slice(0, 120),
+        summary: String(report.summary || "").slice(0, 220),
       };
     })
     .filter(Boolean)
@@ -4685,6 +4818,7 @@ function normalizeOfflineProductionCities(cities = []) {
         ownerUid: city.ownerUid || getCurrentOnlineUid() || null,
         ownerName: city.ownerName || state?.playerName || "",
         ownerFlag: city.ownerFlag || state?.flag || null,
+        ownerKingPower: normalizePowerValue(city.ownerKingPower) || getKingPower(),
         level: isStronghold(city) ? getStrongholdDefenseLevel(city) : clampCityLevel(city.level ?? base.level),
         troops: Math.max(0, Math.floor(Number(city.troops) || 0)),
         troopFloat: Math.max(0, Number(city.troopFloat) || Number(city.troops) || 0),
@@ -4713,6 +4847,7 @@ function restoreOfflineProductionCitiesToLocalState(cities = []) {
       ownerUid: currentUid || snapshot.ownerUid || city.ownerUid || null,
       ownerName: state.playerName,
       ownerFlag: state.flag,
+      ownerKingPower: getKingPower(),
       level: snapshot.level,
       troops: snapshot.troops,
       troopFloat: snapshot.troopFloat,
@@ -5994,6 +6129,7 @@ function applyOnlineCities(onlineCities, regionId = getActiveOnlineRegionId()) {
           ownerUid: null,
           ownerName: "",
           ownerFlag: null,
+          ownerKingPower: 0,
           level: clampCityLevel(base.level),
           troops: Math.max(0, Math.floor(Number(base.troops) || NEUTRAL_START_TROOPS)),
           troopFloat: Math.max(0, Number(base.troops) || NEUTRAL_START_TROOPS),
@@ -6014,6 +6150,7 @@ function applyOnlineCities(onlineCities, regionId = getActiveOnlineRegionId()) {
         ownerUid: currentOwnership.ownerUid,
         ownerName: currentOwnership.ownerName,
         ownerFlag: currentOwnership.ownerFlag,
+        ownerKingPower: currentOwnership.ownerKingPower,
         level: isStronghold(base) ? getStrongholdDefenseLevel(base) : clampCityLevel(current.level ?? base.level),
         troops: Math.max(0, Math.floor(Number(current.troops ?? base.troops) || 0)),
         troopFloat: Math.max(0, Number(current.troopFloat ?? current.troops ?? base.troops) || 0),
@@ -6031,6 +6168,7 @@ function applyOnlineCities(onlineCities, regionId = getActiveOnlineRegionId()) {
     const ownerUid = onlineOwnership.ownerUid;
     const ownerName = onlineOwnership.ownerName;
     const ownerFlag = onlineOwnership.ownerFlag;
+    const ownerKingPower = onlineOwnership.ownerKingPower;
     const localOwner = onlineOwnership.owner;
     const normalizedOwnerKind = onlineOwnership.ownerKind;
     const currentIsLocalPlayerCity = current.owner === "player" && (!current.ownerUid || current.ownerUid === currentUid);
@@ -6050,6 +6188,7 @@ function applyOnlineCities(onlineCities, regionId = getActiveOnlineRegionId()) {
       ownerUid: keepLocalPlayerCity ? currentUid || current.ownerUid || ownerUid || null : ownerUid,
       ownerName: keepLocalPlayerCity ? state.playerName : ownerName,
       ownerFlag: keepLocalPlayerCity ? state.flag : ownerFlag,
+      ownerKingPower: keepLocalPlayerCity ? getKingPower() : ownerKingPower,
       level: isStronghold(base) ? getStrongholdDefenseLevel(base) : clampCityLevel(keepLocalPlayerCity ? current.level ?? online.level ?? base.level : online.level ?? current.level ?? base.level),
       troops: Math.max(0, Math.floor(Number(keepLocalPlayerCity ? current.troops ?? online.troops ?? base.troops : online.troops ?? current.troops ?? base.troops) || 0)),
       troopFloat: Math.max(0, Number(keepLocalPlayerCity ? current.troopFloat ?? current.troops ?? online.troopFloat ?? online.troops ?? base.troops : online.troopFloat ?? current.troopFloat ?? online.troops ?? current.troops ?? base.troops) || 0),
@@ -6110,6 +6249,7 @@ function restoreMainCityOwnership(city) {
   city.ownerUid = uid || city.ownerUid || null;
   city.ownerName = state.playerName;
   city.ownerFlag = state.flag;
+  city.ownerKingPower = getKingPower();
   city.isMainCity = true;
   if (foreignOwner) {
     city.troopFloat = 0;
@@ -6134,6 +6274,7 @@ function getCityRecordOwnership(record = {}, currentUid = getCurrentOnlineUid(),
       ownerUid,
       ownerName: record.ownerName || "",
       ownerFlag: record.ownerFlag || null,
+      ownerKingPower: normalizePowerValue(record.ownerKingPower),
       hasPlayerOwner: true,
     };
   }
@@ -6145,6 +6286,7 @@ function getCityRecordOwnership(record = {}, currentUid = getCurrentOnlineUid(),
       ownerUid: currentUid || record.ownerUid || null,
       ownerName: record.ownerName || state?.playerName || "",
       ownerFlag: record.ownerFlag || state?.flag || null,
+      ownerKingPower: normalizePowerValue(record.ownerKingPower) || getKingPower(),
       hasPlayerOwner: Boolean(currentUid || record.ownerUid),
     };
   }
@@ -6155,6 +6297,7 @@ function getCityRecordOwnership(record = {}, currentUid = getCurrentOnlineUid(),
     ownerUid: null,
     ownerName: "",
     ownerFlag: null,
+    ownerKingPower: 0,
     hasPlayerOwner: false,
   };
 }
@@ -6166,6 +6309,7 @@ function markOwnedCityChanged(city, syncNow = true) {
   city.ownerUid = getCurrentOnlineUid() || city.ownerUid || null;
   city.ownerName = state.playerName;
   city.ownerFlag = state.flag;
+  city.ownerKingPower = getKingPower();
   city.isMainCity = !isStronghold(city) && city.id === state.mainCityId;
   if (syncNow && isOnlineWorldActive()) syncOwnedCitiesToOnline(true);
 }
@@ -6186,6 +6330,7 @@ function toOnlineOwnedCity(city) {
     ownerUid: getCurrentOnlineUid(),
     ownerName: state.playerName,
     ownerFlag: state.flag,
+    ownerKingPower: getKingPower(),
     level: isStronghold(city) ? getStrongholdDefenseLevel(city) : clampCityLevel(city.level),
     troops: Math.max(0, Math.floor(Number(city.troops) || 0)),
     troopFloat: Math.max(0, Number(city.troopFloat) || Number(city.troops) || 0),
@@ -6209,6 +6354,9 @@ function toOnlineCityState(city) {
   const ownerFlag = hasPlayerOwner
     ? city.owner === "player" ? state.flag : city.ownerFlag || null
     : null;
+  const ownerKingPower = hasPlayerOwner
+    ? city.owner === "player" ? getKingPower() : normalizePowerValue(city.ownerKingPower)
+    : 0;
   return {
     id: city.id,
     name: city.name,
@@ -6224,6 +6372,7 @@ function toOnlineCityState(city) {
     ownerUid: hasPlayerOwner ? ownerUid : null,
     ownerName,
     ownerFlag,
+    ownerKingPower,
     level: isStronghold(city) ? getStrongholdDefenseLevel(city) : clampCityLevel(city.level),
     troops: Math.max(0, Math.floor(Number(city.troops) || 0)),
     troopFloat: Math.max(0, Number(city.troopFloat) || Number(city.troops) || 0),
@@ -6375,6 +6524,10 @@ function prepareOnlineArmyMission(mission) {
   mission.ownerUid = getCurrentOnlineUid();
   mission.ownerName = state.playerName;
   mission.ownerFlag = state.flag;
+  mission.ownerKingPower = getKingPower();
+  mission.attackerKingPower = normalizePowerValue(mission.attackerKingPower) || mission.ownerKingPower;
+  mission.defenderKingPower = normalizePowerValue(mission.defenderKingPower);
+  mission.demoAttack = normalizeDemoAttackSnapshot(mission.demoAttack);
   mission.launchedAtMs = mission.launchedAtMs || nowMs;
   mission.arrivesAtMs = mission.arrivesAtMs || nowMs + Math.max(0, Number(mission.total) || 0) * 1000;
   return mission;
@@ -6392,6 +6545,7 @@ function toOnlineArmyMovement(mission) {
     ownerUid: mission.ownerUid || getCurrentOnlineUid(),
     ownerName: mission.ownerName || state.playerName,
     ownerFlag: mission.ownerFlag || state.flag,
+    ownerKingPower: normalizePowerValue(mission.ownerKingPower) || getKingPower(),
     kind: mission.kind || "attack",
     fromId: mission.fromId,
     toId: mission.toId,
@@ -6404,6 +6558,10 @@ function toOnlineArmyMovement(mission) {
     routeRegionIds: getMissionRegionIds(mission),
     pathLength: Math.max(0, Number(mission.pathLength) || pathSegments.reduce((total, segment) => total + segment.length, 0) || routeLength(normalizeArmyPath(mission.path))),
     targetOwnerAtLaunch: mission.targetOwnerAtLaunch || "neutral",
+    requestedTroops: Math.max(0, Math.floor(Number(mission.requestedTroops) || 0)),
+    attackerKingPower: normalizePowerValue(mission.attackerKingPower),
+    defenderKingPower: normalizePowerValue(mission.defenderKingPower),
+    demoAttack: normalizeDemoAttackSnapshot(mission.demoAttack),
     launchedAtMs: Math.max(0, Number(mission.launchedAtMs) || Date.now()),
     arrivesAtMs: Math.max(0, Number(mission.arrivesAtMs) || Date.now()),
     status: "active",
@@ -6499,6 +6657,7 @@ function normalizeOnlineArmyMovement(raw) {
     ownerUid,
     ownerName: raw.ownerName || "",
     ownerFlag: raw.ownerFlag || null,
+    ownerKingPower: normalizePowerValue(raw.ownerKingPower),
     kind: ["attack", "transfer", "scout"].includes(raw.kind) ? raw.kind : "attack",
     fromId: raw.fromId || "",
     toId: raw.toId || "",
@@ -6509,6 +6668,10 @@ function normalizeOnlineArmyMovement(raw) {
     pathSegments,
     pathLength: Math.max(0, Number(raw.pathLength) || pathSegments.reduce((total, segment) => total + segment.length, 0) || routeLength(path)),
     targetOwnerAtLaunch: raw.targetOwnerAtLaunch || "neutral",
+    requestedTroops: Math.max(0, Math.floor(Number(raw.requestedTroops) || 0)),
+    attackerKingPower: normalizePowerValue(raw.attackerKingPower || raw.ownerKingPower),
+    defenderKingPower: normalizePowerValue(raw.defenderKingPower),
+    demoAttack: normalizeDemoAttackSnapshot(raw.demoAttack),
     launchedAtMs,
     arrivesAtMs,
     status: raw.status || "active",
@@ -6585,6 +6748,7 @@ function createLocalAttackFromOnlineArmy(army, remaining = getOnlineArmyRemainin
     ownerUid: uid,
     ownerName: army.ownerName || state.playerName,
     ownerFlag: army.ownerFlag || state.flag,
+    ownerKingPower: normalizePowerValue(army.ownerKingPower),
     kind: army.kind,
     fromId: army.fromId,
     toId: army.toId,
@@ -6595,6 +6759,10 @@ function createLocalAttackFromOnlineArmy(army, remaining = getOnlineArmyRemainin
     pathSegments: army.pathSegments,
     pathLength: army.pathLength,
     targetOwnerAtLaunch: army.targetOwnerAtLaunch,
+    requestedTroops: Math.max(0, Math.floor(Number(army.requestedTroops) || 0)),
+    attackerKingPower: normalizePowerValue(army.attackerKingPower || army.ownerKingPower),
+    defenderKingPower: normalizePowerValue(army.defenderKingPower),
+    demoAttack: normalizeDemoAttackSnapshot(army.demoAttack),
     launchedAtMs: army.launchedAtMs,
     arrivesAtMs: army.arrivesAtMs,
     onlineRegionIds: army.onlineRegionIds?.length ? army.onlineRegionIds : getMissionRegionIds(army),
@@ -8002,10 +8170,14 @@ function launchAttack(sourceId, targetId, percent, owner, exactTroops = null) {
     return false;
   }
 
-  const send = exactTroops !== null && Number.isFinite(Number(exactTroops))
+  const kind = target.owner === owner ? "transfer" : "attack";
+  const requestedSend = exactTroops !== null && Number.isFinite(Number(exactTroops))
     ? clamp(Math.floor(Number(exactTroops)), 1, source.troops)
     : clamp(Math.floor(source.troops * percent), 1, source.troops);
-  const kind = target.owner === owner ? "transfer" : "attack";
+  const demoAttack = kind === "attack"
+    ? createDemoAttackSnapshot(source, target, requestedSend, owner)
+    : null;
+  const send = demoAttack?.active ? demoAttack.effectiveTroops : requestedSend;
 
   source.troopFloat = Math.max(0, source.troopFloat - send);
   source.troops = Math.floor(source.troopFloat);
@@ -8014,7 +8186,7 @@ function launchAttack(sourceId, targetId, percent, owner, exactTroops = null) {
     syncCityStateToOnline(source);
   }
 
-  const duration = travelTime(source, target, owner, route.length, send, kind);
+  const duration = travelTime(source, target, owner, route.length, send, kind, { demoAttack });
   const mission = {
     id: attackIdCounter++,
     owner,
@@ -8028,6 +8200,10 @@ function launchAttack(sourceId, targetId, percent, owner, exactTroops = null) {
     pathSegments: getRouteSegments(route, getCityRegionId(source)),
     pathLength: route.length,
     targetOwnerAtLaunch: target.owner,
+    requestedTroops: requestedSend,
+    attackerKingPower: demoAttack?.attackerKingPower || (owner === "player" ? getKingPower() : 0),
+    defenderKingPower: demoAttack?.defenderKingPower || getCityOwnerKingPowerSnapshot(target),
+    demoAttack,
   };
   prepareOnlineArmyMission(mission);
   state.attacks.push(mission);
@@ -8038,8 +8214,9 @@ function launchAttack(sourceId, targetId, percent, owner, exactTroops = null) {
     addLog(`You moved ${formatNumber(send)} troops from ${source.name} to ${target.name}.`);
     showToast(`Reinforcements moving: ${source.name} \u2192 ${target.name}`);
   } else if (owner === "player") {
-    addLog(`You sent ${formatNumber(send)} troops from ${source.name} to attack ${target.name}.`);
-    showToast(`Attack moving: ${source.name} \u2192 ${target.name}`);
+    const demoText = demoAttack ? ` ${getDemoAttackNotice(demoAttack)}` : "";
+    addLog(`You sent ${formatNumber(send)} troops from ${source.name} to attack ${target.name}.${demoText}`);
+    showToast(demoAttack ? `Demo attack moving: ${formatNumber(send)} troops` : `Attack moving: ${source.name} \u2192 ${target.name}`);
   } else if (target.owner === "player") {
     addLog(`Enemy army is attacking ${target.name} with ${formatNumber(send)} troops.`);
     showToast(`Incoming attack on ${target.name}`);
@@ -8059,16 +8236,18 @@ function getTroopTravelMultiplier(troops) {
   return ARMY_TRAVEL_TROOP_BAND_MULTIPLIERS[index] || 1;
 }
 
-function travelTime(source, target, owner, pathLength = null, troopCount = 1, kind = "attack") {
+function travelTime(source, target, owner, pathLength = null, troopCount = 1, kind = "attack", options = {}) {
   const distance = Number.isFinite(pathLength) && pathLength > 0
     ? pathLength
     : Math.hypot(source.x - target.x, source.y - target.y);
   const speed = owner === "player" ? skillMultiplier("rusher") * getStrongholdMarchSpeedMultiplier(owner) : 1;
   const kindMultiplier = ARMY_TRAVEL_KIND_MULTIPLIERS[kind] || ARMY_TRAVEL_KIND_MULTIPLIERS.attack;
   const troopMultiplier = getTroopTravelMultiplier(troopCount);
+  const demoAttack = kind === "attack" ? normalizeDemoAttackSnapshot(options.demoAttack) : null;
+  const demoMultiplier = demoAttack?.travelMultiplier || 1;
   const minSeconds = kind === "scout" ? ARMY_TRAVEL_SCOUT_MIN_SECONDS : ARMY_TRAVEL_MIN_SECONDS;
   return clamp(
-    distance * ARMY_TRAVEL_SECONDS_PER_MAP_UNIT * kindMultiplier * troopMultiplier / Math.max(0.1, speed),
+    distance * ARMY_TRAVEL_SECONDS_PER_MAP_UNIT * kindMultiplier * troopMultiplier * demoMultiplier / Math.max(0.1, speed),
     minSeconds,
     ARMY_TRAVEL_MAX_SECONDS,
   );
@@ -8110,10 +8289,17 @@ function resolveAttack(attack) {
   const attackerReportName = attack.owner === "player"
     ? getBattleReportOwnerName(null, attack.owner)
     : attack.ownerName || getBattleReportOwnerName(null, attack.owner);
+  const attackSource = cityById(attack.fromId);
   const targetLevel = clampCityLevel(target.level);
   const defendersAtStart = Math.max(0, Math.floor(Number(target.troops) || 0));
   const targetDefenseAtStart = getCityStats(target).totalDefense;
-  const result = calculateCombatResult(attack.troops, attack.owner, target);
+  const demoAttack = normalizeDemoAttackSnapshot(attack.demoAttack)
+    || createDemoAttackSnapshot(attackSource, target, attack.troops, attack.owner, {
+      attackerKingPower: attack.attackerKingPower,
+      defenderKingPower: attack.defenderKingPower,
+    });
+  const demoReportSuffix = getDemoAttackReportSuffix(demoAttack);
+  const result = calculateCombatResult(attack.troops, attack.owner, target, { demoAttack });
 
   if (result.success) {
     const neutralCapture = attack.owner === "player" && oldOwner === "neutral" && !isStronghold(target);
@@ -8136,7 +8322,7 @@ function resolveAttack(attack) {
           defenderLosses: result.defenderLosses,
           totalDefense: targetDefenseAtStart,
           opponentName: defenderName,
-          summary: neutralBlockReason,
+          summary: `${neutralBlockReason}${demoReportSuffix}`,
         });
       }
       addLog(`${attackerName} defeated the defenders at ${target.name}, but could not capture it. ${neutralBlockReason}`);
@@ -8169,7 +8355,7 @@ function resolveAttack(attack) {
           defenderLosses: result.defenderLosses,
           totalDefense: targetDefenseAtStart,
           opponentName: attackerReportName,
-          summary: `Main city protected. Garrison was destroyed, but the city held. ${survivorSummary}`,
+          summary: `Main city protected. Garrison was destroyed, but the city held. ${survivorSummary}${demoReportSuffix}`,
         });
         addLog(`${target.name} is your main city and cannot be captured, but its defending army was destroyed.`);
         showToast(`${target.name} held. Garrison destroyed.`);
@@ -8190,7 +8376,7 @@ function resolveAttack(attack) {
             defenderLosses: result.defenderLosses,
             totalDefense: targetDefenseAtStart,
             opponentName: defenderName,
-            summary: `Protected main city. Garrison destroyed, but ownership did not change. ${survivorSummary}`,
+            summary: `Protected main city. Garrison destroyed, but ownership did not change. ${survivorSummary}${demoReportSuffix}`,
           });
         }
         addLog(`${attackerName} destroyed the garrison at ${target.name}, but main cities cannot be captured.`);
@@ -8199,8 +8385,8 @@ function resolveAttack(attack) {
       return;
     }
 
-    const xpEfficiency = attack.owner === "player" ? getCaptureXpEfficiency(target, oldOwner) : 1;
-    const xpAward = attack.owner === "player" ? getCaptureXpAward(target, oldOwner, result.defenderLosses, attack.owner) : 0;
+    const xpEfficiency = attack.owner === "player" ? (demoAttack ? 0 : getCaptureXpEfficiency(target, oldOwner)) : 1;
+    const xpAward = attack.owner === "player" && !demoAttack ? getCaptureXpAward(target, oldOwner, result.defenderLosses, attack.owner) : 0;
     const cautiousRefund = oldOwner === "player" && attack.owner !== "player" ? grantCautiousRefund(target) : 0;
 
     if (attack.owner === "player") {
@@ -8247,7 +8433,7 @@ function resolveAttack(attack) {
         defenderLosses: result.defenderLosses,
         totalDefense: targetDefenseAtStart,
         opponentName: defenderName,
-        summary: `Captured with ${formatNumber(result.survivors)} survivors. ${formatCapturedCityLevelDrop(levelDrop)} +${formatNumber(xpAward)} XP.`,
+        summary: `Captured with ${formatNumber(result.survivors)} survivors. ${formatCapturedCityLevelDrop(levelDrop)} +${formatNumber(xpAward)} XP.${demoReportSuffix}`,
       });
       addLog(`Victory: you captured ${target.name} with ${formatNumber(result.survivors)} survivors. ${formatCapturedCityLevelDrop(levelDrop)} XP efficiency ${Math.round(xpEfficiency * 100)}%.`);
       if (scavengedGold > 0) {
@@ -8259,7 +8445,7 @@ function resolveAttack(attack) {
     } else if (oldOwner === "player") {
       const savedDefenders = returnSavedTroops("brave", result.defenderLosses, `${target.name} defense`, target.id);
       const salvagedGold = grantKillGold("salvager", result.killedAttackers, `${target.name} defense`);
-      const defenseLossXp = getLostDefenseXpAward(attack.troops);
+      const defenseLossXp = applyDemoDefenderXpMultiplier(getLostDefenseXpAward(attack.troops), demoAttack);
       addBattleReport({
         type: "defense",
         outcome: "lost",
@@ -8274,7 +8460,7 @@ function resolveAttack(attack) {
         defenderLosses: result.defenderLosses,
         totalDefense: targetDefenseAtStart,
         opponentName: attackerReportName,
-        summary: `${target.name} was captured by ${attackerReportName}. ${formatCapturedCityLevelDrop(levelDrop)} +${formatNumber(defenseLossXp)} XP.`,
+        summary: `${target.name} was captured by ${attackerReportName}. ${formatCapturedCityLevelDrop(levelDrop)} +${formatNumber(defenseLossXp)} XP.${demoReportSuffix}`,
       });
       addLog(`Lost: the enemy captured ${target.name}. ${formatCapturedCityLevelDrop(levelDrop)} ${formatNumber(savedDefenders)} defenders escaped, ${formatNumber(cautiousRefund + salvagedGold)} gold was recovered, and you gained ${formatNumber(defenseLossXp)} XP.`);
       showToast(`You lost ${target.name}: +${formatNumber(defenseLossXp)} XP`);
@@ -8287,7 +8473,7 @@ function resolveAttack(attack) {
     if (attack.owner === "player") {
       const savedAttackers = returnSavedTroops("fearless", result.attackerLosses, `${target.name} failed attack`);
       const scavengedGold = grantKillGold("scavenger", result.killedDefenders, `${target.name} failed attack`);
-      const failedAttackXp = getFailedAttackXpAward(target, oldOwner, defendersAtStart, attack.owner);
+      const failedAttackXp = demoAttack ? 0 : getFailedAttackXpAward(target, oldOwner, defendersAtStart, attack.owner);
       addBattleReport({
         type: "attack",
         outcome: "defeat",
@@ -8302,7 +8488,7 @@ function resolveAttack(attack) {
         defenderLosses: result.defenderLosses,
         totalDefense: targetDefenseAtStart,
         opponentName: defenderName,
-        summary: `${formatNumber(result.defendersLeft)} defenders remained. +${formatNumber(failedAttackXp)} XP.`,
+        summary: `${formatNumber(result.defendersLeft)} defenders remained. +${formatNumber(failedAttackXp)} XP.${demoReportSuffix}`,
       });
       addLog(`Defeat: your attack on ${target.name} failed. ${formatNumber(result.defendersLeft)} defenders remain. ${formatNumber(savedAttackers)} attackers regrouped, ${formatNumber(scavengedGold)} gold was recovered, and you gained ${formatNumber(failedAttackXp)} XP.`);
       showToast(`Attack failed at ${target.name}: +${formatNumber(failedAttackXp)} XP`);
@@ -8310,6 +8496,7 @@ function resolveAttack(attack) {
     } else if (oldOwner === "player") {
       const savedDefenders = returnSavedTroops("brave", result.defenderLosses, `${target.name} defense`);
       const salvagedGold = grantKillGold("salvager", result.killedAttackers, `${target.name} defense`);
+      const defenseHeldXp = applyDemoDefenderXpMultiplier(getDefenseHeldXpAward(attack.troops), demoAttack);
       addBattleReport({
         type: "defense",
         outcome: "held",
@@ -8324,14 +8511,14 @@ function resolveAttack(attack) {
         defenderLosses: result.defenderLosses,
         totalDefense: targetDefenseAtStart,
         opponentName: attackerReportName,
-        summary: `${target.name} survived with ${formatNumber(result.defendersLeft)} defenders.`,
+        summary: `${target.name} survived with ${formatNumber(result.defendersLeft)} defenders. +${formatNumber(defenseHeldXp)} XP.${demoReportSuffix}`,
       });
       addLog(`Defense held: ${target.name} survived the enemy attack.`);
       if (savedDefenders > 0 || salvagedGold > 0) {
         addLog(`Defense rewards: ${formatNumber(savedDefenders)} defenders regrouped and ${formatNumber(salvagedGold)} gold was salvaged.`);
       }
       showToast(`Defense held at ${target.name}`);
-      addCharacterXp(getDefenseHeldXpAward(attack.troops), `${target.name} defense`);
+      addCharacterXp(defenseHeldXp, `${target.name} defense`);
     }
   }
 
@@ -9280,11 +9467,13 @@ function renderSendConfirmPanel(source, target) {
   const label = isTransfer ? "Move" : "Attack";
   const route = findRoute(source, target);
   const sendAmount = source.troops > 0 ? clamp(Math.floor(source.troops * selectedMarchPercent), 1, source.troops) : 0;
-  const travel = route ? travelTime(source, target, "player", route.length, sendAmount, isTransfer ? "transfer" : "attack") : Infinity;
+  let travel = route ? travelTime(source, target, "player", route.length, sendAmount, isTransfer ? "transfer" : "attack") : Infinity;
   let outcomeHtml = "";
 
   if (!isTransfer && route) {
     const preview = calculateBattlePreview(source, target, selectedMarchPercent);
+    travel = preview.travel;
+    const demoNotice = getDemoAttackNotice(preview.demoAttack);
     outcomeHtml = `
       <div class="send-outcome ${preview.success ? "win" : "lose"}">
         <strong>${preview.success ? "Likely Victory" : "Likely Defeat"}</strong>
@@ -9292,6 +9481,7 @@ function renderSendConfirmPanel(source, target) {
         <small>${preview.success
           ? `Est. survivors: ${formatNumber(preview.survivors)} - ${preview.xpLabel} ${formatNumber(preview.captureXp)}`
           : `Est. defenders left: ${formatNumber(preview.defendersLeft)} - ${preview.xpLabel} ${formatNumber(preview.captureXp)}`}</small>
+        ${demoNotice ? `<small>${escapeHtml(demoNotice)}</small>` : ""}
       </div>
     `;
   }
@@ -9475,20 +9665,25 @@ function updateTroopSliderModal(source, target, route) {
 
   const report = getScoutReport(target.id);
   if (!report) {
+    const demoAttack = createDemoAttackSnapshot(source, target, selectedTroopAmount, "player");
+    const effectiveTroops = demoAttack?.active ? demoAttack.effectiveTroops : selectedTroopAmount;
+    const demoTravel = travelTime(source, target, "player", route.length, effectiveTroops, "attack", { demoAttack });
+    const demoNotice = getDemoAttackNotice(demoAttack);
     previewEl.className = "troop-slider-preview unknown";
     previewEl.innerHTML = `
       <div><span>Battle forecast</span><strong>Garrison unknown</strong><small>Scout report required</small></div>
-      <div><span>Travel time</span><strong>About ${formatDuration(travel)}</strong><small>Attack is still available</small></div>
+      <div><span>Travel time</span><strong>About ${formatDuration(demoTravel)}</strong><small>Attack is still available</small>${demoNotice ? `<small>${escapeHtml(demoNotice)}</small>` : ""}</div>
     `;
     return;
   }
 
   const scoutedTarget = { ...target, troops: report.troops, troopFloat: report.troops };
   const preview = calculateBattlePreviewForTroops(source, scoutedTarget, selectedTroopAmount, route);
+  const demoNotice = getDemoAttackNotice(preview.demoAttack);
   previewEl.className = `troop-slider-preview ${preview.success ? "win" : "lose"}`;
   previewEl.innerHTML = `
     <div><span>Scouted forecast</span><strong>${preview.success ? "Likely victory" : "Likely defeat"}</strong><small>${preview.label}</small></div>
-    <div><span>${preview.success ? "Estimated survivors" : "Defenders left"}</span><strong>${formatNumber(preview.success ? preview.survivors : preview.defendersLeft)}</strong><small>About ${formatDuration(travel)} travel</small></div>
+    <div><span>${preview.success ? "Estimated survivors" : "Defenders left"}</span><strong>${formatNumber(preview.success ? preview.survivors : preview.defendersLeft)}</strong><small>About ${formatDuration(preview.travel)} travel</small>${demoNotice ? `<small>${escapeHtml(demoNotice)}</small>` : ""}</div>
   `;
 }
 
@@ -9960,6 +10155,7 @@ function showAttackPreview(source, target) {
     showToast("No land route found around the terrain.");
     return;
   }
+  const demoNotice = getDemoAttackNotice(preview.demoAttack);
   modalTitle.textContent = `Attack ${target.name}`;
   modalBody.innerHTML = `
     <div class="battle-preview ${preview.success ? "win" : "lose"}">
@@ -9975,6 +10171,7 @@ function showAttackPreview(source, target) {
       <p>${preview.success
         ? `Expected capture with about <strong>${formatNumber(preview.survivors)}</strong> surviving troops.`
         : `Expected failure with about <strong>${formatNumber(preview.defendersLeft)}</strong> defenders left.`}</p>
+      ${demoNotice ? `<p class="tiny-warning">${escapeHtml(demoNotice)}</p>` : ""}
       <p class="tiny-warning">This is an estimate based on current numbers. Confirm launches using the current troop count.</p>
       <div class="modal-actions">
         <button id="confirmAttackBtn" class="danger-action" type="button">Attack</button>
@@ -9999,6 +10196,7 @@ function showAttackPreview(source, target) {
       <p>${preview.success
         ? `Expected capture with about <strong>${formatNumber(preview.survivors)}</strong> surviving troops.`
         : `Expected failure with about <strong>${formatNumber(preview.defendersLeft)}</strong> defenders left.`}</p>
+      ${demoNotice ? `<p class="tiny-warning">${escapeHtml(demoNotice)}</p>` : ""}
       ${preview.cooldownRemaining > 0 ? `<p class="tiny-warning">Recent capture cooldown: XP is reduced for ${formatDuration(preview.cooldownRemaining)}.</p>` : ""}
       <p class="tiny-warning">This is an estimate based on current numbers. Confirm launches using the current troop count.</p>
       <div class="modal-actions">
@@ -10130,27 +10328,33 @@ function getFortifyCost(city) {
 }
 
 function calculateBattlePreview(source, target, percent) {
-  const send = clamp(Math.floor(source.troops * percent), 1, source.troops);
-  return calculateBattlePreviewForTroops(source, target, send);
+  const requestedSend = clamp(Math.floor(source.troops * percent), 1, source.troops);
+  return calculateBattlePreviewForTroops(source, target, requestedSend);
 }
 
 function calculateBattlePreviewForTroops(source, target, amount, knownRoute = null) {
-  const send = clamp(Math.floor(amount), 1, source.troops);
-  const result = calculateCombatResult(send, "player", target);
-  const xpEfficiency = getCaptureXpEfficiency(target, target.owner);
-  const captureXp = result.success
-    ? getCaptureXpAward(target, target.owner, result.defenderLosses, "player")
-    : getFailedAttackXpAward(target, target.owner, Math.max(0, Math.floor(Number(target.troops) || 0)), "player");
-  const xpLabel = result.success ? "capture XP" : "defeat XP";
+  const requestedSend = clamp(Math.floor(amount), 1, source.troops);
+  const demoAttack = createDemoAttackSnapshot(source, target, requestedSend, "player");
+  const send = demoAttack?.active ? demoAttack.effectiveTroops : requestedSend;
+  const result = calculateCombatResult(send, "player", target, { demoAttack });
+  const xpEfficiency = demoAttack?.active ? 0 : getCaptureXpEfficiency(target, target.owner);
+  const captureXp = demoAttack?.active
+    ? 0
+    : result.success
+      ? getCaptureXpAward(target, target.owner, result.defenderLosses, "player")
+      : getFailedAttackXpAward(target, target.owner, Math.max(0, Math.floor(Number(target.troops) || 0)), "player");
+  const xpLabel = demoAttack?.active ? "attacker XP" : result.success ? "capture XP" : "defeat XP";
   const cooldownRemaining = getCaptureCooldownRemaining(target);
   let label = "Weak odds";
   if (result.ratio >= 1.35) label = "Overwhelming advantage";
   else if (result.ratio >= 1.12) label = "Good advantage";
   else if (result.ratio > 1) label = "Close win";
   else if (result.ratio >= .82) label = "Risky attack";
+  if (demoAttack?.active) label = `${demoAttack.label}: ${label}`;
   const route = knownRoute || findRoute(source, target);
-  const travel = route ? travelTime(source, target, "player", route.length, send, "attack") : Infinity;
+  const travel = route ? travelTime(source, target, "player", route.length, send, "attack", { demoAttack }) : Infinity;
   return {
+    requestedSend,
     send,
     attackPower: result.attackPower,
     defensePower: result.defensePower,
@@ -10165,6 +10369,7 @@ function calculateBattlePreviewForTroops(source, target, amount, knownRoute = nu
     xpLabel,
     cooldownRemaining,
     label,
+    demoAttack,
     travel,
     path: route?.points || null,
     pathLength: route?.length || 0,
@@ -10905,6 +11110,7 @@ function showHelpModal() {
       <li>Prosperous boosts gold, Rusher boosts travel speed, and Striker boosts attacking combat power.</li>
       <li>Fearless saves some attacking losses, Brave saves some defending losses, Scavenger and Salvager recover gold from kills, and Cautious refunds some invested gold when you lose a city.</li>
       <li>Captured cities enter a one-hour XP cooldown. Attacking during cooldown still works, but capture XP is reduced.</li>
+      <li>Demo Attacks protect weaker kingdoms: much stronger attackers send fewer effective troops, march slower, earn 0 XP, and defenders earn bonus XP.</li>
       <li>Items and advisors are intentionally not included in this prototype pass.</li>
     </ul>
   `;
