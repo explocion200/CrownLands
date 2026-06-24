@@ -4075,6 +4075,34 @@ function returnSavedTroops(skill, losses, reason, excludeCityId = null) {
   return saved;
 }
 
+function returnSurvivingAttackersToSource(attack, troops, reason = "") {
+  const returned = Math.max(0, Math.floor(Number(troops) || 0));
+  if (returned <= 0) return 0;
+  const source = cityById(attack?.fromId);
+  const attackOwnerUid = String(attack?.ownerUid || "").trim();
+  const sourceOwnerUid = String(source?.ownerUid || "").trim();
+  const sourceBelongsToAttacker = Boolean(source && (
+    source.owner === attack?.owner
+    || (attackOwnerUid && sourceOwnerUid && attackOwnerUid === sourceOwnerUid)
+  ));
+  if (!sourceBelongsToAttacker) return 0;
+
+  source.troopFloat = Math.max(0, Number(source.troopFloat) || Number(source.troops) || 0) + returned;
+  source.troops = Math.floor(source.troopFloat);
+
+  if (source.owner === "player") {
+    markOwnedCityChanged(source, false);
+    syncCityStateToOnline(source);
+    syncOwnedCitiesToOnline(true);
+  } else if (source.ownerKind === "player" && source.ownerUid) {
+    syncSharedCityState(source);
+  }
+
+  const reasonText = reason ? ` from ${reason}` : "";
+  addLog(`${formatNumber(returned)} surviving attackers returned to ${source.name}${reasonText}.`);
+  return returned;
+}
+
 function grantKillGold(skill, killedTroops, reason) {
   const percent = getSkillPercent(skill);
   const killed = Math.max(0, Math.floor(Number(killedTroops) || 0));
@@ -8083,7 +8111,10 @@ function resolveAttack(attack) {
     if (isProtectedMainCity(target) && oldOwner !== attack.owner) {
       target.troopFloat = 0;
       target.troops = 0;
-      target.lastCapturedAt = state.gameSeconds;
+      const returnedSurvivors = returnSurvivingAttackersToSource(attack, result.survivors, `${target.name} protected main city attack`);
+      const survivorSummary = returnedSurvivors > 0
+        ? `${formatNumber(returnedSurvivors)} surviving attackers returned to their source city.`
+        : "Surviving attackers could not occupy the protected main city.";
       if (oldOwner === "player") {
         markOwnedCityChanged(target);
         syncCityStateToOnline(target);
@@ -8095,13 +8126,13 @@ function resolveAttack(attack) {
           cityLevel: targetLevel,
           sentTroops: attack.troops,
           troopCount: defendersAtStart,
-          survivors: 0,
+          survivors: result.survivors,
           defendersLeft: 0,
           attackerLosses: result.attackerLosses,
           defenderLosses: result.defenderLosses,
           totalDefense: targetDefenseAtStart,
           opponentName: attackerReportName,
-          summary: "Main city protected. Garrison was destroyed, but the city held.",
+          summary: `Main city protected. Garrison was destroyed, but the city held. ${survivorSummary}`,
         });
         addLog(`${target.name} is your main city and cannot be captured, but its defending army was destroyed.`);
         showToast(`${target.name} held. Garrison destroyed.`);
@@ -8110,7 +8141,7 @@ function resolveAttack(attack) {
         if (attack.owner === "player") {
           addBattleReport({
             type: "attack",
-            outcome: "defeat",
+            outcome: "victory",
             cityId: target.id,
             cityName: target.name,
             cityLevel: targetLevel,
@@ -8122,11 +8153,11 @@ function resolveAttack(attack) {
             defenderLosses: result.defenderLosses,
             totalDefense: targetDefenseAtStart,
             opponentName: defenderName,
-            summary: "Protected main city. Garrison destroyed, but ownership did not change.",
+            summary: `Protected main city. Garrison destroyed, but ownership did not change. ${survivorSummary}`,
           });
         }
         addLog(`${attackerName} destroyed the garrison at ${target.name}, but main cities cannot be captured.`);
-        if (attack.owner === "player") showToast(`${target.name} held as a protected main city.`);
+        if (attack.owner === "player") showToast(`${target.name} protected. Survivors returned home.`);
       }
       return;
     }
@@ -9124,6 +9155,15 @@ function layoutCityLabels() {
   }
 }
 
+function canViewArmyTroopAmount(attack) {
+  if (!attack) return false;
+  if (attack.kind !== "transfer") return true;
+  if (attack.owner === "player") return true;
+  const ownerUid = String(attack.ownerUid || "").trim();
+  const currentUid = getCurrentOnlineUid();
+  return Boolean(ownerUid && currentUid && ownerUid === currentUid);
+}
+
 function renderArmies() {
   if (!state) return;
   if (isZoomInteractionActive()) return;
@@ -9147,8 +9187,15 @@ function renderArmies() {
     token.style.left = `${mapPoint.x}px`;
     token.style.top = `${mapPoint.y}px`;
     const armyIcon = attack.kind === "scout" ? "\u{1F52D}" : attack.kind === "transfer" ? "\u{1F45F}" : "\u2694";
-    token.innerHTML = `<span>${armyIcon}</span><strong>${formatNumber(attack.troops)}</strong><small>${formatDuration(attack.remaining)}</small>`;
-    if (attack.ownerName) token.title = `${attack.ownerName}: ${attack.kind} to ${to.name}`;
+    const showTroops = canViewArmyTroopAmount(attack);
+    token.classList.toggle("hidden-transfer", !showTroops);
+    token.innerHTML = showTroops
+      ? `<span>${armyIcon}</span><strong>${formatNumber(attack.troops)}</strong><small>${formatDuration(attack.remaining)}</small>`
+      : `<span>${armyIcon}</span><small>${formatDuration(attack.remaining)}</small>`;
+    if (attack.ownerName) {
+      const titlePrefix = `${attack.ownerName}: ${attack.kind} to ${to.name}`;
+      token.title = showTroops ? titlePrefix : `${titlePrefix} - ${formatDuration(attack.remaining)} remaining`;
+    }
     armyLayer.appendChild(token);
   }
 }

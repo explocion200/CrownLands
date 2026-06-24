@@ -1287,6 +1287,15 @@ input {
 .army-token.enemy { background: linear-gradient(#ff766d, #9c2b26); }
 .army-token.neutral { background: linear-gradient(#d2c6aa, #6c6254); color: #211b15; }
 .army-token small { opacity: .86; font-size: .62rem; }
+.army-token.hidden-transfer {
+  min-width: 48px;
+  height: 28px;
+  padding: 0 .4rem;
+}
+.army-token.hidden-transfer small {
+  font-size: .68rem;
+  font-weight: 950;
+}
 
 .toast {
   position: absolute;
