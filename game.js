@@ -33,20 +33,34 @@ const INVENTORY_SLOT_COUNT = 5;
 const SHOP_ITEMS = [
   {
     id: "shield_12h",
-    label: "12 hour shield",
-    description: "Placeholder defensive item. Shield mechanics will be added later.",
+    label: "Royal Peace Shield",
+    description: "Protects your kingdom from attacks for 12 hours.",
     cost: 50_000,
   },
   {
-    id: "troop_boost_1h",
-    label: "1h troop boost",
-    description: "Placeholder production boost item. Troop boost mechanics will be added later.",
+    id: "war_drums_30m",
+    legacyIds: ["troop_boost_1h"],
+    label: "War Drums",
+    description: "Increases troop production for 30 minutes.",
     cost: 10_000,
   },
   {
-    id: "anti_scout_1h",
-    label: "1h anti scout",
-    description: "Placeholder anti-scout item. Scout-blocking mechanics will be added later.",
+    id: "veil_of_silence_30m",
+    legacyIds: ["anti_scout_1h"],
+    label: "Veil of Silence",
+    description: "Blocks enemy scouting for 30 minutes.",
+    cost: 10_000,
+  },
+  {
+    id: "swift_march_order",
+    label: "Swift March Order",
+    description: "Speeds up one troop transfer between owned cities only.",
+    cost: 10_000,
+  },
+  {
+    id: "recall_horn",
+    label: "Recall Horn",
+    description: "Cancels one active march before it reaches the target.",
     cost: 10_000,
   },
 ];
@@ -3508,7 +3522,10 @@ function normalizeShopItems(items) {
   const normalized = createDefaultShopItems();
   if (!items || typeof items !== "object") return normalized;
   SHOP_ITEMS.forEach(item => {
-    normalized[item.id] = Math.max(0, Math.floor(Number(items[item.id]) || 0));
+    const legacyCount = (item.legacyIds || []).reduce((total, legacyId) => (
+      total + Math.max(0, Math.floor(Number(items[legacyId]) || 0))
+    ), 0);
+    normalized[item.id] = Math.max(0, Math.floor(Number(items[item.id]) || 0)) + legacyCount;
   });
   return normalized;
 }
@@ -9718,7 +9735,10 @@ function renderShopItem(item, inventory) {
   const canBuy = state && Math.floor(Number(state.gold) || 0) >= item.cost;
   return `
     <article class="shop-item">
-      <div>
+      <div class="shop-item-image-placeholder" aria-hidden="true">
+        <span>${escapeHtml(item.label.slice(0, 1))}</span>
+      </div>
+      <div class="shop-item-copy">
         <strong>${escapeHtml(item.label)}</strong>
         <span>${formatNumber(item.cost)} gold</span>
         <small>Owned: ${formatNumber(owned)}</small>
