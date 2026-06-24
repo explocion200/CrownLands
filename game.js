@@ -52,6 +52,7 @@ const SHOP_ITEMS = [
     label: "Veil of Silence",
     description: "Blocks enemy scouting for 30 minutes.",
     cost: 10_000,
+    icon: "assets/veil-of-silence-icon.jpg",
   },
   {
     id: "swift_march_order",
