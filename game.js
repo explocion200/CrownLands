@@ -35,7 +35,7 @@ const SHOP_ITEMS = [
     id: "shield_12h",
     label: "Royal Peace Shield",
     description: "Protects your kingdom from attacks for 12 hours.",
-    cost: 50_000,
+    cost: 175_000,
     icon: "assets/royal-peace-shield-icon.jpg",
   },
   {
@@ -43,7 +43,7 @@ const SHOP_ITEMS = [
     legacyIds: ["troop_boost_1h"],
     label: "War Drums",
     description: "Increases troop production for 30 minutes.",
-    cost: 10_000,
+    cost: 25_000,
     icon: "assets/war-drums-icon.jpg",
   },
   {
@@ -51,21 +51,21 @@ const SHOP_ITEMS = [
     legacyIds: ["anti_scout_1h"],
     label: "Veil of Silence",
     description: "Blocks enemy scouting for 30 minutes.",
-    cost: 10_000,
+    cost: 40_000,
     icon: "assets/veil-of-silence-icon.jpg",
   },
   {
     id: "swift_march_order",
     label: "Swift March Order",
     description: "Speeds up one troop transfer between owned cities only.",
-    cost: 10_000,
+    cost: 55_000,
     icon: "assets/swift-march-order-icon.jpg",
   },
   {
     id: "recall_horn",
     label: "Recall Horn",
     description: "Cancels one active march before it reaches the target.",
-    cost: 10_000,
+    cost: 90_000,
     icon: "assets/recall-horn-icon.jpg",
   },
 ];
