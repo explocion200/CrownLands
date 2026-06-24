@@ -6367,6 +6367,16 @@ function deleteOnlineArmyMovement(mission) {
   });
 }
 
+function getOnlineArmyResolutionId(mission) {
+  const id = mission?.onlineId || (typeof mission?.id === "string" ? mission.id : "");
+  return String(id || "").trim();
+}
+
+function isOnlineArmyResolutionBlocked(mission) {
+  const onlineId = getOnlineArmyResolutionId(mission);
+  return Boolean(onlineId && (resolvedOnlineArmyIds.has(onlineId) || resolvingOnlineArmyIds.has(onlineId)));
+}
+
 function getOnlineArmyRemainingSeconds(army) {
   if (!army) return 0;
   if (Number.isFinite(army.arrivesAtMs) && army.arrivesAtMs > 0) {
@@ -6473,6 +6483,8 @@ function subscribeOnlineArmyWatchers(activeIslandId) {
 
 function isOnlineArmyVisible(army) {
   if (!army || army.status !== "active") return false;
+  const onlineId = getOnlineArmyResolutionId(army);
+  if (onlineId && resolvedOnlineArmyIds.has(onlineId)) return false;
   if (!army.fromId || !army.toId) return false;
   if (army.ownerUid && army.ownerUid === getCurrentOnlineUid()) return true;
   return getOnlineArmyRemainingSeconds(army) > -ONLINE_ARMY_EXPIRY_GRACE_SECONDS;
@@ -6540,7 +6552,7 @@ async function loadOnlineRegionCitiesForResolution(regionId) {
 }
 
 function resolveOverdueOnlineArmy(army) {
-  const onlineId = String(army?.id || army?.onlineId || "");
+  const onlineId = getOnlineArmyResolutionId(army);
   if (!onlineId || resolvingOnlineArmyIds.has(onlineId) || resolvedOnlineArmyIds.has(onlineId)) return;
   resolvingOnlineArmyIds.add(onlineId);
   resolveOverdueOnlineArmyAsync(army)
@@ -6555,7 +6567,7 @@ function resolveOverdueOnlineArmy(army) {
 
 async function resolveOverdueOnlineArmyAsync(army) {
   if (!state || army?.ownerUid !== getCurrentOnlineUid()) return false;
-  const onlineId = String(army.id || army.onlineId || "");
+  const onlineId = getOnlineArmyResolutionId(army);
   if (!onlineId || resolvedOnlineArmyIds.has(onlineId)) return false;
   const targetRegionId = getCityRegionId(army.toId);
   const loadedTargetRegion = await loadOnlineRegionCitiesForResolution(targetRegionId);
@@ -6565,9 +6577,9 @@ async function resolveOverdueOnlineArmyAsync(army) {
 
   const mission = createLocalAttackFromOnlineArmy(army, 0);
   if (!mission) return false;
+  resolvedOnlineArmyIds.add(onlineId);
   resolveAttack(mission);
   deleteOnlineArmyMovement(mission);
-  resolvedOnlineArmyIds.add(onlineId);
   state.attacks = state.attacks.filter(attack => attack.onlineId !== onlineId);
   saveGame();
   flushOnlineSave(true);
@@ -6583,7 +6595,7 @@ function adoptOwnOnlineArmies() {
   if (!uid) return;
   const localOnlineIds = new Set(state.attacks.map(attack => attack.onlineId).filter(Boolean));
   for (const army of onlineArmies) {
-    if (army.ownerUid !== uid || localOnlineIds.has(army.id) || resolvedOnlineArmyIds.has(army.id)) continue;
+    if (army.ownerUid !== uid || localOnlineIds.has(army.id) || isOnlineArmyResolutionBlocked(army)) continue;
     const remaining = getOnlineArmyRemainingSeconds(army);
     if (remaining <= 0) {
       resolveOverdueOnlineArmy(army);
@@ -6602,7 +6614,7 @@ function retryOverdueOnlineArmyResolutions() {
   if (!uid) return;
   onlineArmies
     .filter(army => army?.ownerUid === uid)
-    .filter(army => !resolvedOnlineArmyIds.has(army.id))
+    .filter(army => !isOnlineArmyResolutionBlocked(army))
     .filter(army => getOnlineArmyRemainingSeconds(army) <= 0)
     .forEach(resolveOverdueOnlineArmy);
 }
@@ -7852,13 +7864,28 @@ function showOfflineRewardsModal({ goldGained = 0, troopsGained = 0, troopsKeptI
 
 function updateAttacks(dt) {
   const completed = [];
+  const completedOnlineIds = new Set();
   for (const attack of state.attacks) {
     attack.remaining -= dt;
-    if (attack.remaining <= 0) completed.push(attack);
+    if (attack.remaining <= 0) {
+      const onlineId = getOnlineArmyResolutionId(attack);
+      const skipResolve = Boolean(onlineId && (completedOnlineIds.has(onlineId) || isOnlineArmyResolutionBlocked(attack)));
+      if (onlineId) {
+        completedOnlineIds.add(onlineId);
+        if (!skipResolve) resolvingOnlineArmyIds.add(onlineId);
+      }
+      completed.push({ attack, skipResolve });
+    }
   }
 
-  for (const attack of completed) {
-    resolveAttack(attack);
+  for (const entry of completed) {
+    const { attack, skipResolve } = entry;
+    const onlineId = getOnlineArmyResolutionId(attack);
+    if (!skipResolve) {
+      if (onlineId) resolvedOnlineArmyIds.add(onlineId);
+      resolveAttack(attack);
+    }
+    if (onlineId) resolvingOnlineArmyIds.delete(onlineId);
     deleteOnlineArmyMovement(attack);
   }
 
