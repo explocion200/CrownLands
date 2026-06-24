@@ -434,12 +434,26 @@ const FLAG_PATTERNS = [
   { key: "diagonal", label: "Diagonal" },
   { key: "band", label: "Band" },
   { key: "cross", label: "Cross" },
+  { key: "saltire", label: "Saltire" },
+  { key: "chevron", label: "Chevron" },
+  { key: "quartered", label: "Quartered" },
+  { key: "pale", label: "Pale" },
+  { key: "chief", label: "Chief" },
+  { key: "bend", label: "Bend" },
 ];
 const FLAG_SYMBOLS = [
   { key: "crown", label: "Crown", glyph: "\u265B" },
   { key: "castle", label: "Castle", glyph: "\u265C" },
   { key: "star", label: "Star", glyph: "\u2726" },
   { key: "swords", label: "Swords", glyph: "\u2694" },
+  { key: "fleur", label: "Fleur-de-lis", glyph: "\u269C" },
+  { key: "cross", label: "Templar Cross", glyph: "\u2720" },
+  { key: "sun", label: "Sun", glyph: "\u2600" },
+  { key: "moon", label: "Moon", glyph: "\u263E" },
+  { key: "knight", label: "Knight", glyph: "\u265E" },
+  { key: "tower", label: "Tower", glyph: "\u2656" },
+  { key: "diamond", label: "Gem", glyph: "\u25C6" },
+  { key: "spire", label: "Spire", glyph: "\u25B2" },
 ];
 
 
@@ -3488,7 +3502,7 @@ function newGame(playerName) {
     version: WORLD_SCHEMA_VERSION,
     playerName,
     character: createCharacterProgress(),
-    flag: createDefaultFlag(),
+    flag: createRandomFlag(),
     gold: TEST_STARTING_GOLD,
     gameSeconds: 0,
     lastRealTimeMs: Date.now(),
@@ -3590,6 +3604,22 @@ function normalizeMarchPercent(value) {
 
 function createDefaultFlag() {
   return { primary: "#1f5f91", secondary: "#d3a62e", pattern: "diagonal", symbol: "crown" };
+}
+
+function randomFrom(list) {
+  return list[Math.floor(Math.random() * list.length)];
+}
+
+function createRandomFlag() {
+  const primaryOptions = FLAG_COLORS.filter(color => color !== "#d9e2e8");
+  const primary = randomFrom(primaryOptions) || createDefaultFlag().primary;
+  const secondaryOptions = FLAG_COLORS.filter(color => color !== primary);
+  return {
+    primary,
+    secondary: randomFrom(secondaryOptions) || createDefaultFlag().secondary,
+    pattern: randomFrom(FLAG_PATTERNS)?.key || createDefaultFlag().pattern,
+    symbol: randomFrom(FLAG_SYMBOLS)?.key || createDefaultFlag().symbol,
+  };
 }
 
 function normalizeFlag(flag) {

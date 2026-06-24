@@ -3442,6 +3442,32 @@ input {
 .kingdom-flag.pattern-band::before { left: 0; right: 0; top: 38%; height: 24%; }
 .kingdom-flag.pattern-cross::before { top: 0; bottom: 0; left: 42%; width: 16%; }
 .kingdom-flag.pattern-cross::after { left: 0; right: 0; top: 42%; height: 16%; }
+.kingdom-flag.pattern-saltire::before,
+.kingdom-flag.pattern-saltire::after,
+.kingdom-flag.pattern-bend::before {
+  top: -24%;
+  bottom: -24%;
+  left: 42%;
+  width: 16%;
+}
+.kingdom-flag.pattern-saltire::before { transform: rotate(38deg); }
+.kingdom-flag.pattern-saltire::after { transform: rotate(-38deg); }
+.kingdom-flag.pattern-chevron::before {
+  inset: 0;
+  clip-path: polygon(0 70%, 0 47%, 50% 18%, 100% 47%, 100% 70%, 50% 41%);
+}
+.kingdom-flag.pattern-quartered {
+  background: conic-gradient(
+    from 90deg,
+    var(--flag-primary) 0 25%,
+    var(--flag-secondary) 0 50%,
+    var(--flag-primary) 0 75%,
+    var(--flag-secondary) 0 100%
+  );
+}
+.kingdom-flag.pattern-pale::before { top: 0; bottom: 0; left: 36%; width: 28%; }
+.kingdom-flag.pattern-chief::before { top: 0; left: 0; right: 0; height: 34%; }
+.kingdom-flag.pattern-bend::before { transform: rotate(-38deg); }
 .flag-symbol {
   position: relative;
   z-index: 2;
