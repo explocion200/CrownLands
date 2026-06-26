@@ -4275,7 +4275,7 @@ function getPvpOpponentPowerXpMultiplier(target, oldOwner = target?.owner, attac
   const targetOwnedByPlayer = oldOwner === "enemy"
     || oldOwner === "player"
     || target.ownerKind === "player"
-    || Boolean(target.ownerUid);
+    || Boolean(String(target.ownerUid || "").trim());
   if (!targetOwnedByPlayer) return null;
 
   const attackerPower = Math.max(1, normalizePowerValue(getKingPower()));
@@ -4381,7 +4381,7 @@ function createDemoAttackSnapshot(source, target, requestedTroops, owner = "play
   if (target.owner === owner) return null;
   const targetOwnerUid = String(target.ownerUid || "").trim();
   const currentUid = getCurrentOnlineUid();
-  const targetOwnedByPlayer = target.ownerKind === "player" || target.owner === "enemy";
+  const targetOwnedByPlayer = target.ownerKind === "player" || target.owner === "enemy" || Boolean(targetOwnerUid);
   const targetOwnedByCurrentPlayer = target.owner === "player" || (targetOwnerUid && currentUid && targetOwnerUid === currentUid);
   if (!targetOwnedByPlayer || targetOwnedByCurrentPlayer) return null;
 

@@ -198,6 +198,7 @@
 
   function cleanCitySeed(city) {
     const owner = cleanCityOwner(city);
+    const isStronghold = city.kind === "stronghold" || Boolean(city.strongholdType);
     return {
       id: city.id,
       name: city.name || city.id,
@@ -205,6 +206,12 @@
       y: Number(city.y) || 0,
       startPool: city.startPool || "",
       regionId: city.regionId || city.startPool || "",
+      kind: isStronghold ? "stronghold" : "",
+      strongholdType: isStronghold ? String(city.strongholdType || "").slice(0, 32) : "",
+      bonus: isStronghold ? String(city.bonus || "").slice(0, 32) : "",
+      bonusPercent: isStronghold ? Math.max(0, Math.floor(Number(city.bonusPercent) || 0)) : 0,
+      size: isStronghold ? Math.max(0, Math.floor(Number(city.size) || 0)) : 0,
+      artSrc: isStronghold ? String(city.artSrc || "").slice(0, 160) : "",
       ...owner,
       level: Math.max(1, Math.floor(Number(city.level) || 1)),
       troops: Math.max(0, Math.floor(Number(city.troops) || 0)),
@@ -217,6 +224,7 @@
   }
 
   function cleanCityLayoutSeed(city) {
+    const isStronghold = city.kind === "stronghold" || Boolean(city.strongholdType);
     return {
       id: city.id,
       name: city.name || city.id,
@@ -224,6 +232,12 @@
       y: Number(city.y) || 0,
       startPool: city.startPool || "",
       regionId: city.regionId || city.startPool || "",
+      kind: isStronghold ? "stronghold" : "",
+      strongholdType: isStronghold ? String(city.strongholdType || "").slice(0, 32) : "",
+      bonus: isStronghold ? String(city.bonus || "").slice(0, 32) : "",
+      bonusPercent: isStronghold ? Math.max(0, Math.floor(Number(city.bonusPercent) || 0)) : 0,
+      size: isStronghold ? Math.max(0, Math.floor(Number(city.size) || 0)) : 0,
+      artSrc: isStronghold ? String(city.artSrc || "").slice(0, 160) : "",
       defense: 1,
     };
   }
