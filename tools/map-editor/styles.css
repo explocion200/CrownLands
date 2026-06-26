@@ -314,8 +314,8 @@ select {
 }
 
 .marker.portal {
-  width: 34px;
-  height: 34px;
+  width: var(--marker-size, 34px);
+  height: var(--marker-size, 34px);
   border-radius: 8px;
   transform: translate(-50%, -50%) rotate(45deg);
   border-color: #c8f0ff;
@@ -327,8 +327,8 @@ select {
 }
 
 .marker.objective {
-  width: 48px;
-  height: 48px;
+  width: var(--marker-size, 48px);
+  height: var(--marker-size, 48px);
   border-radius: 8px;
   border-color: #ffe7a7;
   background: radial-gradient(circle, #ffe09a, #8e5d17 74%);

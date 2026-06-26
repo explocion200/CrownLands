@@ -1,6 +1,10 @@
 (function () {
   const CORE_MAP_IDS = ["west", "north", "east", "south", "center"];
   const DEFAULT_IMAGE_ROOT = "../../";
+  const DEFAULT_PORTAL_SIZE = 96;
+  const DEFAULT_OBJECTIVE_SIZE = 154;
+  const MIN_PORTAL_SIZE = 48;
+  const MIN_OBJECTIVE_SIZE = 80;
   const STRONGHOLD_TYPES = {
     gold: {
       name: "Gold Stronghold",
@@ -144,7 +148,7 @@
         targetRegionId: slugify(portal.targetRegionId || portal.target || "center"),
         x: Math.round(Number(portal.x ?? portal.point?.x) || 0),
         y: Math.round(Number(portal.y ?? portal.point?.y) || 0),
-        size: Math.max(24, Math.floor(Number(portal.size) || 74)),
+        size: Math.max(MIN_PORTAL_SIZE, Math.floor(Number(portal.size) || DEFAULT_PORTAL_SIZE)),
       })) : [],
       objectives: Array.isArray(rawMap.objectives) ? rawMap.objectives.map((objective, index) => normalizeObjective(id, objective, index)) : [],
     };
@@ -164,7 +168,7 @@
       artSrc: String(objective.artSrc || defaults.artSrc),
       x: Math.round(Number(objective.x ?? objective.point?.x) || 0),
       y: Math.round(Number(objective.y ?? objective.point?.y) || 0),
-      size: Math.max(40, Math.floor(Number(objective.size) || 120)),
+      size: Math.max(MIN_OBJECTIVE_SIZE, Math.floor(Number(objective.size) || DEFAULT_OBJECTIVE_SIZE)),
     };
   }
 
@@ -341,7 +345,7 @@
             targetRegionId: portal.targetRegionId,
             x: Number(portal.point?.x) || 0,
             y: Number(portal.point?.y) || 0,
-            size: 74,
+            size: DEFAULT_PORTAL_SIZE,
           }))
         : spec.portals.map(portal => {
             const point = extractObject(source, portal.pointConst);
@@ -351,7 +355,7 @@
               targetRegionId: portal.targetRegionId,
               x: Number(point.x) || 0,
               y: Number(point.y) || 0,
-              size: 74,
+              size: DEFAULT_PORTAL_SIZE,
             };
           });
       const objectives = spec.objectives.map((objective, index) => {
@@ -368,7 +372,7 @@
           troops: defaults.troops,
           x: Number(point.x) || 0,
           y: Number(point.y) || 0,
-          size: 130,
+          size: DEFAULT_OBJECTIVE_SIZE,
         }, index);
       });
 
@@ -488,6 +492,9 @@
       button.dataset.index = String(index);
       button.style.left = `${(Number(item.x) || 0) / map.imageWidth * 100}%`;
       button.style.top = `${(Number(item.y) || 0) / map.imageHeight * 100}%`;
+      if (type === "portal" || type === "objective") {
+        button.style.setProperty("--marker-size", `${getMarkerPreviewSize(type, item)}px`);
+      }
       button.title = markerTitle(type, item);
       button.innerHTML = `<span>${markerGlyph(type, index)}</span>`;
       button.addEventListener("pointerdown", event => {
@@ -498,6 +505,18 @@
       });
       elements.markerLayer.appendChild(button);
     });
+  }
+
+  function getMarkerPreviewSize(type, item) {
+    if (type === "portal") {
+      const size = Math.max(MIN_PORTAL_SIZE, Math.floor(Number(item?.size) || DEFAULT_PORTAL_SIZE));
+      return Math.max(20, Math.min(74, Math.round(size * 0.45)));
+    }
+    if (type === "objective") {
+      const size = Math.max(MIN_OBJECTIVE_SIZE, Math.floor(Number(item?.size) || DEFAULT_OBJECTIVE_SIZE));
+      return Math.max(28, Math.min(96, Math.round(size * 0.31)));
+    }
+    return 28;
   }
 
   function markerGlyph(type, index) {
@@ -611,6 +630,7 @@
         ${state.maps.filter(map => map.id !== currentMap().id).map(map => `<option value="${escapeHtml(map.id)}" ${map.id === item.targetRegionId ? "selected" : ""}>${escapeHtml(map.label)}</option>`).join("")}
       </select></label>
       <div class="field-row">${numberField("x", "X", item.x)}${numberField("y", "Y", item.y)}</div>
+      ${numberField("size", "Size", item.size, MIN_PORTAL_SIZE)}
     `;
     bindSelectionInputs(item);
   }
@@ -625,6 +645,7 @@
       ${textField("artSrc", "Icon path", item.artSrc)}
       <div class="field-row">${numberField("x", "X", item.x)}${numberField("y", "Y", item.y)}</div>
       <div class="field-row">${numberField("bonusPercent", "Bonus %", item.bonusPercent)}${numberField("troops", "Defenders", item.troops)}</div>
+      ${numberField("size", "Size", item.size, MIN_OBJECTIVE_SIZE)}
     `;
     bindSelectionInputs(item);
   }
@@ -633,15 +654,17 @@
     return `<label><span>${label}</span><input data-field="${field}" value="${escapeHtml(value)}" /></label>`;
   }
 
-  function numberField(field, label, value) {
-    return `<label><span>${label}</span><input data-field="${field}" type="number" value="${Number(value) || 0}" /></label>`;
+  function numberField(field, label, value, min = null) {
+    const minAttr = Number.isFinite(Number(min)) ? ` min="${Number(min)}"` : "";
+    return `<label><span>${label}</span><input data-field="${field}" type="number"${minAttr} value="${Number(value) || 0}" /></label>`;
   }
 
   function bindSelectionInputs(item) {
     elements.selectionForm.querySelectorAll("[data-field]").forEach(input => {
       input.addEventListener("input", () => {
         const field = input.dataset.field;
-        if (["x", "y", "bonusPercent", "troops", "level", "size"].includes(field)) item[field] = Math.round(Number(input.value) || 0);
+        if (field === "size") item[field] = normalizeSizeForType(state.selected?.type, input.value);
+        else if (["x", "y", "bonusPercent", "troops", "level"].includes(field)) item[field] = Math.round(Number(input.value) || 0);
         else item[field] = input.value;
         if (field === "type" && STRONGHOLD_TYPES[item.type]) {
           const defaults = STRONGHOLD_TYPES[item.type];
@@ -653,6 +676,13 @@
         renderCanvas();
       });
     });
+  }
+
+  function normalizeSizeForType(type, value) {
+    const size = Math.round(Number(value) || 0);
+    if (type === "portal") return Math.max(MIN_PORTAL_SIZE, size || DEFAULT_PORTAL_SIZE);
+    if (type === "objective") return Math.max(MIN_OBJECTIVE_SIZE, size || DEFAULT_OBJECTIVE_SIZE);
+    return size;
   }
 
   function addCity(point) {
@@ -687,7 +717,7 @@
       targetRegionId,
       x: point.x,
       y: point.y,
-      size: 74,
+      size: DEFAULT_PORTAL_SIZE,
     };
     map.portals.push(portal);
     if (targetMap && !targetMap.portals.some(existing => existing.targetRegionId === map.id)) {
@@ -697,7 +727,7 @@
         targetRegionId: map.id,
         x: Math.round(targetMap.imageWidth / 2),
         y: Math.round(targetMap.imageHeight / 2),
-        size: 74,
+        size: DEFAULT_PORTAL_SIZE,
       });
     }
     state.selected = { type: "portal", index: map.portals.length - 1 };
@@ -716,7 +746,7 @@
       name: defaults.name,
       x: point.x,
       y: point.y,
-      size: 130,
+      size: DEFAULT_OBJECTIVE_SIZE,
     }, map.objectives.length);
     map.objectives.push(objective);
     state.selected = { type: "objective", index: map.objectives.length - 1 };
@@ -880,7 +910,7 @@
           targetRegionId: portal.targetRegionId,
           x: Math.round(Number(portal.x) || 0),
           y: Math.round(Number(portal.y) || 0),
-          size: Math.max(24, Math.floor(Number(portal.size) || 74)),
+          size: Math.max(MIN_PORTAL_SIZE, Math.floor(Number(portal.size) || DEFAULT_PORTAL_SIZE)),
         })),
         objectives: map.objectives.map(objective => ({
           id: objective.id,
@@ -893,7 +923,7 @@
           artSrc: objective.artSrc,
           x: Math.round(Number(objective.x) || 0),
           y: Math.round(Number(objective.y) || 0),
-          size: Math.max(40, Math.floor(Number(objective.size) || 120)),
+          size: Math.max(MIN_OBJECTIVE_SIZE, Math.floor(Number(objective.size) || DEFAULT_OBJECTIVE_SIZE)),
         })),
       })),
     };

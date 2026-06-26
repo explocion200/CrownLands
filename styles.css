@@ -777,8 +777,8 @@ input {
 }
 .teleport-node {
   position: absolute;
-  width: 96px;
-  height: 96px;
+  width: var(--teleport-size, 96px);
+  height: var(--teleport-size, 96px);
   transform: translate(-50%, -50%);
   display: grid;
   place-items: center;
@@ -795,23 +795,23 @@ input {
 }
 .teleport-ring {
   position: absolute;
-  inset: 10px;
+  inset: calc(var(--teleport-size, 96px) * .104);
   border-radius: 50%;
-  border: 4px dashed rgba(255,255,255,.82);
+  border: max(2px, calc(var(--teleport-size, 96px) * .042)) dashed rgba(255,255,255,.82);
   box-shadow: inset 0 0 18px rgba(255,255,255,.26);
   animation: teleportSpin 4s linear infinite;
 }
 .teleport-symbol {
   position: relative;
   z-index: 2;
-  font-size: 2rem;
+  font-size: calc(var(--teleport-size, 96px) * .333);
   line-height: 1;
   text-shadow: 0 3px 0 rgba(0,0,0,.42);
 }
 .teleport-label {
   position: absolute;
   left: 50%;
-  bottom: -18px;
+  bottom: calc(var(--teleport-size, 96px) * -.188);
   transform: translateX(-50%);
   padding: .12rem .42rem;
   border-radius: 999px;
@@ -843,8 +843,8 @@ input {
 .city-node.selected { z-index: 10; }
 .city-node.targeted { z-index: 9; }
 .city-node.stronghold-node {
-  width: 154px;
-  height: 138px;
+  width: var(--stronghold-size, 154px);
+  height: calc(var(--stronghold-size, 154px) * .896);
   transform: translate(-50%, -62%);
   border-radius: 0;
   z-index: 6;
@@ -857,8 +857,8 @@ input {
   position: absolute;
   left: 50%;
   bottom: 4px;
-  width: 126px;
-  height: 42px;
+  width: calc(var(--stronghold-size, 154px) * .818);
+  height: calc(var(--stronghold-size, 154px) * .273);
   transform: translateX(-50%);
   border: 2px solid rgba(255, 219, 116, .78);
   border-radius: 50%;
@@ -870,8 +870,8 @@ input {
   position: absolute;
   left: 50%;
   bottom: 0;
-  width: 148px;
-  height: 138px;
+  width: calc(var(--stronghold-size, 154px) * .961);
+  height: calc(var(--stronghold-size, 154px) * .896);
   display: grid;
   place-items: center;
   transform: translateX(-50%);
@@ -922,7 +922,7 @@ input {
   animation: supportPulse .75s infinite alternate;
 }
 .city-node.stronghold-node .city-label {
-  bottom: 132px;
+  bottom: calc(var(--stronghold-size, 154px) * .857);
 }
 .scout-nearby-radius {
   position: absolute;

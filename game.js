@@ -172,6 +172,10 @@ const LOW_ZOOM_PERFORMANCE_THRESHOLD = 0.72;
 const ISLAND_MAP_PADDING = 560;
 const TROOP_PICKUP_ICON_SRC = "assets/troop-pickup.png";
 const GOLD_PICKUP_ICON_SRC = "assets/gold-pickup.png";
+const DEFAULT_PORTAL_VISUAL_SIZE = 96;
+const MIN_PORTAL_VISUAL_SIZE = 48;
+const DEFAULT_STRONGHOLD_VISUAL_SIZE = 154;
+const MIN_STRONGHOLD_VISUAL_SIZE = 80;
 const GOLD_STRONGHOLD_ID = "west_gold_stronghold";
 const GOLD_STRONGHOLD_NAME = "Gold Stronghold";
 const GOLD_STRONGHOLD_ART_SRC = "assets/gold-stronghold.png";
@@ -580,6 +584,14 @@ function isStronghold(city) {
   return Boolean(city && (city.kind === "stronghold" || STRONGHOLD_IDS.has(city.id)));
 }
 
+function getPortalVisualSize(portal) {
+  return Math.max(MIN_PORTAL_VISUAL_SIZE, Math.floor(Number(portal?.size) || DEFAULT_PORTAL_VISUAL_SIZE));
+}
+
+function getStrongholdVisualSize(city) {
+  return Math.max(MIN_STRONGHOLD_VISUAL_SIZE, Math.floor(Number(city?.size) || DEFAULT_STRONGHOLD_VISUAL_SIZE));
+}
+
 function isGoldStronghold(city) {
   return isStronghold(city) && (city.strongholdType === "gold" || city.id === GOLD_STRONGHOLD_ID);
 }
@@ -685,9 +697,12 @@ function applyBaseCityMetadata(city, base) {
   city.bonus = base.bonus || "";
   city.bonusPercent = Number(base.bonusPercent) || 0;
   if (isStronghold(base)) {
+    city.size = getStrongholdVisualSize(base);
     city.name = city.name || base.name;
     city.level = getStrongholdDefenseLevel(base);
     city.investedGold = 0;
+  } else if ("size" in city) {
+    delete city.size;
   }
 }
 
@@ -2855,6 +2870,7 @@ function generateEditorStrongholdSlots() {
         level: Math.max(1, Math.floor(Number(objective?.level) || config.level)),
         troops: Math.max(0, Math.floor(Number(objective?.troops || objective?.startTroops) || config.troops)),
         artSrc: String(objective?.artSrc || config.artSrc || ""),
+        size: Math.max(MIN_STRONGHOLD_VISUAL_SIZE, Math.floor(Number(objective?.size) || DEFAULT_STRONGHOLD_VISUAL_SIZE)),
       }));
     });
   }
@@ -2916,7 +2932,8 @@ function generateStrongholdSlots() {
   ].filter(Boolean);
 }
 
-function createStrongholdSlot({ id, name, region, point, type, bonus, bonusPercent, level, troops, artSrc = "" }) {
+function createStrongholdSlot({ id, name, region, point, type, bonus, bonusPercent, level, troops, size = DEFAULT_STRONGHOLD_VISUAL_SIZE, artSrc = "" }) {
+  const visualSize = Math.max(MIN_STRONGHOLD_VISUAL_SIZE, Math.floor(Number(size) || DEFAULT_STRONGHOLD_VISUAL_SIZE));
   return {
     id,
     name,
@@ -2941,6 +2958,7 @@ function createStrongholdSlot({ id, name, region, point, type, bonus, bonusPerce
     strongholdType: type,
     bonus,
     bonusPercent,
+    size: visualSize,
     artSrc,
     startTroops: troops,
   };
@@ -3367,6 +3385,7 @@ function renderIslandTeleporters() {
     buttonElement.dataset.targetRegion = teleport.targetRegionId;
     buttonElement.style.left = `${portalPoint.x}px`;
     buttonElement.style.top = `${portalPoint.y}px`;
+    buttonElement.style.setProperty("--teleport-size", `${getPortalVisualSize(teleport)}px`);
     buttonElement.setAttribute("aria-label", `Teleport to ${getRegionLabel(teleport.targetRegionId)}`);
     buttonElement.innerHTML = `
       <span class="teleport-ring" aria-hidden="true"></span>
@@ -3430,6 +3449,7 @@ function createEditorTeleporter(regionId, portal) {
     label: String(portal?.label || getRegionLabel(targetRegionId)),
     targetRegionId,
     worldPoint: islandImagePointToWorld(regionId, getEditorPoint(portal)),
+    size: getPortalVisualSize(portal),
     className: portal?.className || `editor-${targetRegionId}-teleport-node`,
   };
 }
@@ -5168,6 +5188,7 @@ function normalizeOfflineProductionCities(cities = []) {
         strongholdType: city.strongholdType || base.strongholdType || "",
         bonus: city.bonus || base.bonus || "",
         bonusPercent: Number(city.bonusPercent ?? base.bonusPercent) || 0,
+        size: isStronghold(city) || isStronghold(base) ? getStrongholdVisualSize({ size: city.size ?? base.size }) : undefined,
         regionId: city.regionId || base.regionId || getCityRegionId(id),
       };
     })
@@ -6668,6 +6689,7 @@ function toOnlineOwnedCity(city) {
     strongholdType: city.strongholdType || "",
     bonus: city.bonus || "",
     bonusPercent: Number(city.bonusPercent) || 0,
+    size: isStronghold(city) ? getStrongholdVisualSize(city) : undefined,
     ownerKind: "player",
     ownerUid: getCurrentOnlineUid(),
     ownerName: state.playerName,
@@ -6710,6 +6732,7 @@ function toOnlineCityState(city) {
     strongholdType: city.strongholdType || "",
     bonus: city.bonus || "",
     bonusPercent: Number(city.bonusPercent) || 0,
+    size: isStronghold(city) ? getStrongholdVisualSize(city) : undefined,
     ownerKind,
     ownerUid: hasPlayerOwner ? ownerUid : null,
     ownerName,
@@ -7536,7 +7559,7 @@ function createRouteContext(regionId, source = null, target = null) {
       id: city.id,
       x: city.x,
       y: city.y,
-      radius: isStronghold(city) ? ROUTE_STRONGHOLD_CLEARANCE : ROUTE_CITY_CLEARANCE,
+      radius: isStronghold(city) ? Math.max(ROUTE_STRONGHOLD_CLEARANCE, getStrongholdVisualSize(city) * 0.55) : ROUTE_CITY_CLEARANCE,
     })) || [];
   return {
     regionId: normalizedRegionId,
@@ -8328,6 +8351,7 @@ function createOfflineProductionSnapshot(snapshot = state) {
       strongholdType: city.strongholdType || "",
       bonus: city.bonus || "",
       bonusPercent: Number(city.bonusPercent) || 0,
+      size: isStronghold(city) ? getStrongholdVisualSize(city) : undefined,
     }));
 }
 
@@ -9321,6 +9345,7 @@ function getCityRenderSignature(visibleCities) {
       getFlagSignature(city.ownerFlag),
       city.kind || "",
       city.strongholdType || "",
+      isStronghold(city) ? getStrongholdVisualSize(city) : "",
       city.level,
       Math.floor(Number(city.troops) || 0),
       city.isMainCity ? 1 : 0,
@@ -9359,12 +9384,13 @@ function renderCities(force = false) {
 
   visibleCities.forEach(city => {
     const mapPoint = worldToMapPoint(city);
+    const stronghold = isStronghold(city);
     const btn = document.createElement("button");
     btn.type = "button";
     btn.dataset.cityId = city.id;
     const castleStage = getCastleStage(city.level);
     btn.className = `city-node ${OWNER[city.owner].css} castle-stage-${castleStage}`;
-    if (isStronghold(city)) btn.classList.add("stronghold-node", `stronghold-${city.strongholdType || "generic"}`);
+    if (stronghold) btn.classList.add("stronghold-node", `stronghold-${city.strongholdType || "generic"}`);
     if (city.id === selectedSourceId) btn.classList.add("selected");
     if (city.id === selectedTargetId) btn.classList.add("targeted");
     if (scoutNearbySource?.id === city.id) btn.classList.add("scout-radius-source");
@@ -9374,6 +9400,7 @@ function renderCities(force = false) {
     }
     btn.style.left = `${mapPoint.x}px`;
     btn.style.top = `${mapPoint.y}px`;
+    if (stronghold) btn.style.setProperty("--stronghold-size", `${getStrongholdVisualSize(city)}px`);
     const scoutReport = city.owner === "player" ? null : getScoutReport(city.id);
     const isSelectedForeign = city.owner !== "player" && city.id === selectedTargetId && !sendMode;
     const ownerName = getCityOwnerDisplayName(city);
@@ -9419,8 +9446,8 @@ function renderCities(force = false) {
           </span>
         </span>`;
     const knownTroops = city.owner === "player" ? city.troops : scoutReport?.troops;
-    const locationType = isStronghold(city) ? "Stronghold" : `Level ${city.level}`;
-    const structureHtml = isStronghold(city)
+    const locationType = stronghold ? "Stronghold" : `Level ${city.level}`;
+    const structureHtml = stronghold
       ? `
       <span class="stronghold-glow" aria-hidden="true"></span>
       <span class="stronghold-building" aria-hidden="true"><img class="stronghold-art" src="${getStrongholdArtSrc(city)}" alt="" draggable="false" /></span>`
