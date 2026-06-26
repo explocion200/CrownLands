@@ -4272,6 +4272,7 @@ function getBattleXpTroopCredit(target, troops) {
 
 function getPvpOpponentPowerXpMultiplier(target, oldOwner = target?.owner, attackerOwner = "player") {
   if (!target || attackerOwner !== "player") return null;
+  if (isStronghold(target)) return null;
   const targetOwnedByPlayer = oldOwner === "enemy"
     || oldOwner === "player"
     || target.ownerKind === "player"
@@ -4379,6 +4380,7 @@ function normalizeDemoAttackSnapshot(demo = null) {
 function createDemoAttackSnapshot(source, target, requestedTroops, owner = "player", overrides = {}) {
   if (!source || !target || owner !== "player") return null;
   if (target.owner === owner) return null;
+  if (isStronghold(target)) return null;
   const targetOwnerUid = String(target.ownerUid || "").trim();
   const currentUid = getCurrentOnlineUid();
   const targetOwnedByPlayer = target.ownerKind === "player" || target.owner === "enemy" || Boolean(targetOwnerUid);
@@ -4419,6 +4421,7 @@ function applyDemoDefenderXpMultiplier(xp, demoAttack) {
 
 function applyDefenseOpponentXpMultiplier(xp, attack, target, demoAttack) {
   const base = Math.max(0, Math.floor(Number(xp) || 0));
+  if (isStronghold(target)) return capBattleXpForCurrentLevel(base);
   const demo = normalizeDemoAttackSnapshot(demoAttack);
   if (demo) return applyDemoDefenderXpMultiplier(base, demo);
 
@@ -8727,11 +8730,13 @@ function resolveAttack(attack) {
   const targetLevel = clampCityLevel(target.level);
   const defendersAtStart = Math.max(0, Math.floor(Number(target.troops) || 0));
   const targetDefenseAtStart = getCityStats(target).totalDefense;
-  const demoAttack = normalizeDemoAttackSnapshot(attack.demoAttack)
-    || createDemoAttackSnapshot(attackSource, target, attack.troops, attack.owner, {
-      attackerKingPower: attack.attackerKingPower,
-      defenderKingPower: attack.defenderKingPower,
-    });
+  const demoAttack = isStronghold(target)
+    ? null
+    : normalizeDemoAttackSnapshot(attack.demoAttack)
+      || createDemoAttackSnapshot(attackSource, target, attack.troops, attack.owner, {
+        attackerKingPower: attack.attackerKingPower,
+        defenderKingPower: attack.defenderKingPower,
+      });
   const demoReportSuffix = getDemoAttackReportSuffix(demoAttack);
   const result = calculateCombatResult(attack.troops, attack.owner, target, { demoAttack });
 
