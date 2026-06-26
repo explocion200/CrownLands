@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Crownlands Map Editor</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <main class="editor-shell">
+    <aside class="map-sidebar" aria-label="Maps">
+      <div class="sidebar-header">
+        <div>
+          <span>Maps</span>
+          <strong id="mapCountLabel">0</strong>
+        </div>
+        <button id="addMapBtn" class="icon-btn" type="button" title="Add map">+</button>
+      </div>
+      <div id="mapList" class="map-list"></div>
+    </aside>
+
+    <section class="workbench" aria-label="Map editor">
+      <header class="topbar">
+        <div class="mode-group" role="group" aria-label="Edit mode">
+          <button class="mode-btn active" type="button" data-mode="select">Select</button>
+          <button class="mode-btn" type="button" data-mode="city">City</button>
+          <button class="mode-btn" type="button" data-mode="portal">Portal</button>
+          <button class="mode-btn" type="button" data-mode="objective">Stronghold</button>
+        </div>
+        <label class="target-select">
+          <span>Portal target</span>
+          <select id="portalTargetSelect"></select>
+        </label>
+        <div class="topbar-actions">
+          <button id="openProjectBtn" class="secondary-btn" type="button">Open Project</button>
+          <button id="applyBtn" class="primary-btn" type="button">Upload to Game</button>
+        </div>
+      </header>
+
+      <div class="canvas-wrap">
+        <div id="mapCanvas" class="map-canvas" tabindex="0" aria-label="Editable map canvas">
+          <img id="mapImage" class="map-image" alt="" draggable="false" />
+          <div id="markerLayer" class="marker-layer"></div>
+        </div>
+      </div>
+
+      <footer id="statusBar" class="status-bar">Loading maps...</footer>
+    </section>
+
+    <aside class="inspector" aria-label="Inspector">
+      <section class="panel">
+        <div class="panel-heading">
+          <span>Map</span>
+          <strong id="currentMapTitle">None</strong>
+        </div>
+        <label>
+          <span>Name</span>
+          <input id="mapLabelInput" />
+        </label>
+        <label>
+          <span>Image path</span>
+          <input id="mapImagePathInput" />
+        </label>
+        <button id="uploadMapImageBtn" class="secondary-btn full" type="button">Upload Map Image</button>
+        <input id="mapImageInput" type="file" accept="image/*" hidden />
+        <input id="newMapImageInput" type="file" accept="image/*" hidden />
+      </section>
+
+      <section class="panel">
+        <div class="panel-heading">
+          <span>Selection</span>
+          <strong id="selectionTitle">None</strong>
+        </div>
+        <div id="selectionForm" class="selection-form empty">Select a marker or add one to edit it.</div>
+        <button id="deleteSelectedBtn" class="danger-btn full" type="button" disabled>Delete Selected</button>
+      </section>
+
+      <section class="panel">
+        <div class="panel-heading">
+          <span>Counts</span>
+          <strong id="mapStats">0 cities</strong>
+        </div>
+        <div class="stats-grid">
+          <div><span>Cities</span><strong id="cityCountStat">0</strong></div>
+          <div><span>Portals</span><strong id="portalCountStat">0</strong></div>
+          <div><span>Strongholds</span><strong id="objectiveCountStat">0</strong></div>
+        </div>
+      </section>
+    </aside>
+  </main>
+
+  <script src="../../assets/map-editor-data.js"></script>
+  <script src="../../world-config.js"></script>
+  <script src="editor.js"></script>
+</body>
+</html>

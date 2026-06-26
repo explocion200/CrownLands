@@ -332,12 +332,13 @@
     const layoutSeedVersion = Math.max(0, Number(islandData.layoutSeedVersion) || 0);
     const needsCitySeed = !islandSnap.exists()
       || seededCityCount < targetCityCount;
+    const needsLayoutRefresh = islandSnap.exists() && layoutSeedVersion < targetVersion;
 
-    if (islandSnap.exists() && !needsCitySeed && layoutSeedVersion >= targetVersion && seededCityCount === targetCityCount) {
+    if (islandSnap.exists() && !needsCitySeed && !needsLayoutRefresh && seededCityCount === targetCityCount) {
       return true;
     }
 
-    if (!needsCitySeed) {
+    if (!needsCitySeed && !needsLayoutRefresh) {
       try {
         await setDoc(islandRef, {
           id: islandId,
@@ -366,19 +367,23 @@
       }, { merge: true });
     }
 
+    let existingCityIds = new Set();
     let seedsToWrite = citySeeds;
     if (islandSnap.exists()) {
       const citiesSnap = await getDocs(collection(client.db, "islands", islandId, "cities"));
-      const existingCityIds = new Set(citiesSnap.docs.map(cityDoc => cityDoc.id));
-      seedsToWrite = citySeeds.filter(city => !existingCityIds.has(city.id));
+      existingCityIds = new Set(citiesSnap.docs.map(cityDoc => cityDoc.id));
+      seedsToWrite = needsLayoutRefresh
+        ? citySeeds
+        : citySeeds.filter(city => !existingCityIds.has(city.id));
     }
 
     let batch = writeBatch(client.db);
     let writes = 0;
     for (const city of seedsToWrite) {
+      const alreadyExists = existingCityIds.has(city.id);
       batch.set(doc(client.db, "islands", islandId, "cities", city.id), {
         ...cleanCityLayoutSeed(city),
-        createdAt: serverTimestamp(),
+        ...(alreadyExists ? {} : { createdAt: serverTimestamp() }),
         updatedAt: serverTimestamp(),
       }, { merge: true });
       writes += 1;
