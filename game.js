@@ -493,6 +493,9 @@ const RECENT_CAPTURE_XP_MULTIPLIER = 0.25;
 const DEFENSE_HELD_XP_BASE = 80;
 const DEFENSE_HELD_XP_PER_ATTACKER = 0.45;
 const FAILED_BATTLE_XP_RATE = 1 / 3;
+const BATTLE_XP_TROOP_CREDIT_CITY_WALL_MULTIPLIER = 1;
+const BATTLE_XP_TROOP_CREDIT_VP_MULTIPLIER = 2;
+const BATTLE_XP_LEVEL_REQUIREMENT_CAP_MULTIPLIER = 3;
 const DEMO_ATTACK_MIN_POWER_RATIO = 3;
 const DEMO_ATTACK_DEFENDER_XP_MULTIPLIER = 2;
 const DEMO_ATTACK_TIERS = [
@@ -4206,19 +4209,19 @@ function addCharacterXp(amount, reason = "progress") {
 
 function getCaptureXpAward(target, oldOwner, defendersAtStart, attackerOwner = "player") {
   const level = clampCityLevel(target?.level);
-  const defenderXp = Math.floor(Math.max(0, Number(defendersAtStart) || 0) * CAPTURE_XP_PER_DEFENDER);
+  const defenderXp = Math.floor(getBattleXpTroopCredit(target, defendersAtStart) * CAPTURE_XP_PER_DEFENDER);
   const ownerBonus = oldOwner === "enemy" ? ENEMY_CAPTURE_XP_BONUS : 0;
   const baseXp = CAPTURE_XP_BASE + level * CAPTURE_XP_PER_CITY_LEVEL + defenderXp + ownerBonus;
   const efficiency = attackerOwner === "player" ? getCaptureXpEfficiency(target, oldOwner) : 1;
-  return Math.floor(baseXp * efficiency);
+  return capBattleXpForCurrentLevel(Math.floor(baseXp * efficiency));
 }
 
 function getCityUpgradeXpAward(city) {
   return Math.floor(CITY_UPGRADE_XP_BASE + clampCityLevel(city?.level) * CITY_UPGRADE_XP_PER_LEVEL);
 }
 
-function getDefenseHeldXpAward(attackingTroops) {
-  return Math.floor(DEFENSE_HELD_XP_BASE + Math.max(0, Number(attackingTroops) || 0) * DEFENSE_HELD_XP_PER_ATTACKER);
+function getDefenseHeldXpAward(attackingTroops, target = null) {
+  return Math.floor(DEFENSE_HELD_XP_BASE + getBattleXpTroopCredit(target, attackingTroops) * DEFENSE_HELD_XP_PER_ATTACKER);
 }
 
 function getPartialBattleXpAward(fullWinXp) {
@@ -4229,24 +4232,72 @@ function getFailedAttackXpAward(target, oldOwner, defendersAtStart, attackerOwne
   return getPartialBattleXpAward(getCaptureXpAward(target, oldOwner, defendersAtStart, attackerOwner));
 }
 
-function getLostDefenseXpAward(attackingTroops) {
-  return getPartialBattleXpAward(getDefenseHeldXpAward(attackingTroops));
+function getLostDefenseXpAward(attackingTroops, target = null) {
+  return getPartialBattleXpAward(getDefenseHeldXpAward(attackingTroops, target));
 }
 
 function getCaptureXpEfficiency(target, oldOwner = target?.owner) {
   if (!target || !state) return 1;
+  const pvpMultiplier = getPvpOpponentPowerXpMultiplier(target, oldOwner, "player");
+  const cooldownMultiplier = getCaptureCooldownRemaining(target) > 0 ? RECENT_CAPTURE_XP_MULTIPLIER : 1;
+  if (pvpMultiplier !== null) return Number(clamp(pvpMultiplier * cooldownMultiplier, 0, 2).toFixed(2));
+
   const heroLevel = Math.max(1, Math.floor(Number(state.character?.level) || 1));
   const empirePressure = 48 + heroLevel * 20 + playerRegularCities().length * 2;
   const targetScore = getCityXpScore(target, oldOwner);
   const strengthEfficiency = clamp(0.35 + targetScore / Math.max(1, empirePressure), 0.25, 2);
-  const cooldownMultiplier = getCaptureCooldownRemaining(target) > 0 ? RECENT_CAPTURE_XP_MULTIPLIER : 1;
   return Number(clamp(strengthEfficiency * cooldownMultiplier, 0.05, 2).toFixed(2));
 }
 
 function getCityXpScore(target, oldOwner = target?.owner) {
   const stats = getCityStats(target);
   const ownerBonus = oldOwner === "enemy" ? 45 : oldOwner === "neutral" ? 10 : 60;
-  return stats.victoryPoints + Math.max(0, Number(target?.troops) || 0) * 0.5 + ownerBonus;
+  return stats.victoryPoints + getBattleXpTroopCredit(target, target?.troops) * 0.25 + ownerBonus;
+}
+
+function getBattleXpTroopCreditCap(target) {
+  const stats = getCityStats(target || {});
+  return Math.max(
+    25,
+    Math.floor(
+      stats.cityWalls * BATTLE_XP_TROOP_CREDIT_CITY_WALL_MULTIPLIER
+      + stats.victoryPoints * BATTLE_XP_TROOP_CREDIT_VP_MULTIPLIER
+    )
+  );
+}
+
+function getBattleXpTroopCredit(target, troops) {
+  return Math.min(Math.max(0, Math.floor(Number(troops) || 0)), getBattleXpTroopCreditCap(target));
+}
+
+function getPvpOpponentPowerXpMultiplier(target, oldOwner = target?.owner, attackerOwner = "player") {
+  if (!target || attackerOwner !== "player") return null;
+  const targetOwnedByPlayer = oldOwner === "enemy"
+    || oldOwner === "player"
+    || target.ownerKind === "player"
+    || Boolean(target.ownerUid);
+  if (!targetOwnedByPlayer) return null;
+
+  const attackerPower = Math.max(1, normalizePowerValue(getKingPower()));
+  const defenderPower = Math.max(1, normalizePowerValue(getCityOwnerKingPowerSnapshot(target)));
+  const opponentRatio = defenderPower / attackerPower;
+  return getOpponentPowerXpMultiplier(opponentRatio);
+}
+
+function getOpponentPowerXpMultiplier(opponentRatio) {
+  const ratio = Number(opponentRatio) || 0;
+  if (ratio >= 2) return 2;
+  if (ratio >= 1.5) return 1.5;
+  if (ratio >= 0.5) return 1;
+  return 0;
+}
+
+function capBattleXpForCurrentLevel(xp) {
+  const base = Math.max(0, Math.floor(Number(xp) || 0));
+  if (!state?.character) return base;
+  const heroLevel = Math.max(1, Math.floor(Number(state.character.level) || 1));
+  const cap = Math.max(250, Math.floor(getXpRequiredForLevel(heroLevel) * BATTLE_XP_LEVEL_REQUIREMENT_CAP_MULTIPLIER));
+  return Math.min(base, cap);
 }
 
 function getCaptureCooldownRemaining(city) {
@@ -4342,8 +4393,9 @@ function createDemoAttackSnapshot(source, target, requestedTroops, owner = "play
 
   const sourceTroops = Math.max(1, Math.floor(Number(source.troops) || 1));
   const requested = clamp(Math.floor(Number(requestedTroops) || 1), 1, sourceTroops);
-  const capByPower = Math.max(1, Math.floor(defenderKingPower * tier.troopCapPercent / 100));
-  const maxTroops = Math.max(1, Math.min(sourceTroops, capByPower));
+  const targetWalls = Math.max(1, Math.floor(Number(getCityStats(target).cityWalls) || 1));
+  const capByWalls = Math.max(1, Math.floor(targetWalls * tier.troopCapPercent / 100));
+  const maxTroops = Math.max(1, Math.min(sourceTroops, capByWalls));
   return normalizeDemoAttackSnapshot({
     active: true,
     label: tier.label,
@@ -4362,7 +4414,24 @@ function createDemoAttackSnapshot(source, target, requestedTroops, owner = "play
 function applyDemoDefenderXpMultiplier(xp, demoAttack) {
   const base = Math.max(0, Math.floor(Number(xp) || 0));
   const demo = normalizeDemoAttackSnapshot(demoAttack);
-  return demo ? Math.floor(base * demo.defenderXpMultiplier) : base;
+  return demo ? capBattleXpForCurrentLevel(Math.floor(base * demo.defenderXpMultiplier)) : base;
+}
+
+function applyDefenseOpponentXpMultiplier(xp, attack, target, demoAttack) {
+  const base = Math.max(0, Math.floor(Number(xp) || 0));
+  const demo = normalizeDemoAttackSnapshot(demoAttack);
+  if (demo) return applyDemoDefenderXpMultiplier(base, demo);
+
+  const defenderPower = Math.max(1, normalizePowerValue(getKingPower()));
+  const attackerPower = Math.max(
+    1,
+    normalizePowerValue(attack?.attackerKingPower)
+      || normalizePowerValue(attack?.ownerKingPower)
+      || normalizePowerValue(attack?.troops)
+      || getCityPowerFloor(cityById(attack?.fromId))
+  );
+  const multiplier = getOpponentPowerXpMultiplier(attackerPower / defenderPower);
+  return capBattleXpForCurrentLevel(Math.floor(base * multiplier));
 }
 
 function getDemoAttackNotice(demoAttack) {
@@ -8810,7 +8879,7 @@ function resolveAttack(attack) {
     } else if (oldOwner === "player") {
       const savedDefenders = returnSavedTroops("brave", result.defenderLosses, `${target.name} defense`, target.id);
       const salvagedGold = grantKillGold("salvager", result.killedAttackers, `${target.name} defense`);
-      const defenseLossXp = applyDemoDefenderXpMultiplier(getLostDefenseXpAward(attack.troops), demoAttack);
+      const defenseLossXp = applyDefenseOpponentXpMultiplier(getLostDefenseXpAward(attack.troops, target), attack, target, demoAttack);
       addBattleReport({
         type: "defense",
         outcome: "lost",
@@ -8861,7 +8930,7 @@ function resolveAttack(attack) {
     } else if (oldOwner === "player") {
       const savedDefenders = returnSavedTroops("brave", result.defenderLosses, `${target.name} defense`);
       const salvagedGold = grantKillGold("salvager", result.killedAttackers, `${target.name} defense`);
-      const defenseHeldXp = applyDemoDefenderXpMultiplier(getDefenseHeldXpAward(attack.troops), demoAttack);
+      const defenseHeldXp = applyDefenseOpponentXpMultiplier(getDefenseHeldXpAward(attack.troops, target), attack, target, demoAttack);
       addBattleReport({
         type: "defense",
         outcome: "held",
