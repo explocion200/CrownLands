@@ -1,6 +1,6 @@
 window.CROWNLANDS_MAP_EDITOR_DATA = {
-  "version": 202606262129,
-  "updatedAt": "2026-06-26T21:29:58.631Z",
+  "version": 202606270011,
+  "updatedAt": "2026-06-27T00:11:42.502Z",
   "maps": [
     {
       "id": "west",
@@ -2132,6 +2132,14 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
           "x": 734,
           "y": 197,
           "size": 120
+        },
+        {
+          "id": "south-west",
+          "label": "Westmark",
+          "targetRegionId": "gatefall-isle",
+          "x": 730,
+          "y": 816,
+          "size": 120
         }
       ],
       "objectives": [
@@ -2856,6 +2864,534 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
           "targetRegionId": "south",
           "x": 625,
           "y": 1018,
+          "size": 120
+        }
+      ],
+      "objectives": [
+        {
+          "id": "center_crown_citadel",
+          "name": "Crown Citadel",
+          "type": "crown",
+          "bonus": "crownDominion",
+          "bonusPercent": 10,
+          "level": 100,
+          "troops": 50000000,
+          "artSrc": "assets/crown-citadel.png",
+          "x": 625,
+          "y": 610,
+          "size": 260
+        }
+      ]
+    },
+    {
+      "id": "gatefall-isle",
+      "label": "Gatefall Isle",
+      "imageSrc": "assets/custom-maps/gatefall-isle-map.png",
+      "thumbnailSrc": "",
+      "imageWidth": 1254,
+      "imageHeight": 1254,
+      "region": {
+        "id": "gatefall-isle",
+        "label": "Gatefall Isle",
+        "x": 2662,
+        "y": 5676,
+        "rx": 1100,
+        "ry": 912,
+        "cityRx": 902,
+        "cityRy": 693,
+        "rot": 0,
+        "palette": "heartland"
+      },
+      "landPolygon": [],
+      "cities": [
+        {
+          "id": "gatefall-isle_001",
+          "name": "Crownhaven",
+          "x": 248,
+          "y": 188,
+          "level": 1,
+          "troops": 10
+        },
+        {
+          "id": "gatefall-isle_002",
+          "name": "Highhaven",
+          "x": 287,
+          "y": 250,
+          "level": 1,
+          "troops": 10
+        },
+        {
+          "id": "gatefall-isle_003",
+          "name": "Stonehaven",
+          "x": 336,
+          "y": 313,
+          "level": 1,
+          "troops": 10
+        },
+        {
+          "id": "gatefall-isle_004",
+          "name": "Riverhaven",
+          "x": 999,
+          "y": 215,
+          "level": 1,
+          "troops": 10
+        },
+        {
+          "id": "gatefall-isle_005",
+          "name": "Kingshaven",
+          "x": 947,
+          "y": 263,
+          "level": 1,
+          "troops": 10
+        },
+        {
+          "id": "gatefall-isle_006",
+          "name": "Queenshaven",
+          "x": 888,
+          "y": 333,
+          "level": 1,
+          "troops": 10
+        },
+        {
+          "id": "gatefall-isle_007",
+          "name": "Ironhaven",
+          "x": 1071,
+          "y": 983,
+          "level": 1,
+          "troops": 10
+        },
+        {
+          "id": "gatefall-isle_008",
+          "name": "Goldhaven",
+          "x": 1002,
+          "y": 934,
+          "level": 1,
+          "troops": 10
+        },
+        {
+          "id": "gatefall-isle_009",
+          "name": "Brighthaven",
+          "x": 953,
+          "y": 881,
+          "level": 1,
+          "troops": 10
+        },
+        {
+          "id": "gatefall-isle_010",
+          "name": "Elderhaven",
+          "x": 218,
+          "y": 1021,
+          "level": 1,
+          "troops": 10
+        },
+        {
+          "id": "gatefall-isle_011",
+          "name": "Lionhaven",
+          "x": 245,
+          "y": 937,
+          "level": 1,
+          "troops": 10
+        },
+        {
+          "id": "gatefall-isle_012",
+          "name": "Oakhaven",
+          "x": 307,
+          "y": 882,
+          "level": 1,
+          "troops": 10
+        },
+        {
+          "id": "gatefall-isle_013",
+          "name": "Ravenhaven",
+          "x": 344,
+          "y": 492,
+          "level": 1,
+          "troops": 10
+        },
+        {
+          "id": "gatefall-isle_014",
+          "name": "Silverhaven",
+          "x": 397,
+          "y": 539,
+          "level": 1,
+          "troops": 10
+        },
+        {
+          "id": "gatefall-isle_015",
+          "name": "Wolfhaven",
+          "x": 360,
+          "y": 598,
+          "level": 1,
+          "troops": 10
+        },
+        {
+          "id": "gatefall-isle_016",
+          "name": "Starhaven",
+          "x": 328,
+          "y": 686,
+          "level": 1,
+          "troops": 10
+        },
+        {
+          "id": "gatefall-isle_017",
+          "name": "Redhaven",
+          "x": 353,
+          "y": 802,
+          "level": 1,
+          "troops": 10
+        },
+        {
+          "id": "gatefall-isle_018",
+          "name": "Whitehaven",
+          "x": 474,
+          "y": 829,
+          "level": 1,
+          "troops": 10
+        },
+        {
+          "id": "gatefall-isle_019",
+          "name": "Dawnhaven",
+          "x": 562,
+          "y": 890,
+          "level": 1,
+          "troops": 10
+        },
+        {
+          "id": "gatefall-isle_020",
+          "name": "Emberhaven",
+          "x": 611,
+          "y": 953,
+          "level": 1,
+          "troops": 10
+        },
+        {
+          "id": "gatefall-isle_021",
+          "name": "Crownford",
+          "x": 677,
+          "y": 904,
+          "level": 1,
+          "troops": 10
+        },
+        {
+          "id": "gatefall-isle_022",
+          "name": "Highford",
+          "x": 749,
+          "y": 849,
+          "level": 1,
+          "troops": 10
+        },
+        {
+          "id": "gatefall-isle_023",
+          "name": "Stoneford",
+          "x": 638,
+          "y": 837,
+          "level": 1,
+          "troops": 10
+        },
+        {
+          "id": "gatefall-isle_024",
+          "name": "Riverford",
+          "x": 565,
+          "y": 799,
+          "level": 1,
+          "troops": 10
+        },
+        {
+          "id": "gatefall-isle_025",
+          "name": "Kingsford",
+          "x": 679,
+          "y": 786,
+          "level": 1,
+          "troops": 10
+        },
+        {
+          "id": "gatefall-isle_026",
+          "name": "Queensford",
+          "x": 607,
+          "y": 755,
+          "level": 1,
+          "troops": 10
+        },
+        {
+          "id": "gatefall-isle_027",
+          "name": "Ironford",
+          "x": 678,
+          "y": 730,
+          "level": 1,
+          "troops": 10
+        },
+        {
+          "id": "gatefall-isle_028",
+          "name": "Goldford",
+          "x": 889,
+          "y": 662,
+          "level": 1,
+          "troops": 10
+        },
+        {
+          "id": "gatefall-isle_029",
+          "name": "Brightford",
+          "x": 904,
+          "y": 604,
+          "level": 1,
+          "troops": 10
+        },
+        {
+          "id": "gatefall-isle_030",
+          "name": "Elderford",
+          "x": 867,
+          "y": 528,
+          "level": 1,
+          "troops": 10
+        },
+        {
+          "id": "gatefall-isle_031",
+          "name": "Lionford",
+          "x": 795,
+          "y": 515,
+          "level": 1,
+          "troops": 10
+        },
+        {
+          "id": "gatefall-isle_032",
+          "name": "Oakford",
+          "x": 806,
+          "y": 577,
+          "level": 1,
+          "troops": 10
+        },
+        {
+          "id": "gatefall-isle_033",
+          "name": "Ravenford",
+          "x": 791,
+          "y": 645,
+          "level": 1,
+          "troops": 10
+        },
+        {
+          "id": "gatefall-isle_034",
+          "name": "Silverford",
+          "x": 706,
+          "y": 646,
+          "level": 1,
+          "troops": 10
+        },
+        {
+          "id": "gatefall-isle_035",
+          "name": "Wolfford",
+          "x": 622,
+          "y": 680,
+          "level": 1,
+          "troops": 10
+        },
+        {
+          "id": "gatefall-isle_036",
+          "name": "Starford",
+          "x": 545,
+          "y": 655,
+          "level": 1,
+          "troops": 10
+        },
+        {
+          "id": "gatefall-isle_037",
+          "name": "Redford",
+          "x": 458,
+          "y": 653,
+          "level": 1,
+          "troops": 10
+        },
+        {
+          "id": "gatefall-isle_038",
+          "name": "Whiteford",
+          "x": 398,
+          "y": 654,
+          "level": 1,
+          "troops": 10
+        },
+        {
+          "id": "gatefall-isle_039",
+          "name": "Dawnford",
+          "x": 455,
+          "y": 590,
+          "level": 1,
+          "troops": 10
+        },
+        {
+          "id": "gatefall-isle_040",
+          "name": "Emberford",
+          "x": 471,
+          "y": 521,
+          "level": 1,
+          "troops": 10
+        },
+        {
+          "id": "gatefall-isle_041",
+          "name": "Crownwick",
+          "x": 521,
+          "y": 583,
+          "level": 1,
+          "troops": 10
+        },
+        {
+          "id": "gatefall-isle_042",
+          "name": "Highwick",
+          "x": 584,
+          "y": 597,
+          "level": 1,
+          "troops": 10
+        },
+        {
+          "id": "gatefall-isle_043",
+          "name": "Stonewick",
+          "x": 642,
+          "y": 601,
+          "level": 1,
+          "troops": 10
+        },
+        {
+          "id": "gatefall-isle_044",
+          "name": "Riverwick",
+          "x": 735,
+          "y": 559,
+          "level": 1,
+          "troops": 10
+        },
+        {
+          "id": "gatefall-isle_045",
+          "name": "Kingswick",
+          "x": 665,
+          "y": 534,
+          "level": 1,
+          "troops": 10
+        },
+        {
+          "id": "gatefall-isle_046",
+          "name": "Queenswick",
+          "x": 590,
+          "y": 533,
+          "level": 1,
+          "troops": 10
+        },
+        {
+          "id": "gatefall-isle_047",
+          "name": "Ironwick",
+          "x": 538,
+          "y": 510,
+          "level": 1,
+          "troops": 10
+        },
+        {
+          "id": "gatefall-isle_048",
+          "name": "Goldwick",
+          "x": 565,
+          "y": 445,
+          "level": 1,
+          "troops": 10
+        },
+        {
+          "id": "gatefall-isle_049",
+          "name": "Brightwick",
+          "x": 621,
+          "y": 474,
+          "level": 1,
+          "troops": 10
+        },
+        {
+          "id": "gatefall-isle_050",
+          "name": "Elderwick",
+          "x": 671,
+          "y": 466,
+          "level": 1,
+          "troops": 10
+        },
+        {
+          "id": "gatefall-isle_051",
+          "name": "Lionwick",
+          "x": 703,
+          "y": 398,
+          "level": 1,
+          "troops": 10
+        },
+        {
+          "id": "gatefall-isle_052",
+          "name": "Oakwick",
+          "x": 721,
+          "y": 335,
+          "level": 1,
+          "troops": 10
+        },
+        {
+          "id": "gatefall-isle_053",
+          "name": "Ravenwick",
+          "x": 672,
+          "y": 267,
+          "level": 1,
+          "troops": 10
+        },
+        {
+          "id": "gatefall-isle_054",
+          "name": "Silverwick",
+          "x": 590,
+          "y": 284,
+          "level": 1,
+          "troops": 10
+        },
+        {
+          "id": "gatefall-isle_055",
+          "name": "Wolfwick",
+          "x": 548,
+          "y": 340,
+          "level": 1,
+          "troops": 10
+        },
+        {
+          "id": "gatefall-isle_056",
+          "name": "Starwick",
+          "x": 646,
+          "y": 345,
+          "level": 1,
+          "troops": 10
+        },
+        {
+          "id": "gatefall-isle_057",
+          "name": "Redwick",
+          "x": 595,
+          "y": 386,
+          "level": 1,
+          "troops": 10
+        },
+        {
+          "id": "gatefall-isle_058",
+          "name": "Whitewick",
+          "x": 647,
+          "y": 414,
+          "level": 1,
+          "troops": 10
+        },
+        {
+          "id": "gatefall-isle_059",
+          "name": "Dawnwick",
+          "x": 543,
+          "y": 722,
+          "level": 1,
+          "troops": 10
+        },
+        {
+          "id": "gatefall-isle_060",
+          "name": "Emberwick",
+          "x": 879,
+          "y": 834,
+          "level": 1,
+          "troops": 10
+        }
+      ],
+      "portals": [
+        {
+          "id": "gatefall-isle-west",
+          "label": "Westmark",
+          "targetRegionId": "south",
+          "x": 625,
+          "y": 112,
           "size": 120
         }
       ],

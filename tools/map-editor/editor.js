@@ -3,6 +3,7 @@
   const DEFAULT_IMAGE_ROOT = "../../";
   const DEFAULT_PORTAL_SIZE = 96;
   const DEFAULT_OBJECTIVE_SIZE = 154;
+  const DEFAULT_CROWN_OBJECTIVE_SIZE = 260;
   const MIN_PORTAL_SIZE = 48;
   const MIN_OBJECTIVE_SIZE = 80;
   const STRONGHOLD_TYPES = {
@@ -37,6 +38,14 @@
       bonusPercent: 15,
       level: 30,
       troops: 10000,
+    },
+    crown: {
+      name: "Crown Citadel",
+      artSrc: "assets/crown-citadel.png",
+      bonus: "crownDominion",
+      bonusPercent: 10,
+      level: 100,
+      troops: 50000000,
     },
   };
 
@@ -330,7 +339,7 @@
         cityPoints: "CENTER_ISLAND_CITY_POINTS",
         landPolygon: "CENTER_ISLAND_LAND_POLYGON",
         centerPortals: "CENTER_ISLAND_TELEPORTS",
-        objectives: [],
+        objectives: [{ id: "center_crown_citadel", type: "crown", pointConst: "CENTER_CROWN_CITADEL_IMAGE_POINT" }],
       },
     ];
 
@@ -372,7 +381,7 @@
           troops: defaults.troops,
           x: Number(point.x) || 0,
           y: Number(point.y) || 0,
-          size: DEFAULT_OBJECTIVE_SIZE,
+          size: objective.type === "crown" ? DEFAULT_CROWN_OBJECTIVE_SIZE : DEFAULT_OBJECTIVE_SIZE,
         }, index);
       });
 
@@ -738,7 +747,7 @@
 
   function addObjective(point) {
     const map = currentMap();
-    const type = map.id === "north" ? "training" : map.id === "east" ? "speed" : map.id === "south" ? "defense" : "gold";
+    const type = map.id === "center" ? "crown" : map.id === "north" ? "training" : map.id === "east" ? "speed" : map.id === "south" ? "defense" : "gold";
     const defaults = STRONGHOLD_TYPES[type];
     const objective = normalizeObjective(map.id, {
       id: nextUniqueId(map.objectives, `${map.id}_${type}_stronghold`),
@@ -746,7 +755,7 @@
       name: defaults.name,
       x: point.x,
       y: point.y,
-      size: DEFAULT_OBJECTIVE_SIZE,
+      size: type === "crown" ? DEFAULT_CROWN_OBJECTIVE_SIZE : DEFAULT_OBJECTIVE_SIZE,
     }, map.objectives.length);
     map.objectives.push(objective);
     state.selected = { type: "objective", index: map.objectives.length - 1 };

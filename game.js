@@ -200,7 +200,24 @@ const DEFENSE_STRONGHOLD_ART_SRC = "assets/defense-stronghold.png";
 const DEFENSE_STRONGHOLD_BONUS_PERCENT = 15;
 const DEFENSE_STRONGHOLD_LEVEL = 30;
 const DEFENSE_STRONGHOLD_START_TROOPS = 10000;
-const STRONGHOLD_IDS = new Set([GOLD_STRONGHOLD_ID, TRAINING_STRONGHOLD_ID, SPEED_STRONGHOLD_ID, DEFENSE_STRONGHOLD_ID]);
+const CROWN_CITADEL_ID = "center_crown_citadel";
+const CROWN_CITADEL_NAME = "Crown Citadel";
+const CROWN_CITADEL_ART_SRC = "assets/crown-citadel.png";
+const CROWN_CITADEL_GOLD_BONUS_PERCENT = 10;
+const CROWN_CITADEL_TROOP_BONUS_PERCENT = 10;
+const CROWN_CITADEL_MARCH_SPEED_BONUS_PERCENT = 8;
+const CROWN_CITADEL_DEFENSE_BONUS_PERCENT = 8;
+const CROWN_CITADEL_UPGRADE_COST_REDUCTION_PERCENT = 8;
+const CROWN_CITADEL_LEVEL = 100;
+const CROWN_CITADEL_START_TROOPS = 50000000;
+const CROWN_CITADEL_VISUAL_SIZE = 260;
+const STRONGHOLD_IDS = new Set([
+  GOLD_STRONGHOLD_ID,
+  TRAINING_STRONGHOLD_ID,
+  SPEED_STRONGHOLD_ID,
+  DEFENSE_STRONGHOLD_ID,
+  CROWN_CITADEL_ID,
+]);
 const WEST_ISLAND_ART_SRC = "assets/west-island.png";
 const WEST_ISLAND_THUMB_SRC = "assets/thumbnails/west-island-thumb.jpg";
 const WEST_ISLAND_IMAGE_WIDTH = 1024;
@@ -341,8 +358,9 @@ const CENTER_ISLAND_TELEPORTS = [
   { id: "center-east", label: "East", targetRegionId: "east", point: { x: 1028, y: 610 } },
   { id: "center-south", label: "South", targetRegionId: "south", point: { x: 625, y: 1018 } },
 ];
+const CENTER_CROWN_CITADEL_IMAGE_POINT = { x: 625, y: 610 };
 const CENTER_ISLAND_RESERVED_CIRCLES = [
-  { x: 625, y: 610, r: 140 },
+  { x: CENTER_CROWN_CITADEL_IMAGE_POINT.x, y: CENTER_CROWN_CITADEL_IMAGE_POINT.y, r: 140 },
   ...CENTER_ISLAND_TELEPORTS.map(teleport => ({ x: teleport.point.x, y: teleport.point.y, r: 74 })),
 ];
 const CENTER_ISLAND_LAND_POLYGON = [
@@ -611,8 +629,13 @@ function isDefenseStronghold(city) {
   return isStronghold(city) && (city.strongholdType === "defense" || city.id === DEFENSE_STRONGHOLD_ID);
 }
 
+function isCrownCitadel(city) {
+  return isStronghold(city) && (city.strongholdType === "crown" || city.id === CROWN_CITADEL_ID);
+}
+
 function getStrongholdArtSrc(city) {
   if (city?.artSrc) return city.artSrc;
+  if (isCrownCitadel(city)) return CROWN_CITADEL_ART_SRC;
   if (isDefenseStronghold(city)) return DEFENSE_STRONGHOLD_ART_SRC;
   if (isSpeedStronghold(city)) return SPEED_STRONGHOLD_ART_SRC;
   if (isTrainingStronghold(city)) return TRAINING_STRONGHOLD_ART_SRC;
@@ -621,6 +644,7 @@ function getStrongholdArtSrc(city) {
 
 function getStrongholdBonusPercent(city) {
   if (Number.isFinite(Number(city?.bonusPercent))) return Math.max(0, Math.floor(Number(city.bonusPercent) || 0));
+  if (isCrownCitadel(city)) return CROWN_CITADEL_GOLD_BONUS_PERCENT;
   if (isDefenseStronghold(city)) return DEFENSE_STRONGHOLD_BONUS_PERCENT;
   if (isSpeedStronghold(city)) return SPEED_STRONGHOLD_BONUS_PERCENT;
   if (isTrainingStronghold(city)) return TRAINING_STRONGHOLD_BONUS_PERCENT;
@@ -629,6 +653,7 @@ function getStrongholdBonusPercent(city) {
 
 function getStrongholdDefenseLevel(city) {
   if (Number.isFinite(Number(city?.level))) return Math.max(1, Math.floor(Number(city.level) || 1));
+  if (isCrownCitadel(city)) return CROWN_CITADEL_LEVEL;
   if (isDefenseStronghold(city)) return DEFENSE_STRONGHOLD_LEVEL;
   if (isSpeedStronghold(city)) return SPEED_STRONGHOLD_LEVEL;
   if (isTrainingStronghold(city)) return TRAINING_STRONGHOLD_LEVEL;
@@ -637,6 +662,7 @@ function getStrongholdDefenseLevel(city) {
 
 function getStrongholdStartTroops(city) {
   if (Number.isFinite(Number(city?.startTroops))) return Math.max(0, Math.floor(Number(city.startTroops) || 0));
+  if (isCrownCitadel(city)) return CROWN_CITADEL_START_TROOPS;
   if (isDefenseStronghold(city)) return DEFENSE_STRONGHOLD_START_TROOPS;
   if (isSpeedStronghold(city)) return SPEED_STRONGHOLD_START_TROOPS;
   if (isTrainingStronghold(city)) return TRAINING_STRONGHOLD_START_TROOPS;
@@ -644,6 +670,7 @@ function getStrongholdStartTroops(city) {
 }
 
 function getStrongholdProductionLabel(city) {
+  if (city?.bonus === "crownDominion" || isCrownCitadel(city)) return "Crown Land bonuses";
   if (city?.bonus === "cityDefense") return "city defense";
   if (city?.bonus === "marchSpeed") return "march speed";
   if (city?.bonus === "troopProduction") return "troop production";
@@ -653,7 +680,17 @@ function getStrongholdProductionLabel(city) {
   return isTrainingStronghold(city) ? "troop production" : "gold production";
 }
 
+function getCrownCitadelBonusLabel() {
+  return `+${CROWN_CITADEL_GOLD_BONUS_PERCENT}% gold, +${CROWN_CITADEL_TROOP_BONUS_PERCENT}% troops, +${CROWN_CITADEL_MARCH_SPEED_BONUS_PERCENT}% speed, +${CROWN_CITADEL_DEFENSE_BONUS_PERCENT}% defense, -${CROWN_CITADEL_UPGRADE_COST_REDUCTION_PERCENT}% upgrade cost`;
+}
+
+function getStrongholdBonusLabel(city) {
+  if (isCrownCitadel(city)) return getCrownCitadelBonusLabel();
+  return `+${formatNumber(getStrongholdBonusPercent(city))}% ${getStrongholdProductionLabel(city)}`;
+}
+
 function getStrongholdShortBonusLabel(city) {
+  if (isCrownCitadel(city)) return "Crown bonuses";
   if (isDefenseStronghold(city)) return `+${formatNumber(getStrongholdBonusPercent(city))}% defense`;
   if (isSpeedStronghold(city)) return `+${formatNumber(getStrongholdBonusPercent(city))}% speed`;
   return isTrainingStronghold(city)
@@ -2809,6 +2846,17 @@ function hasEditorObjectiveDefinitions(regionId) {
 
 function getStrongholdConfigForType(type) {
   const strongholdType = String(type || "gold").trim().toLowerCase();
+  if (strongholdType === "crown") {
+    return {
+      type: "crown",
+      name: CROWN_CITADEL_NAME,
+      artSrc: CROWN_CITADEL_ART_SRC,
+      bonus: "crownDominion",
+      bonusPercent: CROWN_CITADEL_GOLD_BONUS_PERCENT,
+      level: CROWN_CITADEL_LEVEL,
+      troops: CROWN_CITADEL_START_TROOPS,
+    };
+  }
   if (strongholdType === "training") {
     return {
       type: "training",
@@ -2887,6 +2935,7 @@ function generateStrongholdSlots() {
   const north = getRegionById("north");
   const east = getRegionById("east");
   const south = getRegionById("south");
+  const center = getRegionById("center");
   return [
     west ? createStrongholdSlot({
       id: GOLD_STRONGHOLD_ID,
@@ -2931,6 +2980,19 @@ function generateStrongholdSlots() {
       bonusPercent: DEFENSE_STRONGHOLD_BONUS_PERCENT,
       level: DEFENSE_STRONGHOLD_LEVEL,
       troops: DEFENSE_STRONGHOLD_START_TROOPS,
+    }) : null,
+    center ? createStrongholdSlot({
+      id: CROWN_CITADEL_ID,
+      name: CROWN_CITADEL_NAME,
+      region: center,
+      point: centerImagePointToWorld(CENTER_CROWN_CITADEL_IMAGE_POINT),
+      type: "crown",
+      bonus: "crownDominion",
+      bonusPercent: CROWN_CITADEL_GOLD_BONUS_PERCENT,
+      level: CROWN_CITADEL_LEVEL,
+      troops: CROWN_CITADEL_START_TROOPS,
+      size: CROWN_CITADEL_VISUAL_SIZE,
+      artSrc: CROWN_CITADEL_ART_SRC,
     }) : null,
   ].filter(Boolean);
 }
@@ -4477,7 +4539,13 @@ function skillMultiplier(skill) {
   return Number((1 + getSkillPercent(skill) / 100).toFixed(3));
 }
 
+function getControlledCrownCitadel(owner = "player") {
+  if (!state || !Array.isArray(state.cities)) return null;
+  return state.cities.find(city => city.owner === owner && isCrownCitadel(city)) || null;
+}
+
 function getControlledStrongholdGoldBonusPercent(owner = "player") {
+  if (getControlledCrownCitadel(owner)) return CROWN_CITADEL_GOLD_BONUS_PERCENT;
   if (!state || !Array.isArray(state.cities)) return 0;
   return state.cities.reduce((total, city) => {
     if (city.owner !== owner || !isGoldStronghold(city)) return total;
@@ -4486,6 +4554,7 @@ function getControlledStrongholdGoldBonusPercent(owner = "player") {
 }
 
 function getControlledStrongholdTroopBonusPercent(owner = "player") {
+  if (getControlledCrownCitadel(owner)) return CROWN_CITADEL_TROOP_BONUS_PERCENT;
   if (!state || !Array.isArray(state.cities)) return 0;
   return state.cities.reduce((total, city) => {
     if (city.owner !== owner || !isTrainingStronghold(city)) return total;
@@ -4494,6 +4563,7 @@ function getControlledStrongholdTroopBonusPercent(owner = "player") {
 }
 
 function getControlledStrongholdMarchSpeedPercent(owner = "player") {
+  if (getControlledCrownCitadel(owner)) return CROWN_CITADEL_MARCH_SPEED_BONUS_PERCENT;
   if (!state || !Array.isArray(state.cities)) return 0;
   return state.cities.reduce((total, city) => {
     if (city.owner !== owner || !isSpeedStronghold(city)) return total;
@@ -4520,14 +4590,24 @@ function getCityControllerKey(city) {
   return city.owner || "";
 }
 
+function getControlledCrownCitadelForControllerKey(controllerKey) {
+  if (!state || !Array.isArray(state.cities) || !controllerKey) return null;
+  return state.cities.find(city => isCrownCitadel(city) && getCityControllerKey(city) === controllerKey) || null;
+}
+
 function getControlledStrongholdCityDefenseBonusPercentForCity(target) {
   if (!state || !Array.isArray(state.cities)) return 0;
   const targetControllerKey = getCityControllerKey(target);
   if (!targetControllerKey) return 0;
+  if (getControlledCrownCitadelForControllerKey(targetControllerKey)) return CROWN_CITADEL_DEFENSE_BONUS_PERCENT;
   return state.cities.reduce((total, city) => {
     if (!isDefenseStronghold(city) || getCityControllerKey(city) !== targetControllerKey) return total;
     return total + getStrongholdBonusPercent(city);
   }, 0);
+}
+
+function getControlledStrongholdUpgradeCostReductionPercent(owner = "player") {
+  return getControlledCrownCitadel(owner) ? CROWN_CITADEL_UPGRADE_COST_REDUCTION_PERCENT : 0;
 }
 
 function clampCityLevel(level) {
@@ -6762,6 +6842,8 @@ function toOnlineOwnedCity(city) {
     bonus: city.bonus || "",
     bonusPercent: Number(city.bonusPercent) || 0,
     size: isStronghold(city) ? getStrongholdVisualSize(city) : undefined,
+    artSrc: isStronghold(city) ? getStrongholdArtSrc(city) : "",
+    startTroops: isStronghold(city) ? getStrongholdStartTroops(city) : 0,
     ownerKind: "player",
     ownerUid: getCurrentOnlineUid(),
     ownerName: state.playerName,
@@ -6805,6 +6887,8 @@ function toOnlineCityState(city) {
     bonus: city.bonus || "",
     bonusPercent: Number(city.bonusPercent) || 0,
     size: isStronghold(city) ? getStrongholdVisualSize(city) : undefined,
+    artSrc: isStronghold(city) ? getStrongholdArtSrc(city) : "",
+    startTroops: isStronghold(city) ? getStrongholdStartTroops(city) : 0,
     ownerKind,
     ownerUid: hasPlayerOwner ? ownerUid : null,
     ownerName,
@@ -10195,7 +10279,7 @@ function showCityInfoModal(cityId) {
     const report = getScoutReport(city.id);
     const stats = getCityStats(city);
     const remaining = report ? Math.max(0, Math.ceil(report.expiresAt - state.gameSeconds)) : 0;
-    const strongholdBonusLabel = stronghold ? `+${formatNumber(getStrongholdBonusPercent(city))}% ${getStrongholdProductionLabel(city)}` : "";
+    const strongholdBonusLabel = stronghold ? getStrongholdBonusLabel(city) : "";
     modalTitle.textContent = stronghold ? `${city.name} - Stronghold` : `${city.name} - Level ${city.level}`;
     modalBody.innerHTML = `
       <div class="city-stat-panel modal-city-stats">
@@ -10216,15 +10300,19 @@ function showCityInfoModal(cityId) {
   }
   const stats = getCityStats(city);
   if (stronghold) {
-    const strongholdBonusLabel = `+${formatNumber(getStrongholdBonusPercent(city))}% ${getStrongholdProductionLabel(city)}`;
-    const effectTargetLabel = isDefenseStronghold(city)
+    const strongholdBonusLabel = getStrongholdBonusLabel(city);
+    const effectTargetLabel = isCrownCitadel(city)
+      ? "All cities and marches"
+      : isDefenseStronghold(city)
       ? "City defense"
       : isSpeedStronghold(city)
       ? "March time"
       : isTrainingStronghold(city)
         ? "Troop production"
         : "Gold production";
-    const effectHelp = isDefenseStronghold(city)
+    const effectHelp = isCrownCitadel(city)
+      ? "replaces other stronghold bonuses while active"
+      : isDefenseStronghold(city)
       ? "boosts defending power, not attack power"
       : isSpeedStronghold(city)
       ? "reduces travel time, not attack power"
@@ -10758,7 +10846,9 @@ function getMultiLevelCost(city, levels) {
     Math.pow(MILLION_LORDS_CITY_COST_GROWTH, targetLevel - 1)
     - Math.pow(MILLION_LORDS_CITY_COST_GROWTH, startLevel - 1)
   );
-  return Math.max(0, Math.floor(totalCost + 0.000001));
+  const upgradeReductionPercent = city?.owner === "player" ? getControlledStrongholdUpgradeCostReductionPercent("player") : 0;
+  const discountedCost = totalCost * (1 - upgradeReductionPercent / 100);
+  return Math.max(0, Math.floor(discountedCost + 0.000001));
 }
 
 function getLevelCost(city) {

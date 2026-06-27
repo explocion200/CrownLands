@@ -212,6 +212,7 @@
       bonusPercent: isStronghold ? Math.max(0, Math.floor(Number(city.bonusPercent) || 0)) : 0,
       size: isStronghold ? Math.max(0, Math.floor(Number(city.size) || 0)) : 0,
       artSrc: isStronghold ? String(city.artSrc || "").slice(0, 160) : "",
+      startTroops: isStronghold ? Math.max(0, Math.floor(Number(city.startTroops) || Number(city.troops) || 0)) : 0,
       ...owner,
       level: Math.max(1, Math.floor(Number(city.level) || 1)),
       troops: Math.max(0, Math.floor(Number(city.troops) || 0)),
@@ -238,6 +239,7 @@
       bonusPercent: isStronghold ? Math.max(0, Math.floor(Number(city.bonusPercent) || 0)) : 0,
       size: isStronghold ? Math.max(0, Math.floor(Number(city.size) || 0)) : 0,
       artSrc: isStronghold ? String(city.artSrc || "").slice(0, 160) : "",
+      startTroops: isStronghold ? Math.max(0, Math.floor(Number(city.startTroops) || Number(city.troops) || 0)) : 0,
       defense: 1,
     };
   }

@@ -915,6 +915,15 @@ input {
   border-color: rgba(255, 238, 194, .98);
   box-shadow: 0 0 0 5px rgba(255, 179, 76, .26), 0 0 30px rgba(255, 210, 126, .72);
 }
+.city-node.stronghold-crown .stronghold-glow {
+  border-color: rgba(255, 232, 137, .94);
+  background: radial-gradient(ellipse at center, rgba(255, 224, 107, .34), rgba(37, 95, 145, .2) 62%, transparent 72%);
+  box-shadow: 0 0 30px rgba(255, 215, 94, .58), 0 0 22px rgba(91, 176, 255, .42);
+}
+.city-node.stronghold-crown.selected .stronghold-glow {
+  border-color: rgba(255, 249, 205, .98);
+  box-shadow: 0 0 0 6px rgba(255, 215, 94, .3), 0 0 36px rgba(255, 232, 137, .8), 0 0 24px rgba(123, 194, 255, .56);
+}
 .city-node.stronghold-node.attackable .stronghold-glow {
   animation: targetPulse .75s infinite alternate;
 }
