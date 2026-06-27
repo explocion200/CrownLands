@@ -5706,20 +5706,71 @@ async function refreshOnlineIslandSummaries(force = false) {
   }
 }
 
+function getIslandMapPosition(region) {
+  return {
+    x: clamp((Number(region?.x) || WORLD_WIDTH / 2) / WORLD_WIDTH * 100, 7, 93),
+    y: clamp((Number(region?.y) || WORLD_HEIGHT / 2) / WORLD_HEIGHT * 100, 7, 93),
+  };
+}
+
+function getIslandMapIconSize(region) {
+  const densityScale = WORLD_REGIONS.length > 5 ? 0.88 : 1;
+  const rawWidth = Math.max(14, (Number(region?.rx) || 800) * 2 / WORLD_WIDTH * 100) * densityScale;
+  const rawHeight = Math.max(14, (Number(region?.ry) || 800) * 2 / WORLD_HEIGHT * 100) * densityScale;
+  const maxWidth = 34 * densityScale;
+  const maxHeight = 36 * densityScale;
+  const scale = Math.min(1, maxWidth / rawWidth, maxHeight / rawHeight);
+  return {
+    width: clamp(rawWidth * scale, 15, maxWidth),
+    height: clamp(rawHeight * scale, 14, maxHeight),
+  };
+}
+
 function getIslandMapIconStyle(region) {
-  const layout = {
-    center: { x: 50, y: 50, w: 25, h: 31 },
-    north: { x: 50, y: 18, w: 32, h: 24 },
-    south: { x: 50, y: 82, w: 32, h: 24 },
-    west: { x: 20, y: 50, w: 24, h: 37 },
-    east: { x: 80, y: 50, w: 24, h: 37 },
-  }[normalizeRegionId(region.id)];
-  const x = layout ? layout.x : clamp((Number(region.x) || 0) / WORLD_WIDTH * 100, 8, 92);
-  const y = layout ? layout.y : clamp((Number(region.y) || 0) / WORLD_HEIGHT * 100, 8, 92);
-  const width = layout ? layout.w : clamp((Number(region.rx) || 800) * 2 / WORLD_WIDTH * 120, 18, 34);
-  const height = layout ? layout.h : clamp((Number(region.ry) || 800) * 2 / WORLD_HEIGHT * 112, 16, 30);
+  const position = getIslandMapPosition(region);
+  const size = getIslandMapIconSize(region);
   const rot = ((Number(region.rot) || 0) * 180 / Math.PI).toFixed(2);
-  return `--island-x:${formatPathNumber(x)}%;--island-y:${formatPathNumber(y)}%;--island-w:${formatPathNumber(width)}%;--island-h:${formatPathNumber(height)}%;--island-rot:${rot}deg;`;
+  return `--island-x:${formatPathNumber(position.x)}%;--island-y:${formatPathNumber(position.y)}%;--island-w:${formatPathNumber(size.width)}%;--island-h:${formatPathNumber(size.height)}%;--island-rot:${rot}deg;`;
+}
+
+function getIslandMapPickerStyle() {
+  const aspect = clamp(WORLD_WIDTH / WORLD_HEIGHT, 1.05, 1.65);
+  return `--island-map-aspect:${formatPathNumber(aspect)};`;
+}
+
+function getIslandMapConnectionEdges() {
+  const regionIds = new Set(getRegionIds());
+  const edges = new Map();
+  for (const map of getEditorMapEntries()) {
+    const source = normalizeRegionId(map.id);
+    if (!regionIds.has(source)) continue;
+    for (const portal of Array.isArray(map.portals) ? map.portals : []) {
+      const target = normalizeRegionId(portal?.targetRegionId || portal?.target);
+      if (!target || target === source || !regionIds.has(target)) continue;
+      const key = [source, target].sort().join("::");
+      if (!edges.has(key)) edges.set(key, { source, target });
+    }
+  }
+  if (!edges.size && regionIds.has("center")) {
+    for (const regionId of regionIds) {
+      if (regionId === "center") continue;
+      edges.set(["center", regionId].sort().join("::"), { source: "center", target: regionId });
+    }
+  }
+  return Array.from(edges.values());
+}
+
+function renderIslandMapConnections() {
+  const regionById = new Map(WORLD_REGIONS.map(region => [normalizeRegionId(region.id), region]));
+  const lines = getIslandMapConnectionEdges().map(edge => {
+    const source = regionById.get(edge.source);
+    const target = regionById.get(edge.target);
+    if (!source || !target) return "";
+    const start = getIslandMapPosition(source);
+    const end = getIslandMapPosition(target);
+    return `<line class="island-map-connection" x1="${formatPathNumber(start.x)}" y1="${formatPathNumber(start.y)}" x2="${formatPathNumber(end.x)}" y2="${formatPathNumber(end.y)}"></line>`;
+  }).filter(Boolean).join("");
+  return `<svg class="island-map-connections" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">${lines}</svg>`;
 }
 
 function renderIslandMapTile(region, activeRegionId, homeRegionId) {
@@ -5755,11 +5806,8 @@ function renderIslandSwitcherModalContent() {
   const activeRegionId = getActiveOnlineRegionId();
   const homeRegionId = getMainCityRegionId();
   modalBody.innerHTML = `
-    <div class="island-map-picker" aria-label="Island map picker">
-      <span class="island-map-connector north" aria-hidden="true"></span>
-      <span class="island-map-connector south" aria-hidden="true"></span>
-      <span class="island-map-connector west" aria-hidden="true"></span>
-      <span class="island-map-connector east" aria-hidden="true"></span>
+    <div class="island-map-picker" style="${getIslandMapPickerStyle()}" aria-label="Island map picker">
+      ${renderIslandMapConnections()}
       ${WORLD_REGIONS.map(region => renderIslandMapTile(region, activeRegionId, homeRegionId)).join("")}
     </div>
   `;

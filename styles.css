@@ -1780,13 +1780,16 @@ input {
   font-size: 1.35rem;
   background: linear-gradient(#1b6fb6, #063761);
 }
+.island-switcher-modal.modal {
+  width: min(860px, calc(100vw - 1rem));
+}
 .island-switcher-modal .modal-card {
-  max-height: min(80vh, 560px);
+  max-height: min(86vh, 680px);
 }
 .island-map-picker {
   position: relative;
-  width: min(100%, 520px);
-  aspect-ratio: 1.32;
+  width: min(100%, 760px);
+  aspect-ratio: var(--island-map-aspect, 1.32);
   margin: .35rem auto .1rem;
   overflow: hidden;
   border-radius: 16px;
@@ -1882,47 +1885,27 @@ input {
   content: none;
 }
 .island-map-picker {
-  aspect-ratio: 1.36;
   background:
     radial-gradient(circle at 50% 50%, rgba(151, 226, 255, .26), transparent 39%),
     radial-gradient(circle at 18% 26%, rgba(255,255,255,.14), transparent 23%),
     radial-gradient(circle at 82% 74%, rgba(5, 27, 48, .34), transparent 27%),
     linear-gradient(180deg, #1b789f 0%, #0e557b 54%, #0b3553 100%);
 }
-.island-map-connector {
+.island-map-connections {
   position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
   z-index: 1;
   pointer-events: none;
-  border-color: rgba(255, 236, 169, .42);
   filter: drop-shadow(0 2px 4px rgba(0,0,0,.32));
 }
-.island-map-connector.north,
-.island-map-connector.south {
-  left: 50%;
-  width: 0;
-  border-left: 2px dashed rgba(255, 236, 169, .42);
-}
-.island-map-connector.north {
-  top: 29%;
-  height: 15%;
-}
-.island-map-connector.south {
-  top: 56%;
-  height: 15%;
-}
-.island-map-connector.west,
-.island-map-connector.east {
-  top: 50%;
-  height: 0;
-  border-top: 2px dashed rgba(255, 236, 169, .42);
-}
-.island-map-connector.west {
-  left: 32%;
-  width: 10%;
-}
-.island-map-connector.east {
-  left: 58%;
-  width: 10%;
+.island-map-connection {
+  stroke: rgba(255, 236, 169, .48);
+  stroke-width: .46;
+  stroke-dasharray: 2.2 2.2;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
 }
 .island-map-picker .island-map-icon {
   z-index: 2;
