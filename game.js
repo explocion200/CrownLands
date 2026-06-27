@@ -613,6 +613,27 @@ function getStrongholdVisualSize(city) {
   return Math.max(MIN_STRONGHOLD_VISUAL_SIZE, Math.floor(Number(city?.size) || DEFAULT_STRONGHOLD_VISUAL_SIZE));
 }
 
+function applyCityActionWheelSizing(wheel, city) {
+  if (!wheel || !isStronghold(city)) return;
+  const strongholdSize = getStrongholdVisualSize(city);
+  const targetWidth = Math.round(strongholdSize * 0.961);
+  const targetHeight = Math.round(strongholdSize * 0.896);
+  const wheelWidth = targetWidth + Math.max(144, Math.round(strongholdSize * 0.62));
+  const wheelHeight = targetHeight + Math.max(128, Math.round(strongholdSize * 0.54));
+  const ringWidth = targetWidth + Math.max(42, Math.round(strongholdSize * 0.18));
+  const ringHeight = targetHeight + Math.max(34, Math.round(strongholdSize * 0.14));
+
+  wheel.classList.add("stronghold-action-wheel");
+  if (isCrownCitadel(city)) wheel.classList.add("crown-action-wheel");
+  wheel.style.setProperty("--wheel-width", `${wheelWidth}px`);
+  wheel.style.setProperty("--wheel-height", `${wheelHeight}px`);
+  wheel.style.setProperty("--wheel-ring-width", `${ringWidth}px`);
+  wheel.style.setProperty("--wheel-ring-height", `${ringHeight}px`);
+  wheel.style.setProperty("--wheel-side-top", `${Math.round((wheelHeight - 62) / 2)}px`);
+  wheel.style.setProperty("--wheel-info-left", `${Math.round((wheelWidth - 58) / 2)}px`);
+  wheel.style.setProperty("--wheel-translate-y", "-55%");
+}
+
 function isGoldStronghold(city) {
   return isStronghold(city) && (city.strongholdType === "gold" || city.id === GOLD_STRONGHOLD_ID);
 }
@@ -9830,6 +9851,7 @@ function renderSelectedCityWheel(city) {
   const scoutNearbyActive = scoutNearbySourceId === city.id;
   const nearbyCount = scoutNearbyActive ? getNearbyScoutCandidates(city).length : 0;
   wheel.className = "city-action-wheel";
+  applyCityActionWheelSizing(wheel, city);
   wheel.style.left = `${mapPoint.x}px`;
   wheel.style.top = `${mapPoint.y}px`;
   wheel.innerHTML = `
@@ -9879,6 +9901,7 @@ function renderSelectedForeignWheel(city) {
   const canScout = !pendingScout && playerCities().some(playerCity => playerCity.troops >= 1);
   const canAttack = playerCities().some(playerCity => playerCity.troops > 0);
   wheel.className = "city-action-wheel foreign-city-action-wheel";
+  applyCityActionWheelSizing(wheel, city);
   wheel.style.left = `${mapPoint.x}px`;
   wheel.style.top = `${mapPoint.y}px`;
   wheel.innerHTML = `
