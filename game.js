@@ -5706,23 +5706,99 @@ async function refreshOnlineIslandSummaries(force = false) {
   }
 }
 
+function getIslandMapAnchor(region) {
+  const regionId = normalizeRegionId(region?.id);
+  const defaultAnchor = {
+    x: Number(region?.x) || WORLD_WIDTH / 2,
+    y: Number(region?.y) || WORLD_HEIGHT / 2,
+  };
+  if (BASE_BITMAP_ISLAND_IDS.includes(regionId)) return defaultAnchor;
+  const portals = getEditorPortalDefinitions(regionId);
+  const portal = portals.find(entry => getRegionById(normalizeRegionId(entry?.targetRegionId || entry?.target)))
+    || portals[0];
+  const targetRegionId = normalizeRegionId(portal?.targetRegionId || portal?.target);
+  const target = targetRegionId ? getRegionById(targetRegionId) : null;
+  if (!portal || !target) return defaultAnchor;
+
+  const dimensions = getIslandImageDimensions(regionId);
+  const portalPoint = getEditorPoint(portal);
+  const px = dimensions.width ? clamp(portalPoint.x / dimensions.width, 0, 1) : 0.5;
+  const py = dimensions.height ? clamp(portalPoint.y / dimensions.height, 0, 1) : 0.5;
+  const rx = Math.max(600, Number(region?.rx) || 900);
+  const ry = Math.max(520, Number(region?.ry) || 760);
+  const targetRx = Math.max(600, Number(target.rx) || 900);
+  const targetRy = Math.max(520, Number(target.ry) || 760);
+  const gap = Math.max(360, Math.min(WORLD_WIDTH, WORLD_HEIGHT) * 0.055);
+
+  if (py < 0.33) {
+    return {
+      x: (Number(target.x) || WORLD_WIDTH / 2) + (px - 0.5) * targetRx,
+      y: (Number(target.y) || WORLD_HEIGHT / 2) + targetRy + ry + gap,
+    };
+  }
+  if (py > 0.67) {
+    return {
+      x: (Number(target.x) || WORLD_WIDTH / 2) + (px - 0.5) * targetRx,
+      y: (Number(target.y) || WORLD_HEIGHT / 2) - targetRy - ry - gap,
+    };
+  }
+  if (px < 0.33) {
+    return {
+      x: (Number(target.x) || WORLD_WIDTH / 2) + targetRx + rx + gap,
+      y: (Number(target.y) || WORLD_HEIGHT / 2) + (py - 0.5) * targetRy,
+    };
+  }
+  if (px > 0.67) {
+    return {
+      x: (Number(target.x) || WORLD_WIDTH / 2) - targetRx - rx - gap,
+      y: (Number(target.y) || WORLD_HEIGHT / 2) + (py - 0.5) * targetRy,
+    };
+  }
+  return defaultAnchor;
+}
+
+function getIslandMapLayoutBounds() {
+  const margin = 720;
+  const anchors = WORLD_REGIONS.map(region => {
+    const anchor = getIslandMapAnchor(region);
+    const rx = Math.max(500, Number(region?.rx) || 900);
+    const ry = Math.max(450, Number(region?.ry) || 760);
+    return { anchor, rx, ry };
+  });
+  let left = 0;
+  let top = 0;
+  let right = WORLD_WIDTH;
+  let bottom = WORLD_HEIGHT;
+  anchors.forEach(({ anchor, rx, ry }) => {
+    left = Math.min(left, anchor.x - rx - margin);
+    top = Math.min(top, anchor.y - ry - margin);
+    right = Math.max(right, anchor.x + rx + margin);
+    bottom = Math.max(bottom, anchor.y + ry + margin);
+  });
+  const width = Math.max(1, right - left);
+  const height = Math.max(1, bottom - top);
+  return { left, top, right, bottom, width, height };
+}
+
 function getIslandMapPosition(region) {
+  const bounds = getIslandMapLayoutBounds();
+  const anchor = getIslandMapAnchor(region);
   return {
-    x: clamp((Number(region?.x) || WORLD_WIDTH / 2) / WORLD_WIDTH * 100, 7, 93),
-    y: clamp((Number(region?.y) || WORLD_HEIGHT / 2) / WORLD_HEIGHT * 100, 7, 93),
+    x: clamp((anchor.x - bounds.left) / bounds.width * 100, 4, 96),
+    y: clamp((anchor.y - bounds.top) / bounds.height * 100, 4, 96),
   };
 }
 
 function getIslandMapIconSize(region) {
-  const densityScale = WORLD_REGIONS.length > 5 ? 0.88 : 1;
-  const rawWidth = Math.max(14, (Number(region?.rx) || 800) * 2 / WORLD_WIDTH * 100) * densityScale;
-  const rawHeight = Math.max(14, (Number(region?.ry) || 800) * 2 / WORLD_HEIGHT * 100) * densityScale;
-  const maxWidth = 34 * densityScale;
-  const maxHeight = 36 * densityScale;
+  const bounds = getIslandMapLayoutBounds();
+  const rawWidth = Math.max(14, (Number(region?.rx) || 800) * 2 / bounds.width * 100);
+  const rawHeight = Math.max(14, (Number(region?.ry) || 800) * 2 / bounds.height * 100);
+  const maxWidth = 36;
+  const maxHeight = 36;
   const scale = Math.min(1, maxWidth / rawWidth, maxHeight / rawHeight);
   return {
-    width: clamp(rawWidth * scale, 15, maxWidth),
-    height: clamp(rawHeight * scale, 14, maxHeight),
+    width: clamp(rawWidth * scale, 18, maxWidth),
+    height: clamp(rawHeight * scale, 16, maxHeight),
   };
 }
 
@@ -5734,8 +5810,11 @@ function getIslandMapIconStyle(region) {
 }
 
 function getIslandMapPickerStyle() {
+  const bounds = getIslandMapLayoutBounds();
   const aspect = clamp(WORLD_WIDTH / WORLD_HEIGHT, 1.05, 1.65);
-  return `--island-map-aspect:${formatPathNumber(aspect)};`;
+  const canvasWidth = Math.max(100, Math.min(180, bounds.width / WORLD_WIDTH * 100));
+  const canvasHeight = Math.max(100, Math.min(180, bounds.height / WORLD_HEIGHT * 100));
+  return `--island-map-aspect:${formatPathNumber(aspect)};--island-map-canvas-w:${formatPathNumber(canvasWidth)}%;--island-map-canvas-h:${formatPathNumber(canvasHeight)}%;`;
 }
 
 function getIslandMapConnectionEdges() {
@@ -5807,14 +5886,69 @@ function renderIslandSwitcherModalContent() {
   const homeRegionId = getMainCityRegionId();
   modalBody.innerHTML = `
     <div class="island-map-picker" style="${getIslandMapPickerStyle()}" aria-label="Island map picker">
-      ${renderIslandMapConnections()}
-      ${WORLD_REGIONS.map(region => renderIslandMapTile(region, activeRegionId, homeRegionId)).join("")}
+      <div class="island-map-canvas">
+        ${renderIslandMapConnections()}
+        ${WORLD_REGIONS.map(region => renderIslandMapTile(region, activeRegionId, homeRegionId)).join("")}
+      </div>
     </div>
   `;
   if (!modal.open) modal.showModal();
+  const picker = modalBody.querySelector(".island-map-picker");
+  attachIslandMapPickerPan(picker);
   modalBody.querySelectorAll("[data-island-region]").forEach(button => {
-    button.addEventListener("click", () => switchOnlineIsland(button.dataset.islandRegion));
+    button.addEventListener("click", () => {
+      if (picker?.dataset.justDragged === "true") return;
+      switchOnlineIsland(button.dataset.islandRegion);
+    });
   });
+}
+
+function attachIslandMapPickerPan(picker) {
+  if (!picker || picker.dataset.panReady === "true") return;
+  picker.dataset.panReady = "true";
+  let pointerId = null;
+  let startX = 0;
+  let startY = 0;
+  let startScrollLeft = 0;
+  let startScrollTop = 0;
+  let moved = false;
+
+  picker.addEventListener("pointerdown", event => {
+    if (event.button !== undefined && event.button !== 0) return;
+    pointerId = event.pointerId;
+    startX = event.clientX;
+    startY = event.clientY;
+    startScrollLeft = picker.scrollLeft;
+    startScrollTop = picker.scrollTop;
+    moved = false;
+    picker.classList.add("panning");
+    picker.setPointerCapture?.(event.pointerId);
+  });
+
+  picker.addEventListener("pointermove", event => {
+    if (pointerId !== event.pointerId) return;
+    const dx = event.clientX - startX;
+    const dy = event.clientY - startY;
+    if (Math.abs(dx) > 4 || Math.abs(dy) > 4) moved = true;
+    picker.scrollLeft = startScrollLeft - dx;
+    picker.scrollTop = startScrollTop - dy;
+  });
+
+  const stopPan = event => {
+    if (pointerId !== event.pointerId) return;
+    pointerId = null;
+    picker.classList.remove("panning");
+    picker.releasePointerCapture?.(event.pointerId);
+    if (moved) {
+      picker.dataset.justDragged = "true";
+      window.setTimeout(() => {
+        if (picker) delete picker.dataset.justDragged;
+      }, 120);
+    }
+  };
+
+  picker.addEventListener("pointerup", stopPan);
+  picker.addEventListener("pointercancel", stopPan);
 }
 
 function showIslandSwitcherModal() {

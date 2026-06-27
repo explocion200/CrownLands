@@ -1791,24 +1791,47 @@ input {
   width: min(100%, 760px);
   aspect-ratio: var(--island-map-aspect, 1.32);
   margin: .35rem auto .1rem;
-  overflow: hidden;
+  overflow: auto;
+  overscroll-behavior: contain;
+  cursor: grab;
+  user-select: none;
+  scrollbar-color: rgba(255, 226, 147, .68) rgba(5, 28, 48, .4);
+  scrollbar-width: thin;
+  touch-action: none;
   border-radius: 16px;
   border: 1px solid rgba(175, 228, 255, .26);
-  background:
-    radial-gradient(circle at 50% 50%, rgba(130, 214, 255, .22), transparent 42%),
-    radial-gradient(circle at 18% 24%, rgba(255,255,255,.12), transparent 24%),
-    radial-gradient(circle at 82% 78%, rgba(5, 27, 48, .28), transparent 28%),
-    linear-gradient(180deg, #2d7fac, #12527c);
+  background: #0d557d;
   box-shadow: inset 0 0 0 2px rgba(255,255,255,.06), inset 0 -16px 32px rgba(0,0,0,.22);
 }
-.island-map-picker::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
+.island-map-picker.panning {
+  cursor: grabbing;
+}
+.island-map-picker::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+.island-map-picker::-webkit-scrollbar-track {
+  background: rgba(5, 28, 48, .38);
+  border-radius: 999px;
+}
+.island-map-picker::-webkit-scrollbar-thumb {
+  background: rgba(255, 226, 147, .66);
+  border: 2px solid rgba(5, 28, 48, .5);
+  border-radius: 999px;
+}
+.island-map-canvas {
+  position: relative;
+  width: var(--island-map-canvas-w, 100%);
+  height: var(--island-map-canvas-h, 100%);
+  min-width: 100%;
+  min-height: 100%;
   background:
     repeating-linear-gradient(24deg, rgba(255,255,255,.06) 0 2px, transparent 2px 36px),
-    radial-gradient(circle at 50% 48%, transparent 56%, rgba(0,0,0,.2));
+    radial-gradient(circle at 50% 48%, transparent 56%, rgba(0,0,0,.2)),
+    radial-gradient(circle at 50% 50%, rgba(151, 226, 255, .26), transparent 39%),
+    radial-gradient(circle at 18% 26%, rgba(255,255,255,.14), transparent 23%),
+    radial-gradient(circle at 82% 74%, rgba(5, 27, 48, .34), transparent 27%),
+    linear-gradient(180deg, #1b789f 0%, #0e557b 54%, #0b3553 100%);
 }
 .island-map-icon {
   position: absolute;
@@ -1884,13 +1907,6 @@ input {
 .island-map-icon.home::after {
   content: none;
 }
-.island-map-picker {
-  background:
-    radial-gradient(circle at 50% 50%, rgba(151, 226, 255, .26), transparent 39%),
-    radial-gradient(circle at 18% 26%, rgba(255,255,255,.14), transparent 23%),
-    radial-gradient(circle at 82% 74%, rgba(5, 27, 48, .34), transparent 27%),
-    linear-gradient(180deg, #1b789f 0%, #0e557b 54%, #0b3553 100%);
-}
 .island-map-connections {
   position: absolute;
   inset: 0;
@@ -1946,10 +1962,8 @@ input {
     linear-gradient(180deg, #0a5a7b, #062b45);
 }
 .island-map-thumb img {
-  width: auto;
-  height: auto;
-  max-width: 100%;
-  max-height: 100%;
+  width: 100%;
+  height: 100%;
   display: block;
   object-fit: contain;
   object-position: center;
