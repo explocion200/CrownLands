@@ -57,6 +57,7 @@
     portalTargetSelect: document.getElementById("portalTargetSelect"),
     openProjectBtn: document.getElementById("openProjectBtn"),
     applyBtn: document.getElementById("applyBtn"),
+    canvasWrap: document.querySelector(".canvas-wrap"),
     mapCanvas: document.getElementById("mapCanvas"),
     mapImage: document.getElementById("mapImage"),
     markerLayer: document.getElementById("markerLayer"),
@@ -82,6 +83,10 @@
     mode: "select",
     selected: null,
     dragging: null,
+    panning: null,
+    skipNextCanvasClick: false,
+    renderedMapId: "",
+    viewportByMap: new Map(),
     projectDir: null,
     dirty: false,
   };
@@ -116,6 +121,16 @@
 
   function currentMap() {
     return state.maps.find(map => map.id === state.currentId) || state.maps[0] || null;
+  }
+
+  function getMapById(id) {
+    const targetId = slugify(id);
+    return state.maps.find(map => map.id === targetId) || null;
+  }
+
+  function getPortalById(map, portalId) {
+    const targetId = String(portalId || "");
+    return map?.portals?.find(portal => portal.id === targetId) || null;
   }
 
   function markDirty() {
@@ -155,6 +170,7 @@
         id: String(portal.id || `${id}-portal-${index + 1}`),
         label: String(portal.label || titleFromId(portal.targetRegionId || portal.target || "center")),
         targetRegionId: slugify(portal.targetRegionId || portal.target || "center"),
+        targetPortalId: String(portal.targetPortalId || portal.targetPortal || portal.linkedPortalId || portal.connectedPortalId || ""),
         x: Math.round(Number(portal.x ?? portal.point?.x) || 0),
         y: Math.round(Number(portal.y ?? portal.point?.y) || 0),
         size: Math.max(MIN_PORTAL_SIZE, Math.floor(Number(portal.size) || DEFAULT_PORTAL_SIZE)),
@@ -306,7 +322,7 @@
         prefix: "WEST",
         cityPoints: "WEST_ISLAND_CITY_POINTS",
         landPolygon: "WEST_ISLAND_LAND_POLYGON",
-        portals: [{ id: "west-center", label: "Center", targetRegionId: "center", pointConst: "WEST_CENTER_TELEPORT_IMAGE_POINT" }],
+        portals: [{ id: "west-center", label: "Center", targetRegionId: "center", targetPortalId: "center-west", pointConst: "WEST_CENTER_TELEPORT_IMAGE_POINT" }],
         objectives: [{ id: "west_gold_stronghold", type: "gold", pointConst: "WEST_GOLD_STRONGHOLD_IMAGE_POINT" }],
       },
       {
@@ -314,7 +330,7 @@
         prefix: "NORTH",
         cityPoints: "NORTH_ISLAND_CITY_POINTS",
         landPolygon: "NORTH_ISLAND_LAND_POLYGON",
-        portals: [{ id: "north-center", label: "Center", targetRegionId: "center", pointConst: "NORTH_CENTER_TELEPORT_IMAGE_POINT" }],
+        portals: [{ id: "north-center", label: "Center", targetRegionId: "center", targetPortalId: "center-north", pointConst: "NORTH_CENTER_TELEPORT_IMAGE_POINT" }],
         objectives: [{ id: "north_training_stronghold", type: "training", pointConst: "NORTH_TRAINING_STRONGHOLD_IMAGE_POINT" }],
       },
       {
@@ -322,7 +338,7 @@
         prefix: "EAST",
         cityPoints: "EAST_ISLAND_CITY_POINTS",
         landPolygon: "EAST_ISLAND_LAND_POLYGON",
-        portals: [{ id: "east-center", label: "Center", targetRegionId: "center", pointConst: "EAST_CENTER_TELEPORT_IMAGE_POINT" }],
+        portals: [{ id: "east-center", label: "Center", targetRegionId: "center", targetPortalId: "center-east", pointConst: "EAST_CENTER_TELEPORT_IMAGE_POINT" }],
         objectives: [{ id: "east_speed_stronghold", type: "speed", pointConst: "EAST_SPEED_STRONGHOLD_IMAGE_POINT" }],
       },
       {
@@ -330,7 +346,7 @@
         prefix: "SOUTH",
         cityPoints: "SOUTH_ISLAND_CITY_POINTS",
         landPolygon: "SOUTH_ISLAND_LAND_POLYGON",
-        portals: [{ id: "south-center", label: "Center", targetRegionId: "center", pointConst: "SOUTH_CENTER_TELEPORT_IMAGE_POINT" }],
+        portals: [{ id: "south-center", label: "Center", targetRegionId: "center", targetPortalId: "center-south", pointConst: "SOUTH_CENTER_TELEPORT_IMAGE_POINT" }],
         objectives: [{ id: "south_defense_stronghold", type: "defense", pointConst: "SOUTH_DEFENSE_STRONGHOLD_IMAGE_POINT" }],
       },
       {
@@ -352,6 +368,7 @@
             id: portal.id,
             label: portal.label,
             targetRegionId: portal.targetRegionId,
+            targetPortalId: `${portal.targetRegionId}-center`,
             x: Number(portal.point?.x) || 0,
             y: Number(portal.point?.y) || 0,
             size: DEFAULT_PORTAL_SIZE,
@@ -362,6 +379,7 @@
               id: portal.id,
               label: portal.label,
               targetRegionId: portal.targetRegionId,
+              targetPortalId: portal.targetPortalId || "",
               x: Number(point.x) || 0,
               y: Number(point.y) || 0,
               size: DEFAULT_PORTAL_SIZE,
@@ -465,6 +483,7 @@
     `).join("");
     elements.mapList.querySelectorAll("[data-map-id]").forEach(button => {
       button.addEventListener("click", () => {
+        saveViewportForCurrentMap();
         state.currentId = button.dataset.mapId;
         state.selected = null;
         render();
@@ -483,6 +502,9 @@
   function renderCanvas() {
     const map = currentMap();
     if (!map) return;
+    const previousMapId = state.renderedMapId;
+    elements.mapCanvas.style.width = `${Math.max(320, Math.round(Number(map.imageWidth) || 1200))}px`;
+    elements.mapCanvas.style.aspectRatio = `${Math.max(1, Math.round(Number(map.imageWidth) || 1200))} / ${Math.max(1, Math.round(Number(map.imageHeight) || 1200))}`;
     elements.mapImage.src = getMapPreviewSrc(map);
     elements.mapImage.alt = `${map.label} map`;
     elements.currentMapTitle.textContent = map.label;
@@ -490,6 +512,8 @@
     renderMarkers(map, "city", map.cities);
     renderMarkers(map, "portal", map.portals);
     renderMarkers(map, "objective", map.objectives);
+    state.renderedMapId = map.id;
+    if (previousMapId !== map.id) requestAnimationFrame(() => restoreViewportForMap(map.id));
   }
 
   function renderMarkers(map, type, items) {
@@ -535,7 +559,11 @@
   }
 
   function markerTitle(type, item) {
-    if (type === "portal") return `${item.label} to ${titleFromId(item.targetRegionId)}`;
+    if (type === "portal") {
+      const targetPortal = getPortalById(getMapById(item.targetRegionId), item.targetPortalId);
+      const linked = targetPortal ? ` via ${targetPortal.id}` : "";
+      return `${item.label} to ${titleFromId(item.targetRegionId)}${linked}`;
+    }
     if (type === "objective") return item.name;
     return item.name;
   }
@@ -571,6 +599,59 @@
   function stopDrag() {
     window.removeEventListener("pointermove", handlePointerMove);
     state.dragging = null;
+  }
+
+  function saveViewportForCurrentMap() {
+    const map = currentMap();
+    if (!map || !elements.canvasWrap) return;
+    state.viewportByMap.set(map.id, {
+      left: elements.canvasWrap.scrollLeft,
+      top: elements.canvasWrap.scrollTop,
+    });
+  }
+
+  function restoreViewportForMap(mapId) {
+    if (!elements.canvasWrap) return;
+    const saved = state.viewportByMap.get(mapId);
+    if (saved) {
+      elements.canvasWrap.scrollLeft = saved.left;
+      elements.canvasWrap.scrollTop = saved.top;
+      return;
+    }
+    elements.canvasWrap.scrollLeft = Math.max(0, (elements.mapCanvas.offsetWidth - elements.canvasWrap.clientWidth) / 2);
+    elements.canvasWrap.scrollTop = Math.max(0, (elements.mapCanvas.offsetHeight - elements.canvasWrap.clientHeight) / 2);
+  }
+
+  function startCanvasPan(event) {
+    if (!elements.canvasWrap || event.button !== 0 || event.target.closest(".marker")) return;
+    state.panning = {
+      pointerId: event.pointerId,
+      x: event.clientX,
+      y: event.clientY,
+      left: elements.canvasWrap.scrollLeft,
+      top: elements.canvasWrap.scrollTop,
+      moved: false,
+    };
+    elements.canvasWrap.classList.add("panning");
+    elements.canvasWrap.setPointerCapture?.(event.pointerId);
+  }
+
+  function handleCanvasPan(event) {
+    if (!state.panning || state.panning.pointerId !== event.pointerId || !elements.canvasWrap) return;
+    const dx = event.clientX - state.panning.x;
+    const dy = event.clientY - state.panning.y;
+    if (Math.hypot(dx, dy) > 3) state.panning.moved = true;
+    elements.canvasWrap.scrollLeft = state.panning.left - dx;
+    elements.canvasWrap.scrollTop = state.panning.top - dy;
+    event.preventDefault();
+  }
+
+  function stopCanvasPan(event) {
+    if (!state.panning || state.panning.pointerId !== event.pointerId) return;
+    state.skipNextCanvasClick = state.panning.moved;
+    state.panning = null;
+    elements.canvasWrap?.classList.remove("panning");
+    saveViewportForCurrentMap();
   }
 
   function getImagePointFromEvent(event, map) {
@@ -632,16 +713,58 @@
   }
 
   function renderPortalForm(item) {
+    const map = currentMap();
+    const targetMap = getMapById(item.targetRegionId);
+    const targetPortalOptions = getConnectableTargetPortals(map, item);
+    const hasSelectedTargetPortal = targetPortalOptions.some(portal => portal.id === item.targetPortalId);
     elements.selectionForm.innerHTML = `
       ${textField("id", "ID", item.id)}
       ${textField("label", "Label", item.label)}
       <label><span>Target</span><select data-field="targetRegionId">
-        ${state.maps.filter(map => map.id !== currentMap().id).map(map => `<option value="${escapeHtml(map.id)}" ${map.id === item.targetRegionId ? "selected" : ""}>${escapeHtml(map.label)}</option>`).join("")}
+        ${state.maps.filter(target => target.id !== map.id).map(target => `<option value="${escapeHtml(target.id)}" ${target.id === item.targetRegionId ? "selected" : ""}>${escapeHtml(target.label)}</option>`).join("")}
+      </select></label>
+      <label><span>Connected portal</span><select data-field="targetPortalId" ${targetPortalOptions.length ? "" : "disabled"}>
+        <option value="">Unlinked</option>
+        ${!hasSelectedTargetPortal && item.targetPortalId ? `<option value="${escapeHtml(item.targetPortalId)}" selected>Missing: ${escapeHtml(item.targetPortalId)}</option>` : ""}
+        ${targetPortalOptions.map(portal => `<option value="${escapeHtml(portal.id)}" ${portal.id === item.targetPortalId ? "selected" : ""}>${escapeHtml(portal.id)} - ${escapeHtml(portal.label || targetMap?.label || "Portal")}</option>`).join("")}
       </select></label>
       <div class="field-row">${numberField("x", "X", item.x)}${numberField("y", "Y", item.y)}</div>
       ${numberField("size", "Size", item.size, MIN_PORTAL_SIZE)}
     `;
     bindSelectionInputs(item);
+  }
+
+  function getConnectableTargetPortals(sourceMap, portal) {
+    const targetMap = getMapById(portal.targetRegionId);
+    if (!sourceMap || !targetMap) return [];
+    return targetMap.portals.filter(targetPortal => slugify(targetPortal.targetRegionId) === sourceMap.id);
+  }
+
+  function getDefaultTargetPortalId(portal) {
+    return getConnectableTargetPortals(currentMap(), portal)[0]?.id || "";
+  }
+
+  function syncPortalConnection(portal) {
+    const sourceMap = currentMap();
+    const targetMap = getMapById(portal.targetRegionId);
+    if (!sourceMap || !targetMap) {
+      portal.targetPortalId = "";
+      return;
+    }
+    const targetPortal = getPortalById(targetMap, portal.targetPortalId);
+    if (!targetPortal) {
+      portal.targetPortalId = "";
+      return;
+    }
+    targetPortal.targetRegionId = sourceMap.id;
+    targetPortal.targetPortalId = portal.id;
+  }
+
+  function clearPortalConnection(portal) {
+    const sourceMap = currentMap();
+    const targetMap = getMapById(portal?.targetRegionId);
+    const targetPortal = getPortalById(targetMap, portal?.targetPortalId);
+    if (sourceMap && targetPortal?.targetPortalId === portal?.id) targetPortal.targetPortalId = "";
   }
 
   function renderObjectiveForm(item) {
@@ -670,8 +793,34 @@
 
   function bindSelectionInputs(item) {
     elements.selectionForm.querySelectorAll("[data-field]").forEach(input => {
-      input.addEventListener("input", () => {
+      const update = () => {
         const field = input.dataset.field;
+        if (state.selected?.type === "portal" && field === "targetRegionId") {
+          clearPortalConnection(item);
+          item.targetRegionId = slugify(input.value);
+          item.targetPortalId = getDefaultTargetPortalId(item);
+          syncPortalConnection(item);
+          markDirty();
+          render();
+          return;
+        }
+        if (state.selected?.type === "portal" && field === "targetPortalId") {
+          clearPortalConnection(item);
+          item.targetPortalId = input.value;
+          syncPortalConnection(item);
+          markDirty();
+          render();
+          return;
+        }
+        if (state.selected?.type === "portal" && field === "id") {
+          const previousId = item.id;
+          item.id = input.value;
+          const targetPortal = getPortalById(getMapById(item.targetRegionId), item.targetPortalId);
+          if (targetPortal?.targetPortalId === previousId) targetPortal.targetPortalId = item.id;
+          markDirty();
+          renderCanvas();
+          return;
+        }
         if (field === "size") item[field] = normalizeSizeForType(state.selected?.type, input.value);
         else if (["x", "y", "bonusPercent", "troops", "level"].includes(field)) item[field] = Math.round(Number(input.value) || 0);
         else item[field] = input.value;
@@ -683,7 +832,8 @@
         }
         markDirty();
         renderCanvas();
-      });
+      };
+      input.addEventListener(input.tagName === "SELECT" ? "change" : "input", update);
     });
   }
 
@@ -724,20 +874,28 @@
       id: nextUniqueId(map.portals, `${map.id}-${targetRegionId}`),
       label: targetMap?.label || titleFromId(targetRegionId),
       targetRegionId,
+      targetPortalId: "",
       x: point.x,
       y: point.y,
       size: DEFAULT_PORTAL_SIZE,
     };
     map.portals.push(portal);
-    if (targetMap && !targetMap.portals.some(existing => existing.targetRegionId === map.id)) {
-      targetMap.portals.push({
-        id: nextUniqueId(targetMap.portals, `${targetMap.id}-${map.id}`),
-        label: map.label,
-        targetRegionId: map.id,
-        x: Math.round(targetMap.imageWidth / 2),
-        y: Math.round(targetMap.imageHeight / 2),
-        size: DEFAULT_PORTAL_SIZE,
-      });
+    if (targetMap) {
+      let reversePortal = targetMap.portals.find(existing => existing.targetRegionId === map.id && (!existing.targetPortalId || existing.targetPortalId === portal.id));
+      if (!reversePortal) {
+        reversePortal = {
+          id: nextUniqueId(targetMap.portals, `${targetMap.id}-${map.id}`),
+          label: map.label,
+          targetRegionId: map.id,
+          targetPortalId: portal.id,
+          x: Math.round(targetMap.imageWidth / 2),
+          y: Math.round(targetMap.imageHeight / 2),
+          size: DEFAULT_PORTAL_SIZE,
+        };
+        targetMap.portals.push(reversePortal);
+      }
+      portal.targetPortalId = reversePortal.id;
+      reversePortal.targetPortalId = portal.id;
     }
     state.selected = { type: "portal", index: map.portals.length - 1 };
     markDirty();
@@ -777,6 +935,7 @@
     if (!map || !state.selected) return;
     const collection = getCollectionForType(map, state.selected.type);
     if (!collection) return;
+    if (state.selected.type === "portal") clearPortalConnection(collection[state.selected.index]);
     collection.splice(state.selected.index, 1);
     state.selected = null;
     markDirty();
@@ -917,6 +1076,7 @@
           id: portal.id,
           label: portal.label,
           targetRegionId: portal.targetRegionId,
+          targetPortalId: portal.targetPortalId || "",
           x: Math.round(Number(portal.x) || 0),
           y: Math.round(Number(portal.y) || 0),
           size: Math.max(MIN_PORTAL_SIZE, Math.floor(Number(portal.size) || DEFAULT_PORTAL_SIZE)),
@@ -977,8 +1137,16 @@
     elements.modeButtons.forEach(button => {
       button.addEventListener("click", () => setMode(button.dataset.mode));
     });
+    elements.canvasWrap?.addEventListener("pointerdown", startCanvasPan);
+    elements.canvasWrap?.addEventListener("pointermove", handleCanvasPan);
+    elements.canvasWrap?.addEventListener("pointerup", stopCanvasPan);
+    elements.canvasWrap?.addEventListener("pointercancel", stopCanvasPan);
     elements.mapCanvas.addEventListener("click", event => {
       if (event.target.closest(".marker")) return;
+      if (state.skipNextCanvasClick) {
+        state.skipNextCanvasClick = false;
+        return;
+      }
       const map = currentMap();
       if (!map || state.mode === "select") return;
       const point = getImagePointFromEvent(event, map);

@@ -271,11 +271,20 @@ select {
   min-height: 0;
   padding: 16px;
   overflow: auto;
+  cursor: grab;
+  overscroll-behavior: contain;
+  touch-action: none;
+}
+
+.canvas-wrap.panning {
+  cursor: grabbing;
+  user-select: none;
 }
 
 .map-canvas {
   position: relative;
-  width: min(100%, 1180px);
+  width: 1180px;
+  max-width: none;
   margin: 0 auto;
   border: 1px solid rgba(240, 188, 86, 0.28);
   border-radius: 8px;
@@ -286,10 +295,11 @@ select {
 .map-image {
   display: block;
   width: 100%;
-  height: auto;
-  min-height: 420px;
-  object-fit: contain;
+  height: 100%;
+  min-height: 0;
+  object-fit: fill;
   user-select: none;
+  pointer-events: none;
 }
 
 .marker-layer {

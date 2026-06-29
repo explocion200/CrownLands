@@ -530,6 +530,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
           "id": "west-center",
           "label": "Center",
           "targetRegionId": "center",
+          "targetPortalId": "center-west",
           "x": 831,
           "y": 769,
           "size": 120
@@ -1063,6 +1064,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
           "id": "north-center",
           "label": "Center",
           "targetRegionId": "center",
+          "targetPortalId": "center-north",
           "x": 754,
           "y": 884,
           "size": 120
@@ -1592,6 +1594,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
           "id": "east-center",
           "label": "Center",
           "targetRegionId": "center",
+          "targetPortalId": "center-east",
           "x": 269,
           "y": 754,
           "size": 120
@@ -2129,6 +2132,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
           "id": "south-center",
           "label": "Center",
           "targetRegionId": "center",
+          "targetPortalId": "center-south",
           "x": 734,
           "y": 197,
           "size": 120
@@ -2137,6 +2141,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
           "id": "south-west",
           "label": "Westmark",
           "targetRegionId": "gatefall-isle",
+          "targetPortalId": "gatefall-isle-west",
           "x": 730,
           "y": 816,
           "size": 120
@@ -2838,6 +2843,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
           "id": "center-west",
           "label": "West",
           "targetRegionId": "west",
+          "targetPortalId": "west-center",
           "x": 230,
           "y": 601,
           "size": 120
@@ -2846,6 +2852,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
           "id": "center-north",
           "label": "North",
           "targetRegionId": "north",
+          "targetPortalId": "north-center",
           "x": 624,
           "y": 191,
           "size": 120
@@ -2854,6 +2861,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
           "id": "center-east",
           "label": "East",
           "targetRegionId": "east",
+          "targetPortalId": "east-center",
           "x": 1024,
           "y": 597,
           "size": 120
@@ -2862,6 +2870,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
           "id": "center-south",
           "label": "South",
           "targetRegionId": "south",
+          "targetPortalId": "south-center",
           "x": 625,
           "y": 1018,
           "size": 120
@@ -3390,6 +3399,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
           "id": "gatefall-isle-west",
           "label": "Westmark",
           "targetRegionId": "south",
+          "targetPortalId": "south-west",
           "x": 625,
           "y": 112,
           "size": 120

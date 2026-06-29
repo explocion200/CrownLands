@@ -3524,6 +3524,16 @@ function getEditorPortalDefinitions(regionId) {
   return Array.isArray(map?.portals) ? map.portals : [];
 }
 
+function getEditorPortalLinkId(portal) {
+  return String(portal?.targetPortalId || portal?.targetPortal || portal?.linkedPortalId || portal?.connectedPortalId || "");
+}
+
+function getEditorPortalById(regionId, portalId) {
+  const targetPortalId = String(portalId || "");
+  if (!targetPortalId) return null;
+  return getEditorPortalDefinitions(regionId).find(portal => String(portal?.id || "") === targetPortalId) || null;
+}
+
 function hasEditorPortalDefinitions(regionId) {
   return Array.isArray(getEditorMap(regionId)?.portals);
 }
@@ -3547,11 +3557,35 @@ function getEditorTeleportersForRegion(regionId) {
     .filter(teleport => teleport.targetRegionId && teleport.targetRegionId !== sourceRegionId);
 }
 
-function getEditorPortalForRoute(regionId, targetRegionId) {
+function getEditorPortalForRoute(regionId, targetRegionId, options = {}) {
   const sourceRegionId = normalizeRegionId(regionId);
   const destinationRegionId = normalizeRegionId(targetRegionId);
-  return getEditorPortalDefinitions(sourceRegionId)
-    .find(portal => normalizeRegionId(portal?.targetRegionId || portal?.target) === destinationRegionId) || null;
+  const portalId = String(options.portalId || "");
+  const targetPortalId = String(options.targetPortalId || "");
+  const portals = getEditorPortalDefinitions(sourceRegionId)
+    .filter(portal => normalizeRegionId(portal?.targetRegionId || portal?.target) === destinationRegionId);
+  if (portalId) {
+    const exact = portals.find(portal => String(portal?.id || "") === portalId);
+    if (exact) return exact;
+  }
+  if (targetPortalId) {
+    const linked = portals.find(portal => getEditorPortalLinkId(portal) === targetPortalId);
+    if (linked) return linked;
+  }
+  return portals[0] || null;
+}
+
+function getLinkedEditorArrivalPortal(sourceRegionId, targetRegionId, sourcePortal) {
+  const linkedPortalId = getEditorPortalLinkId(sourcePortal);
+  if (linkedPortalId) {
+    return getEditorPortalById(targetRegionId, linkedPortalId);
+  }
+  const sourcePortalId = String(sourcePortal?.id || "");
+  if (sourcePortalId) {
+    const backLinked = getEditorPortalForRoute(targetRegionId, sourceRegionId, { targetPortalId: sourcePortalId });
+    if (backLinked) return backLinked;
+  }
+  return getEditorPortalForRoute(targetRegionId, sourceRegionId);
 }
 
 function findEditorPortalRouteRegionChain(fromRegionId, toRegionId) {
@@ -3637,10 +3671,10 @@ function getCenterTeleportForRegion(regionId) {
   return CENTER_ISLAND_TELEPORTS.find(teleport => teleport.targetRegionId === targetRegionId) || null;
 }
 
-function getPortalWorldPoint(regionId, targetRegionId = "center") {
+function getPortalWorldPoint(regionId, targetRegionId = "center", options = {}) {
   const fromRegionId = normalizeRegionId(regionId);
   const toRegionId = normalizeRegionId(targetRegionId);
-  const editorPortal = getEditorPortalForRoute(fromRegionId, toRegionId);
+  const editorPortal = options.portal || getEditorPortalForRoute(fromRegionId, toRegionId, options);
   if (editorPortal) return islandImagePointToWorld(fromRegionId, getEditorPoint(editorPortal));
   if (hasEditorPortalDefinitions(fromRegionId)) return null;
   if (fromRegionId === "west" && toRegionId === "center") return westImagePointToWorld(WEST_CENTER_TELEPORT_IMAGE_POINT);
@@ -8073,8 +8107,8 @@ function findRoute(source, target) {
 function findPortalRoute(source, target, sourceRegionId = getCityRegionId(source), targetRegionId = getCityRegionId(target)) {
   const normalizedSourceRegionId = normalizeRegionId(sourceRegionId);
   const normalizedTargetRegionId = normalizeRegionId(targetRegionId);
-  const cacheKey = `portal-cityblock-v1:${normalizedSourceRegionId}:${normalizedTargetRegionId}:${getRoutePointId(source, "source")}|${getRoutePointId(target, "target")}`;
-  const reverseKey = `portal-cityblock-v1:${normalizedTargetRegionId}:${normalizedSourceRegionId}:${getRoutePointId(target, "target")}|${getRoutePointId(source, "source")}`;
+  const cacheKey = `portal-cityblock-v2:${normalizedSourceRegionId}:${normalizedTargetRegionId}:${getRoutePointId(source, "source")}|${getRoutePointId(target, "target")}`;
+  const reverseKey = `portal-cityblock-v2:${normalizedTargetRegionId}:${normalizedSourceRegionId}:${getRoutePointId(target, "target")}|${getRoutePointId(source, "source")}`;
   if (routeCache.has(cacheKey)) return cloneRoute(routeCache.get(cacheKey));
   if (routeCache.has(reverseKey)) {
     const reverse = reverseRoute(routeCache.get(reverseKey));
@@ -8091,11 +8125,13 @@ function findPortalRoute(source, target, sourceRegionId = getCityRegionId(source
   for (let index = 0; index < chain.length; index += 1) {
     const regionId = chain[index];
     const isLastRegion = index === chain.length - 1;
-    const portalExitPoint = isLastRegion ? null : getPortalWorldPoint(regionId, chain[index + 1]);
+    const nextRegionId = isLastRegion ? "" : chain[index + 1];
+    const sourcePortal = isLastRegion ? null : getEditorPortalForRoute(regionId, nextRegionId);
+    const portalExitPoint = isLastRegion ? null : getPortalWorldPoint(regionId, nextRegionId, sourcePortal ? { portal: sourcePortal } : {});
     if (!isLastRegion && !portalExitPoint) return null;
     const segmentEnd = isLastRegion
       ? makeRoutePoint(getRoutePointId(target, "target"), target)
-      : makeRoutePoint(`portal:${regionId}->${chain[index + 1]}`, portalExitPoint);
+      : makeRoutePoint(`portal:${regionId}->${nextRegionId}:${sourcePortal?.id || "default"}`, portalExitPoint);
     if (!segmentEnd || !Number.isFinite(segmentEnd.x) || !Number.isFinite(segmentEnd.y)) return null;
 
     const route = findLandRoute(current, segmentEnd, regionId);
@@ -8111,9 +8147,11 @@ function findPortalRoute(source, target, sourceRegionId = getCityRegionId(source
     else points.push(...segment.points.slice(1));
 
     if (!isLastRegion) {
-      const arrivalPoint = getPortalWorldPoint(chain[index + 1], regionId);
+      const arrivalPortal = sourcePortal ? getLinkedEditorArrivalPortal(regionId, nextRegionId, sourcePortal) : null;
+      if (sourcePortal && getEditorPortalLinkId(sourcePortal) && !arrivalPortal) return null;
+      const arrivalPoint = getPortalWorldPoint(nextRegionId, regionId, arrivalPortal ? { portal: arrivalPortal } : {});
       if (!arrivalPoint) return null;
-      current = makeRoutePoint(`portal:${chain[index + 1]}<-${regionId}`, arrivalPoint);
+      current = makeRoutePoint(`portal:${nextRegionId}<-${regionId}:${arrivalPortal?.id || "default"}`, arrivalPoint);
     }
   }
 
