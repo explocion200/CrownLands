@@ -35,7 +35,7 @@ const SHOP_ITEMS = [
   {
     id: "shield_12h",
     label: "Royal Peace Shield",
-    description: "Protects your kingdom from attacks for 12 hours.",
+    description: "Protects your cities for 12 hours. Attacking another player cancels it. Strongholds are excluded.",
     cost: 175_000,
     icon: "assets/royal-peace-shield-icon.jpg",
   },
@@ -4082,7 +4082,7 @@ function getPeaceShieldRemainingSeconds(expiresAtMs = getActivePeaceShieldExpire
 }
 
 function getCityPeaceShieldExpiresAtMs(city) {
-  if (!city) return 0;
+  if (!city || isStronghold(city)) return 0;
   const expiresAtMs = city.owner === "player"
     ? getActivePeaceShieldExpiresAtMs()
     : normalizeTimestampMs(city.ownerShieldExpiresAtMs);
@@ -4090,8 +4090,18 @@ function getCityPeaceShieldExpiresAtMs(city) {
 }
 
 function isCityProtectedByPeaceShield(city) {
-  if (!city || city.owner === "neutral") return false;
+  if (!city || city.owner === "neutral" || isStronghold(city)) return false;
   return getCityPeaceShieldExpiresAtMs(city) > Date.now();
+}
+
+function isAnotherPlayerOwnedCity(city) {
+  if (!city || city.owner === "neutral") return false;
+  const currentUid = getCurrentOnlineUid();
+  const ownerUid = String(city.ownerUid || "").trim();
+  if (city.owner === "player") return false;
+  if (ownerUid && currentUid) return ownerUid !== currentUid;
+  if (city.ownerKind === "player") return true;
+  return city.owner === "enemy";
 }
 
 function isSameAttackOwner(target, attackerOwner = "player", attackerOwnerUid = "") {
@@ -4117,10 +4127,21 @@ function refreshOwnedCityItemEffectMetadata(syncNow = true) {
   if (!state) return;
   const shieldExpiresAtMs = getActivePeaceShieldExpiresAtMs();
   playerCities().forEach(city => {
-    city.ownerShieldExpiresAtMs = shieldExpiresAtMs;
+    city.ownerShieldExpiresAtMs = isStronghold(city) ? 0 : shieldExpiresAtMs;
     markOwnedCityChanged(city, false);
   });
   if (syncNow && isOnlineWorldActive()) syncOwnedCitiesToOnline(true);
+}
+
+function deactivatePeaceShieldForPlayerAttack(target) {
+  if (!state || !isAnotherPlayerOwnedCity(target)) return false;
+  const effects = ensureItemEffects();
+  if (!getActivePeaceShieldExpiresAtMs()) return false;
+  effects.shieldExpiresAtMs = 0;
+  refreshOwnedCityItemEffectMetadata(true);
+  addLog(`Royal Peace Shield deactivated because you attacked ${target.name}.`);
+  saveGame();
+  return true;
 }
 
 function createOnlineEntryState(playerName) {
@@ -7039,7 +7060,7 @@ function applyOnlineCities(onlineCities, regionId = getActiveOnlineRegionId()) {
       ownerName: keepLocalPlayerCity ? state.playerName : ownerName,
       ownerFlag: keepLocalPlayerCity ? state.flag : ownerFlag,
       ownerKingPower: keepLocalPlayerCity ? getKingPower() : ownerKingPower,
-      ownerShieldExpiresAtMs: (keepLocalPlayerCity || localOwner === "player") ? getActivePeaceShieldExpiresAtMs() : ownerShieldExpiresAtMs,
+      ownerShieldExpiresAtMs: isStronghold(base) ? 0 : (keepLocalPlayerCity || localOwner === "player") ? getActivePeaceShieldExpiresAtMs() : ownerShieldExpiresAtMs,
       level: isStronghold(base) ? getStrongholdDefenseLevel(base) : clampCityLevel(keepLocalPlayerCity ? current.level ?? online.level ?? base.level : online.level ?? current.level ?? base.level),
       troops: Math.max(0, Math.floor(Number(keepLocalPlayerCity ? current.troops ?? online.troops ?? base.troops : online.troops ?? current.troops ?? base.troops) || 0)),
       troopFloat: Math.max(0, Number(keepLocalPlayerCity ? current.troopFloat ?? current.troops ?? online.troopFloat ?? online.troops ?? base.troops : online.troopFloat ?? current.troopFloat ?? online.troops ?? current.troops ?? base.troops) || 0),
@@ -7165,7 +7186,7 @@ function markOwnedCityChanged(city, syncNow = true) {
   city.ownerName = state.playerName;
   city.ownerFlag = state.flag;
   city.ownerKingPower = getKingPower();
-  city.ownerShieldExpiresAtMs = getActivePeaceShieldExpiresAtMs();
+  city.ownerShieldExpiresAtMs = isStronghold(city) ? 0 : getActivePeaceShieldExpiresAtMs();
   city.isMainCity = !isStronghold(city) && city.id === state.mainCityId;
   if (syncNow && isOnlineWorldActive()) syncOwnedCitiesToOnline(true);
 }
@@ -7190,7 +7211,7 @@ function toOnlineOwnedCity(city) {
     ownerName: state.playerName,
     ownerFlag: state.flag,
     ownerKingPower: getKingPower(),
-    ownerShieldExpiresAtMs: getActivePeaceShieldExpiresAtMs(),
+    ownerShieldExpiresAtMs: isStronghold(city) ? 0 : getActivePeaceShieldExpiresAtMs(),
     level: isStronghold(city) ? getStrongholdDefenseLevel(city) : clampCityLevel(city.level),
     troops: Math.max(0, Math.floor(Number(city.troops) || 0)),
     troopFloat: Math.max(0, Number(city.troopFloat) || Number(city.troops) || 0),
@@ -7218,7 +7239,7 @@ function toOnlineCityState(city) {
     ? city.owner === "player" ? getKingPower() : normalizePowerValue(city.ownerKingPower)
     : 0;
   const ownerShieldExpiresAtMs = hasPlayerOwner
-    ? city.owner === "player" ? getActivePeaceShieldExpiresAtMs() : normalizeTimestampMs(city.ownerShieldExpiresAtMs)
+    ? isStronghold(city) ? 0 : city.owner === "player" ? getActivePeaceShieldExpiresAtMs() : normalizeTimestampMs(city.ownerShieldExpiresAtMs)
     : 0;
   return {
     id: city.id,
@@ -9055,6 +9076,9 @@ function launchAttack(sourceId, targetId, percent, owner, exactTroops = null) {
     ? createDemoAttackSnapshot(source, target, requestedSend, owner)
     : null;
   const send = demoAttack?.active ? demoAttack.effectiveTroops : requestedSend;
+  const peaceShieldDeactivated = owner === "player" && kind === "attack"
+    ? deactivatePeaceShieldForPlayerAttack(target)
+    : false;
 
   source.troopFloat = Math.max(0, source.troopFloat - send);
   source.troops = Math.floor(source.troopFloat);
@@ -9092,8 +9116,9 @@ function launchAttack(sourceId, targetId, percent, owner, exactTroops = null) {
     showToast(`Reinforcements moving: ${source.name} \u2192 ${target.name}`);
   } else if (owner === "player") {
     const demoText = demoAttack ? ` ${getDemoAttackNotice(demoAttack)}` : "";
-    addLog(`You sent ${formatNumber(send)} troops from ${source.name} to attack ${target.name}.${demoText}`);
-    showToast(demoAttack ? `Demo attack moving: ${formatNumber(send)} troops` : `Attack moving: ${source.name} \u2192 ${target.name}`);
+    const shieldText = peaceShieldDeactivated ? " Royal Peace Shield deactivated." : "";
+    addLog(`You sent ${formatNumber(send)} troops from ${source.name} to attack ${target.name}.${demoText}${shieldText}`);
+    showToast(peaceShieldDeactivated ? "Shield dropped. Attack moving." : demoAttack ? `Demo attack moving: ${formatNumber(send)} troops` : `Attack moving: ${source.name} \u2192 ${target.name}`);
   } else if (target.owner === "player") {
     addLog(`Enemy army is attacking ${target.name} with ${formatNumber(send)} troops.`);
     showToast(`Incoming attack on ${target.name}`);
