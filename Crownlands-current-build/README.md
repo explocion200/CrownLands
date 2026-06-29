@@ -69,6 +69,16 @@ This build has the first Firebase layer added without breaking guest play.
 
 See `FIREBASE_SETUP.md` for the Firebase project steps and the planned shared-world collections.
 
+## Local Web Editor
+
+Run the local editor from PowerShell:
+
+```powershell
+.\tools\start-editor.ps1
+```
+
+Then open `http://127.0.0.1:8791/editor/`. The editor runs only on this computer, reads and writes `world-config.js`, previews islands, city placement, and land bridges, and serves the game at `/game/` for a quick browser preview.
+
 ## Deploy on Netlify
 
 Upload the full folder or zip to Netlify Drop. Keep `index.html`, `styles.css`, `world-config.js`, `game.js`, `manifest.webmanifest`, and the `assets` folder together.

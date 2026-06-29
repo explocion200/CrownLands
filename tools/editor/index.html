@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Crownlands Local Editor</title>
+  <link rel="stylesheet" href="/editor/editor.css" />
+</head>
+<body>
+  <main class="editor-shell">
+    <header class="topbar">
+      <div>
+        <strong>Crownlands Local Editor</strong>
+        <span id="filePath">world-config.js</span>
+      </div>
+      <nav class="top-actions" aria-label="Editor actions">
+        <button id="reloadBtn" type="button">Reload</button>
+        <button id="previewBtn" type="button">Open Preview</button>
+        <button id="saveBtn" class="primary" type="button">Save</button>
+      </nav>
+    </header>
+
+    <section class="workspace">
+      <aside class="sidebar" aria-label="World controls">
+        <section class="panel">
+          <h1>World</h1>
+          <div id="worldFields" class="field-grid"></div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-title-row">
+            <h2>Islands</h2>
+            <button id="addRegionBtn" type="button">Add</button>
+          </div>
+          <div id="regionList" class="list"></div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-title-row">
+            <h2>Land Bridges</h2>
+            <button id="addBridgeBtn" type="button">Add</button>
+          </div>
+          <div id="bridgeList" class="list"></div>
+        </section>
+      </aside>
+
+      <section class="map-panel" aria-label="Map editor">
+        <div class="map-toolbar">
+          <span id="statusText">Loading editor...</span>
+          <label>
+            <span>City preview</span>
+            <input id="cityPreviewToggle" type="checkbox" checked />
+          </label>
+        </div>
+        <div class="map-wrap">
+          <svg id="mapSvg" class="map-svg" role="img" aria-label="Editable Crownlands world map"></svg>
+        </div>
+      </section>
+
+      <aside class="inspector" aria-label="Selected item controls">
+        <section class="panel">
+          <h2 id="inspectorTitle">Selection</h2>
+          <div id="inspectorBody" class="field-grid"></div>
+        </section>
+        <section class="panel">
+          <h2>Config Preview</h2>
+          <pre id="jsonPreview"></pre>
+        </section>
+      </aside>
+    </section>
+  </main>
+
+  <script src="/editor/editor.js"></script>
+</body>
+</html>
