@@ -72,6 +72,7 @@ const SHOP_ITEMS = [
 ];
 const ROYAL_PEACE_SHIELD_ITEM_ID = "shield_12h";
 const ROYAL_PEACE_SHIELD_DURATION_MS = 12 * 60 * 60 * 1000;
+const ROYAL_PEACE_SHIELD_PURCHASE_COOLDOWN_MS = 24 * 60 * 60 * 1000;
 
 function cleanEditorRegionId(value) {
   return String(value || "")
@@ -2118,6 +2119,7 @@ let leaderboardLastSignature = "";
 let leaderboardLastSaveAt = 0;
 let overdueArmyResolveTimer = 0;
 let pendingArmyRecoveryInFlight = false;
+let shopPurchaseInFlight = false;
 let updateCheckTimer = 0;
 let updateCheckInFlight = false;
 let updateRefreshInProgress = false;
@@ -4007,6 +4009,7 @@ function newGame(playerName) {
     upgrades: createDefaultSkills(),
     shopItems: createDefaultShopItems(),
     itemEffects: createDefaultItemEffects(),
+    itemPurchaseCooldowns: createDefaultItemPurchaseCooldowns(),
     daily: { date: currentLocalDateKey(), neutralCaptures: 0, harvestedBonuses: 0, harvestedGoldBonuses: 0, harvestedTroopBonuses: 0 },
     harvestBonuses: [],
     harvestSpawnTimer: HARVEST_BONUS_INITIAL_SPAWN_SECONDS,
@@ -4047,6 +4050,35 @@ function ensureShopItems() {
   if (!state) return createDefaultShopItems();
   state.shopItems = normalizeShopItems(state.shopItems);
   return state.shopItems;
+}
+
+function createDefaultItemPurchaseCooldowns() {
+  return {
+    [ROYAL_PEACE_SHIELD_ITEM_ID]: { lastPurchasedAtMs: 0 },
+  };
+}
+
+function normalizeItemPurchaseCooldowns(cooldowns = {}) {
+  const normalized = createDefaultItemPurchaseCooldowns();
+  const shieldCooldown = cooldowns?.[ROYAL_PEACE_SHIELD_ITEM_ID] || {};
+  normalized[ROYAL_PEACE_SHIELD_ITEM_ID].lastPurchasedAtMs = timestampToMs(
+    shieldCooldown.lastPurchasedAtMs || shieldCooldown.lastPurchasedAt
+  );
+  return normalized;
+}
+
+function ensureItemPurchaseCooldowns() {
+  if (!state) return createDefaultItemPurchaseCooldowns();
+  state.itemPurchaseCooldowns = normalizeItemPurchaseCooldowns(state.itemPurchaseCooldowns);
+  return state.itemPurchaseCooldowns;
+}
+
+function getShieldPurchaseRemainingSeconds() {
+  if (!state) return 0;
+  const cooldowns = ensureItemPurchaseCooldowns();
+  const lastPurchasedAtMs = timestampToMs(cooldowns[ROYAL_PEACE_SHIELD_ITEM_ID]?.lastPurchasedAtMs);
+  if (!lastPurchasedAtMs) return 0;
+  return Math.max(0, Math.ceil((lastPurchasedAtMs + ROYAL_PEACE_SHIELD_PURCHASE_COOLDOWN_MS - Date.now()) / 1000));
 }
 
 function createDefaultItemEffects() {
@@ -5447,6 +5479,7 @@ function applyOnlineProfileSnapshot(profile = null, fallbackPlayerName = "Ricky"
   state.upgrades = normalizeUpgrades(profile.upgrades, state.version || WORLD_SCHEMA_VERSION);
   state.shopItems = normalizeShopItems(profile.shopItems);
   state.itemEffects = normalizeItemEffects(profile.itemEffects);
+  state.itemPurchaseCooldowns = normalizeItemPurchaseCooldowns(profile.itemPurchaseCooldowns);
   syncCharacterSkillPoints(state.character, state.upgrades, profile.character?.skillPoints);
   state.gold = Math.max(TEST_STARTING_GOLD, Math.floor(Number(profile.gold) || 0));
   state.mainCityChangedAtMs = normalizeTimestampMs(profile.mainCityChangedAtMs);
@@ -10999,7 +11032,11 @@ function renderItemIcon(item, imageClass = "") {
 
 function renderShopItem(item, inventory) {
   const owned = Math.max(0, Math.floor(Number(inventory[item.id]) || 0));
-  const canBuy = state && Math.floor(Number(state.gold) || 0) >= item.cost;
+  const shieldCooldownSeconds = item.id === ROYAL_PEACE_SHIELD_ITEM_ID ? getShieldPurchaseRemainingSeconds() : 0;
+  const canBuy = state && !shopPurchaseInFlight && shieldCooldownSeconds <= 0 && Math.floor(Number(state.gold) || 0) >= item.cost;
+  const cooldownLine = shieldCooldownSeconds > 0
+    ? `<small>Available in ${escapeHtml(formatDuration(shieldCooldownSeconds))}</small>`
+    : "";
   return `
     <article class="shop-item">
       <div class="shop-item-image-placeholder ${item.icon ? "has-image" : ""}" aria-hidden="true">
@@ -11010,6 +11047,7 @@ function renderShopItem(item, inventory) {
         <span>${formatNumber(item.cost)} gold</span>
         <small>Owned: ${formatNumber(owned)}</small>
         <small>${escapeHtml(item.description)}</small>
+        ${cooldownLine}
       </div>
       <button class="shop-buy-btn" data-shop-buy="${escapeHtml(item.id)}" type="button" ${canBuy ? "" : "disabled"}>Buy</button>
     </article>
@@ -11044,8 +11082,9 @@ function showShopModal() {
   if (!modal.open) modal.showModal();
 }
 
-function buyShopItem(itemId) {
+async function buyShopItem(itemId) {
   if (!state) return;
+  if (shopPurchaseInFlight) return;
   const item = getShopItemById(itemId);
   if (!item) return;
   const currentGold = Math.floor(Number(state.gold) || 0);
@@ -11054,14 +11093,51 @@ function buyShopItem(itemId) {
     renderShopModal();
     return;
   }
-  const inventory = ensureShopItems();
-  state.gold = currentGold - item.cost;
-  inventory[item.id] = Math.max(0, Math.floor(Number(inventory[item.id]) || 0)) + 1;
-  addLog(`Bought ${item.label} for ${formatNumber(item.cost)} gold.`);
-  saveGame();
-  renderHud();
+  if (item.id === ROYAL_PEACE_SHIELD_ITEM_ID) {
+    const remaining = getShieldPurchaseRemainingSeconds();
+    if (remaining > 0) {
+      showToast(`${item.label} can be bought again in ${formatDuration(remaining)}.`);
+      renderShopModal();
+      return;
+    }
+  }
+
+  const api = getOnlineApi();
+  const onlineConfigured = Boolean(api?.isConfigured?.());
+  const requiresServerPurchase = item.id === ROYAL_PEACE_SHIELD_ITEM_ID && onlineConfigured;
+  shopPurchaseInFlight = true;
   renderShopModal();
-  showToast(`Bought ${item.label}`);
+
+  try {
+    if (requiresServerPurchase) {
+      if (!api?.isSignedIn?.()) throw new Error("Sign in to buy Royal Peace Shield.");
+      if (typeof api.purchaseShopItem !== "function") throw new Error("Shield purchases need the latest online shop service.");
+      await flushOnlineSave(true);
+      const result = await api.purchaseShopItem({ itemId: item.id, cost: item.cost });
+      state.gold = Math.max(0, Math.floor(Number(result?.gold) || 0));
+      state.shopItems = normalizeShopItems(result?.shopItems);
+      state.itemPurchaseCooldowns = normalizeItemPurchaseCooldowns(result?.itemPurchaseCooldowns);
+    } else {
+      const inventory = ensureShopItems();
+      state.gold = currentGold - item.cost;
+      inventory[item.id] = Math.max(0, Math.floor(Number(inventory[item.id]) || 0)) + 1;
+      if (item.id === ROYAL_PEACE_SHIELD_ITEM_ID) {
+        const cooldowns = ensureItemPurchaseCooldowns();
+        cooldowns[item.id].lastPurchasedAtMs = Date.now();
+      }
+    }
+
+    addLog(`Bought ${item.label} for ${formatNumber(item.cost)} gold.`);
+    saveGame();
+    renderHud();
+    showToast(`Bought ${item.label}`);
+  } catch (error) {
+    showToast(error?.message || `Could not buy ${item.label}.`);
+    console.warn("Shop purchase failed", error);
+  } finally {
+    shopPurchaseInFlight = false;
+    renderShopModal();
+  }
 }
 
 function getInventorySlotEntries() {

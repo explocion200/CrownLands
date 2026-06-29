@@ -10,8 +10,46 @@ service cloud.firestore {
       return signedIn() && request.auth.uid == uid;
     }
 
+    function shieldCount(data) {
+      return data.get('shopItems', {}).get('shield_12h', 0);
+    }
+
+    function shieldPurchaseAt(data) {
+      return data.get('itemPurchaseCooldowns', {}).get('shield_12h', {}).get('lastPurchasedAt', null);
+    }
+
+    function shieldCooldownUnchanged() {
+      return shieldPurchaseAt(request.resource.data) == shieldPurchaseAt(resource.data);
+    }
+
+    function shieldStockNotIncreased() {
+      return shieldCount(request.resource.data) <= shieldCount(resource.data);
+    }
+
+    function validShieldPurchase() {
+      return shieldCount(request.resource.data) == shieldCount(resource.data) + 1
+        && request.resource.data.get('gold', 0) == resource.data.get('gold', 0) - 175000
+        && shieldPurchaseAt(request.resource.data) == request.time
+        && (
+          !(shieldPurchaseAt(resource.data) is timestamp)
+          || shieldPurchaseAt(resource.data) <= request.time - duration.value(24, 'h')
+        );
+    }
+
+    function validPlayerProfileCreate() {
+      return shieldCount(request.resource.data) == 0
+        && shieldPurchaseAt(request.resource.data) == null;
+    }
+
+    function validPlayerProfileUpdate() {
+      return (shieldStockNotIncreased() && shieldCooldownUnchanged())
+        || validShieldPurchase();
+    }
+
     match /players/{uid} {
-      allow read, create, update: if ownsPlayerDoc(uid);
+      allow read: if ownsPlayerDoc(uid);
+      allow create: if ownsPlayerDoc(uid) && validPlayerProfileCreate();
+      allow update: if ownsPlayerDoc(uid) && validPlayerProfileUpdate();
       allow delete: if false;
 
       match /saves/{saveId} {

@@ -1,6 +1,9 @@
 (function () {
   const FIREBASE_VERSION = "10.12.5";
   const REQUIRED_CONFIG_KEYS = ["apiKey", "authDomain", "projectId", "appId"];
+  const ROYAL_PEACE_SHIELD_ITEM_ID = "shield_12h";
+  const ROYAL_PEACE_SHIELD_COST = 175_000;
+  const ROYAL_PEACE_SHIELD_PURCHASE_COOLDOWN_MS = 24 * 60 * 60 * 1000;
 
   const client = {
     configured: false,
@@ -90,6 +93,26 @@
     return client.user.uid;
   }
 
+  function timestampToMs(value) {
+    if (!value) return 0;
+    if (typeof value.toMillis === "function") return Math.max(0, Math.floor(Number(value.toMillis()) || 0));
+    if (Number.isFinite(Number(value))) return Math.max(0, Math.floor(Number(value)));
+    if (Number.isFinite(Number(value.seconds))) {
+      return Math.max(0, Math.floor(Number(value.seconds) * 1000 + (Number(value.nanoseconds) || 0) / 1_000_000));
+    }
+    return 0;
+  }
+
+  function normalizeShopItemsForPurchase(items = {}) {
+    const normalized = items && typeof items === "object" ? { ...items } : {};
+    normalized[ROYAL_PEACE_SHIELD_ITEM_ID] = Math.max(0, Math.floor(Number(normalized[ROYAL_PEACE_SHIELD_ITEM_ID]) || 0));
+    return normalized;
+  }
+
+  function normalizeItemPurchaseCooldowns(cooldowns = {}) {
+    return cooldowns && typeof cooldowns === "object" ? { ...cooldowns } : {};
+  }
+
   function rememberLogin() {
     savePlayerProfile({ lastLoginAt: Date.now() }).catch(error => {
       console.warn("Could not update login timestamp", error);
@@ -155,6 +178,72 @@
     const { doc, getDoc } = client.modules.firestore;
     const snap = await getDoc(doc(client.db, "players", uid));
     return snap.exists() ? snap.data() : null;
+  }
+
+  async function purchaseShopItem({ itemId = "", cost = 0 } = {}) {
+    await init();
+    const uid = requireSignedIn();
+    if (!uid) throw new Error("Sign in to buy shop items.");
+    if (itemId !== ROYAL_PEACE_SHIELD_ITEM_ID) {
+      throw new Error("This item is not available through the online shop yet.");
+    }
+    if (Math.floor(Number(cost) || 0) !== ROYAL_PEACE_SHIELD_COST) {
+      throw new Error("Shop item price changed. Reload Crownlands and try again.");
+    }
+
+    const { doc, runTransaction, serverTimestamp } = client.modules.firestore;
+    const playerRef = doc(client.db, "players", uid);
+    const nowMs = Date.now();
+
+    return runTransaction(client.db, async transaction => {
+      const snap = await transaction.get(playerRef);
+      if (!snap.exists()) throw new Error("Enter Kingdom before buying a shield.");
+
+      const data = snap.data() || {};
+      const currentGold = Math.max(0, Math.floor(Number(data.gold) || 0));
+      if (currentGold < ROYAL_PEACE_SHIELD_COST) {
+        throw new Error(`Royal Peace Shield costs ${ROYAL_PEACE_SHIELD_COST.toLocaleString()} gold.`);
+      }
+
+      const cooldowns = normalizeItemPurchaseCooldowns(data.itemPurchaseCooldowns);
+      const shieldCooldown = cooldowns[ROYAL_PEACE_SHIELD_ITEM_ID] || {};
+      const lastPurchasedAtMs = timestampToMs(shieldCooldown.lastPurchasedAt || shieldCooldown.lastPurchasedAtMs);
+      const remainingMs = lastPurchasedAtMs + ROYAL_PEACE_SHIELD_PURCHASE_COOLDOWN_MS - nowMs;
+      if (lastPurchasedAtMs && remainingMs > 0) {
+        const minutes = Math.ceil(remainingMs / 60000);
+        throw new Error(`Royal Peace Shield can be bought again in ${minutes} minute${minutes === 1 ? "" : "s"}.`);
+      }
+
+      const shopItems = normalizeShopItemsForPurchase(data.shopItems);
+      shopItems[ROYAL_PEACE_SHIELD_ITEM_ID] += 1;
+      const itemPurchaseCooldowns = {
+        ...cooldowns,
+        [ROYAL_PEACE_SHIELD_ITEM_ID]: {
+          ...shieldCooldown,
+          lastPurchasedAt: serverTimestamp(),
+        },
+      };
+      const nextGold = currentGold - ROYAL_PEACE_SHIELD_COST;
+
+      transaction.set(playerRef, {
+        shopItems,
+        itemPurchaseCooldowns,
+        gold: nextGold,
+        updatedAt: serverTimestamp(),
+      }, { merge: true });
+
+      return {
+        gold: nextGold,
+        shopItems,
+        itemPurchaseCooldowns: {
+          ...itemPurchaseCooldowns,
+          [ROYAL_PEACE_SHIELD_ITEM_ID]: {
+            ...shieldCooldown,
+            lastPurchasedAtMs: nowMs,
+          },
+        },
+      };
+    });
   }
 
   async function saveGameSnapshot(snapshot, slot = "default") {
@@ -881,6 +970,7 @@
     signOut,
     savePlayerProfile,
     loadPlayerProfile,
+    purchaseShopItem,
     saveGameSnapshot,
     loadGameSnapshot,
     ensureMainIsland,
