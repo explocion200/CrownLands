@@ -77,7 +77,7 @@ Run the local editor from PowerShell:
 .\tools\start-editor.ps1
 ```
 
-Then open `http://127.0.0.1:8791/editor/`. The editor runs only on this computer, reads and writes `world-config.js`, previews islands, city placement, and land bridges, and serves the game at `/game/` for a quick browser preview.
+Then open `http://127.0.0.1:8791/editor/`. The editor runs only on this computer, reads and writes `world-config.js`, can download the current GitHub map into the local editor, previews islands, city placement, and land bridges, and serves the game at `/game/` for a quick browser preview.
 
 ## Deploy on Netlify
 

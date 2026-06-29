@@ -18,6 +18,7 @@ const elements = {
   mapSvg: document.getElementById("mapSvg"),
   saveBtn: document.getElementById("saveBtn"),
   reloadBtn: document.getElementById("reloadBtn"),
+  githubImportBtn: document.getElementById("githubImportBtn"),
   previewBtn: document.getElementById("previewBtn"),
   addRegionBtn: document.getElementById("addRegionBtn"),
   addBridgeBtn: document.getElementById("addBridgeBtn"),
@@ -78,6 +79,20 @@ async function saveConfig() {
   dirty = false;
   render();
   setStatus("Saved world-config.js", "save-ok");
+}
+
+async function importGithubConfig() {
+  if (dirty && !window.confirm("Download the GitHub map and replace your unsaved local editor changes?")) return;
+  setStatus("Downloading GitHub map...");
+  const response = await fetch("/api/world-config/import-github", { method: "POST" });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(payload.error || `GitHub download failed: ${response.status}`);
+  config = payload.config;
+  elements.filePath.textContent = payload.path || "world-config.js";
+  selected = { type: "region", id: config.regions[0]?.id || "" };
+  dirty = false;
+  render();
+  setStatus("Downloaded GitHub map into world-config.js", "save-ok");
 }
 
 function field(label, value, attrs = {}) {
@@ -546,6 +561,7 @@ document.addEventListener("click", event => {
 elements.addRegionBtn.addEventListener("click", addRegion);
 elements.addBridgeBtn.addEventListener("click", addBridge);
 elements.reloadBtn.addEventListener("click", () => loadConfig().catch(error => setStatus(error.message, "save-error")));
+elements.githubImportBtn.addEventListener("click", () => importGithubConfig().catch(error => setStatus(error.message, "save-error")));
 elements.saveBtn.addEventListener("click", () => saveConfig().catch(error => setStatus(error.message, "save-error")));
 elements.previewBtn.addEventListener("click", () => window.open("/game/", "_blank"));
 elements.cityPreviewToggle.addEventListener("change", event => {

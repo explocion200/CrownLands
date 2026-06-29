@@ -7,6 +7,7 @@ const vm = require("vm");
 const ROOT_DIR = path.resolve(__dirname, "..");
 const EDITOR_DIR = path.join(__dirname, "editor");
 const WORLD_CONFIG_PATH = path.join(ROOT_DIR, "world-config.js");
+const GITHUB_WORLD_CONFIG_URL = "https://raw.githubusercontent.com/explocion200/crownlands-game/main/world-config.js";
 const HOST = "127.0.0.1";
 const START_PORT = Number(process.env.PORT) || 8791;
 const MAX_BODY_BYTES = 1024 * 1024;
@@ -80,9 +81,13 @@ function readBody(request) {
 
 async function readWorldConfig() {
   const source = await fsp.readFile(WORLD_CONFIG_PATH, "utf8");
+  return parseWorldConfigSource(source, "world-config.js");
+}
+
+function parseWorldConfigSource(source, filename = "world-config.js") {
   const context = { window: {} };
   vm.createContext(context);
-  vm.runInContext(source, context, { filename: "world-config.js", timeout: 1000 });
+  vm.runInContext(source, context, { filename, timeout: 1000 });
   return sanitizeWorldConfig(context.window.CROWNLANDS_WORLD_CONFIG || {});
 }
 
@@ -156,6 +161,22 @@ async function writeWorldConfig(config) {
   return safe;
 }
 
+async function downloadGithubWorldConfig() {
+  const response = await fetch(GITHUB_WORLD_CONFIG_URL, {
+    headers: {
+      "accept": "text/plain",
+      "user-agent": "crownlands-local-editor",
+    },
+  });
+  if (!response.ok) {
+    throw new Error(`GitHub map download failed: ${response.status} ${response.statusText}`);
+  }
+  const source = await response.text();
+  const config = parseWorldConfigSource(source, "github-world-config.js");
+  const saved = await writeWorldConfig(config);
+  return { config: saved, sourceUrl: GITHUB_WORLD_CONFIG_URL };
+}
+
 async function handleApi(request, response, pathname) {
   if (pathname === "/api/world-config" && request.method === "GET") {
     const config = await readWorldConfig();
@@ -168,6 +189,12 @@ async function handleApi(request, response, pathname) {
     const payload = JSON.parse(rawBody || "{}");
     const config = await writeWorldConfig(payload.config);
     sendJson(response, 200, { ok: true, config, path: WORLD_CONFIG_PATH });
+    return;
+  }
+
+  if (pathname === "/api/world-config/import-github" && request.method === "POST") {
+    const result = await downloadGithubWorldConfig();
+    sendJson(response, 200, { ok: true, path: WORLD_CONFIG_PATH, ...result });
     return;
   }
 
