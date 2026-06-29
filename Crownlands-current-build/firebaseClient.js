@@ -193,6 +193,7 @@
       ownerName: hasPlayerOwner ? city.ownerName || "" : "",
       ownerFlag: hasPlayerOwner ? city.ownerFlag || null : null,
       ownerKingPower: hasPlayerOwner ? Math.max(0, Math.floor(Number(city.ownerKingPower) || 0)) : 0,
+      ownerShieldExpiresAtMs: hasPlayerOwner ? Math.max(0, Math.floor(Number(city.ownerShieldExpiresAtMs) || 0)) : 0,
     };
   }
 

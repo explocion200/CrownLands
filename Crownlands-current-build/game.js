@@ -70,6 +70,8 @@ const SHOP_ITEMS = [
     icon: "assets/recall-horn-icon.jpg",
   },
 ];
+const ROYAL_PEACE_SHIELD_ITEM_ID = "shield_12h";
+const ROYAL_PEACE_SHIELD_DURATION_MS = 12 * 60 * 60 * 1000;
 
 function cleanEditorRegionId(value) {
   return String(value || "")
@@ -4004,6 +4006,7 @@ function newGame(playerName) {
     lastRealTimeMs: Date.now(),
     upgrades: createDefaultSkills(),
     shopItems: createDefaultShopItems(),
+    itemEffects: createDefaultItemEffects(),
     daily: { date: currentLocalDateKey(), neutralCaptures: 0, harvestedBonuses: 0, harvestedGoldBonuses: 0, harvestedTroopBonuses: 0 },
     harvestBonuses: [],
     harvestSpawnTimer: HARVEST_BONUS_INITIAL_SPAWN_SECONDS,
@@ -4044,6 +4047,80 @@ function ensureShopItems() {
   if (!state) return createDefaultShopItems();
   state.shopItems = normalizeShopItems(state.shopItems);
   return state.shopItems;
+}
+
+function createDefaultItemEffects() {
+  return {
+    shieldExpiresAtMs: 0,
+  };
+}
+
+function normalizeItemEffects(effects = {}) {
+  return {
+    shieldExpiresAtMs: normalizeTimestampMs(effects?.shieldExpiresAtMs),
+  };
+}
+
+function ensureItemEffects() {
+  if (!state) return createDefaultItemEffects();
+  state.itemEffects = normalizeItemEffects(state.itemEffects);
+  return state.itemEffects;
+}
+
+function getActivePeaceShieldExpiresAtMs() {
+  const effects = ensureItemEffects();
+  const expiresAtMs = normalizeTimestampMs(effects.shieldExpiresAtMs);
+  if (expiresAtMs && expiresAtMs <= Date.now()) {
+    effects.shieldExpiresAtMs = 0;
+    return 0;
+  }
+  return expiresAtMs;
+}
+
+function getPeaceShieldRemainingSeconds(expiresAtMs = getActivePeaceShieldExpiresAtMs()) {
+  return Math.max(0, Math.ceil((normalizeTimestampMs(expiresAtMs) - Date.now()) / 1000));
+}
+
+function getCityPeaceShieldExpiresAtMs(city) {
+  if (!city) return 0;
+  const expiresAtMs = city.owner === "player"
+    ? getActivePeaceShieldExpiresAtMs()
+    : normalizeTimestampMs(city.ownerShieldExpiresAtMs);
+  return expiresAtMs > Date.now() ? expiresAtMs : 0;
+}
+
+function isCityProtectedByPeaceShield(city) {
+  if (!city || city.owner === "neutral") return false;
+  return getCityPeaceShieldExpiresAtMs(city) > Date.now();
+}
+
+function isSameAttackOwner(target, attackerOwner = "player", attackerOwnerUid = "") {
+  if (!target || target.owner === "neutral") return false;
+  const targetOwnerUid = String(target.ownerUid || "").trim();
+  const incomingOwnerUid = String(attackerOwnerUid || "").trim();
+  if (targetOwnerUid && incomingOwnerUid) return targetOwnerUid === incomingOwnerUid;
+  if (attackerOwner === "player") {
+    const currentUid = getCurrentOnlineUid();
+    return target.owner === "player" || Boolean(currentUid && targetOwnerUid && targetOwnerUid === currentUid);
+  }
+  return target.owner === attackerOwner && !targetOwnerUid && !incomingOwnerUid;
+}
+
+function getPeaceShieldAttackBlockReason(target, attackerOwner = "player", attackerOwnerUid = "") {
+  if (!target || isSameAttackOwner(target, attackerOwner, attackerOwnerUid)) return "";
+  if (!isCityProtectedByPeaceShield(target)) return "";
+  const remaining = getPeaceShieldRemainingSeconds(getCityPeaceShieldExpiresAtMs(target));
+  return `${target.name} is protected by a Royal Peace Shield for ${formatDuration(remaining)}.`;
+}
+
+function refreshOwnedCityItemEffectMetadata(syncNow = true) {
+  if (!state) return;
+  const shieldExpiresAtMs = getActivePeaceShieldExpiresAtMs();
+  playerCities().forEach(city => {
+    city.ownerShieldExpiresAtMs = shieldExpiresAtMs;
+    markOwnedCityChanged(city, false);
+  });
+  if (syncNow && isOnlineWorldActive()) syncOwnedCitiesToOnline(true);
 }
 
 function createOnlineEntryState(playerName) {
@@ -5331,6 +5408,7 @@ function getPlayerProfileSnapshot() {
     character: state?.character ? normalizeCharacterProgress(state.character) : createCharacterProgress(),
     upgrades: state?.upgrades ? normalizeUpgrades(state.upgrades, state.version || 20) : createDefaultSkills(),
     shopItems: state ? normalizeShopItems(state.shopItems) : createDefaultShopItems(),
+    itemEffects: state ? normalizeItemEffects(state.itemEffects) : createDefaultItemEffects(),
     cityCount: state ? playerRegularCities().length : 0,
     kingPower: state ? getKingPower() : 0,
     gold: state ? Math.floor(Number(state.gold) || 0) : 0,
@@ -5347,6 +5425,7 @@ function applyOnlineProfileSnapshot(profile = null, fallbackPlayerName = "Ricky"
   state.character = normalizeCharacterProgress(profile.character);
   state.upgrades = normalizeUpgrades(profile.upgrades, state.version || WORLD_SCHEMA_VERSION);
   state.shopItems = normalizeShopItems(profile.shopItems);
+  state.itemEffects = normalizeItemEffects(profile.itemEffects);
   syncCharacterSkillPoints(state.character, state.upgrades, profile.character?.skillPoints);
   state.gold = Math.max(TEST_STARTING_GOLD, Math.floor(Number(profile.gold) || 0));
   state.mainCityChangedAtMs = normalizeTimestampMs(profile.mainCityChangedAtMs);
@@ -6815,6 +6894,7 @@ async function connectOnlineIsland(regionId, { claimHome = false, homeRegionId =
       }
       applyOnlineCities(onlineCities, targetRegionId);
       onlineCitiesLoaded = true;
+      if (firstCitiesSnapshot && getActivePeaceShieldExpiresAtMs()) refreshOwnedCityItemEffectMetadata(true);
       if (pendingOfflineProgressSeconds > 0) applyPendingOfflineProgress();
       if (state?.mainCityId && getCityRegionId(state.mainCityId) === targetRegionId && cityById(state.mainCityId)?.owner !== "player") {
         const nextOwned = playerCities()[0];
@@ -6897,6 +6977,7 @@ function applyOnlineCities(onlineCities, regionId = getActiveOnlineRegionId()) {
           ownerName: "",
           ownerFlag: null,
           ownerKingPower: 0,
+          ownerShieldExpiresAtMs: 0,
           level: clampCityLevel(base.level),
           troops: Math.max(0, Math.floor(Number(base.troops) || NEUTRAL_START_TROOPS)),
           troopFloat: Math.max(0, Number(base.troops) || NEUTRAL_START_TROOPS),
@@ -6918,6 +6999,7 @@ function applyOnlineCities(onlineCities, regionId = getActiveOnlineRegionId()) {
         ownerName: currentOwnership.ownerName,
         ownerFlag: currentOwnership.ownerFlag,
         ownerKingPower: currentOwnership.ownerKingPower,
+        ownerShieldExpiresAtMs: currentOwnership.ownerShieldExpiresAtMs,
         level: isStronghold(base) ? getStrongholdDefenseLevel(base) : clampCityLevel(current.level ?? base.level),
         troops: Math.max(0, Math.floor(Number(current.troops ?? base.troops) || 0)),
         troopFloat: Math.max(0, Number(current.troopFloat ?? current.troops ?? base.troops) || 0),
@@ -6936,6 +7018,7 @@ function applyOnlineCities(onlineCities, regionId = getActiveOnlineRegionId()) {
     const ownerName = onlineOwnership.ownerName;
     const ownerFlag = onlineOwnership.ownerFlag;
     const ownerKingPower = onlineOwnership.ownerKingPower;
+    const ownerShieldExpiresAtMs = onlineOwnership.ownerShieldExpiresAtMs;
     const localOwner = onlineOwnership.owner;
     const normalizedOwnerKind = onlineOwnership.ownerKind;
     const currentIsLocalPlayerCity = current.owner === "player" && (!current.ownerUid || current.ownerUid === currentUid);
@@ -6956,6 +7039,7 @@ function applyOnlineCities(onlineCities, regionId = getActiveOnlineRegionId()) {
       ownerName: keepLocalPlayerCity ? state.playerName : ownerName,
       ownerFlag: keepLocalPlayerCity ? state.flag : ownerFlag,
       ownerKingPower: keepLocalPlayerCity ? getKingPower() : ownerKingPower,
+      ownerShieldExpiresAtMs: (keepLocalPlayerCity || localOwner === "player") ? getActivePeaceShieldExpiresAtMs() : ownerShieldExpiresAtMs,
       level: isStronghold(base) ? getStrongholdDefenseLevel(base) : clampCityLevel(keepLocalPlayerCity ? current.level ?? online.level ?? base.level : online.level ?? current.level ?? base.level),
       troops: Math.max(0, Math.floor(Number(keepLocalPlayerCity ? current.troops ?? online.troops ?? base.troops : online.troops ?? current.troops ?? base.troops) || 0)),
       troopFloat: Math.max(0, Number(keepLocalPlayerCity ? current.troopFloat ?? current.troops ?? online.troopFloat ?? online.troops ?? base.troops : online.troopFloat ?? current.troopFloat ?? online.troops ?? current.troops ?? base.troops) || 0),
@@ -7017,6 +7101,7 @@ function restoreMainCityOwnership(city) {
   city.ownerName = state.playerName;
   city.ownerFlag = state.flag;
   city.ownerKingPower = getKingPower();
+  city.ownerShieldExpiresAtMs = getActivePeaceShieldExpiresAtMs();
   city.isMainCity = true;
   if (foreignOwner) {
     city.troopFloat = 0;
@@ -7042,6 +7127,7 @@ function getCityRecordOwnership(record = {}, currentUid = getCurrentOnlineUid(),
       ownerName: record.ownerName || "",
       ownerFlag: record.ownerFlag || null,
       ownerKingPower: normalizePowerValue(record.ownerKingPower),
+      ownerShieldExpiresAtMs: normalizeTimestampMs(record.ownerShieldExpiresAtMs),
       hasPlayerOwner: true,
     };
   }
@@ -7054,6 +7140,7 @@ function getCityRecordOwnership(record = {}, currentUid = getCurrentOnlineUid(),
       ownerName: record.ownerName || state?.playerName || "",
       ownerFlag: record.ownerFlag || state?.flag || null,
       ownerKingPower: normalizePowerValue(record.ownerKingPower) || getKingPower(),
+      ownerShieldExpiresAtMs: getActivePeaceShieldExpiresAtMs(),
       hasPlayerOwner: Boolean(currentUid || record.ownerUid),
     };
   }
@@ -7065,6 +7152,7 @@ function getCityRecordOwnership(record = {}, currentUid = getCurrentOnlineUid(),
     ownerName: "",
     ownerFlag: null,
     ownerKingPower: 0,
+    ownerShieldExpiresAtMs: 0,
     hasPlayerOwner: false,
   };
 }
@@ -7077,6 +7165,7 @@ function markOwnedCityChanged(city, syncNow = true) {
   city.ownerName = state.playerName;
   city.ownerFlag = state.flag;
   city.ownerKingPower = getKingPower();
+  city.ownerShieldExpiresAtMs = getActivePeaceShieldExpiresAtMs();
   city.isMainCity = !isStronghold(city) && city.id === state.mainCityId;
   if (syncNow && isOnlineWorldActive()) syncOwnedCitiesToOnline(true);
 }
@@ -7101,6 +7190,7 @@ function toOnlineOwnedCity(city) {
     ownerName: state.playerName,
     ownerFlag: state.flag,
     ownerKingPower: getKingPower(),
+    ownerShieldExpiresAtMs: getActivePeaceShieldExpiresAtMs(),
     level: isStronghold(city) ? getStrongholdDefenseLevel(city) : clampCityLevel(city.level),
     troops: Math.max(0, Math.floor(Number(city.troops) || 0)),
     troopFloat: Math.max(0, Number(city.troopFloat) || Number(city.troops) || 0),
@@ -7127,6 +7217,9 @@ function toOnlineCityState(city) {
   const ownerKingPower = hasPlayerOwner
     ? city.owner === "player" ? getKingPower() : normalizePowerValue(city.ownerKingPower)
     : 0;
+  const ownerShieldExpiresAtMs = hasPlayerOwner
+    ? city.owner === "player" ? getActivePeaceShieldExpiresAtMs() : normalizeTimestampMs(city.ownerShieldExpiresAtMs)
+    : 0;
   return {
     id: city.id,
     name: city.name,
@@ -7146,6 +7239,7 @@ function toOnlineCityState(city) {
     ownerName,
     ownerFlag,
     ownerKingPower,
+    ownerShieldExpiresAtMs,
     level: isStronghold(city) ? getStrongholdDefenseLevel(city) : clampCityLevel(city.level),
     troops: Math.max(0, Math.floor(Number(city.troops) || 0)),
     troopFloat: Math.max(0, Number(city.troopFloat) || Number(city.troops) || 0),
@@ -8935,6 +9029,13 @@ function launchAttack(sourceId, targetId, percent, owner, exactTroops = null) {
   if (source.id === target.id) return false;
   if (source.troops < 1) return false;
 
+  const kind = target.owner === owner ? "transfer" : "attack";
+  const shieldBlockReason = kind === "attack" ? getPeaceShieldAttackBlockReason(target, owner) : "";
+  if (shieldBlockReason) {
+    if (owner === "player") showToast(shieldBlockReason);
+    return false;
+  }
+
   const neutralBlockReason = getNeutralCaptureBlockReason(target, owner);
   if (neutralBlockReason) {
     if (owner === "player") showNeutralCaptureLimitModal(neutralBlockReason);
@@ -8947,7 +9048,6 @@ function launchAttack(sourceId, targetId, percent, owner, exactTroops = null) {
     return false;
   }
 
-  const kind = target.owner === owner ? "transfer" : "attack";
   const requestedSend = exactTroops !== null && Number.isFinite(Number(exactTroops))
     ? clamp(Math.floor(Number(exactTroops)), 1, source.troops)
     : clamp(Math.floor(source.troops * percent), 1, source.troops);
@@ -9070,6 +9170,52 @@ function resolveAttack(attack) {
   const targetLevel = clampCityLevel(target.level);
   const defendersAtStart = Math.max(0, Math.floor(Number(target.troops) || 0));
   const targetDefenseAtStart = getCityStats(target).totalDefense;
+  const shieldBlockReason = getPeaceShieldAttackBlockReason(target, attack.owner, attack.ownerUid);
+  if (shieldBlockReason) {
+    const returned = returnSurvivingAttackersToSource(attack, attack.troops, `${target.name} Royal Peace Shield`);
+    const returnText = returned > 0
+      ? `${formatNumber(returned)} troops returned to their source city.`
+      : "The attacking army could not enter the shielded city.";
+    if (attack.owner === "player") {
+      addBattleReport({
+        type: "attack",
+        outcome: "defeat",
+        cityId: target.id,
+        cityName: target.name,
+        cityLevel: targetLevel,
+        sentTroops: attack.troops,
+        troopCount: defendersAtStart,
+        survivors: returned,
+        defendersLeft: defendersAtStart,
+        attackerLosses: 0,
+        defenderLosses: 0,
+        totalDefense: targetDefenseAtStart,
+        opponentName: defenderName,
+        summary: `Royal Peace Shield blocked the attack. ${returnText}`,
+      });
+      showToast(`${target.name} is shielded. Troops returned.`);
+    } else if (target.owner === "player") {
+      addBattleReport({
+        type: "defense",
+        outcome: "held",
+        cityId: target.id,
+        cityName: target.name,
+        cityLevel: targetLevel,
+        sentTroops: attack.troops,
+        troopCount: defendersAtStart,
+        survivors: defendersAtStart,
+        defendersLeft: defendersAtStart,
+        attackerLosses: 0,
+        defenderLosses: 0,
+        totalDefense: targetDefenseAtStart,
+        opponentName: attackerReportName,
+        summary: `Royal Peace Shield blocked ${attackerReportName}'s attack. ${returnText}`,
+      });
+      showToast(`Shield blocked an attack on ${target.name}`);
+    }
+    addLog(`${shieldBlockReason} ${returnText}`);
+    return;
+  }
   const demoAttack = isStronghold(target)
     ? null
     : normalizeDemoAttackSnapshot(attack.demoAttack)
@@ -9952,7 +10098,8 @@ function renderSelectedForeignWheel(city) {
   const report = getScoutReport(city.id);
   const pendingScout = getPendingScoutMission(city.id);
   const canScout = !pendingScout && playerCities().some(playerCity => playerCity.troops >= 1);
-  const canAttack = playerCities().some(playerCity => playerCity.troops > 0);
+  const shieldBlockReason = getPeaceShieldAttackBlockReason(city, "player");
+  const canAttack = !shieldBlockReason && playerCities().some(playerCity => playerCity.troops > 0);
   wheel.className = "city-action-wheel foreign-city-action-wheel";
   applyCityActionWheelSizing(wheel, city);
   wheel.style.left = `${mapPoint.x}px`;
@@ -9965,7 +10112,7 @@ function renderSelectedForeignWheel(city) {
     </button>
     <button class="city-wheel-action wheel-attack" type="button" aria-label="Attack ${escapeHtml(city.name)}" ${canAttack ? "" : "disabled"}>
       <span class="wheel-icon" aria-hidden="true">&#9876;</span>
-      <span class="wheel-action-name">Attack</span>
+      <span class="wheel-action-name">${shieldBlockReason ? "Shielded" : "Attack"}</span>
     </button>
     <button class="city-wheel-action wheel-info" type="button" aria-label="View ${escapeHtml(city.name)} information">
       <span class="wheel-icon" aria-hidden="true">i</span>
@@ -10098,6 +10245,11 @@ function findPreferredAttackSource(target) {
 function attackForeignCity(cityId) {
   const target = cityById(cityId);
   if (!target || target.owner === "player") return;
+  const shieldBlockReason = getPeaceShieldAttackBlockReason(target, "player");
+  if (shieldBlockReason) {
+    showToast(shieldBlockReason);
+    return;
+  }
   const neutralBlockReason = getNeutralCaptureBlockReason(target, "player");
   if (neutralBlockReason) {
     showNeutralCaptureLimitModal(neutralBlockReason);
@@ -10318,6 +10470,14 @@ function selectCity(id) {
         return;
       }
     }
+    const shieldBlockReason = getPeaceShieldAttackBlockReason(clicked, "player");
+    if (shieldBlockReason) {
+      sendMode = false;
+      selectedTargetId = null;
+      renderAll();
+      showToast(shieldBlockReason);
+      return;
+    }
     selectedTargetId = clicked.id;
     renderAll();
     showTroopSliderModal(source, clicked);
@@ -10373,6 +10533,12 @@ function showTroopSliderModal(source, target) {
   }
 
   const isTransfer = target.owner === "player";
+  const shieldBlockReason = isTransfer ? "" : getPeaceShieldAttackBlockReason(target, "player");
+  if (shieldBlockReason) {
+    showToast(shieldBlockReason);
+    cancelSendMode();
+    return;
+  }
   const commandLabel = isTransfer ? "Transfer" : "Attack";
   const commandIcon = isTransfer ? "&#128095;" : "&#9876;";
   selectedTroopAmount = clamp(selectedTroopAmount, 1, source.troops);
@@ -10900,6 +11066,7 @@ function renderInventorySlot(entry) {
       <span class="inventory-slot-icon ${entry.icon ? "has-image" : ""}" aria-hidden="true">${renderItemIcon(entry, "inventory-slot-image")}</span>
       <strong class="inventory-slot-name">${escapeHtml(entry.label)}</strong>
       <span class="inventory-slot-count">x${formatNumber(entry.count)}</span>
+      <button class="inventory-use-btn" data-inventory-use="${escapeHtml(entry.id)}" type="button">Use</button>
     </article>
   `;
 }
@@ -10908,13 +11075,17 @@ function showInventoryModal() {
   if (!state) return;
   const slots = getInventorySlotEntries();
   const filledSlots = slots.filter(Boolean).length;
+  const shieldExpiresAtMs = getActivePeaceShieldExpiresAtMs();
+  const shieldStatus = shieldExpiresAtMs
+    ? `<small>Peace Shield active: ${formatDuration(getPeaceShieldRemainingSeconds(shieldExpiresAtMs))}</small>`
+    : "<small>No active item effects</small>";
   modal.classList.remove("battle-report-modal", "city-list-modal", "island-switcher-modal", "leaderboard-modal", "shop-modal", "incoming-attack-modal", "outgoing-attack-modal");
   modal.classList.add("inventory-modal");
   modalTitle.textContent = "Bag";
   modalBody.innerHTML = `
     <div class="inventory-panel">
       <section class="inventory-summary">
-        <span>Item slots</span>
+        <span>Item slots ${shieldStatus}</span>
         <strong>${formatNumber(filledSlots)}/${formatNumber(INVENTORY_SLOT_COUNT)}</strong>
       </section>
       <div class="inventory-slots">
@@ -10922,13 +11093,56 @@ function showInventoryModal() {
       </div>
     </div>
   `;
+  modalBody.querySelectorAll("[data-inventory-use]").forEach(button => {
+    button.addEventListener("click", () => useInventoryItem(button.dataset.inventoryUse));
+  });
   if (!modal.open) modal.showModal();
+}
+
+function useInventoryItem(itemId) {
+  if (!state) return;
+  const item = getShopItemById(itemId);
+  if (!item) return;
+  if (item.id === ROYAL_PEACE_SHIELD_ITEM_ID) {
+    useRoyalPeaceShield(item);
+    return;
+  }
+  showToast(`${item.label} mechanics are coming next.`);
+}
+
+function useRoyalPeaceShield(item) {
+  const inventory = ensureShopItems();
+  const owned = Math.max(0, Math.floor(Number(inventory[item.id]) || 0));
+  if (owned <= 0) {
+    showToast(`You do not have ${item.label}.`);
+    showInventoryModal();
+    return;
+  }
+
+  const effects = ensureItemEffects();
+  const now = Date.now();
+  const currentExpiresAtMs = getActivePeaceShieldExpiresAtMs();
+  const startsAtMs = Math.max(now, currentExpiresAtMs);
+  effects.shieldExpiresAtMs = startsAtMs + ROYAL_PEACE_SHIELD_DURATION_MS;
+  inventory[item.id] = owned - 1;
+  refreshOwnedCityItemEffectMetadata(true);
+  addLog(`${item.label} activated. Your kingdom is protected for ${formatDuration(getPeaceShieldRemainingSeconds(effects.shieldExpiresAtMs))}.`);
+  saveGame();
+  renderHud();
+  showInventoryModal();
+  showToast(`${item.label} active: ${formatDuration(getPeaceShieldRemainingSeconds(effects.shieldExpiresAtMs))}`);
 }
 
 function showAttackPreview(source, target) {
   if (!source || !target || source.owner !== "player" || target.owner === "player") return;
   if (source.troops < 1) {
     showToast("No troops available to send.");
+    return;
+  }
+
+  const shieldBlockReason = getPeaceShieldAttackBlockReason(target, "player");
+  if (shieldBlockReason) {
+    showToast(shieldBlockReason);
     return;
   }
 

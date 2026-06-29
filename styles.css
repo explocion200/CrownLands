@@ -1596,6 +1596,14 @@ input {
   font-weight: 950;
   text-transform: uppercase;
 }
+.inventory-summary small {
+  display: block;
+  margin-top: .12rem;
+  color: #8ecdf1;
+  font-size: .66rem;
+  line-height: 1.1;
+  text-transform: none;
+}
 .inventory-summary strong {
   color: #fff0a7;
   font-size: 1.25rem;
@@ -1668,6 +1676,21 @@ input {
   color: #cfe9ff;
   font-size: .72rem;
   font-weight: 900;
+}
+.inventory-use-btn {
+  min-width: 58px;
+  min-height: 30px;
+  padding: .25rem .55rem;
+  border-radius: 8px;
+  color: #211508;
+  background: linear-gradient(#ffe278, #e69a19);
+  border: 1px solid rgba(255,255,255,.55);
+  box-shadow: inset 0 -3px 0 rgba(0,0,0,.17);
+  font-size: .72rem;
+  font-weight: 950;
+}
+.inventory-use-btn:active {
+  transform: translateY(1px);
 }
 .inventory-slot-empty {
   color: rgba(207,233,255,.58);
@@ -4025,6 +4048,7 @@ input {
   .inventory-slot-icon { width: 34px; height: 34px; border-radius: 9px; }
   .inventory-slot-icon span { width: 22px; height: 22px; font-size: .74rem; }
   .inventory-slot-name { font-size: .7rem; }
+  .inventory-use-btn { min-width: 48px; min-height: 26px; padding: .2rem .42rem; font-size: .66rem; }
   .character-level-badge { min-width: 28px; height: 16px; right: 7px; bottom: 6px; font-size: .5rem; }
   .profile-gold { height: 24px; min-width: 66px; margin-top: .12rem; font-size: .74rem; }
   .profile-xp { min-width: 76px; font-size: .52rem; padding: .1rem .3rem; }
