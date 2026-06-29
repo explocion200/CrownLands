@@ -1786,14 +1786,14 @@ input {
   background: linear-gradient(#1b6fb6, #063761);
 }
 .island-switcher-modal.modal {
-  width: min(860px, calc(100vw - 1rem));
+  width: min(940px, calc(100vw - .7rem));
 }
 .island-switcher-modal .modal-card {
-  max-height: min(86vh, 680px);
+  max-height: min(92vh, 760px);
 }
 .island-map-picker {
   position: relative;
-  width: min(100%, 760px);
+  width: min(100%, 860px);
   aspect-ratio: var(--island-map-aspect, 1.32);
   margin: .35rem auto .1rem;
   overflow: auto;
@@ -1824,12 +1824,22 @@ input {
   border: 2px solid rgba(5, 28, 48, .5);
   border-radius: 999px;
 }
-.island-map-canvas {
+.island-map-stage {
   position: relative;
+  width: calc(var(--island-map-canvas-w, 100%) + 100%);
+  height: calc(var(--island-map-canvas-h, 100%) + 100%);
+  min-width: 200%;
+  min-height: 200%;
+}
+.island-map-canvas {
+  position: absolute;
+  left: 50%;
+  top: 50%;
   width: var(--island-map-canvas-w, 100%);
   height: var(--island-map-canvas-h, 100%);
-  min-width: 100%;
-  min-height: 100%;
+  min-width: 0;
+  min-height: 0;
+  transform: translate(-50%, -50%);
   background:
     repeating-linear-gradient(24deg, rgba(255,255,255,.06) 0 2px, transparent 2px 36px),
     radial-gradient(circle at 50% 48%, transparent 56%, rgba(0,0,0,.2)),

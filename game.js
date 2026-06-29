@@ -5867,8 +5867,8 @@ function getIslandMapIconStyle(region) {
 function getIslandMapPickerStyle() {
   const bounds = getIslandMapLayoutBounds();
   const aspect = clamp(WORLD_WIDTH / WORLD_HEIGHT, 1.05, 1.65);
-  const canvasWidth = Math.max(100, Math.min(180, bounds.width / WORLD_WIDTH * 100));
-  const canvasHeight = Math.max(100, Math.min(180, bounds.height / WORLD_HEIGHT * 100));
+  const canvasWidth = Math.max(130, Math.min(220, bounds.width / WORLD_WIDTH * 118));
+  const canvasHeight = Math.max(130, Math.min(220, bounds.height / WORLD_HEIGHT * 118));
   return `--island-map-aspect:${formatPathNumber(aspect)};--island-map-canvas-w:${formatPathNumber(canvasWidth)}%;--island-map-canvas-h:${formatPathNumber(canvasHeight)}%;`;
 }
 
@@ -5941,20 +5941,34 @@ function renderIslandSwitcherModalContent() {
   const homeRegionId = getMainCityRegionId();
   modalBody.innerHTML = `
     <div class="island-map-picker" style="${getIslandMapPickerStyle()}" aria-label="Island map picker">
-      <div class="island-map-canvas">
-        ${renderIslandMapConnections()}
-        ${WORLD_REGIONS.map(region => renderIslandMapTile(region, activeRegionId, homeRegionId)).join("")}
+      <div class="island-map-stage">
+        <div class="island-map-canvas">
+          ${renderIslandMapConnections()}
+          ${WORLD_REGIONS.map(region => renderIslandMapTile(region, activeRegionId, homeRegionId)).join("")}
+        </div>
       </div>
     </div>
   `;
   if (!modal.open) modal.showModal();
   const picker = modalBody.querySelector(".island-map-picker");
   attachIslandMapPickerPan(picker);
+  centerIslandMapPickerOnRegion(picker, activeRegionId || homeRegionId);
   modalBody.querySelectorAll("[data-island-region]").forEach(button => {
     button.addEventListener("click", () => {
       if (picker?.dataset.justDragged === "true") return;
       switchOnlineIsland(button.dataset.islandRegion);
     });
+  });
+}
+
+function centerIslandMapPickerOnRegion(picker, regionId) {
+  if (!picker || !regionId) return;
+  requestAnimationFrame(() => {
+    const target = [...picker.querySelectorAll("[data-island-region]")]
+      .find(button => button.dataset.islandRegion === regionId);
+    if (!target) return;
+    picker.scrollLeft = target.offsetLeft + target.offsetWidth / 2 - picker.clientWidth / 2;
+    picker.scrollTop = target.offsetTop + target.offsetHeight / 2 - picker.clientHeight / 2;
   });
 }
 
@@ -5970,6 +5984,7 @@ function attachIslandMapPickerPan(picker) {
 
   picker.addEventListener("pointerdown", event => {
     if (event.button !== undefined && event.button !== 0) return;
+    if (event.target.closest("[data-island-region]")) return;
     pointerId = event.pointerId;
     startX = event.clientX;
     startY = event.clientY;

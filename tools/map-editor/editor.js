@@ -618,8 +618,8 @@
       elements.canvasWrap.scrollTop = saved.top;
       return;
     }
-    elements.canvasWrap.scrollLeft = Math.max(0, (elements.mapCanvas.offsetWidth - elements.canvasWrap.clientWidth) / 2);
-    elements.canvasWrap.scrollTop = Math.max(0, (elements.mapCanvas.offsetHeight - elements.canvasWrap.clientHeight) / 2);
+    elements.canvasWrap.scrollLeft = Math.max(0, elements.mapCanvas.offsetLeft + elements.mapCanvas.offsetWidth / 2 - elements.canvasWrap.clientWidth / 2);
+    elements.canvasWrap.scrollTop = Math.max(0, elements.mapCanvas.offsetTop + elements.mapCanvas.offsetHeight / 2 - elements.canvasWrap.clientHeight / 2);
   }
 
   function startCanvasPan(event) {
@@ -649,6 +649,11 @@
   function stopCanvasPan(event) {
     if (!state.panning || state.panning.pointerId !== event.pointerId) return;
     state.skipNextCanvasClick = state.panning.moved;
+    if (state.skipNextCanvasClick) {
+      window.setTimeout(() => {
+        state.skipNextCanvasClick = false;
+      }, 160);
+    }
     state.panning = null;
     elements.canvasWrap?.classList.remove("panning");
     saveViewportForCurrentMap();
