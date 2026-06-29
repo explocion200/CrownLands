@@ -5768,8 +5768,12 @@ function getIslandOwnedCityCount(regionId) {
 }
 
 function getIslandSwitcherSummary(regionId) {
-  const ownedCount = getIslandOwnedCityCount(regionId);
-  return `${formatNumber(ownedCount)} yours`;
+  const targetRegionId = normalizeRegionId(regionId);
+  const summary = getIslandOccupancySummary(targetRegionId);
+  const ownedCount = summary
+    ? Math.max(0, Math.floor(Number(summary.ownCityCount) || 0))
+    : getIslandOwnedCityCount(targetRegionId);
+  return `Your cities: ${formatNumber(ownedCount)}`;
 }
 
 function summarizeIslandOccupancy(regionId, cities = state?.cities || []) {
@@ -5837,32 +5841,12 @@ function getIslandOccupancySummary(regionId) {
   return onlineIslandSummaries.get(activeRegionId) || null;
 }
 
-function getIslandRivalSummaryText(regionId) {
-  if (!getOnlineApi()?.isSignedIn?.()) return "";
-  const summary = getIslandOccupancySummary(regionId);
-  if (!summary) return "checking";
-  const rivals = Math.max(0, Number(summary.rivalRulerCount) || 0);
-  return `${formatNumber(rivals)} ${rivals === 1 ? "rival" : "rivals"}`;
-}
-
 function getIslandTileSummaryText(regionId) {
-  const ownedText = getIslandSwitcherSummary(regionId);
-  const rivalText = getIslandRivalSummaryText(regionId);
-  return rivalText ? `${ownedText} • ${rivalText}` : ownedText;
+  return getIslandSwitcherSummary(regionId);
 }
 
 function getIslandTileAriaSummary(regionId) {
-  const parts = [getIslandSwitcherSummary(regionId)];
-  const summary = getIslandOccupancySummary(regionId);
-  if (summary) {
-    const rivals = Math.max(0, Number(summary.rivalRulerCount) || 0);
-    const rivalCities = Math.max(0, Number(summary.rivalCityCount) || 0);
-    parts.push(`${formatNumber(rivals)} rival ${rivals === 1 ? "ruler" : "rulers"}`);
-    parts.push(`${formatNumber(rivalCities)} rival-held ${rivalCities === 1 ? "city" : "cities"}`);
-  } else if (getOnlineApi()?.isSignedIn?.()) {
-    parts.push("checking rival presence");
-  }
-  return parts.join(", ");
+  return getIslandSwitcherSummary(regionId);
 }
 
 function rerenderIslandSwitcherModalIfOpen() {
@@ -6069,8 +6053,8 @@ function renderIslandMapTile(region, activeRegionId, homeRegionId) {
       </span>
       <span class="island-map-name">${escapeHtml(label)}</span>
       <span class="island-map-owned">${escapeHtml(summaryText)}</span>
-      ${isActive ? `<span class="island-map-active-label">Current</span>` : ""}
-      ${isHome ? `<span class="island-map-home-label">Home</span>` : ""}
+      ${isActive ? `<span class="island-map-active-label">Current map</span>` : ""}
+      ${isHome ? `<span class="island-map-home-label">Home map</span>` : ""}
     </button>
   `;
 }

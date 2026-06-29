@@ -2024,19 +2024,19 @@ input {
   pointer-events: none;
 }
 .island-map-picker .island-map-name {
-  bottom: .66rem;
+  bottom: .82rem;
   color: #fff;
-  font-size: .54rem;
+  font-size: .72rem;
   line-height: 1;
   font-weight: 1000;
   text-shadow: 0 2px 0 rgba(0,0,0,.55);
 }
 .island-map-owned {
-  bottom: .18rem;
+  bottom: .24rem;
   color: #bfe4ff;
-  font-size: .43rem;
+  font-size: .56rem;
   line-height: 1;
-  font-weight: 900;
+  font-weight: 950;
 }
 .island-map-home-label,
 .island-map-active-label {
@@ -2048,7 +2048,7 @@ input {
   color: #211508;
   background: #ffe293;
   border: 1px solid rgba(255,255,255,.72);
-  font-size: .44rem;
+  font-size: .52rem;
   font-weight: 1000;
   line-height: 1;
   white-space: nowrap;
