@@ -5985,14 +5985,14 @@ function getIslandMapPosition(region) {
 
 function getIslandMapIconSize(region) {
   const bounds = getIslandMapLayoutBounds();
-  const rawWidth = Math.max(14, (Number(region?.rx) || 800) * 2 / bounds.width * 100);
-  const rawHeight = Math.max(14, (Number(region?.ry) || 800) * 2 / bounds.height * 100);
-  const maxWidth = 36;
-  const maxHeight = 36;
+  const rawWidth = Math.max(10, (Number(region?.rx) || 800) * 1.55 / bounds.width * 100);
+  const rawHeight = Math.max(10, (Number(region?.ry) || 800) * 1.55 / bounds.height * 100);
+  const maxWidth = 28;
+  const maxHeight = 28;
   const scale = Math.min(1, maxWidth / rawWidth, maxHeight / rawHeight);
   return {
-    width: clamp(rawWidth * scale, 18, maxWidth),
-    height: clamp(rawHeight * scale, 16, maxHeight),
+    width: clamp(rawWidth * scale, 13, maxWidth),
+    height: clamp(rawHeight * scale, 12, maxHeight),
   };
 }
 
@@ -6006,8 +6006,8 @@ function getIslandMapIconStyle(region) {
 function getIslandMapPickerStyle() {
   const bounds = getIslandMapLayoutBounds();
   const aspect = clamp(WORLD_WIDTH / WORLD_HEIGHT, 1.05, 1.65);
-  const canvasWidth = Math.max(130, Math.min(220, bounds.width / WORLD_WIDTH * 118));
-  const canvasHeight = Math.max(130, Math.min(220, bounds.height / WORLD_HEIGHT * 118));
+  const canvasWidth = Math.max(105, Math.min(155, bounds.width / WORLD_WIDTH * 92));
+  const canvasHeight = Math.max(105, Math.min(155, bounds.height / WORLD_HEIGHT * 92));
   return `--island-map-aspect:${formatPathNumber(aspect)};--island-map-canvas-w:${formatPathNumber(canvasWidth)}%;--island-map-canvas-h:${formatPathNumber(canvasHeight)}%;`;
 }
 
@@ -6123,7 +6123,6 @@ function attachIslandMapPickerPan(picker) {
 
   picker.addEventListener("pointerdown", event => {
     if (event.button !== undefined && event.button !== 0) return;
-    if (event.target.closest("[data-island-region]")) return;
     pointerId = event.pointerId;
     startX = event.clientX;
     startY = event.clientY;
@@ -6139,6 +6138,7 @@ function attachIslandMapPickerPan(picker) {
     const dx = event.clientX - startX;
     const dy = event.clientY - startY;
     if (Math.abs(dx) > 4 || Math.abs(dy) > 4) moved = true;
+    if (moved) event.preventDefault();
     picker.scrollLeft = startScrollLeft - dx;
     picker.scrollTop = startScrollTop - dy;
   });
