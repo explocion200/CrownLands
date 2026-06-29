@@ -384,10 +384,12 @@
     }
 
     let existingCityIds = new Set();
+    let existingCityDataById = new Map();
     let seedsToWrite = citySeeds;
     if (islandSnap.exists()) {
       const citiesSnap = await getDocs(collection(client.db, "islands", islandId, "cities"));
       existingCityIds = new Set(citiesSnap.docs.map(cityDoc => cityDoc.id));
+      existingCityDataById = new Map(citiesSnap.docs.map(cityDoc => [cityDoc.id, cityDoc.data() || {}]));
       seedsToWrite = needsLayoutRefresh
         ? citySeeds
         : citySeeds.filter(city => !existingCityIds.has(city.id));
@@ -397,8 +399,17 @@
     let writes = 0;
     for (const city of seedsToWrite) {
       const alreadyExists = existingCityIds.has(city.id);
+      const existingCity = existingCityDataById.get(city.id) || {};
+      const isStrongholdCity = city.kind === "stronghold" || Boolean(city.strongholdType);
+      const existingOwnedByPlayer = existingCity.ownerKind === "player" || existingCity.owner === "player" || Boolean(existingCity.ownerUid);
+      const shouldRefreshStrongholdDefense = isStrongholdCity && (!alreadyExists || (needsLayoutRefresh && !existingOwnedByPlayer));
       batch.set(doc(client.db, "islands", islandId, "cities", city.id), {
         ...cleanCityLayoutSeed(city),
+        ...(shouldRefreshStrongholdDefense ? {
+          level: Math.max(1, Math.floor(Number(city.level) || 1)),
+          troops: Math.max(0, Math.floor(Number(city.troops) || 0)),
+          troopFloat: Math.max(0, Number(city.troopFloat) || Number(city.troops) || 0),
+        } : {}),
         ...(alreadyExists ? {} : { createdAt: serverTimestamp() }),
         updatedAt: serverTimestamp(),
       }, { merge: true });

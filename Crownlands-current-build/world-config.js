@@ -1,5 +1,5 @@
 window.CROWNLANDS_WORLD_CONFIG = {
-  version: 32,
+  version: 33,
   name: "Five Island Crownlands",
   width: 10000,
   height: 7600,
