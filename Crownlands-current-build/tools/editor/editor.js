@@ -1,4 +1,6 @@
 const palettes = ["heartland", "pine", "marsh", "woodland", "golden"];
+const EDITOR_BUILD_ID = "github-map-autoload-2026-06-29";
+const AUTO_IMPORT_KEY = `crownlands-editor-${EDITOR_BUILD_ID}`;
 
 let config = null;
 let selected = { type: "region", id: "" };
@@ -47,6 +49,11 @@ function setStatus(message, tone = "") {
   elements.statusText.className = tone;
 }
 
+function describeConfigSource(prefix) {
+  if (!config) return prefix;
+  return `${prefix} Map version ${config.version}, ${config.regions.length} islands, ${config.landBridges.length} bridges.`;
+}
+
 function markDirty() {
   dirty = true;
   setStatus("Unsaved changes", "save-dirty");
@@ -62,7 +69,7 @@ async function loadConfig() {
   selected = { type: "region", id: config.regions[0]?.id || "" };
   dirty = false;
   render();
-  setStatus("Loaded world-config.js", "save-ok");
+  setStatus(describeConfigSource("Loaded local map."), "save-ok");
 }
 
 async function saveConfig() {
@@ -81,8 +88,10 @@ async function saveConfig() {
   setStatus("Saved world-config.js", "save-ok");
 }
 
-async function importGithubConfig() {
-  if (dirty && !window.confirm("Download the GitHub map and replace your unsaved local editor changes?")) return;
+async function importGithubConfig(options = {}) {
+  const force = Boolean(options.force);
+  const automatic = Boolean(options.automatic);
+  if (!force && !automatic && dirty && !window.confirm("Download the GitHub map and replace your unsaved local editor changes?")) return;
   setStatus("Downloading GitHub map...");
   const response = await fetch("/api/world-config/import-github", { method: "POST" });
   const payload = await response.json().catch(() => ({}));
@@ -92,7 +101,22 @@ async function importGithubConfig() {
   selected = { type: "region", id: config.regions[0]?.id || "" };
   dirty = false;
   render();
-  setStatus("Downloaded GitHub map into world-config.js", "save-ok");
+  localStorage.setItem(AUTO_IMPORT_KEY, "1");
+  setStatus(describeConfigSource("Downloaded GitHub map into world-config.js."), "save-ok");
+}
+
+async function bootEditor() {
+  const params = new URLSearchParams(window.location.search);
+  const forcedGithub = params.get("github") === "1";
+  const skipGithub = params.get("local") === "1";
+  const alreadyImported = localStorage.getItem(AUTO_IMPORT_KEY) === "1";
+
+  if (!skipGithub && (forcedGithub || !alreadyImported)) {
+    await importGithubConfig({ force: true, automatic: true });
+    return;
+  }
+
+  await loadConfig();
 }
 
 function field(label, value, attrs = {}) {
@@ -579,4 +603,4 @@ window.addEventListener("beforeunload", event => {
   event.returnValue = "";
 });
 
-loadConfig().catch(error => setStatus(error.message, "save-error"));
+bootEditor().catch(error => setStatus(error.message, "save-error"));

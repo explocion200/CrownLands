@@ -162,7 +162,8 @@ async function writeWorldConfig(config) {
 }
 
 async function downloadGithubWorldConfig() {
-  const response = await fetch(GITHUB_WORLD_CONFIG_URL, {
+  const sourceUrl = `${GITHUB_WORLD_CONFIG_URL}?t=${Date.now()}`;
+  const response = await fetch(sourceUrl, {
     headers: {
       "accept": "text/plain",
       "user-agent": "crownlands-local-editor",
