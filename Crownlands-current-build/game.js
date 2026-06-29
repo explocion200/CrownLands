@@ -4176,6 +4176,12 @@ function deactivatePeaceShieldForPlayerAttack(target) {
   return true;
 }
 
+function getPeaceShieldAttackWarning(target) {
+  const remaining = getPeaceShieldRemainingSeconds();
+  if (!remaining || !isAnotherPlayerOwnedCity(target)) return "";
+  return `Royal Peace Shield active: attacking ${target.name} will drop your shield with ${formatDuration(remaining)} remaining.`;
+}
+
 function createOnlineEntryState(playerName) {
   const entry = newGame(playerName);
   entry.mainCityId = "";
@@ -10599,6 +10605,7 @@ function showTroopSliderModal(source, target) {
   }
   const commandLabel = isTransfer ? "Transfer" : "Attack";
   const commandIcon = isTransfer ? "&#128095;" : "&#9876;";
+  const shieldDropWarning = isTransfer ? "" : getPeaceShieldAttackWarning(target);
   selectedTroopAmount = clamp(selectedTroopAmount, 1, source.troops);
   troopSliderActive = true;
   modal.classList.add("troop-slider-modal");
@@ -10618,6 +10625,8 @@ function showTroopSliderModal(source, target) {
           <small>${isTransfer ? "Your city" : `${OWNER[target.owner].label} city`}</small>
         </div>
       </div>
+
+      ${shieldDropWarning ? `<div class="shield-drop-warning" role="alert"><strong>Shield warning</strong><span>${escapeHtml(shieldDropWarning)}</span></div>` : ""}
 
       <div class="troop-slider-control">
         <div class="troop-slider-readout">
@@ -11259,6 +11268,7 @@ function showAttackPreview(source, target) {
     return;
   }
   const demoNotice = getDemoAttackNotice(preview.demoAttack);
+  const shieldDropWarning = getPeaceShieldAttackWarning(target);
   modalTitle.textContent = `Attack ${target.name}`;
   modalBody.innerHTML = `
     <div class="battle-preview ${preview.success ? "win" : "lose"}">
@@ -11275,6 +11285,7 @@ function showAttackPreview(source, target) {
         ? `Expected capture with about <strong>${formatNumber(preview.survivors)}</strong> surviving troops.`
         : `Expected failure with about <strong>${formatNumber(preview.defendersLeft)}</strong> defenders left.`}</p>
       ${demoNotice ? `<p class="tiny-warning">${escapeHtml(demoNotice)}</p>` : ""}
+      ${shieldDropWarning ? `<p class="shield-drop-warning"><strong>Shield warning</strong><span>${escapeHtml(shieldDropWarning)}</span></p>` : ""}
       <p class="tiny-warning">This is an estimate based on current numbers. Confirm launches using the current troop count.</p>
       <div class="modal-actions">
         <button id="confirmAttackBtn" class="danger-action" type="button">Attack</button>
@@ -11300,6 +11311,7 @@ function showAttackPreview(source, target) {
         ? `Expected capture with about <strong>${formatNumber(preview.survivors)}</strong> surviving troops.`
         : `Expected failure with about <strong>${formatNumber(preview.defendersLeft)}</strong> defenders left.`}</p>
       ${demoNotice ? `<p class="tiny-warning">${escapeHtml(demoNotice)}</p>` : ""}
+      ${shieldDropWarning ? `<p class="shield-drop-warning"><strong>Shield warning</strong><span>${escapeHtml(shieldDropWarning)}</span></p>` : ""}
       ${preview.cooldownRemaining > 0 ? `<p class="tiny-warning">Recent capture cooldown: XP is reduced for ${formatDuration(preview.cooldownRemaining)}.</p>` : ""}
       <p class="tiny-warning">This is an estimate based on current numbers. Confirm launches using the current troop count.</p>
       <div class="modal-actions">

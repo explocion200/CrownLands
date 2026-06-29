@@ -2976,6 +2976,20 @@ input {
   font-size: 1.7rem;
 }
 .troop-slider-panel.transfer .troop-command-icon { color: #071a0d; background: linear-gradient(#a9ec83, #49a84c); border-color: rgba(209,255,187,.8); }
+.shield-drop-warning {
+  display: grid;
+  gap: .12rem;
+  padding: .52rem .68rem;
+  border-radius: 12px;
+  color: #ffeeb2;
+  background: linear-gradient(180deg, rgba(94, 33, 23, .92), rgba(38, 12, 11, .9));
+  border: 1px solid rgba(255, 199, 91, .58);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.06), 0 8px 18px rgba(0,0,0,.22);
+}
+.shield-drop-warning strong,
+.shield-drop-warning span { display: block; }
+.shield-drop-warning strong { color: #fff4c8; font-size: .72rem; font-weight: 950; text-transform: uppercase; }
+.shield-drop-warning span { color: #ffe6a3; font-size: .72rem; font-weight: 850; line-height: 1.28; }
 .troop-slider-control {
   padding: .66rem .76rem .58rem;
   border-radius: 16px;
