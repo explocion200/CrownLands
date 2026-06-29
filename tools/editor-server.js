@@ -5,12 +5,19 @@ const path = require("path");
 const vm = require("vm");
 
 const ROOT_DIR = path.resolve(__dirname, "..");
-const EDITOR_DIR = path.join(__dirname, "editor");
+const EDITOR_DIR = path.join(__dirname, "map-editor");
 const WORLD_CONFIG_PATH = path.join(ROOT_DIR, "world-config.js");
 const GITHUB_WORLD_CONFIG_URL = "https://raw.githubusercontent.com/explocion200/crownlands-game/main/world-config.js";
 const HOST = "127.0.0.1";
 const START_PORT = Number(process.env.PORT) || 8791;
 const MAX_BODY_BYTES = 1024 * 1024;
+const ROOT_STATIC_FILES = new Set([
+  "/firebaseClient.js",
+  "/game.js",
+  "/index.html",
+  "/styles.css",
+  "/world-config.js",
+]);
 
 const MIME_TYPES = new Map([
   [".html", "text/html; charset=utf-8"],
@@ -219,8 +226,37 @@ function createServer() {
         return;
       }
 
+      if (pathname === "/tools/editor" || pathname === "/tools/editor/" || pathname.startsWith("/tools/editor/")) {
+        response.writeHead(302, { location: "/editor/" });
+        response.end();
+        return;
+      }
+
+      if (pathname === "/tools/map-editor" || pathname === "/tools/map-editor/") {
+        response.writeHead(302, { location: "/editor/" });
+        response.end();
+        return;
+      }
+
+      if (pathname.startsWith("/tools/map-editor/")) {
+        const editorPath = pathname.replace(/^\/tools\/map-editor\/?/, "");
+        response.writeHead(302, { location: `/editor/${editorPath}` });
+        response.end();
+        return;
+      }
+
       if (pathname.startsWith("/editor/")) {
         const filePath = safeJoin(EDITOR_DIR, pathname.replace(/^\/editor\/?/, ""));
+        if (!filePath) {
+          sendText(response, 403, "Forbidden");
+          return;
+        }
+        await serveFile(response, filePath);
+        return;
+      }
+
+      if (pathname.startsWith("/assets/") || ROOT_STATIC_FILES.has(pathname)) {
+        const filePath = safeJoin(ROOT_DIR, pathname);
         if (!filePath) {
           sendText(response, 403, "Forbidden");
           return;

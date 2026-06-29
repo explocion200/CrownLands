@@ -36,12 +36,12 @@ Landscape / horizontal medieval island-conquest prototype inspired by the core l
 
 ## Map Rules
 
-- The map is rendered from `world-config.js` as one large 10000 x 7600 world.
-- The center island is the largest battleground, with north, south, west, and east islands around it.
-- Each outer island connects to the center island through two natural land bridges / causeways.
-- Cities are placed on open land or clearings only, with each island center reserved for a future stronghold.
+- The game uses individual island maps backed by `assets/map-editor-data.js`.
+- The center island is the largest battleground, with north, south, west, and east maps around it.
+- Each island has portal markers that switch the active island map and route cross-island movement.
+- Cities are placed on open land or clearings only, with island strongholds and the Crown Citadel configured as map objectives.
 - Cities are not placed on ocean, lakes, mountains, dense forests, or swamp.
-- Troops cannot walk through ocean, lakes, or mountains. All cross-island movement must use land bridges.
+- Troops cannot walk through ocean, lakes, or mountains. All cross-island movement must route through portals.
 - Troops can walk through forests and swamp at normal speed.
 - Active army route markers appear only after troops are sent.
 - Selecting a non-owned city opens Scout, Attack, and Info actions around that city.
@@ -61,11 +61,13 @@ This build has the first Firebase layer added without breaking guest play.
 - `firebase-config.js` holds the Firebase web app config placeholders.
 - `firebaseClient.js` loads Firebase Auth and Firestore only after real config values are pasted in.
 - The setup screen now uses Google sign-in as the only entry button.
-- Signed-in players save a private cloud snapshot to the current reset slot, `players/{uid}/saves/default-fresh-2026-06-21`.
+- Signed-in players save a private cloud snapshot to the current reset slot, `players/{uid}/saves/default-fresh-2026-06-23`.
 - After sign-in, the game automatically checks the current reset slot in Firebase first, then falls back to the current browser save key.
 - `firestore.rules` allows private player saves and signed-in shared-island writes for this prototype phase.
-- Phase 2 creates or upgrades the current reset island, `islands/main-fresh-2026-06-21`, seeds the 250 active city docs, subscribes to city changes in realtime, and claims one starting city for each signed-in player.
-- While online, the browser syncs the signed-in player's owned cities back to Firestore for the shared island.
+- Phase 2 now shards the world into one Firestore island per region, such as `islands/main-fresh-2026-06-23-west`.
+- The browser loads and subscribes to one active island at a time, starting with the player's home island.
+- The island switcher lets signed-in players load a different island, unsubscribing from the previous island before opening the next one.
+- While online, the browser syncs the signed-in player's owned cities back to Firestore for the currently loaded island.
 
 See `FIREBASE_SETUP.md` for the Firebase project steps and the planned shared-world collections.
 
@@ -77,7 +79,7 @@ Run the local editor from PowerShell:
 .\tools\start-editor.ps1
 ```
 
-Then open `http://127.0.0.1:8791/editor/`. The editor runs only on this computer, reads and writes `world-config.js`, can download the current GitHub map into the local editor, previews islands, city placement, and land bridges, and serves the game at `/game/` for a quick browser preview. Use `http://127.0.0.1:8791/editor/?github=1` to force a fresh GitHub map download.
+Then open `http://127.0.0.1:8791/editor/`. The editor runs only on this computer and opens the current visual map editor for `assets/map-editor-data.js`, including individual island maps, portals, cities, strongholds, and custom map images. It also serves the game at `/game/` for a quick browser preview.
 
 ## Deploy on Netlify
 

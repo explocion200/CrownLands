@@ -20,6 +20,17 @@ service cloud.firestore {
       }
     }
 
+    match /leaderboards/{boardId}/entries/{uid} {
+      allow read: if signedIn();
+      allow create, update: if ownsPlayerDoc(uid)
+        && request.resource.data.uid == uid
+        && request.resource.data.kingPower is number
+        && request.resource.data.kingPower >= 0
+        && request.resource.data.cityCount is number
+        && request.resource.data.cityCount >= 0;
+      allow delete: if ownsPlayerDoc(uid);
+    }
+
     // Phase 2 multiplayer collections. Signed-in users can create the shared
     // island and update city docs for the browser prototype. Tighten these
     // rules when combat moves into server-verified transactions.
@@ -38,7 +49,7 @@ service cloud.firestore {
       match /armies/{armyId} {
         allow read: if signedIn();
         allow create, update: if signedIn();
-        allow delete: if false;
+        allow delete: if signedIn();
       }
 
       match /reports/{reportId} {

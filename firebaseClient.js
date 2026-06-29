@@ -90,16 +90,37 @@
     return client.user.uid;
   }
 
+  function rememberLogin() {
+    savePlayerProfile({ lastLoginAt: Date.now() }).catch(error => {
+      console.warn("Could not update login timestamp", error);
+    });
+  }
+
+  function shouldUseRedirectFallback(error) {
+    const code = String(error?.code || "");
+    return code === "auth/popup-blocked"
+      || code === "auth/cancelled-popup-request"
+      || code === "auth/operation-not-supported-in-this-environment";
+  }
+
   async function signInWithGoogle() {
     await init();
     if (!client.configured) {
       throw new Error("Firebase config is still using placeholder values.");
     }
     if (client.error) throw client.error;
-    const result = await client.modules.auth.signInWithPopup(client.auth, client.provider);
-    client.user = serializeUser(result.user);
-    await savePlayerProfile({ lastLoginAt: Date.now() });
-    return client.user;
+    try {
+      const result = await client.modules.auth.signInWithPopup(client.auth, client.provider);
+      client.user = serializeUser(result.user);
+      rememberLogin();
+      return client.user;
+    } catch (error) {
+      if (shouldUseRedirectFallback(error) && client.modules.auth.signInWithRedirect) {
+        await client.modules.auth.signInWithRedirect(client.auth, client.provider);
+        return client.user;
+      }
+      throw error;
+    }
   }
 
   async function signOut() {
@@ -162,17 +183,37 @@
     return snap.data().state || null;
   }
 
+  function cleanCityOwner(city = {}) {
+    const ownerUid = String(city.ownerUid || "").trim();
+    const rawOwnerKind = city.ownerKind || city.owner || "neutral";
+    const hasPlayerOwner = rawOwnerKind === "player" && ownerUid;
+    return {
+      ownerKind: hasPlayerOwner ? "player" : "neutral",
+      ownerUid: hasPlayerOwner ? ownerUid : null,
+      ownerName: hasPlayerOwner ? city.ownerName || "" : "",
+      ownerFlag: hasPlayerOwner ? city.ownerFlag || null : null,
+      ownerKingPower: hasPlayerOwner ? Math.max(0, Math.floor(Number(city.ownerKingPower) || 0)) : 0,
+    };
+  }
+
   function cleanCitySeed(city) {
+    const owner = cleanCityOwner(city);
+    const isStronghold = city.kind === "stronghold" || Boolean(city.strongholdType);
     return {
       id: city.id,
       name: city.name || city.id,
       x: Number(city.x) || 0,
       y: Number(city.y) || 0,
       startPool: city.startPool || "",
-      ownerKind: city.ownerKind || "neutral",
-      ownerUid: city.ownerUid || null,
-      ownerName: city.ownerName || "",
-      ownerFlag: city.ownerFlag || null,
+      regionId: city.regionId || city.startPool || "",
+      kind: isStronghold ? "stronghold" : "",
+      strongholdType: isStronghold ? String(city.strongholdType || "").slice(0, 32) : "",
+      bonus: isStronghold ? String(city.bonus || "").slice(0, 32) : "",
+      bonusPercent: isStronghold ? Math.max(0, Math.floor(Number(city.bonusPercent) || 0)) : 0,
+      size: isStronghold ? Math.max(0, Math.floor(Number(city.size) || 0)) : 0,
+      artSrc: isStronghold ? String(city.artSrc || "").slice(0, 160) : "",
+      startTroops: isStronghold ? Math.max(0, Math.floor(Number(city.startTroops) || Number(city.troops) || 0)) : 0,
+      ...owner,
       level: Math.max(1, Math.floor(Number(city.level) || 1)),
       troops: Math.max(0, Math.floor(Number(city.troops) || 0)),
       troopFloat: Math.max(0, Number(city.troopFloat) || Number(city.troops) || 0),
@@ -184,6 +225,7 @@
   }
 
   function cleanCityLayoutSeed(city) {
+    const isStronghold = city.kind === "stronghold" || Boolean(city.strongholdType);
     return {
       id: city.id,
       name: city.name || city.id,
@@ -191,7 +233,32 @@
       y: Number(city.y) || 0,
       startPool: city.startPool || "",
       regionId: city.regionId || city.startPool || "",
+      kind: isStronghold ? "stronghold" : "",
+      strongholdType: isStronghold ? String(city.strongholdType || "").slice(0, 32) : "",
+      bonus: isStronghold ? String(city.bonus || "").slice(0, 32) : "",
+      bonusPercent: isStronghold ? Math.max(0, Math.floor(Number(city.bonusPercent) || 0)) : 0,
+      size: isStronghold ? Math.max(0, Math.floor(Number(city.size) || 0)) : 0,
+      artSrc: isStronghold ? String(city.artSrc || "").slice(0, 160) : "",
+      startTroops: isStronghold ? Math.max(0, Math.floor(Number(city.startTroops) || Number(city.troops) || 0)) : 0,
       defense: 1,
+    };
+  }
+
+  function cleanDemoAttack(demo = null) {
+    if (!demo || typeof demo !== "object" || !demo.active) return null;
+    return {
+      active: true,
+      label: String(demo.label || "Demo Attack").slice(0, 32),
+      attackerKingPower: Math.max(0, Math.floor(Number(demo.attackerKingPower) || 0)),
+      defenderKingPower: Math.max(1, Math.floor(Number(demo.defenderKingPower) || 1)),
+      powerRatio: Math.max(0, Number(demo.powerRatio) || 0),
+      requestedTroops: Math.max(1, Math.floor(Number(demo.requestedTroops) || 1)),
+      effectiveTroops: Math.max(1, Math.floor(Number(demo.effectiveTroops) || 1)),
+      maxTroops: Math.max(1, Math.floor(Number(demo.maxTroops) || 1)),
+      troopCapPercent: Math.max(1, Math.floor(Number(demo.troopCapPercent) || 100)),
+      attackPowerPercent: Math.max(1, Math.floor(Number(demo.attackPowerPercent) || 100)),
+      travelMultiplier: Math.max(1, Number(demo.travelMultiplier) || 1),
+      defenderXpMultiplier: Math.max(1, Number(demo.defenderXpMultiplier) || 1),
     };
   }
 
@@ -201,12 +268,33 @@
           .map(point => ({ x: Number(point?.x) || 0, y: Number(point?.y) || 0 }))
           .filter(point => Number.isFinite(point.x) && Number.isFinite(point.y))
       : [];
+    const pathSegments = Array.isArray(army?.pathSegments)
+      ? army.pathSegments
+          .map(segment => {
+            const points = Array.isArray(segment?.points)
+              ? segment.points
+                  .map(point => ({ x: Number(point?.x) || 0, y: Number(point?.y) || 0 }))
+                  .filter(point => Number.isFinite(point.x) && Number.isFinite(point.y))
+              : [];
+            if (points.length < 2) return null;
+            return {
+              regionId: String(segment.regionId || "").slice(0, 64),
+              points,
+              length: Math.max(0, Number(segment.length) || 0),
+            };
+          })
+          .filter(Boolean)
+      : [];
+    const routeRegionIds = Array.isArray(army?.routeRegionIds)
+      ? [...new Set(army.routeRegionIds.map(regionId => String(regionId || "").slice(0, 64)).filter(Boolean))]
+      : [];
     return {
       id: String(army?.id || "").slice(0, 96),
       ownerKind: army?.ownerKind || "player",
       ownerUid: army?.ownerUid || client.user?.uid || null,
       ownerName: String(army?.ownerName || client.user?.displayName || "Ruler").slice(0, 32),
       ownerFlag: army?.ownerFlag || null,
+      ownerKingPower: Math.max(0, Math.floor(Number(army?.ownerKingPower) || 0)),
       kind: ["attack", "transfer", "scout"].includes(army?.kind) ? army.kind : "attack",
       fromId: String(army?.fromId || ""),
       toId: String(army?.toId || ""),
@@ -215,8 +303,14 @@
       troops: Math.max(0, Math.floor(Number(army?.troops) || 0)),
       total: Math.max(0.1, Number(army?.total) || 0.1),
       path,
+      pathSegments,
+      routeRegionIds,
       pathLength: Math.max(0, Number(army?.pathLength) || 0),
       targetOwnerAtLaunch: String(army?.targetOwnerAtLaunch || "neutral"),
+      requestedTroops: Math.max(0, Math.floor(Number(army?.requestedTroops) || 0)),
+      attackerKingPower: Math.max(0, Math.floor(Number(army?.attackerKingPower) || 0)),
+      defenderKingPower: Math.max(0, Math.floor(Number(army?.defenderKingPower) || 0)),
+      demoAttack: cleanDemoAttack(army?.demoAttack),
       launchedAtMs: Math.max(0, Number(army?.launchedAtMs) || Date.now()),
       arrivesAtMs: Math.max(0, Number(army?.arrivesAtMs) || Date.now()),
       status: army?.status || "active",
@@ -230,7 +324,10 @@
       playerName: String(presence.playerName || presence.displayName || client.user?.displayName || "Ruler").slice(0, 32),
       islandId: String(presence.islandId || "main").slice(0, 64),
       mainCityId: String(presence.mainCityId || ""),
+      mainRegionId: String(presence.mainRegionId || "").slice(0, 64),
+      mainIslandId: String(presence.mainIslandId || "").slice(0, 64),
       cityCount: Math.max(0, Math.floor(Number(presence.cityCount) || 0)),
+      kingPower: Math.max(0, Math.floor(Number(presence.kingPower) || 0)),
       flag: presence.flag || null,
       updatedAtMs: Math.max(0, Number(presence.updatedAtMs) || Date.now()),
     };
@@ -240,34 +337,69 @@
     await init();
     const uid = requireSignedIn();
     if (!uid) return false;
-    const { doc, getDoc, setDoc, writeBatch, serverTimestamp } = client.modules.firestore;
+    const { collection, doc, getDoc, getDocs, setDoc, writeBatch, serverTimestamp } = client.modules.firestore;
     const islandRef = doc(client.db, "islands", islandId);
     const citySeeds = cities.map(cleanCitySeed);
     const islandSnap = await getDoc(islandRef);
     const islandData = islandSnap.exists() ? islandSnap.data() : {};
     const targetVersion = Number(meta.version) || 21;
     const targetCityCount = citySeeds.length;
+    const seededCityCount = Math.max(0, Number(islandData.seededCityCount) || 0);
+    const layoutSeedVersion = Math.max(0, Number(islandData.layoutSeedVersion) || 0);
     const needsCitySeed = !islandSnap.exists()
-      || Number(islandData.layoutSeedVersion) < targetVersion
-      || Number(islandData.seededCityCount) < targetCityCount;
+      || seededCityCount < targetCityCount;
+    const needsLayoutRefresh = islandSnap.exists() && layoutSeedVersion < targetVersion;
 
-    await setDoc(islandRef, {
-      id: islandId,
-      version: targetVersion,
-      cityCount: targetCityCount,
-      createdBy: uid,
-      updatedAt: serverTimestamp(),
-      ...meta,
-    }, { merge: true });
+    if (islandSnap.exists() && !needsCitySeed && !needsLayoutRefresh && seededCityCount === targetCityCount) {
+      return true;
+    }
 
-    if (!needsCitySeed) return true;
+    if (!needsCitySeed && !needsLayoutRefresh) {
+      try {
+        await setDoc(islandRef, {
+          id: islandId,
+          version: targetVersion,
+          cityCount: targetCityCount,
+          createdBy: islandData.createdBy || uid,
+          updatedAt: serverTimestamp(),
+          ...meta,
+          layoutSeedVersion: targetVersion,
+          seededCityCount: targetCityCount,
+        }, { merge: true });
+      } catch (error) {
+        console.warn("Could not refresh island metadata; using existing seeded island.", error);
+      }
+      return true;
+    }
+
+    if (!islandSnap.exists()) {
+      await setDoc(islandRef, {
+        id: islandId,
+        version: targetVersion,
+        cityCount: targetCityCount,
+        createdBy: uid,
+        updatedAt: serverTimestamp(),
+        ...meta,
+      }, { merge: true });
+    }
+
+    let existingCityIds = new Set();
+    let seedsToWrite = citySeeds;
+    if (islandSnap.exists()) {
+      const citiesSnap = await getDocs(collection(client.db, "islands", islandId, "cities"));
+      existingCityIds = new Set(citiesSnap.docs.map(cityDoc => cityDoc.id));
+      seedsToWrite = needsLayoutRefresh
+        ? citySeeds
+        : citySeeds.filter(city => !existingCityIds.has(city.id));
+    }
 
     let batch = writeBatch(client.db);
     let writes = 0;
-    for (const city of citySeeds) {
+    for (const city of seedsToWrite) {
+      const alreadyExists = existingCityIds.has(city.id);
       batch.set(doc(client.db, "islands", islandId, "cities", city.id), {
         ...cleanCityLayoutSeed(city),
-        createdAt: serverTimestamp(),
+        ...(alreadyExists ? {} : { createdAt: serverTimestamp() }),
         updatedAt: serverTimestamp(),
       }, { merge: true });
       writes += 1;
@@ -279,11 +411,15 @@
     }
     if (writes > 0) await batch.commit();
 
-    await setDoc(islandRef, {
-      layoutSeedVersion: targetVersion,
-      seededCityCount: targetCityCount,
-      updatedAt: serverTimestamp(),
-    }, { merge: true });
+    try {
+      await setDoc(islandRef, {
+        layoutSeedVersion: targetVersion,
+        seededCityCount: targetCityCount,
+        updatedAt: serverTimestamp(),
+      }, { merge: true });
+    } catch (error) {
+      console.warn("Could not refresh island seed metadata after setup.", error);
+    }
 
     return true;
   }
@@ -293,6 +429,8 @@
     candidateCityIds = [],
     playerName = "",
     flag = null,
+    worldId = "",
+    mainRegionId = "",
   } = {}) {
     await init();
     const uid = requireSignedIn();
@@ -302,82 +440,140 @@
     const islandRef = doc(client.db, "islands", islandId);
     const uniqueCandidateIds = [...new Set(candidateCityIds.filter(Boolean))];
     const safePlayerName = String(playerName || client.user.displayName || "Ruler").slice(0, 32);
+    const safeWorldId = String(worldId || "").slice(0, 64);
+    const safeMainRegionId = String(mainRegionId || "").slice(0, 64);
 
     return runTransaction(client.db, async transaction => {
       const playerSnap = await transaction.get(playerRef);
       const playerData = playerSnap.exists() ? playerSnap.data() : {};
       const existingMainCityId = String(playerData.mainCityId || "");
-      if (playerData.mainIslandId === islandId && existingMainCityId && uniqueCandidateIds.includes(existingMainCityId)) {
+      const existingMainIslandId = String(playerData.mainIslandId || "");
+      const existingWorldId = String(playerData.worldId || "");
+      const playerFlag = flag || playerData.flag || null;
+      const playerWorldId = safeWorldId || playerData.worldId || "";
+      const playerRegionId = safeMainRegionId || playerData.mainRegionId || "";
+      const playerKingPower = Math.max(0, Math.floor(Number(playerData.kingPower) || 0));
+      const writePlayerMainCity = cityId => {
+        transaction.set(playerRef, {
+          uid,
+          displayName: client.user.displayName || "",
+          email: client.user.email || "",
+          photoURL: client.user.photoURL || "",
+          playerName: safePlayerName,
+          flag: playerFlag,
+          worldId: playerWorldId,
+          mainIslandId: islandId,
+          mainRegionId: playerRegionId,
+          mainCityId: cityId,
+          updatedAt: serverTimestamp(),
+        }, { merge: true });
+      };
+      const writeCityOwner = (cityRef, cityData = {}, { includeTroops = false, minTroops = 0, setClaimedAt = false, troopsOverride = null } = {}) => {
+        const hasTroopOverride = Number.isFinite(Number(troopsOverride));
+        const baseTroops = hasTroopOverride ? Number(troopsOverride) : Number(cityData.troops);
+        const baseTroopFloat = hasTroopOverride ? Number(troopsOverride) : (Number(cityData.troopFloat) || Number(cityData.troops));
+        const troops = Math.max(minTroops, Math.floor(baseTroops || 0));
+        const troopFloat = Math.max(minTroops, baseTroopFloat || 0);
+        transaction.set(cityRef, {
+          ownerKind: "player",
+          ownerUid: uid,
+          ownerName: safePlayerName,
+          ownerFlag: playerFlag,
+          ownerKingPower: playerKingPower,
+          ...(includeTroops ? { troops, troopFloat } : {}),
+          ...(setClaimedAt ? { claimedAt: cityData.claimedAt || serverTimestamp() } : {}),
+          isMainCity: true,
+          updatedAt: serverTimestamp(),
+        }, { merge: true });
+      };
+      const countNewPlayerOnIsland = () => {
+        transaction.set(islandRef, {
+          playerCount: increment(1),
+          updatedAt: serverTimestamp(),
+        }, { merge: true });
+      };
+
+      if (existingMainCityId && existingMainIslandId && existingMainIslandId !== islandId && (!safeWorldId || existingWorldId === safeWorldId)) {
+        return {
+          cityId: existingMainCityId,
+          islandId: existingMainIslandId,
+          mainRegionId: String(playerData.mainRegionId || ""),
+          alreadyClaimed: true,
+          redirected: true,
+        };
+      }
+
+      if (playerData.mainIslandId === islandId && existingMainCityId) {
         const mainCityRef = doc(client.db, "islands", islandId, "cities", existingMainCityId);
         const mainCitySnap = await transaction.get(mainCityRef);
         if (!mainCitySnap.exists()) {
           // Continue below and claim a fresh city from the current world layout.
         } else {
-        transaction.set(playerRef, {
-          playerName: safePlayerName,
-          flag: flag || playerData.flag || null,
-          updatedAt: serverTimestamp(),
-        }, { merge: true });
-        transaction.set(mainCityRef, {
-          ownerKind: "player",
-          ownerUid: uid,
-          ownerName: safePlayerName,
-          ownerFlag: flag || playerData.flag || null,
-          isMainCity: true,
-          updatedAt: serverTimestamp(),
-        }, { merge: true });
-        return { cityId: existingMainCityId, alreadyClaimed: true };
+          const mainCityData = mainCitySnap.data() || {};
+          const mainOwnedByUser = mainCityData.ownerUid === uid;
+          const mainClaimable = !mainCityData.ownerUid;
+          if (mainOwnedByUser) {
+            return {
+              cityId: existingMainCityId,
+              alreadyClaimed: true,
+            };
+          }
+          writePlayerMainCity(existingMainCityId);
+          writeCityOwner(mainCityRef, mainCityData, {
+            includeTroops: true,
+            minTroops: mainOwnedByUser ? 0 : mainClaimable ? 50 : 0,
+            setClaimedAt: true,
+            troopsOverride: !mainOwnedByUser && !mainClaimable ? 0 : null,
+          });
+          if (mainClaimable) countNewPlayerOnIsland();
+          return {
+            cityId: existingMainCityId,
+            alreadyClaimed: mainOwnedByUser,
+            repairedMainCity: !mainOwnedByUser && !mainClaimable,
+          };
         }
+      }
+
+      for (const cityId of uniqueCandidateIds) {
+        const cityRef = doc(client.db, "islands", islandId, "cities", cityId);
+        const citySnap = await transaction.get(cityRef);
+        if (!citySnap.exists()) continue;
+        const data = citySnap.data() || {};
+        if (data.ownerUid !== uid) continue;
+        writePlayerMainCity(cityId);
+        writeCityOwner(cityRef, data);
+        return { cityId, alreadyClaimed: true };
       }
 
       let chosenRef = null;
       let chosenData = null;
+      let chosenCityId = "";
       for (const cityId of uniqueCandidateIds) {
         const cityRef = doc(client.db, "islands", islandId, "cities", cityId);
         const citySnap = await transaction.get(cityRef);
         if (!citySnap.exists()) continue;
         const data = citySnap.data();
-        if (!data.ownerUid && (data.ownerKind || "neutral") === "neutral") {
+        if (!data.ownerUid) {
           chosenRef = cityRef;
           chosenData = data;
+          chosenCityId = cityId;
           break;
         }
       }
 
-      if (!chosenRef || !chosenData) {
+      if (!chosenRef || !chosenData || !chosenCityId) {
         throw new Error("No unclaimed starting city is available.");
       }
 
-      transaction.set(playerRef, {
-        uid,
-        displayName: client.user.displayName || "",
-        email: client.user.email || "",
-        photoURL: client.user.photoURL || "",
-        playerName: safePlayerName,
-        flag: flag || null,
-        mainIslandId: islandId,
-        mainCityId: chosenData.id,
-        updatedAt: serverTimestamp(),
-      }, { merge: true });
+      writePlayerMainCity(chosenCityId);
+      writeCityOwner(chosenRef, chosenData, {
+        includeTroops: true,
+        minTroops: 50,
+        setClaimedAt: true,
+      });
+      countNewPlayerOnIsland();
 
-      transaction.set(chosenRef, {
-        ownerKind: "player",
-        ownerUid: uid,
-        ownerName: safePlayerName,
-        ownerFlag: flag || null,
-        troops: Math.max(50, Math.floor(Number(chosenData.troops) || 0)),
-        troopFloat: Math.max(50, Number(chosenData.troopFloat) || Number(chosenData.troops) || 0),
-        isMainCity: true,
-        claimedAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-      }, { merge: true });
-
-      transaction.set(islandRef, {
-        playerCount: increment(1),
-        updatedAt: serverTimestamp(),
-      }, { merge: true });
-
-      return { cityId: chosenData.id, alreadyClaimed: false };
+      return { cityId: chosenCityId, alreadyClaimed: false };
     });
   }
 
@@ -417,6 +613,15 @@
     return true;
   }
 
+  async function loadIslandCities(islandId = "main") {
+    await init();
+    const uid = requireSignedIn();
+    if (!uid || !islandId) return [];
+    const { collection, getDocs } = client.modules.firestore;
+    const snapshot = await getDocs(collection(client.db, "islands", islandId, "cities"));
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  }
+
   async function saveArmyMovement(islandId = "main", army = {}) {
     await init();
     const uid = requireSignedIn();
@@ -436,8 +641,17 @@
     const uid = requireSignedIn();
     const safeArmyId = String(armyId || "");
     if (!uid || !safeArmyId) return false;
-    const { doc, setDoc, serverTimestamp } = client.modules.firestore;
-    await setDoc(doc(client.db, "islands", islandId, "armies", safeArmyId), {
+    const { doc, deleteDoc, setDoc, serverTimestamp } = client.modules.firestore;
+    const armyRef = doc(client.db, "islands", islandId, "armies", safeArmyId);
+    if (deleteDoc) {
+      try {
+        await deleteDoc(armyRef);
+        return true;
+      } catch (error) {
+        console.warn("Could not delete resolved army; marking it resolved instead.", error);
+      }
+    }
+    await setDoc(armyRef, {
       status: "resolved",
       resolvedAtMs: Date.now(),
       updatedAt: serverTimestamp(),
@@ -458,9 +672,153 @@
     return true;
   }
 
+  function cleanLeaderboardEntry(entry = {}) {
+    return {
+      uid: client.user?.uid || "",
+      displayName: String(entry.displayName || entry.playerName || client.user?.displayName || "Ruler").slice(0, 32),
+      playerName: String(entry.playerName || entry.displayName || client.user?.displayName || "Ruler").slice(0, 32),
+      flag: entry.flag || null,
+      kingPower: Math.max(0, Math.floor(Number(entry.kingPower) || 0)),
+      cityCount: Math.max(0, Math.floor(Number(entry.cityCount) || 0)),
+      mainCityId: String(entry.mainCityId || "").slice(0, 80),
+      mainRegionId: String(entry.mainRegionId || "").slice(0, 64),
+      mainIslandId: String(entry.mainIslandId || "").slice(0, 64),
+      updatedAtMs: Math.max(0, Number(entry.updatedAtMs) || Date.now()),
+    };
+  }
+
+  async function saveKingPowerLeaderboardEntry(entry = {}) {
+    await init();
+    const uid = requireSignedIn();
+    if (!uid) return false;
+    const { doc, setDoc, serverTimestamp } = client.modules.firestore;
+    await setDoc(doc(client.db, "leaderboards", "kingPower", "entries", uid), {
+      ...cleanLeaderboardEntry({ ...entry, updatedAtMs: Date.now() }),
+      uid,
+      updatedAt: serverTimestamp(),
+    }, { merge: true });
+    return true;
+  }
+
+  async function loadKingPowerLeaderboard(limitCount = 100) {
+    await init();
+    const uid = requireSignedIn();
+    if (!uid) return [];
+    const { collection, getDocs, query: firestoreQuery, orderBy, limit: firestoreLimit } = client.modules.firestore;
+    const entriesRef = collection(client.db, "leaderboards", "kingPower", "entries");
+    const safeLimit = Math.max(1, Math.min(100, Math.floor(Number(limitCount) || 100)));
+    const queryRef = firestoreQuery && orderBy && firestoreLimit
+      ? firestoreQuery(entriesRef, orderBy("kingPower", "desc"), firestoreLimit(safeLimit))
+      : entriesRef;
+    const snapshot = await getDocs(queryRef);
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  }
+
+  async function loadKingPowerPresenceLeaderboard(islandIds = [], limitCount = 100) {
+    await init();
+    const uid = requireSignedIn();
+    if (!uid) return [];
+    const { collection, getDocs } = client.modules.firestore;
+    const safeLimit = Math.max(1, Math.min(100, Math.floor(Number(limitCount) || 100)));
+    const uniqueIslandIds = [...new Set((Array.isArray(islandIds) ? islandIds : [])
+      .map(islandId => String(islandId || "").trim())
+      .filter(Boolean))];
+    const byUid = new Map();
+
+    for (const islandId of uniqueIslandIds) {
+      const snapshot = await getDocs(collection(client.db, "islands", islandId, "presence"));
+      snapshot.docs.forEach(presenceDoc => {
+        const row = { id: presenceDoc.id, islandId, ...presenceDoc.data() };
+        const rowUid = String(row.uid || row.id || "").trim();
+        if (!rowUid) return;
+        const existing = byUid.get(rowUid);
+        const rowPower = Math.max(0, Math.floor(Number(row.kingPower) || 0));
+        const rowUpdatedAtMs = Math.max(0, Number(row.updatedAtMs) || 0);
+        const existingUpdatedAtMs = Math.max(0, Number(existing?.updatedAtMs) || 0);
+        if (!existing || rowPower > Math.max(0, Number(existing.kingPower) || 0) || rowUpdatedAtMs > existingUpdatedAtMs) {
+          byUid.set(rowUid, row);
+        }
+      });
+    }
+
+    return Array.from(byUid.values())
+      .sort((a, b) => (Math.max(0, Number(b.kingPower) || 0) - Math.max(0, Number(a.kingPower) || 0))
+        || (Math.max(0, Number(b.updatedAtMs) || 0) - Math.max(0, Number(a.updatedAtMs) || 0)))
+      .slice(0, safeLimit);
+  }
+
+  async function loadIslandCitySummary(islandId = "main") {
+    await init();
+    const uid = requireSignedIn();
+    if (!uid || !islandId) return null;
+    const { collection, doc, getDoc, getDocs, query: firestoreQuery, where } = client.modules.firestore;
+    const citiesRef = collection(client.db, "islands", islandId, "cities");
+    const playerCitiesRef = firestoreQuery && where
+      ? firestoreQuery(citiesRef, where("ownerKind", "==", "player"))
+      : citiesRef;
+    const [islandSnap, snapshot] = await Promise.all([
+      getDoc(doc(client.db, "islands", islandId)),
+      getDocs(playerCitiesRef),
+    ]);
+    const islandData = islandSnap.exists() ? islandSnap.data() : {};
+    const owners = new Set();
+    const rivalOwners = new Set();
+    let playerHeldCityCount = 0;
+    let ownCityCount = 0;
+    let rivalCityCount = 0;
+
+    snapshot.docs.forEach(cityDoc => {
+      const city = cityDoc.data() || {};
+      if (city.kind === "stronghold" || city.strongholdType) return;
+      const ownerKind = city.ownerKind || city.owner || "neutral";
+      const ownerUid = String(city.ownerUid || "");
+      if (ownerKind !== "player" || !ownerUid) return;
+      playerHeldCityCount += 1;
+      owners.add(ownerUid);
+      if (ownerUid === uid) {
+        ownCityCount += 1;
+      } else {
+        rivalCityCount += 1;
+        rivalOwners.add(ownerUid);
+      }
+    });
+
+    return {
+      islandId,
+      cityCount: Math.max(0, Number(islandData.cityCount) || snapshot.size),
+      playerHeldCityCount,
+      ownCityCount,
+      rivalCityCount,
+      rulerCount: owners.size,
+      rivalRulerCount: rivalOwners.size,
+      updatedAtMs: Date.now(),
+    };
+  }
+
+  async function loadOwnedCitiesAcrossIslands(islandIds = []) {
+    await init();
+    const uid = requireSignedIn();
+    if (!uid) return [];
+    const { collection, getDocs, query: firestoreQuery, where } = client.modules.firestore;
+    if (!firestoreQuery || !where) return [];
+    const uniqueIslandIds = [...new Set((Array.isArray(islandIds) ? islandIds : [])
+      .map(islandId => String(islandId || "").trim())
+      .filter(Boolean))];
+    const results = [];
+    for (const islandId of uniqueIslandIds) {
+      const citiesRef = collection(client.db, "islands", islandId, "cities");
+      const ownedRef = firestoreQuery(citiesRef, where("ownerUid", "==", uid));
+      const snapshot = await getDocs(ownedRef);
+      snapshot.docs.forEach(cityDoc => {
+        results.push({ islandId, id: cityDoc.id, ...cityDoc.data() });
+      });
+    }
+    return results;
+  }
+
   function subscribeIsland(islandId, handlers = {}) {
     if (!client.configured || !client.db || !islandId) return () => {};
-    const { collection, doc, onSnapshot } = client.modules.firestore;
+    const { collection, doc, onSnapshot, query: firestoreQuery, where } = client.modules.firestore;
     const unsubscribers = [];
     const onError = source => error => {
       if (typeof handlers.onError === "function") handlers.onError(error, source);
@@ -483,8 +841,12 @@
     }
 
     if (typeof handlers.onArmies === "function") {
+      const armiesRef = collection(client.db, "islands", islandId, "armies");
+      const activeArmiesRef = firestoreQuery && where
+        ? firestoreQuery(armiesRef, where("status", "==", "active"))
+        : armiesRef;
       unsubscribers.push(onSnapshot(
-        collection(client.db, "islands", islandId, "armies"),
+        activeArmiesRef,
         snapshot => handlers.onArmies(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))),
         onError("armies")
       ));
@@ -513,9 +875,15 @@
     claimStartingCity,
     savePlayerCities,
     saveCityState,
+    loadIslandCities,
     saveArmyMovement,
     deleteArmyMovement,
     savePresence,
+    saveKingPowerLeaderboardEntry,
+    loadKingPowerLeaderboard,
+    loadKingPowerPresenceLeaderboard,
+    loadIslandCitySummary,
+    loadOwnedCitiesAcrossIslands,
     subscribeIsland,
     isConfigured: () => client.configured,
     isReady: () => client.ready,

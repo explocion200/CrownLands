@@ -25,15 +25,15 @@ After Google sign-in, the game tries the current reset slot in Firebase first an
 
 ## Phase 2 Multiplayer Shape
 
-The game now creates and subscribes to a shared island:
+The game now creates one shared island document per world region and subscribes to only one active island at a time:
 
-- `islands/main-fresh-2026-06-21`: shared island metadata for the current reset.
-- `islands/main-fresh-2026-06-21/cities/{cityId}`: city owner, level, troop count, owner UID, owner name, owner flag, and production state.
+- `islands/main-fresh-2026-06-21-west`: one region island metadata document for the current reset.
+- `islands/main-fresh-2026-06-21-west/cities/{cityId}`: city owner, level, troop count, owner UID, owner name, owner flag, region ID, and production state.
 - `islands/{islandId}/armies/{armyId}`: moving troops, route, owner, arrival time, mission type.
 - `islands/{islandId}/reports/{reportId}`: attack, defense, and scout reports.
 - `islands/{islandId}/presence/{uid}`: who is online.
 
-On first sign-in, the browser seeds `islands/main-fresh-2026-06-21` if it does not exist, then claims one unowned starting city for the signed-in player. City docs are watched in realtime, so ownership changes from Firestore update the map without refreshing.
+On first sign-in, the browser chooses a home region, seeds that region island if it does not exist, then claims one unowned starting city for the signed-in player. The active island's city docs are watched in realtime, so ownership changes from Firestore update the loaded island without refreshing. Switching islands unsubscribes from the previous island before loading the next one.
 
 The next implementation pass should move army creation, army arrival, combat, scouting, and production collection into Firestore transactions so two players cannot overwrite the same city at the same time.
 

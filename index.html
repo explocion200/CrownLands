@@ -4,7 +4,21 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Crownlands - Medieval Island Conquest</title>
-  <link rel="stylesheet" href="styles.css" />
+  <meta name="crownlands-build" content="20260626-stronghold-wheel-scale" />
+  <link rel="stylesheet" href="styles.css?v=20260626-stronghold-wheel-scale" />
+  <link rel="preload" as="image" href="assets/loading-ring.png" />
+  <link rel="preload" as="image" href="assets/loading-crown.png" />
+  <link rel="preload" as="image" href="assets/leaderboard-icon.png?v=20260623-leaderboard-icon-new" />
+  <link rel="preload" as="image" href="assets/profile-hud-frame.png?v=20260623-profile-avatar-fill" />
+  <link rel="preload" as="image" href="assets/city-list-icon.png?v=20260623-city-icon-hud" />
+  <link rel="preload" as="image" href="assets/map-icon.png?v=20260623-map-icon-framed" />
+  <link rel="preload" as="image" href="assets/shop-icon.png?v=20260623-shop-ui" />
+  <link rel="preload" as="image" href="assets/bag-icon.png?v=20260623-bag-inventory" />
+  <link rel="preload" as="image" href="assets/royal-peace-shield-icon.jpg?v=20260624-royal-shield-icon" />
+  <link rel="preload" as="image" href="assets/war-drums-icon.jpg?v=20260624-war-drums-icon" />
+  <link rel="preload" as="image" href="assets/veil-of-silence-icon.jpg?v=20260624-veil-silence-icon" />
+  <link rel="preload" as="image" href="assets/swift-march-order-icon.jpg?v=20260624-swift-march-icon" />
+  <link rel="preload" as="image" href="assets/recall-horn-icon.jpg?v=20260624-recall-horn-icon" />
   <link rel="icon" href="data:," />
   <link rel="manifest" href="manifest.webmanifest" />
   <meta name="theme-color" content="#0c1018" />
@@ -13,13 +27,16 @@
   <main class="phone-shell" aria-label="Crownlands real-time medieval conquest prototype">
     <section id="setupScreen" class="setup-screen visible">
       <div class="setup-card">
-        <span class="eyebrow">Online prototype</span>
-        <h1>Crownlands</h1>
-        <p>Sign in with Google, then enter your kingdom.</p>
+        <h1 class="sr-only">Crownlands</h1>
+        <p class="sr-only">Sign in with Google, then enter your kingdom.</p>
+        <div id="menuLoadingWheel" class="loading-wheel menu-loading-wheel" hidden aria-hidden="true">
+          <img class="loading-wheel-ring" src="assets/loading-ring.png" alt="" draggable="false" />
+          <img class="loading-wheel-crown" src="assets/loading-crown.png" alt="" draggable="false" />
+        </div>
         <div class="online-login" aria-label="Online account status">
           <div>
-            <strong id="onlineStatusText">Guest mode</strong>
-            <small id="onlineStatusDetail">Local save only until Firebase is connected.</small>
+            <strong id="onlineStatusText">Online loading</strong>
+            <small id="onlineStatusDetail">Sign in with Google to load your kingdom.</small>
           </div>
           <div class="online-login-actions">
             <button id="googleSignInBtn" class="ghost-btn" type="button">Sign in with Google</button>
@@ -33,17 +50,23 @@
     <section class="game-view" aria-label="Game map">
       <header class="top-hud">
         <div class="profile-stack" aria-label="Kingdom profile and gold">
-          <button id="profileBtn" class="portrait-placeholder profile-button" type="button" aria-label="Open kingdom profile">
-            <span id="hudKingdomFlag" class="kingdom-flag kingdom-flag-small" aria-hidden="true"><span class="flag-symbol"></span></span>
-            <span id="characterLevelBadge" class="character-level-badge">Lv 1</span>
-          </button>
-          <div class="profile-gold"><span>🪙</span><strong id="goldText">0</strong></div>
+          <div class="profile-action-row">
+            <button id="profileBtn" class="portrait-placeholder profile-button" type="button" aria-label="Open kingdom profile">
+              <span id="hudKingdomFlag" class="kingdom-flag kingdom-flag-small" aria-hidden="true"><span class="flag-symbol"></span></span>
+              <span id="characterLevelBadge" class="character-level-badge">Lv 1</span>
+            </button>
+            <button id="leaderboardBtn" class="profile-rank-btn" type="button" aria-label="Open King Power ranks">
+              <img class="profile-rank-icon" src="assets/leaderboard-icon.png?v=20260623-leaderboard-icon-new" alt="" draggable="false" decoding="async" />
+            </button>
+          </div>
+          <div class="profile-gold"><span>&#129689;</span><strong id="goldText">0</strong></div>
           <span id="lordNameText" class="sr-only">Ruler</span>
           <span id="statusText" class="sr-only">Live conquest</span>
         </div>
         <div class="resource-bar">
-          <button id="cityListBtn" class="resource-pill city-list-btn" type="button" aria-label="Open city list"><span>🏰</span><strong id="cityText">1</strong></button>
-          <span id="onlinePlayersText" class="online-players-pill" hidden>Online 1</span>
+          <button id="shopBtn" class="shop-btn" type="button" aria-label="Open shop">
+            <img class="shop-icon" src="assets/shop-icon.png?v=20260623-shop-ui" alt="" draggable="false" decoding="async" />
+          </button>
           <button id="fullscreenBtn" class="hud-btn fullscreen-btn" type="button" aria-label="Enter fullscreen"><span aria-hidden="true">&#x26F6;</span></button>
         </div>
       </header>
@@ -52,13 +75,35 @@
         <span class="main-city-return-arrow" aria-hidden="true">&#9658;</span>
         <span class="main-city-return-house" aria-hidden="true">&#8962;</span>
       </button>
+      <button id="inventoryBtn" class="resource-pill bag-btn" type="button" aria-label="Open bag">
+        <img class="bag-icon" src="assets/bag-icon.png?v=20260623-bag-inventory" alt="" draggable="false" decoding="async" />
+      </button>
+      <button id="cityListBtn" class="resource-pill city-list-btn" type="button" aria-label="Open city list">
+        <img class="city-list-icon" src="assets/city-list-icon.png?v=20260623-city-icon-hud" alt="" draggable="false" decoding="async" />
+        <span id="cityText" class="sr-only">0 cities</span>
+      </button>
+      <button id="islandSwitchBtn" class="resource-pill island-switch-btn" type="button" aria-label="Switch island" hidden>
+        <img class="island-switch-icon" src="assets/map-icon.png?v=20260623-map-icon-framed" alt="" draggable="false" decoding="async" />
+        <span id="islandSwitchLabel" class="sr-only">Map</span>
+      </button>
 
       <section id="mapFrame" class="map-frame" aria-label="Drag to move around the map">
         <div id="mapWorld" class="map-world">
           <div id="mapBg" class="map-bg" aria-hidden="true"></div>
           <svg id="pathsSvg" class="paths" viewBox="0 0 10000 7600" preserveAspectRatio="none" aria-hidden="true"></svg>
+          <div id="harvestLayer" class="harvest-layer"></div>
+          <div id="portalLayer" class="portal-layer"></div>
           <div id="cityLayer" class="city-layer"></div>
           <div id="armyLayer" class="army-layer"></div>
+        </div>
+        <div id="mapLoadingOverlay" class="map-loading-overlay" aria-hidden="true">
+          <div class="map-loading-panel">
+            <div class="loading-wheel map-loading-wheel">
+              <img class="loading-wheel-ring" src="assets/loading-ring.png" alt="" draggable="false" />
+              <img class="loading-wheel-crown" src="assets/loading-crown.png" alt="" draggable="false" />
+            </div>
+            <span id="mapLoadingLabel" class="map-loading-label">Loading island...</span>
+          </div>
         </div>
       </section>
 
@@ -70,14 +115,24 @@
             <strong id="panelTitle">Select a blue city</strong>
             <small id="panelSubtitle">Tap a blue city, then tap any target.</small>
           </div>
-          <button id="clearSelectBtn" class="clear-btn" type="button" aria-label="Close panel">×</button>
+          <button id="clearSelectBtn" class="clear-btn" type="button" aria-label="Close panel">&times;</button>
         </div>
         <div id="selectedInfo" class="selected-info"></div>
         <div id="actionButtons" class="action-buttons"></div>
       </section>
 
       <nav class="bottom-nav" aria-label="Game menu">
-        <button id="logBtn" class="nav-btn" type="button"><span>📜</span>Reports</button>
+        <button id="logBtn" class="nav-btn" type="button"><span>&#128220;</span>Reports</button>
+        <button id="outgoingAttackBtn" class="nav-btn outgoing-attack-btn" type="button" aria-label="Outgoing armies" hidden>
+          <span aria-hidden="true">&#10148;</span>
+          <strong id="outgoingAttackCount">0</strong>
+          <small id="outgoingAttackTime">Outgoing</small>
+        </button>
+        <button id="incomingAttackBtn" class="nav-btn incoming-attack-btn" type="button" aria-label="Incoming threats" hidden>
+          <span aria-hidden="true">&#9876;</span>
+          <strong id="incomingAttackCount">0</strong>
+          <small id="incomingAttackTime">Incoming</small>
+        </button>
       </nav>
 
       <section id="profileScreen" class="profile-screen" aria-hidden="true" aria-label="Kingdom profile">
@@ -119,6 +174,7 @@
           <section class="kingdom-overview" aria-label="Kingdom totals">
             <div class="profile-section-heading"><span>Kingdom</span><h3>Overview</h3></div>
             <div class="kingdom-stat-grid">
+              <div class="kingdom-stat kingdom-stat-wide"><span>King Power</span><strong id="profileKingPowerStat">0</strong></div>
               <div class="kingdom-stat kingdom-stat-wide"><span>Cities</span><strong id="profileCitiesStat">1</strong></div>
               <div class="kingdom-stat"><span>Gold</span><strong id="profileGoldStat">500</strong></div>
               <div class="kingdom-stat"><span>Troops</span><strong id="profileTroopsStat">50</strong></div>
@@ -159,15 +215,16 @@
 
   <dialog id="modal" class="modal">
     <article class="modal-card">
-      <button id="closeModalBtn" class="modal-close" type="button" aria-label="Close">×</button>
+      <button id="closeModalBtn" class="modal-close" type="button" aria-label="Close">&times;</button>
       <h2 id="modalTitle">Info</h2>
       <div id="modalBody"></div>
     </article>
   </dialog>
 
+  <script src="assets/map-editor-data.js?v=20260626-stronghold-wheel-scale"></script>
   <script src="world-config.js"></script>
   <script src="firebase-config.js"></script>
-  <script src="firebaseClient.js"></script>
-  <script src="game.js"></script>
+  <script src="firebaseClient.js?v=20260626-stronghold-wheel-scale"></script>
+  <script src="game.js?v=20260626-stronghold-wheel-scale"></script>
 </body>
 </html>
