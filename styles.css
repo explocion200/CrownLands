@@ -392,43 +392,51 @@ input {
 .shield-status-badge {
   position: absolute;
   z-index: 56;
-  right: calc(max(.75rem, env(safe-area-inset-right)) + 69px);
-  bottom: calc(max(.75rem, env(safe-area-inset-bottom)) + 72px);
-  width: 78px;
-  min-height: 32px;
+  right: max(.72rem, env(safe-area-inset-right));
+  top: 50%;
+  width: 66px;
+  min-height: 82px;
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  align-items: center;
+  grid-template-rows: 58px auto;
+  justify-items: center;
   gap: .22rem;
-  padding: .18rem .38rem;
-  border-radius: 13px;
+  padding: .26rem .24rem .34rem;
+  transform: translateY(-50%);
+  border-radius: 16px;
   color: #fff5c8;
   pointer-events: none;
   background:
-    radial-gradient(circle at 35% 20%, rgba(255,255,255,.28), transparent 42%),
-    linear-gradient(180deg, rgba(22, 63, 105, .96), rgba(7, 22, 38, .92));
-  border: 1px solid rgba(246,190,82,.66);
-  box-shadow: 0 9px 22px rgba(0,0,0,.36), 0 0 18px rgba(79,177,255,.24), inset 0 -3px 0 rgba(0,0,0,.2);
+    radial-gradient(circle at 50% 30%, rgba(83, 193, 255, .22), transparent 55%),
+    linear-gradient(180deg, rgba(6, 23, 43, .64), rgba(5, 14, 26, .82));
+  border: 1px solid rgba(246,190,82,.48);
+  box-shadow: 0 10px 24px rgba(0,0,0,.36), 0 0 22px rgba(79,177,255,.34);
 }
 .shield-status-badge[hidden] {
   display: none;
 }
-.shield-status-badge span {
-  color: #7fd8ff;
-  font-size: .88rem;
-  line-height: 1;
-  filter: drop-shadow(0 2px 4px rgba(0,0,0,.55));
+.shield-status-icon {
+  width: 58px;
+  height: 58px;
+  display: block;
+  object-fit: cover;
+  border-radius: 14px;
+  box-shadow: 0 0 18px rgba(84, 202, 255, .45), 0 7px 14px rgba(0,0,0,.36);
 }
 .shield-status-badge strong {
   min-width: 0;
-  overflow: hidden;
+  max-width: 100%;
   color: #fff4b8;
-  font-size: .7rem;
+  font-size: .68rem;
   font-weight: 1000;
   line-height: 1;
+  padding: .18rem .28rem;
+  border-radius: 999px;
   text-align: center;
   text-overflow: ellipsis;
   white-space: nowrap;
+  background: rgba(4, 13, 25, .82);
+  border: 1px solid rgba(246,190,82,.38);
+  box-shadow: 0 3px 8px rgba(0,0,0,.28);
 }
 .city-list-icon,
 .bag-icon,
@@ -4257,9 +4265,9 @@ button.inventory-slot {
   .resource-pill.island-switch-btn { width: 56px; min-width: 56px; max-width: 56px; height: 56px; }
   .resource-pill.bag-btn { right: calc(max(.75rem, env(safe-area-inset-right)) + 132px); }
   .resource-pill.city-list-btn { right: calc(max(.75rem, env(safe-area-inset-right)) + 66px); }
-  .shield-status-badge { right: calc(max(.75rem, env(safe-area-inset-right)) + 60px); bottom: calc(max(.75rem, env(safe-area-inset-bottom)) + 62px); width: 68px; min-height: 28px; border-radius: 11px; }
-  .shield-status-badge span { font-size: .76rem; }
-  .shield-status-badge strong { font-size: .62rem; }
+  .shield-status-badge { right: max(.55rem, env(safe-area-inset-right)); width: 56px; min-height: 70px; grid-template-rows: 48px auto; border-radius: 13px; }
+  .shield-status-icon { width: 48px; height: 48px; border-radius: 12px; }
+  .shield-status-badge strong { font-size: .58rem; padding: .14rem .22rem; }
   .inventory-slots { gap: .38rem; }
   .inventory-slot { min-height: 98px; grid-template-rows: 34px 3.05em 1em; gap: .2rem; padding: .46rem .32rem; }
   .inventory-slot-icon { width: 34px; height: 34px; border-radius: 9px; }

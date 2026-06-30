@@ -5501,10 +5501,10 @@ function mergeOnlineProfileSources(profile = null, cloudSnapshot = null) {
   const currentCloudSnapshot = cloudSnapshot && isCurrentResetProfile(cloudSnapshot) ? cloudSnapshot : null;
   if (!currentProfile) return currentCloudSnapshot;
   if (!currentCloudSnapshot) return currentProfile;
-  return {
-    ...currentCloudSnapshot,
-    ...currentProfile,
-  };
+  const profileSavedAtMs = getProfileGameSaveMs(currentProfile);
+  const cloudSavedAtMs = getProfileGameSaveMs(currentCloudSnapshot);
+  if (cloudSavedAtMs > profileSavedAtMs) return { ...currentProfile, ...currentCloudSnapshot };
+  return { ...currentCloudSnapshot, ...currentProfile };
 }
 
 function applyOnlineProfileSnapshot(profile = null, fallbackPlayerName = "Ricky") {
@@ -5545,11 +5545,17 @@ function timestampToMs(value) {
   return 0;
 }
 
+function getProfileGameSaveMs(profile = null) {
+  if (!profile || typeof profile !== "object") return 0;
+  return normalizeTimestampMs(profile.lastSeenAtMs)
+    || normalizeTimestampMs(profile.lastRealTimeMs);
+}
+
 function getProfileLastSeenMs(profile = null) {
   if (!profile || typeof profile !== "object") return 0;
   return normalizeTimestampMs(profile.lastSeenAtMs)
-    || timestampToMs(profile.updatedAt)
-    || normalizeTimestampMs(profile.lastRealTimeMs);
+    || normalizeTimestampMs(profile.lastRealTimeMs)
+    || timestampToMs(profile.updatedAt);
 }
 
 function normalizeOfflineProductionCities(cities = []) {
@@ -9067,6 +9073,7 @@ function applyPendingOfflineProgress() {
     });
     syncOwnedCitiesToOnline(true);
     saveGame();
+    flushOnlineSave(true);
   }
 }
 
@@ -9909,6 +9916,9 @@ function saveFlagEditor() {
   state.flag = normalizeFlag(flagDraft);
   saveGame();
   syncOwnedCitiesToOnline(true);
+  flushOnlineSave(true).then(saved => {
+    if (!saved && getOnlineApi()?.isSignedIn?.()) showToast("Flag saved locally. Cloud save will retry.");
+  });
   renderHud();
   showProfileView();
   showToast("Kingdom flag saved.");
