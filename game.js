@@ -72,7 +72,6 @@ const SHOP_ITEMS = [
 ];
 const ROYAL_PEACE_SHIELD_ITEM_ID = "shield_12h";
 const ROYAL_PEACE_SHIELD_DURATION_MS = 12 * 60 * 60 * 1000;
-const ROYAL_PEACE_SHIELD_PURCHASE_COOLDOWN_MS = 24 * 60 * 60 * 1000;
 
 function cleanEditorRegionId(value) {
   return String(value || "")
@@ -2120,6 +2119,7 @@ let leaderboardLastSaveAt = 0;
 let overdueArmyResolveTimer = 0;
 let pendingArmyRecoveryInFlight = false;
 let shopPurchaseInFlight = false;
+let selectedInventoryItemId = "";
 let updateCheckTimer = 0;
 let updateCheckInFlight = false;
 let updateRefreshInProgress = false;
@@ -4071,14 +4071,6 @@ function ensureItemPurchaseCooldowns() {
   if (!state) return createDefaultItemPurchaseCooldowns();
   state.itemPurchaseCooldowns = normalizeItemPurchaseCooldowns(state.itemPurchaseCooldowns);
   return state.itemPurchaseCooldowns;
-}
-
-function getShieldPurchaseRemainingSeconds() {
-  if (!state) return 0;
-  const cooldowns = ensureItemPurchaseCooldowns();
-  const lastPurchasedAtMs = timestampToMs(cooldowns[ROYAL_PEACE_SHIELD_ITEM_ID]?.lastPurchasedAtMs);
-  if (!lastPurchasedAtMs) return 0;
-  return Math.max(0, Math.ceil((lastPurchasedAtMs + ROYAL_PEACE_SHIELD_PURCHASE_COOLDOWN_MS - Date.now()) / 1000));
 }
 
 function createDefaultItemEffects() {
@@ -11037,11 +11029,7 @@ function renderItemIcon(item, imageClass = "") {
 
 function renderShopItem(item, inventory) {
   const owned = Math.max(0, Math.floor(Number(inventory[item.id]) || 0));
-  const shieldCooldownSeconds = item.id === ROYAL_PEACE_SHIELD_ITEM_ID ? getShieldPurchaseRemainingSeconds() : 0;
-  const canBuy = state && !shopPurchaseInFlight && shieldCooldownSeconds <= 0 && Math.floor(Number(state.gold) || 0) >= item.cost;
-  const cooldownLine = shieldCooldownSeconds > 0
-    ? `<small>Available in ${escapeHtml(formatDuration(shieldCooldownSeconds))}</small>`
-    : "";
+  const canBuy = state && !shopPurchaseInFlight && Math.floor(Number(state.gold) || 0) >= item.cost;
   return `
     <article class="shop-item">
       <div class="shop-item-image-placeholder ${item.icon ? "has-image" : ""}" aria-hidden="true">
@@ -11052,7 +11040,6 @@ function renderShopItem(item, inventory) {
         <span>${formatNumber(item.cost)} gold</span>
         <small>Owned: ${formatNumber(owned)}</small>
         <small>${escapeHtml(item.description)}</small>
-        ${cooldownLine}
       </div>
       <button class="shop-buy-btn" data-shop-buy="${escapeHtml(item.id)}" type="button" ${canBuy ? "" : "disabled"}>Buy</button>
     </article>
@@ -11098,14 +11085,6 @@ async function buyShopItem(itemId) {
     renderShopModal();
     return;
   }
-  if (item.id === ROYAL_PEACE_SHIELD_ITEM_ID) {
-    const remaining = getShieldPurchaseRemainingSeconds();
-    if (remaining > 0) {
-      showToast(`${item.label} can be bought again in ${formatDuration(remaining)}.`);
-      renderShopModal();
-      return;
-    }
-  }
 
   const api = getOnlineApi();
   const onlineConfigured = Boolean(api?.isConfigured?.());
@@ -11126,17 +11105,14 @@ async function buyShopItem(itemId) {
       const inventory = ensureShopItems();
       state.gold = currentGold - item.cost;
       inventory[item.id] = Math.max(0, Math.floor(Number(inventory[item.id]) || 0)) + 1;
-      if (item.id === ROYAL_PEACE_SHIELD_ITEM_ID) {
-        const cooldowns = ensureItemPurchaseCooldowns();
-        cooldowns[item.id].lastPurchasedAtMs = Date.now();
-      }
     }
 
     addLog(`Bought ${item.label} for ${formatNumber(item.cost)} gold.`);
     saveGame();
     renderHud();
     if (item.id === ROYAL_PEACE_SHIELD_ITEM_ID) {
-      showToast(`${item.label} added to Bag. Tap Use when ready.`);
+      selectedInventoryItemId = item.id;
+      showToast(`${item.label} added to Bag. Select it, then tap Use.`);
       showInventoryModal();
     } else {
       showToast(`${item.label} added to Bag.`);
@@ -11164,7 +11140,7 @@ function getInventorySlotEntries() {
   return entries;
 }
 
-function renderInventorySlot(entry) {
+function renderInventorySlot(entry, selectedItemId = "") {
   if (!entry) {
     return `
       <article class="inventory-slot empty">
@@ -11172,13 +11148,14 @@ function renderInventorySlot(entry) {
       </article>
     `;
   }
+  const selected = entry.id === selectedItemId;
   return `
-    <article class="inventory-slot filled">
+    <button class="inventory-slot filled ${selected ? "selected" : ""}" data-inventory-select="${escapeHtml(entry.id)}" type="button" aria-pressed="${selected ? "true" : "false"}">
       <span class="inventory-slot-icon ${entry.icon ? "has-image" : ""}" aria-hidden="true">${renderItemIcon(entry, "inventory-slot-image")}</span>
       <strong class="inventory-slot-name">${escapeHtml(entry.label)}</strong>
       <span class="inventory-slot-count">x${formatNumber(entry.count)}</span>
-      <button class="inventory-use-btn" data-inventory-use="${escapeHtml(entry.id)}" type="button">Use</button>
-    </article>
+      <span class="inventory-slot-action">${selected ? "Selected" : "Select"}</span>
+    </button>
   `;
 }
 
@@ -11186,6 +11163,8 @@ function showInventoryModal() {
   if (!state) return;
   const slots = getInventorySlotEntries();
   const filledSlots = slots.filter(Boolean).length;
+  const selectedEntry = slots.find(entry => entry?.id === selectedInventoryItemId) || null;
+  if (!selectedEntry) selectedInventoryItemId = "";
   const shieldExpiresAtMs = getActivePeaceShieldExpiresAtMs();
   const shieldStatus = shieldExpiresAtMs
     ? `<small>Peace Shield active: ${formatDuration(getPeaceShieldRemainingSeconds(shieldExpiresAtMs))}</small>`
@@ -11200,10 +11179,32 @@ function showInventoryModal() {
         <strong>${formatNumber(filledSlots)}/${formatNumber(INVENTORY_SLOT_COUNT)}</strong>
       </section>
       <div class="inventory-slots">
-        ${slots.map(renderInventorySlot).join("")}
+        ${slots.map(entry => renderInventorySlot(entry, selectedInventoryItemId)).join("")}
       </div>
+      <section class="inventory-selection">
+        ${selectedEntry ? `
+          <span class="inventory-selection-icon ${selectedEntry.icon ? "has-image" : ""}" aria-hidden="true">${renderItemIcon(selectedEntry, "inventory-selection-image")}</span>
+          <div class="inventory-selection-copy">
+            <strong>${escapeHtml(selectedEntry.label)}</strong>
+            <small>${escapeHtml(selectedEntry.description)}</small>
+            <span>Owned: ${formatNumber(selectedEntry.count)}</span>
+          </div>
+          <button class="inventory-use-btn" data-inventory-use="${escapeHtml(selectedEntry.id)}" type="button">Use</button>
+        ` : `
+          <div class="inventory-selection-empty">
+            <strong>Select an item</strong>
+            <small>Tap an item slot, then press Use.</small>
+          </div>
+        `}
+      </section>
     </div>
   `;
+  modalBody.querySelectorAll("[data-inventory-select]").forEach(button => {
+    button.addEventListener("click", () => {
+      selectedInventoryItemId = button.dataset.inventorySelect || "";
+      showInventoryModal();
+    });
+  });
   modalBody.querySelectorAll("[data-inventory-use]").forEach(button => {
     button.addEventListener("click", () => useInventoryItem(button.dataset.inventoryUse));
   });
@@ -11236,6 +11237,9 @@ function useRoyalPeaceShield(item) {
   const startsAtMs = Math.max(now, currentExpiresAtMs);
   effects.shieldExpiresAtMs = startsAtMs + ROYAL_PEACE_SHIELD_DURATION_MS;
   inventory[item.id] = owned - 1;
+  if (inventory[item.id] <= 0 && selectedInventoryItemId === item.id) {
+    selectedInventoryItemId = "";
+  }
   refreshOwnedCityItemEffectMetadata(true);
   addLog(`${item.label} activated. Your kingdom is protected for ${formatDuration(getPeaceShieldRemainingSeconds(effects.shieldExpiresAtMs))}.`);
   saveGame();

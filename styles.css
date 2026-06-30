@@ -1627,9 +1627,16 @@ input {
   border: 1px solid rgba(158,213,255,.12);
   box-shadow: inset 0 -4px 0 rgba(0,0,0,.13);
 }
+button.inventory-slot {
+  cursor: pointer;
+}
 .inventory-slot.filled {
   border-color: rgba(246,190,82,.42);
   background: linear-gradient(180deg, rgba(32, 52, 78, .92), rgba(6, 25, 44, .86));
+}
+.inventory-slot.filled.selected {
+  border-color: rgba(255, 226, 120, .95);
+  box-shadow: 0 0 0 4px rgba(255, 205, 88, .18), inset 0 -4px 0 rgba(0,0,0,.13);
 }
 .inventory-slot-icon {
   width: 48px;
@@ -1677,6 +1684,20 @@ input {
   font-size: .72rem;
   font-weight: 900;
 }
+.inventory-slot-action {
+  min-width: 58px;
+  min-height: 28px;
+  display: grid;
+  place-items: center;
+  padding: .22rem .45rem;
+  border-radius: 8px;
+  color: #cfe9ff;
+  background: rgba(13, 59, 96, .72);
+  border: 1px solid rgba(158,213,255,.2);
+  font-size: .68rem;
+  font-weight: 950;
+}
+.inventory-slot.selected .inventory-slot-action,
 .inventory-use-btn {
   min-width: 58px;
   min-height: 30px;
@@ -1691,6 +1712,60 @@ input {
 }
 .inventory-use-btn:active {
   transform: translateY(1px);
+}
+.inventory-selection {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: .7rem;
+  padding: .65rem .75rem;
+  border-radius: 14px;
+  background: rgba(5, 20, 36, .78);
+  border: 1px solid rgba(246,190,82,.24);
+  box-shadow: inset 0 -4px 0 rgba(0,0,0,.13);
+}
+.inventory-selection-icon {
+  width: 56px;
+  height: 56px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border-radius: 12px;
+  border: 1px solid rgba(246,190,82,.34);
+  background: rgba(5, 20, 36, .88);
+}
+.inventory-selection-image {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+}
+.inventory-selection-copy {
+  min-width: 0;
+  display: grid;
+  gap: .16rem;
+}
+.inventory-selection-copy strong,
+.inventory-selection-empty strong {
+  color: #fff0a7;
+  font-size: .9rem;
+}
+.inventory-selection-copy small,
+.inventory-selection-empty small {
+  color: #8ecdf1;
+  font-size: .68rem;
+  line-height: 1.22;
+}
+.inventory-selection-copy span {
+  color: #cfe9ff;
+  font-size: .72rem;
+  font-weight: 900;
+}
+.inventory-selection-empty {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: .15rem;
+  text-align: center;
 }
 .inventory-slot-empty {
   color: rgba(207,233,255,.58);
@@ -4063,6 +4138,11 @@ input {
   .inventory-slot-icon { width: 34px; height: 34px; border-radius: 9px; }
   .inventory-slot-icon span { width: 22px; height: 22px; font-size: .74rem; }
   .inventory-slot-name { font-size: .7rem; }
+  .inventory-slot-action { min-width: 44px; min-height: 24px; padding: .16rem .32rem; font-size: .6rem; }
+  .inventory-selection { grid-template-columns: 42px minmax(0, 1fr) auto; gap: .44rem; padding: .5rem; }
+  .inventory-selection-icon { width: 42px; height: 42px; border-radius: 9px; }
+  .inventory-selection-copy strong { font-size: .78rem; }
+  .inventory-selection-copy small, .inventory-selection-empty small { font-size: .62rem; }
   .inventory-use-btn { min-width: 48px; min-height: 26px; padding: .2rem .42rem; font-size: .66rem; }
   .character-level-badge { min-width: 28px; height: 16px; right: 7px; bottom: 6px; font-size: .5rem; }
   .profile-gold { height: 24px; min-width: 66px; margin-top: .12rem; font-size: .74rem; }
