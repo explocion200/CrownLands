@@ -4,11 +4,11 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Crownlands - Medieval Island Conquest</title>
-  <meta name="crownlands-build" content="20260630-touch-pinch-city-fix" />
+  <meta name="crownlands-build" content="20260630-war-drums-mechanic" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700;800;900&family=Cinzel+Decorative:wght@700;900&family=IM+Fell+English:ital@0;1&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=20260630-global-owned-shield-fix" />
+  <link rel="stylesheet" href="styles.css?v=20260630-war-drums-mechanic" />
   <link rel="preload" as="image" href="assets/loading-ring.png" />
   <link rel="preload" as="image" href="assets/loading-crown.png" />
   <link rel="preload" as="image" href="assets/leaderboard-icon.png?v=20260623-leaderboard-icon-new" />
@@ -18,8 +18,8 @@
   <link rel="preload" as="image" href="assets/shop-icon.png?v=20260623-shop-ui" />
   <link rel="preload" as="image" href="assets/bag-icon.png?v=20260623-bag-inventory" />
   <link rel="preload" as="image" href="assets/royal-peace-shield-icon.jpg?v=20260624-royal-shield-icon" />
-  <link rel="preload" as="image" href="assets/royal-peace-shield-field.png?v=20260630-global-owned-shield-fix" />
   <link rel="preload" as="image" href="assets/war-drums-icon.jpg?v=20260624-war-drums-icon" />
+  <link rel="preload" as="image" href="assets/royal-peace-shield-field.png?v=20260630-global-owned-shield-fix" />
   <link rel="preload" as="image" href="assets/veil-of-silence-icon.jpg?v=20260624-veil-silence-icon" />
   <link rel="preload" as="image" href="assets/swift-march-order-icon.jpg?v=20260624-swift-march-icon" />
   <link rel="preload" as="image" href="assets/recall-horn-icon.jpg?v=20260624-recall-horn-icon" />
@@ -82,9 +82,15 @@
       <button id="inventoryBtn" class="resource-pill bag-btn" type="button" aria-label="Open bag">
         <img class="bag-icon" src="assets/bag-icon.png?v=20260623-bag-inventory" alt="" draggable="false" decoding="async" />
       </button>
-      <div id="shieldStatusBadge" class="shield-status-badge" hidden role="status" aria-live="polite">
-        <img class="shield-status-icon" src="assets/royal-peace-shield-icon.jpg?v=20260624-royal-shield-icon" alt="" draggable="false" decoding="async" />
-        <strong id="shieldStatusTime">0:00</strong>
+      <div id="activeItemEffectsStack" class="active-item-effects-stack" aria-live="polite">
+        <div id="shieldStatusBadge" class="effect-status-badge shield-status-badge" hidden role="status">
+          <img class="effect-status-icon shield-status-icon" src="assets/royal-peace-shield-icon.jpg?v=20260624-royal-shield-icon" alt="" draggable="false" decoding="async" />
+          <strong id="shieldStatusTime">0:00</strong>
+        </div>
+        <div id="warDrumsStatusBadge" class="effect-status-badge war-drums-status-badge" hidden role="status">
+          <img class="effect-status-icon war-drums-status-icon" src="assets/war-drums-icon.jpg?v=20260624-war-drums-icon" alt="" draggable="false" decoding="async" />
+          <strong id="warDrumsStatusTime">0:00</strong>
+        </div>
       </div>
       <button id="cityListBtn" class="resource-pill city-list-btn" type="button" aria-label="Open city list">
         <img class="city-list-icon" src="assets/city-list-icon.png?v=20260623-city-icon-hud" alt="" draggable="false" decoding="async" />
@@ -233,6 +239,6 @@
   <script src="world-config.js"></script>
   <script src="firebase-config.js"></script>
   <script src="firebaseClient.js?v=20260630-profile-restore-fix"></script>
-  <script src="game.js?v=20260630-touch-pinch-city-fix"></script>
+  <script src="game.js?v=20260630-war-drums-mechanic"></script>
 </body>
 </html>

@@ -389,11 +389,18 @@ input {
 .resource-pill.island-switch-btn {
   right: max(.75rem, env(safe-area-inset-right));
 }
-.shield-status-badge {
+.active-item-effects-stack {
   position: absolute;
   z-index: 56;
   right: max(.72rem, env(safe-area-inset-right));
   top: 50%;
+  display: grid;
+  gap: .5rem;
+  justify-items: end;
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+.effect-status-badge {
   width: 66px;
   min-height: 82px;
   display: grid;
@@ -401,20 +408,25 @@ input {
   justify-items: center;
   gap: .22rem;
   padding: .26rem .24rem .34rem;
-  transform: translateY(-50%);
   border-radius: 16px;
   color: #fff5c8;
-  pointer-events: none;
   background:
     radial-gradient(circle at 50% 30%, rgba(83, 193, 255, .22), transparent 55%),
     linear-gradient(180deg, rgba(6, 23, 43, .64), rgba(5, 14, 26, .82));
   border: 1px solid rgba(246,190,82,.48);
   box-shadow: 0 10px 24px rgba(0,0,0,.36), 0 0 22px rgba(79,177,255,.34);
 }
-.shield-status-badge[hidden] {
+.war-drums-status-badge {
+  background:
+    radial-gradient(circle at 50% 30%, rgba(255, 188, 70, .22), transparent 55%),
+    linear-gradient(180deg, rgba(44, 24, 7, .66), rgba(15, 13, 22, .84));
+  border-color: rgba(255, 206, 106, .56);
+  box-shadow: 0 10px 24px rgba(0,0,0,.36), 0 0 22px rgba(255, 177, 60, .3);
+}
+.effect-status-badge[hidden] {
   display: none;
 }
-.shield-status-icon {
+.effect-status-icon {
   width: 58px;
   height: 58px;
   display: block;
@@ -422,7 +434,10 @@ input {
   border-radius: 14px;
   box-shadow: 0 0 18px rgba(84, 202, 255, .45), 0 7px 14px rgba(0,0,0,.36);
 }
-.shield-status-badge strong {
+.war-drums-status-icon {
+  box-shadow: 0 0 18px rgba(255, 186, 78, .42), 0 7px 14px rgba(0,0,0,.36);
+}
+.effect-status-badge strong {
   min-width: 0;
   max-width: 100%;
   color: #fff4b8;
@@ -4297,9 +4312,10 @@ button.inventory-slot {
   .resource-pill.island-switch-btn { width: 56px; min-width: 56px; max-width: 56px; height: 56px; }
   .resource-pill.bag-btn { right: calc(max(.75rem, env(safe-area-inset-right)) + 132px); }
   .resource-pill.city-list-btn { right: calc(max(.75rem, env(safe-area-inset-right)) + 66px); }
-  .shield-status-badge { right: max(.55rem, env(safe-area-inset-right)); width: 56px; min-height: 70px; grid-template-rows: 48px auto; border-radius: 13px; }
-  .shield-status-icon { width: 48px; height: 48px; border-radius: 12px; }
-  .shield-status-badge strong { font-size: .58rem; padding: .14rem .22rem; }
+  .active-item-effects-stack { right: max(.55rem, env(safe-area-inset-right)); gap: .36rem; }
+  .effect-status-badge { width: 56px; min-height: 70px; grid-template-rows: 48px auto; border-radius: 13px; }
+  .effect-status-icon { width: 48px; height: 48px; border-radius: 12px; }
+  .effect-status-badge strong { font-size: .58rem; padding: .14rem .22rem; }
   .inventory-slots { gap: .38rem; }
   .inventory-slot { min-height: 98px; grid-template-rows: 34px 3.05em 1em; gap: .2rem; padding: .46rem .32rem; }
   .inventory-slot-icon { width: 34px; height: 34px; border-radius: 9px; }

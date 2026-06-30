@@ -44,7 +44,7 @@ const SHOP_ITEMS = [
     id: "war_drums_30m",
     legacyIds: ["troop_boost_1h"],
     label: "War Drums",
-    description: "Increases troop production for 30 minutes.",
+    description: "Increases troop production by 25% for 30 minutes.",
     cost: 25_000,
     icon: "assets/war-drums-icon.jpg",
   },
@@ -73,6 +73,9 @@ const SHOP_ITEMS = [
 ];
 const ROYAL_PEACE_SHIELD_ITEM_ID = "shield_12h";
 const ROYAL_PEACE_SHIELD_DURATION_MS = 12 * 60 * 60 * 1000;
+const WAR_DRUMS_ITEM_ID = "war_drums_30m";
+const WAR_DRUMS_DURATION_MS = 30 * 60 * 1000;
+const WAR_DRUMS_TROOP_PRODUCTION_BONUS_PERCENT = 25;
 
 function cleanEditorRegionId(value) {
   return String(value || "")
@@ -2170,6 +2173,8 @@ const cityText = document.getElementById("cityText");
 const inventoryBtn = document.getElementById("inventoryBtn");
 const shieldStatusBadge = document.getElementById("shieldStatusBadge");
 const shieldStatusTime = document.getElementById("shieldStatusTime");
+const warDrumsStatusBadge = document.getElementById("warDrumsStatusBadge");
+const warDrumsStatusTime = document.getElementById("warDrumsStatusTime");
 const shopBtn = document.getElementById("shopBtn");
 const neutralCapText = document.getElementById("neutralCapText");
 const characterLevelBadge = document.getElementById("characterLevelBadge");
@@ -4093,12 +4098,14 @@ function ensureItemPurchaseCooldowns() {
 function createDefaultItemEffects() {
   return {
     shieldExpiresAtMs: 0,
+    warDrumsExpiresAtMs: 0,
   };
 }
 
 function normalizeItemEffects(effects = {}) {
   return {
     shieldExpiresAtMs: timestampToMs(effects?.shieldExpiresAtMs || effects?.shieldExpiresAt),
+    warDrumsExpiresAtMs: timestampToMs(effects?.warDrumsExpiresAtMs || effects?.warDrumsExpiresAt || effects?.troopBoostExpiresAtMs || effects?.troopBoostExpiresAt),
   };
 }
 
@@ -4113,14 +4120,26 @@ function ensureItemEffects() {
   return state.itemEffects;
 }
 
-function getActivePeaceShieldExpiresAtMs() {
+function getActiveTimedItemEffectExpiresAtMs(effectKey) {
   const effects = ensureItemEffects();
-  const expiresAtMs = normalizeTimestampMs(effects.shieldExpiresAtMs);
+  const expiresAtMs = normalizeTimestampMs(effects[effectKey]);
   if (expiresAtMs && expiresAtMs <= Date.now()) {
-    effects.shieldExpiresAtMs = 0;
+    effects[effectKey] = 0;
     return 0;
   }
   return expiresAtMs;
+}
+
+function getActivePeaceShieldExpiresAtMs() {
+  return getActiveTimedItemEffectExpiresAtMs("shieldExpiresAtMs");
+}
+
+function getActiveWarDrumsExpiresAtMs() {
+  return getActiveTimedItemEffectExpiresAtMs("warDrumsExpiresAtMs");
+}
+
+function getWarDrumsTroopProductionBonusPercent() {
+  return getActiveWarDrumsExpiresAtMs() ? WAR_DRUMS_TROOP_PRODUCTION_BONUS_PERCENT : 0;
 }
 
 function getPeaceShieldRemainingSeconds(expiresAtMs = getActivePeaceShieldExpiresAtMs()) {
@@ -4919,9 +4938,12 @@ function getCityStats(city) {
   const strongholdGoldBonusPercent = !stronghold && city?.owner === "player" ? getControlledStrongholdGoldBonusPercent("player") : 0;
   const strongholdTroopBonusPercent = !stronghold && city?.owner === "player" ? getControlledStrongholdTroopBonusPercent("player") : 0;
   const strongholdDefenseBonusPercent = !stronghold ? getControlledStrongholdCityDefenseBonusPercentForCity(city) : 0;
+  const warDrumsTroopBonusPercent = !stronghold && city?.owner === "player" ? getWarDrumsTroopProductionBonusPercent() : 0;
   const baseTroopProductionPerHour = stronghold ? 0 : victoryPoints * CITY_LEVEL_STATS.troopProductionPerVictoryPoint;
   const recruiterBonusPerHour = stronghold ? 0 : victoryPoints * recruiterPercent / 100;
-  const troopProductionPerHour = (baseTroopProductionPerHour + recruiterBonusPerHour) * (1 + strongholdTroopBonusPercent / 100);
+  const troopProductionPerHour = (baseTroopProductionPerHour + recruiterBonusPerHour)
+    * (1 + strongholdTroopBonusPercent / 100)
+    * (1 + warDrumsTroopBonusPercent / 100);
   const millionLordsProductionVp = getMillionLordsCityProductionVp(level);
   const rawGoldProductionPerHour = stronghold ? 0 : getMillionLordsPassiveGoldPerHour(level);
   const baseGoldProductionPerHour = rawGoldProductionPerHour;
@@ -4944,6 +4966,7 @@ function getCityStats(city) {
     strongholdTroopBonusPercent,
     strongholdDefenseBonusPercent,
     strongholdDefenseBonus,
+    warDrumsTroopBonusPercent,
     baseTroopProductionPerHour,
     recruiterBonusPerHour,
     troopProductionPerHour,
@@ -9878,23 +9901,27 @@ function renderHud() {
   if (profileScreen?.classList.contains("open")) renderProfileScreen();
 }
 
-function updateShieldStatusBadge() {
-  if (!shieldStatusBadge || !shieldStatusTime) return;
-  const expiresAtMs = getActivePeaceShieldExpiresAtMs();
+function updateTimedEffectStatusBadge(badge, timeElement, expiresAtMs, label) {
+  if (!badge || !timeElement) return;
   const remainingSeconds = getPeaceShieldRemainingSeconds(expiresAtMs);
   if (!remainingSeconds) {
-    shieldStatusBadge.hidden = true;
-    shieldStatusBadge.title = "";
-    shieldStatusBadge.setAttribute("aria-label", "Royal Peace Shield inactive");
-    shieldStatusTime.textContent = "";
+    badge.hidden = true;
+    badge.title = "";
+    badge.setAttribute("aria-label", `${label} inactive`);
+    timeElement.textContent = "";
     return;
   }
 
   const remainingText = formatDuration(remainingSeconds);
-  shieldStatusBadge.hidden = false;
-  shieldStatusTime.textContent = remainingText;
-  shieldStatusBadge.title = `Royal Peace Shield active: ${remainingText} remaining`;
-  shieldStatusBadge.setAttribute("aria-label", `Royal Peace Shield active, ${remainingText} remaining`);
+  badge.hidden = false;
+  timeElement.textContent = remainingText;
+  badge.title = `${label} active: ${remainingText} remaining`;
+  badge.setAttribute("aria-label", `${label} active, ${remainingText} remaining`);
+}
+
+function updateShieldStatusBadge() {
+  updateTimedEffectStatusBadge(shieldStatusBadge, shieldStatusTime, getActivePeaceShieldExpiresAtMs(), "Royal Peace Shield");
+  updateTimedEffectStatusBadge(warDrumsStatusBadge, warDrumsStatusTime, getActiveWarDrumsExpiresAtMs(), "War Drums");
 }
 
 function applyFlagToElement(element, flag) {
@@ -11167,7 +11194,7 @@ function showCityInfoModal(cityId) {
       <div class="stat-chip"><span>Guardian</span><strong>${stats.guardianPercent}%</strong></div>
       <div class="stat-chip"><span>City power</span><strong>${formatNumber(stats.cityPower)}</strong><small>+${CITY_LEVEL_STATS.victoryPointsPerLevel}/level</small></div>
       <div class="stat-chip"><span>Defense</span><strong>${stats.defensePercent}%</strong><small>+${CITY_LEVEL_STATS.defensePercentPerLevel}%/level${stats.strongholdDefenseBonusPercent ? ` + Stronghold ${formatNumber(stats.strongholdDefenseBonusPercent)}%` : ""}</small></div>
-      <div class="stat-chip"><span>Troops production</span><strong>${formatNumber(stats.troopProductionPerHour)}/h</strong></div>
+      <div class="stat-chip"><span>Troops production</span><strong>${formatNumber(stats.troopProductionPerHour)}/h</strong>${stats.warDrumsTroopBonusPercent ? `<small>War Drums +${formatNumber(stats.warDrumsTroopBonusPercent)}%</small>` : ""}</div>
       <div class="stat-chip"><span>City walls</span><strong>${formatNumber(stats.cityWalls)}</strong><small>+${CITY_LEVEL_STATS.cityWallsPerLevel}/level</small></div>
       <div class="stat-chip"><span>Gold production</span><strong>${formatNumber(stats.goldProductionPerHour)}/h</strong></div>
     </div>
@@ -11203,7 +11230,7 @@ function showCityInfoModal(cityId) {
       <div class="stat-chip"><span>City defense</span><strong>${stats.defensePercent}%</strong><small>${CITY_LEVEL_STATS.defensePercentPerLevel}% per level${stats.strongholdDefenseBonusPercent ? ` + Stronghold ${formatNumber(stats.strongholdDefenseBonusPercent)}%` : ""}</small></div>
       <div class="stat-chip"><span>City walls</span><strong>${formatNumber(stats.cityWalls)}</strong><small>Level-based static defense</small></div>
       <div class="stat-chip"><span>Guardian</span><strong>${stats.guardianPercent}%</strong><small>Player defense skill</small></div>
-      <div class="stat-chip"><span>Troops production</span><strong>${formatNumber(stats.troopProductionPerHour)}/h</strong></div>
+      <div class="stat-chip"><span>Troops production</span><strong>${formatNumber(stats.troopProductionPerHour)}/h</strong>${stats.warDrumsTroopBonusPercent ? `<small>War Drums +${formatNumber(stats.warDrumsTroopBonusPercent)}%</small>` : ""}</div>
       <div class="stat-chip"><span>Gold production</span><strong>${formatNumber(stats.goldProductionPerHour)}/h</strong></div>
       <div class="stat-chip"><span>Invested gold</span><strong>${formatNumber(city.investedGold || 0)}</strong><small>Cautious can refund part</small></div>
       ${cooldownRemaining > 0 ? `<div class="stat-wide"><span>Capture XP cooldown</span><strong>${formatDuration(cooldownRemaining)}</strong></div>` : ""}
@@ -11510,23 +11537,31 @@ function renderInventorySlot(entry, selectedItemId = "") {
   `;
 }
 
+function getActiveItemEffectSummaryHtml() {
+  const effects = [
+    { label: "Peace Shield", expiresAtMs: getActivePeaceShieldExpiresAtMs() },
+    { label: "War Drums", expiresAtMs: getActiveWarDrumsExpiresAtMs() },
+  ].filter(effect => getPeaceShieldRemainingSeconds(effect.expiresAtMs) > 0);
+  if (!effects.length) return "<small>No active item effects</small>";
+  return effects.map(effect => (
+    `<small>${escapeHtml(effect.label)} active: ${formatDuration(getPeaceShieldRemainingSeconds(effect.expiresAtMs))}</small>`
+  )).join("");
+}
+
 function showInventoryModal() {
   if (!state) return;
   const slots = getInventorySlotEntries();
   const filledSlots = slots.filter(Boolean).length;
   const selectedEntry = slots.find(entry => entry?.id === selectedInventoryItemId) || null;
   if (!selectedEntry) selectedInventoryItemId = "";
-  const shieldExpiresAtMs = getActivePeaceShieldExpiresAtMs();
-  const shieldStatus = shieldExpiresAtMs
-    ? `<small>Peace Shield active: ${formatDuration(getPeaceShieldRemainingSeconds(shieldExpiresAtMs))}</small>`
-    : "<small>No active item effects</small>";
+  const activeItemStatus = getActiveItemEffectSummaryHtml();
   modal.classList.remove("battle-report-modal", "city-list-modal", "island-switcher-modal", "leaderboard-modal", "shop-modal", "incoming-attack-modal", "outgoing-attack-modal");
   modal.classList.add("inventory-modal");
   modalTitle.textContent = "Bag";
   modalBody.innerHTML = `
     <div class="inventory-panel">
       <section class="inventory-summary">
-        <span>Item slots ${shieldStatus}</span>
+        <span>Item slots ${activeItemStatus}</span>
         <strong>${formatNumber(filledSlots)}/${formatNumber(INVENTORY_SLOT_COUNT)}</strong>
       </section>
       <div class="inventory-slots">
@@ -11574,28 +11609,40 @@ function useInventoryItem(itemId) {
     });
     return;
   }
+  if (item.id === WAR_DRUMS_ITEM_ID) {
+    useWarDrums(item).catch(error => {
+      console.warn("War Drums activation failed", error);
+      showToast(error?.message || "Could not activate War Drums.");
+      renderHud();
+    });
+    return;
+  }
   showToast(`${item.label} mechanics are coming next.`);
 }
 
-async function useRoyalPeaceShield(item) {
+function consumeInventoryItem(item) {
   const inventory = ensureShopItems();
   const owned = Math.max(0, Math.floor(Number(inventory[item.id]) || 0));
   if (owned <= 0) {
     showToast(`You do not have ${item.label}.`);
     showInventoryModal();
-    return;
+    return null;
   }
+  inventory[item.id] = owned - 1;
+  if (inventory[item.id] <= 0 && selectedInventoryItemId === item.id) {
+    selectedInventoryItemId = "";
+  }
+  return inventory;
+}
 
+async function useRoyalPeaceShield(item) {
+  if (!consumeInventoryItem(item)) return;
   const now = Date.now();
   const currentExpiresAtMs = getActivePeaceShieldExpiresAtMs();
   const startsAtMs = Math.max(now, currentExpiresAtMs);
   const expiresAtMs = startsAtMs + ROYAL_PEACE_SHIELD_DURATION_MS;
   const effects = ensureItemEffects();
   effects.shieldExpiresAtMs = expiresAtMs;
-  inventory[item.id] = owned - 1;
-  if (inventory[item.id] <= 0 && selectedInventoryItemId === item.id) {
-    selectedInventoryItemId = "";
-  }
   refreshOwnedCityItemEffectMetadata(true);
   addLog(`${item.label} activated. Your kingdom is protected for ${formatDuration(getPeaceShieldRemainingSeconds(expiresAtMs))}.`);
   saveGame();
@@ -11612,6 +11659,28 @@ async function useRoyalPeaceShield(item) {
     showToast(`${item.label} active. Cloud save will retry.`);
   } else if (!shieldSynced && getOnlineApi()?.isSignedIn?.()) {
     showToast(`${item.label} active. Shield sync will retry.`);
+  }
+}
+
+async function useWarDrums(item) {
+  if (!consumeInventoryItem(item)) return;
+  const now = Date.now();
+  const currentExpiresAtMs = getActiveWarDrumsExpiresAtMs();
+  const startsAtMs = Math.max(now, currentExpiresAtMs);
+  const expiresAtMs = startsAtMs + WAR_DRUMS_DURATION_MS;
+  const effects = ensureItemEffects();
+  effects.warDrumsExpiresAtMs = expiresAtMs;
+
+  addLog(`${item.label} activated. Troop production increased by ${formatNumber(WAR_DRUMS_TROOP_PRODUCTION_BONUS_PERCENT)}% for ${formatDuration(getPeaceShieldRemainingSeconds(expiresAtMs))}.`);
+  saveGame();
+  renderHud();
+  renderPanel();
+  if (profileScreen?.classList.contains("open")) renderProfileScreen();
+  if (modal?.open && modal.classList.contains("inventory-modal")) modal.close();
+  showToast(`${item.label} active: +${formatNumber(WAR_DRUMS_TROOP_PRODUCTION_BONUS_PERCENT)}% troops for ${formatDuration(getPeaceShieldRemainingSeconds(expiresAtMs))}`);
+  const cloudSaved = await flushOnlineSave(true);
+  if (!cloudSaved && getOnlineApi()?.isSignedIn?.()) {
+    showToast(`${item.label} active. Cloud save will retry.`);
   }
 }
 
