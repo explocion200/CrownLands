@@ -5468,6 +5468,7 @@ function getPlayerProfileSnapshot() {
     upgrades: state?.upgrades ? normalizeUpgrades(state.upgrades, state.version || 20) : createDefaultSkills(),
     shopItems: state ? normalizeShopItems(state.shopItems) : createDefaultShopItems(),
     itemEffects: state ? normalizeItemEffects(state.itemEffects) : createDefaultItemEffects(),
+    itemPurchaseCooldowns: state ? normalizeItemPurchaseCooldowns(state.itemPurchaseCooldowns) : createDefaultItemPurchaseCooldowns(),
     cityCount: state ? playerRegularCities().length : 0,
     kingPower: state ? getKingPower() : 0,
     gold: state ? Math.floor(Number(state.gold) || 0) : 0,
@@ -11123,13 +11124,18 @@ async function buyShopItem(itemId) {
     addLog(`Bought ${item.label} for ${formatNumber(item.cost)} gold.`);
     saveGame();
     renderHud();
-    showToast(`Bought ${item.label}`);
+    if (item.id === ROYAL_PEACE_SHIELD_ITEM_ID) {
+      showToast(`${item.label} added to Bag. Tap Use when ready.`);
+      showInventoryModal();
+    } else {
+      showToast(`${item.label} added to Bag.`);
+    }
   } catch (error) {
     showToast(error?.message || `Could not buy ${item.label}.`);
     console.warn("Shop purchase failed", error);
   } finally {
     shopPurchaseInFlight = false;
-    renderShopModal();
+    if (modal.classList.contains("shop-modal")) renderShopModal();
   }
 }
 
