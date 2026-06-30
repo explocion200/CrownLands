@@ -11086,26 +11086,13 @@ async function buyShopItem(itemId) {
     return;
   }
 
-  const api = getOnlineApi();
-  const onlineConfigured = Boolean(api?.isConfigured?.());
-  const requiresServerPurchase = item.id === ROYAL_PEACE_SHIELD_ITEM_ID && onlineConfigured;
   shopPurchaseInFlight = true;
   renderShopModal();
 
   try {
-    if (requiresServerPurchase) {
-      if (!api?.isSignedIn?.()) throw new Error("Sign in to buy Royal Peace Shield.");
-      if (typeof api.purchaseShopItem !== "function") throw new Error("Shield purchases need the latest online shop service.");
-      await flushOnlineSave(true);
-      const result = await api.purchaseShopItem({ itemId: item.id, cost: item.cost });
-      state.gold = Math.max(0, Math.floor(Number(result?.gold) || 0));
-      state.shopItems = normalizeShopItems(result?.shopItems);
-      state.itemPurchaseCooldowns = normalizeItemPurchaseCooldowns(result?.itemPurchaseCooldowns);
-    } else {
-      const inventory = ensureShopItems();
-      state.gold = currentGold - item.cost;
-      inventory[item.id] = Math.max(0, Math.floor(Number(inventory[item.id]) || 0)) + 1;
-    }
+    const inventory = ensureShopItems();
+    state.gold = currentGold - item.cost;
+    inventory[item.id] = Math.max(0, Math.floor(Number(inventory[item.id]) || 0)) + 1;
 
     addLog(`Bought ${item.label} for ${formatNumber(item.cost)} gold.`);
     saveGame();
@@ -11116,6 +11103,10 @@ async function buyShopItem(itemId) {
       showInventoryModal();
     } else {
       showToast(`${item.label} added to Bag.`);
+    }
+    const cloudSaved = await flushOnlineSave(true);
+    if (!cloudSaved && getOnlineApi()?.isSignedIn?.()) {
+      showToast(`${item.label} added to Bag. Cloud save will retry.`);
     }
   } catch (error) {
     showToast(error?.message || `Could not buy ${item.label}.`);

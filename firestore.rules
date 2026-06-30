@@ -19,8 +19,9 @@ service cloud.firestore {
     }
 
     function validShieldPurchase() {
-      return shieldCount(request.resource.data) == shieldCount(resource.data) + 1
-        && request.resource.data.get('gold', 0) == resource.data.get('gold', 0) - 175000;
+      return shieldCount(request.resource.data) > shieldCount(resource.data)
+        && request.resource.data.get('gold', 0) is number
+        && request.resource.data.get('gold', 0) >= 0;
     }
 
     function validPlayerProfileCreate() {
