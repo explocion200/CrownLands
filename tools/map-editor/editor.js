@@ -57,6 +57,7 @@
     portalTargetSelect: document.getElementById("portalTargetSelect"),
     openProjectBtn: document.getElementById("openProjectBtn"),
     applyBtn: document.getElementById("applyBtn"),
+    sidebarApplyBtn: document.getElementById("sidebarApplyBtn"),
     canvasWrap: document.querySelector(".canvas-wrap"),
     mapCanvas: document.getElementById("mapCanvas"),
     mapImage: document.getElementById("mapImage"),
@@ -1190,10 +1191,12 @@
     elements.openProjectBtn.addEventListener("click", () => {
       openProjectFolder().catch(error => setStatus(error.message || String(error)));
     });
-    elements.applyBtn.addEventListener("click", () => {
-      applyToGame().catch(error => {
-        console.error(error);
-        setStatus(error.message || String(error));
+    [elements.applyBtn, elements.sidebarApplyBtn].filter(Boolean).forEach(button => {
+      button.addEventListener("click", () => {
+        applyToGame().catch(error => {
+          console.error(error);
+          setStatus(error.message || String(error));
+        });
       });
     });
   }

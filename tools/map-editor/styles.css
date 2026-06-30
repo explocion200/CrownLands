@@ -125,6 +125,18 @@ label span,
   overflow: auto;
 }
 
+.sidebar-actions {
+  flex: 0 0 auto;
+  padding: 10px;
+  border-top: 1px solid var(--line);
+  background: rgba(11, 27, 41, 0.96);
+}
+
+.sidebar-actions .primary-btn {
+  min-height: 44px;
+  white-space: normal;
+}
+
 .map-list-btn {
   display: grid;
   grid-template-columns: 58px minmax(0, 1fr);
