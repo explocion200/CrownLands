@@ -21,6 +21,7 @@ const ONLINE_PRESENCE_STALE_SECONDS = 90;
 const LEADERBOARD_SAVE_SECONDS = 60;
 const LEADERBOARD_STALE_REFRESH_MS = 5 * 60 * 1000;
 const KING_POWER_LEADERBOARD_LIMIT = 100;
+const ONLINE_OWNED_CITIES_REFRESH_MS = 15 * 1000;
 const ONLINE_ARMY_EXPIRY_GRACE_SECONDS = 8;
 const ONLINE_ARMY_RESOLVE_RETRY_SECONDS = 5;
 const PENDING_ARMY_MAX_AGE_MS = 3 * 24 * 60 * 60 * 1000;
@@ -2110,6 +2111,10 @@ let resolvedOnlineArmyIds = new Set();
 let onlinePresence = [];
 let onlineIslandSummaries = new Map();
 let onlineIslandSummaryRefreshInFlight = false;
+let onlineOwnedCitiesCache = [];
+let onlineOwnedCitiesCacheAt = 0;
+let onlineOwnedCitiesCacheComplete = false;
+let onlineOwnedCitiesRefreshInFlight = false;
 let onlinePresenceTimer = 0;
 let onlinePresenceInFlight = false;
 let leaderboardSaveTimer = 0;
@@ -4156,7 +4161,62 @@ function refreshOwnedCityItemEffectMetadata(syncNow = true) {
     city.ownerShieldExpiresAtMs = isStronghold(city) ? 0 : shieldExpiresAtMs;
     markOwnedCityChanged(city, false);
   });
+  if (onlineOwnedCitiesCache.length) {
+    onlineOwnedCitiesCache = onlineOwnedCitiesCache.map(city => (
+      isStronghold(city)
+        ? { ...city, ownerShieldExpiresAtMs: 0 }
+        : { ...city, ownerShieldExpiresAtMs: shieldExpiresAtMs }
+    ));
+  }
   if (syncNow && isOnlineWorldActive()) syncOwnedCitiesToOnline(true);
+}
+
+async function syncPeaceShieldToAllOwnedCities(expiresAtMs = getActivePeaceShieldExpiresAtMs()) {
+  if (!state) return false;
+  const api = getOnlineApi();
+  if (!api?.isSignedIn?.() || !api?.loadOwnedCitiesAcrossIslands || !api?.savePlayerCities) {
+    refreshOwnedCityItemEffectMetadata(true);
+    return false;
+  }
+
+  try {
+    const islandIds = getRegionIds().map(getOnlineIslandId);
+    const owned = await withTimeout(
+      api.loadOwnedCitiesAcrossIslands(islandIds),
+      6500,
+      "Shield city lookup is taking too long."
+    );
+    const normalized = (Array.isArray(owned) ? owned : [])
+      .map(city => normalizeOwnedCitySnapshot({
+        ...city,
+        islandId: city.islandId || getOnlineIslandId(getCityRegionId(city)),
+      }))
+      .filter(Boolean);
+    const nextShieldExpiresAtMs = normalizeTimestampMs(expiresAtMs);
+    const byIsland = new Map();
+    normalized.forEach(city => {
+      const nextCity = {
+        ...city,
+        ownerShieldExpiresAtMs: isStronghold(city) ? 0 : nextShieldExpiresAtMs,
+      };
+      const islandId = nextCity.islandId || getOnlineIslandId(getCityRegionId(nextCity));
+      if (!byIsland.has(islandId)) byIsland.set(islandId, []);
+      byIsland.get(islandId).push(nextCity);
+    });
+
+    await Promise.all([...byIsland.entries()].map(([islandId, cities]) => api.savePlayerCities(islandId, cities)));
+    mergeOwnedCitySnapshots(normalized.map(city => ({
+      ...city,
+      ownerShieldExpiresAtMs: isStronghold(city) ? 0 : nextShieldExpiresAtMs,
+    })), { complete: true });
+    renderCities(true);
+    renderHud();
+    return true;
+  } catch (error) {
+    onlineLastError = error?.message || String(error);
+    console.warn("Could not sync peace shield across owned cities", error);
+    return false;
+  }
 }
 
 function deactivatePeaceShieldForPlayerAttack(target) {
@@ -4169,6 +4229,7 @@ function deactivatePeaceShieldForPlayerAttack(target) {
   saveGame();
   updateShieldStatusBadge();
   renderCities(true);
+  syncPeaceShieldToAllOwnedCities(0);
   return true;
 }
 
@@ -4350,7 +4411,7 @@ function getMainCityChangeCooldownRemainingMs(now = Date.now()) {
 function getMainCityChangeStatus(city, now = Date.now()) {
   const cooldownMs = getMainCityChangeCooldownRemainingMs(now);
   const cooldownText = cooldownMs > 0 ? formatDuration(Math.ceil(cooldownMs / 1000)) : "";
-  const ownedCount = state ? playerRegularCities().length : 0;
+  const ownedCount = state ? getAllOwnedRegularCitiesForDisplay().length : 0;
   const isMain = isMainCityForList(city);
   let reason = "";
 
@@ -4492,7 +4553,7 @@ function getCaptureXpEfficiency(target, oldOwner = target?.owner) {
   if (pvpMultiplier !== null) return Number(clamp(pvpMultiplier * cooldownMultiplier, 0, 2).toFixed(2));
 
   const heroLevel = Math.max(1, Math.floor(Number(state.character?.level) || 1));
-  const empirePressure = 48 + heroLevel * 20 + playerRegularCities().length * 2;
+  const empirePressure = 48 + heroLevel * 20 + getAllOwnedRegularCitiesForDisplay().length * 2;
   const targetScore = getCityXpScore(target, oldOwner);
   const strengthEfficiency = clamp(0.35 + targetScore / Math.max(1, empirePressure), 0.25, 2);
   return Number(clamp(strengthEfficiency * cooldownMultiplier, 0.05, 2).toFixed(2));
@@ -5378,7 +5439,7 @@ function pendingNeutralCaptureCount(owner = "player", excludeAttackId = null) {
 function neutralCaptureStatus(excludeAttackId = null) {
   const daily = ensureDailyCaptureTracker();
   const pending = pendingNeutralCaptureCount("player", excludeAttackId);
-  const owned = playerRegularCities().length;
+  const owned = getAllOwnedRegularCitiesForDisplay().length;
   const remainingByCityCount = Math.max(0, NEUTRAL_CITY_COUNT_LIMIT - owned - pending);
   const remainingToday = Math.max(0, DAILY_NEUTRAL_CAPTURE_LIMIT - daily.neutralCaptures - pending);
   return {
@@ -5477,7 +5538,7 @@ function getPlayerProfileSnapshot() {
     shopItems: state ? normalizeShopItems(state.shopItems) : createDefaultShopItems(),
     itemEffects: state ? normalizeItemEffects(state.itemEffects) : createDefaultItemEffects(),
     itemPurchaseCooldowns: state ? normalizeItemPurchaseCooldowns(state.itemPurchaseCooldowns) : createDefaultItemPurchaseCooldowns(),
-    cityCount: state ? playerRegularCities().length : 0,
+    cityCount: state ? getAllOwnedRegularCitiesForDisplay().length : 0,
     kingPower: state ? getKingPower() : 0,
     gold: state ? Math.floor(Number(state.gold) || 0) : 0,
     daily: state ? normalizeDailyCaptureTracker(state.daily) : normalizeDailyCaptureTracker(null),
@@ -5697,7 +5758,7 @@ function getOnlinePresenceSnapshot() {
     mainCityId: state?.mainCityId || "",
     mainRegionId,
     mainIslandId: state?.online?.mainIslandId || getOnlineIslandId(mainRegionId),
-    cityCount: state ? playerRegularCities().length : 0,
+    cityCount: state ? getAllOwnedRegularCitiesForDisplay().length : 0,
     kingPower: state ? getKingPower() : 0,
     updatedAtMs: Date.now(),
   };
@@ -5710,7 +5771,7 @@ function getKingPowerLeaderboardSnapshot() {
     playerName: state?.playerName || "Ruler",
     flag: state?.flag || createDefaultFlag(),
     kingPower: getKingPower(),
-    cityCount: state ? playerRegularCities().length : 0,
+    cityCount: state ? getAllOwnedRegularCitiesForDisplay().length : 0,
     mainCityId: state?.mainCityId || "",
     mainRegionId,
     mainIslandId: state?.online?.mainIslandId || getOnlineIslandId(mainRegionId),
@@ -5819,6 +5880,9 @@ function centerOnRegion(regionId) {
 
 function getIslandOwnedCityCount(regionId) {
   const targetRegionId = normalizeRegionId(regionId);
+  const cachedCount = getAllOwnedRegularCitiesForDisplay()
+    .filter(city => getCityRegionId(city) === targetRegionId).length;
+  if (cachedCount > 0 || onlineOwnedCitiesCache.length) return cachedCount;
   return state ? playerRegularCities().filter(city => getCityRegionId(city) === targetRegionId).length : 0;
 }
 
@@ -5888,6 +5952,34 @@ function cacheIslandOccupancySummary(regionId, summary = null) {
   return normalized;
 }
 
+function updateIslandSummariesFromOwnedCityCache() {
+  if (!onlineOwnedCitiesCache.length) return;
+  const countsByRegion = new Map();
+  for (const city of onlineOwnedCitiesCache) {
+    if (!city || isStronghold(city)) continue;
+    const regionId = getCityRegionId(city);
+    countsByRegion.set(regionId, (countsByRegion.get(regionId) || 0) + 1);
+  }
+  getRegionIds().forEach(regionId => {
+    const existing = onlineIslandSummaries.get(regionId) || {};
+    onlineIslandSummaries.set(regionId, {
+      regionId,
+      islandId: getOnlineIslandId(regionId),
+      cityCount: Math.max(0, Math.floor(Number(existing.cityCount) || 0)),
+      playerHeldCityCount: Math.max(
+        Math.max(0, Math.floor(Number(existing.playerHeldCityCount) || 0)),
+        Math.max(0, Math.floor(Number(existing.rivalCityCount) || 0)) + (countsByRegion.get(regionId) || 0)
+      ),
+      ownCityCount: countsByRegion.get(regionId) || 0,
+      rivalCityCount: Math.max(0, Math.floor(Number(existing.rivalCityCount) || 0)),
+      rulerCount: Math.max(0, Math.floor(Number(existing.rulerCount) || 0)),
+      rivalRulerCount: Math.max(0, Math.floor(Number(existing.rivalRulerCount) || 0)),
+      updatedAtMs: Date.now(),
+    });
+  });
+  rerenderIslandSwitcherModalIfOpen();
+}
+
 function getIslandOccupancySummary(regionId) {
   const activeRegionId = normalizeRegionId(regionId);
   if (state && activeRegionId === getActiveOnlineRegionId() && onlineCitiesLoaded) {
@@ -5936,6 +6028,45 @@ async function refreshOnlineIslandSummaries(force = false) {
     return false;
   } finally {
     onlineIslandSummaryRefreshInFlight = false;
+  }
+}
+
+async function refreshAllOwnedCities(force = false) {
+  if (!state || onlineOwnedCitiesRefreshInFlight) return false;
+  const api = getOnlineApi();
+  if (!api?.loadOwnedCitiesAcrossIslands || !api?.isSignedIn?.()) {
+    mergeOwnedCitySnapshots(playerCities().map(city => ({
+      ...city,
+      islandId: getOnlineIslandId(getCityRegionId(city)),
+    })), { complete: false });
+    return false;
+  }
+  const now = Date.now();
+  if (!force && onlineOwnedCitiesCacheComplete && onlineOwnedCitiesCache.length && now - onlineOwnedCitiesCacheAt < ONLINE_OWNED_CITIES_REFRESH_MS) return true;
+
+  onlineOwnedCitiesRefreshInFlight = true;
+  try {
+    const islandIds = getRegionIds().map(getOnlineIslandId);
+    const owned = await withTimeout(
+      api.loadOwnedCitiesAcrossIslands(islandIds),
+      6500,
+      "Owned city lookup is taking too long."
+    );
+    mergeOwnedCitySnapshots((Array.isArray(owned) ? owned : []).map(city => ({
+      ...city,
+      islandId: city.islandId || getOnlineIslandId(getCityRegionId(city)),
+    })), { complete: true });
+    renderHud();
+    if (profileScreen?.classList.contains("open")) renderProfileScreen();
+    if (modal.open && modal.classList.contains("city-list-modal")) renderCityListModal();
+    if (modal.open && modal.classList.contains("island-switcher-modal")) renderIslandSwitcherModalContent();
+    return true;
+  } catch (error) {
+    onlineLastError = error?.message || String(error);
+    console.warn("Could not load owned cities across islands", error);
+    return false;
+  } finally {
+    onlineOwnedCitiesRefreshInFlight = false;
   }
 }
 
@@ -6161,6 +6292,7 @@ function attachIslandMapPickerPan(picker) {
 
   picker.addEventListener("pointerdown", event => {
     if (event.button !== undefined && event.button !== 0) return;
+    if (event.target?.closest?.("[data-island-region]")) return;
     pointerId = event.pointerId;
     startX = event.clientX;
     startY = event.clientY;
@@ -6494,6 +6626,10 @@ function disconnectOnlineWorld() {
   onlinePresence = [];
   onlineIslandSummaries = new Map();
   onlineIslandSummaryRefreshInFlight = false;
+  onlineOwnedCitiesCache = [];
+  onlineOwnedCitiesCacheAt = 0;
+  onlineOwnedCitiesCacheComplete = false;
+  onlineOwnedCitiesRefreshInFlight = false;
   onlinePresenceTimer = 0;
   onlinePresenceInFlight = false;
   overdueArmyResolveTimer = 0;
@@ -7049,6 +7185,7 @@ async function connectOnlineIsland(regionId, { claimHome = false, homeRegionId =
     subscribeOnlineArmyWatchers(islandId);
     await recoverPendingOnlineArmyMovements();
     await publishOnlinePresence(true);
+    refreshAllOwnedCities(true);
     updateOnlinePlayersUi();
     updateIslandSwitcherUi();
     const activeCount = Math.max(1, getActiveOnlinePlayers().length);
@@ -7173,6 +7310,13 @@ function applyOnlineCities(onlineCities, regionId = getActiveOnlineRegionId()) {
     state.online.islandId = getOnlineIslandId(activeRegionId);
   }
   cacheIslandOccupancySummary(activeRegionId);
+  onlineOwnedCitiesCache = onlineOwnedCitiesCache.filter(city => getCityRegionId(city) !== activeRegionId);
+  mergeOwnedCitySnapshots(playerCities()
+    .filter(city => getCityRegionId(city) === activeRegionId)
+    .map(city => ({
+      ...city,
+      islandId: getOnlineIslandId(activeRegionId),
+    })));
   ensureLoadedMainCityForRegion(activeRegionId);
 }
 
@@ -7419,6 +7563,10 @@ async function syncOwnedCitiesToOnline(force = false) {
   try {
     await api.savePlayerCities(getActiveOnlineIslandId(), cities);
     cities.forEach(city => localDirtyCityIds.delete(city.id));
+    mergeOwnedCitySnapshots(cities.map(city => ({
+      ...city,
+      islandId: getActiveOnlineIslandId(),
+    })), { complete: false });
     return true;
   } catch (error) {
     onlineLastError = error?.message || String(error);
@@ -8036,6 +8184,92 @@ function playerCities() {
 
 function playerRegularCities() {
   return playerCities().filter(city => !isStronghold(city));
+}
+
+function normalizeOwnedCitySnapshot(raw = {}) {
+  const id = getKnownCityId(raw.id);
+  if (!id) return null;
+  const base = getPlayableBaseCities().find(city => city.id === id) || {};
+  const regionId = normalizeRegionId(raw.regionId || base.regionId || raw.startPool || base.startPool);
+  const ownerUid = String(raw.ownerUid || getCurrentOnlineUid() || "").trim();
+  const ownerFlag = raw.ownerFlag || (ownerUid === getCurrentOnlineUid() ? state?.flag : null);
+  return {
+    ...base,
+    ...raw,
+    id,
+    name: raw.name || base.name || id,
+    owner: "player",
+    ownerKind: "player",
+    ownerUid: ownerUid || null,
+    ownerName: raw.ownerName || state?.playerName || "",
+    ownerFlag,
+    ownerKingPower: normalizePowerValue(raw.ownerKingPower),
+    ownerShieldExpiresAtMs: isStronghold(raw) || isStronghold(base) ? 0 : normalizeTimestampMs(raw.ownerShieldExpiresAtMs),
+    regionId,
+    startPool: raw.startPool || base.startPool || regionId,
+    islandId: raw.islandId || getOnlineIslandId(regionId),
+    kind: raw.kind || base.kind || "",
+    strongholdType: raw.strongholdType || base.strongholdType || "",
+    bonus: raw.bonus || base.bonus || "",
+    bonusPercent: Number(raw.bonusPercent ?? base.bonusPercent) || 0,
+    size: isStronghold(raw) || isStronghold(base) ? getStrongholdVisualSize({ ...base, ...raw }) : undefined,
+    level: isStronghold(raw) || isStronghold(base) ? getStrongholdDefenseLevel({ ...base, ...raw }) : clampCityLevel(raw.level ?? base.level),
+    troops: Math.max(0, Math.floor(Number(raw.troops ?? base.troops) || 0)),
+    troopFloat: Math.max(0, Number(raw.troopFloat ?? raw.troops ?? base.troops) || 0),
+    defense: 1,
+    investedGold: Math.max(0, Math.floor(Number(raw.investedGold) || 0)),
+    lastCapturedAt: raw.lastCapturedAt ?? null,
+    isMainCity: !isStronghold(raw) && !isStronghold(base) && (raw.id === state?.mainCityId || Boolean(raw.isMainCity)),
+  };
+}
+
+function mergeOwnedCitySnapshots(cities = [], { complete = false } = {}) {
+  const merged = new Map();
+  if (!complete) {
+    onlineOwnedCitiesCache.forEach(city => {
+      const normalized = normalizeOwnedCitySnapshot(city);
+      if (normalized) merged.set(normalized.id, normalized);
+    });
+  }
+  cities.forEach(city => {
+    const normalized = normalizeOwnedCitySnapshot(city);
+    if (normalized) merged.set(normalized.id, normalized);
+  });
+  onlineOwnedCitiesCache = Array.from(merged.values());
+  if (complete) {
+    onlineOwnedCitiesCacheAt = Date.now();
+    onlineOwnedCitiesCacheComplete = true;
+  }
+  updateIslandSummariesFromOwnedCityCache();
+  return onlineOwnedCitiesCache;
+}
+
+function getAllOwnedCitiesForDisplay() {
+  const merged = new Map();
+  onlineOwnedCitiesCache.forEach(city => {
+    const normalized = normalizeOwnedCitySnapshot(city);
+    if (normalized) merged.set(normalized.id, normalized);
+  });
+  if (state?.cities) {
+    playerCities().forEach(city => {
+      const normalized = normalizeOwnedCitySnapshot({
+        ...city,
+        islandId: getOnlineIslandId(getCityRegionId(city)),
+      });
+      if (normalized) merged.set(normalized.id, normalized);
+    });
+  }
+  return Array.from(merged.values());
+}
+
+function getAllOwnedRegularCitiesForDisplay() {
+  return getAllOwnedCitiesForDisplay().filter(city => !isStronghold(city));
+}
+
+function getOwnedCitySnapshotById(cityId) {
+  const id = getKnownCityId(cityId);
+  if (!id) return null;
+  return getAllOwnedCitiesForDisplay().find(city => city.id === id) || null;
 }
 
 function ownedCities(owner) {
@@ -8955,8 +9189,10 @@ function getOfflineProgressSeconds(snapshot = state) {
 
 function createOfflineProductionSnapshot(snapshot = state) {
   if (!snapshot || !Array.isArray(snapshot.cities)) return [];
-  return snapshot.cities
-    .filter(city => city.owner === "player")
+  const sourceCities = snapshot === state
+    ? getAllOwnedCitiesForDisplay()
+    : snapshot.cities.filter(city => city.owner === "player");
+  return sourceCities
     .map(city => ({
       id: city.id,
       name: city.name,
@@ -9609,7 +9845,7 @@ function renderHud() {
   if (characterLevelBadge) characterLevelBadge.textContent = `Lv ${formatNumber(state.character.level)}`;
   if (characterXpText) characterXpText.textContent = "";
   applyFlagToElement(hudKingdomFlag, state.flag);
-  const regularCityCount = playerRegularCities().length;
+  const regularCityCount = getAllOwnedRegularCitiesForDisplay().length;
   if (cityText) cityText.textContent = `${formatNumber(regularCityCount)} cities`;
   if (cityListBtn) cityListBtn.setAttribute("aria-label", `Open city list, ${formatNumber(regularCityCount)} cities owned`);
   updateShieldStatusBadge();
@@ -9704,14 +9940,14 @@ function getCityKingPower(city) {
 
 function getKingPower() {
   if (!state || !Array.isArray(state.cities)) return 0;
-  const stationedPower = playerCities().reduce((total, city) => total + getCityKingPower(city), 0);
+  const stationedPower = getAllOwnedCitiesForDisplay().reduce((total, city) => total + getCityKingPower(city), 0);
   const marchingPower = getPlayerMarchingTroops() * KING_POWER_PER_TROOP;
   return Math.max(0, Math.floor(stationedPower + marchingPower));
 }
 
 function getKingdomSummary() {
-  const cities = playerCities();
-  const regularCities = playerRegularCities();
+  const cities = getAllOwnedCitiesForDisplay();
+  const regularCities = cities.filter(city => !isStronghold(city));
   const marchingTroops = getPlayerMarchingTroops();
   return {
     kingPower: getKingPower(),
@@ -10160,7 +10396,7 @@ function renderCities(force = false) {
       <span class="stronghold-building" aria-hidden="true"><img class="stronghold-art" src="${getStrongholdArtSrc(city)}" alt="" draggable="false" /></span>`
       : `
       <span class="city-ring"></span>
-      ${shielded ? `<span class="city-shield-field" aria-hidden="true"><img src="assets/royal-peace-shield-field.png?v=20260630-shield-field-cities" alt="" draggable="false" /></span>` : ""}
+      ${shielded ? `<span class="city-shield-field" aria-hidden="true"><img src="assets/royal-peace-shield-field.png?v=20260630-global-owned-shield-fix" alt="" draggable="false" /></span>` : ""}
       <span class="city-castle stage-${castleStage}" aria-hidden="true"><img class="city-art" src="${getCastleAsset(castleStage)}" alt="" draggable="false" /></span>`;
     btn.setAttribute("aria-label", `${city.name}. ${ownerName}. ${locationType}. ${knownTroops === undefined ? "Unknown troops" : `${formatNumber(knownTroops)} troops`}.`);
     btn.innerHTML = `
@@ -10967,11 +11203,12 @@ function showCityListModal() {
   modal.classList.add("city-list-modal");
   renderCityListModal();
   if (!modal.open) modal.showModal();
+  refreshAllOwnedCities();
 }
 
 function renderCityListModal() {
   const cities = getSortedCityList();
-  const regularCityCount = playerRegularCities().length;
+  const regularCityCount = getAllOwnedRegularCitiesForDisplay().length;
   const pageCount = Math.max(1, Math.ceil(cities.length / CITY_LIST_PAGE_SIZE));
   cityListPage = clamp(cityListPage, 0, pageCount - 1);
   const start = cityListPage * CITY_LIST_PAGE_SIZE;
@@ -10980,7 +11217,7 @@ function renderCityListModal() {
   modalBody.innerHTML = `
     <div class="city-list-panel">
       <div class="city-list-summary">
-        <span>Cities owned</span>
+        <span>Owned across maps</span>
         <strong>${formatNumber(regularCityCount)}</strong>
       </div>
       <div class="city-list-toolbar" aria-label="City list filters">
@@ -11034,15 +11271,15 @@ function renderCityListModal() {
   });
 
   modalBody.querySelectorAll("[data-city-list-info]").forEach(button => {
-    button.addEventListener("click", () => {
+    button.addEventListener("click", async () => {
       modal.classList.remove("city-list-modal");
-      showCityInfoModal(button.dataset.cityListInfo);
+      await openCityListInfo(button.dataset.cityListInfo);
     });
   });
 }
 
 async function focusCityListLocation(cityId) {
-  const city = cityById(cityId);
+  const city = cityById(cityId) || getOwnedCitySnapshotById(cityId);
   if (!city) {
     showToast("That city is no longer available.");
     return;
@@ -11060,8 +11297,23 @@ async function focusCityListLocation(cityId) {
   showToast(`Viewing ${city.name}`);
 }
 
+async function openCityListInfo(cityId) {
+  const city = cityById(cityId) || getOwnedCitySnapshotById(cityId);
+  if (!city) {
+    showToast("That city is no longer available.");
+    return;
+  }
+  const regionId = getCityRegionId(city);
+  if (regionId !== getActiveMapRegionId()) {
+    if (modal.open) modal.close();
+    const switched = await switchOnlineIsland(regionId);
+    if (!switched || regionId !== getActiveMapRegionId()) return;
+  }
+  showCityInfoModal(city.id);
+}
+
 function getSortedCityList() {
-  const cities = playerCities().slice();
+  const cities = getAllOwnedCitiesForDisplay().slice();
   const mainCities = cities.filter(isMainCityForList);
   const otherCities = cities.filter(city => !isMainCityForList(city));
   otherCities.sort(compareCityListEntries);
@@ -11097,6 +11349,9 @@ function renderCityListRow(city) {
   const isMain = isMainCityForList(city);
   const stronghold = isStronghold(city);
   const troops = Math.floor(Number(city.troops) || 0);
+  const regionLabel = getRegionLabel(getCityRegionId(city));
+  const statusLabel = stronghold ? getStrongholdShortBonusLabel(city) : isMain ? "Main city" : "";
+  const locationLabel = statusLabel ? `${statusLabel} - ${regionLabel}` : regionLabel;
   return `
     <article class="city-list-row ${isMain ? "main-city" : ""} ${stronghold ? "stronghold-city-row" : ""}">
       <button class="city-list-locate" data-city-list-jump="${escapeHtml(city.id)}" type="button" aria-label="Center on ${escapeHtml(city.name)}">${isMain ? "&#8962;" : "&#128205;"}</button>
@@ -11104,7 +11359,7 @@ function renderCityListRow(city) {
       <span class="city-list-level"><b>${stronghold ? "SH" : formatNumber(clampCityLevel(city.level))}</b></span>
       <strong class="city-list-troops">${formatNumber(troops)} <span aria-hidden="true">&#9817;</span></strong>
       <span class="city-list-name">${escapeHtml(city.name)}</span>
-      <span class="city-list-main-label">${stronghold ? getStrongholdShortBonusLabel(city) : isMain ? "Main city" : ""}</span>
+      <span class="city-list-main-label">${escapeHtml(locationLabel)}</span>
       <button class="city-list-info" data-city-list-info="${escapeHtml(city.id)}" type="button" aria-label="Open ${escapeHtml(city.name)} info">&#9432;</button>
     </article>
   `;
@@ -11297,7 +11552,11 @@ function useInventoryItem(itemId) {
   const item = getShopItemById(itemId);
   if (!item) return;
   if (item.id === ROYAL_PEACE_SHIELD_ITEM_ID) {
-    useRoyalPeaceShield(item);
+    useRoyalPeaceShield(item).catch(error => {
+      console.warn("Royal Peace Shield activation failed", error);
+      showToast(error?.message || "Could not activate Royal Peace Shield.");
+      renderHud();
+    });
     return;
   }
   showToast(`${item.label} mechanics are coming next.`);
@@ -11329,9 +11588,14 @@ async function useRoyalPeaceShield(item) {
   renderCities(true);
   if (modal?.open && modal.classList.contains("inventory-modal")) modal.close();
   showToast(`${item.label} active: ${formatDuration(getPeaceShieldRemainingSeconds(effects.shieldExpiresAtMs))}`);
-  const cloudSaved = await flushOnlineSave(true);
+  const [shieldSynced, cloudSaved] = await Promise.all([
+    syncPeaceShieldToAllOwnedCities(effects.shieldExpiresAtMs),
+    flushOnlineSave(true),
+  ]);
   if (!cloudSaved && getOnlineApi()?.isSignedIn?.()) {
     showToast(`${item.label} active. Cloud save will retry.`);
+  } else if (!shieldSynced && getOnlineApi()?.isSignedIn?.()) {
+    showToast(`${item.label} active. Shield sync will retry.`);
   }
 }
 
@@ -11599,7 +11863,7 @@ function showLegacyEmpireModal() {
     <div class="stat-grid">
       <div class="stat-card"><strong>${formatNumber(Math.floor(state.gold))}</strong><small>gold available</small></div>
       <div class="stat-card"><strong>+${getGoldPerSecond().toFixed(1)}/s</strong><small>gold income</small></div>
-      <div class="stat-card"><strong>${playerRegularCities().length}</strong><small>cities owned</small></div>
+      <div class="stat-card"><strong>${getAllOwnedRegularCitiesForDisplay().length}</strong><small>cities owned</small></div>
     </div>
     ${skillRow("Attack", "attack", "Army attack power", attackCost)}
     ${skillRow("Income", "income", "Gold and troop growth", incomeCost)}
