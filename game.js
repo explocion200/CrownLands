@@ -5441,15 +5441,27 @@ function getSerializableGameState() {
   return JSON.parse(JSON.stringify(state));
 }
 
+function getPlayerCloudStateSnapshot() {
+  const profile = getPlayerProfileSnapshot();
+  return {
+    ...profile,
+    snapshotKind: "player-profile",
+    version: WORLD_SCHEMA_VERSION,
+    gameSeconds: state ? Math.max(0, Number(state.gameSeconds) || 0) : 0,
+  };
+}
+
 function getPlayerProfileSnapshot() {
   const profileName = state?.playerName || cleanName(playerNameInput?.value) || "Ricky";
   const activeRegionId = state ? getActiveOnlineRegionId() : DEFAULT_ONLINE_REGION_ID;
   const mainRegionId = state?.online?.mainRegionId || (state?.mainCityId ? getCityRegionId(state.mainCityId) : activeRegionId);
   const activeIslandId = state?.online?.islandId || getOnlineIslandId(activeRegionId);
+  const harvestTimer = Number(state?.harvestSpawnTimer);
   return {
     resetGeneration: RESET_GENERATION,
     cloudSaveSlot: ONLINE_SAVE_SLOT,
     worldId: ONLINE_WORLD_ID,
+    version: WORLD_SCHEMA_VERSION,
     mainCityId: state?.mainCityId || "",
     mainCityChangedAtMs: state ? normalizeTimestampMs(state.mainCityChangedAtMs) : 0,
     mainIslandId: state?.online?.mainIslandId || getOnlineIslandId(mainRegionId),
@@ -5466,9 +5478,32 @@ function getPlayerProfileSnapshot() {
     cityCount: state ? playerRegularCities().length : 0,
     kingPower: state ? getKingPower() : 0,
     gold: state ? Math.floor(Number(state.gold) || 0) : 0,
+    daily: state ? normalizeDailyCaptureTracker(state.daily) : normalizeDailyCaptureTracker(null),
+    harvestBonuses: state ? normalizeHarvestBonuses(state.harvestBonuses) : [],
+    harvestSpawnTimer: Number.isFinite(harvestTimer)
+      ? clamp(harvestTimer, 0, HARVEST_BONUS_SPAWN_INTERVAL_SECONDS)
+      : HARVEST_BONUS_INITIAL_SPAWN_SECONDS,
+    harvestNextBonusType: normalizeHarvestBonusType(state?.harvestNextBonusType),
+    scoutReports: state ? normalizeScoutReports(state.scoutReports) : {},
+    battleReports: state ? normalizeBattleReports(state.battleReports) : [],
+    marchPercent: normalizeMarchPercent(state?.marchPercent ?? selectedMarchPercent),
+    lastSelectedOwnedCityId: getKnownCityId(lastSelectedOwnedCityId),
+    gameSeconds: state ? Math.max(0, Number(state.gameSeconds) || 0) : 0,
     localGameSeconds: state ? Number(state.gameSeconds) || 0 : 0,
+    lastRealTimeMs: state ? normalizeTimestampMs(state.lastRealTimeMs) || Date.now() : Date.now(),
     lastSeenAtMs: Date.now(),
     offlineProductionCities: state ? createOfflineProductionSnapshot(state) : [],
+  };
+}
+
+function mergeOnlineProfileSources(profile = null, cloudSnapshot = null) {
+  const currentProfile = profile && isCurrentResetProfile(profile) ? profile : null;
+  const currentCloudSnapshot = cloudSnapshot && isCurrentResetProfile(cloudSnapshot) ? cloudSnapshot : null;
+  if (!currentProfile) return currentCloudSnapshot;
+  if (!currentCloudSnapshot) return currentProfile;
+  return {
+    ...currentCloudSnapshot,
+    ...currentProfile,
   };
 }
 
@@ -5483,8 +5518,21 @@ function applyOnlineProfileSnapshot(profile = null, fallbackPlayerName = "Ricky"
   state.itemPurchaseCooldowns = normalizeItemPurchaseCooldowns(profile.itemPurchaseCooldowns);
   syncCharacterSkillPoints(state.character, state.upgrades, profile.character?.skillPoints);
   state.gold = Math.max(TEST_STARTING_GOLD, Math.floor(Number(profile.gold) || 0));
+  state.daily = normalizeDailyCaptureTracker(profile.daily);
+  state.harvestBonuses = enforceHarvestBonusActiveLimit(normalizeHarvestBonuses(profile.harvestBonuses));
+  const harvestTimer = Number(profile.harvestSpawnTimer);
+  state.harvestSpawnTimer = Number.isFinite(harvestTimer)
+    ? clamp(harvestTimer, 0, HARVEST_BONUS_SPAWN_INTERVAL_SECONDS)
+    : HARVEST_BONUS_INITIAL_SPAWN_SECONDS;
+  state.harvestNextBonusType = normalizeHarvestBonusType(profile.harvestNextBonusType);
+  state.scoutReports = normalizeScoutReports(profile.scoutReports);
+  state.battleReports = normalizeBattleReports(profile.battleReports);
+  state.marchPercent = normalizeMarchPercent(profile.marchPercent);
+  selectedMarchPercent = state.marchPercent;
+  lastSelectedOwnedCityId = getKnownCityId(profile.lastSelectedOwnedCityId) || lastSelectedOwnedCityId;
   state.mainCityChangedAtMs = normalizeTimestampMs(profile.mainCityChangedAtMs);
-  state.gameSeconds = Math.max(0, Number(profile.localGameSeconds) || Number(state.gameSeconds) || 0);
+  state.gameSeconds = Math.max(0, Number(profile.localGameSeconds) || Number(profile.gameSeconds) || Number(state.gameSeconds) || 0);
+  state.lastRealTimeMs = normalizeTimestampMs(profile.lastRealTimeMs) || state.lastRealTimeMs;
 }
 
 function timestampToMs(value) {
@@ -5610,7 +5658,11 @@ async function flushOnlineSave(force = false) {
   onlineSaveInFlight = true;
   onlineSaveQueued = false;
   try {
-    await api.savePlayerProfile(getPlayerProfileSnapshot());
+    const cloudState = getPlayerCloudStateSnapshot();
+    await api.savePlayerProfile(cloudState);
+    if (typeof api.saveGameSnapshot === "function") {
+      await api.saveGameSnapshot(cloudState, ONLINE_SAVE_SLOT);
+    }
     await syncOwnedCitiesToOnline();
     publishKingPowerLeaderboard();
     onlineLastSaveAt = Date.now();
@@ -6711,6 +6763,7 @@ async function setupOnlineWorld({ requireOnlineProfile = false } = {}) {
   updateOnlineUi();
   onlineStatusDetail.textContent = "Finding your home island...";
   let profile = null;
+  let cloudSnapshot = null;
   let profileLoadFailed = false;
   try {
     if (api.loadPlayerProfile) {
@@ -6720,12 +6773,17 @@ async function setupOnlineWorld({ requireOnlineProfile = false } = {}) {
     profileLoadFailed = true;
     console.warn("Could not load online profile before island setup", error);
   }
+  try {
+    if (api.loadGameSnapshot) {
+      cloudSnapshot = await withTimeout(api.loadGameSnapshot(ONLINE_SAVE_SLOT), 5000, "Cloud player state lookup is taking too long.");
+    }
+  } catch (error) {
+    console.warn("Could not load cloud player state before island setup", error);
+  }
   if (profileLoadFailed && requireOnlineProfile) {
     console.warn("Continuing online setup without the player profile.");
   }
-  if (profile && !isCurrentResetProfile(profile)) {
-    profile = null;
-  }
+  profile = mergeOnlineProfileSources(profile, cloudSnapshot);
 
   const hasCurrentProfile = Boolean(profile);
   if (hasCurrentProfile) applyOnlineProfileSnapshot(profile, state.playerName);

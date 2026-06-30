@@ -102,6 +102,24 @@
     return cooldowns && typeof cooldowns === "object" ? { ...cooldowns } : {};
   }
 
+  function sanitizeForFirestore(value) {
+    if (value === undefined) return undefined;
+    if (value === null || typeof value !== "object") return value;
+    if (Array.isArray(value)) {
+      return value.map(item => {
+        const sanitized = sanitizeForFirestore(item);
+        return sanitized === undefined ? null : sanitized;
+      });
+    }
+
+    const sanitizedObject = {};
+    Object.entries(value).forEach(([key, entry]) => {
+      const sanitized = sanitizeForFirestore(entry);
+      if (sanitized !== undefined) sanitizedObject[key] = sanitized;
+    });
+    return sanitizedObject;
+  }
+
   function rememberLogin() {
     savePlayerProfile({ lastLoginAt: Date.now() }).catch(error => {
       console.warn("Could not update login timestamp", error);
@@ -149,12 +167,13 @@
     if (!uid) return false;
     const { doc, setDoc, serverTimestamp } = client.modules.firestore;
     const ref = doc(client.db, "players", uid);
+    const cleanProfile = sanitizeForFirestore(profile);
     await setDoc(ref, {
       uid,
       displayName: client.user.displayName || "",
       email: client.user.email || "",
       photoURL: client.user.photoURL || "",
-      ...profile,
+      ...cleanProfile,
       updatedAt: serverTimestamp(),
     }, { merge: true });
     return true;
@@ -235,11 +254,12 @@
     if (!uid || !snapshot) return false;
     const { doc, setDoc, serverTimestamp } = client.modules.firestore;
     const ref = doc(client.db, "players", uid, "saves", slot);
+    const cleanSnapshot = sanitizeForFirestore(snapshot);
     await setDoc(ref, {
-      version: Number(snapshot.version) || 0,
-      playerName: snapshot.playerName || "",
-      gameSeconds: Number(snapshot.gameSeconds) || 0,
-      state: snapshot,
+      version: Number(cleanSnapshot.version) || 0,
+      playerName: cleanSnapshot.playerName || "",
+      gameSeconds: Number(cleanSnapshot.gameSeconds) || 0,
+      state: cleanSnapshot,
       updatedAt: serverTimestamp(),
     }, { merge: true });
     return true;
