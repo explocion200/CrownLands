@@ -11297,7 +11297,7 @@ function useInventoryItem(itemId) {
   showToast(`${item.label} mechanics are coming next.`);
 }
 
-function useRoyalPeaceShield(item) {
+async function useRoyalPeaceShield(item) {
   const inventory = ensureShopItems();
   const owned = Math.max(0, Math.floor(Number(inventory[item.id]) || 0));
   if (owned <= 0) {
@@ -11319,8 +11319,13 @@ function useRoyalPeaceShield(item) {
   addLog(`${item.label} activated. Your kingdom is protected for ${formatDuration(getPeaceShieldRemainingSeconds(effects.shieldExpiresAtMs))}.`);
   saveGame();
   renderHud();
-  showInventoryModal();
+  updateShieldStatusBadge();
+  if (modal?.open && modal.classList.contains("inventory-modal")) modal.close();
   showToast(`${item.label} active: ${formatDuration(getPeaceShieldRemainingSeconds(effects.shieldExpiresAtMs))}`);
+  const cloudSaved = await flushOnlineSave(true);
+  if (!cloudSaved && getOnlineApi()?.isSignedIn?.()) {
+    showToast(`${item.label} active. Cloud save will retry.`);
+  }
 }
 
 function showAttackPreview(source, target) {
