@@ -13082,13 +13082,27 @@ function updatePinch() {
   markZoomInteraction();
 }
 
+function isMapNodeInteractionTarget(target) {
+  return Boolean(target?.closest(".city-node, .city-action-wheel, .teleport-node, .harvest-bonus-node"));
+}
+
 function startPan(event) {
   if (!state || event.button > 0 || isMapInteractionBlocked()) return;
 
-  // City taps must stay owned by the city button.
-  // V6 was capturing the pointer on mapFrame before this check, which could
-  // steal the final click from blue cities after zoom/pan was added.
-  if (event.target.closest(".city-node, .city-action-wheel, .teleport-node, .harvest-bonus-node")) {
+  const startedOnMapNode = isMapNodeInteractionTarget(event.target);
+  if (startedOnMapNode && event.pointerType === "touch") {
+    activePointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+    mapFrame.setPointerCapture?.(event.pointerId);
+    if (activePointers.size >= 2) {
+      cityTapState = null;
+      beginPinch();
+    } else {
+      suppressMapClick = false;
+    }
+    return;
+  }
+
+  if (startedOnMapNode) {
     suppressMapClick = false;
     return;
   }
