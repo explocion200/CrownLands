@@ -1,6 +1,6 @@
 window.CROWNLANDS_MAP_EDITOR_DATA = {
-  "version": 202606292150,
-  "updatedAt": "2026-06-29T21:50:00.000Z",
+  "version": 202606301517,
+  "updatedAt": "2026-06-30T15:17:41.367Z",
   "maps": [
     {
       "id": "west",
@@ -530,6 +530,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
           "id": "west-center",
           "label": "Center",
           "targetRegionId": "center",
+          "targetPortalId": "",
           "x": 831,
           "y": 769,
           "size": 120
@@ -1063,6 +1064,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
           "id": "north-center",
           "label": "Center",
           "targetRegionId": "center",
+          "targetPortalId": "",
           "x": 754,
           "y": 884,
           "size": 120
@@ -1592,6 +1594,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
           "id": "east-center",
           "label": "Center",
           "targetRegionId": "center",
+          "targetPortalId": "",
           "x": 269,
           "y": 754,
           "size": 120
@@ -2129,6 +2132,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
           "id": "south-center",
           "label": "Center",
           "targetRegionId": "center",
+          "targetPortalId": "",
           "x": 734,
           "y": 197,
           "size": 120
@@ -2137,6 +2141,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
           "id": "south-west",
           "label": "Westmark",
           "targetRegionId": "gatefall-isle",
+          "targetPortalId": "",
           "x": 730,
           "y": 816,
           "size": 120
@@ -2315,8 +2320,8 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         {
           "id": "center_006",
           "name": "Queenshaven",
-          "x": 449,
-          "y": 419,
+          "x": 443,
+          "y": 438,
           "level": 1,
           "troops": 10
         },
@@ -2363,8 +2368,8 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         {
           "id": "center_012",
           "name": "Oakhaven",
-          "x": 413,
-          "y": 381,
+          "x": 406,
+          "y": 402,
           "level": 1,
           "troops": 10
         },
@@ -2379,8 +2384,8 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         {
           "id": "center_014",
           "name": "Silverhaven",
-          "x": 662,
-          "y": 469,
+          "x": 703,
+          "y": 479,
           "level": 1,
           "troops": 10
         },
@@ -2427,16 +2432,16 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         {
           "id": "center_020",
           "name": "Emberhaven",
-          "x": 500,
-          "y": 460,
+          "x": 558,
+          "y": 477,
           "level": 1,
           "troops": 10
         },
         {
           "id": "center_021",
           "name": "Crownford",
-          "x": 579,
-          "y": 477,
+          "x": 631,
+          "y": 464,
           "level": 1,
           "troops": 10
         },
@@ -2475,8 +2480,8 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         {
           "id": "center_026",
           "name": "Queensford",
-          "x": 510,
-          "y": 510,
+          "x": 506,
+          "y": 517,
           "level": 1,
           "troops": 10
         },
@@ -2838,6 +2843,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
           "id": "center-west",
           "label": "West",
           "targetRegionId": "west",
+          "targetPortalId": "",
           "x": 230,
           "y": 601,
           "size": 120
@@ -2846,6 +2852,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
           "id": "center-north",
           "label": "North",
           "targetRegionId": "north",
+          "targetPortalId": "",
           "x": 624,
           "y": 191,
           "size": 120
@@ -2854,6 +2861,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
           "id": "center-east",
           "label": "East",
           "targetRegionId": "east",
+          "targetPortalId": "",
           "x": 1024,
           "y": 597,
           "size": 120
@@ -2862,6 +2870,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
           "id": "center-south",
           "label": "South",
           "targetRegionId": "south",
+          "targetPortalId": "",
           "x": 625,
           "y": 1018,
           "size": 120
@@ -2879,7 +2888,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
           "artSrc": "assets/crown-citadel.png?v=20260630-citadel-art",
           "x": 623,
           "y": 596,
-          "size": 350
+          "size": 400
         }
       ]
     },
@@ -3390,6 +3399,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
           "id": "gatefall-isle-west",
           "label": "Westmark",
           "targetRegionId": "south",
+          "targetPortalId": "",
           "x": 625,
           "y": 112,
           "size": 120

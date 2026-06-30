@@ -41,7 +41,7 @@
     },
     crown: {
       name: "Crown Citadel",
-      artSrc: "assets/crown-citadel.png",
+      artSrc: "assets/crown-citadel.png?v=20260630-citadel-art",
       bonus: "crownDominion",
       bonusPercent: 10,
       level: 100,
@@ -57,6 +57,7 @@
     portalTargetSelect: document.getElementById("portalTargetSelect"),
     openProjectBtn: document.getElementById("openProjectBtn"),
     applyBtn: document.getElementById("applyBtn"),
+    sidebarApplyBtn: document.getElementById("sidebarApplyBtn"),
     canvasWrap: document.querySelector(".canvas-wrap"),
     mapCanvas: document.getElementById("mapCanvas"),
     mapImage: document.getElementById("mapImage"),
@@ -948,10 +949,20 @@
     render();
   }
 
+  function getModeLabel(mode) {
+    if (mode === "objective") return "Stronghold";
+    return titleFromId(mode);
+  }
+
+  function getModeInstruction(mode) {
+    if (mode === "select") return "Select or drag existing markers.";
+    return "Click the map to place.";
+  }
+
   function setMode(mode) {
     state.mode = mode;
     elements.modeButtons.forEach(button => button.classList.toggle("active", button.dataset.mode === mode));
-    setStatus(`Mode: ${titleFromId(mode)}.`);
+    setStatus(`Mode: ${getModeLabel(mode)}. ${getModeInstruction(mode)}`);
   }
 
   async function fileToImageInfo(file) {
@@ -1190,10 +1201,12 @@
     elements.openProjectBtn.addEventListener("click", () => {
       openProjectFolder().catch(error => setStatus(error.message || String(error)));
     });
-    elements.applyBtn.addEventListener("click", () => {
-      applyToGame().catch(error => {
-        console.error(error);
-        setStatus(error.message || String(error));
+    [elements.applyBtn, elements.sidebarApplyBtn].filter(Boolean).forEach(button => {
+      button.addEventListener("click", () => {
+        applyToGame().catch(error => {
+          console.error(error);
+          setStatus(error.message || String(error));
+        });
       });
     });
   }

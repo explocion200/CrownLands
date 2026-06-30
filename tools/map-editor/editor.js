@@ -949,10 +949,20 @@
     render();
   }
 
+  function getModeLabel(mode) {
+    if (mode === "objective") return "Stronghold";
+    return titleFromId(mode);
+  }
+
+  function getModeInstruction(mode) {
+    if (mode === "select") return "Select or drag existing markers.";
+    return "Click the map to place.";
+  }
+
   function setMode(mode) {
     state.mode = mode;
     elements.modeButtons.forEach(button => button.classList.toggle("active", button.dataset.mode === mode));
-    setStatus(`Mode: ${titleFromId(mode)}.`);
+    setStatus(`Mode: ${getModeLabel(mode)}. ${getModeInstruction(mode)}`);
   }
 
   async function fileToImageInfo(file) {
