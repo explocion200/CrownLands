@@ -6046,7 +6046,6 @@ function renderIslandMapTile(region, activeRegionId, homeRegionId) {
       data-island-region="${escapeHtml(regionId)}"
       style="${getIslandMapIconStyle(region)}"
       type="button"
-      ${isMapInteractionBlocked() ? "disabled" : ""}
       aria-label="${escapeHtml(ariaParts.join(", "))}"
     >
       <span class="island-map-thumb" aria-hidden="true">
@@ -6080,7 +6079,7 @@ function renderIslandSwitcherModalContent() {
   modalBody.querySelectorAll("[data-island-region]").forEach(button => {
     button.addEventListener("click", () => {
       if (picker?.dataset.justDragged === "true") return;
-      switchOnlineIsland(button.dataset.islandRegion);
+      switchOnlineIsland(button.dataset.islandRegion, { fromMapPicker: true });
     });
   });
 }
@@ -6147,6 +6146,11 @@ function attachIslandMapPickerPan(picker) {
 
 function showIslandSwitcherModal() {
   if (!state) return;
+  if (isMapInteractionBlocked()) {
+    showToast("Finish loading the current island first.");
+    return;
+  }
+  modal.classList.remove("battle-report-modal", "city-list-modal", "leaderboard-modal", "inventory-modal", "shop-modal", "incoming-attack-modal", "outgoing-attack-modal", "scout-report-modal", "offline-reward-modal");
   modal.classList.add("island-switcher-modal");
   modalTitle.textContent = "Map";
   renderIslandSwitcherModalContent();
@@ -6164,40 +6168,44 @@ function prepareSelectionForIslandSwitch() {
   clearSelection(false);
 }
 
-async function switchOnlineIsland(regionId) {
-  if (isMapInteractionBlocked()) return;
+async function switchOnlineIsland(regionId, { fromMapPicker = false } = {}) {
   const targetRegionId = normalizeRegionId(regionId);
+  if (isMapInteractionBlocked()) {
+    if (fromMapPicker) showToast("Finish loading the current island first.");
+    return false;
+  }
   if (!state) {
     await preloadIslandMap(targetRegionId);
     centerOnRegion(targetRegionId);
     if (modal.open) modal.close();
-    return;
+    return true;
   }
   if (targetRegionId === getActiveOnlineRegionId() && onlineWorldConnected) {
     if (modal.open) modal.close();
     centerOnRegion(targetRegionId);
-    return;
+    return true;
   }
 
   if (!getOnlineApi()?.isSignedIn?.()) {
     setMapSwitchLoading(`Loading ${getRegionLabel(targetRegionId)}...`);
+    prepareSelectionForIslandSwitch();
+    if (fromMapPicker && modal.open) modal.close();
     try {
       const ready = await preloadIslandMap(targetRegionId);
       if (!ready) {
         showToast(`Could not load ${getRegionLabel(targetRegionId)} map art.`);
-        return;
+        return false;
       }
       state.activeRegionId = targetRegionId;
       onlineActiveRegionId = targetRegionId;
-      prepareSelectionForIslandSwitch();
       updateIslandSwitcherUi();
       if (modal.open) modal.close();
       centerOnRegion(targetRegionId);
       renderAll();
+      return true;
     } finally {
       clearMapSwitchLoading();
     }
-    return;
   }
 
   const previousRegionId = getActiveOnlineRegionId();
@@ -6206,13 +6214,15 @@ async function switchOnlineIsland(regionId) {
   const homeRegionId = state.online?.mainRegionId || previousRegionId;
   let leftPreviousIsland = false;
   setMapSwitchLoading(`Loading ${targetLabel}...`);
+  prepareSelectionForIslandSwitch();
+  if (fromMapPicker && modal.open) modal.close();
   try {
     onlineStatusDetail.textContent = `Preparing ${targetLabel}...`;
     const mapReady = await preloadIslandMap(targetRegionId);
     if (!mapReady) {
       showToast(`Could not load ${targetLabel} map art.`);
       onlineStatusDetail.textContent = `${previousLabel} connected.`;
-      return;
+      return false;
     }
 
     onlineStatusDetail.textContent = `Leaving ${previousLabel}...`;
@@ -6231,7 +6241,6 @@ async function switchOnlineIsland(regionId) {
     onlinePresence = [];
     onlineCitiesLoaded = false;
     onlineWorldConnected = false;
-    prepareSelectionForIslandSwitch();
     if (modal.open) modal.close();
     const connected = await connectOnlineIsland(targetRegionId, {
       claimHome: false,
@@ -6241,6 +6250,7 @@ async function switchOnlineIsland(regionId) {
     if (connected) {
       centerOnRegion(targetRegionId);
       renderAll();
+      return true;
     } else {
       if (leftPreviousIsland) {
         await connectOnlineIsland(previousRegionId, {
@@ -6251,6 +6261,7 @@ async function switchOnlineIsland(regionId) {
       centerOnRegion(previousRegionId);
       renderAll();
       showToast(`Could not load ${targetLabel}.`);
+      return false;
     }
   } finally {
     clearMapSwitchLoading();
