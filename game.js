@@ -2163,6 +2163,8 @@ const islandSwitchLabel = document.getElementById("islandSwitchLabel");
 const cityListBtn = document.getElementById("cityListBtn");
 const cityText = document.getElementById("cityText");
 const inventoryBtn = document.getElementById("inventoryBtn");
+const shieldStatusBadge = document.getElementById("shieldStatusBadge");
+const shieldStatusTime = document.getElementById("shieldStatusTime");
 const shopBtn = document.getElementById("shopBtn");
 const neutralCapText = document.getElementById("neutralCapText");
 const characterLevelBadge = document.getElementById("characterLevelBadge");
@@ -9543,6 +9545,7 @@ function renderHud() {
   const regularCityCount = playerRegularCities().length;
   if (cityText) cityText.textContent = `${formatNumber(regularCityCount)} cities`;
   if (cityListBtn) cityListBtn.setAttribute("aria-label", `Open city list, ${formatNumber(regularCityCount)} cities owned`);
+  updateShieldStatusBadge();
   updateIslandSwitcherUi();
   updateIncomingAttackUi();
   updateOutgoingAttackUi();
@@ -9555,6 +9558,25 @@ function renderHud() {
   }
 
   if (profileScreen?.classList.contains("open")) renderProfileScreen();
+}
+
+function updateShieldStatusBadge() {
+  if (!shieldStatusBadge || !shieldStatusTime) return;
+  const expiresAtMs = getActivePeaceShieldExpiresAtMs();
+  const remainingSeconds = getPeaceShieldRemainingSeconds(expiresAtMs);
+  if (!remainingSeconds) {
+    shieldStatusBadge.hidden = true;
+    shieldStatusBadge.title = "";
+    shieldStatusBadge.setAttribute("aria-label", "Royal Peace Shield inactive");
+    shieldStatusTime.textContent = "";
+    return;
+  }
+
+  const remainingText = formatDuration(remainingSeconds);
+  shieldStatusBadge.hidden = false;
+  shieldStatusTime.textContent = remainingText;
+  shieldStatusBadge.title = `Royal Peace Shield active: ${remainingText} remaining`;
+  shieldStatusBadge.setAttribute("aria-label", `Royal Peace Shield active, ${remainingText} remaining`);
 }
 
 function applyFlagToElement(element, flag) {

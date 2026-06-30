@@ -389,6 +389,47 @@ input {
 .resource-pill.island-switch-btn {
   right: max(.75rem, env(safe-area-inset-right));
 }
+.shield-status-badge {
+  position: absolute;
+  z-index: 56;
+  right: calc(max(.75rem, env(safe-area-inset-right)) + 69px);
+  bottom: calc(max(.75rem, env(safe-area-inset-bottom)) + 72px);
+  width: 78px;
+  min-height: 32px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: .22rem;
+  padding: .18rem .38rem;
+  border-radius: 13px;
+  color: #fff5c8;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 35% 20%, rgba(255,255,255,.28), transparent 42%),
+    linear-gradient(180deg, rgba(22, 63, 105, .96), rgba(7, 22, 38, .92));
+  border: 1px solid rgba(246,190,82,.66);
+  box-shadow: 0 9px 22px rgba(0,0,0,.36), 0 0 18px rgba(79,177,255,.24), inset 0 -3px 0 rgba(0,0,0,.2);
+}
+.shield-status-badge[hidden] {
+  display: none;
+}
+.shield-status-badge span {
+  color: #7fd8ff;
+  font-size: .88rem;
+  line-height: 1;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,.55));
+}
+.shield-status-badge strong {
+  min-width: 0;
+  overflow: hidden;
+  color: #fff4b8;
+  font-size: .7rem;
+  font-weight: 1000;
+  line-height: 1;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .city-list-icon,
 .bag-icon,
 .island-switch-icon {
@@ -4216,6 +4257,9 @@ button.inventory-slot {
   .resource-pill.island-switch-btn { width: 56px; min-width: 56px; max-width: 56px; height: 56px; }
   .resource-pill.bag-btn { right: calc(max(.75rem, env(safe-area-inset-right)) + 132px); }
   .resource-pill.city-list-btn { right: calc(max(.75rem, env(safe-area-inset-right)) + 66px); }
+  .shield-status-badge { right: calc(max(.75rem, env(safe-area-inset-right)) + 60px); bottom: calc(max(.75rem, env(safe-area-inset-bottom)) + 62px); width: 68px; min-height: 28px; border-radius: 11px; }
+  .shield-status-badge span { font-size: .76rem; }
+  .shield-status-badge strong { font-size: .62rem; }
   .inventory-slots { gap: .38rem; }
   .inventory-slot { min-height: 88px; grid-template-rows: 34px minmax(2em, auto) 1em; gap: .2rem; padding: .46rem .32rem; }
   .inventory-slot-icon { width: 34px; height: 34px; border-radius: 9px; }
