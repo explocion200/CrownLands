@@ -11097,13 +11097,8 @@ async function buyShopItem(itemId) {
     addLog(`Bought ${item.label} for ${formatNumber(item.cost)} gold.`);
     saveGame();
     renderHud();
-    if (item.id === ROYAL_PEACE_SHIELD_ITEM_ID) {
-      selectedInventoryItemId = item.id;
-      showToast(`${item.label} added to Bag. Select it, then tap Use.`);
-      showInventoryModal();
-    } else {
-      showToast(`${item.label} added to Bag.`);
-    }
+    selectedInventoryItemId = item.id;
+    showToast(`${item.label} added to Bag.`);
     const cloudSaved = await flushOnlineSave(true);
     if (!cloudSaved && getOnlineApi()?.isSignedIn?.()) {
       showToast(`${item.label} added to Bag. Cloud save will retry.`);
@@ -11145,7 +11140,6 @@ function renderInventorySlot(entry, selectedItemId = "") {
       <span class="inventory-slot-icon ${entry.icon ? "has-image" : ""}" aria-hidden="true">${renderItemIcon(entry, "inventory-slot-image")}</span>
       <strong class="inventory-slot-name">${escapeHtml(entry.label)}</strong>
       <span class="inventory-slot-count">x${formatNumber(entry.count)}</span>
-      <span class="inventory-slot-action">${selected ? "Selected" : "Select"}</span>
     </button>
   `;
 }

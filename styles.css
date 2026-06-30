@@ -1705,7 +1705,8 @@ input {
 .inventory-slot {
   min-height: 116px;
   display: grid;
-  align-content: center;
+  grid-template-rows: 48px minmax(2.1em, auto) 1.05em;
+  align-content: start;
   justify-items: center;
   gap: .28rem;
   padding: .62rem .46rem;
@@ -1761,31 +1762,25 @@ button.inventory-slot {
 }
 .inventory-slot-name {
   max-width: 100%;
+  min-height: 2.1em;
+  display: -webkit-box;
   overflow: hidden;
   color: #fff0a7;
   font-size: .82rem;
   font-weight: 950;
+  line-height: 1.05;
+  text-align: center;
   text-overflow: ellipsis;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 .inventory-slot-count {
   color: #cfe9ff;
   font-size: .72rem;
   font-weight: 900;
-}
-.inventory-slot-action {
-  min-width: 58px;
-  min-height: 28px;
   display: grid;
   place-items: center;
-  padding: .22rem .45rem;
-  border-radius: 8px;
-  color: #cfe9ff;
-  background: rgba(13, 59, 96, .72);
-  border: 1px solid rgba(158,213,255,.2);
-  font-size: .68rem;
-  font-weight: 950;
 }
-.inventory-slot.selected .inventory-slot-action,
 .inventory-use-btn {
   min-width: 58px;
   min-height: 30px;
@@ -4222,11 +4217,11 @@ button.inventory-slot {
   .resource-pill.bag-btn { right: calc(max(.75rem, env(safe-area-inset-right)) + 132px); }
   .resource-pill.city-list-btn { right: calc(max(.75rem, env(safe-area-inset-right)) + 66px); }
   .inventory-slots { gap: .38rem; }
-  .inventory-slot { min-height: 88px; padding: .46rem .32rem; }
+  .inventory-slot { min-height: 88px; grid-template-rows: 34px minmax(2em, auto) 1em; gap: .2rem; padding: .46rem .32rem; }
   .inventory-slot-icon { width: 34px; height: 34px; border-radius: 9px; }
   .inventory-slot-icon span { width: 22px; height: 22px; font-size: .74rem; }
-  .inventory-slot-name { font-size: .7rem; }
-  .inventory-slot-action { min-width: 44px; min-height: 24px; padding: .16rem .32rem; font-size: .6rem; }
+  .inventory-slot-name { min-height: 2em; font-size: .7rem; }
+  .inventory-slot-count { font-size: .64rem; }
   .inventory-selection { grid-template-columns: 42px minmax(0, 1fr) auto; gap: .44rem; padding: .5rem; }
   .inventory-selection-icon { width: 42px; height: 42px; border-radius: 9px; }
   .inventory-selection-copy strong { font-size: .78rem; }
