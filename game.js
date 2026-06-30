@@ -4055,7 +4055,12 @@ function normalizeShopItems(items) {
 
 function ensureShopItems() {
   if (!state) return createDefaultShopItems();
-  state.shopItems = normalizeShopItems(state.shopItems);
+  const normalized = normalizeShopItems(state.shopItems);
+  if (!state.shopItems || typeof state.shopItems !== "object" || Array.isArray(state.shopItems)) {
+    state.shopItems = normalized;
+  } else {
+    Object.assign(state.shopItems, normalized);
+  }
   return state.shopItems;
 }
 
@@ -4076,7 +4081,12 @@ function normalizeItemPurchaseCooldowns(cooldowns = {}) {
 
 function ensureItemPurchaseCooldowns() {
   if (!state) return createDefaultItemPurchaseCooldowns();
-  state.itemPurchaseCooldowns = normalizeItemPurchaseCooldowns(state.itemPurchaseCooldowns);
+  const normalized = normalizeItemPurchaseCooldowns(state.itemPurchaseCooldowns);
+  if (!state.itemPurchaseCooldowns || typeof state.itemPurchaseCooldowns !== "object" || Array.isArray(state.itemPurchaseCooldowns)) {
+    state.itemPurchaseCooldowns = normalized;
+  } else {
+    Object.assign(state.itemPurchaseCooldowns, normalized);
+  }
   return state.itemPurchaseCooldowns;
 }
 
@@ -4088,13 +4098,18 @@ function createDefaultItemEffects() {
 
 function normalizeItemEffects(effects = {}) {
   return {
-    shieldExpiresAtMs: normalizeTimestampMs(effects?.shieldExpiresAtMs),
+    shieldExpiresAtMs: timestampToMs(effects?.shieldExpiresAtMs || effects?.shieldExpiresAt),
   };
 }
 
 function ensureItemEffects() {
   if (!state) return createDefaultItemEffects();
-  state.itemEffects = normalizeItemEffects(state.itemEffects);
+  const normalized = normalizeItemEffects(state.itemEffects);
+  if (!state.itemEffects || typeof state.itemEffects !== "object" || Array.isArray(state.itemEffects)) {
+    state.itemEffects = normalized;
+  } else {
+    Object.assign(state.itemEffects, normalized);
+  }
   return state.itemEffects;
 }
 
@@ -4221,8 +4236,8 @@ async function syncPeaceShieldToAllOwnedCities(expiresAtMs = getActivePeaceShiel
 
 function deactivatePeaceShieldForPlayerAttack(target) {
   if (!state || !isAnotherPlayerOwnedCity(target)) return false;
-  const effects = ensureItemEffects();
   if (!getActivePeaceShieldExpiresAtMs()) return false;
+  const effects = ensureItemEffects();
   effects.shieldExpiresAtMs = 0;
   refreshOwnedCityItemEffectMetadata(true);
   addLog(`Royal Peace Shield deactivated because you attacked ${target.name}.`);
@@ -11571,25 +11586,26 @@ async function useRoyalPeaceShield(item) {
     return;
   }
 
-  const effects = ensureItemEffects();
   const now = Date.now();
   const currentExpiresAtMs = getActivePeaceShieldExpiresAtMs();
   const startsAtMs = Math.max(now, currentExpiresAtMs);
-  effects.shieldExpiresAtMs = startsAtMs + ROYAL_PEACE_SHIELD_DURATION_MS;
+  const expiresAtMs = startsAtMs + ROYAL_PEACE_SHIELD_DURATION_MS;
+  const effects = ensureItemEffects();
+  effects.shieldExpiresAtMs = expiresAtMs;
   inventory[item.id] = owned - 1;
   if (inventory[item.id] <= 0 && selectedInventoryItemId === item.id) {
     selectedInventoryItemId = "";
   }
   refreshOwnedCityItemEffectMetadata(true);
-  addLog(`${item.label} activated. Your kingdom is protected for ${formatDuration(getPeaceShieldRemainingSeconds(effects.shieldExpiresAtMs))}.`);
+  addLog(`${item.label} activated. Your kingdom is protected for ${formatDuration(getPeaceShieldRemainingSeconds(expiresAtMs))}.`);
   saveGame();
   renderHud();
   updateShieldStatusBadge();
   renderCities(true);
   if (modal?.open && modal.classList.contains("inventory-modal")) modal.close();
-  showToast(`${item.label} active: ${formatDuration(getPeaceShieldRemainingSeconds(effects.shieldExpiresAtMs))}`);
+  showToast(`${item.label} active: ${formatDuration(getPeaceShieldRemainingSeconds(expiresAtMs))}`);
   const [shieldSynced, cloudSaved] = await Promise.all([
-    syncPeaceShieldToAllOwnedCities(effects.shieldExpiresAtMs),
+    syncPeaceShieldToAllOwnedCities(expiresAtMs),
     flushOnlineSave(true),
   ]);
   if (!cloudSaved && getOnlineApi()?.isSignedIn?.()) {
