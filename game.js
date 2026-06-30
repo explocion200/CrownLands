@@ -12931,6 +12931,19 @@ if (cityListBtn) cityListBtn.addEventListener("click", showCityListModal);
 if (helpBtn) helpBtn.addEventListener("click", showHelpModal);
 if (mainCityReturnBtn) mainCityReturnBtn.addEventListener("click", returnToMainCity);
 closeModalBtn.addEventListener("click", () => modal.close());
+modal.addEventListener("click", event => {
+  if (event.target !== modal) return;
+  event.preventDefault();
+  event.stopPropagation();
+  modal.close();
+});
+document.addEventListener("pointerdown", event => {
+  if (!profileScreen?.classList.contains("open") || modal.open) return;
+  if (profileScreen.contains(event.target) || profileBtn?.contains(event.target)) return;
+  event.preventDefault();
+  event.stopPropagation();
+  closeProfileScreen();
+}, true);
 modal.addEventListener("close", () => {
   modal.classList.remove("troop-slider-modal");
   modal.classList.remove("scout-report-modal");

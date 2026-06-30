@@ -1,6 +1,6 @@
 window.CROWNLANDS_MAP_EDITOR_DATA = {
-  "version": 202606301517,
-  "updatedAt": "2026-06-30T15:17:41.367Z",
+  "version": 202606301632,
+  "updatedAt": "2026-06-30T16:32:03.383Z",
   "maps": [
     {
       "id": "west",
@@ -2888,7 +2888,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
           "artSrc": "assets/crown-citadel.png?v=20260630-citadel-art",
           "x": 623,
           "y": 596,
-          "size": 400
+          "size": 600
         }
       ]
     },
