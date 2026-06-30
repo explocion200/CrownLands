@@ -41,7 +41,7 @@
     },
     crown: {
       name: "Crown Citadel",
-      artSrc: "assets/crown-citadel.png",
+      artSrc: "assets/crown-citadel.png?v=20260630-citadel-art",
       bonus: "crownDominion",
       bonusPercent: 10,
       level: 100,

@@ -2876,7 +2876,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
           "bonusPercent": 10,
           "level": 100,
           "troops": 50000000,
-          "artSrc": "assets/crown-citadel.png",
+          "artSrc": "assets/crown-citadel.png?v=20260630-citadel-art",
           "x": 623,
           "y": 596,
           "size": 350
