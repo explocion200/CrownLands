@@ -1108,6 +1108,26 @@ input {
   border-radius: 50%;
   border: 4px solid rgba(255,255,255,.72);
   box-shadow: 0 12px 22px rgba(0,0,0,.35), inset 0 -9px 18px rgba(0,0,0,.22);
+  z-index: 0;
+}
+.city-shield-field {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 98px;
+  height: 100px;
+  transform: translate(-50%, -50%);
+  z-index: 2;
+  pointer-events: none;
+  opacity: .92;
+  filter: drop-shadow(0 0 12px rgba(114, 217, 255, .72)) drop-shadow(0 0 20px rgba(75, 165, 255, .46));
+  animation: cityShieldPulse 1.9s ease-in-out infinite;
+}
+.city-shield-field img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
 }
 .city-node.player .city-ring { background: radial-gradient(circle at 35% 30%, #7cc7ff, var(--blue2) 68%); border-color: #a8ddff; }
 .city-node.player2 .city-ring { background: radial-gradient(circle at 35% 30%, #bb95ff, #5732a3 68%); border-color: #d6c4ff; }
@@ -1121,6 +1141,10 @@ input {
 .city-node.scout-radius-source .city-ring { box-shadow: 0 0 0 8px rgba(89, 209, 255, .55), 0 14px 25px rgba(0,0,0,.42); }
 @keyframes targetPulse { from { box-shadow: 0 0 0 2px rgba(242,184,75,.34), 0 10px 20px rgba(0,0,0,.35); } to { box-shadow: 0 0 0 9px rgba(242,184,75,.42), 0 10px 20px rgba(0,0,0,.35); } }
 @keyframes scoutTargetPulse { from { box-shadow: 0 0 0 3px rgba(88,198,255,.42), 0 10px 20px rgba(0,0,0,.35); } to { box-shadow: 0 0 0 11px rgba(88,198,255,.62), 0 10px 20px rgba(0,0,0,.35); } }
+@keyframes cityShieldPulse {
+  0%, 100% { opacity: .82; transform: translate(-50%, -50%) scale(.985); }
+  50% { opacity: 1; transform: translate(-50%, -50%) scale(1.035); }
+}
 .city-castle {
   position: absolute;
   left: 9px;
@@ -1136,9 +1160,11 @@ input {
   pointer-events: none;
 }
 .map-frame.zooming .city-ring,
+.map-frame.zooming .city-shield-field,
 .map-frame.zooming .city-castle,
 .map-frame.zooming .stronghold-building,
 .map-frame.low-zoom .city-ring,
+.map-frame.low-zoom .city-shield-field,
 .map-frame.low-zoom .city-castle,
 .map-frame.low-zoom .stronghold-building,
 .map-frame.low-zoom .player-city-label,
@@ -1147,6 +1173,11 @@ input {
 .map-frame.low-zoom .city-wheel-ring {
   filter: none;
   box-shadow: none;
+}
+.map-frame.zooming .city-shield-field,
+.map-frame.low-zoom .city-shield-field {
+  animation: none;
+  opacity: .9;
 }
 .map-frame.zooming .city-action-wheel,
 .map-frame.zooming .scout-nearby-radius {
@@ -2924,6 +2955,7 @@ button.inventory-slot {
 @media (max-height: 720px) {
   .map-frame { inset-bottom: 150px; }
   .city-node { width: 58px; height: 58px; }
+  .city-shield-field { width: 90px; height: 92px; }
   .city-castle { left: 7px; top: 7px; width: 44px; height: 44px; }
   .city-castle.stage-1,
   .city-castle.stage-2,

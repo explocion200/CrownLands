@@ -4167,6 +4167,8 @@ function deactivatePeaceShieldForPlayerAttack(target) {
   refreshOwnedCityItemEffectMetadata(true);
   addLog(`Royal Peace Shield deactivated because you attacked ${target.name}.`);
   saveGame();
+  updateShieldStatusBadge();
+  renderCities(true);
   return true;
 }
 
@@ -10048,6 +10050,7 @@ function getCityRenderSignature(visibleCities) {
       city.kind || "",
       city.strongholdType || "",
       isStronghold(city) ? getStrongholdVisualSize(city) : "",
+      isCityProtectedByPeaceShield(city) ? getCityPeaceShieldExpiresAtMs(city) : 0,
       city.level,
       Math.floor(Number(city.troops) || 0),
       city.isMainCity ? 1 : 0,
@@ -10093,6 +10096,8 @@ function renderCities(force = false) {
     const castleStage = getCastleStage(city.level);
     btn.className = `city-node ${OWNER[city.owner].css} castle-stage-${castleStage}`;
     if (stronghold) btn.classList.add("stronghold-node", `stronghold-${city.strongholdType || "generic"}`);
+    const shielded = !stronghold && isCityProtectedByPeaceShield(city);
+    if (shielded) btn.classList.add("peace-shielded");
     if (city.id === selectedSourceId) btn.classList.add("selected");
     if (city.id === selectedTargetId) btn.classList.add("targeted");
     if (scoutNearbySource?.id === city.id) btn.classList.add("scout-radius-source");
@@ -10155,6 +10160,7 @@ function renderCities(force = false) {
       <span class="stronghold-building" aria-hidden="true"><img class="stronghold-art" src="${getStrongholdArtSrc(city)}" alt="" draggable="false" /></span>`
       : `
       <span class="city-ring"></span>
+      ${shielded ? `<span class="city-shield-field" aria-hidden="true"><img src="assets/royal-peace-shield-field.png?v=20260630-shield-field-cities" alt="" draggable="false" /></span>` : ""}
       <span class="city-castle stage-${castleStage}" aria-hidden="true"><img class="city-art" src="${getCastleAsset(castleStage)}" alt="" draggable="false" /></span>`;
     btn.setAttribute("aria-label", `${city.name}. ${ownerName}. ${locationType}. ${knownTroops === undefined ? "Unknown troops" : `${formatNumber(knownTroops)} troops`}.`);
     btn.innerHTML = `
@@ -11320,6 +11326,7 @@ async function useRoyalPeaceShield(item) {
   saveGame();
   renderHud();
   updateShieldStatusBadge();
+  renderCities(true);
   if (modal?.open && modal.classList.contains("inventory-modal")) modal.close();
   showToast(`${item.label} active: ${formatDuration(getPeaceShieldRemainingSeconds(effects.shieldExpiresAtMs))}`);
   const cloudSaved = await flushOnlineSave(true);
