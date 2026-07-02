@@ -409,6 +409,18 @@
     state.selected = { kind: "region", regionId };
   }
 
+  function selectGridCell(gridX, gridY) {
+    state.editorMode = "world";
+    state.tool = "select";
+    state.selected = {
+      kind: "gridCell",
+      gridX: Math.round(Number(gridX) || 0),
+      gridY: Math.round(Number(gridY) || 0),
+    };
+    setStatus(`Selected empty grid cell ${state.selected.gridX}, ${state.selected.gridY}.`);
+    render();
+  }
+
   function selectCity(regionId, index) {
     state.activeRegionId = regionId;
     state.selected = { kind: "city", regionId, index };
@@ -433,6 +445,7 @@
 
   function getSelectedItem() {
     if (!state.selected) return null;
+    if (state.selected.kind === "gridCell") return state.selected;
     const region = getRegion(state.selected.regionId);
     if (!region) return null;
     if (state.selected.kind === "region") return region;
@@ -457,11 +470,12 @@
     elements.addCityBtn.classList.toggle("active", state.tool === "city");
     elements.addStrongholdBtn.classList.toggle("active", state.tool === "stronghold");
     elements.addEdgeBtn.classList.toggle("active", state.tool === "edge");
+    elements.addRegionBtn.classList.toggle("active", state.selected?.kind === "gridCell");
     elements.toggleGridBtn.classList.toggle("active", state.toggles.grid);
     elements.toggleCitiesBtn.classList.toggle("active", state.toggles.cities);
     elements.toggleStrongholdsBtn.classList.toggle("active", state.toggles.strongholds);
     elements.toggleConnectionsBtn.classList.toggle("active", state.toggles.connections);
-    elements.deleteSelectedBtn.disabled = !state.selected;
+    elements.deleteSelectedBtn.disabled = !state.selected || state.selected.kind === "gridCell";
     elements.zoomLabel.textContent = `${Math.round(state.zoom * 100)}%`;
   }
 
@@ -517,6 +531,28 @@
     svg.setAttribute("class", "grid-connection-layer");
     svg.setAttribute("viewBox", `0 0 ${cols * cell} ${rows * cell}`);
     elements.worldGrid.appendChild(svg);
+
+    const occupiedCells = new Set(state.regions.map(region => `${region.gridX},${region.gridY}`));
+    for (let gridY = bounds.minY; gridY <= bounds.maxY; gridY += 1) {
+      for (let gridX = bounds.minX; gridX <= bounds.maxX; gridX += 1) {
+        if (occupiedCells.has(`${gridX},${gridY}`)) continue;
+        const cellButton = document.createElement("button");
+        cellButton.type = "button";
+        cellButton.className = `grid-cell ${state.selected?.kind === "gridCell" && state.selected.gridX === gridX && state.selected.gridY === gridY ? "selected" : ""}`;
+        cellButton.style.left = `${(gridX - bounds.minX) * cell}px`;
+        cellButton.style.top = `${(gridY - bounds.minY) * cell}px`;
+        cellButton.dataset.gridX = String(gridX);
+        cellButton.dataset.gridY = String(gridY);
+        cellButton.title = `Empty grid cell ${gridX}, ${gridY}`;
+        cellButton.innerHTML = `<span>${gridX}, ${gridY}</span>`;
+        cellButton.addEventListener("click", event => {
+          event.preventDefault();
+          event.stopPropagation();
+          selectGridCell(gridX, gridY);
+        });
+        elements.worldGrid.appendChild(cellButton);
+      }
+    }
 
     state.regions.forEach(region => {
       const left = (region.gridX - bounds.minX) * cell + 8;
@@ -848,9 +884,15 @@
 
   function addRegion() {
     const occupied = new Set(state.regions.map(region => `${region.gridX},${region.gridY}`));
-    let gridX = 0;
-    let gridY = 0;
-    while (occupied.has(`${gridX},${gridY}`)) gridX += 1;
+    let gridX = state.selected?.kind === "gridCell" ? state.selected.gridX : 0;
+    let gridY = state.selected?.kind === "gridCell" ? state.selected.gridY : 0;
+    if (occupied.has(`${gridX},${gridY}`)) {
+      if (state.selected?.kind === "gridCell") {
+        setStatus(`Grid cell ${gridX}, ${gridY} already has a region.`);
+        return;
+      }
+      while (occupied.has(`${gridX},${gridY}`)) gridX += 1;
+    }
     const index = state.regions.length + 1;
     const id = uniqueId(state.regions, `region_${index}`);
     const region = normalizeRegion({
@@ -870,7 +912,7 @@
     state.regions.push(region);
     state.activeRegionId = region.id;
     state.selected = { kind: "region", regionId: region.id };
-    markDirty(`Added region ${region.name}.`);
+    markDirty(`Added region ${region.name} at ${gridX}, ${gridY}.`);
     render();
   }
 
@@ -971,11 +1013,12 @@
     if (!item) {
       elements.selectionTitle.textContent = "None";
       elements.selectionForm.className = "selection-form empty";
-      elements.selectionForm.textContent = "Select a region, city, stronghold, or edge connection.";
+      elements.selectionForm.textContent = "Select a grid cell, region, city, stronghold, or edge connection.";
       renderValidationList();
       return;
     }
     elements.selectionForm.className = "selection-form";
+    if (state.selected.kind === "gridCell") renderGridCellForm(item);
     if (state.selected.kind === "region") renderRegionForm(item);
     if (state.selected.kind === "city") renderCityForm(item, getRegion(state.selected.regionId));
     if (state.selected.kind === "stronghold") renderStrongholdForm(item, getRegion(state.selected.regionId));
@@ -985,6 +1028,17 @@
 
   function optionList(values, selected) {
     return values.map(value => `<option value="${escapeHtml(value)}" ${value === selected ? "selected" : ""}>${escapeHtml(titleFromId(value))}</option>`).join("");
+  }
+
+  function renderGridCellForm(cell) {
+    elements.selectionTitle.textContent = `Grid ${cell.gridX}, ${cell.gridY}`;
+    elements.selectionForm.innerHTML = `
+      <div class="form-grid">
+        <label><span>Grid X</span><input value="${cell.gridX}" readonly /></label>
+        <label><span>Grid Y</span><input value="${cell.gridY}" readonly /></label>
+        <p class="wide helper-text">Click Add Region to place a new region in this empty square.</p>
+      </div>
+    `;
   }
 
   function renderRegionForm(region) {

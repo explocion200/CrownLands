@@ -262,6 +262,44 @@ label > span,
   pointer-events: none;
 }
 
+.grid-cell {
+  position: absolute;
+  display: grid;
+  place-items: center;
+  width: var(--cell);
+  height: var(--cell);
+  min-height: 0;
+  border: 1px solid transparent;
+  border-radius: 0;
+  padding: 0;
+  color: transparent;
+  background: transparent;
+}
+
+.grid-cell:hover,
+.grid-cell.selected {
+  border-color: rgba(227, 182, 91, 0.5);
+  color: rgba(237, 246, 255, 0.68);
+  background: rgba(227, 182, 91, 0.08);
+}
+
+.grid-cell.selected {
+  border-color: var(--gold);
+  outline: inset 0 0 0 2px rgba(227, 182, 91, 0.35);
+}
+
+.grid-cell span {
+  display: inline-grid;
+  place-items: center;
+  min-width: 56px;
+  min-height: 24px;
+  padding: 2px 6px;
+  border-radius: 5px;
+  font-size: 11px;
+  font-weight: 800;
+  background: rgba(4, 13, 21, 0.66);
+}
+
 .region-tile {
   position: absolute;
   display: grid;
@@ -550,6 +588,12 @@ label > span,
 
 .form-grid .wide {
   grid-column: 1 / -1;
+}
+
+.helper-text {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.35;
 }
 
 .check-row {
