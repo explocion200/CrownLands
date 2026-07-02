@@ -91,6 +91,12 @@ Then open `http://127.0.0.1:8791/editor/`. The editor runs only on this computer
 
 The editor also serves the game at `/game/` for a quick browser preview.
 
+To check that troop travel can move through every regional edge connection, run:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\tools\validate-world-routes.ps1
+```
+
 ## Deploy on Netlify
 
 Upload the full folder or zip to Netlify Drop. Keep `index.html`, `styles.css`, `world-config.js`, `game.js`, `manifest.webmanifest`, and the `assets` folder together.

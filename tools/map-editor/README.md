@@ -37,6 +37,12 @@ Use `Save to Game` to write:
 
 The JSON files are the new source of truth. `assets/map-editor-data.js` is generated for the current game loader.
 
+After changing region connections, run this from the repo root to verify every map can route troops through the edge network:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\tools\validate-world-routes.ps1
+```
+
 ## Strongholds
 
 The editor supports separate marker types for:

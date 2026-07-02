@@ -1,12 +1,24 @@
 window.CROWNLANDS_MAP_EDITOR_DATA = {
-  "version": 202607022233,
-  "updatedAt": "2026-07-02T22:33:33.718Z",
+  "version": 202607022315,
+  "updatedAt": "2026-07-02T23:15:19.202Z",
   "worldId": "world_01",
   "worldName": "Crownlands World 01",
+  "globalSettings": {
+    "defaultMapWidth": 2048,
+    "defaultMapHeight": 1536,
+    "minimumCitySpacing": 0.045,
+    "worldWidth": 13000,
+    "worldHeight": 17000,
+    "gridCellWorldSize": 2300
+  },
   "maps": [
     {
       "id": "center",
       "label": "Crownlands Heart",
+      "gridX": 0,
+      "gridY": 0,
+      "type": "crownlands_main",
+      "cityCapacity": 100,
       "imageSrc": "assets/worlds/world_01/maps/center-crownlands-heart-1783019616021.png",
       "thumbnailSrc": "",
       "imageWidth": 1448,
@@ -14,14 +26,16 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
       "region": {
         "id": "center",
         "label": "Crownlands Heart",
-        "x": 5000,
-        "y": 3800,
+        "x": 6500,
+        "y": 8500,
         "rx": 1900,
         "ry": 1450,
         "cityRx": 1580,
         "cityRy": 1160,
         "rot": -0.03,
-        "palette": "heartland"
+        "palette": "heartland",
+        "gridX": 0,
+        "gridY": 0
       },
       "cities": [
         {
@@ -988,6 +1002,10 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
     {
       "id": "west",
       "label": "West Marches",
+      "gridX": -1,
+      "gridY": 0,
+      "type": "endgame",
+      "cityCapacity": 50,
       "imageSrc": "assets/worlds/world_01/maps/west-west-2-1783019399438.png",
       "thumbnailSrc": "",
       "imageWidth": 1448,
@@ -995,14 +1013,16 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
       "region": {
         "id": "west",
         "label": "West Marches",
-        "x": 1500,
-        "y": 3800,
+        "x": 4200,
+        "y": 8500,
         "rx": 1120,
         "ry": 1330,
         "cityRx": 900,
         "cityRy": 1090,
         "rot": 0.07,
-        "palette": "woodland"
+        "palette": "woodland",
+        "gridX": -1,
+        "gridY": 0
       },
       "cities": [
         {
@@ -1648,6 +1668,10 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
     {
       "id": "east",
       "label": "East Reach",
+      "gridX": 1,
+      "gridY": 0,
+      "type": "endgame",
+      "cityCapacity": 50,
       "imageSrc": "assets/worlds/world_01/maps/east-east-4-1783020191215.png",
       "thumbnailSrc": "",
       "imageWidth": 1448,
@@ -1655,14 +1679,16 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
       "region": {
         "id": "east",
         "label": "East Reach",
-        "x": 8500,
-        "y": 3800,
+        "x": 8800,
+        "y": 8500,
         "rx": 1120,
         "ry": 1330,
         "cityRx": 900,
         "cityRy": 1090,
         "rot": -0.07,
-        "palette": "golden"
+        "palette": "golden",
+        "gridX": 1,
+        "gridY": 0
       },
       "cities": [
         {
@@ -2308,6 +2334,10 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
     {
       "id": "north",
       "label": "North Frontier",
+      "gridX": 0,
+      "gridY": -1,
+      "type": "endgame",
+      "cityCapacity": 50,
       "imageSrc": "assets/worlds/world_01/maps/north-north-1-1783019201680.png",
       "thumbnailSrc": "",
       "imageWidth": 1448,
@@ -2315,14 +2345,16 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
       "region": {
         "id": "north",
         "label": "North Frontier",
-        "x": 5000,
-        "y": 1150,
+        "x": 6500,
+        "y": 6200,
         "rx": 1650,
         "ry": 900,
         "cityRx": 1370,
         "cityRy": 700,
         "rot": 0.04,
-        "palette": "pine"
+        "palette": "pine",
+        "gridX": 0,
+        "gridY": -1
       },
       "cities": [
         {
@@ -2968,6 +3000,10 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
     {
       "id": "south",
       "label": "Southfields",
+      "gridX": 0,
+      "gridY": 1,
+      "type": "endgame",
+      "cityCapacity": 50,
       "imageSrc": "assets/worlds/world_01/maps/south-south-5-1783020401484.png",
       "thumbnailSrc": "",
       "imageWidth": 1448,
@@ -2975,14 +3011,16 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
       "region": {
         "id": "south",
         "label": "Southfields",
-        "x": 5000,
-        "y": 6450,
+        "x": 6500,
+        "y": 10800,
         "rx": 1650,
         "ry": 900,
         "cityRx": 1370,
         "cityRy": 700,
         "rot": -0.05,
-        "palette": "marsh"
+        "palette": "marsh",
+        "gridX": 0,
+        "gridY": 1
       },
       "cities": [
         {
@@ -3855,6 +3893,10 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
     {
       "id": "region_6",
       "label": "Graywood Hollow",
+      "gridX": -2,
+      "gridY": 2,
+      "type": "midgame",
+      "cityCapacity": 50,
       "imageSrc": "assets/worlds/world_01/maps/region_6-6-1783021585258.png",
       "thumbnailSrc": "",
       "imageWidth": 1448,
@@ -3862,8 +3904,10 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
       "region": {
         "id": "region_6",
         "label": "Graywood Hollow",
-        "x": 400,
-        "y": 8400,
+        "gridX": -2,
+        "gridY": 2,
+        "x": 1900,
+        "y": 13100,
         "rx": 1058,
         "ry": 828,
         "cityRx": 868,
@@ -4495,6 +4539,10 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
     {
       "id": "region_7",
       "label": "Greenrook Vale",
+      "gridX": -1,
+      "gridY": 2,
+      "type": "midgame",
+      "cityCapacity": 50,
       "imageSrc": "assets/worlds/world_01/maps/region_7-7-1783022207943.png",
       "thumbnailSrc": "",
       "imageWidth": 1448,
@@ -4502,8 +4550,10 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
       "region": {
         "id": "region_7",
         "label": "Greenrook Vale",
-        "x": 2700,
-        "y": 8400,
+        "gridX": -1,
+        "gridY": 2,
+        "x": 4200,
+        "y": 13100,
         "rx": 1058,
         "ry": 828,
         "cityRx": 868,
@@ -5422,6 +5472,10 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
     {
       "id": "region_8",
       "label": "Lowroad Vale",
+      "gridX": 0,
+      "gridY": 2,
+      "type": "midgame",
+      "cityCapacity": 50,
       "imageSrc": "assets/worlds/world_01/maps/region_8-8-1783022783978.png",
       "thumbnailSrc": "",
       "imageWidth": 1448,
@@ -5429,8 +5483,10 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
       "region": {
         "id": "region_8",
         "label": "Lowroad Vale",
-        "x": 5000,
-        "y": 8400,
+        "gridX": 0,
+        "gridY": 2,
+        "x": 6500,
+        "y": 13100,
         "rx": 1058,
         "ry": 828,
         "cityRx": 868,
@@ -6264,6 +6320,10 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
     {
       "id": "region_9",
       "label": "Stonebrook Farms",
+      "gridX": 1,
+      "gridY": 2,
+      "type": "midgame",
+      "cityCapacity": 50,
       "imageSrc": "assets/worlds/world_01/maps/region_9-9-1783023202200.png",
       "thumbnailSrc": "",
       "imageWidth": 1448,
@@ -6271,8 +6331,10 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
       "region": {
         "id": "region_9",
         "label": "Stonebrook Farms",
-        "x": 7300,
-        "y": 8400,
+        "gridX": 1,
+        "gridY": 2,
+        "x": 8800,
+        "y": 13100,
         "rx": 1058,
         "ry": 828,
         "cityRx": 868,
@@ -6939,6 +7001,10 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
     {
       "id": "region_10",
       "label": "Goldmere Plains",
+      "gridX": 2,
+      "gridY": 2,
+      "type": "midgame",
+      "cityCapacity": 50,
       "imageSrc": "assets/worlds/world_01/maps/region_10-10-1783023599661.png",
       "thumbnailSrc": "",
       "imageWidth": 1448,
@@ -6946,8 +7012,10 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
       "region": {
         "id": "region_10",
         "label": "Goldmere Plains",
-        "x": 9600,
-        "y": 8400,
+        "gridX": 2,
+        "gridY": 2,
+        "x": 11100,
+        "y": 13100,
         "rx": 1058,
         "ry": 828,
         "cityRx": 868,
@@ -7459,6 +7527,10 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
     {
       "id": "region_11",
       "label": "Bandit Wastes",
+      "gridX": -2,
+      "gridY": 3,
+      "type": "starter",
+      "cityCapacity": 50,
       "imageSrc": "assets/worlds/world_01/maps/region_11-11-1783024323781.png",
       "thumbnailSrc": "",
       "imageWidth": 1448,
@@ -7466,8 +7538,10 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
       "region": {
         "id": "region_11",
         "label": "Bandit Wastes",
-        "x": 400,
-        "y": 10700,
+        "gridX": -2,
+        "gridY": 3,
+        "x": 1900,
+        "y": 15400,
         "rx": 1058,
         "ry": 828,
         "cityRx": 868,
@@ -8087,6 +8161,10 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
     {
       "id": "region_12",
       "label": "Ironfall Hills",
+      "gridX": -1,
+      "gridY": 3,
+      "type": "starter",
+      "cityCapacity": 50,
       "imageSrc": "assets/worlds/world_01/maps/region_12-12-1783024478267.png",
       "thumbnailSrc": "",
       "imageWidth": 1448,
@@ -8094,8 +8172,10 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
       "region": {
         "id": "region_12",
         "label": "Ironfall Hills",
-        "x": 2700,
-        "y": 10700,
+        "gridX": -1,
+        "gridY": 3,
+        "x": 4200,
+        "y": 15400,
         "rx": 1058,
         "ry": 828,
         "cityRx": 868,
@@ -8594,6 +8674,10 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
     {
       "id": "region_13",
       "label": "Redbanner Fields",
+      "gridX": 0,
+      "gridY": 3,
+      "type": "starter",
+      "cityCapacity": 50,
       "imageSrc": "assets/worlds/world_01/maps/region_13-13-1783024786859.png",
       "thumbnailSrc": "",
       "imageWidth": 1448,
@@ -8601,8 +8685,10 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
       "region": {
         "id": "region_13",
         "label": "Redbanner Fields",
-        "x": 5000,
-        "y": 10700,
+        "gridX": 0,
+        "gridY": 3,
+        "x": 6500,
+        "y": 15400,
         "rx": 1058,
         "ry": 828,
         "cityRx": 868,
@@ -9293,6 +9379,10 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
     {
       "id": "region_14",
       "label": "Ashenfen March",
+      "gridX": 1,
+      "gridY": 3,
+      "type": "starter",
+      "cityCapacity": 50,
       "imageSrc": "assets/worlds/world_01/maps/region_14-14-1783024960400.png",
       "thumbnailSrc": "",
       "imageWidth": 1448,
@@ -9300,8 +9390,10 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
       "region": {
         "id": "region_14",
         "label": "Ashenfen March",
-        "x": 7300,
-        "y": 10700,
+        "gridX": 1,
+        "gridY": 3,
+        "x": 8800,
+        "y": 15400,
         "rx": 1058,
         "ry": 828,
         "cityRx": 868,
@@ -9884,6 +9976,10 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
     {
       "id": "region_15",
       "label": "Relic Vale",
+      "gridX": 2,
+      "gridY": 3,
+      "type": "starter",
+      "cityCapacity": 50,
       "imageSrc": "assets/worlds/world_01/maps/region_15-15-1783025218871.png",
       "thumbnailSrc": "",
       "imageWidth": 1448,
@@ -9891,8 +9987,10 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
       "region": {
         "id": "region_15",
         "label": "Relic Vale",
-        "x": 9600,
-        "y": 10700,
+        "gridX": 2,
+        "gridY": 3,
+        "x": 11100,
+        "y": 15400,
         "rx": 1058,
         "ry": 828,
         "cityRx": 868,

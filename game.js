@@ -167,8 +167,8 @@ function getMergedLandBridges(config = {}, editorData = {}) {
 const MAIN_CITY_CHANGE_CITY_LIMIT = 30;
 const MAIN_CITY_CHANGE_COOLDOWN_MS = 24 * 60 * 60 * 1000;
 const MAX_OFFLINE_PROGRESS_SECONDS = 7 * 24 * 60 * 60;
-const WORLD_WIDTH = Math.max(1, Math.floor(Number(WORLD_CONFIG.width) || 10000));
-const WORLD_HEIGHT = Math.max(1, Math.floor(Number(WORLD_CONFIG.height) || 7600));
+const WORLD_WIDTH = Math.max(1, Math.floor(Number(MAP_EDITOR_DATA?.globalSettings?.worldWidth || WORLD_CONFIG.width) || 10000));
+const WORLD_HEIGHT = Math.max(1, Math.floor(Number(MAP_EDITOR_DATA?.globalSettings?.worldHeight || WORLD_CONFIG.height) || 7600));
 const GRID_SIZE = Math.max(40, Math.floor(Number(WORLD_CONFIG.gridSize) || 50));
 const GRID_COLS = Math.ceil(WORLD_WIDTH / GRID_SIZE);
 const GRID_ROWS = Math.ceil(WORLD_HEIGHT / GRID_SIZE);

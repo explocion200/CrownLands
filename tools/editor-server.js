@@ -594,22 +594,17 @@ function compactStrongholdType(type) {
 }
 
 function buildCompatibilityRegion(layout, region) {
-  if (region.compatRegion && typeof region.compatRegion === "object") {
-    return {
-      ...region.compatRegion,
-      id: region.id,
-      label: region.name,
-      gridX: region.gridX,
-      gridY: region.gridY,
-    };
-  }
+  const compatRegion = region.compatRegion && typeof region.compatRegion === "object" ? region.compatRegion : {};
   const cellSize = Math.max(500, Number(layout.globalSettings?.gridCellWorldSize) || 2300);
   const worldWidth = Math.max(1000, Number(layout.globalSettings?.worldWidth) || 10000);
   const worldHeight = Math.max(1000, Number(layout.globalSettings?.worldHeight) || 7600);
   const aspect = Math.max(0.2, (Number(region.width) || 2048) / Math.max(1, Number(region.height) || 2048));
-  const rx = aspect >= 1 ? Math.round(cellSize * 0.46) : Math.round(cellSize * 0.36);
-  const ry = aspect >= 1 ? Math.round(cellSize * 0.36) : Math.round(cellSize * 0.46);
+  const defaultRx = aspect >= 1 ? Math.round(cellSize * 0.46) : Math.round(cellSize * 0.36);
+  const defaultRy = aspect >= 1 ? Math.round(cellSize * 0.36) : Math.round(cellSize * 0.46);
+  const rx = Math.max(1, Math.round(number(compatRegion.rx, defaultRx, 1, 100000)));
+  const ry = Math.max(1, Math.round(number(compatRegion.ry, defaultRy, 1, 100000)));
   return {
+    ...compatRegion,
     id: region.id,
     label: region.name,
     gridX: region.gridX,
@@ -618,10 +613,10 @@ function buildCompatibilityRegion(layout, region) {
     y: Math.round(worldHeight / 2 + Number(region.gridY) * cellSize),
     rx,
     ry,
-    cityRx: Math.round(rx * 0.82),
-    cityRy: Math.round(ry * 0.76),
-    rot: 0,
-    palette: region.type === "crownlands_main" ? "heartland" : "woodland",
+    cityRx: Math.max(1, Math.round(number(compatRegion.cityRx, Math.round(rx * 0.82), 1, 100000))),
+    cityRy: Math.max(1, Math.round(number(compatRegion.cityRy, Math.round(ry * 0.76), 1, 100000))),
+    rot: Number.isFinite(Number(compatRegion.rot)) ? Number(compatRegion.rot) : 0,
+    palette: compatRegion.palette || (region.type === "crownlands_main" ? "heartland" : "woodland"),
   };
 }
 

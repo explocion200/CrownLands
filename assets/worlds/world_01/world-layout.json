@@ -7,8 +7,8 @@
     "defaultMapWidth": 2048,
     "defaultMapHeight": 1536,
     "minimumCitySpacing": 0.045,
-    "worldWidth": 10000,
-    "worldHeight": 7600,
+    "worldWidth": 13000,
+    "worldHeight": 17000,
     "gridCellWorldSize": 2300
   },
   "regions": [
