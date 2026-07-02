@@ -535,7 +535,11 @@ label > span,
   color: #fff;
   background: transparent;
   box-shadow: none;
-  filter: drop-shadow(0 5px 4px rgba(3, 16, 40, 0.62)) drop-shadow(0 0 7px rgba(74, 158, 255, 0.32));
+  filter:
+    drop-shadow(0 7px 4px rgba(2, 10, 25, 0.78))
+    drop-shadow(0 0 4px rgba(255, 244, 175, 0.92))
+    drop-shadow(0 0 13px rgba(76, 205, 255, 0.86))
+    drop-shadow(0 0 24px rgba(35, 116, 255, 0.62));
   font-size: 28px;
   font-weight: 1000;
   line-height: 1;
@@ -547,7 +551,11 @@ label > span,
 }
 
 .edge-switch-arrow.selected {
-  filter: drop-shadow(0 5px 4px rgba(3, 16, 40, 0.62)) drop-shadow(0 0 10px rgba(252, 209, 105, 0.72));
+  filter:
+    drop-shadow(0 7px 4px rgba(2, 10, 25, 0.78))
+    drop-shadow(0 0 6px rgba(255, 244, 175, 1))
+    drop-shadow(0 0 16px rgba(76, 205, 255, 0.92))
+    drop-shadow(0 0 28px rgba(252, 209, 105, 0.78));
 }
 
 .edge-switch-arrow:active {
