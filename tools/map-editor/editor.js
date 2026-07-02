@@ -135,6 +135,7 @@
       connections: true,
     },
     draggingMarker: null,
+    draggingEdge: null,
     panning: null,
     skipNextCanvasClick: false,
   };
@@ -414,9 +415,13 @@
   }
 
   function selectEdge(regionId, side, index) {
+    setSelectedEdge(regionId, side, index);
+    render();
+  }
+
+  function setSelectedEdge(regionId, side, index) {
     state.activeRegionId = regionId;
     state.selected = { kind: "edge", regionId, side, index };
-    render();
   }
 
   function getSelectedItem() {
@@ -650,10 +655,20 @@
           zoneEl.style.height = `${Math.max(0.01, zone.end - zone.start) * 100}%`;
         }
         zoneEl.title = `${side} ${zone.type}`;
-        zoneEl.addEventListener("click", event => {
+        zoneEl.addEventListener("pointerdown", event => {
           event.preventDefault();
           event.stopPropagation();
-          selectEdge(region.id, side, index);
+          setSelectedEdge(region.id, side, index);
+          state.draggingEdge = {
+            regionId: region.id,
+            side,
+            index,
+            pointerId: event.pointerId,
+            width: Math.max(0.02, zone.end - zone.start),
+          };
+          renderToolbar();
+          renderInspector();
+          renderEdgeZones(region);
         });
         elements.edgeLayer.appendChild(zoneEl);
       });
@@ -673,6 +688,50 @@
       xNorm: roundNorm((event.clientX - rect.left) / Math.max(1, rect.width)),
       yNorm: roundNorm((event.clientY - rect.top) / Math.max(1, rect.height)),
     };
+  }
+
+  function getNearestEdgeSide(point) {
+    const distances = {
+      north: point.yNorm,
+      south: 1 - point.yNorm,
+      west: point.xNorm,
+      east: 1 - point.xNorm,
+    };
+    return Object.entries(distances).sort((a, b) => a[1] - b[1])[0][0];
+  }
+
+  function getEdgePosition(side, point) {
+    return side === "north" || side === "south" ? point.xNorm : point.yNorm;
+  }
+
+  function setEdgeRange(edge, center, width = 0.16) {
+    const safeWidth = clamp(Number(width) || 0.16, 0.02, 1);
+    let start = Number(center) - safeWidth / 2;
+    let end = Number(center) + safeWidth / 2;
+    if (start < 0) {
+      end -= start;
+      start = 0;
+    }
+    if (end > 1) {
+      start -= end - 1;
+      end = 1;
+    }
+    edge.start = roundNorm(start);
+    edge.end = roundNorm(end);
+  }
+
+  function isGeneratedEdgeNote(note) {
+    const value = String(note || "").trim();
+    return !value || value === "Outer wilderness edge" || value.startsWith("Connects to ");
+  }
+
+  function updateEdgeNeighborFields(edge, region, side, replaceGeneratedNote = true) {
+    const neighbor = getNeighbor(region, side);
+    const shouldReplaceNote = replaceGeneratedNote && isGeneratedEdgeNote(edge.notes);
+    edge.side = side;
+    edge.connectsToRegionId = neighbor?.id || "";
+    edge.intentionalOuter = !neighbor;
+    if (shouldReplaceNote) edge.notes = neighbor ? `Connects to ${neighbor.name}` : "Outer wilderness edge";
   }
 
   function placeFromEvent(event) {
@@ -756,25 +815,20 @@
   }
 
   function addEdgeConnection(region, point) {
-    const distances = {
-      north: point.yNorm,
-      south: 1 - point.yNorm,
-      west: point.xNorm,
-      east: 1 - point.xNorm,
-    };
-    const side = Object.entries(distances).sort((a, b) => a[1] - b[1])[0][0];
-    const along = side === "north" || side === "south" ? point.xNorm : point.yNorm;
+    const side = getNearestEdgeSide(point);
+    const along = getEdgePosition(side, point);
     const neighbor = getNeighbor(region, side);
     const zone = {
       id: uniqueId(region.edgeConnections[side], `${side}_${elements.edgeTypeSelect.value || "road"}`),
       side,
-      start: roundNorm(along - 0.08),
-      end: roundNorm(along + 0.08),
+      start: 0,
+      end: 0,
       type: elements.edgeTypeSelect.value || "road",
       connectsToRegionId: neighbor?.id || "",
       intentionalOuter: !neighbor,
       notes: neighbor ? `Connects to ${neighbor.name}` : "Outer wilderness edge",
     };
+    setEdgeRange(zone, along, 0.16);
     region.edgeConnections[side].push(zone);
     state.selected = { kind: "edge", regionId: region.id, side, index: region.edgeConnections[side].length - 1 };
     markDirty(`Added ${side} edge connection.`);
@@ -1030,16 +1084,27 @@
     stronghold.size = defaults.size;
   }
 
+  function moveEdgeRecord(region, fromSide, fromIndex, nextSide, options = {}) {
+    const side = SIDES.includes(nextSide) ? nextSide : fromSide;
+    const edge = region?.edgeConnections[fromSide]?.[fromIndex];
+    if (!edge) return null;
+    if (side === fromSide) return { edge, side, index: fromIndex };
+    region.edgeConnections[fromSide].splice(fromIndex, 1);
+    region.edgeConnections[side].push(edge);
+    const index = region.edgeConnections[side].length - 1;
+    if (options.updateNeighbor) updateEdgeNeighborFields(edge, region, side);
+    else edge.side = side;
+    return { edge, side, index };
+  }
+
   function moveEdgeToSide(nextSide) {
     const side = SIDES.includes(nextSide) ? nextSide : state.selected.side;
     if (side === state.selected.side) return;
     const region = getRegion(state.selected.regionId);
-    const edge = region.edgeConnections[state.selected.side][state.selected.index];
-    region.edgeConnections[state.selected.side].splice(state.selected.index, 1);
-    edge.side = side;
-    region.edgeConnections[side].push(edge);
-    state.selected.side = side;
-    state.selected.index = region.edgeConnections[side].length - 1;
+    const moved = moveEdgeRecord(region, state.selected.side, state.selected.index, side, { updateNeighbor: true });
+    if (!moved) return;
+    state.selected.side = moved.side;
+    state.selected.index = moved.index;
   }
 
   function validateWorld() {
@@ -1180,6 +1245,43 @@
     renderInspector();
   }
 
+  function handleEdgeDrag(event) {
+    if (!state.draggingEdge || state.draggingEdge.pointerId !== event.pointerId) return;
+    const region = getRegion(state.draggingEdge.regionId);
+    if (!region) return;
+    const point = getNormPointFromEvent(event);
+    const nextSide = getNearestEdgeSide(point);
+    let side = state.draggingEdge.side;
+    let index = state.draggingEdge.index;
+    let edge = region.edgeConnections[side]?.[index] || null;
+    if (!edge) {
+      state.draggingEdge = null;
+      return;
+    }
+    if (nextSide !== side) {
+      const moved = moveEdgeRecord(region, side, index, nextSide, { updateNeighbor: true });
+      if (!moved) return;
+      edge = moved.edge;
+      side = moved.side;
+      index = moved.index;
+      state.draggingEdge.side = side;
+      state.draggingEdge.index = index;
+      setSelectedEdge(region.id, side, index);
+    }
+    setEdgeRange(edge, getEdgePosition(side, point), state.draggingEdge.width);
+    markDirty();
+    renderRegionEditor();
+    event.preventDefault();
+  }
+
+  function stopEdgeDrag(event) {
+    if (!state.draggingEdge || (event && state.draggingEdge.pointerId !== event.pointerId)) return;
+    state.draggingEdge = null;
+    state.skipNextCanvasClick = true;
+    renderInspector();
+    window.setTimeout(() => { state.skipNextCanvasClick = false; }, 140);
+  }
+
   function startRegionPan(event) {
     if (state.tool !== "select" || event.button !== 0 || event.target.closest(".map-marker, .edge-zone")) return;
     state.panning = {
@@ -1254,6 +1356,9 @@
     elements.regionViewport.addEventListener("pointercancel", stopRegionPan);
     window.addEventListener("pointermove", handleMarkerDrag);
     window.addEventListener("pointerup", stopMarkerDrag);
+    window.addEventListener("pointermove", handleEdgeDrag);
+    window.addEventListener("pointerup", stopEdgeDrag);
+    window.addEventListener("pointercancel", stopEdgeDrag);
     window.addEventListener("keydown", handleKeydown);
   }
 

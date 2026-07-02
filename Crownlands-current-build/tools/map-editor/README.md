@@ -18,6 +18,7 @@ The editor is developer-only and works with the JSON world files in `assets/worl
 
 - World Layout: place region maps on a square grid, edit IDs, names, types, image paths, and city capacity.
 - Region Edit: open one region map, pan/zoom, place cities, place strongholds, and define north/south/east/west edge connection zones.
+- Edge connections: use `Add Edge Connection`, click near a map edge to create one, drag an existing connection to move it, and press Delete or `Delete Selected` to remove it.
 
 ## Saving
 
