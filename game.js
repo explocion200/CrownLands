@@ -178,8 +178,12 @@ const LOW_ZOOM_PERFORMANCE_THRESHOLD = 0.72;
 const ISLAND_MAP_PADDING = 560;
 const TROOP_PICKUP_ICON_SRC = "assets/troop-pickup.png";
 const GOLD_PICKUP_ICON_SRC = "assets/gold-pickup.png";
-const DEFAULT_PORTAL_VISUAL_SIZE = 96;
+const DEFAULT_PORTAL_VISUAL_SIZE = 78;
 const MIN_PORTAL_VISUAL_SIZE = 48;
+const EDGE_TRANSITION_ROUTE_INSET_MIN = 24;
+const EDGE_TRANSITION_ROUTE_INSET_MAX = 58;
+const EDGE_TRANSITION_ARROW_INSET_MIN = 96;
+const EDGE_TRANSITION_ARROW_INSET_MAX = 180;
 const DEFAULT_STRONGHOLD_VISUAL_SIZE = 154;
 const MIN_STRONGHOLD_VISUAL_SIZE = 80;
 const GOLD_STRONGHOLD_ID = "west_gold_stronghold";
@@ -477,7 +481,7 @@ const HARVEST_BONUS_TROOP_SECONDS = 300;
 const HARVEST_BONUS_MIN_TROOPS = 50;
 const HARVEST_BONUS_MAX_TROOPS = 2500;
 const HARVEST_BONUS_CITY_CLEARANCE = 132;
-const HARVEST_BONUS_PORTAL_CLEARANCE = 148;
+const HARVEST_BONUS_TRANSITION_CLEARANCE = 148;
 const HARVEST_BONUS_PICKUP_CLEARANCE = 116;
 const HARVEST_BONUS_TERRAIN_PADDING = 22;
 const HARVEST_BONUS_LAND_CLEARANCE = 64;
@@ -3500,17 +3504,19 @@ function renderIslandTeleporters() {
   getActiveIslandTeleporters().forEach(teleport => {
     const portalPoint = worldToMapPoint(teleport.worldPoint);
     const buttonElement = document.createElement("button");
+    const targetLabel = getRegionLabel(teleport.targetRegionId);
     buttonElement.type = "button";
     buttonElement.className = `teleport-node ${teleport.className || ""}`.trim();
     buttonElement.dataset.targetRegion = teleport.targetRegionId;
+    buttonElement.dataset.transitionSide = teleport.side || "";
     buttonElement.style.left = `${portalPoint.x}px`;
     buttonElement.style.top = `${portalPoint.y}px`;
     buttonElement.style.setProperty("--teleport-size", `${getPortalVisualSize(teleport)}px`);
-    buttonElement.setAttribute("aria-label", `Teleport to ${getRegionLabel(teleport.targetRegionId)}`);
+    buttonElement.setAttribute("aria-label", `Go to ${targetLabel}`);
+    buttonElement.title = `Go to ${targetLabel}`;
     buttonElement.innerHTML = `
-      <span class="teleport-ring" aria-hidden="true"></span>
-      <span class="teleport-symbol" aria-hidden="true">&#10022;</span>
-      <span class="teleport-label">${escapeHtml(teleport.label)}</span>
+      <span class="teleport-symbol" aria-hidden="true">${escapeHtml(teleport.symbol || getEdgeTransitionArrowSymbol(teleport.side))}</span>
+      <span class="teleport-label">${escapeHtml(teleport.label || targetLabel)}</span>
     `;
     buttonElement.addEventListener("click", event => {
       event.stopPropagation();
@@ -3561,39 +3567,87 @@ function getEditorEdgeConnectionDefinitions(regionId) {
   return ["north", "south", "east", "west"].flatMap(side => {
     const zones = Array.isArray(edgeConnections[side]) ? edgeConnections[side] : [];
     return zones
-      .filter(zone => normalizeRegionId(zone?.connectsToRegionId) && !zone?.intentionalOuter)
-      .map(zone => ({ ...zone, side }));
+      .map(zone => {
+        const targetRegionId = getEdgeConnectionTargetRegionId(zone);
+        return targetRegionId && !zone?.intentionalOuter ? { ...zone, side, targetRegionId } : null;
+      })
+      .filter(Boolean);
   });
 }
 
-function createEditorPortalFromEdgeConnection(regionId, zone) {
-  const dimensions = getIslandImageDimensions(regionId);
-  const side = String(zone?.side || "north").toLowerCase();
+function getEdgeConnectionTargetRegionId(zone) {
+  const targetRegionId = cleanEditorRegionId(zone?.connectsToRegionId || zone?.targetRegionId || zone?.target);
+  return getRegionById(targetRegionId) ? targetRegionId : "";
+}
+
+function getEdgeConnectionMidpoint(zone) {
   const start = clamp(Number(zone?.start) || 0, 0, 1);
   const end = clamp(Number(zone?.end) || start, 0, 1);
-  const along = clamp((start + end) / 2, 0, 1);
-  const point = {
-    x: (side === "west" ? 0 : side === "east" ? 1 : along) * dimensions.width,
-    y: (side === "north" ? 0 : side === "south" ? 1 : along) * dimensions.height,
+  return clamp((Math.min(start, end) + Math.max(start, end)) / 2, 0, 1);
+}
+
+function getEdgeConnectionInset(dimensions, mode = "route") {
+  const shortestSide = Math.max(1, Math.min(Number(dimensions?.width) || 1, Number(dimensions?.height) || 1));
+  if (mode === "arrow") {
+    return clamp(Math.round(shortestSide * 0.085), EDGE_TRANSITION_ARROW_INSET_MIN, EDGE_TRANSITION_ARROW_INSET_MAX);
+  }
+  return clamp(Math.round(shortestSide * 0.024), EDGE_TRANSITION_ROUTE_INSET_MIN, EDGE_TRANSITION_ROUTE_INSET_MAX);
+}
+
+function getEdgeConnectionImagePoint(regionId, zone, mode = "route") {
+  const dimensions = getIslandImageDimensions(regionId);
+  const side = String(zone?.side || "north").toLowerCase();
+  const along = getEdgeConnectionMidpoint(zone);
+  const inset = getEdgeConnectionInset(dimensions, mode);
+  return {
+    x: side === "west" ? inset : side === "east" ? dimensions.width - inset : along * dimensions.width,
+    y: side === "north" ? inset : side === "south" ? dimensions.height - inset : along * dimensions.height,
   };
-  const targetRegionId = normalizeRegionId(zone?.connectsToRegionId);
+}
+
+function getEdgeTransitionArrowSymbol(side) {
+  const normalizedSide = String(side || "").toLowerCase();
+  if (normalizedSide === "north") return "\u2191";
+  if (normalizedSide === "south") return "\u2193";
+  if (normalizedSide === "west") return "\u2190";
+  return "\u2192";
+}
+
+function getOppositeEdgeSide(side) {
+  if (side === "north") return "south";
+  if (side === "south") return "north";
+  if (side === "east") return "west";
+  if (side === "west") return "east";
+  return "";
+}
+
+function createEditorPortalFromEdgeConnection(regionId, zone) {
+  const routePoint = getEdgeConnectionImagePoint(regionId, zone, "route");
+  const arrowPoint = getEdgeConnectionImagePoint(regionId, zone, "arrow");
+  const targetRegionId = getEdgeConnectionTargetRegionId(zone);
+  const side = String(zone?.side || "north").toLowerCase();
   return {
     id: String(zone?.id || `${regionId}-${targetRegionId}-${side}`),
     label: String(zone?.label || getRegionLabel(targetRegionId)),
     targetRegionId,
     targetPortalId: String(zone?.targetConnectionId || zone?.targetPortalId || ""),
-    x: point.x,
-    y: point.y,
+    x: routePoint.x,
+    y: routePoint.y,
+    routeX: routePoint.x,
+    routeY: routePoint.y,
+    buttonX: arrowPoint.x,
+    buttonY: arrowPoint.y,
     size: Number(zone?.size) || DEFAULT_PORTAL_VISUAL_SIZE,
     className: "edge-transition-node",
+    side,
+    start: Number(zone?.start) || 0,
+    end: Number(zone?.end) || 0,
+    symbol: getEdgeTransitionArrowSymbol(side),
     edgeConnection: true,
   };
 }
 
 function getEditorPortalDefinitions(regionId) {
-  const map = getEditorMap(regionId);
-  const portals = Array.isArray(map?.portals) ? map.portals : [];
-  if (portals.length) return portals;
   return getEditorEdgeConnectionDefinitions(regionId).map(zone => createEditorPortalFromEdgeConnection(regionId, zone));
 }
 
@@ -3612,14 +3666,21 @@ function hasEditorPortalDefinitions(regionId) {
 }
 
 function createEditorTeleporter(regionId, portal) {
-  const targetRegionId = normalizeRegionId(portal?.targetRegionId || portal?.target || "center");
+  const targetRegionId = getEdgeConnectionTargetRegionId(portal);
+  if (!targetRegionId) return null;
+  const buttonPoint = {
+    x: Number(portal?.buttonX ?? portal?.x) || 0,
+    y: Number(portal?.buttonY ?? portal?.y) || 0,
+  };
   return {
     id: String(portal?.id || `${regionId}-${targetRegionId}`),
     label: String(portal?.label || getRegionLabel(targetRegionId)),
     targetRegionId,
-    worldPoint: islandImagePointToWorld(regionId, getEditorPoint(portal)),
+    worldPoint: islandImagePointToWorld(regionId, buttonPoint),
     size: getPortalVisualSize(portal),
-    className: portal?.className || `editor-${targetRegionId}-teleport-node`,
+    className: `${portal?.className || "edge-transition-node"} edge-transition-${portal?.side || "east"}`.trim(),
+    side: portal?.side || "",
+    symbol: portal?.symbol || getEdgeTransitionArrowSymbol(portal?.side),
   };
 }
 
@@ -3627,7 +3688,7 @@ function getEditorTeleportersForRegion(regionId) {
   const sourceRegionId = normalizeRegionId(regionId);
   return getEditorPortalDefinitions(sourceRegionId)
     .map(portal => createEditorTeleporter(sourceRegionId, portal))
-    .filter(teleport => teleport.targetRegionId && teleport.targetRegionId !== sourceRegionId);
+    .filter(teleport => teleport?.targetRegionId && teleport.targetRegionId !== sourceRegionId);
 }
 
 function getEditorPortalForRoute(regionId, targetRegionId, options = {}) {
@@ -3636,7 +3697,7 @@ function getEditorPortalForRoute(regionId, targetRegionId, options = {}) {
   const portalId = String(options.portalId || "");
   const targetPortalId = String(options.targetPortalId || "");
   const portals = getEditorPortalDefinitions(sourceRegionId)
-    .filter(portal => normalizeRegionId(portal?.targetRegionId || portal?.target) === destinationRegionId);
+    .filter(portal => getEdgeConnectionTargetRegionId(portal) === destinationRegionId);
   if (portalId) {
     const exact = portals.find(portal => String(portal?.id || "") === portalId);
     if (exact) return exact;
@@ -3658,6 +3719,16 @@ function getLinkedEditorArrivalPortal(sourceRegionId, targetRegionId, sourcePort
     const backLinked = getEditorPortalForRoute(targetRegionId, sourceRegionId, { targetPortalId: sourcePortalId });
     if (backLinked) return backLinked;
   }
+  const sourceSide = String(sourcePortal?.side || "");
+  const oppositeSide = getOppositeEdgeSide(sourceSide);
+  const sourceMidpoint = getEdgeConnectionMidpoint(sourcePortal);
+  const candidates = getEditorPortalDefinitions(targetRegionId)
+    .filter(portal => cleanEditorRegionId(portal?.targetRegionId || portal?.target) === cleanEditorRegionId(sourceRegionId))
+    .filter(portal => !oppositeSide || portal.side === oppositeSide);
+  if (candidates.length) {
+    candidates.sort((a, b) => Math.abs(getEdgeConnectionMidpoint(a) - sourceMidpoint) - Math.abs(getEdgeConnectionMidpoint(b) - sourceMidpoint));
+    return candidates[0];
+  }
   return getEditorPortalForRoute(targetRegionId, sourceRegionId);
 }
 
@@ -3669,7 +3740,7 @@ function findEditorPortalRouteRegionChain(fromRegionId, toRegionId) {
   for (const map of getEditorMapEntries()) {
     const source = normalizeRegionId(map.id);
     for (const portal of getEditorPortalDefinitions(source)) {
-      const target = normalizeRegionId(portal?.targetRegionId || portal?.target);
+      const target = getEdgeConnectionTargetRegionId(portal);
       if (!target || target === source) continue;
       if (!adjacency.has(source)) adjacency.set(source, new Set());
       adjacency.get(source).add(target);
@@ -3694,49 +3765,7 @@ function findEditorPortalRouteRegionChain(fromRegionId, toRegionId) {
 
 function getActiveIslandTeleporters() {
   const activeRegionId = getActiveMapRegionId();
-  const editorTeleporters = getEditorTeleportersForRegion(activeRegionId);
-  if (hasEditorPortalDefinitions(activeRegionId)) return editorTeleporters;
-  if (activeRegionId === "west") {
-    return [{
-      label: "Center",
-      targetRegionId: "center",
-      worldPoint: westImagePointToWorld(WEST_CENTER_TELEPORT_IMAGE_POINT),
-      className: "center-teleport-node",
-    }];
-  }
-  if (activeRegionId === "north") {
-    return [{
-      label: "Center",
-      targetRegionId: "center",
-      worldPoint: northImagePointToWorld(NORTH_CENTER_TELEPORT_IMAGE_POINT),
-      className: "center-teleport-node",
-    }];
-  }
-  if (activeRegionId === "east") {
-    return [{
-      label: "Center",
-      targetRegionId: "center",
-      worldPoint: eastImagePointToWorld(EAST_CENTER_TELEPORT_IMAGE_POINT),
-      className: "center-teleport-node",
-    }];
-  }
-  if (activeRegionId === "south") {
-    return [{
-      label: "Center",
-      targetRegionId: "center",
-      worldPoint: southImagePointToWorld(SOUTH_CENTER_TELEPORT_IMAGE_POINT),
-      className: "center-teleport-node",
-    }];
-  }
-  if (activeRegionId === "center") {
-    return CENTER_ISLAND_TELEPORTS.map(teleport => ({
-      label: teleport.label,
-      targetRegionId: teleport.targetRegionId,
-      worldPoint: centerImagePointToWorld(teleport.point),
-      className: `center-${teleport.targetRegionId}-teleport-node`,
-    }));
-  }
-  return [];
+  return getEditorTeleportersForRegion(activeRegionId);
 }
 
 function getCenterTeleportForRegion(regionId) {
@@ -3748,17 +3777,11 @@ function getPortalWorldPoint(regionId, targetRegionId = "center", options = {}) 
   const fromRegionId = normalizeRegionId(regionId);
   const toRegionId = normalizeRegionId(targetRegionId);
   const editorPortal = options.portal || getEditorPortalForRoute(fromRegionId, toRegionId, options);
-  if (editorPortal) return islandImagePointToWorld(fromRegionId, getEditorPoint(editorPortal));
-  if (hasEditorPortalDefinitions(fromRegionId)) return null;
-  if (fromRegionId === "west" && toRegionId === "center") return westImagePointToWorld(WEST_CENTER_TELEPORT_IMAGE_POINT);
-  if (fromRegionId === "north" && toRegionId === "center") return northImagePointToWorld(NORTH_CENTER_TELEPORT_IMAGE_POINT);
-  if (fromRegionId === "east" && toRegionId === "center") return eastImagePointToWorld(EAST_CENTER_TELEPORT_IMAGE_POINT);
-  if (fromRegionId === "south" && toRegionId === "center") return southImagePointToWorld(SOUTH_CENTER_TELEPORT_IMAGE_POINT);
-  if (fromRegionId === "center") {
-    const teleport = getCenterTeleportForRegion(toRegionId);
-    if (teleport) return centerImagePointToWorld(teleport.point);
-  }
-  return null;
+  if (!editorPortal) return null;
+  return islandImagePointToWorld(fromRegionId, {
+    x: Number(editorPortal.routeX ?? editorPortal.x) || 0,
+    y: Number(editorPortal.routeY ?? editorPortal.y) || 0,
+  });
 }
 
 function getPortalRouteRegionChain(fromRegionId, toRegionId) {
@@ -3767,8 +3790,7 @@ function getPortalRouteRegionChain(fromRegionId, toRegionId) {
   if (sourceRegionId === targetRegionId) return [sourceRegionId];
   const editorChain = findEditorPortalRouteRegionChain(sourceRegionId, targetRegionId);
   if (editorChain?.length) return editorChain;
-  if (sourceRegionId === "center" || targetRegionId === "center") return [sourceRegionId, targetRegionId];
-  return [sourceRegionId, "center", targetRegionId];
+  return null;
 }
 
 function renderWorldDefs() {
@@ -6258,17 +6280,20 @@ function getIslandMapAnchor(region) {
     y: Number(region?.y) || WORLD_HEIGHT / 2,
   };
   if (BASE_BITMAP_ISLAND_IDS.includes(regionId)) return defaultAnchor;
-  const portals = getEditorPortalDefinitions(regionId);
-  const portal = portals.find(entry => getRegionById(normalizeRegionId(entry?.targetRegionId || entry?.target)))
-    || portals[0];
-  const targetRegionId = normalizeRegionId(portal?.targetRegionId || portal?.target);
+  const transitions = getEditorPortalDefinitions(regionId);
+  const transition = transitions.find(entry => getRegionById(getEdgeConnectionTargetRegionId(entry)))
+    || transitions[0];
+  const targetRegionId = getEdgeConnectionTargetRegionId(transition);
   const target = targetRegionId ? getRegionById(targetRegionId) : null;
-  if (!portal || !target) return defaultAnchor;
+  if (!transition || !target) return defaultAnchor;
 
   const dimensions = getIslandImageDimensions(regionId);
-  const portalPoint = getEditorPoint(portal);
-  const px = dimensions.width ? clamp(portalPoint.x / dimensions.width, 0, 1) : 0.5;
-  const py = dimensions.height ? clamp(portalPoint.y / dimensions.height, 0, 1) : 0.5;
+  const transitionPoint = {
+    x: Number(transition.buttonX ?? transition.x) || 0,
+    y: Number(transition.buttonY ?? transition.y) || 0,
+  };
+  const px = dimensions.width ? clamp(transitionPoint.x / dimensions.width, 0, 1) : 0.5;
+  const py = dimensions.height ? clamp(transitionPoint.y / dimensions.height, 0, 1) : 0.5;
   const rx = Math.max(600, Number(region?.rx) || 900);
   const ry = Math.max(520, Number(region?.ry) || 760);
   const targetRx = Math.max(600, Number(target.rx) || 900);
@@ -6368,17 +6393,11 @@ function getIslandMapConnectionEdges() {
   for (const map of getEditorMapEntries()) {
     const source = normalizeRegionId(map.id);
     if (!regionIds.has(source)) continue;
-    for (const portal of getEditorPortalDefinitions(source)) {
-      const target = normalizeRegionId(portal?.targetRegionId || portal?.target);
+    for (const transition of getEditorPortalDefinitions(source)) {
+      const target = getEdgeConnectionTargetRegionId(transition);
       if (!target || target === source || !regionIds.has(target)) continue;
       const key = [source, target].sort().join("::");
       if (!edges.has(key)) edges.set(key, { source, target });
-    }
-  }
-  if (!edges.size && regionIds.has("center")) {
-    for (const regionId of regionIds) {
-      if (regionId === "center") continue;
-      edges.set(["center", regionId].sort().join("::"), { source: "center", target: regionId });
     }
   }
   return Array.from(edges.values());
@@ -8781,8 +8800,8 @@ function findRoute(source, target) {
 function findPortalRoute(source, target, sourceRegionId = getCityRegionId(source), targetRegionId = getCityRegionId(target)) {
   const normalizedSourceRegionId = normalizeRegionId(sourceRegionId);
   const normalizedTargetRegionId = normalizeRegionId(targetRegionId);
-  const cacheKey = `portal-cityblock-v2:${normalizedSourceRegionId}:${normalizedTargetRegionId}:${getRoutePointId(source, "source")}|${getRoutePointId(target, "target")}`;
-  const reverseKey = `portal-cityblock-v2:${normalizedTargetRegionId}:${normalizedSourceRegionId}:${getRoutePointId(target, "target")}|${getRoutePointId(source, "source")}`;
+  const cacheKey = `edge-transition-cityblock-v1:${normalizedSourceRegionId}:${normalizedTargetRegionId}:${getRoutePointId(source, "source")}|${getRoutePointId(target, "target")}`;
+  const reverseKey = `edge-transition-cityblock-v1:${normalizedTargetRegionId}:${normalizedSourceRegionId}:${getRoutePointId(target, "target")}|${getRoutePointId(source, "source")}`;
   if (routeCache.has(cacheKey)) return cloneRoute(routeCache.get(cacheKey));
   if (routeCache.has(reverseKey)) {
     const reverse = reverseRoute(routeCache.get(reverseKey));
@@ -8791,6 +8810,7 @@ function findPortalRoute(source, target, sourceRegionId = getCityRegionId(source
   }
 
   const chain = getPortalRouteRegionChain(normalizedSourceRegionId, normalizedTargetRegionId);
+  if (!chain?.length) return null;
   let current = makeRoutePoint(getRoutePointId(source, "source"), source);
   const segments = [];
   const points = [];
@@ -9225,11 +9245,11 @@ function isHarvestBonusFarFromCities(x, y, regionId) {
     .every(city => Math.hypot(city.x - x, city.y - y) >= HARVEST_BONUS_CITY_CLEARANCE);
 }
 
-function isHarvestBonusFarFromPortals(x, y, regionId) {
+function isHarvestBonusFarFromTransitions(x, y, regionId) {
   const activeRegionId = getActiveMapRegionId();
   if (normalizeRegionId(regionId) !== activeRegionId) return true;
   return getActiveIslandTeleporters()
-    .every(teleport => Math.hypot(teleport.worldPoint.x - x, teleport.worldPoint.y - y) >= HARVEST_BONUS_PORTAL_CLEARANCE);
+    .every(teleport => Math.hypot(teleport.worldPoint.x - x, teleport.worldPoint.y - y) >= HARVEST_BONUS_TRANSITION_CLEARANCE);
 }
 
 function isHarvestBonusFarFromOtherPickups(x, y, regionId) {
@@ -9281,7 +9301,7 @@ function isValidHarvestBonusPoint(x, y, regionId) {
   if (!isHarvestBonusNearOwnedCity(x, y, activeRegionId)) return false;
   if (!isHarvestBonusTerrainSafePoint(x, y, activeRegionId)) return false;
   if (!isHarvestBonusFarFromCities(x, y, activeRegionId)) return false;
-  if (!isHarvestBonusFarFromPortals(x, y, activeRegionId)) return false;
+  if (!isHarvestBonusFarFromTransitions(x, y, activeRegionId)) return false;
   if (!isHarvestBonusFarFromOtherPickups(x, y, activeRegionId)) return false;
   return true;
 }
@@ -12929,7 +12949,7 @@ function showHelpModal() {
       <li>Neutral expansion has two limits: 30 neutral captures per local day, and neutral captures stop once you own 30 cities.</li>
       <li>After that, expand by attacking player-owned cities.</li>
       <li>Send Troops is single-click after setup: pick a march percent, then tap one destination to launch.</li>
-      <li>Scout Nearby costs ${formatNumber(SCOUT_NEARBY_COST)} gold, covers the current island only, and never routes scouts through portals.</li>
+      <li>Scout Nearby costs ${formatNumber(SCOUT_NEARBY_COST)} gold and covers the current map only.</li>
       <li>Regroup costs ${formatNumber(REGROUP_COST)} gold, previews a larger red radius, then sends all troops from nearby owned cities into the selected city.</li>
       <li>The top-right fullscreen button expands the game surface and the game disables page text selection while playing.</li>
       <li>City level creates victory points for combat value, while passive gold follows the Million Lords city production curve.</li>

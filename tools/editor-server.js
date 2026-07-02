@@ -656,7 +656,6 @@ function buildCompatibilityMapData(layout, regions) {
           size: stronghold.size,
         };
       }),
-      portals: [],
       edgeConnections: region.edgeConnections,
     })),
   };
