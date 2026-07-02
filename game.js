@@ -6447,7 +6447,7 @@ function renderIslandSwitcherModalContent() {
   centerIslandMapPickerOnRegion(picker, activeRegionId || homeRegionId);
   modalBody.querySelectorAll("[data-island-region]").forEach(button => {
     button.addEventListener("click", () => {
-      if (picker?.dataset.justDragged === "true") return;
+      if (picker?.dataset.justDragged === "true" || picker?.dataset.justActivated === "true") return;
       switchOnlineIsland(button.dataset.islandRegion, { fromMapPicker: true });
     });
   });
@@ -6473,15 +6473,18 @@ function attachIslandMapPickerPan(picker) {
   let startScrollLeft = 0;
   let startScrollTop = 0;
   let moved = false;
+  let tapRegionId = "";
 
   picker.addEventListener("pointerdown", event => {
     if (event.button !== undefined && event.button !== 0) return;
+    const tile = event.target?.closest?.("[data-island-region]");
     pointerId = event.pointerId;
     startX = event.clientX;
     startY = event.clientY;
     startScrollLeft = picker.scrollLeft;
     startScrollTop = picker.scrollTop;
     moved = false;
+    tapRegionId = tile?.dataset?.islandRegion || "";
     picker.classList.add("panning");
     picker.setPointerCapture?.(event.pointerId);
   });
@@ -6506,7 +6509,17 @@ function attachIslandMapPickerPan(picker) {
       window.setTimeout(() => {
         if (picker) delete picker.dataset.justDragged;
       }, 120);
+    } else if (tapRegionId) {
+      const releasedTile = document.elementFromPoint(event.clientX, event.clientY)?.closest?.("[data-island-region]");
+      if (releasedTile?.dataset?.islandRegion === tapRegionId) {
+        picker.dataset.justActivated = "true";
+        switchOnlineIsland(tapRegionId, { fromMapPicker: true });
+        window.setTimeout(() => {
+          if (picker) delete picker.dataset.justActivated;
+        }, 180);
+      }
     }
+    tapRegionId = "";
   };
 
   picker.addEventListener("pointerup", stopPan);
