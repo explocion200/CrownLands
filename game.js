@@ -7162,7 +7162,7 @@ async function connectOnlineIsland(regionId, { claimHome = false, homeRegionId =
       onlineFreshClaimCityId = !claim?.alreadyClaimed && claim?.cityId ? claim.cityId : "";
       const claimedCity = claim?.cityId ? cityById(claim.cityId) : null;
       if (claimedCity) claimedCity.isMainCity = true;
-      if (claim?.repairedMainCity) addLog(`${cityById(claim.cityId)?.name || "Your main city"} was restored. Main cities cannot be captured.`);
+      if (claim?.repairedMainCity) addLog(`${cityById(claim.cityId)?.name || "Your main city"} was restored. Main cities cannot be attacked.`);
       else if (claim?.alreadyClaimed) addLog(`Online ${getRegionLabel(targetRegionId)} connected. Your claimed city was restored.`);
       else if (claim?.cityId) addLog(`Online ${getRegionLabel(targetRegionId)} connected. ${cityById(claim.cityId)?.name || "A city"} joined your kingdom.`);
     }
@@ -9412,6 +9412,12 @@ function isProtectedMainCity(city) {
   return Boolean(city && (city.isMainCity || city.id === state?.mainCityId));
 }
 
+function getMainCityAttackBlockReason(target, attackerOwner = "player", attackerOwnerUid = "") {
+  if (!target || !isProtectedMainCity(target)) return "";
+  if (isSameAttackOwner(target, attackerOwner, attackerOwnerUid)) return "";
+  return `${target.name} is a main city and cannot be attacked.`;
+}
+
 function launchAttack(sourceId, targetId, percent, owner, exactTroops = null) {
   const source = cityById(sourceId);
   const target = cityById(targetId);
@@ -9421,6 +9427,12 @@ function launchAttack(sourceId, targetId, percent, owner, exactTroops = null) {
   if (source.troops < 1) return false;
 
   const kind = target.owner === owner ? "transfer" : "attack";
+  const mainCityBlockReason = kind === "attack" ? getMainCityAttackBlockReason(target, owner) : "";
+  if (mainCityBlockReason) {
+    if (owner === "player") showToast(mainCityBlockReason);
+    return false;
+  }
+
   const shieldBlockReason = kind === "attack" ? getPeaceShieldAttackBlockReason(target, owner) : "";
   if (shieldBlockReason) {
     if (owner === "player") showToast(shieldBlockReason);
@@ -9565,6 +9577,53 @@ function resolveAttack(attack) {
   const targetLevel = clampCityLevel(target.level);
   const defendersAtStart = Math.max(0, Math.floor(Number(target.troops) || 0));
   const targetDefenseAtStart = getCityStats(target).totalDefense;
+  const mainCityBlockReason = getMainCityAttackBlockReason(target, attack.owner, attack.ownerUid);
+  if (mainCityBlockReason) {
+    const returned = returnSurvivingAttackersToSource(attack, attack.troops, `${target.name} protected main city`);
+    const returnText = returned > 0
+      ? `${formatNumber(returned)} troops returned to their source city.`
+      : "The attacking army could not enter the main city.";
+    if (attack.owner === "player") {
+      addBattleReport({
+        type: "attack",
+        outcome: "defeat",
+        cityId: target.id,
+        cityName: target.name,
+        cityLevel: targetLevel,
+        sentTroops: attack.troops,
+        troopCount: defendersAtStart,
+        survivors: returned,
+        defendersLeft: defendersAtStart,
+        attackerLosses: 0,
+        defenderLosses: 0,
+        totalDefense: targetDefenseAtStart,
+        opponentName: defenderName,
+        summary: `Main cities cannot be attacked. ${returnText}`,
+      });
+      showToast(`${target.name} is a main city. Troops returned.`);
+    } else if (target.owner === "player") {
+      addBattleReport({
+        type: "defense",
+        outcome: "held",
+        cityId: target.id,
+        cityName: target.name,
+        cityLevel: targetLevel,
+        sentTroops: attack.troops,
+        troopCount: defendersAtStart,
+        survivors: defendersAtStart,
+        defendersLeft: defendersAtStart,
+        attackerLosses: 0,
+        defenderLosses: 0,
+        totalDefense: targetDefenseAtStart,
+        opponentName: attackerReportName,
+        summary: `Main city protection blocked ${attackerReportName}'s attack. ${returnText}`,
+      });
+      showToast(`Main city protection blocked an attack on ${target.name}`);
+    }
+    addLog(`${mainCityBlockReason} ${returnText}`);
+    return;
+  }
+
   const shieldBlockReason = getPeaceShieldAttackBlockReason(target, attack.owner, attack.ownerUid);
   if (shieldBlockReason) {
     const returned = returnSurvivingAttackersToSource(attack, attack.troops, `${target.name} Royal Peace Shield`);
@@ -9648,60 +9707,6 @@ function resolveAttack(attack) {
       addLog(`${attackerName} defeated the defenders at ${target.name}, but could not capture it. ${neutralBlockReason}`);
       if (attack.owner === "player") showNeutralCaptureLimitModal(neutralBlockReason);
       else showToast(neutralBlockReason);
-      return;
-    }
-
-    if (isProtectedMainCity(target) && oldOwner !== attack.owner) {
-      target.troopFloat = 0;
-      target.troops = 0;
-      const returnedSurvivors = returnSurvivingAttackersToSource(attack, result.survivors, `${target.name} protected main city attack`);
-      const survivorSummary = returnedSurvivors > 0
-        ? `${formatNumber(returnedSurvivors)} surviving attackers returned to their source city.`
-        : "Surviving attackers could not occupy the protected main city.";
-      if (oldOwner === "player") {
-        markOwnedCityChanged(target);
-        syncCityStateToOnline(target);
-        addBattleReport({
-          type: "defense",
-          outcome: "held",
-          cityId: target.id,
-          cityName: target.name,
-          cityLevel: targetLevel,
-          sentTroops: attack.troops,
-          troopCount: defendersAtStart,
-          survivors: result.survivors,
-          defendersLeft: 0,
-          attackerLosses: result.attackerLosses,
-          defenderLosses: result.defenderLosses,
-          totalDefense: targetDefenseAtStart,
-          opponentName: attackerReportName,
-          summary: `Main city protected. Garrison was destroyed, but the city held. ${survivorSummary}${demoReportSuffix}`,
-        });
-        addLog(`${target.name} is your main city and cannot be captured, but its defending army was destroyed.`);
-        showToast(`${target.name} held. Garrison destroyed.`);
-      } else {
-        syncSharedCityState(target);
-        if (attack.owner === "player") {
-          addBattleReport({
-            type: "attack",
-            outcome: "victory",
-            cityId: target.id,
-            cityName: target.name,
-            cityLevel: targetLevel,
-            sentTroops: attack.troops,
-            troopCount: defendersAtStart,
-            survivors: result.survivors,
-            defendersLeft: 0,
-            attackerLosses: result.attackerLosses,
-            defenderLosses: result.defenderLosses,
-            totalDefense: targetDefenseAtStart,
-            opponentName: defenderName,
-            summary: `Protected main city. Garrison destroyed, but ownership did not change. ${survivorSummary}${demoReportSuffix}`,
-          });
-        }
-        addLog(`${attackerName} destroyed the garrison at ${target.name}, but main cities cannot be captured.`);
-        if (attack.owner === "player") showToast(`${target.name} protected. Survivors returned home.`);
-      }
       return;
     }
 
@@ -10524,8 +10529,10 @@ function renderSelectedForeignWheel(city) {
   const report = getScoutReport(city.id);
   const pendingScout = getPendingScoutMission(city.id);
   const canScout = !pendingScout && playerCities().some(playerCity => playerCity.troops >= 1);
+  const mainCityBlockReason = getMainCityAttackBlockReason(city, "player");
   const shieldBlockReason = getPeaceShieldAttackBlockReason(city, "player");
-  const canAttack = !shieldBlockReason && playerCities().some(playerCity => playerCity.troops > 0);
+  const attackBlockLabel = mainCityBlockReason ? "Main City" : shieldBlockReason ? "Shielded" : "Attack";
+  const canAttack = !mainCityBlockReason && !shieldBlockReason && playerCities().some(playerCity => playerCity.troops > 0);
   wheel.className = "city-action-wheel foreign-city-action-wheel";
   applyCityActionWheelSizing(wheel, city);
   wheel.style.left = `${mapPoint.x}px`;
@@ -10536,9 +10543,9 @@ function renderSelectedForeignWheel(city) {
       <span class="wheel-icon" aria-hidden="true">&#128301;</span>
       <span class="wheel-action-name">${pendingScout ? "Scouting" : report ? "Rescout" : "Scout"}</span>
     </button>
-    <button class="city-wheel-action wheel-attack" type="button" aria-label="Attack ${escapeHtml(city.name)}" ${canAttack ? "" : "disabled"}>
+    <button class="city-wheel-action wheel-attack" type="button" aria-label="${mainCityBlockReason ? escapeHtml(mainCityBlockReason) : `Attack ${escapeHtml(city.name)}`}" ${canAttack ? "" : "disabled"}>
       <span class="wheel-icon" aria-hidden="true">&#9876;</span>
-      <span class="wheel-action-name">${shieldBlockReason ? "Shielded" : "Attack"}</span>
+      <span class="wheel-action-name">${attackBlockLabel}</span>
     </button>
     <button class="city-wheel-action wheel-info" type="button" aria-label="View ${escapeHtml(city.name)} information">
       <span class="wheel-icon" aria-hidden="true">i</span>
@@ -10671,6 +10678,11 @@ function findPreferredAttackSource(target) {
 function attackForeignCity(cityId) {
   const target = cityById(cityId);
   if (!target || target.owner === "player") return;
+  const mainCityBlockReason = getMainCityAttackBlockReason(target, "player");
+  if (mainCityBlockReason) {
+    showToast(mainCityBlockReason);
+    return;
+  }
   const shieldBlockReason = getPeaceShieldAttackBlockReason(target, "player");
   if (shieldBlockReason) {
     showToast(shieldBlockReason);
@@ -10896,6 +10908,14 @@ function selectCity(id) {
         return;
       }
     }
+    const mainCityBlockReason = clicked.owner === "player" ? "" : getMainCityAttackBlockReason(clicked, "player");
+    if (mainCityBlockReason) {
+      sendMode = false;
+      selectedTargetId = null;
+      renderAll();
+      showToast(mainCityBlockReason);
+      return;
+    }
     const shieldBlockReason = getPeaceShieldAttackBlockReason(clicked, "player");
     if (shieldBlockReason) {
       sendMode = false;
@@ -10959,6 +10979,12 @@ function showTroopSliderModal(source, target) {
   }
 
   const isTransfer = target.owner === "player";
+  const mainCityBlockReason = isTransfer ? "" : getMainCityAttackBlockReason(target, "player");
+  if (mainCityBlockReason) {
+    showToast(mainCityBlockReason);
+    cancelSendMode();
+    return;
+  }
   const shieldBlockReason = isTransfer ? "" : getPeaceShieldAttackBlockReason(target, "player");
   if (shieldBlockReason) {
     showToast(shieldBlockReason);
@@ -11688,6 +11714,12 @@ function showAttackPreview(source, target) {
   if (!source || !target || source.owner !== "player" || target.owner === "player") return;
   if (source.troops < 1) {
     showToast("No troops available to send.");
+    return;
+  }
+
+  const mainCityBlockReason = getMainCityAttackBlockReason(target, "player");
+  if (mainCityBlockReason) {
+    showToast(mainCityBlockReason);
     return;
   }
 
@@ -12668,6 +12700,7 @@ function showHelpModal() {
       <li>Prosperous boosts gold, Rusher boosts travel speed, and Striker boosts attacking combat power.</li>
       <li>Fearless saves some attacking losses, Brave saves some defending losses, Scavenger and Salvager recover gold from kills, and Cautious refunds some invested gold when you lose a city.</li>
       <li>Captured cities enter a one-hour XP cooldown. Attacking during cooldown still works, but capture XP is reduced.</li>
+      <li>Main cities cannot be attacked. Use your main city as a protected home base while expanding from other cities.</li>
       <li>Demo Attacks protect weaker kingdoms: much stronger attackers send fewer effective troops, march slower, earn 0 XP, and defenders earn bonus XP.</li>
       <li>Items and advisors are intentionally not included in this prototype pass.</li>
     </ul>
