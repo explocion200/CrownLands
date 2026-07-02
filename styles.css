@@ -1035,9 +1035,9 @@ input {
   content: "";
   position: absolute;
   left: 50%;
-  bottom: -11px;
-  width: 86px;
-  height: 74px;
+  bottom: -13px;
+  width: 92px;
+  height: 80px;
   transform: translateX(-50%);
   display: none;
   background-position: center;
@@ -1264,9 +1264,9 @@ input {
 .city-castle {
   position: absolute;
   left: 50%;
-  bottom: -6px;
-  width: var(--city-art-size, 58px);
-  height: var(--city-art-size, 58px);
+  bottom: -8px;
+  width: var(--city-art-size, 62px);
+  height: var(--city-art-size, 62px);
   display: grid;
   place-items: center;
   overflow: visible;
@@ -1304,18 +1304,18 @@ input {
 .map-frame.zooming .city-label {
   opacity: 1;
 }
-.city-castle.stage-1 { --city-art-size: 58px; background-image: none; }
-.city-castle.stage-2 { --city-art-size: 61px; background-image: none; }
-.city-castle.stage-3 { --city-art-size: 64px; background-image: none; }
-.city-castle.stage-4 { --city-art-size: 67px; background-image: none; }
-.city-castle.stage-5 { --city-art-size: 70px; background-image: none; }
+.city-castle.stage-1 { --city-art-size: 62px; background-image: none; }
+.city-castle.stage-2 { --city-art-size: 65px; background-image: none; }
+.city-castle.stage-3 { --city-art-size: 68px; background-image: none; }
+.city-castle.stage-4 { --city-art-size: 71px; background-image: none; }
+.city-castle.stage-5 { --city-art-size: 74px; background-image: none; }
 .city-art { display: block; width: 100%; height: 100%; object-fit: contain; }
 .city-level { display: none; }
 .city-label {
   --label-tether: 0px;
   position: absolute;
   left: 50%;
-  bottom: 70px;
+  bottom: 74px;
   transform: translateX(-50%);
   width: max-content;
   z-index: 3;
@@ -3080,13 +3080,13 @@ button.inventory-slot {
   .map-frame { inset-bottom: 150px; }
   .city-node { width: 58px; height: 58px; }
   .city-shield-field { width: 90px; height: 92px; }
-  .city-castle { bottom: -5px; }
-  .city-castle.stage-1 { --city-art-size: 54px; }
-  .city-castle.stage-2 { --city-art-size: 57px; }
-  .city-castle.stage-3 { --city-art-size: 60px; }
-  .city-castle.stage-4 { --city-art-size: 63px; }
-  .city-castle.stage-5 { --city-art-size: 66px; }
-  .city-label { bottom: 66px; }
+  .city-castle { bottom: -7px; }
+  .city-castle.stage-1 { --city-art-size: 58px; }
+  .city-castle.stage-2 { --city-art-size: 61px; }
+  .city-castle.stage-3 { --city-art-size: 64px; }
+  .city-castle.stage-4 { --city-art-size: 67px; }
+  .city-castle.stage-5 { --city-art-size: 70px; }
+  .city-label { bottom: 70px; }
   .city-action-wheel { --wheel-scale: .86; }
   .commander-panel { min-height: 113px; }
   .toast { bottom: 232px; }
