@@ -6299,6 +6299,15 @@ function getIslandMapGridCoordinate(region) {
     return { gridX: Math.round(Number(explicitGridX)), gridY: Math.round(Number(explicitGridY)) };
   }
 
+  const starterDefaults = {
+    center: { gridX: 0, gridY: 0 },
+    west: { gridX: -1, gridY: 0 },
+    east: { gridX: 1, gridY: 0 },
+    north: { gridX: 0, gridY: -1 },
+    south: { gridX: 0, gridY: 1 },
+  };
+  if (starterDefaults[regionId]) return starterDefaults[regionId];
+
   const explicitWorldX = [map?.region?.x, region?.x].find(value => Number.isFinite(Number(value)));
   const explicitWorldY = [map?.region?.y, region?.y].find(value => Number.isFinite(Number(value)));
   if (explicitWorldX !== undefined && explicitWorldY !== undefined) {
@@ -6310,15 +6319,6 @@ function getIslandMapGridCoordinate(region) {
       gridY: Math.round((Number(explicitWorldY) - worldHeight / 2) / cellSize),
     };
   }
-
-  const starterDefaults = {
-    center: { gridX: 0, gridY: 0 },
-    west: { gridX: -1, gridY: 0 },
-    east: { gridX: 1, gridY: 0 },
-    north: { gridX: 0, gridY: -1 },
-    south: { gridX: 0, gridY: 1 },
-  };
-  if (starterDefaults[regionId]) return starterDefaults[regionId];
 
   const cellSize = Math.max(500, Number(MAP_EDITOR_DATA?.globalSettings?.gridCellWorldSize) || ISLAND_PICKER_GRID_CELL_WORLD_SIZE);
   return {
