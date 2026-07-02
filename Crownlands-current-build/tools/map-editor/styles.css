@@ -275,11 +275,20 @@ label > span,
   text-align: left;
   background: #0b2233;
   box-shadow: 0 10px 26px rgba(0, 0, 0, 0.32);
+  cursor: grab;
+  touch-action: none;
 }
 
 .region-tile.selected {
   border-color: var(--gold);
   outline: 3px solid rgba(227, 182, 91, 0.28);
+}
+
+.region-tile.dragging {
+  border-color: #7fd6ff;
+  cursor: grabbing;
+  opacity: 0.92;
+  z-index: 8;
 }
 
 .region-tile img {

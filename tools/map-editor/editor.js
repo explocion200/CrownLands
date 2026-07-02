@@ -2,6 +2,7 @@
   const WORLD_API = "/api/world-data";
   const SIDES = ["north", "south", "east", "west"];
   const OPPOSITE_SIDE = { north: "south", south: "north", east: "west", west: "east" };
+  const WORLD_GRID_CELL = 128;
   const REGION_TYPES = ["starter", "midgame", "endgame", "activity", "crownlands_main"];
   const EDGE_TYPES = ["road", "valley", "pass", "river_crossing", "open_field", "forest_break", "bridge"];
   const STRONGHOLD_TYPES = [
@@ -136,8 +137,10 @@
     },
     draggingMarker: null,
     draggingEdge: null,
+    draggingRegion: null,
     panning: null,
     skipNextCanvasClick: false,
+    skipNextWorldClick: false,
   };
 
   function setStatus(message) {
@@ -397,9 +400,13 @@
   }
 
   function selectRegion(regionId) {
+    setSelectedRegion(regionId);
+    render();
+  }
+
+  function setSelectedRegion(regionId) {
     state.activeRegionId = regionId;
     state.selected = { kind: "region", regionId };
-    render();
   }
 
   function selectCity(regionId, index) {
@@ -499,7 +506,7 @@
 
   function renderWorldGrid() {
     const bounds = getGridBounds();
-    const cell = 128;
+    const cell = WORLD_GRID_CELL;
     const cols = bounds.maxX - bounds.minX + 1;
     const rows = bounds.maxY - bounds.minY + 1;
     elements.worldView.classList.toggle("hide-grid", !state.toggles.grid);
@@ -516,7 +523,11 @@
       const top = (region.gridY - bounds.minY) * cell + 8;
       const tile = document.createElement("button");
       tile.type = "button";
-      tile.className = `region-tile ${state.selected?.kind === "region" && state.selected.regionId === region.id ? "selected" : ""}`;
+      tile.className = [
+        "region-tile",
+        state.selected?.kind === "region" && state.selected.regionId === region.id ? "selected" : "",
+        state.draggingRegion?.regionId === region.id ? "dragging" : "",
+      ].filter(Boolean).join(" ");
       tile.style.left = `${left}px`;
       tile.style.top = `${top}px`;
       tile.dataset.regionId = region.id;
@@ -529,8 +540,21 @@
         </span>
         ${SIDES.map(side => `<span class="edge-dot ${side} ${hasNeighbor(region, side) ? "connected" : ""}"></span>`).join("")}
       `;
-      tile.addEventListener("click", () => selectRegion(region.id));
-      tile.addEventListener("dblclick", () => {
+      tile.addEventListener("pointerdown", event => startRegionTileDrag(event, region.id));
+      tile.addEventListener("click", event => {
+        if (state.skipNextWorldClick) {
+          event.preventDefault();
+          event.stopPropagation();
+          return;
+        }
+        selectRegion(region.id);
+      });
+      tile.addEventListener("dblclick", event => {
+        if (state.skipNextWorldClick) {
+          event.preventDefault();
+          event.stopPropagation();
+          return;
+        }
         state.activeRegionId = region.id;
         setEditorMode("region");
       });
@@ -586,6 +610,85 @@
       const center = (zone.start + zone.end) / 2;
       return oppositeZones.some(other => Math.abs(center - ((other.start + other.end) / 2)) <= 0.18);
     });
+  }
+
+  function isGridCellOccupied(gridX, gridY, excludeRegionId = "") {
+    return state.regions.some(region =>
+      region.id !== excludeRegionId
+      && Number(region.gridX) === Number(gridX)
+      && Number(region.gridY) === Number(gridY)
+    );
+  }
+
+  function updateWorldTileSelection(regionId) {
+    elements.worldGrid.querySelectorAll(".region-tile").forEach(tile => {
+      tile.classList.toggle("selected", tile.dataset.regionId === regionId);
+    });
+  }
+
+  function startRegionTileDrag(event, regionId) {
+    if (state.editorMode !== "world" || event.button !== 0) return;
+    const region = getRegion(regionId);
+    if (!region) return;
+    event.preventDefault();
+    event.stopPropagation();
+    setSelectedRegion(region.id);
+    updateWorldTileSelection(region.id);
+    state.draggingRegion = {
+      regionId: region.id,
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      startGridX: Number(region.gridX) || 0,
+      startGridY: Number(region.gridY) || 0,
+      lastGridX: Number(region.gridX) || 0,
+      lastGridY: Number(region.gridY) || 0,
+      moved: false,
+    };
+    event.currentTarget.classList.add("dragging");
+    event.currentTarget.setPointerCapture?.(event.pointerId);
+    renderToolbar();
+    renderInspector();
+  }
+
+  function handleRegionTileDrag(event) {
+    if (!state.draggingRegion || state.draggingRegion.pointerId !== event.pointerId) return;
+    const region = getRegion(state.draggingRegion.regionId);
+    if (!region) {
+      state.draggingRegion = null;
+      return;
+    }
+    const deltaX = Math.round((event.clientX - state.draggingRegion.startX) / WORLD_GRID_CELL);
+    const deltaY = Math.round((event.clientY - state.draggingRegion.startY) / WORLD_GRID_CELL);
+    const nextGridX = state.draggingRegion.startGridX + deltaX;
+    const nextGridY = state.draggingRegion.startGridY + deltaY;
+    if (nextGridX === state.draggingRegion.lastGridX && nextGridY === state.draggingRegion.lastGridY) return;
+    state.draggingRegion.moved = true;
+    if (isGridCellOccupied(nextGridX, nextGridY, region.id)) {
+      setStatus(`Grid cell ${nextGridX}, ${nextGridY} already has a region.`);
+      return;
+    }
+    region.gridX = nextGridX;
+    region.gridY = nextGridY;
+    state.draggingRegion.lastGridX = nextGridX;
+    state.draggingRegion.lastGridY = nextGridY;
+    markDirty();
+    renderWorldGrid();
+    renderInspector();
+    renderCounts();
+    event.preventDefault();
+  }
+
+  function stopRegionTileDrag(event) {
+    if (!state.draggingRegion || (event && state.draggingRegion.pointerId !== event.pointerId)) return;
+    const wasMoved = state.draggingRegion.moved;
+    const region = getRegion(state.draggingRegion.regionId);
+    state.draggingRegion = null;
+    state.skipNextWorldClick = wasMoved;
+    renderWorldGrid();
+    renderInspector();
+    if (wasMoved && region) setStatus(`Moved ${region.name} to ${region.gridX}, ${region.gridY}.`);
+    window.setTimeout(() => { state.skipNextWorldClick = false; }, 140);
   }
 
   function renderRegionEditor() {
@@ -1359,6 +1462,9 @@
     window.addEventListener("pointermove", handleEdgeDrag);
     window.addEventListener("pointerup", stopEdgeDrag);
     window.addEventListener("pointercancel", stopEdgeDrag);
+    window.addEventListener("pointermove", handleRegionTileDrag);
+    window.addEventListener("pointerup", stopRegionTileDrag);
+    window.addEventListener("pointercancel", stopRegionTileDrag);
     window.addEventListener("keydown", handleKeydown);
   }
 
