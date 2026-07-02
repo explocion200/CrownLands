@@ -1,26 +1,14 @@
 {
   "id": "north",
   "name": "North Frontier",
+  "type": "starter",
   "gridX": 0,
   "gridY": -1,
-  "type": "starter",
-  "cityCapacity": 50,
   "width": 1448,
   "height": 1086,
   "imagePath": "assets/north-island.png",
+  "cityCapacity": 50,
   "regionPath": "assets/worlds/world_01/regions/north.json",
-  "compatRegion": {
-    "id": "north",
-    "label": "North Frontier",
-    "x": 5000,
-    "y": 1150,
-    "rx": 1650,
-    "ry": 900,
-    "cityRx": 1370,
-    "cityRy": 700,
-    "rot": 0.04,
-    "palette": "pine"
-  },
   "cities": [
     {
       "id": "north_001",
@@ -581,7 +569,7 @@
       "xNorm": 0.501,
       "yNorm": 0.508,
       "strongholdType": "troop_stronghold",
-      "bonusType": "troopProduction",
+      "bonusType": "troopproduction",
       "bonusAmount": 15,
       "startingOwner": "neutral",
       "level": 50,
@@ -593,8 +581,6 @@
   ],
   "edgeConnections": {
     "north": [],
-    "east": [],
-    "west": [],
     "south": [
       {
         "id": "north_center_road",
@@ -606,7 +592,21 @@
         "intentionalOuter": false,
         "notes": "Southern road continues into Crownlands Heart."
       }
-    ]
+    ],
+    "east": [],
+    "west": []
   },
-  "notes": "Placeholder map migrated from the old island editor."
+  "notes": "Placeholder map migrated from the old island editor.",
+  "compatRegion": {
+    "id": "north",
+    "label": "North Frontier",
+    "x": 5000,
+    "y": 1150,
+    "rx": 1650,
+    "ry": 900,
+    "cityRx": 1370,
+    "cityRy": 700,
+    "rot": 0.04,
+    "palette": "pine"
+  }
 }

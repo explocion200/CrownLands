@@ -16,6 +16,12 @@ const GITHUB_WORLD_CONFIG_URL = "https://raw.githubusercontent.com/explocion200/
 const HOST = "127.0.0.1";
 const START_PORT = Number(process.env.PORT) || 8791;
 const MAX_BODY_BYTES = 32 * 1024 * 1024;
+const MAP_ASPECT_WIDTH = 4;
+const MAP_ASPECT_HEIGHT = 3;
+const MAP_ASPECT_RATIO = MAP_ASPECT_WIDTH / MAP_ASPECT_HEIGHT;
+const MAP_ASPECT_TOLERANCE = 0.02;
+const DEFAULT_MAP_WIDTH = 2048;
+const DEFAULT_MAP_HEIGHT = 1536;
 const ROOT_STATIC_FILES = new Set([
   "/firebaseClient.js",
   "/game.js",
@@ -115,6 +121,22 @@ function number(value, fallback, min = -Infinity, max = Infinity) {
   const parsed = Number(value);
   if (!Number.isFinite(parsed)) return fallback;
   return Math.min(max, Math.max(min, parsed));
+}
+
+function isFourThreeDimensions(width, height) {
+  const safeWidth = Number(width) || 0;
+  const safeHeight = Number(height) || 0;
+  if (safeWidth <= 0 || safeHeight <= 0) return false;
+  return Math.abs((safeWidth / safeHeight) - MAP_ASPECT_RATIO) <= MAP_ASPECT_TOLERANCE;
+}
+
+function cleanMapDimensions(width, height) {
+  const safeWidth = Math.floor(number(width, DEFAULT_MAP_WIDTH, 256, 8192));
+  const safeHeight = Math.floor(number(height, DEFAULT_MAP_HEIGHT, 256, 8192));
+  if (isFourThreeDimensions(safeWidth, safeHeight)) {
+    return { width: safeWidth, height: safeHeight };
+  }
+  return { width: DEFAULT_MAP_WIDTH, height: DEFAULT_MAP_HEIGHT };
 }
 
 function sanitizeWorldConfig(config) {
@@ -244,10 +266,14 @@ async function writeMapImageUpload(payload = {}) {
   const regionId = cleanId(payload.regionId, "region");
   const extension = cleanUploadExtension(payload.filename, payload.mimeType);
   if (!extension) throw new Error("Map image must be a JPG, PNG, or WebP file.");
+  if (!isFourThreeDimensions(payload.width, payload.height)) {
+    throw new Error("Map image must be 4:3, such as 2048 x 1536.");
+  }
   const encoded = String(payload.base64 || "").replace(/^data:[^,]+,/, "");
   if (!encoded) throw new Error("Map image upload is empty.");
   const buffer = Buffer.from(encoded, "base64");
   if (!buffer.length) throw new Error("Map image upload could not be decoded.");
+  const dimensions = cleanMapDimensions(payload.width, payload.height);
   const baseName = cleanId(path.basename(String(payload.filename || "map"), extension), "map").slice(0, 48);
   const fileName = `${regionId}-${baseName}-${Date.now()}${extension}`;
   await fsp.mkdir(WORLD_MAPS_DIR, { recursive: true });
@@ -259,8 +285,8 @@ async function writeMapImageUpload(payload = {}) {
     imagePath: publicMapImagePath(fileName),
     filePath,
     replacedImagePath: replacedImage?.imagePath || "",
-    width: Math.floor(number(payload.width, 0, 0, 8192)),
-    height: Math.floor(number(payload.height, 0, 0, 8192)),
+    width: dimensions.width,
+    height: dimensions.height,
   };
 }
 
@@ -296,14 +322,15 @@ function normalizeEdgeConnections(edgeConnections = {}) {
 
 function cleanWorldRegionSummary(region) {
   const id = cleanId(region.id, "region");
+  const dimensions = cleanMapDimensions(region.width || region.imageWidth, region.height || region.imageHeight);
   return {
     id,
     name: cleanString(region.name || region.label, titleCase(id)),
     type: cleanId(region.type, "starter"),
     gridX: Math.round(number(region.gridX, 0, -1000, 1000)),
     gridY: Math.round(number(region.gridY, 0, -1000, 1000)),
-    width: Math.floor(number(region.width || region.imageWidth, 2048, 256, 8192)),
-    height: Math.floor(number(region.height || region.imageHeight, 2048, 256, 8192)),
+    width: dimensions.width,
+    height: dimensions.height,
     imagePath: normalizePathForJson(region.imagePath || region.imageSrc),
     cityCapacity: Math.floor(number(region.cityCapacity, region.type === "crownlands_main" ? 100 : 50, 0, 500)),
     regionPath: normalizePathForJson(region.regionPath || publicRegionPath(id)),
@@ -449,8 +476,8 @@ function normalizeWorldBundle(payload = {}) {
     schemaVersion: Math.max(1, Math.floor(number(rawLayout.schemaVersion, 1, 1, 1000))),
     updatedAt: new Date().toISOString(),
     globalSettings: {
-      defaultMapWidth: Math.floor(number(rawLayout.globalSettings?.defaultMapWidth, 2048, 256, 8192)),
-      defaultMapHeight: Math.floor(number(rawLayout.globalSettings?.defaultMapHeight, 2048, 256, 8192)),
+      defaultMapWidth: cleanMapDimensions(rawLayout.globalSettings?.defaultMapWidth, rawLayout.globalSettings?.defaultMapHeight).width,
+      defaultMapHeight: cleanMapDimensions(rawLayout.globalSettings?.defaultMapWidth, rawLayout.globalSettings?.defaultMapHeight).height,
       minimumCitySpacing: number(rawLayout.globalSettings?.minimumCitySpacing, 0.045, 0.005, 0.25),
       worldWidth: Math.floor(number(rawLayout.globalSettings?.worldWidth, 10000, 1000, 100000)),
       worldHeight: Math.floor(number(rawLayout.globalSettings?.worldHeight, 7600, 1000, 100000)),
@@ -484,6 +511,9 @@ async function buildWorldDataFromMapEditorData() {
   const maps = Array.isArray(data.maps) ? data.maps : [];
   const regions = maps.map((map, index) => {
     const id = cleanId(map.id, `region-${index + 1}`);
+    const sourceWidth = Math.max(1, Number(map.imageWidth || map.width) || DEFAULT_MAP_WIDTH);
+    const sourceHeight = Math.max(1, Number(map.imageHeight || map.height) || DEFAULT_MAP_HEIGHT);
+    const dimensions = cleanMapDimensions(sourceWidth, sourceHeight);
     const region = {
       id,
       name: cleanString(map.label || map.name, titleCase(id)),
@@ -491,15 +521,15 @@ async function buildWorldDataFromMapEditorData() {
       gridY: Math.round(number(map.gridY, id === "north" ? -1 : id === "south" ? 1 : 0)),
       type: id === "center" ? "crownlands_main" : "starter",
       cityCapacity: id === "center" ? 100 : 50,
-      width: Math.floor(number(map.imageWidth || map.width, 2048, 256, 8192)),
-      height: Math.floor(number(map.imageHeight || map.height, 2048, 256, 8192)),
+      width: dimensions.width,
+      height: dimensions.height,
       imagePath: normalizePathForJson(map.imageSrc || map.image?.src),
       compatRegion: map.region || null,
       cities: (Array.isArray(map.cities) ? map.cities : []).map((city, cityIndex) => ({
         id: city.id || `${id}_city_${String(cityIndex + 1).padStart(3, "0")}`,
         name: city.name || `City ${cityIndex + 1}`,
-        xNorm: cleanNorm((Number(city.x) || 0) / Math.max(1, Number(map.imageWidth) || 1), 0.5),
-        yNorm: cleanNorm((Number(city.y) || 0) / Math.max(1, Number(map.imageHeight) || 1), 0.5),
+        xNorm: cleanNorm(city.xNorm ?? ((Number(city.x) || 0) / sourceWidth), 0.5),
+        yNorm: cleanNorm(city.yNorm ?? ((Number(city.y) || 0) / sourceHeight), 0.5),
         level: Math.max(1, Math.floor(Number(city.level) || 1)),
         owner: "neutral",
         startType: "neutral",
@@ -508,8 +538,8 @@ async function buildWorldDataFromMapEditorData() {
       strongholds: (Array.isArray(map.objectives) ? map.objectives : []).map((objective, objectiveIndex) => ({
         id: objective.id || `${id}_stronghold_${objectiveIndex + 1}`,
         name: objective.name || "Stronghold",
-        xNorm: cleanNorm((Number(objective.x) || 0) / Math.max(1, Number(map.imageWidth) || 1), 0.5),
-        yNorm: cleanNorm((Number(objective.y) || 0) / Math.max(1, Number(map.imageHeight) || 1), 0.5),
+        xNorm: cleanNorm(objective.xNorm ?? ((Number(objective.x) || 0) / sourceWidth), 0.5),
+        yNorm: cleanNorm(objective.yNorm ?? ((Number(objective.y) || 0) / sourceHeight), 0.5),
         strongholdType: expandStrongholdType(objective.strongholdType || objective.type),
         bonusType: objective.bonus || getStrongholdDefaults(expandStrongholdType(objective.strongholdType || objective.type)).bonusType,
         bonusAmount: Number(objective.bonusPercent) || getStrongholdDefaults(expandStrongholdType(objective.strongholdType || objective.type)).bonusAmount,

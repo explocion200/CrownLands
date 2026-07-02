@@ -1,26 +1,14 @@
 {
   "id": "south",
   "name": "Southfields",
+  "type": "starter",
   "gridX": 0,
   "gridY": 1,
-  "type": "starter",
-  "cityCapacity": 50,
   "width": 1446,
   "height": 1087,
   "imagePath": "assets/south-island.png",
+  "cityCapacity": 50,
   "regionPath": "assets/worlds/world_01/regions/south.json",
-  "compatRegion": {
-    "id": "south",
-    "label": "Southfields",
-    "x": 5000,
-    "y": 6450,
-    "rx": 1650,
-    "ry": 900,
-    "cityRx": 1370,
-    "cityRy": 700,
-    "rot": -0.05,
-    "palette": "marsh"
-  },
   "cities": [
     {
       "id": "south_001",
@@ -581,7 +569,7 @@
       "xNorm": 0.497,
       "yNorm": 0.477,
       "strongholdType": "defense_stronghold",
-      "bonusType": "cityDefense",
+      "bonusType": "citydefense",
       "bonusAmount": 15,
       "startingOwner": "neutral",
       "level": 50,
@@ -592,9 +580,6 @@
     }
   ],
   "edgeConnections": {
-    "south": [],
-    "east": [],
-    "west": [],
     "north": [
       {
         "id": "south_center_road",
@@ -606,7 +591,22 @@
         "intentionalOuter": false,
         "notes": "Northern road continues into Crownlands Heart."
       }
-    ]
+    ],
+    "south": [],
+    "east": [],
+    "west": []
   },
-  "notes": "Placeholder map migrated from the old island editor."
+  "notes": "Placeholder map migrated from the old island editor.",
+  "compatRegion": {
+    "id": "south",
+    "label": "Southfields",
+    "x": 5000,
+    "y": 6450,
+    "rx": 1650,
+    "ry": 900,
+    "cityRx": 1370,
+    "cityRy": 700,
+    "rot": -0.05,
+    "palette": "marsh"
+  }
 }

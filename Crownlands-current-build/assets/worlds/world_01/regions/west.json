@@ -1,26 +1,14 @@
 {
   "id": "west",
   "name": "West Marches",
+  "type": "starter",
   "gridX": -1,
   "gridY": 0,
-  "type": "starter",
-  "cityCapacity": 50,
-  "width": 1024,
+  "width": 2048,
   "height": 1536,
   "imagePath": "assets/west-island.png",
+  "cityCapacity": 50,
   "regionPath": "assets/worlds/world_01/regions/west.json",
-  "compatRegion": {
-    "id": "west",
-    "label": "West Marches",
-    "x": 1500,
-    "y": 3800,
-    "rx": 1120,
-    "ry": 1330,
-    "cityRx": 900,
-    "cityRy": 1090,
-    "rot": 0.07,
-    "palette": "woodland"
-  },
   "cities": [
     {
       "id": "west_001",
@@ -581,7 +569,7 @@
       "xNorm": 0.502,
       "yNorm": 0.482,
       "strongholdType": "gold_stronghold",
-      "bonusType": "goldProduction",
+      "bonusType": "goldproduction",
       "bonusAmount": 15,
       "startingOwner": "neutral",
       "level": 50,
@@ -594,7 +582,6 @@
   "edgeConnections": {
     "north": [],
     "south": [],
-    "west": [],
     "east": [
       {
         "id": "west_center_road",
@@ -606,7 +593,20 @@
         "intentionalOuter": false,
         "notes": "Eastern road continues into Crownlands Heart."
       }
-    ]
+    ],
+    "west": []
   },
-  "notes": "Placeholder map migrated from the old island editor."
+  "notes": "Placeholder map migrated from the old island editor.",
+  "compatRegion": {
+    "id": "west",
+    "label": "West Marches",
+    "x": 1500,
+    "y": 3800,
+    "rx": 1120,
+    "ry": 1330,
+    "cityRx": 900,
+    "cityRy": 1090,
+    "rot": 0.07,
+    "palette": "woodland"
+  }
 }

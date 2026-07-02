@@ -1,26 +1,14 @@
 {
   "id": "east",
   "name": "East Reach",
+  "type": "starter",
   "gridX": 1,
   "gridY": 0,
-  "type": "starter",
-  "cityCapacity": 50,
-  "width": 1086,
-  "height": 1448,
+  "width": 2048,
+  "height": 1536,
   "imagePath": "assets/east-island.png",
+  "cityCapacity": 50,
   "regionPath": "assets/worlds/world_01/regions/east.json",
-  "compatRegion": {
-    "id": "east",
-    "label": "East Reach",
-    "x": 8500,
-    "y": 3800,
-    "rx": 1120,
-    "ry": 1330,
-    "cityRx": 900,
-    "cityRy": 1090,
-    "rot": -0.07,
-    "palette": "golden"
-  },
   "cities": [
     {
       "id": "east_001",
@@ -581,7 +569,7 @@
       "xNorm": 0.502,
       "yNorm": 0.428,
       "strongholdType": "march_speed_stronghold",
-      "bonusType": "marchSpeed",
+      "bonusType": "marchspeed",
       "bonusAmount": 15,
       "startingOwner": "neutral",
       "level": 50,
@@ -608,5 +596,17 @@
       }
     ]
   },
-  "notes": "Placeholder map migrated from the old island editor."
+  "notes": "Placeholder map migrated from the old island editor.",
+  "compatRegion": {
+    "id": "east",
+    "label": "East Reach",
+    "x": 8500,
+    "y": 3800,
+    "rx": 1120,
+    "ry": 1330,
+    "cityRx": 900,
+    "cityRy": 1090,
+    "rot": -0.07,
+    "palette": "golden"
+  }
 }

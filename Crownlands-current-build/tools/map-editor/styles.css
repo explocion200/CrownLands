@@ -405,7 +405,8 @@ label > span,
 .region-canvas {
   position: relative;
   width: 2048px;
-  height: 2048px;
+  height: 1536px;
+  aspect-ratio: 4 / 3;
   margin: auto;
   border: 1px solid rgba(227, 182, 91, 0.36);
   border-radius: 8px;

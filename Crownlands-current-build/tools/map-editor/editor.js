@@ -6,6 +6,12 @@
   const WORLD_GRID_CELL = 128;
   const MIN_REGION_ZOOM = 0.15;
   const MAX_REGION_ZOOM = 3;
+  const MAP_ASPECT_WIDTH = 4;
+  const MAP_ASPECT_HEIGHT = 3;
+  const MAP_ASPECT_RATIO = MAP_ASPECT_WIDTH / MAP_ASPECT_HEIGHT;
+  const MAP_ASPECT_TOLERANCE = 0.02;
+  const DEFAULT_MAP_WIDTH = 2048;
+  const DEFAULT_MAP_HEIGHT = 1536;
   const REGION_TYPES = ["starter", "midgame", "endgame", "activity", "crownlands_main"];
   const EDGE_TYPES = ["road", "valley", "pass", "river_crossing", "open_field", "forest_break", "bridge"];
   const STRONGHOLD_TYPES = [
@@ -172,6 +178,33 @@
     return Math.max(min, Math.min(max, value));
   }
 
+  function isFourThreeDimensions(width, height) {
+    const safeWidth = Number(width) || 0;
+    const safeHeight = Number(height) || 0;
+    if (safeWidth <= 0 || safeHeight <= 0) return false;
+    return Math.abs((safeWidth / safeHeight) - MAP_ASPECT_RATIO) <= MAP_ASPECT_TOLERANCE;
+  }
+
+  function cleanMapDimensions(width, height) {
+    const safeWidth = Math.max(256, Math.round(Number(width) || DEFAULT_MAP_WIDTH));
+    const safeHeight = Math.max(256, Math.round(Number(height) || DEFAULT_MAP_HEIGHT));
+    if (isFourThreeDimensions(safeWidth, safeHeight)) {
+      return { width: safeWidth, height: safeHeight };
+    }
+    return { width: DEFAULT_MAP_WIDTH, height: DEFAULT_MAP_HEIGHT };
+  }
+
+  function syncRegionAspectFromField(region, field) {
+    if (!region) return;
+    if (field === "height") {
+      region.height = Math.max(256, Math.round(Number(region.height) || DEFAULT_MAP_HEIGHT));
+      region.width = Math.max(256, Math.round(region.height * MAP_ASPECT_RATIO));
+      return;
+    }
+    region.width = Math.max(256, Math.round(Number(region.width) || DEFAULT_MAP_WIDTH));
+    region.height = Math.max(256, Math.round(region.width / MAP_ASPECT_RATIO));
+  }
+
   function roundNorm(value) {
     return Math.round(clamp(Number(value) || 0, 0, 1) * 1000) / 1000;
   }
@@ -206,14 +239,15 @@
   }
 
   function getRegionSummary(region) {
+    const dimensions = cleanMapDimensions(region.width, region.height);
     return {
       id: region.id,
       name: region.name,
       type: region.type,
       gridX: Math.round(Number(region.gridX) || 0),
       gridY: Math.round(Number(region.gridY) || 0),
-      width: Math.max(256, Math.round(Number(region.width) || 2048)),
-      height: Math.max(256, Math.round(Number(region.height) || 2048)),
+      width: dimensions.width,
+      height: dimensions.height,
       imagePath: region.imagePath || "",
       cityCapacity: Math.max(0, Math.floor(Number(region.cityCapacity) || 0)),
       regionPath: region.regionPath || `assets/worlds/world_01/regions/${region.id}.json`,
@@ -241,16 +275,15 @@
   function normalizeRegion(rawRegion = {}, index = 0) {
     const id = slugify(rawRegion.id, `region_${index + 1}`);
     const type = REGION_TYPES.includes(rawRegion.type) ? rawRegion.type : (id === "center" ? "crownlands_main" : "starter");
-    const width = Math.max(256, Math.round(Number(rawRegion.width || rawRegion.imageWidth) || 2048));
-    const height = Math.max(256, Math.round(Number(rawRegion.height || rawRegion.imageHeight) || 2048));
+    const dimensions = cleanMapDimensions(rawRegion.width || rawRegion.imageWidth, rawRegion.height || rawRegion.imageHeight);
     const region = {
       id,
       name: String(rawRegion.name || rawRegion.label || titleFromId(id)),
       type,
       gridX: Math.round(Number(rawRegion.gridX) || 0),
       gridY: Math.round(Number(rawRegion.gridY) || 0),
-      width,
-      height,
+      width: dimensions.width,
+      height: dimensions.height,
       imagePath: String(rawRegion.imagePath || rawRegion.imageSrc || ""),
       cityCapacity: Math.max(0, Math.floor(Number(rawRegion.cityCapacity) || (type === "crownlands_main" ? 100 : 50))),
       cities: [],
@@ -312,8 +345,8 @@
       schemaVersion: Math.max(1, Math.floor(Number(rawLayout.schemaVersion) || 1)),
       updatedAt: rawLayout.updatedAt || new Date().toISOString(),
       globalSettings: {
-        defaultMapWidth: Math.max(256, Math.floor(Number(rawLayout.globalSettings?.defaultMapWidth) || 2048)),
-        defaultMapHeight: Math.max(256, Math.floor(Number(rawLayout.globalSettings?.defaultMapHeight) || 2048)),
+        defaultMapWidth: cleanMapDimensions(rawLayout.globalSettings?.defaultMapWidth, rawLayout.globalSettings?.defaultMapHeight).width,
+        defaultMapHeight: cleanMapDimensions(rawLayout.globalSettings?.defaultMapWidth, rawLayout.globalSettings?.defaultMapHeight).height,
         minimumCitySpacing: Number(rawLayout.globalSettings?.minimumCitySpacing) || 0.045,
         worldWidth: Math.max(1000, Math.floor(Number(rawLayout.globalSettings?.worldWidth) || 10000)),
         worldHeight: Math.max(1000, Math.floor(Number(rawLayout.globalSettings?.worldHeight) || 7600)),
@@ -333,8 +366,8 @@
         globalSettings: {},
       },
       regions: [
-        { id: "center", name: "Crownlands Heart", type: "crownlands_main", gridX: 0, gridY: 0, width: 1254, height: 1254, imagePath: "assets/center-island.png", cityCapacity: 100 },
-        { id: "west", name: "West Marches", type: "starter", gridX: -1, gridY: 0, width: 1024, height: 1536, imagePath: "assets/west-island.png", cityCapacity: 50 },
+        { id: "center", name: "Crownlands Heart", type: "crownlands_main", gridX: 0, gridY: 0, width: DEFAULT_MAP_WIDTH, height: DEFAULT_MAP_HEIGHT, imagePath: "assets/center-island.png", cityCapacity: 100 },
+        { id: "west", name: "West Marches", type: "starter", gridX: -1, gridY: 0, width: DEFAULT_MAP_WIDTH, height: DEFAULT_MAP_HEIGHT, imagePath: "assets/west-island.png", cityCapacity: 50 },
       ],
     });
   }
@@ -1211,6 +1244,10 @@
     }
     if (["gridX", "gridY", "cityCapacity", "width", "height"].includes(field)) {
       region[field] = Math.max(field === "cityCapacity" ? 0 : 1, Math.floor(Number(value) || 0));
+      if (field === "width" || field === "height") {
+        syncRegionAspectFromField(region, field);
+        setStatus(`${region.name} map size locked to 4:3 (${region.width} x ${region.height}).`);
+      }
     } else {
       region[field] = String(value);
     }
@@ -1286,6 +1323,7 @@
       if (gridCells.has(cellKey)) results.push({ level: "error", text: `${region.name} overlaps ${gridCells.get(cellKey).name} at grid ${cellKey}.` });
       gridCells.set(cellKey, region);
       if (!region.imagePath) results.push({ level: "error", text: `${region.name} needs a map image path.` });
+      if (!isFourThreeDimensions(region.width, region.height)) results.push({ level: "error", text: `${region.name} map size must stay 4:3, such as ${DEFAULT_MAP_WIDTH} x ${DEFAULT_MAP_HEIGHT}.` });
       if (region.cities.length > region.cityCapacity) results.push({ level: "warning", text: `${region.name} has ${region.cities.length} cities over capacity ${region.cityCapacity}.` });
       if (region.type === "crownlands_main" && region.cityCapacity < 100) results.push({ level: "warning", text: `${region.name} is Crownlands main and should allow 100 cities.` });
       if (region.type !== "crownlands_main" && (region.cityCapacity < 50 || region.cityCapacity > 60)) results.push({ level: "warning", text: `${region.name} standard capacity should be around 50-60.` });
@@ -1431,6 +1469,10 @@
       readFileAsDataUrl(file),
       readImageDimensions(file),
     ]);
+    if (!isFourThreeDimensions(dimensions.width, dimensions.height)) {
+      setStatus(`Map image must be 4:3, such as ${DEFAULT_MAP_WIDTH} x ${DEFAULT_MAP_HEIGHT}. ${file.name} is ${dimensions.width} x ${dimensions.height}.`);
+      return;
+    }
     const response = await fetch(MAP_IMAGE_API, {
       method: "POST",
       headers: { "content-type": "application/json" },

@@ -13050,6 +13050,25 @@ function updateZoomPerformanceClasses() {
   mapFrame.classList.toggle("low-zoom", zoom <= LOW_ZOOM_PERFORMANCE_THRESHOLD);
 }
 
+function getZoomBoundsForViewport(frameRect = null, dimensions = null) {
+  const rect = frameRect || mapFrame?.getBoundingClientRect();
+  const mapDimensions = dimensions || getActiveMapDimensions();
+  if (!rect || !mapDimensions?.width || !mapDimensions?.height) {
+    return { min: MIN_ZOOM, max: MAX_ZOOM };
+  }
+  const coverZoom = Math.max(rect.width / mapDimensions.width, rect.height / mapDimensions.height);
+  const min = Math.max(MIN_ZOOM, coverZoom);
+  return {
+    min,
+    max: Math.max(MAX_ZOOM, min),
+  };
+}
+
+function clampZoomForViewport(nextZoom, frameRect = null, dimensions = null) {
+  const bounds = getZoomBoundsForViewport(frameRect, dimensions);
+  return clamp(nextZoom, bounds.min, bounds.max);
+}
+
 function getMapViewportOffset(frameRect = null, dimensions = null) {
   const rect = frameRect || mapFrame?.getBoundingClientRect();
   const mapDimensions = dimensions || getActiveMapDimensions();
@@ -13085,7 +13104,7 @@ function updateCameraTransform() {
   if (!mapWorld || !mapFrame) return;
   const rect = mapFrame.getBoundingClientRect();
   const dimensions = getActiveMapDimensions();
-  zoom = clamp(zoom, MIN_ZOOM, MAX_ZOOM);
+  zoom = clampZoomForViewport(zoom, rect, dimensions);
   updateZoomPerformanceClasses();
   const maxX = Math.max(0, dimensions.width - rect.width / zoom);
   const maxY = Math.max(0, dimensions.height - rect.height / zoom);
@@ -13100,6 +13119,7 @@ function centerOnMap() {
   if (!mapFrame) return;
   const rect = mapFrame.getBoundingClientRect();
   const dimensions = getActiveMapDimensions();
+  zoom = clampZoomForViewport(zoom, rect, dimensions);
   const offset = getMapViewportOffset(rect, dimensions);
   camera.x = dimensions.width / 2 - (rect.width / 2 - offset.x) / zoom;
   camera.y = dimensions.height / 2 - (rect.height / 2 - offset.y) / zoom;
@@ -13116,6 +13136,7 @@ function centerOnCity(cityId) {
   const rect = mapFrame.getBoundingClientRect();
   const mapPoint = worldToMapPoint(city);
   const dimensions = getActiveMapDimensions();
+  zoom = clampZoomForViewport(zoom, rect, dimensions);
   const offset = getMapViewportOffset(rect, dimensions);
   camera.x = mapPoint.x - (rect.width / 2 - offset.x) / zoom;
   camera.y = mapPoint.y - (rect.height / 2 - offset.y) / zoom;
@@ -13360,7 +13381,7 @@ function screenToWorld(clientX, clientY) {
 function setZoomAroundPoint(nextZoom, clientX, clientY) {
   const rect = mapFrame.getBoundingClientRect();
   const before = screenToMap(clientX, clientY);
-  zoom = clamp(nextZoom, MIN_ZOOM, MAX_ZOOM);
+  zoom = clampZoomForViewport(nextZoom, rect);
   const offset = getMapViewportOffset(rect);
   camera.x = before.x - (clientX - rect.left - offset.x) / zoom;
   camera.y = before.y - (clientY - rect.top - offset.y) / zoom;
@@ -13417,7 +13438,7 @@ function updatePinch() {
   const nextDistance = Math.max(1, distanceBetween(a, b));
   const scale = nextDistance / pinchState.startDistance;
   const rect = mapFrame.getBoundingClientRect();
-  zoom = clamp(pinchState.startZoom * scale, MIN_ZOOM, MAX_ZOOM);
+  zoom = clampZoomForViewport(pinchState.startZoom * scale, rect);
   const offset = getMapViewportOffset(rect);
   camera.x = pinchState.mapPoint.x - (mid.x - rect.left - offset.x) / zoom;
   camera.y = pinchState.mapPoint.y - (mid.y - rect.top - offset.y) / zoom;
