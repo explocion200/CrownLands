@@ -6,6 +6,7 @@
   const DEFAULT_CROWN_OBJECTIVE_SIZE = 260;
   const MIN_PORTAL_SIZE = 48;
   const MIN_OBJECTIVE_SIZE = 80;
+  const PAN_MOVE_THRESHOLD = 8;
   const STRONGHOLD_TYPES = {
     gold: {
       name: "Gold Stronghold",
@@ -625,6 +626,7 @@
 
   function startCanvasPan(event) {
     if (!elements.canvasWrap || event.button !== 0 || event.target.closest(".marker")) return;
+    const map = currentMap();
     state.panning = {
       pointerId: event.pointerId,
       x: event.clientX,
@@ -632,6 +634,7 @@
       left: elements.canvasWrap.scrollLeft,
       top: elements.canvasWrap.scrollTop,
       moved: false,
+      canPlace: Boolean(map && state.mode !== "select" && isPointerOnMap(event)),
     };
     elements.canvasWrap.classList.add("panning");
     elements.canvasWrap.setPointerCapture?.(event.pointerId);
@@ -641,7 +644,7 @@
     if (!state.panning || state.panning.pointerId !== event.pointerId || !elements.canvasWrap) return;
     const dx = event.clientX - state.panning.x;
     const dy = event.clientY - state.panning.y;
-    if (Math.hypot(dx, dy) > 3) state.panning.moved = true;
+    if (Math.hypot(dx, dy) > PAN_MOVE_THRESHOLD) state.panning.moved = true;
     elements.canvasWrap.scrollLeft = state.panning.left - dx;
     elements.canvasWrap.scrollTop = state.panning.top - dy;
     event.preventDefault();
@@ -649,15 +652,25 @@
 
   function stopCanvasPan(event) {
     if (!state.panning || state.panning.pointerId !== event.pointerId) return;
-    state.skipNextCanvasClick = state.panning.moved;
+    const shouldPlace = state.panning.canPlace && !state.panning.moved;
+    state.skipNextCanvasClick = state.panning.moved || shouldPlace;
     if (state.skipNextCanvasClick) {
       window.setTimeout(() => {
         state.skipNextCanvasClick = false;
       }, 160);
     }
+    if (shouldPlace) placeMarkerFromEvent(event);
     state.panning = null;
     elements.canvasWrap?.classList.remove("panning");
     saveViewportForCurrentMap();
+  }
+
+  function isPointerOnMap(event) {
+    const rect = elements.mapImage.getBoundingClientRect();
+    return event.clientX >= rect.left
+      && event.clientX <= rect.right
+      && event.clientY >= rect.top
+      && event.clientY <= rect.bottom;
   }
 
   function getImagePointFromEvent(event, map) {
@@ -928,6 +941,16 @@
     render();
   }
 
+  function placeMarkerFromEvent(event) {
+    const map = currentMap();
+    if (!map || state.mode === "select" || !isPointerOnMap(event)) return false;
+    const point = getImagePointFromEvent(event, map);
+    if (state.mode === "city") addCity(point);
+    if (state.mode === "portal") addPortal(point);
+    if (state.mode === "objective") addObjective(point);
+    return true;
+  }
+
   function nextUniqueId(collection, baseId) {
     const used = new Set(collection.map(item => item.id));
     if (!used.has(baseId)) return baseId;
@@ -1163,12 +1186,7 @@
         state.skipNextCanvasClick = false;
         return;
       }
-      const map = currentMap();
-      if (!map || state.mode === "select") return;
-      const point = getImagePointFromEvent(event, map);
-      if (state.mode === "city") addCity(point);
-      if (state.mode === "portal") addPortal(point);
-      if (state.mode === "objective") addObjective(point);
+      placeMarkerFromEvent(event);
     });
     elements.mapLabelInput.addEventListener("input", () => {
       const map = currentMap();
