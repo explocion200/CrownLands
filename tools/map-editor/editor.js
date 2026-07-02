@@ -1692,7 +1692,7 @@
   }
 
   function startRegionPan(event) {
-    if (state.tool !== "select" || event.button !== 0 || event.target.closest(".map-marker, .edge-zone, .edge-switch-arrow")) return;
+    if (event.button !== 0 || event.target.closest(".map-marker, .edge-zone, .edge-switch-arrow")) return;
     state.panning = {
       pointerId: event.pointerId,
       x: event.clientX,
@@ -1720,6 +1720,7 @@
     state.skipNextCanvasClick = state.panning.moved;
     state.panning = null;
     elements.regionViewport.classList.remove("panning");
+    elements.regionViewport.releasePointerCapture?.(event.pointerId);
     window.setTimeout(() => { state.skipNextCanvasClick = false; }, 140);
   }
 
