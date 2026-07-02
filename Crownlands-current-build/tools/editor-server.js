@@ -7,10 +7,14 @@ const vm = require("vm");
 const ROOT_DIR = path.resolve(__dirname, "..");
 const EDITOR_DIR = path.join(__dirname, "map-editor");
 const WORLD_CONFIG_PATH = path.join(ROOT_DIR, "world-config.js");
+const WORLD_DATA_ROOT = path.join(ROOT_DIR, "assets", "worlds", "world_01");
+const WORLD_LAYOUT_PATH = path.join(WORLD_DATA_ROOT, "world-layout.json");
+const WORLD_REGIONS_DIR = path.join(WORLD_DATA_ROOT, "regions");
+const MAP_EDITOR_DATA_PATH = path.join(ROOT_DIR, "assets", "map-editor-data.js");
 const GITHUB_WORLD_CONFIG_URL = "https://raw.githubusercontent.com/explocion200/crownlands-game/main/world-config.js";
 const HOST = "127.0.0.1";
 const START_PORT = Number(process.env.PORT) || 8791;
-const MAX_BODY_BYTES = 1024 * 1024;
+const MAX_BODY_BYTES = 8 * 1024 * 1024;
 const ROOT_STATIC_FILES = new Set([
   "/firebaseClient.js",
   "/game.js",
@@ -168,6 +172,413 @@ async function writeWorldConfig(config) {
   return safe;
 }
 
+async function readJsonFile(filePath, fallback = null) {
+  try {
+    return JSON.parse(await fsp.readFile(filePath, "utf8"));
+  } catch (error) {
+    if (error.code === "ENOENT") return fallback;
+    throw error;
+  }
+}
+
+function normalizePathForJson(value) {
+  return String(value || "").replace(/\\/g, "/").replace(/^\/+/, "");
+}
+
+function regionFilePath(regionId) {
+  return path.join(WORLD_REGIONS_DIR, `${cleanId(regionId, "region")}.json`);
+}
+
+function publicRegionPath(regionId) {
+  return `assets/worlds/world_01/regions/${cleanId(regionId, "region")}.json`;
+}
+
+function getSideConnections(edgeConnections, side) {
+  return Array.isArray(edgeConnections?.[side]) ? edgeConnections[side] : [];
+}
+
+function cleanNorm(value, fallback = 0) {
+  return number(value, fallback, 0, 1);
+}
+
+function cleanEdgeZone(zone, index, side) {
+  const start = cleanNorm(zone.start, 0);
+  const end = cleanNorm(zone.end, 1);
+  return {
+    id: cleanId(zone.id, `${side}_connection_${index + 1}`),
+    side,
+    start: Math.min(start, end),
+    end: Math.max(start, end),
+    type: cleanId(zone.type, "road"),
+    connectsToRegionId: cleanId(zone.connectsToRegionId, ""),
+    intentionalOuter: Boolean(zone.intentionalOuter),
+    notes: cleanString(zone.notes, "").slice(0, 240),
+  };
+}
+
+function normalizeEdgeConnections(edgeConnections = {}) {
+  return ["north", "south", "east", "west"].reduce((result, side) => {
+    result[side] = getSideConnections(edgeConnections, side).map((zone, index) => cleanEdgeZone(zone, index, side));
+    return result;
+  }, {});
+}
+
+function cleanWorldRegionSummary(region) {
+  const id = cleanId(region.id, "region");
+  return {
+    id,
+    name: cleanString(region.name || region.label, titleCase(id)),
+    type: cleanId(region.type, "starter"),
+    gridX: Math.round(number(region.gridX, 0, -1000, 1000)),
+    gridY: Math.round(number(region.gridY, 0, -1000, 1000)),
+    width: Math.floor(number(region.width || region.imageWidth, 2048, 256, 8192)),
+    height: Math.floor(number(region.height || region.imageHeight, 2048, 256, 8192)),
+    imagePath: normalizePathForJson(region.imagePath || region.imageSrc),
+    cityCapacity: Math.floor(number(region.cityCapacity, region.type === "crownlands_main" ? 100 : 50, 0, 500)),
+    regionPath: normalizePathForJson(region.regionPath || publicRegionPath(id)),
+  };
+}
+
+function titleCase(value) {
+  return String(value || "region")
+    .split(/[-_]+/)
+    .filter(Boolean)
+    .map(part => `${part.charAt(0).toUpperCase()}${part.slice(1)}`)
+    .join(" ") || "Region";
+}
+
+function cleanCity(city, index, region) {
+  const xNorm = cleanNorm(city.xNorm ?? (Number(city.x) / Math.max(1, Number(region.width) || 1)), 0.5);
+  const yNorm = cleanNorm(city.yNorm ?? (Number(city.y) / Math.max(1, Number(region.height) || 1)), 0.5);
+  return {
+    id: cleanId(city.id, `${region.id}_city_${String(index + 1).padStart(3, "0")}`),
+    name: cleanString(city.name, `City ${index + 1}`),
+    regionId: region.id,
+    xNorm,
+    yNorm,
+    level: Math.max(1, Math.floor(number(city.level, 1, 1, 100))),
+    owner: cleanId(city.owner, "neutral"),
+    startType: cleanId(city.startType, "neutral"),
+    troops: Math.max(0, Math.floor(number(city.troops, 10, 0, 1000000000))),
+  };
+}
+
+function cleanStronghold(stronghold, index, region) {
+  const type = cleanId(stronghold.strongholdType || stronghold.type, region.type === "crownlands_main" ? "crown_citadel" : "gold_stronghold");
+  const xNorm = cleanNorm(stronghold.xNorm ?? (Number(stronghold.x) / Math.max(1, Number(region.width) || 1)), 0.5);
+  const yNorm = cleanNorm(stronghold.yNorm ?? (Number(stronghold.y) / Math.max(1, Number(region.height) || 1)), 0.5);
+  const defaults = getStrongholdDefaults(type);
+  return {
+    id: cleanId(stronghold.id, `${region.id}_${type}_${index + 1}`),
+    name: cleanString(stronghold.name, defaults.name),
+    regionId: region.id,
+    xNorm,
+    yNorm,
+    strongholdType: type,
+    bonusType: cleanId(stronghold.bonusType || stronghold.bonus || defaults.bonusType, defaults.bonusType),
+    bonusAmount: Math.max(0, Math.floor(number(stronghold.bonusAmount ?? stronghold.bonusPercent, defaults.bonusAmount, 0, 1000))),
+    startingOwner: cleanId(stronghold.startingOwner || stronghold.owner, "neutral"),
+    level: Math.max(1, Math.floor(number(stronghold.level, defaults.level, 1, 100))),
+    troops: Math.max(0, Math.floor(number(stronghold.troops ?? stronghold.startTroops, defaults.troops, 0, 1000000000))),
+    artSrc: normalizePathForJson(stronghold.artSrc || defaults.artSrc),
+    size: Math.max(80, Math.floor(number(stronghold.size, defaults.size, 80, 400))),
+    notes: cleanString(stronghold.notes, "").slice(0, 240),
+  };
+}
+
+function getStrongholdDefaults(type) {
+  const normalized = cleanId(type, "gold_stronghold");
+  const defaults = {
+    crown_citadel: {
+      name: "Crown Citadel",
+      bonusType: "crownDominion",
+      bonusAmount: 10,
+      level: 100,
+      troops: 50000000,
+      artSrc: "assets/crown-citadel.png?v=20260630-citadel-art",
+      size: 260,
+    },
+    gold_stronghold: {
+      name: "Gold Stronghold",
+      bonusType: "goldProduction",
+      bonusAmount: 15,
+      level: 50,
+      troops: 50000000,
+      artSrc: "assets/gold-stronghold.png",
+      size: 154,
+    },
+    troop_stronghold: {
+      name: "Troop Stronghold",
+      bonusType: "troopProduction",
+      bonusAmount: 15,
+      level: 50,
+      troops: 50000000,
+      artSrc: "assets/training-stronghold.png",
+      size: 154,
+    },
+    defense_stronghold: {
+      name: "Defense Stronghold",
+      bonusType: "cityDefense",
+      bonusAmount: 15,
+      level: 50,
+      troops: 50000000,
+      artSrc: "assets/defense-stronghold.png",
+      size: 154,
+    },
+    march_speed_stronghold: {
+      name: "March Speed Stronghold",
+      bonusType: "marchSpeed",
+      bonusAmount: 15,
+      level: 50,
+      troops: 50000000,
+      artSrc: "assets/speed-stronghold.png",
+      size: 154,
+    },
+    upgrade_discount_stronghold: {
+      name: "Upgrade Discount Stronghold",
+      bonusType: "upgradeCostReduction",
+      bonusAmount: 8,
+      level: 50,
+      troops: 50000000,
+      artSrc: "assets/gold-stronghold.png",
+      size: 154,
+    },
+  };
+  return defaults[normalized] || defaults.gold_stronghold;
+}
+
+function normalizeRegionDocument(rawRegion) {
+  const summary = cleanWorldRegionSummary(rawRegion);
+  const region = {
+    ...summary,
+    cities: [],
+    strongholds: [],
+    edgeConnections: normalizeEdgeConnections(rawRegion.edgeConnections),
+    notes: cleanString(rawRegion.notes, "").slice(0, 500),
+  };
+  region.cities = (Array.isArray(rawRegion.cities) ? rawRegion.cities : []).map((city, index) => cleanCity(city, index, region));
+  region.strongholds = (Array.isArray(rawRegion.strongholds) ? rawRegion.strongholds : []).map((stronghold, index) => cleanStronghold(stronghold, index, region));
+  if (rawRegion.compatRegion && typeof rawRegion.compatRegion === "object") {
+    region.compatRegion = rawRegion.compatRegion;
+  }
+  return region;
+}
+
+function normalizeWorldBundle(payload = {}) {
+  const rawLayout = payload.layout || payload.worldLayout || payload;
+  const rawRegions = Array.isArray(payload.regions)
+    ? payload.regions
+    : Array.isArray(rawLayout.regions)
+      ? rawLayout.regions.map(region => payload.regionData?.[region.id] || region)
+      : [];
+  const regions = rawRegions.map(normalizeRegionDocument);
+  const layout = {
+    worldId: cleanId(rawLayout.worldId, "world_01"),
+    worldName: cleanString(rawLayout.worldName, "Crownlands World 01"),
+    schemaVersion: Math.max(1, Math.floor(number(rawLayout.schemaVersion, 1, 1, 1000))),
+    updatedAt: new Date().toISOString(),
+    globalSettings: {
+      defaultMapWidth: Math.floor(number(rawLayout.globalSettings?.defaultMapWidth, 2048, 256, 8192)),
+      defaultMapHeight: Math.floor(number(rawLayout.globalSettings?.defaultMapHeight, 2048, 256, 8192)),
+      minimumCitySpacing: number(rawLayout.globalSettings?.minimumCitySpacing, 0.045, 0.005, 0.25),
+      worldWidth: Math.floor(number(rawLayout.globalSettings?.worldWidth, 10000, 1000, 100000)),
+      worldHeight: Math.floor(number(rawLayout.globalSettings?.worldHeight, 7600, 1000, 100000)),
+      gridCellWorldSize: Math.floor(number(rawLayout.globalSettings?.gridCellWorldSize, 2300, 500, 10000)),
+    },
+    regions: regions.map(cleanWorldRegionSummary),
+  };
+  return { layout, regions };
+}
+
+async function readWorldData() {
+  const layout = await readJsonFile(WORLD_LAYOUT_PATH, null);
+  if (!layout) return buildWorldDataFromMapEditorData();
+  const regions = [];
+  for (const summary of Array.isArray(layout.regions) ? layout.regions : []) {
+    const filePath = regionFilePath(summary.id);
+    const region = await readJsonFile(filePath, null);
+    regions.push(region ? { ...summary, ...region } : summary);
+  }
+  return normalizeWorldBundle({ layout, regions });
+}
+
+async function buildWorldDataFromMapEditorData() {
+  const source = await fsp.readFile(MAP_EDITOR_DATA_PATH, "utf8").catch(() => "");
+  const context = { window: {} };
+  if (source) {
+    vm.createContext(context);
+    vm.runInContext(source, context, { filename: "map-editor-data.js", timeout: 1000 });
+  }
+  const data = context.window.CROWNLANDS_MAP_EDITOR_DATA || {};
+  const maps = Array.isArray(data.maps) ? data.maps : [];
+  const regions = maps.map((map, index) => {
+    const id = cleanId(map.id, `region-${index + 1}`);
+    const region = {
+      id,
+      name: cleanString(map.label || map.name, titleCase(id)),
+      gridX: Math.round(number(map.gridX, id === "west" ? -1 : id === "east" ? 1 : 0)),
+      gridY: Math.round(number(map.gridY, id === "north" ? -1 : id === "south" ? 1 : 0)),
+      type: id === "center" ? "crownlands_main" : "starter",
+      cityCapacity: id === "center" ? 100 : 50,
+      width: Math.floor(number(map.imageWidth || map.width, 2048, 256, 8192)),
+      height: Math.floor(number(map.imageHeight || map.height, 2048, 256, 8192)),
+      imagePath: normalizePathForJson(map.imageSrc || map.image?.src),
+      compatRegion: map.region || null,
+      cities: (Array.isArray(map.cities) ? map.cities : []).map((city, cityIndex) => ({
+        id: city.id || `${id}_city_${String(cityIndex + 1).padStart(3, "0")}`,
+        name: city.name || `City ${cityIndex + 1}`,
+        xNorm: cleanNorm((Number(city.x) || 0) / Math.max(1, Number(map.imageWidth) || 1), 0.5),
+        yNorm: cleanNorm((Number(city.y) || 0) / Math.max(1, Number(map.imageHeight) || 1), 0.5),
+        level: Math.max(1, Math.floor(Number(city.level) || 1)),
+        owner: "neutral",
+        startType: "neutral",
+        troops: Math.max(0, Math.floor(Number(city.troops) || 10)),
+      })),
+      strongholds: (Array.isArray(map.objectives) ? map.objectives : []).map((objective, objectiveIndex) => ({
+        id: objective.id || `${id}_stronghold_${objectiveIndex + 1}`,
+        name: objective.name || "Stronghold",
+        xNorm: cleanNorm((Number(objective.x) || 0) / Math.max(1, Number(map.imageWidth) || 1), 0.5),
+        yNorm: cleanNorm((Number(objective.y) || 0) / Math.max(1, Number(map.imageHeight) || 1), 0.5),
+        strongholdType: expandStrongholdType(objective.strongholdType || objective.type),
+        bonusType: objective.bonus || getStrongholdDefaults(expandStrongholdType(objective.strongholdType || objective.type)).bonusType,
+        bonusAmount: Number(objective.bonusPercent) || getStrongholdDefaults(expandStrongholdType(objective.strongholdType || objective.type)).bonusAmount,
+        startingOwner: "neutral",
+        level: objective.level,
+        troops: objective.troops || objective.startTroops,
+        artSrc: objective.artSrc,
+        size: objective.size,
+      })),
+      edgeConnections: { north: [], south: [], east: [], west: [] },
+    };
+    return region;
+  });
+  return normalizeWorldBundle({
+    worldId: "world_01",
+    worldName: "Crownlands World 01",
+    globalSettings: {},
+    regions,
+  });
+}
+
+function expandStrongholdType(type) {
+  const value = cleanId(type, "gold");
+  if (value === "crown" || value === "crown_citadel") return "crown_citadel";
+  if (value === "training" || value === "troop" || value === "troop_stronghold") return "troop_stronghold";
+  if (value === "speed" || value === "march_speed" || value === "march_speed_stronghold") return "march_speed_stronghold";
+  if (value === "defense" || value === "defense_stronghold") return "defense_stronghold";
+  if (value === "upgrade_discount" || value === "upgrade_discount_stronghold") return "upgrade_discount_stronghold";
+  return "gold_stronghold";
+}
+
+function compactStrongholdType(type) {
+  const value = expandStrongholdType(type);
+  if (value === "crown_citadel") return "crown";
+  if (value === "troop_stronghold") return "training";
+  if (value === "march_speed_stronghold") return "speed";
+  if (value === "defense_stronghold") return "defense";
+  if (value === "upgrade_discount_stronghold") return "upgradeDiscount";
+  return "gold";
+}
+
+function buildCompatibilityRegion(layout, region) {
+  if (region.compatRegion && typeof region.compatRegion === "object") {
+    return {
+      ...region.compatRegion,
+      id: region.id,
+      label: region.name,
+    };
+  }
+  const cellSize = Math.max(500, Number(layout.globalSettings?.gridCellWorldSize) || 2300);
+  const worldWidth = Math.max(1000, Number(layout.globalSettings?.worldWidth) || 10000);
+  const worldHeight = Math.max(1000, Number(layout.globalSettings?.worldHeight) || 7600);
+  const aspect = Math.max(0.2, (Number(region.width) || 2048) / Math.max(1, Number(region.height) || 2048));
+  const rx = aspect >= 1 ? Math.round(cellSize * 0.46) : Math.round(cellSize * 0.36);
+  const ry = aspect >= 1 ? Math.round(cellSize * 0.36) : Math.round(cellSize * 0.46);
+  return {
+    id: region.id,
+    label: region.name,
+    x: Math.round(worldWidth / 2 + Number(region.gridX) * cellSize),
+    y: Math.round(worldHeight / 2 + Number(region.gridY) * cellSize),
+    rx,
+    ry,
+    cityRx: Math.round(rx * 0.82),
+    cityRy: Math.round(ry * 0.76),
+    rot: 0,
+    palette: region.type === "crownlands_main" ? "heartland" : "woodland",
+  };
+}
+
+function buildCompatibilityMapData(layout, regions) {
+  return {
+    version: Number(new Date().toISOString().replace(/\D/g, "").slice(0, 12)),
+    updatedAt: new Date().toISOString(),
+    worldId: layout.worldId,
+    worldName: layout.worldName,
+    maps: regions.map(region => ({
+      id: region.id,
+      label: region.name,
+      imageSrc: region.imagePath,
+      thumbnailSrc: region.thumbnailPath || "",
+      imageWidth: region.width,
+      imageHeight: region.height,
+      region: buildCompatibilityRegion(layout, region),
+      cities: region.cities.map(city => ({
+        id: city.id,
+        name: city.name,
+        x: Math.round(city.xNorm * region.width),
+        y: Math.round(city.yNorm * region.height),
+        xNorm: city.xNorm,
+        yNorm: city.yNorm,
+        level: city.level,
+        troops: city.troops,
+        owner: city.owner,
+        startType: city.startType,
+      })),
+      objectives: region.strongholds.map(stronghold => {
+        const gameType = compactStrongholdType(stronghold.strongholdType);
+        return {
+          id: stronghold.id,
+          name: stronghold.name,
+          x: Math.round(stronghold.xNorm * region.width),
+          y: Math.round(stronghold.yNorm * region.height),
+          xNorm: stronghold.xNorm,
+          yNorm: stronghold.yNorm,
+          type: gameType,
+          strongholdType: gameType,
+          sourceStrongholdType: stronghold.strongholdType,
+          bonus: stronghold.bonusType,
+          bonusPercent: stronghold.bonusAmount,
+          level: stronghold.level,
+          troops: stronghold.troops,
+          startTroops: stronghold.troops,
+          artSrc: stronghold.artSrc,
+          size: stronghold.size,
+        };
+      }),
+      portals: [],
+      edgeConnections: region.edgeConnections,
+    })),
+  };
+}
+
+async function writeWorldData(payload) {
+  const bundle = normalizeWorldBundle(payload);
+  await fsp.mkdir(WORLD_REGIONS_DIR, { recursive: true });
+  const normalizedRegions = bundle.regions.map(normalizeRegionDocument);
+  const layout = {
+    ...bundle.layout,
+    regions: normalizedRegions.map(cleanWorldRegionSummary),
+    updatedAt: new Date().toISOString(),
+  };
+  for (const region of normalizedRegions) {
+    await fsp.writeFile(regionFilePath(region.id), `${JSON.stringify(region, null, 2)}\n`, "utf8");
+  }
+  await fsp.writeFile(WORLD_LAYOUT_PATH, `${JSON.stringify(layout, null, 2)}\n`, "utf8");
+  const compatibilityData = buildCompatibilityMapData(layout, normalizedRegions);
+  await fsp.writeFile(MAP_EDITOR_DATA_PATH, `window.CROWNLANDS_MAP_EDITOR_DATA = ${JSON.stringify(compatibilityData, null, 2)};\n`, "utf8");
+  return { layout, regions: normalizedRegions, compatibilityData };
+}
+
 async function downloadGithubWorldConfig() {
   const sourceUrl = `${GITHUB_WORLD_CONFIG_URL}?t=${Date.now()}`;
   const response = await fetch(sourceUrl, {
@@ -186,6 +597,35 @@ async function downloadGithubWorldConfig() {
 }
 
 async function handleApi(request, response, pathname) {
+  if (pathname === "/api/world-data" && request.method === "GET") {
+    const data = await readWorldData();
+    sendJson(response, 200, {
+      ...data,
+      paths: {
+        worldLayout: WORLD_LAYOUT_PATH,
+        regions: WORLD_REGIONS_DIR,
+        compatibilityData: MAP_EDITOR_DATA_PATH,
+      },
+    });
+    return;
+  }
+
+  if (pathname === "/api/world-data" && request.method === "POST") {
+    const rawBody = await readBody(request);
+    const payload = JSON.parse(rawBody || "{}");
+    const data = await writeWorldData(payload);
+    sendJson(response, 200, {
+      ok: true,
+      ...data,
+      paths: {
+        worldLayout: WORLD_LAYOUT_PATH,
+        regions: WORLD_REGIONS_DIR,
+        compatibilityData: MAP_EDITOR_DATA_PATH,
+      },
+    });
+    return;
+  }
+
   if (pathname === "/api/world-config" && request.method === "GET") {
     const config = await readWorldConfig();
     sendJson(response, 200, { config, path: WORLD_CONFIG_PATH });

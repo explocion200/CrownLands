@@ -1,1232 +1,170 @@
 (function () {
-  const CORE_MAP_IDS = ["west", "north", "east", "south", "center"];
-  const DEFAULT_IMAGE_ROOT = "../../";
-  const DEFAULT_PORTAL_SIZE = 96;
-  const DEFAULT_OBJECTIVE_SIZE = 154;
-  const DEFAULT_CROWN_OBJECTIVE_SIZE = 260;
-  const MIN_PORTAL_SIZE = 48;
-  const MIN_OBJECTIVE_SIZE = 80;
-  const PAN_MOVE_THRESHOLD = 8;
-  const STRONGHOLD_TYPES = {
-    gold: {
-      name: "Gold Stronghold",
-      artSrc: "assets/gold-stronghold.png",
-      bonus: "goldProduction",
-      bonusPercent: 15,
-      level: 30,
-      troops: 10000,
-    },
-    training: {
-      name: "Training Stronghold",
-      artSrc: "assets/training-stronghold.png",
-      bonus: "troopProduction",
-      bonusPercent: 15,
-      level: 30,
-      troops: 10000,
-    },
-    speed: {
-      name: "Speed Stronghold",
-      artSrc: "assets/speed-stronghold.png",
-      bonus: "marchSpeed",
-      bonusPercent: 15,
-      level: 30,
-      troops: 10000,
-    },
-    defense: {
-      name: "Defense Stronghold",
-      artSrc: "assets/defense-stronghold.png",
-      bonus: "cityDefense",
-      bonusPercent: 15,
-      level: 30,
-      troops: 10000,
-    },
-    crown: {
+  const WORLD_API = "/api/world-data";
+  const SIDES = ["north", "south", "east", "west"];
+  const OPPOSITE_SIDE = { north: "south", south: "north", east: "west", west: "east" };
+  const REGION_TYPES = ["starter", "midgame", "endgame", "activity", "crownlands_main"];
+  const EDGE_TYPES = ["road", "valley", "pass", "river_crossing", "open_field", "forest_break", "bridge"];
+  const STRONGHOLD_TYPES = [
+    "crown_citadel",
+    "gold_stronghold",
+    "troop_stronghold",
+    "defense_stronghold",
+    "march_speed_stronghold",
+    "upgrade_discount_stronghold",
+  ];
+  const STRONGHOLD_DEFAULTS = {
+    crown_citadel: {
       name: "Crown Citadel",
-      artSrc: "assets/crown-citadel.png?v=20260630-citadel-art",
-      bonus: "crownDominion",
-      bonusPercent: 10,
+      bonusType: "crownDominion",
+      bonusAmount: 10,
       level: 100,
       troops: 50000000,
+      artSrc: "assets/crown-citadel.png?v=20260630-citadel-art",
+      size: 260,
+    },
+    gold_stronghold: {
+      name: "Gold Stronghold",
+      bonusType: "goldProduction",
+      bonusAmount: 15,
+      level: 50,
+      troops: 50000000,
+      artSrc: "assets/gold-stronghold.png",
+      size: 154,
+    },
+    troop_stronghold: {
+      name: "Troop Stronghold",
+      bonusType: "troopProduction",
+      bonusAmount: 15,
+      level: 50,
+      troops: 50000000,
+      artSrc: "assets/training-stronghold.png",
+      size: 154,
+    },
+    defense_stronghold: {
+      name: "Defense Stronghold",
+      bonusType: "cityDefense",
+      bonusAmount: 15,
+      level: 50,
+      troops: 50000000,
+      artSrc: "assets/defense-stronghold.png",
+      size: 154,
+    },
+    march_speed_stronghold: {
+      name: "March Speed Stronghold",
+      bonusType: "marchSpeed",
+      bonusAmount: 15,
+      level: 50,
+      troops: 50000000,
+      artSrc: "assets/speed-stronghold.png",
+      size: 154,
+    },
+    upgrade_discount_stronghold: {
+      name: "Upgrade Discount Stronghold",
+      bonusType: "upgradeCostReduction",
+      bonusAmount: 8,
+      level: 50,
+      troops: 50000000,
+      artSrc: "assets/gold-stronghold.png",
+      size: 154,
     },
   };
 
   const elements = {
-    mapCountLabel: document.getElementById("mapCountLabel"),
-    addMapBtn: document.getElementById("addMapBtn"),
-    mapList: document.getElementById("mapList"),
-    modeButtons: [...document.querySelectorAll("[data-mode]")],
-    portalTargetSelect: document.getElementById("portalTargetSelect"),
-    openProjectBtn: document.getElementById("openProjectBtn"),
-    applyBtn: document.getElementById("applyBtn"),
-    sidebarApplyBtn: document.getElementById("sidebarApplyBtn"),
-    canvasWrap: document.querySelector(".canvas-wrap"),
-    mapCanvas: document.getElementById("mapCanvas"),
-    mapImage: document.getElementById("mapImage"),
+    worldModeBtn: document.getElementById("worldModeBtn"),
+    regionModeBtn: document.getElementById("regionModeBtn"),
+    addRegionBtn: document.getElementById("addRegionBtn"),
+    editRegionBtn: document.getElementById("editRegionBtn"),
+    addCityBtn: document.getElementById("addCityBtn"),
+    addStrongholdBtn: document.getElementById("addStrongholdBtn"),
+    addEdgeBtn: document.getElementById("addEdgeBtn"),
+    deleteSelectedBtn: document.getElementById("deleteSelectedBtn"),
+    validateBtn: document.getElementById("validateBtn"),
+    exportBtn: document.getElementById("exportBtn"),
+    importBtn: document.getElementById("importBtn"),
+    saveBtn: document.getElementById("saveBtn"),
+    toggleGridBtn: document.getElementById("toggleGridBtn"),
+    toggleCitiesBtn: document.getElementById("toggleCitiesBtn"),
+    toggleStrongholdsBtn: document.getElementById("toggleStrongholdsBtn"),
+    toggleConnectionsBtn: document.getElementById("toggleConnectionsBtn"),
+    importFileInput: document.getElementById("importFileInput"),
+    strongholdTypeSelect: document.getElementById("strongholdTypeSelect"),
+    edgeTypeSelect: document.getElementById("edgeTypeSelect"),
+    zoomOutBtn: document.getElementById("zoomOutBtn"),
+    zoomInBtn: document.getElementById("zoomInBtn"),
+    zoomLabel: document.getElementById("zoomLabel"),
+    workspaceKicker: document.getElementById("workspaceKicker"),
+    workspaceTitle: document.getElementById("workspaceTitle"),
+    worldView: document.getElementById("worldView"),
+    worldGrid: document.getElementById("worldGrid"),
+    worldConnectionLayer: document.getElementById("worldConnectionLayer"),
+    regionView: document.getElementById("regionView"),
+    regionViewport: document.getElementById("regionViewport"),
+    regionCanvas: document.getElementById("regionCanvas"),
+    regionImage: document.getElementById("regionImage"),
     markerLayer: document.getElementById("markerLayer"),
-    statusBar: document.getElementById("statusBar"),
-    currentMapTitle: document.getElementById("currentMapTitle"),
-    mapLabelInput: document.getElementById("mapLabelInput"),
-    mapImagePathInput: document.getElementById("mapImagePathInput"),
-    uploadMapImageBtn: document.getElementById("uploadMapImageBtn"),
-    mapImageInput: document.getElementById("mapImageInput"),
-    newMapImageInput: document.getElementById("newMapImageInput"),
+    edgeLayer: document.getElementById("edgeLayer"),
+    worldIdInput: document.getElementById("worldIdInput"),
+    worldNameInput: document.getElementById("worldNameInput"),
+    worldNameLabel: document.getElementById("worldNameLabel"),
     selectionTitle: document.getElementById("selectionTitle"),
     selectionForm: document.getElementById("selectionForm"),
-    deleteSelectedBtn: document.getElementById("deleteSelectedBtn"),
-    mapStats: document.getElementById("mapStats"),
+    validationSummary: document.getElementById("validationSummary"),
+    validationList: document.getElementById("validationList"),
+    countSummary: document.getElementById("countSummary"),
+    regionCountStat: document.getElementById("regionCountStat"),
     cityCountStat: document.getElementById("cityCountStat"),
-    portalCountStat: document.getElementById("portalCountStat"),
-    objectiveCountStat: document.getElementById("objectiveCountStat"),
+    strongholdCountStat: document.getElementById("strongholdCountStat"),
+    edgeCountStat: document.getElementById("edgeCountStat"),
+    statusBar: document.getElementById("statusBar"),
   };
 
   const state = {
-    maps: [],
-    currentId: "",
-    mode: "select",
+    layout: null,
+    regions: [],
+    editorMode: "world",
+    tool: "select",
+    activeRegionId: "",
     selected: null,
-    dragging: null,
+    zoom: 0.5,
+    dirty: false,
+    validation: [],
+    toggles: {
+      grid: true,
+      cities: true,
+      strongholds: true,
+      connections: true,
+    },
+    draggingMarker: null,
     panning: null,
     skipNextCanvasClick: false,
-    renderedMapId: "",
-    viewportByMap: new Map(),
-    projectDir: null,
-    dirty: false,
   };
 
   function setStatus(message) {
     elements.statusBar.textContent = message;
   }
 
-  function slugify(value) {
-    return String(value || "")
+  function slugify(value, fallback = "item") {
+    return String(value || fallback)
       .trim()
       .toLowerCase()
-      .replace(/[^a-z0-9_-]+/g, "-")
-      .replace(/^-+|-+$/g, "") || "island";
+      .replace(/[^a-z0-9_-]+/g, "_")
+      .replace(/^_+|_+$/g, "") || fallback;
   }
 
   function titleFromId(value) {
-    return String(value || "island")
+    return String(value || "region")
       .split(/[-_]+/)
       .filter(Boolean)
       .map(part => `${part.charAt(0).toUpperCase()}${part.slice(1)}`)
-      .join(" ") || "Island";
+      .join(" ") || "Region";
   }
 
-  function pad(value, length = 3) {
-    return String(value).padStart(length, "0");
+  function clamp(value, min, max) {
+    return Math.max(min, Math.min(max, value));
   }
 
-  function deepClone(value) {
-    return JSON.parse(JSON.stringify(value));
-  }
-
-  function currentMap() {
-    return state.maps.find(map => map.id === state.currentId) || state.maps[0] || null;
-  }
-
-  function getMapById(id) {
-    const targetId = slugify(id);
-    return state.maps.find(map => map.id === targetId) || null;
-  }
-
-  function getPortalById(map, portalId) {
-    const targetId = String(portalId || "");
-    return map?.portals?.find(portal => portal.id === targetId) || null;
-  }
-
-  function markDirty() {
-    state.dirty = true;
-  }
-
-  function cleanPoint(point) {
-    return {
-      x: Math.max(0, Math.round(Number(point?.x) || 0)),
-      y: Math.max(0, Math.round(Number(point?.y) || 0)),
-    };
-  }
-
-  function normalizeMap(rawMap) {
-    const id = slugify(rawMap.id);
-    const label = rawMap.label || rawMap.name || titleFromId(id);
-    const imageWidth = Math.max(1, Math.floor(Number(rawMap.imageWidth || rawMap.width || rawMap.image?.width) || 1200));
-    const imageHeight = Math.max(1, Math.floor(Number(rawMap.imageHeight || rawMap.height || rawMap.image?.height) || 1200));
-    return {
-      id,
-      label,
-      imageSrc: rawMap.imageSrc || rawMap.image?.src || "",
-      thumbnailSrc: rawMap.thumbnailSrc || rawMap.thumbSrc || rawMap.previewSrc || "",
-      imageWidth,
-      imageHeight,
-      region: rawMap.region ? { ...rawMap.region, id, label } : buildEditorRegion(id, label, state.maps.length),
-      landPolygon: Array.isArray(rawMap.landPolygon) ? rawMap.landPolygon.map(cleanPoint) : [],
-      cities: Array.isArray(rawMap.cities) ? rawMap.cities.map((city, index) => ({
-        id: String(city.id || `${id}_${pad(index + 1)}`),
-        name: String(city.name || generateCityName(id, index)),
-        x: Math.round(Number(city.x ?? city.point?.x) || 0),
-        y: Math.round(Number(city.y ?? city.point?.y) || 0),
-        level: Math.max(1, Math.floor(Number(city.level) || 1)),
-        troops: Math.max(0, Math.floor(Number(city.troops) || 10)),
-      })) : [],
-      portals: Array.isArray(rawMap.portals) ? rawMap.portals.map((portal, index) => ({
-        id: String(portal.id || `${id}-portal-${index + 1}`),
-        label: String(portal.label || titleFromId(portal.targetRegionId || portal.target || "center")),
-        targetRegionId: slugify(portal.targetRegionId || portal.target || "center"),
-        targetPortalId: String(portal.targetPortalId || portal.targetPortal || portal.linkedPortalId || portal.connectedPortalId || ""),
-        x: Math.round(Number(portal.x ?? portal.point?.x) || 0),
-        y: Math.round(Number(portal.y ?? portal.point?.y) || 0),
-        size: Math.max(MIN_PORTAL_SIZE, Math.floor(Number(portal.size) || DEFAULT_PORTAL_SIZE)),
-      })) : [],
-      objectives: Array.isArray(rawMap.objectives) ? rawMap.objectives.map((objective, index) => normalizeObjective(id, objective, index)) : [],
-    };
-  }
-
-  function normalizeObjective(regionId, objective, index) {
-    const type = slugify(objective.type || objective.strongholdType || "gold");
-    const defaults = STRONGHOLD_TYPES[type] || STRONGHOLD_TYPES.gold;
-    return {
-      id: String(objective.id || `${regionId}_${type}_stronghold_${index + 1}`),
-      name: String(objective.name || defaults.name),
-      type,
-      bonus: String(objective.bonus || defaults.bonus),
-      bonusPercent: Math.max(0, Math.floor(Number(objective.bonusPercent) || defaults.bonusPercent)),
-      level: Math.max(1, Math.floor(Number(objective.level) || defaults.level)),
-      troops: Math.max(0, Math.floor(Number(objective.troops || objective.startTroops) || defaults.troops)),
-      artSrc: String(objective.artSrc || defaults.artSrc),
-      x: Math.round(Number(objective.x ?? objective.point?.x) || 0),
-      y: Math.round(Number(objective.y ?? objective.point?.y) || 0),
-      size: Math.max(MIN_OBJECTIVE_SIZE, Math.floor(Number(objective.size) || DEFAULT_OBJECTIVE_SIZE)),
-    };
-  }
-
-  function buildEditorRegion(id, label, index) {
-    const config = window.CROWNLANDS_WORLD_CONFIG || {};
-    const width = Math.max(2000, Math.floor(Number(config.width) || 10000));
-    const height = Math.max(1600, Math.floor(Number(config.height) || 7600));
-    const angle = -Math.PI / 2 + index * 0.78;
-    const rx = Math.max(900, Math.round(width * 0.11));
-    const ry = Math.max(760, Math.round(height * 0.12));
-    return {
-      id,
-      label,
-      x: Math.round(width / 2 + Math.cos(angle) * width * 0.34),
-      y: Math.round(height / 2 + Math.sin(angle) * height * 0.34),
-      rx,
-      ry,
-      cityRx: Math.round(rx * 0.82),
-      cityRy: Math.round(ry * 0.76),
-      rot: 0,
-      palette: "heartland",
-    };
-  }
-
-  function pathForEditor(src) {
-    const value = String(src || "");
-    if (!value) return "";
-    if (/^(blob:|data:|https?:)/i.test(value)) return value;
-    if (value.startsWith("../../")) return value;
-    if (value.startsWith("../")) return value;
-    return `${DEFAULT_IMAGE_ROOT}${value.replace(/^\.?\//, "")}`;
-  }
-
-  function getMapPreviewSrc(map) {
-    return map?._previewSrc || pathForEditor(map.thumbnailSrc || map.imageSrc);
-  }
-
-  function generateCityName(regionId, index) {
-    const stems = {
-      center: ["Crown", "High", "Stone", "River", "Kings", "Queens", "Iron", "Gold", "Bright", "Elder", "Lion", "Oak", "Raven", "Silver", "Wolf", "Star", "Red", "White", "Dawn", "Ember"],
-      north: ["Frost", "Pine", "North", "Snow", "White", "Grey", "Winter", "Ice", "Wolf", "Raven", "Cold", "Storm", "Hawk", "Stone", "Ash", "Briar", "Moon", "Cloud", "Cedar", "Peak"],
-      south: ["South", "Salt", "Sun", "Marsh", "Reed", "Pearl", "Green", "Bay", "Moss", "Willow", "Rose", "Clear", "Mist", "Rain", "Bloom", "Hearth", "Warm", "Sable", "Drift", "Tide"],
-      west: ["West", "Oak", "Thorn", "Fox", "Ash", "Briar", "Crow", "Dusky", "Wild", "Wood", "Hart", "Moss", "Wolf", "Amber", "Black", "Copper", "Shade", "Glen", "Fern", "Old"],
-      east: ["East", "Sun", "Gold", "Dawn", "Bright", "Lion", "Falcon", "Red", "Rose", "Clear", "Wind", "Star", "Light", "Pearl", "Hawk", "Blue", "Kings", "Queens", "Sea", "Ivory"],
-    };
-    const suffixes = ["haven", "ford", "wick", "mere", "watch", "gate", "rest", "fall", "brook", "hollow"];
-    const regionStems = stems[regionId] || stems.center;
-    const stem = regionStems[index % regionStems.length];
-    const suffix = suffixes[Math.floor(index / regionStems.length) % suffixes.length];
-    return `${stem}${suffix}`;
-  }
-
-  function extractConstLiteral(source, name) {
-    const marker = `const ${name}`;
-    const start = source.indexOf(marker);
-    if (start < 0) return "";
-    const equals = source.indexOf("=", start);
-    if (equals < 0) return "";
-    let cursor = equals + 1;
-    while (/\s/.test(source[cursor] || "")) cursor += 1;
-    const opener = source[cursor];
-    const closer = opener === "[" ? "]" : opener === "{" ? "}" : "";
-    if (!closer) {
-      const end = source.indexOf(";", cursor);
-      return end > cursor ? source.slice(cursor, end).trim() : "";
-    }
-    let depth = 0;
-    let quote = "";
-    let escaped = false;
-    for (let i = cursor; i < source.length; i += 1) {
-      const char = source[i];
-      if (quote) {
-        if (escaped) escaped = false;
-        else if (char === "\\") escaped = true;
-        else if (char === quote) quote = "";
-        continue;
-      }
-      if (char === "\"" || char === "'" || char === "`") {
-        quote = char;
-        continue;
-      }
-      if (char === opener) depth += 1;
-      if (char === closer) {
-        depth -= 1;
-        if (depth === 0) return source.slice(cursor, i + 1);
-      }
-    }
-    return "";
-  }
-
-  function evaluateLiteral(literal, fallback) {
-    if (!literal) return fallback;
-    try {
-      return Function(`"use strict"; return (${literal});`)();
-    } catch (error) {
-      console.warn("Could not parse map literal", error);
-      return fallback;
-    }
-  }
-
-  function extractArray(source, name) {
-    const value = evaluateLiteral(extractConstLiteral(source, name), []);
-    return Array.isArray(value) ? value : [];
-  }
-
-  function extractObject(source, name) {
-    const value = evaluateLiteral(extractConstLiteral(source, name), {});
-    return value && typeof value === "object" && !Array.isArray(value) ? value : {};
-  }
-
-  function extractNumber(source, name, fallback) {
-    const match = source.match(new RegExp(`const\\s+${name}\\s*=\\s*([0-9.]+)\\s*;`));
-    return match ? Number(match[1]) : fallback;
-  }
-
-  function extractString(source, name, fallback) {
-    const match = source.match(new RegExp(`const\\s+${name}\\s*=\\s*["']([^"']+)["']\\s*;`));
-    return match ? match[1] : fallback;
-  }
-
-  function buildSeedMapsFromGameSource(source) {
-    const regions = new Map((window.CROWNLANDS_WORLD_CONFIG?.regions || []).map(region => [region.id, region]));
-    const specs = [
-      {
-        id: "west",
-        prefix: "WEST",
-        cityPoints: "WEST_ISLAND_CITY_POINTS",
-        landPolygon: "WEST_ISLAND_LAND_POLYGON",
-        portals: [{ id: "west-center", label: "Center", targetRegionId: "center", targetPortalId: "center-west", pointConst: "WEST_CENTER_TELEPORT_IMAGE_POINT" }],
-        objectives: [{ id: "west_gold_stronghold", type: "gold", pointConst: "WEST_GOLD_STRONGHOLD_IMAGE_POINT" }],
-      },
-      {
-        id: "north",
-        prefix: "NORTH",
-        cityPoints: "NORTH_ISLAND_CITY_POINTS",
-        landPolygon: "NORTH_ISLAND_LAND_POLYGON",
-        portals: [{ id: "north-center", label: "Center", targetRegionId: "center", targetPortalId: "center-north", pointConst: "NORTH_CENTER_TELEPORT_IMAGE_POINT" }],
-        objectives: [{ id: "north_training_stronghold", type: "training", pointConst: "NORTH_TRAINING_STRONGHOLD_IMAGE_POINT" }],
-      },
-      {
-        id: "east",
-        prefix: "EAST",
-        cityPoints: "EAST_ISLAND_CITY_POINTS",
-        landPolygon: "EAST_ISLAND_LAND_POLYGON",
-        portals: [{ id: "east-center", label: "Center", targetRegionId: "center", targetPortalId: "center-east", pointConst: "EAST_CENTER_TELEPORT_IMAGE_POINT" }],
-        objectives: [{ id: "east_speed_stronghold", type: "speed", pointConst: "EAST_SPEED_STRONGHOLD_IMAGE_POINT" }],
-      },
-      {
-        id: "south",
-        prefix: "SOUTH",
-        cityPoints: "SOUTH_ISLAND_CITY_POINTS",
-        landPolygon: "SOUTH_ISLAND_LAND_POLYGON",
-        portals: [{ id: "south-center", label: "Center", targetRegionId: "center", targetPortalId: "center-south", pointConst: "SOUTH_CENTER_TELEPORT_IMAGE_POINT" }],
-        objectives: [{ id: "south_defense_stronghold", type: "defense", pointConst: "SOUTH_DEFENSE_STRONGHOLD_IMAGE_POINT" }],
-      },
-      {
-        id: "center",
-        prefix: "CENTER",
-        cityPoints: "CENTER_ISLAND_CITY_POINTS",
-        landPolygon: "CENTER_ISLAND_LAND_POLYGON",
-        centerPortals: "CENTER_ISLAND_TELEPORTS",
-        objectives: [{ id: "center_crown_citadel", type: "crown", pointConst: "CENTER_CROWN_CITADEL_IMAGE_POINT" }],
-      },
-    ];
-
-    return specs.map((spec, mapIndex) => {
-      const artPrefix = `${spec.prefix}_ISLAND`;
-      const region = regions.get(spec.id) || buildEditorRegion(spec.id, titleFromId(spec.id), mapIndex);
-      const cityPoints = extractArray(source, spec.cityPoints);
-      const portals = spec.centerPortals
-        ? extractArray(source, spec.centerPortals).map(portal => ({
-            id: portal.id,
-            label: portal.label,
-            targetRegionId: portal.targetRegionId,
-            targetPortalId: `${portal.targetRegionId}-center`,
-            x: Number(portal.point?.x) || 0,
-            y: Number(portal.point?.y) || 0,
-            size: DEFAULT_PORTAL_SIZE,
-          }))
-        : spec.portals.map(portal => {
-            const point = extractObject(source, portal.pointConst);
-            return {
-              id: portal.id,
-              label: portal.label,
-              targetRegionId: portal.targetRegionId,
-              targetPortalId: portal.targetPortalId || "",
-              x: Number(point.x) || 0,
-              y: Number(point.y) || 0,
-              size: DEFAULT_PORTAL_SIZE,
-            };
-          });
-      const objectives = spec.objectives.map((objective, index) => {
-        const point = extractObject(source, objective.pointConst);
-        const defaults = STRONGHOLD_TYPES[objective.type] || STRONGHOLD_TYPES.gold;
-        return normalizeObjective(spec.id, {
-          id: objective.id,
-          type: objective.type,
-          name: defaults.name,
-          artSrc: defaults.artSrc,
-          bonus: defaults.bonus,
-          bonusPercent: defaults.bonusPercent,
-          level: defaults.level,
-          troops: defaults.troops,
-          x: Number(point.x) || 0,
-          y: Number(point.y) || 0,
-          size: objective.type === "crown" ? DEFAULT_CROWN_OBJECTIVE_SIZE : DEFAULT_OBJECTIVE_SIZE,
-        }, index);
-      });
-
-      return normalizeMap({
-        id: spec.id,
-        label: region.label || titleFromId(spec.id),
-        imageSrc: extractString(source, `${artPrefix}_ART_SRC`, `assets/${spec.id}-island.png`),
-        thumbnailSrc: extractString(source, `${artPrefix}_THUMB_SRC`, ""),
-        imageWidth: extractNumber(source, `${artPrefix}_IMAGE_WIDTH`, 1200),
-        imageHeight: extractNumber(source, `${artPrefix}_IMAGE_HEIGHT`, 1200),
-        region: deepClone(region),
-        landPolygon: extractArray(source, spec.landPolygon),
-        cities: cityPoints.map((point, index) => ({
-          id: `${spec.id}_${pad(index + 1)}`,
-          name: generateCityName(spec.id, index),
-          x: point.x,
-          y: point.y,
-          level: 1,
-          troops: 10,
-        })),
-        portals,
-        objectives,
-      });
-    });
-  }
-
-  function buildFallbackMaps() {
-    const regions = window.CROWNLANDS_WORLD_CONFIG?.regions || [];
-    return regions.map((region, index) => normalizeMap({
-      id: region.id || `island-${index + 1}`,
-      label: region.label || titleFromId(region.id),
-      imageSrc: CORE_MAP_IDS.includes(region.id) ? `assets/${region.id}-island.png` : "",
-      imageWidth: 1200,
-      imageHeight: 1200,
-      region,
-      cities: [],
-      portals: [],
-      objectives: [],
-    }));
-  }
-
-  async function loadMaps() {
-    const savedMaps = window.CROWNLANDS_MAP_EDITOR_DATA?.maps;
-    if (Array.isArray(savedMaps) && savedMaps.length) {
-      state.maps = savedMaps.map(normalizeMap);
-      setStatus("Loaded saved editor map data.");
-      return;
-    }
-    try {
-      const response = await fetch(`../../game.js?seed=${Date.now()}`);
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      const source = await response.text();
-      state.maps = buildSeedMapsFromGameSource(source);
-      setStatus("Loaded current hardcoded maps as editable data.");
-    } catch (error) {
-      console.warn("Could not parse game.js map data", error);
-      state.maps = buildFallbackMaps();
-      setStatus("Loaded basic maps. Run this editor from a local server for full seeding.");
-    }
-  }
-
-  function render() {
-    if (!state.currentId && state.maps.length) state.currentId = state.maps[0].id;
-    renderMapList();
-    renderPortalTargets();
-    renderCanvas();
-    renderInspector();
-  }
-
-  function renderMapList() {
-    elements.mapCountLabel.textContent = String(state.maps.length);
-    elements.mapList.innerHTML = state.maps.map(map => `
-      <button class="map-list-btn ${map.id === state.currentId ? "active" : ""}" type="button" data-map-id="${map.id}">
-        <span class="map-list-thumb"><img src="${escapeHtml(getMapPreviewSrc(map))}" alt="" draggable="false" /></span>
-        <span class="map-list-meta">
-          <strong>${escapeHtml(map.label)}</strong>
-          <small>${map.cities.length} cities / ${map.portals.length} portals</small>
-          <small>${escapeHtml(map.id)}</small>
-        </span>
-      </button>
-    `).join("");
-    elements.mapList.querySelectorAll("[data-map-id]").forEach(button => {
-      button.addEventListener("click", () => {
-        saveViewportForCurrentMap();
-        state.currentId = button.dataset.mapId;
-        state.selected = null;
-        render();
-      });
-    });
-  }
-
-  function renderPortalTargets() {
-    const map = currentMap();
-    elements.portalTargetSelect.innerHTML = state.maps
-      .filter(item => !map || item.id !== map.id)
-      .map(item => `<option value="${escapeHtml(item.id)}">${escapeHtml(item.label)}</option>`)
-      .join("");
-  }
-
-  function renderCanvas() {
-    const map = currentMap();
-    if (!map) return;
-    const previousMapId = state.renderedMapId;
-    elements.mapCanvas.style.width = `${Math.max(320, Math.round(Number(map.imageWidth) || 1200))}px`;
-    elements.mapCanvas.style.aspectRatio = `${Math.max(1, Math.round(Number(map.imageWidth) || 1200))} / ${Math.max(1, Math.round(Number(map.imageHeight) || 1200))}`;
-    elements.mapImage.src = getMapPreviewSrc(map);
-    elements.mapImage.alt = `${map.label} map`;
-    elements.currentMapTitle.textContent = map.label;
-    elements.markerLayer.innerHTML = "";
-    renderMarkers(map, "city", map.cities);
-    renderMarkers(map, "portal", map.portals);
-    renderMarkers(map, "objective", map.objectives);
-    state.renderedMapId = map.id;
-    if (previousMapId !== map.id) requestAnimationFrame(() => restoreViewportForMap(map.id));
-  }
-
-  function renderMarkers(map, type, items) {
-    items.forEach((item, index) => {
-      const button = document.createElement("button");
-      button.type = "button";
-      button.className = `marker ${type} ${isSelected(type, index) ? "selected" : ""}`;
-      button.dataset.type = type;
-      button.dataset.index = String(index);
-      button.style.left = `${(Number(item.x) || 0) / map.imageWidth * 100}%`;
-      button.style.top = `${(Number(item.y) || 0) / map.imageHeight * 100}%`;
-      if (type === "portal" || type === "objective") {
-        button.style.setProperty("--marker-size", `${getMarkerPreviewSize(type, item)}px`);
-      }
-      button.title = markerTitle(type, item);
-      button.innerHTML = `<span>${markerGlyph(type, index)}</span>`;
-      button.addEventListener("pointerdown", event => {
-        event.preventDefault();
-        event.stopPropagation();
-        selectMarker(type, index);
-        startDrag(event, type, index);
-      });
-      elements.markerLayer.appendChild(button);
-    });
-  }
-
-  function getMarkerPreviewSize(type, item) {
-    if (type === "portal") {
-      const size = Math.max(MIN_PORTAL_SIZE, Math.floor(Number(item?.size) || DEFAULT_PORTAL_SIZE));
-      return Math.max(20, Math.min(74, Math.round(size * 0.45)));
-    }
-    if (type === "objective") {
-      const size = Math.max(MIN_OBJECTIVE_SIZE, Math.floor(Number(item?.size) || DEFAULT_OBJECTIVE_SIZE));
-      return Math.max(28, Math.min(96, Math.round(size * 0.31)));
-    }
-    return 28;
-  }
-
-  function markerGlyph(type, index) {
-    if (type === "portal") return "P";
-    if (type === "objective") return "S";
-    return String((index + 1) % 10);
-  }
-
-  function markerTitle(type, item) {
-    if (type === "portal") {
-      const targetPortal = getPortalById(getMapById(item.targetRegionId), item.targetPortalId);
-      const linked = targetPortal ? ` via ${targetPortal.id}` : "";
-      return `${item.label} to ${titleFromId(item.targetRegionId)}${linked}`;
-    }
-    if (type === "objective") return item.name;
-    return item.name;
-  }
-
-  function isSelected(type, index) {
-    return state.selected?.type === type && state.selected.index === index;
-  }
-
-  function selectMarker(type, index) {
-    state.selected = { type, index };
-    render();
-  }
-
-  function startDrag(event, type, index) {
-    state.dragging = { type, index };
-    window.addEventListener("pointermove", handlePointerMove);
-    window.addEventListener("pointerup", stopDrag, { once: true });
-  }
-
-  function handlePointerMove(event) {
-    if (!state.dragging) return;
-    const map = currentMap();
-    const item = getSelectedItem();
-    if (!map || !item) return;
-    const point = getImagePointFromEvent(event, map);
-    item.x = point.x;
-    item.y = point.y;
-    markDirty();
-    renderCanvas();
-    renderInspector();
-  }
-
-  function stopDrag() {
-    window.removeEventListener("pointermove", handlePointerMove);
-    state.dragging = null;
-  }
-
-  function saveViewportForCurrentMap() {
-    const map = currentMap();
-    if (!map || !elements.canvasWrap) return;
-    state.viewportByMap.set(map.id, {
-      left: elements.canvasWrap.scrollLeft,
-      top: elements.canvasWrap.scrollTop,
-    });
-  }
-
-  function restoreViewportForMap(mapId) {
-    if (!elements.canvasWrap) return;
-    const saved = state.viewportByMap.get(mapId);
-    if (saved) {
-      elements.canvasWrap.scrollLeft = saved.left;
-      elements.canvasWrap.scrollTop = saved.top;
-      return;
-    }
-    elements.canvasWrap.scrollLeft = Math.max(0, elements.mapCanvas.offsetLeft + elements.mapCanvas.offsetWidth / 2 - elements.canvasWrap.clientWidth / 2);
-    elements.canvasWrap.scrollTop = Math.max(0, elements.mapCanvas.offsetTop + elements.mapCanvas.offsetHeight / 2 - elements.canvasWrap.clientHeight / 2);
-  }
-
-  function startCanvasPan(event) {
-    if (!elements.canvasWrap || event.button !== 0 || event.target.closest(".marker")) return;
-    const map = currentMap();
-    state.panning = {
-      pointerId: event.pointerId,
-      x: event.clientX,
-      y: event.clientY,
-      left: elements.canvasWrap.scrollLeft,
-      top: elements.canvasWrap.scrollTop,
-      moved: false,
-      canPlace: Boolean(map && state.mode !== "select" && isPointerOnMap(event)),
-    };
-    elements.canvasWrap.classList.add("panning");
-    elements.canvasWrap.setPointerCapture?.(event.pointerId);
-  }
-
-  function handleCanvasPan(event) {
-    if (!state.panning || state.panning.pointerId !== event.pointerId || !elements.canvasWrap) return;
-    const dx = event.clientX - state.panning.x;
-    const dy = event.clientY - state.panning.y;
-    if (Math.hypot(dx, dy) > PAN_MOVE_THRESHOLD) state.panning.moved = true;
-    elements.canvasWrap.scrollLeft = state.panning.left - dx;
-    elements.canvasWrap.scrollTop = state.panning.top - dy;
-    event.preventDefault();
-  }
-
-  function stopCanvasPan(event) {
-    if (!state.panning || state.panning.pointerId !== event.pointerId) return;
-    const shouldPlace = state.panning.canPlace && !state.panning.moved;
-    state.skipNextCanvasClick = state.panning.moved || shouldPlace;
-    if (state.skipNextCanvasClick) {
-      window.setTimeout(() => {
-        state.skipNextCanvasClick = false;
-      }, 160);
-    }
-    if (shouldPlace) placeMarkerFromEvent(event);
-    state.panning = null;
-    elements.canvasWrap?.classList.remove("panning");
-    saveViewportForCurrentMap();
-  }
-
-  function isPointerOnMap(event) {
-    const rect = elements.mapImage.getBoundingClientRect();
-    return event.clientX >= rect.left
-      && event.clientX <= rect.right
-      && event.clientY >= rect.top
-      && event.clientY <= rect.bottom;
-  }
-
-  function getImagePointFromEvent(event, map) {
-    const rect = elements.mapImage.getBoundingClientRect();
-    const x = (event.clientX - rect.left) / Math.max(1, rect.width) * map.imageWidth;
-    const y = (event.clientY - rect.top) / Math.max(1, rect.height) * map.imageHeight;
-    return {
-      x: Math.round(Math.max(0, Math.min(map.imageWidth, x))),
-      y: Math.round(Math.max(0, Math.min(map.imageHeight, y))),
-    };
-  }
-
-  function getSelectedItem() {
-    const map = currentMap();
-    if (!map || !state.selected) return null;
-    const collection = getCollectionForType(map, state.selected.type);
-    return collection?.[state.selected.index] || null;
-  }
-
-  function getCollectionForType(map, type) {
-    if (type === "city") return map.cities;
-    if (type === "portal") return map.portals;
-    if (type === "objective") return map.objectives;
-    return null;
-  }
-
-  function renderInspector() {
-    const map = currentMap();
-    if (!map) return;
-    elements.mapLabelInput.value = map.label;
-    elements.mapImagePathInput.value = map.imageSrc;
-    elements.cityCountStat.textContent = String(map.cities.length);
-    elements.portalCountStat.textContent = String(map.portals.length);
-    elements.objectiveCountStat.textContent = String(map.objectives.length);
-    elements.mapStats.textContent = `${map.cities.length} cities`;
-
-    const item = getSelectedItem();
-    elements.deleteSelectedBtn.disabled = !item;
-    if (!item || !state.selected) {
-      elements.selectionTitle.textContent = "None";
-      elements.selectionForm.className = "selection-form empty";
-      elements.selectionForm.textContent = "Select a marker or add one to edit it.";
-      return;
-    }
-    elements.selectionTitle.textContent = state.selected.type;
-    elements.selectionForm.className = "selection-form";
-    if (state.selected.type === "city") renderCityForm(item);
-    if (state.selected.type === "portal") renderPortalForm(item);
-    if (state.selected.type === "objective") renderObjectiveForm(item);
-  }
-
-  function renderCityForm(item) {
-    elements.selectionForm.innerHTML = `
-      ${textField("id", "ID", item.id)}
-      ${textField("name", "Name", item.name)}
-      <div class="field-row">${numberField("x", "X", item.x)}${numberField("y", "Y", item.y)}</div>
-    `;
-    bindSelectionInputs(item);
-  }
-
-  function renderPortalForm(item) {
-    const map = currentMap();
-    const targetMap = getMapById(item.targetRegionId);
-    const targetPortalOptions = getConnectableTargetPortals(map, item);
-    const hasSelectedTargetPortal = targetPortalOptions.some(portal => portal.id === item.targetPortalId);
-    elements.selectionForm.innerHTML = `
-      ${textField("id", "ID", item.id)}
-      ${textField("label", "Label", item.label)}
-      <label><span>Target</span><select data-field="targetRegionId">
-        ${state.maps.filter(target => target.id !== map.id).map(target => `<option value="${escapeHtml(target.id)}" ${target.id === item.targetRegionId ? "selected" : ""}>${escapeHtml(target.label)}</option>`).join("")}
-      </select></label>
-      <label><span>Connected portal</span><select data-field="targetPortalId" ${targetPortalOptions.length ? "" : "disabled"}>
-        <option value="">Unlinked</option>
-        ${!hasSelectedTargetPortal && item.targetPortalId ? `<option value="${escapeHtml(item.targetPortalId)}" selected>Missing: ${escapeHtml(item.targetPortalId)}</option>` : ""}
-        ${targetPortalOptions.map(portal => `<option value="${escapeHtml(portal.id)}" ${portal.id === item.targetPortalId ? "selected" : ""}>${escapeHtml(portal.id)} - ${escapeHtml(portal.label || targetMap?.label || "Portal")}</option>`).join("")}
-      </select></label>
-      <div class="field-row">${numberField("x", "X", item.x)}${numberField("y", "Y", item.y)}</div>
-      ${numberField("size", "Size", item.size, MIN_PORTAL_SIZE)}
-    `;
-    bindSelectionInputs(item);
-  }
-
-  function getConnectableTargetPortals(sourceMap, portal) {
-    const targetMap = getMapById(portal.targetRegionId);
-    if (!sourceMap || !targetMap) return [];
-    return targetMap.portals.filter(targetPortal => slugify(targetPortal.targetRegionId) === sourceMap.id);
-  }
-
-  function getDefaultTargetPortalId(portal) {
-    return getConnectableTargetPortals(currentMap(), portal)[0]?.id || "";
-  }
-
-  function syncPortalConnection(portal) {
-    const sourceMap = currentMap();
-    const targetMap = getMapById(portal.targetRegionId);
-    if (!sourceMap || !targetMap) {
-      portal.targetPortalId = "";
-      return;
-    }
-    const targetPortal = getPortalById(targetMap, portal.targetPortalId);
-    if (!targetPortal) {
-      portal.targetPortalId = "";
-      return;
-    }
-    targetPortal.targetRegionId = sourceMap.id;
-    targetPortal.targetPortalId = portal.id;
-  }
-
-  function clearPortalConnection(portal) {
-    const sourceMap = currentMap();
-    const targetMap = getMapById(portal?.targetRegionId);
-    const targetPortal = getPortalById(targetMap, portal?.targetPortalId);
-    if (sourceMap && targetPortal?.targetPortalId === portal?.id) targetPortal.targetPortalId = "";
-  }
-
-  function renderObjectiveForm(item) {
-    elements.selectionForm.innerHTML = `
-      ${textField("id", "ID", item.id)}
-      ${textField("name", "Name", item.name)}
-      <label><span>Type</span><select data-field="type">
-        ${Object.keys(STRONGHOLD_TYPES).map(type => `<option value="${type}" ${type === item.type ? "selected" : ""}>${titleFromId(type)}</option>`).join("")}
-      </select></label>
-      ${textField("artSrc", "Icon path", item.artSrc)}
-      <div class="field-row">${numberField("x", "X", item.x)}${numberField("y", "Y", item.y)}</div>
-      <div class="field-row">${numberField("bonusPercent", "Bonus %", item.bonusPercent)}${numberField("troops", "Defenders", item.troops)}</div>
-      ${numberField("size", "Size", item.size, MIN_OBJECTIVE_SIZE)}
-    `;
-    bindSelectionInputs(item);
-  }
-
-  function textField(field, label, value) {
-    return `<label><span>${label}</span><input data-field="${field}" value="${escapeHtml(value)}" /></label>`;
-  }
-
-  function numberField(field, label, value, min = null) {
-    const minAttr = Number.isFinite(Number(min)) ? ` min="${Number(min)}"` : "";
-    return `<label><span>${label}</span><input data-field="${field}" type="number"${minAttr} value="${Number(value) || 0}" /></label>`;
-  }
-
-  function bindSelectionInputs(item) {
-    elements.selectionForm.querySelectorAll("[data-field]").forEach(input => {
-      const update = () => {
-        const field = input.dataset.field;
-        if (state.selected?.type === "portal" && field === "targetRegionId") {
-          clearPortalConnection(item);
-          item.targetRegionId = slugify(input.value);
-          item.targetPortalId = getDefaultTargetPortalId(item);
-          syncPortalConnection(item);
-          markDirty();
-          render();
-          return;
-        }
-        if (state.selected?.type === "portal" && field === "targetPortalId") {
-          clearPortalConnection(item);
-          item.targetPortalId = input.value;
-          syncPortalConnection(item);
-          markDirty();
-          render();
-          return;
-        }
-        if (state.selected?.type === "portal" && field === "id") {
-          const previousId = item.id;
-          item.id = input.value;
-          const targetPortal = getPortalById(getMapById(item.targetRegionId), item.targetPortalId);
-          if (targetPortal?.targetPortalId === previousId) targetPortal.targetPortalId = item.id;
-          markDirty();
-          renderCanvas();
-          return;
-        }
-        if (field === "size") item[field] = normalizeSizeForType(state.selected?.type, input.value);
-        else if (["x", "y", "bonusPercent", "troops", "level"].includes(field)) item[field] = Math.round(Number(input.value) || 0);
-        else item[field] = input.value;
-        if (field === "type" && STRONGHOLD_TYPES[item.type]) {
-          const defaults = STRONGHOLD_TYPES[item.type];
-          item.bonus = defaults.bonus;
-          item.name = item.name || defaults.name;
-          item.artSrc = item.artSrc || defaults.artSrc;
-        }
-        markDirty();
-        renderCanvas();
-      };
-      input.addEventListener(input.tagName === "SELECT" ? "change" : "input", update);
-    });
-  }
-
-  function normalizeSizeForType(type, value) {
-    const size = Math.round(Number(value) || 0);
-    if (type === "portal") return Math.max(MIN_PORTAL_SIZE, size || DEFAULT_PORTAL_SIZE);
-    if (type === "objective") return Math.max(MIN_OBJECTIVE_SIZE, size || DEFAULT_OBJECTIVE_SIZE);
-    return size;
-  }
-
-  function addCity(point) {
-    const map = currentMap();
-    const nextNumber = map.cities.length + 1;
-    const city = {
-      id: nextUniqueId(map.cities, `${map.id}_${pad(nextNumber)}`),
-      name: generateCityName(map.id, map.cities.length),
-      x: point.x,
-      y: point.y,
-      level: 1,
-      troops: 10,
-    };
-    map.cities.push(city);
-    state.selected = { type: "city", index: map.cities.length - 1 };
-    markDirty();
-    setStatus(`Added city at ${point.x}, ${point.y}.`);
-    render();
-  }
-
-  function addPortal(point) {
-    const map = currentMap();
-    const targetRegionId = elements.portalTargetSelect.value || state.maps.find(item => item.id !== map.id)?.id || "";
-    if (!targetRegionId || targetRegionId === map.id) {
-      setStatus("Choose another map as the portal target.");
-      return;
-    }
-    const targetMap = state.maps.find(item => item.id === targetRegionId);
-    const portal = {
-      id: nextUniqueId(map.portals, `${map.id}-${targetRegionId}`),
-      label: targetMap?.label || titleFromId(targetRegionId),
-      targetRegionId,
-      targetPortalId: "",
-      x: point.x,
-      y: point.y,
-      size: DEFAULT_PORTAL_SIZE,
-    };
-    map.portals.push(portal);
-    if (targetMap) {
-      let reversePortal = targetMap.portals.find(existing => existing.targetRegionId === map.id && (!existing.targetPortalId || existing.targetPortalId === portal.id));
-      if (!reversePortal) {
-        reversePortal = {
-          id: nextUniqueId(targetMap.portals, `${targetMap.id}-${map.id}`),
-          label: map.label,
-          targetRegionId: map.id,
-          targetPortalId: portal.id,
-          x: Math.round(targetMap.imageWidth / 2),
-          y: Math.round(targetMap.imageHeight / 2),
-          size: DEFAULT_PORTAL_SIZE,
-        };
-        targetMap.portals.push(reversePortal);
-      }
-      portal.targetPortalId = reversePortal.id;
-      reversePortal.targetPortalId = portal.id;
-    }
-    state.selected = { type: "portal", index: map.portals.length - 1 };
-    markDirty();
-    setStatus(`Added portal to ${targetMap?.label || targetRegionId}.`);
-    render();
-  }
-
-  function addObjective(point) {
-    const map = currentMap();
-    const type = map.id === "center" ? "crown" : map.id === "north" ? "training" : map.id === "east" ? "speed" : map.id === "south" ? "defense" : "gold";
-    const defaults = STRONGHOLD_TYPES[type];
-    const objective = normalizeObjective(map.id, {
-      id: nextUniqueId(map.objectives, `${map.id}_${type}_stronghold`),
-      type,
-      name: defaults.name,
-      x: point.x,
-      y: point.y,
-      size: type === "crown" ? DEFAULT_CROWN_OBJECTIVE_SIZE : DEFAULT_OBJECTIVE_SIZE,
-    }, map.objectives.length);
-    map.objectives.push(objective);
-    state.selected = { type: "objective", index: map.objectives.length - 1 };
-    markDirty();
-    setStatus(`Added ${objective.name}.`);
-    render();
-  }
-
-  function placeMarkerFromEvent(event) {
-    const map = currentMap();
-    if (!map || state.mode === "select" || !isPointerOnMap(event)) return false;
-    const point = getImagePointFromEvent(event, map);
-    if (state.mode === "city") addCity(point);
-    if (state.mode === "portal") addPortal(point);
-    if (state.mode === "objective") addObjective(point);
-    return true;
-  }
-
-  function nextUniqueId(collection, baseId) {
-    const used = new Set(collection.map(item => item.id));
-    if (!used.has(baseId)) return baseId;
-    let index = 2;
-    while (used.has(`${baseId}_${index}`)) index += 1;
-    return `${baseId}_${index}`;
-  }
-
-  function deleteSelected() {
-    const map = currentMap();
-    if (!map || !state.selected) return;
-    const collection = getCollectionForType(map, state.selected.type);
-    if (!collection) return;
-    if (state.selected.type === "portal") clearPortalConnection(collection[state.selected.index]);
-    collection.splice(state.selected.index, 1);
-    state.selected = null;
-    markDirty();
-    setStatus("Deleted selected marker.");
-    render();
-  }
-
-  function getModeLabel(mode) {
-    if (mode === "objective") return "Stronghold";
-    return titleFromId(mode);
-  }
-
-  function getModeInstruction(mode) {
-    if (mode === "select") return "Select or drag existing markers.";
-    return "Click the map to place.";
-  }
-
-  function setMode(mode) {
-    state.mode = mode;
-    elements.modeButtons.forEach(button => button.classList.toggle("active", button.dataset.mode === mode));
-    setStatus(`Mode: ${getModeLabel(mode)}. ${getModeInstruction(mode)}`);
-  }
-
-  async function fileToImageInfo(file) {
-    const previewUrl = URL.createObjectURL(file);
-    const image = new Image();
-    image.src = previewUrl;
-    await image.decode().catch(() => {});
-    return {
-      previewUrl,
-      width: image.naturalWidth || 1200,
-      height: image.naturalHeight || 1200,
-    };
-  }
-
-  function extensionForFile(file) {
-    const match = String(file.name || "").toLowerCase().match(/\.([a-z0-9]+)$/);
-    const ext = match ? match[1] : "png";
-    return ["png", "jpg", "jpeg", "webp"].includes(ext) ? ext : "png";
-  }
-
-  async function setMapImageFile(map, file) {
-    if (!map || !file) return;
-    const info = await fileToImageInfo(file);
-    const ext = extensionForFile(file);
-    map._pendingImageFile = file;
-    map._previewSrc = info.previewUrl;
-    map.imageWidth = info.width;
-    map.imageHeight = info.height;
-    map.imageSrc = `assets/custom-maps/${map.id}-map.${ext}`;
-    map.thumbnailSrc = "";
-    markDirty();
-    setStatus(`Loaded image for ${map.label}.`);
-    render();
-  }
-
-  async function addMapFromFile(file) {
-    if (!file) return;
-    const baseName = String(file.name || "new-map").replace(/\.[^.]+$/, "");
-    let id = slugify(window.prompt("Map ID", baseName) || baseName);
-    if (state.maps.some(map => map.id === id)) {
-      let suffix = 2;
-      while (state.maps.some(map => map.id === `${id}-${suffix}`)) suffix += 1;
-      id = `${id}-${suffix}`;
-    }
-    const label = titleFromId(id);
-    const info = await fileToImageInfo(file);
-    const ext = extensionForFile(file);
-    const map = normalizeMap({
-      id,
-      label,
-      imageSrc: `assets/custom-maps/${id}-map.${ext}`,
-      imageWidth: info.width,
-      imageHeight: info.height,
-      region: buildEditorRegion(id, label, state.maps.length),
-      cities: [],
-      portals: [],
-      objectives: [],
-    });
-    map._pendingImageFile = file;
-    map._previewSrc = info.previewUrl;
-    state.maps.push(map);
-    state.currentId = map.id;
-    state.selected = null;
-    markDirty();
-    setStatus(`Added ${label}.`);
-    render();
-  }
-
-  async function openProjectFolder() {
-    if (!window.showDirectoryPicker) {
-      setStatus("Folder writing needs Chrome or Edge on localhost. Use the download fallback after Apply.");
-      return null;
-    }
-    const handle = await window.showDirectoryPicker({ mode: "readwrite" });
-    try {
-      await handle.getFileHandle("game.js");
-    } catch (error) {
-      setStatus("Selected folder does not look like the Crown Lands project root.");
-      return null;
-    }
-    state.projectDir = handle;
-    setStatus("Project folder connected.");
-    return handle;
-  }
-
-  async function getDirectoryHandle(root, segments, create = true) {
-    let current = root;
-    for (const segment of segments) {
-      current = await current.getDirectoryHandle(segment, { create });
-    }
-    return current;
-  }
-
-  async function writeFile(root, path, value) {
-    const parts = path.split("/").filter(Boolean);
-    const fileName = parts.pop();
-    const dir = await getDirectoryHandle(root, parts, true);
-    const handle = await dir.getFileHandle(fileName, { create: true });
-    const writable = await handle.createWritable();
-    await writable.write(value);
-    await writable.close();
-  }
-
-  function buildExportData() {
-    const versionStamp = Number(new Date().toISOString().replace(/\D/g, "").slice(0, 12));
-    return {
-      version: Math.max(versionStamp, Number(window.CROWNLANDS_WORLD_CONFIG?.version) || 0),
-      updatedAt: new Date().toISOString(),
-      maps: state.maps.map(map => ({
-        id: map.id,
-        label: map.label,
-        imageSrc: map.imageSrc,
-        thumbnailSrc: map.thumbnailSrc || "",
-        imageWidth: map.imageWidth,
-        imageHeight: map.imageHeight,
-        region: map.region ? { ...map.region, id: map.id, label: map.label } : buildEditorRegion(map.id, map.label, 0),
-        landPolygon: map.landPolygon.map(cleanPoint),
-        cities: map.cities.map(city => ({
-          id: city.id,
-          name: city.name,
-          x: Math.round(Number(city.x) || 0),
-          y: Math.round(Number(city.y) || 0),
-          level: Math.max(1, Math.floor(Number(city.level) || 1)),
-          troops: Math.max(0, Math.floor(Number(city.troops) || 10)),
-        })),
-        portals: map.portals.map(portal => ({
-          id: portal.id,
-          label: portal.label,
-          targetRegionId: portal.targetRegionId,
-          targetPortalId: portal.targetPortalId || "",
-          x: Math.round(Number(portal.x) || 0),
-          y: Math.round(Number(portal.y) || 0),
-          size: Math.max(MIN_PORTAL_SIZE, Math.floor(Number(portal.size) || DEFAULT_PORTAL_SIZE)),
-        })),
-        objectives: map.objectives.map(objective => ({
-          id: objective.id,
-          name: objective.name,
-          type: objective.type,
-          bonus: objective.bonus,
-          bonusPercent: Math.max(0, Math.floor(Number(objective.bonusPercent) || 0)),
-          level: Math.max(1, Math.floor(Number(objective.level) || 30)),
-          troops: Math.max(0, Math.floor(Number(objective.troops) || 10000)),
-          artSrc: objective.artSrc,
-          x: Math.round(Number(objective.x) || 0),
-          y: Math.round(Number(objective.y) || 0),
-          size: Math.max(MIN_OBJECTIVE_SIZE, Math.floor(Number(objective.size) || DEFAULT_OBJECTIVE_SIZE)),
-        })),
-      })),
-    };
-  }
-
-  function buildDataFileText() {
-    return `window.CROWNLANDS_MAP_EDITOR_DATA = ${JSON.stringify(buildExportData(), null, 2)};\n`;
-  }
-
-  function downloadTextFile(fileName, text) {
-    const blob = new Blob([text], { type: "text/javascript" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = fileName;
-    link.click();
-    URL.revokeObjectURL(url);
-  }
-
-  async function applyToGame() {
-    const dataText = buildDataFileText();
-    if (!state.projectDir && window.showDirectoryPicker) {
-      await openProjectFolder();
-    }
-    if (!state.projectDir) {
-      downloadTextFile("map-editor-data.js", dataText);
-      setStatus("Downloaded map data. Open the project folder to write directly next time.");
-      return;
-    }
-    for (const map of state.maps) {
-      if (!map._pendingImageFile || !map.imageSrc) continue;
-      await writeFile(state.projectDir, map.imageSrc, map._pendingImageFile);
-      delete map._pendingImageFile;
-      delete map._previewSrc;
-    }
-    await writeFile(state.projectDir, "assets/map-editor-data.js", dataText);
-    state.dirty = false;
-    setStatus("Uploaded map changes to assets/map-editor-data.js.");
-  }
-
-  function bindEvents() {
-    elements.modeButtons.forEach(button => {
-      button.addEventListener("click", () => setMode(button.dataset.mode));
-    });
-    elements.canvasWrap?.addEventListener("pointerdown", startCanvasPan);
-    elements.canvasWrap?.addEventListener("pointermove", handleCanvasPan);
-    elements.canvasWrap?.addEventListener("pointerup", stopCanvasPan);
-    elements.canvasWrap?.addEventListener("pointercancel", stopCanvasPan);
-    elements.mapCanvas.addEventListener("click", event => {
-      if (event.target.closest(".marker")) return;
-      if (state.skipNextCanvasClick) {
-        state.skipNextCanvasClick = false;
-        return;
-      }
-      placeMarkerFromEvent(event);
-    });
-    elements.mapLabelInput.addEventListener("input", () => {
-      const map = currentMap();
-      if (!map) return;
-      map.label = elements.mapLabelInput.value || titleFromId(map.id);
-      if (map.region) map.region.label = map.label;
-      markDirty();
-      renderMapList();
-      elements.currentMapTitle.textContent = map.label;
-    });
-    elements.mapImagePathInput.addEventListener("input", () => {
-      const map = currentMap();
-      if (!map) return;
-      map.imageSrc = elements.mapImagePathInput.value.trim();
-      delete map._previewSrc;
-      markDirty();
-      renderCanvas();
-    });
-    elements.uploadMapImageBtn.addEventListener("click", () => elements.mapImageInput.click());
-    elements.mapImageInput.addEventListener("change", event => {
-      setMapImageFile(currentMap(), event.target.files?.[0]);
-      event.target.value = "";
-    });
-    elements.addMapBtn.addEventListener("click", () => elements.newMapImageInput.click());
-    elements.newMapImageInput.addEventListener("change", event => {
-      addMapFromFile(event.target.files?.[0]);
-      event.target.value = "";
-    });
-    elements.deleteSelectedBtn.addEventListener("click", deleteSelected);
-    elements.openProjectBtn.addEventListener("click", () => {
-      openProjectFolder().catch(error => setStatus(error.message || String(error)));
-    });
-    [elements.applyBtn, elements.sidebarApplyBtn].filter(Boolean).forEach(button => {
-      button.addEventListener("click", () => {
-        applyToGame().catch(error => {
-          console.error(error);
-          setStatus(error.message || String(error));
-        });
-      });
-    });
+  function roundNorm(value) {
+    return Math.round(clamp(Number(value) || 0, 0, 1) * 1000) / 1000;
   }
 
   function escapeHtml(value) {
@@ -1238,9 +176,1116 @@
       .replaceAll("'", "&#039;");
   }
 
+  function resolveAssetPath(path) {
+    const value = String(path || "").trim();
+    if (!value) return "";
+    if (/^(https?:|data:|blob:)/i.test(value)) return value;
+    return value.startsWith("/") ? value : `/${value.replace(/^\/+/, "")}`;
+  }
+
+  function deepClone(value) {
+    return JSON.parse(JSON.stringify(value));
+  }
+
+  function currentRegion() {
+    return getRegion(state.activeRegionId) || state.regions[0] || null;
+  }
+
+  function getRegion(regionId) {
+    const id = slugify(regionId, "");
+    return state.regions.find(region => region.id === id) || null;
+  }
+
+  function getRegionSummary(region) {
+    return {
+      id: region.id,
+      name: region.name,
+      type: region.type,
+      gridX: Math.round(Number(region.gridX) || 0),
+      gridY: Math.round(Number(region.gridY) || 0),
+      width: Math.max(256, Math.round(Number(region.width) || 2048)),
+      height: Math.max(256, Math.round(Number(region.height) || 2048)),
+      imagePath: region.imagePath || "",
+      cityCapacity: Math.max(0, Math.floor(Number(region.cityCapacity) || 0)),
+      regionPath: region.regionPath || `assets/worlds/world_01/regions/${region.id}.json`,
+    };
+  }
+
+  function normalizeEdgeConnections(edgeConnections = {}) {
+    return SIDES.reduce((result, side) => {
+      result[side] = Array.isArray(edgeConnections[side])
+        ? edgeConnections[side].map((zone, index) => ({
+            id: slugify(zone.id, `${side}_connection_${index + 1}`),
+            side,
+            start: roundNorm(Math.min(Number(zone.start) || 0, Number(zone.end) || 1)),
+            end: roundNorm(Math.max(Number(zone.start) || 0, Number(zone.end) || 1)),
+            type: EDGE_TYPES.includes(zone.type) ? zone.type : "road",
+            connectsToRegionId: slugify(zone.connectsToRegionId || "", ""),
+            intentionalOuter: Boolean(zone.intentionalOuter),
+            notes: String(zone.notes || ""),
+          }))
+        : [];
+      return result;
+    }, {});
+  }
+
+  function normalizeRegion(rawRegion = {}, index = 0) {
+    const id = slugify(rawRegion.id, `region_${index + 1}`);
+    const type = REGION_TYPES.includes(rawRegion.type) ? rawRegion.type : (id === "center" ? "crownlands_main" : "starter");
+    const width = Math.max(256, Math.round(Number(rawRegion.width || rawRegion.imageWidth) || 2048));
+    const height = Math.max(256, Math.round(Number(rawRegion.height || rawRegion.imageHeight) || 2048));
+    const region = {
+      id,
+      name: String(rawRegion.name || rawRegion.label || titleFromId(id)),
+      type,
+      gridX: Math.round(Number(rawRegion.gridX) || 0),
+      gridY: Math.round(Number(rawRegion.gridY) || 0),
+      width,
+      height,
+      imagePath: String(rawRegion.imagePath || rawRegion.imageSrc || ""),
+      cityCapacity: Math.max(0, Math.floor(Number(rawRegion.cityCapacity) || (type === "crownlands_main" ? 100 : 50))),
+      cities: [],
+      strongholds: [],
+      edgeConnections: normalizeEdgeConnections(rawRegion.edgeConnections),
+      notes: String(rawRegion.notes || ""),
+    };
+    if (rawRegion.compatRegion) region.compatRegion = rawRegion.compatRegion;
+    region.regionPath = rawRegion.regionPath || `assets/worlds/world_01/regions/${region.id}.json`;
+    region.cities = (Array.isArray(rawRegion.cities) ? rawRegion.cities : []).map((city, cityIndex) => normalizeCity(city, cityIndex, region));
+    region.strongholds = (Array.isArray(rawRegion.strongholds) ? rawRegion.strongholds : []).map((stronghold, strongholdIndex) => normalizeStronghold(stronghold, strongholdIndex, region));
+    return region;
+  }
+
+  function normalizeCity(city = {}, index = 0, region) {
+    return {
+      id: slugify(city.id, `${region.id}_city_${String(index + 1).padStart(3, "0")}`),
+      name: String(city.name || `City ${index + 1}`),
+      regionId: region.id,
+      xNorm: roundNorm(city.xNorm ?? ((Number(city.x) || 0) / region.width)),
+      yNorm: roundNorm(city.yNorm ?? ((Number(city.y) || 0) / region.height)),
+      level: Math.max(1, Math.floor(Number(city.level) || 1)),
+      owner: String(city.owner || "neutral"),
+      startType: String(city.startType || "neutral"),
+      troops: Math.max(0, Math.floor(Number(city.troops) || 10)),
+    };
+  }
+
+  function normalizeStronghold(stronghold = {}, index = 0, region) {
+    const strongholdType = STRONGHOLD_TYPES.includes(stronghold.strongholdType || stronghold.type)
+      ? stronghold.strongholdType || stronghold.type
+      : (region.type === "crownlands_main" ? "crown_citadel" : "gold_stronghold");
+    const defaults = STRONGHOLD_DEFAULTS[strongholdType] || STRONGHOLD_DEFAULTS.gold_stronghold;
+    return {
+      id: slugify(stronghold.id, `${region.id}_${strongholdType}_${index + 1}`),
+      name: String(stronghold.name || defaults.name),
+      regionId: region.id,
+      xNorm: roundNorm(stronghold.xNorm ?? ((Number(stronghold.x) || 0) / region.width)),
+      yNorm: roundNorm(stronghold.yNorm ?? ((Number(stronghold.y) || 0) / region.height)),
+      strongholdType,
+      bonusType: String(stronghold.bonusType || stronghold.bonus || defaults.bonusType),
+      bonusAmount: Math.max(0, Math.floor(Number(stronghold.bonusAmount ?? stronghold.bonusPercent) || defaults.bonusAmount)),
+      startingOwner: String(stronghold.startingOwner || stronghold.owner || "neutral"),
+      level: Math.max(1, Math.floor(Number(stronghold.level) || defaults.level)),
+      troops: Math.max(0, Math.floor(Number(stronghold.troops ?? stronghold.startTroops) || defaults.troops)),
+      artSrc: String(stronghold.artSrc || defaults.artSrc),
+      size: Math.max(80, Math.floor(Number(stronghold.size) || defaults.size)),
+      notes: String(stronghold.notes || ""),
+    };
+  }
+
+  function normalizeBundle(data = {}) {
+    const rawLayout = data.layout || {};
+    const rawRegions = Array.isArray(data.regions) ? data.regions : [];
+    const regions = rawRegions.map(normalizeRegion);
+    const layout = {
+      worldId: slugify(rawLayout.worldId, "world_01"),
+      worldName: String(rawLayout.worldName || "Crownlands World 01"),
+      schemaVersion: Math.max(1, Math.floor(Number(rawLayout.schemaVersion) || 1)),
+      updatedAt: rawLayout.updatedAt || new Date().toISOString(),
+      globalSettings: {
+        defaultMapWidth: Math.max(256, Math.floor(Number(rawLayout.globalSettings?.defaultMapWidth) || 2048)),
+        defaultMapHeight: Math.max(256, Math.floor(Number(rawLayout.globalSettings?.defaultMapHeight) || 2048)),
+        minimumCitySpacing: Number(rawLayout.globalSettings?.minimumCitySpacing) || 0.045,
+        worldWidth: Math.max(1000, Math.floor(Number(rawLayout.globalSettings?.worldWidth) || 10000)),
+        worldHeight: Math.max(1000, Math.floor(Number(rawLayout.globalSettings?.worldHeight) || 7600)),
+        gridCellWorldSize: Math.max(500, Math.floor(Number(rawLayout.globalSettings?.gridCellWorldSize) || 2300)),
+      },
+      regions: [],
+    };
+    layout.regions = regions.map(getRegionSummary);
+    return { layout, regions };
+  }
+
+  function createFallbackWorld() {
+    return normalizeBundle({
+      layout: {
+        worldId: "world_01",
+        worldName: "Crownlands World 01",
+        globalSettings: {},
+      },
+      regions: [
+        { id: "center", name: "Crownlands Heart", type: "crownlands_main", gridX: 0, gridY: 0, width: 1254, height: 1254, imagePath: "assets/center-island.png", cityCapacity: 100 },
+        { id: "west", name: "West Marches", type: "starter", gridX: -1, gridY: 0, width: 1024, height: 1536, imagePath: "assets/west-island.png", cityCapacity: 50 },
+      ],
+    });
+  }
+
+  async function loadWorldData() {
+    try {
+      const response = await fetch(WORLD_API, { cache: "no-store" });
+      if (!response.ok) throw new Error(`World data failed: ${response.status}`);
+      const data = normalizeBundle(await response.json());
+      state.layout = data.layout;
+      state.regions = data.regions;
+      state.activeRegionId = state.regions[0]?.id || "";
+      setStatus("Loaded world data.");
+    } catch (error) {
+      const fallback = createFallbackWorld();
+      state.layout = fallback.layout;
+      state.regions = fallback.regions;
+      state.activeRegionId = state.regions[0]?.id || "";
+      setStatus(`Loaded fallback world data. ${error.message || error}`);
+    }
+  }
+
+  function buildSavePayload() {
+    state.layout.regions = state.regions.map(getRegionSummary);
+    state.layout.updatedAt = new Date().toISOString();
+    return {
+      layout: deepClone(state.layout),
+      regions: deepClone(state.regions),
+    };
+  }
+
+  async function saveWorldData() {
+    const payload = buildSavePayload();
+    const response = await fetch(WORLD_API, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    if (!response.ok) {
+      const text = await response.text();
+      throw new Error(text || `Save failed: ${response.status}`);
+    }
+    const data = normalizeBundle(await response.json());
+    state.layout = data.layout;
+    state.regions = data.regions;
+    state.dirty = false;
+    setStatus("Saved JSON world files and game compatibility data.");
+    render();
+  }
+
+  function markDirty(message = "") {
+    state.dirty = true;
+    if (message) setStatus(message);
+  }
+
+  function setEditorMode(mode) {
+    state.editorMode = mode === "region" ? "region" : "world";
+    state.tool = "select";
+    render();
+  }
+
+  function setTool(tool) {
+    if (tool !== "select") state.editorMode = "region";
+    state.tool = tool;
+    if (!currentRegion() && state.regions[0]) state.activeRegionId = state.regions[0].id;
+    setStatus(tool === "select" ? "Select mode." : `${titleFromId(tool)} placement mode.`);
+    render();
+  }
+
+  function selectRegion(regionId) {
+    state.activeRegionId = regionId;
+    state.selected = { kind: "region", regionId };
+    render();
+  }
+
+  function selectCity(regionId, index) {
+    state.activeRegionId = regionId;
+    state.selected = { kind: "city", regionId, index };
+    render();
+  }
+
+  function selectStronghold(regionId, index) {
+    state.activeRegionId = regionId;
+    state.selected = { kind: "stronghold", regionId, index };
+    render();
+  }
+
+  function selectEdge(regionId, side, index) {
+    state.activeRegionId = regionId;
+    state.selected = { kind: "edge", regionId, side, index };
+    render();
+  }
+
+  function getSelectedItem() {
+    if (!state.selected) return null;
+    const region = getRegion(state.selected.regionId);
+    if (!region) return null;
+    if (state.selected.kind === "region") return region;
+    if (state.selected.kind === "city") return region.cities[state.selected.index] || null;
+    if (state.selected.kind === "stronghold") return region.strongholds[state.selected.index] || null;
+    if (state.selected.kind === "edge") return region.edgeConnections[state.selected.side]?.[state.selected.index] || null;
+    return null;
+  }
+
+  function render() {
+    if (!state.layout) return;
+    renderToolbar();
+    renderWorldFields();
+    renderCounts();
+    renderWorkspace();
+    renderInspector();
+  }
+
+  function renderToolbar() {
+    elements.worldModeBtn.classList.toggle("active", state.editorMode === "world");
+    elements.regionModeBtn.classList.toggle("active", state.editorMode === "region");
+    elements.addCityBtn.classList.toggle("active", state.tool === "city");
+    elements.addStrongholdBtn.classList.toggle("active", state.tool === "stronghold");
+    elements.addEdgeBtn.classList.toggle("active", state.tool === "edge");
+    elements.toggleGridBtn.classList.toggle("active", state.toggles.grid);
+    elements.toggleCitiesBtn.classList.toggle("active", state.toggles.cities);
+    elements.toggleStrongholdsBtn.classList.toggle("active", state.toggles.strongholds);
+    elements.toggleConnectionsBtn.classList.toggle("active", state.toggles.connections);
+    elements.deleteSelectedBtn.disabled = !state.selected;
+    elements.zoomLabel.textContent = `${Math.round(state.zoom * 100)}%`;
+  }
+
+  function renderWorldFields() {
+    if (document.activeElement !== elements.worldIdInput) elements.worldIdInput.value = state.layout.worldId;
+    if (document.activeElement !== elements.worldNameInput) elements.worldNameInput.value = state.layout.worldName;
+    elements.worldNameLabel.textContent = state.layout.worldName;
+  }
+
+  function renderCounts() {
+    const cityCount = state.regions.reduce((total, region) => total + region.cities.length, 0);
+    const strongholdCount = state.regions.reduce((total, region) => total + region.strongholds.length, 0);
+    const edgeCount = state.regions.reduce((total, region) => total + SIDES.reduce((sum, side) => sum + region.edgeConnections[side].length, 0), 0);
+    elements.regionCountStat.textContent = String(state.regions.length);
+    elements.cityCountStat.textContent = String(cityCount);
+    elements.strongholdCountStat.textContent = String(strongholdCount);
+    elements.edgeCountStat.textContent = String(edgeCount);
+    elements.countSummary.textContent = `${state.regions.length} regions`;
+  }
+
+  function renderWorkspace() {
+    elements.workspaceKicker.textContent = state.editorMode === "world" ? "World Layout" : "Region Edit";
+    elements.workspaceTitle.textContent = state.editorMode === "world"
+      ? state.layout.worldName
+      : currentRegion()?.name || "No region selected";
+    elements.worldView.classList.toggle("hidden", state.editorMode !== "world");
+    elements.regionView.classList.toggle("hidden", state.editorMode !== "region");
+    if (state.editorMode === "world") renderWorldGrid();
+    else renderRegionEditor();
+  }
+
+  function getGridBounds() {
+    const xs = state.regions.map(region => Number(region.gridX) || 0);
+    const ys = state.regions.map(region => Number(region.gridY) || 0);
+    return {
+      minX: Math.min(-1, ...xs) - 1,
+      maxX: Math.max(1, ...xs) + 1,
+      minY: Math.min(-1, ...ys) - 1,
+      maxY: Math.max(1, ...ys) + 1,
+    };
+  }
+
+  function renderWorldGrid() {
+    const bounds = getGridBounds();
+    const cell = 128;
+    const cols = bounds.maxX - bounds.minX + 1;
+    const rows = bounds.maxY - bounds.minY + 1;
+    elements.worldView.classList.toggle("hide-grid", !state.toggles.grid);
+    elements.worldGrid.style.width = `${cols * cell}px`;
+    elements.worldGrid.style.height = `${rows * cell}px`;
+    elements.worldGrid.innerHTML = "";
+    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svg.setAttribute("class", "grid-connection-layer");
+    svg.setAttribute("viewBox", `0 0 ${cols * cell} ${rows * cell}`);
+    elements.worldGrid.appendChild(svg);
+
+    state.regions.forEach(region => {
+      const left = (region.gridX - bounds.minX) * cell + 8;
+      const top = (region.gridY - bounds.minY) * cell + 8;
+      const tile = document.createElement("button");
+      tile.type = "button";
+      tile.className = `region-tile ${state.selected?.kind === "region" && state.selected.regionId === region.id ? "selected" : ""}`;
+      tile.style.left = `${left}px`;
+      tile.style.top = `${top}px`;
+      tile.dataset.regionId = region.id;
+      tile.innerHTML = `
+        <img src="${escapeHtml(resolveAssetPath(region.imagePath))}" alt="" draggable="false" />
+        <span class="region-tile-meta">
+          <strong>${escapeHtml(region.name)}</strong>
+          <small>${escapeHtml(region.id)} (${region.gridX}, ${region.gridY})</small>
+          <small>${region.cities.length}/${region.cityCapacity} cities</small>
+        </span>
+        ${SIDES.map(side => `<span class="edge-dot ${side} ${hasNeighbor(region, side) ? "connected" : ""}"></span>`).join("")}
+      `;
+      tile.addEventListener("click", () => selectRegion(region.id));
+      tile.addEventListener("dblclick", () => {
+        state.activeRegionId = region.id;
+        setEditorMode("region");
+      });
+      elements.worldGrid.appendChild(tile);
+    });
+
+    renderWorldConnectionLines(svg, bounds, cell);
+  }
+
+  function renderWorldConnectionLines(svg, bounds, cell) {
+    if (!state.toggles.connections) return;
+    const seen = new Set();
+    state.regions.forEach(region => {
+      ["east", "south"].forEach(side => {
+        const neighbor = getNeighbor(region, side);
+        if (!neighbor) return;
+        const key = [region.id, neighbor.id].sort().join(":");
+        if (seen.has(key)) return;
+        seen.add(key);
+        const ax = (region.gridX - bounds.minX) * cell + cell / 2;
+        const ay = (region.gridY - bounds.minY) * cell + cell / 2;
+        const bx = (neighbor.gridX - bounds.minX) * cell + cell / 2;
+        const by = (neighbor.gridY - bounds.minY) * cell + cell / 2;
+        const ok = hasMatchingConnection(region, neighbor, side);
+        const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+        line.setAttribute("x1", ax);
+        line.setAttribute("y1", ay);
+        line.setAttribute("x2", bx);
+        line.setAttribute("y2", by);
+        line.setAttribute("stroke", ok ? "#61b66d" : "#d8564b");
+        line.setAttribute("stroke-width", ok ? "5" : "3");
+        line.setAttribute("stroke-dasharray", ok ? "0" : "8 8");
+        svg.appendChild(line);
+      });
+    });
+  }
+
+  function hasNeighbor(region, side) {
+    return Boolean(getNeighbor(region, side));
+  }
+
+  function getNeighbor(region, side) {
+    const dx = side === "east" ? 1 : side === "west" ? -1 : 0;
+    const dy = side === "south" ? 1 : side === "north" ? -1 : 0;
+    return state.regions.find(other => other.gridX === region.gridX + dx && other.gridY === region.gridY + dy) || null;
+  }
+
+  function hasMatchingConnection(region, neighbor, side) {
+    const zones = region.edgeConnections[side] || [];
+    const oppositeZones = neighbor.edgeConnections[OPPOSITE_SIDE[side]] || [];
+    if (!zones.length || !oppositeZones.length) return false;
+    return zones.some(zone => {
+      const center = (zone.start + zone.end) / 2;
+      return oppositeZones.some(other => Math.abs(center - ((other.start + other.end) / 2)) <= 0.18);
+    });
+  }
+
+  function renderRegionEditor() {
+    const region = currentRegion();
+    if (!region) {
+      elements.regionImage.removeAttribute("src");
+      elements.markerLayer.innerHTML = "";
+      elements.edgeLayer.innerHTML = "";
+      return;
+    }
+    elements.regionCanvas.style.width = `${Math.round(region.width * state.zoom)}px`;
+    elements.regionCanvas.style.height = `${Math.round(region.height * state.zoom)}px`;
+    elements.regionImage.src = resolveAssetPath(region.imagePath);
+    elements.regionImage.alt = `${region.name} map`;
+    elements.regionView.classList.toggle("hide-cities", !state.toggles.cities);
+    elements.regionView.classList.toggle("hide-strongholds", !state.toggles.strongholds);
+    elements.regionView.classList.toggle("hide-connections", !state.toggles.connections);
+    renderRegionMarkers(region);
+    renderEdgeZones(region);
+  }
+
+  function renderRegionMarkers(region) {
+    elements.markerLayer.innerHTML = "";
+    region.cities.forEach((city, index) => {
+      const marker = createMarker("city", city, index, region);
+      marker.textContent = String((index + 1) % 10);
+      elements.markerLayer.appendChild(marker);
+    });
+    region.strongholds.forEach((stronghold, index) => {
+      const marker = createMarker("stronghold", stronghold, index, region);
+      marker.classList.toggle("crown", stronghold.strongholdType === "crown_citadel");
+      marker.textContent = stronghold.strongholdType === "crown_citadel" ? "C" : "S";
+      elements.markerLayer.appendChild(marker);
+    });
+  }
+
+  function createMarker(kind, item, index, region) {
+    const marker = document.createElement("button");
+    marker.type = "button";
+    marker.className = `map-marker ${kind} ${isSelected(kind, region.id, index) ? "selected" : ""}`;
+    marker.style.left = `${item.xNorm * 100}%`;
+    marker.style.top = `${item.yNorm * 100}%`;
+    marker.title = item.name;
+    marker.addEventListener("pointerdown", event => {
+      event.preventDefault();
+      event.stopPropagation();
+      if (kind === "city") selectCity(region.id, index);
+      else selectStronghold(region.id, index);
+      state.draggingMarker = { kind, regionId: region.id, index, pointerId: event.pointerId };
+      marker.setPointerCapture?.(event.pointerId);
+    });
+    return marker;
+  }
+
+  function renderEdgeZones(region) {
+    elements.edgeLayer.innerHTML = "";
+    SIDES.forEach(side => {
+      region.edgeConnections[side].forEach((zone, index) => {
+        const zoneEl = document.createElement("button");
+        zoneEl.type = "button";
+        zoneEl.className = `edge-zone ${side} ${isSelected("edge", region.id, index, side) ? "selected" : ""}`;
+        if (side === "north" || side === "south") {
+          zoneEl.style.left = `${zone.start * 100}%`;
+          zoneEl.style.width = `${Math.max(0.01, zone.end - zone.start) * 100}%`;
+        } else {
+          zoneEl.style.top = `${zone.start * 100}%`;
+          zoneEl.style.height = `${Math.max(0.01, zone.end - zone.start) * 100}%`;
+        }
+        zoneEl.title = `${side} ${zone.type}`;
+        zoneEl.addEventListener("click", event => {
+          event.preventDefault();
+          event.stopPropagation();
+          selectEdge(region.id, side, index);
+        });
+        elements.edgeLayer.appendChild(zoneEl);
+      });
+    });
+  }
+
+  function isSelected(kind, regionId, index, side = "") {
+    return state.selected?.kind === kind
+      && state.selected.regionId === regionId
+      && state.selected.index === index
+      && (!side || state.selected.side === side);
+  }
+
+  function getNormPointFromEvent(event) {
+    const rect = elements.regionCanvas.getBoundingClientRect();
+    return {
+      xNorm: roundNorm((event.clientX - rect.left) / Math.max(1, rect.width)),
+      yNorm: roundNorm((event.clientY - rect.top) / Math.max(1, rect.height)),
+    };
+  }
+
+  function placeFromEvent(event) {
+    const region = currentRegion();
+    if (!region) return;
+    const point = getNormPointFromEvent(event);
+    if (state.tool === "city") addCity(region, point);
+    if (state.tool === "stronghold") addStronghold(region, point);
+    if (state.tool === "edge") addEdgeConnection(region, point);
+  }
+
+  function addRegion() {
+    const occupied = new Set(state.regions.map(region => `${region.gridX},${region.gridY}`));
+    let gridX = 0;
+    let gridY = 0;
+    while (occupied.has(`${gridX},${gridY}`)) gridX += 1;
+    const index = state.regions.length + 1;
+    const id = uniqueId(state.regions, `region_${index}`);
+    const region = normalizeRegion({
+      id,
+      name: titleFromId(id),
+      type: "starter",
+      gridX,
+      gridY,
+      width: state.layout.globalSettings.defaultMapWidth,
+      height: state.layout.globalSettings.defaultMapHeight,
+      imagePath: "",
+      cityCapacity: 50,
+      cities: [],
+      strongholds: [],
+      edgeConnections: {},
+    }, index);
+    state.regions.push(region);
+    state.activeRegionId = region.id;
+    state.selected = { kind: "region", regionId: region.id };
+    markDirty(`Added region ${region.name}.`);
+    render();
+  }
+
+  function addCity(region, point) {
+    const city = normalizeCity({
+      id: uniqueId(region.cities, `${region.id}_city_${String(region.cities.length + 1).padStart(3, "0")}`),
+      name: `City ${region.cities.length + 1}`,
+      xNorm: point.xNorm,
+      yNorm: point.yNorm,
+      level: 1,
+      owner: "neutral",
+      startType: "neutral",
+      troops: 10,
+    }, region.cities.length, region);
+    region.cities.push(city);
+    state.selected = { kind: "city", regionId: region.id, index: region.cities.length - 1 };
+    markDirty(`Added city at ${city.xNorm}, ${city.yNorm}.`);
+    render();
+  }
+
+  function addStronghold(region, point) {
+    const requestedType = elements.strongholdTypeSelect.value || "gold_stronghold";
+    const strongholdType = requestedType === "crown_citadel" || region.type === "crownlands_main"
+      ? requestedType
+      : requestedType;
+    const defaults = STRONGHOLD_DEFAULTS[strongholdType] || STRONGHOLD_DEFAULTS.gold_stronghold;
+    const stronghold = normalizeStronghold({
+      id: uniqueId(region.strongholds, `${region.id}_${strongholdType}`),
+      name: defaults.name,
+      xNorm: point.xNorm,
+      yNorm: point.yNorm,
+      strongholdType,
+      bonusType: defaults.bonusType,
+      bonusAmount: defaults.bonusAmount,
+      startingOwner: "neutral",
+      level: defaults.level,
+      troops: defaults.troops,
+      artSrc: defaults.artSrc,
+      size: defaults.size,
+    }, region.strongholds.length, region);
+    region.strongholds.push(stronghold);
+    state.selected = { kind: "stronghold", regionId: region.id, index: region.strongholds.length - 1 };
+    markDirty(`Added ${stronghold.name}.`);
+    render();
+  }
+
+  function addEdgeConnection(region, point) {
+    const distances = {
+      north: point.yNorm,
+      south: 1 - point.yNorm,
+      west: point.xNorm,
+      east: 1 - point.xNorm,
+    };
+    const side = Object.entries(distances).sort((a, b) => a[1] - b[1])[0][0];
+    const along = side === "north" || side === "south" ? point.xNorm : point.yNorm;
+    const neighbor = getNeighbor(region, side);
+    const zone = {
+      id: uniqueId(region.edgeConnections[side], `${side}_${elements.edgeTypeSelect.value || "road"}`),
+      side,
+      start: roundNorm(along - 0.08),
+      end: roundNorm(along + 0.08),
+      type: elements.edgeTypeSelect.value || "road",
+      connectsToRegionId: neighbor?.id || "",
+      intentionalOuter: !neighbor,
+      notes: neighbor ? `Connects to ${neighbor.name}` : "Outer wilderness edge",
+    };
+    region.edgeConnections[side].push(zone);
+    state.selected = { kind: "edge", regionId: region.id, side, index: region.edgeConnections[side].length - 1 };
+    markDirty(`Added ${side} edge connection.`);
+    render();
+  }
+
+  function uniqueId(collection, baseId) {
+    const used = new Set(collection.map(item => item.id));
+    let candidate = slugify(baseId, "item");
+    if (!used.has(candidate)) return candidate;
+    let index = 2;
+    while (used.has(`${candidate}_${index}`)) index += 1;
+    return `${candidate}_${index}`;
+  }
+
+  function deleteSelected() {
+    if (!state.selected) return;
+    const region = getRegion(state.selected.regionId);
+    if (!region) return;
+    if (state.selected.kind === "region") {
+      state.regions = state.regions.filter(item => item.id !== region.id);
+      state.activeRegionId = state.regions[0]?.id || "";
+    } else if (state.selected.kind === "city") {
+      region.cities.splice(state.selected.index, 1);
+    } else if (state.selected.kind === "stronghold") {
+      region.strongholds.splice(state.selected.index, 1);
+    } else if (state.selected.kind === "edge") {
+      region.edgeConnections[state.selected.side].splice(state.selected.index, 1);
+    }
+    state.selected = null;
+    markDirty("Deleted selected item.");
+    render();
+  }
+
+  function renderInspector() {
+    const item = getSelectedItem();
+    if (!item) {
+      elements.selectionTitle.textContent = "None";
+      elements.selectionForm.className = "selection-form empty";
+      elements.selectionForm.textContent = "Select a region, city, stronghold, or edge connection.";
+      renderValidationList();
+      return;
+    }
+    elements.selectionForm.className = "selection-form";
+    if (state.selected.kind === "region") renderRegionForm(item);
+    if (state.selected.kind === "city") renderCityForm(item, getRegion(state.selected.regionId));
+    if (state.selected.kind === "stronghold") renderStrongholdForm(item, getRegion(state.selected.regionId));
+    if (state.selected.kind === "edge") renderEdgeForm(item, getRegion(state.selected.regionId));
+    renderValidationList();
+  }
+
+  function optionList(values, selected) {
+    return values.map(value => `<option value="${escapeHtml(value)}" ${value === selected ? "selected" : ""}>${escapeHtml(titleFromId(value))}</option>`).join("");
+  }
+
+  function renderRegionForm(region) {
+    elements.selectionTitle.textContent = region.name;
+    elements.selectionForm.innerHTML = `
+      <div class="form-grid">
+        <label class="wide"><span>Region ID</span><input data-field="id" data-commit="change" value="${escapeHtml(region.id)}" /></label>
+        <label class="wide"><span>Name</span><input data-field="name" value="${escapeHtml(region.name)}" /></label>
+        <label><span>Type</span><select data-field="type">${optionList(REGION_TYPES, region.type)}</select></label>
+        <label><span>City Capacity</span><input data-field="cityCapacity" type="number" min="0" value="${region.cityCapacity}" /></label>
+        <label><span>Grid X</span><input data-field="gridX" type="number" value="${region.gridX}" /></label>
+        <label><span>Grid Y</span><input data-field="gridY" type="number" value="${region.gridY}" /></label>
+        <label><span>Width</span><input data-field="width" type="number" min="256" value="${region.width}" /></label>
+        <label><span>Height</span><input data-field="height" type="number" min="256" value="${region.height}" /></label>
+        <label class="wide"><span>Map Image Path</span><input data-field="imagePath" value="${escapeHtml(region.imagePath)}" /></label>
+        <label class="wide"><span>Notes</span><textarea data-field="notes">${escapeHtml(region.notes)}</textarea></label>
+      </div>
+    `;
+  }
+
+  function renderCityForm(city, region) {
+    const px = Math.round(city.xNorm * region.width);
+    const py = Math.round(city.yNorm * region.height);
+    elements.selectionTitle.textContent = city.name;
+    elements.selectionForm.innerHTML = `
+      <div class="form-grid">
+        <label class="wide"><span>City ID</span><input data-field="id" value="${escapeHtml(city.id)}" /></label>
+        <label class="wide"><span>Name</span><input data-field="name" value="${escapeHtml(city.name)}" /></label>
+        <label><span>Region ID</span><input value="${escapeHtml(region.id)}" readonly /></label>
+        <label><span>Level</span><input data-field="level" type="number" min="1" max="100" value="${city.level}" /></label>
+        <label><span>xNorm</span><input data-field="xNorm" type="number" min="0" max="1" step="0.001" value="${city.xNorm}" /></label>
+        <label><span>yNorm</span><input data-field="yNorm" type="number" min="0" max="1" step="0.001" value="${city.yNorm}" /></label>
+        <label><span>Pixel X</span><input value="${px}" readonly /></label>
+        <label><span>Pixel Y</span><input value="${py}" readonly /></label>
+        <label><span>Owner</span><input data-field="owner" value="${escapeHtml(city.owner)}" /></label>
+        <label><span>Start Type</span><input data-field="startType" value="${escapeHtml(city.startType)}" /></label>
+        <label class="wide"><span>Starting Troops</span><input data-field="troops" type="number" min="0" value="${city.troops}" /></label>
+      </div>
+    `;
+  }
+
+  function renderStrongholdForm(stronghold, region) {
+    const px = Math.round(stronghold.xNorm * region.width);
+    const py = Math.round(stronghold.yNorm * region.height);
+    elements.selectionTitle.textContent = stronghold.name;
+    elements.selectionForm.innerHTML = `
+      <div class="form-grid">
+        <label class="wide"><span>Stronghold ID</span><input data-field="id" value="${escapeHtml(stronghold.id)}" /></label>
+        <label class="wide"><span>Name</span><input data-field="name" value="${escapeHtml(stronghold.name)}" /></label>
+        <label class="wide"><span>Stronghold Type</span><select data-field="strongholdType">${optionList(STRONGHOLD_TYPES, stronghold.strongholdType)}</select></label>
+        <label><span>Bonus Type</span><input data-field="bonusType" value="${escapeHtml(stronghold.bonusType)}" /></label>
+        <label><span>Bonus Amount</span><input data-field="bonusAmount" type="number" min="0" value="${stronghold.bonusAmount}" /></label>
+        <label><span>Level</span><input data-field="level" type="number" min="1" max="100" value="${stronghold.level}" /></label>
+        <label><span>Troops</span><input data-field="troops" type="number" min="0" value="${stronghold.troops}" /></label>
+        <label><span>xNorm</span><input data-field="xNorm" type="number" min="0" max="1" step="0.001" value="${stronghold.xNorm}" /></label>
+        <label><span>yNorm</span><input data-field="yNorm" type="number" min="0" max="1" step="0.001" value="${stronghold.yNorm}" /></label>
+        <label><span>Pixel X</span><input value="${px}" readonly /></label>
+        <label><span>Pixel Y</span><input value="${py}" readonly /></label>
+        <label><span>Starting Owner</span><input data-field="startingOwner" value="${escapeHtml(stronghold.startingOwner)}" /></label>
+        <label><span>Visual Size</span><input data-field="size" type="number" min="80" value="${stronghold.size}" /></label>
+        <label class="wide"><span>Art Path</span><input data-field="artSrc" value="${escapeHtml(stronghold.artSrc)}" /></label>
+        <label class="wide"><span>Notes</span><textarea data-field="notes">${escapeHtml(stronghold.notes)}</textarea></label>
+      </div>
+    `;
+  }
+
+  function renderEdgeForm(edge, region) {
+    const neighbor = getNeighbor(region, edge.side);
+    elements.selectionTitle.textContent = `${titleFromId(edge.side)} ${titleFromId(edge.type)}`;
+    elements.selectionForm.innerHTML = `
+      <div class="form-grid">
+        <label class="wide"><span>Connection ID</span><input data-field="id" value="${escapeHtml(edge.id)}" /></label>
+        <label><span>Side</span><select data-field="side">${optionList(SIDES, edge.side)}</select></label>
+        <label><span>Type</span><select data-field="type">${optionList(EDGE_TYPES, edge.type)}</select></label>
+        <label><span>Start</span><input data-field="start" type="number" min="0" max="1" step="0.001" value="${edge.start}" /></label>
+        <label><span>End</span><input data-field="end" type="number" min="0" max="1" step="0.001" value="${edge.end}" /></label>
+        <label class="wide"><span>Connects To Region ID</span><input data-field="connectsToRegionId" value="${escapeHtml(edge.connectsToRegionId || neighbor?.id || "")}" /></label>
+        <label class="wide check-row"><input data-field="intentionalOuter" type="checkbox" ${edge.intentionalOuter ? "checked" : ""} /><span>Intentional outer fog / wilderness edge</span></label>
+        <label class="wide"><span>Notes</span><textarea data-field="notes">${escapeHtml(edge.notes)}</textarea></label>
+      </div>
+    `;
+  }
+
+  function renderValidationList() {
+    const errors = state.validation.filter(item => item.level === "error").length;
+    const warnings = state.validation.filter(item => item.level === "warning").length;
+    if (!state.validation.length) {
+      elements.validationSummary.textContent = "Not checked";
+      elements.validationList.textContent = "Press Validate World when you want a full check.";
+      return;
+    }
+    elements.validationSummary.textContent = errors ? `${errors} errors` : warnings ? `${warnings} warnings` : "Clean";
+    elements.validationList.innerHTML = state.validation
+      .map(item => `<div class="validation-item ${item.level === "error" ? "error" : item.level === "ok" ? "ok" : ""}">${escapeHtml(item.text)}</div>`)
+      .join("");
+  }
+
+  function handleWorldFieldInput(event) {
+    const target = event.target;
+    if (target === elements.worldIdInput) state.layout.worldId = slugify(target.value, "world_01");
+    if (target === elements.worldNameInput) state.layout.worldName = target.value;
+    markDirty();
+    renderCounts();
+  }
+
+  function handleSelectionInput(event) {
+    const target = event.target;
+    const field = target.dataset.field;
+    if (!field || !state.selected) return;
+    const item = getSelectedItem();
+    const region = getRegion(state.selected.regionId);
+    if (!item || !region) return;
+    const value = target.type === "checkbox" ? target.checked : target.value;
+    const shouldDefer = target.dataset.commit === "change" && event.type !== "change";
+    updateSelectedField(item, field, value, { commit: !shouldDefer });
+    markDirty();
+    renderWorkspace();
+    renderCounts();
+  }
+
+  function handleSelectionChange(event) {
+    const target = event.target;
+    const field = target.dataset.field;
+    if (!field || !state.selected) return;
+    const item = getSelectedItem();
+    if (!item) return;
+    updateSelectedField(item, field, target.type === "checkbox" ? target.checked : target.value, { commit: true });
+    markDirty();
+    render();
+  }
+
+  function updateSelectedField(item, field, value, options = {}) {
+    if (options.commit === false) return;
+    if (state.selected.kind === "region") {
+      updateRegionField(item, field, value);
+      return;
+    }
+    if (state.selected.kind === "edge" && field === "side") {
+      moveEdgeToSide(value);
+      return;
+    }
+    if (["xNorm", "yNorm", "start", "end"].includes(field)) item[field] = roundNorm(value);
+    else if (["level", "troops", "bonusAmount", "size"].includes(field)) item[field] = Math.max(0, Math.floor(Number(value) || 0));
+    else if (field === "strongholdType") applyStrongholdType(item, value);
+    else if (field === "intentionalOuter") item[field] = Boolean(value);
+    else item[field] = String(value);
+    if (state.selected.kind === "city") item.regionId = state.selected.regionId;
+    if (state.selected.kind === "stronghold") item.regionId = state.selected.regionId;
+    if (state.selected.kind === "edge") {
+      item.side = state.selected.side;
+      if (item.start > item.end) [item.start, item.end] = [item.end, item.start];
+    }
+  }
+
+  function updateRegionField(region, field, value) {
+    if (field === "id") {
+      const nextId = slugify(value, region.id);
+      if (!nextId || (nextId !== region.id && getRegion(nextId))) {
+        setStatus("Region ID must be unique.");
+        return;
+      }
+      renameRegion(region, nextId);
+      return;
+    }
+    if (["gridX", "gridY", "cityCapacity", "width", "height"].includes(field)) {
+      region[field] = Math.max(field === "cityCapacity" ? 0 : 1, Math.floor(Number(value) || 0));
+    } else {
+      region[field] = String(value);
+    }
+    if (field === "type" && region.type === "crownlands_main" && region.cityCapacity < 100) region.cityCapacity = 100;
+  }
+
+  function renameRegion(region, nextId) {
+    const oldId = region.id;
+    region.id = nextId;
+    region.regionPath = `assets/worlds/world_01/regions/${nextId}.json`;
+    region.cities.forEach(city => { city.regionId = nextId; });
+    region.strongholds.forEach(stronghold => { stronghold.regionId = nextId; });
+    state.regions.forEach(other => {
+      SIDES.forEach(side => {
+        other.edgeConnections[side].forEach(zone => {
+          if (zone.connectsToRegionId === oldId) zone.connectsToRegionId = nextId;
+        });
+      });
+    });
+    state.activeRegionId = nextId;
+    if (state.selected) state.selected.regionId = nextId;
+  }
+
+  function applyStrongholdType(stronghold, type) {
+    const nextType = STRONGHOLD_TYPES.includes(type) ? type : "gold_stronghold";
+    const defaults = STRONGHOLD_DEFAULTS[nextType] || STRONGHOLD_DEFAULTS.gold_stronghold;
+    stronghold.strongholdType = nextType;
+    stronghold.name = defaults.name;
+    stronghold.bonusType = defaults.bonusType;
+    stronghold.bonusAmount = defaults.bonusAmount;
+    stronghold.level = defaults.level;
+    stronghold.troops = defaults.troops;
+    stronghold.artSrc = defaults.artSrc;
+    stronghold.size = defaults.size;
+  }
+
+  function moveEdgeToSide(nextSide) {
+    const side = SIDES.includes(nextSide) ? nextSide : state.selected.side;
+    if (side === state.selected.side) return;
+    const region = getRegion(state.selected.regionId);
+    const edge = region.edgeConnections[state.selected.side][state.selected.index];
+    region.edgeConnections[state.selected.side].splice(state.selected.index, 1);
+    edge.side = side;
+    region.edgeConnections[side].push(edge);
+    state.selected.side = side;
+    state.selected.index = region.edgeConnections[side].length - 1;
+  }
+
+  function validateWorld() {
+    const results = [];
+    const regionIds = new Map();
+    const gridCells = new Map();
+    const cityIds = new Map();
+    const strongholdIds = new Map();
+
+    state.regions.forEach(region => {
+      addCheck(results, region.id, "error", `Region has an ID: ${region.name}`);
+      if (regionIds.has(region.id)) results.push({ level: "error", text: `Duplicate region ID: ${region.id}` });
+      regionIds.set(region.id, region);
+      if (!Number.isFinite(Number(region.gridX)) || !Number.isFinite(Number(region.gridY))) results.push({ level: "error", text: `${region.name} needs gridX/gridY.` });
+      const cellKey = `${region.gridX},${region.gridY}`;
+      if (gridCells.has(cellKey)) results.push({ level: "error", text: `${region.name} overlaps ${gridCells.get(cellKey).name} at grid ${cellKey}.` });
+      gridCells.set(cellKey, region);
+      if (!region.imagePath) results.push({ level: "error", text: `${region.name} needs a map image path.` });
+      if (region.cities.length > region.cityCapacity) results.push({ level: "warning", text: `${region.name} has ${region.cities.length} cities over capacity ${region.cityCapacity}.` });
+      if (region.type === "crownlands_main" && region.cityCapacity < 100) results.push({ level: "warning", text: `${region.name} is Crownlands main and should allow 100 cities.` });
+      if (region.type !== "crownlands_main" && (region.cityCapacity < 50 || region.cityCapacity > 60)) results.push({ level: "warning", text: `${region.name} standard capacity should be around 50-60.` });
+
+      region.cities.forEach(city => {
+        if (cityIds.has(city.id)) results.push({ level: "error", text: `Duplicate city ID: ${city.id}` });
+        cityIds.set(city.id, city);
+        if (!isNormInside(city.xNorm, city.yNorm)) results.push({ level: "error", text: `${city.name} is outside map bounds.` });
+      });
+      checkCitySpacing(results, region);
+
+      region.strongholds.forEach(stronghold => {
+        if (strongholdIds.has(stronghold.id)) results.push({ level: "error", text: `Duplicate stronghold ID: ${stronghold.id}` });
+        strongholdIds.set(stronghold.id, stronghold);
+        if (!isNormInside(stronghold.xNorm, stronghold.yNorm)) results.push({ level: "error", text: `${stronghold.name} is outside map bounds.` });
+        if (stronghold.strongholdType === "crown_citadel" && region.type !== "crownlands_main") {
+          results.push({ level: "warning", text: `${stronghold.name} is a Crown Citadel outside a crownlands_main region.` });
+        }
+      });
+    });
+
+    state.regions.forEach(region => {
+      SIDES.forEach(side => validateEdgeSide(results, region, side));
+      ["east", "south"].forEach(side => {
+        const neighbor = getNeighbor(region, side);
+        if (!neighbor) return;
+        if (!hasMatchingConnection(region, neighbor, side)) {
+          results.push({ level: "warning", text: `${region.name} ${side} edge should match ${neighbor.name} ${OPPOSITE_SIDE[side]} edge.` });
+        }
+      });
+    });
+
+    if (!results.some(item => item.level === "error" || item.level === "warning")) {
+      results.push({ level: "ok", text: "World validation passed." });
+    }
+    state.validation = results;
+    renderValidationList();
+    setStatus("World validation complete.");
+  }
+
+  function addCheck(results, condition, level, text) {
+    if (!condition) results.push({ level, text });
+  }
+
+  function isNormInside(xNorm, yNorm) {
+    return Number.isFinite(Number(xNorm)) && Number.isFinite(Number(yNorm)) && xNorm >= 0 && xNorm <= 1 && yNorm >= 0 && yNorm <= 1;
+  }
+
+  function checkCitySpacing(results, region) {
+    const minSpacing = Number(state.layout.globalSettings.minimumCitySpacing) || 0.045;
+    for (let i = 0; i < region.cities.length; i += 1) {
+      for (let j = i + 1; j < region.cities.length; j += 1) {
+        const a = region.cities[i];
+        const b = region.cities[j];
+        const distance = Math.hypot(a.xNorm - b.xNorm, a.yNorm - b.yNorm);
+        if (distance < minSpacing) {
+          results.push({ level: "warning", text: `${a.name} and ${b.name} are closer than minimum spacing in ${region.name}.` });
+        }
+      }
+    }
+  }
+
+  function validateEdgeSide(results, region, side) {
+    const neighbor = getNeighbor(region, side);
+    const zones = region.edgeConnections[side] || [];
+    zones.forEach(zone => {
+      if (zone.start < 0 || zone.end > 1 || zone.start >= zone.end) results.push({ level: "error", text: `${region.name} ${side} connection ${zone.id} has invalid start/end.` });
+      if (!neighbor && !zone.intentionalOuter) results.push({ level: "warning", text: `${region.name} ${side} connection leads to empty grid. Mark as outer wilderness if intentional.` });
+      if (neighbor && zone.connectsToRegionId && zone.connectsToRegionId !== neighbor.id) {
+        results.push({ level: "warning", text: `${region.name} ${side} connection points to ${zone.connectsToRegionId}, but adjacent region is ${neighbor.id}.` });
+      }
+    });
+  }
+
+  function exportJson() {
+    const payload = buildSavePayload();
+    downloadJson(`${state.layout.worldId || "world"}-bundle.json`, payload);
+    setStatus("Exported JSON bundle.");
+  }
+
+  function downloadJson(filename, value) {
+    const blob = new Blob([`${JSON.stringify(value, null, 2)}\n`], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    link.click();
+    URL.revokeObjectURL(url);
+  }
+
+  async function importJsonFile(file) {
+    if (!file) return;
+    const text = await file.text();
+    const data = normalizeBundle(JSON.parse(text));
+    state.layout = data.layout;
+    state.regions = data.regions;
+    state.activeRegionId = state.regions[0]?.id || "";
+    state.selected = null;
+    state.validation = [];
+    markDirty(`Imported ${file.name}.`);
+    render();
+  }
+
+  function handleMarkerDrag(event) {
+    if (!state.draggingMarker) return;
+    const region = getRegion(state.draggingMarker.regionId);
+    const collection = state.draggingMarker.kind === "city" ? region?.cities : region?.strongholds;
+    const item = collection?.[state.draggingMarker.index];
+    if (!item) return;
+    const point = getNormPointFromEvent(event);
+    item.xNorm = point.xNorm;
+    item.yNorm = point.yNorm;
+    markDirty();
+    renderRegionEditor();
+  }
+
+  function stopMarkerDrag() {
+    if (!state.draggingMarker) return;
+    state.draggingMarker = null;
+    renderInspector();
+  }
+
+  function startRegionPan(event) {
+    if (state.tool !== "select" || event.button !== 0 || event.target.closest(".map-marker, .edge-zone")) return;
+    state.panning = {
+      pointerId: event.pointerId,
+      x: event.clientX,
+      y: event.clientY,
+      left: elements.regionViewport.scrollLeft,
+      top: elements.regionViewport.scrollTop,
+      moved: false,
+    };
+    elements.regionViewport.classList.add("panning");
+    elements.regionViewport.setPointerCapture?.(event.pointerId);
+  }
+
+  function handleRegionPan(event) {
+    if (!state.panning || state.panning.pointerId !== event.pointerId) return;
+    const dx = event.clientX - state.panning.x;
+    const dy = event.clientY - state.panning.y;
+    if (Math.hypot(dx, dy) > 6) state.panning.moved = true;
+    elements.regionViewport.scrollLeft = state.panning.left - dx;
+    elements.regionViewport.scrollTop = state.panning.top - dy;
+    event.preventDefault();
+  }
+
+  function stopRegionPan(event) {
+    if (!state.panning || state.panning.pointerId !== event.pointerId) return;
+    state.skipNextCanvasClick = state.panning.moved;
+    state.panning = null;
+    elements.regionViewport.classList.remove("panning");
+    window.setTimeout(() => { state.skipNextCanvasClick = false; }, 140);
+  }
+
+  function zoomRegion(delta) {
+    state.zoom = clamp(Math.round((state.zoom + delta) * 100) / 100, 0.25, 1.5);
+    render();
+  }
+
+  function bindEvents() {
+    elements.worldModeBtn.addEventListener("click", () => setEditorMode("world"));
+    elements.regionModeBtn.addEventListener("click", () => setEditorMode("region"));
+    elements.addRegionBtn.addEventListener("click", addRegion);
+    elements.editRegionBtn.addEventListener("click", () => setEditorMode("region"));
+    elements.addCityBtn.addEventListener("click", () => setTool(state.tool === "city" ? "select" : "city"));
+    elements.addStrongholdBtn.addEventListener("click", () => setTool(state.tool === "stronghold" ? "select" : "stronghold"));
+    elements.addEdgeBtn.addEventListener("click", () => setTool(state.tool === "edge" ? "select" : "edge"));
+    elements.deleteSelectedBtn.addEventListener("click", deleteSelected);
+    elements.validateBtn.addEventListener("click", validateWorld);
+    elements.exportBtn.addEventListener("click", exportJson);
+    elements.importBtn.addEventListener("click", () => elements.importFileInput.click());
+    elements.saveBtn.addEventListener("click", () => saveWorldData().catch(error => setStatus(error.message || String(error))));
+    elements.importFileInput.addEventListener("change", event => {
+      importJsonFile(event.target.files?.[0]).catch(error => setStatus(error.message || String(error)));
+      event.target.value = "";
+    });
+    elements.toggleGridBtn.addEventListener("click", () => toggleView("grid"));
+    elements.toggleCitiesBtn.addEventListener("click", () => toggleView("cities"));
+    elements.toggleStrongholdsBtn.addEventListener("click", () => toggleView("strongholds"));
+    elements.toggleConnectionsBtn.addEventListener("click", () => toggleView("connections"));
+    elements.zoomOutBtn.addEventListener("click", () => zoomRegion(-0.1));
+    elements.zoomInBtn.addEventListener("click", () => zoomRegion(0.1));
+    elements.worldIdInput.addEventListener("input", handleWorldFieldInput);
+    elements.worldNameInput.addEventListener("input", handleWorldFieldInput);
+    elements.selectionForm.addEventListener("input", handleSelectionInput);
+    elements.selectionForm.addEventListener("change", handleSelectionChange);
+    elements.regionCanvas.addEventListener("click", event => {
+      if (event.target.closest(".map-marker, .edge-zone") || state.skipNextCanvasClick || state.tool === "select") return;
+      placeFromEvent(event);
+    });
+    elements.regionViewport.addEventListener("pointerdown", startRegionPan);
+    elements.regionViewport.addEventListener("pointermove", handleRegionPan);
+    elements.regionViewport.addEventListener("pointerup", stopRegionPan);
+    elements.regionViewport.addEventListener("pointercancel", stopRegionPan);
+    window.addEventListener("pointermove", handleMarkerDrag);
+    window.addEventListener("pointerup", stopMarkerDrag);
+    window.addEventListener("keydown", handleKeydown);
+  }
+
+  function toggleView(key) {
+    state.toggles[key] = !state.toggles[key];
+    render();
+  }
+
+  function handleKeydown(event) {
+    const tag = event.target?.tagName;
+    if (["INPUT", "TEXTAREA", "SELECT"].includes(tag)) return;
+    if (event.key === "Delete") {
+      deleteSelected();
+      event.preventDefault();
+    } else if (event.key === "Escape") {
+      state.selected = null;
+      state.tool = "select";
+      render();
+    } else if (event.key.toLowerCase() === "c") {
+      setTool("city");
+    } else if (event.key.toLowerCase() === "s") {
+      setTool("stronghold");
+    } else if (event.key.toLowerCase() === "e") {
+      setTool("edge");
+    } else if (event.key.toLowerCase() === "g") {
+      toggleView("grid");
+    }
+  }
+
   async function init() {
     bindEvents();
-    await loadMaps();
+    await loadWorldData();
     render();
   }
 
@@ -1248,4 +1293,4 @@
     console.error(error);
     setStatus(error.message || String(error));
   });
-}());
+})();

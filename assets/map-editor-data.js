@@ -1,2178 +1,19 @@
 window.CROWNLANDS_MAP_EDITOR_DATA = {
-  "version": 202606301632,
-  "updatedAt": "2026-06-30T16:32:03.383Z",
+  "version": 202607021512,
+  "updatedAt": "2026-07-02T15:12:42.916Z",
+  "worldId": "world_01",
+  "worldName": "Crownlands World 01",
   "maps": [
     {
-      "id": "west",
-      "label": "Westmark",
-      "imageSrc": "assets/west-island.png",
-      "thumbnailSrc": "assets/thumbnails/west-island-thumb.jpg",
-      "imageWidth": 1024,
-      "imageHeight": 1536,
-      "region": {
-        "id": "west",
-        "label": "Westmark",
-        "x": 1500,
-        "y": 3800,
-        "rx": 1120,
-        "ry": 1330,
-        "cityRx": 900,
-        "cityRy": 1090,
-        "rot": 0.07,
-        "palette": "woodland"
-      },
-      "landPolygon": [
-        {
-          "x": 390,
-          "y": 40
-        },
-        {
-          "x": 520,
-          "y": 42
-        },
-        {
-          "x": 635,
-          "y": 78
-        },
-        {
-          "x": 720,
-          "y": 155
-        },
-        {
-          "x": 785,
-          "y": 240
-        },
-        {
-          "x": 890,
-          "y": 305
-        },
-        {
-          "x": 940,
-          "y": 430
-        },
-        {
-          "x": 905,
-          "y": 575
-        },
-        {
-          "x": 950,
-          "y": 725
-        },
-        {
-          "x": 900,
-          "y": 890
-        },
-        {
-          "x": 945,
-          "y": 1035
-        },
-        {
-          "x": 895,
-          "y": 1190
-        },
-        {
-          "x": 790,
-          "y": 1325
-        },
-        {
-          "x": 690,
-          "y": 1460
-        },
-        {
-          "x": 560,
-          "y": 1515
-        },
-        {
-          "x": 420,
-          "y": 1480
-        },
-        {
-          "x": 300,
-          "y": 1375
-        },
-        {
-          "x": 210,
-          "y": 1235
-        },
-        {
-          "x": 145,
-          "y": 1080
-        },
-        {
-          "x": 95,
-          "y": 910
-        },
-        {
-          "x": 112,
-          "y": 735
-        },
-        {
-          "x": 90,
-          "y": 590
-        },
-        {
-          "x": 125,
-          "y": 430
-        },
-        {
-          "x": 190,
-          "y": 280
-        },
-        {
-          "x": 285,
-          "y": 135
-        }
-      ],
-      "cities": [
-        {
-          "id": "west_001",
-          "name": "Westhaven",
-          "x": 520,
-          "y": 250,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "west_002",
-          "name": "Oakhaven",
-          "x": 601,
-          "y": 285,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "west_003",
-          "name": "Thornhaven",
-          "x": 536,
-          "y": 331,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "west_004",
-          "name": "Foxhaven",
-          "x": 453,
-          "y": 318,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "west_005",
-          "name": "Ashhaven",
-          "x": 519,
-          "y": 397,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "west_006",
-          "name": "Briarhaven",
-          "x": 617,
-          "y": 355,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "west_007",
-          "name": "Crowhaven",
-          "x": 679,
-          "y": 395,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "west_008",
-          "name": "Duskyhaven",
-          "x": 470,
-          "y": 450,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "west_009",
-          "name": "Wildhaven",
-          "x": 570,
-          "y": 450,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "west_010",
-          "name": "Woodhaven",
-          "x": 670,
-          "y": 450,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "west_011",
-          "name": "Harthaven",
-          "x": 749,
-          "y": 454,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "west_012",
-          "name": "Mosshaven",
-          "x": 452,
-          "y": 535,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "west_013",
-          "name": "Wolfhaven",
-          "x": 540,
-          "y": 528,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "west_014",
-          "name": "Amberhaven",
-          "x": 623,
-          "y": 574,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "west_015",
-          "name": "Blackhaven",
-          "x": 759,
-          "y": 529,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "west_016",
-          "name": "Copperhaven",
-          "x": 430,
-          "y": 630,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "west_017",
-          "name": "Shadehaven",
-          "x": 576,
-          "y": 657,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "west_018",
-          "name": "Glenhaven",
-          "x": 705,
-          "y": 616,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "west_019",
-          "name": "Fernhaven",
-          "x": 760,
-          "y": 670,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "west_020",
-          "name": "Oldhaven",
-          "x": 412,
-          "y": 839,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "west_021",
-          "name": "Westford",
-          "x": 625,
-          "y": 787,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "west_022",
-          "name": "Oakford",
-          "x": 693,
-          "y": 795,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "west_023",
-          "name": "Thornford",
-          "x": 768,
-          "y": 837,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "west_024",
-          "name": "Foxford",
-          "x": 480,
-          "y": 883,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "west_025",
-          "name": "Ashford",
-          "x": 558,
-          "y": 852,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "west_026",
-          "name": "Briarford",
-          "x": 611,
-          "y": 956,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "west_027",
-          "name": "Crowford",
-          "x": 770,
-          "y": 900,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "west_028",
-          "name": "Duskyford",
-          "x": 486,
-          "y": 1027,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "west_029",
-          "name": "Wildford",
-          "x": 574,
-          "y": 1048,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "west_030",
-          "name": "Woodford",
-          "x": 660,
-          "y": 1020,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "west_031",
-          "name": "Hartford",
-          "x": 760,
-          "y": 1020,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "west_032",
-          "name": "Mossford",
-          "x": 446,
-          "y": 1110,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "west_033",
-          "name": "Wolfford",
-          "x": 522,
-          "y": 1135,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "west_034",
-          "name": "Amberford",
-          "x": 645,
-          "y": 1085,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "west_035",
-          "name": "Blackford",
-          "x": 690,
-          "y": 1147,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "west_036",
-          "name": "Copperford",
-          "x": 429,
-          "y": 1206,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "west_037",
-          "name": "Shadeford",
-          "x": 578,
-          "y": 1202,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "west_038",
-          "name": "Glenford",
-          "x": 602,
-          "y": 1134,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "west_039",
-          "name": "Fernford",
-          "x": 498,
-          "y": 1254,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "west_040",
-          "name": "Oldford",
-          "x": 510,
-          "y": 600,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "west_041",
-          "name": "Westwick",
-          "x": 643,
-          "y": 682,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "west_042",
-          "name": "Oakwick",
-          "x": 710,
-          "y": 720,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "west_043",
-          "name": "Thornwick",
-          "x": 530,
-          "y": 930,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "west_044",
-          "name": "Foxwick",
-          "x": 630,
-          "y": 860,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "west_045",
-          "name": "Ashwick",
-          "x": 687,
-          "y": 904,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "west_046",
-          "name": "Briarwick",
-          "x": 390,
-          "y": 680,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "west_047",
-          "name": "Crowwick",
-          "x": 422,
-          "y": 936,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "west_048",
-          "name": "Duskywick",
-          "x": 409,
-          "y": 1007,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "west_049",
-          "name": "Wildwick",
-          "x": 810,
-          "y": 620,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "west_050",
-          "name": "Woodwick",
-          "x": 722,
-          "y": 962,
-          "level": 1,
-          "troops": 10
-        }
-      ],
-      "portals": [
-        {
-          "id": "west-center",
-          "label": "Center",
-          "targetRegionId": "center",
-          "targetPortalId": "",
-          "x": 831,
-          "y": 769,
-          "size": 120
-        }
-      ],
-      "objectives": [
-        {
-          "id": "west_gold_stronghold",
-          "name": "Gold Stronghold",
-          "type": "gold",
-          "bonus": "goldProduction",
-          "bonusPercent": 15,
-          "level": 50,
-          "troops": 50000000,
-          "artSrc": "assets/gold-stronghold.png",
-          "x": 514,
-          "y": 741,
-          "size": 300
-        }
-      ]
-    },
-    {
-      "id": "north",
-      "label": "Northreach",
-      "imageSrc": "assets/north-island.png",
-      "thumbnailSrc": "assets/thumbnails/north-island-thumb.jpg",
-      "imageWidth": 1448,
-      "imageHeight": 1086,
-      "region": {
-        "id": "north",
-        "label": "Northreach",
-        "x": 5000,
-        "y": 1150,
-        "rx": 1650,
-        "ry": 900,
-        "cityRx": 1370,
-        "cityRy": 700,
-        "rot": 0.04,
-        "palette": "pine"
-      },
-      "landPolygon": [
-        {
-          "x": 255,
-          "y": 82
-        },
-        {
-          "x": 405,
-          "y": 42
-        },
-        {
-          "x": 575,
-          "y": 48
-        },
-        {
-          "x": 725,
-          "y": 40
-        },
-        {
-          "x": 900,
-          "y": 58
-        },
-        {
-          "x": 1065,
-          "y": 92
-        },
-        {
-          "x": 1225,
-          "y": 145
-        },
-        {
-          "x": 1360,
-          "y": 260
-        },
-        {
-          "x": 1415,
-          "y": 430
-        },
-        {
-          "x": 1375,
-          "y": 610
-        },
-        {
-          "x": 1310,
-          "y": 770
-        },
-        {
-          "x": 1195,
-          "y": 885
-        },
-        {
-          "x": 1030,
-          "y": 970
-        },
-        {
-          "x": 835,
-          "y": 1025
-        },
-        {
-          "x": 620,
-          "y": 1015
-        },
-        {
-          "x": 420,
-          "y": 965
-        },
-        {
-          "x": 250,
-          "y": 880
-        },
-        {
-          "x": 125,
-          "y": 720
-        },
-        {
-          "x": 55,
-          "y": 545
-        },
-        {
-          "x": 75,
-          "y": 365
-        },
-        {
-          "x": 145,
-          "y": 220
-        }
-      ],
-      "cities": [
-        {
-          "id": "north_001",
-          "name": "Frosthaven",
-          "x": 350,
-          "y": 419,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "north_002",
-          "name": "Pinehaven",
-          "x": 520,
-          "y": 400,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "north_003",
-          "name": "Northhaven",
-          "x": 607,
-          "y": 382,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "north_004",
-          "name": "Snowhaven",
-          "x": 832,
-          "y": 434,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "north_005",
-          "name": "Whitehaven",
-          "x": 889,
-          "y": 408,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "north_006",
-          "name": "Greyhaven",
-          "x": 1000,
-          "y": 400,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "north_007",
-          "name": "Winterhaven",
-          "x": 281,
-          "y": 458,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "north_008",
-          "name": "Icehaven",
-          "x": 425,
-          "y": 419,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "north_009",
-          "name": "Wolfhaven",
-          "x": 565,
-          "y": 454,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "north_010",
-          "name": "Ravenhaven",
-          "x": 630,
-          "y": 460,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "north_011",
-          "name": "Coldhaven",
-          "x": 887,
-          "y": 488,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "north_012",
-          "name": "Stormhaven",
-          "x": 967,
-          "y": 462,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "north_013",
-          "name": "Hawkhaven",
-          "x": 1040,
-          "y": 440,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "north_014",
-          "name": "Stonehaven",
-          "x": 1120,
-          "y": 430,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "north_015",
-          "name": "Ashhaven",
-          "x": 323,
-          "y": 527,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "north_016",
-          "name": "Briarhaven",
-          "x": 420,
-          "y": 521,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "north_017",
-          "name": "Moonhaven",
-          "x": 560,
-          "y": 520,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "north_018",
-          "name": "Cloudhaven",
-          "x": 889,
-          "y": 575,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "north_019",
-          "name": "Cedarhaven",
-          "x": 960,
-          "y": 520,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "north_020",
-          "name": "Peakhaven",
-          "x": 1080,
-          "y": 520,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "north_021",
-          "name": "Frostford",
-          "x": 1140,
-          "y": 520,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "north_022",
-          "name": "Pineford",
-          "x": 285,
-          "y": 629,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "north_023",
-          "name": "Northford",
-          "x": 470,
-          "y": 664,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "north_024",
-          "name": "Snowford",
-          "x": 565,
-          "y": 656,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "north_025",
-          "name": "Whiteford",
-          "x": 840,
-          "y": 640,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "north_026",
-          "name": "Greyford",
-          "x": 954,
-          "y": 611,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "north_027",
-          "name": "Winterford",
-          "x": 1023,
-          "y": 576,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "north_028",
-          "name": "Iceford",
-          "x": 1101,
-          "y": 583,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "north_029",
-          "name": "Wolfford",
-          "x": 320,
-          "y": 731,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "north_030",
-          "name": "Ravenford",
-          "x": 418,
-          "y": 738,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "north_031",
-          "name": "Coldford",
-          "x": 580,
-          "y": 740,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "north_032",
-          "name": "Stormford",
-          "x": 700,
-          "y": 740,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "north_033",
-          "name": "Hawkford",
-          "x": 840,
-          "y": 723,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "north_034",
-          "name": "Stoneford",
-          "x": 913,
-          "y": 681,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "north_035",
-          "name": "Ashford",
-          "x": 1029,
-          "y": 670,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "north_036",
-          "name": "Briarford",
-          "x": 1095,
-          "y": 659,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "north_037",
-          "name": "Moonford",
-          "x": 382,
-          "y": 594,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "north_038",
-          "name": "Cloudford",
-          "x": 450,
-          "y": 600,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "north_039",
-          "name": "Cedarford",
-          "x": 685,
-          "y": 811,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "north_040",
-          "name": "Peakford",
-          "x": 847,
-          "y": 832,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "north_041",
-          "name": "Frostwick",
-          "x": 920,
-          "y": 810,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "north_042",
-          "name": "Pinewick",
-          "x": 950,
-          "y": 734,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "north_043",
-          "name": "Northwick",
-          "x": 502,
-          "y": 735,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "north_044",
-          "name": "Snowwick",
-          "x": 640,
-          "y": 680,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "north_045",
-          "name": "Whitewick",
-          "x": 750,
-          "y": 685,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "north_046",
-          "name": "Greywick",
-          "x": 685,
-          "y": 428,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "north_047",
-          "name": "Winterwick",
-          "x": 765,
-          "y": 413,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "north_048",
-          "name": "Icewick",
-          "x": 1020,
-          "y": 740,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "north_049",
-          "name": "Wolfwick",
-          "x": 477,
-          "y": 471,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "north_050",
-          "name": "Ravenwick",
-          "x": 774,
-          "y": 758,
-          "level": 1,
-          "troops": 10
-        }
-      ],
-      "portals": [
-        {
-          "id": "north-center",
-          "label": "Center",
-          "targetRegionId": "center",
-          "targetPortalId": "",
-          "x": 754,
-          "y": 884,
-          "size": 120
-        }
-      ],
-      "objectives": [
-        {
-          "id": "north_training_stronghold",
-          "name": "Training Stronghold",
-          "type": "training",
-          "bonus": "troopProduction",
-          "bonusPercent": 15,
-          "level": 50,
-          "troops": 50000000,
-          "artSrc": "assets/training-stronghold.png",
-          "x": 725,
-          "y": 552,
-          "size": 300
-        }
-      ]
-    },
-    {
-      "id": "east",
-      "label": "Eastwatch",
-      "imageSrc": "assets/east-island.png",
-      "thumbnailSrc": "assets/thumbnails/east-island-thumb.jpg",
-      "imageWidth": 1086,
-      "imageHeight": 1448,
-      "region": {
-        "id": "east",
-        "label": "Eastwatch",
-        "x": 8500,
-        "y": 3800,
-        "rx": 1120,
-        "ry": 1330,
-        "cityRx": 900,
-        "cityRy": 1090,
-        "rot": -0.07,
-        "palette": "golden"
-      },
-      "landPolygon": [
-        {
-          "x": 450,
-          "y": 42
-        },
-        {
-          "x": 620,
-          "y": 30
-        },
-        {
-          "x": 760,
-          "y": 90
-        },
-        {
-          "x": 870,
-          "y": 205
-        },
-        {
-          "x": 970,
-          "y": 360
-        },
-        {
-          "x": 1030,
-          "y": 560
-        },
-        {
-          "x": 990,
-          "y": 760
-        },
-        {
-          "x": 955,
-          "y": 940
-        },
-        {
-          "x": 880,
-          "y": 1135
-        },
-        {
-          "x": 760,
-          "y": 1300
-        },
-        {
-          "x": 620,
-          "y": 1410
-        },
-        {
-          "x": 460,
-          "y": 1420
-        },
-        {
-          "x": 320,
-          "y": 1325
-        },
-        {
-          "x": 225,
-          "y": 1160
-        },
-        {
-          "x": 150,
-          "y": 960
-        },
-        {
-          "x": 105,
-          "y": 760
-        },
-        {
-          "x": 85,
-          "y": 560
-        },
-        {
-          "x": 105,
-          "y": 380
-        },
-        {
-          "x": 170,
-          "y": 220
-        },
-        {
-          "x": 300,
-          "y": 100
-        }
-      ],
-      "cities": [
-        {
-          "id": "east_001",
-          "name": "Easthaven",
-          "x": 478,
-          "y": 257,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "east_002",
-          "name": "Sunhaven",
-          "x": 519,
-          "y": 178,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "east_003",
-          "name": "Goldhaven",
-          "x": 617,
-          "y": 179,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "east_004",
-          "name": "Dawnhaven",
-          "x": 363,
-          "y": 308,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "east_005",
-          "name": "Brighthaven",
-          "x": 451,
-          "y": 312,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "east_006",
-          "name": "Lionhaven",
-          "x": 534,
-          "y": 349,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "east_007",
-          "name": "Falconhaven",
-          "x": 670,
-          "y": 300,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "east_008",
-          "name": "Redhaven",
-          "x": 350,
-          "y": 380,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "east_009",
-          "name": "Rosehaven",
-          "x": 410,
-          "y": 380,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "east_010",
-          "name": "Clearhaven",
-          "x": 484,
-          "y": 415,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "east_011",
-          "name": "Windhaven",
-          "x": 600,
-          "y": 422,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "east_012",
-          "name": "Starhaven",
-          "x": 700,
-          "y": 410,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "east_013",
-          "name": "Lighthaven",
-          "x": 350,
-          "y": 500,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "east_014",
-          "name": "Pearlhaven",
-          "x": 408,
-          "y": 472,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "east_015",
-          "name": "Hawkhaven",
-          "x": 490,
-          "y": 490,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "east_016",
-          "name": "Bluehaven",
-          "x": 610,
-          "y": 500,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "east_017",
-          "name": "Kingshaven",
-          "x": 700,
-          "y": 520,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "east_018",
-          "name": "Queenshaven",
-          "x": 300,
-          "y": 585,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "east_019",
-          "name": "Seahaven",
-          "x": 399,
-          "y": 575,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "east_020",
-          "name": "Ivoryhaven",
-          "x": 680,
-          "y": 620,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "east_021",
-          "name": "Eastford",
-          "x": 730,
-          "y": 640,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "east_022",
-          "name": "Sunford",
-          "x": 410,
-          "y": 740,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "east_023",
-          "name": "Goldford",
-          "x": 494,
-          "y": 759,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "east_024",
-          "name": "Dawnford",
-          "x": 654,
-          "y": 710,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "east_025",
-          "name": "Brightford",
-          "x": 730,
-          "y": 720,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "east_026",
-          "name": "Lionford",
-          "x": 363,
-          "y": 844,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "east_027",
-          "name": "Falconford",
-          "x": 449,
-          "y": 827,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "east_028",
-          "name": "Redford",
-          "x": 540,
-          "y": 880,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "east_029",
-          "name": "Roseford",
-          "x": 612,
-          "y": 915,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "east_030",
-          "name": "Clearford",
-          "x": 667,
-          "y": 852,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "east_031",
-          "name": "Windford",
-          "x": 372,
-          "y": 914,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "east_032",
-          "name": "Starford",
-          "x": 448,
-          "y": 922,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "east_033",
-          "name": "Lightford",
-          "x": 518,
-          "y": 962,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "east_034",
-          "name": "Pearlford",
-          "x": 650,
-          "y": 980,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "east_035",
-          "name": "Hawkford",
-          "x": 710,
-          "y": 980,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "east_036",
-          "name": "Blueford",
-          "x": 425,
-          "y": 1049,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "east_037",
-          "name": "Kingsford",
-          "x": 485,
-          "y": 1035,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "east_038",
-          "name": "Queensford",
-          "x": 532,
-          "y": 1084,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "east_039",
-          "name": "Seaford",
-          "x": 275,
-          "y": 855,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "east_040",
-          "name": "Ivoryford",
-          "x": 535,
-          "y": 1211,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "east_041",
-          "name": "Eastwick",
-          "x": 509,
-          "y": 1150,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "east_042",
-          "name": "Sunwick",
-          "x": 673,
-          "y": 1265,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "east_043",
-          "name": "Goldwick",
-          "x": 582,
-          "y": 1155,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "east_044",
-          "name": "Dawnwick",
-          "x": 453,
-          "y": 1171,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "east_045",
-          "name": "Brightwick",
-          "x": 602,
-          "y": 1258,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "east_046",
-          "name": "Lionwick",
-          "x": 599,
-          "y": 1091,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "east_047",
-          "name": "Falconwick",
-          "x": 360,
-          "y": 690,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "east_048",
-          "name": "Redwick",
-          "x": 420,
-          "y": 660,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "east_049",
-          "name": "Rosewick",
-          "x": 593,
-          "y": 765,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "east_050",
-          "name": "Clearwick",
-          "x": 591,
-          "y": 828,
-          "level": 1,
-          "troops": 10
-        }
-      ],
-      "portals": [
-        {
-          "id": "east-center",
-          "label": "Center",
-          "targetRegionId": "center",
-          "targetPortalId": "",
-          "x": 269,
-          "y": 754,
-          "size": 120
-        }
-      ],
-      "objectives": [
-        {
-          "id": "east_speed_stronghold",
-          "name": "Speed Stronghold",
-          "type": "speed",
-          "bonus": "marchSpeed",
-          "bonusPercent": 15,
-          "level": 50,
-          "troops": 50000000,
-          "artSrc": "assets/speed-stronghold.png",
-          "x": 545,
-          "y": 620,
-          "size": 300
-        }
-      ]
-    },
-    {
-      "id": "south",
-      "label": "Southmere",
-      "imageSrc": "assets/south-island.png",
-      "thumbnailSrc": "assets/thumbnails/south-island-thumb.jpg",
-      "imageWidth": 1446,
-      "imageHeight": 1087,
-      "region": {
-        "id": "south",
-        "label": "Southmere",
-        "x": 5000,
-        "y": 6450,
-        "rx": 1650,
-        "ry": 900,
-        "cityRx": 1370,
-        "cityRy": 700,
-        "rot": -0.05,
-        "palette": "marsh"
-      },
-      "landPolygon": [
-        {
-          "x": 305,
-          "y": 72
-        },
-        {
-          "x": 460,
-          "y": 54
-        },
-        {
-          "x": 610,
-          "y": 66
-        },
-        {
-          "x": 755,
-          "y": 62
-        },
-        {
-          "x": 920,
-          "y": 76
-        },
-        {
-          "x": 1085,
-          "y": 98
-        },
-        {
-          "x": 1240,
-          "y": 145
-        },
-        {
-          "x": 1375,
-          "y": 260
-        },
-        {
-          "x": 1425,
-          "y": 430
-        },
-        {
-          "x": 1410,
-          "y": 620
-        },
-        {
-          "x": 1340,
-          "y": 790
-        },
-        {
-          "x": 1200,
-          "y": 925
-        },
-        {
-          "x": 1025,
-          "y": 1010
-        },
-        {
-          "x": 820,
-          "y": 1050
-        },
-        {
-          "x": 640,
-          "y": 1038
-        },
-        {
-          "x": 450,
-          "y": 1000
-        },
-        {
-          "x": 270,
-          "y": 910
-        },
-        {
-          "x": 135,
-          "y": 770
-        },
-        {
-          "x": 64,
-          "y": 605
-        },
-        {
-          "x": 66,
-          "y": 430
-        },
-        {
-          "x": 120,
-          "y": 285
-        },
-        {
-          "x": 205,
-          "y": 160
-        }
-      ],
-      "cities": [
-        {
-          "id": "south_001",
-          "name": "Southhaven",
-          "x": 466,
-          "y": 248,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "south_002",
-          "name": "Salthaven",
-          "x": 540,
-          "y": 230,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "south_003",
-          "name": "Sunhaven",
-          "x": 630,
-          "y": 245,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "south_004",
-          "name": "Marshhaven",
-          "x": 850,
-          "y": 230,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "south_005",
-          "name": "Reedhaven",
-          "x": 914,
-          "y": 648,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "south_006",
-          "name": "Pearlhaven",
-          "x": 948,
-          "y": 302,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "south_007",
-          "name": "Greenhaven",
-          "x": 383,
-          "y": 308,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "south_008",
-          "name": "Bayhaven",
-          "x": 480,
-          "y": 315,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "south_009",
-          "name": "Mosshaven",
-          "x": 600,
-          "y": 315,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "south_010",
-          "name": "Willowhaven",
-          "x": 694,
-          "y": 309,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "south_011",
-          "name": "Rosehaven",
-          "x": 781,
-          "y": 314,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "south_012",
-          "name": "Clearhaven",
-          "x": 869,
-          "y": 302,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "south_013",
-          "name": "Misthaven",
-          "x": 1020,
-          "y": 313,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "south_014",
-          "name": "Rainhaven",
-          "x": 405,
-          "y": 450,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "south_015",
-          "name": "Bloomhaven",
-          "x": 480,
-          "y": 400,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "south_016",
-          "name": "Hearthhaven",
-          "x": 600,
-          "y": 400,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "south_017",
-          "name": "Warmhaven",
-          "x": 682,
-          "y": 396,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "south_018",
-          "name": "Sablehaven",
-          "x": 775,
-          "y": 395,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "south_019",
-          "name": "Drifthaven",
-          "x": 929,
-          "y": 390,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "south_020",
-          "name": "Tidehaven",
-          "x": 1126,
-          "y": 628,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "south_021",
-          "name": "Southford",
-          "x": 374,
-          "y": 536,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "south_022",
-          "name": "Saltford",
-          "x": 500,
-          "y": 480,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "south_023",
-          "name": "Sunford",
-          "x": 590,
-          "y": 480,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "south_024",
-          "name": "Marshford",
-          "x": 892,
-          "y": 463,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "south_025",
-          "name": "Reedford",
-          "x": 972,
-          "y": 466,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "south_026",
-          "name": "Pearlford",
-          "x": 1040,
-          "y": 480,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "south_027",
-          "name": "Greenford",
-          "x": 335,
-          "y": 601,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "south_028",
-          "name": "Bayford",
-          "x": 465,
-          "y": 563,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "south_029",
-          "name": "Mossford",
-          "x": 550,
-          "y": 560,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "south_030",
-          "name": "Willowford",
-          "x": 900,
-          "y": 560,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "south_031",
-          "name": "Roseford",
-          "x": 990,
-          "y": 560,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "south_032",
-          "name": "Clearford",
-          "x": 1060,
-          "y": 560,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "south_033",
-          "name": "Mistford",
-          "x": 430,
-          "y": 640,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "south_034",
-          "name": "Rainford",
-          "x": 530,
-          "y": 640,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "south_035",
-          "name": "Bloomford",
-          "x": 616,
-          "y": 653,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "south_036",
-          "name": "Hearthford",
-          "x": 824,
-          "y": 646,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "south_037",
-          "name": "Warmford",
-          "x": 980,
-          "y": 640,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "south_038",
-          "name": "Sableford",
-          "x": 1040,
-          "y": 640,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "south_039",
-          "name": "Driftford",
-          "x": 430,
-          "y": 720,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "south_040",
-          "name": "Tideford",
-          "x": 540,
-          "y": 720,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "south_041",
-          "name": "Southwick",
-          "x": 590,
-          "y": 770,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "south_042",
-          "name": "Saltwick",
-          "x": 840,
-          "y": 780,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "south_043",
-          "name": "Sunwick",
-          "x": 874,
-          "y": 701,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "south_044",
-          "name": "Marshwick",
-          "x": 980,
-          "y": 720,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "south_045",
-          "name": "Reedwick",
-          "x": 1060,
-          "y": 720,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "south_046",
-          "name": "Pearlwick",
-          "x": 420,
-          "y": 360,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "south_047",
-          "name": "Greenwick",
-          "x": 540,
-          "y": 360,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "south_048",
-          "name": "Baywick",
-          "x": 852,
-          "y": 392,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "south_049",
-          "name": "Mosswick",
-          "x": 723,
-          "y": 662,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "south_050",
-          "name": "Willowwick",
-          "x": 660,
-          "y": 715,
-          "level": 1,
-          "troops": 10
-        }
-      ],
-      "portals": [
-        {
-          "id": "south-center",
-          "label": "Center",
-          "targetRegionId": "center",
-          "targetPortalId": "",
-          "x": 734,
-          "y": 197,
-          "size": 120
-        },
-        {
-          "id": "south-west",
-          "label": "Westmark",
-          "targetRegionId": "gatefall-isle",
-          "targetPortalId": "",
-          "x": 730,
-          "y": 816,
-          "size": 120
-        }
-      ],
-      "objectives": [
-        {
-          "id": "south_defense_stronghold",
-          "name": "Defense Stronghold",
-          "type": "defense",
-          "bonus": "cityDefense",
-          "bonusPercent": 15,
-          "level": 50,
-          "troops": 50000000,
-          "artSrc": "assets/defense-stronghold.png",
-          "x": 718,
-          "y": 519,
-          "size": 300
-        }
-      ]
-    },
-    {
       "id": "center",
-      "label": "Crownlands",
+      "label": "Crownlands Heart",
       "imageSrc": "assets/center-island.png",
-      "thumbnailSrc": "assets/thumbnails/center-island-thumb.jpg",
+      "thumbnailSrc": "",
       "imageWidth": 1254,
       "imageHeight": 1254,
       "region": {
         "id": "center",
-        "label": "Crownlands",
+        "label": "Crownlands Heart",
         "x": 5000,
         "y": 3800,
         "rx": 1900,
@@ -2182,1230 +23,3829 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         "rot": -0.03,
         "palette": "heartland"
       },
-      "landPolygon": [
-        {
-          "x": 184,
-          "y": 86
-        },
-        {
-          "x": 320,
-          "y": 50
-        },
-        {
-          "x": 480,
-          "y": 42
-        },
-        {
-          "x": 625,
-          "y": 36
-        },
-        {
-          "x": 782,
-          "y": 52
-        },
-        {
-          "x": 934,
-          "y": 86
-        },
-        {
-          "x": 1068,
-          "y": 168
-        },
-        {
-          "x": 1162,
-          "y": 318
-        },
-        {
-          "x": 1214,
-          "y": 500
-        },
-        {
-          "x": 1197,
-          "y": 690
-        },
-        {
-          "x": 1168,
-          "y": 860
-        },
-        {
-          "x": 1112,
-          "y": 1030
-        },
-        {
-          "x": 990,
-          "y": 1148
-        },
-        {
-          "x": 830,
-          "y": 1214
-        },
-        {
-          "x": 650,
-          "y": 1232
-        },
-        {
-          "x": 465,
-          "y": 1212
-        },
-        {
-          "x": 292,
-          "y": 1140
-        },
-        {
-          "x": 165,
-          "y": 1022
-        },
-        {
-          "x": 88,
-          "y": 850
-        },
-        {
-          "x": 45,
-          "y": 650
-        },
-        {
-          "x": 62,
-          "y": 470
-        },
-        {
-          "x": 88,
-          "y": 292
-        },
-        {
-          "x": 122,
-          "y": 168
-        }
-      ],
       "cities": [
         {
           "id": "center_001",
           "name": "Crownhaven",
-          "x": 404,
-          "y": 259,
+          "regionId": "center",
+          "xNorm": 0.322,
+          "yNorm": 0.207,
           "level": 1,
-          "troops": 10
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 404,
+          "y": 260
         },
         {
           "id": "center_002",
           "name": "Highhaven",
-          "x": 461,
-          "y": 292,
+          "regionId": "center",
+          "xNorm": 0.368,
+          "yNorm": 0.233,
           "level": 1,
-          "troops": 10
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 461,
+          "y": 292
         },
         {
           "id": "center_003",
           "name": "Stonehaven",
-          "x": 866,
-          "y": 615,
+          "regionId": "center",
+          "xNorm": 0.691,
+          "yNorm": 0.49,
           "level": 1,
-          "troops": 10
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 867,
+          "y": 614
         },
         {
           "id": "center_004",
           "name": "Riverhaven",
-          "x": 926,
-          "y": 303,
+          "regionId": "center",
+          "xNorm": 0.738,
+          "yNorm": 0.242,
           "level": 1,
-          "troops": 10
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 925,
+          "y": 303
         },
         {
           "id": "center_005",
           "name": "Kingshaven",
-          "x": 595,
-          "y": 418,
+          "regionId": "center",
+          "xNorm": 0.474,
+          "yNorm": 0.333,
           "level": 1,
-          "troops": 10
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 594,
+          "y": 418
         },
         {
           "id": "center_006",
           "name": "Queenshaven",
-          "x": 443,
-          "y": 438,
+          "regionId": "center",
+          "xNorm": 0.353,
+          "yNorm": 0.349,
           "level": 1,
-          "troops": 10
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 443,
+          "y": 438
         },
         {
           "id": "center_007",
           "name": "Ironhaven",
-          "x": 515,
-          "y": 323,
+          "regionId": "center",
+          "xNorm": 0.411,
+          "yNorm": 0.258,
           "level": 1,
-          "troops": 10
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 515,
+          "y": 324
         },
         {
           "id": "center_008",
           "name": "Goldhaven",
-          "x": 640,
-          "y": 351,
+          "regionId": "center",
+          "xNorm": 0.51,
+          "yNorm": 0.28,
           "level": 1,
-          "troops": 10
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 640,
+          "y": 351
         },
         {
           "id": "center_009",
           "name": "Brighthaven",
-          "x": 850,
-          "y": 311,
+          "regionId": "center",
+          "xNorm": 0.678,
+          "yNorm": 0.248,
           "level": 1,
-          "troops": 10
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 850,
+          "y": 311
         },
         {
           "id": "center_010",
           "name": "Elderhaven",
-          "x": 1013,
-          "y": 325,
+          "regionId": "center",
+          "xNorm": 0.808,
+          "yNorm": 0.259,
           "level": 1,
-          "troops": 10
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 1013,
+          "y": 325
         },
         {
           "id": "center_011",
           "name": "Lionhaven",
-          "x": 351,
-          "y": 408,
+          "regionId": "center",
+          "xNorm": 0.28,
+          "yNorm": 0.325,
           "level": 1,
-          "troops": 10
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 351,
+          "y": 408
         },
         {
           "id": "center_012",
           "name": "Oakhaven",
-          "x": 406,
-          "y": 402,
+          "regionId": "center",
+          "xNorm": 0.324,
+          "yNorm": 0.321,
           "level": 1,
-          "troops": 10
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 406,
+          "y": 403
         },
         {
           "id": "center_013",
           "name": "Ravenhaven",
-          "x": 500,
-          "y": 380,
+          "regionId": "center",
+          "xNorm": 0.399,
+          "yNorm": 0.303,
           "level": 1,
-          "troops": 10
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 500,
+          "y": 380
         },
         {
           "id": "center_014",
           "name": "Silverhaven",
-          "x": 703,
-          "y": 479,
+          "regionId": "center",
+          "xNorm": 0.561,
+          "yNorm": 0.382,
           "level": 1,
-          "troops": 10
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 703,
+          "y": 479
         },
         {
           "id": "center_015",
           "name": "Wolfhaven",
-          "x": 740,
-          "y": 380,
+          "regionId": "center",
+          "xNorm": 0.59,
+          "yNorm": 0.303,
           "level": 1,
-          "troops": 10
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 740,
+          "y": 380
         },
         {
           "id": "center_016",
           "name": "Starhaven",
-          "x": 807,
-          "y": 435,
+          "regionId": "center",
+          "xNorm": 0.644,
+          "yNorm": 0.347,
           "level": 1,
-          "troops": 10
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 808,
+          "y": 435
         },
         {
           "id": "center_017",
           "name": "Redhaven",
-          "x": 974,
-          "y": 386,
+          "regionId": "center",
+          "xNorm": 0.777,
+          "yNorm": 0.308,
           "level": 1,
-          "troops": 10
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 974,
+          "y": 386
         },
         {
           "id": "center_018",
           "name": "Whitehaven",
-          "x": 320,
-          "y": 460,
+          "regionId": "center",
+          "xNorm": 0.255,
+          "yNorm": 0.367,
           "level": 1,
-          "troops": 10
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 320,
+          "y": 460
         },
         {
           "id": "center_019",
           "name": "Dawnhaven",
-          "x": 390,
-          "y": 460,
+          "regionId": "center",
+          "xNorm": 0.311,
+          "yNorm": 0.367,
           "level": 1,
-          "troops": 10
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 390,
+          "y": 460
         },
         {
           "id": "center_020",
           "name": "Emberhaven",
-          "x": 558,
-          "y": 477,
+          "regionId": "center",
+          "xNorm": 0.445,
+          "yNorm": 0.38,
           "level": 1,
-          "troops": 10
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 558,
+          "y": 477
         },
         {
           "id": "center_021",
           "name": "Crownford",
-          "x": 631,
-          "y": 464,
+          "regionId": "center",
+          "xNorm": 0.503,
+          "yNorm": 0.37,
           "level": 1,
-          "troops": 10
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 631,
+          "y": 464
         },
         {
           "id": "center_022",
           "name": "Highford",
-          "x": 889,
-          "y": 488,
+          "regionId": "center",
+          "xNorm": 0.709,
+          "yNorm": 0.389,
           "level": 1,
-          "troops": 10
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 889,
+          "y": 488
         },
         {
           "id": "center_023",
           "name": "Stoneford",
-          "x": 930,
-          "y": 440,
+          "regionId": "center",
+          "xNorm": 0.742,
+          "yNorm": 0.351,
           "level": 1,
-          "troops": 10
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 930,
+          "y": 440
         },
         {
           "id": "center_024",
           "name": "Riverford",
-          "x": 320,
-          "y": 540,
+          "regionId": "center",
+          "xNorm": 0.255,
+          "yNorm": 0.431,
           "level": 1,
-          "troops": 10
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 320,
+          "y": 540
         },
         {
           "id": "center_025",
           "name": "Kingsford",
-          "x": 394,
-          "y": 581,
+          "regionId": "center",
+          "xNorm": 0.314,
+          "yNorm": 0.463,
           "level": 1,
-          "troops": 10
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 394,
+          "y": 581
         },
         {
           "id": "center_026",
           "name": "Queensford",
-          "x": 506,
-          "y": 517,
+          "regionId": "center",
+          "xNorm": 0.404,
+          "yNorm": 0.412,
           "level": 1,
-          "troops": 10
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 507,
+          "y": 517
         },
         {
           "id": "center_027",
           "name": "Ironford",
-          "x": 750,
-          "y": 520,
+          "regionId": "center",
+          "xNorm": 0.598,
+          "yNorm": 0.415,
           "level": 1,
-          "troops": 10
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 750,
+          "y": 520
         },
         {
           "id": "center_028",
           "name": "Goldford",
-          "x": 860,
-          "y": 535,
+          "regionId": "center",
+          "xNorm": 0.686,
+          "yNorm": 0.427,
           "level": 1,
-          "troops": 10
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 860,
+          "y": 535
         },
         {
           "id": "center_029",
           "name": "Brightford",
-          "x": 930,
-          "y": 540,
+          "regionId": "center",
+          "xNorm": 0.742,
+          "yNorm": 0.431,
           "level": 1,
-          "troops": 10
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 930,
+          "y": 540
         },
         {
           "id": "center_030",
           "name": "Elderford",
-          "x": 298,
-          "y": 675,
+          "regionId": "center",
+          "xNorm": 0.238,
+          "yNorm": 0.538,
           "level": 1,
-          "troops": 10
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 298,
+          "y": 675
         },
         {
           "id": "center_031",
           "name": "Lionford",
-          "x": 447,
-          "y": 789,
+          "regionId": "center",
+          "xNorm": 0.356,
+          "yNorm": 0.629,
           "level": 1,
-          "troops": 10
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 446,
+          "y": 789
         },
         {
           "id": "center_032",
           "name": "Oakford",
-          "x": 550,
-          "y": 714,
+          "regionId": "center",
+          "xNorm": 0.439,
+          "yNorm": 0.569,
           "level": 1,
-          "troops": 10
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 551,
+          "y": 714
         },
         {
           "id": "center_033",
           "name": "Ravenford",
-          "x": 733,
-          "y": 664,
+          "regionId": "center",
+          "xNorm": 0.585,
+          "yNorm": 0.53,
           "level": 1,
-          "troops": 10
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 734,
+          "y": 665
         },
         {
           "id": "center_034",
           "name": "Silverford",
-          "x": 840,
-          "y": 690,
+          "regionId": "center",
+          "xNorm": 0.67,
+          "yNorm": 0.55,
           "level": 1,
-          "troops": 10
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 840,
+          "y": 690
         },
         {
           "id": "center_035",
           "name": "Wolfford",
-          "x": 930,
-          "y": 690,
+          "regionId": "center",
+          "xNorm": 0.742,
+          "yNorm": 0.55,
           "level": 1,
-          "troops": 10
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 930,
+          "y": 690
         },
         {
           "id": "center_036",
           "name": "Starford",
-          "x": 322,
-          "y": 740,
+          "regionId": "center",
+          "xNorm": 0.257,
+          "yNorm": 0.59,
           "level": 1,
-          "troops": 10
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 322,
+          "y": 740
         },
         {
           "id": "center_037",
           "name": "Redford",
-          "x": 390,
-          "y": 780,
+          "regionId": "center",
+          "xNorm": 0.311,
+          "yNorm": 0.622,
           "level": 1,
-          "troops": 10
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 390,
+          "y": 780
         },
         {
           "id": "center_038",
           "name": "Whiteford",
-          "x": 500,
-          "y": 780,
+          "regionId": "center",
+          "xNorm": 0.399,
+          "yNorm": 0.622,
           "level": 1,
-          "troops": 10
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 500,
+          "y": 780
         },
         {
           "id": "center_039",
           "name": "Dawnford",
-          "x": 610,
-          "y": 780,
+          "regionId": "center",
+          "xNorm": 0.486,
+          "yNorm": 0.622,
           "level": 1,
-          "troops": 10
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 609,
+          "y": 780
         },
         {
           "id": "center_040",
           "name": "Emberford",
-          "x": 740,
-          "y": 780,
+          "regionId": "center",
+          "xNorm": 0.59,
+          "yNorm": 0.622,
           "level": 1,
-          "troops": 10
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 740,
+          "y": 780
         },
         {
           "id": "center_041",
           "name": "Crownwick",
-          "x": 850,
-          "y": 780,
+          "regionId": "center",
+          "xNorm": 0.678,
+          "yNorm": 0.622,
           "level": 1,
-          "troops": 10
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 850,
+          "y": 780
         },
         {
           "id": "center_042",
           "name": "Highwick",
-          "x": 930,
-          "y": 770,
+          "regionId": "center",
+          "xNorm": 0.742,
+          "yNorm": 0.614,
           "level": 1,
-          "troops": 10
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 930,
+          "y": 770
         },
         {
           "id": "center_043",
           "name": "Stonewick",
-          "x": 367,
-          "y": 699,
+          "regionId": "center",
+          "xNorm": 0.293,
+          "yNorm": 0.557,
           "level": 1,
-          "troops": 10
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 367,
+          "y": 698
         },
         {
           "id": "center_044",
           "name": "Riverwick",
-          "x": 420,
-          "y": 837,
+          "regionId": "center",
+          "xNorm": 0.335,
+          "yNorm": 0.667,
           "level": 1,
-          "troops": 10
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 420,
+          "y": 836
         },
         {
           "id": "center_045",
           "name": "Kingswick",
-          "x": 540,
-          "y": 860,
+          "regionId": "center",
+          "xNorm": 0.431,
+          "yNorm": 0.686,
           "level": 1,
-          "troops": 10
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 540,
+          "y": 860
         },
         {
           "id": "center_046",
           "name": "Queenswick",
-          "x": 708,
-          "y": 837,
+          "regionId": "center",
+          "xNorm": 0.565,
+          "yNorm": 0.667,
           "level": 1,
-          "troops": 10
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 709,
+          "y": 836
         },
         {
           "id": "center_047",
           "name": "Ironwick",
-          "x": 645,
-          "y": 730,
+          "regionId": "center",
+          "xNorm": 0.514,
+          "yNorm": 0.582,
           "level": 1,
-          "troops": 10
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 645,
+          "y": 730
         },
         {
           "id": "center_048",
           "name": "Goldwick",
-          "x": 894,
-          "y": 830,
+          "regionId": "center",
+          "xNorm": 0.713,
+          "yNorm": 0.662,
           "level": 1,
-          "troops": 10
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 894,
+          "y": 830
         },
         {
           "id": "center_049",
           "name": "Brightwick",
-          "x": 371,
-          "y": 865,
+          "regionId": "center",
+          "xNorm": 0.296,
+          "yNorm": 0.69,
           "level": 1,
-          "troops": 10
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 371,
+          "y": 865
         },
         {
           "id": "center_050",
           "name": "Elderwick",
-          "x": 485,
-          "y": 841,
+          "regionId": "center",
+          "xNorm": 0.387,
+          "yNorm": 0.671,
           "level": 1,
-          "troops": 10
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 485,
+          "y": 841
         },
         {
           "id": "center_051",
           "name": "Lionwick",
-          "x": 673,
-          "y": 906,
+          "regionId": "center",
+          "xNorm": 0.537,
+          "yNorm": 0.722,
           "level": 1,
-          "troops": 10
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 673,
+          "y": 905
         },
         {
           "id": "center_052",
           "name": "Oakwick",
-          "x": 840,
-          "y": 936,
+          "regionId": "center",
+          "xNorm": 0.67,
+          "yNorm": 0.746,
           "level": 1,
-          "troops": 10
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 840,
+          "y": 935
         },
         {
           "id": "center_053",
           "name": "Ravenwick",
-          "x": 470,
-          "y": 900,
+          "regionId": "center",
+          "xNorm": 0.375,
+          "yNorm": 0.718,
           "level": 1,
-          "troops": 10
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 470,
+          "y": 900
         },
         {
           "id": "center_054",
           "name": "Silverwick",
-          "x": 560,
-          "y": 950,
+          "regionId": "center",
+          "xNorm": 0.447,
+          "yNorm": 0.758,
           "level": 1,
-          "troops": 10
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 561,
+          "y": 951
         },
         {
           "id": "center_055",
           "name": "Wolfwick",
-          "x": 615,
-          "y": 900,
+          "regionId": "center",
+          "xNorm": 0.49,
+          "yNorm": 0.718,
           "level": 1,
-          "troops": 10
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 614,
+          "y": 900
         },
         {
           "id": "center_056",
           "name": "Starwick",
-          "x": 760,
-          "y": 897,
+          "regionId": "center",
+          "xNorm": 0.606,
+          "yNorm": 0.715,
           "level": 1,
-          "troops": 10
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 760,
+          "y": 897
         },
         {
           "id": "center_057",
           "name": "Redwick",
-          "x": 334,
-          "y": 607,
+          "regionId": "center",
+          "xNorm": 0.266,
+          "yNorm": 0.484,
           "level": 1,
-          "troops": 10
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 334,
+          "y": 607
         },
         {
           "id": "center_058",
           "name": "Whitewick",
-          "x": 484,
-          "y": 610,
+          "regionId": "center",
+          "xNorm": 0.386,
+          "yNorm": 0.486,
           "level": 1,
-          "troops": 10
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 484,
+          "y": 609
         },
         {
           "id": "center_059",
           "name": "Dawnwick",
-          "x": 753,
-          "y": 589,
+          "regionId": "center",
+          "xNorm": 0.6,
+          "yNorm": 0.47,
           "level": 1,
-          "troops": 10
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 752,
+          "y": 589
         },
         {
           "id": "center_060",
           "name": "Emberwick",
-          "x": 933,
-          "y": 626,
+          "regionId": "center",
+          "xNorm": 0.744,
+          "yNorm": 0.499,
           "level": 1,
-          "troops": 10
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 933,
+          "y": 626
         },
         {
           "id": "center_061",
           "name": "Crownmere",
-          "x": 293,
-          "y": 406,
+          "regionId": "center",
+          "xNorm": 0.234,
+          "yNorm": 0.324,
           "level": 1,
-          "troops": 10
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 293,
+          "y": 406
         },
         {
           "id": "center_062",
           "name": "Highmere",
-          "x": 998,
-          "y": 516,
+          "regionId": "center",
+          "xNorm": 0.796,
+          "yNorm": 0.411,
           "level": 1,
-          "troops": 10
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 998,
+          "y": 515
         },
         {
           "id": "center_063",
           "name": "Stonemere",
-          "x": 324,
-          "y": 914,
+          "regionId": "center",
+          "xNorm": 0.258,
+          "yNorm": 0.729,
           "level": 1,
-          "troops": 10
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 324,
+          "y": 914
         },
         {
           "id": "center_064",
           "name": "Rivermere",
-          "x": 930,
-          "y": 910,
+          "regionId": "center",
+          "xNorm": 0.742,
+          "yNorm": 0.726,
           "level": 1,
-          "troops": 10
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 930,
+          "y": 910
         },
         {
           "id": "center_065",
           "name": "Kingsmere",
-          "x": 590,
-          "y": 300,
+          "regionId": "center",
+          "xNorm": 0.47,
+          "yNorm": 0.239,
           "level": 1,
-          "troops": 10
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 589,
+          "y": 300
         },
         {
           "id": "center_066",
           "name": "Queensmere",
-          "x": 667,
-          "y": 297,
+          "regionId": "center",
+          "xNorm": 0.532,
+          "yNorm": 0.237,
           "level": 1,
-          "troops": 10
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 667,
+          "y": 297
         },
         {
           "id": "center_067",
           "name": "Ironmere",
-          "x": 590,
-          "y": 840,
+          "regionId": "center",
+          "xNorm": 0.47,
+          "yNorm": 0.67,
           "level": 1,
-          "troops": 10
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 589,
+          "y": 840
         },
         {
           "id": "center_068",
           "name": "Goldmere",
-          "x": 660,
-          "y": 840,
+          "regionId": "center",
+          "xNorm": 0.526,
+          "yNorm": 0.67,
           "level": 1,
-          "troops": 10
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 660,
+          "y": 840
         },
         {
           "id": "center_069",
           "name": "Brightmere",
-          "x": 550,
-          "y": 350,
+          "regionId": "center",
+          "xNorm": 0.439,
+          "yNorm": 0.279,
           "level": 1,
-          "troops": 10
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 551,
+          "y": 350
         },
         {
           "id": "center_070",
           "name": "Eldermere",
-          "x": 773,
-          "y": 328,
+          "regionId": "center",
+          "xNorm": 0.616,
+          "yNorm": 0.262,
           "level": 1,
-          "troops": 10
-        }
-      ],
-      "portals": [
-        {
-          "id": "center-west",
-          "label": "West",
-          "targetRegionId": "west",
-          "targetPortalId": "",
-          "x": 230,
-          "y": 601,
-          "size": 120
-        },
-        {
-          "id": "center-north",
-          "label": "North",
-          "targetRegionId": "north",
-          "targetPortalId": "",
-          "x": 624,
-          "y": 191,
-          "size": 120
-        },
-        {
-          "id": "center-east",
-          "label": "East",
-          "targetRegionId": "east",
-          "targetPortalId": "",
-          "x": 1024,
-          "y": 597,
-          "size": 120
-        },
-        {
-          "id": "center-south",
-          "label": "South",
-          "targetRegionId": "south",
-          "targetPortalId": "",
-          "x": 625,
-          "y": 1018,
-          "size": 120
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 772,
+          "y": 329
         }
       ],
       "objectives": [
         {
           "id": "center_crown_citadel",
           "name": "Crown Citadel",
+          "x": 623,
+          "y": 596,
+          "xNorm": 0.497,
+          "yNorm": 0.475,
           "type": "crown",
+          "strongholdType": "crown",
+          "sourceStrongholdType": "crown_citadel",
           "bonus": "crownDominion",
           "bonusPercent": 10,
           "level": 100,
           "troops": 50000000,
+          "startTroops": 50000000,
           "artSrc": "assets/crown-citadel.png?v=20260630-citadel-art",
-          "x": 623,
-          "y": 596,
           "size": 600
         }
-      ]
+      ],
+      "portals": [],
+      "edgeConnections": {
+        "north": [
+          {
+            "id": "center_north_road",
+            "side": "north",
+            "start": 0.42,
+            "end": 0.58,
+            "type": "road",
+            "connectsToRegionId": "north",
+            "intentionalOuter": false,
+            "notes": "Northern road continues into North Frontier."
+          }
+        ],
+        "south": [
+          {
+            "id": "center_south_road",
+            "side": "south",
+            "start": 0.42,
+            "end": 0.58,
+            "type": "road",
+            "connectsToRegionId": "south",
+            "intentionalOuter": false,
+            "notes": "Southern road continues into Southfields."
+          }
+        ],
+        "east": [
+          {
+            "id": "center_east_road",
+            "side": "east",
+            "start": 0.41,
+            "end": 0.57,
+            "type": "road",
+            "connectsToRegionId": "east",
+            "intentionalOuter": false,
+            "notes": "Eastern road continues into East Reach."
+          }
+        ],
+        "west": [
+          {
+            "id": "center_west_road",
+            "side": "west",
+            "start": 0.41,
+            "end": 0.57,
+            "type": "road",
+            "connectsToRegionId": "west",
+            "intentionalOuter": false,
+            "notes": "Western road continues into West Marches."
+          }
+        ]
+      }
     },
     {
-      "id": "gatefall-isle",
-      "label": "Gatefall Isle",
-      "imageSrc": "assets/custom-maps/gatefall-isle-map.png",
+      "id": "west",
+      "label": "West Marches",
+      "imageSrc": "assets/west-island.png",
       "thumbnailSrc": "",
-      "imageWidth": 1254,
-      "imageHeight": 1254,
+      "imageWidth": 1024,
+      "imageHeight": 1536,
       "region": {
-        "id": "gatefall-isle",
-        "label": "Gatefall Isle",
-        "x": 2662,
-        "y": 5676,
-        "rx": 1100,
-        "ry": 912,
-        "cityRx": 902,
-        "cityRy": 693,
-        "rot": 0,
-        "palette": "heartland"
+        "id": "west",
+        "label": "West Marches",
+        "x": 1500,
+        "y": 3800,
+        "rx": 1120,
+        "ry": 1330,
+        "cityRx": 900,
+        "cityRy": 1090,
+        "rot": 0.07,
+        "palette": "woodland"
       },
-      "landPolygon": [],
       "cities": [
         {
-          "id": "gatefall-isle_001",
-          "name": "Crownhaven",
-          "x": 248,
-          "y": 188,
+          "id": "west_001",
+          "name": "Westhaven",
+          "regionId": "west",
+          "xNorm": 0.508,
+          "yNorm": 0.163,
           "level": 1,
-          "troops": 10
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 520,
+          "y": 250
         },
         {
-          "id": "gatefall-isle_002",
-          "name": "Highhaven",
-          "x": 287,
-          "y": 250,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "gatefall-isle_003",
-          "name": "Stonehaven",
-          "x": 336,
-          "y": 313,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "gatefall-isle_004",
-          "name": "Riverhaven",
-          "x": 999,
-          "y": 215,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "gatefall-isle_005",
-          "name": "Kingshaven",
-          "x": 947,
-          "y": 263,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "gatefall-isle_006",
-          "name": "Queenshaven",
-          "x": 888,
-          "y": 333,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "gatefall-isle_007",
-          "name": "Ironhaven",
-          "x": 1071,
-          "y": 983,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "gatefall-isle_008",
-          "name": "Goldhaven",
-          "x": 1002,
-          "y": 934,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "gatefall-isle_009",
-          "name": "Brighthaven",
-          "x": 953,
-          "y": 881,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "gatefall-isle_010",
-          "name": "Elderhaven",
-          "x": 218,
-          "y": 1021,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "gatefall-isle_011",
-          "name": "Lionhaven",
-          "x": 245,
-          "y": 937,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "gatefall-isle_012",
+          "id": "west_002",
           "name": "Oakhaven",
-          "x": 307,
-          "y": 882,
+          "regionId": "west",
+          "xNorm": 0.587,
+          "yNorm": 0.186,
           "level": 1,
-          "troops": 10
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 601,
+          "y": 286
         },
         {
-          "id": "gatefall-isle_013",
-          "name": "Ravenhaven",
-          "x": 344,
-          "y": 492,
+          "id": "west_003",
+          "name": "Thornhaven",
+          "regionId": "west",
+          "xNorm": 0.523,
+          "yNorm": 0.215,
           "level": 1,
-          "troops": 10
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 536,
+          "y": 330
         },
         {
-          "id": "gatefall-isle_014",
-          "name": "Silverhaven",
-          "x": 397,
-          "y": 539,
+          "id": "west_004",
+          "name": "Foxhaven",
+          "regionId": "west",
+          "xNorm": 0.442,
+          "yNorm": 0.207,
           "level": 1,
-          "troops": 10
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 453,
+          "y": 318
         },
         {
-          "id": "gatefall-isle_015",
-          "name": "Wolfhaven",
-          "x": 360,
-          "y": 598,
+          "id": "west_005",
+          "name": "Ashhaven",
+          "regionId": "west",
+          "xNorm": 0.507,
+          "yNorm": 0.258,
           "level": 1,
-          "troops": 10
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 519,
+          "y": 396
         },
         {
-          "id": "gatefall-isle_016",
-          "name": "Starhaven",
-          "x": 328,
-          "y": 686,
+          "id": "west_006",
+          "name": "Briarhaven",
+          "regionId": "west",
+          "xNorm": 0.603,
+          "yNorm": 0.231,
           "level": 1,
-          "troops": 10
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 617,
+          "y": 355
         },
         {
-          "id": "gatefall-isle_017",
-          "name": "Redhaven",
-          "x": 353,
-          "y": 802,
+          "id": "west_007",
+          "name": "Crowhaven",
+          "regionId": "west",
+          "xNorm": 0.663,
+          "yNorm": 0.257,
           "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "gatefall-isle_018",
-          "name": "Whitehaven",
-          "x": 474,
-          "y": 829,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "gatefall-isle_019",
-          "name": "Dawnhaven",
-          "x": 562,
-          "y": 890,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "gatefall-isle_020",
-          "name": "Emberhaven",
-          "x": 611,
-          "y": 953,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "gatefall-isle_021",
-          "name": "Crownford",
-          "x": 677,
-          "y": 904,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "gatefall-isle_022",
-          "name": "Highford",
-          "x": 749,
-          "y": 849,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "gatefall-isle_023",
-          "name": "Stoneford",
-          "x": 638,
-          "y": 837,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "gatefall-isle_024",
-          "name": "Riverford",
-          "x": 565,
-          "y": 799,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "gatefall-isle_025",
-          "name": "Kingsford",
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
           "x": 679,
-          "y": 786,
-          "level": 1,
-          "troops": 10
+          "y": 395
         },
         {
-          "id": "gatefall-isle_026",
-          "name": "Queensford",
-          "x": 607,
-          "y": 755,
+          "id": "west_008",
+          "name": "Duskyhaven",
+          "regionId": "west",
+          "xNorm": 0.459,
+          "yNorm": 0.293,
           "level": 1,
-          "troops": 10
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 470,
+          "y": 450
         },
         {
-          "id": "gatefall-isle_027",
-          "name": "Ironford",
-          "x": 678,
-          "y": 730,
+          "id": "west_009",
+          "name": "Wildhaven",
+          "regionId": "west",
+          "xNorm": 0.557,
+          "yNorm": 0.293,
           "level": 1,
-          "troops": 10
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 570,
+          "y": 450
         },
         {
-          "id": "gatefall-isle_028",
-          "name": "Goldford",
-          "x": 889,
-          "y": 662,
+          "id": "west_010",
+          "name": "Woodhaven",
+          "regionId": "west",
+          "xNorm": 0.654,
+          "yNorm": 0.293,
           "level": 1,
-          "troops": 10
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 670,
+          "y": 450
         },
         {
-          "id": "gatefall-isle_029",
-          "name": "Brightford",
-          "x": 904,
-          "y": 604,
+          "id": "west_011",
+          "name": "Harthaven",
+          "regionId": "west",
+          "xNorm": 0.731,
+          "yNorm": 0.296,
           "level": 1,
-          "troops": 10
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 749,
+          "y": 455
         },
         {
-          "id": "gatefall-isle_030",
-          "name": "Elderford",
-          "x": 867,
-          "y": 528,
+          "id": "west_012",
+          "name": "Mosshaven",
+          "regionId": "west",
+          "xNorm": 0.441,
+          "yNorm": 0.348,
           "level": 1,
-          "troops": 10
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 452,
+          "y": 535
         },
         {
-          "id": "gatefall-isle_031",
-          "name": "Lionford",
-          "x": 795,
-          "y": 515,
+          "id": "west_013",
+          "name": "Wolfhaven",
+          "regionId": "west",
+          "xNorm": 0.527,
+          "yNorm": 0.344,
           "level": 1,
-          "troops": 10
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 540,
+          "y": 528
         },
         {
-          "id": "gatefall-isle_032",
-          "name": "Oakford",
-          "x": 806,
-          "y": 577,
+          "id": "west_014",
+          "name": "Amberhaven",
+          "regionId": "west",
+          "xNorm": 0.608,
+          "yNorm": 0.374,
           "level": 1,
-          "troops": 10
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 623,
+          "y": 574
         },
         {
-          "id": "gatefall-isle_033",
-          "name": "Ravenford",
-          "x": 791,
-          "y": 645,
+          "id": "west_015",
+          "name": "Blackhaven",
+          "regionId": "west",
+          "xNorm": 0.741,
+          "yNorm": 0.344,
           "level": 1,
-          "troops": 10
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 759,
+          "y": 528
         },
         {
-          "id": "gatefall-isle_034",
-          "name": "Silverford",
-          "x": 706,
-          "y": 646,
+          "id": "west_016",
+          "name": "Copperhaven",
+          "regionId": "west",
+          "xNorm": 0.42,
+          "yNorm": 0.41,
           "level": 1,
-          "troops": 10
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 430,
+          "y": 630
         },
         {
-          "id": "gatefall-isle_035",
-          "name": "Wolfford",
-          "x": 622,
-          "y": 680,
+          "id": "west_017",
+          "name": "Shadehaven",
+          "regionId": "west",
+          "xNorm": 0.563,
+          "yNorm": 0.428,
           "level": 1,
-          "troops": 10
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 577,
+          "y": 657
         },
         {
-          "id": "gatefall-isle_036",
-          "name": "Starford",
-          "x": 545,
-          "y": 655,
+          "id": "west_018",
+          "name": "Glenhaven",
+          "regionId": "west",
+          "xNorm": 0.688,
+          "yNorm": 0.401,
           "level": 1,
-          "troops": 10
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 705,
+          "y": 616
         },
         {
-          "id": "gatefall-isle_037",
-          "name": "Redford",
-          "x": 458,
-          "y": 653,
+          "id": "west_019",
+          "name": "Fernhaven",
+          "regionId": "west",
+          "xNorm": 0.742,
+          "yNorm": 0.436,
           "level": 1,
-          "troops": 10
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 760,
+          "y": 670
         },
         {
-          "id": "gatefall-isle_038",
-          "name": "Whiteford",
-          "x": 398,
-          "y": 654,
+          "id": "west_020",
+          "name": "Oldhaven",
+          "regionId": "west",
+          "xNorm": 0.402,
+          "yNorm": 0.546,
           "level": 1,
-          "troops": 10
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 412,
+          "y": 839
         },
         {
-          "id": "gatefall-isle_039",
-          "name": "Dawnford",
-          "x": 455,
-          "y": 590,
+          "id": "west_021",
+          "name": "Westford",
+          "regionId": "west",
+          "xNorm": 0.61,
+          "yNorm": 0.512,
           "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "gatefall-isle_040",
-          "name": "Emberford",
-          "x": 471,
-          "y": 521,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "gatefall-isle_041",
-          "name": "Crownwick",
-          "x": 521,
-          "y": 583,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "gatefall-isle_042",
-          "name": "Highwick",
-          "x": 584,
-          "y": 597,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "gatefall-isle_043",
-          "name": "Stonewick",
-          "x": 642,
-          "y": 601,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "gatefall-isle_044",
-          "name": "Riverwick",
-          "x": 735,
-          "y": 559,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "gatefall-isle_045",
-          "name": "Kingswick",
-          "x": 665,
-          "y": 534,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "gatefall-isle_046",
-          "name": "Queenswick",
-          "x": 590,
-          "y": 533,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "gatefall-isle_047",
-          "name": "Ironwick",
-          "x": 538,
-          "y": 510,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "gatefall-isle_048",
-          "name": "Goldwick",
-          "x": 565,
-          "y": 445,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "gatefall-isle_049",
-          "name": "Brightwick",
-          "x": 621,
-          "y": 474,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "gatefall-isle_050",
-          "name": "Elderwick",
-          "x": 671,
-          "y": 466,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "gatefall-isle_051",
-          "name": "Lionwick",
-          "x": 703,
-          "y": 398,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "gatefall-isle_052",
-          "name": "Oakwick",
-          "x": 721,
-          "y": 335,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "gatefall-isle_053",
-          "name": "Ravenwick",
-          "x": 672,
-          "y": 267,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "gatefall-isle_054",
-          "name": "Silverwick",
-          "x": 590,
-          "y": 284,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "gatefall-isle_055",
-          "name": "Wolfwick",
-          "x": 548,
-          "y": 340,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "gatefall-isle_056",
-          "name": "Starwick",
-          "x": 646,
-          "y": 345,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "gatefall-isle_057",
-          "name": "Redwick",
-          "x": 595,
-          "y": 386,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "gatefall-isle_058",
-          "name": "Whitewick",
-          "x": 647,
-          "y": 414,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "gatefall-isle_059",
-          "name": "Dawnwick",
-          "x": 543,
-          "y": 722,
-          "level": 1,
-          "troops": 10
-        },
-        {
-          "id": "gatefall-isle_060",
-          "name": "Emberwick",
-          "x": 879,
-          "y": 834,
-          "level": 1,
-          "troops": 10
-        }
-      ],
-      "portals": [
-        {
-          "id": "gatefall-isle-west",
-          "label": "Westmark",
-          "targetRegionId": "south",
-          "targetPortalId": "",
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
           "x": 625,
-          "y": 112,
-          "size": 120
+          "y": 786
+        },
+        {
+          "id": "west_022",
+          "name": "Oakford",
+          "regionId": "west",
+          "xNorm": 0.677,
+          "yNorm": 0.518,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 693,
+          "y": 796
+        },
+        {
+          "id": "west_023",
+          "name": "Thornford",
+          "regionId": "west",
+          "xNorm": 0.75,
+          "yNorm": 0.545,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 768,
+          "y": 837
+        },
+        {
+          "id": "west_024",
+          "name": "Foxford",
+          "regionId": "west",
+          "xNorm": 0.469,
+          "yNorm": 0.575,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 480,
+          "y": 883
+        },
+        {
+          "id": "west_025",
+          "name": "Ashford",
+          "regionId": "west",
+          "xNorm": 0.545,
+          "yNorm": 0.555,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 558,
+          "y": 852
+        },
+        {
+          "id": "west_026",
+          "name": "Briarford",
+          "regionId": "west",
+          "xNorm": 0.597,
+          "yNorm": 0.622,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 611,
+          "y": 955
+        },
+        {
+          "id": "west_027",
+          "name": "Crowford",
+          "regionId": "west",
+          "xNorm": 0.752,
+          "yNorm": 0.586,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 770,
+          "y": 900
+        },
+        {
+          "id": "west_028",
+          "name": "Duskyford",
+          "regionId": "west",
+          "xNorm": 0.475,
+          "yNorm": 0.669,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 486,
+          "y": 1028
+        },
+        {
+          "id": "west_029",
+          "name": "Wildford",
+          "regionId": "west",
+          "xNorm": 0.561,
+          "yNorm": 0.682,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 574,
+          "y": 1048
+        },
+        {
+          "id": "west_030",
+          "name": "Woodford",
+          "regionId": "west",
+          "xNorm": 0.645,
+          "yNorm": 0.664,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 660,
+          "y": 1020
+        },
+        {
+          "id": "west_031",
+          "name": "Hartford",
+          "regionId": "west",
+          "xNorm": 0.742,
+          "yNorm": 0.664,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 760,
+          "y": 1020
+        },
+        {
+          "id": "west_032",
+          "name": "Mossford",
+          "regionId": "west",
+          "xNorm": 0.436,
+          "yNorm": 0.723,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 446,
+          "y": 1111
+        },
+        {
+          "id": "west_033",
+          "name": "Wolfford",
+          "regionId": "west",
+          "xNorm": 0.51,
+          "yNorm": 0.739,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 522,
+          "y": 1135
+        },
+        {
+          "id": "west_034",
+          "name": "Amberford",
+          "regionId": "west",
+          "xNorm": 0.63,
+          "yNorm": 0.706,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 645,
+          "y": 1084
+        },
+        {
+          "id": "west_035",
+          "name": "Blackford",
+          "regionId": "west",
+          "xNorm": 0.674,
+          "yNorm": 0.747,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 690,
+          "y": 1147
+        },
+        {
+          "id": "west_036",
+          "name": "Copperford",
+          "regionId": "west",
+          "xNorm": 0.419,
+          "yNorm": 0.785,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 429,
+          "y": 1206
+        },
+        {
+          "id": "west_037",
+          "name": "Shadeford",
+          "regionId": "west",
+          "xNorm": 0.564,
+          "yNorm": 0.783,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 578,
+          "y": 1203
+        },
+        {
+          "id": "west_038",
+          "name": "Glenford",
+          "regionId": "west",
+          "xNorm": 0.588,
+          "yNorm": 0.738,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 602,
+          "y": 1134
+        },
+        {
+          "id": "west_039",
+          "name": "Fernford",
+          "regionId": "west",
+          "xNorm": 0.486,
+          "yNorm": 0.816,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 498,
+          "y": 1253
+        },
+        {
+          "id": "west_040",
+          "name": "Oldford",
+          "regionId": "west",
+          "xNorm": 0.498,
+          "yNorm": 0.391,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 510,
+          "y": 601
+        },
+        {
+          "id": "west_041",
+          "name": "Westwick",
+          "regionId": "west",
+          "xNorm": 0.628,
+          "yNorm": 0.444,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 643,
+          "y": 682
+        },
+        {
+          "id": "west_042",
+          "name": "Oakwick",
+          "regionId": "west",
+          "xNorm": 0.693,
+          "yNorm": 0.469,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 710,
+          "y": 720
+        },
+        {
+          "id": "west_043",
+          "name": "Thornwick",
+          "regionId": "west",
+          "xNorm": 0.518,
+          "yNorm": 0.605,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 530,
+          "y": 929
+        },
+        {
+          "id": "west_044",
+          "name": "Foxwick",
+          "regionId": "west",
+          "xNorm": 0.615,
+          "yNorm": 0.56,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 630,
+          "y": 860
+        },
+        {
+          "id": "west_045",
+          "name": "Ashwick",
+          "regionId": "west",
+          "xNorm": 0.671,
+          "yNorm": 0.589,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 687,
+          "y": 905
+        },
+        {
+          "id": "west_046",
+          "name": "Briarwick",
+          "regionId": "west",
+          "xNorm": 0.381,
+          "yNorm": 0.443,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 390,
+          "y": 680
+        },
+        {
+          "id": "west_047",
+          "name": "Crowwick",
+          "regionId": "west",
+          "xNorm": 0.412,
+          "yNorm": 0.609,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 422,
+          "y": 935
+        },
+        {
+          "id": "west_048",
+          "name": "Duskywick",
+          "regionId": "west",
+          "xNorm": 0.399,
+          "yNorm": 0.656,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 409,
+          "y": 1008
+        },
+        {
+          "id": "west_049",
+          "name": "Wildwick",
+          "regionId": "west",
+          "xNorm": 0.791,
+          "yNorm": 0.404,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 810,
+          "y": 621
+        },
+        {
+          "id": "west_050",
+          "name": "Woodwick",
+          "regionId": "west",
+          "xNorm": 0.705,
+          "yNorm": 0.626,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 722,
+          "y": 962
         }
       ],
-      "objectives": []
+      "objectives": [
+        {
+          "id": "west_gold_stronghold",
+          "name": "Gold Stronghold",
+          "x": 514,
+          "y": 740,
+          "xNorm": 0.502,
+          "yNorm": 0.482,
+          "type": "gold",
+          "strongholdType": "gold",
+          "sourceStrongholdType": "gold_stronghold",
+          "bonus": "goldProduction",
+          "bonusPercent": 15,
+          "level": 50,
+          "troops": 50000000,
+          "startTroops": 50000000,
+          "artSrc": "assets/gold-stronghold.png",
+          "size": 300
+        }
+      ],
+      "portals": [],
+      "edgeConnections": {
+        "north": [],
+        "south": [],
+        "west": [],
+        "east": [
+          {
+            "id": "west_center_road",
+            "side": "east",
+            "start": 0.44,
+            "end": 0.6,
+            "type": "road",
+            "connectsToRegionId": "center",
+            "intentionalOuter": false,
+            "notes": "Eastern road continues into Crownlands Heart."
+          }
+        ]
+      }
+    },
+    {
+      "id": "east",
+      "label": "East Reach",
+      "imageSrc": "assets/east-island.png",
+      "thumbnailSrc": "",
+      "imageWidth": 1086,
+      "imageHeight": 1448,
+      "region": {
+        "id": "east",
+        "label": "East Reach",
+        "x": 8500,
+        "y": 3800,
+        "rx": 1120,
+        "ry": 1330,
+        "cityRx": 900,
+        "cityRy": 1090,
+        "rot": -0.07,
+        "palette": "golden"
+      },
+      "cities": [
+        {
+          "id": "east_001",
+          "name": "Easthaven",
+          "regionId": "east",
+          "xNorm": 0.44,
+          "yNorm": 0.177,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 478,
+          "y": 256
+        },
+        {
+          "id": "east_002",
+          "name": "Sunhaven",
+          "regionId": "east",
+          "xNorm": 0.478,
+          "yNorm": 0.123,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 519,
+          "y": 178
+        },
+        {
+          "id": "east_003",
+          "name": "Goldhaven",
+          "regionId": "east",
+          "xNorm": 0.568,
+          "yNorm": 0.124,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 617,
+          "y": 180
+        },
+        {
+          "id": "east_004",
+          "name": "Dawnhaven",
+          "regionId": "east",
+          "xNorm": 0.334,
+          "yNorm": 0.213,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 363,
+          "y": 308
+        },
+        {
+          "id": "east_005",
+          "name": "Brighthaven",
+          "regionId": "east",
+          "xNorm": 0.415,
+          "yNorm": 0.215,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 451,
+          "y": 311
+        },
+        {
+          "id": "east_006",
+          "name": "Lionhaven",
+          "regionId": "east",
+          "xNorm": 0.492,
+          "yNorm": 0.241,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 534,
+          "y": 349
+        },
+        {
+          "id": "east_007",
+          "name": "Falconhaven",
+          "regionId": "east",
+          "xNorm": 0.617,
+          "yNorm": 0.207,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 670,
+          "y": 300
+        },
+        {
+          "id": "east_008",
+          "name": "Redhaven",
+          "regionId": "east",
+          "xNorm": 0.322,
+          "yNorm": 0.262,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 350,
+          "y": 379
+        },
+        {
+          "id": "east_009",
+          "name": "Rosehaven",
+          "regionId": "east",
+          "xNorm": 0.378,
+          "yNorm": 0.262,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 411,
+          "y": 379
+        },
+        {
+          "id": "east_010",
+          "name": "Clearhaven",
+          "regionId": "east",
+          "xNorm": 0.446,
+          "yNorm": 0.287,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 484,
+          "y": 416
+        },
+        {
+          "id": "east_011",
+          "name": "Windhaven",
+          "regionId": "east",
+          "xNorm": 0.552,
+          "yNorm": 0.291,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 599,
+          "y": 421
+        },
+        {
+          "id": "east_012",
+          "name": "Starhaven",
+          "regionId": "east",
+          "xNorm": 0.645,
+          "yNorm": 0.283,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 700,
+          "y": 410
+        },
+        {
+          "id": "east_013",
+          "name": "Lighthaven",
+          "regionId": "east",
+          "xNorm": 0.322,
+          "yNorm": 0.345,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 350,
+          "y": 500
+        },
+        {
+          "id": "east_014",
+          "name": "Pearlhaven",
+          "regionId": "east",
+          "xNorm": 0.376,
+          "yNorm": 0.326,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 408,
+          "y": 472
+        },
+        {
+          "id": "east_015",
+          "name": "Hawkhaven",
+          "regionId": "east",
+          "xNorm": 0.451,
+          "yNorm": 0.338,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 490,
+          "y": 489
+        },
+        {
+          "id": "east_016",
+          "name": "Bluehaven",
+          "regionId": "east",
+          "xNorm": 0.562,
+          "yNorm": 0.345,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 610,
+          "y": 500
+        },
+        {
+          "id": "east_017",
+          "name": "Kingshaven",
+          "regionId": "east",
+          "xNorm": 0.645,
+          "yNorm": 0.359,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 700,
+          "y": 520
+        },
+        {
+          "id": "east_018",
+          "name": "Queenshaven",
+          "regionId": "east",
+          "xNorm": 0.276,
+          "yNorm": 0.404,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 300,
+          "y": 585
+        },
+        {
+          "id": "east_019",
+          "name": "Seahaven",
+          "regionId": "east",
+          "xNorm": 0.367,
+          "yNorm": 0.397,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 399,
+          "y": 575
+        },
+        {
+          "id": "east_020",
+          "name": "Ivoryhaven",
+          "regionId": "east",
+          "xNorm": 0.626,
+          "yNorm": 0.428,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 680,
+          "y": 620
+        },
+        {
+          "id": "east_021",
+          "name": "Eastford",
+          "regionId": "east",
+          "xNorm": 0.672,
+          "yNorm": 0.442,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 730,
+          "y": 640
+        },
+        {
+          "id": "east_022",
+          "name": "Sunford",
+          "regionId": "east",
+          "xNorm": 0.378,
+          "yNorm": 0.511,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 411,
+          "y": 740
+        },
+        {
+          "id": "east_023",
+          "name": "Goldford",
+          "regionId": "east",
+          "xNorm": 0.455,
+          "yNorm": 0.524,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 494,
+          "y": 759
+        },
+        {
+          "id": "east_024",
+          "name": "Dawnford",
+          "regionId": "east",
+          "xNorm": 0.602,
+          "yNorm": 0.49,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 654,
+          "y": 710
+        },
+        {
+          "id": "east_025",
+          "name": "Brightford",
+          "regionId": "east",
+          "xNorm": 0.672,
+          "yNorm": 0.497,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 730,
+          "y": 720
+        },
+        {
+          "id": "east_026",
+          "name": "Lionford",
+          "regionId": "east",
+          "xNorm": 0.334,
+          "yNorm": 0.583,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 363,
+          "y": 844
+        },
+        {
+          "id": "east_027",
+          "name": "Falconford",
+          "regionId": "east",
+          "xNorm": 0.413,
+          "yNorm": 0.571,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 449,
+          "y": 827
+        },
+        {
+          "id": "east_028",
+          "name": "Redford",
+          "regionId": "east",
+          "xNorm": 0.497,
+          "yNorm": 0.608,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 540,
+          "y": 880
+        },
+        {
+          "id": "east_029",
+          "name": "Roseford",
+          "regionId": "east",
+          "xNorm": 0.564,
+          "yNorm": 0.632,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 613,
+          "y": 915
+        },
+        {
+          "id": "east_030",
+          "name": "Clearford",
+          "regionId": "east",
+          "xNorm": 0.614,
+          "yNorm": 0.588,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 667,
+          "y": 851
+        },
+        {
+          "id": "east_031",
+          "name": "Windford",
+          "regionId": "east",
+          "xNorm": 0.343,
+          "yNorm": 0.631,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 372,
+          "y": 914
+        },
+        {
+          "id": "east_032",
+          "name": "Starford",
+          "regionId": "east",
+          "xNorm": 0.413,
+          "yNorm": 0.637,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 449,
+          "y": 922
+        },
+        {
+          "id": "east_033",
+          "name": "Lightford",
+          "regionId": "east",
+          "xNorm": 0.477,
+          "yNorm": 0.664,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 518,
+          "y": 961
+        },
+        {
+          "id": "east_034",
+          "name": "Pearlford",
+          "regionId": "east",
+          "xNorm": 0.599,
+          "yNorm": 0.677,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 651,
+          "y": 980
+        },
+        {
+          "id": "east_035",
+          "name": "Hawkford",
+          "regionId": "east",
+          "xNorm": 0.654,
+          "yNorm": 0.677,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 710,
+          "y": 980
+        },
+        {
+          "id": "east_036",
+          "name": "Blueford",
+          "regionId": "east",
+          "xNorm": 0.391,
+          "yNorm": 0.724,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 425,
+          "y": 1048
+        },
+        {
+          "id": "east_037",
+          "name": "Kingsford",
+          "regionId": "east",
+          "xNorm": 0.447,
+          "yNorm": 0.715,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 485,
+          "y": 1035
+        },
+        {
+          "id": "east_038",
+          "name": "Queensford",
+          "regionId": "east",
+          "xNorm": 0.49,
+          "yNorm": 0.749,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 532,
+          "y": 1085
+        },
+        {
+          "id": "east_039",
+          "name": "Seaford",
+          "regionId": "east",
+          "xNorm": 0.253,
+          "yNorm": 0.59,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 275,
+          "y": 854
+        },
+        {
+          "id": "east_040",
+          "name": "Ivoryford",
+          "regionId": "east",
+          "xNorm": 0.493,
+          "yNorm": 0.836,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 535,
+          "y": 1211
+        },
+        {
+          "id": "east_041",
+          "name": "Eastwick",
+          "regionId": "east",
+          "xNorm": 0.469,
+          "yNorm": 0.794,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 509,
+          "y": 1150
+        },
+        {
+          "id": "east_042",
+          "name": "Sunwick",
+          "regionId": "east",
+          "xNorm": 0.62,
+          "yNorm": 0.874,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 673,
+          "y": 1266
+        },
+        {
+          "id": "east_043",
+          "name": "Goldwick",
+          "regionId": "east",
+          "xNorm": 0.536,
+          "yNorm": 0.798,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 582,
+          "y": 1156
+        },
+        {
+          "id": "east_044",
+          "name": "Dawnwick",
+          "regionId": "east",
+          "xNorm": 0.417,
+          "yNorm": 0.809,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 453,
+          "y": 1171
+        },
+        {
+          "id": "east_045",
+          "name": "Brightwick",
+          "regionId": "east",
+          "xNorm": 0.554,
+          "yNorm": 0.869,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 602,
+          "y": 1258
+        },
+        {
+          "id": "east_046",
+          "name": "Lionwick",
+          "regionId": "east",
+          "xNorm": 0.552,
+          "yNorm": 0.753,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 599,
+          "y": 1090
+        },
+        {
+          "id": "east_047",
+          "name": "Falconwick",
+          "regionId": "east",
+          "xNorm": 0.331,
+          "yNorm": 0.477,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 359,
+          "y": 691
+        },
+        {
+          "id": "east_048",
+          "name": "Redwick",
+          "regionId": "east",
+          "xNorm": 0.387,
+          "yNorm": 0.456,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 420,
+          "y": 660
+        },
+        {
+          "id": "east_049",
+          "name": "Rosewick",
+          "regionId": "east",
+          "xNorm": 0.546,
+          "yNorm": 0.528,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 593,
+          "y": 765
+        },
+        {
+          "id": "east_050",
+          "name": "Clearwick",
+          "regionId": "east",
+          "xNorm": 0.544,
+          "yNorm": 0.572,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 591,
+          "y": 828
+        }
+      ],
+      "objectives": [
+        {
+          "id": "east_speed_stronghold",
+          "name": "Speed Stronghold",
+          "x": 545,
+          "y": 620,
+          "xNorm": 0.502,
+          "yNorm": 0.428,
+          "type": "speed",
+          "strongholdType": "speed",
+          "sourceStrongholdType": "march_speed_stronghold",
+          "bonus": "marchSpeed",
+          "bonusPercent": 15,
+          "level": 50,
+          "troops": 50000000,
+          "startTroops": 50000000,
+          "artSrc": "assets/speed-stronghold.png",
+          "size": 300
+        }
+      ],
+      "portals": [],
+      "edgeConnections": {
+        "north": [],
+        "south": [],
+        "east": [],
+        "west": [
+          {
+            "id": "east_center_road",
+            "side": "west",
+            "start": 0.45,
+            "end": 0.61,
+            "type": "road",
+            "connectsToRegionId": "center",
+            "intentionalOuter": false,
+            "notes": "Western road continues into Crownlands Heart."
+          }
+        ]
+      }
+    },
+    {
+      "id": "north",
+      "label": "North Frontier",
+      "imageSrc": "assets/north-island.png",
+      "thumbnailSrc": "",
+      "imageWidth": 1448,
+      "imageHeight": 1086,
+      "region": {
+        "id": "north",
+        "label": "North Frontier",
+        "x": 5000,
+        "y": 1150,
+        "rx": 1650,
+        "ry": 900,
+        "cityRx": 1370,
+        "cityRy": 700,
+        "rot": 0.04,
+        "palette": "pine"
+      },
+      "cities": [
+        {
+          "id": "north_001",
+          "name": "Frosthaven",
+          "regionId": "north",
+          "xNorm": 0.242,
+          "yNorm": 0.386,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 350,
+          "y": 419
+        },
+        {
+          "id": "north_002",
+          "name": "Pinehaven",
+          "regionId": "north",
+          "xNorm": 0.359,
+          "yNorm": 0.368,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 520,
+          "y": 400
+        },
+        {
+          "id": "north_003",
+          "name": "Northhaven",
+          "regionId": "north",
+          "xNorm": 0.419,
+          "yNorm": 0.352,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 607,
+          "y": 382
+        },
+        {
+          "id": "north_004",
+          "name": "Snowhaven",
+          "regionId": "north",
+          "xNorm": 0.575,
+          "yNorm": 0.4,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 833,
+          "y": 434
+        },
+        {
+          "id": "north_005",
+          "name": "Whitehaven",
+          "regionId": "north",
+          "xNorm": 0.614,
+          "yNorm": 0.376,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 889,
+          "y": 408
+        },
+        {
+          "id": "north_006",
+          "name": "Greyhaven",
+          "regionId": "north",
+          "xNorm": 0.691,
+          "yNorm": 0.368,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 1001,
+          "y": 400
+        },
+        {
+          "id": "north_007",
+          "name": "Winterhaven",
+          "regionId": "north",
+          "xNorm": 0.194,
+          "yNorm": 0.422,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 281,
+          "y": 458
+        },
+        {
+          "id": "north_008",
+          "name": "Icehaven",
+          "regionId": "north",
+          "xNorm": 0.294,
+          "yNorm": 0.386,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 426,
+          "y": 419
+        },
+        {
+          "id": "north_009",
+          "name": "Wolfhaven",
+          "regionId": "north",
+          "xNorm": 0.39,
+          "yNorm": 0.418,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 565,
+          "y": 454
+        },
+        {
+          "id": "north_010",
+          "name": "Ravenhaven",
+          "regionId": "north",
+          "xNorm": 0.435,
+          "yNorm": 0.424,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 630,
+          "y": 460
+        },
+        {
+          "id": "north_011",
+          "name": "Coldhaven",
+          "regionId": "north",
+          "xNorm": 0.613,
+          "yNorm": 0.449,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 888,
+          "y": 488
+        },
+        {
+          "id": "north_012",
+          "name": "Stormhaven",
+          "regionId": "north",
+          "xNorm": 0.668,
+          "yNorm": 0.425,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 967,
+          "y": 462
+        },
+        {
+          "id": "north_013",
+          "name": "Hawkhaven",
+          "regionId": "north",
+          "xNorm": 0.718,
+          "yNorm": 0.405,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 1040,
+          "y": 440
+        },
+        {
+          "id": "north_014",
+          "name": "Stonehaven",
+          "regionId": "north",
+          "xNorm": 0.773,
+          "yNorm": 0.396,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 1119,
+          "y": 430
+        },
+        {
+          "id": "north_015",
+          "name": "Ashhaven",
+          "regionId": "north",
+          "xNorm": 0.223,
+          "yNorm": 0.485,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 323,
+          "y": 527
+        },
+        {
+          "id": "north_016",
+          "name": "Briarhaven",
+          "regionId": "north",
+          "xNorm": 0.29,
+          "yNorm": 0.48,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 420,
+          "y": 521
+        },
+        {
+          "id": "north_017",
+          "name": "Moonhaven",
+          "regionId": "north",
+          "xNorm": 0.387,
+          "yNorm": 0.479,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 560,
+          "y": 520
+        },
+        {
+          "id": "north_018",
+          "name": "Cloudhaven",
+          "regionId": "north",
+          "xNorm": 0.614,
+          "yNorm": 0.529,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 889,
+          "y": 574
+        },
+        {
+          "id": "north_019",
+          "name": "Cedarhaven",
+          "regionId": "north",
+          "xNorm": 0.663,
+          "yNorm": 0.479,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 960,
+          "y": 520
+        },
+        {
+          "id": "north_020",
+          "name": "Peakhaven",
+          "regionId": "north",
+          "xNorm": 0.746,
+          "yNorm": 0.479,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 1080,
+          "y": 520
+        },
+        {
+          "id": "north_021",
+          "name": "Frostford",
+          "regionId": "north",
+          "xNorm": 0.787,
+          "yNorm": 0.479,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 1140,
+          "y": 520
+        },
+        {
+          "id": "north_022",
+          "name": "Pineford",
+          "regionId": "north",
+          "xNorm": 0.197,
+          "yNorm": 0.579,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 285,
+          "y": 629
+        },
+        {
+          "id": "north_023",
+          "name": "Northford",
+          "regionId": "north",
+          "xNorm": 0.325,
+          "yNorm": 0.611,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 471,
+          "y": 664
+        },
+        {
+          "id": "north_024",
+          "name": "Snowford",
+          "regionId": "north",
+          "xNorm": 0.39,
+          "yNorm": 0.604,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 565,
+          "y": 656
+        },
+        {
+          "id": "north_025",
+          "name": "Whiteford",
+          "regionId": "north",
+          "xNorm": 0.58,
+          "yNorm": 0.589,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 840,
+          "y": 640
+        },
+        {
+          "id": "north_026",
+          "name": "Greyford",
+          "regionId": "north",
+          "xNorm": 0.659,
+          "yNorm": 0.563,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 954,
+          "y": 611
+        },
+        {
+          "id": "north_027",
+          "name": "Winterford",
+          "regionId": "north",
+          "xNorm": 0.706,
+          "yNorm": 0.53,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 1022,
+          "y": 576
+        },
+        {
+          "id": "north_028",
+          "name": "Iceford",
+          "regionId": "north",
+          "xNorm": 0.76,
+          "yNorm": 0.537,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 1100,
+          "y": 583
+        },
+        {
+          "id": "north_029",
+          "name": "Wolfford",
+          "regionId": "north",
+          "xNorm": 0.221,
+          "yNorm": 0.673,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 320,
+          "y": 731
+        },
+        {
+          "id": "north_030",
+          "name": "Ravenford",
+          "regionId": "north",
+          "xNorm": 0.289,
+          "yNorm": 0.68,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 418,
+          "y": 738
+        },
+        {
+          "id": "north_031",
+          "name": "Coldford",
+          "regionId": "north",
+          "xNorm": 0.401,
+          "yNorm": 0.681,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 581,
+          "y": 740
+        },
+        {
+          "id": "north_032",
+          "name": "Stormford",
+          "regionId": "north",
+          "xNorm": 0.483,
+          "yNorm": 0.681,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 699,
+          "y": 740
+        },
+        {
+          "id": "north_033",
+          "name": "Hawkford",
+          "regionId": "north",
+          "xNorm": 0.58,
+          "yNorm": 0.666,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 840,
+          "y": 723
+        },
+        {
+          "id": "north_034",
+          "name": "Stoneford",
+          "regionId": "north",
+          "xNorm": 0.631,
+          "yNorm": 0.627,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 914,
+          "y": 681
+        },
+        {
+          "id": "north_035",
+          "name": "Ashford",
+          "regionId": "north",
+          "xNorm": 0.711,
+          "yNorm": 0.617,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 1030,
+          "y": 670
+        },
+        {
+          "id": "north_036",
+          "name": "Briarford",
+          "regionId": "north",
+          "xNorm": 0.756,
+          "yNorm": 0.607,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 1095,
+          "y": 659
+        },
+        {
+          "id": "north_037",
+          "name": "Moonford",
+          "regionId": "north",
+          "xNorm": 0.264,
+          "yNorm": 0.547,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 382,
+          "y": 594
+        },
+        {
+          "id": "north_038",
+          "name": "Cloudford",
+          "regionId": "north",
+          "xNorm": 0.311,
+          "yNorm": 0.552,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 450,
+          "y": 599
+        },
+        {
+          "id": "north_039",
+          "name": "Cedarford",
+          "regionId": "north",
+          "xNorm": 0.473,
+          "yNorm": 0.747,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 685,
+          "y": 811
+        },
+        {
+          "id": "north_040",
+          "name": "Peakford",
+          "regionId": "north",
+          "xNorm": 0.585,
+          "yNorm": 0.766,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 847,
+          "y": 832
+        },
+        {
+          "id": "north_041",
+          "name": "Frostwick",
+          "regionId": "north",
+          "xNorm": 0.635,
+          "yNorm": 0.746,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 919,
+          "y": 810
+        },
+        {
+          "id": "north_042",
+          "name": "Pinewick",
+          "regionId": "north",
+          "xNorm": 0.656,
+          "yNorm": 0.676,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 950,
+          "y": 734
+        },
+        {
+          "id": "north_043",
+          "name": "Northwick",
+          "regionId": "north",
+          "xNorm": 0.347,
+          "yNorm": 0.677,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 502,
+          "y": 735
+        },
+        {
+          "id": "north_044",
+          "name": "Snowwick",
+          "regionId": "north",
+          "xNorm": 0.442,
+          "yNorm": 0.626,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 640,
+          "y": 680
+        },
+        {
+          "id": "north_045",
+          "name": "Whitewick",
+          "regionId": "north",
+          "xNorm": 0.518,
+          "yNorm": 0.631,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 750,
+          "y": 685
+        },
+        {
+          "id": "north_046",
+          "name": "Greywick",
+          "regionId": "north",
+          "xNorm": 0.473,
+          "yNorm": 0.394,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 685,
+          "y": 428
+        },
+        {
+          "id": "north_047",
+          "name": "Winterwick",
+          "regionId": "north",
+          "xNorm": 0.528,
+          "yNorm": 0.38,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 765,
+          "y": 413
+        },
+        {
+          "id": "north_048",
+          "name": "Icewick",
+          "regionId": "north",
+          "xNorm": 0.704,
+          "yNorm": 0.681,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 1019,
+          "y": 740
+        },
+        {
+          "id": "north_049",
+          "name": "Wolfwick",
+          "regionId": "north",
+          "xNorm": 0.329,
+          "yNorm": 0.434,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 476,
+          "y": 471
+        },
+        {
+          "id": "north_050",
+          "name": "Ravenwick",
+          "regionId": "north",
+          "xNorm": 0.535,
+          "yNorm": 0.698,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 775,
+          "y": 758
+        }
+      ],
+      "objectives": [
+        {
+          "id": "north_training_stronghold",
+          "name": "Training Stronghold",
+          "x": 725,
+          "y": 552,
+          "xNorm": 0.501,
+          "yNorm": 0.508,
+          "type": "training",
+          "strongholdType": "training",
+          "sourceStrongholdType": "troop_stronghold",
+          "bonus": "troopProduction",
+          "bonusPercent": 15,
+          "level": 50,
+          "troops": 50000000,
+          "startTroops": 50000000,
+          "artSrc": "assets/training-stronghold.png",
+          "size": 300
+        }
+      ],
+      "portals": [],
+      "edgeConnections": {
+        "north": [],
+        "east": [],
+        "west": [],
+        "south": [
+          {
+            "id": "north_center_road",
+            "side": "south",
+            "start": 0.42,
+            "end": 0.58,
+            "type": "road",
+            "connectsToRegionId": "center",
+            "intentionalOuter": false,
+            "notes": "Southern road continues into Crownlands Heart."
+          }
+        ]
+      }
+    },
+    {
+      "id": "south",
+      "label": "Southfields",
+      "imageSrc": "assets/south-island.png",
+      "thumbnailSrc": "",
+      "imageWidth": 1446,
+      "imageHeight": 1087,
+      "region": {
+        "id": "south",
+        "label": "Southfields",
+        "x": 5000,
+        "y": 6450,
+        "rx": 1650,
+        "ry": 900,
+        "cityRx": 1370,
+        "cityRy": 700,
+        "rot": -0.05,
+        "palette": "marsh"
+      },
+      "cities": [
+        {
+          "id": "south_001",
+          "name": "Southhaven",
+          "regionId": "south",
+          "xNorm": 0.322,
+          "yNorm": 0.228,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 466,
+          "y": 248
+        },
+        {
+          "id": "south_002",
+          "name": "Salthaven",
+          "regionId": "south",
+          "xNorm": 0.373,
+          "yNorm": 0.212,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 539,
+          "y": 230
+        },
+        {
+          "id": "south_003",
+          "name": "Sunhaven",
+          "regionId": "south",
+          "xNorm": 0.436,
+          "yNorm": 0.225,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 630,
+          "y": 245
+        },
+        {
+          "id": "south_004",
+          "name": "Marshhaven",
+          "regionId": "south",
+          "xNorm": 0.588,
+          "yNorm": 0.212,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 850,
+          "y": 230
+        },
+        {
+          "id": "south_005",
+          "name": "Reedhaven",
+          "regionId": "south",
+          "xNorm": 0.632,
+          "yNorm": 0.596,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 914,
+          "y": 648
+        },
+        {
+          "id": "south_006",
+          "name": "Pearlhaven",
+          "regionId": "south",
+          "xNorm": 0.656,
+          "yNorm": 0.278,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 949,
+          "y": 302
+        },
+        {
+          "id": "south_007",
+          "name": "Greenhaven",
+          "regionId": "south",
+          "xNorm": 0.265,
+          "yNorm": 0.283,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 383,
+          "y": 308
+        },
+        {
+          "id": "south_008",
+          "name": "Bayhaven",
+          "regionId": "south",
+          "xNorm": 0.332,
+          "yNorm": 0.29,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 480,
+          "y": 315
+        },
+        {
+          "id": "south_009",
+          "name": "Mosshaven",
+          "regionId": "south",
+          "xNorm": 0.415,
+          "yNorm": 0.29,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 600,
+          "y": 315
+        },
+        {
+          "id": "south_010",
+          "name": "Willowhaven",
+          "regionId": "south",
+          "xNorm": 0.48,
+          "yNorm": 0.284,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 694,
+          "y": 309
+        },
+        {
+          "id": "south_011",
+          "name": "Rosehaven",
+          "regionId": "south",
+          "xNorm": 0.54,
+          "yNorm": 0.289,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 781,
+          "y": 314
+        },
+        {
+          "id": "south_012",
+          "name": "Clearhaven",
+          "regionId": "south",
+          "xNorm": 0.601,
+          "yNorm": 0.278,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 869,
+          "y": 302
+        },
+        {
+          "id": "south_013",
+          "name": "Misthaven",
+          "regionId": "south",
+          "xNorm": 0.705,
+          "yNorm": 0.288,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 1019,
+          "y": 313
+        },
+        {
+          "id": "south_014",
+          "name": "Rainhaven",
+          "regionId": "south",
+          "xNorm": 0.28,
+          "yNorm": 0.414,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 405,
+          "y": 450
+        },
+        {
+          "id": "south_015",
+          "name": "Bloomhaven",
+          "regionId": "south",
+          "xNorm": 0.332,
+          "yNorm": 0.368,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 480,
+          "y": 400
+        },
+        {
+          "id": "south_016",
+          "name": "Hearthhaven",
+          "regionId": "south",
+          "xNorm": 0.415,
+          "yNorm": 0.368,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 600,
+          "y": 400
+        },
+        {
+          "id": "south_017",
+          "name": "Warmhaven",
+          "regionId": "south",
+          "xNorm": 0.472,
+          "yNorm": 0.364,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 683,
+          "y": 396
+        },
+        {
+          "id": "south_018",
+          "name": "Sablehaven",
+          "regionId": "south",
+          "xNorm": 0.536,
+          "yNorm": 0.363,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 775,
+          "y": 395
+        },
+        {
+          "id": "south_019",
+          "name": "Drifthaven",
+          "regionId": "south",
+          "xNorm": 0.642,
+          "yNorm": 0.359,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 928,
+          "y": 390
+        },
+        {
+          "id": "south_020",
+          "name": "Tidehaven",
+          "regionId": "south",
+          "xNorm": 0.779,
+          "yNorm": 0.578,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 1126,
+          "y": 628
+        },
+        {
+          "id": "south_021",
+          "name": "Southford",
+          "regionId": "south",
+          "xNorm": 0.259,
+          "yNorm": 0.493,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 375,
+          "y": 536
+        },
+        {
+          "id": "south_022",
+          "name": "Saltford",
+          "regionId": "south",
+          "xNorm": 0.346,
+          "yNorm": 0.442,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 500,
+          "y": 480
+        },
+        {
+          "id": "south_023",
+          "name": "Sunford",
+          "regionId": "south",
+          "xNorm": 0.408,
+          "yNorm": 0.442,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 590,
+          "y": 480
+        },
+        {
+          "id": "south_024",
+          "name": "Marshford",
+          "regionId": "south",
+          "xNorm": 0.617,
+          "yNorm": 0.426,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 892,
+          "y": 463
+        },
+        {
+          "id": "south_025",
+          "name": "Reedford",
+          "regionId": "south",
+          "xNorm": 0.672,
+          "yNorm": 0.429,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 972,
+          "y": 466
+        },
+        {
+          "id": "south_026",
+          "name": "Pearlford",
+          "regionId": "south",
+          "xNorm": 0.719,
+          "yNorm": 0.442,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 1040,
+          "y": 480
+        },
+        {
+          "id": "south_027",
+          "name": "Greenford",
+          "regionId": "south",
+          "xNorm": 0.232,
+          "yNorm": 0.553,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 335,
+          "y": 601
+        },
+        {
+          "id": "south_028",
+          "name": "Bayford",
+          "regionId": "south",
+          "xNorm": 0.322,
+          "yNorm": 0.518,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 466,
+          "y": 563
+        },
+        {
+          "id": "south_029",
+          "name": "Mossford",
+          "regionId": "south",
+          "xNorm": 0.38,
+          "yNorm": 0.515,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 549,
+          "y": 560
+        },
+        {
+          "id": "south_030",
+          "name": "Willowford",
+          "regionId": "south",
+          "xNorm": 0.622,
+          "yNorm": 0.515,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 899,
+          "y": 560
+        },
+        {
+          "id": "south_031",
+          "name": "Roseford",
+          "regionId": "south",
+          "xNorm": 0.685,
+          "yNorm": 0.515,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 991,
+          "y": 560
+        },
+        {
+          "id": "south_032",
+          "name": "Clearford",
+          "regionId": "south",
+          "xNorm": 0.733,
+          "yNorm": 0.515,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 1060,
+          "y": 560
+        },
+        {
+          "id": "south_033",
+          "name": "Mistford",
+          "regionId": "south",
+          "xNorm": 0.297,
+          "yNorm": 0.589,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 429,
+          "y": 640
+        },
+        {
+          "id": "south_034",
+          "name": "Rainford",
+          "regionId": "south",
+          "xNorm": 0.367,
+          "yNorm": 0.589,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 531,
+          "y": 640
+        },
+        {
+          "id": "south_035",
+          "name": "Bloomford",
+          "regionId": "south",
+          "xNorm": 0.426,
+          "yNorm": 0.601,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 616,
+          "y": 653
+        },
+        {
+          "id": "south_036",
+          "name": "Hearthford",
+          "regionId": "south",
+          "xNorm": 0.57,
+          "yNorm": 0.594,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 824,
+          "y": 646
+        },
+        {
+          "id": "south_037",
+          "name": "Warmford",
+          "regionId": "south",
+          "xNorm": 0.678,
+          "yNorm": 0.589,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 980,
+          "y": 640
+        },
+        {
+          "id": "south_038",
+          "name": "Sableford",
+          "regionId": "south",
+          "xNorm": 0.719,
+          "yNorm": 0.589,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 1040,
+          "y": 640
+        },
+        {
+          "id": "south_039",
+          "name": "Driftford",
+          "regionId": "south",
+          "xNorm": 0.297,
+          "yNorm": 0.662,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 429,
+          "y": 720
+        },
+        {
+          "id": "south_040",
+          "name": "Tideford",
+          "regionId": "south",
+          "xNorm": 0.373,
+          "yNorm": 0.662,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 539,
+          "y": 720
+        },
+        {
+          "id": "south_041",
+          "name": "Southwick",
+          "regionId": "south",
+          "xNorm": 0.408,
+          "yNorm": 0.708,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 590,
+          "y": 770
+        },
+        {
+          "id": "south_042",
+          "name": "Saltwick",
+          "regionId": "south",
+          "xNorm": 0.581,
+          "yNorm": 0.718,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 840,
+          "y": 780
+        },
+        {
+          "id": "south_043",
+          "name": "Sunwick",
+          "regionId": "south",
+          "xNorm": 0.604,
+          "yNorm": 0.645,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 873,
+          "y": 701
+        },
+        {
+          "id": "south_044",
+          "name": "Marshwick",
+          "regionId": "south",
+          "xNorm": 0.678,
+          "yNorm": 0.662,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 980,
+          "y": 720
+        },
+        {
+          "id": "south_045",
+          "name": "Reedwick",
+          "regionId": "south",
+          "xNorm": 0.733,
+          "yNorm": 0.662,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 1060,
+          "y": 720
+        },
+        {
+          "id": "south_046",
+          "name": "Pearlwick",
+          "regionId": "south",
+          "xNorm": 0.29,
+          "yNorm": 0.331,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 419,
+          "y": 360
+        },
+        {
+          "id": "south_047",
+          "name": "Greenwick",
+          "regionId": "south",
+          "xNorm": 0.373,
+          "yNorm": 0.331,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 539,
+          "y": 360
+        },
+        {
+          "id": "south_048",
+          "name": "Baywick",
+          "regionId": "south",
+          "xNorm": 0.589,
+          "yNorm": 0.361,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 852,
+          "y": 392
+        },
+        {
+          "id": "south_049",
+          "name": "Mosswick",
+          "regionId": "south",
+          "xNorm": 0.5,
+          "yNorm": 0.609,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 723,
+          "y": 662
+        },
+        {
+          "id": "south_050",
+          "name": "Willowwick",
+          "regionId": "south",
+          "xNorm": 0.456,
+          "yNorm": 0.658,
+          "level": 1,
+          "owner": "neutral",
+          "startType": "neutral",
+          "troops": 10,
+          "x": 659,
+          "y": 715
+        }
+      ],
+      "objectives": [
+        {
+          "id": "south_defense_stronghold",
+          "name": "Defense Stronghold",
+          "x": 719,
+          "y": 518,
+          "xNorm": 0.497,
+          "yNorm": 0.477,
+          "type": "defense",
+          "strongholdType": "defense",
+          "sourceStrongholdType": "defense_stronghold",
+          "bonus": "cityDefense",
+          "bonusPercent": 15,
+          "level": 50,
+          "troops": 50000000,
+          "startTroops": 50000000,
+          "artSrc": "assets/defense-stronghold.png",
+          "size": 300
+        }
+      ],
+      "portals": [],
+      "edgeConnections": {
+        "south": [],
+        "east": [],
+        "west": [],
+        "north": [
+          {
+            "id": "south_center_road",
+            "side": "north",
+            "start": 0.42,
+            "end": 0.58,
+            "type": "road",
+            "connectsToRegionId": "center",
+            "intentionalOuter": false,
+            "notes": "Northern road continues into Crownlands Heart."
+          }
+        ]
+      }
     }
   ]
 };

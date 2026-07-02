@@ -3,106 +3,145 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Crownlands Map Editor</title>
+  <title>Crownlands World Editor</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
   <main class="editor-shell">
-    <aside class="map-sidebar" aria-label="Maps">
-      <div class="sidebar-header">
-        <div>
-          <span>Maps</span>
-          <strong id="mapCountLabel">0</strong>
-        </div>
-        <button id="addMapBtn" class="icon-btn" type="button" title="Add map">+</button>
+    <header class="editor-toolbar">
+      <div class="brand-block">
+        <span>Crownlands</span>
+        <strong>Developer Map Editor</strong>
       </div>
-      <div id="mapList" class="map-list"></div>
-      <div class="sidebar-toolbox" aria-label="Placement tools">
-        <span>Place Tools</span>
-        <div class="sidebar-tool-grid">
-          <button class="mode-btn sidebar-mode-btn" type="button" data-mode="select">Select</button>
-          <button class="mode-btn sidebar-mode-btn" type="button" data-mode="city">Place City</button>
-          <button class="mode-btn sidebar-mode-btn" type="button" data-mode="portal">Place Portal</button>
-          <button class="mode-btn sidebar-mode-btn" type="button" data-mode="objective">Place Stronghold</button>
-        </div>
+      <div class="mode-tabs" role="group" aria-label="Editor mode">
+        <button id="worldModeBtn" class="tool-btn active" type="button">World Layout</button>
+        <button id="regionModeBtn" class="tool-btn" type="button">Region Edit</button>
       </div>
-      <div class="sidebar-actions">
-        <button id="sidebarApplyBtn" class="primary-btn full" type="button">Upload Changes</button>
+      <div class="tool-strip" role="group" aria-label="Editor tools">
+        <button id="addRegionBtn" class="tool-btn" type="button">Add Region</button>
+        <button id="editRegionBtn" class="tool-btn" type="button">Edit Region</button>
+        <button id="addCityBtn" class="tool-btn" type="button">Add City</button>
+        <button id="addStrongholdBtn" class="tool-btn" type="button">Add Stronghold</button>
+        <button id="addEdgeBtn" class="tool-btn" type="button">Add Edge Connection</button>
+        <button id="deleteSelectedBtn" class="tool-btn danger" type="button">Delete Selected</button>
       </div>
-    </aside>
+      <div class="tool-strip" role="group" aria-label="Data actions">
+        <button id="validateBtn" class="tool-btn" type="button">Validate World</button>
+        <button id="exportBtn" class="tool-btn" type="button">Export JSON</button>
+        <button id="importBtn" class="tool-btn" type="button">Import JSON</button>
+        <button id="saveBtn" class="tool-btn primary" type="button">Save to Game</button>
+      </div>
+      <div class="tool-strip toggles" role="group" aria-label="View toggles">
+        <button id="toggleGridBtn" class="tool-btn active" type="button">Toggle Grid</button>
+        <button id="toggleCitiesBtn" class="tool-btn active" type="button">Toggle Cities</button>
+        <button id="toggleStrongholdsBtn" class="tool-btn active" type="button">Toggle Strongholds</button>
+        <button id="toggleConnectionsBtn" class="tool-btn active" type="button">Toggle Connections</button>
+      </div>
+      <input id="importFileInput" type="file" accept=".json,application/json" hidden />
+    </header>
 
-    <section class="workbench" aria-label="Map editor">
-      <header class="topbar">
-        <div class="mode-group" role="group" aria-label="Edit mode">
-          <button class="mode-btn active" type="button" data-mode="select">Select</button>
-          <button class="mode-btn" type="button" data-mode="city">City</button>
-          <button class="mode-btn" type="button" data-mode="portal">Portal</button>
-          <button class="mode-btn" type="button" data-mode="objective">Stronghold</button>
+    <section class="editor-body">
+      <section class="workspace">
+        <div class="workspace-title">
+          <div>
+            <span id="workspaceKicker">World Layout</span>
+            <strong id="workspaceTitle">Loading...</strong>
+          </div>
+          <div class="context-tools">
+            <label class="compact-field">
+              <span>Stronghold</span>
+              <select id="strongholdTypeSelect">
+                <option value="gold_stronghold">Gold</option>
+                <option value="troop_stronghold">Troops</option>
+                <option value="march_speed_stronghold">Speed</option>
+                <option value="defense_stronghold">Defense</option>
+                <option value="upgrade_discount_stronghold">Upgrade</option>
+                <option value="crown_citadel">Crown Citadel</option>
+              </select>
+            </label>
+            <label class="compact-field">
+              <span>Edge Type</span>
+              <select id="edgeTypeSelect">
+                <option value="road">Road</option>
+                <option value="valley">Valley</option>
+                <option value="pass">Pass</option>
+                <option value="river_crossing">River Crossing</option>
+                <option value="open_field">Open Field</option>
+                <option value="forest_break">Forest Break</option>
+                <option value="bridge">Bridge</option>
+              </select>
+            </label>
+            <button id="zoomOutBtn" class="tool-btn small" type="button">-</button>
+            <span id="zoomLabel" class="zoom-label">100%</span>
+            <button id="zoomInBtn" class="tool-btn small" type="button">+</button>
+          </div>
         </div>
-        <label class="target-select">
-          <span>Portal target</span>
-          <select id="portalTargetSelect"></select>
-        </label>
-        <div class="topbar-actions">
-          <button id="openProjectBtn" class="secondary-btn" type="button">Open Project</button>
-          <button id="applyBtn" class="primary-btn" type="button">Upload Changes</button>
-        </div>
-      </header>
 
-      <div class="canvas-wrap">
-        <div id="mapCanvas" class="map-canvas" tabindex="0" aria-label="Editable map canvas">
-          <img id="mapImage" class="map-image" alt="" draggable="false" />
-          <div id="markerLayer" class="marker-layer"></div>
+        <div id="worldView" class="world-view">
+          <svg id="worldConnectionLayer" class="world-connection-layer" aria-hidden="true"></svg>
+          <div id="worldGrid" class="world-grid"></div>
         </div>
-      </div>
 
-      <footer id="statusBar" class="status-bar">Loading maps...</footer>
+        <div id="regionView" class="region-view hidden">
+          <div id="regionViewport" class="region-viewport">
+            <div id="regionCanvas" class="region-canvas">
+              <img id="regionImage" class="region-image" alt="" draggable="false" />
+              <div id="edgeLayer" class="edge-layer"></div>
+              <div id="markerLayer" class="marker-layer"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <aside class="inspector" aria-label="Selected object">
+        <section class="panel">
+          <div class="panel-heading">
+            <span>World</span>
+            <strong id="worldNameLabel">World</strong>
+          </div>
+          <label>
+            <span>World ID</span>
+            <input id="worldIdInput" />
+          </label>
+          <label>
+            <span>World Name</span>
+            <input id="worldNameInput" />
+          </label>
+        </section>
+
+        <section class="panel">
+          <div class="panel-heading">
+            <span>Selection</span>
+            <strong id="selectionTitle">None</strong>
+          </div>
+          <div id="selectionForm" class="selection-form empty">Select a region, city, stronghold, or edge connection.</div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-heading">
+            <span>Validation</span>
+            <strong id="validationSummary">Not checked</strong>
+          </div>
+          <div id="validationList" class="validation-list">Press Validate World when you want a full check.</div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-heading">
+            <span>Counts</span>
+            <strong id="countSummary">0 regions</strong>
+          </div>
+          <div class="stats-grid">
+            <div><span>Regions</span><strong id="regionCountStat">0</strong></div>
+            <div><span>Cities</span><strong id="cityCountStat">0</strong></div>
+            <div><span>Strongholds</span><strong id="strongholdCountStat">0</strong></div>
+            <div><span>Edges</span><strong id="edgeCountStat">0</strong></div>
+          </div>
+        </section>
+      </aside>
     </section>
 
-    <aside class="inspector" aria-label="Inspector">
-      <section class="panel">
-        <div class="panel-heading">
-          <span>Map</span>
-          <strong id="currentMapTitle">None</strong>
-        </div>
-        <label>
-          <span>Name</span>
-          <input id="mapLabelInput" />
-        </label>
-        <label>
-          <span>Image path</span>
-          <input id="mapImagePathInput" />
-        </label>
-        <button id="uploadMapImageBtn" class="secondary-btn full" type="button">Upload Map Image</button>
-        <input id="mapImageInput" type="file" accept="image/*" hidden />
-        <input id="newMapImageInput" type="file" accept="image/*" hidden />
-      </section>
-
-      <section class="panel">
-        <div class="panel-heading">
-          <span>Selection</span>
-          <strong id="selectionTitle">None</strong>
-        </div>
-        <div id="selectionForm" class="selection-form empty">Select a marker or add one to edit it.</div>
-        <button id="deleteSelectedBtn" class="danger-btn full" type="button" disabled>Delete Selected</button>
-      </section>
-
-      <section class="panel">
-        <div class="panel-heading">
-          <span>Counts</span>
-          <strong id="mapStats">0 cities</strong>
-        </div>
-        <div class="stats-grid">
-          <div><span>Cities</span><strong id="cityCountStat">0</strong></div>
-          <div><span>Portals</span><strong id="portalCountStat">0</strong></div>
-          <div><span>Strongholds</span><strong id="objectiveCountStat">0</strong></div>
-        </div>
-      </section>
-    </aside>
+    <footer id="statusBar" class="status-bar">Loading world data...</footer>
   </main>
-
-  <script src="../../assets/map-editor-data.js"></script>
-  <script src="../../world-config.js"></script>
   <script src="editor.js"></script>
 </body>
 </html>

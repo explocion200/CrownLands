@@ -1,0 +1,76 @@
+{
+  "worldId": "world_01",
+  "worldName": "Crownlands World 01",
+  "schemaVersion": 1,
+  "updatedAt": "2026-07-02T15:12:42.912Z",
+  "globalSettings": {
+    "defaultMapWidth": 2048,
+    "defaultMapHeight": 2048,
+    "minimumCitySpacing": 0.045,
+    "worldWidth": 10000,
+    "worldHeight": 7600,
+    "gridCellWorldSize": 2300
+  },
+  "regions": [
+    {
+      "id": "center",
+      "name": "Crownlands Heart",
+      "type": "crownlands_main",
+      "gridX": 0,
+      "gridY": 0,
+      "width": 1254,
+      "height": 1254,
+      "imagePath": "assets/center-island.png",
+      "cityCapacity": 100,
+      "regionPath": "assets/worlds/world_01/regions/center.json"
+    },
+    {
+      "id": "west",
+      "name": "West Marches",
+      "type": "starter",
+      "gridX": -1,
+      "gridY": 0,
+      "width": 1024,
+      "height": 1536,
+      "imagePath": "assets/west-island.png",
+      "cityCapacity": 50,
+      "regionPath": "assets/worlds/world_01/regions/west.json"
+    },
+    {
+      "id": "east",
+      "name": "East Reach",
+      "type": "starter",
+      "gridX": 1,
+      "gridY": 0,
+      "width": 1086,
+      "height": 1448,
+      "imagePath": "assets/east-island.png",
+      "cityCapacity": 50,
+      "regionPath": "assets/worlds/world_01/regions/east.json"
+    },
+    {
+      "id": "north",
+      "name": "North Frontier",
+      "type": "starter",
+      "gridX": 0,
+      "gridY": -1,
+      "width": 1448,
+      "height": 1086,
+      "imagePath": "assets/north-island.png",
+      "cityCapacity": 50,
+      "regionPath": "assets/worlds/world_01/regions/north.json"
+    },
+    {
+      "id": "south",
+      "name": "Southfields",
+      "type": "starter",
+      "gridX": 0,
+      "gridY": 1,
+      "width": 1446,
+      "height": 1087,
+      "imagePath": "assets/south-island.png",
+      "cityCapacity": 50,
+      "regionPath": "assets/worlds/world_01/regions/south.json"
+    }
+  ]
+}

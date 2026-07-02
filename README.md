@@ -6,9 +6,9 @@ Landscape / horizontal medieval island-conquest prototype inspired by the core l
 
 - Player starts with 1 main city, 50 troops, and 500 gold.
 - Google sign-in connects the account first; the player enters the live kingdom with a separate Enter Kingdom button.
-- The world contains 5 large islands with 250 total dynamic city slots: 50 on the center island and 50 on each outer island.
-- Each island keeps its middle clear for a future island stronghold.
-- New online players claim starting cities on the outer islands first; the center island is only used when the outer islands are full.
+- The current placeholder world contains 5 regional maps arranged on a square grid: center, west, east, north, and south.
+- The current map reset is `fresh-2026-07-02-world-reset`, so online players start fresh in a new Firebase world slot.
+- New online players claim starting cities from the available starter regions first; the center Crownlands region is intended as the main battleground.
 - Cities produce troops and gold in real time while the game is active.
 - Offline production catches up when the player returns: troops stay in the cities that produced them, while troops from cities lost offline rally to the main city.
 - City level creates victory points.
@@ -36,12 +36,14 @@ Landscape / horizontal medieval island-conquest prototype inspired by the core l
 
 ## Map Rules
 
-- The game uses individual island maps backed by `assets/map-editor-data.js`.
-- The center island is the largest battleground, with north, south, west, and east maps around it.
-- Each island has portal markers that switch the active island map and route cross-island movement.
-- Cities are placed on open land or clearings only, with island strongholds and the Crown Citadel configured as map objectives.
+- The editor source of truth is now JSON under `assets/worlds/world_01/`.
+- `assets/map-editor-data.js` is still generated as a compatibility file so the current game can load exported placements normally.
+- Regional maps are decorative backgrounds only; cities, strongholds, camps, and gameplay markers are overlaid from data.
+- Regions connect through north, south, east, and west edge connection zones. These zones create map-switch icons in the game.
+- Portals are no longer part of the editor data model.
+- Cities are placed manually on open land or clearings, with resource strongholds and the Crown Citadel configured as separate marker types.
 - Cities are not placed on ocean, lakes, mountains, dense forests, or swamp.
-- Troops cannot walk through ocean, lakes, or mountains. All cross-island movement must route through portals.
+- Troops should cross between maps through edge connection zones where the maps naturally meet.
 - Troops can walk through forests and swamp at normal speed.
 - Active army route markers appear only after troops are sent.
 - Selecting a non-owned city opens Scout, Attack, and Info actions around that city.
@@ -79,7 +81,15 @@ Run the local editor from PowerShell:
 .\tools\start-editor.ps1
 ```
 
-Then open `http://127.0.0.1:8791/editor/`. The editor runs only on this computer and opens the current visual map editor for `assets/map-editor-data.js`, including individual island maps, portals, cities, strongholds, and custom map images. It also serves the game at `/game/` for a quick browser preview.
+Then open `http://127.0.0.1:8791/editor/`. The editor runs only on this computer and opens the developer world editor for `assets/worlds/world_01/`. Use World Layout mode to place regional maps on the grid, and Region Edit mode to place cities, strongholds, and edge connection zones.
+
+`Save to Game` writes:
+
+- `assets/worlds/world_01/world-layout.json`
+- `assets/worlds/world_01/regions/*.json`
+- `assets/map-editor-data.js` for current game compatibility
+
+The editor also serves the game at `/game/` for a quick browser preview.
 
 ## Deploy on Netlify
 

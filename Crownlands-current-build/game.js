@@ -5,7 +5,7 @@ const APP_BUILD_ID = getCurrentDocumentBuildId();
 const WORLD_REGIONS = getMergedWorldRegions(WORLD_CONFIG, MAP_EDITOR_DATA);
 const LAND_BRIDGES = getMergedLandBridges(WORLD_CONFIG, MAP_EDITOR_DATA);
 const REGION_CITY_COUNT = Math.max(1, Math.floor(Number(WORLD_CONFIG.cityCountPerRegion) || 50));
-const RESET_GENERATION = "fresh-2026-06-23";
+const RESET_GENERATION = "fresh-2026-07-02-world-reset";
 const STORAGE_KEY = `crownlands-realtime-${RESET_GENERATION}`;
 const PENDING_ARMY_STORAGE_KEY = `crownlands-pending-armies-${RESET_GENERATION}`;
 const LEGACY_STORAGE_KEYS = [];
@@ -3553,9 +3553,48 @@ function renderHarvestBonuses() {
   });
 }
 
+function getEditorEdgeConnectionDefinitions(regionId) {
+  const map = getEditorMap(regionId);
+  const edgeConnections = map?.edgeConnections && typeof map.edgeConnections === "object"
+    ? map.edgeConnections
+    : {};
+  return ["north", "south", "east", "west"].flatMap(side => {
+    const zones = Array.isArray(edgeConnections[side]) ? edgeConnections[side] : [];
+    return zones
+      .filter(zone => normalizeRegionId(zone?.connectsToRegionId) && !zone?.intentionalOuter)
+      .map(zone => ({ ...zone, side }));
+  });
+}
+
+function createEditorPortalFromEdgeConnection(regionId, zone) {
+  const dimensions = getIslandImageDimensions(regionId);
+  const side = String(zone?.side || "north").toLowerCase();
+  const start = clamp(Number(zone?.start) || 0, 0, 1);
+  const end = clamp(Number(zone?.end) || start, 0, 1);
+  const along = clamp((start + end) / 2, 0, 1);
+  const point = {
+    x: (side === "west" ? 0 : side === "east" ? 1 : along) * dimensions.width,
+    y: (side === "north" ? 0 : side === "south" ? 1 : along) * dimensions.height,
+  };
+  const targetRegionId = normalizeRegionId(zone?.connectsToRegionId);
+  return {
+    id: String(zone?.id || `${regionId}-${targetRegionId}-${side}`),
+    label: String(zone?.label || getRegionLabel(targetRegionId)),
+    targetRegionId,
+    targetPortalId: String(zone?.targetConnectionId || zone?.targetPortalId || ""),
+    x: point.x,
+    y: point.y,
+    size: Number(zone?.size) || DEFAULT_PORTAL_VISUAL_SIZE,
+    className: "edge-transition-node",
+    edgeConnection: true,
+  };
+}
+
 function getEditorPortalDefinitions(regionId) {
   const map = getEditorMap(regionId);
-  return Array.isArray(map?.portals) ? map.portals : [];
+  const portals = Array.isArray(map?.portals) ? map.portals : [];
+  if (portals.length) return portals;
+  return getEditorEdgeConnectionDefinitions(regionId).map(zone => createEditorPortalFromEdgeConnection(regionId, zone));
 }
 
 function getEditorPortalLinkId(portal) {
@@ -3569,7 +3608,7 @@ function getEditorPortalById(regionId, portalId) {
 }
 
 function hasEditorPortalDefinitions(regionId) {
-  return Array.isArray(getEditorMap(regionId)?.portals);
+  return getEditorPortalDefinitions(regionId).length > 0;
 }
 
 function createEditorTeleporter(regionId, portal) {
@@ -3629,7 +3668,7 @@ function findEditorPortalRouteRegionChain(fromRegionId, toRegionId) {
   const adjacency = new Map();
   for (const map of getEditorMapEntries()) {
     const source = normalizeRegionId(map.id);
-    for (const portal of Array.isArray(map.portals) ? map.portals : []) {
+    for (const portal of getEditorPortalDefinitions(source)) {
       const target = normalizeRegionId(portal?.targetRegionId || portal?.target);
       if (!target || target === source) continue;
       if (!adjacency.has(source)) adjacency.set(source, new Set());
@@ -6329,7 +6368,7 @@ function getIslandMapConnectionEdges() {
   for (const map of getEditorMapEntries()) {
     const source = normalizeRegionId(map.id);
     if (!regionIds.has(source)) continue;
-    for (const portal of Array.isArray(map.portals) ? map.portals : []) {
+    for (const portal of getEditorPortalDefinitions(source)) {
       const target = normalizeRegionId(portal?.targetRegionId || portal?.target);
       if (!target || target === source || !regionIds.has(target)) continue;
       const key = [source, target].sort().join("::");
