@@ -1700,6 +1700,7 @@
     const point = getNormPointFromEvent(event);
     edge.arrowXNorm = point.xNorm;
     edge.arrowYNorm = point.yNorm;
+    state.draggingEdgeArrow.lastPoint = point;
     markDirty();
     renderRegionEditor();
     event.preventDefault();
@@ -1707,6 +1708,15 @@
 
   function stopEdgeArrowDrag(event) {
     if (!state.draggingEdgeArrow || (event && state.draggingEdgeArrow.pointerId !== event.pointerId)) return;
+    const drag = state.draggingEdgeArrow;
+    const region = getRegion(drag.regionId);
+    const edge = region?.edgeConnections[drag.side]?.[drag.index];
+    if (edge && drag.lastPoint) {
+      edge.arrowXNorm = drag.lastPoint.xNorm;
+      edge.arrowYNorm = drag.lastPoint.yNorm;
+      materializeEdgeArrowPositions([region]);
+      markDirty();
+    }
     state.draggingEdgeArrow = null;
     state.skipNextCanvasClick = true;
     renderInspector();
