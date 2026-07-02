@@ -298,9 +298,19 @@ function cleanNorm(value, fallback = 0) {
   return number(value, fallback, 0, 1);
 }
 
+function defaultEdgeArrowPoint(side, start, end) {
+  const center = cleanNorm((Math.min(start, end) + Math.max(start, end)) / 2, 0.5);
+  const inset = 0.12;
+  if (side === "north") return { x: center, y: inset };
+  if (side === "south") return { x: center, y: 1 - inset };
+  if (side === "west") return { x: inset, y: center };
+  return { x: 1 - inset, y: center };
+}
+
 function cleanEdgeZone(zone, index, side) {
   const start = cleanNorm(zone.start, 0);
   const end = cleanNorm(zone.end, 1);
+  const arrowFallback = defaultEdgeArrowPoint(side, start, end);
   return {
     id: cleanId(zone.id, `${side}_connection_${index + 1}`),
     side,
@@ -308,6 +318,8 @@ function cleanEdgeZone(zone, index, side) {
     end: Math.max(start, end),
     type: cleanId(zone.type, "road"),
     connectsToRegionId: cleanId(zone.connectsToRegionId, ""),
+    arrowXNorm: cleanNorm(zone.arrowXNorm, arrowFallback.x),
+    arrowYNorm: cleanNorm(zone.arrowYNorm, arrowFallback.y),
     intentionalOuter: Boolean(zone.intentionalOuter),
     notes: cleanString(zone.notes, "").slice(0, 240),
   };

@@ -24,7 +24,8 @@ The editor is developer-only and works with the JSON world files in `assets/worl
 - Map aspect ratio: region maps are locked to 4:3, with `2048 x 1536` as the default stage size.
 - Upload troubleshooting: a successful upload changes the editor preview immediately. Click `Save to Game` after that to update the game JSON, then refresh the game page. If you see `Unknown API route`, restart the local editor with `.\tools\start-editor.ps1` and use `http://127.0.0.1:8791/editor/`; map uploads cannot work from a plain static server or the live Netlify site.
 - Region zoom: use the `+` and `-` buttons or the mouse wheel over the region map to zoom from 15% to 300% for detailed placement.
-- Edge connections: use `Add Edge Connection`, click near a map edge to create one, drag an existing connection to move it, and press Delete or `Delete Selected` to remove it. The game uses these zones as invisible troop crossings and automatically places a visible map-switch arrow slightly inside the map.
+- Edge connections: use `Add Edge Connection`, click near a map edge to create one, drag an existing connection to move it, and press Delete or `Delete Selected` to remove it. The game uses these zones as invisible troop crossings.
+- Map switch arrows: every edge connection shows a blue arrow handle inside the map. Drag that arrow to choose where players tap to switch to the connected map.
 
 ## Saving
 

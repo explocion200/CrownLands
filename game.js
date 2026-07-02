@@ -3597,6 +3597,14 @@ function getEdgeConnectionInset(dimensions, mode = "route") {
 function getEdgeConnectionImagePoint(regionId, zone, mode = "route") {
   const dimensions = getIslandImageDimensions(regionId);
   const side = String(zone?.side || "north").toLowerCase();
+  if (mode === "arrow"
+    && Number.isFinite(Number(zone?.arrowXNorm))
+    && Number.isFinite(Number(zone?.arrowYNorm))) {
+    return {
+      x: clamp(Number(zone.arrowXNorm), 0, 1) * dimensions.width,
+      y: clamp(Number(zone.arrowYNorm), 0, 1) * dimensions.height,
+    };
+  }
   const along = getEdgeConnectionMidpoint(zone);
   const inset = getEdgeConnectionInset(dimensions, mode);
   return {
