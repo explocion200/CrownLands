@@ -490,8 +490,9 @@ const NEUTRAL_START_TROOPS = 10;
 const TEST_STARTING_GOLD = 500;
 const ISLAND_CITY_COUNT = WORLD_REGIONS.reduce((total, region) => total + (region.id === "center" ? CENTER_REGION_CITY_COUNT : REGION_CITY_COUNT), 0);
 const SCOUT_REPORT_SECONDS = 120;
-const SCOUT_NEARBY_COST = 1000;
+const SCOUT_NEARBY_COST = 10000;
 const SCOUT_NEARBY_RADIUS = 420;
+const REGROUP_COST = 20000;
 const REGROUP_RADIUS = 680;
 const BASE_TROOP_ATTACK_POWER = 2;
 const ARMY_TRAVEL_SECONDS_PER_MAP_UNIT = 0.13;
@@ -5403,7 +5404,7 @@ function toggleRegroup(cityId) {
     const troops = targets.reduce((total, city) => total + Math.floor(Number(city.troops) || 0), 0);
     renderAll();
     showToast(targets.length
-      ? `${formatNumber(targets.length)} owned cities can regroup ${formatNumber(troops)} troops to ${target.name}. Press Regroup again.`
+      ? `${formatNumber(targets.length)} owned cities can regroup ${formatNumber(troops)} troops to ${target.name} for ${formatNumber(REGROUP_COST)} gold. Press Regroup again.`
       : `No owned cities with troops are inside ${target.name}'s regroup radius.`);
     return;
   }
@@ -5415,7 +5416,12 @@ function toggleRegroup(cityId) {
     showToast("No nearby owned cities with troops can regroup here.");
     return;
   }
+  if (state.gold < REGROUP_COST) {
+    showToast(`Regroup costs ${formatNumber(REGROUP_COST)} gold.`);
+    return;
+  }
 
+  state.gold -= REGROUP_COST;
   let launched = 0;
   let troopsSent = 0;
   for (const option of options) {
@@ -5429,13 +5435,14 @@ function toggleRegroup(cityId) {
 
   regroupSourceId = null;
   if (!launched) {
+    state.gold += REGROUP_COST;
     renderAll();
     showToast("No troops could regroup right now.");
     return;
   }
 
   if (isOnlineWorldActive()) syncOwnedCitiesToOnline(true);
-  addLog(`${target.name} called a regroup: ${formatNumber(troopsSent)} troops moving in from ${formatNumber(launched)} cities.`);
+  addLog(`${target.name} called a regroup for ${formatNumber(REGROUP_COST)} gold: ${formatNumber(troopsSent)} troops moving in from ${formatNumber(launched)} cities.`);
   saveGame();
   renderAll();
   showToast(`Regroup moving: ${formatNumber(troopsSent)} troops to ${target.name}`);
@@ -10610,7 +10617,7 @@ function renderRegroupRadius(target) {
   radius.style.top = `${mapPoint.y}px`;
   radius.style.width = `${REGROUP_RADIUS * 2}px`;
   radius.style.height = `${REGROUP_RADIUS * 2}px`;
-  radius.innerHTML = `<span>${formatNumber(sources.length)} cities &middot; ${formatNumber(troops)} troops</span>`;
+  radius.innerHTML = `<span>${formatNumber(sources.length)} cities &middot; ${formatNumber(troops)} troops &middot; ${formatNumber(REGROUP_COST)}g</span>`;
   cityLayer.appendChild(radius);
 }
 
@@ -10628,8 +10635,6 @@ function renderSelectedCityWheel(city) {
     : isStronghold(city) ? "Fixed" : city.level >= MAX_CITY_LEVEL ? "MAX" : `${formatNumber(levelCost)}g`;
   const scoutNearbyActive = scoutNearbySourceId === city.id;
   const regroupActive = regroupSourceId === city.id;
-  const nearbyCount = scoutNearbyActive ? getNearbyScoutCandidates(city).length : 0;
-  const regroupCount = regroupActive ? getNearbyRegroupCandidates(city).length : 0;
   wheel.className = "city-action-wheel";
   applyCityActionWheelSizing(wheel, city);
   wheel.style.left = `${mapPoint.x}px`;
@@ -10651,12 +10656,12 @@ function renderSelectedCityWheel(city) {
     <button class="city-wheel-action wheel-scout-nearby ${scoutNearbyActive ? "armed" : ""}" type="button" aria-label="${scoutNearbyActive ? "Confirm scout nearby" : "Preview scout nearby"} from ${escapeHtml(city.name)}" ${city.troops < 1 ? "disabled" : ""}>
       <span class="wheel-icon" aria-hidden="true">&#8857;</span>
       <span class="wheel-action-name">${scoutNearbyActive ? "Send All" : "Nearby"}</span>
-      <span class="wheel-cost">${scoutNearbyActive ? nearbyCount : "1k"}</span>
+      <span class="wheel-cost">${formatNumber(SCOUT_NEARBY_COST)}</span>
     </button>
     <button class="city-wheel-action wheel-regroup ${regroupActive ? "armed" : ""}" type="button" aria-label="${regroupActive ? "Confirm regroup" : "Preview regroup"} to ${escapeHtml(city.name)}">
       <span class="wheel-icon" aria-hidden="true">&#8649;</span>
       <span class="wheel-action-name">${regroupActive ? "Confirm" : "Regroup"}</span>
-      <span class="wheel-cost">${regroupActive ? formatNumber(regroupCount) : "All"}</span>
+      <span class="wheel-cost">${formatNumber(REGROUP_COST)}</span>
     </button>
   `;
   wheel.querySelector(".wheel-level").addEventListener("click", event => {
@@ -12862,7 +12867,7 @@ function showHelpModal() {
       <li>After that, expand by attacking player-owned cities.</li>
       <li>Send Troops is single-click after setup: pick a march percent, then tap one destination to launch.</li>
       <li>Scout Nearby costs ${formatNumber(SCOUT_NEARBY_COST)} gold, covers the current island only, and never routes scouts through portals.</li>
-      <li>Regroup previews a larger red radius, then sends all troops from nearby owned cities into the selected city for free.</li>
+      <li>Regroup costs ${formatNumber(REGROUP_COST)} gold, previews a larger red radius, then sends all troops from nearby owned cities into the selected city.</li>
       <li>The top-right fullscreen button expands the game surface and the game disables page text selection while playing.</li>
       <li>City level creates victory points for combat value, while passive gold follows the Million Lords city production curve.</li>
       <li>City defense is level x 3%, plus wall strength and any Guardian skill bonus for your defending troops.</li>
