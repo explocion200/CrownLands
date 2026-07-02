@@ -658,3 +658,19 @@ label > span,
   color: var(--muted);
   background: #07131d;
 }
+
+.status-bar[data-kind="busy"] {
+  color: #d9efff;
+  background: #0b2233;
+}
+
+.status-bar[data-kind="success"] {
+  color: #eaffed;
+  background: #102a1a;
+}
+
+.status-bar[data-kind="error"] {
+  color: #ffe5e2;
+  background: #35141a;
+  border-top-color: rgba(216, 86, 75, 0.72);
+}

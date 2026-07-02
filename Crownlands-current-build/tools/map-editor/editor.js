@@ -150,12 +150,14 @@
     draggingEdge: null,
     draggingRegion: null,
     panning: null,
+    imagePreviewBusters: {},
     skipNextCanvasClick: false,
     skipNextWorldClick: false,
   };
 
-  function setStatus(message) {
+  function setStatus(message, kind = "") {
     elements.statusBar.textContent = message;
+    elements.statusBar.dataset.kind = kind;
   }
 
   function slugify(value, fallback = "item") {
@@ -223,6 +225,15 @@
     if (!value) return "";
     if (/^(https?:|data:|blob:)/i.test(value)) return value;
     return value.startsWith("/") ? value : `/${value.replace(/^\/+/, "")}`;
+  }
+
+  function appendPreviewBust(src, buster) {
+    if (!src || !buster || /^(data:|blob:)/i.test(src)) return src;
+    return `${src}${src.includes("?") ? "&" : "?"}editorPreview=${encodeURIComponent(buster)}`;
+  }
+
+  function resolveRegionPreviewPath(region) {
+    return appendPreviewBust(resolveAssetPath(region?.imagePath), state.imagePreviewBusters[region?.id]);
   }
 
   function deepClone(value) {
@@ -418,9 +429,9 @@
     render();
   }
 
-  function markDirty(message = "") {
+  function markDirty(message = "", kind = "") {
     state.dirty = true;
-    if (message) setStatus(message);
+    if (message) setStatus(message, kind);
   }
 
   function setEditorMode(mode) {
@@ -607,7 +618,7 @@
       tile.style.top = `${top}px`;
       tile.dataset.regionId = region.id;
       tile.innerHTML = `
-        <img src="${escapeHtml(resolveAssetPath(region.imagePath))}" alt="" draggable="false" />
+        <img src="${escapeHtml(resolveRegionPreviewPath(region))}" alt="" draggable="false" />
         <span class="region-tile-meta">
           <strong>${escapeHtml(region.name)}</strong>
           <small>${escapeHtml(region.id)} (${region.gridX}, ${region.gridY})</small>
@@ -776,7 +787,7 @@
     }
     elements.regionCanvas.style.width = `${Math.round(region.width * state.zoom)}px`;
     elements.regionCanvas.style.height = `${Math.round(region.height * state.zoom)}px`;
-    elements.regionImage.src = resolveAssetPath(region.imagePath);
+    elements.regionImage.src = resolveRegionPreviewPath(region);
     elements.regionImage.alt = `${region.name} map`;
     elements.regionView.classList.toggle("hide-cities", !state.toggles.cities);
     elements.regionView.classList.toggle("hide-strongholds", !state.toggles.strongholds);
@@ -1457,20 +1468,20 @@
     if (!file) return;
     const region = currentRegion();
     if (!region || state.editorMode !== "region") {
-      setStatus("Open a region in Region Edit before uploading a map image.");
+      setStatus("Open a region in Region Edit before uploading a map image.", "error");
       return;
     }
     if (!/^image\/(jpeg|png|webp)$/.test(file.type)) {
-      setStatus("Map image must be a JPG, PNG, or WebP file.");
+      setStatus("Map image must be a JPG, PNG, or WebP file.", "error");
       return;
     }
-    setStatus(`Uploading ${file.name}...`);
+    setStatus(`Uploading ${file.name}...`, "busy");
     const [dataUrl, dimensions] = await Promise.all([
       readFileAsDataUrl(file),
       readImageDimensions(file),
     ]);
     if (!isFourThreeDimensions(dimensions.width, dimensions.height)) {
-      setStatus(`Map image must be 4:3, such as ${DEFAULT_MAP_WIDTH} x ${DEFAULT_MAP_HEIGHT}. ${file.name} is ${dimensions.width} x ${dimensions.height}.`);
+      setStatus(`Upload blocked: map image must be 4:3, such as ${DEFAULT_MAP_WIDTH} x ${DEFAULT_MAP_HEIGHT}. ${file.name} is ${dimensions.width} x ${dimensions.height}.`, "error");
       return;
     }
     const response = await fetch(MAP_IMAGE_API, {
@@ -1491,9 +1502,10 @@
     region.imagePath = payload.imagePath;
     if (payload.width > 0) region.width = payload.width;
     if (payload.height > 0) region.height = payload.height;
+    state.imagePreviewBusters[region.id] = payload.fileName || Date.now();
     state.selected = { kind: "region", regionId: region.id };
     const replacementText = payload.replacedImagePath ? " Replaced the previous uploaded map image." : "";
-    markDirty(`Uploaded map image for ${region.name}.${replacementText} Click Save to Game to store the updated region JSON.`);
+    markDirty(`Uploaded map image for ${region.name}.${replacementText} Preview updated. Click Save to Game to store it.`, "success");
     render();
   }
 
@@ -1624,14 +1636,14 @@
     elements.validateBtn.addEventListener("click", validateWorld);
     elements.exportBtn.addEventListener("click", exportJson);
     elements.importBtn.addEventListener("click", () => elements.importFileInput.click());
-    elements.saveBtn.addEventListener("click", () => saveWorldData().catch(error => setStatus(error.message || String(error))));
+    elements.saveBtn.addEventListener("click", () => saveWorldData().catch(error => setStatus(error.message || String(error), "error")));
     elements.importFileInput.addEventListener("change", event => {
-      importJsonFile(event.target.files?.[0]).catch(error => setStatus(error.message || String(error)));
+      importJsonFile(event.target.files?.[0]).catch(error => setStatus(error.message || String(error), "error"));
       event.target.value = "";
     });
     elements.uploadRegionImageBtn.addEventListener("click", () => elements.regionImageFileInput.click());
     elements.regionImageFileInput.addEventListener("change", event => {
-      uploadRegionImageFile(event.target.files?.[0]).catch(error => setStatus(error.message || String(error)));
+      uploadRegionImageFile(event.target.files?.[0]).catch(error => setStatus(error.message || String(error), "error"));
       event.target.value = "";
     });
     elements.toggleGridBtn.addEventListener("click", () => toggleView("grid"));
@@ -1647,6 +1659,10 @@
     elements.regionCanvas.addEventListener("click", event => {
       if (event.target.closest(".map-marker, .edge-zone") || state.skipNextCanvasClick || state.tool === "select") return;
       placeFromEvent(event);
+    });
+    elements.regionImage.addEventListener("error", () => {
+      const src = elements.regionImage.getAttribute("src") || "";
+      if (src) setStatus(`Could not load map preview image: ${src}`, "error");
     });
     elements.regionViewport.addEventListener("pointerdown", startRegionPan);
     elements.regionViewport.addEventListener("pointermove", handleRegionPan);
