@@ -12,6 +12,7 @@
   const MAP_ASPECT_TOLERANCE = 0.02;
   const DEFAULT_MAP_WIDTH = 2048;
   const DEFAULT_MAP_HEIGHT = 1536;
+  const MAP_SWITCH_ARROW_ICON_SRC = "/assets/map-switch-arrow.png?v=20260702-map-arrow";
   const REGION_TYPES = ["starter", "midgame", "endgame", "activity", "crownlands_main"];
   const EDGE_TYPES = ["road", "valley", "pass", "river_crossing", "open_field", "forest_break", "bridge"];
   const STRONGHOLD_TYPES = [
@@ -983,7 +984,7 @@
     arrow.style.left = `${point.xNorm * 100}%`;
     arrow.style.top = `${point.yNorm * 100}%`;
     arrow.title = `Player map switch arrow to ${zone.connectsToRegionId || "connected region"}`;
-    arrow.textContent = getEdgeArrowGlyph(side);
+    arrow.innerHTML = `<img class="edge-switch-arrow-icon" src="${MAP_SWITCH_ARROW_ICON_SRC}" alt="" draggable="false" decoding="async" aria-hidden="true" />`;
     arrow.addEventListener("pointerdown", event => {
       event.preventDefault();
       event.stopPropagation();

@@ -181,6 +181,7 @@ const LOW_ZOOM_PERFORMANCE_THRESHOLD = 0.72;
 const ISLAND_MAP_PADDING = 560;
 const TROOP_PICKUP_ICON_SRC = "assets/troop-pickup.png";
 const GOLD_PICKUP_ICON_SRC = "assets/gold-pickup.png";
+const MAP_SWITCH_ARROW_ICON_SRC = "assets/map-switch-arrow.png?v=20260702-map-arrow";
 const DEFAULT_PORTAL_VISUAL_SIZE = 78;
 const MIN_PORTAL_VISUAL_SIZE = 48;
 const EDGE_TRANSITION_ROUTE_INSET_MIN = 24;
@@ -3518,7 +3519,7 @@ function renderIslandTeleporters() {
     buttonElement.setAttribute("aria-label", `Go to ${targetLabel}`);
     buttonElement.title = `Go to ${targetLabel}`;
     buttonElement.innerHTML = `
-      <span class="teleport-symbol" aria-hidden="true">${escapeHtml(teleport.symbol || getEdgeTransitionArrowSymbol(teleport.side))}</span>
+      <img class="teleport-arrow-icon" src="${MAP_SWITCH_ARROW_ICON_SRC}" alt="" draggable="false" decoding="async" aria-hidden="true" />
       <span class="teleport-label">${escapeHtml(teleport.label || targetLabel)}</span>
     `;
     buttonElement.addEventListener("click", event => {
