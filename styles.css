@@ -2105,16 +2105,16 @@ button.inventory-slot {
   background: linear-gradient(#1b6fb6, #063761);
 }
 .island-switcher-modal.modal {
-  width: min(820px, calc(100vw - .7rem));
+  width: min(980px, calc(100vw - .7rem));
 }
 .island-switcher-modal .modal-card {
-  max-height: min(88vh, 660px);
+  max-height: min(90vh, 740px);
 }
 .island-map-picker {
   position: relative;
-  width: min(100%, 760px);
-  max-height: min(58vh, 470px);
-  aspect-ratio: var(--island-map-aspect, 1.32);
+  width: min(100%, 920px);
+  height: min(64vh, 560px);
+  min-height: 330px;
   margin: .35rem auto .1rem;
   overflow: auto;
   overscroll-behavior: contain;
@@ -2125,7 +2125,11 @@ button.inventory-slot {
   touch-action: none;
   border-radius: 16px;
   border: 1px solid rgba(175, 228, 255, .26);
-  background: #0d557d;
+  background:
+    linear-gradient(90deg, rgba(184, 224, 255, .09) 0 1px, transparent 1px var(--island-grid-cell-w, 272px)),
+    linear-gradient(rgba(184, 224, 255, .09) 0 1px, transparent 1px var(--island-grid-cell-h, 213px)),
+    radial-gradient(circle at 50% 44%, rgba(80, 181, 224, .38), transparent 52%),
+    #0d3555;
   box-shadow: inset 0 0 0 2px rgba(255,255,255,.06), inset 0 -16px 32px rgba(0,0,0,.22);
 }
 .island-map-picker.panning {
@@ -2146,27 +2150,25 @@ button.inventory-slot {
 }
 .island-map-stage {
   position: relative;
-  width: calc(var(--island-map-canvas-w, 100%) + 52%);
-  height: calc(var(--island-map-canvas-h, 100%) + 52%);
-  min-width: 152%;
-  min-height: 152%;
+  width: var(--island-grid-stage-w, 1100px);
+  height: var(--island-grid-stage-h, 840px);
+  min-width: 100%;
+  min-height: 100%;
 }
 .island-map-canvas {
   position: absolute;
-  left: 50%;
-  top: 50%;
-  width: var(--island-map-canvas-w, 100%);
-  height: var(--island-map-canvas-h, 100%);
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
   min-width: 0;
   min-height: 0;
-  transform: translate(-50%, -50%);
+  transform: none;
   background:
-    repeating-linear-gradient(24deg, rgba(255,255,255,.06) 0 2px, transparent 2px 36px),
-    radial-gradient(circle at 50% 48%, transparent 56%, rgba(0,0,0,.2)),
-    radial-gradient(circle at 50% 50%, rgba(151, 226, 255, .26), transparent 39%),
-    radial-gradient(circle at 18% 26%, rgba(255,255,255,.14), transparent 23%),
-    radial-gradient(circle at 82% 74%, rgba(5, 27, 48, .34), transparent 27%),
-    linear-gradient(180deg, #1b789f 0%, #0e557b 54%, #0b3553 100%);
+    linear-gradient(90deg, rgba(255,255,255,.09) 0 1px, transparent 1px var(--island-grid-cell-w, 272px)),
+    linear-gradient(rgba(255,255,255,.09) 0 1px, transparent 1px var(--island-grid-cell-h, 213px)),
+    radial-gradient(circle at 50% 50%, rgba(151, 226, 255, .2), transparent 40%),
+    linear-gradient(180deg, rgba(27, 120, 159, .62) 0%, rgba(14, 85, 123, .62) 54%, rgba(11, 53, 83, .82) 100%);
 }
 .island-map-icon {
   position: absolute;
@@ -2271,8 +2273,8 @@ button.inventory-slot {
   gap: 0;
   padding: .18rem;
   color: #f6fbff;
-  border-radius: 12px;
-  border: 1px solid rgba(188, 231, 255, .46);
+  border-radius: 10px;
+  border: 2px solid rgba(188, 231, 255, .5);
   background: rgba(5, 20, 34, .72);
   box-shadow: 0 11px 22px rgba(0,0,0,.34), inset 0 0 0 1px rgba(255,255,255,.08);
 }
@@ -2291,7 +2293,7 @@ button.inventory-slot {
   display: grid;
   place-items: center;
   overflow: hidden;
-  border-radius: 10px;
+  border-radius: 8px;
   background:
     radial-gradient(circle at 50% 48%, rgba(80, 196, 225, .32), transparent 43%),
     linear-gradient(180deg, #0a5a7b, #062b45);
@@ -2320,17 +2322,17 @@ button.inventory-slot {
   pointer-events: none;
 }
 .island-map-picker .island-map-name {
-  bottom: .82rem;
+  bottom: 1.15rem;
   color: #fff;
-  font-size: .72rem;
+  font-size: .9rem;
   line-height: 1;
   font-weight: 1000;
   text-shadow: 0 2px 0 rgba(0,0,0,.55);
 }
 .island-map-owned {
-  bottom: .24rem;
+  bottom: .38rem;
   color: #bfe4ff;
-  font-size: .56rem;
+  font-size: .68rem;
   line-height: 1;
   font-weight: 950;
 }

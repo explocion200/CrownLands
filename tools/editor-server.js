@@ -599,6 +599,8 @@ function buildCompatibilityRegion(layout, region) {
       ...region.compatRegion,
       id: region.id,
       label: region.name,
+      gridX: region.gridX,
+      gridY: region.gridY,
     };
   }
   const cellSize = Math.max(500, Number(layout.globalSettings?.gridCellWorldSize) || 2300);
@@ -610,6 +612,8 @@ function buildCompatibilityRegion(layout, region) {
   return {
     id: region.id,
     label: region.name,
+    gridX: region.gridX,
+    gridY: region.gridY,
     x: Math.round(worldWidth / 2 + Number(region.gridX) * cellSize),
     y: Math.round(worldHeight / 2 + Number(region.gridY) * cellSize),
     rx,
@@ -627,9 +631,14 @@ function buildCompatibilityMapData(layout, regions) {
     updatedAt: new Date().toISOString(),
     worldId: layout.worldId,
     worldName: layout.worldName,
+    globalSettings: layout.globalSettings || {},
     maps: regions.map(region => ({
       id: region.id,
       label: region.name,
+      gridX: region.gridX,
+      gridY: region.gridY,
+      type: region.type,
+      cityCapacity: region.cityCapacity,
       imageSrc: region.imagePath,
       thumbnailSrc: region.thumbnailPath || "",
       imageWidth: region.width,

@@ -145,11 +145,14 @@ function getMergedWorldRegions(config = {}, editorData = {}) {
   editorMaps.forEach((map, index) => {
     const existing = regionById.get(map.id);
     const regionPatch = map.region && typeof map.region === "object" ? map.region : {};
+    const gridPatch = {};
+    if (Number.isFinite(Number(map.gridX))) gridPatch.gridX = Math.round(Number(map.gridX));
+    if (Number.isFinite(Number(map.gridY))) gridPatch.gridY = Math.round(Number(map.gridY));
     const fallback = buildDefaultEditorRegion(map, baseRegions.length + index, config);
     const label = map.label || map.name || regionPatch.label || existing?.label || fallback.label;
     const nextRegion = existing
-      ? { ...existing, ...regionPatch, id: map.id, label, palette: map.palette || regionPatch.palette || existing.palette || fallback.palette }
-      : { ...fallback, ...regionPatch, id: map.id, label };
+      ? { ...existing, ...regionPatch, ...gridPatch, id: map.id, label, palette: map.palette || regionPatch.palette || existing.palette || fallback.palette }
+      : { ...fallback, ...regionPatch, ...gridPatch, id: map.id, label };
     regionById.set(map.id, nextRegion);
   });
   return Array.from(regionById.values());
@@ -6281,118 +6284,89 @@ async function refreshAllOwnedCities(force = false) {
   }
 }
 
-function getIslandMapAnchor(region) {
+const ISLAND_PICKER_TILE_WIDTH = 238;
+const ISLAND_PICKER_TILE_HEIGHT = 179;
+const ISLAND_PICKER_TILE_GAP = 34;
+const ISLAND_PICKER_STAGE_PADDING = 260;
+const ISLAND_PICKER_GRID_CELL_WORLD_SIZE = 2300;
+
+function getIslandMapGridCoordinate(region) {
   const regionId = normalizeRegionId(region?.id);
-  const defaultAnchor = {
-    x: Number(region?.x) || WORLD_WIDTH / 2,
-    y: Number(region?.y) || WORLD_HEIGHT / 2,
-  };
-  if (BASE_BITMAP_ISLAND_IDS.includes(regionId)) return defaultAnchor;
-  const transitions = getEditorPortalDefinitions(regionId);
-  const transition = transitions.find(entry => getRegionById(getEdgeConnectionTargetRegionId(entry)))
-    || transitions[0];
-  const targetRegionId = getEdgeConnectionTargetRegionId(transition);
-  const target = targetRegionId ? getRegionById(targetRegionId) : null;
-  if (!transition || !target) return defaultAnchor;
+  const map = getEditorMap(regionId);
+  const explicitGridX = [map?.gridX, map?.region?.gridX, region?.gridX].find(value => Number.isFinite(Number(value)));
+  const explicitGridY = [map?.gridY, map?.region?.gridY, region?.gridY].find(value => Number.isFinite(Number(value)));
+  if (explicitGridX !== undefined && explicitGridY !== undefined) {
+    return { gridX: Math.round(Number(explicitGridX)), gridY: Math.round(Number(explicitGridY)) };
+  }
 
-  const dimensions = getIslandImageDimensions(regionId);
-  const transitionPoint = {
-    x: Number(transition.buttonX ?? transition.x) || 0,
-    y: Number(transition.buttonY ?? transition.y) || 0,
-  };
-  const px = dimensions.width ? clamp(transitionPoint.x / dimensions.width, 0, 1) : 0.5;
-  const py = dimensions.height ? clamp(transitionPoint.y / dimensions.height, 0, 1) : 0.5;
-  const rx = Math.max(600, Number(region?.rx) || 900);
-  const ry = Math.max(520, Number(region?.ry) || 760);
-  const targetRx = Math.max(600, Number(target.rx) || 900);
-  const targetRy = Math.max(520, Number(target.ry) || 760);
-  const gap = Math.max(360, Math.min(WORLD_WIDTH, WORLD_HEIGHT) * 0.055);
+  const explicitWorldX = [map?.region?.x, region?.x].find(value => Number.isFinite(Number(value)));
+  const explicitWorldY = [map?.region?.y, region?.y].find(value => Number.isFinite(Number(value)));
+  if (explicitWorldX !== undefined && explicitWorldY !== undefined) {
+    const cellSize = Math.max(500, Number(MAP_EDITOR_DATA?.globalSettings?.gridCellWorldSize) || ISLAND_PICKER_GRID_CELL_WORLD_SIZE);
+    const worldWidth = Math.max(1000, Number(MAP_EDITOR_DATA?.globalSettings?.worldWidth) || WORLD_WIDTH);
+    const worldHeight = Math.max(1000, Number(MAP_EDITOR_DATA?.globalSettings?.worldHeight) || WORLD_HEIGHT);
+    return {
+      gridX: Math.round((Number(explicitWorldX) - worldWidth / 2) / cellSize),
+      gridY: Math.round((Number(explicitWorldY) - worldHeight / 2) / cellSize),
+    };
+  }
 
-  if (py < 0.33) {
-    return {
-      x: (Number(target.x) || WORLD_WIDTH / 2) + (px - 0.5) * targetRx,
-      y: (Number(target.y) || WORLD_HEIGHT / 2) + targetRy + ry + gap,
-    };
-  }
-  if (py > 0.67) {
-    return {
-      x: (Number(target.x) || WORLD_WIDTH / 2) + (px - 0.5) * targetRx,
-      y: (Number(target.y) || WORLD_HEIGHT / 2) - targetRy - ry - gap,
-    };
-  }
-  if (px < 0.33) {
-    return {
-      x: (Number(target.x) || WORLD_WIDTH / 2) + targetRx + rx + gap,
-      y: (Number(target.y) || WORLD_HEIGHT / 2) + (py - 0.5) * targetRy,
-    };
-  }
-  if (px > 0.67) {
-    return {
-      x: (Number(target.x) || WORLD_WIDTH / 2) - targetRx - rx - gap,
-      y: (Number(target.y) || WORLD_HEIGHT / 2) + (py - 0.5) * targetRy,
-    };
-  }
-  return defaultAnchor;
+  const starterDefaults = {
+    center: { gridX: 0, gridY: 0 },
+    west: { gridX: -1, gridY: 0 },
+    east: { gridX: 1, gridY: 0 },
+    north: { gridX: 0, gridY: -1 },
+    south: { gridX: 0, gridY: 1 },
+  };
+  if (starterDefaults[regionId]) return starterDefaults[regionId];
+
+  const cellSize = Math.max(500, Number(MAP_EDITOR_DATA?.globalSettings?.gridCellWorldSize) || ISLAND_PICKER_GRID_CELL_WORLD_SIZE);
+  return {
+    gridX: Math.round(((Number(region?.x) || WORLD_WIDTH / 2) - WORLD_WIDTH / 2) / cellSize),
+    gridY: Math.round(((Number(region?.y) || WORLD_HEIGHT / 2) - WORLD_HEIGHT / 2) / cellSize),
+  };
 }
 
-function getIslandMapLayoutBounds() {
-  const margin = 720;
-  const anchors = WORLD_REGIONS.map(region => {
-    const anchor = getIslandMapAnchor(region);
-    const rx = Math.max(500, Number(region?.rx) || 900);
-    const ry = Math.max(450, Number(region?.ry) || 760);
-    return { anchor, rx, ry };
-  });
-  let left = 0;
-  let top = 0;
-  let right = WORLD_WIDTH;
-  let bottom = WORLD_HEIGHT;
-  anchors.forEach(({ anchor, rx, ry }) => {
-    left = Math.min(left, anchor.x - rx - margin);
-    top = Math.min(top, anchor.y - ry - margin);
-    right = Math.max(right, anchor.x + rx + margin);
-    bottom = Math.max(bottom, anchor.y + ry + margin);
-  });
-  const width = Math.max(1, right - left);
-  const height = Math.max(1, bottom - top);
-  return { left, top, right, bottom, width, height };
+function getIslandMapGridLayout() {
+  const entries = WORLD_REGIONS.map(region => ({
+    region,
+    ...getIslandMapGridCoordinate(region),
+  }));
+  const xs = entries.map(entry => entry.gridX);
+  const ys = entries.map(entry => entry.gridY);
+  const minX = Math.min(...xs, 0);
+  const maxX = Math.max(...xs, 0);
+  const minY = Math.min(...ys, 0);
+  const maxY = Math.max(...ys, 0);
+  const stepX = ISLAND_PICKER_TILE_WIDTH + ISLAND_PICKER_TILE_GAP;
+  const stepY = ISLAND_PICKER_TILE_HEIGHT + ISLAND_PICKER_TILE_GAP;
+  const stageWidth = ISLAND_PICKER_STAGE_PADDING * 2 + (maxX - minX + 1) * ISLAND_PICKER_TILE_WIDTH + (maxX - minX) * ISLAND_PICKER_TILE_GAP;
+  const stageHeight = ISLAND_PICKER_STAGE_PADDING * 2 + (maxY - minY + 1) * ISLAND_PICKER_TILE_HEIGHT + (maxY - minY) * ISLAND_PICKER_TILE_GAP;
+  return { entries, minX, minY, stepX, stepY, stageWidth, stageHeight };
 }
 
 function getIslandMapPosition(region) {
-  const bounds = getIslandMapLayoutBounds();
-  const anchor = getIslandMapAnchor(region);
+  const layout = getIslandMapGridLayout();
+  const { gridX, gridY } = getIslandMapGridCoordinate(region);
   return {
-    x: clamp((anchor.x - bounds.left) / bounds.width * 100, 4, 96),
-    y: clamp((anchor.y - bounds.top) / bounds.height * 100, 4, 96),
-  };
-}
-
-function getIslandMapIconSize(region) {
-  const bounds = getIslandMapLayoutBounds();
-  const rawWidth = Math.max(10, (Number(region?.rx) || 800) * 1.55 / bounds.width * 100);
-  const rawHeight = Math.max(10, (Number(region?.ry) || 800) * 1.55 / bounds.height * 100);
-  const maxWidth = 28;
-  const maxHeight = 28;
-  const scale = Math.min(1, maxWidth / rawWidth, maxHeight / rawHeight);
-  return {
-    width: clamp(rawWidth * scale, 13, maxWidth),
-    height: clamp(rawHeight * scale, 12, maxHeight),
+    x: ISLAND_PICKER_STAGE_PADDING + (gridX - layout.minX) * layout.stepX + ISLAND_PICKER_TILE_WIDTH / 2,
+    y: ISLAND_PICKER_STAGE_PADDING + (gridY - layout.minY) * layout.stepY + ISLAND_PICKER_TILE_HEIGHT / 2,
   };
 }
 
 function getIslandMapIconStyle(region) {
   const position = getIslandMapPosition(region);
-  const size = getIslandMapIconSize(region);
-  const rot = ((Number(region.rot) || 0) * 180 / Math.PI).toFixed(2);
-  return `--island-x:${formatPathNumber(position.x)}%;--island-y:${formatPathNumber(position.y)}%;--island-w:${formatPathNumber(size.width)}%;--island-h:${formatPathNumber(size.height)}%;--island-rot:${rot}deg;`;
+  return [
+    `--island-x:${formatPathNumber(position.x)}px`,
+    `--island-y:${formatPathNumber(position.y)}px`,
+    `--island-w:${ISLAND_PICKER_TILE_WIDTH}px`,
+    `--island-h:${ISLAND_PICKER_TILE_HEIGHT}px`,
+  ].join(";");
 }
 
 function getIslandMapPickerStyle() {
-  const bounds = getIslandMapLayoutBounds();
-  const aspect = clamp(WORLD_WIDTH / WORLD_HEIGHT, 1.05, 1.65);
-  const canvasWidth = Math.max(105, Math.min(155, bounds.width / WORLD_WIDTH * 92));
-  const canvasHeight = Math.max(105, Math.min(155, bounds.height / WORLD_HEIGHT * 92));
-  return `--island-map-aspect:${formatPathNumber(aspect)};--island-map-canvas-w:${formatPathNumber(canvasWidth)}%;--island-map-canvas-h:${formatPathNumber(canvasHeight)}%;`;
+  const layout = getIslandMapGridLayout();
+  return `--island-grid-stage-w:${Math.round(layout.stageWidth)}px;--island-grid-stage-h:${Math.round(layout.stageHeight)}px;--island-grid-cell-w:${ISLAND_PICKER_TILE_WIDTH + ISLAND_PICKER_TILE_GAP}px;--island-grid-cell-h:${ISLAND_PICKER_TILE_HEIGHT + ISLAND_PICKER_TILE_GAP}px;`;
 }
 
 function getIslandMapConnectionEdges() {
@@ -6412,6 +6386,7 @@ function getIslandMapConnectionEdges() {
 }
 
 function renderIslandMapConnections() {
+  const layout = getIslandMapGridLayout();
   const regionById = new Map(WORLD_REGIONS.map(region => [normalizeRegionId(region.id), region]));
   const lines = getIslandMapConnectionEdges().map(edge => {
     const source = regionById.get(edge.source);
@@ -6421,7 +6396,7 @@ function renderIslandMapConnections() {
     const end = getIslandMapPosition(target);
     return `<line class="island-map-connection" x1="${formatPathNumber(start.x)}" y1="${formatPathNumber(start.y)}" x2="${formatPathNumber(end.x)}" y2="${formatPathNumber(end.y)}"></line>`;
   }).filter(Boolean).join("");
-  return `<svg class="island-map-connections" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">${lines}</svg>`;
+  return `<svg class="island-map-connections" viewBox="0 0 ${Math.round(layout.stageWidth)} ${Math.round(layout.stageHeight)}" preserveAspectRatio="none" aria-hidden="true">${lines}</svg>`;
 }
 
 function renderIslandMapTile(region, activeRegionId, homeRegionId) {
@@ -6430,6 +6405,7 @@ function renderIslandMapTile(region, activeRegionId, homeRegionId) {
   const summaryText = getIslandTileSummaryText(regionId);
   const isActive = regionId === activeRegionId;
   const isHome = regionId === homeRegionId;
+  const previewSrc = getIslandMapArtSrc(regionId) || getIslandPreviewArtSrc(regionId);
   const ariaParts = [label, getIslandTileAriaSummary(regionId)];
   if (isActive) ariaParts.push("current map");
   if (isHome) ariaParts.push("home island");
@@ -6442,7 +6418,7 @@ function renderIslandMapTile(region, activeRegionId, homeRegionId) {
       aria-label="${escapeHtml(ariaParts.join(", "))}"
     >
       <span class="island-map-thumb" aria-hidden="true">
-        <img src="${escapeHtml(getIslandPreviewArtSrc(regionId))}" alt="" draggable="false" loading="lazy" decoding="async" fetchpriority="low" />
+        <img src="${escapeHtml(previewSrc)}" alt="" draggable="false" loading="lazy" decoding="async" fetchpriority="low" />
       </span>
       <span class="island-map-name">${escapeHtml(label)}</span>
       <span class="island-map-owned">${escapeHtml(summaryText)}</span>
@@ -6500,7 +6476,6 @@ function attachIslandMapPickerPan(picker) {
 
   picker.addEventListener("pointerdown", event => {
     if (event.button !== undefined && event.button !== 0) return;
-    if (event.target?.closest?.("[data-island-region]")) return;
     pointerId = event.pointerId;
     startX = event.clientX;
     startY = event.clientY;
