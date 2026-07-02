@@ -1022,6 +1022,8 @@ input {
   height: 64px;
   transform: translate(-50%, -50%);
   border-radius: 50%;
+  border: 0;
+  padding: 0;
   background: transparent;
   color: var(--ink);
   z-index: 5;
@@ -1188,8 +1190,9 @@ input {
   position: absolute;
   inset: 5px;
   border-radius: 50%;
-  border: 4px solid rgba(255,255,255,.72);
-  box-shadow: 0 12px 22px rgba(0,0,0,.35), inset 0 -9px 18px rgba(0,0,0,.22);
+  border: 0;
+  background: transparent;
+  box-shadow: none;
   z-index: 0;
 }
 .city-shield-field {
@@ -1211,11 +1214,11 @@ input {
   height: 100%;
   object-fit: contain;
 }
-.city-node.player .city-ring { background: radial-gradient(circle at 35% 30%, #7cc7ff, var(--blue2) 68%); border-color: #a8ddff; }
-.city-node.player2 .city-ring { background: radial-gradient(circle at 35% 30%, #bb95ff, #5732a3 68%); border-color: #d6c4ff; }
-.city-node.player3 .city-ring { background: radial-gradient(circle at 35% 30%, #90ecaf, #24864f 68%); border-color: #c1ffd3; }
-.city-node.enemy .city-ring { background: radial-gradient(circle at 35% 30%, #ff978b, var(--red2) 68%); border-color: #ffb2aa; }
-.city-node.neutral .city-ring { background: radial-gradient(circle at 35% 30%, #d6cbb7, #625a4d 68%); border-color: #eee6cd; }
+.city-node.player .city-ring,
+.city-node.player2 .city-ring,
+.city-node.player3 .city-ring,
+.city-node.enemy .city-ring,
+.city-node.neutral .city-ring { background: transparent; border-color: transparent; }
 .city-node.selected .city-ring { box-shadow: 0 0 0 5px rgba(242,184,75,.38), 0 14px 25px rgba(0,0,0,.42); }
 .city-node.attackable .city-ring { animation: targetPulse .75s infinite alternate; }
 .city-node.supportable .city-ring { animation: supportPulse .75s infinite alternate; }
@@ -1232,14 +1235,15 @@ input {
 }
 .city-castle {
   position: absolute;
-  left: 9px;
-  top: 9px;
-  width: 46px;
-  height: 46px;
+  left: 50%;
+  bottom: -6px;
+  width: var(--city-art-size, 58px);
+  height: var(--city-art-size, 58px);
   display: grid;
   place-items: center;
-  overflow: hidden;
-  border-radius: 50%;
+  overflow: visible;
+  border-radius: 0;
+  transform: translateX(-50%);
   filter: drop-shadow(0 5px 5px rgba(0,0,0,.35));
   z-index: 1;
   pointer-events: none;
@@ -1272,18 +1276,18 @@ input {
 .map-frame.zooming .city-label {
   opacity: 1;
 }
-.city-castle.stage-1,
-.city-castle.stage-2,
-.city-castle.stage-3,
-.city-castle.stage-4,
-.city-castle.stage-5 { width: 46px; height: 46px; background-image: none; }
+.city-castle.stage-1 { --city-art-size: 58px; background-image: none; }
+.city-castle.stage-2 { --city-art-size: 61px; background-image: none; }
+.city-castle.stage-3 { --city-art-size: 64px; background-image: none; }
+.city-castle.stage-4 { --city-art-size: 67px; background-image: none; }
+.city-castle.stage-5 { --city-art-size: 70px; background-image: none; }
 .city-art { display: block; width: 100%; height: 100%; object-fit: contain; }
 .city-level { display: none; }
 .city-label {
   --label-tether: 0px;
   position: absolute;
   left: 50%;
-  bottom: 58px;
+  bottom: 70px;
   transform: translateX(-50%);
   width: max-content;
   z-index: 3;
@@ -3048,12 +3052,13 @@ button.inventory-slot {
   .map-frame { inset-bottom: 150px; }
   .city-node { width: 58px; height: 58px; }
   .city-shield-field { width: 90px; height: 92px; }
-  .city-castle { left: 7px; top: 7px; width: 44px; height: 44px; }
-  .city-castle.stage-1,
-  .city-castle.stage-2,
-  .city-castle.stage-3,
-  .city-castle.stage-4,
-  .city-castle.stage-5 { width: 44px; height: 44px; }
+  .city-castle { bottom: -5px; }
+  .city-castle.stage-1 { --city-art-size: 54px; }
+  .city-castle.stage-2 { --city-art-size: 57px; }
+  .city-castle.stage-3 { --city-art-size: 60px; }
+  .city-castle.stage-4 { --city-art-size: 63px; }
+  .city-castle.stage-5 { --city-art-size: 66px; }
+  .city-label { bottom: 66px; }
   .city-action-wheel { --wheel-scale: .86; }
   .commander-panel { min-height: 113px; }
   .toast { bottom: 232px; }

@@ -607,12 +607,13 @@ function getCastleStage(level) {
 }
 
 function getCastleAsset(stage) {
+  const version = "v=20260702-city-level-art";
   const assets = {
-    1: "assets/castles/shack.png",
-    2: "assets/castles/fort.png",
-    3: "assets/castles/keep.png",
-    4: "assets/castles/castle.png",
-    5: "assets/castles/city.png",
+    1: `assets/castles/shack.png?${version}`,
+    2: `assets/castles/fort.png?${version}`,
+    3: `assets/castles/keep.png?${version}`,
+    4: `assets/castles/castle.png?${version}`,
+    5: `assets/castles/city.png?${version}`,
   };
   return assets[stage] || assets[1];
 }
