@@ -622,7 +622,7 @@
         <span class="region-tile-meta">
           <strong>${escapeHtml(region.name)}</strong>
           <small>${escapeHtml(region.id)} (${region.gridX}, ${region.gridY})</small>
-          <small>${region.cities.length}/${region.cityCapacity} cities</small>
+          <small>${region.cities.length} ${region.cities.length === 1 ? "city" : "cities"} placed</small>
         </span>
         ${SIDES.map(side => `<span class="edge-dot ${side} ${hasNeighbor(region, side) ? "connected" : ""}"></span>`).join("")}
       `;
@@ -1098,6 +1098,7 @@
         <label class="wide"><span>Region ID</span><input data-field="id" data-commit="change" value="${escapeHtml(region.id)}" /></label>
         <label class="wide"><span>Name</span><input data-field="name" value="${escapeHtml(region.name)}" /></label>
         <label><span>Type</span><select data-field="type">${optionList(REGION_TYPES, region.type)}</select></label>
+        <label><span>Cities Placed</span><input value="${region.cities.length}" readonly /></label>
         <label><span>City Capacity</span><input data-field="cityCapacity" type="number" min="0" value="${region.cityCapacity}" /></label>
         <label><span>Grid X</span><input data-field="gridX" type="number" value="${region.gridX}" /></label>
         <label><span>Grid Y</span><input data-field="gridY" type="number" value="${region.gridY}" /></label>
