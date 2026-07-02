@@ -755,6 +755,21 @@ function createNeutralCityFromBase(base) {
   };
 }
 
+function getCityTroopFallback(base, ownership = null) {
+  const stronghold = isStronghold(base);
+  const ownedByPlayer = ownership?.ownerKind === "player" || ownership?.owner === "player" || Boolean(ownership?.ownerUid);
+  if (stronghold && ownedByPlayer) return 0;
+  return stronghold ? getStrongholdStartTroops(base) : NEUTRAL_START_TROOPS;
+}
+
+function readCityTroops(primary, fallback = 0) {
+  return Math.max(0, Math.floor(Number(primary ?? fallback) || 0));
+}
+
+function readCityTroopFloat(primary, fallback = 0) {
+  return Math.max(0, Number(primary ?? fallback) || 0);
+}
+
 function applyBaseCityMetadata(city, base) {
   if (!city || !base) return;
   city.x = base.x;
@@ -7351,6 +7366,7 @@ function applyOnlineCities(onlineCities, regionId = getActiveOnlineRegionId()) {
     if (!isActiveRegionCity) {
       const current = localById.get(base.id);
       if (!current) {
+        const troopFallback = getCityTroopFallback(base);
         return {
           ...base,
           owner: "neutral",
@@ -7361,8 +7377,8 @@ function applyOnlineCities(onlineCities, regionId = getActiveOnlineRegionId()) {
           ownerKingPower: 0,
           ownerShieldExpiresAtMs: 0,
           level: clampCityLevel(base.level),
-          troops: Math.max(0, Math.floor(Number(base.troops) || NEUTRAL_START_TROOPS)),
-          troopFloat: Math.max(0, Number(base.troops) || NEUTRAL_START_TROOPS),
+          troops: readCityTroops(base.troops, troopFallback),
+          troopFloat: readCityTroopFloat(base.troopFloat ?? base.troops, troopFallback),
           defense: 1,
           investedGold: 0,
           lastCapturedAt: null,
@@ -7372,6 +7388,7 @@ function applyOnlineCities(onlineCities, regionId = getActiveOnlineRegionId()) {
         };
       }
       const currentOwnership = getCityRecordOwnership(current, currentUid, { allowLocalPlayerFallback: true });
+      const troopFallback = getCityTroopFallback(base, currentOwnership);
       return {
         ...base,
         name: current.name || base.name,
@@ -7383,8 +7400,8 @@ function applyOnlineCities(onlineCities, regionId = getActiveOnlineRegionId()) {
         ownerKingPower: currentOwnership.ownerKingPower,
         ownerShieldExpiresAtMs: currentOwnership.ownerShieldExpiresAtMs,
         level: isStronghold(base) ? getStrongholdDefenseLevel(base) : clampCityLevel(current.level ?? base.level),
-        troops: Math.max(0, Math.floor(Number(current.troops ?? base.troops) || 0)),
-        troopFloat: Math.max(0, Number(current.troopFloat ?? current.troops ?? base.troops) || 0),
+        troops: readCityTroops(current.troops, troopFallback),
+        troopFloat: readCityTroopFloat(current.troopFloat ?? current.troops, troopFallback),
         defense: 1,
         investedGold: isStronghold(base) ? 0 : Math.max(0, Math.floor(Number(current.investedGold) || 0)),
         lastCapturedAt: current.lastCapturedAt ?? null,
@@ -7411,6 +7428,9 @@ function applyOnlineCities(onlineCities, regionId = getActiveOnlineRegionId()) {
       && !onlineBelongsToAnotherPlayer
       && !isFreshClaimCity
       && (onlineBelongsToCurrentPlayer || localDirtyCityIds.has(base.id));
+    const troopFallback = getCityTroopFallback(base, keepLocalPlayerCity
+      ? { owner: "player", ownerKind: "player", ownerUid: currentUid || current.ownerUid || ownerUid || null }
+      : onlineOwnership);
 
     return {
       ...base,
@@ -7423,8 +7443,8 @@ function applyOnlineCities(onlineCities, regionId = getActiveOnlineRegionId()) {
       ownerKingPower: keepLocalPlayerCity ? getKingPower() : ownerKingPower,
       ownerShieldExpiresAtMs: isStronghold(base) ? 0 : (keepLocalPlayerCity || localOwner === "player") ? getActivePeaceShieldExpiresAtMs() : ownerShieldExpiresAtMs,
       level: isStronghold(base) ? getStrongholdDefenseLevel(base) : clampCityLevel(keepLocalPlayerCity ? current.level ?? online.level ?? base.level : online.level ?? current.level ?? base.level),
-      troops: Math.max(0, Math.floor(Number(keepLocalPlayerCity ? current.troops ?? online.troops ?? base.troops : online.troops ?? current.troops ?? base.troops) || 0)),
-      troopFloat: Math.max(0, Number(keepLocalPlayerCity ? current.troopFloat ?? current.troops ?? online.troopFloat ?? online.troops ?? base.troops : online.troopFloat ?? current.troopFloat ?? online.troops ?? current.troops ?? base.troops) || 0),
+      troops: readCityTroops(keepLocalPlayerCity ? current.troops ?? online.troops : online.troops ?? current.troops, troopFallback),
+      troopFloat: readCityTroopFloat(keepLocalPlayerCity ? current.troopFloat ?? current.troops ?? online.troopFloat ?? online.troops : online.troopFloat ?? current.troopFloat ?? online.troops ?? current.troops, troopFallback),
       defense: 1,
       investedGold: isStronghold(base) ? 0 : Math.max(0, Math.floor(Number(keepLocalPlayerCity ? current.investedGold ?? online.investedGold : online.investedGold ?? current.investedGold) || 0)),
       lastCapturedAt: keepLocalPlayerCity ? current.lastCapturedAt ?? online.lastCapturedAt ?? null : online.lastCapturedAt ?? current.lastCapturedAt ?? null,
@@ -8348,6 +8368,7 @@ function normalizeOwnedCitySnapshot(raw = {}) {
   const regionId = normalizeRegionId(raw.regionId || base.regionId || raw.startPool || base.startPool);
   const ownerUid = String(raw.ownerUid || getCurrentOnlineUid() || "").trim();
   const ownerFlag = raw.ownerFlag || (ownerUid === getCurrentOnlineUid() ? state?.flag : null);
+  const troopFallback = getCityTroopFallback({ ...base, ...raw }, { owner: "player", ownerKind: "player", ownerUid });
   return {
     ...base,
     ...raw,
@@ -8369,8 +8390,8 @@ function normalizeOwnedCitySnapshot(raw = {}) {
     bonusPercent: Number(raw.bonusPercent ?? base.bonusPercent) || 0,
     size: isStronghold(raw) || isStronghold(base) ? getStrongholdVisualSize({ ...base, ...raw }) : undefined,
     level: isStronghold(raw) || isStronghold(base) ? getStrongholdDefenseLevel({ ...base, ...raw }) : clampCityLevel(raw.level ?? base.level),
-    troops: Math.max(0, Math.floor(Number(raw.troops ?? base.troops) || 0)),
-    troopFloat: Math.max(0, Number(raw.troopFloat ?? raw.troops ?? base.troops) || 0),
+    troops: readCityTroops(raw.troops, troopFallback),
+    troopFloat: readCityTroopFloat(raw.troopFloat ?? raw.troops, troopFallback),
     defense: 1,
     investedGold: Math.max(0, Math.floor(Number(raw.investedGold) || 0)),
     lastCapturedAt: raw.lastCapturedAt ?? null,
@@ -11327,6 +11348,9 @@ function showCityInfoModal(cityId) {
     const stats = getCityStats(city);
     const remaining = report ? Math.max(0, Math.ceil(report.expiresAt - state.gameSeconds)) : 0;
     const strongholdBonusLabel = stronghold ? getStrongholdBonusLabel(city) : "";
+    const neutralStrongholdBase = stronghold && city.owner === "neutral"
+      ? `<div class="stat-chip"><span>Neutral base</span><strong>${formatNumber(getStrongholdStartTroops(city))}</strong><small>one-time starting defenders</small></div>`
+      : "";
     modalTitle.textContent = stronghold ? `${city.name} - Stronghold` : `${city.name} - Level ${city.level}`;
     modalBody.innerHTML = `
       <div class="city-stat-panel modal-city-stats">
@@ -11336,7 +11360,7 @@ function showCityInfoModal(cityId) {
         <div class="stat-chip"><span>Victory points</span><strong>${formatNumber(stats.victoryPoints)}</strong></div>
         <div class="stat-chip"><span>Troops</span><strong>${report ? formatNumber(report.troops) : "Unknown"}</strong></div>
         <div class="stat-chip"><span>Total defense</span><strong>${report ? formatNumber(report.totalDefense) : "Unknown"}</strong></div>
-        ${stronghold ? `<div class="stat-chip"><span>Neutral base</span><strong>${formatNumber(getStrongholdStartTroops(city))}</strong><small>starting defenders</small></div>` : ""}
+        ${neutralStrongholdBase}
         ${report
           ? `<div class="stat-wide"><span>Scout report expires</span><strong>${formatDuration(remaining)}</strong></div>`
           : `<div class="stat-wide scout-required"><span>Scout report</span><strong>Not available</strong></div>`}
