@@ -198,6 +198,38 @@ function publicMapImagePath(filename) {
   return `assets/worlds/world_01/maps/${filename}`;
 }
 
+function uploadedMapImagePathForRegion(imagePath, regionId) {
+  const normalized = normalizePathForJson(imagePath);
+  const mapsPrefix = "assets/worlds/world_01/maps/";
+  if (!normalized.startsWith(mapsPrefix)) return null;
+  const fileName = normalized.slice(mapsPrefix.length);
+  const expectedPrefix = `${cleanId(regionId, "region")}-`;
+  if (!fileName || fileName.includes("/") || fileName.includes("..") || !fileName.startsWith(expectedPrefix)) {
+    return null;
+  }
+  const mapsRoot = path.resolve(WORLD_MAPS_DIR);
+  const filePath = path.resolve(WORLD_MAPS_DIR, fileName);
+  const relativePath = path.relative(mapsRoot, filePath);
+  if (relativePath.startsWith("..") || path.isAbsolute(relativePath)) return null;
+  return {
+    fileName,
+    filePath,
+    imagePath: publicMapImagePath(fileName),
+  };
+}
+
+async function deletePreviousUploadedMapImage(previousImagePath, regionId, nextFilePath) {
+  const previous = uploadedMapImagePathForRegion(previousImagePath, regionId);
+  if (!previous) return null;
+  if (nextFilePath && path.resolve(previous.filePath) === path.resolve(nextFilePath)) return null;
+  try {
+    await fsp.unlink(previous.filePath);
+  } catch (error) {
+    if (error.code !== "ENOENT") throw error;
+  }
+  return previous;
+}
+
 function cleanUploadExtension(filename, mimeType = "") {
   const extension = path.extname(String(filename || "")).toLowerCase();
   const allowed = new Set([".jpg", ".jpeg", ".png", ".webp"]);
@@ -221,10 +253,12 @@ async function writeMapImageUpload(payload = {}) {
   await fsp.mkdir(WORLD_MAPS_DIR, { recursive: true });
   const filePath = path.join(WORLD_MAPS_DIR, fileName);
   await fsp.writeFile(filePath, buffer);
+  const replacedImage = await deletePreviousUploadedMapImage(payload.previousImagePath, regionId, filePath);
   return {
     fileName,
     imagePath: publicMapImagePath(fileName),
     filePath,
+    replacedImagePath: replacedImage?.imagePath || "",
     width: Math.floor(number(payload.width, 0, 0, 8192)),
     height: Math.floor(number(payload.height, 0, 0, 8192)),
   };

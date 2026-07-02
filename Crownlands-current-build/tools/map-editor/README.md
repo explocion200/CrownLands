@@ -20,7 +20,7 @@ The editor is developer-only and works with the JSON world files in `assets/worl
 - Empty grid squares: click an empty square to select it, then click `Add Region` to place the new region there.
 - Region tiles: drag a region in World Layout to move it to a different grid cell. Occupied cells are blocked so two regions do not overlap.
 - Region Edit: open one region map, pan/zoom, place cities, place strongholds, and define north/south/east/west edge connection zones.
-- Region map images: in Region Edit, click `Upload Map` to copy a JPG, PNG, or WebP into `assets/worlds/world_01/maps/` and update that region's image path.
+- Region map images: in Region Edit, click `Upload Map` to copy a JPG, PNG, or WebP into `assets/worlds/world_01/maps/` and update that region's image path. Uploading another map replaces the previous editor-uploaded map image for that region while keeping shared placeholder art safe.
 - Region zoom: use the `+` and `-` buttons or the mouse wheel over the region map to zoom from 15% to 300% for detailed placement.
 - Edge connections: use `Add Edge Connection`, click near a map edge to create one, drag an existing connection to move it, and press Delete or `Delete Selected` to remove it.
 

@@ -1436,6 +1436,7 @@
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
         regionId: region.id,
+        previousImagePath: region.imagePath || "",
         filename: file.name,
         mimeType: file.type,
         base64: dataUrl.split(",")[1] || "",
@@ -1449,7 +1450,8 @@
     if (payload.width > 0) region.width = payload.width;
     if (payload.height > 0) region.height = payload.height;
     state.selected = { kind: "region", regionId: region.id };
-    markDirty(`Uploaded map image for ${region.name}. Click Save to Game to store the updated region JSON.`);
+    const replacementText = payload.replacedImagePath ? " Replaced the previous uploaded map image." : "";
+    markDirty(`Uploaded map image for ${region.name}.${replacementText} Click Save to Game to store the updated region JSON.`);
     render();
   }
 
