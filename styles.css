@@ -1117,6 +1117,38 @@ input {
   font-size: .65rem;
   font-weight: 1000;
 }
+.regroup-radius {
+  position: absolute;
+  z-index: 3;
+  transform: translate(-50%, -50%);
+  border: 5px solid rgba(255, 88, 88, .9);
+  border-radius: 50%;
+  background: rgba(201, 43, 54, .12);
+  box-shadow: inset 0 0 0 4px rgba(255,255,255,.18), 0 0 34px rgba(255,72,72,.38);
+  pointer-events: none;
+}
+.regroup-radius::after {
+  content: "";
+  position: absolute;
+  inset: 18px;
+  border: 3px dashed rgba(255, 210, 210, .78);
+  border-radius: 50%;
+}
+.regroup-radius > span {
+  position: absolute;
+  left: 50%;
+  top: 12px;
+  transform: translateX(-50%);
+  min-width: max-content;
+  padding: .3rem .62rem;
+  border: 2px solid rgba(255, 176, 176, .82);
+  border-radius: 999px;
+  color: white;
+  background: rgba(91, 16, 24, .94);
+  box-shadow: 0 4px 7px rgba(0,0,0,.35);
+  font-size: .65rem;
+  font-weight: 1000;
+}
 .city-ring {
   position: absolute;
   inset: 5px;
@@ -1153,9 +1185,12 @@ input {
 .city-node.attackable .city-ring { animation: targetPulse .75s infinite alternate; }
 .city-node.supportable .city-ring { animation: supportPulse .75s infinite alternate; }
 .city-node.scout-nearby-target .city-ring { animation: scoutTargetPulse .75s infinite alternate; }
+.city-node.regroup-target .city-ring { animation: regroupTargetPulse .75s infinite alternate; }
 .city-node.scout-radius-source .city-ring { box-shadow: 0 0 0 8px rgba(89, 209, 255, .55), 0 14px 25px rgba(0,0,0,.42); }
+.city-node.regroup-radius-source .city-ring { box-shadow: 0 0 0 8px rgba(255, 88, 88, .55), 0 14px 25px rgba(0,0,0,.42); }
 @keyframes targetPulse { from { box-shadow: 0 0 0 2px rgba(242,184,75,.34), 0 10px 20px rgba(0,0,0,.35); } to { box-shadow: 0 0 0 9px rgba(242,184,75,.42), 0 10px 20px rgba(0,0,0,.35); } }
 @keyframes scoutTargetPulse { from { box-shadow: 0 0 0 3px rgba(88,198,255,.42), 0 10px 20px rgba(0,0,0,.35); } to { box-shadow: 0 0 0 11px rgba(88,198,255,.62), 0 10px 20px rgba(0,0,0,.35); } }
+@keyframes regroupTargetPulse { from { box-shadow: 0 0 0 3px rgba(255,88,88,.38), 0 10px 20px rgba(0,0,0,.35); } to { box-shadow: 0 0 0 11px rgba(255,88,88,.58), 0 10px 20px rgba(0,0,0,.35); } }
 @keyframes cityShieldPulse {
   0%, 100% { opacity: .82; transform: translate(-50%, -50%) scale(.985); }
   50% { opacity: 1; transform: translate(-50%, -50%) scale(1.035); }
@@ -1195,7 +1230,8 @@ input {
   opacity: .9;
 }
 .map-frame.zooming .city-action-wheel,
-.map-frame.zooming .scout-nearby-radius {
+.map-frame.zooming .scout-nearby-radius,
+.map-frame.zooming .regroup-radius {
   opacity: 0;
 }
 .map-frame.zooming .city-label {
@@ -1455,7 +1491,11 @@ input {
 .wheel-scout-nearby { right: var(--wheel-extra-right, -50px); top: var(--wheel-extra-top, 10px); width: 58px; min-height: 58px; background: #2d83c8; }
 .wheel-scout-nearby.armed { background: #38a94e; animation: scoutReadyPulse .75s infinite alternate; }
 .wheel-scout-nearby .wheel-icon { font-size: 1.35rem; }
+.wheel-regroup { left: var(--wheel-extra-left, -50px); top: var(--wheel-extra-top, 10px); width: 58px; min-height: 58px; background: #bd3f48; }
+.wheel-regroup.armed { background: #d25050; animation: regroupReadyPulse .75s infinite alternate; }
+.wheel-regroup .wheel-icon { font-size: 1.35rem; }
 @keyframes scoutReadyPulse { from { filter: drop-shadow(0 5px 3px rgba(0,0,0,.52)); } to { filter: drop-shadow(0 0 9px rgba(111,255,169,.92)) drop-shadow(0 5px 3px rgba(0,0,0,.52)); } }
+@keyframes regroupReadyPulse { from { filter: drop-shadow(0 5px 3px rgba(0,0,0,.52)); } to { filter: drop-shadow(0 0 9px rgba(255,132,132,.92)) drop-shadow(0 5px 3px rgba(0,0,0,.52)); } }
 .foreign-city-action-wheel .city-wheel-ring { border-color: rgba(22, 83, 123, .95); border-top-color: transparent; }
 .wheel-info { left: var(--wheel-info-left, 76px); bottom: var(--wheel-info-bottom, 0); width: 58px; min-height: 58px; background: #24547d; }
 .wheel-info .wheel-icon { font-family: Georgia, serif; font-size: 1.45rem; font-weight: 1000; }

@@ -492,6 +492,7 @@ const ISLAND_CITY_COUNT = WORLD_REGIONS.reduce((total, region) => total + (regio
 const SCOUT_REPORT_SECONDS = 120;
 const SCOUT_NEARBY_COST = 1000;
 const SCOUT_NEARBY_RADIUS = 420;
+const REGROUP_RADIUS = 680;
 const BASE_TROOP_ATTACK_POWER = 2;
 const ARMY_TRAVEL_SECONDS_PER_MAP_UNIT = 0.13;
 const ARMY_TRAVEL_MIN_SECONDS = 30;
@@ -2077,6 +2078,7 @@ let selectedMarchPercent = DEFAULT_MARCH_PERCENT;
 let selectedTroopAmount = 1;
 let troopSliderActive = false;
 let scoutNearbySourceId = null;
+let regroupSourceId = null;
 let camera = { x: 0, y: 0 };
 let zoom = 1;
 let panState = null;
@@ -5313,6 +5315,7 @@ function toggleScoutNearby(cityId) {
   const source = cityById(cityId);
   if (!source || source.owner !== "player") {
     scoutNearbySourceId = null;
+    regroupSourceId = null;
     renderAll();
     return;
   }
@@ -5325,6 +5328,7 @@ function toggleScoutNearby(cityId) {
 
   if (scoutNearbySourceId !== source.id) {
     scoutNearbySourceId = source.id;
+    regroupSourceId = null;
     const targets = getNearbyScoutCandidates(source);
     renderAll();
     showToast(targets.length
@@ -5357,6 +5361,84 @@ function toggleScoutNearby(cityId) {
   saveGame();
   renderAll();
   showToast(`${formatNumber(options.length)} scouts dispatched from ${source.name}`);
+}
+
+function isNearbyRegroupCandidate(target, city) {
+  return Boolean(
+    target &&
+    city &&
+    city.id !== target.id &&
+    target.owner === "player" &&
+    city.owner === "player" &&
+    getCityRegionId(city) === getCityRegionId(target) &&
+    Math.floor(Number(city.troops) || 0) > 0 &&
+    Math.hypot(city.x - target.x, city.y - target.y) <= REGROUP_RADIUS
+  );
+}
+
+function getNearbyRegroupCandidates(target) {
+  return state.cities.filter(city => isNearbyRegroupCandidate(target, city));
+}
+
+function getNearbyRegroupOptions(target) {
+  const targetRegionId = getCityRegionId(target);
+  return getNearbyRegroupCandidates(target)
+    .map(city => ({ city, route: findLandRoute(city, target, targetRegionId) }))
+    .filter(option => option.route?.points?.length)
+    .sort((a, b) => a.route.length - b.route.length);
+}
+
+function toggleRegroup(cityId) {
+  const target = cityById(cityId);
+  if (!target || target.owner !== "player") {
+    regroupSourceId = null;
+    renderAll();
+    return;
+  }
+
+  if (regroupSourceId !== target.id) {
+    regroupSourceId = target.id;
+    scoutNearbySourceId = null;
+    const targets = getNearbyRegroupCandidates(target);
+    const troops = targets.reduce((total, city) => total + Math.floor(Number(city.troops) || 0), 0);
+    renderAll();
+    showToast(targets.length
+      ? `${formatNumber(targets.length)} owned cities can regroup ${formatNumber(troops)} troops to ${target.name}. Press Regroup again.`
+      : `No owned cities with troops are inside ${target.name}'s regroup radius.`);
+    return;
+  }
+
+  const options = getNearbyRegroupOptions(target);
+  if (!options.length) {
+    regroupSourceId = null;
+    renderAll();
+    showToast("No nearby owned cities with troops can regroup here.");
+    return;
+  }
+
+  let launched = 0;
+  let troopsSent = 0;
+  for (const option of options) {
+    const troops = Math.floor(Number(option.city.troops) || 0);
+    if (troops < 1) continue;
+    if (launchAttack(option.city.id, target.id, 1, "player", troops, { silent: true, syncOwnedCities: false })) {
+      launched += 1;
+      troopsSent += troops;
+    }
+  }
+
+  regroupSourceId = null;
+  if (!launched) {
+    renderAll();
+    showToast("No troops could regroup right now.");
+    return;
+  }
+
+  if (isOnlineWorldActive()) syncOwnedCitiesToOnline(true);
+  addLog(`${target.name} called a regroup: ${formatNumber(troopsSent)} troops moving in from ${formatNumber(launched)} cities.`);
+  saveGame();
+  renderAll();
+  showToast(`Regroup moving: ${formatNumber(troopsSent)} troops to ${target.name}`);
 }
 
 function getPendingScoutMission(cityId) {
@@ -6387,6 +6469,7 @@ function prepareSelectionForIslandSwitch() {
   if (sendMode && source?.owner === "player") {
     selectedTargetId = null;
     scoutNearbySourceId = null;
+    regroupSourceId = null;
     return;
   }
   clearSelection(false);
@@ -9445,7 +9528,7 @@ function getMainCityAttackBlockReason(target, attackerOwner = "player", attacker
   return `${target.name} is a main city and cannot be attacked.`;
 }
 
-function launchAttack(sourceId, targetId, percent, owner, exactTroops = null) {
+function launchAttack(sourceId, targetId, percent, owner, exactTroops = null, options = {}) {
   const source = cityById(sourceId);
   const target = cityById(targetId);
   if (!source || !target || isGamePausedByOutcome()) return false;
@@ -9518,11 +9601,13 @@ function launchAttack(sourceId, targetId, percent, owner, exactTroops = null) {
   prepareOnlineArmyMission(mission);
   state.attacks.push(mission);
   publishOnlineArmyMovement(mission);
-  if (isOnlineWorldActive() && owner === "player") syncOwnedCitiesToOnline(true);
+  if (isOnlineWorldActive() && owner === "player" && options.syncOwnedCities !== false) syncOwnedCitiesToOnline(true);
 
   if (owner === "player" && kind === "transfer") {
-    addLog(`You moved ${formatNumber(send)} troops from ${source.name} to ${target.name}.`);
-    showToast(`Reinforcements moving: ${source.name} \u2192 ${target.name}`);
+    if (!options.silent) {
+      addLog(`You moved ${formatNumber(send)} troops from ${source.name} to ${target.name}.`);
+      showToast(`Reinforcements moving: ${source.name} \u2192 ${target.name}`);
+    }
   } else if (owner === "player") {
     const demoText = demoAttack ? ` ${getDemoAttackNotice(demoAttack)}` : "";
     const shieldText = peaceShieldDeactivated ? " Royal Peace Shield deactivated." : "";
@@ -10337,6 +10422,7 @@ function shouldRenderCityNode(city, bounds) {
   if (!isCityInActiveMap(city)) return false;
   if (city.id === selectedSourceId || city.id === selectedTargetId || city.id === state?.mainCityId) return true;
   if (scoutNearbySourceId && city.id === scoutNearbySourceId) return true;
+  if (regroupSourceId && city.id === regroupSourceId) return true;
   return isPointInBounds(city.x, city.y, bounds);
 }
 
@@ -10378,6 +10464,7 @@ function getCityRenderSignature(visibleCities) {
     selectedTargetId || "",
     sendMode ? 1 : 0,
     scoutNearbySourceId || "",
+    regroupSourceId || "",
     state.mainCityId || "",
     state.playerName || "",
     playerFlag,
@@ -10389,9 +10476,14 @@ function renderCities(force = false) {
   if (!force && isZoomInteractionActive()) return;
   const source = selectedSourceId ? cityById(selectedSourceId) : null;
   let scoutNearbySource = scoutNearbySourceId ? cityById(scoutNearbySourceId) : null;
-  if (scoutNearbySource?.owner !== "player") {
+  if (scoutNearbySourceId && scoutNearbySource?.owner !== "player") {
     scoutNearbySourceId = null;
     scoutNearbySource = null;
+  }
+  let regroupSource = regroupSourceId ? cityById(regroupSourceId) : null;
+  if (regroupSourceId && regroupSource?.owner !== "player") {
+    regroupSourceId = null;
+    regroupSource = null;
   }
   const visibleBounds = getVisibleWorldBounds();
   const visibleCities = state.cities.filter(city => shouldRenderCityNode(city, visibleBounds));
@@ -10401,6 +10493,7 @@ function renderCities(force = false) {
 
   cityLayer.innerHTML = "";
   if (scoutNearbySource) renderScoutNearbyRadius(scoutNearbySource);
+  if (regroupSource) renderRegroupRadius(regroupSource);
 
   visibleCities.forEach(city => {
     const mapPoint = worldToMapPoint(city);
@@ -10416,7 +10509,9 @@ function renderCities(force = false) {
     if (city.id === selectedSourceId) btn.classList.add("selected");
     if (city.id === selectedTargetId) btn.classList.add("targeted");
     if (scoutNearbySource?.id === city.id) btn.classList.add("scout-radius-source");
+    if (regroupSource?.id === city.id) btn.classList.add("regroup-radius-source");
     if (scoutNearbySource && isNearbyScoutCandidate(scoutNearbySource, city)) btn.classList.add("scout-nearby-target");
+    if (regroupSource && isNearbyRegroupCandidate(regroupSource, city)) btn.classList.add("regroup-target");
     if (sendMode && source && city.id !== source.id) {
       btn.classList.add(city.owner === "player" ? "supportable" : "attackable");
     }
@@ -10505,6 +10600,20 @@ function renderScoutNearbyRadius(source) {
   cityLayer.appendChild(radius);
 }
 
+function renderRegroupRadius(target) {
+  const sources = getNearbyRegroupCandidates(target);
+  const troops = sources.reduce((total, city) => total + Math.floor(Number(city.troops) || 0), 0);
+  const mapPoint = worldToMapPoint(target);
+  const radius = document.createElement("div");
+  radius.className = "regroup-radius";
+  radius.style.left = `${mapPoint.x}px`;
+  radius.style.top = `${mapPoint.y}px`;
+  radius.style.width = `${REGROUP_RADIUS * 2}px`;
+  radius.style.height = `${REGROUP_RADIUS * 2}px`;
+  radius.innerHTML = `<span>${formatNumber(sources.length)} cities &middot; ${formatNumber(troops)} troops</span>`;
+  cityLayer.appendChild(radius);
+}
+
 function renderSelectedCityWheel(city) {
   const mapPoint = worldToMapPoint(city);
   const wheel = document.createElement("div");
@@ -10518,7 +10627,9 @@ function renderSelectedCityWheel(city) {
     ? "Incoming"
     : isStronghold(city) ? "Fixed" : city.level >= MAX_CITY_LEVEL ? "MAX" : `${formatNumber(levelCost)}g`;
   const scoutNearbyActive = scoutNearbySourceId === city.id;
+  const regroupActive = regroupSourceId === city.id;
   const nearbyCount = scoutNearbyActive ? getNearbyScoutCandidates(city).length : 0;
+  const regroupCount = regroupActive ? getNearbyRegroupCandidates(city).length : 0;
   wheel.className = "city-action-wheel";
   applyCityActionWheelSizing(wheel, city);
   wheel.style.left = `${mapPoint.x}px`;
@@ -10542,6 +10653,11 @@ function renderSelectedCityWheel(city) {
       <span class="wheel-action-name">${scoutNearbyActive ? "Send All" : "Nearby"}</span>
       <span class="wheel-cost">${scoutNearbyActive ? nearbyCount : "1k"}</span>
     </button>
+    <button class="city-wheel-action wheel-regroup ${regroupActive ? "armed" : ""}" type="button" aria-label="${regroupActive ? "Confirm regroup" : "Preview regroup"} to ${escapeHtml(city.name)}">
+      <span class="wheel-icon" aria-hidden="true">&#8649;</span>
+      <span class="wheel-action-name">${regroupActive ? "Confirm" : "Regroup"}</span>
+      <span class="wheel-cost">${regroupActive ? formatNumber(regroupCount) : "All"}</span>
+    </button>
   `;
   wheel.querySelector(".wheel-level").addEventListener("click", event => {
     event.stopPropagation();
@@ -10558,6 +10674,10 @@ function renderSelectedCityWheel(city) {
   wheel.querySelector(".wheel-scout-nearby").addEventListener("click", event => {
     event.stopPropagation();
     toggleScoutNearby(city.id);
+  });
+  wheel.querySelector(".wheel-regroup").addEventListener("click", event => {
+    event.stopPropagation();
+    toggleRegroup(city.id);
   });
   cityLayer.appendChild(wheel);
 }
@@ -10743,6 +10863,8 @@ function attackForeignCity(cityId) {
   selectedSourceId = sourceOption.city.id;
   rememberOwnedAttackSource(sourceOption.city);
   selectedTargetId = target.id;
+  scoutNearbySourceId = null;
+  regroupSourceId = null;
   sendMode = true;
   selectedTroopAmount = clamp(Math.floor(sourceOption.city.troops / 2), 1, sourceOption.city.troops);
   renderAll();
@@ -10930,6 +11052,7 @@ function selectCity(id) {
   const clicked = cityById(id);
   if (!clicked) return;
   if (scoutNearbySourceId && scoutNearbySourceId !== clicked.id) scoutNearbySourceId = null;
+  if (regroupSourceId && regroupSourceId !== clicked.id) regroupSourceId = null;
   const source = selectedSourceId ? cityById(selectedSourceId) : null;
 
   if (sendMode && source) {
@@ -10996,6 +11119,7 @@ function beginSendMode(sourceId) {
   rememberOwnedAttackSource(source);
   selectedTargetId = null;
   scoutNearbySourceId = null;
+  regroupSourceId = null;
   sendMode = true;
   selectedTroopAmount = clamp(Math.floor(source.troops / 2), 1, source.troops);
   renderAll();
@@ -11394,6 +11518,7 @@ async function focusCityListLocation(cityId) {
   const regionId = getCityRegionId(city);
   if (modal.open) modal.close();
   scoutNearbySourceId = null;
+  regroupSourceId = null;
   sendMode = false;
   selectedTargetId = null;
   if (regionId !== getActiveMapRegionId()) {
@@ -11865,6 +11990,7 @@ function clearSelection(shouldRender = true) {
   selectedSourceId = null;
   selectedTargetId = null;
   scoutNearbySourceId = null;
+  regroupSourceId = null;
   sendMode = false;
   if (shouldRender) renderAll();
 }
@@ -12736,6 +12862,7 @@ function showHelpModal() {
       <li>After that, expand by attacking player-owned cities.</li>
       <li>Send Troops is single-click after setup: pick a march percent, then tap one destination to launch.</li>
       <li>Scout Nearby costs ${formatNumber(SCOUT_NEARBY_COST)} gold, covers the current island only, and never routes scouts through portals.</li>
+      <li>Regroup previews a larger red radius, then sends all troops from nearby owned cities into the selected city for free.</li>
       <li>The top-right fullscreen button expands the game surface and the game disables page text selection while playing.</li>
       <li>City level creates victory points for combat value, while passive gold follows the Million Lords city production curve.</li>
       <li>City defense is level x 3%, plus wall strength and any Guardian skill bonus for your defending troops.</li>
@@ -13139,6 +13266,7 @@ async function returnToMainCity() {
     return;
   }
   scoutNearbySourceId = null;
+  regroupSourceId = null;
   sendMode = false;
   selectedSourceId = mainCity.owner === "player" ? mainCity.id : null;
   rememberOwnedAttackSource(mainCity);
