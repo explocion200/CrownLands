@@ -12,7 +12,7 @@
   const MAP_ASPECT_TOLERANCE = 0.02;
   const DEFAULT_MAP_WIDTH = 2048;
   const DEFAULT_MAP_HEIGHT = 1536;
-  const MAP_SWITCH_ARROW_ICON_SRC = "/assets/map-switch-arrow.png?v=20260702-map-arrow";
+  const MAP_SWITCH_ARROW_ICON_SRC = "/assets/map-switch-arrow.png?v=20260702-map-arrow-bigger";
   const REGION_TYPES = ["starter", "midgame", "endgame", "activity", "crownlands_main"];
   const EDGE_TYPES = ["road", "valley", "pass", "river_crossing", "open_field", "forest_break", "bridge"];
   const STRONGHOLD_TYPES = [

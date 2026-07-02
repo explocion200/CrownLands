@@ -928,9 +928,10 @@ input {
   100% { transform: scale(1.22); opacity: 0; }
 }
 .teleport-node {
+  --teleport-render-scale: 1.14;
   position: absolute;
-  width: var(--teleport-size, 96px);
-  height: var(--teleport-size, 96px);
+  width: calc(var(--teleport-size, 96px) * var(--teleport-render-scale));
+  height: calc(var(--teleport-size, 96px) * var(--teleport-render-scale));
   transform: translate(-50%, -50%);
   display: grid;
   place-items: center;
@@ -977,7 +978,7 @@ input {
 .teleport-label {
   position: absolute;
   left: 50%;
-  bottom: calc(var(--teleport-size, 96px) * -.26);
+  bottom: calc(var(--teleport-size, 96px) * -.32);
   transform: translateX(-50%);
   padding: .12rem .42rem;
   border-radius: 999px;
