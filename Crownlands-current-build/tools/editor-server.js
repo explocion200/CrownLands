@@ -735,6 +735,13 @@ async function handleApi(request, response, pathname) {
     return;
   }
 
+  if (pathname === "/api/map-image") {
+    sendJson(response, 405, {
+      error: "Map image uploads must be sent from the local editor page. Run .\\tools\\start-editor.ps1 and open http://127.0.0.1:8791/editor/.",
+    });
+    return;
+  }
+
   if (pathname === "/api/world-config" && request.method === "GET") {
     const config = await readWorldConfig();
     sendJson(response, 200, { config, path: WORLD_CONFIG_PATH });

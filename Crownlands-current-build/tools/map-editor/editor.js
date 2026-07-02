@@ -1498,7 +1498,13 @@
       }),
     });
     const payload = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(payload.error || `Upload failed: ${response.status}`);
+    if (!response.ok) {
+      const message = payload.error || `Upload failed: ${response.status}`;
+      if (response.status === 404 && /unknown api route/i.test(message)) {
+        throw new Error("Map upload needs the local editor server. Run .\\tools\\start-editor.ps1 from the repo, then open http://127.0.0.1:8791/editor/ and upload again.");
+      }
+      throw new Error(message);
+    }
     region.imagePath = payload.imagePath;
     if (payload.width > 0) region.width = payload.width;
     if (payload.height > 0) region.height = payload.height;

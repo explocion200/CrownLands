@@ -22,7 +22,7 @@ The editor is developer-only and works with the JSON world files in `assets/worl
 - Region Edit: open one region map, pan/zoom, place cities, place strongholds, and define north/south/east/west edge connection zones.
 - Region map images: in Region Edit, click `Upload Map` to copy a 4:3 JPG, PNG, or WebP into `assets/worlds/world_01/maps/` and update that region's image path. Uploading another map replaces the previous editor-uploaded map image for that region while keeping shared placeholder art safe.
 - Map aspect ratio: region maps are locked to 4:3, with `2048 x 1536` as the default stage size.
-- Upload troubleshooting: a successful upload changes the editor preview immediately. Click `Save to Game` after that to update the game JSON, then refresh the game page.
+- Upload troubleshooting: a successful upload changes the editor preview immediately. Click `Save to Game` after that to update the game JSON, then refresh the game page. If you see `Unknown API route`, restart the local editor with `.\tools\start-editor.ps1` and use `http://127.0.0.1:8791/editor/`; map uploads cannot work from a plain static server or the live Netlify site.
 - Region zoom: use the `+` and `-` buttons or the mouse wheel over the region map to zoom from 15% to 300% for detailed placement.
 - Edge connections: use `Add Edge Connection`, click near a map edge to create one, drag an existing connection to move it, and press Delete or `Delete Selected` to remove it.
 
