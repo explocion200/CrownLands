@@ -9,7 +9,7 @@ window.CROWNLANDS_WORLD_CONFIG = {
   regions: [
     {
       id: "center",
-      label: "Crownlands",
+      label: "Crownlands Heart",
       x: 5000,
       y: 3800,
       rx: 1900,
@@ -21,7 +21,7 @@ window.CROWNLANDS_WORLD_CONFIG = {
     },
     {
       id: "north",
-      label: "Northreach",
+      label: "North Frontier",
       x: 5000,
       y: 1150,
       rx: 1650,
@@ -33,7 +33,7 @@ window.CROWNLANDS_WORLD_CONFIG = {
     },
     {
       id: "south",
-      label: "Southmere",
+      label: "Southfields",
       x: 5000,
       y: 6450,
       rx: 1650,
@@ -45,7 +45,7 @@ window.CROWNLANDS_WORLD_CONFIG = {
     },
     {
       id: "west",
-      label: "Westmark",
+      label: "West Marches",
       x: 1500,
       y: 3800,
       rx: 1120,
@@ -57,7 +57,7 @@ window.CROWNLANDS_WORLD_CONFIG = {
     },
     {
       id: "east",
-      label: "Eastwatch",
+      label: "East Reach",
       x: 8500,
       y: 3800,
       rx: 1120,
