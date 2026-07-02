@@ -155,6 +155,7 @@
     skipNextCanvasClick: false,
     skipNextWorldClick: false,
     lastRegionClick: null,
+    edgeArrowOverrides: {},
   };
 
   function setStatus(message, kind = "") {
@@ -240,6 +241,34 @@
     const point = getDefaultEdgeArrowPoint(edge, side);
     edge.arrowXNorm = point.xNorm;
     edge.arrowYNorm = point.yNorm;
+  }
+
+  function getEdgeArrowOverrideKey(regionId, side, edge) {
+    return `${slugify(regionId, "region")}::${side}::${slugify(edge?.id, "edge")}`;
+  }
+
+  function setEdgeArrowPosition(region, side, edge, point) {
+    if (!region || !edge || !point) return;
+    const nextPoint = {
+      xNorm: roundNorm(point.xNorm),
+      yNorm: roundNorm(point.yNorm),
+    };
+    edge.arrowXNorm = nextPoint.xNorm;
+    edge.arrowYNorm = nextPoint.yNorm;
+    state.edgeArrowOverrides[getEdgeArrowOverrideKey(region.id, side, edge)] = nextPoint;
+  }
+
+  function applyEdgeArrowOverrides(regions = state.regions) {
+    regions.forEach(region => {
+      SIDES.forEach(side => {
+        (region.edgeConnections[side] || []).forEach(edge => {
+          const override = state.edgeArrowOverrides[getEdgeArrowOverrideKey(region.id, side, edge)];
+          if (!override) return;
+          edge.arrowXNorm = override.xNorm;
+          edge.arrowYNorm = override.yNorm;
+        });
+      });
+    });
   }
 
   function escapeHtml(value) {
@@ -448,6 +477,7 @@
   }
 
   function materializeEdgeArrowPositions(regions = state.regions) {
+    applyEdgeArrowOverrides(regions);
     regions.forEach(region => {
       SIDES.forEach(side => {
         (region.edgeConnections[side] || []).forEach(edge => {
@@ -474,6 +504,7 @@
     const data = normalizeBundle(await response.json());
     state.layout = data.layout;
     state.regions = data.regions;
+    applyEdgeArrowOverrides(state.regions);
     state.dirty = false;
     setStatus("Saved JSON world files and game compatibility data.");
     render();
@@ -695,16 +726,6 @@
           event.stopPropagation();
           return;
         }
-        const now = performance.now();
-        const isDoubleClick = state.lastRegionClick?.regionId === region.id
-          && now - state.lastRegionClick.time <= 420;
-        if (isDoubleClick) {
-          event.preventDefault();
-          event.stopPropagation();
-          editRegion(region.id);
-          return;
-        }
-        state.lastRegionClick = { regionId: region.id, time: now };
         selectRegion(region.id);
       });
       tile.addEventListener("dblclick", event => {
@@ -789,6 +810,17 @@
     if (!region) return;
     event.preventDefault();
     event.stopPropagation();
+
+    const now = performance.now();
+    const isDoubleClick = state.lastRegionClick?.regionId === region.id
+      && now - state.lastRegionClick.time <= 450
+      && !state.skipNextWorldClick;
+    state.lastRegionClick = { regionId: region.id, time: now };
+    if (isDoubleClick) {
+      editRegion(region.id);
+      return;
+    }
+
     setSelectedRegion(region.id);
     updateWorldTileSelection(region.id);
     state.draggingRegion = {
@@ -842,6 +874,7 @@
     const region = getRegion(state.draggingRegion.regionId);
     state.draggingRegion = null;
     state.skipNextWorldClick = wasMoved;
+    if (wasMoved) state.lastRegionClick = null;
     renderWorldGrid();
     renderInspector();
     if (wasMoved && region) setStatus(`Moved ${region.name} to ${region.gridX}, ${region.gridY}.`);
@@ -1698,8 +1731,7 @@
       return;
     }
     const point = getNormPointFromEvent(event);
-    edge.arrowXNorm = point.xNorm;
-    edge.arrowYNorm = point.yNorm;
+    setEdgeArrowPosition(region, state.draggingEdgeArrow.side, edge, point);
     state.draggingEdgeArrow.lastPoint = point;
     markDirty();
     renderRegionEditor();
@@ -1712,8 +1744,7 @@
     const region = getRegion(drag.regionId);
     const edge = region?.edgeConnections[drag.side]?.[drag.index];
     if (edge && drag.lastPoint) {
-      edge.arrowXNorm = drag.lastPoint.xNorm;
-      edge.arrowYNorm = drag.lastPoint.yNorm;
+      setEdgeArrowPosition(region, drag.side, edge, drag.lastPoint);
       materializeEdgeArrowPositions([region]);
       markDirty();
     }
