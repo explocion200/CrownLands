@@ -154,6 +154,7 @@
     imagePreviewBusters: {},
     skipNextCanvasClick: false,
     skipNextWorldClick: false,
+    lastRegionClick: null,
   };
 
   function setStatus(message, kind = "") {
@@ -502,6 +503,18 @@
     render();
   }
 
+  function editRegion(regionId) {
+    const region = getRegion(regionId);
+    if (!region) return;
+    state.activeRegionId = region.id;
+    state.selected = { kind: "region", regionId: region.id };
+    state.editorMode = "region";
+    state.tool = "select";
+    state.lastRegionClick = null;
+    setStatus(`Editing ${region.name}.`);
+    render();
+  }
+
   function setSelectedRegion(regionId) {
     state.activeRegionId = regionId;
     state.selected = { kind: "region", regionId };
@@ -682,6 +695,16 @@
           event.stopPropagation();
           return;
         }
+        const now = performance.now();
+        const isDoubleClick = state.lastRegionClick?.regionId === region.id
+          && now - state.lastRegionClick.time <= 420;
+        if (isDoubleClick) {
+          event.preventDefault();
+          event.stopPropagation();
+          editRegion(region.id);
+          return;
+        }
+        state.lastRegionClick = { regionId: region.id, time: now };
         selectRegion(region.id);
       });
       tile.addEventListener("dblclick", event => {
@@ -690,8 +713,7 @@
           event.stopPropagation();
           return;
         }
-        state.activeRegionId = region.id;
-        setEditorMode("region");
+        editRegion(region.id);
       });
       elements.worldGrid.appendChild(tile);
     });
