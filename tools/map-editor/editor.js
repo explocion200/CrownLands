@@ -1,8 +1,11 @@
 (function () {
   const WORLD_API = "/api/world-data";
+  const MAP_IMAGE_API = "/api/map-image";
   const SIDES = ["north", "south", "east", "west"];
   const OPPOSITE_SIDE = { north: "south", south: "north", east: "west", west: "east" };
   const WORLD_GRID_CELL = 128;
+  const MIN_REGION_ZOOM = 0.15;
+  const MAX_REGION_ZOOM = 3;
   const REGION_TYPES = ["starter", "midgame", "endgame", "activity", "crownlands_main"];
   const EDGE_TYPES = ["road", "valley", "pass", "river_crossing", "open_field", "forest_break", "bridge"];
   const STRONGHOLD_TYPES = [
@@ -83,11 +86,13 @@
     exportBtn: document.getElementById("exportBtn"),
     importBtn: document.getElementById("importBtn"),
     saveBtn: document.getElementById("saveBtn"),
+    uploadRegionImageBtn: document.getElementById("uploadRegionImageBtn"),
     toggleGridBtn: document.getElementById("toggleGridBtn"),
     toggleCitiesBtn: document.getElementById("toggleCitiesBtn"),
     toggleStrongholdsBtn: document.getElementById("toggleStrongholdsBtn"),
     toggleConnectionsBtn: document.getElementById("toggleConnectionsBtn"),
     importFileInput: document.getElementById("importFileInput"),
+    regionImageFileInput: document.getElementById("regionImageFileInput"),
     strongholdTypeSelect: document.getElementById("strongholdTypeSelect"),
     edgeTypeSelect: document.getElementById("edgeTypeSelect"),
     zoomOutBtn: document.getElementById("zoomOutBtn"),
@@ -476,6 +481,7 @@
     elements.toggleStrongholdsBtn.classList.toggle("active", state.toggles.strongholds);
     elements.toggleConnectionsBtn.classList.toggle("active", state.toggles.connections);
     elements.deleteSelectedBtn.disabled = !state.selected || state.selected.kind === "gridCell";
+    elements.uploadRegionImageBtn.disabled = state.editorMode !== "region" || !currentRegion();
     elements.zoomLabel.textContent = `${Math.round(state.zoom * 100)}%`;
   }
 
@@ -1383,6 +1389,70 @@
     render();
   }
 
+  function readFileAsDataUrl(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result || ""));
+      reader.onerror = () => reject(reader.error || new Error("Could not read file."));
+      reader.readAsDataURL(file);
+    });
+  }
+
+  function readImageDimensions(file) {
+    return new Promise((resolve, reject) => {
+      const url = URL.createObjectURL(file);
+      const image = new Image();
+      image.onload = () => {
+        const dimensions = { width: image.naturalWidth, height: image.naturalHeight };
+        URL.revokeObjectURL(url);
+        resolve(dimensions);
+      };
+      image.onerror = () => {
+        URL.revokeObjectURL(url);
+        reject(new Error("Could not read image dimensions."));
+      };
+      image.src = url;
+    });
+  }
+
+  async function uploadRegionImageFile(file) {
+    if (!file) return;
+    const region = currentRegion();
+    if (!region || state.editorMode !== "region") {
+      setStatus("Open a region in Region Edit before uploading a map image.");
+      return;
+    }
+    if (!/^image\/(jpeg|png|webp)$/.test(file.type)) {
+      setStatus("Map image must be a JPG, PNG, or WebP file.");
+      return;
+    }
+    setStatus(`Uploading ${file.name}...`);
+    const [dataUrl, dimensions] = await Promise.all([
+      readFileAsDataUrl(file),
+      readImageDimensions(file),
+    ]);
+    const response = await fetch(MAP_IMAGE_API, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        regionId: region.id,
+        filename: file.name,
+        mimeType: file.type,
+        base64: dataUrl.split(",")[1] || "",
+        width: dimensions.width,
+        height: dimensions.height,
+      }),
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(payload.error || `Upload failed: ${response.status}`);
+    region.imagePath = payload.imagePath;
+    if (payload.width > 0) region.width = payload.width;
+    if (payload.height > 0) region.height = payload.height;
+    state.selected = { kind: "region", regionId: region.id };
+    markDirty(`Uploaded map image for ${region.name}. Click Save to Game to store the updated region JSON.`);
+    render();
+  }
+
   function handleMarkerDrag(event) {
     if (!state.draggingMarker) return;
     const region = getRegion(state.draggingMarker.regionId);
@@ -1471,9 +1541,31 @@
     window.setTimeout(() => { state.skipNextCanvasClick = false; }, 140);
   }
 
-  function zoomRegion(delta) {
-    state.zoom = clamp(Math.round((state.zoom + delta) * 100) / 100, 0.25, 1.5);
+  function setRegionZoom(nextZoom, anchorEvent = null) {
+    const next = clamp(Math.round(Number(nextZoom) * 100) / 100, MIN_REGION_ZOOM, MAX_REGION_ZOOM);
+    if (next === state.zoom) return;
+    const viewport = elements.regionViewport;
+    const rect = viewport.getBoundingClientRect();
+    const anchorX = anchorEvent ? anchorEvent.clientX - rect.left : viewport.clientWidth / 2;
+    const anchorY = anchorEvent ? anchorEvent.clientY - rect.top : viewport.clientHeight / 2;
+    const mapX = (viewport.scrollLeft + anchorX) / state.zoom;
+    const mapY = (viewport.scrollTop + anchorY) / state.zoom;
+    state.zoom = next;
     render();
+    viewport.scrollLeft = mapX * state.zoom - anchorX;
+    viewport.scrollTop = mapY * state.zoom - anchorY;
+  }
+
+  function zoomRegion(delta, anchorEvent = null) {
+    setRegionZoom(state.zoom + delta, anchorEvent);
+  }
+
+  function handleRegionWheelZoom(event) {
+    if (state.editorMode !== "region") return;
+    event.preventDefault();
+    const direction = event.deltaY > 0 ? -1 : 1;
+    const step = state.zoom < 1 ? 0.1 : 0.2;
+    zoomRegion(direction * step, event);
   }
 
   function bindEvents() {
@@ -1493,12 +1585,17 @@
       importJsonFile(event.target.files?.[0]).catch(error => setStatus(error.message || String(error)));
       event.target.value = "";
     });
+    elements.uploadRegionImageBtn.addEventListener("click", () => elements.regionImageFileInput.click());
+    elements.regionImageFileInput.addEventListener("change", event => {
+      uploadRegionImageFile(event.target.files?.[0]).catch(error => setStatus(error.message || String(error)));
+      event.target.value = "";
+    });
     elements.toggleGridBtn.addEventListener("click", () => toggleView("grid"));
     elements.toggleCitiesBtn.addEventListener("click", () => toggleView("cities"));
     elements.toggleStrongholdsBtn.addEventListener("click", () => toggleView("strongholds"));
     elements.toggleConnectionsBtn.addEventListener("click", () => toggleView("connections"));
-    elements.zoomOutBtn.addEventListener("click", () => zoomRegion(-0.1));
-    elements.zoomInBtn.addEventListener("click", () => zoomRegion(0.1));
+    elements.zoomOutBtn.addEventListener("click", () => zoomRegion(state.zoom <= 1 ? -0.1 : -0.2));
+    elements.zoomInBtn.addEventListener("click", () => zoomRegion(state.zoom < 1 ? 0.1 : 0.2));
     elements.worldIdInput.addEventListener("input", handleWorldFieldInput);
     elements.worldNameInput.addEventListener("input", handleWorldFieldInput);
     elements.selectionForm.addEventListener("input", handleSelectionInput);
@@ -1511,6 +1608,7 @@
     elements.regionViewport.addEventListener("pointermove", handleRegionPan);
     elements.regionViewport.addEventListener("pointerup", stopRegionPan);
     elements.regionViewport.addEventListener("pointercancel", stopRegionPan);
+    elements.regionViewport.addEventListener("wheel", handleRegionWheelZoom, { passive: false });
     window.addEventListener("pointermove", handleMarkerDrag);
     window.addEventListener("pointerup", stopMarkerDrag);
     window.addEventListener("pointermove", handleEdgeDrag);

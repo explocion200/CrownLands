@@ -10,11 +10,12 @@ const WORLD_CONFIG_PATH = path.join(ROOT_DIR, "world-config.js");
 const WORLD_DATA_ROOT = path.join(ROOT_DIR, "assets", "worlds", "world_01");
 const WORLD_LAYOUT_PATH = path.join(WORLD_DATA_ROOT, "world-layout.json");
 const WORLD_REGIONS_DIR = path.join(WORLD_DATA_ROOT, "regions");
+const WORLD_MAPS_DIR = path.join(WORLD_DATA_ROOT, "maps");
 const MAP_EDITOR_DATA_PATH = path.join(ROOT_DIR, "assets", "map-editor-data.js");
 const GITHUB_WORLD_CONFIG_URL = "https://raw.githubusercontent.com/explocion200/crownlands-game/main/world-config.js";
 const HOST = "127.0.0.1";
 const START_PORT = Number(process.env.PORT) || 8791;
-const MAX_BODY_BYTES = 8 * 1024 * 1024;
+const MAX_BODY_BYTES = 32 * 1024 * 1024;
 const ROOT_STATIC_FILES = new Set([
   "/firebaseClient.js",
   "/game.js",
@@ -191,6 +192,42 @@ function regionFilePath(regionId) {
 
 function publicRegionPath(regionId) {
   return `assets/worlds/world_01/regions/${cleanId(regionId, "region")}.json`;
+}
+
+function publicMapImagePath(filename) {
+  return `assets/worlds/world_01/maps/${filename}`;
+}
+
+function cleanUploadExtension(filename, mimeType = "") {
+  const extension = path.extname(String(filename || "")).toLowerCase();
+  const allowed = new Set([".jpg", ".jpeg", ".png", ".webp"]);
+  if (allowed.has(extension)) return extension;
+  if (mimeType === "image/jpeg") return ".jpg";
+  if (mimeType === "image/png") return ".png";
+  if (mimeType === "image/webp") return ".webp";
+  return "";
+}
+
+async function writeMapImageUpload(payload = {}) {
+  const regionId = cleanId(payload.regionId, "region");
+  const extension = cleanUploadExtension(payload.filename, payload.mimeType);
+  if (!extension) throw new Error("Map image must be a JPG, PNG, or WebP file.");
+  const encoded = String(payload.base64 || "").replace(/^data:[^,]+,/, "");
+  if (!encoded) throw new Error("Map image upload is empty.");
+  const buffer = Buffer.from(encoded, "base64");
+  if (!buffer.length) throw new Error("Map image upload could not be decoded.");
+  const baseName = cleanId(path.basename(String(payload.filename || "map"), extension), "map").slice(0, 48);
+  const fileName = `${regionId}-${baseName}-${Date.now()}${extension}`;
+  await fsp.mkdir(WORLD_MAPS_DIR, { recursive: true });
+  const filePath = path.join(WORLD_MAPS_DIR, fileName);
+  await fsp.writeFile(filePath, buffer);
+  return {
+    fileName,
+    imagePath: publicMapImagePath(fileName),
+    filePath,
+    width: Math.floor(number(payload.width, 0, 0, 8192)),
+    height: Math.floor(number(payload.height, 0, 0, 8192)),
+  };
 }
 
 function getSideConnections(edgeConnections, side) {
@@ -623,6 +660,14 @@ async function handleApi(request, response, pathname) {
         compatibilityData: MAP_EDITOR_DATA_PATH,
       },
     });
+    return;
+  }
+
+  if (pathname === "/api/map-image" && request.method === "POST") {
+    const rawBody = await readBody(request);
+    const payload = JSON.parse(rawBody || "{}");
+    const image = await writeMapImageUpload(payload);
+    sendJson(response, 200, { ok: true, ...image });
     return;
   }
 

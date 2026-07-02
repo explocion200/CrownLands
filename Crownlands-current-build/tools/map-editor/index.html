@@ -38,6 +38,7 @@
         <button id="toggleConnectionsBtn" class="tool-btn active" type="button">Toggle Connections</button>
       </div>
       <input id="importFileInput" type="file" accept=".json,application/json" hidden />
+      <input id="regionImageFileInput" type="file" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" hidden />
     </header>
 
     <section class="editor-body">
@@ -71,6 +72,7 @@
                 <option value="bridge">Bridge</option>
               </select>
             </label>
+            <button id="uploadRegionImageBtn" class="tool-btn" type="button">Upload Map</button>
             <button id="zoomOutBtn" class="tool-btn small" type="button">-</button>
             <span id="zoomLabel" class="zoom-label">100%</span>
             <button id="zoomInBtn" class="tool-btn small" type="button">+</button>
