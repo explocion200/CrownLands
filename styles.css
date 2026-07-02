@@ -1031,6 +1031,34 @@ input {
 }
 .city-node.selected { z-index: 10; }
 .city-node.targeted { z-index: 9; }
+.city-node:not(.stronghold-node)::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: -11px;
+  width: 86px;
+  height: 74px;
+  transform: translateX(-50%);
+  display: none;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: contain;
+  filter: drop-shadow(0 3px 2px rgba(0, 0, 0, .78));
+  pointer-events: none;
+  z-index: 2;
+}
+.city-node.player.selected:not(.stronghold-node)::before,
+.city-node.player.targeted:not(.stronghold-node)::before {
+  display: block;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 86'%3E%3Cpolygon points='50 3 91 24 91 62 50 83 9 62 9 24' fill='none' stroke='%23ffffff' stroke-width='6' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+.city-node.enemy.targeted:not(.stronghold-node)::before,
+.city-node.neutral.targeted:not(.stronghold-node)::before,
+.city-node.player2.targeted:not(.stronghold-node)::before,
+.city-node.player3.targeted:not(.stronghold-node)::before {
+  display: block;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 86'%3E%3Cpolygon points='50 3 91 24 91 62 50 83 9 62 9 24' fill='none' stroke='%23e0302d' stroke-width='6' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
 .city-node.stronghold-node {
   width: var(--stronghold-size, 154px);
   height: calc(var(--stronghold-size, 154px) * .896);
@@ -1219,7 +1247,7 @@ input {
 .city-node.player3 .city-ring,
 .city-node.enemy .city-ring,
 .city-node.neutral .city-ring { background: transparent; border-color: transparent; }
-.city-node.selected .city-ring { box-shadow: 0 0 0 5px rgba(242,184,75,.38), 0 14px 25px rgba(0,0,0,.42); }
+.city-node.selected .city-ring { box-shadow: none; }
 .city-node.attackable .city-ring { animation: targetPulse .75s infinite alternate; }
 .city-node.supportable .city-ring { animation: supportPulse .75s infinite alternate; }
 .city-node.scout-nearby-target .city-ring { animation: scoutTargetPulse .75s infinite alternate; }
@@ -4381,7 +4409,7 @@ button.inventory-slot {
 .send-outcome.lose { box-shadow: inset 0 0 0 1px rgba(237,74,69,.48); }
 .action-buttons button.move-action { color: #0b1b10; background: linear-gradient(#a8ec84, #48a84b); }
 .action-buttons button.attack-action { color: #fff; background: linear-gradient(#ff6a5f, #b82320); }
-.city-node.targeted .city-ring { box-shadow: 0 0 0 6px rgba(255, 255, 255, .26), 0 14px 25px rgba(0,0,0,.42); }
+.city-node.targeted .city-ring { box-shadow: none; animation: none; }
 
 @media (max-width: 780px) and (orientation: landscape) {
   .profile-action-row { gap: .44rem; }
