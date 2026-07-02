@@ -7206,6 +7206,7 @@ async function connectOnlineIsland(regionId, { claimHome = false, homeRegionId =
       onArmies: armies => {
         applyOnlineArmies(armies, islandId);
         renderPaths();
+        renderCities(true);
         renderArmies();
         updateIncomingAttackUi();
         updateOutgoingAttackUi();
@@ -7888,6 +7889,7 @@ function subscribeOnlineArmyWatchers(activeIslandId) {
       onArmies: armies => {
         applyOnlineArmies(armies, islandId);
         renderPaths();
+        renderCities(true);
         renderArmies();
         updateIncomingAttackUi();
         updateOutgoingAttackUi();
@@ -8124,6 +8126,31 @@ function getOutgoingAttacks() {
     })
     .filter(Boolean)
     .sort((a, b) => a.remaining - b.remaining);
+}
+
+function getIncomingUpgradeBlockers(cityOrId) {
+  if (!state) return [];
+  const cityId = getKnownCityId(typeof cityOrId === "object" ? cityOrId?.id : cityOrId);
+  if (!cityId) return [];
+  const seen = new Set();
+  return getRenderableArmies()
+    .map(attack => {
+      if (!attack || attack.kind !== "attack") return null;
+      if (getKnownCityId(attack.toId) !== cityId) return null;
+      if (attack.owner === "player") return null;
+      const remaining = Math.max(0, Number(attack.remaining) || 0);
+      if (remaining <= 0) return null;
+      const key = String(attack.onlineId || attack.id || `${attack.fromId}:${attack.toId}:${attack.launchedAtMs || ""}`);
+      if (seen.has(key)) return null;
+      seen.add(key);
+      return { ...attack, key, remaining };
+    })
+    .filter(Boolean)
+    .sort((a, b) => a.remaining - b.remaining);
+}
+
+function cityHasIncomingUpgradeBlocker(cityOrId) {
+  return getIncomingUpgradeBlockers(cityOrId).length > 0;
 }
 
 function hardReset() {
@@ -10321,6 +10348,10 @@ function getFlagSignature(flag) {
 
 function getCityRenderSignature(visibleCities) {
   const playerFlag = getFlagSignature(state.flag);
+  const upgradeBlockedTargets = new Set(getRenderableArmies()
+    .filter(attack => attack?.kind === "attack" && attack.owner !== "player" && Math.max(0, Number(attack.remaining) || 0) > 0)
+    .map(attack => getKnownCityId(attack.toId))
+    .filter(Boolean));
   const cityTokens = visibleCities.map(city => {
     const report = city.owner === "player" ? null : getScoutReport(city.id);
     return [
@@ -10337,6 +10368,7 @@ function getCityRenderSignature(visibleCities) {
       city.level,
       Math.floor(Number(city.troops) || 0),
       city.isMainCity ? 1 : 0,
+      upgradeBlockedTargets.has(getKnownCityId(city.id)) ? 1 : 0,
       report ? `${Math.floor(Number(report.troops) || 0)}:${report.expiresAt > state.gameSeconds ? 1 : 0}` : "",
     ].join(":");
   }).join("|");
@@ -10477,7 +10509,14 @@ function renderSelectedCityWheel(city) {
   const mapPoint = worldToMapPoint(city);
   const wheel = document.createElement("div");
   const levelCost = getLevelCost(city);
-  const levelDisabled = isStronghold(city) || city.level >= MAX_CITY_LEVEL || state.gold < levelCost;
+  const incomingUpgradeLocked = cityHasIncomingUpgradeBlocker(city);
+  const levelDisabled = incomingUpgradeLocked || isStronghold(city) || city.level >= MAX_CITY_LEVEL || state.gold < levelCost;
+  const levelButtonLabel = incomingUpgradeLocked
+    ? `${city.name} cannot be leveled while an attack is incoming`
+    : `Level up ${city.name}`;
+  const levelCostLabel = incomingUpgradeLocked
+    ? "Incoming"
+    : isStronghold(city) ? "Fixed" : city.level >= MAX_CITY_LEVEL ? "MAX" : `${formatNumber(levelCost)}g`;
   const scoutNearbyActive = scoutNearbySourceId === city.id;
   const nearbyCount = scoutNearbyActive ? getNearbyScoutCandidates(city).length : 0;
   wheel.className = "city-action-wheel";
@@ -10486,10 +10525,10 @@ function renderSelectedCityWheel(city) {
   wheel.style.top = `${mapPoint.y}px`;
   wheel.innerHTML = `
     <span class="city-wheel-ring" aria-hidden="true"></span>
-    <button class="city-wheel-action wheel-level" type="button" aria-label="Level up ${escapeHtml(city.name)}" ${levelDisabled ? "disabled" : ""}>
+    <button class="city-wheel-action wheel-level" type="button" aria-label="${escapeHtml(levelButtonLabel)}" title="${escapeHtml(levelButtonLabel)}" ${levelDisabled ? "disabled" : ""}>
       <span class="wheel-icon" aria-hidden="true">\u265C\u2191</span>
       <span class="wheel-action-name">Level</span>
-      <span class="wheel-cost">${isStronghold(city) ? "Fixed" : city.level >= MAX_CITY_LEVEL ? "MAX" : `${formatNumber(levelCost)}g`}</span>
+      <span class="wheel-cost">${levelCostLabel}</span>
     </button>
     <button class="city-wheel-action wheel-send" type="button" aria-label="Send troops from ${escapeHtml(city.name)}" ${city.troops < 1 ? "disabled" : ""}>
       <span class="wheel-icon" aria-hidden="true">\u2694</span>
@@ -11850,6 +11889,12 @@ function upgradeCity(cityId, levels = 1) {
   if (!city) return;
   if (isStronghold(city)) {
     showToast("Strongholds cannot be upgraded.");
+    renderAll();
+    return;
+  }
+  const incomingBlockers = getIncomingUpgradeBlockers(city.id);
+  if (incomingBlockers.length) {
+    showToast(`${city.name} cannot be upgraded while an attack is incoming. Arrival: ${formatDuration(incomingBlockers[0].remaining)}.`);
     renderAll();
     return;
   }
