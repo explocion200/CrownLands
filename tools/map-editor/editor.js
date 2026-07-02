@@ -83,7 +83,6 @@
     worldModeBtn: document.getElementById("worldModeBtn"),
     regionModeBtn: document.getElementById("regionModeBtn"),
     addRegionBtn: document.getElementById("addRegionBtn"),
-    editRegionBtn: document.getElementById("editRegionBtn"),
     addCityBtn: document.getElementById("addCityBtn"),
     addStrongholdBtn: document.getElementById("addStrongholdBtn"),
     addEdgeBtn: document.getElementById("addEdgeBtn"),
@@ -1018,6 +1017,14 @@
     };
   }
 
+  function isEventInsideRegionCanvas(event) {
+    const rect = elements.regionCanvas.getBoundingClientRect();
+    return event.clientX >= rect.left
+      && event.clientX <= rect.right
+      && event.clientY >= rect.top
+      && event.clientY <= rect.bottom;
+  }
+
   function getNearestEdgeSide(point) {
     const distances = {
       north: point.yNorm,
@@ -1780,10 +1787,13 @@
 
   function stopRegionPan(event) {
     if (!state.panning || state.panning.pointerId !== event.pointerId) return;
-    state.skipNextCanvasClick = state.panning.moved;
+    const wasMoved = state.panning.moved;
+    const shouldPlace = !wasMoved && state.tool !== "select" && isEventInsideRegionCanvas(event);
+    state.skipNextCanvasClick = wasMoved || shouldPlace;
     state.panning = null;
     elements.regionViewport.classList.remove("panning");
     elements.regionViewport.releasePointerCapture?.(event.pointerId);
+    if (shouldPlace) placeFromEvent(event);
     window.setTimeout(() => { state.skipNextCanvasClick = false; }, 140);
   }
 
@@ -1818,7 +1828,6 @@
     elements.worldModeBtn.addEventListener("click", () => setEditorMode("world"));
     elements.regionModeBtn.addEventListener("click", () => setEditorMode("region"));
     elements.addRegionBtn.addEventListener("click", addRegion);
-    elements.editRegionBtn.addEventListener("click", () => setEditorMode("region"));
     elements.addCityBtn.addEventListener("click", () => setTool(state.tool === "city" ? "select" : "city"));
     elements.addStrongholdBtn.addEventListener("click", () => setTool(state.tool === "stronghold" ? "select" : "stronghold"));
     elements.addEdgeBtn.addEventListener("click", () => setTool(state.tool === "edge" ? "select" : "edge"));
