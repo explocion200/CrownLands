@@ -437,12 +437,26 @@
   }
 
   function buildSavePayload() {
+    materializeEdgeArrowPositions();
     state.layout.regions = state.regions.map(getRegionSummary);
     state.layout.updatedAt = new Date().toISOString();
     return {
       layout: deepClone(state.layout),
       regions: deepClone(state.regions),
     };
+  }
+
+  function materializeEdgeArrowPositions(regions = state.regions) {
+    regions.forEach(region => {
+      SIDES.forEach(side => {
+        (region.edgeConnections[side] || []).forEach(edge => {
+          edge.side = side;
+          const point = getEdgeArrowPoint(edge);
+          edge.arrowXNorm = point.xNorm;
+          edge.arrowYNorm = point.yNorm;
+        });
+      });
+    });
   }
 
   async function saveWorldData() {
