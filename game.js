@@ -216,7 +216,7 @@ const DEFENSE_STRONGHOLD_LEVEL = 50;
 const DEFENSE_STRONGHOLD_START_TROOPS = 50000000;
 const CROWN_CITADEL_ID = "center_crown_citadel";
 const CROWN_CITADEL_NAME = "Crown Citadel";
-const CROWN_CITADEL_ART_SRC = "assets/crown-citadel.png?v=20260630-citadel-art";
+const CROWN_CITADEL_ART_SRC = "assets/crown-citadel.png?v=20260703-crown-citadel-art";
 const CROWN_CITADEL_GOLD_BONUS_PERCENT = 10;
 const CROWN_CITADEL_TROOP_BONUS_PERCENT = 10;
 const CROWN_CITADEL_MARCH_SPEED_BONUS_PERCENT = 8;
