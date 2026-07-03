@@ -661,7 +661,7 @@ async function getProfileSnapshots(transaction, uids) {
   return new Map(entries);
 }
 
-exports.sendArmyOrder = onCall({ region: "us-central1", maxInstances: 20 }, async request => {
+exports.sendArmyOrder = onCall({ region: "us-central1", maxInstances: 20, invoker: "public" }, async request => {
   const uid = requireAuth(request);
   const nowMs = Date.now();
   const order = normalizeArmyPayload(request.data || {}, uid);
@@ -821,7 +821,7 @@ exports.sendArmyOrder = onCall({ region: "us-central1", maxInstances: 20 }, asyn
   });
 });
 
-exports.resolveArmyOrder = onCall({ region: "us-central1", maxInstances: 30 }, async request => {
+exports.resolveArmyOrder = onCall({ region: "us-central1", maxInstances: 30, invoker: "public" }, async request => {
   const callerUid = requireAuth(request);
   const data = request.data || {};
   const armyId = safeString(data.armyId || data.id, 96).replace(/[^a-zA-Z0-9_-]/g, "_");
