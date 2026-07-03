@@ -3994,6 +3994,7 @@ button.inventory-slot {
 }
 .profile-screen.open { display: grid; }
 .profile-screen.skills-active,
+.profile-screen.settings-active,
 .profile-screen.flag-editor-active {
   height: min(520px, calc(100dvh - 1.5rem));
   grid-template-rows: auto minmax(0, 1fr);
@@ -4015,7 +4016,7 @@ button.inventory-slot {
 .profile-screen-header h2 { margin: .05rem 0 0; overflow: hidden; font-size: 1.25rem; letter-spacing: 0; text-overflow: ellipsis; white-space: nowrap; }
 .profile-tabs {
   display: grid;
-  grid-template-columns: repeat(2, minmax(86px, 1fr));
+  grid-template-columns: repeat(3, minmax(82px, 1fr));
   gap: .35rem;
   padding: .25rem;
   border-radius: 8px;
@@ -4064,6 +4065,21 @@ button.inventory-slot {
   margin: 0 auto;
   padding: .75rem;
   overflow-y: auto;
+}
+.profile-settings-view {
+  width: min(620px, 100%);
+  min-height: 0;
+  margin: 0 auto;
+  padding: .85rem;
+  overflow-y: auto;
+}
+.profile-settings-section {
+  display: grid;
+  gap: .7rem;
+  padding: .78rem;
+  border-radius: 8px;
+  background: rgba(13,44,69,.62);
+  border: 1px solid rgba(158,213,255,.18);
 }
 .profile-skill-summary {
   display: grid;
@@ -4193,12 +4209,31 @@ button.inventory-slot {
 .kingdom-stat-wide { grid-column: auto; width: auto; justify-self: stretch; }
 .kingdom-stat span { color: #9ed5ff; font-size: .72rem; font-weight: 900; }
 .kingdom-stat strong { color: #fff; font-size: 1.12rem; }
-.profile-alert-row {
+.profile-notification-row {
   min-height: 50px;
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   gap: .55rem;
+  padding: .55rem .65rem;
+  border-radius: 8px;
+  background: #0d2c45;
+  border: 1px solid rgba(83,159,208,.24);
+}
+.profile-notification-row strong,
+.profile-notification-row small {
+  display: block;
+}
+.profile-notification-row strong {
+  color: #fff4c8;
+  font-size: .95rem;
+}
+.profile-notification-row small {
+  margin-top: .08rem;
+  color: #cfe9ff;
+  font-size: .68rem;
+  font-weight: 850;
+  line-height: 1.25;
 }
 .push-alerts-btn { min-height: 42px; }
 .push-alerts-btn.enabled {
@@ -4208,7 +4243,8 @@ button.inventory-slot {
 }
 .push-alerts-btn:disabled { opacity: .58; }
 .push-alerts-status {
-  min-width: 74px;
+  justify-self: end;
+  min-width: 132px;
   padding: .35rem .55rem;
   overflow: hidden;
   border-radius: 8px;
@@ -4273,8 +4309,8 @@ button.inventory-slot {
 
 @media (max-width: 900px) and (orientation: landscape) {
   .profile-screen-header { min-height: 56px; padding-top: calc(.35rem + env(safe-area-inset-top)); padding-bottom: .35rem; }
-  .profile-tabs { grid-template-columns: repeat(2, minmax(76px, 1fr)); }
-  .profile-tabs button { min-height: 34px; padding: 0 .55rem; }
+  .profile-tabs { grid-template-columns: repeat(3, minmax(68px, 1fr)); }
+  .profile-tabs button { min-height: 34px; padding: 0 .45rem; font-size: .72rem; }
   .profile-view { grid-template-columns: minmax(195px, .7fr) minmax(300px, 1.3fr); padding: .45rem; gap: .35rem; }
   .profile-identity, .kingdom-overview { padding: .32rem; }
   .kingdom-flag-large { width: 104px; height: 76px; }
@@ -4296,6 +4332,8 @@ button.inventory-slot {
   .profile-skill-reset button { min-height: 34px; min-width: 72px; }
   .profile-skill-list { gap: .35rem .55rem; }
   .profile-skill-list .skill-row { padding: .42rem .55rem; }
+  .profile-settings-view { padding: .55rem; }
+  .profile-notification-row { min-height: 46px; padding: .45rem .55rem; }
 }
 
 .profile-gold {

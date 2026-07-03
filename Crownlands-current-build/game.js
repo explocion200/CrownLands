@@ -11,6 +11,7 @@ const MIN_NEW_PLAYER_SPAWN_NEUTRAL_CITIES = 10;
 const RESET_GENERATION = "fresh-2026-07-03-profile-reset";
 const STORAGE_KEY = `crownlands-realtime-${RESET_GENERATION}`;
 const PENDING_ARMY_STORAGE_KEY = `crownlands-pending-armies-${RESET_GENERATION}`;
+const PUSH_NOTIFICATIONS_PREF_KEY = "crownlands-push-notifications";
 const LEGACY_STORAGE_KEYS = [];
 const SAVE_EVERY_SECONDS = 30;
 const ONLINE_SAVE_SECONDS = 20;
@@ -2251,8 +2252,10 @@ const profileCloseBtn = document.getElementById("profileCloseBtn");
 const profileScreenTitle = document.getElementById("profileScreenTitle");
 const profileTabBtn = document.getElementById("profileTabBtn");
 const skillsTabBtn = document.getElementById("skillsTabBtn");
+const settingsTabBtn = document.getElementById("settingsTabBtn");
 const profileView = document.getElementById("profileView");
 const skillsView = document.getElementById("skillsView");
+const settingsView = document.getElementById("settingsView");
 const flagEditorView = document.getElementById("flagEditorView");
 const profileKingdomFlag = document.getElementById("profileKingdomFlag");
 const profileFlagBtn = document.getElementById("profileFlagBtn");
@@ -11026,50 +11029,70 @@ function getKingdomSummary() {
   };
 }
 
+function getPushNotificationsPreference() {
+  try {
+    const saved = localStorage.getItem(PUSH_NOTIFICATIONS_PREF_KEY);
+    if (saved === "on") return true;
+    if (saved === "off") return false;
+  } catch (error) {
+    console.warn("Could not read notification preference", error);
+  }
+  return getOnlineApi()?.getNotificationPermission?.() === "granted";
+}
+
+function setPushNotificationsPreference(enabled) {
+  try {
+    localStorage.setItem(PUSH_NOTIFICATIONS_PREF_KEY, enabled ? "on" : "off");
+  } catch (error) {
+    console.warn("Could not save notification preference", error);
+  }
+}
+
 function updatePushAlertsUi() {
   if (!pushAlertsBtn || !pushAlertsStatus) return;
   const api = getOnlineApi();
   const signedIn = Boolean(api?.isSignedIn?.());
   const supported = Boolean(api?.isPushSupported?.());
   const permission = api?.getNotificationPermission?.() || "unsupported";
+  const enabledPreference = getPushNotificationsPreference();
   pushAlertsBtn.classList.remove("enabled");
   pushAlertsBtn.hidden = false;
   pushAlertsStatus.hidden = false;
 
   if (!state || !signedIn) {
-    pushAlertsBtn.textContent = "Alerts";
+    pushAlertsBtn.textContent = "Notifications Off";
     pushAlertsStatus.textContent = "Offline";
     pushAlertsBtn.disabled = true;
     return;
   }
   if (!supported) {
-    pushAlertsBtn.textContent = "Alerts";
+    pushAlertsBtn.textContent = "Notifications Off";
     pushAlertsStatus.textContent = "Unavailable";
     pushAlertsBtn.disabled = true;
     return;
   }
   pushAlertsBtn.removeAttribute("title");
-  if (permission === "granted") {
-    pushAlertsBtn.textContent = "Alerts On";
-    pushAlertsStatus.textContent = "Enabled";
-    pushAlertsBtn.classList.add("enabled");
-    pushAlertsBtn.disabled = false;
-    return;
-  }
   if (permission === "denied") {
-    pushAlertsBtn.textContent = "Alerts";
+    pushAlertsBtn.textContent = "Notifications Blocked";
     pushAlertsStatus.textContent = "Blocked";
     pushAlertsBtn.disabled = true;
     return;
   }
-  pushAlertsBtn.textContent = "Enable Alerts";
-  pushAlertsStatus.textContent = "Off";
+  if (enabledPreference && permission === "granted") {
+    pushAlertsBtn.textContent = "Notifications On";
+    pushAlertsStatus.textContent = "Notifications On";
+    pushAlertsBtn.classList.add("enabled");
+    pushAlertsBtn.disabled = false;
+    return;
+  }
+  pushAlertsBtn.textContent = "Notifications Off";
+  pushAlertsStatus.textContent = "Notifications Off";
   pushAlertsBtn.disabled = false;
 }
 
 async function refreshPushAlertRegistration(silent = true) {
   const api = getOnlineApi();
-  if (!state || !api?.registerPushNotifications || !api?.isSignedIn?.()) {
+  if (!state || !api?.registerPushNotifications || !api?.isSignedIn?.() || !getPushNotificationsPreference()) {
     updatePushAlertsUi();
     return false;
   }
@@ -11084,18 +11107,26 @@ async function refreshPushAlertRegistration(silent = true) {
   }
 }
 
-async function enablePushAlerts() {
+async function togglePushNotifications() {
   const api = getOnlineApi();
   if (!api?.enablePushNotifications) {
-    showToast("Battle alerts are not available here.");
+    showToast("Notifications are not available here.");
     return;
   }
   if (pushAlertsBtn) pushAlertsBtn.disabled = true;
   try {
+    if (getPushNotificationsPreference() && api?.getNotificationPermission?.() === "granted") {
+      setPushNotificationsPreference(false);
+      if (api.disablePushNotifications) await api.disablePushNotifications();
+      showToast("Notifications off.");
+      return;
+    }
+    setPushNotificationsPreference(true);
     await api.enablePushNotifications({ playerName: state?.playerName || "Ruler" });
-    showToast("Battle alerts enabled.");
+    showToast("Notifications on.");
   } catch (error) {
-    showToast(error?.message || "Could not enable battle alerts.");
+    setPushNotificationsPreference(false);
+    showToast(error?.message || "Could not update notifications.");
   } finally {
     updatePushAlertsUi();
   }
@@ -11119,7 +11150,7 @@ function showProfileScreen() {
 function closeProfileScreen() {
   if (!profileScreen) return;
   profileScreen.classList.remove("open");
-  profileScreen.classList.remove("skills-active", "flag-editor-active");
+  profileScreen.classList.remove("skills-active", "settings-active", "flag-editor-active");
   profileScreen.setAttribute("aria-hidden", "true");
   flagDraft = null;
   activeProfileTab = "profile";
@@ -11127,11 +11158,12 @@ function closeProfileScreen() {
 }
 
 function showProfileView() {
-  if (!profileView || !skillsView || !flagEditorView) return;
+  if (!profileView || !skillsView || !settingsView || !flagEditorView) return;
   activeProfileTab = "profile";
-  profileScreen.classList.remove("skills-active", "flag-editor-active");
+  profileScreen.classList.remove("skills-active", "settings-active", "flag-editor-active");
   profileView.hidden = false;
   skillsView.hidden = true;
+  settingsView.hidden = true;
   flagEditorView.hidden = true;
   flagDraft = null;
   cancelProfileNameEdit();
@@ -11140,12 +11172,13 @@ function showProfileView() {
 }
 
 function showProfileSkills() {
-  if (!state || !profileView || !skillsView || !flagEditorView) return;
+  if (!state || !profileView || !skillsView || !settingsView || !flagEditorView) return;
   activeProfileTab = "skills";
   profileScreen.classList.add("skills-active");
-  profileScreen.classList.remove("flag-editor-active");
+  profileScreen.classList.remove("settings-active", "flag-editor-active");
   profileView.hidden = true;
   skillsView.hidden = false;
+  settingsView.hidden = true;
   flagEditorView.hidden = true;
   flagDraft = null;
   cancelProfileNameEdit();
@@ -11153,16 +11186,36 @@ function showProfileSkills() {
   renderProfileSkills();
 }
 
+function showProfileSettings() {
+  if (!state || !profileView || !skillsView || !settingsView || !flagEditorView) return;
+  activeProfileTab = "settings";
+  profileScreen.classList.add("settings-active");
+  profileScreen.classList.remove("skills-active", "flag-editor-active");
+  profileView.hidden = true;
+  skillsView.hidden = true;
+  settingsView.hidden = false;
+  flagEditorView.hidden = true;
+  flagDraft = null;
+  cancelProfileNameEdit();
+  updateProfileTabHeader();
+  updatePushAlertsUi();
+}
+
 function updateProfileTabHeader() {
   const showingSkills = activeProfileTab === "skills";
-  if (profileScreenTitle) profileScreenTitle.textContent = showingSkills ? "Skills" : "Profile";
+  const showingSettings = activeProfileTab === "settings";
+  if (profileScreenTitle) profileScreenTitle.textContent = showingSettings ? "Settings" : showingSkills ? "Skills" : "Profile";
   if (profileTabBtn) {
-    profileTabBtn.classList.toggle("active", !showingSkills);
-    profileTabBtn.setAttribute("aria-selected", String(!showingSkills));
+    profileTabBtn.classList.toggle("active", !showingSkills && !showingSettings);
+    profileTabBtn.setAttribute("aria-selected", String(!showingSkills && !showingSettings));
   }
   if (skillsTabBtn) {
     skillsTabBtn.classList.toggle("active", showingSkills);
     skillsTabBtn.setAttribute("aria-selected", String(showingSkills));
+  }
+  if (settingsTabBtn) {
+    settingsTabBtn.classList.toggle("active", showingSettings);
+    settingsTabBtn.setAttribute("aria-selected", String(showingSettings));
   }
 }
 
@@ -11254,13 +11307,14 @@ function saveProfileName() {
 }
 
 function showFlagEditor() {
-  if (!state || !profileView || !skillsView || !flagEditorView) return;
+  if (!state || !profileView || !skillsView || !settingsView || !flagEditorView) return;
   activeProfileTab = "profile";
   profileScreen.classList.add("flag-editor-active");
-  profileScreen.classList.remove("skills-active");
+  profileScreen.classList.remove("skills-active", "settings-active");
   flagDraft = normalizeFlag(state.flag);
   profileView.hidden = true;
   skillsView.hidden = true;
+  settingsView.hidden = true;
   flagEditorView.hidden = false;
   updateProfileTabHeader();
   renderFlagEditor();
@@ -14577,7 +14631,8 @@ if (profileBtn) profileBtn.addEventListener("click", showProfileScreen);
 if (profileCloseBtn) profileCloseBtn.addEventListener("click", closeProfileScreen);
 if (profileTabBtn) profileTabBtn.addEventListener("click", showProfileView);
 if (skillsTabBtn) skillsTabBtn.addEventListener("click", showProfileSkills);
-if (pushAlertsBtn) pushAlertsBtn.addEventListener("click", enablePushAlerts);
+if (settingsTabBtn) settingsTabBtn.addEventListener("click", showProfileSettings);
+if (pushAlertsBtn) pushAlertsBtn.addEventListener("click", togglePushNotifications);
 if (profileFlagBtn) profileFlagBtn.addEventListener("click", showFlagEditor);
 if (profileNameEditBtn) profileNameEditBtn.addEventListener("click", beginProfileNameEdit);
 if (profileNameSaveBtn) profileNameSaveBtn.addEventListener("click", saveProfileName);

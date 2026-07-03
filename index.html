@@ -158,6 +158,7 @@
           <div class="profile-tabs" role="tablist" aria-label="Kingdom sections">
             <button id="profileTabBtn" class="active" type="button" role="tab" aria-selected="true" aria-controls="profileView">Profile</button>
             <button id="skillsTabBtn" type="button" role="tab" aria-selected="false" aria-controls="skillsView">Skills</button>
+            <button id="settingsTabBtn" type="button" role="tab" aria-selected="false" aria-controls="settingsView">Settings</button>
           </div>
           <button id="profileCloseBtn" class="profile-icon-btn profile-screen-close" type="button" aria-label="Close profile">&times;</button>
         </header>
@@ -198,14 +199,24 @@
               <div class="kingdom-stat"><span>Gold production</span><strong id="profileGoldProductionStat">0/h</strong></div>
               <div class="kingdom-stat"><span>Troops production</span><strong id="profileTroopProductionStat">0/h</strong></div>
             </div>
-            <div class="profile-alert-row">
-              <button id="pushAlertsBtn" class="profile-secondary-btn push-alerts-btn" type="button">Enable Alerts</button>
-              <span id="pushAlertsStatus" class="push-alerts-status">Off</span>
-            </div>
           </section>
         </div>
 
         <div id="skillsView" class="profile-skills-view" role="tabpanel" aria-labelledby="skillsTabBtn" hidden></div>
+
+        <div id="settingsView" class="profile-settings-view" role="tabpanel" aria-labelledby="settingsTabBtn" hidden>
+          <section class="profile-settings-section">
+            <div class="profile-section-heading"><span>Settings</span><h3>Notifications</h3></div>
+            <div class="profile-notification-row">
+              <div>
+                <strong>Incoming attacks and scouts</strong>
+                <small>Browser push notification</small>
+              </div>
+              <button id="pushAlertsBtn" class="profile-secondary-btn push-alerts-btn" type="button">Notifications Off</button>
+            </div>
+            <span id="pushAlertsStatus" class="push-alerts-status">Notifications Off</span>
+          </section>
+        </div>
 
         <div id="flagEditorView" class="flag-editor-view" hidden>
           <section class="flag-editor-preview">
