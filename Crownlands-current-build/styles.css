@@ -4339,13 +4339,32 @@ button.inventory-slot {
   font-weight: 850;
   line-height: 1.25;
 }
-.push-alerts-btn { min-height: 42px; }
-.push-alerts-btn.enabled {
-  color: #102015;
-  background: #7eb35f;
-  border-color: rgba(255,255,255,.42);
+.push-alerts-toggle {
+  width: 144px;
+  min-height: 42px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: .22rem;
+  padding: .22rem;
+  border-radius: 8px;
+  background: rgba(5,10,17,.55);
+  border: 1px solid rgba(158,213,255,.24);
 }
-.push-alerts-btn:disabled { opacity: .58; }
+.push-alerts-option {
+  min-width: 0;
+  min-height: 34px;
+  border-radius: 6px;
+  color: #d8ecfa;
+  background: transparent;
+  border: 1px solid transparent;
+  font-weight: 950;
+}
+.push-alerts-option.active {
+  color: #211508;
+  background: #f2b84b;
+  border-color: rgba(255,255,255,.48);
+}
+.push-alerts-option:disabled { opacity: .58; }
 .push-alerts-status {
   justify-self: end;
   min-width: 132px;

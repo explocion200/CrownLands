@@ -2287,7 +2287,8 @@ const profileGoldStat = document.getElementById("profileGoldStat");
 const profileTroopsStat = document.getElementById("profileTroopsStat");
 const profileGoldProductionStat = document.getElementById("profileGoldProductionStat");
 const profileTroopProductionStat = document.getElementById("profileTroopProductionStat");
-const pushAlertsBtn = document.getElementById("pushAlertsBtn");
+const pushAlertsOffBtn = document.getElementById("pushAlertsOffBtn");
+const pushAlertsOnBtn = document.getElementById("pushAlertsOnBtn");
 const pushAlertsStatus = document.getElementById("pushAlertsStatus");
 const flagEditorPreview = document.getElementById("flagEditorPreview");
 const flagPrimaryColors = document.getElementById("flagPrimaryColors");
@@ -11206,46 +11207,53 @@ function setPushNotificationsPreference(enabled) {
   }
 }
 
+function setPushAlertsStatus(text = "", visible = false) {
+  if (!pushAlertsStatus) return;
+  pushAlertsStatus.textContent = text;
+  pushAlertsStatus.hidden = !visible;
+}
+
+function setPushAlertsOptionState(enabled, disabled = false) {
+  if (!pushAlertsOffBtn || !pushAlertsOnBtn) return;
+  pushAlertsOffBtn.classList.toggle("active", !enabled);
+  pushAlertsOnBtn.classList.toggle("active", enabled);
+  pushAlertsOffBtn.setAttribute("aria-pressed", String(!enabled));
+  pushAlertsOnBtn.setAttribute("aria-pressed", String(enabled));
+  pushAlertsOffBtn.disabled = disabled;
+  pushAlertsOnBtn.disabled = disabled;
+}
+
 function updatePushAlertsUi() {
-  if (!pushAlertsBtn || !pushAlertsStatus) return;
+  if (!pushAlertsOffBtn || !pushAlertsOnBtn) return;
   const api = getOnlineApi();
   const signedIn = Boolean(api?.isSignedIn?.());
   const supported = Boolean(api?.isPushSupported?.());
   const permission = api?.getNotificationPermission?.() || "unsupported";
   const enabledPreference = getPushNotificationsPreference();
-  pushAlertsBtn.classList.remove("enabled");
-  pushAlertsBtn.hidden = false;
-  pushAlertsStatus.hidden = false;
 
   if (!state || !signedIn) {
-    pushAlertsBtn.textContent = "Notifications Off";
-    pushAlertsStatus.textContent = "Offline";
-    pushAlertsBtn.disabled = true;
+    setPushAlertsOptionState(false, true);
+    setPushAlertsStatus("Offline", true);
     return;
   }
   if (!supported) {
-    pushAlertsBtn.textContent = "Notifications Off";
-    pushAlertsStatus.textContent = "Unavailable";
-    pushAlertsBtn.disabled = true;
+    setPushAlertsOptionState(false, true);
+    setPushAlertsStatus("Unavailable", true);
     return;
   }
-  pushAlertsBtn.removeAttribute("title");
   if (permission === "denied") {
-    pushAlertsBtn.textContent = "Notifications Blocked";
-    pushAlertsStatus.textContent = "Blocked";
-    pushAlertsBtn.disabled = true;
+    setPushAlertsOptionState(false, false);
+    pushAlertsOnBtn.disabled = true;
+    setPushAlertsStatus("Blocked", true);
     return;
   }
   if (enabledPreference && permission === "granted") {
-    pushAlertsBtn.textContent = "Notifications On";
-    pushAlertsStatus.textContent = "Notifications On";
-    pushAlertsBtn.classList.add("enabled");
-    pushAlertsBtn.disabled = false;
+    setPushAlertsOptionState(true, false);
+    setPushAlertsStatus("Notifications On", false);
     return;
   }
-  pushAlertsBtn.textContent = "Notifications Off";
-  pushAlertsStatus.textContent = "Notifications Off";
-  pushAlertsBtn.disabled = false;
+  setPushAlertsOptionState(false, false);
+  setPushAlertsStatus("Notifications Off", false);
 }
 
 async function refreshPushAlertRegistration(silent = true) {
@@ -11259,35 +11267,62 @@ async function refreshPushAlertRegistration(silent = true) {
     updatePushAlertsUi();
     return Boolean(result?.enabled);
   } catch (error) {
-    if (!silent) showToast(error?.message || "Could not enable battle alerts.");
+    if (!silent) showToast(error?.message || "Could not enable notifications.");
     updatePushAlertsUi();
     return false;
   }
 }
 
-async function togglePushNotifications() {
+async function exitFullscreenForNotificationPrompt() {
+  if (!document.fullscreenElement || !document.exitFullscreen) return false;
+  try {
+    await document.exitFullscreen();
+    updateFullscreenButton();
+    await new Promise(resolve => requestAnimationFrame(resolve));
+    return true;
+  } catch (error) {
+    console.warn("Could not exit fullscreen before notification prompt", error);
+    return false;
+  }
+}
+
+async function setPushNotificationsEnabled(enabled) {
   const api = getOnlineApi();
   if (!api?.enablePushNotifications) {
     showToast("Notifications are not available here.");
     return;
   }
-  if (pushAlertsBtn) pushAlertsBtn.disabled = true;
+  setPushAlertsOptionState(getPushNotificationsPreference() && api?.getNotificationPermission?.() === "granted", true);
   try {
-    if (getPushNotificationsPreference() && api?.getNotificationPermission?.() === "granted") {
+    if (!enabled) {
       setPushNotificationsPreference(false);
       if (api.disablePushNotifications) await api.disablePushNotifications();
       showToast("Notifications off.");
       return;
     }
+    if (api?.getNotificationPermission?.() === "denied") {
+      setPushNotificationsPreference(false);
+      showToast("Notifications are blocked in this browser.");
+      return;
+    }
+    await exitFullscreenForNotificationPrompt();
     setPushNotificationsPreference(true);
     await api.enablePushNotifications({ playerName: state?.playerName || "Ruler" });
     showToast("Notifications on.");
   } catch (error) {
-    setPushNotificationsPreference(false);
+    if (enabled) setPushNotificationsPreference(false);
     showToast(error?.message || "Could not update notifications.");
   } finally {
     updatePushAlertsUi();
   }
+}
+
+async function enablePushNotificationsFromSettings() {
+  await setPushNotificationsEnabled(true);
+}
+
+async function disablePushNotificationsFromSettings() {
+  await setPushNotificationsEnabled(false);
 }
 
 function handlePushMessage(event) {
@@ -15091,7 +15126,8 @@ if (profileCloseBtn) profileCloseBtn.addEventListener("click", closeProfileScree
 if (profileTabBtn) profileTabBtn.addEventListener("click", showProfileView);
 if (skillsTabBtn) skillsTabBtn.addEventListener("click", showProfileSkills);
 if (settingsTabBtn) settingsTabBtn.addEventListener("click", showProfileSettings);
-if (pushAlertsBtn) pushAlertsBtn.addEventListener("click", togglePushNotifications);
+if (pushAlertsOffBtn) pushAlertsOffBtn.addEventListener("click", disablePushNotificationsFromSettings);
+if (pushAlertsOnBtn) pushAlertsOnBtn.addEventListener("click", enablePushNotificationsFromSettings);
 if (profileFlagBtn) profileFlagBtn.addEventListener("click", showFlagEditor);
 if (profileNameEditBtn) profileNameEditBtn.addEventListener("click", beginProfileNameEdit);
 if (profileNameSaveBtn) profileNameSaveBtn.addEventListener("click", saveProfileName);

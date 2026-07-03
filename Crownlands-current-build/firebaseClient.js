@@ -200,7 +200,7 @@
 
   async function getServiceWorkerRegistration() {
     if (client.serviceWorkerRegistration) return client.serviceWorkerRegistration;
-    if (!("serviceWorker" in navigator)) throw new Error("This browser does not support push alerts.");
+    if (!("serviceWorker" in navigator)) throw new Error("This browser does not support notifications.");
     const workerUrl = new URL("firebase-messaging-sw.js", window.location.href);
     client.serviceWorkerRegistration = await navigator.serviceWorker.register(workerUrl.href);
     return client.serviceWorkerRegistration;
@@ -208,11 +208,11 @@
 
   async function ensureMessaging() {
     await init();
-    if (!isPushSupported()) throw new Error("This browser cannot receive push alerts.");
+    if (!isPushSupported()) throw new Error("This browser cannot receive notifications.");
     const messagingModule = await loadMessagingModule();
     if (typeof messagingModule.isSupported === "function") {
       const supported = await messagingModule.isSupported();
-      if (!supported) throw new Error("Firebase push alerts are not supported in this browser.");
+      if (!supported) throw new Error("Firebase notifications are not supported in this browser.");
     }
     if (!client.messaging) {
       client.messaging = messagingModule.getMessaging(client.app);
@@ -265,21 +265,21 @@
   async function enablePushNotifications(options = {}) {
     await init();
     const uid = requireSignedIn();
-    if (!uid) throw new Error("Sign in to enable battle alerts.");
-    if (!isPushSupported()) throw new Error("This browser cannot receive push alerts.");
+    if (!uid) throw new Error("Sign in to enable notifications.");
+    if (!isPushSupported()) throw new Error("This browser cannot receive notifications.");
     const vapidKey = getNotificationVapidKey();
     let permission = getNotificationPermission();
     if (permission === "default" && window.Notification?.requestPermission) {
       permission = await window.Notification.requestPermission();
     }
-    if (permission !== "granted") throw new Error("Battle alerts are blocked in this browser.");
+    if (permission !== "granted") throw new Error("Notifications are blocked in this browser.");
     const messagingModule = await loadMessagingModule();
     const messaging = await ensureMessaging();
     const registration = await getServiceWorkerRegistration();
     const tokenOptions = { serviceWorkerRegistration: registration };
     if (vapidKey) tokenOptions.vapidKey = vapidKey;
     const token = await messagingModule.getToken(messaging, tokenOptions);
-    if (!token) throw new Error("Could not register this browser for battle alerts.");
+    if (!token) throw new Error("Could not register this browser for notifications.");
     const tokenId = await saveNotificationToken(token, options);
     dispatch("push-notifications", { enabled: true, tokenId });
     return { enabled: true, tokenId, permission };
@@ -371,7 +371,7 @@
     await init();
     if (!client.auth) return;
     await disablePushNotifications().catch(error => {
-      console.warn("Could not disable push alerts during sign-out", error);
+      console.warn("Could not disable notifications during sign-out", error);
     });
     await client.modules.auth.signOut(client.auth);
     client.user = null;

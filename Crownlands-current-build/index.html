@@ -4,11 +4,11 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Crownlands - Medieval Island Conquest</title>
-  <meta name="crownlands-build" content="20260703-battle-alerts" />
+  <meta name="crownlands-build" content="20260703-notifications-toggle" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700;800;900&family=Cinzel+Decorative:wght@700;900&family=IM+Fell+English:ital@0;1&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=20260703-battle-alerts" />
+  <link rel="stylesheet" href="styles.css?v=20260703-notifications-toggle" />
   <link rel="preload" as="image" href="assets/loading-ring.png" />
   <link rel="preload" as="image" href="assets/loading-crown.png" />
   <link rel="preload" as="image" href="assets/leaderboard-icon.png?v=20260623-leaderboard-icon-new" />
@@ -209,12 +209,14 @@
             <div class="profile-section-heading"><span>Settings</span><h3>Notifications</h3></div>
             <div class="profile-notification-row">
               <div>
-                <strong>Incoming attacks and scouts</strong>
-                <small>Browser push notification</small>
+                <strong>Notifications</strong>
               </div>
-              <button id="pushAlertsBtn" class="profile-secondary-btn push-alerts-btn" type="button">Notifications Off</button>
+              <div class="push-alerts-toggle" role="group" aria-label="Notifications">
+                <button id="pushAlertsOffBtn" class="push-alerts-option active" type="button" aria-pressed="true">Off</button>
+                <button id="pushAlertsOnBtn" class="push-alerts-option" type="button" aria-pressed="false">On</button>
+              </div>
             </div>
-            <span id="pushAlertsStatus" class="push-alerts-status">Notifications Off</span>
+            <span id="pushAlertsStatus" class="push-alerts-status" aria-live="polite" hidden>Notifications Off</span>
           </section>
         </div>
 
@@ -256,7 +258,7 @@
   <script src="assets/map-editor-data.js?v=20260702-world-editor-reset"></script>
   <script src="world-config.js"></script>
   <script src="firebase-config.js"></script>
-  <script src="firebaseClient.js?v=20260703-battle-alerts"></script>
-  <script src="game.js?v=20260703-battle-alerts"></script>
+  <script src="firebaseClient.js?v=20260703-notifications-toggle"></script>
+  <script src="game.js?v=20260703-notifications-toggle"></script>
 </body>
 </html>
