@@ -61,7 +61,7 @@ const SHOP_ITEMS = [
     label: "Swift March Order",
     description: "Speeds up one troop transfer between owned cities only.",
     cost: 55_000,
-    icon: "assets/swift-march-order-icon.jpg",
+    icon: "assets/swift-march-order-icon.png",
   },
   {
     id: "recall_horn",
