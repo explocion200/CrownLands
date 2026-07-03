@@ -458,6 +458,7 @@ function getBattleXpTroopCredit(target = {}, troops = 0, defenderProfile = null)
 }
 
 function getCaptureXpAward(target = {}, oldOwnerUid = "", defendersAtStart = 0, defenderProfile = null) {
+  if (isGivenUpNeutralCity(target)) return 0;
   const level = clampCityLevel(target.level);
   const defenderXp = Math.floor(getBattleXpTroopCredit(target, defendersAtStart, defenderProfile) * CAPTURE_XP_PER_DEFENDER);
   const ownerBonus = oldOwnerUid ? ENEMY_CAPTURE_XP_BONUS : 0;
@@ -604,6 +605,15 @@ function islandReportRef(regionId, reportId) {
 
 function getOwnerUid(city = {}) {
   return safeString(city.ownerUid, 128);
+}
+
+function isGivenUpNeutralCity(city = {}) {
+  return Boolean(
+    city
+    && !getOwnerUid(city)
+    && !isStronghold(city)
+    && (timestampToMs(city.relinquishedAtMs) > 0 || timestampToMs(city.relocatedAtMs) > 0)
+  );
 }
 
 function getOwnerName(city = {}, fallback = "Unknown") {
@@ -1357,6 +1367,7 @@ exports.relinquishCity = onCall({ region: "us-central1", maxInstances: 20, invok
       isMainCity: false,
       productionUpdatedAtMs: nowMs,
       relinquishedAtMs: nowMs,
+      relocatedAtMs: 0,
     };
 
     const sourceUpdate = {
@@ -1450,6 +1461,7 @@ exports.relocateMainCity = onCall({ region: "us-central1", maxInstances: 20, inv
       investedGold: 0,
       isMainCity: false,
       productionUpdatedAtMs: nowMs,
+      relinquishedAtMs: 0,
       relocatedAtMs: nowMs,
     };
     const newMainPatch = {
@@ -1465,7 +1477,8 @@ exports.relocateMainCity = onCall({ region: "us-central1", maxInstances: 20, inv
       investedGold: Math.max(0, Math.floor(safeNumber(targetCity.investedGold, 0))),
       isMainCity: true,
       productionUpdatedAtMs: nowMs,
-      relocatedAtMs: nowMs,
+      relinquishedAtMs: 0,
+      relocatedAtMs: 0,
     };
     const newMainWritePatch = {
       ...newMainPatch,
@@ -2051,8 +2064,9 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
     const defendersAtStart = Math.max(0, Math.floor(safeNumber(target.troops, 0)));
     const demoAttack = normalizeDemoAttackSnapshot(army.demoAttack);
     const result = calculateCombatResult(troopCount, target, attackerProfile, defenderProfile, { demoAttack });
-    const attackWinXp = demoAttack ? 0 : getCaptureXpAward(target, oldOwnerUid, result.defenderLosses, defenderProfile);
-    const attackFailXp = demoAttack ? 0 : getPartialBattleXpAward(getCaptureXpAward(target, oldOwnerUid, defendersAtStart, defenderProfile));
+    const givenUpNeutralTarget = isGivenUpNeutralCity(target);
+    const attackWinXp = demoAttack || givenUpNeutralTarget ? 0 : getCaptureXpAward(target, oldOwnerUid, result.defenderLosses, defenderProfile);
+    const attackFailXp = demoAttack || givenUpNeutralTarget ? 0 : getPartialBattleXpAward(getCaptureXpAward(target, oldOwnerUid, defendersAtStart, defenderProfile));
     const defenseHeldXp = applyDemoDefenderXpMultiplier(getDefenseHeldXpAward(troopCount, target, defenderProfile), demoAttack);
     const defenseLostXp = getPartialBattleXpAward(defenseHeldXp);
     const attackerScavengerGold = Math.floor(result.killedDefenders * KILL_GOLD_BASE * getSkillPercent(attackerProfile, "scavenger") / 100);
@@ -2073,10 +2087,18 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
     if (result.success) {
       const daily = normalizeDaily(attackerProfile.daily);
       if (!oldOwnerUid && !isStronghold(target) && daily.neutralCaptures >= DAILY_NEUTRAL_CAPTURE_LIMIT) {
-        transaction.set(targetRef, cleanCityUpdate(target, {
-          troops: Math.max(1, Math.floor(safeNumber(target.troops, 1))),
-          troopFloat: Math.max(1, safeNumber(target.troopFloat, target.troops || 1)),
-        }), { merge: true });
+        const blockedTroops = givenUpNeutralTarget ? 0 : Math.max(1, Math.floor(safeNumber(target.troops, 1)));
+        const blockedTroopFloat = givenUpNeutralTarget ? 0 : Math.max(1, safeNumber(target.troopFloat, target.troops || 1));
+        const blockedPatch = {
+          troops: blockedTroops,
+          troopFloat: blockedTroopFloat,
+          ...(givenUpNeutralTarget ? {
+            relinquishedAtMs: timestampToMs(target.relinquishedAtMs),
+            relocatedAtMs: timestampToMs(target.relocatedAtMs),
+          } : {}),
+        };
+        transaction.set(targetRef, cleanCityUpdate(target, blockedPatch), { merge: true });
+        cityUpdates.push({ id: target.id, regionId: targetRegionId, ...blockedPatch });
         writeParticipantEconomies();
         const blockedReport = makeReport({
           id: `${armyId}_capture_limit_${attackerUid}`,
@@ -2113,6 +2135,8 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
         investedGold: 0,
         lastCapturedAtMs: nowMs,
         isMainCity: false,
+        relinquishedAtMs: 0,
+        relocatedAtMs: 0,
       };
       transaction.set(targetRef, cleanCityUpdate(target, targetPatch), { merge: true });
       cityUpdates.push({ id: target.id, regionId: targetRegionId, ...targetPatch });

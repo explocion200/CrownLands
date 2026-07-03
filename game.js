@@ -783,6 +783,8 @@ function createNeutralCityFromBase(base) {
     investedGold: 0,
     lastCapturedAt: null,
     isMainCity: false,
+    relinquishedAtMs: 0,
+    relocatedAtMs: 0,
   };
 }
 
@@ -799,6 +801,14 @@ function readCityTroops(primary, fallback = 0) {
 
 function readCityTroopFloat(primary, fallback = 0) {
   return Math.max(0, Number(primary ?? fallback) || 0);
+}
+
+function isGivenUpNeutralCity(city = {}) {
+  if (!city || isStronghold(city)) return false;
+  const ownerUid = String(city.ownerUid || "").trim();
+  const ownerKind = city.ownerKind || city.owner || "neutral";
+  const isNeutral = !ownerUid && (ownerKind === "neutral" || city.owner === "neutral");
+  return Boolean(isNeutral && (timestampToMs(city.relinquishedAtMs) > 0 || timestampToMs(city.relocatedAtMs) > 0));
 }
 
 function applyBaseCityMetadata(city, base) {
@@ -3215,6 +3225,8 @@ function createStrongholdSlot({ id, name, region, point, type, bonus, bonusPerce
     investedGold: 0,
     lastCapturedAt: null,
     isMainCity: false,
+    relinquishedAtMs: 0,
+    relocatedAtMs: 0,
     kind: "stronghold",
     strongholdType: type,
     bonus,
@@ -4153,6 +4165,8 @@ function createIslandStartLayout(playerName) {
     city.investedGold = 0;
     city.lastCapturedAt = null;
     city.isMainCity = slot.key === "player";
+    city.relinquishedAtMs = 0;
+    city.relocatedAtMs = 0;
   }
 
   return { cities, startIds };
@@ -4855,6 +4869,7 @@ function addCharacterXp(amount, reason = "progress") {
 }
 
 function getCaptureXpAward(target, oldOwner, defendersAtStart, attackerOwner = "player") {
+  if (isGivenUpNeutralCity(target)) return 0;
   const level = clampCityLevel(target?.level);
   const defenderXp = Math.floor(getBattleXpTroopCredit(target, defendersAtStart) * CAPTURE_XP_PER_DEFENDER);
   const ownerBonus = oldOwner === "enemy" ? ENEMY_CAPTURE_XP_BONUS : 0;
@@ -6214,6 +6229,14 @@ function applyServerCityUpdates(cityUpdates = []) {
       city.productionUpdatedAtMs = normalizeTimestampMs(update.productionUpdatedAtMs);
       changed = true;
     }
+    if (update.relinquishedAtMs !== undefined) {
+      city.relinquishedAtMs = timestampToMs(update.relinquishedAtMs);
+      changed = true;
+    }
+    if (update.relocatedAtMs !== undefined) {
+      city.relocatedAtMs = timestampToMs(update.relocatedAtMs);
+      changed = true;
+    }
     if (update.ownerUid !== undefined) {
       const currentUid = getCurrentOnlineUid();
       const ownerUid = String(update.ownerUid || "").trim();
@@ -6225,6 +6248,10 @@ function applyServerCityUpdates(cityUpdates = []) {
       city.ownerKingPower = normalizePowerValue(update.ownerKingPower);
       city.ownerShieldExpiresAtMs = normalizeTimestampMs(update.ownerShieldExpiresAtMs);
       city.isMainCity = Boolean(update.isMainCity) && !isStronghold(city);
+      if (ownerUid) {
+        city.relinquishedAtMs = 0;
+        city.relocatedAtMs = 0;
+      }
       if (!ownerUid) localDirtyCityIds.delete(city.id);
       changed = true;
     } else if (update.isMainCity !== undefined) {
@@ -6514,6 +6541,8 @@ function restoreOfflineProductionCitiesToLocalState(cities = []) {
       investedGold: Math.max(0, Math.floor(Number(city.investedGold) || 0)),
       lastCapturedAt: city.lastCapturedAt ?? null,
       isMainCity: !isStronghold(city) && city.id === state.mainCityId,
+      relinquishedAtMs: 0,
+      relocatedAtMs: 0,
     };
   });
 }
@@ -8063,6 +8092,8 @@ function applyOnlineCities(onlineCities, regionId = getActiveOnlineRegionId()) {
           investedGold: 0,
           lastCapturedAt: null,
           isMainCity: !isStronghold(base) && base.id === state.mainCityId,
+          relinquishedAtMs: 0,
+          relocatedAtMs: 0,
           startPool: base.startPool,
           regionId: base.regionId,
         };
@@ -8086,6 +8117,8 @@ function applyOnlineCities(onlineCities, regionId = getActiveOnlineRegionId()) {
         investedGold: isStronghold(base) ? 0 : Math.max(0, Math.floor(Number(current.investedGold) || 0)),
         lastCapturedAt: current.lastCapturedAt ?? null,
         isMainCity: !isStronghold(base) && (currentOwnership.owner === "player" ? base.id === state.mainCityId : Boolean(current.isMainCity)),
+        relinquishedAtMs: currentOwnership.owner === "player" ? 0 : timestampToMs(current.relinquishedAtMs),
+        relocatedAtMs: currentOwnership.owner === "player" ? 0 : timestampToMs(current.relocatedAtMs),
         startPool: base.startPool,
         regionId: base.regionId,
       };
@@ -8129,6 +8162,8 @@ function applyOnlineCities(onlineCities, regionId = getActiveOnlineRegionId()) {
       investedGold: isStronghold(base) ? 0 : Math.max(0, Math.floor(Number(keepLocalPlayerCity ? current.investedGold ?? online.investedGold : online.investedGold ?? current.investedGold) || 0)),
       lastCapturedAt: keepLocalPlayerCity ? current.lastCapturedAt ?? online.lastCapturedAt ?? null : online.lastCapturedAt ?? current.lastCapturedAt ?? null,
       isMainCity: !isStronghold(base) && (localOwner === "player" ? base.id === state.mainCityId : Boolean(online.isMainCity || current.isMainCity)),
+      relinquishedAtMs: keepLocalPlayerCity || normalizedOwnerKind === "player" ? 0 : timestampToMs(online.relinquishedAtMs ?? current.relinquishedAtMs),
+      relocatedAtMs: keepLocalPlayerCity || normalizedOwnerKind === "player" ? 0 : timestampToMs(online.relocatedAtMs ?? current.relocatedAtMs),
       startPool: base.startPool,
       regionId: base.regionId,
     };
@@ -8256,6 +8291,8 @@ function markOwnedCityChanged(city, syncNow = true) {
   city.ownerKingPower = getKingPower();
   city.ownerShieldExpiresAtMs = isStronghold(city) ? 0 : getActivePeaceShieldExpiresAtMs();
   city.isMainCity = !isStronghold(city) && city.id === state.mainCityId;
+  city.relinquishedAtMs = 0;
+  city.relocatedAtMs = 0;
   if (syncNow && isOnlineWorldActive()) syncOwnedCitiesToOnline(true);
 }
 
@@ -8287,6 +8324,8 @@ function toOnlineOwnedCity(city) {
     investedGold: isStronghold(city) ? 0 : Math.max(0, Math.floor(Number(city.investedGold) || 0)),
     lastCapturedAt: city.lastCapturedAt ?? null,
     isMainCity: !isStronghold(city) && (city.owner === "player" ? city.id === state.mainCityId : Boolean(city.isMainCity)),
+    relinquishedAtMs: 0,
+    relocatedAtMs: 0,
   };
 }
 
@@ -8309,6 +8348,8 @@ function toOnlineCityState(city) {
   const ownerShieldExpiresAtMs = hasPlayerOwner
     ? isStronghold(city) ? 0 : city.owner === "player" ? getActivePeaceShieldExpiresAtMs() : normalizeTimestampMs(city.ownerShieldExpiresAtMs)
     : 0;
+  const relinquishedAtMs = hasPlayerOwner || isStronghold(city) ? 0 : timestampToMs(city.relinquishedAtMs);
+  const relocatedAtMs = hasPlayerOwner || isStronghold(city) ? 0 : timestampToMs(city.relocatedAtMs);
   return {
     id: city.id,
     name: getCanonicalCityName(city),
@@ -8336,6 +8377,8 @@ function toOnlineCityState(city) {
     investedGold: isStronghold(city) ? 0 : Math.max(0, Math.floor(Number(city.investedGold) || 0)),
     lastCapturedAt: city.lastCapturedAt ?? null,
     isMainCity: !isStronghold(city) && (city.owner === "player" ? city.id === state.mainCityId : Boolean(city.isMainCity)),
+    relinquishedAtMs,
+    relocatedAtMs,
   };
 }
 
@@ -9233,6 +9276,8 @@ function normalizeOwnedCitySnapshot(raw = {}) {
     investedGold: Math.max(0, Math.floor(Number(raw.investedGold) || 0)),
     lastCapturedAt: raw.lastCapturedAt ?? null,
     isMainCity: !isStronghold(raw) && !isStronghold(base) && (raw.id === state?.mainCityId || Boolean(raw.isMainCity)),
+    relinquishedAtMs: 0,
+    relocatedAtMs: 0,
   };
 }
 
@@ -10806,14 +10851,20 @@ function resolveAttack(attack) {
         defenderKingPower: attack.defenderKingPower,
       });
   const demoReportSuffix = getDemoAttackReportSuffix(demoAttack);
+  const givenUpNeutralTarget = isGivenUpNeutralCity(target);
   const result = calculateCombatResult(attack.troops, attack.owner, target, { demoAttack });
 
   if (result.success) {
     const neutralCapture = attack.owner === "player" && oldOwner === "neutral" && !isStronghold(target);
     const neutralBlockReason = neutralCapture ? getNeutralCaptureBlockReason(target, "player", attack.id) : "";
     if (neutralBlockReason) {
-      target.troopFloat = Math.max(1, target.troopFloat);
-      target.troops = Math.floor(target.troopFloat);
+      if (givenUpNeutralTarget) {
+        target.troopFloat = 0;
+        target.troops = 0;
+      } else {
+        target.troopFloat = Math.max(1, target.troopFloat);
+        target.troops = Math.floor(target.troopFloat);
+      }
       if (attack.owner === "player") {
         addBattleReport({
           type: "attack",
@@ -10838,8 +10889,8 @@ function resolveAttack(attack) {
       return;
     }
 
-    const xpEfficiency = attack.owner === "player" ? (demoAttack ? 0 : getCaptureXpEfficiency(target, oldOwner)) : 1;
-    const xpAward = attack.owner === "player" && !demoAttack ? getCaptureXpAward(target, oldOwner, result.defenderLosses, attack.owner) : 0;
+    const xpEfficiency = attack.owner === "player" ? (demoAttack || givenUpNeutralTarget ? 0 : getCaptureXpEfficiency(target, oldOwner)) : 1;
+    const xpAward = attack.owner === "player" && !demoAttack && !givenUpNeutralTarget ? getCaptureXpAward(target, oldOwner, result.defenderLosses, attack.owner) : 0;
     const cautiousRefund = oldOwner === "player" && attack.owner !== "player" ? grantCautiousRefund(target) : 0;
 
     if (attack.owner === "player") {
@@ -10867,6 +10918,8 @@ function resolveAttack(attack) {
     target.defense = 1;
     target.investedGold = 0;
     target.lastCapturedAt = state.gameSeconds;
+    target.relinquishedAtMs = 0;
+    target.relocatedAtMs = 0;
     if (neutralCapture) recordNeutralCapture();
 
     if (attack.owner === "player") {
@@ -10926,7 +10979,7 @@ function resolveAttack(attack) {
     if (attack.owner === "player") {
       const savedAttackers = returnSavedTroops("fearless", result.attackerLosses, `${target.name} failed attack`);
       const scavengedGold = grantKillGold("scavenger", result.killedDefenders, `${target.name} failed attack`);
-      const failedAttackXp = demoAttack ? 0 : getFailedAttackXpAward(target, oldOwner, defendersAtStart, attack.owner);
+      const failedAttackXp = demoAttack || givenUpNeutralTarget ? 0 : getFailedAttackXpAward(target, oldOwner, defendersAtStart, attack.owner);
       addBattleReport({
         type: "attack",
         outcome: "defeat",
@@ -12662,6 +12715,8 @@ function applyLocalRelinquishCity(city, destination) {
   city.troops = 0;
   city.troopFloat = 0;
   city.investedGold = 0;
+  city.relinquishedAtMs = Date.now();
+  city.relocatedAtMs = 0;
   localDirtyCityIds.delete(city.id);
   syncCityStateToOnline(city);
   syncOwnedCitiesToOnline(true);
@@ -13617,8 +13672,9 @@ function calculateBattlePreviewForTroops(source, target, amount, knownRoute = nu
   const demoAttack = createDemoAttackSnapshot(source, target, requestedSend, "player");
   const send = demoAttack?.active ? demoAttack.effectiveTroops : requestedSend;
   const result = calculateCombatResult(send, "player", target, { demoAttack });
-  const xpEfficiency = demoAttack?.active ? 0 : getCaptureXpEfficiency(target, target.owner);
-  const captureXp = demoAttack?.active
+  const givenUpNeutralTarget = isGivenUpNeutralCity(target);
+  const xpEfficiency = demoAttack?.active || givenUpNeutralTarget ? 0 : getCaptureXpEfficiency(target, target.owner);
+  const captureXp = demoAttack?.active || givenUpNeutralTarget
     ? 0
     : result.success
       ? getCaptureXpAward(target, target.owner, result.defenderLosses, "player")

@@ -475,6 +475,8 @@
       investedGold: Math.max(0, Math.floor(Number(city.investedGold) || 0)),
       lastCapturedAt: city.lastCapturedAt ?? null,
       isMainCity: Boolean(city.isMainCity),
+      relinquishedAtMs: Math.max(0, Math.floor(Number(city.relinquishedAtMs) || 0)),
+      relocatedAtMs: Math.max(0, Math.floor(Number(city.relocatedAtMs) || 0)),
     };
   }
 
@@ -681,6 +683,8 @@
           ...(includeTroops ? { troops, troopFloat } : {}),
           ...(setClaimedAt ? { claimedAt: cityData.claimedAt || serverTimestamp() } : {}),
           isMainCity: true,
+          relinquishedAtMs: 0,
+          relocatedAtMs: 0,
           updatedAt: serverTimestamp(),
         }, { merge: true });
       };
