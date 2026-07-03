@@ -45,16 +45,17 @@ Troop orders and online economy updates now go through Firebase callable functio
 - `collectEconomy`: collects passive/offline gold and troop production for every owned city across all region maps.
 - `upgradeCity`: collects production, spends server gold, upgrades the city, records invested gold, and awards upgrade XP in one transaction.
 - `purchaseShopItem` and `activateInventoryItem`: spend gold, update inventory, apply Peace Shield/War Drums timers, and sync shield expiry to owned city docs from the server.
+- `resolveDueArmyOrders`: runs from Cloud Scheduler once per minute, finds overdue active attack/scout/transfer armies, and resolves them on the server even when every player is offline.
 
 Browsers can read army/report streams, but Firestore rules block direct browser writes to `armies`, `reports`, `serverReports`, player economy fields, and city troop/level/production fields after the initial starting-city claim.
 
 Important: deploy both Functions and rules after this update:
 
 ```bash
-firebase deploy --only functions,firestore:rules
+firebase deploy --only functions,firestore
 ```
 
-If Functions are not deployed, online troop orders will be rejected instead of falling back to client-side combat.
+If Functions are not deployed, online troop orders will be rejected instead of falling back to client-side combat. If the Firestore indexes are not deployed, the scheduled resolver may not be able to find overdue armies. Scheduled functions use Cloud Scheduler, so the Firebase project must have Cloud Scheduler enabled and a billing plan that supports scheduled functions.
 
 ## Netlify
 

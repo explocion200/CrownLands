@@ -1,4 +1,5 @@
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
+const { onSchedule } = require("firebase-functions/v2/scheduler");
 const admin = require("firebase-admin");
 
 admin.initializeApp();
@@ -58,6 +59,8 @@ const WAR_DRUMS_ITEM_ID = "war_drums_30m";
 const WAR_DRUMS_DURATION_MS = 30 * 60 * 1000;
 const WAR_DRUMS_TROOP_PRODUCTION_BONUS_PERCENT = 25;
 const MAX_SERVER_PRODUCTION_SECONDS = 7 * 24 * 60 * 60;
+const SCHEDULED_ARMY_RESOLVE_SCAN_LIMIT = 100;
+const SCHEDULED_ARMY_RESOLVE_MAX_PER_RUN = 40;
 const SHOP_ITEMS = {
   [ROYAL_PEACE_SHIELD_ITEM_ID]: { id: ROYAL_PEACE_SHIELD_ITEM_ID, label: "Royal Peace Shield", cost: 175000 },
   [WAR_DRUMS_ITEM_ID]: { id: WAR_DRUMS_ITEM_ID, label: "War Drums", cost: 25000 },
@@ -1545,16 +1548,11 @@ exports.sendArmyOrder = onCall({ region: "us-central1", maxInstances: 20, invoke
   return result;
 });
 
-exports.resolveArmyOrder = onCall({ region: "us-central1", maxInstances: 30, invoker: "public" }, async request => {
-  const callerUid = requireAuth(request);
-  const data = request.data || {};
-  const armyId = safeString(data.armyId || data.id, 96).replace(/[^a-zA-Z0-9_-]/g, "_");
-  const requestedRegions = normalizeRegionIds(data.routeRegionIds || data.regionIds || []);
+async function resolveArmyOrderById({ armyId = "", requestedRegions = [], callerUid = "", nowMs = Date.now() } = {}) {
   if (!armyId) throw new HttpsError("invalid-argument", "Missing army id.");
   if (!requestedRegions.length) throw new HttpsError("invalid-argument", "Missing army route regions.");
 
   const firstArmyRef = armyRefsForRegions(requestedRegions, armyId)[0];
-  const nowMs = Date.now();
 
   return db.runTransaction(async transaction => {
     const firstArmySnap = await transaction.get(firstArmyRef);
@@ -2003,5 +2001,108 @@ exports.resolveArmyOrder = onCall({ region: "us-central1", maxInstances: 30, inv
       cityUpdates: withEconomyCityUpdates(cityUpdates),
       currentUser: profilePatchForCaller(attackerProgress, defenderProgress),
     };
+  });
+}
+
+exports.resolveArmyOrder = onCall({ region: "us-central1", maxInstances: 30, invoker: "public" }, async request => {
+  const callerUid = requireAuth(request);
+  const data = request.data || {};
+  const armyId = safeString(data.armyId || data.id, 96).replace(/[^a-zA-Z0-9_-]/g, "_");
+  const requestedRegions = normalizeRegionIds(data.routeRegionIds || data.regionIds || []);
+  return resolveArmyOrderById({ armyId, requestedRegions, callerUid });
+});
+
+function getScheduledArmyDedupeKey(armyId = "", ownerUid = "") {
+  return `${safeString(ownerUid, 128)}:${safeString(armyId, 96)}`;
+}
+
+function getScheduledArmyTarget(doc = null) {
+  if (!doc) return null;
+  const data = doc.data() || {};
+  const armyId = safeString(data.id || doc.id, 96).replace(/[^a-zA-Z0-9_-]/g, "_");
+  const routeRegionIds = normalizeRegionIds(data.routeRegionIds || []);
+  const sourceRegionId = data.sourceRegionId ? normalizeRegionId(data.sourceRegionId) : "";
+  const targetRegionId = data.targetRegionId ? normalizeRegionId(data.targetRegionId) : "";
+  if (sourceRegionId && !routeRegionIds.includes(sourceRegionId)) routeRegionIds.push(sourceRegionId);
+  if (targetRegionId && !routeRegionIds.includes(targetRegionId)) routeRegionIds.push(targetRegionId);
+  if (!armyId || !routeRegionIds.length) return null;
+  return {
+    armyId,
+    requestedRegions: [...new Set(routeRegionIds)],
+    ownerUid: getOwnerUid(data),
+    arrivesAtMs: Math.max(0, Math.floor(safeNumber(data.arrivesAtMs, 0))),
+  };
+}
+
+async function loadDueArmyTargets(nowMs = Date.now()) {
+  const snap = await db.collectionGroup("armies")
+    .where("status", "==", "active")
+    .where("arrivesAtMs", "<=", nowMs)
+    .orderBy("arrivesAtMs", "asc")
+    .limit(SCHEDULED_ARMY_RESOLVE_SCAN_LIMIT)
+    .get();
+  const targetsByKey = new Map();
+  snap.docs.forEach(doc => {
+    const target = getScheduledArmyTarget(doc);
+    if (!target) return;
+    const key = getScheduledArmyDedupeKey(target.armyId, target.ownerUid);
+    if (!targetsByKey.has(key)) targetsByKey.set(key, target);
+  });
+  return Array.from(targetsByKey.values())
+    .sort((a, b) => a.arrivesAtMs - b.arrivesAtMs)
+    .slice(0, SCHEDULED_ARMY_RESOLVE_MAX_PER_RUN);
+}
+
+function isExpectedScheduledResolveError(error = {}) {
+  const code = String(error.code || "");
+  const message = String(error.message || error || "");
+  return code === "failed-precondition" && /not arrived/i.test(message);
+}
+
+exports.resolveDueArmyOrders = onSchedule({
+  region: "us-central1",
+  schedule: "every 1 minutes",
+  timeZone: "Etc/UTC",
+  maxInstances: 1,
+  timeoutSeconds: 180,
+  memory: "256MiB",
+}, async () => {
+  const nowMs = Date.now();
+  const targets = await loadDueArmyTargets(nowMs);
+  let resolved = 0;
+  let skipped = 0;
+  let failed = 0;
+
+  for (const target of targets) {
+    try {
+      const result = await resolveArmyOrderById({
+        armyId: target.armyId,
+        requestedRegions: target.requestedRegions,
+        callerUid: "",
+        nowMs,
+      });
+      if (result?.status === "resolved") resolved += 1;
+      else skipped += 1;
+    } catch (error) {
+      if (isExpectedScheduledResolveError(error)) {
+        skipped += 1;
+        continue;
+      }
+      failed += 1;
+      console.error("Scheduled army resolution failed", {
+        armyId: target.armyId,
+        ownerUid: target.ownerUid,
+        requestedRegions: target.requestedRegions,
+        message: error?.message || String(error),
+        code: error?.code || "",
+      });
+    }
+  }
+
+  console.log("Scheduled army resolution finished", {
+    scanned: targets.length,
+    resolved,
+    skipped,
+    failed,
   });
 });
