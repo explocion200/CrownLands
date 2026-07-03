@@ -487,6 +487,7 @@ const IMAGE_NO_CITY_TERRAIN = normalizeImageTerrainShapes({
   ],
 });
 const MAX_CITY_LEVEL = 100;
+const SERVER_CITY_UPGRADE_LEVEL_CHUNK = 25;
 const MILLION_LORDS_CITY_COST_BASE = 50;
 const MILLION_LORDS_CITY_COST_GROWTH = 1.2;
 const MILLION_LORDS_CITY_PRODUCTION_VP_BASE = 20;
@@ -12970,6 +12971,7 @@ function showCityInfoModal(cityId) {
         <div class="stat-chip"><span>Victory points</span><strong>${formatNumber(stats.victoryPoints)}</strong></div>
         <div class="stat-chip"><span>Troops</span><strong>${report ? formatNumber(report.troops) : "Unknown"}</strong></div>
         <div class="stat-chip"><span>Total defense</span><strong>${report ? formatNumber(report.totalDefense) : "Unknown"}</strong></div>
+        ${renderCityLevelUpAction(city)}
         ${neutralStrongholdBase}
         ${report
           ? `<div class="stat-wide"><span>Scout report expires</span><strong>${formatDuration(remaining)}</strong></div>`
@@ -13009,9 +13011,11 @@ function showCityInfoModal(cityId) {
         <div class="stat-chip"><span>City walls</span><strong>${formatNumber(stats.cityWalls)}</strong></div>
         <div class="stat-chip"><span>Garrison limit</span><strong>Unlimited</strong><small>station as many troops as you can send</small></div>
         <div class="stat-chip"><span>Effect target</span><strong>${effectTargetLabel}</strong><small>${effectHelp}</small></div>
+        ${renderCityLevelUpAction(city)}
         ${renderRelinquishCityAction(city)}
       </div>
     `;
+    bindCityLevelUpButtons(city);
     bindRelinquishCityButton(city);
     if (!modal.open) modal.showModal();
     return;
@@ -13054,6 +13058,7 @@ function showCityInfoModal(cityId) {
   modalBody.innerHTML = `
     <div class="city-stat-panel modal-city-stats">
       ${mainCityBlock}
+      ${renderCityLevelUpAction(city)}
       <div class="stat-wide"><span>Total defense</span><strong>${formatNumber(stats.totalDefense)}</strong></div>
       <div class="stat-chip"><span>Owner</span><strong>${escapeHtml(getCityOwnerDisplayName(city))}</strong></div>
       <div class="stat-chip"><span>Troops</span><strong>${formatNumber(city.troops)}</strong></div>
@@ -13069,6 +13074,7 @@ function showCityInfoModal(cityId) {
     </div>
   `;
   modalBody.querySelector("#changeMainCityBtn")?.addEventListener("click", () => changeMainCity(city.id));
+  bindCityLevelUpButtons(city);
   bindRelocateMainCityButton(city);
   bindRelinquishCityButton(city);
   if (!modal.open) modal.showModal();
@@ -13711,6 +13717,7 @@ function recruit(cityId) {
 async function upgradeCity(cityId, levels = 1) {
   const city = cityById(cityId);
   if (!city) return;
+  const requestedLevels = Math.max(1, Math.floor(Number(levels) || 1));
   if (isStronghold(city)) {
     showToast("Strongholds cannot be upgraded.");
     renderAll();
@@ -13729,20 +13736,37 @@ async function upgradeCity(cityId, levels = 1) {
       return;
     }
     serverCityUpgradeInFlightIds.add(inFlightKey);
+    let totalUpgraded = 0;
+    let totalSpent = 0;
     try {
-      const result = await getOnlineApi().upgradeCity({
-        cityId: city.id,
-        regionId: getCityRegionId(city),
-        levels,
-      });
-      applyServerEconomyResult(result);
+      let remainingLevels = requestedLevels;
+      while (remainingLevels > 0) {
+        const chunkLevels = Math.min(remainingLevels, SERVER_CITY_UPGRADE_LEVEL_CHUNK);
+        const result = await getOnlineApi().upgradeCity({
+          cityId: city.id,
+          regionId: getCityRegionId(city),
+          levels: chunkLevels,
+        });
+        applyServerEconomyResult(result);
+        const upgraded = Math.max(0, Math.floor(Number(result?.upgraded) || chunkLevels));
+        totalUpgraded += upgraded;
+        totalSpent += Math.max(0, Math.floor(Number(result?.spentGold) || 0));
+        remainingLevels -= upgraded;
+        if (upgraded < chunkLevels) break;
+      }
       const updatedCity = cityById(city.id) || city;
-      addLog(`${updatedCity.name} upgraded to level ${formatNumber(updatedCity.level)}.`);
-      showToast(`${updatedCity.name} upgraded`);
+      const levelText = totalUpgraded > 1 ? `${formatNumber(totalUpgraded)} levels` : "1 level";
+      addLog(`${updatedCity.name} upgraded ${levelText} to level ${formatNumber(updatedCity.level)}${totalSpent ? ` for ${formatNumber(totalSpent)} gold` : ""}.`);
+      showToast(`${updatedCity.name} upgraded ${levelText}`);
       renderAll();
     } catch (error) {
       onlineLastError = error?.message || String(error);
-      showToast(error?.message || "Could not upgrade city.");
+      if (totalUpgraded > 0) {
+        const updatedCity = cityById(city.id) || city;
+        showToast(`${updatedCity.name} upgraded ${formatNumber(totalUpgraded)} level${totalUpgraded === 1 ? "" : "s"}`);
+      } else {
+        showToast(error?.message || "Could not upgrade city.");
+      }
       console.warn("Server city upgrade failed", error);
       renderAll();
     } finally {
@@ -13752,7 +13776,7 @@ async function upgradeCity(cityId, levels = 1) {
   }
   let upgraded = 0;
   let xpAward = 0;
-  while (upgraded < levels && city.level < MAX_CITY_LEVEL) {
+  while (upgraded < requestedLevels && city.level < MAX_CITY_LEVEL) {
     const cost = getLevelCost(city);
     if (state.gold < cost) break;
     state.gold -= cost;
@@ -13808,6 +13832,106 @@ function getMultiLevelCost(city, levels) {
 
 function getLevelCost(city) {
   return getMultiLevelCost(city, 1);
+}
+
+function getAffordableCityUpgradeLevels(city, levelLimit = MAX_CITY_LEVEL) {
+  if (!state || !city || city.owner !== "player" || isStronghold(city)) return 0;
+  const currentLevel = clampCityLevel(city.level);
+  const levelsRemaining = Math.max(0, MAX_CITY_LEVEL - currentLevel);
+  const rawLimit = Number.isFinite(Number(levelLimit)) ? Math.floor(Number(levelLimit)) : levelsRemaining;
+  const maxLevels = clamp(rawLimit, 0, levelsRemaining);
+  const availableGold = Math.max(0, Math.floor(Number(state.gold) || 0));
+  let affordableLevels = 0;
+  for (let levels = 1; levels <= maxLevels; levels += 1) {
+    const cost = getMultiLevelCost(city, levels);
+    if (!Number.isFinite(cost) || cost > availableGold) break;
+    affordableLevels = levels;
+  }
+  return affordableLevels;
+}
+
+function renderCityLevelUpButton({ label, levels, cost, disabled, reason }) {
+  const safeLevels = Math.max(0, Math.floor(Number(levels) || 0));
+  const costLabel = Number.isFinite(cost) && cost > 0 ? `${formatNumber(cost)}g` : (reason || "MAX");
+  return `
+    <button class="city-level-up-btn" data-city-upgrade-levels="${safeLevels}" type="button" ${disabled ? "disabled" : ""}>
+      <span>${escapeHtml(label)}</span>
+      <small>${escapeHtml(reason || costLabel)}</small>
+    </button>`;
+}
+
+function renderCityLevelUpAction(city) {
+  const currentLevel = clampCityLevel(city?.level || 1);
+  const levelsRemaining = Math.max(0, MAX_CITY_LEVEL - currentLevel);
+  const incomingBlockers = city ? getIncomingUpgradeBlockers(city.id) : [];
+  const owned = city?.owner === "player";
+  const stronghold = isStronghold(city);
+  const inFlight = city ? serverCityUpgradeInFlightIds.has(city.id) : false;
+  const baseDisabledReason = !owned
+    ? "Own first"
+    : stronghold
+      ? "Fixed"
+      : incomingBlockers.length
+        ? "Incoming"
+        : inFlight
+          ? "Working"
+          : levelsRemaining <= 0
+            ? "MAX"
+            : "";
+  const oneCost = getMultiLevelCost(city, 1);
+  const fiveLevels = Math.min(5, levelsRemaining);
+  const fiveCost = fiveLevels === 5 ? getMultiLevelCost(city, 5) : Infinity;
+  const affordableMax = baseDisabledReason ? 0 : getAffordableCityUpgradeLevels(city, levelsRemaining);
+  const maxCost = affordableMax > 0 ? getMultiLevelCost(city, affordableMax) : Infinity;
+  const nextLevelLabel = levelsRemaining > 0
+    ? `Next: Lv ${formatNumber(Math.min(MAX_CITY_LEVEL, currentLevel + 1))}`
+    : "At maximum level";
+  const availableGold = Math.max(0, Math.floor(Number(state?.gold) || 0));
+  const insufficientReason = Number.isFinite(oneCost) ? `Need ${formatNumber(oneCost)}g` : "Unavailable";
+
+  return `
+    <section class="city-level-up-panel">
+      <div class="city-level-up-copy">
+        <strong>Level up city</strong>
+        <small>${escapeHtml(nextLevelLabel)} · Gold ${formatNumber(availableGold)}</small>
+      </div>
+      <div class="city-level-up-actions">
+        ${renderCityLevelUpButton({
+          label: "1 lvl",
+          levels: 1,
+          cost: oneCost,
+          disabled: Boolean(baseDisabledReason) || availableGold < oneCost,
+          reason: baseDisabledReason || (availableGold < oneCost ? insufficientReason : ""),
+        })}
+        ${renderCityLevelUpButton({
+          label: "5 lvls",
+          levels: 5,
+          cost: fiveCost,
+          disabled: Boolean(baseDisabledReason) || fiveLevels < 5 || availableGold < fiveCost,
+          reason: baseDisabledReason || (fiveLevels < 5 ? `Only ${formatNumber(levelsRemaining)} left` : availableGold < fiveCost ? `Need ${formatNumber(fiveCost)}g` : ""),
+        })}
+        ${renderCityLevelUpButton({
+          label: "Max",
+          levels: affordableMax,
+          cost: maxCost,
+          disabled: Boolean(baseDisabledReason) || affordableMax < 1,
+          reason: baseDisabledReason || (affordableMax < 1 ? insufficientReason : `+${formatNumber(affordableMax)} · ${formatNumber(maxCost)}g`),
+        })}
+      </div>
+    </section>`;
+}
+
+function bindCityLevelUpButtons(city) {
+  modalBody.querySelectorAll("[data-city-upgrade-levels]").forEach(button => {
+    button.addEventListener("click", async () => {
+      const levels = Math.max(0, Math.floor(Number(button.dataset.cityUpgradeLevels) || 0));
+      if (levels < 1) return;
+      button.disabled = true;
+      await upgradeCity(city.id, levels);
+      const refreshedCity = cityById(city.id);
+      if (refreshedCity && modal.open) showCityInfoModal(refreshedCity.id);
+    });
+  });
 }
 
 function getFortifyCost(city) {
