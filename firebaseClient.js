@@ -163,14 +163,33 @@
     return String(configKey || "").trim();
   }
 
-  function isPushSupported() {
+  function hasPushEnvironmentSupport() {
     return Boolean(
-      client.configured
-      && window.isSecureContext
+      window.isSecureContext
       && "Notification" in window
       && "serviceWorker" in navigator
       && "PushManager" in window
     );
+  }
+
+  function isPushSupported() {
+    return Boolean(
+      hasRealFirebaseConfig(window.CROWNLANDS_FIREBASE_CONFIG)
+      && getNotificationVapidKey()
+      && hasPushEnvironmentSupport()
+    );
+  }
+
+  async function requestNotificationPermission() {
+    if (!("Notification" in window)) return "unsupported";
+    const currentPermission = getNotificationPermission();
+    if (currentPermission !== "default") return currentPermission;
+    if (!window.Notification?.requestPermission) return currentPermission;
+    const request = window.Notification.requestPermission.bind(window.Notification);
+    if (request.length > 0) {
+      return new Promise(resolve => request(resolve));
+    }
+    return request();
   }
 
   async function hashText(value) {
@@ -263,16 +282,20 @@
   }
 
   async function enablePushNotifications(options = {}) {
+    if (!window.isSecureContext) throw new Error("Open the game with HTTPS to enable notifications.");
+    if (!("Notification" in window)) throw new Error("This browser cannot receive notifications.");
+    if (!("serviceWorker" in navigator) || !("PushManager" in window)) throw new Error("This browser cannot receive push notifications.");
+    const vapidKey = getNotificationVapidKey();
+    if (!vapidKey) throw new Error("Notifications are missing the web push key.");
+    let permission = getNotificationPermission();
+    if (permission === "default" && !options.skipPermissionRequest) {
+      permission = await requestNotificationPermission();
+    }
+    if (permission !== "granted") throw new Error("Notifications are blocked in this browser.");
     await init();
     const uid = requireSignedIn();
     if (!uid) throw new Error("Sign in to enable notifications.");
     if (!isPushSupported()) throw new Error("This browser cannot receive notifications.");
-    const vapidKey = getNotificationVapidKey();
-    let permission = getNotificationPermission();
-    if (permission === "default" && window.Notification?.requestPermission) {
-      permission = await window.Notification.requestPermission();
-    }
-    if (permission !== "granted") throw new Error("Notifications are blocked in this browser.");
     const messagingModule = await loadMessagingModule();
     const messaging = await ensureMessaging();
     const registration = await getServiceWorkerRegistration();
@@ -1124,6 +1147,7 @@
     subscribeServerReports,
     isPushSupported,
     getNotificationPermission,
+    requestNotificationPermission,
     hasNotificationVapidKey: () => Boolean(getNotificationVapidKey()),
     usesServerArmyAuthority: () => Boolean(client.functions && client.modules?.functions?.httpsCallable),
     usesServerEconomyAuthority,

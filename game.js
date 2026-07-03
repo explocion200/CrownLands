@@ -11320,7 +11320,9 @@ function updatePushAlertsUi() {
   }
   if (!supported) {
     setPushAlertsOptionState(false, true);
-    setPushAlertsStatus("Unavailable", true);
+    const hasVapidKey = Boolean(api?.hasNotificationVapidKey?.());
+    const statusText = !window.isSecureContext ? "HTTPS required" : (!hasVapidKey ? "Missing key" : "Unavailable");
+    setPushAlertsStatus(statusText, true);
     return;
   }
   if (permission === "denied") {
@@ -11387,9 +11389,23 @@ async function setPushNotificationsEnabled(enabled) {
       showToast("Notifications are blocked in this browser.");
       return;
     }
-    await exitFullscreenForNotificationPrompt();
+    if (!api?.hasNotificationVapidKey?.()) {
+      setPushNotificationsPreference(false);
+      showToast("Notifications are missing the web push key.");
+      return;
+    }
+    let permission = api?.getNotificationPermission?.() || "unsupported";
+    if (permission === "default" && api?.requestNotificationPermission) {
+      if (document.fullscreenElement) await exitFullscreenForNotificationPrompt();
+      permission = await api.requestNotificationPermission();
+    }
+    if (permission !== "granted") {
+      setPushNotificationsPreference(false);
+      showToast(permission === "denied" ? "Notifications are blocked in this browser." : "Notifications were not allowed.");
+      return;
+    }
     setPushNotificationsPreference(true);
-    await api.enablePushNotifications({ playerName: state?.playerName || "Ruler" });
+    await api.enablePushNotifications({ playerName: state?.playerName || "Ruler", skipPermissionRequest: true });
     showToast("Notifications on.");
   } catch (error) {
     if (enabled) setPushNotificationsPreference(false);
