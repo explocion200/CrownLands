@@ -5,6 +5,7 @@ const APP_BUILD_ID = getCurrentDocumentBuildId();
 const WORLD_REGIONS = getMergedWorldRegions(WORLD_CONFIG, MAP_EDITOR_DATA);
 const LAND_BRIDGES = getMergedLandBridges(WORLD_CONFIG, MAP_EDITOR_DATA);
 const REGION_CITY_COUNT = Math.max(1, Math.floor(Number(WORLD_CONFIG.cityCountPerRegion) || 50));
+const STARTER_REGION_TYPE = "starter";
 const RESET_GENERATION = "fresh-2026-07-03-profile-reset";
 const STORAGE_KEY = `crownlands-realtime-${RESET_GENERATION}`;
 const PENDING_ARMY_STORAGE_KEY = `crownlands-pending-armies-${RESET_GENERATION}`;
@@ -14,7 +15,10 @@ const ONLINE_SAVE_SECONDS = 20;
 const ONLINE_SAVE_SLOT = `default-${RESET_GENERATION}`;
 const ONLINE_WORLD_ID = `main-${RESET_GENERATION}`;
 const ONLINE_LEGACY_ISLAND_ID = ONLINE_WORLD_ID;
-const DEFAULT_ONLINE_REGION_ID = WORLD_REGIONS.find(region => region.id === "west")?.id || WORLD_REGIONS[0]?.id || "center";
+const DEFAULT_ONLINE_REGION_ID = WORLD_REGIONS.find(isStarterRegion)?.id
+  || WORLD_REGIONS.find(region => region.id === "west")?.id
+  || WORLD_REGIONS[0]?.id
+  || "center";
 const ONLINE_CITY_SYNC_SECONDS = 20;
 const ONLINE_PRESENCE_SECONDS = 30;
 const ONLINE_PRESENCE_STALE_SECONDS = 90;
@@ -86,6 +90,18 @@ function cleanEditorRegionId(value) {
     .replace(/^-+|-+$/g, "");
 }
 
+function cleanRegionType(value) {
+  return String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9_-]+/g, "_")
+    .replace(/^_+|_+$/g, "");
+}
+
+function isStarterRegion(region = null) {
+  return cleanRegionType(region?.type) === STARTER_REGION_TYPE;
+}
+
 function labelFromEditorRegionId(regionId) {
   return String(regionId || "island")
     .split(/[-_]+/)
@@ -151,9 +167,10 @@ function getMergedWorldRegions(config = {}, editorData = {}) {
     if (Number.isFinite(Number(map.gridY))) gridPatch.gridY = Math.round(Number(map.gridY));
     const fallback = buildDefaultEditorRegion(map, baseRegions.length + index, config);
     const label = map.label || map.name || regionPatch.label || existing?.label || fallback.label;
+    const type = cleanRegionType(map.type || regionPatch.type || existing?.type || fallback.type);
     const nextRegion = existing
-      ? { ...existing, ...regionPatch, ...gridPatch, id: map.id, label, palette: map.palette || regionPatch.palette || existing.palette || fallback.palette }
-      : { ...fallback, ...regionPatch, ...gridPatch, id: map.id, label };
+      ? { ...existing, ...regionPatch, ...gridPatch, id: map.id, label, type, palette: map.palette || regionPatch.palette || existing.palette || fallback.palette }
+      : { ...fallback, ...regionPatch, ...gridPatch, id: map.id, label, type };
     regionById.set(map.id, nextRegion);
   });
   return Array.from(regionById.values());
@@ -2752,6 +2769,15 @@ function getOuterRegionIds() {
   return outer.length ? outer : getRegionIds();
 }
 
+function getStarterRegionIds() {
+  return getRegionIds().filter(regionId => isStarterRegion(getRegionById(regionId)));
+}
+
+function getNewPlayerSpawnRegionIds() {
+  const starterRegionIds = getStarterRegionIds();
+  return starterRegionIds.length ? starterRegionIds : getOuterRegionIds();
+}
+
 function hashString(value) {
   let hash = 2166136261;
   for (let i = 0; i < String(value || "").length; i += 1) {
@@ -2762,7 +2788,7 @@ function hashString(value) {
 }
 
 function pickStartingRegionId() {
-  const regions = getOuterRegionIds();
+  const regions = getNewPlayerSpawnRegionIds();
   if (!regions.length) return DEFAULT_ONLINE_REGION_ID;
   const uid = getCurrentOnlineUid() || getOnlineApi()?.getUser?.()?.email || "guest";
   return regions[hashString(uid) % regions.length] || DEFAULT_ONLINE_REGION_ID;
@@ -13778,9 +13804,9 @@ function showHelpModal() {
       <li>There are no fixed roads. Active army routes appear only after troops are sent.</li>
       <li>Armies calculate the shortest land route around lakes, mountains, cities, and strongholds, then resolve when they arrive.</li>
       <li>All cities start at Level 1 and can upgrade to Level 100.</li>
-      <li>The world has five island maps and ${formatNumber(ISLAND_CITY_COUNT)} total city slots.</li>
+      <li>The world has ${formatNumber(getRegionIds().length)} maps and ${formatNumber(ISLAND_CITY_COUNT)} total city slots.</li>
       <li>The center island keeps its middle clear for a future feature.</li>
-      <li>New online players claim starting cities on the outer islands first; the center island is a fallback once those are full.</li>
+      <li>New online players claim starting cities on maps labeled starter in the map editor.</li>
       <li>Your main city starts with 50 troops. Gray cities start with 10 defending troops.</li>
       <li>Use Recruit, Level Up, and Skills to grow faster. Leveling increases walls, defense %, troop production, and gold production.</li>
       <li>Every signed-in player claims one starting city, then expands through neutral captures and player combat.</li>
