@@ -31,6 +31,15 @@ const BATTLE_XP_TROOP_CREDIT_CITY_WALL_MULTIPLIER = 1;
 const BATTLE_XP_TROOP_CREDIT_VP_MULTIPLIER = 2;
 const BATTLE_XP_LEVEL_REQUIREMENT_CAP_MULTIPLIER = 3;
 const KILL_GOLD_BASE = 5;
+const DEMO_ATTACK_MIN_POWER_RATIO = 3;
+const DEMO_ATTACK_DEFENDER_XP_MULTIPLIER = 2;
+const DEMO_ATTACK_TIERS = [
+  { minRatio: 10, label: "Severe Demo Attack", troopCapPercent: 30, attackPowerPercent: 30, travelMultiplier: 2.5 },
+  { minRatio: 5, label: "Heavy Demo Attack", troopCapPercent: 40, attackPowerPercent: 40, travelMultiplier: 2 },
+  { minRatio: DEMO_ATTACK_MIN_POWER_RATIO, label: "Demo Attack", troopCapPercent: 50, attackPowerPercent: 50, travelMultiplier: 1.6 },
+];
+const KING_POWER_PER_TROOP = 1;
+const KING_POWER_PER_CITY_VP = 10;
 const LEVEL_UP_TROOP_REWARD_BASE = 50;
 const LEVEL_UP_TROOP_REWARD_MULTIPLIER = 1.15;
 const CHARACTER_START_LEVEL = 1;
@@ -154,15 +163,97 @@ function getCityStats(city = {}, defenderProfile = null) {
   };
 }
 
+function getCityPowerFloor(city = {}) {
+  if (!city) return 0;
+  const stats = getCityStats(city);
+  const troopPower = Math.max(0, Math.floor(safeNumber(city.troops, 0))) * KING_POWER_PER_TROOP;
+  const cityPower = Math.max(0, Math.floor(safeNumber(stats.victoryPoints, 0))) * KING_POWER_PER_CITY_VP;
+  return troopPower + cityPower;
+}
+
+function getDemoAttackTier(powerRatio) {
+  const ratio = safeNumber(powerRatio, 0);
+  return DEMO_ATTACK_TIERS.find(tier => ratio >= tier.minRatio) || null;
+}
+
+function normalizeDemoAttackSnapshot(demo = null) {
+  if (!demo || typeof demo !== "object" || !demo.active) return null;
+  const attackerKingPower = Math.max(0, Math.floor(safeNumber(demo.attackerKingPower, 0)));
+  const defenderKingPower = Math.max(1, Math.floor(safeNumber(demo.defenderKingPower, 1)));
+  const powerRatio = Number.isFinite(Number(demo.powerRatio))
+    ? Number(demo.powerRatio)
+    : attackerKingPower / Math.max(1, defenderKingPower);
+  const tier = getDemoAttackTier(powerRatio);
+  if (!tier) return null;
+  const maxTroops = Math.max(1, Math.floor(safeNumber(demo.maxTroops, 1)));
+  const requestedTroops = Math.max(1, Math.floor(safeNumber(demo.requestedTroops, maxTroops)));
+  const effectiveTroops = Math.max(1, Math.min(maxTroops, Math.floor(safeNumber(demo.effectiveTroops, maxTroops))));
+  const attackPowerPercent = clampInt(demo.attackPowerPercent || tier.attackPowerPercent, 1, 100);
+  const troopCapPercent = clampInt(demo.troopCapPercent || tier.troopCapPercent, 1, 100);
+  const travelMultiplier = Math.max(1, safeNumber(demo.travelMultiplier, tier.travelMultiplier));
+  return {
+    active: true,
+    label: safeString(demo.label || tier.label || "Demo Attack", 32),
+    attackerKingPower,
+    defenderKingPower,
+    powerRatio: Number(powerRatio.toFixed(2)),
+    requestedTroops,
+    effectiveTroops,
+    maxTroops,
+    troopCapPercent,
+    attackPowerPercent,
+    attackPowerMultiplier: attackPowerPercent / 100,
+    travelMultiplier,
+    attackerXpMultiplier: 0,
+    defenderXpMultiplier: DEMO_ATTACK_DEFENDER_XP_MULTIPLIER,
+  };
+}
+
+function createServerDemoAttackSnapshot({ sourceTroops = 1, target = null, requestedTroops = 1, attackerKingPower = 0, defenderKingPower = 1, attackerUid = "" } = {}) {
+  if (!target || isStronghold(target)) return null;
+  const targetOwnerUid = getOwnerUid(target);
+  if (!targetOwnerUid || targetOwnerUid === attackerUid) return null;
+  const attackerPower = Math.max(0, Math.floor(safeNumber(attackerKingPower, 0)));
+  const defenderPower = Math.max(1, Math.floor(safeNumber(defenderKingPower, 1)));
+  const powerRatio = attackerPower / Math.max(1, defenderPower);
+  const tier = getDemoAttackTier(powerRatio);
+  if (!tier) return null;
+  const availableTroops = Math.max(1, Math.floor(safeNumber(sourceTroops, 1)));
+  const requested = clampInt(requestedTroops, 1, availableTroops);
+  const targetWalls = Math.max(1, Math.floor(safeNumber(getCityStats(target).cityWalls, 1)));
+  const capByWalls = Math.max(1, Math.floor(targetWalls * tier.troopCapPercent / 100));
+  const maxTroops = Math.max(1, Math.min(availableTroops, capByWalls));
+  return normalizeDemoAttackSnapshot({
+    active: true,
+    label: tier.label,
+    attackerKingPower: attackerPower,
+    defenderKingPower: defenderPower,
+    powerRatio,
+    requestedTroops: requested,
+    effectiveTroops: Math.min(requested, maxTroops),
+    maxTroops,
+    troopCapPercent: tier.troopCapPercent,
+    attackPowerPercent: tier.attackPowerPercent,
+    travelMultiplier: tier.travelMultiplier,
+  });
+}
+
+function applyDemoDefenderXpMultiplier(xp, demoAttack) {
+  const base = Math.max(0, Math.floor(safeNumber(xp, 0)));
+  const demo = normalizeDemoAttackSnapshot(demoAttack);
+  return demo ? Math.floor(base * demo.defenderXpMultiplier) : base;
+}
+
 function getAttackPower(troops, attackerProfile = null) {
   const boost = attackerProfile ? skillMultiplier(attackerProfile, "striker") : 1;
   return troops * BASE_TROOP_ATTACK_POWER * boost;
 }
 
-function calculateCombatResult(attackTroops, target, attackerProfile = null, defenderProfile = null) {
+function calculateCombatResult(attackTroops, target, attackerProfile = null, defenderProfile = null, options = {}) {
   const troops = Math.max(0, Math.floor(safeNumber(attackTroops, 0)));
   const defendersAtStart = Math.max(0, Math.floor(safeNumber(target?.troops, 0)));
-  const attackPower = getAttackPower(troops, attackerProfile);
+  const demoAttack = normalizeDemoAttackSnapshot(options.demoAttack);
+  const attackPower = getAttackPower(troops, attackerProfile) * (demoAttack?.attackPowerMultiplier || 1);
   const defensePower = getCityStats(target, defenderProfile).totalDefense;
   const ratio = attackPower / Math.max(1, defensePower);
   const success = attackPower > defensePower;
@@ -195,6 +286,7 @@ function calculateCombatResult(attackTroops, target, attackerProfile = null, def
     defenderLosses,
     killedAttackers: attackerLosses,
     killedDefenders: defenderLosses,
+    demoAttack,
   };
 }
 
@@ -282,12 +374,13 @@ function getTroopTravelMultiplier(troops) {
   return ARMY_TRAVEL_TROOP_BAND_MULTIPLIERS[getTroopTravelBandIndex(troops)] || 1;
 }
 
-function calculateTravelTime({ pathLength = 0, troopCount = 1, kind = "attack", requestedTotal = 0 }) {
+function calculateTravelTime({ pathLength = 0, troopCount = 1, kind = "attack", requestedTotal = 0, demoAttack = null }) {
   const distance = Math.max(1, safeNumber(pathLength, 1));
   const kindMultiplier = ARMY_TRAVEL_KIND_MULTIPLIERS[kind] || ARMY_TRAVEL_KIND_MULTIPLIERS.attack;
   const troopMultiplier = getTroopTravelMultiplier(troopCount);
+  const demoMultiplier = normalizeDemoAttackSnapshot(demoAttack)?.travelMultiplier || 1;
   const minSeconds = kind === "scout" ? ARMY_TRAVEL_SCOUT_MIN_SECONDS : ARMY_TRAVEL_MIN_SECONDS;
-  const computed = clamp(distance * ARMY_TRAVEL_SECONDS_PER_MAP_UNIT * kindMultiplier * troopMultiplier, minSeconds, ARMY_TRAVEL_MAX_SECONDS);
+  const computed = clamp(distance * ARMY_TRAVEL_SECONDS_PER_MAP_UNIT * kindMultiplier * troopMultiplier * demoMultiplier, minSeconds, ARMY_TRAVEL_MAX_SECONDS);
   const requested = safeNumber(requestedTotal, computed);
   return clamp(Math.max(computed, requested), minSeconds, ARMY_TRAVEL_MAX_SECONDS);
 }
@@ -381,6 +474,7 @@ function normalizeArmyPayload(data = {}, uid = "") {
     targetOwnerAtLaunch: safeString(raw.targetOwnerAtLaunch || "neutral", 32),
     attackerKingPower: Math.max(0, Math.floor(safeNumber(raw.attackerKingPower || raw.ownerKingPower, 0))),
     defenderKingPower: Math.max(0, Math.floor(safeNumber(raw.defenderKingPower, 0))),
+    demoAttack: raw.demoAttack && typeof raw.demoAttack === "object" ? raw.demoAttack : null,
   };
 }
 
@@ -602,8 +696,13 @@ exports.sendArmyOrder = onCall({ region: "us-central1", maxInstances: 20 }, asyn
 
     const source = { id: sourceSnap.id, ...sourceSnap.data() };
     const target = { id: targetSnap.id, ...targetSnap.data() };
+    const playerData = playerSnap.exists ? playerSnap.data() || {} : {};
     const sourceOwnerUid = getOwnerUid(source);
     const targetOwnerUid = getOwnerUid(target);
+    const defenderPowerSnap = targetOwnerUid && targetOwnerUid !== uid
+      ? await transaction.get(db.doc(`players/${targetOwnerUid}`))
+      : null;
+    const defenderPowerData = defenderPowerSnap?.exists ? defenderPowerSnap.data() || {} : {};
     if (sourceOwnerUid !== uid) {
       throw new HttpsError("permission-denied", "You can only send troops from your own city.");
     }
@@ -617,7 +716,29 @@ exports.sendArmyOrder = onCall({ region: "us-central1", maxInstances: 20 }, asyn
     const requestedTroops = resolvedKind === "scout"
       ? 1
       : clampInt(order.requestedTroops || order.troops || Math.floor(sourceTroops * DEFAULT_MARCH_PERCENT), 1, Math.max(1, sourceTroops));
-    const troops = resolvedKind === "scout" ? 1 : requestedTroops;
+    const attackerKingPower = Math.max(
+      0,
+      Math.floor(safeNumber(playerData.kingPower, 0)),
+      Math.floor(safeNumber(order.ownerKingPower, 0)),
+      Math.floor(safeNumber(order.attackerKingPower, 0))
+    );
+    const defenderKingPower = Math.max(
+      1,
+      Math.floor(safeNumber(target.ownerKingPower, 0)),
+      Math.floor(safeNumber(defenderPowerData.kingPower, 0)),
+      Math.floor(getCityPowerFloor(target))
+    );
+    const demoAttack = resolvedKind === "attack"
+      ? createServerDemoAttackSnapshot({
+        sourceTroops,
+        target,
+        requestedTroops,
+        attackerKingPower,
+        defenderKingPower,
+        attackerUid: uid,
+      })
+      : null;
+    const troops = resolvedKind === "scout" ? 1 : (demoAttack?.effectiveTroops || requestedTroops);
 
     if (sourceTroops < troops) throw new HttpsError("failed-precondition", "Not enough troops in the source city.");
     if (resolvedKind === "attack") {
@@ -634,6 +755,7 @@ exports.sendArmyOrder = onCall({ region: "us-central1", maxInstances: 20 }, asyn
       troopCount: troops,
       kind: resolvedKind,
       requestedTotal: order.total,
+      demoAttack,
     });
     const movement = {
       id: order.id,
@@ -657,8 +779,9 @@ exports.sendArmyOrder = onCall({ region: "us-central1", maxInstances: 20 }, asyn
       routeRegionIds: order.routeRegionIds,
       pathLength: order.pathLength,
       targetOwnerAtLaunch: targetOwnerUid ? "player" : "neutral",
-      attackerKingPower: order.attackerKingPower || order.ownerKingPower,
-      defenderKingPower: order.defenderKingPower,
+      attackerKingPower: attackerKingPower || order.attackerKingPower || order.ownerKingPower,
+      defenderKingPower,
+      demoAttack,
       launchedAtMs: nowMs,
       arrivesAtMs: nowMs + Math.ceil(duration * 1000),
       status: "active",
@@ -671,7 +794,6 @@ exports.sendArmyOrder = onCall({ region: "us-central1", maxInstances: 20 }, asyn
       troopFloat: Math.max(0, safeNumber(source.troopFloat, sourceTroops) - troops),
     }), { merge: true });
 
-    const playerData = playerSnap.exists ? playerSnap.data() || {} : {};
     if (resolvedKind === "attack" && targetOwnerUid && targetOwnerUid !== uid) {
       const itemEffects = playerData.itemEffects && typeof playerData.itemEffects === "object" ? { ...playerData.itemEffects } : {};
       if (safeNumber(itemEffects.shieldExpiresAtMs, 0) > nowMs) {
@@ -872,10 +994,11 @@ exports.resolveArmyOrder = onCall({ region: "us-central1", maxInstances: 30 }, a
 
     const oldOwnerUid = defenderUid;
     const defendersAtStart = Math.max(0, Math.floor(safeNumber(target.troops, 0)));
-    const result = calculateCombatResult(troopCount, target, attackerProfile, defenderProfile);
-    const attackWinXp = getCaptureXpAward(target, oldOwnerUid, result.defenderLosses, defenderProfile);
-    const attackFailXp = getPartialBattleXpAward(getCaptureXpAward(target, oldOwnerUid, defendersAtStart, defenderProfile));
-    const defenseHeldXp = getDefenseHeldXpAward(troopCount, target, defenderProfile);
+    const demoAttack = normalizeDemoAttackSnapshot(army.demoAttack);
+    const result = calculateCombatResult(troopCount, target, attackerProfile, defenderProfile, { demoAttack });
+    const attackWinXp = demoAttack ? 0 : getCaptureXpAward(target, oldOwnerUid, result.defenderLosses, defenderProfile);
+    const attackFailXp = demoAttack ? 0 : getPartialBattleXpAward(getCaptureXpAward(target, oldOwnerUid, defendersAtStart, defenderProfile));
+    const defenseHeldXp = applyDemoDefenderXpMultiplier(getDefenseHeldXpAward(troopCount, target, defenderProfile), demoAttack);
     const defenseLostXp = getPartialBattleXpAward(defenseHeldXp);
     const attackerScavengerGold = Math.floor(result.killedDefenders * KILL_GOLD_BASE * getSkillPercent(attackerProfile, "scavenger") / 100);
     const defenderSalvagerGold = defenderProfile

@@ -3,7 +3,6 @@
   const REQUIRED_CONFIG_KEYS = ["apiKey", "authDomain", "projectId", "appId"];
   const ROYAL_PEACE_SHIELD_ITEM_ID = "shield_12h";
   const ROYAL_PEACE_SHIELD_COST = 175_000;
-  const ROYAL_PEACE_SHIELD_PURCHASE_COOLDOWN_MS = 24 * 60 * 60 * 1000;
 
   const client = {
     configured: false,
@@ -13,6 +12,7 @@
     app: null,
     auth: null,
     db: null,
+    functions: null,
     provider: null,
     modules: null,
     initPromise: null,
@@ -41,12 +41,13 @@
   }
 
   async function loadModules() {
-    const [app, auth, firestore] = await Promise.all([
+    const [app, auth, firestore, functions] = await Promise.all([
       import(`https://www.gstatic.com/firebasejs/${FIREBASE_VERSION}/firebase-app.js`),
       import(`https://www.gstatic.com/firebasejs/${FIREBASE_VERSION}/firebase-auth.js`),
       import(`https://www.gstatic.com/firebasejs/${FIREBASE_VERSION}/firebase-firestore.js`),
+      import(`https://www.gstatic.com/firebasejs/${FIREBASE_VERSION}/firebase-functions.js`),
     ]);
-    return { app, auth, firestore };
+    return { app, auth, firestore, functions };
   }
 
   async function init() {
@@ -67,6 +68,7 @@
         client.app = client.modules.app.initializeApp(config);
         client.auth = client.modules.auth.getAuth(client.app);
         client.db = client.modules.firestore.getFirestore(client.app);
+        client.functions = client.modules.functions.getFunctions(client.app);
         client.provider = new client.modules.auth.GoogleAuthProvider();
 
         client.modules.auth.onAuthStateChanged(client.auth, user => {
@@ -93,14 +95,24 @@
     return client.user.uid;
   }
 
-  function timestampToMs(value) {
-    if (!value) return 0;
-    if (typeof value.toMillis === "function") return Math.max(0, Math.floor(Number(value.toMillis()) || 0));
-    if (Number.isFinite(Number(value))) return Math.max(0, Math.floor(Number(value)));
-    if (Number.isFinite(Number(value.seconds))) {
-      return Math.max(0, Math.floor(Number(value.seconds) * 1000 + (Number(value.nanoseconds) || 0) / 1_000_000));
+  async function callServerFunction(name, payload = {}) {
+    await init();
+    const uid = requireSignedIn();
+    if (!uid) throw new Error("Sign in to use server multiplayer.");
+    if (!client.functions || !client.modules?.functions?.httpsCallable) {
+      throw new Error("Firebase Functions did not load.");
     }
-    return 0;
+    const callable = client.modules.functions.httpsCallable(client.functions, name);
+    const result = await callable(sanitizeForFirestore(payload) || {});
+    return result?.data || null;
+  }
+
+  async function sendArmyOrder(payload = {}) {
+    return callServerFunction("sendArmyOrder", payload);
+  }
+
+  async function resolveArmyOrder(payload = {}) {
+    return callServerFunction("resolveArmyOrder", payload);
   }
 
   function normalizeShopItemsForPurchase(items = {}) {
@@ -111,6 +123,24 @@
 
   function normalizeItemPurchaseCooldowns(cooldowns = {}) {
     return cooldowns && typeof cooldowns === "object" ? { ...cooldowns } : {};
+  }
+
+  function sanitizeForFirestore(value) {
+    if (value === undefined) return undefined;
+    if (value === null || typeof value !== "object") return value;
+    if (Array.isArray(value)) {
+      return value.map(item => {
+        const sanitized = sanitizeForFirestore(item);
+        return sanitized === undefined ? null : sanitized;
+      });
+    }
+
+    const sanitizedObject = {};
+    Object.entries(value).forEach(([key, entry]) => {
+      const sanitized = sanitizeForFirestore(entry);
+      if (sanitized !== undefined) sanitizedObject[key] = sanitized;
+    });
+    return sanitizedObject;
   }
 
   function rememberLogin() {
@@ -160,12 +190,13 @@
     if (!uid) return false;
     const { doc, setDoc, serverTimestamp } = client.modules.firestore;
     const ref = doc(client.db, "players", uid);
+    const cleanProfile = sanitizeForFirestore(profile);
     await setDoc(ref, {
       uid,
       displayName: client.user.displayName || "",
       email: client.user.email || "",
       photoURL: client.user.photoURL || "",
-      ...profile,
+      ...cleanProfile,
       updatedAt: serverTimestamp(),
     }, { merge: true });
     return true;
@@ -207,12 +238,6 @@
 
       const cooldowns = normalizeItemPurchaseCooldowns(data.itemPurchaseCooldowns);
       const shieldCooldown = cooldowns[ROYAL_PEACE_SHIELD_ITEM_ID] || {};
-      const lastPurchasedAtMs = timestampToMs(shieldCooldown.lastPurchasedAt || shieldCooldown.lastPurchasedAtMs);
-      const remainingMs = lastPurchasedAtMs + ROYAL_PEACE_SHIELD_PURCHASE_COOLDOWN_MS - nowMs;
-      if (lastPurchasedAtMs && remainingMs > 0) {
-        const minutes = Math.ceil(remainingMs / 60000);
-        throw new Error(`Royal Peace Shield can be bought again in ${minutes} minute${minutes === 1 ? "" : "s"}.`);
-      }
 
       const shopItems = normalizeShopItemsForPurchase(data.shopItems);
       shopItems[ROYAL_PEACE_SHIELD_ITEM_ID] += 1;
@@ -252,11 +277,12 @@
     if (!uid || !snapshot) return false;
     const { doc, setDoc, serverTimestamp } = client.modules.firestore;
     const ref = doc(client.db, "players", uid, "saves", slot);
+    const cleanSnapshot = sanitizeForFirestore(snapshot);
     await setDoc(ref, {
-      version: Number(snapshot.version) || 0,
-      playerName: snapshot.playerName || "",
-      gameSeconds: Number(snapshot.gameSeconds) || 0,
-      state: snapshot,
+      version: Number(cleanSnapshot.version) || 0,
+      playerName: cleanSnapshot.playerName || "",
+      gameSeconds: Number(cleanSnapshot.gameSeconds) || 0,
+      state: cleanSnapshot,
       updatedAt: serverTimestamp(),
     }, { merge: true });
     return true;
@@ -331,79 +357,6 @@
       artSrc: isStronghold ? String(city.artSrc || "").slice(0, 160) : "",
       startTroops: isStronghold ? Math.max(0, Math.floor(Number(city.startTroops) || Number(city.troops) || 0)) : 0,
       defense: 1,
-    };
-  }
-
-  function cleanDemoAttack(demo = null) {
-    if (!demo || typeof demo !== "object" || !demo.active) return null;
-    return {
-      active: true,
-      label: String(demo.label || "Demo Attack").slice(0, 32),
-      attackerKingPower: Math.max(0, Math.floor(Number(demo.attackerKingPower) || 0)),
-      defenderKingPower: Math.max(1, Math.floor(Number(demo.defenderKingPower) || 1)),
-      powerRatio: Math.max(0, Number(demo.powerRatio) || 0),
-      requestedTroops: Math.max(1, Math.floor(Number(demo.requestedTroops) || 1)),
-      effectiveTroops: Math.max(1, Math.floor(Number(demo.effectiveTroops) || 1)),
-      maxTroops: Math.max(1, Math.floor(Number(demo.maxTroops) || 1)),
-      troopCapPercent: Math.max(1, Math.floor(Number(demo.troopCapPercent) || 100)),
-      attackPowerPercent: Math.max(1, Math.floor(Number(demo.attackPowerPercent) || 100)),
-      travelMultiplier: Math.max(1, Number(demo.travelMultiplier) || 1),
-      defenderXpMultiplier: Math.max(1, Number(demo.defenderXpMultiplier) || 1),
-    };
-  }
-
-  function cleanArmyMovement(army) {
-    const path = Array.isArray(army?.path)
-      ? army.path
-          .map(point => ({ x: Number(point?.x) || 0, y: Number(point?.y) || 0 }))
-          .filter(point => Number.isFinite(point.x) && Number.isFinite(point.y))
-      : [];
-    const pathSegments = Array.isArray(army?.pathSegments)
-      ? army.pathSegments
-          .map(segment => {
-            const points = Array.isArray(segment?.points)
-              ? segment.points
-                  .map(point => ({ x: Number(point?.x) || 0, y: Number(point?.y) || 0 }))
-                  .filter(point => Number.isFinite(point.x) && Number.isFinite(point.y))
-              : [];
-            if (points.length < 2) return null;
-            return {
-              regionId: String(segment.regionId || "").slice(0, 64),
-              points,
-              length: Math.max(0, Number(segment.length) || 0),
-            };
-          })
-          .filter(Boolean)
-      : [];
-    const routeRegionIds = Array.isArray(army?.routeRegionIds)
-      ? [...new Set(army.routeRegionIds.map(regionId => String(regionId || "").slice(0, 64)).filter(Boolean))]
-      : [];
-    return {
-      id: String(army?.id || "").slice(0, 96),
-      ownerKind: army?.ownerKind || "player",
-      ownerUid: army?.ownerUid || client.user?.uid || null,
-      ownerName: String(army?.ownerName || client.user?.displayName || "Ruler").slice(0, 32),
-      ownerFlag: army?.ownerFlag || null,
-      ownerKingPower: Math.max(0, Math.floor(Number(army?.ownerKingPower) || 0)),
-      kind: ["attack", "transfer", "scout"].includes(army?.kind) ? army.kind : "attack",
-      fromId: String(army?.fromId || ""),
-      toId: String(army?.toId || ""),
-      fromName: String(army?.fromName || "").slice(0, 40),
-      toName: String(army?.toName || "").slice(0, 40),
-      troops: Math.max(0, Math.floor(Number(army?.troops) || 0)),
-      total: Math.max(0.1, Number(army?.total) || 0.1),
-      path,
-      pathSegments,
-      routeRegionIds,
-      pathLength: Math.max(0, Number(army?.pathLength) || 0),
-      targetOwnerAtLaunch: String(army?.targetOwnerAtLaunch || "neutral"),
-      requestedTroops: Math.max(0, Math.floor(Number(army?.requestedTroops) || 0)),
-      attackerKingPower: Math.max(0, Math.floor(Number(army?.attackerKingPower) || 0)),
-      defenderKingPower: Math.max(0, Math.floor(Number(army?.defenderKingPower) || 0)),
-      demoAttack: cleanDemoAttack(army?.demoAttack),
-      launchedAtMs: Math.max(0, Number(army?.launchedAtMs) || Date.now()),
-      arrivesAtMs: Math.max(0, Number(army?.arrivesAtMs) || Date.now()),
-      status: army?.status || "active",
     };
   }
 
@@ -723,43 +676,6 @@
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
   }
 
-  async function saveArmyMovement(islandId = "main", army = {}) {
-    await init();
-    const uid = requireSignedIn();
-    if (!uid || !army?.id) return false;
-    const { doc, setDoc, serverTimestamp } = client.modules.firestore;
-    const cleanArmy = cleanArmyMovement({ ...army, ownerUid: uid });
-    if (!cleanArmy.id || !cleanArmy.fromId || !cleanArmy.toId) return false;
-    await setDoc(doc(client.db, "islands", islandId, "armies", cleanArmy.id), {
-      ...cleanArmy,
-      updatedAt: serverTimestamp(),
-    }, { merge: true });
-    return true;
-  }
-
-  async function deleteArmyMovement(islandId = "main", armyId = "") {
-    await init();
-    const uid = requireSignedIn();
-    const safeArmyId = String(armyId || "");
-    if (!uid || !safeArmyId) return false;
-    const { doc, deleteDoc, setDoc, serverTimestamp } = client.modules.firestore;
-    const armyRef = doc(client.db, "islands", islandId, "armies", safeArmyId);
-    if (deleteDoc) {
-      try {
-        await deleteDoc(armyRef);
-        return true;
-      } catch (error) {
-        console.warn("Could not delete resolved army; marking it resolved instead.", error);
-      }
-    }
-    await setDoc(armyRef, {
-      status: "resolved",
-      resolvedAtMs: Date.now(),
-      updatedAt: serverTimestamp(),
-    }, { merge: true });
-    return true;
-  }
-
   async function savePresence(islandId = "main", presence = {}) {
     await init();
     const uid = requireSignedIn();
@@ -917,6 +833,41 @@
     return results;
   }
 
+  async function loadServerReports(limitCount = 120) {
+    await init();
+    const uid = requireSignedIn();
+    if (!uid) return [];
+    const { collection, getDocs, query: firestoreQuery, orderBy, limit } = client.modules.firestore;
+    const reportsRef = collection(client.db, "players", uid, "serverReports");
+    const safeLimit = Math.max(1, Math.min(200, Math.floor(Number(limitCount) || 120)));
+    const reportsQuery = firestoreQuery && orderBy && limit
+      ? firestoreQuery(reportsRef, orderBy("createdAtMs", "desc"), limit(safeLimit))
+      : reportsRef;
+    const snapshot = await getDocs(reportsQuery);
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  }
+
+  function subscribeServerReports(handlers = {}) {
+    if (!client.configured || !client.db || !client.user?.uid) return () => {};
+    const { collection, onSnapshot, query: firestoreQuery, orderBy, limit } = client.modules.firestore;
+    const reportsRef = collection(client.db, "players", client.user.uid, "serverReports");
+    const reportsQuery = firestoreQuery && orderBy && limit
+      ? firestoreQuery(reportsRef, orderBy("createdAtMs", "desc"), limit(120))
+      : reportsRef;
+    const unsubscribe = onSnapshot(
+      reportsQuery,
+      snapshot => {
+        if (typeof handlers.onReports === "function") {
+          handlers.onReports(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+        }
+      },
+      error => {
+        if (typeof handlers.onError === "function") handlers.onError(error, "serverReports");
+      }
+    );
+    return unsubscribe;
+  }
+
   function subscribeIsland(islandId, handlers = {}) {
     if (!client.configured || !client.db || !islandId) return () => {};
     const { collection, doc, onSnapshot, query: firestoreQuery, where } = client.modules.firestore;
@@ -973,20 +924,23 @@
     purchaseShopItem,
     saveGameSnapshot,
     loadGameSnapshot,
+    sendArmyOrder,
+    resolveArmyOrder,
     ensureMainIsland,
     claimStartingCity,
     savePlayerCities,
     saveCityState,
     loadIslandCities,
-    saveArmyMovement,
-    deleteArmyMovement,
     savePresence,
     saveKingPowerLeaderboardEntry,
     loadKingPowerLeaderboard,
     loadKingPowerPresenceLeaderboard,
     loadIslandCitySummary,
     loadOwnedCitiesAcrossIslands,
+    loadServerReports,
     subscribeIsland,
+    subscribeServerReports,
+    usesServerArmyAuthority: () => Boolean(client.functions && client.modules?.functions?.httpsCallable),
     isConfigured: () => client.configured,
     isReady: () => client.ready,
     isSignedIn: () => Boolean(client.user?.uid),

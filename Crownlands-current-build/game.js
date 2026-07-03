@@ -145,11 +145,14 @@ function getMergedWorldRegions(config = {}, editorData = {}) {
   editorMaps.forEach((map, index) => {
     const existing = regionById.get(map.id);
     const regionPatch = map.region && typeof map.region === "object" ? map.region : {};
+    const gridPatch = {};
+    if (Number.isFinite(Number(map.gridX))) gridPatch.gridX = Math.round(Number(map.gridX));
+    if (Number.isFinite(Number(map.gridY))) gridPatch.gridY = Math.round(Number(map.gridY));
     const fallback = buildDefaultEditorRegion(map, baseRegions.length + index, config);
     const label = map.label || map.name || regionPatch.label || existing?.label || fallback.label;
     const nextRegion = existing
-      ? { ...existing, ...regionPatch, id: map.id, label, palette: map.palette || regionPatch.palette || existing.palette || fallback.palette }
-      : { ...fallback, ...regionPatch, id: map.id, label };
+      ? { ...existing, ...regionPatch, ...gridPatch, id: map.id, label, palette: map.palette || regionPatch.palette || existing.palette || fallback.palette }
+      : { ...fallback, ...regionPatch, ...gridPatch, id: map.id, label };
     regionById.set(map.id, nextRegion);
   });
   return Array.from(regionById.values());
@@ -164,8 +167,8 @@ function getMergedLandBridges(config = {}, editorData = {}) {
 const MAIN_CITY_CHANGE_CITY_LIMIT = 30;
 const MAIN_CITY_CHANGE_COOLDOWN_MS = 24 * 60 * 60 * 1000;
 const MAX_OFFLINE_PROGRESS_SECONDS = 7 * 24 * 60 * 60;
-const WORLD_WIDTH = Math.max(1, Math.floor(Number(WORLD_CONFIG.width) || 10000));
-const WORLD_HEIGHT = Math.max(1, Math.floor(Number(WORLD_CONFIG.height) || 7600));
+const WORLD_WIDTH = Math.max(1, Math.floor(Number(MAP_EDITOR_DATA?.globalSettings?.worldWidth || WORLD_CONFIG.width) || 10000));
+const WORLD_HEIGHT = Math.max(1, Math.floor(Number(MAP_EDITOR_DATA?.globalSettings?.worldHeight || WORLD_CONFIG.height) || 7600));
 const GRID_SIZE = Math.max(40, Math.floor(Number(WORLD_CONFIG.gridSize) || 50));
 const GRID_COLS = Math.ceil(WORLD_WIDTH / GRID_SIZE);
 const GRID_ROWS = Math.ceil(WORLD_HEIGHT / GRID_SIZE);
@@ -178,8 +181,13 @@ const LOW_ZOOM_PERFORMANCE_THRESHOLD = 0.72;
 const ISLAND_MAP_PADDING = 560;
 const TROOP_PICKUP_ICON_SRC = "assets/troop-pickup.png?v=20260702-troop-pickup-art";
 const GOLD_PICKUP_ICON_SRC = "assets/gold-pickup.png?v=20260702-gold-pickup-art";
-const DEFAULT_PORTAL_VISUAL_SIZE = 96;
-const MIN_PORTAL_VISUAL_SIZE = 48;
+const MAP_SWITCH_ARROW_ICON_SRC = "assets/map-switch-arrow.png?v=20260702-map-arrow-bigger";
+const DEFAULT_PORTAL_VISUAL_SIZE = 92;
+const MIN_PORTAL_VISUAL_SIZE = 60;
+const EDGE_TRANSITION_ROUTE_INSET_MIN = 24;
+const EDGE_TRANSITION_ROUTE_INSET_MAX = 58;
+const EDGE_TRANSITION_ARROW_INSET_MIN = 96;
+const EDGE_TRANSITION_ARROW_INSET_MAX = 180;
 const DEFAULT_STRONGHOLD_VISUAL_SIZE = 154;
 const MIN_STRONGHOLD_VISUAL_SIZE = 80;
 const GOLD_STRONGHOLD_ID = "west_gold_stronghold";
@@ -477,7 +485,7 @@ const HARVEST_BONUS_TROOP_SECONDS = 300;
 const HARVEST_BONUS_MIN_TROOPS = 50;
 const HARVEST_BONUS_MAX_TROOPS = 2500;
 const HARVEST_BONUS_CITY_CLEARANCE = 132;
-const HARVEST_BONUS_PORTAL_CLEARANCE = 148;
+const HARVEST_BONUS_TRANSITION_CLEARANCE = 148;
 const HARVEST_BONUS_PICKUP_CLEARANCE = 116;
 const HARVEST_BONUS_TERRAIN_PADDING = 22;
 const HARVEST_BONUS_LAND_CLEARANCE = 64;
@@ -599,12 +607,13 @@ function getCastleStage(level) {
 }
 
 function getCastleAsset(stage) {
+  const version = "v=20260702-city-level-art";
   const assets = {
-    1: "assets/castles/shack.png",
-    2: "assets/castles/fort.png",
-    3: "assets/castles/keep.png",
-    4: "assets/castles/castle.png",
-    5: "assets/castles/city.png",
+    1: `assets/castles/shack.png?${version}`,
+    2: `assets/castles/fort.png?${version}`,
+    3: `assets/castles/keep.png?${version}`,
+    4: `assets/castles/castle.png?${version}`,
+    5: `assets/castles/city.png?${version}`,
   };
   return assets[stage] || assets[1];
 }
@@ -2113,6 +2122,7 @@ let onlineLastSaveAt = 0;
 let onlineLastError = "";
 let onlineArmySavePromises = new Set();
 let onlineCityStateSavePromises = new Set();
+let pendingServerArmyLaunchKeys = new Set();
 let onlineIslandUnsubscribe = null;
 let onlineWorldLoading = false;
 let onlineWorldConnected = false;
@@ -2127,6 +2137,8 @@ let onlineCitySyncQueued = false;
 let onlineArmies = [];
 let onlineArmiesByIsland = new Map();
 let onlineArmyUnsubscribes = [];
+let onlineServerReportsUnsubscribe = null;
+let appliedServerReportIds = new Set();
 let resolvingOnlineArmyIds = new Set();
 let resolvedOnlineArmyIds = new Set();
 let onlinePresence = [];
@@ -3500,17 +3512,19 @@ function renderIslandTeleporters() {
   getActiveIslandTeleporters().forEach(teleport => {
     const portalPoint = worldToMapPoint(teleport.worldPoint);
     const buttonElement = document.createElement("button");
+    const targetLabel = getRegionLabel(teleport.targetRegionId);
     buttonElement.type = "button";
     buttonElement.className = `teleport-node ${teleport.className || ""}`.trim();
     buttonElement.dataset.targetRegion = teleport.targetRegionId;
+    buttonElement.dataset.transitionSide = teleport.side || "";
     buttonElement.style.left = `${portalPoint.x}px`;
     buttonElement.style.top = `${portalPoint.y}px`;
     buttonElement.style.setProperty("--teleport-size", `${getPortalVisualSize(teleport)}px`);
-    buttonElement.setAttribute("aria-label", `Teleport to ${getRegionLabel(teleport.targetRegionId)}`);
+    buttonElement.setAttribute("aria-label", `Go to ${targetLabel}`);
+    buttonElement.title = `Go to ${targetLabel}`;
     buttonElement.innerHTML = `
-      <span class="teleport-ring" aria-hidden="true"></span>
-      <span class="teleport-symbol" aria-hidden="true">&#10022;</span>
-      <span class="teleport-label">${escapeHtml(teleport.label)}</span>
+      <img class="teleport-arrow-icon" src="${MAP_SWITCH_ARROW_ICON_SRC}" alt="" draggable="false" decoding="async" aria-hidden="true" />
+      <span class="teleport-label">${escapeHtml(teleport.label || targetLabel)}</span>
     `;
     buttonElement.addEventListener("click", event => {
       event.stopPropagation();
@@ -3561,39 +3575,95 @@ function getEditorEdgeConnectionDefinitions(regionId) {
   return ["north", "south", "east", "west"].flatMap(side => {
     const zones = Array.isArray(edgeConnections[side]) ? edgeConnections[side] : [];
     return zones
-      .filter(zone => normalizeRegionId(zone?.connectsToRegionId) && !zone?.intentionalOuter)
-      .map(zone => ({ ...zone, side }));
+      .map(zone => {
+        const targetRegionId = getEdgeConnectionTargetRegionId(zone);
+        return targetRegionId && !zone?.intentionalOuter ? { ...zone, side, targetRegionId } : null;
+      })
+      .filter(Boolean);
   });
 }
 
-function createEditorPortalFromEdgeConnection(regionId, zone) {
-  const dimensions = getIslandImageDimensions(regionId);
-  const side = String(zone?.side || "north").toLowerCase();
+function getEdgeConnectionTargetRegionId(zone) {
+  const targetRegionId = cleanEditorRegionId(zone?.connectsToRegionId || zone?.targetRegionId || zone?.target);
+  return getRegionById(targetRegionId) ? targetRegionId : "";
+}
+
+function getEdgeConnectionMidpoint(zone) {
   const start = clamp(Number(zone?.start) || 0, 0, 1);
   const end = clamp(Number(zone?.end) || start, 0, 1);
-  const along = clamp((start + end) / 2, 0, 1);
-  const point = {
-    x: (side === "west" ? 0 : side === "east" ? 1 : along) * dimensions.width,
-    y: (side === "north" ? 0 : side === "south" ? 1 : along) * dimensions.height,
+  return clamp((Math.min(start, end) + Math.max(start, end)) / 2, 0, 1);
+}
+
+function getEdgeConnectionInset(dimensions, mode = "route") {
+  const shortestSide = Math.max(1, Math.min(Number(dimensions?.width) || 1, Number(dimensions?.height) || 1));
+  if (mode === "arrow") {
+    return clamp(Math.round(shortestSide * 0.085), EDGE_TRANSITION_ARROW_INSET_MIN, EDGE_TRANSITION_ARROW_INSET_MAX);
+  }
+  return clamp(Math.round(shortestSide * 0.024), EDGE_TRANSITION_ROUTE_INSET_MIN, EDGE_TRANSITION_ROUTE_INSET_MAX);
+}
+
+function getEdgeConnectionImagePoint(regionId, zone, mode = "route") {
+  const dimensions = getIslandImageDimensions(regionId);
+  const side = String(zone?.side || "north").toLowerCase();
+  if (mode === "arrow"
+    && Number.isFinite(Number(zone?.arrowXNorm))
+    && Number.isFinite(Number(zone?.arrowYNorm))) {
+    return {
+      x: clamp(Number(zone.arrowXNorm), 0, 1) * dimensions.width,
+      y: clamp(Number(zone.arrowYNorm), 0, 1) * dimensions.height,
+    };
+  }
+  const along = getEdgeConnectionMidpoint(zone);
+  const inset = getEdgeConnectionInset(dimensions, mode);
+  return {
+    x: side === "west" ? inset : side === "east" ? dimensions.width - inset : along * dimensions.width,
+    y: side === "north" ? inset : side === "south" ? dimensions.height - inset : along * dimensions.height,
   };
-  const targetRegionId = normalizeRegionId(zone?.connectsToRegionId);
+}
+
+function getEdgeTransitionArrowSymbol(side) {
+  const normalizedSide = String(side || "").toLowerCase();
+  if (normalizedSide === "north") return "\u2191";
+  if (normalizedSide === "south") return "\u2193";
+  if (normalizedSide === "west") return "\u2190";
+  return "\u2192";
+}
+
+function getOppositeEdgeSide(side) {
+  if (side === "north") return "south";
+  if (side === "south") return "north";
+  if (side === "east") return "west";
+  if (side === "west") return "east";
+  return "";
+}
+
+function createEditorPortalFromEdgeConnection(regionId, zone) {
+  const routePoint = getEdgeConnectionImagePoint(regionId, zone, "route");
+  const arrowPoint = getEdgeConnectionImagePoint(regionId, zone, "arrow");
+  const targetRegionId = getEdgeConnectionTargetRegionId(zone);
+  const side = String(zone?.side || "north").toLowerCase();
   return {
     id: String(zone?.id || `${regionId}-${targetRegionId}-${side}`),
     label: String(zone?.label || getRegionLabel(targetRegionId)),
     targetRegionId,
     targetPortalId: String(zone?.targetConnectionId || zone?.targetPortalId || ""),
-    x: point.x,
-    y: point.y,
+    x: routePoint.x,
+    y: routePoint.y,
+    routeX: routePoint.x,
+    routeY: routePoint.y,
+    buttonX: arrowPoint.x,
+    buttonY: arrowPoint.y,
     size: Number(zone?.size) || DEFAULT_PORTAL_VISUAL_SIZE,
     className: "edge-transition-node",
+    side,
+    start: Number(zone?.start) || 0,
+    end: Number(zone?.end) || 0,
+    symbol: getEdgeTransitionArrowSymbol(side),
     edgeConnection: true,
   };
 }
 
 function getEditorPortalDefinitions(regionId) {
-  const map = getEditorMap(regionId);
-  const portals = Array.isArray(map?.portals) ? map.portals : [];
-  if (portals.length) return portals;
   return getEditorEdgeConnectionDefinitions(regionId).map(zone => createEditorPortalFromEdgeConnection(regionId, zone));
 }
 
@@ -3612,14 +3682,21 @@ function hasEditorPortalDefinitions(regionId) {
 }
 
 function createEditorTeleporter(regionId, portal) {
-  const targetRegionId = normalizeRegionId(portal?.targetRegionId || portal?.target || "center");
+  const targetRegionId = getEdgeConnectionTargetRegionId(portal);
+  if (!targetRegionId) return null;
+  const buttonPoint = {
+    x: Number(portal?.buttonX ?? portal?.x) || 0,
+    y: Number(portal?.buttonY ?? portal?.y) || 0,
+  };
   return {
     id: String(portal?.id || `${regionId}-${targetRegionId}`),
     label: String(portal?.label || getRegionLabel(targetRegionId)),
     targetRegionId,
-    worldPoint: islandImagePointToWorld(regionId, getEditorPoint(portal)),
+    worldPoint: islandImagePointToWorld(regionId, buttonPoint),
     size: getPortalVisualSize(portal),
-    className: portal?.className || `editor-${targetRegionId}-teleport-node`,
+    className: `${portal?.className || "edge-transition-node"} edge-transition-${portal?.side || "east"}`.trim(),
+    side: portal?.side || "",
+    symbol: portal?.symbol || getEdgeTransitionArrowSymbol(portal?.side),
   };
 }
 
@@ -3627,7 +3704,7 @@ function getEditorTeleportersForRegion(regionId) {
   const sourceRegionId = normalizeRegionId(regionId);
   return getEditorPortalDefinitions(sourceRegionId)
     .map(portal => createEditorTeleporter(sourceRegionId, portal))
-    .filter(teleport => teleport.targetRegionId && teleport.targetRegionId !== sourceRegionId);
+    .filter(teleport => teleport?.targetRegionId && teleport.targetRegionId !== sourceRegionId);
 }
 
 function getEditorPortalForRoute(regionId, targetRegionId, options = {}) {
@@ -3636,7 +3713,7 @@ function getEditorPortalForRoute(regionId, targetRegionId, options = {}) {
   const portalId = String(options.portalId || "");
   const targetPortalId = String(options.targetPortalId || "");
   const portals = getEditorPortalDefinitions(sourceRegionId)
-    .filter(portal => normalizeRegionId(portal?.targetRegionId || portal?.target) === destinationRegionId);
+    .filter(portal => getEdgeConnectionTargetRegionId(portal) === destinationRegionId);
   if (portalId) {
     const exact = portals.find(portal => String(portal?.id || "") === portalId);
     if (exact) return exact;
@@ -3658,6 +3735,16 @@ function getLinkedEditorArrivalPortal(sourceRegionId, targetRegionId, sourcePort
     const backLinked = getEditorPortalForRoute(targetRegionId, sourceRegionId, { targetPortalId: sourcePortalId });
     if (backLinked) return backLinked;
   }
+  const sourceSide = String(sourcePortal?.side || "");
+  const oppositeSide = getOppositeEdgeSide(sourceSide);
+  const sourceMidpoint = getEdgeConnectionMidpoint(sourcePortal);
+  const candidates = getEditorPortalDefinitions(targetRegionId)
+    .filter(portal => cleanEditorRegionId(portal?.targetRegionId || portal?.target) === cleanEditorRegionId(sourceRegionId))
+    .filter(portal => !oppositeSide || portal.side === oppositeSide);
+  if (candidates.length) {
+    candidates.sort((a, b) => Math.abs(getEdgeConnectionMidpoint(a) - sourceMidpoint) - Math.abs(getEdgeConnectionMidpoint(b) - sourceMidpoint));
+    return candidates[0];
+  }
   return getEditorPortalForRoute(targetRegionId, sourceRegionId);
 }
 
@@ -3669,7 +3756,7 @@ function findEditorPortalRouteRegionChain(fromRegionId, toRegionId) {
   for (const map of getEditorMapEntries()) {
     const source = normalizeRegionId(map.id);
     for (const portal of getEditorPortalDefinitions(source)) {
-      const target = normalizeRegionId(portal?.targetRegionId || portal?.target);
+      const target = getEdgeConnectionTargetRegionId(portal);
       if (!target || target === source) continue;
       if (!adjacency.has(source)) adjacency.set(source, new Set());
       adjacency.get(source).add(target);
@@ -3694,49 +3781,7 @@ function findEditorPortalRouteRegionChain(fromRegionId, toRegionId) {
 
 function getActiveIslandTeleporters() {
   const activeRegionId = getActiveMapRegionId();
-  const editorTeleporters = getEditorTeleportersForRegion(activeRegionId);
-  if (hasEditorPortalDefinitions(activeRegionId)) return editorTeleporters;
-  if (activeRegionId === "west") {
-    return [{
-      label: "Center",
-      targetRegionId: "center",
-      worldPoint: westImagePointToWorld(WEST_CENTER_TELEPORT_IMAGE_POINT),
-      className: "center-teleport-node",
-    }];
-  }
-  if (activeRegionId === "north") {
-    return [{
-      label: "Center",
-      targetRegionId: "center",
-      worldPoint: northImagePointToWorld(NORTH_CENTER_TELEPORT_IMAGE_POINT),
-      className: "center-teleport-node",
-    }];
-  }
-  if (activeRegionId === "east") {
-    return [{
-      label: "Center",
-      targetRegionId: "center",
-      worldPoint: eastImagePointToWorld(EAST_CENTER_TELEPORT_IMAGE_POINT),
-      className: "center-teleport-node",
-    }];
-  }
-  if (activeRegionId === "south") {
-    return [{
-      label: "Center",
-      targetRegionId: "center",
-      worldPoint: southImagePointToWorld(SOUTH_CENTER_TELEPORT_IMAGE_POINT),
-      className: "center-teleport-node",
-    }];
-  }
-  if (activeRegionId === "center") {
-    return CENTER_ISLAND_TELEPORTS.map(teleport => ({
-      label: teleport.label,
-      targetRegionId: teleport.targetRegionId,
-      worldPoint: centerImagePointToWorld(teleport.point),
-      className: `center-${teleport.targetRegionId}-teleport-node`,
-    }));
-  }
-  return [];
+  return getEditorTeleportersForRegion(activeRegionId);
 }
 
 function getCenterTeleportForRegion(regionId) {
@@ -3748,17 +3793,11 @@ function getPortalWorldPoint(regionId, targetRegionId = "center", options = {}) 
   const fromRegionId = normalizeRegionId(regionId);
   const toRegionId = normalizeRegionId(targetRegionId);
   const editorPortal = options.portal || getEditorPortalForRoute(fromRegionId, toRegionId, options);
-  if (editorPortal) return islandImagePointToWorld(fromRegionId, getEditorPoint(editorPortal));
-  if (hasEditorPortalDefinitions(fromRegionId)) return null;
-  if (fromRegionId === "west" && toRegionId === "center") return westImagePointToWorld(WEST_CENTER_TELEPORT_IMAGE_POINT);
-  if (fromRegionId === "north" && toRegionId === "center") return northImagePointToWorld(NORTH_CENTER_TELEPORT_IMAGE_POINT);
-  if (fromRegionId === "east" && toRegionId === "center") return eastImagePointToWorld(EAST_CENTER_TELEPORT_IMAGE_POINT);
-  if (fromRegionId === "south" && toRegionId === "center") return southImagePointToWorld(SOUTH_CENTER_TELEPORT_IMAGE_POINT);
-  if (fromRegionId === "center") {
-    const teleport = getCenterTeleportForRegion(toRegionId);
-    if (teleport) return centerImagePointToWorld(teleport.point);
-  }
-  return null;
+  if (!editorPortal) return null;
+  return islandImagePointToWorld(fromRegionId, {
+    x: Number(editorPortal.routeX ?? editorPortal.x) || 0,
+    y: Number(editorPortal.routeY ?? editorPortal.y) || 0,
+  });
 }
 
 function getPortalRouteRegionChain(fromRegionId, toRegionId) {
@@ -3767,8 +3806,7 @@ function getPortalRouteRegionChain(fromRegionId, toRegionId) {
   if (sourceRegionId === targetRegionId) return [sourceRegionId];
   const editorChain = findEditorPortalRouteRegionChain(sourceRegionId, targetRegionId);
   if (editorChain?.length) return editorChain;
-  if (sourceRegionId === "center" || targetRegionId === "center") return [sourceRegionId, targetRegionId];
-  return [sourceRegionId, "center", targetRegionId];
+  return null;
 }
 
 function renderWorldDefs() {
@@ -5307,8 +5345,9 @@ function scoutCity(cityId) {
   }
 
   const source = sourceOption.city;
-  launchScoutMission(source, target, sourceOption.route);
-  if (isOnlineWorldActive()) syncOwnedCitiesToOnline(true);
+  const mission = launchScoutMission(source, target, sourceOption.route);
+  if (!mission || usesServerArmyAuthority()) return;
+  if (isOnlineWorldActive() && !usesServerArmyAuthority()) syncOwnedCitiesToOnline(true);
   addLog(`One scout left ${source.name} for ${target.name}.`);
   saveGame();
   renderAll();
@@ -5317,10 +5356,7 @@ function scoutCity(cityId) {
 
 function launchScoutMission(source, target, route) {
   if (!source || !target || source.owner !== "player" || source.troops < 1 || !route?.points?.length) return null;
-  source.troopFloat = Math.max(0, (Number(source.troopFloat) || source.troops) - 1);
-  source.troops = Math.floor(source.troopFloat);
-  markOwnedCityChanged(source, false);
-  syncCityStateToOnline(source);
+  if (!canUseOnlineArmyOrders()) return null;
   const duration = travelTime(source, target, "player", route.length, 1, "scout");
   const mission = {
     id: attackIdCounter++,
@@ -5337,6 +5373,28 @@ function launchScoutMission(source, target, route) {
     targetOwnerAtLaunch: target.owner,
   };
   prepareOnlineArmyMission(mission);
+  if (usesServerArmyAuthority()) {
+    const launchKey = getServerArmyLaunchKey(source.id, target.id, "scout");
+    if (pendingServerArmyLaunchKeys.has(launchKey)) {
+      showToast(`A scout order from ${source.name} to ${target.name} is already being sent.`);
+      return null;
+    }
+    pendingServerArmyLaunchKeys.add(launchKey);
+    publishOnlineArmyMovement(mission, { addLocalMissionOnAccept: true, optimistic: false })
+      .then(accepted => {
+        if (!accepted) return;
+        addLog(`One scout left ${source.name} for ${target.name}.`);
+        showToast(`Scout moving from ${source.name} to ${target.name}`);
+      })
+      .finally(() => pendingServerArmyLaunchKeys.delete(launchKey));
+    showToast("Sending scout order to the server...");
+    return mission;
+  }
+
+  source.troopFloat = Math.max(0, (Number(source.troopFloat) || source.troops) - 1);
+  source.troops = Math.floor(source.troopFloat);
+  markOwnedCityChanged(source, false);
+  syncCityStateToOnline(source);
   state.attacks.push(mission);
   publishOnlineArmyMovement(mission);
   return mission;
@@ -5411,7 +5469,7 @@ function toggleScoutNearby(cityId) {
   state.gold -= SCOUT_NEARBY_COST;
   for (const option of options) launchScoutMission(source, option.city, option.route);
   scoutNearbySourceId = null;
-  if (isOnlineWorldActive()) syncOwnedCitiesToOnline(true);
+  if (isOnlineWorldActive() && !usesServerArmyAuthority()) syncOwnedCitiesToOnline(true);
   addLog(`${source.name} dispatched ${formatNumber(options.length)} nearby scouts for ${formatNumber(SCOUT_NEARBY_COST)} gold.`);
   saveGame();
   renderAll();
@@ -5495,7 +5553,7 @@ function toggleRegroup(cityId) {
     return;
   }
 
-  if (isOnlineWorldActive()) syncOwnedCitiesToOnline(true);
+  if (isOnlineWorldActive() && !usesServerArmyAuthority()) syncOwnedCitiesToOnline(true);
   addLog(`${target.name} called a regroup for ${formatNumber(REGROUP_COST)} gold: ${formatNumber(troopsSent)} troops moving in from ${formatNumber(launched)} cities.`);
   saveGame();
   renderAll();
@@ -5677,6 +5735,161 @@ function saveGame() {
 
 function getOnlineApi() {
   return window.CrownlandsOnline || null;
+}
+
+function usesServerArmyAuthority() {
+  const api = getOnlineApi();
+  const apiReady = typeof api?.usesServerArmyAuthority === "function"
+    ? api.usesServerArmyAuthority()
+    : true;
+  return Boolean(isOnlineWorldActive() && api?.isSignedIn?.() && api?.sendArmyOrder && api?.resolveArmyOrder && apiReady);
+}
+
+function getServerArmyLaunchKey(sourceId, targetId, kind = "attack") {
+  return `${String(kind || "attack")}:${String(sourceId || "")}:${String(targetId || "")}`;
+}
+
+function canUseOnlineArmyOrders() {
+  if (!isOnlineWorldActive()) return true;
+  if (usesServerArmyAuthority()) return true;
+  onlineLastError = "Online army orders require the Crownlands server.";
+  showToast("Online army orders need the server connection. Try again after reconnecting.");
+  return false;
+}
+
+function getServerReportGameSecond(report = {}) {
+  const createdAtMs = normalizeTimestampMs(report.createdAtMs);
+  if (!createdAtMs || !state) return Math.max(0, Number(state?.gameSeconds) || 0);
+  const ageSeconds = Math.max(0, Math.floor((Date.now() - createdAtMs) / 1000));
+  return Math.max(0, Math.floor(Number(state.gameSeconds) || 0) - ageSeconds);
+}
+
+function normalizeServerScoutReport(report = null) {
+  if (!report || typeof report !== "object" || !state) return null;
+  const nowMs = Date.now();
+  const scoutedAtMs = normalizeTimestampMs(report.scoutedAtMs) || nowMs;
+  const expiresAtMs = normalizeTimestampMs(report.expiresAtMs) || (scoutedAtMs + SCOUT_REPORT_SECONDS * 1000);
+  const createdAgeSeconds = Math.max(0, Math.floor((nowMs - scoutedAtMs) / 1000));
+  const remainingSeconds = Math.max(0, Math.ceil((expiresAtMs - nowMs) / 1000));
+  const scoutedAt = Math.max(0, Math.floor(Number(state.gameSeconds) || 0) - createdAgeSeconds);
+  return {
+    ...report,
+    troops: Math.max(0, Math.floor(Number(report.troops) || 0)),
+    totalDefense: Math.max(0, Math.floor(Number(report.totalDefense) || 0)),
+    cityLevel: clampCityLevel(report.cityLevel || 1),
+    scoutedAt,
+    expiresAt: scoutedAt + remainingSeconds,
+  };
+}
+
+function normalizeServerBattleReport(report = null) {
+  if (!report || typeof report !== "object") return null;
+  const currentUid = getCurrentOnlineUid();
+  if (report.uid && currentUid && report.uid !== currentUid) return null;
+  return normalizeBattleReports([{
+    ...report,
+    id: report.id || `server_${report.cityId || "report"}_${report.createdAtMs || Date.now()}`,
+    createdAt: getServerReportGameSecond(report),
+  }])[0] || null;
+}
+
+function mergeServerReports(reports = []) {
+  if (!state || !Array.isArray(reports) || !reports.length) return false;
+  let changed = false;
+  state.battleReports = normalizeBattleReports(state.battleReports);
+  state.scoutReports = normalizeScoutReports(state.scoutReports);
+  const existingIds = new Set(state.battleReports.map(report => report.id));
+  for (const rawReport of reports) {
+    const normalized = normalizeServerBattleReport(rawReport);
+    if (!normalized || existingIds.has(normalized.id) || appliedServerReportIds.has(normalized.id)) continue;
+    state.battleReports.push(normalized);
+    existingIds.add(normalized.id);
+    appliedServerReportIds.add(normalized.id);
+    if (rawReport.type === "scout" && rawReport.cityId && rawReport.scoutReport) {
+      const scoutReport = normalizeServerScoutReport(rawReport.scoutReport);
+      if (scoutReport) state.scoutReports[rawReport.cityId] = scoutReport;
+    }
+    if (rawReport.characterAfter || Number.isFinite(Number(rawReport.goldAfter))) {
+      applyServerProfilePatch({
+        character: rawReport.characterAfter,
+        gold: rawReport.goldAfter,
+      });
+    }
+    changed = true;
+  }
+  if (changed) {
+    state.battleReports = normalizeBattleReports(state.battleReports);
+    if (state.battleReports.length > 120) state.battleReports = state.battleReports.slice(-120);
+    saveGame();
+    if (modal.open && modal.classList.contains("battle-report-modal")) showLogModal();
+    renderHud();
+  }
+  return changed;
+}
+
+function applyServerProfilePatch(patch = null) {
+  if (!state || !patch || typeof patch !== "object") return false;
+  let changed = false;
+  if (patch.character) {
+    state.character = normalizeCharacterProgress(patch.character);
+    syncCharacterSkillPoints(state.character, state.upgrades, patch.character?.skillPoints);
+    changed = true;
+  }
+  if (Number.isFinite(Number(patch.gold))) {
+    state.gold = Math.max(TEST_STARTING_GOLD, Math.floor(Number(patch.gold) || 0));
+    changed = true;
+  }
+  if (changed) {
+    saveGame();
+    renderHud();
+    if (profileScreen?.classList.contains("open")) renderProfileScreen();
+  }
+  return changed;
+}
+
+function applyServerCityUpdates(cityUpdates = []) {
+  if (!state || !Array.isArray(cityUpdates)) return false;
+  let changed = false;
+  for (const update of cityUpdates) {
+    const cityId = getKnownCityId(update?.id);
+    const city = cityId ? cityById(cityId) : null;
+    if (!city) continue;
+    const currentRegionId = getCityRegionId(city);
+    const updateRegionId = normalizeRegionId(update.regionId || currentRegionId);
+    if (currentRegionId !== updateRegionId) continue;
+    if (Number.isFinite(Number(update.troops))) {
+      city.troops = Math.max(0, Math.floor(Number(update.troops) || 0));
+      city.troopFloat = Math.max(0, Number(update.troopFloat) || city.troops);
+      changed = true;
+    }
+    if (Number.isFinite(Number(update.level))) {
+      city.level = isStronghold(city) ? getStrongholdDefenseLevel(city) : clampCityLevel(update.level);
+      changed = true;
+    }
+    if (update.ownerUid !== undefined) {
+      const currentUid = getCurrentOnlineUid();
+      const ownerUid = String(update.ownerUid || "").trim();
+      city.ownerKind = ownerUid ? "player" : "neutral";
+      city.ownerUid = ownerUid || null;
+      city.owner = ownerUid && currentUid && ownerUid === currentUid ? "player" : ownerUid ? "enemy" : "neutral";
+      city.ownerName = update.ownerName || "";
+      city.ownerFlag = update.ownerFlag || null;
+      city.ownerKingPower = normalizePowerValue(update.ownerKingPower);
+      city.ownerShieldExpiresAtMs = normalizeTimestampMs(update.ownerShieldExpiresAtMs);
+      changed = true;
+    }
+  }
+  if (changed) renderAll();
+  return changed;
+}
+
+function applyServerArmyResult(result = null) {
+  if (!result || typeof result !== "object") return false;
+  let changed = false;
+  if (Array.isArray(result.reports)) changed = mergeServerReports(result.reports) || changed;
+  if (Array.isArray(result.cityUpdates)) changed = applyServerCityUpdates(result.cityUpdates) || changed;
+  if (result.currentUser) changed = applyServerProfilePatch(result.currentUser) || changed;
+  return changed;
 }
 
 function getSerializableGameState() {
@@ -6251,115 +6464,89 @@ async function refreshAllOwnedCities(force = false) {
   }
 }
 
-function getIslandMapAnchor(region) {
+const ISLAND_PICKER_TILE_WIDTH = 238;
+const ISLAND_PICKER_TILE_HEIGHT = 179;
+const ISLAND_PICKER_TILE_GAP = 34;
+const ISLAND_PICKER_STAGE_PADDING = 260;
+const ISLAND_PICKER_GRID_CELL_WORLD_SIZE = 2300;
+
+function getIslandMapGridCoordinate(region) {
   const regionId = normalizeRegionId(region?.id);
-  const defaultAnchor = {
-    x: Number(region?.x) || WORLD_WIDTH / 2,
-    y: Number(region?.y) || WORLD_HEIGHT / 2,
+  const map = getEditorMap(regionId);
+  const explicitGridX = [map?.gridX, map?.region?.gridX, region?.gridX].find(value => Number.isFinite(Number(value)));
+  const explicitGridY = [map?.gridY, map?.region?.gridY, region?.gridY].find(value => Number.isFinite(Number(value)));
+  if (explicitGridX !== undefined && explicitGridY !== undefined) {
+    return { gridX: Math.round(Number(explicitGridX)), gridY: Math.round(Number(explicitGridY)) };
+  }
+
+  const starterDefaults = {
+    center: { gridX: 0, gridY: 0 },
+    west: { gridX: -1, gridY: 0 },
+    east: { gridX: 1, gridY: 0 },
+    north: { gridX: 0, gridY: -1 },
+    south: { gridX: 0, gridY: 1 },
   };
-  if (BASE_BITMAP_ISLAND_IDS.includes(regionId)) return defaultAnchor;
-  const portals = getEditorPortalDefinitions(regionId);
-  const portal = portals.find(entry => getRegionById(normalizeRegionId(entry?.targetRegionId || entry?.target)))
-    || portals[0];
-  const targetRegionId = normalizeRegionId(portal?.targetRegionId || portal?.target);
-  const target = targetRegionId ? getRegionById(targetRegionId) : null;
-  if (!portal || !target) return defaultAnchor;
+  if (starterDefaults[regionId]) return starterDefaults[regionId];
 
-  const dimensions = getIslandImageDimensions(regionId);
-  const portalPoint = getEditorPoint(portal);
-  const px = dimensions.width ? clamp(portalPoint.x / dimensions.width, 0, 1) : 0.5;
-  const py = dimensions.height ? clamp(portalPoint.y / dimensions.height, 0, 1) : 0.5;
-  const rx = Math.max(600, Number(region?.rx) || 900);
-  const ry = Math.max(520, Number(region?.ry) || 760);
-  const targetRx = Math.max(600, Number(target.rx) || 900);
-  const targetRy = Math.max(520, Number(target.ry) || 760);
-  const gap = Math.max(360, Math.min(WORLD_WIDTH, WORLD_HEIGHT) * 0.055);
+  const explicitWorldX = [map?.region?.x, region?.x].find(value => Number.isFinite(Number(value)));
+  const explicitWorldY = [map?.region?.y, region?.y].find(value => Number.isFinite(Number(value)));
+  if (explicitWorldX !== undefined && explicitWorldY !== undefined) {
+    const cellSize = Math.max(500, Number(MAP_EDITOR_DATA?.globalSettings?.gridCellWorldSize) || ISLAND_PICKER_GRID_CELL_WORLD_SIZE);
+    const worldWidth = Math.max(1000, Number(MAP_EDITOR_DATA?.globalSettings?.worldWidth) || WORLD_WIDTH);
+    const worldHeight = Math.max(1000, Number(MAP_EDITOR_DATA?.globalSettings?.worldHeight) || WORLD_HEIGHT);
+    return {
+      gridX: Math.round((Number(explicitWorldX) - worldWidth / 2) / cellSize),
+      gridY: Math.round((Number(explicitWorldY) - worldHeight / 2) / cellSize),
+    };
+  }
 
-  if (py < 0.33) {
-    return {
-      x: (Number(target.x) || WORLD_WIDTH / 2) + (px - 0.5) * targetRx,
-      y: (Number(target.y) || WORLD_HEIGHT / 2) + targetRy + ry + gap,
-    };
-  }
-  if (py > 0.67) {
-    return {
-      x: (Number(target.x) || WORLD_WIDTH / 2) + (px - 0.5) * targetRx,
-      y: (Number(target.y) || WORLD_HEIGHT / 2) - targetRy - ry - gap,
-    };
-  }
-  if (px < 0.33) {
-    return {
-      x: (Number(target.x) || WORLD_WIDTH / 2) + targetRx + rx + gap,
-      y: (Number(target.y) || WORLD_HEIGHT / 2) + (py - 0.5) * targetRy,
-    };
-  }
-  if (px > 0.67) {
-    return {
-      x: (Number(target.x) || WORLD_WIDTH / 2) - targetRx - rx - gap,
-      y: (Number(target.y) || WORLD_HEIGHT / 2) + (py - 0.5) * targetRy,
-    };
-  }
-  return defaultAnchor;
+  const cellSize = Math.max(500, Number(MAP_EDITOR_DATA?.globalSettings?.gridCellWorldSize) || ISLAND_PICKER_GRID_CELL_WORLD_SIZE);
+  return {
+    gridX: Math.round(((Number(region?.x) || WORLD_WIDTH / 2) - WORLD_WIDTH / 2) / cellSize),
+    gridY: Math.round(((Number(region?.y) || WORLD_HEIGHT / 2) - WORLD_HEIGHT / 2) / cellSize),
+  };
 }
 
-function getIslandMapLayoutBounds() {
-  const margin = 720;
-  const anchors = WORLD_REGIONS.map(region => {
-    const anchor = getIslandMapAnchor(region);
-    const rx = Math.max(500, Number(region?.rx) || 900);
-    const ry = Math.max(450, Number(region?.ry) || 760);
-    return { anchor, rx, ry };
-  });
-  let left = 0;
-  let top = 0;
-  let right = WORLD_WIDTH;
-  let bottom = WORLD_HEIGHT;
-  anchors.forEach(({ anchor, rx, ry }) => {
-    left = Math.min(left, anchor.x - rx - margin);
-    top = Math.min(top, anchor.y - ry - margin);
-    right = Math.max(right, anchor.x + rx + margin);
-    bottom = Math.max(bottom, anchor.y + ry + margin);
-  });
-  const width = Math.max(1, right - left);
-  const height = Math.max(1, bottom - top);
-  return { left, top, right, bottom, width, height };
+function getIslandMapGridLayout() {
+  const entries = WORLD_REGIONS.map(region => ({
+    region,
+    ...getIslandMapGridCoordinate(region),
+  }));
+  const xs = entries.map(entry => entry.gridX);
+  const ys = entries.map(entry => entry.gridY);
+  const minX = Math.min(...xs, 0);
+  const maxX = Math.max(...xs, 0);
+  const minY = Math.min(...ys, 0);
+  const maxY = Math.max(...ys, 0);
+  const stepX = ISLAND_PICKER_TILE_WIDTH + ISLAND_PICKER_TILE_GAP;
+  const stepY = ISLAND_PICKER_TILE_HEIGHT + ISLAND_PICKER_TILE_GAP;
+  const stageWidth = ISLAND_PICKER_STAGE_PADDING * 2 + (maxX - minX + 1) * ISLAND_PICKER_TILE_WIDTH + (maxX - minX) * ISLAND_PICKER_TILE_GAP;
+  const stageHeight = ISLAND_PICKER_STAGE_PADDING * 2 + (maxY - minY + 1) * ISLAND_PICKER_TILE_HEIGHT + (maxY - minY) * ISLAND_PICKER_TILE_GAP;
+  return { entries, minX, minY, stepX, stepY, stageWidth, stageHeight };
 }
 
 function getIslandMapPosition(region) {
-  const bounds = getIslandMapLayoutBounds();
-  const anchor = getIslandMapAnchor(region);
+  const layout = getIslandMapGridLayout();
+  const { gridX, gridY } = getIslandMapGridCoordinate(region);
   return {
-    x: clamp((anchor.x - bounds.left) / bounds.width * 100, 4, 96),
-    y: clamp((anchor.y - bounds.top) / bounds.height * 100, 4, 96),
-  };
-}
-
-function getIslandMapIconSize(region) {
-  const bounds = getIslandMapLayoutBounds();
-  const rawWidth = Math.max(10, (Number(region?.rx) || 800) * 1.55 / bounds.width * 100);
-  const rawHeight = Math.max(10, (Number(region?.ry) || 800) * 1.55 / bounds.height * 100);
-  const maxWidth = 28;
-  const maxHeight = 28;
-  const scale = Math.min(1, maxWidth / rawWidth, maxHeight / rawHeight);
-  return {
-    width: clamp(rawWidth * scale, 13, maxWidth),
-    height: clamp(rawHeight * scale, 12, maxHeight),
+    x: ISLAND_PICKER_STAGE_PADDING + (gridX - layout.minX) * layout.stepX + ISLAND_PICKER_TILE_WIDTH / 2,
+    y: ISLAND_PICKER_STAGE_PADDING + (gridY - layout.minY) * layout.stepY + ISLAND_PICKER_TILE_HEIGHT / 2,
   };
 }
 
 function getIslandMapIconStyle(region) {
   const position = getIslandMapPosition(region);
-  const size = getIslandMapIconSize(region);
-  const rot = ((Number(region.rot) || 0) * 180 / Math.PI).toFixed(2);
-  return `--island-x:${formatPathNumber(position.x)}%;--island-y:${formatPathNumber(position.y)}%;--island-w:${formatPathNumber(size.width)}%;--island-h:${formatPathNumber(size.height)}%;--island-rot:${rot}deg;`;
+  return [
+    `--island-x:${formatPathNumber(position.x)}px`,
+    `--island-y:${formatPathNumber(position.y)}px`,
+    `--island-w:${ISLAND_PICKER_TILE_WIDTH}px`,
+    `--island-h:${ISLAND_PICKER_TILE_HEIGHT}px`,
+  ].join(";");
 }
 
 function getIslandMapPickerStyle() {
-  const bounds = getIslandMapLayoutBounds();
-  const aspect = clamp(WORLD_WIDTH / WORLD_HEIGHT, 1.05, 1.65);
-  const canvasWidth = Math.max(105, Math.min(155, bounds.width / WORLD_WIDTH * 92));
-  const canvasHeight = Math.max(105, Math.min(155, bounds.height / WORLD_HEIGHT * 92));
-  return `--island-map-aspect:${formatPathNumber(aspect)};--island-map-canvas-w:${formatPathNumber(canvasWidth)}%;--island-map-canvas-h:${formatPathNumber(canvasHeight)}%;`;
+  const layout = getIslandMapGridLayout();
+  return `--island-grid-stage-w:${Math.round(layout.stageWidth)}px;--island-grid-stage-h:${Math.round(layout.stageHeight)}px;--island-grid-cell-w:${ISLAND_PICKER_TILE_WIDTH + ISLAND_PICKER_TILE_GAP}px;--island-grid-cell-h:${ISLAND_PICKER_TILE_HEIGHT + ISLAND_PICKER_TILE_GAP}px;`;
 }
 
 function getIslandMapConnectionEdges() {
@@ -6368,23 +6555,18 @@ function getIslandMapConnectionEdges() {
   for (const map of getEditorMapEntries()) {
     const source = normalizeRegionId(map.id);
     if (!regionIds.has(source)) continue;
-    for (const portal of getEditorPortalDefinitions(source)) {
-      const target = normalizeRegionId(portal?.targetRegionId || portal?.target);
+    for (const transition of getEditorPortalDefinitions(source)) {
+      const target = getEdgeConnectionTargetRegionId(transition);
       if (!target || target === source || !regionIds.has(target)) continue;
       const key = [source, target].sort().join("::");
       if (!edges.has(key)) edges.set(key, { source, target });
-    }
-  }
-  if (!edges.size && regionIds.has("center")) {
-    for (const regionId of regionIds) {
-      if (regionId === "center") continue;
-      edges.set(["center", regionId].sort().join("::"), { source: "center", target: regionId });
     }
   }
   return Array.from(edges.values());
 }
 
 function renderIslandMapConnections() {
+  const layout = getIslandMapGridLayout();
   const regionById = new Map(WORLD_REGIONS.map(region => [normalizeRegionId(region.id), region]));
   const lines = getIslandMapConnectionEdges().map(edge => {
     const source = regionById.get(edge.source);
@@ -6394,7 +6576,7 @@ function renderIslandMapConnections() {
     const end = getIslandMapPosition(target);
     return `<line class="island-map-connection" x1="${formatPathNumber(start.x)}" y1="${formatPathNumber(start.y)}" x2="${formatPathNumber(end.x)}" y2="${formatPathNumber(end.y)}"></line>`;
   }).filter(Boolean).join("");
-  return `<svg class="island-map-connections" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">${lines}</svg>`;
+  return `<svg class="island-map-connections" viewBox="0 0 ${Math.round(layout.stageWidth)} ${Math.round(layout.stageHeight)}" preserveAspectRatio="none" aria-hidden="true">${lines}</svg>`;
 }
 
 function renderIslandMapTile(region, activeRegionId, homeRegionId) {
@@ -6403,6 +6585,7 @@ function renderIslandMapTile(region, activeRegionId, homeRegionId) {
   const summaryText = getIslandTileSummaryText(regionId);
   const isActive = regionId === activeRegionId;
   const isHome = regionId === homeRegionId;
+  const previewSrc = getIslandMapArtSrc(regionId) || getIslandPreviewArtSrc(regionId);
   const ariaParts = [label, getIslandTileAriaSummary(regionId)];
   if (isActive) ariaParts.push("current map");
   if (isHome) ariaParts.push("home island");
@@ -6415,7 +6598,7 @@ function renderIslandMapTile(region, activeRegionId, homeRegionId) {
       aria-label="${escapeHtml(ariaParts.join(", "))}"
     >
       <span class="island-map-thumb" aria-hidden="true">
-        <img src="${escapeHtml(getIslandPreviewArtSrc(regionId))}" alt="" draggable="false" loading="lazy" decoding="async" fetchpriority="low" />
+        <img src="${escapeHtml(previewSrc)}" alt="" draggable="false" loading="lazy" decoding="async" fetchpriority="low" />
       </span>
       <span class="island-map-name">${escapeHtml(label)}</span>
       <span class="island-map-owned">${escapeHtml(summaryText)}</span>
@@ -6444,7 +6627,7 @@ function renderIslandSwitcherModalContent() {
   centerIslandMapPickerOnRegion(picker, activeRegionId || homeRegionId);
   modalBody.querySelectorAll("[data-island-region]").forEach(button => {
     button.addEventListener("click", () => {
-      if (picker?.dataset.justDragged === "true") return;
+      if (picker?.dataset.justDragged === "true" || picker?.dataset.justActivated === "true") return;
       switchOnlineIsland(button.dataset.islandRegion, { fromMapPicker: true });
     });
   });
@@ -6470,16 +6653,18 @@ function attachIslandMapPickerPan(picker) {
   let startScrollLeft = 0;
   let startScrollTop = 0;
   let moved = false;
+  let tapRegionId = "";
 
   picker.addEventListener("pointerdown", event => {
     if (event.button !== undefined && event.button !== 0) return;
-    if (event.target?.closest?.("[data-island-region]")) return;
+    const tile = event.target?.closest?.("[data-island-region]");
     pointerId = event.pointerId;
     startX = event.clientX;
     startY = event.clientY;
     startScrollLeft = picker.scrollLeft;
     startScrollTop = picker.scrollTop;
     moved = false;
+    tapRegionId = tile?.dataset?.islandRegion || "";
     picker.classList.add("panning");
     picker.setPointerCapture?.(event.pointerId);
   });
@@ -6504,7 +6689,17 @@ function attachIslandMapPickerPan(picker) {
       window.setTimeout(() => {
         if (picker) delete picker.dataset.justDragged;
       }, 120);
+    } else if (tapRegionId) {
+      const releasedTile = document.elementFromPoint(event.clientX, event.clientY)?.closest?.("[data-island-region]");
+      if (releasedTile?.dataset?.islandRegion === tapRegionId) {
+        picker.dataset.justActivated = "true";
+        switchOnlineIsland(tapRegionId, { fromMapPicker: true });
+        window.setTimeout(() => {
+          if (picker) delete picker.dataset.justActivated;
+        }, 180);
+      }
     }
+    tapRegionId = "";
   };
 
   picker.addEventListener("pointerup", stopPan);
@@ -6805,6 +7000,8 @@ function disconnectOnlineWorld() {
   if (typeof onlineIslandUnsubscribe === "function") onlineIslandUnsubscribe();
   onlineIslandUnsubscribe = null;
   clearOnlineArmyWatchers();
+  clearOnlineServerReportWatcher();
+  appliedServerReportIds = new Set();
   onlinePresence = [];
   onlineIslandSummaries = new Map();
   onlineIslandSummaryRefreshInFlight = false;
@@ -6987,12 +7184,9 @@ function forgetPendingOnlineArmyMovement(onlineId) {
 }
 
 async function saveOnlineArmyMovementToRegions(movement, regionIds = []) {
-  const api = getOnlineApi();
-  if (!api?.saveArmyMovement || !movement?.id) return false;
-  const normalizedRegionIds = [...new Set((regionIds.length ? regionIds : movement.routeRegionIds || []).map(normalizeRegionId).filter(Boolean))];
-  if (!normalizedRegionIds.length) return false;
-  await Promise.all(normalizedRegionIds.map(regionId => api.saveArmyMovement(getOnlineIslandId(regionId), movement)));
-  return true;
+  onlineLastError = "Direct army writes are disabled. Online military movement must go through the server.";
+  console.warn("Blocked direct army movement write", { movementId: movement?.id, regionIds });
+  return false;
 }
 
 async function waitForPendingOnlineWrites(timeoutMs = 4500) {
@@ -7007,39 +7201,8 @@ async function recoverPendingOnlineArmyMovements() {
   if (!isOnlineWorldActive()) return false;
   const uid = getCurrentOnlineUid();
   if (!uid) return false;
-  const entries = readPendingOnlineArmyMovements();
-  const mine = entries.filter(entry => entry.uid === uid && entry?.movement?.id);
-  if (!mine.length) return false;
-
-  let recovered = 0;
-  pendingArmyRecoveryInFlight = true;
-  try {
-    for (const entry of mine) {
-      const movement = {
-        ...(entry.movement || {}),
-        ownerUid: uid,
-        ownerKind: "player",
-        status: "active",
-      };
-      const regionIds = entry.regionIds?.length ? entry.regionIds : movement.routeRegionIds || [];
-      try {
-        await saveOnlineArmyMovementToRegions(movement, regionIds);
-        forgetPendingOnlineArmyMovement(movement.id);
-        recovered += 1;
-      } catch (error) {
-        onlineLastError = error?.message || String(error);
-        console.warn("Could not recover pending army movement", error);
-      }
-    }
-
-    if (recovered > 0) {
-      addLog(`${formatNumber(recovered)} pending army order${recovered === 1 ? "" : "s"} synced after reconnecting.`);
-      showToast(`${formatNumber(recovered)} army order${recovered === 1 ? "" : "s"} synced.`);
-    }
-    return recovered > 0;
-  } finally {
-    pendingArmyRecoveryInFlight = false;
-  }
+  writePendingOnlineArmyMovements(readPendingOnlineArmyMovements().filter(entry => entry.uid !== uid));
+  return false;
 }
 
 async function subscribeOnlineIslandWithInitialCities(api, islandId, handlers = {}, timeoutMs = 9000, timeoutMessage = "City list is taking too long.") {
@@ -7366,6 +7529,8 @@ async function connectOnlineIsland(regionId, { claimHome = false, homeRegionId =
     onlineWorldConnected = true;
     onlineLastError = "";
     subscribeOnlineArmyWatchers(islandId);
+    subscribeOnlineServerReports();
+    loadServerReportsOnce();
     await recoverPendingOnlineArmyMovements();
     await publishOnlinePresence(true);
     refreshAllOwnedCities(true);
@@ -7887,24 +8052,103 @@ function toOnlineArmyMovement(mission) {
   };
 }
 
-function publishOnlineArmyMovement(mission) {
-  if (!isOnlineWorldActive() || mission?.owner !== "player") return;
+function rollbackServerArmyMission(mission, reason = "") {
+  if (!state || !mission) return;
+  const onlineId = getOnlineArmyResolutionId(mission);
+  const source = cityById(mission.fromId);
+  if (source?.owner === "player") {
+    const returned = Math.max(0, Math.floor(Number(mission.troops) || 0));
+    source.troopFloat = Math.max(0, Number(source.troopFloat) || Number(source.troops) || 0) + returned;
+    source.troops = Math.floor(source.troopFloat);
+  }
+  state.attacks = state.attacks.filter(attack => {
+    if (onlineId && getOnlineArmyResolutionId(attack) === onlineId) return false;
+    return attack.id !== mission.id;
+  });
+  forgetPendingOnlineArmyMovement(onlineId);
+  onlineLastError = reason || "Server rejected the army order.";
+  addLog(`Army order canceled by server${reason ? `: ${reason}` : "."}`);
+  showToast(reason || "Server canceled that army order.");
+  saveGame();
+  renderAll();
+}
+
+function rejectServerArmyMission(mission, reason = "", options = {}) {
+  if (options.optimistic) {
+    rollbackServerArmyMission(mission, reason);
+    return;
+  }
+  const onlineId = getOnlineArmyResolutionId(mission);
+  if (onlineId) forgetPendingOnlineArmyMovement(onlineId);
+  onlineLastError = reason || "Server rejected the army order.";
+  addLog(`Army order rejected by server${reason ? `: ${reason}` : "."}`);
+  showToast(reason || "Server rejected that army order.");
+  renderAll();
+}
+
+function applyServerMovementToMission(mission, movement = null) {
+  if (!mission || !movement) return;
+  mission.onlineId = movement.id || mission.onlineId;
+  mission.troops = Math.max(0, Math.floor(Number(movement.troops) || mission.troops || 0));
+  mission.requestedTroops = Math.max(0, Math.floor(Number(movement.requestedTroops) || mission.requestedTroops || mission.troops || 0));
+  mission.total = Math.max(0.1, Number(movement.total) || mission.total || 0.1);
+  mission.remaining = Math.max(0, (Number(movement.arrivesAtMs) - Date.now()) / 1000) || mission.total;
+  mission.launchedAtMs = normalizeTimestampMs(movement.launchedAtMs) || mission.launchedAtMs;
+  mission.arrivesAtMs = normalizeTimestampMs(movement.arrivesAtMs) || mission.arrivesAtMs;
+  mission.onlineRegionIds = Array.isArray(movement.routeRegionIds) ? movement.routeRegionIds.map(normalizeRegionId).filter(Boolean) : mission.onlineRegionIds;
+}
+
+function addServerAcceptedMission(mission) {
+  if (!state || !mission) return false;
+  const onlineId = getOnlineArmyResolutionId(mission);
+  if (onlineId && state.attacks.some(attack => getOnlineArmyResolutionId(attack) === onlineId)) return false;
+  state.attacks.push(mission);
+  return true;
+}
+
+function publishOnlineArmyMovement(mission, options = {}) {
+  if (!isOnlineWorldActive() || mission?.owner !== "player") return Promise.resolve(false);
   const api = getOnlineApi();
-  if (!api?.saveArmyMovement) return;
+  if (!usesServerArmyAuthority() || !api?.sendArmyOrder) {
+    onlineLastError = "Online army orders require the Crownlands server.";
+    showToast("Online army orders need the server connection. Try again after reconnecting.");
+    return Promise.resolve(false);
+  }
   prepareOnlineArmyMission(mission);
   const movement = toOnlineArmyMovement(mission);
-  if (!movement) return;
+  if (!movement) return Promise.resolve(false);
   const regionIds = movement.routeRegionIds?.length ? movement.routeRegionIds : getMissionRegionIds(mission);
   mission.onlineRegionIds = regionIds;
-  rememberPendingOnlineArmyMovement(movement, regionIds);
-  const savePromise = saveOnlineArmyMovementToRegions(movement, regionIds)
-    .then(() => {
-      forgetPendingOnlineArmyMovement(movement.id);
+  const sourceRegionId = getCityRegionId(mission.fromId);
+  const targetRegionId = getCityRegionId(mission.toId);
+
+  const savePromise = api.sendArmyOrder({
+    worldId: ONLINE_WORLD_ID,
+    resetGeneration: RESET_GENERATION,
+    army: {
+      ...movement,
+      sourceRegionId,
+      targetRegionId,
+    },
+    sourceRegionId,
+    targetRegionId,
+    routeRegionIds: regionIds,
+  })
+    .then(result => {
+      if (result?.movement) applyServerMovementToMission(mission, result.movement);
+      if (result?.sourceCity) applyServerCityUpdates([result.sourceCity]);
+      if (options.addLocalMissionOnAccept) addServerAcceptedMission(mission);
+      onlineLastError = "";
+      saveGame();
+      renderAll();
+      updateIncomingAttackUi();
+      updateOutgoingAttackUi();
       return true;
     })
     .catch(error => {
       onlineLastError = error?.message || String(error);
-      console.warn("Could not sync army movement", error);
+      console.warn("Server rejected army movement", error);
+      rejectServerArmyMission(mission, onlineLastError, options);
       return false;
     })
     .finally(() => {
@@ -7916,16 +8160,7 @@ function publishOnlineArmyMovement(mission) {
 
 function deleteOnlineArmyMovement(mission) {
   if (!mission?.onlineId || mission.owner !== "player") return;
-  const api = getOnlineApi();
-  if (!api?.deleteArmyMovement) return;
-  const regionIds = mission.onlineRegionIds?.length ? mission.onlineRegionIds : getMissionRegionIds(mission);
   forgetPendingOnlineArmyMovement(mission.onlineId);
-  regionIds.forEach(regionId => {
-    api.deleteArmyMovement(getOnlineIslandId(regionId), mission.onlineId).catch(error => {
-      onlineLastError = error?.message || String(error);
-      console.warn("Could not delete army movement", error);
-    });
-  });
 }
 
 function getOnlineArmyResolutionId(mission) {
@@ -8018,6 +8253,39 @@ function clearOnlineArmyWatchers() {
   onlineArmyUnsubscribes = [];
   onlineArmiesByIsland = new Map();
   onlineArmies = [];
+}
+
+function clearOnlineServerReportWatcher() {
+  if (typeof onlineServerReportsUnsubscribe === "function") onlineServerReportsUnsubscribe();
+  onlineServerReportsUnsubscribe = null;
+}
+
+async function loadServerReportsOnce() {
+  const api = getOnlineApi();
+  if (!state || !api?.loadServerReports || !api?.isSignedIn?.()) return false;
+  try {
+    const reports = await withTimeout(api.loadServerReports(120), 5000, "Server reports are taking too long.");
+    return mergeServerReports(reports);
+  } catch (error) {
+    onlineLastError = error?.message || String(error);
+    console.warn("Could not load server reports", error);
+    return false;
+  }
+}
+
+function subscribeOnlineServerReports() {
+  const api = getOnlineApi();
+  clearOnlineServerReportWatcher();
+  if (!state || !api?.subscribeServerReports || !api?.isSignedIn?.()) return;
+  onlineServerReportsUnsubscribe = api.subscribeServerReports({
+    onReports: reports => {
+      mergeServerReports(reports);
+    },
+    onError: error => {
+      onlineLastError = error?.message || String(error);
+      console.warn("Could not subscribe to server reports", error);
+    },
+  });
 }
 
 function subscribeOnlineArmyWatchers(activeIslandId) {
@@ -8137,28 +8405,53 @@ function resolveOverdueOnlineArmy(army) {
     });
 }
 
+async function resolveServerArmyMission(mission) {
+  if (!usesServerArmyAuthority()) return false;
+  const onlineId = getOnlineArmyResolutionId(mission);
+  if (!onlineId || resolvedOnlineArmyIds.has(onlineId)) return false;
+  const api = getOnlineApi();
+  const routeRegionIds = mission.onlineRegionIds?.length
+    ? mission.onlineRegionIds
+    : getMissionRegionIds(mission);
+  if (!routeRegionIds.length) return false;
+
+  if (resolvingOnlineArmyIds.has(onlineId)) return false;
+  resolvingOnlineArmyIds.add(onlineId);
+  try {
+    const result = await api.resolveArmyOrder({
+      armyId: onlineId,
+      routeRegionIds,
+    });
+    if (result?.status === "resolved" || result?.status === "missing" || result?.status === "already-resolved") {
+      resolvedOnlineArmyIds.add(onlineId);
+    }
+    applyServerArmyResult(result);
+    onlineLastError = "";
+    saveGame();
+    flushOnlineSave(true);
+    renderAll();
+    updateIncomingAttackUi();
+    updateOutgoingAttackUi();
+    return true;
+  } catch (error) {
+    onlineLastError = error?.message || String(error);
+    console.warn("Could not resolve server army", error);
+    return false;
+  } finally {
+    resolvingOnlineArmyIds.delete(onlineId);
+  }
+}
+
 async function resolveOverdueOnlineArmyAsync(army) {
-  if (!state || army?.ownerUid !== getCurrentOnlineUid()) return false;
+  if (!state) return false;
   const onlineId = getOnlineArmyResolutionId(army);
   if (!onlineId || resolvedOnlineArmyIds.has(onlineId)) return false;
-  const targetRegionId = getCityRegionId(army.toId);
-  const loadedTargetRegion = await loadOnlineRegionCitiesForResolution(targetRegionId);
-  if (!loadedTargetRegion) return false;
-  const target = cityById(army.toId);
-  if (!target) return false;
-
-  const mission = createLocalAttackFromOnlineArmy(army, 0);
-  if (!mission) return false;
-  resolvedOnlineArmyIds.add(onlineId);
-  resolveAttack(mission);
-  deleteOnlineArmyMovement(mission);
-  state.attacks = state.attacks.filter(attack => attack.onlineId !== onlineId);
-  saveGame();
-  flushOnlineSave(true);
-  renderAll();
-  updateIncomingAttackUi();
-  updateOutgoingAttackUi();
-  return true;
+  if (usesServerArmyAuthority()) {
+    resolvingOnlineArmyIds.delete(onlineId);
+    return resolveServerArmyMission(army);
+  }
+  onlineLastError = "Online army resolution requires the Crownlands server.";
+  return false;
 }
 
 function adoptOwnOnlineArmies() {
@@ -8182,10 +8475,10 @@ function adoptOwnOnlineArmies() {
 
 function retryOverdueOnlineArmyResolutions() {
   if (!state || !Array.isArray(onlineArmies)) return;
+  if (!usesServerArmyAuthority()) return;
   const uid = getCurrentOnlineUid();
   if (!uid) return;
   onlineArmies
-    .filter(army => army?.ownerUid === uid)
     .filter(army => !isOnlineArmyResolutionBlocked(army))
     .filter(army => getOnlineArmyRemainingSeconds(army) <= 0)
     .forEach(resolveOverdueOnlineArmy);
@@ -8781,8 +9074,8 @@ function findRoute(source, target) {
 function findPortalRoute(source, target, sourceRegionId = getCityRegionId(source), targetRegionId = getCityRegionId(target)) {
   const normalizedSourceRegionId = normalizeRegionId(sourceRegionId);
   const normalizedTargetRegionId = normalizeRegionId(targetRegionId);
-  const cacheKey = `portal-cityblock-v2:${normalizedSourceRegionId}:${normalizedTargetRegionId}:${getRoutePointId(source, "source")}|${getRoutePointId(target, "target")}`;
-  const reverseKey = `portal-cityblock-v2:${normalizedTargetRegionId}:${normalizedSourceRegionId}:${getRoutePointId(target, "target")}|${getRoutePointId(source, "source")}`;
+  const cacheKey = `edge-transition-cityblock-v1:${normalizedSourceRegionId}:${normalizedTargetRegionId}:${getRoutePointId(source, "source")}|${getRoutePointId(target, "target")}`;
+  const reverseKey = `edge-transition-cityblock-v1:${normalizedTargetRegionId}:${normalizedSourceRegionId}:${getRoutePointId(target, "target")}|${getRoutePointId(source, "source")}`;
   if (routeCache.has(cacheKey)) return cloneRoute(routeCache.get(cacheKey));
   if (routeCache.has(reverseKey)) {
     const reverse = reverseRoute(routeCache.get(reverseKey));
@@ -8791,6 +9084,7 @@ function findPortalRoute(source, target, sourceRegionId = getCityRegionId(source
   }
 
   const chain = getPortalRouteRegionChain(normalizedSourceRegionId, normalizedTargetRegionId);
+  if (!chain?.length) return null;
   let current = makeRoutePoint(getRoutePointId(source, "source"), source);
   const segments = [];
   const points = [];
@@ -9225,11 +9519,11 @@ function isHarvestBonusFarFromCities(x, y, regionId) {
     .every(city => Math.hypot(city.x - x, city.y - y) >= HARVEST_BONUS_CITY_CLEARANCE);
 }
 
-function isHarvestBonusFarFromPortals(x, y, regionId) {
+function isHarvestBonusFarFromTransitions(x, y, regionId) {
   const activeRegionId = getActiveMapRegionId();
   if (normalizeRegionId(regionId) !== activeRegionId) return true;
   return getActiveIslandTeleporters()
-    .every(teleport => Math.hypot(teleport.worldPoint.x - x, teleport.worldPoint.y - y) >= HARVEST_BONUS_PORTAL_CLEARANCE);
+    .every(teleport => Math.hypot(teleport.worldPoint.x - x, teleport.worldPoint.y - y) >= HARVEST_BONUS_TRANSITION_CLEARANCE);
 }
 
 function isHarvestBonusFarFromOtherPickups(x, y, regionId) {
@@ -9281,7 +9575,7 @@ function isValidHarvestBonusPoint(x, y, regionId) {
   if (!isHarvestBonusNearOwnedCity(x, y, activeRegionId)) return false;
   if (!isHarvestBonusTerrainSafePoint(x, y, activeRegionId)) return false;
   if (!isHarvestBonusFarFromCities(x, y, activeRegionId)) return false;
-  if (!isHarvestBonusFarFromPortals(x, y, activeRegionId)) return false;
+  if (!isHarvestBonusFarFromTransitions(x, y, activeRegionId)) return false;
   if (!isHarvestBonusFarFromOtherPickups(x, y, activeRegionId)) return false;
   return true;
 }
@@ -9563,7 +9857,6 @@ function updateAttacks(dt) {
       const skipResolve = Boolean(onlineId && (completedOnlineIds.has(onlineId) || isOnlineArmyResolutionBlocked(attack)));
       if (onlineId) {
         completedOnlineIds.add(onlineId);
-        if (!skipResolve) resolvingOnlineArmyIds.add(onlineId);
       }
       completed.push({ attack, skipResolve });
     }
@@ -9572,12 +9865,14 @@ function updateAttacks(dt) {
   for (const entry of completed) {
     const { attack, skipResolve } = entry;
     const onlineId = getOnlineArmyResolutionId(attack);
-    if (!skipResolve) {
+    if (!skipResolve && onlineId && usesServerArmyAuthority()) {
+      resolveServerArmyMission(attack);
+    } else if (!skipResolve && !onlineId) {
       if (onlineId) resolvedOnlineArmyIds.add(onlineId);
       resolveAttack(attack);
+    } else if (!skipResolve && onlineId) {
+      onlineLastError = "Online army resolution requires the Crownlands server.";
     }
-    if (onlineId) resolvingOnlineArmyIds.delete(onlineId);
-    deleteOnlineArmyMovement(attack);
   }
 
   if (completed.length) {
@@ -9602,6 +9897,7 @@ function launchAttack(sourceId, targetId, percent, owner, exactTroops = null, op
   if (source.owner !== owner) return false;
   if (source.id === target.id) return false;
   if (source.troops < 1) return false;
+  if (owner === "player" && !canUseOnlineArmyOrders()) return false;
 
   const kind = target.owner === owner ? "transfer" : "attack";
   const mainCityBlockReason = kind === "attack" ? getMainCityAttackBlockReason(target, owner) : "";
@@ -9635,17 +9931,6 @@ function launchAttack(sourceId, targetId, percent, owner, exactTroops = null, op
     ? createDemoAttackSnapshot(source, target, requestedSend, owner)
     : null;
   const send = demoAttack?.active ? demoAttack.effectiveTroops : requestedSend;
-  const peaceShieldDeactivated = owner === "player" && kind === "attack"
-    ? deactivatePeaceShieldForPlayerAttack(target)
-    : false;
-
-  source.troopFloat = Math.max(0, source.troopFloat - send);
-  source.troops = Math.floor(source.troopFloat);
-  if (owner === "player") {
-    markOwnedCityChanged(source, false);
-    syncCityStateToOnline(source);
-  }
-
   const duration = travelTime(source, target, owner, route.length, send, kind, { demoAttack });
   const mission = {
     id: attackIdCounter++,
@@ -9666,9 +9951,46 @@ function launchAttack(sourceId, targetId, percent, owner, exactTroops = null, op
     demoAttack,
   };
   prepareOnlineArmyMission(mission);
+
+  if (owner === "player" && usesServerArmyAuthority()) {
+    const launchKey = getServerArmyLaunchKey(source.id, target.id, kind);
+    if (pendingServerArmyLaunchKeys.has(launchKey)) {
+      showToast(`An order from ${source.name} to ${target.name} is already being sent.`);
+      return false;
+    }
+    pendingServerArmyLaunchKeys.add(launchKey);
+    publishOnlineArmyMovement(mission, { addLocalMissionOnAccept: true, optimistic: false })
+      .then(accepted => {
+        if (!accepted) return;
+        if (kind === "transfer") {
+          if (!options.silent) {
+            addLog(`You moved ${formatNumber(send)} troops from ${source.name} to ${target.name}.`);
+            showToast(`Reinforcements moving: ${source.name} \u2192 ${target.name}`);
+          }
+        } else {
+          const demoText = demoAttack ? ` ${getDemoAttackNotice(demoAttack)}` : "";
+          addLog(`You sent ${formatNumber(send)} troops from ${source.name} to attack ${target.name}.${demoText}`);
+          showToast(demoAttack ? `Demo attack moving: ${formatNumber(send)} troops` : `Attack moving: ${source.name} \u2192 ${target.name}`);
+        }
+      })
+      .finally(() => pendingServerArmyLaunchKeys.delete(launchKey));
+    showToast("Sending army order to the server...");
+    return true;
+  }
+
+  const peaceShieldDeactivated = owner === "player" && kind === "attack"
+    ? deactivatePeaceShieldForPlayerAttack(target)
+    : false;
+
+  source.troopFloat = Math.max(0, source.troopFloat - send);
+  source.troops = Math.floor(source.troopFloat);
+  if (owner === "player") {
+    markOwnedCityChanged(source, false);
+    syncCityStateToOnline(source);
+  }
   state.attacks.push(mission);
   publishOnlineArmyMovement(mission);
-  if (isOnlineWorldActive() && owner === "player" && options.syncOwnedCities !== false) syncOwnedCitiesToOnline(true);
+  if (isOnlineWorldActive() && owner === "player" && options.syncOwnedCities !== false && !usesServerArmyAuthority()) syncOwnedCitiesToOnline(true);
 
   if (owner === "player" && kind === "transfer") {
     if (!options.silent) {
@@ -12929,7 +13251,7 @@ function showHelpModal() {
       <li>Neutral expansion has two limits: 30 neutral captures per local day, and neutral captures stop once you own 30 cities.</li>
       <li>After that, expand by attacking player-owned cities.</li>
       <li>Send Troops is single-click after setup: pick a march percent, then tap one destination to launch.</li>
-      <li>Scout Nearby costs ${formatNumber(SCOUT_NEARBY_COST)} gold, covers the current island only, and never routes scouts through portals.</li>
+      <li>Scout Nearby costs ${formatNumber(SCOUT_NEARBY_COST)} gold and covers the current map only.</li>
       <li>Regroup costs ${formatNumber(REGROUP_COST)} gold, previews a larger red radius, then sends all troops from nearby owned cities into the selected city.</li>
       <li>The top-right fullscreen button expands the game surface and the game disables page text selection while playing.</li>
       <li>City level creates victory points for combat value, while passive gold follows the Million Lords city production curve.</li>

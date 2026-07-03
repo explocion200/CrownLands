@@ -360,79 +360,6 @@
     };
   }
 
-  function cleanDemoAttack(demo = null) {
-    if (!demo || typeof demo !== "object" || !demo.active) return null;
-    return {
-      active: true,
-      label: String(demo.label || "Demo Attack").slice(0, 32),
-      attackerKingPower: Math.max(0, Math.floor(Number(demo.attackerKingPower) || 0)),
-      defenderKingPower: Math.max(1, Math.floor(Number(demo.defenderKingPower) || 1)),
-      powerRatio: Math.max(0, Number(demo.powerRatio) || 0),
-      requestedTroops: Math.max(1, Math.floor(Number(demo.requestedTroops) || 1)),
-      effectiveTroops: Math.max(1, Math.floor(Number(demo.effectiveTroops) || 1)),
-      maxTroops: Math.max(1, Math.floor(Number(demo.maxTroops) || 1)),
-      troopCapPercent: Math.max(1, Math.floor(Number(demo.troopCapPercent) || 100)),
-      attackPowerPercent: Math.max(1, Math.floor(Number(demo.attackPowerPercent) || 100)),
-      travelMultiplier: Math.max(1, Number(demo.travelMultiplier) || 1),
-      defenderXpMultiplier: Math.max(1, Number(demo.defenderXpMultiplier) || 1),
-    };
-  }
-
-  function cleanArmyMovement(army) {
-    const path = Array.isArray(army?.path)
-      ? army.path
-          .map(point => ({ x: Number(point?.x) || 0, y: Number(point?.y) || 0 }))
-          .filter(point => Number.isFinite(point.x) && Number.isFinite(point.y))
-      : [];
-    const pathSegments = Array.isArray(army?.pathSegments)
-      ? army.pathSegments
-          .map(segment => {
-            const points = Array.isArray(segment?.points)
-              ? segment.points
-                  .map(point => ({ x: Number(point?.x) || 0, y: Number(point?.y) || 0 }))
-                  .filter(point => Number.isFinite(point.x) && Number.isFinite(point.y))
-              : [];
-            if (points.length < 2) return null;
-            return {
-              regionId: String(segment.regionId || "").slice(0, 64),
-              points,
-              length: Math.max(0, Number(segment.length) || 0),
-            };
-          })
-          .filter(Boolean)
-      : [];
-    const routeRegionIds = Array.isArray(army?.routeRegionIds)
-      ? [...new Set(army.routeRegionIds.map(regionId => String(regionId || "").slice(0, 64)).filter(Boolean))]
-      : [];
-    return {
-      id: String(army?.id || "").slice(0, 96),
-      ownerKind: army?.ownerKind || "player",
-      ownerUid: army?.ownerUid || client.user?.uid || null,
-      ownerName: String(army?.ownerName || client.user?.displayName || "Ruler").slice(0, 32),
-      ownerFlag: army?.ownerFlag || null,
-      ownerKingPower: Math.max(0, Math.floor(Number(army?.ownerKingPower) || 0)),
-      kind: ["attack", "transfer", "scout"].includes(army?.kind) ? army.kind : "attack",
-      fromId: String(army?.fromId || ""),
-      toId: String(army?.toId || ""),
-      fromName: String(army?.fromName || "").slice(0, 40),
-      toName: String(army?.toName || "").slice(0, 40),
-      troops: Math.max(0, Math.floor(Number(army?.troops) || 0)),
-      total: Math.max(0.1, Number(army?.total) || 0.1),
-      path,
-      pathSegments,
-      routeRegionIds,
-      pathLength: Math.max(0, Number(army?.pathLength) || 0),
-      targetOwnerAtLaunch: String(army?.targetOwnerAtLaunch || "neutral"),
-      requestedTroops: Math.max(0, Math.floor(Number(army?.requestedTroops) || 0)),
-      attackerKingPower: Math.max(0, Math.floor(Number(army?.attackerKingPower) || 0)),
-      defenderKingPower: Math.max(0, Math.floor(Number(army?.defenderKingPower) || 0)),
-      demoAttack: cleanDemoAttack(army?.demoAttack),
-      launchedAtMs: Math.max(0, Number(army?.launchedAtMs) || Date.now()),
-      arrivesAtMs: Math.max(0, Number(army?.arrivesAtMs) || Date.now()),
-      status: army?.status || "active",
-    };
-  }
-
   function cleanPresence(presence = {}) {
     return {
       uid: client.user?.uid || "",
@@ -749,43 +676,6 @@
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
   }
 
-  async function saveArmyMovement(islandId = "main", army = {}) {
-    await init();
-    const uid = requireSignedIn();
-    if (!uid || !army?.id) return false;
-    const { doc, setDoc, serverTimestamp } = client.modules.firestore;
-    const cleanArmy = cleanArmyMovement({ ...army, ownerUid: uid });
-    if (!cleanArmy.id || !cleanArmy.fromId || !cleanArmy.toId) return false;
-    await setDoc(doc(client.db, "islands", islandId, "armies", cleanArmy.id), {
-      ...cleanArmy,
-      updatedAt: serverTimestamp(),
-    }, { merge: true });
-    return true;
-  }
-
-  async function deleteArmyMovement(islandId = "main", armyId = "") {
-    await init();
-    const uid = requireSignedIn();
-    const safeArmyId = String(armyId || "");
-    if (!uid || !safeArmyId) return false;
-    const { doc, deleteDoc, setDoc, serverTimestamp } = client.modules.firestore;
-    const armyRef = doc(client.db, "islands", islandId, "armies", safeArmyId);
-    if (deleteDoc) {
-      try {
-        await deleteDoc(armyRef);
-        return true;
-      } catch (error) {
-        console.warn("Could not delete resolved army; marking it resolved instead.", error);
-      }
-    }
-    await setDoc(armyRef, {
-      status: "resolved",
-      resolvedAtMs: Date.now(),
-      updatedAt: serverTimestamp(),
-    }, { merge: true });
-    return true;
-  }
-
   async function savePresence(islandId = "main", presence = {}) {
     await init();
     const uid = requireSignedIn();
@@ -1041,8 +931,6 @@
     savePlayerCities,
     saveCityState,
     loadIslandCities,
-    saveArmyMovement,
-    deleteArmyMovement,
     savePresence,
     saveKingPowerLeaderboardEntry,
     loadKingPowerLeaderboard,
