@@ -3585,6 +3585,58 @@ button.inventory-slot {
   font-size: .72rem;
   line-height: 1.3;
 }
+.relinquish-city-action-panel {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: .55rem;
+  padding: .62rem;
+  border-radius: 14px;
+  background: rgba(50, 16, 18, .72);
+  border: 1px solid rgba(255, 102, 94, .38);
+}
+.relinquish-city-action-copy {
+  min-width: 0;
+}
+.relinquish-city-action-copy strong,
+.relinquish-city-action-copy small {
+  display: block;
+}
+.relinquish-city-action-copy strong {
+  color: #fff;
+  font-size: .93rem;
+}
+.relinquish-city-action-copy small {
+  margin-top: .08rem;
+  color: #ffd2c9;
+  font-size: .7rem;
+  font-weight: 800;
+  line-height: 1.25;
+}
+.relinquish-city-btn {
+  min-height: 42px;
+  min-width: 138px;
+  border-radius: 13px;
+  padding: .48rem .68rem;
+  color: #fff;
+  background: linear-gradient(#ff665e, #bd302a);
+  font-weight: 950;
+  white-space: nowrap;
+}
+.relinquish-warning {
+  display: grid;
+  gap: .7rem;
+}
+.relinquish-warning > strong {
+  color: #fff1bd;
+  font-size: 1.05rem;
+}
+.relinquish-warning p {
+  margin: 0;
+  color: #eadbce;
+  line-height: 1.35;
+}
 
 /* === V9 LANDSCAPE / HORIZONTAL LAYOUT === */
 .phone-shell {
@@ -4546,6 +4598,8 @@ button.inventory-slot {
   .city-action-row { grid-template-columns: 1fr 46px 1fr; gap: .35rem; }
   .action-buttons .city-action-row button { min-height: 52px; font-size: .68rem; }
   .action-buttons .city-action-row .info-action { min-height: 46px; font-size: 1.1rem; }
+  .relinquish-city-action-panel { grid-template-columns: minmax(0, 1fr); align-items: stretch; }
+  .relinquish-city-btn { width: 100%; min-width: 0; }
   .send-confirm-card { grid-template-columns: 46px 1fr; }
   .send-icon { width: 46px; height: 46px; font-size: 1.25rem; }
   .shop-item { grid-template-columns: 46px minmax(0, 1fr) auto; gap: .48rem; padding: .5rem .55rem; }

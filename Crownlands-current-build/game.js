@@ -2191,6 +2191,7 @@ let overdueArmyResolveTimer = 0;
 let pendingArmyRecoveryInFlight = false;
 let shopPurchaseInFlight = false;
 let serverCityUpgradeInFlightIds = new Set();
+let serverCityRelinquishInFlightIds = new Set();
 let selectedInventoryItemId = "";
 let updateCheckTimer = 0;
 let updateCheckInFlight = false;
@@ -5960,6 +5961,7 @@ function hasServerEconomyApi() {
     api?.isSignedIn?.()
       && api?.collectEconomy
       && api?.upgradeCity
+      && api?.relinquishCity
       && api?.purchaseShopItem
       && api?.activateInventoryItem
       && apiReady
@@ -6084,10 +6086,46 @@ function applyServerProfilePatch(patch = null) {
   return changed;
 }
 
+function applyServerCityUpdateToOwnedCache(update = {}) {
+  if (!state || !update || typeof update !== "object") return false;
+  const cityId = getKnownCityId(update.id);
+  if (!cityId) return false;
+  const currentUid = getCurrentOnlineUid();
+  const existingIndex = onlineOwnedCitiesCache.findIndex(city => city.id === cityId);
+  const existing = existingIndex >= 0 ? onlineOwnedCitiesCache[existingIndex] : null;
+  const ownerUidProvided = Object.prototype.hasOwnProperty.call(update, "ownerUid");
+  const nextOwnerUid = ownerUidProvided ? String(update.ownerUid || "").trim() : String(existing?.ownerUid || currentUid || "").trim();
+
+  if (ownerUidProvided && (!nextOwnerUid || (currentUid && nextOwnerUid !== currentUid))) {
+    if (existingIndex < 0) return false;
+    onlineOwnedCitiesCache.splice(existingIndex, 1);
+    localDirtyCityIds.delete(cityId);
+    return true;
+  }
+
+  if (!existing && !(ownerUidProvided && nextOwnerUid && (!currentUid || nextOwnerUid === currentUid))) return false;
+  const next = normalizeOwnedCitySnapshot({
+    ...(existing || {}),
+    ...update,
+    id: cityId,
+    regionId: normalizeRegionId(update.regionId || existing?.regionId || getCityRegionId(cityId)),
+    ownerKind: "player",
+    ownerUid: nextOwnerUid || currentUid || null,
+    ownerName: update.ownerName || existing?.ownerName || state.playerName,
+    ownerFlag: update.ownerFlag || existing?.ownerFlag || state.flag,
+  });
+  if (!next) return false;
+  if (existingIndex >= 0) onlineOwnedCitiesCache[existingIndex] = next;
+  else onlineOwnedCitiesCache.push(next);
+  return true;
+}
+
 function applyServerCityUpdates(cityUpdates = []) {
   if (!state || !Array.isArray(cityUpdates)) return false;
   let changed = false;
+  let cacheChanged = false;
   for (const update of cityUpdates) {
+    cacheChanged = applyServerCityUpdateToOwnedCache(update) || cacheChanged;
     const cityId = getKnownCityId(update?.id);
     const city = cityId ? cityById(cityId) : null;
     if (!city) continue;
@@ -6125,11 +6163,17 @@ function applyServerCityUpdates(cityUpdates = []) {
       city.ownerFlag = update.ownerFlag || null;
       city.ownerKingPower = normalizePowerValue(update.ownerKingPower);
       city.ownerShieldExpiresAtMs = normalizeTimestampMs(update.ownerShieldExpiresAtMs);
+      city.isMainCity = Boolean(update.isMainCity) && !isStronghold(city);
+      if (!ownerUid) localDirtyCityIds.delete(city.id);
+      changed = true;
+    } else if (update.isMainCity !== undefined) {
+      city.isMainCity = Boolean(update.isMainCity) && !isStronghold(city);
       changed = true;
     }
   }
+  if (cacheChanged) updateIslandSummariesFromOwnedCityCache();
   if (changed) renderAll();
-  return changed;
+  return changed || cacheChanged;
 }
 
 function applyServerArmyResult(result = null) {
@@ -12329,6 +12373,165 @@ function cancelSendMode() {
   renderAll();
 }
 
+function canRelinquishCity(city) {
+  if (!state || !city || city.owner !== "player") return false;
+  return isStronghold(city) || !isMainCityForList(city);
+}
+
+function getRelinquishDestinationPreview(city, { loadedOnly = false } = {}) {
+  if (!state || !city) return null;
+  const sourceRegionId = getCityRegionId(city);
+  const candidates = (loadedOnly ? playerCities() : getAllOwnedCitiesForDisplay())
+    .filter(candidate => candidate.id !== city.id)
+    .filter(candidate => loadedOnly ? candidate.owner === "player" : true)
+    .map(candidate => {
+      const sameRegion = getCityRegionId(candidate) === sourceRegionId;
+      const distance = Math.hypot((Number(candidate.x) || 0) - (Number(city.x) || 0), (Number(candidate.y) || 0) - (Number(city.y) || 0));
+      return { city: candidate, sameRegion, distance };
+    })
+    .sort((a, b) => {
+      if (a.sameRegion !== b.sameRegion) return a.sameRegion ? -1 : 1;
+      if (a.distance !== b.distance) return a.distance - b.distance;
+      return String(a.city.name || a.city.id).localeCompare(String(b.city.name || b.city.id));
+    });
+  return candidates[0]?.city || null;
+}
+
+function renderRelinquishCityAction(city) {
+  if (!canRelinquishCity(city)) return "";
+  return `
+    <div class="relinquish-city-action-panel">
+      <div class="relinquish-city-action-copy">
+        <strong>Relinquish Castle</strong>
+        <small>Move stationed troops to your nearest friendly city and make this city neutral.</small>
+      </div>
+      <button id="relinquishCityBtn" class="relinquish-city-btn" type="button">Relinquish Castle</button>
+    </div>
+  `;
+}
+
+function bindRelinquishCityButton(city) {
+  modalBody.querySelector("#relinquishCityBtn")?.addEventListener("click", () => showRelinquishCityConfirm(city.id));
+}
+
+function showRelinquishCityConfirm(cityId) {
+  const city = cityById(cityId);
+  if (!city) {
+    showToast("That city is no longer available.");
+    return;
+  }
+  if (!canRelinquishCity(city)) {
+    showToast(isMainCityForList(city) ? "You cannot relinquish your main city." : "You can only relinquish your own cities.");
+    return;
+  }
+
+  const troops = Math.max(0, Math.floor(Number(city.troops) || 0));
+  const destination = getRelinquishDestinationPreview(city);
+  const destinationLabel = destination ? destination.name : "your nearest friendly city";
+  modal.classList.add("relinquish-city-modal");
+  modalTitle.textContent = "Relinquish Castle";
+  modalBody.innerHTML = `
+    <div class="relinquish-warning">
+      <strong>Give up ${escapeHtml(city.name)}?</strong>
+      <p>You are giving up this city. ${formatNumber(troops)} stationed troops will move to ${escapeHtml(destinationLabel)}.</p>
+      <p>${escapeHtml(city.name)} will become neutral and stay at level ${formatNumber(isStronghold(city) ? getStrongholdDefenseLevel(city) : city.level)}.</p>
+      <div class="modal-actions">
+        <button id="confirmRelinquishCityBtn" class="danger-action" type="button">Yes</button>
+        <button id="cancelRelinquishCityBtn" class="safe-action" type="button">No</button>
+      </div>
+    </div>
+  `;
+  modalBody.querySelector("#cancelRelinquishCityBtn")?.addEventListener("click", () => modal.close());
+  modalBody.querySelector("#confirmRelinquishCityBtn")?.addEventListener("click", async event => {
+    event.currentTarget.disabled = true;
+    const success = await relinquishCity(city.id);
+    if (!success && modal.open) event.currentTarget.disabled = false;
+  });
+  if (!modal.open) modal.showModal();
+}
+
+function applyLocalRelinquishCity(city, destination) {
+  if (!state || !city || !destination) return false;
+  const transferredTroops = Math.max(0, Math.floor(Number(city.troops) || 0));
+  destination.troopFloat = Math.max(0, Number(destination.troopFloat) || Number(destination.troops) || 0) + transferredTroops;
+  destination.troops = Math.floor(destination.troopFloat);
+  markOwnedCityChanged(destination, false);
+
+  city.owner = "neutral";
+  city.ownerKind = "neutral";
+  city.ownerUid = null;
+  city.ownerName = "";
+  city.ownerFlag = null;
+  city.ownerKingPower = 0;
+  city.ownerShieldExpiresAtMs = 0;
+  city.isMainCity = false;
+  city.troops = 0;
+  city.troopFloat = 0;
+  city.investedGold = 0;
+  localDirtyCityIds.delete(city.id);
+  syncCityStateToOnline(city);
+  syncOwnedCitiesToOnline(true);
+  return true;
+}
+
+async function relinquishCity(cityId) {
+  const city = cityById(cityId);
+  if (!city) {
+    showToast("That city is no longer available.");
+    return false;
+  }
+  if (!canRelinquishCity(city)) {
+    showToast(isMainCityForList(city) ? "You cannot relinquish your main city." : "You can only relinquish your own cities.");
+    return false;
+  }
+
+  const regionId = getCityRegionId(city);
+  const inFlightKey = `${regionId}:${city.id}`;
+  if (serverCityRelinquishInFlightIds.has(inFlightKey)) {
+    showToast(`${city.name} is already being relinquished.`);
+    return false;
+  }
+
+  serverCityRelinquishInFlightIds.add(inFlightKey);
+  try {
+    if (usesServerEconomyAuthority() && getOnlineApi()?.relinquishCity) {
+      const result = await getOnlineApi().relinquishCity({ cityId: city.id, regionId });
+      applyServerEconomyResult(result);
+      const transferredTroops = Math.max(0, Math.floor(Number(result?.transferredTroops) || 0));
+      const destinationName = result?.destinationCity?.name || getRelinquishDestinationPreview(city)?.name || "the nearest friendly city";
+      addLog(`Relinquished ${city.name}. ${formatNumber(transferredTroops)} troops moved to ${destinationName}.`);
+      showToast(`${city.name} relinquished`);
+      if (modal.open) modal.close();
+      clearSelection(false);
+      renderAll();
+      return true;
+    }
+
+    const destination = getRelinquishDestinationPreview(city, { loadedOnly: true });
+    if (!destination) {
+      showToast("You need another friendly city to receive the troops.");
+      return false;
+    }
+    const transferredTroops = Math.max(0, Math.floor(Number(city.troops) || 0));
+    applyLocalRelinquishCity(city, destination);
+    addLog(`Relinquished ${city.name}. ${formatNumber(transferredTroops)} troops moved to ${destination.name}.`);
+    showToast(`${city.name} relinquished`);
+    saveGame();
+    if (modal.open) modal.close();
+    clearSelection(false);
+    renderAll();
+    return true;
+  } catch (error) {
+    onlineLastError = error?.message || String(error);
+    showToast(error?.message || "Could not relinquish city.");
+    console.warn("City relinquish failed", error);
+    renderAll();
+    return false;
+  } finally {
+    serverCityRelinquishInFlightIds.delete(inFlightKey);
+  }
+}
+
 function confirmSendOrder() {
   const source = selectedSourceId ? cityById(selectedSourceId) : null;
   const target = selectedTargetId ? cityById(selectedTargetId) : null;
@@ -12417,8 +12620,10 @@ function showCityInfoModal(cityId) {
         <div class="stat-chip"><span>City walls</span><strong>${formatNumber(stats.cityWalls)}</strong></div>
         <div class="stat-chip"><span>Garrison limit</span><strong>Unlimited</strong><small>station as many troops as you can send</small></div>
         <div class="stat-chip"><span>Effect target</span><strong>${effectTargetLabel}</strong><small>${effectHelp}</small></div>
+        ${renderRelinquishCityAction(city)}
       </div>
     `;
+    bindRelinquishCityButton(city);
     if (!modal.open) modal.showModal();
     return;
   }
@@ -12470,9 +12675,11 @@ function showCityInfoModal(cityId) {
       <div class="stat-chip"><span>Gold production</span><strong>${formatNumber(stats.goldProductionPerHour)}/h</strong></div>
       <div class="stat-chip"><span>Invested gold</span><strong>${formatNumber(city.investedGold || 0)}</strong><small>Cautious can refund part</small></div>
       ${cooldownRemaining > 0 ? `<div class="stat-wide"><span>Capture XP cooldown</span><strong>${formatDuration(cooldownRemaining)}</strong></div>` : ""}
+      ${renderRelinquishCityAction(city)}
     </div>
   `;
   modalBody.querySelector("#changeMainCityBtn")?.addEventListener("click", () => changeMainCity(city.id));
+  bindRelinquishCityButton(city);
   if (!modal.open) modal.showModal();
 }
 
@@ -14752,6 +14959,7 @@ modal.addEventListener("close", () => {
   modal.classList.remove("inventory-modal");
   modal.classList.remove("incoming-attack-modal");
   modal.classList.remove("outgoing-attack-modal");
+  modal.classList.remove("relinquish-city-modal");
   if (!troopSliderActive) return;
   troopSliderActive = false;
   cancelSendMode();

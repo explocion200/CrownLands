@@ -876,6 +876,28 @@ function getEconomyCityByRef(economy = null, ref = null) {
   return economy.cityEntries.find(entry => entry.ref.path === ref.path) || null;
 }
 
+function findNearestRelinquishDestination(economy = null, sourceEntry = null) {
+  if (!economy || !sourceEntry?.city) return null;
+  const source = sourceEntry.city;
+  const sourceRegionId = normalizeRegionId(source.regionId || "");
+  const sourceX = safeNumber(source.x, 0);
+  const sourceY = safeNumber(source.y, 0);
+  return economy.cityEntries
+    .filter(entry => entry?.ref?.path !== sourceEntry.ref.path)
+    .filter(entry => getOwnerUid(entry.city) === economy.uid)
+    .map(entry => {
+      const city = entry.city || {};
+      const sameRegion = normalizeRegionId(city.regionId || "") === sourceRegionId;
+      const distance = Math.hypot(safeNumber(city.x, 0) - sourceX, safeNumber(city.y, 0) - sourceY);
+      return { ...entry, sameRegion, distance };
+    })
+    .sort((a, b) => {
+      if (a.sameRegion !== b.sameRegion) return a.sameRegion ? -1 : 1;
+      if (a.distance !== b.distance) return a.distance - b.distance;
+      return safeString(a.city?.name || a.city?.id, 80).localeCompare(safeString(b.city?.name || b.city?.id, 80));
+    })[0] || null;
+}
+
 async function prepareEconomyCollection(transaction, uid, nowMs = Date.now(), options = {}) {
   const profileRef = options.profileRef || db.doc(`players/${uid}`);
   const profileSnap = options.profileSnap || await transaction.get(profileRef);
@@ -1232,6 +1254,92 @@ exports.upgradeCity = onCall({ region: "us-central1", maxInstances: 20, invoker:
       spentGold,
       upgraded,
       xpAwarded: progress.xpAwarded,
+    });
+  });
+});
+
+exports.relinquishCity = onCall({ region: "us-central1", maxInstances: 20, invoker: "public" }, async request => {
+  const uid = requireAuth(request);
+  const data = request.data || {};
+  const cityId = safeString(data.cityId || data.id, 96).replace(/[^a-zA-Z0-9_-]/g, "_");
+  const regionId = normalizeRegionId(data.regionId || data.islandId || "west");
+  if (!cityId) throw new HttpsError("invalid-argument", "Choose a city to relinquish.");
+
+  return db.runTransaction(async transaction => {
+    const nowMs = Date.now();
+    const cityRef = cityRefForRegion(regionId, cityId);
+    const economy = await prepareEconomyCollection(transaction, uid, nowMs);
+    const sourceEntry = getEconomyCityByRef(economy, cityRef);
+    if (!sourceEntry?.city || getOwnerUid(sourceEntry.city) !== uid) {
+      throw new HttpsError("permission-denied", "You can only relinquish your own city.");
+    }
+
+    const source = sourceEntry.city;
+    const profileMainCityId = safeString(economy.profileAfter.mainCityId || economy.profileBefore.mainCityId, 96);
+    if (!isStronghold(source) && (source.isMainCity || source.id === profileMainCityId)) {
+      throw new HttpsError("failed-precondition", "You cannot relinquish your main city.");
+    }
+
+    const destinationEntry = findNearestRelinquishDestination(economy, sourceEntry);
+    if (!destinationEntry?.city) {
+      throw new HttpsError("failed-precondition", "You need another friendly city to receive the troops.");
+    }
+
+    const transferredTroops = Math.max(0, Math.floor(safeNumber(source.troops, 0)));
+    const destination = destinationEntry.city;
+    const destinationTroopFloat = Math.max(0, safeNumber(destination.troopFloat, destination.troops || 0)) + transferredTroops;
+    const destinationPatch = {
+      troops: Math.max(0, Math.floor(destinationTroopFloat)),
+      troopFloat: destinationTroopFloat,
+      productionUpdatedAtMs: nowMs,
+    };
+    const sourceLevel = isStronghold(source) ? getStrongholdDefenseLevel(source) : clampCityLevel(source.level);
+    const sourcePatch = {
+      ownerKind: "neutral",
+      ownerUid: null,
+      ownerName: "",
+      ownerFlag: null,
+      ownerKingPower: 0,
+      ownerShieldExpiresAtMs: 0,
+      level: sourceLevel,
+      troops: 0,
+      troopFloat: 0,
+      investedGold: 0,
+      isMainCity: false,
+      productionUpdatedAtMs: nowMs,
+      relinquishedAtMs: nowMs,
+    };
+
+    const sourceUpdate = {
+      id: source.id,
+      regionId: source.regionId || regionId,
+      ...sourcePatch,
+    };
+    const destinationUpdate = {
+      id: destination.id,
+      regionId: destination.regionId || regionId,
+      ...destinationPatch,
+    };
+
+    writePreparedEconomy(transaction, economy, {}, [
+      { ref: sourceEntry.ref, city: source, patch: sourcePatch },
+      { ref: destinationEntry.ref, city: destination, patch: destinationPatch },
+    ]);
+
+    return createEconomyResponse(economy, {
+      cityUpdates: [...economy.cityUpdates, sourceUpdate, destinationUpdate],
+      relinquishedCity: {
+        id: source.id,
+        name: safeString(source.name || source.id, 80),
+        regionId: source.regionId || regionId,
+        level: sourceLevel,
+      },
+      destinationCity: {
+        id: destination.id,
+        name: safeString(destination.name || destination.id, 80),
+        regionId: destination.regionId || regionId,
+      },
+      transferredTroops,
     });
   });
 });

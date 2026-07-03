@@ -137,6 +137,10 @@
     return callServerFunction("upgradeCity", payload);
   }
 
+  async function relinquishCity(payload = {}) {
+    return callServerFunction("relinquishCity", payload);
+  }
+
   async function activateInventoryItem(payload = {}) {
     return callServerFunction("activateInventoryItem", payload);
   }
@@ -1085,6 +1089,7 @@
     loadPlayerProfile,
     collectEconomy,
     upgradeCity,
+    relinquishCity,
     purchaseShopItem,
     activateInventoryItem,
     saveGameSnapshot,
