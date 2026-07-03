@@ -2161,6 +2161,8 @@ let onlinePresenceInFlight = false;
 let serverEconomySyncTimer = 0;
 let serverEconomyRefreshInFlight = false;
 let serverEconomyRefreshQueued = false;
+let serverEconomyLastSyncAt = 0;
+let serverEconomyLastToastAt = 0;
 let leaderboardSaveTimer = 0;
 let leaderboardSaveInFlight = false;
 let leaderboardLastSignature = "";
@@ -6077,10 +6079,18 @@ async function refreshServerEconomy(force = false, options = {}) {
       resetGeneration: RESET_GENERATION,
     });
     applyServerEconomyResult(result, options);
+    serverEconomyLastSyncAt = Date.now();
     onlineLastError = "";
+    updateOnlineUi();
     return true;
   } catch (error) {
     onlineLastError = error?.message || String(error);
+    const nowMs = Date.now();
+    if (nowMs - serverEconomyLastToastAt > 30000) {
+      serverEconomyLastToastAt = nowMs;
+      showToast("Server economy sync failed. Deploy Functions/firestore or reconnect.");
+    }
+    updateOnlineUi();
     console.warn("Could not refresh server economy", error);
     return false;
   } finally {
@@ -7128,6 +7138,8 @@ function updateOnlineUi() {
     onlineStatusText.textContent = user?.displayName ? `Signed in: ${user.displayName}` : "Signed in";
     if (onlineLastError) {
       onlineStatusDetail.textContent = `Online waiting: ${onlineLastError}`;
+    } else if (usesServerEconomyAuthority() && serverEconomyLastSyncAt) {
+      onlineStatusDetail.textContent = `Online ready. Server economy synced ${new Date(serverEconomyLastSyncAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}.`;
     } else if (onlineLastSaveAt) {
       onlineStatusDetail.textContent = `Online ready. Last synced ${new Date(onlineLastSaveAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}. Press Enter Kingdom.`;
     } else {
