@@ -196,7 +196,7 @@ const TRAINING_STRONGHOLD_LEVEL = 50;
 const TRAINING_STRONGHOLD_START_TROOPS = 50000000;
 const SPEED_STRONGHOLD_ID = "east_speed_stronghold";
 const SPEED_STRONGHOLD_NAME = "Speed Stronghold";
-const SPEED_STRONGHOLD_ART_SRC = "assets/speed-stronghold.png";
+const SPEED_STRONGHOLD_ART_SRC = "assets/speed-stronghold.png?v=20260703-speed-stronghold-art";
 const SPEED_STRONGHOLD_BONUS_PERCENT = 15;
 const SPEED_STRONGHOLD_LEVEL = 50;
 const SPEED_STRONGHOLD_START_TROOPS = 50000000;
