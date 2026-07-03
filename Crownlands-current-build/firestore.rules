@@ -14,36 +14,63 @@ service cloud.firestore {
       return data.get('shopItems', {}).get('shield_12h', 0);
     }
 
-    function shieldPurchaseAt(data) {
-      return data.get('itemPurchaseCooldowns', {}).get('shield_12h', {}).get('lastPurchasedAt', null);
-    }
-
-    function shieldCooldownUnchanged() {
-      return shieldPurchaseAt(request.resource.data) == shieldPurchaseAt(resource.data);
-    }
-
     function shieldStockNotIncreased() {
       return shieldCount(request.resource.data) <= shieldCount(resource.data);
     }
 
     function validShieldPurchase() {
-      return shieldCount(request.resource.data) == shieldCount(resource.data) + 1
-        && request.resource.data.get('gold', 0) == resource.data.get('gold', 0) - 175000
-        && shieldPurchaseAt(request.resource.data) == request.time
-        && (
-          !(shieldPurchaseAt(resource.data) is timestamp)
-          || shieldPurchaseAt(resource.data) <= request.time - duration.value(24, 'h')
-        );
+      return shieldCount(request.resource.data) > shieldCount(resource.data)
+        && request.resource.data.get('gold', 0) is number
+        && request.resource.data.get('gold', 0) >= 0;
     }
 
     function validPlayerProfileCreate() {
-      return shieldCount(request.resource.data) == 0
-        && shieldPurchaseAt(request.resource.data) == null;
+      return shieldCount(request.resource.data) == 0;
+    }
+
+    function profileFieldUnchanged(field) {
+      return request.resource.data.get(field, resource.data.get(field, null)) == resource.data.get(field, null);
+    }
+
+    function playerEconomyUnchanged() {
+      return profileFieldUnchanged('gold')
+        && profileFieldUnchanged('goldFloat')
+        && profileFieldUnchanged('shopItems')
+        && profileFieldUnchanged('itemEffects')
+        && profileFieldUnchanged('itemPurchaseCooldowns')
+        && profileFieldUnchanged('economyUpdatedAtMs')
+        && profileFieldUnchanged('offlineProductionCities');
     }
 
     function validPlayerProfileUpdate() {
-      return (shieldStockNotIncreased() && shieldCooldownUnchanged())
-        || validShieldPurchase();
+      return playerEconomyUnchanged();
+    }
+
+    function cityFieldUnchanged(field) {
+      return request.resource.data.get(field, resource.data.get(field, null)) == resource.data.get(field, null);
+    }
+
+    function cityEconomyUnchanged() {
+      return cityFieldUnchanged('troops')
+        && cityFieldUnchanged('troopFloat')
+        && cityFieldUnchanged('level')
+        && cityFieldUnchanged('investedGold')
+        && cityFieldUnchanged('productionUpdatedAtMs')
+        && cityFieldUnchanged('ownerShieldExpiresAtMs');
+    }
+
+    function validStartingCityClaim() {
+      return resource.data.get('ownerUid', null) == null
+        && request.resource.data.get('ownerUid', null) == request.auth.uid
+        && request.resource.data.get('ownerKind', '') == 'player'
+        && request.resource.data.get('troops', 0) is number
+        && request.resource.data.get('troops', 0) >= 0
+        && request.resource.data.get('troops', 0) <= 50
+        && request.resource.data.get('troopFloat', 0) is number
+        && request.resource.data.get('troopFloat', 0) >= 0
+        && request.resource.data.get('troopFloat', 0) <= 50
+        && request.resource.data.get('level', resource.data.get('level', 1)) == resource.data.get('level', 1)
+        && request.resource.data.get('investedGold', resource.data.get('investedGold', 0)) == resource.data.get('investedGold', 0);
     }
 
     match /players/{uid} {
@@ -54,6 +81,20 @@ service cloud.firestore {
 
       match /saves/{saveId} {
         allow read, create, update: if ownsPlayerDoc(uid);
+        allow delete: if ownsPlayerDoc(uid);
+      }
+
+      match /serverReports/{reportId} {
+        allow read: if ownsPlayerDoc(uid);
+        allow create, update, delete: if false;
+      }
+
+      match /notificationTokens/{tokenId} {
+        allow read: if ownsPlayerDoc(uid);
+        allow create, update: if ownsPlayerDoc(uid)
+          && request.resource.data.uid == uid
+          && request.resource.data.token is string
+          && request.resource.data.enabled is bool;
         allow delete: if ownsPlayerDoc(uid);
       }
     }
@@ -69,9 +110,9 @@ service cloud.firestore {
       allow delete: if ownsPlayerDoc(uid);
     }
 
-    // Phase 2 multiplayer collections. Signed-in users can create the shared
-    // island and update city docs for the browser prototype. Tighten these
-    // rules when combat moves into server-verified transactions.
+    // Multiplayer collections. Layout/profile metadata can still be updated by
+    // the browser, but economy, army orders, arrivals, combat, and reports are
+    // server-owned.
     match /islands/{islandId} {
       allow read: if signedIn();
       allow create: if signedIn();
@@ -80,19 +121,19 @@ service cloud.firestore {
 
       match /cities/{cityId} {
         allow read: if signedIn();
-        allow create, update: if signedIn();
+        allow create: if signedIn();
+        allow update: if signedIn() && (cityEconomyUnchanged() || validStartingCityClaim());
         allow delete: if false;
       }
 
       match /armies/{armyId} {
         allow read: if signedIn();
-        allow create, update: if signedIn();
-        allow delete: if signedIn();
+        allow create, update, delete: if false;
       }
 
       match /reports/{reportId} {
         allow read: if signedIn();
-        allow create, update: if signedIn();
+        allow create, update: if false;
         allow delete: if false;
       }
 

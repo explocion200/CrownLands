@@ -4,17 +4,18 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Crownlands - Medieval Island Conquest</title>
-  <meta name="crownlands-build" content="20260703-route-name-fix" />
+  <meta name="crownlands-build" content="20260703-battle-alerts" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700;800;900&family=Cinzel+Decorative:wght@700;900&family=IM+Fell+English:ital@0;1&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=20260703-map-arrow-glow" />
+  <link rel="stylesheet" href="styles.css?v=20260703-battle-alerts" />
   <link rel="preload" as="image" href="assets/loading-ring.png" />
   <link rel="preload" as="image" href="assets/loading-crown.png" />
   <link rel="preload" as="image" href="assets/leaderboard-icon.png?v=20260623-leaderboard-icon-new" />
   <link rel="preload" as="image" href="assets/profile-hud-frame.png?v=20260702-profile-frame" />
   <link rel="preload" as="image" href="assets/city-list-icon.png?v=20260623-city-icon-hud" />
   <link rel="preload" as="image" href="assets/map-icon.png?v=20260623-map-icon-framed" />
+  <link rel="preload" as="image" href="assets/map-switch-arrow.png?v=20260702-map-arrow-bigger" />
   <link rel="preload" as="image" href="assets/shop-icon.png?v=20260623-shop-ui" />
   <link rel="preload" as="image" href="assets/bag-icon.png?v=20260623-bag-inventory" />
   <link rel="preload" as="image" href="assets/report-icon.png?v=20260702-report-icon" />
@@ -197,6 +198,10 @@
               <div class="kingdom-stat"><span>Gold production</span><strong id="profileGoldProductionStat">0/h</strong></div>
               <div class="kingdom-stat"><span>Troops production</span><strong id="profileTroopProductionStat">0/h</strong></div>
             </div>
+            <div class="profile-alert-row">
+              <button id="pushAlertsBtn" class="profile-secondary-btn push-alerts-btn" type="button">Enable Alerts</button>
+              <span id="pushAlertsStatus" class="push-alerts-status">Off</span>
+            </div>
           </section>
         </div>
 
@@ -240,7 +245,7 @@
   <script src="assets/map-editor-data.js?v=20260702-world-editor-reset"></script>
   <script src="world-config.js"></script>
   <script src="firebase-config.js"></script>
-  <script src="firebaseClient.js?v=20260630-profile-restore-fix"></script>
-  <script src="game.js?v=20260703-route-name-fix"></script>
+  <script src="firebaseClient.js?v=20260703-battle-alerts"></script>
+  <script src="game.js?v=20260703-battle-alerts"></script>
 </body>
 </html>

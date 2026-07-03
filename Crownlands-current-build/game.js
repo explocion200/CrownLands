@@ -18,6 +18,7 @@ const DEFAULT_ONLINE_REGION_ID = WORLD_REGIONS.find(region => region.id === "wes
 const ONLINE_CITY_SYNC_SECONDS = 20;
 const ONLINE_PRESENCE_SECONDS = 30;
 const ONLINE_PRESENCE_STALE_SECONDS = 90;
+const SERVER_ECONOMY_SYNC_SECONDS = 15;
 const LEADERBOARD_SAVE_SECONDS = 60;
 const LEADERBOARD_STALE_REFRESH_MS = 5 * 60 * 1000;
 const KING_POWER_LEADERBOARD_LIMIT = 100;
@@ -2096,7 +2097,9 @@ const routeEdgePassableCache = new Map();
 const pathMetricCache = new WeakMap();
 const ROUTE_CELL_FALLBACK_RADIUS = 32;
 const ROUTE_CELL_FALLBACK_CANDIDATES = 24;
-const ROUTE_CELL_FALLBACK_PAIR_LIMIT = 48;
+const ROUTE_CELL_FALLBACK_PAIR_LIMIT = 16;
+const NEAREST_SOURCE_ROUTE_CHECK_LIMIT = 18;
+const SCOUT_SOURCE_ROUTE_CHECK_LIMIT = 10;
 
 
 let state;
@@ -2155,6 +2158,9 @@ let onlineOwnedCitiesCacheComplete = false;
 let onlineOwnedCitiesRefreshInFlight = false;
 let onlinePresenceTimer = 0;
 let onlinePresenceInFlight = false;
+let serverEconomySyncTimer = 0;
+let serverEconomyRefreshInFlight = false;
+let serverEconomyRefreshQueued = false;
 let leaderboardSaveTimer = 0;
 let leaderboardSaveInFlight = false;
 let leaderboardLastSignature = "";
@@ -2162,6 +2168,7 @@ let leaderboardLastSaveAt = 0;
 let overdueArmyResolveTimer = 0;
 let pendingArmyRecoveryInFlight = false;
 let shopPurchaseInFlight = false;
+let serverCityUpgradeInFlightIds = new Set();
 let selectedInventoryItemId = "";
 let updateCheckTimer = 0;
 let updateCheckInFlight = false;
@@ -2244,6 +2251,8 @@ const profileGoldStat = document.getElementById("profileGoldStat");
 const profileTroopsStat = document.getElementById("profileTroopsStat");
 const profileGoldProductionStat = document.getElementById("profileGoldProductionStat");
 const profileTroopProductionStat = document.getElementById("profileTroopProductionStat");
+const pushAlertsBtn = document.getElementById("pushAlertsBtn");
+const pushAlertsStatus = document.getElementById("pushAlertsStatus");
 const flagEditorPreview = document.getElementById("flagEditorPreview");
 const flagPrimaryColors = document.getElementById("flagPrimaryColors");
 const flagSecondaryColors = document.getElementById("flagSecondaryColors");
@@ -5608,16 +5617,57 @@ function getPendingScoutMission(cityId) {
   return state?.attacks?.find(attack => attack.owner === "player" && attack.kind === "scout" && attack.toId === cityId) || null;
 }
 
-function findNearestOwnedSource(target, minimumTroops = 1) {
-  return playerCities()
+function getRouteHeuristicDistance(source, target) {
+  if (!source || !target) return Infinity;
+  const sourceRegionId = getCityRegionId(source);
+  const targetRegionId = getCityRegionId(target);
+  if (sourceRegionId === targetRegionId) return Math.hypot(source.x - target.x, source.y - target.y);
+
+  const chain = getPortalRouteRegionChain(sourceRegionId, targetRegionId);
+  if (!chain?.length) return Infinity;
+
+  let currentPoint = { x: source.x, y: source.y };
+  let distance = 0;
+  for (let index = 0; index < chain.length; index += 1) {
+    const regionId = chain[index];
+    const isLastRegion = index === chain.length - 1;
+    const nextRegionId = isLastRegion ? "" : chain[index + 1];
+    if (isLastRegion) {
+      distance += Math.hypot(currentPoint.x - target.x, currentPoint.y - target.y);
+      break;
+    }
+    const sourcePortal = getEditorPortalForRoute(regionId, nextRegionId);
+    const exitPoint = getPortalWorldPoint(regionId, nextRegionId, sourcePortal ? { portal: sourcePortal } : {});
+    if (!exitPoint) return Infinity;
+    distance += Math.hypot(currentPoint.x - exitPoint.x, currentPoint.y - exitPoint.y);
+    const arrivalPortal = sourcePortal ? getLinkedEditorArrivalPortal(regionId, nextRegionId, sourcePortal) : null;
+    const arrivalPoint = getPortalWorldPoint(nextRegionId, regionId, arrivalPortal ? { portal: arrivalPortal } : {});
+    if (!arrivalPoint) return Infinity;
+    currentPoint = arrivalPoint;
+  }
+  return distance;
+}
+
+function findNearestOwnedSource(target, minimumTroops = 1, options = {}) {
+  const maxRouteChecks = Math.max(1, Math.floor(Number(options.maxRouteChecks) || NEAREST_SOURCE_ROUTE_CHECK_LIMIT));
+  const candidates = playerCities()
     .filter(city => Math.floor(Number(city.troops) || 0) >= minimumTroops && city.id !== target.id)
-    .map(city => ({ city, route: findRoute(city, target) }))
-    .filter(option => option.route?.points?.length)
-    .sort((a, b) => a.route.length - b.route.length)[0] || null;
+    .map(city => ({ city, estimate: getRouteHeuristicDistance(city, target) }))
+    .filter(option => Number.isFinite(option.estimate))
+    .sort((a, b) => a.estimate - b.estimate);
+
+  let checked = 0;
+  for (const option of candidates) {
+    if (checked >= maxRouteChecks) break;
+    checked += 1;
+    const route = findRoute(option.city, target);
+    if (route?.points?.length) return { city: option.city, route };
+  }
+  return null;
 }
 
 function findNearestScoutSource(target) {
-  return findNearestOwnedSource(target, 1);
+  return findNearestOwnedSource(target, 1, { maxRouteChecks: SCOUT_SOURCE_ROUTE_CHECK_LIMIT });
 }
 
 function rememberOwnedAttackSource(cityOrId) {
@@ -5789,6 +5839,25 @@ function usesServerArmyAuthority() {
   return Boolean(isOnlineWorldActive() && api?.isSignedIn?.() && api?.sendArmyOrder && api?.resolveArmyOrder && apiReady);
 }
 
+function hasServerEconomyApi() {
+  const api = getOnlineApi();
+  const apiReady = typeof api?.usesServerEconomyAuthority === "function"
+    ? api.usesServerEconomyAuthority()
+    : true;
+  return Boolean(
+    api?.isSignedIn?.()
+      && api?.collectEconomy
+      && api?.upgradeCity
+      && api?.purchaseShopItem
+      && api?.activateInventoryItem
+      && apiReady
+  );
+}
+
+function usesServerEconomyAuthority() {
+  return Boolean(isOnlineWorldActive() && hasServerEconomyApi());
+}
+
 function getServerArmyLaunchKey(sourceId, targetId, kind = "attack") {
   return `${String(kind || "attack")}:${String(sourceId || "")}:${String(targetId || "")}`;
 }
@@ -5880,7 +5949,19 @@ function applyServerProfilePatch(patch = null) {
     changed = true;
   }
   if (Number.isFinite(Number(patch.gold))) {
-    state.gold = Math.max(TEST_STARTING_GOLD, Math.floor(Number(patch.gold) || 0));
+    state.gold = Math.max(0, Math.floor(Number(patch.gold) || 0));
+    changed = true;
+  }
+  if (patch.shopItems && typeof patch.shopItems === "object") {
+    state.shopItems = normalizeShopItems(patch.shopItems);
+    changed = true;
+  }
+  if (patch.itemEffects && typeof patch.itemEffects === "object") {
+    state.itemEffects = normalizeItemEffects(patch.itemEffects);
+    changed = true;
+  }
+  if (patch.itemPurchaseCooldowns && typeof patch.itemPurchaseCooldowns === "object") {
+    state.itemPurchaseCooldowns = normalizeItemPurchaseCooldowns(patch.itemPurchaseCooldowns);
     changed = true;
   }
   if (changed) {
@@ -5910,6 +5991,18 @@ function applyServerCityUpdates(cityUpdates = []) {
       city.level = isStronghold(city) ? getStrongholdDefenseLevel(city) : clampCityLevel(update.level);
       changed = true;
     }
+    if (Number.isFinite(Number(update.investedGold))) {
+      city.investedGold = isStronghold(city) ? 0 : Math.max(0, Math.floor(Number(update.investedGold) || 0));
+      changed = true;
+    }
+    if (Number.isFinite(Number(update.ownerShieldExpiresAtMs))) {
+      city.ownerShieldExpiresAtMs = isStronghold(city) ? 0 : normalizeTimestampMs(update.ownerShieldExpiresAtMs);
+      changed = true;
+    }
+    if (Number.isFinite(Number(update.productionUpdatedAtMs))) {
+      city.productionUpdatedAtMs = normalizeTimestampMs(update.productionUpdatedAtMs);
+      changed = true;
+    }
     if (update.ownerUid !== undefined) {
       const currentUid = getCurrentOnlineUid();
       const ownerUid = String(update.ownerUid || "").trim();
@@ -5936,6 +6029,69 @@ function applyServerArmyResult(result = null) {
   return changed;
 }
 
+function applyServerEconomyResult(result = null, options = {}) {
+  if (!result || typeof result !== "object") return false;
+  let changed = false;
+  if (result.currentUser) changed = applyServerProfilePatch(result.currentUser) || changed;
+  if (Array.isArray(result.cityUpdates)) changed = applyServerCityUpdates(result.cityUpdates) || changed;
+  const production = result.production || {};
+  const goldGained = Math.max(0, Math.floor(Number(production.goldGained) || 0));
+  const troopsGained = Math.max(0, Math.floor(Number(production.troopsGained) || 0));
+  const elapsed = Math.max(0, Math.floor(Number(production.elapsedSeconds) || 0));
+  if (options.showOfflineRewards && elapsed >= 60 && (goldGained > 0 || troopsGained > 0)) {
+    addLog(`Server production: +${formatNumber(goldGained)} gold and +${formatNumber(troopsGained)} troops while away.`);
+    showOfflineRewardsModal({
+      goldGained,
+      troopsGained,
+      troopsKeptInCities: troopsGained,
+      troopsRalliedToMain: 0,
+      elapsed,
+      cityName: getMainRewardCity()?.name || "main city",
+      lostCities: [],
+    });
+  }
+  if (changed) {
+    saveGame();
+    renderHud();
+    renderCities(true);
+    if (modal.open && modal.classList.contains("shop-modal")) renderShopModal();
+    if (modal.open && modal.classList.contains("inventory-modal")) showInventoryModal();
+    if (modal.open && modal.classList.contains("city-list-modal")) renderCityListModal();
+    if (profileScreen?.classList.contains("open")) renderProfileScreen();
+  }
+  return changed;
+}
+
+async function refreshServerEconomy(force = false, options = {}) {
+  if (!state || !usesServerEconomyAuthority()) return false;
+  const api = getOnlineApi();
+  if (!api?.collectEconomy) return false;
+  if (serverEconomyRefreshInFlight) {
+    if (force) serverEconomyRefreshQueued = true;
+    return false;
+  }
+  serverEconomyRefreshInFlight = true;
+  try {
+    const result = await api.collectEconomy({
+      worldId: ONLINE_WORLD_ID,
+      resetGeneration: RESET_GENERATION,
+    });
+    applyServerEconomyResult(result, options);
+    onlineLastError = "";
+    return true;
+  } catch (error) {
+    onlineLastError = error?.message || String(error);
+    console.warn("Could not refresh server economy", error);
+    return false;
+  } finally {
+    serverEconomyRefreshInFlight = false;
+    if (serverEconomyRefreshQueued) {
+      serverEconomyRefreshQueued = false;
+      refreshServerEconomy(true);
+    }
+  }
+}
+
 function getSerializableGameState() {
   if (!state) return null;
   normalizeGameOverState(state);
@@ -5950,6 +6106,18 @@ function getPlayerCloudStateSnapshot() {
     version: WORLD_SCHEMA_VERSION,
     gameSeconds: state ? Math.max(0, Number(state.gameSeconds) || 0) : 0,
   };
+}
+
+function stripServerEconomyProfileFields(profile = {}) {
+  if (!usesServerEconomyAuthority()) return profile;
+  const clean = { ...profile };
+  delete clean.gold;
+  delete clean.goldFloat;
+  delete clean.shopItems;
+  delete clean.itemEffects;
+  delete clean.itemPurchaseCooldowns;
+  delete clean.offlineProductionCities;
+  return clean;
 }
 
 function getPlayerProfileSnapshot() {
@@ -6004,8 +6172,15 @@ function mergeOnlineProfileSources(profile = null, cloudSnapshot = null) {
   if (!currentCloudSnapshot) return currentProfile;
   const profileSavedAtMs = getProfileGameSaveMs(currentProfile);
   const cloudSavedAtMs = getProfileGameSaveMs(currentCloudSnapshot);
-  if (cloudSavedAtMs > profileSavedAtMs) return { ...currentProfile, ...currentCloudSnapshot };
-  return { ...currentCloudSnapshot, ...currentProfile };
+  const merged = cloudSavedAtMs > profileSavedAtMs
+    ? { ...currentProfile, ...currentCloudSnapshot }
+    : { ...currentCloudSnapshot, ...currentProfile };
+  if (hasServerEconomyApi()) {
+    ["gold", "goldFloat", "shopItems", "itemEffects", "itemPurchaseCooldowns", "economyUpdatedAtMs"].forEach(key => {
+      if (currentProfile[key] !== undefined) merged[key] = currentProfile[key];
+    });
+  }
+  return merged;
 }
 
 function applyOnlineProfileSnapshot(profile = null, fallbackPlayerName = "Ricky") {
@@ -6018,7 +6193,8 @@ function applyOnlineProfileSnapshot(profile = null, fallbackPlayerName = "Ricky"
   state.itemEffects = normalizeItemEffects(profile.itemEffects);
   state.itemPurchaseCooldowns = normalizeItemPurchaseCooldowns(profile.itemPurchaseCooldowns);
   syncCharacterSkillPoints(state.character, state.upgrades, profile.character?.skillPoints);
-  state.gold = Math.max(TEST_STARTING_GOLD, Math.floor(Number(profile.gold) || 0));
+  const profileGold = Number(profile.gold);
+  state.gold = Math.max(0, Math.floor(Number.isFinite(profileGold) ? profileGold : TEST_STARTING_GOLD));
   state.daily = normalizeDailyCaptureTracker(profile.daily);
   state.harvestBonuses = enforceHarvestBonusActiveLimit(normalizeHarvestBonuses(profile.harvestBonuses));
   const harvestTimer = Number(profile.harvestSpawnTimer);
@@ -6121,6 +6297,7 @@ async function prepareOfflineProgressFromProfile(profile = null) {
   pendingOfflineProgressSeconds = 0;
   pendingOfflineProductionCities = [];
   pendingOfflineOwnedCityIds = null;
+  if (hasServerEconomyApi()) return false;
   if (!state || !profile || !isCurrentResetProfile(profile)) return false;
 
   const productionCities = normalizeOfflineProductionCities(profile.offlineProductionCities);
@@ -6166,7 +6343,7 @@ async function flushOnlineSave(force = false) {
   onlineSaveQueued = false;
   try {
     const cloudState = getPlayerCloudStateSnapshot();
-    await api.savePlayerProfile(cloudState);
+    await api.savePlayerProfile(stripServerEconomyProfileFields(cloudState));
     if (typeof api.saveGameSnapshot === "function") {
       await api.saveGameSnapshot(cloudState, ONLINE_SAVE_SLOT);
     }
@@ -7536,7 +7713,12 @@ async function connectOnlineIsland(regionId, { claimHome = false, homeRegionId =
       applyOnlineCities(onlineCities, targetRegionId);
       onlineCitiesLoaded = true;
       if (firstCitiesSnapshot && getActivePeaceShieldExpiresAtMs()) refreshOwnedCityItemEffectMetadata(true);
-      if (pendingOfflineProgressSeconds > 0) applyPendingOfflineProgress();
+      if (firstCitiesSnapshot && usesServerEconomyAuthority()) {
+        serverEconomySyncTimer = 0;
+        refreshServerEconomy(true, { showOfflineRewards: true });
+      } else if (pendingOfflineProgressSeconds > 0) {
+        applyPendingOfflineProgress();
+      }
       if (state?.mainCityId && getCityRegionId(state.mainCityId) === targetRegionId && cityById(state.mainCityId)?.owner !== "player") {
         const nextOwned = playerCities()[0];
         state.mainCityId = nextOwned?.id || state.mainCityId;
@@ -7909,6 +8091,7 @@ function toOnlineCityState(city) {
 
 function syncSharedCityState(city) {
   if (!city || !isOnlineWorldActive()) return;
+  if (usesServerEconomyAuthority() && (city.owner === "player" || city.ownerUid === getCurrentOnlineUid())) return;
   const api = getOnlineApi();
   if (!api?.saveCityState) return;
   const cityId = city.id;
@@ -7935,6 +8118,7 @@ function syncCityStateToOnline(city) {
 
 async function syncOwnedCitiesToOnline(force = false) {
   if (!isOnlineWorldActive()) return false;
+  if (usesServerEconomyAuthority()) return false;
   if (!onlineCitiesLoaded) {
     if (force) onlineCitySyncQueued = true;
     return false;
@@ -8185,7 +8369,10 @@ function publishOnlineArmyMovement(mission, options = {}) {
   })
     .then(result => {
       if (result?.movement) applyServerMovementToMission(mission, result.movement);
-      if (result?.sourceCity) applyServerCityUpdates([result.sourceCity]);
+      applyServerArmyResult({
+        currentUser: result?.currentUser,
+        cityUpdates: result?.sourceCity ? [result.sourceCity] : [],
+      });
       if (options.addLocalMissionOnAccept) addServerAcceptedMission(mission);
       onlineLastError = "";
       saveGame();
@@ -8715,6 +8902,7 @@ async function startFromInput(forceFresh = false) {
     renderAll();
     requestAnimationFrame(() => centerOnCity(selectedSourceId || state.mainCityId || playerCities()[0]?.id));
     flushOnlineSave(true);
+    refreshPushAlertRegistration(true);
     showToast("Online kingdom loaded.");
   } catch (error) {
     onlineLastError = error?.message || String(error);
@@ -9480,6 +9668,13 @@ function frame(now) {
         onlineCitySyncTimer = 0;
         syncOwnedCitiesToOnline();
       }
+      if (usesServerEconomyAuthority()) {
+        serverEconomySyncTimer += dt;
+        if (serverEconomySyncTimer >= SERVER_ECONOMY_SYNC_SECONDS) {
+          serverEconomySyncTimer = 0;
+          refreshServerEconomy();
+        }
+      }
       onlinePresenceTimer += dt;
       if (onlinePresenceTimer >= ONLINE_PRESENCE_SECONDS) {
         onlinePresenceTimer = 0;
@@ -9526,6 +9721,7 @@ function updateGame(dt) {
 }
 
 function updateEconomy(dt) {
+  if (usesServerEconomyAuthority()) return;
   for (const city of state.cities) {
     if (city.owner === "neutral") continue;
     if (isOnlineWorldActive() && city.owner !== "player") continue;
@@ -10688,6 +10884,89 @@ function getKingdomSummary() {
   };
 }
 
+function updatePushAlertsUi() {
+  if (!pushAlertsBtn || !pushAlertsStatus) return;
+  const api = getOnlineApi();
+  const signedIn = Boolean(api?.isSignedIn?.());
+  const supported = Boolean(api?.isPushSupported?.());
+  const permission = api?.getNotificationPermission?.() || "unsupported";
+  pushAlertsBtn.classList.remove("enabled");
+  pushAlertsBtn.hidden = false;
+  pushAlertsStatus.hidden = false;
+
+  if (!state || !signedIn) {
+    pushAlertsBtn.textContent = "Alerts";
+    pushAlertsStatus.textContent = "Offline";
+    pushAlertsBtn.disabled = true;
+    return;
+  }
+  if (!supported) {
+    pushAlertsBtn.textContent = "Alerts";
+    pushAlertsStatus.textContent = "Unavailable";
+    pushAlertsBtn.disabled = true;
+    return;
+  }
+  pushAlertsBtn.removeAttribute("title");
+  if (permission === "granted") {
+    pushAlertsBtn.textContent = "Alerts On";
+    pushAlertsStatus.textContent = "Enabled";
+    pushAlertsBtn.classList.add("enabled");
+    pushAlertsBtn.disabled = false;
+    return;
+  }
+  if (permission === "denied") {
+    pushAlertsBtn.textContent = "Alerts";
+    pushAlertsStatus.textContent = "Blocked";
+    pushAlertsBtn.disabled = true;
+    return;
+  }
+  pushAlertsBtn.textContent = "Enable Alerts";
+  pushAlertsStatus.textContent = "Off";
+  pushAlertsBtn.disabled = false;
+}
+
+async function refreshPushAlertRegistration(silent = true) {
+  const api = getOnlineApi();
+  if (!state || !api?.registerPushNotifications || !api?.isSignedIn?.()) {
+    updatePushAlertsUi();
+    return false;
+  }
+  try {
+    const result = await api.registerPushNotifications({ playerName: state.playerName || "Ruler" });
+    updatePushAlertsUi();
+    return Boolean(result?.enabled);
+  } catch (error) {
+    if (!silent) showToast(error?.message || "Could not enable battle alerts.");
+    updatePushAlertsUi();
+    return false;
+  }
+}
+
+async function enablePushAlerts() {
+  const api = getOnlineApi();
+  if (!api?.enablePushNotifications) {
+    showToast("Battle alerts are not available here.");
+    return;
+  }
+  if (pushAlertsBtn) pushAlertsBtn.disabled = true;
+  try {
+    await api.enablePushNotifications({ playerName: state?.playerName || "Ruler" });
+    showToast("Battle alerts enabled.");
+  } catch (error) {
+    showToast(error?.message || "Could not enable battle alerts.");
+  } finally {
+    updatePushAlertsUi();
+  }
+}
+
+function handlePushMessage(event) {
+  const detail = event?.detail || {};
+  if (detail.type !== "incoming_army") return;
+  const message = detail.body || (detail.kind === "scout" ? "Scout incoming." : "Attack incoming.");
+  showToast(message);
+  updateIncomingAttackUi();
+}
+
 function showProfileScreen() {
   if (!state || !profileScreen) return;
   profileScreen.classList.add("open");
@@ -10765,6 +11044,7 @@ function renderProfileScreen() {
   if (profileGoldProductionStat) profileGoldProductionStat.textContent = `${formatNumber(summary.goldProductionPerHour)}/h`;
   if (profileTroopProductionStat) profileTroopProductionStat.textContent = `${formatNumber(summary.troopProductionPerHour)}/h`;
   applyFlagToElement(profileKingdomFlag, state.flag);
+  updatePushAlertsUi();
   if (activeProfileTab === "skills") renderProfileSkills();
 }
 
@@ -12244,6 +12524,17 @@ async function buyShopItem(itemId) {
   renderShopModal();
 
   try {
+    if (usesServerEconomyAuthority()) {
+      const result = await getOnlineApi().purchaseShopItem({ itemId: item.id, cost: item.cost });
+      applyServerEconomyResult(result);
+      selectedInventoryItemId = item.id;
+      addLog(`Bought ${item.label} for ${formatNumber(item.cost)} gold.`);
+      saveGame();
+      renderHud();
+      showToast(`${item.label} added to Bag.`);
+      return;
+    }
+
     const inventory = ensureShopItems();
     state.gold = currentGold - item.cost;
     inventory[item.id] = Math.max(0, Math.floor(Number(inventory[item.id]) || 0)) + 1;
@@ -12396,7 +12687,33 @@ function consumeInventoryItem(item) {
   return inventory;
 }
 
+async function useServerInventoryItem(item) {
+  if (!item || !usesServerEconomyAuthority()) return false;
+  const result = await getOnlineApi().activateInventoryItem({ itemId: item.id });
+  applyServerEconomyResult(result);
+  const expiresAtMs = normalizeTimestampMs(result?.expiresAtMs);
+  if (item.id === ROYAL_PEACE_SHIELD_ITEM_ID) {
+    addLog(`${item.label} activated. Your kingdom is protected for ${formatDuration(getPeaceShieldRemainingSeconds(expiresAtMs))}.`);
+    updateShieldStatusBadge();
+    renderCities(true);
+    showToast(`${item.label} active: ${formatDuration(getPeaceShieldRemainingSeconds(expiresAtMs))}`);
+  } else if (item.id === WAR_DRUMS_ITEM_ID) {
+    addLog(`${item.label} activated. Troop production increased by ${formatNumber(WAR_DRUMS_TROOP_PRODUCTION_BONUS_PERCENT)}% for ${formatDuration(getPeaceShieldRemainingSeconds(expiresAtMs))}.`);
+    showToast(`${item.label} active: +${formatNumber(WAR_DRUMS_TROOP_PRODUCTION_BONUS_PERCENT)}% troops for ${formatDuration(getPeaceShieldRemainingSeconds(expiresAtMs))}`);
+  }
+  saveGame();
+  renderHud();
+  renderPanel();
+  if (profileScreen?.classList.contains("open")) renderProfileScreen();
+  if (modal?.open && modal.classList.contains("inventory-modal")) modal.close();
+  return true;
+}
+
 async function useRoyalPeaceShield(item) {
+  if (usesServerEconomyAuthority()) {
+    await useServerInventoryItem(item);
+    return;
+  }
   if (!consumeInventoryItem(item)) return;
   const now = Date.now();
   const currentExpiresAtMs = getActivePeaceShieldExpiresAtMs();
@@ -12424,6 +12741,10 @@ async function useRoyalPeaceShield(item) {
 }
 
 async function useWarDrums(item) {
+  if (usesServerEconomyAuthority()) {
+    await useServerInventoryItem(item);
+    return;
+  }
   if (!consumeInventoryItem(item)) return;
   const now = Date.now();
   const currentExpiresAtMs = getActiveWarDrumsExpiresAtMs();
@@ -12581,7 +12902,7 @@ function recruit(cityId) {
   renderAll();
 }
 
-function upgradeCity(cityId, levels = 1) {
+async function upgradeCity(cityId, levels = 1) {
   const city = cityById(cityId);
   if (!city) return;
   if (isStronghold(city)) {
@@ -12593,6 +12914,34 @@ function upgradeCity(cityId, levels = 1) {
   if (incomingBlockers.length) {
     showToast(`${city.name} cannot be upgraded while an attack is incoming. Arrival: ${formatDuration(incomingBlockers[0].remaining)}.`);
     renderAll();
+    return;
+  }
+  if (usesServerEconomyAuthority()) {
+    const inFlightKey = city.id;
+    if (serverCityUpgradeInFlightIds.has(inFlightKey)) {
+      showToast(`${city.name} upgrade is already processing.`);
+      return;
+    }
+    serverCityUpgradeInFlightIds.add(inFlightKey);
+    try {
+      const result = await getOnlineApi().upgradeCity({
+        cityId: city.id,
+        regionId: getCityRegionId(city),
+        levels,
+      });
+      applyServerEconomyResult(result);
+      const updatedCity = cityById(city.id) || city;
+      addLog(`${updatedCity.name} upgraded to level ${formatNumber(updatedCity.level)}.`);
+      showToast(`${updatedCity.name} upgraded`);
+      renderAll();
+    } catch (error) {
+      onlineLastError = error?.message || String(error);
+      showToast(error?.message || "Could not upgrade city.");
+      console.warn("Server city upgrade failed", error);
+      renderAll();
+    } finally {
+      serverCityUpgradeInFlightIds.delete(inFlightKey);
+    }
     return;
   }
   let upgraded = 0;
@@ -14056,17 +14405,23 @@ if (freshBtn) freshBtn.addEventListener("click", () => startFromInput(true));
 if (googleSignInBtn) googleSignInBtn.addEventListener("click", handleGoogleSignIn);
 if (enterKingdomBtn) enterKingdomBtn.addEventListener("click", () => startFromInput(false));
 if (googleSignOutBtn) googleSignOutBtn.addEventListener("click", handleGoogleSignOut);
-window.addEventListener("crownlands:online-ready", updateOnlineUi);
+window.addEventListener("crownlands:online-ready", () => {
+  updateOnlineUi();
+  updatePushAlertsUi();
+});
 window.addEventListener("crownlands:auth", async () => {
   updateOnlineUi();
+  refreshPushAlertRegistration(true);
   if (state) {
     queueOnlineSave();
     flushOnlineSave(true);
   }
 });
+window.addEventListener("crownlands:push-message", handlePushMessage);
 window.addEventListener("crownlands:online-error", event => {
   onlineLastError = event.detail?.message || "Firebase could not start.";
   updateOnlineUi();
+  updatePushAlertsUi();
 });
 if (playerNameInput) {
   playerNameInput.addEventListener("keydown", event => {
@@ -14080,6 +14435,7 @@ if (profileBtn) profileBtn.addEventListener("click", showProfileScreen);
 if (profileCloseBtn) profileCloseBtn.addEventListener("click", closeProfileScreen);
 if (profileTabBtn) profileTabBtn.addEventListener("click", showProfileView);
 if (skillsTabBtn) skillsTabBtn.addEventListener("click", showProfileSkills);
+if (pushAlertsBtn) pushAlertsBtn.addEventListener("click", enablePushAlerts);
 if (profileFlagBtn) profileFlagBtn.addEventListener("click", showFlagEditor);
 if (profileNameEditBtn) profileNameEditBtn.addEventListener("click", beginProfileNameEdit);
 if (profileNameSaveBtn) profileNameSaveBtn.addEventListener("click", saveProfileName);

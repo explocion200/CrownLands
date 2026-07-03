@@ -4193,6 +4193,34 @@ button.inventory-slot {
 .kingdom-stat-wide { grid-column: auto; width: auto; justify-self: stretch; }
 .kingdom-stat span { color: #9ed5ff; font-size: .72rem; font-weight: 900; }
 .kingdom-stat strong { color: #fff; font-size: 1.12rem; }
+.profile-alert-row {
+  min-height: 50px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: .55rem;
+}
+.push-alerts-btn { min-height: 42px; }
+.push-alerts-btn.enabled {
+  color: #102015;
+  background: #7eb35f;
+  border-color: rgba(255,255,255,.42);
+}
+.push-alerts-btn:disabled { opacity: .58; }
+.push-alerts-status {
+  min-width: 74px;
+  padding: .35rem .55rem;
+  overflow: hidden;
+  border-radius: 8px;
+  color: #d8ecfa;
+  background: rgba(5,10,17,.55);
+  border: 1px solid rgba(158,213,255,.2);
+  font-size: .68rem;
+  font-weight: 900;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 
 .flag-editor-view {
   width: min(920px, 100%);

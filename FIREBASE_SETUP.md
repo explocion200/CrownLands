@@ -1,6 +1,6 @@
 # Crownlands Online Setup
 
-This build keeps guest/local play working while adding Firebase for Google sign-in, cloud saves, realtime city sync, and server-authoritative troop movement.
+This build keeps guest/local play working while adding Firebase for Google sign-in, cloud saves, realtime city sync, server-authoritative troop movement, and server-authoritative economy updates.
 
 ## Phase 1: Connect Firebase
 
@@ -9,8 +9,9 @@ This build keeps guest/local play working while adding Firebase for Google sign-
 3. Enable Authentication -> Sign-in method -> Google.
 4. Enable Firestore Database.
 5. Copy the Firebase web app config into `firebase-config.js`.
-6. Publish the rules from `firestore.rules`.
-7. Open the game through Netlify or a local web server and click `Sign in with Google`.
+6. In Firebase project settings -> Cloud Messaging -> Web Push certificates, generate/copy the public key into `firebase-config.js` as `vapidKey`.
+7. Publish the rules from `firestore.rules`.
+8. Open the game through Netlify or a local web server and click `Sign in with Google`.
 
 The Firebase web config is not a password. Real protection comes from Firebase Authentication and Firestore rules.
 
@@ -19,6 +20,7 @@ The Firebase web config is not a password. Real protection comes from Firebase A
 The game currently writes private account data here:
 
 - `players/{uid}`: display name, email, ruler name, flag, character, skill data, city count, gold.
+- `players/{uid}/notificationTokens/{tokenId}`: browser push tokens for incoming scout/attack alerts.
 - `players/{uid}/saves/default-fresh-2026-07-03-profile-reset`: the current full game state snapshot for the fresh reset.
 - `players/{uid}/serverReports/{reportId}`: server-written attack, defense, and scout reports that survive stale browser saves.
 
@@ -36,12 +38,15 @@ The game now creates one shared island document per world region and subscribes 
 
 On first sign-in, the browser chooses a home region, seeds that region island if it does not exist, then claims one unowned starting city for the signed-in player. The active island's city docs are watched in realtime, so ownership changes from Firestore update the loaded island without refreshing. Switching islands unsubscribes from the previous island before loading the next one.
 
-Troop orders now go through Firebase callable functions:
+Troop orders and online economy updates now go through Firebase callable functions:
 
 - `sendArmyOrder`: validates source ownership, troop count, target protection, travel timing, deducts troops, and creates visible army docs for every route region.
 - `resolveArmyOrder`: can be triggered by any signed-in player who sees an overdue army. It resolves scouts, transfers, attacks, defenses, city capture, level drops, XP, gold rewards, and server reports in one Firestore transaction.
+- `collectEconomy`: collects passive/offline gold and troop production for every owned city across all region maps.
+- `upgradeCity`: collects production, spends server gold, upgrades the city, records invested gold, and awards upgrade XP in one transaction.
+- `purchaseShopItem` and `activateInventoryItem`: spend gold, update inventory, apply Peace Shield/War Drums timers, and sync shield expiry to owned city docs from the server.
 
-Browsers can read army/report streams, but Firestore rules block direct browser writes to `armies`, `reports`, and `serverReports`. City/economy writes still have a browser-managed migration path for the current prototype; future economy hardening should move upgrades, recruitment, item effects, and production collection into callable functions too.
+Browsers can read army/report streams, but Firestore rules block direct browser writes to `armies`, `reports`, `serverReports`, player economy fields, and city troop/level/production fields after the initial starting-city claim.
 
 Important: deploy both Functions and rules after this update:
 

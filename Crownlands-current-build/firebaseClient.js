@@ -13,9 +13,15 @@
     auth: null,
     db: null,
     functions: null,
+    messaging: null,
     provider: null,
     modules: null,
     initPromise: null,
+    pushPromise: null,
+    serviceWorkerRegistration: null,
+    notificationToken: "",
+    notificationTokenId: "",
+    foregroundPushListenerReady: false,
   };
 
   function hasRealFirebaseConfig(config) {
@@ -48,6 +54,14 @@
       import(`https://www.gstatic.com/firebasejs/${FIREBASE_VERSION}/firebase-functions.js`),
     ]);
     return { app, auth, firestore, functions };
+  }
+
+  async function loadMessagingModule() {
+    await init();
+    if (client.modules?.messaging) return client.modules.messaging;
+    const messaging = await import(`https://www.gstatic.com/firebasejs/${FIREBASE_VERSION}/firebase-messaging.js`);
+    client.modules.messaging = messaging;
+    return messaging;
   }
 
   async function init() {
@@ -115,6 +129,175 @@
     return callServerFunction("resolveArmyOrder", payload);
   }
 
+  async function collectEconomy(payload = {}) {
+    return callServerFunction("collectEconomy", payload);
+  }
+
+  async function upgradeCity(payload = {}) {
+    return callServerFunction("upgradeCity", payload);
+  }
+
+  async function activateInventoryItem(payload = {}) {
+    return callServerFunction("activateInventoryItem", payload);
+  }
+
+  function usesServerEconomyAuthority() {
+    return Boolean(client.functions && client.modules?.functions?.httpsCallable);
+  }
+
+  function getNotificationPermission() {
+    if (!("Notification" in window)) return "unsupported";
+    return window.Notification.permission || "default";
+  }
+
+  function getNotificationVapidKey() {
+    const configKey = window.CROWNLANDS_FIREBASE_CONFIG?.vapidKey || window.CROWNLANDS_FIREBASE_VAPID_KEY || "";
+    return String(configKey || "").trim();
+  }
+
+  function isPushSupported() {
+    return Boolean(
+      client.configured
+      && window.isSecureContext
+      && "Notification" in window
+      && "serviceWorker" in navigator
+      && "PushManager" in window
+    );
+  }
+
+  async function hashText(value) {
+    const text = String(value || "");
+    if (window.crypto?.subtle && window.TextEncoder) {
+      const bytes = new TextEncoder().encode(text);
+      const digest = await window.crypto.subtle.digest("SHA-256", bytes);
+      return Array.from(new Uint8Array(digest)).map(byte => byte.toString(16).padStart(2, "0")).join("");
+    }
+    return btoa(text).replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 180);
+  }
+
+  function normalizePushPayload(payload = {}) {
+    const data = payload.data || {};
+    const notification = payload.notification || {};
+    return {
+      title: notification.title || data.title || "",
+      body: notification.body || data.body || "",
+      kind: data.kind || "",
+      type: data.type || "",
+      cityId: data.cityId || "",
+      armyId: data.armyId || "",
+      arrivesAtMs: Number(data.arrivesAtMs) || 0,
+      raw: payload,
+    };
+  }
+
+  async function getServiceWorkerRegistration() {
+    if (client.serviceWorkerRegistration) return client.serviceWorkerRegistration;
+    if (!("serviceWorker" in navigator)) throw new Error("This browser does not support push alerts.");
+    const workerUrl = new URL("firebase-messaging-sw.js", window.location.href);
+    client.serviceWorkerRegistration = await navigator.serviceWorker.register(workerUrl.href);
+    return client.serviceWorkerRegistration;
+  }
+
+  async function ensureMessaging() {
+    await init();
+    if (!isPushSupported()) throw new Error("This browser cannot receive push alerts.");
+    const messagingModule = await loadMessagingModule();
+    if (typeof messagingModule.isSupported === "function") {
+      const supported = await messagingModule.isSupported();
+      if (!supported) throw new Error("Firebase push alerts are not supported in this browser.");
+    }
+    if (!client.messaging) {
+      client.messaging = messagingModule.getMessaging(client.app);
+    }
+    if (!client.foregroundPushListenerReady && messagingModule.onMessage) {
+      client.foregroundPushListenerReady = true;
+      messagingModule.onMessage(client.messaging, payload => {
+        dispatch("push-message", normalizePushPayload(payload));
+      });
+    }
+    return client.messaging;
+  }
+
+  async function saveNotificationToken(token, options = {}) {
+    const uid = requireSignedIn();
+    if (!uid || !token) return null;
+    const { doc, setDoc, serverTimestamp } = client.modules.firestore;
+    const tokenId = await hashText(token);
+    await setDoc(doc(client.db, "players", uid, "notificationTokens", tokenId), {
+      uid,
+      token,
+      platform: "web",
+      userAgent: String(navigator.userAgent || "").slice(0, 240),
+      playerName: String(options.playerName || client.user?.displayName || "Ruler").slice(0, 40),
+      enabled: true,
+      lastSeenAtMs: Date.now(),
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    }, { merge: true });
+    client.notificationToken = token;
+    client.notificationTokenId = tokenId;
+    return tokenId;
+  }
+
+  async function removeNotificationToken(token = client.notificationToken, tokenId = client.notificationTokenId) {
+    await init();
+    const uid = requireSignedIn();
+    if (!uid) return false;
+    const safeTokenId = tokenId || (token ? await hashText(token) : "");
+    if (!safeTokenId) return false;
+    const { deleteDoc, doc } = client.modules.firestore;
+    await deleteDoc(doc(client.db, "players", uid, "notificationTokens", safeTokenId));
+    if (safeTokenId === client.notificationTokenId) {
+      client.notificationToken = "";
+      client.notificationTokenId = "";
+    }
+    return true;
+  }
+
+  async function enablePushNotifications(options = {}) {
+    await init();
+    const uid = requireSignedIn();
+    if (!uid) throw new Error("Sign in to enable battle alerts.");
+    if (!isPushSupported()) throw new Error("This browser cannot receive push alerts.");
+    const vapidKey = getNotificationVapidKey();
+    let permission = getNotificationPermission();
+    if (permission === "default" && window.Notification?.requestPermission) {
+      permission = await window.Notification.requestPermission();
+    }
+    if (permission !== "granted") throw new Error("Battle alerts are blocked in this browser.");
+    const messagingModule = await loadMessagingModule();
+    const messaging = await ensureMessaging();
+    const registration = await getServiceWorkerRegistration();
+    const tokenOptions = { serviceWorkerRegistration: registration };
+    if (vapidKey) tokenOptions.vapidKey = vapidKey;
+    const token = await messagingModule.getToken(messaging, tokenOptions);
+    if (!token) throw new Error("Could not register this browser for battle alerts.");
+    const tokenId = await saveNotificationToken(token, options);
+    dispatch("push-notifications", { enabled: true, tokenId });
+    return { enabled: true, tokenId, permission };
+  }
+
+  async function registerPushNotifications(options = {}) {
+    if (getNotificationPermission() !== "granted") return { enabled: false, permission: getNotificationPermission() };
+    return enablePushNotifications(options);
+  }
+
+  async function disablePushNotifications() {
+    await init();
+    try {
+      if (client.messaging && client.modules?.messaging?.deleteToken) {
+        await client.modules.messaging.deleteToken(client.messaging);
+      }
+    } catch (error) {
+      console.warn("Could not delete Firebase push token", error);
+    }
+    await removeNotificationToken().catch(error => {
+      console.warn("Could not remove stored push token", error);
+    });
+    dispatch("push-notifications", { enabled: false });
+    return true;
+  }
+
   function normalizeShopItemsForPurchase(items = {}) {
     const normalized = items && typeof items === "object" ? { ...items } : {};
     normalized[ROYAL_PEACE_SHIELD_ITEM_ID] = Math.max(0, Math.floor(Number(normalized[ROYAL_PEACE_SHIELD_ITEM_ID]) || 0));
@@ -179,6 +362,9 @@
   async function signOut() {
     await init();
     if (!client.auth) return;
+    await disablePushNotifications().catch(error => {
+      console.warn("Could not disable push alerts during sign-out", error);
+    });
     await client.modules.auth.signOut(client.auth);
     client.user = null;
     dispatch("auth", { user: null });
@@ -212,63 +398,7 @@
   }
 
   async function purchaseShopItem({ itemId = "", cost = 0 } = {}) {
-    await init();
-    const uid = requireSignedIn();
-    if (!uid) throw new Error("Sign in to buy shop items.");
-    if (itemId !== ROYAL_PEACE_SHIELD_ITEM_ID) {
-      throw new Error("This item is not available through the online shop yet.");
-    }
-    if (Math.floor(Number(cost) || 0) !== ROYAL_PEACE_SHIELD_COST) {
-      throw new Error("Shop item price changed. Reload Crownlands and try again.");
-    }
-
-    const { doc, runTransaction, serverTimestamp } = client.modules.firestore;
-    const playerRef = doc(client.db, "players", uid);
-    const nowMs = Date.now();
-
-    return runTransaction(client.db, async transaction => {
-      const snap = await transaction.get(playerRef);
-      if (!snap.exists()) throw new Error("Enter Kingdom before buying a shield.");
-
-      const data = snap.data() || {};
-      const currentGold = Math.max(0, Math.floor(Number(data.gold) || 0));
-      if (currentGold < ROYAL_PEACE_SHIELD_COST) {
-        throw new Error(`Royal Peace Shield costs ${ROYAL_PEACE_SHIELD_COST.toLocaleString()} gold.`);
-      }
-
-      const cooldowns = normalizeItemPurchaseCooldowns(data.itemPurchaseCooldowns);
-      const shieldCooldown = cooldowns[ROYAL_PEACE_SHIELD_ITEM_ID] || {};
-
-      const shopItems = normalizeShopItemsForPurchase(data.shopItems);
-      shopItems[ROYAL_PEACE_SHIELD_ITEM_ID] += 1;
-      const itemPurchaseCooldowns = {
-        ...cooldowns,
-        [ROYAL_PEACE_SHIELD_ITEM_ID]: {
-          ...shieldCooldown,
-          lastPurchasedAt: serverTimestamp(),
-        },
-      };
-      const nextGold = currentGold - ROYAL_PEACE_SHIELD_COST;
-
-      transaction.set(playerRef, {
-        shopItems,
-        itemPurchaseCooldowns,
-        gold: nextGold,
-        updatedAt: serverTimestamp(),
-      }, { merge: true });
-
-      return {
-        gold: nextGold,
-        shopItems,
-        itemPurchaseCooldowns: {
-          ...itemPurchaseCooldowns,
-          [ROYAL_PEACE_SHIELD_ITEM_ID]: {
-            ...shieldCooldown,
-            lastPurchasedAtMs: nowMs,
-          },
-        },
-      };
-    });
+    return callServerFunction("purchaseShopItem", { itemId, cost });
   }
 
   async function saveGameSnapshot(snapshot, slot = "default") {
@@ -921,11 +1051,17 @@
     signOut,
     savePlayerProfile,
     loadPlayerProfile,
+    collectEconomy,
+    upgradeCity,
     purchaseShopItem,
+    activateInventoryItem,
     saveGameSnapshot,
     loadGameSnapshot,
     sendArmyOrder,
     resolveArmyOrder,
+    enablePushNotifications,
+    registerPushNotifications,
+    disablePushNotifications,
     ensureMainIsland,
     claimStartingCity,
     savePlayerCities,
@@ -940,7 +1076,11 @@
     loadServerReports,
     subscribeIsland,
     subscribeServerReports,
+    isPushSupported,
+    getNotificationPermission,
+    hasNotificationVapidKey: () => Boolean(getNotificationVapidKey()),
     usesServerArmyAuthority: () => Boolean(client.functions && client.modules?.functions?.httpsCallable),
+    usesServerEconomyAuthority,
     isConfigured: () => client.configured,
     isReady: () => client.ready,
     isSignedIn: () => Boolean(client.user?.uid),
