@@ -5474,7 +5474,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
       "label": "Lowroad Vale",
       "gridX": 0,
       "gridY": 2,
-      "type": "midgame",
+      "type": "starter",
       "cityCapacity": 50,
       "imageSrc": "assets/worlds/world_01/maps/region_8-8-1783022783978.webp",
       "thumbnailSrc": "assets/worlds/world_01/maps/thumbnails/region_8-8-1783022783978-thumb.webp",
