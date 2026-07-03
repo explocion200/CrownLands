@@ -1698,7 +1698,10 @@ exports.sendArmyOrder = onCall({ region: "us-central1", maxInstances: 20, invoke
     if (sourceOwnerUid !== uid) {
       throw new HttpsError("permission-denied", "You can only send troops from your own city.");
     }
-    const attackerEconomy = await prepareEconomyCollection(transaction, uid, nowMs, { profileRef, profileSnap });
+    const attackerEconomy = await prepareEconomyCollection(transaction, uid, nowMs, {
+      profileRef: playerRef,
+      profileSnap: playerSnap,
+    });
     const producedSourceEntry = getEconomyCityByRef(attackerEconomy, sourceRef);
     if (producedSourceEntry?.city) source = producedSourceEntry.city;
     const attackerProfile = attackerEconomy.profileAfter || playerData;
