@@ -1035,29 +1035,38 @@ input {
   content: "";
   position: absolute;
   left: 50%;
-  bottom: -13px;
-  width: 92px;
-  height: 80px;
-  transform: translateX(-50%);
+  bottom: -11px;
+  width: 88px;
+  height: 76px;
+  transform: translateX(-50%) translateY(1px) scale(.995);
+  transform-origin: 50% 58%;
   display: none;
   background-position: center;
   background-repeat: no-repeat;
   background-size: contain;
-  filter: drop-shadow(0 3px 2px rgba(0, 0, 0, .78));
+  filter: drop-shadow(0 2px 1px rgba(0, 0, 0, .76));
+  animation: citySelectionFloat 1.9s ease-in-out infinite;
   pointer-events: none;
+  will-change: transform;
   z-index: 2;
 }
 .city-node.player.selected:not(.stronghold-node)::before,
 .city-node.player.targeted:not(.stronghold-node)::before {
   display: block;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 86'%3E%3Cpolygon points='50 3 91 24 91 62 50 83 9 62 9 24' fill='none' stroke='%23ffffff' stroke-width='6' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 86'%3E%3Cpolygon points='50 3 91 24 91 62 50 83 9 62 9 24' fill='none' stroke='%23ffffff' stroke-width='3.5' stroke-linejoin='round'/%3E%3C/svg%3E");
+  filter: drop-shadow(0 2px 1px rgba(0, 0, 0, .76)) drop-shadow(0 0 5px rgba(255, 255, 255, .48));
 }
 .city-node.enemy.targeted:not(.stronghold-node)::before,
 .city-node.neutral.targeted:not(.stronghold-node)::before,
 .city-node.player2.targeted:not(.stronghold-node)::before,
 .city-node.player3.targeted:not(.stronghold-node)::before {
   display: block;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 86'%3E%3Cpolygon points='50 3 91 24 91 62 50 83 9 62 9 24' fill='none' stroke='%23e0302d' stroke-width='6' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 86'%3E%3Cpolygon points='50 3 91 24 91 62 50 83 9 62 9 24' fill='none' stroke='%23e0302d' stroke-width='3.5' stroke-linejoin='round'/%3E%3C/svg%3E");
+  filter: drop-shadow(0 2px 1px rgba(0, 0, 0, .76)) drop-shadow(0 0 5px rgba(255, 57, 57, .5));
+}
+@keyframes citySelectionFloat {
+  0%, 100% { transform: translateX(-50%) translateY(1px) scale(.995); }
+  50% { transform: translateX(-50%) translateY(-4px) scale(1.015); }
 }
 .city-node.stronghold-node {
   width: var(--stronghold-size, 154px);
