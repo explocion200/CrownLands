@@ -38,6 +38,7 @@ const SETUP_LOADING_MIN_MS = 180;
 const IMAGE_PRELOAD_TIMEOUT_MS = 15000;
 const HUD_RENDER_INTERVAL_MS = 250;
 const MAP_RENDER_INTERVAL_MS = 1600;
+const ARMY_RENDER_INTERVAL_MS = 140;
 const CITY_LIST_PAGE_SIZE = 5;
 const INVENTORY_SLOT_COUNT = 5;
 const SHOP_ITEMS = [
@@ -2152,6 +2153,7 @@ let suppressMapClick = false;
 let lastFrameTime = performance.now();
 let lastRenderTime = 0;
 let lastHudRenderTime = 0;
+let lastArmyRenderTime = 0;
 let saveTimer = 0;
 let onlineSaveTimer = 0;
 let onlineSaveQueued = false;
@@ -2208,6 +2210,7 @@ let updateCheckTimer = 0;
 let updateCheckInFlight = false;
 let updateRefreshInProgress = false;
 const islandImageLoadPromises = new Map();
+const nearbyIslandPreloadRegions = new Set();
 let pendingOfflineProgressSeconds = 0;
 let pendingOfflineProductionCities = [];
 let pendingOfflineOwnedCityIds = null;
@@ -2221,6 +2224,11 @@ let cityListSortKey = "level";
 let cityListSortDirection = "desc";
 let cityListPage = 0;
 let playableBaseCitiesCache = null;
+let playableBaseCitiesByIdCache = null;
+let playableBaseCitiesByRegionCache = null;
+let stateCityByIdCache = null;
+let stateCityByIdCacheSource = null;
+let stateCityByIdCacheSize = 0;
 let renderedMapRegionId = "";
 let renderedMapBoundsSignature = "";
 let interactionRenderLockUntil = 0;
@@ -2350,14 +2358,14 @@ function getCityRegionId(cityOrId) {
     return normalizeRegionId(cityOrId.regionId || cityOrId.startPool);
   }
   const cityId = String(cityOrId || "");
-  const base = getPlayableBaseCities().find(city => city.id === cityId);
+  const base = getPlayableBaseCityById(cityId);
   return normalizeRegionId(base?.regionId || base?.startPool);
 }
 
 function getKnownCityId(cityId) {
   const value = String(cityId || "");
   if (!value) return "";
-  return getPlayableBaseCities().some(city => city.id === value) ? value : "";
+  return getPlayableBaseCityById(value) ? value : "";
 }
 
 function getOnlineIslandId(regionId = DEFAULT_ONLINE_REGION_ID) {
@@ -2778,8 +2786,7 @@ function getActiveOnlineIslandId() {
 }
 
 function getOnlineIslandBaseCities(regionId = getActiveOnlineRegionId()) {
-  const normalizedRegionId = normalizeRegionId(regionId);
-  return getPlayableBaseCities().filter(city => getCityRegionId(city) === normalizedRegionId);
+  return getPlayableBaseCitiesByRegion(regionId);
 }
 
 function getRegularCityCapacity(regionId) {
@@ -3545,6 +3552,7 @@ function syncMapSurfaceToActiveIsland(force = false) {
   }
   renderWorldMap();
   renderIslandTeleporters();
+  preloadNearbyIslandMaps(bounds.regionId);
   cityRenderSignature = "";
   pathRenderSignature = "";
 }
@@ -3604,6 +3612,29 @@ function preloadImage(src) {
 
 function preloadIslandMap(regionId) {
   return preloadImage(getIslandMapArtSrc(regionId));
+}
+
+function getConnectedIslandRegionIds(regionId) {
+  const normalizedRegionId = normalizeRegionId(regionId);
+  const connected = new Set();
+  getIslandMapConnectionEdges().forEach(edge => {
+    if (edge.source === normalizedRegionId) connected.add(edge.target);
+    if (edge.target === normalizedRegionId) connected.add(edge.source);
+  });
+  return Array.from(connected).filter(id => id && id !== normalizedRegionId);
+}
+
+function preloadNearbyIslandMaps(regionId) {
+  const normalizedRegionId = normalizeRegionId(regionId);
+  if (nearbyIslandPreloadRegions.has(normalizedRegionId)) return;
+  nearbyIslandPreloadRegions.add(normalizedRegionId);
+  window.setTimeout(() => {
+    getConnectedIslandRegionIds(normalizedRegionId)
+      .slice(0, 4)
+      .forEach(connectedRegionId => {
+        preloadIslandMap(connectedRegionId).catch(() => {});
+      });
+  }, 350);
 }
 
 function setSetupLoading(active, detail = "") {
@@ -4144,6 +4175,27 @@ function getPlayableBaseCities() {
   if (playableBaseCitiesCache) return playableBaseCitiesCache;
   playableBaseCitiesCache = generateWorldCitySlots();
   return playableBaseCitiesCache;
+}
+
+function getPlayableBaseCityById(cityId) {
+  const id = String(cityId || "");
+  if (!id) return null;
+  if (!playableBaseCitiesByIdCache) {
+    playableBaseCitiesByIdCache = new Map(getPlayableBaseCities().map(city => [city.id, city]));
+  }
+  return playableBaseCitiesByIdCache.get(id) || null;
+}
+
+function getPlayableBaseCitiesByRegion(regionId = getActiveOnlineRegionId()) {
+  const normalizedRegionId = normalizeRegionId(regionId);
+  if (!playableBaseCitiesByRegionCache) playableBaseCitiesByRegionCache = new Map();
+  if (!playableBaseCitiesByRegionCache.has(normalizedRegionId)) {
+    playableBaseCitiesByRegionCache.set(
+      normalizedRegionId,
+      getPlayableBaseCities().filter(city => getCityRegionId(city) === normalizedRegionId)
+    );
+  }
+  return playableBaseCitiesByRegionCache.get(normalizedRegionId) || [];
 }
 
 function createIslandStartLayout(playerName) {
@@ -4753,7 +4805,7 @@ function getMainCityReference() {
   const loaded = cityById(state.mainCityId);
   if (loaded?.owner === "player" && !isStronghold(loaded)) return loaded;
   if (loaded && getCityRegionId(loaded) === getActiveMapRegionId()) return null;
-  const base = getPlayableBaseCities().find(city => city.id === state.mainCityId);
+  const base = getPlayableBaseCityById(state.mainCityId);
   if (isStronghold(base)) return null;
   return base ? { ...base, owner: "player", isMainCity: true } : null;
 }
@@ -6507,7 +6559,7 @@ function normalizeOfflineProductionCities(cities = []) {
       const id = getKnownCityId(city?.id);
       if (!id || seen.has(id)) return null;
       seen.add(id);
-      const base = getPlayableBaseCities().find(city => city.id === id) || {};
+      const base = getPlayableBaseCityById(id) || {};
       return {
         id,
         name: getCanonicalCityName(base, city),
@@ -9237,11 +9289,27 @@ function cleanName(value) {
   return String(value || "").replace(/[^a-z0-9 _.-]/gi, "").trim().slice(0, 18);
 }
 
+function getStateCityByIdCache() {
+  if (!state?.cities) return null;
+  if (
+    stateCityByIdCache
+    && stateCityByIdCacheSource === state.cities
+    && stateCityByIdCacheSize === state.cities.length
+  ) {
+    return stateCityByIdCache;
+  }
+  stateCityByIdCacheSource = state.cities;
+  stateCityByIdCacheSize = state.cities.length;
+  stateCityByIdCache = new Map(state.cities.map(city => [city.id, city]));
+  return stateCityByIdCache;
+}
+
 function cityById(id) {
-  return state.cities.find(city => city.id === id);
+  return getStateCityByIdCache()?.get(String(id || "")) || null;
 }
 
 function cityByIdSafe(cities, id) {
+  if (state?.cities && cities === state.cities) return cityById(id);
   return Array.isArray(cities) ? cities.find(city => city.id === id) : null;
 }
 
@@ -9256,7 +9324,7 @@ function playerRegularCities() {
 function normalizeOwnedCitySnapshot(raw = {}) {
   const id = getKnownCityId(raw.id);
   if (!id) return null;
-  const base = getPlayableBaseCities().find(city => city.id === id) || {};
+  const base = getPlayableBaseCityById(id) || {};
   const regionId = normalizeRegionId(raw.regionId || base.regionId || raw.startPool || base.startPool);
   const ownerUid = String(raw.ownerUid || getCurrentOnlineUid() || "").trim();
   const ownerFlag = raw.ownerFlag || (ownerUid === getCurrentOnlineUid() ? state?.flag : null);
@@ -10002,7 +10070,9 @@ function frame(now) {
   }
 
   if (state) {
-    renderArmies();
+    if (now - lastArmyRenderTime > ARMY_RENDER_INTERVAL_MS) {
+      renderArmies();
+    }
     if (now - lastHudRenderTime > HUD_RENDER_INTERVAL_MS) {
       lastHudRenderTime = now;
       renderHud();
@@ -11061,6 +11131,7 @@ function renderAll() {
   const now = performance.now();
   lastHudRenderTime = now;
   lastRenderTime = now;
+  lastArmyRenderTime = 0;
   syncMapSurfaceToActiveIsland();
   updateCameraTransform();
   renderHud();
@@ -11069,7 +11140,7 @@ function renderAll() {
   renderPaths();
   renderCities(true);
   renderPanel();
-  renderArmies();
+  renderArmies(true);
 }
 
 function renderHud() {
@@ -11745,6 +11816,7 @@ function renderCities(force = false) {
   if (scoutNearbySource) renderScoutNearbyRadius(scoutNearbySource);
   if (regroupSource) renderRegroupRadius(regroupSource);
 
+  const cityFragment = document.createDocumentFragment();
   visibleCities.forEach(city => {
     const mapPoint = worldToMapPoint(city);
     const stronghold = isStronghold(city);
@@ -11828,8 +11900,9 @@ function renderCities(force = false) {
       ${cityLabel}
     `;
     applyCityOwnerFlags(btn, city);
-    cityLayer.appendChild(btn);
+    cityFragment.appendChild(btn);
   });
+  cityLayer.appendChild(cityFragment);
 
   layoutCityLabels();
   const selectedForeign = selectedTargetId ? cityById(selectedTargetId) : null;
@@ -12171,12 +12244,16 @@ function canViewArmyTroopAmount(attack) {
   return Boolean(ownerUid && currentUid && ownerUid === currentUid);
 }
 
-function renderArmies() {
+function renderArmies(force = false) {
   if (!state) return;
   if (isZoomInteractionActive()) return;
+  const now = performance.now();
+  if (!force && now - lastArmyRenderTime < ARMY_RENDER_INTERVAL_MS) return;
+  lastArmyRenderTime = now;
   armyLayer.innerHTML = "";
   const visibleBounds = getVisibleWorldBounds(240);
   const activeRegionId = getActiveMapRegionId();
+  const fragment = document.createDocumentFragment();
   for (const attack of getRenderableArmies()) {
     const from = cityById(attack.fromId);
     const to = cityById(attack.toId);
@@ -12203,8 +12280,9 @@ function renderArmies() {
       const titlePrefix = `${attack.ownerName}: ${attack.kind} to ${to.name}`;
       token.title = showTroops ? titlePrefix : `${titlePrefix} - ${formatDuration(attack.remaining)} remaining`;
     }
-    armyLayer.appendChild(token);
+    fragment.appendChild(token);
   }
+  armyLayer.appendChild(fragment);
 }
 
 function renderPanel() {

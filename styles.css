@@ -1606,6 +1606,8 @@ input {
   font-size: .72rem;
   font-weight: 950;
   pointer-events: none;
+  transition: left .12s linear, top .12s linear;
+  will-change: left, top;
 }
 .army-token.player { background: linear-gradient(#4fb2ff, #175ea9); }
 .army-token.player2 { background: linear-gradient(#bd9bff, #5d35a8); }
