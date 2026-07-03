@@ -4456,6 +4456,17 @@ function getActiveWarDrumsExpiresAtMs() {
   return getActiveTimedItemEffectExpiresAtMs("warDrumsExpiresAtMs");
 }
 
+function getInventoryItemActiveExpiresAtMs(item) {
+  if (!item) return 0;
+  if (item.id === ROYAL_PEACE_SHIELD_ITEM_ID) return getActivePeaceShieldExpiresAtMs();
+  if (item.id === WAR_DRUMS_ITEM_ID) return getActiveWarDrumsExpiresAtMs();
+  return 0;
+}
+
+function getInventoryItemActiveRemainingSeconds(item) {
+  return getPeaceShieldRemainingSeconds(getInventoryItemActiveExpiresAtMs(item));
+}
+
 function getWarDrumsTroopProductionBonusPercent() {
   return getActiveWarDrumsExpiresAtMs() ? WAR_DRUMS_TROOP_PRODUCTION_BONUS_PERCENT : 0;
 }
@@ -13295,6 +13306,7 @@ function showInventoryModal() {
   const filledSlots = slots.filter(Boolean).length;
   const selectedEntry = slots.find(entry => entry?.id === selectedInventoryItemId) || null;
   if (!selectedEntry) selectedInventoryItemId = "";
+  const selectedEntryActiveRemaining = selectedEntry ? getInventoryItemActiveRemainingSeconds(selectedEntry) : 0;
   const activeItemStatus = getActiveItemEffectSummaryHtml();
   modal.classList.remove("battle-report-modal", "city-list-modal", "island-switcher-modal", "leaderboard-modal", "shop-modal", "incoming-attack-modal", "outgoing-attack-modal");
   modal.classList.add("inventory-modal");
@@ -13314,9 +13326,10 @@ function showInventoryModal() {
           <div class="inventory-selection-copy">
             <strong>${escapeHtml(selectedEntry.label)}</strong>
             <small>${escapeHtml(selectedEntry.description)}</small>
+            ${selectedEntryActiveRemaining > 0 ? `<small>Active: ${formatDuration(selectedEntryActiveRemaining)}</small>` : ""}
             <span>Owned: ${formatNumber(selectedEntry.count)}</span>
           </div>
-          <button class="inventory-use-btn" data-inventory-use="${escapeHtml(selectedEntry.id)}" type="button">Use</button>
+          <button class="inventory-use-btn" data-inventory-use="${escapeHtml(selectedEntry.id)}" type="button" ${selectedEntryActiveRemaining > 0 ? "disabled" : ""}>${selectedEntryActiveRemaining > 0 ? "Active" : "Use"}</button>
         ` : `
           <div class="inventory-selection-empty">
             <strong>Select an item</strong>
@@ -13342,6 +13355,12 @@ function useInventoryItem(itemId) {
   if (!state) return;
   const item = getShopItemById(itemId);
   if (!item) return;
+  const activeRemainingSeconds = getInventoryItemActiveRemainingSeconds(item);
+  if (activeRemainingSeconds > 0) {
+    showToast(`${item.label} is already active for ${formatDuration(activeRemainingSeconds)}.`);
+    if (modal?.open && modal.classList.contains("inventory-modal")) showInventoryModal();
+    return;
+  }
   if (item.id === ROYAL_PEACE_SHIELD_ITEM_ID) {
     useRoyalPeaceShield(item).catch(error => {
       console.warn("Royal Peace Shield activation failed", error);
@@ -13399,15 +13418,17 @@ async function useServerInventoryItem(item) {
 }
 
 async function useRoyalPeaceShield(item) {
+  const currentExpiresAtMs = getActivePeaceShieldExpiresAtMs();
+  if (currentExpiresAtMs > Date.now()) {
+    showToast(`${item.label} is already active for ${formatDuration(getPeaceShieldRemainingSeconds(currentExpiresAtMs))}.`);
+    return;
+  }
   if (usesServerEconomyAuthority()) {
     await useServerInventoryItem(item);
     return;
   }
   if (!consumeInventoryItem(item)) return;
-  const now = Date.now();
-  const currentExpiresAtMs = getActivePeaceShieldExpiresAtMs();
-  const startsAtMs = Math.max(now, currentExpiresAtMs);
-  const expiresAtMs = startsAtMs + ROYAL_PEACE_SHIELD_DURATION_MS;
+  const expiresAtMs = Date.now() + ROYAL_PEACE_SHIELD_DURATION_MS;
   const effects = ensureItemEffects();
   effects.shieldExpiresAtMs = expiresAtMs;
   refreshOwnedCityItemEffectMetadata(true);
@@ -13430,15 +13451,17 @@ async function useRoyalPeaceShield(item) {
 }
 
 async function useWarDrums(item) {
+  const currentExpiresAtMs = getActiveWarDrumsExpiresAtMs();
+  if (currentExpiresAtMs > Date.now()) {
+    showToast(`${item.label} is already active for ${formatDuration(getPeaceShieldRemainingSeconds(currentExpiresAtMs))}.`);
+    return;
+  }
   if (usesServerEconomyAuthority()) {
     await useServerInventoryItem(item);
     return;
   }
   if (!consumeInventoryItem(item)) return;
-  const now = Date.now();
-  const currentExpiresAtMs = getActiveWarDrumsExpiresAtMs();
-  const startsAtMs = Math.max(now, currentExpiresAtMs);
-  const expiresAtMs = startsAtMs + WAR_DRUMS_DURATION_MS;
+  const expiresAtMs = Date.now() + WAR_DRUMS_DURATION_MS;
   const effects = ensureItemEffects();
   effects.warDrumsExpiresAtMs = expiresAtMs;
 

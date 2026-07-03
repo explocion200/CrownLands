@@ -1597,15 +1597,17 @@ exports.activateInventoryItem = onCall({ region: "us-central1", maxInstances: 20
     const shopItems = { ...economy.shopItems };
     const owned = Math.max(0, Math.floor(safeNumber(shopItems[itemId], 0)));
     if (owned <= 0) throw new HttpsError("failed-precondition", `You do not have ${item.label}.`);
-    shopItems[itemId] = owned - 1;
 
     const itemEffects = { ...economy.itemEffects };
     let expiresAtMs = 0;
     const extraCityPatches = [];
     const extraCityUpdates = [];
     if (itemId === ROYAL_PEACE_SHIELD_ITEM_ID) {
-      const startsAtMs = Math.max(nowMs, timestampToMs(itemEffects.shieldExpiresAtMs));
-      expiresAtMs = startsAtMs + ROYAL_PEACE_SHIELD_DURATION_MS;
+      const currentExpiresAtMs = timestampToMs(itemEffects.shieldExpiresAtMs);
+      if (currentExpiresAtMs > nowMs) {
+        throw new HttpsError("failed-precondition", `${item.label} is already active.`);
+      }
+      expiresAtMs = nowMs + ROYAL_PEACE_SHIELD_DURATION_MS;
       itemEffects.shieldExpiresAtMs = expiresAtMs;
       economy.cityEntries.forEach(entry => {
         const shieldValue = isStronghold(entry.city) ? 0 : expiresAtMs;
@@ -1618,10 +1620,14 @@ exports.activateInventoryItem = onCall({ region: "us-central1", maxInstances: 20
         });
       });
     } else if (itemId === WAR_DRUMS_ITEM_ID) {
-      const startsAtMs = Math.max(nowMs, timestampToMs(itemEffects.warDrumsExpiresAtMs));
-      expiresAtMs = startsAtMs + WAR_DRUMS_DURATION_MS;
+      const currentExpiresAtMs = timestampToMs(itemEffects.warDrumsExpiresAtMs);
+      if (currentExpiresAtMs > nowMs) {
+        throw new HttpsError("failed-precondition", `${item.label} is already active.`);
+      }
+      expiresAtMs = nowMs + WAR_DRUMS_DURATION_MS;
       itemEffects.warDrumsExpiresAtMs = expiresAtMs;
     }
+    shopItems[itemId] = owned - 1;
 
     writePreparedEconomy(transaction, economy, {
       shopItems,
