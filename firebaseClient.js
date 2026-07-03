@@ -141,6 +141,10 @@
     return callServerFunction("relinquishCity", payload);
   }
 
+  async function relocateMainCity(payload = {}) {
+    return callServerFunction("relocateMainCity", payload);
+  }
+
   async function activateInventoryItem(payload = {}) {
     return callServerFunction("activateInventoryItem", payload);
   }
@@ -1090,6 +1094,7 @@
     collectEconomy,
     upgradeCity,
     relinquishCity,
+    relocateMainCity,
     purchaseShopItem,
     activateInventoryItem,
     saveGameSnapshot,

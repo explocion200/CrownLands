@@ -2192,6 +2192,7 @@ let pendingArmyRecoveryInFlight = false;
 let shopPurchaseInFlight = false;
 let serverCityUpgradeInFlightIds = new Set();
 let serverCityRelinquishInFlightIds = new Set();
+let mainCityRelocationInFlight = false;
 let selectedInventoryItemId = "";
 let updateCheckTimer = 0;
 let updateCheckInFlight = false;
@@ -4227,6 +4228,47 @@ function createOnlineIslandSeed(regionId = DEFAULT_ONLINE_REGION_ID) {
   };
 }
 
+function getOnlineIslandSeedMeta(regionId, seed) {
+  const targetRegionId = normalizeRegionId(regionId);
+  return {
+    worldId: ONLINE_WORLD_ID,
+    legacyWorldId: ONLINE_LEGACY_ISLAND_ID,
+    regionId: targetRegionId,
+    regionName: getRegionLabel(targetRegionId),
+    version: WORLD_SCHEMA_VERSION,
+    name: `${getRegionLabel(targetRegionId)} - ${WORLD_CONFIG.name || "Crownlands"}`,
+    cityCount: seed.cities.length,
+    regionCount: WORLD_REGIONS.length,
+    cityCountPerRegion: REGION_CITY_COUNT,
+    worldWidth: WORLD_WIDTH,
+    worldHeight: WORLD_HEIGHT,
+  };
+}
+
+async function ensureOnlineIslandSeeded(regionId, timeoutMs = 20000) {
+  const api = getOnlineApi();
+  if (!api?.ensureMainIsland) return createOnlineIslandSeed(regionId);
+  const targetRegionId = normalizeRegionId(regionId);
+  const seed = createOnlineIslandSeed(targetRegionId);
+  await withTimeout(api.ensureMainIsland({
+    islandId: getOnlineIslandId(targetRegionId),
+    cities: seed.cities,
+    meta: getOnlineIslandSeedMeta(targetRegionId, seed),
+  }), timeoutMs, `${getRegionLabel(targetRegionId)} setup is taking too long.`);
+  return seed;
+}
+
+function getRelocationSpawnRegionCandidates() {
+  return getNewPlayerSpawnRegionIds().map(regionId => {
+    const seed = createOnlineIslandSeed(regionId);
+    return {
+      regionId: normalizeRegionId(regionId),
+      islandId: getOnlineIslandId(regionId),
+      cityIds: seed.claimCandidateIds,
+    };
+  }).filter(candidate => candidate.cityIds.length);
+}
+
 function getOnlineClaimCandidateIds(cities, startIds) {
   const selected = [];
   const used = new Set();
@@ -5972,6 +6014,11 @@ function usesServerEconomyAuthority() {
   return Boolean(isOnlineWorldActive() && hasServerEconomyApi());
 }
 
+function hasMainCityRelocationApi() {
+  const api = getOnlineApi();
+  return Boolean(isOnlineWorldActive() && api?.isSignedIn?.() && api?.relocateMainCity && api?.ensureMainIsland);
+}
+
 function getServerArmyLaunchKey(sourceId, targetId, kind = "attack") {
   return `${String(kind || "attack")}:${String(sourceId || "")}:${String(targetId || "")}`;
 }
@@ -6076,6 +6123,20 @@ function applyServerProfilePatch(patch = null) {
   }
   if (patch.itemPurchaseCooldowns && typeof patch.itemPurchaseCooldowns === "object") {
     state.itemPurchaseCooldowns = normalizeItemPurchaseCooldowns(patch.itemPurchaseCooldowns);
+    changed = true;
+  }
+  const nextMainCityId = getKnownCityId(patch.mainCityId);
+  if (nextMainCityId) {
+    state.mainCityId = nextMainCityId;
+    if (state.online) {
+      state.online.mainCityId = nextMainCityId;
+      state.online.mainRegionId = normalizeRegionId(patch.mainRegionId || getCityRegionId(nextMainCityId));
+      state.online.mainIslandId = patch.mainIslandId || getOnlineIslandId(state.online.mainRegionId);
+    }
+    changed = true;
+  }
+  if (Number.isFinite(Number(patch.mainCityChangedAtMs))) {
+    state.mainCityChangedAtMs = normalizeTimestampMs(patch.mainCityChangedAtMs);
     changed = true;
   }
   if (changed) {
@@ -12373,6 +12434,139 @@ function cancelSendMode() {
   renderAll();
 }
 
+function canRelocateMainCity(city) {
+  return Boolean(state && city && city.owner === "player" && !isStronghold(city) && isMainCityForList(city));
+}
+
+function renderRelocateMainCityAction(city) {
+  if (!canRelocateMainCity(city)) return "";
+  return `
+    <div class="relocate-main-city-action-panel">
+      <div class="relocate-main-city-action-copy">
+        <strong>Relocate main city</strong>
+        <small>Give up this main city and claim a new neutral city using starter, midgame, then endgame spawn rules.</small>
+      </div>
+      <button id="relocateMainCityBtn" class="relocate-main-city-btn" type="button">Relocate</button>
+    </div>
+  `;
+}
+
+function bindRelocateMainCityButton(city) {
+  modalBody.querySelector("#relocateMainCityBtn")?.addEventListener("click", () => showRelocateMainCityConfirm(city.id));
+}
+
+function showRelocateMainCityConfirm(cityId) {
+  const city = cityById(cityId);
+  if (!canRelocateMainCity(city)) {
+    showToast("Only your current main city can relocate.");
+    return;
+  }
+  if (!hasMainCityRelocationApi()) {
+    showToast("Sign in online before relocating your main city.");
+    return;
+  }
+
+  const troops = Math.max(0, Math.floor(Number(city.troops) || 0));
+  modal.classList.add("relocate-main-city-modal");
+  modalTitle.textContent = "Relocate Main City";
+  modalBody.innerHTML = `
+    <div class="relocate-main-warning">
+      <strong>Relocate from ${escapeHtml(city.name)}?</strong>
+      <p>Your current main city will become neutral at level ${formatNumber(city.level)}.</p>
+      <p>${formatNumber(troops)} stationed troops will move to the new main city. Your other cities stay yours.</p>
+      <p>The new city is chosen from starter maps first, then midgame maps, then endgame maps, and must be on a map with at least ${formatNumber(MIN_NEW_PLAYER_SPAWN_NEUTRAL_CITIES)} neutral cities.</p>
+      <div class="modal-actions">
+        <button id="confirmRelocateMainCityBtn" class="danger-action" type="button">Yes</button>
+        <button id="cancelRelocateMainCityBtn" class="safe-action" type="button">No</button>
+      </div>
+    </div>
+  `;
+  modalBody.querySelector("#cancelRelocateMainCityBtn")?.addEventListener("click", () => modal.close());
+  modalBody.querySelector("#confirmRelocateMainCityBtn")?.addEventListener("click", async event => {
+    event.currentTarget.disabled = true;
+    const success = await relocateMainCity(city.id);
+    if (!success && modal.open) event.currentTarget.disabled = false;
+  });
+  if (!modal.open) modal.showModal();
+}
+
+async function relocateMainCity(cityId) {
+  if (!state || mainCityRelocationInFlight) return false;
+  const city = cityById(cityId);
+  if (!canRelocateMainCity(city)) {
+    showToast("Only your current main city can relocate.");
+    return false;
+  }
+  if (!hasMainCityRelocationApi()) {
+    showToast("Sign in online before relocating your main city.");
+    return false;
+  }
+
+  mainCityRelocationInFlight = true;
+  try {
+    showToast("Finding a new main city...");
+    const targetRegionId = await pickAvailableStartingRegionId();
+    if (!targetRegionId) {
+      throw new Error(`No starter, midgame, or endgame map has ${MIN_NEW_PLAYER_SPAWN_NEUTRAL_CITIES} neutral cities available.`);
+    }
+    await ensureOnlineIslandSeeded(targetRegionId, 20000);
+    const result = await getOnlineApi().relocateMainCity({
+      currentCityId: city.id,
+      currentRegionId: getCityRegionId(city),
+      regionCandidates: getRelocationSpawnRegionCandidates(),
+      minimumNeutralCities: MIN_NEW_PLAYER_SPAWN_NEUTRAL_CITIES,
+      playerName: state.playerName,
+      flag: state.flag,
+      ownerKingPower: getKingPower(),
+      worldId: ONLINE_WORLD_ID,
+    });
+    applyServerEconomyResult(result);
+
+    const newMain = result?.newMainCity || {};
+    const newRegionId = normalizeRegionId(newMain.regionId || targetRegionId);
+    const newCityId = getKnownCityId(newMain.id) || state.mainCityId;
+    if (newCityId) state.mainCityId = newCityId;
+    if (state.online) {
+      state.online.mainCityId = newCityId;
+      state.online.mainRegionId = newRegionId;
+      state.online.mainIslandId = newMain.islandId || getOnlineIslandId(newRegionId);
+    }
+    onlineOwnedCitiesCacheComplete = false;
+
+    const movedTroops = Math.max(0, Math.floor(Number(result?.transferredTroops) || 0));
+    addLog(`Main city relocated from ${city.name} to ${newMain.name || "a new city"}. ${formatNumber(movedTroops)} troops moved.`);
+    showToast(`Main city relocated to ${newMain.name || "new city"}`);
+    if (modal.open) modal.close();
+    clearSelection(false);
+    await refreshAllOwnedCities(true);
+    if (newRegionId && newRegionId !== getActiveOnlineRegionId()) {
+      await connectOnlineIsland(newRegionId, {
+        claimHome: false,
+        homeRegionId: newRegionId,
+        profile: {
+          mainIslandId: state.online?.mainIslandId || getOnlineIslandId(newRegionId),
+          mainRegionId: newRegionId,
+          mainCityId: newCityId,
+        },
+      });
+    } else {
+      renderAll();
+      if (newCityId) centerOnCity(newCityId);
+    }
+    publishOnlinePresence(true);
+    flushOnlineSave(true);
+    return true;
+  } catch (error) {
+    onlineLastError = error?.message || String(error);
+    showToast(error?.message || "Could not relocate main city.");
+    console.warn("Main city relocation failed", error);
+    renderAll();
+    return false;
+  } finally {
+    mainCityRelocationInFlight = false;
+  }
+}
+
 function canRelinquishCity(city) {
   if (!state || !city || city.owner !== "player") return false;
   return isStronghold(city) || !isMainCityForList(city);
@@ -12647,7 +12841,8 @@ function showCityInfoModal(cityId) {
       <div class="stat-wide main-city-status">
         <span>Home status</span>
         <strong>Main city</strong>
-      </div>`
+      </div>
+      ${renderRelocateMainCityAction(city)}`
     : `
       <div class="main-city-action-panel">
         <div class="main-city-action-copy">
@@ -12679,6 +12874,7 @@ function showCityInfoModal(cityId) {
     </div>
   `;
   modalBody.querySelector("#changeMainCityBtn")?.addEventListener("click", () => changeMainCity(city.id));
+  bindRelocateMainCityButton(city);
   bindRelinquishCityButton(city);
   if (!modal.open) modal.showModal();
 }
@@ -14960,6 +15156,7 @@ modal.addEventListener("close", () => {
   modal.classList.remove("incoming-attack-modal");
   modal.classList.remove("outgoing-attack-modal");
   modal.classList.remove("relinquish-city-modal");
+  modal.classList.remove("relocate-main-city-modal");
   if (!troopSliderActive) return;
   troopSliderActive = false;
   cancelSendMode();
