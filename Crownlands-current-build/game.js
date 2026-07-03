@@ -177,7 +177,7 @@ const ZOOM_RENDER_SETTLE_MS = 260;
 const LOW_ZOOM_PERFORMANCE_THRESHOLD = 0.72;
 const ISLAND_MAP_PADDING = 560;
 const TROOP_PICKUP_ICON_SRC = "assets/troop-pickup.png";
-const GOLD_PICKUP_ICON_SRC = "assets/gold-pickup.png";
+const GOLD_PICKUP_ICON_SRC = "assets/gold-pickup.png?v=20260702-gold-pickup-art";
 const DEFAULT_PORTAL_VISUAL_SIZE = 96;
 const MIN_PORTAL_VISUAL_SIZE = 48;
 const DEFAULT_STRONGHOLD_VISUAL_SIZE = 154;
