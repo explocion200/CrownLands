@@ -42,6 +42,11 @@ service cloud.firestore {
         allow read, create, update: if ownsPlayerDoc(uid);
         allow delete: if ownsPlayerDoc(uid);
       }
+
+      match /serverReports/{reportId} {
+        allow read: if ownsPlayerDoc(uid);
+        allow create, update, delete: if false;
+      }
     }
 
     match /leaderboards/{boardId}/entries/{uid} {
@@ -55,9 +60,9 @@ service cloud.firestore {
       allow delete: if ownsPlayerDoc(uid);
     }
 
-    // Phase 2 multiplayer collections. Signed-in users can create the shared
-    // island and update city docs for the browser prototype. Tighten these
-    // rules when combat moves into server-verified transactions.
+    // Phase 2 multiplayer collections. City layout/profile writes are still
+    // browser-managed for the current prototype, but army orders, arrivals,
+    // combat results, defense reports, and scout reports are server-owned.
     match /islands/{islandId} {
       allow read: if signedIn();
       allow create: if signedIn();
@@ -72,13 +77,12 @@ service cloud.firestore {
 
       match /armies/{armyId} {
         allow read: if signedIn();
-        allow create, update: if signedIn();
-        allow delete: if signedIn();
+        allow create, update, delete: if false;
       }
 
       match /reports/{reportId} {
         allow read: if signedIn();
-        allow create, update: if signedIn();
+        allow create, update: if false;
         allow delete: if false;
       }
 

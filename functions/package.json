@@ -1,0 +1,16 @@
+{
+  "name": "crownlands-functions",
+  "private": true,
+  "description": "Server-authoritative Crownlands multiplayer actions",
+  "engines": {
+    "node": "20"
+  },
+  "main": "index.js",
+  "scripts": {
+    "lint": "node --check index.js"
+  },
+  "dependencies": {
+    "firebase-admin": "^12.5.0",
+    "firebase-functions": "^5.1.1"
+  }
+}

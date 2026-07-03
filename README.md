@@ -48,7 +48,7 @@ Landscape / horizontal medieval island-conquest prototype inspired by the core l
 - Active army route markers appear only after troops are sent.
 - Selecting a non-owned city opens Scout, Attack, and Info actions around that city.
 - Scouting dispatches one troop from the nearest reachable owned city; its report reveals a troop and defense snapshot for two minutes after arrival.
-- Owned cities have a Scout Nearby action. The first click previews a 300-distance radius and highlights targets; pressing Send All costs 1,000 gold and dispatches one troop from that city to every reachable highlighted non-owned city.
+- Owned cities have a Scout Nearby action. The first click previews the nearby radius and highlights targets; pressing Send All costs 10,000 gold and dispatches one troop from that city to every reachable highlighted non-owned city.
 - A completed scout report adds a Report action to the selected city and shows the reported troop count in its banner.
 - Detailed reports include city level, troop and wall defense contributions, total defense, and level/percentage rows for relevant defense and attack skills.
 
@@ -58,20 +58,28 @@ Open the Netlify site, sign in with Google, then use the live map to scout, atta
 
 ## Online Multiplayer Foundation
 
-This build has the first Firebase layer added without breaking guest play.
+This build has Firebase Auth, Firestore, and callable Functions added without breaking guest play.
 
 - `firebase-config.js` holds the Firebase web app config placeholders.
-- `firebaseClient.js` loads Firebase Auth and Firestore only after real config values are pasted in.
+- `firebaseClient.js` loads Firebase Auth, Firestore, and Functions only after real config values are pasted in.
 - The setup screen now uses Google sign-in as the only entry button.
-- Signed-in players save a private cloud snapshot to the current reset slot, `players/{uid}/saves/default-fresh-2026-06-23`.
+- Signed-in players save a private cloud snapshot to the current reset slot, `players/{uid}/saves/default-fresh-2026-07-02-world-reset`.
 - After sign-in, the game automatically checks the current reset slot in Firebase first, then falls back to the current browser save key.
-- `firestore.rules` allows private player saves and signed-in shared-island writes for this prototype phase.
-- Phase 2 now shards the world into one Firestore island per region, such as `islands/main-fresh-2026-06-23-west`.
+- `firestore.rules` allows private player saves and shared city setup, but blocks browser writes to army movement and report collections.
+- Phase 2 now shards the world into one Firestore island per region, such as `islands/main-fresh-2026-07-02-world-reset-west`.
 - The browser loads and subscribes to one active island at a time, starting with the player's home island.
 - The island switcher lets signed-in players load a different island, unsubscribing from the previous island before opening the next one.
 - While online, the browser syncs the signed-in player's owned cities back to Firestore for the currently loaded island.
+- Online troop orders now call Firebase Functions: `sendArmyOrder` creates and validates marches server-side, and `resolveArmyOrder` resolves scouts, transfers, attacks, defenses, city capture, level drops, XP, gold rewards, and battle reports in Firestore transactions.
+- Server-written reports are stored under `players/{uid}/serverReports/{reportId}` and merged into the in-game Reports UI.
 
 See `FIREBASE_SETUP.md` for the Firebase project steps and the planned shared-world collections.
+
+Deploy Firebase rules and Functions after changing server multiplayer code:
+
+```powershell
+firebase deploy --only functions,firestore:rules
+```
 
 ## Local Web Editor
 

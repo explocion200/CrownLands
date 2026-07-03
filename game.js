@@ -2136,6 +2136,8 @@ let onlineCitySyncQueued = false;
 let onlineArmies = [];
 let onlineArmiesByIsland = new Map();
 let onlineArmyUnsubscribes = [];
+let onlineServerReportsUnsubscribe = null;
+let appliedServerReportIds = new Set();
 let resolvingOnlineArmyIds = new Set();
 let resolvedOnlineArmyIds = new Set();
 let onlinePresence = [];
@@ -5343,7 +5345,7 @@ function scoutCity(cityId) {
 
   const source = sourceOption.city;
   launchScoutMission(source, target, sourceOption.route);
-  if (isOnlineWorldActive()) syncOwnedCitiesToOnline(true);
+  if (isOnlineWorldActive() && !usesServerArmyAuthority()) syncOwnedCitiesToOnline(true);
   addLog(`One scout left ${source.name} for ${target.name}.`);
   saveGame();
   renderAll();
@@ -5354,8 +5356,10 @@ function launchScoutMission(source, target, route) {
   if (!source || !target || source.owner !== "player" || source.troops < 1 || !route?.points?.length) return null;
   source.troopFloat = Math.max(0, (Number(source.troopFloat) || source.troops) - 1);
   source.troops = Math.floor(source.troopFloat);
-  markOwnedCityChanged(source, false);
-  syncCityStateToOnline(source);
+  if (!usesServerArmyAuthority()) {
+    markOwnedCityChanged(source, false);
+    syncCityStateToOnline(source);
+  }
   const duration = travelTime(source, target, "player", route.length, 1, "scout");
   const mission = {
     id: attackIdCounter++,
@@ -5530,7 +5534,7 @@ function toggleRegroup(cityId) {
     return;
   }
 
-  if (isOnlineWorldActive()) syncOwnedCitiesToOnline(true);
+  if (isOnlineWorldActive() && !usesServerArmyAuthority()) syncOwnedCitiesToOnline(true);
   addLog(`${target.name} called a regroup for ${formatNumber(REGROUP_COST)} gold: ${formatNumber(troopsSent)} troops moving in from ${formatNumber(launched)} cities.`);
   saveGame();
   renderAll();
@@ -5712,6 +5716,146 @@ function saveGame() {
 
 function getOnlineApi() {
   return window.CrownlandsOnline || null;
+}
+
+function usesServerArmyAuthority() {
+  const api = getOnlineApi();
+  return Boolean(isOnlineWorldActive() && api?.isSignedIn?.() && api?.sendArmyOrder && api?.resolveArmyOrder);
+}
+
+function getServerReportGameSecond(report = {}) {
+  const createdAtMs = normalizeTimestampMs(report.createdAtMs);
+  if (!createdAtMs || !state) return Math.max(0, Number(state?.gameSeconds) || 0);
+  const ageSeconds = Math.max(0, Math.floor((Date.now() - createdAtMs) / 1000));
+  return Math.max(0, Math.floor(Number(state.gameSeconds) || 0) - ageSeconds);
+}
+
+function normalizeServerScoutReport(report = null) {
+  if (!report || typeof report !== "object" || !state) return null;
+  const nowMs = Date.now();
+  const scoutedAtMs = normalizeTimestampMs(report.scoutedAtMs) || nowMs;
+  const expiresAtMs = normalizeTimestampMs(report.expiresAtMs) || (scoutedAtMs + SCOUT_REPORT_SECONDS * 1000);
+  const createdAgeSeconds = Math.max(0, Math.floor((nowMs - scoutedAtMs) / 1000));
+  const remainingSeconds = Math.max(0, Math.ceil((expiresAtMs - nowMs) / 1000));
+  const scoutedAt = Math.max(0, Math.floor(Number(state.gameSeconds) || 0) - createdAgeSeconds);
+  return {
+    ...report,
+    troops: Math.max(0, Math.floor(Number(report.troops) || 0)),
+    totalDefense: Math.max(0, Math.floor(Number(report.totalDefense) || 0)),
+    cityLevel: clampCityLevel(report.cityLevel || 1),
+    scoutedAt,
+    expiresAt: scoutedAt + remainingSeconds,
+  };
+}
+
+function normalizeServerBattleReport(report = null) {
+  if (!report || typeof report !== "object") return null;
+  const currentUid = getCurrentOnlineUid();
+  if (report.uid && currentUid && report.uid !== currentUid) return null;
+  return normalizeBattleReports([{
+    ...report,
+    id: report.id || `server_${report.cityId || "report"}_${report.createdAtMs || Date.now()}`,
+    createdAt: getServerReportGameSecond(report),
+  }])[0] || null;
+}
+
+function mergeServerReports(reports = []) {
+  if (!state || !Array.isArray(reports) || !reports.length) return false;
+  let changed = false;
+  state.battleReports = normalizeBattleReports(state.battleReports);
+  state.scoutReports = normalizeScoutReports(state.scoutReports);
+  const existingIds = new Set(state.battleReports.map(report => report.id));
+  for (const rawReport of reports) {
+    const normalized = normalizeServerBattleReport(rawReport);
+    if (!normalized || existingIds.has(normalized.id) || appliedServerReportIds.has(normalized.id)) continue;
+    state.battleReports.push(normalized);
+    existingIds.add(normalized.id);
+    appliedServerReportIds.add(normalized.id);
+    if (rawReport.type === "scout" && rawReport.cityId && rawReport.scoutReport) {
+      const scoutReport = normalizeServerScoutReport(rawReport.scoutReport);
+      if (scoutReport) state.scoutReports[rawReport.cityId] = scoutReport;
+    }
+    if (rawReport.characterAfter || Number.isFinite(Number(rawReport.goldAfter))) {
+      applyServerProfilePatch({
+        character: rawReport.characterAfter,
+        gold: rawReport.goldAfter,
+      });
+    }
+    changed = true;
+  }
+  if (changed) {
+    state.battleReports = normalizeBattleReports(state.battleReports);
+    if (state.battleReports.length > 120) state.battleReports = state.battleReports.slice(-120);
+    saveGame();
+    if (modal.open && modal.classList.contains("battle-report-modal")) showLogModal();
+    renderHud();
+  }
+  return changed;
+}
+
+function applyServerProfilePatch(patch = null) {
+  if (!state || !patch || typeof patch !== "object") return false;
+  let changed = false;
+  if (patch.character) {
+    state.character = normalizeCharacterProgress(patch.character);
+    syncCharacterSkillPoints(state.character, state.upgrades, patch.character?.skillPoints);
+    changed = true;
+  }
+  if (Number.isFinite(Number(patch.gold))) {
+    state.gold = Math.max(TEST_STARTING_GOLD, Math.floor(Number(patch.gold) || 0));
+    changed = true;
+  }
+  if (changed) {
+    saveGame();
+    renderHud();
+    if (profileScreen?.classList.contains("open")) renderProfileScreen();
+  }
+  return changed;
+}
+
+function applyServerCityUpdates(cityUpdates = []) {
+  if (!state || !Array.isArray(cityUpdates)) return false;
+  let changed = false;
+  for (const update of cityUpdates) {
+    const cityId = getKnownCityId(update?.id);
+    const city = cityId ? cityById(cityId) : null;
+    if (!city) continue;
+    const currentRegionId = getCityRegionId(city);
+    const updateRegionId = normalizeRegionId(update.regionId || currentRegionId);
+    if (currentRegionId !== updateRegionId) continue;
+    if (Number.isFinite(Number(update.troops))) {
+      city.troops = Math.max(0, Math.floor(Number(update.troops) || 0));
+      city.troopFloat = Math.max(0, Number(update.troopFloat) || city.troops);
+      changed = true;
+    }
+    if (Number.isFinite(Number(update.level))) {
+      city.level = isStronghold(city) ? getStrongholdDefenseLevel(city) : clampCityLevel(update.level);
+      changed = true;
+    }
+    if (update.ownerUid !== undefined) {
+      const currentUid = getCurrentOnlineUid();
+      const ownerUid = String(update.ownerUid || "").trim();
+      city.ownerKind = ownerUid ? "player" : "neutral";
+      city.ownerUid = ownerUid || null;
+      city.owner = ownerUid && currentUid && ownerUid === currentUid ? "player" : ownerUid ? "enemy" : "neutral";
+      city.ownerName = update.ownerName || "";
+      city.ownerFlag = update.ownerFlag || null;
+      city.ownerKingPower = normalizePowerValue(update.ownerKingPower);
+      city.ownerShieldExpiresAtMs = normalizeTimestampMs(update.ownerShieldExpiresAtMs);
+      changed = true;
+    }
+  }
+  if (changed) renderAll();
+  return changed;
+}
+
+function applyServerArmyResult(result = null) {
+  if (!result || typeof result !== "object") return false;
+  let changed = false;
+  if (Array.isArray(result.reports)) changed = mergeServerReports(result.reports) || changed;
+  if (Array.isArray(result.cityUpdates)) changed = applyServerCityUpdates(result.cityUpdates) || changed;
+  if (result.currentUser) changed = applyServerProfilePatch(result.currentUser) || changed;
+  return changed;
 }
 
 function getSerializableGameState() {
@@ -6822,6 +6966,8 @@ function disconnectOnlineWorld() {
   if (typeof onlineIslandUnsubscribe === "function") onlineIslandUnsubscribe();
   onlineIslandUnsubscribe = null;
   clearOnlineArmyWatchers();
+  clearOnlineServerReportWatcher();
+  appliedServerReportIds = new Set();
   onlinePresence = [];
   onlineIslandSummaries = new Map();
   onlineIslandSummaryRefreshInFlight = false;
@@ -7022,6 +7168,10 @@ async function waitForPendingOnlineWrites(timeoutMs = 4500) {
 async function recoverPendingOnlineArmyMovements() {
   if (pendingArmyRecoveryInFlight) return false;
   if (!isOnlineWorldActive()) return false;
+  if (usesServerArmyAuthority()) {
+    writePendingOnlineArmyMovements(readPendingOnlineArmyMovements().filter(entry => entry.uid !== getCurrentOnlineUid()));
+    return false;
+  }
   const uid = getCurrentOnlineUid();
   if (!uid) return false;
   const entries = readPendingOnlineArmyMovements();
@@ -7383,6 +7533,8 @@ async function connectOnlineIsland(regionId, { claimHome = false, homeRegionId =
     onlineWorldConnected = true;
     onlineLastError = "";
     subscribeOnlineArmyWatchers(islandId);
+    subscribeOnlineServerReports();
+    loadServerReportsOnce();
     await recoverPendingOnlineArmyMovements();
     await publishOnlinePresence(true);
     refreshAllOwnedCities(true);
@@ -7904,15 +8056,83 @@ function toOnlineArmyMovement(mission) {
   };
 }
 
+function rollbackServerArmyMission(mission, reason = "") {
+  if (!state || !mission) return;
+  const onlineId = getOnlineArmyResolutionId(mission);
+  const source = cityById(mission.fromId);
+  if (source?.owner === "player") {
+    const returned = Math.max(0, Math.floor(Number(mission.troops) || 0));
+    source.troopFloat = Math.max(0, Number(source.troopFloat) || Number(source.troops) || 0) + returned;
+    source.troops = Math.floor(source.troopFloat);
+  }
+  state.attacks = state.attacks.filter(attack => {
+    if (onlineId && getOnlineArmyResolutionId(attack) === onlineId) return false;
+    return attack.id !== mission.id;
+  });
+  forgetPendingOnlineArmyMovement(onlineId);
+  onlineLastError = reason || "Server rejected the army order.";
+  addLog(`Army order canceled by server${reason ? `: ${reason}` : "."}`);
+  showToast(reason || "Server canceled that army order.");
+  saveGame();
+  renderAll();
+}
+
+function applyServerMovementToMission(mission, movement = null) {
+  if (!mission || !movement) return;
+  mission.onlineId = movement.id || mission.onlineId;
+  mission.troops = Math.max(0, Math.floor(Number(movement.troops) || mission.troops || 0));
+  mission.requestedTroops = Math.max(0, Math.floor(Number(movement.requestedTroops) || mission.requestedTroops || mission.troops || 0));
+  mission.total = Math.max(0.1, Number(movement.total) || mission.total || 0.1);
+  mission.remaining = Math.max(0, (Number(movement.arrivesAtMs) - Date.now()) / 1000) || mission.total;
+  mission.launchedAtMs = normalizeTimestampMs(movement.launchedAtMs) || mission.launchedAtMs;
+  mission.arrivesAtMs = normalizeTimestampMs(movement.arrivesAtMs) || mission.arrivesAtMs;
+  mission.onlineRegionIds = Array.isArray(movement.routeRegionIds) ? movement.routeRegionIds.map(normalizeRegionId).filter(Boolean) : mission.onlineRegionIds;
+}
+
 function publishOnlineArmyMovement(mission) {
   if (!isOnlineWorldActive() || mission?.owner !== "player") return;
   const api = getOnlineApi();
-  if (!api?.saveArmyMovement) return;
+  if (!api?.sendArmyOrder && !api?.saveArmyMovement) return;
   prepareOnlineArmyMission(mission);
   const movement = toOnlineArmyMovement(mission);
   if (!movement) return;
   const regionIds = movement.routeRegionIds?.length ? movement.routeRegionIds : getMissionRegionIds(mission);
   mission.onlineRegionIds = regionIds;
+  const sourceRegionId = getCityRegionId(mission.fromId);
+  const targetRegionId = getCityRegionId(mission.toId);
+
+  if (usesServerArmyAuthority()) {
+    const savePromise = api.sendArmyOrder({
+      worldId: ONLINE_WORLD_ID,
+      resetGeneration: RESET_GENERATION,
+      army: {
+        ...movement,
+        sourceRegionId,
+        targetRegionId,
+      },
+      sourceRegionId,
+      targetRegionId,
+      routeRegionIds: regionIds,
+    })
+    .then(result => {
+      if (result?.movement) applyServerMovementToMission(mission, result.movement);
+      if (result?.sourceCity) applyServerCityUpdates([result.sourceCity]);
+      onlineLastError = "";
+      return true;
+    })
+    .catch(error => {
+      onlineLastError = error?.message || String(error);
+      console.warn("Server rejected army movement", error);
+      rollbackServerArmyMission(mission, onlineLastError);
+      return false;
+    })
+    .finally(() => {
+      onlineArmySavePromises.delete(savePromise);
+    });
+    onlineArmySavePromises.add(savePromise);
+    return savePromise;
+  }
+
   rememberPendingOnlineArmyMovement(movement, regionIds);
   const savePromise = saveOnlineArmyMovementToRegions(movement, regionIds)
     .then(() => {
@@ -7933,6 +8153,7 @@ function publishOnlineArmyMovement(mission) {
 
 function deleteOnlineArmyMovement(mission) {
   if (!mission?.onlineId || mission.owner !== "player") return;
+  if (usesServerArmyAuthority()) return;
   const api = getOnlineApi();
   if (!api?.deleteArmyMovement) return;
   const regionIds = mission.onlineRegionIds?.length ? mission.onlineRegionIds : getMissionRegionIds(mission);
@@ -8035,6 +8256,39 @@ function clearOnlineArmyWatchers() {
   onlineArmyUnsubscribes = [];
   onlineArmiesByIsland = new Map();
   onlineArmies = [];
+}
+
+function clearOnlineServerReportWatcher() {
+  if (typeof onlineServerReportsUnsubscribe === "function") onlineServerReportsUnsubscribe();
+  onlineServerReportsUnsubscribe = null;
+}
+
+async function loadServerReportsOnce() {
+  const api = getOnlineApi();
+  if (!state || !api?.loadServerReports || !api?.isSignedIn?.()) return false;
+  try {
+    const reports = await withTimeout(api.loadServerReports(120), 5000, "Server reports are taking too long.");
+    return mergeServerReports(reports);
+  } catch (error) {
+    onlineLastError = error?.message || String(error);
+    console.warn("Could not load server reports", error);
+    return false;
+  }
+}
+
+function subscribeOnlineServerReports() {
+  const api = getOnlineApi();
+  clearOnlineServerReportWatcher();
+  if (!state || !api?.subscribeServerReports || !api?.isSignedIn?.()) return;
+  onlineServerReportsUnsubscribe = api.subscribeServerReports({
+    onReports: reports => {
+      mergeServerReports(reports);
+    },
+    onError: error => {
+      onlineLastError = error?.message || String(error);
+      console.warn("Could not subscribe to server reports", error);
+    },
+  });
 }
 
 function subscribeOnlineArmyWatchers(activeIslandId) {
@@ -8154,10 +8408,52 @@ function resolveOverdueOnlineArmy(army) {
     });
 }
 
+async function resolveServerArmyMission(mission) {
+  if (!usesServerArmyAuthority()) return false;
+  const onlineId = getOnlineArmyResolutionId(mission);
+  if (!onlineId || resolvedOnlineArmyIds.has(onlineId)) return false;
+  const api = getOnlineApi();
+  const routeRegionIds = mission.onlineRegionIds?.length
+    ? mission.onlineRegionIds
+    : getMissionRegionIds(mission);
+  if (!routeRegionIds.length) return false;
+
+  if (resolvingOnlineArmyIds.has(onlineId)) return false;
+  resolvingOnlineArmyIds.add(onlineId);
+  try {
+    const result = await api.resolveArmyOrder({
+      armyId: onlineId,
+      routeRegionIds,
+    });
+    if (result?.status === "resolved" || result?.status === "missing" || result?.status === "already-resolved") {
+      resolvedOnlineArmyIds.add(onlineId);
+    }
+    applyServerArmyResult(result);
+    onlineLastError = "";
+    saveGame();
+    flushOnlineSave(true);
+    renderAll();
+    updateIncomingAttackUi();
+    updateOutgoingAttackUi();
+    return true;
+  } catch (error) {
+    onlineLastError = error?.message || String(error);
+    console.warn("Could not resolve server army", error);
+    return false;
+  } finally {
+    resolvingOnlineArmyIds.delete(onlineId);
+  }
+}
+
 async function resolveOverdueOnlineArmyAsync(army) {
-  if (!state || army?.ownerUid !== getCurrentOnlineUid()) return false;
+  if (!state) return false;
   const onlineId = getOnlineArmyResolutionId(army);
   if (!onlineId || resolvedOnlineArmyIds.has(onlineId)) return false;
+  if (usesServerArmyAuthority()) {
+    resolvingOnlineArmyIds.delete(onlineId);
+    return resolveServerArmyMission(army);
+  }
+  if (army?.ownerUid !== getCurrentOnlineUid()) return false;
   const targetRegionId = getCityRegionId(army.toId);
   const loadedTargetRegion = await loadOnlineRegionCitiesForResolution(targetRegionId);
   if (!loadedTargetRegion) return false;
@@ -8202,7 +8498,7 @@ function retryOverdueOnlineArmyResolutions() {
   const uid = getCurrentOnlineUid();
   if (!uid) return;
   onlineArmies
-    .filter(army => army?.ownerUid === uid)
+    .filter(army => usesServerArmyAuthority() || army?.ownerUid === uid)
     .filter(army => !isOnlineArmyResolutionBlocked(army))
     .filter(army => getOnlineArmyRemainingSeconds(army) <= 0)
     .forEach(resolveOverdueOnlineArmy);
@@ -9581,7 +9877,7 @@ function updateAttacks(dt) {
       const skipResolve = Boolean(onlineId && (completedOnlineIds.has(onlineId) || isOnlineArmyResolutionBlocked(attack)));
       if (onlineId) {
         completedOnlineIds.add(onlineId);
-        if (!skipResolve) resolvingOnlineArmyIds.add(onlineId);
+        if (!skipResolve && !usesServerArmyAuthority()) resolvingOnlineArmyIds.add(onlineId);
       }
       completed.push({ attack, skipResolve });
     }
@@ -9590,12 +9886,14 @@ function updateAttacks(dt) {
   for (const entry of completed) {
     const { attack, skipResolve } = entry;
     const onlineId = getOnlineArmyResolutionId(attack);
-    if (!skipResolve) {
+    if (!skipResolve && onlineId && usesServerArmyAuthority()) {
+      resolveServerArmyMission(attack);
+    } else if (!skipResolve) {
       if (onlineId) resolvedOnlineArmyIds.add(onlineId);
       resolveAttack(attack);
     }
-    if (onlineId) resolvingOnlineArmyIds.delete(onlineId);
-    deleteOnlineArmyMovement(attack);
+    if (onlineId && !usesServerArmyAuthority()) resolvingOnlineArmyIds.delete(onlineId);
+    if (!usesServerArmyAuthority()) deleteOnlineArmyMovement(attack);
   }
 
   if (completed.length) {
@@ -9659,7 +9957,7 @@ function launchAttack(sourceId, targetId, percent, owner, exactTroops = null, op
 
   source.troopFloat = Math.max(0, source.troopFloat - send);
   source.troops = Math.floor(source.troopFloat);
-  if (owner === "player") {
+  if (owner === "player" && !usesServerArmyAuthority()) {
     markOwnedCityChanged(source, false);
     syncCityStateToOnline(source);
   }
@@ -9686,7 +9984,7 @@ function launchAttack(sourceId, targetId, percent, owner, exactTroops = null, op
   prepareOnlineArmyMission(mission);
   state.attacks.push(mission);
   publishOnlineArmyMovement(mission);
-  if (isOnlineWorldActive() && owner === "player" && options.syncOwnedCities !== false) syncOwnedCitiesToOnline(true);
+  if (isOnlineWorldActive() && owner === "player" && options.syncOwnedCities !== false && !usesServerArmyAuthority()) syncOwnedCitiesToOnline(true);
 
   if (owner === "player" && kind === "transfer") {
     if (!options.silent) {

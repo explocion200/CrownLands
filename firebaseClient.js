@@ -12,6 +12,7 @@
     app: null,
     auth: null,
     db: null,
+    functions: null,
     provider: null,
     modules: null,
     initPromise: null,
@@ -40,12 +41,13 @@
   }
 
   async function loadModules() {
-    const [app, auth, firestore] = await Promise.all([
+    const [app, auth, firestore, functions] = await Promise.all([
       import(`https://www.gstatic.com/firebasejs/${FIREBASE_VERSION}/firebase-app.js`),
       import(`https://www.gstatic.com/firebasejs/${FIREBASE_VERSION}/firebase-auth.js`),
       import(`https://www.gstatic.com/firebasejs/${FIREBASE_VERSION}/firebase-firestore.js`),
+      import(`https://www.gstatic.com/firebasejs/${FIREBASE_VERSION}/firebase-functions.js`),
     ]);
-    return { app, auth, firestore };
+    return { app, auth, firestore, functions };
   }
 
   async function init() {
@@ -66,6 +68,7 @@
         client.app = client.modules.app.initializeApp(config);
         client.auth = client.modules.auth.getAuth(client.app);
         client.db = client.modules.firestore.getFirestore(client.app);
+        client.functions = client.modules.functions.getFunctions(client.app);
         client.provider = new client.modules.auth.GoogleAuthProvider();
 
         client.modules.auth.onAuthStateChanged(client.auth, user => {
@@ -90,6 +93,26 @@
   function requireSignedIn() {
     if (!client.configured || !client.db || !client.user?.uid) return null;
     return client.user.uid;
+  }
+
+  async function callServerFunction(name, payload = {}) {
+    await init();
+    const uid = requireSignedIn();
+    if (!uid) throw new Error("Sign in to use server multiplayer.");
+    if (!client.functions || !client.modules?.functions?.httpsCallable) {
+      throw new Error("Firebase Functions did not load.");
+    }
+    const callable = client.modules.functions.httpsCallable(client.functions, name);
+    const result = await callable(sanitizeForFirestore(payload) || {});
+    return result?.data || null;
+  }
+
+  async function sendArmyOrder(payload = {}) {
+    return callServerFunction("sendArmyOrder", payload);
+  }
+
+  async function resolveArmyOrder(payload = {}) {
+    return callServerFunction("resolveArmyOrder", payload);
   }
 
   function normalizeShopItemsForPurchase(items = {}) {
@@ -920,6 +943,41 @@
     return results;
   }
 
+  async function loadServerReports(limitCount = 120) {
+    await init();
+    const uid = requireSignedIn();
+    if (!uid) return [];
+    const { collection, getDocs, query: firestoreQuery, orderBy, limit } = client.modules.firestore;
+    const reportsRef = collection(client.db, "players", uid, "serverReports");
+    const safeLimit = Math.max(1, Math.min(200, Math.floor(Number(limitCount) || 120)));
+    const reportsQuery = firestoreQuery && orderBy && limit
+      ? firestoreQuery(reportsRef, orderBy("createdAtMs", "desc"), limit(safeLimit))
+      : reportsRef;
+    const snapshot = await getDocs(reportsQuery);
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  }
+
+  function subscribeServerReports(handlers = {}) {
+    if (!client.configured || !client.db || !client.user?.uid) return () => {};
+    const { collection, onSnapshot, query: firestoreQuery, orderBy, limit } = client.modules.firestore;
+    const reportsRef = collection(client.db, "players", client.user.uid, "serverReports");
+    const reportsQuery = firestoreQuery && orderBy && limit
+      ? firestoreQuery(reportsRef, orderBy("createdAtMs", "desc"), limit(120))
+      : reportsRef;
+    const unsubscribe = onSnapshot(
+      reportsQuery,
+      snapshot => {
+        if (typeof handlers.onReports === "function") {
+          handlers.onReports(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+        }
+      },
+      error => {
+        if (typeof handlers.onError === "function") handlers.onError(error, "serverReports");
+      }
+    );
+    return unsubscribe;
+  }
+
   function subscribeIsland(islandId, handlers = {}) {
     if (!client.configured || !client.db || !islandId) return () => {};
     const { collection, doc, onSnapshot, query: firestoreQuery, where } = client.modules.firestore;
@@ -976,6 +1034,8 @@
     purchaseShopItem,
     saveGameSnapshot,
     loadGameSnapshot,
+    sendArmyOrder,
+    resolveArmyOrder,
     ensureMainIsland,
     claimStartingCity,
     savePlayerCities,
@@ -989,7 +1049,10 @@
     loadKingPowerPresenceLeaderboard,
     loadIslandCitySummary,
     loadOwnedCitiesAcrossIslands,
+    loadServerReports,
     subscribeIsland,
+    subscribeServerReports,
+    usesServerArmyAuthority: () => Boolean(client.functions && client.modules?.functions?.httpsCallable),
     isConfigured: () => client.configured,
     isReady: () => client.ready,
     isSignedIn: () => Boolean(client.user?.uid),
