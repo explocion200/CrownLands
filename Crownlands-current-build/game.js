@@ -190,7 +190,7 @@ const GOLD_STRONGHOLD_LEVEL = 50;
 const GOLD_STRONGHOLD_START_TROOPS = 50000000;
 const TRAINING_STRONGHOLD_ID = "north_training_stronghold";
 const TRAINING_STRONGHOLD_NAME = "Training Stronghold";
-const TRAINING_STRONGHOLD_ART_SRC = "assets/training-stronghold.png";
+const TRAINING_STRONGHOLD_ART_SRC = "assets/training-stronghold.png?v=20260703-training-stronghold-art";
 const TRAINING_STRONGHOLD_BONUS_PERCENT = 15;
 const TRAINING_STRONGHOLD_LEVEL = 50;
 const TRAINING_STRONGHOLD_START_TROOPS = 50000000;
