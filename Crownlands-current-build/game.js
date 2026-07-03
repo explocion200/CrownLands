@@ -184,7 +184,7 @@ const DEFAULT_STRONGHOLD_VISUAL_SIZE = 154;
 const MIN_STRONGHOLD_VISUAL_SIZE = 80;
 const GOLD_STRONGHOLD_ID = "west_gold_stronghold";
 const GOLD_STRONGHOLD_NAME = "Gold Stronghold";
-const GOLD_STRONGHOLD_ART_SRC = "assets/gold-stronghold.png";
+const GOLD_STRONGHOLD_ART_SRC = "assets/gold-stronghold.png?v=20260703-gold-stronghold-art";
 const GOLD_STRONGHOLD_BONUS_PERCENT = 15;
 const GOLD_STRONGHOLD_LEVEL = 50;
 const GOLD_STRONGHOLD_START_TROOPS = 50000000;
