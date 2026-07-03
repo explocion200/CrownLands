@@ -47,7 +47,7 @@ const SHOP_ITEMS = [
     label: "Royal Peace Shield",
     description: "Protects your cities for 12 hours. Attacking another player cancels it. Strongholds are excluded.",
     cost: 175_000,
-    icon: "assets/royal-peace-shield-icon.png",
+    icon: "assets/royal-peace-shield-icon.webp?v=20260703-shop-icons",
   },
   {
     id: "war_drums_30m",
@@ -55,7 +55,7 @@ const SHOP_ITEMS = [
     label: "War Drums",
     description: "Increases troop production by 25% for 30 minutes.",
     cost: 25_000,
-    icon: "assets/war-drums-icon.png",
+    icon: "assets/war-drums-icon.webp?v=20260703-shop-icons",
   },
   {
     id: "veil_of_silence_30m",
@@ -63,21 +63,21 @@ const SHOP_ITEMS = [
     label: "Veil of Silence",
     description: "Blocks enemy scouting for 30 minutes.",
     cost: 40_000,
-    icon: "assets/veil-of-silence-icon.png",
+    icon: "assets/veil-of-silence-icon.webp?v=20260703-shop-icons",
   },
   {
     id: "swift_march_order",
     label: "Swift March Order",
     description: "Speeds up one troop transfer between owned cities only.",
     cost: 55_000,
-    icon: "assets/swift-march-order-icon.png",
+    icon: "assets/swift-march-order-icon.webp?v=20260703-shop-icons",
   },
   {
     id: "recall_horn",
     label: "Recall Horn",
     description: "Cancels one active march before it reaches the target.",
     cost: 90_000,
-    icon: "assets/recall-horn-icon.png",
+    icon: "assets/recall-horn-icon.webp?v=20260703-shop-icons",
   },
 ];
 const ROYAL_PEACE_SHIELD_ITEM_ID = "shield_12h";
