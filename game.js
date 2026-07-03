@@ -210,7 +210,7 @@ const SPEED_STRONGHOLD_LEVEL = 50;
 const SPEED_STRONGHOLD_START_TROOPS = 50000000;
 const DEFENSE_STRONGHOLD_ID = "south_defense_stronghold";
 const DEFENSE_STRONGHOLD_NAME = "Defense Stronghold";
-const DEFENSE_STRONGHOLD_ART_SRC = "assets/defense-stronghold.png";
+const DEFENSE_STRONGHOLD_ART_SRC = "assets/defense-stronghold.png?v=20260703-defense-stronghold-art";
 const DEFENSE_STRONGHOLD_BONUS_PERCENT = 15;
 const DEFENSE_STRONGHOLD_LEVEL = 50;
 const DEFENSE_STRONGHOLD_START_TROOPS = 50000000;
