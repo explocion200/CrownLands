@@ -2197,7 +2197,7 @@ const shopBtn = document.getElementById("shopBtn");
 const neutralCapText = document.getElementById("neutralCapText");
 const characterLevelBadge = document.getElementById("characterLevelBadge");
 const characterXpText = document.getElementById("characterXpText");
-const fullscreenBtn = document.getElementById("fullscreenBtn");
+const fullscreenButtons = Array.from(document.querySelectorAll("[data-fullscreen-toggle]"));
 const mainCityReturnBtn = document.getElementById("mainCityReturnBtn");
 const profileBtn = document.getElementById("profileBtn");
 const hudKingdomFlag = document.getElementById("hudKingdomFlag");
@@ -12965,11 +12965,13 @@ async function toggleFullscreen() {
 }
 
 function updateFullscreenButton() {
-  if (!fullscreenBtn) return;
+  if (!fullscreenButtons.length) return;
   const isActive = Boolean(document.fullscreenElement);
-  fullscreenBtn.classList.toggle("active", isActive);
-  fullscreenBtn.setAttribute("aria-label", isActive ? "Exit fullscreen" : "Enter fullscreen");
-  fullscreenBtn.innerHTML = isActive ? "&times;" : "<span aria-hidden=\"true\">&#x26F6;</span>";
+  fullscreenButtons.forEach(button => {
+    button.classList.toggle("active", isActive);
+    button.setAttribute("aria-label", isActive ? "Exit fullscreen" : "Enter fullscreen");
+    button.innerHTML = isActive ? "&times;" : "<span aria-hidden=\"true\">&#x26F6;</span>";
+  });
 }
 
 function button(label, onClick, disabled = false, extraClass = "") {
@@ -13568,7 +13570,7 @@ if (playerNameInput) {
     if (event.key === "Enter") startFromInput(false);
   });
 }
-if (fullscreenBtn) fullscreenBtn.addEventListener("click", toggleFullscreen);
+fullscreenButtons.forEach(button => button.addEventListener("click", toggleFullscreen));
 if (shopBtn) shopBtn.addEventListener("click", showShopModal);
 if (islandSwitchBtn) islandSwitchBtn.addEventListener("click", showIslandSwitcherModal);
 if (profileBtn) profileBtn.addEventListener("click", showProfileScreen);
