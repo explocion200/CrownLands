@@ -154,8 +154,8 @@ html:fullscreen::backdrop {
   background:
     linear-gradient(180deg, rgba(3, 8, 16, .02) 0%, rgba(3, 8, 16, .18) 42%, rgba(3, 8, 16, .72) 100%),
     radial-gradient(circle at 50% 82%, rgba(10, 32, 54, .2), transparent 38%),
-    url("assets/game-menu-background.jpg") center / cover no-repeat,
-    #07131f;
+    url("assets/game-menu-background.jpg?v=20260702-login-page") center / contain no-repeat,
+    #17110d;
 }
 .setup-screen.visible { display: grid; }
 .setup-card {
