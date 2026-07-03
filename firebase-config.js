@@ -9,5 +9,5 @@ window.CROWNLANDS_FIREBASE_CONFIG = {
   appId: "1:542378516435:web:e6b6d0af45341c12811926",
   measurementId: "G-K5W0M2NPFN",
   // Firebase Console > Project settings > Cloud Messaging > Web Push certificates.
-  vapidKey: "",
+  vapidKey: "BKkq5rK6phczEbCSGHaM1nLblIYyqj-I7DwuSS5g_SctfLskk8WePNM8uu5GV2Gx0tSEhk8RiCVC8JJZV9C3GvU",
 };
