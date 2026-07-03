@@ -955,9 +955,9 @@ input {
   box-shadow: none;
   filter:
     drop-shadow(0 9px 5px rgba(2, 10, 25, .78))
-    drop-shadow(0 0 5px rgba(255, 244, 175, .96))
-    drop-shadow(0 0 16px rgba(76, 205, 255, .9))
-    drop-shadow(0 0 30px rgba(35, 116, 255, .68));
+    drop-shadow(0 0 4px rgba(255, 244, 175, .78))
+    drop-shadow(0 0 9px rgba(76, 205, 255, .42))
+    drop-shadow(0 0 16px rgba(35, 116, 255, .24));
   pointer-events: auto;
   z-index: 20;
   padding: 0;
@@ -967,8 +967,8 @@ input {
   position: absolute;
   inset: -16%;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(255, 240, 139, .42), rgba(70, 197, 255, .3) 43%, rgba(24, 92, 255, .14) 62%, transparent 76%);
-  filter: blur(5px);
+  background: radial-gradient(circle, rgba(255, 240, 139, .28), rgba(70, 197, 255, .14) 43%, rgba(24, 92, 255, .06) 62%, transparent 76%);
+  filter: blur(4px);
   pointer-events: none;
 }
 .teleport-node::after {
@@ -978,9 +978,9 @@ input {
   transform: translate(-50%, calc(-50% + 3px)) scale(.96);
   filter:
     drop-shadow(0 5px 4px rgba(2, 10, 25, .72))
-    drop-shadow(0 0 4px rgba(255, 244, 175, .86))
-    drop-shadow(0 0 13px rgba(76, 205, 255, .78))
-    drop-shadow(0 0 22px rgba(35, 116, 255, .56));
+    drop-shadow(0 0 3px rgba(255, 244, 175, .72))
+    drop-shadow(0 0 7px rgba(76, 205, 255, .36))
+    drop-shadow(0 0 13px rgba(35, 116, 255, .22));
 }
 .teleport-arrow-icon {
   position: relative;
@@ -1024,9 +1024,9 @@ input {
 .map-frame.low-zoom .teleport-node {
   filter:
     drop-shadow(0 7px 4px rgba(2, 10, 25, .72))
-    drop-shadow(0 0 4px rgba(255, 244, 175, .86))
-    drop-shadow(0 0 13px rgba(76, 205, 255, .8))
-    drop-shadow(0 0 24px rgba(35, 116, 255, .58));
+    drop-shadow(0 0 3px rgba(255, 244, 175, .72))
+    drop-shadow(0 0 7px rgba(76, 205, 255, .36))
+    drop-shadow(0 0 14px rgba(35, 116, 255, .22));
 }
 
 .city-node {

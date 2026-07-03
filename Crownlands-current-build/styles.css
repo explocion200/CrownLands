@@ -951,7 +951,7 @@ input {
   color: #f8fbff;
   background: radial-gradient(circle at 50% 45%, rgba(195, 244, 255, .96), rgba(65, 171, 236, .9) 34%, rgba(16, 63, 121, .92) 64%, rgba(5, 19, 50, .98));
   border: 3px solid rgba(228, 251, 255, .86);
-  box-shadow: 0 0 0 7px rgba(78, 205, 255, .2), 0 0 34px rgba(79, 221, 255, .7), inset 0 0 20px rgba(255,255,255,.35);
+  box-shadow: 0 0 0 5px rgba(78, 205, 255, .08), 0 0 16px rgba(79, 221, 255, .28), inset 0 0 16px rgba(255,255,255,.26);
   pointer-events: auto;
   z-index: 20;
 }
@@ -991,7 +991,7 @@ input {
 @keyframes teleportSpin { to { transform: rotate(360deg); } }
 .map-frame.zooming .teleport-node,
 .map-frame.low-zoom .teleport-node {
-  box-shadow: 0 0 0 5px rgba(78, 205, 255, .16), 0 0 18px rgba(79, 221, 255, .45);
+  box-shadow: 0 0 0 4px rgba(78, 205, 255, .07), 0 0 10px rgba(79, 221, 255, .24);
 }
 
 .city-node {
