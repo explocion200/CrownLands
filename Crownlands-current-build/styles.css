@@ -3770,8 +3770,8 @@ button.inventory-slot {
 
 .portrait-placeholder {
   position: relative;
-  width: 82px;
-  height: 64px;
+  width: 92px;
+  height: 72px;
   border-radius: 16px;
   border: 0;
   background: transparent;
@@ -3791,7 +3791,7 @@ button.inventory-slot {
   inset: 0;
   z-index: 2;
   pointer-events: none;
-  background: url("assets/profile-hud-frame.png?v=20260623-profile-avatar-fill") center / 100% 100% no-repeat;
+  background: url("assets/profile-hud-frame.png?v=20260702-profile-frame") center / 100% 100% no-repeat;
   filter: drop-shadow(0 8px 16px rgba(0,0,0,.34));
 }
 .profile-button > * {
@@ -3799,10 +3799,13 @@ button.inventory-slot {
   z-index: 1;
 }
 .profile-button .kingdom-flag-small {
-  width: 100%;
-  height: 100%;
+  position: absolute;
+  left: 19.5%;
+  top: 25.4%;
+  width: 60.8%;
+  height: 52%;
   border: 0;
-  border-radius: 14px;
+  border-radius: 0;
   box-shadow: none;
 }
 .profile-rank-btn {
@@ -4381,7 +4384,7 @@ button.inventory-slot {
 @media (max-width: 780px) and (orientation: landscape) {
   .profile-action-row { gap: .44rem; }
   .portrait-placeholder { width: 68px; height: 53px; border-radius: 14px; }
-  .profile-button .kingdom-flag-small { width: 100%; height: 100%; border-radius: 12px; }
+  .profile-button .kingdom-flag-small { left: 19.5%; top: 25.4%; width: 60.8%; height: 52%; border-radius: 0; }
   .profile-rank-btn { width: 40px; height: 40px; }
   .shop-btn { width: 42px; height: 42px; }
   .resource-pill.bag-btn,
