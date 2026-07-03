@@ -254,7 +254,7 @@ const STRONGHOLD_IDS = new Set([
   DEFENSE_STRONGHOLD_ID,
   CROWN_CITADEL_ID,
 ]);
-const WEST_ISLAND_ART_SRC = "assets/west-island.png";
+const WEST_ISLAND_ART_SRC = "assets/west-island.webp";
 const WEST_ISLAND_THUMB_SRC = "assets/thumbnails/west-island-thumb.jpg";
 const WEST_ISLAND_IMAGE_WIDTH = 1024;
 const WEST_ISLAND_IMAGE_HEIGHT = 1536;
@@ -284,7 +284,7 @@ const WEST_ISLAND_CITY_POINTS = [
   { x: 720, y: 860 }, { x: 390, y: 680 }, { x: 420, y: 950 }, { x: 400, y: 1000 },
   { x: 810, y: 620 }, { x: 810, y: 940 },
 ];
-const NORTH_ISLAND_ART_SRC = "assets/north-island.png";
+const NORTH_ISLAND_ART_SRC = "assets/north-island.webp";
 const NORTH_ISLAND_THUMB_SRC = "assets/thumbnails/north-island-thumb.jpg";
 const NORTH_ISLAND_IMAGE_WIDTH = 1448;
 const NORTH_ISLAND_IMAGE_HEIGHT = 1086;
@@ -317,7 +317,7 @@ const NORTH_ISLAND_CITY_POINTS = [
   { x: 720, y: 810 }, { x: 860, y: 810 }, { x: 980, y: 810 }, { x: 1100, y: 810 },
   { x: 490, y: 480 }, { x: 760, y: 770 },
 ];
-const EAST_ISLAND_ART_SRC = "assets/east-island.png";
+const EAST_ISLAND_ART_SRC = "assets/east-island.webp";
 const EAST_ISLAND_THUMB_SRC = "assets/thumbnails/east-island-thumb.jpg";
 const EAST_ISLAND_IMAGE_WIDTH = 1086;
 const EAST_ISLAND_IMAGE_HEIGHT = 1448;
@@ -349,7 +349,7 @@ const EAST_ISLAND_CITY_POINTS = [
   { x: 580, y: 1160 }, { x: 640, y: 1070 }, { x: 360, y: 690 }, { x: 420, y: 660 },
   { x: 660, y: 800 }, { x: 720, y: 790 },
 ];
-const SOUTH_ISLAND_ART_SRC = "assets/south-island.png";
+const SOUTH_ISLAND_ART_SRC = "assets/south-island.webp";
 const SOUTH_ISLAND_THUMB_SRC = "assets/thumbnails/south-island-thumb.jpg";
 const SOUTH_ISLAND_IMAGE_WIDTH = 1446;
 const SOUTH_ISLAND_IMAGE_HEIGHT = 1087;
@@ -384,7 +384,7 @@ const SOUTH_ISLAND_CITY_POINTS = [
   { x: 1020, y: 360 }, { x: 640, y: 800 },
 ];
 const CENTER_REGION_CITY_COUNT = 70;
-const CENTER_ISLAND_ART_SRC = "assets/center-island.png";
+const CENTER_ISLAND_ART_SRC = "assets/center-island.webp";
 const CENTER_ISLAND_THUMB_SRC = "assets/thumbnails/center-island-thumb.jpg";
 const CENTER_ISLAND_IMAGE_WIDTH = 1254;
 const CENTER_ISLAND_IMAGE_HEIGHT = 1254;
@@ -7145,7 +7145,7 @@ function renderIslandMapTile(region, activeRegionId, homeRegionId) {
   const summaryText = getIslandTileSummaryText(regionId);
   const isActive = regionId === activeRegionId;
   const isHome = regionId === homeRegionId;
-  const previewSrc = getIslandMapArtSrc(regionId) || getIslandPreviewArtSrc(regionId);
+  const previewSrc = getIslandPreviewArtSrc(regionId) || getIslandMapArtSrc(regionId);
   const ariaParts = [label, getIslandTileAriaSummary(regionId)];
   if (isActive) ariaParts.push("current map");
   if (isHome) ariaParts.push("home island");

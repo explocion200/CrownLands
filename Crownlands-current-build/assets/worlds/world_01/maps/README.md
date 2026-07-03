@@ -1,1 +1,1 @@
-Place future full-screen regional JPG map backgrounds in this folder. Current placeholder regions still reference the existing assets/*.png files.
+Place future full-screen regional WebP/JPG map backgrounds in this folder. Keep source PNGs only when they are needed for editing or fallback assets.

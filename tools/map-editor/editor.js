@@ -442,8 +442,8 @@
         globalSettings: {},
       },
       regions: [
-        { id: "center", name: "Crownlands Heart", type: "crownlands_main", gridX: 0, gridY: 0, width: DEFAULT_MAP_WIDTH, height: DEFAULT_MAP_HEIGHT, imagePath: "assets/center-island.png", cityCapacity: 100 },
-        { id: "west", name: "West Marches", type: "starter", gridX: -1, gridY: 0, width: DEFAULT_MAP_WIDTH, height: DEFAULT_MAP_HEIGHT, imagePath: "assets/west-island.png", cityCapacity: 50 },
+        { id: "center", name: "Crownlands Heart", type: "crownlands_main", gridX: 0, gridY: 0, width: DEFAULT_MAP_WIDTH, height: DEFAULT_MAP_HEIGHT, imagePath: "assets/center-island.webp", cityCapacity: 100 },
+        { id: "west", name: "West Marches", type: "starter", gridX: -1, gridY: 0, width: DEFAULT_MAP_WIDTH, height: DEFAULT_MAP_HEIGHT, imagePath: "assets/west-island.webp", cityCapacity: 50 },
       ],
     });
   }

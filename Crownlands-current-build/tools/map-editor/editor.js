@@ -12,6 +12,7 @@
   const MAP_ASPECT_TOLERANCE = 0.02;
   const DEFAULT_MAP_WIDTH = 2048;
   const DEFAULT_MAP_HEIGHT = 1536;
+  const MAP_SWITCH_ARROW_ICON_SRC = "/assets/map-switch-arrow.png?v=20260702-map-arrow-bigger";
   const REGION_TYPES = ["starter", "midgame", "endgame", "activity", "crownlands_main"];
   const EDGE_TYPES = ["road", "valley", "pass", "river_crossing", "open_field", "forest_break", "bridge"];
   const STRONGHOLD_TYPES = [
@@ -83,7 +84,6 @@
     worldModeBtn: document.getElementById("worldModeBtn"),
     regionModeBtn: document.getElementById("regionModeBtn"),
     addRegionBtn: document.getElementById("addRegionBtn"),
-    editRegionBtn: document.getElementById("editRegionBtn"),
     addCityBtn: document.getElementById("addCityBtn"),
     addStrongholdBtn: document.getElementById("addStrongholdBtn"),
     addEdgeBtn: document.getElementById("addEdgeBtn"),
@@ -148,11 +148,14 @@
     },
     draggingMarker: null,
     draggingEdge: null,
+    draggingEdgeArrow: null,
     draggingRegion: null,
     panning: null,
     imagePreviewBusters: {},
     skipNextCanvasClick: false,
     skipNextWorldClick: false,
+    lastRegionClick: null,
+    edgeArrowOverrides: {},
   };
 
   function setStatus(message, kind = "") {
@@ -209,6 +212,63 @@
 
   function roundNorm(value) {
     return Math.round(clamp(Number(value) || 0, 0, 1) * 1000) / 1000;
+  }
+
+  function getEdgeCenter(edge) {
+    const start = Number(edge?.start) || 0;
+    const end = Number(edge?.end) || start;
+    return roundNorm((Math.min(start, end) + Math.max(start, end)) / 2);
+  }
+
+  function getDefaultEdgeArrowPoint(edge, side = edge?.side || "north") {
+    const center = getEdgeCenter(edge);
+    const inset = 0.12;
+    if (side === "north") return { xNorm: center, yNorm: inset };
+    if (side === "south") return { xNorm: center, yNorm: 1 - inset };
+    if (side === "west") return { xNorm: inset, yNorm: center };
+    return { xNorm: 1 - inset, yNorm: center };
+  }
+
+  function getEdgeArrowPoint(edge) {
+    const fallback = getDefaultEdgeArrowPoint(edge, edge?.side);
+    return {
+      xNorm: Number.isFinite(Number(edge?.arrowXNorm)) ? roundNorm(edge.arrowXNorm) : fallback.xNorm,
+      yNorm: Number.isFinite(Number(edge?.arrowYNorm)) ? roundNorm(edge.arrowYNorm) : fallback.yNorm,
+    };
+  }
+
+  function setDefaultEdgeArrowPosition(edge, side = edge?.side || "north") {
+    const point = getDefaultEdgeArrowPoint(edge, side);
+    edge.arrowXNorm = point.xNorm;
+    edge.arrowYNorm = point.yNorm;
+  }
+
+  function getEdgeArrowOverrideKey(regionId, side, edge) {
+    return `${slugify(regionId, "region")}::${side}::${slugify(edge?.id, "edge")}`;
+  }
+
+  function setEdgeArrowPosition(region, side, edge, point) {
+    if (!region || !edge || !point) return;
+    const nextPoint = {
+      xNorm: roundNorm(point.xNorm),
+      yNorm: roundNorm(point.yNorm),
+    };
+    edge.arrowXNorm = nextPoint.xNorm;
+    edge.arrowYNorm = nextPoint.yNorm;
+    state.edgeArrowOverrides[getEdgeArrowOverrideKey(region.id, side, edge)] = nextPoint;
+  }
+
+  function applyEdgeArrowOverrides(regions = state.regions) {
+    regions.forEach(region => {
+      SIDES.forEach(side => {
+        (region.edgeConnections[side] || []).forEach(edge => {
+          const override = state.edgeArrowOverrides[getEdgeArrowOverrideKey(region.id, side, edge)];
+          if (!override) return;
+          edge.arrowXNorm = override.xNorm;
+          edge.arrowYNorm = override.yNorm;
+        });
+      });
+    });
   }
 
   function escapeHtml(value) {
@@ -268,16 +328,21 @@
   function normalizeEdgeConnections(edgeConnections = {}) {
     return SIDES.reduce((result, side) => {
       result[side] = Array.isArray(edgeConnections[side])
-        ? edgeConnections[side].map((zone, index) => ({
-            id: slugify(zone.id, `${side}_connection_${index + 1}`),
-            side,
-            start: roundNorm(Math.min(Number(zone.start) || 0, Number(zone.end) || 1)),
-            end: roundNorm(Math.max(Number(zone.start) || 0, Number(zone.end) || 1)),
-            type: EDGE_TYPES.includes(zone.type) ? zone.type : "road",
-            connectsToRegionId: slugify(zone.connectsToRegionId || "", ""),
-            intentionalOuter: Boolean(zone.intentionalOuter),
-            notes: String(zone.notes || ""),
-          }))
+        ? edgeConnections[side].map((zone, index) => {
+            const edge = {
+              id: slugify(zone.id, `${side}_connection_${index + 1}`),
+              side,
+              start: roundNorm(Math.min(Number(zone.start) || 0, Number(zone.end) || 1)),
+              end: roundNorm(Math.max(Number(zone.start) || 0, Number(zone.end) || 1)),
+              type: EDGE_TYPES.includes(zone.type) ? zone.type : "road",
+              connectsToRegionId: slugify(zone.connectsToRegionId || "", ""),
+              intentionalOuter: Boolean(zone.intentionalOuter),
+              notes: String(zone.notes || ""),
+            };
+            edge.arrowXNorm = Number.isFinite(Number(zone.arrowXNorm)) ? roundNorm(zone.arrowXNorm) : getDefaultEdgeArrowPoint(edge, side).xNorm;
+            edge.arrowYNorm = Number.isFinite(Number(zone.arrowYNorm)) ? roundNorm(zone.arrowYNorm) : getDefaultEdgeArrowPoint(edge, side).yNorm;
+            return edge;
+          })
         : [];
       return result;
     }, {});
@@ -377,8 +442,8 @@
         globalSettings: {},
       },
       regions: [
-        { id: "center", name: "Crownlands Heart", type: "crownlands_main", gridX: 0, gridY: 0, width: DEFAULT_MAP_WIDTH, height: DEFAULT_MAP_HEIGHT, imagePath: "assets/center-island.png", cityCapacity: 100 },
-        { id: "west", name: "West Marches", type: "starter", gridX: -1, gridY: 0, width: DEFAULT_MAP_WIDTH, height: DEFAULT_MAP_HEIGHT, imagePath: "assets/west-island.png", cityCapacity: 50 },
+        { id: "center", name: "Crownlands Heart", type: "crownlands_main", gridX: 0, gridY: 0, width: DEFAULT_MAP_WIDTH, height: DEFAULT_MAP_HEIGHT, imagePath: "assets/center-island.webp", cityCapacity: 100 },
+        { id: "west", name: "West Marches", type: "starter", gridX: -1, gridY: 0, width: DEFAULT_MAP_WIDTH, height: DEFAULT_MAP_HEIGHT, imagePath: "assets/west-island.webp", cityCapacity: 50 },
       ],
     });
   }
@@ -402,12 +467,27 @@
   }
 
   function buildSavePayload() {
+    materializeEdgeArrowPositions();
     state.layout.regions = state.regions.map(getRegionSummary);
     state.layout.updatedAt = new Date().toISOString();
     return {
       layout: deepClone(state.layout),
       regions: deepClone(state.regions),
     };
+  }
+
+  function materializeEdgeArrowPositions(regions = state.regions) {
+    applyEdgeArrowOverrides(regions);
+    regions.forEach(region => {
+      SIDES.forEach(side => {
+        (region.edgeConnections[side] || []).forEach(edge => {
+          edge.side = side;
+          const point = getEdgeArrowPoint(edge);
+          edge.arrowXNorm = point.xNorm;
+          edge.arrowYNorm = point.yNorm;
+        });
+      });
+    });
   }
 
   async function saveWorldData() {
@@ -424,6 +504,7 @@
     const data = normalizeBundle(await response.json());
     state.layout = data.layout;
     state.regions = data.regions;
+    applyEdgeArrowOverrides(state.regions);
     state.dirty = false;
     setStatus("Saved JSON world files and game compatibility data.");
     render();
@@ -450,6 +531,18 @@
 
   function selectRegion(regionId) {
     setSelectedRegion(regionId);
+    render();
+  }
+
+  function editRegion(regionId) {
+    const region = getRegion(regionId);
+    if (!region) return;
+    state.activeRegionId = region.id;
+    state.selected = { kind: "region", regionId: region.id };
+    state.editorMode = "region";
+    state.tool = "select";
+    state.lastRegionClick = null;
+    setStatus(`Editing ${region.name}.`);
     render();
   }
 
@@ -622,7 +715,7 @@
         <span class="region-tile-meta">
           <strong>${escapeHtml(region.name)}</strong>
           <small>${escapeHtml(region.id)} (${region.gridX}, ${region.gridY})</small>
-          <small>${region.cities.length}/${region.cityCapacity} cities</small>
+          <small>${region.cities.length} ${region.cities.length === 1 ? "city" : "cities"} placed</small>
         </span>
         ${SIDES.map(side => `<span class="edge-dot ${side} ${hasNeighbor(region, side) ? "connected" : ""}"></span>`).join("")}
       `;
@@ -641,8 +734,7 @@
           event.stopPropagation();
           return;
         }
-        state.activeRegionId = region.id;
-        setEditorMode("region");
+        editRegion(region.id);
       });
       elements.worldGrid.appendChild(tile);
     });
@@ -718,6 +810,17 @@
     if (!region) return;
     event.preventDefault();
     event.stopPropagation();
+
+    const now = performance.now();
+    const isDoubleClick = state.lastRegionClick?.regionId === region.id
+      && now - state.lastRegionClick.time <= 450
+      && !state.skipNextWorldClick;
+    state.lastRegionClick = { regionId: region.id, time: now };
+    if (isDoubleClick) {
+      editRegion(region.id);
+      return;
+    }
+
     setSelectedRegion(region.id);
     updateWorldTileSelection(region.id);
     state.draggingRegion = {
@@ -771,6 +874,7 @@
     const region = getRegion(state.draggingRegion.regionId);
     state.draggingRegion = null;
     state.skipNextWorldClick = wasMoved;
+    if (wasMoved) state.lastRegionClick = null;
     renderWorldGrid();
     renderInspector();
     if (wasMoved && region) setStatus(`Moved ${region.name} to ${region.gridX}, ${region.gridY}.`);
@@ -860,8 +964,43 @@
           renderEdgeZones(region);
         });
         elements.edgeLayer.appendChild(zoneEl);
+        elements.edgeLayer.appendChild(createEdgeSwitchArrow(region, zone, side, index));
       });
     });
+  }
+
+  function getEdgeArrowGlyph(side) {
+    if (side === "north") return "↑";
+    if (side === "south") return "↓";
+    if (side === "west") return "←";
+    return "→";
+  }
+
+  function createEdgeSwitchArrow(region, zone, side, index) {
+    const point = getEdgeArrowPoint(zone);
+    const arrow = document.createElement("button");
+    arrow.type = "button";
+    arrow.className = `edge-switch-arrow ${side} ${isSelected("edge", region.id, index, side) ? "selected" : ""}`;
+    arrow.style.left = `${point.xNorm * 100}%`;
+    arrow.style.top = `${point.yNorm * 100}%`;
+    arrow.title = `Player map switch arrow to ${zone.connectsToRegionId || "connected region"}`;
+    arrow.innerHTML = `<img class="edge-switch-arrow-icon" src="${MAP_SWITCH_ARROW_ICON_SRC}" alt="" draggable="false" decoding="async" aria-hidden="true" />`;
+    arrow.addEventListener("pointerdown", event => {
+      event.preventDefault();
+      event.stopPropagation();
+      setSelectedEdge(region.id, side, index);
+      state.draggingEdgeArrow = {
+        regionId: region.id,
+        side,
+        index,
+        pointerId: event.pointerId,
+      };
+      arrow.setPointerCapture?.(event.pointerId);
+      renderToolbar();
+      renderInspector();
+      renderEdgeZones(region);
+    });
+    return arrow;
   }
 
   function isSelected(kind, regionId, index, side = "") {
@@ -877,6 +1016,14 @@
       xNorm: roundNorm((event.clientX - rect.left) / Math.max(1, rect.width)),
       yNorm: roundNorm((event.clientY - rect.top) / Math.max(1, rect.height)),
     };
+  }
+
+  function isEventInsideRegionCanvas(event) {
+    const rect = elements.regionCanvas.getBoundingClientRect();
+    return event.clientX >= rect.left
+      && event.clientX <= rect.right
+      && event.clientY >= rect.top
+      && event.clientY <= rect.bottom;
   }
 
   function getNearestEdgeSide(point) {
@@ -1024,6 +1171,7 @@
       notes: neighbor ? `Connects to ${neighbor.name}` : "Outer wilderness edge",
     };
     setEdgeRange(zone, along, 0.16);
+    setDefaultEdgeArrowPosition(zone, side);
     region.edgeConnections[side].push(zone);
     state.selected = { kind: "edge", regionId: region.id, side, index: region.edgeConnections[side].length - 1 };
     markDirty(`Added ${side} edge connection.`);
@@ -1098,6 +1246,7 @@
         <label class="wide"><span>Region ID</span><input data-field="id" data-commit="change" value="${escapeHtml(region.id)}" /></label>
         <label class="wide"><span>Name</span><input data-field="name" value="${escapeHtml(region.name)}" /></label>
         <label><span>Type</span><select data-field="type">${optionList(REGION_TYPES, region.type)}</select></label>
+        <label><span>Cities Placed</span><input value="${region.cities.length}" readonly /></label>
         <label><span>City Capacity</span><input data-field="cityCapacity" type="number" min="0" value="${region.cityCapacity}" /></label>
         <label><span>Grid X</span><input data-field="gridX" type="number" value="${region.gridX}" /></label>
         <label><span>Grid Y</span><input data-field="gridY" type="number" value="${region.gridY}" /></label>
@@ -1157,6 +1306,7 @@
 
   function renderEdgeForm(edge, region) {
     const neighbor = getNeighbor(region, edge.side);
+    const arrowPoint = getEdgeArrowPoint(edge);
     elements.selectionTitle.textContent = `${titleFromId(edge.side)} ${titleFromId(edge.type)}`;
     elements.selectionForm.innerHTML = `
       <div class="form-grid">
@@ -1165,8 +1315,11 @@
         <label><span>Type</span><select data-field="type">${optionList(EDGE_TYPES, edge.type)}</select></label>
         <label><span>Start</span><input data-field="start" type="number" min="0" max="1" step="0.001" value="${edge.start}" /></label>
         <label><span>End</span><input data-field="end" type="number" min="0" max="1" step="0.001" value="${edge.end}" /></label>
+        <label><span>Arrow X</span><input data-field="arrowXNorm" type="number" min="0" max="1" step="0.001" value="${arrowPoint.xNorm}" /></label>
+        <label><span>Arrow Y</span><input data-field="arrowYNorm" type="number" min="0" max="1" step="0.001" value="${arrowPoint.yNorm}" /></label>
         <label class="wide"><span>Connects To Region ID</span><input data-field="connectsToRegionId" value="${escapeHtml(edge.connectsToRegionId || neighbor?.id || "")}" /></label>
         <label class="wide check-row"><input data-field="intentionalOuter" type="checkbox" ${edge.intentionalOuter ? "checked" : ""} /><span>Intentional outer fog / wilderness edge</span></label>
+        <p class="wide helper-text">Drag the blue strip to move the hidden troop crossing. Drag the arrow to move the visible map-switch icon players tap.</p>
         <label class="wide"><span>Notes</span><textarea data-field="notes">${escapeHtml(edge.notes)}</textarea></label>
       </div>
     `;
@@ -1230,7 +1383,7 @@
       moveEdgeToSide(value);
       return;
     }
-    if (["xNorm", "yNorm", "start", "end"].includes(field)) item[field] = roundNorm(value);
+    if (["xNorm", "yNorm", "start", "end", "arrowXNorm", "arrowYNorm"].includes(field)) item[field] = roundNorm(value);
     else if (["level", "troops", "bonusAmount", "size"].includes(field)) item[field] = Math.max(0, Math.floor(Number(value) || 0));
     else if (field === "strongholdType") applyStrongholdType(item, value);
     else if (field === "intentionalOuter") item[field] = Boolean(value);
@@ -1303,8 +1456,12 @@
     region.edgeConnections[fromSide].splice(fromIndex, 1);
     region.edgeConnections[side].push(edge);
     const index = region.edgeConnections[side].length - 1;
-    if (options.updateNeighbor) updateEdgeNeighborFields(edge, region, side);
-    else edge.side = side;
+    if (options.updateNeighbor) {
+      updateEdgeNeighborFields(edge, region, side);
+      setDefaultEdgeArrowPosition(edge, side);
+    } else {
+      edge.side = side;
+    }
     return { edge, side, index };
   }
 
@@ -1402,6 +1559,8 @@
     const zones = region.edgeConnections[side] || [];
     zones.forEach(zone => {
       if (zone.start < 0 || zone.end > 1 || zone.start >= zone.end) results.push({ level: "error", text: `${region.name} ${side} connection ${zone.id} has invalid start/end.` });
+      const arrow = getEdgeArrowPoint(zone);
+      if (!isNormInside(arrow.xNorm, arrow.yNorm)) results.push({ level: "error", text: `${region.name} ${side} connection ${zone.id} has an arrow outside map bounds.` });
       if (!neighbor && !zone.intentionalOuter) results.push({ level: "warning", text: `${region.name} ${side} connection leads to empty grid. Mark as outer wilderness if intentional.` });
       if (neighbor && zone.connectsToRegionId && zone.connectsToRegionId !== neighbor.id) {
         results.push({ level: "warning", text: `${region.name} ${side} connection points to ${zone.connectsToRegionId}, but adjacent region is ${neighbor.id}.` });
@@ -1571,8 +1730,40 @@
     window.setTimeout(() => { state.skipNextCanvasClick = false; }, 140);
   }
 
+  function handleEdgeArrowDrag(event) {
+    if (!state.draggingEdgeArrow || state.draggingEdgeArrow.pointerId !== event.pointerId) return;
+    const region = getRegion(state.draggingEdgeArrow.regionId);
+    const edge = region?.edgeConnections[state.draggingEdgeArrow.side]?.[state.draggingEdgeArrow.index];
+    if (!edge) {
+      state.draggingEdgeArrow = null;
+      return;
+    }
+    const point = getNormPointFromEvent(event);
+    setEdgeArrowPosition(region, state.draggingEdgeArrow.side, edge, point);
+    state.draggingEdgeArrow.lastPoint = point;
+    markDirty();
+    renderRegionEditor();
+    event.preventDefault();
+  }
+
+  function stopEdgeArrowDrag(event) {
+    if (!state.draggingEdgeArrow || (event && state.draggingEdgeArrow.pointerId !== event.pointerId)) return;
+    const drag = state.draggingEdgeArrow;
+    const region = getRegion(drag.regionId);
+    const edge = region?.edgeConnections[drag.side]?.[drag.index];
+    if (edge && drag.lastPoint) {
+      setEdgeArrowPosition(region, drag.side, edge, drag.lastPoint);
+      materializeEdgeArrowPositions([region]);
+      markDirty();
+    }
+    state.draggingEdgeArrow = null;
+    state.skipNextCanvasClick = true;
+    renderInspector();
+    window.setTimeout(() => { state.skipNextCanvasClick = false; }, 140);
+  }
+
   function startRegionPan(event) {
-    if (state.tool !== "select" || event.button !== 0 || event.target.closest(".map-marker, .edge-zone")) return;
+    if (event.button !== 0 || event.target.closest(".map-marker, .edge-zone, .edge-switch-arrow")) return;
     state.panning = {
       pointerId: event.pointerId,
       x: event.clientX,
@@ -1597,9 +1788,13 @@
 
   function stopRegionPan(event) {
     if (!state.panning || state.panning.pointerId !== event.pointerId) return;
-    state.skipNextCanvasClick = state.panning.moved;
+    const wasMoved = state.panning.moved;
+    const shouldPlace = !wasMoved && state.tool !== "select" && isEventInsideRegionCanvas(event);
+    state.skipNextCanvasClick = wasMoved || shouldPlace;
     state.panning = null;
     elements.regionViewport.classList.remove("panning");
+    elements.regionViewport.releasePointerCapture?.(event.pointerId);
+    if (shouldPlace) placeFromEvent(event);
     window.setTimeout(() => { state.skipNextCanvasClick = false; }, 140);
   }
 
@@ -1634,7 +1829,6 @@
     elements.worldModeBtn.addEventListener("click", () => setEditorMode("world"));
     elements.regionModeBtn.addEventListener("click", () => setEditorMode("region"));
     elements.addRegionBtn.addEventListener("click", addRegion);
-    elements.editRegionBtn.addEventListener("click", () => setEditorMode("region"));
     elements.addCityBtn.addEventListener("click", () => setTool(state.tool === "city" ? "select" : "city"));
     elements.addStrongholdBtn.addEventListener("click", () => setTool(state.tool === "stronghold" ? "select" : "stronghold"));
     elements.addEdgeBtn.addEventListener("click", () => setTool(state.tool === "edge" ? "select" : "edge"));
@@ -1663,7 +1857,7 @@
     elements.selectionForm.addEventListener("input", handleSelectionInput);
     elements.selectionForm.addEventListener("change", handleSelectionChange);
     elements.regionCanvas.addEventListener("click", event => {
-      if (event.target.closest(".map-marker, .edge-zone") || state.skipNextCanvasClick || state.tool === "select") return;
+      if (event.target.closest(".map-marker, .edge-zone, .edge-switch-arrow") || state.skipNextCanvasClick || state.tool === "select") return;
       placeFromEvent(event);
     });
     elements.regionImage.addEventListener("error", () => {
@@ -1680,6 +1874,9 @@
     window.addEventListener("pointermove", handleEdgeDrag);
     window.addEventListener("pointerup", stopEdgeDrag);
     window.addEventListener("pointercancel", stopEdgeDrag);
+    window.addEventListener("pointermove", handleEdgeArrowDrag);
+    window.addEventListener("pointerup", stopEdgeArrowDrag);
+    window.addEventListener("pointercancel", stopEdgeArrowDrag);
     window.addEventListener("pointermove", handleRegionTileDrag);
     window.addEventListener("pointerup", stopRegionTileDrag);
     window.addEventListener("pointercancel", stopRegionTileDrag);

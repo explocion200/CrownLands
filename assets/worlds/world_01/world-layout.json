@@ -20,7 +20,7 @@
       "gridY": 0,
       "width": 1448,
       "height": 1086,
-      "imagePath": "assets/worlds/world_01/maps/center-crownlands-heart-1783019616021.png",
+      "imagePath": "assets/worlds/world_01/maps/center-crownlands-heart-1783019616021.webp",
       "cityCapacity": 100,
       "regionPath": "assets/worlds/world_01/regions/center.json"
     },
@@ -32,7 +32,7 @@
       "gridY": 0,
       "width": 1448,
       "height": 1086,
-      "imagePath": "assets/worlds/world_01/maps/west-west-2-1783019399438.png",
+      "imagePath": "assets/worlds/world_01/maps/west-west-2-1783019399438.webp",
       "cityCapacity": 50,
       "regionPath": "assets/worlds/world_01/regions/west.json"
     },
@@ -44,7 +44,7 @@
       "gridY": 0,
       "width": 1448,
       "height": 1086,
-      "imagePath": "assets/worlds/world_01/maps/east-east-4-1783020191215.png",
+      "imagePath": "assets/worlds/world_01/maps/east-east-4-1783020191215.webp",
       "cityCapacity": 50,
       "regionPath": "assets/worlds/world_01/regions/east.json"
     },
@@ -56,7 +56,7 @@
       "gridY": -1,
       "width": 1448,
       "height": 1086,
-      "imagePath": "assets/worlds/world_01/maps/north-north-1-1783019201680.png",
+      "imagePath": "assets/worlds/world_01/maps/north-north-1-1783019201680.webp",
       "cityCapacity": 50,
       "regionPath": "assets/worlds/world_01/regions/north.json"
     },
@@ -68,7 +68,7 @@
       "gridY": 1,
       "width": 1448,
       "height": 1086,
-      "imagePath": "assets/worlds/world_01/maps/south-south-5-1783020401484.png",
+      "imagePath": "assets/worlds/world_01/maps/south-south-5-1783020401484.webp",
       "cityCapacity": 50,
       "regionPath": "assets/worlds/world_01/regions/south.json"
     },
@@ -80,7 +80,7 @@
       "gridY": 2,
       "width": 1448,
       "height": 1086,
-      "imagePath": "assets/worlds/world_01/maps/region_6-6-1783021585258.png",
+      "imagePath": "assets/worlds/world_01/maps/region_6-6-1783021585258.webp",
       "cityCapacity": 50,
       "regionPath": "assets/worlds/world_01/regions/region_6.json"
     },
@@ -92,7 +92,7 @@
       "gridY": 2,
       "width": 1448,
       "height": 1086,
-      "imagePath": "assets/worlds/world_01/maps/region_7-7-1783022207943.png",
+      "imagePath": "assets/worlds/world_01/maps/region_7-7-1783022207943.webp",
       "cityCapacity": 50,
       "regionPath": "assets/worlds/world_01/regions/region_7.json"
     },
@@ -104,7 +104,7 @@
       "gridY": 2,
       "width": 1448,
       "height": 1086,
-      "imagePath": "assets/worlds/world_01/maps/region_8-8-1783022783978.png",
+      "imagePath": "assets/worlds/world_01/maps/region_8-8-1783022783978.webp",
       "cityCapacity": 50,
       "regionPath": "assets/worlds/world_01/regions/region_8.json"
     },
@@ -116,7 +116,7 @@
       "gridY": 2,
       "width": 1448,
       "height": 1086,
-      "imagePath": "assets/worlds/world_01/maps/region_9-9-1783023202200.png",
+      "imagePath": "assets/worlds/world_01/maps/region_9-9-1783023202200.webp",
       "cityCapacity": 50,
       "regionPath": "assets/worlds/world_01/regions/region_9.json"
     },
@@ -128,7 +128,7 @@
       "gridY": 2,
       "width": 1448,
       "height": 1086,
-      "imagePath": "assets/worlds/world_01/maps/region_10-10-1783023599661.png",
+      "imagePath": "assets/worlds/world_01/maps/region_10-10-1783023599661.webp",
       "cityCapacity": 50,
       "regionPath": "assets/worlds/world_01/regions/region_10.json"
     },
@@ -140,7 +140,7 @@
       "gridY": 3,
       "width": 1448,
       "height": 1086,
-      "imagePath": "assets/worlds/world_01/maps/region_11-11-1783024323781.png",
+      "imagePath": "assets/worlds/world_01/maps/region_11-11-1783024323781.webp",
       "cityCapacity": 50,
       "regionPath": "assets/worlds/world_01/regions/region_11.json"
     },
@@ -152,7 +152,7 @@
       "gridY": 3,
       "width": 1448,
       "height": 1086,
-      "imagePath": "assets/worlds/world_01/maps/region_12-12-1783024478267.png",
+      "imagePath": "assets/worlds/world_01/maps/region_12-12-1783024478267.webp",
       "cityCapacity": 50,
       "regionPath": "assets/worlds/world_01/regions/region_12.json"
     },
@@ -164,7 +164,7 @@
       "gridY": 3,
       "width": 1448,
       "height": 1086,
-      "imagePath": "assets/worlds/world_01/maps/region_13-13-1783024786859.png",
+      "imagePath": "assets/worlds/world_01/maps/region_13-13-1783024786859.webp",
       "cityCapacity": 50,
       "regionPath": "assets/worlds/world_01/regions/region_13.json"
     },
@@ -176,7 +176,7 @@
       "gridY": 3,
       "width": 1448,
       "height": 1086,
-      "imagePath": "assets/worlds/world_01/maps/region_14-14-1783024960400.png",
+      "imagePath": "assets/worlds/world_01/maps/region_14-14-1783024960400.webp",
       "cityCapacity": 50,
       "regionPath": "assets/worlds/world_01/regions/region_14.json"
     },
@@ -188,7 +188,7 @@
       "gridY": 3,
       "width": 1448,
       "height": 1086,
-      "imagePath": "assets/worlds/world_01/maps/region_15-15-1783025218871.png",
+      "imagePath": "assets/worlds/world_01/maps/region_15-15-1783025218871.webp",
       "cityCapacity": 50,
       "regionPath": "assets/worlds/world_01/regions/region_15.json"
     }
