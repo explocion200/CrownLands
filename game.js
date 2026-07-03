@@ -38,7 +38,7 @@ const SHOP_ITEMS = [
     label: "Royal Peace Shield",
     description: "Protects your cities for 12 hours. Attacking another player cancels it. Strongholds are excluded.",
     cost: 175_000,
-    icon: "assets/royal-peace-shield-icon.jpg",
+    icon: "assets/royal-peace-shield-icon.png",
   },
   {
     id: "war_drums_30m",
