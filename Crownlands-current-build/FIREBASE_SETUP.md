@@ -19,7 +19,7 @@ The Firebase web config is not a password. Real protection comes from Firebase A
 The game currently writes private account data here:
 
 - `players/{uid}`: display name, email, ruler name, flag, character, skill data, city count, gold.
-- `players/{uid}/saves/default-fresh-2026-07-02-world-reset`: the current full game state snapshot for the fresh reset.
+- `players/{uid}/saves/default-fresh-2026-07-03-profile-reset`: the current full game state snapshot for the fresh reset.
 
 After Google sign-in, the game tries the current reset slot in Firebase first and then falls back to the current local browser storage key.
 
@@ -27,7 +27,7 @@ After Google sign-in, the game tries the current reset slot in Firebase first an
 
 The game now creates one shared island document per world region and subscribes to only one active island at a time:
 
-- `islands/main-fresh-2026-07-02-world-reset-west`: one region metadata document for the current reset.
+- `islands/main-fresh-2026-07-03-profile-reset-west`: one region metadata document for the current reset.
 - `islands/main-fresh-2026-06-21-west/cities/{cityId}`: city owner, level, troop count, owner UID, owner name, owner flag, region ID, and production state.
 - `islands/{islandId}/armies/{armyId}`: moving troops, route, owner, arrival time, mission type.
 - `islands/{islandId}/reports/{reportId}`: attack, defense, and scout reports.
