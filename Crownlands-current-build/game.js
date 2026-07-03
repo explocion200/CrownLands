@@ -6,6 +6,8 @@ const WORLD_REGIONS = getMergedWorldRegions(WORLD_CONFIG, MAP_EDITOR_DATA);
 const LAND_BRIDGES = getMergedLandBridges(WORLD_CONFIG, MAP_EDITOR_DATA);
 const REGION_CITY_COUNT = Math.max(1, Math.floor(Number(WORLD_CONFIG.cityCountPerRegion) || 50));
 const STARTER_REGION_TYPE = "starter";
+const NEW_PLAYER_SPAWN_REGION_TYPE_ORDER = [STARTER_REGION_TYPE, "midgame", "endgame"];
+const MIN_NEW_PLAYER_SPAWN_NEUTRAL_CITIES = 10;
 const RESET_GENERATION = "fresh-2026-07-03-profile-reset";
 const STORAGE_KEY = `crownlands-realtime-${RESET_GENERATION}`;
 const PENDING_ARMY_STORAGE_KEY = `crownlands-pending-armies-${RESET_GENERATION}`;
@@ -2764,6 +2766,10 @@ function getOnlineIslandBaseCities(regionId = getActiveOnlineRegionId()) {
   return getPlayableBaseCities().filter(city => getCityRegionId(city) === normalizedRegionId);
 }
 
+function getRegularCityCapacity(regionId) {
+  return getOnlineIslandBaseCities(regionId).filter(city => !isStronghold(city)).length;
+}
+
 function getOuterRegionIds() {
   const outer = getRegionIds().filter(regionId => regionId !== "center");
   return outer.length ? outer : getRegionIds();
@@ -2773,9 +2779,40 @@ function getStarterRegionIds() {
   return getRegionIds().filter(regionId => isStarterRegion(getRegionById(regionId)));
 }
 
+function getRegionIdsByType(regionType) {
+  const targetType = cleanRegionType(regionType);
+  return getRegionIds().filter(regionId => cleanRegionType(getRegionById(regionId)?.type) === targetType);
+}
+
+function getOrderedNewPlayerSpawnRegionIds() {
+  const seen = new Set();
+  const ordered = [];
+  NEW_PLAYER_SPAWN_REGION_TYPE_ORDER.forEach(regionType => {
+    getRegionIdsByType(regionType).forEach(regionId => {
+      if (seen.has(regionId)) return;
+      seen.add(regionId);
+      ordered.push(regionId);
+    });
+  });
+  return ordered;
+}
+
 function getNewPlayerSpawnRegionIds() {
-  const starterRegionIds = getStarterRegionIds();
-  return starterRegionIds.length ? starterRegionIds : getOuterRegionIds();
+  const orderedRegionIds = getOrderedNewPlayerSpawnRegionIds();
+  return orderedRegionIds.length ? orderedRegionIds : getOuterRegionIds();
+}
+
+function getNeutralCityCountFromSummary(regionId, summary = null) {
+  const regularCityCount = Math.max(
+    0,
+    getRegularCityCapacity(regionId),
+    Math.floor(Number(summary?.regularCityCount) || 0),
+    Math.floor(Number(summary?.cityCount) || 0)
+  );
+  const exactNeutralCount = Number(summary?.neutralCityCount);
+  if (Number.isFinite(exactNeutralCount)) return Math.max(0, Math.floor(exactNeutralCount));
+  const playerHeldCityCount = Math.max(0, Math.floor(Number(summary?.playerHeldCityCount) || 0));
+  return Math.max(0, regularCityCount - playerHeldCityCount);
 }
 
 function hashString(value) {
@@ -2794,23 +2831,67 @@ function pickStartingRegionId() {
   return regions[hashString(uid) % regions.length] || DEFAULT_ONLINE_REGION_ID;
 }
 
+async function loadNewPlayerSpawnSummary(regionId) {
+  const api = getOnlineApi();
+  if (!api?.loadIslandCitySummary || !api?.isSignedIn?.()) return null;
+  const summary = await withTimeout(
+    api.loadIslandCitySummary(getOnlineIslandId(regionId), { includeNeutralCount: true }),
+    6500,
+    `${getRegionLabel(regionId)} availability lookup is taking too long.`
+  );
+  return summary ? cacheIslandOccupancySummary(regionId, summary) : null;
+}
+
+async function pickAvailableStartingRegionId() {
+  const orderedRegionIds = getNewPlayerSpawnRegionIds();
+  if (!orderedRegionIds.length) return DEFAULT_ONLINE_REGION_ID;
+  const api = getOnlineApi();
+  if (!api?.loadIslandCitySummary || !api?.isSignedIn?.()) return pickStartingRegionId();
+
+  let summariesLoaded = 0;
+  for (const regionId of orderedRegionIds) {
+    try {
+      const summary = await loadNewPlayerSpawnSummary(regionId);
+      summariesLoaded += summary ? 1 : 0;
+      const neutralCityCount = getNeutralCityCountFromSummary(regionId, summary);
+      if (neutralCityCount >= MIN_NEW_PLAYER_SPAWN_NEUTRAL_CITIES) return regionId;
+    } catch (error) {
+      console.warn(`Could not check ${getRegionLabel(regionId)} spawn availability`, error);
+    }
+  }
+
+  return summariesLoaded > 0 ? "" : pickStartingRegionId();
+}
+
 function isCurrentResetProfile(profile) {
   return Boolean(profile && profile.resetGeneration === RESET_GENERATION);
 }
 
-function resolveHomeRegionId(profile = null, { trustLocalState = true } = {}) {
+function getStoredHomeRegionId(profile = null, { trustLocalState = true } = {}) {
   const profileRegion = normalizeRegionId(profile?.mainRegionId || getRegionIdFromOnlineIslandId(profile?.mainIslandId));
   if (profile?.mainRegionId || getRegionIdFromOnlineIslandId(profile?.mainIslandId)) return profileRegion;
   const profileMainCityId = getKnownCityId(profile?.mainCityId);
   if (profileMainCityId) return getCityRegionId(profileMainCityId);
-  if (!trustLocalState) return pickStartingRegionId();
+  if (!trustLocalState) return "";
   if (state?.online?.mainRegionId) return normalizeRegionId(state.online.mainRegionId);
   const onlineMainCityId = getKnownCityId(state?.online?.mainCityId);
   if (onlineMainCityId) return getCityRegionId(onlineMainCityId);
   if (state?.online?.mainIslandId) return normalizeRegionId(getRegionIdFromOnlineIslandId(state.online.mainIslandId));
   const savedMainCityId = getKnownCityId(state?.mainCityId);
   if (savedMainCityId) return getCityRegionId(savedMainCityId);
-  return pickStartingRegionId();
+  return "";
+}
+
+function resolveHomeRegionId(profile = null, { trustLocalState = true } = {}) {
+  return getStoredHomeRegionId(profile, { trustLocalState }) || pickStartingRegionId();
+}
+
+async function resolveHomeRegionIdForSetup(profile = null, { trustLocalState = true } = {}) {
+  const storedHomeRegionId = getStoredHomeRegionId(profile, { trustLocalState });
+  if (storedHomeRegionId) return storedHomeRegionId;
+  const availableRegionId = await pickAvailableStartingRegionId();
+  if (availableRegionId) return availableRegionId;
+  throw new Error(`No starter, midgame, or endgame map has ${MIN_NEW_PLAYER_SPAWN_NEUTRAL_CITIES} neutral cities available.`);
 }
 
 function createWorldTerrainBlockers() {
@@ -6551,6 +6632,7 @@ function summarizeIslandOccupancy(regionId, cities = state?.cities || []) {
   const currentUid = getCurrentOnlineUid();
   const owners = new Set();
   const rivalOwners = new Set();
+  const regularCityCount = getRegularCityCapacity(activeRegionId);
   let playerHeldCityCount = 0;
   let ownCityCount = 0;
   let rivalCityCount = 0;
@@ -6575,7 +6657,10 @@ function summarizeIslandOccupancy(regionId, cities = state?.cities || []) {
   return {
     regionId: activeRegionId,
     islandId: getOnlineIslandId(activeRegionId),
+    cityCount: regularCityCount,
+    regularCityCount,
     playerHeldCityCount,
+    neutralCityCount: Math.max(0, regularCityCount - playerHeldCityCount),
     ownCityCount,
     rivalCityCount,
     rulerCount: owners.size || (playerHeldCityCount > 0 ? 1 : 0),
@@ -6586,12 +6671,26 @@ function summarizeIslandOccupancy(regionId, cities = state?.cities || []) {
 
 function cacheIslandOccupancySummary(regionId, summary = null) {
   const activeRegionId = normalizeRegionId(regionId);
+  const regularCityCount = Math.max(
+    0,
+    getRegularCityCapacity(activeRegionId),
+    Math.floor(Number(summary?.regularCityCount) || 0),
+    Math.floor(Number(summary?.cityCount) || 0)
+  );
+  const playerHeldCityCount = Math.max(0, Math.floor(Number(summary?.playerHeldCityCount) || 0));
+  const neutralCityCount = getNeutralCityCountFromSummary(activeRegionId, {
+    ...(summary || {}),
+    regularCityCount,
+    playerHeldCityCount,
+  });
   const normalized = summary
     ? {
         regionId: activeRegionId,
         islandId: summary.islandId || getOnlineIslandId(activeRegionId),
-        cityCount: Math.max(0, Math.floor(Number(summary.cityCount) || 0)),
-        playerHeldCityCount: Math.max(0, Math.floor(Number(summary.playerHeldCityCount) || 0)),
+        cityCount: Math.max(regularCityCount, Math.floor(Number(summary.cityCount) || 0)),
+        regularCityCount,
+        neutralCityCount,
+        playerHeldCityCount,
         ownCityCount: Math.max(0, Math.floor(Number(summary.ownCityCount) || 0)),
         rivalCityCount: Math.max(0, Math.floor(Number(summary.rivalCityCount) || 0)),
         rulerCount: Math.max(0, Math.floor(Number(summary.rulerCount) || 0)),
@@ -6617,6 +6716,7 @@ function updateIslandSummariesFromOwnedCityCache() {
       regionId,
       islandId: getOnlineIslandId(regionId),
       cityCount: Math.max(0, Math.floor(Number(existing.cityCount) || 0)),
+      regularCityCount: Math.max(0, getRegularCityCapacity(regionId), Math.floor(Number(existing.regularCityCount) || 0)),
       playerHeldCityCount: Math.max(
         Math.max(0, Math.floor(Number(existing.playerHeldCityCount) || 0)),
         Math.max(0, Math.floor(Number(existing.rivalCityCount) || 0)) + (countsByRegion.get(regionId) || 0)
@@ -6627,6 +6727,8 @@ function updateIslandSummariesFromOwnedCityCache() {
       rivalRulerCount: Math.max(0, Math.floor(Number(existing.rivalRulerCount) || 0)),
       updatedAtMs: Date.now(),
     });
+    const next = onlineIslandSummaries.get(regionId);
+    next.neutralCityCount = getNeutralCityCountFromSummary(regionId, next);
   });
   rerenderIslandSwitcherModalIfOpen();
 }
@@ -7536,7 +7638,7 @@ async function setupOnlineWorld({ requireOnlineProfile = false } = {}) {
   const hasCurrentProfile = Boolean(profile);
   if (hasCurrentProfile) applyOnlineProfileSnapshot(profile, state.playerName);
   if (hasCurrentProfile) await prepareOfflineProgressFromProfile(profile);
-  const homeRegionId = resolveHomeRegionId(profile, { trustLocalState: hasCurrentProfile });
+  const homeRegionId = await resolveHomeRegionIdForSetup(profile, { trustLocalState: hasCurrentProfile });
   const activeRegionId = homeRegionId;
   const mainIslandId = getOnlineIslandId(homeRegionId);
   const mainCityId = getKnownCityId(profile?.mainCityId)
@@ -7690,6 +7792,7 @@ async function connectOnlineIsland(regionId, { claimHome = false, homeRegionId =
 
     if (claimHome) {
       onlineStatusDetail.textContent = "Claiming your starting city...";
+      const isNewHomeClaim = !getKnownCityId(nextOnlineState.mainCityId);
       const claim = await withTimeout(api.claimStartingCity({
         islandId,
         candidateCityIds: seed.claimCandidateIds,
@@ -7697,6 +7800,7 @@ async function connectOnlineIsland(regionId, { claimHome = false, homeRegionId =
         flag: state.flag,
         worldId: ONLINE_WORLD_ID,
         mainRegionId: targetRegionId,
+        minimumNeutralCities: isNewHomeClaim ? MIN_NEW_PLAYER_SPAWN_NEUTRAL_CITIES : 0,
       }), 12000, "Starting city claim is taking too long.");
 
       if (!claim?.cityId) throw new Error("No starting city was claimed.");
@@ -13806,7 +13910,7 @@ function showHelpModal() {
       <li>All cities start at Level 1 and can upgrade to Level 100.</li>
       <li>The world has ${formatNumber(getRegionIds().length)} maps and ${formatNumber(ISLAND_CITY_COUNT)} total city slots.</li>
       <li>The center island keeps its middle clear for a future feature.</li>
-      <li>New online players claim starting cities on maps labeled starter in the map editor.</li>
+      <li>New online players claim starting cities on starter maps with at least ${formatNumber(MIN_NEW_PLAYER_SPAWN_NEUTRAL_CITIES)} neutral cities, then midgame maps, then endgame maps.</li>
       <li>Your main city starts with 50 troops. Gray cities start with 10 defending troops.</li>
       <li>Use Recruit, Level Up, and Skills to grow faster. Leveling increases walls, defense %, troop production, and gold production.</li>
       <li>Every signed-in player claims one starting city, then expands through neutral captures and player combat.</li>

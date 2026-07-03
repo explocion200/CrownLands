@@ -517,6 +517,7 @@
     const islandData = islandSnap.exists() ? islandSnap.data() : {};
     const targetVersion = Number(meta.version) || 21;
     const targetCityCount = citySeeds.length;
+    const targetRegularCityCount = citySeeds.filter(city => !(city.kind === "stronghold" || city.strongholdType)).length;
     const seededCityCount = Math.max(0, Number(islandData.seededCityCount) || 0);
     const layoutSeedVersion = Math.max(0, Number(islandData.layoutSeedVersion) || 0);
     const needsCitySeed = !islandSnap.exists()
@@ -533,6 +534,7 @@
           id: islandId,
           version: targetVersion,
           cityCount: targetCityCount,
+          regularCityCount: targetRegularCityCount,
           createdBy: islandData.createdBy || uid,
           updatedAt: serverTimestamp(),
           ...meta,
@@ -550,6 +552,7 @@
         id: islandId,
         version: targetVersion,
         cityCount: targetCityCount,
+        regularCityCount: targetRegularCityCount,
         createdBy: uid,
         updatedAt: serverTimestamp(),
         ...meta,
@@ -599,6 +602,7 @@
       await setDoc(islandRef, {
         layoutSeedVersion: targetVersion,
         seededCityCount: targetCityCount,
+        regularCityCount: targetRegularCityCount,
         updatedAt: serverTimestamp(),
       }, { merge: true });
     } catch (error) {
@@ -615,6 +619,7 @@
     flag = null,
     worldId = "",
     mainRegionId = "",
+    minimumNeutralCities = 0,
   } = {}) {
     await init();
     const uid = requireSignedIn();
@@ -626,6 +631,7 @@
     const safePlayerName = String(playerName || client.user.displayName || "Ruler").slice(0, 32);
     const safeWorldId = String(worldId || "").slice(0, 64);
     const safeMainRegionId = String(mainRegionId || "").slice(0, 64);
+    const neutralCityReserve = Math.max(0, Math.floor(Number(minimumNeutralCities) || 0));
 
     return runTransaction(client.db, async transaction => {
       const playerSnap = await transaction.get(playerRef);
@@ -732,17 +738,28 @@
       let chosenRef = null;
       let chosenData = null;
       let chosenCityId = "";
+      let neutralCityCount = 0;
       for (const cityId of uniqueCandidateIds) {
         const cityRef = doc(client.db, "islands", islandId, "cities", cityId);
         const citySnap = await transaction.get(cityRef);
         if (!citySnap.exists()) continue;
         const data = citySnap.data();
-        if (!data.ownerUid) {
+        const isStrongholdCity = data.kind === "stronghold" || Boolean(data.strongholdType);
+        const ownerKind = data.ownerKind || data.owner || "neutral";
+        const hasPlayerOwner = ownerKind === "player" && Boolean(data.ownerUid);
+        const isNeutralRegularCity = !isStrongholdCity && !hasPlayerOwner && !data.ownerUid;
+        if (isNeutralRegularCity) {
+          neutralCityCount += 1;
+        }
+        if (!chosenRef && isNeutralRegularCity) {
           chosenRef = cityRef;
           chosenData = data;
           chosenCityId = cityId;
-          break;
         }
+      }
+
+      if (neutralCityReserve > 0 && neutralCityCount < neutralCityReserve) {
+        throw new Error(`That map needs at least ${neutralCityReserve} neutral cities before a new ruler can spawn there.`);
       }
 
       if (!chosenRef || !chosenData || !chosenCityId) {
@@ -894,13 +911,14 @@
       .slice(0, safeLimit);
   }
 
-  async function loadIslandCitySummary(islandId = "main") {
+  async function loadIslandCitySummary(islandId = "main", options = {}) {
     await init();
     const uid = requireSignedIn();
     if (!uid || !islandId) return null;
     const { collection, doc, getDoc, getDocs, query: firestoreQuery, where } = client.modules.firestore;
     const citiesRef = collection(client.db, "islands", islandId, "cities");
-    const playerCitiesRef = firestoreQuery && where
+    const includeNeutralCount = Boolean(options?.includeNeutralCount);
+    const playerCitiesRef = !includeNeutralCount && firestoreQuery && where
       ? firestoreQuery(citiesRef, where("ownerKind", "==", "player"))
       : citiesRef;
     const [islandSnap, snapshot] = await Promise.all([
@@ -910,6 +928,8 @@
     const islandData = islandSnap.exists() ? islandSnap.data() : {};
     const owners = new Set();
     const rivalOwners = new Set();
+    let regularCityCount = 0;
+    let neutralCityCount = 0;
     let playerHeldCityCount = 0;
     let ownCityCount = 0;
     let rivalCityCount = 0;
@@ -917,9 +937,13 @@
     snapshot.docs.forEach(cityDoc => {
       const city = cityDoc.data() || {};
       if (city.kind === "stronghold" || city.strongholdType) return;
+      if (includeNeutralCount) regularCityCount += 1;
       const ownerKind = city.ownerKind || city.owner || "neutral";
       const ownerUid = String(city.ownerUid || "");
-      if (ownerKind !== "player" || !ownerUid) return;
+      if (ownerKind !== "player" || !ownerUid) {
+        if (includeNeutralCount) neutralCityCount += 1;
+        return;
+      }
       playerHeldCityCount += 1;
       owners.add(ownerUid);
       if (ownerUid === uid) {
@@ -929,10 +953,18 @@
         rivalOwners.add(ownerUid);
       }
     });
+    const storedCityCount = Math.max(
+      0,
+      Number(islandData.cityCount) || 0,
+      Number(islandData.seededCityCount) || 0
+    );
+    const isSeededIsland = islandSnap.exists() && (storedCityCount > 0 || snapshot.size > 0);
 
     return {
       islandId,
-      cityCount: Math.max(0, Number(islandData.cityCount) || snapshot.size),
+      cityCount: Math.max(storedCityCount, snapshot.size),
+      regularCityCount: Math.max(0, Number(islandData.regularCityCount) || regularCityCount),
+      neutralCityCount: includeNeutralCount && isSeededIsland ? neutralCityCount : undefined,
       playerHeldCityCount,
       ownCityCount,
       rivalCityCount,
