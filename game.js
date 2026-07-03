@@ -68,7 +68,7 @@ const SHOP_ITEMS = [
     label: "Recall Horn",
     description: "Cancels one active march before it reaches the target.",
     cost: 90_000,
-    icon: "assets/recall-horn-icon.jpg",
+    icon: "assets/recall-horn-icon.png",
   },
 ];
 const ROYAL_PEACE_SHIELD_ITEM_ID = "shield_12h";
