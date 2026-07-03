@@ -748,6 +748,7 @@ function createNeutralCityFromBase(base) {
   const troops = getBaseCityInitialTroops(base);
   return {
     ...base,
+    name: getCanonicalCityName(base),
     owner: "neutral",
     ownerKind: "neutral",
     ownerUid: null,
@@ -794,8 +795,9 @@ function applyBaseCityMetadata(city, base) {
     city.name = city.name || base.name;
     city.level = getStrongholdDefenseLevel(base);
     city.investedGold = 0;
-  } else if ("size" in city) {
-    delete city.size;
+  } else {
+    city.name = getCanonicalCityName(base, city);
+    if ("size" in city) delete city.size;
   }
 }
 
@@ -2092,6 +2094,9 @@ const NO_CITY_TERRAIN = createWorldNoCityTerrain();
 const routeCache = new Map();
 const routeEdgePassableCache = new Map();
 const pathMetricCache = new WeakMap();
+const ROUTE_CELL_FALLBACK_RADIUS = 32;
+const ROUTE_CELL_FALLBACK_CANDIDATES = 24;
+const ROUTE_CELL_FALLBACK_PAIR_LIMIT = 48;
 
 
 let state;
@@ -2379,6 +2384,7 @@ function getIslandLandPolygon(regionId) {
       .map(point => ({ x: Number(point?.x) || 0, y: Number(point?.y) || 0 }))
       .filter(point => Number.isFinite(point.x) && Number.isFinite(point.y));
   }
+  if (hasEditorImageMap(regionId)) return [];
   return getDefaultIslandLandPolygon(regionId);
 }
 
@@ -2884,7 +2890,7 @@ function createEditorCitySlot(region, city, index) {
   const chosen = islandImagePointToWorld(region.id, getEditorPoint(city));
   return {
     id: String(city?.id || `${region.id}_${String(index + 1).padStart(3, "0")}`),
-    name: String(city?.name || generateCityName(region, index)),
+    name: generateCityName(region, index),
     regionId: region.id,
     startPool: region.id,
     x: Math.round(chosen.x),
@@ -3284,19 +3290,57 @@ function isWorldStrongholdReservePoint(x, y) {
   });
 }
 
-function generateCityName(region, index) {
-  const stems = {
-    center: ["Crown", "High", "Stone", "River", "Kings", "Queens", "Iron", "Gold", "Bright", "Elder", "Lion", "Oak", "Raven", "Silver", "Wolf", "Star", "Red", "White", "Dawn", "Ember"],
-    north: ["Frost", "Pine", "North", "Snow", "White", "Grey", "Winter", "Ice", "Wolf", "Raven", "Cold", "Storm", "Hawk", "Stone", "Ash", "Briar", "Moon", "Cloud", "Cedar", "Peak"],
-    south: ["South", "Salt", "Sun", "Marsh", "Reed", "Pearl", "Green", "Bay", "Moss", "Willow", "Rose", "Clear", "Mist", "Rain", "Bloom", "Hearth", "Warm", "Sable", "Drift", "Tide"],
-    west: ["West", "Oak", "Thorn", "Fox", "Ash", "Briar", "Crow", "Dusky", "Wild", "Wood", "Hart", "Moss", "Wolf", "Amber", "Black", "Copper", "Shade", "Glen", "Fern", "Old"],
-    east: ["East", "Sun", "Gold", "Dawn", "Bright", "Lion", "Falcon", "Red", "Rose", "Clear", "Wind", "Star", "Light", "Pearl", "Hawk", "Blue", "Kings", "Queens", "Sea", "Ivory"],
-  };
-  const suffixes = ["haven", "ford", "wick", "mere", "watch", "gate", "rest", "fall", "brook", "hollow"];
-  const regionStems = stems[region.id] || stems.center;
-  const stem = regionStems[index % regionStems.length];
-  const suffix = suffixes[Math.floor(index / regionStems.length) % suffixes.length];
-  return `${stem}${suffix}`;
+const MEDIEVAL_CITY_PREFIXES = [
+  "Alder", "Ash", "Barrow", "Bell", "Black", "Briar", "Brindle", "Brook", "Cedar", "Crow",
+  "Dun", "Elder", "Ember", "Fair", "Fen", "Flint", "Green", "Grey", "Hart", "High",
+  "Iron", "Kings", "Low", "Oak", "Raven", "Red", "Silver", "Stone", "Thorn", "Vale",
+  "White", "Wolf", "Wyvern",
+];
+const MEDIEVAL_REGION_PREFIXES = {
+  center: ["Crown", "Lion", "Regal", "Scepter", "Royal", "Queen", "King", "High", "Gold", "Star"],
+  north: ["Frost", "Snow", "Pine", "Winter", "Storm", "Moon", "Peak", "Cold", "Cloud", "Hawk"],
+  south: ["Sun", "Salt", "Reed", "Willow", "Rose", "Marsh", "Tide", "Warm", "Bloom", "Pearl"],
+  west: ["Oak", "Thorn", "Fox", "Ash", "Briar", "Crow", "Wild", "Wood", "Moss", "Fern"],
+  east: ["Dawn", "Gold", "Bright", "Falcon", "Rose", "Wind", "Star", "Pearl", "Blue", "Ivory"],
+};
+const MEDIEVAL_CITY_SUFFIXES = [
+  "bury", "ford", "wick", "stead", "mere", "brook", "hollow", "watch", "gate", "fall",
+  "bridge", "market", "vale", "den", "field", "worth", "cross", "moor", "reach", "cliffe",
+  "hurst", "wall", "ham", "port",
+];
+const MEDIEVAL_CITY_TITLES = [
+  "Abbey", "Cross", "Gate", "March", "Market", "Mead", "Moor", "Rest", "Rise", "Watch",
+];
+
+function getCityNameIndex(cityId, fallbackIndex = 0) {
+  const match = String(cityId || "").match(/_(\d+)$/);
+  if (match) return Math.max(0, Math.floor(Number(match[1]) || 1) - 1);
+  if (Number.isFinite(Number(fallbackIndex))) return Math.max(0, Math.floor(Number(fallbackIndex) || 0));
+  return hashString(cityId || "city") % 997;
+}
+
+function generateCityName(region, index, cityId = "") {
+  const regionId = normalizeRegionId(region?.id || region) || "center";
+  const cityIndex = getCityNameIndex(cityId, index);
+  const prefixes = [...new Set([...MEDIEVAL_CITY_PREFIXES, ...(MEDIEVAL_REGION_PREFIXES[regionId] || [])])];
+  const comboCount = prefixes.length * MEDIEVAL_CITY_SUFFIXES.length;
+  const offset = hashString(`medieval-city:${regionId}`) % comboCount;
+  const comboIndex = (cityIndex * 487 + offset) % comboCount;
+  const prefix = prefixes[comboIndex % prefixes.length];
+  const suffix = MEDIEVAL_CITY_SUFFIXES[Math.floor(comboIndex / prefixes.length) % MEDIEVAL_CITY_SUFFIXES.length];
+  const title = MEDIEVAL_CITY_TITLES[(cityIndex * 191 + offset) % MEDIEVAL_CITY_TITLES.length];
+  return cityIndex % 5 === 0 ? `${prefix}${suffix} ${title}` : `${prefix}${suffix}`;
+}
+
+function getCanonicalCityName(base = {}, fallback = null) {
+  const fallbackRecord = fallback && typeof fallback === "object" ? fallback : {};
+  const source = { ...fallbackRecord, ...base };
+  if (isStronghold(source)) return String(source.name || fallbackRecord.name || source.id || "Stronghold");
+  const regionId = normalizeRegionId(source.regionId || source.startPool || fallbackRecord.regionId || fallbackRecord.startPool);
+  const region = getRegionById(regionId) || { id: regionId || "center" };
+  const cityId = source.id || fallbackRecord.id || "";
+  const index = getCityNameIndex(cityId, source.index);
+  return generateCityName(region, index, cityId);
 }
 
 function pointInWorldRegion(x, y, region, padding = 0) {
@@ -6026,7 +6070,7 @@ function normalizeOfflineProductionCities(cities = []) {
       const base = getPlayableBaseCities().find(city => city.id === id) || {};
       return {
         id,
-        name: city.name || base.name || id,
+        name: getCanonicalCityName(base, city),
         owner: "player",
         ownerKind: "player",
         ownerUid: city.ownerUid || getCurrentOnlineUid() || null,
@@ -7595,7 +7639,7 @@ function applyOnlineCities(onlineCities, regionId = getActiveOnlineRegionId()) {
       const troopFallback = getCityTroopFallback(base, currentOwnership);
       return {
         ...base,
-        name: current.name || base.name,
+        name: getCanonicalCityName(base, current),
         owner: currentOwnership.owner,
         ownerKind: currentOwnership.ownerKind,
         ownerUid: currentOwnership.ownerUid,
@@ -7638,7 +7682,7 @@ function applyOnlineCities(onlineCities, regionId = getActiveOnlineRegionId()) {
 
     return {
       ...base,
-      name: keepLocalPlayerCity ? current.name || online.name || base.name : online.name || current.name || base.name,
+      name: getCanonicalCityName(base, keepLocalPlayerCity ? current : online),
       owner: keepLocalPlayerCity ? "player" : OWNER[localOwner] ? localOwner : "neutral",
       ownerKind: keepLocalPlayerCity ? "player" : normalizedOwnerKind,
       ownerUid: keepLocalPlayerCity ? currentUid || current.ownerUid || ownerUid || null : ownerUid,
@@ -7786,7 +7830,7 @@ function markOwnedCityChanged(city, syncNow = true) {
 function toOnlineOwnedCity(city) {
   return {
     id: city.id,
-    name: city.name,
+    name: getCanonicalCityName(city),
     x: city.x,
     y: city.y,
     startPool: city.startPool || "",
@@ -7835,7 +7879,7 @@ function toOnlineCityState(city) {
     : 0;
   return {
     id: city.id,
-    name: city.name,
+    name: getCanonicalCityName(city),
     x: city.x,
     y: city.y,
     startPool: city.startPool || "",
@@ -8088,13 +8132,18 @@ function rejectServerArmyMission(mission, reason = "", options = {}) {
 
 function applyServerMovementToMission(mission, movement = null) {
   if (!mission || !movement) return;
+  const movementKind = String(movement.kind || "");
   mission.onlineId = movement.id || mission.onlineId;
+  if (["attack", "transfer", "scout"].includes(movementKind)) mission.kind = movementKind;
   mission.troops = Math.max(0, Math.floor(Number(movement.troops) || mission.troops || 0));
   mission.requestedTroops = Math.max(0, Math.floor(Number(movement.requestedTroops) || mission.requestedTroops || mission.troops || 0));
   mission.total = Math.max(0.1, Number(movement.total) || mission.total || 0.1);
   mission.remaining = Math.max(0, (Number(movement.arrivesAtMs) - Date.now()) / 1000) || mission.total;
   mission.launchedAtMs = normalizeTimestampMs(movement.launchedAtMs) || mission.launchedAtMs;
   mission.arrivesAtMs = normalizeTimestampMs(movement.arrivesAtMs) || mission.arrivesAtMs;
+  mission.attackerKingPower = normalizePowerValue(movement.attackerKingPower || mission.attackerKingPower);
+  mission.defenderKingPower = normalizePowerValue(movement.defenderKingPower || mission.defenderKingPower);
+  if (movement.demoAttack !== undefined) mission.demoAttack = normalizeDemoAttackSnapshot(movement.demoAttack);
   mission.onlineRegionIds = Array.isArray(movement.routeRegionIds) ? movement.routeRegionIds.map(normalizeRegionId).filter(Boolean) : mission.onlineRegionIds;
 }
 
@@ -8179,6 +8228,19 @@ function getOnlineArmyRemainingSeconds(army) {
     return (army.arrivesAtMs - Date.now()) / 1000;
   }
   return Number(army.remaining) || 0;
+}
+
+function isServerArmyNotArrivedError(error) {
+  const message = String(error?.message || error || "");
+  return /not arrived/i.test(message);
+}
+
+function deferServerArmyResolutionRetry(mission) {
+  if (!mission) return;
+  const remaining = getOnlineArmyRemainingSeconds(mission);
+  const retrySeconds = Math.min(5, Math.max(0.5, Number.isFinite(remaining) && remaining > 0 ? remaining : 1));
+  mission.remaining = Math.max(Number(mission.remaining) || 0, retrySeconds);
+  mission.resolveRetryAtMs = Date.now() + Math.ceil(retrySeconds * 1000);
 }
 
 function resolveOnlineArmyOwner(army) {
@@ -8426,6 +8488,7 @@ async function resolveServerArmyMission(mission) {
       resolvedOnlineArmyIds.add(onlineId);
     }
     applyServerArmyResult(result);
+    mission.resolveRetryAtMs = 0;
     onlineLastError = "";
     saveGame();
     flushOnlineSave(true);
@@ -8434,6 +8497,10 @@ async function resolveServerArmyMission(mission) {
     updateOutgoingAttackUi();
     return true;
   } catch (error) {
+    if (isServerArmyNotArrivedError(error)) {
+      deferServerArmyResolutionRetry(mission);
+      return false;
+    }
     onlineLastError = error?.message || String(error);
     console.warn("Could not resolve server army", error);
     return false;
@@ -8705,7 +8772,7 @@ function normalizeOwnedCitySnapshot(raw = {}) {
     ...base,
     ...raw,
     id,
-    name: raw.name || base.name || id,
+    name: getCanonicalCityName(base, raw),
     owner: "player",
     ownerKind: "player",
     ownerUid: ownerUid || null,
@@ -8910,10 +8977,11 @@ function isWalkableCell(gx, gy) {
   return isWalkablePoint(gx * GRID_SIZE + GRID_SIZE / 2, gy * GRID_SIZE + GRID_SIZE / 2, 0);
 }
 
-function createRouteContext(regionId, source = null, target = null) {
+function createRouteContext(regionId, source = null, target = null, options = {}) {
   const normalizedRegionId = normalizeRegionId(regionId);
   const ignoredIds = new Set([source?.id, target?.id].filter(Boolean));
-  const obstacles = state?.cities
+  const ignoreCityObstacles = Boolean(options.ignoreCityObstacles);
+  const obstacles = ignoreCityObstacles ? [] : state?.cities
     ?.filter(city => getCityRegionId(city) === normalizedRegionId && !ignoredIds.has(city.id))
     .map(city => ({
       id: city.id,
@@ -8925,7 +8993,8 @@ function createRouteContext(regionId, source = null, target = null) {
     regionId: normalizedRegionId,
     ignoredIds,
     obstacles,
-    cacheKey: `cityblock:${normalizedRegionId}:${[...ignoredIds].sort().join(",")}`,
+    ignoreCityObstacles,
+    cacheKey: `${ignoreCityObstacles ? "terrain-only" : "cityblock"}:${normalizedRegionId}:${[...ignoredIds].sort().join(",")}`,
   };
 }
 
@@ -8995,6 +9064,45 @@ function nearestWalkableCellInRegion(x, y, regionId, context = null) {
   return null;
 }
 
+function getRouteCellKey(cell) {
+  return `${cell?.gx ?? -1},${cell?.gy ?? -1}`;
+}
+
+function getWalkableCellCandidatesInRegion(x, y, regionId, context = null, maxRadius = ROUTE_CELL_FALLBACK_RADIUS, maxCandidates = ROUTE_CELL_FALLBACK_CANDIDATES) {
+  const start = worldToGrid(x, y);
+  const seen = new Set();
+  const candidates = [];
+  const addCandidate = (gx, gy, radius) => {
+    if (gx < 0 || gy < 0 || gx >= GRID_COLS || gy >= GRID_ROWS) return;
+    const key = `${gx},${gy}`;
+    if (seen.has(key)) return;
+    seen.add(key);
+    if (!isWalkableCellForRegion(gx, gy, regionId, context)) return;
+    const point = gridToWorld(gx, gy);
+    candidates.push({
+      gx,
+      gy,
+      radius,
+      distance: Math.hypot(point.x - x, point.y - y),
+    });
+  };
+
+  addCandidate(start.gx, start.gy, 0);
+  for (let radius = 1; radius <= maxRadius; radius += 1) {
+    for (let dy = -radius; dy <= radius; dy += 1) {
+      for (let dx = -radius; dx <= radius; dx += 1) {
+        if (Math.abs(dx) !== radius && Math.abs(dy) !== radius) continue;
+        addCandidate(start.gx + dx, start.gy + dy, radius);
+      }
+    }
+  }
+
+  return candidates
+    .sort((a, b) => a.distance - b.distance || a.radius - b.radius)
+    .slice(0, maxCandidates)
+    .map(({ gx, gy }) => ({ gx, gy }));
+}
+
 function linePassable(a, b) {
   const distance = Math.hypot(a.x - b.x, a.y - b.y);
   const steps = Math.max(2, Math.ceil(distance / 22));
@@ -9040,6 +9148,54 @@ function gridEdgePassableInRegion(cx, cy, nx, ny, regionId, context = null) {
   const passable = linePassableInRegion(gridToWorld(cx, cy), gridToWorld(nx, ny), regionId, context);
   routeEdgePassableCache.set(key, passable);
   return passable;
+}
+
+function findGridRouteInRegion(start, goal, startPoint, endPoint, normalizedRegionId, routeContext = null) {
+  if (!start || !goal) return null;
+  const startIndex = start.gy * GRID_COLS + start.gx;
+  const goalIndex = goal.gy * GRID_COLS + goal.gx;
+  const open = [{ index: startIndex, f: 0 }];
+  const gScore = new Map([[startIndex, 0]]);
+  const cameFrom = new Map();
+  const closed = new Set();
+  const dirs = [
+    [1, 0, 1], [-1, 0, 1], [0, 1, 1], [0, -1, 1],
+    [1, 1, Math.SQRT2], [1, -1, Math.SQRT2], [-1, 1, Math.SQRT2], [-1, -1, Math.SQRT2],
+  ];
+
+  while (open.length) {
+    open.sort((a, b) => b.f - a.f);
+    const current = open.pop();
+    if (!current || closed.has(current.index)) continue;
+    if (current.index === goalIndex) {
+      const route = buildRouteFromCells(cameFrom, current.index, startPoint, endPoint, normalizedRegionId, routeContext);
+      route.segments = [{ regionId: normalizedRegionId, points: route.points.map(point => ({ x: point.x, y: point.y })), length: route.length }];
+      return route;
+    }
+
+    closed.add(current.index);
+    const cx = current.index % GRID_COLS;
+    const cy = Math.floor(current.index / GRID_COLS);
+    const currentG = gScore.get(current.index) || 0;
+
+    for (const [dx, dy, cost] of dirs) {
+      const nx = cx + dx;
+      const ny = cy + dy;
+      if (!isWalkableCellForRegion(nx, ny, normalizedRegionId, routeContext)) continue;
+      if (dx && dy && (!isWalkableCellForRegion(cx + dx, cy, normalizedRegionId, routeContext) || !isWalkableCellForRegion(cx, cy + dy, normalizedRegionId, routeContext))) continue;
+      if (!gridEdgePassableInRegion(cx, cy, nx, ny, normalizedRegionId, routeContext)) continue;
+      const nextIndex = ny * GRID_COLS + nx;
+      if (closed.has(nextIndex)) continue;
+      const tentative = currentG + cost;
+      if (tentative >= (gScore.get(nextIndex) ?? Infinity)) continue;
+      cameFrom.set(nextIndex, current.index);
+      gScore.set(nextIndex, tentative);
+      const h = Math.hypot(goal.gx - nx, goal.gy - ny);
+      open.push({ index: nextIndex, f: tentative + h });
+    }
+  }
+
+  return null;
 }
 
 function getRoutePointId(point, fallback = "point") {
@@ -9131,11 +9287,22 @@ function findPortalRoute(source, target, sourceRegionId = getCityRegionId(source
 function findLandRoute(source, target, regionId = getCityRegionId(source)) {
   const normalizedRegionId = normalizeRegionId(regionId);
   const routeContext = createRouteContext(normalizedRegionId, source, target);
-  const cacheKey = `land-cityblock-v1:${normalizedRegionId}:${getRoutePointId(source, "source")}|${getRoutePointId(target, "target")}`;
-  const reverseKey = `land-cityblock-v1:${normalizedRegionId}:${getRoutePointId(target, "target")}|${getRoutePointId(source, "source")}`;
+  const primaryRoute = findLandRouteWithContext(source, target, normalizedRegionId, routeContext);
+  if (primaryRoute) return primaryRoute;
+  if (routeContext.obstacles.length) {
+    const terrainOnlyContext = createRouteContext(normalizedRegionId, source, target, { ignoreCityObstacles: true });
+    const terrainOnlyRoute = findLandRouteWithContext(source, target, normalizedRegionId, terrainOnlyContext);
+    if (terrainOnlyRoute) return terrainOnlyRoute;
+  }
+  return null;
+}
+
+function findLandRouteWithContext(source, target, normalizedRegionId, routeContext = null) {
+  const cacheKey = `land-cityblock-v2:${normalizedRegionId}:${routeContext?.cacheKey || "terrain"}:${getRoutePointId(source, "source")}|${getRoutePointId(target, "target")}`;
   if (routeCache.has(cacheKey)) return cloneRoute(routeCache.get(cacheKey));
-  if (routeCache.has(reverseKey)) {
-    const reverse = reverseRoute(routeCache.get(reverseKey));
+  const contextReverseKey = `land-cityblock-v2:${normalizedRegionId}:${routeContext?.cacheKey || "terrain"}:${getRoutePointId(target, "target")}|${getRoutePointId(source, "source")}`;
+  if (routeCache.has(contextReverseKey)) {
+    const reverse = reverseRoute(routeCache.get(contextReverseKey));
     routeCache.set(cacheKey, cloneRoute(reverse));
     return reverse;
   }
@@ -9154,49 +9321,41 @@ function findLandRoute(source, target, regionId = getCityRegionId(source)) {
 
   const start = nearestWalkableCellInRegion(source.x, source.y, normalizedRegionId, routeContext);
   const goal = nearestWalkableCellInRegion(target.x, target.y, normalizedRegionId, routeContext);
-  if (!start || !goal) return null;
+  const triedCellPairs = new Set();
+  const commitRoute = route => {
+    if (!route) return null;
+    routeCache.set(cacheKey, cloneRoute(route));
+    return route;
+  };
+  const tryCells = (candidateStart, candidateGoal) => {
+    if (!candidateStart || !candidateGoal) return null;
+    const pairKey = `${getRouteCellKey(candidateStart)}|${getRouteCellKey(candidateGoal)}`;
+    if (triedCellPairs.has(pairKey)) return null;
+    triedCellPairs.add(pairKey);
+    return findGridRouteInRegion(candidateStart, candidateGoal, startPoint, endPoint, normalizedRegionId, routeContext);
+  };
 
-  const startIndex = start.gy * GRID_COLS + start.gx;
-  const goalIndex = goal.gy * GRID_COLS + goal.gx;
-  const open = [{ index: startIndex, f: 0 }];
-  const gScore = new Map([[startIndex, 0]]);
-  const cameFrom = new Map();
-  const closed = new Set();
-  const dirs = [
-    [1, 0, 1], [-1, 0, 1], [0, 1, 1], [0, -1, 1],
-    [1, 1, Math.SQRT2], [1, -1, Math.SQRT2], [-1, 1, Math.SQRT2], [-1, -1, Math.SQRT2],
-  ];
+  const primaryRoute = tryCells(start, goal);
+  if (primaryRoute) return commitRoute(primaryRoute);
 
-  while (open.length) {
-    open.sort((a, b) => b.f - a.f);
-    const current = open.pop();
-    if (!current || closed.has(current.index)) continue;
-    if (current.index === goalIndex) {
-      const route = buildRouteFromCells(cameFrom, current.index, startPoint, endPoint, normalizedRegionId, routeContext);
-      route.segments = [{ regionId: normalizedRegionId, points: route.points.map(point => ({ x: point.x, y: point.y })), length: route.length }];
-      routeCache.set(cacheKey, cloneRoute(route));
-      return route;
-    }
+  const startCandidates = getWalkableCellCandidatesInRegion(source.x, source.y, normalizedRegionId, routeContext);
+  const goalCandidates = getWalkableCellCandidatesInRegion(target.x, target.y, normalizedRegionId, routeContext);
+  for (const startCandidate of startCandidates) {
+    const route = tryCells(startCandidate, goal);
+    if (route) return commitRoute(route);
+  }
+  for (const goalCandidate of goalCandidates) {
+    const route = tryCells(start, goalCandidate);
+    if (route) return commitRoute(route);
+  }
 
-    closed.add(current.index);
-    const cx = current.index % GRID_COLS;
-    const cy = Math.floor(current.index / GRID_COLS);
-    const currentG = gScore.get(current.index) || 0;
-
-    for (const [dx, dy, cost] of dirs) {
-      const nx = cx + dx;
-      const ny = cy + dy;
-      if (!isWalkableCellForRegion(nx, ny, normalizedRegionId, routeContext)) continue;
-      if (dx && dy && (!isWalkableCellForRegion(cx + dx, cy, normalizedRegionId, routeContext) || !isWalkableCellForRegion(cx, cy + dy, normalizedRegionId, routeContext))) continue;
-      if (!gridEdgePassableInRegion(cx, cy, nx, ny, normalizedRegionId, routeContext)) continue;
-      const nextIndex = ny * GRID_COLS + nx;
-      if (closed.has(nextIndex)) continue;
-      const tentative = currentG + cost;
-      if (tentative >= (gScore.get(nextIndex) ?? Infinity)) continue;
-      cameFrom.set(nextIndex, current.index);
-      gScore.set(nextIndex, tentative);
-      const h = Math.hypot(goal.gx - nx, goal.gy - ny);
-      open.push({ index: nextIndex, f: tentative + h });
+  let pairAttempts = 0;
+  for (const startCandidate of startCandidates) {
+    for (const goalCandidate of goalCandidates) {
+      if (pairAttempts >= ROUTE_CELL_FALLBACK_PAIR_LIMIT) return null;
+      pairAttempts += 1;
+      const route = tryCells(startCandidate, goalCandidate);
+      if (route) return commitRoute(route);
     }
   }
 
@@ -9704,7 +9863,7 @@ function createOfflineProductionSnapshot(snapshot = state) {
   return sourceCities
     .map(city => ({
       id: city.id,
-      name: city.name,
+      name: getCanonicalCityName(city),
       owner: "player",
       ownerKind: "player",
       ownerUid: city.ownerUid || getCurrentOnlineUid() || null,
@@ -9850,11 +10009,26 @@ function showOfflineRewardsModal({ goldGained = 0, troopsGained = 0, troopsKeptI
 function updateAttacks(dt) {
   const completed = [];
   const completedOnlineIds = new Set();
+  const nowMs = Date.now();
   for (const attack of state.attacks) {
-    attack.remaining -= dt;
+    const onlineId = getOnlineArmyResolutionId(attack);
+    if (onlineId && usesServerArmyAuthority()) {
+      const authoritativeRemaining = getOnlineArmyRemainingSeconds(attack);
+      if (authoritativeRemaining > 0) {
+        attack.remaining = authoritativeRemaining;
+      } else {
+        attack.remaining -= dt;
+      }
+    } else {
+      attack.remaining -= dt;
+    }
     if (attack.remaining <= 0) {
-      const onlineId = getOnlineArmyResolutionId(attack);
-      const skipResolve = Boolean(onlineId && (completedOnlineIds.has(onlineId) || isOnlineArmyResolutionBlocked(attack)));
+      const retryAtMs = Math.max(0, Number(attack.resolveRetryAtMs) || 0);
+      const skipResolve = Boolean(onlineId && (
+        completedOnlineIds.has(onlineId)
+        || isOnlineArmyResolutionBlocked(attack)
+        || retryAtMs > nowMs
+      ));
       if (onlineId) {
         completedOnlineIds.add(onlineId);
       }
@@ -9876,7 +10050,11 @@ function updateAttacks(dt) {
   }
 
   if (completed.length) {
-    state.attacks = state.attacks.filter(attack => attack.remaining > 0);
+    state.attacks = state.attacks.filter(attack => {
+      if (attack.remaining > 0) return true;
+      const onlineId = getOnlineArmyResolutionId(attack);
+      return Boolean(onlineId && usesServerArmyAuthority() && !resolvedOnlineArmyIds.has(onlineId));
+    });
   }
 }
 
@@ -9962,15 +10140,18 @@ function launchAttack(sourceId, targetId, percent, owner, exactTroops = null, op
     publishOnlineArmyMovement(mission, { addLocalMissionOnAccept: true, optimistic: false })
       .then(accepted => {
         if (!accepted) return;
-        if (kind === "transfer") {
+        const acceptedKind = mission.kind || kind;
+        const acceptedTroops = Math.max(0, Math.floor(Number(mission.troops) || send));
+        const acceptedDemoAttack = normalizeDemoAttackSnapshot(mission.demoAttack) || demoAttack;
+        if (acceptedKind === "transfer") {
           if (!options.silent) {
-            addLog(`You moved ${formatNumber(send)} troops from ${source.name} to ${target.name}.`);
+            addLog(`You moved ${formatNumber(acceptedTroops)} troops from ${source.name} to ${target.name}.`);
             showToast(`Reinforcements moving: ${source.name} \u2192 ${target.name}`);
           }
         } else {
-          const demoText = demoAttack ? ` ${getDemoAttackNotice(demoAttack)}` : "";
-          addLog(`You sent ${formatNumber(send)} troops from ${source.name} to attack ${target.name}.${demoText}`);
-          showToast(demoAttack ? `Demo attack moving: ${formatNumber(send)} troops` : `Attack moving: ${source.name} \u2192 ${target.name}`);
+          const demoText = acceptedDemoAttack ? ` ${getDemoAttackNotice(acceptedDemoAttack)}` : "";
+          addLog(`You sent ${formatNumber(acceptedTroops)} troops from ${source.name} to attack ${target.name}.${demoText}`);
+          showToast(acceptedDemoAttack ? `Demo attack moving: ${formatNumber(acceptedTroops)} troops` : `Attack moving: ${source.name} \u2192 ${target.name}`);
         }
       })
       .finally(() => pendingServerArmyLaunchKeys.delete(launchKey));
@@ -11217,7 +11398,7 @@ function findLastSelectedAttackSource(target) {
 
 function findPreferredAttackSource(target) {
   const rememberedSource = getLastSelectedOwnedAttackCity();
-  if (rememberedSource) return findLastSelectedAttackSource(target);
+  if (rememberedSource) return findLastSelectedAttackSource(target) || findNearestOwnedSource(target, 1);
   return findNearestOwnedSource(target, 1);
 }
 

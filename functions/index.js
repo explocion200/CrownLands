@@ -690,15 +690,34 @@ exports.sendArmyOrder = onCall({ region: "us-central1", maxInstances: 20, invoke
 
     if (!sourceSnap.exists) throw new HttpsError("not-found", "Source city was not found.");
     if (!targetSnap.exists) throw new HttpsError("not-found", "Destination city was not found.");
-    if (existingArmySnap.exists && existingArmySnap.data()?.status === "active") {
-      throw new HttpsError("already-exists", "That army order is already active.");
-    }
 
     const source = { id: sourceSnap.id, ...sourceSnap.data() };
     const target = { id: targetSnap.id, ...targetSnap.data() };
-    const playerData = playerSnap.exists ? playerSnap.data() || {} : {};
     const sourceOwnerUid = getOwnerUid(source);
     const targetOwnerUid = getOwnerUid(target);
+    if (existingArmySnap.exists) {
+      const existingArmy = { id: existingArmySnap.id, ...existingArmySnap.data() };
+      delete existingArmy.createdAt;
+      delete existingArmy.updatedAt;
+      if (existingArmy.status === "active" && getOwnerUid(existingArmy) === uid) {
+        return {
+          ok: true,
+          duplicate: true,
+          movement: existingArmy,
+          sourceCity: sourceOwnerUid === uid
+            ? {
+              id: source.id,
+              regionId: order.sourceRegionId,
+              troops: Math.max(0, Math.floor(safeNumber(source.troops, 0))),
+              troopFloat: Math.max(0, safeNumber(source.troopFloat, source.troops || 0)),
+            }
+            : null,
+        };
+      }
+      throw new HttpsError("already-exists", "That army order has already been sent.");
+    }
+
+    const playerData = playerSnap.exists ? playerSnap.data() || {} : {};
     const defenderPowerSnap = targetOwnerUid && targetOwnerUid !== uid
       ? await transaction.get(db.doc(`players/${targetOwnerUid}`))
       : null;
@@ -838,7 +857,7 @@ exports.resolveArmyOrder = onCall({ region: "us-central1", maxInstances: 30, inv
     const army = { id: firstArmySnap.id, ...firstArmySnap.data() };
     if (army.status !== "active") return { ok: true, status: army.status || "resolved" };
     const arrivesAtMs = Math.max(0, Math.floor(safeNumber(army.arrivesAtMs, 0)));
-    if (arrivesAtMs > nowMs + 1500) {
+    if (arrivesAtMs > nowMs) {
       throw new HttpsError("failed-precondition", "Army has not arrived yet.");
     }
 
