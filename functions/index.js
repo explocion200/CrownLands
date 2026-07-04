@@ -68,6 +68,7 @@ const SHOP_ITEMS = {
   swift_march_order: { id: "swift_march_order", label: "Swift March Order", cost: 55000 },
   recall_horn: { id: "recall_horn", label: "Recall Horn", cost: 90000 },
 };
+const LEGACY_SHOP_ITEM_IDS = ["troop_boost_1h", "anti_scout_1h"];
 const CITY_LEVEL_STATS = {
   victoryPointsBase: 6,
   victoryPointsPerLevel: 4,
@@ -825,10 +826,17 @@ function normalizeShopItems(items = {}) {
   Object.keys(SHOP_ITEMS).forEach(itemId => {
     normalized[itemId] = Math.max(0, Math.floor(safeNumber(items[itemId], 0)));
   });
-  if (Number.isFinite(Number(items.troop_boost_1h))) {
+  if (!Object.prototype.hasOwnProperty.call(items, WAR_DRUMS_ITEM_ID) && Number.isFinite(Number(items.troop_boost_1h))) {
     normalized[WAR_DRUMS_ITEM_ID] += Math.max(0, Math.floor(safeNumber(items.troop_boost_1h, 0)));
   }
   return normalized;
+}
+
+function addLegacyShopItemDeletes(patch = {}) {
+  LEGACY_SHOP_ITEM_IDS.forEach(itemId => {
+    patch[`shopItems.${itemId}`] = FieldValue.delete();
+  });
+  return patch;
 }
 
 function normalizeItemEffects(effects = {}) {
@@ -1089,6 +1097,9 @@ function writePreparedEconomy(transaction, economy, profileOverrides = {}, extra
     ...profileOverrides,
     updatedAt: FieldValue.serverTimestamp(),
   }, { merge: true });
+  if (economy.profileSnap?.exists) {
+    transaction.update(economy.profileRef, addLegacyShopItemDeletes());
+  }
 }
 
 function createEconomyResponse(economy = null, overrides = {}) {

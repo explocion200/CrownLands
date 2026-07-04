@@ -4421,10 +4421,13 @@ function normalizeShopItems(items) {
   const normalized = createDefaultShopItems();
   if (!items || typeof items !== "object") return normalized;
   SHOP_ITEMS.forEach(item => {
+    const hasCanonicalCount = Object.prototype.hasOwnProperty.call(items, item.id);
     const legacyCount = (item.legacyIds || []).reduce((total, legacyId) => (
       total + Math.max(0, Math.floor(Number(items[legacyId]) || 0))
     ), 0);
-    normalized[item.id] = Math.max(0, Math.floor(Number(items[item.id]) || 0)) + legacyCount;
+    normalized[item.id] = hasCanonicalCount
+      ? Math.max(0, Math.floor(Number(items[item.id]) || 0))
+      : legacyCount;
   });
   return normalized;
 }

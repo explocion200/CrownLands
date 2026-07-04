@@ -405,9 +405,16 @@
     await init();
     const uid = requireSignedIn();
     if (!uid) return false;
-    const { doc, setDoc, serverTimestamp } = client.modules.firestore;
+    const { doc, setDoc, serverTimestamp, deleteField } = client.modules.firestore;
     const ref = doc(client.db, "players", uid);
     const cleanProfile = sanitizeForFirestore(profile);
+    if (cleanProfile.shopItems && typeof cleanProfile.shopItems === "object" && deleteField) {
+      cleanProfile.shopItems = {
+        ...cleanProfile.shopItems,
+        troop_boost_1h: deleteField(),
+        anti_scout_1h: deleteField(),
+      };
+    }
     await setDoc(ref, {
       uid,
       displayName: client.user.displayName || "",
