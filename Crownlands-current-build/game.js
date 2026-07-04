@@ -627,7 +627,7 @@ function getCastleStage(level) {
 }
 
 function getCastleAsset(stage) {
-  const version = "v=20260702-city-level-art";
+  const version = "v=20260704-firebase-castles";
   const assets = {
     1: `assets/castles/shack.png?${version}`,
     2: `assets/castles/fort.png?${version}`,
