@@ -1629,7 +1629,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
       "objectives": [
         {
           "id": "west_gold_stronghold",
-          "name": "Gold Stronghold",
+          "name": "Aurum Keep",
           "x": 615,
           "y": 484,
           "xNorm": 0.425,
@@ -2295,7 +2295,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
       "objectives": [
         {
           "id": "east_speed_stronghold",
-          "name": "Speed Stronghold",
+          "name": "Swiftgate",
           "x": 763,
           "y": 467,
           "xNorm": 0.527,
@@ -2961,7 +2961,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
       "objectives": [
         {
           "id": "north_training_stronghold",
-          "name": "Training Stronghold",
+          "name": "Greybanner Hold",
           "x": 770,
           "y": 512,
           "xNorm": 0.532,
@@ -3843,7 +3843,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
       "objectives": [
         {
           "id": "south_defense_stronghold",
-          "name": "Defense Stronghold",
+          "name": "Ironwatch",
           "x": 573,
           "y": 447,
           "xNorm": 0.396,

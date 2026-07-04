@@ -213,25 +213,25 @@ const EDGE_TRANSITION_ARROW_INSET_MAX = 180;
 const DEFAULT_STRONGHOLD_VISUAL_SIZE = 154;
 const MIN_STRONGHOLD_VISUAL_SIZE = 80;
 const GOLD_STRONGHOLD_ID = "west_gold_stronghold";
-const GOLD_STRONGHOLD_NAME = "Gold Stronghold";
+const GOLD_STRONGHOLD_NAME = "Aurum Keep";
 const GOLD_STRONGHOLD_ART_SRC = "assets/gold-stronghold.png?v=20260704-gold-stronghold-updated";
 const GOLD_STRONGHOLD_BONUS_PERCENT = 8;
 const GOLD_STRONGHOLD_LEVEL = 50;
 const GOLD_STRONGHOLD_START_TROOPS = 50000000;
 const TRAINING_STRONGHOLD_ID = "north_training_stronghold";
-const TRAINING_STRONGHOLD_NAME = "Training Stronghold";
+const TRAINING_STRONGHOLD_NAME = "Greybanner Hold";
 const TRAINING_STRONGHOLD_ART_SRC = "assets/training-stronghold.png?v=20260703-training-stronghold-art";
 const TRAINING_STRONGHOLD_BONUS_PERCENT = 8;
 const TRAINING_STRONGHOLD_LEVEL = 50;
 const TRAINING_STRONGHOLD_START_TROOPS = 50000000;
 const SPEED_STRONGHOLD_ID = "east_speed_stronghold";
-const SPEED_STRONGHOLD_NAME = "Speed Stronghold";
+const SPEED_STRONGHOLD_NAME = "Swiftgate";
 const SPEED_STRONGHOLD_ART_SRC = "assets/speed-stronghold.png?v=20260704-speed-stronghold-updated";
 const SPEED_STRONGHOLD_BONUS_PERCENT = 8;
 const SPEED_STRONGHOLD_LEVEL = 50;
 const SPEED_STRONGHOLD_START_TROOPS = 50000000;
 const DEFENSE_STRONGHOLD_ID = "south_defense_stronghold";
-const DEFENSE_STRONGHOLD_NAME = "Defense Stronghold";
+const DEFENSE_STRONGHOLD_NAME = "Ironwatch";
 const DEFENSE_STRONGHOLD_ART_SRC = "assets/defense-stronghold.png?v=20260704-defense-stronghold-update";
 const DEFENSE_STRONGHOLD_BONUS_PERCENT = 8;
 const DEFENSE_STRONGHOLD_LEVEL = 50;
@@ -696,6 +696,15 @@ function isCrownCitadel(city) {
   return isStronghold(city) && (type === "crown" || type === "crown_citadel" || city.id === CROWN_CITADEL_ID);
 }
 
+function getStrongholdDisplayName(city) {
+  if (isCrownCitadel(city)) return CROWN_CITADEL_NAME;
+  if (isDefenseStronghold(city)) return DEFENSE_STRONGHOLD_NAME;
+  if (isSpeedStronghold(city)) return SPEED_STRONGHOLD_NAME;
+  if (isTrainingStronghold(city)) return TRAINING_STRONGHOLD_NAME;
+  if (isGoldStronghold(city)) return GOLD_STRONGHOLD_NAME;
+  return String(city?.name || city?.id || "Stronghold");
+}
+
 function getStrongholdArtSrc(city) {
   if (city?.artSrc) return city.artSrc;
   if (isCrownCitadel(city)) return CROWN_CITADEL_ART_SRC;
@@ -827,7 +836,7 @@ function applyBaseCityMetadata(city, base) {
   city.bonusPercent = Number(base.bonusPercent) || 0;
   if (isStronghold(base)) {
     city.size = getStrongholdVisualSize(base);
-    city.name = city.name || base.name;
+    city.name = getStrongholdDisplayName({ ...base, ...city });
     city.level = getStrongholdDefenseLevel(base);
     city.investedGold = 0;
   } else {
@@ -3482,7 +3491,7 @@ function generateCityName(region, index, cityId = "") {
 function getCanonicalCityName(base = {}, fallback = null) {
   const fallbackRecord = fallback && typeof fallback === "object" ? fallback : {};
   const source = { ...fallbackRecord, ...base };
-  if (isStronghold(source)) return String(source.name || fallbackRecord.name || source.id || "Stronghold");
+  if (isStronghold(source)) return getStrongholdDisplayName(source);
   const regionId = normalizeRegionId(source.regionId || source.startPool || fallbackRecord.regionId || fallbackRecord.startPool);
   const region = getRegionById(regionId) || { id: regionId || "center" };
   const cityId = source.id || fallbackRecord.id || "";

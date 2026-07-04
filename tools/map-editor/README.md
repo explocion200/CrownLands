@@ -48,10 +48,10 @@ powershell -ExecutionPolicy Bypass -File .\tools\validate-world-routes.ps1
 The editor supports separate marker types for:
 
 - Crown Citadel
-- Gold Stronghold
-- Troop Stronghold
-- Defense Stronghold
-- March Speed Stronghold
+- Aurum Keep - gold production bonus
+- Greybanner Hold - troop production bonus
+- Ironwatch - defense bonus
+- Swiftgate - march speed bonus
 - Upgrade Discount Stronghold
 
 Resource strongholds default to Level 50 with 50 million troops. The Crown Citadel defaults to Level 100 with 50 million troops.

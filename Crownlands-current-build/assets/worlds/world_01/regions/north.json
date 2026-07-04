@@ -564,7 +564,7 @@
   "strongholds": [
     {
       "id": "north_training_stronghold",
-      "name": "Training Stronghold",
+      "name": "Greybanner Hold",
       "regionId": "north",
       "xNorm": 0.532,
       "yNorm": 0.471,

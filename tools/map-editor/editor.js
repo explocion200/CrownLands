@@ -34,7 +34,7 @@
       size: 260,
     },
     gold_stronghold: {
-      name: "Gold Stronghold",
+      name: "Aurum Keep",
       bonusType: "goldProduction",
       bonusAmount: 8,
       level: 50,
@@ -43,7 +43,7 @@
       size: 154,
     },
     troop_stronghold: {
-      name: "Troop Stronghold",
+      name: "Greybanner Hold",
       bonusType: "troopProduction",
       bonusAmount: 8,
       level: 50,
@@ -52,7 +52,7 @@
       size: 154,
     },
     defense_stronghold: {
-      name: "Defense Stronghold",
+      name: "Ironwatch",
       bonusType: "cityDefense",
       bonusAmount: 8,
       level: 50,
@@ -61,7 +61,7 @@
       size: 154,
     },
     march_speed_stronghold: {
-      name: "March Speed Stronghold",
+      name: "Swiftgate",
       bonusType: "marchSpeed",
       bonusAmount: 8,
       level: 50,

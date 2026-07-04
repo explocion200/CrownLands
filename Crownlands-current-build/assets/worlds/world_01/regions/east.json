@@ -564,7 +564,7 @@
   "strongholds": [
     {
       "id": "east_speed_stronghold",
-      "name": "Speed Stronghold",
+      "name": "Swiftgate",
       "regionId": "east",
       "xNorm": 0.527,
       "yNorm": 0.43,

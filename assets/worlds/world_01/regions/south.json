@@ -762,7 +762,7 @@
   "strongholds": [
     {
       "id": "south_defense_stronghold",
-      "name": "Defense Stronghold",
+      "name": "Ironwatch",
       "regionId": "south",
       "xNorm": 0.396,
       "yNorm": 0.412,
