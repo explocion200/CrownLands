@@ -1093,6 +1093,7 @@ input {
   z-index: 12;
 }
 .stronghold-glow {
+  display: none;
   position: absolute;
   left: 50%;
   bottom: 4px;
