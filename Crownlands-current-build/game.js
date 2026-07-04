@@ -5613,6 +5613,11 @@ function getScoutReport(cityId) {
 function scoutCity(cityId) {
   const target = cityById(cityId);
   if (!target || target.owner === "player") return;
+  const mainCityBlockReason = getMainCityScoutBlockReason(target, "player");
+  if (mainCityBlockReason) {
+    showToast(mainCityBlockReason);
+    return;
+  }
   if (getPendingScoutMission(target.id)) {
     showToast(`A scout is already traveling to ${target.name}`);
     return;
@@ -5635,6 +5640,11 @@ function scoutCity(cityId) {
 
 function launchScoutMission(source, target, route) {
   if (!source || !target || source.owner !== "player" || source.troops < 1 || !route?.points?.length) return null;
+  const mainCityBlockReason = getMainCityScoutBlockReason(target, "player");
+  if (mainCityBlockReason) {
+    showToast(mainCityBlockReason);
+    return null;
+  }
   if (!canUseOnlineArmyOrders()) return null;
   const duration = travelTime(source, target, "player", route.length, 1, "scout");
   const mission = {
@@ -5686,6 +5696,7 @@ function isNearbyScoutCandidate(source, city) {
     city.id !== source.id &&
     getCityRegionId(city) === getCityRegionId(source) &&
     city.owner !== "player" &&
+    !getMainCityScoutBlockReason(city, "player") &&
     !getPendingScoutMission(city.id) &&
     Math.hypot(city.x - source.x, city.y - source.y) <= SCOUT_NEARBY_RADIUS
   );
@@ -10639,6 +10650,12 @@ function getMainCityAttackBlockReason(target, attackerOwner = "player", attacker
   return `${target.name} is a main city and cannot be attacked.`;
 }
 
+function getMainCityScoutBlockReason(target, scoutOwner = "player", scoutOwnerUid = "") {
+  if (!target || !isProtectedMainCity(target)) return "";
+  if (isSameAttackOwner(target, scoutOwner, scoutOwnerUid)) return "";
+  return `${target.name} is a main city and cannot be scouted.`;
+}
+
 function launchAttack(sourceId, targetId, percent, owner, exactTroops = null, options = {}) {
   const source = cityById(sourceId);
   const target = cityById(targetId);
@@ -12014,7 +12031,8 @@ function renderSelectedForeignWheel(city) {
   const wheel = document.createElement("div");
   const report = getScoutReport(city.id);
   const pendingScout = getPendingScoutMission(city.id);
-  const canScout = !pendingScout && playerCities().some(playerCity => playerCity.troops >= 1);
+  const scoutBlockReason = getMainCityScoutBlockReason(city, "player");
+  const canScout = !scoutBlockReason && !pendingScout && playerCities().some(playerCity => playerCity.troops >= 1);
   const mainCityBlockReason = getMainCityAttackBlockReason(city, "player");
   const shieldBlockReason = getPeaceShieldAttackBlockReason(city, "player");
   const attackBlockLabel = mainCityBlockReason ? "Main City" : shieldBlockReason ? "Shielded" : "Attack";
@@ -12025,9 +12043,9 @@ function renderSelectedForeignWheel(city) {
   wheel.style.top = `${mapPoint.y}px`;
   wheel.innerHTML = `
     <span class="city-wheel-ring" aria-hidden="true"></span>
-    <button class="city-wheel-action wheel-scout" type="button" aria-label="${pendingScout ? "Scout traveling to" : report ? "Scout again" : "Scout"} ${escapeHtml(city.name)}" ${canScout ? "" : "disabled"}>
+    <button class="city-wheel-action wheel-scout" type="button" aria-label="${scoutBlockReason ? escapeHtml(scoutBlockReason) : `${pendingScout ? "Scout traveling to" : report ? "Scout again" : "Scout"} ${escapeHtml(city.name)}`}" ${canScout ? "" : "disabled"}>
       <span class="wheel-icon" aria-hidden="true">&#128301;</span>
-      <span class="wheel-action-name">${pendingScout ? "Scouting" : report ? "Rescout" : "Scout"}</span>
+      <span class="wheel-action-name">${scoutBlockReason ? "Main City" : pendingScout ? "Scouting" : report ? "Rescout" : "Scout"}</span>
     </button>
     <button class="city-wheel-action wheel-attack" type="button" aria-label="${mainCityBlockReason ? escapeHtml(mainCityBlockReason) : `Attack ${escapeHtml(city.name)}`}" ${canAttack ? "" : "disabled"}>
       <span class="wheel-icon" aria-hidden="true">&#9876;</span>

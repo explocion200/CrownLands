@@ -1919,6 +1919,9 @@ exports.sendArmyOrder = onCall({ region: "us-central1", maxInstances: 20, invoke
     const troops = resolvedKind === "scout" ? 1 : (demoAttack?.effectiveTroops || requestedTroops);
 
     if (sourceTroops < troops) throw new HttpsError("failed-precondition", "Not enough troops in the source city.");
+    if (resolvedKind === "scout" && isProtectedMainCity(target, uid)) {
+      throw new HttpsError("failed-precondition", "Main cities cannot be scouted.");
+    }
     if (resolvedKind === "attack") {
       if (isProtectedMainCity(target, uid)) {
         throw new HttpsError("failed-precondition", "Main cities cannot be attacked.");
@@ -2153,6 +2156,42 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
       : "Neutral city";
 
     if (army.kind === "scout") {
+      if (isProtectedMainCity(target, attackerUid)) {
+        writeParticipantEconomies();
+        const returned = returnTroopsToSource(troopCount);
+        const report = makeReport({
+          id: `${armyId}_scout_blocked_${attackerUid}`,
+          uid: attackerUid,
+          type: "scout",
+          outcome: "scout",
+          city: target,
+          opponentName: defenderName,
+          sentTroops: troopCount,
+          troopCount: Math.max(0, Math.floor(safeNumber(target.troops, 0))),
+          totalDefense: targetStats.totalDefense,
+          summary: `Main cities cannot be scouted. ${returned.toLocaleString()} scout returned.`,
+          nowMs,
+        });
+        writeReport(transaction, attackerUid, report, attackerProfileSnap);
+        transaction.set(islandReportRef(targetRegionId, report.id), {
+          ...report,
+          createdAt: FieldValue.serverTimestamp(),
+        }, { merge: true });
+        reports.push(report);
+        markResolved({ kind: "scout", blocked: "main_city", returned });
+        return {
+          ok: true,
+          status: "resolved",
+          kind: "scout",
+          reports: reportsForCaller(),
+          cityUpdates: withEconomyCityUpdates(cityUpdates),
+          currentUser: profilePatchForCaller(
+            { character: attackerProfile.character, gold: attackerEconomy?.gold, goldFloat: attackerEconomy?.goldFloat },
+            defenderEconomy ? { character: defenderProfile?.character, gold: defenderEconomy.gold, goldFloat: defenderEconomy.goldFloat } : null
+          ),
+        };
+      }
+
       if (defenderUid && defenderUid === attackerUid) {
         writeParticipantEconomies();
         const nextTroops = Math.max(0, Math.floor(safeNumber(target.troops, 0))) + troopCount;
