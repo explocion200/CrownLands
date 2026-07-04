@@ -25,7 +25,18 @@ service cloud.firestore {
     }
 
     function validPlayerProfileCreate() {
-      return shieldCount(request.resource.data) == 0;
+      return shieldCount(request.resource.data) == 0
+        && !request.resource.data.keys().hasAny([
+          'gold',
+          'goldFloat',
+          'shopItems',
+          'itemEffects',
+          'itemPurchaseCooldowns',
+          'economyUpdatedAtMs',
+          'offlineProductionCities',
+          'character',
+          'upgrades'
+        ]);
     }
 
     function profileFieldUnchanged(field) {
@@ -43,7 +54,9 @@ service cloud.firestore {
     }
 
     function validPlayerProfileUpdate() {
-      return playerEconomyUnchanged();
+      return playerEconomyUnchanged()
+        && profileFieldUnchanged('character')
+        && profileFieldUnchanged('upgrades');
     }
 
     function cityFieldUnchanged(field) {

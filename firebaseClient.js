@@ -137,6 +137,14 @@
     return callServerFunction("upgradeCity", payload);
   }
 
+  async function spendSkillPoint(payload = {}) {
+    return callServerFunction("spendSkillPoint", payload);
+  }
+
+  async function resetSkills(payload = {}) {
+    return callServerFunction("resetSkills", payload);
+  }
+
   async function relinquishCity(payload = {}) {
     return callServerFunction("relinquishCity", payload);
   }
@@ -1127,6 +1135,8 @@
     loadPlayerProfile,
     collectEconomy,
     upgradeCity,
+    spendSkillPoint,
+    resetSkills,
     relinquishCity,
     relocateMainCity,
     purchaseShopItem,

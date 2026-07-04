@@ -80,15 +80,24 @@ const CITY_LEVEL_STATS = {
   troopProductionPerVictoryPoint: 3,
 };
 const SKILL_CONFIG = {
-  striker: { percentPerLevel: 2 },
-  fearless: { percentPerLevel: 2, maxPercent: 75 },
-  brave: { percentPerLevel: 2, maxPercent: 75 },
-  guardian: { percentPerLevel: 3 },
-  prosperous: { percentPerLevel: 3 },
-  recruiter: { percentPerLevel: 3 },
-  scavenger: { percentPerLevel: 2 },
-  salvager: { percentPerLevel: 2 },
+  swordmastery: { percentPerLevel: 2, maxPercent: 60 },
+  stoneworks: { percentPerLevel: 3, maxPercent: 75 },
+  taxStewardship: { percentPerLevel: 3, maxPercent: 75 },
+  royalGranaries: { percentPerLevel: 3, maxPercent: 75 },
+  guildCharters: { percentPerLevel: 2, maxPercent: 50 },
+  marchOrders: { percentPerLevel: 3, maxPercent: 60 },
+  fieldMedics: { percentPerLevel: 2, maxPercent: 50 },
 };
+const SKILL_ORDER = [
+  "swordmastery",
+  "stoneworks",
+  "taxStewardship",
+  "royalGranaries",
+  "guildCharters",
+  "marchOrders",
+  "fieldMedics",
+];
+const SKILL_RESET_COST = 10_000;
 const GOLD_STRONGHOLD_ID = "west_gold_stronghold";
 const TRAINING_STRONGHOLD_ID = "north_training_stronghold";
 const SPEED_STRONGHOLD_ID = "east_speed_stronghold";
@@ -96,10 +105,12 @@ const DEFENSE_STRONGHOLD_ID = "south_defense_stronghold";
 const CROWN_CITADEL_ID = "center_crown_citadel";
 const GOLD_STRONGHOLD_BONUS_PERCENT = 15;
 const TRAINING_STRONGHOLD_BONUS_PERCENT = 15;
+const SPEED_STRONGHOLD_BONUS_PERCENT = 15;
 const DEFENSE_STRONGHOLD_BONUS_PERCENT = 15;
 const CROWN_CITADEL_GOLD_BONUS_PERCENT = 10;
 const CROWN_CITADEL_TROOP_BONUS_PERCENT = 10;
 const CROWN_CITADEL_DEFENSE_BONUS_PERCENT = 8;
+const CROWN_CITADEL_MARCH_SPEED_BONUS_PERCENT = 8;
 const CROWN_CITADEL_UPGRADE_COST_REDUCTION_PERCENT = 8;
 const STRONGHOLD_IDS = new Set([
   GOLD_STRONGHOLD_ID,
@@ -167,6 +178,10 @@ function isTrainingStronghold(city = {}) {
   return isStronghold(city) && (city.strongholdType === "training" || city.id === TRAINING_STRONGHOLD_ID);
 }
 
+function isSpeedStronghold(city = {}) {
+  return isStronghold(city) && (city.strongholdType === "speed" || city.strongholdType === "march_speed_stronghold" || city.id === SPEED_STRONGHOLD_ID);
+}
+
 function isDefenseStronghold(city = {}) {
   return isStronghold(city) && (city.strongholdType === "defense" || city.id === DEFENSE_STRONGHOLD_ID);
 }
@@ -179,6 +194,7 @@ function getStrongholdBonusPercent(city = {}) {
   if (Number.isFinite(Number(city.bonusPercent))) return Math.max(0, Math.floor(Number(city.bonusPercent) || 0));
   if (isCrownCitadel(city)) return CROWN_CITADEL_GOLD_BONUS_PERCENT;
   if (isDefenseStronghold(city)) return DEFENSE_STRONGHOLD_BONUS_PERCENT;
+  if (isSpeedStronghold(city)) return SPEED_STRONGHOLD_BONUS_PERCENT;
   if (isTrainingStronghold(city)) return TRAINING_STRONGHOLD_BONUS_PERCENT;
   return isGoldStronghold(city) ? GOLD_STRONGHOLD_BONUS_PERCENT : 0;
 }
@@ -188,8 +204,40 @@ function getStrongholdDefenseLevel(city = {}) {
   return clampCityLevel(city.level || STRONGHOLD_LEVELS[city.id] || 50);
 }
 
+function normalizeSkillLevel(value) {
+  return Math.max(0, Math.floor(safeNumber(value, 0)));
+}
+
+function normalizeSkillUpgrades(upgrades = {}) {
+  const source = upgrades && typeof upgrades === "object" ? upgrades : {};
+  const normalized = SKILL_ORDER.reduce((skills, key) => {
+    skills[key] = normalizeSkillLevel(source[key]);
+    return skills;
+  }, {});
+
+  const legacyAttack = Math.max(normalizeSkillLevel(source.striker), normalizeSkillLevel(source.attack));
+  const legacyIncome = Math.max(normalizeSkillLevel(source.prosperous), normalizeSkillLevel(source.income));
+  const legacyTroops = Math.max(normalizeSkillLevel(source.recruiter), normalizeSkillLevel(source.income));
+  const legacyDefense = Math.max(normalizeSkillLevel(source.guardian), normalizeSkillLevel(source.defense));
+  const legacySpeed = Math.max(normalizeSkillLevel(source.rusher), normalizeSkillLevel(source.speed));
+  const legacyRecovery = Math.max(normalizeSkillLevel(source.fearless), normalizeSkillLevel(source.brave));
+
+  normalized.swordmastery = Math.max(normalized.swordmastery, legacyAttack);
+  normalized.taxStewardship = Math.max(normalized.taxStewardship, legacyIncome);
+  normalized.royalGranaries = Math.max(normalized.royalGranaries, legacyTroops);
+  normalized.stoneworks = Math.max(normalized.stoneworks, legacyDefense);
+  normalized.marchOrders = Math.max(normalized.marchOrders, legacySpeed);
+  normalized.fieldMedics = Math.max(normalized.fieldMedics, legacyRecovery);
+  return normalized;
+}
+
+function getSpentSkillPoints(upgrades = {}) {
+  const normalized = normalizeSkillUpgrades(upgrades);
+  return SKILL_ORDER.reduce((total, key) => total + normalizeSkillLevel(normalized[key]), 0);
+}
+
 function getSkillLevel(profile = {}, skill = "") {
-  return Math.max(0, Math.floor(safeNumber(profile?.upgrades?.[skill], 0)));
+  return normalizeSkillUpgrades(profile?.upgrades)[skill] || 0;
 }
 
 function getSkillPercent(profile = {}, skill = "") {
@@ -222,20 +270,20 @@ function getCityProductionStats(city = {}, profile = {}, bonuses = {}) {
       + level * CITY_LEVEL_STATS.victoryPointsPerLevel
       + Math.pow(level, CITY_LEVEL_STATS.victoryPointsExponent) * CITY_LEVEL_STATS.victoryPointsExponentScale
   );
-  const recruiterPercent = getSkillPercent(profile, "recruiter");
-  const prosperousPercent = getSkillPercent(profile, "prosperous");
+  const royalGranariesPercent = getSkillPercent(profile, "royalGranaries");
+  const taxStewardshipPercent = getSkillPercent(profile, "taxStewardship");
   const warDrumsExpiresAtMs = Math.max(0, Math.floor(safeNumber(profile?.itemEffects?.warDrumsExpiresAtMs, 0)));
   const warDrumsTroopBonusPercent = !stronghold && warDrumsExpiresAtMs > Date.now()
     ? WAR_DRUMS_TROOP_PRODUCTION_BONUS_PERCENT
     : 0;
   const baseTroopProductionPerHour = stronghold ? 0 : victoryPoints * CITY_LEVEL_STATS.troopProductionPerVictoryPoint;
-  const recruiterBonusPerHour = stronghold ? 0 : victoryPoints * recruiterPercent / 100;
-  const troopProductionPerHour = (baseTroopProductionPerHour + recruiterBonusPerHour)
+  const troopProductionPerHour = baseTroopProductionPerHour
+    * (1 + royalGranariesPercent / 100)
     * (1 + Math.max(0, safeNumber(bonuses.troopBonusPercent, 0)) / 100)
     * (1 + warDrumsTroopBonusPercent / 100);
   const rawGoldProductionPerHour = stronghold ? 0 : getMillionLordsPassiveGoldPerHour(level);
   const goldProductionPerHour = rawGoldProductionPerHour
-    * (1 + prosperousPercent / 100)
+    * (1 + taxStewardshipPercent / 100)
     * (1 + Math.max(0, safeNumber(bonuses.goldBonusPercent, 0)) / 100);
 
   return {
@@ -257,17 +305,19 @@ function getCityStats(city = {}, defenderProfile = null) {
       + Math.pow(level, CITY_LEVEL_STATS.victoryPointsExponent) * CITY_LEVEL_STATS.victoryPointsExponentScale
   );
   const defensePercent = level * CITY_LEVEL_STATS.defensePercentPerLevel;
-  const cityWalls = CITY_LEVEL_STATS.cityWallsBase + step * CITY_LEVEL_STATS.cityWallsPerLevel;
-  const guardianPercent = defenderProfile ? getSkillPercent(defenderProfile, "guardian") : 0;
-  const troopDefense = Math.floor((Math.max(0, Math.floor(safeNumber(city.troops, 0)))) * (1 + defensePercent / 100) * (1 + guardianPercent / 100));
+  const baseCityWalls = CITY_LEVEL_STATS.cityWallsBase + step * CITY_LEVEL_STATS.cityWallsPerLevel;
+  const stoneworksPercent = defenderProfile ? getSkillPercent(defenderProfile, "stoneworks") : 0;
+  const cityWalls = Math.floor(baseCityWalls * (1 + stoneworksPercent / 100));
+  const troopDefense = Math.floor((Math.max(0, Math.floor(safeNumber(city.troops, 0)))) * (1 + defensePercent / 100));
   const totalDefense = Math.floor(cityWalls + troopDefense);
 
   return {
     level,
     victoryPoints,
     defensePercent,
+    baseCityWalls,
     cityWalls,
-    guardianPercent,
+    stoneworksPercent,
     totalDefense,
   };
 }
@@ -354,7 +404,7 @@ function applyDemoDefenderXpMultiplier(xp, demoAttack) {
 }
 
 function getAttackPower(troops, attackerProfile = null) {
-  const boost = attackerProfile ? skillMultiplier(attackerProfile, "striker") : 1;
+  const boost = attackerProfile ? skillMultiplier(attackerProfile, "swordmastery") : 1;
   return troops * BASE_TROOP_ATTACK_POWER * boost;
 }
 
@@ -366,7 +416,7 @@ function calculateCombatResult(attackTroops, target, attackerProfile = null, def
   const defensePower = getCityStats(target, defenderProfile).totalDefense;
   const ratio = attackPower / Math.max(1, defensePower);
   const success = attackPower > defensePower;
-  const attackerBoost = attackerProfile ? skillMultiplier(attackerProfile, "striker") : 1;
+  const attackerBoost = attackerProfile ? skillMultiplier(attackerProfile, "swordmastery") : 1;
   let survivors = 0;
   let defendersLeft = defendersAtStart;
   let attackerLosses = troops;
@@ -484,13 +534,14 @@ function getTroopTravelMultiplier(troops) {
   return ARMY_TRAVEL_TROOP_BAND_MULTIPLIERS[getTroopTravelBandIndex(troops)] || 1;
 }
 
-function calculateTravelTime({ pathLength = 0, troopCount = 1, kind = "attack", requestedTotal = 0, demoAttack = null }) {
+function calculateTravelTime({ pathLength = 0, troopCount = 1, kind = "attack", requestedTotal = 0, demoAttack = null, speedMultiplier = 1 }) {
   const distance = Math.max(1, safeNumber(pathLength, 1));
   const kindMultiplier = ARMY_TRAVEL_KIND_MULTIPLIERS[kind] || ARMY_TRAVEL_KIND_MULTIPLIERS.attack;
   const troopMultiplier = getTroopTravelMultiplier(troopCount);
   const demoMultiplier = normalizeDemoAttackSnapshot(demoAttack)?.travelMultiplier || 1;
   const minSeconds = kind === "scout" ? ARMY_TRAVEL_SCOUT_MIN_SECONDS : ARMY_TRAVEL_MIN_SECONDS;
-  const computed = clamp(distance * ARMY_TRAVEL_SECONDS_PER_MAP_UNIT * kindMultiplier * troopMultiplier * demoMultiplier, minSeconds, ARMY_TRAVEL_MAX_SECONDS);
+  const speed = Math.max(0.1, safeNumber(speedMultiplier, 1));
+  const computed = clamp(distance * ARMY_TRAVEL_SECONDS_PER_MAP_UNIT * kindMultiplier * troopMultiplier * demoMultiplier / speed, minSeconds, ARMY_TRAVEL_MAX_SECONDS);
   const requested = safeNumber(requestedTotal, computed);
   return clamp(Math.max(computed, requested), minSeconds, ARMY_TRAVEL_MAX_SECONDS);
 }
@@ -608,6 +659,18 @@ function getOwnerUid(city = {}) {
   return safeString(city.ownerUid, 128);
 }
 
+function getMainCityInfo(profile = {}) {
+  const id = safeString(profile?.mainCityId, 96).replace(/[^a-zA-Z0-9_-]/g, "_");
+  if (!id) return null;
+  const islandRegionId = profile?.mainIslandId ? getRegionIdFromOnlineIslandId(profile.mainIslandId) : "";
+  const regionId = normalizeRegionId(profile?.mainRegionId || profile?.mainRegion || islandRegionId || profile?.regionId || "west");
+  return {
+    id,
+    regionId,
+    ref: cityRefForRegion(regionId, id),
+  };
+}
+
 function isGivenUpNeutralCity(city = {}) {
   return Boolean(
     city
@@ -662,8 +725,12 @@ function normalizeDaily(daily = {}, now = new Date()) {
 function createScoutReportSnapshot(target = {}, defenderProfile = null, nowMs = Date.now()) {
   const stats = getCityStats(target, defenderProfile);
   const baseTroopDefense = Math.max(0, Math.floor(safeNumber(target.troops, 0)));
-  const cityAdjustedDefense = Math.floor(baseTroopDefense * (1 + stats.defensePercent / 100));
-  const troopDefense = Math.floor(cityAdjustedDefense * (1 + stats.guardianPercent / 100));
+  const troopDefense = Math.floor(baseTroopDefense * (1 + stats.defensePercent / 100));
+  const skillSnapshot = {};
+  for (const skill of SKILL_ORDER) {
+    skillSnapshot[`${skill}Level`] = defenderProfile ? getSkillLevel(defenderProfile, skill) : 0;
+    skillSnapshot[`${skill}Percent`] = defenderProfile ? getSkillPercent(defenderProfile, skill) : 0;
+  }
   return {
     troops: baseTroopDefense,
     totalDefense: Math.floor(stats.totalDefense),
@@ -673,8 +740,9 @@ function createScoutReportSnapshot(target = {}, defenderProfile = null, nowMs = 
     defensePercent: stats.defensePercent,
     cityWalls: stats.cityWalls,
     troopDefense,
-    cityDefenseBonus: Math.max(0, cityAdjustedDefense - baseTroopDefense),
-    guardianBonus: Math.max(0, troopDefense - cityAdjustedDefense),
+    cityDefenseBonus: Math.max(0, troopDefense - baseTroopDefense),
+    stoneworksBonus: Math.max(0, stats.cityWalls - stats.baseCityWalls),
+    ...skillSnapshot,
     scoutedAtMs: nowMs,
     expiresAtMs: nowMs + SCOUT_REPORT_SECONDS * 1000,
   };
@@ -866,6 +934,7 @@ function getOwnedStrongholdBonuses(cities = []) {
     return {
       goldBonusPercent: CROWN_CITADEL_GOLD_BONUS_PERCENT,
       troopBonusPercent: CROWN_CITADEL_TROOP_BONUS_PERCENT,
+      marchSpeedBonusPercent: CROWN_CITADEL_MARCH_SPEED_BONUS_PERCENT,
       upgradeCostReductionPercent: CROWN_CITADEL_UPGRADE_COST_REDUCTION_PERCENT,
     };
   }
@@ -873,8 +942,9 @@ function getOwnedStrongholdBonuses(cities = []) {
     const city = entry.city || {};
     if (isGoldStronghold(city)) bonuses.goldBonusPercent += getStrongholdBonusPercent(city);
     if (isTrainingStronghold(city)) bonuses.troopBonusPercent += getStrongholdBonusPercent(city);
+    if (isSpeedStronghold(city)) bonuses.marchSpeedBonusPercent += getStrongholdBonusPercent(city);
     return bonuses;
-  }, { goldBonusPercent: 0, troopBonusPercent: 0, upgradeCostReductionPercent: 0 });
+  }, { goldBonusPercent: 0, troopBonusPercent: 0, marchSpeedBonusPercent: 0, upgradeCostReductionPercent: 0 });
 }
 
 function getCityUpgradeCost(city = {}, bonuses = {}) {
@@ -1116,6 +1186,7 @@ function createEconomyResponse(economy = null, overrides = {}) {
     itemEffects,
     itemPurchaseCooldowns,
     character,
+    upgrades,
     cityUpdates,
     ...meta
   } = overrides;
@@ -1126,6 +1197,7 @@ function createEconomyResponse(economy = null, overrides = {}) {
     itemEffects: itemEffects || economy.itemEffects,
     itemPurchaseCooldowns: itemPurchaseCooldowns || economy.itemPurchaseCooldowns,
     character: character || economy.profileAfter.character || null,
+    upgrades: upgrades || normalizeSkillUpgrades(economy.profileAfter.upgrades),
   };
   return {
     ok: true,
@@ -1254,6 +1326,79 @@ exports.collectEconomy = onCall({ region: "us-central1", maxInstances: 30, invok
   });
 });
 
+exports.spendSkillPoint = onCall({ region: "us-central1", maxInstances: 20, invoker: "public" }, async request => {
+  const uid = requireAuth(request);
+  const data = request.data || {};
+  const skillId = safeString(data.skillId || data.skill, 64);
+  const config = SKILL_CONFIG[skillId];
+  if (!config) throw new HttpsError("invalid-argument", "Choose a valid skill.");
+
+  return db.runTransaction(async transaction => {
+    const profileRef = db.doc(`players/${uid}`);
+    const profileSnap = await transaction.get(profileRef);
+    if (!profileSnap.exists) throw new HttpsError("not-found", "Player profile was not found.");
+    const profile = profileSnap.data() || {};
+    const character = normalizeCharacterProgress(profile.character);
+    const upgrades = normalizeSkillUpgrades(profile.upgrades);
+    const currentLevel = normalizeSkillLevel(upgrades[skillId]);
+    const currentPercent = currentLevel * config.percentPerLevel;
+    if (Number.isFinite(config.maxPercent) && currentPercent >= config.maxPercent) {
+      throw new HttpsError("failed-precondition", "That skill is already capped.");
+    }
+    if (character.skillPoints < 1) {
+      throw new HttpsError("failed-precondition", "Earn a hero level for another skill point.");
+    }
+    character.skillPoints -= 1;
+    upgrades[skillId] = currentLevel + 1;
+    transaction.set(profileRef, {
+      character,
+      upgrades,
+      updatedAt: FieldValue.serverTimestamp(),
+    }, { merge: true });
+    return {
+      ok: true,
+      skillId,
+      currentUser: {
+        character,
+        upgrades,
+        gold: Math.max(0, Math.floor(safeNumber(profile.gold, 0))),
+        goldFloat: Math.max(0, safeNumber(profile.goldFloat, profile.gold || 0)),
+      },
+    };
+  });
+});
+
+exports.resetSkills = onCall({ region: "us-central1", maxInstances: 20, invoker: "public" }, async request => {
+  const uid = requireAuth(request);
+  const nowMs = Date.now();
+  return db.runTransaction(async transaction => {
+    const economy = await prepareEconomyCollection(transaction, uid, nowMs);
+    const spentPoints = getSpentSkillPoints(economy.profileAfter.upgrades);
+    if (spentPoints < 1) throw new HttpsError("failed-precondition", "No spent skill points to reset.");
+    if (economy.gold < SKILL_RESET_COST) {
+      throw new HttpsError("failed-precondition", `Skill reset costs ${SKILL_RESET_COST.toLocaleString()} gold.`);
+    }
+    const character = normalizeCharacterProgress(economy.profileAfter.character);
+    character.skillPoints += spentPoints;
+    const upgrades = normalizeSkillUpgrades({});
+    const gold = Math.max(0, economy.gold - SKILL_RESET_COST);
+    writePreparedEconomy(transaction, economy, {
+      character,
+      upgrades,
+      gold,
+      goldFloat: gold,
+    });
+    return createEconomyResponse(economy, {
+      character,
+      upgrades,
+      gold,
+      goldFloat: gold,
+      spentPoints,
+      resetCost: SKILL_RESET_COST,
+    });
+  });
+});
+
 exports.upgradeCity = onCall({ region: "us-central1", maxInstances: 20, invoker: "public" }, async request => {
   const uid = requireAuth(request);
   const data = request.data || {};
@@ -1281,9 +1426,17 @@ exports.upgradeCity = onCall({ region: "us-central1", maxInstances: 20, invoker:
     let upgraded = 0;
     let spentGold = 0;
     let xpAward = 0;
+    const upgradeBonuses = {
+      ...economy.bonuses,
+      upgradeCostReductionPercent: Math.min(
+        85,
+        Math.max(0, safeNumber(economy.bonuses.upgradeCostReductionPercent, 0))
+          + getSkillPercent(economy.profileAfter, "guildCharters")
+      ),
+    };
 
     while (upgraded < requestedLevels && clampCityLevel(city.level) < MAX_CITY_LEVEL) {
-      const cost = getCityUpgradeCost(city, economy.bonuses);
+      const cost = getCityUpgradeCost(city, upgradeBonuses);
       if (!Number.isFinite(cost) || gold < cost) break;
       goldFloat = Math.max(0, goldFloat - cost);
       gold = Math.max(0, Math.floor(goldFloat));
@@ -1781,6 +1934,8 @@ exports.sendArmyOrder = onCall({ region: "us-central1", maxInstances: 20, invoke
       kind: resolvedKind,
       requestedTotal: order.total,
       demoAttack,
+      speedMultiplier: skillMultiplier(attackerProfile, "marchOrders")
+        * (1 + Math.max(0, safeNumber(attackerEconomy.bonuses.marchSpeedBonusPercent, 0)) / 100),
     });
     const movement = {
       id: order.id,
@@ -1851,6 +2006,7 @@ exports.sendArmyOrder = onCall({ region: "us-central1", maxInstances: 20, invoke
         itemEffects: profileOverrides.itemEffects || attackerEconomy.itemEffects,
         itemPurchaseCooldowns: attackerEconomy.itemPurchaseCooldowns,
         character: attackerProfile.character || null,
+        upgrades: normalizeSkillUpgrades(attackerProfile.upgrades),
       },
       incomingNotification: createIncomingArmyNotification({
         defenderUid: targetOwnerUid,
@@ -1942,10 +2098,10 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
     const reportsForCaller = () => reports.filter(report => report.uid === callerUid);
     const profilePatchForCaller = (attackerPatch = null, defenderPatch = null) => {
       if (callerUid === attackerUid && attackerPatch) {
-        return { character: attackerPatch.character, gold: attackerPatch.gold, goldFloat: attackerPatch.goldFloat };
+        return { character: attackerPatch.character, gold: attackerPatch.gold, goldFloat: attackerPatch.goldFloat, upgrades: normalizeSkillUpgrades(attackerProfile.upgrades) };
       }
       if (callerUid === defenderUid && defenderPatch) {
-        return { character: defenderPatch.character, gold: defenderPatch.gold, goldFloat: defenderPatch.goldFloat };
+        return { character: defenderPatch.character, gold: defenderPatch.gold, goldFloat: defenderPatch.goldFloat, upgrades: normalizeSkillUpgrades(defenderProfile?.upgrades) };
       }
       return null;
     };
@@ -1968,6 +2124,25 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
       }), { merge: true });
       cityUpdates.push({ id: source.id, regionId: sourceRegionId, troops: nextTroops });
       return returned;
+    };
+    const recoverBattleLossesToMainCity = ({ uid = "", profile = {}, economy = null, losses = 0 } = {}) => {
+      const recovered = Math.floor(Math.max(0, safeNumber(losses, 0)) * getSkillPercent(profile, "fieldMedics") / 100);
+      if (!uid || recovered <= 0 || !economy) return 0;
+      const mainInfo = getMainCityInfo(profile);
+      if (!mainInfo?.ref) return 0;
+      const entry = getEconomyCityByRef(economy, mainInfo.ref);
+      const city = entry?.city;
+      if (!city || getOwnerUid(city) !== uid) return 0;
+      const troopFloat = Math.max(0, safeNumber(city.troopFloat, city.troops || 0)) + recovered;
+      const patch = {
+        troops: Math.max(0, Math.floor(troopFloat)),
+        troopFloat,
+        productionUpdatedAtMs: nowMs,
+      };
+      transaction.set(mainInfo.ref, cleanCityUpdate(city, patch), { merge: true });
+      cityUpdates.push({ id: city.id, regionId: mainInfo.regionId, ...patch });
+      entry.city = { ...city, ...patch };
+      return recovered;
     };
 
     const troopCount = Math.max(0, Math.floor(safeNumber(army.troops, 0)));
@@ -2094,18 +2269,12 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
     const attackFailXp = demoAttack || givenUpNeutralTarget ? 0 : getPartialBattleXpAward(getCaptureXpAward(target, oldOwnerUid, defendersAtStart, defenderProfile));
     const defenseHeldXp = applyDemoDefenderXpMultiplier(getDefenseHeldXpAward(troopCount, target, defenderProfile), demoAttack);
     const defenseLostXp = getPartialBattleXpAward(defenseHeldXp);
-    const attackerScavengerGold = Math.floor(result.killedDefenders * KILL_GOLD_BASE * getSkillPercent(attackerProfile, "scavenger") / 100);
-    const defenderSalvagerGold = defenderProfile
-      ? Math.floor(result.killedAttackers * KILL_GOLD_BASE * getSkillPercent(defenderProfile, "salvager") / 100)
-      : 0;
     const attackerProgress = buildPlayerProgressPatch(attackerProfile, {
       xp: result.success ? attackWinXp : attackFailXp,
-      gold: attackerScavengerGold,
     });
     const defenderProgress = defenderUid
       ? buildPlayerProgressPatch(defenderProfile || {}, {
         xp: result.success ? defenseLostXp : defenseHeldXp,
-        gold: defenderSalvagerGold,
       })
       : null;
 
@@ -2197,6 +2366,23 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
         gold: defenderProgress.gold,
         goldFloat: defenderProgress.goldFloat,
       } : {});
+      const attackerRecoveredTroops = recoverBattleLossesToMainCity({
+        uid: attackerUid,
+        profile: attackerProfile,
+        economy: attackerEconomy,
+        losses: result.attackerLosses,
+      });
+      const defenderRecoveredTroops = defenderUid && defenderUid !== attackerUid
+        ? recoverBattleLossesToMainCity({
+          uid: defenderUid,
+          profile: defenderProfile,
+          economy: defenderEconomy,
+          losses: result.defenderLosses,
+        })
+        : 0;
+      if (attackerRecoveredTroops > 0) {
+        attackerReport.summary = `${attackerReport.summary} Field Medics returned ${attackerRecoveredTroops.toLocaleString()} troops to your main city.`;
+      }
       transaction.set(targetRef, cleanCityUpdate(target, targetPatch), { merge: true });
       writeReport(transaction, attackerUid, attackerReport, attackerProfileSnap, {
         character: attackerProgress.character,
@@ -2218,7 +2404,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
           troopCount: defendersAtStart,
           result,
           totalDefense: targetStats.totalDefense,
-          summary: `${target.name || target.id} was captured by ${attackerName}. Level ${clampCityLevel(target.level).toLocaleString()} to ${nextLevel.toLocaleString()}. +${defenderProgress.xpAwarded.toLocaleString()} XP.`,
+          summary: `${target.name || target.id} was captured by ${attackerName}. Level ${clampCityLevel(target.level).toLocaleString()} to ${nextLevel.toLocaleString()}. +${defenderProgress.xpAwarded.toLocaleString()} XP.${defenderRecoveredTroops > 0 ? ` Field Medics returned ${defenderRecoveredTroops.toLocaleString()} troops to your main city.` : ""}`,
           xpAwarded: defenderProgress.xpAwarded,
           goldAwarded: defenderProgress.goldAwarded,
           characterAfter: defenderProgress.character,
@@ -2285,6 +2471,23 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
       gold: defenderProgress.gold,
       goldFloat: defenderProgress.goldFloat,
     } : {});
+    const attackerRecoveredTroops = recoverBattleLossesToMainCity({
+      uid: attackerUid,
+      profile: attackerProfile,
+      economy: attackerEconomy,
+      losses: result.attackerLosses,
+    });
+    const defenderRecoveredTroops = defenderUid && defenderUid !== attackerUid
+      ? recoverBattleLossesToMainCity({
+        uid: defenderUid,
+        profile: defenderProfile,
+        economy: defenderEconomy,
+        losses: result.defenderLosses,
+      })
+      : 0;
+    if (attackerRecoveredTroops > 0) {
+      attackerReport.summary = `${attackerReport.summary} Field Medics returned ${attackerRecoveredTroops.toLocaleString()} troops to your main city.`;
+    }
     transaction.set(targetRef, cleanCityUpdate(target, targetPatch), { merge: true });
     writeReport(transaction, attackerUid, attackerReport, attackerProfileSnap, {
       character: attackerProgress.character,
@@ -2305,7 +2508,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
         troopCount: defendersAtStart,
         result,
         totalDefense: targetStats.totalDefense,
-        summary: `${target.name || target.id} survived with ${result.defendersLeft.toLocaleString()} defenders. +${defenderProgress.xpAwarded.toLocaleString()} XP.`,
+        summary: `${target.name || target.id} survived with ${result.defendersLeft.toLocaleString()} defenders. +${defenderProgress.xpAwarded.toLocaleString()} XP.${defenderRecoveredTroops > 0 ? ` Field Medics returned ${defenderRecoveredTroops.toLocaleString()} troops to your main city.` : ""}`,
         xpAwarded: defenderProgress.xpAwarded,
         goldAwarded: defenderProgress.goldAwarded,
         characterAfter: defenderProgress.character,

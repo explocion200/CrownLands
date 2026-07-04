@@ -577,19 +577,16 @@ const KING_POWER_PER_CITY_VP = 10;
 const SKILL_RESET_COST = 10_000;
 
 const SKILL_CONFIG = {
-  striker: { label: "Striker", percentPerLevel: 2, description: "Attack combat bonus for outgoing armies." },
-  fearless: { label: "Fearless", percentPerLevel: 2, maxPercent: 75, description: "Saves a share of attacking losses back to your main city." },
-  brave: { label: "Brave", percentPerLevel: 2, maxPercent: 75, description: "Saves a share of defending losses back to your main city." },
-  guardian: { label: "Guardian", percentPerLevel: 3, description: "Defending troop bonus in your cities." },
-  prosperous: { label: "Prosperous", percentPerLevel: 3, description: "Gold production bonus from your cities." },
-  recruiter: { label: "Recruiter", percentPerLevel: 3, description: "Extra troop production based on city VP." },
-  rusher: { label: "Rusher", percentPerLevel: 5, description: "Army travel speed bonus." },
-  scavenger: { label: "Scavenger", percentPerLevel: 2, description: "Bonus gold for troops killed while attacking." },
-  salvager: { label: "Salvager", percentPerLevel: 2, description: "Bonus gold for troops killed while defending." },
-  cautious: { label: "Cautious", percentPerLevel: 1, maxPercent: 50, description: "Refunds a share of your invested city gold when a city is lost." },
+  swordmastery: { label: "Swordmastery", percentPerLevel: 2, maxPercent: 60, description: "Increases attack power for outgoing armies." },
+  stoneworks: { label: "Stoneworks", percentPerLevel: 3, maxPercent: 75, description: "Increases wall defense from city level." },
+  taxStewardship: { label: "Tax Stewardship", percentPerLevel: 3, maxPercent: 75, description: "Increases gold production from normal cities." },
+  royalGranaries: { label: "Royal Granaries", percentPerLevel: 3, maxPercent: 75, description: "Increases troop production from normal cities." },
+  guildCharters: { label: "Guild Charters", percentPerLevel: 2, maxPercent: 50, description: "Reduces gold cost when upgrading cities." },
+  marchOrders: { label: "March Orders", percentPerLevel: 3, maxPercent: 60, description: "Increases army travel speed for attacks, transfers, scouts, and regroups." },
+  fieldMedics: { label: "Field Medics", percentPerLevel: 2, maxPercent: 50, description: "Returns battle losses to your main city after attacks or defenses." },
 };
 
-const SKILL_ORDER = ["striker", "fearless", "brave", "guardian", "prosperous", "recruiter", "rusher", "scavenger", "salvager", "cautious"];
+const SKILL_ORDER = ["swordmastery", "stoneworks", "taxStewardship", "royalGranaries", "guildCharters", "marchOrders", "fieldMedics"];
 
 const FLAG_COLORS = ["#1f5f91", "#b23a35", "#2f7a4a", "#6d4aa2", "#d3a62e", "#202a38", "#d9e2e8", "#8d5a2f"];
 const FLAG_PATTERNS = [
@@ -2203,6 +2200,7 @@ let leaderboardLastSaveAt = 0;
 let overdueArmyResolveTimer = 0;
 let pendingArmyRecoveryInFlight = false;
 let shopPurchaseInFlight = false;
+let skillActionInFlight = false;
 let serverCityUpgradeInFlightIds = new Set();
 let serverCityRelinquishInFlightIds = new Set();
 let mainCityRelocationInFlight = false;
@@ -4684,11 +4682,16 @@ function normalizeUpgrades(upgrades, sourceVersion = 6) {
   const oldDefense = normalizeLegacySkillLevel(upgrades?.defense, sourceVersion, 0.08);
   const oldSpeed = normalizeLegacySkillLevel(upgrades?.speed, sourceVersion, 0.06);
 
-  normalized.striker = Math.max(normalized.striker, oldAttack);
-  normalized.prosperous = Math.max(normalized.prosperous, oldIncome);
-  normalized.recruiter = Math.max(normalized.recruiter, oldIncome);
-  normalized.guardian = Math.max(normalized.guardian, oldDefense);
-  normalized.rusher = Math.max(normalized.rusher, oldSpeed);
+  normalized.swordmastery = Math.max(normalized.swordmastery, oldAttack, Math.floor(Number(upgrades?.striker) || 0));
+  normalized.taxStewardship = Math.max(normalized.taxStewardship, oldIncome, Math.floor(Number(upgrades?.prosperous) || 0));
+  normalized.royalGranaries = Math.max(normalized.royalGranaries, oldIncome, Math.floor(Number(upgrades?.recruiter) || 0));
+  normalized.stoneworks = Math.max(normalized.stoneworks, oldDefense, Math.floor(Number(upgrades?.guardian) || 0));
+  normalized.marchOrders = Math.max(normalized.marchOrders, oldSpeed, Math.floor(Number(upgrades?.rusher) || 0));
+  normalized.fieldMedics = Math.max(
+    normalized.fieldMedics,
+    Math.floor(Number(upgrades?.fearless) || 0),
+    Math.floor(Number(upgrades?.brave) || 0),
+  );
 
   return normalized;
 }
@@ -5321,24 +5324,26 @@ function getCityStats(city) {
     + Math.pow(level, CITY_LEVEL_STATS.victoryPointsExponent) * CITY_LEVEL_STATS.victoryPointsExponentScale
   );
   const defensePercent = level * CITY_LEVEL_STATS.defensePercentPerLevel;
-  const cityWalls = CITY_LEVEL_STATS.cityWallsBase + step * CITY_LEVEL_STATS.cityWallsPerLevel;
-  const guardianPercent = city?.owner === "player" ? getSkillPercent("guardian") : 0;
-  const recruiterPercent = city?.owner === "player" ? getSkillPercent("recruiter") : 0;
-  const prosperousPercent = city?.owner === "player" ? getSkillPercent("prosperous") : 0;
+  const baseCityWalls = CITY_LEVEL_STATS.cityWallsBase + step * CITY_LEVEL_STATS.cityWallsPerLevel;
+  const stoneworksPercent = city?.owner === "player" ? getSkillPercent("stoneworks") : 0;
+  const cityWalls = Math.floor(baseCityWalls * (1 + stoneworksPercent / 100));
+  const royalGranariesPercent = city?.owner === "player" ? getSkillPercent("royalGranaries") : 0;
+  const taxStewardshipPercent = city?.owner === "player" ? getSkillPercent("taxStewardship") : 0;
   const strongholdGoldBonusPercent = !stronghold && city?.owner === "player" ? getControlledStrongholdGoldBonusPercent("player") : 0;
   const strongholdTroopBonusPercent = !stronghold && city?.owner === "player" ? getControlledStrongholdTroopBonusPercent("player") : 0;
   const strongholdDefenseBonusPercent = !stronghold ? getControlledStrongholdCityDefenseBonusPercentForCity(city) : 0;
   const warDrumsTroopBonusPercent = !stronghold && city?.owner === "player" ? getWarDrumsTroopProductionBonusPercent() : 0;
   const baseTroopProductionPerHour = stronghold ? 0 : victoryPoints * CITY_LEVEL_STATS.troopProductionPerVictoryPoint;
-  const recruiterBonusPerHour = stronghold ? 0 : victoryPoints * recruiterPercent / 100;
-  const troopProductionPerHour = (baseTroopProductionPerHour + recruiterBonusPerHour)
+  const royalGranariesBonusPerHour = stronghold ? 0 : baseTroopProductionPerHour * royalGranariesPercent / 100;
+  const troopProductionPerHour = baseTroopProductionPerHour
+    * (1 + royalGranariesPercent / 100)
     * (1 + strongholdTroopBonusPercent / 100)
     * (1 + warDrumsTroopBonusPercent / 100);
   const millionLordsProductionVp = getMillionLordsCityProductionVp(level);
   const rawGoldProductionPerHour = stronghold ? 0 : getMillionLordsPassiveGoldPerHour(level);
   const baseGoldProductionPerHour = rawGoldProductionPerHour;
-  const goldProductionPerHour = baseGoldProductionPerHour * (1 + prosperousPercent / 100) * (1 + strongholdGoldBonusPercent / 100);
-  const troopDefense = Math.floor((Number(city?.troops) || 0) * (1 + defensePercent / 100) * (1 + guardianPercent / 100));
+  const goldProductionPerHour = baseGoldProductionPerHour * (1 + taxStewardshipPercent / 100) * (1 + strongholdGoldBonusPercent / 100);
+  const troopDefense = Math.floor((Number(city?.troops) || 0) * (1 + defensePercent / 100));
   const baseTotalDefense = Math.floor(cityWalls + troopDefense);
   const strongholdDefenseBonus = Math.floor(baseTotalDefense * strongholdDefenseBonusPercent / 100);
   const totalDefense = baseTotalDefense + strongholdDefenseBonus;
@@ -5348,17 +5353,18 @@ function getCityStats(city) {
     victoryPoints,
     cityPower: victoryPoints,
     defensePercent,
+    baseCityWalls,
     cityWalls,
-    guardianPercent,
-    recruiterPercent,
-    prosperousPercent,
+    stoneworksPercent,
+    royalGranariesPercent,
+    taxStewardshipPercent,
     strongholdGoldBonusPercent,
     strongholdTroopBonusPercent,
     strongholdDefenseBonusPercent,
     strongholdDefenseBonus,
     warDrumsTroopBonusPercent,
     baseTroopProductionPerHour,
-    recruiterBonusPerHour,
+    royalGranariesBonusPerHour,
     troopProductionPerHour,
     millionLordsProductionVp,
     rawGoldProductionPerHour,
@@ -5376,7 +5382,7 @@ function getBattleDefensePower(city) {
 }
 
 function getAttackPower(troops, owner) {
-  const ownerBoost = owner === "player" ? skillMultiplier("striker") : 1.04;
+  const ownerBoost = owner === "player" ? skillMultiplier("swordmastery") : 1.04;
   return troops * BASE_TROOP_ATTACK_POWER * ownerBoost;
 }
 
@@ -5388,7 +5394,7 @@ function calculateCombatResult(attackTroops, attackOwner, target, options = {}) 
   const defensePower = getBattleDefensePower(target);
   const ratio = attackPower / Math.max(1, defensePower);
   const success = attackPower > defensePower;
-  const attackerBoost = attackOwner === "player" ? skillMultiplier("striker") : 1.04;
+  const attackerBoost = attackOwner === "player" ? skillMultiplier("swordmastery") : 1.04;
   let survivors = 0;
   let defendersLeft = defendersAtStart;
   let attackerLosses = troops;
@@ -5461,28 +5467,6 @@ function returnSurvivingAttackersToSource(attack, troops, reason = "") {
   const reasonText = reason ? ` from ${reason}` : "";
   addLog(`${formatNumber(returned)} surviving attackers returned to ${source.name}${reasonText}.`);
   return returned;
-}
-
-function grantKillGold(skill, killedTroops, reason) {
-  const percent = getSkillPercent(skill);
-  const killed = Math.max(0, Math.floor(Number(killedTroops) || 0));
-  if (percent <= 0 || killed <= 0) return 0;
-  const gold = Math.floor(killed * KILL_GOLD_BASE * percent / 100);
-  if (gold <= 0) return 0;
-  state.gold += gold;
-  addLog(`${SKILL_CONFIG[skill].label}: recovered ${formatNumber(gold)} gold from ${reason}.`);
-  return gold;
-}
-
-function grantCautiousRefund(city) {
-  const percent = getSkillPercent("cautious");
-  const invested = Math.max(0, Math.floor(Number(city?.investedGold) || 0));
-  if (percent <= 0 || invested <= 0) return 0;
-  const refund = Math.floor(invested * percent / 100);
-  if (refund <= 0) return 0;
-  state.gold += refund;
-  addLog(`Cautious: refunded ${formatNumber(refund)} gold from lost investment in ${city.name}.`);
-  return refund;
 }
 
 function currentLocalDateKey() {
@@ -5951,11 +5935,10 @@ function completeScoutMission(attack, target) {
 function createScoutReportSnapshot(target) {
   const stats = getCityStats(target);
   const baseTroopDefense = Math.max(0, Math.floor(Number(target.troops) || 0));
-  const cityAdjustedDefense = Math.floor(baseTroopDefense * (1 + stats.defensePercent / 100));
-  const troopDefense = Math.floor(cityAdjustedDefense * (1 + stats.guardianPercent / 100));
+  const troopDefense = Math.floor(baseTroopDefense * (1 + stats.defensePercent / 100));
   const ownerUsesPlayerSkills = target.owner === "player";
   const skillSnapshot = {};
-  for (const skill of ["guardian", "brave", "cautious", "striker", "fearless", "scavenger"]) {
+  for (const skill of SKILL_ORDER) {
     const level = ownerUsesPlayerSkills ? getSkillLevel(skill) : 0;
     const config = SKILL_CONFIG[skill];
     const rawPercent = level * config.percentPerLevel;
@@ -5971,8 +5954,8 @@ function createScoutReportSnapshot(target) {
     defensePercent: stats.defensePercent,
     cityWalls: stats.cityWalls,
     troopDefense,
-    cityDefenseBonus: Math.max(0, cityAdjustedDefense - baseTroopDefense),
-    guardianBonus: Math.max(0, troopDefense - cityAdjustedDefense),
+    cityDefenseBonus: Math.max(0, troopDefense - baseTroopDefense),
+    stoneworksBonus: Math.max(0, stats.cityWalls - stats.baseCityWalls),
     baseAttackPercent: target.owner === "enemy" ? 4 : 0,
     ...skillSnapshot,
     scoutedAt: state.gameSeconds,
@@ -6194,6 +6177,11 @@ function applyServerProfilePatch(patch = null) {
   if (patch.character) {
     state.character = normalizeCharacterProgress(patch.character);
     syncCharacterSkillPoints(state.character, state.upgrades, patch.character?.skillPoints);
+    changed = true;
+  }
+  if (patch.upgrades && typeof patch.upgrades === "object") {
+    state.upgrades = normalizeUpgrades(patch.upgrades, state.version);
+    syncCharacterSkillPoints(state.character, state.upgrades, state.character?.skillPoints);
     changed = true;
   }
   if (Number.isFinite(Number(patch.gold))) {
@@ -6441,6 +6429,8 @@ function stripServerEconomyProfileFields(profile = {}) {
   delete clean.itemEffects;
   delete clean.itemPurchaseCooldowns;
   delete clean.offlineProductionCities;
+  delete clean.character;
+  delete clean.upgrades;
   return clean;
 }
 
@@ -10787,7 +10777,7 @@ function travelTime(source, target, owner, pathLength = null, troopCount = 1, ki
   const distance = Number.isFinite(pathLength) && pathLength > 0
     ? pathLength
     : Math.hypot(source.x - target.x, source.y - target.y);
-  const speed = owner === "player" ? skillMultiplier("rusher") * getStrongholdMarchSpeedMultiplier(owner) : 1;
+  const speed = owner === "player" ? skillMultiplier("marchOrders") * getStrongholdMarchSpeedMultiplier(owner) : 1;
   const kindMultiplier = ARMY_TRAVEL_KIND_MULTIPLIERS[kind] || ARMY_TRAVEL_KIND_MULTIPLIERS.attack;
   const troopMultiplier = getTroopTravelMultiplier(troopCount);
   const demoAttack = kind === "attack" ? normalizeDemoAttackSnapshot(options.demoAttack) : null;
@@ -10981,8 +10971,6 @@ function resolveAttack(attack) {
 
     const xpEfficiency = attack.owner === "player" ? (demoAttack || givenUpNeutralTarget ? 0 : getCaptureXpEfficiency(target, oldOwner)) : 1;
     const xpAward = attack.owner === "player" && !demoAttack && !givenUpNeutralTarget ? getCaptureXpAward(target, oldOwner, result.defenderLosses, attack.owner) : 0;
-    const cautiousRefund = oldOwner === "player" && attack.owner !== "player" ? grantCautiousRefund(target) : 0;
-
     if (attack.owner === "player") {
       target.owner = "player";
       target.ownerKind = "player";
@@ -11013,8 +11001,7 @@ function resolveAttack(attack) {
     if (neutralCapture) recordNeutralCapture();
 
     if (attack.owner === "player") {
-      const savedAttackers = returnSavedTroops("fearless", result.attackerLosses, `${target.name} attack`);
-      const scavengedGold = grantKillGold("scavenger", result.killedDefenders, `${target.name} attack`);
+      const savedAttackers = returnSavedTroops("fieldMedics", result.attackerLosses, `${target.name} attack`);
       addBattleReport({
         type: "attack",
         outcome: "victory",
@@ -11031,16 +11018,11 @@ function resolveAttack(attack) {
         opponentName: defenderName,
         summary: `Captured with ${formatNumber(result.survivors)} survivors. ${formatCapturedCityLevelDrop(levelDrop)} +${formatNumber(xpAward)} XP.${demoReportSuffix}`,
       });
-      addLog(`Victory: you captured ${target.name} with ${formatNumber(result.survivors)} survivors. ${formatCapturedCityLevelDrop(levelDrop)} XP efficiency ${Math.round(xpEfficiency * 100)}%.`);
-      if (scavengedGold > 0) {
-        showToast(`Captured ${target.name}: +${formatNumber(xpAward)} XP, +${formatNumber(scavengedGold)} gold`);
-      } else {
-        showToast(`Captured ${target.name}: +${formatNumber(xpAward)} XP`);
-      }
+      addLog(`Victory: you captured ${target.name} with ${formatNumber(result.survivors)} survivors. ${formatNumber(savedAttackers)} troops recovered. ${formatCapturedCityLevelDrop(levelDrop)} XP efficiency ${Math.round(xpEfficiency * 100)}%.`);
+      showToast(`Captured ${target.name}: +${formatNumber(xpAward)} XP`);
       addCharacterXp(xpAward, `${target.name} capture`);
     } else if (oldOwner === "player") {
-      const savedDefenders = returnSavedTroops("brave", result.defenderLosses, `${target.name} defense`, target.id);
-      const salvagedGold = grantKillGold("salvager", result.killedAttackers, `${target.name} defense`);
+      const savedDefenders = returnSavedTroops("fieldMedics", result.defenderLosses, `${target.name} defense`, target.id);
       const defenseLossXp = applyDefenseOpponentXpMultiplier(getLostDefenseXpAward(attack.troops, target), attack, target, demoAttack);
       addBattleReport({
         type: "defense",
@@ -11058,7 +11040,7 @@ function resolveAttack(attack) {
         opponentName: attackerReportName,
         summary: `${target.name} was captured by ${attackerReportName}. ${formatCapturedCityLevelDrop(levelDrop)} +${formatNumber(defenseLossXp)} XP.${demoReportSuffix}`,
       });
-      addLog(`Lost: the enemy captured ${target.name}. ${formatCapturedCityLevelDrop(levelDrop)} ${formatNumber(savedDefenders)} defenders escaped, ${formatNumber(cautiousRefund + salvagedGold)} gold was recovered, and you gained ${formatNumber(defenseLossXp)} XP.`);
+      addLog(`Lost: the enemy captured ${target.name}. ${formatCapturedCityLevelDrop(levelDrop)} ${formatNumber(savedDefenders)} troops recovered, and you gained ${formatNumber(defenseLossXp)} XP.`);
       showToast(`You lost ${target.name}: +${formatNumber(defenseLossXp)} XP`);
       addCharacterXp(defenseLossXp, `${target.name} lost defense`);
     }
@@ -11067,8 +11049,7 @@ function resolveAttack(attack) {
     target.troops = result.defendersLeft;
 
     if (attack.owner === "player") {
-      const savedAttackers = returnSavedTroops("fearless", result.attackerLosses, `${target.name} failed attack`);
-      const scavengedGold = grantKillGold("scavenger", result.killedDefenders, `${target.name} failed attack`);
+      const savedAttackers = returnSavedTroops("fieldMedics", result.attackerLosses, `${target.name} failed attack`);
       const failedAttackXp = demoAttack || givenUpNeutralTarget ? 0 : getFailedAttackXpAward(target, oldOwner, defendersAtStart, attack.owner);
       addBattleReport({
         type: "attack",
@@ -11086,12 +11067,11 @@ function resolveAttack(attack) {
         opponentName: defenderName,
         summary: `${formatNumber(result.defendersLeft)} defenders remained. +${formatNumber(failedAttackXp)} XP.${demoReportSuffix}`,
       });
-      addLog(`Defeat: your attack on ${target.name} failed. ${formatNumber(result.defendersLeft)} defenders remain. ${formatNumber(savedAttackers)} attackers regrouped, ${formatNumber(scavengedGold)} gold was recovered, and you gained ${formatNumber(failedAttackXp)} XP.`);
+      addLog(`Defeat: your attack on ${target.name} failed. ${formatNumber(result.defendersLeft)} defenders remain. ${formatNumber(savedAttackers)} troops recovered, and you gained ${formatNumber(failedAttackXp)} XP.`);
       showToast(`Attack failed at ${target.name}: +${formatNumber(failedAttackXp)} XP`);
       addCharacterXp(failedAttackXp, `${target.name} failed attack`);
     } else if (oldOwner === "player") {
-      const savedDefenders = returnSavedTroops("brave", result.defenderLosses, `${target.name} defense`);
-      const salvagedGold = grantKillGold("salvager", result.killedAttackers, `${target.name} defense`);
+      const savedDefenders = returnSavedTroops("fieldMedics", result.defenderLosses, `${target.name} defense`);
       const defenseHeldXp = applyDefenseOpponentXpMultiplier(getDefenseHeldXpAward(attack.troops, target), attack, target, demoAttack);
       addBattleReport({
         type: "defense",
@@ -11110,8 +11090,8 @@ function resolveAttack(attack) {
         summary: `${target.name} survived with ${formatNumber(result.defendersLeft)} defenders. +${formatNumber(defenseHeldXp)} XP.${demoReportSuffix}`,
       });
       addLog(`Defense held: ${target.name} survived the enemy attack.`);
-      if (savedDefenders > 0 || salvagedGold > 0) {
-        addLog(`Defense rewards: ${formatNumber(savedDefenders)} defenders regrouped and ${formatNumber(salvagedGold)} gold was salvaged.`);
+      if (savedDefenders > 0) {
+        addLog(`Field Medics recovered ${formatNumber(savedDefenders)} defenders to your main city.`);
       }
       showToast(`Defense held at ${target.name}`);
       addCharacterXp(defenseHeldXp, `${target.name} defense`);
@@ -11548,7 +11528,9 @@ function renderProfileSkills() {
   state.upgrades = normalizeUpgrades(state.upgrades, state.version);
   const points = Math.max(0, Math.floor(Number(state.character.skillPoints) || 0));
   const spentPoints = getSpentSkillPoints();
-  const canResetSkills = spentPoints > 0 && Math.floor(Number(state.gold) || 0) >= SKILL_RESET_COST;
+  const canResetSkills = !skillActionInFlight
+    && spentPoints > 0
+    && (usesServerEconomyAuthority() || Math.floor(Number(state.gold) || 0) >= SKILL_RESET_COST);
   skillsView.innerHTML = `
     <div class="profile-skill-summary" aria-label="Hero skill progress">
       <div><span>Skill points</span><strong>${formatNumber(points)}</strong></div>
@@ -12096,7 +12078,7 @@ function showScoutReportModal(cityId) {
   const defensePercent = Math.max(0, Number(report.defensePercent) || cityLevel * CITY_LEVEL_STATS.defensePercentPerLevel);
   const cityWalls = Math.max(0, Math.floor(Number(report.cityWalls) || getCityStats({ ...city, level: cityLevel, troops: report.troops }).cityWalls));
   const cityDefenseBonus = Math.max(0, Math.floor(Number(report.cityDefenseBonus) || report.troops * defensePercent / 100));
-  const guardianBonus = Math.max(0, Math.floor(Number(report.guardianBonus) || 0));
+  const stoneworksBonus = Math.max(0, Math.floor(Number(report.stoneworksBonus) || 0));
   modal.classList.add("scout-report-modal");
   modalTitle.textContent = "Detailed scout report";
   modalBody.innerHTML = `
@@ -12125,7 +12107,7 @@ function showScoutReportModal(cityId) {
         <div class="scout-defense-breakdown">
           ${scoutBreakdownRow("&#9817;", "Troops", "Reported garrison", report.troops)}
           ${scoutBreakdownRow("&#128737;", "City defense", `Lv ${cityLevel} - +${formatNumber(defensePercent)}%`, cityDefenseBonus)}
-          ${scoutBreakdownRow("&#10022;", "Guardian", `Lv ${report.guardianLevel || 0} - +${report.guardianPercent || 0}%`, guardianBonus)}
+          ${scoutBreakdownRow("&#10022;", "Stoneworks", `Lv ${report.stoneworksLevel || 0} - +${report.stoneworksPercent || 0}%`, stoneworksBonus)}
           ${scoutBreakdownRow("&#9819;", "City walls", `Lv ${cityLevel}`, cityWalls)}
           <div class="scout-breakdown-total"><span>Total</span><strong>${formatNumber(report.totalDefense)}</strong></div>
         </div>
@@ -12135,17 +12117,18 @@ function showScoutReportModal(cityId) {
         <section class="scout-report-section">
           <h3>Enemy defense stats</h3>
           <div class="scout-skill-list">
-            ${scoutSkillRow("Guardian", report.guardianLevel, report.guardianPercent)}
-            ${scoutSkillRow("Brave", report.braveLevel, report.bravePercent)}
-            ${scoutSkillRow("Cautious", report.cautiousLevel, report.cautiousPercent)}
+            ${scoutSkillRow("Stoneworks", report.stoneworksLevel, report.stoneworksPercent)}
+            ${scoutSkillRow("Field Medics", report.fieldMedicsLevel, report.fieldMedicsPercent)}
+            ${scoutSkillRow("Guild Charters", report.guildChartersLevel, report.guildChartersPercent)}
           </div>
         </section>
         <section class="scout-report-section">
           <h3>Enemy attack stats</h3>
           <div class="scout-skill-list">
-            ${scoutSkillRow("Striker", report.strikerLevel, report.strikerPercent)}
-            ${scoutSkillRow("Fearless", report.fearlessLevel, report.fearlessPercent)}
-            ${scoutSkillRow("Scavenger", report.scavengerLevel, report.scavengerPercent)}
+            ${scoutSkillRow("Swordmastery", report.swordmasteryLevel, report.swordmasteryPercent)}
+            ${scoutSkillRow("March Orders", report.marchOrdersLevel, report.marchOrdersPercent)}
+            ${scoutSkillRow("Tax Stewardship", report.taxStewardshipLevel, report.taxStewardshipPercent)}
+            ${scoutSkillRow("Royal Granaries", report.royalGranariesLevel, report.royalGranariesPercent)}
             <div class="scout-skill-row base"><span>Base attack</span><strong>+${formatNumber(report.baseAttackPercent || 0)}%</strong></div>
           </div>
         </section>
@@ -13032,7 +13015,7 @@ function showCityInfoModal(cityId) {
     <div class="city-stat-panel modal-city-stats">
       <div class="stat-wide"><span>Total defense</span><strong>${formatNumber(stats.totalDefense)}</strong></div>
       <div class="stat-chip"><span>Troops</span><strong>${formatNumber(city.troops)}</strong></div>
-      <div class="stat-chip"><span>Guardian</span><strong>${stats.guardianPercent}%</strong></div>
+      <div class="stat-chip"><span>Stoneworks</span><strong>${stats.stoneworksPercent}%</strong></div>
       <div class="stat-chip"><span>City power</span><strong>${formatNumber(stats.cityPower)}</strong><small>+${CITY_LEVEL_STATS.victoryPointsPerLevel}/level</small></div>
       <div class="stat-chip"><span>Defense</span><strong>${stats.defensePercent}%</strong><small>+${CITY_LEVEL_STATS.defensePercentPerLevel}%/level${stats.strongholdDefenseBonusPercent ? ` + Stronghold ${formatNumber(stats.strongholdDefenseBonusPercent)}%` : ""}</small></div>
       <div class="stat-chip"><span>Troops production</span><strong>${formatNumber(stats.troopProductionPerHour)}/h</strong>${stats.warDrumsTroopBonusPercent ? `<small>War Drums +${formatNumber(stats.warDrumsTroopBonusPercent)}%</small>` : ""}</div>
@@ -13072,10 +13055,10 @@ function showCityInfoModal(cityId) {
       <div class="stat-chip"><span>Victory points</span><strong>${formatNumber(stats.victoryPoints)}</strong><small>Drives growth and XP value</small></div>
       <div class="stat-chip"><span>City defense</span><strong>${stats.defensePercent}%</strong><small>${CITY_LEVEL_STATS.defensePercentPerLevel}% per level${stats.strongholdDefenseBonusPercent ? ` + Stronghold ${formatNumber(stats.strongholdDefenseBonusPercent)}%` : ""}</small></div>
       <div class="stat-chip"><span>City walls</span><strong>${formatNumber(stats.cityWalls)}</strong><small>Level-based static defense</small></div>
-      <div class="stat-chip"><span>Guardian</span><strong>${stats.guardianPercent}%</strong><small>Player defense skill</small></div>
+      <div class="stat-chip"><span>Stoneworks</span><strong>${stats.stoneworksPercent}%</strong><small>Wall defense skill</small></div>
       <div class="stat-chip"><span>Troops production</span><strong>${formatNumber(stats.troopProductionPerHour)}/h</strong>${stats.warDrumsTroopBonusPercent ? `<small>War Drums +${formatNumber(stats.warDrumsTroopBonusPercent)}%</small>` : ""}</div>
       <div class="stat-chip"><span>Gold production</span><strong>${formatNumber(stats.goldProductionPerHour)}/h</strong></div>
-      <div class="stat-chip"><span>Invested gold</span><strong>${formatNumber(city.investedGold || 0)}</strong><small>Cautious can refund part</small></div>
+      <div class="stat-chip"><span>Invested gold</span><strong>${formatNumber(city.investedGold || 0)}</strong><small>Clears when captured</small></div>
       ${cooldownRemaining > 0 ? `<div class="stat-wide"><span>Capture XP cooldown</span><strong>${formatDuration(cooldownRemaining)}</strong></div>` : ""}
       ${renderRelinquishCityAction(city)}
     </div>
@@ -13832,7 +13815,9 @@ function getMultiLevelCost(city, levels) {
     Math.pow(MILLION_LORDS_CITY_COST_GROWTH, targetLevel - 1)
     - Math.pow(MILLION_LORDS_CITY_COST_GROWTH, startLevel - 1)
   );
-  const upgradeReductionPercent = city?.owner === "player" ? getControlledStrongholdUpgradeCostReductionPercent("player") : 0;
+  const upgradeReductionPercent = city?.owner === "player"
+    ? Math.min(85, getControlledStrongholdUpgradeCostReductionPercent("player") + getSkillPercent("guildCharters"))
+    : 0;
   const discountedCost = totalCost * (1 - upgradeReductionPercent / 100);
   return Math.max(0, Math.floor(discountedCost + 0.000001));
 }
@@ -13999,52 +13984,6 @@ function estimateOutcome(source, target, percent) {
   return calculateBattlePreview(source, target, percent).label;
 }
 
-function showLegacyEmpireModal() {
-  const attackCost = getSkillCost("attack");
-  const incomeCost = getSkillCost("income");
-  const defenseCost = getSkillCost("defense");
-  const speedCost = getSkillCost("speed");
-  modalTitle.textContent = "Empire Skills";
-  modalBody.innerHTML = `
-    <div class="stat-grid">
-      <div class="stat-card"><strong>${formatNumber(Math.floor(state.gold))}</strong><small>gold available</small></div>
-      <div class="stat-card"><strong>+${getGoldPerSecond().toFixed(1)}/s</strong><small>gold income</small></div>
-      <div class="stat-card"><strong>${getAllOwnedRegularCitiesForDisplay().length}</strong><small>cities owned</small></div>
-    </div>
-    ${skillRow("Attack", "attack", "Army attack power", attackCost)}
-    ${skillRow("Income", "income", "Gold and troop growth", incomeCost)}
-    ${skillRow("Defense", "defense", "Player city defense", defenseCost)}
-    ${skillRow("March", "speed", "Army travel speed", speedCost)}
-  `;
-  modalBody.querySelectorAll("button[data-skill]").forEach(btn => {
-    btn.addEventListener("click", () => buySkill(btn.dataset.skill));
-  });
-  if (!modal.open) modal.showModal();
-}
-
-function legacySkillRow(label, key, description, cost) {
-  const level = Number(state.upgrades[key]) || 0;
-  const multiplier = skillMultiplier(key).toFixed(2).replace(/\.00$/, "");
-  const disabled = state.gold < cost ? "disabled" : "";
-  return `
-    <div class="skill-row">
-      <div><strong>${label} Lv ${level} \u00B7 x${multiplier}</strong><br><small>${description}</small></div>
-      <button data-skill="${key}" ${disabled}>${formatNumber(cost)}</button>
-    </div>
-  `;
-}
-
-function legacyBuySkill(skill) {
-  const cost = getSkillCost(skill);
-  if (state.gold < cost) return;
-  state.gold -= cost;
-  state.upgrades[skill] = Math.max(0, Number(state.upgrades[skill]) || 0) + 1;
-  addLog(`Empire skill improved: ${skill} is now level ${state.upgrades[skill]}.`);
-  saveGame();
-  showEmpireModal();
-  renderAll();
-}
-
 function showEmpireModal() {
   if (!state) {
     showToast("Start a map first.");
@@ -14061,7 +14000,7 @@ function skillRow(key) {
   const percent = getSkillPercent(key);
   const capText = Number.isFinite(config.maxPercent) ? `, cap ${config.maxPercent}%` : "";
   const capped = isSkillAtCap(key);
-  const disabled = Math.max(0, Math.floor(Number(state.character?.skillPoints) || 0)) < 1 || capped ? "disabled" : "";
+  const disabled = skillActionInFlight || Math.max(0, Math.floor(Number(state.character?.skillPoints) || 0)) < 1 || capped ? "disabled" : "";
   const buttonLabel = capped ? "Max" : "+1";
   return `
     <div class="skill-row">
@@ -14071,7 +14010,7 @@ function skillRow(key) {
   `;
 }
 
-function buySkill(skill) {
+async function buySkill(skill) {
   const config = SKILL_CONFIG[skill];
   if (!config) return;
   state.character = normalizeCharacterProgress(state.character);
@@ -14084,6 +14023,24 @@ function buySkill(skill) {
     showToast("Earn a hero level for another skill point.");
     return;
   }
+  if (usesServerEconomyAuthority() && getOnlineApi()?.spendSkillPoint) {
+    if (skillActionInFlight) return;
+    skillActionInFlight = true;
+    renderProfileSkills();
+    try {
+      const result = await getOnlineApi().spendSkillPoint({ skillId: skill });
+      applyServerEconomyResult(result);
+      addLog(`${config.label} improved to level ${getSkillLevel(skill)}.`);
+      showToast(`${config.label} improved`);
+    } catch (error) {
+      console.warn("Could not spend skill point on server", error);
+      showToast(error?.message || "Skill upgrade failed.");
+    } finally {
+      skillActionInFlight = false;
+      renderAll();
+    }
+    return;
+  }
   state.character.skillPoints -= 1;
   state.upgrades[skill] = getSkillLevel(skill) + 1;
   addLog(`${SKILL_CONFIG[skill].label} improved to level ${state.upgrades[skill]}.`);
@@ -14091,7 +14048,7 @@ function buySkill(skill) {
   renderAll();
 }
 
-function resetSkills() {
+async function resetSkills() {
   if (!state) return;
   state.character = normalizeCharacterProgress(state.character);
   state.upgrades = normalizeUpgrades(state.upgrades, state.version);
@@ -14099,6 +14056,24 @@ function resetSkills() {
   if (spentPoints < 1) {
     showToast("No spent skill points to reset.");
     renderProfileSkills();
+    return;
+  }
+  if (usesServerEconomyAuthority() && getOnlineApi()?.resetSkills) {
+    if (skillActionInFlight) return;
+    skillActionInFlight = true;
+    renderProfileSkills();
+    try {
+      const result = await getOnlineApi().resetSkills();
+      applyServerEconomyResult(result);
+      addLog(`Skills reset for ${formatNumber(result?.resetCost || SKILL_RESET_COST)} gold. Refunded ${formatNumber(result?.spentPoints || spentPoints)} skill ${Number(result?.spentPoints || spentPoints) === 1 ? "point" : "points"}.`);
+      showToast(`Skills reset: +${formatNumber(result?.spentPoints || spentPoints)} points`);
+    } catch (error) {
+      console.warn("Could not reset skills on server", error);
+      showToast(error?.message || "Skill reset failed.");
+    } finally {
+      skillActionInFlight = false;
+      renderAll();
+    }
     return;
   }
   const currentGold = Math.floor(Number(state.gold) || 0);
@@ -14114,11 +14089,6 @@ function resetSkills() {
   saveGame();
   renderAll();
   showToast(`Skills reset: +${formatNumber(spentPoints)} points`);
-}
-
-function getSkillCost(skill) {
-  const level = Math.max(0, Number(state.upgrades[skill]) || 0);
-  return Math.floor(450 * Math.pow(level + 1, 1.85));
 }
 
 function updateIncomingAttackUi() {
@@ -14723,12 +14693,11 @@ function showHelpModal() {
       <li>Regroup costs ${formatNumber(REGROUP_COST)} gold, previews a larger red radius, then sends all troops from nearby owned cities into the selected city.</li>
       <li>The top-right fullscreen button expands the game surface and the game disables page text selection while playing.</li>
       <li>City level creates victory points for combat value, while passive gold follows the Million Lords city production curve.</li>
-      <li>City defense is level x 3%, plus wall strength and any Guardian skill bonus for your defending troops.</li>
-      <li>Troop production is VP x 3, with Recruiter adding more production from VP. Passive gold uses ML city production VP x ${formatNumber(MILLION_LORDS_PASSIVE_GOLD_PER_CITY_VP)}, with Prosperous and Stronghold bonuses added on top.</li>
-      <li>Army travel uses route distance plus troop-size bands. Larger armies march slower, scouts move as one troop, and Rusher reduces travel time.</li>
+      <li>City defense is level x 3%, plus wall strength. Stoneworks increases the wall part of defense.</li>
+      <li>Troop production is VP x 3, improved by Royal Granaries. Passive gold uses ML city production VP x ${formatNumber(MILLION_LORDS_PASSIVE_GOLD_PER_CITY_VP)}, improved by Tax Stewardship and stronghold bonuses.</li>
+      <li>Army travel uses route distance plus troop-size bands. Larger armies march slower, scouts move as one troop, and March Orders reduces travel time.</li>
       <li>Glowing pickups appear near your owned cities on the current island during active play once per minute, alternating between gold and stored troop-production rewards. Daily pickup limits are ${formatNumber(HARVEST_BONUS_DAILY_GOLD_LIMIT)} gold and ${formatNumber(HARVEST_BONUS_DAILY_TROOP_LIMIT)} troop pickups.</li>
-      <li>Prosperous boosts gold, Rusher boosts travel speed, and Striker boosts attacking combat power.</li>
-      <li>Fearless saves some attacking losses, Brave saves some defending losses, Scavenger and Salvager recover gold from kills, and Cautious refunds some invested gold when you lose a city.</li>
+      <li>Swordmastery boosts outgoing attack, Guild Charters reduces city upgrade cost, and Field Medics returns part of battle losses to your main city.</li>
       <li>Captured cities enter a one-hour XP cooldown. Attacking during cooldown still works, but capture XP is reduced.</li>
       <li>Main cities cannot be attacked. Use your main city as a protected home base while expanding from other cities.</li>
       <li>Demo Attacks protect weaker kingdoms: much stronger attackers send fewer effective troops, march slower, earn 0 XP, and defenders earn bonus XP.</li>
