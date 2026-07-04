@@ -4422,11 +4422,15 @@ function normalizeShopItems(items) {
   if (!items || typeof items !== "object") return normalized;
   SHOP_ITEMS.forEach(item => {
     const hasCanonicalCount = Object.prototype.hasOwnProperty.call(items, item.id);
+    const canonicalCount = Math.max(0, Math.floor(Number(items[item.id]) || 0));
     const legacyCount = (item.legacyIds || []).reduce((total, legacyId) => (
       total + Math.max(0, Math.floor(Number(items[legacyId]) || 0))
     ), 0);
+    const hasLegacyCount = legacyCount > 0 && (item.legacyIds || []).some(legacyId => (
+      Object.prototype.hasOwnProperty.call(items, legacyId)
+    ));
     normalized[item.id] = hasCanonicalCount
-      ? Math.max(0, Math.floor(Number(items[item.id]) || 0))
+      ? (hasLegacyCount ? Math.min(canonicalCount, legacyCount) : canonicalCount)
       : legacyCount;
   });
   return normalized;

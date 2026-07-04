@@ -826,8 +826,13 @@ function normalizeShopItems(items = {}) {
   Object.keys(SHOP_ITEMS).forEach(itemId => {
     normalized[itemId] = Math.max(0, Math.floor(safeNumber(items[itemId], 0)));
   });
-  if (!Object.prototype.hasOwnProperty.call(items, WAR_DRUMS_ITEM_ID) && Number.isFinite(Number(items.troop_boost_1h))) {
-    normalized[WAR_DRUMS_ITEM_ID] += Math.max(0, Math.floor(safeNumber(items.troop_boost_1h, 0)));
+  const hasWarDrumsCount = Object.prototype.hasOwnProperty.call(items, WAR_DRUMS_ITEM_ID);
+  const legacyWarDrumsCount = Math.max(0, Math.floor(safeNumber(items.troop_boost_1h, 0)));
+  const hasLegacyWarDrumsCount = legacyWarDrumsCount > 0 && Object.prototype.hasOwnProperty.call(items, "troop_boost_1h");
+  if (!hasWarDrumsCount && Number.isFinite(Number(items.troop_boost_1h))) {
+    normalized[WAR_DRUMS_ITEM_ID] = legacyWarDrumsCount;
+  } else if (hasLegacyWarDrumsCount) {
+    normalized[WAR_DRUMS_ITEM_ID] = Math.min(normalized[WAR_DRUMS_ITEM_ID], legacyWarDrumsCount);
   }
   return normalized;
 }
