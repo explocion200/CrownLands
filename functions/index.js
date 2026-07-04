@@ -103,10 +103,10 @@ const TRAINING_STRONGHOLD_ID = "north_training_stronghold";
 const SPEED_STRONGHOLD_ID = "east_speed_stronghold";
 const DEFENSE_STRONGHOLD_ID = "south_defense_stronghold";
 const CROWN_CITADEL_ID = "center_crown_citadel";
-const GOLD_STRONGHOLD_BONUS_PERCENT = 15;
-const TRAINING_STRONGHOLD_BONUS_PERCENT = 15;
-const SPEED_STRONGHOLD_BONUS_PERCENT = 15;
-const DEFENSE_STRONGHOLD_BONUS_PERCENT = 15;
+const GOLD_STRONGHOLD_BONUS_PERCENT = 8;
+const TRAINING_STRONGHOLD_BONUS_PERCENT = 8;
+const SPEED_STRONGHOLD_BONUS_PERCENT = 8;
+const DEFENSE_STRONGHOLD_BONUS_PERCENT = 8;
 const CROWN_CITADEL_GOLD_BONUS_PERCENT = 10;
 const CROWN_CITADEL_TROOP_BONUS_PERCENT = 10;
 const CROWN_CITADEL_DEFENSE_BONUS_PERCENT = 8;
@@ -171,32 +171,37 @@ function isStronghold(city = {}) {
 }
 
 function isGoldStronghold(city = {}) {
-  return isStronghold(city) && (city.strongholdType === "gold" || city.id === GOLD_STRONGHOLD_ID);
+  const type = String(city.strongholdType || "").toLowerCase();
+  return isStronghold(city) && (type === "gold" || type === "gold_stronghold" || city.id === GOLD_STRONGHOLD_ID);
 }
 
 function isTrainingStronghold(city = {}) {
-  return isStronghold(city) && (city.strongholdType === "training" || city.id === TRAINING_STRONGHOLD_ID);
+  const type = String(city.strongholdType || "").toLowerCase();
+  return isStronghold(city) && (type === "training" || type === "troop" || type === "troop_stronghold" || city.id === TRAINING_STRONGHOLD_ID);
 }
 
 function isSpeedStronghold(city = {}) {
-  return isStronghold(city) && (city.strongholdType === "speed" || city.strongholdType === "march_speed_stronghold" || city.id === SPEED_STRONGHOLD_ID);
+  const type = String(city.strongholdType || "").toLowerCase();
+  return isStronghold(city) && (type === "speed" || type === "march_speed" || type === "march_speed_stronghold" || city.id === SPEED_STRONGHOLD_ID);
 }
 
 function isDefenseStronghold(city = {}) {
-  return isStronghold(city) && (city.strongholdType === "defense" || city.id === DEFENSE_STRONGHOLD_ID);
+  const type = String(city.strongholdType || "").toLowerCase();
+  return isStronghold(city) && (type === "defense" || type === "defense_stronghold" || city.id === DEFENSE_STRONGHOLD_ID);
 }
 
 function isCrownCitadel(city = {}) {
-  return isStronghold(city) && (city.strongholdType === "crown" || city.id === CROWN_CITADEL_ID);
+  const type = String(city.strongholdType || "").toLowerCase();
+  return isStronghold(city) && (type === "crown" || type === "crown_citadel" || city.id === CROWN_CITADEL_ID);
 }
 
 function getStrongholdBonusPercent(city = {}) {
-  if (Number.isFinite(Number(city.bonusPercent))) return Math.max(0, Math.floor(Number(city.bonusPercent) || 0));
   if (isCrownCitadel(city)) return CROWN_CITADEL_GOLD_BONUS_PERCENT;
   if (isDefenseStronghold(city)) return DEFENSE_STRONGHOLD_BONUS_PERCENT;
   if (isSpeedStronghold(city)) return SPEED_STRONGHOLD_BONUS_PERCENT;
   if (isTrainingStronghold(city)) return TRAINING_STRONGHOLD_BONUS_PERCENT;
-  return isGoldStronghold(city) ? GOLD_STRONGHOLD_BONUS_PERCENT : 0;
+  if (isGoldStronghold(city)) return GOLD_STRONGHOLD_BONUS_PERCENT;
+  return Number.isFinite(Number(city.bonusPercent)) ? Math.max(0, Math.floor(Number(city.bonusPercent) || 0)) : 0;
 }
 
 function getStrongholdDefenseLevel(city = {}) {
@@ -296,8 +301,9 @@ function getCityProductionStats(city = {}, profile = {}, bonuses = {}) {
   };
 }
 
-function getCityStats(city = {}, defenderProfile = null) {
-  const level = isStronghold(city) ? getStrongholdDefenseLevel(city) : clampCityLevel(city.level);
+function getCityStats(city = {}, defenderProfile = null, bonuses = {}) {
+  const stronghold = isStronghold(city);
+  const level = stronghold ? getStrongholdDefenseLevel(city) : clampCityLevel(city.level);
   const step = level - 1;
   const victoryPoints = Math.floor(
     CITY_LEVEL_STATS.victoryPointsBase
@@ -309,7 +315,10 @@ function getCityStats(city = {}, defenderProfile = null) {
   const stoneworksPercent = defenderProfile ? getSkillPercent(defenderProfile, "stoneworks") : 0;
   const cityWalls = Math.floor(baseCityWalls * (1 + stoneworksPercent / 100));
   const troopDefense = Math.floor((Math.max(0, Math.floor(safeNumber(city.troops, 0)))) * (1 + defensePercent / 100));
-  const totalDefense = Math.floor(cityWalls + troopDefense);
+  const baseTotalDefense = Math.floor(cityWalls + troopDefense);
+  const strongholdDefenseBonusPercent = !stronghold ? Math.max(0, safeNumber(bonuses.cityDefenseBonusPercent, 0)) : 0;
+  const strongholdDefenseBonus = Math.floor(baseTotalDefense * strongholdDefenseBonusPercent / 100);
+  const totalDefense = baseTotalDefense + strongholdDefenseBonus;
 
   return {
     level,
@@ -318,6 +327,8 @@ function getCityStats(city = {}, defenderProfile = null) {
     baseCityWalls,
     cityWalls,
     stoneworksPercent,
+    strongholdDefenseBonusPercent,
+    strongholdDefenseBonus,
     totalDefense,
   };
 }
@@ -413,7 +424,7 @@ function calculateCombatResult(attackTroops, target, attackerProfile = null, def
   const defendersAtStart = Math.max(0, Math.floor(safeNumber(target?.troops, 0)));
   const demoAttack = normalizeDemoAttackSnapshot(options.demoAttack);
   const attackPower = getAttackPower(troops, attackerProfile) * (demoAttack?.attackPowerMultiplier || 1);
-  const defensePower = getCityStats(target, defenderProfile).totalDefense;
+  const defensePower = getCityStats(target, defenderProfile, options.defenderBonuses).totalDefense;
   const ratio = attackPower / Math.max(1, defensePower);
   const success = attackPower > defensePower;
   const attackerBoost = attackerProfile ? skillMultiplier(attackerProfile, "swordmastery") : 1;
@@ -722,8 +733,8 @@ function normalizeDaily(daily = {}, now = new Date()) {
   };
 }
 
-function createScoutReportSnapshot(target = {}, defenderProfile = null, nowMs = Date.now()) {
-  const stats = getCityStats(target, defenderProfile);
+function createScoutReportSnapshot(target = {}, defenderProfile = null, nowMs = Date.now(), bonuses = {}) {
+  const stats = getCityStats(target, defenderProfile, bonuses);
   const baseTroopDefense = Math.max(0, Math.floor(safeNumber(target.troops, 0)));
   const troopDefense = Math.floor(baseTroopDefense * (1 + stats.defensePercent / 100));
   const skillSnapshot = {};
@@ -741,6 +752,8 @@ function createScoutReportSnapshot(target = {}, defenderProfile = null, nowMs = 
     cityWalls: stats.cityWalls,
     troopDefense,
     cityDefenseBonus: Math.max(0, troopDefense - baseTroopDefense),
+    strongholdDefenseBonusPercent: stats.strongholdDefenseBonusPercent,
+    strongholdDefenseBonus: stats.strongholdDefenseBonus,
     stoneworksBonus: Math.max(0, stats.cityWalls - stats.baseCityWalls),
     ...skillSnapshot,
     scoutedAtMs: nowMs,
@@ -935,6 +948,7 @@ function getOwnedStrongholdBonuses(cities = []) {
       goldBonusPercent: CROWN_CITADEL_GOLD_BONUS_PERCENT,
       troopBonusPercent: CROWN_CITADEL_TROOP_BONUS_PERCENT,
       marchSpeedBonusPercent: CROWN_CITADEL_MARCH_SPEED_BONUS_PERCENT,
+      cityDefenseBonusPercent: CROWN_CITADEL_DEFENSE_BONUS_PERCENT,
       upgradeCostReductionPercent: CROWN_CITADEL_UPGRADE_COST_REDUCTION_PERCENT,
     };
   }
@@ -943,8 +957,9 @@ function getOwnedStrongholdBonuses(cities = []) {
     if (isGoldStronghold(city)) bonuses.goldBonusPercent += getStrongholdBonusPercent(city);
     if (isTrainingStronghold(city)) bonuses.troopBonusPercent += getStrongholdBonusPercent(city);
     if (isSpeedStronghold(city)) bonuses.marchSpeedBonusPercent += getStrongholdBonusPercent(city);
+    if (isDefenseStronghold(city)) bonuses.cityDefenseBonusPercent += getStrongholdBonusPercent(city);
     return bonuses;
-  }, { goldBonusPercent: 0, troopBonusPercent: 0, marchSpeedBonusPercent: 0, upgradeCostReductionPercent: 0 });
+  }, { goldBonusPercent: 0, troopBonusPercent: 0, marchSpeedBonusPercent: 0, cityDefenseBonusPercent: 0, upgradeCostReductionPercent: 0 });
 }
 
 function getCityUpgradeCost(city = {}, bonuses = {}) {
@@ -2149,7 +2164,8 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
     };
 
     const troopCount = Math.max(0, Math.floor(safeNumber(army.troops, 0)));
-    const targetStats = getCityStats(target, defenderProfile);
+    const defenderBonuses = defenderEconomy?.bonuses || {};
+    const targetStats = getCityStats(target, defenderProfile, defenderBonuses);
     const attackerName = safeString(army.ownerName || attackerProfile.playerName || "Rival ruler", 40);
     const defenderName = defenderUid
       ? safeString(target.ownerName || defenderProfile.playerName || "Rival ruler", 40)
@@ -2205,7 +2221,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
       }
 
       writeParticipantEconomies();
-      const scoutReport = createScoutReportSnapshot(target, defenderProfile, nowMs);
+      const scoutReport = createScoutReportSnapshot(target, defenderProfile, nowMs, defenderBonuses);
       const report = makeReport({
         id: `${armyId}_scout_${attackerUid}`,
         uid: attackerUid,
@@ -2302,7 +2318,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
     const oldOwnerUid = defenderUid;
     const defendersAtStart = Math.max(0, Math.floor(safeNumber(target.troops, 0)));
     const demoAttack = normalizeDemoAttackSnapshot(army.demoAttack);
-    const result = calculateCombatResult(troopCount, target, attackerProfile, defenderProfile, { demoAttack });
+    const result = calculateCombatResult(troopCount, target, attackerProfile, defenderProfile, { demoAttack, defenderBonuses });
     const givenUpNeutralTarget = isGivenUpNeutralCity(target);
     const attackWinXp = demoAttack || givenUpNeutralTarget ? 0 : getCaptureXpAward(target, oldOwnerUid, result.defenderLosses, defenderProfile);
     const attackFailXp = demoAttack || givenUpNeutralTarget ? 0 : getPartialBattleXpAward(getCaptureXpAward(target, oldOwnerUid, defendersAtStart, defenderProfile));

@@ -570,7 +570,7 @@
       "yNorm": 0.43,
       "strongholdType": "march_speed_stronghold",
       "bonusType": "marchspeed",
-      "bonusAmount": 15,
+      "bonusAmount": 8,
       "startingOwner": "neutral",
       "level": 50,
       "troops": 50000000,

@@ -411,7 +411,7 @@ function getStrongholdDefaults(type) {
     gold_stronghold: {
       name: "Gold Stronghold",
       bonusType: "goldProduction",
-      bonusAmount: 15,
+      bonusAmount: 8,
       level: 50,
       troops: 50000000,
       artSrc: "assets/gold-stronghold.png",
@@ -420,7 +420,7 @@ function getStrongholdDefaults(type) {
     troop_stronghold: {
       name: "Troop Stronghold",
       bonusType: "troopProduction",
-      bonusAmount: 15,
+      bonusAmount: 8,
       level: 50,
       troops: 50000000,
       artSrc: "assets/training-stronghold.png",
@@ -429,7 +429,7 @@ function getStrongholdDefaults(type) {
     defense_stronghold: {
       name: "Defense Stronghold",
       bonusType: "cityDefense",
-      bonusAmount: 15,
+      bonusAmount: 8,
       level: 50,
       troops: 50000000,
       artSrc: "assets/defense-stronghold.png",
@@ -438,7 +438,7 @@ function getStrongholdDefaults(type) {
     march_speed_stronghold: {
       name: "March Speed Stronghold",
       bonusType: "marchSpeed",
-      bonusAmount: 15,
+      bonusAmount: 8,
       level: 50,
       troops: 50000000,
       artSrc: "assets/speed-stronghold.png",

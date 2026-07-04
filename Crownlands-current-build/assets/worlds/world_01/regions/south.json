@@ -768,7 +768,7 @@
       "yNorm": 0.412,
       "strongholdType": "defense_stronghold",
       "bonusType": "citydefense",
-      "bonusAmount": 15,
+      "bonusAmount": 8,
       "startingOwner": "neutral",
       "level": 50,
       "troops": 50000000,

@@ -570,7 +570,7 @@
       "yNorm": 0.471,
       "strongholdType": "troop_stronghold",
       "bonusType": "troopproduction",
-      "bonusAmount": 15,
+      "bonusAmount": 8,
       "startingOwner": "neutral",
       "level": 50,
       "troops": 50000000,

@@ -215,25 +215,25 @@ const MIN_STRONGHOLD_VISUAL_SIZE = 80;
 const GOLD_STRONGHOLD_ID = "west_gold_stronghold";
 const GOLD_STRONGHOLD_NAME = "Gold Stronghold";
 const GOLD_STRONGHOLD_ART_SRC = "assets/gold-stronghold.png?v=20260704-gold-stronghold-updated";
-const GOLD_STRONGHOLD_BONUS_PERCENT = 15;
+const GOLD_STRONGHOLD_BONUS_PERCENT = 8;
 const GOLD_STRONGHOLD_LEVEL = 50;
 const GOLD_STRONGHOLD_START_TROOPS = 50000000;
 const TRAINING_STRONGHOLD_ID = "north_training_stronghold";
 const TRAINING_STRONGHOLD_NAME = "Training Stronghold";
 const TRAINING_STRONGHOLD_ART_SRC = "assets/training-stronghold.png?v=20260703-training-stronghold-art";
-const TRAINING_STRONGHOLD_BONUS_PERCENT = 15;
+const TRAINING_STRONGHOLD_BONUS_PERCENT = 8;
 const TRAINING_STRONGHOLD_LEVEL = 50;
 const TRAINING_STRONGHOLD_START_TROOPS = 50000000;
 const SPEED_STRONGHOLD_ID = "east_speed_stronghold";
 const SPEED_STRONGHOLD_NAME = "Speed Stronghold";
 const SPEED_STRONGHOLD_ART_SRC = "assets/speed-stronghold.png?v=20260704-speed-stronghold-updated";
-const SPEED_STRONGHOLD_BONUS_PERCENT = 15;
+const SPEED_STRONGHOLD_BONUS_PERCENT = 8;
 const SPEED_STRONGHOLD_LEVEL = 50;
 const SPEED_STRONGHOLD_START_TROOPS = 50000000;
 const DEFENSE_STRONGHOLD_ID = "south_defense_stronghold";
 const DEFENSE_STRONGHOLD_NAME = "Defense Stronghold";
 const DEFENSE_STRONGHOLD_ART_SRC = "assets/defense-stronghold.png?v=20260704-defense-stronghold-update";
-const DEFENSE_STRONGHOLD_BONUS_PERCENT = 15;
+const DEFENSE_STRONGHOLD_BONUS_PERCENT = 8;
 const DEFENSE_STRONGHOLD_LEVEL = 50;
 const DEFENSE_STRONGHOLD_START_TROOPS = 50000000;
 const CROWN_CITADEL_ID = "center_crown_citadel";
@@ -672,23 +672,28 @@ function applyCityActionWheelSizing(wheel, city) {
 }
 
 function isGoldStronghold(city) {
-  return isStronghold(city) && (city.strongholdType === "gold" || city.id === GOLD_STRONGHOLD_ID);
+  const type = String(city?.strongholdType || "").toLowerCase();
+  return isStronghold(city) && (type === "gold" || type === "gold_stronghold" || city.id === GOLD_STRONGHOLD_ID);
 }
 
 function isTrainingStronghold(city) {
-  return isStronghold(city) && (city.strongholdType === "training" || city.id === TRAINING_STRONGHOLD_ID);
+  const type = String(city?.strongholdType || "").toLowerCase();
+  return isStronghold(city) && (type === "training" || type === "troop" || type === "troop_stronghold" || city.id === TRAINING_STRONGHOLD_ID);
 }
 
 function isSpeedStronghold(city) {
-  return isStronghold(city) && (city.strongholdType === "speed" || city.id === SPEED_STRONGHOLD_ID);
+  const type = String(city?.strongholdType || "").toLowerCase();
+  return isStronghold(city) && (type === "speed" || type === "march_speed" || type === "march_speed_stronghold" || city.id === SPEED_STRONGHOLD_ID);
 }
 
 function isDefenseStronghold(city) {
-  return isStronghold(city) && (city.strongholdType === "defense" || city.id === DEFENSE_STRONGHOLD_ID);
+  const type = String(city?.strongholdType || "").toLowerCase();
+  return isStronghold(city) && (type === "defense" || type === "defense_stronghold" || city.id === DEFENSE_STRONGHOLD_ID);
 }
 
 function isCrownCitadel(city) {
-  return isStronghold(city) && (city.strongholdType === "crown" || city.id === CROWN_CITADEL_ID);
+  const type = String(city?.strongholdType || "").toLowerCase();
+  return isStronghold(city) && (type === "crown" || type === "crown_citadel" || city.id === CROWN_CITADEL_ID);
 }
 
 function getStrongholdArtSrc(city) {
@@ -701,12 +706,12 @@ function getStrongholdArtSrc(city) {
 }
 
 function getStrongholdBonusPercent(city) {
-  if (Number.isFinite(Number(city?.bonusPercent))) return Math.max(0, Math.floor(Number(city.bonusPercent) || 0));
   if (isCrownCitadel(city)) return CROWN_CITADEL_GOLD_BONUS_PERCENT;
   if (isDefenseStronghold(city)) return DEFENSE_STRONGHOLD_BONUS_PERCENT;
   if (isSpeedStronghold(city)) return SPEED_STRONGHOLD_BONUS_PERCENT;
   if (isTrainingStronghold(city)) return TRAINING_STRONGHOLD_BONUS_PERCENT;
-  return isGoldStronghold(city) ? GOLD_STRONGHOLD_BONUS_PERCENT : 0;
+  if (isGoldStronghold(city)) return GOLD_STRONGHOLD_BONUS_PERCENT;
+  return Number.isFinite(Number(city?.bonusPercent)) ? Math.max(0, Math.floor(Number(city.bonusPercent) || 0)) : 0;
 }
 
 function getStrongholdDefenseLevel(city) {
@@ -3059,7 +3064,7 @@ function hasEditorObjectiveDefinitions(regionId) {
 
 function getStrongholdConfigForType(type) {
   const strongholdType = String(type || "gold").trim().toLowerCase();
-  if (strongholdType === "crown") {
+  if (strongholdType === "crown" || strongholdType === "crown_citadel") {
     return {
       type: "crown",
       name: CROWN_CITADEL_NAME,
@@ -3070,7 +3075,7 @@ function getStrongholdConfigForType(type) {
       troops: CROWN_CITADEL_START_TROOPS,
     };
   }
-  if (strongholdType === "training") {
+  if (strongholdType === "training" || strongholdType === "troop" || strongholdType === "troop_stronghold") {
     return {
       type: "training",
       name: TRAINING_STRONGHOLD_NAME,
@@ -3081,7 +3086,7 @@ function getStrongholdConfigForType(type) {
       troops: TRAINING_STRONGHOLD_START_TROOPS,
     };
   }
-  if (strongholdType === "speed") {
+  if (strongholdType === "speed" || strongholdType === "march_speed" || strongholdType === "march_speed_stronghold") {
     return {
       type: "speed",
       name: SPEED_STRONGHOLD_NAME,
@@ -3092,7 +3097,7 @@ function getStrongholdConfigForType(type) {
       troops: SPEED_STRONGHOLD_START_TROOPS,
     };
   }
-  if (strongholdType === "defense") {
+  if (strongholdType === "defense" || strongholdType === "defense_stronghold") {
     return {
       type: "defense",
       name: DEFENSE_STRONGHOLD_NAME,
