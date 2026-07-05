@@ -53,7 +53,7 @@ const SHOP_ITEMS = [
     id: "war_drums_30m",
     legacyIds: ["troop_boost_1h"],
     label: "War Drums",
-    description: "Increases troop production by 25% for 30 minutes.",
+    description: "Increases troop production by 5% for 30 minutes.",
     cost: 250_000,
     icon: "assets/war-drums-icon.webp?v=20260703-shop-icons",
   },
@@ -84,7 +84,7 @@ const ROYAL_PEACE_SHIELD_ITEM_ID = "shield_12h";
 const ROYAL_PEACE_SHIELD_DURATION_MS = 12 * 60 * 60 * 1000;
 const WAR_DRUMS_ITEM_ID = "war_drums_30m";
 const WAR_DRUMS_DURATION_MS = 30 * 60 * 1000;
-const WAR_DRUMS_TROOP_PRODUCTION_BONUS_PERCENT = 25;
+const WAR_DRUMS_TROOP_PRODUCTION_BONUS_PERCENT = 5;
 const VEIL_OF_SILENCE_ITEM_ID = "veil_of_silence_30m";
 const VEIL_OF_SILENCE_DURATION_MS = 5 * 60 * 1000;
 
