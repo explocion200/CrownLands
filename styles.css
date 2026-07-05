@@ -403,21 +403,26 @@ input {
   right: max(.75rem, env(safe-area-inset-right));
 }
 .active-item-effects-stack {
+  --effect-badge-size: 66px;
+  --effect-icon-size: 58px;
+  --effect-timer-font: .68rem;
+  --effect-stack-gap: .5rem;
   position: absolute;
   z-index: 56;
   right: max(.72rem, env(safe-area-inset-right));
   top: 50%;
   display: grid;
-  gap: .5rem;
+  gap: var(--effect-stack-gap);
   justify-items: end;
   transform: translateY(-50%);
   pointer-events: none;
+  max-height: calc(100dvh - 150px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
 }
 .effect-status-badge {
-  width: 66px;
-  min-height: 82px;
+  width: var(--effect-badge-size);
+  min-height: calc(var(--effect-badge-size) * 1.24);
   display: grid;
-  grid-template-rows: 58px auto;
+  grid-template-rows: var(--effect-icon-size) auto;
   justify-items: center;
   gap: .22rem;
   padding: .26rem .24rem .34rem;
@@ -447,8 +452,8 @@ input {
   display: none;
 }
 .effect-status-icon {
-  width: 58px;
-  height: 58px;
+  width: var(--effect-icon-size);
+  height: var(--effect-icon-size);
   display: block;
   object-fit: cover;
   border-radius: 14px;
@@ -464,7 +469,7 @@ input {
   min-width: 0;
   max-width: 100%;
   color: #fff4b8;
-  font-size: .68rem;
+  font-size: var(--effect-timer-font);
   font-weight: 1000;
   line-height: 1;
   padding: .18rem .28rem;
@@ -4756,10 +4761,17 @@ button.inventory-slot {
   .resource-pill.island-switch-btn { width: 56px; min-width: 56px; max-width: 56px; height: 56px; }
   .resource-pill.bag-btn { right: calc(max(.75rem, env(safe-area-inset-right)) + 132px); }
   .resource-pill.city-list-btn { right: calc(max(.75rem, env(safe-area-inset-right)) + 66px); }
-  .active-item-effects-stack { right: max(.55rem, env(safe-area-inset-right)); gap: .36rem; }
-  .effect-status-badge { width: 56px; min-height: 70px; grid-template-rows: 48px auto; border-radius: 13px; }
-  .effect-status-icon { width: 48px; height: 48px; border-radius: 12px; }
-  .effect-status-badge strong { font-size: .58rem; padding: .14rem .22rem; }
+  .active-item-effects-stack {
+    --effect-badge-size: 48px;
+    --effect-icon-size: 39px;
+    --effect-timer-font: .5rem;
+    --effect-stack-gap: .22rem;
+    right: max(.38rem, env(safe-area-inset-right));
+    max-height: calc(100dvh - 124px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+  }
+  .effect-status-badge { padding: .18rem .16rem .22rem; border-radius: 11px; }
+  .effect-status-icon { border-radius: 10px; }
+  .effect-status-badge strong { font-size: var(--effect-timer-font); padding: .12rem .18rem; }
   .inventory-slots { gap: .38rem; }
   .inventory-slot { min-height: 98px; grid-template-rows: 34px 3.05em 1em; gap: .2rem; padding: .46rem .32rem; }
   .inventory-slot-icon { width: 34px; height: 34px; border-radius: 9px; }
@@ -4811,6 +4823,20 @@ button.inventory-slot {
   .main-city-return { width: 36px; height: 36px; }
   .main-city-return-house { font-size: 1rem; }
   .main-city-return-arrow { transform: translate(-50%, -50%) rotate(var(--main-city-angle, 0deg)) translateX(18px); }
+}
+
+@media (max-width: 780px) and (orientation: landscape) and (max-height: 390px) {
+  .active-item-effects-stack {
+    --effect-badge-size: 42px;
+    --effect-icon-size: 34px;
+    --effect-timer-font: .46rem;
+    --effect-stack-gap: .16rem;
+    right: max(.28rem, env(safe-area-inset-right));
+    max-height: calc(100dvh - 104px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+  }
+  .effect-status-badge { padding: .14rem .12rem .18rem; border-radius: 9px; }
+  .effect-status-icon { border-radius: 8px; }
+  .effect-status-badge strong { padding: .1rem .14rem; }
 }
 .action-buttons .city-action-row { flex: 1 0 100%; }
 
