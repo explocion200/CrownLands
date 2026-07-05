@@ -61,7 +61,7 @@ const SHOP_ITEMS = [
     id: "veil_of_silence_30m",
     legacyIds: ["anti_scout_1h"],
     label: "Veil of Silence",
-    description: "Blocks enemy scouting for 30 minutes.",
+    description: "Blocks enemy scouting for 5 minutes.",
     cost: 40_000,
     icon: "assets/veil-of-silence-icon.webp?v=20260703-shop-icons",
   },
@@ -85,6 +85,8 @@ const ROYAL_PEACE_SHIELD_DURATION_MS = 12 * 60 * 60 * 1000;
 const WAR_DRUMS_ITEM_ID = "war_drums_30m";
 const WAR_DRUMS_DURATION_MS = 30 * 60 * 1000;
 const WAR_DRUMS_TROOP_PRODUCTION_BONUS_PERCENT = 25;
+const VEIL_OF_SILENCE_ITEM_ID = "veil_of_silence_30m";
+const VEIL_OF_SILENCE_DURATION_MS = 5 * 60 * 1000;
 
 function cleanEditorRegionId(value) {
   return String(value || "")
@@ -2272,6 +2274,8 @@ const shieldStatusBadge = document.getElementById("shieldStatusBadge");
 const shieldStatusTime = document.getElementById("shieldStatusTime");
 const warDrumsStatusBadge = document.getElementById("warDrumsStatusBadge");
 const warDrumsStatusTime = document.getElementById("warDrumsStatusTime");
+const veilStatusBadge = document.getElementById("veilStatusBadge");
+const veilStatusTime = document.getElementById("veilStatusTime");
 const shopBtn = document.getElementById("shopBtn");
 const neutralCapText = document.getElementById("neutralCapText");
 const characterLevelBadge = document.getElementById("characterLevelBadge");
@@ -4489,6 +4493,7 @@ function createDefaultItemEffects() {
   return {
     shieldExpiresAtMs: 0,
     warDrumsExpiresAtMs: 0,
+    veilOfSilenceExpiresAtMs: 0,
   };
 }
 
@@ -4496,6 +4501,7 @@ function normalizeItemEffects(effects = {}) {
   return {
     shieldExpiresAtMs: timestampToMs(effects?.shieldExpiresAtMs || effects?.shieldExpiresAt),
     warDrumsExpiresAtMs: timestampToMs(effects?.warDrumsExpiresAtMs || effects?.warDrumsExpiresAt || effects?.troopBoostExpiresAtMs || effects?.troopBoostExpiresAt),
+    veilOfSilenceExpiresAtMs: timestampToMs(effects?.veilOfSilenceExpiresAtMs || effects?.veilOfSilenceExpiresAt || effects?.antiScoutExpiresAtMs || effects?.antiScoutExpiresAt),
   };
 }
 
@@ -4528,10 +4534,15 @@ function getActiveWarDrumsExpiresAtMs() {
   return getActiveTimedItemEffectExpiresAtMs("warDrumsExpiresAtMs");
 }
 
+function getActiveVeilOfSilenceExpiresAtMs() {
+  return getActiveTimedItemEffectExpiresAtMs("veilOfSilenceExpiresAtMs");
+}
+
 function getInventoryItemActiveExpiresAtMs(item) {
   if (!item) return 0;
   if (item.id === ROYAL_PEACE_SHIELD_ITEM_ID) return getActivePeaceShieldExpiresAtMs();
   if (item.id === WAR_DRUMS_ITEM_ID) return getActiveWarDrumsExpiresAtMs();
+  if (item.id === VEIL_OF_SILENCE_ITEM_ID) return getActiveVeilOfSilenceExpiresAtMs();
   return 0;
 }
 
@@ -11223,6 +11234,7 @@ function updateTimedEffectStatusBadge(badge, timeElement, expiresAtMs, label) {
 function updateShieldStatusBadge() {
   updateTimedEffectStatusBadge(shieldStatusBadge, shieldStatusTime, getActivePeaceShieldExpiresAtMs(), "Royal Peace Shield");
   updateTimedEffectStatusBadge(warDrumsStatusBadge, warDrumsStatusTime, getActiveWarDrumsExpiresAtMs(), "War Drums");
+  updateTimedEffectStatusBadge(veilStatusBadge, veilStatusTime, getActiveVeilOfSilenceExpiresAtMs(), "Veil of Silence");
 }
 
 function applyFlagToElement(element, flag) {
@@ -13428,6 +13440,7 @@ function getActiveItemEffectSummaryHtml() {
   const effects = [
     { label: "Peace Shield", expiresAtMs: getActivePeaceShieldExpiresAtMs() },
     { label: "War Drums", expiresAtMs: getActiveWarDrumsExpiresAtMs() },
+    { label: "Veil of Silence", expiresAtMs: getActiveVeilOfSilenceExpiresAtMs() },
   ].filter(effect => getPeaceShieldRemainingSeconds(effect.expiresAtMs) > 0);
   if (!effects.length) return "<small>No active item effects</small>";
   return effects.map(effect => (
@@ -13512,6 +13525,14 @@ function useInventoryItem(itemId) {
     });
     return;
   }
+  if (item.id === VEIL_OF_SILENCE_ITEM_ID) {
+    useVeilOfSilence(item).catch(error => {
+      console.warn("Veil of Silence activation failed", error);
+      showToast(error?.message || "Could not activate Veil of Silence.");
+      renderHud();
+    });
+    return;
+  }
   showToast(`${item.label} mechanics are coming next.`);
 }
 
@@ -13543,6 +13564,9 @@ async function useServerInventoryItem(item) {
   } else if (item.id === WAR_DRUMS_ITEM_ID) {
     addLog(`${item.label} activated. Troop production increased by ${formatNumber(WAR_DRUMS_TROOP_PRODUCTION_BONUS_PERCENT)}% for ${formatDuration(getPeaceShieldRemainingSeconds(expiresAtMs))}.`);
     showToast(`${item.label} active: +${formatNumber(WAR_DRUMS_TROOP_PRODUCTION_BONUS_PERCENT)}% troops for ${formatDuration(getPeaceShieldRemainingSeconds(expiresAtMs))}`);
+  } else if (item.id === VEIL_OF_SILENCE_ITEM_ID) {
+    addLog(`${item.label} activated. Enemy scouts are blocked for ${formatDuration(getPeaceShieldRemainingSeconds(expiresAtMs))}.`);
+    showToast(`${item.label} active: scouts blocked for ${formatDuration(getPeaceShieldRemainingSeconds(expiresAtMs))}`);
   }
   saveGame();
   renderHud();
@@ -13607,6 +13631,34 @@ async function useWarDrums(item) {
   if (profileScreen?.classList.contains("open")) renderProfileScreen();
   if (modal?.open && modal.classList.contains("inventory-modal")) modal.close();
   showToast(`${item.label} active: +${formatNumber(WAR_DRUMS_TROOP_PRODUCTION_BONUS_PERCENT)}% troops for ${formatDuration(getPeaceShieldRemainingSeconds(expiresAtMs))}`);
+  const cloudSaved = await flushOnlineSave(true);
+  if (!cloudSaved && getOnlineApi()?.isSignedIn?.()) {
+    showToast(`${item.label} active. Cloud save will retry.`);
+  }
+}
+
+async function useVeilOfSilence(item) {
+  const currentExpiresAtMs = getActiveVeilOfSilenceExpiresAtMs();
+  if (currentExpiresAtMs > Date.now()) {
+    showToast(`${item.label} is already active for ${formatDuration(getPeaceShieldRemainingSeconds(currentExpiresAtMs))}.`);
+    return;
+  }
+  if (usesServerEconomyAuthority()) {
+    await useServerInventoryItem(item);
+    return;
+  }
+  if (!consumeInventoryItem(item)) return;
+  const expiresAtMs = Date.now() + VEIL_OF_SILENCE_DURATION_MS;
+  const effects = ensureItemEffects();
+  effects.veilOfSilenceExpiresAtMs = expiresAtMs;
+
+  addLog(`${item.label} activated. Enemy scouts are blocked for ${formatDuration(getPeaceShieldRemainingSeconds(expiresAtMs))}.`);
+  saveGame();
+  renderHud();
+  renderPanel();
+  if (profileScreen?.classList.contains("open")) renderProfileScreen();
+  if (modal?.open && modal.classList.contains("inventory-modal")) modal.close();
+  showToast(`${item.label} active: scouts blocked for ${formatDuration(getPeaceShieldRemainingSeconds(expiresAtMs))}`);
   const cloudSaved = await flushOnlineSave(true);
   if (!cloudSaved && getOnlineApi()?.isSignedIn?.()) {
     showToast(`${item.label} active. Cloud save will retry.`);

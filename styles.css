@@ -436,6 +436,13 @@ input {
   border-color: rgba(255, 206, 106, .56);
   box-shadow: 0 10px 24px rgba(0,0,0,.36), 0 0 22px rgba(255, 177, 60, .3);
 }
+.veil-status-badge {
+  background:
+    radial-gradient(circle at 50% 30%, rgba(139, 91, 255, .24), transparent 55%),
+    linear-gradient(180deg, rgba(24, 15, 42, .72), rgba(8, 10, 24, .86));
+  border-color: rgba(186, 154, 255, .56);
+  box-shadow: 0 10px 24px rgba(0,0,0,.36), 0 0 22px rgba(135, 98, 255, .32);
+}
 .effect-status-badge[hidden] {
   display: none;
 }
@@ -449,6 +456,9 @@ input {
 }
 .war-drums-status-icon {
   box-shadow: 0 0 18px rgba(255, 186, 78, .42), 0 7px 14px rgba(0,0,0,.36);
+}
+.veil-status-icon {
+  box-shadow: 0 0 18px rgba(153, 119, 255, .42), 0 7px 14px rgba(0,0,0,.36);
 }
 .effect-status-badge strong {
   min-width: 0;

@@ -58,13 +58,15 @@ const ROYAL_PEACE_SHIELD_DURATION_MS = 12 * 60 * 60 * 1000;
 const WAR_DRUMS_ITEM_ID = "war_drums_30m";
 const WAR_DRUMS_DURATION_MS = 30 * 60 * 1000;
 const WAR_DRUMS_TROOP_PRODUCTION_BONUS_PERCENT = 25;
+const VEIL_OF_SILENCE_ITEM_ID = "veil_of_silence_30m";
+const VEIL_OF_SILENCE_DURATION_MS = 5 * 60 * 1000;
 const MAX_SERVER_PRODUCTION_SECONDS = 7 * 24 * 60 * 60;
 const SCHEDULED_ARMY_RESOLVE_SCAN_LIMIT = 100;
 const SCHEDULED_ARMY_RESOLVE_MAX_PER_RUN = 40;
 const SHOP_ITEMS = {
   [ROYAL_PEACE_SHIELD_ITEM_ID]: { id: ROYAL_PEACE_SHIELD_ITEM_ID, label: "Royal Peace Shield", cost: 175000 },
   [WAR_DRUMS_ITEM_ID]: { id: WAR_DRUMS_ITEM_ID, label: "War Drums", cost: 25000 },
-  veil_of_silence_30m: { id: "veil_of_silence_30m", label: "Veil of Silence", cost: 40000 },
+  [VEIL_OF_SILENCE_ITEM_ID]: { id: VEIL_OF_SILENCE_ITEM_ID, label: "Veil of Silence", cost: 40000 },
   swift_march_order: { id: "swift_march_order", label: "Swift March Order", cost: 55000 },
   recall_horn: { id: "recall_horn", label: "Recall Horn", cost: 90000 },
 };
@@ -945,7 +947,12 @@ function normalizeItemEffects(effects = {}) {
   return {
     shieldExpiresAtMs: timestampToMs(effects.shieldExpiresAtMs || effects.shieldExpiresAt),
     warDrumsExpiresAtMs: timestampToMs(effects.warDrumsExpiresAtMs || effects.warDrumsExpiresAt || effects.troopBoostExpiresAtMs || effects.troopBoostExpiresAt),
+    veilOfSilenceExpiresAtMs: timestampToMs(effects.veilOfSilenceExpiresAtMs || effects.veilOfSilenceExpiresAt || effects.antiScoutExpiresAtMs || effects.antiScoutExpiresAt),
   };
+}
+
+function isVeilOfSilenceActive(profile = {}, nowMs = Date.now()) {
+  return timestampToMs(profile?.itemEffects?.veilOfSilenceExpiresAtMs || profile?.itemEffects?.veilOfSilenceExpiresAt) > nowMs;
 }
 
 function normalizeItemPurchaseCooldowns(cooldowns = {}) {
@@ -1793,7 +1800,7 @@ exports.activateInventoryItem = onCall({ region: "us-central1", maxInstances: 20
   const itemId = safeString(data.itemId, 64);
   const item = SHOP_ITEMS[itemId];
   if (!item) throw new HttpsError("invalid-argument", "That inventory item does not exist.");
-  if (![ROYAL_PEACE_SHIELD_ITEM_ID, WAR_DRUMS_ITEM_ID].includes(itemId)) {
+  if (![ROYAL_PEACE_SHIELD_ITEM_ID, WAR_DRUMS_ITEM_ID, VEIL_OF_SILENCE_ITEM_ID].includes(itemId)) {
     throw new HttpsError("failed-precondition", "That item effect is not active yet.");
   }
 
@@ -1832,6 +1839,13 @@ exports.activateInventoryItem = onCall({ region: "us-central1", maxInstances: 20
       }
       expiresAtMs = nowMs + WAR_DRUMS_DURATION_MS;
       itemEffects.warDrumsExpiresAtMs = expiresAtMs;
+    } else if (itemId === VEIL_OF_SILENCE_ITEM_ID) {
+      const currentExpiresAtMs = timestampToMs(itemEffects.veilOfSilenceExpiresAtMs);
+      if (currentExpiresAtMs > nowMs) {
+        throw new HttpsError("failed-precondition", `${item.label} is already active.`);
+      }
+      expiresAtMs = nowMs + VEIL_OF_SILENCE_DURATION_MS;
+      itemEffects.veilOfSilenceExpiresAtMs = expiresAtMs;
     }
     shopItems[itemId] = owned - 1;
 
@@ -1958,6 +1972,9 @@ exports.sendArmyOrder = onCall({ region: "us-central1", maxInstances: 20, invoke
     if (sourceTroops < troops) throw new HttpsError("failed-precondition", "Not enough troops in the source city.");
     if (resolvedKind === "scout" && isProtectedMainCity(target, uid)) {
       throw new HttpsError("failed-precondition", "Main cities cannot be scouted.");
+    }
+    if (resolvedKind === "scout" && targetOwnerUid && targetOwnerUid !== uid && isVeilOfSilenceActive(defenderPowerData, nowMs)) {
+      throw new HttpsError("failed-precondition", "That city is hidden by Veil of Silence.");
     }
     if (resolvedKind === "attack") {
       if (isProtectedMainCity(target, uid)) {
@@ -2217,6 +2234,42 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
         }, { merge: true });
         reports.push(report);
         markResolved({ kind: "scout", blocked: "main_city", returned });
+        return {
+          ok: true,
+          status: "resolved",
+          kind: "scout",
+          reports: reportsForCaller(),
+          cityUpdates: withEconomyCityUpdates(cityUpdates),
+          currentUser: profilePatchForCaller(
+            { character: attackerProfile.character, gold: attackerEconomy?.gold, goldFloat: attackerEconomy?.goldFloat },
+            defenderEconomy ? { character: defenderProfile?.character, gold: defenderEconomy.gold, goldFloat: defenderEconomy.goldFloat } : null
+          ),
+        };
+      }
+
+      if (defenderUid && defenderUid !== attackerUid && isVeilOfSilenceActive(defenderProfile, nowMs)) {
+        writeParticipantEconomies();
+        const returned = returnTroopsToSource(troopCount);
+        const report = makeReport({
+          id: `${armyId}_scout_veiled_${attackerUid}`,
+          uid: attackerUid,
+          type: "scout",
+          outcome: "scout",
+          city: target,
+          opponentName: defenderName,
+          sentTroops: troopCount,
+          troopCount: 0,
+          totalDefense: 0,
+          summary: `Veil of Silence blocked the scout. ${returned.toLocaleString()} scout returned.`,
+          nowMs,
+        });
+        writeReport(transaction, attackerUid, report, attackerProfileSnap);
+        transaction.set(islandReportRef(targetRegionId, report.id), {
+          ...report,
+          createdAt: FieldValue.serverTimestamp(),
+        }, { merge: true });
+        reports.push(report);
+        markResolved({ kind: "scout", blocked: "veil_of_silence", returned });
         return {
           ok: true,
           status: "resolved",
