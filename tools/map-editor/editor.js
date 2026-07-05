@@ -557,7 +557,7 @@
     const data = normalizeBundle(await response.json());
     const savedCampCount = countCamps(data.regions);
     if (savedCampCount < expectedCampCount) {
-      throw new Error(`Save response only returned ${savedCampCount} of ${expectedCampCount} camps. Restart the local editor server with .\\tools\\start-editor.ps1, reload the editor, and save again.`);
+      throw new Error(`Save response only returned ${savedCampCount} of ${expectedCampCount} camps. Keep this editor tab open, restart the local editor server with .\\tools\\start-editor.ps1, then click Save to Game again. If you need to reload first, use Export JSON so your unsaved camps are not lost.`);
     }
     state.layout = data.layout;
     state.regions = data.regions;
