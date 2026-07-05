@@ -2,6 +2,36 @@
   publish = "."
   command = ""
 
+[[redirects]]
+  from = "/Crownlands-current-build"
+  to = "/"
+  status = 301
+  force = true
+
+[[redirects]]
+  from = "/Crownlands-current-build/"
+  to = "/"
+  status = 301
+  force = true
+
+[[redirects]]
+  from = "/Crownlands-current-build/*"
+  to = "/:splat"
+  status = 301
+  force = true
+
+[[redirects]]
+  from = "/firebase-hosting-redirect"
+  to = "/"
+  status = 301
+  force = true
+
+[[redirects]]
+  from = "/firebase-hosting-redirect/*"
+  to = "/"
+  status = 301
+  force = true
+
 [[headers]]
   for = "/*"
   [headers.values]

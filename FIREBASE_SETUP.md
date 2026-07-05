@@ -60,3 +60,5 @@ If Functions are not deployed, online troop orders will be rejected instead of f
 ## Netlify
 
 This remains a static site. Netlify should publish this folder directly. `netlify.toml` is already configured with `publish = "."`.
+
+Firebase Hosting is not the live game frontend anymore. Its hosting config only redirects players to `https://crownland.netlify.app/` so there is not a second playable copy of Crownlands. Keep Firebase for Auth, Firestore, and Functions.

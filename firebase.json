@@ -11,48 +11,22 @@
     }
   ],
   "hosting": {
-    "public": "Crownlands-current-build",
+    "public": "firebase-hosting-redirect",
     "ignore": [
       "firebase.json",
       "**/.*",
-      "**/node_modules/**",
-      "FIREBASE_SETUP.md",
-      "README.md",
-      "firestore.indexes.json",
-      "firestore.rules",
-      "netlify.toml",
-      "tools/**"
+      "**/node_modules/**"
+    ],
+    "redirects": [
+      {
+        "source": "**",
+        "destination": "https://crownland.netlify.app",
+        "type": 301
+      }
     ],
     "headers": [
       {
-        "source": "**/*.@(css|js|jpg|jpeg|png|svg|webp|webmanifest)",
-        "headers": [
-          {
-            "key": "Cache-Control",
-            "value": "public,max-age=3600"
-          }
-        ]
-      },
-      {
-        "source": "firebase-messaging-sw.js",
-        "headers": [
-          {
-            "key": "Cache-Control",
-            "value": "no-cache"
-          }
-        ]
-      },
-      {
-        "source": "firebase-config.js",
-        "headers": [
-          {
-            "key": "Cache-Control",
-            "value": "no-cache"
-          }
-        ]
-      },
-      {
-        "source": "/",
+        "source": "**",
         "headers": [
           {
             "key": "Cache-Control",
