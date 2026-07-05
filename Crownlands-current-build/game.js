@@ -579,13 +579,13 @@ const KING_POWER_PER_CITY_VP = 10;
 const SKILL_RESET_COST = 1_000_000;
 
 const SKILL_CONFIG = {
-  swordmastery: { label: "Swordmastery", percentPerLevel: 2, maxPercent: 60, description: "Increases attack power for outgoing armies." },
-  stoneworks: { label: "Stoneworks", percentPerLevel: 3, maxPercent: 75, description: "Increases wall defense from city level." },
-  taxStewardship: { label: "Tax Stewardship", percentPerLevel: 3, maxPercent: 75, description: "Increases gold production from normal cities." },
-  royalGranaries: { label: "Royal Granaries", percentPerLevel: 3, maxPercent: 75, description: "Increases troop production from normal cities." },
-  guildCharters: { label: "Guild Charters", percentPerLevel: 2, maxPercent: 50, description: "Reduces gold cost when upgrading cities." },
-  marchOrders: { label: "March Orders", percentPerLevel: 3, maxPercent: 60, description: "Increases army travel speed for attacks, transfers, scouts, and regroups." },
-  fieldMedics: { label: "Field Medics", percentPerLevel: 2, maxPercent: 50, description: "Returns battle losses to your main city after attacks or defenses." },
+  swordmastery: { label: "Swordmastery", percentPerLevel: 2, maxPercent: 60, description: "Outgoing attack power." },
+  stoneworks: { label: "Stoneworks", percentPerLevel: 3, maxPercent: 75, description: "City wall defense from level." },
+  taxStewardship: { label: "Tax Stewardship", percentPerLevel: 3, maxPercent: 75, description: "Normal city gold production." },
+  royalGranaries: { label: "Royal Granaries", percentPerLevel: 3, maxPercent: 75, description: "Normal city troop production." },
+  guildCharters: { label: "Guild Charters", percentPerLevel: 2, maxPercent: 50, description: "Upgrade cost reduction." },
+  marchOrders: { label: "March Orders", percentPerLevel: 3, maxPercent: 60, description: "Travel speed for attacks, transfers, scouts, and regroups." },
+  fieldMedics: { label: "Field Medics", percentPerLevel: 2, maxPercent: 50, description: "Returns a percent of battle losses to your main city." },
 };
 
 const SKILL_ORDER = ["swordmastery", "stoneworks", "taxStewardship", "royalGranaries", "guildCharters", "marchOrders", "fieldMedics"];
