@@ -1,0 +1,15 @@
+{
+  "name": "crownlands-game",
+  "private": true,
+  "packageManager": "pnpm@11.7.0",
+  "scripts": {
+    "firebase": "firebase",
+    "firebase:version": "firebase --version",
+    "deploy:functions": "firebase deploy --only functions --project crown-land-b15e0",
+    "deploy:rules": "firebase deploy --only firestore:rules --project crown-land-b15e0",
+    "deploy:hosting-redirect": "firebase deploy --only hosting --project crown-land-b15e0"
+  },
+  "devDependencies": {
+    "firebase-tools": "15.22.4"
+  }
+}
