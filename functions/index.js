@@ -245,6 +245,16 @@ function getEarnedSkillPoints(character = {}) {
   return Math.max(0, Math.floor(safeNumber(character?.level, CHARACTER_START_LEVEL)) - 1);
 }
 
+function getAvailableSkillPoints(character = {}, upgrades = {}) {
+  return Math.max(0, getEarnedSkillPoints(character) - getSpentSkillPoints(upgrades));
+}
+
+function reconcileSkillPoints(character = {}, upgrades = {}) {
+  const next = normalizeCharacterProgress(character);
+  next.skillPoints = getAvailableSkillPoints(next, upgrades);
+  return next;
+}
+
 function getSkillLevel(profile = {}, skill = "") {
   return normalizeSkillUpgrades(profile?.upgrades)[skill] || 0;
 }
@@ -808,9 +818,11 @@ function getBattleReportsArray(profile = {}) {
 function buildPlayerProgressPatch(profile = {}, { xp = 0, gold = 0 } = {}) {
   const baseGold = Math.max(0, Math.floor(safeNumber(profile.gold, 0)));
   const xpResult = applyXpToCharacter(profile.character, xp);
+  const upgrades = normalizeSkillUpgrades(profile.upgrades);
+  const character = reconcileSkillPoints(xpResult.character, upgrades);
   const nextGold = baseGold + Math.max(0, Math.floor(safeNumber(gold, 0))) + xpResult.goldReward;
   return {
-    character: xpResult.character,
+    character,
     gold: nextGold,
     goldFloat: nextGold,
     xpAwarded: xpResult.xp,
@@ -1357,8 +1369,8 @@ exports.spendSkillPoint = onCall({ region: "us-central1", maxInstances: 20, invo
     const profileSnap = await transaction.get(profileRef);
     if (!profileSnap.exists) throw new HttpsError("not-found", "Player profile was not found.");
     const profile = profileSnap.data() || {};
-    const character = normalizeCharacterProgress(profile.character);
     const upgrades = normalizeSkillUpgrades(profile.upgrades);
+    const character = reconcileSkillPoints(profile.character, upgrades);
     const currentLevel = normalizeSkillLevel(upgrades[skillId]);
     const currentPercent = currentLevel * config.percentPerLevel;
     if (Number.isFinite(config.maxPercent) && currentPercent >= config.maxPercent) {
@@ -1367,8 +1379,8 @@ exports.spendSkillPoint = onCall({ region: "us-central1", maxInstances: 20, invo
     if (character.skillPoints < 1) {
       throw new HttpsError("failed-precondition", "Earn a hero level for another skill point.");
     }
-    character.skillPoints -= 1;
     upgrades[skillId] = currentLevel + 1;
+    character.skillPoints = getAvailableSkillPoints(character, upgrades);
     transaction.set(profileRef, {
       character,
       upgrades,
@@ -1393,14 +1405,19 @@ exports.resetSkills = onCall({ region: "us-central1", maxInstances: 20, invoker:
   return db.runTransaction(async transaction => {
     const economy = await prepareEconomyCollection(transaction, uid, nowMs);
     const spentPoints = getSpentSkillPoints(economy.profileAfter.upgrades);
-    if (spentPoints < 1) throw new HttpsError("failed-precondition", "No spent skill points to reset.");
-    if (economy.gold < SKILL_RESET_COST) {
+    const currentUpgrades = normalizeSkillUpgrades(economy.profileAfter.upgrades);
+    const currentCharacter = normalizeCharacterProgress(economy.profileAfter.character);
+    const expectedPoints = getAvailableSkillPoints(currentCharacter, currentUpgrades);
+    const storedPoints = normalizeSkillLevel(currentCharacter.skillPoints);
+    const needsPointRepair = storedPoints !== expectedPoints;
+    if (spentPoints < 1 && !needsPointRepair) throw new HttpsError("failed-precondition", "No spent skill points to reset.");
+    const resetCost = spentPoints > 0 ? SKILL_RESET_COST : 0;
+    if (economy.gold < resetCost) {
       throw new HttpsError("failed-precondition", `Skill reset costs ${SKILL_RESET_COST.toLocaleString()} gold.`);
     }
-    const character = normalizeCharacterProgress(economy.profileAfter.character);
-    character.skillPoints = getEarnedSkillPoints(character);
-    const upgrades = normalizeSkillUpgrades({});
-    const gold = Math.max(0, economy.gold - SKILL_RESET_COST);
+    const upgrades = spentPoints > 0 ? normalizeSkillUpgrades({}) : currentUpgrades;
+    const character = reconcileSkillPoints(currentCharacter, upgrades);
+    const gold = Math.max(0, economy.gold - resetCost);
     writePreparedEconomy(transaction, economy, {
       character,
       upgrades,
@@ -1413,7 +1430,8 @@ exports.resetSkills = onCall({ region: "us-central1", maxInstances: 20, invoker:
       gold,
       goldFloat: gold,
       spentPoints,
-      resetCost: SKILL_RESET_COST,
+      resetCost,
+      repairedSkillPoints: needsPointRepair,
     });
   });
 });

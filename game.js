@@ -4784,14 +4784,11 @@ function normalizeCharacterProgress(character) {
 
 function syncCharacterSkillPoints(character, upgrades, rawSkillPoints = undefined) {
   if (!character) return;
-  const savedPoints = Number(rawSkillPoints);
-  if (Number.isFinite(savedPoints)) {
-    character.skillPoints = Math.max(0, Math.floor(savedPoints));
-    return;
-  }
-
-  const earnedPoints = Math.max(0, Math.floor(Number(character.level) || 1) - 1);
-  character.skillPoints = Math.max(0, earnedPoints - getSpentSkillPoints(upgrades));
+  const expectedPoints = getAvailableSkillPoints(character, upgrades);
+  const rawSavedPoints = Number.isFinite(Number(rawSkillPoints)) ? Number(rawSkillPoints) : Number(character.skillPoints);
+  const savedPoints = Math.max(0, Math.floor(Number.isFinite(rawSavedPoints) ? rawSavedPoints : 0));
+  character.skillPoints = expectedPoints;
+  return savedPoints !== expectedPoints;
 }
 
 function getEarnedSkillPoints(character = state?.character) {
@@ -4800,6 +4797,15 @@ function getEarnedSkillPoints(character = state?.character) {
 
 function getSpentSkillPoints(upgrades = state?.upgrades) {
   return SKILL_ORDER.reduce((total, key) => total + Math.max(0, Math.floor(Number(upgrades?.[key]) || 0)), 0);
+}
+
+function getAvailableSkillPoints(character = state?.character, upgrades = state?.upgrades) {
+  return Math.max(0, getEarnedSkillPoints(character) - getSpentSkillPoints(upgrades));
+}
+
+function reconcileSkillPoints(character = state?.character, upgrades = state?.upgrades) {
+  if (!character) return false;
+  return syncCharacterSkillPoints(character, upgrades, character.skillPoints);
 }
 
 function getXpRequiredForLevel(level) {
@@ -4925,6 +4931,8 @@ function changeMainCity(cityId) {
 function addCharacterXp(amount, reason = "progress") {
   if (!state) return;
   state.character = normalizeCharacterProgress(state.character);
+  state.upgrades = normalizeUpgrades(state.upgrades, state.version);
+  reconcileSkillPoints(state.character, state.upgrades);
   const gained = Math.max(0, Math.floor(Number(amount) || 0));
   if (!gained) return;
 
@@ -4959,6 +4967,7 @@ function addCharacterXp(amount, reason = "progress") {
     addLog(`Hero leveled to ${state.character.level}. Reward: ${formatNumber(levelsGained)} skill point, ${formatNumber(totalGoldReward)} gold, and ${formatNumber(totalTroopReward)} troops to ${mainCity ? mainCity.name : "the main city"}.`);
     showToast(`Hero Lv ${state.character.level}: +${formatNumber(levelsGained)} skill point, +${formatNumber(totalGoldReward)} gold, +${formatNumber(totalTroopReward)} troops`);
   }
+  reconcileSkillPoints(state.character, state.upgrades);
 }
 
 function getCaptureXpAward(target, oldOwner, defendersAtStart, attackerOwner = "player") {
@@ -11561,6 +11570,7 @@ function renderProfileSkills() {
   if (!state || !skillsView || skillsView.hidden) return;
   state.character = normalizeCharacterProgress(state.character);
   state.upgrades = normalizeUpgrades(state.upgrades, state.version);
+  reconcileSkillPoints(state.character, state.upgrades);
   const points = Math.max(0, Math.floor(Number(state.character.skillPoints) || 0));
   const spentPoints = getSpentSkillPoints();
   const canResetSkills = !skillActionInFlight
@@ -14050,6 +14060,7 @@ async function buySkill(skill) {
   if (!config) return;
   state.character = normalizeCharacterProgress(state.character);
   state.upgrades = normalizeUpgrades(state.upgrades, state.version);
+  reconcileSkillPoints(state.character, state.upgrades);
   if (isSkillAtCap(skill)) {
     showToast(`${config.label} is capped at ${config.maxPercent}%.`);
     return;
@@ -14087,8 +14098,9 @@ async function resetSkills() {
   if (!state) return;
   state.character = normalizeCharacterProgress(state.character);
   state.upgrades = normalizeUpgrades(state.upgrades, state.version);
+  const repairedPoints = reconcileSkillPoints(state.character, state.upgrades);
   const spentPoints = getSpentSkillPoints();
-  if (spentPoints < 1) {
+  if (spentPoints < 1 && !repairedPoints) {
     showToast("No spent skill points to reset.");
     renderProfileSkills();
     return;
@@ -14100,8 +14112,15 @@ async function resetSkills() {
     try {
       const result = await getOnlineApi().resetSkills();
       applyServerEconomyResult(result);
-      addLog(`Skills reset for ${formatNumber(result?.resetCost || SKILL_RESET_COST)} gold. Refunded ${formatNumber(result?.spentPoints || spentPoints)} skill ${Number(result?.spentPoints || spentPoints) === 1 ? "point" : "points"}.`);
-      showToast(`Skills reset: +${formatNumber(result?.spentPoints || spentPoints)} points`);
+      const resetCost = Number.isFinite(Number(result?.resetCost)) ? Math.max(0, Math.floor(Number(result.resetCost))) : SKILL_RESET_COST;
+      const refundedPoints = Number.isFinite(Number(result?.spentPoints)) ? Math.max(0, Math.floor(Number(result.spentPoints))) : spentPoints;
+      if (refundedPoints > 0) {
+        addLog(`Skills reset for ${formatNumber(resetCost)} gold. Refunded ${formatNumber(refundedPoints)} skill ${refundedPoints === 1 ? "point" : "points"}.`);
+        showToast(`Skills reset: +${formatNumber(refundedPoints)} points`);
+      } else {
+        addLog("Skill points repaired to match hero level.");
+        showToast("Skill points repaired");
+      }
     } catch (error) {
       console.warn("Could not reset skills on server", error);
       showToast(error?.message || "Skill reset failed.");
@@ -14111,19 +14130,24 @@ async function resetSkills() {
     }
     return;
   }
+  const resetCost = spentPoints > 0 ? SKILL_RESET_COST : 0;
   const currentGold = Math.floor(Number(state.gold) || 0);
-  if (currentGold < SKILL_RESET_COST) {
+  if (currentGold < resetCost) {
     showToast(`Skill reset costs ${formatNumber(SKILL_RESET_COST)} gold.`);
     renderProfileSkills();
     return;
   }
-  state.gold = currentGold - SKILL_RESET_COST;
+  state.gold = currentGold - resetCost;
   state.character.skillPoints = getEarnedSkillPoints(state.character);
   state.upgrades = createDefaultSkills();
-  addLog(`Skills reset for ${formatNumber(SKILL_RESET_COST)} gold. Refunded ${formatNumber(spentPoints)} skill ${spentPoints === 1 ? "point" : "points"}.`);
+  if (spentPoints > 0) {
+    addLog(`Skills reset for ${formatNumber(SKILL_RESET_COST)} gold. Refunded ${formatNumber(spentPoints)} skill ${spentPoints === 1 ? "point" : "points"}.`);
+  } else {
+    addLog("Skill points repaired to match hero level.");
+  }
   saveGame();
   renderAll();
-  showToast(`Skills reset: +${formatNumber(spentPoints)} points`);
+  showToast(spentPoints > 0 ? `Skills reset: +${formatNumber(spentPoints)} points` : "Skill points repaired");
 }
 
 function updateIncomingAttackUi() {
