@@ -441,6 +441,19 @@
     }
   ],
   "strongholds": [],
+  "camps": [
+    {
+      "id": "region_10_troops_camp",
+      "name": "Troop Camp",
+      "regionId": "region_10",
+      "xNorm": 0.486,
+      "yNorm": 0.449,
+      "campType": "troops",
+      "artSrc": "assets/camps/troops.png",
+      "size": 132,
+      "notes": ""
+    }
+  ],
   "edgeConnections": {
     "north": [],
     "south": [

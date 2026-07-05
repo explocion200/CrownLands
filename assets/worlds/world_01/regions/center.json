@@ -289,8 +289,8 @@
       "id": "center_026",
       "name": "Queensford",
       "regionId": "center",
-      "xNorm": 0.32,
-      "yNorm": 0.486,
+      "xNorm": 0.331,
+      "yNorm": 0.481,
       "level": 1,
       "owner": "neutral",
       "startType": "neutral",
@@ -1164,6 +1164,28 @@
       "owner": "neutral",
       "startType": "neutral",
       "troops": 10
+    },
+    {
+      "id": "center_city_106",
+      "name": "City 106",
+      "regionId": "center",
+      "xNorm": 0.381,
+      "yNorm": 0.539,
+      "level": 1,
+      "owner": "neutral",
+      "startType": "neutral",
+      "troops": 10
+    },
+    {
+      "id": "center_city_107",
+      "name": "City 107",
+      "regionId": "center",
+      "xNorm": 0.57,
+      "yNorm": 0.581,
+      "level": 1,
+      "owner": "neutral",
+      "startType": "neutral",
+      "troops": 10
     }
   ],
   "strongholds": [
@@ -1184,6 +1206,7 @@
       "notes": ""
     }
   ],
+  "camps": [],
   "edgeConnections": {
     "north": [
       {

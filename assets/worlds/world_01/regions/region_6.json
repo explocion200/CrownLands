@@ -584,6 +584,19 @@
     }
   ],
   "strongholds": [],
+  "camps": [
+    {
+      "id": "region_6_gold_camp",
+      "name": "Gold Camp",
+      "regionId": "region_6",
+      "xNorm": 0.518,
+      "yNorm": 0.533,
+      "campType": "gold",
+      "artSrc": "assets/camps/gold.png",
+      "size": 132,
+      "notes": ""
+    }
+  ],
   "edgeConnections": {
     "north": [],
     "south": [

@@ -804,6 +804,19 @@
     }
   ],
   "strongholds": [],
+  "camps": [
+    {
+      "id": "region_7_items_camp",
+      "name": "Item Camp",
+      "regionId": "region_7",
+      "xNorm": 0.516,
+      "yNorm": 0.484,
+      "campType": "items",
+      "artSrc": "assets/camps/items.png",
+      "size": 132,
+      "notes": ""
+    }
+  ],
   "edgeConnections": {
     "north": [],
     "south": [

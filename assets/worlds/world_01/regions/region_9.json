@@ -903,6 +903,19 @@
     }
   ],
   "strongholds": [],
+  "camps": [
+    {
+      "id": "region_9_deed_camp",
+      "name": "City Deed Camp",
+      "regionId": "region_9",
+      "xNorm": 0.494,
+      "yNorm": 0.468,
+      "campType": "deed",
+      "artSrc": "assets/camps/deed.png",
+      "size": 132,
+      "notes": ""
+    }
+  ],
   "edgeConnections": {
     "north": [],
     "south": [
