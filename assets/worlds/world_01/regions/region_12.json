@@ -428,6 +428,8 @@
         "end": 0.531,
         "type": "road",
         "connectsToRegionId": "region_7",
+        "arrowXNorm": 0.504,
+        "arrowYNorm": 0.12,
         "intentionalOuter": false,
         "notes": "Connects to Greenrook Vale"
       }
@@ -441,6 +443,8 @@
         "end": 0.472,
         "type": "road",
         "connectsToRegionId": "region_13",
+        "arrowXNorm": 0.88,
+        "arrowYNorm": 0.433,
         "intentionalOuter": false,
         "notes": "Connects to Redbanner Fields"
       }
@@ -453,6 +457,8 @@
         "end": 0.458,
         "type": "road",
         "connectsToRegionId": "region_11",
+        "arrowXNorm": 0.12,
+        "arrowYNorm": 0.426,
         "intentionalOuter": false,
         "notes": "Connects to Bandit Wastes"
       }

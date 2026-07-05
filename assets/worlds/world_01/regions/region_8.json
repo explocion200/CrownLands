@@ -725,6 +725,8 @@
         "end": 0.543,
         "type": "road",
         "connectsToRegionId": "south",
+        "arrowXNorm": 0.52,
+        "arrowYNorm": 0.12,
         "intentionalOuter": false,
         "notes": "Connects to Southfields"
       }
@@ -737,6 +739,8 @@
         "end": 0.534,
         "type": "road",
         "connectsToRegionId": "region_13",
+        "arrowXNorm": 0.502,
+        "arrowYNorm": 0.88,
         "intentionalOuter": false,
         "notes": "Connects to Redbanner Fields"
       }
@@ -749,6 +753,8 @@
         "end": 0.512,
         "type": "road",
         "connectsToRegionId": "region_9",
+        "arrowXNorm": 0.88,
+        "arrowYNorm": 0.474,
         "intentionalOuter": false,
         "notes": "Connects to Stonebrook Farms"
       }
@@ -761,6 +767,8 @@
         "end": 0.506,
         "type": "road",
         "connectsToRegionId": "region_7",
+        "arrowXNorm": 0.12,
+        "arrowYNorm": 0.468,
         "intentionalOuter": false,
         "notes": "Connects to Greenrook Vale"
       }

@@ -773,7 +773,7 @@
       "level": 50,
       "troops": 50000000,
       "artSrc": "assets/defense-stronghold.png",
-      "size": 300,
+      "size": 400,
       "notes": ""
     }
   ],
@@ -786,6 +786,8 @@
         "end": 0.424,
         "type": "road",
         "connectsToRegionId": "center",
+        "arrowXNorm": 0.396,
+        "arrowYNorm": 0.12,
         "intentionalOuter": false,
         "notes": "Northern road continues into Crownlands Heart."
       }
@@ -798,6 +800,8 @@
         "end": 0.543,
         "type": "road",
         "connectsToRegionId": "region_8",
+        "arrowXNorm": 0.515,
+        "arrowYNorm": 0.88,
         "intentionalOuter": false,
         "notes": "Connects to Lowroad Vale"
       }

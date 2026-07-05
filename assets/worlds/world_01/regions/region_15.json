@@ -450,6 +450,8 @@
         "end": 0.508,
         "type": "road",
         "connectsToRegionId": "region_10",
+        "arrowXNorm": 0.474,
+        "arrowYNorm": 0.12,
         "intentionalOuter": false,
         "notes": "Connects to Goldmere Plains"
       }
@@ -464,6 +466,8 @@
         "end": 0.53,
         "type": "road",
         "connectsToRegionId": "region_14",
+        "arrowXNorm": 0.12,
+        "arrowYNorm": 0.495,
         "intentionalOuter": false,
         "notes": "Connects to Ashenfen March"
       }

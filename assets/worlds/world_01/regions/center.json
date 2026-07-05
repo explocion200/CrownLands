@@ -852,6 +852,8 @@
         "end": 0.55,
         "type": "road",
         "connectsToRegionId": "north",
+        "arrowXNorm": 0.51,
+        "arrowYNorm": 0.12,
         "intentionalOuter": false,
         "notes": "Northern road continues into North Frontier."
       }
@@ -864,6 +866,8 @@
         "end": 0.525,
         "type": "road",
         "connectsToRegionId": "south",
+        "arrowXNorm": 0.495,
+        "arrowYNorm": 0.88,
         "intentionalOuter": false,
         "notes": "Southern road continues into Southfields."
       }
@@ -876,6 +880,8 @@
         "end": 0.522,
         "type": "road",
         "connectsToRegionId": "east",
+        "arrowXNorm": 0.88,
+        "arrowYNorm": 0.483,
         "intentionalOuter": false,
         "notes": "Eastern road continues into East Reach."
       }
@@ -888,6 +894,8 @@
         "end": 0.49,
         "type": "road",
         "connectsToRegionId": "west",
+        "arrowXNorm": 0.12,
+        "arrowYNorm": 0.46,
         "intentionalOuter": false,
         "notes": "Western road continues into West Marches."
       }

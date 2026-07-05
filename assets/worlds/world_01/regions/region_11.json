@@ -549,6 +549,8 @@
         "end": 0.465,
         "type": "road",
         "connectsToRegionId": "region_6",
+        "arrowXNorm": 0.437,
+        "arrowYNorm": 0.12,
         "intentionalOuter": false,
         "notes": "Connects to Graywood Hollow"
       }
@@ -562,6 +564,8 @@
         "end": 0.567,
         "type": "road",
         "connectsToRegionId": "region_12",
+        "arrowXNorm": 0.88,
+        "arrowYNorm": 0.532,
         "intentionalOuter": false,
         "notes": "Connects to Ironfall Hills"
       }

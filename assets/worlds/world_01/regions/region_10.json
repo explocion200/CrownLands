@@ -451,6 +451,8 @@
         "end": 0.476,
         "type": "road",
         "connectsToRegionId": "region_15",
+        "arrowXNorm": 0.45,
+        "arrowYNorm": 0.88,
         "intentionalOuter": false,
         "notes": "Connects to Relic Vale"
       }
@@ -464,6 +466,8 @@
         "end": 0.448,
         "type": "road",
         "connectsToRegionId": "region_9",
+        "arrowXNorm": 0.12,
+        "arrowYNorm": 0.416,
         "intentionalOuter": false,
         "notes": "Connects to Stonebrook Farms"
       }

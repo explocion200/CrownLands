@@ -505,6 +505,8 @@
         "end": 0.546,
         "type": "road",
         "connectsToRegionId": "region_9",
+        "arrowXNorm": 0.527,
+        "arrowYNorm": 0.12,
         "intentionalOuter": false,
         "notes": "Connects to Stonebrook Farms"
       }
@@ -518,6 +520,8 @@
         "end": 0.437,
         "type": "road",
         "connectsToRegionId": "region_15",
+        "arrowXNorm": 0.88,
+        "arrowYNorm": 0.405,
         "intentionalOuter": false,
         "notes": "Connects to Relic Vale"
       }
@@ -530,6 +534,8 @@
         "end": 0.436,
         "type": "road",
         "connectsToRegionId": "region_13",
+        "arrowXNorm": 0.12,
+        "arrowYNorm": 0.413,
         "intentionalOuter": false,
         "notes": "Connects to Redbanner Fields"
       }

@@ -604,6 +604,8 @@
         "end": 0.528,
         "type": "road",
         "connectsToRegionId": "region_8",
+        "arrowXNorm": 0.493,
+        "arrowYNorm": 0.12,
         "intentionalOuter": false,
         "notes": "Connects to Lowroad Vale"
       }
@@ -617,6 +619,8 @@
         "end": 0.509,
         "type": "road",
         "connectsToRegionId": "region_14",
+        "arrowXNorm": 0.88,
+        "arrowYNorm": 0.47,
         "intentionalOuter": false,
         "notes": "Connects to Ashenfen March"
       }
@@ -629,6 +633,8 @@
         "end": 0.496,
         "type": "road",
         "connectsToRegionId": "region_12",
+        "arrowXNorm": 0.12,
+        "arrowYNorm": 0.456,
         "intentionalOuter": false,
         "notes": "Connects to Ironfall Hills"
       }

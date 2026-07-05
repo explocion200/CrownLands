@@ -575,7 +575,7 @@
       "level": 50,
       "troops": 50000000,
       "artSrc": "assets/speed-stronghold.png",
-      "size": 300,
+      "size": 400,
       "notes": ""
     }
   ],
@@ -591,6 +591,8 @@
         "end": 0.536,
         "type": "road",
         "connectsToRegionId": "center",
+        "arrowXNorm": 0.12,
+        "arrowYNorm": 0.492,
         "intentionalOuter": false,
         "notes": "Western road continues into Crownlands Heart."
       }

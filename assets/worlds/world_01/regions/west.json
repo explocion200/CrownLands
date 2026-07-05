@@ -575,7 +575,7 @@
       "level": 50,
       "troops": 50000000,
       "artSrc": "assets/gold-stronghold.png",
-      "size": 300,
+      "size": 400,
       "notes": ""
     }
   ],
@@ -590,6 +590,8 @@
         "end": 0.528,
         "type": "road",
         "connectsToRegionId": "center",
+        "arrowXNorm": 0.88,
+        "arrowYNorm": 0.478,
         "intentionalOuter": false,
         "notes": "Eastern road continues into Crownlands Heart."
       }

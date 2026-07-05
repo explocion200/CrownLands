@@ -589,6 +589,8 @@
         "end": 0.537,
         "type": "road",
         "connectsToRegionId": "center",
+        "arrowXNorm": 0.499,
+        "arrowYNorm": 0.88,
         "intentionalOuter": false,
         "notes": "Southern road continues into Crownlands Heart."
       }

@@ -583,6 +583,8 @@
         "end": 0.57,
         "type": "road",
         "connectsToRegionId": "region_14",
+        "arrowXNorm": 0.544,
+        "arrowYNorm": 0.88,
         "intentionalOuter": false,
         "notes": "Connects to Ashenfen March"
       }
@@ -595,6 +597,8 @@
         "end": 0.467,
         "type": "road",
         "connectsToRegionId": "region_10",
+        "arrowXNorm": 0.88,
+        "arrowYNorm": 0.436,
         "intentionalOuter": false,
         "notes": "Connects to Goldmere Plains"
       }
@@ -607,6 +611,8 @@
         "end": 0.351,
         "type": "road",
         "connectsToRegionId": "region_8",
+        "arrowXNorm": 0.12,
+        "arrowYNorm": 0.32,
         "intentionalOuter": false,
         "notes": "Connects to Lowroad Vale"
       }

@@ -1,6 +1,6 @@
 window.CROWNLANDS_MAP_EDITOR_DATA = {
-  "version": 202607022315,
-  "updatedAt": "2026-07-02T23:15:19.202Z",
+  "version": 202607050613,
+  "updatedAt": "2026-07-05T06:13:43.706Z",
   "worldId": "world_01",
   "worldName": "Crownlands World 01",
   "globalSettings": {
@@ -20,7 +20,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
       "type": "crownlands_main",
       "cityCapacity": 100,
       "imageSrc": "assets/worlds/world_01/maps/center-crownlands-heart-1783019616021.webp",
-      "thumbnailSrc": "assets/worlds/world_01/maps/thumbnails/center-crownlands-heart-1783019616021-thumb.webp",
+      "thumbnailSrc": "",
       "imageWidth": 1448,
       "imageHeight": 1086,
       "region": {
@@ -943,11 +943,10 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
           "level": 100,
           "troops": 50000000,
           "startTroops": 50000000,
-          "artSrc": "assets/crown-citadel.png?v=20260630-citadel-art",
+          "artSrc": "assets/crown-citadel.png?v=20260703-crown-citadel-art",
           "size": 400
         }
       ],
-      "portals": [],
       "edgeConnections": {
         "north": [
           {
@@ -957,6 +956,8 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
             "end": 0.55,
             "type": "road",
             "connectsToRegionId": "north",
+            "arrowXNorm": 0.51,
+            "arrowYNorm": 0.12,
             "intentionalOuter": false,
             "notes": "Northern road continues into North Frontier."
           }
@@ -969,6 +970,8 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
             "end": 0.525,
             "type": "road",
             "connectsToRegionId": "south",
+            "arrowXNorm": 0.495,
+            "arrowYNorm": 0.88,
             "intentionalOuter": false,
             "notes": "Southern road continues into Southfields."
           }
@@ -981,6 +984,8 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
             "end": 0.522,
             "type": "road",
             "connectsToRegionId": "east",
+            "arrowXNorm": 0.88,
+            "arrowYNorm": 0.483,
             "intentionalOuter": false,
             "notes": "Eastern road continues into East Reach."
           }
@@ -993,6 +998,8 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
             "end": 0.49,
             "type": "road",
             "connectsToRegionId": "west",
+            "arrowXNorm": 0.12,
+            "arrowYNorm": 0.46,
             "intentionalOuter": false,
             "notes": "Western road continues into West Marches."
           }
@@ -1007,7 +1014,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
       "type": "endgame",
       "cityCapacity": 50,
       "imageSrc": "assets/worlds/world_01/maps/west-west-2-1783019399438.webp",
-      "thumbnailSrc": "assets/worlds/world_01/maps/thumbnails/west-west-2-1783019399438-thumb.webp",
+      "thumbnailSrc": "",
       "imageWidth": 1448,
       "imageHeight": 1086,
       "region": {
@@ -1643,10 +1650,9 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
           "troops": 50000000,
           "startTroops": 50000000,
           "artSrc": "assets/gold-stronghold.png",
-          "size": 300
+          "size": 400
         }
       ],
-      "portals": [],
       "edgeConnections": {
         "north": [],
         "south": [],
@@ -1658,6 +1664,8 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
             "end": 0.528,
             "type": "road",
             "connectsToRegionId": "center",
+            "arrowXNorm": 0.88,
+            "arrowYNorm": 0.478,
             "intentionalOuter": false,
             "notes": "Eastern road continues into Crownlands Heart."
           }
@@ -1673,7 +1681,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
       "type": "endgame",
       "cityCapacity": 50,
       "imageSrc": "assets/worlds/world_01/maps/east-east-4-1783020191215.webp",
-      "thumbnailSrc": "assets/worlds/world_01/maps/thumbnails/east-east-4-1783020191215-thumb.webp",
+      "thumbnailSrc": "",
       "imageWidth": 1448,
       "imageHeight": 1086,
       "region": {
@@ -2309,10 +2317,9 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
           "troops": 50000000,
           "startTroops": 50000000,
           "artSrc": "assets/speed-stronghold.png",
-          "size": 300
+          "size": 400
         }
       ],
-      "portals": [],
       "edgeConnections": {
         "north": [],
         "south": [],
@@ -2325,6 +2332,8 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
             "end": 0.536,
             "type": "road",
             "connectsToRegionId": "center",
+            "arrowXNorm": 0.12,
+            "arrowYNorm": 0.492,
             "intentionalOuter": false,
             "notes": "Western road continues into Crownlands Heart."
           }
@@ -2339,7 +2348,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
       "type": "endgame",
       "cityCapacity": 50,
       "imageSrc": "assets/worlds/world_01/maps/north-north-1-1783019201680.webp",
-      "thumbnailSrc": "assets/worlds/world_01/maps/thumbnails/north-north-1-1783019201680-thumb.webp",
+      "thumbnailSrc": "",
       "imageWidth": 1448,
       "imageHeight": 1086,
       "region": {
@@ -2978,7 +2987,6 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
           "size": 300
         }
       ],
-      "portals": [],
       "edgeConnections": {
         "north": [],
         "south": [
@@ -2989,6 +2997,8 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
             "end": 0.537,
             "type": "road",
             "connectsToRegionId": "center",
+            "arrowXNorm": 0.499,
+            "arrowYNorm": 0.88,
             "intentionalOuter": false,
             "notes": "Southern road continues into Crownlands Heart."
           }
@@ -3005,7 +3015,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
       "type": "endgame",
       "cityCapacity": 50,
       "imageSrc": "assets/worlds/world_01/maps/south-south-5-1783020401484.webp",
-      "thumbnailSrc": "assets/worlds/world_01/maps/thumbnails/south-south-5-1783020401484-thumb.webp",
+      "thumbnailSrc": "",
       "imageWidth": 1448,
       "imageHeight": 1086,
       "region": {
@@ -3857,10 +3867,9 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
           "troops": 50000000,
           "startTroops": 50000000,
           "artSrc": "assets/defense-stronghold.png",
-          "size": 300
+          "size": 400
         }
       ],
-      "portals": [],
       "edgeConnections": {
         "north": [
           {
@@ -3870,6 +3879,8 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
             "end": 0.424,
             "type": "road",
             "connectsToRegionId": "center",
+            "arrowXNorm": 0.396,
+            "arrowYNorm": 0.12,
             "intentionalOuter": false,
             "notes": "Northern road continues into Crownlands Heart."
           }
@@ -3882,6 +3893,8 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
             "end": 0.543,
             "type": "road",
             "connectsToRegionId": "region_8",
+            "arrowXNorm": 0.515,
+            "arrowYNorm": 0.88,
             "intentionalOuter": false,
             "notes": "Connects to Lowroad Vale"
           }
@@ -3898,7 +3911,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
       "type": "midgame",
       "cityCapacity": 50,
       "imageSrc": "assets/worlds/world_01/maps/region_6-6-1783021585258.webp",
-      "thumbnailSrc": "assets/worlds/world_01/maps/thumbnails/region_6-6-1783021585258-thumb.webp",
+      "thumbnailSrc": "",
       "imageWidth": 1448,
       "imageHeight": 1086,
       "region": {
@@ -4506,7 +4519,6 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         }
       ],
       "objectives": [],
-      "portals": [],
       "edgeConnections": {
         "north": [],
         "south": [
@@ -4517,6 +4529,8 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
             "end": 0.472,
             "type": "road",
             "connectsToRegionId": "region_11",
+            "arrowXNorm": 0.439,
+            "arrowYNorm": 0.88,
             "intentionalOuter": false,
             "notes": "Connects to Bandit Wastes"
           }
@@ -4529,6 +4543,8 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
             "end": 0.209,
             "type": "road",
             "connectsToRegionId": "region_7",
+            "arrowXNorm": 0.88,
+            "arrowYNorm": 0.167,
             "intentionalOuter": false,
             "notes": "Connects to Greenrook Vale"
           }
@@ -4544,7 +4560,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
       "type": "midgame",
       "cityCapacity": 50,
       "imageSrc": "assets/worlds/world_01/maps/region_7-7-1783022207943.webp",
-      "thumbnailSrc": "assets/worlds/world_01/maps/thumbnails/region_7-7-1783022207943-thumb.webp",
+      "thumbnailSrc": "",
       "imageWidth": 1448,
       "imageHeight": 1086,
       "region": {
@@ -5428,7 +5444,6 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         }
       ],
       "objectives": [],
-      "portals": [],
       "edgeConnections": {
         "north": [],
         "south": [
@@ -5439,6 +5454,8 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
             "end": 0.501,
             "type": "road",
             "connectsToRegionId": "region_12",
+            "arrowXNorm": 0.466,
+            "arrowYNorm": 0.88,
             "intentionalOuter": false,
             "notes": "Connects to Ironfall Hills"
           }
@@ -5451,6 +5468,8 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
             "end": 0.46,
             "type": "road",
             "connectsToRegionId": "region_8",
+            "arrowXNorm": 0.88,
+            "arrowYNorm": 0.439,
             "intentionalOuter": false,
             "notes": "Connects to Lowroad Vale"
           }
@@ -5463,6 +5482,8 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
             "end": 0.454,
             "type": "road",
             "connectsToRegionId": "region_6",
+            "arrowXNorm": 0.12,
+            "arrowYNorm": 0.424,
             "intentionalOuter": false,
             "notes": "Connects to Graywood Hollow"
           }
@@ -5477,7 +5498,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
       "type": "starter",
       "cityCapacity": 50,
       "imageSrc": "assets/worlds/world_01/maps/region_8-8-1783022783978.webp",
-      "thumbnailSrc": "assets/worlds/world_01/maps/thumbnails/region_8-8-1783022783978-thumb.webp",
+      "thumbnailSrc": "",
       "imageWidth": 1448,
       "imageHeight": 1086,
       "region": {
@@ -6265,7 +6286,6 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         }
       ],
       "objectives": [],
-      "portals": [],
       "edgeConnections": {
         "north": [
           {
@@ -6275,6 +6295,8 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
             "end": 0.543,
             "type": "road",
             "connectsToRegionId": "south",
+            "arrowXNorm": 0.52,
+            "arrowYNorm": 0.12,
             "intentionalOuter": false,
             "notes": "Connects to Southfields"
           }
@@ -6287,6 +6309,8 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
             "end": 0.534,
             "type": "road",
             "connectsToRegionId": "region_13",
+            "arrowXNorm": 0.502,
+            "arrowYNorm": 0.88,
             "intentionalOuter": false,
             "notes": "Connects to Redbanner Fields"
           }
@@ -6299,6 +6323,8 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
             "end": 0.512,
             "type": "road",
             "connectsToRegionId": "region_9",
+            "arrowXNorm": 0.88,
+            "arrowYNorm": 0.474,
             "intentionalOuter": false,
             "notes": "Connects to Stonebrook Farms"
           }
@@ -6311,6 +6337,8 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
             "end": 0.506,
             "type": "road",
             "connectsToRegionId": "region_7",
+            "arrowXNorm": 0.12,
+            "arrowYNorm": 0.468,
             "intentionalOuter": false,
             "notes": "Connects to Greenrook Vale"
           }
@@ -6325,7 +6353,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
       "type": "midgame",
       "cityCapacity": 50,
       "imageSrc": "assets/worlds/world_01/maps/region_9-9-1783023202200.webp",
-      "thumbnailSrc": "assets/worlds/world_01/maps/thumbnails/region_9-9-1783023202200-thumb.webp",
+      "thumbnailSrc": "",
       "imageWidth": 1448,
       "imageHeight": 1086,
       "region": {
@@ -6957,7 +6985,6 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         }
       ],
       "objectives": [],
-      "portals": [],
       "edgeConnections": {
         "north": [],
         "south": [
@@ -6968,6 +6995,8 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
             "end": 0.57,
             "type": "road",
             "connectsToRegionId": "region_14",
+            "arrowXNorm": 0.544,
+            "arrowYNorm": 0.88,
             "intentionalOuter": false,
             "notes": "Connects to Ashenfen March"
           }
@@ -6980,6 +7009,8 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
             "end": 0.467,
             "type": "road",
             "connectsToRegionId": "region_10",
+            "arrowXNorm": 0.88,
+            "arrowYNorm": 0.436,
             "intentionalOuter": false,
             "notes": "Connects to Goldmere Plains"
           }
@@ -6992,6 +7023,8 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
             "end": 0.351,
             "type": "road",
             "connectsToRegionId": "region_8",
+            "arrowXNorm": 0.12,
+            "arrowYNorm": 0.32,
             "intentionalOuter": false,
             "notes": "Connects to Lowroad Vale"
           }
@@ -7006,7 +7039,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
       "type": "midgame",
       "cityCapacity": 50,
       "imageSrc": "assets/worlds/world_01/maps/region_10-10-1783023599661.webp",
-      "thumbnailSrc": "assets/worlds/world_01/maps/thumbnails/region_10-10-1783023599661-thumb.webp",
+      "thumbnailSrc": "",
       "imageWidth": 1448,
       "imageHeight": 1086,
       "region": {
@@ -7494,7 +7527,6 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         }
       ],
       "objectives": [],
-      "portals": [],
       "edgeConnections": {
         "north": [],
         "south": [
@@ -7505,6 +7537,8 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
             "end": 0.476,
             "type": "road",
             "connectsToRegionId": "region_15",
+            "arrowXNorm": 0.45,
+            "arrowYNorm": 0.88,
             "intentionalOuter": false,
             "notes": "Connects to Relic Vale"
           }
@@ -7518,6 +7552,8 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
             "end": 0.448,
             "type": "road",
             "connectsToRegionId": "region_9",
+            "arrowXNorm": 0.12,
+            "arrowYNorm": 0.416,
             "intentionalOuter": false,
             "notes": "Connects to Stonebrook Farms"
           }
@@ -7532,7 +7568,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
       "type": "starter",
       "cityCapacity": 50,
       "imageSrc": "assets/worlds/world_01/maps/region_11-11-1783024323781.webp",
-      "thumbnailSrc": "assets/worlds/world_01/maps/thumbnails/region_11-11-1783024323781-thumb.webp",
+      "thumbnailSrc": "",
       "imageWidth": 1448,
       "imageHeight": 1086,
       "region": {
@@ -8128,7 +8164,6 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         }
       ],
       "objectives": [],
-      "portals": [],
       "edgeConnections": {
         "north": [
           {
@@ -8138,6 +8173,8 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
             "end": 0.465,
             "type": "road",
             "connectsToRegionId": "region_6",
+            "arrowXNorm": 0.437,
+            "arrowYNorm": 0.12,
             "intentionalOuter": false,
             "notes": "Connects to Graywood Hollow"
           }
@@ -8151,6 +8188,8 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
             "end": 0.567,
             "type": "road",
             "connectsToRegionId": "region_12",
+            "arrowXNorm": 0.88,
+            "arrowYNorm": 0.532,
             "intentionalOuter": false,
             "notes": "Connects to Ironfall Hills"
           }
@@ -8166,7 +8205,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
       "type": "starter",
       "cityCapacity": 50,
       "imageSrc": "assets/worlds/world_01/maps/region_12-12-1783024478267.webp",
-      "thumbnailSrc": "assets/worlds/world_01/maps/thumbnails/region_12-12-1783024478267-thumb.webp",
+      "thumbnailSrc": "",
       "imageWidth": 1448,
       "imageHeight": 1086,
       "region": {
@@ -8630,7 +8669,6 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         }
       ],
       "objectives": [],
-      "portals": [],
       "edgeConnections": {
         "north": [
           {
@@ -8640,6 +8678,8 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
             "end": 0.531,
             "type": "road",
             "connectsToRegionId": "region_7",
+            "arrowXNorm": 0.504,
+            "arrowYNorm": 0.12,
             "intentionalOuter": false,
             "notes": "Connects to Greenrook Vale"
           }
@@ -8653,6 +8693,8 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
             "end": 0.472,
             "type": "road",
             "connectsToRegionId": "region_13",
+            "arrowXNorm": 0.88,
+            "arrowYNorm": 0.433,
             "intentionalOuter": false,
             "notes": "Connects to Redbanner Fields"
           }
@@ -8665,6 +8707,8 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
             "end": 0.458,
             "type": "road",
             "connectsToRegionId": "region_11",
+            "arrowXNorm": 0.12,
+            "arrowYNorm": 0.426,
             "intentionalOuter": false,
             "notes": "Connects to Bandit Wastes"
           }
@@ -8679,7 +8723,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
       "type": "starter",
       "cityCapacity": 50,
       "imageSrc": "assets/worlds/world_01/maps/region_13-13-1783024786859.webp",
-      "thumbnailSrc": "assets/worlds/world_01/maps/thumbnails/region_13-13-1783024786859-thumb.webp",
+      "thumbnailSrc": "",
       "imageWidth": 1448,
       "imageHeight": 1086,
       "region": {
@@ -9335,7 +9379,6 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         }
       ],
       "objectives": [],
-      "portals": [],
       "edgeConnections": {
         "north": [
           {
@@ -9345,6 +9388,8 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
             "end": 0.528,
             "type": "road",
             "connectsToRegionId": "region_8",
+            "arrowXNorm": 0.493,
+            "arrowYNorm": 0.12,
             "intentionalOuter": false,
             "notes": "Connects to Lowroad Vale"
           }
@@ -9358,6 +9403,8 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
             "end": 0.509,
             "type": "road",
             "connectsToRegionId": "region_14",
+            "arrowXNorm": 0.88,
+            "arrowYNorm": 0.47,
             "intentionalOuter": false,
             "notes": "Connects to Ashenfen March"
           }
@@ -9370,6 +9417,8 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
             "end": 0.496,
             "type": "road",
             "connectsToRegionId": "region_12",
+            "arrowXNorm": 0.12,
+            "arrowYNorm": 0.456,
             "intentionalOuter": false,
             "notes": "Connects to Ironfall Hills"
           }
@@ -9384,7 +9433,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
       "type": "starter",
       "cityCapacity": 50,
       "imageSrc": "assets/worlds/world_01/maps/region_14-14-1783024960400.webp",
-      "thumbnailSrc": "assets/worlds/world_01/maps/thumbnails/region_14-14-1783024960400-thumb.webp",
+      "thumbnailSrc": "",
       "imageWidth": 1448,
       "imageHeight": 1086,
       "region": {
@@ -9932,7 +9981,6 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         }
       ],
       "objectives": [],
-      "portals": [],
       "edgeConnections": {
         "north": [
           {
@@ -9942,6 +9990,8 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
             "end": 0.546,
             "type": "road",
             "connectsToRegionId": "region_9",
+            "arrowXNorm": 0.527,
+            "arrowYNorm": 0.12,
             "intentionalOuter": false,
             "notes": "Connects to Stonebrook Farms"
           }
@@ -9955,6 +10005,8 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
             "end": 0.437,
             "type": "road",
             "connectsToRegionId": "region_15",
+            "arrowXNorm": 0.88,
+            "arrowYNorm": 0.405,
             "intentionalOuter": false,
             "notes": "Connects to Relic Vale"
           }
@@ -9967,6 +10019,8 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
             "end": 0.436,
             "type": "road",
             "connectsToRegionId": "region_13",
+            "arrowXNorm": 0.12,
+            "arrowYNorm": 0.413,
             "intentionalOuter": false,
             "notes": "Connects to Redbanner Fields"
           }
@@ -9981,7 +10035,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
       "type": "starter",
       "cityCapacity": 50,
       "imageSrc": "assets/worlds/world_01/maps/region_15-15-1783025218871.webp",
-      "thumbnailSrc": "assets/worlds/world_01/maps/thumbnails/region_15-15-1783025218871-thumb.webp",
+      "thumbnailSrc": "",
       "imageWidth": 1448,
       "imageHeight": 1086,
       "region": {
@@ -10469,7 +10523,6 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         }
       ],
       "objectives": [],
-      "portals": [],
       "edgeConnections": {
         "north": [
           {
@@ -10479,6 +10532,8 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
             "end": 0.508,
             "type": "road",
             "connectsToRegionId": "region_10",
+            "arrowXNorm": 0.474,
+            "arrowYNorm": 0.12,
             "intentionalOuter": false,
             "notes": "Connects to Goldmere Plains"
           }
@@ -10493,6 +10548,8 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
             "end": 0.53,
             "type": "road",
             "connectsToRegionId": "region_14",
+            "arrowXNorm": 0.12,
+            "arrowYNorm": 0.495,
             "intentionalOuter": false,
             "notes": "Connects to Ashenfen March"
           }
