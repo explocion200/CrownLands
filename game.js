@@ -2207,6 +2207,7 @@ let onlineOwnedCitiesCacheComplete = false;
 let onlineOwnedCitiesRefreshInFlight = false;
 let onlinePresenceTimer = 0;
 let onlinePresenceInFlight = false;
+let onlineSessionReplaced = false;
 let serverEconomySyncTimer = 0;
 let serverEconomyRefreshInFlight = false;
 let serverEconomyRefreshQueued = false;
@@ -7554,6 +7555,18 @@ function updateOnlineUi() {
     return;
   }
 
+  if (onlineSessionReplaced) {
+    onlineStatusText.textContent = "Signed out";
+    onlineStatusDetail.textContent = "This account opened on another device.";
+    if (googleSignInBtn) {
+      googleSignInBtn.hidden = false;
+      googleSignInBtn.disabled = signedIn;
+    }
+    if (enterKingdomBtn) enterKingdomBtn.hidden = true;
+    if (googleSignOutBtn) googleSignOutBtn.hidden = true;
+    return;
+  }
+
   if (signedIn) {
     onlineStatusText.textContent = user?.displayName ? `Signed in: ${user.displayName}` : "Signed in";
     if (onlineLastError) {
@@ -7595,6 +7608,7 @@ async function handleGoogleSignIn() {
   }
 
   try {
+    onlineSessionReplaced = false;
     if (googleSignInBtn) googleSignInBtn.disabled = true;
     await api.signInWithGoogle();
     onlineLastError = "";
@@ -7618,6 +7632,7 @@ async function handleGoogleSignOut() {
   const api = getOnlineApi();
   if (!api?.signOut) return;
   try {
+    onlineSessionReplaced = false;
     if (onlineArmySavePromises.size || onlineCityStateSavePromises.size) {
       showToast("Finishing army orders...");
       try {
@@ -7639,6 +7654,20 @@ async function handleGoogleSignOut() {
     updateOnlineUi();
     showToast("Could not sign out.");
   }
+}
+
+function handleOnlineSessionReplaced() {
+  onlineSessionReplaced = true;
+  onlineLastError = "";
+  disconnectOnlineWorld();
+  clearSelection(false);
+  if (modal?.open) modal.close();
+  closeProfileScreen();
+  setSetupLoading(false);
+  state = null;
+  if (setupScreen) setupScreen.classList.add("visible");
+  updateOnlineUi();
+  showToast("Signed out. This account opened on another device.");
 }
 
 function getCurrentOnlineUid() {
@@ -9318,6 +9347,7 @@ async function startFromInput(forceFresh = false) {
   let shouldConnectOnline = false;
   let statusOverride = "";
   try {
+    onlineSessionReplaced = false;
     if (launchBtn) {
       launchBtn.disabled = true;
       launchBtn.textContent = forceFresh ? "Creating..." : "Entering...";
@@ -15516,6 +15546,7 @@ window.addEventListener("crownlands:online-error", event => {
   updateOnlineUi();
   updatePushAlertsUi();
 });
+window.addEventListener("crownlands:session-replaced", handleOnlineSessionReplaced);
 if (playerNameInput) {
   playerNameInput.addEventListener("keydown", event => {
     if (event.key === "Enter") startFromInput(false);

@@ -1,6 +1,7 @@
 (function () {
   const FIREBASE_VERSION = "10.12.5";
   const REQUIRED_CONFIG_KEYS = ["apiKey", "authDomain", "projectId", "appId"];
+  const ACTIVE_SESSION_STORAGE_KEY = "crownlands-active-session-id";
   const ROYAL_PEACE_SHIELD_ITEM_ID = "shield_12h";
   const ROYAL_PEACE_SHIELD_COST = 175_000;
 
@@ -22,6 +23,9 @@
     notificationToken: "",
     notificationTokenId: "",
     foregroundPushListenerReady: false,
+    activeSessionId: "",
+    activeSessionUnsubscribe: null,
+    sessionReplacementInFlight: false,
   };
 
   function hasRealFirebaseConfig(config) {
@@ -44,6 +48,111 @@
 
   function dispatch(name, detail = {}) {
     window.dispatchEvent(new CustomEvent(`crownlands:${name}`, { detail }));
+  }
+
+  function createSessionId() {
+    if (window.crypto?.randomUUID) return window.crypto.randomUUID();
+    const random = window.crypto?.getRandomValues
+      ? Array.from(window.crypto.getRandomValues(new Uint32Array(4))).map(value => value.toString(16)).join("")
+      : Math.random().toString(36).slice(2);
+    return `session-${Date.now().toString(36)}-${random}`;
+  }
+
+  function getActiveSessionId() {
+    if (client.activeSessionId) return client.activeSessionId;
+    try {
+      client.activeSessionId = window.sessionStorage?.getItem(ACTIVE_SESSION_STORAGE_KEY) || "";
+      if (!client.activeSessionId) {
+        client.activeSessionId = createSessionId();
+        window.sessionStorage?.setItem(ACTIVE_SESSION_STORAGE_KEY, client.activeSessionId);
+      }
+    } catch (_) {
+      client.activeSessionId = client.activeSessionId || createSessionId();
+    }
+    return client.activeSessionId;
+  }
+
+  function getSessionDeviceLabel() {
+    const ua = String(navigator.userAgent || "");
+    if (/ipad|tablet/i.test(ua)) return "tablet";
+    if (/mobi|android|iphone|ipod/i.test(ua)) return "mobile";
+    return "desktop";
+  }
+
+  function stopActiveSessionWatcher() {
+    if (typeof client.activeSessionUnsubscribe === "function") {
+      client.activeSessionUnsubscribe();
+    }
+    client.activeSessionUnsubscribe = null;
+  }
+
+  async function signOutForSessionReplacement(remoteSession = {}) {
+    if (client.sessionReplacementInFlight) return;
+    client.sessionReplacementInFlight = true;
+    const replacedUser = client.user;
+    stopActiveSessionWatcher();
+    dispatch("session-replaced", { user: replacedUser, activeSession: remoteSession });
+    try {
+      await disablePushNotifications().catch(error => {
+        console.warn("Could not disable notifications after session replacement", error);
+      });
+      if (client.auth && client.modules?.auth?.signOut) {
+        await client.modules.auth.signOut(client.auth);
+      }
+    } catch (error) {
+      console.warn("Could not sign out replaced session", error);
+    } finally {
+      client.user = null;
+      client.sessionReplacementInFlight = false;
+      dispatch("auth", { user: null, reason: "session-replaced" });
+    }
+  }
+
+  function startActiveSessionWatcher(uid) {
+    stopActiveSessionWatcher();
+    if (!uid || !client.db || !client.modules?.firestore?.onSnapshot) return;
+    const { doc, onSnapshot } = client.modules.firestore;
+    client.activeSessionUnsubscribe = onSnapshot(
+      doc(client.db, "players", uid),
+      snapshot => {
+        if (!snapshot.exists()) return;
+        const activeSession = snapshot.data()?.activeSession || {};
+        const remoteSessionId = String(activeSession.id || "");
+        const localSessionId = getActiveSessionId();
+        if (!remoteSessionId || !localSessionId || remoteSessionId === localSessionId) return;
+        signOutForSessionReplacement(activeSession);
+      },
+      error => {
+        console.warn("Active session watcher failed", error);
+      }
+    );
+  }
+
+  async function activateCurrentSession(reason = "login") {
+    await init();
+    const uid = requireSignedIn();
+    if (!uid) return null;
+    const { doc, setDoc, serverTimestamp } = client.modules.firestore;
+    const now = Date.now();
+    const activeSession = {
+      id: getActiveSessionId(),
+      device: getSessionDeviceLabel(),
+      reason: String(reason || "login").slice(0, 32),
+      userAgent: String(navigator.userAgent || "").slice(0, 180),
+      loginAtMs: now,
+      lastSeenAtMs: now,
+    };
+    await setDoc(doc(client.db, "players", uid), {
+      uid,
+      displayName: client.user?.displayName || "",
+      email: client.user?.email || "",
+      photoURL: client.user?.photoURL || "",
+      activeSession,
+      lastLoginAt: now,
+      updatedAt: serverTimestamp(),
+    }, { merge: true });
+    startActiveSessionWatcher(uid);
+    return activeSession;
   }
 
   async function loadModules() {
@@ -87,6 +196,13 @@
 
         client.modules.auth.onAuthStateChanged(client.auth, user => {
           client.user = serializeUser(user);
+          if (client.user?.uid && !client.sessionReplacementInFlight) {
+            activateCurrentSession("auth-state").catch(error => {
+              console.warn("Could not activate current session", error);
+            });
+          } else if (!client.user?.uid) {
+            stopActiveSessionWatcher();
+          }
           dispatch("auth", { user: client.user });
         });
 
@@ -365,9 +481,10 @@
     return sanitizedObject;
   }
 
-  function rememberLogin() {
-    savePlayerProfile({ lastLoginAt: Date.now() }).catch(error => {
-      console.warn("Could not update login timestamp", error);
+  async function rememberLogin(reason = "login") {
+    return activateCurrentSession(reason).catch(error => {
+      console.warn("Could not update login session", error);
+      return null;
     });
   }
 
@@ -387,7 +504,7 @@
     try {
       const result = await client.modules.auth.signInWithPopup(client.auth, client.provider);
       client.user = serializeUser(result.user);
-      rememberLogin();
+      await rememberLogin("google-sign-in");
       return client.user;
     } catch (error) {
       if (shouldUseRedirectFallback(error) && client.modules.auth.signInWithRedirect) {
@@ -404,6 +521,7 @@
     await disablePushNotifications().catch(error => {
       console.warn("Could not disable notifications during sign-out", error);
     });
+    stopActiveSessionWatcher();
     await client.modules.auth.signOut(client.auth);
     client.user = null;
     dispatch("auth", { user: null });

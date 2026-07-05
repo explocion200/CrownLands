@@ -6,6 +6,7 @@ Landscape / horizontal medieval island-conquest prototype inspired by the core l
 
 - Player starts with 1 main city, 50 troops, and 500 gold.
 - Google sign-in connects the account first; the player enters the live kingdom with a separate Enter Kingdom button.
+- Each account can have one active browser session; signing in on another device signs out the older device.
 - The current placeholder world contains 5 regional maps arranged on a square grid: center, west, east, north, and south.
 - The current map reset is `fresh-2026-07-03-profile-reset`, so online players start fresh in a new Firebase world slot.
 - New online players claim starting cities from the available starter regions first; the center Crownlands region is intended as the main battleground.
