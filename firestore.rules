@@ -72,18 +72,37 @@ service cloud.firestore {
         && cityFieldUnchanged('ownerShieldExpiresAtMs');
     }
 
-    function validStartingCityClaim() {
-      return resource.data.get('ownerUid', null) == null
-        && request.resource.data.get('ownerUid', null) == request.auth.uid
-        && request.resource.data.get('ownerKind', '') == 'player'
-        && request.resource.data.get('troops', 0) is number
-        && request.resource.data.get('troops', 0) >= 0
-        && request.resource.data.get('troops', 0) <= 50
-        && request.resource.data.get('troopFloat', 0) is number
-        && request.resource.data.get('troopFloat', 0) >= 0
-        && request.resource.data.get('troopFloat', 0) <= 50
-        && request.resource.data.get('level', resource.data.get('level', 1)) == resource.data.get('level', 1)
-        && request.resource.data.get('investedGold', resource.data.get('investedGold', 0)) == resource.data.get('investedGold', 0);
+    function cityOwnerCoreUnchanged() {
+      return cityFieldUnchanged('ownerUid')
+        && cityFieldUnchanged('ownerKind')
+        && cityFieldUnchanged('owner')
+        && cityFieldUnchanged('isMainCity')
+        && cityFieldUnchanged('relinquishedAtMs')
+        && cityFieldUnchanged('relocatedAtMs')
+        && cityFieldUnchanged('claimedAt')
+        && cityFieldUnchanged('lastCapturedAt');
+    }
+
+    function cityOwnerDisplayUnchanged() {
+      return cityFieldUnchanged('ownerName')
+        && cityFieldUnchanged('ownerFlag')
+        && cityFieldUnchanged('ownerKingPower');
+    }
+
+    function ownsCityOwnerIdentity() {
+      return resource.data.get('ownerUid', null) == request.auth.uid
+        && request.resource.data.get('ownerUid', null) == request.auth.uid;
+    }
+
+    function cityOwnershipSafeForBrowser() {
+      return cityOwnerCoreUnchanged()
+        && (cityOwnerDisplayUnchanged() || ownsCityOwnerIdentity());
+    }
+
+    function validCityLayoutCreate() {
+      return request.resource.data.get('ownerUid', null) == null
+        && request.resource.data.get('ownerKind', 'neutral') != 'player'
+        && request.resource.data.get('isMainCity', false) != true;
     }
 
     match /players/{uid} {
@@ -134,8 +153,8 @@ service cloud.firestore {
 
       match /cities/{cityId} {
         allow read: if signedIn();
-        allow create: if signedIn();
-        allow update: if signedIn() && (cityEconomyUnchanged() || validStartingCityClaim());
+        allow create: if signedIn() && validCityLayoutCreate();
+        allow update: if signedIn() && cityEconomyUnchanged() && cityOwnershipSafeForBrowser();
         allow delete: if false;
       }
 

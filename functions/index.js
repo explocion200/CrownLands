@@ -151,6 +151,23 @@ function safeString(value, max = 80) {
   return String(value || "").trim().slice(0, max);
 }
 
+function sanitizeJsonValue(value, depth = 0) {
+  if (value === undefined || typeof value === "function" || typeof value === "symbol") return null;
+  if (value === null || typeof value !== "object") return value;
+  if (depth >= 6) return null;
+  if (Array.isArray(value)) {
+    return value.slice(0, 40).map(item => sanitizeJsonValue(item, depth + 1));
+  }
+  const output = {};
+  Object.entries(value).slice(0, 80).forEach(([key, entry]) => {
+    const cleanKey = safeString(key, 80);
+    if (!cleanKey) return;
+    const cleanValue = sanitizeJsonValue(entry, depth + 1);
+    if (cleanValue !== undefined) output[cleanKey] = cleanValue;
+  });
+  return output;
+}
+
 function safeNumber(value, fallback = 0) {
   const number = Number(value);
   return Number.isFinite(number) ? number : fallback;
@@ -1450,6 +1467,201 @@ exports.resetSkills = onCall({ region: "us-central1", maxInstances: 20, invoker:
       resetCost,
       repairedSkillPoints: needsPointRepair,
     });
+  });
+});
+
+exports.claimStartingCity = onCall({ region: "us-central1", maxInstances: 20, invoker: "public" }, async request => {
+  const uid = requireAuth(request);
+  const data = request.data || {};
+  const authToken = request.auth?.token || {};
+  const islandId = safeString(data.islandId || getOnlineIslandId(data.mainRegionId || "west"), 160);
+  const regionId = normalizeRegionId(data.mainRegionId || getRegionIdFromOnlineIslandId(islandId));
+  const worldId = safeString(data.worldId || ONLINE_WORLD_ID, 80) || ONLINE_WORLD_ID;
+  const rawCandidateIds = Array.isArray(data.candidateCityIds) ? data.candidateCityIds : [];
+  const candidateCityIds = [...new Set(rawCandidateIds
+    .map(cityId => safeString(cityId, 96).replace(/[^a-zA-Z0-9_-]/g, "_"))
+    .filter(Boolean))]
+    .slice(0, 180);
+  const minimumNeutralCities = Math.max(0, Math.floor(safeNumber(data.minimumNeutralCities, 0)));
+  const displayName = safeString(data.displayName || authToken.name || "", 80);
+  const email = safeString(data.email || authToken.email || "", 120);
+  const photoURL = safeString(data.photoURL || authToken.picture || "", 300);
+  const playerName = safeString(data.playerName || displayName || "Ruler", 32) || "Ruler";
+  if (!islandId || !candidateCityIds.length) {
+    throw new HttpsError("invalid-argument", "No starting city candidates were provided.");
+  }
+
+  const playerRef = db.doc(`players/${uid}`);
+  const islandRef = db.doc(`islands/${islandId}`);
+  const cityRefForIsland = cityId => db.doc(`islands/${islandId}/cities/${cityId}`);
+
+  return db.runTransaction(async transaction => {
+    const nowMs = Date.now();
+    const playerSnap = await transaction.get(playerRef);
+    const playerData = playerSnap.exists ? playerSnap.data() || {} : {};
+    const existingMainCityId = safeString(playerData.mainCityId, 96).replace(/[^a-zA-Z0-9_-]/g, "_");
+    const existingMainIslandId = safeString(playerData.mainIslandId, 160);
+    const playerFlag = sanitizeJsonValue(data.flag || playerData.flag || null);
+    const playerKingPower = Math.max(0, Math.floor(safeNumber(playerData.kingPower, 0)));
+
+    const buildPlayerPatch = cityId => {
+      const existingGoldFloat = safeNumber(playerData.goldFloat, safeNumber(playerData.gold, TEST_STARTING_GOLD));
+      const goldFloat = Math.max(0, existingGoldFloat);
+      const gold = Math.max(0, Math.floor(safeNumber(playerData.gold, goldFloat)));
+      return {
+        uid,
+        displayName: displayName || safeString(playerData.displayName, 80),
+        email: email || safeString(playerData.email, 120),
+        photoURL: photoURL || safeString(playerData.photoURL, 300),
+        playerName,
+        flag: playerFlag,
+        resetGeneration: playerData.resetGeneration || RESET_GENERATION,
+        worldId,
+        mainIslandId: islandId,
+        mainRegionId: regionId,
+        mainCityId: cityId,
+        gold,
+        goldFloat,
+        character: normalizeCharacterProgress(playerData.character),
+        upgrades: normalizeSkillUpgrades(playerData.upgrades),
+        shopItems: normalizeShopItems(playerData.shopItems),
+        itemEffects: normalizeItemEffects(playerData.itemEffects),
+        itemPurchaseCooldowns: normalizeItemPurchaseCooldowns(playerData.itemPurchaseCooldowns),
+        economyUpdatedAtMs: Math.max(0, timestampToMs(playerData.economyUpdatedAtMs) || nowMs),
+        updatedAt: FieldValue.serverTimestamp(),
+      };
+    };
+
+    const writePlayerMainCity = cityId => {
+      transaction.set(playerRef, buildPlayerPatch(cityId), { merge: true });
+    };
+
+    const writeCityOwner = (cityRef, cityData = {}, { setStartingTroops = false } = {}) => {
+      const baseTroops = Math.max(0, Math.floor(safeNumber(cityData.troops, 0)));
+      const troops = setStartingTroops ? Math.max(50, baseTroops) : baseTroops;
+      transaction.set(cityRef, {
+        ownerKind: "player",
+        ownerUid: uid,
+        ownerName: playerName,
+        ownerFlag: playerFlag,
+        ownerKingPower: playerKingPower,
+        troops,
+        troopFloat: Math.max(troops, safeNumber(cityData.troopFloat, cityData.troops || troops)),
+        isMainCity: true,
+        relinquishedAtMs: 0,
+        relocatedAtMs: 0,
+        claimedAt: cityData.claimedAt || FieldValue.serverTimestamp(),
+        productionUpdatedAtMs: Math.max(0, timestampToMs(cityData.productionUpdatedAtMs) || nowMs),
+        updatedAt: FieldValue.serverTimestamp(),
+      }, { merge: true });
+    };
+
+    const readExistingMainCity = async () => {
+      if (!existingMainCityId || !existingMainIslandId) return null;
+      const existingRegionId = normalizeRegionId(playerData.mainRegionId || getRegionIdFromOnlineIslandId(existingMainIslandId));
+      const ref = db.doc(`islands/${existingMainIslandId}/cities/${existingMainCityId}`);
+      const snap = await transaction.get(ref);
+      return snap.exists ? { ref, city: { id: snap.id, ...snap.data(), regionId: existingRegionId }, regionId: existingRegionId } : null;
+    };
+
+    const existingMain = await readExistingMainCity();
+    if (existingMain?.city && getOwnerUid(existingMain.city) === uid) {
+      const existingMainRegionId = normalizeRegionId(existingMain.city.regionId || regionId);
+      const existingMainIsland = existingMain.ref.parent.parent.id;
+      transaction.set(playerRef, {
+        uid,
+        displayName: displayName || safeString(playerData.displayName, 80),
+        email: email || safeString(playerData.email, 120),
+        photoURL: photoURL || safeString(playerData.photoURL, 300),
+        playerName,
+        flag: playerFlag,
+        worldId,
+        mainIslandId: existingMainIsland,
+        mainRegionId: existingMainRegionId,
+        mainCityId: existingMain.city.id,
+        updatedAt: FieldValue.serverTimestamp(),
+      }, { merge: true });
+      transaction.set(existingMain.ref, {
+        ownerName: playerName,
+        ownerFlag: playerFlag,
+        ownerKingPower: playerKingPower,
+        isMainCity: true,
+        updatedAt: FieldValue.serverTimestamp(),
+      }, { merge: true });
+      return {
+        cityId: existingMain.city.id,
+        islandId: existingMainIsland,
+        mainRegionId: existingMainRegionId,
+        alreadyClaimed: true,
+        redirected: existingMainIsland !== islandId,
+      };
+    }
+
+    const shouldScanOwnedCandidates = Boolean(existingMainCityId || existingMainIslandId || playerData.mainRegionId || playerData.worldId);
+    if (shouldScanOwnedCandidates) {
+      for (const cityId of candidateCityIds) {
+        const cityRef = cityRefForIsland(cityId);
+        const citySnap = await transaction.get(cityRef);
+        if (!citySnap.exists) continue;
+        const cityData = citySnap.data() || {};
+        if (getOwnerUid(cityData) !== uid) continue;
+        writePlayerMainCity(cityId);
+        transaction.set(cityRef, {
+          ownerName: playerName,
+          ownerFlag: playerFlag,
+          ownerKingPower: playerKingPower,
+          isMainCity: true,
+          updatedAt: FieldValue.serverTimestamp(),
+        }, { merge: true });
+        return { cityId, islandId, mainRegionId: regionId, alreadyClaimed: true };
+      }
+    }
+
+    let chosenRef = null;
+    let chosenData = null;
+    let chosenCityId = "";
+    let neutralCityCount = 0;
+    for (const cityId of candidateCityIds) {
+      const cityRef = cityRefForIsland(cityId);
+      const citySnap = await transaction.get(cityRef);
+      if (!citySnap.exists) continue;
+      const cityData = citySnap.data() || {};
+      const ownerUid = getOwnerUid(cityData);
+      const ownerKind = cityData.ownerKind || cityData.owner || "neutral";
+      const isNeutralRegularCity = !isStronghold({ id: cityId, ...cityData })
+        && !ownerUid
+        && ownerKind !== "player";
+      if (!isNeutralRegularCity) continue;
+      neutralCityCount += 1;
+      if (!chosenRef) {
+        chosenRef = cityRef;
+        chosenData = cityData;
+        chosenCityId = cityId;
+      }
+      if (!minimumNeutralCities || neutralCityCount >= minimumNeutralCities) break;
+    }
+
+    if (minimumNeutralCities > 0 && neutralCityCount < minimumNeutralCities) {
+      throw new HttpsError("failed-precondition", `That map needs at least ${minimumNeutralCities} neutral cities before a new ruler can spawn there.`);
+    }
+    if (!chosenRef || !chosenCityId) {
+      throw new HttpsError("resource-exhausted", "No unclaimed starting city is available.");
+    }
+
+    writePlayerMainCity(chosenCityId);
+    writeCityOwner(chosenRef, chosenData, { setStartingTroops: true });
+    transaction.set(islandRef, {
+      playerCount: FieldValue.increment(1),
+      updatedAt: FieldValue.serverTimestamp(),
+    }, { merge: true });
+
+    return {
+      cityId: chosenCityId,
+      islandId,
+      mainRegionId: regionId,
+      alreadyClaimed: false,
+      repairedMainCity: Boolean(existingMainCityId),
+    };
   });
 });
 
