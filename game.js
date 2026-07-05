@@ -46,7 +46,7 @@ const SHOP_ITEMS = [
     id: "shield_12h",
     label: "Royal Peace Shield",
     description: "Protects your cities for 12 hours. Attacking another player cancels it. Strongholds are excluded.",
-    cost: 175_000,
+    cost: 1_250_000,
     icon: "assets/royal-peace-shield-icon.webp?v=20260703-shop-icons",
   },
   {
@@ -54,7 +54,7 @@ const SHOP_ITEMS = [
     legacyIds: ["troop_boost_1h"],
     label: "War Drums",
     description: "Increases troop production by 25% for 30 minutes.",
-    cost: 25_000,
+    cost: 250_000,
     icon: "assets/war-drums-icon.webp?v=20260703-shop-icons",
   },
   {
@@ -62,21 +62,21 @@ const SHOP_ITEMS = [
     legacyIds: ["anti_scout_1h"],
     label: "Veil of Silence",
     description: "Blocks enemy scouting for 5 minutes.",
-    cost: 40_000,
+    cost: 175_000,
     icon: "assets/veil-of-silence-icon.webp?v=20260703-shop-icons",
   },
   {
     id: "swift_march_order",
     label: "Swift March Order",
     description: "Speeds up one troop transfer between owned cities only.",
-    cost: 55_000,
+    cost: 300_000,
     icon: "assets/swift-march-order-icon.webp?v=20260703-shop-icons",
   },
   {
     id: "recall_horn",
     label: "Recall Horn",
     description: "Cancels one active march before it reaches the target.",
-    cost: 90_000,
+    cost: 500_000,
     icon: "assets/recall-horn-icon.webp?v=20260703-shop-icons",
   },
 ];
@@ -525,9 +525,9 @@ const NEUTRAL_START_TROOPS = 10;
 const TEST_STARTING_GOLD = 500;
 const ISLAND_CITY_COUNT = WORLD_REGIONS.reduce((total, region) => total + (region.id === "center" ? CENTER_REGION_CITY_COUNT : REGION_CITY_COUNT), 0);
 const SCOUT_REPORT_SECONDS = 120;
-const SCOUT_NEARBY_COST = 10000;
+const SCOUT_NEARBY_COST = 75000;
 const SCOUT_NEARBY_RADIUS = 420;
-const REGROUP_COST = 20000;
+const REGROUP_COST = 150000;
 const REGROUP_RADIUS = 680;
 const BASE_TROOP_ATTACK_POWER = 2;
 const ARMY_TRAVEL_SECONDS_PER_MAP_UNIT = 0.13;

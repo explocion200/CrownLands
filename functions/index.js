@@ -64,11 +64,11 @@ const MAX_SERVER_PRODUCTION_SECONDS = 7 * 24 * 60 * 60;
 const SCHEDULED_ARMY_RESOLVE_SCAN_LIMIT = 100;
 const SCHEDULED_ARMY_RESOLVE_MAX_PER_RUN = 40;
 const SHOP_ITEMS = {
-  [ROYAL_PEACE_SHIELD_ITEM_ID]: { id: ROYAL_PEACE_SHIELD_ITEM_ID, label: "Royal Peace Shield", cost: 175000 },
-  [WAR_DRUMS_ITEM_ID]: { id: WAR_DRUMS_ITEM_ID, label: "War Drums", cost: 25000 },
-  [VEIL_OF_SILENCE_ITEM_ID]: { id: VEIL_OF_SILENCE_ITEM_ID, label: "Veil of Silence", cost: 40000 },
-  swift_march_order: { id: "swift_march_order", label: "Swift March Order", cost: 55000 },
-  recall_horn: { id: "recall_horn", label: "Recall Horn", cost: 90000 },
+  [ROYAL_PEACE_SHIELD_ITEM_ID]: { id: ROYAL_PEACE_SHIELD_ITEM_ID, label: "Royal Peace Shield", cost: 1250000 },
+  [WAR_DRUMS_ITEM_ID]: { id: WAR_DRUMS_ITEM_ID, label: "War Drums", cost: 250000 },
+  [VEIL_OF_SILENCE_ITEM_ID]: { id: VEIL_OF_SILENCE_ITEM_ID, label: "Veil of Silence", cost: 175000 },
+  swift_march_order: { id: "swift_march_order", label: "Swift March Order", cost: 300000 },
+  recall_horn: { id: "recall_horn", label: "Recall Horn", cost: 500000 },
 };
 const LEGACY_SHOP_ITEM_IDS = ["troop_boost_1h", "anti_scout_1h"];
 const CITY_LEVEL_STATS = {
