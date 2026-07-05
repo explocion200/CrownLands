@@ -4794,6 +4794,10 @@ function syncCharacterSkillPoints(character, upgrades, rawSkillPoints = undefine
   character.skillPoints = Math.max(0, earnedPoints - getSpentSkillPoints(upgrades));
 }
 
+function getEarnedSkillPoints(character = state?.character) {
+  return Math.max(0, Math.floor(Number(character?.level) || 1) - 1);
+}
+
 function getSpentSkillPoints(upgrades = state?.upgrades) {
   return SKILL_ORDER.reduce((total, key) => total + Math.max(0, Math.floor(Number(upgrades?.[key]) || 0)), 0);
 }
@@ -11560,8 +11564,7 @@ function renderProfileSkills() {
   const points = Math.max(0, Math.floor(Number(state.character.skillPoints) || 0));
   const spentPoints = getSpentSkillPoints();
   const canResetSkills = !skillActionInFlight
-    && spentPoints > 0
-    && (usesServerEconomyAuthority() || Math.floor(Number(state.gold) || 0) >= SKILL_RESET_COST);
+    && spentPoints > 0;
   skillsView.innerHTML = `
     <div class="profile-skill-summary" aria-label="Hero skill progress">
       <div><span>Skill points</span><strong>${formatNumber(points)}</strong></div>
@@ -14115,7 +14118,7 @@ async function resetSkills() {
     return;
   }
   state.gold = currentGold - SKILL_RESET_COST;
-  state.character.skillPoints = Math.max(0, Math.floor(Number(state.character.skillPoints) || 0)) + spentPoints;
+  state.character.skillPoints = getEarnedSkillPoints(state.character);
   state.upgrades = createDefaultSkills();
   addLog(`Skills reset for ${formatNumber(SKILL_RESET_COST)} gold. Refunded ${formatNumber(spentPoints)} skill ${spentPoints === 1 ? "point" : "points"}.`);
   saveGame();

@@ -241,6 +241,10 @@ function getSpentSkillPoints(upgrades = {}) {
   return SKILL_ORDER.reduce((total, key) => total + normalizeSkillLevel(normalized[key]), 0);
 }
 
+function getEarnedSkillPoints(character = {}) {
+  return Math.max(0, Math.floor(safeNumber(character?.level, CHARACTER_START_LEVEL)) - 1);
+}
+
 function getSkillLevel(profile = {}, skill = "") {
   return normalizeSkillUpgrades(profile?.upgrades)[skill] || 0;
 }
@@ -1394,7 +1398,7 @@ exports.resetSkills = onCall({ region: "us-central1", maxInstances: 20, invoker:
       throw new HttpsError("failed-precondition", `Skill reset costs ${SKILL_RESET_COST.toLocaleString()} gold.`);
     }
     const character = normalizeCharacterProgress(economy.profileAfter.character);
-    character.skillPoints += spentPoints;
+    character.skillPoints = getEarnedSkillPoints(character);
     const upgrades = normalizeSkillUpgrades({});
     const gold = Math.max(0, economy.gold - SKILL_RESET_COST);
     writePreparedEconomy(transaction, economy, {
