@@ -8,7 +8,7 @@ Landscape / horizontal medieval island-conquest prototype inspired by the core l
 - Google sign-in connects the account first; the player enters the live kingdom with a separate Enter Kingdom button.
 - Each account can have one active browser session; signing in on another device signs out the older device.
 - The current placeholder world contains 5 regional maps arranged on a square grid: center, west, east, north, and south.
-- The current map reset is `fresh-2026-07-03-profile-reset`, so online players start fresh in a new Firebase world slot.
+- The current map reset is `fresh-2026-07-05-server-reset`, so online players start fresh in a new Firebase world slot.
 - New online players claim starting cities from the available starter regions first; the center Crownlands region is intended as the main battleground.
 - Cities produce troops and gold in real time while the game is active.
 - Offline production catches up when the player returns: troops stay in the cities that produced them, while troops from cities lost offline rally to the main city.
@@ -64,10 +64,10 @@ This build has Firebase Auth, Firestore, and callable Functions added without br
 - `firebase-config.js` holds the Firebase web app config placeholders.
 - `firebaseClient.js` loads Firebase Auth, Firestore, and Functions only after real config values are pasted in.
 - The setup screen now uses Google sign-in as the only entry button.
-- Signed-in players save a private cloud snapshot to the current reset slot, `players/{uid}/saves/default-fresh-2026-07-03-profile-reset`.
+- Signed-in players save a private cloud snapshot to the current reset slot, `players/{uid}/saves/default-fresh-2026-07-05-server-reset`.
 - After sign-in, the game automatically checks the current reset slot in Firebase first, then falls back to the current browser save key.
 - `firestore.rules` allows private player saves and shared city setup, but blocks browser writes to army movement and report collections.
-- Phase 2 now shards the world into one Firestore island per region, such as `islands/main-fresh-2026-07-03-profile-reset-west`.
+- Phase 2 now shards the world into one Firestore island per region, such as `islands/main-fresh-2026-07-05-server-reset-west`.
 - The browser loads and subscribes to one active island at a time, starting with the player's home island.
 - The island switcher lets signed-in players load a different island, unsubscribing from the previous island before opening the next one.
 - While online, the browser syncs the signed-in player's owned cities back to Firestore for the currently loaded island.

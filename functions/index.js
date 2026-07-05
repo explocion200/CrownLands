@@ -7,7 +7,7 @@ admin.initializeApp();
 const db = admin.firestore();
 const FieldValue = admin.firestore.FieldValue;
 
-const RESET_GENERATION = "fresh-2026-07-03-profile-reset";
+const RESET_GENERATION = "fresh-2026-07-05-server-reset";
 const ONLINE_WORLD_ID = `main-${RESET_GENERATION}`;
 const MAX_CITY_LEVEL = 100;
 const TEST_STARTING_GOLD = 500;

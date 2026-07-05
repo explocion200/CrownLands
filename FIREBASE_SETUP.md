@@ -21,7 +21,7 @@ The game currently writes private account data here:
 
 - `players/{uid}`: display name, email, ruler name, flag, character, skill data, city count, gold.
 - `players/{uid}/notificationTokens/{tokenId}`: browser push tokens for incoming scout/attack alerts.
-- `players/{uid}/saves/default-fresh-2026-07-03-profile-reset`: the current full game state snapshot for the fresh reset.
+- `players/{uid}/saves/default-fresh-2026-07-05-server-reset`: the current full game state snapshot for the fresh reset.
 - `players/{uid}/serverReports/{reportId}`: server-written attack, defense, and scout reports that survive stale browser saves.
 
 After Google sign-in, the game tries the current reset slot in Firebase first and then falls back to the current local browser storage key.
@@ -30,8 +30,8 @@ After Google sign-in, the game tries the current reset slot in Firebase first an
 
 The game now creates one shared island document per world region and subscribes to only one active island at a time:
 
-- `islands/main-fresh-2026-07-03-profile-reset-west`: one region metadata document for the current reset.
-- `islands/main-fresh-2026-07-03-profile-reset-west/cities/{cityId}`: city owner, level, troop count, owner UID, owner name, owner flag, region ID, and production state.
+- `islands/main-fresh-2026-07-05-server-reset-west`: one region metadata document for the current reset.
+- `islands/main-fresh-2026-07-05-server-reset-west/cities/{cityId}`: city owner, level, troop count, owner UID, owner name, owner flag, region ID, and production state.
 - `islands/{islandId}/armies/{armyId}`: server-written moving troops, route, owner, arrival time, and mission type.
 - `islands/{islandId}/reports/{reportId}`: server-written shared report records.
 - `islands/{islandId}/presence/{uid}`: who is online.
