@@ -1039,6 +1039,33 @@ input {
     drop-shadow(0 0 14px rgba(35, 116, 255, .22));
 }
 
+.camp-node {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: var(--camp-size, 132px);
+  height: var(--camp-size, 132px);
+  transform: translate(-50%, -58%);
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+  user-select: none;
+  z-index: 4;
+  filter: drop-shadow(0 10px 8px rgba(0, 0, 0, .42));
+}
+.camp-art {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  pointer-events: none;
+  user-select: none;
+}
+.map-frame.zooming .camp-node,
+.map-frame.low-zoom .camp-node {
+  filter: drop-shadow(0 7px 5px rgba(0, 0, 0, .52));
+}
+
 .city-node {
   position: absolute;
   width: 64px;

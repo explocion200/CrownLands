@@ -214,6 +214,8 @@ const EDGE_TRANSITION_ARROW_INSET_MIN = 96;
 const EDGE_TRANSITION_ARROW_INSET_MAX = 180;
 const DEFAULT_STRONGHOLD_VISUAL_SIZE = 154;
 const MIN_STRONGHOLD_VISUAL_SIZE = 80;
+const DEFAULT_CAMP_VISUAL_SIZE = 132;
+const MIN_CAMP_VISUAL_SIZE = 64;
 const GOLD_STRONGHOLD_ID = "west_gold_stronghold";
 const GOLD_STRONGHOLD_NAME = "Aurum Keep";
 const GOLD_STRONGHOLD_ART_SRC = "assets/gold-stronghold.png?v=20260704-gold-stronghold-updated";
@@ -2137,6 +2139,7 @@ const WALKABLE_TERRAIN_ROWS = [
 
 const TERRAIN_BLOCKERS = createWorldTerrainBlockers();
 const NO_CITY_TERRAIN = createWorldNoCityTerrain();
+const WORLD_CAMPS = generateWorldCampSlots();
 const routeCache = new Map();
 const routeEdgePassableCache = new Map();
 const pathMetricCache = new WeakMap();
@@ -3075,6 +3078,25 @@ function hasEditorObjectiveDefinitions(regionId) {
   return Array.isArray(getEditorMap(regionId)?.objectives);
 }
 
+function getEditorCampDefinitions(regionId) {
+  const map = getEditorMap(regionId);
+  return Array.isArray(map?.camps) ? map.camps : [];
+}
+
+function getCampConfigForType(type) {
+  const campType = String(type || "gold").trim().toLowerCase();
+  if (campType === "troops" || campType === "troop") {
+    return { type: "troops", name: "Troop Camp", artSrc: "assets/camps/troops.png" };
+  }
+  if (campType === "items" || campType === "item") {
+    return { type: "items", name: "Item Camp", artSrc: "assets/camps/items.png" };
+  }
+  if (campType === "deed" || campType === "city_deed") {
+    return { type: "deed", name: "City Deed Camp", artSrc: "assets/camps/deed.png" };
+  }
+  return { type: "gold", name: "Gold Camp", artSrc: "assets/camps/gold.png" };
+}
+
 function getStrongholdConfigForType(type) {
   const strongholdType = String(type || "gold").trim().toLowerCase();
   if (strongholdType === "crown" || strongholdType === "crown_citadel") {
@@ -3157,6 +3179,28 @@ function generateEditorStrongholdSlots() {
     });
   }
   return hasAnyEditorObjectives ? slots : null;
+}
+
+function generateWorldCampSlots() {
+  const slots = [];
+  for (const region of WORLD_REGIONS) {
+    const camps = getEditorCampDefinitions(region.id);
+    camps.forEach((camp, index) => {
+      const config = getCampConfigForType(camp?.campType || camp?.type);
+      const point = islandImagePointToWorld(region.id, getEditorPoint(camp));
+      slots.push({
+        id: String(camp?.id || `${region.id}_${config.type}_camp_${index + 1}`),
+        name: String(camp?.name || config.name),
+        regionId: region.id,
+        x: Math.round(point.x),
+        y: Math.round(point.y),
+        campType: config.type,
+        artSrc: String(camp?.artSrc || config.artSrc),
+        size: Math.max(MIN_CAMP_VISUAL_SIZE, Math.floor(Number(camp?.size) || DEFAULT_CAMP_VISUAL_SIZE)),
+      });
+    });
+  }
+  return slots;
 }
 
 function generateStrongholdSlots() {
@@ -11809,13 +11853,21 @@ function shouldRenderCityNode(city, bounds) {
   return isPointInBounds(city.x, city.y, bounds);
 }
 
+function isCampInActiveMap(camp) {
+  return camp && normalizeRegionId(camp.regionId) === getActiveMapRegionId();
+}
+
+function shouldRenderCampNode(camp, bounds) {
+  return camp && isCampInActiveMap(camp) && isPointInBounds(camp.x, camp.y, bounds);
+}
+
 function getFlagSignature(flag) {
   if (!flag) return "";
   const normalized = normalizeFlag(flag);
   return `${normalized.primary}:${normalized.secondary}:${normalized.pattern}:${normalized.symbol}`;
 }
 
-function getCityRenderSignature(visibleCities) {
+function getCityRenderSignature(visibleCities, visibleCamps = []) {
   const playerFlag = getFlagSignature(state.flag);
   const upgradeBlockedTargets = new Set(getRenderableArmies()
     .filter(attack => attack?.kind === "attack" && attack.owner !== "player" && Math.max(0, Number(attack.remaining) || 0) > 0)
@@ -11841,6 +11893,15 @@ function getCityRenderSignature(visibleCities) {
       report ? `${Math.floor(Number(report.troops) || 0)}:${report.expiresAt > state.gameSeconds ? 1 : 0}` : "",
     ].join(":");
   }).join("|");
+  const campTokens = visibleCamps.map(camp => [
+    camp.id,
+    camp.regionId,
+    camp.campType,
+    camp.x,
+    camp.y,
+    camp.artSrc,
+    camp.size,
+  ].join(":")).join("|");
 
   return [
     selectedSourceId || "",
@@ -11851,6 +11912,7 @@ function getCityRenderSignature(visibleCities) {
     state.mainCityId || "",
     state.playerName || "",
     playerFlag,
+    campTokens,
     cityTokens,
   ].join(";");
 }
@@ -11870,7 +11932,8 @@ function renderCities(force = false) {
   }
   const visibleBounds = getVisibleWorldBounds();
   const visibleCities = state.cities.filter(city => shouldRenderCityNode(city, visibleBounds));
-  const signature = getCityRenderSignature(visibleCities);
+  const visibleCamps = WORLD_CAMPS.filter(camp => shouldRenderCampNode(camp, visibleBounds));
+  const signature = getCityRenderSignature(visibleCities, visibleCamps);
   if (!force && signature === cityRenderSignature) return;
   cityRenderSignature = signature;
 
@@ -11879,6 +11942,18 @@ function renderCities(force = false) {
   if (regroupSource) renderRegroupRadius(regroupSource);
 
   const cityFragment = document.createDocumentFragment();
+  visibleCamps.forEach(camp => {
+    const mapPoint = worldToMapPoint(camp);
+    const campNode = document.createElement("div");
+    campNode.className = `camp-node camp-${camp.campType || "gold"}`;
+    campNode.style.left = `${mapPoint.x}px`;
+    campNode.style.top = `${mapPoint.y}px`;
+    campNode.style.setProperty("--camp-size", `${camp.size}px`);
+    campNode.title = camp.name;
+    campNode.setAttribute("aria-hidden", "true");
+    campNode.innerHTML = `<img class="camp-art" src="${escapeHtml(camp.artSrc)}" alt="" draggable="false" />`;
+    cityFragment.appendChild(campNode);
+  });
   visibleCities.forEach(city => {
     const mapPoint = worldToMapPoint(city);
     const stronghold = isStronghold(city);

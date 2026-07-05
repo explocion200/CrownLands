@@ -524,6 +524,10 @@
     };
   }
 
+  function countCamps(regions = []) {
+    return regions.reduce((total, region) => total + (Array.isArray(region.camps) ? region.camps.length : 0), 0);
+  }
+
   function materializeEdgeArrowPositions(regions = state.regions) {
     applyEdgeArrowOverrides(regions);
     regions.forEach(region => {
@@ -540,6 +544,7 @@
 
   async function saveWorldData() {
     const payload = buildSavePayload();
+    const expectedCampCount = countCamps(payload.regions);
     const response = await fetch(WORLD_API, {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -550,6 +555,10 @@
       throw new Error(text || `Save failed: ${response.status}`);
     }
     const data = normalizeBundle(await response.json());
+    const savedCampCount = countCamps(data.regions);
+    if (savedCampCount < expectedCampCount) {
+      throw new Error(`Save response only returned ${savedCampCount} of ${expectedCampCount} camps. Restart the local editor server with .\\tools\\start-editor.ps1, reload the editor, and save again.`);
+    }
     state.layout = data.layout;
     state.regions = data.regions;
     applyEdgeArrowOverrides(state.regions);
