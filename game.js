@@ -8231,7 +8231,7 @@ async function connectOnlineIsland(regionId, { claimHome = false, homeRegionId =
         worldId: ONLINE_WORLD_ID,
         mainRegionId: targetRegionId,
         minimumNeutralCities: isNewHomeClaim ? MIN_NEW_PLAYER_SPAWN_NEUTRAL_CITIES : 0,
-      }), 12000, "Starting city claim is taking too long.");
+      }), isNewHomeClaim ? 45000 : 20000, "Starting city claim is taking too long.");
 
       if (!claim?.cityId) throw new Error("No starting city was claimed.");
       const redirectedRegionId = claim?.redirected && claim?.islandId

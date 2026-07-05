@@ -892,15 +892,18 @@
         }
       }
 
-      for (const cityId of uniqueCandidateIds) {
-        const cityRef = doc(client.db, "islands", islandId, "cities", cityId);
-        const citySnap = await transaction.get(cityRef);
-        if (!citySnap.exists()) continue;
-        const data = citySnap.data() || {};
-        if (data.ownerUid !== uid) continue;
-        writePlayerMainCity(cityId);
-        writeCityOwner(cityRef, data);
-        return { cityId, alreadyClaimed: true };
+      const shouldScanOwnedCandidates = Boolean(existingMainCityId || existingMainIslandId || existingWorldId || playerData.mainRegionId);
+      if (shouldScanOwnedCandidates) {
+        for (const cityId of uniqueCandidateIds) {
+          const cityRef = doc(client.db, "islands", islandId, "cities", cityId);
+          const citySnap = await transaction.get(cityRef);
+          if (!citySnap.exists()) continue;
+          const data = citySnap.data() || {};
+          if (data.ownerUid !== uid) continue;
+          writePlayerMainCity(cityId);
+          writeCityOwner(cityRef, data);
+          return { cityId, alreadyClaimed: true };
+        }
       }
 
       let chosenRef = null;
@@ -924,6 +927,7 @@
           chosenData = data;
           chosenCityId = cityId;
         }
+        if (chosenRef && (!neutralCityReserve || neutralCityCount >= neutralCityReserve)) break;
       }
 
       if (neutralCityReserve > 0 && neutralCityCount < neutralCityReserve) {
