@@ -578,7 +578,7 @@ const CITY_LEVEL_STATS = {
 };
 const KING_POWER_PER_TROOP = 1;
 const KING_POWER_PER_CITY_VP = 10;
-const SKILL_RESET_COST = 1_000_000;
+const SKILL_RESET_COST = 750_000;
 
 const SKILL_CONFIG = {
   swordmastery: { label: "Swordmastery", percentPerLevel: 2, maxPercent: 60, description: "Outgoing attack power." },

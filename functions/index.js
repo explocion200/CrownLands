@@ -99,7 +99,7 @@ const SKILL_ORDER = [
   "marchOrders",
   "fieldMedics",
 ];
-const SKILL_RESET_COST = 1_000_000;
+const SKILL_RESET_COST = 750_000;
 const GOLD_STRONGHOLD_ID = "west_gold_stronghold";
 const TRAINING_STRONGHOLD_ID = "north_training_stronghold";
 const SPEED_STRONGHOLD_ID = "east_speed_stronghold";
