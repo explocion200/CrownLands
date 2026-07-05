@@ -2280,6 +2280,7 @@ const warDrumsStatusBadge = document.getElementById("warDrumsStatusBadge");
 const warDrumsStatusTime = document.getElementById("warDrumsStatusTime");
 const veilStatusBadge = document.getElementById("veilStatusBadge");
 const veilStatusTime = document.getElementById("veilStatusTime");
+const activeItemEffectsStack = document.getElementById("activeItemEffectsStack");
 const shopBtn = document.getElementById("shopBtn");
 const neutralCapText = document.getElementById("neutralCapText");
 const characterLevelBadge = document.getElementById("characterLevelBadge");
@@ -11417,6 +11418,17 @@ function updateShieldStatusBadge() {
   updateTimedEffectStatusBadge(shieldStatusBadge, shieldStatusTime, getActivePeaceShieldExpiresAtMs(), "Royal Peace Shield");
   updateTimedEffectStatusBadge(warDrumsStatusBadge, warDrumsStatusTime, getActiveWarDrumsExpiresAtMs(), "War Drums");
   updateTimedEffectStatusBadge(veilStatusBadge, veilStatusTime, getActiveVeilOfSilenceExpiresAtMs(), "Veil of Silence");
+  updateActiveItemEffectsStackDensity();
+}
+
+function updateActiveItemEffectsStackDensity() {
+  if (!activeItemEffectsStack) return;
+  const activeCount = Array.from(activeItemEffectsStack.querySelectorAll(".effect-status-badge"))
+    .filter(badge => !badge.hidden)
+    .length;
+  activeItemEffectsStack.dataset.activeCount = String(activeCount);
+  activeItemEffectsStack.classList.toggle("compact", activeCount > 2);
+  activeItemEffectsStack.classList.toggle("dense", activeCount > 3);
 }
 
 function applyFlagToElement(element, flag) {
