@@ -15,6 +15,7 @@
   const MAP_SWITCH_ARROW_ICON_SRC = "/assets/map-switch-arrow.png?v=20260702-map-arrow-bigger";
   const REGION_TYPES = ["starter", "midgame", "endgame", "activity", "crownlands_main"];
   const EDGE_TYPES = ["road", "valley", "pass", "river_crossing", "open_field", "forest_break", "bridge"];
+  const CAMP_TYPES = ["gold", "troops", "items", "deed"];
   const STRONGHOLD_TYPES = [
     "crown_citadel",
     "gold_stronghold",
@@ -79,6 +80,28 @@
       size: 154,
     },
   };
+  const CAMP_DEFAULTS = {
+    gold: {
+      name: "Gold Camp",
+      artSrc: "assets/camps/gold.png",
+      size: 132,
+    },
+    troops: {
+      name: "Troop Camp",
+      artSrc: "assets/camps/troops.png",
+      size: 132,
+    },
+    items: {
+      name: "Item Camp",
+      artSrc: "assets/camps/items.png",
+      size: 132,
+    },
+    deed: {
+      name: "City Deed Camp",
+      artSrc: "assets/camps/deed.png",
+      size: 132,
+    },
+  };
 
   const elements = {
     worldModeBtn: document.getElementById("worldModeBtn"),
@@ -86,6 +109,7 @@
     addRegionBtn: document.getElementById("addRegionBtn"),
     addCityBtn: document.getElementById("addCityBtn"),
     addStrongholdBtn: document.getElementById("addStrongholdBtn"),
+    addCampBtn: document.getElementById("addCampBtn"),
     addEdgeBtn: document.getElementById("addEdgeBtn"),
     deleteSelectedBtn: document.getElementById("deleteSelectedBtn"),
     validateBtn: document.getElementById("validateBtn"),
@@ -96,10 +120,12 @@
     toggleGridBtn: document.getElementById("toggleGridBtn"),
     toggleCitiesBtn: document.getElementById("toggleCitiesBtn"),
     toggleStrongholdsBtn: document.getElementById("toggleStrongholdsBtn"),
+    toggleCampsBtn: document.getElementById("toggleCampsBtn"),
     toggleConnectionsBtn: document.getElementById("toggleConnectionsBtn"),
     importFileInput: document.getElementById("importFileInput"),
     regionImageFileInput: document.getElementById("regionImageFileInput"),
     strongholdTypeSelect: document.getElementById("strongholdTypeSelect"),
+    campTypeSelect: document.getElementById("campTypeSelect"),
     edgeTypeSelect: document.getElementById("edgeTypeSelect"),
     zoomOutBtn: document.getElementById("zoomOutBtn"),
     zoomInBtn: document.getElementById("zoomInBtn"),
@@ -126,6 +152,7 @@
     regionCountStat: document.getElementById("regionCountStat"),
     cityCountStat: document.getElementById("cityCountStat"),
     strongholdCountStat: document.getElementById("strongholdCountStat"),
+    campCountStat: document.getElementById("campCountStat"),
     edgeCountStat: document.getElementById("edgeCountStat"),
     statusBar: document.getElementById("statusBar"),
   };
@@ -144,6 +171,7 @@
       grid: true,
       cities: true,
       strongholds: true,
+      camps: true,
       connections: true,
     },
     draggingMarker: null,
@@ -364,6 +392,7 @@
       cityCapacity: Math.max(0, Math.floor(Number(rawRegion.cityCapacity) || (type === "crownlands_main" ? 100 : 50))),
       cities: [],
       strongholds: [],
+      camps: [],
       edgeConnections: normalizeEdgeConnections(rawRegion.edgeConnections),
       notes: String(rawRegion.notes || ""),
     };
@@ -371,6 +400,7 @@
     region.regionPath = rawRegion.regionPath || `assets/worlds/world_01/regions/${region.id}.json`;
     region.cities = (Array.isArray(rawRegion.cities) ? rawRegion.cities : []).map((city, cityIndex) => normalizeCity(city, cityIndex, region));
     region.strongholds = (Array.isArray(rawRegion.strongholds) ? rawRegion.strongholds : []).map((stronghold, strongholdIndex) => normalizeStronghold(stronghold, strongholdIndex, region));
+    region.camps = (Array.isArray(rawRegion.camps) ? rawRegion.camps : []).map((camp, campIndex) => normalizeCamp(camp, campIndex, region));
     return region;
   }
 
@@ -408,6 +438,24 @@
       artSrc: String(stronghold.artSrc || defaults.artSrc),
       size: Math.max(80, Math.floor(Number(stronghold.size) || defaults.size)),
       notes: String(stronghold.notes || ""),
+    };
+  }
+
+  function normalizeCamp(camp = {}, index = 0, region) {
+    const campType = CAMP_TYPES.includes(camp.campType || camp.type)
+      ? camp.campType || camp.type
+      : "gold";
+    const defaults = CAMP_DEFAULTS[campType] || CAMP_DEFAULTS.gold;
+    return {
+      id: slugify(camp.id, `${region.id}_${campType}_camp_${index + 1}`),
+      name: String(camp.name || defaults.name),
+      regionId: region.id,
+      xNorm: roundNorm(camp.xNorm ?? ((Number(camp.x) || 0) / region.width)),
+      yNorm: roundNorm(camp.yNorm ?? ((Number(camp.y) || 0) / region.height)),
+      campType,
+      artSrc: String(camp.artSrc || defaults.artSrc),
+      size: Math.max(64, Math.floor(Number(camp.size) || defaults.size)),
+      notes: String(camp.notes || ""),
     };
   }
 
@@ -575,6 +623,12 @@
     render();
   }
 
+  function selectCamp(regionId, index) {
+    state.activeRegionId = regionId;
+    state.selected = { kind: "camp", regionId, index };
+    render();
+  }
+
   function selectEdge(regionId, side, index) {
     setSelectedEdge(regionId, side, index);
     render();
@@ -593,6 +647,7 @@
     if (state.selected.kind === "region") return region;
     if (state.selected.kind === "city") return region.cities[state.selected.index] || null;
     if (state.selected.kind === "stronghold") return region.strongholds[state.selected.index] || null;
+    if (state.selected.kind === "camp") return region.camps[state.selected.index] || null;
     if (state.selected.kind === "edge") return region.edgeConnections[state.selected.side]?.[state.selected.index] || null;
     return null;
   }
@@ -611,11 +666,13 @@
     elements.regionModeBtn.classList.toggle("active", state.editorMode === "region");
     elements.addCityBtn.classList.toggle("active", state.tool === "city");
     elements.addStrongholdBtn.classList.toggle("active", state.tool === "stronghold");
+    elements.addCampBtn.classList.toggle("active", state.tool === "camp");
     elements.addEdgeBtn.classList.toggle("active", state.tool === "edge");
     elements.addRegionBtn.classList.toggle("active", state.selected?.kind === "gridCell");
     elements.toggleGridBtn.classList.toggle("active", state.toggles.grid);
     elements.toggleCitiesBtn.classList.toggle("active", state.toggles.cities);
     elements.toggleStrongholdsBtn.classList.toggle("active", state.toggles.strongholds);
+    elements.toggleCampsBtn.classList.toggle("active", state.toggles.camps);
     elements.toggleConnectionsBtn.classList.toggle("active", state.toggles.connections);
     elements.deleteSelectedBtn.disabled = !state.selected || state.selected.kind === "gridCell";
     elements.uploadRegionImageBtn.disabled = state.editorMode !== "region" || !currentRegion();
@@ -631,10 +688,12 @@
   function renderCounts() {
     const cityCount = state.regions.reduce((total, region) => total + region.cities.length, 0);
     const strongholdCount = state.regions.reduce((total, region) => total + region.strongholds.length, 0);
+    const campCount = state.regions.reduce((total, region) => total + region.camps.length, 0);
     const edgeCount = state.regions.reduce((total, region) => total + SIDES.reduce((sum, side) => sum + region.edgeConnections[side].length, 0), 0);
     elements.regionCountStat.textContent = String(state.regions.length);
     elements.cityCountStat.textContent = String(cityCount);
     elements.strongholdCountStat.textContent = String(strongholdCount);
+    elements.campCountStat.textContent = String(campCount);
     elements.edgeCountStat.textContent = String(edgeCount);
     elements.countSummary.textContent = `${state.regions.length} regions`;
   }
@@ -895,6 +954,7 @@
     elements.regionImage.alt = `${region.name} map`;
     elements.regionView.classList.toggle("hide-cities", !state.toggles.cities);
     elements.regionView.classList.toggle("hide-strongholds", !state.toggles.strongholds);
+    elements.regionView.classList.toggle("hide-camps", !state.toggles.camps);
     elements.regionView.classList.toggle("hide-connections", !state.toggles.connections);
     renderRegionMarkers(region);
     renderEdgeZones(region);
@@ -913,6 +973,12 @@
       marker.textContent = stronghold.strongholdType === "crown_citadel" ? "C" : "S";
       elements.markerLayer.appendChild(marker);
     });
+    region.camps.forEach((camp, index) => {
+      const marker = createMarker("camp", camp, index, region);
+      marker.dataset.campType = camp.campType;
+      marker.innerHTML = `<img src="${escapeHtml(resolveAssetPath(camp.artSrc))}" alt="" draggable="false" decoding="async" />`;
+      elements.markerLayer.appendChild(marker);
+    });
   }
 
   function createMarker(kind, item, index, region) {
@@ -926,6 +992,7 @@
       event.preventDefault();
       event.stopPropagation();
       if (kind === "city") selectCity(region.id, index);
+      else if (kind === "camp") selectCamp(region.id, index);
       else selectStronghold(region.id, index);
       state.draggingMarker = { kind, regionId: region.id, index, pointerId: event.pointerId };
       marker.setPointerCapture?.(event.pointerId);
@@ -1076,6 +1143,7 @@
     const point = getNormPointFromEvent(event);
     if (state.tool === "city") addCity(region, point);
     if (state.tool === "stronghold") addStronghold(region, point);
+    if (state.tool === "camp") addCamp(region, point);
     if (state.tool === "edge") addEdgeConnection(region, point);
   }
 
@@ -1104,6 +1172,7 @@
       cityCapacity: 50,
       cities: [],
       strongholds: [],
+      camps: [],
       edgeConnections: {},
     }, index);
     state.regions.push(region);
@@ -1156,6 +1225,24 @@
     render();
   }
 
+  function addCamp(region, point) {
+    const campType = CAMP_TYPES.includes(elements.campTypeSelect.value) ? elements.campTypeSelect.value : "gold";
+    const defaults = CAMP_DEFAULTS[campType] || CAMP_DEFAULTS.gold;
+    const camp = normalizeCamp({
+      id: uniqueId(region.camps, `${region.id}_${campType}_camp`),
+      name: defaults.name,
+      xNorm: point.xNorm,
+      yNorm: point.yNorm,
+      campType,
+      artSrc: defaults.artSrc,
+      size: defaults.size,
+    }, region.camps.length, region);
+    region.camps.push(camp);
+    state.selected = { kind: "camp", regionId: region.id, index: region.camps.length - 1 };
+    markDirty(`Added ${camp.name}.`);
+    render();
+  }
+
   function addEdgeConnection(region, point) {
     const side = getNearestEdgeSide(point);
     const along = getEdgePosition(side, point);
@@ -1198,6 +1285,8 @@
       region.cities.splice(state.selected.index, 1);
     } else if (state.selected.kind === "stronghold") {
       region.strongholds.splice(state.selected.index, 1);
+    } else if (state.selected.kind === "camp") {
+      region.camps.splice(state.selected.index, 1);
     } else if (state.selected.kind === "edge") {
       region.edgeConnections[state.selected.side].splice(state.selected.index, 1);
     }
@@ -1211,7 +1300,7 @@
     if (!item) {
       elements.selectionTitle.textContent = "None";
       elements.selectionForm.className = "selection-form empty";
-      elements.selectionForm.textContent = "Select a grid cell, region, city, stronghold, or edge connection.";
+      elements.selectionForm.textContent = "Select a grid cell, region, city, stronghold, camp, or edge connection.";
       renderValidationList();
       return;
     }
@@ -1220,6 +1309,7 @@
     if (state.selected.kind === "region") renderRegionForm(item);
     if (state.selected.kind === "city") renderCityForm(item, getRegion(state.selected.regionId));
     if (state.selected.kind === "stronghold") renderStrongholdForm(item, getRegion(state.selected.regionId));
+    if (state.selected.kind === "camp") renderCampForm(item, getRegion(state.selected.regionId));
     if (state.selected.kind === "edge") renderEdgeForm(item, getRegion(state.selected.regionId));
     renderValidationList();
   }
@@ -1247,6 +1337,7 @@
         <label class="wide"><span>Name</span><input data-field="name" value="${escapeHtml(region.name)}" /></label>
         <label><span>Type</span><select data-field="type">${optionList(REGION_TYPES, region.type)}</select></label>
         <label><span>Cities Placed</span><input value="${region.cities.length}" readonly /></label>
+        <label><span>Camps Placed</span><input value="${region.camps.length}" readonly /></label>
         <label><span>City Capacity</span><input data-field="cityCapacity" type="number" min="0" value="${region.cityCapacity}" /></label>
         <label><span>Grid X</span><input data-field="gridX" type="number" value="${region.gridX}" /></label>
         <label><span>Grid Y</span><input data-field="gridY" type="number" value="${region.gridY}" /></label>
@@ -1300,6 +1391,27 @@
         <label><span>Visual Size</span><input data-field="size" type="number" min="80" value="${stronghold.size}" /></label>
         <label class="wide"><span>Art Path</span><input data-field="artSrc" value="${escapeHtml(stronghold.artSrc)}" /></label>
         <label class="wide"><span>Notes</span><textarea data-field="notes">${escapeHtml(stronghold.notes)}</textarea></label>
+      </div>
+    `;
+  }
+
+  function renderCampForm(camp, region) {
+    const px = Math.round(camp.xNorm * region.width);
+    const py = Math.round(camp.yNorm * region.height);
+    elements.selectionTitle.textContent = camp.name;
+    elements.selectionForm.innerHTML = `
+      <div class="form-grid">
+        <label class="wide"><span>Camp ID</span><input data-field="id" value="${escapeHtml(camp.id)}" /></label>
+        <label class="wide"><span>Name</span><input data-field="name" value="${escapeHtml(camp.name)}" /></label>
+        <label class="wide"><span>Camp Type</span><select data-field="campType">${optionList(CAMP_TYPES, camp.campType)}</select></label>
+        <label><span>Region ID</span><input value="${escapeHtml(region.id)}" readonly /></label>
+        <label><span>xNorm</span><input data-field="xNorm" type="number" min="0" max="1" step="0.001" value="${camp.xNorm}" /></label>
+        <label><span>yNorm</span><input data-field="yNorm" type="number" min="0" max="1" step="0.001" value="${camp.yNorm}" /></label>
+        <label><span>Pixel X</span><input value="${px}" readonly /></label>
+        <label><span>Pixel Y</span><input value="${py}" readonly /></label>
+        <label><span>Visual Size</span><input data-field="size" type="number" min="64" value="${camp.size}" /></label>
+        <label class="wide"><span>Art Path</span><input data-field="artSrc" value="${escapeHtml(camp.artSrc)}" /></label>
+        <label class="wide"><span>Notes</span><textarea data-field="notes">${escapeHtml(camp.notes)}</textarea></label>
       </div>
     `;
   }
@@ -1386,10 +1498,12 @@
     if (["xNorm", "yNorm", "start", "end", "arrowXNorm", "arrowYNorm"].includes(field)) item[field] = roundNorm(value);
     else if (["level", "troops", "bonusAmount", "size"].includes(field)) item[field] = Math.max(0, Math.floor(Number(value) || 0));
     else if (field === "strongholdType") applyStrongholdType(item, value);
+    else if (field === "campType") applyCampType(item, value);
     else if (field === "intentionalOuter") item[field] = Boolean(value);
     else item[field] = String(value);
     if (state.selected.kind === "city") item.regionId = state.selected.regionId;
     if (state.selected.kind === "stronghold") item.regionId = state.selected.regionId;
+    if (state.selected.kind === "camp") item.regionId = state.selected.regionId;
     if (state.selected.kind === "edge") {
       item.side = state.selected.side;
       if (item.start > item.end) [item.start, item.end] = [item.end, item.start];
@@ -1424,6 +1538,7 @@
     region.regionPath = `assets/worlds/world_01/regions/${nextId}.json`;
     region.cities.forEach(city => { city.regionId = nextId; });
     region.strongholds.forEach(stronghold => { stronghold.regionId = nextId; });
+    region.camps.forEach(camp => { camp.regionId = nextId; });
     state.regions.forEach(other => {
       SIDES.forEach(side => {
         other.edgeConnections[side].forEach(zone => {
@@ -1446,6 +1561,15 @@
     stronghold.troops = defaults.troops;
     stronghold.artSrc = defaults.artSrc;
     stronghold.size = defaults.size;
+  }
+
+  function applyCampType(camp, type) {
+    const nextType = CAMP_TYPES.includes(type) ? type : "gold";
+    const defaults = CAMP_DEFAULTS[nextType] || CAMP_DEFAULTS.gold;
+    camp.campType = nextType;
+    camp.name = defaults.name;
+    camp.artSrc = defaults.artSrc;
+    camp.size = defaults.size;
   }
 
   function moveEdgeRecord(region, fromSide, fromIndex, nextSide, options = {}) {
@@ -1481,6 +1605,7 @@
     const gridCells = new Map();
     const cityIds = new Map();
     const strongholdIds = new Map();
+    const campIds = new Map();
 
     state.regions.forEach(region => {
       addCheck(results, region.id, "error", `Region has an ID: ${region.name}`);
@@ -1510,6 +1635,14 @@
         if (stronghold.strongholdType === "crown_citadel" && region.type !== "crownlands_main") {
           results.push({ level: "warning", text: `${stronghold.name} is a Crown Citadel outside a crownlands_main region.` });
         }
+      });
+
+      region.camps.forEach(camp => {
+        if (campIds.has(camp.id)) results.push({ level: "error", text: `Duplicate camp ID: ${camp.id}` });
+        campIds.set(camp.id, camp);
+        if (!CAMP_TYPES.includes(camp.campType)) results.push({ level: "error", text: `${camp.name} has an unknown camp type.` });
+        if (!isNormInside(camp.xNorm, camp.yNorm)) results.push({ level: "error", text: `${camp.name} is outside map bounds.` });
+        if (!camp.artSrc) results.push({ level: "warning", text: `${camp.name} needs a camp image path.` });
       });
     });
 
@@ -1674,10 +1807,18 @@
     render();
   }
 
+  function getRegionMarkerCollection(region, kind) {
+    if (!region) return null;
+    if (kind === "city") return region.cities;
+    if (kind === "stronghold") return region.strongholds;
+    if (kind === "camp") return region.camps;
+    return null;
+  }
+
   function handleMarkerDrag(event) {
     if (!state.draggingMarker) return;
     const region = getRegion(state.draggingMarker.regionId);
-    const collection = state.draggingMarker.kind === "city" ? region?.cities : region?.strongholds;
+    const collection = getRegionMarkerCollection(region, state.draggingMarker.kind);
     const item = collection?.[state.draggingMarker.index];
     if (!item) return;
     const point = getNormPointFromEvent(event);
@@ -1831,6 +1972,7 @@
     elements.addRegionBtn.addEventListener("click", addRegion);
     elements.addCityBtn.addEventListener("click", () => setTool(state.tool === "city" ? "select" : "city"));
     elements.addStrongholdBtn.addEventListener("click", () => setTool(state.tool === "stronghold" ? "select" : "stronghold"));
+    elements.addCampBtn.addEventListener("click", () => setTool(state.tool === "camp" ? "select" : "camp"));
     elements.addEdgeBtn.addEventListener("click", () => setTool(state.tool === "edge" ? "select" : "edge"));
     elements.deleteSelectedBtn.addEventListener("click", deleteSelected);
     elements.validateBtn.addEventListener("click", validateWorld);
@@ -1849,6 +1991,7 @@
     elements.toggleGridBtn.addEventListener("click", () => toggleView("grid"));
     elements.toggleCitiesBtn.addEventListener("click", () => toggleView("cities"));
     elements.toggleStrongholdsBtn.addEventListener("click", () => toggleView("strongholds"));
+    elements.toggleCampsBtn.addEventListener("click", () => toggleView("camps"));
     elements.toggleConnectionsBtn.addEventListener("click", () => toggleView("connections"));
     elements.zoomOutBtn.addEventListener("click", () => zoomRegion(state.zoom <= 1 ? -0.1 : -0.2));
     elements.zoomInBtn.addEventListener("click", () => zoomRegion(state.zoom < 1 ? 0.1 : 0.2));
@@ -1904,6 +2047,8 @@
       setTool("stronghold");
     } else if (event.key.toLowerCase() === "e") {
       setTool("edge");
+    } else if (event.key.toLowerCase() === "p") {
+      setTool("camp");
     } else if (event.key.toLowerCase() === "g") {
       toggleView("grid");
     }

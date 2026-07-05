@@ -396,6 +396,24 @@ function cleanStronghold(stronghold, index, region) {
   };
 }
 
+function cleanCamp(camp, index, region) {
+  const type = cleanCampType(camp.campType || camp.type);
+  const defaults = getCampDefaults(type);
+  const xNorm = cleanNorm(camp.xNorm ?? (Number(camp.x) / Math.max(1, Number(region.width) || 1)), 0.5);
+  const yNorm = cleanNorm(camp.yNorm ?? (Number(camp.y) / Math.max(1, Number(region.height) || 1)), 0.5);
+  return {
+    id: cleanId(camp.id, `${region.id}_${type}_camp_${index + 1}`),
+    name: cleanString(camp.name, defaults.name),
+    regionId: region.id,
+    xNorm,
+    yNorm,
+    campType: type,
+    artSrc: normalizePathForJson(camp.artSrc || defaults.artSrc),
+    size: Math.max(64, Math.floor(number(camp.size, defaults.size, 64, 400))),
+    notes: cleanString(camp.notes, "").slice(0, 240),
+  };
+}
+
 function getStrongholdDefaults(type) {
   const normalized = cleanId(type, "gold_stronghold");
   const defaults = {
@@ -457,17 +475,51 @@ function getStrongholdDefaults(type) {
   return defaults[normalized] || defaults.gold_stronghold;
 }
 
+function cleanCampType(type) {
+  const value = cleanId(type, "gold");
+  return ["gold", "troops", "items", "deed"].includes(value) ? value : "gold";
+}
+
+function getCampDefaults(type) {
+  const normalized = cleanCampType(type);
+  const defaults = {
+    gold: {
+      name: "Gold Camp",
+      artSrc: "assets/camps/gold.png",
+      size: 132,
+    },
+    troops: {
+      name: "Troop Camp",
+      artSrc: "assets/camps/troops.png",
+      size: 132,
+    },
+    items: {
+      name: "Item Camp",
+      artSrc: "assets/camps/items.png",
+      size: 132,
+    },
+    deed: {
+      name: "City Deed Camp",
+      artSrc: "assets/camps/deed.png",
+      size: 132,
+    },
+  };
+  return defaults[normalized] || defaults.gold;
+}
+
 function normalizeRegionDocument(rawRegion) {
   const summary = cleanWorldRegionSummary(rawRegion);
   const region = {
     ...summary,
     cities: [],
     strongholds: [],
+    camps: [],
     edgeConnections: normalizeEdgeConnections(rawRegion.edgeConnections),
     notes: cleanString(rawRegion.notes, "").slice(0, 500),
   };
   region.cities = (Array.isArray(rawRegion.cities) ? rawRegion.cities : []).map((city, index) => cleanCity(city, index, region));
   region.strongholds = (Array.isArray(rawRegion.strongholds) ? rawRegion.strongholds : []).map((stronghold, index) => cleanStronghold(stronghold, index, region));
+  region.camps = (Array.isArray(rawRegion.camps) ? rawRegion.camps : []).map((camp, index) => cleanCamp(camp, index, region));
   if (rawRegion.compatRegion && typeof rawRegion.compatRegion === "object") {
     region.compatRegion = rawRegion.compatRegion;
   }
@@ -560,6 +612,16 @@ async function buildWorldDataFromMapEditorData() {
         troops: objective.troops || objective.startTroops,
         artSrc: objective.artSrc,
         size: objective.size,
+      })),
+      camps: (Array.isArray(map.camps) ? map.camps : []).map((camp, campIndex) => ({
+        id: camp.id || `${id}_${cleanCampType(camp.campType || camp.type)}_camp_${campIndex + 1}`,
+        name: camp.name,
+        xNorm: cleanNorm(camp.xNorm ?? ((Number(camp.x) || 0) / sourceWidth), 0.5),
+        yNorm: cleanNorm(camp.yNorm ?? ((Number(camp.y) || 0) / sourceHeight), 0.5),
+        campType: cleanCampType(camp.campType || camp.type),
+        artSrc: camp.artSrc,
+        size: camp.size,
+        notes: camp.notes,
       })),
       edgeConnections: { north: [], south: [], east: [], west: [] },
     };
@@ -672,6 +734,19 @@ function buildCompatibilityMapData(layout, regions) {
           size: stronghold.size,
         };
       }),
+      camps: region.camps.map(camp => ({
+        id: camp.id,
+        name: camp.name,
+        x: Math.round(camp.xNorm * region.width),
+        y: Math.round(camp.yNorm * region.height),
+        xNorm: camp.xNorm,
+        yNorm: camp.yNorm,
+        type: camp.campType,
+        campType: camp.campType,
+        artSrc: camp.artSrc,
+        size: camp.size,
+        notes: camp.notes,
+      })),
       edgeConnections: region.edgeConnections,
     })),
   };

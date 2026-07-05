@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Crownlands World Editor</title>
-  <link rel="stylesheet" href="styles.css?v=20260702-map-switch-arrow-bigger" />
+  <link rel="stylesheet" href="styles.css?v=20260704-camp-placement" />
 </head>
 <body>
   <main class="editor-shell">
@@ -21,6 +21,7 @@
         <button id="addRegionBtn" class="tool-btn" type="button">Add Region</button>
         <button id="addCityBtn" class="tool-btn" type="button">Add City</button>
         <button id="addStrongholdBtn" class="tool-btn" type="button">Add Stronghold</button>
+        <button id="addCampBtn" class="tool-btn" type="button">Add Camp</button>
         <button id="addEdgeBtn" class="tool-btn" type="button">Add Edge Connection</button>
         <button id="deleteSelectedBtn" class="tool-btn danger" type="button">Delete Selected</button>
       </div>
@@ -34,6 +35,7 @@
         <button id="toggleGridBtn" class="tool-btn active" type="button">Toggle Grid</button>
         <button id="toggleCitiesBtn" class="tool-btn active" type="button">Toggle Cities</button>
         <button id="toggleStrongholdsBtn" class="tool-btn active" type="button">Toggle Strongholds</button>
+        <button id="toggleCampsBtn" class="tool-btn active" type="button">Toggle Camps</button>
         <button id="toggleConnectionsBtn" class="tool-btn active" type="button">Toggle Connections</button>
       </div>
       <input id="importFileInput" type="file" accept=".json,application/json" hidden />
@@ -57,6 +59,15 @@
                 <option value="defense_stronghold">Defense</option>
                 <option value="upgrade_discount_stronghold">Upgrade</option>
                 <option value="crown_citadel">Crown Citadel</option>
+              </select>
+            </label>
+            <label class="compact-field">
+              <span>Camp</span>
+              <select id="campTypeSelect">
+                <option value="gold">Gold</option>
+                <option value="troops">Troops</option>
+                <option value="items">Items</option>
+                <option value="deed">City Deed</option>
               </select>
             </label>
             <label class="compact-field">
@@ -115,7 +126,7 @@
             <span>Selection</span>
             <strong id="selectionTitle">None</strong>
           </div>
-          <div id="selectionForm" class="selection-form empty">Select a region, city, stronghold, or edge connection.</div>
+          <div id="selectionForm" class="selection-form empty">Select a region, city, stronghold, camp, or edge connection.</div>
         </section>
 
         <section class="panel">
@@ -135,6 +146,7 @@
             <div><span>Regions</span><strong id="regionCountStat">0</strong></div>
             <div><span>Cities</span><strong id="cityCountStat">0</strong></div>
             <div><span>Strongholds</span><strong id="strongholdCountStat">0</strong></div>
+            <div><span>Camps</span><strong id="campCountStat">0</strong></div>
             <div><span>Edges</span><strong id="edgeCountStat">0</strong></div>
           </div>
         </section>
@@ -143,6 +155,6 @@
 
     <footer id="statusBar" class="status-bar">Loading world data...</footer>
   </main>
-  <script src="editor.js?v=20260702-map-switch-arrow-bigger"></script>
+  <script src="editor.js?v=20260704-camp-placement"></script>
 </body>
 </html>

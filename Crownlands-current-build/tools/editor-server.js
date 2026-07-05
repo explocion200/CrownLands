@@ -298,9 +298,19 @@ function cleanNorm(value, fallback = 0) {
   return number(value, fallback, 0, 1);
 }
 
+function defaultEdgeArrowPoint(side, start, end) {
+  const center = cleanNorm((Math.min(start, end) + Math.max(start, end)) / 2, 0.5);
+  const inset = 0.12;
+  if (side === "north") return { x: center, y: inset };
+  if (side === "south") return { x: center, y: 1 - inset };
+  if (side === "west") return { x: inset, y: center };
+  return { x: 1 - inset, y: center };
+}
+
 function cleanEdgeZone(zone, index, side) {
   const start = cleanNorm(zone.start, 0);
   const end = cleanNorm(zone.end, 1);
+  const arrowFallback = defaultEdgeArrowPoint(side, start, end);
   return {
     id: cleanId(zone.id, `${side}_connection_${index + 1}`),
     side,
@@ -308,6 +318,8 @@ function cleanEdgeZone(zone, index, side) {
     end: Math.max(start, end),
     type: cleanId(zone.type, "road"),
     connectsToRegionId: cleanId(zone.connectsToRegionId, ""),
+    arrowXNorm: cleanNorm(zone.arrowXNorm, arrowFallback.x),
+    arrowYNorm: cleanNorm(zone.arrowYNorm, arrowFallback.y),
     intentionalOuter: Boolean(zone.intentionalOuter),
     notes: cleanString(zone.notes, "").slice(0, 240),
   };
@@ -384,6 +396,24 @@ function cleanStronghold(stronghold, index, region) {
   };
 }
 
+function cleanCamp(camp, index, region) {
+  const type = cleanCampType(camp.campType || camp.type);
+  const defaults = getCampDefaults(type);
+  const xNorm = cleanNorm(camp.xNorm ?? (Number(camp.x) / Math.max(1, Number(region.width) || 1)), 0.5);
+  const yNorm = cleanNorm(camp.yNorm ?? (Number(camp.y) / Math.max(1, Number(region.height) || 1)), 0.5);
+  return {
+    id: cleanId(camp.id, `${region.id}_${type}_camp_${index + 1}`),
+    name: cleanString(camp.name, defaults.name),
+    regionId: region.id,
+    xNorm,
+    yNorm,
+    campType: type,
+    artSrc: normalizePathForJson(camp.artSrc || defaults.artSrc),
+    size: Math.max(64, Math.floor(number(camp.size, defaults.size, 64, 400))),
+    notes: cleanString(camp.notes, "").slice(0, 240),
+  };
+}
+
 function getStrongholdDefaults(type) {
   const normalized = cleanId(type, "gold_stronghold");
   const defaults = {
@@ -445,17 +475,51 @@ function getStrongholdDefaults(type) {
   return defaults[normalized] || defaults.gold_stronghold;
 }
 
+function cleanCampType(type) {
+  const value = cleanId(type, "gold");
+  return ["gold", "troops", "items", "deed"].includes(value) ? value : "gold";
+}
+
+function getCampDefaults(type) {
+  const normalized = cleanCampType(type);
+  const defaults = {
+    gold: {
+      name: "Gold Camp",
+      artSrc: "assets/camps/gold.png",
+      size: 132,
+    },
+    troops: {
+      name: "Troop Camp",
+      artSrc: "assets/camps/troops.png",
+      size: 132,
+    },
+    items: {
+      name: "Item Camp",
+      artSrc: "assets/camps/items.png",
+      size: 132,
+    },
+    deed: {
+      name: "City Deed Camp",
+      artSrc: "assets/camps/deed.png",
+      size: 132,
+    },
+  };
+  return defaults[normalized] || defaults.gold;
+}
+
 function normalizeRegionDocument(rawRegion) {
   const summary = cleanWorldRegionSummary(rawRegion);
   const region = {
     ...summary,
     cities: [],
     strongholds: [],
+    camps: [],
     edgeConnections: normalizeEdgeConnections(rawRegion.edgeConnections),
     notes: cleanString(rawRegion.notes, "").slice(0, 500),
   };
   region.cities = (Array.isArray(rawRegion.cities) ? rawRegion.cities : []).map((city, index) => cleanCity(city, index, region));
   region.strongholds = (Array.isArray(rawRegion.strongholds) ? rawRegion.strongholds : []).map((stronghold, index) => cleanStronghold(stronghold, index, region));
+  region.camps = (Array.isArray(rawRegion.camps) ? rawRegion.camps : []).map((camp, index) => cleanCamp(camp, index, region));
   if (rawRegion.compatRegion && typeof rawRegion.compatRegion === "object") {
     region.compatRegion = rawRegion.compatRegion;
   }
@@ -549,6 +613,16 @@ async function buildWorldDataFromMapEditorData() {
         artSrc: objective.artSrc,
         size: objective.size,
       })),
+      camps: (Array.isArray(map.camps) ? map.camps : []).map((camp, campIndex) => ({
+        id: camp.id || `${id}_${cleanCampType(camp.campType || camp.type)}_camp_${campIndex + 1}`,
+        name: camp.name,
+        xNorm: cleanNorm(camp.xNorm ?? ((Number(camp.x) || 0) / sourceWidth), 0.5),
+        yNorm: cleanNorm(camp.yNorm ?? ((Number(camp.y) || 0) / sourceHeight), 0.5),
+        campType: cleanCampType(camp.campType || camp.type),
+        artSrc: camp.artSrc,
+        size: camp.size,
+        notes: camp.notes,
+      })),
       edgeConnections: { north: [], south: [], east: [], west: [] },
     };
     return region;
@@ -582,30 +656,29 @@ function compactStrongholdType(type) {
 }
 
 function buildCompatibilityRegion(layout, region) {
-  if (region.compatRegion && typeof region.compatRegion === "object") {
-    return {
-      ...region.compatRegion,
-      id: region.id,
-      label: region.name,
-    };
-  }
+  const compatRegion = region.compatRegion && typeof region.compatRegion === "object" ? region.compatRegion : {};
   const cellSize = Math.max(500, Number(layout.globalSettings?.gridCellWorldSize) || 2300);
   const worldWidth = Math.max(1000, Number(layout.globalSettings?.worldWidth) || 10000);
   const worldHeight = Math.max(1000, Number(layout.globalSettings?.worldHeight) || 7600);
   const aspect = Math.max(0.2, (Number(region.width) || 2048) / Math.max(1, Number(region.height) || 2048));
-  const rx = aspect >= 1 ? Math.round(cellSize * 0.46) : Math.round(cellSize * 0.36);
-  const ry = aspect >= 1 ? Math.round(cellSize * 0.36) : Math.round(cellSize * 0.46);
+  const defaultRx = aspect >= 1 ? Math.round(cellSize * 0.46) : Math.round(cellSize * 0.36);
+  const defaultRy = aspect >= 1 ? Math.round(cellSize * 0.36) : Math.round(cellSize * 0.46);
+  const rx = Math.max(1, Math.round(number(compatRegion.rx, defaultRx, 1, 100000)));
+  const ry = Math.max(1, Math.round(number(compatRegion.ry, defaultRy, 1, 100000)));
   return {
+    ...compatRegion,
     id: region.id,
     label: region.name,
+    gridX: region.gridX,
+    gridY: region.gridY,
     x: Math.round(worldWidth / 2 + Number(region.gridX) * cellSize),
     y: Math.round(worldHeight / 2 + Number(region.gridY) * cellSize),
     rx,
     ry,
-    cityRx: Math.round(rx * 0.82),
-    cityRy: Math.round(ry * 0.76),
-    rot: 0,
-    palette: region.type === "crownlands_main" ? "heartland" : "woodland",
+    cityRx: Math.max(1, Math.round(number(compatRegion.cityRx, Math.round(rx * 0.82), 1, 100000))),
+    cityRy: Math.max(1, Math.round(number(compatRegion.cityRy, Math.round(ry * 0.76), 1, 100000))),
+    rot: Number.isFinite(Number(compatRegion.rot)) ? Number(compatRegion.rot) : 0,
+    palette: compatRegion.palette || (region.type === "crownlands_main" ? "heartland" : "woodland"),
   };
 }
 
@@ -615,9 +688,14 @@ function buildCompatibilityMapData(layout, regions) {
     updatedAt: new Date().toISOString(),
     worldId: layout.worldId,
     worldName: layout.worldName,
+    globalSettings: layout.globalSettings || {},
     maps: regions.map(region => ({
       id: region.id,
       label: region.name,
+      gridX: region.gridX,
+      gridY: region.gridY,
+      type: region.type,
+      cityCapacity: region.cityCapacity,
       imageSrc: region.imagePath,
       thumbnailSrc: region.thumbnailPath || "",
       imageWidth: region.width,
@@ -656,7 +734,19 @@ function buildCompatibilityMapData(layout, regions) {
           size: stronghold.size,
         };
       }),
-      portals: [],
+      camps: region.camps.map(camp => ({
+        id: camp.id,
+        name: camp.name,
+        x: Math.round(camp.xNorm * region.width),
+        y: Math.round(camp.yNorm * region.height),
+        xNorm: camp.xNorm,
+        yNorm: camp.yNorm,
+        type: camp.campType,
+        campType: camp.campType,
+        artSrc: camp.artSrc,
+        size: camp.size,
+        notes: camp.notes,
+      })),
       edgeConnections: region.edgeConnections,
     })),
   };

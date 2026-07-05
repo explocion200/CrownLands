@@ -472,6 +472,26 @@ label > span,
   background: #683ca3;
 }
 
+.map-marker.camp {
+  width: 58px;
+  height: 58px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  box-shadow: none;
+  overflow: visible;
+}
+
+.map-marker.camp img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  pointer-events: none;
+  user-select: none;
+  filter: drop-shadow(0 8px 8px rgba(0, 0, 0, 0.55));
+}
+
 .map-marker.selected {
   outline: 4px solid rgba(227, 182, 91, 0.66);
   z-index: 10;
@@ -591,6 +611,7 @@ label > span,
 
 .hide-cities .map-marker.city,
 .hide-strongholds .map-marker.stronghold,
+.hide-camps .map-marker.camp,
 .hide-connections .edge-zone,
 .hide-connections .edge-switch-arrow,
 .hidden {
