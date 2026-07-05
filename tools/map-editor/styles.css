@@ -459,22 +459,24 @@ label > span,
 }
 
 .map-marker.stronghold {
-  width: 42px;
-  height: 42px;
-  border-color: #ffe6a5;
-  border-radius: 9px;
-  background: #9b681c;
+  width: var(--marker-size, 154px);
+  height: var(--marker-size, 154px);
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  overflow: visible;
 }
 
 .map-marker.crown {
-  width: 54px;
-  height: 54px;
-  background: #683ca3;
+  width: var(--marker-size, 260px);
+  height: var(--marker-size, 260px);
+  background: transparent;
 }
 
 .map-marker.camp {
-  width: 58px;
-  height: 58px;
+  width: var(--marker-size, 132px);
+  height: var(--marker-size, 132px);
   border: 0;
   border-radius: 8px;
   background: transparent;
@@ -482,6 +484,7 @@ label > span,
   overflow: visible;
 }
 
+.map-marker.stronghold img,
 .map-marker.camp img {
   display: block;
   width: 100%;

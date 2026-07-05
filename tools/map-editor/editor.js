@@ -970,7 +970,8 @@
     region.strongholds.forEach((stronghold, index) => {
       const marker = createMarker("stronghold", stronghold, index, region);
       marker.classList.toggle("crown", stronghold.strongholdType === "crown_citadel");
-      marker.textContent = stronghold.strongholdType === "crown_citadel" ? "C" : "S";
+      marker.dataset.strongholdType = stronghold.strongholdType;
+      marker.innerHTML = `<img src="${escapeHtml(resolveAssetPath(stronghold.artSrc))}" alt="" draggable="false" decoding="async" />`;
       elements.markerLayer.appendChild(marker);
     });
     region.camps.forEach((camp, index) => {
@@ -988,6 +989,7 @@
     marker.style.left = `${item.xNorm * 100}%`;
     marker.style.top = `${item.yNorm * 100}%`;
     marker.title = item.name;
+    applyMarkerVisualSize(marker, kind, item);
     marker.addEventListener("pointerdown", event => {
       event.preventDefault();
       event.stopPropagation();
@@ -998,6 +1000,18 @@
       marker.setPointerCapture?.(event.pointerId);
     });
     return marker;
+  }
+
+  function applyMarkerVisualSize(marker, kind, item) {
+    if (kind !== "stronghold" && kind !== "camp") return;
+    const defaultSize = kind === "camp"
+      ? (CAMP_DEFAULTS[item.campType]?.size || CAMP_DEFAULTS.gold.size)
+      : (STRONGHOLD_DEFAULTS[item.strongholdType]?.size || STRONGHOLD_DEFAULTS.gold_stronghold.size);
+    const minSize = kind === "camp" ? 64 : 80;
+    const size = Math.max(minSize, Math.floor(Number(item.size) || defaultSize));
+    marker.style.setProperty("--marker-base-size", `${size}px`);
+    marker.style.setProperty("--marker-size", `${Math.max(1, size * state.zoom)}px`);
+    marker.dataset.visualSize = String(size);
   }
 
   function renderEdgeZones(region) {
