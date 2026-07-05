@@ -982,6 +982,52 @@
     return true;
   }
 
+  async function updateOwnedCityIdentityAcrossIslands(islandIds = [], identity = {}) {
+    await init();
+    const uid = requireSignedIn();
+    if (!uid) return 0;
+    const { collection, getDocs, query: firestoreQuery, where, writeBatch, serverTimestamp } = client.modules.firestore;
+    if (!firestoreQuery || !where || !writeBatch) return 0;
+    const uniqueIslandIds = [...new Set((Array.isArray(islandIds) ? islandIds : [])
+      .map(islandId => String(islandId || "").trim())
+      .filter(Boolean))];
+    const ownerName = String(identity.ownerName || identity.playerName || client.user?.displayName || "Ruler").slice(0, 32);
+    const ownerFlag = identity.ownerFlag || identity.flag || null;
+    const ownerKingPower = Math.max(0, Math.floor(Number(identity.ownerKingPower ?? identity.kingPower) || 0));
+    let batch = writeBatch(client.db);
+    let pendingWrites = 0;
+    let updatedCount = 0;
+
+    async function commitPendingBatch() {
+      if (!pendingWrites) return;
+      await batch.commit();
+      batch = writeBatch(client.db);
+      pendingWrites = 0;
+    }
+
+    for (const islandId of uniqueIslandIds) {
+      const citiesRef = collection(client.db, "islands", islandId, "cities");
+      const ownedRef = firestoreQuery(citiesRef, where("ownerUid", "==", uid));
+      const snapshot = await getDocs(ownedRef);
+      for (const cityDoc of snapshot.docs) {
+        batch.set(cityDoc.ref, {
+          ownerKind: "player",
+          ownerUid: uid,
+          ownerName,
+          ownerFlag,
+          ownerKingPower,
+          updatedAt: serverTimestamp(),
+        }, { merge: true });
+        pendingWrites += 1;
+        updatedCount += 1;
+        if (pendingWrites >= 450) await commitPendingBatch();
+      }
+    }
+
+    await commitPendingBatch();
+    return updatedCount;
+  }
+
   async function loadIslandCities(islandId = "main") {
     await init();
     const uid = requireSignedIn();
@@ -1270,6 +1316,7 @@
     claimStartingCity,
     savePlayerCities,
     saveCityState,
+    updateOwnedCityIdentityAcrossIslands,
     loadIslandCities,
     savePresence,
     saveKingPowerLeaderboardEntry,

@@ -4710,6 +4710,114 @@ async function syncPeaceShieldToAllOwnedCities(expiresAtMs = getActivePeaceShiel
   }
 }
 
+async function syncPlayerIdentityToAllOwnedCities({ forceLeaderboard = true } = {}) {
+  if (!state) return false;
+  const api = getOnlineApi();
+  const currentUid = getCurrentOnlineUid();
+  const nextFlag = normalizeFlag(state.flag);
+  const nextOwnerName = state.playerName || getOnlineApi()?.getUser?.()?.displayName || "Ruler";
+  const nextKingPower = getKingPower();
+
+  playerCities().forEach(city => {
+    city.ownerKind = "player";
+    city.ownerUid = currentUid || city.ownerUid || null;
+    city.ownerName = nextOwnerName;
+    city.ownerFlag = nextFlag;
+    city.ownerKingPower = nextKingPower;
+    localDirtyCityIds.add(city.id);
+  });
+
+  if (onlineOwnedCitiesCache.length) {
+    onlineOwnedCitiesCache = onlineOwnedCitiesCache.map(city => ({
+      ...city,
+      ownerName: nextOwnerName,
+      ownerFlag: nextFlag,
+      ownerKingPower: nextKingPower,
+    }));
+    updateIslandSummariesFromOwnedCityCache();
+  }
+
+  const profileSave = api?.savePlayerProfile && api?.isSignedIn?.()
+    ? api.savePlayerProfile(stripServerEconomyProfileFields(getPlayerCloudStateSnapshot())).catch(error => {
+      console.warn("Could not save player profile identity", error);
+      return false;
+    })
+    : Promise.resolve(false);
+  const leaderboardSave = forceLeaderboard ? publishKingPowerLeaderboard({ force: true }) : Promise.resolve(false);
+  const presenceSave = publishOnlinePresence(true);
+
+  if (!api?.isSignedIn?.() || !api?.loadOwnedCitiesAcrossIslands || !api?.savePlayerCities) {
+    await Promise.allSettled([profileSave, leaderboardSave, presenceSave]);
+    if (isOnlineWorldActive()) syncOwnedCitiesToOnline(true);
+    return false;
+  }
+
+  try {
+    const islandIds = getRegionIds().map(getOnlineIslandId);
+    if (api.updateOwnedCityIdentityAcrossIslands) {
+      await Promise.all([
+        api.updateOwnedCityIdentityAcrossIslands(islandIds, {
+          ownerName: nextOwnerName,
+          ownerFlag: nextFlag,
+          ownerKingPower: nextKingPower,
+        }),
+        profileSave,
+        leaderboardSave,
+        presenceSave,
+      ]);
+      playerCities().forEach(city => localDirtyCityIds.delete(city.id));
+      onlineLastError = "";
+      renderCities(true);
+      renderHud();
+      return true;
+    }
+
+    const owned = await withTimeout(
+      api.loadOwnedCitiesAcrossIslands(islandIds),
+      6500,
+      "Owned city flag lookup is taking too long."
+    );
+    const normalized = (Array.isArray(owned) ? owned : [])
+      .map(city => normalizeOwnedCitySnapshot({
+        ...city,
+        islandId: city.islandId || getOnlineIslandId(getCityRegionId(city)),
+        ownerName: nextOwnerName,
+        ownerFlag: nextFlag,
+        ownerKingPower: nextKingPower,
+      }))
+      .filter(Boolean);
+    const byIsland = new Map();
+    normalized.forEach(city => {
+      const islandId = city.islandId || getOnlineIslandId(getCityRegionId(city));
+      if (!byIsland.has(islandId)) byIsland.set(islandId, []);
+      byIsland.get(islandId).push({
+        ...city,
+        ownerName: nextOwnerName,
+        ownerFlag: nextFlag,
+        ownerKingPower: nextKingPower,
+      });
+    });
+
+    await Promise.all([
+      ...[...byIsland.entries()].map(([islandId, cities]) => api.savePlayerCities(islandId, cities)),
+      profileSave,
+      leaderboardSave,
+      presenceSave,
+    ]);
+    mergeOwnedCitySnapshots(normalized, { complete: true });
+    normalized.forEach(city => localDirtyCityIds.delete(city.id));
+    onlineLastError = "";
+    renderCities(true);
+    renderHud();
+    return true;
+  } catch (error) {
+    onlineLastError = error?.message || String(error);
+    console.warn("Could not sync player flag across owned cities", error);
+    await Promise.allSettled([profileSave, leaderboardSave, presenceSave]);
+    return false;
+  }
+}
+
 function deactivatePeaceShieldForPlayerAttack(target) {
   if (!state || !isAnotherPlayerOwnedCity(target)) return false;
   if (!getActivePeaceShieldExpiresAtMs()) return false;
@@ -11765,17 +11873,27 @@ function renderFlagSwatches(container, key) {
   });
 }
 
-function saveFlagEditor() {
+async function saveFlagEditor() {
   if (!state || !flagDraft) return;
   state.flag = normalizeFlag(flagDraft);
-  saveGame();
-  syncOwnedCitiesToOnline(true);
-  flushOnlineSave(true).then(saved => {
-    if (!saved && getOnlineApi()?.isSignedIn?.()) showToast("Flag saved locally. Cloud save will retry.");
+  playerCities().forEach(city => {
+    city.ownerFlag = state.flag;
+    markOwnedCityChanged(city, false);
   });
+  saveGame();
   renderHud();
+  renderCities(true);
   showProfileView();
-  showToast("Kingdom flag saved.");
+  showToast("Kingdom flag saved. Updating your cities...");
+  const [identitySynced, cloudSaved] = await Promise.all([
+    syncPlayerIdentityToAllOwnedCities({ forceLeaderboard: true }),
+    flushOnlineSave(true),
+  ]);
+  if (getOnlineApi()?.isSignedIn?.() && (!identitySynced || !cloudSaved)) {
+    showToast("Flag saved. Online flag sync will retry.");
+  } else {
+    showToast("Kingdom flag updated everywhere.");
+  }
 }
 
 function formatPathNumber(value) {
