@@ -38,6 +38,7 @@ const MIME_TYPES = new Map([
   [".png", "image/png"],
   [".jpg", "image/jpeg"],
   [".jpeg", "image/jpeg"],
+  [".webp", "image/webp"],
   [".svg", "image/svg+xml; charset=utf-8"],
   [".webmanifest", "application/manifest+json; charset=utf-8"],
 ]);
@@ -423,7 +424,7 @@ function getStrongholdDefaults(type) {
       bonusAmount: 10,
       level: 100,
       troops: 50000000,
-      artSrc: "assets/crown-citadel.png?v=20260630-citadel-art",
+      artSrc: "assets/crown-citadel.png?v=20260703-crown-citadel-art",
       size: 260,
     },
     gold_stronghold: {

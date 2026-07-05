@@ -3,7 +3,7 @@
   "private": true,
   "description": "Server-authoritative Crownlands multiplayer actions",
   "engines": {
-    "node": "20"
+    "node": "22"
   },
   "main": "index.js",
   "scripts": {
