@@ -925,15 +925,20 @@ function normalizeShopItems(items = {}) {
   Object.keys(SHOP_ITEMS).forEach(itemId => {
     normalized[itemId] = Math.max(0, Math.floor(safeNumber(items[itemId], 0)));
   });
-  const hasWarDrumsCount = Object.prototype.hasOwnProperty.call(items, WAR_DRUMS_ITEM_ID);
-  const legacyWarDrumsCount = Math.max(0, Math.floor(safeNumber(items.troop_boost_1h, 0)));
-  const hasLegacyWarDrumsCount = legacyWarDrumsCount > 0 && Object.prototype.hasOwnProperty.call(items, "troop_boost_1h");
-  if (!hasWarDrumsCount && Number.isFinite(Number(items.troop_boost_1h))) {
-    normalized[WAR_DRUMS_ITEM_ID] = legacyWarDrumsCount;
-  } else if (hasLegacyWarDrumsCount) {
-    normalized[WAR_DRUMS_ITEM_ID] = Math.min(normalized[WAR_DRUMS_ITEM_ID], legacyWarDrumsCount);
-  }
+  mergeLegacyShopItemCount(items, normalized, WAR_DRUMS_ITEM_ID, "troop_boost_1h");
+  mergeLegacyShopItemCount(items, normalized, VEIL_OF_SILENCE_ITEM_ID, "anti_scout_1h");
   return normalized;
+}
+
+function mergeLegacyShopItemCount(items, normalized, canonicalId, legacyId) {
+  const hasCanonicalCount = Object.prototype.hasOwnProperty.call(items, canonicalId);
+  const legacyCount = Math.max(0, Math.floor(safeNumber(items[legacyId], 0)));
+  const hasLegacyCount = legacyCount > 0 && Object.prototype.hasOwnProperty.call(items, legacyId);
+  if (!hasCanonicalCount && Number.isFinite(Number(items[legacyId]))) {
+    normalized[canonicalId] = legacyCount;
+  } else if (hasLegacyCount) {
+    normalized[canonicalId] = Math.min(normalized[canonicalId], legacyCount);
+  }
 }
 
 function addLegacyShopItemDeletes(patch = {}) {
@@ -952,7 +957,12 @@ function normalizeItemEffects(effects = {}) {
 }
 
 function isVeilOfSilenceActive(profile = {}, nowMs = Date.now()) {
-  return timestampToMs(profile?.itemEffects?.veilOfSilenceExpiresAtMs || profile?.itemEffects?.veilOfSilenceExpiresAt) > nowMs;
+  return timestampToMs(
+    profile?.itemEffects?.veilOfSilenceExpiresAtMs ||
+    profile?.itemEffects?.veilOfSilenceExpiresAt ||
+    profile?.itemEffects?.antiScoutExpiresAtMs ||
+    profile?.itemEffects?.antiScoutExpiresAt
+  ) > nowMs;
 }
 
 function normalizeItemPurchaseCooldowns(cooldowns = {}) {
