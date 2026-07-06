@@ -687,6 +687,28 @@ function cityRefForRegion(regionId, cityId) {
   return db.doc(`islands/${getOnlineIslandId(regionId)}/cities/${cityId}`);
 }
 
+function cleanServerCityLayoutSeed(city = {}) {
+  const cityId = safeString(city.id, 96).replace(/[^a-zA-Z0-9_-]/g, "_");
+  const isStrongholdCity = city.kind === "stronghold" || Boolean(city.strongholdType);
+  return {
+    id: cityId,
+    name: safeString(city.name || cityId, 80),
+    x: safeNumber(city.x, 0),
+    y: safeNumber(city.y, 0),
+    startPool: safeString(city.startPool, 80),
+    regionId: safeString(city.regionId || city.startPool, 80),
+    kind: isStrongholdCity ? "stronghold" : "",
+    strongholdType: isStrongholdCity ? safeString(city.strongholdType, 32) : "",
+    bonus: isStrongholdCity ? safeString(city.bonus, 32) : "",
+    bonusPercent: isStrongholdCity ? Math.max(0, Math.floor(safeNumber(city.bonusPercent, 0))) : 0,
+    size: isStrongholdCity ? Math.max(0, Math.floor(safeNumber(city.size, 0))) : 0,
+    artSrc: isStrongholdCity ? safeString(city.artSrc, 180) : "",
+    startTroops: isStrongholdCity ? Math.max(0, Math.floor(safeNumber(city.startTroops, safeNumber(city.troops, 0)))) : 0,
+    level: clampCityLevel(city.level || (isStrongholdCity ? 50 : 1)),
+    defense: 1,
+  };
+}
+
 function armyRefsForRegions(regionIds, armyId) {
   return normalizeRegionIds(regionIds).map(regionId => db.doc(`islands/${getOnlineIslandId(regionId)}/armies/${armyId}`));
 }
@@ -1468,6 +1490,111 @@ exports.resetSkills = onCall({ region: "us-central1", maxInstances: 20, invoker:
       repairedSkillPoints: needsPointRepair,
     });
   });
+});
+
+exports.ensureMainIsland = onCall({ region: "us-central1", maxInstances: 20, invoker: "public" }, async request => {
+  const uid = requireAuth(request);
+  const data = request.data || {};
+  const islandId = safeString(data.islandId || getOnlineIslandId(data.meta?.regionId || "west"), 160);
+  const rawCities = Array.isArray(data.cities) ? data.cities : [];
+  const citySeeds = rawCities
+    .map(cleanServerCityLayoutSeed)
+    .filter(city => city.id)
+    .slice(0, 450);
+  if (!islandId || !citySeeds.length) {
+    throw new HttpsError("invalid-argument", "No island layout was provided.");
+  }
+
+  const rawMeta = data.meta && typeof data.meta === "object" ? data.meta : {};
+  const targetVersion = Math.max(1, Math.floor(safeNumber(rawMeta.version, 21)));
+  const targetCityCount = citySeeds.length;
+  const targetRegularCityCount = citySeeds.filter(city => !(city.kind === "stronghold" || city.strongholdType)).length;
+  const islandRef = db.doc(`islands/${islandId}`);
+  const citiesRef = islandRef.collection("cities");
+  const islandSnap = await islandRef.get();
+  const islandData = islandSnap.exists ? islandSnap.data() || {} : {};
+  const seededCityCount = Math.max(0, Math.floor(safeNumber(islandData.seededCityCount, 0)));
+  const layoutSeedVersion = Math.max(0, Math.floor(safeNumber(islandData.layoutSeedVersion, 0)));
+  const needsCitySeed = !islandSnap.exists || seededCityCount < targetCityCount;
+  const needsLayoutRefresh = islandSnap.exists && layoutSeedVersion < targetVersion;
+  const safeMeta = {
+    worldId: safeString(rawMeta.worldId || ONLINE_WORLD_ID, 80),
+    legacyWorldId: safeString(rawMeta.legacyWorldId, 80),
+    regionId: normalizeRegionId(rawMeta.regionId || getRegionIdFromOnlineIslandId(islandId)),
+    regionName: safeString(rawMeta.regionName, 80),
+    version: targetVersion,
+    name: safeString(rawMeta.name || islandId, 120),
+    cityCount: targetCityCount,
+    regionCount: Math.max(0, Math.floor(safeNumber(rawMeta.regionCount, 0))),
+    cityCountPerRegion: Math.max(0, Math.floor(safeNumber(rawMeta.cityCountPerRegion, 0))),
+    worldWidth: Math.max(0, Math.floor(safeNumber(rawMeta.worldWidth, 0))),
+    worldHeight: Math.max(0, Math.floor(safeNumber(rawMeta.worldHeight, 0))),
+  };
+
+  if (islandSnap.exists && !needsCitySeed && !needsLayoutRefresh && seededCityCount === targetCityCount) {
+    return {
+      islandId,
+      seeded: false,
+      refreshed: false,
+      cityCount: targetCityCount,
+      version: targetVersion,
+    };
+  }
+
+  const cityDocs = await citiesRef.get();
+  const existingCityDataById = new Map(cityDocs.docs.map(cityDoc => [cityDoc.id, cityDoc.data() || {}]));
+  const existingCityIds = new Set(existingCityDataById.keys());
+  const seedsToWrite = needsLayoutRefresh
+    ? citySeeds
+    : citySeeds.filter(city => !existingCityIds.has(city.id));
+
+  const batch = db.batch();
+  batch.set(islandRef, {
+    id: islandId,
+    ...safeMeta,
+    regularCityCount: targetRegularCityCount,
+    seededCityCount: targetCityCount,
+    layoutSeedVersion: targetVersion,
+    createdBy: islandData.createdBy || uid,
+    createdAt: islandData.createdAt || FieldValue.serverTimestamp(),
+    updatedAt: FieldValue.serverTimestamp(),
+  }, { merge: true });
+
+  for (const city of seedsToWrite) {
+    const alreadyExists = existingCityIds.has(city.id);
+    const existingCity = existingCityDataById.get(city.id) || {};
+    const isStrongholdCity = city.kind === "stronghold" || Boolean(city.strongholdType);
+    const existingOwnedByPlayer = existingCity.ownerKind === "player" || existingCity.owner === "player" || Boolean(existingCity.ownerUid);
+    const shouldRefreshStrongholdDefense = isStrongholdCity && (!alreadyExists || (needsLayoutRefresh && !existingOwnedByPlayer));
+    batch.set(citiesRef.doc(city.id), {
+      ...city,
+      ...(alreadyExists ? {} : {
+        ownerKind: "neutral",
+        ownerUid: null,
+        ownerName: "",
+        ownerFlag: null,
+        ownerKingPower: 0,
+        isMainCity: false,
+      }),
+      ...(shouldRefreshStrongholdDefense ? {
+        level: clampCityLevel(existingOwnedByPlayer ? existingCity.level : safeNumber(existingCity.level, safeNumber(city.level, 50))),
+        troops: Math.max(0, Math.floor(safeNumber(existingCity.troops, safeNumber(city.startTroops, 0)))),
+        troopFloat: Math.max(0, safeNumber(existingCity.troopFloat, safeNumber(existingCity.troops, safeNumber(city.startTroops, 0)))),
+      } : {}),
+      ...(alreadyExists ? {} : { createdAt: FieldValue.serverTimestamp() }),
+      updatedAt: FieldValue.serverTimestamp(),
+    }, { merge: true });
+  }
+
+  await batch.commit();
+  return {
+    islandId,
+    seeded: seedsToWrite.length > 0,
+    refreshed: needsLayoutRefresh,
+    writes: seedsToWrite.length,
+    cityCount: targetCityCount,
+    version: targetVersion,
+  };
 });
 
 exports.claimStartingCity = onCall({ region: "us-central1", maxInstances: 20, invoker: "public" }, async request => {

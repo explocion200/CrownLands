@@ -261,6 +261,10 @@
     return callServerFunction("resetSkills", payload);
   }
 
+  async function ensureMainIsland(payload = {}) {
+    return callServerFunction("ensureMainIsland", payload);
+  }
+
   async function claimStartingCity(payload = {}) {
     return callServerFunction("claimStartingCity", payload);
   }
@@ -674,112 +678,6 @@
       flag: presence.flag || null,
       updatedAtMs: Math.max(0, Number(presence.updatedAtMs) || Date.now()),
     };
-  }
-
-  async function ensureMainIsland({ islandId = "main", cities = [], meta = {} } = {}) {
-    await init();
-    const uid = requireSignedIn();
-    if (!uid) return false;
-    const { collection, doc, getDoc, getDocs, setDoc, writeBatch, serverTimestamp } = client.modules.firestore;
-    const islandRef = doc(client.db, "islands", islandId);
-    const citySeeds = cities.map(cleanCitySeed);
-    const islandSnap = await getDoc(islandRef);
-    const islandData = islandSnap.exists() ? islandSnap.data() : {};
-    const targetVersion = Number(meta.version) || 21;
-    const targetCityCount = citySeeds.length;
-    const targetRegularCityCount = citySeeds.filter(city => !(city.kind === "stronghold" || city.strongholdType)).length;
-    const seededCityCount = Math.max(0, Number(islandData.seededCityCount) || 0);
-    const layoutSeedVersion = Math.max(0, Number(islandData.layoutSeedVersion) || 0);
-    const needsCitySeed = !islandSnap.exists()
-      || seededCityCount < targetCityCount;
-    const needsLayoutRefresh = islandSnap.exists() && layoutSeedVersion < targetVersion;
-
-    if (islandSnap.exists() && !needsCitySeed && !needsLayoutRefresh && seededCityCount === targetCityCount) {
-      return true;
-    }
-
-    if (!needsCitySeed && !needsLayoutRefresh) {
-      try {
-        await setDoc(islandRef, {
-          id: islandId,
-          version: targetVersion,
-          cityCount: targetCityCount,
-          regularCityCount: targetRegularCityCount,
-          createdBy: islandData.createdBy || uid,
-          updatedAt: serverTimestamp(),
-          ...meta,
-          layoutSeedVersion: targetVersion,
-          seededCityCount: targetCityCount,
-        }, { merge: true });
-      } catch (error) {
-        console.warn("Could not refresh island metadata; using existing seeded island.", error);
-      }
-      return true;
-    }
-
-    if (!islandSnap.exists()) {
-      await setDoc(islandRef, {
-        id: islandId,
-        version: targetVersion,
-        cityCount: targetCityCount,
-        regularCityCount: targetRegularCityCount,
-        createdBy: uid,
-        updatedAt: serverTimestamp(),
-        ...meta,
-      }, { merge: true });
-    }
-
-    let existingCityIds = new Set();
-    let existingCityDataById = new Map();
-    let seedsToWrite = citySeeds;
-    if (islandSnap.exists()) {
-      const citiesSnap = await getDocs(collection(client.db, "islands", islandId, "cities"));
-      existingCityIds = new Set(citiesSnap.docs.map(cityDoc => cityDoc.id));
-      existingCityDataById = new Map(citiesSnap.docs.map(cityDoc => [cityDoc.id, cityDoc.data() || {}]));
-      seedsToWrite = needsLayoutRefresh
-        ? citySeeds
-        : citySeeds.filter(city => !existingCityIds.has(city.id));
-    }
-
-    let batch = writeBatch(client.db);
-    let writes = 0;
-    for (const city of seedsToWrite) {
-      const alreadyExists = existingCityIds.has(city.id);
-      const existingCity = existingCityDataById.get(city.id) || {};
-      const isStrongholdCity = city.kind === "stronghold" || Boolean(city.strongholdType);
-      const existingOwnedByPlayer = existingCity.ownerKind === "player" || existingCity.owner === "player" || Boolean(existingCity.ownerUid);
-      const shouldRefreshStrongholdDefense = isStrongholdCity && (!alreadyExists || (needsLayoutRefresh && !existingOwnedByPlayer));
-      batch.set(doc(client.db, "islands", islandId, "cities", city.id), {
-        ...cleanCityLayoutSeed(city),
-        ...(shouldRefreshStrongholdDefense ? {
-          level: Math.max(1, Math.floor(Number(city.level) || 1)),
-          troops: Math.max(0, Math.floor(Number(city.troops) || 0)),
-          troopFloat: Math.max(0, Number(city.troopFloat) || Number(city.troops) || 0),
-        } : {}),
-        ...(alreadyExists ? {} : { createdAt: serverTimestamp() }),
-        updatedAt: serverTimestamp(),
-      }, { merge: true });
-      writes += 1;
-      if (writes >= 450) {
-        await batch.commit();
-        batch = writeBatch(client.db);
-        writes = 0;
-      }
-    }
-    if (writes > 0) await batch.commit();
-
-    try {
-      await setDoc(islandRef, {
-        layoutSeedVersion: targetVersion,
-        seededCityCount: targetCityCount,
-        regularCityCount: targetRegularCityCount,
-        updatedAt: serverTimestamp(),
-      }, { merge: true });
-    } catch (error) {
-      console.warn("Could not refresh island seed metadata after setup.", error);
-    }
-
-    return true;
   }
 
   async function savePlayerCities(islandId = "main", cities = []) {
