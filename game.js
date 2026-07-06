@@ -2184,6 +2184,8 @@ let onlineIslandUnsubscribe = null;
 let onlineWorldLoading = false;
 let onlineWorldConnected = false;
 let onlineCitiesLoaded = false;
+let onlineIdentityRepairInFlight = false;
+let onlineIdentityRepairCompleted = false;
 let onlineFreshClaimCityId = "";
 let onlineActiveRegionId = DEFAULT_ONLINE_REGION_ID;
 let mapSwitchLoading = false;
@@ -7832,6 +7834,33 @@ function isOnlineWorldActive() {
   return Boolean(state?.online?.islandId && getOnlineApi()?.isSignedIn?.());
 }
 
+function queueOnlineIdentityRepair() {
+  const api = getOnlineApi();
+  if (
+    onlineIdentityRepairCompleted
+    || onlineIdentityRepairInFlight
+    || !state
+    || !isOnlineWorldActive()
+    || !api?.syncPlayerIdentity
+  ) {
+    return;
+  }
+
+  onlineIdentityRepairInFlight = true;
+  window.setTimeout(async () => {
+    try {
+      const repaired = await syncPlayerIdentityToAllOwnedCities({ forceLeaderboard: true });
+      onlineIdentityRepairCompleted = Boolean(repaired);
+      if (!repaired) console.warn("Player identity repair did not complete; it will retry next kingdom load.");
+    } catch (error) {
+      onlineIdentityRepairCompleted = false;
+      console.warn("Could not repair player identity across owned cities", error);
+    } finally {
+      onlineIdentityRepairInFlight = false;
+    }
+  }, 0);
+}
+
 function disconnectOnlineWorld() {
   if (typeof onlineIslandUnsubscribe === "function") onlineIslandUnsubscribe();
   onlineIslandUnsubscribe = null;
@@ -8377,6 +8406,7 @@ async function connectOnlineIsland(regionId, { claimHome = false, homeRegionId =
     await recoverPendingOnlineArmyMovements();
     await publishOnlinePresence(true);
     refreshAllOwnedCities(true);
+    queueOnlineIdentityRepair();
     updateOnlinePlayersUi();
     updateIslandSwitcherUi();
     const activeCount = Math.max(1, getActiveOnlinePlayers().length);
@@ -9518,6 +9548,8 @@ async function startFromInput(forceFresh = false) {
     state.online = null;
     onlineWorldConnected = false;
     onlineCitiesLoaded = false;
+    onlineIdentityRepairInFlight = false;
+    onlineIdentityRepairCompleted = false;
     localDirtyCityIds = new Set();
     pendingOfflineProgressSeconds = 0;
     pendingOfflineProductionCities = [];
