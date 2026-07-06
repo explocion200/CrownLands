@@ -759,6 +759,42 @@ function getOwnerName(city = {}, fallback = "Unknown") {
   return safeString(city.ownerName || city.name || fallback, 40);
 }
 
+function normalizeServerFlag(flag = null) {
+  if (!flag || typeof flag !== "object") return null;
+  try {
+    return JSON.parse(JSON.stringify(flag));
+  } catch (error) {
+    return null;
+  }
+}
+
+function isCurrentWorldIslandId(islandId = "") {
+  return String(islandId || "").startsWith(`${ONLINE_WORLD_ID}-`);
+}
+
+function getCanonicalPlayerIdentity(uid = "", profile = {}, data = {}, authToken = {}) {
+  const ownerName = safeString(
+    data.ownerName || data.playerName || profile.playerName || profile.displayName || authToken.name || "Ruler",
+    32
+  ) || "Ruler";
+  const hasFlagPayload = Object.prototype.hasOwnProperty.call(data, "ownerFlag")
+    || Object.prototype.hasOwnProperty.call(data, "flag");
+  const rawFlag = hasFlagPayload
+    ? (data.ownerFlag !== undefined ? data.ownerFlag : data.flag)
+    : profile.flag;
+  const ownerFlag = normalizeServerFlag(rawFlag);
+  const ownerKingPower = Math.max(
+    0,
+    Math.floor(safeNumber(data.ownerKingPower, profile.kingPower || 0))
+  );
+  return {
+    uid,
+    ownerName,
+    ownerFlag,
+    ownerKingPower,
+  };
+}
+
 function isProtectedMainCity(city = {}, attackerUid = "") {
   return Boolean(city.isMainCity && getOwnerUid(city) && getOwnerUid(city) !== attackerUid);
 }
@@ -1657,6 +1693,106 @@ exports.resetSkills = onCall({ region: "us-central1", maxInstances: 20, invoker:
   });
 });
 
+exports.syncPlayerIdentity = onCall({ region: "us-central1", maxInstances: 20, invoker: "public" }, async request => {
+  const uid = requireAuth(request);
+  const data = request.data || {};
+  const authToken = request.auth?.token || {};
+  const profileRef = db.doc(`players/${uid}`);
+  const profileSnap = await profileRef.get();
+  const profile = profileSnap.exists ? profileSnap.data() || {} : {};
+  const identity = getCanonicalPlayerIdentity(uid, profile, data, authToken);
+  const nowMs = Date.now();
+
+  const ownedCitiesSnap = await db.collectionGroup("cities").where("ownerUid", "==", uid).get();
+  const activeArmiesSnap = await db.collectionGroup("armies").where("ownerUid", "==", uid).get();
+  const cityDocs = ownedCitiesSnap.docs.filter(cityDoc => {
+    const islandId = cityDoc.ref.parent.parent?.id || "";
+    return isCurrentWorldIslandId(islandId);
+  });
+  const activeArmyDocs = activeArmiesSnap.docs.filter(armyDoc => {
+    const islandId = armyDoc.ref.parent.parent?.id || "";
+    const army = armyDoc.data() || {};
+    return isCurrentWorldIslandId(islandId) && army.status === "active";
+  });
+  const cityCount = cityDocs.filter(cityDoc => !isStronghold(cityDoc.data() || {})).length;
+  const mainRegionId = normalizeRegionId(data.mainRegionId || profile.mainRegionId || getRegionIdFromOnlineIslandId(data.mainIslandId || profile.mainIslandId));
+  const mainIslandId = data.mainIslandId || profile.mainIslandId || getOnlineIslandId(mainRegionId);
+
+  const writes = [
+    {
+      ref: profileRef,
+      data: {
+        uid,
+        playerName: identity.ownerName,
+        displayName: identity.ownerName,
+        flag: identity.ownerFlag,
+        kingPower: identity.ownerKingPower,
+        updatedAt: FieldValue.serverTimestamp(),
+      },
+    },
+    {
+      ref: db.doc(`leaderboards/kingPower/entries/${uid}`),
+      data: {
+        uid,
+        displayName: identity.ownerName,
+        playerName: identity.ownerName,
+        flag: identity.ownerFlag,
+        kingPower: identity.ownerKingPower,
+        cityCount,
+        mainCityId: safeString(data.mainCityId || profile.mainCityId, 80),
+        mainRegionId,
+        mainIslandId,
+        updatedAtMs: nowMs,
+        updatedAt: FieldValue.serverTimestamp(),
+      },
+    },
+  ];
+
+  cityDocs.forEach(cityDoc => {
+    writes.push({
+      ref: cityDoc.ref,
+      data: {
+        ownerKind: "player",
+        ownerUid: uid,
+        ownerName: identity.ownerName,
+        ownerFlag: identity.ownerFlag,
+        ownerKingPower: identity.ownerKingPower,
+        updatedAt: FieldValue.serverTimestamp(),
+      },
+    });
+  });
+  activeArmyDocs.forEach(armyDoc => {
+    writes.push({
+      ref: armyDoc.ref,
+      data: {
+        ownerName: identity.ownerName,
+        ownerFlag: identity.ownerFlag,
+        ownerKingPower: identity.ownerKingPower,
+        attackerKingPower: identity.ownerKingPower,
+        updatedAt: FieldValue.serverTimestamp(),
+      },
+    });
+  });
+
+  for (let index = 0; index < writes.length; index += 450) {
+    const batch = db.batch();
+    writes.slice(index, index + 450).forEach(write => {
+      batch.set(write.ref, write.data, { merge: true });
+    });
+    await batch.commit();
+  }
+
+  return {
+    ok: true,
+    ownerName: identity.ownerName,
+    ownerFlag: identity.ownerFlag,
+    ownerKingPower: identity.ownerKingPower,
+    cityCount,
+    cityUpdates: cityDocs.length,
+    armyUpdates: activeArmyDocs.length,
+  };
+});
+
 exports.ensureMainIsland = onCall({ region: "us-central1", maxInstances: 20, invoker: "public" }, async request => {
   const uid = requireAuth(request);
   const data = request.data || {};
@@ -2521,9 +2657,9 @@ exports.sendArmyOrder = onCall({ region: "us-central1", maxInstances: 20, invoke
       id: order.id,
       ownerKind: "player",
       ownerUid: uid,
-      ownerName: safeString(order.ownerName || source.ownerName || request.auth.token?.name || "Ruler", 32),
-      ownerFlag: order.ownerFlag || source.ownerFlag || null,
-      ownerKingPower: order.ownerKingPower,
+      ownerName: safeString(attackerProfile.playerName || order.ownerName || source.ownerName || request.auth.token?.name || "Ruler", 32),
+      ownerFlag: attackerProfile.flag || order.ownerFlag || source.ownerFlag || null,
+      ownerKingPower: attackerKingPower,
       kind: resolvedKind,
       fromId: order.fromId,
       toId: order.toId,
@@ -2728,7 +2864,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
     const troopCount = Math.max(0, Math.floor(safeNumber(army.troops, 0)));
     const defenderBonuses = defenderEconomy?.bonuses || {};
     const targetStats = getCityStats(target, defenderProfile, defenderBonuses);
-    const attackerName = safeString(army.ownerName || attackerProfile.playerName || "Rival ruler", 40);
+    const attackerName = safeString(attackerProfile.playerName || army.ownerName || "Rival ruler", 40);
     const defenderName = defenderUid
       ? safeString(target.ownerName || defenderProfile.playerName || "Rival ruler", 40)
       : "Neutral city";
@@ -2972,8 +3108,8 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
         ownerKind: "player",
         ownerUid: attackerUid,
         ownerName: attackerName,
-        ownerFlag: army.ownerFlag || attackerProfile.flag || null,
-        ownerKingPower: Math.max(0, Math.floor(safeNumber(army.ownerKingPower || attackerProfile.kingPower, 0))),
+        ownerFlag: attackerProfile.flag || army.ownerFlag || null,
+        ownerKingPower: Math.max(0, Math.floor(safeNumber(attackerProfile.kingPower || army.ownerKingPower, 0))),
         ownerShieldExpiresAtMs: 0,
         troops: result.survivors,
         troopFloat: result.survivors,

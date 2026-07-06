@@ -265,6 +265,10 @@
     return callServerFunction("resetSkills", payload);
   }
 
+  async function syncPlayerIdentity(payload = {}) {
+    return callServerFunction("syncPlayerIdentity", payload);
+  }
+
   async function ensureMainIsland(payload = {}) {
     return callServerFunction("ensureMainIsland", payload);
   }
@@ -1040,6 +1044,7 @@
     upgradeCity,
     spendSkillPoint,
     resetSkills,
+    syncPlayerIdentity,
     relinquishCity,
     relocateMainCity,
     purchaseShopItem,

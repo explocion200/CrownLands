@@ -4762,6 +4762,23 @@ async function syncPlayerIdentityToAllOwnedCities({ forceLeaderboard = true } = 
 
   try {
     const islandIds = getRegionIds().map(getOnlineIslandId);
+    if (api.syncPlayerIdentity) {
+      const leaderboardEntry = getKingPowerLeaderboardSnapshot();
+      const syncResult = await api.syncPlayerIdentity({
+        ownerName: nextOwnerName,
+        ownerFlag: nextFlag,
+        ownerKingPower: nextKingPower,
+        mainCityId: leaderboardEntry.mainCityId,
+        mainRegionId: leaderboardEntry.mainRegionId,
+        mainIslandId: leaderboardEntry.mainIslandId,
+      });
+      await Promise.all([profileSave, leaderboardSave, presenceSave]);
+      playerCities().forEach(city => localDirtyCityIds.delete(city.id));
+      onlineLastError = "";
+      renderCities(true);
+      renderHud();
+      return Boolean(syncResult?.ok ?? true);
+    }
     if (api.updateOwnedCityIdentityAcrossIslands) {
       await Promise.all([
         api.updateOwnedCityIdentityAcrossIslands(islandIds, {
