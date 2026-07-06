@@ -6276,6 +6276,7 @@ function hasServerEconomyApi() {
   return Boolean(
     api?.isSignedIn?.()
       && api?.collectEconomy
+      && api?.collectHarvestBonus
       && api?.upgradeCity
       && api?.relinquishCity
       && api?.purchaseShopItem
