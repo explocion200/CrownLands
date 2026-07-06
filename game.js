@@ -2223,6 +2223,7 @@ let shopPurchaseInFlight = false;
 let skillActionInFlight = false;
 let serverCityUpgradeInFlightIds = new Set();
 let serverCityRelinquishInFlightIds = new Set();
+let pendingHarvestBonusIds = new Set();
 let mainCityRelocationInFlight = false;
 let selectedInventoryItemId = "";
 let updateCheckTimer = 0;
@@ -6389,6 +6390,26 @@ function applyServerProfilePatch(patch = null) {
   }
   if (Number.isFinite(Number(patch.gold))) {
     state.gold = Math.max(0, Math.floor(Number(patch.gold) || 0));
+    changed = true;
+  }
+  if (patch.daily && typeof patch.daily === "object") {
+    state.daily = normalizeDailyCaptureTracker(patch.daily);
+    changed = true;
+  }
+  if (Array.isArray(patch.harvestBonuses)) {
+    state.harvestBonuses = enforceHarvestBonusActiveLimit(normalizeHarvestBonuses(patch.harvestBonuses));
+    changed = true;
+  }
+  if (Number.isFinite(Number(patch.harvestSpawnTimer))) {
+    state.harvestSpawnTimer = clamp(
+      Math.floor(Number(patch.harvestSpawnTimer) || 0),
+      0,
+      HARVEST_BONUS_SPAWN_INTERVAL_SECONDS
+    );
+    changed = true;
+  }
+  if (patch.harvestNextBonusType) {
+    state.harvestNextBonusType = normalizeHarvestBonusType(patch.harvestNextBonusType);
     changed = true;
   }
   if (patch.shopItems && typeof patch.shopItems === "object") {
@@ -10603,8 +10624,10 @@ function resetHarvestSpawnTimer() {
   state.harvestSpawnTimer = HARVEST_BONUS_SPAWN_INTERVAL_SECONDS;
 }
 
-function collectHarvestBonus(bonusId) {
+async function collectHarvestBonus(bonusId) {
   if (!state || isGamePausedByOutcome()) return;
+  const pendingId = String(bonusId || "");
+  if (pendingHarvestBonusIds.has(pendingId)) return;
   state.harvestBonuses = normalizeHarvestBonuses(state.harvestBonuses);
   const index = state.harvestBonuses.findIndex(bonus => bonus.id === bonusId);
   if (index < 0) return;
@@ -10616,6 +10639,56 @@ function collectHarvestBonus(bonusId) {
     return;
   }
   state.harvestBonuses.splice(index, 1);
+
+  if (usesServerEconomyAuthority()) {
+    const api = getOnlineApi();
+    if (!api?.collectHarvestBonus) {
+      state.harvestBonuses.splice(index, 0, bonus);
+      showToast("Pickup collection needs the server update. Reload and try again.");
+      renderHarvestBonuses();
+      return;
+    }
+
+    pendingHarvestBonusIds.add(pendingId);
+    renderHarvestBonuses();
+    showToast(`Collecting ${type === "troops" ? "troops" : "gold"}...`);
+    try {
+      const result = await api.collectHarvestBonus({
+        bonusId: bonus.id,
+        type,
+        regionId: normalizeRegionId(bonus.regionId),
+        daily: normalizeDailyCaptureTracker(daily),
+      });
+      applyServerEconomyResult(result);
+      const reward = Math.max(0, Math.floor(Number(result?.reward) || 0));
+      const serverDaily = ensureDailyCaptureTracker();
+      resetHarvestSpawnTimer();
+      saveGame();
+      renderHud();
+      renderCities(true);
+      renderPanel();
+      renderHarvestBonuses();
+      if (type === "troops") {
+        const targetName = result?.targetCityName || getHarvestBonusTroopTargetCity()?.name || "main city";
+        addLog(`Harvested stored troop production: ${formatNumber(reward)} troops to ${targetName}.`);
+        showToast(`Harvested +${formatNumber(reward)} troops (${formatNumber(serverDaily.harvestedTroopBonuses)}/${HARVEST_BONUS_DAILY_TROOP_LIMIT})`);
+      } else {
+        showToast(`Harvested +${formatNumber(reward)} gold (${formatNumber(serverDaily.harvestedGoldBonuses)}/${HARVEST_BONUS_DAILY_GOLD_LIMIT})`);
+      }
+    } catch (error) {
+      state.harvestBonuses = normalizeHarvestBonuses(state.harvestBonuses);
+      if (!state.harvestBonuses.some(item => item.id === bonus.id)) {
+        state.harvestBonuses.splice(Math.min(index, state.harvestBonuses.length), 0, bonus);
+      }
+      onlineLastError = error?.message || String(error);
+      console.warn("Could not collect harvest bonus", error);
+      renderHarvestBonuses();
+      showToast(onlineLastError || "Could not collect pickup.");
+    } finally {
+      pendingHarvestBonusIds.delete(pendingId);
+    }
+    return;
+  }
 
   if (type === "troops") {
     const troopReward = getHarvestBonusTroopReward();

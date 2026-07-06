@@ -19,6 +19,15 @@ const MILLION_LORDS_PASSIVE_GOLD_PER_CITY_VP = 15;
 const BASE_TROOP_ATTACK_POWER = 2;
 const DEFAULT_MARCH_PERCENT = 0.5;
 const DAILY_NEUTRAL_CAPTURE_LIMIT = 30;
+const HARVEST_BONUS_DAILY_LIMIT = 200;
+const HARVEST_BONUS_DAILY_GOLD_LIMIT = 100;
+const HARVEST_BONUS_DAILY_TROOP_LIMIT = 100;
+const HARVEST_BONUS_GOLD_SECONDS = 180;
+const HARVEST_BONUS_MIN_GOLD = 300;
+const HARVEST_BONUS_TROOP_SECONDS = 300;
+const HARVEST_BONUS_MIN_TROOPS = 50;
+const HARVEST_BONUS_MAX_TROOPS = 2500;
+const HARVEST_BONUS_SPAWN_INTERVAL_SECONDS = 60;
 const SCOUT_REPORT_SECONDS = 120;
 const ARMY_TRAVEL_SECONDS_PER_MAP_UNIT = 0.13;
 const ARMY_TRAVEL_MIN_SECONDS = 30;
@@ -782,10 +791,52 @@ function normalizeDaily(daily = {}, now = new Date()) {
   return {
     date: today,
     neutralCaptures: clampInt(daily.neutralCaptures, 0, DAILY_NEUTRAL_CAPTURE_LIMIT),
-    harvestedBonuses: clampInt(daily.harvestedBonuses, 0, 200),
-    harvestedGoldBonuses: clampInt(daily.harvestedGoldBonuses, 0, 100),
-    harvestedTroopBonuses: clampInt(daily.harvestedTroopBonuses, 0, 100),
+    harvestedBonuses: clampInt(daily.harvestedBonuses, 0, HARVEST_BONUS_DAILY_LIMIT),
+    harvestedGoldBonuses: clampInt(daily.harvestedGoldBonuses, 0, HARVEST_BONUS_DAILY_GOLD_LIMIT),
+    harvestedTroopBonuses: clampInt(daily.harvestedTroopBonuses, 0, HARVEST_BONUS_DAILY_TROOP_LIMIT),
   };
+}
+
+function mergeHarvestDailyTrackers(serverDaily = {}, clientDaily = {}, now = new Date()) {
+  const server = normalizeDaily(serverDaily, now);
+  const client = normalizeDaily(clientDaily, now);
+  const harvestedGoldBonuses = clampInt(
+    Math.max(server.harvestedGoldBonuses, client.harvestedGoldBonuses),
+    0,
+    HARVEST_BONUS_DAILY_GOLD_LIMIT
+  );
+  const harvestedTroopBonuses = clampInt(
+    Math.max(server.harvestedTroopBonuses, client.harvestedTroopBonuses),
+    0,
+    HARVEST_BONUS_DAILY_TROOP_LIMIT
+  );
+  return {
+    date: server.date,
+    neutralCaptures: clampInt(Math.max(server.neutralCaptures, client.neutralCaptures), 0, DAILY_NEUTRAL_CAPTURE_LIMIT),
+    harvestedGoldBonuses,
+    harvestedTroopBonuses,
+    harvestedBonuses: clampInt(harvestedGoldBonuses + harvestedTroopBonuses, 0, HARVEST_BONUS_DAILY_LIMIT),
+  };
+}
+
+function getHarvestBonusRemaining(type = "gold", daily = {}) {
+  const normalizedType = type === "troops" ? "troops" : "gold";
+  const typeLimit = normalizedType === "troops" ? HARVEST_BONUS_DAILY_TROOP_LIMIT : HARVEST_BONUS_DAILY_GOLD_LIMIT;
+  const typeCount = normalizedType === "troops" ? daily.harvestedTroopBonuses : daily.harvestedGoldBonuses;
+  const typeRemaining = typeLimit - clampInt(typeCount, 0, typeLimit);
+  const totalRemaining = HARVEST_BONUS_DAILY_LIMIT - clampInt(daily.harvestedBonuses, 0, HARVEST_BONUS_DAILY_LIMIT);
+  return Math.max(0, Math.min(typeRemaining, totalRemaining));
+}
+
+function incrementHarvestDailyTracker(type = "gold", daily = {}) {
+  const next = normalizeDaily(daily);
+  if (type === "troops") {
+    next.harvestedTroopBonuses = clampInt(next.harvestedTroopBonuses + 1, 0, HARVEST_BONUS_DAILY_TROOP_LIMIT);
+  } else {
+    next.harvestedGoldBonuses = clampInt(next.harvestedGoldBonuses + 1, 0, HARVEST_BONUS_DAILY_GOLD_LIMIT);
+  }
+  next.harvestedBonuses = clampInt(next.harvestedGoldBonuses + next.harvestedTroopBonuses, 0, HARVEST_BONUS_DAILY_LIMIT);
+  return next;
 }
 
 function createScoutReportSnapshot(target = {}, defenderProfile = null, nowMs = Date.now(), bonuses = {}) {
@@ -1274,6 +1325,10 @@ function createEconomyResponse(economy = null, overrides = {}) {
     itemPurchaseCooldowns,
     character,
     upgrades,
+    daily,
+    harvestBonuses,
+    harvestSpawnTimer,
+    harvestNextBonusType,
     cityUpdates,
     ...meta
   } = overrides;
@@ -1286,6 +1341,14 @@ function createEconomyResponse(economy = null, overrides = {}) {
     character: character || economy.profileAfter.character || null,
     upgrades: upgrades || normalizeSkillUpgrades(economy.profileAfter.upgrades),
   };
+  if (daily !== undefined) currentUser.daily = normalizeDaily(daily);
+  if (harvestBonuses !== undefined) currentUser.harvestBonuses = Array.isArray(harvestBonuses) ? harvestBonuses : [];
+  if (harvestSpawnTimer !== undefined) {
+    currentUser.harvestSpawnTimer = clampInt(harvestSpawnTimer, 0, HARVEST_BONUS_SPAWN_INTERVAL_SECONDS);
+  }
+  if (harvestNextBonusType !== undefined) {
+    currentUser.harvestNextBonusType = harvestNextBonusType === "troops" ? "troops" : "gold";
+  }
   return {
     ok: true,
     currentUser,
@@ -1293,6 +1356,38 @@ function createEconomyResponse(economy = null, overrides = {}) {
     production: economy.production,
     ...meta,
   };
+}
+
+function getHarvestEconomyRates(economy = null) {
+  if (!economy) return { goldPerSecond: 0, troopProductionPerSecond: 0 };
+  return economy.cityEntries.reduce((totals, entry) => {
+    const city = entry?.city || {};
+    if (isStronghold(city) || getOwnerUid(city) !== economy.uid) return totals;
+    const stats = getCityProductionStats(city, economy.profileAfter, economy.bonuses);
+    totals.goldPerSecond += Math.max(0, safeNumber(stats.goldProductionPerSecond, 0));
+    totals.troopProductionPerSecond += Math.max(0, safeNumber(stats.troopProductionPerSecond, 0));
+    return totals;
+  }, { goldPerSecond: 0, troopProductionPerSecond: 0 });
+}
+
+function getHarvestBonusReward(economy = null, type = "gold") {
+  const rates = getHarvestEconomyRates(economy);
+  if (type === "troops") {
+    const passiveTroops = Math.floor(rates.troopProductionPerSecond * HARVEST_BONUS_TROOP_SECONDS);
+    return clampInt(
+      Math.max(HARVEST_BONUS_MIN_TROOPS, passiveTroops),
+      HARVEST_BONUS_MIN_TROOPS,
+      HARVEST_BONUS_MAX_TROOPS
+    );
+  }
+  const passiveGold = Math.floor(rates.goldPerSecond * HARVEST_BONUS_GOLD_SECONDS);
+  return Math.max(HARVEST_BONUS_MIN_GOLD, passiveGold);
+}
+
+function removeHarvestBonusFromProfile(profile = {}, bonusId = "") {
+  const id = safeString(bonusId, 96);
+  if (!id || !Array.isArray(profile.harvestBonuses)) return Array.isArray(profile.harvestBonuses) ? profile.harvestBonuses : [];
+  return profile.harvestBonuses.filter(bonus => safeString(bonus?.id, 96) !== id);
 }
 
 function formatNotificationNumber(value) {
@@ -1410,6 +1505,76 @@ exports.collectEconomy = onCall({ region: "us-central1", maxInstances: 30, invok
     const economy = await prepareEconomyCollection(transaction, uid, nowMs);
     writePreparedEconomy(transaction, economy);
     return createEconomyResponse(economy);
+  });
+});
+
+exports.collectHarvestBonus = onCall({ region: "us-central1", maxInstances: 30, invoker: "public" }, async request => {
+  const uid = requireAuth(request);
+  const data = request.data || {};
+  const type = safeString(data.type, 16) === "troops" ? "troops" : "gold";
+  const bonusId = safeString(data.bonusId || data.id, 96);
+  const nowMs = Date.now();
+
+  return db.runTransaction(async transaction => {
+    const economy = await prepareEconomyCollection(transaction, uid, nowMs);
+    let daily = mergeHarvestDailyTrackers(economy.profileAfter.daily, data.daily, new Date(nowMs));
+    if (getHarvestBonusRemaining(type, daily) <= 0) {
+      throw new HttpsError("failed-precondition", `Daily ${type === "troops" ? "troop" : "gold"} harvest limit reached.`);
+    }
+
+    const reward = getHarvestBonusReward(economy, type);
+    daily = incrementHarvestDailyTracker(type, daily);
+    const harvestBonuses = removeHarvestBonusFromProfile(economy.profileAfter, bonusId);
+    const profileOverrides = {
+      daily,
+      harvestBonuses,
+      harvestSpawnTimer: HARVEST_BONUS_SPAWN_INTERVAL_SECONDS,
+      harvestNextBonusType: type === "troops" ? "gold" : "troops",
+    };
+
+    if (type === "troops") {
+      const mainInfo = getMainCityInfo(economy.profileAfter);
+      const mainEntry = mainInfo ? getEconomyCityByRef(economy, mainInfo.ref) : null;
+      if (!mainEntry?.city || getOwnerUid(mainEntry.city) !== uid || isStronghold(mainEntry.city)) {
+        throw new HttpsError("failed-precondition", "Claim a main city before collecting troop pickups.");
+      }
+      const currentTroopFloat = Math.max(0, safeNumber(mainEntry.city.troopFloat, mainEntry.city.troops || 0));
+      const troopFloat = currentTroopFloat + reward;
+      const cityPatch = {
+        troops: Math.max(0, Math.floor(troopFloat)),
+        troopFloat,
+        productionUpdatedAtMs: nowMs,
+      };
+      const cityUpdate = {
+        id: mainEntry.city.id,
+        regionId: mainEntry.city.regionId || mainInfo.regionId,
+        ...cityPatch,
+      };
+      writePreparedEconomy(transaction, economy, profileOverrides, [{ ref: mainEntry.ref, city: mainEntry.city, patch: cityPatch }]);
+      return createEconomyResponse(economy, {
+        ...profileOverrides,
+        cityUpdates: [...economy.cityUpdates, cityUpdate],
+        rewardType: type,
+        reward,
+        targetCityId: mainEntry.city.id,
+        targetCityName: mainEntry.city.name || mainEntry.city.id,
+      });
+    }
+
+    const goldFloat = Math.max(0, safeNumber(economy.goldFloat, economy.gold)) + reward;
+    const gold = Math.max(0, Math.floor(goldFloat));
+    writePreparedEconomy(transaction, economy, {
+      ...profileOverrides,
+      gold,
+      goldFloat,
+    });
+    return createEconomyResponse(economy, {
+      ...profileOverrides,
+      gold,
+      goldFloat,
+      rewardType: type,
+      reward,
+    });
   });
 });
 
