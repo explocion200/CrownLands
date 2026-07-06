@@ -1727,25 +1727,34 @@ exports.ensureMainIsland = onCall({ region: "us-central1", maxInstances: 20, inv
 
   for (const city of seedsToWrite) {
     const alreadyExists = existingCityIds.has(city.id);
-    const existingCity = existingCityDataById.get(city.id) || {};
     const isStrongholdCity = city.kind === "stronghold" || Boolean(city.strongholdType);
-    const existingOwnedByPlayer = existingCity.ownerKind === "player" || existingCity.owner === "player" || Boolean(existingCity.ownerUid);
-    const shouldRefreshStrongholdDefense = isStrongholdCity && (!alreadyExists || (needsLayoutRefresh && !existingOwnedByPlayer));
+    const { level: seedLevel, ...layoutPatch } = city;
+    const staticPatch = {
+      ...layoutPatch,
+      ...(isStrongholdCity ? { level: clampCityLevel(seedLevel || 50) } : {}),
+    };
+    const initialTroops = isStrongholdCity
+      ? Math.max(0, Math.floor(safeNumber(city.startTroops, 0)))
+      : 0;
     batch.set(citiesRef.doc(city.id), {
-      ...city,
+      // Layout refreshes must never rewrite live city progression for existing towns.
+      ...staticPatch,
       ...(alreadyExists ? {} : {
         ownerKind: "neutral",
         ownerUid: null,
         ownerName: "",
         ownerFlag: null,
         ownerKingPower: 0,
+        ownerShieldExpiresAtMs: 0,
         isMainCity: false,
+        level: clampCityLevel(seedLevel || (isStrongholdCity ? 50 : 1)),
+        troops: initialTroops,
+        troopFloat: initialTroops,
+        investedGold: 0,
+        lastCapturedAt: null,
+        relinquishedAtMs: 0,
+        relocatedAtMs: 0,
       }),
-      ...(shouldRefreshStrongholdDefense ? {
-        level: clampCityLevel(existingOwnedByPlayer ? existingCity.level : safeNumber(existingCity.level, safeNumber(city.level, 50))),
-        troops: Math.max(0, Math.floor(safeNumber(existingCity.troops, safeNumber(city.startTroops, 0)))),
-        troopFloat: Math.max(0, safeNumber(existingCity.troopFloat, safeNumber(existingCity.troops, safeNumber(city.startTroops, 0)))),
-      } : {}),
       ...(alreadyExists ? {} : { createdAt: FieldValue.serverTimestamp() }),
       updatedAt: FieldValue.serverTimestamp(),
     }, { merge: true });

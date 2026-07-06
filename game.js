@@ -4666,6 +4666,12 @@ function refreshOwnedCityItemEffectMetadata(syncNow = true) {
 
 async function syncPeaceShieldToAllOwnedCities(expiresAtMs = getActivePeaceShieldExpiresAtMs()) {
   if (!state) return false;
+  if (usesServerEconomyAuthority()) {
+    refreshOwnedCityItemEffectMetadata(true);
+    renderCities(true);
+    renderHud();
+    return true;
+  }
   const api = getOnlineApi();
   if (!api?.isSignedIn?.() || !api?.loadOwnedCitiesAcrossIslands || !api?.savePlayerCities) {
     refreshOwnedCityItemEffectMetadata(true);
