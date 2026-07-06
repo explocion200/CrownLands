@@ -2186,6 +2186,7 @@ let onlineWorldConnected = false;
 let onlineCitiesLoaded = false;
 let onlineIdentityRepairInFlight = false;
 let onlineIdentityRepairCompleted = false;
+let deferredInstallPrompt = null;
 let onlineFreshClaimCityId = "";
 let onlineActiveRegionId = DEFAULT_ONLINE_REGION_ID;
 let mapSwitchLoading = false;
@@ -2269,6 +2270,7 @@ const onlineStatusDetail = document.getElementById("onlineStatusDetail");
 const googleSignInBtn = document.getElementById("googleSignInBtn");
 const enterKingdomBtn = document.getElementById("enterKingdomBtn");
 const googleSignOutBtn = document.getElementById("googleSignOutBtn");
+const installAppBtn = document.getElementById("installAppBtn");
 const lordNameText = document.getElementById("lordNameText");
 const statusText = document.getElementById("statusText");
 const goldText = document.getElementById("goldText");
@@ -15778,6 +15780,78 @@ function randomChoice(items) {
   return items[Math.floor(Math.random() * items.length)];
 }
 
+function isInstalledAppDisplayMode() {
+  return Boolean(
+    window.matchMedia?.("(display-mode: standalone)")?.matches
+    || window.navigator?.standalone === true
+  );
+}
+
+function updateInstallAppButton() {
+  if (!installAppBtn) return;
+  installAppBtn.hidden = !deferredInstallPrompt || isInstalledAppDisplayMode();
+}
+
+async function handleInstallAppClick() {
+  if (!deferredInstallPrompt) return;
+  installAppBtn.disabled = true;
+  try {
+    deferredInstallPrompt.prompt();
+    await deferredInstallPrompt.userChoice;
+    deferredInstallPrompt = null;
+    updateInstallAppButton();
+  } catch (error) {
+    console.warn("[Crownlands] Install prompt failed.", error);
+  } finally {
+    installAppBtn.disabled = false;
+  }
+}
+
+function registerPwaInstallPrompt() {
+  window.addEventListener("beforeinstallprompt", event => {
+    event.preventDefault();
+    deferredInstallPrompt = event;
+    updateInstallAppButton();
+    console.info("[Crownlands] Install prompt is ready.");
+  });
+  window.addEventListener("appinstalled", () => {
+    deferredInstallPrompt = null;
+    updateInstallAppButton();
+    console.info("[Crownlands] App installed.");
+  });
+  updateInstallAppButton();
+}
+
+function registerCrownlandsServiceWorker() {
+  if (!("serviceWorker" in navigator)) {
+    console.info("[Crownlands] Service workers are not supported in this browser.");
+    return;
+  }
+
+  window.addEventListener("load", async () => {
+    try {
+      const registration = await navigator.serviceWorker.register("/service-worker.js");
+      console.info("[Crownlands] Service worker registered.", registration.scope);
+
+      if (registration.waiting) {
+        console.info("[Crownlands] Update available. Reload to use the latest version.");
+      }
+
+      registration.addEventListener("updatefound", () => {
+        const installingWorker = registration.installing;
+        if (!installingWorker) return;
+        installingWorker.addEventListener("statechange", () => {
+          if (installingWorker.state === "installed" && navigator.serviceWorker.controller) {
+            console.info("[Crownlands] Update available. Reload to use the latest version.");
+          }
+        });
+      });
+    } catch (error) {
+      console.warn("[Crownlands] Service worker registration failed.", error);
+    }
+  });
+}
+
 function clamp(value, min, max) {
   return Math.max(min, Math.min(max, value));
 }
@@ -15787,6 +15861,7 @@ if (freshBtn) freshBtn.addEventListener("click", () => startFromInput(true));
 if (googleSignInBtn) googleSignInBtn.addEventListener("click", handleGoogleSignIn);
 if (enterKingdomBtn) enterKingdomBtn.addEventListener("click", () => startFromInput(false));
 if (googleSignOutBtn) googleSignOutBtn.addEventListener("click", handleGoogleSignOut);
+if (installAppBtn) installAppBtn.addEventListener("click", handleInstallAppClick);
 window.addEventListener("crownlands:online-ready", () => {
   updateOnlineUi();
   updatePushAlertsUi();
@@ -15953,4 +16028,6 @@ renderWorldMap();
 renderIslandTeleporters();
 updateFullscreenButton();
 updateOnlineUi();
+registerPwaInstallPrompt();
+registerCrownlandsServiceWorker();
 requestAnimationFrame(frame);

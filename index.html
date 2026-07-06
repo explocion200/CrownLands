@@ -4,13 +4,23 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Crownlands - Medieval Island Conquest</title>
-  <meta name="crownlands-build" content="20260703-city-level-actions" />
+  <meta name="description" content="Crownlands is a medieval real-time browser strategy game." />
+  <meta name="application-name" content="Crownlands" />
+  <meta name="theme-color" content="#10233a" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="Crownlands" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="format-detection" content="telephone=no" />
+  <meta name="crownlands-build" content="20260706-pwa-v1" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700;800;900&family=Cinzel+Decorative:wght@700;900&family=IM+Fell+English:ital@0;1&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="styles.css?v=20260705-compact-effect-badges" />
+  <link rel="preload" as="image" href="assets/game-menu-background.jpg?v=20260702-login-page" />
   <link rel="preload" as="image" href="assets/loading-ring.png" />
   <link rel="preload" as="image" href="assets/loading-crown.png" />
+  <link rel="preload" as="image" type="image/webp" href="assets/worlds/world_01/maps/region_8-8-1783022783978.webp" />
   <link rel="preload" as="image" href="assets/leaderboard-icon.png?v=20260623-leaderboard-icon-new" />
   <link rel="preload" as="image" href="assets/profile-hud-frame.png?v=20260702-profile-frame" />
   <link rel="preload" as="image" href="assets/city-list-icon.png?v=20260623-city-icon-hud" />
@@ -25,9 +35,9 @@
   <link rel="preload" as="image" type="image/webp" href="assets/veil-of-silence-icon.webp?v=20260703-shop-icons" />
   <link rel="preload" as="image" type="image/webp" href="assets/swift-march-order-icon.webp?v=20260703-shop-icons" />
   <link rel="preload" as="image" type="image/webp" href="assets/recall-horn-icon.webp?v=20260703-shop-icons" />
-  <link rel="icon" href="data:," />
-  <link rel="manifest" href="manifest.webmanifest" />
-  <meta name="theme-color" content="#0c1018" />
+  <link rel="icon" type="image/png" sizes="192x192" href="/assets/icons/crownlands-icon-192.png" />
+  <link rel="apple-touch-icon" href="/assets/icons/crownlands-icon-192.png" />
+  <link rel="manifest" href="/manifest.webmanifest" />
 </head>
 <body>
   <main class="phone-shell" aria-label="Crownlands real-time medieval conquest prototype">
@@ -49,6 +59,7 @@
             <button id="googleSignInBtn" class="ghost-btn" type="button">Sign in with Google</button>
             <button id="enterKingdomBtn" class="primary-btn" type="button" hidden>Enter Kingdom</button>
             <button id="googleSignOutBtn" class="ghost-btn" type="button" hidden>Sign out</button>
+            <button id="installAppBtn" class="ghost-btn install-app-btn" type="button" hidden>Install Crownlands</button>
           </div>
         </div>
       </div>
@@ -262,7 +273,7 @@
   <script src="assets/map-editor-data.js?v=20260705-stronghold-sizes"></script>
   <script src="world-config.js"></script>
   <script src="firebase-config.js?v=20260703-vapid-key"></script>
-  <script src="firebaseClient.js?v=20260706-identity-repair"></script>
-  <script src="game.js?v=20260706-identity-repair"></script>
+  <script src="firebaseClient.js?v=20260706-pwa-v1"></script>
+  <script src="game.js?v=20260706-pwa-v1"></script>
 </body>
 </html>

@@ -1,10 +1,36 @@
 {
-  "name": "Crownlands Prototype V16",
+  "name": "Crownlands",
   "short_name": "Crownlands",
-  "start_url": "./index.html",
-  "display": "fullscreen",
+  "description": "A medieval real-time browser strategy game.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
   "orientation": "landscape",
-  "background_color": "#0c1018",
-  "theme_color": "#0c1018",
-  "icons": []
+  "background_color": "#0b111d",
+  "theme_color": "#10233a",
+  "categories": ["games", "strategy"],
+  "icons": [
+    {
+      "src": "/assets/icons/crownlands-icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/assets/icons/crownlands-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "/assets/icons/crownlands-maskable-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/assets/icons/crownlands-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
 }

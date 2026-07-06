@@ -360,7 +360,7 @@
   async function getServiceWorkerRegistration() {
     if (client.serviceWorkerRegistration) return client.serviceWorkerRegistration;
     if (!("serviceWorker" in navigator)) throw new Error("This browser does not support notifications.");
-    const workerUrl = new URL("firebase-messaging-sw.js", window.location.href);
+    const workerUrl = new URL("/service-worker.js", window.location.origin);
     client.serviceWorkerRegistration = await navigator.serviceWorker.register(workerUrl.href);
     return client.serviceWorkerRegistration;
   }

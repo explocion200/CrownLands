@@ -113,3 +113,36 @@ Upload the full folder or zip to Netlify Drop. Keep `index.html`, `styles.css`, 
 For GitHub + Netlify, push this full folder to GitHub, then create a Netlify site from that repo. Netlify can publish the folder directly with the included `netlify.toml`.
 
 Netlify is the only public game frontend. Firebase Hosting is configured as a redirect-only shell that sends Firebase-hosting URLs back to `https://crownland.netlify.app/`; Firebase is still used for Auth, Firestore, and Cloud Functions.
+
+## Progressive Web App
+
+Crownlands can now be installed as a Progressive Web App from the Netlify site. The PWA setup includes:
+
+- `manifest.webmanifest` with standalone landscape display and Crownlands launcher icons.
+- `service-worker.js` for repeat-load caching and offline app-shell fallback.
+- `firebase-messaging-sw.js` as a compatibility wrapper that loads the main service worker.
+- Mobile metadata in `index.html` for Android Chrome, desktop Chrome, and iPhone Safari Add to Home Screen.
+- An optional `Install Crownlands` button when the browser exposes the install prompt.
+
+The service worker caches the app shell, core scripts, manifest, loading art, HUD icons, castle images, stronghold images, camp images, item images, thumbnails, and the current starter-region map assets. It does not cache Firebase Auth, Firestore, Cloud Functions, Netlify Functions, API calls, POST requests, or future live multiplayer server state.
+
+To update the PWA cache after changing cached assets, change `CACHE_VERSION` in `service-worker.js` and update any changed version query strings in `index.html` and `STATIC_CACHE_URLS`. Add new static art paths to `STATIC_CACHE_URLS` only when they are safe to cache as files. Do not add server data endpoints, player data, army orders, reports, or auth URLs to the cache list.
+
+Local PWA test:
+
+```powershell
+& "C:\Users\ricmo\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe" -m http.server 8787
+```
+
+Open `http://127.0.0.1:8787/` in Chrome. Service workers work on `localhost` and `127.0.0.1` for local testing.
+
+Verification checklist:
+
+- Open DevTools > Application > Manifest and confirm the app name, icons, standalone display, and landscape orientation.
+- Open DevTools > Application > Service Workers and confirm `/service-worker.js` is registered.
+- Open DevTools > Application > Cache Storage and confirm `crownlands-cache-*` exists.
+- Reload once online, then switch DevTools to Offline and reload. The shell/loading screen should still open from cache.
+- Desktop/Android Chrome: use the browser install icon or the in-game `Install Crownlands` button when it appears.
+- iPhone Safari: open `https://crownland.netlify.app/`, tap Share, then tap Add to Home Screen.
+
+Deploying to Netlify still works through GitHub push. `netlify.toml` keeps `index.html`, the manifest, and service workers fresh while allowing longer caching for versioned map/icon assets.
