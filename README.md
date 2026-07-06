@@ -146,3 +146,12 @@ Verification checklist:
 - iPhone Safari: open `https://crownland.netlify.app/`, tap Share, then tap Add to Home Screen.
 
 Deploying to Netlify still works through GitHub push. `netlify.toml` keeps `index.html`, the manifest, and service workers fresh while allowing longer caching for versioned map/icon assets.
+
+## Performance Notes
+
+- Map backgrounds now keep the previous region image visible until the next region image is decoded, then crossfade. This avoids blank flicker while switching maps.
+- City marker rebuilds are reserved for structural changes such as owner, level, selection, flag, shield, visibility, or report state. Troop counts update separately on a short interval so normal production does not rebuild every visible city.
+- Army tokens are reused and moved with `translate3d` transforms instead of being rebuilt each movement tick.
+- Pan and pinch movement schedule camera transforms through `requestAnimationFrame` to reduce mobile pointer-event work.
+- Press `F8` or open the game with `?perf=1` to show the developer performance panel with FPS, active region, visible marker counts, active army tokens, loaded image count, neighbor preload status, and service-worker state.
+- Map art remains lazy-loaded and cache-first. The service worker should cache app shell and core art, while live Firebase/Auth/Functions/server requests remain uncached.

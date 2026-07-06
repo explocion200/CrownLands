@@ -39,6 +39,8 @@ const IMAGE_PRELOAD_TIMEOUT_MS = 15000;
 const HUD_RENDER_INTERVAL_MS = 250;
 const MAP_RENDER_INTERVAL_MS = 1600;
 const ARMY_RENDER_INTERVAL_MS = 140;
+const CITY_DYNAMIC_TEXT_INTERVAL_MS = 600;
+const PERFORMANCE_PANEL_SAMPLE_MS = 500;
 const CITY_LIST_PAGE_SIZE = 5;
 const INVENTORY_SLOT_COUNT = 5;
 const SHOP_ITEMS = [
@@ -2171,6 +2173,8 @@ let lastFrameTime = performance.now();
 let lastRenderTime = 0;
 let lastHudRenderTime = 0;
 let lastArmyRenderTime = 0;
+let lastCityDynamicTextTime = 0;
+let cameraTransformRaf = 0;
 let saveTimer = 0;
 let onlineSaveTimer = 0;
 let onlineSaveQueued = false;
@@ -2234,7 +2238,9 @@ let updateCheckInFlight = false;
 let deployedUpdateAvailableBuildId = "";
 let deployedUpdateNoticeShown = false;
 const islandImageLoadPromises = new Map();
+const loadedImageAssets = new Set();
 const nearbyIslandPreloadRegions = new Set();
+const preloadedMapRegions = new Set();
 let pendingOfflineProgressSeconds = 0;
 let pendingOfflineProductionCities = [];
 let pendingOfflineOwnedCityIds = null;
@@ -2255,9 +2261,16 @@ let stateCityByIdCacheSource = null;
 let stateCityByIdCacheSize = 0;
 let renderedMapRegionId = "";
 let renderedMapBoundsSignature = "";
+let mapImageSwapToken = 0;
 let interactionRenderLockUntil = 0;
 let cityRenderSignature = "";
 let pathRenderSignature = "";
+const armyTokenCache = new Map();
+let performancePanel = null;
+let performancePanelVisible = false;
+let performanceFrameCount = 0;
+let performanceLastSampleTime = performance.now();
+let performanceFps = 0;
 let cityTapState = null;
 
 const setupScreen = document.getElementById("setupScreen");
@@ -3670,7 +3683,10 @@ function preloadImage(src) {
     image.loading = "eager";
     image.onload = () => {
       const decodePromise = typeof image.decode === "function" ? image.decode().catch(() => {}) : Promise.resolve();
-      decodePromise.finally(() => finish(true));
+      decodePromise.finally(() => {
+        loadedImageAssets.add(imageSrc);
+        finish(true);
+      });
     };
     image.onerror = () => finish(false);
     image.src = imageSrc;
@@ -3680,7 +3696,11 @@ function preloadImage(src) {
 }
 
 function preloadIslandMap(regionId) {
-  return preloadImage(getIslandMapArtSrc(regionId));
+  const targetRegionId = normalizeRegionId(regionId);
+  return preloadImage(getIslandMapArtSrc(targetRegionId)).then(success => {
+    if (success) preloadedMapRegions.add(targetRegionId);
+    return success;
+  });
 }
 
 function getConnectedIslandRegionIds(regionId) {
@@ -3752,6 +3772,54 @@ function isMapInteractionBlocked() {
   return Boolean(onlineWorldLoading || mapSwitchLoading);
 }
 
+function setImageMapBackground(regionId, imageSrc) {
+  if (!mapBg || !imageSrc) return;
+  const targetRegionId = normalizeRegionId(regionId);
+  const activeImage = mapBg.querySelector(".island-art-map.active");
+  if (
+    mapBg.dataset.imageRegion === targetRegionId
+    && mapBg.dataset.imageSrc === imageSrc
+    && activeImage
+  ) {
+    return;
+  }
+
+  const swapToken = ++mapImageSwapToken;
+  mapBg.dataset.imageRegion = targetRegionId;
+  mapBg.dataset.imageSrc = imageSrc;
+  mapBg.classList.add("image-map-ready");
+
+  const image = document.createElement("img");
+  image.className = `island-art-map ${targetRegionId}-island-art`;
+  image.src = imageSrc;
+  image.alt = "";
+  image.draggable = false;
+  image.decoding = "async";
+  image.loading = "eager";
+  image.fetchPriority = "high";
+  mapBg.appendChild(image);
+
+  preloadImage(imageSrc).finally(() => {
+    if (!mapBg || swapToken !== mapImageSwapToken) {
+      image.remove();
+      return;
+    }
+    requestAnimationFrame(() => {
+      image.classList.add("active");
+      [...mapBg.children]
+        .filter(node => node !== image && !node.classList.contains("island-art-map"))
+        .forEach(node => node.remove());
+      [...mapBg.querySelectorAll(".island-art-map")]
+        .filter(node => node !== image)
+        .forEach(node => {
+          node.classList.remove("active");
+          node.classList.add("retiring");
+          window.setTimeout(() => node.remove(), 240);
+        });
+    });
+  });
+}
+
 function renderWorldMap() {
   if (!mapBg) return;
   const bounds = getActiveMapBounds();
@@ -3762,14 +3830,13 @@ function renderWorldMap() {
   mapBg.classList.toggle("center-image-map", bounds.regionId === "center");
   const islandArtSrc = getIslandMapArtSrc(bounds.regionId);
   if (islandArtSrc) {
-    if (mapBg.dataset.imageRegion === bounds.regionId && mapBg.dataset.imageSrc === islandArtSrc && mapBg.firstElementChild?.tagName === "IMG") return;
-    mapBg.dataset.imageRegion = bounds.regionId;
-    mapBg.dataset.imageSrc = islandArtSrc;
-    mapBg.innerHTML = `<img class="island-art-map ${escapeHtml(bounds.regionId)}-island-art" src="${escapeHtml(islandArtSrc)}" alt="" draggable="false" decoding="async" loading="eager" fetchpriority="high" />`;
+    setImageMapBackground(bounds.regionId, islandArtSrc);
     return;
   }
+  mapImageSwapToken += 1;
   delete mapBg.dataset.imageRegion;
   delete mapBg.dataset.imageSrc;
+  mapBg.classList.remove("image-map-ready");
   const activeRegion = bounds.region;
   const regionTerrain = NO_CITY_TERRAIN.filter(shape => shape.regionId === bounds.regionId);
   const regionMountains = TERRAIN_BLOCKERS.filter(shape => shape.regionId === bounds.regionId);
@@ -10310,6 +10377,7 @@ function frame(now) {
   const rawDt = (now - lastFrameTime) / 1000;
   lastFrameTime = now;
   const dt = Math.min(rawDt, 0.25);
+  samplePerformancePanel(now);
   updateDeploymentCheck(dt);
 
   if (state && !isGamePausedByOutcome()) {
@@ -10361,6 +10429,10 @@ function frame(now) {
   if (state) {
     if (now - lastArmyRenderTime > ARMY_RENDER_INTERVAL_MS) {
       renderArmies();
+    }
+    if (now - lastCityDynamicTextTime > CITY_DYNAMIC_TEXT_INTERVAL_MS) {
+      lastCityDynamicTextTime = now;
+      updateVisibleCityDynamicText();
     }
     if (now - lastHudRenderTime > HUD_RENDER_INTERVAL_MS) {
       lastHudRenderTime = now;
@@ -12158,7 +12230,7 @@ function getCityRenderSignature(visibleCities, visibleCamps = []) {
       isStronghold(city) ? getStrongholdVisualSize(city) : "",
       isCityProtectedByPeaceShield(city) ? getCityPeaceShieldExpiresAtMs(city) : 0,
       city.level,
-      Math.floor(Number(city.troops) || 0),
+      city.owner === "player" && Math.floor(Number(city.troops) || 0) > 0 ? 1 : 0,
       city.isMainCity ? 1 : 0,
       upgradeBlockedTargets.has(getKnownCityId(city.id)) ? 1 : 0,
       report ? `${Math.floor(Number(report.troops) || 0)}:${report.expiresAt > state.gameSeconds ? 1 : 0}` : "",
@@ -12188,6 +12260,24 @@ function getCityRenderSignature(visibleCities, visibleCamps = []) {
   ].join(";");
 }
 
+function updateVisibleCityDynamicText() {
+  if (!state || !cityLayer) return;
+  cityLayer.querySelectorAll(".city-node").forEach(node => {
+    const city = cityById(node.dataset.cityId);
+    if (!city) return;
+    const troops = Math.floor(Number(city.troops) || 0);
+    if (node.dataset.troopTextValue === String(troops)) return;
+    node.dataset.troopTextValue = String(troops);
+    const playerCount = node.querySelector(".city-army-count");
+    if (playerCount) playerCount.textContent = `${formatNumber(troops)} troops`;
+    const scoutReport = city.owner === "player" ? null : getScoutReport(city.id);
+    const knownTroops = city.owner === "player" ? troops : scoutReport?.troops;
+    const ownerName = getCityOwnerDisplayName(city);
+    const locationType = isStronghold(city) ? "Stronghold" : `Level ${city.level}`;
+    node.setAttribute("aria-label", `${city.name}. ${ownerName}. ${locationType}. ${knownTroops === undefined ? "Unknown troops" : `${formatNumber(knownTroops)} troops`}.`);
+  });
+}
+
 function renderCities(force = false) {
   if (!force && isZoomInteractionActive()) return;
   const source = selectedSourceId ? cityById(selectedSourceId) : null;
@@ -12205,7 +12295,10 @@ function renderCities(force = false) {
   const visibleCities = state.cities.filter(city => shouldRenderCityNode(city, visibleBounds));
   const visibleCamps = WORLD_CAMPS.filter(camp => shouldRenderCampNode(camp, visibleBounds));
   const signature = getCityRenderSignature(visibleCities, visibleCamps);
-  if (!force && signature === cityRenderSignature) return;
+  if (!force && signature === cityRenderSignature) {
+    updateVisibleCityDynamicText();
+    return;
+  }
   cityRenderSignature = signature;
 
   cityLayer.innerHTML = "";
@@ -12312,6 +12405,7 @@ function renderCities(force = false) {
   });
   cityLayer.appendChild(cityFragment);
 
+  updateVisibleCityDynamicText();
   layoutCityLabels();
   const selectedForeign = selectedTargetId ? cityById(selectedTargetId) : null;
   if (selectedForeign && selectedForeign.owner !== "player" && !sendMode) renderSelectedForeignWheel(selectedForeign);
@@ -12654,16 +12748,56 @@ function canViewArmyTroopAmount(attack) {
   return Boolean(ownerUid && currentUid && ownerUid === currentUid);
 }
 
+function getArmyTokenId(attack) {
+  return String(attack?.id || attack?.onlineId || `${attack?.fromId || "from"}-${attack?.toId || "to"}-${attack?.launchedAtMs || attack?.total || ""}`);
+}
+
+function createArmyTokenElement(attack) {
+  const token = document.createElement("div");
+  token.dataset.armyTokenId = getArmyTokenId(attack);
+  token.innerHTML = `<span class="army-token-icon"></span><strong class="army-token-count"></strong><small class="army-token-time"></small>`;
+  return token;
+}
+
+function updateArmyTokenElement(token, attack, mapPoint, targetCity) {
+  const ownerClass = (OWNER[attack.owner] || OWNER.enemy).css;
+  const showTroops = canViewArmyTroopAmount(attack);
+  const className = `army-token ${ownerClass}${showTroops ? "" : " hidden-transfer"}`;
+  if (token.className !== className) token.className = className;
+  token.style.transform = `translate3d(${mapPoint.x}px, ${mapPoint.y}px, 0) translate(-50%, -50%)`;
+
+  const armyIcon = attack.kind === "scout" ? "\u{1F52D}" : attack.kind === "transfer" ? "\u{1F45F}" : "\u2694";
+  const iconElement = token.querySelector(".army-token-icon");
+  const countElement = token.querySelector(".army-token-count");
+  const timeElement = token.querySelector(".army-token-time");
+  if (iconElement && iconElement.textContent !== armyIcon) iconElement.textContent = armyIcon;
+  if (countElement) {
+    countElement.hidden = !showTroops;
+    if (showTroops) {
+      const troopText = formatNumber(attack.troops);
+      if (countElement.textContent !== troopText) countElement.textContent = troopText;
+    }
+  }
+  if (timeElement) {
+    const timeText = formatDuration(attack.remaining);
+    if (timeElement.textContent !== timeText) timeElement.textContent = timeText;
+  }
+  if (attack.ownerName) {
+    const titlePrefix = `${attack.ownerName}: ${attack.kind} to ${targetCity?.name || "target"}`;
+    token.title = showTroops ? titlePrefix : `${titlePrefix} - ${formatDuration(attack.remaining)} remaining`;
+  }
+}
+
 function renderArmies(force = false) {
   if (!state) return;
   if (isZoomInteractionActive()) return;
   const now = performance.now();
   if (!force && now - lastArmyRenderTime < ARMY_RENDER_INTERVAL_MS) return;
   lastArmyRenderTime = now;
-  armyLayer.innerHTML = "";
   const visibleBounds = getVisibleWorldBounds(240);
   const activeRegionId = getActiveMapRegionId();
   const fragment = document.createDocumentFragment();
+  const visibleArmyTokenIds = new Set();
   for (const attack of getRenderableArmies()) {
     const from = cityById(attack.fromId);
     const to = cityById(attack.toId);
@@ -12676,23 +12810,84 @@ function renderArmies(force = false) {
     const y = point.y;
     if (!isPointInBounds(x, y, visibleBounds)) continue;
     const mapPoint = worldToMapPoint(point);
-    const token = document.createElement("div");
-    token.className = `army-token ${(OWNER[attack.owner] || OWNER.enemy).css}`;
-    token.style.left = `${mapPoint.x}px`;
-    token.style.top = `${mapPoint.y}px`;
-    const armyIcon = attack.kind === "scout" ? "\u{1F52D}" : attack.kind === "transfer" ? "\u{1F45F}" : "\u2694";
-    const showTroops = canViewArmyTroopAmount(attack);
-    token.classList.toggle("hidden-transfer", !showTroops);
-    token.innerHTML = showTroops
-      ? `<span>${armyIcon}</span><strong>${formatNumber(attack.troops)}</strong><small>${formatDuration(attack.remaining)}</small>`
-      : `<span>${armyIcon}</span><small>${formatDuration(attack.remaining)}</small>`;
-    if (attack.ownerName) {
-      const titlePrefix = `${attack.ownerName}: ${attack.kind} to ${to.name}`;
-      token.title = showTroops ? titlePrefix : `${titlePrefix} - ${formatDuration(attack.remaining)} remaining`;
+    const tokenId = getArmyTokenId(attack);
+    visibleArmyTokenIds.add(tokenId);
+    let token = armyTokenCache.get(tokenId);
+    if (!token) {
+      token = createArmyTokenElement(attack);
+      armyTokenCache.set(tokenId, token);
+      fragment.appendChild(token);
     }
-    fragment.appendChild(token);
+    updateArmyTokenElement(token, attack, mapPoint, to);
   }
-  armyLayer.appendChild(fragment);
+  if (fragment.childNodes.length) armyLayer.appendChild(fragment);
+  for (const [tokenId, token] of armyTokenCache) {
+    if (visibleArmyTokenIds.has(tokenId)) continue;
+    token.remove();
+    armyTokenCache.delete(tokenId);
+  }
+}
+
+function ensurePerformancePanel() {
+  if (performancePanel) return performancePanel;
+  performancePanel = document.createElement("aside");
+  performancePanel.className = "performance-panel";
+  performancePanel.hidden = true;
+  performancePanel.setAttribute("aria-live", "polite");
+  document.body.appendChild(performancePanel);
+  return performancePanel;
+}
+
+function getServiceWorkerDebugStatus() {
+  if (!("serviceWorker" in navigator)) return "unsupported";
+  if (navigator.serviceWorker.controller) return "active";
+  return "registered";
+}
+
+function getNeighborPreloadDebugText(regionId = getActiveMapRegionId()) {
+  const neighbors = getConnectedIslandRegionIds(regionId);
+  if (!neighbors.length) return "none";
+  return neighbors
+    .map(id => `${getRegionLabel(id)}:${preloadedMapRegions.has(id) ? "yes" : "no"}`)
+    .join(", ");
+}
+
+function updatePerformancePanel(now = performance.now()) {
+  if (!performancePanelVisible) return;
+  const panel = ensurePerformancePanel();
+  const activeRegionId = getActiveMapRegionId();
+  const visibleCityMarkers = cityLayer?.querySelectorAll(".city-node").length || 0;
+  const visibleCampMarkers = cityLayer?.querySelectorAll(".camp-node").length || 0;
+  panel.hidden = false;
+  panel.innerHTML = `
+    <strong>Crownlands Perf</strong>
+    <span>FPS: ${Math.round(performanceFps)}</span>
+    <span>Region: ${escapeHtml(getRegionLabel(activeRegionId))}</span>
+    <span>Cities: ${formatNumber(visibleCityMarkers)} visible</span>
+    <span>Camps: ${formatNumber(visibleCampMarkers)} visible</span>
+    <span>Army tokens: ${formatNumber(armyTokenCache.size)}</span>
+    <span>Loaded images: ${formatNumber(loadedImageAssets.size)}</span>
+    <span>Neighbors: ${escapeHtml(getNeighborPreloadDebugText(activeRegionId))}</span>
+    <span>SW: ${escapeHtml(getServiceWorkerDebugStatus())}</span>
+    <small>F8 toggles this panel</small>
+  `;
+}
+
+function samplePerformancePanel(now) {
+  performanceFrameCount += 1;
+  if (now - performanceLastSampleTime < PERFORMANCE_PANEL_SAMPLE_MS) return;
+  const elapsed = Math.max(1, now - performanceLastSampleTime);
+  performanceFps = performanceFrameCount * 1000 / elapsed;
+  performanceFrameCount = 0;
+  performanceLastSampleTime = now;
+  updatePerformancePanel(now);
+}
+
+function togglePerformancePanel(force = null) {
+  performancePanelVisible = force === null ? !performancePanelVisible : Boolean(force);
+  const panel = ensurePerformancePanel();
+  panel.hidden = !performancePanelVisible;
+  if (performancePanelVisible) updatePerformancePanel();
 }
 
 function renderPanel() {
@@ -15318,7 +15513,7 @@ function markZoomInteraction() {
   }, ZOOM_RENDER_SETTLE_MS);
 }
 
-function updateCameraTransform() {
+function applyCameraTransform() {
   if (!mapWorld || !mapFrame) return;
   const rect = mapFrame.getBoundingClientRect();
   const dimensions = getActiveMapDimensions();
@@ -15331,6 +15526,22 @@ function updateCameraTransform() {
   const offset = getMapViewportOffset(rect, dimensions);
   mapWorld.style.transform = `translate3d(${offset.x - camera.x * zoom}px, ${offset.y - camera.y * zoom}px, 0) scale(${zoom})`;
   updateMainCityReturnButton(rect);
+}
+
+function updateCameraTransform() {
+  if (cameraTransformRaf) {
+    cancelAnimationFrame(cameraTransformRaf);
+    cameraTransformRaf = 0;
+  }
+  applyCameraTransform();
+}
+
+function scheduleCameraTransform() {
+  if (cameraTransformRaf) return;
+  cameraTransformRaf = requestAnimationFrame(() => {
+    cameraTransformRaf = 0;
+    applyCameraTransform();
+  });
 }
 
 function centerOnMap() {
@@ -15603,7 +15814,7 @@ function setZoomAroundPoint(nextZoom, clientX, clientY) {
   const offset = getMapViewportOffset(rect);
   camera.x = before.x - (clientX - rect.left - offset.x) / zoom;
   camera.y = before.y - (clientY - rect.top - offset.y) / zoom;
-  updateCameraTransform();
+  scheduleCameraTransform();
   markZoomInteraction();
   renderPanel();
 }
@@ -15660,7 +15871,7 @@ function updatePinch() {
   const offset = getMapViewportOffset(rect);
   camera.x = pinchState.mapPoint.x - (mid.x - rect.left - offset.x) / zoom;
   camera.y = pinchState.mapPoint.y - (mid.y - rect.top - offset.y) / zoom;
-  updateCameraTransform();
+  scheduleCameraTransform();
   markZoomInteraction();
 }
 
@@ -15726,7 +15937,7 @@ function movePan(event) {
   if (Math.abs(dx) > 5 || Math.abs(dy) > 5) panState.moved = true;
   camera.x = panState.cameraX - dx / zoom;
   camera.y = panState.cameraY - dy / zoom;
-  updateCameraTransform();
+  scheduleCameraTransform();
 }
 
 function endPan(event) {
@@ -15956,6 +16167,11 @@ document.addEventListener("visibilitychange", () => {
 });
 window.addEventListener("online", () => checkForDeployedUpdate(true));
 document.addEventListener("keydown", event => {
+  if (event.key === "F8") {
+    event.preventDefault();
+    togglePerformancePanel();
+    return;
+  }
   if (event.key !== "Escape" || !profileScreen?.classList.contains("open")) return;
   if (event.target === profileNameInput) return;
   if (!flagEditorView.hidden) showProfileView();
@@ -16010,4 +16226,5 @@ updateFullscreenButton();
 updateOnlineUi();
 registerPwaInstallPrompt();
 registerCrownlandsServiceWorker();
+if (new URLSearchParams(window.location.search).has("perf")) togglePerformancePanel(true);
 requestAnimationFrame(frame);

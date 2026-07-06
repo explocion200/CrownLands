@@ -683,8 +683,18 @@ input {
   height: 100%;
   display: block;
   object-fit: fill;
+  opacity: 0;
   pointer-events: none;
   user-select: none;
+  transition: opacity .18s ease;
+  will-change: opacity;
+  transform: translateZ(0);
+}
+.island-art-map.active {
+  opacity: 1;
+}
+.island-art-map.retiring {
+  opacity: 0;
 }
 .world-map-svg {
   display: block;
@@ -1674,7 +1684,7 @@ input {
   position: absolute;
   min-width: 44px;
   height: 30px;
-  transform: translate(-50%, -50%);
+  transform: translate3d(0, 0, 0) translate(-50%, -50%);
   z-index: 20;
   display: flex;
   align-items: center;
@@ -1687,8 +1697,9 @@ input {
   font-size: .72rem;
   font-weight: 950;
   pointer-events: none;
-  transition: left .12s linear, top .12s linear;
-  will-change: left, top;
+  transition: transform .12s linear;
+  will-change: transform;
+  contain: layout paint;
 }
 .army-token.player { background: linear-gradient(#4fb2ff, #175ea9); }
 .army-token.player2 { background: linear-gradient(#bd9bff, #5d35a8); }
@@ -1704,6 +1715,39 @@ input {
 .army-token.hidden-transfer small {
   font-size: .68rem;
   font-weight: 950;
+}
+
+.performance-panel {
+  position: fixed;
+  right: 10px;
+  bottom: 10px;
+  z-index: 9999;
+  width: min(280px, calc(100vw - 20px));
+  display: grid;
+  gap: .18rem;
+  padding: .6rem .7rem;
+  border: 1px solid rgba(147, 214, 255, .44);
+  border-radius: 10px;
+  color: #eaf8ff;
+  background: rgba(5, 17, 30, .9);
+  box-shadow: 0 14px 30px rgba(0,0,0,.42);
+  font-size: .68rem;
+  font-weight: 800;
+  line-height: 1.25;
+  pointer-events: none;
+}
+.performance-panel[hidden] { display: none; }
+.performance-panel strong {
+  color: #ffe08a;
+  font-size: .78rem;
+}
+.performance-panel span,
+.performance-panel small {
+  display: block;
+}
+.performance-panel small {
+  color: rgba(234, 248, 255, .68);
+  font-size: .58rem;
 }
 
 .toast {
