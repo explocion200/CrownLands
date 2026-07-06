@@ -2231,7 +2231,8 @@ let mainCityRelocationInFlight = false;
 let selectedInventoryItemId = "";
 let updateCheckTimer = 0;
 let updateCheckInFlight = false;
-let updateRefreshInProgress = false;
+let deployedUpdateAvailableBuildId = "";
+let deployedUpdateNoticeShown = false;
 const islandImageLoadPromises = new Map();
 const nearbyIslandPreloadRegions = new Set();
 let pendingOfflineProgressSeconds = 0;
@@ -7555,7 +7556,8 @@ async function switchOnlineIsland(regionId, { fromMapPicker = false } = {}) {
   }
   if (targetRegionId === getActiveOnlineRegionId() && onlineWorldConnected) {
     if (modal.open) modal.close();
-    centerOnRegion(targetRegionId);
+    syncMapSurfaceToActiveIsland();
+    updateCameraTransform();
     return true;
   }
 
@@ -7945,12 +7947,13 @@ async function fetchDeployedBuildId() {
 
 async function checkForDeployedUpdate(force = false) {
   const api = getOnlineApi();
-  if (updateRefreshInProgress || updateCheckInFlight || !api?.isSignedIn?.()) return false;
+  if (updateCheckInFlight || !api?.isSignedIn?.()) return false;
   if (!force && document.visibilityState === "hidden") return false;
   updateCheckInFlight = true;
   try {
     const deployedBuildId = await fetchDeployedBuildId();
     if (!deployedBuildId || deployedBuildId === APP_BUILD_ID) return false;
+    if (deployedBuildId === deployedUpdateAvailableBuildId && deployedUpdateNoticeShown) return false;
     await handleDeployedUpdate(deployedBuildId);
     return true;
   } catch (error) {
@@ -7962,7 +7965,6 @@ async function checkForDeployedUpdate(force = false) {
 }
 
 function updateDeploymentCheck(dt) {
-  if (updateRefreshInProgress) return;
   updateCheckTimer += dt;
   if (updateCheckTimer < UPDATE_CHECK_INTERVAL_SECONDS) return;
   updateCheckTimer = 0;
@@ -7970,36 +7972,14 @@ function updateDeploymentCheck(dt) {
 }
 
 async function handleDeployedUpdate(deployedBuildId) {
-  if (updateRefreshInProgress) return;
-  updateRefreshInProgress = true;
-  showToast("New update detected. Relogging...");
-  if (onlineStatusDetail) onlineStatusDetail.textContent = "New update detected. Relog required.";
-  setSetupLoading(true, "New update detected. Relogging...");
-  if (modal.open) modal.close();
-
-  try {
-    await waitForPendingOnlineWrites(5000);
-  } catch (error) {
-    console.warn("Continuing update reload while online writes are still pending", error);
-  }
-
-  try {
-    await flushOnlineSave(true);
-  } catch (error) {
-    console.warn("Could not finish cloud save before update reload", error);
-  }
-
-  const api = getOnlineApi();
-  try {
-    disconnectOnlineWorld();
-    if (api?.isSignedIn?.() && api?.signOut) await api.signOut();
-  } catch (error) {
-    console.warn("Could not sign out before update reload", error);
-  }
-
-  window.setTimeout(() => {
-    window.location.reload();
-  }, 700);
+  deployedUpdateAvailableBuildId = String(deployedBuildId || "");
+  deployedUpdateNoticeShown = true;
+  showToast("New update available. Reload when ready.");
+  if (onlineStatusDetail) onlineStatusDetail.textContent = "New update available. Reload when ready.";
+  console.info("[Crownlands] New deployed build available.", {
+    currentBuildId: APP_BUILD_ID,
+    deployedBuildId: deployedUpdateAvailableBuildId,
+  });
 }
 
 function readPendingOnlineArmyMovements() {

@@ -1,4 +1,4 @@
-const CACHE_VERSION = "20260706-pwa-v1";
+const CACHE_VERSION = "20260706-map-pan-fix";
 const CACHE_NAME = `crownlands-cache-${CACHE_VERSION}`;
 const STATIC_CACHE_URLS = [
   "/",
@@ -7,8 +7,8 @@ const STATIC_CACHE_URLS = [
   "/styles.css?v=20260705-compact-effect-badges",
   "/world-config.js",
   "/firebase-config.js?v=20260703-vapid-key",
-  "/firebaseClient.js?v=20260706-pwa-v1",
-  "/game.js?v=20260706-pwa-v1",
+  "/firebaseClient.js?v=20260706-map-pan-fix",
+  "/game.js?v=20260706-map-pan-fix",
   "/assets/map-editor-data.js?v=20260705-stronghold-sizes",
   "/assets/game-menu-background.jpg?v=20260702-login-page",
   "/assets/loading-ring.png",
