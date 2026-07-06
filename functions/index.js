@@ -2682,7 +2682,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
       };
     }
 
-    const effectiveKind = army.kind === "transfer" && defenderUid === attackerUid ? "transfer" : "attack";
+    const effectiveKind = defenderUid === attackerUid ? "transfer" : "attack";
     if (effectiveKind === "transfer") {
       writeParticipantEconomies();
       const nextTroops = Math.max(0, Math.floor(safeNumber(target.troops, 0))) + troopCount;
