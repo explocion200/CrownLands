@@ -2221,6 +2221,11 @@ let onlineOwnedCitiesCache = [];
 let onlineOwnedCitiesCacheAt = 0;
 let onlineOwnedCitiesCacheComplete = false;
 let onlineOwnedCitiesRefreshInFlight = false;
+const islandMapPickerViewState = {
+  scrollLeft: 0,
+  scrollTop: 0,
+  hasView: false,
+};
 let onlinePresenceTimer = 0;
 let onlinePresenceInFlight = false;
 let onlineSessionReplaced = false;
@@ -7537,7 +7542,7 @@ function getIslandTileAriaSummary(regionId) {
 
 function rerenderIslandSwitcherModalIfOpen() {
   if (!modal.open || !modal.classList.contains("island-switcher-modal")) return;
-  renderIslandSwitcherModalContent();
+  rememberIslandMapPickerView();
 }
 
 async function refreshOnlineIslandSummaries(force = false) {
@@ -7598,7 +7603,7 @@ async function refreshAllOwnedCities(force = false) {
     renderHud();
     if (profileScreen?.classList.contains("open")) renderProfileScreen();
     if (modal.open && modal.classList.contains("city-list-modal")) renderCityListModal();
-    if (modal.open && modal.classList.contains("island-switcher-modal")) renderIslandSwitcherModalContent();
+    if (modal.open && modal.classList.contains("island-switcher-modal")) rerenderIslandSwitcherModalIfOpen();
     return true;
   } catch (error) {
     onlineLastError = error?.message || String(error);
@@ -7769,24 +7774,69 @@ function renderIslandSwitcherModalContent() {
   if (!modal.open) modal.showModal();
   const picker = modalBody.querySelector(".island-map-picker");
   attachIslandMapPickerPan(picker);
-  centerIslandMapPickerOnRegion(picker, activeRegionId || homeRegionId);
+  if (!restoreIslandMapPickerView(picker)) {
+    centerIslandMapPickerOnRegion(picker, activeRegionId || homeRegionId);
+  }
   modalBody.querySelectorAll("[data-island-region]").forEach(button => {
     button.addEventListener("click", () => {
       if (picker?.dataset.justDragged === "true" || picker?.dataset.justActivated === "true") return;
+      rememberIslandMapPickerView(picker);
       switchOnlineIsland(button.dataset.islandRegion, { fromMapPicker: true });
     });
   });
 }
 
+function getIslandMapPickerElement() {
+  return modalBody?.querySelector?.(".island-map-picker") || null;
+}
+
+function clampIslandMapPickerScroll(picker, scrollLeft, scrollTop) {
+  const maxLeft = Math.max(0, (picker?.scrollWidth || 0) - (picker?.clientWidth || 0));
+  const maxTop = Math.max(0, (picker?.scrollHeight || 0) - (picker?.clientHeight || 0));
+  return {
+    left: Math.min(Math.max(0, Number(scrollLeft) || 0), maxLeft),
+    top: Math.min(Math.max(0, Number(scrollTop) || 0), maxTop),
+  };
+}
+
+function rememberIslandMapPickerView(picker = getIslandMapPickerElement()) {
+  if (!picker) return false;
+  const clamped = clampIslandMapPickerScroll(picker, picker.scrollLeft, picker.scrollTop);
+  islandMapPickerViewState.scrollLeft = clamped.left;
+  islandMapPickerViewState.scrollTop = clamped.top;
+  islandMapPickerViewState.hasView = true;
+  return true;
+}
+
+function restoreIslandMapPickerView(picker) {
+  if (!picker || !islandMapPickerViewState.hasView) return false;
+  const apply = () => {
+    const clamped = clampIslandMapPickerScroll(
+      picker,
+      islandMapPickerViewState.scrollLeft,
+      islandMapPickerViewState.scrollTop
+    );
+    picker.scrollLeft = clamped.left;
+    picker.scrollTop = clamped.top;
+    rememberIslandMapPickerView(picker);
+  };
+  apply();
+  requestAnimationFrame(apply);
+  return true;
+}
+
 function centerIslandMapPickerOnRegion(picker, regionId) {
   if (!picker || !regionId) return;
-  requestAnimationFrame(() => {
+  const apply = () => {
     const target = [...picker.querySelectorAll("[data-island-region]")]
       .find(button => button.dataset.islandRegion === regionId);
-    if (!target) return;
+    if (!target || !picker.clientWidth || !picker.clientHeight) return false;
     picker.scrollLeft = target.offsetLeft + target.offsetWidth / 2 - picker.clientWidth / 2;
     picker.scrollTop = target.offsetTop + target.offsetHeight / 2 - picker.clientHeight / 2;
-  });
+    rememberIslandMapPickerView(picker);
+    return true;
+  };
+  if (!apply()) requestAnimationFrame(apply);
 }
 
 function attachIslandMapPickerPan(picker) {
@@ -7799,6 +7849,10 @@ function attachIslandMapPickerPan(picker) {
   let startScrollTop = 0;
   let moved = false;
   let tapRegionId = "";
+
+  picker.addEventListener("scroll", () => {
+    rememberIslandMapPickerView(picker);
+  }, { passive: true });
 
   picker.addEventListener("pointerdown", event => {
     if (event.button !== undefined && event.button !== 0) return;
@@ -7822,6 +7876,7 @@ function attachIslandMapPickerPan(picker) {
     if (moved) event.preventDefault();
     picker.scrollLeft = startScrollLeft - dx;
     picker.scrollTop = startScrollTop - dy;
+    rememberIslandMapPickerView(picker);
   });
 
   const stopPan = event => {
@@ -7830,6 +7885,7 @@ function attachIslandMapPickerPan(picker) {
     picker.classList.remove("panning");
     picker.releasePointerCapture?.(event.pointerId);
     if (moved) {
+      rememberIslandMapPickerView(picker);
       picker.dataset.justDragged = "true";
       window.setTimeout(() => {
         if (picker) delete picker.dataset.justDragged;
@@ -7838,6 +7894,7 @@ function attachIslandMapPickerPan(picker) {
       const releasedTile = document.elementFromPoint(event.clientX, event.clientY)?.closest?.("[data-island-region]");
       if (releasedTile?.dataset?.islandRegion === tapRegionId) {
         picker.dataset.justActivated = "true";
+        rememberIslandMapPickerView(picker);
         switchOnlineIsland(tapRegionId, { fromMapPicker: true });
         window.setTimeout(() => {
           if (picker) delete picker.dataset.justActivated;
@@ -7862,7 +7919,6 @@ function showIslandSwitcherModal() {
   modalTitle.textContent = "Map";
   renderIslandSwitcherModalContent();
   if (!modal.open) modal.showModal();
-  refreshOnlineIslandSummaries();
 }
 
 function prepareSelectionForIslandSwitch() {
