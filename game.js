@@ -227,9 +227,9 @@ const EDGE_TRANSITION_ROUTE_INSET_MAX = 58;
 const EDGE_TRANSITION_ARROW_INSET_MIN = 96;
 const EDGE_TRANSITION_ARROW_INSET_MAX = 180;
 const DEFAULT_STRONGHOLD_VISUAL_SIZE = 154;
-const MIN_STRONGHOLD_VISUAL_SIZE = 80;
+const MIN_STRONGHOLD_VISUAL_SIZE = 1;
 const DEFAULT_CAMP_VISUAL_SIZE = 132;
-const MIN_CAMP_VISUAL_SIZE = 64;
+const MIN_CAMP_VISUAL_SIZE = 1;
 const GOLD_STRONGHOLD_ID = "west_gold_stronghold";
 const GOLD_STRONGHOLD_NAME = "Aurum Keep";
 const GOLD_STRONGHOLD_ART_SRC = "assets/gold-stronghold.png?v=20260704-gold-stronghold-updated";
@@ -660,12 +660,19 @@ function isStronghold(city) {
   return Boolean(city && (city.kind === "stronghold" || STRONGHOLD_IDS.has(city.id)));
 }
 
+function readVisualSize(value, fallback) {
+  const parsed = Math.floor(Number(value));
+  if (Number.isFinite(parsed) && parsed > 0) return parsed;
+  const fallbackSize = Math.floor(Number(fallback));
+  return Number.isFinite(fallbackSize) && fallbackSize > 0 ? fallbackSize : 1;
+}
+
 function getPortalVisualSize(portal) {
   return Math.max(MIN_PORTAL_VISUAL_SIZE, Math.floor(Number(portal?.size) || DEFAULT_PORTAL_VISUAL_SIZE));
 }
 
 function getStrongholdVisualSize(city) {
-  return Math.max(MIN_STRONGHOLD_VISUAL_SIZE, Math.floor(Number(city?.size) || DEFAULT_STRONGHOLD_VISUAL_SIZE));
+  return Math.max(MIN_STRONGHOLD_VISUAL_SIZE, readVisualSize(city?.size, DEFAULT_STRONGHOLD_VISUAL_SIZE));
 }
 
 function applyCityActionWheelSizing(wheel, city) {
@@ -2707,6 +2714,15 @@ function islandImagePointToWorld(regionId, point) {
   };
 }
 
+function islandImageVisualSizeToWorld(regionId, size, fallback) {
+  const targetRegionId = cleanEditorRegionId(regionId);
+  const dimensions = getIslandImageDimensions(targetRegionId);
+  const bounds = getIslandMapBounds(targetRegionId);
+  const imageSize = readVisualSize(size, fallback);
+  const scale = bounds.width / Math.max(1, dimensions.width);
+  return Math.max(1, Math.round(imageSize * scale));
+}
+
 function worldToIslandImagePointRaw(regionId, pointOrX, yValue = null) {
   const targetRegionId = cleanEditorRegionId(regionId);
   const dimensions = getIslandImageDimensions(targetRegionId);
@@ -3232,7 +3248,7 @@ function generateEditorStrongholdSlots() {
         level: Math.max(1, Math.floor(Number(objective?.level) || config.level)),
         troops: Math.max(0, Math.floor(Number(objective?.troops || objective?.startTroops) || config.troops)),
         artSrc: String(objective?.artSrc || config.artSrc || ""),
-        size: Math.max(MIN_STRONGHOLD_VISUAL_SIZE, Math.floor(Number(objective?.size) || DEFAULT_STRONGHOLD_VISUAL_SIZE)),
+        size: islandImageVisualSizeToWorld(region.id, objective?.size, DEFAULT_STRONGHOLD_VISUAL_SIZE),
       }));
     });
   }
@@ -3254,7 +3270,7 @@ function generateWorldCampSlots() {
         y: Math.round(point.y),
         campType: config.type,
         artSrc: String(camp?.artSrc || config.artSrc),
-        size: Math.max(MIN_CAMP_VISUAL_SIZE, Math.floor(Number(camp?.size) || DEFAULT_CAMP_VISUAL_SIZE)),
+        size: islandImageVisualSizeToWorld(region.id, camp?.size, DEFAULT_CAMP_VISUAL_SIZE),
       });
     });
   }
@@ -3331,7 +3347,7 @@ function generateStrongholdSlots() {
 }
 
 function createStrongholdSlot({ id, name, region, point, type, bonus, bonusPercent, level, troops, size = DEFAULT_STRONGHOLD_VISUAL_SIZE, artSrc = "" }) {
-  const visualSize = Math.max(MIN_STRONGHOLD_VISUAL_SIZE, Math.floor(Number(size) || DEFAULT_STRONGHOLD_VISUAL_SIZE));
+  const visualSize = getStrongholdVisualSize({ size });
   return {
     id,
     name,
@@ -7100,7 +7116,7 @@ function normalizeOfflineProductionCities(cities = []) {
         strongholdType: city.strongholdType || base.strongholdType || "",
         bonus: city.bonus || base.bonus || "",
         bonusPercent: Number(city.bonusPercent ?? base.bonusPercent) || 0,
-        size: isStronghold(city) || isStronghold(base) ? getStrongholdVisualSize({ size: city.size ?? base.size }) : undefined,
+        size: isStronghold(city) || isStronghold(base) ? getStrongholdVisualSize({ size: base.size ?? city.size }) : undefined,
         regionId: city.regionId || base.regionId || getCityRegionId(id),
       };
     })
@@ -10354,7 +10370,7 @@ function normalizeOwnedCitySnapshot(raw = {}) {
     strongholdType: raw.strongholdType || base.strongholdType || "",
     bonus: raw.bonus || base.bonus || "",
     bonusPercent: Number(raw.bonusPercent ?? base.bonusPercent) || 0,
-    size: isStronghold(raw) || isStronghold(base) ? getStrongholdVisualSize({ ...base, ...raw }) : undefined,
+    size: isStronghold(raw) || isStronghold(base) ? getStrongholdVisualSize(isStronghold(base) ? base : raw) : undefined,
     level: isStronghold(raw) || isStronghold(base) ? getStrongholdDefenseLevel({ ...base, ...raw }) : clampCityLevel(raw.level ?? base.level),
     troops: readCityTroops(raw.troops, troopFallback),
     troopFloat: readCityTroopFloat(raw.troopFloat ?? raw.troops, troopFallback),

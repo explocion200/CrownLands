@@ -103,6 +103,13 @@
     },
   };
 
+  function readVisualSize(value, fallback) {
+    const parsed = Math.floor(Number(value));
+    if (Number.isFinite(parsed) && parsed > 0) return parsed;
+    const fallbackSize = Math.floor(Number(fallback));
+    return Number.isFinite(fallbackSize) && fallbackSize > 0 ? fallbackSize : 1;
+  }
+
   const elements = {
     worldModeBtn: document.getElementById("worldModeBtn"),
     regionModeBtn: document.getElementById("regionModeBtn"),
@@ -436,7 +443,7 @@
       level: Math.max(1, Math.floor(Number(stronghold.level) || defaults.level)),
       troops: Math.max(0, Math.floor(Number(stronghold.troops ?? stronghold.startTroops) || defaults.troops)),
       artSrc: String(stronghold.artSrc || defaults.artSrc),
-      size: Math.max(80, Math.floor(Number(stronghold.size) || defaults.size)),
+      size: readVisualSize(stronghold.size, defaults.size),
       notes: String(stronghold.notes || ""),
     };
   }
@@ -454,7 +461,7 @@
       yNorm: roundNorm(camp.yNorm ?? ((Number(camp.y) || 0) / region.height)),
       campType,
       artSrc: String(camp.artSrc || defaults.artSrc),
-      size: Math.max(64, Math.floor(Number(camp.size) || defaults.size)),
+      size: readVisualSize(camp.size, defaults.size),
       notes: String(camp.notes || ""),
     };
   }
@@ -1016,8 +1023,7 @@
     const defaultSize = kind === "camp"
       ? (CAMP_DEFAULTS[item.campType]?.size || CAMP_DEFAULTS.gold.size)
       : (STRONGHOLD_DEFAULTS[item.strongholdType]?.size || STRONGHOLD_DEFAULTS.gold_stronghold.size);
-    const minSize = kind === "camp" ? 64 : 80;
-    const size = Math.max(minSize, Math.floor(Number(item.size) || defaultSize));
+    const size = readVisualSize(item.size, defaultSize);
     marker.style.setProperty("--marker-base-size", `${size}px`);
     marker.style.setProperty("--marker-size", `${Math.max(1, size * state.zoom)}px`);
     marker.dataset.visualSize = String(size);
@@ -1411,7 +1417,7 @@
         <label><span>Pixel X</span><input value="${px}" readonly /></label>
         <label><span>Pixel Y</span><input value="${py}" readonly /></label>
         <label><span>Starting Owner</span><input data-field="startingOwner" value="${escapeHtml(stronghold.startingOwner)}" /></label>
-        <label><span>Visual Size</span><input data-field="size" type="number" min="80" value="${stronghold.size}" /></label>
+        <label><span>Visual Size</span><input data-field="size" type="number" min="1" value="${stronghold.size}" /></label>
         <label class="wide"><span>Art Path</span><input data-field="artSrc" value="${escapeHtml(stronghold.artSrc)}" /></label>
         <label class="wide"><span>Notes</span><textarea data-field="notes">${escapeHtml(stronghold.notes)}</textarea></label>
       </div>
@@ -1432,7 +1438,7 @@
         <label><span>yNorm</span><input data-field="yNorm" type="number" min="0" max="1" step="0.001" value="${camp.yNorm}" /></label>
         <label><span>Pixel X</span><input value="${px}" readonly /></label>
         <label><span>Pixel Y</span><input value="${py}" readonly /></label>
-        <label><span>Visual Size</span><input data-field="size" type="number" min="64" value="${camp.size}" /></label>
+        <label><span>Visual Size</span><input data-field="size" type="number" min="1" value="${camp.size}" /></label>
         <label class="wide"><span>Art Path</span><input data-field="artSrc" value="${escapeHtml(camp.artSrc)}" /></label>
         <label class="wide"><span>Notes</span><textarea data-field="notes">${escapeHtml(camp.notes)}</textarea></label>
       </div>
@@ -1519,7 +1525,8 @@
       return;
     }
     if (["xNorm", "yNorm", "start", "end", "arrowXNorm", "arrowYNorm"].includes(field)) item[field] = roundNorm(value);
-    else if (["level", "troops", "bonusAmount", "size"].includes(field)) item[field] = Math.max(0, Math.floor(Number(value) || 0));
+    else if (field === "size") item[field] = readVisualSize(value, item.size);
+    else if (["level", "troops", "bonusAmount"].includes(field)) item[field] = Math.max(0, Math.floor(Number(value) || 0));
     else if (field === "strongholdType") applyStrongholdType(item, value);
     else if (field === "campType") applyCampType(item, value);
     else if (field === "intentionalOuter") item[field] = Boolean(value);

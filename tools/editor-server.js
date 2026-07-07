@@ -124,6 +124,13 @@ function number(value, fallback, min = -Infinity, max = Infinity) {
   return Math.min(max, Math.max(min, parsed));
 }
 
+function cleanVisualSize(value, fallback) {
+  const parsed = Math.floor(Number(value));
+  if (Number.isFinite(parsed) && parsed > 0) return parsed;
+  const fallbackSize = Math.floor(Number(fallback));
+  return Number.isFinite(fallbackSize) && fallbackSize > 0 ? fallbackSize : 1;
+}
+
 function isFourThreeDimensions(width, height) {
   const safeWidth = Number(width) || 0;
   const safeHeight = Number(height) || 0;
@@ -392,7 +399,7 @@ function cleanStronghold(stronghold, index, region) {
     level: Math.max(1, Math.floor(number(stronghold.level, defaults.level, 1, 100))),
     troops: Math.max(0, Math.floor(number(stronghold.troops ?? stronghold.startTroops, defaults.troops, 0, 1000000000))),
     artSrc: normalizePathForJson(stronghold.artSrc || defaults.artSrc),
-    size: Math.max(80, Math.floor(number(stronghold.size, defaults.size, 80, 400))),
+    size: cleanVisualSize(stronghold.size, defaults.size),
     notes: cleanString(stronghold.notes, "").slice(0, 240),
   };
 }
@@ -410,7 +417,7 @@ function cleanCamp(camp, index, region) {
     yNorm,
     campType: type,
     artSrc: normalizePathForJson(camp.artSrc || defaults.artSrc),
-    size: Math.max(64, Math.floor(number(camp.size, defaults.size, 64, 400))),
+    size: cleanVisualSize(camp.size, defaults.size),
     notes: cleanString(camp.notes, "").slice(0, 240),
   };
 }

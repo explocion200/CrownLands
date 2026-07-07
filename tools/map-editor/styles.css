@@ -460,17 +460,18 @@ label > span,
 
 .map-marker.stronghold {
   width: var(--marker-size, 154px);
-  height: var(--marker-size, 154px);
+  height: calc(var(--marker-size, 154px) * .896);
   border: 0;
   border-radius: 0;
   background: transparent;
   box-shadow: none;
   overflow: visible;
+  transform: translate(-50%, -62%);
 }
 
 .map-marker.crown {
   width: var(--marker-size, 260px);
-  height: var(--marker-size, 260px);
+  height: calc(var(--marker-size, 260px) * .896);
   background: transparent;
 }
 
@@ -482,12 +483,22 @@ label > span,
   background: transparent;
   box-shadow: none;
   overflow: visible;
+  transform: translate(-50%, -58%);
 }
 
-.map-marker.stronghold img,
 .map-marker.camp img {
   display: block;
   width: 100%;
+  height: 100%;
+  object-fit: contain;
+  pointer-events: none;
+  user-select: none;
+  filter: drop-shadow(0 8px 8px rgba(0, 0, 0, 0.55));
+}
+
+.map-marker.stronghold img {
+  display: block;
+  width: 96.1%;
   height: 100%;
   object-fit: contain;
   pointer-events: none;

@@ -1,6 +1,6 @@
 window.CROWNLANDS_MAP_EDITOR_DATA = {
-  "version": 202607060009,
-  "updatedAt": "2026-07-06T00:09:38.282Z",
+  "version": 202607072350,
+  "updatedAt": "2026-07-07T23:50:55.931Z",
   "worldId": "world_01",
   "worldName": "Crownlands World 01",
   "globalSettings": {
