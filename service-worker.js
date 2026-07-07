@@ -1,14 +1,14 @@
-const CACHE_VERSION = "20260707-login-city-fallback";
+const CACHE_VERSION = "20260707-login-existing-fast";
 const CACHE_NAME = `crownlands-cache-${CACHE_VERSION}`;
 const STATIC_CACHE_URLS = [
   "/",
   "/index.html",
   "/manifest.webmanifest",
-  "/styles.css?v=20260707-login-city-fallback",
+  "/styles.css?v=20260707-login-existing-fast",
   "/world-config.js",
   "/firebase-config.js?v=20260703-vapid-key",
   "/firebaseClient.js?v=20260706-perf-v1",
-  "/game.js?v=20260707-login-city-fallback",
+  "/game.js?v=20260707-login-existing-fast",
   "/assets/map-editor-data.js?v=20260705-stronghold-sizes",
   "/assets/game-menu-background.jpg?v=20260702-login-page",
   "/assets/loading-ring.png",

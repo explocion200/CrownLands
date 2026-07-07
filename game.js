@@ -8612,9 +8612,11 @@ async function setupOnlineWorld({ requireOnlineProfile = false } = {}) {
   const homeRegionId = await resolveHomeRegionIdForSetup(profile, { trustLocalState: hasCurrentProfile });
   const activeRegionId = homeRegionId;
   const mainIslandId = getOnlineIslandId(homeRegionId);
-  const mainCityId = getKnownCityId(profile?.mainCityId)
-    || (hasCurrentProfile ? getKnownCityId(state.online?.mainCityId) : "")
-    || (hasCurrentProfile ? getKnownCityId(state.mainCityId) : "")
+  const storedMainCityId = String(profile?.mainCityId
+    || (hasCurrentProfile ? state.online?.mainCityId : "")
+    || (hasCurrentProfile ? state.mainCityId : "")
+    || "").trim();
+  const mainCityId = getKnownCityId(storedMainCityId)
     || "";
 
   state.activeRegionId = activeRegionId;
@@ -8628,9 +8630,10 @@ async function setupOnlineWorld({ requireOnlineProfile = false } = {}) {
     playerUid: getCurrentOnlineUid(),
   };
   state.mainCityId = mainCityId || "";
+  const needsMainCityClaim = !storedMainCityId;
 
   return connectOnlineIsland(activeRegionId, {
-    claimHome: activeRegionId === homeRegionId,
+    claimHome: activeRegionId === homeRegionId && needsMainCityClaim,
     homeRegionId,
     profile,
   });
