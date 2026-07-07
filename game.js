@@ -42,6 +42,7 @@ const UPDATE_CHECK_INTERVAL_SECONDS = 45;
 const SETUP_LOADING_MIN_MS = 180;
 const IMAGE_PRELOAD_TIMEOUT_MS = 15000;
 const HUD_RENDER_INTERVAL_MS = 250;
+const HUD_STATUS_RENDER_INTERVAL_MS = 1000;
 const MAP_RENDER_INTERVAL_MS = 1600;
 const ARMY_RENDER_INTERVAL_MS = 140;
 const CITY_DYNAMIC_TEXT_INTERVAL_MS = 600;
@@ -91,6 +92,7 @@ const SHOP_ITEMS = [
 ];
 const ROYAL_PEACE_SHIELD_ITEM_ID = "shield_12h";
 const ROYAL_PEACE_SHIELD_DURATION_MS = 12 * 60 * 60 * 1000;
+const ROYAL_PEACE_SHIELD_PURCHASE_COOLDOWN_MS = 24 * 60 * 60 * 1000;
 const WAR_DRUMS_ITEM_ID = "war_drums_30m";
 const WAR_DRUMS_DURATION_MS = 30 * 60 * 1000;
 const WAR_DRUMS_TROOP_PRODUCTION_BONUS_PERCENT = 5;
@@ -2157,6 +2159,7 @@ const pathMetricCache = new WeakMap();
 const ROUTE_CELL_FALLBACK_RADIUS = 32;
 const ROUTE_CELL_FALLBACK_CANDIDATES = 24;
 const ROUTE_CELL_FALLBACK_PAIR_LIMIT = 16;
+const ROUTE_SEARCH_MAX_VISITED_CELLS = Math.max(2500, Math.min(24000, GRID_COLS * GRID_ROWS));
 const NEAREST_SOURCE_ROUTE_CHECK_LIMIT = 18;
 const SCOUT_SOURCE_ROUTE_CHECK_LIMIT = 10;
 
@@ -2169,6 +2172,7 @@ let sendMode = false;
 let selectedMarchPercent = DEFAULT_MARCH_PERCENT;
 let selectedTroopAmount = 1;
 let troopSliderActive = false;
+let activeTroopSliderRoute = null;
 let scoutNearbySourceId = null;
 let regroupSourceId = null;
 let camera = { x: 0, y: 0 };
@@ -2180,6 +2184,7 @@ let suppressMapClick = false;
 let lastFrameTime = performance.now();
 let lastRenderTime = 0;
 let lastHudRenderTime = 0;
+let lastHudStatusRenderTime = 0;
 let lastArmyRenderTime = 0;
 let lastCityDynamicTextTime = 0;
 let cameraTransformRaf = 0;
@@ -2218,6 +2223,7 @@ const playerIdentityCache = new Map();
 const playerIdentityLookupQueue = new Set();
 const playerIdentityLookupMisses = new Map();
 let playerIdentityLookupInFlight = false;
+let lastHudFlagSignature = "";
 let onlineIslandSummaries = new Map();
 let onlineIslandSummaryRefreshInFlight = false;
 let onlineOwnedCitiesCache = [];
@@ -4638,6 +4644,21 @@ function ensureItemPurchaseCooldowns() {
   return state.itemPurchaseCooldowns;
 }
 
+function getItemPurchaseCooldownRemainingMs(itemId, now = Date.now()) {
+  if (itemId !== ROYAL_PEACE_SHIELD_ITEM_ID) return 0;
+  const cooldowns = ensureItemPurchaseCooldowns();
+  const lastPurchasedAtMs = normalizeTimestampMs(cooldowns?.[ROYAL_PEACE_SHIELD_ITEM_ID]?.lastPurchasedAtMs);
+  if (!lastPurchasedAtMs) return 0;
+  const currentTime = Math.max(0, Number(now) || Date.now());
+  const elapsed = Math.max(0, currentTime - Math.min(lastPurchasedAtMs, currentTime));
+  return Math.max(0, ROYAL_PEACE_SHIELD_PURCHASE_COOLDOWN_MS - elapsed);
+}
+
+function getItemPurchaseCooldownText(itemId, now = Date.now()) {
+  const remainingMs = getItemPurchaseCooldownRemainingMs(itemId, now);
+  return remainingMs > 0 ? formatDuration(Math.ceil(remainingMs / 1000)) : "";
+}
+
 function createDefaultItemEffects() {
   return {
     shieldExpiresAtMs: 0,
@@ -5053,6 +5074,17 @@ function normalizeFlag(flag) {
   };
 }
 
+function getFlagSignature(flag) {
+  const normalized = normalizeFlag(flag);
+  return `${normalized.primary}|${normalized.secondary}|${normalized.pattern}|${normalized.symbol}`;
+}
+
+function setTextIfChanged(element, value) {
+  if (!element) return;
+  const text = String(value);
+  if (element.textContent !== text) element.textContent = text;
+}
+
 
 function createCharacterProgress() {
   return { level: CHARACTER_START_LEVEL, xp: CHARACTER_START_XP, skillPoints: 0 };
@@ -5388,11 +5420,12 @@ function getCityOwnerKingPowerSnapshot(city) {
   if (!city) return 0;
   const currentUid = getCurrentOnlineUid();
   if (city.owner === "player" && (!city.ownerUid || city.ownerUid === currentUid)) return getKingPower();
-  const stored = normalizePowerValue(city.ownerKingPower);
-  if (stored > 0) return stored;
-  const presence = getPresenceKingPowerByUid(city.ownerUid);
-  if (presence > 0) return presence;
-  return getCityPowerFloor(city);
+  return Math.max(
+    normalizePowerValue(city.ownerKingPower),
+    normalizePowerValue(playerIdentityCache.get(city.ownerUid)?.kingPower),
+    getPresenceKingPowerByUid(city.ownerUid),
+    getCityPowerFloor(city)
+  );
 }
 
 function getDemoAttackTier(powerRatio) {
@@ -5884,6 +5917,9 @@ function normalizeBattleReports(reports) {
       if (!report || typeof report !== "object") return null;
       const type = ["attack", "defense", "scout"].includes(report.type) ? report.type : "";
       if (!type) return null;
+      const cityId = getKnownCityId(report.cityId || report.targetCityId || report.city?.id) || String(report.cityId || report.targetCityId || report.city?.id || "");
+      const inferredRegionId = cityId ? getCityRegionId(cityId) : "";
+      const rawRegionId = report.regionId || report.targetRegionId || report.city?.regionId || report.city?.startPool || inferredRegionId;
       const fallbackOutcome = type === "scout" ? "scout" : "defeat";
       const outcome = ["victory", "defeat", "held", "lost", "scout"].includes(report.outcome)
         ? report.outcome
@@ -5893,7 +5929,8 @@ function normalizeBattleReports(reports) {
         type,
         outcome,
         createdAt: Math.max(0, Number(report.createdAt) || 0),
-        cityId: String(report.cityId || ""),
+        cityId,
+        regionId: rawRegionId ? normalizeRegionId(rawRegionId) : "",
         cityName: String(report.cityName || "Unknown city").slice(0, 40),
         cityLevel: clampCityLevel(report.cityLevel || 1),
         troopCount: Math.max(0, Math.floor(Number(report.troopCount) || 0)),
@@ -6250,6 +6287,7 @@ function completeScoutMission(attack, target) {
     type: "scout",
     outcome: "scout",
     cityId: target.id,
+    regionId: getCityRegionId(target),
     cityName: target.name,
     cityLevel: report.cityLevel,
     troopCount: report.troops,
@@ -8883,8 +8921,6 @@ async function connectOnlineIsland(regionId, { claimHome = false, homeRegionId =
       },
       onArmies: armies => {
         applyOnlineArmies(armies, islandId);
-        renderPaths();
-        renderCities();
         renderArmies();
         updateIncomingAttackUi();
         updateOutgoingAttackUi();
@@ -9728,8 +9764,6 @@ function subscribeOnlineArmyWatchers(activeIslandId) {
     const unsubscribe = api.subscribeIsland(islandId, {
       onArmies: armies => {
         applyOnlineArmies(armies, islandId);
-        renderPaths();
-        renderCities();
         renderArmies();
         updateIncomingAttackUi();
         updateOutgoingAttackUi();
@@ -10544,11 +10578,75 @@ function gridEdgePassableInRegion(cx, cy, nx, ny, regionId, context = null) {
   return passable;
 }
 
-function findGridRouteInRegion(start, goal, startPoint, endPoint, normalizedRegionId, routeContext = null) {
+class RoutePriorityQueue {
+  constructor() {
+    this.items = [];
+  }
+
+  get length() {
+    return this.items.length;
+  }
+
+  push(index, f) {
+    const item = { index, f };
+    this.items.push(item);
+    this.bubbleUp(this.items.length - 1);
+  }
+
+  pop() {
+    if (!this.items.length) return null;
+    const top = this.items[0];
+    const end = this.items.pop();
+    if (this.items.length && end) {
+      this.items[0] = end;
+      this.sinkDown(0);
+    }
+    return top;
+  }
+
+  bubbleUp(index) {
+    const item = this.items[index];
+    while (index > 0) {
+      const parentIndex = Math.floor((index - 1) / 2);
+      const parent = this.items[parentIndex];
+      if (item.f >= parent.f) break;
+      this.items[parentIndex] = item;
+      this.items[index] = parent;
+      index = parentIndex;
+    }
+  }
+
+  sinkDown(index) {
+    const length = this.items.length;
+    const item = this.items[index];
+    while (true) {
+      const leftIndex = index * 2 + 1;
+      const rightIndex = leftIndex + 1;
+      let swapIndex = -1;
+
+      if (leftIndex < length && this.items[leftIndex].f < item.f) {
+        swapIndex = leftIndex;
+      }
+      if (rightIndex < length) {
+        const right = this.items[rightIndex];
+        const left = swapIndex === -1 ? item : this.items[leftIndex];
+        if (right.f < left.f) swapIndex = rightIndex;
+      }
+      if (swapIndex === -1) break;
+      this.items[index] = this.items[swapIndex];
+      this.items[swapIndex] = item;
+      index = swapIndex;
+    }
+  }
+}
+
+function findGridRouteInRegion(start, goal, startPoint, endPoint, normalizedRegionId, routeContext = null, searchBudget = null) {
   if (!start || !goal) return null;
+  const budget = searchBudget || { visited: 0, max: ROUTE_SEARCH_MAX_VISITED_CELLS };
   const startIndex = start.gy * GRID_COLS + start.gx;
   const goalIndex = goal.gy * GRID_COLS + goal.gx;
-  const open = [{ index: startIndex, f: 0 }];
+  const open = new RoutePriorityQueue();
+  open.push(startIndex, 0);
   const gScore = new Map([[startIndex, 0]]);
   const cameFrom = new Map();
   const closed = new Set();
@@ -10558,9 +10656,9 @@ function findGridRouteInRegion(start, goal, startPoint, endPoint, normalizedRegi
   ];
 
   while (open.length) {
-    open.sort((a, b) => b.f - a.f);
     const current = open.pop();
     if (!current || closed.has(current.index)) continue;
+    if (budget.visited >= budget.max) return null;
     if (current.index === goalIndex) {
       const route = buildRouteFromCells(cameFrom, current.index, startPoint, endPoint, normalizedRegionId, routeContext);
       route.segments = [{ regionId: normalizedRegionId, points: route.points.map(point => ({ x: point.x, y: point.y })), length: route.length }];
@@ -10568,6 +10666,7 @@ function findGridRouteInRegion(start, goal, startPoint, endPoint, normalizedRegi
     }
 
     closed.add(current.index);
+    budget.visited += 1;
     const cx = current.index % GRID_COLS;
     const cy = Math.floor(current.index / GRID_COLS);
     const currentG = gScore.get(current.index) || 0;
@@ -10585,7 +10684,7 @@ function findGridRouteInRegion(start, goal, startPoint, endPoint, normalizedRegi
       cameFrom.set(nextIndex, current.index);
       gScore.set(nextIndex, tentative);
       const h = Math.hypot(goal.gx - nx, goal.gy - ny);
-      open.push({ index: nextIndex, f: tentative + h });
+      open.push(nextIndex, tentative + h);
     }
   }
 
@@ -10716,6 +10815,7 @@ function findLandRouteWithContext(source, target, normalizedRegionId, routeConte
   const start = nearestWalkableCellInRegion(source.x, source.y, normalizedRegionId, routeContext);
   const goal = nearestWalkableCellInRegion(target.x, target.y, normalizedRegionId, routeContext);
   const triedCellPairs = new Set();
+  const searchBudget = { visited: 0, max: ROUTE_SEARCH_MAX_VISITED_CELLS };
   const commitRoute = route => {
     if (!route) return null;
     routeCache.set(cacheKey, cloneRoute(route));
@@ -10726,7 +10826,7 @@ function findLandRouteWithContext(source, target, normalizedRegionId, routeConte
     const pairKey = `${getRouteCellKey(candidateStart)}|${getRouteCellKey(candidateGoal)}`;
     if (triedCellPairs.has(pairKey)) return null;
     triedCellPairs.add(pairKey);
-    return findGridRouteInRegion(candidateStart, candidateGoal, startPoint, endPoint, normalizedRegionId, routeContext);
+    return findGridRouteInRegion(candidateStart, candidateGoal, startPoint, endPoint, normalizedRegionId, routeContext, searchBudget);
   };
 
   const primaryRoute = tryCells(start, goal);
@@ -10902,7 +11002,7 @@ function frame(now) {
   }
 
   if (state) {
-    if (now - lastArmyRenderTime > ARMY_RENDER_INTERVAL_MS) {
+    if (hasRenderableArmyWork() && now - lastArmyRenderTime > ARMY_RENDER_INTERVAL_MS) {
       renderArmies();
     }
     if (now - lastCityDynamicTextTime > CITY_DYNAMIC_TEXT_INTERVAL_MS) {
@@ -10912,7 +11012,10 @@ function frame(now) {
     if (now - lastHudRenderTime > HUD_RENDER_INTERVAL_MS) {
       lastHudRenderTime = now;
       renderHud();
-      updateOnlinePlayersUi();
+    }
+    if (now - lastHudStatusRenderTime > HUD_STATUS_RENDER_INTERVAL_MS) {
+      lastHudStatusRenderTime = now;
+      renderHudStatusPanels();
     }
     if (now - lastRenderTime > MAP_RENDER_INTERVAL_MS && now >= interactionRenderLockUntil) {
       lastRenderTime = now;
@@ -11563,7 +11666,7 @@ function launchAttack(sourceId, targetId, percent, owner, exactTroops = null, op
     return false;
   }
 
-  const route = findRoute(source, target);
+  const route = options.route?.points?.length ? cloneRoute(options.route) : findRoute(source, target);
   if (!route || !route.points.length) {
     if (owner === "player") showToast("No land route found around the terrain.");
     return false;
@@ -12016,11 +12119,13 @@ function renderAll() {
   if (!state) return;
   const now = performance.now();
   lastHudRenderTime = now;
+  lastHudStatusRenderTime = now;
   lastRenderTime = now;
   lastArmyRenderTime = 0;
   syncMapSurfaceToActiveIsland();
   updateCameraTransform();
   renderHud();
+  renderHudStatusPanels();
   if (isCameraInteractionActive()) {
     queueDeferredMapRender();
     return;
@@ -12034,29 +12139,35 @@ function renderAll() {
 }
 
 function renderHud() {
-  if (lordNameText) lordNameText.textContent = state.playerName;
+  setTextIfChanged(lordNameText, state.playerName);
   ensureDailyCaptureTracker();
   state.character = normalizeCharacterProgress(state.character);
   state.flag = normalizeFlag(state.flag);
-  goldText.textContent = formatNumber(Math.floor(state.gold));
-  if (characterLevelBadge) characterLevelBadge.textContent = `Lv ${formatNumber(state.character.level)}`;
-  if (characterXpText) characterXpText.textContent = "";
-  applyFlagToElement(hudKingdomFlag, state.flag);
+  setTextIfChanged(goldText, formatNumber(Math.floor(state.gold)));
+  setTextIfChanged(characterLevelBadge, `Lv ${formatNumber(state.character.level)}`);
+  setTextIfChanged(characterXpText, "");
+  const flagSignature = getFlagSignature(state.flag);
+  if (hudKingdomFlag && flagSignature !== lastHudFlagSignature) {
+    lastHudFlagSignature = flagSignature;
+    applyFlagToElement(hudKingdomFlag, state.flag);
+  }
   const regularCityCount = getOwnedRegularCityCountForDisplay();
-  if (cityText) cityText.textContent = `${formatNumber(regularCityCount)} cities`;
+  setTextIfChanged(cityText, `${formatNumber(regularCityCount)} cities`);
   if (cityListBtn) cityListBtn.setAttribute("aria-label", `Open city list, ${formatNumber(regularCityCount)} cities owned`);
+
+  if (!statusText) return;
+  if (state.gameOver === "victory") {
+    setTextIfChanged(statusText, "Victory");
+  } else {
+    setTextIfChanged(statusText, `+${getGoldPerSecond().toFixed(1)} gold/s`);
+  }
+}
+
+function renderHudStatusPanels() {
   updateShieldStatusBadge();
   updateIslandSwitcherUi();
   updateIncomingAttackUi();
   updateOutgoingAttackUi();
-
-  if (!statusText) return;
-  if (state.gameOver === "victory") {
-    statusText.textContent = "Victory";
-  } else {
-    statusText.textContent = `+${getGoldPerSecond().toFixed(1)} gold/s`;
-  }
-
   if (profileScreen?.classList.contains("open")) renderProfileScreen();
 }
 
@@ -13320,6 +13431,10 @@ function updateArmyTokenElement(token, attack, mapPoint, targetCity) {
   }
 }
 
+function hasRenderableArmyWork() {
+  return Boolean((state?.attacks?.length || 0) || onlineArmies.length || armyTokenCache.size);
+}
+
 function renderArmies(force = false) {
   if (!state) return;
   if (isCameraInteractionActive()) {
@@ -13619,10 +13734,16 @@ function showTroopSliderModal(source, target) {
   if (!route || !route.points.length) {
     showToast("No land route found around the terrain.");
     selectedTargetId = null;
+    activeTroopSliderRoute = null;
     renderAll();
     return;
   }
 
+  activeTroopSliderRoute = {
+    sourceId: source.id,
+    targetId: target.id,
+    route: cloneRoute(route),
+  };
   const isTransfer = target.owner === "player";
   const mainCityBlockReason = isTransfer ? "" : getMainCityAttackBlockReason(target, "player");
   if (mainCityBlockReason) {
@@ -13742,6 +13863,7 @@ function confirmTroopSliderOrder() {
   const target = selectedTargetId ? cityById(selectedTargetId) : null;
   if (!source || !target || source.owner !== "player" || source.troops < 1) {
     troopSliderActive = false;
+    activeTroopSliderRoute = null;
     modal.classList.remove("troop-slider-modal");
     if (modal.open) modal.close();
     clearSelection(false);
@@ -13751,9 +13873,13 @@ function confirmTroopSliderOrder() {
   }
 
   selectedTroopAmount = clamp(selectedTroopAmount, 1, source.troops);
-  const launched = launchAttack(source.id, target.id, 1, "player", selectedTroopAmount);
+  const cachedRoute = activeTroopSliderRoute?.sourceId === source.id && activeTroopSliderRoute?.targetId === target.id
+    ? activeTroopSliderRoute.route
+    : null;
+  const launched = launchAttack(source.id, target.id, 1, "player", selectedTroopAmount, { route: cachedRoute });
   if (!launched) return;
   troopSliderActive = false;
+  activeTroopSliderRoute = null;
   modal.classList.remove("troop-slider-modal");
   if (modal.open) modal.close();
   clearSelection(false);
@@ -13764,6 +13890,7 @@ function cancelSendMode() {
   sendMode = false;
   selectedTargetId = null;
   selectedTroopAmount = 1;
+  activeTroopSliderRoute = null;
   renderAll();
 }
 
@@ -14402,7 +14529,9 @@ function renderItemIcon(item, imageClass = "") {
 
 function renderShopItem(item, inventory) {
   const owned = Math.max(0, Math.floor(Number(inventory[item.id]) || 0));
-  const canBuy = state && !shopPurchaseInFlight && Math.floor(Number(state.gold) || 0) >= item.cost;
+  const cooldownText = getItemPurchaseCooldownText(item.id);
+  const canBuy = state && !shopPurchaseInFlight && !cooldownText && Math.floor(Number(state.gold) || 0) >= item.cost;
+  const buyLabel = cooldownText ? "Cooldown" : "Buy";
   return `
     <article class="shop-item">
       <div class="shop-item-image-placeholder ${item.icon ? "has-image" : ""}" aria-hidden="true">
@@ -14412,9 +14541,10 @@ function renderShopItem(item, inventory) {
         <strong>${escapeHtml(item.label)}</strong>
         <span>${formatNumber(item.cost)} gold</span>
         <small>Owned: ${formatNumber(owned)}</small>
+        ${cooldownText ? `<small class="shop-item-cooldown">Available in ${escapeHtml(cooldownText)}</small>` : ""}
         <small>${escapeHtml(item.description)}</small>
       </div>
-      <button class="shop-buy-btn" data-shop-buy="${escapeHtml(item.id)}" type="button" ${canBuy ? "" : "disabled"}>Buy</button>
+      <button class="shop-buy-btn" data-shop-buy="${escapeHtml(item.id)}" type="button" ${canBuy ? "" : "disabled"}>${buyLabel}</button>
     </article>
   `;
 }
@@ -14452,6 +14582,12 @@ async function buyShopItem(itemId) {
   if (shopPurchaseInFlight) return;
   const item = getShopItemById(itemId);
   if (!item) return;
+  const cooldownText = getItemPurchaseCooldownText(item.id);
+  if (cooldownText) {
+    showToast(`${item.label} can be purchased again in ${cooldownText}.`);
+    renderShopModal();
+    return;
+  }
   const currentGold = Math.floor(Number(state.gold) || 0);
   if (currentGold < item.cost) {
     showToast(`${item.label} costs ${formatNumber(item.cost)} gold.`);
@@ -14475,8 +14611,12 @@ async function buyShopItem(itemId) {
     }
 
     const inventory = ensureShopItems();
+    const cooldowns = ensureItemPurchaseCooldowns();
     state.gold = currentGold - item.cost;
     inventory[item.id] = Math.max(0, Math.floor(Number(inventory[item.id]) || 0)) + 1;
+    if (item.id === ROYAL_PEACE_SHIELD_ITEM_ID) {
+      cooldowns[ROYAL_PEACE_SHIELD_ITEM_ID] = { lastPurchasedAtMs: Date.now() };
+    }
 
     addLog(`Bought ${item.label} for ${formatNumber(item.cost)} gold.`);
     saveGame();
@@ -15769,6 +15909,7 @@ function showLogModal() {
   modalBody.querySelectorAll("[data-report-detail]").forEach(button => {
     button.addEventListener("click", () => showBattleReportDetail(button.dataset.reportDetail));
   });
+  bindBattleReportJumpButtons();
   if (!modal.open) modal.showModal();
 }
 
@@ -15780,6 +15921,7 @@ function renderBattleReportCard(report) {
     : (report.sentTroops || report.troopCount || report.defendersLeft);
   const opponent = report.opponentName || report.ownerName || "Unknown";
   const troopLabel = report.type === "scout" ? "reported" : "sent";
+  const locateButton = renderBattleReportLocateButton(report);
   return `
     <article class="battle-report-card ${badge.tone}">
       <div class="battle-report-result">
@@ -15799,9 +15941,59 @@ function renderBattleReportCard(report) {
         <strong>${escapeHtml(opponent)}</strong>
         <small>${escapeHtml(report.summary || getBattleReportSummary(report))}</small>
       </div>
-      <button class="battle-report-detail-btn" data-report-detail="${escapeHtml(report.id)}" type="button" aria-label="Open report details">&#128203;</button>
+      <div class="battle-report-actions">
+        ${locateButton}
+        <button class="battle-report-detail-btn" data-report-detail="${escapeHtml(report.id)}" type="button" aria-label="Open report details">&#128203;</button>
+      </div>
     </article>
   `;
+}
+
+function renderBattleReportLocateButton(report, extraClass = "") {
+  const cityId = getResolvableReportCityId(report?.cityId);
+  if (!cityId) {
+    return `<button class="battle-report-locate-btn ${extraClass}" type="button" aria-label="Target unavailable" disabled>&#8982;</button>`;
+  }
+  const loadedCity = cityById(cityId);
+  const regionId = report.regionId || getCityRegionId(loadedCity || cityId);
+  const label = report.cityName || "target city";
+  return `<button class="battle-report-locate-btn ${extraClass}" data-report-jump="${escapeHtml(cityId)}" data-report-region="${escapeHtml(regionId)}" type="button" aria-label="Go to ${escapeHtml(label)}">&#8982;</button>`;
+}
+
+function getResolvableReportCityId(cityId) {
+  const value = String(cityId || "");
+  if (!value) return "";
+  return getKnownCityId(value) || (cityById(value) ? value : "");
+}
+
+async function focusBattleReportTarget(cityId, regionId = "") {
+  const targetCityId = getResolvableReportCityId(cityId);
+  if (!targetCityId) {
+    showToast("That target city is no longer available.");
+    return;
+  }
+  const loadedCity = cityById(targetCityId);
+  const targetRegionId = normalizeRegionId(regionId || getCityRegionId(loadedCity || targetCityId));
+  if (modal.open) modal.close();
+  scoutNearbySourceId = null;
+  regroupSourceId = null;
+  sendMode = false;
+  selectedTargetId = null;
+  if (targetRegionId !== getActiveMapRegionId()) {
+    const switched = await switchOnlineIsland(targetRegionId);
+    if (!switched || targetRegionId !== getActiveMapRegionId()) return;
+  }
+  selectCity(targetCityId);
+  const target = cityById(targetCityId);
+  showToast(target ? `Viewing ${target.name}` : "Viewing report target");
+}
+
+function bindBattleReportJumpButtons() {
+  modalBody.querySelectorAll("[data-report-jump]").forEach(button => {
+    button.addEventListener("click", () => {
+      focusBattleReportTarget(button.dataset.reportJump, button.dataset.reportRegion || "");
+    });
+  });
 }
 
 function showBattleReportDetail(reportId) {
@@ -15821,6 +16013,7 @@ function showBattleReportDetail(reportId) {
         <span>${badge.label}</span>
         <strong>${escapeHtml(report.cityName)}</strong>
         <small>Level ${formatNumber(report.cityLevel)} - ${formatDuration(Math.max(0, state.gameSeconds - report.createdAt))} ago</small>
+        ${renderBattleReportLocateButton(report, "battle-report-locate-detail")}
       </div>
       <div class="battle-report-detail-grid">
         <div><span>Type</span><strong>${escapeHtml(getBattleReportTypeLabel(report.type))}</strong></div>
@@ -15836,6 +16029,7 @@ function showBattleReportDetail(reportId) {
     </div>
   `;
   modalBody.querySelector("#battleReportBackBtn")?.addEventListener("click", showLogModal);
+  bindBattleReportJumpButtons();
   if (!modal.open) modal.showModal();
 }
 

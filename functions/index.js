@@ -64,6 +64,7 @@ const CITY_UPGRADE_XP_BASE = 18;
 const CITY_UPGRADE_XP_PER_LEVEL = 4;
 const ROYAL_PEACE_SHIELD_ITEM_ID = "shield_12h";
 const ROYAL_PEACE_SHIELD_DURATION_MS = 12 * 60 * 60 * 1000;
+const ROYAL_PEACE_SHIELD_PURCHASE_COOLDOWN_MS = 24 * 60 * 60 * 1000;
 const WAR_DRUMS_ITEM_ID = "war_drums_30m";
 const WAR_DRUMS_DURATION_MS = 30 * 60 * 1000;
 const WAR_DRUMS_TROOP_PRODUCTION_BONUS_PERCENT = 5;
@@ -381,6 +382,20 @@ function getCityPowerFloor(city = {}) {
   const troopPower = Math.max(0, Math.floor(safeNumber(city.troops, 0))) * KING_POWER_PER_TROOP;
   const cityPower = Math.max(0, Math.floor(safeNumber(stats.victoryPoints, 0))) * KING_POWER_PER_CITY_VP;
   return troopPower + cityPower;
+}
+
+function getPowerValue(...values) {
+  return Math.max(0, ...values.map(value => Math.floor(safeNumber(value, 0))));
+}
+
+function getPlayerPowerSnapshot({ profile = {}, leaderboard = {}, city = {}, fallback = 0 } = {}) {
+  const serverPower = getPowerValue(
+    profile.kingPower,
+    leaderboard.kingPower,
+    city.ownerKingPower,
+    getCityPowerFloor(city)
+  );
+  return serverPower > 0 ? serverPower : getPowerValue(fallback);
 }
 
 function getDemoAttackTier(powerRatio) {
@@ -910,6 +925,7 @@ function makeReport({ id, uid, type, outcome, city, opponentName = "", summary =
     type,
     outcome,
     cityId: safeString(city?.id, 96),
+    regionId: safeString(city?.regionId || city?.startPool || "", 80),
     cityName: safeString(city?.name || city?.id || "Unknown city", 40),
     cityLevel: clampCityLevel(city?.level || 1),
     troopCount: Math.max(0, Math.floor(safeNumber(troopCount, city?.troops || 0))),
@@ -1098,6 +1114,28 @@ function normalizeItemPurchaseCooldowns(cooldowns = {}) {
       lastPurchasedAtMs: timestampToMs(shieldCooldown.lastPurchasedAtMs || shieldCooldown.lastPurchasedAt),
     },
   };
+}
+
+function getShieldPurchaseCooldownRemainingMs(cooldowns = {}, nowMs = Date.now()) {
+  const lastPurchasedAtMs = timestampToMs(cooldowns?.[ROYAL_PEACE_SHIELD_ITEM_ID]?.lastPurchasedAtMs);
+  if (!lastPurchasedAtMs) return 0;
+  const elapsed = Math.max(0, nowMs - Math.min(lastPurchasedAtMs, nowMs));
+  return Math.max(0, ROYAL_PEACE_SHIELD_PURCHASE_COOLDOWN_MS - elapsed);
+}
+
+function formatCooldownMs(ms) {
+  const totalSeconds = Math.max(0, Math.ceil(safeNumber(ms, 0) / 1000));
+  if (totalSeconds >= 3600) {
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    return `${hours}h${minutes > 0 ? ` ${minutes}m` : ""}`;
+  }
+  if (totalSeconds >= 60) {
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    return `${minutes}m ${seconds}s`;
+  }
+  return `${totalSeconds}s`;
 }
 
 function getOwnedStrongholdBonuses(cities = []) {
@@ -2449,6 +2487,15 @@ exports.purchaseShopItem = onCall({ region: "us-central1", maxInstances: 20, inv
     if (gold < item.cost) {
       throw new HttpsError("failed-precondition", `${item.label} costs ${item.cost.toLocaleString()} gold.`);
     }
+    if (itemId === ROYAL_PEACE_SHIELD_ITEM_ID) {
+      const cooldownRemainingMs = getShieldPurchaseCooldownRemainingMs(economy.itemPurchaseCooldowns, nowMs);
+      if (cooldownRemainingMs > 0) {
+        throw new HttpsError(
+          "failed-precondition",
+          `Royal Peace Shield can only be purchased once every 24 hours. Available in ${formatCooldownMs(cooldownRemainingMs)}.`
+        );
+      }
+    }
 
     goldFloat = Math.max(0, goldFloat - item.cost);
     gold = Math.max(0, Math.floor(goldFloat));
@@ -2565,13 +2612,15 @@ exports.sendArmyOrder = onCall({ region: "us-central1", maxInstances: 20, invoke
   const targetRef = cityRefForRegion(order.targetRegionId, order.toId);
   const armyRefs = armyRefsForRegions(order.routeRegionIds, order.id);
   const playerRef = db.doc(`players/${uid}`);
+  const attackerLeaderboardRef = db.doc(`leaderboards/kingPower/entries/${uid}`);
 
   const result = await db.runTransaction(async transaction => {
-    const [sourceSnap, targetSnap, existingArmySnap, playerSnap] = await Promise.all([
+    const [sourceSnap, targetSnap, existingArmySnap, playerSnap, attackerLeaderboardSnap] = await Promise.all([
       transaction.get(sourceRef),
       transaction.get(targetRef),
       transaction.get(armyRefs[0]),
       transaction.get(playerRef),
+      transaction.get(attackerLeaderboardRef),
     ]);
 
     if (!sourceSnap.exists) throw new HttpsError("not-found", "Source city was not found.");
@@ -2604,6 +2653,7 @@ exports.sendArmyOrder = onCall({ region: "us-central1", maxInstances: 20, invoke
     }
 
     const playerData = playerSnap.exists ? playerSnap.data() || {} : {};
+    const attackerLeaderboardData = attackerLeaderboardSnap.exists ? attackerLeaderboardSnap.data() || {} : {};
     if (sourceOwnerUid !== uid) {
       throw new HttpsError("permission-denied", "You can only send troops from your own city.");
     }
@@ -2617,7 +2667,11 @@ exports.sendArmyOrder = onCall({ region: "us-central1", maxInstances: 20, invoke
     const defenderPowerSnap = targetOwnerUid && targetOwnerUid !== uid
       ? await transaction.get(db.doc(`players/${targetOwnerUid}`))
       : null;
+    const defenderLeaderboardSnap = targetOwnerUid && targetOwnerUid !== uid
+      ? await transaction.get(db.doc(`leaderboards/kingPower/entries/${targetOwnerUid}`))
+      : null;
     const defenderPowerData = defenderPowerSnap?.exists ? defenderPowerSnap.data() || {} : {};
+    const defenderLeaderboardData = defenderLeaderboardSnap?.exists ? defenderLeaderboardSnap.data() || {} : {};
 
     const sourceTroops = Math.max(0, Math.floor(safeNumber(source.troops, 0)));
     const resolvedKind = order.kind === "scout"
@@ -2628,18 +2682,18 @@ exports.sendArmyOrder = onCall({ region: "us-central1", maxInstances: 20, invoke
     const requestedTroops = resolvedKind === "scout"
       ? 1
       : clampInt(order.requestedTroops || order.troops || Math.floor(sourceTroops * DEFAULT_MARCH_PERCENT), 1, Math.max(1, sourceTroops));
-    const attackerKingPower = Math.max(
-      0,
-      Math.floor(safeNumber(attackerProfile.kingPower, 0)),
-      Math.floor(safeNumber(order.ownerKingPower, 0)),
-      Math.floor(safeNumber(order.attackerKingPower, 0))
-    );
-    const defenderKingPower = Math.max(
-      1,
-      Math.floor(safeNumber(target.ownerKingPower, 0)),
-      Math.floor(safeNumber(defenderPowerData.kingPower, 0)),
-      Math.floor(getCityPowerFloor(target))
-    );
+    const attackerKingPower = getPlayerPowerSnapshot({
+      profile: attackerProfile,
+      leaderboard: attackerLeaderboardData,
+      city: source,
+      fallback: Math.max(order.ownerKingPower, order.attackerKingPower),
+    });
+    const defenderKingPower = Math.max(1, getPlayerPowerSnapshot({
+      profile: defenderPowerData,
+      leaderboard: defenderLeaderboardData,
+      city: target,
+      fallback: order.defenderKingPower,
+    }));
     const demoAttack = resolvedKind === "attack"
       ? createServerDemoAttackSnapshot({
         sourceTroops,

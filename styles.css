@@ -2044,6 +2044,10 @@ input {
   color: var(--muted);
   font-size: .72rem;
 }
+.shop-item-copy .shop-item-cooldown {
+  color: #ffe293;
+  font-weight: 950;
+}
 .shop-buy-btn {
   min-width: 104px;
   min-height: 44px;
@@ -2764,7 +2768,8 @@ button.inventory-slot {
 }
 .battle-report-filters button,
 .battle-report-back,
-.battle-report-detail-btn {
+.battle-report-detail-btn,
+.battle-report-locate-btn {
   min-height: 36px;
   border-radius: 12px;
   padding: 0 .65rem;
@@ -2784,7 +2789,7 @@ button.inventory-slot {
 }
 .battle-report-card {
   display: grid;
-  grid-template-columns: 150px minmax(150px, 1fr) 120px minmax(160px, 1fr) 46px;
+  grid-template-columns: 150px minmax(150px, 1fr) 120px minmax(160px, 1fr) 88px;
   align-items: center;
   gap: .55rem;
   min-height: 78px;
@@ -2860,11 +2865,25 @@ button.inventory-slot {
   grid-row: span 2;
   font-size: 1.65rem;
 }
-.battle-report-detail-btn {
+.battle-report-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: .35rem;
+}
+.battle-report-detail-btn,
+.battle-report-locate-btn {
   width: 42px;
   min-width: 42px;
   padding: 0;
   font-size: 1.2rem;
+}
+.battle-report-locate-btn {
+  color: #1b0e05;
+  background: linear-gradient(#fff1a5, #f2a83c);
+  border-color: rgba(255,255,255,.38);
+}
+.battle-report-locate-btn:disabled {
+  opacity: .45;
 }
 .battle-report-empty {
   padding: 1.2rem;
@@ -2888,6 +2907,10 @@ button.inventory-slot {
   border-radius: 12px;
   background: rgba(4, 15, 27, .72);
   border: 1px solid rgba(255,255,255,.12);
+}
+.battle-report-locate-detail {
+  justify-self: end;
+  margin-top: -.2rem;
 }
 .battle-report-detail-head span {
   width: max-content;
@@ -3239,10 +3262,14 @@ button.inventory-slot {
   .battle-report-opponent {
     grid-column: 1;
   }
-  .battle-report-detail-btn {
+  .battle-report-actions {
     grid-column: 2;
     grid-row: 1 / span 4;
     align-self: stretch;
+    flex-direction: column;
+  }
+  .battle-report-detail-btn,
+  .battle-report-locate-btn {
     height: auto;
   }
   .battle-report-detail-grid {
