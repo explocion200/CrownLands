@@ -2226,6 +2226,7 @@ const islandMapPickerViewState = {
   scrollTop: 0,
   hasView: false,
 };
+let islandMapHomeRefreshInFlight = false;
 let onlinePresenceTimer = 0;
 let onlinePresenceInFlight = false;
 let onlineSessionReplaced = false;
@@ -7825,6 +7826,65 @@ function restoreIslandMapPickerView(picker) {
   return true;
 }
 
+function updateIslandMapHomeMarkerInPlace(homeRegionId = getMainCityRegionId()) {
+  const picker = getIslandMapPickerElement();
+  if (!picker) return false;
+  const activeRegionId = getActiveOnlineRegionId();
+  const nextHomeRegionId = normalizeRegionId(homeRegionId);
+  picker.querySelectorAll("[data-island-region]").forEach(button => {
+    const regionId = normalizeRegionId(button.dataset.islandRegion);
+    const isHome = regionId === nextHomeRegionId;
+    const isActive = regionId === activeRegionId;
+    button.classList.toggle("home", isHome);
+
+    let homeLabel = button.querySelector(".island-map-home-label");
+    if (isHome && !homeLabel) {
+      homeLabel = document.createElement("span");
+      homeLabel.className = "island-map-home-label";
+      homeLabel.textContent = "Home map";
+      button.appendChild(homeLabel);
+    } else if (!isHome && homeLabel) {
+      homeLabel.remove();
+    }
+
+    const ariaParts = [getRegionLabel(regionId), getIslandTileAriaSummary(regionId)];
+    if (isActive) ariaParts.push("current map");
+    if (isHome) ariaParts.push("home island");
+    button.setAttribute("aria-label", ariaParts.join(", "));
+  });
+  return true;
+}
+
+async function refreshIslandMapHomeRegionOnceForOpen() {
+  if (!state || islandMapHomeRefreshInFlight) return false;
+  const api = getOnlineApi();
+  if (!api?.loadPlayerProfile || !api?.isSignedIn?.()) return false;
+  islandMapHomeRefreshInFlight = true;
+  try {
+    const profile = await withTimeout(api.loadPlayerProfile(), 3500, "Player profile lookup is taking too long.");
+    if (!profile || !isCurrentResetProfile(profile)) return false;
+    const homeRegionId = getStoredHomeRegionId(profile, { trustLocalState: false });
+    if (!homeRegionId) return false;
+    const mainCityId = getKnownCityId(profile.mainCityId);
+    if (!state.online) state.online = {};
+    state.online.mainRegionId = homeRegionId;
+    state.online.mainIslandId = getOnlineIslandId(homeRegionId);
+    if (mainCityId) {
+      state.online.mainCityId = mainCityId;
+      state.mainCityId = mainCityId;
+    }
+    updateIslandMapHomeMarkerInPlace(homeRegionId);
+    updateIslandSwitcherUi();
+    updateMainCityReturnButton();
+    return true;
+  } catch (error) {
+    console.warn("Could not refresh home map marker", error);
+    return false;
+  } finally {
+    islandMapHomeRefreshInFlight = false;
+  }
+}
+
 function centerIslandMapPickerOnRegion(picker, regionId) {
   if (!picker || !regionId) return;
   const apply = () => {
@@ -7919,6 +7979,7 @@ function showIslandSwitcherModal() {
   modalTitle.textContent = "Map";
   renderIslandSwitcherModalContent();
   if (!modal.open) modal.showModal();
+  refreshIslandMapHomeRegionOnceForOpen();
 }
 
 function prepareSelectionForIslandSwitch() {
