@@ -2242,6 +2242,8 @@ let leaderboardSaveTimer = 0;
 let leaderboardSaveInFlight = false;
 let leaderboardLastSignature = "";
 let leaderboardLastSaveAt = 0;
+let kingPowerCalculationInProgress = false;
+let lastComputedKingPower = 0;
 let overdueArmyResolveTimer = 0;
 let pendingArmyRecoveryInFlight = false;
 let shopPurchaseInFlight = false;
@@ -12120,11 +12122,26 @@ function getCityKingPower(city) {
   return troopPower + cityPower;
 }
 
+function getCachedKingPowerFallback() {
+  const currentUid = getCurrentOnlineUid();
+  const cachedIdentityPower = currentUid
+    ? normalizePowerValue(playerIdentityCache.get(currentUid)?.kingPower)
+    : 0;
+  return Math.max(0, normalizePowerValue(lastComputedKingPower), cachedIdentityPower);
+}
+
 function getKingPower() {
   if (!state || !Array.isArray(state.cities)) return 0;
-  const stationedPower = getAllOwnedCitiesForDisplay().reduce((total, city) => total + getCityKingPower(city), 0);
-  const marchingPower = getPlayerMarchingTroops() * KING_POWER_PER_TROOP;
-  return Math.max(0, Math.floor(stationedPower + marchingPower));
+  if (kingPowerCalculationInProgress) return getCachedKingPowerFallback();
+  kingPowerCalculationInProgress = true;
+  try {
+    const stationedPower = getAllOwnedCitiesForDisplay().reduce((total, city) => total + getCityKingPower(city), 0);
+    const marchingPower = getPlayerMarchingTroops() * KING_POWER_PER_TROOP;
+    lastComputedKingPower = Math.max(0, Math.floor(stationedPower + marchingPower));
+    return lastComputedKingPower;
+  } finally {
+    kingPowerCalculationInProgress = false;
+  }
 }
 
 function getKingdomSummary() {
