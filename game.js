@@ -41,6 +41,8 @@ const MAP_RENDER_INTERVAL_MS = 1600;
 const ARMY_RENDER_INTERVAL_MS = 140;
 const CITY_DYNAMIC_TEXT_INTERVAL_MS = 600;
 const PERFORMANCE_PANEL_SAMPLE_MS = 500;
+const CROWDED_MAP_CITY_THRESHOLD = 70;
+const CROWDED_MAP_ARMY_THRESHOLD = 24;
 const CITY_LIST_PAGE_SIZE = 5;
 const INVENTORY_SLOT_COUNT = 5;
 const SHOP_ITEMS = [
@@ -3772,6 +3774,22 @@ function isMapInteractionBlocked() {
   return Boolean(onlineWorldLoading || mapSwitchLoading);
 }
 
+function updateMapDensityMode(visibleCityCount = null, visibleArmyCount = null) {
+  if (!mapFrame) return;
+  const hasCityCount = visibleCityCount !== null && visibleCityCount !== undefined && Number.isFinite(Number(visibleCityCount));
+  const hasArmyCount = visibleArmyCount !== null && visibleArmyCount !== undefined && Number.isFinite(Number(visibleArmyCount));
+  const cityCount = hasCityCount
+    ? Number(visibleCityCount)
+    : cityLayer?.querySelectorAll(".city-node").length || 0;
+  const armyCount = hasArmyCount
+    ? Number(visibleArmyCount)
+    : armyTokenCache.size;
+  mapFrame.classList.toggle(
+    "crowded-map",
+    cityCount >= CROWDED_MAP_CITY_THRESHOLD || armyCount >= CROWDED_MAP_ARMY_THRESHOLD,
+  );
+}
+
 function setImageMapBackground(regionId, imageSrc) {
   if (!mapBg || !imageSrc) return;
   const targetRegionId = normalizeRegionId(regionId);
@@ -3779,7 +3797,7 @@ function setImageMapBackground(regionId, imageSrc) {
   if (
     mapBg.dataset.imageRegion === targetRegionId
     && mapBg.dataset.imageSrc === imageSrc
-    && activeImage
+    && activeImage?.getAttribute("src") === imageSrc
   ) {
     return;
   }
@@ -3789,33 +3807,23 @@ function setImageMapBackground(regionId, imageSrc) {
   mapBg.dataset.imageSrc = imageSrc;
   mapBg.classList.add("image-map-ready");
 
-  const image = document.createElement("img");
-  image.className = `island-art-map ${targetRegionId}-island-art`;
-  image.src = imageSrc;
-  image.alt = "";
-  image.draggable = false;
-  image.decoding = "async";
-  image.loading = "eager";
-  image.fetchPriority = "high";
-  mapBg.appendChild(image);
-
-  preloadImage(imageSrc).finally(() => {
-    if (!mapBg || swapToken !== mapImageSwapToken) {
-      image.remove();
+  preloadImage(imageSrc).then(success => {
+    if (!mapBg || swapToken !== mapImageSwapToken || !success) {
       return;
     }
+    const image = document.createElement("img");
+    image.className = `island-art-map ${targetRegionId}-island-art active`;
+    image.src = imageSrc;
+    image.dataset.imageRegion = targetRegionId;
+    image.dataset.imageSrc = imageSrc;
+    image.alt = "";
+    image.draggable = false;
+    image.decoding = "async";
+    image.loading = "eager";
+    image.fetchPriority = "high";
     requestAnimationFrame(() => {
-      image.classList.add("active");
-      [...mapBg.children]
-        .filter(node => node !== image && !node.classList.contains("island-art-map"))
-        .forEach(node => node.remove());
-      [...mapBg.querySelectorAll(".island-art-map")]
-        .filter(node => node !== image)
-        .forEach(node => {
-          node.classList.remove("active");
-          node.classList.add("retiring");
-          window.setTimeout(() => node.remove(), 240);
-        });
+      if (!mapBg || swapToken !== mapImageSwapToken) return;
+      mapBg.replaceChildren(image);
     });
   });
 }
@@ -12294,6 +12302,7 @@ function renderCities(force = false) {
   const visibleBounds = getVisibleWorldBounds();
   const visibleCities = state.cities.filter(city => shouldRenderCityNode(city, visibleBounds));
   const visibleCamps = WORLD_CAMPS.filter(camp => shouldRenderCampNode(camp, visibleBounds));
+  updateMapDensityMode(visibleCities.length + visibleCamps.length);
   const signature = getCityRenderSignature(visibleCities, visibleCamps);
   if (!force && signature === cityRenderSignature) {
     updateVisibleCityDynamicText();
@@ -12826,6 +12835,7 @@ function renderArmies(force = false) {
     token.remove();
     armyTokenCache.delete(tokenId);
   }
+  updateMapDensityMode(null, visibleArmyTokenIds.size);
 }
 
 function ensurePerformancePanel() {

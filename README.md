@@ -149,7 +149,8 @@ Deploying to Netlify still works through GitHub push. `netlify.toml` keeps `inde
 
 ## Performance Notes
 
-- Map backgrounds now keep the previous region image visible until the next region image is decoded, then crossfade. This avoids blank flicker while switching maps.
+- Map backgrounds now replace the visible region image only after the next image is decoded, without crossfading two full map images at once. This avoids blank flicker while keeping mobile GPU memory lower.
+- Large map child layers avoid forced 3D compositing, and crowded-map mode disables extra shadows/animations when many city or army markers are visible.
 - City marker rebuilds are reserved for structural changes such as owner, level, selection, flag, shield, visibility, or report state. Troop counts update separately on a short interval so normal production does not rebuild every visible city.
 - Army tokens are reused and moved with `translate3d` transforms instead of being rebuilt each movement tick.
 - Pan and pinch movement schedule camera transforms through `requestAnimationFrame` to reduce mobile pointer-event work.
