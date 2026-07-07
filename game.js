@@ -211,6 +211,7 @@ const DEFAULT_MARCH_PERCENT = 0.5;
 const MIN_ZOOM = 0.40;
 const MAX_ZOOM = 1;
 const WHEEL_ZOOM_STEP = 1.12;
+const MAP_TOUCH_PAN_THRESHOLD = 12;
 const ZOOM_RENDER_SETTLE_MS = 260;
 const PAN_RENDER_SETTLE_MS = 180;
 const MAIN_CITY_RETURN_CAMERA_THROTTLE_MS = 180;
@@ -5179,6 +5180,127 @@ function getMainCityRegionId() {
   return normalizeRegionId(state?.mainCityId ? getCityRegionId(state.mainCityId) : state?.online?.mainRegionId || getActiveOnlineRegionId());
 }
 
+function getKnownOwnedRegularCities() {
+  if (!state) return [];
+  const merged = new Map();
+  onlineOwnedCitiesCache.forEach(city => {
+    const normalized = normalizeOwnedCitySnapshot(city);
+    if (normalized && !isStronghold(normalized)) merged.set(normalized.id, normalized);
+  });
+  playerRegularCities().forEach(city => {
+    const normalized = normalizeOwnedCitySnapshot({
+      ...city,
+      islandId: getOnlineIslandId(getCityRegionId(city)),
+    });
+    if (normalized && !isStronghold(normalized)) merged.set(normalized.id, normalized);
+  });
+  return Array.from(merged.values());
+}
+
+function resolveSingleMainCityId(preferredCityId = "") {
+  if (!state) return "";
+  const preferredId = getKnownCityId(preferredCityId);
+  const currentId = getKnownCityId(state.mainCityId);
+  const ownedCities = getKnownOwnedRegularCities();
+  const ownedIds = new Set(ownedCities.map(city => city.id));
+  if (preferredId && ownedIds.has(preferredId)) return preferredId;
+  if (currentId && (!ownedIds.size || ownedIds.has(currentId))) return currentId;
+  const flagged = ownedCities.find(city => city.isMainCity && !isStronghold(city));
+  return flagged?.id || ownedCities[0]?.id || currentId || preferredId || "";
+}
+
+function normalizeSingleMainCityAssignment(preferredCityId = "", { markDirty = false } = {}) {
+  if (!state) return { mainCityId: "", changed: false };
+  const mainCityId = resolveSingleMainCityId(preferredCityId);
+  let changed = false;
+  if (mainCityId && state.mainCityId !== mainCityId) {
+    state.mainCityId = mainCityId;
+    changed = true;
+  }
+
+  if (mainCityId && state.online) {
+    const mainRegionId = getCityRegionId(mainCityId);
+    if (state.online.mainCityId !== mainCityId) {
+      state.online.mainCityId = mainCityId;
+      changed = true;
+    }
+    if (state.online.mainRegionId !== mainRegionId) {
+      state.online.mainRegionId = mainRegionId;
+      changed = true;
+    }
+    const mainIslandId = getOnlineIslandId(mainRegionId);
+    if (state.online.mainIslandId !== mainIslandId) {
+      state.online.mainIslandId = mainIslandId;
+      changed = true;
+    }
+  }
+
+  if (Array.isArray(state.cities)) {
+    state.cities.forEach(city => {
+      if (city.owner !== "player") return;
+      if (isStronghold(city)) {
+        if (city.isMainCity) {
+          city.isMainCity = false;
+          changed = true;
+        }
+        return;
+      }
+      const shouldBeMain = Boolean(mainCityId && city.id === mainCityId);
+      if (city.isMainCity !== shouldBeMain) {
+        city.isMainCity = shouldBeMain;
+        changed = true;
+        if (markDirty) markOwnedCityChanged(city, false);
+      }
+    });
+  }
+
+  if (onlineOwnedCitiesCache.length) {
+    onlineOwnedCitiesCache = onlineOwnedCitiesCache.map(city => {
+      const shouldBeMain = Boolean(mainCityId && city.id === mainCityId && !isStronghold(city));
+      if (Boolean(city.isMainCity) === shouldBeMain) return city;
+      changed = true;
+      return { ...city, isMainCity: shouldBeMain };
+    });
+    updateIslandSummariesFromOwnedCityCache();
+  }
+
+  return { mainCityId, changed };
+}
+
+async function syncSingleMainCityAssignmentToOnline(mainCityId = state?.mainCityId || "", { refreshFirst = false } = {}) {
+  if (!state || !mainCityId || !isOnlineWorldActive()) return false;
+  const api = getOnlineApi();
+  if (!api?.savePlayerCities || !api?.isSignedIn?.()) return false;
+  if (refreshFirst && api.loadOwnedCitiesAcrossIslands) {
+    await refreshAllOwnedCities(true).catch(error => {
+      console.warn("Could not refresh owned cities before main city repair", error);
+      return false;
+    });
+  }
+
+  const normalizedMainCityId = getKnownCityId(mainCityId);
+  normalizeSingleMainCityAssignment(normalizedMainCityId, { markDirty: false });
+  const groupedByIsland = new Map();
+  getKnownOwnedRegularCities().forEach(city => {
+    const patched = {
+      ...city,
+      isMainCity: city.id === normalizedMainCityId,
+      islandId: city.islandId || getOnlineIslandId(getCityRegionId(city)),
+    };
+    const islandId = patched.islandId;
+    if (!groupedByIsland.has(islandId)) groupedByIsland.set(islandId, []);
+    groupedByIsland.get(islandId).push(patched);
+  });
+  if (!groupedByIsland.size) return false;
+
+  const saves = [...groupedByIsland.entries()].map(([islandId, cities]) => api.savePlayerCities(islandId, cities));
+  await Promise.all(saves);
+  const syncedCities = [...groupedByIsland.values()].flat();
+  syncedCities.forEach(city => localDirtyCityIds.delete(city.id));
+  mergeOwnedCitySnapshots(syncedCities, { complete: false });
+  return true;
+}
+
 function getMainCityChangeCooldownRemainingMs(now = Date.now()) {
   if (!state) return 0;
   const lastChangedAt = normalizeTimestampMs(state.mainCityChangedAtMs);
@@ -5213,7 +5335,7 @@ function getMainCityChangeStatus(city, now = Date.now()) {
   };
 }
 
-function changeMainCity(cityId) {
+async function changeMainCity(cityId) {
   if (!state) return false;
   const city = cityById(cityId);
   const status = getMainCityChangeStatus(city);
@@ -5224,12 +5346,9 @@ function changeMainCity(cityId) {
   }
 
   const previousMain = getLoadedMainCity() || (state.mainCityId ? cityById(state.mainCityId) : null);
-  state.cities.forEach(item => {
-    item.isMainCity = item.id === city.id;
-  });
-  city.isMainCity = true;
   state.mainCityId = city.id;
   state.mainCityChangedAtMs = Date.now();
+  normalizeSingleMainCityAssignment(city.id, { markDirty: true });
 
   const mainRegionId = getCityRegionId(city);
   if (state.online) {
@@ -5248,6 +5367,10 @@ function changeMainCity(cityId) {
   addLog(`${city.name} is now your main city.`);
   saveGame();
   if (isOnlineWorldActive()) {
+    await syncSingleMainCityAssignmentToOnline(city.id, { refreshFirst: true }).catch(error => {
+      console.warn("Could not repair remote main city flags", error);
+      return false;
+    });
     syncOwnedCitiesToOnline(true);
     publishOnlinePresence(true);
     flushOnlineSave(true);
@@ -6611,6 +6734,8 @@ function applyServerProfilePatch(patch = null) {
     state.mainCityChangedAtMs = normalizeTimestampMs(patch.mainCityChangedAtMs);
     changed = true;
   }
+  const mainCityRepair = normalizeSingleMainCityAssignment(nextMainCityId || state.mainCityId);
+  changed = mainCityRepair.changed || changed;
   if (changed) {
     saveGame();
     renderHud();
@@ -6719,6 +6844,8 @@ function applyServerCityUpdates(cityUpdates = []) {
     }
   }
   if (cacheChanged) updateIslandSummariesFromOwnedCityCache();
+  const mainCityRepair = normalizeSingleMainCityAssignment(state.mainCityId);
+  changed = mainCityRepair.changed || changed;
   if (changed) renderAll();
   return changed || cacheChanged;
 }
@@ -8703,6 +8830,7 @@ async function setupOnlineWorld({ requireOnlineProfile = false } = {}) {
     playerUid: getCurrentOnlineUid(),
   };
   state.mainCityId = mainCityId || "";
+  normalizeSingleMainCityAssignment(state.mainCityId);
   const needsMainCityClaim = !storedMainCityId;
 
   return connectOnlineIsland(activeRegionId, {
@@ -8879,6 +9007,7 @@ async function connectOnlineIsland(regionId, { claimHome = false, homeRegionId =
       onlineFreshClaimCityId = !claim?.alreadyClaimed && claim?.cityId ? claim.cityId : "";
       const claimedCity = claim?.cityId ? cityById(claim.cityId) : null;
       if (claimedCity) claimedCity.isMainCity = true;
+      normalizeSingleMainCityAssignment(claim?.cityId || state.mainCityId, { markDirty: true });
       if (claim?.repairedMainCity) addLog(`${cityById(claim.cityId)?.name || "Your main city"} was restored. Main cities cannot be attacked.`);
       else if (claim?.alreadyClaimed) addLog(`Online ${getRegionLabel(targetRegionId)} connected. Your claimed city was restored.`);
       else if (claim?.cityId) addLog(`Online ${getRegionLabel(targetRegionId)} connected. ${cityById(claim.cityId)?.name || "A city"} joined your kingdom.`);
@@ -9099,6 +9228,7 @@ function applyOnlineCities(onlineCities, regionId = getActiveOnlineRegionId()) {
       ...city,
       islandId: getOnlineIslandId(activeRegionId),
     })));
+  normalizeSingleMainCityAssignment(state.mainCityId);
   ensureLoadedMainCityForRegion(activeRegionId);
 }
 
@@ -9117,6 +9247,7 @@ function ensureLoadedMainCityForRegion(regionId) {
       state.online.mainRegionId = activeRegionId;
       state.online.mainIslandId = getOnlineIslandId(activeRegionId);
     }
+    normalizeSingleMainCityAssignment(currentMain.id);
     return;
   }
 
@@ -9130,6 +9261,7 @@ function ensureLoadedMainCityForRegion(regionId) {
     state.online.mainRegionId = activeRegionId;
     state.online.mainIslandId = getOnlineIslandId(activeRegionId);
   }
+  normalizeSingleMainCityAssignment(fallbackMain.id);
 }
 
 function restoreMainCityOwnership(city) {
@@ -10200,6 +10332,9 @@ function normalizeOwnedCitySnapshot(raw = {}) {
   const ownerIdentity = ownerUid ? resolvePlayerIdentityForUid(ownerUid, raw) : null;
   const ownerFlag = ownerIdentity?.flag || raw.ownerFlag || (ownerUid === getCurrentOnlineUid() ? state?.flag : null);
   const troopFallback = getCityTroopFallback({ ...base, ...raw }, { owner: "player", ownerKind: "player", ownerUid });
+  const knownMainCityId = getKnownCityId(state?.mainCityId);
+  const isKnownMainCity = !isStronghold(raw) && !isStronghold(base)
+    && (knownMainCityId ? id === knownMainCityId : Boolean(raw.isMainCity));
   return {
     ...base,
     ...raw,
@@ -10226,7 +10361,7 @@ function normalizeOwnedCitySnapshot(raw = {}) {
     defense: 1,
     investedGold: Math.max(0, Math.floor(Number(raw.investedGold) || 0)),
     lastCapturedAt: raw.lastCapturedAt ?? null,
-    isMainCity: !isStronghold(raw) && !isStronghold(base) && (raw.id === state?.mainCityId || Boolean(raw.isMainCity)),
+    isMainCity: isKnownMainCity,
     relinquishedAtMs: 0,
     relocatedAtMs: 0,
   };
@@ -10245,6 +10380,7 @@ function mergeOwnedCitySnapshots(cities = [], { complete = false } = {}) {
     if (normalized) merged.set(normalized.id, normalized);
   });
   onlineOwnedCitiesCache = Array.from(merged.values());
+  normalizeSingleMainCityAssignment(state?.mainCityId || "");
   if (complete) {
     onlineOwnedCitiesCacheAt = Date.now();
     onlineOwnedCitiesCacheComplete = true;
@@ -14647,7 +14783,9 @@ function showCityInfoModal(cityId) {
       ${renderRelinquishCityAction(city)}
     </div>
   `;
-  modalBody.querySelector("#changeMainCityBtn")?.addEventListener("click", () => changeMainCity(city.id));
+  modalBody.querySelector("#changeMainCityBtn")?.addEventListener("click", () => {
+    void changeMainCity(city.id);
+  });
   bindCityLevelUpButtons(city);
   bindRelocateMainCityButton(city);
   bindRelinquishCityButton(city);
@@ -16951,6 +17089,7 @@ function beginPinch() {
   if (!pair) return;
   const [a, b] = pair;
   const mid = midpointBetween(a, b);
+  cityTapState = null;
   pinchState = {
     startDistance: Math.max(1, distanceBetween(a, b)),
     startZoom: zoom,
@@ -16983,18 +17122,36 @@ function isMapNodeInteractionTarget(target) {
   return Boolean(target?.closest(".city-node, .city-action-wheel, .teleport-node, .harvest-bonus-node"));
 }
 
+function isMapCommandInteractionTarget(target) {
+  return Boolean(target?.closest(".city-wheel-action, .teleport-node, .harvest-bonus-node"));
+}
+
 function startPan(event) {
   if (!state || event.button > 0 || isMapInteractionBlocked()) return;
 
   const startedOnMapNode = isMapNodeInteractionTarget(event.target);
-  if (startedOnMapNode && event.pointerType === "touch") {
+  const isTouch = event.pointerType === "touch";
+  const startedOnCommand = isMapCommandInteractionTarget(event.target);
+
+  if (isTouch && !startedOnCommand) event.preventDefault();
+
+  if (startedOnMapNode && isTouch && !startedOnCommand) {
     activePointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
     mapFrame.setPointerCapture?.(event.pointerId);
     if (activePointers.size >= 2) {
-      cityTapState = null;
       beginPinch();
     } else {
+      panState = {
+        pointerId: event.pointerId,
+        startX: event.clientX,
+        startY: event.clientY,
+        cameraX: camera.x,
+        cameraY: camera.y,
+        moved: false,
+        startedOnMapNode: true,
+      };
       suppressMapClick = false;
+      mapFrame.classList.add("dragging");
     }
     return;
   }
@@ -17019,6 +17176,7 @@ function startPan(event) {
     cameraX: camera.x,
     cameraY: camera.y,
     moved: false,
+    startedOnMapNode: false,
   };
   suppressMapClick = false;
   mapFrame.classList.add("dragging");
@@ -17026,6 +17184,9 @@ function startPan(event) {
 
 function movePan(event) {
   if (isMapInteractionBlocked()) return;
+  if (event.pointerType === "touch" && (pinchState || panState || activePointers.has(event.pointerId))) {
+    event.preventDefault();
+  }
   if (activePointers.has(event.pointerId)) {
     activePointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
   }
@@ -17038,7 +17199,13 @@ function movePan(event) {
   if (!panState || panState.pointerId !== event.pointerId) return;
   const dx = event.clientX - panState.startX;
   const dy = event.clientY - panState.startY;
-  if (Math.abs(dx) > 5 || Math.abs(dy) > 5) panState.moved = true;
+  const distance = Math.hypot(dx, dy);
+  const movementThreshold = panState.startedOnMapNode ? MAP_TOUCH_PAN_THRESHOLD : 5;
+  if (distance > movementThreshold) {
+    panState.moved = true;
+    if (cityTapState?.pointerId === event.pointerId) cityTapState = null;
+  }
+  if (panState.startedOnMapNode && !panState.moved) return;
   camera.x = panState.cameraX - dx / zoom;
   camera.y = panState.cameraY - dy / zoom;
   scheduleCameraTransform();
@@ -17063,6 +17230,11 @@ function endPan(event) {
     window.setTimeout(() => { suppressMapClick = false; }, 80);
   }
   renderPanel();
+}
+
+function preventNativeMapTouch(event) {
+  if (!state || isMapInteractionBlocked()) return;
+  event.preventDefault();
 }
 
 function handleMapClick(event) {
@@ -17259,12 +17431,17 @@ cityLayer.addEventListener("click", event => {
   cityTapState = null;
   selectCity(cityButton.dataset.cityId);
 });
-mapFrame.addEventListener("pointerdown", startPan);
-mapFrame.addEventListener("pointermove", movePan);
-mapFrame.addEventListener("pointerup", endPan);
-mapFrame.addEventListener("pointercancel", endPan);
+const mapPointerEventOptions = { passive: false };
+mapFrame.addEventListener("pointerdown", startPan, mapPointerEventOptions);
+mapFrame.addEventListener("pointermove", movePan, mapPointerEventOptions);
+mapFrame.addEventListener("pointerup", endPan, mapPointerEventOptions);
+mapFrame.addEventListener("pointercancel", endPan, mapPointerEventOptions);
 mapFrame.addEventListener("click", handleMapClick);
 mapFrame.addEventListener("wheel", handleWheelZoom, { passive: false });
+mapFrame.addEventListener("touchmove", preventNativeMapTouch, { passive: false });
+mapFrame.addEventListener("gesturestart", preventNativeMapTouch, { passive: false });
+mapFrame.addEventListener("gesturechange", preventNativeMapTouch, { passive: false });
+mapFrame.addEventListener("gestureend", preventNativeMapTouch, { passive: false });
 window.addEventListener("resize", updateCameraTransform);
 document.addEventListener("fullscreenchange", updateFullscreenButton);
 document.addEventListener("visibilitychange", () => {

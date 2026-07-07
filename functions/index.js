@@ -1252,6 +1252,25 @@ async function pickRelocationTarget(transaction, regionCandidates = [], minimumN
   return null;
 }
 
+function getCityEntryIslandId(entry = {}) {
+  return safeString(entry.ref?.parent?.parent?.id || getOnlineIslandId(entry.city?.regionId), 160);
+}
+
+function getCanonicalMainCityEntry(profile = {}, cityEntries = []) {
+  const regularEntries = cityEntries.filter(entry => entry?.city && !isStronghold(entry.city));
+  if (!regularEntries.length) return null;
+  const profileMainCityId = safeString(profile.mainCityId, 96).replace(/[^a-zA-Z0-9_-]/g, "_");
+  const profileIslandId = safeString(profile.mainIslandId, 160);
+  if (profileMainCityId) {
+    const profileMatch = regularEntries.find(entry => {
+      if (entry.city.id !== profileMainCityId) return false;
+      return !profileIslandId || getCityEntryIslandId(entry) === profileIslandId;
+    });
+    if (profileMatch) return profileMatch;
+  }
+  return regularEntries.find(entry => Boolean(entry.city.isMainCity)) || regularEntries[0];
+}
+
 async function prepareEconomyCollection(transaction, uid, nowMs = Date.now(), options = {}) {
   const profileRef = options.profileRef || db.doc(`players/${uid}`);
   const profileSnap = options.profileSnap || await transaction.get(profileRef);
@@ -1281,9 +1300,31 @@ async function prepareEconomyCollection(transaction, uid, nowMs = Date.now(), op
     })
     .filter(Boolean);
 
-  const bonuses = getOwnedStrongholdBonuses(cityEntries);
   const cityPatches = [];
   const cityUpdates = [];
+  const mainCityEntry = getCanonicalMainCityEntry(rawProfile, cityEntries);
+  const mainCityEntryPath = mainCityEntry?.ref?.path || "";
+  const canonicalMainCityId = mainCityEntry?.city?.id || "";
+  const canonicalMainIslandId = mainCityEntry ? getCityEntryIslandId(mainCityEntry) : safeString(rawProfile.mainIslandId, 160);
+  const canonicalMainRegionId = mainCityEntry
+    ? normalizeRegionId(mainCityEntry.city.regionId || getRegionIdFromOnlineIslandId(canonicalMainIslandId))
+    : normalizeRegionId(rawProfile.mainRegionId || getRegionIdFromOnlineIslandId(canonicalMainIslandId));
+
+  cityEntries.forEach(entry => {
+    if (!entry?.city) return;
+    const shouldBeMain = Boolean(mainCityEntryPath && entry.ref.path === mainCityEntryPath && !isStronghold(entry.city));
+    if (Boolean(entry.city.isMainCity) === shouldBeMain) return;
+    const patch = { isMainCity: shouldBeMain };
+    cityPatches.push({ ref: entry.ref, city: entry.city, patch });
+    cityUpdates.push({
+      id: entry.city.id,
+      regionId: entry.city.regionId,
+      ...patch,
+    });
+    entry.city = { ...entry.city, ...patch };
+  });
+
+  const bonuses = getOwnedStrongholdBonuses(cityEntries);
   let goldGainFloat = 0;
   let troopsGained = 0;
   let maxElapsedSeconds = 0;
@@ -1332,6 +1373,11 @@ async function prepareEconomyCollection(transaction, uid, nowMs = Date.now(), op
     shopItems,
     itemEffects,
     itemPurchaseCooldowns,
+    ...(canonicalMainCityId ? {
+      mainCityId: canonicalMainCityId,
+      mainIslandId: canonicalMainIslandId,
+      mainRegionId: canonicalMainRegionId,
+    } : {}),
   };
   const profilePatch = {
     uid,
@@ -1342,6 +1388,11 @@ async function prepareEconomyCollection(transaction, uid, nowMs = Date.now(), op
     shopItems,
     itemEffects,
     itemPurchaseCooldowns,
+    ...(canonicalMainCityId ? {
+      mainCityId: canonicalMainCityId,
+      mainIslandId: canonicalMainIslandId,
+      mainRegionId: canonicalMainRegionId,
+    } : {}),
     economyUpdatedAtMs: nowMs,
   };
 

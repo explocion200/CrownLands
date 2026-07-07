@@ -589,7 +589,7 @@ input {
   transform: translateY(1px);
 }
 
-.map-frame { position: absolute; inset: 0 0 164px 0; overflow: hidden; touch-action: none; cursor: grab; background: var(--ocean-bg); }
+.map-frame { position: absolute; inset: 0 0 164px 0; overflow: hidden; touch-action: none; -webkit-user-select: none; user-select: none; cursor: grab; background: var(--ocean-bg); }
 .map-frame.dragging { cursor: grabbing; }
 .map-frame.map-switching {
   cursor: wait;
@@ -1100,6 +1100,21 @@ input {
   user-select: none;
   z-index: 4;
   filter: drop-shadow(0 10px 8px rgba(0, 0, 0, .42));
+}
+.map-world,
+.map-bg,
+.harvest-layer,
+.portal-layer,
+.city-layer,
+.army-layer,
+.city-node,
+.city-action-wheel,
+.teleport-node,
+.harvest-bonus-node {
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-user-drag: none;
 }
 .camp-art {
   display: block;
