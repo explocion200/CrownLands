@@ -29,6 +29,8 @@ const SERVER_ECONOMY_SYNC_SECONDS = 15;
 const LEADERBOARD_SAVE_SECONDS = 60;
 const LEADERBOARD_STALE_REFRESH_MS = 5 * 60 * 1000;
 const KING_POWER_LEADERBOARD_LIMIT = 100;
+const PLAYER_IDENTITY_LOOKUP_BATCH_SIZE = 80;
+const PLAYER_IDENTITY_CACHE_STALE_MS = 5 * 60 * 1000;
 const ONLINE_OWNED_CITIES_REFRESH_MS = 15 * 1000;
 const ONLINE_ARMY_EXPIRY_GRACE_SECONDS = 8;
 const ONLINE_ARMY_RESOLVE_RETRY_SECONDS = 5;
@@ -2208,6 +2210,10 @@ let appliedServerReportIds = new Set();
 let resolvingOnlineArmyIds = new Set();
 let resolvedOnlineArmyIds = new Set();
 let onlinePresence = [];
+const playerIdentityCache = new Map();
+const playerIdentityLookupQueue = new Set();
+const playerIdentityLookupMisses = new Map();
+let playerIdentityLookupInFlight = false;
 let onlineIslandSummaries = new Map();
 let onlineIslandSummaryRefreshInFlight = false;
 let onlineOwnedCitiesCache = [];
@@ -4805,6 +4811,7 @@ async function syncPlayerIdentityToAllOwnedCities({ forceLeaderboard = true } = 
   const nextFlag = normalizeFlag(state.flag);
   const nextOwnerName = state.playerName || getOnlineApi()?.getUser?.()?.displayName || "Ruler";
   const nextKingPower = getKingPower();
+  rememberCurrentPlayerIdentity();
 
   playerCities().forEach(city => {
     city.ownerKind = "player";
@@ -6272,8 +6279,10 @@ function createScoutReportSnapshot(target) {
 
 function getBattleReportOwnerName(city, owner = city?.owner) {
   if (owner === "player") return state?.playerName || "You";
-  if (city?.ownerKind === "player" && city.ownerUid && city.ownerName) return city.ownerName;
-  if (city?.ownerKind === "player" && city.ownerUid) return "Rival ruler";
+  if (city?.ownerKind === "player" && city.ownerUid) {
+    const identity = resolvePlayerIdentityForUid(city.ownerUid, city);
+    return identity.displayName || city.ownerName || "Rival ruler";
+  }
   return OWNER[owner]?.label || "Unknown";
 }
 
@@ -6589,6 +6598,7 @@ function applyServerCityUpdates(cityUpdates = []) {
   let changed = false;
   let cacheChanged = false;
   for (const update of cityUpdates) {
+    if (update?.ownerUid) rememberOwnerIdentitiesFromRecords([update]);
     cacheChanged = applyServerCityUpdateToOwnedCache(update) || cacheChanged;
     const cityId = getKnownCityId(update?.id);
     const city = cityId ? cityById(cityId) : null;
@@ -6628,12 +6638,13 @@ function applyServerCityUpdates(cityUpdates = []) {
     if (update.ownerUid !== undefined) {
       const currentUid = getCurrentOnlineUid();
       const ownerUid = String(update.ownerUid || "").trim();
+      const ownerIdentity = ownerUid ? resolvePlayerIdentityForUid(ownerUid, update) : null;
       city.ownerKind = ownerUid ? "player" : "neutral";
       city.ownerUid = ownerUid || null;
       city.owner = ownerUid && currentUid && ownerUid === currentUid ? "player" : ownerUid ? "enemy" : "neutral";
-      city.ownerName = update.ownerName || "";
-      city.ownerFlag = update.ownerFlag || null;
-      city.ownerKingPower = normalizePowerValue(update.ownerKingPower);
+      city.ownerName = ownerIdentity?.displayName || update.ownerName || "";
+      city.ownerFlag = ownerIdentity?.flag || update.ownerFlag || null;
+      city.ownerKingPower = normalizePowerValue(ownerIdentity?.kingPower) || normalizePowerValue(update.ownerKingPower);
       city.ownerShieldExpiresAtMs = normalizeTimestampMs(update.ownerShieldExpiresAtMs);
       city.isMainCity = Boolean(update.isMainCity) && !isStronghold(city);
       if (ownerUid) {
@@ -7062,6 +7073,7 @@ async function publishKingPowerLeaderboard({ force = false } = {}) {
   leaderboardSaveInFlight = true;
   try {
     await api.saveKingPowerLeaderboardEntry(entry);
+    rememberCurrentPlayerIdentity();
     leaderboardLastSignature = signature;
     leaderboardLastSaveAt = Date.now();
     return true;
@@ -7088,6 +7100,249 @@ function normalizePresence(raw) {
     kingPower: Math.max(0, Math.floor(Number(raw.kingPower) || 0)),
     updatedAtMs: Math.max(0, Number(raw.updatedAtMs) || 0),
   };
+}
+
+function normalizePlayerIdentity(raw = {}, fallbackUid = "") {
+  if (!raw || typeof raw !== "object") return null;
+  const uid = String(raw.uid || raw.ownerUid || raw.id || fallbackUid || "").trim();
+  if (!uid) return null;
+  return {
+    uid,
+    displayName: cleanName(raw.playerName || raw.displayName || raw.ownerName || raw.name || "") || "",
+    flag: raw.flag || raw.ownerFlag || null,
+    kingPower: normalizePowerValue(raw.kingPower ?? raw.ownerKingPower ?? raw.attackerKingPower),
+    updatedAtMs: normalizeTimestampMs(raw.updatedAtMs) || timestampToMs(raw.updatedAt),
+  };
+}
+
+function getPlayerIdentitySignature(identity) {
+  if (!identity) return "";
+  return [
+    identity.uid || "",
+    identity.displayName || "",
+    getFlagSignature(identity.flag),
+    normalizePowerValue(identity.kingPower),
+    normalizeTimestampMs(identity.updatedAtMs),
+  ].join("|");
+}
+
+function rememberPlayerIdentity(raw = {}, options = {}) {
+  const identity = normalizePlayerIdentity(raw);
+  if (!identity) return false;
+  const currentUid = getCurrentOnlineUid();
+  if (currentUid && state && identity.uid === currentUid) {
+    identity.displayName = state.playerName || identity.displayName || "Ruler";
+    identity.flag = state.flag || identity.flag || createDefaultFlag();
+    identity.kingPower = getKingPower() || identity.kingPower;
+    identity.updatedAtMs = Math.max(identity.updatedAtMs || 0, Date.now());
+  }
+
+  const existing = playerIdentityCache.get(identity.uid) || null;
+  const before = getPlayerIdentitySignature(existing);
+  const force = Boolean(options.force);
+  const identityIsNewer = !existing
+    || !existing.updatedAtMs
+    || !identity.updatedAtMs
+    || identity.updatedAtMs >= existing.updatedAtMs
+    || force;
+  const next = {
+    uid: identity.uid,
+    displayName: identityIsNewer
+      ? identity.displayName || existing?.displayName || ""
+      : existing?.displayName || identity.displayName || "",
+    flag: identityIsNewer
+      ? identity.flag || existing?.flag || null
+      : existing?.flag || identity.flag || null,
+    kingPower: identityIsNewer
+      ? identity.kingPower || existing?.kingPower || 0
+      : existing?.kingPower || identity.kingPower || 0,
+    updatedAtMs: Math.max(existing?.updatedAtMs || 0, identity.updatedAtMs || 0),
+    fetchedAtMs: Date.now(),
+  };
+  playerIdentityCache.set(identity.uid, next);
+  playerIdentityLookupMisses.delete(identity.uid);
+  return before !== getPlayerIdentitySignature(next);
+}
+
+function rememberPlayerIdentities(rows = [], options = {}) {
+  let changed = false;
+  (Array.isArray(rows) ? rows : []).forEach(row => {
+    if (rememberPlayerIdentity(row, options)) changed = true;
+  });
+  return changed;
+}
+
+function rememberOwnerIdentitiesFromRecords(records = []) {
+  let changed = false;
+  (Array.isArray(records) ? records : []).forEach(record => {
+    if (!record || typeof record !== "object") return;
+    const ownerUid = String(record.ownerUid || record.uid || "").trim();
+    if (!ownerUid) return;
+    if (rememberPlayerIdentity({
+      uid: ownerUid,
+      ownerName: record.ownerName,
+      ownerFlag: record.ownerFlag,
+      ownerKingPower: record.ownerKingPower ?? record.kingPower ?? record.attackerKingPower,
+      updatedAtMs: normalizeTimestampMs(record.updatedAtMs) || timestampToMs(record.updatedAt),
+    })) {
+      changed = true;
+    }
+  });
+  return changed;
+}
+
+function rememberCurrentPlayerIdentity() {
+  const uid = getCurrentOnlineUid();
+  if (!uid || !state) return false;
+  return rememberPlayerIdentity({
+    uid,
+    playerName: state.playerName,
+    flag: state.flag,
+    kingPower: getKingPower(),
+    updatedAtMs: Date.now(),
+  }, { force: true });
+}
+
+function resolvePlayerIdentityForUid(uid, fallback = {}) {
+  const ownerUid = String(uid || "").trim();
+  const fallbackIdentity = normalizePlayerIdentity(fallback, ownerUid) || {};
+  const currentUid = getCurrentOnlineUid();
+  if (ownerUid && currentUid && ownerUid === currentUid && state) {
+    return {
+      uid: ownerUid,
+      displayName: state.playerName || fallbackIdentity.displayName || "Ruler",
+      flag: state.flag || fallbackIdentity.flag || createDefaultFlag(),
+      kingPower: getKingPower() || fallbackIdentity.kingPower || 0,
+      updatedAtMs: Date.now(),
+    };
+  }
+  const cached = ownerUid ? playerIdentityCache.get(ownerUid) : null;
+  return {
+    uid: ownerUid,
+    displayName: cached?.displayName || fallbackIdentity.displayName || "",
+    flag: cached?.flag || fallbackIdentity.flag || null,
+    kingPower: cached?.kingPower || fallbackIdentity.kingPower || 0,
+    updatedAtMs: Math.max(cached?.updatedAtMs || 0, fallbackIdentity.updatedAtMs || 0),
+  };
+}
+
+function applyCanonicalPlayerIdentityToRecord(record) {
+  if (!record || typeof record !== "object") return false;
+  const ownerUid = String(record.ownerUid || "").trim();
+  if (!ownerUid) return false;
+  const rawOwnerKind = record.ownerKind || record.owner || "player";
+  if (rawOwnerKind !== "player" && record.owner !== "player" && record.owner !== "enemy") return false;
+  const identity = resolvePlayerIdentityForUid(ownerUid, record);
+  const nextName = identity.displayName || record.ownerName || "";
+  const nextFlag = identity.flag || record.ownerFlag || null;
+  const nextPower = normalizePowerValue(identity.kingPower) || normalizePowerValue(record.ownerKingPower);
+  let changed = false;
+  if ((record.ownerName || "") !== nextName) {
+    record.ownerName = nextName;
+    changed = true;
+  }
+  if (getFlagSignature(record.ownerFlag) !== getFlagSignature(nextFlag)) {
+    record.ownerFlag = nextFlag;
+    changed = true;
+  }
+  if (normalizePowerValue(record.ownerKingPower) !== nextPower) {
+    record.ownerKingPower = nextPower;
+    changed = true;
+  }
+  if (record.attackerKingPower !== undefined && normalizePowerValue(record.attackerKingPower) !== nextPower) {
+    record.attackerKingPower = nextPower;
+    changed = true;
+  }
+  return changed;
+}
+
+function queuePlayerIdentityLookupForUids(uids = []) {
+  const api = getOnlineApi();
+  if (!api?.loadPlayerIdentities || !api?.isSignedIn?.()) return;
+  const currentUid = getCurrentOnlineUid();
+  const now = Date.now();
+  const uniqueUids = [...new Set((Array.isArray(uids) ? uids : [])
+    .map(uid => String(uid || "").trim())
+    .filter(uid => uid && uid !== currentUid))];
+  uniqueUids.forEach(uid => {
+    const cached = playerIdentityCache.get(uid);
+    const missedAt = playerIdentityLookupMisses.get(uid) || 0;
+    const fetchedAt = cached?.fetchedAtMs || cached?.updatedAtMs || 0;
+    if (fetchedAt && now - fetchedAt < PLAYER_IDENTITY_CACHE_STALE_MS) return;
+    if (missedAt && now - missedAt < PLAYER_IDENTITY_CACHE_STALE_MS) return;
+    playerIdentityLookupQueue.add(uid);
+  });
+  if (!playerIdentityLookupQueue.size || playerIdentityLookupInFlight) return;
+  window.setTimeout(refreshQueuedPlayerIdentities, 0);
+}
+
+function queuePlayerIdentityLookupForRecords(records = []) {
+  if (!Array.isArray(records) || !records.length) return;
+  rememberOwnerIdentitiesFromRecords(records);
+  queuePlayerIdentityLookupForUids(records.map(record => record?.ownerUid || record?.uid).filter(Boolean));
+}
+
+async function refreshQueuedPlayerIdentities() {
+  if (playerIdentityLookupInFlight) return;
+  const api = getOnlineApi();
+  if (!api?.loadPlayerIdentities || !api?.isSignedIn?.()) return;
+  playerIdentityLookupInFlight = true;
+  let changed = false;
+  try {
+    while (playerIdentityLookupQueue.size) {
+      const batch = Array.from(playerIdentityLookupQueue).slice(0, PLAYER_IDENTITY_LOOKUP_BATCH_SIZE);
+      batch.forEach(uid => playerIdentityLookupQueue.delete(uid));
+      const rows = await api.loadPlayerIdentities(batch);
+      const normalizedRows = (Array.isArray(rows) ? rows : []).map(normalizePlayerIdentity).filter(Boolean);
+      const found = new Set(normalizedRows.map(row => row.uid));
+      if (rememberPlayerIdentities(normalizedRows, { force: true })) changed = true;
+      batch.forEach(uid => {
+        if (!found.has(uid)) playerIdentityLookupMisses.set(uid, Date.now());
+      });
+    }
+  } catch (error) {
+    console.warn("Could not refresh player identities", error);
+  } finally {
+    playerIdentityLookupInFlight = false;
+  }
+  if (changed && canonicalizeVisiblePlayerIdentities()) {
+    renderCities(true);
+    renderPaths();
+    renderArmies();
+    updateIncomingAttackUi();
+    updateOutgoingAttackUi();
+  }
+  if (playerIdentityLookupQueue.size) window.setTimeout(refreshQueuedPlayerIdentities, 0);
+}
+
+function canonicalizeVisiblePlayerIdentities() {
+  let changed = false;
+  if (state?.cities?.length) {
+    state.cities.forEach(city => {
+      if (applyCanonicalPlayerIdentityToRecord(city)) changed = true;
+    });
+  }
+  if (onlineOwnedCitiesCache.length) {
+    onlineOwnedCitiesCache.forEach(city => {
+      if (applyCanonicalPlayerIdentityToRecord(city)) changed = true;
+    });
+  }
+  if (onlineArmies.length) {
+    onlineArmies.forEach(army => {
+      if (applyCanonicalPlayerIdentityToRecord(army)) changed = true;
+    });
+  }
+  onlineArmiesByIsland.forEach(armies => {
+    (Array.isArray(armies) ? armies : []).forEach(army => {
+      if (applyCanonicalPlayerIdentityToRecord(army)) changed = true;
+    });
+  });
+  if (state?.attacks?.length) {
+    state.attacks.forEach(attack => {
+      if (applyCanonicalPlayerIdentityToRecord(attack)) changed = true;
+    });
+  }
+  return changed;
 }
 
 function getActiveOnlinePlayers() {
@@ -7725,6 +7980,12 @@ function applyOnlinePresence(rawPresence) {
     return;
   }
   onlinePresence = rawPresence.map(normalizePresence).filter(Boolean);
+  if (rememberPlayerIdentities(onlinePresence, { force: true }) && canonicalizeVisiblePlayerIdentities()) {
+    renderCities(true);
+    renderArmies();
+    updateIncomingAttackUi();
+    updateOutgoingAttackUi();
+  }
   updateOnlinePlayersUi();
 }
 
@@ -7737,6 +7998,7 @@ async function publishOnlinePresence(force = false) {
   onlinePresenceInFlight = true;
   try {
     await api.savePresence(islandId, getOnlinePresenceSnapshot());
+    rememberCurrentPlayerIdentity();
     onlineLastError = "";
     updateOnlinePlayersUi();
     return true;
@@ -8494,6 +8756,7 @@ function applyOnlineCities(onlineCities, regionId = getActiveOnlineRegionId()) {
   const currentUid = getCurrentOnlineUid();
   const localById = new Map(state.cities.map(city => [city.id, city]));
   const activeRegionId = normalizeRegionId(regionId);
+  queuePlayerIdentityLookupForRecords(onlineCities);
 
   state.cities = getPlayableBaseCities().map(base => {
     const isActiveRegionCity = getCityRegionId(base) === activeRegionId;
@@ -8599,6 +8862,7 @@ function applyOnlineCities(onlineCities, regionId = getActiveOnlineRegionId()) {
     state.online.islandId = getOnlineIslandId(activeRegionId);
   }
   cacheIslandOccupancySummary(activeRegionId);
+  canonicalizeVisiblePlayerIdentities();
   onlineOwnedCitiesCache = onlineOwnedCitiesCache.filter(city => getCityRegionId(city) !== activeRegionId);
   mergeOwnedCitySnapshots(playerCities()
     .filter(city => getCityRegionId(city) === activeRegionId)
@@ -8669,28 +8933,31 @@ function getCityRecordOwnership(record = {}, currentUid = getCurrentOnlineUid(),
   const ownerUid = String(record.ownerUid || "").trim();
   const hasPlayerOwner = Boolean(ownerUid) && (rawOwnerKind === "player" || record.owner === "player" || record.owner === "enemy");
   if (hasPlayerOwner) {
+    const identity = resolvePlayerIdentityForUid(ownerUid, record);
     return {
       owner: ownerUid === currentUid ? "player" : "enemy",
       ownerKind: "player",
       ownerUid,
-      ownerName: record.ownerName || "",
-      ownerFlag: record.ownerFlag || null,
-      ownerKingPower: normalizePowerValue(record.ownerKingPower),
+      ownerName: identity.displayName || record.ownerName || "",
+      ownerFlag: identity.flag || record.ownerFlag || null,
+      ownerKingPower: normalizePowerValue(identity.kingPower) || normalizePowerValue(record.ownerKingPower),
       ownerShieldExpiresAtMs: normalizeTimestampMs(record.ownerShieldExpiresAtMs),
       hasPlayerOwner: true,
     };
   }
 
   if (allowLocalPlayerFallback && record.owner === "player" && (!record.ownerUid || record.ownerUid === currentUid)) {
+    const fallbackUid = currentUid || record.ownerUid || null;
+    const identity = resolvePlayerIdentityForUid(fallbackUid, record);
     return {
       owner: "player",
       ownerKind: "player",
-      ownerUid: currentUid || record.ownerUid || null,
-      ownerName: record.ownerName || state?.playerName || "",
-      ownerFlag: record.ownerFlag || state?.flag || null,
-      ownerKingPower: normalizePowerValue(record.ownerKingPower) || getKingPower(),
+      ownerUid: fallbackUid,
+      ownerName: identity.displayName || record.ownerName || state?.playerName || "",
+      ownerFlag: identity.flag || record.ownerFlag || state?.flag || null,
+      ownerKingPower: normalizePowerValue(identity.kingPower) || normalizePowerValue(record.ownerKingPower) || getKingPower(),
       ownerShieldExpiresAtMs: getActivePeaceShieldExpiresAtMs(),
-      hasPlayerOwner: Boolean(currentUid || record.ownerUid),
+      hasPlayerOwner: Boolean(fallbackUid),
     };
   }
 
@@ -8761,14 +9028,15 @@ function toOnlineCityState(city) {
     : city.ownerUid || null;
   const hasPlayerOwner = Boolean(ownerUid) && (city.owner === "player" || city.owner === "enemy" || city.ownerKind === "player");
   const ownerKind = hasPlayerOwner ? "player" : "neutral";
+  const ownerIdentity = hasPlayerOwner ? resolvePlayerIdentityForUid(ownerUid, city) : null;
   const ownerName = hasPlayerOwner
-    ? city.owner === "player" ? state.playerName : city.ownerName || ""
+    ? city.owner === "player" ? state.playerName : ownerIdentity?.displayName || city.ownerName || ""
     : "";
   const ownerFlag = hasPlayerOwner
-    ? city.owner === "player" ? state.flag : city.ownerFlag || null
+    ? city.owner === "player" ? state.flag : ownerIdentity?.flag || city.ownerFlag || null
     : null;
   const ownerKingPower = hasPlayerOwner
-    ? city.owner === "player" ? getKingPower() : normalizePowerValue(city.ownerKingPower)
+    ? city.owner === "player" ? getKingPower() : normalizePowerValue(ownerIdentity?.kingPower) || normalizePowerValue(city.ownerKingPower)
     : 0;
   const ownerShieldExpiresAtMs = hasPlayerOwner
     ? isStronghold(city) ? 0 : city.owner === "player" ? getActivePeaceShieldExpiresAtMs() : normalizeTimestampMs(city.ownerShieldExpiresAtMs)
@@ -9170,15 +9438,16 @@ function normalizeOnlineArmyMovement(raw) {
   );
   const path = normalizeArmyPath(raw.path);
   const pathSegments = normalizeArmyPathSegments(raw.pathSegments);
+  const ownerIdentity = ownerUid ? resolvePlayerIdentityForUid(ownerUid, raw) : null;
   return {
     id,
     onlineId: id,
     owner: resolveOnlineArmyOwner(raw),
     ownerKind: ownerUid ? "player" : "neutral",
     ownerUid,
-    ownerName: raw.ownerName || "",
-    ownerFlag: raw.ownerFlag || null,
-    ownerKingPower: normalizePowerValue(raw.ownerKingPower),
+    ownerName: ownerIdentity?.displayName || raw.ownerName || "",
+    ownerFlag: ownerIdentity?.flag || raw.ownerFlag || null,
+    ownerKingPower: normalizePowerValue(ownerIdentity?.kingPower) || normalizePowerValue(raw.ownerKingPower),
     kind: ["attack", "transfer", "scout"].includes(raw.kind) ? raw.kind : "attack",
     fromId: raw.fromId || "",
     toId: raw.toId || "",
@@ -9463,6 +9732,7 @@ function applyOnlineArmies(rawArmies, islandId = getActiveOnlineIslandId()) {
     rebuildOnlineArmies();
     return;
   }
+  queuePlayerIdentityLookupForRecords(rawArmies);
   onlineArmiesByIsland.set(normalizedIslandId, rawArmies
     .map(normalizeOnlineArmyMovement)
     .filter(Boolean)
@@ -9482,11 +9752,19 @@ function getRenderableArmies() {
   const remoteArmies = onlineArmies
     .filter(isOnlineArmyVisible)
     .filter(army => !(army.ownerUid === getCurrentOnlineUid() && localOnlineIds.has(army.id)))
-    .map(army => ({
-      ...army,
-      owner: resolveOnlineArmyOwner(army),
-      remaining: Math.max(0, getOnlineArmyRemainingSeconds(army)),
-    }));
+    .map(army => {
+      const identity = army.ownerUid ? resolvePlayerIdentityForUid(army.ownerUid, army) : null;
+      const ownerKingPower = normalizePowerValue(identity?.kingPower) || normalizePowerValue(army.ownerKingPower);
+      return {
+        ...army,
+        owner: resolveOnlineArmyOwner(army),
+        ownerName: identity?.displayName || army.ownerName || "",
+        ownerFlag: identity?.flag || army.ownerFlag || null,
+        ownerKingPower,
+        attackerKingPower: normalizePowerValue(army.attackerKingPower) || ownerKingPower,
+        remaining: Math.max(0, getOnlineArmyRemainingSeconds(army)),
+      };
+    });
   return [...localArmies, ...remoteArmies];
 }
 
@@ -9504,13 +9782,14 @@ function getIncomingAttacks() {
       if (seen.has(key)) return null;
       seen.add(key);
       const source = cityById(attack.fromId);
+      const attackerIdentity = attack.ownerUid ? resolvePlayerIdentityForUid(attack.ownerUid, attack) : null;
       return {
         ...attack,
         key,
         target,
         source,
         remaining,
-        attackerName: attack.ownerName || getBattleReportOwnerName(source, attack.owner),
+        attackerName: attackerIdentity?.displayName || attack.ownerName || getBattleReportOwnerName(source, attack.owner),
       };
     })
     .filter(Boolean)
@@ -9691,7 +9970,8 @@ function normalizeOwnedCitySnapshot(raw = {}) {
   const base = getPlayableBaseCityById(id) || {};
   const regionId = normalizeRegionId(raw.regionId || base.regionId || raw.startPool || base.startPool);
   const ownerUid = String(raw.ownerUid || getCurrentOnlineUid() || "").trim();
-  const ownerFlag = raw.ownerFlag || (ownerUid === getCurrentOnlineUid() ? state?.flag : null);
+  const ownerIdentity = ownerUid ? resolvePlayerIdentityForUid(ownerUid, raw) : null;
+  const ownerFlag = ownerIdentity?.flag || raw.ownerFlag || (ownerUid === getCurrentOnlineUid() ? state?.flag : null);
   const troopFallback = getCityTroopFallback({ ...base, ...raw }, { owner: "player", ownerKind: "player", ownerUid });
   return {
     ...base,
@@ -9701,9 +9981,9 @@ function normalizeOwnedCitySnapshot(raw = {}) {
     owner: "player",
     ownerKind: "player",
     ownerUid: ownerUid || null,
-    ownerName: raw.ownerName || state?.playerName || "",
+    ownerName: ownerIdentity?.displayName || raw.ownerName || state?.playerName || "",
     ownerFlag,
-    ownerKingPower: normalizePowerValue(raw.ownerKingPower),
+    ownerKingPower: normalizePowerValue(ownerIdentity?.kingPower) || normalizePowerValue(raw.ownerKingPower),
     ownerShieldExpiresAtMs: isStronghold(raw) || isStronghold(base) ? 0 : normalizeTimestampMs(raw.ownerShieldExpiresAtMs),
     regionId,
     startPool: raw.startPool || base.startPool || regionId,
@@ -11249,12 +11529,13 @@ function resolveAttack(attack) {
     return;
   }
 
-  const attackerName = attack.owner === "player" ? "You" : attack.ownerName || "Enemy";
+  const attackOwnerIdentity = attack.ownerUid ? resolvePlayerIdentityForUid(attack.ownerUid, attack) : null;
+  const attackerName = attack.owner === "player" ? "You" : attackOwnerIdentity?.displayName || attack.ownerName || "Enemy";
   const oldOwner = target.owner;
   const defenderName = getBattleReportOwnerName(target, oldOwner);
   const attackerReportName = attack.owner === "player"
     ? getBattleReportOwnerName(null, attack.owner)
-    : attack.ownerName || getBattleReportOwnerName(null, attack.owner);
+    : attackOwnerIdentity?.displayName || attack.ownerName || getBattleReportOwnerName(null, attack.owner);
   const attackSource = cityById(attack.fromId);
   const targetLevel = clampCityLevel(target.level);
   const defendersAtStart = Math.max(0, Math.floor(Number(target.troops) || 0));
@@ -11407,11 +11688,12 @@ function resolveAttack(attack) {
       target.ownerName = state.playerName;
       target.ownerFlag = state.flag;
     } else if (attack.ownerKind === "player" && attack.ownerUid) {
+      const attackerIdentity = resolvePlayerIdentityForUid(attack.ownerUid, attack);
       target.owner = "enemy";
       target.ownerKind = "player";
       target.ownerUid = attack.ownerUid;
-      target.ownerName = attack.ownerName || "Rival ruler";
-      target.ownerFlag = attack.ownerFlag || createDefaultFlag();
+      target.ownerName = attackerIdentity.displayName || attack.ownerName || "Rival ruler";
+      target.ownerFlag = attackerIdentity.flag || attack.ownerFlag || createDefaultFlag();
     } else {
       target.owner = attack.owner;
       target.ownerKind = attack.owner === "enemy" ? "enemy" : attack.owner;
@@ -11637,7 +11919,10 @@ function applyFlagToElement(element, flag) {
 function getCityOwnerFlag(city) {
   if (!city) return null;
   if (city.owner === "player") return state.flag;
-  if (city.ownerKind === "player" && city.ownerUid) return city.ownerFlag || createDefaultFlag();
+  if (city.ownerKind === "player" && city.ownerUid) {
+    const identity = resolvePlayerIdentityForUid(city.ownerUid, city);
+    return identity.flag || city.ownerFlag || createDefaultFlag();
+  }
   return null;
 }
 
@@ -11658,8 +11943,10 @@ function applyCityOwnerFlags(container, city) {
 function getCityOwnerDisplayName(city) {
   if (!city) return "";
   if (city.owner === "player") return state.playerName;
-  if (city.ownerKind === "player" && city.ownerUid && city.ownerName) return city.ownerName;
-  if (city.ownerKind === "player" && city.ownerUid) return "Rival ruler";
+  if (city.ownerKind === "player" && city.ownerUid) {
+    const identity = resolvePlayerIdentityForUid(city.ownerUid, city);
+    return identity.displayName || city.ownerName || "Rival ruler";
+  }
   return OWNER[city.owner]?.label || "Unknown";
 }
 
@@ -12009,7 +12296,7 @@ function cancelProfileNameEdit() {
   profileNameEditor.hidden = true;
 }
 
-function saveProfileName() {
+async function saveProfileName() {
   if (!state) return;
   const nextName = cleanName(profileNameInput.value);
   if (!nextName) {
@@ -12020,12 +12307,27 @@ function saveProfileName() {
   state.playerName = nextName;
   const mainCity = state.mainCityId ? cityById(state.mainCityId) : null;
   if (mainCity?.name === `${previousName} Keep`) mainCity.name = `${nextName} Keep`;
+  playerCities().forEach(city => {
+    city.ownerName = nextName;
+    markOwnedCityChanged(city, false);
+  });
+  rememberCurrentPlayerIdentity();
   cancelProfileNameEdit();
   saveGame();
-  syncOwnedCitiesToOnline(true);
   renderAll();
   renderProfileScreen();
-  showToast("Ruler name updated.");
+  showToast("Ruler name saved. Updating your cities...");
+  const [identityResult, cloudResult] = await Promise.allSettled([
+    syncPlayerIdentityToAllOwnedCities({ forceLeaderboard: true }),
+    flushOnlineSave(true),
+  ]);
+  const identitySynced = identityResult.status === "fulfilled" && identityResult.value;
+  const cloudSaved = cloudResult.status === "fulfilled" && cloudResult.value;
+  if (getOnlineApi()?.isSignedIn?.() && (!identitySynced || !cloudSaved)) {
+    showToast("Ruler name saved. Online sync will retry.");
+  } else {
+    showToast("Ruler name updated everywhere.");
+  }
 }
 
 function showFlagEditor() {

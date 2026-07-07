@@ -834,6 +834,24 @@
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
   }
 
+  async function loadPlayerIdentities(uids = []) {
+    await init();
+    const uid = requireSignedIn();
+    if (!uid) return [];
+    const { doc, getDoc } = client.modules.firestore;
+    const uniqueUids = [...new Set((Array.isArray(uids) ? uids : [])
+      .map(value => String(value || "").trim())
+      .filter(Boolean))]
+      .slice(0, 80);
+    if (!uniqueUids.length) return [];
+    const rows = await Promise.all(uniqueUids.map(identityUid => (
+      getDoc(doc(client.db, "leaderboards", "kingPower", "entries", identityUid))
+        .then(snapshot => (snapshot.exists() ? { id: snapshot.id, ...snapshot.data() } : null))
+        .catch(() => null)
+    )));
+    return rows.filter(Boolean);
+  }
+
   async function loadKingPowerPresenceLeaderboard(islandIds = [], limitCount = 100) {
     await init();
     const uid = requireSignedIn();
@@ -1065,6 +1083,7 @@
     savePresence,
     saveKingPowerLeaderboardEntry,
     loadKingPowerLeaderboard,
+    loadPlayerIdentities,
     loadKingPowerPresenceLeaderboard,
     loadIslandCitySummary,
     loadOwnedCitiesAcrossIslands,

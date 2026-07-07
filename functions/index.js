@@ -1705,6 +1705,7 @@ exports.syncPlayerIdentity = onCall({ region: "us-central1", maxInstances: 20, i
 
   const ownedCitiesSnap = await db.collectionGroup("cities").where("ownerUid", "==", uid).get();
   const activeArmiesSnap = await db.collectionGroup("armies").where("ownerUid", "==", uid).get();
+  const presenceSnap = await db.collectionGroup("presence").where("uid", "==", uid).get();
   const cityDocs = ownedCitiesSnap.docs.filter(cityDoc => {
     const islandId = cityDoc.ref.parent.parent?.id || "";
     return isCurrentWorldIslandId(islandId);
@@ -1713,6 +1714,10 @@ exports.syncPlayerIdentity = onCall({ region: "us-central1", maxInstances: 20, i
     const islandId = armyDoc.ref.parent.parent?.id || "";
     const army = armyDoc.data() || {};
     return isCurrentWorldIslandId(islandId) && army.status === "active";
+  });
+  const presenceDocs = presenceSnap.docs.filter(presenceDoc => {
+    const islandId = presenceDoc.ref.parent.parent?.id || "";
+    return isCurrentWorldIslandId(islandId);
   });
   const cityCount = cityDocs.filter(cityDoc => !isStronghold(cityDoc.data() || {})).length;
   const mainRegionId = normalizeRegionId(data.mainRegionId || profile.mainRegionId || getRegionIdFromOnlineIslandId(data.mainIslandId || profile.mainIslandId));
@@ -1773,6 +1778,24 @@ exports.syncPlayerIdentity = onCall({ region: "us-central1", maxInstances: 20, i
       },
     });
   });
+  presenceDocs.forEach(presenceDoc => {
+    writes.push({
+      ref: presenceDoc.ref,
+      data: {
+        uid,
+        displayName: identity.ownerName,
+        playerName: identity.ownerName,
+        flag: identity.ownerFlag,
+        kingPower: identity.ownerKingPower,
+        cityCount,
+        mainCityId: safeString(data.mainCityId || profile.mainCityId, 80),
+        mainRegionId,
+        mainIslandId,
+        updatedAtMs: nowMs,
+        updatedAt: FieldValue.serverTimestamp(),
+      },
+    });
+  });
 
   for (let index = 0; index < writes.length; index += 450) {
     const batch = db.batch();
@@ -1790,6 +1813,7 @@ exports.syncPlayerIdentity = onCall({ region: "us-central1", maxInstances: 20, i
     cityCount,
     cityUpdates: cityDocs.length,
     armyUpdates: activeArmyDocs.length,
+    presenceUpdates: presenceDocs.length,
   };
 });
 
