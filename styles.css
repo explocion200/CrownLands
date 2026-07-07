@@ -3650,6 +3650,7 @@ button.inventory-slot {
 .troop-slider-confirm { display: flex; align-items: center; justify-content: center; gap: .42rem; color: #251702; background: linear-gradient(#ffe278, #e69a19); }
 .troop-slider-confirm span { font-size: 1.25rem; }
 .troop-slider-confirm.transfer { color: #071a0d; background: linear-gradient(#a9ec83, #49a84c); }
+.troop-slider-confirm:disabled { opacity: .68; cursor: progress; filter: grayscale(.15); }
 .troop-slider-cancel { color: var(--ink); background: rgba(255,255,255,.1); border: 1px solid var(--line); }
 
 @media (max-width: 780px) and (orientation: landscape), (max-height: 430px) {

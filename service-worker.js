@@ -1,14 +1,15 @@
-const CACHE_VERSION = "20260707-perf-audit";
+const CACHE_VERSION = "20260707-route-worker";
 const CACHE_NAME = `crownlands-cache-${CACHE_VERSION}`;
 const STATIC_CACHE_URLS = [
   "/",
   "/index.html",
   "/manifest.webmanifest",
-  "/styles.css?v=20260707-perf-audit",
+  "/styles.css?v=20260707-route-worker",
   "/world-config.js",
   "/firebase-config.js?v=20260703-vapid-key",
   "/firebaseClient.js?v=20260706-perf-v1",
-  "/game.js?v=20260707-perf-audit",
+  "/game.js?v=20260707-route-worker",
+  "/route-worker.js?v=20260707-route-worker",
   "/assets/map-editor-data.js?v=20260705-stronghold-sizes",
   "/assets/game-menu-background.jpg?v=20260702-login-page",
   "/assets/loading-ring.png",

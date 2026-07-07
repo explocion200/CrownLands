@@ -2160,6 +2160,7 @@ const ROUTE_CELL_FALLBACK_RADIUS = 32;
 const ROUTE_CELL_FALLBACK_CANDIDATES = 24;
 const ROUTE_CELL_FALLBACK_PAIR_LIMIT = 16;
 const ROUTE_SEARCH_MAX_VISITED_CELLS = Math.max(2500, Math.min(24000, GRID_COLS * GRID_ROWS));
+const ROUTE_WORKER_TIMEOUT_MS = 15000;
 const NEAREST_SOURCE_ROUTE_CHECK_LIMIT = 18;
 const SCOUT_SOURCE_ROUTE_CHECK_LIMIT = 10;
 
@@ -2173,6 +2174,7 @@ let selectedMarchPercent = DEFAULT_MARCH_PERCENT;
 let selectedTroopAmount = 1;
 let troopSliderActive = false;
 let activeTroopSliderRoute = null;
+let activeTroopRouteRequestId = 0;
 let scoutNearbySourceId = null;
 let regroupSourceId = null;
 let camera = { x: 0, y: 0 };
@@ -2224,6 +2226,10 @@ const playerIdentityLookupQueue = new Set();
 const playerIdentityLookupMisses = new Map();
 let playerIdentityLookupInFlight = false;
 let lastHudFlagSignature = "";
+let routeWorker = null;
+let routeWorkerUnavailable = false;
+let routeWorkerRequestId = 0;
+const routeWorkerRequests = new Map();
 let onlineIslandSummaries = new Map();
 let onlineIslandSummaryRefreshInFlight = false;
 let onlineOwnedCitiesCache = [];
@@ -10713,6 +10719,214 @@ function reverseRoute(route) {
   return reversed;
 }
 
+function getRouteWorker() {
+  if (routeWorkerUnavailable || typeof Worker === "undefined") return null;
+  if (routeWorker) return routeWorker;
+  try {
+    const workerUrl = new URL("route-worker.js", window.location.href);
+    workerUrl.searchParams.set("v", APP_BUILD_ID || "dev");
+    routeWorker = new Worker(workerUrl, { name: "crownlands-route-worker" });
+    routeWorker.addEventListener("message", event => {
+      const message = event.data || {};
+      if (message.type !== "route") return;
+      const request = routeWorkerRequests.get(message.id);
+      if (!request) return;
+      window.clearTimeout(request.timeoutId);
+      routeWorkerRequests.delete(message.id);
+      if (message.ok) request.resolve(message.route || null);
+      else request.reject(new Error(message.error || "Route worker failed."));
+    });
+    routeWorker.addEventListener("error", event => {
+      routeWorkerUnavailable = true;
+      const error = new Error(event.message || "Route worker error.");
+      routeWorkerRequests.forEach(request => {
+        window.clearTimeout(request.timeoutId);
+        request.reject(error);
+      });
+      routeWorkerRequests.clear();
+      routeWorker?.terminate?.();
+      routeWorker = null;
+    });
+    return routeWorker;
+  } catch (error) {
+    routeWorkerUnavailable = true;
+    console.warn("Route worker unavailable; falling back to main-thread routing.", error);
+    return null;
+  }
+}
+
+function requestRouteFromWorker(job) {
+  const worker = getRouteWorker();
+  if (!worker) return Promise.reject(new Error("Route worker unavailable."));
+  const id = ++routeWorkerRequestId;
+  return new Promise((resolve, reject) => {
+    const timeoutId = window.setTimeout(() => {
+      routeWorkerRequests.delete(id);
+      reject(new Error("Route calculation timed out."));
+    }, ROUTE_WORKER_TIMEOUT_MS);
+    routeWorkerRequests.set(id, { resolve, reject, timeoutId });
+    worker.postMessage({ type: "route", id, job });
+  });
+}
+
+async function findRouteAsync(source, target) {
+  const job = buildRouteWorkerJob(source, target);
+  if (!job) return findRoute(source, target);
+  try {
+    const workerRoute = await requestRouteFromWorker(job);
+    return workerRoute?.points?.length ? cloneRoute(workerRoute) : null;
+  } catch (error) {
+    console.warn("Route worker failed; falling back to main-thread routing.", error);
+    return findRoute(source, target);
+  }
+}
+
+function buildRouteWorkerJob(source, target) {
+  if (!source || !target) return null;
+  const legs = buildRouteWorkerLegs(source, target);
+  if (!legs?.length) return null;
+  const regionIds = [...new Set(legs.map(leg => normalizeRegionId(leg.regionId)))];
+  const regions = Object.fromEntries(regionIds.map(regionId => [regionId, getRouteWorkerRegionData(regionId)]));
+  const obstaclesByRegion = getRouteWorkerObstaclesByRegion(regionIds);
+  return {
+    defaultRegionId: getActiveMapRegionId(),
+    constants: {
+      worldWidth: WORLD_WIDTH,
+      worldHeight: WORLD_HEIGHT,
+      gridSize: GRID_SIZE,
+      fallbackRadius: ROUTE_CELL_FALLBACK_RADIUS,
+      fallbackCandidates: ROUTE_CELL_FALLBACK_CANDIDATES,
+      fallbackPairLimit: ROUTE_CELL_FALLBACK_PAIR_LIMIT,
+      searchMaxVisitedCells: ROUTE_SEARCH_MAX_VISITED_CELLS,
+    },
+    regions,
+    obstaclesByRegion,
+    legs,
+  };
+}
+
+function buildRouteWorkerLegs(source, target) {
+  const sourceRegionId = getCityRegionId(source);
+  const targetRegionId = getCityRegionId(target);
+  if (sourceRegionId === targetRegionId) {
+    return [{
+      regionId: sourceRegionId,
+      start: makeRoutePoint(getRoutePointId(source, "source"), source),
+      end: makeRoutePoint(getRoutePointId(target, "target"), target),
+    }];
+  }
+
+  const chain = getPortalRouteRegionChain(sourceRegionId, targetRegionId);
+  if (!chain?.length) return null;
+  let current = makeRoutePoint(getRoutePointId(source, "source"), source);
+  const legs = [];
+  for (let index = 0; index < chain.length; index += 1) {
+    const regionId = chain[index];
+    const isLastRegion = index === chain.length - 1;
+    const nextRegionId = isLastRegion ? "" : chain[index + 1];
+    const sourcePortal = isLastRegion ? null : getEditorPortalForRoute(regionId, nextRegionId);
+    const portalExitPoint = isLastRegion ? null : getPortalWorldPoint(regionId, nextRegionId, sourcePortal ? { portal: sourcePortal } : {});
+    if (!isLastRegion && !portalExitPoint) return null;
+    const segmentEnd = isLastRegion
+      ? makeRoutePoint(getRoutePointId(target, "target"), target)
+      : makeRoutePoint(`portal:${regionId}->${nextRegionId}:${sourcePortal?.id || "default"}`, portalExitPoint);
+    if (!segmentEnd || !Number.isFinite(segmentEnd.x) || !Number.isFinite(segmentEnd.y)) return null;
+    legs.push({ regionId, start: current, end: segmentEnd });
+
+    if (!isLastRegion) {
+      const arrivalPortal = sourcePortal ? getLinkedEditorArrivalPortal(regionId, nextRegionId, sourcePortal) : null;
+      if (sourcePortal && getEditorPortalLinkId(sourcePortal) && !arrivalPortal) return null;
+      const arrivalPoint = getPortalWorldPoint(nextRegionId, regionId, arrivalPortal ? { portal: arrivalPortal } : {});
+      if (!arrivalPoint) return null;
+      current = makeRoutePoint(`portal:${nextRegionId}<-${regionId}:${arrivalPortal?.id || "default"}`, arrivalPoint);
+    }
+  }
+  return legs;
+}
+
+function getRouteWorkerRegionData(regionId) {
+  const normalizedRegionId = normalizeRegionId(regionId);
+  const region = getRegionById(normalizedRegionId) || {};
+  const bounds = getIslandMapBounds(normalizedRegionId);
+  const isBitmap = BITMAP_ISLAND_IDS.includes(normalizedRegionId);
+  const terrainShapes = isBitmap
+    ? IMAGE_TERRAIN_BLOCKERS[normalizedRegionId] || []
+    : TERRAIN_BLOCKERS.filter(shape => normalizeRegionId(shape.regionId) === normalizedRegionId);
+  return {
+    id: normalizedRegionId,
+    isBitmap,
+    region: sanitizeRouteWorkerRegion(region),
+    bounds: sanitizeRouteWorkerBounds(bounds),
+    dimensions: sanitizeRouteWorkerDimensions(getIslandImageDimensions(normalizedRegionId)),
+    landPolygon: getIslandLandPolygon(normalizedRegionId).map(point => ({
+      x: Number(point.x) || 0,
+      y: Number(point.y) || 0,
+    })),
+    terrainBlockers: terrainShapes.map(sanitizeRouteWorkerTerrainShape),
+  };
+}
+
+function sanitizeRouteWorkerRegion(region = {}) {
+  return {
+    id: normalizeRegionId(region.id),
+    x: Number(region.x) || 0,
+    y: Number(region.y) || 0,
+    rx: Number(region.rx) || 0,
+    ry: Number(region.ry) || 0,
+    rot: Number(region.rot) || 0,
+  };
+}
+
+function sanitizeRouteWorkerBounds(bounds = {}) {
+  return {
+    left: Number(bounds.left) || 0,
+    top: Number(bounds.top) || 0,
+    right: Number(bounds.right) || 0,
+    bottom: Number(bounds.bottom) || 0,
+    width: Math.max(1, Number(bounds.width) || 1),
+    height: Math.max(1, Number(bounds.height) || 1),
+  };
+}
+
+function sanitizeRouteWorkerDimensions(dimensions = {}) {
+  return {
+    width: Math.max(1, Number(dimensions.width) || 1),
+    height: Math.max(1, Number(dimensions.height) || 1),
+  };
+}
+
+function sanitizeRouteWorkerTerrainShape(shape = {}) {
+  return {
+    x: Number(shape.x) || 0,
+    y: Number(shape.y) || 0,
+    rx: Math.max(1, Number(shape.rx) || 1),
+    ry: Math.max(1, Number(shape.ry) || 1),
+    rot: Number(shape.rot) || 0,
+    cos: Number.isFinite(Number(shape.cos)) ? Number(shape.cos) : Math.cos(-(Number(shape.rot) || 0)),
+    sin: Number.isFinite(Number(shape.sin)) ? Number(shape.sin) : Math.sin(-(Number(shape.rot) || 0)),
+    type: String(shape.type || ""),
+    regionId: normalizeRegionId(shape.regionId),
+  };
+}
+
+function getRouteWorkerObstaclesByRegion(regionIds = []) {
+  const regionSet = new Set(regionIds.map(normalizeRegionId));
+  const obstaclesByRegion = Object.fromEntries([...regionSet].map(regionId => [regionId, []]));
+  (state?.cities || []).forEach(city => {
+    const regionId = getCityRegionId(city);
+    if (!regionSet.has(regionId)) return;
+    obstaclesByRegion[regionId].push({
+      id: city.id,
+      x: Number(city.x) || 0,
+      y: Number(city.y) || 0,
+      radius: isStronghold(city)
+        ? Math.max(ROUTE_STRONGHOLD_CLEARANCE, getStrongholdVisualSize(city) * 0.55)
+        : ROUTE_CITY_CLEARANCE,
+    });
+  });
+  return obstaclesByRegion;
+}
+
 function findRoute(source, target) {
   const sourceRegionId = getCityRegionId(source);
   const targetRegionId = getCityRegionId(target);
@@ -13723,6 +13937,10 @@ function beginSendMode(sourceId) {
 }
 
 function showTroopSliderModal(source, target) {
+  void showTroopSliderModalAsync(source, target);
+}
+
+async function showTroopSliderModalAsync(source, target) {
   if (!source || !target || source.owner !== "player" || source.id === target.id) return;
   if (source.troops < 1) {
     showToast("No troops available to send.");
@@ -13730,15 +13948,98 @@ function showTroopSliderModal(source, target) {
     return;
   }
 
-  const route = findRoute(source, target);
+  const isTransfer = target.owner === "player";
+  const mainCityBlockReason = isTransfer ? "" : getMainCityAttackBlockReason(target, "player");
+  if (mainCityBlockReason) {
+    showToast(mainCityBlockReason);
+    cancelSendMode();
+    if (modal.open) modal.close();
+    return;
+  }
+  const shieldBlockReason = isTransfer ? "" : getPeaceShieldAttackBlockReason(target, "player");
+  if (shieldBlockReason) {
+    showToast(shieldBlockReason);
+    cancelSendMode();
+    if (modal.open) modal.close();
+    return;
+  }
+
+  const requestId = ++activeTroopRouteRequestId;
+  troopSliderActive = true;
+  activeTroopSliderRoute = null;
+  showTroopRouteLoadingModal(source, target, isTransfer);
+
+  await new Promise(resolve => requestAnimationFrame(resolve));
+  const route = await findRouteAsync(source, target);
+  if (requestId !== activeTroopRouteRequestId) return;
+
+  const freshSource = cityById(source.id);
+  const freshTarget = cityById(target.id);
+  if (!freshSource || !freshTarget || freshSource.owner !== "player" || freshSource.id === freshTarget.id) {
+    showToast("Order canceled. The map changed.");
+    cancelSendMode();
+    if (modal.open) modal.close();
+    renderAll();
+    return;
+  }
+  if (!modal.open || !modal.classList.contains("troop-slider-modal")) return;
+  if (freshSource.troops < 1) {
+    showToast("No troops available to send.");
+    cancelSendMode();
+    if (modal.open) modal.close();
+    return;
+  }
   if (!route || !route.points.length) {
     showToast("No land route found around the terrain.");
     selectedTargetId = null;
-    activeTroopSliderRoute = null;
+    cancelSendMode();
+    if (modal.open) modal.close();
     renderAll();
     return;
   }
 
+  showTroopSliderModalWithRoute(freshSource, freshTarget, route);
+}
+
+function showTroopRouteLoadingModal(source, target, isTransfer) {
+  const commandLabel = isTransfer ? "Transfer" : "Attack";
+  const commandIcon = isTransfer ? "&#128095;" : "&#9876;";
+  modal.classList.add("troop-slider-modal");
+  modalTitle.textContent = `${commandLabel} troops`;
+  modalBody.innerHTML = `
+    <div class="troop-slider-panel ${isTransfer ? "transfer" : "attack"}">
+      <div class="troop-route-summary">
+        <div class="troop-route-city">
+          <span>From</span>
+          <strong>${escapeHtml(source.name)}</strong>
+          <small><b>${formatNumber(source.troops)}</b> available</small>
+        </div>
+        <div class="troop-command-icon" aria-hidden="true">${commandIcon}</div>
+        <div class="troop-route-city destination">
+          <span>To</span>
+          <strong>${escapeHtml(target.name)}</strong>
+          <small>${isTransfer ? "Your city" : `${OWNER[target.owner].label} city`}</small>
+        </div>
+      </div>
+
+      <div class="troop-slider-preview unknown route-loading-preview" role="status" aria-live="polite">
+        <div><span>Route</span><strong>Calculating...</strong><small>Finding a land path around cities and terrain</small></div>
+        <div><span>Orders</span><strong>Almost ready</strong><small>You can cancel while the route loads</small></div>
+      </div>
+
+      <div class="troop-slider-actions">
+        <button id="troopSliderConfirm" class="troop-slider-confirm ${isTransfer ? "transfer" : "attack"}" type="button" disabled>
+          <span aria-hidden="true">${commandIcon}</span>Calculating
+        </button>
+        <button id="troopSliderCancel" class="troop-slider-cancel" type="button">Cancel</button>
+      </div>
+    </div>
+  `;
+  modalBody.querySelector("#troopSliderCancel")?.addEventListener("click", () => modal.close());
+  if (!modal.open) modal.showModal();
+}
+
+function showTroopSliderModalWithRoute(source, target, route) {
   activeTroopSliderRoute = {
     sourceId: source.id,
     targetId: target.id,
@@ -13749,12 +14050,14 @@ function showTroopSliderModal(source, target) {
   if (mainCityBlockReason) {
     showToast(mainCityBlockReason);
     cancelSendMode();
+    if (modal.open) modal.close();
     return;
   }
   const shieldBlockReason = isTransfer ? "" : getPeaceShieldAttackBlockReason(target, "player");
   if (shieldBlockReason) {
     showToast(shieldBlockReason);
     cancelSendMode();
+    if (modal.open) modal.close();
     return;
   }
   const commandLabel = isTransfer ? "Transfer" : "Attack";
@@ -13876,6 +14179,10 @@ function confirmTroopSliderOrder() {
   const cachedRoute = activeTroopSliderRoute?.sourceId === source.id && activeTroopSliderRoute?.targetId === target.id
     ? activeTroopSliderRoute.route
     : null;
+  if (!cachedRoute?.points?.length) {
+    showToast("Route is still calculating.");
+    return;
+  }
   const launched = launchAttack(source.id, target.id, 1, "player", selectedTroopAmount, { route: cachedRoute });
   if (!launched) return;
   troopSliderActive = false;
@@ -13887,6 +14194,7 @@ function confirmTroopSliderOrder() {
 }
 
 function cancelSendMode() {
+  activeTroopRouteRequestId += 1;
   sendMode = false;
   selectedTargetId = null;
   selectedTroopAmount = 1;
