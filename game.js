@@ -207,6 +207,8 @@ const MIN_ZOOM = 0.40;
 const MAX_ZOOM = 1;
 const WHEEL_ZOOM_STEP = 1.12;
 const ZOOM_RENDER_SETTLE_MS = 260;
+const PAN_RENDER_SETTLE_MS = 180;
+const MAIN_CITY_RETURN_CAMERA_THROTTLE_MS = 180;
 const LOW_ZOOM_PERFORMANCE_THRESHOLD = 0.72;
 const ISLAND_MAP_PADDING = 560;
 const TROOP_PICKUP_ICON_SRC = "assets/troop-pickup.png?v=20260704-troop-pickup-red";
@@ -2171,7 +2173,6 @@ let zoom = 1;
 let panState = null;
 let activePointers = new Map();
 let pinchState = null;
-let zoomSettleTimer = null;
 let suppressMapClick = false;
 let lastFrameTime = performance.now();
 let lastRenderTime = 0;
@@ -2271,6 +2272,9 @@ let renderedMapRegionId = "";
 let renderedMapBoundsSignature = "";
 let mapImageSwapToken = 0;
 let interactionRenderLockUntil = 0;
+let cameraInteractionSettleTimer = null;
+let deferredMapRenderPending = false;
+let lastMainCityReturnCameraUpdateAt = 0;
 let cityRenderSignature = "";
 let pathRenderSignature = "";
 const armyTokenCache = new Map();
@@ -11834,6 +11838,10 @@ function renderAll() {
   syncMapSurfaceToActiveIsland();
   updateCameraTransform();
   renderHud();
+  if (isCameraInteractionActive()) {
+    queueDeferredMapRender();
+    return;
+  }
   renderHarvestBonuses();
   renderIslandTeleporters();
   renderPaths();
@@ -12440,6 +12448,10 @@ function getMissionPointAtProgress(mission, progress) {
 }
 
 function renderPaths() {
+  if (isCameraInteractionActive()) {
+    queueDeferredMapRender();
+    return;
+  }
   const armies = getRenderableArmies();
   const activeRegionId = getActiveMapRegionId();
   const visibleArmySegments = armies
@@ -12572,6 +12584,7 @@ function getCityRenderSignature(visibleCities, visibleCamps = []) {
 
 function updateVisibleCityDynamicText() {
   if (!state || !cityLayer) return;
+  if (isCameraInteractionActive()) return;
   cityLayer.querySelectorAll(".city-node").forEach(node => {
     const city = cityById(node.dataset.cityId);
     if (!city) return;
@@ -12589,7 +12602,10 @@ function updateVisibleCityDynamicText() {
 }
 
 function renderCities(force = false) {
-  if (!force && isZoomInteractionActive()) return;
+  if (isCameraInteractionActive()) {
+    queueDeferredMapRender();
+    return;
+  }
   const source = selectedSourceId ? cityById(selectedSourceId) : null;
   let scoutNearbySource = scoutNearbySourceId ? cityById(scoutNearbySourceId) : null;
   if (scoutNearbySourceId && scoutNearbySource?.owner !== "player") {
@@ -13101,7 +13117,10 @@ function updateArmyTokenElement(token, attack, mapPoint, targetCity) {
 
 function renderArmies(force = false) {
   if (!state) return;
-  if (isZoomInteractionActive()) return;
+  if (isCameraInteractionActive()) {
+    queueDeferredMapRender();
+    return;
+  }
   const now = performance.now();
   if (!force && now - lastArmyRenderTime < ARMY_RENDER_INTERVAL_MS) return;
   lastArmyRenderTime = now;
@@ -15805,24 +15824,76 @@ function getMapViewportOffset(frameRect = null, dimensions = null) {
 }
 
 function isZoomInteractionActive() {
-  return Boolean(mapFrame?.classList.contains("zooming"));
+  return isCameraInteractionActive();
+}
+
+function hasActiveCameraGesture() {
+  return Boolean(panState || pinchState || activePointers.size >= 2 || mapFrame?.classList.contains("dragging"));
+}
+
+function isCameraInteractionActive() {
+  return Boolean(
+    mapFrame?.classList.contains("camera-moving")
+    || mapFrame?.classList.contains("zooming")
+    || mapFrame?.classList.contains("dragging")
+    || performance.now() < interactionRenderLockUntil
+  );
+}
+
+function queueDeferredMapRender() {
+  deferredMapRenderPending = true;
+}
+
+function flushDeferredMapRender() {
+  if (!state || isCameraInteractionActive()) return;
+  const shouldRender = deferredMapRenderPending;
+  deferredMapRenderPending = false;
+  lastRenderTime = performance.now();
+  updateMainCityReturnButton();
+  if (!shouldRender) return;
+  pathRenderSignature = "";
+  cityRenderSignature = "";
+  renderHarvestBonuses();
+  renderIslandTeleporters();
+  renderPaths();
+  renderCities(true);
+  renderPanel();
+  renderArmies(true);
+}
+
+function finishCameraInteraction() {
+  if (!mapFrame) return;
+  if (hasActiveCameraGesture()) {
+    if (cameraInteractionSettleTimer) window.clearTimeout(cameraInteractionSettleTimer);
+    cameraInteractionSettleTimer = window.setTimeout(finishCameraInteraction, PAN_RENDER_SETTLE_MS);
+    return;
+  }
+  cameraInteractionSettleTimer = null;
+  mapFrame.classList.remove("camera-moving", "zooming");
+  interactionRenderLockUntil = 0;
+  flushDeferredMapRender();
+}
+
+function markCameraInteraction({ zooming = false, settleMs = PAN_RENDER_SETTLE_MS } = {}) {
+  if (!mapFrame) return;
+  interactionRenderLockUntil = performance.now() + settleMs;
+  mapFrame.classList.add("camera-moving");
+  if (zooming) mapFrame.classList.add("zooming");
+  if (cameraInteractionSettleTimer) window.clearTimeout(cameraInteractionSettleTimer);
+  cameraInteractionSettleTimer = window.setTimeout(finishCameraInteraction, settleMs);
 }
 
 function markZoomInteraction() {
-  if (!mapFrame) return;
-  interactionRenderLockUntil = performance.now() + ZOOM_RENDER_SETTLE_MS;
-  mapFrame.classList.add("zooming");
-  if (zoomSettleTimer) window.clearTimeout(zoomSettleTimer);
-  zoomSettleTimer = window.setTimeout(() => {
-    zoomSettleTimer = null;
-    mapFrame.classList.remove("zooming");
-    cityRenderSignature = "";
-    if (!state) return;
-    renderPaths();
-    renderCities(true);
-    renderPanel();
-    renderArmies();
-  }, ZOOM_RENDER_SETTLE_MS);
+  markCameraInteraction({ zooming: true, settleMs: ZOOM_RENDER_SETTLE_MS });
+}
+
+function updateMainCityReturnButtonForCamera(rect = null) {
+  if (isCameraInteractionActive()) {
+    const now = performance.now();
+    if (now - lastMainCityReturnCameraUpdateAt < MAIN_CITY_RETURN_CAMERA_THROTTLE_MS) return;
+    lastMainCityReturnCameraUpdateAt = now;
+  }
+  updateMainCityReturnButton(rect);
 }
 
 function applyCameraTransform() {
@@ -15837,7 +15908,7 @@ function applyCameraTransform() {
   camera.y = clamp(camera.y, 0, maxY);
   const offset = getMapViewportOffset(rect, dimensions);
   mapWorld.style.transform = `translate3d(${offset.x - camera.x * zoom}px, ${offset.y - camera.y * zoom}px, 0) scale(${zoom})`;
-  updateMainCityReturnButton(rect);
+  updateMainCityReturnButtonForCamera(rect);
 }
 
 function updateCameraTransform() {
@@ -16128,7 +16199,6 @@ function setZoomAroundPoint(nextZoom, clientX, clientY) {
   camera.y = before.y - (clientY - rect.top - offset.y) / zoom;
   scheduleCameraTransform();
   markZoomInteraction();
-  renderPanel();
 }
 
 function handleWheelZoom(event) {
@@ -16250,6 +16320,7 @@ function movePan(event) {
   camera.x = panState.cameraX - dx / zoom;
   camera.y = panState.cameraY - dy / zoom;
   scheduleCameraTransform();
+  markCameraInteraction();
 }
 
 function endPan(event) {
