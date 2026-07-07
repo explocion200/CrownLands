@@ -32,6 +32,9 @@ const KING_POWER_LEADERBOARD_LIMIT = 100;
 const PLAYER_IDENTITY_LOOKUP_BATCH_SIZE = 80;
 const PLAYER_IDENTITY_CACHE_STALE_MS = 5 * 60 * 1000;
 const ONLINE_OWNED_CITIES_REFRESH_MS = 15 * 1000;
+const ONLINE_INITIAL_CITY_LIST_TIMEOUT_MS = 18 * 1000;
+const ONLINE_INITIAL_CITY_LIST_FALLBACK_TIMEOUT_MS = 35 * 1000;
+const ONLINE_REGION_CITY_RESOLUTION_TIMEOUT_MS = 20 * 1000;
 const ONLINE_ARMY_EXPIRY_GRACE_SECONDS = 8;
 const ONLINE_ARMY_RESOLVE_RETRY_SECONDS = 5;
 const PENDING_ARMY_MAX_AGE_MS = 3 * 24 * 60 * 60 * 1000;
@@ -8510,7 +8513,7 @@ async function recoverPendingOnlineArmyMovements() {
   return false;
 }
 
-async function subscribeOnlineIslandWithInitialCities(api, islandId, handlers = {}, timeoutMs = 9000, timeoutMessage = "City list is taking too long.") {
+async function subscribeOnlineIslandWithInitialCities(api, islandId, handlers = {}, timeoutMs = ONLINE_INITIAL_CITY_LIST_TIMEOUT_MS, timeoutMessage = "City list is taking too long.") {
   let unsubscribe = null;
   let settled = false;
   const initialSnapshot = new Promise((resolve, reject) => {
@@ -8542,6 +8545,30 @@ async function subscribeOnlineIslandWithInitialCities(api, islandId, handlers = 
     if (!Array.isArray(cities)) throw new Error("City list did not load.");
     return unsubscribe;
   } catch (error) {
+    const timedOut = String(error?.message || error) === timeoutMessage;
+    if (timedOut && api?.loadIslandCities) {
+      console.warn("Initial live city list timed out; using one-time city load while the listener catches up.", {
+        islandId,
+        timeoutMs,
+      });
+      try {
+        const fallbackMessage = timeoutMessage.replace(" is taking too long.", " backup load is taking too long.");
+        const cities = await withTimeout(
+          api.loadIslandCities(islandId),
+          Math.max(ONLINE_INITIAL_CITY_LIST_FALLBACK_TIMEOUT_MS, timeoutMs + 12000),
+          fallbackMessage
+        );
+        if (!Array.isArray(cities)) throw new Error("City list did not load.");
+        if (!settled) {
+          settled = true;
+          if (typeof handlers.onCities === "function") handlers.onCities(cities);
+        }
+        return unsubscribe;
+      } catch (fallbackError) {
+        if (typeof unsubscribe === "function") unsubscribe();
+        throw fallbackError;
+      }
+    }
     if (typeof unsubscribe === "function") unsubscribe();
     throw error;
   }
@@ -8836,7 +8863,7 @@ async function connectOnlineIsland(regionId, { claimHome = false, homeRegionId =
       onError: (error, source) => {
         handleOnlineSnapshotError(error, null);
       },
-    }, 9000, `${getRegionLabel(targetRegionId)} city list is taking too long.`);
+    }, ONLINE_INITIAL_CITY_LIST_TIMEOUT_MS, `${getRegionLabel(targetRegionId)} city list is taking too long.`);
 
     onlineWorldConnected = true;
     onlineLastError = "";
@@ -9739,7 +9766,7 @@ async function loadOnlineRegionCitiesForResolution(regionId) {
 
   const onlineCities = await withTimeout(
     api.loadIslandCities(getOnlineIslandId(targetRegionId)),
-    9000,
+    ONLINE_REGION_CITY_RESOLUTION_TIMEOUT_MS,
     `${getRegionLabel(targetRegionId)} city list is taking too long.`
   );
   if (!Array.isArray(onlineCities)) return false;
