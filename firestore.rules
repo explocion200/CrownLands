@@ -34,8 +34,15 @@ service cloud.firestore {
           'itemPurchaseCooldowns',
           'economyUpdatedAtMs',
           'offlineProductionCities',
+          'kingPower',
+          'cityCount',
+          'globalStats',
           'character',
-          'upgrades'
+          'upgrades',
+          'mainCityId',
+          'mainIslandId',
+          'mainRegionId',
+          'mainCityChangedAtMs'
         ]);
     }
 
@@ -50,13 +57,20 @@ service cloud.firestore {
         && profileFieldUnchanged('itemEffects')
         && profileFieldUnchanged('itemPurchaseCooldowns')
         && profileFieldUnchanged('economyUpdatedAtMs')
-        && profileFieldUnchanged('offlineProductionCities');
+        && profileFieldUnchanged('offlineProductionCities')
+        && profileFieldUnchanged('kingPower')
+        && profileFieldUnchanged('cityCount')
+        && profileFieldUnchanged('globalStats');
     }
 
     function validPlayerProfileUpdate() {
       return playerEconomyUnchanged()
         && profileFieldUnchanged('character')
-        && profileFieldUnchanged('upgrades');
+        && profileFieldUnchanged('upgrades')
+        && profileFieldUnchanged('mainCityId')
+        && profileFieldUnchanged('mainIslandId')
+        && profileFieldUnchanged('mainRegionId')
+        && profileFieldUnchanged('mainCityChangedAtMs');
     }
 
     function cityFieldUnchanged(field) {
@@ -121,6 +135,11 @@ service cloud.firestore {
         allow create, update, delete: if false;
       }
 
+      match /stats/{statsId} {
+        allow read: if ownsPlayerDoc(uid);
+        allow create, update, delete: if false;
+      }
+
       match /notificationTokens/{tokenId} {
         allow read: if ownsPlayerDoc(uid);
         allow create, update: if ownsPlayerDoc(uid)
@@ -133,13 +152,7 @@ service cloud.firestore {
 
     match /leaderboards/{boardId}/entries/{uid} {
       allow read: if signedIn();
-      allow create, update: if ownsPlayerDoc(uid)
-        && request.resource.data.uid == uid
-        && request.resource.data.kingPower is number
-        && request.resource.data.kingPower >= 0
-        && request.resource.data.cityCount is number
-        && request.resource.data.cityCount >= 0;
-      allow delete: if ownsPlayerDoc(uid);
+      allow create, update, delete: if false;
     }
 
     // Multiplayer collections. Layout/profile metadata can still be updated by

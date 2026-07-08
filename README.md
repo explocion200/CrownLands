@@ -73,13 +73,15 @@ This build has Firebase Auth, Firestore, and callable Functions added without br
 - While online, the browser syncs the signed-in player's owned cities back to Firestore for the currently loaded island.
 - Online troop orders now call Firebase Functions: `sendArmyOrder` creates and validates marches server-side, and `resolveArmyOrder` resolves scouts, transfers, attacks, defenses, city capture, level drops, XP, gold rewards, and battle reports in Firestore transactions.
 - Server-written reports are stored under `players/{uid}/serverReports/{reportId}` and merged into the in-game Reports UI.
+- Kingdom-wide totals are server-derived in `players/{uid}/stats/global`. King Power, total city count, marching troops, gold/hour, troop/hour, per-island owned counts, and leaderboard rows should read this aggregate instead of scanning every island during normal login.
+- Admin-only callables `recalculatePlayerGlobalStats` and `recalculateAllPlayerGlobalStats` rebuild the aggregate and leaderboard rows when old player data needs repair.
 
 See `FIREBASE_SETUP.md` for the Firebase project steps and the planned shared-world collections.
 
 Deploy Firebase rules and Functions after changing server multiplayer code:
 
 ```powershell
-firebase deploy --only functions,firestore:rules
+firebase deploy --only functions,firestore:rules,firestore:indexes
 ```
 
 ## Local Web Editor

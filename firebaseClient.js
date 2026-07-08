@@ -269,8 +269,24 @@
     return callServerFunction("resetSkills", payload);
   }
 
+  async function repairMainCityAssignment(payload = {}) {
+    return callServerFunction("repairMainCityAssignment", payload);
+  }
+
+  async function changeMainCity(payload = {}) {
+    return callServerFunction("changeMainCity", payload);
+  }
+
   async function syncPlayerIdentity(payload = {}) {
     return callServerFunction("syncPlayerIdentity", payload);
+  }
+
+  async function recalculatePlayerGlobalStats(payload = {}) {
+    return callServerFunction("recalculatePlayerGlobalStats", payload);
+  }
+
+  async function recalculateAllPlayerGlobalStats(payload = {}) {
+    return callServerFunction("recalculateAllPlayerGlobalStats", payload);
   }
 
   async function ensureMainIsland(payload = {}) {
@@ -554,6 +570,10 @@
     const { doc, setDoc, serverTimestamp, deleteField } = client.modules.firestore;
     const ref = doc(client.db, "players", uid);
     const cleanProfile = sanitizeForFirestore(profile);
+    delete cleanProfile.mainCityId;
+    delete cleanProfile.mainIslandId;
+    delete cleanProfile.mainRegionId;
+    delete cleanProfile.mainCityChangedAtMs;
     if (cleanProfile.shopItems && typeof cleanProfile.shopItems === "object" && deleteField) {
       cleanProfile.shopItems = {
         ...cleanProfile.shopItems,
@@ -579,6 +599,74 @@
     const { doc, getDoc } = client.modules.firestore;
     const snap = await getDoc(doc(client.db, "players", uid));
     return snap.exists() ? snap.data() : null;
+  }
+
+  function timestampToMs(value) {
+    if (!value) return 0;
+    if (typeof value === "number") return Math.max(0, value);
+    if (typeof value.toMillis === "function") return Math.max(0, value.toMillis());
+    if (Number.isFinite(Number(value.seconds))) {
+      return Math.max(0, Number(value.seconds) * 1000 + Math.floor(Number(value.nanoseconds || 0) / 1_000_000));
+    }
+    return 0;
+  }
+
+  function cleanGlobalStats(stats = {}) {
+    if (!stats || typeof stats !== "object") return null;
+    return {
+      playerId: String(stats.playerId || stats.uid || client.user?.uid || "").slice(0, 128),
+      uid: String(stats.uid || stats.playerId || client.user?.uid || "").slice(0, 128),
+      worldId: String(stats.worldId || "").slice(0, 120),
+      resetGeneration: String(stats.resetGeneration || "").slice(0, 120),
+      version: Math.max(0, Math.floor(Number(stats.version) || 0)),
+      kingPower: Math.max(0, Math.floor(Number(stats.kingPower) || 0)),
+      totalCities: Math.max(0, Math.floor(Number(stats.totalCities) || 0)),
+      totalTroops: Math.max(0, Math.floor(Number(stats.totalTroops) || 0)),
+      totalMarchingTroops: Math.max(0, Math.floor(Number(stats.totalMarchingTroops) || 0)),
+      totalCityLevels: Math.max(0, Math.floor(Number(stats.totalCityLevels) || 0)),
+      totalVictoryPoints: Math.max(0, Math.floor(Number(stats.totalVictoryPoints) || 0)),
+      strongholdCount: Math.max(0, Math.floor(Number(stats.strongholdCount) || 0)),
+      cityCountsByRegion: Object.entries(stats.cityCountsByRegion || {}).reduce((counts, [regionId, count]) => {
+        const key = String(regionId || "").slice(0, 120);
+        if (key) counts[key] = Math.max(0, Math.floor(Number(count) || 0));
+        return counts;
+      }, {}),
+      goldPerHour: Math.max(0, Math.floor(Number(stats.goldPerHour) || 0)),
+      troopPerHour: Math.max(0, Math.floor(Number(stats.troopPerHour) || 0)),
+      stationedTroopPower: Math.max(0, Math.floor(Number(stats.stationedTroopPower) || 0)),
+      cityPower: Math.max(0, Math.floor(Number(stats.cityPower) || 0)),
+      marchingPower: Math.max(0, Math.floor(Number(stats.marchingPower) || 0)),
+      characterLevel: Math.max(1, Math.floor(Number(stats.characterLevel) || 1)),
+      mainCityId: String(stats.mainCityId || "").slice(0, 96),
+      mainIslandId: String(stats.mainIslandId || "").slice(0, 160),
+      mainRegionId: String(stats.mainRegionId || "").slice(0, 120),
+      updatedAtMs: Math.max(0, Math.floor(Number(stats.updatedAtMs) || timestampToMs(stats.updatedAt))),
+    };
+  }
+
+  async function loadPlayerGlobalStats() {
+    await init();
+    const uid = requireSignedIn();
+    if (!uid) return null;
+    const { doc, getDoc } = client.modules.firestore;
+    const snap = await getDoc(doc(client.db, "players", uid, "stats", "global"));
+    return snap.exists() ? cleanGlobalStats({ id: snap.id, ...snap.data() }) : null;
+  }
+
+  function subscribePlayerGlobalStats(handlers = {}) {
+    if (!client.db || !client.modules?.firestore?.onSnapshot || !client.user?.uid) return null;
+    const { doc, onSnapshot } = client.modules.firestore;
+    return onSnapshot(
+      doc(client.db, "players", client.user.uid, "stats", "global"),
+      snapshot => {
+        if (typeof handlers.onStats === "function") {
+          handlers.onStats(snapshot.exists() ? cleanGlobalStats({ id: snapshot.id, ...snapshot.data() }) : null);
+        }
+      },
+      error => {
+        if (typeof handlers.onError === "function") handlers.onError(error);
+      }
+    );
   }
 
   async function purchaseShopItem({ itemId = "", cost = 0 } = {}) {
@@ -701,8 +789,10 @@
 
     for (const city of cities) {
       if (!city?.id) continue;
+      const cityPatch = cleanCitySeed(city);
+      delete cityPatch.isMainCity;
       batch.set(doc(client.db, "islands", islandId, "cities", city.id), {
-        ...cleanCitySeed(city),
+        ...cityPatch,
         ownerKind: "player",
         ownerUid: uid,
         ownerName: city.ownerName || client.user.displayName || "Ruler",
@@ -720,8 +810,10 @@
     const uid = requireSignedIn();
     if (!uid || !city?.id) return false;
     const { doc, setDoc, serverTimestamp } = client.modules.firestore;
+    const cityPatch = cleanCitySeed(city);
+    delete cityPatch.isMainCity;
     await setDoc(doc(client.db, "islands", islandId, "cities", city.id), {
-      ...cleanCitySeed(city),
+      ...cityPatch,
       updatedBy: uid,
       updatedAt: serverTimestamp(),
     }, { merge: true });
@@ -815,13 +907,8 @@
     await init();
     const uid = requireSignedIn();
     if (!uid) return false;
-    const { doc, setDoc, serverTimestamp } = client.modules.firestore;
-    await setDoc(doc(client.db, "leaderboards", "kingPower", "entries", uid), {
-      ...cleanLeaderboardEntry({ ...entry, updatedAtMs: Date.now() }),
-      uid,
-      updatedAt: serverTimestamp(),
-    }, { merge: true });
-    return true;
+    cleanLeaderboardEntry(entry);
+    return false;
   }
 
   async function loadKingPowerLeaderboard(limitCount = 100) {
@@ -1067,13 +1154,19 @@
     upgradeCity,
     spendSkillPoint,
     resetSkills,
+    repairMainCityAssignment,
+    changeMainCity,
     syncPlayerIdentity,
+    recalculatePlayerGlobalStats,
+    recalculateAllPlayerGlobalStats,
     relinquishCity,
     relocateMainCity,
     purchaseShopItem,
     activateInventoryItem,
     saveGameSnapshot,
     loadGameSnapshot,
+    loadPlayerGlobalStats,
+    subscribePlayerGlobalStats,
     sendArmyOrder,
     resolveArmyOrder,
     enablePushNotifications,

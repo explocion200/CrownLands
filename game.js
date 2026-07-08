@@ -2228,6 +2228,8 @@ let onlineArmies = [];
 let onlineArmiesByIsland = new Map();
 let onlineArmyUnsubscribes = [];
 let onlineServerReportsUnsubscribe = null;
+let onlineGlobalStatsUnsubscribe = null;
+let onlineGlobalStats = null;
 let appliedServerReportIds = new Set();
 let resolvingOnlineArmyIds = new Set();
 let resolvedOnlineArmyIds = new Set();
@@ -4591,6 +4593,7 @@ function newGame(playerName) {
     shopItems: createDefaultShopItems(),
     itemEffects: createDefaultItemEffects(),
     itemPurchaseCooldowns: createDefaultItemPurchaseCooldowns(),
+    globalStats: null,
     daily: { date: currentLocalDateKey(), neutralCaptures: 0, harvestedBonuses: 0, harvestedGoldBonuses: 0, harvestedTroopBonuses: 0 },
     harvestBonuses: [],
     harvestSpawnTimer: HARVEST_BONUS_INITIAL_SPAWN_SECONDS,
@@ -4924,6 +4927,7 @@ async function syncPlayerIdentityToAllOwnedCities({ forceLeaderboard = true } = 
         mainRegionId: leaderboardEntry.mainRegionId,
         mainIslandId: leaderboardEntry.mainIslandId,
       });
+      if (syncResult?.globalStats) applyGlobalStatsSnapshot(syncResult.globalStats, { render: false });
       await Promise.all([profileSave, leaderboardSave, presenceSave]);
       playerCities().forEach(city => localDirtyCityIds.delete(city.id));
       onlineLastError = "";
@@ -5291,7 +5295,7 @@ function normalizeSingleMainCityAssignment(preferredCityId = "", { markDirty = f
 async function syncSingleMainCityAssignmentToOnline(mainCityId = state?.mainCityId || "", { refreshFirst = false } = {}) {
   if (!state || !mainCityId || !isOnlineWorldActive()) return false;
   const api = getOnlineApi();
-  if (!api?.savePlayerCities || !api?.isSignedIn?.()) return false;
+  if (!api?.repairMainCityAssignment || !api?.isSignedIn?.()) return false;
   if (refreshFirst && api.loadOwnedCitiesAcrossIslands) {
     await refreshAllOwnedCities(true).catch(error => {
       console.warn("Could not refresh owned cities before main city repair", error);
@@ -5299,27 +5303,19 @@ async function syncSingleMainCityAssignmentToOnline(mainCityId = state?.mainCity
     });
   }
 
-  const normalizedMainCityId = getKnownCityId(mainCityId);
-  normalizeSingleMainCityAssignment(normalizedMainCityId, { markDirty: false });
-  const groupedByIsland = new Map();
-  getKnownOwnedRegularCities().forEach(city => {
-    const patched = {
-      ...city,
-      isMainCity: city.id === normalizedMainCityId,
-      islandId: city.islandId || getOnlineIslandId(getCityRegionId(city)),
-    };
-    const islandId = patched.islandId;
-    if (!groupedByIsland.has(islandId)) groupedByIsland.set(islandId, []);
-    groupedByIsland.get(islandId).push(patched);
-  });
-  if (!groupedByIsland.size) return false;
-
-  const saves = [...groupedByIsland.entries()].map(([islandId, cities]) => api.savePlayerCities(islandId, cities));
-  await Promise.all(saves);
-  const syncedCities = [...groupedByIsland.values()].flat();
-  syncedCities.forEach(city => localDirtyCityIds.delete(city.id));
-  mergeOwnedCitySnapshots(syncedCities, { complete: false });
-  return true;
+  const result = await api.repairMainCityAssignment({ mainCityId: getKnownCityId(mainCityId) });
+  applyServerEconomyResult(result);
+  const repairedMainCityId = getKnownCityId(result?.currentUser?.mainCityId) || getKnownCityId(mainCityId);
+  if (repairedMainCityId) {
+    state.mainCityId = repairedMainCityId;
+    if (state.online) {
+      state.online.mainCityId = repairedMainCityId;
+      state.online.mainRegionId = normalizeRegionId(result?.currentUser?.mainRegionId || state.online.mainRegionId);
+      state.online.mainIslandId = result?.currentUser?.mainIslandId || state.online.mainIslandId || getOnlineIslandId(state.online.mainRegionId);
+    }
+    normalizeSingleMainCityAssignment(repairedMainCityId, { markDirty: false });
+  }
+  return Boolean(result?.ok ?? true);
 }
 
 function getMainCityChangeCooldownRemainingMs(now = Date.now()) {
@@ -5367,6 +5363,52 @@ async function changeMainCity(cityId) {
   }
 
   const previousMain = getLoadedMainCity() || (state.mainCityId ? cityById(state.mainCityId) : null);
+  const api = getOnlineApi();
+  if (isOnlineWorldActive() && api?.changeMainCity && api?.isSignedIn?.()) {
+    try {
+      showToast("Changing main city...");
+      const result = await api.changeMainCity({
+        cityId: city.id,
+        regionId: getCityRegionId(city),
+        playerName: state.playerName,
+        flag: state.flag,
+        ownerKingPower: getKingPower(),
+      });
+      applyServerEconomyResult(result);
+
+      const newMain = result?.mainCity || {};
+      const nextMainCityId = getKnownCityId(result?.currentUser?.mainCityId || newMain.id || city.id);
+      const nextMainRegionId = normalizeRegionId(result?.currentUser?.mainRegionId || newMain.regionId || getCityRegionId(city));
+      if (nextMainCityId) state.mainCityId = nextMainCityId;
+      state.mainCityChangedAtMs = normalizeTimestampMs(result?.currentUser?.mainCityChangedAtMs)
+        || state.mainCityChangedAtMs
+        || Date.now();
+      if (state.online) {
+        state.online.mainCityId = nextMainCityId;
+        state.online.mainRegionId = nextMainRegionId;
+        state.online.mainIslandId = result?.currentUser?.mainIslandId || newMain.islandId || getOnlineIslandId(nextMainRegionId);
+      }
+      normalizeSingleMainCityAssignment(nextMainCityId, { markDirty: false });
+      onlineOwnedCitiesCacheComplete = false;
+      await refreshAllOwnedCities(true).catch(error => {
+        console.warn("Could not refresh owned cities after main city change", error);
+        return false;
+      });
+      addLog(`${city.name} is now your main city.`);
+      publishOnlinePresence(true);
+      saveGame();
+      renderAll();
+      showCityInfoModal(nextMainCityId || city.id);
+      showToast(`${city.name} is now your main city.`);
+      return true;
+    } catch (error) {
+      showToast(error?.message || "Could not change main city.");
+      console.warn("Could not change main city on server", error);
+      if (city) showCityInfoModal(city.id);
+      return false;
+    }
+  }
+
   state.mainCityId = city.id;
   state.mainCityChangedAtMs = Date.now();
   normalizeSingleMainCityAssignment(city.id, { markDirty: true });
@@ -5549,6 +5591,93 @@ function getCaptureCooldownRemaining(city) {
 
 function normalizePowerValue(value) {
   return Math.max(0, Math.floor(Number(value) || 0));
+}
+
+function normalizeGlobalStatsSnapshot(raw = null) {
+  if (!raw || typeof raw !== "object") return null;
+  const cityCountsByRegion = Object.entries(raw.cityCountsByRegion || {}).reduce((counts, [regionId, count]) => {
+    const key = normalizeRegionId(regionId);
+    if (key) counts[key] = Math.max(0, Math.floor(Number(count) || 0));
+    return counts;
+  }, {});
+  return {
+    uid: String(raw.uid || raw.playerId || getCurrentOnlineUid() || "").trim(),
+    worldId: String(raw.worldId || ""),
+    resetGeneration: String(raw.resetGeneration || ""),
+    version: Math.max(0, Math.floor(Number(raw.version) || 0)),
+    kingPower: normalizePowerValue(raw.kingPower),
+    totalCities: Math.max(0, Math.floor(Number(raw.totalCities) || 0)),
+    totalTroops: Math.max(0, Math.floor(Number(raw.totalTroops) || 0)),
+    totalMarchingTroops: Math.max(0, Math.floor(Number(raw.totalMarchingTroops) || 0)),
+    totalCityLevels: Math.max(0, Math.floor(Number(raw.totalCityLevels) || 0)),
+    totalVictoryPoints: Math.max(0, Math.floor(Number(raw.totalVictoryPoints) || 0)),
+    strongholdCount: Math.max(0, Math.floor(Number(raw.strongholdCount) || 0)),
+    cityCountsByRegion,
+    goldPerHour: Math.max(0, Math.floor(Number(raw.goldPerHour) || 0)),
+    troopPerHour: Math.max(0, Math.floor(Number(raw.troopPerHour) || 0)),
+    stationedTroopPower: normalizePowerValue(raw.stationedTroopPower),
+    cityPower: normalizePowerValue(raw.cityPower),
+    marchingPower: normalizePowerValue(raw.marchingPower),
+    characterLevel: Math.max(1, Math.floor(Number(raw.characterLevel) || 1)),
+    mainCityId: getKnownCityId(raw.mainCityId),
+    mainIslandId: String(raw.mainIslandId || ""),
+    mainRegionId: normalizeRegionId(raw.mainRegionId || getRegionIdFromOnlineIslandId(raw.mainIslandId)),
+    updatedAtMs: normalizeTimestampMs(raw.updatedAtMs) || timestampToMs(raw.updatedAt),
+  };
+}
+
+function hasUsableGlobalStats(stats = getGlobalStatsSnapshot()) {
+  return Boolean(stats && (stats.version > 0 || stats.updatedAtMs > 0 || stats.worldId));
+}
+
+function getGlobalStatsSnapshot() {
+  const stats = normalizeGlobalStatsSnapshot(state?.globalStats || onlineGlobalStats);
+  const currentUid = getCurrentOnlineUid();
+  if (stats?.uid && currentUid && stats.uid !== currentUid) return null;
+  return stats;
+}
+
+function getGlobalOwnedCityCountByRegion(regionId) {
+  const stats = getGlobalStatsSnapshot();
+  if (!hasUsableGlobalStats(stats)) return null;
+  if (regionId === null || regionId === undefined || !String(regionId || "").trim()) return stats.totalCities;
+  const key = normalizeRegionId(regionId);
+  return Math.max(0, Math.floor(Number(stats.cityCountsByRegion?.[key]) || 0));
+}
+
+function applyGlobalStatsSnapshot(raw = null, options = {}) {
+  if (!state) return false;
+  const stats = normalizeGlobalStatsSnapshot(raw);
+  if (!stats) return false;
+  const currentUid = getCurrentOnlineUid();
+  if (stats.uid && currentUid && stats.uid !== currentUid) return false;
+  const before = JSON.stringify(state.globalStats || onlineGlobalStats || null);
+  onlineGlobalStats = stats;
+  state.globalStats = stats;
+  lastComputedKingPower = stats.kingPower;
+  if (stats.mainCityId) {
+    state.mainCityId = stats.mainCityId;
+    if (state.online) {
+      state.online.mainCityId = stats.mainCityId;
+      state.online.mainRegionId = stats.mainRegionId || state.online.mainRegionId;
+      state.online.mainIslandId = stats.mainIslandId || state.online.mainIslandId;
+    }
+  }
+  rememberPlayerIdentity({
+    uid: stats.uid || currentUid,
+    playerName: state.playerName,
+    flag: state.flag,
+    kingPower: stats.kingPower,
+    updatedAtMs: stats.updatedAtMs || Date.now(),
+  }, { force: true });
+  const changed = before !== JSON.stringify(stats);
+  if (changed && options.render !== false) {
+    renderHud();
+    updateIslandSwitcherUi();
+    if (modal.open && modal.classList.contains("city-list-modal")) renderCityListModal();
+    if (profileScreen?.classList.contains("open")) renderProfileScreen();
+  }
+  return changed;
 }
 
 function getPresenceKingPowerByUid(uid) {
@@ -6052,13 +6181,28 @@ function isGamePausedByOutcome() {
 function normalizeScoutReports(reports) {
   if (!reports || typeof reports !== "object" || Array.isArray(reports)) return {};
   const normalized = {};
+  const nowMs = Date.now();
+  const currentGameSeconds = Math.max(0, Math.floor(Number(state?.gameSeconds) || 0));
   for (const [cityId, report] of Object.entries(reports)) {
     const troops = Math.max(0, Math.floor(Number(report?.troops) || 0));
     const totalDefense = Math.max(0, Math.floor(Number(report?.totalDefense) || 0));
-    const scoutedAt = Math.max(0, Number(report?.scoutedAt) || 0);
-    const expiresAt = Math.max(0, Number(report?.expiresAt) || 0);
+    let scoutedAt = Math.max(0, Number(report?.scoutedAt) || 0);
+    let expiresAt = Math.max(0, Number(report?.expiresAt) || 0);
+    const scoutedAtMs = normalizeTimestampMs(report?.scoutedAtMs);
+    const expiresAtMs = normalizeTimestampMs(report?.expiresAtMs);
+    if (expiresAtMs) {
+      const startMs = scoutedAtMs || Math.max(0, expiresAtMs - SCOUT_REPORT_SECONDS * 1000);
+      const remainingSeconds = Math.max(0, Math.ceil((expiresAtMs - nowMs) / 1000));
+      if (remainingSeconds <= 0) continue;
+      if (!scoutedAt || !expiresAt || expiresAt <= scoutedAt || expiresAt <= currentGameSeconds) {
+        const ageSeconds = Math.max(0, Math.floor((nowMs - startMs) / 1000));
+        scoutedAt = Math.max(0, currentGameSeconds - ageSeconds);
+        expiresAt = scoutedAt + remainingSeconds;
+      }
+    }
     if (expiresAt <= scoutedAt) continue;
-    normalized[cityId] = { ...report, troops, totalDefense, scoutedAt, expiresAt };
+    if (currentGameSeconds > 0 && expiresAt <= currentGameSeconds) continue;
+    normalized[cityId] = { ...report, troops, totalDefense, scoutedAt, expiresAt, scoutedAtMs, expiresAtMs };
   }
   return normalized;
 }
@@ -6096,6 +6240,7 @@ function normalizeBattleReports(reports) {
         opponentName: String(report.opponentName || "").slice(0, 40),
         ownerName: String(report.ownerName || "").slice(0, 40),
         summary: String(report.summary || "").slice(0, 220),
+        scoutReport: report.scoutReport || null,
       };
     })
     .filter(Boolean)
@@ -6428,9 +6573,26 @@ function getLastSelectedOwnedAttackCity() {
 
 function completeScoutMission(attack, target) {
   if (target.owner === "player") {
-    target.troopFloat = Math.max(0, Number(target.troopFloat) || target.troops || 0) + 1;
+    const joined = Math.max(0, Math.floor(Number(attack.troops) || 1));
+    target.troopFloat = Math.max(0, Number(target.troopFloat) || target.troops || 0) + joined;
     target.troops = Math.floor(target.troopFloat);
+    const stats = getCityStats(target);
+    addBattleReport({
+      type: "scout",
+      outcome: "scout",
+      cityId: target.id,
+      regionId: getCityRegionId(target),
+      cityName: target.name,
+      cityLevel: clampCityLevel(target.level),
+      sentTroops: joined,
+      troopCount: target.troops,
+      totalDefense: stats.totalDefense,
+      ownerName: getCityOwnerDisplayName(target),
+      opponentName: getCityOwnerDisplayName(target),
+      summary: `Scout reached ${target.name}, now under your control. ${formatNumber(joined)} scout joined the garrison.`,
+    });
     addLog(`The scout joined your garrison at ${target.name}.`);
+    showToast(`Scout arrived at ${target.name}`);
     return;
   }
   state.scoutReports = normalizeScoutReports(state.scoutReports);
@@ -6662,6 +6824,19 @@ function normalizeServerBattleReport(report = null) {
   }])[0] || null;
 }
 
+function mergeServerScoutReport(rawReport = null) {
+  if (!state || rawReport?.type !== "scout" || !rawReport.cityId || !rawReport.scoutReport) return false;
+  state.scoutReports = normalizeScoutReports(state.scoutReports);
+  const scoutReport = normalizeServerScoutReport(rawReport.scoutReport);
+  if (!scoutReport) return false;
+  const existing = state.scoutReports[rawReport.cityId];
+  const existingTime = normalizeTimestampMs(existing?.scoutedAtMs) || Math.max(0, Number(existing?.scoutedAt) || 0);
+  const nextTime = normalizeTimestampMs(scoutReport.scoutedAtMs) || Math.max(0, Number(scoutReport.scoutedAt) || 0);
+  if (existing && existingTime >= nextTime) return false;
+  state.scoutReports[rawReport.cityId] = scoutReport;
+  return true;
+}
+
 function mergeServerReports(reports = []) {
   if (!state || !Array.isArray(reports) || !reports.length) return false;
   let changed = false;
@@ -6669,15 +6844,12 @@ function mergeServerReports(reports = []) {
   state.scoutReports = normalizeScoutReports(state.scoutReports);
   const existingIds = new Set(state.battleReports.map(report => report.id));
   for (const rawReport of reports) {
+    changed = mergeServerScoutReport(rawReport) || changed;
     const normalized = normalizeServerBattleReport(rawReport);
     if (!normalized || existingIds.has(normalized.id) || appliedServerReportIds.has(normalized.id)) continue;
     state.battleReports.push(normalized);
     existingIds.add(normalized.id);
     appliedServerReportIds.add(normalized.id);
-    if (rawReport.type === "scout" && rawReport.cityId && rawReport.scoutReport) {
-      const scoutReport = normalizeServerScoutReport(rawReport.scoutReport);
-      if (scoutReport) state.scoutReports[rawReport.cityId] = scoutReport;
-    }
     if (rawReport.characterAfter || Number.isFinite(Number(rawReport.goldAfter))) {
       applyServerProfilePatch({
         character: rawReport.characterAfter,
@@ -6699,6 +6871,9 @@ function mergeServerReports(reports = []) {
 function applyServerProfilePatch(patch = null) {
   if (!state || !patch || typeof patch !== "object") return false;
   let changed = false;
+  if (patch.globalStats) {
+    changed = applyGlobalStatsSnapshot(patch.globalStats, { render: false }) || changed;
+  }
   if (patch.character) {
     state.character = normalizeCharacterProgress(patch.character);
     syncCharacterSkillPoints(state.character, state.upgrades, patch.character?.skillPoints);
@@ -6884,6 +7059,7 @@ function applyServerCityUpdates(cityUpdates = []) {
 function applyServerArmyResult(result = null) {
   if (!result || typeof result !== "object") return false;
   let changed = false;
+  if (result.globalStats) changed = applyGlobalStatsSnapshot(result.globalStats, { render: false }) || changed;
   if (Array.isArray(result.reports)) changed = mergeServerReports(result.reports) || changed;
   if (Array.isArray(result.cityUpdates)) changed = applyServerCityUpdates(result.cityUpdates) || changed;
   if (result.currentUser) changed = applyServerProfilePatch(result.currentUser) || changed;
@@ -6893,6 +7069,7 @@ function applyServerArmyResult(result = null) {
 function applyServerEconomyResult(result = null, options = {}) {
   if (!result || typeof result !== "object") return false;
   let changed = false;
+  if (result.globalStats) changed = applyGlobalStatsSnapshot(result.globalStats, { render: false }) || changed;
   if (result.currentUser) changed = applyServerProfilePatch(result.currentUser) || changed;
   if (Array.isArray(result.cityUpdates)) changed = applyServerCityUpdates(result.cityUpdates) || changed;
   const production = result.production || {};
@@ -6993,6 +7170,13 @@ function stripServerEconomyProfileFields(profile = {}) {
   delete clean.harvestNextBonusType;
   delete clean.character;
   delete clean.upgrades;
+  delete clean.mainCityId;
+  delete clean.mainIslandId;
+  delete clean.mainRegionId;
+  delete clean.mainCityChangedAtMs;
+  delete clean.globalStats;
+  delete clean.kingPower;
+  delete clean.cityCount;
   return clean;
 }
 
@@ -7090,6 +7274,7 @@ function applyOnlineProfileSnapshot(profile = null, fallbackPlayerName = "Ricky"
   state.mainCityChangedAtMs = normalizeTimestampMs(profile.mainCityChangedAtMs);
   state.gameSeconds = Math.max(0, Number(profile.localGameSeconds) || Number(profile.gameSeconds) || Number(state.gameSeconds) || 0);
   state.lastRealTimeMs = normalizeTimestampMs(profile.lastRealTimeMs) || state.lastRealTimeMs;
+  if (profile.globalStats) applyGlobalStatsSnapshot(profile.globalStats, { render: false });
 }
 
 function timestampToMs(value) {
@@ -7248,14 +7433,16 @@ async function flushOnlineSave(force = false) {
 
 function getOnlinePresenceSnapshot() {
   const mainRegionId = state?.online?.mainRegionId || (state?.mainCityId ? getCityRegionId(state.mainCityId) : getActiveOnlineRegionId());
+  const stats = getGlobalStatsSnapshot();
+  const cityCount = hasUsableGlobalStats(stats) ? stats.totalCities : state ? getOwnedRegularCityCountForDisplay() : 0;
   return {
     displayName: state?.playerName || getOnlineApi()?.getUser?.()?.displayName || "Ruler",
     playerName: state?.playerName || "Ruler",
     flag: state?.flag || createDefaultFlag(),
-    mainCityId: state?.mainCityId || "",
-    mainRegionId,
-    mainIslandId: state?.online?.mainIslandId || getOnlineIslandId(mainRegionId),
-    cityCount: state ? getOwnedRegularCityCountForDisplay() : 0,
+    mainCityId: stats?.mainCityId || state?.mainCityId || "",
+    mainRegionId: stats?.mainRegionId || mainRegionId,
+    mainIslandId: stats?.mainIslandId || state?.online?.mainIslandId || getOnlineIslandId(mainRegionId),
+    cityCount,
     kingPower: state ? getKingPower() : 0,
     updatedAtMs: Date.now(),
   };
@@ -7263,15 +7450,17 @@ function getOnlinePresenceSnapshot() {
 
 function getKingPowerLeaderboardSnapshot() {
   const mainRegionId = state?.online?.mainRegionId || (state?.mainCityId ? getCityRegionId(state.mainCityId) : getActiveOnlineRegionId());
+  const stats = getGlobalStatsSnapshot();
+  const cityCount = hasUsableGlobalStats(stats) ? stats.totalCities : state ? getOwnedRegularCityCountForDisplay() : 0;
   return {
     displayName: state?.playerName || getOnlineApi()?.getUser?.()?.displayName || "Ruler",
     playerName: state?.playerName || "Ruler",
     flag: state?.flag || createDefaultFlag(),
     kingPower: getKingPower(),
-    cityCount: state ? getOwnedRegularCityCountForDisplay() : 0,
-    mainCityId: state?.mainCityId || "",
-    mainRegionId,
-    mainIslandId: state?.online?.mainIslandId || getOnlineIslandId(mainRegionId),
+    cityCount,
+    mainCityId: stats?.mainCityId || state?.mainCityId || "",
+    mainRegionId: stats?.mainRegionId || mainRegionId,
+    mainIslandId: stats?.mainIslandId || state?.online?.mainIslandId || getOnlineIslandId(mainRegionId),
     updatedAtMs: Date.now(),
   };
 }
@@ -7290,6 +7479,10 @@ function getLeaderboardEntrySignature(entry) {
 async function publishKingPowerLeaderboard({ force = false } = {}) {
   if (!state || leaderboardSaveInFlight) return false;
   if (!isOnlineWorldActive()) return false;
+  if (usesServerEconomyAuthority()) {
+    rememberCurrentPlayerIdentity();
+    return false;
+  }
   const api = getOnlineApi();
   if (!api?.saveKingPowerLeaderboardEntry || !api?.isSignedIn?.()) return false;
   const entry = getKingPowerLeaderboardSnapshot();
@@ -7635,8 +7828,10 @@ function getOwnedRegularCityCountsByRegionForDisplay() {
 }
 
 function getOwnedRegularCityCountForDisplay(regionId = null) {
-  const countsByRegion = getOwnedRegularCityCountsByRegionForDisplay();
   const hasRegionFilter = regionId !== null && regionId !== undefined && String(regionId || "").trim();
+  const statsCount = getGlobalOwnedCityCountByRegion(hasRegionFilter ? regionId : null);
+  if (statsCount !== null) return statsCount;
+  const countsByRegion = getOwnedRegularCityCountsByRegionForDisplay();
   if (hasRegionFilter) {
     const targetRegionId = normalizeRegionId(regionId);
     return countsByRegion.get(targetRegionId) || 0;
@@ -7655,8 +7850,11 @@ function getIslandOwnedCityCount(regionId) {
 
 function getIslandSwitcherSummary(regionId) {
   const targetRegionId = normalizeRegionId(regionId);
+  const statsOwnedCount = getGlobalOwnedCityCountByRegion(targetRegionId);
   const summary = getIslandOccupancySummary(targetRegionId);
-  const ownedCount = summary
+  const ownedCount = statsOwnedCount !== null
+    ? statsOwnedCount
+    : summary
     ? Math.max(0, Math.floor(Number(summary.ownCityCount) || 0))
     : getIslandOwnedCityCount(targetRegionId);
   return `Your cities: ${formatNumber(ownedCount)}`;
@@ -8571,8 +8769,10 @@ function disconnectOnlineWorld() {
   onlineIslandUnsubscribe = null;
   clearOnlineArmyWatchers();
   clearOnlineServerReportWatcher();
+  clearOnlineGlobalStatsWatcher();
   appliedServerReportIds = new Set();
   onlinePresence = [];
+  onlineGlobalStats = null;
   onlineIslandSummaries = new Map();
   onlineIslandSummaryRefreshInFlight = false;
   onlineOwnedCitiesCache = [];
@@ -8848,9 +9048,17 @@ async function setupOnlineWorld({ requireOnlineProfile = false } = {}) {
 
   const hasCurrentProfile = Boolean(profile);
   if (hasCurrentProfile) applyOnlineProfileSnapshot(profile, state.playerName);
+  if (api.loadPlayerGlobalStats) {
+    try {
+      const stats = await withTimeout(api.loadPlayerGlobalStats(), 3500, "Global stats lookup is taking too long.");
+      if (stats) applyGlobalStatsSnapshot(stats, { render: false });
+    } catch (error) {
+      console.warn("Could not load global kingdom stats before island setup", error);
+    }
+  }
   if (hasCurrentProfile) await prepareOfflineProgressFromProfile(profile);
-  const homeRegionId = await resolveHomeRegionIdForSetup(profile, { trustLocalState: hasCurrentProfile });
-  const activeRegionId = homeRegionId;
+  let homeRegionId = await resolveHomeRegionIdForSetup(profile, { trustLocalState: hasCurrentProfile });
+  let activeRegionId = homeRegionId;
   const mainIslandId = getOnlineIslandId(homeRegionId);
   const storedMainCityId = String(profile?.mainCityId
     || (hasCurrentProfile ? state.online?.mainCityId : "")
@@ -8871,7 +9079,36 @@ async function setupOnlineWorld({ requireOnlineProfile = false } = {}) {
   };
   state.mainCityId = mainCityId || "";
   normalizeSingleMainCityAssignment(state.mainCityId);
-  const needsMainCityClaim = !storedMainCityId;
+  let needsMainCityClaim = !storedMainCityId;
+
+  if (api.repairMainCityAssignment && (mainCityId || hasCurrentProfile)) {
+    onlineStatusDetail.textContent = "Verifying your main city...";
+    try {
+      const repair = await withTimeout(
+        api.repairMainCityAssignment({ mainCityId }),
+        12000,
+        "Main city repair is taking too long."
+      );
+      applyServerEconomyResult(repair);
+      const repairedMainCityId = getKnownCityId(repair?.currentUser?.mainCityId) || mainCityId;
+      const repairedMainRegionId = normalizeRegionId(repair?.currentUser?.mainRegionId || homeRegionId);
+      if (repairedMainCityId) {
+        needsMainCityClaim = false;
+        homeRegionId = repairedMainRegionId;
+        activeRegionId = repairedMainRegionId;
+        state.activeRegionId = activeRegionId;
+        state.mainCityId = repairedMainCityId;
+        state.online.islandId = getOnlineIslandId(activeRegionId);
+        state.online.activeRegionId = activeRegionId;
+        state.online.mainCityId = repairedMainCityId;
+        state.online.mainRegionId = repairedMainRegionId;
+        state.online.mainIslandId = repair?.currentUser?.mainIslandId || getOnlineIslandId(repairedMainRegionId);
+        normalizeSingleMainCityAssignment(repairedMainCityId, { markDirty: false });
+      }
+    } catch (error) {
+      console.warn("Could not verify main city during online setup", error);
+    }
+  }
 
   return connectOnlineIsland(activeRegionId, {
     claimHome: activeRegionId === homeRegionId && needsMainCityClaim,
@@ -9048,7 +9285,7 @@ async function connectOnlineIsland(regionId, { claimHome = false, homeRegionId =
       const claimedCity = claim?.cityId ? cityById(claim.cityId) : null;
       if (claimedCity) claimedCity.isMainCity = true;
       normalizeSingleMainCityAssignment(claim?.cityId || state.mainCityId, { markDirty: true });
-      if (claim?.repairedMainCity) addLog(`${cityById(claim.cityId)?.name || "Your main city"} was restored. Main cities cannot be attacked.`);
+      if (Math.max(0, Number(claim?.repairedMainCities) || 0) > 0) addLog(`${cityById(claim.cityId)?.name || "Your main city"} was restored. Main cities cannot be attacked.`);
       else if (claim?.alreadyClaimed) addLog(`Online ${getRegionLabel(targetRegionId)} connected. Your claimed city was restored.`);
       else if (claim?.cityId) addLog(`Online ${getRegionLabel(targetRegionId)} connected. ${cityById(claim.cityId)?.name || "A city"} joined your kingdom.`);
     }
@@ -9112,10 +9349,10 @@ async function connectOnlineIsland(regionId, { claimHome = false, homeRegionId =
     onlineLastError = "";
     subscribeOnlineArmyWatchers(islandId);
     subscribeOnlineServerReports();
+    subscribeOnlineGlobalStats();
     loadServerReportsOnce();
     await recoverPendingOnlineArmyMovements();
     await publishOnlinePresence(true);
-    refreshAllOwnedCities(true);
     queueOnlineIdentityRepair();
     updateOnlinePlayersUi();
     updateIslandSwitcherUi();
@@ -9897,6 +10134,11 @@ function clearOnlineServerReportWatcher() {
   onlineServerReportsUnsubscribe = null;
 }
 
+function clearOnlineGlobalStatsWatcher() {
+  if (typeof onlineGlobalStatsUnsubscribe === "function") onlineGlobalStatsUnsubscribe();
+  onlineGlobalStatsUnsubscribe = null;
+}
+
 async function loadServerReportsOnce() {
   const api = getOnlineApi();
   if (!state || !api?.loadServerReports || !api?.isSignedIn?.()) return false;
@@ -9921,6 +10163,20 @@ function subscribeOnlineServerReports() {
     onError: error => {
       onlineLastError = error?.message || String(error);
       console.warn("Could not subscribe to server reports", error);
+    },
+  });
+}
+
+function subscribeOnlineGlobalStats() {
+  const api = getOnlineApi();
+  clearOnlineGlobalStatsWatcher();
+  if (!state || !api?.subscribePlayerGlobalStats || !api?.isSignedIn?.()) return;
+  onlineGlobalStatsUnsubscribe = api.subscribePlayerGlobalStats({
+    onStats: stats => {
+      if (stats) applyGlobalStatsSnapshot(stats);
+    },
+    onError: error => {
+      console.warn("Could not subscribe to global kingdom stats", error);
     },
   });
 }
@@ -10057,10 +10313,15 @@ async function resolveServerArmyMission(mission) {
       armyId: onlineId,
       routeRegionIds,
     });
+    const shouldBackfillScoutReports = mission?.kind === "scout"
+      && (!Array.isArray(result?.reports) || result.reports.length === 0);
     if (result?.status === "resolved" || result?.status === "missing" || result?.status === "already-resolved") {
       resolvedOnlineArmyIds.add(onlineId);
     }
     applyServerArmyResult(result);
+    if (shouldBackfillScoutReports) {
+      await loadServerReportsOnce();
+    }
     mission.resolveRetryAtMs = 0;
     onlineLastError = "";
     saveGame();
@@ -12779,6 +13040,11 @@ function getCurrentPlayerIdentityKingPower(fallback = 0) {
 
 function getKingPower() {
   if (!state || !Array.isArray(state.cities)) return 0;
+  const globalStats = getGlobalStatsSnapshot();
+  if (hasUsableGlobalStats(globalStats)) {
+    lastComputedKingPower = normalizePowerValue(globalStats.kingPower);
+    return lastComputedKingPower;
+  }
   if (kingPowerCalculationInProgress) return getCachedKingPowerFallback();
   kingPowerCalculationInProgress = true;
   try {
@@ -12792,6 +13058,18 @@ function getKingPower() {
 }
 
 function getKingdomSummary() {
+  const globalStats = getGlobalStatsSnapshot();
+  if (hasUsableGlobalStats(globalStats)) {
+    return {
+      kingPower: normalizePowerValue(globalStats.kingPower),
+      cities: Math.max(0, Math.floor(Number(globalStats.totalCities) || 0)),
+      troops: Math.max(0, Math.floor(Number(globalStats.totalTroops) || 0))
+        + Math.max(0, Math.floor(Number(globalStats.totalMarchingTroops) || 0)),
+      gold: Math.floor(Number(state.gold) || 0),
+      goldProductionPerHour: Math.max(0, Math.floor(Number(globalStats.goldPerHour) || 0)),
+      troopProductionPerHour: Math.max(0, Math.floor(Number(globalStats.troopPerHour) || 0)),
+    };
+  }
   const cities = getAllOwnedCitiesForDisplay();
   const regularCities = cities.filter(city => !isStronghold(city));
   const marchingTroops = getPlayerMarchingTroops();
@@ -14948,6 +15226,8 @@ function showCityListModal() {
 function renderCityListModal() {
   const cities = getSortedCityList();
   const regularCityCount = cities.filter(city => !isStronghold(city)).length;
+  const globalStats = getGlobalStatsSnapshot();
+  const displayCityCount = hasUsableGlobalStats(globalStats) ? globalStats.totalCities : regularCityCount;
   const pageCount = Math.max(1, Math.ceil(cities.length / CITY_LIST_PAGE_SIZE));
   cityListPage = clamp(cityListPage, 0, pageCount - 1);
   const start = cityListPage * CITY_LIST_PAGE_SIZE;
@@ -14957,7 +15237,7 @@ function renderCityListModal() {
     <div class="city-list-panel">
       <div class="city-list-summary">
         <span>Owned across maps</span>
-        <strong>${formatNumber(regularCityCount)}</strong>
+        <strong>${formatNumber(displayCityCount)}</strong>
       </div>
       <div class="city-list-toolbar" aria-label="City list filters">
         <button class="${cityListSortKey === "level" ? "active" : ""}" data-city-list-sort="level" type="button" aria-pressed="${cityListSortKey === "level"}">
@@ -16301,7 +16581,11 @@ function normalizeLeaderboardEntry(raw) {
     displayName: cleanName(raw.playerName || raw.displayName || "Ruler") || "Ruler",
     flag: raw.flag || null,
     kingPower: Math.max(0, Math.floor(Number(raw.kingPower) || 0)),
-    cityCount: Math.max(0, Math.floor(Number(raw.cityCount) || 0)),
+    cityCount: Math.max(0, Math.floor(Number(raw.cityCount ?? raw.totalCities) || 0)),
+    totalTroops: Math.max(0, Math.floor(Number(raw.totalTroops) || 0)),
+    totalMarchingTroops: Math.max(0, Math.floor(Number(raw.totalMarchingTroops) || 0)),
+    goldPerHour: Math.max(0, Math.floor(Number(raw.goldPerHour) || 0)),
+    troopPerHour: Math.max(0, Math.floor(Number(raw.troopPerHour) || 0)),
     mainCityId,
     mainRegionId,
     updatedAtMs: normalizeTimestampMs(raw.updatedAtMs) || timestampToMs(raw.updatedAt),
@@ -16388,18 +16672,15 @@ async function refreshLeaderboardRows({ forcePublish = false } = {}) {
   }
   if (refreshBtn) refreshBtn.disabled = true;
   list.innerHTML = `<div class="leaderboard-empty">Loading King Power ranks...</div>`;
-  setLeaderboardStatus("Publishing your score...");
+  setLeaderboardStatus("Loading global ranks...");
   try {
     let rows = [];
     let usedFallback = false;
     let globalError = null;
     try {
       await publishOnlinePresence(true);
-      const published = await publishKingPowerLeaderboard({ force: forcePublish });
       rows = await api.loadKingPowerLeaderboard(KING_POWER_LEADERBOARD_LIMIT);
-      if (!published && !rows.length) {
-        globalError = new Error("King Power leaderboard entry was not published.");
-      }
+      if (!rows.length) globalError = new Error("No global King Power rows were found.");
     } catch (error) {
       globalError = error;
       console.warn("Could not load King Power leaderboard; trying online presence fallback", error);
