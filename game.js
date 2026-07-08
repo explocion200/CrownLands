@@ -17618,7 +17618,7 @@ function movePan(event) {
   markCameraInteraction();
 }
 
-function endPan(event) {
+function finishTrackedMapPointer(event, { renderPanelAfter = true } = {}) {
   const wasPinching = Boolean(pinchState);
   activePointers.delete(event.pointerId);
 
@@ -17631,11 +17631,40 @@ function endPan(event) {
 
   if (activePointers.size < 2) pinchState = null;
   if (activePointers.size === 0) mapFrame.classList.remove("dragging");
-  mapFrame.releasePointerCapture?.(event.pointerId);
+  try {
+    mapFrame.releasePointerCapture?.(event.pointerId);
+  } catch {
+    // Some browsers throw if capture was already released by the target element.
+  }
   if (suppressMapClick) {
     window.setTimeout(() => { suppressMapClick = false; }, 80);
   }
-  renderPanel();
+  if (renderPanelAfter) renderPanel();
+}
+
+function trySelectTrackedCityTap(event, { requireSameTarget = false } = {}) {
+  if (isMapInteractionBlocked()) return false;
+  if (!cityTapState || cityTapState.pointerId !== event.pointerId) return false;
+  const tapState = cityTapState;
+  cityTapState = null;
+  const moved = Math.hypot(event.clientX - tapState.x, event.clientY - tapState.y) > 12;
+  if (moved) return false;
+  if (requireSameTarget) {
+    const cityButton = event.target.closest(".city-node");
+    const sameCity = cityButton && cityLayer.contains(cityButton) && cityButton.dataset.cityId === tapState.cityId;
+    if (!sameCity) return false;
+  }
+  const city = cityById(tapState.cityId);
+  if (!city || !isCityInActiveMap(city)) return false;
+  suppressMapClick = true;
+  selectCity(tapState.cityId);
+  window.setTimeout(() => { suppressMapClick = false; }, 80);
+  return true;
+}
+
+function endPan(event) {
+  finishTrackedMapPointer(event, { renderPanelAfter: false });
+  if (event.type !== "pointerup" || !trySelectTrackedCityTap(event)) renderPanel();
 }
 
 function preventNativeMapTouch(event) {
@@ -17806,10 +17835,8 @@ cityLayer.addEventListener("pointerup", event => {
   const sameCity = cityButton && cityLayer.contains(cityButton) && cityButton.dataset.cityId === cityTapState.cityId;
   if (!moved && sameCity) {
     event.stopPropagation();
-    cityTapState.selected = true;
-    suppressMapClick = true;
-    selectCity(cityTapState.cityId);
-    window.setTimeout(() => { suppressMapClick = false; }, 80);
+    finishTrackedMapPointer(event, { renderPanelAfter: false });
+    trySelectTrackedCityTap(event, { requireSameTarget: true });
   } else {
     cityTapState = null;
   }
