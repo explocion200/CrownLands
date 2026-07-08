@@ -1602,8 +1602,7 @@ async function prepareEconomyCollection(transaction, uid, nowMs = Date.now(), op
 
   const ownedSnap = await transaction.get(db.collectionGroup("cities").where("ownerUid", "==", uid));
   const activeArmiesSnap = await transaction.get(db.collectionGroup("armies")
-    .where("ownerUid", "==", uid)
-    .where("status", "==", "active"));
+    .where("ownerUid", "==", uid));
   const cityEntries = createOwnedCityEntriesFromSnapshot(uid, ownedSnap);
   const activeArmies = activeArmiesSnap.docs
     .map(doc => ({
@@ -1834,14 +1833,10 @@ async function rebuildGlobalStatsForPlayer(uid = "") {
   if (!playerUid) throw new HttpsError("invalid-argument", "A player uid is required.");
   const nowMs = Date.now();
   const profileRef = db.doc(`players/${playerUid}`);
-  const [profileSnap, ownedSnap, activeArmiesSnap, presenceSnap] = await Promise.all([
+  const [profileSnap, ownedSnap, activeArmiesSnap] = await Promise.all([
     profileRef.get(),
     db.collectionGroup("cities").where("ownerUid", "==", playerUid).get(),
-    db.collectionGroup("armies")
-      .where("ownerUid", "==", playerUid)
-      .where("status", "==", "active")
-      .get(),
-    db.collectionGroup("presence").where("uid", "==", playerUid).get(),
+    db.collectionGroup("armies").where("ownerUid", "==", playerUid).get(),
   ]);
   const profile = profileSnap.exists ? profileSnap.data() || {} : {};
   const identity = getCanonicalPlayerIdentity(playerUid, profile, {}, {});
@@ -1853,7 +1848,7 @@ async function rebuildGlobalStatsForPlayer(uid = "") {
       islandId: safeString(armyDoc.ref.parent?.parent?.id, 160),
       ...armyDoc.data(),
     };
-    return isCurrentWorldArmy(army);
+    return army.status === "active" && isCurrentWorldArmy(army);
   });
   const activeArmies = activeArmyDocs.map(armyDoc => ({
     id: safeString(armyDoc.data()?.id || armyDoc.id, 96),
@@ -1939,26 +1934,6 @@ async function rebuildGlobalStatsForPlayer(uid = "") {
         ownerFlag: identity.ownerFlag,
         ownerKingPower: stats.kingPower,
         attackerKingPower: stats.kingPower,
-        updatedAt: FieldValue.serverTimestamp(),
-      },
-    });
-  });
-  presenceSnap.docs.forEach(presenceDoc => {
-    const islandId = presenceDoc.ref.parent?.parent?.id || "";
-    if (!isCurrentWorldIslandId(islandId)) return;
-    writes.push({
-      ref: presenceDoc.ref,
-      data: {
-        uid: playerUid,
-        displayName: identity.ownerName,
-        playerName: identity.ownerName,
-        flag: identity.ownerFlag,
-        kingPower: stats.kingPower,
-        cityCount: stats.totalCities,
-        mainCityId,
-        mainRegionId,
-        mainIslandId,
-        updatedAtMs: nowMs,
         updatedAt: FieldValue.serverTimestamp(),
       },
     });
@@ -2536,11 +2511,7 @@ exports.syncPlayerIdentity = onCall({ region: "us-central1", maxInstances: 20, i
   const nowMs = Date.now();
 
   const ownedCitiesSnap = await db.collectionGroup("cities").where("ownerUid", "==", uid).get();
-  const activeArmiesSnap = await db.collectionGroup("armies")
-    .where("ownerUid", "==", uid)
-    .where("status", "==", "active")
-    .get();
-  const presenceSnap = await db.collectionGroup("presence").where("uid", "==", uid).get();
+  const activeArmiesSnap = await db.collectionGroup("armies").where("ownerUid", "==", uid).get();
   const cityDocs = ownedCitiesSnap.docs.filter(cityDoc => {
     const islandId = cityDoc.ref.parent.parent?.id || "";
     return isCurrentWorldIslandId(islandId);
@@ -2549,10 +2520,6 @@ exports.syncPlayerIdentity = onCall({ region: "us-central1", maxInstances: 20, i
     const islandId = armyDoc.ref.parent.parent?.id || "";
     const army = armyDoc.data() || {};
     return isCurrentWorldIslandId(islandId) && army.status === "active";
-  });
-  const presenceDocs = presenceSnap.docs.filter(presenceDoc => {
-    const islandId = presenceDoc.ref.parent.parent?.id || "";
-    return isCurrentWorldIslandId(islandId);
   });
   const ownedCityEntries = cityDocs.map(cityDoc => {
     const city = cityDoc.data() || {};
@@ -2659,24 +2626,6 @@ exports.syncPlayerIdentity = onCall({ region: "us-central1", maxInstances: 20, i
       },
     });
   });
-  presenceDocs.forEach(presenceDoc => {
-    writes.push({
-      ref: presenceDoc.ref,
-      data: {
-        uid,
-        displayName: identity.ownerName,
-        playerName: identity.ownerName,
-        flag: identity.ownerFlag,
-        kingPower: serverKingPower,
-        cityCount,
-        mainCityId,
-        mainRegionId,
-        mainIslandId,
-        updatedAtMs: nowMs,
-        updatedAt: FieldValue.serverTimestamp(),
-      },
-    });
-  });
   mainCityRepair.cityPatches.forEach(entry => {
     writes.push({
       ref: entry.ref,
@@ -2701,7 +2650,7 @@ exports.syncPlayerIdentity = onCall({ region: "us-central1", maxInstances: 20, i
     globalStats: globalStatsForClient(globalStats),
     cityUpdates: cityDocs.length,
     armyUpdates: activeArmyDocs.length,
-    presenceUpdates: presenceDocs.length,
+    presenceUpdates: 0,
   };
 });
 
