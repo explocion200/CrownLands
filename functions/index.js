@@ -73,6 +73,8 @@ const VEIL_OF_SILENCE_DURATION_MS = 5 * 60 * 1000;
 const MAX_SERVER_PRODUCTION_SECONDS = 7 * 24 * 60 * 60;
 const SCHEDULED_ARMY_RESOLVE_SCAN_LIMIT = 100;
 const SCHEDULED_ARMY_RESOLVE_MAX_PER_RUN = 40;
+const SCHEDULED_MAIN_CITY_REPAIR_SCAN_LIMIT = 1500;
+const SCHEDULED_MAIN_CITY_REPAIR_MAX_PLAYERS = 50;
 const SHOP_ITEMS = {
   [ROYAL_PEACE_SHIELD_ITEM_ID]: { id: ROYAL_PEACE_SHIELD_ITEM_ID, label: "Royal Peace Shield", cost: 1250000 },
   [WAR_DRUMS_ITEM_ID]: { id: WAR_DRUMS_ITEM_ID, label: "War Drums", cost: 250000 },
@@ -1256,6 +1258,28 @@ function getCityEntryIslandId(entry = {}) {
   return safeString(entry.ref?.parent?.parent?.id || getOnlineIslandId(entry.city?.regionId), 160);
 }
 
+function getCityEntryPath(entry = {}) {
+  return safeString(entry.ref?.path, 240);
+}
+
+function getCityEntryClaimedAtMs(entry = {}) {
+  const city = entry.city || {};
+  const timestamps = [
+    timestampToMs(city.claimedAt),
+    timestampToMs(city.createdAt),
+    timestampToMs(city.productionUpdatedAtMs),
+    timestampToMs(city.updatedAt)
+  ].filter(value => value > 0);
+  return timestamps.length ? Math.min(...timestamps) : Number.MAX_SAFE_INTEGER;
+}
+
+function compareMainCityCandidates(a = {}, b = {}) {
+  const aTime = getCityEntryClaimedAtMs(a);
+  const bTime = getCityEntryClaimedAtMs(b);
+  if (aTime !== bTime) return aTime - bTime;
+  return getCityEntryPath(a).localeCompare(getCityEntryPath(b));
+}
+
 function getCanonicalMainCityEntry(profile = {}, cityEntries = []) {
   const regularEntries = cityEntries.filter(entry => entry?.city && !isStronghold(entry.city));
   if (!regularEntries.length) return null;
@@ -1268,7 +1292,79 @@ function getCanonicalMainCityEntry(profile = {}, cityEntries = []) {
     });
     if (profileMatch) return profileMatch;
   }
-  return regularEntries.find(entry => Boolean(entry.city.isMainCity)) || regularEntries[0];
+  const flaggedMainEntries = regularEntries
+    .filter(entry => Boolean(entry.city.isMainCity))
+    .sort(compareMainCityCandidates);
+  if (flaggedMainEntries.length) return flaggedMainEntries[0];
+  return regularEntries.slice().sort(compareMainCityCandidates)[0];
+}
+
+function createOwnedCityEntriesFromSnapshot(uid, ownedSnap) {
+  return ownedSnap.docs
+    .map(doc => {
+      const data = doc.data() || {};
+      const islandId = safeString(doc.ref.parent?.parent?.id, 160);
+      if (!isCurrentWorldIslandId(islandId)) return null;
+      if ((data.ownerKind || "player") !== "player" || getOwnerUid(data) !== uid) return null;
+      const regionId = getRegionIdFromCityDoc(doc, data);
+      return {
+        ref: doc.ref,
+        city: {
+          id: doc.id,
+          ...data,
+          islandId,
+          regionId,
+          ownerKind: "player",
+          ownerUid: uid,
+        },
+      };
+    })
+    .filter(Boolean);
+}
+
+function createMainCityAssignmentRepair(uid, rawProfile = {}, cityEntries = []) {
+  const cityPatches = [];
+  const cityUpdates = [];
+  const mainCityEntry = getCanonicalMainCityEntry(rawProfile, cityEntries);
+  const mainCityEntryPath = getCityEntryPath(mainCityEntry);
+  const canonicalMainCityId = mainCityEntry?.city?.id || "";
+  const canonicalMainIslandId = mainCityEntry ? getCityEntryIslandId(mainCityEntry) : safeString(rawProfile.mainIslandId, 160);
+  const canonicalMainRegionId = mainCityEntry
+    ? normalizeRegionId(mainCityEntry.city.regionId || getRegionIdFromOnlineIslandId(canonicalMainIslandId))
+    : normalizeRegionId(rawProfile.mainRegionId || getRegionIdFromOnlineIslandId(canonicalMainIslandId));
+
+  cityEntries.forEach(entry => {
+    if (!entry?.city) return;
+    const shouldBeMain = Boolean(mainCityEntryPath && getCityEntryPath(entry) === mainCityEntryPath && !isStronghold(entry.city));
+    if (Boolean(entry.city.isMainCity) === shouldBeMain) return;
+    const patch = { isMainCity: shouldBeMain };
+    cityPatches.push({ ref: entry.ref, city: entry.city, patch });
+    cityUpdates.push({
+      id: entry.city.id,
+      regionId: entry.city.regionId,
+      ...patch,
+    });
+    entry.city = { ...entry.city, ...patch };
+  });
+
+  const profileFields = canonicalMainCityId
+    ? {
+        mainCityId: canonicalMainCityId,
+        mainIslandId: canonicalMainIslandId,
+        mainRegionId: canonicalMainRegionId,
+      }
+    : {};
+
+  return {
+    mainCityEntry,
+    mainCityEntryPath,
+    canonicalMainCityId,
+    canonicalMainIslandId,
+    canonicalMainRegionId,
+    profileFields,
+    cityPatches,
+    cityUpdates,
+  };
 }
 
 async function prepareEconomyCollection(transaction, uid, nowMs = Date.now(), options = {}) {
@@ -1282,47 +1378,10 @@ async function prepareEconomyCollection(transaction, uid, nowMs = Date.now(), op
   const fallbackProductionAtMs = Math.min(nowMs, getProfileLastSeenMs(rawProfile) || nowMs);
 
   const ownedSnap = await transaction.get(db.collectionGroup("cities").where("ownerUid", "==", uid));
-  const cityEntries = ownedSnap.docs
-    .map(doc => {
-      const data = doc.data() || {};
-      if ((data.ownerKind || "player") !== "player" || getOwnerUid(data) !== uid) return null;
-      const regionId = getRegionIdFromCityDoc(doc, data);
-      return {
-        ref: doc.ref,
-        city: {
-          id: doc.id,
-          ...data,
-          regionId,
-          ownerKind: "player",
-          ownerUid: uid,
-        },
-      };
-    })
-    .filter(Boolean);
-
-  const cityPatches = [];
-  const cityUpdates = [];
-  const mainCityEntry = getCanonicalMainCityEntry(rawProfile, cityEntries);
-  const mainCityEntryPath = mainCityEntry?.ref?.path || "";
-  const canonicalMainCityId = mainCityEntry?.city?.id || "";
-  const canonicalMainIslandId = mainCityEntry ? getCityEntryIslandId(mainCityEntry) : safeString(rawProfile.mainIslandId, 160);
-  const canonicalMainRegionId = mainCityEntry
-    ? normalizeRegionId(mainCityEntry.city.regionId || getRegionIdFromOnlineIslandId(canonicalMainIslandId))
-    : normalizeRegionId(rawProfile.mainRegionId || getRegionIdFromOnlineIslandId(canonicalMainIslandId));
-
-  cityEntries.forEach(entry => {
-    if (!entry?.city) return;
-    const shouldBeMain = Boolean(mainCityEntryPath && entry.ref.path === mainCityEntryPath && !isStronghold(entry.city));
-    if (Boolean(entry.city.isMainCity) === shouldBeMain) return;
-    const patch = { isMainCity: shouldBeMain };
-    cityPatches.push({ ref: entry.ref, city: entry.city, patch });
-    cityUpdates.push({
-      id: entry.city.id,
-      regionId: entry.city.regionId,
-      ...patch,
-    });
-    entry.city = { ...entry.city, ...patch };
-  });
+  const cityEntries = createOwnedCityEntriesFromSnapshot(uid, ownedSnap);
+  const mainCityRepair = createMainCityAssignmentRepair(uid, rawProfile, cityEntries);
+  const cityPatches = [...mainCityRepair.cityPatches];
+  const cityUpdates = [...mainCityRepair.cityUpdates];
 
   const bonuses = getOwnedStrongholdBonuses(cityEntries);
   let goldGainFloat = 0;
@@ -1373,11 +1432,7 @@ async function prepareEconomyCollection(transaction, uid, nowMs = Date.now(), op
     shopItems,
     itemEffects,
     itemPurchaseCooldowns,
-    ...(canonicalMainCityId ? {
-      mainCityId: canonicalMainCityId,
-      mainIslandId: canonicalMainIslandId,
-      mainRegionId: canonicalMainRegionId,
-    } : {}),
+    ...mainCityRepair.profileFields,
   };
   const profilePatch = {
     uid,
@@ -1388,11 +1443,7 @@ async function prepareEconomyCollection(transaction, uid, nowMs = Date.now(), op
     shopItems,
     itemEffects,
     itemPurchaseCooldowns,
-    ...(canonicalMainCityId ? {
-      mainCityId: canonicalMainCityId,
-      mainIslandId: canonicalMainIslandId,
-      mainRegionId: canonicalMainRegionId,
-    } : {}),
+    ...mainCityRepair.profileFields,
     economyUpdatedAtMs: nowMs,
   };
 
@@ -1465,6 +1516,10 @@ function createEconomyResponse(economy = null, overrides = {}) {
     itemPurchaseCooldowns: itemPurchaseCooldowns || economy.itemPurchaseCooldowns,
     character: character || economy.profileAfter.character || null,
     upgrades: upgrades || normalizeSkillUpgrades(economy.profileAfter.upgrades),
+    mainCityId: safeString(economy.profileAfter.mainCityId, 96),
+    mainIslandId: safeString(economy.profileAfter.mainIslandId, 160),
+    mainRegionId: normalizeRegionId(economy.profileAfter.mainRegionId || getRegionIdFromOnlineIslandId(economy.profileAfter.mainIslandId)),
+    mainCityChangedAtMs: timestampToMs(economy.profileAfter.mainCityChangedAtMs),
   };
   if (daily !== undefined) currentUser.daily = normalizeDaily(daily);
   if (harvestBonuses !== undefined) currentUser.harvestBonuses = Array.isArray(harvestBonuses) ? harvestBonuses : [];
@@ -1480,6 +1535,58 @@ function createEconomyResponse(economy = null, overrides = {}) {
     cityUpdates: cityUpdates || economy.cityUpdates,
     production: economy.production,
     ...meta,
+  };
+}
+
+async function repairMainCityAssignmentForUid(uid, nowMs = Date.now()) {
+  const playerUid = safeString(uid, 128);
+  if (!playerUid) return { ok: false, reason: "missing-uid" };
+  const profileRef = db.doc(`players/${playerUid}`);
+  const [profileSnap, ownedSnap] = await Promise.all([
+    profileRef.get(),
+    db.collectionGroup("cities").where("ownerUid", "==", playerUid).get(),
+  ]);
+  const rawProfile = profileSnap.exists ? profileSnap.data() || {} : {};
+  const cityEntries = createOwnedCityEntriesFromSnapshot(playerUid, ownedSnap);
+  const repair = createMainCityAssignmentRepair(playerUid, rawProfile, cityEntries);
+  const profileFields = repair.profileFields || {};
+  const profileNeedsRepair = Boolean(profileFields.mainCityId) && (
+    safeString(rawProfile.mainCityId, 96) !== profileFields.mainCityId
+    || safeString(rawProfile.mainIslandId, 160) !== profileFields.mainIslandId
+    || normalizeRegionId(rawProfile.mainRegionId || getRegionIdFromOnlineIslandId(rawProfile.mainIslandId)) !== profileFields.mainRegionId
+  );
+  const writes = repair.cityPatches.map(entry => ({
+    ref: entry.ref,
+    data: cleanCityUpdate(entry.city, entry.patch),
+  }));
+  if (profileNeedsRepair) {
+    writes.push({
+      ref: profileRef,
+      data: {
+        uid: playerUid,
+        ...profileFields,
+        mainCityRepairUpdatedAtMs: nowMs,
+        updatedAt: FieldValue.serverTimestamp(),
+      },
+    });
+  }
+
+  for (let index = 0; index < writes.length; index += 450) {
+    const batch = db.batch();
+    writes.slice(index, index + 450).forEach(write => {
+      batch.set(write.ref, write.data, { merge: true });
+    });
+    await batch.commit();
+  }
+
+  return {
+    ok: true,
+    uid: playerUid,
+    mainCityId: profileFields.mainCityId || "",
+    mainIslandId: profileFields.mainIslandId || "",
+    mainRegionId: profileFields.mainRegionId || "",
+    repairedCities: repair.cityPatches.length,
+    repairedProfile: profileNeedsRepair,
   };
 }
 
@@ -1630,6 +1737,20 @@ exports.collectEconomy = onCall({ region: "us-central1", maxInstances: 30, invok
     const economy = await prepareEconomyCollection(transaction, uid, nowMs);
     writePreparedEconomy(transaction, economy);
     return createEconomyResponse(economy);
+  });
+});
+
+exports.repairMainCityAssignment = onCall({ region: "us-central1", maxInstances: 20, invoker: "public" }, async request => {
+  const uid = requireAuth(request);
+  const nowMs = Date.now();
+  return db.runTransaction(async transaction => {
+    const economy = await prepareEconomyCollection(transaction, uid, nowMs);
+    writePreparedEconomy(transaction, economy, {
+      mainCityRepairUpdatedAtMs: nowMs,
+    });
+    return createEconomyResponse(economy, {
+      repairedMainCity: true,
+    });
   });
 });
 
@@ -3515,6 +3636,27 @@ function isExpectedScheduledResolveError(error = {}) {
   return code === "failed-precondition" && /not arrived/i.test(message);
 }
 
+async function loadDuplicateMainCityOwnerUids() {
+  const snap = await db.collectionGroup("cities")
+    .where("isMainCity", "==", true)
+    .limit(SCHEDULED_MAIN_CITY_REPAIR_SCAN_LIMIT)
+    .get();
+  const counts = new Map();
+  snap.docs.forEach(doc => {
+    const data = doc.data() || {};
+    const islandId = safeString(doc.ref.parent?.parent?.id, 160);
+    if (!isCurrentWorldIslandId(islandId)) return;
+    if (isStronghold(data)) return;
+    const uid = getOwnerUid(data);
+    if (!uid || (data.ownerKind || "player") !== "player") return;
+    counts.set(uid, (counts.get(uid) || 0) + 1);
+  });
+  return Array.from(counts.entries())
+    .filter(([, count]) => count > 1)
+    .map(([uid]) => uid)
+    .slice(0, SCHEDULED_MAIN_CITY_REPAIR_MAX_PLAYERS);
+}
+
 exports.resolveDueArmyOrders = onSchedule({
   region: "us-central1",
   schedule: "every 1 minutes",
@@ -3559,6 +3701,43 @@ exports.resolveDueArmyOrders = onSchedule({
     scanned: targets.length,
     resolved,
     skipped,
+    failed,
+  });
+});
+
+exports.repairDuplicateMainCities = onSchedule({
+  region: "us-central1",
+  schedule: "every 15 minutes",
+  timeZone: "Etc/UTC",
+  maxInstances: 1,
+  timeoutSeconds: 240,
+  memory: "256MiB",
+}, async () => {
+  const nowMs = Date.now();
+  const uids = await loadDuplicateMainCityOwnerUids();
+  let repairedPlayers = 0;
+  let repairedCities = 0;
+  let failed = 0;
+
+  for (const uid of uids) {
+    try {
+      const result = await repairMainCityAssignmentForUid(uid, nowMs);
+      if (result?.repairedCities || result?.repairedProfile) repairedPlayers += 1;
+      repairedCities += Math.max(0, Math.floor(safeNumber(result?.repairedCities, 0)));
+    } catch (error) {
+      failed += 1;
+      console.error("Scheduled main city repair failed", {
+        uid,
+        message: error?.message || String(error),
+        code: error?.code || "",
+      });
+    }
+  }
+
+  console.log("Scheduled main city repair finished", {
+    scannedPlayers: uids.length,
+    repairedPlayers,
+    repairedCities,
     failed,
   });
 });

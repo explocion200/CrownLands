@@ -765,7 +765,7 @@
       "name": "Ironwatch",
       "regionId": "south",
       "xNorm": 0.39,
-      "yNorm": 0.405,
+      "yNorm": 0.413,
       "strongholdType": "defense_stronghold",
       "bonusType": "citydefense",
       "bonusAmount": 8,
