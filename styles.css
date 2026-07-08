@@ -1116,6 +1116,14 @@ input {
   user-select: none;
   -webkit-user-drag: none;
 }
+.map-frame img,
+.map-frame picture,
+.map-frame canvas {
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-user-drag: none;
+}
 .camp-art {
   display: block;
   width: 100%;

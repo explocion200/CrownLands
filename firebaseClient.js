@@ -253,6 +253,10 @@
     return callServerFunction("collectHarvestBonus", payload);
   }
 
+  async function reserveHarvestBonusSpawn(payload = {}) {
+    return callServerFunction("reserveHarvestBonusSpawn", payload);
+  }
+
   async function upgradeCity(payload = {}) {
     return callServerFunction("upgradeCity", payload);
   }
@@ -1058,6 +1062,7 @@
     savePlayerProfile,
     loadPlayerProfile,
     collectEconomy,
+    reserveHarvestBonusSpawn,
     collectHarvestBonus,
     upgradeCity,
     spendSkillPoint,

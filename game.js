@@ -518,7 +518,7 @@ const HARVEST_BONUS_DAILY_TROOP_LIMIT = 100;
 const HARVEST_BONUS_TYPES = ["gold", "troops"];
 const HARVEST_BONUS_SPAWN_INTERVAL_SECONDS = 60;
 const HARVEST_BONUS_INITIAL_SPAWN_SECONDS = 60;
-const HARVEST_BONUS_MAX_ACTIVE_PER_ISLAND = 1;
+const HARVEST_BONUS_MAX_ACTIVE_PER_PLAYER = 1;
 const HARVEST_BONUS_EXPIRE_SECONDS = 1800;
 const HARVEST_BONUS_GOLD_SECONDS = 180;
 const HARVEST_BONUS_MIN_GOLD = 300;
@@ -532,6 +532,9 @@ const HARVEST_BONUS_TERRAIN_PADDING = 22;
 const HARVEST_BONUS_LAND_CLEARANCE = 64;
 const HARVEST_BONUS_CITY_SPAWN_MIN_DISTANCE = 170;
 const HARVEST_BONUS_CITY_SPAWN_MAX_DISTANCE = 420;
+const HARVEST_BONUS_STRONGHOLD_CLEARANCE_EXTRA = 72;
+const HARVEST_BONUS_CAMP_CLEARANCE_EXTRA = 64;
+const HARVEST_BONUS_SERVER_RETRY_SECONDS = 5;
 const NEUTRAL_CITY_COUNT_LIMIT = 30;
 const PLAYER_START_TROOPS = 50;
 const PLAYER_SLOT_START_TROOPS = 50;
@@ -2167,8 +2170,8 @@ const pathMetricCache = new WeakMap();
 const ROUTE_CELL_FALLBACK_RADIUS = 32;
 const ROUTE_CELL_FALLBACK_CANDIDATES = 24;
 const ROUTE_CELL_FALLBACK_PAIR_LIMIT = 16;
-const ROUTE_SEARCH_MAX_VISITED_CELLS = Math.max(2500, Math.min(24000, GRID_COLS * GRID_ROWS));
-const ROUTE_WORKER_TIMEOUT_MS = 15000;
+const ROUTE_SEARCH_MAX_VISITED_CELLS = Math.max(2500, Math.min(10000, GRID_COLS * GRID_ROWS));
+const ROUTE_WORKER_TIMEOUT_MS = 6000;
 const NEAREST_SOURCE_ROUTE_CHECK_LIMIT = 18;
 const SCOUT_SOURCE_ROUTE_CHECK_LIMIT = 10;
 
@@ -2238,6 +2241,7 @@ let routeWorker = null;
 let routeWorkerUnavailable = false;
 let routeWorkerRequestId = 0;
 const routeWorkerRequests = new Map();
+let harvestSpawnRequestInFlight = false;
 let onlineIslandSummaries = new Map();
 let onlineIslandSummaryRefreshInFlight = false;
 let onlineOwnedCitiesCache = [];
@@ -4590,6 +4594,7 @@ function newGame(playerName) {
     daily: { date: currentLocalDateKey(), neutralCaptures: 0, harvestedBonuses: 0, harvestedGoldBonuses: 0, harvestedTroopBonuses: 0 },
     harvestBonuses: [],
     harvestSpawnTimer: HARVEST_BONUS_INITIAL_SPAWN_SECONDS,
+    harvestNextSpawnAtMs: Date.now() + HARVEST_BONUS_INITIAL_SPAWN_SECONDS * 1000,
     harvestNextBonusType: "gold",
     scoutReports: {},
     battleReports: [],
@@ -6017,6 +6022,7 @@ function normalizeHarvestBonuses(bonuses) {
       x: Number(bonus?.x),
       y: Number(bonus?.y),
       createdAt: Math.max(0, Number(bonus?.createdAt) || 0),
+      createdAtMs: normalizeTimestampMs(bonus?.createdAtMs),
     }))
     .filter(bonus => bonus.id && Number.isFinite(bonus.x) && Number.isFinite(bonus.y));
 }
@@ -6028,6 +6034,8 @@ function normalizeHarvestState(snapshot) {
   snapshot.harvestSpawnTimer = Number.isFinite(timer)
     ? clamp(timer, 0, HARVEST_BONUS_SPAWN_INTERVAL_SECONDS)
     : HARVEST_BONUS_INITIAL_SPAWN_SECONDS;
+  snapshot.harvestNextSpawnAtMs = normalizeTimestampMs(snapshot.harvestNextSpawnAtMs)
+    || (Date.now() + snapshot.harvestSpawnTimer * 1000);
   snapshot.harvestNextBonusType = normalizeHarvestBonusType(snapshot.harvestNextBonusType);
 }
 
@@ -6587,6 +6595,7 @@ function hasServerEconomyApi() {
   return Boolean(
     api?.isSignedIn?.()
       && api?.collectEconomy
+      && api?.reserveHarvestBonusSpawn
       && api?.collectHarvestBonus
       && api?.upgradeCity
       && api?.relinquishCity
@@ -6718,6 +6727,12 @@ function applyServerProfilePatch(patch = null) {
       0,
       HARVEST_BONUS_SPAWN_INTERVAL_SECONDS
     );
+    changed = true;
+  }
+  if (Number.isFinite(Number(patch.harvestNextSpawnAtMs))) {
+    state.harvestNextSpawnAtMs = normalizeTimestampMs(patch.harvestNextSpawnAtMs);
+    const remainingSeconds = Math.ceil(Math.max(0, state.harvestNextSpawnAtMs - Date.now()) / 1000);
+    state.harvestSpawnTimer = clamp(remainingSeconds, 0, HARVEST_BONUS_SPAWN_INTERVAL_SECONDS);
     changed = true;
   }
   if (patch.harvestNextBonusType) {
@@ -6900,6 +6915,7 @@ function applyServerEconomyResult(result = null, options = {}) {
     saveGame();
     renderHud();
     renderCities(true);
+    renderHarvestBonuses();
     if (modal.open && modal.classList.contains("shop-modal")) renderShopModal();
     if (modal.open && modal.classList.contains("inventory-modal")) showInventoryModal();
     if (modal.open && modal.classList.contains("city-list-modal")) renderCityListModal();
@@ -6971,6 +6987,10 @@ function stripServerEconomyProfileFields(profile = {}) {
   delete clean.itemEffects;
   delete clean.itemPurchaseCooldowns;
   delete clean.offlineProductionCities;
+  delete clean.harvestBonuses;
+  delete clean.harvestSpawnTimer;
+  delete clean.harvestNextSpawnAtMs;
+  delete clean.harvestNextBonusType;
   delete clean.character;
   delete clean.upgrades;
   return clean;
@@ -7008,6 +7028,8 @@ function getPlayerProfileSnapshot() {
     harvestSpawnTimer: Number.isFinite(harvestTimer)
       ? clamp(harvestTimer, 0, HARVEST_BONUS_SPAWN_INTERVAL_SECONDS)
       : HARVEST_BONUS_INITIAL_SPAWN_SECONDS,
+    harvestNextSpawnAtMs: normalizeTimestampMs(state?.harvestNextSpawnAtMs)
+      || Date.now() + (Number.isFinite(harvestTimer) ? clamp(harvestTimer, 0, HARVEST_BONUS_SPAWN_INTERVAL_SECONDS) : HARVEST_BONUS_INITIAL_SPAWN_SECONDS) * 1000,
     harvestNextBonusType: normalizeHarvestBonusType(state?.harvestNextBonusType),
     scoutReports: state ? normalizeScoutReports(state.scoutReports) : {},
     battleReports: state ? normalizeBattleReports(state.battleReports) : [],
@@ -7057,6 +7079,8 @@ function applyOnlineProfileSnapshot(profile = null, fallbackPlayerName = "Ricky"
   state.harvestSpawnTimer = Number.isFinite(harvestTimer)
     ? clamp(harvestTimer, 0, HARVEST_BONUS_SPAWN_INTERVAL_SECONDS)
     : HARVEST_BONUS_INITIAL_SPAWN_SECONDS;
+  state.harvestNextSpawnAtMs = normalizeTimestampMs(profile.harvestNextSpawnAtMs)
+    || Date.now() + state.harvestSpawnTimer * 1000;
   state.harvestNextBonusType = normalizeHarvestBonusType(profile.harvestNextBonusType);
   state.scoutReports = normalizeScoutReports(profile.scoutReports);
   state.battleReports = normalizeBattleReports(profile.battleReports);
@@ -10871,6 +10895,18 @@ function reverseRoute(route) {
   return reversed;
 }
 
+function isBitmapRouteWorkerJob(job = null) {
+  return Boolean(job?.regions && Object.values(job.regions).some(region => region?.isBitmap));
+}
+
+function rejectPendingRouteWorkerRequests(error) {
+  routeWorkerRequests.forEach(request => {
+    window.clearTimeout(request.timeoutId);
+    request.reject(error);
+  });
+  routeWorkerRequests.clear();
+}
+
 function getRouteWorker() {
   if (routeWorkerUnavailable || typeof Worker === "undefined") return null;
   if (routeWorker) return routeWorker;
@@ -10891,11 +10927,7 @@ function getRouteWorker() {
     routeWorker.addEventListener("error", event => {
       routeWorkerUnavailable = true;
       const error = new Error(event.message || "Route worker error.");
-      routeWorkerRequests.forEach(request => {
-        window.clearTimeout(request.timeoutId);
-        request.reject(error);
-      });
-      routeWorkerRequests.clear();
+      rejectPendingRouteWorkerRequests(error);
       routeWorker?.terminate?.();
       routeWorker = null;
     });
@@ -10913,8 +10945,11 @@ function requestRouteFromWorker(job) {
   const id = ++routeWorkerRequestId;
   return new Promise((resolve, reject) => {
     const timeoutId = window.setTimeout(() => {
-      routeWorkerRequests.delete(id);
-      reject(new Error("Route calculation timed out."));
+      const timeoutError = new Error("Route calculation timed out.");
+      timeoutError.routeTimedOut = true;
+      rejectPendingRouteWorkerRequests(timeoutError);
+      routeWorker?.terminate?.();
+      routeWorker = null;
     }, ROUTE_WORKER_TIMEOUT_MS);
     routeWorkerRequests.set(id, { resolve, reject, timeoutId });
     worker.postMessage({ type: "route", id, job });
@@ -10928,6 +10963,10 @@ async function findRouteAsync(source, target) {
     const workerRoute = await requestRouteFromWorker(job);
     return workerRoute?.points?.length ? cloneRoute(workerRoute) : null;
   } catch (error) {
+    if (error?.routeTimedOut || isBitmapRouteWorkerJob(job)) {
+      console.warn("Route worker failed; route calculation canceled to keep the map responsive.", error);
+      return null;
+    }
     console.warn("Route worker failed; falling back to main-thread routing.", error);
     return findRoute(source, target);
   }
@@ -11504,24 +11543,23 @@ function getHarvestBonusTroopTargetCity() {
 
 function getActiveHarvestBonuses(regionId = getActiveMapRegionId()) {
   const activeRegionId = normalizeRegionId(regionId);
-  return normalizeHarvestBonuses(state?.harvestBonuses || [])
+  return getAllActiveHarvestBonuses()
     .filter(bonus => normalizeRegionId(bonus.regionId) === activeRegionId);
 }
 
+function getAllActiveHarvestBonuses() {
+  return normalizeHarvestBonuses(state?.harvestBonuses || []);
+}
+
+function hasAnyActiveHarvestBonus() {
+  return getAllActiveHarvestBonuses().length >= HARVEST_BONUS_MAX_ACTIVE_PER_PLAYER;
+}
+
 function enforceHarvestBonusActiveLimit(bonuses) {
-  const keptByRegion = new Map();
-  normalizeHarvestBonuses(bonuses)
-    .sort((a, b) => b.createdAt - a.createdAt)
-    .forEach(bonus => {
-      const regionId = normalizeRegionId(bonus.regionId);
-      const current = keptByRegion.get(regionId) || [];
-      if (current.length >= HARVEST_BONUS_MAX_ACTIVE_PER_ISLAND) return;
-      current.push(bonus);
-      keptByRegion.set(regionId, current);
-    });
-  return Array.from(keptByRegion.values())
-    .flat()
-    .sort((a, b) => a.createdAt - b.createdAt);
+  return normalizeHarvestBonuses(bonuses)
+    .sort((a, b) => (b.createdAtMs || b.createdAt) - (a.createdAtMs || a.createdAt))
+    .slice(0, HARVEST_BONUS_MAX_ACTIVE_PER_PLAYER)
+    .sort((a, b) => (a.createdAtMs || a.createdAt) - (b.createdAtMs || b.createdAt));
 }
 
 function getHarvestBonusOwnedCityAnchors(regionId) {
@@ -11542,7 +11580,9 @@ function pruneExpiredHarvestBonuses() {
   const before = state.harvestBonuses?.length || 0;
   state.harvestBonuses = normalizeHarvestBonuses(state.harvestBonuses)
     .filter(bonus => (
-      now - bonus.createdAt <= HARVEST_BONUS_EXPIRE_SECONDS
+      (bonus.createdAtMs
+        ? Date.now() - bonus.createdAtMs <= HARVEST_BONUS_EXPIRE_SECONDS * 1000
+        : now - bonus.createdAt <= HARVEST_BONUS_EXPIRE_SECONDS)
       && isHarvestBonusTerrainSafePoint(bonus.x, bonus.y, bonus.regionId)
       && isHarvestBonusNearOwnedCity(bonus.x, bonus.y, bonus.regionId)
     ));
@@ -11550,10 +11590,29 @@ function pruneExpiredHarvestBonuses() {
   if (state.harvestBonuses.length !== before) renderHarvestBonuses();
 }
 
+function getHarvestBonusCityClearance(city) {
+  if (isStronghold(city)) {
+    return Math.max(HARVEST_BONUS_CITY_CLEARANCE, getStrongholdVisualSize(city) * 0.65 + HARVEST_BONUS_STRONGHOLD_CLEARANCE_EXTRA);
+  }
+  return HARVEST_BONUS_CITY_CLEARANCE;
+}
+
+function getHarvestBonusCampClearance(camp) {
+  const size = readVisualSize(camp?.size, DEFAULT_CAMP_VISUAL_SIZE);
+  return Math.max(HARVEST_BONUS_CITY_CLEARANCE, size * 0.65 + HARVEST_BONUS_CAMP_CLEARANCE_EXTRA);
+}
+
 function isHarvestBonusFarFromCities(x, y, regionId) {
   return state.cities
     .filter(city => getCityRegionId(city) === regionId)
-    .every(city => Math.hypot(city.x - x, city.y - y) >= HARVEST_BONUS_CITY_CLEARANCE);
+    .every(city => Math.hypot(city.x - x, city.y - y) >= getHarvestBonusCityClearance(city));
+}
+
+function isHarvestBonusFarFromCamps(x, y, regionId) {
+  const activeRegionId = normalizeRegionId(regionId);
+  return WORLD_CAMPS
+    .filter(camp => normalizeRegionId(camp.regionId) === activeRegionId)
+    .every(camp => Math.hypot(camp.x - x, camp.y - y) >= getHarvestBonusCampClearance(camp));
 }
 
 function isHarvestBonusFarFromTransitions(x, y, regionId) {
@@ -11612,6 +11671,7 @@ function isValidHarvestBonusPoint(x, y, regionId) {
   if (!isHarvestBonusNearOwnedCity(x, y, activeRegionId)) return false;
   if (!isHarvestBonusTerrainSafePoint(x, y, activeRegionId)) return false;
   if (!isHarvestBonusFarFromCities(x, y, activeRegionId)) return false;
+  if (!isHarvestBonusFarFromCamps(x, y, activeRegionId)) return false;
   if (!isHarvestBonusFarFromTransitions(x, y, activeRegionId)) return false;
   if (!isHarvestBonusFarFromOtherPickups(x, y, activeRegionId)) return false;
   return true;
@@ -11633,40 +11693,109 @@ function createHarvestBonusPoint(regionId) {
   return null;
 }
 
+function getHarvestSpawnDelaySeconds() {
+  if (!state) return HARVEST_BONUS_INITIAL_SPAWN_SECONDS;
+  const nextSpawnAtMs = normalizeTimestampMs(state.harvestNextSpawnAtMs);
+  if (!nextSpawnAtMs) {
+    const timer = Number(state.harvestSpawnTimer);
+    return Number.isFinite(timer)
+      ? clamp(Math.ceil(timer), 0, HARVEST_BONUS_SPAWN_INTERVAL_SECONDS)
+      : HARVEST_BONUS_INITIAL_SPAWN_SECONDS;
+  }
+  return clamp(Math.ceil(Math.max(0, nextSpawnAtMs - Date.now()) / 1000), 0, HARVEST_BONUS_SPAWN_INTERVAL_SECONDS);
+}
+
+function setHarvestSpawnDelay(seconds = HARVEST_BONUS_SPAWN_INTERVAL_SECONDS) {
+  if (!state) return;
+  const delay = clamp(Math.ceil(Number(seconds) || 0), 0, HARVEST_BONUS_SPAWN_INTERVAL_SECONDS);
+  state.harvestSpawnTimer = delay;
+  state.harvestNextSpawnAtMs = Date.now() + delay * 1000;
+}
+
+function createHarvestBonusRecord(regionId, type, point) {
+  const activeRegionId = normalizeRegionId(regionId);
+  const bonusType = normalizeHarvestBonusType(type);
+  return {
+    id: `harvest-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
+    type: bonusType,
+    regionId: activeRegionId,
+    x: Math.round(point.x),
+    y: Math.round(point.y),
+    createdAt: Math.max(0, Number(state?.gameSeconds) || 0),
+    createdAtMs: Date.now(),
+  };
+}
+
 function spawnHarvestBonus(regionId = getActiveMapRegionId(), type = getNextAvailableHarvestBonusType()) {
   if (!state) return false;
   const daily = ensureDailyCaptureTracker();
   const bonusType = normalizeHarvestBonusType(type);
   if (!canHarvestBonusType(bonusType, daily)) return false;
   const activeRegionId = normalizeRegionId(regionId);
-  if (getActiveHarvestBonuses(activeRegionId).length >= HARVEST_BONUS_MAX_ACTIVE_PER_ISLAND) return false;
+  if (hasAnyActiveHarvestBonus()) return false;
   const point = createHarvestBonusPoint(activeRegionId);
   if (!point) return false;
   state.harvestBonuses = normalizeHarvestBonuses(state.harvestBonuses);
-  state.harvestBonuses.push({
-    id: `harvest-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
-    type: bonusType,
-    regionId: activeRegionId,
-    x: Math.round(point.x),
-    y: Math.round(point.y),
-    createdAt: Math.max(0, Number(state.gameSeconds) || 0),
-  });
+  state.harvestBonuses.push(createHarvestBonusRecord(activeRegionId, bonusType, point));
+  state.harvestBonuses = enforceHarvestBonusActiveLimit(state.harvestBonuses);
   return true;
+}
+
+function updateServerHarvestBonuses() {
+  if (!state || harvestSpawnRequestInFlight) return;
+  const api = getOnlineApi();
+  if (!api?.reserveHarvestBonusSpawn) return;
+  const daily = ensureDailyCaptureTracker();
+  if (daily.harvestedBonuses >= HARVEST_BONUS_DAILY_LIMIT) return;
+  const nextType = getNextAvailableHarvestBonusType(daily);
+  if (!nextType) return;
+  if (hasAnyActiveHarvestBonus()) return;
+  const delay = getHarvestSpawnDelaySeconds();
+  state.harvestSpawnTimer = delay;
+  if (delay > 0) return;
+
+  const activeRegionId = getActiveMapRegionId();
+  const point = createHarvestBonusPoint(activeRegionId);
+  if (!point) {
+    setHarvestSpawnDelay(HARVEST_BONUS_SERVER_RETRY_SECONDS);
+    return;
+  }
+  const bonus = createHarvestBonusRecord(activeRegionId, nextType, point);
+  harvestSpawnRequestInFlight = true;
+  api.reserveHarvestBonusSpawn({
+    type: nextType,
+    regionId: activeRegionId,
+    daily: normalizeDailyCaptureTracker(daily),
+    bonus,
+  }).then(result => {
+    applyServerEconomyResult(result);
+    if (result?.spawned) renderHarvestBonuses();
+  }).catch(error => {
+    console.warn("Could not reserve harvest pickup spawn", error);
+    setHarvestSpawnDelay(HARVEST_BONUS_SERVER_RETRY_SECONDS);
+  }).finally(() => {
+    harvestSpawnRequestInFlight = false;
+  });
 }
 
 function updateHarvestBonuses(dt) {
   if (!state || isGamePausedByOutcome() || onlineWorldLoading) return;
   const daily = ensureDailyCaptureTracker();
   pruneExpiredHarvestBonuses();
+  if (usesServerEconomyAuthority()) {
+    updateServerHarvestBonuses();
+    return;
+  }
   if (daily.harvestedBonuses >= HARVEST_BONUS_DAILY_LIMIT) return;
   const nextType = getNextAvailableHarvestBonusType(daily);
   if (!nextType) return;
+  if (hasAnyActiveHarvestBonus()) return;
   const activeRegionId = getActiveMapRegionId();
-  if (getActiveHarvestBonuses(activeRegionId).length >= HARVEST_BONUS_MAX_ACTIVE_PER_ISLAND) return;
   state.harvestSpawnTimer = Math.max(0, Number(state.harvestSpawnTimer) || 0) - dt;
+  state.harvestNextSpawnAtMs = Date.now() + state.harvestSpawnTimer * 1000;
   if (state.harvestSpawnTimer > 0) return;
   const spawned = spawnHarvestBonus(activeRegionId, nextType);
-  state.harvestSpawnTimer = HARVEST_BONUS_SPAWN_INTERVAL_SECONDS;
+  setHarvestSpawnDelay(HARVEST_BONUS_SPAWN_INTERVAL_SECONDS);
   if (spawned) {
     state.harvestNextBonusType = getAlternateHarvestBonusType(nextType);
     renderHarvestBonuses();
@@ -11675,7 +11804,7 @@ function updateHarvestBonuses(dt) {
 
 function resetHarvestSpawnTimer() {
   if (!state) return;
-  state.harvestSpawnTimer = HARVEST_BONUS_SPAWN_INTERVAL_SECONDS;
+  setHarvestSpawnDelay(HARVEST_BONUS_SPAWN_INTERVAL_SECONDS);
 }
 
 async function collectHarvestBonus(bonusId) {
@@ -17142,41 +17271,7 @@ function isMapCommandInteractionTarget(target) {
   return Boolean(target?.closest(".city-wheel-action, .teleport-node, .harvest-bonus-node"));
 }
 
-function startPan(event) {
-  if (!state || event.button > 0 || isMapInteractionBlocked()) return;
-
-  const startedOnMapNode = isMapNodeInteractionTarget(event.target);
-  const isTouch = event.pointerType === "touch";
-  const startedOnCommand = isMapCommandInteractionTarget(event.target);
-
-  if (isTouch && !startedOnCommand) event.preventDefault();
-
-  if (startedOnMapNode && isTouch && !startedOnCommand) {
-    activePointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
-    mapFrame.setPointerCapture?.(event.pointerId);
-    if (activePointers.size >= 2) {
-      beginPinch();
-    } else {
-      panState = {
-        pointerId: event.pointerId,
-        startX: event.clientX,
-        startY: event.clientY,
-        cameraX: camera.x,
-        cameraY: camera.y,
-        moved: false,
-        startedOnMapNode: true,
-      };
-      suppressMapClick = false;
-      mapFrame.classList.add("dragging");
-    }
-    return;
-  }
-
-  if (startedOnMapNode) {
-    suppressMapClick = false;
-    return;
-  }
-
+function beginTrackedPan(event, startedOnMapNode = false) {
   activePointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
   mapFrame.setPointerCapture?.(event.pointerId);
 
@@ -17192,10 +17287,27 @@ function startPan(event) {
     cameraX: camera.x,
     cameraY: camera.y,
     moved: false,
-    startedOnMapNode: false,
+    startedOnMapNode,
   };
   suppressMapClick = false;
   mapFrame.classList.add("dragging");
+}
+
+function startPan(event) {
+  if (!state || event.button > 0 || isMapInteractionBlocked()) return;
+
+  const startedOnMapNode = isMapNodeInteractionTarget(event.target);
+  const isTouch = event.pointerType === "touch";
+  const startedOnCommand = isMapCommandInteractionTarget(event.target);
+
+  if (isTouch && !startedOnCommand) event.preventDefault();
+
+  if (startedOnCommand) {
+    suppressMapClick = false;
+    return;
+  }
+
+  beginTrackedPan(event, startedOnMapNode);
 }
 
 function movePan(event) {

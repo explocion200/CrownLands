@@ -28,6 +28,8 @@ const HARVEST_BONUS_TROOP_SECONDS = 300;
 const HARVEST_BONUS_MIN_TROOPS = 50;
 const HARVEST_BONUS_MAX_TROOPS = 2500;
 const HARVEST_BONUS_SPAWN_INTERVAL_SECONDS = 60;
+const HARVEST_BONUS_EXPIRE_SECONDS = 1800;
+const HARVEST_BONUS_MAX_ACTIVE_PER_PLAYER = 1;
 const SCOUT_REPORT_SECONDS = 120;
 const ARMY_TRAVEL_SECONDS_PER_MAP_UNIT = 0.13;
 const ARMY_TRAVEL_MIN_SECONDS = 30;
@@ -892,6 +894,72 @@ function incrementHarvestDailyTracker(type = "gold", daily = {}) {
   return next;
 }
 
+function normalizeHarvestBonusType(type = "gold") {
+  return safeString(type, 16) === "troops" ? "troops" : "gold";
+}
+
+function normalizeHarvestBonuses(bonuses = [], nowMs = Date.now()) {
+  return (Array.isArray(bonuses) ? bonuses : [])
+    .map(bonus => {
+      const id = safeString(bonus?.id, 96).replace(/[^a-zA-Z0-9_-]/g, "_");
+      const regionId = normalizeRegionId(bonus?.regionId);
+      const x = safeNumber(bonus?.x, NaN);
+      const y = safeNumber(bonus?.y, NaN);
+      const createdAt = Math.max(0, safeNumber(bonus?.createdAt, 0));
+      const createdAtMs = timestampToMs(bonus?.createdAtMs) || 0;
+      if (!id || !Number.isFinite(x) || !Number.isFinite(y)) return null;
+      return {
+        id,
+        type: normalizeHarvestBonusType(bonus?.type),
+        regionId,
+        x: Math.round(x),
+        y: Math.round(y),
+        createdAt,
+        createdAtMs,
+      };
+    })
+    .filter(Boolean)
+    .filter(bonus => !bonus.createdAtMs || nowMs - bonus.createdAtMs <= HARVEST_BONUS_EXPIRE_SECONDS * 1000);
+}
+
+function enforceHarvestBonusActiveLimit(bonuses = [], nowMs = Date.now()) {
+  return normalizeHarvestBonuses(bonuses, nowMs)
+    .sort((a, b) => (b.createdAtMs || b.createdAt) - (a.createdAtMs || a.createdAt))
+    .slice(0, HARVEST_BONUS_MAX_ACTIVE_PER_PLAYER)
+    .sort((a, b) => (a.createdAtMs || a.createdAt) - (b.createdAtMs || b.createdAt));
+}
+
+function getHarvestNextSpawnAtMs(profile = {}, nowMs = Date.now()) {
+  const explicit = timestampToMs(profile.harvestNextSpawnAtMs);
+  if (explicit) return explicit;
+  if (Number.isFinite(Number(profile.harvestSpawnTimer))) {
+    return nowMs + clampInt(profile.harvestSpawnTimer, 0, HARVEST_BONUS_SPAWN_INTERVAL_SECONDS) * 1000;
+  }
+  return nowMs + HARVEST_BONUS_SPAWN_INTERVAL_SECONDS * 1000;
+}
+
+function getHarvestSpawnTimerFromNextAt(nextSpawnAtMs = 0, nowMs = Date.now()) {
+  return clampInt(Math.ceil(Math.max(0, nextSpawnAtMs - nowMs) / 1000), 0, HARVEST_BONUS_SPAWN_INTERVAL_SECONDS);
+}
+
+function createHarvestBonusFromPayload(data = {}, uid = "", nowMs = Date.now()) {
+  const bonus = data.bonus && typeof data.bonus === "object" ? data.bonus : data;
+  const id = safeString(bonus.id || `harvest-${uid}-${nowMs}`, 96).replace(/[^a-zA-Z0-9_-]/g, "_");
+  const regionId = normalizeRegionId(bonus.regionId || data.regionId);
+  const x = safeNumber(bonus.x, NaN);
+  const y = safeNumber(bonus.y, NaN);
+  if (!id || !Number.isFinite(x) || !Number.isFinite(y)) return null;
+  return {
+    id,
+    type: normalizeHarvestBonusType(bonus.type || data.type),
+    regionId,
+    x: Math.round(x),
+    y: Math.round(y),
+    createdAt: Math.max(0, safeNumber(bonus.createdAt, 0)),
+    createdAtMs: nowMs,
+  };
+}
+
 function createScoutReportSnapshot(target = {}, defenderProfile = null, nowMs = Date.now(), bonuses = {}) {
   const stats = getCityStats(target, defenderProfile, bonuses);
   const baseTroopDefense = Math.max(0, Math.floor(safeNumber(target.troops, 0)));
@@ -1504,10 +1572,17 @@ function createEconomyResponse(economy = null, overrides = {}) {
     daily,
     harvestBonuses,
     harvestSpawnTimer,
+    harvestNextSpawnAtMs,
     harvestNextBonusType,
     cityUpdates,
     ...meta
   } = overrides;
+  const resolvedHarvestBonuses = harvestBonuses !== undefined
+    ? harvestBonuses
+    : economy.profileAfter.harvestBonuses;
+  const resolvedHarvestNextSpawnAtMs = timestampToMs(
+    harvestNextSpawnAtMs !== undefined ? harvestNextSpawnAtMs : economy.profileAfter.harvestNextSpawnAtMs
+  );
   const currentUser = {
     gold: Math.max(0, Math.floor(safeNumber(gold, economy.gold))),
     goldFloat: Math.max(0, safeNumber(goldFloat, gold ?? economy.goldFloat)),
@@ -1522,12 +1597,20 @@ function createEconomyResponse(economy = null, overrides = {}) {
     mainCityChangedAtMs: timestampToMs(economy.profileAfter.mainCityChangedAtMs),
   };
   if (daily !== undefined) currentUser.daily = normalizeDaily(daily);
-  if (harvestBonuses !== undefined) currentUser.harvestBonuses = Array.isArray(harvestBonuses) ? harvestBonuses : [];
+  if (resolvedHarvestBonuses !== undefined) currentUser.harvestBonuses = enforceHarvestBonusActiveLimit(resolvedHarvestBonuses);
   if (harvestSpawnTimer !== undefined) {
     currentUser.harvestSpawnTimer = clampInt(harvestSpawnTimer, 0, HARVEST_BONUS_SPAWN_INTERVAL_SECONDS);
   }
+  if (resolvedHarvestNextSpawnAtMs) {
+    currentUser.harvestNextSpawnAtMs = resolvedHarvestNextSpawnAtMs;
+    if (harvestSpawnTimer === undefined) {
+      currentUser.harvestSpawnTimer = getHarvestSpawnTimerFromNextAt(resolvedHarvestNextSpawnAtMs);
+    }
+  }
   if (harvestNextBonusType !== undefined) {
-    currentUser.harvestNextBonusType = harvestNextBonusType === "troops" ? "troops" : "gold";
+    currentUser.harvestNextBonusType = normalizeHarvestBonusType(harvestNextBonusType);
+  } else if (economy.profileAfter.harvestNextBonusType !== undefined) {
+    currentUser.harvestNextBonusType = normalizeHarvestBonusType(economy.profileAfter.harvestNextBonusType);
   }
   return {
     ok: true,
@@ -1740,6 +1823,82 @@ exports.collectEconomy = onCall({ region: "us-central1", maxInstances: 30, invok
   });
 });
 
+exports.reserveHarvestBonusSpawn = onCall({ region: "us-central1", maxInstances: 30, invoker: "public" }, async request => {
+  const uid = requireAuth(request);
+  const data = request.data || {};
+  const requestedType = normalizeHarvestBonusType(data.type);
+  const nowMs = Date.now();
+
+  return db.runTransaction(async transaction => {
+    const profileRef = db.doc(`players/${uid}`);
+    const profileSnap = await transaction.get(profileRef);
+    const profile = profileSnap.exists ? profileSnap.data() || {} : {};
+    const daily = mergeHarvestDailyTrackers(profile.daily, data.daily, new Date(nowMs));
+    const preferredType = normalizeHarvestBonusType(profile.harvestNextBonusType || requestedType);
+    const alternateType = preferredType === "troops" ? "gold" : "troops";
+    const spawnType = getHarvestBonusRemaining(preferredType, daily) > 0
+      ? preferredType
+      : getHarvestBonusRemaining(alternateType, daily) > 0
+        ? alternateType
+        : "";
+    const activeBonuses = enforceHarvestBonusActiveLimit(profile.harvestBonuses, nowMs);
+    const currentNextSpawnAtMs = getHarvestNextSpawnAtMs(profile, nowMs);
+    const writeProfileState = (overrides = {}) => {
+      const harvestNextSpawnAtMs = timestampToMs(overrides.harvestNextSpawnAtMs) || currentNextSpawnAtMs;
+      const harvestBonuses = enforceHarvestBonusActiveLimit(
+        overrides.harvestBonuses !== undefined ? overrides.harvestBonuses : activeBonuses,
+        nowMs
+      );
+      const harvestNextBonusType = normalizeHarvestBonusType(overrides.harvestNextBonusType || profile.harvestNextBonusType || requestedType);
+      transaction.set(profileRef, {
+        uid,
+        resetGeneration: RESET_GENERATION,
+        worldId: ONLINE_WORLD_ID,
+        daily,
+        harvestBonuses,
+        harvestSpawnTimer: getHarvestSpawnTimerFromNextAt(harvestNextSpawnAtMs, nowMs),
+        harvestNextSpawnAtMs,
+        harvestNextBonusType,
+        updatedAt: FieldValue.serverTimestamp(),
+      }, { merge: true });
+      return {
+        ok: true,
+        spawned: Boolean(overrides.spawned),
+        reason: overrides.reason || "",
+        currentUser: {
+          daily,
+          harvestBonuses,
+          harvestSpawnTimer: getHarvestSpawnTimerFromNextAt(harvestNextSpawnAtMs, nowMs),
+          harvestNextSpawnAtMs,
+          harvestNextBonusType,
+        },
+      };
+    };
+
+    if (!spawnType) {
+      return writeProfileState({ reason: "daily-limit" });
+    }
+    if (activeBonuses.length >= HARVEST_BONUS_MAX_ACTIVE_PER_PLAYER) {
+      return writeProfileState({ reason: "active-pickup" });
+    }
+    if (nowMs < currentNextSpawnAtMs) {
+      return writeProfileState({ reason: "cooldown" });
+    }
+
+    const bonus = createHarvestBonusFromPayload(data, uid, nowMs);
+    if (!bonus) throw new HttpsError("invalid-argument", "Pickup spawn location is invalid.");
+    bonus.type = spawnType;
+    const harvestBonuses = enforceHarvestBonusActiveLimit([...activeBonuses, bonus], nowMs);
+    const harvestNextSpawnAtMs = nowMs + HARVEST_BONUS_SPAWN_INTERVAL_SECONDS * 1000;
+    return writeProfileState({
+      spawned: true,
+      harvestBonuses,
+      harvestNextSpawnAtMs,
+      harvestNextBonusType: spawnType === "troops" ? "gold" : "troops",
+    });
+  });
+});
+
 exports.repairMainCityAssignment = onCall({ region: "us-central1", maxInstances: 20, invoker: "public" }, async request => {
   const uid = requireAuth(request);
   const nowMs = Date.now();
@@ -1764,17 +1923,24 @@ exports.collectHarvestBonus = onCall({ region: "us-central1", maxInstances: 30, 
   return db.runTransaction(async transaction => {
     const economy = await prepareEconomyCollection(transaction, uid, nowMs);
     let daily = mergeHarvestDailyTrackers(economy.profileAfter.daily, data.daily, new Date(nowMs));
+    const activeHarvestBonuses = enforceHarvestBonusActiveLimit(economy.profileAfter.harvestBonuses, nowMs);
+    const activeBonus = activeHarvestBonuses.find(bonus => bonus.id === bonusId && bonus.type === type);
+    if (!activeBonus) {
+      throw new HttpsError("failed-precondition", "That pickup expired. Reload the map and try the next one.");
+    }
     if (getHarvestBonusRemaining(type, daily) <= 0) {
       throw new HttpsError("failed-precondition", `Daily ${type === "troops" ? "troop" : "gold"} harvest limit reached.`);
     }
 
     const reward = getHarvestBonusReward(economy, type);
     daily = incrementHarvestDailyTracker(type, daily);
-    const harvestBonuses = removeHarvestBonusFromProfile(economy.profileAfter, bonusId);
+    const harvestBonuses = removeHarvestBonusFromProfile({ harvestBonuses: activeHarvestBonuses }, bonusId);
+    const harvestNextSpawnAtMs = nowMs + HARVEST_BONUS_SPAWN_INTERVAL_SECONDS * 1000;
     const profileOverrides = {
       daily,
       harvestBonuses,
       harvestSpawnTimer: HARVEST_BONUS_SPAWN_INTERVAL_SECONDS,
+      harvestNextSpawnAtMs,
       harvestNextBonusType: type === "troops" ? "gold" : "troops",
     };
 
