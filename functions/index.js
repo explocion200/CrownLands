@@ -3583,19 +3583,38 @@ exports.sendArmyOrder = onCall({ region: "us-central1", maxInstances: 20, invoke
     };
 
     let profileOverrides = {};
+    const launchCityPatches = [];
+    const launchCityUpdates = [];
     if (resolvedKind === "attack" && targetOwnerUid && targetOwnerUid !== uid) {
       const itemEffects = { ...(attackerEconomy.itemEffects || {}) };
       if (safeNumber(itemEffects.shieldExpiresAtMs, 0) > nowMs) {
         itemEffects.shieldExpiresAtMs = 0;
         profileOverrides = { itemEffects };
+        attackerEconomy.cityEntries.forEach(entry => {
+          if (!entry?.ref || !entry.city || isStronghold(entry.city)) return;
+          const patch = { ownerShieldExpiresAtMs: 0 };
+          launchCityPatches.push({ ref: entry.ref, city: entry.city, patch });
+          launchCityUpdates.push({
+            id: entry.city.id,
+            regionId: entry.city.regionId,
+            ...patch,
+          });
+        });
       }
     }
     const sourceTroopPatch = {
       troops: sourceTroops - troops,
       troopFloat: Math.max(0, safeNumber(source.troopFloat, sourceTroops) - troops),
     };
+    launchCityPatches.push({ ref: sourceRef, city: source, patch: sourceTroopPatch });
+    launchCityUpdates.push({
+      id: source.id,
+      regionId: order.sourceRegionId,
+      troops: sourceTroops - troops,
+      troopFloat: Math.max(0, safeNumber(source.troopFloat, sourceTroops) - troops),
+    });
     writePreparedEconomy(transaction, attackerEconomy, profileOverrides, [
-      { ref: sourceRef, city: source, patch: sourceTroopPatch },
+      ...launchCityPatches,
     ], {
       addActiveArmies: [movement],
       nowMs,
@@ -3618,6 +3637,7 @@ exports.sendArmyOrder = onCall({ region: "us-central1", maxInstances: 20, invoke
         troops: sourceTroops - troops,
         troopFloat: Math.max(0, safeNumber(source.troopFloat, sourceTroops) - troops),
       },
+      cityUpdates: launchCityUpdates,
       currentUser: {
         gold: attackerEconomy.gold,
         goldFloat: attackerEconomy.goldFloat,

@@ -14,16 +14,6 @@ service cloud.firestore {
       return data.get('shopItems', {}).get('shield_12h', 0);
     }
 
-    function shieldStockNotIncreased() {
-      return shieldCount(request.resource.data) <= shieldCount(resource.data);
-    }
-
-    function validShieldPurchase() {
-      return shieldCount(request.resource.data) > shieldCount(resource.data)
-        && request.resource.data.get('gold', 0) is number
-        && request.resource.data.get('gold', 0) >= 0;
-    }
-
     function validPlayerProfileCreate() {
       return shieldCount(request.resource.data) == 0
         && !request.resource.data.keys().hasAny([

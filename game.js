@@ -5106,11 +5106,6 @@ function normalizeFlag(flag) {
   };
 }
 
-function getFlagSignature(flag) {
-  const normalized = normalizeFlag(flag);
-  return `${normalized.primary}|${normalized.secondary}|${normalized.pattern}|${normalized.symbol}`;
-}
-
 function setTextIfChanged(element, value) {
   if (!element) return;
   const text = String(value);
@@ -9995,7 +9990,9 @@ function publishOnlineArmyMovement(mission, options = {}) {
       if (result?.movement) applyServerMovementToMission(mission, result.movement);
       applyServerArmyResult({
         currentUser: result?.currentUser,
-        cityUpdates: result?.sourceCity ? [result.sourceCity] : [],
+        cityUpdates: Array.isArray(result?.cityUpdates)
+          ? result.cityUpdates
+          : result?.sourceCity ? [result.sourceCity] : [],
       });
       if (options.addLocalMissionOnAccept) addServerAcceptedMission(mission);
       onlineLastError = "";
