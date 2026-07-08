@@ -1601,16 +1601,8 @@ async function prepareEconomyCollection(transaction, uid, nowMs = Date.now(), op
   const fallbackProductionAtMs = Math.min(nowMs, getProfileLastSeenMs(rawProfile) || nowMs);
 
   const ownedSnap = await transaction.get(db.collectionGroup("cities").where("ownerUid", "==", uid));
-  const activeArmiesSnap = await transaction.get(db.collectionGroup("armies")
-    .where("ownerUid", "==", uid));
   const cityEntries = createOwnedCityEntriesFromSnapshot(uid, ownedSnap);
-  const activeArmies = activeArmiesSnap.docs
-    .map(doc => ({
-      id: safeString(doc.data()?.id || doc.id, 96),
-      islandId: safeString(doc.ref.parent?.parent?.id, 160),
-      ...doc.data(),
-    }))
-    .filter(army => getOwnerUid(army) === uid && army.status === "active" && isCurrentWorldArmy(army));
+  const activeArmies = [];
   const mainCityRepair = createMainCityAssignmentRepair(uid, rawProfile, cityEntries);
   const cityPatches = [...mainCityRepair.cityPatches];
   const cityUpdates = [...mainCityRepair.cityUpdates];
@@ -1833,28 +1825,16 @@ async function rebuildGlobalStatsForPlayer(uid = "") {
   if (!playerUid) throw new HttpsError("invalid-argument", "A player uid is required.");
   const nowMs = Date.now();
   const profileRef = db.doc(`players/${playerUid}`);
-  const [profileSnap, ownedSnap, activeArmiesSnap] = await Promise.all([
+  const [profileSnap, ownedSnap] = await Promise.all([
     profileRef.get(),
     db.collectionGroup("cities").where("ownerUid", "==", playerUid).get(),
-    db.collectionGroup("armies").where("ownerUid", "==", playerUid).get(),
   ]);
   const profile = profileSnap.exists ? profileSnap.data() || {} : {};
   const identity = getCanonicalPlayerIdentity(playerUid, profile, {}, {});
   const cityEntries = createOwnedCityEntriesFromSnapshot(playerUid, ownedSnap);
   const mainRepair = createMainCityAssignmentRepair(playerUid, profile, cityEntries);
-  const activeArmyDocs = activeArmiesSnap.docs.filter(armyDoc => {
-    const army = {
-      id: safeString(armyDoc.data()?.id || armyDoc.id, 96),
-      islandId: safeString(armyDoc.ref.parent?.parent?.id, 160),
-      ...armyDoc.data(),
-    };
-    return army.status === "active" && isCurrentWorldArmy(army);
-  });
-  const activeArmies = activeArmyDocs.map(armyDoc => ({
-    id: safeString(armyDoc.data()?.id || armyDoc.id, 96),
-    islandId: safeString(armyDoc.ref.parent?.parent?.id, 160),
-    ...armyDoc.data(),
-  }));
+  const activeArmyDocs = [];
+  const activeArmies = [];
   const profileForStats = {
     ...profile,
     playerName: identity.ownerName,
@@ -2511,16 +2491,11 @@ exports.syncPlayerIdentity = onCall({ region: "us-central1", maxInstances: 20, i
   const nowMs = Date.now();
 
   const ownedCitiesSnap = await db.collectionGroup("cities").where("ownerUid", "==", uid).get();
-  const activeArmiesSnap = await db.collectionGroup("armies").where("ownerUid", "==", uid).get();
   const cityDocs = ownedCitiesSnap.docs.filter(cityDoc => {
     const islandId = cityDoc.ref.parent.parent?.id || "";
     return isCurrentWorldIslandId(islandId);
   });
-  const activeArmyDocs = activeArmiesSnap.docs.filter(armyDoc => {
-    const islandId = armyDoc.ref.parent.parent?.id || "";
-    const army = armyDoc.data() || {};
-    return isCurrentWorldIslandId(islandId) && army.status === "active";
-  });
+  const activeArmyDocs = [];
   const ownedCityEntries = cityDocs.map(cityDoc => {
     const city = cityDoc.data() || {};
     const islandId = safeString(cityDoc.ref.parent.parent?.id, 160);
