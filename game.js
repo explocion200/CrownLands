@@ -23,9 +23,9 @@ const DEFAULT_ONLINE_REGION_ID = WORLD_REGIONS.find(isStarterRegion)?.id
   || WORLD_REGIONS[0]?.id
   || "center";
 const ONLINE_CITY_SYNC_SECONDS = 20;
-const ONLINE_PRESENCE_SECONDS = 30;
-const ONLINE_PRESENCE_STALE_SECONDS = 90;
-const SERVER_ECONOMY_SYNC_SECONDS = 15;
+const ONLINE_PRESENCE_SECONDS = 60;
+const ONLINE_PRESENCE_STALE_SECONDS = 180;
+const SERVER_ECONOMY_SYNC_SECONDS = 30;
 const LEADERBOARD_SAVE_SECONDS = 60;
 const LEADERBOARD_STALE_REFRESH_MS = 5 * 60 * 1000;
 const KING_POWER_LEADERBOARD_LIMIT = 100;
@@ -38,7 +38,7 @@ const ONLINE_REGION_CITY_RESOLUTION_TIMEOUT_MS = 20 * 1000;
 const ONLINE_ARMY_EXPIRY_GRACE_SECONDS = 8;
 const ONLINE_ARMY_RESOLVE_RETRY_SECONDS = 5;
 const PENDING_ARMY_MAX_AGE_MS = 3 * 24 * 60 * 60 * 1000;
-const UPDATE_CHECK_INTERVAL_SECONDS = 45;
+const UPDATE_CHECK_INTERVAL_SECONDS = 120;
 const SETUP_LOADING_MIN_MS = 180;
 const IMAGE_PRELOAD_TIMEOUT_MS = 15000;
 const HUD_RENDER_INTERVAL_MS = 250;
@@ -595,6 +595,7 @@ const CITY_LEVEL_STATS = {
 };
 const KING_POWER_PER_TROOP = 1;
 const KING_POWER_PER_CITY_VP = 10;
+const KING_POWER_AUTHORITY_VERSION = 2;
 const SKILL_RESET_COST = 750_000;
 
 const SKILL_CONFIG = {
@@ -5663,6 +5664,7 @@ function applyGlobalStatsSnapshot(raw = null, options = {}) {
     playerName: state.playerName,
     flag: state.flag,
     kingPower: stats.kingPower,
+    kingPowerVersion: stats.version,
     updatedAtMs: stats.updatedAtMs || Date.now(),
   }, { force: true });
   const changed = before !== JSON.stringify(stats);
@@ -5694,9 +5696,13 @@ function getCityOwnerKingPowerSnapshot(city) {
   if (!city) return 0;
   const currentUid = getCurrentOnlineUid();
   if (city.owner === "player" && (!city.ownerUid || city.ownerUid === currentUid)) return getKingPower();
+  const cachedIdentity = playerIdentityCache.get(city.ownerUid);
+  if (Math.max(0, Math.floor(Number(cachedIdentity?.kingPowerVersion) || 0)) >= KING_POWER_AUTHORITY_VERSION) {
+    return normalizePowerValue(cachedIdentity.kingPower);
+  }
   return Math.max(
     normalizePowerValue(city.ownerKingPower),
-    normalizePowerValue(playerIdentityCache.get(city.ownerUid)?.kingPower),
+    normalizePowerValue(cachedIdentity?.kingPower),
     getPresenceKingPowerByUid(city.ownerUid),
     getCityPowerFloor(city)
   );
@@ -6221,6 +6227,7 @@ function normalizeBattleReports(reports) {
         type,
         outcome,
         createdAt: Math.max(0, Number(report.createdAt) || 0),
+        createdAtMs: normalizeTimestampMs(report.createdAtMs),
         cityId,
         regionId: rawRegionId ? normalizeRegionId(rawRegionId) : "",
         cityName: String(report.cityName || "Unknown city").slice(0, 40),
@@ -6240,6 +6247,14 @@ function normalizeBattleReports(reports) {
     })
     .filter(Boolean)
     .slice(-120);
+}
+
+function compareBattleReportsNewestFirst(a = {}, b = {}) {
+  const gameTimeDifference = Math.max(0, Number(b.createdAt) || 0) - Math.max(0, Number(a.createdAt) || 0);
+  if (gameTimeDifference) return gameTimeDifference;
+  const realTimeDifference = normalizeTimestampMs(b.createdAtMs) - normalizeTimestampMs(a.createdAtMs);
+  if (realTimeDifference) return realTimeDifference;
+  return String(b.id || "").localeCompare(String(a.id || ""));
 }
 
 function normalizeTimestampMs(value) {
@@ -6656,6 +6671,7 @@ function addBattleReport(report) {
   const entry = normalizeBattleReports([{
     id: `report_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`,
     createdAt: state.gameSeconds,
+    createdAtMs: Date.now(),
     ...report,
   }])[0];
   if (!entry) return;
@@ -7047,7 +7063,11 @@ function applyServerCityUpdates(cityUpdates = []) {
   if (cacheChanged) updateIslandSummariesFromOwnedCityCache();
   const mainCityRepair = normalizeSingleMainCityAssignment(state.mainCityId);
   changed = mainCityRepair.changed || changed;
-  if (changed) renderAll();
+  if (changed) {
+    renderHud();
+    renderCities();
+    renderPanel();
+  }
   return changed || cacheChanged;
 }
 
@@ -7084,9 +7104,8 @@ function applyServerEconomyResult(result = null, options = {}) {
     });
   }
   if (changed) {
-    saveGame();
     renderHud();
-    renderCities(true);
+    renderCities();
     renderHarvestBonuses();
     if (modal.open && modal.classList.contains("shop-modal")) renderShopModal();
     if (modal.open && modal.classList.contains("inventory-modal")) showInventoryModal();
@@ -7405,10 +7424,9 @@ async function flushOnlineSave(force = false) {
   onlineSaveQueued = false;
   try {
     const cloudState = getPlayerCloudStateSnapshot();
-    await api.savePlayerProfile(stripServerEconomyProfileFields(cloudState));
-    if (typeof api.saveGameSnapshot === "function") {
-      await api.saveGameSnapshot(cloudState, ONLINE_SAVE_SLOT);
-    }
+    const writes = [api.savePlayerProfile(stripServerEconomyProfileFields(cloudState))];
+    if (typeof api.saveGameSnapshot === "function") writes.push(api.saveGameSnapshot(cloudState, ONLINE_SAVE_SLOT));
+    await Promise.all(writes);
     await syncOwnedCitiesToOnline();
     publishKingPowerLeaderboard();
     onlineLastSaveAt = Date.now();
@@ -7439,6 +7457,7 @@ function getOnlinePresenceSnapshot() {
     mainIslandId: stats?.mainIslandId || state?.online?.mainIslandId || getOnlineIslandId(mainRegionId),
     cityCount,
     kingPower: state ? getKingPower() : 0,
+    kingPowerVersion: Math.max(KING_POWER_AUTHORITY_VERSION, Math.floor(Number(stats?.version) || 0)),
     updatedAtMs: Date.now(),
   };
 }
@@ -7452,6 +7471,7 @@ function getKingPowerLeaderboardSnapshot() {
     playerName: state?.playerName || "Ruler",
     flag: state?.flag || createDefaultFlag(),
     kingPower: getKingPower(),
+    kingPowerVersion: Math.max(KING_POWER_AUTHORITY_VERSION, Math.floor(Number(stats?.version) || 0)),
     cityCount,
     mainCityId: stats?.mainCityId || state?.mainCityId || "",
     mainRegionId: stats?.mainRegionId || mainRegionId,
@@ -7513,6 +7533,7 @@ function normalizePresence(raw) {
     mainIslandId: String(raw.mainIslandId || ""),
     cityCount: Math.max(0, Math.floor(Number(raw.cityCount) || 0)),
     kingPower: Math.max(0, Math.floor(Number(raw.kingPower) || 0)),
+    kingPowerVersion: Math.max(0, Math.floor(Number(raw.kingPowerVersion) || 0)),
     updatedAtMs: Math.max(0, Number(raw.updatedAtMs) || 0),
   };
 }
@@ -7526,6 +7547,7 @@ function normalizePlayerIdentity(raw = {}, fallbackUid = "") {
     displayName: cleanName(raw.playerName || raw.displayName || raw.ownerName || raw.name || "") || "",
     flag: raw.flag || raw.ownerFlag || null,
     kingPower: normalizePowerValue(raw.kingPower ?? raw.ownerKingPower ?? raw.attackerKingPower),
+    kingPowerVersion: Math.max(0, Math.floor(Number(raw.kingPowerVersion) || 0)),
     updatedAtMs: normalizeTimestampMs(raw.updatedAtMs) || timestampToMs(raw.updatedAt),
   };
 }
@@ -7537,6 +7559,7 @@ function getPlayerIdentitySignature(identity) {
     identity.displayName || "",
     getFlagSignature(identity.flag),
     normalizePowerValue(identity.kingPower),
+    Math.max(0, Math.floor(Number(identity.kingPowerVersion) || 0)),
     normalizeTimestampMs(identity.updatedAtMs),
   ].join("|");
 }
@@ -7548,7 +7571,8 @@ function rememberPlayerIdentity(raw = {}, options = {}) {
   if (currentUid && state && identity.uid === currentUid) {
     identity.displayName = state.playerName || identity.displayName || "Ruler";
     identity.flag = state.flag || identity.flag || createDefaultFlag();
-    identity.kingPower = getKingPower() || identity.kingPower;
+    identity.kingPower = getKingPower();
+    identity.kingPowerVersion = Math.max(identity.kingPowerVersion, KING_POWER_AUTHORITY_VERSION);
     identity.updatedAtMs = Math.max(identity.updatedAtMs || 0, Date.now());
   }
 
@@ -7569,8 +7593,11 @@ function rememberPlayerIdentity(raw = {}, options = {}) {
       ? identity.flag || existing?.flag || null
       : existing?.flag || identity.flag || null,
     kingPower: identityIsNewer
-      ? identity.kingPower || existing?.kingPower || 0
-      : existing?.kingPower || identity.kingPower || 0,
+      ? identity.kingPower
+      : existing?.kingPower || 0,
+    kingPowerVersion: identityIsNewer
+      ? identity.kingPowerVersion
+      : Math.max(0, Math.floor(Number(existing?.kingPowerVersion) || 0)),
     updatedAtMs: Math.max(existing?.updatedAtMs || 0, identity.updatedAtMs || 0),
     fetchedAtMs: Date.now(),
   };
@@ -7598,6 +7625,7 @@ function rememberOwnerIdentitiesFromRecords(records = []) {
       ownerName: record.ownerName,
       ownerFlag: record.ownerFlag,
       ownerKingPower: record.ownerKingPower ?? record.kingPower ?? record.attackerKingPower,
+      kingPowerVersion: record.kingPowerVersion,
       updatedAtMs: normalizeTimestampMs(record.updatedAtMs) || timestampToMs(record.updatedAt),
     })) {
       changed = true;
@@ -7614,6 +7642,7 @@ function rememberCurrentPlayerIdentity() {
     playerName: state.playerName,
     flag: state.flag,
     kingPower: getKingPower(),
+    kingPowerVersion: KING_POWER_AUTHORITY_VERSION,
     updatedAtMs: Date.now(),
   }, { force: true });
 }
@@ -7628,15 +7657,20 @@ function resolvePlayerIdentityForUid(uid, fallback = {}) {
       displayName: state.playerName || fallbackIdentity.displayName || "Ruler",
       flag: state.flag || fallbackIdentity.flag || createDefaultFlag(),
       kingPower: getCurrentPlayerIdentityKingPower(fallbackIdentity.kingPower),
+      kingPowerVersion: KING_POWER_AUTHORITY_VERSION,
       updatedAtMs: Date.now(),
     };
   }
   const cached = ownerUid ? playerIdentityCache.get(ownerUid) : null;
+  const cachedPowerIsAuthoritative = Math.max(0, Math.floor(Number(cached?.kingPowerVersion) || 0)) >= KING_POWER_AUTHORITY_VERSION;
   return {
     uid: ownerUid,
     displayName: cached?.displayName || fallbackIdentity.displayName || "",
     flag: cached?.flag || fallbackIdentity.flag || null,
-    kingPower: cached?.kingPower || fallbackIdentity.kingPower || 0,
+    kingPower: cachedPowerIsAuthoritative
+      ? normalizePowerValue(cached.kingPower)
+      : cached?.kingPower || fallbackIdentity.kingPower || 0,
+    kingPowerVersion: Math.max(cached?.kingPowerVersion || 0, fallbackIdentity.kingPowerVersion || 0),
     updatedAtMs: Math.max(cached?.updatedAtMs || 0, fallbackIdentity.updatedAtMs || 0),
   };
 }
@@ -7650,7 +7684,9 @@ function applyCanonicalPlayerIdentityToRecord(record) {
   const identity = resolvePlayerIdentityForUid(ownerUid, record);
   const nextName = identity.displayName || record.ownerName || "";
   const nextFlag = identity.flag || record.ownerFlag || null;
-  const nextPower = normalizePowerValue(identity.kingPower) || normalizePowerValue(record.ownerKingPower);
+  const nextPower = identity.kingPowerVersion >= KING_POWER_AUTHORITY_VERSION
+    ? normalizePowerValue(identity.kingPower)
+    : normalizePowerValue(identity.kingPower) || normalizePowerValue(record.ownerKingPower);
   let changed = false;
   if ((record.ownerName || "") !== nextName) {
     record.ownerName = nextName;
@@ -7721,7 +7757,7 @@ async function refreshQueuedPlayerIdentities() {
     playerIdentityLookupInFlight = false;
   }
   if (changed && canonicalizeVisiblePlayerIdentities()) {
-    renderCities(true);
+    renderCities();
     renderPaths();
     renderArmies();
     updateIncomingAttackUi();
@@ -8538,7 +8574,7 @@ function applyOnlinePresence(rawPresence) {
   }
   onlinePresence = rawPresence.map(normalizePresence).filter(Boolean);
   if (rememberPlayerIdentities(onlinePresence, { force: true }) && canonicalizeVisiblePlayerIdentities()) {
-    renderCities(true);
+    renderCities();
     renderArmies();
     updateIncomingAttackUi();
     updateOutgoingAttackUi();
@@ -9317,7 +9353,15 @@ async function connectOnlineIsland(regionId, { claimHome = false, homeRegionId =
         onlineCitySyncTimer = 0;
         onlinePresenceTimer = 0;
       }
-      if (render) renderAll();
+      if (render) {
+        if (firstCitiesSnapshot) {
+          renderAll();
+        } else {
+          renderHud();
+          renderCities();
+          renderPanel();
+        }
+      }
       onlineFreshClaimCityId = "";
     };
 
@@ -9345,7 +9389,6 @@ async function connectOnlineIsland(regionId, { claimHome = false, homeRegionId =
     subscribeOnlineArmyWatchers(islandId);
     subscribeOnlineServerReports();
     subscribeOnlineGlobalStats();
-    loadServerReportsOnce();
     await recoverPendingOnlineArmyMovements();
     await publishOnlinePresence(true);
     queueOnlineIdentityRepair();
@@ -9379,65 +9422,14 @@ function applyOnlineCities(onlineCities, regionId = getActiveOnlineRegionId()) {
   const currentUid = getCurrentOnlineUid();
   const localById = new Map(state.cities.map(city => [city.id, city]));
   const activeRegionId = normalizeRegionId(regionId);
+  const inactiveCities = state.cities.filter(city => getCityRegionId(city) !== activeRegionId);
   const previousKingPowerOverride = currentPlayerIdentityKingPowerOverride;
   const currentPlayerKingPower = getKingPower();
   queuePlayerIdentityLookupForRecords(onlineCities);
 
   currentPlayerIdentityKingPowerOverride = currentPlayerKingPower;
   try {
-    state.cities = getPlayableBaseCities().map(base => {
-    const isActiveRegionCity = getCityRegionId(base) === activeRegionId;
-    if (!isActiveRegionCity) {
-      const current = localById.get(base.id);
-      if (!current) {
-        const troopFallback = getCityTroopFallback(base);
-        return {
-          ...base,
-          owner: "neutral",
-          ownerKind: "neutral",
-          ownerUid: null,
-          ownerName: "",
-          ownerFlag: null,
-          ownerKingPower: 0,
-          ownerShieldExpiresAtMs: 0,
-          level: clampCityLevel(base.level),
-          troops: readCityTroops(base.troops, troopFallback),
-          troopFloat: readCityTroopFloat(base.troopFloat ?? base.troops, troopFallback),
-          defense: 1,
-          investedGold: 0,
-          lastCapturedAt: null,
-          isMainCity: !isStronghold(base) && base.id === state.mainCityId,
-          relinquishedAtMs: 0,
-          relocatedAtMs: 0,
-          startPool: base.startPool,
-          regionId: base.regionId,
-        };
-      }
-      const currentOwnership = getCityRecordOwnership(current, currentUid, { allowLocalPlayerFallback: true });
-      const troopFallback = getCityTroopFallback(base, currentOwnership);
-      return {
-        ...base,
-        name: getCanonicalCityName(base, current),
-        owner: currentOwnership.owner,
-        ownerKind: currentOwnership.ownerKind,
-        ownerUid: currentOwnership.ownerUid,
-        ownerName: currentOwnership.ownerName,
-        ownerFlag: currentOwnership.ownerFlag,
-        ownerKingPower: currentOwnership.ownerKingPower,
-        ownerShieldExpiresAtMs: currentOwnership.ownerShieldExpiresAtMs,
-        level: isStronghold(base) ? getStrongholdDefenseLevel(base) : clampCityLevel(current.level ?? base.level),
-        troops: readCityTroops(current.troops, troopFallback),
-        troopFloat: readCityTroopFloat(current.troopFloat ?? current.troops, troopFallback),
-        defense: 1,
-        investedGold: isStronghold(base) ? 0 : Math.max(0, Math.floor(Number(current.investedGold) || 0)),
-        lastCapturedAt: current.lastCapturedAt ?? null,
-        isMainCity: !isStronghold(base) && (currentOwnership.owner === "player" ? base.id === state.mainCityId : Boolean(current.isMainCity)),
-        relinquishedAtMs: currentOwnership.owner === "player" ? 0 : timestampToMs(current.relinquishedAtMs),
-        relocatedAtMs: currentOwnership.owner === "player" ? 0 : timestampToMs(current.relocatedAtMs),
-        startPool: base.startPool,
-        regionId: base.regionId,
-      };
-    }
+    const activeCities = getPlayableBaseCitiesByRegion(activeRegionId).map(base => {
     const current = localById.get(base.id) || {};
     const online = byId.get(base.id) || {};
     const onlineOwnership = getCityRecordOwnership(online, currentUid);
@@ -9483,6 +9475,7 @@ function applyOnlineCities(onlineCities, regionId = getActiveOnlineRegionId()) {
       regionId: base.regionId,
     };
     });
+    state.cities = [...inactiveCities, ...activeCities];
   } finally {
     currentPlayerIdentityKingPowerOverride = previousKingPowerOverride;
   }
@@ -10151,7 +10144,7 @@ async function loadServerReportsOnce() {
 
 function subscribeOnlineServerReports() {
   const api = getOnlineApi();
-  clearOnlineServerReportWatcher();
+  if (typeof onlineServerReportsUnsubscribe === "function") return;
   if (!state || !api?.subscribeServerReports || !api?.isSignedIn?.()) return;
   onlineServerReportsUnsubscribe = api.subscribeServerReports({
     onReports: reports => {
@@ -10159,6 +10152,7 @@ function subscribeOnlineServerReports() {
     },
     onError: error => {
       onlineLastError = error?.message || String(error);
+      clearOnlineServerReportWatcher();
       console.warn("Could not subscribe to server reports", error);
     },
   });
@@ -10166,13 +10160,14 @@ function subscribeOnlineServerReports() {
 
 function subscribeOnlineGlobalStats() {
   const api = getOnlineApi();
-  clearOnlineGlobalStatsWatcher();
+  if (typeof onlineGlobalStatsUnsubscribe === "function") return;
   if (!state || !api?.subscribePlayerGlobalStats || !api?.isSignedIn?.()) return;
   onlineGlobalStatsUnsubscribe = api.subscribePlayerGlobalStats({
     onStats: stats => {
       if (stats) applyGlobalStatsSnapshot(stats);
     },
     onError: error => {
+      clearOnlineGlobalStatsWatcher();
       console.warn("Could not subscribe to global kingdom stats", error);
     },
   });
@@ -10180,7 +10175,7 @@ function subscribeOnlineGlobalStats() {
 
 function subscribeOnlineArmyWatchers(activeIslandId) {
   const api = getOnlineApi();
-  if (!api?.subscribeIsland || !isOnlineWorldActive()) return;
+  if (!api?.subscribePlayerArmies || !isOnlineWorldActive()) return;
   const activeId = String(activeIslandId || getActiveOnlineIslandId());
   const activeArmies = onlineArmiesByIsland.get(activeId) || [];
   clearOnlineArmyWatchers();
@@ -10188,20 +10183,18 @@ function subscribeOnlineArmyWatchers(activeIslandId) {
     onlineArmiesByIsland.set(activeId, activeArmies);
     rebuildOnlineArmies();
   }
-  const islandIds = [...new Set(getRegionIds().map(getOnlineIslandId).filter(Boolean))]
-    .filter(islandId => islandId !== activeId);
-
-  islandIds.forEach(islandId => {
-    const unsubscribe = api.subscribeIsland(islandId, {
-      onArmies: armies => {
-        applyOnlineArmies(armies, islandId);
-        renderArmies();
-        updateIncomingAttackUi();
-        updateOutgoingAttackUi();
-      },
-    });
-    if (typeof unsubscribe === "function") onlineArmyUnsubscribes.push(unsubscribe);
+  const unsubscribe = api.subscribePlayerArmies({
+    onArmies: armies => {
+      applyOnlineArmies(armies, "player-relevant");
+      renderArmies();
+      updateIncomingAttackUi();
+      updateOutgoingAttackUi();
+    },
+    onError: error => {
+      console.warn("Could not subscribe to player-relevant armies", error);
+    },
   });
+  if (typeof unsubscribe === "function") onlineArmyUnsubscribes.push(unsubscribe);
 }
 
 function isOnlineArmyVisible(army) {
@@ -11623,7 +11616,7 @@ function frame(now) {
     saveTimer += dt;
     if (saveTimer >= SAVE_EVERY_SECONDS) {
       saveTimer = 0;
-      saveGame();
+      if (!usesServerEconomyAuthority()) saveGame();
     }
     if (onlineSaveQueued) {
       onlineSaveTimer += dt;
@@ -12676,6 +12669,32 @@ function resolveAttack(attack) {
     addLog(`${shieldBlockReason} ${returnText}`);
     return;
   }
+
+  const neutralCapture = attack.owner === "player" && oldOwner === "neutral" && !isStronghold(target);
+  const neutralBlockReason = neutralCapture ? getNeutralCaptureBlockReason(target, "player", attack.id) : "";
+  if (neutralBlockReason) {
+    const returned = returnSurvivingAttackersToSource(attack, attack.troops, `${target.name} neutral capture limit`);
+    addBattleReport({
+      type: "attack",
+      outcome: "defeat",
+      cityId: target.id,
+      cityName: target.name,
+      cityLevel: targetLevel,
+      sentTroops: attack.troops,
+      troopCount: defendersAtStart,
+      survivors: returned,
+      defendersLeft: defendersAtStart,
+      attackerLosses: 0,
+      defenderLosses: 0,
+      totalDefense: targetDefenseAtStart,
+      opponentName: defenderName,
+      summary: `${neutralBlockReason} The attack was canceled and ${formatNumber(returned)} troops returned.`,
+    });
+    addLog(`${attackerName} could not attack ${target.name}. ${neutralBlockReason}`);
+    showNeutralCaptureLimitModal(neutralBlockReason);
+    return;
+  }
+
   const demoAttack = isStronghold(target)
     ? null
     : normalizeDemoAttackSnapshot(attack.demoAttack)
@@ -12688,40 +12707,6 @@ function resolveAttack(attack) {
   const result = calculateCombatResult(attack.troops, attack.owner, target, { demoAttack });
 
   if (result.success) {
-    const neutralCapture = attack.owner === "player" && oldOwner === "neutral" && !isStronghold(target);
-    const neutralBlockReason = neutralCapture ? getNeutralCaptureBlockReason(target, "player", attack.id) : "";
-    if (neutralBlockReason) {
-      if (givenUpNeutralTarget) {
-        target.troopFloat = 0;
-        target.troops = 0;
-      } else {
-        target.troopFloat = Math.max(1, target.troopFloat);
-        target.troops = Math.floor(target.troopFloat);
-      }
-      if (attack.owner === "player") {
-        addBattleReport({
-          type: "attack",
-          outcome: "defeat",
-          cityId: target.id,
-          cityName: target.name,
-          cityLevel: targetLevel,
-          sentTroops: attack.troops,
-          troopCount: defendersAtStart,
-          survivors: result.survivors,
-          defendersLeft: target.troops,
-          attackerLosses: result.attackerLosses,
-          defenderLosses: result.defenderLosses,
-          totalDefense: targetDefenseAtStart,
-          opponentName: defenderName,
-          summary: `${neutralBlockReason}${demoReportSuffix}`,
-        });
-      }
-      addLog(`${attackerName} defeated the defenders at ${target.name}, but could not capture it. ${neutralBlockReason}`);
-      if (attack.owner === "player") showNeutralCaptureLimitModal(neutralBlockReason);
-      else showToast(neutralBlockReason);
-      return;
-    }
-
     const xpEfficiency = attack.owner === "player" ? (demoAttack || givenUpNeutralTarget ? 0 : getCaptureXpEfficiency(target, oldOwner)) : 1;
     const xpAward = attack.owner === "player" && !demoAttack && !givenUpNeutralTarget ? getCaptureXpAward(target, oldOwner, result.defenderLosses, attack.owner) : 0;
     if (attack.owner === "player") {
@@ -14902,6 +14887,7 @@ function getRelinquishDestinationPreview(city, { loadedOnly = false } = {}) {
   const candidates = (loadedOnly ? playerCities() : getAllOwnedCitiesForDisplay())
     .filter(candidate => candidate.id !== city.id)
     .filter(candidate => loadedOnly ? candidate.owner === "player" : true)
+    .filter(candidate => !isStronghold(candidate))
     .map(candidate => {
       const sameRegion = getCityRegionId(candidate) === sourceRegionId;
       const distance = Math.hypot((Number(candidate.x) || 0) - (Number(city.x) || 0), (Number(candidate.y) || 0) - (Number(city.y) || 0));
@@ -14921,7 +14907,7 @@ function renderRelinquishCityAction(city) {
     <div class="relinquish-city-action-panel">
       <div class="relinquish-city-action-copy">
         <strong>Relinquish Castle</strong>
-        <small>Move stationed troops to your nearest friendly city and make this city neutral.</small>
+        <small>March stationed troops to your nearest friendly city and make this city neutral.</small>
       </div>
       <button id="relinquishCityBtn" class="relinquish-city-btn" type="button">Relinquish Castle</button>
     </div>
@@ -14951,7 +14937,7 @@ function showRelinquishCityConfirm(cityId) {
   modalBody.innerHTML = `
     <div class="relinquish-warning">
       <strong>Give up ${escapeHtml(city.name)}?</strong>
-      <p>You are giving up this city. ${formatNumber(troops)} stationed troops will move to ${escapeHtml(destinationLabel)}.</p>
+      <p>You are giving up this city. ${formatNumber(troops)} stationed troops will march to ${escapeHtml(destinationLabel)}.</p>
       <p>${escapeHtml(city.name)} will become neutral and stay at level ${formatNumber(isStronghold(city) ? getStrongholdDefenseLevel(city) : city.level)}.</p>
       <div class="modal-actions">
         <button id="confirmRelinquishCityBtn" class="danger-action" type="button">Yes</button>
@@ -14968,12 +14954,37 @@ function showRelinquishCityConfirm(cityId) {
   if (!modal.open) modal.showModal();
 }
 
-function applyLocalRelinquishCity(city, destination) {
+function createRelinquishTransferMission(city, destination, route, troops, { online = true } = {}) {
+  if (!state || !city || !destination || !route?.points?.length || troops < 1) return null;
+  const duration = travelTime(city, destination, "player", route.length, troops, "transfer");
+  const mission = {
+    id: attackIdCounter++,
+    owner: "player",
+    kind: "transfer",
+    fromId: city.id,
+    toId: destination.id,
+    troops,
+    requestedTroops: troops,
+    total: duration,
+    remaining: duration,
+    path: route.points,
+    pathSegments: getRouteSegments(route, getCityRegionId(city)),
+    pathLength: route.length,
+    targetOwnerAtLaunch: "player",
+    attackerKingPower: getKingPower(),
+    defenderKingPower: getKingPower(),
+    demoAttack: null,
+    relinquishTransfer: true,
+  };
+  if (online) prepareOnlineArmyMission(mission);
+  return mission;
+}
+
+function applyLocalRelinquishCity(city, destination, mission = null) {
   if (!state || !city || !destination) return false;
   const transferredTroops = Math.max(0, Math.floor(Number(city.troops) || 0));
-  destination.troopFloat = Math.max(0, Number(destination.troopFloat) || Number(destination.troops) || 0) + transferredTroops;
-  destination.troops = Math.floor(destination.troopFloat);
-  markOwnedCityChanged(destination, false);
+  if (transferredTroops > 0 && !mission) return false;
+  if (mission) state.attacks.push(mission);
 
   city.owner = "neutral";
   city.ownerKind = "neutral";
@@ -15014,27 +15025,79 @@ async function relinquishCity(cityId) {
 
   serverCityRelinquishInFlightIds.add(inFlightKey);
   try {
-    if (usesServerEconomyAuthority() && getOnlineApi()?.relinquishCity) {
-      const result = await getOnlineApi().relinquishCity({ cityId: city.id, regionId });
-      applyServerEconomyResult(result);
-      const transferredTroops = Math.max(0, Math.floor(Number(result?.transferredTroops) || 0));
-      const destinationName = result?.destinationCity?.name || getRelinquishDestinationPreview(city)?.name || "the nearest friendly city";
-      addLog(`Relinquished ${city.name}. ${formatNumber(transferredTroops)} troops moved to ${destinationName}.`);
-      showToast(`${city.name} relinquished`);
-      if (modal.open) modal.close();
-      clearSelection(false);
-      renderAll();
-      return true;
-    }
-
-    const destination = getRelinquishDestinationPreview(city, { loadedOnly: true });
+    const serverAuthority = usesServerEconomyAuthority() && getOnlineApi()?.relinquishCity;
+    const destination = getRelinquishDestinationPreview(city, { loadedOnly: !serverAuthority });
     if (!destination) {
       showToast("You need another friendly city to receive the troops.");
       return false;
     }
+
     const transferredTroops = Math.max(0, Math.floor(Number(city.troops) || 0));
-    applyLocalRelinquishCity(city, destination);
-    addLog(`Relinquished ${city.name}. ${formatNumber(transferredTroops)} troops moved to ${destination.name}.`);
+    let route = null;
+    let mission = null;
+    if (transferredTroops > 0) {
+      showToast(`Calculating march to ${destination.name}...`);
+      route = await findRouteAsync(city, destination);
+      if (!route?.points?.length) {
+        showToast("No land and portal route was found to the nearest friendly city.");
+        return false;
+      }
+      mission = createRelinquishTransferMission(city, destination, route, transferredTroops, { online: Boolean(serverAuthority) });
+      if (!mission) {
+        showToast("Could not prepare the relinquish march.");
+        return false;
+      }
+    }
+
+    if (serverAuthority) {
+      const movement = mission ? toOnlineArmyMovement(mission) : null;
+      const destinationRegionId = getCityRegionId(destination);
+      if (mission && !movement) {
+        showToast("Could not prepare the online relinquish march.");
+        return false;
+      }
+      if (mission) mission.onlineRegionIds = movement.routeRegionIds;
+      const result = await getOnlineApi().relinquishCity({
+        cityId: city.id,
+        regionId,
+        destinationCityId: destination.id,
+        destinationRegionId,
+        army: movement ? {
+          ...movement,
+          sourceRegionId: regionId,
+          targetRegionId: destinationRegionId,
+          fromName: city.name,
+          toName: destination.name,
+        } : null,
+        routeRegionIds: movement?.routeRegionIds || [],
+      });
+      applyServerEconomyResult(result);
+      if (mission && result?.movement) {
+        applyServerMovementToMission(mission, result.movement);
+        addServerAcceptedMission(mission);
+      }
+      const acceptedTroops = Math.max(0, Math.floor(Number(result?.transferredTroops) || 0));
+      const destinationName = result?.destinationCity?.name || destination.name || "the nearest friendly city";
+      const travelText = result?.movement ? ` (${formatDuration(Number(result.movement.total) || mission?.total || 0)})` : "";
+      addLog(acceptedTroops > 0
+        ? `Relinquished ${city.name}. ${formatNumber(acceptedTroops)} troops are marching to ${destinationName}${travelText}.`
+        : `Relinquished ${city.name}. No stationed troops needed to march.`);
+      showToast(`${city.name} relinquished`);
+      saveGame();
+      if (modal.open) modal.close();
+      clearSelection(false);
+      renderAll();
+      updateOutgoingAttackUi();
+      return true;
+    }
+
+    if (!applyLocalRelinquishCity(city, destination, mission)) {
+      showToast("Could not relinquish that city.");
+      return false;
+    }
+    addLog(transferredTroops > 0
+      ? `Relinquished ${city.name}. ${formatNumber(transferredTroops)} troops are marching to ${destination.name} (${formatDuration(mission.total)}).`
+      : `Relinquished ${city.name}. No stationed troops needed to march.`);
     showToast(`${city.name} relinquished`);
     saveGame();
     if (modal.open) modal.close();
@@ -16578,6 +16641,7 @@ function normalizeLeaderboardEntry(raw) {
     displayName: cleanName(raw.playerName || raw.displayName || "Ruler") || "Ruler",
     flag: raw.flag || null,
     kingPower: Math.max(0, Math.floor(Number(raw.kingPower) || 0)),
+    kingPowerVersion: Math.max(0, Math.floor(Number(raw.kingPowerVersion) || 0)),
     cityCount: Math.max(0, Math.floor(Number(raw.cityCount ?? raw.totalCities) || 0)),
     totalTroops: Math.max(0, Math.floor(Number(raw.totalTroops) || 0)),
     totalMarchingTroops: Math.max(0, Math.floor(Number(raw.totalMarchingTroops) || 0)),
@@ -16607,7 +16671,13 @@ function mergeLeaderboardEntries(rows = []) {
     const entry = normalizeLeaderboardEntry(row);
     if (!entry) return;
     const existing = byUid.get(entry.uid);
-    if (!existing || entry.kingPower > existing.kingPower || entry.updatedAtMs > existing.updatedAtMs) {
+    const entryIsAuthoritative = entry.kingPowerVersion >= KING_POWER_AUTHORITY_VERSION;
+    const existingIsAuthoritative = existing?.kingPowerVersion >= KING_POWER_AUTHORITY_VERSION;
+    const shouldReplace = !existing
+      || (entryIsAuthoritative && !existingIsAuthoritative)
+      || (entryIsAuthoritative === existingIsAuthoritative && entry.updatedAtMs >= existing.updatedAtMs)
+      || (!entryIsAuthoritative && !existingIsAuthoritative && entry.kingPower > existing.kingPower);
+    if (shouldReplace) {
       byUid.set(entry.uid, entry);
     }
   });
@@ -16749,7 +16819,7 @@ function showLogModal() {
   const filteredReports = state.battleReports
     .filter(report => battleReportFilter === "all" || report.type === battleReportFilter)
     .slice()
-    .reverse();
+    .sort(compareBattleReportsNewestFirst);
 
   modalBody.innerHTML = `
     <div class="battle-report-panel">

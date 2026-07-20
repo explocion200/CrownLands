@@ -775,6 +775,7 @@
       mainIslandId: String(presence.mainIslandId || "").slice(0, 64),
       cityCount: Math.max(0, Math.floor(Number(presence.cityCount) || 0)),
       kingPower: Math.max(0, Math.floor(Number(presence.kingPower) || 0)),
+      kingPowerVersion: Math.max(0, Math.floor(Number(presence.kingPowerVersion) || 0)),
       flag: presence.flag || null,
       updatedAtMs: Math.max(0, Number(presence.updatedAtMs) || Date.now()),
     };
@@ -895,6 +896,7 @@
       playerName: String(entry.playerName || entry.displayName || client.user?.displayName || "Ruler").slice(0, 32),
       flag: entry.flag || null,
       kingPower: Math.max(0, Math.floor(Number(entry.kingPower) || 0)),
+      kingPowerVersion: Math.max(0, Math.floor(Number(entry.kingPowerVersion) || 0)),
       cityCount: Math.max(0, Math.floor(Number(entry.cityCount) || 0)),
       mainCityId: String(entry.mainCityId || "").slice(0, 80),
       mainRegionId: String(entry.mainRegionId || "").slice(0, 64),
@@ -1095,6 +1097,51 @@
     return unsubscribe;
   }
 
+  function subscribePlayerArmies(handlers = {}) {
+    if (!client.configured || !client.db || !client.user?.uid) return () => {};
+    const { collectionGroup, onSnapshot, query: firestoreQuery, where } = client.modules.firestore;
+    if (!collectionGroup || !onSnapshot || !firestoreQuery || !where) return () => {};
+
+    const uid = client.user.uid;
+    const rowsBySource = new Map([
+      ["outgoing", new Map()],
+      ["incoming", new Map()],
+    ]);
+    const emit = () => {
+      if (typeof handlers.onArmies !== "function") return;
+      const merged = new Map();
+      rowsBySource.forEach(rows => rows.forEach((army, armyId) => merged.set(armyId, army)));
+      handlers.onArmies([...merged.values()]);
+    };
+    const subscribe = (source, ownerField) => onSnapshot(
+      firestoreQuery(
+        collectionGroup(client.db, "armies"),
+        where(ownerField, "==", uid),
+        where("status", "==", "active")
+      ),
+      snapshot => {
+        rowsBySource.set(source, new Map(snapshot.docs.map(doc => [
+          doc.id,
+          {
+            id: doc.id,
+            islandId: doc.ref.parent?.parent?.id || "",
+            ...doc.data(),
+          },
+        ])));
+        emit();
+      },
+      error => {
+        if (typeof handlers.onError === "function") handlers.onError(error, source);
+      }
+    );
+
+    const unsubscribers = [
+      subscribe("outgoing", "ownerUid"),
+      subscribe("incoming", "targetOwnerUid"),
+    ];
+    return () => unsubscribers.forEach(unsubscribe => unsubscribe());
+  }
+
   function subscribeIsland(islandId, handlers = {}) {
     if (!client.configured || !client.db || !islandId) return () => {};
     const { collection, doc, onSnapshot, query: firestoreQuery, where } = client.modules.firestore;
@@ -1187,6 +1234,7 @@
     loadOwnedCitiesAcrossIslands,
     loadServerReports,
     subscribeIsland,
+    subscribePlayerArmies,
     subscribeServerReports,
     isPushSupported,
     getNotificationPermission,

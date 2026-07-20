@@ -1,4 +1,4 @@
-const CACHE_VERSION = "20260707-editor-size-match";
+const CACHE_VERSION = "20260720-performance-v2";
 const CACHE_NAME = `crownlands-cache-${CACHE_VERSION}`;
 const STATIC_CACHE_URLS = [
   "/",
@@ -7,8 +7,8 @@ const STATIC_CACHE_URLS = [
   "/styles.css?v=20260707-main-city-repair",
   "/world-config.js",
   "/firebase-config.js?v=20260703-vapid-key",
-  "/firebaseClient.js?v=20260706-perf-v1",
-  "/game.js?v=20260707-editor-size-match",
+  "/firebaseClient.js?v=20260720-performance-v2",
+  "/game.js?v=20260720-performance-v2",
   "/route-worker.js?v=20260707-main-city-repair",
   "/assets/map-editor-data.js?v=20260705-stronghold-sizes",
   "/assets/game-menu-background.jpg?v=20260702-login-page",

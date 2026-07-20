@@ -19,6 +19,7 @@ const MILLION_LORDS_PASSIVE_GOLD_PER_CITY_VP = 15;
 const BASE_TROOP_ATTACK_POWER = 2;
 const DEFAULT_MARCH_PERCENT = 0.5;
 const DAILY_NEUTRAL_CAPTURE_LIMIT = 30;
+const NEUTRAL_CITY_COUNT_LIMIT = 30;
 const HARVEST_BONUS_DAILY_LIMIT = 200;
 const HARVEST_BONUS_DAILY_GOLD_LIMIT = 100;
 const HARVEST_BONUS_DAILY_TROOP_LIMIT = 100;
@@ -75,7 +76,8 @@ const VEIL_OF_SILENCE_DURATION_MS = 5 * 60 * 1000;
 const MAIN_CITY_CHANGE_CITY_LIMIT = 30;
 const MAIN_CITY_CHANGE_COOLDOWN_MS = 24 * 60 * 60 * 1000;
 const MAX_SERVER_PRODUCTION_SECONDS = 7 * 24 * 60 * 60;
-const GLOBAL_PLAYER_STATS_VERSION = 1;
+const GLOBAL_PLAYER_STATS_VERSION = 2;
+const PLAYER_IDENTITY_SYNC_VERSION = 1;
 const SCHEDULED_ARMY_RESOLVE_SCAN_LIMIT = 100;
 const SCHEDULED_ARMY_RESOLVE_MAX_PER_RUN = 40;
 const SHOP_ITEMS = {
@@ -410,6 +412,28 @@ function getArmyStatsKey(army = {}) {
   return safeString(army.id || army.armyId || "", 96);
 }
 
+function createActiveArmiesFromSnapshot(uid = "", activeArmiesSnap = null) {
+  const playerUid = safeString(uid, 128);
+  if (!playerUid || !activeArmiesSnap?.docs) return [];
+  const armiesById = new Map();
+  activeArmiesSnap.docs.forEach(doc => {
+    const army = {
+      id: safeString(doc.data()?.id || doc.id, 96),
+      islandId: safeString(doc.ref.parent?.parent?.id, 160),
+      ...doc.data(),
+    };
+    if (getOwnerUid(army) !== playerUid || army.status !== "active" || !isCurrentWorldArmy(army)) return;
+    if (!armiesById.has(army.id)) armiesById.set(army.id, army);
+  });
+  return [...armiesById.values()];
+}
+
+function activeArmiesQueryForPlayer(uid = "") {
+  return db.collectionGroup("armies")
+    .where("ownerUid", "==", safeString(uid, 128))
+    .where("status", "==", "active");
+}
+
 function isCurrentWorldArmy(army = {}) {
   const routeRegionIds = normalizeRegionIds(army.routeRegionIds || []);
   if (routeRegionIds.some(regionId => isCurrentWorldIslandId(getOnlineIslandId(regionId)))) return true;
@@ -521,6 +545,22 @@ function getPowerValue(...values) {
 }
 
 function getPlayerPowerSnapshot({ profile = {}, leaderboard = {}, city = {}, fallback = 0 } = {}) {
+  const authoritativeCandidates = [
+    {
+      version: Math.max(0, Math.floor(safeNumber(profile.kingPowerVersion, 0))),
+      power: Math.max(0, Math.floor(safeNumber(profile.kingPower, 0))),
+      updatedAtMs: Math.max(0, timestampToMs(profile.kingPowerUpdatedAtMs)),
+    },
+    {
+      version: Math.max(0, Math.floor(safeNumber(leaderboard.kingPowerVersion, 0))),
+      power: Math.max(0, Math.floor(safeNumber(leaderboard.kingPower, 0))),
+      updatedAtMs: Math.max(0, timestampToMs(leaderboard.kingPowerUpdatedAtMs || leaderboard.updatedAtMs)),
+    },
+  ]
+    .filter(candidate => candidate.version >= GLOBAL_PLAYER_STATS_VERSION)
+    .sort((a, b) => b.updatedAtMs - a.updatedAtMs);
+  if (authoritativeCandidates.length) return authoritativeCandidates[0].power;
+
   const serverPower = getPowerValue(
     profile.kingPower,
     leaderboard.kingPower,
@@ -1022,6 +1062,22 @@ function incrementHarvestDailyTracker(type = "gold", daily = {}) {
   return next;
 }
 
+function getServerNeutralCaptureBlockReason(economy = null, profile = {}, target = {}) {
+  if (!economy || getOwnerUid(target) || isStronghold(target)) return "";
+  const ownedCityCount = Math.max(0, Math.floor(safeNumber(
+    economy.globalStats?.totalCities,
+    economy.cityEntries?.filter(entry => entry?.city && !isStronghold(entry.city) && getOwnerUid(entry.city) === economy.uid).length || 0
+  )));
+  if (ownedCityCount >= NEUTRAL_CITY_COUNT_LIMIT) {
+    return `Neutral expansion is capped while you own ${NEUTRAL_CITY_COUNT_LIMIT} or more cities.`;
+  }
+  const daily = normalizeDaily(profile.daily);
+  if (daily.neutralCaptures >= DAILY_NEUTRAL_CAPTURE_LIMIT) {
+    return `Daily neutral capture limit reached: ${DAILY_NEUTRAL_CAPTURE_LIMIT}/${DAILY_NEUTRAL_CAPTURE_LIMIT}.`;
+  }
+  return "";
+}
+
 function normalizeHarvestBonusType(type = "gold") {
   return safeString(type, 16) === "troops" ? "troops" : "gold";
 }
@@ -1086,6 +1142,13 @@ function createHarvestBonusFromPayload(data = {}, uid = "", nowMs = Date.now()) 
     createdAt: Math.max(0, safeNumber(bonus.createdAt, 0)),
     createdAtMs: nowMs,
   };
+}
+
+function getPlayerIdentitySyncSignature(identity = {}) {
+  return JSON.stringify([
+    safeString(identity.ownerName || "Ruler", 32),
+    normalizeServerFlag(identity.ownerFlag),
+  ]);
 }
 
 function createScoutReportSnapshot(target = {}, defenderProfile = null, nowMs = Date.now(), bonuses = {}) {
@@ -1379,6 +1442,14 @@ function getEconomyCityByRef(economy = null, ref = null) {
   return economy.cityEntries.find(entry => entry.ref.path === ref.path) || null;
 }
 
+function appendEconomyCityPatch(economy = null, ref = null, city = {}, patch = {}) {
+  if (!economy || !ref || !patch || typeof patch !== "object") return false;
+  economy.cityPatches.push({ ref, city, patch });
+  const entry = getEconomyCityByRef(economy, ref);
+  if (entry?.city) entry.city = { ...entry.city, ...patch };
+  return true;
+}
+
 function findNearestRelinquishDestination(economy = null, sourceEntry = null) {
   if (!economy || !sourceEntry?.city) return null;
   const source = sourceEntry.city;
@@ -1388,6 +1459,7 @@ function findNearestRelinquishDestination(economy = null, sourceEntry = null) {
   return economy.cityEntries
     .filter(entry => entry?.ref?.path !== sourceEntry.ref.path)
     .filter(entry => getOwnerUid(entry.city) === economy.uid)
+    .filter(entry => !isStronghold(entry.city))
     .map(entry => {
       const city = entry.city || {};
       const sameRegion = normalizeRegionId(city.regionId || "") === sourceRegionId;
@@ -1600,9 +1672,12 @@ async function prepareEconomyCollection(transaction, uid, nowMs = Date.now(), op
   const baseGold = Math.max(0, safeNumber(rawProfile.goldFloat, safeNumber(rawProfile.gold, TEST_STARTING_GOLD)));
   const fallbackProductionAtMs = Math.min(nowMs, getProfileLastSeenMs(rawProfile) || nowMs);
 
-  const ownedSnap = await transaction.get(db.collectionGroup("cities").where("ownerUid", "==", uid));
+  const [ownedSnap, activeArmiesSnap] = await Promise.all([
+    transaction.get(db.collectionGroup("cities").where("ownerUid", "==", uid)),
+    transaction.get(activeArmiesQueryForPlayer(uid)),
+  ]);
   const cityEntries = createOwnedCityEntriesFromSnapshot(uid, ownedSnap);
-  const activeArmies = [];
+  const activeArmies = createActiveArmiesFromSnapshot(uid, activeArmiesSnap);
   const mainCityRepair = createMainCityAssignmentRepair(uid, rawProfile, cityEntries);
   const cityPatches = [...mainCityRepair.cityPatches];
   const cityUpdates = [...mainCityRepair.cityUpdates];
@@ -1780,6 +1855,8 @@ function writeGlobalStatsFromEconomy(transaction, economy = null, profileOverrid
     playerName: safeString(profile.playerName || profile.displayName || "Ruler", 32),
     flag: profile.flag || null,
     kingPower: stats.kingPower,
+    kingPowerVersion: GLOBAL_PLAYER_STATS_VERSION,
+    kingPowerUpdatedAtMs: stats.updatedAtMs,
     cityCount: stats.totalCities,
     totalTroops: stats.totalTroops,
     totalMarchingTroops: stats.totalMarchingTroops,
@@ -1797,7 +1874,7 @@ function writeGlobalStatsFromEconomy(transaction, economy = null, profileOverrid
 }
 
 function writePreparedEconomy(transaction, economy, profileOverrides = {}, extraCityPatches = [], options = {}) {
-  if (!economy) return;
+  if (!economy) return null;
   economy.cityPatches.forEach(entry => {
     transaction.set(entry.ref, cleanCityUpdate(entry.city, entry.patch), { merge: true });
   });
@@ -1805,19 +1882,25 @@ function writePreparedEconomy(transaction, economy, profileOverrides = {}, extra
     if (!entry?.ref || !entry.patch) return;
     transaction.set(entry.ref, cleanCityUpdate(entry.city || {}, entry.patch), { merge: true });
   });
+  const statsCityPatches = Array.isArray(options.statsCityPatches) ? options.statsCityPatches : [];
+  const stats = writeGlobalStatsFromEconomy(transaction, economy, profileOverrides, [
+    ...extraCityPatches,
+    ...statsCityPatches,
+  ], options);
   transaction.set(economy.profileRef, {
     ...economy.profilePatch,
     ...profileOverrides,
+    ...(stats ? {
+      kingPower: stats.kingPower,
+      kingPowerVersion: GLOBAL_PLAYER_STATS_VERSION,
+      kingPowerUpdatedAtMs: stats.updatedAtMs,
+    } : {}),
     updatedAt: FieldValue.serverTimestamp(),
   }, { merge: true });
   if (economy.profileSnap?.exists) {
     transaction.update(economy.profileRef, addLegacyShopItemDeletes());
   }
-  const statsCityPatches = Array.isArray(options.statsCityPatches) ? options.statsCityPatches : [];
-  writeGlobalStatsFromEconomy(transaction, economy, profileOverrides, [
-    ...extraCityPatches,
-    ...statsCityPatches,
-  ], options);
+  return stats;
 }
 
 async function rebuildGlobalStatsForPlayer(uid = "") {
@@ -1825,16 +1908,24 @@ async function rebuildGlobalStatsForPlayer(uid = "") {
   if (!playerUid) throw new HttpsError("invalid-argument", "A player uid is required.");
   const nowMs = Date.now();
   const profileRef = db.doc(`players/${playerUid}`);
-  const [profileSnap, ownedSnap] = await Promise.all([
+  const [profileSnap, ownedSnap, activeArmiesSnap] = await Promise.all([
     profileRef.get(),
     db.collectionGroup("cities").where("ownerUid", "==", playerUid).get(),
+    activeArmiesQueryForPlayer(playerUid).get(),
   ]);
   const profile = profileSnap.exists ? profileSnap.data() || {} : {};
   const identity = getCanonicalPlayerIdentity(playerUid, profile, {}, {});
   const cityEntries = createOwnedCityEntriesFromSnapshot(playerUid, ownedSnap);
   const mainRepair = createMainCityAssignmentRepair(playerUid, profile, cityEntries);
-  const activeArmyDocs = [];
-  const activeArmies = [];
+  const activeArmyDocs = activeArmiesSnap.docs.filter(armyDoc => {
+    const army = {
+      id: safeString(armyDoc.data()?.id || armyDoc.id, 96),
+      islandId: safeString(armyDoc.ref.parent?.parent?.id, 160),
+      ...armyDoc.data(),
+    };
+    return isCurrentWorldArmy(army);
+  });
+  const activeArmies = createActiveArmiesFromSnapshot(playerUid, activeArmiesSnap);
   const profileForStats = {
     ...profile,
     playerName: identity.ownerName,
@@ -1862,6 +1953,8 @@ async function rebuildGlobalStatsForPlayer(uid = "") {
         displayName: identity.ownerName,
         flag: identity.ownerFlag,
         kingPower: stats.kingPower,
+        kingPowerVersion: GLOBAL_PLAYER_STATS_VERSION,
+        kingPowerUpdatedAtMs: nowMs,
         ...mainRepair.profileFields,
         updatedAt: FieldValue.serverTimestamp(),
       },
@@ -1878,6 +1971,8 @@ async function rebuildGlobalStatsForPlayer(uid = "") {
         playerName: identity.ownerName,
         flag: identity.ownerFlag,
         kingPower: stats.kingPower,
+        kingPowerVersion: GLOBAL_PLAYER_STATS_VERSION,
+        kingPowerUpdatedAtMs: nowMs,
         cityCount: stats.totalCities,
         totalTroops: stats.totalTroops,
         totalMarchingTroops: stats.totalMarchingTroops,
@@ -2489,13 +2584,37 @@ exports.syncPlayerIdentity = onCall({ region: "us-central1", maxInstances: 20, i
   const profile = profileSnap.exists ? profileSnap.data() || {} : {};
   const identity = getCanonicalPlayerIdentity(uid, profile, data, authToken);
   const nowMs = Date.now();
+  const identitySyncSignature = getPlayerIdentitySyncSignature(identity);
+  if (
+    Math.max(0, Math.floor(safeNumber(profile.identitySyncVersion, 0))) >= PLAYER_IDENTITY_SYNC_VERSION
+    && safeString(profile.identitySyncSignature, 1000) === identitySyncSignature
+  ) {
+    const globalStatsSnap = await playerGlobalStatsRef(uid).get();
+    return {
+      ok: true,
+      unchanged: true,
+      updatedCities: 0,
+      updatedArmies: 0,
+      globalStats: globalStatsSnap.exists ? globalStatsForClient(globalStatsSnap.data() || {}) : null,
+    };
+  }
 
-  const ownedCitiesSnap = await db.collectionGroup("cities").where("ownerUid", "==", uid).get();
+  const [ownedCitiesSnap, activeArmiesSnap] = await Promise.all([
+    db.collectionGroup("cities").where("ownerUid", "==", uid).get(),
+    activeArmiesQueryForPlayer(uid).get(),
+  ]);
   const cityDocs = ownedCitiesSnap.docs.filter(cityDoc => {
     const islandId = cityDoc.ref.parent.parent?.id || "";
     return isCurrentWorldIslandId(islandId);
   });
-  const activeArmyDocs = [];
+  const activeArmyDocs = activeArmiesSnap.docs.filter(armyDoc => {
+    const army = {
+      id: safeString(armyDoc.data()?.id || armyDoc.id, 96),
+      islandId: safeString(armyDoc.ref.parent?.parent?.id, 160),
+      ...armyDoc.data(),
+    };
+    return isCurrentWorldArmy(army);
+  });
   const ownedCityEntries = cityDocs.map(cityDoc => {
     const city = cityDoc.data() || {};
     const islandId = safeString(cityDoc.ref.parent.parent?.id, 160);
@@ -2521,11 +2640,7 @@ exports.syncPlayerIdentity = onCall({ region: "us-central1", maxInstances: 20, i
     flag: identity.ownerFlag,
     ...mainCityRepair.profileFields,
   };
-  const activeArmies = activeArmyDocs.map(armyDoc => ({
-    id: safeString(armyDoc.data()?.id || armyDoc.id, 96),
-    islandId: safeString(armyDoc.ref.parent?.parent?.id, 160),
-    ...armyDoc.data(),
-  }));
+  const activeArmies = createActiveArmiesFromSnapshot(uid, activeArmiesSnap);
   const globalStats = createGlobalStatsSnapshot({
     uid,
     profile: profileForStats,
@@ -2544,7 +2659,11 @@ exports.syncPlayerIdentity = onCall({ region: "us-central1", maxInstances: 20, i
         playerName: identity.ownerName,
         displayName: identity.ownerName,
         flag: identity.ownerFlag,
+        identitySyncVersion: PLAYER_IDENTITY_SYNC_VERSION,
+        identitySyncSignature,
         kingPower: serverKingPower,
+        kingPowerVersion: GLOBAL_PLAYER_STATS_VERSION,
+        kingPowerUpdatedAtMs: nowMs,
         ...mainCityRepair.profileFields,
         updatedAt: FieldValue.serverTimestamp(),
       },
@@ -2561,6 +2680,8 @@ exports.syncPlayerIdentity = onCall({ region: "us-central1", maxInstances: 20, i
         playerName: identity.ownerName,
         flag: identity.ownerFlag,
         kingPower: serverKingPower,
+        kingPowerVersion: GLOBAL_PLAYER_STATS_VERSION,
+        kingPowerUpdatedAtMs: nowMs,
         cityCount,
         totalTroops: globalStats.totalTroops,
         totalMarchingTroops: globalStats.totalMarchingTroops,
@@ -3072,6 +3193,7 @@ exports.relinquishCity = onCall({ region: "us-central1", maxInstances: 20, invok
   const data = request.data || {};
   const cityId = safeString(data.cityId || data.id, 96).replace(/[^a-zA-Z0-9_-]/g, "_");
   const regionId = normalizeRegionId(data.regionId || data.islandId || "west");
+  const order = normalizeArmyPayload(data, uid);
   if (!cityId) throw new HttpsError("invalid-argument", "Choose a city to relinquish.");
 
   return db.runTransaction(async transaction => {
@@ -3096,12 +3218,81 @@ exports.relinquishCity = onCall({ region: "us-central1", maxInstances: 20, invok
 
     const transferredTroops = Math.max(0, Math.floor(safeNumber(source.troops, 0)));
     const destination = destinationEntry.city;
-    const destinationTroopFloat = Math.max(0, safeNumber(destination.troopFloat, destination.troops || 0)) + transferredTroops;
-    const destinationPatch = {
-      troops: Math.max(0, Math.floor(destinationTroopFloat)),
-      troopFloat: destinationTroopFloat,
-      productionUpdatedAtMs: nowMs,
-    };
+    const destinationRegionId = normalizeRegionId(destination.regionId || destination.startPool || regionId);
+    let movement = null;
+    let armyRefs = [];
+
+    if (transferredTroops > 0) {
+      const hasRoute = order.path.length >= 2 || order.pathSegments.some(segment => segment.points.length >= 2);
+      if (
+        order.kind !== "transfer"
+        || order.fromId !== source.id
+        || order.toId !== destination.id
+        || order.sourceRegionId !== regionId
+        || order.targetRegionId !== destinationRegionId
+      ) {
+        throw new HttpsError("invalid-argument", "The relinquish march does not match the nearest friendly city.");
+      }
+      if (!hasRoute || order.pathLength <= 0) {
+        throw new HttpsError("failed-precondition", "No valid troop route was found to the nearest friendly city.");
+      }
+      if (!order.routeRegionIds.includes(regionId) || !order.routeRegionIds.includes(destinationRegionId)) {
+        throw new HttpsError("invalid-argument", "The relinquish march is missing part of its island route.");
+      }
+
+      armyRefs = armyRefsForRegions(order.routeRegionIds, order.id);
+      if (!armyRefs.length) {
+        throw new HttpsError("invalid-argument", "The relinquish march has no valid island route.");
+      }
+      const existingArmySnap = await transaction.get(armyRefs[0]);
+      if (existingArmySnap.exists) {
+        throw new HttpsError("already-exists", "That relinquish march has already been created.");
+      }
+
+      const ownerKingPower = Math.max(0, Math.floor(safeNumber(economy.globalStats?.kingPower, 0)));
+      const duration = calculateTravelTime({
+        pathLength: order.pathLength,
+        troopCount: transferredTroops,
+        kind: "transfer",
+        requestedTotal: order.total,
+        speedMultiplier: skillMultiplier(economy.profileAfter, "marchOrders")
+          * (1 + Math.max(0, safeNumber(economy.bonuses.marchSpeedBonusPercent, 0)) / 100),
+      });
+      movement = {
+        id: order.id,
+        ownerKind: "player",
+        ownerUid: uid,
+        ownerName: safeString(economy.profileAfter.playerName || order.ownerName || source.ownerName || request.auth.token?.name || "Ruler", 32),
+        ownerFlag: economy.profileAfter.flag || order.ownerFlag || source.ownerFlag || null,
+        ownerKingPower,
+        kind: "transfer",
+        fromId: source.id,
+        toId: destination.id,
+        sourceRegionId: regionId,
+        targetRegionId: destinationRegionId,
+        fromName: safeString(source.name || order.fromName, 40),
+        toName: safeString(destination.name || order.toName, 40),
+        troops: transferredTroops,
+        requestedTroops: transferredTroops,
+        total: duration,
+        path: order.path,
+        pathSegments: order.pathSegments,
+        routeRegionIds: order.routeRegionIds,
+        pathLength: order.pathLength,
+        targetOwnerAtLaunch: "player",
+        targetOwnerUid: uid,
+        attackerKingPower: ownerKingPower,
+        defenderKingPower: ownerKingPower,
+        demoAttack: null,
+        launchedAtMs: nowMs,
+        arrivesAtMs: nowMs + Math.ceil(duration * 1000),
+        status: "active",
+        createdByServer: true,
+        serverAuthorityVersion: 1,
+        relinquishTransfer: true,
+      };
+    }
+
     const sourceLevel = isStronghold(source) ? getStrongholdDefenseLevel(source) : clampCityLevel(source.level);
     const sourcePatch = {
       ownerKind: "neutral",
@@ -3125,19 +3316,22 @@ exports.relinquishCity = onCall({ region: "us-central1", maxInstances: 20, invok
       regionId: source.regionId || regionId,
       ...sourcePatch,
     };
-    const destinationUpdate = {
-      id: destination.id,
-      regionId: destination.regionId || regionId,
-      ...destinationPatch,
-    };
 
     writePreparedEconomy(transaction, economy, {}, [
       { ref: sourceEntry.ref, city: source, patch: sourcePatch },
-      { ref: destinationEntry.ref, city: destination, patch: destinationPatch },
-    ]);
+    ], {
+      addActiveArmies: movement ? [movement] : [],
+      nowMs,
+    });
+
+    armyRefs.forEach(ref => transaction.set(ref, {
+      ...movement,
+      updatedAt: FieldValue.serverTimestamp(),
+      createdAt: FieldValue.serverTimestamp(),
+    }, { merge: true }));
 
     return createEconomyResponse(economy, {
-      cityUpdates: [...economy.cityUpdates, sourceUpdate, destinationUpdate],
+      cityUpdates: [...economy.cityUpdates, sourceUpdate],
       relinquishedCity: {
         id: source.id,
         name: safeString(source.name || source.id, 80),
@@ -3147,9 +3341,10 @@ exports.relinquishCity = onCall({ region: "us-central1", maxInstances: 20, invok
       destinationCity: {
         id: destination.id,
         name: safeString(destination.name || destination.id, 80),
-        regionId: destination.regionId || regionId,
+        regionId: destinationRegionId,
       },
       transferredTroops,
+      movement,
     });
   });
 });
@@ -3498,10 +3693,19 @@ exports.sendArmyOrder = onCall({ region: "us-central1", maxInstances: 20, invoke
       : targetOwnerUid === uid
         ? "transfer"
         : "attack";
+    const neutralCaptureBlockReason = resolvedKind === "attack"
+      ? getServerNeutralCaptureBlockReason(attackerEconomy, attackerProfile, target)
+      : "";
+    if (neutralCaptureBlockReason) {
+      throw new HttpsError("failed-precondition", neutralCaptureBlockReason);
+    }
     const requestedTroops = resolvedKind === "scout"
       ? 1
       : clampInt(order.requestedTroops || order.troops || Math.floor(sourceTroops * DEFAULT_MARCH_PERCENT), 1, Math.max(1, sourceTroops));
-    const attackerKingPower = getPlayerPowerSnapshot({
+    const attackerKingPower = Math.max(
+      0,
+      Math.floor(safeNumber(attackerEconomy.globalStats?.kingPower, 0))
+    ) || getPlayerPowerSnapshot({
       profile: attackerProfile,
       leaderboard: attackerLeaderboardData,
       city: source,
@@ -3572,6 +3776,7 @@ exports.sendArmyOrder = onCall({ region: "us-central1", maxInstances: 20, invoke
       routeRegionIds: order.routeRegionIds,
       pathLength: order.pathLength,
       targetOwnerAtLaunch: targetOwnerUid ? "player" : "neutral",
+      targetOwnerUid: targetOwnerUid || "",
       attackerKingPower: attackerKingPower || order.attackerKingPower || order.ownerKingPower,
       defenderKingPower,
       demoAttack,
@@ -3619,8 +3824,6 @@ exports.sendArmyOrder = onCall({ region: "us-central1", maxInstances: 20, invoke
       addActiveArmies: [movement],
       nowMs,
     });
-
-    transaction.set(sourceRef, cleanCityUpdate(source, sourceTroopPatch), { merge: true });
 
     armyRefs.forEach(ref => transaction.set(ref, {
       ...movement,
@@ -3738,8 +3941,13 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
         statsCityPatches: Array.isArray(options.statsCityPatches) ? options.statsCityPatches : [],
         nowMs,
       };
-      if (attackerEconomy) writePreparedEconomy(transaction, attackerEconomy, attackerOverrides, [], statsOptions);
-      if (defenderEconomy && defenderEconomy !== attackerEconomy) writePreparedEconomy(transaction, defenderEconomy, defenderOverrides, [], statsOptions);
+      const attackerStats = attackerEconomy
+        ? writePreparedEconomy(transaction, attackerEconomy, attackerOverrides, [], statsOptions)
+        : null;
+      const defenderStats = defenderEconomy && defenderEconomy !== attackerEconomy
+        ? writePreparedEconomy(transaction, defenderEconomy, defenderOverrides, [], statsOptions)
+        : attackerStats;
+      return { attackerStats, defenderStats };
     };
     const reportsForCaller = () => reports.filter(report => report.uid === callerUid);
     const profilePatchForCaller = (attackerPatch = null, defenderPatch = null) => {
@@ -3784,6 +3992,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
         troopFloat: Math.max(0, safeNumber(source.troopFloat, source.troops || 0)) + returned,
       };
       latestSourceReturnStatsPatch = { ref: sourceRef, city: source, patch };
+      appendEconomyCityPatch(attackerEconomy, sourceRef, source, patch);
       transaction.set(sourceRef, cleanCityUpdate(source, patch), { merge: true });
       source = { ...source, ...patch };
       cityUpdates.push({ id: source.id, regionId: sourceRegionId, troops: nextTroops });
@@ -3803,9 +4012,9 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
         troopFloat,
         productionUpdatedAtMs: nowMs,
       };
+      appendEconomyCityPatch(economy, mainInfo.ref, city, patch);
       transaction.set(mainInfo.ref, cleanCityUpdate(city, patch), { merge: true });
       cityUpdates.push({ id: city.id, regionId: mainInfo.regionId, ...patch });
-      entry.city = { ...city, ...patch };
       return recovered;
     };
 
@@ -3982,6 +4191,39 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
       return { ok: true, status: "resolved", kind: "transfer", cityUpdates: withEconomyCityUpdates(cityUpdates) };
     }
 
+    const neutralCaptureBlockReason = getServerNeutralCaptureBlockReason(attackerEconomy, attackerProfile, target);
+    if (neutralCaptureBlockReason) {
+      const returned = returnTroopsToSource(troopCount);
+      writeParticipantEconomies({}, {}, { statsCityPatches: getLatestSourceReturnStatsPatches() });
+      const attackerReport = makeReport({
+        id: `${armyId}_capture_limit_${attackerUid}`,
+        uid: attackerUid,
+        type: "attack",
+        outcome: "defeat",
+        city: target,
+        opponentName: defenderName,
+        sentTroops: troopCount,
+        troopCount: Math.max(0, Math.floor(safeNumber(target.troops, 0))),
+        totalDefense: targetStats.totalDefense,
+        summary: `${neutralCaptureBlockReason} The attack was canceled and ${returned.toLocaleString()} troops returned.`,
+        nowMs,
+      });
+      writeReport(transaction, attackerUid, attackerReport, attackerProfileSnap);
+      reports.push(attackerReport);
+      markResolved({ kind: "attack", blocked: "neutral_capture_limit", returned });
+      return {
+        ok: true,
+        status: "resolved",
+        kind: "attack",
+        reports: reportsForCaller(),
+        cityUpdates: withEconomyCityUpdates(cityUpdates),
+        currentUser: profilePatchForCaller(
+          { character: attackerProfile.character, gold: attackerEconomy?.gold, goldFloat: attackerEconomy?.goldFloat },
+          null
+        ),
+      };
+    }
+
     if (isProtectedMainCity(target, attackerUid)) {
       const returned = returnTroopsToSource(troopCount);
       writeParticipantEconomies({}, {}, { statsCityPatches: getLatestSourceReturnStatsPatches() });
@@ -4046,40 +4288,6 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
 
     if (result.success) {
       const daily = normalizeDaily(attackerProfile.daily);
-      if (!oldOwnerUid && !isStronghold(target) && daily.neutralCaptures >= DAILY_NEUTRAL_CAPTURE_LIMIT) {
-        const blockedTroops = givenUpNeutralTarget ? 0 : Math.max(1, Math.floor(safeNumber(target.troops, 1)));
-        const blockedTroopFloat = givenUpNeutralTarget ? 0 : Math.max(1, safeNumber(target.troopFloat, target.troops || 1));
-        const blockedPatch = {
-          troops: blockedTroops,
-          troopFloat: blockedTroopFloat,
-          ...(givenUpNeutralTarget ? {
-            relinquishedAtMs: timestampToMs(target.relinquishedAtMs),
-            relocatedAtMs: timestampToMs(target.relocatedAtMs),
-          } : {}),
-        };
-        transaction.set(targetRef, cleanCityUpdate(target, blockedPatch), { merge: true });
-        cityUpdates.push({ id: target.id, regionId: targetRegionId, ...blockedPatch });
-        writeParticipantEconomies({}, {}, { statsCityPatches: [{ ref: targetRef, city: target, patch: blockedPatch }] });
-        const blockedReport = makeReport({
-          id: `${armyId}_capture_limit_${attackerUid}`,
-          uid: attackerUid,
-          type: "attack",
-          outcome: "defeat",
-          city: target,
-          opponentName: defenderName,
-          sentTroops: troopCount,
-          troopCount: defendersAtStart,
-          result,
-          totalDefense: targetStats.totalDefense,
-          summary: "Daily neutral capture limit reached. The city could not be captured.",
-          nowMs,
-        });
-        writeReport(transaction, attackerUid, blockedReport, attackerProfileSnap);
-        reports.push(blockedReport);
-        markResolved({ kind: "attack", blocked: "capture_limit" });
-        return { ok: true, status: "resolved", kind: "attack", reports: reportsForCaller(), cityUpdates: withEconomyCityUpdates(cityUpdates) };
-      }
-
       const nextLevel = dropCapturedCityLevel(target);
       const targetPatch = {
         ownerKind: "player",
@@ -4099,7 +4307,8 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
         relocatedAtMs: 0,
       };
       transaction.set(targetRef, cleanCityUpdate(target, targetPatch), { merge: true });
-      cityUpdates.push({ id: target.id, regionId: targetRegionId, ...targetPatch });
+      const targetCityUpdate = { id: target.id, regionId: targetRegionId, ...targetPatch };
+      cityUpdates.push(targetCityUpdate);
 
       const attackerReport = makeReport({
         id: `${armyId}_attack_${attackerUid}`,
@@ -4122,18 +4331,6 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
       const attackerDaily = !oldOwnerUid && !isStronghold(target)
         ? { daily: { ...daily, neutralCaptures: daily.neutralCaptures + 1 } }
         : {};
-      writeParticipantEconomies({
-        character: attackerProgress.character,
-        gold: attackerProgress.gold,
-        goldFloat: attackerProgress.goldFloat,
-        ...attackerDaily,
-      }, defenderProgress ? {
-        character: defenderProgress.character,
-        gold: defenderProgress.gold,
-        goldFloat: defenderProgress.goldFloat,
-      } : {}, {
-        statsCityPatches: [{ ref: targetRef, city: target, patch: targetPatch }],
-      });
       const attackerRecoveredTroops = recoverBattleLossesToMainCity({
         uid: attackerUid,
         profile: attackerProfile,
@@ -4148,6 +4345,26 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
           losses: result.defenderLosses,
         })
         : 0;
+      const participantStats = writeParticipantEconomies({
+        character: attackerProgress.character,
+        gold: attackerProgress.gold,
+        goldFloat: attackerProgress.goldFloat,
+        ...attackerDaily,
+      }, defenderProgress ? {
+        character: defenderProgress.character,
+        gold: defenderProgress.gold,
+        goldFloat: defenderProgress.goldFloat,
+      } : {}, {
+        statsCityPatches: [{ ref: targetRef, city: target, patch: targetPatch }],
+      });
+      if (participantStats.attackerStats) {
+        targetPatch.ownerKingPower = participantStats.attackerStats.kingPower;
+        targetPatch.kingPowerVersion = GLOBAL_PLAYER_STATS_VERSION;
+        Object.assign(targetCityUpdate, {
+          ownerKingPower: targetPatch.ownerKingPower,
+          kingPowerVersion: targetPatch.kingPowerVersion,
+        });
+      }
       if (attackerRecoveredTroops > 0) {
         attackerReport.summary = `${attackerReport.summary} Field Medics returned ${attackerRecoveredTroops.toLocaleString()} troops to your main city.`;
       }
@@ -4230,17 +4447,6 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
       goldAfter: attackerProgress.gold,
       nowMs,
     });
-    writeParticipantEconomies({
-      character: attackerProgress.character,
-      gold: attackerProgress.gold,
-      goldFloat: attackerProgress.goldFloat,
-    }, defenderProgress ? {
-      character: defenderProgress.character,
-      gold: defenderProgress.gold,
-      goldFloat: defenderProgress.goldFloat,
-    } : {}, {
-      statsCityPatches: [{ ref: targetRef, city: target, patch: targetPatch }],
-    });
     const attackerRecoveredTroops = recoverBattleLossesToMainCity({
       uid: attackerUid,
       profile: attackerProfile,
@@ -4255,6 +4461,17 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
         losses: result.defenderLosses,
       })
       : 0;
+    writeParticipantEconomies({
+      character: attackerProgress.character,
+      gold: attackerProgress.gold,
+      goldFloat: attackerProgress.goldFloat,
+    }, defenderProgress ? {
+      character: defenderProgress.character,
+      gold: defenderProgress.gold,
+      goldFloat: defenderProgress.goldFloat,
+    } : {}, {
+      statsCityPatches: [{ ref: targetRef, city: target, patch: targetPatch }],
+    });
     if (attackerRecoveredTroops > 0) {
       attackerReport.summary = `${attackerReport.summary} Field Medics returned ${attackerRecoveredTroops.toLocaleString()} troops to your main city.`;
     }

@@ -25,6 +25,8 @@ service cloud.firestore {
           'economyUpdatedAtMs',
           'offlineProductionCities',
           'kingPower',
+          'kingPowerVersion',
+          'kingPowerUpdatedAtMs',
           'cityCount',
           'globalStats',
           'character',
@@ -49,6 +51,8 @@ service cloud.firestore {
         && profileFieldUnchanged('economyUpdatedAtMs')
         && profileFieldUnchanged('offlineProductionCities')
         && profileFieldUnchanged('kingPower')
+        && profileFieldUnchanged('kingPowerVersion')
+        && profileFieldUnchanged('kingPowerUpdatedAtMs')
         && profileFieldUnchanged('cityCount')
         && profileFieldUnchanged('globalStats');
     }
