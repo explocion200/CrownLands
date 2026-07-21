@@ -1,14 +1,14 @@
-const CACHE_VERSION = "20260721-recall-horn";
+const CACHE_VERSION = "20260721-account-sync";
 const CACHE_NAME = `crownlands-cache-${CACHE_VERSION}`;
 const STATIC_CACHE_URLS = [
   "/",
   "/index.html",
   "/manifest.webmanifest",
-  "/styles.css?v=20260721-recall-horn",
+  "/styles.css?v=20260721-account-sync",
   "/world-config.js",
   "/firebase-config.js?v=20260703-vapid-key",
-  "/firebaseClient.js?v=20260721-recall-horn",
-  "/game.js?v=20260721-recall-horn",
+  "/firebaseClient.js?v=20260721-account-sync",
+  "/game.js?v=20260721-account-sync",
   "/route-worker.js?v=20260721-structure-route-clearance",
   "/assets/map-editor-data.js?v=20260705-stronghold-sizes",
   "/assets/game-menu-background.jpg?v=20260702-login-page",

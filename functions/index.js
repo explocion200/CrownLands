@@ -2460,6 +2460,7 @@ async function prepareEconomyCollection(transaction, uid, nowMs = Date.now(), op
   const itemPurchaseCooldowns = normalizeItemPurchaseCooldowns(rawProfile.itemPurchaseCooldowns);
   const baseGold = Math.max(0, safeNumber(rawProfile.goldFloat, safeNumber(rawProfile.gold, TEST_STARTING_GOLD)));
   const fallbackProductionAtMs = Math.min(nowMs, getProfileLastSeenMs(rawProfile) || nowMs);
+  const economyRevisionMs = Math.max(nowMs, timestampToMs(rawProfile.economyUpdatedAtMs) + 1);
 
   const [ownedSnap, activeArmiesSnap] = await Promise.all([
     transaction.get(db.collectionGroup("cities").where("ownerUid", "==", uid)),
@@ -2553,6 +2554,7 @@ async function prepareEconomyCollection(transaction, uid, nowMs = Date.now(), op
     itemEffects,
     itemPurchaseCooldowns,
     ...mainCityRepair.profileFields,
+    economyUpdatedAtMs: economyRevisionMs,
   };
   const globalStatsRef = playerGlobalStatsRef(uid);
   const globalStats = createGlobalStatsSnapshot({
@@ -2573,7 +2575,7 @@ async function prepareEconomyCollection(transaction, uid, nowMs = Date.now(), op
     itemEffects,
     itemPurchaseCooldowns,
     ...mainCityRepair.profileFields,
-    economyUpdatedAtMs: nowMs,
+    economyUpdatedAtMs: economyRevisionMs,
   };
 
   return {
@@ -2887,6 +2889,7 @@ function createEconomyResponse(economy = null, overrides = {}) {
   const currentUser = {
     gold: Math.max(0, Math.floor(safeNumber(gold, economy.gold))),
     goldFloat: Math.max(0, safeNumber(goldFloat, gold ?? economy.goldFloat)),
+    economyUpdatedAtMs: Math.max(0, timestampToMs(economy.profilePatch?.economyUpdatedAtMs)),
     shopItems: shopItems || economy.shopItems,
     itemEffects: itemEffects || economy.itemEffects,
     itemPurchaseCooldowns: itemPurchaseCooldowns || economy.itemPurchaseCooldowns,
@@ -4979,6 +4982,7 @@ exports.sendArmyOrder = onCall({ region: "us-central1", maxInstances: 20, invoke
       currentUser: {
         gold: attackerEconomy.gold,
         goldFloat: attackerEconomy.goldFloat,
+        economyUpdatedAtMs: timestampToMs(attackerEconomy.profilePatch?.economyUpdatedAtMs),
         shopItems: attackerEconomy.shopItems,
         itemEffects: profileOverrides.itemEffects || attackerEconomy.itemEffects,
         itemPurchaseCooldowns: attackerEconomy.itemPurchaseCooldowns,
@@ -5102,6 +5106,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
           character: attackerPatch.character,
           gold: attackerPatch.gold,
           goldFloat: attackerPatch.goldFloat,
+          economyUpdatedAtMs: timestampToMs(attackerEconomy?.profilePatch?.economyUpdatedAtMs),
           upgrades: normalizeSkillUpgrades(attackerProfile.upgrades),
           globalStats: globalStatsForClient(attackerEconomy?.lastGlobalStats || attackerEconomy?.globalStats),
         };
@@ -5111,6 +5116,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
           character: defenderPatch.character,
           gold: defenderPatch.gold,
           goldFloat: defenderPatch.goldFloat,
+          economyUpdatedAtMs: timestampToMs(defenderEconomy?.profilePatch?.economyUpdatedAtMs),
           upgrades: normalizeSkillUpgrades(defenderProfile?.upgrades),
           globalStats: globalStatsForClient(defenderEconomy?.lastGlobalStats || defenderEconomy?.globalStats),
         };

@@ -2328,6 +2328,8 @@ let serverEconomyRefreshInFlight = false;
 let serverEconomyRefreshQueued = false;
 let serverEconomyLastSyncAt = 0;
 let serverEconomyLastToastAt = 0;
+let lastAuthoritativeProfileRevisionMs = 0;
+let lastReportDrivenEconomyRefreshAtMs = 0;
 let leaderboardSaveTimer = 0;
 let leaderboardSaveInFlight = false;
 let leaderboardLastSignature = "";
@@ -5788,6 +5790,10 @@ function applyGlobalStatsSnapshot(raw = null, options = {}) {
   if (!stats) return false;
   const currentUid = getCurrentOnlineUid();
   if (stats.uid && currentUid && stats.uid !== currentUid) return false;
+  const currentStats = getGlobalStatsSnapshot();
+  if (stats.updatedAtMs > 0 && currentStats?.updatedAtMs > 0 && stats.updatedAtMs < currentStats.updatedAtMs) {
+    return false;
+  }
   const before = JSON.stringify(state.globalStats || onlineGlobalStats || null);
   onlineGlobalStats = stats;
   state.globalStats = stats;
@@ -7044,12 +7050,6 @@ function mergeServerReports(reports = []) {
     state.battleReports.push(normalized);
     existingIds.add(normalized.id);
     appliedServerReportIds.add(normalized.id);
-    if (rawReport.characterAfter || Number.isFinite(Number(rawReport.goldAfter))) {
-      applyServerProfilePatch({
-        character: rawReport.characterAfter,
-        gold: rawReport.goldAfter,
-      });
-    }
     changed = true;
   }
   if (changed) {
@@ -7062,12 +7062,25 @@ function mergeServerReports(reports = []) {
   return changed;
 }
 
+function getAuthoritativeProfileRevisionMs(profile = null) {
+  if (!profile || typeof profile !== "object") return 0;
+  return normalizeTimestampMs(profile.economyUpdatedAtMs)
+    || normalizeTimestampMs(profile.accountUpdatedAtMs)
+    || normalizeTimestampMs(profile.updatedAtMs)
+    || timestampToMs(profile.updatedAt);
+}
+
 function applyServerProfilePatch(patch = null) {
   if (!state || !patch || typeof patch !== "object") return false;
   let changed = false;
   if (patch.globalStats) {
     changed = applyGlobalStatsSnapshot(patch.globalStats, { render: false }) || changed;
   }
+  const revisionMs = getAuthoritativeProfileRevisionMs(patch);
+  if (revisionMs > 0 && lastAuthoritativeProfileRevisionMs > 0 && revisionMs < lastAuthoritativeProfileRevisionMs) {
+    return changed;
+  }
+  if (revisionMs > 0) lastAuthoritativeProfileRevisionMs = Math.max(lastAuthoritativeProfileRevisionMs, revisionMs);
   if (patch.character) {
     state.character = normalizeCharacterProgress(patch.character);
     syncCharacterSkillPoints(state.character, state.upgrades, patch.character?.skillPoints);
@@ -7447,7 +7460,23 @@ function mergeOnlineProfileSources(profile = null, cloudSnapshot = null) {
     ? { ...currentProfile, ...currentCloudSnapshot }
     : { ...currentCloudSnapshot, ...currentProfile };
   if (hasServerEconomyApi()) {
-    ["gold", "goldFloat", "shopItems", "itemEffects", "itemPurchaseCooldowns", "economyUpdatedAtMs"].forEach(key => {
+    [
+      "gold",
+      "goldFloat",
+      "character",
+      "upgrades",
+      "shopItems",
+      "itemEffects",
+      "itemPurchaseCooldowns",
+      "economyUpdatedAtMs",
+      "mainCityId",
+      "mainIslandId",
+      "mainRegionId",
+      "mainCityChangedAtMs",
+      "globalStats",
+      "kingPower",
+      "cityCount",
+    ].forEach(key => {
       if (currentProfile[key] !== undefined) merged[key] = currentProfile[key];
     });
   }
@@ -7483,6 +7512,10 @@ function applyOnlineProfileSnapshot(profile = null, fallbackPlayerName = "Ricky"
   state.mainCityChangedAtMs = normalizeTimestampMs(profile.mainCityChangedAtMs);
   state.gameSeconds = Math.max(0, Number(profile.localGameSeconds) || Number(profile.gameSeconds) || Number(state.gameSeconds) || 0);
   state.lastRealTimeMs = normalizeTimestampMs(profile.lastRealTimeMs) || state.lastRealTimeMs;
+  lastAuthoritativeProfileRevisionMs = Math.max(
+    lastAuthoritativeProfileRevisionMs,
+    getAuthoritativeProfileRevisionMs(profile)
+  );
   if (profile.globalStats) applyGlobalStatsSnapshot(profile.globalStats, { render: false });
 }
 
@@ -8997,6 +9030,8 @@ function disconnectOnlineWorld() {
   clearOnlineServerReportWatcher();
   clearOnlineGlobalStatsWatcher();
   appliedServerReportIds = new Set();
+  lastAuthoritativeProfileRevisionMs = 0;
+  lastReportDrivenEconomyRefreshAtMs = 0;
   onlinePresence = [];
   onlineCampStates = new Map();
   resolvingRewardCampPayoutIds = new Set();
@@ -10540,7 +10575,18 @@ function subscribeOnlineServerReports() {
   if (!state || !api?.subscribeServerReports || !api?.isSignedIn?.()) return;
   onlineServerReportsUnsubscribe = api.subscribeServerReports({
     onReports: reports => {
-      mergeServerReports(reports);
+      const changed = mergeServerReports(reports);
+      if (!changed || !usesServerEconomyAuthority()) return;
+      const newestReportAtMs = (Array.isArray(reports) ? reports : []).reduce((latest, report) => (
+        Math.max(latest, normalizeTimestampMs(report?.createdAtMs) || timestampToMs(report?.createdAt))
+      ), 0);
+      const latestKnownAccountAtMs = Math.max(
+        lastAuthoritativeProfileRevisionMs,
+        lastReportDrivenEconomyRefreshAtMs
+      );
+      if (newestReportAtMs <= latestKnownAccountAtMs) return;
+      lastReportDrivenEconomyRefreshAtMs = newestReportAtMs;
+      refreshServerEconomy(true);
     },
     onError: error => {
       onlineLastError = error?.message || String(error);
