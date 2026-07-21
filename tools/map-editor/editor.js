@@ -12,10 +12,9 @@
   const MAP_ASPECT_TOLERANCE = 0.02;
   const DEFAULT_MAP_WIDTH = 2048;
   const DEFAULT_MAP_HEIGHT = 1536;
-  const CITY_UI_CLEARANCE_RADIUS = 110;
-  const CITY_UI_CLEARANCE_DIAMETER = CITY_UI_CLEARANCE_RADIUS * 2;
   const CITY_UI_LABEL_WIDTH = 190;
-  const CITY_UI_LABEL_OFFSET = 42;
+  const CITY_UI_LABEL_HEIGHT = 64;
+  const CITY_UI_LABEL_OFFSET = 58;
   const MAP_SWITCH_ARROW_ICON_SRC = "/assets/map-switch-arrow.png?v=20260702-map-arrow-bigger";
   const REGION_TYPES = ["starter", "midgame", "endgame", "activity", "crownlands_main"];
   const EDGE_TYPES = ["road", "valley", "pass", "river_crossing", "open_field", "forest_break", "bridge"];
@@ -987,10 +986,10 @@
       const marker = createMarker("city", city, index, region);
       const isSelectedGuide = index === cityUiGuide.selectedIndex;
       const isOverlapPeer = cityUiGuide.overlapIndexes.has(index);
+      const showUiPreview = isSelectedGuide || isOverlapPeer;
       marker.classList.toggle("ui-overlap", isSelectedGuide && cityUiGuide.overlapIndexes.size > 0);
       marker.classList.toggle("ui-overlap-peer", isOverlapPeer);
-      marker.innerHTML = `${isSelectedGuide ? `
-        <span class="city-ui-clearance" aria-hidden="true"><span>Name + level UI</span></span>
+      marker.innerHTML = `${showUiPreview ? `
         <span class="city-ui-preview" aria-hidden="true">
           <strong>${escapeHtml(city.name)}</strong>
           <small>Lv ${escapeHtml(city.level)}</small>
@@ -1026,14 +1025,31 @@
     const overlapIndexes = new Set();
     const selectedCity = cities[selectedIndex];
     if (!selectedCity) return { selectedIndex: -1, overlapIndexes };
+    const selectedLabelRect = getCityUiLabelRect(selectedCity, region);
 
     for (let index = 0; index < cities.length; index += 1) {
       if (index === selectedIndex) continue;
-      const dx = (selectedCity.xNorm - cities[index].xNorm) * region.width;
-      const dy = (selectedCity.yNorm - cities[index].yNorm) * region.height;
-      if (Math.hypot(dx, dy) < CITY_UI_CLEARANCE_DIAMETER) overlapIndexes.add(index);
+      if (cityUiLabelsOverlap(selectedLabelRect, getCityUiLabelRect(cities[index], region))) {
+        overlapIndexes.add(index);
+      }
     }
     return { selectedIndex, overlapIndexes };
+  }
+
+  function getCityUiLabelRect(city, region) {
+    const centerX = Number(city.xNorm) * region.width;
+    const centerY = Number(city.yNorm) * region.height;
+    const bottom = centerY - CITY_UI_LABEL_OFFSET;
+    return {
+      left: centerX - CITY_UI_LABEL_WIDTH / 2,
+      right: centerX + CITY_UI_LABEL_WIDTH / 2,
+      top: bottom - CITY_UI_LABEL_HEIGHT,
+      bottom,
+    };
+  }
+
+  function cityUiLabelsOverlap(a, b) {
+    return a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
   }
 
   function createMarker(kind, item, index, region) {
@@ -1057,8 +1073,8 @@
 
   function applyMarkerVisualSize(marker, kind, item) {
     if (kind === "city") {
-      marker.style.setProperty("--city-ui-clearance-size", `${CITY_UI_CLEARANCE_DIAMETER * state.zoom}px`);
       marker.style.setProperty("--city-ui-label-width", `${CITY_UI_LABEL_WIDTH * state.zoom}px`);
+      marker.style.setProperty("--city-ui-label-height", `${CITY_UI_LABEL_HEIGHT * state.zoom}px`);
       marker.style.setProperty("--city-ui-label-offset", `${CITY_UI_LABEL_OFFSET * state.zoom}px`);
       marker.style.setProperty("--city-ui-label-font-size", `${Math.max(7, 12 * state.zoom)}px`);
       return;
@@ -1754,11 +1770,7 @@
         const a = region.cities[i];
         const b = region.cities[j];
         const distance = Math.hypot(a.xNorm - b.xNorm, a.yNorm - b.yNorm);
-        const pixelDistance = Math.hypot(
-          (a.xNorm - b.xNorm) * region.width,
-          (a.yNorm - b.yNorm) * region.height
-        );
-        if (pixelDistance < CITY_UI_CLEARANCE_DIAMETER) {
+        if (cityUiLabelsOverlap(getCityUiLabelRect(a, region), getCityUiLabelRect(b, region))) {
           results.push({ level: "warning", text: `${a.name} and ${b.name} have overlapping name/level UI in ${region.name}.` });
         } else if (distance < minSpacing) {
           results.push({ level: "warning", text: `${a.name} and ${b.name} are closer than minimum spacing in ${region.name}.` });

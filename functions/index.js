@@ -12,6 +12,7 @@ const FieldValue = admin.firestore.FieldValue;
 const RESET_GENERATION = "fresh-2026-07-05-server-reset";
 const ONLINE_WORLD_ID = `main-${RESET_GENERATION}`;
 const TEST_STARTING_GOLD = 500;
+const PLAYER_NAME_MAX_LENGTH = 18;
 const MILLION_LORDS_CITY_COST_BASE = 50;
 const MILLION_LORDS_CITY_COST_GROWTH = 1.2;
 const CITY_PRESTIGE_START_LEVEL = 100;
@@ -228,6 +229,15 @@ function getOnlineIslandId(regionId = "west") {
 
 function safeString(value, max = 80) {
   return String(value || "").trim().slice(0, max);
+}
+
+function normalizePlayerName(value, fallback = "Ruler") {
+  const cleaned = String(value || "")
+    .replace(/[^a-z0-9 _.-]/gi, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, PLAYER_NAME_MAX_LENGTH);
+  return cleaned || fallback;
 }
 
 const SERVER_WORLD_MAPS = Array.isArray(SERVER_WORLD_LAYOUT?.maps) ? SERVER_WORLD_LAYOUT.maps : [];
@@ -1156,7 +1166,7 @@ function normalizeArmyPayload(data = {}, uid = "") {
   return {
     id: safeString(raw.id || data.armyId || `${uid}_${kind}_${Date.now().toString(36)}`, 96).replace(/[^a-zA-Z0-9_-]/g, "_"),
     ownerUid: uid,
-    ownerName: safeString(raw.ownerName || data.ownerName || "Ruler", 32),
+    ownerName: normalizePlayerName(raw.ownerName || data.ownerName),
     ownerFlag: raw.ownerFlag || data.ownerFlag || null,
     ownerKingPower: Math.max(0, Math.floor(safeNumber(raw.ownerKingPower, 0))),
     kind,
@@ -1337,7 +1347,7 @@ function getRewardCampCombatTarget(camp = {}) {
     troopFloat: currentGarrison,
     ownerKind: camp.holderUid ? "player" : "neutral",
     ownerUid: safeString(camp.holderUid || camp.ownerUid, 128),
-    ownerName: safeString(camp.holderName || camp.ownerName, 40),
+    ownerName: normalizePlayerName(camp.holderName || camp.ownerName, ""),
     ownerFlag: camp.holderFlag || camp.ownerFlag || null,
     defense: 1,
     isMainCity: false,
@@ -1427,7 +1437,7 @@ function isGivenUpNeutralCity(city = {}) {
 }
 
 function getOwnerName(city = {}, fallback = "Unknown") {
-  return safeString(city.ownerName || city.name || fallback, 40);
+  return normalizePlayerName(city.ownerName, "") || safeString(city.name || fallback, 40);
 }
 
 function normalizeServerFlag(flag = null) {
@@ -1444,10 +1454,9 @@ function isCurrentWorldIslandId(islandId = "") {
 }
 
 function getCanonicalPlayerIdentity(uid = "", profile = {}, data = {}, authToken = {}) {
-  const ownerName = safeString(
-    data.ownerName || data.playerName || profile.playerName || profile.displayName || authToken.name || "Ruler",
-    32
-  ) || "Ruler";
+  const ownerName = normalizePlayerName(
+    data.ownerName || data.playerName || profile.playerName || profile.displayName || authToken.name
+  );
   const hasFlagPayload = Object.prototype.hasOwnProperty.call(data, "ownerFlag")
     || Object.prototype.hasOwnProperty.call(data, "flag");
   const rawFlag = hasFlagPayload
@@ -1630,7 +1639,7 @@ function createHarvestBonusFromPayload(data = {}, uid = "", nowMs = Date.now()) 
 
 function getPlayerIdentitySyncSignature(identity = {}) {
   return JSON.stringify([
-    safeString(identity.ownerName || "Ruler", 32),
+    normalizePlayerName(identity.ownerName),
     normalizeServerFlag(identity.ownerFlag),
   ]);
 }
@@ -1680,8 +1689,8 @@ function makeReport({ id, uid, type, outcome, city, opponentName = "", summary =
     attackerLosses: Math.max(0, Math.floor(safeNumber(result.attackerLosses, 0))),
     defenderLosses: Math.max(0, Math.floor(safeNumber(result.defenderLosses, 0))),
     totalDefense: Math.max(0, Math.floor(safeNumber(totalDefense, result.defensePower || 0))),
-    opponentName: safeString(opponentName, 40),
-    ownerName: safeString(city?.ownerName || "", 40),
+    opponentName: normalizePlayerName(opponentName, "Unknown ruler"),
+    ownerName: normalizePlayerName(city?.ownerName, ""),
     summary: safeString(summary, 220),
     createdAtMs: nowMs,
     resetGeneration: RESET_GENERATION,
@@ -2363,8 +2372,8 @@ function writeGlobalStatsFromEconomy(transaction, economy = null, profileOverrid
   transaction.set(economy.globalStatsRef, stats, { merge: true });
   transaction.set(leaderboardEntryRef(economy.uid), {
     uid: economy.uid,
-    displayName: safeString(profile.playerName || profile.displayName || "Ruler", 32),
-    playerName: safeString(profile.playerName || profile.displayName || "Ruler", 32),
+    displayName: normalizePlayerName(profile.playerName || profile.displayName),
+    playerName: normalizePlayerName(profile.playerName || profile.displayName),
     flag: profile.flag || null,
     kingPower: stats.kingPower,
     kingPowerVersion: GLOBAL_PLAYER_STATS_VERSION,
@@ -2654,7 +2663,7 @@ function formatNotificationNumber(value) {
 function createIncomingArmyNotification({ defenderUid = "", attackerUid = "", movement = {}, source = {}, target = {} } = {}) {
   const kind = movement.kind === "scout" ? "scout" : movement.kind === "attack" ? "attack" : "";
   if (!defenderUid || !attackerUid || defenderUid === attackerUid || !kind) return null;
-  const attackerName = safeString(movement.ownerName || source.ownerName || "A rival ruler", 40);
+  const attackerName = normalizePlayerName(movement.ownerName || source.ownerName, "A rival ruler");
   const sourceName = safeString(movement.fromName || source.name || movement.fromId || "Unknown city", 40);
   const targetName = safeString(movement.toName || target.name || movement.toId || "your city", 40);
   const title = kind === "scout" ? "Scout incoming" : "Attack incoming";
@@ -3448,7 +3457,7 @@ exports.claimStartingCity = onCall({ region: "us-central1", maxInstances: 20, in
   const displayName = safeString(data.displayName || authToken.name || "", 80);
   const email = safeString(data.email || authToken.email || "", 120);
   const photoURL = safeString(data.photoURL || authToken.picture || "", 300);
-  const playerName = safeString(data.playerName || displayName || "Ruler", 32) || "Ruler";
+  const playerName = normalizePlayerName(data.playerName || displayName);
   if (!islandId || !candidateCityIds.length) {
     throw new HttpsError("invalid-argument", "No starting city candidates were provided.");
   }
@@ -3804,7 +3813,7 @@ exports.relinquishCity = onCall({ region: "us-central1", maxInstances: 20, invok
         resetGeneration: RESET_GENERATION,
         ownerKind: "player",
         ownerUid: uid,
-        ownerName: safeString(economy.profileAfter.playerName || order.ownerName || source.ownerName || request.auth.token?.name || "Ruler", 32),
+        ownerName: normalizePlayerName(economy.profileAfter.playerName || order.ownerName || source.ownerName || request.auth.token?.name),
         ownerFlag: economy.profileAfter.flag || order.ownerFlag || source.ownerFlag || null,
         ownerKingPower,
         kind: "transfer",
@@ -3927,7 +3936,7 @@ exports.relocateMainCity = onCall({ region: "us-central1", maxInstances: 20, inv
       );
     }
 
-    const playerName = safeString(data.playerName || profile.playerName || profile.displayName || "Ruler", 40);
+    const playerName = normalizePlayerName(data.playerName || profile.playerName || profile.displayName);
     const playerFlag = data.flag || profile.flag || null;
     const ownerKingPower = Math.max(0, Math.floor(safeNumber(profile.kingPower, 0)));
     const shieldExpiresAtMs = Math.max(0, timestampToMs(profile.itemEffects?.shieldExpiresAtMs));
@@ -4328,7 +4337,7 @@ exports.sendArmyOrder = onCall({ region: "us-central1", maxInstances: 20, invoke
       resetGeneration: RESET_GENERATION,
       ownerKind: "player",
       ownerUid: uid,
-      ownerName: safeString(attackerProfile.playerName || order.ownerName || source.ownerName || request.auth.token?.name || "Ruler", 32),
+      ownerName: normalizePlayerName(attackerProfile.playerName || order.ownerName || source.ownerName || request.auth.token?.name),
       ownerFlag: attackerProfile.flag || order.ownerFlag || source.ownerFlag || null,
       ownerKingPower: attackerKingPower,
       kind: resolvedKind,
@@ -4611,9 +4620,9 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
     const troopCount = Math.max(0, Math.floor(safeNumber(army.troops, 0)));
     const defenderBonuses = defenderEconomy?.bonuses || {};
     const targetStats = getCityStats(target, defenderProfile, defenderBonuses);
-    const attackerName = safeString(attackerProfile.playerName || army.ownerName || "Rival ruler", 40);
+    const attackerName = normalizePlayerName(attackerProfile.playerName || army.ownerName, "Rival ruler");
     const defenderName = defenderUid
-      ? safeString(target.ownerName || defenderProfile.playerName || "Rival ruler", 40)
+      ? normalizePlayerName(target.ownerName || defenderProfile.playerName, "Rival ruler")
       : "Neutral city";
 
     if (targetType === "camp") {

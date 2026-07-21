@@ -2,6 +2,7 @@
   const FIREBASE_VERSION = "10.12.5";
   const REQUIRED_CONFIG_KEYS = ["apiKey", "authDomain", "projectId", "appId"];
   const ACTIVE_SESSION_STORAGE_KEY = "crownlands-active-session-id";
+  const PLAYER_NAME_MAX_LENGTH = 18;
   const ROYAL_PEACE_SHIELD_ITEM_ID = "shield_12h";
   const ROYAL_PEACE_SHIELD_COST = 175_000;
 
@@ -48,6 +49,15 @@
 
   function dispatch(name, detail = {}) {
     window.dispatchEvent(new CustomEvent(`crownlands:${name}`, { detail }));
+  }
+
+  function cleanPlayerName(value, fallback = "Ruler") {
+    const cleaned = String(value || "")
+      .replace(/[^a-z0-9 _.-]/gi, "")
+      .replace(/\s+/g, " ")
+      .trim()
+      .slice(0, PLAYER_NAME_MAX_LENGTH);
+    return cleaned || fallback;
   }
 
   function createSessionId() {
@@ -423,7 +433,7 @@
       token,
       platform: "web",
       userAgent: String(navigator.userAgent || "").slice(0, 240),
-      playerName: String(options.playerName || client.user?.displayName || "Ruler").slice(0, 40),
+      playerName: cleanPlayerName(options.playerName || client.user?.displayName),
       enabled: true,
       lastSeenAtMs: Date.now(),
       createdAt: serverTimestamp(),
@@ -775,8 +785,8 @@
   function cleanPresence(presence = {}) {
     return {
       uid: client.user?.uid || "",
-      displayName: String(presence.displayName || client.user?.displayName || "Ruler").slice(0, 32),
-      playerName: String(presence.playerName || presence.displayName || client.user?.displayName || "Ruler").slice(0, 32),
+      displayName: cleanPlayerName(presence.displayName || presence.playerName || client.user?.displayName),
+      playerName: cleanPlayerName(presence.playerName || presence.displayName || client.user?.displayName),
       islandId: String(presence.islandId || "main").slice(0, 64),
       mainCityId: String(presence.mainCityId || ""),
       mainRegionId: String(presence.mainRegionId || "").slice(0, 64),
@@ -838,7 +848,7 @@
     const uniqueIslandIds = [...new Set((Array.isArray(islandIds) ? islandIds : [])
       .map(islandId => String(islandId || "").trim())
       .filter(Boolean))];
-    const ownerName = String(identity.ownerName || identity.playerName || client.user?.displayName || "Ruler").slice(0, 32);
+    const ownerName = cleanPlayerName(identity.ownerName || identity.playerName || client.user?.displayName);
     const ownerFlag = identity.ownerFlag || identity.flag || null;
     let batch = writeBatch(client.db);
     let pendingWrites = 0;
@@ -898,8 +908,8 @@
   function cleanLeaderboardEntry(entry = {}) {
     return {
       uid: client.user?.uid || "",
-      displayName: String(entry.displayName || entry.playerName || client.user?.displayName || "Ruler").slice(0, 32),
-      playerName: String(entry.playerName || entry.displayName || client.user?.displayName || "Ruler").slice(0, 32),
+      displayName: cleanPlayerName(entry.displayName || entry.playerName || client.user?.displayName),
+      playerName: cleanPlayerName(entry.playerName || entry.displayName || client.user?.displayName),
       flag: entry.flag || null,
       kingPower: Math.max(0, Math.floor(Number(entry.kingPower) || 0)),
       kingPowerVersion: Math.max(0, Math.floor(Number(entry.kingPowerVersion) || 0)),

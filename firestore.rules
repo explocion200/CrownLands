@@ -14,8 +14,21 @@ service cloud.firestore {
       return data.get('shopItems', {}).get('shield_12h', 0);
     }
 
+    function validPlayerNameValue(value) {
+      return value is string
+        && value.size() >= 1
+        && value.size() <= 18
+        && value.matches('^[A-Za-z0-9 _.-]+$');
+    }
+
+    function validPlayerProfileNameCreate() {
+      return !request.resource.data.keys().hasAny(['playerName'])
+        || validPlayerNameValue(request.resource.data.playerName);
+    }
+
     function validPlayerProfileCreate() {
       return shieldCount(request.resource.data) == 0
+        && validPlayerProfileNameCreate()
         && !request.resource.data.keys().hasAny([
           'gold',
           'goldFloat',
@@ -60,6 +73,7 @@ service cloud.firestore {
 
     function validPlayerProfileUpdate() {
       return playerEconomyUnchanged()
+        && (profileFieldUnchanged('playerName') || validPlayerNameValue(request.resource.data.playerName))
         && profileFieldUnchanged('character')
         && profileFieldUnchanged('upgrades')
         && profileFieldUnchanged('mainCityId')
@@ -76,6 +90,7 @@ service cloud.firestore {
 
     function cityIdentityOnlyUpdate() {
       return ownsCityOwnerIdentity()
+        && (profileFieldUnchanged('ownerName') || validPlayerNameValue(request.resource.data.ownerName))
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
           'ownerName',
           'ownerFlag',

@@ -30,6 +30,7 @@ const MAIN_CITY_ASSIGNMENT_VERSION = 2;
 const LEADERBOARD_SAVE_SECONDS = 60;
 const LEADERBOARD_STALE_REFRESH_MS = 5 * 60 * 1000;
 const KING_POWER_LEADERBOARD_LIMIT = 100;
+const PLAYER_NAME_MAX_LENGTH = 18;
 const PLAYER_IDENTITY_LOOKUP_BATCH_SIZE = 80;
 const PLAYER_IDENTITY_CACHE_STALE_MS = 5 * 60 * 1000;
 const ONLINE_OWNED_CITIES_REFRESH_MS = 15 * 1000;
@@ -10820,7 +10821,11 @@ async function startFromInput(forceFresh = false) {
 }
 
 function cleanName(value) {
-  return String(value || "").replace(/[^a-z0-9 _.-]/gi, "").trim().slice(0, 18);
+  return String(value || "")
+    .replace(/[^a-z0-9 _.-]/gi, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, PLAYER_NAME_MAX_LENGTH);
 }
 
 function getStateCityByIdCache() {
