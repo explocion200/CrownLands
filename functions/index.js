@@ -62,13 +62,15 @@ const DEMO_ATTACK_TIERS = [
   { minRatio: DEMO_ATTACK_MIN_POWER_RATIO, label: "Demo Attack", troopCapPercent: 50, attackPowerPercent: 50, travelMultiplier: 1.6 },
 ];
 const KING_POWER_TERRITORY_PER_CITY = 2500;
-const KING_POWER_GOLD_PRODUCTION_SQRT_MULTIPLIER = 50;
-const KING_POWER_TROOP_PRODUCTION_MULTIPLIER = 8;
-const KING_POWER_WALL_MULTIPLIER = 4;
-const KING_POWER_DEFENSE_PERCENT_MULTIPLIER = 50;
+const KING_POWER_CITY_LEVEL_SQUARED_MULTIPLIER = 10;
+const KING_POWER_GOLD_PRODUCTION_SQRT_MULTIPLIER = 15;
+const KING_POWER_GOLD_TO_TROOP_PRODUCTION_CAP_RATIO = 0.25;
+const KING_POWER_TROOP_PRODUCTION_MULTIPLIER = 20;
+const KING_POWER_WALL_MULTIPLIER = 8;
+const KING_POWER_DEFENSE_PERCENT_MULTIPLIER = 100;
 const KING_POWER_STRONGHOLD_BASE = 25000;
-const KING_POWER_STRONGHOLD_LEVEL_MULTIPLIER = 1000;
-const KING_POWER_TROOP_SCALE = 10;
+const KING_POWER_STRONGHOLD_LEVEL_MULTIPLIER = 2000;
+const KING_POWER_TROOP_SCALE = 15;
 const KING_POWER_TROOP_EXPONENT = 0.7;
 const LEVEL_UP_TROOP_REWARD_BASE = 50;
 const LEVEL_UP_TROOP_REWARD_MULTIPLIER = 1.15;
@@ -100,7 +102,7 @@ const MAIN_CITY_CHANGE_CITY_LIMIT = 30;
 const MAIN_CITY_CHANGE_SMALL_KINGDOM_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000;
 const MAIN_CITY_CHANGE_LARGE_KINGDOM_COOLDOWN_MS = 14 * 24 * 60 * 60 * 1000;
 const MAX_SERVER_PRODUCTION_SECONDS = 7 * 24 * 60 * 60;
-const GLOBAL_PLAYER_STATS_VERSION = 3;
+const GLOBAL_PLAYER_STATS_VERSION = 4;
 const PLAYER_IDENTITY_SYNC_VERSION = 1;
 const MAIN_CITY_ASSIGNMENT_VERSION = 2;
 const ECONOMY_CITY_CHECKPOINT_MS = 5 * 60 * 1000;
@@ -819,11 +821,12 @@ function getTroopKingPower(troops = 0) {
 
 function getCityInfrastructurePowerComponents(city = {}) {
   if (!city) {
-    return { territoryPower: 0, economicPower: 0, troopProductionPower: 0, fortificationPower: 0, strongholdPower: 0 };
+    return { territoryPower: 0, cityLevelPower: 0, economicPower: 0, troopProductionPower: 0, fortificationPower: 0, strongholdPower: 0 };
   }
   if (isStronghold(city)) {
     return {
       territoryPower: 0,
+      cityLevelPower: 0,
       economicPower: 0,
       troopProductionPower: 0,
       fortificationPower: 0,
@@ -838,16 +841,21 @@ function getCityInfrastructurePowerComponents(city = {}) {
   });
   const baseWalls = CITY_LEVEL_STATS.cityWallsBase + (level - 1) * CITY_LEVEL_STATS.cityWallsPerLevel;
   const defensePercent = level * CITY_LEVEL_STATS.defensePercentPerLevel;
+  const troopProductionPower = Math.floor(
+    Math.max(0, safeNumber(production.troopProductionPerHour, 0))
+      * KING_POWER_TROOP_PRODUCTION_MULTIPLIER
+  );
   return {
     territoryPower: KING_POWER_TERRITORY_PER_CITY,
-    economicPower: Math.floor(
+    cityLevelPower: Math.floor(
+      level * level * KING_POWER_CITY_LEVEL_SQUARED_MULTIPLIER
+    ),
+    economicPower: Math.floor(Math.min(
       Math.sqrt(Math.max(0, safeNumber(production.goldProductionPerHour, 0)))
-        * KING_POWER_GOLD_PRODUCTION_SQRT_MULTIPLIER
-    ),
-    troopProductionPower: Math.floor(
-      Math.max(0, safeNumber(production.troopProductionPerHour, 0))
-        * KING_POWER_TROOP_PRODUCTION_MULTIPLIER
-    ),
+        * KING_POWER_GOLD_PRODUCTION_SQRT_MULTIPLIER,
+      troopProductionPower * KING_POWER_GOLD_TO_TROOP_PRODUCTION_CAP_RATIO
+    )),
+    troopProductionPower,
     fortificationPower: Math.floor(
       baseWalls * KING_POWER_WALL_MULTIPLIER
         + defensePercent * KING_POWER_DEFENSE_PERCENT_MULTIPLIER
@@ -937,6 +945,7 @@ function createGlobalStatsSnapshot({
   let totalVictoryPoints = 0;
   let cityPower = 0;
   let territoryPower = 0;
+  let cityLevelPower = 0;
   let economicPower = 0;
   let troopProductionPower = 0;
   let fortificationPower = 0;
@@ -956,6 +965,7 @@ function createGlobalStatsSnapshot({
     totalTroops += troopCount;
     totalVictoryPoints += Math.max(0, Math.floor(safeNumber(stats.victoryPoints, 0)));
     territoryPower += powerComponents.territoryPower;
+    cityLevelPower += powerComponents.cityLevelPower;
     economicPower += powerComponents.economicPower;
     troopProductionPower += powerComponents.troopProductionPower;
     fortificationPower += powerComponents.fortificationPower;
@@ -1011,6 +1021,7 @@ function createGlobalStatsSnapshot({
     marchingPower: Math.max(0, Math.floor(marchingPower)),
     troopPower: Math.max(0, Math.floor(totalTroopPower)),
     territoryPower: Math.max(0, Math.floor(territoryPower)),
+    cityLevelPower: Math.max(0, Math.floor(cityLevelPower)),
     economicPower: Math.max(0, Math.floor(economicPower)),
     troopProductionPower: Math.max(0, Math.floor(troopProductionPower)),
     fortificationPower: Math.max(0, Math.floor(fortificationPower)),
@@ -1056,15 +1067,20 @@ function getLegacyGlobalStatsKingPower(stats = {}) {
       + CITY_LEVEL_STATS.cityWallsPerLevel * Math.max(0, totalLevels - totalCities)
     : 0;
   const territoryPower = totalCities * KING_POWER_TERRITORY_PER_CITY;
-  const economicPower = totalCities > 0
-    ? Math.floor(
-      Math.sqrt(Math.max(0, safeNumber(stats.goldPerHour, 0)) * totalCities)
-        * KING_POWER_GOLD_PRODUCTION_SQRT_MULTIPLIER
-    )
-    : 0;
   const troopProductionPower = Math.floor(
     Math.max(0, safeNumber(stats.troopPerHour, 0)) * KING_POWER_TROOP_PRODUCTION_MULTIPLIER
   );
+  const averageLevel = totalCities > 0 ? totalLevels / totalCities : 0;
+  const cityLevelPower = Math.floor(
+    totalCities * averageLevel * averageLevel * KING_POWER_CITY_LEVEL_SQUARED_MULTIPLIER
+  );
+  const economicPower = totalCities > 0
+    ? Math.floor(Math.min(
+      Math.sqrt(Math.max(0, safeNumber(stats.goldPerHour, 0)) * totalCities)
+        * KING_POWER_GOLD_PRODUCTION_SQRT_MULTIPLIER,
+      troopProductionPower * KING_POWER_GOLD_TO_TROOP_PRODUCTION_CAP_RATIO
+    ))
+    : 0;
   const fortificationPower = Math.floor(
     baseWalls * KING_POWER_WALL_MULTIPLIER
       + totalLevels * CITY_LEVEL_STATS.defensePercentPerLevel * KING_POWER_DEFENSE_PERCENT_MULTIPLIER
@@ -1074,6 +1090,7 @@ function getLegacyGlobalStatsKingPower(stats = {}) {
   );
   return Math.max(0, Math.floor(
     territoryPower
+      + cityLevelPower
       + economicPower
       + troopProductionPower
       + fortificationPower

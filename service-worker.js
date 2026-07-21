@@ -1,4 +1,4 @@
-const CACHE_VERSION = "20260721-transfer-knight-ui";
+const CACHE_VERSION = "20260721-military-king-power-v4";
 const CACHE_NAME = `crownlands-cache-${CACHE_VERSION}`;
 const STATIC_CACHE_URLS = [
   "/",
@@ -7,8 +7,8 @@ const STATIC_CACHE_URLS = [
   "/styles.css?v=20260721-medieval-transfer-icon",
   "/world-config.js",
   "/firebase-config.js?v=20260703-vapid-key",
-  "/firebaseClient.js?v=20260721-king-power-v3",
-  "/game.js?v=20260721-transfer-knight-ui",
+  "/firebaseClient.js?v=20260721-military-king-power-v4",
+  "/game.js?v=20260721-military-king-power-v4",
   "/route-worker.js?v=20260721-structure-route-clearance",
   "/assets/map-editor-data.js?v=20260705-stronghold-sizes",
   "/assets/game-menu-background.jpg?v=20260702-login-page",

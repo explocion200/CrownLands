@@ -664,6 +664,7 @@
       marchingPower: Math.max(0, Math.floor(Number(stats.marchingPower) || 0)),
       troopPower: Math.max(0, Math.floor(Number(stats.troopPower) || 0)),
       territoryPower: Math.max(0, Math.floor(Number(stats.territoryPower) || 0)),
+      cityLevelPower: Math.max(0, Math.floor(Number(stats.cityLevelPower) || 0)),
       economicPower: Math.max(0, Math.floor(Number(stats.economicPower) || 0)),
       troopProductionPower: Math.max(0, Math.floor(Number(stats.troopProductionPower) || 0)),
       fortificationPower: Math.max(0, Math.floor(Number(stats.fortificationPower) || 0)),

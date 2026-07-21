@@ -650,15 +650,17 @@ const CITY_LEVEL_STATS = {
   goldProductionPerMillionLordsVp: MILLION_LORDS_PASSIVE_GOLD_PER_CITY_VP,
 };
 const KING_POWER_TERRITORY_PER_CITY = 2500;
-const KING_POWER_GOLD_PRODUCTION_SQRT_MULTIPLIER = 50;
-const KING_POWER_TROOP_PRODUCTION_MULTIPLIER = 8;
-const KING_POWER_WALL_MULTIPLIER = 4;
-const KING_POWER_DEFENSE_PERCENT_MULTIPLIER = 50;
+const KING_POWER_CITY_LEVEL_SQUARED_MULTIPLIER = 10;
+const KING_POWER_GOLD_PRODUCTION_SQRT_MULTIPLIER = 15;
+const KING_POWER_GOLD_TO_TROOP_PRODUCTION_CAP_RATIO = 0.25;
+const KING_POWER_TROOP_PRODUCTION_MULTIPLIER = 20;
+const KING_POWER_WALL_MULTIPLIER = 8;
+const KING_POWER_DEFENSE_PERCENT_MULTIPLIER = 100;
 const KING_POWER_STRONGHOLD_BASE = 25000;
-const KING_POWER_STRONGHOLD_LEVEL_MULTIPLIER = 1000;
-const KING_POWER_TROOP_SCALE = 10;
+const KING_POWER_STRONGHOLD_LEVEL_MULTIPLIER = 2000;
+const KING_POWER_TROOP_SCALE = 15;
 const KING_POWER_TROOP_EXPONENT = 0.7;
-const KING_POWER_AUTHORITY_VERSION = 3;
+const KING_POWER_AUTHORITY_VERSION = 4;
 const SKILL_RESET_COST = 750_000;
 
 const SKILL_CONFIG = {
@@ -5781,6 +5783,7 @@ function normalizeGlobalStatsSnapshot(raw = null) {
     marchingPower: normalizePowerValue(raw.marchingPower),
     troopPower: normalizePowerValue(raw.troopPower),
     territoryPower: normalizePowerValue(raw.territoryPower),
+    cityLevelPower: normalizePowerValue(raw.cityLevelPower),
     economicPower: normalizePowerValue(raw.economicPower),
     troopProductionPower: normalizePowerValue(raw.troopProductionPower),
     fortificationPower: normalizePowerValue(raw.fortificationPower),
@@ -5882,10 +5885,16 @@ function getCityInfrastructureKingPower(city) {
   const baseTroopsPerHour = victoryPoints * CITY_LEVEL_STATS.troopProductionPerVictoryPoint;
   const baseWalls = CITY_LEVEL_STATS.cityWallsBase + (level - 1) * CITY_LEVEL_STATS.cityWallsPerLevel;
   const defensePercent = level * CITY_LEVEL_STATS.defensePercentPerLevel;
+  const troopProductionPower = baseTroopsPerHour * KING_POWER_TROOP_PRODUCTION_MULTIPLIER;
+  const economicPower = Math.min(
+    Math.sqrt(baseGoldPerHour) * KING_POWER_GOLD_PRODUCTION_SQRT_MULTIPLIER,
+    troopProductionPower * KING_POWER_GOLD_TO_TROOP_PRODUCTION_CAP_RATIO
+  );
   return Math.max(0, Math.floor(
     KING_POWER_TERRITORY_PER_CITY
-      + Math.sqrt(baseGoldPerHour) * KING_POWER_GOLD_PRODUCTION_SQRT_MULTIPLIER
-      + baseTroopsPerHour * KING_POWER_TROOP_PRODUCTION_MULTIPLIER
+      + level * level * KING_POWER_CITY_LEVEL_SQUARED_MULTIPLIER
+      + economicPower
+      + troopProductionPower
       + baseWalls * KING_POWER_WALL_MULTIPLIER
       + defensePercent * KING_POWER_DEFENSE_PERCENT_MULTIPLIER
   ));
