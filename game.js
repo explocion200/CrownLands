@@ -18153,7 +18153,9 @@ function updateFullscreenButton() {
   fullscreenButtons.forEach(button => {
     button.classList.toggle("active", isActive);
     button.setAttribute("aria-label", isActive ? "Exit fullscreen" : "Enter fullscreen");
-    button.innerHTML = isActive ? "&times;" : "<span aria-hidden=\"true\">&#x26F6;</span>";
+    button.innerHTML = isActive
+      ? "<span class=\"fullscreen-glyph\" aria-hidden=\"true\">&times;</span>"
+      : "<span class=\"fullscreen-glyph\" aria-hidden=\"true\">&#x26F6;</span>";
   });
 }
 
@@ -18415,6 +18417,7 @@ function getMainCityReturnAvoidRects(viewRect) {
     document.querySelector(".profile-stack"),
     document.querySelector(".resource-bar"),
     inventoryBtn,
+    shopBtn,
     cityListBtn,
     islandSwitchBtn,
     document.querySelector(".commander-panel.visible"),

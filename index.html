@@ -12,11 +12,11 @@
   <meta name="apple-mobile-web-app-title" content="Crownlands" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="format-detection" content="telephone=no" />
-  <meta name="crownlands-build" content="20260721-account-sync" />
+  <meta name="crownlands-build" content="20260721-hud-polish" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700;800;900&family=Cinzel+Decorative:wght@700;900&family=IM+Fell+English:ital@0;1&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=20260721-account-sync" />
+  <link rel="stylesheet" href="styles.css?v=20260721-hud-polish" />
   <link rel="preload" as="image" href="assets/game-menu-background.jpg?v=20260702-login-page" />
   <link rel="preload" as="image" href="assets/loading-ring.png" />
   <link rel="preload" as="image" href="assets/loading-crown.png" />
@@ -42,7 +42,7 @@
 <body>
   <main class="phone-shell" aria-label="Crownlands real-time medieval conquest prototype">
     <section id="setupScreen" class="setup-screen visible">
-      <button id="setupFullscreenBtn" class="hud-btn fullscreen-btn setup-fullscreen-btn" type="button" aria-label="Enter fullscreen" data-fullscreen-toggle><span aria-hidden="true">&#x26F6;</span></button>
+      <button id="setupFullscreenBtn" class="hud-btn fullscreen-btn setup-fullscreen-btn" type="button" aria-label="Enter fullscreen" data-fullscreen-toggle><span class="fullscreen-glyph" aria-hidden="true">&#x26F6;</span></button>
       <div class="setup-card">
         <h1 class="sr-only">Crownlands</h1>
         <p class="sr-only">Sign in with Google, then enter your kingdom.</p>
@@ -82,10 +82,7 @@
           <span id="statusText" class="sr-only">Live conquest</span>
         </div>
         <div class="resource-bar">
-          <button id="shopBtn" class="shop-btn" type="button" aria-label="Open shop">
-            <img class="shop-icon" src="assets/shop-icon.png?v=20260623-shop-ui" alt="" draggable="false" decoding="async" />
-          </button>
-          <button id="fullscreenBtn" class="hud-btn fullscreen-btn" type="button" aria-label="Enter fullscreen" data-fullscreen-toggle><span aria-hidden="true">&#x26F6;</span></button>
+          <button id="fullscreenBtn" class="hud-btn fullscreen-btn" type="button" aria-label="Enter fullscreen" data-fullscreen-toggle><span class="fullscreen-glyph" aria-hidden="true">&#x26F6;</span></button>
         </div>
       </header>
 
@@ -95,6 +92,9 @@
       </button>
       <button id="inventoryBtn" class="resource-pill bag-btn" type="button" aria-label="Open bag">
         <img class="bag-icon" src="assets/bag-icon.png?v=20260623-bag-inventory" alt="" draggable="false" decoding="async" />
+      </button>
+      <button id="shopBtn" class="resource-pill shop-btn" type="button" aria-label="Open shop">
+        <img class="shop-icon" src="assets/shop-icon.png?v=20260623-shop-ui" alt="" draggable="false" decoding="async" />
       </button>
       <div id="activeItemEffectsStack" class="active-item-effects-stack" aria-live="polite">
         <div id="shieldStatusBadge" class="effect-status-badge shield-status-badge" hidden role="status">
@@ -277,7 +277,7 @@
   <script src="assets/map-editor-data.js?v=20260705-stronghold-sizes"></script>
   <script src="world-config.js"></script>
   <script src="firebase-config.js?v=20260703-vapid-key"></script>
-  <script src="firebaseClient.js?v=20260721-account-sync"></script>
-  <script src="game.js?v=20260721-account-sync"></script>
+  <script src="firebaseClient.js?v=20260721-hud-polish"></script>
+  <script src="game.js?v=20260721-hud-polish"></script>
 </body>
 </html>
