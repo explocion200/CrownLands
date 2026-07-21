@@ -12,6 +12,7 @@ const WORLD_LAYOUT_PATH = path.join(WORLD_DATA_ROOT, "world-layout.json");
 const WORLD_REGIONS_DIR = path.join(WORLD_DATA_ROOT, "regions");
 const WORLD_MAPS_DIR = path.join(WORLD_DATA_ROOT, "maps");
 const MAP_EDITOR_DATA_PATH = path.join(ROOT_DIR, "assets", "map-editor-data.js");
+const SERVER_WORLD_LAYOUT_PATH = path.join(ROOT_DIR, "functions", "world-layout.json");
 const GITHUB_WORLD_CONFIG_URL = "https://raw.githubusercontent.com/explocion200/crownlands-game/main/world-config.js";
 const HOST = "127.0.0.1";
 const START_PORT = Number(process.env.PORT) || 8791;
@@ -775,6 +776,8 @@ async function writeWorldData(payload) {
   await fsp.writeFile(WORLD_LAYOUT_PATH, `${JSON.stringify(layout, null, 2)}\n`, "utf8");
   const compatibilityData = buildCompatibilityMapData(layout, normalizedRegions);
   await fsp.writeFile(MAP_EDITOR_DATA_PATH, `window.CROWNLANDS_MAP_EDITOR_DATA = ${JSON.stringify(compatibilityData, null, 2)};\n`, "utf8");
+  await fsp.mkdir(path.dirname(SERVER_WORLD_LAYOUT_PATH), { recursive: true });
+  await fsp.writeFile(SERVER_WORLD_LAYOUT_PATH, `${JSON.stringify(compatibilityData, null, 2)}\n`, "utf8");
   return { layout, regions: normalizedRegions, compatibilityData };
 }
 

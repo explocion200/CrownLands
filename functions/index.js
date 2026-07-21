@@ -1,6 +1,8 @@
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
 const { onSchedule } = require("firebase-functions/v2/scheduler");
+const { onDocumentWritten } = require("firebase-functions/v2/firestore");
 const admin = require("firebase-admin");
+const SERVER_WORLD_LAYOUT = require("./world-layout.json");
 
 admin.initializeApp();
 
@@ -79,8 +81,19 @@ const MAIN_CITY_CHANGE_COOLDOWN_MS = 24 * 60 * 60 * 1000;
 const MAX_SERVER_PRODUCTION_SECONDS = 7 * 24 * 60 * 60;
 const GLOBAL_PLAYER_STATS_VERSION = 2;
 const PLAYER_IDENTITY_SYNC_VERSION = 1;
-const SCHEDULED_ARMY_RESOLVE_SCAN_LIMIT = 100;
-const SCHEDULED_ARMY_RESOLVE_MAX_PER_RUN = 40;
+const MAIN_CITY_ASSIGNMENT_VERSION = 2;
+const ECONOMY_CITY_CHECKPOINT_MS = 5 * 60 * 1000;
+const ECONOMY_MAX_CITY_CHECKPOINT_WRITES = 300;
+const SCHEDULED_ARMY_RESOLVE_SCAN_LIMIT = 250;
+const SCHEDULED_ARMY_RESOLVE_MAX_PER_RUN = 120;
+const SCHEDULED_ARMY_RESOLVE_CONCURRENCY = 8;
+const MAX_ROUTE_REGION_COUNT = 20;
+const MAX_ROUTE_SEGMENT_COUNT = 20;
+const MAX_ROUTE_POINTS_PER_SEGMENT = 160;
+const ROUTE_ENDPOINT_TOLERANCE = 180;
+const SERVER_ISLAND_MAP_PADDING = 560;
+const SERVER_ROUTE_INSET_MIN = 24;
+const SERVER_ROUTE_INSET_MAX = 58;
 const GOLD_CAMP_HOLD_DURATION_MS = 10 * 60 * 1000;
 const GOLD_CAMP_BASE_REWARD = 100_000;
 const GOLD_CAMP_BASE_DEFENDERS = 10_000;
@@ -215,6 +228,247 @@ function getOnlineIslandId(regionId = "west") {
 
 function safeString(value, max = 80) {
   return String(value || "").trim().slice(0, max);
+}
+
+const SERVER_WORLD_MAPS = Array.isArray(SERVER_WORLD_LAYOUT?.maps) ? SERVER_WORLD_LAYOUT.maps : [];
+const SERVER_WORLD_MAP_BY_ID = new Map(SERVER_WORLD_MAPS.map(map => [safeString(map?.id, 80), map]));
+const SERVER_WORLD_REGION_IDS = new Set(SERVER_WORLD_MAP_BY_ID.keys());
+
+function isKnownWorldRegionId(regionId = "") {
+  return SERVER_WORLD_REGION_IDS.has(normalizeRegionId(regionId));
+}
+
+function requireKnownWorldRegionId(regionId = "") {
+  const normalized = normalizeRegionId(regionId);
+  if (!SERVER_WORLD_REGION_IDS.has(normalized)) {
+    throw new HttpsError("invalid-argument", "That Crownlands map does not exist.");
+  }
+  return normalized;
+}
+
+function getServerWorldMap(regionId = "") {
+  return SERVER_WORLD_MAP_BY_ID.get(normalizeRegionId(regionId)) || null;
+}
+
+function getServerWorldTargetIds(regionId = "") {
+  const map = getServerWorldMap(regionId);
+  return new Set([
+    ...(Array.isArray(map?.cities) ? map.cities : []),
+    ...(Array.isArray(map?.objectives) ? map.objectives : []),
+  ].map(target => safeString(target?.id, 96)).filter(Boolean));
+}
+
+function getServerWorldRegularCityIds(regionId = "") {
+  const map = getServerWorldMap(regionId);
+  return new Set((Array.isArray(map?.cities) ? map.cities : [])
+    .map(city => safeString(city?.id, 96))
+    .filter(Boolean));
+}
+
+function getServerWorldCampIds(regionId = "") {
+  const map = getServerWorldMap(regionId);
+  return new Set((Array.isArray(map?.camps) ? map.camps : [])
+    .map(camp => safeString(camp?.id, 96))
+    .filter(Boolean));
+}
+
+function getServerWorldDimensions() {
+  const settings = SERVER_WORLD_LAYOUT?.globalSettings || {};
+  return {
+    width: Math.max(1000, Math.floor(safeNumber(settings.worldWidth, 13000))),
+    height: Math.max(1000, Math.floor(safeNumber(settings.worldHeight, 17000))),
+  };
+}
+
+function getServerMapImageDimensions(map = {}) {
+  return {
+    width: Math.max(1, Math.floor(safeNumber(map.imageWidth, 2048))),
+    height: Math.max(1, Math.floor(safeNumber(map.imageHeight, 1536))),
+  };
+}
+
+function getServerMapBounds(regionId = "") {
+  const map = getServerWorldMap(regionId);
+  if (!map) return null;
+  const region = map.region || {};
+  const dimensions = getServerMapImageDimensions(map);
+  const world = getServerWorldDimensions();
+  const aspect = Math.max(0.1, dimensions.width / Math.max(1, dimensions.height));
+  const padding = Math.max(
+    SERVER_ISLAND_MAP_PADDING,
+    Math.round(Math.max(safeNumber(region.rx, 0), safeNumber(region.ry, 0)) * 0.22)
+  );
+  let width;
+  let height;
+  if (aspect >= 1) {
+    width = Math.round((safeNumber(region.rx, 1000) + padding) * 2);
+    height = Math.round(width / aspect);
+  } else {
+    height = Math.round((safeNumber(region.ry, 800) + padding) * 2);
+    width = Math.round(height * aspect);
+  }
+  width = clamp(width, 1, world.width);
+  height = clamp(height, 1, world.height);
+  const left = clamp(Math.round(safeNumber(region.x, world.width / 2) - width / 2), 0, Math.max(0, world.width - width));
+  const top = clamp(Math.round(safeNumber(region.y, world.height / 2) - height / 2), 0, Math.max(0, world.height - height));
+  return { left, top, width, height, right: left + width, bottom: top + height };
+}
+
+function serverImagePointToWorld(regionId = "", point = {}) {
+  const map = getServerWorldMap(regionId);
+  const bounds = getServerMapBounds(regionId);
+  if (!map || !bounds) return null;
+  const dimensions = getServerMapImageDimensions(map);
+  return {
+    x: bounds.left + safeNumber(point.x, 0) / dimensions.width * bounds.width,
+    y: bounds.top + safeNumber(point.y, 0) / dimensions.height * bounds.height,
+  };
+}
+
+function serverImageSizeToWorld(regionId = "", size = 1) {
+  const map = getServerWorldMap(regionId);
+  const bounds = getServerMapBounds(regionId);
+  if (!map || !bounds) return Math.max(1, Math.floor(safeNumber(size, 1)));
+  return Math.max(1, Math.round(Math.max(1, safeNumber(size, 1)) * bounds.width / getServerMapImageDimensions(map).width));
+}
+
+function getServerEdgeConnections(regionId = "") {
+  const map = getServerWorldMap(regionId);
+  const edgeConnections = map?.edgeConnections || {};
+  return ["north", "south", "east", "west"].flatMap(side => (
+    Array.isArray(edgeConnections[side]) ? edgeConnections[side] : []
+  ).map(connection => ({ ...connection, side })))
+    .filter(connection => !connection.intentionalOuter && isKnownWorldRegionId(connection.connectsToRegionId));
+}
+
+function getServerPortalConnection(fromRegionId = "", toRegionId = "") {
+  const targetRegionId = normalizeRegionId(toRegionId);
+  return getServerEdgeConnections(fromRegionId)
+    .find(connection => normalizeRegionId(connection.connectsToRegionId) === targetRegionId) || null;
+}
+
+function getOppositeServerEdgeSide(side = "") {
+  if (side === "north") return "south";
+  if (side === "south") return "north";
+  if (side === "east") return "west";
+  if (side === "west") return "east";
+  return "";
+}
+
+function getServerPortalWorldPoint(regionId = "", connection = null) {
+  const map = getServerWorldMap(regionId);
+  if (!map || !connection) return null;
+  const dimensions = getServerMapImageDimensions(map);
+  const side = safeString(connection.side, 12).toLowerCase();
+  const start = clamp(safeNumber(connection.start, 0), 0, 1);
+  const end = clamp(safeNumber(connection.end, start), 0, 1);
+  const along = clamp((Math.min(start, end) + Math.max(start, end)) / 2, 0, 1);
+  const inset = clamp(
+    Math.round(Math.min(dimensions.width, dimensions.height) * 0.024),
+    SERVER_ROUTE_INSET_MIN,
+    SERVER_ROUTE_INSET_MAX
+  );
+  return serverImagePointToWorld(regionId, {
+    x: side === "west" ? inset : side === "east" ? dimensions.width - inset : along * dimensions.width,
+    y: side === "north" ? inset : side === "south" ? dimensions.height - inset : along * dimensions.height,
+  });
+}
+
+function getServerArrivalConnection(sourceRegionId = "", targetRegionId = "", sourceConnection = null) {
+  const oppositeSide = getOppositeServerEdgeSide(safeString(sourceConnection?.side, 12).toLowerCase());
+  const candidates = getServerEdgeConnections(targetRegionId)
+    .filter(connection => normalizeRegionId(connection.connectsToRegionId) === normalizeRegionId(sourceRegionId));
+  return candidates.find(connection => !oppositeSide || connection.side === oppositeSide) || candidates[0] || null;
+}
+
+function findServerPortalRouteRegionChain(fromRegionId = "", toRegionId = "") {
+  const sourceRegionId = requireKnownWorldRegionId(fromRegionId);
+  const targetRegionId = requireKnownWorldRegionId(toRegionId);
+  if (sourceRegionId === targetRegionId) return [sourceRegionId];
+  const queue = [[sourceRegionId]];
+  const visited = new Set([sourceRegionId]);
+  while (queue.length) {
+    const chain = queue.shift();
+    const current = chain[chain.length - 1];
+    for (const connection of getServerEdgeConnections(current)) {
+      const next = normalizeRegionId(connection.connectsToRegionId);
+      if (!next || visited.has(next)) continue;
+      const nextChain = [...chain, next];
+      if (next === targetRegionId) return nextChain;
+      visited.add(next);
+      queue.push(nextChain);
+    }
+  }
+  throw new HttpsError("failed-precondition", "No portal route connects those maps.");
+}
+
+function getAuthoritativeIslandSeed(regionId = "") {
+  const targetRegionId = requireKnownWorldRegionId(regionId);
+  const map = getServerWorldMap(targetRegionId);
+  const cities = (Array.isArray(map.cities) ? map.cities : []).map((city, index) => {
+    const point = serverImagePointToWorld(targetRegionId, city);
+    return cleanServerCityLayoutSeed({
+      id: city.id || `${targetRegionId}_${String(index + 1).padStart(3, "0")}`,
+      name: city.name || city.id,
+      regionId: targetRegionId,
+      startPool: targetRegionId,
+      x: Math.round(point.x),
+      y: Math.round(point.y),
+      level: city.level || 1,
+    });
+  });
+  (Array.isArray(map.objectives) ? map.objectives : []).forEach((objective, index) => {
+    const point = serverImagePointToWorld(targetRegionId, objective);
+    cities.push(cleanServerCityLayoutSeed({
+      id: objective.id || `${targetRegionId}_stronghold_${index + 1}`,
+      name: objective.name || objective.id,
+      regionId: targetRegionId,
+      startPool: targetRegionId,
+      x: Math.round(point.x),
+      y: Math.round(point.y),
+      kind: "stronghold",
+      strongholdType: objective.strongholdType || objective.type,
+      bonus: objective.bonus,
+      bonusPercent: objective.bonusPercent,
+      size: serverImageSizeToWorld(targetRegionId, objective.size || 154),
+      artSrc: objective.artSrc,
+      startTroops: objective.startTroops || objective.troops,
+      level: objective.level,
+    }));
+  });
+  const camps = (Array.isArray(map.camps) ? map.camps : []).map((camp, index) => {
+    const point = serverImagePointToWorld(targetRegionId, camp);
+    return cleanServerCampLayoutSeed({
+      id: camp.id || `${targetRegionId}_camp_${index + 1}`,
+      name: camp.name || camp.id,
+      regionId: targetRegionId,
+      mapId: targetRegionId,
+      x: Math.round(point.x),
+      y: Math.round(point.y),
+      size: serverImageSizeToWorld(targetRegionId, camp.size || 132),
+      artSrc: camp.artSrc,
+      campType: camp.campType || camp.type,
+    });
+  }).filter(camp => camp.id && isRewardCamp(camp));
+  const world = getServerWorldDimensions();
+  return {
+    regionId: targetRegionId,
+    islandId: getOnlineIslandId(targetRegionId),
+    cities,
+    camps,
+    meta: {
+      worldId: ONLINE_WORLD_ID,
+      regionId: targetRegionId,
+      regionName: safeString(map.label || map.name || targetRegionId, 80),
+      version: Math.max(1, Math.floor(safeNumber(SERVER_WORLD_LAYOUT.version, 1))),
+      name: safeString(`${map.label || map.name || targetRegionId} - Crownlands`, 120),
+      cityCount: cities.length,
+      regionCount: SERVER_WORLD_MAPS.length,
+      cityCountPerRegion: Math.max(0, Math.floor(safeNumber(map.cityCapacity, 0))),
+      worldWidth: world.width,
+      worldHeight: world.height,
+    },
+  };
 }
 
 function sanitizeJsonValue(value, depth = 0) {
@@ -473,12 +727,14 @@ function createActiveArmiesFromSnapshot(uid = "", activeArmiesSnap = null) {
 }
 
 function activeArmiesQueryForPlayer(uid = "") {
-  return db.collectionGroup("armies")
+  return db.collection("armies")
     .where("ownerUid", "==", safeString(uid, 128))
     .where("status", "==", "active");
 }
 
 function isCurrentWorldArmy(army = {}) {
+  if (army.worldId && safeString(army.worldId, 120) !== ONLINE_WORLD_ID) return false;
+  if (army.resetGeneration && safeString(army.resetGeneration, 120) !== RESET_GENERATION) return false;
   const routeRegionIds = normalizeRegionIds(army.routeRegionIds || []);
   if (routeRegionIds.some(regionId => isCurrentWorldIslandId(getOnlineIslandId(regionId)))) return true;
   const sourceRegionId = normalizeRegionId(army.sourceRegionId || "");
@@ -838,7 +1094,7 @@ function normalizePoint(point = {}) {
 
 function normalizePath(points = []) {
   return Array.isArray(points)
-    ? points.map(normalizePoint).filter(Boolean).slice(0, 320)
+    ? points.map(normalizePoint).filter(Boolean).slice(0, MAX_ROUTE_POINTS_PER_SEGMENT)
     : [];
 }
 
@@ -860,14 +1116,15 @@ function normalizePathSegments(segments = []) {
         points,
         length: Math.max(0, safeNumber(segment.length, routeLength(points))),
       };
-    }).filter(Boolean).slice(0, 24)
+    }).filter(Boolean).slice(0, MAX_ROUTE_SEGMENT_COUNT)
     : [];
 }
 
 function normalizeRegionIds(value = []) {
   return [...new Set((Array.isArray(value) ? value : [])
     .map(normalizeRegionId)
-    .filter(Boolean))];
+    .filter(Boolean))]
+    .slice(0, MAX_ROUTE_REGION_COUNT);
 }
 
 function getCityRegionIdFromPayload(city = {}, fallback = "") {
@@ -972,6 +1229,88 @@ function cleanServerCampLayoutSeed(camp = {}) {
   };
 }
 
+function pointsAreClose(a = null, b = null, tolerance = ROUTE_ENDPOINT_TOLERANCE) {
+  return Boolean(a && b && Math.hypot(safeNumber(a.x, 0) - safeNumber(b.x, 0), safeNumber(a.y, 0) - safeNumber(b.y, 0)) <= tolerance);
+}
+
+function getExpectedServerRouteLegs(source = {}, target = {}, routeRegionIds = []) {
+  const legs = [];
+  let currentPoint = { x: safeNumber(source.x, 0), y: safeNumber(source.y, 0) };
+  for (let index = 0; index < routeRegionIds.length; index += 1) {
+    const regionId = routeRegionIds[index];
+    const isLast = index === routeRegionIds.length - 1;
+    if (isLast) {
+      legs.push({
+        regionId,
+        start: currentPoint,
+        end: { x: safeNumber(target.x, 0), y: safeNumber(target.y, 0) },
+      });
+      break;
+    }
+    const nextRegionId = routeRegionIds[index + 1];
+    const sourceConnection = getServerPortalConnection(regionId, nextRegionId);
+    const exitPoint = getServerPortalWorldPoint(regionId, sourceConnection);
+    const arrivalConnection = getServerArrivalConnection(regionId, nextRegionId, sourceConnection);
+    const arrivalPoint = getServerPortalWorldPoint(nextRegionId, arrivalConnection);
+    if (!sourceConnection || !arrivalConnection || !exitPoint || !arrivalPoint) {
+      throw new HttpsError("failed-precondition", "The portal route is incomplete.");
+    }
+    legs.push({ regionId, start: currentPoint, end: exitPoint });
+    currentPoint = arrivalPoint;
+  }
+  return legs;
+}
+
+function validateArmyRoute(order = {}, source = {}, target = {}) {
+  const expectedRegions = findServerPortalRouteRegionChain(order.sourceRegionId, order.targetRegionId);
+  if (expectedRegions.length > MAX_ROUTE_REGION_COUNT) {
+    throw new HttpsError("failed-precondition", "That route crosses too many maps.");
+  }
+  if (order.routeRegionIds.length !== expectedRegions.length
+    || expectedRegions.some((regionId, index) => order.routeRegionIds[index] !== regionId)) {
+    throw new HttpsError("invalid-argument", "The march route does not follow the Crownlands portal network.");
+  }
+
+  const expectedLegs = getExpectedServerRouteLegs(source, target, expectedRegions);
+  const suppliedSegments = order.pathSegments.length
+    ? order.pathSegments
+    : expectedRegions.length === 1 && order.path.length >= 2
+      ? [{ regionId: expectedRegions[0], points: order.path }]
+      : [];
+  if (suppliedSegments.length !== expectedLegs.length) {
+    throw new HttpsError("invalid-argument", "The march route is missing a map segment.");
+  }
+
+  let pathLength = 0;
+  const pathSegments = suppliedSegments.map((segment, index) => {
+    const expected = expectedLegs[index];
+    const points = normalizePath(segment.points);
+    if (segment.regionId !== expected.regionId || points.length < 2) {
+      throw new HttpsError("invalid-argument", "The march contains an invalid map segment.");
+    }
+    if (!pointsAreClose(points[0], expected.start) || !pointsAreClose(points[points.length - 1], expected.end)) {
+      throw new HttpsError("invalid-argument", "The march route does not connect its city and portal endpoints.");
+    }
+    const length = routeLength(points);
+    const minimumLength = Math.hypot(expected.end.x - expected.start.x, expected.end.y - expected.start.y);
+    if (length + ROUTE_ENDPOINT_TOLERANCE < minimumLength) {
+      throw new HttpsError("invalid-argument", "The march route distance is too short.");
+    }
+    pathLength += length;
+    return { regionId: expected.regionId, points, length };
+  });
+  if (!Number.isFinite(pathLength) || pathLength <= 0) {
+    throw new HttpsError("failed-precondition", "No valid troop route was found.");
+  }
+  const path = pathSegments.flatMap((segment, index) => index ? segment.points.slice(1) : segment.points);
+  return {
+    routeRegionIds: expectedRegions,
+    pathSegments,
+    path: path.slice(0, MAX_ROUTE_POINTS_PER_SEGMENT),
+    pathLength,
+  };
+}
+
 function normalizeActiveArmyIds(value = []) {
   return [...new Set((Array.isArray(value) ? value : [])
     .map(id => safeString(id, 96).replace(/[^a-zA-Z0-9_-]/g, "_"))
@@ -1042,8 +1381,16 @@ function cleanServerCityLayoutSeed(city = {}) {
   };
 }
 
-function armyRefsForRegions(regionIds, armyId) {
+function canonicalArmyRef(armyId = "") {
+  return db.doc(`armies/${safeString(armyId, 96).replace(/[^a-zA-Z0-9_-]/g, "_")}`);
+}
+
+function armyViewRefsForRegions(regionIds, armyId) {
   return normalizeRegionIds(regionIds).map(regionId => db.doc(`islands/${getOnlineIslandId(regionId)}/armies/${armyId}`));
+}
+
+function armyRefsForRegions(regionIds, armyId) {
+  return [canonicalArmyRef(armyId), ...armyViewRefsForRegions(regionIds, armyId)];
 }
 
 function reportRef(uid, reportId) {
@@ -1109,7 +1456,7 @@ function getCanonicalPlayerIdentity(uid = "", profile = {}, data = {}, authToken
   const ownerFlag = normalizeServerFlag(rawFlag);
   const ownerKingPower = Math.max(
     0,
-    Math.floor(safeNumber(data.ownerKingPower, profile.kingPower || 0))
+    Math.floor(safeNumber(profile.kingPower, 0))
   );
   return {
     uid,
@@ -1627,18 +1974,21 @@ function normalizeRelocationRegionCandidates(rawCandidates = []) {
   return rawCandidates
     .map(candidate => {
       const regionId = normalizeRegionId(candidate?.regionId || candidate?.id || candidate?.mainRegionId);
-      if (!regionId || seenRegions.has(regionId)) return null;
+      if (!isKnownWorldRegionId(regionId) || seenRegions.has(regionId)) return null;
+      const islandId = safeString(candidate?.islandId || getOnlineIslandId(regionId), 160);
+      if (islandId !== getOnlineIslandId(regionId)) return null;
+      const allowedCityIds = getServerWorldRegularCityIds(regionId);
       const rawCityIds = Array.isArray(candidate?.cityIds)
         ? candidate.cityIds
         : Array.isArray(candidate?.candidateCityIds) ? candidate.candidateCityIds : [];
       const cityIds = [...new Set(rawCityIds
         .map(cityId => safeString(cityId, 96).replace(/[^a-zA-Z0-9_-]/g, "_"))
-        .filter(Boolean))];
+        .filter(cityId => cityId && allowedCityIds.has(cityId)))];
       if (!cityIds.length) return null;
       seenRegions.add(regionId);
       return {
         regionId,
-        islandId: safeString(candidate?.islandId || getOnlineIslandId(regionId), 160),
+        islandId,
         cityIds: cityIds.slice(0, 140),
       };
     })
@@ -1723,6 +2073,7 @@ function createOwnedCityEntriesFromSnapshot(uid, ownedSnap) {
       if (!isCurrentWorldIslandId(islandId)) return null;
       if ((data.ownerKind || "player") !== "player" || getOwnerUid(data) !== uid) return null;
       const regionId = getRegionIdFromCityDoc(doc, data);
+      if (!getServerWorldTargetIds(regionId).has(doc.id)) return null;
       return {
         ref: doc.ref,
         city: {
@@ -1763,13 +2114,14 @@ function createMainCityAssignmentRepair(uid, rawProfile = {}, cityEntries = []) 
     entry.city = { ...entry.city, ...patch };
   });
 
-  const profileFields = canonicalMainCityId
-    ? {
+  const profileFields = {
+    mainCityAssignmentVersion: MAIN_CITY_ASSIGNMENT_VERSION,
+    ...(canonicalMainCityId ? {
         mainCityId: canonicalMainCityId,
         mainIslandId: canonicalMainIslandId,
         mainRegionId: canonicalMainRegionId,
-      }
-    : {};
+      } : {}),
+  };
 
   return {
     mainCityEntry,
@@ -1829,11 +2181,17 @@ async function prepareEconomyCollection(transaction, uid, nowMs = Date.now(), op
   const mainCityRepair = createMainCityAssignmentRepair(uid, rawProfile, cityEntries);
   const cityPatches = [...mainCityRepair.cityPatches];
   const cityUpdates = [...mainCityRepair.cityUpdates];
+  const productionCityPatches = [];
 
   const bonuses = getOwnedStrongholdBonuses(cityEntries);
-  let goldGainFloat = 0;
+  const lastEconomyAtMs = Math.min(
+    nowMs,
+    timestampToMs(rawProfile.economyUpdatedAtMs) || fallbackProductionAtMs
+  );
+  const goldElapsedSeconds = clamp((nowMs - lastEconomyAtMs) / 1000, 0, MAX_SERVER_PRODUCTION_SECONDS);
+  let goldProductionPerSecond = 0;
   let troopsGained = 0;
-  let maxElapsedSeconds = 0;
+  let maxElapsedSeconds = goldElapsedSeconds;
 
   cityEntries.forEach(entry => {
     const city = entry.city;
@@ -1849,15 +2207,14 @@ async function prepareEconomyCollection(transaction, uid, nowMs = Date.now(), op
     const troopGainFloat = stats.troopProductionPerSecond * elapsedSeconds;
     const nextTroopFloat = currentTroopFloat + troopGainFloat;
     const nextTroops = Math.max(0, Math.floor(nextTroopFloat));
-    goldGainFloat += stats.goldProductionPerSecond * elapsedSeconds;
+    goldProductionPerSecond += stats.goldProductionPerSecond;
     troopsGained += Math.max(0, nextTroops - Math.max(0, Math.floor(safeNumber(city.troops, 0))));
+    const patch = {
+      troops: nextTroops,
+      troopFloat: nextTroopFloat,
+      productionUpdatedAtMs: nowMs,
+    };
     if (elapsedSeconds > 0 || !timestampToMs(city.productionUpdatedAtMs)) {
-      const patch = {
-        troops: nextTroops,
-        troopFloat: nextTroopFloat,
-        productionUpdatedAtMs: nowMs,
-      };
-      cityPatches.push({ ref: entry.ref, city, patch });
       cityUpdates.push({
         id: city.id,
         regionId: city.regionId,
@@ -1868,8 +2225,15 @@ async function prepareEconomyCollection(transaction, uid, nowMs = Date.now(), op
         ...patch,
       };
     }
+    const shouldCheckpointCity = !timestampToMs(city.productionUpdatedAtMs)
+      || nowMs - lastProductionAtMs >= ECONOMY_CITY_CHECKPOINT_MS;
+    if (shouldCheckpointCity) {
+      productionCityPatches.push({ ref: entry.ref, city, patch });
+    }
   });
+  cityPatches.push(...productionCityPatches.slice(0, ECONOMY_MAX_CITY_CHECKPOINT_WRITES));
 
+  const goldGainFloat = goldProductionPerSecond * goldElapsedSeconds;
   const goldFloat = baseGold + goldGainFloat;
   const gold = Math.max(0, Math.floor(goldFloat));
   const profileAfter = {
@@ -2753,7 +3117,10 @@ exports.syncPlayerIdentity = onCall({ region: "us-central1", maxInstances: 20, i
   ]);
   const cityDocs = ownedCitiesSnap.docs.filter(cityDoc => {
     const islandId = cityDoc.ref.parent.parent?.id || "";
-    return isCurrentWorldIslandId(islandId);
+    if (!isCurrentWorldIslandId(islandId)) return false;
+    const city = cityDoc.data() || {};
+    const regionId = getRegionIdFromCityDoc(cityDoc, city);
+    return getServerWorldTargetIds(regionId).has(cityDoc.id);
   });
   const activeArmyDocs = activeArmiesSnap.docs.filter(armyDoc => {
     const army = {
@@ -2927,22 +3294,18 @@ exports.recalculateAllPlayerGlobalStats = onCall({ region: "us-central1", timeou
 exports.ensureMainIsland = onCall({ region: "us-central1", maxInstances: 20, invoker: "public" }, async request => {
   const uid = requireAuth(request);
   const data = request.data || {};
-  const islandId = safeString(data.islandId || getOnlineIslandId(data.meta?.regionId || "west"), 160);
-  const rawCities = Array.isArray(data.cities) ? data.cities : [];
-  const citySeeds = rawCities
-    .map(cleanServerCityLayoutSeed)
-    .filter(city => city.id)
-    .slice(0, 450);
-  const campSeeds = (Array.isArray(data.camps) ? data.camps : [])
-    .map(cleanServerCampLayoutSeed)
-    .filter(camp => camp.id && isRewardCamp(camp))
-    .slice(0, 20);
-  if (!islandId || !citySeeds.length) {
-    throw new HttpsError("invalid-argument", "No island layout was provided.");
+  const requestedIslandId = safeString(data.islandId, 160);
+  const requestedRegionId = data.regionId
+    || data.meta?.regionId
+    || getRegionIdFromOnlineIslandId(requestedIslandId);
+  const seed = getAuthoritativeIslandSeed(requestedRegionId || "west");
+  const islandId = seed.islandId;
+  if (requestedIslandId && requestedIslandId !== islandId) {
+    throw new HttpsError("invalid-argument", "The requested island does not match the current Crownlands world.");
   }
-
-  const rawMeta = data.meta && typeof data.meta === "object" ? data.meta : {};
-  const targetVersion = Math.max(1, Math.floor(safeNumber(rawMeta.version, 21)));
+  const citySeeds = seed.cities;
+  const campSeeds = seed.camps;
+  const targetVersion = seed.meta.version;
   const targetCityCount = citySeeds.length;
   const targetCampCount = campSeeds.length;
   const targetRegularCityCount = citySeeds.filter(city => !(city.kind === "stronghold" || city.strongholdType)).length;
@@ -2957,19 +3320,7 @@ exports.ensureMainIsland = onCall({ region: "us-central1", maxInstances: 20, inv
   const needsCitySeed = !islandSnap.exists || seededCityCount < targetCityCount;
   const needsCampSeed = targetCampCount > 0 && (!islandSnap.exists || seededCampCount < targetCampCount);
   const needsLayoutRefresh = islandSnap.exists && layoutSeedVersion < targetVersion;
-  const safeMeta = {
-    worldId: safeString(rawMeta.worldId || ONLINE_WORLD_ID, 80),
-    legacyWorldId: safeString(rawMeta.legacyWorldId, 80),
-    regionId: normalizeRegionId(rawMeta.regionId || getRegionIdFromOnlineIslandId(islandId)),
-    regionName: safeString(rawMeta.regionName, 80),
-    version: targetVersion,
-    name: safeString(rawMeta.name || islandId, 120),
-    cityCount: targetCityCount,
-    regionCount: Math.max(0, Math.floor(safeNumber(rawMeta.regionCount, 0))),
-    cityCountPerRegion: Math.max(0, Math.floor(safeNumber(rawMeta.cityCountPerRegion, 0))),
-    worldWidth: Math.max(0, Math.floor(safeNumber(rawMeta.worldWidth, 0))),
-    worldHeight: Math.max(0, Math.floor(safeNumber(rawMeta.worldHeight, 0))),
-  };
+  const safeMeta = seed.meta;
 
   if (islandSnap.exists && !needsCitySeed && !needsCampSeed && !needsLayoutRefresh && seededCityCount === targetCityCount && seededCampCount === targetCampCount) {
     return {
@@ -3080,13 +3431,18 @@ exports.claimStartingCity = onCall({ region: "us-central1", maxInstances: 20, in
   const uid = requireAuth(request);
   const data = request.data || {};
   const authToken = request.auth?.token || {};
-  const islandId = safeString(data.islandId || getOnlineIslandId(data.mainRegionId || "west"), 160);
-  const regionId = normalizeRegionId(data.mainRegionId || getRegionIdFromOnlineIslandId(islandId));
+  const requestedIslandId = safeString(data.islandId || getOnlineIslandId(data.mainRegionId || "west"), 160);
+  const regionId = requireKnownWorldRegionId(data.mainRegionId || getRegionIdFromOnlineIslandId(requestedIslandId));
+  const islandId = getOnlineIslandId(regionId);
+  if (requestedIslandId !== islandId) {
+    throw new HttpsError("invalid-argument", "The requested starting island does not match the current Crownlands world.");
+  }
+  const allowedStartingCityIds = getServerWorldRegularCityIds(regionId);
   const worldId = safeString(data.worldId || ONLINE_WORLD_ID, 80) || ONLINE_WORLD_ID;
   const rawCandidateIds = Array.isArray(data.candidateCityIds) ? data.candidateCityIds : [];
   const candidateCityIds = [...new Set(rawCandidateIds
     .map(cityId => safeString(cityId, 96).replace(/[^a-zA-Z0-9_-]/g, "_"))
-    .filter(Boolean))]
+    .filter(cityId => cityId && allowedStartingCityIds.has(cityId)))]
     .slice(0, 180);
   const minimumNeutralCities = Math.max(0, Math.floor(safeNumber(data.minimumNeutralCities, 0)));
   const displayName = safeString(data.displayName || authToken.name || "", 80);
@@ -3135,6 +3491,7 @@ exports.claimStartingCity = onCall({ region: "us-central1", maxInstances: 20, in
         shopItems: normalizeShopItems(playerData.shopItems),
         itemEffects: normalizeItemEffects(playerData.itemEffects),
         itemPurchaseCooldowns: normalizeItemPurchaseCooldowns(playerData.itemPurchaseCooldowns),
+        mainCityAssignmentVersion: MAIN_CITY_ASSIGNMENT_VERSION,
         economyUpdatedAtMs: Math.max(0, timestampToMs(playerData.economyUpdatedAtMs) || nowMs),
         updatedAt: FieldValue.serverTimestamp(),
       };
@@ -3187,6 +3544,7 @@ exports.claimStartingCity = onCall({ region: "us-central1", maxInstances: 20, in
         mainIslandId: existingMainIsland,
         mainRegionId: existingMainRegionId,
         mainCityId: existingMain.city.id,
+        mainCityAssignmentVersion: MAIN_CITY_ASSIGNMENT_VERSION,
         updatedAt: FieldValue.serverTimestamp(),
       }, { merge: true });
       transaction.set(existingMain.ref, {
@@ -3382,7 +3740,7 @@ exports.relinquishCity = onCall({ region: "us-central1", maxInstances: 20, invok
   const uid = requireAuth(request);
   const data = request.data || {};
   const cityId = safeString(data.cityId || data.id, 96).replace(/[^a-zA-Z0-9_-]/g, "_");
-  const regionId = normalizeRegionId(data.regionId || data.islandId || "west");
+  const regionId = requireKnownWorldRegionId(data.regionId || getRegionIdFromOnlineIslandId(data.islandId) || "west");
   const order = normalizeArmyPayload(data, uid);
   if (!cityId) throw new HttpsError("invalid-argument", "Choose a city to relinquish.");
 
@@ -3413,7 +3771,6 @@ exports.relinquishCity = onCall({ region: "us-central1", maxInstances: 20, invok
     let armyRefs = [];
 
     if (transferredTroops > 0) {
-      const hasRoute = order.path.length >= 2 || order.pathSegments.some(segment => segment.points.length >= 2);
       if (
         order.kind !== "transfer"
         || order.fromId !== source.id
@@ -3423,14 +3780,8 @@ exports.relinquishCity = onCall({ region: "us-central1", maxInstances: 20, invok
       ) {
         throw new HttpsError("invalid-argument", "The relinquish march does not match the nearest friendly city.");
       }
-      if (!hasRoute || order.pathLength <= 0) {
-        throw new HttpsError("failed-precondition", "No valid troop route was found to the nearest friendly city.");
-      }
-      if (!order.routeRegionIds.includes(regionId) || !order.routeRegionIds.includes(destinationRegionId)) {
-        throw new HttpsError("invalid-argument", "The relinquish march is missing part of its island route.");
-      }
-
-      armyRefs = armyRefsForRegions(order.routeRegionIds, order.id);
+      const validatedRoute = validateArmyRoute(order, source, destination);
+      armyRefs = armyRefsForRegions(validatedRoute.routeRegionIds, order.id);
       if (!armyRefs.length) {
         throw new HttpsError("invalid-argument", "The relinquish march has no valid island route.");
       }
@@ -3441,15 +3792,16 @@ exports.relinquishCity = onCall({ region: "us-central1", maxInstances: 20, invok
 
       const ownerKingPower = Math.max(0, Math.floor(safeNumber(economy.globalStats?.kingPower, 0)));
       const duration = calculateTravelTime({
-        pathLength: order.pathLength,
+        pathLength: validatedRoute.pathLength,
         troopCount: transferredTroops,
         kind: "transfer",
-        requestedTotal: order.total,
         speedMultiplier: skillMultiplier(economy.profileAfter, "marchOrders")
           * (1 + Math.max(0, safeNumber(economy.bonuses.marchSpeedBonusPercent, 0)) / 100),
       });
       movement = {
         id: order.id,
+        worldId: ONLINE_WORLD_ID,
+        resetGeneration: RESET_GENERATION,
         ownerKind: "player",
         ownerUid: uid,
         ownerName: safeString(economy.profileAfter.playerName || order.ownerName || source.ownerName || request.auth.token?.name || "Ruler", 32),
@@ -3465,10 +3817,12 @@ exports.relinquishCity = onCall({ region: "us-central1", maxInstances: 20, invok
         troops: transferredTroops,
         requestedTroops: transferredTroops,
         total: duration,
-        path: order.path,
-        pathSegments: order.pathSegments,
-        routeRegionIds: order.routeRegionIds,
-        pathLength: order.pathLength,
+        path: validatedRoute.path,
+        pathSegments: validatedRoute.pathSegments,
+        routeRegionIds: validatedRoute.routeRegionIds,
+        viewRegionIds: validatedRoute.routeRegionIds,
+        pathLength: validatedRoute.pathLength,
+        targetKey: `${destinationRegionId}:${destination.id}`,
         targetOwnerAtLaunch: "player",
         targetOwnerUid: uid,
         attackerKingPower: ownerKingPower,
@@ -3478,7 +3832,7 @@ exports.relinquishCity = onCall({ region: "us-central1", maxInstances: 20, invok
         arrivesAtMs: nowMs + Math.ceil(duration * 1000),
         status: "active",
         createdByServer: true,
-        serverAuthorityVersion: 1,
+        serverAuthorityVersion: 2,
         relinquishTransfer: true,
       };
     }
@@ -3575,7 +3929,7 @@ exports.relocateMainCity = onCall({ region: "us-central1", maxInstances: 20, inv
 
     const playerName = safeString(data.playerName || profile.playerName || profile.displayName || "Ruler", 40);
     const playerFlag = data.flag || profile.flag || null;
-    const ownerKingPower = Math.max(0, Math.floor(safeNumber(data.ownerKingPower, profile.kingPower || 0)));
+    const ownerKingPower = Math.max(0, Math.floor(safeNumber(profile.kingPower, 0)));
     const shieldExpiresAtMs = Math.max(0, timestampToMs(profile.itemEffects?.shieldExpiresAtMs));
     const currentMain = currentMainEntry.city;
     const targetCity = target.city;
@@ -3809,22 +4163,33 @@ exports.sendArmyOrder = onCall({ region: "us-central1", maxInstances: 20, invoke
   if (!order.sourceRegionId || !order.targetRegionId) {
     throw new HttpsError("invalid-argument", "Missing source or destination region.");
   }
-  if (!order.routeRegionIds.includes(order.sourceRegionId)) order.routeRegionIds.push(order.sourceRegionId);
-  if (!order.routeRegionIds.includes(order.targetRegionId)) order.routeRegionIds.push(order.targetRegionId);
+  order.sourceRegionId = requireKnownWorldRegionId(order.sourceRegionId);
+  order.targetRegionId = requireKnownWorldRegionId(order.targetRegionId);
+  if (!getServerWorldTargetIds(order.sourceRegionId).has(order.fromId)) {
+    throw new HttpsError("invalid-argument", "The source city is not part of the current Crownlands map.");
+  }
+  const allowedTargetIds = order.targetType === "camp"
+    ? getServerWorldCampIds(order.targetRegionId)
+    : getServerWorldTargetIds(order.targetRegionId);
+  if (!allowedTargetIds.has(order.toId)) {
+    throw new HttpsError("invalid-argument", "The destination is not part of the current Crownlands map.");
+  }
 
   const sourceRef = cityRefForRegion(order.sourceRegionId, order.fromId);
   const targetRef = order.targetType === "camp"
     ? campRefForRegion(order.targetRegionId, order.toId)
     : cityRefForRegion(order.targetRegionId, order.toId);
-  const armyRefs = armyRefsForRegions(order.routeRegionIds, order.id);
+  let armyRefs = [canonicalArmyRef(order.id)];
+  const legacyArmyRef = db.doc(`islands/${getOnlineIslandId(order.sourceRegionId)}/armies/${order.id}`);
   const playerRef = db.doc(`players/${uid}`);
   const attackerLeaderboardRef = db.doc(`leaderboards/kingPower/entries/${uid}`);
 
   const result = await db.runTransaction(async transaction => {
-    const [sourceSnap, targetSnap, existingArmySnap, playerSnap, attackerLeaderboardSnap] = await Promise.all([
+    const [sourceSnap, targetSnap, canonicalArmySnap, legacyArmySnap, playerSnap, attackerLeaderboardSnap] = await Promise.all([
       transaction.get(sourceRef),
       transaction.get(targetRef),
       transaction.get(armyRefs[0]),
+      transaction.get(legacyArmyRef),
       transaction.get(playerRef),
       transaction.get(attackerLeaderboardRef),
     ]);
@@ -3841,6 +4206,7 @@ exports.sendArmyOrder = onCall({ region: "us-central1", maxInstances: 20, invoke
     }
     const sourceOwnerUid = getOwnerUid(source);
     const targetOwnerUid = getOwnerUid(target);
+    const existingArmySnap = canonicalArmySnap.exists ? canonicalArmySnap : legacyArmySnap;
     if (existingArmySnap.exists) {
       const existingArmy = { id: existingArmySnap.id, ...existingArmySnap.data() };
       delete existingArmy.createdAt;
@@ -3868,6 +4234,8 @@ exports.sendArmyOrder = onCall({ region: "us-central1", maxInstances: 20, invoke
     if (sourceOwnerUid !== uid) {
       throw new HttpsError("permission-denied", "You can only send troops from your own city.");
     }
+    const validatedRoute = validateArmyRoute(order, source, target);
+    armyRefs = armyRefsForRegions(validatedRoute.routeRegionIds, order.id);
     const attackerEconomy = await prepareEconomyCollection(transaction, uid, nowMs, {
       profileRef: playerRef,
       profileSnap: playerSnap,
@@ -3946,17 +4314,18 @@ exports.sendArmyOrder = onCall({ region: "us-central1", maxInstances: 20, invoke
     }
 
     const duration = calculateTravelTime({
-      pathLength: order.pathLength,
+      pathLength: validatedRoute.pathLength,
       troopCount: troops,
       kind: resolvedKind,
       targetType: order.targetType,
-      requestedTotal: order.total,
       demoAttack,
       speedMultiplier: skillMultiplier(attackerProfile, "marchOrders")
         * (1 + Math.max(0, safeNumber(attackerEconomy.bonuses.marchSpeedBonusPercent, 0)) / 100),
     });
     const movement = {
       id: order.id,
+      worldId: ONLINE_WORLD_ID,
+      resetGeneration: RESET_GENERATION,
       ownerKind: "player",
       ownerUid: uid,
       ownerName: safeString(attackerProfile.playerName || order.ownerName || source.ownerName || request.auth.token?.name || "Ruler", 32),
@@ -3973,10 +4342,12 @@ exports.sendArmyOrder = onCall({ region: "us-central1", maxInstances: 20, invoke
       troops,
       requestedTroops,
       total: duration,
-      path: order.path,
-      pathSegments: order.pathSegments,
-      routeRegionIds: order.routeRegionIds,
-      pathLength: order.pathLength,
+      path: validatedRoute.path,
+      pathSegments: validatedRoute.pathSegments,
+      routeRegionIds: validatedRoute.routeRegionIds,
+      viewRegionIds: validatedRoute.routeRegionIds,
+      pathLength: validatedRoute.pathLength,
+      targetKey: `${order.targetRegionId}:${order.toId}`,
       targetOwnerAtLaunch: targetOwnerUid ? "player" : "neutral",
       targetOwnerUid: targetOwnerUid || "",
       attackerKingPower: attackerKingPower || order.attackerKingPower || order.ownerKingPower,
@@ -3986,7 +4357,7 @@ exports.sendArmyOrder = onCall({ region: "us-central1", maxInstances: 20, invoke
       arrivesAtMs: nowMs + Math.ceil(duration * 1000),
       status: "active",
       createdByServer: true,
-      serverAuthorityVersion: 1,
+      serverAuthorityVersion: 2,
     };
 
     let profileOverrides = {};
@@ -4085,13 +4456,12 @@ exports.sendArmyOrder = onCall({ region: "us-central1", maxInstances: 20, invoke
 
 async function resolveArmyOrderById({ armyId = "", requestedRegions = [], callerUid = "", nowMs = Date.now() } = {}) {
   if (!armyId) throw new HttpsError("invalid-argument", "Missing army id.");
-  if (!requestedRegions.length) throw new HttpsError("invalid-argument", "Missing army route regions.");
-
-  const firstArmyRef = armyRefsForRegions(requestedRegions, armyId)[0];
+  const candidateRefs = [canonicalArmyRef(armyId), ...armyViewRefsForRegions(requestedRegions, armyId)];
 
   return db.runTransaction(async transaction => {
-    const firstArmySnap = await transaction.get(firstArmyRef);
-    if (!firstArmySnap.exists) return { ok: true, status: "missing" };
+    const candidateSnaps = await Promise.all(candidateRefs.map(ref => transaction.get(ref)));
+    const firstArmySnap = candidateSnaps.find(snapshot => snapshot.exists);
+    if (!firstArmySnap) return { ok: true, status: "missing" };
     const army = { id: firstArmySnap.id, ...firstArmySnap.data() };
     if (army.status !== "active") return { ok: true, status: army.status || "resolved" };
     const arrivesAtMs = Math.max(0, Math.floor(safeNumber(army.arrivesAtMs, 0)));
@@ -4100,6 +4470,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
     }
 
     const routeRegionIds = normalizeRegionIds(army.routeRegionIds?.length ? army.routeRegionIds : requestedRegions);
+    if (!routeRegionIds.length) throw new HttpsError("failed-precondition", "Army route data is missing.");
     const armyRefs = armyRefsForRegions(routeRegionIds, armyId);
     const sourceRegionId = normalizeRegionId(army.sourceRegionId || routeRegionIds[0]);
     const targetRegionId = normalizeRegionId(army.targetRegionId || routeRegionIds[routeRegionIds.length - 1] || sourceRegionId);
@@ -4883,6 +5254,59 @@ exports.resolveArmyOrder = onCall({ region: "us-central1", maxInstances: 30, inv
   return resolveArmyOrderById({ armyId, requestedRegions, callerUid });
 });
 
+async function refreshActiveArmyTargetOwner(targetKey = "", targetOwnerUid = "") {
+  const safeTargetKey = safeString(targetKey, 180);
+  if (!safeTargetKey) return 0;
+  const snapshot = await db.collection("armies")
+    .where("targetKey", "==", safeTargetKey)
+    .where("status", "==", "active")
+    .limit(400)
+    .get();
+  await processWithConcurrency(snapshot.docs, 8, async armyDoc => {
+    const army = armyDoc.data() || {};
+    const refs = armyRefsForRegions(army.viewRegionIds || army.routeRegionIds || [], armyDoc.id);
+    const batch = db.batch();
+    refs.forEach(ref => batch.set(ref, {
+      targetOwnerUid: safeString(targetOwnerUid, 128),
+      targetOwnerUpdatedAtMs: Date.now(),
+      updatedAt: FieldValue.serverTimestamp(),
+    }, { merge: true }));
+    await batch.commit();
+  });
+  return snapshot.size;
+}
+
+function getOwnerUidFromWrittenTarget(data = {}, targetType = "city") {
+  return targetType === "camp"
+    ? safeString(data.holderUid || data.ownerUid, 128)
+    : safeString(data.ownerUid, 128);
+}
+
+async function handleTargetOwnershipWrite(event, targetType = "city") {
+  const before = event.data?.before?.exists ? event.data.before.data() || {} : {};
+  const after = event.data?.after?.exists ? event.data.after.data() || {} : {};
+  const beforeOwnerUid = getOwnerUidFromWrittenTarget(before, targetType);
+  const afterOwnerUid = getOwnerUidFromWrittenTarget(after, targetType);
+  if (beforeOwnerUid === afterOwnerUid) return;
+  const islandId = safeString(event.params?.islandId, 160);
+  if (!isCurrentWorldIslandId(islandId)) return;
+  const regionId = getRegionIdFromOnlineIslandId(islandId);
+  const targetId = safeString(targetType === "camp" ? event.params?.campId : event.params?.cityId, 96);
+  await refreshActiveArmyTargetOwner(`${regionId}:${targetId}`, afterOwnerUid);
+}
+
+exports.syncCityArmyTargetOwner = onDocumentWritten({
+  region: "us-central1",
+  document: "islands/{islandId}/cities/{cityId}",
+  maxInstances: 20,
+}, event => handleTargetOwnershipWrite(event, "city"));
+
+exports.syncCampArmyTargetOwner = onDocumentWritten({
+  region: "us-central1",
+  document: "islands/{islandId}/camps/{campId}",
+  maxInstances: 20,
+}, event => handleTargetOwnershipWrite(event, "camp"));
+
 function getUtcDateKey(nowMs = Date.now()) {
   return new Date(nowMs).toISOString().slice(0, 10);
 }
@@ -5067,14 +5491,23 @@ function getScheduledArmyTarget(doc = null) {
 }
 
 async function loadDueArmyTargets(nowMs = Date.now()) {
-  const snap = await db.collectionGroup("armies")
-    .where("status", "==", "active")
-    .where("arrivesAtMs", "<=", nowMs)
-    .orderBy("arrivesAtMs", "asc")
-    .limit(SCHEDULED_ARMY_RESOLVE_SCAN_LIMIT)
-    .get();
+  const [canonicalSnap, legacySnap] = await Promise.all([
+    db.collection("armies")
+      .where("status", "==", "active")
+      .where("arrivesAtMs", "<=", nowMs)
+      .orderBy("arrivesAtMs", "asc")
+      .limit(SCHEDULED_ARMY_RESOLVE_SCAN_LIMIT)
+      .get(),
+    // Keep resolving pre-migration marches until every legacy view has settled.
+    db.collectionGroup("armies")
+      .where("status", "==", "active")
+      .where("arrivesAtMs", "<=", nowMs)
+      .orderBy("arrivesAtMs", "asc")
+      .limit(Math.min(100, SCHEDULED_ARMY_RESOLVE_SCAN_LIMIT))
+      .get(),
+  ]);
   const targetsByKey = new Map();
-  snap.docs.forEach(doc => {
+  [...canonicalSnap.docs, ...legacySnap.docs].forEach(doc => {
     const target = getScheduledArmyTarget(doc);
     if (!target) return;
     const key = getScheduledArmyDedupeKey(target.armyId, target.ownerUid);
@@ -5091,6 +5524,17 @@ function isExpectedScheduledResolveError(error = {}) {
   return code === "failed-precondition" && /not arrived/i.test(message);
 }
 
+async function processWithConcurrency(items = [], concurrency = 1, worker) {
+  const queue = items.slice();
+  const workers = Array.from({ length: Math.min(Math.max(1, concurrency), queue.length || 1) }, async () => {
+    while (queue.length) {
+      const item = queue.shift();
+      await worker(item);
+    }
+  });
+  await Promise.all(workers);
+}
+
 exports.resolveDueArmyOrders = onSchedule({
   region: "us-central1",
   schedule: "every 1 minutes",
@@ -5105,7 +5549,7 @@ exports.resolveDueArmyOrders = onSchedule({
   let skipped = 0;
   let failed = 0;
 
-  for (const target of targets) {
+  await processWithConcurrency(targets, SCHEDULED_ARMY_RESOLVE_CONCURRENCY, async target => {
     try {
       const result = await resolveArmyOrderById({
         armyId: target.armyId,
@@ -5118,7 +5562,7 @@ exports.resolveDueArmyOrders = onSchedule({
     } catch (error) {
       if (isExpectedScheduledResolveError(error)) {
         skipped += 1;
-        continue;
+        return;
       }
       failed += 1;
       console.error("Scheduled army resolution failed", {
@@ -5129,7 +5573,7 @@ exports.resolveDueArmyOrders = onSchedule({
         code: error?.code || "",
       });
     }
-  }
+  });
 
   console.log("Scheduled army resolution finished", {
     scanned: targets.length,

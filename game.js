@@ -25,7 +25,8 @@ const DEFAULT_ONLINE_REGION_ID = WORLD_REGIONS.find(isStarterRegion)?.id
 const ONLINE_CITY_SYNC_SECONDS = 20;
 const ONLINE_PRESENCE_SECONDS = 60;
 const ONLINE_PRESENCE_STALE_SECONDS = 180;
-const SERVER_ECONOMY_SYNC_SECONDS = 30;
+const SERVER_ECONOMY_SYNC_SECONDS = 120;
+const MAIN_CITY_ASSIGNMENT_VERSION = 2;
 const LEADERBOARD_SAVE_SECONDS = 60;
 const LEADERBOARD_STALE_REFRESH_MS = 5 * 60 * 1000;
 const KING_POWER_LEADERBOARD_LIMIT = 100;
@@ -2257,6 +2258,7 @@ let onlineIdentityRepairCompleted = false;
 let deferredInstallPrompt = null;
 let onlineFreshClaimCityId = "";
 let onlineActiveRegionId = DEFAULT_ONLINE_REGION_ID;
+const verifiedOnlineIslandSeeds = new Set();
 let mapSwitchLoading = false;
 let onlineSetupBackgroundInFlight = false;
 let onlineCitySyncTimer = 0;
@@ -4583,15 +4585,14 @@ function getOnlineIslandSeedMeta(regionId, seed) {
 
 async function ensureOnlineIslandSeeded(regionId, timeoutMs = 20000) {
   const api = getOnlineApi();
-  if (!api?.ensureMainIsland) return createOnlineIslandSeed(regionId);
   const targetRegionId = normalizeRegionId(regionId);
   const seed = createOnlineIslandSeed(targetRegionId);
+  if (!api?.ensureMainIsland || verifiedOnlineIslandSeeds.has(targetRegionId)) return seed;
   await withTimeout(api.ensureMainIsland({
     islandId: getOnlineIslandId(targetRegionId),
-    cities: seed.cities,
-    camps: seed.camps,
-    meta: getOnlineIslandSeedMeta(targetRegionId, seed),
+    regionId: targetRegionId,
   }), timeoutMs, `${getRegionLabel(targetRegionId)} setup is taking too long.`);
+  verifiedOnlineIslandSeeds.add(targetRegionId);
   return seed;
 }
 
@@ -9155,22 +9156,22 @@ async function setupOnlineWorld({ requireOnlineProfile = false } = {}) {
   onlineStatusDetail.textContent = "Finding your home island...";
   let profile = null;
   let cloudSnapshot = null;
-  let profileLoadFailed = false;
-  try {
-    if (api.loadPlayerProfile) {
-      profile = await withTimeout(api.loadPlayerProfile(), 5000, "Player profile lookup is taking too long.");
-    }
-  } catch (error) {
-    profileLoadFailed = true;
-    console.warn("Could not load online profile before island setup", error);
-  }
-  try {
-    if (api.loadGameSnapshot) {
-      cloudSnapshot = await withTimeout(api.loadGameSnapshot(ONLINE_SAVE_SLOT), 5000, "Cloud player state lookup is taking too long.");
-    }
-  } catch (error) {
-    console.warn("Could not load cloud player state before island setup", error);
-  }
+  const [profileResult, snapshotResult, statsResult] = await Promise.allSettled([
+    api.loadPlayerProfile
+      ? withTimeout(api.loadPlayerProfile(), 5000, "Player profile lookup is taking too long.")
+      : Promise.resolve(null),
+    api.loadGameSnapshot
+      ? withTimeout(api.loadGameSnapshot(ONLINE_SAVE_SLOT), 5000, "Cloud player state lookup is taking too long.")
+      : Promise.resolve(null),
+    api.loadPlayerGlobalStats
+      ? withTimeout(api.loadPlayerGlobalStats(), 5000, "Global stats lookup is taking too long.")
+      : Promise.resolve(null),
+  ]);
+  const profileLoadFailed = profileResult.status === "rejected";
+  if (profileResult.status === "fulfilled") profile = profileResult.value;
+  else console.warn("Could not load online profile before island setup", profileResult.reason);
+  if (snapshotResult.status === "fulfilled") cloudSnapshot = snapshotResult.value;
+  else console.warn("Could not load cloud player state before island setup", snapshotResult.reason);
   if (profileLoadFailed && requireOnlineProfile) {
     console.warn("Continuing online setup without the player profile.");
   }
@@ -9178,13 +9179,10 @@ async function setupOnlineWorld({ requireOnlineProfile = false } = {}) {
 
   const hasCurrentProfile = Boolean(profile);
   if (hasCurrentProfile) applyOnlineProfileSnapshot(profile, state.playerName);
-  if (api.loadPlayerGlobalStats) {
-    try {
-      const stats = await withTimeout(api.loadPlayerGlobalStats(), 3500, "Global stats lookup is taking too long.");
-      if (stats) applyGlobalStatsSnapshot(stats, { render: false });
-    } catch (error) {
-      console.warn("Could not load global kingdom stats before island setup", error);
-    }
+  if (statsResult.status === "fulfilled" && statsResult.value) {
+    applyGlobalStatsSnapshot(statsResult.value, { render: false });
+  } else if (statsResult.status === "rejected") {
+    console.warn("Could not load global kingdom stats before island setup", statsResult.reason);
   }
   if (hasCurrentProfile) await prepareOfflineProgressFromProfile(profile);
   let homeRegionId = await resolveHomeRegionIdForSetup(profile, { trustLocalState: hasCurrentProfile });
@@ -9211,7 +9209,8 @@ async function setupOnlineWorld({ requireOnlineProfile = false } = {}) {
   normalizeSingleMainCityAssignment(state.mainCityId);
   let needsMainCityClaim = !storedMainCityId;
 
-  if (api.repairMainCityAssignment && (mainCityId || hasCurrentProfile)) {
+  const needsMainCityRepair = Number(profile?.mainCityAssignmentVersion || 0) < MAIN_CITY_ASSIGNMENT_VERSION;
+  if (api.repairMainCityAssignment && needsMainCityRepair && (mainCityId || hasCurrentProfile)) {
     onlineStatusDetail.textContent = "Verifying your main city...";
     try {
       const repair = await withTimeout(
@@ -9220,6 +9219,7 @@ async function setupOnlineWorld({ requireOnlineProfile = false } = {}) {
         "Main city repair is taking too long."
       );
       applyServerEconomyResult(repair);
+      serverEconomyLastSyncAt = Date.now();
       const repairedMainCityId = getKnownCityId(repair?.currentUser?.mainCityId) || mainCityId;
       const repairedMainRegionId = normalizeRegionId(repair?.currentUser?.mainRegionId || homeRegionId);
       if (repairedMainCityId) {
@@ -9342,36 +9342,18 @@ async function connectOnlineIsland(regionId, { claimHome = false, homeRegionId =
   try {
     const seed = createOnlineIslandSeed(targetRegionId);
     onlineStatusDetail.textContent = `Preparing ${getRegionLabel(targetRegionId)} (${seed.cities.length} city slots)...`;
-    const islandSetupPromise = api.ensureMainIsland
+    const islandSetupPromise = api.ensureMainIsland && !verifiedOnlineIslandSeeds.has(targetRegionId)
       ? withTimeout(api.ensureMainIsland({
         islandId,
-        cities: seed.cities,
-        camps: seed.camps,
-        meta: {
-          worldId: ONLINE_WORLD_ID,
-          legacyWorldId: ONLINE_LEGACY_ISLAND_ID,
-          regionId: targetRegionId,
-          regionName: getRegionLabel(targetRegionId),
-          version: WORLD_SCHEMA_VERSION,
-          name: `${getRegionLabel(targetRegionId)} - ${WORLD_CONFIG.name || "Crownlands"}`,
-          cityCount: seed.cities.length,
-          regionCount: WORLD_REGIONS.length,
-          cityCountPerRegion: REGION_CITY_COUNT,
-          worldWidth: WORLD_WIDTH,
-          worldHeight: WORLD_HEIGHT,
-        },
+        regionId: targetRegionId,
       }), claimHome ? 20000 : 10000, `${getRegionLabel(targetRegionId)} setup is taking too long.`)
-      : Promise.resolve(false);
+        .then(result => {
+          verifiedOnlineIslandSeeds.add(targetRegionId);
+          return result;
+        })
+      : Promise.resolve(true);
 
-    if (claimHome) {
-      await islandSetupPromise;
-    } else {
-      islandSetupPromise.catch(error => {
-        onlineLastError = error?.message || String(error);
-        updateOnlineUi();
-        console.warn(`${getRegionLabel(targetRegionId)} background setup is still pending`, error);
-      });
-    }
+    await islandSetupPromise;
 
     if (claimHome) {
       onlineStatusDetail.textContent = "Claiming your starting city...";
@@ -9439,7 +9421,9 @@ async function connectOnlineIsland(regionId, { claimHome = false, homeRegionId =
       applyOnlineCities(onlineCities, targetRegionId);
       onlineCitiesLoaded = true;
       if (firstCitiesSnapshot && getActivePeaceShieldExpiresAtMs()) refreshOwnedCityItemEffectMetadata(true);
-      if (firstCitiesSnapshot && usesServerEconomyAuthority()) {
+      const economyIsStale = !serverEconomyLastSyncAt
+        || Date.now() - serverEconomyLastSyncAt >= SERVER_ECONOMY_SYNC_SECONDS * 1000;
+      if (firstCitiesSnapshot && usesServerEconomyAuthority() && economyIsStale) {
         serverEconomySyncTimer = 0;
         refreshServerEconomy(true, { showOfflineRewards: true });
       } else if (pendingOfflineProgressSeconds > 0) {
@@ -14056,7 +14040,12 @@ function renderCities(force = false) {
   }
   cityRenderSignature = signature;
 
-  cityLayer.innerHTML = "";
+  cityLayer.querySelectorAll(".scout-nearby-radius, .regroup-radius, .city-action-wheel, .gold-camp-action-wheel")
+    .forEach(node => node.remove());
+  const existingCampNodes = new Map([...cityLayer.querySelectorAll(".camp-node[data-render-camp-id]")]
+    .map(node => [node.dataset.renderCampId, node]));
+  const existingCityNodes = new Map([...cityLayer.querySelectorAll(".city-node[data-city-id]")]
+    .map(node => [node.dataset.cityId, node]));
   if (scoutNearbySource) renderScoutNearbyRadius(scoutNearbySource);
   if (regroupSource) renderRegroupRadius(regroupSource);
 
@@ -14064,9 +14053,13 @@ function renderCities(force = false) {
   visibleCamps.forEach(camp => {
     const mapPoint = worldToMapPoint(camp);
     const interactiveRewardCamp = Boolean(getRewardCampConfig(camp));
-    const campNode = document.createElement("button");
+    const existingCampNode = existingCampNodes.get(camp.id);
+    const campNode = existingCampNode || document.createElement("button");
+    existingCampNodes.delete(camp.id);
     campNode.type = "button";
+    campNode.dataset.renderCampId = camp.id;
     if (interactiveRewardCamp) campNode.dataset.campId = camp.id;
+    else delete campNode.dataset.campId;
     campNode.className = `camp-node camp-${camp.campType || "gold"} ${interactiveRewardCamp ? camp.owner || "neutral" : "decorative"}`;
     if (interactiveRewardCamp && camp.id === selectedTargetId) campNode.classList.add("selected");
     if (interactiveRewardCamp && sendMode && source) campNode.classList.add(camp.owner === "player" ? "supportable" : "attackable");
@@ -14076,24 +14069,34 @@ function renderCities(force = false) {
     if (interactiveRewardCamp) {
       campNode.title = `${camp.name}. ${getRewardCampStatusText(camp)}.`;
       campNode.setAttribute("aria-label", `${camp.name}. ${getRewardCampStatusText(camp)}. ${formatNumber(camp.baseReward)} ${getRewardCampConfig(camp)?.rewardLabel || "reward"} reward.`);
-      campNode.innerHTML = `
+      const campHtml = `
         <img class="camp-art" src="${escapeHtml(camp.artSrc)}" alt="" draggable="false" />
         <span class="gold-camp-label">
           <strong>${escapeHtml(camp.name)}</strong>
           <span class="gold-camp-state">${escapeHtml(getRewardCampStatusText(camp))}</span>
           <small>${formatNumber(camp.baseReward)} ${escapeHtml(getRewardCampConfig(camp)?.rewardLabel || "reward")}</small>
         </span>`;
+      if (campNode._renderContent !== campHtml) {
+        campNode.innerHTML = campHtml;
+        campNode._renderContent = campHtml;
+      }
     } else {
       campNode.tabIndex = -1;
       campNode.setAttribute("aria-hidden", "true");
-      campNode.innerHTML = `<img class="camp-art" src="${escapeHtml(camp.artSrc)}" alt="" draggable="false" />`;
+      const campHtml = `<img class="camp-art" src="${escapeHtml(camp.artSrc)}" alt="" draggable="false" />`;
+      if (campNode._renderContent !== campHtml) {
+        campNode.innerHTML = campHtml;
+        campNode._renderContent = campHtml;
+      }
     }
-    cityFragment.appendChild(campNode);
+    if (!existingCampNode) cityFragment.appendChild(campNode);
   });
   visibleCities.forEach(city => {
     const mapPoint = worldToMapPoint(city);
     const stronghold = isStronghold(city);
-    const btn = document.createElement("button");
+    const existingCityNode = existingCityNodes.get(city.id);
+    const btn = existingCityNode || document.createElement("button");
+    existingCityNodes.delete(city.id);
     btn.type = "button";
     btn.dataset.cityId = city.id;
     const castleStage = getCastleStage(city.level);
@@ -14113,6 +14116,7 @@ function renderCities(force = false) {
     btn.style.left = `${mapPoint.x}px`;
     btn.style.top = `${mapPoint.y}px`;
     if (stronghold) btn.style.setProperty("--stronghold-size", `${getStrongholdVisualSize(city)}px`);
+    else btn.style.removeProperty("--stronghold-size");
     const scoutReport = city.owner === "player" ? null : getScoutReport(city.id);
     const isSelectedForeign = city.owner !== "player" && city.id === selectedTargetId && !sendMode;
     const ownerName = getCityOwnerDisplayName(city);
@@ -14168,13 +14172,19 @@ function renderCities(force = false) {
       ${shielded ? `<span class="city-shield-field" aria-hidden="true"><img src="assets/royal-peace-shield-field.png?v=20260704-shield-badge" alt="" draggable="false" /></span>` : ""}
       <span class="city-castle stage-${castleStage}" aria-hidden="true"><img class="city-art" src="${getCastleAsset(castleStage)}" alt="" draggable="false" /></span>`;
     btn.setAttribute("aria-label", `${city.name}. ${ownerName}. ${locationType}. ${knownTroops === undefined ? "Unknown troops" : `${formatNumber(knownTroops)} troops`}.`);
-    btn.innerHTML = `
+    const cityHtml = `
       ${structureHtml}
       ${cityLabel}
     `;
-    applyCityOwnerFlags(btn, city);
-    cityFragment.appendChild(btn);
+    if (btn._renderContent !== cityHtml) {
+      btn.innerHTML = cityHtml;
+      btn._renderContent = cityHtml;
+      applyCityOwnerFlags(btn, city);
+    }
+    if (!existingCityNode) cityFragment.appendChild(btn);
   });
+  existingCampNodes.forEach(node => node.remove());
+  existingCityNodes.forEach(node => node.remove());
   cityLayer.appendChild(cityFragment);
 
   updateVisibleCityDynamicText();
@@ -14581,24 +14591,62 @@ function layoutCityLabels() {
       if (ownerPriority) return ownerPriority;
       return (Number.parseFloat(b.style.top) || 0) - (Number.parseFloat(a.style.top) || 0);
     });
-  const placed = [];
   const slots = ["top", "top-high", "top-higher", "top-highest", "top-tier-5", "top-tier-6"];
+  const slotBottom = { top: 58, "top-high": 74, "top-higher": 90, "top-highest": 106, "top-tier-5": 122, "top-tier-6": 138 };
   const slotPenalty = { top: 0, "top-high": 8, "top-higher": 18, "top-highest": 32, "top-tier-5": 50, "top-tier-6": 72 };
+  const spatialGrid = new Map();
+  const gridSize = 220;
+  const getGridKey = (x, y) => `${x}:${y}`;
+  const getNearbyRects = rect => {
+    const found = new Set();
+    const minX = Math.floor(rect.left / gridSize) - 1;
+    const maxX = Math.floor(rect.right / gridSize) + 1;
+    const minY = Math.floor(rect.top / gridSize) - 1;
+    const maxY = Math.floor(rect.bottom / gridSize) + 1;
+    for (let x = minX; x <= maxX; x += 1) {
+      for (let y = minY; y <= maxY; y += 1) {
+        (spatialGrid.get(getGridKey(x, y)) || []).forEach(other => found.add(other));
+      }
+    }
+    return found;
+  };
+  const storeRect = rect => {
+    const minX = Math.floor(rect.left / gridSize);
+    const maxX = Math.floor(rect.right / gridSize);
+    const minY = Math.floor(rect.top / gridSize);
+    const maxY = Math.floor(rect.bottom / gridSize);
+    for (let x = minX; x <= maxX; x += 1) {
+      for (let y = minY; y <= maxY; y += 1) {
+        const key = getGridKey(x, y);
+        const bucket = spatialGrid.get(key) || [];
+        bucket.push(rect);
+        spatialGrid.set(key, bucket);
+      }
+    }
+  };
 
   for (const node of nodes) {
     const label = node.querySelector(".city-label");
     if (!label) continue;
+    const cityX = Number.parseFloat(node.style.left) || 0;
     const cityY = Number.parseFloat(node.style.top) || 0;
+    const labelWidth = Math.max(1, label.offsetWidth || 150);
+    const labelHeight = Math.max(1, label.offsetHeight || 54);
     const availableSlots = cityY < 210 ? slots.slice(0, 2) : slots;
     let bestSlot = "top";
+    let bestRect = null;
     let bestPenalty = Infinity;
 
     for (const slot of availableSlots) {
-      for (const option of slots) label.classList.remove(`label-slot-${option}`);
-      label.classList.add(`label-slot-${slot}`);
-      const rect = label.getBoundingClientRect();
+      const bottom = slotBottom[slot];
+      const rect = {
+        left: cityX - labelWidth / 2,
+        right: cityX + labelWidth / 2,
+        top: cityY - bottom - labelHeight,
+        bottom: cityY - bottom,
+      };
       let penalty = slotPenalty[slot];
-      for (const other of placed) {
+      for (const other of getNearbyRects(rect)) {
         const overlapX = Math.max(0, Math.min(rect.right, other.right) - Math.max(rect.left, other.left));
         const overlapY = Math.max(0, Math.min(rect.bottom, other.bottom) - Math.max(rect.top, other.top));
         penalty += overlapX * overlapY;
@@ -14606,13 +14654,14 @@ function layoutCityLabels() {
       if (penalty < bestPenalty) {
         bestPenalty = penalty;
         bestSlot = slot;
+        bestRect = rect;
       }
       if (penalty === 0) break;
     }
 
     for (const option of slots) label.classList.remove(`label-slot-${option}`);
     label.classList.add(`label-slot-${bestSlot}`);
-    placed.push(label.getBoundingClientRect());
+    if (bestRect) storeRect(bestRect);
   }
 }
 

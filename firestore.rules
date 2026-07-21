@@ -32,9 +32,10 @@ service cloud.firestore {
           'character',
           'upgrades',
           'mainCityId',
-          'mainIslandId',
-          'mainRegionId',
-          'mainCityChangedAtMs'
+           'mainIslandId',
+           'mainRegionId',
+           'mainCityChangedAtMs',
+           'mainCityAssignmentVersion'
         ]);
     }
 
@@ -64,37 +65,8 @@ service cloud.firestore {
         && profileFieldUnchanged('mainCityId')
         && profileFieldUnchanged('mainIslandId')
         && profileFieldUnchanged('mainRegionId')
-        && profileFieldUnchanged('mainCityChangedAtMs');
-    }
-
-    function cityFieldUnchanged(field) {
-      return request.resource.data.get(field, resource.data.get(field, null)) == resource.data.get(field, null);
-    }
-
-    function cityEconomyUnchanged() {
-      return cityFieldUnchanged('troops')
-        && cityFieldUnchanged('troopFloat')
-        && cityFieldUnchanged('level')
-        && cityFieldUnchanged('investedGold')
-        && cityFieldUnchanged('productionUpdatedAtMs')
-        && cityFieldUnchanged('ownerShieldExpiresAtMs');
-    }
-
-    function cityOwnerCoreUnchanged() {
-      return cityFieldUnchanged('ownerUid')
-        && cityFieldUnchanged('ownerKind')
-        && cityFieldUnchanged('owner')
-        && cityFieldUnchanged('isMainCity')
-        && cityFieldUnchanged('relinquishedAtMs')
-        && cityFieldUnchanged('relocatedAtMs')
-        && cityFieldUnchanged('claimedAt')
-        && cityFieldUnchanged('lastCapturedAt');
-    }
-
-    function cityOwnerDisplayUnchanged() {
-      return cityFieldUnchanged('ownerName')
-        && cityFieldUnchanged('ownerFlag')
-        && cityFieldUnchanged('ownerKingPower');
+        && profileFieldUnchanged('mainCityChangedAtMs')
+        && profileFieldUnchanged('mainCityAssignmentVersion');
     }
 
     function ownsCityOwnerIdentity() {
@@ -102,15 +74,14 @@ service cloud.firestore {
         && request.resource.data.get('ownerUid', null) == request.auth.uid;
     }
 
-    function cityOwnershipSafeForBrowser() {
-      return cityOwnerCoreUnchanged()
-        && (cityOwnerDisplayUnchanged() || ownsCityOwnerIdentity());
-    }
-
-    function validCityLayoutCreate() {
-      return request.resource.data.get('ownerUid', null) == null
-        && request.resource.data.get('ownerKind', 'neutral') != 'player'
-        && request.resource.data.get('isMainCity', false) != true;
+    function cityIdentityOnlyUpdate() {
+      return ownsCityOwnerIdentity()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'ownerName',
+          'ownerFlag',
+          'updatedAt',
+          'updatedBy'
+        ]);
     }
 
     match /players/{uid} {
@@ -154,19 +125,22 @@ service cloud.firestore {
       allow create, update, delete: if false;
     }
 
-    // Multiplayer collections. Layout/profile metadata can still be updated by
-    // the browser, but economy, army orders, arrivals, combat, and reports are
-    // server-owned.
+    match /armies/{armyId} {
+      allow read: if signedIn()
+        && (resource.data.ownerUid == request.auth.uid
+          || resource.data.targetOwnerUid == request.auth.uid);
+      allow create, update, delete: if false;
+    }
+
+    // Multiplayer layout, economy, armies, combat, and reports are server-owned.
     match /islands/{islandId} {
       allow read: if signedIn();
-      allow create: if signedIn();
-      allow update: if signedIn();
-      allow delete: if false;
+      allow create, update, delete: if false;
 
       match /cities/{cityId} {
         allow read: if signedIn();
-        allow create: if signedIn() && validCityLayoutCreate();
-        allow update: if signedIn() && cityEconomyUnchanged() && cityOwnershipSafeForBrowser();
+        allow create: if false;
+        allow update: if signedIn() && cityIdentityOnlyUpdate();
         allow delete: if false;
       }
 

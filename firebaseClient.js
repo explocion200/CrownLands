@@ -840,7 +840,6 @@
       .filter(Boolean))];
     const ownerName = String(identity.ownerName || identity.playerName || client.user?.displayName || "Ruler").slice(0, 32);
     const ownerFlag = identity.ownerFlag || identity.flag || null;
-    const ownerKingPower = Math.max(0, Math.floor(Number(identity.ownerKingPower ?? identity.kingPower) || 0));
     let batch = writeBatch(client.db);
     let pendingWrites = 0;
     let updatedCount = 0;
@@ -862,7 +861,6 @@
           ownerUid: uid,
           ownerName,
           ownerFlag,
-          ownerKingPower,
           updatedAt: serverTimestamp(),
         }, { merge: true });
         pendingWrites += 1;
@@ -1107,8 +1105,8 @@
 
   function subscribePlayerArmies(handlers = {}) {
     if (!client.configured || !client.db || !client.user?.uid) return () => {};
-    const { collectionGroup, onSnapshot, query: firestoreQuery, where } = client.modules.firestore;
-    if (!collectionGroup || !onSnapshot || !firestoreQuery || !where) return () => {};
+    const { collection, onSnapshot, query: firestoreQuery, where } = client.modules.firestore;
+    if (!collection || !onSnapshot || !firestoreQuery || !where) return () => {};
 
     const uid = client.user.uid;
     const rowsBySource = new Map([
@@ -1123,7 +1121,7 @@
     };
     const subscribe = (source, ownerField) => onSnapshot(
       firestoreQuery(
-        collectionGroup(client.db, "armies"),
+        collection(client.db, "armies"),
         where(ownerField, "==", uid),
         where("status", "==", "active")
       ),
@@ -1132,7 +1130,7 @@
           doc.id,
           {
             id: doc.id,
-            islandId: doc.ref.parent?.parent?.id || "",
+            islandId: doc.data()?.sourceRegionId || "",
             ...doc.data(),
           },
         ])));
