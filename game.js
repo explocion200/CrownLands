@@ -18410,7 +18410,9 @@ function trySelectTrackedCampTap(event, { requireSameTarget = false } = {}) {
 
 function endPan(event) {
   finishTrackedMapPointer(event, { renderPanelAfter: false });
-  if (event.type !== "pointerup" || !trySelectTrackedCityTap(event)) renderPanel();
+  const selectedMapTarget = event.type === "pointerup"
+    && (trySelectTrackedCityTap(event) || trySelectTrackedCampTap(event));
+  if (!selectedMapTarget) renderPanel();
 }
 
 function preventNativeMapTouch(event) {
