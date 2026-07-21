@@ -245,6 +245,14 @@
     return callServerFunction("resolveArmyOrder", payload);
   }
 
+  async function resolveGoldCampPayout(payload = {}) {
+    return callServerFunction("resolveGoldCampPayout", payload);
+  }
+
+  async function resolveRewardCampPayout(payload = {}) {
+    return callServerFunction("resolveRewardCampPayout", payload);
+  }
+
   async function collectEconomy(payload = {}) {
     return callServerFunction("collectEconomy", payload);
   }
@@ -1166,6 +1174,14 @@
       ));
     }
 
+    if (typeof handlers.onCamps === "function") {
+      unsubscribers.push(onSnapshot(
+        collection(client.db, "islands", islandId, "camps"),
+        snapshot => handlers.onCamps(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))),
+        onError("camps")
+      ));
+    }
+
     if (typeof handlers.onArmies === "function") {
       const armiesRef = collection(client.db, "islands", islandId, "armies");
       const activeArmiesRef = firestoreQuery && where
@@ -1216,6 +1232,8 @@
     subscribePlayerGlobalStats,
     sendArmyOrder,
     resolveArmyOrder,
+    resolveGoldCampPayout,
+    resolveRewardCampPayout,
     enablePushNotifications,
     registerPushNotifications,
     disablePushNotifications,

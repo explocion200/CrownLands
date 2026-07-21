@@ -458,6 +458,109 @@ label > span,
   box-shadow: 0 8px 16px rgba(0, 0, 0, 0.36);
 }
 
+.map-marker.city {
+  isolation: isolate;
+  touch-action: none;
+}
+
+.city-marker-index {
+  position: relative;
+  z-index: 3;
+  pointer-events: none;
+}
+
+.city-ui-clearance {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: var(--city-ui-clearance-size, 110px);
+  height: var(--city-ui-clearance-size, 110px);
+  transform: translate(-50%, -50%);
+  border: 1px dashed rgba(108, 211, 255, 0.72);
+  border-radius: 50%;
+  background: rgba(45, 170, 226, 0.055);
+  box-shadow: inset 0 0 18px rgba(66, 191, 245, 0.07);
+  pointer-events: none;
+  z-index: -1;
+}
+
+.city-ui-clearance > span {
+  display: none;
+  position: absolute;
+  left: 50%;
+  top: 4px;
+  transform: translateX(-50%);
+  padding: 2px 5px;
+  border-radius: 3px;
+  color: #dff7ff;
+  background: rgba(5, 29, 43, 0.9);
+  font-size: 8px;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.city-ui-preview {
+  position: absolute;
+  left: 50%;
+  top: calc(50% - var(--city-ui-label-offset, 21px));
+  width: var(--city-ui-label-width, 95px);
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  transform: translate(-50%, -100%);
+  color: #fff4ce;
+  font-size: var(--city-ui-label-font-size, 7px);
+  line-height: 1;
+  text-shadow: -1px -1px 0 #07111a, 1px -1px 0 #07111a, -1px 1px 0 #07111a, 1px 1px 0 #07111a;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.city-ui-preview strong {
+  width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.city-ui-preview small {
+  padding: 2px 5px;
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  border-radius: 3px;
+  color: #fff;
+  background: rgba(74, 86, 96, 0.88);
+  font-size: inherit;
+  white-space: nowrap;
+}
+
+.map-marker.city.selected .city-ui-clearance {
+  border-width: 2px;
+  border-color: rgba(255, 209, 92, 0.98);
+  background: rgba(255, 198, 69, 0.08);
+  box-shadow: inset 0 0 24px rgba(255, 199, 63, 0.11), 0 0 12px rgba(255, 204, 83, 0.28);
+}
+
+.map-marker.city.selected .city-ui-clearance > span {
+  display: block;
+}
+
+.map-marker.city.ui-overlap .city-ui-clearance {
+  border-color: rgba(255, 91, 91, 0.95);
+  background: rgba(223, 48, 58, 0.11);
+}
+
+.map-marker.city.ui-overlap.selected .city-ui-clearance {
+  border-color: #ff6969;
+  background: rgba(223, 48, 58, 0.12);
+  box-shadow: inset 0 0 24px rgba(225, 49, 58, 0.17), 0 0 0 2px rgba(255, 219, 111, 0.82);
+}
+
+.map-marker.city.ui-overlap-peer {
+  border-color: #ff7777;
+  background: #a93342;
+  box-shadow: 0 0 0 3px rgba(255, 77, 89, 0.24), 0 8px 16px rgba(0, 0, 0, 0.36);
+}
+
 .map-marker.stronghold {
   width: var(--marker-size, 154px);
   height: calc(var(--marker-size, 154px) * .896);

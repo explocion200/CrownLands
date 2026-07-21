@@ -497,7 +497,7 @@ function getCampDefaults(type) {
       size: 132,
     },
     troops: {
-      name: "Troop Camp",
+      name: "Warband Camp",
       artSrc: "assets/camps/troops.png",
       size: 132,
     },

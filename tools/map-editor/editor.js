@@ -12,6 +12,10 @@
   const MAP_ASPECT_TOLERANCE = 0.02;
   const DEFAULT_MAP_WIDTH = 2048;
   const DEFAULT_MAP_HEIGHT = 1536;
+  const CITY_UI_CLEARANCE_RADIUS = 110;
+  const CITY_UI_CLEARANCE_DIAMETER = CITY_UI_CLEARANCE_RADIUS * 2;
+  const CITY_UI_LABEL_WIDTH = 190;
+  const CITY_UI_LABEL_OFFSET = 42;
   const MAP_SWITCH_ARROW_ICON_SRC = "/assets/map-switch-arrow.png?v=20260702-map-arrow-bigger";
   const REGION_TYPES = ["starter", "midgame", "endgame", "activity", "crownlands_main"];
   const EDGE_TYPES = ["road", "valley", "pass", "river_crossing", "open_field", "forest_break", "bridge"];
@@ -87,7 +91,7 @@
       size: 132,
     },
     troops: {
-      name: "Troop Camp",
+      name: "Warband Camp",
       artSrc: "assets/camps/troops.png",
       size: 132,
     },
@@ -978,9 +982,25 @@
 
   function renderRegionMarkers(region) {
     elements.markerLayer.innerHTML = "";
+    const cityUiGuide = getSelectedCityUiGuide(region);
     region.cities.forEach((city, index) => {
       const marker = createMarker("city", city, index, region);
-      marker.textContent = String((index + 1) % 10);
+      const isSelectedGuide = index === cityUiGuide.selectedIndex;
+      const isOverlapPeer = cityUiGuide.overlapIndexes.has(index);
+      marker.classList.toggle("ui-overlap", isSelectedGuide && cityUiGuide.overlapIndexes.size > 0);
+      marker.classList.toggle("ui-overlap-peer", isOverlapPeer);
+      marker.innerHTML = `${isSelectedGuide ? `
+        <span class="city-ui-clearance" aria-hidden="true"><span>Name + level UI</span></span>
+        <span class="city-ui-preview" aria-hidden="true">
+          <strong>${escapeHtml(city.name)}</strong>
+          <small>Lv ${escapeHtml(city.level)}</small>
+        </span>` : ""}
+        <span class="city-marker-index" aria-hidden="true">${escapeHtml((index + 1) % 10)}</span>`;
+      if (isSelectedGuide && cityUiGuide.overlapIndexes.size > 0) {
+        marker.title = `${city.name} - name/level UI overlaps ${cityUiGuide.overlapIndexes.size} nearby ${cityUiGuide.overlapIndexes.size === 1 ? "city" : "cities"}`;
+      } else if (isOverlapPeer) {
+        marker.title = `${city.name} - name/level UI overlaps the selected city`;
+      }
       elements.markerLayer.appendChild(marker);
     });
     region.strongholds.forEach((stronghold, index) => {
@@ -998,6 +1018,24 @@
     });
   }
 
+  function getSelectedCityUiGuide(region) {
+    const cities = Array.isArray(region?.cities) ? region.cities : [];
+    const selectedIndex = state.selected.kind === "city" && state.selected.regionId === region.id
+      ? state.selected.index
+      : -1;
+    const overlapIndexes = new Set();
+    const selectedCity = cities[selectedIndex];
+    if (!selectedCity) return { selectedIndex: -1, overlapIndexes };
+
+    for (let index = 0; index < cities.length; index += 1) {
+      if (index === selectedIndex) continue;
+      const dx = (selectedCity.xNorm - cities[index].xNorm) * region.width;
+      const dy = (selectedCity.yNorm - cities[index].yNorm) * region.height;
+      if (Math.hypot(dx, dy) < CITY_UI_CLEARANCE_DIAMETER) overlapIndexes.add(index);
+    }
+    return { selectedIndex, overlapIndexes };
+  }
+
   function createMarker(kind, item, index, region) {
     const marker = document.createElement("button");
     marker.type = "button";
@@ -1009,16 +1047,22 @@
     marker.addEventListener("pointerdown", event => {
       event.preventDefault();
       event.stopPropagation();
+      state.draggingMarker = { kind, regionId: region.id, index, pointerId: event.pointerId };
       if (kind === "city") selectCity(region.id, index);
       else if (kind === "camp") selectCamp(region.id, index);
       else selectStronghold(region.id, index);
-      state.draggingMarker = { kind, regionId: region.id, index, pointerId: event.pointerId };
-      marker.setPointerCapture?.(event.pointerId);
     });
     return marker;
   }
 
   function applyMarkerVisualSize(marker, kind, item) {
+    if (kind === "city") {
+      marker.style.setProperty("--city-ui-clearance-size", `${CITY_UI_CLEARANCE_DIAMETER * state.zoom}px`);
+      marker.style.setProperty("--city-ui-label-width", `${CITY_UI_LABEL_WIDTH * state.zoom}px`);
+      marker.style.setProperty("--city-ui-label-offset", `${CITY_UI_LABEL_OFFSET * state.zoom}px`);
+      marker.style.setProperty("--city-ui-label-font-size", `${Math.max(7, 12 * state.zoom)}px`);
+      return;
+    }
     if (kind !== "stronghold" && kind !== "camp") return;
     const defaultSize = kind === "camp"
       ? (CAMP_DEFAULTS[item.campType]?.size || CAMP_DEFAULTS.gold.size)
@@ -1710,7 +1754,13 @@
         const a = region.cities[i];
         const b = region.cities[j];
         const distance = Math.hypot(a.xNorm - b.xNorm, a.yNorm - b.yNorm);
-        if (distance < minSpacing) {
+        const pixelDistance = Math.hypot(
+          (a.xNorm - b.xNorm) * region.width,
+          (a.yNorm - b.yNorm) * region.height
+        );
+        if (pixelDistance < CITY_UI_CLEARANCE_DIAMETER) {
+          results.push({ level: "warning", text: `${a.name} and ${b.name} have overlapping name/level UI in ${region.name}.` });
+        } else if (distance < minSpacing) {
           results.push({ level: "warning", text: `${a.name} and ${b.name} are closer than minimum spacing in ${region.name}.` });
         }
       }

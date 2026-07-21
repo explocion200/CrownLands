@@ -1094,9 +1094,13 @@ input {
   width: var(--camp-size, 132px);
   height: var(--camp-size, 132px);
   transform: translate(-50%, -58%);
-  display: grid;
-  place-items: center;
-  pointer-events: none;
+  display: block;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #fff;
+  pointer-events: auto;
+  cursor: pointer;
   user-select: none;
   z-index: 4;
   filter: drop-shadow(0 10px 8px rgba(0, 0, 0, .42));
@@ -1109,6 +1113,8 @@ input {
 .army-layer,
 .city-node,
 .city-action-wheel,
+.camp-node,
+.gold-camp-action-wheel,
 .teleport-node,
 .harvest-bonus-node {
   touch-action: none;
@@ -1131,6 +1137,142 @@ input {
   object-fit: contain;
   pointer-events: none;
   user-select: none;
+}
+.camp-node.selected,
+.camp-node.attackable,
+.camp-node.supportable {
+  z-index: 27;
+}
+.camp-node.decorative {
+  pointer-events: none;
+  cursor: default;
+}
+.camp-node.selected .camp-art {
+  filter: drop-shadow(0 0 7px rgba(255, 235, 149, .98)) drop-shadow(0 0 16px rgba(74, 181, 255, .86));
+}
+.camp-node.attackable .camp-art {
+  filter: drop-shadow(0 0 8px rgba(255, 83, 83, .95));
+}
+.camp-node.supportable .camp-art {
+  filter: drop-shadow(0 0 8px rgba(83, 226, 137, .95));
+}
+.gold-camp-label {
+  position: absolute;
+  left: 50%;
+  top: calc(100% - 5px);
+  width: max-content;
+  max-width: 176px;
+  transform: translateX(-50%);
+  display: grid;
+  justify-items: center;
+  gap: 1px;
+  padding: 4px 8px 5px;
+  border: 1px solid rgba(255, 221, 125, .78);
+  border-radius: 5px;
+  background: rgba(4, 18, 31, .9);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, .55);
+  font-family: Georgia, serif;
+  line-height: 1.05;
+  white-space: nowrap;
+  pointer-events: none;
+}
+.gold-camp-label strong {
+  color: #ffe29a;
+  font-size: .72rem;
+}
+.gold-camp-state {
+  color: #fff;
+  font-size: .64rem;
+  font-weight: 800;
+}
+.gold-camp-label small {
+  color: #f3c95f;
+  font-size: .58rem;
+  font-weight: 800;
+}
+.gold-camp-action-wheel {
+  position: absolute;
+  z-index: 30;
+  width: var(--camp-wheel-size, 132px);
+  height: var(--camp-wheel-size, 132px);
+  transform: translate(-50%, -58%);
+  pointer-events: none;
+}
+.gold-camp-wheel-action {
+  position: absolute;
+  top: 50%;
+  width: 62px;
+  min-height: 60px;
+  transform: translateY(-50%);
+  display: grid;
+  place-items: center;
+  gap: 2px;
+  padding: 6px 5px;
+  border: 2px solid rgba(255, 226, 139, .92);
+  border-radius: 50%;
+  color: #fff8d4;
+  background: #205d91;
+  box-shadow: 0 5px 8px rgba(0, 0, 0, .55);
+  pointer-events: auto;
+}
+.gold-camp-wheel-action > span {
+  font-size: 1.35rem;
+  line-height: 1;
+}
+.gold-camp-wheel-action strong {
+  font-size: .6rem;
+}
+.gold-camp-wheel-action:disabled {
+  filter: grayscale(.75);
+  opacity: .72;
+}
+.camp-order-action {
+  right: calc(100% + 10px);
+  background: #b77c22;
+}
+.camp-info-action {
+  left: calc(100% + 10px);
+}
+.gold-camp-info-panel {
+  display: grid;
+  gap: 12px;
+}
+.gold-camp-info-panel > img {
+  width: min(210px, 55vw);
+  height: 170px;
+  margin: 0 auto;
+  object-fit: contain;
+  filter: drop-shadow(0 8px 7px rgba(0, 0, 0, .5));
+}
+.gold-camp-info-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+.gold-camp-info-grid > div {
+  min-width: 0;
+  padding: 8px 10px;
+  border: 1px solid rgba(164, 213, 244, .2);
+  border-radius: 6px;
+  background: rgba(17, 55, 82, .78);
+}
+.gold-camp-info-grid span,
+.gold-camp-info-grid strong {
+  display: block;
+}
+.gold-camp-info-grid span {
+  color: #a8c7dc;
+  font-size: .68rem;
+}
+.gold-camp-info-grid strong {
+  margin-top: 2px;
+  color: #fff3c2;
+  overflow-wrap: anywhere;
+}
+.gold-camp-info-panel p {
+  margin: 0;
+  color: #d9e5ee;
+  line-height: 1.35;
 }
 .map-frame.zooming .camp-node,
 .map-frame.low-zoom .camp-node {
@@ -1467,9 +1609,11 @@ input {
   animation: none;
 }
 .map-frame.camera-moving .city-action-wheel,
+.map-frame.camera-moving .gold-camp-action-wheel,
 .map-frame.camera-moving .scout-nearby-radius,
 .map-frame.camera-moving .regroup-radius,
 .map-frame.zooming .city-action-wheel,
+.map-frame.zooming .gold-camp-action-wheel,
 .map-frame.zooming .scout-nearby-radius,
 .map-frame.zooming .regroup-radius {
   opacity: 0;

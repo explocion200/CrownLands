@@ -230,6 +230,40 @@ const DEFAULT_STRONGHOLD_VISUAL_SIZE = 154;
 const MIN_STRONGHOLD_VISUAL_SIZE = 1;
 const DEFAULT_CAMP_VISUAL_SIZE = 132;
 const MIN_CAMP_VISUAL_SIZE = 1;
+const GOLD_CAMP_BASE_REWARD = 100000;
+const GOLD_CAMP_BASE_DEFENDERS = 10000;
+const GOLD_CAMP_DEFENSE_LEVEL = 30;
+const GOLD_CAMP_HOLD_SECONDS = 10 * 60;
+const WARBAND_CAMP_BASE_REWARD = 50000;
+const WARBAND_CAMP_BASE_DEFENDERS = 10000;
+const WARBAND_CAMP_DEFENSE_LEVEL = 30;
+const WARBAND_CAMP_HOLD_SECONDS = 15 * 60;
+const REWARD_CAMP_CONFIG = {
+  gold: {
+    type: "gold",
+    kind: "goldCamp",
+    name: "Gold Camp",
+    rewardType: "gold",
+    rewardLabel: "gold",
+    baseReward: GOLD_CAMP_BASE_REWARD,
+    baseDefenders: GOLD_CAMP_BASE_DEFENDERS,
+    defenseLevel: GOLD_CAMP_DEFENSE_LEVEL,
+    holdSeconds: GOLD_CAMP_HOLD_SECONDS,
+    dailyRewards: [100000, 100000, 75000, 50000, 25000],
+  },
+  troops: {
+    type: "troops",
+    kind: "warbandCamp",
+    name: "Warband Camp",
+    rewardType: "troops",
+    rewardLabel: "troops",
+    baseReward: WARBAND_CAMP_BASE_REWARD,
+    baseDefenders: WARBAND_CAMP_BASE_DEFENDERS,
+    defenseLevel: WARBAND_CAMP_DEFENSE_LEVEL,
+    holdSeconds: WARBAND_CAMP_HOLD_SECONDS,
+    dailyRewards: [50000, 50000, 37500, 25000, 12500],
+  },
+};
 const GOLD_STRONGHOLD_ID = "west_gold_stronghold";
 const GOLD_STRONGHOLD_NAME = "Aurum Keep";
 const GOLD_STRONGHOLD_ART_SRC = "assets/gold-stronghold.png?v=20260704-gold-stronghold-updated";
@@ -504,10 +538,11 @@ const IMAGE_NO_CITY_TERRAIN = normalizeImageTerrainShapes({
     { x: 625, y: 1018, rx: 82, ry: 74, rot: 0 },
   ],
 });
-const MAX_CITY_LEVEL = 100;
 const SERVER_CITY_UPGRADE_LEVEL_CHUNK = 25;
 const MILLION_LORDS_CITY_COST_BASE = 50;
 const MILLION_LORDS_CITY_COST_GROWTH = 1.2;
+const CITY_PRESTIGE_START_LEVEL = 100;
+const CITY_PRESTIGE_BAND_SIZE = 10;
 const MILLION_LORDS_CITY_PRODUCTION_VP_BASE = 20;
 const MILLION_LORDS_CITY_PRODUCTION_VP_GROWTH = 1.115;
 const MILLION_LORDS_PASSIVE_GOLD_PER_CITY_VP = 15;
@@ -2227,6 +2262,8 @@ let onlineCitySyncInFlight = false;
 let onlineCitySyncQueued = false;
 let onlineArmies = [];
 let onlineArmiesByIsland = new Map();
+let onlineCampStates = new Map();
+let resolvingRewardCampPayoutIds = new Set();
 let onlineArmyUnsubscribes = [];
 let onlineServerReportsUnsubscribe = null;
 let onlineGlobalStatsUnsubscribe = null;
@@ -3167,7 +3204,7 @@ function getEditorCampDefinitions(regionId) {
 function getCampConfigForType(type) {
   const campType = String(type || "gold").trim().toLowerCase();
   if (campType === "troops" || campType === "troop") {
-    return { type: "troops", name: "Troop Camp", artSrc: "assets/camps/troops.png" };
+    return { type: "troops", name: "Warband Camp", artSrc: "assets/camps/troops.png" };
   }
   if (campType === "items" || campType === "item") {
     return { type: "items", name: "Item Camp", artSrc: "assets/camps/items.png" };
@@ -3176,6 +3213,15 @@ function getCampConfigForType(type) {
     return { type: "deed", name: "City Deed Camp", artSrc: "assets/camps/deed.png" };
   }
   return { type: "gold", name: "Gold Camp", artSrc: "assets/camps/gold.png" };
+}
+
+function getRewardCampConfig(campOrType = {}) {
+  const rawType = typeof campOrType === "string"
+    ? campOrType
+    : campOrType?.campType
+      || (campOrType?.kind === "warbandCamp" ? "troops" : "")
+      || (campOrType?.kind === "goldCamp" || campOrType?.targetType === "camp" ? "gold" : "");
+  return REWARD_CAMP_CONFIG[String(rawType || "").trim().toLowerCase()] || null;
 }
 
 function getStrongholdConfigForType(type) {
@@ -4488,10 +4534,27 @@ function createOnlineIslandSeed(regionId = DEFAULT_ONLINE_REGION_ID) {
   const baseCities = getOnlineIslandBaseCities(regionId);
   const startIds = pickDeterministicStartCities(baseCities);
   const cities = baseCities.map(createNeutralCityFromBase);
+  const targetRegionId = normalizeRegionId(regionId);
+  const camps = WORLD_CAMPS
+    .filter(camp => normalizeRegionId(camp.regionId) === targetRegionId && getRewardCampConfig(camp))
+    .map(camp => {
+      const config = getRewardCampConfig(camp);
+      return {
+        ...camp,
+        name: config.name,
+        mapId: targetRegionId,
+        rewardType: config.rewardType,
+        holdDurationMs: config.holdSeconds * 1000,
+        baseReward: config.baseReward,
+        baseDefenders: config.baseDefenders,
+        defenseLevel: config.defenseLevel,
+      };
+    });
 
   return {
-    regionId: normalizeRegionId(regionId),
+    regionId: targetRegionId,
     cities,
+    camps,
     startIds,
     claimCandidateIds: getOnlineClaimCandidateIds(cities, startIds),
   };
@@ -4522,6 +4585,7 @@ async function ensureOnlineIslandSeeded(regionId, timeoutMs = 20000) {
   await withTimeout(api.ensureMainIsland({
     islandId: getOnlineIslandId(targetRegionId),
     cities: seed.cities,
+    camps: seed.camps,
     meta: getOnlineIslandSeedMeta(targetRegionId, seed),
   }), timeoutMs, `${getRegionLabel(targetRegionId)} setup is taking too long.`);
   return seed;
@@ -5548,7 +5612,7 @@ function getBattleXpTroopCredit(target, troops) {
 
 function getPvpOpponentPowerXpMultiplier(target, oldOwner = target?.owner, attackerOwner = "player") {
   if (!target || attackerOwner !== "player") return null;
-  if (isStronghold(target)) return null;
+  if (isStronghold(target) || isRewardCampTarget(target)) return null;
   const targetOwnedByPlayer = oldOwner === "enemy"
     || oldOwner === "player"
     || target.ownerKind === "player"
@@ -5918,18 +5982,24 @@ function getControlledStrongholdUpgradeCostReductionPercent(owner = "player") {
 }
 
 function clampCityLevel(level) {
-  return clamp(Math.floor(Number(level) || 1), 1, MAX_CITY_LEVEL);
+  const normalized = Math.floor(Number(level));
+  if (!Number.isFinite(normalized)) return 1;
+  return clamp(normalized, 1, Number.MAX_SAFE_INTEGER);
 }
 
 function getMillionLordsCityProductionVp(level) {
   const normalizedLevel = clampCityLevel(level);
   const rawValue = MILLION_LORDS_CITY_PRODUCTION_VP_BASE
     * Math.pow(MILLION_LORDS_CITY_PRODUCTION_VP_GROWTH, normalizedLevel - 1);
-  return Math.max(0, Math.floor(rawValue + 0.000001));
+  if (!Number.isFinite(rawValue)) return Number.MAX_SAFE_INTEGER;
+  return Math.min(Number.MAX_SAFE_INTEGER, Math.max(0, Math.floor(rawValue + 0.000001)));
 }
 
 function getMillionLordsPassiveGoldPerHour(level) {
-  return Math.floor(getMillionLordsCityProductionVp(level) * MILLION_LORDS_PASSIVE_GOLD_PER_CITY_VP);
+  return Math.min(
+    Number.MAX_SAFE_INTEGER,
+    Math.floor(getMillionLordsCityProductionVp(level) * MILLION_LORDS_PASSIVE_GOLD_PER_CITY_VP)
+  );
 }
 
 function dropCapturedCityLevel(city) {
@@ -6323,6 +6393,8 @@ function launchScoutMission(source, target, route) {
     path: route.points,
     pathSegments: getRouteSegments(route, getCityRegionId(source)),
     pathLength: route.length,
+    sourceRegionId: getCityRegionId(source),
+    targetRegionId: getCityRegionId(target),
     targetOwnerAtLaunch: target.owner,
   };
   prepareOnlineArmyMission(mission);
@@ -6684,6 +6756,7 @@ function pendingNeutralCaptureCount(owner = "player", excludeAttackId = null) {
   return state.attacks.filter(attack => {
     if (attack.id === excludeAttackId) return false;
     if (attack.owner !== owner || attack.kind !== "attack") return false;
+    if (attack.targetType === "camp" || isRewardCampTarget(getArmyTargetById(attack.toId))) return false;
     const target = cityById(attack.toId);
     if (isStronghold(target)) return false;
     return attack.targetOwnerAtLaunch === "neutral" || (!attack.targetOwnerAtLaunch && target?.owner === "neutral");
@@ -7077,6 +7150,18 @@ function applyServerArmyResult(result = null) {
   if (result.globalStats) changed = applyGlobalStatsSnapshot(result.globalStats, { render: false }) || changed;
   if (Array.isArray(result.reports)) changed = mergeServerReports(result.reports) || changed;
   if (Array.isArray(result.cityUpdates)) changed = applyServerCityUpdates(result.cityUpdates) || changed;
+  if (result.campUpdate?.id) {
+    const normalized = normalizeOnlineCampState({ ...(onlineCampStates.get(result.campUpdate.id) || {}), ...result.campUpdate });
+    if (normalized) {
+      onlineCampStates.set(normalized.id, normalized);
+      cityRenderSignature = "";
+      changed = true;
+      if (result.targetType === "camp" && result.kind === "attack" && result.outcome === "victory" && normalized.holderUid === getCurrentOnlineUid()) {
+        const config = getRewardCampConfig(normalized);
+        showToast(`${config?.name || normalized.name} captured. Hold for ${Math.floor((config?.holdSeconds || 0) / 60)} minutes to claim ${formatNumber(config?.baseReward || 0)} ${config?.rewardLabel || "reward"}.`);
+      }
+    }
+  }
   if (result.currentUser) changed = applyServerProfilePatch(result.currentUser) || changed;
   return changed;
 }
@@ -8803,6 +8888,8 @@ function disconnectOnlineWorld() {
   clearOnlineGlobalStatsWatcher();
   appliedServerReportIds = new Set();
   onlinePresence = [];
+  onlineCampStates = new Map();
+  resolvingRewardCampPayoutIds = new Set();
   onlineGlobalStats = null;
   onlineIslandSummaries = new Map();
   onlineIslandSummaryRefreshInFlight = false;
@@ -9247,6 +9334,7 @@ async function connectOnlineIsland(regionId, { claimHome = false, homeRegionId =
       ? withTimeout(api.ensureMainIsland({
         islandId,
         cities: seed.cities,
+        camps: seed.camps,
         meta: {
           worldId: ONLINE_WORLD_ID,
           legacyWorldId: ONLINE_LEGACY_ISLAND_ID,
@@ -9369,6 +9457,9 @@ async function connectOnlineIsland(regionId, { claimHome = false, homeRegionId =
     onlineIslandUnsubscribe = await subscribeOnlineIslandWithInitialCities(api, islandId, {
       onCities: onlineCities => {
         applyOnlineCityPayload(onlineCities);
+      },
+      onCamps: camps => {
+        applyOnlineCamps(camps, targetRegionId);
       },
       onArmies: armies => {
         applyOnlineArmies(armies, islandId);
@@ -9495,6 +9586,126 @@ function applyOnlineCities(onlineCities, regionId = getActiveOnlineRegionId()) {
     })));
   normalizeSingleMainCityAssignment(state.mainCityId);
   ensureLoadedMainCityForRegion(activeRegionId);
+}
+
+function normalizeOnlineCampState(raw = {}) {
+  const id = String(raw.id || raw.campId || "").trim();
+  if (!id) return null;
+  const campType = String(raw.campType || "gold").toLowerCase();
+  const config = getRewardCampConfig(campType);
+  if (!config) return null;
+  return {
+    ...raw,
+    id,
+    campId: id,
+    regionId: normalizeRegionId(raw.regionId || raw.mapId),
+    kind: config.kind,
+    campType: config.type,
+    rewardType: config.rewardType,
+    holdDurationMs: config.holdSeconds * 1000,
+    holderUid: String(raw.holderUid || "").trim(),
+    holderName: String(raw.holderName || "").slice(0, 40),
+    holderFlag: raw.holderFlag || null,
+    heldSinceMs: normalizeTimestampMs(raw.heldSinceMs),
+    payoutAtMs: normalizeTimestampMs(raw.payoutAtMs),
+    payoutPending: Boolean(raw.payoutPending),
+    currentGarrison: Math.max(0, Math.floor(Number(raw.currentGarrison) || 0)),
+    baseDefenders: Math.max(1, Math.floor(Number(raw.baseDefenders) || config.baseDefenders)),
+    baseReward: Math.max(0, Math.floor(Number(raw.baseReward) || config.baseReward)),
+    defenseLevel: Math.max(1, Math.floor(Number(raw.defenseLevel) || config.defenseLevel)),
+    activeArmyIds: Array.isArray(raw.activeArmyIds) ? raw.activeArmyIds.map(String) : [],
+    state: ["neutral", "held", "contested"].includes(raw.state) ? raw.state : raw.holderUid ? "held" : "neutral",
+  };
+}
+
+function applyOnlineCamps(rawCamps, regionId = getActiveOnlineRegionId()) {
+  const activeRegionId = normalizeRegionId(regionId);
+  onlineCampStates = new Map((Array.isArray(rawCamps) ? rawCamps : [])
+    .map(normalizeOnlineCampState)
+    .filter(camp => camp && camp.regionId === activeRegionId)
+    .map(camp => [camp.id, camp]));
+  cityRenderSignature = "";
+  renderCities(true);
+}
+
+function getCampTargetById(campId) {
+  const id = String(campId || "");
+  const base = WORLD_CAMPS.find(camp => camp.id === id);
+  const config = getRewardCampConfig(base);
+  if (!base || !config) return null;
+  const online = onlineCampStates.get(id) || {};
+  const holderUid = String(online.holderUid || "").trim();
+  const currentUid = getCurrentOnlineUid();
+  const owner = holderUid ? (holderUid === currentUid ? "player" : "enemy") : "neutral";
+  const onlineGarrison = Number(online.currentGarrison);
+  const currentGarrison = Number.isFinite(onlineGarrison)
+    ? Math.max(0, Math.floor(onlineGarrison))
+    : Math.max(1, Math.floor(Number(online.baseDefenders) || config.baseDefenders));
+  return {
+    ...base,
+    ...online,
+    id,
+    campId: id,
+    name: config.name,
+    kind: config.kind,
+    targetType: "camp",
+    campType: config.type,
+    rewardType: config.rewardType,
+    holdDurationMs: config.holdSeconds * 1000,
+    owner,
+    ownerKind: holderUid ? "player" : "neutral",
+    ownerUid: holderUid || null,
+    ownerName: online.holderName || (holderUid ? "Rival ruler" : "Neutral defenders"),
+    ownerFlag: online.holderFlag || null,
+    level: Math.max(1, Math.floor(Number(online.defenseLevel) || config.defenseLevel)),
+    defenseLevel: Math.max(1, Math.floor(Number(online.defenseLevel) || config.defenseLevel)),
+    troops: currentGarrison,
+    troopFloat: currentGarrison,
+    currentGarrison,
+    baseDefenders: Math.max(1, Math.floor(Number(online.baseDefenders) || config.baseDefenders)),
+    baseReward: Math.max(0, Math.floor(Number(online.baseReward) || config.baseReward)),
+    payoutAtMs: normalizeTimestampMs(online.payoutAtMs),
+    heldSinceMs: normalizeTimestampMs(online.heldSinceMs),
+    payoutPending: Boolean(online.payoutPending),
+    state: online.state || (holderUid ? "held" : "neutral"),
+    isMainCity: false,
+    ownerShieldExpiresAtMs: 0,
+  };
+}
+
+function getArmyTargetById(targetId) {
+  return cityById(targetId) || getCampTargetById(targetId);
+}
+
+function isRewardCampTarget(target) {
+  return Boolean(target && getRewardCampConfig(target));
+}
+
+async function requestDueRewardCampPayout(camp) {
+  if (!camp?.id || camp.owner !== "player" || !camp.payoutPending || camp.payoutAtMs > Date.now()) return false;
+  if (resolvingRewardCampPayoutIds.has(camp.id)) return false;
+  const api = getOnlineApi();
+  const resolvePayout = api?.resolveRewardCampPayout || api?.resolveGoldCampPayout;
+  if (!resolvePayout) return false;
+  resolvingRewardCampPayoutIds.add(camp.id);
+  try {
+    const result = await resolvePayout({ campId: camp.id, regionId: camp.regionId });
+    if (result?.currentUser) applyServerProfilePatch(result.currentUser);
+    if (Array.isArray(result?.cityUpdates)) applyServerCityUpdates(result.cityUpdates);
+    if (result?.globalStats) applyGlobalStatsSnapshot(result.globalStats);
+    if (result?.status === "paid") {
+      const config = getRewardCampConfig(result.campType || camp);
+      showToast(result.reward > 0
+        ? `${config?.name || camp.name} reward: +${formatNumber(result.reward)} ${result.rewardType || config?.rewardLabel || "reward"}`
+        : `${config?.name || camp.name} daily reward limit reached.`);
+    }
+    return result?.status === "paid";
+  } catch (error) {
+    console.warn("Could not resolve reward camp payout", error);
+    return false;
+  } finally {
+    resolvingRewardCampPayoutIds.delete(camp.id);
+  }
 }
 
 function ensureLoadedMainCityForRegion(regionId) {
@@ -9815,9 +10026,9 @@ function getMissionRouteSegments(mission) {
   const segments = normalizeArmyPathSegments(mission?.pathSegments);
   if (segments.length) return segments;
   const from = cityById(mission?.fromId);
-  const to = cityById(mission?.toId);
+  const to = getArmyTargetById(mission?.toId);
   const fromRegionId = from ? getCityRegionId(from) : (getKnownCityId(mission?.fromId) ? getCityRegionId(mission.fromId) : "");
-  const toRegionId = to ? getCityRegionId(to) : (getKnownCityId(mission?.toId) ? getCityRegionId(mission.toId) : "");
+  const toRegionId = to ? getCityRegionId(to) : mission?.targetRegionId ? normalizeRegionId(mission.targetRegionId) : "";
   const points = normalizeArmyPath(mission?.path);
   if (points.length >= 2 && fromRegionId === toRegionId) {
     return [{ regionId: fromRegionId, points, length: Math.max(0, Number(mission?.pathLength) || routeLength(points)) }];
@@ -9828,7 +10039,8 @@ function getMissionRouteSegments(mission) {
 function getMissionRegionIds(mission) {
   const ids = getMissionRouteSegments(mission).map(segment => segment.regionId);
   const fromRegionId = getKnownCityId(mission?.fromId) ? getCityRegionId(mission.fromId) : "";
-  const toRegionId = getKnownCityId(mission?.toId) ? getCityRegionId(mission.toId) : "";
+  const target = getArmyTargetById(mission?.toId);
+  const toRegionId = target ? getCityRegionId(target) : mission?.targetRegionId ? normalizeRegionId(mission.targetRegionId) : "";
   if (fromRegionId) ids.push(fromRegionId);
   if (toRegionId) ids.push(toRegionId);
   return [...new Set(ids.map(normalizeRegionId).filter(Boolean))];
@@ -9861,7 +10073,7 @@ function toOnlineArmyMovement(mission) {
   const onlineId = mission?.onlineId || "";
   if (!mission || !onlineId) return null;
   const from = cityById(mission.fromId);
-  const to = cityById(mission.toId);
+  const to = getArmyTargetById(mission.toId);
   const pathSegments = getMissionRouteSegments(mission);
   return {
     id: onlineId,
@@ -9871,6 +10083,7 @@ function toOnlineArmyMovement(mission) {
     ownerFlag: mission.ownerFlag || state.flag,
     ownerKingPower: normalizePowerValue(mission.ownerKingPower) || getKingPower(),
     kind: mission.kind || "attack",
+    targetType: mission.targetType === "camp" || isRewardCampTarget(to) ? "camp" : "city",
     fromId: mission.fromId,
     toId: mission.toId,
     fromName: from?.name || "",
@@ -9940,6 +10153,7 @@ function applyServerMovementToMission(mission, movement = null) {
   mission.attackerKingPower = normalizePowerValue(movement.attackerKingPower || mission.attackerKingPower);
   mission.defenderKingPower = normalizePowerValue(movement.defenderKingPower || mission.defenderKingPower);
   if (movement.demoAttack !== undefined) mission.demoAttack = normalizeDemoAttackSnapshot(movement.demoAttack);
+  mission.targetType = movement.targetType === "camp" ? "camp" : mission.targetType || "city";
   mission.onlineRegionIds = Array.isArray(movement.routeRegionIds) ? movement.routeRegionIds.map(normalizeRegionId).filter(Boolean) : mission.onlineRegionIds;
 }
 
@@ -9965,7 +10179,8 @@ function publishOnlineArmyMovement(mission, options = {}) {
   const regionIds = movement.routeRegionIds?.length ? movement.routeRegionIds : getMissionRegionIds(mission);
   mission.onlineRegionIds = regionIds;
   const sourceRegionId = getCityRegionId(mission.fromId);
-  const targetRegionId = getCityRegionId(mission.toId);
+  const target = getArmyTargetById(mission.toId);
+  const targetRegionId = normalizeRegionId(mission.targetRegionId || target?.regionId || getCityRegionId(mission.toId));
 
   const savePromise = api.sendArmyOrder({
     worldId: ONLINE_WORLD_ID,
@@ -9974,6 +10189,7 @@ function publishOnlineArmyMovement(mission, options = {}) {
       ...movement,
       sourceRegionId,
       targetRegionId,
+      targetType: movement.targetType,
     },
     sourceRegionId,
     targetRegionId,
@@ -10077,8 +10293,13 @@ function normalizeOnlineArmyMovement(raw) {
     ownerFlag: ownerIdentity?.flag || raw.ownerFlag || null,
     ownerKingPower: normalizePowerValue(ownerIdentity?.kingPower) || normalizePowerValue(raw.ownerKingPower),
     kind: ["attack", "transfer", "scout"].includes(raw.kind) ? raw.kind : "attack",
+    targetType: raw.targetType === "camp" ? "camp" : "city",
     fromId: raw.fromId || "",
     toId: raw.toId || "",
+    fromName: raw.fromName || "",
+    toName: raw.toName || "",
+    sourceRegionId: normalizeRegionId(raw.sourceRegionId),
+    targetRegionId: normalizeRegionId(raw.targetRegionId),
     troops: Math.max(0, Math.floor(Number(raw.troops) || 0)),
     total,
     remaining: Math.max(0, (arrivesAtMs - Date.now()) / 1000),
@@ -10086,6 +10307,7 @@ function normalizeOnlineArmyMovement(raw) {
     pathSegments,
     pathLength: Math.max(0, Number(raw.pathLength) || pathSegments.reduce((total, segment) => total + segment.length, 0) || routeLength(path)),
     targetOwnerAtLaunch: raw.targetOwnerAtLaunch || "neutral",
+    targetOwnerUid: String(raw.targetOwnerUid || ""),
     requestedTroops: Math.max(0, Math.floor(Number(raw.requestedTroops) || 0)),
     attackerKingPower: normalizePowerValue(raw.attackerKingPower || raw.ownerKingPower),
     defenderKingPower: normalizePowerValue(raw.defenderKingPower),
@@ -10219,6 +10441,7 @@ function createLocalAttackFromOnlineArmy(army, remaining = getOnlineArmyRemainin
     ownerFlag: army.ownerFlag || state.flag,
     ownerKingPower: normalizePowerValue(army.ownerKingPower),
     kind: army.kind,
+    targetType: army.targetType === "camp" ? "camp" : "city",
     fromId: army.fromId,
     toId: army.toId,
     troops: army.troops,
@@ -10234,6 +10457,8 @@ function createLocalAttackFromOnlineArmy(army, remaining = getOnlineArmyRemainin
     demoAttack: normalizeDemoAttackSnapshot(army.demoAttack),
     launchedAtMs: army.launchedAtMs,
     arrivesAtMs: army.arrivesAtMs,
+    sourceRegionId: army.sourceRegionId,
+    targetRegionId: army.targetRegionId,
     onlineRegionIds: army.onlineRegionIds?.length ? army.onlineRegionIds : getMissionRegionIds(army),
   };
 }
@@ -10424,7 +10649,10 @@ function getIncomingAttacks() {
   return getRenderableArmies()
     .map(attack => {
       if (!attack || !["attack", "scout"].includes(attack.kind) || attack.owner === "player") return null;
-      const target = cityById(attack.toId);
+      const baseTarget = getArmyTargetById(attack.toId);
+      const target = attack.targetType === "camp" && baseTarget && attack.targetOwnerUid === getCurrentOnlineUid()
+        ? { ...baseTarget, owner: "player", ownerKind: "player", ownerUid: attack.targetOwnerUid }
+        : baseTarget;
       if (!target || target.owner !== "player") return null;
       const remaining = Math.max(0, Number(attack.remaining) || 0);
       if (remaining <= 0) return null;
@@ -10461,7 +10689,7 @@ function getOutgoingAttacks() {
       return {
         ...attack,
         key,
-        target: cityById(attack.toId),
+        target: getArmyTargetById(attack.toId),
         source: cityById(attack.fromId),
         remaining,
         isResolving,
@@ -12386,7 +12614,7 @@ function getMainCityScoutBlockReason(target, scoutOwner = "player", scoutOwnerUi
 
 function launchAttack(sourceId, targetId, percent, owner, exactTroops = null, options = {}) {
   const source = cityById(sourceId);
-  const target = cityById(targetId);
+  const target = getArmyTargetById(targetId);
   if (!source || !target || isGamePausedByOutcome()) return false;
   if (source.owner !== owner) return false;
   if (source.id === target.id) return false;
@@ -12394,19 +12622,20 @@ function launchAttack(sourceId, targetId, percent, owner, exactTroops = null, op
   if (owner === "player" && !canUseOnlineArmyOrders()) return false;
 
   const kind = target.owner === owner ? "transfer" : "attack";
-  const mainCityBlockReason = kind === "attack" ? getMainCityAttackBlockReason(target, owner) : "";
+  const campTarget = isRewardCampTarget(target);
+  const mainCityBlockReason = kind === "attack" && !campTarget ? getMainCityAttackBlockReason(target, owner) : "";
   if (mainCityBlockReason) {
     if (owner === "player") showToast(mainCityBlockReason);
     return false;
   }
 
-  const shieldBlockReason = kind === "attack" ? getPeaceShieldAttackBlockReason(target, owner) : "";
+  const shieldBlockReason = kind === "attack" && !campTarget ? getPeaceShieldAttackBlockReason(target, owner) : "";
   if (shieldBlockReason) {
     if (owner === "player") showToast(shieldBlockReason);
     return false;
   }
 
-  const neutralBlockReason = getNeutralCaptureBlockReason(target, owner);
+  const neutralBlockReason = campTarget ? "" : getNeutralCaptureBlockReason(target, owner);
   if (neutralBlockReason) {
     if (owner === "player") showNeutralCaptureLimitModal(neutralBlockReason);
     return false;
@@ -12430,6 +12659,7 @@ function launchAttack(sourceId, targetId, percent, owner, exactTroops = null, op
     id: attackIdCounter++,
     owner,
     kind,
+    targetType: campTarget ? "camp" : "city",
     fromId: source.id,
     toId: target.id,
     troops: send,
@@ -13489,7 +13719,7 @@ function getMissionSegmentsForRegion(mission, regionId = getActiveMapRegionId())
   const segments = getMissionRouteSegments(mission).filter(segment => segment.regionId === activeRegionId);
   if (segments.length) return segments;
   const from = cityById(mission?.fromId);
-  const to = cityById(mission?.toId);
+  const to = getArmyTargetById(mission?.toId);
   if (!from || !to || getCityRegionId(from) !== activeRegionId || getCityRegionId(to) !== activeRegionId) return [];
   const path = normalizeArmyPath(mission?.path);
   if (path.length >= 2) return [{ regionId: activeRegionId, points: path, length: Math.max(0, Number(mission?.pathLength) || routeLength(path)) }];
@@ -13594,7 +13824,22 @@ function isCampInActiveMap(camp) {
 }
 
 function shouldRenderCampNode(camp, bounds) {
-  return camp && isCampInActiveMap(camp) && isPointInBounds(camp.x, camp.y, bounds);
+  return camp && isCampInActiveMap(camp) && (camp.id === selectedTargetId || isPointInBounds(camp.x, camp.y, bounds));
+}
+
+function getRewardCampCountdownSeconds(camp) {
+  if (!camp?.payoutPending || !camp.payoutAtMs) return 0;
+  return Math.max(0, Math.ceil((camp.payoutAtMs - Date.now()) / 1000));
+}
+
+function getRewardCampStatusText(camp) {
+  if (!camp) return "Unavailable";
+  if (!camp.ownerUid) return `Neutral - ${formatNumber(camp.currentGarrison)} defenders`;
+  const holder = camp.owner === "player" ? "You" : camp.ownerName || "Rival ruler";
+  const countdown = getRewardCampCountdownSeconds(camp);
+  if (camp.payoutPending && countdown <= 0) return `${holder} - payout ready`;
+  const stateLabel = camp.state === "contested" ? "Contested" : "Held";
+  return `${stateLabel} by ${holder} - ${formatDuration(countdown)}`;
 }
 
 function getFlagSignature(flag) {
@@ -13637,6 +13882,11 @@ function getCityRenderSignature(visibleCities, visibleCamps = []) {
     camp.y,
     camp.artSrc,
     camp.size,
+    camp.ownerUid || "",
+    camp.ownerName || "",
+    camp.currentGarrison || 0,
+    camp.payoutAtMs || 0,
+    camp.state || "neutral",
   ].join(":")).join("|");
 
   return [
@@ -13656,6 +13906,15 @@ function getCityRenderSignature(visibleCities, visibleCamps = []) {
 function updateVisibleCityDynamicText() {
   if (!state || !cityLayer) return;
   if (isCameraInteractionActive()) return;
+  cityLayer.querySelectorAll(".camp-node[data-camp-id]").forEach(node => {
+    const camp = getCampTargetById(node.dataset.campId);
+    if (!camp) return;
+    const statusText = getRewardCampStatusText(camp);
+    const stateEl = node.querySelector(".gold-camp-state");
+    if (stateEl && stateEl.textContent !== statusText) stateEl.textContent = statusText;
+    node.setAttribute("aria-label", `${camp.name}. ${statusText}. ${formatNumber(camp.baseReward)} ${getRewardCampConfig(camp)?.rewardLabel || "reward"} reward.`);
+    if (camp.owner === "player" && camp.payoutPending && camp.payoutAtMs <= Date.now()) void requestDueRewardCampPayout(camp);
+  });
   cityLayer.querySelectorAll(".city-node").forEach(node => {
     const city = cityById(node.dataset.cityId);
     if (!city) return;
@@ -13690,7 +13949,9 @@ function renderCities(force = false) {
   }
   const visibleBounds = getVisibleWorldBounds();
   const visibleCities = state.cities.filter(city => shouldRenderCityNode(city, visibleBounds));
-  const visibleCamps = WORLD_CAMPS.filter(camp => shouldRenderCampNode(camp, visibleBounds));
+  const visibleCamps = WORLD_CAMPS
+    .map(camp => getCampTargetById(camp.id) || camp)
+    .filter(camp => shouldRenderCampNode(camp, visibleBounds));
   updateMapDensityMode(visibleCities.length + visibleCamps.length);
   const signature = getCityRenderSignature(visibleCities, visibleCamps);
   if (!force && signature === cityRenderSignature) {
@@ -13706,14 +13967,31 @@ function renderCities(force = false) {
   const cityFragment = document.createDocumentFragment();
   visibleCamps.forEach(camp => {
     const mapPoint = worldToMapPoint(camp);
-    const campNode = document.createElement("div");
-    campNode.className = `camp-node camp-${camp.campType || "gold"}`;
+    const interactiveRewardCamp = Boolean(getRewardCampConfig(camp));
+    const campNode = document.createElement("button");
+    campNode.type = "button";
+    if (interactiveRewardCamp) campNode.dataset.campId = camp.id;
+    campNode.className = `camp-node camp-${camp.campType || "gold"} ${interactiveRewardCamp ? camp.owner || "neutral" : "decorative"}`;
+    if (interactiveRewardCamp && camp.id === selectedTargetId) campNode.classList.add("selected");
+    if (interactiveRewardCamp && sendMode && source) campNode.classList.add(camp.owner === "player" ? "supportable" : "attackable");
     campNode.style.left = `${mapPoint.x}px`;
     campNode.style.top = `${mapPoint.y}px`;
     campNode.style.setProperty("--camp-size", `${camp.size}px`);
-    campNode.title = camp.name;
-    campNode.setAttribute("aria-hidden", "true");
-    campNode.innerHTML = `<img class="camp-art" src="${escapeHtml(camp.artSrc)}" alt="" draggable="false" />`;
+    if (interactiveRewardCamp) {
+      campNode.title = `${camp.name}. ${getRewardCampStatusText(camp)}.`;
+      campNode.setAttribute("aria-label", `${camp.name}. ${getRewardCampStatusText(camp)}. ${formatNumber(camp.baseReward)} ${getRewardCampConfig(camp)?.rewardLabel || "reward"} reward.`);
+      campNode.innerHTML = `
+        <img class="camp-art" src="${escapeHtml(camp.artSrc)}" alt="" draggable="false" />
+        <span class="gold-camp-label">
+          <strong>${escapeHtml(camp.name)}</strong>
+          <span class="gold-camp-state">${escapeHtml(getRewardCampStatusText(camp))}</span>
+          <small>${formatNumber(camp.baseReward)} ${escapeHtml(getRewardCampConfig(camp)?.rewardLabel || "reward")}</small>
+        </span>`;
+    } else {
+      campNode.tabIndex = -1;
+      campNode.setAttribute("aria-hidden", "true");
+      campNode.innerHTML = `<img class="camp-art" src="${escapeHtml(camp.artSrc)}" alt="" draggable="false" />`;
+    }
     cityFragment.appendChild(campNode);
   });
   visibleCities.forEach(city => {
@@ -13752,7 +14030,7 @@ function renderCities(force = false) {
           <span class="player-city-banner">
             <span class="city-owner-column">
               ${ownerFlag}
-              <span class="city-label-level">${city.level}</span>
+              <span class="city-label-level">${formatNumber(city.level)}</span>
             </span>
             <span class="player-city-data">
               <strong class="city-ruler-name">${escapeHtml(state.playerName)}</strong>
@@ -13766,7 +14044,7 @@ function renderCities(force = false) {
         <span class="city-label foreign-city-label selected-foreign-label">
           <strong class="foreign-ruler-name">${escapeHtml(ownerName)}</strong>
           <span class="foreign-selected-banner">
-            <span class="foreign-selected-level">${city.level}</span>
+            <span class="foreign-selected-level">${formatNumber(city.level)}</span>
             <span class="foreign-selected-crest">${ownerFlag}</span>
             <span class="foreign-selected-data">
               <strong class="city-name">${escapeHtml(city.name)}</strong>
@@ -13780,7 +14058,7 @@ function renderCities(force = false) {
           <strong class="city-name">${escapeHtml(city.name)}</strong>
           <span class="foreign-city-shield">
             ${ownerFlag}
-            <span class="city-label-level">${city.level}</span>
+            <span class="city-label-level">${formatNumber(city.level)}</span>
           </span>
         </span>`;
     const knownTroops = city.owner === "player" ? city.troops : scoutReport?.troops;
@@ -13806,7 +14084,9 @@ function renderCities(force = false) {
   updateVisibleCityDynamicText();
   layoutCityLabels();
   const selectedForeign = selectedTargetId ? cityById(selectedTargetId) : null;
-  if (selectedForeign && selectedForeign.owner !== "player" && !sendMode) renderSelectedForeignWheel(selectedForeign);
+  const selectedCamp = selectedTargetId ? getCampTargetById(selectedTargetId) : null;
+  if (selectedCamp && !sendMode) renderSelectedRewardCampWheel(selectedCamp);
+  else if (selectedForeign && selectedForeign.owner !== "player" && !sendMode) renderSelectedForeignWheel(selectedForeign);
   else if (source?.owner === "player" && !sendMode) renderSelectedCityWheel(source);
 }
 
@@ -13842,13 +14122,13 @@ function renderSelectedCityWheel(city) {
   const wheel = document.createElement("div");
   const levelCost = getLevelCost(city);
   const incomingUpgradeLocked = cityHasIncomingUpgradeBlocker(city);
-  const levelDisabled = incomingUpgradeLocked || isStronghold(city) || city.level >= MAX_CITY_LEVEL || state.gold < levelCost;
+  const levelDisabled = incomingUpgradeLocked || isStronghold(city) || !Number.isFinite(levelCost) || state.gold < levelCost;
   const levelButtonLabel = incomingUpgradeLocked
     ? `${city.name} cannot be leveled while an attack is incoming`
     : `Level up ${city.name}`;
   const levelCostLabel = incomingUpgradeLocked
     ? "Incoming"
-    : isStronghold(city) ? "Fixed" : city.level >= MAX_CITY_LEVEL ? "MAX" : `${formatNumber(levelCost)}g`;
+    : isStronghold(city) ? "Fixed" : Number.isFinite(levelCost) ? `${formatNumber(levelCost)}g` : "Unavailable";
   const scoutNearbyActive = scoutNearbySourceId === city.id;
   const regroupActive = regroupSourceId === city.id;
   wheel.className = "city-action-wheel";
@@ -13955,6 +14235,109 @@ function renderSelectedForeignWheel(city) {
     showScoutReportModal(city.id);
   });
   cityLayer.appendChild(wheel);
+}
+
+function renderSelectedRewardCampWheel(camp) {
+  const mapPoint = worldToMapPoint(camp);
+  const wheel = document.createElement("div");
+  const isHeldByPlayer = camp.owner === "player";
+  const canSend = playerCities().some(city => Math.floor(Number(city.troops) || 0) > 0);
+  wheel.className = "gold-camp-action-wheel";
+  wheel.style.left = `${mapPoint.x}px`;
+  wheel.style.top = `${mapPoint.y}px`;
+  wheel.style.setProperty("--camp-wheel-size", `${Math.max(112, Number(camp.size) || 132)}px`);
+  wheel.innerHTML = `
+    <button class="gold-camp-wheel-action camp-order-action" type="button" ${canSend ? "" : "disabled"}>
+      <span aria-hidden="true">${isHeldByPlayer ? "&#8649;" : "&#9876;"}</span>
+      <strong>${isHeldByPlayer ? "Reinforce" : "Attack"}</strong>
+    </button>
+    <button class="gold-camp-wheel-action camp-info-action" type="button">
+      <span aria-hidden="true">i</span>
+      <strong>Info</strong>
+    </button>`;
+  wheel.querySelector(".camp-order-action")?.addEventListener("click", event => {
+    event.stopPropagation();
+    beginRewardCampOrder(camp.id);
+  });
+  wheel.querySelector(".camp-info-action")?.addEventListener("click", event => {
+    event.stopPropagation();
+    showRewardCampInfoModal(camp.id);
+  });
+  cityLayer.appendChild(wheel);
+}
+
+function beginRewardCampOrder(campId) {
+  const camp = getCampTargetById(campId);
+  if (!camp) return;
+  const sourceOption = findPreferredAttackSource(camp);
+  if (!sourceOption) {
+    showToast(`No owned city with troops can reach this ${camp.name}.`);
+    return;
+  }
+  selectedSourceId = sourceOption.city.id;
+  rememberOwnedAttackSource(sourceOption.city);
+  selectedTargetId = camp.id;
+  scoutNearbySourceId = null;
+  regroupSourceId = null;
+  sendMode = true;
+  selectedTroopAmount = clamp(Math.floor(sourceOption.city.troops / 2), 1, sourceOption.city.troops);
+  renderSelectionChangeNow();
+  showTroopSliderModal(sourceOption.city, camp);
+}
+
+function selectRewardCamp(campId) {
+  if (!state || isGamePausedByOutcome()) return;
+  const camp = getCampTargetById(campId);
+  if (!camp) return;
+  const source = selectedSourceId ? cityById(selectedSourceId) : null;
+  if (sendMode && source?.owner === "player") {
+    selectedTargetId = camp.id;
+    renderSelectionChangeNow();
+    showTroopSliderModal(source, camp);
+    return;
+  }
+  selectedTargetId = camp.id;
+  selectedSourceId = null;
+  scoutNearbySourceId = null;
+  regroupSourceId = null;
+  sendMode = false;
+  renderSelectionChangeNow();
+  requestAnimationFrame(() => centerOnCity(camp.id));
+}
+
+function showRewardCampInfoModal(campId) {
+  const camp = getCampTargetById(campId);
+  if (!camp) {
+    showToast("Reward camp state is unavailable.");
+    return;
+  }
+  const config = getRewardCampConfig(camp);
+  if (!config) return;
+  const countdown = getRewardCampCountdownSeconds(camp);
+  const holder = camp.ownerUid ? (camp.owner === "player" ? `${state.playerName} (You)` : camp.ownerName || "Rival ruler") : "Neutral";
+  const stateLabel = camp.payoutPending && countdown <= 0
+    ? "Payout ready"
+    : camp.state === "contested"
+      ? "Contested"
+      : camp.ownerUid
+        ? "Held"
+        : "Neutral";
+  modalTitle.textContent = camp.name;
+  modalBody.innerHTML = `
+    <div class="gold-camp-info-panel">
+      <img src="${escapeHtml(camp.artSrc)}" alt="" draggable="false" />
+      <div class="gold-camp-info-grid">
+        <div><span>State</span><strong>${escapeHtml(stateLabel)}</strong></div>
+        <div><span>Holder</span><strong>${escapeHtml(holder)}</strong></div>
+        <div><span>Garrison</span><strong>${formatNumber(camp.currentGarrison)}</strong></div>
+        <div><span>Defense</span><strong>Level ${formatNumber(camp.defenseLevel)}</strong></div>
+        <div><span>Base reward</span><strong>${formatNumber(camp.baseReward)} ${escapeHtml(config.rewardLabel)}</strong></div>
+        <div><span>Hold timer</span><strong>${camp.payoutPending ? countdown > 0 ? formatDuration(countdown) : "Payout ready" : "Not active"}</strong></div>
+      </div>
+      <p>Capture and hold this objective for ${Math.floor(config.holdSeconds / 60)} minutes. It does not count as a city, cannot be shielded or scouted, and stronger-kingdom attack limits do not apply.${config.rewardType === "troops" ? " The reward and stationed defenders return to your main city after payout." : ""}</p>
+      <p>Daily rewards: ${config.dailyRewards.map(formatNumber).join(", ")}, then 0 until the next UTC day.</p>
+    </div>`;
+  if (!modal.open) modal.showModal();
 }
 
 function showScoutReportModal(cityId) {
@@ -14205,7 +14588,7 @@ function renderArmies(force = false) {
   const visibleArmyTokenIds = new Set();
   for (const attack of getRenderableArmies()) {
     const from = cityById(attack.fromId);
-    const to = cityById(attack.toId);
+    const to = getArmyTargetById(attack.toId);
     if (!from || !to) continue;
     const progress = clamp(1 - attack.remaining / attack.total, 0, 1);
     const segmentPoint = getMissionPointAtProgress(attack, progress);
@@ -14490,14 +14873,15 @@ async function showTroopSliderModalAsync(source, target) {
   }
 
   const isTransfer = target.owner === "player";
-  const mainCityBlockReason = isTransfer ? "" : getMainCityAttackBlockReason(target, "player");
+  const campTarget = isRewardCampTarget(target);
+  const mainCityBlockReason = isTransfer || campTarget ? "" : getMainCityAttackBlockReason(target, "player");
   if (mainCityBlockReason) {
     showToast(mainCityBlockReason);
     cancelSendMode();
     if (modal.open) modal.close();
     return;
   }
-  const shieldBlockReason = isTransfer ? "" : getPeaceShieldAttackBlockReason(target, "player");
+  const shieldBlockReason = isTransfer || campTarget ? "" : getPeaceShieldAttackBlockReason(target, "player");
   if (shieldBlockReason) {
     showToast(shieldBlockReason);
     cancelSendMode();
@@ -14515,7 +14899,7 @@ async function showTroopSliderModalAsync(source, target) {
   if (requestId !== activeTroopRouteRequestId) return;
 
   const freshSource = cityById(source.id);
-  const freshTarget = cityById(target.id);
+  const freshTarget = getArmyTargetById(target.id);
   if (!freshSource || !freshTarget || freshSource.owner !== "player" || freshSource.id === freshTarget.id) {
     showToast("Order canceled. The map changed.");
     cancelSendMode();
@@ -14559,7 +14943,7 @@ function showTroopRouteLoadingModal(source, target, isTransfer) {
         <div class="troop-route-city destination">
           <span>To</span>
           <strong>${escapeHtml(target.name)}</strong>
-          <small>${isTransfer ? "Your city" : `${OWNER[target.owner].label} city`}</small>
+          <small>${isRewardCampTarget(target) ? (isTransfer ? `Your ${escapeHtml(target.name)}` : `${OWNER[target.owner].label} ${escapeHtml(target.name)}`) : isTransfer ? "Your city" : `${OWNER[target.owner].label} city`}</small>
         </div>
       </div>
 
@@ -14587,14 +14971,15 @@ function showTroopSliderModalWithRoute(source, target, route) {
     route: cloneRoute(route),
   };
   const isTransfer = target.owner === "player";
-  const mainCityBlockReason = isTransfer ? "" : getMainCityAttackBlockReason(target, "player");
+  const campTarget = isRewardCampTarget(target);
+  const mainCityBlockReason = isTransfer || campTarget ? "" : getMainCityAttackBlockReason(target, "player");
   if (mainCityBlockReason) {
     showToast(mainCityBlockReason);
     cancelSendMode();
     if (modal.open) modal.close();
     return;
   }
-  const shieldBlockReason = isTransfer ? "" : getPeaceShieldAttackBlockReason(target, "player");
+  const shieldBlockReason = isTransfer || campTarget ? "" : getPeaceShieldAttackBlockReason(target, "player");
   if (shieldBlockReason) {
     showToast(shieldBlockReason);
     cancelSendMode();
@@ -14603,7 +14988,7 @@ function showTroopSliderModalWithRoute(source, target, route) {
   }
   const commandLabel = isTransfer ? "Transfer" : "Attack";
   const commandIcon = isTransfer ? "&#128095;" : "&#9876;";
-  const shieldDropWarning = isTransfer ? "" : getPeaceShieldAttackWarning(target);
+  const shieldDropWarning = isTransfer || campTarget ? "" : getPeaceShieldAttackWarning(target);
   selectedTroopAmount = clamp(selectedTroopAmount, 1, source.troops);
   troopSliderActive = true;
   modal.classList.add("troop-slider-modal");
@@ -14620,7 +15005,7 @@ function showTroopSliderModalWithRoute(source, target, route) {
         <div class="troop-route-city destination">
           <span>To</span>
           <strong>${escapeHtml(target.name)}</strong>
-          <small>${isTransfer ? "Your city" : `${OWNER[target.owner].label} city`}</small>
+          <small>${campTarget ? (isTransfer ? `Your ${escapeHtml(target.name)}` : `${OWNER[target.owner].label} ${escapeHtml(target.name)}`) : isTransfer ? "Your city" : `${OWNER[target.owner].label} city`}</small>
         </div>
       </div>
 
@@ -14678,6 +15063,16 @@ function updateTroopSliderModal(source, target, route) {
     return;
   }
 
+  if (isRewardCampTarget(target)) {
+    const preview = calculateBattlePreviewForTroops(source, target, selectedTroopAmount, route);
+    previewEl.className = `troop-slider-preview ${preview.success ? "win" : "lose"}`;
+    previewEl.innerHTML = `
+      <div><span>Public garrison</span><strong>${formatNumber(target.currentGarrison)} defenders</strong><small>Level ${formatNumber(target.defenseLevel)} defense</small></div>
+      <div><span>Battle forecast</span><strong>${preview.success ? "Likely capture" : "Likely defeat"}</strong><small>${preview.success ? `${formatNumber(preview.survivors)} estimated survivors` : `${formatNumber(preview.defendersLeft)} defenders estimated`} &middot; ${formatDuration(preview.travel)} travel</small></div>
+    `;
+    return;
+  }
+
   const report = getScoutReport(target.id);
   if (!report) {
     const demoAttack = createDemoAttackSnapshot(source, target, selectedTroopAmount, "player");
@@ -14704,7 +15099,7 @@ function updateTroopSliderModal(source, target, route) {
 
 function confirmTroopSliderOrder() {
   const source = selectedSourceId ? cityById(selectedSourceId) : null;
-  const target = selectedTargetId ? cityById(selectedTargetId) : null;
+  const target = selectedTargetId ? getArmyTargetById(selectedTargetId) : null;
   if (!source || !target || source.owner !== "player" || source.troops < 1) {
     troopSliderActive = false;
     activeTroopSliderRoute = null;
@@ -15117,7 +15512,7 @@ async function relinquishCity(cityId) {
 
 function confirmSendOrder() {
   const source = selectedSourceId ? cityById(selectedSourceId) : null;
-  const target = selectedTargetId ? cityById(selectedTargetId) : null;
+  const target = selectedTargetId ? getArmyTargetById(selectedTargetId) : null;
   if (!source || !target) return;
   const launched = launchAttack(source.id, target.id, selectedMarchPercent, "player");
   if (launched) {
@@ -16026,18 +16421,20 @@ async function upgradeCity(cityId, levels = 1) {
   }
   let upgraded = 0;
   let xpAward = 0;
-  while (upgraded < requestedLevels && city.level < MAX_CITY_LEVEL) {
+  while (upgraded < requestedLevels) {
     const cost = getLevelCost(city);
-    if (state.gold < cost) break;
+    if (!Number.isFinite(cost) || state.gold < cost) break;
     state.gold -= cost;
     city.investedGold = Math.max(0, Math.floor(Number(city.investedGold) || 0)) + cost;
-    city.level = clampCityLevel(city.level + 1);
+    const nextLevel = clampCityLevel(city.level + 1);
+    if (nextLevel <= city.level) break;
+    city.level = nextLevel;
     xpAward += getCityUpgradeXpAward(city);
     upgraded += 1;
   }
 
   if (!upgraded) {
-    showToast(city.level >= MAX_CITY_LEVEL ? `${city.name} is max level` : "Not enough gold");
+    showToast(Number.isFinite(getLevelCost(city)) ? "Not enough gold" : "That upgrade is outside the supported number range");
     renderAll();
     return;
   }
@@ -16064,47 +16461,77 @@ function getRecruitCost(city) {
   return Math.floor(25 + getCityStats(city).level * 5);
 }
 
-function getMultiLevelCost(city, levels) {
-  if (isStronghold(city)) return Infinity;
-  if (!city || city.level >= MAX_CITY_LEVEL) return Infinity;
-  const startLevel = clampCityLevel(city.level);
-  const levelCount = Math.max(0, Math.floor(Number(levels) || 0));
-  const targetLevel = clamp(startLevel + levelCount, startLevel, MAX_CITY_LEVEL);
-  if (targetLevel <= startLevel) return 0;
-  const totalCost = MILLION_LORDS_CITY_COST_BASE * (
+function getCityUpgradePrestigeMultiplier(targetLevel) {
+  const normalizedTarget = clampCityLevel(targetLevel);
+  if (normalizedTarget <= CITY_PRESTIGE_START_LEVEL) return 1;
+  const band = Math.floor((normalizedTarget - CITY_PRESTIGE_START_LEVEL - 1) / CITY_PRESTIGE_BAND_SIZE) + 1;
+  const multiplier = Math.pow(2, band);
+  return Number.isFinite(multiplier) ? multiplier : Infinity;
+}
+
+function getRawCityUpgradeCostAtLevel(currentLevel) {
+  const startLevel = clampCityLevel(currentLevel);
+  const targetLevel = startLevel + 1;
+  if (!Number.isSafeInteger(targetLevel)) return Infinity;
+  const baseCost = MILLION_LORDS_CITY_COST_BASE * (
     Math.pow(MILLION_LORDS_CITY_COST_GROWTH, targetLevel - 1)
     - Math.pow(MILLION_LORDS_CITY_COST_GROWTH, startLevel - 1)
   );
-  const upgradeReductionPercent = city?.owner === "player"
+  const cost = baseCost * getCityUpgradePrestigeMultiplier(targetLevel);
+  return Number.isFinite(cost) ? cost : Infinity;
+}
+
+function getCityUpgradeReductionPercent(city) {
+  return city?.owner === "player"
     ? Math.min(85, getControlledStrongholdUpgradeCostReductionPercent("player") + getSkillPercent("guildCharters"))
     : 0;
-  const discountedCost = totalCost * (1 - upgradeReductionPercent / 100);
-  return Math.max(0, Math.floor(discountedCost + 0.000001));
+}
+
+function getCityUpgradeCostAtLevel(currentLevel, reductionPercent = 0) {
+  const rawCost = getRawCityUpgradeCostAtLevel(currentLevel);
+  if (!Number.isFinite(rawCost)) return Infinity;
+  return Math.max(0, Math.floor(rawCost * (1 - Math.min(85, Math.max(0, reductionPercent)) / 100) + 0.000001));
+}
+
+function getMultiLevelCost(city, levels) {
+  if (!city || isStronghold(city)) return Infinity;
+  const startLevel = clampCityLevel(city.level);
+  const levelCount = Math.max(0, Math.floor(Number(levels) || 0));
+  const reductionPercent = getCityUpgradeReductionPercent(city);
+  let totalCost = 0;
+  for (let offset = 0; offset < levelCount; offset += 1) {
+    const cost = getCityUpgradeCostAtLevel(startLevel + offset, reductionPercent);
+    if (!Number.isFinite(cost) || !Number.isFinite(totalCost + cost)) return Infinity;
+    totalCost += cost;
+  }
+  return totalCost;
 }
 
 function getLevelCost(city) {
   return getMultiLevelCost(city, 1);
 }
 
-function getAffordableCityUpgradeLevels(city, levelLimit = MAX_CITY_LEVEL) {
+function getAffordableCityUpgradeLevels(city, levelLimit = Number.POSITIVE_INFINITY) {
   if (!state || !city || city.owner !== "player" || isStronghold(city)) return 0;
   const currentLevel = clampCityLevel(city.level);
-  const levelsRemaining = Math.max(0, MAX_CITY_LEVEL - currentLevel);
-  const rawLimit = Number.isFinite(Number(levelLimit)) ? Math.floor(Number(levelLimit)) : levelsRemaining;
-  const maxLevels = clamp(rawLimit, 0, levelsRemaining);
+  const rawLimit = Number.isFinite(Number(levelLimit)) ? Math.floor(Number(levelLimit)) : Number.MAX_SAFE_INTEGER;
+  const maxLevels = Math.max(0, rawLimit);
   const availableGold = Math.max(0, Math.floor(Number(state.gold) || 0));
+  const reductionPercent = getCityUpgradeReductionPercent(city);
   let affordableLevels = 0;
-  for (let levels = 1; levels <= maxLevels; levels += 1) {
-    const cost = getMultiLevelCost(city, levels);
-    if (!Number.isFinite(cost) || cost > availableGold) break;
-    affordableLevels = levels;
+  let spentGold = 0;
+  while (affordableLevels < maxLevels) {
+    const cost = getCityUpgradeCostAtLevel(currentLevel + affordableLevels, reductionPercent);
+    if (!Number.isFinite(cost) || cost > availableGold - spentGold) break;
+    spentGold += cost;
+    affordableLevels += 1;
   }
   return affordableLevels;
 }
 
 function renderCityLevelUpButton({ label, levels, cost, disabled, reason }) {
   const safeLevels = Math.max(0, Math.floor(Number(levels) || 0));
-  const costLabel = Number.isFinite(cost) && cost > 0 ? `${formatNumber(cost)}g` : (reason || "MAX");
+  const costLabel = Number.isFinite(cost) && cost > 0 ? `${formatNumber(cost)}g` : (reason || "Unavailable");
   return `
     <button class="city-level-up-btn" data-city-upgrade-levels="${safeLevels}" type="button" ${disabled ? "disabled" : ""}>
       <span>${escapeHtml(label)}</span>
@@ -16114,7 +16541,6 @@ function renderCityLevelUpButton({ label, levels, cost, disabled, reason }) {
 
 function renderCityLevelUpAction(city) {
   const currentLevel = clampCityLevel(city?.level || 1);
-  const levelsRemaining = Math.max(0, MAX_CITY_LEVEL - currentLevel);
   const incomingBlockers = city ? getIncomingUpgradeBlockers(city.id) : [];
   const owned = city?.owner === "player";
   const stronghold = isStronghold(city);
@@ -16127,17 +16553,12 @@ function renderCityLevelUpAction(city) {
         ? "Incoming"
         : inFlight
           ? "Working"
-          : levelsRemaining <= 0
-            ? "MAX"
-            : "";
+          : "";
   const oneCost = getMultiLevelCost(city, 1);
-  const fiveLevels = Math.min(5, levelsRemaining);
-  const fiveCost = fiveLevels === 5 ? getMultiLevelCost(city, 5) : Infinity;
-  const affordableMax = baseDisabledReason ? 0 : getAffordableCityUpgradeLevels(city, levelsRemaining);
+  const fiveCost = getMultiLevelCost(city, 5);
+  const affordableMax = baseDisabledReason ? 0 : getAffordableCityUpgradeLevels(city);
   const maxCost = affordableMax > 0 ? getMultiLevelCost(city, affordableMax) : Infinity;
-  const nextLevelLabel = levelsRemaining > 0
-    ? `Next: Lv ${formatNumber(Math.min(MAX_CITY_LEVEL, currentLevel + 1))}`
-    : "At maximum level";
+  const nextLevelLabel = `Next: Lv ${formatNumber(currentLevel + 1)}`;
   const availableGold = Math.max(0, Math.floor(Number(state?.gold) || 0));
   const insufficientReason = Number.isFinite(oneCost) ? `Need ${formatNumber(oneCost)}g` : "Unavailable";
 
@@ -16159,8 +16580,8 @@ function renderCityLevelUpAction(city) {
           label: "5 lvls",
           levels: 5,
           cost: fiveCost,
-          disabled: Boolean(baseDisabledReason) || fiveLevels < 5 || availableGold < fiveCost,
-          reason: baseDisabledReason || (fiveLevels < 5 ? `Only ${formatNumber(levelsRemaining)} left` : availableGold < fiveCost ? `Need ${formatNumber(fiveCost)}g` : ""),
+          disabled: Boolean(baseDisabledReason) || !Number.isFinite(fiveCost) || availableGold < fiveCost,
+          reason: baseDisabledReason || (!Number.isFinite(fiveCost) ? "Unavailable" : availableGold < fiveCost ? `Need ${formatNumber(fiveCost)}g` : ""),
         })}
         ${renderCityLevelUpButton({
           label: "Max",
@@ -16513,7 +16934,7 @@ function renderIncomingAttackCard(attack) {
 }
 
 async function focusIncomingAttackCity(cityId) {
-  const city = cityById(cityId);
+  const city = getArmyTargetById(cityId);
   if (!city) {
     showToast("That city is no longer available.");
     return;
@@ -16609,7 +17030,7 @@ function renderOutgoingAttackCard(mission) {
 }
 
 async function focusOutgoingAttackCity(cityId) {
-  const city = cityById(cityId);
+  const city = getArmyTargetById(cityId);
   if (!city) {
     showToast("That target is no longer available.");
     return;
@@ -16893,7 +17314,7 @@ function renderBattleReportLocateButton(report, extraClass = "") {
   if (!cityId) {
     return `<button class="battle-report-locate-btn ${extraClass}" type="button" aria-label="Target unavailable" disabled>&#8982;</button>`;
   }
-  const loadedCity = cityById(cityId);
+  const loadedCity = getArmyTargetById(cityId);
   const regionId = report.regionId || getCityRegionId(loadedCity || cityId);
   const label = report.cityName || "target city";
   return `<button class="battle-report-locate-btn ${extraClass}" data-report-jump="${escapeHtml(cityId)}" data-report-region="${escapeHtml(regionId)}" type="button" aria-label="Go to ${escapeHtml(label)}">&#8982;</button>`;
@@ -16902,7 +17323,7 @@ function renderBattleReportLocateButton(report, extraClass = "") {
 function getResolvableReportCityId(cityId) {
   const value = String(cityId || "");
   if (!value) return "";
-  return getKnownCityId(value) || (cityById(value) ? value : "");
+  return getKnownCityId(value) || (getArmyTargetById(value) ? value : "");
 }
 
 async function focusBattleReportTarget(cityId, regionId = "") {
@@ -16911,7 +17332,7 @@ async function focusBattleReportTarget(cityId, regionId = "") {
     showToast("That target city is no longer available.");
     return;
   }
-  const loadedCity = cityById(targetCityId);
+  const loadedCity = getArmyTargetById(targetCityId);
   const targetRegionId = normalizeRegionId(regionId || getCityRegionId(loadedCity || targetCityId));
   if (modal.open) modal.close();
   scoutNearbySourceId = null;
@@ -16922,8 +17343,9 @@ async function focusBattleReportTarget(cityId, regionId = "") {
     const switched = await switchOnlineIsland(targetRegionId);
     if (!switched || targetRegionId !== getActiveMapRegionId()) return;
   }
-  selectCity(targetCityId);
-  const target = cityById(targetCityId);
+  if (getCampTargetById(targetCityId)) selectRewardCamp(targetCityId);
+  else selectCity(targetCityId);
+  const target = getArmyTargetById(targetCityId);
   showToast(target ? `Viewing ${target.name}` : "Viewing report target");
 }
 
@@ -17009,7 +17431,7 @@ function showHelpModal() {
       <li>Blue destinations receive transfers. Neutral and player-owned destinations receive attacks.</li>
       <li>There are no fixed roads. Active army routes appear only after troops are sent.</li>
       <li>Armies calculate the shortest land route around lakes, mountains, cities, and strongholds, then resolve when they arrive.</li>
-      <li>All cities start at Level 1 and can upgrade to Level 100.</li>
+      <li>Normal cities have no level cap. Upgrade cost rises 20% per level, with an extra doubling for each ten-level band above Level 100.</li>
       <li>The world has ${formatNumber(getRegionIds().length)} maps and ${formatNumber(ISLAND_CITY_COUNT)} total city slots.</li>
       <li>The center island keeps its middle clear for a future feature.</li>
       <li>New online players claim starting cities on starter maps with at least ${formatNumber(MIN_NEW_PLAYER_SPAWN_NEUTRAL_CITIES)} neutral cities, then midgame maps, then endgame maps.</li>
@@ -17292,9 +17714,9 @@ function centerOnMap() {
 }
 
 function centerOnCity(cityId) {
-  const city = cityById(cityId);
+  const city = getArmyTargetById(cityId);
   if (!city || !mapFrame) return;
-  if (!isCityInActiveMap(city)) {
+  if (isRewardCampTarget(city) ? !isCampInActiveMap(city) : !isCityInActiveMap(city)) {
     centerOnMap();
     return;
   }
@@ -17612,11 +18034,70 @@ function updatePinch() {
 }
 
 function isMapNodeInteractionTarget(target) {
-  return Boolean(target?.closest(".city-node, .city-action-wheel, .teleport-node, .harvest-bonus-node"));
+  return Boolean(target?.closest(".city-node, .city-action-wheel, .camp-node, .gold-camp-action-wheel, .teleport-node, .harvest-bonus-node"));
 }
 
 function isMapCommandInteractionTarget(target) {
-  return Boolean(target?.closest(".city-wheel-action, .teleport-node, .harvest-bonus-node"));
+  return Boolean(target?.closest(".city-wheel-action, .gold-camp-wheel-action, .teleport-node, .harvest-bonus-node"));
+}
+
+function resolveCityTapButton(event) {
+  if (!event || !cityLayer) return null;
+  const clientX = Number(event.clientX);
+  const clientY = Number(event.clientY);
+  if (!Number.isFinite(clientX) || !Number.isFinite(clientY)) return event.target?.closest?.(".city-node") || null;
+
+  const directNode = event.target?.closest?.(".city-node") || null;
+  const candidateNodes = [];
+  const seenIds = new Set();
+  const addCandidate = node => {
+    if (!node || !cityLayer.contains(node) || seenIds.has(node.dataset.cityId)) return;
+    seenIds.add(node.dataset.cityId);
+    candidateNodes.push(node);
+  };
+  addCandidate(directNode);
+  document.elementsFromPoint?.(clientX, clientY).forEach(element => addCandidate(element.closest?.(".city-node")));
+
+  const worldPoint = screenToWorld(clientX, clientY);
+  const distanceToNode = node => {
+    const city = cityById(node?.dataset.cityId);
+    return city ? Math.hypot(city.x - worldPoint.x, city.y - worldPoint.y) : Infinity;
+  };
+  if (candidateNodes.length > 1) {
+    return candidateNodes.reduce((best, node) => distanceToNode(node) < distanceToNode(best) ? node : best);
+  }
+  if (directNode && !directNode.classList.contains("stronghold-node")) return directNode;
+
+  const nearbyRadius = 44 / Math.max(0.1, zoom);
+  let nearestCity = null;
+  let nearestDistance = Infinity;
+  (state?.cities || []).forEach(city => {
+    if (!isCityInActiveMap(city)) return;
+    const distance = Math.hypot(city.x - worldPoint.x, city.y - worldPoint.y);
+    if (distance <= nearbyRadius && distance < nearestDistance) {
+      nearestCity = city;
+      nearestDistance = distance;
+    }
+  });
+  if (nearestCity) {
+    for (const child of cityLayer.children) {
+      if (child.classList?.contains("city-node") && child.dataset.cityId === nearestCity.id) return child;
+    }
+  }
+
+  return directNode || candidateNodes[0] || null;
+}
+
+function trackCityTap(event, cityButton = resolveCityTapButton(event)) {
+  if (!cityButton || !cityLayer.contains(cityButton)) return null;
+  cityTapState = {
+    pointerId: event.pointerId,
+    cityId: cityButton.dataset.cityId,
+    x: event.clientX,
+    y: event.clientY,
+    selected: false,
+  };
+  return cityButton;
 }
 
 function beginTrackedPan(event, startedOnMapNode = false) {
@@ -17644,9 +18125,11 @@ function beginTrackedPan(event, startedOnMapNode = false) {
 function startPan(event) {
   if (!state || event.button > 0 || isMapInteractionBlocked()) return;
 
-  const startedOnMapNode = isMapNodeInteractionTarget(event.target);
   const isTouch = event.pointerType === "touch";
   const startedOnCommand = isMapCommandInteractionTarget(event.target);
+  const cityButton = startedOnCommand ? null : resolveCityTapButton(event);
+  if (cityButton) trackCityTap(event, cityButton);
+  const startedOnMapNode = Boolean(cityButton) || isMapNodeInteractionTarget(event.target);
 
   if (isTouch && !startedOnCommand) event.preventDefault();
 
@@ -17720,7 +18203,7 @@ function trySelectTrackedCityTap(event, { requireSameTarget = false } = {}) {
   const moved = Math.hypot(event.clientX - tapState.x, event.clientY - tapState.y) > 12;
   if (moved) return false;
   if (requireSameTarget) {
-    const cityButton = event.target.closest(".city-node");
+    const cityButton = resolveCityTapButton(event);
     const sameCity = cityButton && cityLayer.contains(cityButton) && cityButton.dataset.cityId === tapState.cityId;
     if (!sameCity) return false;
   }
@@ -17745,7 +18228,7 @@ function preventNativeMapTouch(event) {
 function handleMapClick(event) {
   if (isMapInteractionBlocked()) return;
   if (suppressMapClick) return;
-  if (event.target.closest(".city-node")) return;
+  if (resolveCityTapButton(event)) return;
   clearSelection();
 }
 function randomChoice(items) {
@@ -17885,22 +18368,14 @@ if (flagExitBtn) flagExitBtn.addEventListener("click", closeProfileScreen);
 clearSelectBtn.addEventListener("click", () => clearSelection());
 cityLayer.addEventListener("pointerdown", event => {
   if (isMapInteractionBlocked()) return;
-  const cityButton = event.target.closest(".city-node");
-  if (cityButton && cityLayer.contains(cityButton)) {
-    cityTapState = {
-      pointerId: event.pointerId,
-      cityId: cityButton.dataset.cityId,
-      x: event.clientX,
-      y: event.clientY,
-      selected: false,
-    };
-  }
-  if (event.target.closest(".city-node, .city-wheel-action")) interactionRenderLockUntil = performance.now() + 600;
+  const cityButton = event.target.closest(".city-wheel-action") ? null : resolveCityTapButton(event);
+  if (cityButton) trackCityTap(event, cityButton);
+  if (event.target.closest(".city-node, .city-wheel-action, .camp-node, .gold-camp-wheel-action")) interactionRenderLockUntil = performance.now() + 600;
 });
 cityLayer.addEventListener("pointerup", event => {
   if (isMapInteractionBlocked()) return;
   if (!cityTapState || cityTapState.pointerId !== event.pointerId) return;
-  const cityButton = event.target.closest(".city-node");
+  const cityButton = resolveCityTapButton(event);
   const moved = Math.hypot(event.clientX - cityTapState.x, event.clientY - cityTapState.y) > 12;
   const sameCity = cityButton && cityLayer.contains(cityButton) && cityButton.dataset.cityId === cityTapState.cityId;
   if (!moved && sameCity) {
@@ -17924,7 +18399,16 @@ if (portalLayer) {
 }
 cityLayer.addEventListener("click", event => {
   if (isMapInteractionBlocked()) return;
-  const cityButton = event.target.closest(".city-node");
+  if (suppressMapClick) return;
+  if (event.target.closest(".city-wheel-action, .gold-camp-wheel-action")) return;
+  const campButton = event.target.closest(".camp-node[data-camp-id]");
+  if (campButton && cityLayer.contains(campButton)) {
+    event.stopPropagation();
+    cityTapState = null;
+    selectRewardCamp(campButton.dataset.campId);
+    return;
+  }
+  const cityButton = resolveCityTapButton(event);
   if (!cityButton || !cityLayer.contains(cityButton)) return;
   event.stopPropagation();
   if (cityTapState?.selected && cityTapState.cityId === cityButton.dataset.cityId) {

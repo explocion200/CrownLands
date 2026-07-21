@@ -1,15 +1,15 @@
-const CACHE_VERSION = "20260720-performance-v2";
+const CACHE_VERSION = "20260720-warband-camp";
 const CACHE_NAME = `crownlands-cache-${CACHE_VERSION}`;
 const STATIC_CACHE_URLS = [
   "/",
   "/index.html",
   "/manifest.webmanifest",
-  "/styles.css?v=20260707-main-city-repair",
+  "/styles.css?v=20260720-warband-camp",
   "/world-config.js",
   "/firebase-config.js?v=20260703-vapid-key",
-  "/firebaseClient.js?v=20260720-performance-v2",
-  "/game.js?v=20260720-performance-v2",
-  "/route-worker.js?v=20260707-main-city-repair",
+  "/firebaseClient.js?v=20260720-warband-camp",
+  "/game.js?v=20260720-warband-camp",
+  "/route-worker.js?v=20260720-unlimited-castles",
   "/assets/map-editor-data.js?v=20260705-stronghold-sizes",
   "/assets/game-menu-background.jpg?v=20260702-login-page",
   "/assets/loading-ring.png",

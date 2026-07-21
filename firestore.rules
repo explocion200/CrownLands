@@ -134,6 +134,11 @@ service cloud.firestore {
         allow create, update, delete: if false;
       }
 
+      match /objectiveStats/{objectiveId} {
+        allow read: if ownsPlayerDoc(uid);
+        allow create, update, delete: if false;
+      }
+
       match /notificationTokens/{tokenId} {
         allow read: if ownsPlayerDoc(uid);
         allow create, update: if ownsPlayerDoc(uid)
@@ -163,6 +168,11 @@ service cloud.firestore {
         allow create: if signedIn() && validCityLayoutCreate();
         allow update: if signedIn() && cityEconomyUnchanged() && cityOwnershipSafeForBrowser();
         allow delete: if false;
+      }
+
+      match /camps/{campId} {
+        allow read: if signedIn();
+        allow create, update, delete: if false;
       }
 
       match /armies/{armyId} {

@@ -444,10 +444,10 @@
   "camps": [
     {
       "id": "region_10_troops_camp",
-      "name": "Troop Camp",
+      "name": "Warband Camp",
       "regionId": "region_10",
       "xNorm": 0.486,
-      "yNorm": 0.449,
+      "yNorm": 0.46,
       "campType": "troops",
       "artSrc": "assets/camps/troops.png",
       "size": 132,

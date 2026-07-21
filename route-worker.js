@@ -83,13 +83,14 @@ function findLandRouteForLeg(job, constants, leg) {
   const regionId = normalizeRegionId(job, leg.regionId);
   const source = makeRoutePoint(leg.start, "source");
   const target = makeRoutePoint(leg.end, "target");
-  const searchBudget = { visited: 0, max: constants.searchMaxVisitedCells };
   const context = createRouteContext(job, regionId, source, target, false);
-  const primary = findLandRouteWithContext(job, constants, source, target, regionId, context, searchBudget);
+  const primaryBudget = { visited: 0, max: constants.searchMaxVisitedCells };
+  const primary = findLandRouteWithContext(job, constants, source, target, regionId, context, primaryBudget);
   if (primary) return primary;
   if (context.obstacles.length) {
     const terrainOnlyContext = createRouteContext(job, regionId, source, target, true);
-    return findLandRouteWithContext(job, constants, source, target, regionId, terrainOnlyContext, searchBudget);
+    const fallbackBudget = { visited: 0, max: constants.searchMaxVisitedCells };
+    return findLandRouteWithContext(job, constants, source, target, regionId, terrainOnlyContext, fallbackBudget);
   }
   return null;
 }
