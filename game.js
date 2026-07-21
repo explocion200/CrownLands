@@ -9884,6 +9884,22 @@ function isRewardCampTarget(target) {
   return Boolean(target && getRewardCampConfig(target));
 }
 
+function adoptServerArmyMovement(rawMovement) {
+  const movement = normalizeOnlineArmyMovement(rawMovement);
+  if (!movement) return null;
+  const current = onlineArmiesByIsland.get(PLAYER_RELEVANT_ARMIES_CACHE_KEY) || [];
+  onlineArmiesByIsland.set(PLAYER_RELEVANT_ARMIES_CACHE_KEY, [
+    ...current.filter(army => getOnlineArmyResolutionId(army) !== movement.id),
+    movement,
+  ]);
+  rebuildOnlineArmies();
+  adoptOwnOnlineArmies();
+  renderPaths();
+  renderArmies(true);
+  updateOutgoingAttackUi();
+  return movement;
+}
+
 async function requestDueRewardCampPayout(camp) {
   if (!camp?.id || camp.owner !== "player" || !camp.payoutPending || camp.payoutAtMs > Date.now()) return false;
   if (resolvingRewardCampPayoutIds.has(camp.id)) return false;
@@ -9894,6 +9910,7 @@ async function requestDueRewardCampPayout(camp) {
   try {
     const result = await resolvePayout({ campId: camp.id, regionId: camp.regionId });
     applyServerArmyResult(result);
+    if (result?.movement) adoptServerArmyMovement(result.movement);
     if (result?.status === "paid") {
       const config = getRewardCampConfig(result.campType || camp);
       if (config && result.holderUid === getCurrentOnlineUid()) {
@@ -15015,18 +15032,7 @@ async function recallRewardCampGarrison(campId) {
       regionId: camp.regionId,
     });
     applyServerArmyResult(result);
-    if (result?.movement) {
-      const movement = normalizeOnlineArmyMovement(result.movement);
-      if (movement) {
-        const current = onlineArmiesByIsland.get(PLAYER_RELEVANT_ARMIES_CACHE_KEY) || [];
-        onlineArmiesByIsland.set(PLAYER_RELEVANT_ARMIES_CACHE_KEY, [
-          ...current.filter(army => getOnlineArmyResolutionId(army) !== movement.id),
-          movement,
-        ]);
-        rebuildOnlineArmies();
-        adoptOwnOnlineArmies();
-      }
-    }
+    if (result?.movement) adoptServerArmyMovement(result.movement);
     const troops = Math.max(0, Math.floor(Number(result?.returningTroops) || 0));
     const destination = result?.returnDestinationName || "your city";
     addLog(`${formatNumber(troops)} troops withdrew from ${camp.name} and began marching to ${destination}.`);

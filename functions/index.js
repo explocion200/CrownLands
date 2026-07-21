@@ -5909,31 +5909,39 @@ async function resolveRewardCampPayoutByRef(campRef, nowMs = Date.now(), callerU
     const mainCityInfo = getMainCityInfo(player);
     const mainCitySnap = mainCityInfo?.ref ? await transaction.get(mainCityInfo.ref) : null;
     const mainCity = mainCitySnap?.exists ? { id: mainCitySnap.id, ...mainCitySnap.data() } : null;
-    if (!mainCity || getOwnerUid(mainCity) !== holderUid) {
-      throw new HttpsError("failed-precondition", `${config.name} holder has no valid main city for payout.`);
-    }
     const returnSourceCityId = safeString(camp.returnSourceCityId, 96).replace(/[^a-zA-Z0-9_-]/g, "_");
     const returnSourceRegionId = normalizeRegionId(camp.returnSourceRegionId || camp.regionId);
     const returnSourceRef = returnSourceCityId ? cityRefForRegion(returnSourceRegionId, returnSourceCityId) : null;
     const returnSourceSnap = returnSourceRef ? await transaction.get(returnSourceRef) : null;
     const returnSourceCity = returnSourceSnap?.exists ? { id: returnSourceSnap.id, ...returnSourceSnap.data() } : null;
-    const returnDestination = returnSourceCity && getOwnerUid(returnSourceCity) === holderUid ? returnSourceCity : mainCity;
-    const returnDestinationRegionId = normalizeRegionId(returnDestination.regionId || mainCityInfo.regionId);
+    const ownedReturnSource = returnSourceCity && getOwnerUid(returnSourceCity) === holderUid
+      ? { ...returnSourceCity, regionId: returnSourceRegionId }
+      : null;
+    const ownedMainCity = mainCity && getOwnerUid(mainCity) === holderUid
+      ? { ...mainCity, regionId: mainCityInfo.regionId }
+      : null;
+    const returnDestination = ownedReturnSource || ownedMainCity;
+    if (!returnDestination) {
+      throw new HttpsError("failed-precondition", `${config.name} holder has no owned city available for returning troops.`);
+    }
+    const returnDestinationRegionId = normalizeRegionId(returnDestination.regionId);
     const returningTroops = Math.max(0, Math.floor(safeNumber(camp.currentGarrison, camp.troops)));
     const troopReward = config.rewardType === "troops" ? reward : 0;
     let returnedTroops = 0;
     let rewardedTroops = 0;
     let mainCityPatch = null;
-    if (mainCity && getOwnerUid(mainCity) === holderUid && troopReward > 0) {
-      const troopFloat = Math.max(0, safeNumber(mainCity.troopFloat, mainCity.troops || 0)) + troopReward;
+    const troopRewardDestination = ownedMainCity || returnDestination;
+    const troopRewardDestinationRef = ownedMainCity ? mainCityInfo.ref : returnSourceRef;
+    if (troopRewardDestination && troopRewardDestinationRef && troopReward > 0) {
+      const troopFloat = Math.max(0, safeNumber(troopRewardDestination.troopFloat, troopRewardDestination.troops || 0)) + troopReward;
       mainCityPatch = {
-        id: mainCity.id,
-        regionId: mainCityInfo.regionId,
+        id: troopRewardDestination.id,
+        regionId: normalizeRegionId(troopRewardDestination.regionId),
         troops: Math.floor(troopFloat),
         troopFloat,
         productionUpdatedAtMs: nowMs,
       };
-      transaction.set(mainCityInfo.ref, cleanCityUpdate(mainCity, {
+      transaction.set(troopRewardDestinationRef, cleanCityUpdate(troopRewardDestination, {
         troops: mainCityPatch.troops,
         troopFloat: mainCityPatch.troopFloat,
         productionUpdatedAtMs: mainCityPatch.productionUpdatedAtMs,
@@ -5958,7 +5966,10 @@ async function resolveRewardCampPayoutByRef(campRef, nowMs = Date.now(), callerU
         ownerUid: holderUid,
         ownerName: normalizePlayerName(player.playerName || camp.holderName, "Ruler"),
         ownerFlag: player.flag || camp.holderFlag || null,
-        ownerKingPower: normalizePowerValue(player.globalStats?.kingPower),
+        ownerKingPower: Math.max(0, Math.floor(safeNumber(
+          player.globalStats?.kingPower,
+          safeNumber(player.kingPower, 0)
+        ))),
         kind: "transfer",
         campReturn: true,
         campId: camp.id,
@@ -5985,11 +5996,13 @@ async function resolveRewardCampPayoutByRef(campRef, nowMs = Date.now(), callerU
         status: "active",
         createdByServer: true,
         serverAuthorityVersion: 2,
-        createdAt: FieldValue.serverTimestamp(),
-        updatedAt: FieldValue.serverTimestamp(),
       };
       armyRefsForRegions(route.routeRegionIds, returnArmyId).forEach(ref => {
-        transaction.set(ref, returnArmy, { merge: true });
+        transaction.set(ref, {
+          ...returnArmy,
+          createdAt: FieldValue.serverTimestamp(),
+          updatedAt: FieldValue.serverTimestamp(),
+        }, { merge: true });
       });
     }
 
@@ -6077,6 +6090,7 @@ async function resolveRewardCampPayoutByRef(campRef, nowMs = Date.now(), callerU
       returnDestinationId: returnArmy?.toId || "",
       returnDestinationRegionId: returnArmy?.targetRegionId || "",
       returnArrivesAtMs: returnArmy?.arrivesAtMs || 0,
+      movement: returnArmy,
       rewardedTroops,
       campUpdate: campUpdateForClient(camp.id, camp.regionId, campPatch),
       cityUpdates: mainCityPatch ? [mainCityPatch] : [],
@@ -6182,7 +6196,10 @@ exports.recallRewardCampGarrison = onCall({ region: "us-central1", maxInstances:
         ownerUid: uid,
         ownerName: normalizePlayerName(player.playerName || rawCamp.holderName, "Ruler"),
         ownerFlag: player.flag || rawCamp.holderFlag || null,
-        ownerKingPower: normalizePowerValue(player.globalStats?.kingPower),
+        ownerKingPower: Math.max(0, Math.floor(safeNumber(
+          player.globalStats?.kingPower,
+          safeNumber(player.kingPower, 0)
+        ))),
         kind: "transfer",
         campReturn: true,
         campRecall: true,
