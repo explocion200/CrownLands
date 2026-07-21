@@ -10390,14 +10390,21 @@ function rejectServerArmyMission(mission, reason = "", options = {}) {
 function applyServerMovementToMission(mission, movement = null) {
   if (!mission || !movement) return;
   const movementKind = String(movement.kind || "");
+  const launchedAtMs = normalizeTimestampMs(movement.launchedAtMs);
+  const arrivesAtMs = normalizeTimestampMs(movement.arrivesAtMs);
+  const rawRemaining = Number(movement.remaining);
   mission.onlineId = movement.id || mission.onlineId;
   if (["attack", "transfer", "scout"].includes(movementKind)) mission.kind = movementKind;
   mission.troops = Math.max(0, Math.floor(Number(movement.troops) || mission.troops || 0));
   mission.requestedTroops = Math.max(0, Math.floor(Number(movement.requestedTroops) || mission.requestedTroops || mission.troops || 0));
   mission.total = Math.max(0.1, Number(movement.total) || mission.total || 0.1);
-  mission.remaining = Math.max(0, (Number(movement.arrivesAtMs) - Date.now()) / 1000) || mission.total;
-  mission.launchedAtMs = normalizeTimestampMs(movement.launchedAtMs) || mission.launchedAtMs;
-  mission.arrivesAtMs = normalizeTimestampMs(movement.arrivesAtMs) || mission.arrivesAtMs;
+  if (arrivesAtMs > 0) {
+    mission.remaining = Math.max(0, (arrivesAtMs - Date.now()) / 1000);
+  } else if (Number.isFinite(rawRemaining)) {
+    mission.remaining = Math.max(0, rawRemaining);
+  }
+  mission.launchedAtMs = launchedAtMs || mission.launchedAtMs;
+  mission.arrivesAtMs = arrivesAtMs || mission.arrivesAtMs;
   mission.swiftMarchUsedAtMs = normalizeTimestampMs(movement.swiftMarchUsedAtMs) || mission.swiftMarchUsedAtMs || 0;
   mission.swiftMarchOriginalArrivesAtMs = normalizeTimestampMs(movement.swiftMarchOriginalArrivesAtMs) || mission.swiftMarchOriginalArrivesAtMs || 0;
   mission.swiftMarchProgressAtUse = clamp(Number(movement.swiftMarchProgressAtUse) || mission.swiftMarchProgressAtUse || 0, 0, 1);
@@ -10638,6 +10645,30 @@ function clearOnlineArmyWatchers() {
   pendingOutgoingMissions = new Map();
 }
 
+function purgeResolvedOnlineArmy(onlineId, { removeLocal = true } = {}) {
+  const id = String(onlineId || "").trim();
+  if (!id) return false;
+  let changed = false;
+  for (const [cacheKey, armies] of onlineArmiesByIsland) {
+    const current = Array.isArray(armies) ? armies : [];
+    const filtered = current.filter(army => getOnlineArmyResolutionId(army) !== id);
+    if (filtered.length === current.length) continue;
+    onlineArmiesByIsland.set(cacheKey, filtered);
+    changed = true;
+  }
+  if (removeLocal && state?.attacks?.length) {
+    const filtered = state.attacks.filter(army => getOnlineArmyResolutionId(army) !== id);
+    if (filtered.length !== state.attacks.length) {
+      state.attacks = filtered;
+      changed = true;
+    }
+  }
+  if (pendingOutgoingMissions.delete(id)) changed = true;
+  forgetPendingOnlineArmyMovement(id);
+  if (changed) rebuildOnlineArmies();
+  return changed;
+}
+
 function clearOnlineIslandArmySnapshots() {
   const playerRelevantArmies = onlineArmiesByIsland.get(PLAYER_RELEVANT_ARMIES_CACHE_KEY);
   onlineArmiesByIsland = new Map();
@@ -10873,10 +10904,14 @@ async function resolveServerArmyMission(mission) {
     });
     const shouldBackfillScoutReports = mission?.kind === "scout"
       && (!Array.isArray(result?.reports) || result.reports.length === 0);
-    if (result?.status === "resolved" || result?.status === "missing" || result?.status === "already-resolved") {
+    const resolutionComplete = result?.status === "resolved"
+      || result?.status === "missing"
+      || result?.status === "already-resolved";
+    if (resolutionComplete) {
       resolvedOnlineArmyIds.add(onlineId);
     }
     applyServerArmyResult(result);
+    if (resolutionComplete) purgeResolvedOnlineArmy(onlineId);
     if (shouldBackfillScoutReports) {
       await loadServerReportsOnce();
     }
@@ -13060,7 +13095,7 @@ function updateAttacks(dt) {
       if (authoritativeRemaining > 0) {
         attack.remaining = authoritativeRemaining;
       } else {
-        attack.remaining -= dt;
+        attack.remaining = Math.min(0, authoritativeRemaining);
       }
     } else {
       attack.remaining -= dt;
@@ -15782,6 +15817,10 @@ function getArmyTravelProgress(army, nowMs = Date.now()) {
     const progressAtUse = clamp(Number(army.swiftMarchProgressAtUse) || 0, 0, 1);
     const acceleratedProgress = clamp((nowMs - swiftUsedAtMs) / (arrivesAtMs - swiftUsedAtMs), 0, 1);
     return progressAtUse + (1 - progressAtUse) * acceleratedProgress;
+  }
+  const launchedAtMs = normalizeTimestampMs(army?.launchedAtMs);
+  if (launchedAtMs > 0 && arrivesAtMs > launchedAtMs) {
+    return clamp((nowMs - launchedAtMs) / (arrivesAtMs - launchedAtMs), 0, 1);
   }
   return clamp(1 - Math.max(0, Number(army?.remaining) || 0) / Math.max(0.1, Number(army?.total) || 0.1), 0, 1);
 }
