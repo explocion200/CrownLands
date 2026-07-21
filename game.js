@@ -2224,6 +2224,8 @@ const WORLD_CAMPS = generateWorldCampSlots();
 const routeCache = new Map();
 const asyncRouteCache = new Map();
 const routeEdgePassableCache = new Map();
+const normalizedArmyPathCache = new WeakMap();
+const normalizedArmyPathSegmentsCache = new WeakMap();
 const pathMetricCache = new WeakMap();
 const ROUTE_CELL_FALLBACK_RADIUS = 32;
 const ROUTE_CELL_FALLBACK_CANDIDATES = 24;
@@ -2249,6 +2251,8 @@ let scoutNearbySourceId = null;
 let regroupSourceId = null;
 let camera = { x: 0, y: 0 };
 let zoom = 1;
+let mapViewportWidth = 0;
+let mapViewportHeight = 0;
 let panState = null;
 let activePointers = new Map();
 let pinchState = null;
@@ -2358,6 +2362,7 @@ let updateCheckInFlight = false;
 let deployedUpdateAvailableBuildId = "";
 let deployedUpdateNoticeShown = false;
 let deployedUpdateReloadInProgress = false;
+let selectedArmyTokenId = "";
 const islandImageLoadPromises = new Map();
 const loadedImageAssets = new Set();
 const nearbyIslandPreloadRegions = new Set();
@@ -2390,6 +2395,9 @@ let lastMainCityReturnCameraUpdateAt = 0;
 let cityRenderSignature = "";
 let pathRenderSignature = "";
 const armyTokenCache = new Map();
+let visibleCityDensityCount = 0;
+let visibleArmyDensityCount = 0;
+let crowdedMapDensityEnabled = false;
 let performancePanel = null;
 let performancePanelVisible = false;
 let performanceFrameCount = 0;
@@ -3921,16 +3929,13 @@ function updateMapDensityMode(visibleCityCount = null, visibleArmyCount = null) 
   if (!mapFrame) return;
   const hasCityCount = visibleCityCount !== null && visibleCityCount !== undefined && Number.isFinite(Number(visibleCityCount));
   const hasArmyCount = visibleArmyCount !== null && visibleArmyCount !== undefined && Number.isFinite(Number(visibleArmyCount));
-  const cityCount = hasCityCount
-    ? Number(visibleCityCount)
-    : cityLayer?.querySelectorAll(".city-node").length || 0;
-  const armyCount = hasArmyCount
-    ? Number(visibleArmyCount)
-    : armyTokenCache.size;
-  mapFrame.classList.toggle(
-    "crowded-map",
-    cityCount >= CROWDED_MAP_CITY_THRESHOLD || armyCount >= CROWDED_MAP_ARMY_THRESHOLD,
-  );
+  if (hasCityCount) visibleCityDensityCount = Math.max(0, Number(visibleCityCount));
+  if (hasArmyCount) visibleArmyDensityCount = Math.max(0, Number(visibleArmyCount));
+  const shouldEnable = visibleCityDensityCount >= CROWDED_MAP_CITY_THRESHOLD
+    || visibleArmyDensityCount >= CROWDED_MAP_ARMY_THRESHOLD;
+  if (shouldEnable === crowdedMapDensityEnabled) return;
+  crowdedMapDensityEnabled = shouldEnable;
+  mapFrame.classList.toggle("crowded-map", shouldEnable);
 }
 
 function setImageMapBackground(regionId, imageSrc) {
@@ -10197,17 +10202,24 @@ async function syncOwnedCitiesToOnline(force = false) {
 
 function normalizeArmyPath(points) {
   if (!Array.isArray(points)) return [];
-  return points
+  const cached = normalizedArmyPathCache.get(points);
+  if (cached) return cached;
+  const normalized = points
     .map(point => ({
       x: Number(point?.x),
       y: Number(point?.y),
     }))
     .filter(point => Number.isFinite(point.x) && Number.isFinite(point.y));
+  normalizedArmyPathCache.set(points, normalized);
+  normalizedArmyPathCache.set(normalized, normalized);
+  return normalized;
 }
 
 function normalizeArmyPathSegments(segments) {
   if (!Array.isArray(segments)) return [];
-  return segments
+  const cached = normalizedArmyPathSegmentsCache.get(segments);
+  if (cached) return cached;
+  const normalized = segments
     .map(segment => {
       const points = normalizeArmyPath(segment?.points);
       if (points.length < 2) return null;
@@ -10218,6 +10230,9 @@ function normalizeArmyPathSegments(segments) {
       };
     })
     .filter(Boolean);
+  normalizedArmyPathSegmentsCache.set(segments, normalized);
+  normalizedArmyPathSegmentsCache.set(normalized, normalized);
+  return normalized;
 }
 
 function getRouteSegments(route, fallbackRegionId = "") {
@@ -14225,14 +14240,33 @@ function getMissionSegmentsForRegion(mission, regionId = getActiveMapRegionId())
     routeEndProgress: 1,
   }];
   const route = findRoute(from, to);
-  return getRouteSegments(route, activeRegionId)
-    .filter(segment => segment.regionId === activeRegionId)
-    .map(segment => ({ ...segment, routeStartProgress: 0, routeEndProgress: 1 }));
+  const fallbackSegments = getRouteSegments(route, activeRegionId);
+  const fallbackTotalLength = Math.max(0.1, fallbackSegments.reduce((total, segment) => (
+    total + Math.max(0.1, Number(segment.length) || routeLength(segment.points))
+  ), 0));
+  let fallbackTraversedLength = 0;
+  return fallbackSegments.map(segment => {
+    const length = Math.max(0.1, Number(segment.length) || routeLength(segment.points));
+    const routeSegment = {
+      ...segment,
+      length,
+      routeStartProgress: fallbackTraversedLength / fallbackTotalLength,
+      routeEndProgress: (fallbackTraversedLength + length) / fallbackTotalLength,
+    };
+    fallbackTraversedLength += length;
+    return routeSegment;
+  }).filter(segment => segment.regionId === activeRegionId);
 }
 
-function getTaperedRouteWidth(progress) {
-  const distanceFromMiddle = Math.abs(clamp(progress, 0, 1) * 2 - 1);
-  return 1.2 + 5.4 * Math.pow(distanceFromMiddle, 1.35);
+const MARCH_ROUTE_ENDPOINT_TAPER_DISTANCE = 240;
+
+function getTaperedRouteWidth(progress, totalRouteLength) {
+  const normalizedProgress = clamp(progress, 0, 1);
+  const routeLength = Math.max(0.1, Number(totalRouteLength) || 0.1);
+  const distanceFromEndpoint = Math.min(normalizedProgress, 1 - normalizedProgress) * routeLength;
+  const taperProgress = clamp(distanceFromEndpoint / MARCH_ROUTE_ENDPOINT_TAPER_DISTANCE, 0, 1);
+  const smoothTaper = taperProgress * taperProgress * (3 - 2 * taperProgress);
+  return 0.35 + 6.25 * (1 - smoothTaper);
 }
 
 function buildTaperedRoutePolygon(points, routeStartProgress = 0, routeEndProgress = 1) {
@@ -14241,6 +14275,8 @@ function buildTaperedRoutePolygon(points, routeStartProgress = 0, routeEndProgre
 
   const metrics = getPathMetrics(mapPoints);
   if (metrics.total <= 0) return "";
+  const progressSpan = Math.max(0.0001, routeEndProgress - routeStartProgress);
+  const totalRouteLength = metrics.total / progressSpan;
 
   let coveredDistance = 0;
   const routePoints = mapPoints.map((point, index) => {
@@ -14252,6 +14288,15 @@ function buildTaperedRoutePolygon(points, routeStartProgress = 0, routeEndProgre
   [0.25, 0.5, 0.75].forEach(progress => {
     if (routePoints.some(entry => Math.abs(entry.progress - progress) < 0.015)) return;
     routePoints.push({ point: pointAlongRoute(mapPoints, progress), progress });
+  });
+  [0.25, 0.5, 0.75, 1].forEach(taperStep => {
+    const taperProgress = (MARCH_ROUTE_ENDPOINT_TAPER_DISTANCE * taperStep) / totalRouteLength;
+    [taperProgress, 1 - taperProgress].forEach(globalProgress => {
+      if (globalProgress <= routeStartProgress || globalProgress >= routeEndProgress) return;
+      const localProgress = (globalProgress - routeStartProgress) / progressSpan;
+      if (routePoints.some(entry => Math.abs(entry.progress - localProgress) < 0.005)) return;
+      routePoints.push({ point: pointAlongRoute(mapPoints, localProgress), progress: localProgress });
+    });
   });
   routePoints.sort((a, b) => a.progress - b.progress);
 
@@ -14266,7 +14311,7 @@ function buildTaperedRoutePolygon(points, routeStartProgress = 0, routeEndProgre
     const normalX = -dy / tangentLength;
     const normalY = dx / tangentLength;
     const globalProgress = routeStartProgress + (routeEndProgress - routeStartProgress) * entry.progress;
-    const halfWidth = getTaperedRouteWidth(globalProgress) / 2;
+    const halfWidth = getTaperedRouteWidth(globalProgress, totalRouteLength) / 2;
     left.push({ x: entry.point.x + normalX * halfWidth, y: entry.point.y + normalY * halfWidth });
     right.push({ x: entry.point.x - normalX * halfWidth, y: entry.point.y - normalY * halfWidth });
   });
@@ -14366,14 +14411,19 @@ function getVisibleWorldBounds(margin = 420) {
       bottom: mapBounds.bottom,
     };
   }
-  const rect = mapFrame.getBoundingClientRect();
+  if (mapViewportWidth <= 0 || mapViewportHeight <= 0) {
+    const rect = mapFrame.getBoundingClientRect();
+    mapViewportWidth = rect.width;
+    mapViewportHeight = rect.height;
+  }
   const worldMargin = margin / Math.max(zoom, 0.1);
-  const offset = getMapViewportOffset(rect, getActiveMapDimensions());
+  const viewport = { width: mapViewportWidth, height: mapViewportHeight };
+  const offset = getMapViewportOffset(viewport, getActiveMapDimensions());
   return {
     left: mapBounds.left + camera.x - offset.x / Math.max(zoom, 0.1) - worldMargin,
     top: mapBounds.top + camera.y - offset.y / Math.max(zoom, 0.1) - worldMargin,
-    right: mapBounds.left + camera.x + (rect.width - offset.x) / Math.max(zoom, 0.1) + worldMargin,
-    bottom: mapBounds.top + camera.y + (rect.height - offset.y) / Math.max(zoom, 0.1) + worldMargin,
+    right: mapBounds.left + camera.x + (mapViewportWidth - offset.x) / Math.max(zoom, 0.1) + worldMargin,
+    bottom: mapBounds.top + camera.y + (mapViewportHeight - offset.y) / Math.max(zoom, 0.1) + worldMargin,
   };
 }
 
@@ -15496,27 +15546,138 @@ function getArmyTokenId(attack) {
   return String(attack?.id || attack?.onlineId || `${attack?.fromId || "from"}-${attack?.toId || "to"}-${attack?.launchedAtMs || attack?.total || ""}`);
 }
 
+function getArmyByTokenId(tokenId) {
+  const normalizedId = String(tokenId || "");
+  if (!normalizedId) return null;
+  return getRenderableArmies().find(attack => getArmyTokenId(attack) === normalizedId) || null;
+}
+
+function getArmyTokenParts(token) {
+  if (token.armyTokenParts) return token.armyTokenParts;
+  token.armyTokenParts = {
+    icon: token.querySelector(".army-token-icon"),
+    count: token.querySelector(".army-token-count"),
+    time: token.querySelector(".army-token-time"),
+    navigation: token.querySelector(".army-token-nav"),
+    fromButton: token.querySelector('[data-army-endpoint="from"]'),
+    toButton: token.querySelector('[data-army-endpoint="to"]'),
+  };
+  return token.armyTokenParts;
+}
+
+function updateArmyTokenNavigationSelection() {
+  armyTokenCache.forEach((token, tokenId) => {
+    const selected = tokenId === selectedArmyTokenId;
+    token.classList.toggle("selected", selected);
+    const expanded = String(selected);
+    if (token.getAttribute("aria-expanded") !== expanded) token.setAttribute("aria-expanded", expanded);
+    const { navigation } = getArmyTokenParts(token);
+    if (navigation && navigation.hidden === selected) navigation.hidden = !selected;
+  });
+}
+
+function getArmyEndpointDetails(attack, endpointKind = "to") {
+  if (!attack) return null;
+  const isSource = endpointKind === "from";
+  const id = String((isSource ? attack.fromId : attack.toId) || "");
+  if (!id) return null;
+  const target = getArmyTargetById(id);
+  const explicitRegionId = isSource ? attack.sourceRegionId : attack.targetRegionId;
+  const regionId = target
+    ? getCityRegionId(target)
+    : normalizeRegionId(explicitRegionId || getCityRegionId(id));
+  const fallbackName = isSource ? attack.fromName : attack.toName;
+  return {
+    id,
+    name: target?.name || String(fallbackName || (isSource ? "Origin" : "Destination")),
+    regionId,
+  };
+}
+
+async function focusArmyEndpoint(tokenId, endpointKind = "to") {
+  const attack = getArmyByTokenId(tokenId);
+  const endpoint = getArmyEndpointDetails(attack, endpointKind);
+  if (!endpoint) {
+    showToast("That march endpoint is no longer available.");
+    return;
+  }
+
+  selectedArmyTokenId = "";
+  updateArmyTokenNavigationSelection();
+  if (endpoint.regionId !== getActiveMapRegionId()) {
+    const switched = await switchOnlineIsland(endpoint.regionId);
+    if (!switched || endpoint.regionId !== getActiveMapRegionId()) return;
+  }
+
+  const target = getArmyTargetById(endpoint.id);
+  if (!target) {
+    showToast(`${endpoint.name} is no longer available.`);
+    return;
+  }
+  requestAnimationFrame(() => {
+    centerOnCity(target.id);
+    showToast(`Viewing ${target.name}`);
+  });
+}
+
 function createArmyTokenElement(attack) {
   const token = document.createElement("div");
   token.dataset.armyTokenId = getArmyTokenId(attack);
-  token.innerHTML = `<span class="army-token-icon"></span><strong class="army-token-count"></strong><small class="army-token-time"></small>`;
+  token.setAttribute("role", "button");
+  token.setAttribute("tabindex", "0");
+  token.setAttribute("aria-expanded", "false");
+  token.innerHTML = `
+    <span class="army-token-icon"></span>
+    <strong class="army-token-count"></strong>
+    <small class="army-token-time"></small>
+    <span class="army-token-nav" hidden>
+      <button type="button" data-army-endpoint="from" title="Go to march origin" aria-label="Go to march origin"><span aria-hidden="true">&#8592;</span><small>From</small></button>
+      <button type="button" data-army-endpoint="to" title="Go to march destination" aria-label="Go to march destination"><span aria-hidden="true">&#8594;</span><small>To</small></button>
+    </span>`;
+  getArmyTokenParts(token);
+  token.addEventListener("click", event => {
+    event.stopPropagation();
+    if (suppressMapClick) return;
+    const endpointButton = event.target.closest("[data-army-endpoint]");
+    if (endpointButton) {
+      focusArmyEndpoint(token.dataset.armyTokenId, endpointButton.dataset.armyEndpoint);
+      return;
+    }
+    selectedArmyTokenId = selectedArmyTokenId === token.dataset.armyTokenId
+      ? ""
+      : token.dataset.armyTokenId;
+    updateArmyTokenNavigationSelection();
+  });
+  token.addEventListener("keydown", event => {
+    if (event.target !== token || (event.key !== "Enter" && event.key !== " ")) return;
+    event.preventDefault();
+    token.click();
+  });
   return token;
 }
 
 function updateArmyTokenElement(token, attack, mapPoint, targetCity) {
   const ownerClass = isPersonalArmy(attack) ? OWNER.player.css : OWNER.enemy.css;
   const showTroops = canViewArmyTroopAmount(attack);
-  const className = `army-token ${ownerClass}${showTroops ? "" : " hidden-transfer"}`;
+  const selected = getArmyTokenId(attack) === selectedArmyTokenId;
+  const className = `army-token ${ownerClass}${showTroops ? "" : " hidden-transfer"}${selected ? " selected" : ""}`;
   if (token.className !== className) token.className = className;
+  const expanded = String(selected);
+  if (token.getAttribute("aria-expanded") !== expanded) token.setAttribute("aria-expanded", expanded);
   token.style.transform = `translate3d(${mapPoint.x}px, ${mapPoint.y}px, 0) translate(-50%, -50%)`;
 
   const armyIcon = attack.kind === "scout" ? "\u{1F52D}" : attack.kind === "transfer" ? "\u{1F45F}" : "\u2694";
-  const iconElement = token.querySelector(".army-token-icon");
-  const countElement = token.querySelector(".army-token-count");
-  const timeElement = token.querySelector(".army-token-time");
+  const {
+    icon: iconElement,
+    count: countElement,
+    time: timeElement,
+    navigation,
+    fromButton,
+    toButton,
+  } = getArmyTokenParts(token);
   if (iconElement && iconElement.textContent !== armyIcon) iconElement.textContent = armyIcon;
   if (countElement) {
-    countElement.hidden = !showTroops;
+    if (countElement.hidden === showTroops) countElement.hidden = !showTroops;
     if (showTroops) {
       const troopText = formatNumber(attack.troops);
       if (countElement.textContent !== troopText) countElement.textContent = troopText;
@@ -15526,9 +15687,27 @@ function updateArmyTokenElement(token, attack, mapPoint, targetCity) {
     const timeText = formatDuration(attack.remaining);
     if (timeElement.textContent !== timeText) timeElement.textContent = timeText;
   }
+  if (navigation && navigation.hidden === selected) navigation.hidden = !selected;
+  const endpointSignature = `${attack.fromId || ""}:${attack.fromName || ""}:${attack.toId || ""}:${attack.toName || ""}`;
+  if (token.dataset.armyEndpointSignature !== endpointSignature) {
+    token.dataset.armyEndpointSignature = endpointSignature;
+    const fromDetails = getArmyEndpointDetails(attack, "from");
+    const toDetails = getArmyEndpointDetails(attack, "to");
+    if (fromButton && fromDetails) {
+      fromButton.title = `Go to ${fromDetails.name}`;
+      fromButton.setAttribute("aria-label", `Go to ${fromDetails.name}`);
+    }
+    if (toButton && toDetails) {
+      toButton.title = `Go to ${toDetails.name}`;
+      toButton.setAttribute("aria-label", `Go to ${toDetails.name}`);
+    }
+  }
+  const tokenLabel = `${attack.kind || "Army"} march to ${targetCity?.name || attack.toName || "destination"}. Show route locations.`;
+  if (token.getAttribute("aria-label") !== tokenLabel) token.setAttribute("aria-label", tokenLabel);
   if (attack.ownerName) {
     const titlePrefix = `${attack.ownerName}: ${attack.kind} to ${targetCity?.name || "target"}`;
-    token.title = showTroops ? titlePrefix : `${titlePrefix} - ${formatDuration(attack.remaining)} remaining`;
+    const title = showTroops ? titlePrefix : `${titlePrefix} - ${formatDuration(attack.remaining)} remaining`;
+    if (token.title !== title) token.title = title;
   }
 }
 
@@ -15550,7 +15729,7 @@ function renderArmies(force = false) {
   const fragment = document.createDocumentFragment();
   const visibleArmyTokenIds = new Set();
   for (const attack of getRenderableArmies()) {
-    const from = cityById(attack.fromId);
+    const from = getArmyTargetById(attack.fromId);
     const to = getArmyTargetById(attack.toId);
     if (!from || !to) continue;
     const progress = getArmyTravelProgress(attack);
@@ -15576,6 +15755,9 @@ function renderArmies(force = false) {
     if (visibleArmyTokenIds.has(tokenId)) continue;
     token.remove();
     armyTokenCache.delete(tokenId);
+  }
+  if (selectedArmyTokenId && !visibleArmyTokenIds.has(selectedArmyTokenId)) {
+    selectedArmyTokenId = "";
   }
   updateMapDensityMode(null, visibleArmyTokenIds.size);
 }
@@ -18768,6 +18950,8 @@ function updateMainCityReturnButtonForCamera(rect = null) {
 function applyCameraTransform() {
   if (!mapWorld || !mapFrame) return;
   const rect = mapFrame.getBoundingClientRect();
+  mapViewportWidth = rect.width;
+  mapViewportHeight = rect.height;
   const dimensions = getActiveMapDimensions();
   zoom = clampZoomForViewport(zoom, rect, dimensions);
   updateZoomPerformanceClasses();
@@ -19130,11 +19314,11 @@ function updatePinch() {
 }
 
 function isMapNodeInteractionTarget(target) {
-  return Boolean(target?.closest(".city-node, .city-action-wheel, .camp-node, .gold-camp-action-wheel, .teleport-node, .harvest-bonus-node"));
+  return Boolean(target?.closest(".city-node, .city-action-wheel, .camp-node, .gold-camp-action-wheel, .teleport-node, .harvest-bonus-node, .army-token"));
 }
 
 function isMapCommandInteractionTarget(target) {
-  return Boolean(target?.closest(".city-wheel-action, .gold-camp-wheel-action, .teleport-node, .harvest-bonus-node"));
+  return Boolean(target?.closest(".city-wheel-action, .gold-camp-wheel-action, .teleport-node, .harvest-bonus-node, .army-token-nav button"));
 }
 
 function resolveCityTapButton(event) {
@@ -19364,6 +19548,11 @@ function preventNativeMapTouch(event) {
 function handleMapClick(event) {
   if (isMapInteractionBlocked()) return;
   if (suppressMapClick) return;
+  if (!event.target?.closest?.(".army-token") && selectedArmyTokenId) {
+    selectedArmyTokenId = "";
+    updateArmyTokenNavigationSelection();
+  }
+  if (event.target?.closest?.(".army-token")) return;
   if (resolveCityTapButton(event)) return;
   clearSelection();
 }

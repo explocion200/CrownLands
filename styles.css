@@ -2291,7 +2291,9 @@ input {
   box-shadow: 0 10px 22px rgba(0,0,0,.36);
   font-size: .72rem;
   font-weight: 950;
-  pointer-events: none;
+  pointer-events: auto;
+  cursor: pointer;
+  touch-action: none;
   transition: transform .12s linear;
   will-change: transform;
   contain: layout paint;
@@ -2311,6 +2313,68 @@ input {
   font-size: .68rem;
   font-weight: 950;
 }
+.army-token.selected {
+  z-index: 28;
+  contain: layout;
+  overflow: visible;
+  border-color: #fff2a6;
+  box-shadow: 0 0 0 2px rgba(10, 35, 63, .9), 0 0 16px rgba(255, 220, 111, .72), 0 10px 22px rgba(0,0,0,.4);
+}
+.army-token-nav {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 9px);
+  transform: translateX(-50%);
+  width: 148px;
+  height: 50px;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 4px;
+  padding: 4px;
+  border: 2px solid #cda94f;
+  border-radius: 6px;
+  background: rgba(7, 24, 42, .96);
+  box-shadow: 0 8px 18px rgba(0,0,0,.5);
+  pointer-events: auto;
+}
+.army-token-nav[hidden] { display: none; }
+.army-token-nav::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: -7px;
+  width: 10px;
+  height: 10px;
+  transform: translateX(-50%) rotate(45deg);
+  border-right: 2px solid #cda94f;
+  border-bottom: 2px solid #cda94f;
+  background: #07182a;
+}
+.army-token-nav button {
+  position: relative;
+  z-index: 1;
+  min-width: 0;
+  height: 38px;
+  display: grid;
+  grid-template-columns: 18px 1fr;
+  place-items: center;
+  gap: 2px;
+  padding: 0 5px;
+  border: 1px solid rgba(231, 205, 127, .55);
+  border-radius: 4px;
+  color: #fff4d4;
+  background: linear-gradient(#245984, #123a5e);
+  font: inherit;
+  cursor: pointer;
+}
+.army-token-nav button:hover,
+.army-token-nav button:focus-visible {
+  border-color: #ffe18a;
+  background: linear-gradient(#3475a9, #184b78);
+  outline: none;
+}
+.army-token-nav button > span { font-size: 1rem; line-height: 1; }
+.army-token-nav button > small { font-size: .68rem; font-weight: 950; opacity: 1; }
 .map-frame.camera-moving .army-token,
 .map-frame.crowded-map .army-token,
 .map-frame.low-zoom .army-token {
