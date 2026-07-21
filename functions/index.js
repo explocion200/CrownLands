@@ -92,6 +92,9 @@ const MAX_ROUTE_REGION_COUNT = 20;
 const MAX_ROUTE_SEGMENT_COUNT = 20;
 const MAX_ROUTE_POINTS_PER_SEGMENT = 160;
 const ROUTE_ENDPOINT_TOLERANCE = 180;
+const SERVER_ROUTE_CITY_CLEARANCE = 46;
+const SERVER_ROUTE_STRUCTURE_CLEARANCE = 88;
+const SERVER_DEFAULT_CAMP_VISUAL_SIZE = 132;
 const SERVER_ISLAND_MAP_PADDING = 560;
 const SERVER_ROUTE_INSET_MIN = 24;
 const SERVER_ROUTE_INSET_MAX = 58;
@@ -340,6 +343,84 @@ function serverImageSizeToWorld(regionId = "", size = 1) {
   const bounds = getServerMapBounds(regionId);
   if (!map || !bounds) return Math.max(1, Math.floor(safeNumber(size, 1)));
   return Math.max(1, Math.round(Math.max(1, safeNumber(size, 1)) * bounds.width / getServerMapImageDimensions(map).width));
+}
+
+const SERVER_ROUTE_OBSTACLES_BY_REGION = new Map();
+
+function getServerRouteObstacles(regionId = "") {
+  const normalizedRegionId = normalizeRegionId(regionId);
+  if (SERVER_ROUTE_OBSTACLES_BY_REGION.has(normalizedRegionId)) {
+    return SERVER_ROUTE_OBSTACLES_BY_REGION.get(normalizedRegionId);
+  }
+  const map = getServerWorldMap(normalizedRegionId);
+  const obstacles = [];
+  const addObstacle = (target = {}, radius = SERVER_ROUTE_CITY_CLEARANCE) => {
+    const id = safeString(target.id, 96);
+    const point = serverImagePointToWorld(normalizedRegionId, target);
+    if (!id || !point) return;
+    obstacles.push({ id, x: point.x, y: point.y, radius: Math.max(1, safeNumber(radius, 1)) });
+  };
+  (Array.isArray(map?.cities) ? map.cities : []).forEach(city => {
+    addObstacle(city, SERVER_ROUTE_CITY_CLEARANCE);
+  });
+  (Array.isArray(map?.objectives) ? map.objectives : []).forEach(objective => {
+    addObstacle(
+      objective,
+      Math.max(
+        SERVER_ROUTE_STRUCTURE_CLEARANCE,
+        serverImageSizeToWorld(normalizedRegionId, objective.size || 154) * 0.55
+      )
+    );
+  });
+  (Array.isArray(map?.camps) ? map.camps : []).forEach(camp => {
+    addObstacle(
+      camp,
+      Math.max(
+        SERVER_ROUTE_STRUCTURE_CLEARANCE,
+        serverImageSizeToWorld(normalizedRegionId, camp.size || SERVER_DEFAULT_CAMP_VISUAL_SIZE) * 0.55
+      )
+    );
+  });
+  SERVER_ROUTE_OBSTACLES_BY_REGION.set(normalizedRegionId, obstacles);
+  return obstacles;
+}
+
+function pointToSegmentDistanceSquared(point = {}, start = {}, end = {}) {
+  const dx = safeNumber(end.x, 0) - safeNumber(start.x, 0);
+  const dy = safeNumber(end.y, 0) - safeNumber(start.y, 0);
+  const lengthSquared = dx * dx + dy * dy;
+  if (lengthSquared <= 0) {
+    const pointDx = safeNumber(point.x, 0) - safeNumber(start.x, 0);
+    const pointDy = safeNumber(point.y, 0) - safeNumber(start.y, 0);
+    return pointDx * pointDx + pointDy * pointDy;
+  }
+  const projection = clamp(
+    ((safeNumber(point.x, 0) - safeNumber(start.x, 0)) * dx + (safeNumber(point.y, 0) - safeNumber(start.y, 0)) * dy) / lengthSquared,
+    0,
+    1
+  );
+  const nearestX = safeNumber(start.x, 0) + projection * dx;
+  const nearestY = safeNumber(start.y, 0) + projection * dy;
+  const pointDx = safeNumber(point.x, 0) - nearestX;
+  const pointDy = safeNumber(point.y, 0) - nearestY;
+  return pointDx * pointDx + pointDy * pointDy;
+}
+
+function assertRouteAvoidsWorldStructures(pathSegments = [], ignoredIds = new Set()) {
+  for (const segment of pathSegments) {
+    const obstacles = getServerRouteObstacles(segment.regionId)
+      .filter(obstacle => !ignoredIds.has(obstacle.id));
+    for (let index = 1; index < segment.points.length; index += 1) {
+      const start = segment.points[index - 1];
+      const end = segment.points[index];
+      for (const obstacle of obstacles) {
+        const enforcedRadius = Math.max(1, obstacle.radius - 2);
+        if (pointToSegmentDistanceSquared(obstacle, start, end) < enforcedRadius * enforcedRadius) {
+          throw new HttpsError("invalid-argument", "The march route crosses a city, camp, or stronghold.");
+        }
+      }
+    }
+  }
 }
 
 function getServerEdgeConnections(regionId = "") {
@@ -1312,6 +1393,7 @@ function validateArmyRoute(order = {}, source = {}, target = {}) {
   if (!Number.isFinite(pathLength) || pathLength <= 0) {
     throw new HttpsError("failed-precondition", "No valid troop route was found.");
   }
+  assertRouteAvoidsWorldStructures(pathSegments, new Set([order.fromId, order.toId]));
   const path = pathSegments.flatMap((segment, index) => index ? segment.points.slice(1) : segment.points);
   return {
     routeRegionIds: expectedRegions,

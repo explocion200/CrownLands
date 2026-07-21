@@ -89,35 +89,26 @@ function findLandRouteForLeg(job, constants, leg) {
   const regionId = normalizeRegionId(job, leg.regionId);
   const source = makeRoutePoint(leg.start, "source");
   const target = makeRoutePoint(leg.end, "target");
-  const context = createRouteContext(job, regionId, source, target, false);
+  const context = createRouteContext(job, regionId, source, target);
   const primaryBudget = { visited: 0, max: constants.searchMaxVisitedCells };
-  const primary = findLandRouteWithContext(job, constants, source, target, regionId, context, primaryBudget);
-  if (primary) return primary;
-  if (context.obstacles.length) {
-    const terrainOnlyContext = createRouteContext(job, regionId, source, target, true);
-    const fallbackBudget = { visited: 0, max: constants.searchMaxVisitedCells };
-    return findLandRouteWithContext(job, constants, source, target, regionId, terrainOnlyContext, fallbackBudget);
-  }
-  return null;
+  return findLandRouteWithContext(job, constants, source, target, regionId, context, primaryBudget);
 }
 
-function createRouteContext(job, regionId, source, target, ignoreCityObstacles) {
+function createRouteContext(job, regionId, source, target) {
   const ignoredIds = new Set([source?.id, target?.id].filter(Boolean));
-  const obstacles = ignoreCityObstacles
-    ? []
-    : (job.obstaclesByRegion?.[regionId] || [])
-      .filter(obstacle => !ignoredIds.has(obstacle.id))
-      .map(obstacle => ({
-        id: String(obstacle.id || ""),
-        x: Number(obstacle.x) || 0,
-        y: Number(obstacle.y) || 0,
-        radius: Math.max(0, Number(obstacle.radius) || 0),
-      }));
+  const obstacles = (job.obstaclesByRegion?.[regionId] || [])
+    .filter(obstacle => !ignoredIds.has(obstacle.id))
+    .map(obstacle => ({
+      id: String(obstacle.id || ""),
+      x: Number(obstacle.x) || 0,
+      y: Number(obstacle.y) || 0,
+      radius: Math.max(0, Number(obstacle.radius) || 0),
+    }));
   return {
     regionId,
     obstacles,
     obstacleGrid: createRouteObstacleGrid(obstacles),
-    cacheKey: `${ignoreCityObstacles ? "terrain-only" : "cityblock"}:${regionId}:${Array.from(ignoredIds).sort().join(",")}`,
+    cacheKey: `structure-block:${regionId}:${Array.from(ignoredIds).sort().join(",")}`,
   };
 }
 

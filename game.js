@@ -11085,24 +11085,50 @@ function isWalkableCell(gx, gy) {
   return isWalkablePoint(gx * GRID_SIZE + GRID_SIZE / 2, gy * GRID_SIZE + GRID_SIZE / 2, 0);
 }
 
-function createRouteContext(regionId, source = null, target = null, options = {}) {
+function isCampRouteObstacle(target = {}) {
+  return Boolean(target.campType || target.targetType === "camp" || target.kind === "goldCamp" || target.kind === "warbandCamp");
+}
+
+function getRouteObstacleRadius(target = {}) {
+  if (isCampRouteObstacle(target)) {
+    return Math.max(ROUTE_STRONGHOLD_CLEARANCE, readVisualSize(target.size, DEFAULT_CAMP_VISUAL_SIZE) * 0.55);
+  }
+  if (isStronghold(target)) {
+    return Math.max(ROUTE_STRONGHOLD_CLEARANCE, getStrongholdVisualSize(target) * 0.55);
+  }
+  return ROUTE_CITY_CLEARANCE;
+}
+
+function getRouteObstacleTargetsForRegion(regionId) {
+  const normalizedRegionId = normalizeRegionId(regionId);
+  const targetsById = new Map();
+  const addTarget = target => {
+    const id = String(target?.id || "");
+    if (!id || getCityRegionId(target) !== normalizedRegionId) return;
+    targetsById.set(id, target);
+  };
+  getOnlineIslandBaseCities(normalizedRegionId).forEach(addTarget);
+  WORLD_CAMPS.forEach(addTarget);
+  (state?.cities || []).forEach(addTarget);
+  return [...targetsById.values()];
+}
+
+function createRouteContext(regionId, source = null, target = null) {
   const normalizedRegionId = normalizeRegionId(regionId);
   const ignoredIds = new Set([source?.id, target?.id].filter(Boolean));
-  const ignoreCityObstacles = Boolean(options.ignoreCityObstacles);
-  const obstacles = ignoreCityObstacles ? [] : state?.cities
-    ?.filter(city => getCityRegionId(city) === normalizedRegionId && !ignoredIds.has(city.id))
-    .map(city => ({
-      id: city.id,
-      x: city.x,
-      y: city.y,
-      radius: isStronghold(city) ? Math.max(ROUTE_STRONGHOLD_CLEARANCE, getStrongholdVisualSize(city) * 0.55) : ROUTE_CITY_CLEARANCE,
-    })) || [];
+  const obstacles = getRouteObstacleTargetsForRegion(normalizedRegionId)
+    .filter(structure => !ignoredIds.has(structure.id))
+    .map(structure => ({
+      id: structure.id,
+      x: structure.x,
+      y: structure.y,
+      radius: getRouteObstacleRadius(structure),
+    }));
   return {
     regionId: normalizedRegionId,
     ignoredIds,
     obstacles,
-    ignoreCityObstacles,
-    cacheKey: `${ignoreCityObstacles ? "terrain-only" : "cityblock"}:${normalizedRegionId}:${[...ignoredIds].sort().join(",")}`,
+    cacheKey: `structure-block:${normalizedRegionId}:${[...ignoredIds].sort().join(",")}`,
   };
 }
 
@@ -11658,29 +11684,15 @@ function sanitizeRouteWorkerTerrainShape(shape = {}) {
 
 function getRouteWorkerObstaclesByRegion(regionIds = []) {
   const regionSet = new Set(regionIds.map(normalizeRegionId));
-  const obstacleMaps = Object.fromEntries([...regionSet].map(regionId => [regionId, new Map()]));
-  const addObstacle = target => {
-    const regionId = normalizeRegionId(target?.regionId || target?.startPool);
-    const id = String(target?.id || "");
-    if (!id || !regionSet.has(regionId)) return;
-    const isCamp = Boolean(getRewardCampConfig(target));
-    obstacleMaps[regionId].set(id, {
-      id,
+  return Object.fromEntries([...regionSet].map(regionId => [
+    regionId,
+    getRouteObstacleTargetsForRegion(regionId).map(target => ({
+      id: target.id,
       x: Number(target.x) || 0,
       y: Number(target.y) || 0,
-      radius: isCamp
-        ? Math.max(ROUTE_STRONGHOLD_CLEARANCE, readVisualSize(target.size, DEFAULT_CAMP_VISUAL_SIZE) * 0.55)
-        : isStronghold(target)
-          ? Math.max(ROUTE_STRONGHOLD_CLEARANCE, getStrongholdVisualSize(target) * 0.55)
-          : ROUTE_CITY_CLEARANCE,
-    });
-  };
-  regionSet.forEach(regionId => {
-    getOnlineIslandBaseCities(regionId).forEach(addObstacle);
-    WORLD_CAMPS.filter(camp => normalizeRegionId(camp.regionId) === regionId).forEach(addObstacle);
-  });
-  (state?.cities || []).forEach(addObstacle);
-  return Object.fromEntries(Object.entries(obstacleMaps).map(([regionId, obstacles]) => [regionId, [...obstacles.values()]]));
+      radius: getRouteObstacleRadius(target),
+    })),
+  ]));
 }
 
 function findRoute(source, target) {
@@ -11750,14 +11762,7 @@ function findPortalRoute(source, target, sourceRegionId = getCityRegionId(source
 function findLandRoute(source, target, regionId = getCityRegionId(source)) {
   const normalizedRegionId = normalizeRegionId(regionId);
   const routeContext = createRouteContext(normalizedRegionId, source, target);
-  const primaryRoute = findLandRouteWithContext(source, target, normalizedRegionId, routeContext);
-  if (primaryRoute) return primaryRoute;
-  if (routeContext.obstacles.length) {
-    const terrainOnlyContext = createRouteContext(normalizedRegionId, source, target, { ignoreCityObstacles: true });
-    const terrainOnlyRoute = findLandRouteWithContext(source, target, normalizedRegionId, terrainOnlyContext);
-    if (terrainOnlyRoute) return terrainOnlyRoute;
-  }
-  return null;
+  return findLandRouteWithContext(source, target, normalizedRegionId, routeContext);
 }
 
 function findLandRouteWithContext(source, target, normalizedRegionId, routeContext = null) {
