@@ -74,7 +74,13 @@ const ROYAL_PEACE_SHIELD_DURATION_MS = 12 * 60 * 60 * 1000;
 const ROYAL_PEACE_SHIELD_PURCHASE_COOLDOWN_MS = 24 * 60 * 60 * 1000;
 const WAR_DRUMS_ITEM_ID = "war_drums_30m";
 const WAR_DRUMS_DURATION_MS = 30 * 60 * 1000;
-const WAR_DRUMS_TROOP_PRODUCTION_BONUS_PERCENT = 5;
+const WAR_DRUMS_TROOP_PRODUCTION_BONUS_PERCENT = 50;
+const ROYAL_TAX_DECREE_ITEM_ID = "royal_tax_decree_30m";
+const ROYAL_TAX_DECREE_DURATION_MS = 30 * 60 * 1000;
+const ROYAL_TAX_DECREE_GOLD_PRODUCTION_BONUS_PERCENT = 50;
+const PRODUCTION_BOOST_PURCHASE_LIMIT = 3;
+const PRODUCTION_BOOST_PURCHASE_WINDOW_MS = 24 * 60 * 60 * 1000;
+const PRODUCTION_BOOST_ITEM_IDS = new Set([WAR_DRUMS_ITEM_ID, ROYAL_TAX_DECREE_ITEM_ID]);
 const VEIL_OF_SILENCE_ITEM_ID = "veil_of_silence_30m";
 const VEIL_OF_SILENCE_DURATION_MS = 5 * 60 * 1000;
 const MAIN_CITY_CHANGE_CITY_LIMIT = 30;
@@ -140,6 +146,7 @@ const REWARD_CAMP_CONFIG = {
 const SHOP_ITEMS = {
   [ROYAL_PEACE_SHIELD_ITEM_ID]: { id: ROYAL_PEACE_SHIELD_ITEM_ID, label: "Royal Peace Shield", cost: 1250000 },
   [WAR_DRUMS_ITEM_ID]: { id: WAR_DRUMS_ITEM_ID, label: "War Drums", cost: 250000 },
+  [ROYAL_TAX_DECREE_ITEM_ID]: { id: ROYAL_TAX_DECREE_ITEM_ID, label: "Royal Tax Decree", cost: 150000 },
   [VEIL_OF_SILENCE_ITEM_ID]: { id: VEIL_OF_SILENCE_ITEM_ID, label: "Veil of Silence", cost: 175000 },
   swift_march_order: { id: "swift_march_order", label: "Swift March Order", cost: 300000 },
   recall_horn: { id: "recall_horn", label: "Recall Horn", cost: 500000 },
@@ -715,7 +722,7 @@ function getMillionLordsPassiveGoldPerHour(level) {
   );
 }
 
-function getCityProductionStats(city = {}, profile = {}, bonuses = {}) {
+function getCityProductionStats(city = {}, profile = {}, bonuses = {}, options = {}) {
   const stronghold = isStronghold(city);
   const level = stronghold ? getStrongholdDefenseLevel(city) : clampCityLevel(city.level);
   const victoryPoints = Math.floor(
@@ -725,9 +732,14 @@ function getCityProductionStats(city = {}, profile = {}, bonuses = {}) {
   );
   const royalGranariesPercent = getSkillPercent(profile, "royalGranaries");
   const taxStewardshipPercent = getSkillPercent(profile, "taxStewardship");
+  const nowMs = Math.max(0, safeNumber(options.nowMs, Date.now()));
   const warDrumsExpiresAtMs = Math.max(0, Math.floor(safeNumber(profile?.itemEffects?.warDrumsExpiresAtMs, 0)));
-  const warDrumsTroopBonusPercent = !stronghold && warDrumsExpiresAtMs > Date.now()
+  const warDrumsTroopBonusPercent = options.includeWarDrums !== false && !stronghold && warDrumsExpiresAtMs > nowMs
     ? WAR_DRUMS_TROOP_PRODUCTION_BONUS_PERCENT
+    : 0;
+  const royalTaxDecreeExpiresAtMs = Math.max(0, Math.floor(safeNumber(profile?.itemEffects?.royalTaxDecreeExpiresAtMs, 0)));
+  const royalTaxDecreeGoldBonusPercent = options.includeRoyalTaxDecree !== false && !stronghold && royalTaxDecreeExpiresAtMs > nowMs
+    ? ROYAL_TAX_DECREE_GOLD_PRODUCTION_BONUS_PERCENT
     : 0;
   const baseTroopProductionPerHour = stronghold ? 0 : victoryPoints * CITY_LEVEL_STATS.troopProductionPerVictoryPoint;
   const troopProductionPerHour = baseTroopProductionPerHour
@@ -737,13 +749,16 @@ function getCityProductionStats(city = {}, profile = {}, bonuses = {}) {
   const rawGoldProductionPerHour = stronghold ? 0 : getMillionLordsPassiveGoldPerHour(level);
   const goldProductionPerHour = rawGoldProductionPerHour
     * (1 + taxStewardshipPercent / 100)
-    * (1 + Math.max(0, safeNumber(bonuses.goldBonusPercent, 0)) / 100);
+    * (1 + Math.max(0, safeNumber(bonuses.goldBonusPercent, 0)) / 100)
+    * (1 + royalTaxDecreeGoldBonusPercent / 100);
 
   return {
     level,
     victoryPoints,
     troopProductionPerHour,
     goldProductionPerHour,
+    warDrumsTroopBonusPercent,
+    royalTaxDecreeGoldBonusPercent,
     troopProductionPerSecond: troopProductionPerHour / 3600,
     goldProductionPerSecond: goldProductionPerHour / 3600,
   };
@@ -923,6 +938,15 @@ function createGlobalStatsSnapshot({
     updatedAtMs: nowMs,
     updatedAt: FieldValue.serverTimestamp(),
   };
+}
+
+function getTimedProductionBoostOverlapSeconds(intervalStartMs, intervalEndMs, expiresAtMs, durationMs) {
+  const endMs = Math.max(0, safeNumber(intervalEndMs, 0));
+  const startMs = clamp(safeNumber(intervalStartMs, endMs), 0, endMs);
+  const effectEndMs = Math.max(0, timestampToMs(expiresAtMs));
+  const effectStartMs = Math.max(0, effectEndMs - Math.max(0, safeNumber(durationMs, 0)));
+  if (!effectEndMs || effectEndMs <= startMs || effectStartMs >= endMs) return 0;
+  return Math.max(0, (Math.min(endMs, effectEndMs) - Math.max(startMs, effectStartMs)) / 1000);
 }
 
 function globalStatsForClient(stats = null) {
@@ -1931,6 +1955,7 @@ function normalizeItemEffects(effects = {}) {
   return {
     shieldExpiresAtMs: timestampToMs(effects.shieldExpiresAtMs || effects.shieldExpiresAt),
     warDrumsExpiresAtMs: timestampToMs(effects.warDrumsExpiresAtMs || effects.warDrumsExpiresAt || effects.troopBoostExpiresAtMs || effects.troopBoostExpiresAt),
+    royalTaxDecreeExpiresAtMs: timestampToMs(effects.royalTaxDecreeExpiresAtMs || effects.royalTaxDecreeExpiresAt),
     veilOfSilenceExpiresAtMs: timestampToMs(effects.veilOfSilenceExpiresAtMs || effects.veilOfSilenceExpiresAt || effects.antiScoutExpiresAtMs || effects.antiScoutExpiresAt),
   };
 }
@@ -1944,13 +1969,32 @@ function isVeilOfSilenceActive(profile = {}, nowMs = Date.now()) {
   ) > nowMs;
 }
 
+function normalizeItemPurchaseTimestamps(value = {}) {
+  const rawTimestamps = Array.isArray(value?.purchaseTimestampsMs)
+    ? value.purchaseTimestampsMs
+    : Array.isArray(value?.purchaseTimestamps)
+      ? value.purchaseTimestamps
+      : [];
+  return rawTimestamps
+    .map(timestampToMs)
+    .filter(timestamp => timestamp > 0)
+    .sort((a, b) => a - b)
+    .slice(-PRODUCTION_BOOST_PURCHASE_LIMIT);
+}
+
 function normalizeItemPurchaseCooldowns(cooldowns = {}) {
   const shieldCooldown = cooldowns?.[ROYAL_PEACE_SHIELD_ITEM_ID] || {};
-  return {
+  const normalized = {
     [ROYAL_PEACE_SHIELD_ITEM_ID]: {
       lastPurchasedAtMs: timestampToMs(shieldCooldown.lastPurchasedAtMs || shieldCooldown.lastPurchasedAt),
     },
+    [WAR_DRUMS_ITEM_ID]: { purchaseTimestampsMs: [] },
+    [ROYAL_TAX_DECREE_ITEM_ID]: { purchaseTimestampsMs: [] },
   };
+  PRODUCTION_BOOST_ITEM_IDS.forEach(itemId => {
+    normalized[itemId].purchaseTimestampsMs = normalizeItemPurchaseTimestamps(cooldowns?.[itemId]);
+  });
+  return normalized;
 }
 
 function getShieldPurchaseCooldownRemainingMs(cooldowns = {}, nowMs = Date.now()) {
@@ -1958,6 +2002,16 @@ function getShieldPurchaseCooldownRemainingMs(cooldowns = {}, nowMs = Date.now()
   if (!lastPurchasedAtMs) return 0;
   const elapsed = Math.max(0, nowMs - Math.min(lastPurchasedAtMs, nowMs));
   return Math.max(0, ROYAL_PEACE_SHIELD_PURCHASE_COOLDOWN_MS - elapsed);
+}
+
+function getProductionBoostPurchaseStatus(itemId, cooldowns = {}, nowMs = Date.now()) {
+  if (!PRODUCTION_BOOST_ITEM_IDS.has(itemId)) return { count: 0, remainingMs: 0, purchaseTimestampsMs: [] };
+  const purchaseTimestampsMs = normalizeItemPurchaseTimestamps(cooldowns?.[itemId])
+    .filter(timestamp => timestamp > nowMs - PRODUCTION_BOOST_PURCHASE_WINDOW_MS && timestamp <= nowMs);
+  const remainingMs = purchaseTimestampsMs.length >= PRODUCTION_BOOST_PURCHASE_LIMIT
+    ? Math.max(0, purchaseTimestampsMs[0] + PRODUCTION_BOOST_PURCHASE_WINDOW_MS - nowMs)
+    : 0;
+  return { count: purchaseTimestampsMs.length, remainingMs, purchaseTimestampsMs };
 }
 
 function formatCooldownMs(ms) {
@@ -2280,7 +2334,7 @@ async function prepareEconomyCollection(transaction, uid, nowMs = Date.now(), op
     timestampToMs(rawProfile.economyUpdatedAtMs) || fallbackProductionAtMs
   );
   const goldElapsedSeconds = clamp((nowMs - lastEconomyAtMs) / 1000, 0, MAX_SERVER_PRODUCTION_SECONDS);
-  let goldProductionPerSecond = 0;
+  let goldGainFloat = 0;
   let troopsGained = 0;
   let maxElapsedSeconds = goldElapsedSeconds;
 
@@ -2293,12 +2347,33 @@ async function prepareEconomyCollection(transaction, uid, nowMs = Date.now(), op
     );
     const elapsedSeconds = clamp((nowMs - lastProductionAtMs) / 1000, 0, MAX_SERVER_PRODUCTION_SECONDS);
     maxElapsedSeconds = Math.max(maxElapsedSeconds, elapsedSeconds);
-    const stats = getCityProductionStats(city, { ...rawProfile, itemEffects }, bonuses);
+    const stats = getCityProductionStats(city, { ...rawProfile, itemEffects }, bonuses, {
+      nowMs,
+      includeWarDrums: false,
+      includeRoyalTaxDecree: false,
+    });
+    const troopIntervalStartMs = nowMs - elapsedSeconds * 1000;
+    const warDrumsOverlapSeconds = getTimedProductionBoostOverlapSeconds(
+      troopIntervalStartMs,
+      nowMs,
+      itemEffects.warDrumsExpiresAtMs,
+      WAR_DRUMS_DURATION_MS
+    );
+    const taxDecreeOverlapSeconds = getTimedProductionBoostOverlapSeconds(
+      nowMs - goldElapsedSeconds * 1000,
+      nowMs,
+      itemEffects.royalTaxDecreeExpiresAtMs,
+      ROYAL_TAX_DECREE_DURATION_MS
+    );
     const currentTroopFloat = Math.max(0, safeNumber(city.troopFloat, safeNumber(city.troops, 0)));
-    const troopGainFloat = stats.troopProductionPerSecond * elapsedSeconds;
+    const troopGainFloat = stats.troopProductionPerSecond * (
+      elapsedSeconds + warDrumsOverlapSeconds * WAR_DRUMS_TROOP_PRODUCTION_BONUS_PERCENT / 100
+    );
     const nextTroopFloat = currentTroopFloat + troopGainFloat;
     const nextTroops = Math.max(0, Math.floor(nextTroopFloat));
-    goldProductionPerSecond += stats.goldProductionPerSecond;
+    goldGainFloat += stats.goldProductionPerSecond * (
+      goldElapsedSeconds + taxDecreeOverlapSeconds * ROYAL_TAX_DECREE_GOLD_PRODUCTION_BONUS_PERCENT / 100
+    );
     troopsGained += Math.max(0, nextTroops - Math.max(0, Math.floor(safeNumber(city.troops, 0))));
     const patch = {
       troops: nextTroops,
@@ -2324,7 +2399,6 @@ async function prepareEconomyCollection(transaction, uid, nowMs = Date.now(), op
   });
   cityPatches.push(...productionCityPatches.slice(0, ECONOMY_MAX_CITY_CHECKPOINT_WRITES));
 
-  const goldGainFloat = goldProductionPerSecond * goldElapsedSeconds;
   const goldFloat = baseGold + goldGainFloat;
   const gold = Math.max(0, Math.floor(goldFloat));
   const profileAfter = {
@@ -2711,7 +2785,9 @@ function getHarvestEconomyRates(economy = null) {
   return economy.cityEntries.reduce((totals, entry) => {
     const city = entry?.city || {};
     if (isStronghold(city) || getOwnerUid(city) !== economy.uid) return totals;
-    const stats = getCityProductionStats(city, economy.profileAfter, economy.bonuses);
+    const stats = getCityProductionStats(city, economy.profileAfter, economy.bonuses, {
+      includeRoyalTaxDecree: false,
+    });
     totals.goldPerSecond += Math.max(0, safeNumber(stats.goldProductionPerSecond, 0));
     totals.troopProductionPerSecond += Math.max(0, safeNumber(stats.troopProductionPerSecond, 0));
     return totals;
@@ -4145,6 +4221,13 @@ exports.purchaseShopItem = onCall({ region: "us-central1", maxInstances: 20, inv
         );
       }
     }
+    const productionBoostPurchaseStatus = getProductionBoostPurchaseStatus(itemId, economy.itemPurchaseCooldowns, nowMs);
+    if (productionBoostPurchaseStatus.remainingMs > 0) {
+      throw new HttpsError(
+        "failed-precondition",
+        `${item.label} can only be purchased ${PRODUCTION_BOOST_PURCHASE_LIMIT} times every 24 hours. Available in ${formatCooldownMs(productionBoostPurchaseStatus.remainingMs)}.`
+      );
+    }
 
     goldFloat = Math.max(0, goldFloat - item.cost);
     gold = Math.max(0, Math.floor(goldFloat));
@@ -4154,6 +4237,13 @@ exports.purchaseShopItem = onCall({ region: "us-central1", maxInstances: 20, inv
       ...economy.itemPurchaseCooldowns,
       ...(itemId === ROYAL_PEACE_SHIELD_ITEM_ID ? {
         [ROYAL_PEACE_SHIELD_ITEM_ID]: { lastPurchasedAtMs: nowMs },
+      } : {}),
+      ...(PRODUCTION_BOOST_ITEM_IDS.has(itemId) ? {
+        [itemId]: {
+          purchaseTimestampsMs: [...productionBoostPurchaseStatus.purchaseTimestampsMs, nowMs]
+            .sort((a, b) => a - b)
+            .slice(-PRODUCTION_BOOST_PURCHASE_LIMIT),
+        },
       } : {}),
     };
 
@@ -4179,7 +4269,7 @@ exports.activateInventoryItem = onCall({ region: "us-central1", maxInstances: 20
   const itemId = safeString(data.itemId, 64);
   const item = SHOP_ITEMS[itemId];
   if (!item) throw new HttpsError("invalid-argument", "That inventory item does not exist.");
-  if (![ROYAL_PEACE_SHIELD_ITEM_ID, WAR_DRUMS_ITEM_ID, VEIL_OF_SILENCE_ITEM_ID].includes(itemId)) {
+  if (![ROYAL_PEACE_SHIELD_ITEM_ID, WAR_DRUMS_ITEM_ID, ROYAL_TAX_DECREE_ITEM_ID, VEIL_OF_SILENCE_ITEM_ID].includes(itemId)) {
     throw new HttpsError("failed-precondition", "That item effect is not active yet.");
   }
 
@@ -4218,6 +4308,13 @@ exports.activateInventoryItem = onCall({ region: "us-central1", maxInstances: 20
       }
       expiresAtMs = nowMs + WAR_DRUMS_DURATION_MS;
       itemEffects.warDrumsExpiresAtMs = expiresAtMs;
+    } else if (itemId === ROYAL_TAX_DECREE_ITEM_ID) {
+      const currentExpiresAtMs = timestampToMs(itemEffects.royalTaxDecreeExpiresAtMs);
+      if (currentExpiresAtMs > nowMs) {
+        throw new HttpsError("failed-precondition", `${item.label} is already active.`);
+      }
+      expiresAtMs = nowMs + ROYAL_TAX_DECREE_DURATION_MS;
+      itemEffects.royalTaxDecreeExpiresAtMs = expiresAtMs;
     } else if (itemId === VEIL_OF_SILENCE_ITEM_ID) {
       const currentExpiresAtMs = timestampToMs(itemEffects.veilOfSilenceExpiresAtMs);
       if (currentExpiresAtMs > nowMs) {
@@ -4344,9 +4441,6 @@ exports.sendArmyOrder = onCall({ region: "us-central1", maxInstances: 20, invoke
     const defenderLeaderboardData = defenderLeaderboardSnap?.exists ? defenderLeaderboardSnap.data() || {} : {};
 
     const sourceTroops = Math.max(0, Math.floor(safeNumber(source.troops, 0)));
-    if (order.targetType === "camp" && order.kind === "scout") {
-      throw new HttpsError("failed-precondition", "Reward camps cannot be scouted.");
-    }
     const resolvedKind = order.kind === "scout"
       ? "scout"
       : targetOwnerUid === uid
@@ -4392,7 +4486,7 @@ exports.sendArmyOrder = onCall({ region: "us-central1", maxInstances: 20, invoke
     if (order.targetType !== "camp" && resolvedKind === "scout" && isProtectedMainCity(target, uid)) {
       throw new HttpsError("failed-precondition", "Main cities cannot be scouted.");
     }
-    if (resolvedKind === "scout" && targetOwnerUid && targetOwnerUid !== uid && isVeilOfSilenceActive(defenderPowerData, nowMs)) {
+    if (order.targetType !== "camp" && resolvedKind === "scout" && targetOwnerUid && targetOwnerUid !== uid && isVeilOfSilenceActive(defenderPowerData, nowMs)) {
       throw new HttpsError("failed-precondition", "That city is hidden by Veil of Silence.");
     }
     if (resolvedKind === "attack" && order.targetType !== "camp") {
@@ -4709,10 +4803,44 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
 
     if (targetType === "camp") {
       if (army.kind === "scout") {
-        const returned = returnTroopsToSource(troopCount);
-        writeParticipantEconomies({}, {}, { statsCityPatches: getLatestSourceReturnStatsPatches() });
-        markResolved({ kind: "scout", blocked: "reward_camp", returned });
-        return { ok: true, status: "resolved", kind: "scout", cityUpdates: withEconomyCityUpdates(cityUpdates) };
+        const campTarget = getRewardCampCombatTarget(target);
+        const scoutReport = createScoutReportSnapshot(campTarget, defenderProfile, nowMs, defenderBonuses);
+        const report = makeReport({
+          id: `${armyId}_${campTarget.campType}_camp_scout_${attackerUid}`,
+          uid: attackerUid,
+          type: "scout",
+          outcome: "scout",
+          city: campTarget,
+          opponentName: defenderUid ? defenderName : "Neutral defenders",
+          sentTroops: troopCount,
+          troopCount: scoutReport.troops,
+          totalDefense: scoutReport.totalDefense,
+          summary: `Scout revealed ${scoutReport.troops.toLocaleString()} defenders at ${campTarget.name || campTarget.id}.`,
+          scoutReport,
+          nowMs,
+        });
+        writeParticipantEconomies();
+        writeReport(transaction, attackerUid, report, attackerProfileSnap);
+        writeScoutReport(transaction, attackerUid, campTarget.id, scoutReport, attackerProfileSnap);
+        transaction.set(islandReportRef(targetRegionId, report.id), {
+          ...report,
+          createdAt: FieldValue.serverTimestamp(),
+        }, { merge: true });
+        reports.push(report);
+        markResolved({ kind: "scout", targetType: "camp", targetTroops: scoutReport.troops });
+        return {
+          ok: true,
+          status: "resolved",
+          kind: "scout",
+          targetType: "camp",
+          reports: reportsForCaller(),
+          scoutReport: callerUid === attackerUid ? scoutReport : null,
+          cityUpdates: withEconomyCityUpdates(cityUpdates),
+          currentUser: profilePatchForCaller(
+            { character: attackerProfile.character, gold: attackerEconomy?.gold, goldFloat: attackerEconomy?.goldFloat },
+            defenderEconomy ? { character: defenderProfile?.character, gold: defenderEconomy.gold, goldFloat: defenderEconomy.goldFloat } : null
+          ),
+        };
       }
 
       const remainingActiveArmyIds = removeActiveCampArmyId(target, armyId);

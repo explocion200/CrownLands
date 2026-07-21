@@ -441,6 +441,13 @@ input {
   border-color: rgba(255, 206, 106, .56);
   box-shadow: 0 10px 24px rgba(0,0,0,.36), 0 0 22px rgba(255, 177, 60, .3);
 }
+.tax-decree-status-badge {
+  background:
+    radial-gradient(circle at 50% 30%, rgba(255, 223, 126, .24), transparent 55%),
+    linear-gradient(180deg, rgba(55, 37, 10, .7), rgba(18, 14, 8, .86));
+  border-color: rgba(255, 223, 139, .62);
+  box-shadow: 0 10px 24px rgba(0,0,0,.36), 0 0 22px rgba(255, 210, 89, .3);
+}
 .veil-status-badge {
   background:
     radial-gradient(circle at 50% 30%, rgba(139, 91, 255, .24), transparent 55%),
@@ -461,6 +468,9 @@ input {
 }
 .war-drums-status-icon {
   box-shadow: 0 0 18px rgba(255, 186, 78, .42), 0 7px 14px rgba(0,0,0,.36);
+}
+.tax-decree-status-icon {
+  box-shadow: 0 0 18px rgba(255, 221, 118, .44), 0 7px 14px rgba(0,0,0,.36);
 }
 .veil-status-icon {
   box-shadow: 0 0 18px rgba(153, 119, 255, .42), 0 7px 14px rgba(0,0,0,.36);
@@ -501,6 +511,9 @@ input {
 }
 .active-item-effects-stack.compact .war-drums-status-icon {
   box-shadow: 0 0 12px rgba(255, 186, 78, .32), 0 5px 10px rgba(0,0,0,.3);
+}
+.active-item-effects-stack.compact .tax-decree-status-icon {
+  box-shadow: 0 0 12px rgba(255, 221, 118, .34), 0 5px 10px rgba(0,0,0,.3);
 }
 .active-item-effects-stack.compact .veil-status-icon {
   box-shadow: 0 0 12px rgba(153, 119, 255, .32), 0 5px 10px rgba(0,0,0,.3);
@@ -1159,14 +1172,12 @@ input {
 .gold-camp-label {
   position: absolute;
   left: 50%;
-  top: calc(100% - 5px);
+  top: calc(100% - 20px);
   width: max-content;
-  max-width: 176px;
+  max-width: 190px;
   transform: translateX(-50%);
-  display: grid;
-  justify-items: center;
-  gap: 1px;
-  padding: 4px 8px 5px;
+  display: block;
+  padding: 5px 10px 6px;
   border: 1px solid rgba(255, 221, 125, .78);
   border-radius: 5px;
   background: rgba(4, 18, 31, .9);
@@ -1178,17 +1189,7 @@ input {
 }
 .gold-camp-label strong {
   color: #ffe29a;
-  font-size: .72rem;
-}
-.gold-camp-state {
-  color: #fff;
-  font-size: .64rem;
-  font-weight: 800;
-}
-.gold-camp-label small {
-  color: #f3c95f;
-  font-size: .58rem;
-  font-weight: 800;
+  font-size: .74rem;
 }
 .gold-camp-action-wheel {
   position: absolute;
@@ -1200,14 +1201,14 @@ input {
 }
 .gold-camp-wheel-action {
   position: absolute;
-  top: 50%;
-  width: 62px;
-  min-height: 60px;
-  transform: translateY(-50%);
+  top: calc(100% + 34px);
+  width: 52px;
+  min-height: 48px;
+  transform: translate(-50%, -50%);
   display: grid;
   place-items: center;
   gap: 2px;
-  padding: 6px 5px;
+  padding: 5px 3px;
   border: 2px solid rgba(255, 226, 139, .92);
   border-radius: 50%;
   color: #fff8d4;
@@ -1216,22 +1217,29 @@ input {
   pointer-events: auto;
 }
 .gold-camp-wheel-action > span {
-  font-size: 1.35rem;
+  font-size: 1.05rem;
   line-height: 1;
 }
 .gold-camp-wheel-action strong {
-  font-size: .6rem;
+  max-width: 100%;
+  font-size: .52rem;
+  line-height: 1;
+  overflow-wrap: anywhere;
 }
 .gold-camp-wheel-action:disabled {
   filter: grayscale(.75);
   opacity: .72;
 }
+.camp-scout-action {
+  left: calc(50% - 58px);
+  background: #285a82;
+}
 .camp-order-action {
-  right: calc(100% + 10px);
+  left: calc(50% + 58px);
   background: #b77c22;
 }
 .camp-info-action {
-  left: calc(100% + 10px);
+  left: 50%;
 }
 .gold-camp-info-panel {
   display: grid;
@@ -2215,6 +2223,10 @@ input {
   color: #ffe293;
   font-weight: 950;
 }
+.shop-item-copy .shop-item-purchase-limit {
+  color: #d8e9f6;
+  font-weight: 850;
+}
 .shop-buy-btn {
   min-width: 104px;
   min-height: 44px;
@@ -2275,8 +2287,13 @@ input {
 }
 .inventory-slots {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: .55rem;
+}
+@media (max-width: 620px) {
+  .inventory-slots {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
 }
 .inventory-slot {
   min-height: 128px;

@@ -52,7 +52,7 @@ const PERFORMANCE_PANEL_SAMPLE_MS = 500;
 const CROWDED_MAP_CITY_THRESHOLD = 70;
 const CROWDED_MAP_ARMY_THRESHOLD = 24;
 const CITY_LIST_PAGE_SIZE = 5;
-const INVENTORY_SLOT_COUNT = 5;
+const INVENTORY_SLOT_COUNT = 6;
 const SHOP_ITEMS = [
   {
     id: "shield_12h",
@@ -65,9 +65,16 @@ const SHOP_ITEMS = [
     id: "war_drums_30m",
     legacyIds: ["troop_boost_1h"],
     label: "War Drums",
-    description: "Increases troop production by 5% for 30 minutes.",
+    description: "Increases troop production from owned cities by 50% for 30 minutes.",
     cost: 250_000,
     icon: "assets/war-drums-icon.webp?v=20260703-shop-icons",
+  },
+  {
+    id: "royal_tax_decree_30m",
+    label: "Royal Tax Decree",
+    description: "Increases gold production from owned cities by 50% for 30 minutes.",
+    cost: 150_000,
+    icon: "assets/royal-tax-decree-icon.webp?v=20260721-tax-decree",
   },
   {
     id: "veil_of_silence_30m",
@@ -97,7 +104,13 @@ const ROYAL_PEACE_SHIELD_DURATION_MS = 12 * 60 * 60 * 1000;
 const ROYAL_PEACE_SHIELD_PURCHASE_COOLDOWN_MS = 24 * 60 * 60 * 1000;
 const WAR_DRUMS_ITEM_ID = "war_drums_30m";
 const WAR_DRUMS_DURATION_MS = 30 * 60 * 1000;
-const WAR_DRUMS_TROOP_PRODUCTION_BONUS_PERCENT = 5;
+const WAR_DRUMS_TROOP_PRODUCTION_BONUS_PERCENT = 50;
+const ROYAL_TAX_DECREE_ITEM_ID = "royal_tax_decree_30m";
+const ROYAL_TAX_DECREE_DURATION_MS = 30 * 60 * 1000;
+const ROYAL_TAX_DECREE_GOLD_PRODUCTION_BONUS_PERCENT = 50;
+const PRODUCTION_BOOST_PURCHASE_LIMIT = 3;
+const PRODUCTION_BOOST_PURCHASE_WINDOW_MS = 24 * 60 * 60 * 1000;
+const PRODUCTION_BOOST_ITEM_IDS = new Set([WAR_DRUMS_ITEM_ID, ROYAL_TAX_DECREE_ITEM_ID]);
 const VEIL_OF_SILENCE_ITEM_ID = "veil_of_silence_30m";
 const VEIL_OF_SILENCE_DURATION_MS = 5 * 60 * 1000;
 
@@ -2393,6 +2406,8 @@ const shieldStatusBadge = document.getElementById("shieldStatusBadge");
 const shieldStatusTime = document.getElementById("shieldStatusTime");
 const warDrumsStatusBadge = document.getElementById("warDrumsStatusBadge");
 const warDrumsStatusTime = document.getElementById("warDrumsStatusTime");
+const taxDecreeStatusBadge = document.getElementById("taxDecreeStatusBadge");
+const taxDecreeStatusTime = document.getElementById("taxDecreeStatusTime");
 const veilStatusBadge = document.getElementById("veilStatusBadge");
 const veilStatusTime = document.getElementById("veilStatusTime");
 const activeItemEffectsStack = document.getElementById("activeItemEffectsStack");
@@ -4724,7 +4739,22 @@ function ensureShopItems() {
 function createDefaultItemPurchaseCooldowns() {
   return {
     [ROYAL_PEACE_SHIELD_ITEM_ID]: { lastPurchasedAtMs: 0 },
+    [WAR_DRUMS_ITEM_ID]: { purchaseTimestampsMs: [] },
+    [ROYAL_TAX_DECREE_ITEM_ID]: { purchaseTimestampsMs: [] },
   };
+}
+
+function normalizeItemPurchaseTimestamps(value = {}) {
+  const rawTimestamps = Array.isArray(value?.purchaseTimestampsMs)
+    ? value.purchaseTimestampsMs
+    : Array.isArray(value?.purchaseTimestamps)
+      ? value.purchaseTimestamps
+      : [];
+  return rawTimestamps
+    .map(timestampToMs)
+    .filter(timestamp => timestamp > 0)
+    .sort((a, b) => a - b)
+    .slice(-PRODUCTION_BOOST_PURCHASE_LIMIT);
 }
 
 function normalizeItemPurchaseCooldowns(cooldowns = {}) {
@@ -4733,6 +4763,9 @@ function normalizeItemPurchaseCooldowns(cooldowns = {}) {
   normalized[ROYAL_PEACE_SHIELD_ITEM_ID].lastPurchasedAtMs = timestampToMs(
     shieldCooldown.lastPurchasedAtMs || shieldCooldown.lastPurchasedAt
   );
+  PRODUCTION_BOOST_ITEM_IDS.forEach(itemId => {
+    normalized[itemId].purchaseTimestampsMs = normalizeItemPurchaseTimestamps(cooldowns?.[itemId]);
+  });
   return normalized;
 }
 
@@ -4748,13 +4781,37 @@ function ensureItemPurchaseCooldowns() {
 }
 
 function getItemPurchaseCooldownRemainingMs(itemId, now = Date.now()) {
-  if (itemId !== ROYAL_PEACE_SHIELD_ITEM_ID) return 0;
   const cooldowns = ensureItemPurchaseCooldowns();
-  const lastPurchasedAtMs = normalizeTimestampMs(cooldowns?.[ROYAL_PEACE_SHIELD_ITEM_ID]?.lastPurchasedAtMs);
-  if (!lastPurchasedAtMs) return 0;
   const currentTime = Math.max(0, Number(now) || Date.now());
-  const elapsed = Math.max(0, currentTime - Math.min(lastPurchasedAtMs, currentTime));
-  return Math.max(0, ROYAL_PEACE_SHIELD_PURCHASE_COOLDOWN_MS - elapsed);
+  if (itemId === ROYAL_PEACE_SHIELD_ITEM_ID) {
+    const lastPurchasedAtMs = normalizeTimestampMs(cooldowns?.[ROYAL_PEACE_SHIELD_ITEM_ID]?.lastPurchasedAtMs);
+    if (!lastPurchasedAtMs) return 0;
+    const elapsed = Math.max(0, currentTime - Math.min(lastPurchasedAtMs, currentTime));
+    return Math.max(0, ROYAL_PEACE_SHIELD_PURCHASE_COOLDOWN_MS - elapsed);
+  }
+  if (!PRODUCTION_BOOST_ITEM_IDS.has(itemId)) return 0;
+  const recentPurchases = normalizeItemPurchaseTimestamps(cooldowns?.[itemId])
+    .filter(timestamp => timestamp > currentTime - PRODUCTION_BOOST_PURCHASE_WINDOW_MS && timestamp <= currentTime);
+  if (recentPurchases.length < PRODUCTION_BOOST_PURCHASE_LIMIT) return 0;
+  return Math.max(0, recentPurchases[0] + PRODUCTION_BOOST_PURCHASE_WINDOW_MS - currentTime);
+}
+
+function getProductionBoostPurchaseCount(itemId, now = Date.now()) {
+  if (!PRODUCTION_BOOST_ITEM_IDS.has(itemId)) return 0;
+  const currentTime = Math.max(0, Number(now) || Date.now());
+  return normalizeItemPurchaseTimestamps(ensureItemPurchaseCooldowns()?.[itemId])
+    .filter(timestamp => timestamp > currentTime - PRODUCTION_BOOST_PURCHASE_WINDOW_MS && timestamp <= currentTime)
+    .length;
+}
+
+function recordProductionBoostPurchase(itemId, purchasedAtMs = Date.now()) {
+  if (!PRODUCTION_BOOST_ITEM_IDS.has(itemId)) return;
+  const cooldowns = ensureItemPurchaseCooldowns();
+  const purchaseTimestampsMs = normalizeItemPurchaseTimestamps(cooldowns[itemId]);
+  purchaseTimestampsMs.push(Math.max(0, Number(purchasedAtMs) || Date.now()));
+  cooldowns[itemId] = {
+    purchaseTimestampsMs: purchaseTimestampsMs.sort((a, b) => a - b).slice(-PRODUCTION_BOOST_PURCHASE_LIMIT),
+  };
 }
 
 function getItemPurchaseCooldownText(itemId, now = Date.now()) {
@@ -4766,6 +4823,7 @@ function createDefaultItemEffects() {
   return {
     shieldExpiresAtMs: 0,
     warDrumsExpiresAtMs: 0,
+    royalTaxDecreeExpiresAtMs: 0,
     veilOfSilenceExpiresAtMs: 0,
   };
 }
@@ -4774,6 +4832,7 @@ function normalizeItemEffects(effects = {}) {
   return {
     shieldExpiresAtMs: timestampToMs(effects?.shieldExpiresAtMs || effects?.shieldExpiresAt),
     warDrumsExpiresAtMs: timestampToMs(effects?.warDrumsExpiresAtMs || effects?.warDrumsExpiresAt || effects?.troopBoostExpiresAtMs || effects?.troopBoostExpiresAt),
+    royalTaxDecreeExpiresAtMs: timestampToMs(effects?.royalTaxDecreeExpiresAtMs || effects?.royalTaxDecreeExpiresAt),
     veilOfSilenceExpiresAtMs: timestampToMs(effects?.veilOfSilenceExpiresAtMs || effects?.veilOfSilenceExpiresAt || effects?.antiScoutExpiresAtMs || effects?.antiScoutExpiresAt),
   };
 }
@@ -4807,6 +4866,10 @@ function getActiveWarDrumsExpiresAtMs() {
   return getActiveTimedItemEffectExpiresAtMs("warDrumsExpiresAtMs");
 }
 
+function getActiveRoyalTaxDecreeExpiresAtMs() {
+  return getActiveTimedItemEffectExpiresAtMs("royalTaxDecreeExpiresAtMs");
+}
+
 function getActiveVeilOfSilenceExpiresAtMs() {
   return getActiveTimedItemEffectExpiresAtMs("veilOfSilenceExpiresAtMs");
 }
@@ -4815,6 +4878,7 @@ function getInventoryItemActiveExpiresAtMs(item) {
   if (!item) return 0;
   if (item.id === ROYAL_PEACE_SHIELD_ITEM_ID) return getActivePeaceShieldExpiresAtMs();
   if (item.id === WAR_DRUMS_ITEM_ID) return getActiveWarDrumsExpiresAtMs();
+  if (item.id === ROYAL_TAX_DECREE_ITEM_ID) return getActiveRoyalTaxDecreeExpiresAtMs();
   if (item.id === VEIL_OF_SILENCE_ITEM_ID) return getActiveVeilOfSilenceExpiresAtMs();
   return 0;
 }
@@ -6023,7 +6087,7 @@ function formatCapturedCityLevelDrop(levelDrop) {
   return `Level ${formatNumber(levelDrop.previousLevel)} to ${formatNumber(levelDrop.nextLevel)}.`;
 }
 
-function getCityStats(city) {
+function getCityStats(city, options = {}) {
   const stronghold = isStronghold(city);
   const level = stronghold ? getStrongholdDefenseLevel(city) : clampCityLevel(city?.level);
   const step = level - 1;
@@ -6041,7 +6105,11 @@ function getCityStats(city) {
   const strongholdGoldBonusPercent = !stronghold && city?.owner === "player" ? getControlledStrongholdGoldBonusPercent("player") : 0;
   const strongholdTroopBonusPercent = !stronghold && city?.owner === "player" ? getControlledStrongholdTroopBonusPercent("player") : 0;
   const strongholdDefenseBonusPercent = !stronghold ? getControlledStrongholdCityDefenseBonusPercentForCity(city) : 0;
-  const warDrumsTroopBonusPercent = !stronghold && city?.owner === "player" ? getWarDrumsTroopProductionBonusPercent() : 0;
+  const includeTimedItemBoosts = options.includeTimedItemBoosts !== false;
+  const warDrumsTroopBonusPercent = includeTimedItemBoosts && !stronghold && city?.owner === "player" ? getWarDrumsTroopProductionBonusPercent() : 0;
+  const royalTaxDecreeGoldBonusPercent = includeTimedItemBoosts && !stronghold && city?.owner === "player" && getActiveRoyalTaxDecreeExpiresAtMs() > Date.now()
+    ? ROYAL_TAX_DECREE_GOLD_PRODUCTION_BONUS_PERCENT
+    : 0;
   const baseTroopProductionPerHour = stronghold ? 0 : victoryPoints * CITY_LEVEL_STATS.troopProductionPerVictoryPoint;
   const royalGranariesBonusPerHour = stronghold ? 0 : baseTroopProductionPerHour * royalGranariesPercent / 100;
   const troopProductionPerHour = baseTroopProductionPerHour
@@ -6051,7 +6119,10 @@ function getCityStats(city) {
   const millionLordsProductionVp = getMillionLordsCityProductionVp(level);
   const rawGoldProductionPerHour = stronghold ? 0 : getMillionLordsPassiveGoldPerHour(level);
   const baseGoldProductionPerHour = rawGoldProductionPerHour;
-  const goldProductionPerHour = baseGoldProductionPerHour * (1 + taxStewardshipPercent / 100) * (1 + strongholdGoldBonusPercent / 100);
+  const goldProductionPerHour = baseGoldProductionPerHour
+    * (1 + taxStewardshipPercent / 100)
+    * (1 + strongholdGoldBonusPercent / 100)
+    * (1 + royalTaxDecreeGoldBonusPercent / 100);
   const troopDefense = Math.floor((Number(city?.troops) || 0) * (1 + defensePercent / 100));
   const baseTotalDefense = Math.floor(cityWalls + troopDefense);
   const strongholdDefenseBonus = Math.floor(baseTotalDefense * strongholdDefenseBonusPercent / 100);
@@ -6072,6 +6143,7 @@ function getCityStats(city) {
     strongholdDefenseBonusPercent,
     strongholdDefenseBonus,
     warDrumsTroopBonusPercent,
+    royalTaxDecreeGoldBonusPercent,
     baseTroopProductionPerHour,
     royalGranariesBonusPerHour,
     troopProductionPerHour,
@@ -6354,7 +6426,22 @@ function getScoutReport(cityId) {
 function scoutCity(cityId) {
   const target = cityById(cityId);
   if (!target || target.owner === "player") return;
-  const mainCityBlockReason = getMainCityScoutBlockReason(target, "player");
+  scoutTarget(target);
+}
+
+function scoutRewardCamp(campId) {
+  const target = getCampTargetById(campId);
+  if (!target) return;
+  if (target.owner === "player") {
+    showToast(`You already control ${target.name}.`);
+    return;
+  }
+  scoutTarget(target);
+}
+
+function scoutTarget(target) {
+  const campTarget = isRewardCampTarget(target);
+  const mainCityBlockReason = campTarget ? "" : getMainCityScoutBlockReason(target, "player");
   if (mainCityBlockReason) {
     showToast(mainCityBlockReason);
     return;
@@ -6381,7 +6468,8 @@ function scoutCity(cityId) {
 
 function launchScoutMission(source, target, route) {
   if (!source || !target || source.owner !== "player" || source.troops < 1 || !route?.points?.length) return null;
-  const mainCityBlockReason = getMainCityScoutBlockReason(target, "player");
+  const campTarget = isRewardCampTarget(target);
+  const mainCityBlockReason = campTarget ? "" : getMainCityScoutBlockReason(target, "player");
   if (mainCityBlockReason) {
     showToast(mainCityBlockReason);
     return null;
@@ -6392,6 +6480,7 @@ function launchScoutMission(source, target, route) {
     id: attackIdCounter++,
     owner: "player",
     kind: "scout",
+    targetType: campTarget ? "camp" : "city",
     fromId: source.id,
     toId: target.id,
     troops: 1,
@@ -12026,8 +12115,8 @@ function updateEconomy(dt) {
   state.gold += goldPerSecond * dt;
 }
 
-function getGoldPerSecond() {
-  return playerCities().reduce((sum, city) => sum + getCityStats(city).goldProductionPerSecond, 0);
+function getGoldPerSecond(options = {}) {
+  return playerCities().reduce((sum, city) => sum + getCityStats(city, options).goldProductionPerSecond, 0);
 }
 
 function getTroopProductionPerSecond() {
@@ -12035,7 +12124,7 @@ function getTroopProductionPerSecond() {
 }
 
 function getHarvestBonusGoldReward() {
-  const passiveGold = Math.floor(getGoldPerSecond() * HARVEST_BONUS_GOLD_SECONDS);
+  const passiveGold = Math.floor(getGoldPerSecond({ includeTimedItemBoosts: false }) * HARVEST_BONUS_GOLD_SECONDS);
   return Math.max(HARVEST_BONUS_MIN_GOLD, passiveGold);
 }
 
@@ -13251,6 +13340,7 @@ function updateTimedEffectStatusBadge(badge, timeElement, expiresAtMs, label) {
 function updateShieldStatusBadge() {
   updateTimedEffectStatusBadge(shieldStatusBadge, shieldStatusTime, getActivePeaceShieldExpiresAtMs(), "Royal Peace Shield");
   updateTimedEffectStatusBadge(warDrumsStatusBadge, warDrumsStatusTime, getActiveWarDrumsExpiresAtMs(), "War Drums");
+  updateTimedEffectStatusBadge(taxDecreeStatusBadge, taxDecreeStatusTime, getActiveRoyalTaxDecreeExpiresAtMs(), "Royal Tax Decree");
   updateTimedEffectStatusBadge(veilStatusBadge, veilStatusTime, getActiveVeilOfSilenceExpiresAtMs(), "Veil of Silence");
   updateActiveItemEffectsStackDensity();
 }
@@ -14001,8 +14091,6 @@ function updateVisibleCityDynamicText() {
     const camp = getCampTargetById(node.dataset.campId);
     if (!camp) return;
     const statusText = getRewardCampStatusText(camp);
-    const stateEl = node.querySelector(".gold-camp-state");
-    if (stateEl && stateEl.textContent !== statusText) stateEl.textContent = statusText;
     node.setAttribute("aria-label", `${camp.name}. ${statusText}. ${formatNumber(camp.baseReward)} ${getRewardCampConfig(camp)?.rewardLabel || "reward"} reward.`);
     if (camp.owner === "player" && camp.payoutPending && camp.payoutAtMs <= Date.now()) void requestDueRewardCampPayout(camp);
   });
@@ -14084,8 +14172,6 @@ function renderCities(force = false) {
         <img class="camp-art" src="${escapeHtml(camp.artSrc)}" alt="" draggable="false" />
         <span class="gold-camp-label">
           <strong>${escapeHtml(camp.name)}</strong>
-          <span class="gold-camp-state">${escapeHtml(getRewardCampStatusText(camp))}</span>
-          <small>${formatNumber(camp.baseReward)} ${escapeHtml(getRewardCampConfig(camp)?.rewardLabel || "reward")}</small>
         </span>`;
       if (campNode._renderContent !== campHtml) {
         campNode.innerHTML = campHtml;
@@ -14364,14 +14450,22 @@ function renderSelectedRewardCampWheel(camp) {
   wheel.style.top = `${mapPoint.y}px`;
   wheel.style.setProperty("--camp-wheel-size", `${Math.max(112, Number(camp.size) || 132)}px`);
   wheel.innerHTML = `
-    <button class="gold-camp-wheel-action camp-order-action" type="button" ${canSend ? "" : "disabled"}>
-      <span aria-hidden="true">${isHeldByPlayer ? "&#8649;" : "&#9876;"}</span>
-      <strong>${isHeldByPlayer ? "Reinforce" : "Attack"}</strong>
+    <button class="gold-camp-wheel-action camp-scout-action" type="button" ${isHeldByPlayer ? "disabled" : ""}>
+      <span aria-hidden="true">&#128301;</span>
+      <strong>Scout</strong>
     </button>
     <button class="gold-camp-wheel-action camp-info-action" type="button">
       <span aria-hidden="true">i</span>
       <strong>Info</strong>
+    </button>
+    <button class="gold-camp-wheel-action camp-order-action" type="button" ${canSend ? "" : "disabled"}>
+      <span aria-hidden="true">${isHeldByPlayer ? "&#8649;" : "&#9876;"}</span>
+      <strong>${isHeldByPlayer ? "Reinforce" : "Attack"}</strong>
     </button>`;
+  wheel.querySelector(".camp-scout-action")?.addEventListener("click", event => {
+    event.stopPropagation();
+    scoutRewardCamp(camp.id);
+  });
   wheel.querySelector(".camp-order-action")?.addEventListener("click", event => {
     event.stopPropagation();
     beginRewardCampOrder(camp.id);
@@ -14451,14 +14545,14 @@ function showRewardCampInfoModal(campId) {
         <div><span>Base reward</span><strong>${formatNumber(camp.baseReward)} ${escapeHtml(config.rewardLabel)}</strong></div>
         <div><span>Hold timer</span><strong>${camp.payoutPending ? countdown > 0 ? formatDuration(countdown) : "Payout ready" : "Not active"}</strong></div>
       </div>
-      <p>Capture and hold this objective for ${Math.floor(config.holdSeconds / 60)} minutes. It does not count as a city, cannot be shielded or scouted, and stronger-kingdom attack limits do not apply.${config.rewardType === "troops" ? " The reward and stationed defenders return to your main city after payout." : ""}</p>
+      <p>Capture and hold this objective for ${Math.floor(config.holdSeconds / 60)} minutes. It does not count as a city, cannot be shielded, and stronger-kingdom attack limits do not apply.${config.rewardType === "troops" ? " The reward and stationed defenders return to your main city after payout." : ""}</p>
       <p>Daily rewards: ${config.dailyRewards.map(formatNumber).join(", ")}, then 0 until the next UTC day.</p>
     </div>`;
   if (!modal.open) modal.showModal();
 }
 
 function showScoutReportModal(cityId) {
-  const city = cityById(cityId);
+  const city = getArmyTargetById(cityId);
   const report = getScoutReport(cityId);
   if (!city || !report) {
     showToast("That scout report is no longer available.");
@@ -14490,7 +14584,7 @@ function showScoutReportModal(cityId) {
         </div>
       </div>
 
-      <div class="scout-report-city"><span>Target city</span><strong>${escapeHtml(city.name)}</strong><b>Level ${formatNumber(cityLevel)}</b></div>
+      <div class="scout-report-city"><span>${isRewardCampTarget(city) ? "Target camp" : "Target city"}</span><strong>${escapeHtml(city.name)}</strong><b>${isRewardCampTarget(city) ? `Level ${formatNumber(cityLevel)} defense` : `Level ${formatNumber(cityLevel)}`}</b></div>
 
       <div class="scout-report-overview">
         <div><span>Scouted troops</span><strong>${formatNumber(report.troops)}</strong></div>
@@ -15777,7 +15871,7 @@ function showCityInfoModal(cityId) {
       <div class="stat-chip"><span>Defense</span><strong>${stats.defensePercent}%</strong><small>+${CITY_LEVEL_STATS.defensePercentPerLevel}%/level${stats.strongholdDefenseBonusPercent ? ` + Stronghold ${formatNumber(stats.strongholdDefenseBonusPercent)}%` : ""}</small></div>
       <div class="stat-chip"><span>Troops production</span><strong>${formatNumber(stats.troopProductionPerHour)}/h</strong>${stats.warDrumsTroopBonusPercent ? `<small>War Drums +${formatNumber(stats.warDrumsTroopBonusPercent)}%</small>` : ""}</div>
       <div class="stat-chip"><span>City walls</span><strong>${formatNumber(stats.cityWalls)}</strong><small>+${CITY_LEVEL_STATS.cityWallsPerLevel}/level</small></div>
-      <div class="stat-chip"><span>Gold production</span><strong>${formatNumber(stats.goldProductionPerHour)}/h</strong></div>
+      <div class="stat-chip"><span>Gold production</span><strong>${formatNumber(stats.goldProductionPerHour)}/h</strong>${stats.royalTaxDecreeGoldBonusPercent ? `<small>Royal Tax Decree +${formatNumber(stats.royalTaxDecreeGoldBonusPercent)}%</small>` : ""}</div>
     </div>
   `;
   const cooldownRemaining = getCaptureCooldownRemaining(city);
@@ -15814,7 +15908,7 @@ function showCityInfoModal(cityId) {
       <div class="stat-chip"><span>City walls</span><strong>${formatNumber(stats.cityWalls)}</strong><small>Level-based static defense</small></div>
       <div class="stat-chip"><span>Stoneworks</span><strong>${stats.stoneworksPercent}%</strong><small>Wall defense skill</small></div>
       <div class="stat-chip"><span>Troops production</span><strong>${formatNumber(stats.troopProductionPerHour)}/h</strong>${stats.warDrumsTroopBonusPercent ? `<small>War Drums +${formatNumber(stats.warDrumsTroopBonusPercent)}%</small>` : ""}</div>
-      <div class="stat-chip"><span>Gold production</span><strong>${formatNumber(stats.goldProductionPerHour)}/h</strong></div>
+      <div class="stat-chip"><span>Gold production</span><strong>${formatNumber(stats.goldProductionPerHour)}/h</strong>${stats.royalTaxDecreeGoldBonusPercent ? `<small>Royal Tax Decree +${formatNumber(stats.royalTaxDecreeGoldBonusPercent)}%</small>` : ""}</div>
       <div class="stat-chip"><span>Invested gold</span><strong>${formatNumber(city.investedGold || 0)}</strong><small>Clears when captured</small></div>
       ${cooldownRemaining > 0 ? `<div class="stat-wide"><span>Capture XP cooldown</span><strong>${formatDuration(cooldownRemaining)}</strong></div>` : ""}
       ${renderRelinquishCityAction(city)}
@@ -16015,6 +16109,7 @@ function renderItemIcon(item, imageClass = "") {
 function renderShopItem(item, inventory) {
   const owned = Math.max(0, Math.floor(Number(inventory[item.id]) || 0));
   const cooldownText = getItemPurchaseCooldownText(item.id);
+  const purchaseCount = getProductionBoostPurchaseCount(item.id);
   const canBuy = state && !shopPurchaseInFlight && !cooldownText && Math.floor(Number(state.gold) || 0) >= item.cost;
   const buyLabel = cooldownText ? "Cooldown" : "Buy";
   return `
@@ -16026,6 +16121,7 @@ function renderShopItem(item, inventory) {
         <strong>${escapeHtml(item.label)}</strong>
         <span>${formatNumber(item.cost)} gold</span>
         <small>Owned: ${formatNumber(owned)}</small>
+        ${PRODUCTION_BOOST_ITEM_IDS.has(item.id) ? `<small class="shop-item-purchase-limit">Purchased: ${formatNumber(purchaseCount)}/${formatNumber(PRODUCTION_BOOST_PURCHASE_LIMIT)} in 24 hours</small>` : ""}
         ${cooldownText ? `<small class="shop-item-cooldown">Available in ${escapeHtml(cooldownText)}</small>` : ""}
         <small>${escapeHtml(item.description)}</small>
       </div>
@@ -16102,6 +16198,7 @@ async function buyShopItem(itemId) {
     if (item.id === ROYAL_PEACE_SHIELD_ITEM_ID) {
       cooldowns[ROYAL_PEACE_SHIELD_ITEM_ID] = { lastPurchasedAtMs: Date.now() };
     }
+    recordProductionBoostPurchase(item.id);
 
     addLog(`Bought ${item.label} for ${formatNumber(item.cost)} gold.`);
     saveGame();
@@ -16157,6 +16254,7 @@ function getActiveItemEffectSummaryHtml() {
   const effects = [
     { label: "Peace Shield", expiresAtMs: getActivePeaceShieldExpiresAtMs() },
     { label: "War Drums", expiresAtMs: getActiveWarDrumsExpiresAtMs() },
+    { label: "Royal Tax Decree", expiresAtMs: getActiveRoyalTaxDecreeExpiresAtMs() },
     { label: "Veil of Silence", expiresAtMs: getActiveVeilOfSilenceExpiresAtMs() },
   ].filter(effect => getPeaceShieldRemainingSeconds(effect.expiresAtMs) > 0);
   if (!effects.length) return "<small>No active item effects</small>";
@@ -16242,6 +16340,14 @@ function useInventoryItem(itemId) {
     });
     return;
   }
+  if (item.id === ROYAL_TAX_DECREE_ITEM_ID) {
+    useRoyalTaxDecree(item).catch(error => {
+      console.warn("Royal Tax Decree activation failed", error);
+      showToast(error?.message || "Could not activate Royal Tax Decree.");
+      renderHud();
+    });
+    return;
+  }
   if (item.id === VEIL_OF_SILENCE_ITEM_ID) {
     useVeilOfSilence(item).catch(error => {
       console.warn("Veil of Silence activation failed", error);
@@ -16281,6 +16387,9 @@ async function useServerInventoryItem(item) {
   } else if (item.id === WAR_DRUMS_ITEM_ID) {
     addLog(`${item.label} activated. Troop production increased by ${formatNumber(WAR_DRUMS_TROOP_PRODUCTION_BONUS_PERCENT)}% for ${formatDuration(getPeaceShieldRemainingSeconds(expiresAtMs))}.`);
     showToast(`${item.label} active: +${formatNumber(WAR_DRUMS_TROOP_PRODUCTION_BONUS_PERCENT)}% troops for ${formatDuration(getPeaceShieldRemainingSeconds(expiresAtMs))}`);
+  } else if (item.id === ROYAL_TAX_DECREE_ITEM_ID) {
+    addLog(`${item.label} activated. City gold production increased by ${formatNumber(ROYAL_TAX_DECREE_GOLD_PRODUCTION_BONUS_PERCENT)}% for ${formatDuration(getPeaceShieldRemainingSeconds(expiresAtMs))}.`);
+    showToast(`${item.label} active: +${formatNumber(ROYAL_TAX_DECREE_GOLD_PRODUCTION_BONUS_PERCENT)}% city gold for ${formatDuration(getPeaceShieldRemainingSeconds(expiresAtMs))}`);
   } else if (item.id === VEIL_OF_SILENCE_ITEM_ID) {
     addLog(`${item.label} activated. Enemy scouts are blocked for ${formatDuration(getPeaceShieldRemainingSeconds(expiresAtMs))}.`);
     showToast(`${item.label} active: scouts blocked for ${formatDuration(getPeaceShieldRemainingSeconds(expiresAtMs))}`);
@@ -16348,6 +16457,34 @@ async function useWarDrums(item) {
   if (profileScreen?.classList.contains("open")) renderProfileScreen();
   if (modal?.open && modal.classList.contains("inventory-modal")) modal.close();
   showToast(`${item.label} active: +${formatNumber(WAR_DRUMS_TROOP_PRODUCTION_BONUS_PERCENT)}% troops for ${formatDuration(getPeaceShieldRemainingSeconds(expiresAtMs))}`);
+  const cloudSaved = await flushOnlineSave(true);
+  if (!cloudSaved && getOnlineApi()?.isSignedIn?.()) {
+    showToast(`${item.label} active. Cloud save will retry.`);
+  }
+}
+
+async function useRoyalTaxDecree(item) {
+  const currentExpiresAtMs = getActiveRoyalTaxDecreeExpiresAtMs();
+  if (currentExpiresAtMs > Date.now()) {
+    showToast(`${item.label} is already active for ${formatDuration(getPeaceShieldRemainingSeconds(currentExpiresAtMs))}.`);
+    return;
+  }
+  if (usesServerEconomyAuthority()) {
+    await useServerInventoryItem(item);
+    return;
+  }
+  if (!consumeInventoryItem(item)) return;
+  const expiresAtMs = Date.now() + ROYAL_TAX_DECREE_DURATION_MS;
+  const effects = ensureItemEffects();
+  effects.royalTaxDecreeExpiresAtMs = expiresAtMs;
+
+  addLog(`${item.label} activated. City gold production increased by ${formatNumber(ROYAL_TAX_DECREE_GOLD_PRODUCTION_BONUS_PERCENT)}% for ${formatDuration(getPeaceShieldRemainingSeconds(expiresAtMs))}.`);
+  saveGame();
+  renderHud();
+  renderPanel();
+  if (profileScreen?.classList.contains("open")) renderProfileScreen();
+  if (modal?.open && modal.classList.contains("inventory-modal")) modal.close();
+  showToast(`${item.label} active: +${formatNumber(ROYAL_TAX_DECREE_GOLD_PRODUCTION_BONUS_PERCENT)}% city gold for ${formatDuration(getPeaceShieldRemainingSeconds(expiresAtMs))}`);
   const cloudSaved = await flushOnlineSave(true);
   if (!cloudSaved && getOnlineApi()?.isSignedIn?.()) {
     showToast(`${item.label} active. Cloud save will retry.`);

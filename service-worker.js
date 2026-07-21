@@ -1,19 +1,20 @@
-const CACHE_VERSION = "20260720-smooth-remote-attacks";
+const CACHE_VERSION = "20260721-tax-decree";
 const CACHE_NAME = `crownlands-cache-${CACHE_VERSION}`;
 const STATIC_CACHE_URLS = [
   "/",
   "/index.html",
   "/manifest.webmanifest",
-  "/styles.css?v=20260720-smooth-remote-attacks",
+  "/styles.css?v=20260721-tax-decree",
   "/world-config.js",
   "/firebase-config.js?v=20260703-vapid-key",
-  "/firebaseClient.js?v=20260720-smooth-remote-attacks",
-  "/game.js?v=20260720-smooth-remote-attacks",
-  "/route-worker.js?v=20260720-smooth-remote-attacks",
+  "/firebaseClient.js?v=20260721-player-name-limit",
+  "/game.js?v=20260721-tax-decree",
+  "/route-worker.js?v=20260721-structure-route-clearance",
   "/assets/map-editor-data.js?v=20260705-stronghold-sizes",
   "/assets/game-menu-background.jpg?v=20260702-login-page",
   "/assets/loading-ring.png",
   "/assets/loading-crown.png",
+  "/assets/royal-tax-decree-icon.webp?v=20260721-tax-decree",
   "/assets/icons/crownlands-icon-192.png",
   "/assets/icons/crownlands-icon-512.png",
   "/assets/icons/crownlands-maskable-192.png",
