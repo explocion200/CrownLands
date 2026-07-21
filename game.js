@@ -5189,6 +5189,16 @@ function createOnlineEntryState(playerName) {
   return entry;
 }
 
+function getSkillMaxLevel(skill = "") {
+  const config = SKILL_CONFIG[skill];
+  if (!config || !Number.isFinite(config.maxPercent)) return Number.MAX_SAFE_INTEGER;
+  return Math.max(0, Math.ceil(config.maxPercent / Math.max(1, config.percentPerLevel)));
+}
+
+function normalizeSkillUpgradeLevel(skill = "", value = 0) {
+  return Math.min(Math.max(0, Math.floor(Number(value) || 0)), getSkillMaxLevel(skill));
+}
+
 function normalizeUpgrades(upgrades, sourceVersion = 6) {
   const normalized = createDefaultSkills();
 
@@ -5212,6 +5222,9 @@ function normalizeUpgrades(upgrades, sourceVersion = 6) {
     Math.floor(Number(upgrades?.fearless) || 0),
     Math.floor(Number(upgrades?.brave) || 0),
   );
+  SKILL_ORDER.forEach(key => {
+    normalized[key] = normalizeSkillUpgradeLevel(key, normalized[key]);
+  });
 
   return normalized;
 }
@@ -5308,7 +5321,8 @@ function getEarnedSkillPoints(character = state?.character) {
 }
 
 function getSpentSkillPoints(upgrades = state?.upgrades) {
-  return SKILL_ORDER.reduce((total, key) => total + Math.max(0, Math.floor(Number(upgrades?.[key]) || 0)), 0);
+  const normalized = normalizeUpgrades(upgrades);
+  return SKILL_ORDER.reduce((total, key) => total + normalizeSkillUpgradeLevel(key, normalized[key]), 0);
 }
 
 function getAvailableSkillPoints(character = state?.character, upgrades = state?.upgrades) {
@@ -6040,7 +6054,7 @@ function getDemoAttackReportSuffix(demoAttack) {
 }
 
 function getSkillLevel(skill) {
-  return Math.max(0, Math.floor(Number(state?.upgrades?.[skill]) || 0));
+  return normalizeSkillUpgradeLevel(skill, state?.upgrades?.[skill]);
 }
 
 function getSkillPercent(skill) {

@@ -666,6 +666,16 @@ function normalizeSkillLevel(value) {
   return Math.max(0, Math.floor(safeNumber(value, 0)));
 }
 
+function getSkillMaxLevel(skill = "") {
+  const config = SKILL_CONFIG[skill];
+  if (!config || !Number.isFinite(config.maxPercent)) return Number.MAX_SAFE_INTEGER;
+  return Math.max(0, Math.ceil(config.maxPercent / Math.max(1, config.percentPerLevel)));
+}
+
+function normalizeSkillLevelForSkill(skill = "", value = 0) {
+  return Math.min(normalizeSkillLevel(value), getSkillMaxLevel(skill));
+}
+
 function normalizeSkillUpgrades(upgrades = {}) {
   const source = upgrades && typeof upgrades === "object" ? upgrades : {};
   const normalized = SKILL_ORDER.reduce((skills, key) => {
@@ -686,6 +696,9 @@ function normalizeSkillUpgrades(upgrades = {}) {
   normalized.stoneworks = Math.max(normalized.stoneworks, legacyDefense);
   normalized.marchOrders = Math.max(normalized.marchOrders, legacySpeed);
   normalized.fieldMedics = Math.max(normalized.fieldMedics, legacyRecovery);
+  SKILL_ORDER.forEach(key => {
+    normalized[key] = normalizeSkillLevelForSkill(key, normalized[key]);
+  });
   return normalized;
 }
 
@@ -2680,6 +2693,8 @@ async function prepareEconomyCollection(transaction, uid, nowMs = Date.now(), op
   const profileRef = options.profileRef || db.doc(`players/${uid}`);
   const profileSnap = options.profileSnap || await transaction.get(profileRef);
   const rawProfile = profileSnap.exists ? profileSnap.data() || {} : {};
+  const upgrades = normalizeSkillUpgrades(rawProfile.upgrades);
+  const character = reconcileSkillPoints(rawProfile.character, upgrades);
   const itemEffects = normalizeItemEffects(rawProfile.itemEffects);
   const shopItems = normalizeShopItems(rawProfile.shopItems);
   const itemPurchaseCooldowns = normalizeItemPurchaseCooldowns(rawProfile.itemPurchaseCooldowns);
@@ -2717,7 +2732,7 @@ async function prepareEconomyCollection(transaction, uid, nowMs = Date.now(), op
     );
     const elapsedSeconds = clamp((nowMs - lastProductionAtMs) / 1000, 0, MAX_SERVER_PRODUCTION_SECONDS);
     maxElapsedSeconds = Math.max(maxElapsedSeconds, elapsedSeconds);
-    const stats = getCityProductionStats(city, { ...rawProfile, itemEffects }, bonuses, {
+    const stats = getCityProductionStats(city, { ...rawProfile, character, upgrades, itemEffects }, bonuses, {
       nowMs,
       includeWarDrums: false,
       includeRoyalTaxDecree: false,
@@ -2773,6 +2788,8 @@ async function prepareEconomyCollection(transaction, uid, nowMs = Date.now(), op
   const gold = Math.max(0, Math.floor(goldFloat));
   const profileAfter = {
     ...rawProfile,
+    character,
+    upgrades,
     gold,
     goldFloat,
     shopItems,
@@ -2796,6 +2813,8 @@ async function prepareEconomyCollection(transaction, uid, nowMs = Date.now(), op
     worldId: rawProfile.worldId || ONLINE_WORLD_ID,
     gold,
     goldFloat,
+    character,
+    upgrades,
     shopItems,
     itemEffects,
     itemPurchaseCooldowns,
@@ -3601,16 +3620,14 @@ exports.spendSkillPoint = onCall({ region: "us-central1", maxInstances: 20, invo
   const config = SKILL_CONFIG[skillId];
   if (!config) throw new HttpsError("invalid-argument", "Choose a valid skill.");
 
+  const nowMs = Date.now();
   return db.runTransaction(async transaction => {
-    const profileRef = db.doc(`players/${uid}`);
-    const profileSnap = await transaction.get(profileRef);
-    if (!profileSnap.exists) throw new HttpsError("not-found", "Player profile was not found.");
-    const profile = profileSnap.data() || {};
-    const upgrades = normalizeSkillUpgrades(profile.upgrades);
-    const character = reconcileSkillPoints(profile.character, upgrades);
-    const currentLevel = normalizeSkillLevel(upgrades[skillId]);
-    const currentPercent = currentLevel * config.percentPerLevel;
-    if (Number.isFinite(config.maxPercent) && currentPercent >= config.maxPercent) {
+    const economy = await prepareEconomyCollection(transaction, uid, nowMs);
+    if (!economy.profileSnap.exists) throw new HttpsError("not-found", "Player profile was not found.");
+    const upgrades = normalizeSkillUpgrades(economy.profileAfter.upgrades);
+    const character = reconcileSkillPoints(economy.profileAfter.character, upgrades);
+    const currentLevel = normalizeSkillLevelForSkill(skillId, upgrades[skillId]);
+    if (currentLevel >= getSkillMaxLevel(skillId)) {
       throw new HttpsError("failed-precondition", "That skill is already capped.");
     }
     if (character.skillPoints < 1) {
@@ -3618,21 +3635,15 @@ exports.spendSkillPoint = onCall({ region: "us-central1", maxInstances: 20, invo
     }
     upgrades[skillId] = currentLevel + 1;
     character.skillPoints = getAvailableSkillPoints(character, upgrades);
-    transaction.set(profileRef, {
+    writePreparedEconomy(transaction, economy, {
       character,
       upgrades,
-      updatedAt: FieldValue.serverTimestamp(),
-    }, { merge: true });
-    return {
-      ok: true,
+    });
+    return createEconomyResponse(economy, {
       skillId,
-      currentUser: {
-        character,
-        upgrades,
-        gold: Math.max(0, Math.floor(safeNumber(profile.gold, 0))),
-        goldFloat: Math.max(0, safeNumber(profile.goldFloat, profile.gold || 0)),
-      },
-    };
+      character,
+      upgrades,
+    });
   });
 });
 
@@ -5361,20 +5372,20 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
     const recoverBattleLossesToMainCity = ({ uid = "", profile = {}, economy = null, losses = 0 } = {}) => {
       const recovered = Math.floor(Math.max(0, safeNumber(losses, 0)) * getSkillPercent(profile, "fieldMedics") / 100);
       if (!uid || recovered <= 0 || !economy) return 0;
-      const mainInfo = getMainCityInfo(profile);
-      if (!mainInfo?.ref) return 0;
-      const entry = getEconomyCityByRef(economy, mainInfo.ref);
+      const entry = getCanonicalMainCityEntry(profile, economy.cityEntries);
       const city = entry?.city;
       if (!city || getOwnerUid(city) !== uid) return 0;
+      const mainRef = entry.ref;
+      const mainRegionId = normalizeRegionId(city.regionId || getRegionIdFromOnlineIslandId(getCityEntryIslandId(entry)));
       const troopFloat = Math.max(0, safeNumber(city.troopFloat, city.troops || 0)) + recovered;
       const patch = {
         troops: Math.max(0, Math.floor(troopFloat)),
         troopFloat,
         productionUpdatedAtMs: nowMs,
       };
-      appendEconomyCityPatch(economy, mainInfo.ref, city, patch);
-      transaction.set(mainInfo.ref, cleanCityUpdate(city, patch), { merge: true });
-      cityUpdates.push({ id: city.id, regionId: mainInfo.regionId, ...patch });
+      appendEconomyCityPatch(economy, mainRef, city, patch);
+      transaction.set(mainRef, cleanCityUpdate(city, patch), { merge: true });
+      cityUpdates.push({ id: city.id, regionId: mainRegionId, ...patch });
       return recovered;
     };
 
@@ -5570,6 +5581,20 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
       const campStats = getCityStats(campTarget, defenderProfile, defenderBonuses);
       const defendersAtStart = Math.max(0, Math.floor(safeNumber(campTarget.troops, 0)));
       const battle = calculateCombatResult(troopCount, campTarget, attackerProfile, defenderProfile, { defenderBonuses });
+      const attackerRecoveredTroops = recoverBattleLossesToMainCity({
+        uid: attackerUid,
+        profile: attackerProfile,
+        economy: attackerEconomy,
+        losses: battle.attackerLosses,
+      });
+      const defenderRecoveredTroops = defenderUid && defenderUid !== attackerUid
+        ? recoverBattleLossesToMainCity({
+          uid: defenderUid,
+          profile: defenderProfile,
+          economy: defenderEconomy,
+          losses: battle.defenderLosses,
+        })
+        : 0;
       const attackerReport = makeReport({
         id: `${armyId}_${campTarget.campType}_camp_attack_${attackerUid}`,
         uid: attackerUid,
@@ -5581,9 +5606,9 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
         troopCount: defendersAtStart,
         result: battle,
         totalDefense: campStats.totalDefense,
-        summary: battle.success
+        summary: `${battle.success
           ? `Captured ${campTarget.name || campConfig.name} with ${battle.survivors.toLocaleString()} troops. Hold it for ${Math.floor(campConfig.holdDurationMs / 60000)} minutes to earn ${campConfig.rewardType}.`
-          : `${battle.defendersLeft.toLocaleString()} defenders remained at ${campTarget.name || campConfig.name}.`,
+          : `${battle.defendersLeft.toLocaleString()} defenders remained at ${campTarget.name || campConfig.name}.`}${attackerRecoveredTroops > 0 ? ` Field Medics returned ${attackerRecoveredTroops.toLocaleString()} troops to your main city.` : ""}`,
         nowMs,
       });
 
@@ -5634,9 +5659,9 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
           troopCount: defendersAtStart,
           result: battle,
           totalDefense: campStats.totalDefense,
-          summary: battle.success
+          summary: `${battle.success
             ? `${attackerName} captured ${campTarget.name || campConfig.name}.`
-            : `${campTarget.name || campConfig.name} held with ${battle.defendersLeft.toLocaleString()} defenders.`,
+            : `${campTarget.name || campConfig.name} held with ${battle.defendersLeft.toLocaleString()} defenders.`}${defenderRecoveredTroops > 0 ? ` Field Medics returned ${defenderRecoveredTroops.toLocaleString()} troops to your main city.` : ""}`,
           nowMs,
         });
         writeReport(transaction, defenderUid, defenderReport, defenderProfileSnap);
@@ -6369,6 +6394,7 @@ async function resolveRewardCampPayoutByRef(campRef, nowMs = Date.now(), callerU
         pathLength: route.pathLength,
         troopCount: returningTroops,
         kind: "transfer",
+        speedMultiplier: skillMultiplier(player, "marchOrders"),
       });
       returnArmy = {
         id: returnArmyId,
@@ -6599,6 +6625,7 @@ exports.recallRewardCampGarrison = onCall({ region: "us-central1", maxInstances:
         pathLength: route.pathLength,
         troopCount: returningTroops,
         kind: "transfer",
+        speedMultiplier: skillMultiplier(player, "marchOrders"),
       });
       movement = {
         id: armyId,
