@@ -2245,14 +2245,14 @@ function appendEconomyCityPatch(economy = null, ref = null, city = {}, patch = {
   return true;
 }
 
-function findNearestRelinquishDestination(economy = null, sourceEntry = null) {
-  if (!economy || !sourceEntry?.city) return null;
-  const source = sourceEntry.city;
+function findNearestOwnedCityDestination(economy = null, source = null, excludedPaths = []) {
+  if (!economy || !source) return null;
+  const excluded = new Set((Array.isArray(excludedPaths) ? excludedPaths : []).map(path => safeString(path, 240)));
   const sourceRegionId = normalizeRegionId(source.regionId || "");
   const sourceX = safeNumber(source.x, 0);
   const sourceY = safeNumber(source.y, 0);
   return economy.cityEntries
-    .filter(entry => entry?.ref?.path !== sourceEntry.ref.path)
+    .filter(entry => !excluded.has(safeString(entry?.ref?.path, 240)))
     .filter(entry => getOwnerUid(entry.city) === economy.uid)
     .filter(entry => !isStronghold(entry.city))
     .map(entry => {
@@ -2266,6 +2266,97 @@ function findNearestRelinquishDestination(economy = null, sourceEntry = null) {
       if (a.distance !== b.distance) return a.distance - b.distance;
       return safeString(a.city?.name || a.city?.id, 80).localeCompare(safeString(b.city?.name || b.city?.id, 80));
     })[0] || null;
+}
+
+function findNearestRelinquishDestination(economy = null, sourceEntry = null) {
+  if (!sourceEntry?.city) return null;
+  return findNearestOwnedCityDestination(economy, sourceEntry.city, [sourceEntry.ref?.path]);
+}
+
+function getOwnedMainCityDestination(economy = null, profile = {}) {
+  if (!economy) return null;
+  const ownedEntries = economy.cityEntries.filter(entry => (
+    entry?.city
+    && getOwnerUid(entry.city) === economy.uid
+    && !isStronghold(entry.city)
+  ));
+  return getCanonicalMainCityEntry(profile, ownedEntries);
+}
+
+function createRelinquishContinuationMovement({
+  army = {},
+  source = {},
+  destinationEntry = null,
+  economy = null,
+  profile = {},
+  nowMs = Date.now(),
+  reason = "released_destination",
+} = {}) {
+  if (!destinationEntry?.city || !economy?.uid) {
+    throw new HttpsError("failed-precondition", "No owned city is available for the relinquished troops.");
+  }
+  const destination = destinationEntry.city;
+  const route = buildServerGeneratedArmyRoute(source, destination);
+  const continuationCount = clampInt(army.relinquishContinuationCount, 0, 999) + 1;
+  const rawOriginId = safeString(army.relinquishOriginArmyId || army.id, 72)
+    .replace(/[^a-zA-Z0-9_-]/g, "_") || "relinquish";
+  const suffix = `_rb${continuationCount}_${Math.max(0, Math.floor(nowMs)).toString(36)}`;
+  const continuationId = `${rawOriginId.slice(0, Math.max(1, 96 - suffix.length))}${suffix}`;
+  const sourceRegionId = normalizeRegionId(source.regionId || source.startPool);
+  const destinationRegionId = normalizeRegionId(destination.regionId || destination.startPool);
+  const ownerKingPower = Math.max(0, Math.floor(safeNumber(
+    economy.lastGlobalStats?.kingPower,
+    safeNumber(economy.globalStats?.kingPower, safeNumber(profile.kingPower, army.ownerKingPower))
+  )));
+  const troops = Math.max(0, Math.floor(safeNumber(army.troops, 0)));
+  const duration = calculateTravelTime({
+    pathLength: route.pathLength,
+    troopCount: troops,
+    kind: "transfer",
+    speedMultiplier: skillMultiplier(profile, "marchOrders")
+      * (1 + Math.max(0, safeNumber(economy.bonuses?.marchSpeedBonusPercent, 0)) / 100),
+  });
+  return {
+    id: continuationId,
+    worldId: ONLINE_WORLD_ID,
+    resetGeneration: RESET_GENERATION,
+    ownerKind: "player",
+    ownerUid: economy.uid,
+    ownerName: normalizePlayerName(profile.playerName || army.ownerName, "Ruler"),
+    ownerFlag: profile.flag || army.ownerFlag || null,
+    ownerKingPower,
+    kind: "transfer",
+    targetType: "city",
+    relinquishTransfer: true,
+    relinquishOriginArmyId: rawOriginId,
+    relinquishContinuationCount: continuationCount,
+    relinquishRedirectReason: safeString(reason, 40),
+    fromId: safeString(source.id, 96),
+    toId: safeString(destination.id, 96),
+    fromName: safeString(source.name || army.toName || "Released city", 40),
+    toName: safeString(destination.name || "Owned city", 40),
+    sourceRegionId,
+    targetRegionId: destinationRegionId,
+    troops,
+    requestedTroops: troops,
+    total: duration,
+    path: route.path,
+    pathSegments: route.pathSegments,
+    routeRegionIds: route.routeRegionIds,
+    viewRegionIds: route.routeRegionIds,
+    pathLength: route.pathLength,
+    targetKey: `${destinationRegionId}:${destination.id}`,
+    targetOwnerAtLaunch: "player",
+    targetOwnerUid: economy.uid,
+    attackerKingPower: ownerKingPower,
+    defenderKingPower: ownerKingPower,
+    demoAttack: null,
+    launchedAtMs: nowMs,
+    arrivesAtMs: nowMs + Math.ceil(duration * 1000),
+    status: "active",
+    createdByServer: true,
+    serverAuthorityVersion: 2,
+  };
 }
 
 function getCityEntryIslandId(entry = {}) {
@@ -4963,16 +5054,21 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
     };
     const withEconomyCityUpdates = updates => [...economyCityUpdates(), ...(Array.isArray(updates) ? updates : [])];
     const writeParticipantEconomies = (attackerOverrides = {}, defenderOverrides = {}, options = {}) => {
-      const statsOptions = {
+      const attackerStatsOptions = {
         excludeArmyIds: [armyId],
+        addActiveArmies: Array.isArray(options.addActiveArmies) ? options.addActiveArmies : [],
         statsCityPatches: Array.isArray(options.statsCityPatches) ? options.statsCityPatches : [],
         nowMs,
       };
+      const defenderStatsOptions = {
+        ...attackerStatsOptions,
+        addActiveArmies: [],
+      };
       const attackerStats = attackerEconomy
-        ? writePreparedEconomy(transaction, attackerEconomy, attackerOverrides, [], statsOptions)
+        ? writePreparedEconomy(transaction, attackerEconomy, attackerOverrides, [], attackerStatsOptions)
         : null;
       const defenderStats = defenderEconomy && defenderEconomy !== attackerEconomy
-        ? writePreparedEconomy(transaction, defenderEconomy, defenderOverrides, [], statsOptions)
+        ? writePreparedEconomy(transaction, defenderEconomy, defenderOverrides, [], defenderStatsOptions)
         : attackerStats;
       return { attackerStats, defenderStats };
     };
@@ -5080,6 +5176,58 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
     const defenderName = defenderUid
       ? normalizePlayerName(target.ownerName || defenderProfile.playerName, "Rival ruler")
       : "Neutral city";
+    const continueRelinquishMarch = ({ destinationEntry = null, reason = "released_destination", reportSummary = "" } = {}) => {
+      const movement = createRelinquishContinuationMovement({
+        army,
+        source: { ...target, regionId: targetRegionId },
+        destinationEntry,
+        economy: attackerEconomy,
+        profile: attackerProfile,
+        nowMs,
+        reason,
+      });
+      armyRefsForRegions(movement.routeRegionIds, movement.id).forEach(ref => {
+        transaction.set(ref, {
+          ...movement,
+          createdAt: FieldValue.serverTimestamp(),
+          updatedAt: FieldValue.serverTimestamp(),
+        }, { merge: true });
+      });
+      writeParticipantEconomies({}, {}, { addActiveArmies: [movement] });
+      if (reportSummary) {
+        const report = makeReport({
+          id: `${armyId}_relinquish_redirect_${attackerUid}`,
+          uid: attackerUid,
+          type: "attack",
+          outcome: "defeat",
+          city: target,
+          opponentName: defenderName,
+          sentTroops: troopCount,
+          troopCount: Math.max(0, Math.floor(safeNumber(target.troops, 0))),
+          totalDefense: targetStats.totalDefense,
+          summary: reportSummary,
+          nowMs,
+        });
+        writeReport(transaction, attackerUid, report, attackerProfileSnap);
+        reports.push(report);
+      }
+      markResolved({
+        kind: "transfer",
+        rerouted: true,
+        redirectReason: reason,
+        continuationArmyId: movement.id,
+      });
+      return {
+        ok: true,
+        status: "resolved",
+        kind: "transfer",
+        rerouted: true,
+        redirectReason: reason,
+        movement,
+        reports: reportsForCaller(),
+        cityUpdates: withEconomyCityUpdates(cityUpdates),
+      };
+    };
 
     if (isCampReturn && defenderUid !== attackerUid) {
       const returnedArmy = returnRecalledTroops(troopCount);
@@ -5476,6 +5624,21 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
       return { ok: true, status: "resolved", kind: "transfer", cityUpdates: withEconomyCityUpdates(cityUpdates) };
     }
 
+    if (army.relinquishTransfer && !defenderUid) {
+      const destinationEntry = findNearestOwnedCityDestination(
+        attackerEconomy,
+        { ...target, regionId: targetRegionId },
+        [targetRef.path]
+      );
+      if (!destinationEntry?.city) {
+        throw new HttpsError("failed-precondition", "No owned city is available for the relinquished troops.");
+      }
+      return continueRelinquishMarch({
+        destinationEntry,
+        reason: "released_destination",
+      });
+    }
+
     const neutralCaptureBlockReason = getServerNeutralCaptureBlockReason(attackerEconomy, attackerProfile, target);
     if (neutralCaptureBlockReason) {
       const returned = returnTroopsToSource(troopCount);
@@ -5510,6 +5673,17 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
     }
 
     if (isProtectedMainCity(target, attackerUid)) {
+      if (army.relinquishTransfer) {
+        const destinationEntry = getOwnedMainCityDestination(attackerEconomy, attackerProfile);
+        if (!destinationEntry?.city) {
+          throw new HttpsError("failed-precondition", "Your main city is unavailable for the returning troops.");
+        }
+        return continueRelinquishMarch({
+          destinationEntry,
+          reason: "protected_main_city",
+          reportSummary: `Main cities cannot be attacked. Your relinquished troops are returning to ${destinationEntry.city.name || "your main city"}.`,
+        });
+      }
       const returned = returnTroopsToSource(troopCount);
       writeParticipantEconomies({}, {}, { statsCityPatches: getLatestSourceReturnStatsPatches() });
       const attackerReport = makeReport({
@@ -5532,6 +5706,17 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
     }
 
     if (isCityShielded(target, attackerUid, nowMs)) {
+      if (army.relinquishTransfer) {
+        const destinationEntry = getOwnedMainCityDestination(attackerEconomy, attackerProfile);
+        if (!destinationEntry?.city) {
+          throw new HttpsError("failed-precondition", "Your main city is unavailable for the returning troops.");
+        }
+        return continueRelinquishMarch({
+          destinationEntry,
+          reason: "shielded_destination",
+          reportSummary: `Royal Peace Shield blocked the attack. Your relinquished troops are returning to ${destinationEntry.city.name || "your main city"}.`,
+        });
+      }
       const returned = returnTroopsToSource(troopCount);
       writeParticipantEconomies({}, {}, { statsCityPatches: getLatestSourceReturnStatsPatches() });
       const attackerReport = makeReport({

@@ -10913,6 +10913,7 @@ async function resolveServerArmyMission(mission) {
     }
     applyServerArmyResult(result);
     if (resolutionComplete) purgeResolvedOnlineArmy(onlineId);
+    if (result?.movement) adoptServerArmyMovement(result.movement);
     if (shouldBackfillScoutReports) {
       await loadServerReportsOnce();
     }
