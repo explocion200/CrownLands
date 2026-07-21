@@ -40,7 +40,9 @@ const ONLINE_REGION_CITY_RESOLUTION_TIMEOUT_MS = 20 * 1000;
 const ONLINE_ARMY_EXPIRY_GRACE_SECONDS = 8;
 const ONLINE_ARMY_RESOLVE_RETRY_SECONDS = 5;
 const PENDING_ARMY_MAX_AGE_MS = 3 * 24 * 60 * 60 * 1000;
-const UPDATE_CHECK_INTERVAL_SECONDS = 120;
+const UPDATE_CHECK_INTERVAL_SECONDS = 60;
+const UPDATE_RELOAD_SAVE_TIMEOUT_MS = 3000;
+const UPDATE_RELOAD_PAUSE_MS = 650;
 const SETUP_LOADING_MIN_MS = 180;
 const IMAGE_PRELOAD_TIMEOUT_MS = 15000;
 const HUD_RENDER_INTERVAL_MS = 250;
@@ -2355,6 +2357,7 @@ let updateCheckTimer = 0;
 let updateCheckInFlight = false;
 let deployedUpdateAvailableBuildId = "";
 let deployedUpdateNoticeShown = false;
+let deployedUpdateReloadInProgress = false;
 const islandImageLoadPromises = new Map();
 const loadedImageAssets = new Set();
 const nearbyIslandPreloadRegions = new Set();
@@ -9163,14 +9166,54 @@ function updateDeploymentCheck(dt) {
 }
 
 async function handleDeployedUpdate(deployedBuildId) {
+  const nextBuildId = String(deployedBuildId || "").trim();
+  if (!nextBuildId || nextBuildId === APP_BUILD_ID || deployedUpdateReloadInProgress) return;
+  deployedUpdateReloadInProgress = true;
   deployedUpdateAvailableBuildId = String(deployedBuildId || "");
   deployedUpdateNoticeShown = true;
-  showToast("New update available. Reload when ready.");
-  if (onlineStatusDetail) onlineStatusDetail.textContent = "New update available. Reload when ready.";
+  showToast("Crownlands updated. Restarting the game...");
+  if (onlineStatusDetail) onlineStatusDetail.textContent = "Installing the latest Crownlands update...";
+  setSetupLoading(true, "Installing the latest Crownlands update...");
+  setMapSwitchLoading("Installing update...");
   console.info("[Crownlands] New deployed build available.", {
     currentBuildId: APP_BUILD_ID,
     deployedBuildId: deployedUpdateAvailableBuildId,
   });
+
+  if (state) {
+    saveGame();
+    try {
+      await withTimeout(
+        Promise.resolve(flushOnlineSave(true)),
+        UPDATE_RELOAD_SAVE_TIMEOUT_MS,
+        "Timed out while saving before the update reload.",
+      );
+    } catch (error) {
+      console.warn("[Crownlands] Continuing update reload after save timeout.", error);
+    }
+  }
+
+  if ("serviceWorker" in navigator) {
+    try {
+      const registration = await navigator.serviceWorker.getRegistration("/");
+      await registration?.update?.();
+      registration?.waiting?.postMessage?.({ type: "SKIP_WAITING" });
+    } catch (error) {
+      console.warn("[Crownlands] Service worker update check failed before reload.", error);
+    }
+  }
+
+  await new Promise(resolve => window.setTimeout(resolve, UPDATE_RELOAD_PAUSE_MS));
+  const reloadUrl = new URL(window.location.href);
+  reloadUrl.searchParams.set("build", nextBuildId);
+  window.location.replace(reloadUrl.href);
+}
+
+function handleServiceWorkerUpdateMessage(event) {
+  if (event?.data?.type !== "CROWNLANDS_UPDATE_READY") return;
+  const buildId = String(event.data.buildId || "").trim();
+  if (!buildId || buildId === APP_BUILD_ID) return;
+  handleDeployedUpdate(buildId);
 }
 
 function readPendingOnlineArmyMovements() {
@@ -19377,13 +19420,19 @@ function registerCrownlandsServiceWorker() {
     return;
   }
 
+  navigator.serviceWorker.addEventListener("message", handleServiceWorkerUpdateMessage);
+  navigator.serviceWorker.addEventListener("controllerchange", () => {
+    checkForDeployedUpdate(true);
+  });
+
   window.addEventListener("load", async () => {
     try {
       const registration = await navigator.serviceWorker.register("/service-worker.js");
       console.info("[Crownlands] Service worker registered.", registration.scope);
 
       if (registration.waiting) {
-        console.info("[Crownlands] Update available. Reload to use the latest version.");
+        registration.waiting.postMessage({ type: "SKIP_WAITING" });
+        checkForDeployedUpdate(true);
       }
 
       registration.addEventListener("updatefound", () => {
@@ -19391,7 +19440,7 @@ function registerCrownlandsServiceWorker() {
         if (!installingWorker) return;
         installingWorker.addEventListener("statechange", () => {
           if (installingWorker.state === "installed" && navigator.serviceWorker.controller) {
-            console.info("[Crownlands] Update available. Reload to use the latest version.");
+            checkForDeployedUpdate(true);
           }
         });
       });

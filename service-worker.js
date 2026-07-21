@@ -1,14 +1,14 @@
-const CACHE_VERSION = "20260721-tapered-march-routes";
+const CACHE_VERSION = "20260721-auto-update-reload";
 const CACHE_NAME = `crownlands-cache-${CACHE_VERSION}`;
 const STATIC_CACHE_URLS = [
   "/",
   "/index.html",
   "/manifest.webmanifest",
-  "/styles.css?v=20260721-tapered-march-routes",
+  "/styles.css?v=20260721-auto-update-reload",
   "/world-config.js",
   "/firebase-config.js?v=20260703-vapid-key",
-  "/firebaseClient.js?v=20260721-tapered-march-routes",
-  "/game.js?v=20260721-tapered-march-routes",
+  "/firebaseClient.js?v=20260721-auto-update-reload",
+  "/game.js?v=20260721-auto-update-reload",
   "/route-worker.js?v=20260721-structure-route-clearance",
   "/assets/map-editor-data.js?v=20260705-stronghold-sizes",
   "/assets/game-menu-background.jpg?v=20260702-login-page",
@@ -145,6 +145,11 @@ self.addEventListener("activate", event => {
     const names = await caches.keys();
     await Promise.all(names.filter(name => name.startsWith("crownlands-cache-") && name !== CACHE_NAME).map(name => caches.delete(name)));
     await self.clients.claim();
+    const windowClients = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
+    windowClients.forEach(client => client.postMessage({
+      type: "CROWNLANDS_UPDATE_READY",
+      buildId: CACHE_VERSION,
+    }));
   })());
 });
 
