@@ -83,6 +83,12 @@ const PRODUCTION_BOOST_PURCHASE_WINDOW_MS = 24 * 60 * 60 * 1000;
 const PRODUCTION_BOOST_ITEM_IDS = new Set([WAR_DRUMS_ITEM_ID, ROYAL_TAX_DECREE_ITEM_ID]);
 const VEIL_OF_SILENCE_ITEM_ID = "veil_of_silence_30m";
 const VEIL_OF_SILENCE_DURATION_MS = 5 * 60 * 1000;
+const SWIFT_MARCH_ORDER_ITEM_ID = "swift_march_order";
+const SWIFT_MARCH_REMAINING_TIME_MULTIPLIER = 0.5;
+const SWIFT_MARCH_MINIMUM_REMAINING_MS = 1000;
+const RECALL_HORN_ITEM_ID = "recall_horn";
+const RECALL_HORN_MINIMUM_REMAINING_MS = 1000;
+const RECALL_HORN_MINIMUM_RETURN_MS = 1000;
 const MAIN_CITY_CHANGE_CITY_LIMIT = 30;
 const MAIN_CITY_CHANGE_COOLDOWN_MS = 24 * 60 * 60 * 1000;
 const MAX_SERVER_PRODUCTION_SECONDS = 7 * 24 * 60 * 60;
@@ -148,8 +154,8 @@ const SHOP_ITEMS = {
   [WAR_DRUMS_ITEM_ID]: { id: WAR_DRUMS_ITEM_ID, label: "War Drums", cost: 250000 },
   [ROYAL_TAX_DECREE_ITEM_ID]: { id: ROYAL_TAX_DECREE_ITEM_ID, label: "Royal Tax Decree", cost: 150000 },
   [VEIL_OF_SILENCE_ITEM_ID]: { id: VEIL_OF_SILENCE_ITEM_ID, label: "Veil of Silence", cost: 175000 },
-  swift_march_order: { id: "swift_march_order", label: "Swift March Order", cost: 300000 },
-  recall_horn: { id: "recall_horn", label: "Recall Horn", cost: 500000 },
+  [SWIFT_MARCH_ORDER_ITEM_ID]: { id: SWIFT_MARCH_ORDER_ITEM_ID, label: "Swift March Order", cost: 300000 },
+  [RECALL_HORN_ITEM_ID]: { id: RECALL_HORN_ITEM_ID, label: "Recall Horn", cost: 500000 },
 };
 const LEGACY_SHOP_ITEM_IDS = ["troop_boost_1h", "anti_scout_1h"];
 const CITY_LEVEL_STATS = {
@@ -1507,6 +1513,144 @@ function armyViewRefsForRegions(regionIds, armyId) {
 
 function armyRefsForRegions(regionIds, armyId) {
   return [canonicalArmyRef(armyId), ...armyViewRefsForRegions(regionIds, armyId)];
+}
+
+function getArmyRouteProgressAtMs(army = {}, nowMs = Date.now()) {
+  const launchedAtMs = Math.max(0, Math.floor(safeNumber(army.launchedAtMs, 0)));
+  const arrivesAtMs = Math.max(0, Math.floor(safeNumber(army.arrivesAtMs, 0)));
+  const swiftUsedAtMs = Math.max(0, Math.floor(safeNumber(army.swiftMarchUsedAtMs, 0)));
+  if (swiftUsedAtMs > 0 && arrivesAtMs > swiftUsedAtMs && nowMs >= swiftUsedAtMs) {
+    const progressAtUse = clamp(safeNumber(army.swiftMarchProgressAtUse, 0), 0, 1);
+    const acceleratedProgress = clamp((nowMs - swiftUsedAtMs) / (arrivesAtMs - swiftUsedAtMs), 0, 1);
+    return clamp(progressAtUse + (1 - progressAtUse) * acceleratedProgress, 0, 1);
+  }
+  if (launchedAtMs > 0 && arrivesAtMs > launchedAtMs) {
+    return clamp((nowMs - launchedAtMs) / (arrivesAtMs - launchedAtMs), 0, 1);
+  }
+  const totalMs = Math.max(100, safeNumber(army.total, 0.1) * 1000);
+  return clamp(1 - Math.max(0, arrivesAtMs - nowMs) / totalMs, 0, 1);
+}
+
+function reverseArmyRoute(pathSegments = []) {
+  const segments = normalizePathSegments(pathSegments)
+    .reverse()
+    .map(segment => {
+      const points = [...segment.points].reverse();
+      return { regionId: segment.regionId, points, length: routeLength(points) };
+    });
+  if (!segments.length) return null;
+  return {
+    routeRegionIds: segments.map(segment => segment.regionId),
+    pathSegments: segments,
+    path: segments.flatMap((segment, index) => index ? segment.points.slice(1) : segment.points).slice(0, MAX_ROUTE_POINTS_PER_SEGMENT),
+    pathLength: segments.reduce((total, segment) => total + segment.length, 0),
+  };
+}
+
+function segmentCrossesServerObstacle(start = {}, end = {}, obstacle = {}, clearance = 0) {
+  const radius = Math.max(1, safeNumber(obstacle.radius, 1) + clearance);
+  return pointToSegmentDistanceSquared(obstacle, start, end) < radius * radius;
+}
+
+function getServerRouteCollisionCount(regionId = "", start = {}, end = {}, ignoredIds = new Set()) {
+  return getServerRouteObstacles(regionId).reduce((count, obstacle) => (
+    ignoredIds.has(obstacle.id) || !segmentCrossesServerObstacle(start, end, obstacle, 2)
+      ? count
+      : count + 1
+  ), 0);
+}
+
+function findFirstServerRouteCollision(regionId = "", points = [], ignoredIds = new Set()) {
+  const obstacles = getServerRouteObstacles(regionId).filter(obstacle => !ignoredIds.has(obstacle.id));
+  for (let pointIndex = 1; pointIndex < points.length; pointIndex += 1) {
+    const start = points[pointIndex - 1];
+    const end = points[pointIndex];
+    for (const obstacle of obstacles) {
+      if (segmentCrossesServerObstacle(start, end, obstacle, 2)) {
+        return { pointIndex, start, end, obstacle };
+      }
+    }
+  }
+  return null;
+}
+
+function findServerObstacleDetour(regionId = "", collision = {}, ignoredIds = new Set()) {
+  const { start, end, obstacle } = collision;
+  const bounds = getServerMapBounds(regionId);
+  if (!start || !end || !obstacle || !bounds) return null;
+  const candidates = [];
+  const paddingScales = [1.18, 1.4, 1.75, 2.2];
+  for (const scale of paddingScales) {
+    const radius = Math.max(obstacle.radius + 12, obstacle.radius * scale);
+    for (let step = 0; step < 32; step += 1) {
+      const angle = step / 32 * Math.PI * 2;
+      const point = {
+        x: obstacle.x + Math.cos(angle) * radius,
+        y: obstacle.y + Math.sin(angle) * radius,
+      };
+      if (point.x < bounds.left || point.x > bounds.right || point.y < bounds.top || point.y > bounds.bottom) continue;
+      if (segmentCrossesServerObstacle(start, point, obstacle, 2)
+        || segmentCrossesServerObstacle(point, end, obstacle, 2)) continue;
+      const collisionCount = getServerRouteCollisionCount(regionId, start, point, ignoredIds)
+        + getServerRouteCollisionCount(regionId, point, end, ignoredIds);
+      const distance = Math.hypot(point.x - start.x, point.y - start.y)
+        + Math.hypot(end.x - point.x, end.y - point.y);
+      candidates.push({ point, collisionCount, distance });
+    }
+    const clearCandidates = candidates.filter(candidate => candidate.collisionCount === 0);
+    if (clearCandidates.length) {
+      clearCandidates.sort((a, b) => a.distance - b.distance);
+      return clearCandidates[0].point;
+    }
+  }
+  candidates.sort((a, b) => a.collisionCount - b.collisionCount || a.distance - b.distance);
+  return candidates[0]?.point || null;
+}
+
+function buildServerStructureSafeLeg(regionId = "", start = {}, end = {}, ignoredIds = new Set()) {
+  const points = [
+    { x: safeNumber(start.x, 0), y: safeNumber(start.y, 0) },
+    { x: safeNumber(end.x, 0), y: safeNumber(end.y, 0) },
+  ];
+  for (let attempt = 0; attempt < MAX_ROUTE_POINTS_PER_SEGMENT - 2; attempt += 1) {
+    const collision = findFirstServerRouteCollision(regionId, points, ignoredIds);
+    if (!collision) return points;
+    const detour = findServerObstacleDetour(regionId, collision, ignoredIds);
+    if (!detour) {
+      throw new HttpsError("failed-precondition", "A safe return route from the camp could not be found.");
+    }
+    points.splice(collision.pointIndex, 0, detour);
+  }
+  throw new HttpsError("failed-precondition", "The camp return route is too complex.");
+}
+
+function buildServerGeneratedArmyRoute(source = {}, target = {}) {
+  const sourceRegionId = requireKnownWorldRegionId(source.regionId || source.startPool);
+  const targetRegionId = requireKnownWorldRegionId(target.regionId || target.startPool);
+  const routeRegionIds = findServerPortalRouteRegionChain(sourceRegionId, targetRegionId);
+  const ignoredIds = new Set([safeString(source.id, 96), safeString(target.id, 96)].filter(Boolean));
+  const pathSegments = getExpectedServerRouteLegs(source, target, routeRegionIds).map(leg => {
+    const points = buildServerStructureSafeLeg(leg.regionId, leg.start, leg.end, ignoredIds);
+    return { regionId: leg.regionId, points, length: routeLength(points) };
+  });
+  assertRouteAvoidsWorldStructures(pathSegments, ignoredIds);
+  return {
+    routeRegionIds,
+    pathSegments,
+    path: pathSegments.flatMap((segment, index) => index ? segment.points.slice(1) : segment.points).slice(0, MAX_ROUTE_POINTS_PER_SEGMENT),
+    pathLength: pathSegments.reduce((total, segment) => total + segment.length, 0),
+  };
+}
+
+function getCampReturnRoute(camp = {}, destination = {}) {
+  const destinationRegionId = normalizeRegionId(destination.regionId || destination.startPool);
+  const storedSourceId = safeString(camp.returnSourceCityId, 96);
+  const storedSourceRegionId = normalizeRegionId(camp.returnSourceRegionId);
+  if (storedSourceId === safeString(destination.id, 96) && storedSourceRegionId === destinationRegionId) {
+    const reversed = reverseArmyRoute(camp.returnPathSegments);
+    if (reversed?.pathLength > 0) return reversed;
+  }
+  return buildServerGeneratedArmyRoute(camp, destination);
 }
 
 function reportRef(uid, reportId) {
@@ -3572,6 +3716,12 @@ exports.ensureMainIsland = onCall({ region: "us-central1", maxInstances: 20, inv
         payoutAtMs: 0,
         payoutPending: false,
         currentGarrison: camp.baseDefenders,
+        returnSourceCityId: "",
+        returnSourceRegionId: "",
+        returnSourceCityName: "",
+        returnPathSegments: [],
+        returnRouteRegionIds: [],
+        returnPathLength: 0,
         activeArmyIds: [],
         dailyRewardClaims: {},
         lastResetDate: "",
@@ -4340,6 +4490,224 @@ exports.activateInventoryItem = onCall({ region: "us-central1", maxInstances: 20
   });
 });
 
+exports.useSwiftMarchOrder = onCall({ region: "us-central1", maxInstances: 20, invoker: "public" }, async request => {
+  const uid = requireAuth(request);
+  const armyId = safeString(request.data?.armyId, 96).replace(/[^a-zA-Z0-9_-]/g, "_");
+  if (!armyId) throw new HttpsError("invalid-argument", "Choose an active troop transfer.");
+
+  const armyRef = canonicalArmyRef(armyId);
+  const profileRef = db.doc(`players/${uid}`);
+  return db.runTransaction(async transaction => {
+    const nowMs = Date.now();
+    const [armySnap, profileSnap] = await Promise.all([
+      transaction.get(armyRef),
+      transaction.get(profileRef),
+    ]);
+    if (!armySnap.exists) throw new HttpsError("not-found", "That troop transfer is no longer active.");
+    if (!profileSnap.exists) throw new HttpsError("not-found", "Your player profile was not found.");
+
+    const army = { id: armySnap.id, ...armySnap.data() };
+    if (army.status !== "active") throw new HttpsError("failed-precondition", "That troop transfer has already arrived.");
+    if (getOwnerUid(army) !== uid) throw new HttpsError("permission-denied", "You can only speed up your own troop transfers.");
+    if (army.kind !== "transfer" || army.targetType === "camp" || army.relinquishTransfer) {
+      throw new HttpsError("failed-precondition", "Swift March Orders only work between two cities you own.");
+    }
+    if (army.returning) {
+      throw new HttpsError("failed-precondition", "A returning army cannot use a Swift March Order.");
+    }
+    if (timestampToMs(army.swiftMarchUsedAtMs) > 0) {
+      throw new HttpsError("failed-precondition", "A Swift March Order has already been used on this transfer.");
+    }
+
+    const sourceRegionId = normalizeRegionId(army.sourceRegionId);
+    const targetRegionId = normalizeRegionId(army.targetRegionId);
+    if (!sourceRegionId || !targetRegionId || !army.fromId || !army.toId) {
+      throw new HttpsError("failed-precondition", "That troop transfer is missing its city route.");
+    }
+    const sourceRef = cityRefForRegion(sourceRegionId, army.fromId);
+    const targetRef = cityRefForRegion(targetRegionId, army.toId);
+    const [sourceSnap, targetSnap] = await Promise.all([
+      transaction.get(sourceRef),
+      transaction.get(targetRef),
+    ]);
+    if (!sourceSnap.exists || !targetSnap.exists) {
+      throw new HttpsError("not-found", "One of the transfer cities no longer exists.");
+    }
+    const source = { id: sourceSnap.id, ...sourceSnap.data() };
+    const target = { id: targetSnap.id, ...targetSnap.data() };
+    if (getOwnerUid(source) !== uid || getOwnerUid(target) !== uid || isStronghold(source) || isStronghold(target)) {
+      throw new HttpsError("failed-precondition", "Swift March Orders only work between two cities you currently own.");
+    }
+
+    const profile = profileSnap.data() || {};
+    const shopItems = normalizeShopItems(profile.shopItems);
+    const owned = Math.max(0, Math.floor(safeNumber(shopItems[SWIFT_MARCH_ORDER_ITEM_ID], 0)));
+    if (owned <= 0) throw new HttpsError("failed-precondition", "You do not have a Swift March Order.");
+
+    const oldArrivesAtMs = Math.max(0, Math.floor(safeNumber(army.arrivesAtMs, 0)));
+    const remainingBeforeMs = oldArrivesAtMs - nowMs;
+    if (remainingBeforeMs <= SWIFT_MARCH_MINIMUM_REMAINING_MS) {
+      throw new HttpsError("failed-precondition", "That troop transfer is too close to arrival to speed up.");
+    }
+    const launchedAtMs = Math.max(0, Math.floor(safeNumber(
+      army.launchedAtMs,
+      oldArrivesAtMs - Math.max(100, safeNumber(army.total, 0.1) * 1000)
+    )));
+    const originalTotalMs = Math.max(100, Math.floor(safeNumber(army.total, 0.1) * 1000));
+    const progressAtUse = Math.max(0, Math.min(0.999999, 1 - remainingBeforeMs / originalTotalMs));
+    const remainingAfterMs = Math.max(
+      SWIFT_MARCH_MINIMUM_REMAINING_MS,
+      Math.ceil(remainingBeforeMs * SWIFT_MARCH_REMAINING_TIME_MULTIPLIER)
+    );
+    const arrivesAtMs = nowMs + remainingAfterMs;
+    const movementPatch = {
+      arrivesAtMs,
+      total: Math.max(0.1, (arrivesAtMs - launchedAtMs) / 1000),
+      swiftMarchUsedAtMs: nowMs,
+      swiftMarchOriginalArrivesAtMs: oldArrivesAtMs,
+      swiftMarchProgressAtUse: progressAtUse,
+      swiftMarchRemainingMultiplier: SWIFT_MARCH_REMAINING_TIME_MULTIPLIER,
+      updatedAt: FieldValue.serverTimestamp(),
+    };
+    const routeRegionIds = normalizeRegionIds([
+      ...(army.routeRegionIds || []),
+      sourceRegionId,
+      targetRegionId,
+    ]);
+    armyRefsForRegions(routeRegionIds, armyId).forEach(ref => {
+      transaction.set(ref, movementPatch, { merge: true });
+    });
+    shopItems[SWIFT_MARCH_ORDER_ITEM_ID] = owned - 1;
+    transaction.set(profileRef, {
+      shopItems,
+      updatedAt: FieldValue.serverTimestamp(),
+    }, { merge: true });
+
+    const movement = { ...army, ...movementPatch };
+    delete movement.updatedAt;
+    return {
+      ok: true,
+      movement,
+      secondsSaved: Math.max(0, Math.floor((remainingBeforeMs - remainingAfterMs) / 1000)),
+      currentUser: {
+        shopItems,
+      },
+    };
+  });
+});
+
+exports.useRecallHorn = onCall({ region: "us-central1", maxInstances: 20, invoker: "public" }, async request => {
+  const uid = requireAuth(request);
+  const armyId = safeString(request.data?.armyId, 96).replace(/[^a-zA-Z0-9_-]/g, "_");
+  if (!armyId) throw new HttpsError("invalid-argument", "Choose an active troop march.");
+
+  const armyRef = canonicalArmyRef(armyId);
+  const profileRef = db.doc(`players/${uid}`);
+  return db.runTransaction(async transaction => {
+    const nowMs = Date.now();
+    const [armySnap, profileSnap] = await Promise.all([
+      transaction.get(armyRef),
+      transaction.get(profileRef),
+    ]);
+    if (!armySnap.exists) throw new HttpsError("not-found", "That troop march is no longer active.");
+    if (!profileSnap.exists) throw new HttpsError("not-found", "Your player profile was not found.");
+
+    const army = { id: armySnap.id, ...armySnap.data() };
+    if (army.status !== "active") throw new HttpsError("failed-precondition", "That troop march has already arrived.");
+    if (getOwnerUid(army) !== uid) throw new HttpsError("permission-denied", "You can only recall your own troop marches.");
+    if (army.kind === "scout") throw new HttpsError("failed-precondition", "Recall Horns cannot be used on scouts.");
+    if (army.returning || timestampToMs(army.recalledAtMs) > 0) {
+      throw new HttpsError("failed-precondition", "That army is already returning.");
+    }
+
+    const sourceRegionId = normalizeRegionId(army.sourceRegionId);
+    const targetRegionId = normalizeRegionId(army.targetRegionId);
+    if (!sourceRegionId || !targetRegionId || !army.fromId || !army.toId) {
+      throw new HttpsError("failed-precondition", "That troop march is missing its route.");
+    }
+    const targetCampRef = army.targetType === "camp" ? campRefForRegion(targetRegionId, army.toId) : null;
+    const targetCampSnap = targetCampRef ? await transaction.get(targetCampRef) : null;
+
+    const oldArrivesAtMs = Math.max(0, Math.floor(safeNumber(army.arrivesAtMs, 0)));
+    const remainingBeforeMs = oldArrivesAtMs - nowMs;
+    if (remainingBeforeMs <= RECALL_HORN_MINIMUM_REMAINING_MS) {
+      throw new HttpsError("failed-precondition", "That troop march is too close to arrival to recall.");
+    }
+
+    const profile = profileSnap.data() || {};
+    const shopItems = normalizeShopItems(profile.shopItems);
+    const owned = Math.max(0, Math.floor(safeNumber(shopItems[RECALL_HORN_ITEM_ID], 0)));
+    if (owned <= 0) throw new HttpsError("failed-precondition", "You do not have a Recall Horn.");
+
+    const launchedAtMs = Math.max(0, Math.floor(safeNumber(
+      army.launchedAtMs,
+      oldArrivesAtMs - Math.max(100, safeNumber(army.total, 0.1) * 1000)
+    )));
+    const originalArrivesAtMs = Math.max(
+      oldArrivesAtMs,
+      Math.floor(safeNumber(army.swiftMarchOriginalArrivesAtMs, oldArrivesAtMs))
+    );
+    const originalTotalMs = Math.max(100, originalArrivesAtMs - launchedAtMs);
+    const returnStartProgress = clamp(getArmyRouteProgressAtMs(army, nowMs), 0.000001, 0.999999);
+    const returnDurationMs = Math.max(
+      RECALL_HORN_MINIMUM_RETURN_MS,
+      Math.ceil(originalTotalMs * returnStartProgress)
+    );
+    const arrivesAtMs = nowMs + returnDurationMs;
+    const routeRegionIds = normalizeRegionIds([
+      ...(army.routeRegionIds || []),
+      sourceRegionId,
+      targetRegionId,
+    ]);
+    const movementPatch = {
+      returning: true,
+      returnReason: RECALL_HORN_ITEM_ID,
+      recalledAtMs: nowMs,
+      recallOriginalArrivesAtMs: oldArrivesAtMs,
+      returnStartProgress,
+      returnDestinationId: army.fromId,
+      returnDestinationRegionId: sourceRegionId,
+      arrivesAtMs,
+      total: Math.max(0.1, returnDurationMs / 1000),
+      targetOwnerUid: "",
+      updatedAt: FieldValue.serverTimestamp(),
+    };
+    let campUpdate = null;
+    if (targetCampRef && targetCampSnap?.exists) {
+      const camp = { id: targetCampSnap.id, ...targetCampSnap.data() };
+      const remainingActiveArmyIds = removeActiveCampArmyId(camp, armyId);
+      const campPatch = {
+        activeArmyIds: remainingActiveArmyIds,
+        state: getRewardCampState(remainingActiveArmyIds, getOwnerUid(camp)),
+        updatedAt: FieldValue.serverTimestamp(),
+      };
+      transaction.set(targetCampRef, campPatch, { merge: true });
+      campUpdate = campUpdateForClient(camp.id, targetRegionId, campPatch);
+    }
+    armyRefsForRegions(routeRegionIds, armyId).forEach(ref => {
+      transaction.set(ref, movementPatch, { merge: true });
+    });
+    shopItems[RECALL_HORN_ITEM_ID] = owned - 1;
+    transaction.set(profileRef, {
+      shopItems,
+      updatedAt: FieldValue.serverTimestamp(),
+    }, { merge: true });
+
+    const movement = { ...army, ...movementPatch };
+    delete movement.updatedAt;
+    return {
+      ok: true,
+      movement,
+      returnSeconds: Math.max(1, Math.ceil(returnDurationMs / 1000)),
+      targetType: army.targetType === "camp" ? "camp" : "city",
+      campUpdate,
+      currentUser: {
+        shopItems,
+      },
+    };
+  });
+});
+
 exports.sendArmyOrder = onCall({ region: "us-central1", maxInstances: 20, invoker: "public" }, async request => {
   const uid = requireAuth(request);
   const nowMs = Date.now();
@@ -4665,17 +5033,20 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
       ? campRefForRegion(targetRegionId, army.toId)
       : cityRefForRegion(targetRegionId, army.toId);
     const [sourceSnap, targetSnap] = await Promise.all([transaction.get(sourceRef), transaction.get(targetRef)]);
-    if (!targetSnap.exists) throw new HttpsError("not-found", "Target city was not found.");
+    const isReturning = Boolean(army.returning && army.returnReason === RECALL_HORN_ITEM_ID);
+    if (!targetSnap.exists && !isReturning) throw new HttpsError("not-found", "Target city was not found.");
 
     let source = sourceSnap.exists ? { id: sourceSnap.id, ...sourceSnap.data() } : null;
-    let target = targetType === "camp"
-      ? getRewardCampCombatTarget({ id: targetSnap.id, ...targetSnap.data() })
-      : { id: targetSnap.id, ...targetSnap.data() };
-    if (targetType === "camp" && !target) {
+    let target = targetSnap.exists
+      ? targetType === "camp"
+        ? getRewardCampCombatTarget({ id: targetSnap.id, ...targetSnap.data() })
+        : { id: targetSnap.id, ...targetSnap.data() }
+      : { id: army.toId, regionId: targetRegionId, ownerKind: "neutral", ownerUid: "", troops: 0 };
+    if (targetType === "camp" && !target && !isReturning) {
       throw new HttpsError("failed-precondition", "That camp is not an active reward objective.");
     }
     const attackerUid = safeString(army.ownerUid, 128);
-    const defenderUid = getOwnerUid(target);
+    const defenderUid = isReturning ? "" : getOwnerUid(target);
     const participantProfiles = await getProfileSnapshots(transaction, [attackerUid, defenderUid]);
     const attackerProfileEntry = participantProfiles.get(attackerUid) || {};
     const defenderProfileEntry = defenderUid ? participantProfiles.get(defenderUid) || {} : null;
@@ -4773,6 +5144,32 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
       cityUpdates.push({ id: source.id, regionId: sourceRegionId, troops: nextTroops });
       return returned;
     };
+    const returnRecalledTroops = troops => {
+      const returnedToSource = returnTroopsToSource(troops);
+      if (returnedToSource > 0) {
+        return { returned: returnedToSource, cityId: source.id, regionId: sourceRegionId };
+      }
+      const returned = Math.max(0, Math.floor(safeNumber(troops, 0)));
+      if (!returned || !attackerEconomy) return { returned: 0, cityId: "", regionId: "" };
+      const mainInfo = getMainCityInfo(attackerProfile);
+      const mainEntry = mainInfo?.ref ? getEconomyCityByRef(attackerEconomy, mainInfo.ref) : null;
+      const fallbackEntry = mainEntry?.city && getOwnerUid(mainEntry.city) === attackerUid
+        ? mainEntry
+        : attackerEconomy.cityEntries.find(entry => getOwnerUid(entry.city) === attackerUid);
+      if (!fallbackEntry?.city) return { returned: 0, cityId: "", regionId: "" };
+      const fallbackCity = fallbackEntry.city;
+      const nextTroops = Math.max(0, Math.floor(safeNumber(fallbackCity.troops, 0))) + returned;
+      const patch = {
+        troops: nextTroops,
+        troopFloat: Math.max(0, safeNumber(fallbackCity.troopFloat, fallbackCity.troops || 0)) + returned,
+      };
+      latestSourceReturnStatsPatch = { ref: fallbackEntry.ref, city: fallbackCity, patch };
+      appendEconomyCityPatch(attackerEconomy, fallbackEntry.ref, fallbackCity, patch);
+      transaction.set(fallbackEntry.ref, cleanCityUpdate(fallbackCity, patch), { merge: true });
+      const fallbackRegionId = normalizeRegionId(fallbackCity.regionId || mainInfo?.regionId);
+      cityUpdates.push({ id: fallbackCity.id, regionId: fallbackRegionId, troops: nextTroops });
+      return { returned, cityId: fallbackCity.id, regionId: fallbackRegionId };
+    };
     const recoverBattleLossesToMainCity = ({ uid = "", profile = {}, economy = null, losses = 0 } = {}) => {
       const recovered = Math.floor(Math.max(0, safeNumber(losses, 0)) * getSkillPercent(profile, "fieldMedics") / 100);
       if (!uid || recovered <= 0 || !economy) return 0;
@@ -4800,6 +5197,42 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
     const defenderName = defenderUid
       ? normalizePlayerName(target.ownerName || defenderProfile.playerName, "Rival ruler")
       : "Neutral city";
+
+    if (isReturning) {
+      const returnedArmy = returnRecalledTroops(troopCount);
+      let campUpdate = null;
+      if (targetType === "camp" && targetSnap.exists && target) {
+        const remainingActiveArmyIds = removeActiveCampArmyId(target, armyId);
+        const campPatch = {
+          activeArmyIds: remainingActiveArmyIds,
+          state: getRewardCampState(remainingActiveArmyIds, getOwnerUid(target)),
+          updatedAt: FieldValue.serverTimestamp(),
+        };
+        transaction.set(targetRef, campPatch, { merge: true });
+        campUpdate = campUpdateForClient(target.id, targetRegionId, campPatch);
+      }
+      writeParticipantEconomies({}, {}, { statsCityPatches: getLatestSourceReturnStatsPatches() });
+      markResolved({
+        kind: "return",
+        recalled: true,
+        returned: returnedArmy.returned,
+        returnCityId: returnedArmy.cityId,
+      });
+      return {
+        ok: true,
+        status: "resolved",
+        kind: "return",
+        returned: returnedArmy.returned,
+        returnCityId: returnedArmy.cityId,
+        returnRegionId: returnedArmy.regionId,
+        campUpdate,
+        cityUpdates: withEconomyCityUpdates(cityUpdates),
+        currentUser: profilePatchForCaller(
+          { character: attackerProfile.character, gold: attackerEconomy?.gold, goldFloat: attackerEconomy?.goldFloat },
+          null
+        ),
+      };
+    }
 
     if (targetType === "camp") {
       if (army.kind === "scout") {
@@ -4897,6 +5330,12 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
           payoutAtMs: nowMs + campConfig.holdDurationMs,
           payoutPending: true,
           currentGarrison: battle.survivors,
+          returnSourceCityId: army.fromId,
+          returnSourceRegionId: sourceRegionId,
+          returnSourceCityName: source?.name || army.fromName || "Origin city",
+          returnPathSegments: normalizePathSegments(army.pathSegments),
+          returnRouteRegionIds: normalizeRegionIds(army.routeRegionIds),
+          returnPathLength: Math.max(0, safeNumber(army.pathLength, 0)),
           activeArmyIds: remainingActiveArmyIds,
           state: getRewardCampState(remainingActiveArmyIds, attackerUid),
           lastCapturedAtMs: nowMs,
@@ -5563,13 +6002,20 @@ async function resolveRewardCampPayoutByRef(campRef, nowMs = Date.now(), callerU
     if (!mainCity || getOwnerUid(mainCity) !== holderUid) {
       throw new HttpsError("failed-precondition", `${config.name} holder has no valid main city for payout.`);
     }
+    const returnSourceCityId = safeString(camp.returnSourceCityId, 96).replace(/[^a-zA-Z0-9_-]/g, "_");
+    const returnSourceRegionId = normalizeRegionId(camp.returnSourceRegionId || camp.regionId);
+    const returnSourceRef = returnSourceCityId ? cityRefForRegion(returnSourceRegionId, returnSourceCityId) : null;
+    const returnSourceSnap = returnSourceRef ? await transaction.get(returnSourceRef) : null;
+    const returnSourceCity = returnSourceSnap?.exists ? { id: returnSourceSnap.id, ...returnSourceSnap.data() } : null;
+    const returnDestination = returnSourceCity && getOwnerUid(returnSourceCity) === holderUid ? returnSourceCity : mainCity;
+    const returnDestinationRegionId = normalizeRegionId(returnDestination.regionId || mainCityInfo.regionId);
     const returningTroops = Math.max(0, Math.floor(safeNumber(camp.currentGarrison, camp.troops)));
     const troopReward = config.rewardType === "troops" ? reward : 0;
     let returnedTroops = 0;
     let rewardedTroops = 0;
     let mainCityPatch = null;
-    if (mainCity && getOwnerUid(mainCity) === holderUid && (returningTroops > 0 || troopReward > 0)) {
-      const troopFloat = Math.max(0, safeNumber(mainCity.troopFloat, mainCity.troops || 0)) + returningTroops + troopReward;
+    if (mainCity && getOwnerUid(mainCity) === holderUid && troopReward > 0) {
+      const troopFloat = Math.max(0, safeNumber(mainCity.troopFloat, mainCity.troops || 0)) + troopReward;
       mainCityPatch = {
         id: mainCity.id,
         regionId: mainCityInfo.regionId,
@@ -5582,8 +6028,59 @@ async function resolveRewardCampPayoutByRef(campRef, nowMs = Date.now(), callerU
         troopFloat: mainCityPatch.troopFloat,
         productionUpdatedAtMs: mainCityPatch.productionUpdatedAtMs,
       }), { merge: true });
-      returnedTroops = returningTroops;
       rewardedTroops = troopReward;
+    }
+
+    let returnArmy = null;
+    if (returningTroops > 0) {
+      const route = getCampReturnRoute(camp, returnDestination);
+      const returnArmyId = safeString(`camp_return_${camp.id}_${payoutAtMs}_${holderUid}`, 96).replace(/[^a-zA-Z0-9_-]/g, "_");
+      const duration = calculateTravelTime({
+        pathLength: route.pathLength,
+        troopCount: returningTroops,
+        kind: "transfer",
+      });
+      returnArmy = {
+        id: returnArmyId,
+        worldId: ONLINE_WORLD_ID,
+        resetGeneration: RESET_GENERATION,
+        ownerKind: "player",
+        ownerUid: holderUid,
+        ownerName: normalizePlayerName(player.playerName || camp.holderName, "Ruler"),
+        ownerFlag: player.flag || camp.holderFlag || null,
+        ownerKingPower: normalizePowerValue(player.globalStats?.kingPower),
+        kind: "transfer",
+        campReturn: true,
+        campId: camp.id,
+        targetType: "city",
+        fromId: camp.id,
+        toId: returnDestination.id,
+        fromName: camp.name || config.name,
+        toName: returnDestination.name || "Main city",
+        troops: returningTroops,
+        requestedTroops: returningTroops,
+        total: duration,
+        path: route.path,
+        pathSegments: route.pathSegments,
+        routeRegionIds: route.routeRegionIds,
+        viewRegionIds: route.routeRegionIds,
+        pathLength: route.pathLength,
+        targetKey: `${returnDestinationRegionId}:${returnDestination.id}`,
+        targetOwnerAtLaunch: "player",
+        targetOwnerUid: holderUid,
+        sourceRegionId: normalizeRegionId(camp.regionId),
+        targetRegionId: returnDestinationRegionId,
+        launchedAtMs: nowMs,
+        arrivesAtMs: nowMs + Math.ceil(duration * 1000),
+        status: "active",
+        createdByServer: true,
+        serverAuthorityVersion: 2,
+        createdAt: FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp(),
+      };
+      armyRefsForRegions(route.routeRegionIds, returnArmyId).forEach(ref => {
+        transaction.set(ref, returnArmy, { merge: true });
+      });
     }
 
     const baseDefenders = Math.max(1, Math.floor(safeNumber(camp.baseDefenders, config.baseDefenders)));
@@ -5596,6 +6093,12 @@ async function resolveRewardCampPayoutByRef(campRef, nowMs = Date.now(), callerU
       payoutAtMs: 0,
       payoutPending: false,
       currentGarrison: baseDefenders,
+      returnSourceCityId: "",
+      returnSourceRegionId: "",
+      returnSourceCityName: "",
+      returnPathSegments: [],
+      returnRouteRegionIds: [],
+      returnPathLength: 0,
       activeArmyIds,
       dailyRewardClaims: {
         lastHolderUid: holderUid,
@@ -5631,11 +6134,11 @@ async function resolveRewardCampPayoutByRef(campRef, nowMs = Date.now(), callerU
       city: camp,
       opponentName: config.name,
       troopCount: returningTroops,
-      result: { survivors: returnedTroops, defendersLeft: 0 },
+      result: { survivors: returningTroops, defendersLeft: 0, returning: Boolean(returnArmy) },
       totalDefense: 0,
       summary: reward > 0
-        ? `Held ${camp.name || config.name} for ${holdMinutes} minutes and earned ${rewardLabel}.${returnedTroops ? ` ${returnedTroops.toLocaleString()} stationed troops returned to your main city.` : ""}`
-        : `Held ${camp.name || config.name} for ${holdMinutes} minutes. Today's ${config.name} reward limit has been reached.${returnedTroops ? ` ${returnedTroops.toLocaleString()} stationed troops returned to your main city.` : ""}`,
+        ? `Held ${camp.name || config.name} for ${holdMinutes} minutes and earned ${rewardLabel}.${returnArmy ? ` ${returningTroops.toLocaleString()} stationed troops began marching to ${returnDestination.name || "your main city"}.` : ""}`
+        : `Held ${camp.name || config.name} for ${holdMinutes} minutes. Today's ${config.name} reward limit has been reached.${returnArmy ? ` ${returningTroops.toLocaleString()} stationed troops began marching to ${returnDestination.name || "your main city"}.` : ""}`,
       goldAwarded: goldReward,
       troopsAwarded: rewardedTroops,
       goldAfter: nextGold,
@@ -5659,6 +6162,11 @@ async function resolveRewardCampPayoutByRef(campRef, nowMs = Date.now(), callerU
       campType: config.campType,
       dailyClaim: nextClaims,
       returnedTroops,
+      returningTroops,
+      returnArmyId: returnArmy?.id || "",
+      returnDestinationId: returnArmy?.toId || "",
+      returnDestinationRegionId: returnArmy?.targetRegionId || "",
+      returnArrivesAtMs: returnArmy?.arrivesAtMs || 0,
       rewardedTroops,
       campUpdate: campUpdateForClient(camp.id, camp.regionId, campPatch),
       cityUpdates: mainCityPatch ? [mainCityPatch] : [],

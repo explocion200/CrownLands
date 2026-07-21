@@ -1,14 +1,14 @@
-const CACHE_VERSION = "20260721-tax-decree";
+const CACHE_VERSION = "20260721-recall-horn";
 const CACHE_NAME = `crownlands-cache-${CACHE_VERSION}`;
 const STATIC_CACHE_URLS = [
   "/",
   "/index.html",
   "/manifest.webmanifest",
-  "/styles.css?v=20260721-tax-decree",
+  "/styles.css?v=20260721-recall-horn",
   "/world-config.js",
   "/firebase-config.js?v=20260703-vapid-key",
-  "/firebaseClient.js?v=20260721-player-name-limit",
-  "/game.js?v=20260721-tax-decree",
+  "/firebaseClient.js?v=20260721-recall-horn",
+  "/game.js?v=20260721-recall-horn",
   "/route-worker.js?v=20260721-structure-route-clearance",
   "/assets/map-editor-data.js?v=20260705-stronghold-sizes",
   "/assets/game-menu-background.jpg?v=20260702-login-page",

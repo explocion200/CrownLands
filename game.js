@@ -113,6 +113,8 @@ const PRODUCTION_BOOST_PURCHASE_WINDOW_MS = 24 * 60 * 60 * 1000;
 const PRODUCTION_BOOST_ITEM_IDS = new Set([WAR_DRUMS_ITEM_ID, ROYAL_TAX_DECREE_ITEM_ID]);
 const VEIL_OF_SILENCE_ITEM_ID = "veil_of_silence_30m";
 const VEIL_OF_SILENCE_DURATION_MS = 5 * 60 * 1000;
+const SWIFT_MARCH_ORDER_ITEM_ID = "swift_march_order";
+const RECALL_HORN_ITEM_ID = "recall_horn";
 
 function cleanEditorRegionId(value) {
   return String(value || "")
@@ -2261,6 +2263,8 @@ let onlineSaveInFlight = false;
 let onlineLastSaveAt = 0;
 let onlineLastError = "";
 let onlineArmySavePromises = new Set();
+const swiftMarchOrderRequests = new Set();
+const recallHornRequests = new Set();
 let onlineCityStateSavePromises = new Set();
 let pendingServerArmyLaunchKeys = new Set();
 let onlineIslandUnsubscribe = null;
@@ -2280,6 +2284,8 @@ let onlineCitySyncInFlight = false;
 let onlineCitySyncQueued = false;
 let onlineArmies = [];
 let onlineArmiesByIsland = new Map();
+const PLAYER_RELEVANT_ARMIES_CACHE_KEY = "player-relevant";
+let pendingOutgoingMissions = new Map();
 let onlineCampStates = new Map();
 let resolvingRewardCampPayoutIds = new Set();
 let onlineArmyUnsubscribes = [];
@@ -8723,7 +8729,7 @@ async function switchOnlineIsland(regionId, { fromMapPicker = false } = {}) {
     saveGame();
     if (typeof onlineIslandUnsubscribe === "function") onlineIslandUnsubscribe();
     onlineIslandUnsubscribe = null;
-    clearOnlineArmyWatchers();
+    clearOnlineIslandArmySnapshots();
     leftPreviousIsland = true;
     onlinePresence = [];
     onlineCitiesLoaded = false;
@@ -9496,9 +9502,9 @@ async function connectOnlineIsland(regionId, { claimHome = false, homeRegionId =
 
     if (onlineIslandUnsubscribe) onlineIslandUnsubscribe();
     onlineIslandUnsubscribe = null;
-    clearOnlineArmyWatchers();
+    clearOnlineIslandArmySnapshots();
     onlinePresence = [];
-    state.attacks = state.attacks.filter(attack => getKnownCityId(attack.fromId) && getKnownCityId(attack.toId));
+    state.attacks = state.attacks.filter(attack => String(attack?.fromId || "") && String(attack?.toId || ""));
 
     const applyOnlineCityPayload = (onlineCities, { render = true } = {}) => {
       const firstCitiesSnapshot = !onlineCitiesLoaded;
@@ -9777,14 +9783,16 @@ async function requestDueRewardCampPayout(camp) {
   resolvingRewardCampPayoutIds.add(camp.id);
   try {
     const result = await resolvePayout({ campId: camp.id, regionId: camp.regionId });
-    if (result?.currentUser) applyServerProfilePatch(result.currentUser);
-    if (Array.isArray(result?.cityUpdates)) applyServerCityUpdates(result.cityUpdates);
-    if (result?.globalStats) applyGlobalStatsSnapshot(result.globalStats);
+    applyServerArmyResult(result);
     if (result?.status === "paid") {
       const config = getRewardCampConfig(result.campType || camp);
-      showToast(result.reward > 0
+      const rewardMessage = result.reward > 0
         ? `${config?.name || camp.name} reward: +${formatNumber(result.reward)} ${result.rewardType || config?.rewardLabel || "reward"}`
-        : `${config?.name || camp.name} daily reward limit reached.`);
+        : `${config?.name || camp.name} daily reward limit reached.`;
+      const returnMessage = result.returningTroops > 0
+        ? ` ${formatNumber(result.returningTroops)} stationed troops are marching home.`
+        : "";
+      showToast(`${rewardMessage}${returnMessage}`);
     }
     return result?.status === "paid";
   } catch (error) {
@@ -10142,6 +10150,8 @@ function createOnlineArmyId(kind = "army") {
 function prepareOnlineArmyMission(mission) {
   if (!mission || !isOnlineWorldActive() || mission.owner !== "player") return mission;
   const nowMs = Date.now();
+  const source = cityById(mission.fromId);
+  const target = getArmyTargetById(mission.toId);
   mission.onlineId = mission.onlineId || createOnlineArmyId(mission.kind);
   mission.ownerKind = "player";
   mission.ownerUid = getCurrentOnlineUid();
@@ -10153,6 +10163,10 @@ function prepareOnlineArmyMission(mission) {
   mission.demoAttack = normalizeDemoAttackSnapshot(mission.demoAttack);
   mission.launchedAtMs = mission.launchedAtMs || nowMs;
   mission.arrivesAtMs = mission.arrivesAtMs || nowMs + Math.max(0, Number(mission.total) || 0) * 1000;
+  mission.fromName = mission.fromName || source?.name || "";
+  mission.toName = mission.toName || target?.name || "";
+  mission.sourceRegionId = normalizeRegionId(mission.sourceRegionId || getCityRegionId(source || mission.fromId));
+  mission.targetRegionId = normalizeRegionId(mission.targetRegionId || getCityRegionId(target || mission.toId));
   return mission;
 }
 
@@ -10237,11 +10251,29 @@ function applyServerMovementToMission(mission, movement = null) {
   mission.remaining = Math.max(0, (Number(movement.arrivesAtMs) - Date.now()) / 1000) || mission.total;
   mission.launchedAtMs = normalizeTimestampMs(movement.launchedAtMs) || mission.launchedAtMs;
   mission.arrivesAtMs = normalizeTimestampMs(movement.arrivesAtMs) || mission.arrivesAtMs;
+  mission.swiftMarchUsedAtMs = normalizeTimestampMs(movement.swiftMarchUsedAtMs) || mission.swiftMarchUsedAtMs || 0;
+  mission.swiftMarchOriginalArrivesAtMs = normalizeTimestampMs(movement.swiftMarchOriginalArrivesAtMs) || mission.swiftMarchOriginalArrivesAtMs || 0;
+  mission.swiftMarchProgressAtUse = clamp(Number(movement.swiftMarchProgressAtUse) || mission.swiftMarchProgressAtUse || 0, 0, 1);
+  mission.swiftMarchRemainingMultiplier = Math.max(0, Number(movement.swiftMarchRemainingMultiplier) || mission.swiftMarchRemainingMultiplier || 0);
+  if (movement.returning !== undefined) mission.returning = Boolean(movement.returning);
+  mission.returnReason = movement.returnReason || mission.returnReason || "";
+  mission.recalledAtMs = normalizeTimestampMs(movement.recalledAtMs) || mission.recalledAtMs || 0;
+  mission.recallOriginalArrivesAtMs = normalizeTimestampMs(movement.recallOriginalArrivesAtMs) || mission.recallOriginalArrivesAtMs || 0;
+  mission.returnStartProgress = clamp(Number(movement.returnStartProgress) || mission.returnStartProgress || 0, 0, 1);
+  mission.returnDestinationId = movement.returnDestinationId || mission.returnDestinationId || "";
+  mission.returnDestinationRegionId = normalizeRegionId(movement.returnDestinationRegionId || mission.returnDestinationRegionId);
+  mission.relinquishTransfer = Boolean(movement.relinquishTransfer || mission.relinquishTransfer);
   mission.attackerKingPower = normalizePowerValue(movement.attackerKingPower || mission.attackerKingPower);
   mission.defenderKingPower = normalizePowerValue(movement.defenderKingPower || mission.defenderKingPower);
   if (movement.demoAttack !== undefined) mission.demoAttack = normalizeDemoAttackSnapshot(movement.demoAttack);
   mission.targetType = movement.targetType === "camp" ? "camp" : mission.targetType || "city";
-  mission.onlineRegionIds = Array.isArray(movement.routeRegionIds) ? movement.routeRegionIds.map(normalizeRegionId).filter(Boolean) : mission.onlineRegionIds;
+  if (movement.targetOwnerUid !== undefined) mission.targetOwnerUid = String(movement.targetOwnerUid || "");
+  mission.fromName = movement.fromName || mission.fromName || "";
+  mission.toName = movement.toName || mission.toName || "";
+  mission.sourceRegionId = normalizeRegionId(movement.sourceRegionId || mission.sourceRegionId);
+  mission.targetRegionId = normalizeRegionId(movement.targetRegionId || mission.targetRegionId);
+  const movementRegionIds = Array.isArray(movement.routeRegionIds) ? movement.routeRegionIds : movement.onlineRegionIds;
+  mission.onlineRegionIds = Array.isArray(movementRegionIds) ? movementRegionIds.map(normalizeRegionId).filter(Boolean) : mission.onlineRegionIds;
 }
 
 function addServerAcceptedMission(mission) {
@@ -10268,6 +10300,13 @@ function publishOnlineArmyMovement(mission, options = {}) {
   const sourceRegionId = getCityRegionId(mission.fromId);
   const target = getArmyTargetById(mission.toId);
   const targetRegionId = normalizeRegionId(mission.targetRegionId || target?.regionId || getCityRegionId(mission.toId));
+  mission.fromName = mission.fromName || movement.fromName || "";
+  mission.toName = mission.toName || movement.toName || "";
+  mission.sourceRegionId = normalizeRegionId(mission.sourceRegionId || sourceRegionId);
+  mission.targetRegionId = targetRegionId;
+  mission.serverPending = true;
+  pendingOutgoingMissions.set(movement.id, mission);
+  updateOutgoingAttackUi();
 
   const savePromise = api.sendArmyOrder({
     worldId: ONLINE_WORLD_ID,
@@ -10284,6 +10323,7 @@ function publishOnlineArmyMovement(mission, options = {}) {
   })
     .then(result => {
       if (result?.movement) applyServerMovementToMission(mission, result.movement);
+      mission.serverPending = false;
       applyServerArmyResult({
         currentUser: result?.currentUser,
         cityUpdates: Array.isArray(result?.cityUpdates)
@@ -10291,6 +10331,7 @@ function publishOnlineArmyMovement(mission, options = {}) {
           : result?.sourceCity ? [result.sourceCity] : [],
       });
       if (options.addLocalMissionOnAccept) addServerAcceptedMission(mission);
+      pendingOutgoingMissions.delete(movement.id);
       onlineLastError = "";
       saveGame();
       renderAll();
@@ -10299,13 +10340,17 @@ function publishOnlineArmyMovement(mission, options = {}) {
       return true;
     })
     .catch(error => {
+      pendingOutgoingMissions.delete(movement.id);
+      mission.serverPending = false;
       onlineLastError = error?.message || String(error);
       console.warn("Server rejected army movement", error);
       rejectServerArmyMission(mission, onlineLastError, options);
       return false;
     })
     .finally(() => {
+      pendingOutgoingMissions.delete(movement.id);
       onlineArmySavePromises.delete(savePromise);
+      updateOutgoingAttackUi();
     });
   onlineArmySavePromises.add(savePromise);
   return savePromise;
@@ -10401,6 +10446,18 @@ function normalizeOnlineArmyMovement(raw) {
     demoAttack: normalizeDemoAttackSnapshot(raw.demoAttack),
     launchedAtMs,
     arrivesAtMs,
+    swiftMarchUsedAtMs: normalizeTimestampMs(raw.swiftMarchUsedAtMs),
+    swiftMarchOriginalArrivesAtMs: normalizeTimestampMs(raw.swiftMarchOriginalArrivesAtMs),
+    swiftMarchProgressAtUse: clamp(Number(raw.swiftMarchProgressAtUse) || 0, 0, 1),
+    swiftMarchRemainingMultiplier: Math.max(0, Number(raw.swiftMarchRemainingMultiplier) || 0),
+    returning: Boolean(raw.returning),
+    returnReason: String(raw.returnReason || ""),
+    recalledAtMs: normalizeTimestampMs(raw.recalledAtMs),
+    recallOriginalArrivesAtMs: normalizeTimestampMs(raw.recallOriginalArrivesAtMs),
+    returnStartProgress: clamp(Number(raw.returnStartProgress) || 0, 0, 1),
+    returnDestinationId: String(raw.returnDestinationId || ""),
+    returnDestinationRegionId: normalizeRegionId(raw.returnDestinationRegionId),
+    relinquishTransfer: Boolean(raw.relinquishTransfer),
     status: raw.status || "active",
     onlineRegionIds: Array.isArray(raw.routeRegionIds) ? raw.routeRegionIds.map(normalizeRegionId) : [],
   };
@@ -10426,6 +10483,16 @@ function clearOnlineArmyWatchers() {
   onlineArmyUnsubscribes = [];
   onlineArmiesByIsland = new Map();
   onlineArmies = [];
+  pendingOutgoingMissions = new Map();
+}
+
+function clearOnlineIslandArmySnapshots() {
+  const playerRelevantArmies = onlineArmiesByIsland.get(PLAYER_RELEVANT_ARMIES_CACHE_KEY);
+  onlineArmiesByIsland = new Map();
+  if (playerRelevantArmies?.length) {
+    onlineArmiesByIsland.set(PLAYER_RELEVANT_ARMIES_CACHE_KEY, playerRelevantArmies);
+  }
+  rebuildOnlineArmies();
 }
 
 function clearOnlineServerReportWatcher() {
@@ -10498,19 +10565,13 @@ function subscribeOnlineGlobalStats() {
   });
 }
 
-function subscribeOnlineArmyWatchers(activeIslandId) {
+function subscribeOnlineArmyWatchers() {
   const api = getOnlineApi();
   if (!api?.subscribePlayerArmies || !isOnlineWorldActive()) return;
-  const activeId = String(activeIslandId || getActiveOnlineIslandId());
-  const activeArmies = onlineArmiesByIsland.get(activeId) || [];
-  clearOnlineArmyWatchers();
-  if (activeArmies.length) {
-    onlineArmiesByIsland.set(activeId, activeArmies);
-    rebuildOnlineArmies();
-  }
+  if (onlineArmyUnsubscribes.length) return;
   const unsubscribe = api.subscribePlayerArmies({
     onArmies: armies => {
-      applyOnlineArmies(armies, "player-relevant");
+      applyOnlineArmies(armies, PLAYER_RELEVANT_ARMIES_CACHE_KEY);
       renderArmies();
       updateIncomingAttackUi();
       updateOutgoingAttackUi();
@@ -10547,6 +10608,8 @@ function createLocalAttackFromOnlineArmy(army, remaining = getOnlineArmyRemainin
     targetType: army.targetType === "camp" ? "camp" : "city",
     fromId: army.fromId,
     toId: army.toId,
+    fromName: army.fromName || "",
+    toName: army.toName || "",
     troops: army.troops,
     total: army.total,
     remaining: clamp(remaining, 0, army.total),
@@ -10560,6 +10623,18 @@ function createLocalAttackFromOnlineArmy(army, remaining = getOnlineArmyRemainin
     demoAttack: normalizeDemoAttackSnapshot(army.demoAttack),
     launchedAtMs: army.launchedAtMs,
     arrivesAtMs: army.arrivesAtMs,
+    swiftMarchUsedAtMs: normalizeTimestampMs(army.swiftMarchUsedAtMs),
+    swiftMarchOriginalArrivesAtMs: normalizeTimestampMs(army.swiftMarchOriginalArrivesAtMs),
+    swiftMarchProgressAtUse: clamp(Number(army.swiftMarchProgressAtUse) || 0, 0, 1),
+    swiftMarchRemainingMultiplier: Math.max(0, Number(army.swiftMarchRemainingMultiplier) || 0),
+    returning: Boolean(army.returning),
+    returnReason: String(army.returnReason || ""),
+    recalledAtMs: normalizeTimestampMs(army.recalledAtMs),
+    recallOriginalArrivesAtMs: normalizeTimestampMs(army.recallOriginalArrivesAtMs),
+    returnStartProgress: clamp(Number(army.returnStartProgress) || 0, 0, 1),
+    returnDestinationId: String(army.returnDestinationId || ""),
+    returnDestinationRegionId: normalizeRegionId(army.returnDestinationRegionId),
+    relinquishTransfer: Boolean(army.relinquishTransfer),
     sourceRegionId: army.sourceRegionId,
     targetRegionId: army.targetRegionId,
     onlineRegionIds: army.onlineRegionIds?.length ? army.onlineRegionIds : getMissionRegionIds(army),
@@ -10677,9 +10752,17 @@ function adoptOwnOnlineArmies() {
   if (!state || !Array.isArray(onlineArmies)) return;
   const uid = getCurrentOnlineUid();
   if (!uid) return;
-  const localOnlineIds = new Set(state.attacks.map(attack => attack.onlineId).filter(Boolean));
+  const localArmiesByOnlineId = new Map(state.attacks
+    .filter(attack => attack.onlineId)
+    .map(attack => [String(attack.onlineId), attack]));
+  const localOnlineIds = new Set(localArmiesByOnlineId.keys());
   for (const army of onlineArmies) {
-    if (army.ownerUid !== uid || localOnlineIds.has(army.id) || isOnlineArmyResolutionBlocked(army)) continue;
+    if (army.ownerUid !== uid || isOnlineArmyResolutionBlocked(army)) continue;
+    const existingMission = localArmiesByOnlineId.get(String(army.id));
+    if (existingMission) {
+      applyServerMovementToMission(existingMission, army);
+      continue;
+    }
     const remaining = getOnlineArmyRemainingSeconds(army);
     if (remaining <= 0) {
       resolveOverdueOnlineArmy(army);
@@ -10743,7 +10826,18 @@ function getRenderableArmies() {
         remaining: Math.max(0, getOnlineArmyRemainingSeconds(army)),
       };
     });
-  return [...localArmies, ...remoteArmies];
+  const knownOnlineIds = new Set([...localArmies, ...remoteArmies]
+    .map(getOnlineArmyResolutionId)
+    .filter(Boolean));
+  const pendingArmies = Array.from(pendingOutgoingMissions.values())
+    .filter(mission => !knownOnlineIds.has(getOnlineArmyResolutionId(mission)))
+    .map(mission => ({
+      ...mission,
+      owner: "player",
+      remaining: Math.max(0, getOnlineArmyRemainingSeconds(mission)),
+      serverPending: true,
+    }));
+  return [...localArmies, ...remoteArmies, ...pendingArmies];
 }
 
 function getIncomingAttacks() {
@@ -10751,7 +10845,7 @@ function getIncomingAttacks() {
   const seen = new Set();
   return getRenderableArmies()
     .map(attack => {
-      if (!attack || !["attack", "scout"].includes(attack.kind) || attack.owner === "player") return null;
+      if (!attack || attack.returning || !["attack", "scout"].includes(attack.kind) || attack.owner === "player") return null;
       const baseTarget = getArmyTargetById(attack.toId);
       const target = attack.targetType === "camp" && baseTarget && attack.targetOwnerUid === getCurrentOnlineUid()
         ? { ...baseTarget, owner: "player", ownerKind: "player", ownerUid: attack.targetOwnerUid }
@@ -10782,7 +10876,7 @@ function getOutgoingAttacks() {
   const seen = new Set();
   return getRenderableArmies()
     .map(attack => {
-      if (!attack || !["attack", "scout"].includes(attack.kind) || attack.owner !== "player") return null;
+      if (!attack || !["attack", "scout", "transfer"].includes(attack.kind) || attack.owner !== "player") return null;
       const key = String(attack.onlineId || attack.id || `${attack.fromId}:${attack.toId}:${attack.launchedAtMs || ""}`);
       if (seen.has(key)) return null;
       seen.add(key);
@@ -10809,7 +10903,7 @@ function getIncomingUpgradeBlockers(cityOrId) {
   const seen = new Set();
   return getRenderableArmies()
     .map(attack => {
-      if (!attack || attack.kind !== "attack") return null;
+      if (!attack || attack.returning || attack.kind !== "attack") return null;
       if (getKnownCityId(attack.toId) !== cityId) return null;
       if (attack.owner === "player") return null;
       const remaining = Math.max(0, Number(attack.remaining) || 0);
@@ -14055,20 +14149,24 @@ function getCityRenderSignature(visibleCities, visibleCamps = []) {
       report ? `${Math.floor(Number(report.troops) || 0)}:${report.expiresAt > state.gameSeconds ? 1 : 0}` : "",
     ].join(":");
   }).join("|");
-  const campTokens = visibleCamps.map(camp => [
-    camp.id,
-    camp.regionId,
-    camp.campType,
-    camp.x,
-    camp.y,
-    camp.artSrc,
-    camp.size,
-    camp.ownerUid || "",
-    camp.ownerName || "",
-    camp.currentGarrison || 0,
-    camp.payoutAtMs || 0,
-    camp.state || "neutral",
-  ].join(":")).join("|");
+  const campTokens = visibleCamps.map(camp => {
+    const report = getScoutReport(camp.id);
+    return [
+      camp.id,
+      camp.regionId,
+      camp.campType,
+      camp.x,
+      camp.y,
+      camp.artSrc,
+      camp.size,
+      camp.ownerUid || "",
+      camp.ownerName || "",
+      camp.currentGarrison || 0,
+      camp.payoutAtMs || 0,
+      camp.state || "neutral",
+      report ? `${Math.floor(Number(report.troops) || 0)}:${report.expiresAt > state.gameSeconds ? 1 : 0}` : "",
+    ].join(":");
+  }).join("|");
 
   return [
     selectedSourceId || "",
@@ -14092,6 +14190,17 @@ function updateVisibleCityDynamicText() {
     if (!camp) return;
     const statusText = getRewardCampStatusText(camp);
     node.setAttribute("aria-label", `${camp.name}. ${statusText}. ${formatNumber(camp.baseReward)} ${getRewardCampConfig(camp)?.rewardLabel || "reward"} reward.`);
+    const timer = node.querySelector(".gold-camp-active-timer");
+    if (timer) {
+      const countdown = getRewardCampCountdownSeconds(camp);
+      timer.hidden = !camp.ownerUid;
+      const status = timer.querySelector("small");
+      const value = timer.querySelector("strong");
+      if (status) status.textContent = camp.state === "contested" ? "Contested" : "Active";
+      if (value) value.textContent = camp.payoutPending
+        ? countdown > 0 ? formatDuration(countdown) : "Payout ready"
+        : "Securing";
+    }
     if (camp.owner === "player" && camp.payoutPending && camp.payoutAtMs <= Date.now()) void requestDueRewardCampPayout(camp);
   });
   cityLayer.querySelectorAll(".city-node").forEach(node => {
@@ -14168,8 +14277,13 @@ function renderCities(force = false) {
     if (interactiveRewardCamp) {
       campNode.title = `${camp.name}. ${getRewardCampStatusText(camp)}.`;
       campNode.setAttribute("aria-label", `${camp.name}. ${getRewardCampStatusText(camp)}. ${formatNumber(camp.baseReward)} ${getRewardCampConfig(camp)?.rewardLabel || "reward"} reward.`);
+      const countdown = getRewardCampCountdownSeconds(camp);
       const campHtml = `
         <img class="camp-art" src="${escapeHtml(camp.artSrc)}" alt="" draggable="false" />
+        <span class="gold-camp-active-timer" ${camp.ownerUid ? "" : "hidden"}>
+          <small>${camp.state === "contested" ? "Contested" : "Active"}</small>
+          <strong>${camp.payoutPending ? countdown > 0 ? formatDuration(countdown) : "Payout ready" : "Securing"}</strong>
+        </span>
         <span class="gold-camp-label">
           <strong>${escapeHtml(camp.name)}</strong>
         </span>`;
@@ -14444,24 +14558,35 @@ function renderSelectedRewardCampWheel(camp) {
   const mapPoint = worldToMapPoint(camp);
   const wheel = document.createElement("div");
   const isHeldByPlayer = camp.owner === "player";
+  const report = getScoutReport(camp.id);
+  const pendingScout = getPendingScoutMission(camp.id);
   const canSend = playerCities().some(city => Math.floor(Number(city.troops) || 0) > 0);
+  const canScout = !isHeldByPlayer && !pendingScout && canSend;
+  const wheelSize = Math.max(112, Number(camp.size) || 132);
   wheel.className = "gold-camp-action-wheel";
   wheel.style.left = `${mapPoint.x}px`;
   wheel.style.top = `${mapPoint.y}px`;
-  wheel.style.setProperty("--camp-wheel-size", `${Math.max(112, Number(camp.size) || 132)}px`);
+  wheel.style.setProperty("--camp-wheel-size", `${wheelSize}px`);
+  wheel.style.setProperty("--camp-action-offset", `${Math.max(82, Math.min(116, wheelSize * .7))}px`);
   wheel.innerHTML = `
-    <button class="gold-camp-wheel-action camp-scout-action" type="button" ${isHeldByPlayer ? "disabled" : ""}>
+    <button class="gold-camp-wheel-action camp-scout-action" type="button" aria-label="${pendingScout ? `Scout traveling to ${escapeHtml(camp.name)}` : report ? `Scout ${escapeHtml(camp.name)} again` : `Scout ${escapeHtml(camp.name)}`}" ${canScout ? "" : "disabled"}>
       <span aria-hidden="true">&#128301;</span>
-      <strong>Scout</strong>
+      <strong>${pendingScout ? "Scouting" : report ? "Rescout" : "Scout"}</strong>
     </button>
-    <button class="gold-camp-wheel-action camp-info-action" type="button">
+    <button class="gold-camp-wheel-action camp-info-action" type="button" aria-label="How ${escapeHtml(camp.name)} works">
       <span aria-hidden="true">i</span>
       <strong>Info</strong>
     </button>
-    <button class="gold-camp-wheel-action camp-order-action" type="button" ${canSend ? "" : "disabled"}>
+    <button class="gold-camp-wheel-action camp-order-action" type="button" aria-label="${isHeldByPlayer ? "Reinforce" : "Attack"} ${escapeHtml(camp.name)}" ${canSend ? "" : "disabled"}>
       <span aria-hidden="true">${isHeldByPlayer ? "&#8649;" : "&#9876;"}</span>
       <strong>${isHeldByPlayer ? "Reinforce" : "Attack"}</strong>
-    </button>`;
+    </button>
+    ${report ? `
+      <button class="gold-camp-wheel-action camp-report-action" type="button" aria-label="Open scout report for ${escapeHtml(camp.name)}">
+        <span aria-hidden="true">&#128221;</span>
+        <strong>Report</strong>
+      </button>
+    ` : ""}`;
   wheel.querySelector(".camp-scout-action")?.addEventListener("click", event => {
     event.stopPropagation();
     scoutRewardCamp(camp.id);
@@ -14473,6 +14598,10 @@ function renderSelectedRewardCampWheel(camp) {
   wheel.querySelector(".camp-info-action")?.addEventListener("click", event => {
     event.stopPropagation();
     showRewardCampInfoModal(camp.id);
+  });
+  wheel.querySelector(".camp-report-action")?.addEventListener("click", event => {
+    event.stopPropagation();
+    showScoutReportModal(camp.id);
   });
   cityLayer.appendChild(wheel);
 }
@@ -14524,29 +14653,19 @@ function showRewardCampInfoModal(campId) {
   }
   const config = getRewardCampConfig(camp);
   if (!config) return;
-  const countdown = getRewardCampCountdownSeconds(camp);
-  const holder = camp.ownerUid ? (camp.owner === "player" ? `${state.playerName} (You)` : camp.ownerName || "Rival ruler") : "Neutral";
-  const stateLabel = camp.payoutPending && countdown <= 0
-    ? "Payout ready"
-    : camp.state === "contested"
-      ? "Contested"
-      : camp.ownerUid
-        ? "Held"
-        : "Neutral";
+  const holdMinutes = Math.floor(config.holdSeconds / 60);
+  const rewardDestination = config.rewardType === "troops"
+    ? "The troop reward is delivered to the holder's main city."
+    : "The gold reward is added directly to the holder's treasury.";
   modalTitle.textContent = camp.name;
   modalBody.innerHTML = `
-    <div class="gold-camp-info-panel">
-      <img src="${escapeHtml(camp.artSrc)}" alt="" draggable="false" />
-      <div class="gold-camp-info-grid">
-        <div><span>State</span><strong>${escapeHtml(stateLabel)}</strong></div>
-        <div><span>Holder</span><strong>${escapeHtml(holder)}</strong></div>
-        <div><span>Garrison</span><strong>${formatNumber(camp.currentGarrison)}</strong></div>
-        <div><span>Defense</span><strong>Level ${formatNumber(camp.defenseLevel)}</strong></div>
-        <div><span>Base reward</span><strong>${formatNumber(camp.baseReward)} ${escapeHtml(config.rewardLabel)}</strong></div>
-        <div><span>Hold timer</span><strong>${camp.payoutPending ? countdown > 0 ? formatDuration(countdown) : "Payout ready" : "Not active"}</strong></div>
+    <div class="gold-camp-info-panel camp-rules-only">
+      <div class="gold-camp-description">
+        <strong>How it works</strong>
+        <p>Attack and capture this special objective, then hold it for ${formatNumber(holdMinutes)} minutes to earn ${formatNumber(config.baseReward)} ${escapeHtml(config.rewardLabel)}. The public timer begins when control changes and restarts if another ruler captures the camp before payout.</p>
+        <p>${escapeHtml(rewardDestination)} After payout, the camp resets to neutral. Camps do not count as cities, cannot be shielded, allow unlimited stationed defenders, and ignore weaker-kingdom attack limits.</p>
+        <p>Daily rewards: ${config.dailyRewards.map(value => `${formatNumber(value)} ${config.rewardLabel}`).join(", ")}. Further successful holds award 0 until the next UTC day.</p>
       </div>
-      <p>Capture and hold this objective for ${Math.floor(config.holdSeconds / 60)} minutes. It does not count as a city, cannot be shielded, and stronger-kingdom attack limits do not apply.${config.rewardType === "troops" ? " The reward and stationed defenders return to your main city after payout." : ""}</p>
-      <p>Daily rewards: ${config.dailyRewards.map(formatNumber).join(", ")}, then 0 until the next UTC day.</p>
     </div>`;
   if (!modal.open) modal.showModal();
 }
@@ -14840,7 +14959,7 @@ function renderArmies(force = false) {
     const from = cityById(attack.fromId);
     const to = getArmyTargetById(attack.toId);
     if (!from || !to) continue;
-    const progress = clamp(1 - attack.remaining / attack.total, 0, 1);
+    const progress = getArmyTravelProgress(attack);
     const segmentPoint = getMissionPointAtProgress(attack, progress);
     if (!segmentPoint || segmentPoint.regionId !== activeRegionId) continue;
     const point = segmentPoint.point;
@@ -14865,6 +14984,24 @@ function renderArmies(force = false) {
     armyTokenCache.delete(tokenId);
   }
   updateMapDensityMode(null, visibleArmyTokenIds.size);
+}
+
+function getArmyTravelProgress(army, nowMs = Date.now()) {
+  const recalledAtMs = normalizeTimestampMs(army?.recalledAtMs);
+  const returnArrivesAtMs = normalizeTimestampMs(army?.arrivesAtMs);
+  if (army?.returning && recalledAtMs > 0 && returnArrivesAtMs > recalledAtMs) {
+    const returnStartProgress = clamp(Number(army.returnStartProgress) || 0, 0, 1);
+    const returnProgress = clamp((nowMs - recalledAtMs) / (returnArrivesAtMs - recalledAtMs), 0, 1);
+    return returnStartProgress * (1 - returnProgress);
+  }
+  const swiftUsedAtMs = normalizeTimestampMs(army?.swiftMarchUsedAtMs);
+  const arrivesAtMs = normalizeTimestampMs(army?.arrivesAtMs);
+  if (swiftUsedAtMs > 0 && arrivesAtMs > swiftUsedAtMs && nowMs >= swiftUsedAtMs) {
+    const progressAtUse = clamp(Number(army.swiftMarchProgressAtUse) || 0, 0, 1);
+    const acceleratedProgress = clamp((nowMs - swiftUsedAtMs) / (arrivesAtMs - swiftUsedAtMs), 0, 1);
+    return progressAtUse + (1 - progressAtUse) * acceleratedProgress;
+  }
+  return clamp(1 - Math.max(0, Number(army?.remaining) || 0) / Math.max(0.1, Number(army?.total) || 0.1), 0, 1);
 }
 
 function ensurePerformancePanel() {
@@ -16270,6 +16407,11 @@ function showInventoryModal() {
   const selectedEntry = slots.find(entry => entry?.id === selectedInventoryItemId) || null;
   if (!selectedEntry) selectedInventoryItemId = "";
   const selectedEntryActiveRemaining = selectedEntry ? getInventoryItemActiveRemainingSeconds(selectedEntry) : 0;
+  const selectedEntryIsSwiftMarch = selectedEntry?.id === SWIFT_MARCH_ORDER_ITEM_ID;
+  const selectedEntryIsRecallHorn = selectedEntry?.id === RECALL_HORN_ITEM_ID;
+  const selectedEntryActionLabel = selectedEntryIsSwiftMarch || selectedEntryIsRecallHorn
+    ? "View Marches"
+    : selectedEntryActiveRemaining > 0 ? "Active" : "Use";
   const activeItemStatus = getActiveItemEffectSummaryHtml();
   modal.classList.remove("battle-report-modal", "city-list-modal", "island-switcher-modal", "leaderboard-modal", "shop-modal", "incoming-attack-modal", "outgoing-attack-modal");
   modal.classList.add("inventory-modal");
@@ -16292,7 +16434,7 @@ function showInventoryModal() {
             ${selectedEntryActiveRemaining > 0 ? `<small>Active: ${formatDuration(selectedEntryActiveRemaining)}</small>` : ""}
             <span>Owned: ${formatNumber(selectedEntry.count)}</span>
           </div>
-          <button class="inventory-use-btn" data-inventory-use="${escapeHtml(selectedEntry.id)}" type="button" ${selectedEntryActiveRemaining > 0 ? "disabled" : ""}>${selectedEntryActiveRemaining > 0 ? "Active" : "Use"}</button>
+          <button class="inventory-use-btn" data-inventory-use="${escapeHtml(selectedEntry.id)}" type="button" ${selectedEntryActiveRemaining > 0 ? "disabled" : ""}>${selectedEntryActionLabel}</button>
         ` : `
           <div class="inventory-selection-empty">
             <strong>Select an item</strong>
@@ -16354,6 +16496,26 @@ function useInventoryItem(itemId) {
       showToast(error?.message || "Could not activate Veil of Silence.");
       renderHud();
     });
+    return;
+  }
+  if (item.id === SWIFT_MARCH_ORDER_ITEM_ID) {
+    const eligibleMarches = getOutgoingAttacks().filter(isSwiftMarchOrderEligible);
+    if (modal?.open && modal.classList.contains("inventory-modal")) modal.close();
+    if (!eligibleMarches.length) {
+      showToast("No eligible troop transfers are active.");
+      return;
+    }
+    showOutgoingAttacksModal();
+    return;
+  }
+  if (item.id === RECALL_HORN_ITEM_ID) {
+    const eligibleMarches = getOutgoingAttacks().filter(isRecallHornEligible);
+    if (modal?.open && modal.classList.contains("inventory-modal")) modal.close();
+    if (!eligibleMarches.length) {
+      showToast("No eligible troop marches are active.");
+      return;
+    }
+    showOutgoingAttacksModal();
     return;
   }
   showToast(`${item.label} mechanics are coming next.`);
@@ -17111,14 +17273,14 @@ function updateOutgoingAttackUi() {
   outgoingAttackBtn.classList.toggle("active", outgoing.length > 0);
   if (!outgoing.length) {
     if (outgoingAttackCount) outgoingAttackCount.textContent = "0";
-    if (outgoingAttackTime) outgoingAttackTime.textContent = "Outgoing";
+    if (outgoingAttackTime) outgoingAttackTime.textContent = "Marches";
     outgoingAttackBtn.removeAttribute("title");
-    outgoingAttackBtn.setAttribute("aria-label", "Outgoing armies");
+    outgoingAttackBtn.setAttribute("aria-label", "Active marches");
     if (modal.open && modal.classList.contains("outgoing-attack-modal")) modal.close();
     return;
   }
 
-  const soonest = formatDuration(outgoing[0].remaining);
+  const soonest = outgoing[0].serverPending ? "Sending" : formatDuration(outgoing[0].remaining);
   if (outgoingAttackCount) outgoingAttackCount.textContent = formatNumber(outgoing.length);
   if (outgoingAttackTime) outgoingAttackTime.textContent = soonest;
   outgoingAttackBtn.title = `${formatOutgoingMissionSummary(outgoing)} - soonest ${soonest}`;
@@ -17131,10 +17293,12 @@ function updateOutgoingAttackUi() {
 
 function getArmyKindCounts(missions) {
   return missions.reduce((counts, mission) => {
-    if (mission.kind === "scout") counts.scouts += 1;
+    if (mission.returning) counts.returns += 1;
+    else if (mission.kind === "scout") counts.scouts += 1;
+    else if (mission.kind === "transfer") counts.transfers += 1;
     else counts.attacks += 1;
     return counts;
-  }, { attacks: 0, scouts: 0 });
+  }, { attacks: 0, scouts: 0, transfers: 0, returns: 0 });
 }
 
 function getIncomingThreatCounts(incoming) {
@@ -17154,7 +17318,9 @@ function formatOutgoingMissionSummary(outgoing) {
   const parts = [];
   if (counts.attacks) parts.push(`${formatNumber(counts.attacks)} outgoing ${counts.attacks === 1 ? "attack" : "attacks"}`);
   if (counts.scouts) parts.push(`${formatNumber(counts.scouts)} outgoing ${counts.scouts === 1 ? "scout" : "scouts"}`);
-  return parts.join(", ") || "No outgoing armies";
+  if (counts.transfers) parts.push(`${formatNumber(counts.transfers)} ${counts.transfers === 1 ? "troop transfer" : "troop transfers"}`);
+  if (counts.returns) parts.push(`${formatNumber(counts.returns)} returning ${counts.returns === 1 ? "army" : "armies"}`);
+  return parts.join(", ") || "No active marches";
 }
 
 function showIncomingAttacksModal() {
@@ -17249,7 +17415,7 @@ async function focusIncomingAttackCity(cityId) {
 function showOutgoingAttacksModal() {
   const outgoing = getOutgoingAttacks();
   if (!outgoing.length) {
-    showToast("No outgoing attacks or scouts right now.");
+    showToast("No active marches right now.");
     updateOutgoingAttackUi();
     return;
   }
@@ -17261,19 +17427,19 @@ function showOutgoingAttacksModal() {
 
 function renderOutgoingAttacksModalContent(outgoing = getOutgoingAttacks()) {
   if (!outgoing.length) {
-    modalTitle.textContent = "Outgoing Armies";
-    modalBody.innerHTML = `<div class="incoming-attack-empty">No active outgoing attacks or scouts.</div>`;
+    modalTitle.textContent = "Active Marches";
+    modalBody.innerHTML = `<div class="incoming-attack-empty">No active marches.</div>`;
     return;
   }
 
-  modalTitle.textContent = outgoing.length === 1 ? "Outgoing Army" : "Outgoing Armies";
+  modalTitle.textContent = outgoing.length === 1 ? "Active March" : "Active Marches";
   const summary = formatOutgoingMissionSummary(outgoing);
   modalBody.innerHTML = `
     <div class="incoming-attack-panel">
       <div class="incoming-attack-summary">
         <strong>${formatNumber(outgoing.length)}</strong>
         <span>${summary} ${outgoing.length === 1 ? "is" : "are"} traveling now.</span>
-        <small>${outgoing[0].isResolving ? "Resolving arrived order" : `Soonest arrival: ${formatDuration(outgoing[0].remaining)}`}</small>
+        <small>${outgoing[0].serverPending ? "Sending order to server" : outgoing[0].isResolving ? "Resolving arrived order" : `Soonest arrival: ${formatDuration(outgoing[0].remaining)}`}</small>
       </div>
       <div class="incoming-attack-list">
         ${outgoing.map(renderOutgoingAttackCard).join("")}
@@ -17284,30 +17450,187 @@ function renderOutgoingAttacksModalContent(outgoing = getOutgoingAttacks()) {
   modalBody.querySelectorAll("[data-outgoing-city]").forEach(button => {
     button.addEventListener("click", () => focusOutgoingAttackCity(button.dataset.outgoingCity));
   });
+  modalBody.querySelectorAll("[data-swift-march-order]").forEach(button => {
+    button.addEventListener("click", () => useSwiftMarchOrderOnMission(button.dataset.swiftMarchOrder));
+  });
+  modalBody.querySelectorAll("[data-recall-horn]").forEach(button => {
+    button.addEventListener("click", () => useRecallHornOnMission(button.dataset.recallHorn));
+  });
+}
+
+function isSwiftMarchOrderEligible(mission) {
+  if (!mission || mission.kind !== "transfer" || mission.targetType === "camp") return false;
+  if (mission.serverPending || mission.isResolving || mission.returning || mission.relinquishTransfer || mission.swiftMarchUsedAtMs) return false;
+  if (Math.max(0, Number(mission.remaining) || 0) <= 1) return false;
+  const source = mission.source || cityById(mission.fromId);
+  const target = mission.target || getArmyTargetById(mission.toId);
+  if (!source || !target || isStronghold(source) || isStronghold(target) || isRewardCampTarget(target)) return false;
+  return true;
+}
+
+function isRecallHornEligible(mission) {
+  if (!mission || mission.owner !== "player" || mission.kind === "scout" || mission.returning) return false;
+  if (mission.serverPending || mission.isResolving) return false;
+  if (!getOnlineArmyResolutionId(mission)) return false;
+  return Math.max(0, Number(mission.remaining) || 0) > 1;
+}
+
+async function useSwiftMarchOrderOnMission(armyId = "") {
+  const normalizedArmyId = String(armyId || "").trim();
+  if (!normalizedArmyId || swiftMarchOrderRequests.has(normalizedArmyId)) return;
+  const mission = getOutgoingAttacks().find(entry => getOnlineArmyResolutionId(entry) === normalizedArmyId);
+  if (!mission || !isSwiftMarchOrderEligible(mission)) {
+    showToast("That troop transfer is no longer eligible for a Swift March Order.");
+    renderOutgoingAttacksModalContent();
+    return;
+  }
+  const inventory = ensureShopItems();
+  if (Math.max(0, Math.floor(Number(inventory[SWIFT_MARCH_ORDER_ITEM_ID]) || 0)) <= 0) {
+    showToast("You do not have a Swift March Order.");
+    renderOutgoingAttacksModalContent();
+    return;
+  }
+  const api = getOnlineApi();
+  if (!usesServerArmyAuthority() || !api?.useSwiftMarchOrder) {
+    showToast("Swift March Orders require the online Crownlands server.");
+    return;
+  }
+
+  swiftMarchOrderRequests.add(normalizedArmyId);
+  renderOutgoingAttacksModalContent();
+  try {
+    const result = await api.useSwiftMarchOrder({ armyId: normalizedArmyId });
+    if (result?.currentUser) applyServerProfilePatch(result.currentUser);
+    const localMission = state?.attacks?.find(entry => getOnlineArmyResolutionId(entry) === normalizedArmyId);
+    if (localMission && result?.movement) applyServerMovementToMission(localMission, result.movement);
+    onlineArmiesByIsland.forEach(armies => armies.forEach(army => {
+      if (getOnlineArmyResolutionId(army) === normalizedArmyId && result?.movement) {
+        applyServerMovementToMission(army, result.movement);
+      }
+    }));
+    rebuildOnlineArmies();
+    const secondsSaved = Math.max(0, Math.floor(Number(result?.secondsSaved) || 0));
+    addLog(`Swift March Order used on the transfer to ${mission.toName || mission.target?.name || "your city"}.`);
+    showToast(secondsSaved > 0
+      ? `Swift March Order used. Arrival shortened by ${formatDuration(secondsSaved)}.`
+      : "Swift March Order used.");
+    saveGame();
+    renderArmies(true);
+    updateOutgoingAttackUi();
+  } catch (error) {
+    console.warn("Swift March Order activation failed", error);
+    showToast(error?.message || "Could not use Swift March Order.");
+  } finally {
+    swiftMarchOrderRequests.delete(normalizedArmyId);
+    if (modal?.open && modal.classList.contains("outgoing-attack-modal")) {
+      renderOutgoingAttacksModalContent();
+    }
+  }
+}
+
+async function useRecallHornOnMission(armyId = "") {
+  const normalizedArmyId = String(armyId || "").trim();
+  if (!normalizedArmyId || recallHornRequests.has(normalizedArmyId)) return;
+  const mission = getOutgoingAttacks().find(entry => getOnlineArmyResolutionId(entry) === normalizedArmyId);
+  if (!mission || !isRecallHornEligible(mission)) {
+    showToast("That troop march is no longer eligible for a Recall Horn.");
+    renderOutgoingAttacksModalContent();
+    return;
+  }
+  const inventory = ensureShopItems();
+  if (Math.max(0, Math.floor(Number(inventory[RECALL_HORN_ITEM_ID]) || 0)) <= 0) {
+    showToast("You do not have a Recall Horn.");
+    renderOutgoingAttacksModalContent();
+    return;
+  }
+  const api = getOnlineApi();
+  if (!usesServerArmyAuthority() || !api?.useRecallHorn) {
+    showToast("Recall Horns require the online Crownlands server.");
+    return;
+  }
+
+  recallHornRequests.add(normalizedArmyId);
+  renderOutgoingAttacksModalContent();
+  try {
+    const result = await api.useRecallHorn({ armyId: normalizedArmyId });
+    applyServerArmyResult(result);
+    const localMission = state?.attacks?.find(entry => getOnlineArmyResolutionId(entry) === normalizedArmyId);
+    if (localMission && result?.movement) applyServerMovementToMission(localMission, result.movement);
+    onlineArmiesByIsland.forEach(armies => armies.forEach(army => {
+      if (getOnlineArmyResolutionId(army) === normalizedArmyId && result?.movement) {
+        applyServerMovementToMission(army, result.movement);
+      }
+    }));
+    rebuildOnlineArmies();
+    const sourceName = mission.fromName || mission.source?.name || "its origin city";
+    addLog(`Recall Horn used. ${formatNumber(mission.troops)} troops are returning to ${sourceName}.`);
+    showToast(`Army recalled. Returning to ${sourceName} in ${formatDuration(result?.returnSeconds || mission.remaining)}.`);
+    saveGame();
+    renderArmies(true);
+    updateIncomingAttackUi();
+    updateOutgoingAttackUi();
+  } catch (error) {
+    console.warn("Recall Horn activation failed", error);
+    showToast(error?.message || "Could not use Recall Horn.");
+  } finally {
+    recallHornRequests.delete(normalizedArmyId);
+    if (modal?.open && modal.classList.contains("outgoing-attack-modal")) {
+      renderOutgoingAttacksModalContent();
+    }
+  }
 }
 
 function renderOutgoingAttackCard(mission) {
   const city = mission.target;
-  const sourceName = mission.source?.name || "Unknown city";
-  const targetName = city?.name || "Unknown target";
-  const regionName = getRegionLabel(city ? getCityRegionId(city) : getCityRegionId(mission.toId));
+  const sourceCity = mission.source;
+  const sourceName = mission.source?.name || mission.fromName || "Unknown city";
+  const originalTargetName = city?.name || mission.toName || "Unknown target";
+  const isReturning = Boolean(mission.returning);
+  const targetName = isReturning ? sourceName : originalTargetName;
+  const regionName = getRegionLabel(isReturning
+    ? sourceCity ? getCityRegionId(sourceCity) : normalizeRegionId(mission.returnDestinationRegionId || mission.sourceRegionId)
+    : city ? getCityRegionId(city) : mission.targetRegionId || getCityRegionId(mission.toId));
   const ownerName = city ? getBattleReportOwnerName(city, city.owner) : "Unknown owner";
   const isScout = mission.kind === "scout";
-  const missionLabel = isScout ? "Scout" : "Attack";
+  const isTransfer = mission.kind === "transfer";
+  const isReinforcement = isTransfer && Boolean(city && (isStronghold(city) || isRewardCampTarget(city)));
+  const missionLabel = isReturning ? "Returning" : isScout ? "Scout" : isReinforcement ? "Reinforce" : isTransfer ? "Transfer" : "Attack";
   const forceDetails = isScout
     ? `1 scout from ${escapeHtml(sourceName)}`
     : `${formatNumber(mission.troops)} troops from ${escapeHtml(sourceName)}`;
-  const targetDetails = city
+  const targetDetails = isReturning
+    ? `Recalled before reaching ${escapeHtml(originalTargetName)}`
+    : isTransfer
+    ? `${isReinforcement ? "Reinforcing" : "Moving troops to"} ${escapeHtml(targetName)}`
+    : city
     ? `${escapeHtml(ownerName)} - ${formatNumber(city.troops)} troops`
     : "Target details are loading";
-  const locateButton = city
-    ? `<button class="incoming-attack-locate" data-outgoing-city="${escapeHtml(city.id)}" type="button" aria-label="Go to ${escapeHtml(city.name)}">&#8982;</button>`
+  const locateCity = isReturning ? sourceCity : city;
+  const locateButton = locateCity
+    ? `<button class="incoming-attack-locate" data-outgoing-city="${escapeHtml(locateCity.id)}" type="button" aria-label="Go to ${escapeHtml(locateCity.name)}">&#8982;</button>`
     : `<button class="incoming-attack-locate" type="button" aria-label="Target unavailable" disabled>&#8982;</button>`;
+  const onlineId = getOnlineArmyResolutionId(mission);
+  const itemActionBusy = swiftMarchOrderRequests.has(onlineId) || recallHornRequests.has(onlineId);
+  const swiftItemCount = Math.max(0, Math.floor(Number(ensureShopItems()[SWIFT_MARCH_ORDER_ITEM_ID]) || 0));
+  const swiftOrderButton = isSwiftMarchOrderEligible(mission) && swiftItemCount > 0
+    ? `<button class="swift-march-order-btn" data-swift-march-order="${escapeHtml(onlineId)}" type="button" ${itemActionBusy ? "disabled" : ""}>${swiftMarchOrderRequests.has(onlineId) ? "Applying Swift Order..." : "Use Swift March Order"}</button>`
+    : mission.swiftMarchUsedAtMs && !isReturning
+      ? `<div class="swift-march-order-used">Swift March Order applied</div>`
+      : "";
+  const recallHornCount = Math.max(0, Math.floor(Number(ensureShopItems()[RECALL_HORN_ITEM_ID]) || 0));
+  const recallHornButton = isRecallHornEligible(mission) && recallHornCount > 0
+    ? `<button class="recall-horn-btn" data-recall-horn="${escapeHtml(onlineId)}" type="button" ${itemActionBusy ? "disabled" : ""}>${recallHornRequests.has(onlineId) ? "Sounding Recall..." : "Use Recall Horn"}</button>`
+    : isReturning
+      ? `<div class="recall-horn-status">Returning to ${escapeHtml(sourceName)}</div>`
+      : "";
+  const itemActions = swiftOrderButton || recallHornButton
+    ? `<div class="march-item-actions">${swiftOrderButton}${recallHornButton}</div>`
+    : "";
 
   return `
-    <article class="incoming-attack-card outgoing-attack-card ${isScout ? "outgoing-scout-card" : ""}">
+    <article class="incoming-attack-card outgoing-attack-card ${isReturning ? "outgoing-return-card" : isScout ? "outgoing-scout-card" : isTransfer ? "outgoing-transfer-card" : ""}">
       <div class="incoming-attack-badge">
-        <strong>${mission.isResolving ? "Resolving" : formatDuration(mission.remaining)}</strong>
+        <strong>${mission.serverPending ? "Sending" : mission.isResolving ? "Resolving" : formatDuration(mission.remaining)}</strong>
         <small>${missionLabel}</small>
       </div>
       <div class="incoming-attack-city">
@@ -17321,6 +17644,7 @@ function renderOutgoingAttackCard(mission) {
         <small>${forceDetails}</small>
       </div>
       ${locateButton}
+      ${itemActions}
     </article>
   `;
 }

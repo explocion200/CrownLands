@@ -327,6 +327,14 @@
     return callServerFunction("activateInventoryItem", payload);
   }
 
+  async function useSwiftMarchOrder(payload = {}) {
+    return callServerFunction("useSwiftMarchOrder", payload);
+  }
+
+  async function useRecallHorn(payload = {}) {
+    return callServerFunction("useRecallHorn", payload);
+  }
+
   function usesServerEconomyAuthority() {
     return Boolean(client.functions && client.modules?.functions?.httpsCallable);
   }
@@ -1234,6 +1242,8 @@
     relocateMainCity,
     purchaseShopItem,
     activateInventoryItem,
+    useSwiftMarchOrder,
+    useRecallHorn,
     saveGameSnapshot,
     loadGameSnapshot,
     loadPlayerGlobalStats,
