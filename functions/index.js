@@ -61,17 +61,9 @@ const DEMO_ATTACK_TIERS = [
   { minRatio: 5, label: "Heavy Demo Attack", troopCapPercent: 40, attackPowerPercent: 40, travelMultiplier: 2 },
   { minRatio: DEMO_ATTACK_MIN_POWER_RATIO, label: "Demo Attack", troopCapPercent: 50, attackPowerPercent: 50, travelMultiplier: 1.6 },
 ];
-const KING_POWER_TERRITORY_PER_CITY = 2500;
-const KING_POWER_CITY_LEVEL_SQUARED_MULTIPLIER = 10;
-const KING_POWER_GOLD_PRODUCTION_SQRT_MULTIPLIER = 15;
-const KING_POWER_GOLD_TO_TROOP_PRODUCTION_CAP_RATIO = 0.25;
-const KING_POWER_TROOP_PRODUCTION_MULTIPLIER = 20;
-const KING_POWER_WALL_MULTIPLIER = 8;
-const KING_POWER_DEFENSE_PERCENT_MULTIPLIER = 100;
-const KING_POWER_STRONGHOLD_BASE = 25000;
-const KING_POWER_STRONGHOLD_LEVEL_MULTIPLIER = 2000;
-const KING_POWER_TROOP_SCALE = 15;
-const KING_POWER_TROOP_EXPONENT = 0.7;
+const KING_POWER_ARMY_TROOP_VALUE = 2;
+const KING_POWER_REPLACEMENT_HOURS = 12;
+const KING_POWER_DEFENSIVE_ADVANTAGE_WEIGHT = 0.25;
 const LEVEL_UP_TROOP_REWARD_BASE = 50;
 const LEVEL_UP_TROOP_REWARD_MULTIPLIER = 1.15;
 const CHARACTER_START_LEVEL = 1;
@@ -102,7 +94,7 @@ const MAIN_CITY_CHANGE_CITY_LIMIT = 30;
 const MAIN_CITY_CHANGE_SMALL_KINGDOM_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000;
 const MAIN_CITY_CHANGE_LARGE_KINGDOM_COOLDOWN_MS = 14 * 24 * 60 * 60 * 1000;
 const MAX_SERVER_PRODUCTION_SECONDS = 7 * 24 * 60 * 60;
-const GLOBAL_PLAYER_STATS_VERSION = 4;
+const GLOBAL_PLAYER_STATS_VERSION = 5;
 const PLAYER_IDENTITY_SYNC_VERSION = 1;
 const MAIN_CITY_ASSIGNMENT_VERSION = 2;
 const ECONOMY_CITY_CHECKPOINT_MS = 5 * 60 * 1000;
@@ -828,58 +820,42 @@ function getCityStats(city = {}, defenderProfile = null, bonuses = {}) {
 function getTroopKingPower(troops = 0) {
   const troopCount = Math.max(0, Math.floor(safeNumber(troops, 0)));
   if (!troopCount) return 0;
-  const power = Math.pow(troopCount, KING_POWER_TROOP_EXPONENT) * KING_POWER_TROOP_SCALE;
+  const power = troopCount * KING_POWER_ARMY_TROOP_VALUE;
   return Number.isFinite(power) ? Math.min(Number.MAX_SAFE_INTEGER, Math.floor(power)) : Number.MAX_SAFE_INTEGER;
 }
 
-function getCityInfrastructurePowerComponents(city = {}) {
+function getCityInfrastructurePowerComponents(city = {}, bonuses = {}) {
   if (!city) {
-    return { territoryPower: 0, cityLevelPower: 0, economicPower: 0, troopProductionPower: 0, fortificationPower: 0, strongholdPower: 0 };
+    return { replacementPower: 0, defensivePower: 0, sustainableTroopPerHour: 0 };
   }
-  if (isStronghold(city)) {
-    return {
-      territoryPower: 0,
-      cityLevelPower: 0,
-      economicPower: 0,
-      troopProductionPower: 0,
-      fortificationPower: 0,
-      strongholdPower: KING_POWER_STRONGHOLD_BASE
-        + getStrongholdDefenseLevel(city) * KING_POWER_STRONGHOLD_LEVEL_MULTIPLIER,
-    };
-  }
-  const level = clampCityLevel(city.level);
-  const production = getCityProductionStats(city, {}, {}, {
+  const troopCount = Math.max(0, Math.floor(safeNumber(city.troops, 0)));
+  const production = getCityProductionStats(city, {}, bonuses, {
     includeWarDrums: false,
     includeRoyalTaxDecree: false,
   });
-  const baseWalls = CITY_LEVEL_STATS.cityWallsBase + (level - 1) * CITY_LEVEL_STATS.cityWallsPerLevel;
-  const defensePercent = level * CITY_LEVEL_STATS.defensePercentPerLevel;
-  const troopProductionPower = Math.floor(
-    Math.max(0, safeNumber(production.troopProductionPerHour, 0))
-      * KING_POWER_TROOP_PRODUCTION_MULTIPLIER
-  );
+  const defense = getCityStats(city, null, bonuses);
+  const sustainableTroopPerHour = Math.max(0, safeNumber(production.troopProductionPerHour, 0));
+  const defensiveAdvantage = Math.max(0, safeNumber(defense.totalDefense, 0) - troopCount);
   return {
-    territoryPower: KING_POWER_TERRITORY_PER_CITY,
-    cityLevelPower: Math.floor(
-      level * level * KING_POWER_CITY_LEVEL_SQUARED_MULTIPLIER
+    replacementPower: Math.min(
+      Number.MAX_SAFE_INTEGER,
+      Math.floor(sustainableTroopPerHour * KING_POWER_REPLACEMENT_HOURS)
     ),
-    economicPower: Math.floor(Math.min(
-      Math.sqrt(Math.max(0, safeNumber(production.goldProductionPerHour, 0)))
-        * KING_POWER_GOLD_PRODUCTION_SQRT_MULTIPLIER,
-      troopProductionPower * KING_POWER_GOLD_TO_TROOP_PRODUCTION_CAP_RATIO
-    )),
-    troopProductionPower,
-    fortificationPower: Math.floor(
-      baseWalls * KING_POWER_WALL_MULTIPLIER
-        + defensePercent * KING_POWER_DEFENSE_PERCENT_MULTIPLIER
+    defensivePower: Math.min(
+      Number.MAX_SAFE_INTEGER,
+      Math.floor(defensiveAdvantage * KING_POWER_DEFENSIVE_ADVANTAGE_WEIGHT)
     ),
-    strongholdPower: 0,
+    sustainableTroopPerHour,
   };
 }
 
-function getCityInfrastructurePower(city = {}) {
-  return Object.values(getCityInfrastructurePowerComponents(city))
-    .reduce((total, value) => total + Math.max(0, Math.floor(safeNumber(value, 0))), 0);
+function getCityInfrastructurePower(city = {}, bonuses = {}) {
+  const components = getCityInfrastructurePowerComponents(city, bonuses);
+  return Math.min(
+    Number.MAX_SAFE_INTEGER,
+    Math.max(0, Math.floor(safeNumber(components.replacementPower, 0)))
+      + Math.max(0, Math.floor(safeNumber(components.defensivePower, 0)))
+  );
 }
 
 function getCityPowerFloor(city = {}) {
@@ -921,6 +897,31 @@ function activeArmiesQueryForPlayer(uid = "") {
     .where("status", "==", "active");
 }
 
+function heldRewardCampsQueryForPlayer(uid = "") {
+  return db.collectionGroup("camps")
+    .where("holderUid", "==", safeString(uid, 128));
+}
+
+function createHeldCampEntriesFromSnapshot(uid = "", heldCampsSnap = null) {
+  const playerUid = safeString(uid, 128);
+  if (!playerUid || !heldCampsSnap?.docs) return [];
+  return heldCampsSnap.docs.map(doc => {
+    const islandId = safeString(doc.ref.parent?.parent?.id, 160);
+    if (!isCurrentWorldIslandId(islandId)) return null;
+    const data = doc.data() || {};
+    if (safeString(data.holderUid || data.ownerUid, 128) !== playerUid) return null;
+    const regionId = normalizeRegionId(data.regionId || getRegionIdFromOnlineIslandId(islandId));
+    if (!getServerWorldCampIds(regionId).has(doc.id)) return null;
+    const camp = getRewardCampCombatTarget({
+      id: doc.id,
+      ...data,
+      islandId,
+      regionId,
+    });
+    return camp ? { ref: doc.ref, camp } : null;
+  }).filter(Boolean);
+}
+
 function isCurrentWorldArmy(army = {}) {
   if (army.worldId && safeString(army.worldId, 120) !== ONLINE_WORLD_ID) return false;
   if (army.resetGeneration && safeString(army.resetGeneration, 120) !== RESET_GENERATION) return false;
@@ -937,6 +938,7 @@ function createGlobalStatsSnapshot({
   uid = "",
   profile = {},
   cityEntries = [],
+  heldCamps = [],
   activeArmies = [],
   bonuses = null,
   nowMs = Date.now(),
@@ -953,16 +955,13 @@ function createGlobalStatsSnapshot({
 
   let totalCities = 0;
   let strongholdCount = 0;
-  let totalTroops = 0;
+  let totalCityTroops = 0;
+  let totalCampTroops = 0;
   let totalCityLevels = 0;
   let totalVictoryPoints = 0;
-  let cityPower = 0;
-  let territoryPower = 0;
-  let cityLevelPower = 0;
-  let economicPower = 0;
-  let troopProductionPower = 0;
-  let fortificationPower = 0;
-  let strongholdPower = 0;
+  let replacementPower = 0;
+  let defensivePower = 0;
+  let sustainableTroopPerHour = 0;
   let goldPerHour = 0;
   let troopPerHour = 0;
   // Include zeroes so Firestore merge writes clear regions where the player lost their final city.
@@ -974,16 +973,12 @@ function createGlobalStatsSnapshot({
     const city = entry.city || {};
     const troopCount = Math.max(0, Math.floor(safeNumber(city.troops, 0)));
     const stats = getCityProductionStats(city, profileForStats, resolvedBonuses);
-    const powerComponents = getCityInfrastructurePowerComponents(city);
-    totalTroops += troopCount;
+    const powerComponents = getCityInfrastructurePowerComponents(city, resolvedBonuses);
+    totalCityTroops += troopCount;
     totalVictoryPoints += Math.max(0, Math.floor(safeNumber(stats.victoryPoints, 0)));
-    territoryPower += powerComponents.territoryPower;
-    cityLevelPower += powerComponents.cityLevelPower;
-    economicPower += powerComponents.economicPower;
-    troopProductionPower += powerComponents.troopProductionPower;
-    fortificationPower += powerComponents.fortificationPower;
-    strongholdPower += powerComponents.strongholdPower;
-    cityPower += Object.values(powerComponents).reduce((total, value) => total + value, 0);
+    replacementPower += powerComponents.replacementPower;
+    defensivePower += powerComponents.defensivePower;
+    sustainableTroopPerHour += powerComponents.sustainableTroopPerHour;
     goldPerHour += Math.max(0, safeNumber(stats.goldProductionPerHour, 0));
     troopPerHour += Math.max(0, safeNumber(stats.troopProductionPerHour, 0));
     if (isStronghold(city)) {
@@ -996,6 +991,17 @@ function createGlobalStatsSnapshot({
     }
   });
 
+  (Array.isArray(heldCamps) ? heldCamps : []).forEach(entry => {
+    const camp = entry?.camp;
+    if (!camp || getOwnerUid(camp) !== playerUid) return;
+    const islandId = safeString(camp.islandId || entry.ref?.parent?.parent?.id, 160);
+    if (!isCurrentWorldIslandId(islandId)) return;
+    const troopCount = Math.max(0, Math.floor(safeNumber(camp.troops, 0)));
+    const powerComponents = getCityInfrastructurePowerComponents(camp, resolvedBonuses);
+    totalCampTroops += troopCount;
+    defensivePower += powerComponents.defensivePower;
+  });
+
   const marchingById = new Map();
   (Array.isArray(activeArmies) ? activeArmies : []).forEach(army => {
     if (!army || getOwnerUid(army) !== playerUid || army.status !== "active" || !isCurrentWorldArmy(army)) return;
@@ -1005,13 +1011,18 @@ function createGlobalStatsSnapshot({
   });
   const totalMarchingTroops = [...marchingById.values()]
     .reduce((total, army) => total + Math.max(0, Math.floor(safeNumber(army.troops, 0))), 0);
+  const totalTroops = totalCityTroops + totalCampTroops;
   const totalMilitaryTroops = totalTroops + totalMarchingTroops;
-  const totalTroopPower = getTroopKingPower(totalMilitaryTroops);
-  const stationedTroopPower = totalMilitaryTroops > 0
-    ? Math.floor(totalTroopPower * totalTroops / totalMilitaryTroops)
-    : 0;
-  const marchingPower = Math.max(0, totalTroopPower - stationedTroopPower);
-  const kingPower = Math.max(0, Math.floor(stationedTroopPower + cityPower + marchingPower));
+  const armyPower = getTroopKingPower(totalMilitaryTroops);
+  const cityTroopPower = getTroopKingPower(totalCityTroops);
+  const campTroopPower = getTroopKingPower(totalCampTroops);
+  const stationedTroopPower = Math.min(Number.MAX_SAFE_INTEGER, cityTroopPower + campTroopPower);
+  const marchingPower = getTroopKingPower(totalMarchingTroops);
+  replacementPower = Math.min(Number.MAX_SAFE_INTEGER, Math.max(0, Math.floor(replacementPower)));
+  defensivePower = Math.min(Number.MAX_SAFE_INTEGER, Math.max(0, Math.floor(defensivePower)));
+  sustainableTroopPerHour = Math.min(Number.MAX_SAFE_INTEGER, Math.max(0, Math.floor(sustainableTroopPerHour)));
+  const cityPower = Math.min(Number.MAX_SAFE_INTEGER, replacementPower + defensivePower);
+  const kingPower = Math.min(Number.MAX_SAFE_INTEGER, Math.max(0, Math.floor(armyPower + cityPower)));
   const character = normalizeCharacterProgress(profileForStats.character);
 
   return {
@@ -1022,6 +1033,8 @@ function createGlobalStatsSnapshot({
     version: GLOBAL_PLAYER_STATS_VERSION,
     totalCities,
     totalTroops,
+    totalCityTroops,
+    totalCampTroops,
     totalMarchingTroops,
     totalCityLevels,
     totalVictoryPoints,
@@ -1029,16 +1042,23 @@ function createGlobalStatsSnapshot({
     cityCountsByRegion,
     goldPerHour: Math.max(0, Math.floor(goldPerHour)),
     troopPerHour: Math.max(0, Math.floor(troopPerHour)),
+    sustainableTroopPerHour,
+    armyPower,
+    replacementPower,
+    defensivePower,
+    strongholdTroopBonusPercent: Math.max(0, Math.floor(safeNumber(resolvedBonuses.troopBonusPercent, 0))),
+    strongholdDefenseBonusPercent: Math.max(0, Math.floor(safeNumber(resolvedBonuses.cityDefenseBonusPercent, 0))),
     stationedTroopPower: Math.max(0, Math.floor(stationedTroopPower)),
+    campTroopPower: Math.max(0, Math.floor(campTroopPower)),
     cityPower: Math.max(0, Math.floor(cityPower)),
     marchingPower: Math.max(0, Math.floor(marchingPower)),
-    troopPower: Math.max(0, Math.floor(totalTroopPower)),
-    territoryPower: Math.max(0, Math.floor(territoryPower)),
-    cityLevelPower: Math.max(0, Math.floor(cityLevelPower)),
-    economicPower: Math.max(0, Math.floor(economicPower)),
-    troopProductionPower: Math.max(0, Math.floor(troopProductionPower)),
-    fortificationPower: Math.max(0, Math.floor(fortificationPower)),
-    strongholdPower: Math.max(0, Math.floor(strongholdPower)),
+    troopPower: Math.max(0, Math.floor(armyPower)),
+    territoryPower: 0,
+    cityLevelPower: 0,
+    economicPower: 0,
+    troopProductionPower: replacementPower,
+    fortificationPower: defensivePower,
+    strongholdPower: 0,
     kingPower,
     characterLevel: character.level,
     mainCityId: safeString(profileForStats.mainCityId, 96),
@@ -1072,43 +1092,24 @@ function getLegacyGlobalStatsKingPower(stats = {}) {
   if (!stats || typeof stats !== "object") return 0;
   const totalCities = Math.max(0, Math.floor(safeNumber(stats.totalCities, stats.cityCount)));
   const totalLevels = Math.max(totalCities, Math.floor(safeNumber(stats.totalCityLevels, totalCities)));
-  const strongholdCount = Math.max(0, Math.floor(safeNumber(stats.strongholdCount, 0)));
-  const totalTroops = Math.max(0, Math.floor(safeNumber(stats.totalTroops, 0)))
-    + Math.max(0, Math.floor(safeNumber(stats.totalMarchingTroops, 0)));
+  const stationedTroops = Math.max(0, Math.floor(safeNumber(stats.totalTroops, 0)));
+  const totalTroops = stationedTroops + Math.max(0, Math.floor(safeNumber(stats.totalMarchingTroops, 0)));
   const baseWalls = totalCities > 0
     ? CITY_LEVEL_STATS.cityWallsBase * totalCities
       + CITY_LEVEL_STATS.cityWallsPerLevel * Math.max(0, totalLevels - totalCities)
     : 0;
-  const territoryPower = totalCities * KING_POWER_TERRITORY_PER_CITY;
-  const troopProductionPower = Math.floor(
-    Math.max(0, safeNumber(stats.troopPerHour, 0)) * KING_POWER_TROOP_PRODUCTION_MULTIPLIER
-  );
+  const sustainableTroopPerHour = Math.max(0, Math.floor(
+    safeNumber(stats.totalVictoryPoints, 0) * CITY_LEVEL_STATS.troopProductionPerVictoryPoint
+  ));
+  const replacementPower = Math.floor(sustainableTroopPerHour * KING_POWER_REPLACEMENT_HOURS);
   const averageLevel = totalCities > 0 ? totalLevels / totalCities : 0;
-  const cityLevelPower = Math.floor(
-    totalCities * averageLevel * averageLevel * KING_POWER_CITY_LEVEL_SQUARED_MULTIPLIER
-  );
-  const economicPower = totalCities > 0
-    ? Math.floor(Math.min(
-      Math.sqrt(Math.max(0, safeNumber(stats.goldPerHour, 0)) * totalCities)
-        * KING_POWER_GOLD_PRODUCTION_SQRT_MULTIPLIER,
-      troopProductionPower * KING_POWER_GOLD_TO_TROOP_PRODUCTION_CAP_RATIO
-    ))
-    : 0;
-  const fortificationPower = Math.floor(
-    baseWalls * KING_POWER_WALL_MULTIPLIER
-      + totalLevels * CITY_LEVEL_STATS.defensePercentPerLevel * KING_POWER_DEFENSE_PERCENT_MULTIPLIER
-  );
-  const strongholdPower = strongholdCount * (
-    KING_POWER_STRONGHOLD_BASE + 50 * KING_POWER_STRONGHOLD_LEVEL_MULTIPLIER
+  const defensiveAdvantage = baseWalls + stationedTroops
+    * averageLevel * CITY_LEVEL_STATS.defensePercentPerLevel / 100;
+  const defensivePower = Math.floor(
+    Math.max(0, defensiveAdvantage) * KING_POWER_DEFENSIVE_ADVANTAGE_WEIGHT
   );
   return Math.max(0, Math.floor(
-    territoryPower
-      + cityLevelPower
-      + economicPower
-      + troopProductionPower
-      + fortificationPower
-      + strongholdPower
-      + getTroopKingPower(totalTroops)
+    getTroopKingPower(totalTroops) + replacementPower + defensivePower
   ));
 }
 
@@ -2702,12 +2703,14 @@ async function prepareEconomyCollection(transaction, uid, nowMs = Date.now(), op
   const fallbackProductionAtMs = Math.min(nowMs, getProfileLastSeenMs(rawProfile) || nowMs);
   const economyRevisionMs = Math.max(nowMs, timestampToMs(rawProfile.economyUpdatedAtMs) + 1);
 
-  const [ownedSnap, activeArmiesSnap] = await Promise.all([
+  const [ownedSnap, activeArmiesSnap, heldCampsSnap] = await Promise.all([
     transaction.get(db.collectionGroup("cities").where("ownerUid", "==", uid)),
     transaction.get(activeArmiesQueryForPlayer(uid)),
+    transaction.get(heldRewardCampsQueryForPlayer(uid)),
   ]);
   const cityEntries = createOwnedCityEntriesFromSnapshot(uid, ownedSnap);
   const activeArmies = createActiveArmiesFromSnapshot(uid, activeArmiesSnap);
+  const heldCamps = createHeldCampEntriesFromSnapshot(uid, heldCampsSnap);
   const mainCityRepair = createMainCityAssignmentRepair(uid, rawProfile, cityEntries);
   const cityPatches = [...mainCityRepair.cityPatches];
   const cityUpdates = [...mainCityRepair.cityUpdates];
@@ -2803,6 +2806,7 @@ async function prepareEconomyCollection(transaction, uid, nowMs = Date.now(), op
     uid,
     profile: profileAfter,
     cityEntries,
+    heldCamps,
     activeArmies,
     bonuses,
     nowMs,
@@ -2832,6 +2836,7 @@ async function prepareEconomyCollection(transaction, uid, nowMs = Date.now(), op
     globalStatsRef,
     globalStats,
     activeArmies,
+    heldCamps,
     cityEntries,
     cityPatches,
     cityUpdates,
@@ -2911,6 +2916,7 @@ function createPreparedEconomyStatsSnapshot(economy = null, profileOverrides = {
     uid: economy.uid,
     profile,
     cityEntries: createPatchedCityEntriesForStats(economy, options.extraCityPatches),
+    heldCamps: economy.heldCamps,
     activeArmies: createPatchedActiveArmiesForStats(economy, options),
     bonuses: null,
     nowMs: options.nowMs || Date.now(),
@@ -2938,9 +2944,16 @@ function writeGlobalStatsFromEconomy(transaction, economy = null, profileOverrid
     kingPowerUpdatedAtMs: stats.updatedAtMs,
     cityCount: stats.totalCities,
     totalTroops: stats.totalTroops,
+    totalCampTroops: stats.totalCampTroops,
     totalMarchingTroops: stats.totalMarchingTroops,
+    armyPower: stats.armyPower,
+    replacementPower: stats.replacementPower,
+    defensivePower: stats.defensivePower,
     goldPerHour: stats.goldPerHour,
     troopPerHour: stats.troopPerHour,
+    sustainableTroopPerHour: stats.sustainableTroopPerHour,
+    strongholdTroopBonusPercent: stats.strongholdTroopBonusPercent,
+    strongholdDefenseBonusPercent: stats.strongholdDefenseBonusPercent,
     strongholdCount: stats.strongholdCount,
     mainCityId: stats.mainCityId,
     mainRegionId: stats.mainRegionId,
@@ -2987,10 +3000,11 @@ async function rebuildGlobalStatsForPlayer(uid = "") {
   if (!playerUid) throw new HttpsError("invalid-argument", "A player uid is required.");
   const nowMs = Date.now();
   const profileRef = db.doc(`players/${playerUid}`);
-  const [profileSnap, ownedSnap, activeArmiesSnap] = await Promise.all([
+  const [profileSnap, ownedSnap, activeArmiesSnap, heldCampsSnap] = await Promise.all([
     profileRef.get(),
     db.collectionGroup("cities").where("ownerUid", "==", playerUid).get(),
     activeArmiesQueryForPlayer(playerUid).get(),
+    heldRewardCampsQueryForPlayer(playerUid).get(),
   ]);
   const profile = profileSnap.exists ? profileSnap.data() || {} : {};
   const identity = getCanonicalPlayerIdentity(playerUid, profile, {}, {});
@@ -3005,6 +3019,7 @@ async function rebuildGlobalStatsForPlayer(uid = "") {
     return isCurrentWorldArmy(army);
   });
   const activeArmies = createActiveArmiesFromSnapshot(playerUid, activeArmiesSnap);
+  const heldCamps = createHeldCampEntriesFromSnapshot(playerUid, heldCampsSnap);
   const profileForStats = {
     ...profile,
     playerName: identity.ownerName,
@@ -3016,6 +3031,7 @@ async function rebuildGlobalStatsForPlayer(uid = "") {
     uid: playerUid,
     profile: profileForStats,
     cityEntries,
+    heldCamps,
     activeArmies,
     nowMs,
   });
@@ -3054,9 +3070,16 @@ async function rebuildGlobalStatsForPlayer(uid = "") {
         kingPowerUpdatedAtMs: nowMs,
         cityCount: stats.totalCities,
         totalTroops: stats.totalTroops,
+        totalCampTroops: stats.totalCampTroops,
         totalMarchingTroops: stats.totalMarchingTroops,
+        armyPower: stats.armyPower,
+        replacementPower: stats.replacementPower,
+        defensivePower: stats.defensivePower,
         goldPerHour: stats.goldPerHour,
         troopPerHour: stats.troopPerHour,
+        sustainableTroopPerHour: stats.sustainableTroopPerHour,
+        strongholdTroopBonusPercent: stats.strongholdTroopBonusPercent,
+        strongholdDefenseBonusPercent: stats.strongholdDefenseBonusPercent,
         strongholdCount: stats.strongholdCount,
         mainCityId,
         mainRegionId,
@@ -6298,6 +6321,10 @@ async function handleTargetOwnershipWrite(event, targetType = "city") {
   const regionId = getRegionIdFromOnlineIslandId(islandId);
   const targetId = safeString(targetType === "camp" ? event.params?.campId : event.params?.cityId, 96);
   await refreshActiveArmyTargetOwner(`${regionId}:${targetId}`, afterOwnerUid);
+  if (targetType === "camp") {
+    const affectedUids = [...new Set([beforeOwnerUid, afterOwnerUid].filter(Boolean))];
+    await Promise.all(affectedUids.map(uid => rebuildGlobalStatsForPlayer(uid)));
+  }
 }
 
 exports.syncCityArmyTargetOwner = onDocumentWritten({

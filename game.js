@@ -649,18 +649,10 @@ const CITY_LEVEL_STATS = {
   troopProductionPerVictoryPoint: 3,
   goldProductionPerMillionLordsVp: MILLION_LORDS_PASSIVE_GOLD_PER_CITY_VP,
 };
-const KING_POWER_TERRITORY_PER_CITY = 2500;
-const KING_POWER_CITY_LEVEL_SQUARED_MULTIPLIER = 10;
-const KING_POWER_GOLD_PRODUCTION_SQRT_MULTIPLIER = 15;
-const KING_POWER_GOLD_TO_TROOP_PRODUCTION_CAP_RATIO = 0.25;
-const KING_POWER_TROOP_PRODUCTION_MULTIPLIER = 20;
-const KING_POWER_WALL_MULTIPLIER = 8;
-const KING_POWER_DEFENSE_PERCENT_MULTIPLIER = 100;
-const KING_POWER_STRONGHOLD_BASE = 25000;
-const KING_POWER_STRONGHOLD_LEVEL_MULTIPLIER = 2000;
-const KING_POWER_TROOP_SCALE = 15;
-const KING_POWER_TROOP_EXPONENT = 0.7;
-const KING_POWER_AUTHORITY_VERSION = 4;
+const KING_POWER_ARMY_TROOP_VALUE = 2;
+const KING_POWER_REPLACEMENT_HOURS = 12;
+const KING_POWER_DEFENSIVE_ADVANTAGE_WEIGHT = 0.25;
+const KING_POWER_AUTHORITY_VERSION = 5;
 const SKILL_RESET_COST = 750_000;
 
 const SKILL_CONFIG = {
@@ -2476,6 +2468,8 @@ const profileLevelText = document.getElementById("profileLevelText");
 const profileXpLabel = document.getElementById("profileXpLabel");
 const profileXpFill = document.getElementById("profileXpFill");
 const profileKingPowerStat = document.getElementById("profileKingPowerStat");
+const profileKingPowerBreakdown = document.getElementById("profileKingPowerBreakdown");
+const profileKingPowerStrongholdBonus = document.getElementById("profileKingPowerStrongholdBonus");
 const profileCitiesStat = document.getElementById("profileCitiesStat");
 const profileGoldStat = document.getElementById("profileGoldStat");
 const profileTroopsStat = document.getElementById("profileTroopsStat");
@@ -5785,6 +5779,8 @@ function normalizeGlobalStatsSnapshot(raw = null) {
     kingPower: normalizePowerValue(raw.kingPower),
     totalCities: Math.max(0, Math.floor(Number(raw.totalCities) || 0)),
     totalTroops: Math.max(0, Math.floor(Number(raw.totalTroops) || 0)),
+    totalCityTroops: Math.max(0, Math.floor(Number(raw.totalCityTroops) || 0)),
+    totalCampTroops: Math.max(0, Math.floor(Number(raw.totalCampTroops) || 0)),
     totalMarchingTroops: Math.max(0, Math.floor(Number(raw.totalMarchingTroops) || 0)),
     totalCityLevels: Math.max(0, Math.floor(Number(raw.totalCityLevels) || 0)),
     totalVictoryPoints: Math.max(0, Math.floor(Number(raw.totalVictoryPoints) || 0)),
@@ -5792,7 +5788,14 @@ function normalizeGlobalStatsSnapshot(raw = null) {
     cityCountsByRegion,
     goldPerHour: Math.max(0, Math.floor(Number(raw.goldPerHour) || 0)),
     troopPerHour: Math.max(0, Math.floor(Number(raw.troopPerHour) || 0)),
+    sustainableTroopPerHour: Math.max(0, Math.floor(Number(raw.sustainableTroopPerHour) || 0)),
+    armyPower: normalizePowerValue(raw.armyPower),
+    replacementPower: normalizePowerValue(raw.replacementPower),
+    defensivePower: normalizePowerValue(raw.defensivePower),
+    strongholdTroopBonusPercent: Math.max(0, Math.floor(Number(raw.strongholdTroopBonusPercent) || 0)),
+    strongholdDefenseBonusPercent: Math.max(0, Math.floor(Number(raw.strongholdDefenseBonusPercent) || 0)),
     stationedTroopPower: normalizePowerValue(raw.stationedTroopPower),
+    campTroopPower: normalizePowerValue(raw.campTroopPower),
     cityPower: normalizePowerValue(raw.cityPower),
     marchingPower: normalizePowerValue(raw.marchingPower),
     troopPower: normalizePowerValue(raw.troopPower),
@@ -5879,39 +5882,29 @@ function getPresenceKingPowerByUid(uid) {
 function getTroopKingPower(troops = 0) {
   const troopCount = Math.max(0, Math.floor(Number(troops) || 0));
   if (!troopCount) return 0;
-  const power = Math.pow(troopCount, KING_POWER_TROOP_EXPONENT) * KING_POWER_TROOP_SCALE;
+  const power = troopCount * KING_POWER_ARMY_TROOP_VALUE;
   return Number.isFinite(power) ? Math.min(Number.MAX_SAFE_INTEGER, Math.floor(power)) : Number.MAX_SAFE_INTEGER;
 }
 
-function getCityInfrastructureKingPower(city) {
-  if (!city) return 0;
-  if (isStronghold(city)) {
-    return KING_POWER_STRONGHOLD_BASE
-      + getStrongholdDefenseLevel(city) * KING_POWER_STRONGHOLD_LEVEL_MULTIPLIER;
-  }
-  const level = clampCityLevel(city.level);
-  const victoryPoints = Math.floor(
-    CITY_LEVEL_STATS.victoryPointsBase
-      + level * CITY_LEVEL_STATS.victoryPointsPerLevel
-      + Math.pow(level, CITY_LEVEL_STATS.victoryPointsExponent) * CITY_LEVEL_STATS.victoryPointsExponentScale
-  );
-  const baseGoldPerHour = getMillionLordsPassiveGoldPerHour(level);
-  const baseTroopsPerHour = victoryPoints * CITY_LEVEL_STATS.troopProductionPerVictoryPoint;
-  const baseWalls = CITY_LEVEL_STATS.cityWallsBase + (level - 1) * CITY_LEVEL_STATS.cityWallsPerLevel;
-  const defensePercent = level * CITY_LEVEL_STATS.defensePercentPerLevel;
-  const troopProductionPower = baseTroopsPerHour * KING_POWER_TROOP_PRODUCTION_MULTIPLIER;
-  const economicPower = Math.min(
-    Math.sqrt(baseGoldPerHour) * KING_POWER_GOLD_PRODUCTION_SQRT_MULTIPLIER,
-    troopProductionPower * KING_POWER_GOLD_TO_TROOP_PRODUCTION_CAP_RATIO
-  );
-  return Math.max(0, Math.floor(
-    KING_POWER_TERRITORY_PER_CITY
-      + level * level * KING_POWER_CITY_LEVEL_SQUARED_MULTIPLIER
-      + economicPower
-      + troopProductionPower
-      + baseWalls * KING_POWER_WALL_MULTIPLIER
-      + defensePercent * KING_POWER_DEFENSE_PERCENT_MULTIPLIER
+function getCityInfrastructureKingPowerComponents(city) {
+  if (!city) return { replacementPower: 0, defensivePower: 0 };
+  const troopCount = Math.max(0, Math.floor(Number(city.troops) || 0));
+  const stats = getCityStats(city, {
+    includeSkillBoosts: false,
+    includeTimedItemBoosts: false,
+  });
+  const replacementPower = Math.max(0, Math.floor(
+    stats.troopProductionPerHour * KING_POWER_REPLACEMENT_HOURS
   ));
+  const defensivePower = Math.max(0, Math.floor(
+    Math.max(0, stats.totalDefense - troopCount) * KING_POWER_DEFENSIVE_ADVANTAGE_WEIGHT
+  ));
+  return { replacementPower, defensivePower };
+}
+
+function getCityInfrastructureKingPower(city) {
+  const components = getCityInfrastructureKingPowerComponents(city);
+  return Math.min(Number.MAX_SAFE_INTEGER, components.replacementPower + components.defensivePower);
 }
 
 function getCityPowerFloor(city) {
@@ -6196,10 +6189,11 @@ function getCityStats(city, options = {}) {
   );
   const defensePercent = level * CITY_LEVEL_STATS.defensePercentPerLevel;
   const baseCityWalls = CITY_LEVEL_STATS.cityWallsBase + step * CITY_LEVEL_STATS.cityWallsPerLevel;
-  const stoneworksPercent = city?.owner === "player" ? getSkillPercent("stoneworks") : 0;
+  const includeSkillBoosts = options.includeSkillBoosts !== false;
+  const stoneworksPercent = includeSkillBoosts && city?.owner === "player" ? getSkillPercent("stoneworks") : 0;
   const cityWalls = Math.floor(baseCityWalls * (1 + stoneworksPercent / 100));
-  const royalGranariesPercent = city?.owner === "player" ? getSkillPercent("royalGranaries") : 0;
-  const taxStewardshipPercent = city?.owner === "player" ? getSkillPercent("taxStewardship") : 0;
+  const royalGranariesPercent = includeSkillBoosts && city?.owner === "player" ? getSkillPercent("royalGranaries") : 0;
+  const taxStewardshipPercent = includeSkillBoosts && city?.owner === "player" ? getSkillPercent("taxStewardship") : 0;
   const strongholdGoldBonusPercent = !stronghold && city?.owner === "player" ? getControlledStrongholdGoldBonusPercent("player") : 0;
   const strongholdTroopBonusPercent = !stronghold && city?.owner === "player" ? getControlledStrongholdTroopBonusPercent("player") : 0;
   const strongholdDefenseBonusPercent = !stronghold ? getControlledStrongholdCityDefenseBonusPercentForCity(city) : 0;
@@ -14169,6 +14163,26 @@ function renderProfileScreen() {
   state.character = normalizeCharacterProgress(state.character);
   state.flag = normalizeFlag(state.flag);
   const summary = getKingdomSummary();
+  const globalStats = getGlobalStatsSnapshot();
+  const hasMilitaryBreakdown = globalStats?.version >= KING_POWER_AUTHORITY_VERSION;
+  const ownedCities = hasMilitaryBreakdown ? [] : getAllOwnedCitiesForDisplay();
+  const fallbackComponents = hasMilitaryBreakdown ? [] : ownedCities.map(getCityInfrastructureKingPowerComponents);
+  const armyPower = hasMilitaryBreakdown
+    ? globalStats.armyPower
+    : getTroopKingPower(summary.troops);
+  const replacementPower = hasMilitaryBreakdown
+    ? globalStats.replacementPower
+    : fallbackComponents.reduce((total, component) => total + component.replacementPower, 0);
+  const defensivePower = hasMilitaryBreakdown
+    ? globalStats.defensivePower
+    : fallbackComponents.reduce((total, component) => total + component.defensivePower, 0);
+  const strongholdTroopBonusPercent = hasMilitaryBreakdown
+    ? globalStats.strongholdTroopBonusPercent
+    : getControlledStrongholdTroopBonusPercent("player");
+  const defenseBonusTarget = ownedCities.find(city => city?.owner === "player" && !isStronghold(city));
+  const strongholdDefenseBonusPercent = hasMilitaryBreakdown
+    ? globalStats.strongholdDefenseBonusPercent
+    : getControlledStrongholdCityDefenseBonusPercentForCity(defenseBonusTarget);
   const xpRequired = getXpRequiredForLevel(state.character.level);
   const xpProgress = clamp(state.character.xp / Math.max(1, xpRequired), 0, 1);
 
@@ -14177,6 +14191,16 @@ function renderProfileScreen() {
   if (profileXpLabel) profileXpLabel.textContent = `${formatNumber(state.character.xp)} / ${formatNumber(xpRequired)} XP`;
   if (profileXpFill) profileXpFill.style.width = `${Math.round(xpProgress * 100)}%`;
   if (profileKingPowerStat) profileKingPowerStat.textContent = formatNumber(summary.kingPower);
+  if (profileKingPowerBreakdown) {
+    profileKingPowerBreakdown.textContent = `Army ${formatNumber(armyPower)} | Replacement ${formatNumber(replacementPower)} | Defense ${formatNumber(defensivePower)}`;
+  }
+  if (profileKingPowerStrongholdBonus) {
+    const bonusParts = [];
+    if (strongholdTroopBonusPercent > 0) bonusParts.push(`+${formatNumber(strongholdTroopBonusPercent)}% troop production`);
+    if (strongholdDefenseBonusPercent > 0) bonusParts.push(`+${formatNumber(strongholdDefenseBonusPercent)}% defense`);
+    profileKingPowerStrongholdBonus.hidden = bonusParts.length === 0;
+    profileKingPowerStrongholdBonus.textContent = bonusParts.length ? `Strongholds: ${bonusParts.join(" | ")}` : "";
+  }
   if (profileCitiesStat) profileCitiesStat.textContent = formatNumber(summary.cities);
   if (profileGoldStat) profileGoldStat.textContent = formatNumber(summary.gold);
   if (profileTroopsStat) profileTroopsStat.textContent = formatNumber(summary.troops);

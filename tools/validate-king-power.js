@@ -4,18 +4,11 @@ const path = require("path");
 const root = path.resolve(__dirname, "..");
 const serverSource = fs.readFileSync(path.join(root, "functions", "index.js"), "utf8");
 const clientSource = fs.readFileSync(path.join(root, "game.js"), "utf8");
+const indexSource = fs.readFileSync(path.join(root, "firestore.indexes.json"), "utf8");
 const constantNames = [
-  "KING_POWER_TERRITORY_PER_CITY",
-  "KING_POWER_CITY_LEVEL_SQUARED_MULTIPLIER",
-  "KING_POWER_GOLD_PRODUCTION_SQRT_MULTIPLIER",
-  "KING_POWER_GOLD_TO_TROOP_PRODUCTION_CAP_RATIO",
-  "KING_POWER_TROOP_PRODUCTION_MULTIPLIER",
-  "KING_POWER_WALL_MULTIPLIER",
-  "KING_POWER_DEFENSE_PERCENT_MULTIPLIER",
-  "KING_POWER_STRONGHOLD_BASE",
-  "KING_POWER_STRONGHOLD_LEVEL_MULTIPLIER",
-  "KING_POWER_TROOP_SCALE",
-  "KING_POWER_TROOP_EXPONENT",
+  "KING_POWER_ARMY_TROOP_VALUE",
+  "KING_POWER_REPLACEMENT_HOURS",
+  "KING_POWER_DEFENSIVE_ADVANTAGE_WEIGHT",
 ];
 
 function readConstant(source, name) {
@@ -35,69 +28,111 @@ const config = Object.fromEntries(constantNames.map(name => {
 
 const serverVersion = readConstant(serverSource, "GLOBAL_PLAYER_STATS_VERSION");
 const clientVersion = readConstant(clientSource, "KING_POWER_AUTHORITY_VERSION");
-if (serverVersion !== clientVersion || serverVersion !== 4) {
+if (serverVersion !== clientVersion || serverVersion !== 5) {
   throw new Error(`King Power authority versions differ or are stale (server ${serverVersion}, client ${clientVersion}).`);
 }
 
-function cityPower(level) {
-  const victoryPoints = Math.floor(6 + level * 4 + Math.pow(level, 1.35) * 2);
-  const productionVp = Math.floor(20 * Math.pow(1.115, level - 1) + 0.000001);
-  const goldPerHour = productionVp * 15;
-  const troopPerHour = victoryPoints * 3;
-  const walls = 30 + (level - 1) * 32;
-  const defensePercent = level * 3;
-  const troopProductionPower = troopPerHour * config.KING_POWER_TROOP_PRODUCTION_MULTIPLIER;
-  const economicPower = Math.floor(Math.min(
-    Math.sqrt(goldPerHour) * config.KING_POWER_GOLD_PRODUCTION_SQRT_MULTIPLIER,
-    troopProductionPower * config.KING_POWER_GOLD_TO_TROOP_PRODUCTION_CAP_RATIO
-  ));
-  const total = Math.floor(
-    config.KING_POWER_TERRITORY_PER_CITY
-      + level * level * config.KING_POWER_CITY_LEVEL_SQUARED_MULTIPLIER
-      + economicPower
-      + troopProductionPower
-      + walls * config.KING_POWER_WALL_MULTIPLIER
-      + defensePercent * config.KING_POWER_DEFENSE_PERCENT_MULTIPLIER
-  );
-  return { total, economicPower, troopProductionPower };
-}
-
-function troopPower(troops) {
-  return Math.floor(
-    Math.pow(Math.max(0, troops), config.KING_POWER_TROOP_EXPONENT)
-      * config.KING_POWER_TROOP_SCALE
-  );
-}
-
-const levels = [1, 10, 25, 50, 75, 100, 110, 125, 150];
-for (let index = 1; index < levels.length; index += 1) {
-  if (cityPower(levels[index]).total <= cityPower(levels[index - 1]).total) {
-    throw new Error(`City power did not increase from level ${levels[index - 1]} to ${levels[index]}.`);
-  }
-}
-levels.forEach(level => {
-  const power = cityPower(level);
-  if (power.economicPower > power.troopProductionPower) {
-    throw new Error(`Gold power exceeded troop-production power at level ${level}.`);
-  }
-  if (power.economicPower > power.troopProductionPower * config.KING_POWER_GOLD_TO_TROOP_PRODUCTION_CAP_RATIO) {
-    throw new Error(`Gold power exceeded its military-support cap at level ${level}.`);
+const legacyConstants = [
+  "KING_POWER_TERRITORY_PER_CITY",
+  "KING_POWER_GOLD_PRODUCTION_SQRT_MULTIPLIER",
+  "KING_POWER_STRONGHOLD_BASE",
+  "KING_POWER_TROOP_EXPONENT",
+];
+legacyConstants.forEach(name => {
+  if (serverSource.includes(name) || clientSource.includes(name)) {
+    throw new Error(`Legacy King Power input ${name} is still active.`);
   }
 });
 
-const concentratedRemnant = cityPower(100).total + troopPower(10_000_000);
-const broadKingdom = cityPower(75).total * 10 + troopPower(1_000_000);
-if (concentratedRemnant >= broadKingdom) {
-  throw new Error("A one-city 10M-troop remnant still outweighs ten level 75 cities.");
+const militaryFormula = serverSource.slice(
+  serverSource.indexOf("function getTroopKingPower"),
+  serverSource.indexOf("function playerGlobalStatsRef")
+);
+if (!militaryFormula.includes("getCityProductionStats(city, {}, bonuses")) {
+  throw new Error("King Power replacement capacity is not skill-neutral.");
 }
-if (troopPower(10_000_000) <= troopPower(1_000_000)) {
-  throw new Error("Additional troops must still increase King Power.");
+if (!militaryFormula.includes("getCityStats(city, null, bonuses)")) {
+  throw new Error("King Power defense is not skill-neutral.");
 }
-if (cityPower(100).total <= troopPower(1_000_000)) {
-  throw new Error("A developed level 100 city should outweigh an ordinary one-million-troop reserve.");
+if (/gold|taxStewardship|royalGranaries|stoneworks|warDrumsExpiresAtMs/i.test(militaryFormula)) {
+  throw new Error("A skill, item, or gold input leaked into the King Power formula.");
+}
+if (!serverSource.includes('where("holderUid", "=="')) {
+  throw new Error("Held reward camps are not queried for King Power.");
+}
+if (!serverSource.includes("heldCamps: economy.heldCamps")) {
+  throw new Error("Prepared economy snapshots omit held reward camps.");
+}
+if (!serverSource.includes('if (targetType === "camp")')) {
+  throw new Error("Camp ownership changes do not rebuild holder King Power.");
+}
+if (!indexSource.includes('"fieldPath": "holderUid"')) {
+  throw new Error("The camps.holderUid collection-group index is missing.");
+}
+if (!serverSource.includes("if (ownsCrownCitadel)")) {
+  throw new Error("Crown Citadel non-stacking behavior is missing.");
+}
+if (!serverSource.includes("isTrainingStronghold(city)") || !serverSource.includes("isDefenseStronghold(city)")) {
+  throw new Error("Military stronghold bonuses are missing.");
+}
+
+function cityMilitaryComponents(level, troops, bonuses = {}) {
+  const victoryPoints = Math.floor(6 + level * 4 + Math.pow(level, 1.35) * 2);
+  const sustainableTroopPerHour = victoryPoints * 3 * (1 + (bonuses.troop || 0) / 100);
+  const replacementPower = Math.floor(sustainableTroopPerHour * config.KING_POWER_REPLACEMENT_HOURS);
+  const walls = 30 + (level - 1) * 32;
+  const totalDefense = Math.floor(
+    (walls + Math.floor(troops * (1 + level * 3 / 100))) * (1 + (bonuses.defense || 0) / 100)
+  );
+  const defensivePower = Math.floor(
+    Math.max(0, totalDefense - troops) * config.KING_POWER_DEFENSIVE_ADVANTAGE_WEIGHT
+  );
+  return { replacementPower, defensivePower };
+}
+
+function kingdomPower(cities, marchingTroops = 0, campTroops = 0) {
+  const stationedTroops = cities.reduce((total, city) => total + city.troops, campTroops);
+  const armyPower = Math.floor(
+    (stationedTroops + marchingTroops) * config.KING_POWER_ARMY_TROOP_VALUE
+  );
+  const components = cities.map(city => cityMilitaryComponents(city.level, city.troops, city.bonuses));
+  return {
+    armyPower,
+    replacementPower: components.reduce((total, item) => total + item.replacementPower, 0),
+    defensivePower: components.reduce((total, item) => total + item.defensivePower, 0),
+    total: armyPower
+      + components.reduce((total, item) => total + item.replacementPower + item.defensivePower, 0),
+  };
+}
+
+const concentratedArmy = kingdomPower([{ level: 100, troops: 10_000_000 }]);
+const broadKingdom = kingdomPower(Array.from({ length: 10 }, () => ({ level: 75, troops: 100_000 })));
+if (concentratedArmy.total <= broadKingdom.total) {
+  throw new Error("A 10M military can still rank below a broadly developed 1M military kingdom.");
+}
+if (kingdomPower([{ level: 50, troops: 2_000_000 }]).total <= kingdomPower([{ level: 50, troops: 1_000_000 }]).total) {
+  throw new Error("Additional controlled troops must always increase King Power.");
+}
+const campPower = kingdomPower([{ level: 30, troops: 100_000 }], 0, 50_000);
+const noCampPower = kingdomPower([{ level: 30, troops: 100_000 }]);
+if (campPower.armyPower - noCampPower.armyPower !== 50_000 * config.KING_POWER_ARMY_TROOP_VALUE) {
+  throw new Error("Camp garrisons are not counted exactly once as controlled troops.");
+}
+const base = cityMilitaryComponents(75, 1_000_000);
+const training = cityMilitaryComponents(75, 1_000_000, { troop: 15 });
+const defense = cityMilitaryComponents(75, 1_000_000, { defense: 15 });
+const crown = cityMilitaryComponents(75, 1_000_000, { troop: 10, defense: 8 });
+if (training.replacementPower <= base.replacementPower || training.defensivePower !== base.defensivePower) {
+  throw new Error("Training Stronghold must affect replacement capacity only.");
+}
+if (defense.defensivePower <= base.defensivePower || defense.replacementPower !== base.replacementPower) {
+  throw new Error("Defense Stronghold must affect defense only.");
+}
+if (crown.replacementPower <= base.replacementPower || crown.defensivePower <= base.defensivePower) {
+  throw new Error("Crown Citadel must affect both military components.");
 }
 
 console.log(
-  `Validated King Power v4: 1x L100 + 10M troops = ${concentratedRemnant.toLocaleString()}, `
-    + `10x L75 + 1M troops = ${broadKingdom.toLocaleString()}.`
+  `Validated King Power v5: 1x L100 + 10M troops = ${concentratedArmy.total.toLocaleString()}, `
+    + `10x L75 + 1M troops = ${broadKingdom.total.toLocaleString()}.`
 );

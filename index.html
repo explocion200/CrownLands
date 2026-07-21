@@ -12,11 +12,11 @@
   <meta name="apple-mobile-web-app-title" content="Crownlands" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="format-detection" content="telephone=no" />
-  <meta name="crownlands-build" content="20260721-skill-authority-audit" />
+  <meta name="crownlands-build" content="20260721-king-power-v5" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700;800;900&family=Cinzel+Decorative:wght@700;900&family=IM+Fell+English:ital@0;1&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=20260721-medieval-transfer-icon" />
+  <link rel="stylesheet" href="styles.css?v=20260721-king-power-v5" />
   <link rel="preload" as="image" href="assets/game-menu-background.jpg?v=20260702-login-page" />
   <link rel="preload" as="image" href="assets/loading-ring.png" />
   <link rel="preload" as="image" href="assets/loading-crown.png" />
@@ -211,7 +211,12 @@
           <section class="kingdom-overview" aria-label="Kingdom totals">
             <div class="profile-section-heading"><span>Kingdom</span><h3>Overview</h3></div>
             <div class="kingdom-stat-grid">
-              <div class="kingdom-stat kingdom-stat-wide"><span>King Power</span><strong id="profileKingPowerStat">0</strong></div>
+              <div class="kingdom-stat kingdom-stat-wide kingdom-stat-power">
+                <span>King Power</span>
+                <strong id="profileKingPowerStat">0</strong>
+                <small id="profileKingPowerBreakdown">Army 0 | Replacement 0 | Defense 0</small>
+                <small id="profileKingPowerStrongholdBonus" hidden></small>
+              </div>
               <div class="kingdom-stat kingdom-stat-wide"><span>Cities</span><strong id="profileCitiesStat">1</strong></div>
               <div class="kingdom-stat"><span>Gold</span><strong id="profileGoldStat">500</strong></div>
               <div class="kingdom-stat"><span>Troops</span><strong id="profileTroopsStat">50</strong></div>
@@ -277,7 +282,7 @@
   <script src="assets/map-editor-data.js?v=20260705-stronghold-sizes"></script>
   <script src="world-config.js"></script>
   <script src="firebase-config.js?v=20260703-vapid-key"></script>
-  <script src="firebaseClient.js?v=20260721-skill-authority-audit"></script>
-  <script src="game.js?v=20260721-skill-authority-audit"></script>
+  <script src="firebaseClient.js?v=20260721-king-power-v5"></script>
+  <script src="game.js?v=20260721-king-power-v5"></script>
 </body>
 </html>

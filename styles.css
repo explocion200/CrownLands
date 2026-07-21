@@ -5207,6 +5207,15 @@ button.inventory-slot {
 .kingdom-stat-wide { grid-column: auto; width: auto; justify-self: stretch; }
 .kingdom-stat span { color: #9ed5ff; font-size: .72rem; font-weight: 900; }
 .kingdom-stat strong { color: #fff; font-size: 1.12rem; }
+.kingdom-stat-power { min-height: 82px; }
+.kingdom-stat-power small {
+  display: block;
+  color: #b8d9ed;
+  font-size: .56rem;
+  font-weight: 700;
+  line-height: 1.25;
+}
+.kingdom-stat-power small[hidden] { display: none; }
 .profile-notification-row {
   min-height: 50px;
   display: grid;
@@ -5337,6 +5346,7 @@ button.inventory-slot {
   .profile-level-row span { font-size: .72rem; }
   .profile-xp-track { height: 12px; }
   .kingdom-stat { min-height: 62px; padding: .42rem .5rem; }
+  .kingdom-stat-power { min-height: 76px; }
   .kingdom-stat strong { font-size: .96rem; }
   .flag-editor-view { padding-top: .5rem; }
   .kingdom-flag-editor { width: 132px; height: 92px; }
