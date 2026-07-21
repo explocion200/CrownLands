@@ -2367,6 +2367,7 @@ let performanceFrameCount = 0;
 let performanceLastSampleTime = performance.now();
 let performanceFps = 0;
 let cityTapState = null;
+let campTapState = null;
 
 const setupScreen = document.getElementById("setupScreen");
 const gameView = document.querySelector(".game-view");
@@ -18158,6 +18159,7 @@ function beginPinch() {
   const [a, b] = pair;
   const mid = midpointBetween(a, b);
   cityTapState = null;
+  campTapState = null;
   pinchState = {
     startDistance: Math.max(1, distanceBetween(a, b)),
     startZoom: zoom,
@@ -18241,6 +18243,12 @@ function resolveCityTapButton(event) {
   return directNode || candidateNodes[0] || null;
 }
 
+function resolveCampTapButton(event) {
+  if (!event || !cityLayer) return null;
+  const campButton = event.target?.closest?.(".camp-node[data-camp-id]") || null;
+  return campButton && cityLayer.contains(campButton) ? campButton : null;
+}
+
 function trackCityTap(event, cityButton = resolveCityTapButton(event)) {
   if (!cityButton || !cityLayer.contains(cityButton)) return null;
   cityTapState = {
@@ -18251,6 +18259,17 @@ function trackCityTap(event, cityButton = resolveCityTapButton(event)) {
     selected: false,
   };
   return cityButton;
+}
+
+function trackCampTap(event, campButton = resolveCampTapButton(event)) {
+  if (!campButton) return null;
+  campTapState = {
+    pointerId: event.pointerId,
+    campId: campButton.dataset.campId,
+    x: event.clientX,
+    y: event.clientY,
+  };
+  return campButton;
 }
 
 function beginTrackedPan(event, startedOnMapNode = false) {
@@ -18316,6 +18335,7 @@ function movePan(event) {
   if (distance > movementThreshold) {
     panState.moved = true;
     if (cityTapState?.pointerId === event.pointerId) cityTapState = null;
+    if (campTapState?.pointerId === event.pointerId) campTapState = null;
   }
   if (panState.startedOnMapNode && !panState.moved) return;
   camera.x = panState.cameraX - dx / zoom;
@@ -18364,6 +18384,26 @@ function trySelectTrackedCityTap(event, { requireSameTarget = false } = {}) {
   if (!city || !isCityInActiveMap(city)) return false;
   suppressMapClick = true;
   selectCity(tapState.cityId);
+  window.setTimeout(() => { suppressMapClick = false; }, 80);
+  return true;
+}
+
+function trySelectTrackedCampTap(event, { requireSameTarget = false } = {}) {
+  if (isMapInteractionBlocked()) return false;
+  if (!campTapState || campTapState.pointerId !== event.pointerId) return false;
+  const tapState = campTapState;
+  campTapState = null;
+  const moved = Math.hypot(event.clientX - tapState.x, event.clientY - tapState.y) > 12;
+  if (moved) return false;
+  if (requireSameTarget) {
+    const campButton = resolveCampTapButton(event);
+    const sameCamp = campButton?.dataset.campId === tapState.campId;
+    if (!sameCamp) return false;
+  }
+  const camp = getCampTargetById(tapState.campId);
+  if (!camp || !isCampInActiveMap(camp)) return false;
+  suppressMapClick = true;
+  selectRewardCamp(tapState.campId);
   window.setTimeout(() => { suppressMapClick = false; }, 80);
   return true;
 }
@@ -18521,12 +18561,28 @@ if (flagExitBtn) flagExitBtn.addEventListener("click", closeProfileScreen);
 clearSelectBtn.addEventListener("click", () => clearSelection());
 cityLayer.addEventListener("pointerdown", event => {
   if (isMapInteractionBlocked()) return;
-  const cityButton = event.target.closest(".city-wheel-action") ? null : resolveCityTapButton(event);
+  const startedOnCommand = isMapCommandInteractionTarget(event.target);
+  const cityButton = startedOnCommand ? null : resolveCityTapButton(event);
+  const campButton = cityButton || startedOnCommand ? null : resolveCampTapButton(event);
   if (cityButton) trackCityTap(event, cityButton);
+  else if (campButton) trackCampTap(event, campButton);
   if (event.target.closest(".city-node, .city-wheel-action, .camp-node, .gold-camp-wheel-action")) interactionRenderLockUntil = performance.now() + 600;
 });
 cityLayer.addEventListener("pointerup", event => {
   if (isMapInteractionBlocked()) return;
+  if (campTapState?.pointerId === event.pointerId) {
+    const campButton = resolveCampTapButton(event);
+    const moved = Math.hypot(event.clientX - campTapState.x, event.clientY - campTapState.y) > 12;
+    const sameCamp = campButton?.dataset.campId === campTapState.campId;
+    if (!moved && sameCamp) {
+      event.stopPropagation();
+      finishTrackedMapPointer(event, { renderPanelAfter: false });
+      trySelectTrackedCampTap(event, { requireSameTarget: true });
+    } else {
+      campTapState = null;
+    }
+    return;
+  }
   if (!cityTapState || cityTapState.pointerId !== event.pointerId) return;
   const cityButton = resolveCityTapButton(event);
   const moved = Math.hypot(event.clientX - cityTapState.x, event.clientY - cityTapState.y) > 12;
@@ -18541,6 +18597,7 @@ cityLayer.addEventListener("pointerup", event => {
 });
 cityLayer.addEventListener("pointercancel", event => {
   if (cityTapState?.pointerId === event.pointerId) cityTapState = null;
+  if (campTapState?.pointerId === event.pointerId) campTapState = null;
 });
 if (portalLayer) {
   portalLayer.addEventListener("pointerdown", event => {
@@ -18558,6 +18615,7 @@ cityLayer.addEventListener("click", event => {
   if (campButton && cityLayer.contains(campButton)) {
     event.stopPropagation();
     cityTapState = null;
+    campTapState = null;
     selectRewardCamp(campButton.dataset.campId);
     return;
   }
@@ -18569,6 +18627,7 @@ cityLayer.addEventListener("click", event => {
     return;
   }
   cityTapState = null;
+  campTapState = null;
   selectCity(cityButton.dataset.cityId);
 });
 const mapPointerEventOptions = { passive: false };
