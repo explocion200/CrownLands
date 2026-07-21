@@ -15996,7 +15996,7 @@ function renderSendConfirmPanel(source, target) {
 
   const isTransfer = target.owner === "player";
   const neutralBlockReason = getNeutralCaptureBlockReason(target, "player");
-  const icon = isTransfer ? "\u{1F45F}" : "\u2694";
+  const icon = isTransfer ? "\u265E" : "\u2694";
   const label = isTransfer ? "Move" : "Attack";
   const route = findRoute(source, target);
   const sendAmount = source.troops > 0 ? clamp(Math.floor(source.troops * selectedMarchPercent), 1, source.troops) : 0;
@@ -16192,7 +16192,7 @@ async function showTroopSliderModalAsync(source, target) {
 
 function showTroopRouteLoadingModal(source, target, isTransfer) {
   const commandLabel = isTransfer ? "Transfer" : "Attack";
-  const commandIcon = isTransfer ? "&#128095;" : "&#9876;";
+  const commandIcon = isTransfer ? "&#9822;" : "&#9876;";
   modal.classList.add("troop-slider-modal");
   modalTitle.textContent = `${commandLabel} troops`;
   modalBody.innerHTML = `
@@ -16251,7 +16251,7 @@ function showTroopSliderModalWithRoute(source, target, route) {
     return;
   }
   const commandLabel = isTransfer ? "Transfer" : "Attack";
-  const commandIcon = isTransfer ? "&#128095;" : "&#9876;";
+  const commandIcon = isTransfer ? "&#9822;" : "&#9876;";
   const shieldDropWarning = isTransfer ? "" : getPeaceShieldAttackWarning(target);
   selectedTroopAmount = clamp(selectedTroopAmount, 1, source.troops);
   troopSliderActive = true;
