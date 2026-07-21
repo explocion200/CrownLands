@@ -2549,11 +2549,11 @@ function createRelinquishContinuationMovement({
 }
 
 function getCityEntryIslandId(entry = {}) {
-  return safeString(entry.ref?.parent?.parent?.id || getOnlineIslandId(entry.city?.regionId), 160);
+  return safeString(entry?.ref?.parent?.parent?.id || getOnlineIslandId(entry?.city?.regionId), 160);
 }
 
 function getCityEntryPath(entry = {}) {
-  return safeString(entry.ref?.path, 240);
+  return safeString(entry?.ref?.path, 240);
 }
 
 function getCityEntryClaimedAtMs(entry = {}) {
