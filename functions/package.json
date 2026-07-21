@@ -8,7 +8,7 @@
   "main": "index.js",
   "scripts": {
     "lint": "node --check index.js",
-    "test": "node ../tools/validate-runtime.js && node ../tools/validate-route-obstacles.js && node ../tools/validate-king-power.js"
+    "test": "node ../tools/validate-runtime.js && node ../tools/validate-route-obstacles.js && node ../tools/validate-king-power.js && node ../tools/validate-level-up-rewards.js"
   },
   "dependencies": {
     "@google-cloud/functions-framework": "^5.0.5",

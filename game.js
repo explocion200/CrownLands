@@ -6479,6 +6479,9 @@ function normalizeBattleReports(reports) {
         opponentName: String(report.opponentName || "").slice(0, 40),
         ownerName: String(report.ownerName || "").slice(0, 40),
         summary: String(report.summary || "").slice(0, 220),
+        xpAwarded: Math.max(0, Math.floor(Number(report.xpAwarded) || 0)),
+        goldAwarded: Math.max(0, Math.floor(Number(report.goldAwarded) || 0)),
+        troopsAwarded: Math.max(0, Math.floor(Number(report.troopsAwarded) || 0)),
         scoutReport: report.scoutReport || null,
       };
     })
@@ -17601,6 +17604,7 @@ async function upgradeCity(cityId, levels = 1) {
     serverCityUpgradeInFlightIds.add(inFlightKey);
     let totalUpgraded = 0;
     let totalSpent = 0;
+    let totalTroopsAwarded = 0;
     try {
       let remainingLevels = requestedLevels;
       while (remainingLevels > 0) {
@@ -17614,13 +17618,14 @@ async function upgradeCity(cityId, levels = 1) {
         const upgraded = Math.max(0, Math.floor(Number(result?.upgraded) || chunkLevels));
         totalUpgraded += upgraded;
         totalSpent += Math.max(0, Math.floor(Number(result?.spentGold) || 0));
+        totalTroopsAwarded += Math.max(0, Math.floor(Number(result?.troopsAwarded) || 0));
         remainingLevels -= upgraded;
         if (upgraded < chunkLevels) break;
       }
       const updatedCity = cityById(city.id) || city;
       const levelText = totalUpgraded > 1 ? `${formatNumber(totalUpgraded)} levels` : "1 level";
       addLog(`${updatedCity.name} upgraded ${levelText} to level ${formatNumber(updatedCity.level)}${totalSpent ? ` for ${formatNumber(totalSpent)} gold` : ""}.`);
-      showToast(`${updatedCity.name} upgraded ${levelText}`);
+      showToast(`${updatedCity.name} upgraded ${levelText}${totalTroopsAwarded ? ` · +${formatNumber(totalTroopsAwarded)} level-up troops` : ""}`);
       renderAll();
     } catch (error) {
       onlineLastError = error?.message || String(error);
@@ -18768,6 +18773,9 @@ function showBattleReportDetail(reportId) {
         <div><span>Defenders left</span><strong>${formatNumber(report.defendersLeft)}</strong></div>
         <div><span>Attackers lost</span><strong>${formatNumber(report.attackerLosses)}</strong></div>
         <div><span>Defenders lost</span><strong>${formatNumber(report.defenderLosses)}</strong></div>
+        ${report.xpAwarded > 0 ? `<div><span>XP earned</span><strong>+${formatNumber(report.xpAwarded)}</strong></div>` : ""}
+        ${report.goldAwarded > 0 ? `<div><span>Gold earned</span><strong>+${formatNumber(report.goldAwarded)}</strong></div>` : ""}
+        ${report.troopsAwarded > 0 ? `<div><span>Level-up troops</span><strong>+${formatNumber(report.troopsAwarded)}</strong></div>` : ""}
       </div>
       <p>${escapeHtml(report.summary || getBattleReportSummary(report))}</p>
     </div>

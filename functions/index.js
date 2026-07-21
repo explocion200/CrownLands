@@ -2383,6 +2383,41 @@ function appendEconomyCityPatch(economy = null, ref = null, city = {}, patch = {
   return true;
 }
 
+function creditLevelUpTroopsToMainCity(economy = null, profile = {}, troopReward = 0, nowMs = Date.now()) {
+  const credited = Math.max(0, Math.floor(safeNumber(troopReward, 0)));
+  if (!economy?.uid || credited <= 0) return null;
+  const mainEntry = getCanonicalMainCityEntry(profile, economy.cityEntries);
+  const city = mainEntry?.city;
+  if (!mainEntry?.ref || !city || getOwnerUid(city) !== economy.uid || isStronghold(city)) return null;
+
+  const troopFloat = Math.max(0, safeNumber(city.troopFloat, city.troops || 0)) + credited;
+  const patch = {
+    troops: Math.max(0, Math.floor(troopFloat)),
+    troopFloat,
+    productionUpdatedAtMs: nowMs,
+  };
+  appendEconomyCityPatch(economy, mainEntry.ref, city, patch);
+
+  const cityUpdate = {
+    id: city.id,
+    regionId: normalizeRegionId(city.regionId || getRegionIdFromOnlineIslandId(getCityEntryIslandId(mainEntry))),
+    ...patch,
+  };
+  const existingUpdate = economy.cityUpdates.find(update => (
+    update?.id === cityUpdate.id && normalizeRegionId(update.regionId) === cityUpdate.regionId
+  ));
+  if (existingUpdate) Object.assign(existingUpdate, cityUpdate);
+  else economy.cityUpdates.push(cityUpdate);
+
+  return {
+    credited,
+    cityId: city.id,
+    cityName: safeString(city.name || city.id || "main city", 40),
+    regionId: cityUpdate.regionId,
+    patch,
+  };
+}
+
 function findNearestOwnedCityDestination(economy = null, source = null, excludedPaths = []) {
   if (!economy || !source) return null;
   const excluded = new Set((Array.isArray(excludedPaths) ? excludedPaths : []).map(path => safeString(path, 240)));
@@ -4264,16 +4299,23 @@ exports.upgradeCity = onCall({ region: "us-central1", maxInstances: 20, invoker:
     }
 
     const progress = buildPlayerProgressPatch({ ...economy.profileAfter, gold, goldFloat }, { xp: xpAward });
+    const levelTroopReward = creditLevelUpTroopsToMainCity(
+      economy,
+      economy.profileAfter,
+      progress.levelTroopReward,
+      nowMs
+    );
     const cityPatch = {
       level: city.level,
       investedGold,
       productionUpdatedAtMs: nowMs,
     };
+    const latestCity = getEconomyCityByRef(economy, cityRef)?.city || city;
     const cityUpdate = {
       id: city.id,
       regionId: city.regionId || regionId,
-      troops: Math.max(0, Math.floor(safeNumber(city.troops, 0))),
-      troopFloat: Math.max(0, safeNumber(city.troopFloat, city.troops || 0)),
+      troops: Math.max(0, Math.floor(safeNumber(latestCity.troops, 0))),
+      troopFloat: Math.max(0, safeNumber(latestCity.troopFloat, latestCity.troops || 0)),
       ...cityPatch,
     };
 
@@ -4291,6 +4333,9 @@ exports.upgradeCity = onCall({ region: "us-central1", maxInstances: 20, invoker:
       spentGold,
       upgraded,
       xpAwarded: progress.xpAwarded,
+      troopsAwarded: levelTroopReward?.credited || 0,
+      troopRewardCityId: levelTroopReward?.cityId || "",
+      troopRewardCityName: levelTroopReward?.cityName || "",
     });
   });
 });
@@ -5919,6 +5964,20 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
         xp: result.success ? defenseLostXp : defenseHeldXp,
       })
       : null;
+    const attackerLevelTroopReward = creditLevelUpTroopsToMainCity(
+      attackerEconomy,
+      attackerProfile,
+      attackerProgress.levelTroopReward,
+      nowMs
+    );
+    const defenderLevelTroopReward = defenderProgress
+      ? creditLevelUpTroopsToMainCity(
+        defenderEconomy,
+        defenderProfile || {},
+        defenderProgress.levelTroopReward,
+        nowMs
+      )
+      : null;
 
     if (result.success) {
       const daily = normalizeDaily(attackerProfile.daily);
@@ -5955,9 +6014,10 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
         troopCount: defendersAtStart,
         result,
         totalDefense: targetStats.totalDefense,
-        summary: `Captured with ${result.survivors.toLocaleString()} survivors. Level ${clampCityLevel(target.level).toLocaleString()} to ${nextLevel.toLocaleString()}. +${attackerProgress.xpAwarded.toLocaleString()} XP.`,
+        summary: `Captured with ${result.survivors.toLocaleString()} survivors. Level ${clampCityLevel(target.level).toLocaleString()} to ${nextLevel.toLocaleString()}. +${attackerProgress.xpAwarded.toLocaleString()} XP.${attackerLevelTroopReward ? ` Hero level reward: +${attackerLevelTroopReward.credited.toLocaleString()} troops to ${attackerLevelTroopReward.cityName}.` : ""}`,
         xpAwarded: attackerProgress.xpAwarded,
         goldAwarded: attackerProgress.goldAwarded,
+        troopsAwarded: attackerLevelTroopReward?.credited || 0,
         characterAfter: attackerProgress.character,
         goldAfter: attackerProgress.gold,
         nowMs,
@@ -6023,9 +6083,10 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
           troopCount: defendersAtStart,
           result,
           totalDefense: targetStats.totalDefense,
-          summary: `${target.name || target.id} was captured by ${attackerName}. Level ${clampCityLevel(target.level).toLocaleString()} to ${nextLevel.toLocaleString()}. +${defenderProgress.xpAwarded.toLocaleString()} XP.${defenderRecoveredTroops > 0 ? ` Field Medics returned ${defenderRecoveredTroops.toLocaleString()} troops to your main city.` : ""}`,
+          summary: `${target.name || target.id} was captured by ${attackerName}. Level ${clampCityLevel(target.level).toLocaleString()} to ${nextLevel.toLocaleString()}. +${defenderProgress.xpAwarded.toLocaleString()} XP.${defenderLevelTroopReward ? ` Hero level reward: +${defenderLevelTroopReward.credited.toLocaleString()} troops to ${defenderLevelTroopReward.cityName}.` : ""}${defenderRecoveredTroops > 0 ? ` Field Medics returned ${defenderRecoveredTroops.toLocaleString()} troops to your main city.` : ""}`,
           xpAwarded: defenderProgress.xpAwarded,
           goldAwarded: defenderProgress.goldAwarded,
+          troopsAwarded: defenderLevelTroopReward?.credited || 0,
           characterAfter: defenderProgress.character,
           goldAfter: defenderProgress.gold,
           nowMs,
@@ -6074,9 +6135,10 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
       troopCount: defendersAtStart,
       result,
       totalDefense: targetStats.totalDefense,
-      summary: `${result.defendersLeft.toLocaleString()} defenders remained. +${attackerProgress.xpAwarded.toLocaleString()} XP.`,
+      summary: `${result.defendersLeft.toLocaleString()} defenders remained. +${attackerProgress.xpAwarded.toLocaleString()} XP.${attackerLevelTroopReward ? ` Hero level reward: +${attackerLevelTroopReward.credited.toLocaleString()} troops to ${attackerLevelTroopReward.cityName}.` : ""}`,
       xpAwarded: attackerProgress.xpAwarded,
       goldAwarded: attackerProgress.goldAwarded,
+      troopsAwarded: attackerLevelTroopReward?.credited || 0,
       characterAfter: attackerProgress.character,
       goldAfter: attackerProgress.gold,
       nowMs,
@@ -6129,9 +6191,10 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
         troopCount: defendersAtStart,
         result,
         totalDefense: targetStats.totalDefense,
-        summary: `${target.name || target.id} survived with ${result.defendersLeft.toLocaleString()} defenders. +${defenderProgress.xpAwarded.toLocaleString()} XP.${defenderRecoveredTroops > 0 ? ` Field Medics returned ${defenderRecoveredTroops.toLocaleString()} troops to your main city.` : ""}`,
+        summary: `${target.name || target.id} survived with ${result.defendersLeft.toLocaleString()} defenders. +${defenderProgress.xpAwarded.toLocaleString()} XP.${defenderLevelTroopReward ? ` Hero level reward: +${defenderLevelTroopReward.credited.toLocaleString()} troops to ${defenderLevelTroopReward.cityName}.` : ""}${defenderRecoveredTroops > 0 ? ` Field Medics returned ${defenderRecoveredTroops.toLocaleString()} troops to your main city.` : ""}`,
         xpAwarded: defenderProgress.xpAwarded,
         goldAwarded: defenderProgress.goldAwarded,
+        troopsAwarded: defenderLevelTroopReward?.credited || 0,
         characterAfter: defenderProgress.character,
         goldAfter: defenderProgress.gold,
         nowMs,
