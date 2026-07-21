@@ -74,6 +74,7 @@ This build has Firebase Auth, Firestore, and callable Functions added without br
 - Online troop orders now call Firebase Functions: `sendArmyOrder` creates and validates marches server-side, and `resolveArmyOrder` resolves scouts, transfers, attacks, defenses, city capture, level drops, XP, gold rewards, and battle reports in Firestore transactions.
 - Server-written reports are stored under `players/{uid}/serverReports/{reportId}` and merged into the in-game Reports UI.
 - Kingdom-wide totals are server-derived in `players/{uid}/stats/global`. King Power, total city count, marching troops, gold/hour, troop/hour, per-island owned counts, and leaderboard rows should read this aggregate instead of scanning every island during normal login.
+- King Power v3 combines permanent city territory, base gold and troop production, walls, level defense, objective strongholds, and diminishing total troop power. Stationed and marching troops are combined before scoring so moving an army cannot inflate or hide its contribution; temporary boosts and skills do not change King Power.
 - Admin-only callables `recalculatePlayerGlobalStats` and `recalculateAllPlayerGlobalStats` rebuild the aggregate and leaderboard rows when old player data needs repair.
 
 See `FIREBASE_SETUP.md` for the Firebase project steps and the planned shared-world collections.

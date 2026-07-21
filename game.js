@@ -649,9 +649,16 @@ const CITY_LEVEL_STATS = {
   troopProductionPerVictoryPoint: 3,
   goldProductionPerMillionLordsVp: MILLION_LORDS_PASSIVE_GOLD_PER_CITY_VP,
 };
-const KING_POWER_PER_TROOP = 1;
-const KING_POWER_PER_CITY_VP = 10;
-const KING_POWER_AUTHORITY_VERSION = 2;
+const KING_POWER_TERRITORY_PER_CITY = 2500;
+const KING_POWER_GOLD_PRODUCTION_SQRT_MULTIPLIER = 50;
+const KING_POWER_TROOP_PRODUCTION_MULTIPLIER = 8;
+const KING_POWER_WALL_MULTIPLIER = 4;
+const KING_POWER_DEFENSE_PERCENT_MULTIPLIER = 50;
+const KING_POWER_STRONGHOLD_BASE = 25000;
+const KING_POWER_STRONGHOLD_LEVEL_MULTIPLIER = 1000;
+const KING_POWER_TROOP_SCALE = 10;
+const KING_POWER_TROOP_EXPONENT = 0.7;
+const KING_POWER_AUTHORITY_VERSION = 3;
 const SKILL_RESET_COST = 750_000;
 
 const SKILL_CONFIG = {
@@ -5772,6 +5779,12 @@ function normalizeGlobalStatsSnapshot(raw = null) {
     stationedTroopPower: normalizePowerValue(raw.stationedTroopPower),
     cityPower: normalizePowerValue(raw.cityPower),
     marchingPower: normalizePowerValue(raw.marchingPower),
+    troopPower: normalizePowerValue(raw.troopPower),
+    territoryPower: normalizePowerValue(raw.territoryPower),
+    economicPower: normalizePowerValue(raw.economicPower),
+    troopProductionPower: normalizePowerValue(raw.troopProductionPower),
+    fortificationPower: normalizePowerValue(raw.fortificationPower),
+    strongholdPower: normalizePowerValue(raw.strongholdPower),
     characterLevel: Math.max(1, Math.floor(Number(raw.characterLevel) || 1)),
     mainCityId: getKnownCityId(raw.mainCityId),
     mainIslandId: String(raw.mainIslandId || ""),
@@ -5846,12 +5859,41 @@ function getPresenceKingPowerByUid(uid) {
   return normalizePowerValue(presence?.kingPower);
 }
 
+function getTroopKingPower(troops = 0) {
+  const troopCount = Math.max(0, Math.floor(Number(troops) || 0));
+  if (!troopCount) return 0;
+  const power = Math.pow(troopCount, KING_POWER_TROOP_EXPONENT) * KING_POWER_TROOP_SCALE;
+  return Number.isFinite(power) ? Math.min(Number.MAX_SAFE_INTEGER, Math.floor(power)) : Number.MAX_SAFE_INTEGER;
+}
+
+function getCityInfrastructureKingPower(city) {
+  if (!city) return 0;
+  if (isStronghold(city)) {
+    return KING_POWER_STRONGHOLD_BASE
+      + getStrongholdDefenseLevel(city) * KING_POWER_STRONGHOLD_LEVEL_MULTIPLIER;
+  }
+  const level = clampCityLevel(city.level);
+  const victoryPoints = Math.floor(
+    CITY_LEVEL_STATS.victoryPointsBase
+      + level * CITY_LEVEL_STATS.victoryPointsPerLevel
+      + Math.pow(level, CITY_LEVEL_STATS.victoryPointsExponent) * CITY_LEVEL_STATS.victoryPointsExponentScale
+  );
+  const baseGoldPerHour = getMillionLordsPassiveGoldPerHour(level);
+  const baseTroopsPerHour = victoryPoints * CITY_LEVEL_STATS.troopProductionPerVictoryPoint;
+  const baseWalls = CITY_LEVEL_STATS.cityWallsBase + (level - 1) * CITY_LEVEL_STATS.cityWallsPerLevel;
+  const defensePercent = level * CITY_LEVEL_STATS.defensePercentPerLevel;
+  return Math.max(0, Math.floor(
+    KING_POWER_TERRITORY_PER_CITY
+      + Math.sqrt(baseGoldPerHour) * KING_POWER_GOLD_PRODUCTION_SQRT_MULTIPLIER
+      + baseTroopsPerHour * KING_POWER_TROOP_PRODUCTION_MULTIPLIER
+      + baseWalls * KING_POWER_WALL_MULTIPLIER
+      + defensePercent * KING_POWER_DEFENSE_PERCENT_MULTIPLIER
+  ));
+}
+
 function getCityPowerFloor(city) {
   if (!city) return 0;
-  const stats = getCityStats(city);
-  const troopPower = Math.max(0, Math.floor(Number(city.troops) || 0)) * KING_POWER_PER_TROOP;
-  const cityPower = Math.max(0, Math.floor(Number(stats.victoryPoints) || 0)) * KING_POWER_PER_CITY_VP;
-  return troopPower + cityPower;
+  return getCityInfrastructureKingPower(city) + getTroopKingPower(city.troops);
 }
 
 function getCityOwnerKingPowerSnapshot(city) {
@@ -5862,10 +5904,16 @@ function getCityOwnerKingPowerSnapshot(city) {
   if (Math.max(0, Math.floor(Number(cachedIdentity?.kingPowerVersion) || 0)) >= KING_POWER_AUTHORITY_VERSION) {
     return normalizePowerValue(cachedIdentity.kingPower);
   }
+  const presence = Array.isArray(onlinePresence)
+    ? onlinePresence.find(entry => entry?.uid === city.ownerUid)
+    : null;
   return Math.max(
-    normalizePowerValue(city.ownerKingPower),
-    normalizePowerValue(cachedIdentity?.kingPower),
-    getPresenceKingPowerByUid(city.ownerUid),
+    Math.max(0, Math.floor(Number(city.kingPowerVersion) || 0)) >= KING_POWER_AUTHORITY_VERSION
+      ? normalizePowerValue(city.ownerKingPower)
+      : 0,
+    Math.max(0, Math.floor(Number(presence?.kingPowerVersion) || 0)) >= KING_POWER_AUTHORITY_VERSION
+      ? normalizePowerValue(presence?.kingPower)
+      : 0,
     getCityPowerFloor(city)
   );
 }
@@ -13778,16 +13826,14 @@ function getPlayerMarchingTroops() {
 
 function getCityKingPower(city) {
   if (!city || city.owner !== "player") return 0;
-  const stats = getCityStats(city);
-  const troopPower = Math.max(0, Math.floor(Number(city.troops) || 0)) * KING_POWER_PER_TROOP;
-  const cityPower = Math.max(0, Math.floor(Number(stats.victoryPoints) || 0)) * KING_POWER_PER_CITY_VP;
-  return troopPower + cityPower;
+  return getCityInfrastructureKingPower(city) + getTroopKingPower(city.troops);
 }
 
 function getCachedKingPowerFallback() {
   const currentUid = getCurrentOnlineUid();
-  const cachedIdentityPower = currentUid
-    ? normalizePowerValue(playerIdentityCache.get(currentUid)?.kingPower)
+  const cachedIdentity = currentUid ? playerIdentityCache.get(currentUid) : null;
+  const cachedIdentityPower = Math.max(0, Math.floor(Number(cachedIdentity?.kingPowerVersion) || 0)) >= KING_POWER_AUTHORITY_VERSION
+    ? normalizePowerValue(cachedIdentity?.kingPower)
     : 0;
   return Math.max(0, normalizePowerValue(lastComputedKingPower), cachedIdentityPower);
 }
@@ -13802,16 +13848,21 @@ function getCurrentPlayerIdentityKingPower(fallback = 0) {
 function getKingPower() {
   if (!state || !Array.isArray(state.cities)) return 0;
   const globalStats = getGlobalStatsSnapshot();
-  if (hasUsableGlobalStats(globalStats)) {
+  if (hasUsableGlobalStats(globalStats) && globalStats.version >= KING_POWER_AUTHORITY_VERSION) {
     lastComputedKingPower = normalizePowerValue(globalStats.kingPower);
     return lastComputedKingPower;
   }
   if (kingPowerCalculationInProgress) return getCachedKingPowerFallback();
   kingPowerCalculationInProgress = true;
   try {
-    const stationedPower = getAllOwnedCitiesForDisplay().reduce((total, city) => total + getCityKingPower(city), 0);
-    const marchingPower = getPlayerMarchingTroops() * KING_POWER_PER_TROOP;
-    lastComputedKingPower = Math.max(0, Math.floor(stationedPower + marchingPower));
+    const ownedCities = getAllOwnedCitiesForDisplay();
+    const infrastructurePower = ownedCities.reduce((total, city) => total + getCityInfrastructureKingPower(city), 0);
+    const stationedTroops = ownedCities.reduce(
+      (total, city) => total + Math.max(0, Math.floor(Number(city.troops) || 0)),
+      0
+    );
+    const totalTroops = stationedTroops + getPlayerMarchingTroops();
+    lastComputedKingPower = Math.max(0, Math.floor(infrastructurePower + getTroopKingPower(totalTroops)));
     return lastComputedKingPower;
   } finally {
     kingPowerCalculationInProgress = false;
@@ -13822,7 +13873,9 @@ function getKingdomSummary() {
   const globalStats = getGlobalStatsSnapshot();
   if (hasUsableGlobalStats(globalStats)) {
     return {
-      kingPower: normalizePowerValue(globalStats.kingPower),
+      kingPower: globalStats.version >= KING_POWER_AUTHORITY_VERSION
+        ? normalizePowerValue(globalStats.kingPower)
+        : getKingPower(),
       cities: Math.max(0, Math.floor(Number(globalStats.totalCities) || 0)),
       troops: Math.max(0, Math.floor(Number(globalStats.totalTroops) || 0))
         + Math.max(0, Math.floor(Number(globalStats.totalMarchingTroops) || 0)),
