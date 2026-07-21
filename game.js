@@ -2405,6 +2405,7 @@ let performanceLastSampleTime = performance.now();
 let performanceFps = 0;
 let cityTapState = null;
 let campTapState = null;
+let armyTapState = null;
 
 const setupScreen = document.getElementById("setupScreen");
 const gameView = document.querySelector(".game-view");
@@ -19330,6 +19331,7 @@ function beginPinch() {
   const mid = midpointBetween(a, b);
   cityTapState = null;
   campTapState = null;
+  armyTapState = null;
   pinchState = {
     startDistance: Math.max(1, distanceBetween(a, b)),
     startZoom: zoom,
@@ -19419,6 +19421,12 @@ function resolveCampTapButton(event) {
   return campButton && cityLayer.contains(campButton) ? campButton : null;
 }
 
+function resolveArmyTapToken(event) {
+  if (!event || !armyLayer) return null;
+  const token = event.target?.closest?.(".army-token[data-army-token-id]") || null;
+  return token && armyLayer.contains(token) ? token : null;
+}
+
 function trackCityTap(event, cityButton = resolveCityTapButton(event)) {
   if (!cityButton || !cityLayer.contains(cityButton)) return null;
   cityTapState = {
@@ -19440,6 +19448,17 @@ function trackCampTap(event, campButton = resolveCampTapButton(event)) {
     y: event.clientY,
   };
   return campButton;
+}
+
+function trackArmyTap(event, token = resolveArmyTapToken(event)) {
+  if (!token) return null;
+  armyTapState = {
+    pointerId: event.pointerId,
+    tokenId: token.dataset.armyTokenId,
+    x: event.clientX,
+    y: event.clientY,
+  };
+  return token;
 }
 
 function beginTrackedPan(event, startedOnMapNode = false) {
@@ -19469,9 +19488,11 @@ function startPan(event) {
 
   const isTouch = event.pointerType === "touch";
   const startedOnCommand = isMapCommandInteractionTarget(event.target);
-  const cityButton = startedOnCommand ? null : resolveCityTapButton(event);
+  const armyToken = startedOnCommand ? null : resolveArmyTapToken(event);
+  const cityButton = armyToken || startedOnCommand ? null : resolveCityTapButton(event);
   if (cityButton) trackCityTap(event, cityButton);
-  const startedOnMapNode = Boolean(cityButton) || isMapNodeInteractionTarget(event.target);
+  if (armyToken) trackArmyTap(event, armyToken);
+  const startedOnMapNode = Boolean(cityButton || armyToken) || isMapNodeInteractionTarget(event.target);
 
   if (isTouch && !startedOnCommand) event.preventDefault();
 
@@ -19506,6 +19527,7 @@ function movePan(event) {
     panState.moved = true;
     if (cityTapState?.pointerId === event.pointerId) cityTapState = null;
     if (campTapState?.pointerId === event.pointerId) campTapState = null;
+    if (armyTapState?.pointerId === event.pointerId) armyTapState = null;
   }
   if (panState.startedOnMapNode && !panState.moved) return;
   camera.x = panState.cameraX - dx / zoom;
@@ -19578,10 +19600,25 @@ function trySelectTrackedCampTap(event, { requireSameTarget = false } = {}) {
   return true;
 }
 
+function trySelectTrackedArmyTap(event) {
+  if (isMapInteractionBlocked()) return false;
+  if (!armyTapState || armyTapState.pointerId !== event.pointerId) return false;
+  const tapState = armyTapState;
+  armyTapState = null;
+  const moved = Math.hypot(event.clientX - tapState.x, event.clientY - tapState.y) > 12;
+  if (moved || !getArmyByTokenId(tapState.tokenId)) return false;
+  suppressMapClick = true;
+  selectedArmyTokenId = selectedArmyTokenId === tapState.tokenId ? "" : tapState.tokenId;
+  updateArmyTokenNavigationSelection();
+  window.setTimeout(() => { suppressMapClick = false; }, 120);
+  return true;
+}
+
 function endPan(event) {
   finishTrackedMapPointer(event, { renderPanelAfter: false });
   const selectedMapTarget = event.type === "pointerup"
-    && (trySelectTrackedCityTap(event) || trySelectTrackedCampTap(event));
+    && (trySelectTrackedCityTap(event) || trySelectTrackedCampTap(event) || trySelectTrackedArmyTap(event));
+  if (event.type !== "pointerup" && armyTapState?.pointerId === event.pointerId) armyTapState = null;
   if (!selectedMapTarget) renderPanel();
 }
 
@@ -19781,6 +19818,7 @@ cityLayer.addEventListener("pointerup", event => {
 cityLayer.addEventListener("pointercancel", event => {
   if (cityTapState?.pointerId === event.pointerId) cityTapState = null;
   if (campTapState?.pointerId === event.pointerId) campTapState = null;
+  if (armyTapState?.pointerId === event.pointerId) armyTapState = null;
 });
 if (portalLayer) {
   portalLayer.addEventListener("pointerdown", event => {
