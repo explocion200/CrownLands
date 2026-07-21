@@ -90,7 +90,8 @@ const RECALL_HORN_ITEM_ID = "recall_horn";
 const RECALL_HORN_MINIMUM_REMAINING_MS = 1000;
 const RECALL_HORN_MINIMUM_RETURN_MS = 1000;
 const MAIN_CITY_CHANGE_CITY_LIMIT = 30;
-const MAIN_CITY_CHANGE_COOLDOWN_MS = 24 * 60 * 60 * 1000;
+const MAIN_CITY_CHANGE_SMALL_KINGDOM_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000;
+const MAIN_CITY_CHANGE_LARGE_KINGDOM_COOLDOWN_MS = 14 * 24 * 60 * 60 * 1000;
 const MAX_SERVER_PRODUCTION_SECONDS = 7 * 24 * 60 * 60;
 const GLOBAL_PLAYER_STATS_VERSION = 2;
 const PLAYER_IDENTITY_SYNC_VERSION = 1;
@@ -883,7 +884,10 @@ function createGlobalStatsSnapshot({
   let cityPower = 0;
   let goldPerHour = 0;
   let troopPerHour = 0;
-  const cityCountsByRegion = {};
+  // Include zeroes so Firestore merge writes clear regions where the player lost their final city.
+  const cityCountsByRegion = Object.fromEntries(
+    [...SERVER_WORLD_REGION_IDS].map(regionId => [regionId, 0])
+  );
 
   ownedEntries.forEach(entry => {
     const city = entry.city || {};
@@ -1742,6 +1746,13 @@ function isCityShielded(city = {}, attackerUid = "", nowMs = Date.now()) {
   return getShieldExpiresAtMs(city) > nowMs;
 }
 
+function shouldDeactivatePeaceShieldForAttack(target = {}, targetType = "city", attackerUid = "", resolvedKind = "attack") {
+  if (resolvedKind !== "attack") return false;
+  if (targetType === "camp" || isStronghold(target)) return true;
+  const targetOwnerUid = getOwnerUid(target);
+  return Boolean(targetOwnerUid && targetOwnerUid !== attackerUid);
+}
+
 function getCurrentDateKey(now = new Date()) {
   const year = now.getFullYear();
   const month = String(now.getMonth() + 1).padStart(2, "0");
@@ -2255,58 +2266,6 @@ function findNearestRelinquishDestination(economy = null, sourceEntry = null) {
       if (a.distance !== b.distance) return a.distance - b.distance;
       return safeString(a.city?.name || a.city?.id, 80).localeCompare(safeString(b.city?.name || b.city?.id, 80));
     })[0] || null;
-}
-
-function normalizeRelocationRegionCandidates(rawCandidates = []) {
-  if (!Array.isArray(rawCandidates)) return [];
-  const seenRegions = new Set();
-  return rawCandidates
-    .map(candidate => {
-      const regionId = normalizeRegionId(candidate?.regionId || candidate?.id || candidate?.mainRegionId);
-      if (!isKnownWorldRegionId(regionId) || seenRegions.has(regionId)) return null;
-      const islandId = safeString(candidate?.islandId || getOnlineIslandId(regionId), 160);
-      if (islandId !== getOnlineIslandId(regionId)) return null;
-      const allowedCityIds = getServerWorldRegularCityIds(regionId);
-      const rawCityIds = Array.isArray(candidate?.cityIds)
-        ? candidate.cityIds
-        : Array.isArray(candidate?.candidateCityIds) ? candidate.candidateCityIds : [];
-      const cityIds = [...new Set(rawCityIds
-        .map(cityId => safeString(cityId, 96).replace(/[^a-zA-Z0-9_-]/g, "_"))
-        .filter(cityId => cityId && allowedCityIds.has(cityId)))];
-      if (!cityIds.length) return null;
-      seenRegions.add(regionId);
-      return {
-        regionId,
-        islandId,
-        cityIds: cityIds.slice(0, 140),
-      };
-    })
-    .filter(Boolean)
-    .slice(0, 40);
-}
-
-async function pickRelocationTarget(transaction, regionCandidates = [], minimumNeutralCities = 0, excludeCityId = "") {
-  const neutralReserve = Math.max(0, Math.floor(safeNumber(minimumNeutralCities, 0)));
-  for (const candidate of regionCandidates) {
-    let chosen = null;
-    let neutralCityCount = 0;
-    for (const cityId of candidate.cityIds) {
-      if (cityId === excludeCityId) continue;
-      const ref = cityRefForRegion(candidate.regionId, cityId);
-      const snap = await transaction.get(ref);
-      if (!snap.exists) continue;
-      const city = { id: snap.id, ...snap.data(), regionId: candidate.regionId };
-      const ownerUid = getOwnerUid(city);
-      const ownerKind = city.ownerKind || city.owner || "neutral";
-      const isNeutralRegularCity = !isStronghold(city) && !ownerUid && ownerKind !== "player";
-      if (!isNeutralRegularCity) continue;
-      neutralCityCount += 1;
-      if (!chosen) chosen = { ref, city, regionId: candidate.regionId, islandId: candidate.islandId };
-      if (chosen && neutralCityCount >= neutralReserve) return { ...chosen, neutralCityCount };
-    }
-    if (chosen && neutralCityCount >= neutralReserve) return { ...chosen, neutralCityCount };
-  }
-  return null;
 }
 
 function getCityEntryIslandId(entry = {}) {
@@ -3120,6 +3079,7 @@ exports.reserveHarvestBonusSpawn = onCall({ region: "us-central1", maxInstances:
       return {
         ok: true,
         spawned: Boolean(overrides.spawned),
+        relocated: Boolean(overrides.relocated),
         reason: overrides.reason || "",
         currentUser: {
           daily,
@@ -3130,6 +3090,31 @@ exports.reserveHarvestBonusSpawn = onCall({ region: "us-central1", maxInstances:
         },
       };
     };
+
+    if (activeBonuses.length && data.relocateActive === true) {
+      const activeBonus = activeBonuses[0];
+      const requestedBonusId = safeString(data.activeBonusId || data.bonus?.id, 96).replace(/[^a-zA-Z0-9_-]/g, "_");
+      if (requestedBonusId && requestedBonusId !== activeBonus.id) {
+        return writeProfileState({ reason: "active-pickup-changed" });
+      }
+      const candidate = createHarvestBonusFromPayload(data, uid, nowMs);
+      if (!candidate) throw new HttpsError("invalid-argument", "Pickup respawn location is invalid.");
+      const targetRegionId = requireKnownWorldRegionId(candidate.regionId);
+      if (targetRegionId === activeBonus.regionId) {
+        return writeProfileState({ reason: "active-pickup-current-map" });
+      }
+      const relocatedBonus = {
+        ...activeBonus,
+        regionId: targetRegionId,
+        x: candidate.x,
+        y: candidate.y,
+      };
+      return writeProfileState({
+        relocated: true,
+        reason: "active-pickup-relocated",
+        harvestBonuses: [relocatedBonus],
+      });
+    }
 
     if (!spawnType) {
       return writeProfileState({ reason: "daily-limit" });
@@ -3186,10 +3171,14 @@ exports.changeMainCity = onCall({ region: "us-central1", maxInstances: 20, invok
       throw new HttpsError("failed-precondition", "Only one of your regular cities can become your main city.");
     }
 
-    const regularOwnedCount = economy.cityEntries.filter(entry => entry?.city && !isStronghold(entry.city)).length;
-    if (regularOwnedCount >= MAIN_CITY_CHANGE_CITY_LIMIT) {
-      throw new HttpsError("failed-precondition", `You can only move your main city while you own fewer than ${MAIN_CITY_CHANGE_CITY_LIMIT} cities.`);
-    }
+    const regularOwnedCount = economy.cityEntries.filter(entry => (
+      entry?.city
+      && getOwnerUid(entry.city) === uid
+      && !isStronghold(entry.city)
+    )).length;
+    const mainCityChangeCooldownMs = regularOwnedCount < MAIN_CITY_CHANGE_CITY_LIMIT
+      ? MAIN_CITY_CHANGE_SMALL_KINGDOM_COOLDOWN_MS
+      : MAIN_CITY_CHANGE_LARGE_KINGDOM_COOLDOWN_MS;
 
     const targetRegionId = normalizeRegionId(targetEntry.city.regionId || regionId || getRegionIdFromOnlineIslandId(getCityEntryIslandId(targetEntry)));
     const targetIslandId = getCityEntryIslandId(targetEntry) || getOnlineIslandId(targetRegionId);
@@ -3215,9 +3204,10 @@ exports.changeMainCity = onCall({ region: "us-central1", maxInstances: 20, invok
     }
 
     const lastChangedAtMs = timestampToMs(economy.profileAfter.mainCityChangedAtMs || economy.profileBefore.mainCityChangedAtMs);
-    const cooldownRemainingMs = Math.max(0, MAIN_CITY_CHANGE_COOLDOWN_MS - (nowMs - lastChangedAtMs));
+    const cooldownRemainingMs = Math.max(0, mainCityChangeCooldownMs - (nowMs - lastChangedAtMs));
     if (lastChangedAtMs > 0 && cooldownRemainingMs > 0) {
-      throw new HttpsError("failed-precondition", `Main city change is on cooldown for ${formatCooldownMs(cooldownRemainingMs)}.`);
+      const cooldownLabel = regularOwnedCount < MAIN_CITY_CHANGE_CITY_LIMIT ? "7-day" : "14-day";
+      throw new HttpsError("failed-precondition", `Your ${cooldownLabel} main city change cooldown has ${formatCooldownMs(cooldownRemainingMs)} remaining.`);
     }
 
     const profileOverrides = {
@@ -3235,6 +3225,8 @@ exports.changeMainCity = onCall({ region: "us-central1", maxInstances: 20, invok
       },
       cityUpdates: [...economy.cityUpdates, ...repair.cityUpdates],
       mainCityChanged: true,
+      mainCityChangeCooldownMs,
+      ownedRegularCityCount: regularOwnedCount,
       mainCity: {
         id: targetEntry.city.id,
         name: safeString(targetEntry.city.name || targetEntry.city.id, 80),
@@ -4214,137 +4206,11 @@ exports.relinquishCity = onCall({ region: "us-central1", maxInstances: 20, invok
 });
 
 exports.relocateMainCity = onCall({ region: "us-central1", maxInstances: 20, invoker: "public" }, async request => {
-  const uid = requireAuth(request);
-  const data = request.data || {};
-  const regionCandidates = normalizeRelocationRegionCandidates(data.regionCandidates || data.spawnCandidates || []);
-  const minimumNeutralCities = Math.max(0, Math.floor(safeNumber(data.minimumNeutralCities, 0)));
-  if (!regionCandidates.length) {
-    throw new HttpsError("invalid-argument", "No relocation maps were provided.");
-  }
-
-  return db.runTransaction(async transaction => {
-    const nowMs = Date.now();
-    const economy = await prepareEconomyCollection(transaction, uid, nowMs);
-    const profile = economy.profileAfter || {};
-    const currentMainCityId = safeString(data.currentCityId || profile.mainCityId || economy.profileBefore.mainCityId, 96)
-      .replace(/[^a-zA-Z0-9_-]/g, "_");
-    const currentRegionId = normalizeRegionId(data.currentRegionId || profile.mainRegionId || getRegionIdFromOnlineIslandId(profile.mainIslandId));
-    if (!currentMainCityId) {
-      throw new HttpsError("failed-precondition", "Your current main city could not be found.");
-    }
-
-    const currentMainRef = cityRefForRegion(currentRegionId, currentMainCityId);
-    const currentMainEntry = getEconomyCityByRef(economy, currentMainRef);
-    if (!currentMainEntry?.city || getOwnerUid(currentMainEntry.city) !== uid || isStronghold(currentMainEntry.city)) {
-      throw new HttpsError("failed-precondition", "Your current main city could not be verified.");
-    }
-
-    const target = await pickRelocationTarget(transaction, regionCandidates, minimumNeutralCities, currentMainCityId);
-    if (!target?.city) {
-      throw new HttpsError(
-        "failed-precondition",
-        `No starter, midgame, or endgame map has ${minimumNeutralCities.toLocaleString()} neutral cities available.`
-      );
-    }
-
-    const playerName = normalizePlayerName(data.playerName || profile.playerName || profile.displayName);
-    const playerFlag = data.flag || profile.flag || null;
-    const ownerKingPower = Math.max(0, Math.floor(safeNumber(profile.kingPower, 0)));
-    const shieldExpiresAtMs = Math.max(0, timestampToMs(profile.itemEffects?.shieldExpiresAtMs));
-    const currentMain = currentMainEntry.city;
-    const targetCity = target.city;
-    const transferredTroops = Math.max(0, Math.floor(safeNumber(currentMain.troops, 0)));
-    const currentMainLevel = clampCityLevel(currentMain.level);
-    const targetLevel = clampCityLevel(targetCity.level);
-
-    const oldMainPatch = {
-      ownerKind: "neutral",
-      ownerUid: null,
-      ownerName: "",
-      ownerFlag: null,
-      ownerKingPower: 0,
-      ownerShieldExpiresAtMs: 0,
-      level: currentMainLevel,
-      troops: 0,
-      troopFloat: 0,
-      investedGold: 0,
-      isMainCity: false,
-      productionUpdatedAtMs: nowMs,
-      relinquishedAtMs: 0,
-      relocatedAtMs: nowMs,
-    };
-    const newMainPatch = {
-      ownerKind: "player",
-      ownerUid: uid,
-      ownerName: playerName,
-      ownerFlag: playerFlag,
-      ownerKingPower,
-      ownerShieldExpiresAtMs: shieldExpiresAtMs,
-      level: targetLevel,
-      troops: transferredTroops,
-      troopFloat: transferredTroops,
-      investedGold: Math.max(0, Math.floor(safeNumber(targetCity.investedGold, 0))),
-      isMainCity: true,
-      productionUpdatedAtMs: nowMs,
-      relinquishedAtMs: 0,
-      relocatedAtMs: 0,
-    };
-    const newMainWritePatch = {
-      ...newMainPatch,
-      claimedAt: targetCity.claimedAt || FieldValue.serverTimestamp(),
-    };
-    const profileOverrides = {
-      playerName,
-      flag: playerFlag,
-      mainIslandId: target.islandId,
-      mainRegionId: target.regionId,
-      mainCityId: targetCity.id,
-      mainCityChangedAtMs: nowMs,
-    };
-    const singleMainRepair = createSingleMainCityPatches(economy.cityEntries, target.ref);
-
-    writePreparedEconomy(transaction, economy, profileOverrides, [
-      ...singleMainRepair.cityPatches,
-      { ref: currentMainEntry.ref, city: currentMain, patch: oldMainPatch },
-      { ref: target.ref, city: targetCity, patch: newMainWritePatch },
-    ]);
-
-    return createEconomyResponse(economy, {
-      currentUser: {
-        ...createEconomyResponse(economy).currentUser,
-        ...profileOverrides,
-      },
-      cityUpdates: [
-        ...economy.cityUpdates,
-        ...singleMainRepair.cityUpdates,
-        {
-          id: currentMain.id,
-          regionId: currentMain.regionId || currentRegionId,
-          ...oldMainPatch,
-        },
-        {
-          id: targetCity.id,
-          regionId: target.regionId,
-          ...newMainPatch,
-        },
-      ],
-      oldMainCity: {
-        id: currentMain.id,
-        name: safeString(currentMain.name || currentMain.id, 80),
-        regionId: currentMain.regionId || currentRegionId,
-        level: currentMainLevel,
-      },
-      newMainCity: {
-        id: targetCity.id,
-        name: safeString(targetCity.name || targetCity.id, 80),
-        regionId: target.regionId,
-        islandId: target.islandId,
-        level: targetLevel,
-      },
-      transferredTroops,
-      neutralCityCount: target.neutralCityCount,
-    });
-  });
+  requireAuth(request);
+  throw new HttpsError(
+    "failed-precondition",
+    "Main city relocation has been removed. Choose one of your owned cities as your main city instead."
+  );
 });
 
 exports.purchaseShopItem = onCall({ region: "us-central1", maxInstances: 20, invoker: "public" }, async request => {
@@ -4619,6 +4485,7 @@ exports.useRecallHorn = onCall({ region: "us-central1", maxInstances: 20, invoke
     if (army.status !== "active") throw new HttpsError("failed-precondition", "That troop march has already arrived.");
     if (getOwnerUid(army) !== uid) throw new HttpsError("permission-denied", "You can only recall your own troop marches.");
     if (army.kind === "scout") throw new HttpsError("failed-precondition", "Recall Horns cannot be used on scouts.");
+    if (army.campReturn) throw new HttpsError("failed-precondition", "Troops withdrawing from a camp are already returning home.");
     if (army.returning || timestampToMs(army.recalledAtMs) > 0) {
       throw new HttpsError("failed-precondition", "That army is already returning.");
     }
@@ -4917,13 +4784,21 @@ exports.sendArmyOrder = onCall({ region: "us-central1", maxInstances: 20, invoke
     };
 
     let profileOverrides = {};
+    let peaceShieldDeactivated = false;
     const launchCityPatches = [];
     const launchCityUpdates = [];
-    if (resolvedKind === "attack" && order.targetType !== "camp" && targetOwnerUid && targetOwnerUid !== uid) {
+    if (shouldDeactivatePeaceShieldForAttack(target, order.targetType, uid, resolvedKind)) {
       const itemEffects = { ...(attackerEconomy.itemEffects || {}) };
-      if (safeNumber(itemEffects.shieldExpiresAtMs, 0) > nowMs) {
+      const shieldIsActive = safeNumber(itemEffects.shieldExpiresAtMs, 0) > nowMs
+        || attackerEconomy.cityEntries.some(entry => (
+          entry?.city
+          && !isStronghold(entry.city)
+          && getShieldExpiresAtMs(entry.city) > nowMs
+        ));
+      if (shieldIsActive) {
         itemEffects.shieldExpiresAtMs = 0;
         profileOverrides = { itemEffects };
+        peaceShieldDeactivated = true;
         attackerEconomy.cityEntries.forEach(entry => {
           if (!entry?.ref || !entry.city || isStronghold(entry.city)) return;
           const patch = { ownerShieldExpiresAtMs: 0 };
@@ -4971,6 +4846,7 @@ exports.sendArmyOrder = onCall({ region: "us-central1", maxInstances: 20, invoke
 
     return {
       ok: true,
+      peaceShieldDeactivated,
       movement,
       sourceCity: {
         id: source.id,
@@ -5038,7 +4914,8 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
       : cityRefForRegion(targetRegionId, army.toId);
     const [sourceSnap, targetSnap] = await Promise.all([transaction.get(sourceRef), transaction.get(targetRef)]);
     const isReturning = Boolean(army.returning && army.returnReason === RECALL_HORN_ITEM_ID);
-    if (!targetSnap.exists && !isReturning) throw new HttpsError("not-found", "Target city was not found.");
+    const isCampReturn = Boolean(army.campReturn);
+    if (!targetSnap.exists && !isReturning && !isCampReturn) throw new HttpsError("not-found", "Target city was not found.");
 
     let source = sourceSnap.exists ? { id: sourceSnap.id, ...sourceSnap.data() } : null;
     let target = targetSnap.exists
@@ -5203,6 +5080,33 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
     const defenderName = defenderUid
       ? normalizePlayerName(target.ownerName || defenderProfile.playerName, "Rival ruler")
       : "Neutral city";
+
+    if (isCampReturn && defenderUid !== attackerUid) {
+      const returnedArmy = returnRecalledTroops(troopCount);
+      writeParticipantEconomies({}, {}, { statsCityPatches: getLatestSourceReturnStatsPatches() });
+      markResolved({
+        kind: "return",
+        campReturn: true,
+        rerouted: true,
+        returned: returnedArmy.returned,
+        returnCityId: returnedArmy.cityId,
+      });
+      return {
+        ok: true,
+        status: "resolved",
+        kind: "return",
+        campReturn: true,
+        rerouted: true,
+        returned: returnedArmy.returned,
+        returnCityId: returnedArmy.cityId,
+        returnRegionId: returnedArmy.regionId,
+        cityUpdates: withEconomyCityUpdates(cityUpdates),
+        currentUser: profilePatchForCaller(
+          { character: attackerProfile.character, gold: attackerEconomy?.gold, goldFloat: attackerEconomy?.goldFloat },
+          null
+        ),
+      };
+    }
 
     if (isReturning) {
       const returnedArmy = returnRecalledTroops(troopCount);
@@ -6200,6 +6104,160 @@ exports.resolveRewardCampPayout = onCall({ region: "us-central1", maxInstances: 
 });
 
 exports.resolveGoldCampPayout = exports.resolveRewardCampPayout;
+
+exports.recallRewardCampGarrison = onCall({ region: "us-central1", maxInstances: 20, invoker: "public" }, async request => {
+  const uid = requireAuth(request);
+  const data = request.data || {};
+  const campId = safeString(data.campId, 96).replace(/[^a-zA-Z0-9_-]/g, "_");
+  const regionId = requireKnownWorldRegionId(data.regionId || data.mapId);
+  if (!campId || !getServerWorldCampIds(regionId).has(campId)) {
+    throw new HttpsError("invalid-argument", "Choose a valid reward camp.");
+  }
+
+  const campRef = campRefForRegion(regionId, campId);
+  const playerRef = db.doc(`players/${uid}`);
+  return db.runTransaction(async transaction => {
+    const nowMs = Date.now();
+    const [campSnap, playerSnap] = await Promise.all([
+      transaction.get(campRef),
+      transaction.get(playerRef),
+    ]);
+    if (!campSnap.exists) throw new HttpsError("not-found", "That reward camp was not found.");
+    if (!playerSnap.exists) throw new HttpsError("not-found", "Your player profile was not found.");
+
+    const rawCamp = { id: campSnap.id, ...campSnap.data() };
+    const camp = getRewardCampCombatTarget(rawCamp);
+    const config = getRewardCampConfig(camp);
+    if (!camp || !config) throw new HttpsError("failed-precondition", "That objective is not a reward camp.");
+    const holderUid = safeString(rawCamp.holderUid || rawCamp.ownerUid, 128);
+    if (holderUid !== uid) throw new HttpsError("permission-denied", "Only the current camp holder can recall its troops.");
+    if (!rawCamp.payoutPending) throw new HttpsError("failed-precondition", "That camp hold is no longer active.");
+    const payoutAtMs = Math.max(0, Math.floor(safeNumber(rawCamp.payoutAtMs, 0)));
+    if (payoutAtMs > 0 && payoutAtMs <= nowMs) {
+      throw new HttpsError("failed-precondition", "That camp hold has already finished and is awaiting payout.");
+    }
+
+    const player = playerSnap.data() || {};
+    const sourceCityId = safeString(rawCamp.returnSourceCityId, 96).replace(/[^a-zA-Z0-9_-]/g, "_");
+    const sourceRegionId = normalizeRegionId(rawCamp.returnSourceRegionId || regionId);
+    const sourceRef = sourceCityId ? cityRefForRegion(sourceRegionId, sourceCityId) : null;
+    const mainCityInfo = getMainCityInfo(player);
+    const destinationRefs = new Map();
+    if (sourceRef) destinationRefs.set(sourceRef.path, sourceRef);
+    if (mainCityInfo?.ref) destinationRefs.set(mainCityInfo.ref.path, mainCityInfo.ref);
+    const destinationSnaps = await Promise.all([...destinationRefs.values()].map(ref => transaction.get(ref)));
+    const destinations = new Map(destinationSnaps.map(snapshot => [snapshot.ref.path, snapshot]));
+    const sourceSnap = sourceRef ? destinations.get(sourceRef.path) : null;
+    const mainCitySnap = mainCityInfo?.ref ? destinations.get(mainCityInfo.ref.path) : null;
+    const sourceCity = sourceSnap?.exists ? { id: sourceSnap.id, ...sourceSnap.data() } : null;
+    const mainCity = mainCitySnap?.exists ? { id: mainCitySnap.id, ...mainCitySnap.data() } : null;
+    const returnDestination = sourceCity && getOwnerUid(sourceCity) === uid
+      ? sourceCity
+      : mainCity && getOwnerUid(mainCity) === uid
+        ? mainCity
+        : null;
+    if (!returnDestination) {
+      throw new HttpsError("failed-precondition", "No owned city is available to receive the recalled troops.");
+    }
+
+    const returnDestinationRegionId = normalizeRegionId(
+      returnDestination.regionId
+      || (returnDestination.id === mainCity?.id ? mainCityInfo?.regionId : sourceRegionId)
+    );
+    const returningTroops = Math.max(0, Math.floor(safeNumber(rawCamp.currentGarrison, rawCamp.troops)));
+    let movement = null;
+    if (returningTroops > 0) {
+      const route = getCampReturnRoute(rawCamp, returnDestination);
+      const armyId = safeString(`camp_recall_${camp.id}_${nowMs}_${uid}`, 96).replace(/[^a-zA-Z0-9_-]/g, "_");
+      const duration = calculateTravelTime({
+        pathLength: route.pathLength,
+        troopCount: returningTroops,
+        kind: "transfer",
+      });
+      movement = {
+        id: armyId,
+        worldId: ONLINE_WORLD_ID,
+        resetGeneration: RESET_GENERATION,
+        ownerKind: "player",
+        ownerUid: uid,
+        ownerName: normalizePlayerName(player.playerName || rawCamp.holderName, "Ruler"),
+        ownerFlag: player.flag || rawCamp.holderFlag || null,
+        ownerKingPower: normalizePowerValue(player.globalStats?.kingPower),
+        kind: "transfer",
+        campReturn: true,
+        campRecall: true,
+        campId: camp.id,
+        targetType: "city",
+        fromId: camp.id,
+        toId: returnDestination.id,
+        fromName: camp.name || config.name,
+        toName: returnDestination.name || "Main city",
+        troops: returningTroops,
+        requestedTroops: returningTroops,
+        total: duration,
+        path: route.path,
+        pathSegments: route.pathSegments,
+        routeRegionIds: route.routeRegionIds,
+        viewRegionIds: route.routeRegionIds,
+        pathLength: route.pathLength,
+        targetKey: `${returnDestinationRegionId}:${returnDestination.id}`,
+        targetOwnerAtLaunch: "player",
+        targetOwnerUid: uid,
+        sourceRegionId: regionId,
+        targetRegionId: returnDestinationRegionId,
+        launchedAtMs: nowMs,
+        arrivesAtMs: nowMs + Math.ceil(duration * 1000),
+        status: "active",
+        createdByServer: true,
+        serverAuthorityVersion: 2,
+      };
+      armyRefsForRegions(route.routeRegionIds, armyId).forEach(ref => {
+        transaction.set(ref, {
+          ...movement,
+          createdAt: FieldValue.serverTimestamp(),
+          updatedAt: FieldValue.serverTimestamp(),
+        }, { merge: true });
+      });
+    }
+
+    const activeArmyIds = normalizeActiveArmyIds(rawCamp.activeArmyIds);
+    const campPatch = {
+      holderUid: "",
+      holderName: "",
+      holderFlag: null,
+      heldSinceMs: 0,
+      payoutAtMs: 0,
+      payoutPending: false,
+      currentGarrison: Math.max(1, Math.floor(safeNumber(rawCamp.baseDefenders, config.baseDefenders))),
+      returnSourceCityId: "",
+      returnSourceRegionId: "",
+      returnSourceCityName: "",
+      returnPathSegments: [],
+      returnRouteRegionIds: [],
+      returnPathLength: 0,
+      activeArmyIds,
+      state: getRewardCampState(activeArmyIds, ""),
+      lastRecalledAtMs: nowMs,
+      lastRecalledByUid: uid,
+      updatedAt: FieldValue.serverTimestamp(),
+    };
+    transaction.set(campRef, campPatch, { merge: true });
+
+    return {
+      ok: true,
+      status: "recalled",
+      targetType: "camp",
+      kind: "return",
+      returningTroops,
+      returnDestinationId: returnDestination.id,
+      returnDestinationRegionId,
+      returnDestinationName: returnDestination.name || "Main city",
+      returnArrivesAtMs: movement?.arrivesAtMs || 0,
+      movement,
+      campUpdate: campUpdateForClient(camp.id, regionId, campPatch),
+    };
+  });
+});
 
 function getScheduledArmyDedupeKey(armyId = "", ownerUid = "") {
   return `${safeString(ownerUid, 128)}:${safeString(armyId, 96)}`;

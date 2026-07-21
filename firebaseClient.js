@@ -263,6 +263,10 @@
     return callServerFunction("resolveRewardCampPayout", payload);
   }
 
+  async function recallRewardCampGarrison(payload = {}) {
+    return callServerFunction("recallRewardCampGarrison", payload);
+  }
+
   async function collectEconomy(payload = {}) {
     return callServerFunction("collectEconomy", payload);
   }
@@ -317,10 +321,6 @@
 
   async function relinquishCity(payload = {}) {
     return callServerFunction("relinquishCity", payload);
-  }
-
-  async function relocateMainCity(payload = {}) {
-    return callServerFunction("relocateMainCity", payload);
   }
 
   async function activateInventoryItem(payload = {}) {
@@ -677,6 +677,31 @@
     const { doc, getDoc } = client.modules.firestore;
     const snap = await getDoc(doc(client.db, "players", uid, "stats", "global"));
     return snap.exists() ? cleanGlobalStats({ id: snap.id, ...snap.data() }) : null;
+  }
+
+  async function loadRewardCampProgress(campType = "") {
+    await init();
+    const uid = requireSignedIn();
+    if (!uid) return null;
+    const normalizedType = String(campType || "").trim().toLowerCase();
+    const objectiveId = normalizedType === "gold"
+      ? "goldCamp"
+      : normalizedType === "troops"
+        ? "warbandCamp"
+        : "";
+    if (!objectiveId) throw new Error("Unknown reward camp type.");
+    const { doc, getDoc } = client.modules.firestore;
+    const snap = await getDoc(doc(client.db, "players", uid, "objectiveStats", objectiveId));
+    const data = snap.exists() ? snap.data() || {} : {};
+    return {
+      objectiveId,
+      campType: normalizedType,
+      date: String(data.date || "").slice(0, 10),
+      count: Math.max(0, Math.floor(Number(data.count) || 0)),
+      lastReward: Math.max(0, Math.floor(Number(data.lastReward) || 0)),
+      lastCampId: String(data.lastCampId || "").slice(0, 120),
+      lastClaimedAtMs: Math.max(0, Math.floor(Number(data.lastClaimedAtMs) || 0)),
+    };
   }
 
   function subscribePlayerGlobalStats(handlers = {}) {
@@ -1239,7 +1264,6 @@
     recalculatePlayerGlobalStats,
     recalculateAllPlayerGlobalStats,
     relinquishCity,
-    relocateMainCity,
     purchaseShopItem,
     activateInventoryItem,
     useSwiftMarchOrder,
@@ -1247,11 +1271,13 @@
     saveGameSnapshot,
     loadGameSnapshot,
     loadPlayerGlobalStats,
+    loadRewardCampProgress,
     subscribePlayerGlobalStats,
     sendArmyOrder,
     resolveArmyOrder,
     resolveGoldCampPayout,
     resolveRewardCampPayout,
+    recallRewardCampGarrison,
     enablePushNotifications,
     registerPushNotifications,
     disablePushNotifications,

@@ -217,7 +217,8 @@ function getMergedLandBridges(config = {}, editorData = {}) {
 }
 
 const MAIN_CITY_CHANGE_CITY_LIMIT = 30;
-const MAIN_CITY_CHANGE_COOLDOWN_MS = 24 * 60 * 60 * 1000;
+const MAIN_CITY_CHANGE_SMALL_KINGDOM_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000;
+const MAIN_CITY_CHANGE_LARGE_KINGDOM_COOLDOWN_MS = 14 * 24 * 60 * 60 * 1000;
 const MAX_OFFLINE_PROGRESS_SECONDS = 7 * 24 * 60 * 60;
 const WORLD_WIDTH = Math.max(1, Math.floor(Number(MAP_EDITOR_DATA?.globalSettings?.worldWidth || WORLD_CONFIG.width) || 10000));
 const WORLD_HEIGHT = Math.max(1, Math.floor(Number(MAP_EDITOR_DATA?.globalSettings?.worldHeight || WORLD_CONFIG.height) || 7600));
@@ -281,6 +282,7 @@ const REWARD_CAMP_CONFIG = {
     dailyRewards: [50000, 50000, 37500, 25000, 12500],
   },
 };
+const REWARD_CAMP_PROGRESS_CACHE_MS = 30 * 1000;
 const GOLD_STRONGHOLD_ID = "west_gold_stronghold";
 const GOLD_STRONGHOLD_NAME = "Aurum Keep";
 const GOLD_STRONGHOLD_ART_SRC = "assets/gold-stronghold.png?v=20260704-gold-stronghold-updated";
@@ -2265,6 +2267,9 @@ let onlineLastError = "";
 let onlineArmySavePromises = new Set();
 const swiftMarchOrderRequests = new Set();
 const recallHornRequests = new Set();
+const rewardCampRecallRequests = new Set();
+const rewardCampProgressCache = new Map();
+const rewardCampProgressRequests = new Map();
 let onlineCityStateSavePromises = new Set();
 let pendingServerArmyLaunchKeys = new Set();
 let onlineIslandUnsubscribe = null;
@@ -2308,6 +2313,7 @@ const routeWorkerRequests = new Map();
 const routeWorkerRegionDataCache = new Map();
 let routeWorkerWarmupScheduled = false;
 let harvestSpawnRequestInFlight = false;
+let harvestRelocationRetryAtMs = 0;
 let onlineIslandSummaries = new Map();
 let onlineIslandSummaryRefreshInFlight = false;
 let onlineOwnedCitiesCache = [];
@@ -2344,7 +2350,6 @@ let skillActionInFlight = false;
 let serverCityUpgradeInFlightIds = new Set();
 let serverCityRelinquishInFlightIds = new Set();
 let pendingHarvestBonusIds = new Set();
-let mainCityRelocationInFlight = false;
 let selectedInventoryItemId = "";
 let updateCheckTimer = 0;
 let updateCheckInFlight = false;
@@ -4621,17 +4626,6 @@ async function ensureOnlineIslandSeeded(regionId, timeoutMs = 20000) {
   return seed;
 }
 
-function getRelocationSpawnRegionCandidates() {
-  return getNewPlayerSpawnRegionIds().map(regionId => {
-    const seed = createOnlineIslandSeed(regionId);
-    return {
-      regionId: normalizeRegionId(regionId),
-      islandId: getOnlineIslandId(regionId),
-      cityIds: seed.claimCandidateIds,
-    };
-  }).filter(candidate => candidate.cityIds.length);
-}
-
 function getOnlineClaimCandidateIds(cities, startIds) {
   const selected = [];
   const used = new Set();
@@ -5143,8 +5137,13 @@ async function syncPlayerIdentityToAllOwnedCities({ forceLeaderboard = true } = 
   }
 }
 
+function shouldDeactivatePeaceShieldForPlayerAttack(target) {
+  if (!target || target.owner === "player") return false;
+  return isRewardCampTarget(target) || isStronghold(target) || isAnotherPlayerOwnedCity(target);
+}
+
 function deactivatePeaceShieldForPlayerAttack(target) {
-  if (!state || !isAnotherPlayerOwnedCity(target)) return false;
+  if (!state || !shouldDeactivatePeaceShieldForPlayerAttack(target)) return false;
   if (!getActivePeaceShieldExpiresAtMs()) return false;
   const effects = ensureItemEffects();
   effects.shieldExpiresAtMs = 0;
@@ -5159,8 +5158,8 @@ function deactivatePeaceShieldForPlayerAttack(target) {
 
 function getPeaceShieldAttackWarning(target) {
   const remaining = getPeaceShieldRemainingSeconds();
-  if (!remaining || !isAnotherPlayerOwnedCity(target)) return "";
-  return `Royal Peace Shield active: attacking ${target.name} will drop your shield with ${formatDuration(remaining)} remaining.`;
+  if (!remaining || !shouldDeactivatePeaceShieldForPlayerAttack(target)) return "";
+  return `Royal Peace Shield active: attacking ${target.name} will deactivate it and remove protection from all your cities with ${formatDuration(remaining)} remaining.`;
 }
 
 function createOnlineEntryState(playerName) {
@@ -5457,19 +5456,26 @@ async function syncSingleMainCityAssignmentToOnline(mainCityId = state?.mainCity
   return Boolean(result?.ok ?? true);
 }
 
-function getMainCityChangeCooldownRemainingMs(now = Date.now()) {
+function getMainCityChangeCooldownDurationMs(ownedCount = getOwnedRegularCityCountForDisplay()) {
+  return ownedCount < MAIN_CITY_CHANGE_CITY_LIMIT
+    ? MAIN_CITY_CHANGE_SMALL_KINGDOM_COOLDOWN_MS
+    : MAIN_CITY_CHANGE_LARGE_KINGDOM_COOLDOWN_MS;
+}
+
+function getMainCityChangeCooldownRemainingMs(now = Date.now(), ownedCount = getOwnedRegularCityCountForDisplay()) {
   if (!state) return 0;
   const lastChangedAt = normalizeTimestampMs(state.mainCityChangedAtMs);
   if (!lastChangedAt) return 0;
   const currentTime = Math.max(0, Number(now) || Date.now());
   const elapsed = Math.max(0, currentTime - Math.min(lastChangedAt, currentTime));
-  return Math.max(0, MAIN_CITY_CHANGE_COOLDOWN_MS - elapsed);
+  return Math.max(0, getMainCityChangeCooldownDurationMs(ownedCount) - elapsed);
 }
 
 function getMainCityChangeStatus(city, now = Date.now()) {
-  const cooldownMs = getMainCityChangeCooldownRemainingMs(now);
-  const cooldownText = cooldownMs > 0 ? formatDuration(Math.ceil(cooldownMs / 1000)) : "";
   const ownedCount = state ? getOwnedRegularCityCountForDisplay() : 0;
+  const cooldownDurationMs = getMainCityChangeCooldownDurationMs(ownedCount);
+  const cooldownMs = getMainCityChangeCooldownRemainingMs(now, ownedCount);
+  const cooldownText = cooldownMs > 0 ? formatDuration(Math.ceil(cooldownMs / 1000)) : "";
   const isMain = isMainCityForList(city);
   let reason = "";
 
@@ -5478,11 +5484,11 @@ function getMainCityChangeStatus(city, now = Date.now()) {
   else if (city.owner !== "player") reason = "Only owned cities can become your main city.";
   else if (isStronghold(city)) reason = "Strongholds cannot become your main city.";
   else if (isMain) reason = "This city is already your main city.";
-  else if (ownedCount >= MAIN_CITY_CHANGE_CITY_LIMIT) reason = `You can only move your main city while you own fewer than ${MAIN_CITY_CHANGE_CITY_LIMIT} cities.`;
   else if (cooldownMs > 0) reason = `Main city can change again in ${cooldownText}.`;
 
   return {
-    canChange: Boolean(state && city && city.owner === "player" && !isStronghold(city) && !isMain && ownedCount < MAIN_CITY_CHANGE_CITY_LIMIT && cooldownMs <= 0),
+    canChange: Boolean(state && city && city.owner === "player" && !isStronghold(city) && !isMain && cooldownMs <= 0),
+    cooldownDurationMs,
     cooldownMs,
     cooldownText,
     ownedCount,
@@ -6330,6 +6336,10 @@ function normalizeHarvestState(snapshot) {
   snapshot.harvestNextBonusType = normalizeHarvestBonusType(snapshot.harvestNextBonusType);
 }
 
+function currentUtcDateKey() {
+  return new Date().toISOString().slice(0, 10);
+}
+
 function normalizeGameOverState(snapshot = state) {
   if (!snapshot || typeof snapshot !== "object") return;
   if (snapshot.gameOver === "defeat") snapshot.gameOver = null;
@@ -6969,11 +6979,6 @@ function hasServerEconomyApi() {
 
 function usesServerEconomyAuthority() {
   return Boolean(isOnlineWorldActive() && hasServerEconomyApi());
-}
-
-function hasMainCityRelocationApi() {
-  const api = getOnlineApi();
-  return Boolean(isOnlineWorldActive() && api?.isSignedIn?.() && api?.relocateMainCity && api?.ensureMainIsland);
 }
 
 function getServerArmyLaunchKey(sourceId, targetId, kind = "attack") {
@@ -8055,6 +8060,7 @@ function updateIslandSwitcherUi() {
   const label = getRegionLabel(regionId);
   if (islandSwitchLabel) islandSwitchLabel.textContent = "Map";
   islandSwitchBtn.title = `Map - viewing ${label}`;
+  updateIslandMapTileSummariesInPlace();
 }
 
 function centerOnRegion(regionId) {
@@ -8244,6 +8250,26 @@ function getIslandTileAriaSummary(regionId) {
 function rerenderIslandSwitcherModalIfOpen() {
   if (!modal.open || !modal.classList.contains("island-switcher-modal")) return;
   rememberIslandMapPickerView();
+  updateIslandMapTileSummariesInPlace();
+}
+
+function updateIslandMapTileSummariesInPlace() {
+  const picker = getIslandMapPickerElement();
+  if (!picker) return false;
+  const activeRegionId = getActiveOnlineRegionId();
+  const homeRegionId = getMainCityRegionId();
+  picker.querySelectorAll("[data-island-region]").forEach(button => {
+    const regionId = normalizeRegionId(button.dataset.islandRegion);
+    const summaryText = getIslandTileSummaryText(regionId);
+    const summary = button.querySelector(".island-map-owned");
+    if (summary && summary.textContent !== summaryText) summary.textContent = summaryText;
+
+    const ariaParts = [getRegionLabel(regionId), getIslandTileAriaSummary(regionId)];
+    if (regionId === activeRegionId) ariaParts.push("current map");
+    if (regionId === homeRegionId) ariaParts.push("home island");
+    button.setAttribute("aria-label", ariaParts.join(", "));
+  });
+  return true;
 }
 
 async function refreshOnlineIslandSummaries(force = false) {
@@ -9044,6 +9070,7 @@ function disconnectOnlineWorld() {
   onlineOwnedCitiesRefreshInFlight = false;
   onlinePresenceTimer = 0;
   onlinePresenceInFlight = false;
+  harvestRelocationRetryAtMs = 0;
   overdueArmyResolveTimer = 0;
   pendingArmyRecoveryInFlight = false;
   onlineWorldConnected = false;
@@ -9821,6 +9848,16 @@ async function requestDueRewardCampPayout(camp) {
     applyServerArmyResult(result);
     if (result?.status === "paid") {
       const config = getRewardCampConfig(result.campType || camp);
+      if (config && result.holderUid === getCurrentOnlineUid()) {
+        const progress = cacheRewardCampProgress(config, {
+          date: currentUtcDateKey(),
+          count: result.dailyClaim,
+          lastReward: result.reward,
+          lastCampId: camp.id,
+          lastClaimedAtMs: Date.now(),
+        });
+        renderRewardCampProgressPanel(camp.id, config, progress);
+      }
       const rewardMessage = result.reward > 0
         ? `${config?.name || camp.name} reward: +${formatNumber(result.reward)} ${result.rewardType || config?.rewardLabel || "reward"}`
         : `${config?.name || camp.name} daily reward limit reached.`;
@@ -10298,6 +10335,8 @@ function applyServerMovementToMission(mission, movement = null) {
   mission.returnDestinationId = movement.returnDestinationId || mission.returnDestinationId || "";
   mission.returnDestinationRegionId = normalizeRegionId(movement.returnDestinationRegionId || mission.returnDestinationRegionId);
   mission.relinquishTransfer = Boolean(movement.relinquishTransfer || mission.relinquishTransfer);
+  mission.campReturn = Boolean(movement.campReturn || mission.campReturn);
+  mission.campRecall = Boolean(movement.campRecall || mission.campRecall);
   mission.attackerKingPower = normalizePowerValue(movement.attackerKingPower || mission.attackerKingPower);
   mission.defenderKingPower = normalizePowerValue(movement.defenderKingPower || mission.defenderKingPower);
   if (movement.demoAttack !== undefined) mission.demoAttack = normalizeDemoAttackSnapshot(movement.demoAttack);
@@ -10358,6 +10397,7 @@ function publishOnlineArmyMovement(mission, options = {}) {
   })
     .then(result => {
       if (result?.movement) applyServerMovementToMission(mission, result.movement);
+      mission.peaceShieldDeactivated = Boolean(result?.peaceShieldDeactivated);
       mission.serverPending = false;
       applyServerArmyResult({
         currentUser: result?.currentUser,
@@ -10493,6 +10533,8 @@ function normalizeOnlineArmyMovement(raw) {
     returnDestinationId: String(raw.returnDestinationId || ""),
     returnDestinationRegionId: normalizeRegionId(raw.returnDestinationRegionId),
     relinquishTransfer: Boolean(raw.relinquishTransfer),
+    campReturn: Boolean(raw.campReturn),
+    campRecall: Boolean(raw.campRecall),
     status: raw.status || "active",
     onlineRegionIds: Array.isArray(raw.routeRegionIds) ? raw.routeRegionIds.map(normalizeRegionId) : [],
   };
@@ -10681,6 +10723,8 @@ function createLocalAttackFromOnlineArmy(army, remaining = getOnlineArmyRemainin
     returnDestinationId: String(army.returnDestinationId || ""),
     returnDestinationRegionId: normalizeRegionId(army.returnDestinationRegionId),
     relinquishTransfer: Boolean(army.relinquishTransfer),
+    campReturn: Boolean(army.campReturn),
+    campRecall: Boolean(army.campRecall),
     sourceRegionId: army.sourceRegionId,
     targetRegionId: army.targetRegionId,
     onlineRegionIds: army.onlineRegionIds?.length ? army.onlineRegionIds : getMissionRegionIds(army),
@@ -12376,14 +12420,20 @@ function isHarvestBonusNearOwnedCity(x, y, regionId) {
 function pruneExpiredHarvestBonuses() {
   if (!state) return;
   const now = Math.max(0, Number(state.gameSeconds) || 0);
+  const activeRegionId = getActiveMapRegionId();
   const before = state.harvestBonuses?.length || 0;
   state.harvestBonuses = normalizeHarvestBonuses(state.harvestBonuses)
     .filter(bonus => (
       (bonus.createdAtMs
         ? Date.now() - bonus.createdAtMs <= HARVEST_BONUS_EXPIRE_SECONDS * 1000
         : now - bonus.createdAt <= HARVEST_BONUS_EXPIRE_SECONDS)
-      && isHarvestBonusTerrainSafePoint(bonus.x, bonus.y, bonus.regionId)
-      && isHarvestBonusNearOwnedCity(bonus.x, bonus.y, bonus.regionId)
+      && (
+        normalizeRegionId(bonus.regionId) !== activeRegionId
+        || (
+          isHarvestBonusTerrainSafePoint(bonus.x, bonus.y, bonus.regionId)
+          && isHarvestBonusNearOwnedCity(bonus.x, bonus.y, bonus.regionId)
+        )
+      )
     ));
   state.harvestBonuses = enforceHarvestBonusActiveLimit(state.harvestBonuses);
   if (state.harvestBonuses.length !== before) renderHarvestBonuses();
@@ -12545,6 +12595,46 @@ function updateServerHarvestBonuses() {
   const api = getOnlineApi();
   if (!api?.reserveHarvestBonusSpawn) return;
   const daily = ensureDailyCaptureTracker();
+  const activeBonus = getAllActiveHarvestBonuses()[0] || null;
+  if (activeBonus) {
+    const activeRegionId = getActiveMapRegionId();
+    if (normalizeRegionId(activeBonus.regionId) === activeRegionId) {
+      harvestRelocationRetryAtMs = 0;
+      return;
+    }
+    if (Date.now() < harvestRelocationRetryAtMs) return;
+    const point = createHarvestBonusPoint(activeRegionId);
+    if (!point) {
+      harvestRelocationRetryAtMs = Date.now() + HARVEST_BONUS_SERVER_RETRY_SECONDS * 1000;
+      return;
+    }
+    const relocatedBonus = {
+      ...activeBonus,
+      regionId: activeRegionId,
+      x: Math.round(point.x),
+      y: Math.round(point.y),
+    };
+    harvestSpawnRequestInFlight = true;
+    api.reserveHarvestBonusSpawn({
+      relocateActive: true,
+      activeBonusId: activeBonus.id,
+      type: activeBonus.type,
+      regionId: activeRegionId,
+      daily: normalizeDailyCaptureTracker(daily),
+      bonus: relocatedBonus,
+    }).then(result => {
+      applyServerEconomyResult(result);
+      if (result?.relocated || result?.spawned) renderHarvestBonuses();
+      harvestRelocationRetryAtMs = 0;
+    }).catch(error => {
+      console.warn("Could not move harvest pickup to the current map", error);
+      harvestRelocationRetryAtMs = Date.now() + HARVEST_BONUS_SERVER_RETRY_SECONDS * 1000;
+    }).finally(() => {
+      harvestSpawnRequestInFlight = false;
+    });
+    return;
+  }
+  harvestRelocationRetryAtMs = 0;
   if (daily.harvestedBonuses >= HARVEST_BONUS_DAILY_LIMIT) return;
   const nextType = getNextAvailableHarvestBonusType(daily);
   if (!nextType) return;
@@ -12585,6 +12675,26 @@ function updateHarvestBonuses(dt) {
     updateServerHarvestBonuses();
     return;
   }
+  const activeBonus = getAllActiveHarvestBonuses()[0] || null;
+  if (activeBonus) {
+    const activeRegionId = getActiveMapRegionId();
+    if (normalizeRegionId(activeBonus.regionId) !== activeRegionId && Date.now() >= harvestRelocationRetryAtMs) {
+      const point = createHarvestBonusPoint(activeRegionId);
+      if (point) {
+        state.harvestBonuses = normalizeHarvestBonuses(state.harvestBonuses).map(bonus => (
+          bonus.id === activeBonus.id
+            ? { ...bonus, regionId: activeRegionId, x: Math.round(point.x), y: Math.round(point.y) }
+            : bonus
+        ));
+        harvestRelocationRetryAtMs = 0;
+        renderHarvestBonuses();
+      } else {
+        harvestRelocationRetryAtMs = Date.now() + HARVEST_BONUS_SERVER_RETRY_SECONDS * 1000;
+      }
+    }
+    return;
+  }
+  harvestRelocationRetryAtMs = 0;
   if (daily.harvestedBonuses >= HARVEST_BONUS_DAILY_LIMIT) return;
   const nextType = getNextAvailableHarvestBonusType(daily);
   if (!nextType) return;
@@ -13009,6 +13119,7 @@ function launchAttack(sourceId, targetId, percent, owner, exactTroops = null, op
         const acceptedKind = mission.kind || kind;
         const acceptedTroops = Math.max(0, Math.floor(Number(mission.troops) || send));
         const acceptedDemoAttack = normalizeDemoAttackSnapshot(mission.demoAttack) || demoAttack;
+        const peaceShieldDeactivated = Boolean(mission.peaceShieldDeactivated);
         if (acceptedKind === "transfer") {
           if (!options.silent) {
             addLog(`You moved ${formatNumber(acceptedTroops)} troops from ${source.name} to ${target.name}.`);
@@ -13016,8 +13127,13 @@ function launchAttack(sourceId, targetId, percent, owner, exactTroops = null, op
           }
         } else {
           const demoText = acceptedDemoAttack ? ` ${getDemoAttackNotice(acceptedDemoAttack)}` : "";
-          addLog(`You sent ${formatNumber(acceptedTroops)} troops from ${source.name} to attack ${target.name}.${demoText}`);
-          showToast(acceptedDemoAttack ? `Demo attack moving: ${formatNumber(acceptedTroops)} troops` : `Attack moving: ${source.name} \u2192 ${target.name}`);
+          const shieldText = peaceShieldDeactivated ? " Royal Peace Shield deactivated." : "";
+          addLog(`You sent ${formatNumber(acceptedTroops)} troops from ${source.name} to attack ${target.name}.${demoText}${shieldText}`);
+          showToast(peaceShieldDeactivated
+            ? "Shield dropped. Attack moving."
+            : acceptedDemoAttack
+              ? `Demo attack moving: ${formatNumber(acceptedTroops)} troops`
+              : `Attack moving: ${source.name} \u2192 ${target.name}`);
         }
       })
       .finally(() => pendingServerArmyLaunchKeys.delete(launchKey));
@@ -14037,15 +14153,89 @@ function formatPathNumber(value) {
 
 function getMissionSegmentsForRegion(mission, regionId = getActiveMapRegionId()) {
   const activeRegionId = normalizeRegionId(regionId);
-  const segments = getMissionRouteSegments(mission).filter(segment => segment.regionId === activeRegionId);
+  const missionSegments = getMissionRouteSegments(mission);
+  const totalLength = Math.max(0.1, missionSegments.reduce((total, segment) => (
+    total + Math.max(0.1, Number(segment.length) || routeLength(segment.points))
+  ), 0));
+  let traversedLength = 0;
+  const segments = missionSegments.map(segment => {
+    const length = Math.max(0.1, Number(segment.length) || routeLength(segment.points));
+    const routeSegment = {
+      ...segment,
+      length,
+      routeStartProgress: traversedLength / totalLength,
+      routeEndProgress: (traversedLength + length) / totalLength,
+    };
+    traversedLength += length;
+    return routeSegment;
+  }).filter(segment => segment.regionId === activeRegionId);
   if (segments.length) return segments;
   const from = cityById(mission?.fromId);
   const to = getArmyTargetById(mission?.toId);
   if (!from || !to || getCityRegionId(from) !== activeRegionId || getCityRegionId(to) !== activeRegionId) return [];
   const path = normalizeArmyPath(mission?.path);
-  if (path.length >= 2) return [{ regionId: activeRegionId, points: path, length: Math.max(0, Number(mission?.pathLength) || routeLength(path)) }];
+  if (path.length >= 2) return [{
+    regionId: activeRegionId,
+    points: path,
+    length: Math.max(0, Number(mission?.pathLength) || routeLength(path)),
+    routeStartProgress: 0,
+    routeEndProgress: 1,
+  }];
   const route = findRoute(from, to);
-  return getRouteSegments(route, activeRegionId).filter(segment => segment.regionId === activeRegionId);
+  return getRouteSegments(route, activeRegionId)
+    .filter(segment => segment.regionId === activeRegionId)
+    .map(segment => ({ ...segment, routeStartProgress: 0, routeEndProgress: 1 }));
+}
+
+function getTaperedRouteWidth(progress) {
+  const distanceFromMiddle = Math.abs(clamp(progress, 0, 1) * 2 - 1);
+  return 1.2 + 5.4 * Math.pow(distanceFromMiddle, 1.35);
+}
+
+function buildTaperedRoutePolygon(points, routeStartProgress = 0, routeEndProgress = 1) {
+  const mapPoints = normalizeArmyPath(points).map(point => worldToMapPoint(point));
+  if (mapPoints.length < 2) return "";
+
+  const metrics = getPathMetrics(mapPoints);
+  if (metrics.total <= 0) return "";
+
+  let coveredDistance = 0;
+  const routePoints = mapPoints.map((point, index) => {
+    if (index > 0) coveredDistance += metrics.segments[index - 1]?.length || 0;
+    return { point, progress: coveredDistance / metrics.total };
+  });
+
+  // Long, straight routes still need interior points for the visible taper.
+  [0.25, 0.5, 0.75].forEach(progress => {
+    if (routePoints.some(entry => Math.abs(entry.progress - progress) < 0.015)) return;
+    routePoints.push({ point: pointAlongRoute(mapPoints, progress), progress });
+  });
+  routePoints.sort((a, b) => a.progress - b.progress);
+
+  const left = [];
+  const right = [];
+  routePoints.forEach((entry, index) => {
+    const previous = routePoints[Math.max(0, index - 1)].point;
+    const next = routePoints[Math.min(routePoints.length - 1, index + 1)].point;
+    const dx = next.x - previous.x;
+    const dy = next.y - previous.y;
+    const tangentLength = Math.max(0.001, Math.hypot(dx, dy));
+    const normalX = -dy / tangentLength;
+    const normalY = dx / tangentLength;
+    const globalProgress = routeStartProgress + (routeEndProgress - routeStartProgress) * entry.progress;
+    const halfWidth = getTaperedRouteWidth(globalProgress) / 2;
+    left.push({ x: entry.point.x + normalX * halfWidth, y: entry.point.y + normalY * halfWidth });
+    right.push({ x: entry.point.x - normalX * halfWidth, y: entry.point.y - normalY * halfWidth });
+  });
+
+  return [...left, ...right.reverse()]
+    .map(point => `${formatPathNumber(point.x)},${formatPathNumber(point.y)}`)
+    .join(" ");
+}
+
+function isPersonalArmy(mission) {
+  const currentUid = getCurrentOnlineUid();
+  return mission?.owner === "player" || Boolean(currentUid && mission?.ownerUid === currentUid);
 }
 
 function getMissionPointAtProgress(mission, progress) {
@@ -14085,23 +14275,40 @@ function renderPaths() {
   const signature = [
     activeRegionId,
     visibleArmySegments
-      .map(({ attack, segments }) => `${attack.id}:${attack.kind || ""}:${attack.owner || ""}:${attack.fromId}:${attack.toId}:${attack.pathLength || 0}:${segments.map(segment => segment.points.length).join(",")}`)
+      .map(({ attack, segments }) => `${attack.id}:${attack.kind || ""}:${attack.owner || ""}:${attack.ownerUid || ""}:${attack.fromId}:${attack.toId}:${attack.pathLength || 0}:${segments.map(segment => segment.points.length).join(",")}`)
       .join("|"),
   ].join(";");
   if (signature === pathRenderSignature) return;
   pathRenderSignature = signature;
   pathsSvg.innerHTML = "";
   for (const { attack, segments } of visibleArmySegments) {
+    const ownerClass = isPersonalArmy(attack) ? "player-route" : "enemy-route";
+    const kindClass = attack.kind === "transfer"
+      ? "transfer-route"
+      : attack.kind === "scout"
+        ? "scout-route"
+        : "attack-route";
     for (const segment of segments) {
-      const polyline = document.createElementNS("http://www.w3.org/2000/svg", "polyline");
-      polyline.setAttribute("points", segment.points.map(point => {
+      const linePoints = segment.points.map(point => {
         const mapPoint = worldToMapPoint(point);
         return `${mapPoint.x},${mapPoint.y}`;
-      }).join(" "));
-      polyline.classList.add("army-route", attack.owner === "player" ? "player-route" : "enemy-route");
-      if (attack.kind === "transfer") polyline.classList.add("transfer-route");
-      if (attack.kind === "scout") polyline.classList.add("scout-route");
-      pathsSvg.appendChild(polyline);
+      }).join(" ");
+      const ribbonPoints = buildTaperedRoutePolygon(
+        segment.points,
+        segment.routeStartProgress,
+        segment.routeEndProgress,
+      );
+      if (ribbonPoints) {
+        const ribbon = document.createElementNS("http://www.w3.org/2000/svg", "polygon");
+        ribbon.setAttribute("points", ribbonPoints);
+        ribbon.classList.add("army-route-ribbon", ownerClass, kindClass);
+        pathsSvg.appendChild(ribbon);
+      }
+
+      const flowLine = document.createElementNS("http://www.w3.org/2000/svg", "polyline");
+      flowLine.setAttribute("points", linePoints);
+      flowLine.classList.add("army-route-flow", ownerClass, kindClass);
+      pathsSvg.appendChild(flowLine);
     }
   }
 }
@@ -14155,7 +14362,7 @@ function getRewardCampCountdownSeconds(camp) {
 
 function getRewardCampStatusText(camp) {
   if (!camp) return "Unavailable";
-  if (!camp.ownerUid) return `Neutral - ${formatNumber(camp.currentGarrison)} defenders`;
+  if (!camp.ownerUid) return "Neutral defenders";
   const holder = camp.owner === "player" ? "You" : camp.ownerName || "Rival ruler";
   const countdown = getRewardCampCountdownSeconds(camp);
   if (camp.payoutPending && countdown <= 0) return `${holder} - payout ready`;
@@ -14231,6 +14438,16 @@ function getCityRenderSignature(visibleCities, visibleCamps = []) {
 function updateVisibleCityDynamicText() {
   if (!state || !cityLayer) return;
   if (isCameraInteractionActive()) return;
+  const campInfoCountdown = modalBody?.querySelector("[data-camp-info-countdown]");
+  if (campInfoCountdown) {
+    const camp = getCampTargetById(campInfoCountdown.dataset.campInfoCountdown);
+    if (camp) {
+      const countdown = getRewardCampCountdownSeconds(camp);
+      campInfoCountdown.textContent = camp.payoutPending
+        ? countdown > 0 ? formatDuration(countdown) : "Payout ready"
+        : "Neutral";
+    }
+  }
   cityLayer.querySelectorAll(".camp-node[data-camp-id]").forEach(node => {
     const camp = getCampTargetById(node.dataset.campId);
     if (!camp) return;
@@ -14608,6 +14825,7 @@ function renderSelectedRewardCampWheel(camp) {
   const pendingScout = getPendingScoutMission(camp.id);
   const canSend = playerCities().some(city => Math.floor(Number(city.troops) || 0) > 0);
   const canScout = !isHeldByPlayer && !pendingScout && canSend;
+  const canRecall = isHeldByPlayer && camp.payoutPending && !rewardCampRecallRequests.has(camp.id);
   const wheelSize = Math.max(112, Number(camp.size) || 132);
   wheel.className = "gold-camp-action-wheel";
   wheel.style.left = `${mapPoint.x}px`;
@@ -14615,11 +14833,11 @@ function renderSelectedRewardCampWheel(camp) {
   wheel.style.setProperty("--camp-wheel-size", `${wheelSize}px`);
   wheel.style.setProperty("--camp-action-offset", `${Math.max(82, Math.min(116, wheelSize * .7))}px`);
   wheel.innerHTML = `
-    <button class="gold-camp-wheel-action camp-scout-action" type="button" aria-label="${pendingScout ? `Scout traveling to ${escapeHtml(camp.name)}` : report ? `Scout ${escapeHtml(camp.name)} again` : `Scout ${escapeHtml(camp.name)}`}" ${canScout ? "" : "disabled"}>
-      <span aria-hidden="true">&#128301;</span>
-      <strong>${pendingScout ? "Scouting" : report ? "Rescout" : "Scout"}</strong>
+    <button class="gold-camp-wheel-action ${isHeldByPlayer ? "camp-recall-action" : "camp-scout-action"}" type="button" aria-label="${isHeldByPlayer ? `Recall stationed troops from ${escapeHtml(camp.name)}` : pendingScout ? `Scout traveling to ${escapeHtml(camp.name)}` : report ? `Scout ${escapeHtml(camp.name)} again` : `Scout ${escapeHtml(camp.name)}`}" ${isHeldByPlayer ? canRecall ? "" : "disabled" : canScout ? "" : "disabled"}>
+      <span aria-hidden="true">${isHeldByPlayer ? "&#8630;" : "&#128301;"}</span>
+      <strong>${isHeldByPlayer ? rewardCampRecallRequests.has(camp.id) ? "Recalling" : "Recall" : pendingScout ? "Scouting" : report ? "Rescout" : "Scout"}</strong>
     </button>
-    <button class="gold-camp-wheel-action camp-info-action" type="button" aria-label="How ${escapeHtml(camp.name)} works">
+    <button class="gold-camp-wheel-action camp-info-action" type="button" aria-label="Open ${escapeHtml(camp.name)} information">
       <span aria-hidden="true">i</span>
       <strong>Info</strong>
     </button>
@@ -14637,6 +14855,10 @@ function renderSelectedRewardCampWheel(camp) {
     event.stopPropagation();
     scoutRewardCamp(camp.id);
   });
+  wheel.querySelector(".camp-recall-action")?.addEventListener("click", event => {
+    event.stopPropagation();
+    showRecallRewardCampConfirm(camp.id);
+  });
   wheel.querySelector(".camp-order-action")?.addEventListener("click", event => {
     event.stopPropagation();
     beginRewardCampOrder(camp.id);
@@ -14650,6 +14872,86 @@ function renderSelectedRewardCampWheel(camp) {
     showScoutReportModal(camp.id);
   });
   cityLayer.appendChild(wheel);
+}
+
+function showRecallRewardCampConfirm(campId) {
+  const camp = getCampTargetById(campId);
+  if (!camp || camp.owner !== "player" || !camp.payoutPending) {
+    showToast("You no longer control that camp.");
+    return;
+  }
+  const troops = Math.max(0, Math.floor(Number(camp.currentGarrison) || 0));
+  const sourceName = String(camp.returnSourceCityName || "the city they came from");
+  modalTitle.textContent = `Recall from ${camp.name}`;
+  modalBody.innerHTML = `
+    <div class="relinquish-warning">
+      <strong>End this camp hold?</strong>
+      <p>${formatNumber(troops)} stationed troops will leave ${escapeHtml(camp.name)} and march to ${escapeHtml(sourceName)}. If that city was lost, they will march to your main city instead.</p>
+      <p>The camp will reset to neutral immediately and this hold will award no reward.</p>
+      <div class="modal-actions">
+        <button id="confirmRecallCampBtn" class="danger-action" type="button">Recall Troops</button>
+        <button id="cancelRecallCampBtn" class="safe-action" type="button">Keep Holding</button>
+      </div>
+    </div>`;
+  modalBody.querySelector("#cancelRecallCampBtn")?.addEventListener("click", () => modal.close());
+  modalBody.querySelector("#confirmRecallCampBtn")?.addEventListener("click", async event => {
+    event.currentTarget.disabled = true;
+    const success = await recallRewardCampGarrison(camp.id);
+    if (!success && modal.open) event.currentTarget.disabled = false;
+  });
+  if (!modal.open) modal.showModal();
+}
+
+async function recallRewardCampGarrison(campId) {
+  if (!state || rewardCampRecallRequests.has(campId)) return false;
+  const camp = getCampTargetById(campId);
+  const api = getOnlineApi();
+  if (!camp || camp.owner !== "player" || !camp.payoutPending) {
+    showToast("You no longer control that camp.");
+    return false;
+  }
+  if (!api?.recallRewardCampGarrison || !api?.isSignedIn?.()) {
+    showToast("Camp recalls require the online Crownlands server.");
+    return false;
+  }
+
+  rewardCampRecallRequests.add(campId);
+  try {
+    const result = await api.recallRewardCampGarrison({
+      campId: camp.id,
+      regionId: camp.regionId,
+    });
+    applyServerArmyResult(result);
+    if (result?.movement) {
+      const movement = normalizeOnlineArmyMovement(result.movement);
+      if (movement) {
+        const current = onlineArmiesByIsland.get(PLAYER_RELEVANT_ARMIES_CACHE_KEY) || [];
+        onlineArmiesByIsland.set(PLAYER_RELEVANT_ARMIES_CACHE_KEY, [
+          ...current.filter(army => getOnlineArmyResolutionId(army) !== movement.id),
+          movement,
+        ]);
+        rebuildOnlineArmies();
+        adoptOwnOnlineArmies();
+      }
+    }
+    const troops = Math.max(0, Math.floor(Number(result?.returningTroops) || 0));
+    const destination = result?.returnDestinationName || "your city";
+    addLog(`${formatNumber(troops)} troops withdrew from ${camp.name} and began marching to ${destination}.`);
+    showToast(`${formatNumber(troops)} troops recalled from ${camp.name}.`);
+    if (modal.open) modal.close();
+    clearSelection(false);
+    saveGame();
+    renderAll();
+    updateOutgoingAttackUi();
+    return true;
+  } catch (error) {
+    onlineLastError = error?.message || String(error);
+    console.warn("Could not recall reward camp garrison", error);
+    showToast(error?.message || "Could not recall troops from that camp.");
+    return false;
+  } finally {
+    rewardCampRecallRequests.delete(campId);
+  }
 }
 
 function beginRewardCampOrder(campId) {
@@ -14691,6 +14993,122 @@ function selectRewardCamp(campId) {
   requestAnimationFrame(() => centerOnCity(camp.id));
 }
 
+function getRewardCampProgressCacheKey(config) {
+  const uid = getCurrentOnlineUid();
+  return uid && config?.type ? `${uid}:${config.type}` : "";
+}
+
+function normalizeRewardCampProgress(config, raw = {}) {
+  const today = currentUtcDateKey();
+  const date = String(raw?.date || "").slice(0, 10);
+  const count = date === today ? Math.max(0, Math.floor(Number(raw?.count) || 0)) : 0;
+  return {
+    campType: config?.type || "",
+    date: today,
+    count,
+    lastReward: date === today ? Math.max(0, Math.floor(Number(raw?.lastReward) || 0)) : 0,
+    lastCampId: date === today ? String(raw?.lastCampId || "") : "",
+    lastClaimedAtMs: date === today ? normalizeTimestampMs(raw?.lastClaimedAtMs) : 0,
+  };
+}
+
+function cacheRewardCampProgress(config, raw = {}) {
+  const cacheKey = getRewardCampProgressCacheKey(config);
+  const normalized = normalizeRewardCampProgress(config, raw);
+  if (!cacheKey) return normalized;
+  const previous = rewardCampProgressCache.get(cacheKey)?.progress;
+  const progress = previous?.date === normalized.date && previous.count > normalized.count
+    ? previous
+    : normalized;
+  rewardCampProgressCache.set(cacheKey, { progress, fetchedAtMs: Date.now() });
+  return progress;
+}
+
+function getCachedRewardCampProgress(config) {
+  const cacheKey = getRewardCampProgressCacheKey(config);
+  if (!cacheKey) return null;
+  const cached = rewardCampProgressCache.get(cacheKey) || null;
+  if (cached?.progress?.date && cached.progress.date !== currentUtcDateKey()) {
+    rewardCampProgressCache.delete(cacheKey);
+    return null;
+  }
+  return cached;
+}
+
+async function loadRewardCampProgress(config) {
+  const api = getOnlineApi();
+  const cacheKey = getRewardCampProgressCacheKey(config);
+  if (!cacheKey || !api?.isSignedIn?.() || !api?.loadRewardCampProgress) {
+    throw new Error("Reward progress requires an online account.");
+  }
+  const cached = rewardCampProgressCache.get(cacheKey);
+  if (cached?.progress?.date === currentUtcDateKey() && Date.now() - cached.fetchedAtMs < REWARD_CAMP_PROGRESS_CACHE_MS) {
+    return cached.progress;
+  }
+  if (rewardCampProgressRequests.has(cacheKey)) return rewardCampProgressRequests.get(cacheKey);
+  const request = api.loadRewardCampProgress(config.type)
+    .then(raw => cacheRewardCampProgress(config, raw || {}))
+    .finally(() => rewardCampProgressRequests.delete(cacheKey));
+  rewardCampProgressRequests.set(cacheKey, request);
+  return request;
+}
+
+function rewardCampProgressMarkup(config, progress, status = "ready") {
+  if (status === "loading") {
+    return `<div class="camp-reward-loading"><span class="camp-reward-spinner" aria-hidden="true"></span><strong>Loading reward progress...</strong></div>`;
+  }
+  if (status === "error") {
+    return `<div class="camp-reward-loading error"><strong>Reward progress unavailable</strong><p>Your rewards are still tracked by the server. Reopen this panel once the connection is ready.</p></div>`;
+  }
+  const rewards = Array.isArray(config?.dailyRewards) ? config.dailyRewards : [];
+  const claimed = clamp(Math.floor(Number(progress?.count) || 0), 0, rewards.length);
+  const completed = claimed >= rewards.length;
+  const nextReward = completed ? 0 : Math.max(0, Math.floor(Number(rewards[claimed]) || 0));
+  const progressPercent = rewards.length > 0 ? Math.round(claimed / rewards.length * 100) : 0;
+  const rows = rewards.map((reward, index) => {
+    const isClaimed = index < claimed;
+    const isNext = index === claimed;
+    const rowState = isClaimed ? "claimed" : isNext ? "next" : "upcoming";
+    const stateLabel = isClaimed ? "Claimed" : isNext ? "Next" : "Upcoming";
+    return `
+      <li class="camp-reward-row ${rowState}">
+        <span class="camp-reward-check" aria-hidden="true">${isClaimed ? "&#10003;" : index + 1}</span>
+        <span class="camp-reward-copy"><small>Claim ${index + 1}</small><strong>${formatNumber(reward)} ${escapeHtml(config.rewardLabel)}</strong></span>
+        <em>${stateLabel}</em>
+      </li>`;
+  }).join("");
+  return `
+    <div class="camp-reward-overview">
+      <div><span>Today's progress</span><strong>${claimed} / ${rewards.length}</strong></div>
+      <div><span>Next reward</span><strong>${completed ? "Complete" : `${formatNumber(nextReward)} ${escapeHtml(config.rewardLabel)}`}</strong></div>
+    </div>
+    <div class="camp-reward-meter" role="progressbar" aria-label="Daily camp reward progress" aria-valuemin="0" aria-valuemax="${rewards.length}" aria-valuenow="${claimed}"><span style="width:${progressPercent}%"></span></div>
+    <ol class="camp-reward-list">${rows}</ol>
+    <p class="camp-reward-reset">${completed ? "Further successful holds award 0 today. " : ""}The reward ladder resets at 00:00 UTC.</p>`;
+}
+
+function findRewardCampProgressPanel(campId) {
+  return [...modalBody.querySelectorAll("[data-camp-reward-panel]")]
+    .find(panel => panel.dataset.campRewardPanel === String(campId || "")) || null;
+}
+
+function renderRewardCampProgressPanel(campId, config, progress, status = "ready") {
+  const panel = findRewardCampProgressPanel(campId);
+  if (!panel) return;
+  panel.innerHTML = rewardCampProgressMarkup(config, progress, status);
+}
+
+function refreshRewardCampProgressPanel(campId, config) {
+  const cached = getCachedRewardCampProgress(config);
+  renderRewardCampProgressPanel(campId, config, cached?.progress, cached ? "ready" : "loading");
+  void loadRewardCampProgress(config)
+    .then(progress => renderRewardCampProgressPanel(campId, config, progress))
+    .catch(error => {
+      console.warn("Could not load reward camp progress", error);
+      if (!cached) renderRewardCampProgressPanel(campId, config, null, "error");
+    });
+}
+
 function showRewardCampInfoModal(campId) {
   const camp = getCampTargetById(campId);
   if (!camp) {
@@ -14703,17 +15121,107 @@ function showRewardCampInfoModal(campId) {
   const rewardDestination = config.rewardType === "troops"
     ? "The troop reward is delivered to the holder's main city."
     : "The gold reward is added directly to the holder's treasury.";
+  const report = camp.owner === "player" ? null : getScoutReport(camp.id);
+  const holderHasAccess = camp.owner === "player";
+  const visibleStats = holderHasAccess || report
+    ? (() => {
+        const troops = holderHasAccess
+          ? Math.max(0, Math.floor(Number(camp.currentGarrison) || 0))
+          : Math.max(0, Math.floor(Number(report.troops) || 0));
+        const liveStats = holderHasAccess ? getCityStats({ ...camp, troops, troopFloat: troops }) : null;
+        const defenseLevel = holderHasAccess
+          ? Math.max(1, Math.floor(Number(liveStats.level) || camp.defenseLevel || config.defenseLevel))
+          : Math.max(1, Math.floor(Number(report.cityLevel) || camp.defenseLevel || config.defenseLevel));
+        const defensePercent = holderHasAccess
+          ? Math.max(0, Number(liveStats.defensePercent) || 0)
+          : Math.max(0, Number(report.defensePercent) || 0);
+        const troopDefense = holderHasAccess
+          ? Math.floor(troops * (1 + defensePercent / 100))
+          : Math.max(0, Math.floor(Number(report.troopDefense) || troops * (1 + defensePercent / 100)));
+        return {
+          troops,
+          defenseLevel,
+          defensePercent,
+          troopDefense,
+          fortifications: holderHasAccess
+            ? Math.max(0, Math.floor(Number(liveStats.cityWalls) || 0))
+            : Math.max(0, Math.floor(Number(report.cityWalls) || 0)),
+          territoryDefensePercent: holderHasAccess
+            ? Math.max(0, Number(liveStats.strongholdDefenseBonusPercent) || 0)
+            : Math.max(0, Number(report.strongholdDefenseBonusPercent) || 0),
+          totalDefense: holderHasAccess
+            ? Math.max(0, Math.floor(Number(liveStats.totalDefense) || 0))
+            : Math.max(0, Math.floor(Number(report.totalDefense) || 0)),
+        };
+      })()
+    : null;
+  const countdown = getRewardCampCountdownSeconds(camp);
+  const controller = camp.owner === "player" ? "You" : camp.ownerUid ? camp.ownerName || "Rival ruler" : "Neutral";
+  const statsSourceLabel = holderHasAccess ? "Live holder stats" : report ? "Scout report snapshot" : "Scouting required";
+  const reportRemaining = report ? Math.max(0, Math.ceil(report.expiresAt - state.gameSeconds)) : 0;
+  const statsMarkup = visibleStats
+    ? `
+      <div class="gold-camp-info-grid camp-defense-grid">
+        <div><span>Stationed troops</span><strong>${formatNumber(visibleStats.troops)}</strong></div>
+        <div><span>Defense level</span><strong>${formatNumber(visibleStats.defenseLevel)}</strong></div>
+        <div><span>Troop defense</span><strong>${formatNumber(visibleStats.troopDefense)}</strong><small>Level bonus +${formatNumber(visibleStats.defensePercent)}%</small></div>
+        <div><span>Fortifications</span><strong>${formatNumber(visibleStats.fortifications)}</strong><small>${visibleStats.territoryDefensePercent > 0 ? `Territory defense +${formatNumber(visibleStats.territoryDefensePercent)}%` : "Camp walls"}</small></div>
+        <div class="camp-total-defense"><span>Total defense</span><strong>${formatNumber(visibleStats.totalDefense)}</strong></div>
+      </div>
+      ${report ? `<p class="camp-scout-expiry">Scout snapshot expires in <strong>${formatDuration(reportRemaining)}</strong>. Reinforcements or battles after the scout arrived are not revealed.</p>` : ""}`
+    : `
+      <div class="camp-stats-locked">
+        <span class="camp-stats-lock" aria-hidden="true">&#128274;</span>
+        <strong>Camp defenses hidden</strong>
+        <p>Scout this camp to reveal its stationed troops and defense stats.</p>
+      </div>`;
   modalTitle.textContent = camp.name;
   modalBody.innerHTML = `
-    <div class="gold-camp-info-panel camp-rules-only">
-      <div class="gold-camp-description">
-        <strong>How it works</strong>
-        <p>Attack and capture this special objective, then hold it for ${formatNumber(holdMinutes)} minutes to earn ${formatNumber(config.baseReward)} ${escapeHtml(config.rewardLabel)}. The public timer begins when control changes and restarts if another ruler captures the camp before payout.</p>
-        <p>${escapeHtml(rewardDestination)} After payout, the camp resets to neutral. Camps do not count as cities, cannot be shielded, allow unlimited stationed defenders, and ignore weaker-kingdom attack limits.</p>
-        <p>Daily rewards: ${config.dailyRewards.map(value => `${formatNumber(value)} ${config.rewardLabel}`).join(", ")}. Further successful holds award 0 until the next UTC day.</p>
+    <div class="gold-camp-info-panel">
+      <div class="camp-info-tabs" role="tablist" aria-label="${escapeHtml(camp.name)} information">
+        <button id="campStatsTab" class="camp-info-tab active" type="button" role="tab" aria-selected="true" aria-controls="campStatsPanel" data-camp-info-tab="stats">Stats</button>
+        <button id="campRewardTab" class="camp-info-tab" type="button" role="tab" aria-selected="false" aria-controls="campRewardPanel" data-camp-info-tab="reward">Reward</button>
+        <button id="campRulesTab" class="camp-info-tab camp-rules-tab" type="button" role="tab" aria-label="How this camp works" aria-selected="false" aria-controls="campRulesPanel" data-camp-info-tab="rules">?</button>
       </div>
+
+      <section id="campStatsPanel" class="camp-info-tab-panel" role="tabpanel" aria-labelledby="campStatsTab" data-camp-info-panel="stats">
+        <div class="camp-public-status">
+          <div><span>Controller</span><strong>${escapeHtml(controller)}</strong></div>
+          <div><span>Status</span><strong data-camp-info-countdown="${escapeHtml(camp.id)}">${camp.payoutPending ? countdown > 0 ? formatDuration(countdown) : "Payout ready" : "Neutral"}</strong></div>
+          <small class="camp-stats-source">${escapeHtml(statsSourceLabel)}</small>
+        </div>
+        ${statsMarkup}
+      </section>
+
+      <section id="campRewardPanel" class="camp-info-tab-panel" role="tabpanel" aria-labelledby="campRewardTab" data-camp-info-panel="reward" data-camp-reward-panel="${escapeHtml(camp.id)}" hidden>
+        ${rewardCampProgressMarkup(config, null, "loading")}
+      </section>
+
+      <section id="campRulesPanel" class="camp-info-tab-panel" role="tabpanel" aria-labelledby="campRulesTab" data-camp-info-panel="rules" hidden>
+        <div class="gold-camp-description">
+          <strong>How it works</strong>
+          <p>Attack and capture this special objective, then hold it for ${formatNumber(holdMinutes)} minutes to earn ${formatNumber(config.baseReward)} ${escapeHtml(config.rewardLabel)}. The public timer begins when control changes and restarts if another ruler captures the camp before payout.</p>
+          <p>${escapeHtml(rewardDestination)} When the timer ends, all stationed troops leave in a return march to their origin city, or to the holder's main city if the origin was lost. The camp then resets to neutral.</p>
+          <p>Camps do not count as cities, cannot be shielded, allow unlimited stationed defenders, and ignore weaker-kingdom attack limits.</p>
+          <p>Daily rewards: ${config.dailyRewards.map(value => `${formatNumber(value)} ${config.rewardLabel}`).join(", ")}. Further successful holds award 0 until the next UTC day.</p>
+        </div>
+      </section>
     </div>`;
+  const tabs = [...modalBody.querySelectorAll("[data-camp-info-tab]")];
+  const panels = [...modalBody.querySelectorAll("[data-camp-info-panel]")];
+  tabs.forEach(tab => tab.addEventListener("click", () => {
+    const selectedTab = tab.dataset.campInfoTab;
+    tabs.forEach(candidate => {
+      const selected = candidate === tab;
+      candidate.classList.toggle("active", selected);
+      candidate.setAttribute("aria-selected", selected ? "true" : "false");
+    });
+    panels.forEach(panel => {
+      panel.hidden = panel.dataset.campInfoPanel !== selectedTab;
+    });
+  }));
   if (!modal.open) modal.showModal();
+  refreshRewardCampProgressPanel(camp.id, config);
 }
 
 function showScoutReportModal(cityId) {
@@ -14938,10 +15446,7 @@ function layoutCityLabels() {
 function canViewArmyTroopAmount(attack) {
   if (!attack) return false;
   if (attack.kind !== "transfer") return true;
-  if (attack.owner === "player") return true;
-  const ownerUid = String(attack.ownerUid || "").trim();
-  const currentUid = getCurrentOnlineUid();
-  return Boolean(ownerUid && currentUid && ownerUid === currentUid);
+  return isPersonalArmy(attack);
 }
 
 function getArmyTokenId(attack) {
@@ -14956,7 +15461,7 @@ function createArmyTokenElement(attack) {
 }
 
 function updateArmyTokenElement(token, attack, mapPoint, targetCity) {
-  const ownerClass = (OWNER[attack.owner] || OWNER.enemy).css;
+  const ownerClass = isPersonalArmy(attack) ? OWNER.player.css : OWNER.enemy.css;
   const showTroops = canViewArmyTroopAmount(attack);
   const className = `army-token ${ownerClass}${showTroops ? "" : " hidden-transfer"}`;
   if (token.className !== className) token.className = className;
@@ -15422,7 +15927,7 @@ function showTroopSliderModalWithRoute(source, target, route) {
   }
   const commandLabel = isTransfer ? "Transfer" : "Attack";
   const commandIcon = isTransfer ? "&#128095;" : "&#9876;";
-  const shieldDropWarning = isTransfer || campTarget ? "" : getPeaceShieldAttackWarning(target);
+  const shieldDropWarning = isTransfer ? "" : getPeaceShieldAttackWarning(target);
   selectedTroopAmount = clamp(selectedTroopAmount, 1, source.troops);
   troopSliderActive = true;
   modal.classList.add("troop-slider-modal");
@@ -15499,11 +16004,21 @@ function updateTroopSliderModal(source, target, route) {
   }
 
   if (isRewardCampTarget(target)) {
-    const preview = calculateBattlePreviewForTroops(source, target, selectedTroopAmount, route);
+    const report = getScoutReport(target.id);
+    if (!report) {
+      previewEl.className = "troop-slider-preview unknown";
+      previewEl.innerHTML = `
+        <div><span>Battle forecast</span><strong>Camp defenses hidden</strong><small>Scout report required</small></div>
+        <div><span>Travel time</span><strong>About ${formatDuration(travel)}</strong><small>${escapeHtml(routeSummary)}</small><small>Attack is still available</small></div>
+      `;
+      return;
+    }
+    const scoutedTarget = { ...target, troops: report.troops, troopFloat: report.troops };
+    const preview = calculateBattlePreviewForTroops(source, scoutedTarget, selectedTroopAmount, route);
     previewEl.className = `troop-slider-preview ${preview.success ? "win" : "lose"}`;
     previewEl.innerHTML = `
-      <div><span>Public garrison</span><strong>${formatNumber(target.currentGarrison)} defenders</strong><small>Level ${formatNumber(target.defenseLevel)} defense</small></div>
-      <div><span>Battle forecast</span><strong>${preview.success ? "Likely capture" : "Likely defeat"}</strong><small>${preview.success ? `${formatNumber(preview.survivors)} estimated survivors` : `${formatNumber(preview.defendersLeft)} defenders estimated`} &middot; ${formatDuration(preview.travel)} travel</small><small>${escapeHtml(routeSummary)}</small></div>
+      <div><span>Scouted garrison</span><strong>${formatNumber(report.troops)} defenders</strong><small>Level ${formatNumber(report.cityLevel || target.defenseLevel)} defense</small></div>
+      <div><span>Scouted forecast</span><strong>${preview.success ? "Likely capture" : "Likely defeat"}</strong><small>${preview.success ? `${formatNumber(preview.survivors)} estimated survivors` : `${formatNumber(preview.defendersLeft)} defenders estimated`} &middot; ${formatDuration(preview.travel)} travel</small><small>${escapeHtml(routeSummary)}</small></div>
     `;
     return;
   }
@@ -15572,139 +16087,6 @@ function cancelSendMode() {
   selectedTroopAmount = 1;
   activeTroopSliderRoute = null;
   renderAll();
-}
-
-function canRelocateMainCity(city) {
-  return Boolean(state && city && city.owner === "player" && !isStronghold(city) && isMainCityForList(city));
-}
-
-function renderRelocateMainCityAction(city) {
-  if (!canRelocateMainCity(city)) return "";
-  return `
-    <div class="relocate-main-city-action-panel">
-      <div class="relocate-main-city-action-copy">
-        <strong>Relocate main city</strong>
-        <small>Give up this main city and claim a new neutral city using starter, midgame, then endgame spawn rules.</small>
-      </div>
-      <button id="relocateMainCityBtn" class="relocate-main-city-btn" type="button">Relocate</button>
-    </div>
-  `;
-}
-
-function bindRelocateMainCityButton(city) {
-  modalBody.querySelector("#relocateMainCityBtn")?.addEventListener("click", () => showRelocateMainCityConfirm(city.id));
-}
-
-function showRelocateMainCityConfirm(cityId) {
-  const city = cityById(cityId);
-  if (!canRelocateMainCity(city)) {
-    showToast("Only your current main city can relocate.");
-    return;
-  }
-  if (!hasMainCityRelocationApi()) {
-    showToast("Sign in online before relocating your main city.");
-    return;
-  }
-
-  const troops = Math.max(0, Math.floor(Number(city.troops) || 0));
-  modal.classList.add("relocate-main-city-modal");
-  modalTitle.textContent = "Relocate Main City";
-  modalBody.innerHTML = `
-    <div class="relocate-main-warning">
-      <strong>Relocate from ${escapeHtml(city.name)}?</strong>
-      <p>Your current main city will become neutral at level ${formatNumber(city.level)}.</p>
-      <p>${formatNumber(troops)} stationed troops will move to the new main city. Your other cities stay yours.</p>
-      <p>The new city is chosen from starter maps first, then midgame maps, then endgame maps, and must be on a map with at least ${formatNumber(MIN_NEW_PLAYER_SPAWN_NEUTRAL_CITIES)} neutral cities.</p>
-      <div class="modal-actions">
-        <button id="confirmRelocateMainCityBtn" class="danger-action" type="button">Yes</button>
-        <button id="cancelRelocateMainCityBtn" class="safe-action" type="button">No</button>
-      </div>
-    </div>
-  `;
-  modalBody.querySelector("#cancelRelocateMainCityBtn")?.addEventListener("click", () => modal.close());
-  modalBody.querySelector("#confirmRelocateMainCityBtn")?.addEventListener("click", async event => {
-    event.currentTarget.disabled = true;
-    const success = await relocateMainCity(city.id);
-    if (!success && modal.open) event.currentTarget.disabled = false;
-  });
-  if (!modal.open) modal.showModal();
-}
-
-async function relocateMainCity(cityId) {
-  if (!state || mainCityRelocationInFlight) return false;
-  const city = cityById(cityId);
-  if (!canRelocateMainCity(city)) {
-    showToast("Only your current main city can relocate.");
-    return false;
-  }
-  if (!hasMainCityRelocationApi()) {
-    showToast("Sign in online before relocating your main city.");
-    return false;
-  }
-
-  mainCityRelocationInFlight = true;
-  try {
-    showToast("Finding a new main city...");
-    const targetRegionId = await pickAvailableStartingRegionId();
-    if (!targetRegionId) {
-      throw new Error(`No starter, midgame, or endgame map has ${MIN_NEW_PLAYER_SPAWN_NEUTRAL_CITIES} neutral cities available.`);
-    }
-    await ensureOnlineIslandSeeded(targetRegionId, 20000);
-    const result = await getOnlineApi().relocateMainCity({
-      currentCityId: city.id,
-      currentRegionId: getCityRegionId(city),
-      regionCandidates: getRelocationSpawnRegionCandidates(),
-      minimumNeutralCities: MIN_NEW_PLAYER_SPAWN_NEUTRAL_CITIES,
-      playerName: state.playerName,
-      flag: state.flag,
-      ownerKingPower: getKingPower(),
-      worldId: ONLINE_WORLD_ID,
-    });
-    applyServerEconomyResult(result);
-
-    const newMain = result?.newMainCity || {};
-    const newRegionId = normalizeRegionId(newMain.regionId || targetRegionId);
-    const newCityId = getKnownCityId(newMain.id) || state.mainCityId;
-    if (newCityId) state.mainCityId = newCityId;
-    if (state.online) {
-      state.online.mainCityId = newCityId;
-      state.online.mainRegionId = newRegionId;
-      state.online.mainIslandId = newMain.islandId || getOnlineIslandId(newRegionId);
-    }
-    onlineOwnedCitiesCacheComplete = false;
-
-    const movedTroops = Math.max(0, Math.floor(Number(result?.transferredTroops) || 0));
-    addLog(`Main city relocated from ${city.name} to ${newMain.name || "a new city"}. ${formatNumber(movedTroops)} troops moved.`);
-    showToast(`Main city relocated to ${newMain.name || "new city"}`);
-    if (modal.open) modal.close();
-    clearSelection(false);
-    await refreshAllOwnedCities(true);
-    if (newRegionId && newRegionId !== getActiveOnlineRegionId()) {
-      await connectOnlineIsland(newRegionId, {
-        claimHome: false,
-        homeRegionId: newRegionId,
-        profile: {
-          mainIslandId: state.online?.mainIslandId || getOnlineIslandId(newRegionId),
-          mainRegionId: newRegionId,
-          mainCityId: newCityId,
-        },
-      });
-    } else {
-      renderAll();
-      if (newCityId) centerOnCity(newCityId);
-    }
-    publishOnlinePresence(true);
-    flushOnlineSave(true);
-    return true;
-  } catch (error) {
-    onlineLastError = error?.message || String(error);
-    showToast(error?.message || "Could not relocate main city.");
-    console.warn("Main city relocation failed", error);
-    renderAll();
-    return false;
-  } finally {
-    mainCityRelocationInFlight = false;
-  }
 }
 
 function canRelinquishCity(city) {
@@ -16064,13 +16446,12 @@ function showCityInfoModal(cityId) {
       <div class="stat-wide main-city-status">
         <span>Home status</span>
         <strong>Main city</strong>
-      </div>
-      ${renderRelocateMainCityAction(city)}`
+      </div>`
     : `
       <div class="main-city-action-panel">
         <div class="main-city-action-copy">
           <strong>Move main city here</strong>
-          <small>Allowed while you own fewer than ${MAIN_CITY_CHANGE_CITY_LIMIT} cities. Once every 24 hours.</small>
+          <small>Fewer than ${MAIN_CITY_CHANGE_CITY_LIMIT} cities: once every 7 days. ${MAIN_CITY_CHANGE_CITY_LIMIT} or more: once every 14 days.</small>
         </div>
         <button id="changeMainCityBtn" class="main-city-change-btn" type="button"${mainCityStatus.canChange ? "" : " disabled"}>
           <span>Change main city</span>
@@ -16101,7 +16482,6 @@ function showCityInfoModal(cityId) {
     void changeMainCity(city.id);
   });
   bindCityLevelUpButtons(city);
-  bindRelocateMainCityButton(city);
   bindRelinquishCityButton(city);
   if (!modal.open) modal.showModal();
 }
@@ -17515,7 +17895,7 @@ function isSwiftMarchOrderEligible(mission) {
 }
 
 function isRecallHornEligible(mission) {
-  if (!mission || mission.owner !== "player" || mission.kind === "scout" || mission.returning) return false;
+  if (!mission || mission.owner !== "player" || mission.kind === "scout" || mission.returning || mission.campReturn) return false;
   if (mission.serverPending || mission.isResolving) return false;
   if (!getOnlineArmyResolutionId(mission)) return false;
   return Math.max(0, Number(mission.remaining) || 0) > 1;
@@ -17639,13 +18019,16 @@ function renderOutgoingAttackCard(mission) {
   const ownerName = city ? getBattleReportOwnerName(city, city.owner) : "Unknown owner";
   const isScout = mission.kind === "scout";
   const isTransfer = mission.kind === "transfer";
+  const isCampReturn = isTransfer && Boolean(mission.campReturn);
   const isReinforcement = isTransfer && Boolean(city && (isStronghold(city) || isRewardCampTarget(city)));
-  const missionLabel = isReturning ? "Returning" : isScout ? "Scout" : isReinforcement ? "Reinforce" : isTransfer ? "Transfer" : "Attack";
+  const missionLabel = isReturning ? "Returning" : isScout ? "Scout" : isCampReturn ? "Camp Recall" : isReinforcement ? "Reinforce" : isTransfer ? "Transfer" : "Attack";
   const forceDetails = isScout
     ? `1 scout from ${escapeHtml(sourceName)}`
     : `${formatNumber(mission.troops)} troops from ${escapeHtml(sourceName)}`;
   const targetDetails = isReturning
     ? `Recalled before reaching ${escapeHtml(originalTargetName)}`
+    : isCampReturn
+    ? `Withdrawing stationed troops to ${escapeHtml(targetName)}`
     : isTransfer
     ? `${isReinforcement ? "Reinforcing" : "Moving troops to"} ${escapeHtml(targetName)}`
     : city
@@ -19210,7 +19593,6 @@ modal.addEventListener("close", () => {
   modal.classList.remove("incoming-attack-modal");
   modal.classList.remove("outgoing-attack-modal");
   modal.classList.remove("relinquish-city-modal");
-  modal.classList.remove("relocate-main-city-modal");
   if (!troopSliderActive) return;
   troopSliderActive = false;
   cancelSendMode();

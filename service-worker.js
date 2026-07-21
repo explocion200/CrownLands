@@ -1,14 +1,14 @@
-const CACHE_VERSION = "20260721-hud-polish";
+const CACHE_VERSION = "20260721-tapered-march-routes";
 const CACHE_NAME = `crownlands-cache-${CACHE_VERSION}`;
 const STATIC_CACHE_URLS = [
   "/",
   "/index.html",
   "/manifest.webmanifest",
-  "/styles.css?v=20260721-hud-polish",
+  "/styles.css?v=20260721-tapered-march-routes",
   "/world-config.js",
   "/firebase-config.js?v=20260703-vapid-key",
-  "/firebaseClient.js?v=20260721-hud-polish",
-  "/game.js?v=20260721-hud-polish",
+  "/firebaseClient.js?v=20260721-tapered-march-routes",
+  "/game.js?v=20260721-tapered-march-routes",
   "/route-worker.js?v=20260721-structure-route-clearance",
   "/assets/map-editor-data.js?v=20260705-stronghold-sizes",
   "/assets/game-menu-background.jpg?v=20260702-login-page",
