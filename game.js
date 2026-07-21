@@ -15708,7 +15708,7 @@ function updateArmyTokenElement(token, attack, mapPoint, targetCity) {
   if (token.getAttribute("aria-expanded") !== expanded) token.setAttribute("aria-expanded", expanded);
   token.style.transform = `translate3d(${mapPoint.x}px, ${mapPoint.y}px, 0) translate(-50%, -50%)`;
 
-  const armyIcon = attack.kind === "scout" ? "\u{1F52D}" : attack.kind === "transfer" ? "\u{1F45F}" : "\u2694";
+  const armyIcon = attack.kind === "scout" ? "\u{1F52D}" : attack.kind === "transfer" ? "\u265E" : "\u2694";
   const {
     icon: iconElement,
     count: countElement,
