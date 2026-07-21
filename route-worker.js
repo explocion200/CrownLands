@@ -2,9 +2,15 @@
 
 const routeCache = new Map();
 const routeEdgePassableCache = new Map();
+const ROUTE_OBSTACLE_BUCKET_SIZE = 240;
+const ROUTE_OBSTACLE_BUCKET_PADDING = 48;
 
 self.onmessage = event => {
   const message = event.data || {};
+  if (message.type === "warmup") {
+    self.postMessage({ type: "warmup", ok: true });
+    return;
+  }
   if (message.type !== "route") return;
   try {
     const route = calculateRoute(message.job || {});
@@ -110,8 +116,29 @@ function createRouteContext(job, regionId, source, target, ignoreCityObstacles) 
   return {
     regionId,
     obstacles,
+    obstacleGrid: createRouteObstacleGrid(obstacles),
     cacheKey: `${ignoreCityObstacles ? "terrain-only" : "cityblock"}:${regionId}:${Array.from(ignoredIds).sort().join(",")}`,
   };
+}
+
+function createRouteObstacleGrid(obstacles) {
+  const grid = new Map();
+  for (const obstacle of obstacles) {
+    const reach = obstacle.radius + ROUTE_OBSTACLE_BUCKET_PADDING;
+    const minX = Math.floor((obstacle.x - reach) / ROUTE_OBSTACLE_BUCKET_SIZE);
+    const maxX = Math.floor((obstacle.x + reach) / ROUTE_OBSTACLE_BUCKET_SIZE);
+    const minY = Math.floor((obstacle.y - reach) / ROUTE_OBSTACLE_BUCKET_SIZE);
+    const maxY = Math.floor((obstacle.y + reach) / ROUTE_OBSTACLE_BUCKET_SIZE);
+    for (let y = minY; y <= maxY; y += 1) {
+      for (let x = minX; x <= maxX; x += 1) {
+        const key = `${x},${y}`;
+        const bucket = grid.get(key) || [];
+        bucket.push(obstacle);
+        grid.set(key, bucket);
+      }
+    }
+  }
+  return grid;
 }
 
 function findLandRouteWithContext(job, constants, source, target, regionId, context, searchBudget) {
@@ -261,7 +288,9 @@ function isRouteWalkablePointInRegion(job, x, y, regionId, context, padding = 0)
 
 function isRouteCityBlockedPoint(x, y, context, padding = 0) {
   if (!context?.obstacles?.length) return false;
-  for (const obstacle of context.obstacles) {
+  const bucketKey = `${Math.floor(x / ROUTE_OBSTACLE_BUCKET_SIZE)},${Math.floor(y / ROUTE_OBSTACLE_BUCKET_SIZE)}`;
+  const obstacles = context.obstacleGrid?.get(bucketKey) || [];
+  for (const obstacle of obstacles) {
     const radius = obstacle.radius + padding;
     const dx = obstacle.x - x;
     const dy = obstacle.y - y;
@@ -358,7 +387,6 @@ function findGridRouteInRegion(job, constants, start, goal, startPoint, endPoint
     [1, 0, 1], [-1, 0, 1], [0, 1, 1], [0, -1, 1],
     [1, 1, Math.SQRT2], [1, -1, Math.SQRT2], [-1, 1, Math.SQRT2], [-1, -1, Math.SQRT2],
   ];
-
   while (open.length) {
     const current = open.pop();
     if (!current || closed.has(current.index)) continue;

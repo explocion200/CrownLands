@@ -2201,6 +2201,7 @@ const TERRAIN_BLOCKERS = createWorldTerrainBlockers();
 const NO_CITY_TERRAIN = createWorldNoCityTerrain();
 const WORLD_CAMPS = generateWorldCampSlots();
 const routeCache = new Map();
+const asyncRouteCache = new Map();
 const routeEdgePassableCache = new Map();
 const pathMetricCache = new WeakMap();
 const ROUTE_CELL_FALLBACK_RADIUS = 32;
@@ -2208,6 +2209,7 @@ const ROUTE_CELL_FALLBACK_CANDIDATES = 24;
 const ROUTE_CELL_FALLBACK_PAIR_LIMIT = 16;
 const ROUTE_SEARCH_MAX_VISITED_CELLS = Math.max(2500, Math.min(10000, GRID_COLS * GRID_ROWS));
 const ROUTE_WORKER_TIMEOUT_MS = 6000;
+const ASYNC_ROUTE_CACHE_LIMIT = 320;
 const NEAREST_SOURCE_ROUTE_CHECK_LIMIT = 18;
 const SCOUT_SOURCE_ROUTE_CHECK_LIMIT = 10;
 
@@ -2281,6 +2283,8 @@ let routeWorker = null;
 let routeWorkerUnavailable = false;
 let routeWorkerRequestId = 0;
 const routeWorkerRequests = new Map();
+const routeWorkerRegionDataCache = new Map();
+let routeWorkerWarmupScheduled = false;
 let harvestSpawnRequestInFlight = false;
 let onlineIslandSummaries = new Map();
 let onlineIslandSummaryRefreshInFlight = false;
@@ -6623,11 +6627,7 @@ function getRouteHeuristicDistance(source, target) {
 
 function findNearestOwnedSource(target, minimumTroops = 1, options = {}) {
   const maxRouteChecks = Math.max(1, Math.floor(Number(options.maxRouteChecks) || NEAREST_SOURCE_ROUTE_CHECK_LIMIT));
-  const candidates = playerCities()
-    .filter(city => Math.floor(Number(city.troops) || 0) >= minimumTroops && city.id !== target.id)
-    .map(city => ({ city, estimate: getRouteHeuristicDistance(city, target) }))
-    .filter(option => Number.isFinite(option.estimate))
-    .sort((a, b) => a.estimate - b.estimate);
+  const candidates = getOwnedSourceCandidates(target, minimumTroops);
 
   let checked = 0;
   for (const option of candidates) {
@@ -6637,6 +6637,18 @@ function findNearestOwnedSource(target, minimumTroops = 1, options = {}) {
     if (route?.points?.length) return { city: option.city, route };
   }
   return null;
+}
+
+function getOwnedSourceCandidates(target, minimumTroops = 1) {
+  return playerCities()
+    .filter(city => Math.floor(Number(city.troops) || 0) >= minimumTroops && city.id !== target.id)
+    .map(city => ({ city, estimate: getRouteHeuristicDistance(city, target) }))
+    .filter(option => Number.isFinite(option.estimate))
+    .sort((a, b) => a.estimate - b.estimate);
+}
+
+function findNearestOwnedSourceCandidate(target, minimumTroops = 1) {
+  return getOwnedSourceCandidates(target, minimumTroops)[0] || null;
 }
 
 function findNearestScoutSource(target) {
@@ -10346,6 +10358,22 @@ function clearOnlineServerReportWatcher() {
   onlineServerReportsUnsubscribe = null;
 }
 
+function getArmyRouteSummary(route, source, target) {
+  const regionIds = getRouteSegments(route, getCityRegionId(source)).map(segment => segment.regionId);
+  const sourceRegionId = getCityRegionId(source);
+  const targetRegionId = getCityRegionId(target);
+  if (sourceRegionId) regionIds.unshift(sourceRegionId);
+  if (targetRegionId) regionIds.push(targetRegionId);
+  const orderedRegionIds = regionIds
+    .map(normalizeRegionId)
+    .filter((regionId, index, values) => regionId && (index === 0 || regionId !== values[index - 1]));
+  const portalCount = Math.max(0, orderedRegionIds.length - 1);
+  const chain = orderedRegionIds.map(getRegionLabel).join(" -> ");
+  return portalCount > 0
+    ? `${portalCount} portal ${portalCount === 1 ? "crossing" : "crossings"}: ${chain}`
+    : `Same-island route: ${chain || getRegionLabel(sourceRegionId)}`;
+}
+
 function clearOnlineGlobalStatsWatcher() {
   if (typeof onlineGlobalStatsUnsubscribe === "function") onlineGlobalStatsUnsubscribe();
   onlineGlobalStatsUnsubscribe = null;
@@ -10778,6 +10806,7 @@ async function startFromInput(forceFresh = false) {
     rememberOwnedAttackSource(state.mainCityId || playerCities()[0]?.id);
     saveGame();
     renderAll();
+    scheduleRouteWorkerWarmup();
     requestAnimationFrame(() => centerOnCity(selectedSourceId || state.mainCityId || playerCities()[0]?.id));
     flushOnlineSave(true);
     refreshPushAlertRegistration(true);
@@ -11386,6 +11415,15 @@ function rejectPendingRouteWorkerRequests(error) {
   routeWorkerRequests.clear();
 }
 
+function cancelPendingRouteWorkerRequests(message = "Route calculation canceled.") {
+  if (!routeWorkerRequests.size) return;
+  const error = new Error(message);
+  error.routeCanceled = true;
+  rejectPendingRouteWorkerRequests(error);
+  routeWorker?.terminate?.();
+  routeWorker = null;
+}
+
 function getRouteWorker() {
   if (routeWorkerUnavailable || typeof Worker === "undefined") return null;
   if (routeWorker) return routeWorker;
@@ -11418,6 +11456,22 @@ function getRouteWorker() {
   }
 }
 
+function scheduleRouteWorkerWarmup() {
+  if (routeWorker || routeWorkerUnavailable || routeWorkerWarmupScheduled || typeof Worker === "undefined") return;
+  routeWorkerWarmupScheduled = true;
+  const warmup = () => {
+    routeWorkerWarmupScheduled = false;
+    if (!state || routeWorker || routeWorkerUnavailable) return;
+    const worker = getRouteWorker();
+    worker?.postMessage?.({ type: "warmup" });
+  };
+  if (typeof window.requestIdleCallback === "function") {
+    window.requestIdleCallback(warmup, { timeout: 2500 });
+  } else {
+    window.setTimeout(warmup, 1200);
+  }
+}
+
 function requestRouteFromWorker(job) {
   const worker = getRouteWorker();
   if (!worker) return Promise.reject(new Error("Route worker unavailable."));
@@ -11436,18 +11490,47 @@ function requestRouteFromWorker(job) {
 }
 
 async function findRouteAsync(source, target) {
+  const cacheKey = getAsyncRouteCacheKey(source, target);
+  const cachedRoute = cacheKey ? asyncRouteCache.get(cacheKey) : null;
+  if (cachedRoute?.points?.length) return cloneRoute(cachedRoute);
+  const reverseKey = getAsyncRouteCacheKey(target, source);
+  const cachedReverseRoute = reverseKey ? asyncRouteCache.get(reverseKey) : null;
+  if (cachedReverseRoute?.points?.length) {
+    const route = reverseRoute(cachedReverseRoute);
+    cacheAsyncRoute(cacheKey, route);
+    return route;
+  }
   const job = buildRouteWorkerJob(source, target);
   if (!job) return findRoute(source, target);
   try {
     const workerRoute = await requestRouteFromWorker(job);
-    return workerRoute?.points?.length ? cloneRoute(workerRoute) : null;
+    if (!workerRoute?.points?.length) return null;
+    cacheAsyncRoute(cacheKey, workerRoute);
+    return cloneRoute(workerRoute);
   } catch (error) {
+    if (error?.routeCanceled) return null;
     if (error?.routeTimedOut || isBitmapRouteWorkerJob(job)) {
       console.warn("Route worker failed; route calculation canceled to keep the map responsive.", error);
       return null;
     }
     console.warn("Route worker failed; falling back to main-thread routing.", error);
     return findRoute(source, target);
+  }
+}
+
+function getAsyncRouteCacheKey(source, target) {
+  if (!source || !target) return "";
+  const sourceRegionId = getCityRegionId(source);
+  const targetRegionId = getCityRegionId(target);
+  return `${sourceRegionId}:${getRoutePointId(source, "source")}:${Math.round(Number(source.x) || 0)},${Math.round(Number(source.y) || 0)}|${targetRegionId}:${getRoutePointId(target, "target")}:${Math.round(Number(target.x) || 0)},${Math.round(Number(target.y) || 0)}`;
+}
+
+function cacheAsyncRoute(cacheKey, route) {
+  if (!cacheKey || !route?.points?.length) return;
+  asyncRouteCache.delete(cacheKey);
+  asyncRouteCache.set(cacheKey, cloneRoute(route));
+  while (asyncRouteCache.size > ASYNC_ROUTE_CACHE_LIMIT) {
+    asyncRouteCache.delete(asyncRouteCache.keys().next().value);
   }
 }
 
@@ -11516,13 +11599,15 @@ function buildRouteWorkerLegs(source, target) {
 
 function getRouteWorkerRegionData(regionId) {
   const normalizedRegionId = normalizeRegionId(regionId);
+  const cached = routeWorkerRegionDataCache.get(normalizedRegionId);
+  if (cached) return cached;
   const region = getRegionById(normalizedRegionId) || {};
   const bounds = getIslandMapBounds(normalizedRegionId);
   const isBitmap = BITMAP_ISLAND_IDS.includes(normalizedRegionId);
   const terrainShapes = isBitmap
     ? IMAGE_TERRAIN_BLOCKERS[normalizedRegionId] || []
     : TERRAIN_BLOCKERS.filter(shape => normalizeRegionId(shape.regionId) === normalizedRegionId);
-  return {
+  const data = {
     id: normalizedRegionId,
     isBitmap,
     region: sanitizeRouteWorkerRegion(region),
@@ -11534,6 +11619,8 @@ function getRouteWorkerRegionData(regionId) {
     })),
     terrainBlockers: terrainShapes.map(sanitizeRouteWorkerTerrainShape),
   };
+  routeWorkerRegionDataCache.set(normalizedRegionId, data);
+  return data;
 }
 
 function sanitizeRouteWorkerRegion(region = {}) {
@@ -11581,20 +11668,29 @@ function sanitizeRouteWorkerTerrainShape(shape = {}) {
 
 function getRouteWorkerObstaclesByRegion(regionIds = []) {
   const regionSet = new Set(regionIds.map(normalizeRegionId));
-  const obstaclesByRegion = Object.fromEntries([...regionSet].map(regionId => [regionId, []]));
-  (state?.cities || []).forEach(city => {
-    const regionId = getCityRegionId(city);
-    if (!regionSet.has(regionId)) return;
-    obstaclesByRegion[regionId].push({
-      id: city.id,
-      x: Number(city.x) || 0,
-      y: Number(city.y) || 0,
-      radius: isStronghold(city)
-        ? Math.max(ROUTE_STRONGHOLD_CLEARANCE, getStrongholdVisualSize(city) * 0.55)
-        : ROUTE_CITY_CLEARANCE,
+  const obstacleMaps = Object.fromEntries([...regionSet].map(regionId => [regionId, new Map()]));
+  const addObstacle = target => {
+    const regionId = normalizeRegionId(target?.regionId || target?.startPool);
+    const id = String(target?.id || "");
+    if (!id || !regionSet.has(regionId)) return;
+    const isCamp = Boolean(getRewardCampConfig(target));
+    obstacleMaps[regionId].set(id, {
+      id,
+      x: Number(target.x) || 0,
+      y: Number(target.y) || 0,
+      radius: isCamp
+        ? Math.max(ROUTE_STRONGHOLD_CLEARANCE, readVisualSize(target.size, DEFAULT_CAMP_VISUAL_SIZE) * 0.55)
+        : isStronghold(target)
+          ? Math.max(ROUTE_STRONGHOLD_CLEARANCE, getStrongholdVisualSize(target) * 0.55)
+          : ROUTE_CITY_CLEARANCE,
     });
+  };
+  regionSet.forEach(regionId => {
+    getOnlineIslandBaseCities(regionId).forEach(addObstacle);
+    WORLD_CAMPS.filter(camp => normalizeRegionId(camp.regionId) === regionId).forEach(addObstacle);
   });
-  return obstaclesByRegion;
+  (state?.cities || []).forEach(addObstacle);
+  return Object.fromEntries(Object.entries(obstacleMaps).map(([regionId, obstacles]) => [regionId, [...obstacles.values()]]));
 }
 
 function findRoute(source, target) {
@@ -14430,14 +14526,14 @@ function scoutSkillRow(label, level = 0, percent = 0) {
 function findLastSelectedAttackSource(target) {
   const source = getLastSelectedOwnedAttackCity();
   if (!source || source.id === target.id || Math.floor(Number(source.troops) || 0) < 1) return null;
-  const route = findRoute(source, target);
-  return route?.points?.length ? { city: source, route } : null;
+  const estimate = getRouteHeuristicDistance(source, target);
+  return Number.isFinite(estimate) ? { city: source, estimate } : null;
 }
 
 function findPreferredAttackSource(target) {
   const rememberedSource = getLastSelectedOwnedAttackCity();
-  if (rememberedSource) return findLastSelectedAttackSource(target) || findNearestOwnedSource(target, 1);
-  return findNearestOwnedSource(target, 1);
+  if (rememberedSource) return findLastSelectedAttackSource(target);
+  return findNearestOwnedSourceCandidate(target, 1);
 }
 
 function attackForeignCity(cityId) {
@@ -14462,8 +14558,8 @@ function attackForeignCity(cityId) {
   if (!sourceOption) {
     const rememberedSource = getLastSelectedOwnedAttackCity();
     showToast(rememberedSource
-      ? `${rememberedSource.name} needs troops and a valid route to attack this target.`
-      : "No owned city with troops can reach this target.");
+      ? `${rememberedSource.name} needs troops and a portal connection to attack this target.`
+      : "No owned city with troops has a portal connection to this target.");
     return;
   }
   selectedSourceId = sourceOption.city.id;
@@ -14889,12 +14985,13 @@ async function showTroopSliderModalAsync(source, target) {
     return;
   }
 
+  cancelPendingRouteWorkerRequests("A newer route was selected.");
   const requestId = ++activeTroopRouteRequestId;
   troopSliderActive = true;
   activeTroopSliderRoute = null;
   showTroopRouteLoadingModal(source, target, isTransfer);
 
-  await new Promise(resolve => requestAnimationFrame(resolve));
+  await waitForSetupLoadingPaint(0);
   const route = await findRouteAsync(source, target);
   if (requestId !== activeTroopRouteRequestId) return;
 
@@ -14937,13 +15034,13 @@ function showTroopRouteLoadingModal(source, target, isTransfer) {
         <div class="troop-route-city">
           <span>From</span>
           <strong>${escapeHtml(source.name)}</strong>
-          <small><b>${formatNumber(source.troops)}</b> available</small>
+          <small>${escapeHtml(getRegionLabel(getCityRegionId(source)))} &middot; <b>${formatNumber(source.troops)}</b> available</small>
         </div>
         <div class="troop-command-icon" aria-hidden="true">${commandIcon}</div>
         <div class="troop-route-city destination">
           <span>To</span>
           <strong>${escapeHtml(target.name)}</strong>
-          <small>${isRewardCampTarget(target) ? (isTransfer ? `Your ${escapeHtml(target.name)}` : `${OWNER[target.owner].label} ${escapeHtml(target.name)}`) : isTransfer ? "Your city" : `${OWNER[target.owner].label} city`}</small>
+          <small>${escapeHtml(getRegionLabel(getCityRegionId(target)))} &middot; ${isRewardCampTarget(target) ? (isTransfer ? `Your ${escapeHtml(target.name)}` : `${OWNER[target.owner].label} ${escapeHtml(target.name)}`) : isTransfer ? "Your city" : `${OWNER[target.owner].label} city`}</small>
         </div>
       </div>
 
@@ -14999,13 +15096,13 @@ function showTroopSliderModalWithRoute(source, target, route) {
         <div class="troop-route-city">
           <span>From</span>
           <strong>${escapeHtml(source.name)}</strong>
-          <small><b id="troopSliderRemaining">${formatNumber(source.troops - selectedTroopAmount)}</b> remain</small>
+          <small>${escapeHtml(getRegionLabel(getCityRegionId(source)))} &middot; <b id="troopSliderRemaining">${formatNumber(source.troops - selectedTroopAmount)}</b> remain</small>
         </div>
         <div class="troop-command-icon" aria-hidden="true">${commandIcon}</div>
         <div class="troop-route-city destination">
           <span>To</span>
           <strong>${escapeHtml(target.name)}</strong>
-          <small>${campTarget ? (isTransfer ? `Your ${escapeHtml(target.name)}` : `${OWNER[target.owner].label} ${escapeHtml(target.name)}`) : isTransfer ? "Your city" : `${OWNER[target.owner].label} city`}</small>
+          <small>${escapeHtml(getRegionLabel(getCityRegionId(target)))} &middot; ${campTarget ? (isTransfer ? `Your ${escapeHtml(target.name)}` : `${OWNER[target.owner].label} ${escapeHtml(target.name)}`) : isTransfer ? "Your city" : `${OWNER[target.owner].label} city`}</small>
         </div>
       </div>
 
@@ -15045,6 +15142,7 @@ function showTroopSliderModalWithRoute(source, target, route) {
 function updateTroopSliderModal(source, target, route) {
   const slider = modalBody.querySelector("#troopAmountSlider");
   if (!slider || !source || !target) return;
+  const routeSummary = getArmyRouteSummary(route, source, target);
   selectedTroopAmount = clamp(selectedTroopAmount, 1, source.troops);
   slider.value = selectedTroopAmount;
   const progress = source.troops <= 1 ? 100 : ((selectedTroopAmount - 1) / (source.troops - 1)) * 100;
@@ -15058,7 +15156,7 @@ function updateTroopSliderModal(source, target, route) {
     previewEl.className = "troop-slider-preview transfer";
     previewEl.innerHTML = `
       <div><span>Arrival</span><strong>${formatNumber(target.troops + selectedTroopAmount)} troops</strong></div>
-      <div><span>Travel time</span><strong>About ${formatDuration(travel)}</strong></div>
+      <div><span>Travel time</span><strong>About ${formatDuration(travel)}</strong><small>${escapeHtml(routeSummary)}</small></div>
     `;
     return;
   }
@@ -15068,7 +15166,7 @@ function updateTroopSliderModal(source, target, route) {
     previewEl.className = `troop-slider-preview ${preview.success ? "win" : "lose"}`;
     previewEl.innerHTML = `
       <div><span>Public garrison</span><strong>${formatNumber(target.currentGarrison)} defenders</strong><small>Level ${formatNumber(target.defenseLevel)} defense</small></div>
-      <div><span>Battle forecast</span><strong>${preview.success ? "Likely capture" : "Likely defeat"}</strong><small>${preview.success ? `${formatNumber(preview.survivors)} estimated survivors` : `${formatNumber(preview.defendersLeft)} defenders estimated`} &middot; ${formatDuration(preview.travel)} travel</small></div>
+      <div><span>Battle forecast</span><strong>${preview.success ? "Likely capture" : "Likely defeat"}</strong><small>${preview.success ? `${formatNumber(preview.survivors)} estimated survivors` : `${formatNumber(preview.defendersLeft)} defenders estimated`} &middot; ${formatDuration(preview.travel)} travel</small><small>${escapeHtml(routeSummary)}</small></div>
     `;
     return;
   }
@@ -15082,7 +15180,7 @@ function updateTroopSliderModal(source, target, route) {
     previewEl.className = "troop-slider-preview unknown";
     previewEl.innerHTML = `
       <div><span>Battle forecast</span><strong>Garrison unknown</strong><small>Scout report required</small></div>
-      <div><span>Travel time</span><strong>About ${formatDuration(demoTravel)}</strong><small>Attack is still available</small>${demoNotice ? `<small>${escapeHtml(demoNotice)}</small>` : ""}</div>
+      <div><span>Travel time</span><strong>About ${formatDuration(demoTravel)}</strong><small>${escapeHtml(routeSummary)}</small><small>Attack is still available</small>${demoNotice ? `<small>${escapeHtml(demoNotice)}</small>` : ""}</div>
     `;
     return;
   }
@@ -15093,7 +15191,7 @@ function updateTroopSliderModal(source, target, route) {
   previewEl.className = `troop-slider-preview ${preview.success ? "win" : "lose"}`;
   previewEl.innerHTML = `
     <div><span>Scouted forecast</span><strong>${preview.success ? "Likely victory" : "Likely defeat"}</strong><small>${preview.label}</small></div>
-    <div><span>${preview.success ? "Estimated survivors" : "Defenders left"}</span><strong>${formatNumber(preview.success ? preview.survivors : preview.defendersLeft)}</strong><small>About ${formatDuration(preview.travel)} travel</small>${demoNotice ? `<small>${escapeHtml(demoNotice)}</small>` : ""}</div>
+    <div><span>${preview.success ? "Estimated survivors" : "Defenders left"}</span><strong>${formatNumber(preview.success ? preview.survivors : preview.defendersLeft)}</strong><small>About ${formatDuration(preview.travel)} travel</small><small>${escapeHtml(routeSummary)}</small>${demoNotice ? `<small>${escapeHtml(demoNotice)}</small>` : ""}</div>
   `;
 }
 
@@ -15131,6 +15229,7 @@ function confirmTroopSliderOrder() {
 
 function cancelSendMode() {
   activeTroopRouteRequestId += 1;
+  cancelPendingRouteWorkerRequests();
   sendMode = false;
   selectedTargetId = null;
   selectedTroopAmount = 1;
