@@ -4,6 +4,7 @@ const vm = require("vm");
 
 const root = path.resolve(__dirname, "..");
 const source = fs.readFileSync(path.join(root, "functions", "index.js"), "utf8");
+const clientSource = fs.readFileSync(path.join(root, "game.js"), "utf8");
 
 function readFunction(name) {
   const start = source.indexOf(`function ${name}(`);
@@ -82,12 +83,12 @@ if (sandbox.DEMO_ATTACK_MIN_POWER_RATIO !== 3) {
 }
 
 const validGlobalPower = sandbox.getPlayerPowerSnapshot({
-  profile: { kingPowerVersion: 5, kingPower: 0, kingPowerUpdatedAtMs: 5000 },
+  profile: { kingPowerVersion: 5, kingPower: 4_000_000, kingPowerUpdatedAtMs: 5000 },
   globalStats: { version: 5, kingPower: 900_000, updatedAtMs: 4000 },
   city: { powerFloor: 300_000 },
 });
 if (validGlobalPower !== 900_000) {
-  throw new Error("A temporary zero profile snapshot overrides valid v5 global stats.");
+  throw new Error("A newer mirrored profile snapshot overrides canonical v5 global stats.");
 }
 
 const cityFloorPower = sandbox.getPlayerPowerSnapshot({
@@ -124,6 +125,16 @@ const weakToStrong = sandbox.createServerDemoAttackSnapshot({
   attackerUid: "weak-player",
 });
 if (weakToStrong) throw new Error("Weak-to-strong attacks are incorrectly restricted.");
+
+const closeMatch = sandbox.createServerDemoAttackSnapshot({
+  sourceTroops: 1_000_000,
+  target: { ownerUid: "twelve-million-player", cityWalls: 100_000 },
+  requestedTroops: 1_000_000,
+  attackerKingPower: 11_000_000,
+  defenderKingPower: 12_000_000,
+  attackerUid: "eleven-million-player",
+});
+if (closeMatch) throw new Error("An 11M versus 12M King Power attack is incorrectly classified as a demo attack.");
 
 const sameOwner = sandbox.createServerDemoAttackSnapshot({
   sourceTroops: 100_000,
@@ -164,6 +175,14 @@ if (!source.includes("globalStats: defenderGlobalStatsData")) {
 }
 if (!source.includes("writeParticipantEconomies({") || !source.includes("statsCityPatches: [{ ref: targetRef, city: target, patch: targetPatch }]")) {
   throw new Error("Battle resolution does not refresh both participants after a city battle.");
+}
+if (!clientSource.includes("function getAuthoritativeCityOwnerKingPowerSnapshot(city)")
+  || !clientSource.includes("getAuthoritativeCityOwnerKingPowerSnapshot(target)")) {
+  throw new Error("Client demo previews do not require an authoritative opponent King Power snapshot.");
+}
+if (!clientSource.includes("authoritative: existingIsAuthoritative || force")
+  || !clientSource.includes("fetchedAtMs: force ? Date.now() : existing?.fetchedAtMs || 0")) {
+  throw new Error("Map city records can still overwrite or postpone canonical identity refreshes.");
 }
 
 console.log("Validated weaker-kingdom protection with King Power v5, directional limits, and objective exemptions.");

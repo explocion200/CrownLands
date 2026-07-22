@@ -1138,18 +1138,17 @@ function getPlayerPowerSnapshot({ profile = {}, leaderboard = {}, globalStats = 
       updatedAtMs: Math.max(0, timestampToMs(globalStats.updatedAtMs || globalStats.updatedAt)),
     },
     {
-      version: Math.max(0, Math.floor(safeNumber(profile.kingPowerVersion, 0))),
-      power: Math.max(0, Math.floor(safeNumber(profile.kingPower, 0))),
-      updatedAtMs: Math.max(0, timestampToMs(profile.kingPowerUpdatedAtMs)),
-    },
-    {
       version: Math.max(0, Math.floor(safeNumber(leaderboard.kingPowerVersion, 0))),
       power: Math.max(0, Math.floor(safeNumber(leaderboard.kingPower, 0))),
       updatedAtMs: Math.max(0, timestampToMs(leaderboard.kingPowerUpdatedAtMs || leaderboard.updatedAtMs)),
     },
+    {
+      version: Math.max(0, Math.floor(safeNumber(profile.kingPowerVersion, 0))),
+      power: Math.max(0, Math.floor(safeNumber(profile.kingPower, 0))),
+      updatedAtMs: Math.max(0, timestampToMs(profile.kingPowerUpdatedAtMs)),
+    },
   ]
-    .filter(candidate => candidate.version >= GLOBAL_PLAYER_STATS_VERSION && candidate.power > 0)
-    .sort((a, b) => b.updatedAtMs - a.updatedAtMs);
+    .filter(candidate => candidate.version >= GLOBAL_PLAYER_STATS_VERSION && candidate.power > 0);
   if (authoritativeCandidates.length) return authoritativeCandidates[0].power;
 
   const legacyGlobalPower = getLegacyGlobalStatsKingPower(globalStats);

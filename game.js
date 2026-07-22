@@ -6000,6 +6000,24 @@ function getCityOwnerKingPowerSnapshot(city) {
   );
 }
 
+function getAuthoritativeCityOwnerKingPowerSnapshot(city) {
+  if (!city) return 0;
+  const currentUid = getCurrentOnlineUid();
+  if (city.owner === "player" && (!city.ownerUid || city.ownerUid === currentUid)) return getKingPower();
+  const cachedIdentity = playerIdentityCache.get(city.ownerUid);
+  const cachedPower = cachedIdentity?.authoritative
+    && Math.max(0, Math.floor(Number(cachedIdentity.kingPowerVersion) || 0)) >= KING_POWER_AUTHORITY_VERSION
+    ? normalizePowerValue(cachedIdentity.kingPower)
+    : 0;
+  if (cachedPower > 0) return cachedPower;
+  const presence = Array.isArray(onlinePresence)
+    ? onlinePresence.find(entry => entry?.uid === city.ownerUid)
+    : null;
+  return Math.max(0, Math.floor(Number(presence?.kingPowerVersion) || 0)) >= KING_POWER_AUTHORITY_VERSION
+    ? normalizePowerValue(presence.kingPower)
+    : 0;
+}
+
 function getDemoAttackTier(powerRatio) {
   const ratio = Number(powerRatio) || 0;
   return DEMO_ATTACK_TIERS.find(tier => ratio >= tier.minRatio) || null;
@@ -6049,7 +6067,11 @@ function createDemoAttackSnapshot(source, target, requestedTroops, owner = "play
   if (!targetOwnedByPlayer || targetOwnedByCurrentPlayer) return null;
 
   const attackerKingPower = normalizePowerValue(overrides.attackerKingPower ?? getKingPower());
-  const defenderKingPower = Math.max(1, normalizePowerValue(overrides.defenderKingPower ?? getCityOwnerKingPowerSnapshot(target)));
+  const defenderSnapshot = overrides.defenderKingPower === undefined
+    ? getAuthoritativeCityOwnerKingPowerSnapshot(target)
+    : normalizePowerValue(overrides.defenderKingPower);
+  if (defenderSnapshot <= 0) return null;
+  const defenderKingPower = Math.max(1, defenderSnapshot);
   const powerRatio = attackerKingPower / Math.max(1, defenderKingPower);
   const tier = getDemoAttackTier(powerRatio);
   if (!tier) return null;
@@ -7955,11 +7977,14 @@ function rememberPlayerIdentity(raw = {}, options = {}) {
   const existing = playerIdentityCache.get(identity.uid) || null;
   const before = getPlayerIdentitySignature(existing);
   const force = Boolean(options.force);
+  const existingIsAuthoritative = Boolean(existing?.authoritative);
   const identityIsNewer = !existing
-    || !existing.updatedAtMs
-    || !identity.updatedAtMs
-    || identity.updatedAtMs >= existing.updatedAtMs
-    || force;
+    || force
+    || (!existingIsAuthoritative && (
+      !existing.updatedAtMs
+      || !identity.updatedAtMs
+      || identity.updatedAtMs >= existing.updatedAtMs
+    ));
   const next = {
     uid: identity.uid,
     displayName: identityIsNewer
@@ -7975,7 +8000,8 @@ function rememberPlayerIdentity(raw = {}, options = {}) {
       ? identity.kingPowerVersion
       : Math.max(0, Math.floor(Number(existing?.kingPowerVersion) || 0)),
     updatedAtMs: Math.max(existing?.updatedAtMs || 0, identity.updatedAtMs || 0),
-    fetchedAtMs: Date.now(),
+    fetchedAtMs: force ? Date.now() : existing?.fetchedAtMs || 0,
+    authoritative: existingIsAuthoritative || force,
   };
   playerIdentityCache.set(identity.uid, next);
   playerIdentityLookupMisses.delete(identity.uid);
