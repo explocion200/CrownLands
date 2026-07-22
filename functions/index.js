@@ -162,6 +162,7 @@ const REWARD_CAMP_CONFIG = {
     name: "Deed Camp",
     artSrc: "assets/camps/deed.png",
     rewardType: "city",
+    objectiveStatsId: "deedCamp",
     holdDurationMs: DEED_CAMP_HOLD_DURATION_MS,
     baseReward: 1,
     baseDefenders: DEED_CAMP_BASE_DEFENDERS,
@@ -1480,6 +1481,37 @@ function cityRefForRegion(regionId, cityId) {
 
 function campRefForRegion(regionId, campId) {
   return db.doc(`islands/${getOnlineIslandId(regionId)}/camps/${campId}`);
+}
+
+function getAuthoritativeRewardCampSeed(regionId = "", campId = "") {
+  const safeCampId = safeString(campId, 96).replace(/[^a-zA-Z0-9_-]/g, "_");
+  if (!safeCampId) return null;
+  return getAuthoritativeIslandSeed(regionId).camps.find(camp => camp.id === safeCampId) || null;
+}
+
+function createNeutralRewardCampState(camp = {}) {
+  const seed = cleanServerCampLayoutSeed(camp);
+  if (!seed.id) return null;
+  return {
+    ...seed,
+    holderUid: "",
+    holderName: "",
+    holderFlag: null,
+    heldSinceMs: 0,
+    payoutAtMs: 0,
+    payoutPending: false,
+    currentGarrison: seed.baseDefenders,
+    returnSourceCityId: "",
+    returnSourceRegionId: "",
+    returnSourceCityName: "",
+    returnPathSegments: [],
+    returnRouteRegionIds: [],
+    returnPathLength: 0,
+    activeArmyIds: [],
+    dailyRewardClaims: {},
+    lastResetDate: "",
+    state: "neutral",
+  };
 }
 
 function getRewardCampConfig(campOrType = {}) {
@@ -4965,11 +4997,20 @@ exports.sendArmyOrder = onCall({ region: "us-central1", maxInstances: 20, invoke
     ]);
 
     if (!sourceSnap.exists) throw new HttpsError("not-found", "Source city was not found.");
-    if (!targetSnap.exists) throw new HttpsError("not-found", "Destination city was not found.");
+    const missingTargetCamp = order.targetType === "camp" && !targetSnap.exists
+      ? createNeutralRewardCampState(getAuthoritativeRewardCampSeed(order.targetRegionId, order.toId))
+      : null;
+    if (!targetSnap.exists && !missingTargetCamp) {
+      throw new HttpsError("not-found", order.targetType === "camp"
+        ? "Destination camp was not found."
+        : "Destination city was not found.");
+    }
 
     let source = { id: sourceSnap.id, ...sourceSnap.data() };
     const target = order.targetType === "camp"
-      ? getRewardCampCombatTarget({ id: targetSnap.id, ...targetSnap.data() })
+      ? getRewardCampCombatTarget(targetSnap.exists
+        ? { id: targetSnap.id, ...targetSnap.data() }
+        : missingTargetCamp)
       : { id: targetSnap.id, ...targetSnap.data() };
     if (order.targetType === "camp" && !target) {
       throw new HttpsError("failed-precondition", "That camp is not an active reward objective.");
@@ -5173,6 +5214,13 @@ exports.sendArmyOrder = onCall({ region: "us-central1", maxInstances: 20, invoke
       troops: sourceTroops - troops,
       troopFloat: Math.max(0, safeNumber(source.troopFloat, sourceTroops) - troops),
     });
+    if (missingTargetCamp) {
+      transaction.set(targetRef, {
+        ...missingTargetCamp,
+        createdAt: FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp(),
+      }, { merge: true });
+    }
     writePreparedEconomy(transaction, attackerEconomy, profileOverrides, [
       ...launchCityPatches,
     ], {
@@ -6446,11 +6494,12 @@ async function resolveRewardCampPayoutByRef(campRef, nowMs = Date.now(), callerU
     const player = playerSnap.exists ? playerSnap.data() || {} : {};
     const claimData = claimsSnap?.exists ? claimsSnap.data() || {} : {};
     const today = getUtcDateKey(nowMs);
-    const priorClaims = !isDeedCamp && claimData.date === today
+    const priorClaims = claimData.date === today
       ? Math.max(0, Math.floor(safeNumber(claimData.count, 0)))
       : 0;
-    let reward = isDeedCamp ? 1 : getRewardCampDailyReward(config, priorClaims);
-    const nextClaims = isDeedCamp ? 0 : priorClaims + 1;
+    const deedDailyLimitReached = isDeedCamp && priorClaims >= 1;
+    let reward = isDeedCamp ? deedDailyLimitReached ? 0 : 1 : getRewardCampDailyReward(config, priorClaims);
+    let nextClaims = isDeedCamp ? priorClaims : priorClaims + 1;
 
     const mainCityInfo = getMainCityInfo(player);
     const mainCitySnap = mainCityInfo?.ref ? await transaction.get(mainCityInfo.ref) : null;
@@ -6466,10 +6515,11 @@ async function resolveRewardCampPayoutByRef(campRef, nowMs = Date.now(), callerU
     const ownedMainCity = mainCity && getOwnerUid(mainCity) === holderUid
       ? { ...mainCity, regionId: mainCityInfo.regionId }
       : null;
-    const deedCityAward = isDeedCamp
+    const deedCityAward = isDeedCamp && !deedDailyLimitReached
       ? await findEligibleDeedCampCity(transaction, camp, holderUid, payoutAtMs)
       : null;
     if (isDeedCamp && !deedCityAward) reward = 0;
+    if (deedCityAward) nextClaims = priorClaims + 1;
     const returnDestination = ownedReturnSource || ownedMainCity;
     if (!returnDestination) {
       throw new HttpsError("failed-precondition", `${config.name} holder has no owned city available for returning troops.`);
@@ -6673,7 +6723,9 @@ async function resolveRewardCampPayoutByRef(campRef, nowMs = Date.now(), callerU
       ? { ...deedCityAward.city, ...deedCityPatch, regionId: deedCityAward.regionId }
       : camp;
     const reportSummary = isDeedCamp
-      ? deedCityPatch
+      ? deedDailyLimitReached
+        ? `Held ${camp.name || config.name} for ${holdMinutes} minutes, but you already received a Deed Camp city today. The camp reset to neutral.${returnSummary}`
+        : deedCityPatch
         ? `Held ${camp.name || config.name} for ${holdMinutes} minutes and received ${rewardLabel}. No battle XP was awarded.${returnSummary}`
         : `Held ${camp.name || config.name} for ${holdMinutes} minutes, but no eligible neutral city was available. The camp reset to neutral.${returnSummary}`
       : reward > 0
@@ -6706,7 +6758,13 @@ async function resolveRewardCampPayoutByRef(campRef, nowMs = Date.now(), callerU
 
     return {
       ok: true,
-      status: isDeedCamp && !deedCityPatch ? "no-eligible-city" : "paid",
+      status: isDeedCamp
+        ? deedDailyLimitReached
+          ? "daily-limit"
+          : !deedCityPatch
+            ? "no-eligible-city"
+            : "paid"
+        : "paid",
       holderUid,
       reward,
       rewardType: config.rewardType,
@@ -6737,7 +6795,7 @@ async function resolveRewardCampPayoutByRef(campRef, nowMs = Date.now(), callerU
 
 async function resolveRewardCampPayoutAndStats(campRef, nowMs = Date.now(), callerUid = "") {
   const result = await resolveRewardCampPayoutByRef(campRef, nowMs, callerUid);
-  if (["paid", "no-eligible-city"].includes(result?.status) && result.holderUid) {
+  if (["paid", "no-eligible-city", "daily-limit"].includes(result?.status) && result.holderUid) {
     const rebuilt = await rebuildGlobalStatsForPlayer(result.holderUid);
     if (callerUid === result.holderUid) result.globalStats = rebuilt.stats;
   }

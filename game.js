@@ -10079,7 +10079,7 @@ async function requestDueRewardCampPayout(camp) {
     applyServerArmyResult(result);
     if (result?.movement) adoptServerArmyMovement(result.movement);
     const config = getRewardCampConfig(result?.campType || camp);
-    if (["paid", "no-eligible-city"].includes(result?.status)) {
+    if (["paid", "no-eligible-city", "daily-limit"].includes(result?.status)) {
       if (config?.type === "deed") {
         deedCampHistoryCache.delete(getDeedCampHistoryCacheKey(camp));
       } else if (config && result.holderUid === getCurrentOnlineUid()) {
@@ -10093,7 +10093,9 @@ async function requestDueRewardCampPayout(camp) {
         renderRewardCampProgressPanel(camp.id, config, progress);
       }
       const rewardMessage = config?.type === "deed"
-        ? result.awardedCity
+        ? result.status === "daily-limit"
+          ? "You already received a Deed Camp city today. The camp reset to neutral."
+          : result.awardedCity
           ? `${config.name} reward: ${result.awardedCity.name} in ${result.awardedCity.regionName} is now yours.`
           : "No eligible neutral city was available. The Deed Camp reset to neutral."
         : result.reward > 0
@@ -15607,13 +15609,13 @@ function showRewardCampInfoModal(campId) {
     ? `<div data-deed-history-panel="${escapeHtml(camp.id)}">${deedCampHistoryMarkup([], "loading")}</div>`
     : rewardCampProgressMarkup(config, null, "loading");
   const rewardConditionMarkup = isDeedCamp
-    ? `<p class="deed-camp-condition">Hold this camp for 1 hour to receive one random eligible neutral gray city. The server awards it automatically, even if the holder has reached the normal neutral-city daily capture limit.</p>`
+    ? `<p class="deed-camp-condition">Hold this camp for 1 hour to receive one random eligible neutral gray city. A player can receive one Deed Camp city per UTC day. This remains separate from the normal neutral-city capture limit.</p>`
     : "";
   const rulesMarkup = isDeedCamp
     ? `
       <div class="gold-camp-description deed-camp-help">
         <strong>How it works</strong>
-        <p>Capture and hold the Deed Camp for 1 hour. If you still control it when the timer ends, you are awarded one random eligible neutral gray city. This reward is separate from normal gray-city captures and can happen whether you are below, at, or above the normal neutral-city daily capture limit.</p>
+        <p>Capture and hold the Deed Camp for 1 hour. If you still control it when the timer ends, you are awarded one random eligible neutral gray city. Each player can receive one Deed Camp city per UTC day. This reward is separate from normal gray-city captures and can happen whether you are below, at, or above the normal neutral-city daily capture limit.</p>
         <p>Other players can attack and steal the camp before the timer finishes. If control changes, the public 1-hour timer restarts for the new holder. The Reward History tab shows cities previously awarded by this camp.</p>
         <p>The awarded city is chosen automatically. No Deed Token or inventory item is given, and no battle XP is awarded because no battle happened for that city.</p>
         <p>The normal neutral-city capture limit still applies to regular attacks on gray cities. A Deed Camp reward does not use that limit and is granted whether the holder is below, at, or above it.</p>

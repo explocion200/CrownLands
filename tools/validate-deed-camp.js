@@ -24,8 +24,12 @@ for (const source of [serverSource, clientSource]) {
 }
 requireMatch(serverSource, /DEED_CAMP_HOLD_DURATION_MS\s*=\s*60\s*\*\s*60\s*\*\s*1000/, "Server Deed Camp hold time is not one hour.");
 requireMatch(clientSource, /DEED_CAMP_HOLD_SECONDS\s*=\s*60\s*\*\s*60/, "Client Deed Camp hold time is not one hour.");
+requireMatch(serverSource, /deed:\s*\{[\s\S]*?objectiveStatsId:\s*"deedCamp"/, "Deed Camp is missing its per-player daily claim record.");
+requireMatch(serverSource, /deedDailyLimitReached\s*=\s*isDeedCamp\s*&&\s*priorClaims\s*>=\s*1/, "Deed Camp is not limited to one city award per player per UTC day.");
+requireMatch(serverSource, /status:\s*isDeedCamp[\s\S]*?"daily-limit"[\s\S]*?"no-eligible-city"/, "Deed Camp payout does not report its daily limit cleanly.");
 requireMatch(serverSource, /findEligibleDeedCampCity[\s\S]*?getServerWorldRegularCityIds[\s\S]*?where\("ownerUid",\s*"==",\s*null\)/, "Deed Camp payout is not using a bounded neutral-city query.");
 requireMatch(serverSource, /getDeedCampCandidateRegionIds[\s\S]*?mapType === "starter" \|\| mapType === "midgame"/, "Deed Camp fallback regions are not restricted to connected activity maps.");
+requireMatch(serverSource, /missingTargetCamp[\s\S]*?getAuthoritativeRewardCampSeed[\s\S]*?transaction\.set\(targetRef,[\s\S]*?missingTargetCamp/, "Missing authoritative camp documents are not repaired before an army launches.");
 
 const payoutStart = serverSource.indexOf("async function resolveRewardCampPayoutByRef");
 const payoutEnd = serverSource.indexOf("async function resolveRewardCampPayoutAndStats", payoutStart);
@@ -34,7 +38,7 @@ if (!payoutSource) throw new Error("Missing reward camp payout transaction.");
 requireMatch(payoutSource, /deedCityPatch[\s\S]*?ownerUid:\s*holderUid[\s\S]*?isMainCity:\s*false/, "Deed Camp does not transfer a regular city to its holder.");
 requireMatch(payoutSource, /source:\s*"deed_camp"/, "Deed Camp payout history is missing its source marker.");
 requireMatch(payoutSource, /rewardHistory\//, "Deed Camp payout does not create a public history entry.");
-requireMatch(payoutSource, /status:\s*isDeedCamp && !deedCityPatch \? "no-eligible-city" : "paid"/, "Deed Camp has no safe no-city payout result.");
+requireMatch(payoutSource, /!deedCityPatch[\s\S]*?"no-eligible-city"/, "Deed Camp has no safe no-city payout result.");
 if (/neutralCaptures/.test(payoutSource)) throw new Error("Deed Camp payout must not use the normal neutral capture counter.");
 if (/buildPlayerProgressPatch|xpAwarded:\s*[1-9]/.test(payoutSource)) throw new Error("Deed Camp payout must not award battle XP.");
 
@@ -42,6 +46,6 @@ requireMatch(firebaseClientSource, /loadRewardCampHistory\(\{[\s\S]*?limitCount\
 requireMatch(rulesSource, /match \/rewardHistory\/\{entryId\}[\s\S]*?allow read: if signedIn\(\);[\s\S]*?allow create, update, delete: if false;/, "Deed Camp history is not publicly readable and server-owned.");
 requireMatch(clientSource, /Reward History/, "Deed Camp UI is missing its public Reward History tab.");
 requireMatch(clientSource, /data-deed-history-jump[\s\S]*?focusBattleReportTarget/, "Deed Camp history does not provide cross-map city navigation.");
-requireMatch(clientSource, /Capture and hold the Deed Camp for 1 hour[\s\S]*?No Deed Token or inventory item is given[\s\S]*?normal neutral-city capture limit still applies/, "Deed Camp help text is incomplete.");
+requireMatch(clientSource, /Capture and hold the Deed Camp for 1 hour[\s\S]*?one Deed Camp city per UTC day[\s\S]*?No Deed Token or inventory item is given[\s\S]*?normal neutral-city capture limit still applies/, "Deed Camp help text is incomplete.");
 
 console.log("Validated Deed Camp placement, payout authority, neutral-city award, public history, navigation, and capture-limit isolation.");
