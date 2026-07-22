@@ -39,6 +39,7 @@ requireMatch(serverSource, /RELIC_CAMP_HOLD_DURATION_MS\s*=\s*30\s*\*\s*60\s*\*\
 requireMatch(clientSource, /RELIC_CAMP_HOLD_SECONDS\s*=\s*30\s*\*\s*60/, "Client Relic Camp hold time is not 30 minutes.");
 requireMatch(serverSource, /items:\s*\{[\s\S]*?kind:\s*"relicCamp"[\s\S]*?rewardType:\s*"item"[\s\S]*?objectiveStatsId:\s*"relicCamp"[\s\S]*?maxDailyRewards:\s*RELIC_CAMP_DAILY_REWARD_LIMIT/, "Relic Camp server configuration is incomplete.");
 requireMatch(serverSource, /crypto\.randomInt\(1,\s*totalChance\s*\+\s*1\)/, "Relic Camp item rarity is not rolled on the server.");
+requireMatch(serverSource, /function cleanServerCampLayoutSeed\(camp = \{\}\)\s*\{\s*if \(!camp \|\| typeof camp !== "object"\) return \{\};/, "Missing camp seeds can still crash server army launches.");
 
 const payoutStart = serverSource.indexOf("async function resolveRewardCampPayoutByRef");
 const payoutEnd = serverSource.indexOf("async function resolveRewardCampPayoutAndStats", payoutStart);

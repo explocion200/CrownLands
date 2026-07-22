@@ -15547,6 +15547,13 @@ function getDeedCampHistoryCacheKey(camp = {}) {
   return camp?.id ? `${normalizeRegionId(camp.regionId)}:${camp.id}` : "";
 }
 
+function getDeedCampHistoryCityName(entry = {}) {
+  const cityId = getKnownCityId(entry.cityId);
+  const base = cityId ? getPlayableBaseCityById(cityId) : null;
+  if (base) return getCanonicalCityName(base, { id: cityId, regionId: entry.regionId });
+  return String(entry.cityName || cityId || "Unknown city").slice(0, 80);
+}
+
 function deedCampHistoryMarkup(history = [], status = "ready") {
   if (status === "loading") {
     return `<div class="camp-reward-loading"><span class="camp-reward-spinner" aria-hidden="true"></span><strong>Loading reward history...</strong></div>`;
@@ -15562,15 +15569,16 @@ function deedCampHistoryMarkup(history = [], status = "ready") {
       ${history.map(entry => {
         const awardedAtMs = normalizeTimestampMs(entry.awardedAtMs);
         const awardedAt = awardedAtMs ? new Date(awardedAtMs).toLocaleString() : "Award time unavailable";
+        const cityName = getDeedCampHistoryCityName(entry);
         return `
           <li class="deed-camp-history-row">
             <span class="deed-history-city" aria-hidden="true">&#9813;</span>
             <span class="deed-history-copy">
-              <strong>${escapeHtml(entry.cityName || "Unknown city")}</strong>
+              <strong>${escapeHtml(cityName)}</strong>
               <span>${escapeHtml(entry.regionName || getRegionLabel(entry.regionId))}</span>
               <small>Awarded to ${escapeHtml(entry.awardedToDisplayName || "Ruler")} &middot; ${escapeHtml(awardedAt)}</small>
             </span>
-            <button class="battle-report-locate-btn deed-history-locate" type="button" data-deed-history-jump="${escapeHtml(entry.cityId)}" data-deed-history-region="${escapeHtml(entry.regionId)}" aria-label="Go to ${escapeHtml(entry.cityName || "awarded city")}">&#8982;</button>
+            <button class="battle-report-locate-btn deed-history-locate" type="button" data-deed-history-jump="${escapeHtml(entry.cityId)}" data-deed-history-region="${escapeHtml(entry.regionId)}" aria-label="Go to ${escapeHtml(cityName)}">&#8982;</button>
           </li>`;
       }).join("")}
     </ol>

@@ -47,6 +47,7 @@ if (!payoutSource) throw new Error("Missing reward camp payout transaction.");
 requireMatch(payoutSource, /deedCityPatch[\s\S]*?ownerUid:\s*holderUid[\s\S]*?isMainCity:\s*false/, "Deed Camp does not transfer a regular city to its holder.");
 requireMatch(payoutSource, /source:\s*"deed_camp"/, "Deed Camp payout history is missing its source marker.");
 requireMatch(payoutSource, /rewardHistory\//, "Deed Camp payout does not create a public history entry.");
+requireMatch(payoutSource, /const deedCityName = getServerCanonicalCityName\(deedCityAward\.city,\s*deedCityAward\.regionId\)[\s\S]*?name:\s*deedCityName[\s\S]*?cityName:\s*safeString\(deedCityName/, "Deed Camp payouts expose numbered layout city names.");
 requireMatch(payoutSource, /!deedCityPatch[\s\S]*?"no-eligible-city"/, "Deed Camp has no safe no-city payout result.");
 if (/neutralCaptures/.test(payoutSource)) throw new Error("Deed Camp payout must not use the normal neutral capture counter.");
 if (/buildPlayerProgressPatch|xpAwarded:\s*[1-9]/.test(payoutSource)) throw new Error("Deed Camp payout must not award battle XP.");
@@ -55,6 +56,7 @@ requireMatch(firebaseClientSource, /loadRewardCampHistory\(\{[\s\S]*?limitCount\
 requireMatch(rulesSource, /match \/rewardHistory\/\{entryId\}[\s\S]*?allow read: if signedIn\(\);[\s\S]*?allow create, update, delete: if false;/, "Deed Camp history is not publicly readable and server-owned.");
 requireMatch(clientSource, /Reward History/, "Deed Camp UI is missing its public Reward History tab.");
 requireMatch(clientSource, /data-deed-history-jump[\s\S]*?focusBattleReportTarget/, "Deed Camp history does not provide cross-map city navigation.");
+requireMatch(clientSource, /function getDeedCampHistoryCityName[\s\S]*?getCanonicalCityName[\s\S]*?const cityName = getDeedCampHistoryCityName\(entry\)/, "Existing Deed Camp history entries do not resolve canonical city names.");
 requireMatch(clientSource, /Capture and hold the Deed Camp for 1 hour[\s\S]*?one Deed Camp city per UTC day[\s\S]*?No Deed Token or inventory item is given[\s\S]*?normal neutral-city capture limit still applies/, "Deed Camp help text is incomplete.");
 
 console.log("Validated Deed Camp placement, payout authority, neutral-city award, public history, navigation, and capture-limit isolation.");

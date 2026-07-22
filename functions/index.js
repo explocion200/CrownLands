@@ -338,6 +338,66 @@ function getServerWorldRegularCityIds(regionId = "") {
     .filter(Boolean));
 }
 
+const SERVER_MEDIEVAL_CITY_PREFIXES = [
+  "Alder", "Ash", "Barrow", "Bell", "Black", "Briar", "Brindle", "Brook", "Cedar", "Crow",
+  "Dun", "Elder", "Ember", "Fair", "Fen", "Flint", "Green", "Grey", "Hart", "High",
+  "Iron", "Kings", "Low", "Oak", "Raven", "Red", "Silver", "Stone", "Thorn", "Vale",
+  "White", "Wolf", "Wyvern",
+];
+const SERVER_MEDIEVAL_REGION_PREFIXES = {
+  center: ["Crown", "Lion", "Regal", "Scepter", "Royal", "Queen", "King", "High", "Gold", "Star"],
+  north: ["Frost", "Snow", "Pine", "Winter", "Storm", "Moon", "Peak", "Cold", "Cloud", "Hawk"],
+  south: ["Sun", "Salt", "Reed", "Willow", "Rose", "Marsh", "Tide", "Warm", "Bloom", "Pearl"],
+  west: ["Oak", "Thorn", "Fox", "Ash", "Briar", "Crow", "Wild", "Wood", "Moss", "Fern"],
+  east: ["Dawn", "Gold", "Bright", "Falcon", "Rose", "Wind", "Star", "Pearl", "Blue", "Ivory"],
+};
+const SERVER_MEDIEVAL_CITY_SUFFIXES = [
+  "bury", "ford", "wick", "stead", "mere", "brook", "hollow", "watch", "gate", "fall",
+  "bridge", "market", "vale", "den", "field", "worth", "cross", "moor", "reach", "cliffe",
+  "hurst", "wall", "ham", "port",
+];
+const SERVER_MEDIEVAL_CITY_TITLES = [
+  "Abbey", "Cross", "Gate", "March", "Market", "Mead", "Moor", "Rest", "Rise", "Watch",
+];
+
+function hashServerCityName(value = "") {
+  let hash = 2166136261;
+  const text = String(value || "");
+  for (let index = 0; index < text.length; index += 1) {
+    hash ^= text.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return hash >>> 0;
+}
+
+function getServerCityNameIndex(cityId = "", fallbackIndex = 0) {
+  const match = String(cityId || "").match(/_(\d+)$/);
+  if (match) return Math.max(0, Math.floor(Number(match[1]) || 1) - 1);
+  return Math.max(0, Math.floor(safeNumber(fallbackIndex, 0)));
+}
+
+function getServerCanonicalCityName(city = {}, regionId = "") {
+  const cityId = safeString(city.id, 96);
+  const normalizedRegionId = normalizeRegionId(regionId || city.regionId || city.startPool);
+  const map = getServerWorldMap(normalizedRegionId);
+  const mapCities = Array.isArray(map?.cities) ? map.cities : [];
+  const mapIndex = mapCities.findIndex(entry => safeString(entry?.id, 96) === cityId);
+  const cityIndex = getServerCityNameIndex(cityId, mapIndex >= 0 ? mapIndex : city.index);
+  const prefixes = [...new Set([
+    ...SERVER_MEDIEVAL_CITY_PREFIXES,
+    ...(SERVER_MEDIEVAL_REGION_PREFIXES[normalizedRegionId] || []),
+  ])];
+  const comboCount = prefixes.length * SERVER_MEDIEVAL_CITY_SUFFIXES.length;
+  const offset = hashServerCityName(`medieval-city:${normalizedRegionId}`) % comboCount;
+  const comboIndex = (cityIndex * 487 + offset) % comboCount;
+  const prefix = prefixes[comboIndex % prefixes.length];
+  const suffix = SERVER_MEDIEVAL_CITY_SUFFIXES[
+    Math.floor(comboIndex / prefixes.length) % SERVER_MEDIEVAL_CITY_SUFFIXES.length
+  ];
+  const title = SERVER_MEDIEVAL_CITY_TITLES[(cityIndex * 191 + offset) % SERVER_MEDIEVAL_CITY_TITLES.length];
+  return cityIndex % 5 === 0 ? `${prefix}${suffix} ${title}` : `${prefix}${suffix}`;
+}
+
 function getServerWorldCampIds(regionId = "") {
   const map = getServerWorldMap(regionId);
   return new Set((Array.isArray(map?.camps) ? map.camps : [])
@@ -1558,6 +1618,7 @@ function isRewardCamp(target = {}) {
 }
 
 function cleanServerCampLayoutSeed(camp = {}) {
+  if (!camp || typeof camp !== "object") return {};
   const campId = safeString(camp.id, 96).replace(/[^a-zA-Z0-9_-]/g, "_");
   const config = getRewardCampConfig(camp);
   if (!config) return {};
@@ -6678,6 +6739,7 @@ async function resolveRewardCampPayoutByRef(campRef, nowMs = Date.now(), callerU
     let deedHistoryEntry = null;
     if (deedCityAward) {
       const playerName = normalizePlayerName(player.playerName || camp.holderName, "Ruler");
+      const deedCityName = getServerCanonicalCityName(deedCityAward.city, deedCityAward.regionId);
       const playerKingPower = Math.max(0, Math.floor(safeNumber(
         player.globalStats?.kingPower,
         safeNumber(player.kingPower, 0)
@@ -6688,6 +6750,7 @@ async function resolveRewardCampPayoutByRef(campRef, nowMs = Date.now(), callerU
         : 0;
       deedCityPatch = {
         id: deedCityAward.city.id,
+        name: deedCityName,
         regionId: deedCityAward.regionId,
         ownerKind: "player",
         ownerUid: holderUid,
@@ -6716,7 +6779,7 @@ async function resolveRewardCampPayoutByRef(campRef, nowMs = Date.now(), callerU
       deedHistoryEntry = {
         campId: camp.id,
         cityId: deedCityAward.city.id,
-        cityName: safeString(deedCityAward.city.name || deedCityAward.city.id, 80),
+        cityName: safeString(deedCityName, 80),
         regionId: deedCityAward.regionId,
         regionName: deedCityAward.regionName,
         awardedToPlayerId: holderUid,
