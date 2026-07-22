@@ -95,6 +95,12 @@ const MAIN_CITY_CHANGE_CITY_LIMIT = 30;
 const MAIN_CITY_CHANGE_SMALL_KINGDOM_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000;
 const MAIN_CITY_CHANGE_LARGE_KINGDOM_COOLDOWN_MS = 14 * 24 * 60 * 60 * 1000;
 const MAX_SERVER_PRODUCTION_SECONDS = 7 * 24 * 60 * 60;
+const GAME_SERVER_ID = "crown-marches";
+const GAME_SERVER_NAME = "The Crown Marches";
+const GAME_SERVER_CAPACITY = 50;
+const GAME_SERVER_ACTIVE_STALE_MS = 3 * 60 * 1000;
+const GAME_SERVER_WAITING_STALE_MS = 5 * 60 * 1000;
+const GAME_SERVER_MAX_WAITING = 500;
 const GLOBAL_PLAYER_STATS_VERSION = 5;
 const PLAYER_IDENTITY_SYNC_VERSION = 1;
 const MAIN_CITY_ASSIGNMENT_VERSION = 2;
@@ -292,6 +298,231 @@ function getOnlineIslandId(regionId = "west") {
 
 function safeString(value, max = 80) {
   return String(value || "").trim().slice(0, max);
+}
+
+function requireGameServerId(value = GAME_SERVER_ID) {
+  const serverId = safeString(value || GAME_SERVER_ID, 64).toLowerCase();
+  if (serverId !== GAME_SERVER_ID) {
+    throw new HttpsError("not-found", "That Crownlands realm does not exist.");
+  }
+  return serverId;
+}
+
+function requireGameServerSessionId(value = "") {
+  const sessionId = safeString(value, 128).replace(/[^a-zA-Z0-9_-]/g, "");
+  if (!sessionId) throw new HttpsError("invalid-argument", "This browser session is missing its realm key.");
+  return sessionId;
+}
+
+function cleanGameServerEntry(raw = {}, fallback = {}) {
+  return {
+    uid: safeString(raw.uid || fallback.uid, 128),
+    sessionId: safeString(raw.sessionId || fallback.sessionId, 128),
+    displayName: normalizePlayerName(raw.displayName || fallback.displayName || "Ruler"),
+    joinedAtMs: Math.max(0, Math.floor(safeNumber(raw.joinedAtMs, fallback.joinedAtMs || 0))),
+    queuedAtMs: Math.max(0, Math.floor(safeNumber(raw.queuedAtMs, fallback.queuedAtMs || 0))),
+    admittedAtMs: Math.max(0, Math.floor(safeNumber(raw.admittedAtMs, fallback.admittedAtMs || 0))),
+    lastSeenAtMs: Math.max(0, Math.floor(safeNumber(raw.lastSeenAtMs, fallback.lastSeenAtMs || 0))),
+    ticket: Math.max(0, Math.floor(safeNumber(raw.ticket, fallback.ticket || 0))),
+  };
+}
+
+function normalizeGameServerEntries(raw = {}, nowMs = Date.now(), staleMs = 0) {
+  const entries = {};
+  Object.entries(raw && typeof raw === "object" ? raw : {}).forEach(([rawUid, value]) => {
+    const uid = safeString(value?.uid || rawUid, 128);
+    if (!uid || uid.includes("/")) return;
+    const entry = cleanGameServerEntry(value, { uid });
+    if (!entry.sessionId || !entry.lastSeenAtMs) return;
+    if (staleMs > 0 && nowMs - entry.lastSeenAtMs > staleMs) return;
+    entries[uid] = entry;
+  });
+  return entries;
+}
+
+function createGameServerState(raw = {}, nowMs = Date.now()) {
+  return {
+    id: GAME_SERVER_ID,
+    name: GAME_SERVER_NAME,
+    capacity: GAME_SERVER_CAPACITY,
+    nextTicket: Math.max(1, Math.floor(safeNumber(raw.nextTicket, 1))),
+    activeSlots: normalizeGameServerEntries(raw.activeSlots, nowMs, GAME_SERVER_ACTIVE_STALE_MS),
+    waitingQueue: normalizeGameServerEntries(raw.waitingQueue, nowMs, GAME_SERVER_WAITING_STALE_MS),
+  };
+}
+
+function getOrderedGameServerWaiters(state) {
+  return Object.values(state.waitingQueue || {}).sort((a, b) => (
+    (a.ticket - b.ticket)
+    || (a.queuedAtMs - b.queuedAtMs)
+    || a.uid.localeCompare(b.uid)
+  ));
+}
+
+function promoteGameServerWaiters(state, nowMs = Date.now()) {
+  const promoted = [];
+  const waiters = getOrderedGameServerWaiters(state);
+  while (Object.keys(state.activeSlots).length < GAME_SERVER_CAPACITY && waiters.length) {
+    const waiter = waiters.shift();
+    if (!waiter?.uid || !state.waitingQueue[waiter.uid]) continue;
+    delete state.waitingQueue[waiter.uid];
+    const activeEntry = cleanGameServerEntry(waiter, {
+      uid: waiter.uid,
+      admittedAtMs: nowMs,
+      joinedAtMs: nowMs,
+    });
+    activeEntry.admittedAtMs = nowMs;
+    activeEntry.joinedAtMs = activeEntry.joinedAtMs || nowMs;
+    activeEntry.lastSeenAtMs = nowMs;
+    activeEntry.ticket = 0;
+    state.activeSlots[waiter.uid] = activeEntry;
+    promoted.push(activeEntry);
+  }
+  return promoted;
+}
+
+function writeGameServerMembership(transaction, entry, status, nowMs = Date.now()) {
+  if (!entry?.uid) return;
+  transaction.set(db.doc(`players/${entry.uid}/serverMembership/current`), {
+    serverId: GAME_SERVER_ID,
+    serverName: GAME_SERVER_NAME,
+    status,
+    sessionId: entry.sessionId || "",
+    displayName: entry.displayName || "Ruler",
+    queuedAtMs: status === "waiting" ? entry.queuedAtMs || nowMs : 0,
+    admittedAtMs: status === "active" ? entry.admittedAtMs || nowMs : 0,
+    lastSeenAtMs: nowMs,
+    updatedAtMs: nowMs,
+    updatedAt: FieldValue.serverTimestamp(),
+  }, { merge: true });
+}
+
+function writeGameServerState(transaction, serverRef, state, nowMs = Date.now()) {
+  transaction.set(serverRef, {
+    id: GAME_SERVER_ID,
+    name: GAME_SERVER_NAME,
+    capacity: GAME_SERVER_CAPACITY,
+    activeSlots: state.activeSlots,
+    waitingQueue: state.waitingQueue,
+    nextTicket: state.nextTicket,
+    updatedAtMs: nowMs,
+    updatedAt: FieldValue.serverTimestamp(),
+  }, { merge: true });
+}
+
+async function joinGameServerForPlayer({ uid, sessionId, displayName, nowMs = Date.now() }) {
+  const serverRef = db.doc(`gameServers/${GAME_SERVER_ID}`);
+  return db.runTransaction(async transaction => {
+    const serverSnap = await transaction.get(serverRef);
+    const state = createGameServerState(serverSnap.exists ? serverSnap.data() : {}, nowMs);
+    const promoted = promoteGameServerWaiters(state, nowMs);
+    let activeEntry = state.activeSlots[uid] || null;
+    let waitingEntry = state.waitingQueue[uid] || null;
+
+    if (activeEntry) {
+      activeEntry = cleanGameServerEntry(activeEntry, { uid });
+      activeEntry.sessionId = sessionId;
+      activeEntry.displayName = displayName;
+      activeEntry.lastSeenAtMs = nowMs;
+      activeEntry.joinedAtMs = activeEntry.joinedAtMs || nowMs;
+      activeEntry.admittedAtMs = activeEntry.admittedAtMs || nowMs;
+      state.activeSlots[uid] = activeEntry;
+      delete state.waitingQueue[uid];
+      waitingEntry = null;
+    } else if (waitingEntry) {
+      waitingEntry = cleanGameServerEntry(waitingEntry, { uid });
+      waitingEntry.sessionId = sessionId;
+      waitingEntry.displayName = displayName;
+      waitingEntry.lastSeenAtMs = nowMs;
+      waitingEntry.queuedAtMs = waitingEntry.queuedAtMs || nowMs;
+      state.waitingQueue[uid] = waitingEntry;
+    } else if (Object.keys(state.activeSlots).length < GAME_SERVER_CAPACITY && !getOrderedGameServerWaiters(state).length) {
+      activeEntry = cleanGameServerEntry({
+        uid,
+        sessionId,
+        displayName,
+        joinedAtMs: nowMs,
+        admittedAtMs: nowMs,
+        lastSeenAtMs: nowMs,
+      });
+      state.activeSlots[uid] = activeEntry;
+    } else {
+      if (Object.keys(state.waitingQueue).length >= GAME_SERVER_MAX_WAITING) {
+        throw new HttpsError("resource-exhausted", "The Crown Marches waiting list is full. Try again shortly.");
+      }
+      waitingEntry = cleanGameServerEntry({
+        uid,
+        sessionId,
+        displayName,
+        queuedAtMs: nowMs,
+        lastSeenAtMs: nowMs,
+        ticket: state.nextTicket,
+      });
+      state.nextTicket += 1;
+      state.waitingQueue[uid] = waitingEntry;
+    }
+
+    const newlyPromoted = promoteGameServerWaiters(state, nowMs);
+    promoted.push(...newlyPromoted);
+    activeEntry = state.activeSlots[uid] || null;
+    waitingEntry = state.waitingQueue[uid] || null;
+
+    writeGameServerState(transaction, serverRef, state, nowMs);
+    const membershipWrites = new Map(promoted.map(entry => [entry.uid, { entry, status: "active" }]));
+    if (activeEntry) membershipWrites.set(uid, { entry: activeEntry, status: "active" });
+    else if (waitingEntry) membershipWrites.set(uid, { entry: waitingEntry, status: "waiting" });
+    membershipWrites.forEach(({ entry, status }) => writeGameServerMembership(transaction, entry, status, nowMs));
+
+    return {
+      serverId: GAME_SERVER_ID,
+      serverName: GAME_SERVER_NAME,
+      status: activeEntry ? "active" : "waiting",
+      admittedAtMs: activeEntry?.admittedAtMs || 0,
+      queuedAtMs: waitingEntry?.queuedAtMs || 0,
+    };
+  });
+}
+
+async function leaveGameServerForPlayer({ uid, sessionId, nowMs = Date.now() }) {
+  const serverRef = db.doc(`gameServers/${GAME_SERVER_ID}`);
+  return db.runTransaction(async transaction => {
+    const serverSnap = await transaction.get(serverRef);
+    const state = createGameServerState(serverSnap.exists ? serverSnap.data() : {}, nowMs);
+    const activeEntry = state.activeSlots[uid] || null;
+    const waitingEntry = state.waitingQueue[uid] || null;
+    const currentEntry = activeEntry || waitingEntry;
+    if (currentEntry && currentEntry.sessionId !== sessionId) {
+      return { serverId: GAME_SERVER_ID, serverName: GAME_SERVER_NAME, status: "session-replaced" };
+    }
+
+    delete state.activeSlots[uid];
+    delete state.waitingQueue[uid];
+    const promoted = promoteGameServerWaiters(state, nowMs);
+    writeGameServerState(transaction, serverRef, state, nowMs);
+    promoted.forEach(entry => writeGameServerMembership(transaction, entry, "active", nowMs));
+    writeGameServerMembership(transaction, {
+      uid,
+      sessionId,
+      displayName: currentEntry?.displayName || "Ruler",
+    }, "left", nowMs);
+    return { serverId: GAME_SERVER_ID, serverName: GAME_SERVER_NAME, status: "left" };
+  });
+}
+
+async function maintainGameServer(nowMs = Date.now()) {
+  const serverRef = db.doc(`gameServers/${GAME_SERVER_ID}`);
+  return db.runTransaction(async transaction => {
+    const serverSnap = await transaction.get(serverRef);
+    const state = createGameServerState(serverSnap.exists ? serverSnap.data() : {}, nowMs);
+    const promoted = promoteGameServerWaiters(state, nowMs);
+    writeGameServerState(transaction, serverRef, state, nowMs);
+    promoted.forEach(entry => writeGameServerMembership(transaction, entry, "active", nowMs));
+    return {
+      active: Object.keys(state.activeSlots).length,
+      waiting: Object.keys(state.waitingQueue).length,
+      promoted: promoted.length,
+    };
+  });
 }
 
 function normalizePlayerName(value, fallback = "Ruler") {
@@ -3487,6 +3718,41 @@ async function sendIncomingArmyNotification(notification = {}) {
   }
   return result.successCount > 0;
 }
+
+exports.joinGameServer = onCall({ region: "us-central1", maxInstances: 20, invoker: "public" }, async request => {
+  const uid = requireAuth(request);
+  const data = request.data || {};
+  requireGameServerId(data.serverId);
+  return joinGameServerForPlayer({
+    uid,
+    sessionId: requireGameServerSessionId(data.sessionId),
+    displayName: normalizePlayerName(data.displayName || request.auth?.token?.name || "Ruler"),
+    nowMs: Date.now(),
+  });
+});
+
+exports.heartbeatGameServer = onCall({ region: "us-central1", maxInstances: 20, invoker: "public" }, async request => {
+  const uid = requireAuth(request);
+  const data = request.data || {};
+  requireGameServerId(data.serverId);
+  return joinGameServerForPlayer({
+    uid,
+    sessionId: requireGameServerSessionId(data.sessionId),
+    displayName: normalizePlayerName(data.displayName || request.auth?.token?.name || "Ruler"),
+    nowMs: Date.now(),
+  });
+});
+
+exports.leaveGameServer = onCall({ region: "us-central1", maxInstances: 20, invoker: "public" }, async request => {
+  const uid = requireAuth(request);
+  const data = request.data || {};
+  requireGameServerId(data.serverId);
+  return leaveGameServerForPlayer({
+    uid,
+    sessionId: requireGameServerSessionId(data.sessionId),
+    nowMs: Date.now(),
+  });
+});
 
 exports.collectEconomy = onCall({ region: "us-central1", maxInstances: 30, invoker: "public" }, async request => {
   const uid = requireAuth(request);
@@ -7215,6 +7481,18 @@ async function processWithConcurrency(items = [], concurrency = 1, worker) {
   });
   await Promise.all(workers);
 }
+
+exports.maintainGameServer = onSchedule({
+  region: "us-central1",
+  schedule: "every 1 minutes",
+  timeZone: "Etc/UTC",
+  maxInstances: 1,
+  timeoutSeconds: 60,
+  memory: "256MiB",
+}, async () => {
+  const result = await maintainGameServer(Date.now());
+  console.log("Crownlands realm capacity maintained", result);
+});
 
 exports.resolveDueArmyOrders = onSchedule({
   region: "us-central1",

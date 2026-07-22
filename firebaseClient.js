@@ -3,6 +3,7 @@
   const REQUIRED_CONFIG_KEYS = ["apiKey", "authDomain", "projectId", "appId"];
   const ACTIVE_SESSION_STORAGE_KEY = "crownlands-active-session-id";
   const PLAYER_NAME_MAX_LENGTH = 18;
+  const DEFAULT_GAME_SERVER_ID = "crown-marches";
   const ROYAL_PEACE_SHIELD_ITEM_ID = "shield_12h";
   const ROYAL_PEACE_SHIELD_COST = 175_000;
 
@@ -245,6 +246,42 @@
     const callable = client.modules.functions.httpsCallable(client.functions, name);
     const result = await callable(sanitizeForFirestore(payload) || {});
     return result?.data || null;
+  }
+
+  function createGameServerPayload(serverId = DEFAULT_GAME_SERVER_ID) {
+    return {
+      serverId: String(serverId || DEFAULT_GAME_SERVER_ID).slice(0, 64),
+      sessionId: getActiveSessionId(),
+      displayName: cleanPlayerName(client.user?.displayName || "Ruler"),
+    };
+  }
+
+  async function joinGameServer(serverId = DEFAULT_GAME_SERVER_ID) {
+    return callServerFunction("joinGameServer", createGameServerPayload(serverId));
+  }
+
+  async function heartbeatGameServer(serverId = DEFAULT_GAME_SERVER_ID) {
+    return callServerFunction("heartbeatGameServer", createGameServerPayload(serverId));
+  }
+
+  async function leaveGameServer(serverId = DEFAULT_GAME_SERVER_ID) {
+    return callServerFunction("leaveGameServer", createGameServerPayload(serverId));
+  }
+
+  function subscribeGameServerMembership(handlers = {}) {
+    if (!client.db || !client.modules?.firestore?.onSnapshot || !client.user?.uid) return null;
+    const { doc, onSnapshot } = client.modules.firestore;
+    return onSnapshot(
+      doc(client.db, "players", client.user.uid, "serverMembership", "current"),
+      snapshot => {
+        if (typeof handlers.onMembership === "function") {
+          handlers.onMembership(snapshot.exists() ? { id: snapshot.id, ...snapshot.data() } : null);
+        }
+      },
+      error => {
+        if (typeof handlers.onError === "function") handlers.onError(error);
+      }
+    );
   }
 
   async function sendArmyOrder(payload = {}) {
@@ -1353,6 +1390,10 @@
     init,
     signInWithGoogle,
     signOut,
+    joinGameServer,
+    heartbeatGameServer,
+    leaveGameServer,
+    subscribeGameServerMembership,
     savePlayerProfile,
     loadPlayerProfile,
     collectEconomy,

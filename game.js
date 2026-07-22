@@ -18,6 +18,9 @@ const ONLINE_SAVE_SECONDS = 20;
 const ONLINE_SAVE_SLOT = `default-${RESET_GENERATION}`;
 const ONLINE_WORLD_ID = `main-${RESET_GENERATION}`;
 const ONLINE_LEGACY_ISLAND_ID = ONLINE_WORLD_ID;
+const GAME_SERVER_ID = "crown-marches";
+const GAME_SERVER_NAME = "The Crown Marches";
+const GAME_SERVER_HEARTBEAT_SECONDS = 60;
 const DEFAULT_ONLINE_REGION_ID = WORLD_REGIONS.find(isStarterRegion)?.id
   || WORLD_REGIONS.find(region => region.id === "west")?.id
   || WORLD_REGIONS[0]?.id
@@ -2364,6 +2367,13 @@ let islandMapHomeRefreshInFlight = false;
 let onlinePresenceTimer = 0;
 let onlinePresenceInFlight = false;
 let onlineSessionReplaced = false;
+let gameServerMembership = null;
+let gameServerMembershipUnsubscribe = null;
+let gameServerHeartbeatIntervalId = 0;
+let gameServerHeartbeatInFlight = false;
+let gameServerJoinInFlight = false;
+let gameServerLaunchInFlight = false;
+let gameServerAutoEnter = false;
 let serverEconomySyncTimer = 0;
 let serverEconomyRefreshInFlight = false;
 let serverEconomyRefreshQueued = false;
@@ -2450,6 +2460,9 @@ const googleSignInBtn = document.getElementById("googleSignInBtn");
 const enterKingdomBtn = document.getElementById("enterKingdomBtn");
 const googleSignOutBtn = document.getElementById("googleSignOutBtn");
 const installAppBtn = document.getElementById("installAppBtn");
+const serverRealmList = document.getElementById("serverRealmList");
+const serverRealmBtn = document.getElementById("serverRealmBtn");
+const serverQueueStatus = document.getElementById("serverQueueStatus");
 const lordNameText = document.getElementById("lordNameText");
 const statusText = document.getElementById("statusText");
 const goldText = document.getElementById("goldText");
@@ -9049,13 +9062,159 @@ function handleOnlineSnapshotError(error, rejectInitialCities = null) {
   console.warn("Active island snapshot failed", error);
 }
 
+function normalizeGameServerMembership(raw = null) {
+  if (!raw || typeof raw !== "object") return null;
+  const serverId = String(raw.serverId || "").trim();
+  const status = String(raw.status || "").trim().toLowerCase();
+  if (serverId !== GAME_SERVER_ID || !["active", "waiting", "left", "expired", "session-replaced"].includes(status)) return null;
+  return {
+    serverId,
+    serverName: String(raw.serverName || GAME_SERVER_NAME).trim() || GAME_SERVER_NAME,
+    status,
+    queuedAtMs: Math.max(0, Number(raw.queuedAtMs) || 0),
+    admittedAtMs: Math.max(0, Number(raw.admittedAtMs) || 0),
+    lastSeenAtMs: Math.max(0, Number(raw.lastSeenAtMs) || 0),
+    updatedAtMs: Math.max(0, Number(raw.updatedAtMs) || 0),
+  };
+}
+
+function hasActiveGameServerSlot() {
+  return gameServerMembership?.serverId === GAME_SERVER_ID && gameServerMembership.status === "active";
+}
+
+function isWaitingForGameServerSlot() {
+  return gameServerMembership?.serverId === GAME_SERVER_ID && gameServerMembership.status === "waiting";
+}
+
+function stopGameServerHeartbeat() {
+  if (gameServerHeartbeatIntervalId) window.clearInterval(gameServerHeartbeatIntervalId);
+  gameServerHeartbeatIntervalId = 0;
+  gameServerHeartbeatInFlight = false;
+}
+
+async function heartbeatGameServerMembership() {
+  if (gameServerHeartbeatInFlight || (!hasActiveGameServerSlot() && !isWaitingForGameServerSlot())) return false;
+  const api = getOnlineApi();
+  if (!api?.heartbeatGameServer || !api?.isSignedIn?.()) return false;
+  gameServerHeartbeatInFlight = true;
+  try {
+    const result = await api.heartbeatGameServer(GAME_SERVER_ID);
+    applyGameServerMembership(result);
+    return true;
+  } catch (error) {
+    console.warn("Could not refresh Crownlands realm membership", error);
+    return false;
+  } finally {
+    gameServerHeartbeatInFlight = false;
+  }
+}
+
+function startGameServerHeartbeat() {
+  if (gameServerHeartbeatIntervalId) return;
+  gameServerHeartbeatIntervalId = window.setInterval(
+    heartbeatGameServerMembership,
+    GAME_SERVER_HEARTBEAT_SECONDS * 1000
+  );
+  heartbeatGameServerMembership();
+}
+
+function stopGameServerMembershipWatcher({ clear = true } = {}) {
+  if (typeof gameServerMembershipUnsubscribe === "function") gameServerMembershipUnsubscribe();
+  gameServerMembershipUnsubscribe = null;
+  stopGameServerHeartbeat();
+  if (clear) gameServerMembership = null;
+}
+
+function applyGameServerMembership(raw = null) {
+  const membership = normalizeGameServerMembership(raw);
+  gameServerMembership = membership;
+  if (membership?.status === "active" || membership?.status === "waiting") startGameServerHeartbeat();
+  else stopGameServerHeartbeat();
+  updateOnlineUi();
+
+  if (
+    membership?.status === "active"
+    && gameServerAutoEnter
+    && !gameServerLaunchInFlight
+    && setupScreen?.classList.contains("visible")
+  ) {
+    gameServerAutoEnter = false;
+    window.setTimeout(() => startFromInput(false), 0);
+  }
+}
+
+function watchGameServerMembership() {
+  stopGameServerMembershipWatcher({ clear: true });
+  const api = getOnlineApi();
+  if (!api?.isSignedIn?.() || !api?.subscribeGameServerMembership) {
+    updateOnlineUi();
+    return;
+  }
+  gameServerMembershipUnsubscribe = api.subscribeGameServerMembership({
+    onMembership: membership => applyGameServerMembership(membership),
+    onError: error => {
+      console.warn("Could not watch Crownlands realm membership", error);
+      onlineLastError = error?.message || String(error);
+      updateOnlineUi();
+    },
+  });
+}
+
+async function joinSelectedGameServer() {
+  if (gameServerJoinInFlight) return false;
+  const api = getOnlineApi();
+  if (!api?.joinGameServer || !api?.isSignedIn?.()) throw new Error("Sign in before entering a Crownlands realm.");
+  gameServerJoinInFlight = true;
+  try {
+    const result = await api.joinGameServer(GAME_SERVER_ID);
+    applyGameServerMembership(result);
+    if (result?.status === "waiting") {
+      gameServerAutoEnter = true;
+      return false;
+    }
+    return result?.status === "active";
+  } finally {
+    gameServerJoinInFlight = false;
+  }
+}
+
+async function leaveSelectedGameServer() {
+  const api = getOnlineApi();
+  const shouldLeave = hasActiveGameServerSlot() || isWaitingForGameServerSlot();
+  gameServerAutoEnter = false;
+  if (!shouldLeave || !api?.leaveGameServer || !api?.isSignedIn?.()) {
+    stopGameServerMembershipWatcher({ clear: true });
+    return false;
+  }
+  try {
+    await api.leaveGameServer(GAME_SERVER_ID);
+    return true;
+  } catch (error) {
+    console.warn("Could not release Crownlands realm slot", error);
+    return false;
+  } finally {
+    stopGameServerMembershipWatcher({ clear: true });
+  }
+}
+
 function updateOnlineUi() {
   const api = getOnlineApi();
   updateOnlinePlayersUi();
   updateIslandSwitcherUi();
   if (!onlineStatusText || !onlineStatusDetail) return;
 
+  const setRealmMenuState = (visible, waiting = false) => {
+    if (serverRealmList) serverRealmList.hidden = !visible;
+    if (serverQueueStatus) serverQueueStatus.hidden = !visible || !waiting;
+    if (serverRealmBtn) {
+      serverRealmBtn.disabled = !visible || waiting || gameServerJoinInFlight || gameServerLaunchInFlight;
+      serverRealmBtn.classList.toggle("selected", visible);
+      serverRealmBtn.setAttribute("aria-pressed", visible ? "true" : "false");
+    }
+  };
+
   if (!api) {
+    setRealmMenuState(false);
     onlineStatusText.textContent = "Online unavailable";
     onlineStatusDetail.textContent = "Firebase client did not load.";
     if (googleSignInBtn) googleSignInBtn.disabled = true;
@@ -9069,6 +9228,7 @@ function updateOnlineUi() {
   const user = api.getUser?.();
 
   if (!configured) {
+    setRealmMenuState(false);
     onlineStatusText.textContent = "Firebase needed";
     onlineStatusDetail.textContent = "Paste your Firebase web config into firebase-config.js to enable Google login.";
     if (googleSignInBtn) {
@@ -9081,6 +9241,7 @@ function updateOnlineUi() {
   }
 
   if (onlineSessionReplaced) {
+    setRealmMenuState(false);
     onlineStatusText.textContent = "Signed out";
     onlineStatusDetail.textContent = "This account opened on another device.";
     if (googleSignInBtn) {
@@ -9093,20 +9254,27 @@ function updateOnlineUi() {
   }
 
   if (signedIn) {
+    const waitingForRealm = isWaitingForGameServerSlot();
+    const realmIsActive = hasActiveGameServerSlot();
+    setRealmMenuState(true, waitingForRealm);
     onlineStatusText.textContent = user?.displayName ? `Signed in: ${user.displayName}` : "Signed in";
-    if (onlineLastError) {
+    if (waitingForRealm) {
+      onlineStatusDetail.textContent = `Waiting for an opening in ${GAME_SERVER_NAME}.`;
+    } else if (onlineLastError) {
       onlineStatusDetail.textContent = `Online waiting: ${onlineLastError}`;
+    } else if (realmIsActive) {
+      onlineStatusDetail.textContent = `${GAME_SERVER_NAME} is ready. Press Enter Kingdom.`;
     } else if (usesServerEconomyAuthority() && serverEconomyLastSyncAt) {
-      onlineStatusDetail.textContent = `Online ready. Server economy synced ${new Date(serverEconomyLastSyncAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}.`;
+      onlineStatusDetail.textContent = `${GAME_SERVER_NAME} is selected. Press Enter Kingdom.`;
     } else if (onlineLastSaveAt) {
-      onlineStatusDetail.textContent = `Online ready. Last synced ${new Date(onlineLastSaveAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}. Press Enter Kingdom.`;
+      onlineStatusDetail.textContent = `${GAME_SERVER_NAME} is selected. Press Enter Kingdom.`;
     } else {
-      onlineStatusDetail.textContent = "Online ready. Press Enter Kingdom to join the game.";
+      onlineStatusDetail.textContent = `${GAME_SERVER_NAME} is selected. Press Enter Kingdom.`;
     }
     if (googleSignInBtn) googleSignInBtn.hidden = true;
     if (enterKingdomBtn) {
-      enterKingdomBtn.hidden = false;
-      enterKingdomBtn.disabled = false;
+      enterKingdomBtn.hidden = waitingForRealm;
+      enterKingdomBtn.disabled = waitingForRealm || gameServerJoinInFlight || gameServerLaunchInFlight;
     }
     if (googleSignOutBtn) {
       googleSignOutBtn.hidden = false;
@@ -9115,6 +9283,7 @@ function updateOnlineUi() {
     return;
   }
 
+  setRealmMenuState(false);
   onlineStatusText.textContent = "Sign in to play";
   onlineStatusDetail.textContent = "Use Google to load your kingdom.";
   if (googleSignInBtn) {
@@ -9142,7 +9311,7 @@ async function handleGoogleSignIn() {
       queueOnlineSave();
       await flushOnlineSave(true);
     }
-    showToast("Google connected. Press Enter Kingdom to play.");
+    showToast(`Google connected. ${GAME_SERVER_NAME} is ready to join.`);
   } catch (error) {
     onlineLastError = error?.message || String(error);
     updateOnlineUi();
@@ -9169,6 +9338,7 @@ async function handleGoogleSignOut() {
     }
     await flushOnlineSave(true);
     disconnectOnlineWorld();
+    await leaveSelectedGameServer();
     await api.signOut();
     onlineLastSaveAt = 0;
     onlineLastError = "";
@@ -9182,6 +9352,7 @@ async function handleGoogleSignOut() {
 }
 
 function handleOnlineSessionReplaced() {
+  leaveSelectedGameServer();
   onlineSessionReplaced = true;
   onlineLastError = "";
   disconnectOnlineWorld();
@@ -11369,6 +11540,8 @@ function getPreferredPlayerName() {
 }
 
 async function startFromInput(forceFresh = false) {
+  if (gameServerLaunchInFlight) return;
+  gameServerLaunchInFlight = true;
   const playerName = getPreferredPlayerName();
   const launchBtn = enterKingdomBtn || startBtn;
   const originalStartText = launchBtn?.textContent || "";
@@ -11388,6 +11561,13 @@ async function startFromInput(forceFresh = false) {
     shouldConnectOnline = Boolean(getOnlineApi()?.isSignedIn?.());
     if (!shouldConnectOnline) {
       throw new Error("Sign in with Google to play online.");
+    }
+    const realmIsReady = await joinSelectedGameServer();
+    if (!realmIsReady) {
+      statusOverride = `Waiting for an opening in ${GAME_SERVER_NAME}.`;
+      if (onlineStatusDetail) onlineStatusDetail.textContent = statusOverride;
+      showToast(`${GAME_SERVER_NAME} is full. You joined the waiting list.`);
+      return;
     }
     state = createOnlineEntryState(playerName);
     state.online = null;
@@ -11426,6 +11606,7 @@ async function startFromInput(forceFresh = false) {
     showToast(shouldConnectOnline ? "Online setup failed. Try again." : "Sign in with Google to play.");
     console.warn("Could not start Crown Lands", error);
   } finally {
+    gameServerLaunchInFlight = false;
     setSetupLoading(false);
     if (setupScreen?.classList.contains("visible") && onlineStatusDetail && originalStatusDetail && !statusOverride) {
       onlineStatusDetail.textContent = originalStatusDetail;
@@ -11435,6 +11616,7 @@ async function startFromInput(forceFresh = false) {
       launchBtn.textContent = originalStartText || "Enter Kingdom";
     }
     if (freshBtn) freshBtn.disabled = false;
+    updateOnlineUi();
   }
 }
 
@@ -20514,13 +20696,17 @@ if (startBtn) startBtn.addEventListener("click", () => startFromInput(false));
 if (freshBtn) freshBtn.addEventListener("click", () => startFromInput(true));
 if (googleSignInBtn) googleSignInBtn.addEventListener("click", handleGoogleSignIn);
 if (enterKingdomBtn) enterKingdomBtn.addEventListener("click", () => startFromInput(false));
+if (serverRealmBtn) serverRealmBtn.addEventListener("click", () => startFromInput(false));
 if (googleSignOutBtn) googleSignOutBtn.addEventListener("click", handleGoogleSignOut);
 if (installAppBtn) installAppBtn.addEventListener("click", handleInstallAppClick);
 window.addEventListener("crownlands:online-ready", () => {
   updateOnlineUi();
   updatePushAlertsUi();
+  if (getOnlineApi()?.isSignedIn?.()) watchGameServerMembership();
 });
 window.addEventListener("crownlands:auth", async () => {
+  if (getOnlineApi()?.isSignedIn?.()) watchGameServerMembership();
+  else stopGameServerMembershipWatcher({ clear: true });
   updateOnlineUi();
   refreshPushAlertRegistration(true);
   if (state) {
@@ -20650,9 +20836,15 @@ mapFrame.addEventListener("gestureend", preventNativeMapTouch, { passive: false 
 window.addEventListener("resize", updateCameraTransform);
 document.addEventListener("fullscreenchange", updateFullscreenButton);
 document.addEventListener("visibilitychange", () => {
-  if (document.visibilityState === "visible") checkForDeployedUpdate(true);
+  if (document.visibilityState === "visible") {
+    checkForDeployedUpdate(true);
+    heartbeatGameServerMembership();
+  }
 });
-window.addEventListener("online", () => checkForDeployedUpdate(true));
+window.addEventListener("online", () => {
+  checkForDeployedUpdate(true);
+  heartbeatGameServerMembership();
+});
 document.addEventListener("keydown", event => {
   if (event.key === "F8") {
     event.preventDefault();

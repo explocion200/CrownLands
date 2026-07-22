@@ -12,11 +12,11 @@
   <meta name="apple-mobile-web-app-title" content="Crownlands" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="format-detection" content="telephone=no" />
-  <meta name="crownlands-build" content="20260722-deed-city-names-v1" />
+  <meta name="crownlands-build" content="20260722-realm-lobby-v1" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700;800;900&family=Cinzel+Decorative:wght@700;900&family=IM+Fell+English:ital@0;1&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=20260722-deed-city-names-v1" />
+  <link rel="stylesheet" href="styles.css?v=20260722-realm-lobby-v1" />
   <link rel="preload" as="image" href="assets/game-menu-background.jpg?v=20260702-login-page" />
   <link rel="preload" as="image" href="assets/loading-ring.png" />
   <link rel="preload" as="image" href="assets/loading-crown.png" />
@@ -54,6 +54,17 @@
             <strong id="onlineStatusText">Online loading</strong>
             <small id="onlineStatusDetail">Sign in with Google to load your kingdom.</small>
           </div>
+          <section id="serverRealmList" class="server-realm-list" aria-label="Crownlands realms" hidden>
+            <span class="server-realm-heading">Choose Realm</span>
+            <button id="serverRealmBtn" class="server-realm-card selected" type="button" aria-pressed="true">
+              <span class="server-realm-crest" aria-hidden="true">&#9813;</span>
+              <strong>The Crown Marches</strong>
+            </button>
+            <div id="serverQueueStatus" class="server-queue-status" role="status" hidden>
+              <span class="server-queue-spinner" aria-hidden="true"></span>
+              <strong>Waiting for an opening...</strong>
+            </div>
+          </section>
           <div class="online-login-actions">
             <button id="googleSignInBtn" class="ghost-btn" type="button">Sign in with Google</button>
             <button id="enterKingdomBtn" class="primary-btn" type="button" hidden>Enter Kingdom</button>
@@ -278,10 +289,10 @@
     </article>
   </dialog>
 
-  <script src="assets/map-editor-data.js?v=20260722-deed-city-names-v1"></script>
+  <script src="assets/map-editor-data.js?v=20260722-realm-lobby-v1"></script>
   <script src="world-config.js"></script>
   <script src="firebase-config.js?v=20260703-vapid-key"></script>
-  <script src="firebaseClient.js?v=20260722-deed-city-names-v1"></script>
-  <script src="game.js?v=20260722-deed-city-names-v1"></script>
+  <script src="firebaseClient.js?v=20260722-realm-lobby-v1"></script>
+  <script src="game.js?v=20260722-realm-lobby-v1"></script>
 </body>
 </html>

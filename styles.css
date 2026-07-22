@@ -293,6 +293,86 @@ input {
   font-size: .78rem;
   line-height: 1.35;
 }
+.server-realm-list {
+  display: grid;
+  gap: .42rem;
+  margin-top: .72rem;
+  padding-top: .62rem;
+  border-top: 1px solid rgba(239, 205, 126, .22);
+}
+.server-realm-list[hidden] { display: none; }
+.server-realm-heading {
+  color: #efd17e;
+  font-family: var(--font-ui);
+  font-size: .7rem;
+  font-weight: 900;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+.server-realm-card {
+  width: 100%;
+  min-height: 58px;
+  display: grid;
+  grid-template-columns: 46px minmax(0, 1fr);
+  align-items: center;
+  gap: .68rem;
+  padding: .42rem .68rem .42rem .48rem;
+  color: #fff1c8;
+  text-align: left;
+  border: 1px solid rgba(235, 199, 112, .48);
+  border-radius: 8px;
+  background: linear-gradient(180deg, rgba(22, 54, 83, .96), rgba(6, 23, 40, .98));
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.1), inset 0 -3px 0 rgba(0,0,0,.18), 0 7px 16px rgba(0,0,0,.3);
+}
+.server-realm-card.selected {
+  border-color: #f1cc70;
+  box-shadow: 0 0 0 1px rgba(241, 204, 112, .22), 0 0 18px rgba(83, 157, 211, .2), inset 0 1px 0 rgba(255,255,255,.12);
+}
+.server-realm-card:disabled { opacity: .72; }
+.server-realm-card strong {
+  min-width: 0;
+  overflow: hidden;
+  color: #fff0bd;
+  font-family: var(--font-display);
+  font-size: 1rem;
+  line-height: 1.08;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.server-realm-crest {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  color: #2b1905;
+  border: 1px solid #f6dc91;
+  border-radius: 50%;
+  background: radial-gradient(circle at 36% 28%, #fff1ac, #d59a32 58%, #74420e);
+  box-shadow: inset 0 0 0 2px rgba(77, 40, 5, .28), 0 4px 8px rgba(0,0,0,.34);
+  font-family: Georgia, serif;
+  font-size: 1.55rem;
+  line-height: 1;
+}
+.server-queue-status {
+  min-height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: .48rem;
+  color: #d9e9f4;
+  font-size: .76rem;
+}
+.server-queue-status[hidden] { display: none; }
+.server-queue-status strong { color: #d9e9f4; }
+.server-queue-spinner {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+  border: 2px solid rgba(217, 233, 244, .28);
+  border-top-color: #f1cc70;
+  border-radius: 50%;
+  animation: loadingWheelSpin .9s linear infinite;
+}
 .online-login-actions {
   display: grid;
   grid-template-columns: 1fr;
