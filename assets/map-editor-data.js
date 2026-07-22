@@ -6511,7 +6511,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
       "camps": [
         {
           "id": "region_7_items_camp",
-          "name": "Item Camp",
+          "name": "Relic Camp",
           "x": 747,
           "y": 526,
           "xNorm": 0.516,

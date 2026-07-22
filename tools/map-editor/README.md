@@ -64,7 +64,7 @@ The editor supports placement-only camp markers for:
 
 - Gold Camp
 - Warband Camp
-- Item Camp
+- Relic Camp
 - Deed Camp
 
 Camp positions save into each region JSON under `camps`. Each camp stores its ID, name, type, normalized position, art path, visual size, and notes.

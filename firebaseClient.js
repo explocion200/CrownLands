@@ -704,6 +704,8 @@
       ? "goldCamp"
       : normalizedType === "troops"
         ? "warbandCamp"
+        : normalizedType === "items" || normalizedType === "item" || normalizedType === "relic"
+          ? "relicCamp"
         : "";
     if (!objectiveId) throw new Error("Unknown reward camp type.");
     const { doc, getDoc } = client.modules.firestore;
@@ -717,6 +719,15 @@
       lastReward: Math.max(0, Math.floor(Number(data.lastReward) || 0)),
       lastCampId: String(data.lastCampId || "").slice(0, 120),
       lastClaimedAtMs: Math.max(0, Math.floor(Number(data.lastClaimedAtMs) || 0)),
+      maxDailyRewards: Math.max(0, Math.floor(Number(data.maxDailyRewards) || 0)),
+      rewards: (Array.isArray(data.rewards) ? data.rewards : []).slice(-5).map(entry => ({
+        itemId: String(entry?.itemId || "").slice(0, 64),
+        itemName: String(entry?.itemName || "Unknown item").slice(0, 80),
+        rarity: String(entry?.rarity || "").slice(0, 24),
+        awardedAtMs: Math.max(0, Math.floor(Number(entry?.awardedAtMs) || timestampToMs(entry?.awardedAt))),
+        campId: String(entry?.campId || "").slice(0, 96),
+        campName: String(entry?.campName || "Relic Camp").slice(0, 80),
+      })).filter(entry => entry.itemId),
     };
   }
 

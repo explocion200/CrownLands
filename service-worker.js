@@ -1,16 +1,16 @@
-const CACHE_VERSION = "20260722-deed-camp-v2";
+const CACHE_VERSION = "20260722-relic-camp-v1";
 const CACHE_NAME = `crownlands-cache-${CACHE_VERSION}`;
 const STATIC_CACHE_URLS = [
   "/",
   "/index.html",
   "/manifest.webmanifest",
-  "/styles.css?v=20260722-deed-camp-v2",
+  "/styles.css?v=20260722-relic-camp-v1",
   "/world-config.js",
   "/firebase-config.js?v=20260703-vapid-key",
-  "/firebaseClient.js?v=20260722-deed-camp-v2",
-  "/game.js?v=20260722-deed-camp-v2",
+  "/firebaseClient.js?v=20260722-relic-camp-v1",
+  "/game.js?v=20260722-relic-camp-v1",
   "/route-worker.js?v=20260721-structure-route-clearance",
-  "/assets/map-editor-data.js?v=20260705-stronghold-sizes",
+  "/assets/map-editor-data.js?v=20260722-relic-camp-v1",
   "/assets/game-menu-background.jpg?v=20260702-login-page",
   "/assets/loading-ring.png",
   "/assets/loading-crown.png",

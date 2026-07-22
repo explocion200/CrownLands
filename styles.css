@@ -1612,6 +1612,81 @@ input {
   font-size: .68rem;
   text-align: center;
 }
+.relic-limit-message {
+  padding: 9px 11px;
+  border: 1px solid rgba(218, 131, 94, .62);
+  border-left: 3px solid #d7824f;
+  border-radius: 5px;
+  color: #f3d0b7 !important;
+  background: rgba(76, 30, 24, .72);
+  font-size: .72rem;
+}
+.relic-reward-heading {
+  margin: 2px 0 0;
+  color: #ffe09a;
+  font-family: "Cinzel", Georgia, serif;
+  font-size: .78rem;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+.relic-drop-table {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.relic-drop-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  min-height: 48px;
+  padding: 7px 9px;
+  border: 1px solid rgba(139, 167, 187, .28);
+  border-left: 3px solid #a8becd;
+  border-radius: 5px;
+  background: rgba(9, 31, 49, .78);
+}
+.relic-drop-row.rarity-uncommon { border-left-color: #6ea6d7; }
+.relic-drop-row.rarity-rare { border-left-color: #b58be4; }
+.relic-drop-row.rarity-legendary { border-left-color: #f0bd55; }
+.relic-drop-name,
+.relic-drop-name strong,
+.relic-drop-name small {
+  display: block;
+  min-width: 0;
+}
+.relic-drop-name strong {
+  color: #f4e6bd;
+  font-size: .72rem;
+  overflow-wrap: anywhere;
+}
+.relic-drop-name small {
+  margin-top: 2px;
+  color: #9fb9ca;
+  font-size: .58rem;
+  text-transform: uppercase;
+}
+.relic-drop-row em {
+  color: #ffe09a;
+  font-size: .72rem;
+  font-style: normal;
+  font-weight: 900;
+}
+.relic-reward-history-row em {
+  white-space: nowrap;
+}
+.relic-reward-empty {
+  padding: 16px;
+  border: 1px dashed rgba(139, 167, 187, .32);
+  border-radius: 5px;
+  color: #aebfcb;
+  background: rgba(9, 31, 49, .46);
+  font-size: .72rem;
+  text-align: center;
+}
 .deed-camp-condition {
   padding: 9px 11px;
   border: 1px solid rgba(231, 189, 94, .44);
@@ -1712,6 +1787,11 @@ input {
 }
 @keyframes campRewardSpin {
   to { transform: rotate(360deg); }
+}
+@media (max-width: 520px) {
+  .relic-drop-table {
+    grid-template-columns: 1fr;
+  }
 }
 .gold-camp-info-panel p {
   margin: 0;

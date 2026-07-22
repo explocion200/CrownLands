@@ -266,6 +266,18 @@ const WARBAND_CAMP_HOLD_SECONDS = 15 * 60;
 const DEED_CAMP_BASE_DEFENDERS = 10000;
 const DEED_CAMP_DEFENSE_LEVEL = 30;
 const DEED_CAMP_HOLD_SECONDS = 60 * 60;
+const RELIC_CAMP_BASE_DEFENDERS = 10000;
+const RELIC_CAMP_DEFENSE_LEVEL = 30;
+const RELIC_CAMP_HOLD_SECONDS = 30 * 60;
+const RELIC_CAMP_DAILY_REWARD_LIMIT = 5;
+const RELIC_CAMP_DROP_TABLE = [
+  { itemId: WAR_DRUMS_ITEM_ID, itemName: "War Drums", rarity: "Common", chance: 35 },
+  { itemId: VEIL_OF_SILENCE_ITEM_ID, itemName: "Veil of Silence", rarity: "Common", chance: 25 },
+  { itemId: SWIFT_MARCH_ORDER_ITEM_ID, itemName: "Swift March Order", rarity: "Uncommon", chance: 18 },
+  { itemId: ROYAL_TAX_DECREE_ITEM_ID, itemName: "Royal Tax Decree", rarity: "Uncommon", chance: 12 },
+  { itemId: RECALL_HORN_ITEM_ID, itemName: "Recall Horn", rarity: "Rare", chance: 8 },
+  { itemId: ROYAL_PEACE_SHIELD_ITEM_ID, itemName: "Royal Peace Shield", rarity: "Legendary", chance: 2 },
+];
 const REWARD_CAMP_CONFIG = {
   gold: {
     type: "gold",
@@ -301,6 +313,19 @@ const REWARD_CAMP_CONFIG = {
     baseDefenders: DEED_CAMP_BASE_DEFENDERS,
     defenseLevel: DEED_CAMP_DEFENSE_LEVEL,
     holdSeconds: DEED_CAMP_HOLD_SECONDS,
+  },
+  items: {
+    type: "items",
+    kind: "relicCamp",
+    name: "Relic Camp",
+    rewardType: "item",
+    rewardLabel: "usable item",
+    baseReward: 1,
+    baseDefenders: RELIC_CAMP_BASE_DEFENDERS,
+    defenseLevel: RELIC_CAMP_DEFENSE_LEVEL,
+    holdSeconds: RELIC_CAMP_HOLD_SECONDS,
+    maxDailyRewards: RELIC_CAMP_DAILY_REWARD_LIMIT,
+    itemDrops: RELIC_CAMP_DROP_TABLE,
   },
 };
 const REWARD_CAMP_PROGRESS_CACHE_MS = 30 * 1000;
@@ -3280,8 +3305,8 @@ function getCampConfigForType(type) {
   if (campType === "troops" || campType === "troop") {
     return { type: "troops", name: "Warband Camp", artSrc: "assets/camps/troops.png" };
   }
-  if (campType === "items" || campType === "item") {
-    return { type: "items", name: "Item Camp", artSrc: "assets/camps/items.png" };
+  if (campType === "items" || campType === "item" || campType === "relic") {
+    return { type: "items", name: "Relic Camp", artSrc: "assets/camps/items.png" };
   }
   if (campType === "deed" || campType === "city_deed") {
     return { type: "deed", name: "Deed Camp", artSrc: "assets/camps/deed.png" };
@@ -3294,8 +3319,11 @@ function getRewardCampConfig(campOrType = {}) {
     ? campOrType
     : campOrType?.campType
       || (campOrType?.kind === "warbandCamp" ? "troops" : "")
+      || (campOrType?.kind === "relicCamp" ? "items" : "")
       || (campOrType?.kind === "goldCamp" || campOrType?.targetType === "camp" ? "gold" : "");
-  return REWARD_CAMP_CONFIG[String(rawType || "").trim().toLowerCase()] || null;
+  const normalizedType = String(rawType || "").trim().toLowerCase();
+  const campType = normalizedType === "relic" || normalizedType === "item" ? "items" : normalizedType;
+  return REWARD_CAMP_CONFIG[campType] || null;
 }
 
 function getStrongholdConfigForType(type) {
@@ -10083,13 +10111,15 @@ async function requestDueRewardCampPayout(camp) {
       if (config?.type === "deed") {
         deedCampHistoryCache.delete(getDeedCampHistoryCacheKey(camp));
       } else if (config && result.holderUid === getCurrentOnlineUid()) {
-        const progress = cacheRewardCampProgress(config, {
-          date: currentUtcDateKey(),
-          count: result.dailyClaim,
-          lastReward: result.reward,
-          lastCampId: camp.id,
-          lastClaimedAtMs: Date.now(),
-        });
+         const progress = cacheRewardCampProgress(config, {
+           date: currentUtcDateKey(),
+           count: result.dailyClaim,
+           lastReward: result.reward,
+           lastCampId: camp.id,
+           lastClaimedAtMs: Date.now(),
+           rewards: result.rewardsToday,
+           maxDailyRewards: result.maxDailyRewards,
+         });
         renderRewardCampProgressPanel(camp.id, config, progress);
       }
       const rewardMessage = config?.type === "deed"
@@ -10098,6 +10128,12 @@ async function requestDueRewardCampPayout(camp) {
           : result.awardedCity
           ? `${config.name} reward: ${result.awardedCity.name} in ${result.awardedCity.regionName} is now yours.`
           : "No eligible neutral city was available. The Deed Camp reset to neutral."
+        : config?.type === "items"
+          ? result.status === "daily-limit"
+            ? "Daily Relic Camp reward limit reached. The camp reset to neutral."
+            : result.rewardItem
+              ? `Relic Camp reward: ${result.rewardItem.itemName} (${result.rewardItem.rarity}) was added to your bag.`
+              : "Relic Camp completed without an item reward."
         : result.reward > 0
           ? `${config?.name || camp.name} reward: +${formatNumber(result.reward)} ${result.rewardType || config?.rewardLabel || "reward"}`
           : `${config?.name || camp.name} daily reward limit reached.`;
@@ -10106,7 +10142,7 @@ async function requestDueRewardCampPayout(camp) {
         : "";
       showToast(`${rewardMessage}${returnMessage}`);
     }
-    return ["paid", "no-eligible-city"].includes(result?.status);
+    return ["paid", "no-eligible-city", "daily-limit"].includes(result?.status);
   } catch (error) {
     console.warn("Could not resolve reward camp payout", error);
     return false;
@@ -15342,6 +15378,16 @@ function normalizeRewardCampProgress(config, raw = {}) {
   const today = currentUtcDateKey();
   const date = String(raw?.date || "").slice(0, 10);
   const count = date === today ? Math.max(0, Math.floor(Number(raw?.count) || 0)) : 0;
+  const rewardsToday = date === today && Array.isArray(raw?.rewards)
+    ? raw.rewards.slice(-RELIC_CAMP_DAILY_REWARD_LIMIT).map(entry => ({
+        itemId: String(entry?.itemId || "").slice(0, 64),
+        itemName: String(entry?.itemName || "Unknown item").slice(0, 80),
+        rarity: String(entry?.rarity || "").slice(0, 24),
+        awardedAtMs: normalizeTimestampMs(entry?.awardedAtMs || entry?.awardedAt),
+        campId: String(entry?.campId || "").slice(0, 96),
+        campName: String(entry?.campName || config?.name || "Relic Camp").slice(0, 80),
+      })).filter(entry => entry.itemId)
+    : [];
   return {
     campType: config?.type || "",
     date: today,
@@ -15349,6 +15395,8 @@ function normalizeRewardCampProgress(config, raw = {}) {
     lastReward: date === today ? Math.max(0, Math.floor(Number(raw?.lastReward) || 0)) : 0,
     lastCampId: date === today ? String(raw?.lastCampId || "") : "",
     lastClaimedAtMs: date === today ? normalizeTimestampMs(raw?.lastClaimedAtMs) : 0,
+    rewards: rewardsToday,
+    maxDailyRewards: Math.max(0, Math.floor(Number(raw?.maxDailyRewards) || config?.maxDailyRewards || 0)),
   };
 }
 
@@ -15393,7 +15441,53 @@ async function loadRewardCampProgress(config) {
   return request;
 }
 
+function relicCampProgressMarkup(config, progress, status = "ready") {
+  if (status === "loading") {
+    return `<div class="camp-reward-loading"><span class="camp-reward-spinner" aria-hidden="true"></span><strong>Loading Relic Camp rewards...</strong></div>`;
+  }
+  if (status === "error") {
+    return `<div class="camp-reward-loading error"><strong>Reward progress unavailable</strong><p>Your Relic Camp rewards are still tracked by the server. Reopen this panel once the connection is ready.</p></div>`;
+  }
+  const maxRewards = Math.max(1, Math.floor(Number(config?.maxDailyRewards) || RELIC_CAMP_DAILY_REWARD_LIMIT));
+  const claimed = clamp(Math.floor(Number(progress?.count) || 0), 0, maxRewards);
+  const completed = claimed >= maxRewards;
+  const progressPercent = Math.round(claimed / maxRewards * 100);
+  const drops = (Array.isArray(config?.itemDrops) ? config.itemDrops : RELIC_CAMP_DROP_TABLE).map(item => `
+    <li class="relic-drop-row rarity-${escapeHtml(String(item.rarity || "common").toLowerCase())}">
+      <span class="relic-drop-name"><strong>${escapeHtml(item.itemName)}</strong><small>${escapeHtml(item.rarity)}</small></span>
+      <em>${formatNumber(item.chance)}%</em>
+    </li>`).join("");
+  const rewardsToday = Array.isArray(progress?.rewards) ? [...progress.rewards].reverse() : [];
+  const history = rewardsToday.length
+    ? rewardsToday.map(entry => {
+        const awardedAtMs = normalizeTimestampMs(entry.awardedAtMs);
+        const awardedAt = awardedAtMs
+          ? new Date(awardedAtMs).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })
+          : "Time unavailable";
+        return `
+          <li class="camp-reward-row claimed relic-reward-history-row">
+            <span class="camp-reward-check" aria-hidden="true">&#10003;</span>
+            <span class="camp-reward-copy"><small>${escapeHtml(entry.rarity || "Item reward")}</small><strong>${escapeHtml(entry.itemName || "Usable item")}</strong></span>
+            <em>${escapeHtml(awardedAt)}</em>
+          </li>`;
+      }).join("")
+    : `<li class="relic-reward-empty">No Relic Camp items earned today.</li>`;
+  return `
+    <div class="camp-reward-overview">
+      <div><span>Today's rewards</span><strong>${claimed} / ${maxRewards} claimed</strong></div>
+      <div><span>Eligibility</span><strong>${completed ? "Limit reached" : "Reward available"}</strong></div>
+    </div>
+    <div class="camp-reward-meter" role="progressbar" aria-label="Daily Relic Camp rewards" aria-valuemin="0" aria-valuemax="${maxRewards}" aria-valuenow="${claimed}"><span style="width:${progressPercent}%"></span></div>
+    ${completed ? `<p class="relic-limit-message">Daily reward limit reached. You can still fight for this camp, but you will not receive another reward today.</p>` : ""}
+    <h3 class="relic-reward-heading">Possible item drops</h3>
+    <ul class="relic-drop-table">${drops}</ul>
+    <h3 class="relic-reward-heading">Today's rewards</h3>
+    <ol class="camp-reward-list relic-reward-history">${history}</ol>
+    <p class="camp-reward-reset">Relic Camp rewards reset at 00:00 UTC.</p>`;
+}
+
 function rewardCampProgressMarkup(config, progress, status = "ready") {
+  if (config?.type === "items") return relicCampProgressMarkup(config, progress, status);
   if (status === "loading") {
     return `<div class="camp-reward-loading"><span class="camp-reward-spinner" aria-hidden="true"></span><strong>Loading reward progress...</strong></div>`;
   }
@@ -15545,9 +15639,12 @@ function showRewardCampInfoModal(campId) {
   const config = getRewardCampConfig(camp);
   if (!config) return;
   const isDeedCamp = config.type === "deed";
+  const isRelicCamp = config.type === "items";
   const holdMinutes = Math.floor(config.holdSeconds / 60);
   const rewardDestination = isDeedCamp
     ? "The awarded neutral city immediately becomes the holder's city without a battle or troop march."
+    : isRelicCamp
+      ? "One random usable item is added directly to the holder's bag when a rewarded hold completes."
     : config.rewardType === "troops"
     ? "The troop reward is delivered to the holder's main city."
     : "The gold reward is added directly to the holder's treasury.";
@@ -15610,7 +15707,9 @@ function showRewardCampInfoModal(campId) {
     : rewardCampProgressMarkup(config, null, "loading");
   const rewardConditionMarkup = isDeedCamp
     ? `<p class="deed-camp-condition">Hold this camp for 1 hour to receive one random eligible neutral gray city. A player can receive one Deed Camp city per UTC day. This remains separate from the normal neutral-city capture limit.</p>`
-    : "";
+    : isRelicCamp
+      ? `<p class="deed-camp-condition">Hold this camp for 30 minutes to receive one random usable item. Up to 5 Relic Camp item rewards can be earned per player each UTC day.</p>`
+      : "";
   const rulesMarkup = isDeedCamp
     ? `
       <div class="gold-camp-description deed-camp-help">
@@ -15620,6 +15719,16 @@ function showRewardCampInfoModal(campId) {
         <p>The awarded city is chosen automatically. No Deed Token or inventory item is given, and no battle XP is awarded because no battle happened for that city.</p>
         <p>The normal neutral-city capture limit still applies to regular attacks on gray cities. A Deed Camp reward does not use that limit and is granted whether the holder is below, at, or above it.</p>
         <p>After payout, stationed troops march back to their origin city, or to the holder's main city if the origin was lost. The camp then resets to neutral with its fixed defenders.</p>
+      </div>`
+    : isRelicCamp
+      ? `
+      <div class="gold-camp-description deed-camp-help">
+        <strong>How it works</strong>
+        <p>Capture and hold the Relic Camp for 30 minutes. If you still control it when the public timer ends, you receive one random usable item based on rarity.</p>
+        <p>You can earn up to 5 Relic Camp item rewards per UTC day. After that, you can still attack, capture, reinforce, and hold the camp, but you will not receive another item until the daily reset.</p>
+        <p>The reward is added directly to your bag. No relic fragments, gold, troops, battle XP, or leaderboard points are awarded by the payout.</p>
+        <p>Other players can attack and steal this camp before payout. Royal Peace Shield does not protect camp ownership, and the camp does not count as a city or use neutral-city capture limits.</p>
+        <p>After payout or a no-reward completion, stationed troops march back to their origin city, or to the holder's main city if the origin was lost. The camp resets to neutral with its fixed defenders.</p>
       </div>`
     : `
       <div class="gold-camp-description">
@@ -15633,7 +15742,7 @@ function showRewardCampInfoModal(campId) {
   modalBody.innerHTML = `
     <div class="gold-camp-info-panel">
       <div class="camp-info-tabs" role="tablist" aria-label="${escapeHtml(camp.name)} information">
-        <button id="campStatsTab" class="camp-info-tab active" type="button" role="tab" aria-selected="true" aria-controls="campStatsPanel" data-camp-info-tab="stats">${isDeedCamp ? "Status" : "Stats"}</button>
+        <button id="campStatsTab" class="camp-info-tab active" type="button" role="tab" aria-selected="true" aria-controls="campStatsPanel" data-camp-info-tab="stats">${isDeedCamp || isRelicCamp ? "Status" : "Stats"}</button>
         <button id="campRewardTab" class="camp-info-tab" type="button" role="tab" aria-selected="false" aria-controls="campRewardPanel" data-camp-info-tab="reward">${isDeedCamp ? "Reward History" : "Reward"}</button>
         <button id="campRulesTab" class="camp-info-tab camp-rules-tab" type="button" role="tab" aria-label="How this camp works" aria-selected="false" aria-controls="campRulesPanel" data-camp-info-tab="rules">?</button>
       </div>

@@ -2,6 +2,7 @@ const { onCall, HttpsError } = require("firebase-functions/v2/https");
 const { onSchedule } = require("firebase-functions/v2/scheduler");
 const { onDocumentWritten } = require("firebase-functions/v2/firestore");
 const admin = require("firebase-admin");
+const crypto = require("node:crypto");
 const SERVER_WORLD_LAYOUT = require("./world-layout.json");
 
 admin.initializeApp();
@@ -129,6 +130,18 @@ const DEED_CAMP_DEFENSE_LEVEL = 30;
 const DEED_CAMP_HISTORY_LIMIT = 25;
 const DEED_CAMP_CITY_QUERY_LIMIT = 50;
 const DEED_CAMP_FALLBACK_REGION_LIMIT = 6;
+const RELIC_CAMP_HOLD_DURATION_MS = 30 * 60 * 1000;
+const RELIC_CAMP_BASE_DEFENDERS = 10_000;
+const RELIC_CAMP_DEFENSE_LEVEL = 30;
+const RELIC_CAMP_DAILY_REWARD_LIMIT = 5;
+const RELIC_CAMP_DROP_TABLE = [
+  { itemId: WAR_DRUMS_ITEM_ID, itemName: "War Drums", rarity: "Common", chance: 35 },
+  { itemId: VEIL_OF_SILENCE_ITEM_ID, itemName: "Veil of Silence", rarity: "Common", chance: 25 },
+  { itemId: SWIFT_MARCH_ORDER_ITEM_ID, itemName: "Swift March Order", rarity: "Uncommon", chance: 18 },
+  { itemId: ROYAL_TAX_DECREE_ITEM_ID, itemName: "Royal Tax Decree", rarity: "Uncommon", chance: 12 },
+  { itemId: RECALL_HORN_ITEM_ID, itemName: "Recall Horn", rarity: "Rare", chance: 8 },
+  { itemId: ROYAL_PEACE_SHIELD_ITEM_ID, itemName: "Royal Peace Shield", rarity: "Legendary", chance: 2 },
+];
 const REWARD_CAMP_CONFIG = {
   gold: {
     campType: "gold",
@@ -167,6 +180,20 @@ const REWARD_CAMP_CONFIG = {
     baseReward: 1,
     baseDefenders: DEED_CAMP_BASE_DEFENDERS,
     defenseLevel: DEED_CAMP_DEFENSE_LEVEL,
+  },
+  items: {
+    campType: "items",
+    kind: "relicCamp",
+    name: "Relic Camp",
+    artSrc: "assets/camps/items.png",
+    rewardType: "item",
+    objectiveStatsId: "relicCamp",
+    holdDurationMs: RELIC_CAMP_HOLD_DURATION_MS,
+    baseReward: 1,
+    baseDefenders: RELIC_CAMP_BASE_DEFENDERS,
+    defenseLevel: RELIC_CAMP_DEFENSE_LEVEL,
+    maxDailyRewards: RELIC_CAMP_DAILY_REWARD_LIMIT,
+    itemDrops: RELIC_CAMP_DROP_TABLE,
   },
 };
 const SHOP_ITEMS = {
@@ -1519,8 +1546,10 @@ function getRewardCampConfig(campOrType = {}) {
     ? campOrType
     : campOrType?.campType
       || (campOrType?.kind === "warbandCamp" ? "troops" : "")
+      || (campOrType?.kind === "relicCamp" ? "items" : "")
       || (campOrType?.kind === "goldCamp" || campOrType?.targetType === "camp" ? "gold" : "");
-  const campType = safeString(rawType, 24).toLowerCase();
+  const normalizedType = safeString(rawType, 24).toLowerCase();
+  const campType = normalizedType === "relic" || normalizedType === "item" ? "items" : normalizedType;
   return REWARD_CAMP_CONFIG[campType] || null;
 }
 
@@ -6412,6 +6441,33 @@ function getRewardCampDailyReward(config, claimIndex = 0) {
   return config?.dailyRewards?.[Math.max(0, Math.floor(safeNumber(claimIndex, 0)))] || 0;
 }
 
+function rollRelicCampItem(dropTable = RELIC_CAMP_DROP_TABLE) {
+  const entries = Array.isArray(dropTable) ? dropTable.filter(entry => entry?.itemId && entry.chance > 0) : [];
+  const totalChance = entries.reduce((total, entry) => total + Math.max(0, Math.floor(safeNumber(entry.chance, 0))), 0);
+  if (!entries.length || totalChance !== 100) {
+    throw new HttpsError("internal", "Relic Camp drop table is unavailable.");
+  }
+  const roll = crypto.randomInt(1, totalChance + 1);
+  let cumulativeChance = 0;
+  for (const entry of entries) {
+    cumulativeChance += Math.max(0, Math.floor(safeNumber(entry.chance, 0)));
+    if (roll <= cumulativeChance) return { ...entry };
+  }
+  return { ...entries[entries.length - 1] };
+}
+
+function normalizeRelicCampRewardsToday(claimData = {}, today = "") {
+  if (safeString(claimData.date, 10) !== today || !Array.isArray(claimData.rewards)) return [];
+  return claimData.rewards.slice(-RELIC_CAMP_DAILY_REWARD_LIMIT).map(entry => ({
+    itemId: safeString(entry?.itemId, 64),
+    itemName: safeString(entry?.itemName, 80),
+    rarity: safeString(entry?.rarity, 24),
+    awardedAtMs: Math.max(0, Math.floor(safeNumber(entry?.awardedAtMs, 0))),
+    campId: safeString(entry?.campId, 96),
+    campName: safeString(entry?.campName, 80),
+  })).filter(entry => entry.itemId && SHOP_ITEMS[entry.itemId]);
+}
+
 function getDeedCampCandidateRegionIds(regionId = "") {
   const sourceRegionId = requireKnownWorldRegionId(regionId);
   const connectedRegions = getServerEdgeConnections(sourceRegionId)
@@ -6485,6 +6541,7 @@ async function resolveRewardCampPayoutByRef(campRef, nowMs = Date.now(), callerU
     if (payoutAtMs > nowMs) return { ok: true, status: "not-due", payoutAtMs };
 
     const isDeedCamp = config.rewardType === "city";
+    const isRelicCamp = config.rewardType === "item";
     const playerRef = db.doc(`players/${holderUid}`);
     const claimsRef = config.objectiveStatsId
       ? db.doc(`players/${holderUid}/objectiveStats/${config.objectiveStatsId}`)
@@ -6498,8 +6555,18 @@ async function resolveRewardCampPayoutByRef(campRef, nowMs = Date.now(), callerU
       ? Math.max(0, Math.floor(safeNumber(claimData.count, 0)))
       : 0;
     const deedDailyLimitReached = isDeedCamp && priorClaims >= 1;
-    let reward = isDeedCamp ? deedDailyLimitReached ? 0 : 1 : getRewardCampDailyReward(config, priorClaims);
-    let nextClaims = isDeedCamp ? priorClaims : priorClaims + 1;
+    const relicDailyLimitReached = isRelicCamp && priorClaims >= config.maxDailyRewards;
+    const priorRelicRewards = isRelicCamp ? normalizeRelicCampRewardsToday(claimData, today) : [];
+    const relicRewardItem = isRelicCamp && !relicDailyLimitReached
+      ? rollRelicCampItem(config.itemDrops)
+      : null;
+    let reward = isDeedCamp
+      ? deedDailyLimitReached ? 0 : 1
+      : isRelicCamp
+        ? relicRewardItem ? 1 : 0
+        : getRewardCampDailyReward(config, priorClaims);
+    let nextClaims = isDeedCamp || isRelicCamp ? priorClaims : priorClaims + 1;
+    if (relicRewardItem) nextClaims = priorClaims + 1;
 
     const mainCityInfo = getMainCityInfo(player);
     const mainCitySnap = mainCityInfo?.ref ? await transaction.get(mainCityInfo.ref) : null;
@@ -6664,6 +6731,28 @@ async function resolveRewardCampPayoutByRef(campRef, nowMs = Date.now(), callerU
       });
     }
 
+    let relicRewardEntry = null;
+    let rewardedShopItems = null;
+    if (relicRewardItem) {
+      rewardedShopItems = normalizeShopItems(player.shopItems);
+      rewardedShopItems[relicRewardItem.itemId] = Math.max(
+        0,
+        Math.floor(safeNumber(rewardedShopItems[relicRewardItem.itemId], 0))
+      ) + 1;
+      relicRewardEntry = {
+        itemId: relicRewardItem.itemId,
+        itemName: relicRewardItem.itemName,
+        rarity: relicRewardItem.rarity,
+        awardedAtMs: nowMs,
+        campId: camp.id,
+        campName: camp.name || config.name,
+      };
+    }
+    const relicRewardsToday = isRelicCamp
+      ? [...priorRelicRewards, ...(relicRewardEntry ? [relicRewardEntry] : [])]
+          .slice(-RELIC_CAMP_DAILY_REWARD_LIMIT)
+      : [];
+
     const baseDefenders = Math.max(1, Math.floor(safeNumber(camp.baseDefenders, config.baseDefenders)));
     const activeArmyIds = normalizeActiveArmyIds(camp.activeArmyIds);
     const campPatch = {
@@ -6687,6 +6776,7 @@ async function resolveRewardCampPayoutByRef(campRef, nowMs = Date.now(), callerU
         lastClaimNumber: nextClaims,
         lastReward: reward,
         ...(deedCityPatch ? { lastAwardedCityId: deedCityPatch.id } : {}),
+        ...(relicRewardEntry ? { lastRewardItemId: relicRewardEntry.itemId } : {}),
       },
       lastResetDate: today,
       lastPaidAtMs: nowMs,
@@ -6701,6 +6791,10 @@ async function resolveRewardCampPayoutByRef(campRef, nowMs = Date.now(), callerU
         lastReward: reward,
         lastCampId: camp.id,
         lastClaimedAtMs: nowMs,
+        ...(isRelicCamp ? {
+          rewards: relicRewardsToday,
+          maxDailyRewards: config.maxDailyRewards,
+        } : {}),
         updatedAt: FieldValue.serverTimestamp(),
       }, { merge: true });
     }
@@ -6713,6 +6807,10 @@ async function resolveRewardCampPayoutByRef(campRef, nowMs = Date.now(), callerU
       ? deedCityPatch
         ? `${deedHistoryEntry.cityName} in ${deedHistoryEntry.regionName}`
         : "no eligible neutral city"
+      : isRelicCamp
+        ? relicRewardEntry
+          ? `${relicRewardEntry.itemName} (${relicRewardEntry.rarity})`
+          : "no item"
       : config.rewardType === "troops"
         ? `${reward.toLocaleString()} troops`
         : `${reward.toLocaleString()} gold`;
@@ -6728,6 +6826,10 @@ async function resolveRewardCampPayoutByRef(campRef, nowMs = Date.now(), callerU
         : deedCityPatch
         ? `Held ${camp.name || config.name} for ${holdMinutes} minutes and received ${rewardLabel}. No battle XP was awarded.${returnSummary}`
         : `Held ${camp.name || config.name} for ${holdMinutes} minutes, but no eligible neutral city was available. The camp reset to neutral.${returnSummary}`
+      : isRelicCamp
+        ? relicDailyLimitReached
+          ? `Held ${camp.name || config.name} for ${holdMinutes} minutes, but the daily limit of ${config.maxDailyRewards} Relic Camp rewards was already reached. The camp reset to neutral.${returnSummary}`
+          : `Held ${camp.name || config.name} for ${holdMinutes} minutes and received ${rewardLabel}. The item was added to your bag.${returnSummary}`
       : reward > 0
         ? `Held ${camp.name || config.name} for ${holdMinutes} minutes and earned ${rewardLabel}.${returnSummary}`
         : `Held ${camp.name || config.name} for ${holdMinutes} minutes. Today's ${config.name} reward limit has been reached.${returnSummary}`;
@@ -6747,10 +6849,13 @@ async function resolveRewardCampPayoutByRef(campRef, nowMs = Date.now(), callerU
       goldAfter: nextGold,
       nowMs,
     });
-    writeReport(transaction, holderUid, report, playerSnap, config.rewardType === "gold" ? {
-      gold: nextGold,
-      goldFloat: nextGoldFloat,
-    } : {});
+    writeReport(transaction, holderUid, report, playerSnap, {
+      ...(config.rewardType === "gold" ? {
+        gold: nextGold,
+        goldFloat: nextGoldFloat,
+      } : {}),
+      ...(rewardedShopItems ? { shopItems: rewardedShopItems } : {}),
+    });
     transaction.set(islandReportRef(camp.regionId, report.id), {
       ...report,
       createdAt: FieldValue.serverTimestamp(),
@@ -6764,7 +6869,9 @@ async function resolveRewardCampPayoutByRef(campRef, nowMs = Date.now(), callerU
           : !deedCityPatch
             ? "no-eligible-city"
             : "paid"
-        : "paid",
+        : isRelicCamp && relicDailyLimitReached
+          ? "daily-limit"
+          : "paid",
       holderUid,
       reward,
       rewardType: config.rewardType,
@@ -6778,6 +6885,9 @@ async function resolveRewardCampPayoutByRef(campRef, nowMs = Date.now(), callerU
       } : null,
       rewardHistoryEntry: deedHistoryEntry,
       rewardHistoryLimit: DEED_CAMP_HISTORY_LIMIT,
+      rewardItem: relicRewardEntry,
+      rewardsToday: relicRewardsToday,
+      maxDailyRewards: isRelicCamp ? config.maxDailyRewards : 0,
       returnedTroops,
       returningTroops,
       returnArmyId: returnArmy?.id || "",
@@ -6788,7 +6898,12 @@ async function resolveRewardCampPayoutByRef(campRef, nowMs = Date.now(), callerU
       rewardedTroops,
       campUpdate: campUpdateForClient(camp.id, camp.regionId, campPatch),
       cityUpdates: [deedCityPatch, mainCityPatch].filter(Boolean),
-      currentUser: callerUid === holderUid && config.rewardType === "gold" ? { gold: nextGold, goldFloat: nextGoldFloat } : null,
+      currentUser: callerUid === holderUid && (config.rewardType === "gold" || rewardedShopItems)
+        ? {
+            ...(config.rewardType === "gold" ? { gold: nextGold, goldFloat: nextGoldFloat } : {}),
+            ...(rewardedShopItems ? { shopItems: rewardedShopItems } : {}),
+          }
+        : null,
     };
   });
 }

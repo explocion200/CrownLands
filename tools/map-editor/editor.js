@@ -95,7 +95,7 @@
       size: 132,
     },
     items: {
-      name: "Item Camp",
+      name: "Relic Camp",
       artSrc: "assets/camps/items.png",
       size: 132,
     },

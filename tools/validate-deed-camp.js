@@ -6,6 +6,7 @@ const serverSource = fs.readFileSync(path.join(root, "functions", "index.js"), "
 const clientSource = fs.readFileSync(path.join(root, "game.js"), "utf8");
 const firebaseClientSource = fs.readFileSync(path.join(root, "firebaseClient.js"), "utf8");
 const rulesSource = fs.readFileSync(path.join(root, "firestore.rules"), "utf8");
+const firestoreIndexes = JSON.parse(fs.readFileSync(path.join(root, "firestore.indexes.json"), "utf8"));
 const worldLayout = JSON.parse(fs.readFileSync(path.join(root, "functions", "world-layout.json"), "utf8"));
 
 function requireMatch(source, pattern, message) {
@@ -30,6 +31,14 @@ requireMatch(serverSource, /status:\s*isDeedCamp[\s\S]*?"daily-limit"[\s\S]*?"no
 requireMatch(serverSource, /findEligibleDeedCampCity[\s\S]*?getServerWorldRegularCityIds[\s\S]*?where\("ownerUid",\s*"==",\s*null\)/, "Deed Camp payout is not using a bounded neutral-city query.");
 requireMatch(serverSource, /getDeedCampCandidateRegionIds[\s\S]*?mapType === "starter" \|\| mapType === "midgame"/, "Deed Camp fallback regions are not restricted to connected activity maps.");
 requireMatch(serverSource, /missingTargetCamp[\s\S]*?getAuthoritativeRewardCampSeed[\s\S]*?transaction\.set\(targetRef,[\s\S]*?missingTargetCamp/, "Missing authoritative camp documents are not repaired before an army launches.");
+
+const cityOwnerIndex = (firestoreIndexes.fieldOverrides || []).find(index => (
+  index.collectionGroup === "cities" && index.fieldPath === "ownerUid"
+));
+const cityOwnerScopes = new Set((cityOwnerIndex?.indexes || []).map(index => index.queryScope));
+if (!cityOwnerScopes.has("COLLECTION") || !cityOwnerScopes.has("COLLECTION_GROUP")) {
+  throw new Error("cities.ownerUid must support both collection and collection-group queries for Deed Camp payouts and global ownership reads.");
+}
 
 const payoutStart = serverSource.indexOf("async function resolveRewardCampPayoutByRef");
 const payoutEnd = serverSource.indexOf("async function resolveRewardCampPayoutAndStats", payoutStart);
