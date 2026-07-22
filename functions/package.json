@@ -8,7 +8,7 @@
   "main": "index.js",
   "scripts": {
     "lint": "node --check index.js",
-    "test": "node ../tools/validate-runtime.js && node ../tools/validate-route-obstacles.js && node ../tools/validate-map-interactions.js && node ../tools/validate-owned-city-list.js && node ../tools/validate-harvest-pickups.js && node ../tools/validate-map-image-loading.js && node ../tools/validate-king-power.js && node ../tools/validate-level-up-rewards.js && node ../tools/validate-skills.js"
+    "test": "node ../tools/validate-runtime.js && node ../tools/validate-route-obstacles.js && node ../tools/validate-map-interactions.js && node ../tools/validate-owned-city-list.js && node ../tools/validate-harvest-pickups.js && node ../tools/validate-map-image-loading.js && node ../tools/validate-king-power.js && node ../tools/validate-weaker-kingdom-protection.js && node ../tools/validate-level-up-rewards.js && node ../tools/validate-skills.js && node ../tools/validate-deed-camp.js"
   },
   "dependencies": {
     "@google-cloud/functions-framework": "^5.0.5",

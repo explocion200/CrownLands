@@ -8788,7 +8788,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
       "camps": [
         {
           "id": "region_9_deed_camp",
-          "name": "City Deed Camp",
+          "name": "Deed Camp",
           "x": 715,
           "y": 508,
           "xNorm": 0.494,

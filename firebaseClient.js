@@ -720,6 +720,37 @@
     };
   }
 
+  async function loadRewardCampHistory({ islandId = "", campId = "", limitCount = 25 } = {}) {
+    await init();
+    const uid = requireSignedIn();
+    if (!uid) return [];
+    const safeIslandId = String(islandId || "").trim().replace(/[^a-zA-Z0-9_-]/g, "");
+    const safeCampId = String(campId || "").trim().replace(/[^a-zA-Z0-9_-]/g, "");
+    if (!safeIslandId || !safeCampId) throw new Error("Missing Deed Camp location.");
+    const safeLimit = Math.max(1, Math.min(50, Math.floor(Number(limitCount) || 25)));
+    const { collection, getDocs, query: firestoreQuery, orderBy, limit } = client.modules.firestore;
+    const historyRef = collection(client.db, "islands", safeIslandId, "camps", safeCampId, "rewardHistory");
+    const historyQuery = firestoreQuery && orderBy && limit
+      ? firestoreQuery(historyRef, orderBy("awardedAtMs", "desc"), limit(safeLimit))
+      : historyRef;
+    const snapshot = await getDocs(historyQuery);
+    return snapshot.docs.slice(0, safeLimit).map(historyDoc => {
+      const history = historyDoc.data() || {};
+      return {
+        id: historyDoc.id,
+        campId: String(history.campId || safeCampId).slice(0, 96),
+        cityId: String(history.cityId || "").slice(0, 96),
+        cityName: String(history.cityName || "Unknown city").slice(0, 80),
+        regionId: String(history.regionId || "").slice(0, 80),
+        regionName: String(history.regionName || history.regionId || "Unknown map").slice(0, 80),
+        awardedToPlayerId: String(history.awardedToPlayerId || "").slice(0, 128),
+        awardedToDisplayName: cleanPlayerName(history.awardedToDisplayName || "Ruler"),
+        awardedAtMs: Math.max(0, Math.floor(Number(history.awardedAtMs) || timestampToMs(history.awardedAt))),
+        source: String(history.source || "").slice(0, 32),
+      };
+    }).filter(history => history.cityId && history.regionId && history.source === "deed_camp");
+  }
+
   function subscribePlayerGlobalStats(handlers = {}) {
     if (!client.db || !client.modules?.firestore?.onSnapshot || !client.user?.uid) return null;
     const { doc, onSnapshot } = client.modules.firestore;
@@ -1304,6 +1335,7 @@
     loadGameSnapshot,
     loadPlayerGlobalStats,
     loadRewardCampProgress,
+    loadRewardCampHistory,
     subscribePlayerGlobalStats,
     sendArmyOrder,
     resolveArmyOrder,

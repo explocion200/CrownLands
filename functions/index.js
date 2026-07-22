@@ -123,6 +123,12 @@ const WARBAND_CAMP_BASE_REWARD = 50_000;
 const WARBAND_CAMP_BASE_DEFENDERS = 10_000;
 const WARBAND_CAMP_DEFENSE_LEVEL = 30;
 const WARBAND_CAMP_REWARD_BY_DAILY_CLAIM = [50_000, 50_000, 37_500, 25_000, 12_500];
+const DEED_CAMP_HOLD_DURATION_MS = 60 * 60 * 1000;
+const DEED_CAMP_BASE_DEFENDERS = 10_000;
+const DEED_CAMP_DEFENSE_LEVEL = 30;
+const DEED_CAMP_HISTORY_LIMIT = 25;
+const DEED_CAMP_CITY_QUERY_LIMIT = 50;
+const DEED_CAMP_FALLBACK_REGION_LIMIT = 6;
 const REWARD_CAMP_CONFIG = {
   gold: {
     campType: "gold",
@@ -149,6 +155,17 @@ const REWARD_CAMP_CONFIG = {
     baseDefenders: WARBAND_CAMP_BASE_DEFENDERS,
     defenseLevel: WARBAND_CAMP_DEFENSE_LEVEL,
     dailyRewards: WARBAND_CAMP_REWARD_BY_DAILY_CLAIM,
+  },
+  deed: {
+    campType: "deed",
+    kind: "deedCamp",
+    name: "Deed Camp",
+    artSrc: "assets/camps/deed.png",
+    rewardType: "city",
+    holdDurationMs: DEED_CAMP_HOLD_DURATION_MS,
+    baseReward: 1,
+    baseDefenders: DEED_CAMP_BASE_DEFENDERS,
+    defenseLevel: DEED_CAMP_DEFENSE_LEVEL,
   },
 };
 const SHOP_ITEMS = {
@@ -1131,7 +1148,7 @@ function getPlayerPowerSnapshot({ profile = {}, leaderboard = {}, globalStats = 
       updatedAtMs: Math.max(0, timestampToMs(leaderboard.kingPowerUpdatedAtMs || leaderboard.updatedAtMs)),
     },
   ]
-    .filter(candidate => candidate.version >= GLOBAL_PLAYER_STATS_VERSION)
+    .filter(candidate => candidate.version >= GLOBAL_PLAYER_STATS_VERSION && candidate.power > 0)
     .sort((a, b) => b.updatedAtMs - a.updatedAtMs);
   if (authoritativeCandidates.length) return authoritativeCandidates[0].power;
 
@@ -1185,8 +1202,8 @@ function normalizeDemoAttackSnapshot(demo = null) {
   };
 }
 
-function createServerDemoAttackSnapshot({ sourceTroops = 1, target = null, requestedTroops = 1, attackerKingPower = 0, defenderKingPower = 1, attackerUid = "" } = {}) {
-  if (!target || isStronghold(target)) return null;
+function createServerDemoAttackSnapshot({ sourceTroops = 1, target = null, targetType = "city", requestedTroops = 1, attackerKingPower = 0, defenderKingPower = 1, attackerUid = "" } = {}) {
+  if (!target || targetType === "camp" || isStronghold(target)) return null;
   const targetOwnerUid = getOwnerUid(target);
   if (!targetOwnerUid || targetOwnerUid === attackerUid) return null;
   const attackerPower = Math.max(0, Math.floor(safeNumber(attackerKingPower, 0)));
@@ -5041,10 +5058,11 @@ exports.sendArmyOrder = onCall({ region: "us-central1", maxInstances: 20, invoke
       city: target,
       fallback: order.defenderKingPower,
     }));
-    const demoAttack = resolvedKind === "attack" && order.targetType !== "camp"
+    const demoAttack = resolvedKind === "attack"
       ? createServerDemoAttackSnapshot({
         sourceTroops,
         target,
+        targetType: order.targetType,
         requestedTroops,
         attackerKingPower,
         defenderKingPower,
@@ -6347,6 +6365,66 @@ function getRewardCampDailyReward(config, claimIndex = 0) {
   return config?.dailyRewards?.[Math.max(0, Math.floor(safeNumber(claimIndex, 0)))] || 0;
 }
 
+function getDeedCampCandidateRegionIds(regionId = "") {
+  const sourceRegionId = requireKnownWorldRegionId(regionId);
+  const connectedRegions = getServerEdgeConnections(sourceRegionId)
+    .map(connection => normalizeRegionId(connection.connectsToRegionId))
+    .filter((candidateRegionId, index, all) => {
+      if (!candidateRegionId || candidateRegionId === sourceRegionId || all.indexOf(candidateRegionId) !== index) return false;
+      const mapType = safeString(getServerWorldMap(candidateRegionId)?.type, 32).toLowerCase();
+      return mapType === "starter" || mapType === "midgame";
+    })
+    .slice(0, DEED_CAMP_FALLBACK_REGION_LIMIT);
+  return [sourceRegionId, ...connectedRegions];
+}
+
+function stableDeedCampChoiceIndex(seed = "", count = 0) {
+  const size = Math.max(0, Math.floor(safeNumber(count, 0)));
+  if (!size) return -1;
+  let hash = 2166136261;
+  for (const character of String(seed || "")) {
+    hash ^= character.charCodeAt(0);
+    hash = Math.imul(hash, 16777619);
+  }
+  return (hash >>> 0) % size;
+}
+
+async function findEligibleDeedCampCity(transaction, camp = {}, holderUid = "", payoutAtMs = 0) {
+  for (const regionId of getDeedCampCandidateRegionIds(camp.regionId)) {
+    const regularCityIds = getServerWorldRegularCityIds(regionId);
+    if (!regularCityIds.size) continue;
+    const neutralQuery = db.collection(`islands/${getOnlineIslandId(regionId)}/cities`)
+      .where("ownerUid", "==", null)
+      .limit(DEED_CAMP_CITY_QUERY_LIMIT);
+    const snapshot = await transaction.get(neutralQuery);
+    const candidates = snapshot.docs
+      .filter(cityDoc => {
+        const city = cityDoc.data() || {};
+        return regularCityIds.has(cityDoc.id)
+          && !getOwnerUid(city)
+          && !isStronghold(city)
+          && !city.targetType
+          && !city.campType;
+      })
+      .sort((left, right) => left.id.localeCompare(right.id));
+    if (!candidates.length) continue;
+    const selectedIndex = stableDeedCampChoiceIndex(
+      `${camp.id}:${payoutAtMs}:${holderUid}:${regionId}`,
+      candidates.length
+    );
+    const selected = candidates[selectedIndex];
+    const city = { id: selected.id, ...selected.data(), regionId };
+    const map = getServerWorldMap(regionId);
+    return {
+      ref: selected.ref,
+      city,
+      regionId,
+      regionName: safeString(map?.label || map?.name || regionId, 80),
+    };
+  }
+  return null;
+}
+
 async function resolveRewardCampPayoutByRef(campRef, nowMs = Date.now(), callerUid = "") {
   return db.runTransaction(async transaction => {
     const campSnap = await transaction.get(campRef);
@@ -6359,16 +6437,21 @@ async function resolveRewardCampPayoutByRef(campRef, nowMs = Date.now(), callerU
     if (!camp.payoutPending || !holderUid || !payoutAtMs) return { ok: true, status: "not-pending" };
     if (payoutAtMs > nowMs) return { ok: true, status: "not-due", payoutAtMs };
 
+    const isDeedCamp = config.rewardType === "city";
     const playerRef = db.doc(`players/${holderUid}`);
-    const claimsRef = db.doc(`players/${holderUid}/objectiveStats/${config.objectiveStatsId}`);
+    const claimsRef = config.objectiveStatsId
+      ? db.doc(`players/${holderUid}/objectiveStats/${config.objectiveStatsId}`)
+      : null;
     const playerSnap = await transaction.get(playerRef);
-    const claimsSnap = await transaction.get(claimsRef);
+    const claimsSnap = claimsRef ? await transaction.get(claimsRef) : null;
     const player = playerSnap.exists ? playerSnap.data() || {} : {};
-    const claimData = claimsSnap.exists ? claimsSnap.data() || {} : {};
+    const claimData = claimsSnap?.exists ? claimsSnap.data() || {} : {};
     const today = getUtcDateKey(nowMs);
-    const priorClaims = claimData.date === today ? Math.max(0, Math.floor(safeNumber(claimData.count, 0))) : 0;
-    const reward = getRewardCampDailyReward(config, priorClaims);
-    const nextClaims = priorClaims + 1;
+    const priorClaims = !isDeedCamp && claimData.date === today
+      ? Math.max(0, Math.floor(safeNumber(claimData.count, 0)))
+      : 0;
+    let reward = isDeedCamp ? 1 : getRewardCampDailyReward(config, priorClaims);
+    const nextClaims = isDeedCamp ? 0 : priorClaims + 1;
 
     const mainCityInfo = getMainCityInfo(player);
     const mainCitySnap = mainCityInfo?.ref ? await transaction.get(mainCityInfo.ref) : null;
@@ -6384,6 +6467,10 @@ async function resolveRewardCampPayoutByRef(campRef, nowMs = Date.now(), callerU
     const ownedMainCity = mainCity && getOwnerUid(mainCity) === holderUid
       ? { ...mainCity, regionId: mainCityInfo.regionId }
       : null;
+    const deedCityAward = isDeedCamp
+      ? await findEligibleDeedCampCity(transaction, camp, holderUid, payoutAtMs)
+      : null;
+    if (isDeedCamp && !deedCityAward) reward = 0;
     const returnDestination = ownedReturnSource || ownedMainCity;
     if (!returnDestination) {
       throw new HttpsError("failed-precondition", `${config.name} holder has no owned city available for returning troops.`);
@@ -6471,6 +6558,63 @@ async function resolveRewardCampPayoutByRef(campRef, nowMs = Date.now(), callerU
       });
     }
 
+    let deedCityPatch = null;
+    let deedHistoryEntry = null;
+    if (deedCityAward) {
+      const playerName = normalizePlayerName(player.playerName || camp.holderName, "Ruler");
+      const playerKingPower = Math.max(0, Math.floor(safeNumber(
+        player.globalStats?.kingPower,
+        safeNumber(player.kingPower, 0)
+      )));
+      const itemEffects = normalizeItemEffects(player.itemEffects);
+      const activeShieldExpiresAtMs = itemEffects.shieldExpiresAtMs > nowMs
+        ? itemEffects.shieldExpiresAtMs
+        : 0;
+      deedCityPatch = {
+        id: deedCityAward.city.id,
+        regionId: deedCityAward.regionId,
+        ownerKind: "player",
+        ownerUid: holderUid,
+        ownerName: playerName,
+        ownerFlag: player.flag || camp.holderFlag || null,
+        ownerKingPower: playerKingPower,
+        ownerShieldExpiresAtMs: activeShieldExpiresAtMs,
+        troops: 0,
+        troopFloat: 0,
+        level: clampCityLevel(deedCityAward.city.level || 1),
+        defense: 1,
+        investedGold: 0,
+        productionUpdatedAtMs: nowMs,
+        lastCapturedAtMs: nowMs,
+        isMainCity: false,
+        relinquishedAtMs: 0,
+        relocatedAtMs: 0,
+        deedAwardedAtMs: nowMs,
+        deedCampId: camp.id,
+      };
+      transaction.set(
+        deedCityAward.ref,
+        cleanCityUpdate(deedCityAward.city, deedCityPatch),
+        { merge: true }
+      );
+      deedHistoryEntry = {
+        campId: camp.id,
+        cityId: deedCityAward.city.id,
+        cityName: safeString(deedCityAward.city.name || deedCityAward.city.id, 80),
+        regionId: deedCityAward.regionId,
+        regionName: deedCityAward.regionName,
+        awardedToPlayerId: holderUid,
+        awardedToDisplayName: playerName,
+        awardedAtMs: nowMs,
+        source: "deed_camp",
+      };
+      const historyId = safeString(`${payoutAtMs}_${deedCityAward.city.id}`, 160).replace(/[^a-zA-Z0-9_-]/g, "_");
+      transaction.set(db.doc(`${campRef.path}/rewardHistory/${historyId}`), {
+        ...deedHistoryEntry,
+        awardedAt: FieldValue.serverTimestamp(),
+      });
+    }
+
     const baseDefenders = Math.max(1, Math.floor(safeNumber(camp.baseDefenders, config.baseDefenders)));
     const activeArmyIds = normalizeActiveArmyIds(camp.activeArmyIds);
     const campPatch = {
@@ -6493,6 +6637,7 @@ async function resolveRewardCampPayoutByRef(campRef, nowMs = Date.now(), callerU
         lastClaimDate: today,
         lastClaimNumber: nextClaims,
         lastReward: reward,
+        ...(deedCityPatch ? { lastAwardedCityId: deedCityPatch.id } : {}),
       },
       lastResetDate: today,
       lastPaidAtMs: nowMs,
@@ -6500,33 +6645,52 @@ async function resolveRewardCampPayoutByRef(campRef, nowMs = Date.now(), callerU
       updatedAt: FieldValue.serverTimestamp(),
     };
     transaction.set(campRef, campPatch, { merge: true });
-    transaction.set(claimsRef, {
-      date: today,
-      count: nextClaims,
-      lastReward: reward,
-      lastCampId: camp.id,
-      lastClaimedAtMs: nowMs,
-      updatedAt: FieldValue.serverTimestamp(),
-    }, { merge: true });
+    if (claimsRef) {
+      transaction.set(claimsRef, {
+        date: today,
+        count: nextClaims,
+        lastReward: reward,
+        lastCampId: camp.id,
+        lastClaimedAtMs: nowMs,
+        updatedAt: FieldValue.serverTimestamp(),
+      }, { merge: true });
+    }
 
     const goldReward = config.rewardType === "gold" ? reward : 0;
     const nextGoldFloat = Math.max(0, safeNumber(player.goldFloat, player.gold || 0)) + goldReward;
     const nextGold = Math.floor(nextGoldFloat);
     const holdMinutes = Math.floor(config.holdDurationMs / 60000);
-    const rewardLabel = config.rewardType === "troops" ? `${reward.toLocaleString()} troops` : `${reward.toLocaleString()} gold`;
+    const rewardLabel = isDeedCamp
+      ? deedCityPatch
+        ? `${deedHistoryEntry.cityName} in ${deedHistoryEntry.regionName}`
+        : "no eligible neutral city"
+      : config.rewardType === "troops"
+        ? `${reward.toLocaleString()} troops`
+        : `${reward.toLocaleString()} gold`;
+    const returnSummary = returnArmy
+      ? ` ${returningTroops.toLocaleString()} stationed troops began marching to ${returnDestination.name || "your main city"}.`
+      : "";
+    const reportCity = deedCityAward
+      ? { ...deedCityAward.city, ...deedCityPatch, regionId: deedCityAward.regionId }
+      : camp;
+    const reportSummary = isDeedCamp
+      ? deedCityPatch
+        ? `Held ${camp.name || config.name} for ${holdMinutes} minutes and received ${rewardLabel}. No battle XP was awarded.${returnSummary}`
+        : `Held ${camp.name || config.name} for ${holdMinutes} minutes, but no eligible neutral city was available. The camp reset to neutral.${returnSummary}`
+      : reward > 0
+        ? `Held ${camp.name || config.name} for ${holdMinutes} minutes and earned ${rewardLabel}.${returnSummary}`
+        : `Held ${camp.name || config.name} for ${holdMinutes} minutes. Today's ${config.name} reward limit has been reached.${returnSummary}`;
     const report = makeReport({
       id: `${camp.id}_hold_${nowMs}_${holderUid}`,
       uid: holderUid,
       type: "defense",
       outcome: "held",
-      city: camp,
+      city: reportCity,
       opponentName: config.name,
       troopCount: returningTroops,
       result: { survivors: returningTroops, defendersLeft: 0, returning: Boolean(returnArmy) },
       totalDefense: 0,
-      summary: reward > 0
-        ? `Held ${camp.name || config.name} for ${holdMinutes} minutes and earned ${rewardLabel}.${returnArmy ? ` ${returningTroops.toLocaleString()} stationed troops began marching to ${returnDestination.name || "your main city"}.` : ""}`
-        : `Held ${camp.name || config.name} for ${holdMinutes} minutes. Today's ${config.name} reward limit has been reached.${returnArmy ? ` ${returningTroops.toLocaleString()} stationed troops began marching to ${returnDestination.name || "your main city"}.` : ""}`,
+      summary: reportSummary,
       goldAwarded: goldReward,
       troopsAwarded: rewardedTroops,
       goldAfter: nextGold,
@@ -6543,12 +6707,20 @@ async function resolveRewardCampPayoutByRef(campRef, nowMs = Date.now(), callerU
 
     return {
       ok: true,
-      status: "paid",
+      status: isDeedCamp && !deedCityPatch ? "no-eligible-city" : "paid",
       holderUid,
       reward,
       rewardType: config.rewardType,
       campType: config.campType,
       dailyClaim: nextClaims,
+      awardedCity: deedCityPatch ? {
+        id: deedCityPatch.id,
+        name: deedHistoryEntry.cityName,
+        regionId: deedHistoryEntry.regionId,
+        regionName: deedHistoryEntry.regionName,
+      } : null,
+      rewardHistoryEntry: deedHistoryEntry,
+      rewardHistoryLimit: DEED_CAMP_HISTORY_LIMIT,
       returnedTroops,
       returningTroops,
       returnArmyId: returnArmy?.id || "",
@@ -6558,7 +6730,7 @@ async function resolveRewardCampPayoutByRef(campRef, nowMs = Date.now(), callerU
       movement: returnArmy,
       rewardedTroops,
       campUpdate: campUpdateForClient(camp.id, camp.regionId, campPatch),
-      cityUpdates: mainCityPatch ? [mainCityPatch] : [],
+      cityUpdates: [deedCityPatch, mainCityPatch].filter(Boolean),
       currentUser: callerUid === holderUid && config.rewardType === "gold" ? { gold: nextGold, goldFloat: nextGoldFloat } : null,
     };
   });
@@ -6566,7 +6738,7 @@ async function resolveRewardCampPayoutByRef(campRef, nowMs = Date.now(), callerU
 
 async function resolveRewardCampPayoutAndStats(campRef, nowMs = Date.now(), callerUid = "") {
   const result = await resolveRewardCampPayoutByRef(campRef, nowMs, callerUid);
-  if (result?.status === "paid" && result.holderUid) {
+  if (["paid", "no-eligible-city"].includes(result?.status) && result.holderUid) {
     const rebuilt = await rebuildGlobalStatsForPlayer(result.holderUid);
     if (callerUid === result.holderUid) result.globalStats = rebuilt.stats;
   }
@@ -6878,7 +7050,15 @@ exports.resolveDueRewardCampPayouts = onSchedule({
     try {
       const result = await resolveRewardCampPayoutAndStats(campDoc.ref, nowMs, "");
       if (result?.status === "paid") paid += 1;
-      else skipped += 1;
+      else {
+        skipped += 1;
+        if (result?.status === "no-eligible-city") {
+          console.warn("Deed Camp payout reset without an eligible neutral city", {
+            campId: campDoc.id,
+            holderUid: result.holderUid || "",
+          });
+        }
+      }
     } catch (error) {
       failed += 1;
       console.error("Scheduled reward camp payout failed", {

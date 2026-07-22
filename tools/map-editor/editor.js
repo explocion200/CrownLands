@@ -100,7 +100,7 @@
       size: 132,
     },
     deed: {
-      name: "City Deed Camp",
+      name: "Deed Camp",
       artSrc: "assets/camps/deed.png",
       size: 132,
     },

@@ -263,6 +263,9 @@ const WARBAND_CAMP_BASE_REWARD = 50000;
 const WARBAND_CAMP_BASE_DEFENDERS = 10000;
 const WARBAND_CAMP_DEFENSE_LEVEL = 30;
 const WARBAND_CAMP_HOLD_SECONDS = 15 * 60;
+const DEED_CAMP_BASE_DEFENDERS = 10000;
+const DEED_CAMP_DEFENSE_LEVEL = 30;
+const DEED_CAMP_HOLD_SECONDS = 60 * 60;
 const REWARD_CAMP_CONFIG = {
   gold: {
     type: "gold",
@@ -287,6 +290,17 @@ const REWARD_CAMP_CONFIG = {
     defenseLevel: WARBAND_CAMP_DEFENSE_LEVEL,
     holdSeconds: WARBAND_CAMP_HOLD_SECONDS,
     dailyRewards: [50000, 50000, 37500, 25000, 12500],
+  },
+  deed: {
+    type: "deed",
+    kind: "deedCamp",
+    name: "Deed Camp",
+    rewardType: "city",
+    rewardLabel: "neutral city",
+    baseReward: 1,
+    baseDefenders: DEED_CAMP_BASE_DEFENDERS,
+    defenseLevel: DEED_CAMP_DEFENSE_LEVEL,
+    holdSeconds: DEED_CAMP_HOLD_SECONDS,
   },
 };
 const REWARD_CAMP_PROGRESS_CACHE_MS = 30 * 1000;
@@ -2282,6 +2296,8 @@ const recallHornRequests = new Set();
 const rewardCampRecallRequests = new Set();
 const rewardCampProgressCache = new Map();
 const rewardCampProgressRequests = new Map();
+const deedCampHistoryCache = new Map();
+const deedCampHistoryRequests = new Map();
 let onlineCityStateSavePromises = new Set();
 let pendingServerArmyLaunchKeys = new Set();
 let onlineIslandUnsubscribe = null;
@@ -3268,7 +3284,7 @@ function getCampConfigForType(type) {
     return { type: "items", name: "Item Camp", artSrc: "assets/camps/items.png" };
   }
   if (campType === "deed" || campType === "city_deed") {
-    return { type: "deed", name: "City Deed Camp", artSrc: "assets/camps/deed.png" };
+    return { type: "deed", name: "Deed Camp", artSrc: "assets/camps/deed.png" };
   }
   return { type: "gold", name: "Gold Camp", artSrc: "assets/camps/gold.png" };
 }
@@ -9188,6 +9204,8 @@ function disconnectOnlineWorld() {
   onlinePresence = [];
   onlineCampStates = new Map();
   resolvingRewardCampPayoutIds = new Set();
+  deedCampHistoryCache.clear();
+  deedCampHistoryRequests.clear();
   onlineGlobalStats = null;
   onlineIslandSummaries = new Map();
   onlineIslandSummaryRefreshInFlight = false;
@@ -10034,9 +10052,11 @@ async function requestDueRewardCampPayout(camp) {
     const result = await resolvePayout({ campId: camp.id, regionId: camp.regionId });
     applyServerArmyResult(result);
     if (result?.movement) adoptServerArmyMovement(result.movement);
-    if (result?.status === "paid") {
-      const config = getRewardCampConfig(result.campType || camp);
-      if (config && result.holderUid === getCurrentOnlineUid()) {
+    const config = getRewardCampConfig(result?.campType || camp);
+    if (["paid", "no-eligible-city"].includes(result?.status)) {
+      if (config?.type === "deed") {
+        deedCampHistoryCache.delete(getDeedCampHistoryCacheKey(camp));
+      } else if (config && result.holderUid === getCurrentOnlineUid()) {
         const progress = cacheRewardCampProgress(config, {
           date: currentUtcDateKey(),
           count: result.dailyClaim,
@@ -10046,15 +10066,19 @@ async function requestDueRewardCampPayout(camp) {
         });
         renderRewardCampProgressPanel(camp.id, config, progress);
       }
-      const rewardMessage = result.reward > 0
-        ? `${config?.name || camp.name} reward: +${formatNumber(result.reward)} ${result.rewardType || config?.rewardLabel || "reward"}`
-        : `${config?.name || camp.name} daily reward limit reached.`;
+      const rewardMessage = config?.type === "deed"
+        ? result.awardedCity
+          ? `${config.name} reward: ${result.awardedCity.name} in ${result.awardedCity.regionName} is now yours.`
+          : "No eligible neutral city was available. The Deed Camp reset to neutral."
+        : result.reward > 0
+          ? `${config?.name || camp.name} reward: +${formatNumber(result.reward)} ${result.rewardType || config?.rewardLabel || "reward"}`
+          : `${config?.name || camp.name} daily reward limit reached.`;
       const returnMessage = result.returningTroops > 0
         ? ` ${formatNumber(result.returningTroops)} stationed troops are marching home.`
         : "";
       showToast(`${rewardMessage}${returnMessage}`);
     }
-    return result?.status === "paid";
+    return ["paid", "no-eligible-city"].includes(result?.status);
   } catch (error) {
     console.warn("Could not resolve reward camp payout", error);
     return false;
@@ -15397,6 +15421,93 @@ function refreshRewardCampProgressPanel(campId, config) {
     });
 }
 
+function getDeedCampHistoryCacheKey(camp = {}) {
+  return camp?.id ? `${normalizeRegionId(camp.regionId)}:${camp.id}` : "";
+}
+
+function deedCampHistoryMarkup(history = [], status = "ready") {
+  if (status === "loading") {
+    return `<div class="camp-reward-loading"><span class="camp-reward-spinner" aria-hidden="true"></span><strong>Loading reward history...</strong></div>`;
+  }
+  if (status === "error") {
+    return `<div class="camp-reward-loading error"><strong>Reward history unavailable</strong><p>The server history was not changed. Reopen this tab once the connection is ready.</p></div>`;
+  }
+  if (!history.length) {
+    return `<div class="camp-reward-loading deed-history-empty"><strong>No cities awarded yet</strong><p>Successful Deed Camp holds will appear here.</p></div>`;
+  }
+  return `
+    <ol class="deed-camp-history-list">
+      ${history.map(entry => {
+        const awardedAtMs = normalizeTimestampMs(entry.awardedAtMs);
+        const awardedAt = awardedAtMs ? new Date(awardedAtMs).toLocaleString() : "Award time unavailable";
+        return `
+          <li class="deed-camp-history-row">
+            <span class="deed-history-city" aria-hidden="true">&#9813;</span>
+            <span class="deed-history-copy">
+              <strong>${escapeHtml(entry.cityName || "Unknown city")}</strong>
+              <span>${escapeHtml(entry.regionName || getRegionLabel(entry.regionId))}</span>
+              <small>Awarded to ${escapeHtml(entry.awardedToDisplayName || "Ruler")} &middot; ${escapeHtml(awardedAt)}</small>
+            </span>
+            <button class="battle-report-locate-btn deed-history-locate" type="button" data-deed-history-jump="${escapeHtml(entry.cityId)}" data-deed-history-region="${escapeHtml(entry.regionId)}" aria-label="Go to ${escapeHtml(entry.cityName || "awarded city")}">&#8982;</button>
+          </li>`;
+      }).join("")}
+    </ol>
+    <p class="camp-reward-reset">Showing the latest ${formatNumber(history.length)} awards from this Deed Camp.</p>`;
+}
+
+function findDeedCampHistoryPanel(campId) {
+  return [...modalBody.querySelectorAll("[data-deed-history-panel]")]
+    .find(panel => panel.dataset.deedHistoryPanel === String(campId || "")) || null;
+}
+
+function bindDeedCampHistoryLocationButtons(panel) {
+  panel?.querySelectorAll("[data-deed-history-jump]").forEach(button => {
+    button.addEventListener("click", () => {
+      void focusBattleReportTarget(
+        button.dataset.deedHistoryJump,
+        button.dataset.deedHistoryRegion || ""
+      );
+    });
+  });
+}
+
+function renderDeedCampHistoryPanel(campId, history = [], status = "ready") {
+  const panel = findDeedCampHistoryPanel(campId);
+  if (!panel) return;
+  panel.innerHTML = deedCampHistoryMarkup(history, status);
+  if (status === "ready") bindDeedCampHistoryLocationButtons(panel);
+}
+
+function refreshDeedCampHistoryPanel(camp, { force = false } = {}) {
+  const api = getOnlineApi();
+  const cacheKey = getDeedCampHistoryCacheKey(camp);
+  if (!cacheKey || !api?.isSignedIn?.() || !api?.loadRewardCampHistory) {
+    renderDeedCampHistoryPanel(camp.id, [], "error");
+    return;
+  }
+  const cached = deedCampHistoryCache.get(cacheKey);
+  if (!force && cached && Date.now() - cached.fetchedAtMs < REWARD_CAMP_PROGRESS_CACHE_MS) {
+    renderDeedCampHistoryPanel(camp.id, cached.history);
+    return;
+  }
+  renderDeedCampHistoryPanel(camp.id, cached?.history || [], cached ? "ready" : "loading");
+  if (deedCampHistoryRequests.has(cacheKey)) return;
+  const request = api.loadRewardCampHistory({
+    islandId: getOnlineIslandId(camp.regionId),
+    campId: camp.id,
+    limitCount: 25,
+  }).then(history => {
+    const cleanHistory = Array.isArray(history) ? history.slice(0, 25) : [];
+    deedCampHistoryCache.set(cacheKey, { history: cleanHistory, fetchedAtMs: Date.now() });
+    renderDeedCampHistoryPanel(camp.id, cleanHistory);
+    return cleanHistory;
+  }).catch(error => {
+    console.warn("Could not load Deed Camp reward history", error);
+    if (!cached) renderDeedCampHistoryPanel(camp.id, [], "error");
+  }).finally(() => deedCampHistoryRequests.delete(cacheKey));
+  deedCampHistoryRequests.set(cacheKey, request);
+}
+
 function showRewardCampInfoModal(campId) {
   const camp = getCampTargetById(campId);
   if (!camp) {
@@ -15405,8 +15516,11 @@ function showRewardCampInfoModal(campId) {
   }
   const config = getRewardCampConfig(camp);
   if (!config) return;
+  const isDeedCamp = config.type === "deed";
   const holdMinutes = Math.floor(config.holdSeconds / 60);
-  const rewardDestination = config.rewardType === "troops"
+  const rewardDestination = isDeedCamp
+    ? "The awarded neutral city immediately becomes the holder's city without a battle or troop march."
+    : config.rewardType === "troops"
     ? "The troop reward is delivered to the holder's main city."
     : "The gold reward is added directly to the holder's treasury.";
   const report = camp.owner === "player" ? null : getScoutReport(camp.id);
@@ -15463,12 +15577,36 @@ function showRewardCampInfoModal(campId) {
         <strong>Camp defenses hidden</strong>
         <p>Scout this camp to reveal its stationed troops and defense stats.</p>
       </div>`;
+  const rewardPanelMarkup = isDeedCamp
+    ? `<div data-deed-history-panel="${escapeHtml(camp.id)}">${deedCampHistoryMarkup([], "loading")}</div>`
+    : rewardCampProgressMarkup(config, null, "loading");
+  const rewardConditionMarkup = isDeedCamp
+    ? `<p class="deed-camp-condition">Hold this camp for 1 hour to receive one random eligible neutral gray city. The server awards it automatically, even if the holder has reached the normal neutral-city daily capture limit.</p>`
+    : "";
+  const rulesMarkup = isDeedCamp
+    ? `
+      <div class="gold-camp-description deed-camp-help">
+        <strong>How it works</strong>
+        <p>Capture and hold the Deed Camp for 1 hour. If you still control it when the timer ends, you are awarded one random eligible neutral gray city. This reward is separate from normal gray-city captures and can happen whether you are below, at, or above the normal neutral-city daily capture limit.</p>
+        <p>Other players can attack and steal the camp before the timer finishes. If control changes, the public 1-hour timer restarts for the new holder. The Reward History tab shows cities previously awarded by this camp.</p>
+        <p>The awarded city is chosen automatically. No Deed Token or inventory item is given, and no battle XP is awarded because no battle happened for that city.</p>
+        <p>The normal neutral-city capture limit still applies to regular attacks on gray cities. A Deed Camp reward does not use that limit and is granted whether the holder is below, at, or above it.</p>
+        <p>After payout, stationed troops march back to their origin city, or to the holder's main city if the origin was lost. The camp then resets to neutral with its fixed defenders.</p>
+      </div>`
+    : `
+      <div class="gold-camp-description">
+        <strong>How it works</strong>
+        <p>Attack and capture this special objective, then hold it for ${formatNumber(holdMinutes)} minutes to earn ${formatNumber(config.baseReward)} ${escapeHtml(config.rewardLabel)}. The public timer begins when control changes and restarts if another ruler captures the camp before payout.</p>
+        <p>${escapeHtml(rewardDestination)} When the timer ends, all stationed troops leave in a return march to their origin city, or to the holder's main city if the origin was lost. The camp then resets to neutral.</p>
+        <p>Camps do not count as cities, cannot be shielded, allow unlimited stationed defenders, and ignore weaker-kingdom attack limits.</p>
+        <p>Daily rewards: ${config.dailyRewards.map(value => `${formatNumber(value)} ${config.rewardLabel}`).join(", ")}. Further successful holds award 0 until the next UTC day.</p>
+      </div>`;
   modalTitle.textContent = camp.name;
   modalBody.innerHTML = `
     <div class="gold-camp-info-panel">
       <div class="camp-info-tabs" role="tablist" aria-label="${escapeHtml(camp.name)} information">
-        <button id="campStatsTab" class="camp-info-tab active" type="button" role="tab" aria-selected="true" aria-controls="campStatsPanel" data-camp-info-tab="stats">Stats</button>
-        <button id="campRewardTab" class="camp-info-tab" type="button" role="tab" aria-selected="false" aria-controls="campRewardPanel" data-camp-info-tab="reward">Reward</button>
+        <button id="campStatsTab" class="camp-info-tab active" type="button" role="tab" aria-selected="true" aria-controls="campStatsPanel" data-camp-info-tab="stats">${isDeedCamp ? "Status" : "Stats"}</button>
+        <button id="campRewardTab" class="camp-info-tab" type="button" role="tab" aria-selected="false" aria-controls="campRewardPanel" data-camp-info-tab="reward">${isDeedCamp ? "Reward History" : "Reward"}</button>
         <button id="campRulesTab" class="camp-info-tab camp-rules-tab" type="button" role="tab" aria-label="How this camp works" aria-selected="false" aria-controls="campRulesPanel" data-camp-info-tab="rules">?</button>
       </div>
 
@@ -15478,21 +15616,16 @@ function showRewardCampInfoModal(campId) {
           <div><span>Status</span><strong data-camp-info-countdown="${escapeHtml(camp.id)}">${camp.payoutPending ? countdown > 0 ? formatDuration(countdown) : "Payout ready" : "Neutral"}</strong></div>
           <small class="camp-stats-source">${escapeHtml(statsSourceLabel)}</small>
         </div>
+        ${rewardConditionMarkup}
         ${statsMarkup}
       </section>
 
       <section id="campRewardPanel" class="camp-info-tab-panel" role="tabpanel" aria-labelledby="campRewardTab" data-camp-info-panel="reward" data-camp-reward-panel="${escapeHtml(camp.id)}" hidden>
-        ${rewardCampProgressMarkup(config, null, "loading")}
+        ${rewardPanelMarkup}
       </section>
 
       <section id="campRulesPanel" class="camp-info-tab-panel" role="tabpanel" aria-labelledby="campRulesTab" data-camp-info-panel="rules" hidden>
-        <div class="gold-camp-description">
-          <strong>How it works</strong>
-          <p>Attack and capture this special objective, then hold it for ${formatNumber(holdMinutes)} minutes to earn ${formatNumber(config.baseReward)} ${escapeHtml(config.rewardLabel)}. The public timer begins when control changes and restarts if another ruler captures the camp before payout.</p>
-          <p>${escapeHtml(rewardDestination)} When the timer ends, all stationed troops leave in a return march to their origin city, or to the holder's main city if the origin was lost. The camp then resets to neutral.</p>
-          <p>Camps do not count as cities, cannot be shielded, allow unlimited stationed defenders, and ignore weaker-kingdom attack limits.</p>
-          <p>Daily rewards: ${config.dailyRewards.map(value => `${formatNumber(value)} ${config.rewardLabel}`).join(", ")}. Further successful holds award 0 until the next UTC day.</p>
-        </div>
+        ${rulesMarkup}
       </section>
     </div>`;
   const tabs = [...modalBody.querySelectorAll("[data-camp-info-tab]")];
@@ -15507,9 +15640,10 @@ function showRewardCampInfoModal(campId) {
     panels.forEach(panel => {
       panel.hidden = panel.dataset.campInfoPanel !== selectedTab;
     });
+    if (isDeedCamp && selectedTab === "reward") refreshDeedCampHistoryPanel(camp, { force: true });
   }));
   if (!modal.open) modal.showModal();
-  refreshRewardCampProgressPanel(camp.id, config);
+  if (!isDeedCamp) refreshRewardCampProgressPanel(camp.id, config);
 }
 
 function showScoutReportModal(cityId) {

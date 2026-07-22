@@ -27,7 +27,7 @@ The editor is developer-only and works with the JSON world files in `assets/worl
 - City placement: selecting, placing, or dragging a city shows its actual scaled name/level label footprint. Any neighboring labels that overlap are shown in red, keeping crowded maps readable.
 - Edge connections: use `Add Edge Connection`, click near a map edge to create one, drag an existing connection to move it, and press Delete or `Delete Selected` to remove it. The game uses these zones as invisible troop crossings.
 - Map switch arrows: every edge connection shows a blue arrow handle inside the map. Drag that arrow to choose where players tap to switch to the connected map.
-- Camps: use `Add Camp` and the Camp dropdown to place gold, troop, item, and city deed camps. Camps are placement-only for now; no gameplay mechanics are attached yet.
+- Camps: use `Add Camp` and the Camp dropdown to place gold, troop, item, and Deed camps. Gameplay behavior is supplied by the main game for supported camp types.
 
 ## Saving
 
@@ -65,7 +65,7 @@ The editor supports placement-only camp markers for:
 - Gold Camp
 - Warband Camp
 - Item Camp
-- City Deed Camp
+- Deed Camp
 
 Camp positions save into each region JSON under `camps`. Each camp stores its ID, name, type, normalized position, art path, visual size, and notes.
 

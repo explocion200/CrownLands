@@ -162,6 +162,11 @@ service cloud.firestore {
       match /camps/{campId} {
         allow read: if signedIn();
         allow create, update, delete: if false;
+
+        match /rewardHistory/{entryId} {
+          allow read: if signedIn();
+          allow create, update, delete: if false;
+        }
       }
 
       match /armies/{armyId} {
