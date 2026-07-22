@@ -2279,7 +2279,7 @@ input {
   position: absolute;
   min-width: 44px;
   height: 30px;
-  transform: translate3d(0, 0, 0) translate(-50%, -50%);
+  transform: translate(-50%, -50%);
   z-index: 20;
   display: flex;
   align-items: center;
@@ -2295,8 +2295,7 @@ input {
   cursor: pointer;
   touch-action: none;
   transition: transform .12s linear;
-  will-change: transform;
-  contain: layout paint;
+  contain: layout;
 }
 .army-token.player { background: linear-gradient(#4fb2ff, #175ea9); }
 .army-token.player2 { background: linear-gradient(#bd9bff, #5d35a8); }
@@ -2319,6 +2318,13 @@ input {
   overflow: visible;
   border-color: #fff2a6;
   box-shadow: 0 0 0 2px rgba(10, 35, 63, .9), 0 0 16px rgba(255, 220, 111, .72), 0 10px 22px rgba(0,0,0,.4);
+}
+.army-token.endpoint-clearance {
+  pointer-events: none;
+  cursor: default;
+}
+.army-token.endpoint-clearance .army-token-nav {
+  display: none;
 }
 .army-token-nav {
   position: absolute;

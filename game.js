@@ -53,6 +53,8 @@ const CITY_DYNAMIC_TEXT_INTERVAL_MS = 600;
 const PERFORMANCE_PANEL_SAMPLE_MS = 500;
 const CROWDED_MAP_CITY_THRESHOLD = 70;
 const CROWDED_MAP_ARMY_THRESHOLD = 24;
+const CROWDED_MAP_CITY_EXIT_THRESHOLD = 58;
+const CROWDED_MAP_ARMY_EXIT_THRESHOLD = 18;
 const CITY_LIST_PAGE_SIZE = 5;
 const INVENTORY_SLOT_COUNT = 6;
 const SHOP_ITEMS = [
@@ -236,6 +238,9 @@ const ZOOM_RENDER_SETTLE_MS = 260;
 const PAN_RENDER_SETTLE_MS = 180;
 const MAIN_CITY_RETURN_CAMERA_THROTTLE_MS = 180;
 const LOW_ZOOM_PERFORMANCE_THRESHOLD = 0.72;
+const LOW_ZOOM_PERFORMANCE_EXIT_THRESHOLD = 0.78;
+const MARCH_ENDPOINT_INTERACTION_MIN_CLEARANCE = 72;
+const MARCH_ENDPOINT_INTERACTION_SIZE_RATIO = 0.62;
 const ISLAND_MAP_PADDING = 560;
 const TROOP_PICKUP_ICON_SRC = "assets/troop-pickup.png?v=20260704-troop-pickup-red";
 const GOLD_PICKUP_ICON_SRC = "assets/gold-pickup.png?v=20260704-gold-pickup-art";
@@ -2399,6 +2404,7 @@ const armyTokenCache = new Map();
 let visibleCityDensityCount = 0;
 let visibleArmyDensityCount = 0;
 let crowdedMapDensityEnabled = false;
+let lowZoomPerformanceEnabled = false;
 let performancePanel = null;
 let performancePanelVisible = false;
 let performanceFrameCount = 0;
@@ -3935,11 +3941,25 @@ function updateMapDensityMode(visibleCityCount = null, visibleArmyCount = null) 
   const hasArmyCount = visibleArmyCount !== null && visibleArmyCount !== undefined && Number.isFinite(Number(visibleArmyCount));
   if (hasCityCount) visibleCityDensityCount = Math.max(0, Number(visibleCityCount));
   if (hasArmyCount) visibleArmyDensityCount = Math.max(0, Number(visibleArmyCount));
-  const shouldEnable = visibleCityDensityCount >= CROWDED_MAP_CITY_THRESHOLD
-    || visibleArmyDensityCount >= CROWDED_MAP_ARMY_THRESHOLD;
+  const shouldEnable = shouldUseCrowdedMapPerformance(
+    crowdedMapDensityEnabled,
+    visibleCityDensityCount,
+    visibleArmyDensityCount,
+  );
   if (shouldEnable === crowdedMapDensityEnabled) return;
   crowdedMapDensityEnabled = shouldEnable;
   mapFrame.classList.toggle("crowded-map", shouldEnable);
+}
+
+function shouldUseCrowdedMapPerformance(currentlyEnabled, cityCount, armyCount) {
+  const cityThreshold = currentlyEnabled
+    ? CROWDED_MAP_CITY_EXIT_THRESHOLD
+    : CROWDED_MAP_CITY_THRESHOLD;
+  const armyThreshold = currentlyEnabled
+    ? CROWDED_MAP_ARMY_EXIT_THRESHOLD
+    : CROWDED_MAP_ARMY_THRESHOLD;
+  return Math.max(0, Number(cityCount) || 0) >= cityThreshold
+    || Math.max(0, Number(armyCount) || 0) >= armyThreshold;
 }
 
 function setImageMapBackground(regionId, imageSrc) {
@@ -15713,13 +15733,36 @@ function getArmyTokenParts(token) {
 
 function updateArmyTokenNavigationSelection() {
   armyTokenCache.forEach((token, tokenId) => {
-    const selected = tokenId === selectedArmyTokenId;
+    const endpointInteractionDisabled = token.dataset.endpointInteractionDisabled === "true";
+    const selected = tokenId === selectedArmyTokenId && !endpointInteractionDisabled;
     token.classList.toggle("selected", selected);
     const expanded = String(selected);
     if (token.getAttribute("aria-expanded") !== expanded) token.setAttribute("aria-expanded", expanded);
     const { navigation } = getArmyTokenParts(token);
-    if (navigation && navigation.hidden === selected) navigation.hidden = !selected;
+    if (navigation) navigation.hidden = !selected;
   });
+}
+
+function getMarchEndpointInteractionClearance(target) {
+  if (!target) return MARCH_ENDPOINT_INTERACTION_MIN_CLEARANCE;
+  let visualSize = 64;
+  if (isRewardCampTarget(target)) {
+    visualSize = Math.max(visualSize, Number(target.size) || DEFAULT_CAMP_VISUAL_SIZE);
+  } else if (isStronghold(target)) {
+    visualSize = Math.max(visualSize, getStrongholdVisualSize(target));
+  }
+  return Math.max(
+    MARCH_ENDPOINT_INTERACTION_MIN_CLEARANCE,
+    visualSize * MARCH_ENDPOINT_INTERACTION_SIZE_RATIO,
+  );
+}
+
+function isMarchInsideEndpointInteractionClearance(point, from, to) {
+  if (!point) return false;
+  const distanceToFrom = from ? Math.hypot(point.x - from.x, point.y - from.y) : Infinity;
+  const distanceToTo = to ? Math.hypot(point.x - to.x, point.y - to.y) : Infinity;
+  return distanceToFrom <= getMarchEndpointInteractionClearance(from)
+    || distanceToTo <= getMarchEndpointInteractionClearance(to);
 }
 
 function getArmyEndpointDetails(attack, endpointKind = "to") {
@@ -15783,7 +15826,7 @@ function createArmyTokenElement(attack) {
   getArmyTokenParts(token);
   token.addEventListener("click", event => {
     event.stopPropagation();
-    if (suppressMapClick) return;
+    if (suppressMapClick || token.dataset.endpointInteractionDisabled === "true") return;
     const endpointButton = event.target.closest("[data-army-endpoint]");
     if (endpointButton) {
       focusArmyEndpoint(token.dataset.armyTokenId, endpointButton.dataset.armyEndpoint);
@@ -15802,15 +15845,19 @@ function createArmyTokenElement(attack) {
   return token;
 }
 
-function updateArmyTokenElement(token, attack, mapPoint, targetCity) {
+function updateArmyTokenElement(token, attack, mapPoint, targetCity, endpointInteractionDisabled = false) {
   const ownerClass = isPersonalArmy(attack) ? OWNER.player.css : OWNER.enemy.css;
   const showTroops = canViewArmyTroopAmount(attack);
-  const selected = getArmyTokenId(attack) === selectedArmyTokenId;
-  const className = `army-token ${ownerClass}${showTroops ? "" : " hidden-transfer"}${selected ? " selected" : ""}`;
+  const selected = !endpointInteractionDisabled && getArmyTokenId(attack) === selectedArmyTokenId;
+  const className = `army-token ${ownerClass}${showTroops ? "" : " hidden-transfer"}${selected ? " selected" : ""}${endpointInteractionDisabled ? " endpoint-clearance" : ""}`;
   if (token.className !== className) token.className = className;
+  token.dataset.endpointInteractionDisabled = String(endpointInteractionDisabled);
+  token.tabIndex = endpointInteractionDisabled ? -1 : 0;
+  token.setAttribute("aria-disabled", String(endpointInteractionDisabled));
+  if (endpointInteractionDisabled && document.activeElement === token) token.blur();
   const expanded = String(selected);
   if (token.getAttribute("aria-expanded") !== expanded) token.setAttribute("aria-expanded", expanded);
-  token.style.transform = `translate3d(${mapPoint.x}px, ${mapPoint.y}px, 0) translate(-50%, -50%)`;
+  token.style.transform = `translate(${mapPoint.x}px, ${mapPoint.y}px) translate(-50%, -50%)`;
 
   const armyIcon = attack.kind === "scout" ? "\u{1F52D}" : attack.kind === "transfer" ? "\u265E" : "\u2694";
   const {
@@ -15833,7 +15880,9 @@ function updateArmyTokenElement(token, attack, mapPoint, targetCity) {
     const timeText = formatDuration(attack.remaining);
     if (timeElement.textContent !== timeText) timeElement.textContent = timeText;
   }
-  if (navigation && navigation.hidden === selected) navigation.hidden = !selected;
+  if (navigation) navigation.hidden = !selected;
+  if (fromButton) fromButton.disabled = endpointInteractionDisabled;
+  if (toButton) toButton.disabled = endpointInteractionDisabled;
   const endpointSignature = `${attack.fromId || ""}:${attack.fromName || ""}:${attack.toId || ""}:${attack.toName || ""}`;
   if (token.dataset.armyEndpointSignature !== endpointSignature) {
     token.dataset.armyEndpointSignature = endpointSignature;
@@ -15848,7 +15897,9 @@ function updateArmyTokenElement(token, attack, mapPoint, targetCity) {
       toButton.setAttribute("aria-label", `Go to ${toDetails.name}`);
     }
   }
-  const tokenLabel = `${attack.kind || "Army"} march to ${targetCity?.name || attack.toName || "destination"}. Show route locations.`;
+  const tokenLabel = endpointInteractionDisabled
+    ? `${attack.kind || "Army"} march near an endpoint. Select the location beneath it.`
+    : `${attack.kind || "Army"} march to ${targetCity?.name || attack.toName || "destination"}. Show route locations.`;
   if (token.getAttribute("aria-label") !== tokenLabel) token.setAttribute("aria-label", tokenLabel);
   if (attack.ownerName) {
     const titlePrefix = `${attack.ownerName}: ${attack.kind} to ${targetCity?.name || "target"}`;
@@ -15874,6 +15925,7 @@ function renderArmies(force = false) {
   const activeRegionId = getActiveMapRegionId();
   const fragment = document.createDocumentFragment();
   const visibleArmyTokenIds = new Set();
+  let clearedEndpointSelection = false;
   for (const attack of getRenderableArmies()) {
     const from = getArmyTargetById(attack.fromId);
     const to = getArmyTargetById(attack.toId);
@@ -15887,6 +15939,11 @@ function renderArmies(force = false) {
     if (!isPointInBounds(x, y, visibleBounds)) continue;
     const mapPoint = worldToMapPoint(point);
     const tokenId = getArmyTokenId(attack);
+    const endpointInteractionDisabled = isMarchInsideEndpointInteractionClearance(point, from, to);
+    if (endpointInteractionDisabled && selectedArmyTokenId === tokenId) {
+      selectedArmyTokenId = "";
+      clearedEndpointSelection = true;
+    }
     visibleArmyTokenIds.add(tokenId);
     let token = armyTokenCache.get(tokenId);
     if (!token) {
@@ -15894,7 +15951,7 @@ function renderArmies(force = false) {
       armyTokenCache.set(tokenId, token);
       fragment.appendChild(token);
     }
-    updateArmyTokenElement(token, attack, mapPoint, to);
+    updateArmyTokenElement(token, attack, mapPoint, to, endpointInteractionDisabled);
   }
   if (fragment.childNodes.length) armyLayer.appendChild(fragment);
   for (const [tokenId, token] of armyTokenCache) {
@@ -15905,6 +15962,7 @@ function renderArmies(force = false) {
   if (selectedArmyTokenId && !visibleArmyTokenIds.has(selectedArmyTokenId)) {
     selectedArmyTokenId = "";
   }
+  if (clearedEndpointSelection) updateArmyTokenNavigationSelection();
   updateMapDensityMode(null, visibleArmyTokenIds.size);
 }
 
@@ -18997,7 +19055,17 @@ function formatPercent(percent) {
 
 function updateZoomPerformanceClasses() {
   if (!mapFrame) return;
-  mapFrame.classList.toggle("low-zoom", zoom <= LOW_ZOOM_PERFORMANCE_THRESHOLD);
+  const shouldEnable = shouldUseLowZoomPerformance(lowZoomPerformanceEnabled, zoom);
+  if (shouldEnable === lowZoomPerformanceEnabled) return;
+  lowZoomPerformanceEnabled = shouldEnable;
+  mapFrame.classList.toggle("low-zoom", shouldEnable);
+}
+
+function shouldUseLowZoomPerformance(currentlyEnabled, zoomLevel) {
+  const threshold = currentlyEnabled
+    ? LOW_ZOOM_PERFORMANCE_EXIT_THRESHOLD
+    : LOW_ZOOM_PERFORMANCE_THRESHOLD;
+  return Math.max(0, Number(zoomLevel) || 0) <= threshold;
 }
 
 function getZoomBoundsForViewport(frameRect = null, dimensions = null) {
@@ -19533,7 +19601,7 @@ function resolveCampTapButton(event) {
 function resolveArmyTapToken(event) {
   if (!event || !armyLayer) return null;
   const token = event.target?.closest?.(".army-token[data-army-token-id]") || null;
-  return token && armyLayer.contains(token) ? token : null;
+  return token && armyLayer.contains(token) && token.dataset.endpointInteractionDisabled !== "true" ? token : null;
 }
 
 function trackCityTap(event, cityButton = resolveCityTapButton(event)) {

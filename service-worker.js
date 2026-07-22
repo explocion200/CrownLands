@@ -1,14 +1,14 @@
-const CACHE_VERSION = "20260721-king-power-v5";
+const CACHE_VERSION = "20260721-map-stability-v1";
 const CACHE_NAME = `crownlands-cache-${CACHE_VERSION}`;
 const STATIC_CACHE_URLS = [
   "/",
   "/index.html",
   "/manifest.webmanifest",
-  "/styles.css?v=20260721-king-power-v5",
+  "/styles.css?v=20260721-map-stability-v1",
   "/world-config.js",
   "/firebase-config.js?v=20260703-vapid-key",
-  "/firebaseClient.js?v=20260721-king-power-v5",
-  "/game.js?v=20260721-king-power-v5",
+  "/firebaseClient.js?v=20260721-map-stability-v1",
+  "/game.js?v=20260721-map-stability-v1",
   "/route-worker.js?v=20260721-structure-route-clearance",
   "/assets/map-editor-data.js?v=20260705-stronghold-sizes",
   "/assets/game-menu-background.jpg?v=20260702-login-page",
