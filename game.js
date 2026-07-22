@@ -2370,6 +2370,7 @@ let deployedUpdateNoticeShown = false;
 let deployedUpdateReloadInProgress = false;
 let selectedArmyTokenId = "";
 const islandImageLoadPromises = new Map();
+const islandImagePreloadElements = new Map();
 const loadedImageAssets = new Set();
 const nearbyIslandPreloadRegions = new Set();
 const preloadedMapRegions = new Set();
@@ -3826,10 +3827,17 @@ function getIslandPreviewArtSrc(regionId) {
   return CENTER_ISLAND_THUMB_SRC;
 }
 
-function preloadImage(src) {
+function preloadImage(src, { fetchPriority = "auto" } = {}) {
   const imageSrc = String(src || "");
   if (!imageSrc) return Promise.resolve(false);
-  if (islandImageLoadPromises.has(imageSrc)) return islandImageLoadPromises.get(imageSrc);
+  if (loadedImageAssets.has(imageSrc)) return Promise.resolve(true);
+  if (islandImageLoadPromises.has(imageSrc)) {
+    if (fetchPriority === "high") {
+      const pendingImage = islandImagePreloadElements.get(imageSrc);
+      if (pendingImage) pendingImage.fetchPriority = "high";
+    }
+    return islandImageLoadPromises.get(imageSrc);
+  }
 
   const promise = new Promise(resolve => {
     const image = new Image();
@@ -3838,12 +3846,15 @@ function preloadImage(src) {
       if (settled) return;
       settled = true;
       window.clearTimeout(timeoutId);
+      islandImagePreloadElements.delete(imageSrc);
       if (!success) islandImageLoadPromises.delete(imageSrc);
       resolve(success);
     };
     const timeoutId = window.setTimeout(() => finish(false), IMAGE_PRELOAD_TIMEOUT_MS);
     image.decoding = "async";
     image.loading = "eager";
+    image.fetchPriority = fetchPriority;
+    islandImagePreloadElements.set(imageSrc, image);
     image.onload = () => {
       const decodePromise = typeof image.decode === "function" ? image.decode().catch(() => {}) : Promise.resolve();
       decodePromise.finally(() => {
@@ -3858,9 +3869,9 @@ function preloadImage(src) {
   return promise;
 }
 
-function preloadIslandMap(regionId) {
+function preloadIslandMap(regionId, options = {}) {
   const targetRegionId = normalizeRegionId(regionId);
-  return preloadImage(getIslandMapArtSrc(targetRegionId)).then(success => {
+  return preloadImage(getIslandMapArtSrc(targetRegionId), options).then(success => {
     if (success) preloadedMapRegions.add(targetRegionId);
     return success;
   });
@@ -3880,13 +3891,21 @@ function preloadNearbyIslandMaps(regionId) {
   const normalizedRegionId = normalizeRegionId(regionId);
   if (nearbyIslandPreloadRegions.has(normalizedRegionId)) return;
   nearbyIslandPreloadRegions.add(normalizedRegionId);
-  window.setTimeout(() => {
-    getConnectedIslandRegionIds(normalizedRegionId)
-      .slice(0, 4)
-      .forEach(connectedRegionId => {
-        preloadIslandMap(connectedRegionId).catch(() => {});
-      });
-  }, 350);
+  const connectedRegionIds = getConnectedIslandRegionIds(normalizedRegionId).slice(0, 4);
+  const scheduleIdle = callback => {
+    if (typeof window.requestIdleCallback === "function") {
+      window.requestIdleCallback(callback, { timeout: 2500 });
+    } else {
+      window.setTimeout(callback, 1200);
+    }
+  };
+  const preloadNext = index => {
+    if (index >= connectedRegionIds.length) return;
+    preloadIslandMap(connectedRegionIds[index], { fetchPriority: "low" })
+      .catch(() => false)
+      .finally(() => scheduleIdle(() => preloadNext(index + 1)));
+  };
+  scheduleIdle(() => preloadNext(0));
 }
 
 function setSetupLoading(active, detail = "") {
@@ -3977,9 +3996,8 @@ function setImageMapBackground(regionId, imageSrc) {
   const swapToken = ++mapImageSwapToken;
   mapBg.dataset.imageRegion = targetRegionId;
   mapBg.dataset.imageSrc = imageSrc;
-  mapBg.classList.add("image-map-ready");
 
-  preloadImage(imageSrc).then(success => {
+  preloadImage(imageSrc, { fetchPriority: "high" }).then(async success => {
     if (!mapBg || swapToken !== mapImageSwapToken || !success) {
       return;
     }
@@ -3993,9 +4011,21 @@ function setImageMapBackground(regionId, imageSrc) {
     image.decoding = "async";
     image.loading = "eager";
     image.fetchPriority = "high";
+    try {
+      await image.decode();
+    } catch (_error) {
+      if (!image.complete) {
+        await new Promise(resolve => {
+          image.onload = resolve;
+          image.onerror = resolve;
+        });
+      }
+    }
+    if (!mapBg || swapToken !== mapImageSwapToken) return;
     requestAnimationFrame(() => {
       if (!mapBg || swapToken !== mapImageSwapToken) return;
       mapBg.replaceChildren(image);
+      mapBg.classList.add("image-map-ready");
     });
   });
 }
@@ -4715,7 +4745,7 @@ function newGame(playerName) {
     itemEffects: createDefaultItemEffects(),
     itemPurchaseCooldowns: createDefaultItemPurchaseCooldowns(),
     globalStats: null,
-    daily: { date: currentLocalDateKey(), neutralCaptures: 0, harvestedBonuses: 0, harvestedGoldBonuses: 0, harvestedTroopBonuses: 0 },
+    daily: { date: currentDailyDateKey(), neutralCaptures: 0, harvestedBonuses: 0, harvestedGoldBonuses: 0, harvestedTroopBonuses: 0 },
     harvestBonuses: [],
     harvestSpawnTimer: HARVEST_BONUS_INITIAL_SPAWN_SECONDS,
     harvestNextSpawnAtMs: Date.now() + HARVEST_BONUS_INITIAL_SPAWN_SECONDS * 1000,
@@ -6362,16 +6392,15 @@ function returnSurvivingAttackersToSource(attack, troops, reason = "") {
   return returned;
 }
 
-function currentLocalDateKey() {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, "0");
-  const day = String(now.getDate()).padStart(2, "0");
+function currentDailyDateKey(now = new Date()) {
+  const year = now.getUTCFullYear();
+  const month = String(now.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(now.getUTCDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
 }
 
 function normalizeDailyCaptureTracker(daily) {
-  const today = currentLocalDateKey();
+  const today = currentDailyDateKey();
   if (!daily || typeof daily !== "object" || daily.date !== today) {
     return { date: today, neutralCaptures: 0, harvestedBonuses: 0, harvestedGoldBonuses: 0, harvestedTroopBonuses: 0 };
   }
@@ -6394,7 +6423,7 @@ function normalizeDailyCaptureTracker(daily) {
 }
 
 function ensureDailyCaptureTracker() {
-  if (!state) return { date: currentLocalDateKey(), neutralCaptures: 0, harvestedBonuses: 0, harvestedGoldBonuses: 0, harvestedTroopBonuses: 0 };
+  if (!state) return { date: currentDailyDateKey(), neutralCaptures: 0, harvestedBonuses: 0, harvestedGoldBonuses: 0, harvestedTroopBonuses: 0 };
   state.daily = normalizeDailyCaptureTracker(state.daily);
   return state.daily;
 }
@@ -7415,7 +7444,8 @@ function applyServerEconomyResult(result = null, options = {}) {
   }
   if (changed) {
     renderHud();
-    renderCities();
+    if (options.renderCities === false) updateVisibleCityDynamicText();
+    else renderCities();
     renderHarvestBonuses();
     if (modal.open && modal.classList.contains("shop-modal")) renderShopModal();
     if (modal.open && modal.classList.contains("inventory-modal")) showInventoryModal();
@@ -9636,6 +9666,7 @@ async function connectOnlineIsland(regionId, { claimHome = false, homeRegionId =
 
   onlineStatusDetail.textContent = `Loading ${getRegionLabel(targetRegionId)}...`;
   try {
+    const mapArtReadyPromise = preloadIslandMap(targetRegionId, { fetchPriority: "high" });
     const seed = createOnlineIslandSeed(targetRegionId);
     onlineStatusDetail.textContent = `Preparing ${getRegionLabel(targetRegionId)} (${seed.cities.length} city slots)...`;
     const islandSetupPromise = api.ensureMainIsland && !verifiedOnlineIslandSeeds.has(targetRegionId)
@@ -9649,7 +9680,10 @@ async function connectOnlineIsland(regionId, { claimHome = false, homeRegionId =
         })
       : Promise.resolve(true);
 
-    await islandSetupPromise;
+    const [, mapArtReady] = await Promise.all([islandSetupPromise, mapArtReadyPromise]);
+    if (!mapArtReady) {
+      console.warn(`Map art preload did not finish for ${targetRegionId}; rendering will retry it.`);
+    }
 
     if (claimHome) {
       onlineStatusDetail.textContent = "Claiming your starting city...";
@@ -12951,15 +12985,10 @@ async function collectHarvestBonus(bonusId) {
         regionId: normalizeRegionId(bonus.regionId),
         daily: normalizeDailyCaptureTracker(daily),
       });
-      applyServerEconomyResult(result);
+      applyServerEconomyResult(result, { renderCities: false });
       const reward = Math.max(0, Math.floor(Number(result?.reward) || 0));
-      const serverDaily = ensureDailyCaptureTracker();
-      resetHarvestSpawnTimer();
-      saveGame();
-      renderHud();
-      renderCities(true);
+      const serverDaily = normalizeDailyCaptureTracker(result?.currentUser?.daily || state.daily);
       renderPanel();
-      renderHarvestBonuses();
       if (type === "troops") {
         const targetName = result?.targetCityName || getHarvestBonusTroopTargetCity()?.name || "main city";
         addLog(`Harvested stored troop production: ${formatNumber(reward)} troops to ${targetName}.`);

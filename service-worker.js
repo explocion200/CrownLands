@@ -1,14 +1,14 @@
-const CACHE_VERSION = "20260721-global-city-list-v1";
+const CACHE_VERSION = "20260721-map-load-v1";
 const CACHE_NAME = `crownlands-cache-${CACHE_VERSION}`;
 const STATIC_CACHE_URLS = [
   "/",
   "/index.html",
   "/manifest.webmanifest",
-  "/styles.css?v=20260721-global-city-list-v1",
+  "/styles.css?v=20260721-map-load-v1",
   "/world-config.js",
   "/firebase-config.js?v=20260703-vapid-key",
-  "/firebaseClient.js?v=20260721-global-city-list-v1",
-  "/game.js?v=20260721-global-city-list-v1",
+  "/firebaseClient.js?v=20260721-map-load-v1",
+  "/game.js?v=20260721-map-load-v1",
   "/route-worker.js?v=20260721-structure-route-clearance",
   "/assets/map-editor-data.js?v=20260705-stronghold-sizes",
   "/assets/game-menu-background.jpg?v=20260702-login-page",
