@@ -16922,9 +16922,10 @@ function showCityInfoModal(cityId) {
 function showCityListModal() {
   if (!state) return;
   modal.classList.add("city-list-modal");
+  const refreshPromise = refreshAllOwnedCities(true);
   renderCityListModal();
   if (!modal.open) modal.showModal();
-  refreshAllOwnedCities();
+  void refreshPromise;
 }
 
 function renderCityListModal() {
@@ -16932,6 +16933,11 @@ function renderCityListModal() {
   const regularCityCount = cities.filter(city => !isStronghold(city)).length;
   const globalStats = getGlobalStatsSnapshot();
   const displayCityCount = hasUsableGlobalStats(globalStats) ? globalStats.totalCities : regularCityCount;
+  const rosterIsSyncing = onlineOwnedCitiesRefreshInFlight
+    || (!onlineOwnedCitiesCacheComplete && displayCityCount > regularCityCount);
+  const rosterCountLabel = rosterIsSyncing && displayCityCount > regularCityCount
+    ? `${formatNumber(regularCityCount)} / ${formatNumber(displayCityCount)}`
+    : formatNumber(displayCityCount);
   const pageCount = Math.max(1, Math.ceil(cities.length / CITY_LIST_PAGE_SIZE));
   cityListPage = clamp(cityListPage, 0, pageCount - 1);
   const start = cityListPage * CITY_LIST_PAGE_SIZE;
@@ -16941,7 +16947,8 @@ function renderCityListModal() {
     <div class="city-list-panel">
       <div class="city-list-summary">
         <span>Owned across maps</span>
-        <strong>${formatNumber(displayCityCount)}</strong>
+        <strong>${rosterCountLabel}</strong>
+        ${rosterIsSyncing ? `<small class="city-list-syncing" role="status">Syncing full city roster...</small>` : ""}
       </div>
       <div class="city-list-toolbar" aria-label="City list filters">
         <button class="${cityListSortKey === "level" ? "active" : ""}" data-city-list-sort="level" type="button" aria-pressed="${cityListSortKey === "level"}">

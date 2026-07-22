@@ -1110,21 +1110,37 @@
     await init();
     const uid = requireSignedIn();
     if (!uid) return [];
-    const { collection, getDocs, query: firestoreQuery, where } = client.modules.firestore;
+    const {
+      collection,
+      collectionGroup,
+      getDocs,
+      query: firestoreQuery,
+      where,
+    } = client.modules.firestore;
     if (!firestoreQuery || !where) return [];
     const uniqueIslandIds = [...new Set((Array.isArray(islandIds) ? islandIds : [])
       .map(islandId => String(islandId || "").trim())
       .filter(Boolean))];
-    const results = [];
-    for (const islandId of uniqueIslandIds) {
+
+    if (collectionGroup) {
+      const ownedRef = firestoreQuery(collectionGroup(client.db, "cities"), where("ownerUid", "==", uid));
+      const snapshot = await getDocs(ownedRef);
+      return snapshot.docs
+        .map(cityDoc => {
+          const city = cityDoc.data() || {};
+          const islandId = String(cityDoc.ref?.parent?.parent?.id || city.islandId || "").trim();
+          return { ...city, islandId, id: cityDoc.id };
+        })
+        .filter(city => !uniqueIslandIds.length || uniqueIslandIds.includes(city.islandId));
+    }
+
+    const snapshots = await Promise.all(uniqueIslandIds.map(async islandId => {
       const citiesRef = collection(client.db, "islands", islandId, "cities");
       const ownedRef = firestoreQuery(citiesRef, where("ownerUid", "==", uid));
       const snapshot = await getDocs(ownedRef);
-      snapshot.docs.forEach(cityDoc => {
-        results.push({ islandId, id: cityDoc.id, ...cityDoc.data() });
-      });
-    }
-    return results;
+      return snapshot.docs.map(cityDoc => ({ ...cityDoc.data(), islandId, id: cityDoc.id }));
+    }));
+    return snapshots.flat();
   }
 
   async function loadServerReports(limitCount = 120) {
