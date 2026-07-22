@@ -1265,6 +1265,35 @@
     return () => unsubscribers.forEach(unsubscribe => unsubscribe());
   }
 
+  function subscribePlayerCamps(handlers = {}) {
+    if (!client.configured || !client.db || !client.user?.uid) return () => {};
+    const { collectionGroup, onSnapshot, query: firestoreQuery, where } = client.modules.firestore;
+    if (!collectionGroup || !onSnapshot || !firestoreQuery || !where) return () => {};
+
+    const heldCampsRef = firestoreQuery(
+      collectionGroup(client.db, "camps"),
+      where("holderUid", "==", client.user.uid)
+    );
+    return onSnapshot(
+      heldCampsRef,
+      snapshot => {
+        if (typeof handlers.onCamps !== "function") return;
+        handlers.onCamps(snapshot.docs.map(campDoc => {
+          const camp = campDoc.data() || {};
+          return {
+            ...camp,
+            id: campDoc.id,
+            regionId: camp.regionId || "",
+            islandId: camp.islandId || campDoc.ref?.parent?.parent?.id || "",
+          };
+        }));
+      },
+      error => {
+        if (typeof handlers.onError === "function") handlers.onError(error, "heldCamps");
+      }
+    );
+  }
+
   function subscribeIsland(islandId, handlers = {}) {
     if (!client.configured || !client.db || !islandId) return () => {};
     const { collection, doc, onSnapshot, query: firestoreQuery, where } = client.modules.firestore;
@@ -1372,6 +1401,7 @@
     loadServerReports,
     subscribeIsland,
     subscribePlayerArmies,
+    subscribePlayerCamps,
     subscribeServerReports,
     isPushSupported,
     getNotificationPermission,

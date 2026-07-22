@@ -1274,6 +1274,12 @@ input {
   transform: translate(-50%, -58%);
   pointer-events: none;
 }
+.stronghold-objective-action-wheel {
+  transform: translate(-50%, -62%);
+}
+.stronghold-objective-action-wheel.crown-objective-action-wheel {
+  z-index: 31;
+}
 .gold-camp-wheel-action {
   position: absolute;
   top: calc(100% - 3px);
@@ -2373,11 +2379,6 @@ input {
   height: var(--wheel-height, 184px);
   transform: translate(-50%, var(--wheel-translate-y, -38%)) scale(var(--wheel-scale, 1));
   pointer-events: none;
-}
-.city-action-wheel.stronghold-action-wheel {
-  --wheel-side-offset: 0px;
-  --wheel-extra-right: 12px;
-  --wheel-extra-top: 0px;
 }
 .city-wheel-ring {
   position: absolute;
@@ -3872,6 +3873,60 @@ button.inventory-slot {
   border-color: rgba(122, 203, 255, .58);
   box-shadow: 0 28px 80px rgba(0,0,0,.58), 0 0 36px rgba(79, 177, 255, .16);
 }
+.active-operations-panel {
+  display: grid;
+  gap: .7rem;
+}
+.active-operations-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 2px;
+  padding: 3px;
+  border: 1px solid rgba(132, 199, 239, .3);
+  border-radius: 8px;
+  background: rgba(2, 14, 25, .72);
+}
+.active-operations-tab {
+  min-width: 0;
+  min-height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: .42rem;
+  padding: .45rem .55rem;
+  color: #b8d7ea;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  background: transparent;
+  font-family: var(--font-display);
+  font-size: .74rem;
+  font-weight: 900;
+}
+.active-operations-tab strong {
+  min-width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  padding: 0 .3rem;
+  border-radius: 5px;
+  color: #dff5ff;
+  background: rgba(91, 166, 210, .2);
+  font-family: var(--font-ui);
+  font-size: .68rem;
+}
+.active-operations-tab.active {
+  color: #fff0b8;
+  border-color: rgba(255, 210, 102, .52);
+  background: linear-gradient(180deg, rgba(50, 91, 124, .96), rgba(18, 49, 78, .96));
+  box-shadow: inset 0 -3px 0 rgba(0,0,0,.22);
+}
+.active-operations-tab.active strong {
+  color: #241304;
+  background: linear-gradient(#ffe69b, #d99528);
+}
+.active-operations-content {
+  min-width: 0;
+}
 .incoming-attack-panel {
   display: grid;
   gap: .7rem;
@@ -3918,6 +3973,20 @@ button.inventory-slot {
 .outgoing-attack-modal .incoming-attack-summary small {
   color: #bfe7ff;
 }
+.outgoing-attack-modal .active-objective-summary {
+  background: linear-gradient(90deg, rgba(110, 72, 19, .45), rgba(27, 70, 102, .38));
+  border-color: rgba(255, 205, 103, .34);
+}
+.outgoing-attack-modal .active-objective-summary strong {
+  color: #241304;
+  background: linear-gradient(#ffe69b, #c88625);
+}
+.outgoing-attack-modal .active-objective-summary span {
+  color: #fff0bf;
+}
+.outgoing-attack-modal .active-objective-summary small {
+  color: #cae8f8;
+}
 .incoming-attack-list {
   display: grid;
   gap: .52rem;
@@ -3960,6 +4029,18 @@ button.inventory-slot {
 }
 .outgoing-scout-card .incoming-attack-badge {
   background: linear-gradient(#8fffd7, #188a75);
+}
+.active-objective-card.held-camp-operation-card .active-objective-badge {
+  background: linear-gradient(#ffe69b, #b8731f);
+}
+.active-objective-card.held-stronghold-operation-card .active-objective-badge {
+  background: linear-gradient(#ffe99f, #467fa6);
+}
+.active-objective-card .active-objective-badge strong {
+  color: #251505;
+}
+.active-objective-card .active-objective-badge small {
+  color: rgba(37, 21, 5, .78);
 }
 .incoming-attack-badge strong {
   color: #231005;
@@ -4146,6 +4227,17 @@ button.inventory-slot {
   }
   .incoming-attack-card {
     grid-template-columns: 78px minmax(0, 1fr) 46px;
+  }
+  .active-operations-tab {
+    gap: .24rem;
+    padding-inline: .28rem;
+    font-size: .65rem;
+  }
+  .active-operations-tab strong {
+    min-width: 19px;
+    height: 19px;
+    padding-inline: .2rem;
+    font-size: .6rem;
   }
   .incoming-attack-force {
     grid-column: 2 / 3;

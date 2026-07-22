@@ -70,4 +70,15 @@ assert.equal(context.isMarchInsideEndpointInteractionClearance({ x: 130, y: 0 },
 
 assert.match(stylesSource, /\.army-token\.endpoint-clearance\s*\{[\s\S]*?pointer-events:\s*none;/, "Endpoint march markers must pass pointer input through to cities.");
 
-console.log("Validated stable map performance modes and march endpoint interaction clearance.");
+const strongholdWheelSource = extractFunction("renderSelectedStrongholdWheel");
+assert.match(strongholdWheelSource, /gold-camp-action-wheel stronghold-objective-action-wheel/, "Strongholds should use the camp-style action plaque.");
+assert.match(strongholdWheelSource, /Scout[\s\S]*?Info[\s\S]*?Attack/, "Foreign strongholds should expose Scout, Info, and Attack actions.");
+assert.match(strongholdWheelSource, /Send[\s\S]*?Reinforce/, "Owned strongholds should preserve send and reinforcement actions.");
+assert.doesNotMatch(strongholdWheelSource, /Level|upgradeCity/, "Stronghold action plaques must not expose leveling.");
+
+const cityInfoSource = extractFunction("showCityInfoModal");
+assert.match(cityInfoSource, /stronghold \? "" : renderCityLevelUpAction\(city\)/, "Foreign stronghold information should omit city leveling controls.");
+assert.equal((cityInfoSource.match(/renderCityLevelUpAction\(city\)/g) || []).length, 2, "Only regular city information should render leveling controls.");
+assert.match(stylesSource, /\.stronghold-objective-action-wheel\s*\{[\s\S]*?translate\(-50%, -62%\)/, "Stronghold action plaques should align to stronghold artwork.");
+
+console.log("Validated stable map performance modes, march endpoint clearance, and stronghold action plaques.");

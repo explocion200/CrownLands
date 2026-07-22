@@ -780,27 +780,6 @@ function getStrongholdVisualSize(city) {
   return Math.max(MIN_STRONGHOLD_VISUAL_SIZE, readVisualSize(city?.size, DEFAULT_STRONGHOLD_VISUAL_SIZE));
 }
 
-function applyCityActionWheelSizing(wheel, city) {
-  if (!wheel || !isStronghold(city)) return;
-  const strongholdSize = getStrongholdVisualSize(city);
-  const targetWidth = Math.round(strongholdSize * 0.961);
-  const targetHeight = Math.round(strongholdSize * 0.896);
-  const wheelWidth = targetWidth + Math.max(144, Math.round(strongholdSize * 0.62));
-  const wheelHeight = targetHeight + Math.max(128, Math.round(strongholdSize * 0.54));
-  const ringWidth = targetWidth + Math.max(42, Math.round(strongholdSize * 0.18));
-  const ringHeight = targetHeight + Math.max(34, Math.round(strongholdSize * 0.14));
-
-  wheel.classList.add("stronghold-action-wheel");
-  if (isCrownCitadel(city)) wheel.classList.add("crown-action-wheel");
-  wheel.style.setProperty("--wheel-width", `${wheelWidth}px`);
-  wheel.style.setProperty("--wheel-height", `${wheelHeight}px`);
-  wheel.style.setProperty("--wheel-ring-width", `${ringWidth}px`);
-  wheel.style.setProperty("--wheel-ring-height", `${ringHeight}px`);
-  wheel.style.setProperty("--wheel-side-top", `${Math.round((wheelHeight - 62) / 2)}px`);
-  wheel.style.setProperty("--wheel-info-left", `${Math.round((wheelWidth - 58) / 2)}px`);
-  wheel.style.setProperty("--wheel-translate-y", "-55%");
-}
-
 function isGoldStronghold(city) {
   const type = String(city?.strongholdType || "").toLowerCase();
   return isStronghold(city) && (type === "gold" || type === "gold_stronghold" || city.id === GOLD_STRONGHOLD_ID);
@@ -2345,8 +2324,10 @@ let onlineArmiesByIsland = new Map();
 const PLAYER_RELEVANT_ARMIES_CACHE_KEY = "player-relevant";
 let pendingOutgoingMissions = new Map();
 let onlineCampStates = new Map();
+let onlineHeldCampStates = new Map();
 let resolvingRewardCampPayoutIds = new Set();
 let onlineArmyUnsubscribes = [];
+let onlineHeldCampsUnsubscribe = null;
 let onlineServerReportsUnsubscribe = null;
 let onlineGlobalStatsUnsubscribe = null;
 let onlineGlobalStats = null;
@@ -2373,6 +2354,7 @@ let onlineOwnedCitiesCache = [];
 let onlineOwnedCitiesCacheAt = 0;
 let onlineOwnedCitiesCacheComplete = false;
 let onlineOwnedCitiesRefreshInFlight = false;
+let activeOperationsTab = "marches";
 const islandMapPickerViewState = {
   scrollLeft: 0,
   scrollTop: 0,
@@ -7474,6 +7456,8 @@ function applyServerArmyResult(result = null) {
     const normalized = normalizeOnlineCampState({ ...(onlineCampStates.get(result.campUpdate.id) || {}), ...result.campUpdate });
     if (normalized) {
       onlineCampStates.set(normalized.id, normalized);
+      if (normalized.holderUid === getCurrentOnlineUid()) onlineHeldCampStates.set(normalized.id, normalized);
+      else onlineHeldCampStates.delete(normalized.id);
       cityRenderSignature = "";
       changed = true;
       if (result.targetType === "camp" && result.kind === "attack" && result.outcome === "victory" && normalized.holderUid === getCurrentOnlineUid()) {
@@ -9250,6 +9234,7 @@ function disconnectOnlineWorld() {
   if (typeof onlineIslandUnsubscribe === "function") onlineIslandUnsubscribe();
   onlineIslandUnsubscribe = null;
   clearOnlineArmyWatchers();
+  clearOnlineHeldCampWatcher();
   clearOnlineServerReportWatcher();
   clearOnlineGlobalStatsWatcher();
   appliedServerReportIds = new Set();
@@ -9257,6 +9242,7 @@ function disconnectOnlineWorld() {
   lastReportDrivenEconomyRefreshAtMs = 0;
   onlinePresence = [];
   onlineCampStates = new Map();
+  onlineHeldCampStates = new Map();
   resolvingRewardCampPayoutIds = new Set();
   deedCampHistoryCache.clear();
   deedCampHistoryRequests.clear();
@@ -9876,6 +9862,7 @@ async function connectOnlineIsland(regionId, { claimHome = false, homeRegionId =
     onlineWorldConnected = true;
     onlineLastError = "";
     subscribeOnlineArmyWatchers(islandId);
+    subscribeOnlineHeldCamps();
     subscribeOnlineServerReports();
     subscribeOnlineGlobalStats();
     await recoverPendingOnlineArmyMovements();
@@ -9996,7 +9983,7 @@ function normalizeOnlineCampState(raw = {}) {
     ...raw,
     id,
     campId: id,
-    regionId: normalizeRegionId(raw.regionId || raw.mapId),
+    regionId: normalizeRegionId(raw.regionId || raw.mapId || getRegionIdFromOnlineIslandId(raw.islandId)),
     kind: config.kind,
     campType: config.type,
     rewardType: config.rewardType,
@@ -10018,12 +10005,28 @@ function normalizeOnlineCampState(raw = {}) {
 
 function applyOnlineCamps(rawCamps, regionId = getActiveOnlineRegionId()) {
   const activeRegionId = normalizeRegionId(regionId);
-  onlineCampStates = new Map((Array.isArray(rawCamps) ? rawCamps : [])
+  const normalizedCamps = (Array.isArray(rawCamps) ? rawCamps : [])
     .map(normalizeOnlineCampState)
-    .filter(camp => camp && camp.regionId === activeRegionId)
-    .map(camp => [camp.id, camp]));
+    .filter(camp => camp && camp.regionId === activeRegionId);
+  onlineCampStates = new Map(normalizedCamps.map(camp => [camp.id, camp]));
+  const currentUid = getCurrentOnlineUid();
+  onlineHeldCampStates = new Map([...onlineHeldCampStates]
+    .filter(([, camp]) => camp.regionId !== activeRegionId));
+  normalizedCamps.forEach(camp => {
+    if (currentUid && camp.holderUid === currentUid) onlineHeldCampStates.set(camp.id, camp);
+  });
   cityRenderSignature = "";
   renderCities(true);
+  updateOutgoingAttackUi();
+}
+
+function applyOnlineHeldCamps(rawCamps = []) {
+  const currentUid = getCurrentOnlineUid();
+  onlineHeldCampStates = new Map((Array.isArray(rawCamps) ? rawCamps : [])
+    .map(normalizeOnlineCampState)
+    .filter(camp => camp && currentUid && camp.holderUid === currentUid)
+    .map(camp => [camp.id, camp]));
+  updateOutgoingAttackUi();
 }
 
 function getCampTargetById(campId) {
@@ -10031,7 +10034,7 @@ function getCampTargetById(campId) {
   const base = WORLD_CAMPS.find(camp => camp.id === id);
   const config = getRewardCampConfig(base);
   if (!base || !config) return null;
-  const online = onlineCampStates.get(id) || {};
+  const online = onlineCampStates.get(id) || onlineHeldCampStates.get(id) || {};
   const holderUid = String(online.holderUid || "").trim();
   const currentUid = getCurrentOnlineUid();
   const owner = holderUid ? (holderUid === currentUid ? "player" : "enemy") : "neutral";
@@ -10856,6 +10859,12 @@ function clearOnlineArmyWatchers() {
   pendingOutgoingMissions = new Map();
 }
 
+function clearOnlineHeldCampWatcher() {
+  if (typeof onlineHeldCampsUnsubscribe === "function") onlineHeldCampsUnsubscribe();
+  onlineHeldCampsUnsubscribe = null;
+  onlineHeldCampStates = new Map();
+}
+
 function purgeResolvedOnlineArmy(onlineId, { removeLocal = true } = {}) {
   const id = String(onlineId || "").trim();
   if (!id) return false;
@@ -10966,6 +10975,19 @@ function subscribeOnlineGlobalStats() {
     onError: error => {
       clearOnlineGlobalStatsWatcher();
       console.warn("Could not subscribe to global kingdom stats", error);
+    },
+  });
+}
+
+function subscribeOnlineHeldCamps() {
+  const api = getOnlineApi();
+  if (typeof onlineHeldCampsUnsubscribe === "function") return;
+  if (!state || !api?.subscribePlayerCamps || !api?.isSignedIn?.()) return;
+  onlineHeldCampsUnsubscribe = api.subscribePlayerCamps({
+    onCamps: camps => applyOnlineHeldCamps(camps),
+    onError: error => {
+      clearOnlineHeldCampWatcher();
+      console.warn("Could not subscribe to held camps", error);
     },
   });
 }
@@ -11519,6 +11541,7 @@ function mergeOwnedCitySnapshots(cities = [], { complete = false } = {}) {
     onlineOwnedCitiesCacheComplete = true;
   }
   updateIslandSummariesFromOwnedCityCache();
+  updateOutgoingAttackUi();
   return onlineOwnedCitiesCache;
 }
 
@@ -15053,7 +15076,9 @@ function renderCities(force = false) {
   const selectedForeign = selectedTargetId ? cityById(selectedTargetId) : null;
   const selectedCamp = selectedTargetId ? getCampTargetById(selectedTargetId) : null;
   if (selectedCamp && !sendMode) renderSelectedRewardCampWheel(selectedCamp);
+  else if (selectedForeign && isStronghold(selectedForeign) && !sendMode) renderSelectedStrongholdWheel(selectedForeign);
   else if (selectedForeign && selectedForeign.owner !== "player" && !sendMode) renderSelectedForeignWheel(selectedForeign);
+  else if (source?.owner === "player" && isStronghold(source) && !sendMode) renderSelectedStrongholdWheel(source);
   else if (source?.owner === "player" && !sendMode) renderSelectedCityWheel(source);
 }
 
@@ -15085,6 +15110,7 @@ function renderRegroupRadius(target) {
 }
 
 function renderSelectedCityWheel(city) {
+  if (isStronghold(city)) return renderSelectedStrongholdWheel(city);
   const mapPoint = worldToMapPoint(city);
   const wheel = document.createElement("div");
   const levelCost = getLevelCost(city);
@@ -15099,7 +15125,6 @@ function renderSelectedCityWheel(city) {
   const scoutNearbyActive = scoutNearbySourceId === city.id;
   const regroupActive = regroupSourceId === city.id;
   wheel.className = "city-action-wheel";
-  applyCityActionWheelSizing(wheel, city);
   wheel.style.left = `${mapPoint.x}px`;
   wheel.style.top = `${mapPoint.y}px`;
   wheel.innerHTML = `
@@ -15151,6 +15176,7 @@ function renderSelectedCityWheel(city) {
 }
 
 function renderSelectedForeignWheel(city) {
+  if (isStronghold(city)) return renderSelectedStrongholdWheel(city);
   const mapPoint = worldToMapPoint(city);
   const wheel = document.createElement("div");
   const report = getScoutReport(city.id);
@@ -15162,7 +15188,6 @@ function renderSelectedForeignWheel(city) {
   const attackBlockLabel = mainCityBlockReason ? "Main City" : shieldBlockReason ? "Shielded" : "Attack";
   const canAttack = !mainCityBlockReason && !shieldBlockReason && playerCities().some(playerCity => playerCity.troops > 0);
   wheel.className = "city-action-wheel foreign-city-action-wheel";
-  applyCityActionWheelSizing(wheel, city);
   wheel.style.left = `${mapPoint.x}px`;
   wheel.style.top = `${mapPoint.y}px`;
   wheel.innerHTML = `
@@ -15202,6 +15227,86 @@ function renderSelectedForeignWheel(city) {
     showScoutReportModal(city.id);
   });
   cityLayer.appendChild(wheel);
+}
+
+function renderSelectedStrongholdWheel(stronghold) {
+  const mapPoint = worldToMapPoint(stronghold);
+  const wheel = document.createElement("div");
+  const owned = stronghold.owner === "player";
+  const report = owned ? null : getScoutReport(stronghold.id);
+  const pendingScout = owned ? null : getPendingScoutMission(stronghold.id);
+  const availableSources = playerCities().filter(city => city.id !== stronghold.id && Math.floor(Number(city.troops) || 0) > 0);
+  const canScout = !owned && !pendingScout && availableSources.length > 0;
+  const canAttack = !owned && availableSources.length > 0;
+  const canSend = owned && Math.floor(Number(stronghold.troops) || 0) > 0;
+  const canReinforce = owned && availableSources.length > 0;
+  const wheelSize = getStrongholdVisualSize(stronghold);
+  const actionOffset = Math.max(86, Math.min(148, wheelSize * .62));
+
+  wheel.className = "gold-camp-action-wheel stronghold-objective-action-wheel";
+  if (isCrownCitadel(stronghold)) wheel.classList.add("crown-objective-action-wheel");
+  wheel.style.left = `${mapPoint.x}px`;
+  wheel.style.top = `${mapPoint.y}px`;
+  wheel.style.setProperty("--camp-wheel-size", `${wheelSize}px`);
+  wheel.style.setProperty("--camp-action-offset", `${actionOffset}px`);
+  wheel.innerHTML = `
+    <button class="gold-camp-wheel-action camp-scout-action" type="button" aria-label="${owned ? `Send troops from ${escapeHtml(stronghold.name)}` : pendingScout ? `Scout traveling to ${escapeHtml(stronghold.name)}` : report ? `Scout ${escapeHtml(stronghold.name)} again` : `Scout ${escapeHtml(stronghold.name)}`}" ${owned ? canSend ? "" : "disabled" : canScout ? "" : "disabled"}>
+      <span aria-hidden="true">${owned ? "&#9876;" : "&#128301;"}</span>
+      <strong>${owned ? "Send" : pendingScout ? "Scouting" : report ? "Rescout" : "Scout"}</strong>
+    </button>
+    <button class="gold-camp-wheel-action camp-info-action" type="button" aria-label="Open ${escapeHtml(stronghold.name)} information">
+      <span aria-hidden="true">i</span>
+      <strong>Info</strong>
+    </button>
+    <button class="gold-camp-wheel-action camp-order-action" type="button" aria-label="${owned ? "Reinforce" : "Attack"} ${escapeHtml(stronghold.name)}" ${owned ? canReinforce ? "" : "disabled" : canAttack ? "" : "disabled"}>
+      <span aria-hidden="true">${owned ? "&#8649;" : "&#9876;"}</span>
+      <strong>${owned ? "Reinforce" : "Attack"}</strong>
+    </button>
+    ${report ? `
+      <button class="gold-camp-wheel-action camp-report-action" type="button" aria-label="Open scout report for ${escapeHtml(stronghold.name)}">
+        <span aria-hidden="true">&#128221;</span>
+        <strong>Report</strong>
+      </button>
+    ` : ""}`;
+
+  wheel.querySelector(".camp-scout-action")?.addEventListener("click", event => {
+    event.stopPropagation();
+    if (owned) beginSendMode(stronghold.id);
+    else scoutCity(stronghold.id);
+  });
+  wheel.querySelector(".camp-order-action")?.addEventListener("click", event => {
+    event.stopPropagation();
+    if (owned) beginStrongholdReinforcement(stronghold.id);
+    else attackForeignCity(stronghold.id);
+  });
+  wheel.querySelector(".camp-info-action")?.addEventListener("click", event => {
+    event.stopPropagation();
+    showCityInfoModal(stronghold.id);
+  });
+  wheel.querySelector(".camp-report-action")?.addEventListener("click", event => {
+    event.stopPropagation();
+    showScoutReportModal(stronghold.id);
+  });
+  cityLayer.appendChild(wheel);
+}
+
+function beginStrongholdReinforcement(strongholdId) {
+  const stronghold = cityById(strongholdId);
+  if (!stronghold || !isStronghold(stronghold) || stronghold.owner !== "player") return;
+  const sourceOption = findNearestOwnedSourceCandidate(stronghold, 1);
+  if (!sourceOption) {
+    showToast(`No other owned city with troops can reach ${stronghold.name}.`);
+    return;
+  }
+  selectedSourceId = sourceOption.city.id;
+  rememberOwnedAttackSource(sourceOption.city);
+  selectedTargetId = stronghold.id;
+  scoutNearbySourceId = null;
+  regroupSourceId = null;
+  sendMode = true;
+  selectedTroopAmount = clamp(Math.floor(sourceOption.city.troops / 2), 1, sourceOption.city.troops);
+  renderSelectionChangeNow();
+  showTroopSliderModal(sourceOption.city, stronghold);
 }
 
 function renderSelectedRewardCampWheel(camp) {
@@ -17118,7 +17223,7 @@ function showCityInfoModal(cityId) {
         <div class="stat-chip"><span>Victory points</span><strong>${formatNumber(stats.victoryPoints)}</strong></div>
         <div class="stat-chip"><span>Troops</span><strong>${report ? formatNumber(report.troops) : "Unknown"}</strong></div>
         <div class="stat-chip"><span>Total defense</span><strong>${report ? formatNumber(report.totalDefense) : "Unknown"}</strong></div>
-        ${renderCityLevelUpAction(city)}
+        ${stronghold ? "" : renderCityLevelUpAction(city)}
         ${neutralStrongholdBase}
         ${report
           ? `<div class="stat-wide"><span>Scout report expires</span><strong>${formatDuration(remaining)}</strong></div>`
@@ -17158,11 +17263,9 @@ function showCityInfoModal(cityId) {
         <div class="stat-chip"><span>City walls</span><strong>${formatNumber(stats.cityWalls)}</strong></div>
         <div class="stat-chip"><span>Garrison limit</span><strong>Unlimited</strong><small>station as many troops as you can send</small></div>
         <div class="stat-chip"><span>Effect target</span><strong>${effectTargetLabel}</strong><small>${effectHelp}</small></div>
-        ${renderCityLevelUpAction(city)}
         ${renderRelinquishCityAction(city)}
       </div>
     `;
-    bindCityLevelUpButtons(city);
     bindRelinquishCityButton(city);
     if (!modal.open) modal.showModal();
     return;
@@ -18444,27 +18547,74 @@ function updateIncomingAttackUi() {
 
 function updateOutgoingAttackUi() {
   if (!outgoingAttackBtn) return;
-  const outgoing = getOutgoingAttacks();
-  outgoingAttackBtn.hidden = outgoing.length === 0;
-  outgoingAttackBtn.classList.toggle("active", outgoing.length > 0);
-  if (!outgoing.length) {
+  const operations = getActiveOperationsSnapshot();
+  const total = operations.marches.length + operations.camps.length + operations.strongholds.length;
+  outgoingAttackBtn.hidden = total === 0;
+  outgoingAttackBtn.classList.toggle("active", total > 0);
+  if (!total) {
     if (outgoingAttackCount) outgoingAttackCount.textContent = "0";
     if (outgoingAttackTime) outgoingAttackTime.textContent = "Marches";
     outgoingAttackBtn.removeAttribute("title");
-    outgoingAttackBtn.setAttribute("aria-label", "Active marches");
+    outgoingAttackBtn.setAttribute("aria-label", "Kingdom activity");
     if (modal.open && modal.classList.contains("outgoing-attack-modal")) modal.close();
     return;
   }
 
-  const soonest = outgoing[0].serverPending ? "Sending" : formatDuration(outgoing[0].remaining);
-  if (outgoingAttackCount) outgoingAttackCount.textContent = formatNumber(outgoing.length);
-  if (outgoingAttackTime) outgoingAttackTime.textContent = soonest;
-  outgoingAttackBtn.title = `${formatOutgoingMissionSummary(outgoing)} - soonest ${soonest}`;
+  const soonestCamp = operations.camps
+    .filter(camp => camp.payoutAtMs > Date.now())
+    .sort((a, b) => a.payoutAtMs - b.payoutAtMs)[0];
+  const status = operations.marches.length
+    ? operations.marches[0].serverPending ? "Sending" : formatDuration(operations.marches[0].remaining)
+    : soonestCamp
+      ? formatDuration(Math.max(0, Math.ceil((soonestCamp.payoutAtMs - Date.now()) / 1000)))
+      : "Holdings";
+  const titleParts = [];
+  if (operations.marches.length) titleParts.push(formatOutgoingMissionSummary(operations.marches));
+  if (operations.camps.length) titleParts.push(`${formatNumber(operations.camps.length)} held ${operations.camps.length === 1 ? "camp" : "camps"}`);
+  if (operations.strongholds.length) titleParts.push(`${formatNumber(operations.strongholds.length)} held ${operations.strongholds.length === 1 ? "stronghold" : "strongholds"}`);
+  if (outgoingAttackCount) outgoingAttackCount.textContent = formatNumber(total);
+  if (outgoingAttackTime) outgoingAttackTime.textContent = status;
+  outgoingAttackBtn.title = titleParts.join(" - ");
   outgoingAttackBtn.setAttribute("aria-label", outgoingAttackBtn.title);
 
   if (modal.open && modal.classList.contains("outgoing-attack-modal")) {
-    renderOutgoingAttacksModalContent(outgoing);
+    renderOutgoingAttacksModalContent(operations);
   }
+}
+
+function getHeldCampsForActiveOperations() {
+  const held = new Map(onlineHeldCampStates);
+  const currentUid = getCurrentOnlineUid();
+  onlineCampStates.forEach(camp => {
+    if (currentUid && camp.holderUid === currentUid) held.set(camp.id, camp);
+    else held.delete(camp.id);
+  });
+  return [...held.values()]
+    .map(camp => getCampTargetById(camp.id))
+    .filter(camp => camp?.owner === "player")
+    .sort((a, b) => (a.payoutAtMs || Number.MAX_SAFE_INTEGER) - (b.payoutAtMs || Number.MAX_SAFE_INTEGER)
+      || a.name.localeCompare(b.name));
+}
+
+function getHeldStrongholdsForActiveOperations() {
+  const held = new Map();
+  onlineOwnedCitiesCache.forEach(city => {
+    if (isStronghold(city)) held.set(city.id, city);
+  });
+  (state?.cities || []).forEach(city => {
+    if (city.owner === "player" && isStronghold(city)) held.set(city.id, city);
+  });
+  return [...held.values()]
+    .sort((a, b) => getRegionLabel(getCityRegionId(a)).localeCompare(getRegionLabel(getCityRegionId(b)))
+      || a.name.localeCompare(b.name));
+}
+
+function getActiveOperationsSnapshot() {
+  return {
+    marches: getOutgoingAttacks(),
+    camps: getHeldCampsForActiveOperations(),
+    strongholds: getHeldStrongholdsForActiveOperations(),
+  };
 }
 
 function getArmyKindCounts(missions) {
@@ -18589,48 +18739,191 @@ async function focusIncomingAttackCity(cityId) {
 }
 
 function showOutgoingAttacksModal() {
-  const outgoing = getOutgoingAttacks();
-  if (!outgoing.length) {
-    showToast("No active marches right now.");
+  const operations = getActiveOperationsSnapshot();
+  const total = operations.marches.length + operations.camps.length + operations.strongholds.length;
+  if (!total) {
+    showToast("No active marches or controlled objectives right now.");
     updateOutgoingAttackUi();
     return;
   }
+  if (!operations[activeOperationsTab]?.length) {
+    activeOperationsTab = operations.marches.length
+      ? "marches"
+      : operations.camps.length
+        ? "camps"
+        : "strongholds";
+  }
   modal.classList.remove("incoming-attack-modal");
   modal.classList.add("outgoing-attack-modal");
-  renderOutgoingAttacksModalContent(outgoing);
+  renderOutgoingAttacksModalContent(operations);
   if (!modal.open) modal.showModal();
 }
 
-function renderOutgoingAttacksModalContent(outgoing = getOutgoingAttacks()) {
-  if (!outgoing.length) {
-    modalTitle.textContent = "Active Marches";
-    modalBody.innerHTML = `<div class="incoming-attack-empty">No active marches.</div>`;
-    return;
-  }
+function renderOutgoingAttacksModalContent(operations = getActiveOperationsSnapshot()) {
+  const normalizedOperations = operations?.marches
+    ? operations
+    : { marches: Array.isArray(operations) ? operations : [], camps: getHeldCampsForActiveOperations(), strongholds: getHeldStrongholdsForActiveOperations() };
+  const { marches, camps, strongholds } = normalizedOperations;
+  const tabs = [
+    { id: "marches", label: "Marches", count: marches.length },
+    { id: "camps", label: "Camps", count: camps.length },
+    { id: "strongholds", label: "Strongholds", count: strongholds.length },
+  ];
+  if (!tabs.some(tab => tab.id === activeOperationsTab)) activeOperationsTab = "marches";
+  const panel = activeOperationsTab === "camps"
+    ? renderHeldCampsOperationPanel(camps)
+    : activeOperationsTab === "strongholds"
+      ? renderHeldStrongholdsOperationPanel(strongholds)
+      : renderMarchesOperationPanel(marches);
 
-  modalTitle.textContent = outgoing.length === 1 ? "Active March" : "Active Marches";
-  const summary = formatOutgoingMissionSummary(outgoing);
+  modalTitle.textContent = "Kingdom Activity";
   modalBody.innerHTML = `
-    <div class="incoming-attack-panel">
-      <div class="incoming-attack-summary">
-        <strong>${formatNumber(outgoing.length)}</strong>
-        <span>${summary} ${outgoing.length === 1 ? "is" : "are"} traveling now.</span>
-        <small>${outgoing[0].serverPending ? "Sending order to server" : outgoing[0].isResolving ? "Resolving arrived order" : `Soonest arrival: ${formatDuration(outgoing[0].remaining)}`}</small>
+    <div class="active-operations-panel">
+      <div class="active-operations-tabs" role="tablist" aria-label="Kingdom activity categories">
+        ${tabs.map(tab => `
+          <button class="active-operations-tab ${activeOperationsTab === tab.id ? "active" : ""}" data-active-operations-tab="${tab.id}" type="button" role="tab" aria-selected="${activeOperationsTab === tab.id}">
+            <span>${tab.label}</span><strong>${formatNumber(tab.count)}</strong>
+          </button>`).join("")}
       </div>
-      <div class="incoming-attack-list">
-        ${outgoing.map(renderOutgoingAttackCard).join("")}
+      <div class="active-operations-content" role="tabpanel" aria-label="${escapeHtml(tabs.find(tab => tab.id === activeOperationsTab)?.label || "Marches")}">
+        ${panel}
       </div>
     </div>
   `;
 
+  modalBody.querySelectorAll("[data-active-operations-tab]").forEach(button => {
+    button.addEventListener("click", () => {
+      activeOperationsTab = button.dataset.activeOperationsTab || "marches";
+      renderOutgoingAttacksModalContent();
+    });
+  });
   modalBody.querySelectorAll("[data-outgoing-city]").forEach(button => {
     button.addEventListener("click", () => focusOutgoingAttackCity(button.dataset.outgoingCity));
+  });
+  modalBody.querySelectorAll("[data-operation-location]").forEach(button => {
+    button.addEventListener("click", () => focusActiveOperationLocation({
+      id: button.dataset.operationLocation,
+      regionId: button.dataset.operationRegion,
+      type: button.dataset.operationType,
+    }));
   });
   modalBody.querySelectorAll("[data-swift-march-order]").forEach(button => {
     button.addEventListener("click", () => useSwiftMarchOrderOnMission(button.dataset.swiftMarchOrder));
   });
   modalBody.querySelectorAll("[data-recall-horn]").forEach(button => {
     button.addEventListener("click", () => useRecallHornOnMission(button.dataset.recallHorn));
+  });
+}
+
+function renderMarchesOperationPanel(marches) {
+  if (!marches.length) return `<div class="incoming-attack-empty">No active troop marches.</div>`;
+  const summary = formatOutgoingMissionSummary(marches);
+  return `
+    <div class="incoming-attack-panel">
+      <div class="incoming-attack-summary">
+        <strong>${formatNumber(marches.length)}</strong>
+        <span>${summary} ${marches.length === 1 ? "is" : "are"} traveling now.</span>
+        <small>${marches[0].serverPending ? "Sending order to server" : marches[0].isResolving ? "Resolving arrived order" : `Soonest arrival: ${formatDuration(marches[0].remaining)}`}</small>
+      </div>
+      <div class="incoming-attack-list">${marches.map(renderOutgoingAttackCard).join("")}</div>
+    </div>`;
+}
+
+function formatHeldCampReward(camp) {
+  const config = getRewardCampConfig(camp);
+  if (!config) return "Camp reward";
+  if (config.rewardType === "city") return "1 random neutral city";
+  if (config.rewardType === "item") return "1 random usable item";
+  return `${formatNumber(config.baseReward)} ${config.rewardLabel}`;
+}
+
+function renderHeldCampsOperationPanel(camps) {
+  if (!camps.length) return `<div class="incoming-attack-empty">You are not holding a camp.</div>`;
+  const soonest = camps.find(camp => camp.payoutAtMs > Date.now());
+  return `
+    <div class="incoming-attack-panel">
+      <div class="incoming-attack-summary active-objective-summary">
+        <strong>${formatNumber(camps.length)}</strong>
+        <span>${camps.length === 1 ? "One camp is" : `${formatNumber(camps.length)} camps are`} under your control.</span>
+        <small>${soonest ? `Next camp reward: ${formatDuration(Math.max(0, Math.ceil((soonest.payoutAtMs - Date.now()) / 1000)))}` : "Camp reward state is syncing."}</small>
+      </div>
+      <div class="incoming-attack-list">${camps.map(renderHeldCampOperationCard).join("")}</div>
+    </div>`;
+}
+
+function renderHeldCampOperationCard(camp) {
+  const remaining = camp.payoutAtMs > 0 ? Math.max(0, Math.ceil((camp.payoutAtMs - Date.now()) / 1000)) : 0;
+  const timerLabel = camp.payoutAtMs > 0 ? (remaining > 0 ? formatDuration(remaining) : "Resolving") : "Syncing";
+  return `
+    <article class="incoming-attack-card outgoing-attack-card active-objective-card held-camp-operation-card">
+      <div class="incoming-attack-badge active-objective-badge"><strong>${timerLabel}</strong><small>Camp</small></div>
+      <div class="incoming-attack-city">
+        <span>${escapeHtml(getRegionLabel(getCityRegionId(camp)))}</span>
+        <strong>${escapeHtml(camp.name)}</strong>
+        <small>Hold reward: ${escapeHtml(formatHeldCampReward(camp))}</small>
+      </div>
+      <div class="incoming-attack-force">
+        <span>Garrison</span>
+        <strong>${formatNumber(camp.currentGarrison || camp.troops || 0)} troops</strong>
+        <small>${camp.state === "contested" ? "Control contested" : "Controlled by you"}</small>
+      </div>
+      ${renderActiveOperationLocationButton(camp, "camp")}
+    </article>`;
+}
+
+function renderHeldStrongholdsOperationPanel(strongholds) {
+  if (!strongholds.length) return `<div class="incoming-attack-empty">You do not control a stronghold.</div>`;
+  return `
+    <div class="incoming-attack-panel">
+      <div class="incoming-attack-summary active-objective-summary">
+        <strong>${formatNumber(strongholds.length)}</strong>
+        <span>${strongholds.length === 1 ? "One stronghold is" : `${formatNumber(strongholds.length)} strongholds are`} under your control.</span>
+        <small>Stronghold bonuses remain active while you hold them.</small>
+      </div>
+      <div class="incoming-attack-list">${strongholds.map(renderHeldStrongholdOperationCard).join("")}</div>
+    </div>`;
+}
+
+function renderHeldStrongholdOperationCard(stronghold) {
+  return `
+    <article class="incoming-attack-card outgoing-attack-card active-objective-card held-stronghold-operation-card">
+      <div class="incoming-attack-badge active-objective-badge"><strong>Held</strong><small>Stronghold</small></div>
+      <div class="incoming-attack-city">
+        <span>${escapeHtml(getRegionLabel(getCityRegionId(stronghold)))}</span>
+        <strong>${escapeHtml(stronghold.name)}</strong>
+        <small>${escapeHtml(getStrongholdBonusLabel(stronghold))}</small>
+      </div>
+      <div class="incoming-attack-force">
+        <span>Garrison</span>
+        <strong>${formatNumber(stronghold.troops || 0)} troops</strong>
+        <small>Level ${formatNumber(stronghold.level || getStrongholdDefenseLevel(stronghold))} defense</small>
+      </div>
+      ${renderActiveOperationLocationButton(stronghold, "stronghold")}
+    </article>`;
+}
+
+function renderActiveOperationLocationButton(target, type) {
+  return `<button class="incoming-attack-locate" data-operation-location="${escapeHtml(target.id)}" data-operation-region="${escapeHtml(getCityRegionId(target))}" data-operation-type="${escapeHtml(type)}" type="button" aria-label="Go to ${escapeHtml(target.name)}">&#8982;</button>`;
+}
+
+async function focusActiveOperationLocation({ id = "", regionId = "", type = "" } = {}) {
+  const targetRegionId = normalizeRegionId(regionId);
+  const knownTarget = type === "camp" ? getCampTargetById(id) : getOwnedCitySnapshotById(id) || cityById(id);
+  if (!knownTarget) {
+    showToast(`That ${type === "camp" ? "camp" : "stronghold"} is no longer available.`);
+    return;
+  }
+  if (modal.open) modal.close();
+  if (targetRegionId !== getActiveMapRegionId()) {
+    const switched = await switchOnlineIsland(targetRegionId);
+    if (!switched) {
+      showToast(`Could not open ${getRegionLabel(targetRegionId)}.`);
+      return;
+    }
+  }
+  requestAnimationFrame(() => {
+    centerOnCity(id);
+    showToast(`Viewing ${knownTarget.name}`);
   });
 }
 
