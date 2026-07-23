@@ -1,5 +1,7 @@
+const assert = require("node:assert/strict");
 const fs = require("fs");
 const path = require("path");
+const vm = require("node:vm");
 
 const root = path.resolve(__dirname, "..");
 const serverSource = fs.readFileSync(path.join(root, "functions", "index.js"), "utf8");
@@ -15,6 +17,19 @@ function readConstant(source, name) {
   const match = source.match(new RegExp(`const\\s+${name}\\s*=\\s*([0-9.]+)`));
   if (!match) throw new Error(`Missing ${name}.`);
   return Number(match[1]);
+}
+
+function extractFunction(source, name) {
+  const start = source.indexOf(`function ${name}(`);
+  assert.ok(start >= 0, `Missing ${name}.`);
+  const bodyStart = source.indexOf("{", start);
+  let depth = 0;
+  for (let index = bodyStart; index < source.length; index += 1) {
+    if (source[index] === "{") depth += 1;
+    if (source[index] === "}") depth -= 1;
+    if (depth === 0) return source.slice(start, index + 1);
+  }
+  throw new Error(`Could not parse ${name}.`);
 }
 
 const config = Object.fromEntries(constantNames.map(name => {
@@ -72,9 +87,69 @@ if (!indexSource.includes('"fieldPath": "holderUid"')) {
 if (!serverSource.includes("if (ownsCrownCitadel)")) {
   throw new Error("Crown Citadel non-stacking behavior is missing.");
 }
+const strongholdBonusFormula = serverSource.slice(
+  serverSource.indexOf("function getOwnedStrongholdBonuses"),
+  serverSource.indexOf("function getCityUpgradePrestigeMultiplier")
+);
+if (!strongholdBonusFormula.includes('source: "crown_citadel"')
+  || !strongholdBonusFormula.includes("crownCitadelControlled: true")
+  || strongholdBonusFormula.indexOf("if (ownsCrownCitadel)") > strongholdBonusFormula.indexOf("return cities.reduce")) {
+  throw new Error("Crown Citadel must exclusively replace individual Stronghold bonuses.");
+}
+if (!serverSource.includes("strongholdBonusesAuthoritative: true")
+  || !clientSource.includes("getAuthoritativePlayerStrongholdBonuses")
+  || !clientSource.includes("globalStats?.strongholdBonusesAuthoritative")) {
+  throw new Error("The client is not consuming the server-authoritative all-map Stronghold bonus snapshot.");
+}
 if (!serverSource.includes("isTrainingStronghold(city)") || !serverSource.includes("isDefenseStronghold(city)")) {
   throw new Error("Military stronghold bonuses are missing.");
 }
+
+const strongholdContext = {
+  CROWN_CITADEL_GOLD_BONUS_PERCENT: readConstant(serverSource, "CROWN_CITADEL_GOLD_BONUS_PERCENT"),
+  CROWN_CITADEL_TROOP_BONUS_PERCENT: readConstant(serverSource, "CROWN_CITADEL_TROOP_BONUS_PERCENT"),
+  CROWN_CITADEL_MARCH_SPEED_BONUS_PERCENT: readConstant(serverSource, "CROWN_CITADEL_MARCH_SPEED_BONUS_PERCENT"),
+  CROWN_CITADEL_DEFENSE_BONUS_PERCENT: readConstant(serverSource, "CROWN_CITADEL_DEFENSE_BONUS_PERCENT"),
+  CROWN_CITADEL_UPGRADE_COST_REDUCTION_PERCENT: readConstant(serverSource, "CROWN_CITADEL_UPGRADE_COST_REDUCTION_PERCENT"),
+  isCrownCitadel: city => city?.type === "crown",
+  isGoldStronghold: city => city?.type === "gold",
+  isTrainingStronghold: city => city?.type === "training",
+  isSpeedStronghold: city => city?.type === "speed",
+  isDefenseStronghold: city => city?.type === "defense",
+  getStrongholdBonusPercent: city => Number(city?.bonusPercent) || 0,
+};
+vm.createContext(strongholdContext);
+vm.runInContext(
+  extractFunction(serverSource, "getOwnedStrongholdBonuses"),
+  strongholdContext,
+  { filename: path.join(root, "functions", "index.js") }
+);
+const citadelBonuses = strongholdContext.getOwnedStrongholdBonuses([
+  { city: { type: "crown" } },
+  { city: { type: "gold", bonusPercent: 8 } },
+  { city: { type: "training", bonusPercent: 8 } },
+  { city: { type: "speed", bonusPercent: 8 } },
+  { city: { type: "defense", bonusPercent: 8 } },
+]);
+assert.equal(citadelBonuses.source, "crown_citadel");
+assert.equal(citadelBonuses.crownCitadelControlled, true);
+assert.equal(citadelBonuses.goldBonusPercent, strongholdContext.CROWN_CITADEL_GOLD_BONUS_PERCENT);
+assert.equal(citadelBonuses.troopBonusPercent, strongholdContext.CROWN_CITADEL_TROOP_BONUS_PERCENT);
+assert.equal(citadelBonuses.marchSpeedBonusPercent, strongholdContext.CROWN_CITADEL_MARCH_SPEED_BONUS_PERCENT);
+assert.equal(citadelBonuses.cityDefenseBonusPercent, strongholdContext.CROWN_CITADEL_DEFENSE_BONUS_PERCENT);
+assert.equal(citadelBonuses.upgradeCostReductionPercent, strongholdContext.CROWN_CITADEL_UPGRADE_COST_REDUCTION_PERCENT);
+const individualBonuses = strongholdContext.getOwnedStrongholdBonuses([
+  { city: { type: "gold", bonusPercent: 8 } },
+  { city: { type: "training", bonusPercent: 8 } },
+  { city: { type: "speed", bonusPercent: 8 } },
+  { city: { type: "defense", bonusPercent: 8 } },
+]);
+assert.equal(individualBonuses.source, "individual");
+assert.equal(individualBonuses.crownCitadelControlled, false);
+assert.equal(individualBonuses.goldBonusPercent, 8);
+assert.equal(individualBonuses.troopBonusPercent, 8);
+assert.equal(individualBonuses.marchSpeedBonusPercent, 8);
+assert.equal(individualBonuses.cityDefenseBonusPercent, 8);
 
 function cityMilitaryComponents(level, troops, bonuses = {}) {
   const victoryPoints = Math.floor(6 + level * 4 + Math.pow(level, 1.35) * 2);

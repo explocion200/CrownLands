@@ -63,10 +63,14 @@ assert.equal(context.shouldUseCrowdedMapPerformance(true, 58, 0), true, "Crowded
 assert.equal(context.shouldUseCrowdedMapPerformance(true, 57, 17), false);
 assert.equal(context.clampIslandMapPickerZoom(0.01), context.ISLAND_PICKER_MIN_ZOOM);
 assert.equal(context.clampIslandMapPickerZoom(0), context.ISLAND_PICKER_MIN_ZOOM);
+assert.equal(context.clampIslandMapPickerZoom(0.2, 0.45), 0.45);
 assert.equal(context.clampIslandMapPickerZoom(0.5), 0.5);
 assert.equal(context.clampIslandMapPickerZoom(2), context.ISLAND_PICKER_MAX_ZOOM);
 assert.match(source, /data-island-map-zoom-fit/, "The map picker should expose a fit-all control.");
 assert.match(source, /fitIslandMapPickerToView/, "The map picker should calculate a fit-all zoom.");
+assert.match(source, /function getIslandMapPickerMinimumZoom[\s\S]*?getIslandMapPickerFitZoom/, "The map picker minimum zoom should stop at the all-maps view.");
+assert.match(source, /picker\.addEventListener\("wheel"[\s\S]*?event\.preventDefault\(\)[\s\S]*?anchorClientX/, "The mouse wheel should zoom the map around the pointer.");
+assert.match(source, /picker\.addEventListener\("pointerdown"[\s\S]*?picker\.scrollLeft = startScrollLeft - dx/, "The map picker should pan by dragging.");
 assert.match(stylesSource, /\.island-map-canvas-frame[\s\S]*?--island-grid-scaled-w/, "The map picker should scale inside a bounded canvas frame.");
 
 const city = { id: "city", kind: "city", x: 0, y: 0 };

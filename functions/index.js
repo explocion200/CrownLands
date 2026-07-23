@@ -1454,8 +1454,14 @@ function createGlobalStatsSnapshot({
     armyPower,
     replacementPower,
     defensivePower,
+    strongholdBonusesAuthoritative: true,
+    strongholdBonusSource: safeString(resolvedBonuses.source, 32),
+    crownCitadelControlled: Boolean(resolvedBonuses.crownCitadelControlled),
+    strongholdGoldBonusPercent: Math.max(0, Math.floor(safeNumber(resolvedBonuses.goldBonusPercent, 0))),
     strongholdTroopBonusPercent: Math.max(0, Math.floor(safeNumber(resolvedBonuses.troopBonusPercent, 0))),
+    strongholdMarchSpeedBonusPercent: Math.max(0, Math.floor(safeNumber(resolvedBonuses.marchSpeedBonusPercent, 0))),
     strongholdDefenseBonusPercent: Math.max(0, Math.floor(safeNumber(resolvedBonuses.cityDefenseBonusPercent, 0))),
+    strongholdUpgradeCostReductionPercent: Math.max(0, Math.floor(safeNumber(resolvedBonuses.upgradeCostReductionPercent, 0))),
     stationedTroopPower: Math.max(0, Math.floor(stationedTroopPower)),
     campTroopPower: Math.max(0, Math.floor(campTroopPower)),
     cityPower: Math.max(0, Math.floor(cityPower)),
@@ -2262,6 +2268,22 @@ function getOwnerUid(city = {}) {
   return safeString(city.ownerUid, 128);
 }
 
+function canUseSwiftMarchOrderOnTransfer(army = {}, source = {}, target = {}, uid = "") {
+  if (
+    !uid
+    || army.kind !== "transfer"
+    || army.targetType === "camp"
+    || army.relinquishTransfer
+    || getOwnerUid(army) !== uid
+    || getOwnerUid(source) !== uid
+    || getOwnerUid(target) !== uid
+  ) {
+    return false;
+  }
+  if (isStronghold(target)) return true;
+  return !isStronghold(source);
+}
+
 function getMainCityInfo(profile = {}) {
   const id = safeString(profile?.mainCityId, 96).replace(/[^a-zA-Z0-9_-]/g, "_");
   if (!id) return null;
@@ -2781,6 +2803,8 @@ function getOwnedStrongholdBonuses(cities = []) {
   const ownsCrownCitadel = cities.some(entry => isCrownCitadel(entry.city));
   if (ownsCrownCitadel) {
     return {
+      source: "crown_citadel",
+      crownCitadelControlled: true,
       goldBonusPercent: CROWN_CITADEL_GOLD_BONUS_PERCENT,
       troopBonusPercent: CROWN_CITADEL_TROOP_BONUS_PERCENT,
       marchSpeedBonusPercent: CROWN_CITADEL_MARCH_SPEED_BONUS_PERCENT,
@@ -2795,7 +2819,15 @@ function getOwnedStrongholdBonuses(cities = []) {
     if (isSpeedStronghold(city)) bonuses.marchSpeedBonusPercent += getStrongholdBonusPercent(city);
     if (isDefenseStronghold(city)) bonuses.cityDefenseBonusPercent += getStrongholdBonusPercent(city);
     return bonuses;
-  }, { goldBonusPercent: 0, troopBonusPercent: 0, marchSpeedBonusPercent: 0, cityDefenseBonusPercent: 0, upgradeCostReductionPercent: 0 });
+  }, {
+    source: "individual",
+    crownCitadelControlled: false,
+    goldBonusPercent: 0,
+    troopBonusPercent: 0,
+    marchSpeedBonusPercent: 0,
+    cityDefenseBonusPercent: 0,
+    upgradeCostReductionPercent: 0,
+  });
 }
 
 function getCityUpgradePrestigeMultiplier(targetLevel) {
@@ -5205,7 +5237,7 @@ exports.useSwiftMarchOrder = onCall({ region: "us-central1", maxInstances: 20, i
     if (army.status !== "active") throw new HttpsError("failed-precondition", "That troop transfer has already arrived.");
     if (getOwnerUid(army) !== uid) throw new HttpsError("permission-denied", "You can only speed up your own troop transfers.");
     if (army.kind !== "transfer" || army.targetType === "camp" || army.relinquishTransfer) {
-      throw new HttpsError("failed-precondition", "Swift March Orders only work between two cities you own.");
+      throw new HttpsError("failed-precondition", "Swift March Orders only work on owned-city transfers and owned Stronghold reinforcements.");
     }
     if (army.returning) {
       throw new HttpsError("failed-precondition", "A returning army cannot use a Swift March Order.");
@@ -5230,8 +5262,8 @@ exports.useSwiftMarchOrder = onCall({ region: "us-central1", maxInstances: 20, i
     }
     const source = { id: sourceSnap.id, ...sourceSnap.data() };
     const target = { id: targetSnap.id, ...targetSnap.data() };
-    if (getOwnerUid(source) !== uid || getOwnerUid(target) !== uid || isStronghold(source) || isStronghold(target)) {
-      throw new HttpsError("failed-precondition", "Swift March Orders only work between two cities you currently own.");
+    if (!canUseSwiftMarchOrderOnTransfer(army, source, target, uid)) {
+      throw new HttpsError("failed-precondition", "Swift March Orders only work on transfers between owned cities or reinforcements to an owned Stronghold.");
     }
 
     const profile = profileSnap.data() || {};

@@ -94,7 +94,7 @@ const SHOP_ITEMS = [
   {
     id: "swift_march_order",
     label: "Swift March Order",
-    description: "Speeds up one troop transfer between owned cities only.",
+    description: "Speeds up one owned-city transfer or reinforcement to an owned Stronghold.",
     cost: 300_000,
     icon: "assets/swift-march-order-icon.webp?v=20260703-shop-icons",
   },
@@ -5913,8 +5913,14 @@ function normalizeGlobalStatsSnapshot(raw = null) {
     armyPower: normalizePowerValue(raw.armyPower),
     replacementPower: normalizePowerValue(raw.replacementPower),
     defensivePower: normalizePowerValue(raw.defensivePower),
+    strongholdBonusesAuthoritative: raw.strongholdBonusesAuthoritative === true,
+    strongholdBonusSource: String(raw.strongholdBonusSource || "").slice(0, 32),
+    crownCitadelControlled: raw.crownCitadelControlled === true,
+    strongholdGoldBonusPercent: Math.max(0, Math.floor(Number(raw.strongholdGoldBonusPercent) || 0)),
     strongholdTroopBonusPercent: Math.max(0, Math.floor(Number(raw.strongholdTroopBonusPercent) || 0)),
+    strongholdMarchSpeedBonusPercent: Math.max(0, Math.floor(Number(raw.strongholdMarchSpeedBonusPercent) || 0)),
     strongholdDefenseBonusPercent: Math.max(0, Math.floor(Number(raw.strongholdDefenseBonusPercent) || 0)),
+    strongholdUpgradeCostReductionPercent: Math.max(0, Math.floor(Number(raw.strongholdUpgradeCostReductionPercent) || 0)),
     stationedTroopPower: normalizePowerValue(raw.stationedTroopPower),
     campTroopPower: normalizePowerValue(raw.campTroopPower),
     cityPower: normalizePowerValue(raw.cityPower),
@@ -6217,10 +6223,44 @@ function skillMultiplier(skill) {
 
 function getControlledCrownCitadel(owner = "player") {
   if (!state || !Array.isArray(state.cities)) return null;
-  return state.cities.find(city => city.owner === owner && isCrownCitadel(city)) || null;
+  const loadedCitadel = state.cities.find(city => city.owner === owner && isCrownCitadel(city));
+  if (loadedCitadel) return loadedCitadel;
+  if (owner !== "player") return null;
+  const citadel = getCrownCitadelControlSnapshot();
+  const currentUid = getCurrentOnlineUid();
+  return currentUid && getCrownCitadelHolderUid() === currentUid ? citadel : null;
+}
+
+function getAuthoritativePlayerStrongholdBonuses() {
+  if (getControlledCrownCitadel("player")) {
+    return {
+      source: "crown_citadel",
+      crownCitadelControlled: true,
+      goldBonusPercent: CROWN_CITADEL_GOLD_BONUS_PERCENT,
+      troopBonusPercent: CROWN_CITADEL_TROOP_BONUS_PERCENT,
+      marchSpeedBonusPercent: CROWN_CITADEL_MARCH_SPEED_BONUS_PERCENT,
+      cityDefenseBonusPercent: CROWN_CITADEL_DEFENSE_BONUS_PERCENT,
+      upgradeCostReductionPercent: CROWN_CITADEL_UPGRADE_COST_REDUCTION_PERCENT,
+    };
+  }
+  const globalStats = getGlobalStatsSnapshot();
+  if (!globalStats?.strongholdBonusesAuthoritative) return null;
+  return {
+    source: globalStats.strongholdBonusSource || "individual",
+    crownCitadelControlled: globalStats.crownCitadelControlled === true,
+    goldBonusPercent: globalStats.strongholdGoldBonusPercent,
+    troopBonusPercent: globalStats.strongholdTroopBonusPercent,
+    marchSpeedBonusPercent: globalStats.strongholdMarchSpeedBonusPercent,
+    cityDefenseBonusPercent: globalStats.strongholdDefenseBonusPercent,
+    upgradeCostReductionPercent: globalStats.strongholdUpgradeCostReductionPercent,
+  };
 }
 
 function getControlledStrongholdGoldBonusPercent(owner = "player") {
+  if (owner === "player") {
+    const authoritative = getAuthoritativePlayerStrongholdBonuses();
+    if (authoritative) return authoritative.goldBonusPercent;
+  }
   if (getControlledCrownCitadel(owner)) return CROWN_CITADEL_GOLD_BONUS_PERCENT;
   if (!state || !Array.isArray(state.cities)) return 0;
   return state.cities.reduce((total, city) => {
@@ -6230,6 +6270,10 @@ function getControlledStrongholdGoldBonusPercent(owner = "player") {
 }
 
 function getControlledStrongholdTroopBonusPercent(owner = "player") {
+  if (owner === "player") {
+    const authoritative = getAuthoritativePlayerStrongholdBonuses();
+    if (authoritative) return authoritative.troopBonusPercent;
+  }
   if (getControlledCrownCitadel(owner)) return CROWN_CITADEL_TROOP_BONUS_PERCENT;
   if (!state || !Array.isArray(state.cities)) return 0;
   return state.cities.reduce((total, city) => {
@@ -6239,6 +6283,10 @@ function getControlledStrongholdTroopBonusPercent(owner = "player") {
 }
 
 function getControlledStrongholdMarchSpeedPercent(owner = "player") {
+  if (owner === "player") {
+    const authoritative = getAuthoritativePlayerStrongholdBonuses();
+    if (authoritative) return authoritative.marchSpeedBonusPercent;
+  }
   if (getControlledCrownCitadel(owner)) return CROWN_CITADEL_MARCH_SPEED_BONUS_PERCENT;
   if (!state || !Array.isArray(state.cities)) return 0;
   return state.cities.reduce((total, city) => {
@@ -6268,13 +6316,21 @@ function getCityControllerKey(city) {
 
 function getControlledCrownCitadelForControllerKey(controllerKey) {
   if (!state || !Array.isArray(state.cities) || !controllerKey) return null;
-  return state.cities.find(city => isCrownCitadel(city) && getCityControllerKey(city) === controllerKey) || null;
+  const loadedCitadel = state.cities.find(city => isCrownCitadel(city) && getCityControllerKey(city) === controllerKey);
+  if (loadedCitadel) return loadedCitadel;
+  const citadel = getCrownCitadelControlSnapshot();
+  return citadel && getCityControllerKey(citadel) === controllerKey ? citadel : null;
 }
 
 function getControlledStrongholdCityDefenseBonusPercentForCity(target) {
   if (!state || !Array.isArray(state.cities)) return 0;
   const targetControllerKey = getCityControllerKey(target);
   if (!targetControllerKey) return 0;
+  const currentUid = getCurrentOnlineUid();
+  if (targetControllerKey === "player:local" || (currentUid && targetControllerKey === `player:${currentUid}`)) {
+    const authoritative = getAuthoritativePlayerStrongholdBonuses();
+    if (authoritative) return authoritative.cityDefenseBonusPercent;
+  }
   if (getControlledCrownCitadelForControllerKey(targetControllerKey)) return CROWN_CITADEL_DEFENSE_BONUS_PERCENT;
   return state.cities.reduce((total, city) => {
     if (!isDefenseStronghold(city) || getCityControllerKey(city) !== targetControllerKey) return total;
@@ -6283,6 +6339,10 @@ function getControlledStrongholdCityDefenseBonusPercentForCity(target) {
 }
 
 function getControlledStrongholdUpgradeCostReductionPercent(owner = "player") {
+  if (owner === "player") {
+    const authoritative = getAuthoritativePlayerStrongholdBonuses();
+    if (authoritative) return authoritative.upgradeCostReductionPercent;
+  }
   return getControlledCrownCitadel(owner) ? CROWN_CITADEL_UPGRADE_COST_REDUCTION_PERCENT : 0;
 }
 
@@ -8768,16 +8828,39 @@ function getIslandMapPickerElement() {
   return modalBody?.querySelector?.(".island-map-picker") || null;
 }
 
-function clampIslandMapPickerZoom(value) {
+function clampIslandMapPickerZoom(value, minimumZoom = ISLAND_PICKER_MIN_ZOOM) {
   const parsed = Number(value);
+  const minimum = Math.min(
+    ISLAND_PICKER_MAX_ZOOM,
+    Math.max(ISLAND_PICKER_MIN_ZOOM, Number(minimumZoom) || ISLAND_PICKER_MIN_ZOOM)
+  );
   return Math.min(
     ISLAND_PICKER_MAX_ZOOM,
-    Math.max(ISLAND_PICKER_MIN_ZOOM, Number.isFinite(parsed) ? parsed : 1)
+    Math.max(minimum, Number.isFinite(parsed) ? parsed : 1)
   );
 }
 
+function getIslandMapPickerFitZoom(picker) {
+  if (!picker?.clientWidth || !picker?.clientHeight) return ISLAND_PICKER_MIN_ZOOM;
+  const layout = getIslandMapGridLayout();
+  const horizontalPadding = Math.min(28, picker.clientWidth * 0.08);
+  const verticalPadding = Math.min(28, picker.clientHeight * 0.08);
+  return clampIslandMapPickerZoom(Math.min(
+    ISLAND_PICKER_MAX_ZOOM,
+    (picker.clientWidth - horizontalPadding) / layout.stageWidth,
+    (picker.clientHeight - verticalPadding) / layout.stageHeight
+  ));
+}
+
+function getIslandMapPickerMinimumZoom(picker) {
+  return getIslandMapPickerFitZoom(picker);
+}
+
 function getIslandMapPickerZoom(picker = getIslandMapPickerElement()) {
-  return clampIslandMapPickerZoom(picker?.dataset?.islandMapZoom || islandMapPickerViewState.zoom);
+  return clampIslandMapPickerZoom(
+    picker?.dataset?.islandMapZoom || islandMapPickerViewState.zoom,
+    getIslandMapPickerMinimumZoom(picker)
+  );
 }
 
 function updateIslandMapPickerZoomControls(picker) {
@@ -8788,20 +8871,38 @@ function updateIslandMapPickerZoomControls(picker) {
   const value = shell.querySelector("[data-island-map-zoom-value]");
   const zoomOut = shell.querySelector("[data-island-map-zoom-out]");
   const zoomIn = shell.querySelector("[data-island-map-zoom-in]");
+  const minimumZoom = getIslandMapPickerMinimumZoom(picker);
+  if (slider) slider.min = String(minimumZoom);
   if (slider) slider.value = String(zoom);
   if (value) value.textContent = `${Math.round(zoom * 100)}%`;
-  if (zoomOut) zoomOut.disabled = zoom <= ISLAND_PICKER_MIN_ZOOM + 0.001;
+  if (zoomOut) zoomOut.disabled = zoom <= minimumZoom + 0.001;
   if (zoomIn) zoomIn.disabled = zoom >= ISLAND_PICKER_MAX_ZOOM - 0.001;
 }
 
-function setIslandMapPickerZoom(picker, value, { preserveCenter = true, remember = true } = {}) {
+function setIslandMapPickerZoom(picker, value, {
+  preserveCenter = true,
+  remember = true,
+  anchorClientX = null,
+  anchorClientY = null,
+} = {}) {
   if (!picker) return false;
-  const zoom = clampIslandMapPickerZoom(value);
+  const zoom = clampIslandMapPickerZoom(value, getIslandMapPickerMinimumZoom(picker));
   const layout = getIslandMapGridLayout();
-  const previousWidth = Math.max(1, picker.scrollWidth);
-  const previousHeight = Math.max(1, picker.scrollHeight);
-  const centerRatioX = (picker.scrollLeft + picker.clientWidth / 2) / previousWidth;
-  const centerRatioY = (picker.scrollTop + picker.clientHeight / 2) / previousHeight;
+  const pickerBounds = picker.getBoundingClientRect();
+  const canvasFrame = picker.querySelector(".island-map-canvas-frame");
+  const previousFrameBounds = canvasFrame?.getBoundingClientRect();
+  const anchorX = Number.isFinite(Number(anchorClientX))
+    ? Number(anchorClientX)
+    : pickerBounds.left + picker.clientWidth / 2;
+  const anchorY = Number.isFinite(Number(anchorClientY))
+    ? Number(anchorClientY)
+    : pickerBounds.top + picker.clientHeight / 2;
+  const anchorRatioX = previousFrameBounds?.width
+    ? clamp((anchorX - previousFrameBounds.left) / previousFrameBounds.width, 0, 1)
+    : 0.5;
+  const anchorRatioY = previousFrameBounds?.height
+    ? clamp((anchorY - previousFrameBounds.top) / previousFrameBounds.height, 0, 1)
+    : 0.5;
 
   picker.dataset.islandMapZoom = String(zoom);
   picker.style.setProperty("--island-map-zoom", formatPathNumber(zoom));
@@ -8812,10 +8913,17 @@ function setIslandMapPickerZoom(picker, value, { preserveCenter = true, remember
 
   const applyView = () => {
     if (preserveCenter) {
+      const nextFrameBounds = canvasFrame?.getBoundingClientRect();
+      const anchoredLeft = nextFrameBounds
+        ? picker.scrollLeft + nextFrameBounds.left + nextFrameBounds.width * anchorRatioX - anchorX
+        : picker.scrollLeft;
+      const anchoredTop = nextFrameBounds
+        ? picker.scrollTop + nextFrameBounds.top + nextFrameBounds.height * anchorRatioY - anchorY
+        : picker.scrollTop;
       const next = clampIslandMapPickerScroll(
         picker,
-        centerRatioX * picker.scrollWidth - picker.clientWidth / 2,
-        centerRatioY * picker.scrollHeight - picker.clientHeight / 2
+        anchoredLeft,
+        anchoredTop
       );
       picker.scrollLeft = next.left;
       picker.scrollTop = next.top;
@@ -8829,14 +8937,7 @@ function setIslandMapPickerZoom(picker, value, { preserveCenter = true, remember
 
 function fitIslandMapPickerToView(picker) {
   if (!picker?.clientWidth || !picker?.clientHeight) return false;
-  const layout = getIslandMapGridLayout();
-  const horizontalPadding = Math.min(28, picker.clientWidth * 0.08);
-  const verticalPadding = Math.min(28, picker.clientHeight * 0.08);
-  const fitZoom = Math.min(
-    ISLAND_PICKER_MAX_ZOOM,
-    (picker.clientWidth - horizontalPadding) / layout.stageWidth,
-    (picker.clientHeight - verticalPadding) / layout.stageHeight
-  );
+  const fitZoom = getIslandMapPickerFitZoom(picker);
   setIslandMapPickerZoom(picker, fitZoom, { preserveCenter: false, remember: false });
   const centerStage = () => {
     const centered = clampIslandMapPickerScroll(
@@ -8861,6 +8962,10 @@ function attachIslandMapPickerZoom(picker) {
   const zoomOut = shell.querySelector("[data-island-map-zoom-out]");
   const zoomIn = shell.querySelector("[data-island-map-zoom-in]");
   const fitAll = shell.querySelector("[data-island-map-zoom-fit]");
+  let wheelZoomFrame = 0;
+  let wheelTargetZoom = getIslandMapPickerZoom(picker);
+  let wheelAnchorX = 0;
+  let wheelAnchorY = 0;
   zoomOut?.addEventListener("click", () => {
     setIslandMapPickerZoom(picker, getIslandMapPickerZoom(picker) - ISLAND_PICKER_ZOOM_STEP);
   });
@@ -8872,6 +8977,30 @@ function attachIslandMapPickerZoom(picker) {
   });
   fitAll?.addEventListener("click", () => {
     fitIslandMapPickerToView(picker);
+  });
+  picker.addEventListener("wheel", event => {
+    event.preventDefault();
+    if (!wheelZoomFrame) wheelTargetZoom = getIslandMapPickerZoom(picker);
+    const boundedDelta = clamp(Number(event.deltaY) || 0, -120, 120);
+    wheelTargetZoom = clampIslandMapPickerZoom(
+      wheelTargetZoom * Math.exp(-boundedDelta * 0.0016),
+      getIslandMapPickerMinimumZoom(picker)
+    );
+    wheelAnchorX = event.clientX;
+    wheelAnchorY = event.clientY;
+    if (wheelZoomFrame) return;
+    wheelZoomFrame = requestAnimationFrame(() => {
+      wheelZoomFrame = 0;
+      setIslandMapPickerZoom(picker, wheelTargetZoom, {
+        anchorClientX: wheelAnchorX,
+        anchorClientY: wheelAnchorY,
+      });
+      wheelTargetZoom = getIslandMapPickerZoom(picker);
+    });
+  }, { passive: false });
+  setIslandMapPickerZoom(picker, getIslandMapPickerZoom(picker), {
+    preserveCenter: false,
+    remember: false,
   });
   updateIslandMapPickerZoomControls(picker);
 }
@@ -18370,7 +18499,7 @@ function useInventoryItem(itemId) {
     const eligibleMarches = getOutgoingAttacks().filter(isSwiftMarchOrderEligible);
     if (modal?.open && modal.classList.contains("inventory-modal")) modal.close();
     if (!eligibleMarches.length) {
-      showToast("No eligible troop transfers are active.");
+      showToast("No eligible troop transfers or Stronghold reinforcements are active.");
       return;
     }
     showOutgoingAttacksModal();
@@ -19522,10 +19651,15 @@ function isSwiftMarchOrderEligible(mission) {
   if (!mission || mission.kind !== "transfer" || mission.targetType === "camp") return false;
   if (mission.serverPending || mission.isResolving || mission.returning || mission.relinquishTransfer || mission.swiftMarchUsedAtMs) return false;
   if (Math.max(0, Number(mission.remaining) || 0) <= 1) return false;
-  const source = mission.source || cityById(mission.fromId);
-  const target = mission.target || getArmyTargetById(mission.toId);
-  if (!source || !target || isStronghold(source) || isStronghold(target) || isRewardCampTarget(target)) return false;
-  return true;
+  const source = mission.source || cityById(mission.fromId) || getOwnedCitySnapshotById(mission.fromId) || getPlayableBaseCityById(mission.fromId);
+  const target = mission.target || getArmyTargetById(mission.toId) || getOwnedCitySnapshotById(mission.toId) || getPlayableBaseCityById(mission.toId);
+  if (!source || !target || isRewardCampTarget(target)) return false;
+  const currentUid = getCurrentOnlineUid();
+  const targetIsOwned = target.owner === "player"
+    || (currentUid && String(target.ownerUid || mission.targetOwnerUid || "") === currentUid);
+  if (!targetIsOwned) return false;
+  if (isStronghold(target)) return true;
+  return !isStronghold(source);
 }
 
 function isRecallHornEligible(mission) {
@@ -19540,7 +19674,7 @@ async function useSwiftMarchOrderOnMission(armyId = "") {
   if (!normalizedArmyId || swiftMarchOrderRequests.has(normalizedArmyId)) return;
   const mission = getOutgoingAttacks().find(entry => getOnlineArmyResolutionId(entry) === normalizedArmyId);
   if (!mission || !isSwiftMarchOrderEligible(mission)) {
-    showToast("That troop transfer is no longer eligible for a Swift March Order.");
+    showToast("That troop transfer or Stronghold reinforcement is no longer eligible for a Swift March Order.");
     renderOutgoingAttacksModalContent();
     return;
   }
