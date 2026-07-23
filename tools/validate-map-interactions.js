@@ -36,6 +36,8 @@ const context = {
   LOW_ZOOM_PERFORMANCE_EXIT_THRESHOLD: readNumberConstant("LOW_ZOOM_PERFORMANCE_EXIT_THRESHOLD"),
   MARCH_ENDPOINT_INTERACTION_MIN_CLEARANCE: readNumberConstant("MARCH_ENDPOINT_INTERACTION_MIN_CLEARANCE"),
   MARCH_ENDPOINT_INTERACTION_SIZE_RATIO: readNumberConstant("MARCH_ENDPOINT_INTERACTION_SIZE_RATIO"),
+  ISLAND_PICKER_MIN_ZOOM: readNumberConstant("ISLAND_PICKER_MIN_ZOOM"),
+  ISLAND_PICKER_MAX_ZOOM: readNumberConstant("ISLAND_PICKER_MAX_ZOOM"),
   DEFAULT_CAMP_VISUAL_SIZE: 132,
   isRewardCampTarget: target => target?.kind === "camp",
   isStronghold: target => target?.kind === "stronghold",
@@ -48,6 +50,7 @@ vm.runInContext([
   extractFunction("shouldUseLowZoomPerformance"),
   extractFunction("getMarchEndpointInteractionClearance"),
   extractFunction("isMarchInsideEndpointInteractionClearance"),
+  extractFunction("clampIslandMapPickerZoom"),
 ].join("\n"), context, { filename: gamePath });
 
 assert.equal(context.shouldUseLowZoomPerformance(false, 0.71), true);
@@ -58,6 +61,13 @@ assert.equal(context.shouldUseCrowdedMapPerformance(false, 69, 23), false);
 assert.equal(context.shouldUseCrowdedMapPerformance(false, 70, 0), true);
 assert.equal(context.shouldUseCrowdedMapPerformance(true, 58, 0), true, "Crowded mode should remain stable near its entry threshold.");
 assert.equal(context.shouldUseCrowdedMapPerformance(true, 57, 17), false);
+assert.equal(context.clampIslandMapPickerZoom(0.01), context.ISLAND_PICKER_MIN_ZOOM);
+assert.equal(context.clampIslandMapPickerZoom(0), context.ISLAND_PICKER_MIN_ZOOM);
+assert.equal(context.clampIslandMapPickerZoom(0.5), 0.5);
+assert.equal(context.clampIslandMapPickerZoom(2), context.ISLAND_PICKER_MAX_ZOOM);
+assert.match(source, /data-island-map-zoom-fit/, "The map picker should expose a fit-all control.");
+assert.match(source, /fitIslandMapPickerToView/, "The map picker should calculate a fit-all zoom.");
+assert.match(stylesSource, /\.island-map-canvas-frame[\s\S]*?--island-grid-scaled-w/, "The map picker should scale inside a bounded canvas frame.");
 
 const city = { id: "city", kind: "city", x: 0, y: 0 };
 const target = { id: "target", kind: "city", x: 1000, y: 0 };

@@ -2392,6 +2392,7 @@ let activeOperationsTab = "marches";
 const islandMapPickerViewState = {
   scrollLeft: 0,
   scrollTop: 0,
+  zoom: 1,
   hasView: false,
 };
 let islandMapHomeRefreshInFlight = false;
@@ -8571,6 +8572,9 @@ const ISLAND_PICKER_TILE_HEIGHT = 179;
 const ISLAND_PICKER_TILE_GAP = 34;
 const ISLAND_PICKER_STAGE_PADDING = 260;
 const ISLAND_PICKER_GRID_CELL_WORLD_SIZE = 2300;
+const ISLAND_PICKER_MIN_ZOOM = 0.18;
+const ISLAND_PICKER_MAX_ZOOM = 1;
+const ISLAND_PICKER_ZOOM_STEP = 0.08;
 
 function getIslandMapGridCoordinate(region) {
   const regionId = normalizeRegionId(region?.id);
@@ -8648,7 +8652,16 @@ function getIslandMapIconStyle(region) {
 
 function getIslandMapPickerStyle() {
   const layout = getIslandMapGridLayout();
-  return `--island-grid-stage-w:${Math.round(layout.stageWidth)}px;--island-grid-stage-h:${Math.round(layout.stageHeight)}px;--island-grid-cell-w:${ISLAND_PICKER_TILE_WIDTH + ISLAND_PICKER_TILE_GAP}px;--island-grid-cell-h:${ISLAND_PICKER_TILE_HEIGHT + ISLAND_PICKER_TILE_GAP}px;`;
+  const zoom = clampIslandMapPickerZoom(islandMapPickerViewState.zoom);
+  return [
+    `--island-grid-base-w:${Math.round(layout.stageWidth)}px`,
+    `--island-grid-base-h:${Math.round(layout.stageHeight)}px`,
+    `--island-grid-scaled-w:${formatPathNumber(layout.stageWidth * zoom)}px`,
+    `--island-grid-scaled-h:${formatPathNumber(layout.stageHeight * zoom)}px`,
+    `--island-grid-cell-w:${ISLAND_PICKER_TILE_WIDTH + ISLAND_PICKER_TILE_GAP}px`,
+    `--island-grid-cell-h:${ISLAND_PICKER_TILE_HEIGHT + ISLAND_PICKER_TILE_GAP}px`,
+    `--island-map-zoom:${formatPathNumber(zoom)}`,
+  ].join(";");
 }
 
 function getIslandMapConnectionEdges() {
@@ -8713,12 +8726,24 @@ function renderIslandMapTile(region, activeRegionId, homeRegionId) {
 function renderIslandSwitcherModalContent() {
   const activeRegionId = getActiveOnlineRegionId();
   const homeRegionId = getMainCityRegionId();
+  const zoom = clampIslandMapPickerZoom(islandMapPickerViewState.zoom);
   modalBody.innerHTML = `
-    <div class="island-map-picker" style="${getIslandMapPickerStyle()}" aria-label="Island map picker">
-      <div class="island-map-stage">
-        <div class="island-map-canvas">
-          ${renderIslandMapConnections()}
-          ${WORLD_REGIONS.map(region => renderIslandMapTile(region, activeRegionId, homeRegionId)).join("")}
+    <div class="island-map-shell">
+      <div class="island-map-zoom-toolbar" role="group" aria-label="Map zoom controls">
+        <button type="button" data-island-map-zoom-out aria-label="Zoom map out" title="Zoom out">&minus;</button>
+        <input type="range" min="${ISLAND_PICKER_MIN_ZOOM}" max="${ISLAND_PICKER_MAX_ZOOM}" step="0.02" value="${zoom}" data-island-map-zoom-slider aria-label="Map zoom" />
+        <button type="button" data-island-map-zoom-in aria-label="Zoom map in" title="Zoom in">&plus;</button>
+        <button type="button" data-island-map-zoom-fit aria-label="Fit all maps" title="Fit all maps">&#x26F6;</button>
+        <output data-island-map-zoom-value aria-live="polite">${Math.round(zoom * 100)}%</output>
+      </div>
+      <div class="island-map-picker" style="${getIslandMapPickerStyle()}" data-island-map-zoom="${zoom}" aria-label="Island map picker">
+        <div class="island-map-stage">
+          <div class="island-map-canvas-frame">
+            <div class="island-map-canvas">
+              ${renderIslandMapConnections()}
+              ${WORLD_REGIONS.map(region => renderIslandMapTile(region, activeRegionId, homeRegionId)).join("")}
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -8726,6 +8751,7 @@ function renderIslandSwitcherModalContent() {
   if (!modal.open) modal.showModal();
   const picker = modalBody.querySelector(".island-map-picker");
   attachIslandMapPickerPan(picker);
+  attachIslandMapPickerZoom(picker);
   if (!restoreIslandMapPickerView(picker)) {
     centerIslandMapPickerOnRegion(picker, activeRegionId || homeRegionId);
   }
@@ -8742,6 +8768,114 @@ function getIslandMapPickerElement() {
   return modalBody?.querySelector?.(".island-map-picker") || null;
 }
 
+function clampIslandMapPickerZoom(value) {
+  const parsed = Number(value);
+  return Math.min(
+    ISLAND_PICKER_MAX_ZOOM,
+    Math.max(ISLAND_PICKER_MIN_ZOOM, Number.isFinite(parsed) ? parsed : 1)
+  );
+}
+
+function getIslandMapPickerZoom(picker = getIslandMapPickerElement()) {
+  return clampIslandMapPickerZoom(picker?.dataset?.islandMapZoom || islandMapPickerViewState.zoom);
+}
+
+function updateIslandMapPickerZoomControls(picker) {
+  const shell = picker?.closest?.(".island-map-shell");
+  if (!shell) return;
+  const zoom = getIslandMapPickerZoom(picker);
+  const slider = shell.querySelector("[data-island-map-zoom-slider]");
+  const value = shell.querySelector("[data-island-map-zoom-value]");
+  const zoomOut = shell.querySelector("[data-island-map-zoom-out]");
+  const zoomIn = shell.querySelector("[data-island-map-zoom-in]");
+  if (slider) slider.value = String(zoom);
+  if (value) value.textContent = `${Math.round(zoom * 100)}%`;
+  if (zoomOut) zoomOut.disabled = zoom <= ISLAND_PICKER_MIN_ZOOM + 0.001;
+  if (zoomIn) zoomIn.disabled = zoom >= ISLAND_PICKER_MAX_ZOOM - 0.001;
+}
+
+function setIslandMapPickerZoom(picker, value, { preserveCenter = true, remember = true } = {}) {
+  if (!picker) return false;
+  const zoom = clampIslandMapPickerZoom(value);
+  const layout = getIslandMapGridLayout();
+  const previousWidth = Math.max(1, picker.scrollWidth);
+  const previousHeight = Math.max(1, picker.scrollHeight);
+  const centerRatioX = (picker.scrollLeft + picker.clientWidth / 2) / previousWidth;
+  const centerRatioY = (picker.scrollTop + picker.clientHeight / 2) / previousHeight;
+
+  picker.dataset.islandMapZoom = String(zoom);
+  picker.style.setProperty("--island-map-zoom", formatPathNumber(zoom));
+  picker.style.setProperty("--island-grid-scaled-w", `${formatPathNumber(layout.stageWidth * zoom)}px`);
+  picker.style.setProperty("--island-grid-scaled-h", `${formatPathNumber(layout.stageHeight * zoom)}px`);
+  islandMapPickerViewState.zoom = zoom;
+  updateIslandMapPickerZoomControls(picker);
+
+  const applyView = () => {
+    if (preserveCenter) {
+      const next = clampIslandMapPickerScroll(
+        picker,
+        centerRatioX * picker.scrollWidth - picker.clientWidth / 2,
+        centerRatioY * picker.scrollHeight - picker.clientHeight / 2
+      );
+      picker.scrollLeft = next.left;
+      picker.scrollTop = next.top;
+    }
+    if (remember) rememberIslandMapPickerView(picker);
+  };
+  applyView();
+  requestAnimationFrame(applyView);
+  return true;
+}
+
+function fitIslandMapPickerToView(picker) {
+  if (!picker?.clientWidth || !picker?.clientHeight) return false;
+  const layout = getIslandMapGridLayout();
+  const horizontalPadding = Math.min(28, picker.clientWidth * 0.08);
+  const verticalPadding = Math.min(28, picker.clientHeight * 0.08);
+  const fitZoom = Math.min(
+    ISLAND_PICKER_MAX_ZOOM,
+    (picker.clientWidth - horizontalPadding) / layout.stageWidth,
+    (picker.clientHeight - verticalPadding) / layout.stageHeight
+  );
+  setIslandMapPickerZoom(picker, fitZoom, { preserveCenter: false, remember: false });
+  const centerStage = () => {
+    const centered = clampIslandMapPickerScroll(
+      picker,
+      (picker.scrollWidth - picker.clientWidth) / 2,
+      (picker.scrollHeight - picker.clientHeight) / 2
+    );
+    picker.scrollLeft = centered.left;
+    picker.scrollTop = centered.top;
+    rememberIslandMapPickerView(picker);
+  };
+  centerStage();
+  requestAnimationFrame(centerStage);
+  return true;
+}
+
+function attachIslandMapPickerZoom(picker) {
+  const shell = picker?.closest?.(".island-map-shell");
+  if (!picker || !shell || shell.dataset.zoomReady === "true") return;
+  shell.dataset.zoomReady = "true";
+  const slider = shell.querySelector("[data-island-map-zoom-slider]");
+  const zoomOut = shell.querySelector("[data-island-map-zoom-out]");
+  const zoomIn = shell.querySelector("[data-island-map-zoom-in]");
+  const fitAll = shell.querySelector("[data-island-map-zoom-fit]");
+  zoomOut?.addEventListener("click", () => {
+    setIslandMapPickerZoom(picker, getIslandMapPickerZoom(picker) - ISLAND_PICKER_ZOOM_STEP);
+  });
+  zoomIn?.addEventListener("click", () => {
+    setIslandMapPickerZoom(picker, getIslandMapPickerZoom(picker) + ISLAND_PICKER_ZOOM_STEP);
+  });
+  slider?.addEventListener("input", () => {
+    setIslandMapPickerZoom(picker, Number(slider.value));
+  });
+  fitAll?.addEventListener("click", () => {
+    fitIslandMapPickerToView(picker);
+  });
+  updateIslandMapPickerZoomControls(picker);
+}
+
 function clampIslandMapPickerScroll(picker, scrollLeft, scrollTop) {
   const maxLeft = Math.max(0, (picker?.scrollWidth || 0) - (picker?.clientWidth || 0));
   const maxTop = Math.max(0, (picker?.scrollHeight || 0) - (picker?.clientHeight || 0));
@@ -8756,12 +8890,17 @@ function rememberIslandMapPickerView(picker = getIslandMapPickerElement()) {
   const clamped = clampIslandMapPickerScroll(picker, picker.scrollLeft, picker.scrollTop);
   islandMapPickerViewState.scrollLeft = clamped.left;
   islandMapPickerViewState.scrollTop = clamped.top;
+  islandMapPickerViewState.zoom = getIslandMapPickerZoom(picker);
   islandMapPickerViewState.hasView = true;
   return true;
 }
 
 function restoreIslandMapPickerView(picker) {
   if (!picker || !islandMapPickerViewState.hasView) return false;
+  setIslandMapPickerZoom(picker, islandMapPickerViewState.zoom, {
+    preserveCenter: false,
+    remember: false,
+  });
   const apply = () => {
     const clamped = clampIslandMapPickerScroll(
       picker,
@@ -8842,8 +8981,15 @@ function centerIslandMapPickerOnRegion(picker, regionId) {
     const target = [...picker.querySelectorAll("[data-island-region]")]
       .find(button => button.dataset.islandRegion === regionId);
     if (!target || !picker.clientWidth || !picker.clientHeight) return false;
-    picker.scrollLeft = target.offsetLeft + target.offsetWidth / 2 - picker.clientWidth / 2;
-    picker.scrollTop = target.offsetTop + target.offsetHeight / 2 - picker.clientHeight / 2;
+    const pickerBounds = picker.getBoundingClientRect();
+    const targetBounds = target.getBoundingClientRect();
+    const centered = clampIslandMapPickerScroll(
+      picker,
+      picker.scrollLeft + targetBounds.left + targetBounds.width / 2 - pickerBounds.left - picker.clientWidth / 2,
+      picker.scrollTop + targetBounds.top + targetBounds.height / 2 - pickerBounds.top - picker.clientHeight / 2
+    );
+    picker.scrollLeft = centered.left;
+    picker.scrollTop = centered.top;
     rememberIslandMapPickerView(picker);
     return true;
   };

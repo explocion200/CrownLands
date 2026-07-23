@@ -3368,12 +3368,58 @@ button.inventory-slot {
 .island-switcher-modal .modal-card {
   max-height: min(90vh, 740px);
 }
+.island-map-shell {
+  width: min(100%, 920px);
+  display: grid;
+  gap: 7px;
+  margin: .25rem auto .1rem;
+}
+.island-map-zoom-toolbar {
+  min-height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  padding: 0 2px;
+}
+.island-map-zoom-toolbar button {
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 1px solid rgba(211, 161, 63, .58);
+  border-radius: 5px;
+  color: #fff1bd;
+  background: linear-gradient(180deg, #1e628a, #082a46);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.16), 0 4px 9px rgba(0,0,0,.24);
+  font-size: 1.1rem;
+  line-height: 1;
+}
+.island-map-zoom-toolbar button:disabled {
+  opacity: .42;
+}
+.island-map-zoom-toolbar input[type="range"] {
+  width: clamp(90px, 25vw, 180px);
+  min-width: 0;
+  accent-color: #d3a13f;
+}
+.island-map-zoom-toolbar output {
+  width: 44px;
+  min-width: 44px;
+  flex: 0 0 44px;
+  color: #d9f3ff;
+  font-size: .7rem;
+  font-weight: 900;
+  text-align: right;
+}
 .island-map-picker {
   position: relative;
   width: min(100%, 920px);
   height: min(64vh, 560px);
   min-height: 330px;
-  margin: .35rem auto .1rem;
+  margin: 0;
   overflow: auto;
   overscroll-behavior: contain;
   cursor: grab;
@@ -3408,20 +3454,29 @@ button.inventory-slot {
 }
 .island-map-stage {
   position: relative;
-  width: var(--island-grid-stage-w, 1100px);
-  height: var(--island-grid-stage-h, 840px);
+  width: max(100%, var(--island-grid-scaled-w, 1100px));
+  height: max(100%, var(--island-grid-scaled-h, 840px));
   min-width: 100%;
   min-height: 100%;
+}
+.island-map-canvas-frame {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: var(--island-grid-scaled-w, 1100px);
+  height: var(--island-grid-scaled-h, 840px);
+  transform: translate(-50%, -50%);
 }
 .island-map-canvas {
   position: absolute;
   left: 0;
   top: 0;
-  width: 100%;
-  height: 100%;
+  width: var(--island-grid-base-w, 1100px);
+  height: var(--island-grid-base-h, 840px);
   min-width: 0;
   min-height: 0;
-  transform: none;
+  transform: scale(var(--island-map-zoom, 1));
+  transform-origin: left top;
   background:
     linear-gradient(90deg, rgba(255,255,255,.09) 0 1px, transparent 1px var(--island-grid-cell-w, 272px)),
     linear-gradient(rgba(255,255,255,.09) 0 1px, transparent 1px var(--island-grid-cell-h, 213px)),
@@ -6696,6 +6751,20 @@ select:focus {
     linear-gradient(rgba(190, 222, 237, .07) 0 1px, transparent 1px var(--island-grid-cell-h, 213px)),
     linear-gradient(180deg, #144e69, #082c46 62%, #061d31);
   box-shadow: inset 0 0 0 2px rgba(255, 235, 174, .06), inset 0 -18px 34px rgba(0, 0, 0, .24);
+}
+
+@media (max-width: 540px) {
+  .island-map-zoom-toolbar {
+    justify-content: center;
+  }
+  .island-map-zoom-toolbar button {
+    width: 34px;
+    height: 34px;
+    min-width: 34px;
+  }
+  .island-map-zoom-toolbar input[type="range"] {
+    width: min(30vw, 116px);
+  }
 }
 
 .island-map-canvas {
