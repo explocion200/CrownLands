@@ -799,6 +799,36 @@
     }).filter(history => history.cityId && history.regionId && history.source === "deed_camp");
   }
 
+  async function loadCrownCitadelReignLeaderboard(limitCount = 100) {
+    await init();
+    const uid = requireSignedIn();
+    if (!uid) return [];
+    const safeLimit = Math.max(1, Math.min(100, Math.floor(Number(limitCount) || 100)));
+    const { collection, getDocs, query: firestoreQuery, orderBy, limit } = client.modules.firestore;
+    const reignsRef = collection(client.db, "crownCitadelReigns");
+    const reignsQuery = firestoreQuery && orderBy && limit
+      ? firestoreQuery(reignsRef, orderBy("totalHeldMs", "desc"), limit(safeLimit))
+      : reignsRef;
+    const snapshot = await getDocs(reignsQuery);
+    return snapshot.docs.slice(0, safeLimit).map(reignDoc => {
+      const reign = reignDoc.data() || {};
+      return {
+        id: reignDoc.id,
+        playerId: String(reign.playerId || reignDoc.id).slice(0, 128),
+        playerName: cleanPlayerName(reign.playerName || "Ruler"),
+        playerFlag: reign.playerFlag || null,
+        worldId: String(reign.worldId || "").slice(0, 120),
+        resetGeneration: String(reign.resetGeneration || "").slice(0, 120),
+        totalHeldMs: Math.max(0, Math.floor(Number(reign.totalHeldMs) || 0)),
+        currentHeldSinceMs: Math.max(0, Math.floor(Number(reign.currentHeldSinceMs) || 0)),
+        isCurrentHolder: Boolean(reign.isCurrentHolder),
+        lastCapturedAtMs: Math.max(0, Math.floor(Number(reign.lastCapturedAtMs) || 0)),
+        lastLostAtMs: Math.max(0, Math.floor(Number(reign.lastLostAtMs) || 0)),
+        updatedAtMs: Math.max(0, Math.floor(Number(reign.updatedAtMs) || timestampToMs(reign.updatedAt))),
+      };
+    }).filter(reign => reign.playerId);
+  }
+
   function subscribePlayerGlobalStats(handlers = {}) {
     if (!client.db || !client.modules?.firestore?.onSnapshot || !client.user?.uid) return null;
     const { doc, onSnapshot } = client.modules.firestore;
@@ -1331,6 +1361,22 @@
     );
   }
 
+  function subscribeCrownCitadel(islandId = "", citadelId = "", handlers = {}) {
+    if (!client.configured || !client.db || !client.user?.uid || !islandId || !citadelId) return () => {};
+    const { doc, onSnapshot } = client.modules.firestore;
+    return onSnapshot(
+      doc(client.db, "islands", islandId, "cities", citadelId),
+      snapshot => {
+        if (typeof handlers.onCitadel === "function") {
+          handlers.onCitadel(snapshot.exists() ? { id: snapshot.id, ...snapshot.data() } : null);
+        }
+      },
+      error => {
+        if (typeof handlers.onError === "function") handlers.onError(error, "crownCitadel");
+      }
+    );
+  }
+
   function subscribeIsland(islandId, handlers = {}) {
     if (!client.configured || !client.db || !islandId) return () => {};
     const { collection, doc, onSnapshot, query: firestoreQuery, where } = client.modules.firestore;
@@ -1417,6 +1463,7 @@
     loadPlayerGlobalStats,
     loadRewardCampProgress,
     loadRewardCampHistory,
+    loadCrownCitadelReignLeaderboard,
     subscribePlayerGlobalStats,
     sendArmyOrder,
     resolveArmyOrder,
@@ -1443,6 +1490,7 @@
     subscribeIsland,
     subscribePlayerArmies,
     subscribePlayerCamps,
+    subscribeCrownCitadel,
     subscribeServerReports,
     isPushSupported,
     getNotificationPermission,

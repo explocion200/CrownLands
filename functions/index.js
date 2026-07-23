@@ -976,6 +976,78 @@ function isCrownCitadel(city = {}) {
   return isStronghold(city) && (type === "crown" || type === "crown_citadel" || city.id === CROWN_CITADEL_ID);
 }
 
+function crownCitadelReignRef(uid = "") {
+  const safeUid = safeString(uid, 128).replace(/[^a-zA-Z0-9_-]/g, "_");
+  return safeUid ? db.doc(`crownCitadelReigns/${safeUid}`) : null;
+}
+
+async function recordCrownCitadelControlChange(transaction, {
+  citadel = {},
+  previousOwnerUid = "",
+  previousOwnerName = "",
+  nextOwnerUid = "",
+  nextOwnerName = "",
+  nextOwnerFlag = null,
+  nowMs = Date.now(),
+} = {}) {
+  if (!transaction || !isCrownCitadel(citadel)) return;
+  const oldUid = safeString(previousOwnerUid, 128);
+  const newUid = safeString(nextOwnerUid, 128);
+  if (oldUid === newUid) return;
+
+  const oldRef = crownCitadelReignRef(oldUid);
+  const newRef = crownCitadelReignRef(newUid);
+  const refs = [...new Set([oldRef, newRef].filter(Boolean))];
+  const snapshots = new Map();
+  for (const ref of refs) snapshots.set(ref.path, await transaction.get(ref));
+
+  if (oldRef) {
+    const oldData = snapshots.get(oldRef.path)?.data() || {};
+    const isCurrentWorldRecord = safeString(oldData.worldId, 120) === ONLINE_WORLD_ID
+      && safeString(oldData.resetGeneration, 120) === RESET_GENERATION;
+    const recordedHeldSinceMs = isCurrentWorldRecord
+      ? Math.max(0, Math.floor(safeNumber(oldData.currentHeldSinceMs, 0)))
+      : 0;
+    const heldSinceMs = recordedHeldSinceMs || Math.max(0, Math.floor(safeNumber(
+      citadel.lastCapturedAtMs,
+      timestampToMs(citadel.lastCapturedAt)
+    )));
+    const completedReignMs = heldSinceMs > 0 ? Math.max(0, nowMs - heldSinceMs) : 0;
+    transaction.set(oldRef, {
+      playerId: oldUid,
+      playerName: normalizePlayerName(previousOwnerName || oldData.playerName, "Ruler"),
+      playerFlag: oldData.playerFlag || citadel.ownerFlag || null,
+      worldId: ONLINE_WORLD_ID,
+      resetGeneration: RESET_GENERATION,
+      totalHeldMs: (isCurrentWorldRecord ? Math.max(0, Math.floor(safeNumber(oldData.totalHeldMs, 0))) : 0) + completedReignMs,
+      currentHeldSinceMs: 0,
+      isCurrentHolder: false,
+      lastLostAtMs: nowMs,
+      updatedAtMs: nowMs,
+      updatedAt: FieldValue.serverTimestamp(),
+    }, { merge: true });
+  }
+
+  if (newRef) {
+    const newData = snapshots.get(newRef.path)?.data() || {};
+    const isCurrentWorldRecord = safeString(newData.worldId, 120) === ONLINE_WORLD_ID
+      && safeString(newData.resetGeneration, 120) === RESET_GENERATION;
+    transaction.set(newRef, {
+      playerId: newUid,
+      playerName: normalizePlayerName(nextOwnerName || newData.playerName, "Ruler"),
+      playerFlag: nextOwnerFlag || newData.playerFlag || null,
+      worldId: ONLINE_WORLD_ID,
+      resetGeneration: RESET_GENERATION,
+      totalHeldMs: isCurrentWorldRecord ? Math.max(0, Math.floor(safeNumber(newData.totalHeldMs, 0))) : 0,
+      currentHeldSinceMs: nowMs,
+      isCurrentHolder: true,
+      lastCapturedAtMs: nowMs,
+      updatedAtMs: nowMs,
+      updatedAt: FieldValue.serverTimestamp(),
+    }, { merge: true });
+  }
+}
+
 function getStrongholdBonusPercent(city = {}) {
   if (isCrownCitadel(city)) return CROWN_CITADEL_GOLD_BONUS_PERCENT;
   if (isDefenseStronghold(city)) return DEFENSE_STRONGHOLD_BONUS_PERCENT;
@@ -4135,9 +4207,10 @@ exports.syncPlayerIdentity = onCall({ region: "us-central1", maxInstances: 20, i
     };
   }
 
-  const [ownedCitiesSnap, activeArmiesSnap] = await Promise.all([
+  const [ownedCitiesSnap, activeArmiesSnap, crownReignSnap] = await Promise.all([
     db.collectionGroup("cities").where("ownerUid", "==", uid).get(),
     activeArmiesQueryForPlayer(uid).get(),
+    crownCitadelReignRef(uid).get(),
   ]);
   const cityDocs = ownedCitiesSnap.docs.filter(cityDoc => {
     const islandId = cityDoc.ref.parent.parent?.id || "";
@@ -4263,6 +4336,17 @@ exports.syncPlayerIdentity = onCall({ region: "us-central1", maxInstances: 20, i
       },
     });
   });
+  if (crownReignSnap.exists) {
+    writes.push({
+      ref: crownReignSnap.ref,
+      data: {
+        playerName: identity.ownerName,
+        playerFlag: identity.ownerFlag,
+        updatedAtMs: nowMs,
+        updatedAt: FieldValue.serverTimestamp(),
+      },
+    });
+  }
   mainCityRepair.cityPatches.forEach(entry => {
     writes.push({
       ref: entry.ref,
@@ -4904,6 +4988,16 @@ exports.relinquishCity = onCall({ region: "us-central1", maxInstances: 20, invok
       regionId: source.regionId || regionId,
       ...sourcePatch,
     };
+
+    if (isCrownCitadel(source)) {
+      await recordCrownCitadelControlChange(transaction, {
+        citadel: source,
+        previousOwnerUid: uid,
+        previousOwnerName: normalizePlayerName(economy.profileAfter.playerName || source.ownerName, "Ruler"),
+        nextOwnerUid: "",
+        nowMs,
+      });
+    }
 
     writePreparedEconomy(transaction, economy, {}, [
       { ref: sourceEntry.ref, city: source, patch: sourcePatch },
@@ -6451,6 +6545,17 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
     if (result.success) {
       const daily = normalizeDaily(attackerProfile.daily);
       const nextLevel = dropCapturedCityLevel(target);
+      if (isCrownCitadel(target)) {
+        await recordCrownCitadelControlChange(transaction, {
+          citadel: target,
+          previousOwnerUid: oldOwnerUid,
+          previousOwnerName: defenderName,
+          nextOwnerUid: attackerUid,
+          nextOwnerName: attackerName,
+          nextOwnerFlag: attackerProfile.flag || army.ownerFlag || null,
+          nowMs,
+        });
+      }
       const targetPatch = {
         ownerKind: "player",
         ownerUid: attackerUid,

@@ -145,6 +145,11 @@ service cloud.firestore {
       allow create, update, delete: if false;
     }
 
+    match /crownCitadelReigns/{uid} {
+      allow read: if signedIn();
+      allow create, update, delete: if false;
+    }
+
     match /gameServers/{serverId} {
       allow read, create, update, delete: if false;
     }

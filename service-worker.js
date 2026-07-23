@@ -1,16 +1,16 @@
-const CACHE_VERSION = "20260722-realm-lobby-v1";
+const CACHE_VERSION = "20260722-citadel-reign-v1";
 const CACHE_NAME = `crownlands-cache-${CACHE_VERSION}`;
 const STATIC_CACHE_URLS = [
   "/",
   "/index.html",
   "/manifest.webmanifest",
-  "/styles.css?v=20260722-realm-lobby-v1",
+  "/styles.css?v=20260722-citadel-reign-v1",
   "/world-config.js",
   "/firebase-config.js?v=20260703-vapid-key",
-  "/firebaseClient.js?v=20260722-realm-lobby-v1",
-  "/game.js?v=20260722-realm-lobby-v1",
+  "/firebaseClient.js?v=20260722-citadel-reign-v1",
+  "/game.js?v=20260722-citadel-reign-v1",
   "/route-worker.js?v=20260721-structure-route-clearance",
-  "/assets/map-editor-data.js?v=20260722-realm-lobby-v1",
+  "/assets/map-editor-data.js?v=20260722-citadel-reign-v1",
   "/assets/game-menu-background.jpg?v=20260702-login-page",
   "/assets/loading-ring.png",
   "/assets/loading-crown.png",
