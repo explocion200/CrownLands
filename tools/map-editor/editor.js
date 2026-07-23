@@ -16,7 +16,7 @@
   const CITY_UI_LABEL_HEIGHT = 64;
   const CITY_UI_LABEL_OFFSET = 58;
   const MAP_SWITCH_ARROW_ICON_SRC = "/assets/map-switch-arrow.png?v=20260702-map-arrow-bigger";
-  const CITY_UI_FOOTPRINT = { width: 228, top: 208, bottom: 62 };
+  const CITY_UI_MARKER_FOOTPRINT = 72;
   const CAMP_UI_FOOTPRINT_PAD = { x: 34, top: 30, bottom: 18 };
   const STRONGHOLD_UI_FOOTPRINT_PAD = { x: 58, top: 78, bottom: 42 };
   const CROWN_UI_FOOTPRINT_PAD = { x: 84, top: 116, bottom: 56 };
@@ -1064,7 +1064,13 @@
   }
 
   function getUiFootprintDimensions(kind, item) {
-    if (kind === "city") return CITY_UI_FOOTPRINT;
+    if (kind === "city") {
+      return {
+        width: CITY_UI_LABEL_WIDTH,
+        top: CITY_UI_LABEL_OFFSET + CITY_UI_LABEL_HEIGHT,
+        bottom: CITY_UI_MARKER_FOOTPRINT / 2,
+      };
+    }
     if (kind === "camp") {
       const size = getMarkerVisualBaseSize(kind, item);
       return {
