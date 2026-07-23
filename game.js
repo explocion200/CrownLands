@@ -108,7 +108,7 @@ const SHOP_ITEMS = [
 ];
 const ROYAL_PEACE_SHIELD_ITEM_ID = "shield_12h";
 const ROYAL_PEACE_SHIELD_DURATION_MS = 12 * 60 * 60 * 1000;
-const ROYAL_PEACE_SHIELD_PURCHASE_COOLDOWN_MS = 24 * 60 * 60 * 1000;
+const ROYAL_PEACE_SHIELD_DAILY_PURCHASE_LIMIT = 1;
 const WAR_DRUMS_ITEM_ID = "war_drums_30m";
 const WAR_DRUMS_DURATION_MS = 30 * 60 * 1000;
 const WAR_DRUMS_TROOP_PRODUCTION_BONUS_PERCENT = 50;
@@ -116,7 +116,6 @@ const ROYAL_TAX_DECREE_ITEM_ID = "royal_tax_decree_30m";
 const ROYAL_TAX_DECREE_DURATION_MS = 30 * 60 * 1000;
 const ROYAL_TAX_DECREE_GOLD_PRODUCTION_BONUS_PERCENT = 50;
 const PRODUCTION_BOOST_PURCHASE_LIMIT = 3;
-const PRODUCTION_BOOST_PURCHASE_WINDOW_MS = 24 * 60 * 60 * 1000;
 const PRODUCTION_BOOST_ITEM_IDS = new Set([WAR_DRUMS_ITEM_ID, ROYAL_TAX_DECREE_ITEM_ID]);
 const VEIL_OF_SILENCE_ITEM_ID = "veil_of_silence_30m";
 const VEIL_OF_SILENCE_DURATION_MS = 5 * 60 * 1000;
@@ -4873,10 +4872,22 @@ function ensureShopItems() {
 
 function createDefaultItemPurchaseCooldowns() {
   return {
-    [ROYAL_PEACE_SHIELD_ITEM_ID]: { lastPurchasedAtMs: 0 },
-    [WAR_DRUMS_ITEM_ID]: { purchaseTimestampsMs: [] },
-    [ROYAL_TAX_DECREE_ITEM_ID]: { purchaseTimestampsMs: [] },
+    [ROYAL_PEACE_SHIELD_ITEM_ID]: { utcDate: "", purchaseCount: 0 },
+    [WAR_DRUMS_ITEM_ID]: { utcDate: "", purchaseCount: 0 },
+    [ROYAL_TAX_DECREE_ITEM_ID]: { utcDate: "", purchaseCount: 0 },
   };
+}
+
+function getUtcDateKeyAtMs(value = Date.now()) {
+  const parsed = Number(value);
+  const date = new Date(Number.isFinite(parsed) ? parsed : Date.now());
+  return date.toISOString().slice(0, 10);
+}
+
+function getNextUtcDayStartMs(value = Date.now()) {
+  const parsed = Number(value);
+  const date = new Date(Number.isFinite(parsed) ? parsed : Date.now());
+  return Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate() + 1);
 }
 
 function normalizeItemPurchaseTimestamps(value = {}) {
@@ -4892,14 +4903,46 @@ function normalizeItemPurchaseTimestamps(value = {}) {
     .slice(-PRODUCTION_BOOST_PURCHASE_LIMIT);
 }
 
+function normalizeDailyItemPurchaseCounter(value = {}, limit = 0) {
+  const safeLimit = Math.max(0, Math.floor(Number(limit) || 0));
+  const explicitDate = String(value?.utcDate || value?.date || "").trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(explicitDate)) {
+    return {
+      utcDate: explicitDate,
+      purchaseCount: Math.min(safeLimit, Math.max(0, Math.floor(Number(value?.purchaseCount ?? value?.count) || 0))),
+    };
+  }
+
+  const legacyTimestamps = normalizeItemPurchaseTimestamps(value);
+  const lastPurchasedAtMs = timestampToMs(value?.lastPurchasedAtMs || value?.lastPurchasedAt);
+  if (lastPurchasedAtMs > 0) legacyTimestamps.push(lastPurchasedAtMs);
+  if (!legacyTimestamps.length) return { utcDate: "", purchaseCount: 0 };
+
+  const latestPurchaseAtMs = Math.max(...legacyTimestamps);
+  const utcDate = getUtcDateKeyAtMs(latestPurchaseAtMs);
+  const purchaseCount = legacyTimestamps.filter(timestamp => getUtcDateKeyAtMs(timestamp) === utcDate).length;
+  return {
+    utcDate,
+    purchaseCount: Math.min(safeLimit, purchaseCount),
+  };
+}
+
+function getItemDailyPurchaseLimit(itemId) {
+  if (itemId === ROYAL_PEACE_SHIELD_ITEM_ID) return ROYAL_PEACE_SHIELD_DAILY_PURCHASE_LIMIT;
+  if (PRODUCTION_BOOST_ITEM_IDS.has(itemId)) return PRODUCTION_BOOST_PURCHASE_LIMIT;
+  return 0;
+}
+
 function normalizeItemPurchaseCooldowns(cooldowns = {}) {
   const normalized = createDefaultItemPurchaseCooldowns();
-  const shieldCooldown = cooldowns?.[ROYAL_PEACE_SHIELD_ITEM_ID] || {};
-  normalized[ROYAL_PEACE_SHIELD_ITEM_ID].lastPurchasedAtMs = timestampToMs(
-    shieldCooldown.lastPurchasedAtMs || shieldCooldown.lastPurchasedAt
-  );
-  PRODUCTION_BOOST_ITEM_IDS.forEach(itemId => {
-    normalized[itemId].purchaseTimestampsMs = normalizeItemPurchaseTimestamps(cooldowns?.[itemId]);
+  [
+    ROYAL_PEACE_SHIELD_ITEM_ID,
+    ...PRODUCTION_BOOST_ITEM_IDS,
+  ].forEach(itemId => {
+    normalized[itemId] = normalizeDailyItemPurchaseCounter(
+      cooldowns?.[itemId],
+      getItemDailyPurchaseLimit(itemId)
+    );
   });
   return normalized;
 }
@@ -4915,37 +4958,37 @@ function ensureItemPurchaseCooldowns() {
   return state.itemPurchaseCooldowns;
 }
 
+function getItemPurchaseStatus(itemId, cooldowns = ensureItemPurchaseCooldowns(), now = Date.now()) {
+  const limit = getItemDailyPurchaseLimit(itemId);
+  const currentTime = Math.max(0, Number(now) || Date.now());
+  if (limit <= 0) return { count: 0, limit: 0, remainingMs: 0, utcDate: getUtcDateKeyAtMs(currentTime) };
+  const today = getUtcDateKeyAtMs(currentTime);
+  const counter = normalizeDailyItemPurchaseCounter(cooldowns?.[itemId], limit);
+  const count = counter.utcDate === today ? Math.min(limit, counter.purchaseCount) : 0;
+  return {
+    count,
+    limit,
+    remainingMs: count >= limit ? Math.max(0, getNextUtcDayStartMs(currentTime) - currentTime) : 0,
+    utcDate: today,
+  };
+}
+
 function getItemPurchaseCooldownRemainingMs(itemId, now = Date.now()) {
-  const cooldowns = ensureItemPurchaseCooldowns();
-  const currentTime = Math.max(0, Number(now) || Date.now());
-  if (itemId === ROYAL_PEACE_SHIELD_ITEM_ID) {
-    const lastPurchasedAtMs = normalizeTimestampMs(cooldowns?.[ROYAL_PEACE_SHIELD_ITEM_ID]?.lastPurchasedAtMs);
-    if (!lastPurchasedAtMs) return 0;
-    const elapsed = Math.max(0, currentTime - Math.min(lastPurchasedAtMs, currentTime));
-    return Math.max(0, ROYAL_PEACE_SHIELD_PURCHASE_COOLDOWN_MS - elapsed);
-  }
-  if (!PRODUCTION_BOOST_ITEM_IDS.has(itemId)) return 0;
-  const recentPurchases = normalizeItemPurchaseTimestamps(cooldowns?.[itemId])
-    .filter(timestamp => timestamp > currentTime - PRODUCTION_BOOST_PURCHASE_WINDOW_MS && timestamp <= currentTime);
-  if (recentPurchases.length < PRODUCTION_BOOST_PURCHASE_LIMIT) return 0;
-  return Math.max(0, recentPurchases[0] + PRODUCTION_BOOST_PURCHASE_WINDOW_MS - currentTime);
+  return getItemPurchaseStatus(itemId, ensureItemPurchaseCooldowns(), now).remainingMs;
 }
 
-function getProductionBoostPurchaseCount(itemId, now = Date.now()) {
-  if (!PRODUCTION_BOOST_ITEM_IDS.has(itemId)) return 0;
-  const currentTime = Math.max(0, Number(now) || Date.now());
-  return normalizeItemPurchaseTimestamps(ensureItemPurchaseCooldowns()?.[itemId])
-    .filter(timestamp => timestamp > currentTime - PRODUCTION_BOOST_PURCHASE_WINDOW_MS && timestamp <= currentTime)
-    .length;
+function getItemPurchaseCount(itemId, now = Date.now()) {
+  return getItemPurchaseStatus(itemId, ensureItemPurchaseCooldowns(), now).count;
 }
 
-function recordProductionBoostPurchase(itemId, purchasedAtMs = Date.now()) {
-  if (!PRODUCTION_BOOST_ITEM_IDS.has(itemId)) return;
+function recordItemPurchase(itemId, purchasedAtMs = Date.now()) {
+  const limit = getItemDailyPurchaseLimit(itemId);
+  if (limit <= 0) return;
   const cooldowns = ensureItemPurchaseCooldowns();
-  const purchaseTimestampsMs = normalizeItemPurchaseTimestamps(cooldowns[itemId]);
-  purchaseTimestampsMs.push(Math.max(0, Number(purchasedAtMs) || Date.now()));
+  const status = getItemPurchaseStatus(itemId, cooldowns, purchasedAtMs);
   cooldowns[itemId] = {
-    purchaseTimestampsMs: purchaseTimestampsMs.sort((a, b) => a - b).slice(-PRODUCTION_BOOST_PURCHASE_LIMIT),
+    utcDate: status.utcDate,
+    purchaseCount: Math.min(limit, status.count + 1),
   };
 }
 
@@ -8634,7 +8677,6 @@ const ISLAND_PICKER_STAGE_PADDING = 260;
 const ISLAND_PICKER_GRID_CELL_WORLD_SIZE = 2300;
 const ISLAND_PICKER_MIN_ZOOM = 0.18;
 const ISLAND_PICKER_MAX_ZOOM = 1;
-const ISLAND_PICKER_ZOOM_STEP = 0.08;
 
 function getIslandMapGridCoordinate(region) {
   const regionId = normalizeRegionId(region?.id);
@@ -8789,12 +8831,6 @@ function renderIslandSwitcherModalContent() {
   const zoom = clampIslandMapPickerZoom(islandMapPickerViewState.zoom);
   modalBody.innerHTML = `
     <div class="island-map-shell">
-      <div class="island-map-zoom-toolbar" role="group" aria-label="Map zoom controls">
-        <button type="button" data-island-map-zoom-out aria-label="Zoom map out" title="Zoom out">&minus;</button>
-        <button type="button" data-island-map-zoom-in aria-label="Zoom map in" title="Zoom in">&plus;</button>
-        <button type="button" data-island-map-zoom-fit aria-label="Fit all maps" title="Fit all maps">&#x26F6;</button>
-        <output data-island-map-zoom-value aria-live="polite">${Math.round(zoom * 100)}%</output>
-      </div>
       <div class="island-map-picker" style="${getIslandMapPickerStyle()}" data-island-map-zoom="${zoom}" aria-label="Island map picker">
         <div class="island-map-stage">
           <div class="island-map-canvas-frame">
@@ -8862,22 +8898,10 @@ function getIslandMapPickerZoom(picker = getIslandMapPickerElement()) {
   );
 }
 
-function updateIslandMapPickerZoomControls(picker) {
-  const shell = picker?.closest?.(".island-map-shell");
-  if (!shell) return;
-  const zoom = getIslandMapPickerZoom(picker);
-  const value = shell.querySelector("[data-island-map-zoom-value]");
-  const zoomOut = shell.querySelector("[data-island-map-zoom-out]");
-  const zoomIn = shell.querySelector("[data-island-map-zoom-in]");
-  const minimumZoom = getIslandMapPickerMinimumZoom(picker);
-  if (value) value.textContent = `${Math.round(zoom * 100)}%`;
-  if (zoomOut) zoomOut.disabled = zoom <= minimumZoom + 0.001;
-  if (zoomIn) zoomIn.disabled = zoom >= ISLAND_PICKER_MAX_ZOOM - 0.001;
-}
-
 function setIslandMapPickerZoom(picker, value, {
   preserveCenter = true,
   remember = true,
+  settleNextFrame = true,
   anchorClientX = null,
   anchorClientY = null,
   targetClientX = null,
@@ -8889,14 +8913,14 @@ function setIslandMapPickerZoom(picker, value, {
   const pickerBounds = picker.getBoundingClientRect();
   const canvasFrame = picker.querySelector(".island-map-canvas-frame");
   const previousFrameBounds = canvasFrame?.getBoundingClientRect();
-  const anchorX = Number.isFinite(Number(anchorClientX))
+  const anchorX = anchorClientX !== null && Number.isFinite(Number(anchorClientX))
     ? Number(anchorClientX)
     : pickerBounds.left + picker.clientWidth / 2;
-  const anchorY = Number.isFinite(Number(anchorClientY))
+  const anchorY = anchorClientY !== null && Number.isFinite(Number(anchorClientY))
     ? Number(anchorClientY)
     : pickerBounds.top + picker.clientHeight / 2;
-  const targetX = Number.isFinite(Number(targetClientX)) ? Number(targetClientX) : anchorX;
-  const targetY = Number.isFinite(Number(targetClientY)) ? Number(targetClientY) : anchorY;
+  const targetX = targetClientX !== null && Number.isFinite(Number(targetClientX)) ? Number(targetClientX) : anchorX;
+  const targetY = targetClientY !== null && Number.isFinite(Number(targetClientY)) ? Number(targetClientY) : anchorY;
   const anchorRatioX = previousFrameBounds?.width
     ? clamp((anchorX - previousFrameBounds.left) / previousFrameBounds.width, 0, 1)
     : 0.5;
@@ -8909,7 +8933,6 @@ function setIslandMapPickerZoom(picker, value, {
   picker.style.setProperty("--island-grid-scaled-w", `${formatPathNumber(layout.stageWidth * zoom)}px`);
   picker.style.setProperty("--island-grid-scaled-h", `${formatPathNumber(layout.stageHeight * zoom)}px`);
   islandMapPickerViewState.zoom = zoom;
-  updateIslandMapPickerZoomControls(picker);
 
   const applyView = () => {
     if (preserveCenter) {
@@ -8931,74 +8954,65 @@ function setIslandMapPickerZoom(picker, value, {
     if (remember) rememberIslandMapPickerView(picker);
   };
   applyView();
-  requestAnimationFrame(applyView);
-  return true;
-}
-
-function fitIslandMapPickerToView(picker) {
-  if (!picker?.clientWidth || !picker?.clientHeight) return false;
-  const fitZoom = getIslandMapPickerFitZoom(picker);
-  setIslandMapPickerZoom(picker, fitZoom, { preserveCenter: false, remember: false });
-  const centerStage = () => {
-    const centered = clampIslandMapPickerScroll(
-      picker,
-      (picker.scrollWidth - picker.clientWidth) / 2,
-      (picker.scrollHeight - picker.clientHeight) / 2
-    );
-    picker.scrollLeft = centered.left;
-    picker.scrollTop = centered.top;
-    rememberIslandMapPickerView(picker);
-  };
-  centerStage();
-  requestAnimationFrame(centerStage);
+  if (settleNextFrame) requestAnimationFrame(applyView);
   return true;
 }
 
 function attachIslandMapPickerZoom(picker) {
-  const shell = picker?.closest?.(".island-map-shell");
-  if (!picker || !shell || shell.dataset.zoomReady === "true") return;
-  shell.dataset.zoomReady = "true";
-  const zoomOut = shell.querySelector("[data-island-map-zoom-out]");
-  const zoomIn = shell.querySelector("[data-island-map-zoom-in]");
-  const fitAll = shell.querySelector("[data-island-map-zoom-fit]");
+  if (!picker || picker.dataset.zoomReady === "true") return;
+  picker.dataset.zoomReady = "true";
   let wheelZoomFrame = 0;
   let wheelTargetZoom = getIslandMapPickerZoom(picker);
-  let wheelAnchorX = 0;
-  let wheelAnchorY = 0;
-  zoomOut?.addEventListener("click", () => {
-    setIslandMapPickerZoom(picker, getIslandMapPickerZoom(picker) - ISLAND_PICKER_ZOOM_STEP);
-  });
-  zoomIn?.addEventListener("click", () => {
-    setIslandMapPickerZoom(picker, getIslandMapPickerZoom(picker) + ISLAND_PICKER_ZOOM_STEP);
-  });
-  fitAll?.addEventListener("click", () => {
-    fitIslandMapPickerToView(picker);
-  });
+  let wheelAnchorX = null;
+  let wheelAnchorY = null;
+  let wheelZoomFrameAt = 0;
+
+  const animateWheelZoom = timestamp => {
+    wheelZoomFrame = 0;
+    if (!picker.isConnected) return;
+    const currentZoom = getIslandMapPickerZoom(picker);
+    const elapsed = wheelZoomFrameAt ? Math.min(40, Math.max(8, timestamp - wheelZoomFrameAt)) : 16;
+    const easing = 1 - Math.exp(-elapsed / 58);
+    const difference = wheelTargetZoom - currentZoom;
+    const finished = Math.abs(difference) < 0.0005;
+    const nextZoom = finished ? wheelTargetZoom : currentZoom + difference * easing;
+    setIslandMapPickerZoom(picker, nextZoom, {
+      anchorClientX: wheelAnchorX,
+      anchorClientY: wheelAnchorY,
+      remember: false,
+      settleNextFrame: false,
+    });
+    wheelZoomFrameAt = timestamp;
+    if (!finished) {
+      wheelZoomFrame = requestAnimationFrame(animateWheelZoom);
+      return;
+    }
+    wheelTargetZoom = getIslandMapPickerZoom(picker);
+    wheelZoomFrameAt = 0;
+    rememberIslandMapPickerView(picker);
+  };
+
+  const queueWheelZoom = (value, anchorClientX = null, anchorClientY = null) => {
+    wheelTargetZoom = clampIslandMapPickerZoom(value, getIslandMapPickerMinimumZoom(picker));
+    wheelAnchorX = anchorClientX !== null && Number.isFinite(Number(anchorClientX)) ? Number(anchorClientX) : null;
+    wheelAnchorY = anchorClientY !== null && Number.isFinite(Number(anchorClientY)) ? Number(anchorClientY) : null;
+    if (!wheelZoomFrame) wheelZoomFrame = requestAnimationFrame(animateWheelZoom);
+  };
+
   picker.addEventListener("wheel", event => {
     event.preventDefault();
     if (!wheelZoomFrame) wheelTargetZoom = getIslandMapPickerZoom(picker);
     const boundedDelta = clamp(Number(event.deltaY) || 0, -120, 120);
-    wheelTargetZoom = clampIslandMapPickerZoom(
+    const nextTargetZoom = clampIslandMapPickerZoom(
       wheelTargetZoom * Math.exp(-boundedDelta * 0.0016),
       getIslandMapPickerMinimumZoom(picker)
     );
-    wheelAnchorX = event.clientX;
-    wheelAnchorY = event.clientY;
-    if (wheelZoomFrame) return;
-    wheelZoomFrame = requestAnimationFrame(() => {
-      wheelZoomFrame = 0;
-      setIslandMapPickerZoom(picker, wheelTargetZoom, {
-        anchorClientX: wheelAnchorX,
-        anchorClientY: wheelAnchorY,
-      });
-      wheelTargetZoom = getIslandMapPickerZoom(picker);
-    });
+    queueWheelZoom(nextTargetZoom, event.clientX, event.clientY);
   }, { passive: false });
   setIslandMapPickerZoom(picker, getIslandMapPickerZoom(picker), {
     preserveCenter: false,
     remember: false,
   });
-  updateIslandMapPickerZoomControls(picker);
 }
 
 function clampIslandMapPickerScroll(picker, scrollLeft, scrollTop) {
@@ -9144,6 +9158,8 @@ function attachIslandMapPickerPan(picker) {
   let moved = false;
   let tapRegionId = "";
   let pinchGeometry = null;
+  let pendingPinchGeometry = null;
+  let pinchZoomFrame = 0;
 
   picker.addEventListener("scroll", () => {
     rememberIslandMapPickerView(picker);
@@ -9165,6 +9181,23 @@ function attachIslandMapPickerPan(picker) {
     window.setTimeout(() => {
       if (picker) delete picker.dataset.justDragged;
     }, 180);
+  };
+
+  const applyPendingPinchZoom = () => {
+    pinchZoomFrame = 0;
+    const nextGeometry = pendingPinchGeometry;
+    pendingPinchGeometry = null;
+    if (!pinchGeometry || !nextGeometry) return;
+    const nextZoom = getIslandMapPickerZoom(picker) * (nextGeometry.distance / pinchGeometry.distance);
+    setIslandMapPickerZoom(picker, nextZoom, {
+      anchorClientX: pinchGeometry.centerX,
+      anchorClientY: pinchGeometry.centerY,
+      targetClientX: nextGeometry.centerX,
+      targetClientY: nextGeometry.centerY,
+      remember: false,
+      settleNextFrame: false,
+    });
+    pinchGeometry = nextGeometry;
   };
 
   picker.addEventListener("pointerdown", event => {
@@ -9192,17 +9225,8 @@ function attachIslandMapPickerPan(picker) {
       touchPointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
       if (touchPointers.size >= 2) {
         const nextGeometry = getIslandMapPinchGeometry(touchPointers);
-        if (pinchGeometry && nextGeometry) {
-          const nextZoom = getIslandMapPickerZoom(picker) * (nextGeometry.distance / pinchGeometry.distance);
-          setIslandMapPickerZoom(picker, nextZoom, {
-            anchorClientX: pinchGeometry.centerX,
-            anchorClientY: pinchGeometry.centerY,
-            targetClientX: nextGeometry.centerX,
-            targetClientY: nextGeometry.centerY,
-            remember: false,
-          });
-        }
-        pinchGeometry = nextGeometry;
+        pendingPinchGeometry = nextGeometry;
+        if (!pinchZoomFrame) pinchZoomFrame = requestAnimationFrame(applyPendingPinchZoom);
         moved = true;
         tapRegionId = "";
         event.preventDefault();
@@ -9221,6 +9245,10 @@ function attachIslandMapPickerPan(picker) {
 
   const stopPan = event => {
     const wasPinching = picker.classList.contains("pinching");
+    if (wasPinching && pinchZoomFrame) {
+      cancelAnimationFrame(pinchZoomFrame);
+      applyPendingPinchZoom();
+    }
     if (event.pointerType === "touch") touchPointers.delete(event.pointerId);
     picker.releasePointerCapture?.(event.pointerId);
     if (wasPinching) {
@@ -17121,7 +17149,9 @@ function releaseSelectionRenderDelay() {
 
 function renderSelectionChangeNow() {
   releaseSelectionRenderDelay();
-  renderAll();
+  lastRenderTime = performance.now();
+  renderCities();
+  renderPanel();
 }
 
 function renderSendConfirmPanel(source, target) {
@@ -18313,7 +18343,8 @@ function renderItemIcon(item, imageClass = "") {
 function renderShopItem(item, inventory) {
   const owned = Math.max(0, Math.floor(Number(inventory[item.id]) || 0));
   const cooldownText = getItemPurchaseCooldownText(item.id);
-  const purchaseCount = getProductionBoostPurchaseCount(item.id);
+  const purchaseLimit = getItemDailyPurchaseLimit(item.id);
+  const purchaseCount = getItemPurchaseCount(item.id);
   const canBuy = state && !shopPurchaseInFlight && !cooldownText && Math.floor(Number(state.gold) || 0) >= item.cost;
   const buyLabel = cooldownText ? "Cooldown" : "Buy";
   return `
@@ -18325,8 +18356,8 @@ function renderShopItem(item, inventory) {
         <strong>${escapeHtml(item.label)}</strong>
         <span>${formatNumber(item.cost)} gold</span>
         <small>Owned: ${formatNumber(owned)}</small>
-        ${PRODUCTION_BOOST_ITEM_IDS.has(item.id) ? `<small class="shop-item-purchase-limit">Purchased: ${formatNumber(purchaseCount)}/${formatNumber(PRODUCTION_BOOST_PURCHASE_LIMIT)} in 24 hours</small>` : ""}
-        ${cooldownText ? `<small class="shop-item-cooldown">Available in ${escapeHtml(cooldownText)}</small>` : ""}
+        ${purchaseLimit > 0 ? `<small class="shop-item-purchase-limit">Purchased: ${formatNumber(purchaseCount)}/${formatNumber(purchaseLimit)} today (UTC)</small>` : ""}
+        ${cooldownText ? `<small class="shop-item-cooldown">UTC reset in ${escapeHtml(cooldownText)}</small>` : ""}
         <small>${escapeHtml(item.description)}</small>
       </div>
       <button class="shop-buy-btn" data-shop-buy="${escapeHtml(item.id)}" type="button" ${canBuy ? "" : "disabled"}>${buyLabel}</button>
@@ -18369,7 +18400,7 @@ async function buyShopItem(itemId) {
   if (!item) return;
   const cooldownText = getItemPurchaseCooldownText(item.id);
   if (cooldownText) {
-    showToast(`${item.label} can be purchased again in ${cooldownText}.`);
+    showToast(`${item.label} resets at 00:00 UTC, in ${cooldownText}.`);
     renderShopModal();
     return;
   }
@@ -18396,13 +18427,9 @@ async function buyShopItem(itemId) {
     }
 
     const inventory = ensureShopItems();
-    const cooldowns = ensureItemPurchaseCooldowns();
     state.gold = currentGold - item.cost;
     inventory[item.id] = Math.max(0, Math.floor(Number(inventory[item.id]) || 0)) + 1;
-    if (item.id === ROYAL_PEACE_SHIELD_ITEM_ID) {
-      cooldowns[ROYAL_PEACE_SHIELD_ITEM_ID] = { lastPurchasedAtMs: Date.now() };
-    }
-    recordProductionBoostPurchase(item.id);
+    recordItemPurchase(item.id);
 
     addLog(`Bought ${item.label} for ${formatNumber(item.cost)} gold.`);
     saveGame();

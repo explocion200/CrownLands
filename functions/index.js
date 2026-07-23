@@ -73,7 +73,7 @@ const CITY_UPGRADE_XP_BASE = 18;
 const CITY_UPGRADE_XP_PER_LEVEL = 4;
 const ROYAL_PEACE_SHIELD_ITEM_ID = "shield_12h";
 const ROYAL_PEACE_SHIELD_DURATION_MS = 12 * 60 * 60 * 1000;
-const ROYAL_PEACE_SHIELD_PURCHASE_COOLDOWN_MS = 24 * 60 * 60 * 1000;
+const ROYAL_PEACE_SHIELD_DAILY_PURCHASE_LIMIT = 1;
 const WAR_DRUMS_ITEM_ID = "war_drums_30m";
 const WAR_DRUMS_DURATION_MS = 30 * 60 * 1000;
 const WAR_DRUMS_TROOP_PRODUCTION_BONUS_PERCENT = 50;
@@ -81,7 +81,6 @@ const ROYAL_TAX_DECREE_ITEM_ID = "royal_tax_decree_30m";
 const ROYAL_TAX_DECREE_DURATION_MS = 30 * 60 * 1000;
 const ROYAL_TAX_DECREE_GOLD_PRODUCTION_BONUS_PERCENT = 50;
 const PRODUCTION_BOOST_PURCHASE_LIMIT = 3;
-const PRODUCTION_BOOST_PURCHASE_WINDOW_MS = 24 * 60 * 60 * 1000;
 const PRODUCTION_BOOST_ITEM_IDS = new Set([WAR_DRUMS_ITEM_ID, ROYAL_TAX_DECREE_ITEM_ID]);
 const VEIL_OF_SILENCE_ITEM_ID = "veil_of_silence_30m";
 const VEIL_OF_SILENCE_DURATION_MS = 5 * 60 * 1000;
@@ -2752,36 +2751,72 @@ function normalizeItemPurchaseTimestamps(value = {}) {
     .slice(-PRODUCTION_BOOST_PURCHASE_LIMIT);
 }
 
-function normalizeItemPurchaseCooldowns(cooldowns = {}) {
-  const shieldCooldown = cooldowns?.[ROYAL_PEACE_SHIELD_ITEM_ID] || {};
-  const normalized = {
-    [ROYAL_PEACE_SHIELD_ITEM_ID]: {
-      lastPurchasedAtMs: timestampToMs(shieldCooldown.lastPurchasedAtMs || shieldCooldown.lastPurchasedAt),
-    },
-    [WAR_DRUMS_ITEM_ID]: { purchaseTimestampsMs: [] },
-    [ROYAL_TAX_DECREE_ITEM_ID]: { purchaseTimestampsMs: [] },
+function getNextUtcDayStartMs(nowMs = Date.now()) {
+  const date = new Date(Math.max(0, safeNumber(nowMs, Date.now())));
+  return Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate() + 1);
+}
+
+function normalizeDailyItemPurchaseCounter(value = {}, limit = 0) {
+  const safeLimit = Math.max(0, Math.floor(safeNumber(limit, 0)));
+  const explicitDate = safeString(value?.utcDate || value?.date, 10);
+  if (/^\d{4}-\d{2}-\d{2}$/.test(explicitDate)) {
+    return {
+      utcDate: explicitDate,
+      purchaseCount: Math.min(safeLimit, Math.max(0, Math.floor(safeNumber(value?.purchaseCount ?? value?.count, 0)))),
+    };
+  }
+
+  const legacyTimestamps = normalizeItemPurchaseTimestamps(value);
+  const lastPurchasedAtMs = timestampToMs(value?.lastPurchasedAtMs || value?.lastPurchasedAt);
+  if (lastPurchasedAtMs > 0) legacyTimestamps.push(lastPurchasedAtMs);
+  if (!legacyTimestamps.length) return { utcDate: "", purchaseCount: 0 };
+
+  const latestPurchaseAtMs = Math.max(...legacyTimestamps);
+  const utcDate = getUtcDateKey(latestPurchaseAtMs);
+  const purchaseCount = legacyTimestamps.filter(timestamp => getUtcDateKey(timestamp) === utcDate).length;
+  return {
+    utcDate,
+    purchaseCount: Math.min(safeLimit, purchaseCount),
   };
-  PRODUCTION_BOOST_ITEM_IDS.forEach(itemId => {
-    normalized[itemId].purchaseTimestampsMs = normalizeItemPurchaseTimestamps(cooldowns?.[itemId]);
+}
+
+function getItemDailyPurchaseLimit(itemId) {
+  if (itemId === ROYAL_PEACE_SHIELD_ITEM_ID) return ROYAL_PEACE_SHIELD_DAILY_PURCHASE_LIMIT;
+  if (PRODUCTION_BOOST_ITEM_IDS.has(itemId)) return PRODUCTION_BOOST_PURCHASE_LIMIT;
+  return 0;
+}
+
+function normalizeItemPurchaseCooldowns(cooldowns = {}) {
+  const normalized = {
+    [ROYAL_PEACE_SHIELD_ITEM_ID]: { utcDate: "", purchaseCount: 0 },
+    [WAR_DRUMS_ITEM_ID]: { utcDate: "", purchaseCount: 0 },
+    [ROYAL_TAX_DECREE_ITEM_ID]: { utcDate: "", purchaseCount: 0 },
+  };
+  [
+    ROYAL_PEACE_SHIELD_ITEM_ID,
+    ...PRODUCTION_BOOST_ITEM_IDS,
+  ].forEach(itemId => {
+    normalized[itemId] = normalizeDailyItemPurchaseCounter(
+      cooldowns?.[itemId],
+      getItemDailyPurchaseLimit(itemId)
+    );
   });
   return normalized;
 }
 
-function getShieldPurchaseCooldownRemainingMs(cooldowns = {}, nowMs = Date.now()) {
-  const lastPurchasedAtMs = timestampToMs(cooldowns?.[ROYAL_PEACE_SHIELD_ITEM_ID]?.lastPurchasedAtMs);
-  if (!lastPurchasedAtMs) return 0;
-  const elapsed = Math.max(0, nowMs - Math.min(lastPurchasedAtMs, nowMs));
-  return Math.max(0, ROYAL_PEACE_SHIELD_PURCHASE_COOLDOWN_MS - elapsed);
-}
-
-function getProductionBoostPurchaseStatus(itemId, cooldowns = {}, nowMs = Date.now()) {
-  if (!PRODUCTION_BOOST_ITEM_IDS.has(itemId)) return { count: 0, remainingMs: 0, purchaseTimestampsMs: [] };
-  const purchaseTimestampsMs = normalizeItemPurchaseTimestamps(cooldowns?.[itemId])
-    .filter(timestamp => timestamp > nowMs - PRODUCTION_BOOST_PURCHASE_WINDOW_MS && timestamp <= nowMs);
-  const remainingMs = purchaseTimestampsMs.length >= PRODUCTION_BOOST_PURCHASE_LIMIT
-    ? Math.max(0, purchaseTimestampsMs[0] + PRODUCTION_BOOST_PURCHASE_WINDOW_MS - nowMs)
-    : 0;
-  return { count: purchaseTimestampsMs.length, remainingMs, purchaseTimestampsMs };
+function getItemPurchaseStatus(itemId, cooldowns = {}, nowMs = Date.now()) {
+  const limit = getItemDailyPurchaseLimit(itemId);
+  const currentTime = Math.max(0, safeNumber(nowMs, Date.now()));
+  const utcDate = getUtcDateKey(currentTime);
+  if (limit <= 0) return { count: 0, limit: 0, remainingMs: 0, utcDate };
+  const counter = normalizeDailyItemPurchaseCounter(cooldowns?.[itemId], limit);
+  const count = counter.utcDate === utcDate ? Math.min(limit, counter.purchaseCount) : 0;
+  return {
+    count,
+    limit,
+    remainingMs: count >= limit ? Math.max(0, getNextUtcDayStartMs(currentTime) - currentTime) : 0,
+    utcDate,
+  };
 }
 
 function formatCooldownMs(ms) {
@@ -5089,20 +5124,14 @@ exports.purchaseShopItem = onCall({ region: "us-central1", maxInstances: 20, inv
     if (gold < item.cost) {
       throw new HttpsError("failed-precondition", `${item.label} costs ${item.cost.toLocaleString()} gold.`);
     }
-    if (itemId === ROYAL_PEACE_SHIELD_ITEM_ID) {
-      const cooldownRemainingMs = getShieldPurchaseCooldownRemainingMs(economy.itemPurchaseCooldowns, nowMs);
-      if (cooldownRemainingMs > 0) {
-        throw new HttpsError(
-          "failed-precondition",
-          `Royal Peace Shield can only be purchased once every 24 hours. Available in ${formatCooldownMs(cooldownRemainingMs)}.`
-        );
-      }
-    }
-    const productionBoostPurchaseStatus = getProductionBoostPurchaseStatus(itemId, economy.itemPurchaseCooldowns, nowMs);
-    if (productionBoostPurchaseStatus.remainingMs > 0) {
+    const purchaseStatus = getItemPurchaseStatus(itemId, economy.itemPurchaseCooldowns, nowMs);
+    if (purchaseStatus.remainingMs > 0) {
+      const purchaseRule = itemId === ROYAL_PEACE_SHIELD_ITEM_ID
+        ? "once per UTC day"
+        : `${purchaseStatus.limit} times per UTC day`;
       throw new HttpsError(
         "failed-precondition",
-        `${item.label} can only be purchased ${PRODUCTION_BOOST_PURCHASE_LIMIT} times every 24 hours. Available in ${formatCooldownMs(productionBoostPurchaseStatus.remainingMs)}.`
+        `${item.label} can only be purchased ${purchaseRule}. UTC reset in ${formatCooldownMs(purchaseStatus.remainingMs)}.`
       );
     }
 
@@ -5112,14 +5141,10 @@ exports.purchaseShopItem = onCall({ region: "us-central1", maxInstances: 20, inv
     shopItems[itemId] = Math.max(0, Math.floor(safeNumber(shopItems[itemId], 0))) + 1;
     const itemPurchaseCooldowns = {
       ...economy.itemPurchaseCooldowns,
-      ...(itemId === ROYAL_PEACE_SHIELD_ITEM_ID ? {
-        [ROYAL_PEACE_SHIELD_ITEM_ID]: { lastPurchasedAtMs: nowMs },
-      } : {}),
-      ...(PRODUCTION_BOOST_ITEM_IDS.has(itemId) ? {
+      ...(purchaseStatus.limit > 0 ? {
         [itemId]: {
-          purchaseTimestampsMs: [...productionBoostPurchaseStatus.purchaseTimestampsMs, nowMs]
-            .sort((a, b) => a - b)
-            .slice(-PRODUCTION_BOOST_PURCHASE_LIMIT),
+          utcDate: purchaseStatus.utcDate,
+          purchaseCount: Math.min(purchaseStatus.limit, purchaseStatus.count + 1),
         },
       } : {}),
     };

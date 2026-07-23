@@ -58,7 +58,7 @@ body {
   -webkit-touch-callout: none;
 }
 button, input { font: inherit; }
-button { border: 0; cursor: pointer; }
+button { border: 0; cursor: pointer; touch-action: manipulation; }
 button:disabled { opacity: .42; cursor: not-allowed; }
 input { user-select: text; -webkit-user-select: text; -webkit-touch-callout: default; }
 
@@ -3371,43 +3371,7 @@ button.inventory-slot {
 .island-map-shell {
   width: min(100%, 920px);
   display: grid;
-  gap: 7px;
   margin: .25rem auto .1rem;
-}
-.island-map-zoom-toolbar {
-  min-height: 38px;
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 6px;
-  padding: 0 2px;
-}
-.island-map-zoom-toolbar button {
-  width: 36px;
-  height: 36px;
-  min-width: 36px;
-  display: grid;
-  place-items: center;
-  padding: 0;
-  border: 1px solid rgba(211, 161, 63, .58);
-  border-radius: 5px;
-  color: #fff1bd;
-  background: linear-gradient(180deg, #1e628a, #082a46);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.16), 0 4px 9px rgba(0,0,0,.24);
-  font-size: 1.1rem;
-  line-height: 1;
-}
-.island-map-zoom-toolbar button:disabled {
-  opacity: .42;
-}
-.island-map-zoom-toolbar output {
-  width: 44px;
-  min-width: 44px;
-  flex: 0 0 44px;
-  color: #d9f3ff;
-  font-size: .7rem;
-  font-weight: 900;
-  text-align: right;
 }
 .island-map-picker {
   position: relative;
@@ -3419,8 +3383,8 @@ button.inventory-slot {
   overscroll-behavior: contain;
   cursor: grab;
   user-select: none;
-  scrollbar-color: rgba(255, 226, 147, .68) rgba(5, 28, 48, .4);
-  scrollbar-width: thin;
+  -ms-overflow-style: none;
+  scrollbar-width: none;
   touch-action: none;
   border-radius: 16px;
   border: 1px solid rgba(175, 228, 255, .26);
@@ -3436,17 +3400,9 @@ button.inventory-slot {
   cursor: grabbing;
 }
 .island-map-picker::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
-}
-.island-map-picker::-webkit-scrollbar-track {
-  background: rgba(5, 28, 48, .38);
-  border-radius: 999px;
-}
-.island-map-picker::-webkit-scrollbar-thumb {
-  background: rgba(255, 226, 147, .66);
-  border: 2px solid rgba(5, 28, 48, .5);
-  border-radius: 999px;
+  width: 0;
+  height: 0;
+  display: none;
 }
 .island-map-stage {
   position: relative;
@@ -3473,11 +3429,23 @@ button.inventory-slot {
   min-height: 0;
   transform: scale(var(--island-map-zoom, 1));
   transform-origin: left top;
+  backface-visibility: hidden;
+  will-change: transform;
   background:
     linear-gradient(90deg, rgba(255,255,255,.09) 0 1px, transparent 1px var(--island-grid-cell-w, 272px)),
     linear-gradient(rgba(255,255,255,.09) 0 1px, transparent 1px var(--island-grid-cell-h, 213px)),
     radial-gradient(circle at 50% 50%, rgba(151, 226, 255, .2), transparent 40%),
     linear-gradient(180deg, rgba(27, 120, 159, .62) 0%, rgba(14, 85, 123, .62) 54%, rgba(11, 53, 83, .82) 100%);
+}
+
+.island-switcher-modal .modal-card #modalBody {
+  scrollbar-width: none;
+}
+
+.island-switcher-modal .modal-card #modalBody::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;
 }
 .island-map-icon {
   position: absolute;
@@ -6747,17 +6715,6 @@ select:focus {
     linear-gradient(rgba(190, 222, 237, .07) 0 1px, transparent 1px var(--island-grid-cell-h, 213px)),
     linear-gradient(180deg, #144e69, #082c46 62%, #061d31);
   box-shadow: inset 0 0 0 2px rgba(255, 235, 174, .06), inset 0 -18px 34px rgba(0, 0, 0, .24);
-}
-
-@media (max-width: 540px) {
-  .island-map-zoom-toolbar {
-    justify-content: center;
-  }
-  .island-map-zoom-toolbar button {
-    width: 34px;
-    height: 34px;
-    min-width: 34px;
-  }
 }
 
 .island-map-canvas {

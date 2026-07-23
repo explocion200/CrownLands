@@ -20,7 +20,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
       "type": "crownlands_main",
       "cityCapacity": 100,
       "imageSrc": "assets/worlds/world_01/maps/center-crownlands-heart-1783019616021.webp",
-      "thumbnailSrc": "",
+      "thumbnailSrc": "assets/worlds/world_01/thumbnails/center-thumb.webp",
       "imageWidth": 1448,
       "imageHeight": 1086,
       "region": {
@@ -1411,7 +1411,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
       "type": "endgame",
       "cityCapacity": 50,
       "imageSrc": "assets/worlds/world_01/maps/west-west-2-1783019399438.webp",
-      "thumbnailSrc": "",
+      "thumbnailSrc": "assets/worlds/world_01/thumbnails/west-thumb.webp",
       "imageWidth": 1448,
       "imageHeight": 1086,
       "region": {
@@ -2211,7 +2211,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
       "type": "endgame",
       "cityCapacity": 50,
       "imageSrc": "assets/worlds/world_01/maps/east-east-4-1783020191215.webp",
-      "thumbnailSrc": "",
+      "thumbnailSrc": "assets/worlds/world_01/thumbnails/east-thumb.webp",
       "imageWidth": 1448,
       "imageHeight": 1086,
       "region": {
@@ -3059,7 +3059,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
       "type": "endgame",
       "cityCapacity": 50,
       "imageSrc": "assets/worlds/world_01/maps/north-north-1-1783019201680.webp",
-      "thumbnailSrc": "",
+      "thumbnailSrc": "assets/worlds/world_01/thumbnails/north-thumb.webp",
       "imageWidth": 1448,
       "imageHeight": 1086,
       "region": {
@@ -4027,7 +4027,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
       "type": "endgame",
       "cityCapacity": 50,
       "imageSrc": "assets/worlds/world_01/maps/south-south-5-1783020401484.webp",
-      "thumbnailSrc": "",
+      "thumbnailSrc": "assets/worlds/world_01/thumbnails/south-thumb.webp",
       "imageWidth": 1448,
       "imageHeight": 1086,
       "region": {
@@ -4924,7 +4924,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
       "type": "midgame",
       "cityCapacity": 100,
       "imageSrc": "assets/worlds/world_01/maps/region_6-6-1783021585258.webp",
-      "thumbnailSrc": "",
+      "thumbnailSrc": "assets/worlds/world_01/thumbnails/region_6-thumb.webp",
       "imageWidth": 1448,
       "imageHeight": 1086,
       "region": {
@@ -5624,7 +5624,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
       "type": "midgame",
       "cityCapacity": 50,
       "imageSrc": "assets/worlds/world_01/maps/region_7-7-1783022207943.webp",
-      "thumbnailSrc": "",
+      "thumbnailSrc": "assets/worlds/world_01/thumbnails/region_7-thumb.webp",
       "imageWidth": 1448,
       "imageHeight": 1086,
       "region": {
@@ -6577,7 +6577,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
       "type": "starter",
       "cityCapacity": 50,
       "imageSrc": "assets/worlds/world_01/maps/region_8-8-1783022783978.webp",
-      "thumbnailSrc": "",
+      "thumbnailSrc": "assets/worlds/world_01/thumbnails/region_8-thumb.webp",
       "imageWidth": 1448,
       "imageHeight": 1086,
       "region": {
@@ -7793,7 +7793,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
       "type": "midgame",
       "cityCapacity": 50,
       "imageSrc": "assets/worlds/world_01/maps/region_9-9-1783023202200.webp",
-      "thumbnailSrc": "",
+      "thumbnailSrc": "assets/worlds/world_01/thumbnails/region_9-thumb.webp",
       "imageWidth": 1448,
       "imageHeight": 1086,
       "region": {
@@ -8854,7 +8854,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
       "type": "midgame",
       "cityCapacity": 50,
       "imageSrc": "assets/worlds/world_01/maps/region_10-10-1783023599661.webp",
-      "thumbnailSrc": "",
+      "thumbnailSrc": "assets/worlds/world_01/thumbnails/region_10-thumb.webp",
       "imageWidth": 1448,
       "imageHeight": 1086,
       "region": {
@@ -9398,7 +9398,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
       "type": "starter",
       "cityCapacity": 50,
       "imageSrc": "assets/worlds/world_01/maps/region_11-11-1783024323781.webp",
-      "thumbnailSrc": "",
+      "thumbnailSrc": "assets/worlds/world_01/thumbnails/region_11-thumb.webp",
       "imageWidth": 1448,
       "imageHeight": 1086,
       "region": {
@@ -10408,7 +10408,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
       "type": "starter",
       "cityCapacity": 50,
       "imageSrc": "assets/worlds/world_01/maps/region_12-12-1783024478267.webp",
-      "thumbnailSrc": "",
+      "thumbnailSrc": "assets/worlds/world_01/thumbnails/region_12-thumb.webp",
       "imageWidth": 1448,
       "imageHeight": 1086,
       "region": {
@@ -11371,7 +11371,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
       "type": "starter",
       "cityCapacity": 50,
       "imageSrc": "assets/worlds/world_01/maps/region_13-13-1783024786859.webp",
-      "thumbnailSrc": "",
+      "thumbnailSrc": "assets/worlds/world_01/thumbnails/region_13-thumb.webp",
       "imageWidth": 1448,
       "imageHeight": 1086,
       "region": {
@@ -12358,7 +12358,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
       "type": "starter",
       "cityCapacity": 50,
       "imageSrc": "assets/worlds/world_01/maps/region_14-14-1783024960400.webp",
-      "thumbnailSrc": "",
+      "thumbnailSrc": "assets/worlds/world_01/thumbnails/region_14-thumb.webp",
       "imageWidth": 1448,
       "imageHeight": 1086,
       "region": {
@@ -13165,7 +13165,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
       "type": "starter",
       "cityCapacity": 50,
       "imageSrc": "assets/worlds/world_01/maps/region_15-15-1783025218871.webp",
-      "thumbnailSrc": "",
+      "thumbnailSrc": "assets/worlds/world_01/thumbnails/region_15-thumb.webp",
       "imageWidth": 1448,
       "imageHeight": 1086,
       "region": {

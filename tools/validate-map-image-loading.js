@@ -5,6 +5,7 @@ const root = path.resolve(__dirname, "..");
 const game = fs.readFileSync(path.join(root, "game.js"), "utf8");
 const html = fs.readFileSync(path.join(root, "index.html"), "utf8");
 const worker = fs.readFileSync(path.join(root, "service-worker.js"), "utf8");
+const layout = JSON.parse(fs.readFileSync(path.join(root, "functions", "world-layout.json"), "utf8"));
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
@@ -42,4 +43,18 @@ assert(
   "Map images should continue using cache-first service-worker delivery."
 );
 
-console.log("Map image loading validation passed.");
+let fullMapBytes = 0;
+let thumbnailBytes = 0;
+for (const map of layout.maps || []) {
+  const fullMapPath = path.join(root, String(map.imageSrc || ""));
+  const thumbnailPath = path.join(root, String(map.thumbnailSrc || ""));
+  assert(map.thumbnailSrc, `${map.id} should use an optimized map-picker thumbnail.`);
+  assert(fs.existsSync(fullMapPath), `${map.id} full map art is missing.`);
+  assert(fs.existsSync(thumbnailPath), `${map.id} map-picker thumbnail is missing.`);
+  assert(map.thumbnailSrc !== map.imageSrc, `${map.id} should not load full map art in the map picker.`);
+  fullMapBytes += fs.statSync(fullMapPath).size;
+  thumbnailBytes += fs.statSync(thumbnailPath).size;
+}
+assert(thumbnailBytes < fullMapBytes * 0.1, "Map-picker thumbnails should stay below 10% of full map art size.");
+
+console.log(`Map image loading validation passed (${thumbnailBytes} thumbnail bytes vs ${fullMapBytes} full-map bytes).`);
