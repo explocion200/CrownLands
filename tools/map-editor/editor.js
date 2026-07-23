@@ -16,6 +16,10 @@
   const CITY_UI_LABEL_HEIGHT = 64;
   const CITY_UI_LABEL_OFFSET = 58;
   const MAP_SWITCH_ARROW_ICON_SRC = "/assets/map-switch-arrow.png?v=20260702-map-arrow-bigger";
+  const CITY_UI_FOOTPRINT = { width: 228, top: 208, bottom: 62 };
+  const CAMP_UI_FOOTPRINT_PAD = { x: 34, top: 30, bottom: 18 };
+  const STRONGHOLD_UI_FOOTPRINT_PAD = { x: 58, top: 78, bottom: 42 };
+  const CROWN_UI_FOOTPRINT_PAD = { x: 84, top: 116, bottom: 56 };
   const REGION_TYPES = ["starter", "midgame", "endgame", "activity", "crownlands_main"];
   const EDGE_TYPES = ["road", "valley", "pass", "river_crossing", "open_field", "forest_break", "bridge"];
   const CAMP_TYPES = ["gold", "troops", "items", "deed"];
@@ -132,6 +136,7 @@
     toggleStrongholdsBtn: document.getElementById("toggleStrongholdsBtn"),
     toggleCampsBtn: document.getElementById("toggleCampsBtn"),
     toggleConnectionsBtn: document.getElementById("toggleConnectionsBtn"),
+    toggleUiBoundsBtn: document.getElementById("toggleUiBoundsBtn"),
     importFileInput: document.getElementById("importFileInput"),
     regionImageFileInput: document.getElementById("regionImageFileInput"),
     strongholdTypeSelect: document.getElementById("strongholdTypeSelect"),
@@ -183,6 +188,7 @@
       strongholds: true,
       camps: true,
       connections: true,
+      uiBounds: true,
     },
     draggingMarker: null,
     draggingEdge: null,
@@ -693,6 +699,7 @@
     elements.toggleStrongholdsBtn.classList.toggle("active", state.toggles.strongholds);
     elements.toggleCampsBtn.classList.toggle("active", state.toggles.camps);
     elements.toggleConnectionsBtn.classList.toggle("active", state.toggles.connections);
+    elements.toggleUiBoundsBtn.classList.toggle("active", state.toggles.uiBounds);
     elements.deleteSelectedBtn.disabled = !state.selected || state.selected.kind === "gridCell";
     elements.uploadRegionImageBtn.disabled = state.editorMode !== "region" || !currentRegion();
     elements.zoomLabel.textContent = `${Math.round(state.zoom * 100)}%`;
@@ -975,6 +982,7 @@
     elements.regionView.classList.toggle("hide-strongholds", !state.toggles.strongholds);
     elements.regionView.classList.toggle("hide-camps", !state.toggles.camps);
     elements.regionView.classList.toggle("hide-connections", !state.toggles.connections);
+    elements.regionView.classList.toggle("hide-ui-bounds", !state.toggles.uiBounds);
     renderRegionMarkers(region);
     renderEdgeZones(region);
   }
@@ -983,6 +991,7 @@
     elements.markerLayer.innerHTML = "";
     const cityUiGuide = getSelectedCityUiGuide(region);
     region.cities.forEach((city, index) => {
+      elements.markerLayer.appendChild(createUiFootprint("city", city, index, region));
       const marker = createMarker("city", city, index, region);
       const isSelectedGuide = index === cityUiGuide.selectedIndex;
       const isOverlapPeer = cityUiGuide.overlapIndexes.has(index);
@@ -1003,6 +1012,7 @@
       elements.markerLayer.appendChild(marker);
     });
     region.strongholds.forEach((stronghold, index) => {
+      elements.markerLayer.appendChild(createUiFootprint("stronghold", stronghold, index, region));
       const marker = createMarker("stronghold", stronghold, index, region);
       marker.classList.toggle("crown", stronghold.strongholdType === "crown_citadel");
       marker.dataset.strongholdType = stronghold.strongholdType;
@@ -1010,6 +1020,7 @@
       elements.markerLayer.appendChild(marker);
     });
     region.camps.forEach((camp, index) => {
+      elements.markerLayer.appendChild(createUiFootprint("camp", camp, index, region));
       const marker = createMarker("camp", camp, index, region);
       marker.dataset.campType = camp.campType;
       marker.innerHTML = `<img src="${escapeHtml(resolveAssetPath(camp.artSrc))}" alt="" draggable="false" decoding="async" />`;
@@ -1052,6 +1063,43 @@
     return a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
   }
 
+  function getUiFootprintDimensions(kind, item) {
+    if (kind === "city") return CITY_UI_FOOTPRINT;
+    if (kind === "camp") {
+      const size = getMarkerVisualBaseSize(kind, item);
+      return {
+        width: size + CAMP_UI_FOOTPRINT_PAD.x,
+        top: Math.round(size * 0.62 + CAMP_UI_FOOTPRINT_PAD.top),
+        bottom: Math.round(size * 0.44 + CAMP_UI_FOOTPRINT_PAD.bottom),
+      };
+    }
+    const size = getMarkerVisualBaseSize(kind, item);
+    const isCrown = item.strongholdType === "crown_citadel";
+    const pad = isCrown ? CROWN_UI_FOOTPRINT_PAD : STRONGHOLD_UI_FOOTPRINT_PAD;
+    return {
+      width: Math.max(isCrown ? 340 : 240, Math.round(size * (isCrown ? 1.36 : 1.28) + pad.x)),
+      top: Math.round(size * (isCrown ? 1.18 : 0.96) + pad.top),
+      bottom: Math.round(size * 0.38 + pad.bottom),
+    };
+  }
+
+  function createUiFootprint(kind, item, index, region) {
+    const dimensions = getUiFootprintDimensions(kind, item);
+    const footprint = document.createElement("div");
+    const isCrown = kind === "stronghold" && item.strongholdType === "crown_citadel";
+    footprint.className = `ui-footprint ${kind}${isCrown ? " crown" : ""}`;
+    footprint.dataset.kind = kind;
+    footprint.dataset.index = String(index);
+    footprint.dataset.label = isCrown ? "Crown + label area" : `${titleFromId(kind)} UI area`;
+    footprint.style.left = `${item.xNorm * 100}%`;
+    footprint.style.top = `${item.yNorm * 100}%`;
+    footprint.style.width = `${Math.round(dimensions.width * state.zoom)}px`;
+    footprint.style.height = `${Math.round((dimensions.top + dimensions.bottom) * state.zoom)}px`;
+    footprint.style.transform = `translate(-50%, -${Math.round(dimensions.top * state.zoom)}px)`;
+    footprint.title = `${item.name} ${footprint.dataset.label}`;
+    return footprint;
+  }
+
   function createMarker(kind, item, index, region) {
     const marker = document.createElement("button");
     marker.type = "button";
@@ -1080,13 +1128,17 @@
       return;
     }
     if (kind !== "stronghold" && kind !== "camp") return;
-    const defaultSize = kind === "camp"
-      ? (CAMP_DEFAULTS[item.campType]?.size || CAMP_DEFAULTS.gold.size)
-      : (STRONGHOLD_DEFAULTS[item.strongholdType]?.size || STRONGHOLD_DEFAULTS.gold_stronghold.size);
-    const size = readVisualSize(item.size, defaultSize);
+    const size = getMarkerVisualBaseSize(kind, item);
     marker.style.setProperty("--marker-base-size", `${size}px`);
     marker.style.setProperty("--marker-size", `${Math.max(1, size * state.zoom)}px`);
     marker.dataset.visualSize = String(size);
+  }
+
+  function getMarkerVisualBaseSize(kind, item) {
+    const defaultSize = kind === "camp"
+      ? (CAMP_DEFAULTS[item.campType]?.size || CAMP_DEFAULTS.gold.size)
+      : (STRONGHOLD_DEFAULTS[item.strongholdType]?.size || STRONGHOLD_DEFAULTS.gold_stronghold.size);
+    return readVisualSize(item.size, defaultSize);
   }
 
   function renderEdgeZones(region) {
@@ -2085,6 +2137,7 @@
     elements.toggleStrongholdsBtn.addEventListener("click", () => toggleView("strongholds"));
     elements.toggleCampsBtn.addEventListener("click", () => toggleView("camps"));
     elements.toggleConnectionsBtn.addEventListener("click", () => toggleView("connections"));
+    elements.toggleUiBoundsBtn.addEventListener("click", () => toggleView("uiBounds"));
     elements.zoomOutBtn.addEventListener("click", () => zoomRegion(state.zoom <= 1 ? -0.1 : -0.2));
     elements.zoomInBtn.addEventListener("click", () => zoomRegion(state.zoom < 1 ? 0.1 : 0.2));
     elements.worldIdInput.addEventListener("input", handleWorldFieldInput);
@@ -2143,6 +2196,8 @@
       setTool("camp");
     } else if (event.key.toLowerCase() === "g") {
       toggleView("grid");
+    } else if (event.key.toLowerCase() === "u") {
+      toggleView("uiBounds");
     }
   }
 
