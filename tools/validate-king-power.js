@@ -43,7 +43,7 @@ const config = Object.fromEntries(constantNames.map(name => {
 
 const serverVersion = readConstant(serverSource, "GLOBAL_PLAYER_STATS_VERSION");
 const clientVersion = readConstant(clientSource, "KING_POWER_AUTHORITY_VERSION");
-if (serverVersion !== clientVersion || serverVersion !== 5) {
+if (serverVersion !== clientVersion || serverVersion !== 6) {
   throw new Error(`King Power authority versions differ or are stale (server ${serverVersion}, client ${clientVersion}).`);
 }
 
@@ -208,6 +208,6 @@ if (crown.replacementPower <= base.replacementPower || crown.defensivePower <= b
 }
 
 console.log(
-  `Validated King Power v5: 1x L100 + 10M troops = ${concentratedArmy.total.toLocaleString()}, `
+  `Validated King Power v6: 1x L100 + 10M troops = ${concentratedArmy.total.toLocaleString()}, `
     + `10x L75 + 1M troops = ${broadKingdom.total.toLocaleString()}.`
 );

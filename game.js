@@ -72,8 +72,8 @@ const SHOP_ITEMS = [
     id: "war_drums_30m",
     legacyIds: ["troop_boost_1h"],
     label: "War Drums",
-    description: "Increases troop production from owned cities by 50% for 30 minutes.",
-    cost: 250_000,
+    description: "Increases troop production from owned cities by 5% for 30 minutes.",
+    cost: 75_000,
     icon: "assets/war-drums-icon.webp?v=20260703-shop-icons",
   },
   {
@@ -88,7 +88,7 @@ const SHOP_ITEMS = [
     legacyIds: ["anti_scout_1h"],
     label: "Veil of Silence",
     description: "Blocks enemy scouting for 5 minutes.",
-    cost: 175_000,
+    cost: 125_000,
     icon: "assets/veil-of-silence-icon.webp?v=20260703-shop-icons",
   },
   {
@@ -108,19 +108,25 @@ const SHOP_ITEMS = [
 ];
 const ROYAL_PEACE_SHIELD_ITEM_ID = "shield_12h";
 const ROYAL_PEACE_SHIELD_DURATION_MS = 12 * 60 * 60 * 1000;
-const ROYAL_PEACE_SHIELD_DAILY_PURCHASE_LIMIT = 1;
 const WAR_DRUMS_ITEM_ID = "war_drums_30m";
 const WAR_DRUMS_DURATION_MS = 30 * 60 * 1000;
-const WAR_DRUMS_TROOP_PRODUCTION_BONUS_PERCENT = 50;
+const WAR_DRUMS_TROOP_PRODUCTION_BONUS_PERCENT = 5;
 const ROYAL_TAX_DECREE_ITEM_ID = "royal_tax_decree_30m";
 const ROYAL_TAX_DECREE_DURATION_MS = 30 * 60 * 1000;
 const ROYAL_TAX_DECREE_GOLD_PRODUCTION_BONUS_PERCENT = 50;
-const PRODUCTION_BOOST_PURCHASE_LIMIT = 3;
-const PRODUCTION_BOOST_ITEM_IDS = new Set([WAR_DRUMS_ITEM_ID, ROYAL_TAX_DECREE_ITEM_ID]);
 const VEIL_OF_SILENCE_ITEM_ID = "veil_of_silence_30m";
 const VEIL_OF_SILENCE_DURATION_MS = 5 * 60 * 1000;
 const SWIFT_MARCH_ORDER_ITEM_ID = "swift_march_order";
 const RECALL_HORN_ITEM_ID = "recall_horn";
+const ITEM_DAILY_PURCHASE_LIMITS = Object.freeze({
+  [ROYAL_PEACE_SHIELD_ITEM_ID]: 1,
+  [WAR_DRUMS_ITEM_ID]: 4,
+  [ROYAL_TAX_DECREE_ITEM_ID]: 2,
+  [VEIL_OF_SILENCE_ITEM_ID]: 4,
+  [SWIFT_MARCH_ORDER_ITEM_ID]: 2,
+  [RECALL_HORN_ITEM_ID]: 2,
+});
+const MAX_ITEM_DAILY_PURCHASE_LIMIT = Math.max(...Object.values(ITEM_DAILY_PURCHASE_LIMITS));
 
 function cleanEditorRegionId(value) {
   return String(value || "")
@@ -271,7 +277,7 @@ const DEED_CAMP_HOLD_SECONDS = 60 * 60;
 const RELIC_CAMP_BASE_DEFENDERS = 10000;
 const RELIC_CAMP_DEFENSE_LEVEL = 30;
 const RELIC_CAMP_HOLD_SECONDS = 30 * 60;
-const RELIC_CAMP_DAILY_REWARD_LIMIT = 5;
+const RELIC_CAMP_DAILY_REWARD_LIMIT = 2;
 const RELIC_CAMP_DROP_TABLE = [
   { itemId: WAR_DRUMS_ITEM_ID, itemName: "War Drums", rarity: "Common", chance: 35 },
   { itemId: VEIL_OF_SILENCE_ITEM_ID, itemName: "Veil of Silence", rarity: "Common", chance: 25 },
@@ -291,7 +297,8 @@ const REWARD_CAMP_CONFIG = {
     baseDefenders: GOLD_CAMP_BASE_DEFENDERS,
     defenseLevel: GOLD_CAMP_DEFENSE_LEVEL,
     holdSeconds: GOLD_CAMP_HOLD_SECONDS,
-    dailyRewards: [100000, 100000, 75000, 50000, 25000],
+    dailyRewards: [100000, 75000, 50000, 25000],
+    rewardHours: [3, 2, 1, 0.5],
   },
   troops: {
     type: "troops",
@@ -303,7 +310,8 @@ const REWARD_CAMP_CONFIG = {
     baseDefenders: WARBAND_CAMP_BASE_DEFENDERS,
     defenseLevel: WARBAND_CAMP_DEFENSE_LEVEL,
     holdSeconds: WARBAND_CAMP_HOLD_SECONDS,
-    dailyRewards: [50000, 50000, 37500, 25000, 12500],
+    dailyRewards: [50000, 37500, 25000, 12500],
+    rewardHours: [6, 4, 3, 2],
   },
   deed: {
     type: "deed",
@@ -606,27 +614,32 @@ const IMAGE_NO_CITY_TERRAIN = normalizeImageTerrainShapes({
   ],
 });
 const SERVER_CITY_UPGRADE_LEVEL_CHUNK = 25;
-const MILLION_LORDS_CITY_COST_BASE = 50;
-const MILLION_LORDS_CITY_COST_GROWTH = 1.2;
-const CITY_PRESTIGE_START_LEVEL = 100;
-const CITY_PRESTIGE_BAND_SIZE = 10;
 const MILLION_LORDS_CITY_PRODUCTION_VP_BASE = 20;
 const MILLION_LORDS_CITY_PRODUCTION_VP_GROWTH = 1.115;
 const MILLION_LORDS_PASSIVE_GOLD_PER_CITY_VP = 15;
+const CITY_GOLD_ENDGAME_START_LEVEL = 100;
+const CITY_GOLD_ENDGAME_GROWTH = 1.08;
+const CITY_UPGRADE_EARLY_END_LEVEL = 50;
+const CITY_UPGRADE_MID_END_LEVEL = 100;
+const CITY_UPGRADE_EARLY_START_HOURS = 0.1;
+const CITY_UPGRADE_EARLY_END_HOURS = 4;
+const CITY_UPGRADE_MID_END_HOURS = 36;
+const CITY_UPGRADE_END_LEVEL_150_HOURS = 240;
+const CITY_UPGRADE_MAX_TARGET_HOURS = 720;
 const DAILY_NEUTRAL_CAPTURE_LIMIT = 30;
-const HARVEST_BONUS_DAILY_LIMIT = 200;
-const HARVEST_BONUS_DAILY_GOLD_LIMIT = 100;
-const HARVEST_BONUS_DAILY_TROOP_LIMIT = 100;
+const HARVEST_BONUS_DAILY_LIMIT = 12;
+const HARVEST_BONUS_DAILY_GOLD_LIMIT = 6;
+const HARVEST_BONUS_DAILY_TROOP_LIMIT = 6;
 const HARVEST_BONUS_TYPES = ["gold", "troops"];
-const HARVEST_BONUS_SPAWN_INTERVAL_SECONDS = 60;
-const HARVEST_BONUS_INITIAL_SPAWN_SECONDS = 60;
+const HARVEST_BONUS_SPAWN_INTERVAL_SECONDS = 3 * 60;
+const HARVEST_BONUS_INITIAL_SPAWN_SECONDS = 3 * 60;
 const HARVEST_BONUS_MAX_ACTIVE_PER_PLAYER = 1;
-const HARVEST_BONUS_EXPIRE_SECONDS = 1800;
-const HARVEST_BONUS_GOLD_SECONDS = 180;
-const HARVEST_BONUS_MIN_GOLD = 300;
-const HARVEST_BONUS_TROOP_SECONDS = 300;
-const HARVEST_BONUS_MIN_TROOPS = 50;
-const HARVEST_BONUS_MAX_TROOPS = 2500;
+const HARVEST_BONUS_EXPIRE_SECONDS = 20 * 60;
+const HARVEST_BONUS_GOLD_SECONDS = 10 * 60;
+const HARVEST_BONUS_MIN_GOLD = 50;
+const HARVEST_BONUS_TROOP_SECONDS = 10 * 60;
+const HARVEST_BONUS_MIN_TROOPS = 10;
+const HARVEST_BONUS_MAX_TROOPS = Number.MAX_SAFE_INTEGER;
 const HARVEST_BONUS_CITY_CLEARANCE = 132;
 const HARVEST_BONUS_TRANSITION_CLEARANCE = 148;
 const HARVEST_BONUS_PICKUP_CLEARANCE = 116;
@@ -723,7 +736,7 @@ const CITY_LEVEL_STATS = {
 const KING_POWER_ARMY_TROOP_VALUE = 2;
 const KING_POWER_REPLACEMENT_HOURS = 12;
 const KING_POWER_DEFENSIVE_ADVANTAGE_WEIGHT = 0.25;
-const KING_POWER_AUTHORITY_VERSION = 5;
+const KING_POWER_AUTHORITY_VERSION = 6;
 const SKILL_RESET_COST = 750_000;
 
 const SKILL_CONFIG = {
@@ -4896,11 +4909,10 @@ function ensureShopItems() {
 }
 
 function createDefaultItemPurchaseCooldowns() {
-  return {
-    [ROYAL_PEACE_SHIELD_ITEM_ID]: { utcDate: "", purchaseCount: 0 },
-    [WAR_DRUMS_ITEM_ID]: { utcDate: "", purchaseCount: 0 },
-    [ROYAL_TAX_DECREE_ITEM_ID]: { utcDate: "", purchaseCount: 0 },
-  };
+  return Object.fromEntries(
+    Object.keys(ITEM_DAILY_PURCHASE_LIMITS)
+      .map(itemId => [itemId, { utcDate: "", purchaseCount: 0 }])
+  );
 }
 
 function getUtcDateKeyAtMs(value = Date.now()) {
@@ -4925,7 +4937,7 @@ function normalizeItemPurchaseTimestamps(value = {}) {
     .map(timestampToMs)
     .filter(timestamp => timestamp > 0)
     .sort((a, b) => a - b)
-    .slice(-PRODUCTION_BOOST_PURCHASE_LIMIT);
+    .slice(-MAX_ITEM_DAILY_PURCHASE_LIMIT);
 }
 
 function normalizeDailyItemPurchaseCounter(value = {}, limit = 0) {
@@ -4953,17 +4965,12 @@ function normalizeDailyItemPurchaseCounter(value = {}, limit = 0) {
 }
 
 function getItemDailyPurchaseLimit(itemId) {
-  if (itemId === ROYAL_PEACE_SHIELD_ITEM_ID) return ROYAL_PEACE_SHIELD_DAILY_PURCHASE_LIMIT;
-  if (PRODUCTION_BOOST_ITEM_IDS.has(itemId)) return PRODUCTION_BOOST_PURCHASE_LIMIT;
-  return 0;
+  return Math.max(0, Math.floor(Number(ITEM_DAILY_PURCHASE_LIMITS[itemId]) || 0));
 }
 
 function normalizeItemPurchaseCooldowns(cooldowns = {}) {
   const normalized = createDefaultItemPurchaseCooldowns();
-  [
-    ROYAL_PEACE_SHIELD_ITEM_ID,
-    ...PRODUCTION_BOOST_ITEM_IDS,
-  ].forEach(itemId => {
+  Object.keys(ITEM_DAILY_PURCHASE_LIMITS).forEach(itemId => {
     normalized[itemId] = normalizeDailyItemPurchaseCounter(
       cooldowns?.[itemId],
       getItemDailyPurchaseLimit(itemId)
@@ -6060,6 +6067,8 @@ function normalizeGlobalStatsSnapshot(raw = null) {
     cityCountsByRegion,
     goldPerHour: Math.max(0, Math.floor(Number(raw.goldPerHour) || 0)),
     troopPerHour: Math.max(0, Math.floor(Number(raw.troopPerHour) || 0)),
+    baseGoldPerHour: Math.max(0, Math.floor(Number(raw.baseGoldPerHour ?? raw.goldPerHour) || 0)),
+    baseTroopPerHour: Math.max(0, Math.floor(Number(raw.baseTroopPerHour ?? raw.troopPerHour) || 0)),
     sustainableTroopPerHour: Math.max(0, Math.floor(Number(raw.sustainableTroopPerHour) || 0)),
     armyPower: normalizePowerValue(raw.armyPower),
     replacementPower: normalizePowerValue(raw.replacementPower),
@@ -6512,10 +6521,16 @@ function getMillionLordsCityProductionVp(level) {
 }
 
 function getMillionLordsPassiveGoldPerHour(level) {
-  return Math.min(
-    Number.MAX_SAFE_INTEGER,
-    Math.floor(getMillionLordsCityProductionVp(level) * MILLION_LORDS_PASSIVE_GOLD_PER_CITY_VP)
-  );
+  const normalizedLevel = clampCityLevel(level);
+  const curveLevel = Math.min(normalizedLevel, CITY_GOLD_ENDGAME_START_LEVEL);
+  const level100Base = getMillionLordsCityProductionVp(curveLevel)
+    * MILLION_LORDS_PASSIVE_GOLD_PER_CITY_VP;
+  const endgameMultiplier = normalizedLevel > CITY_GOLD_ENDGAME_START_LEVEL
+    ? Math.pow(CITY_GOLD_ENDGAME_GROWTH, normalizedLevel - CITY_GOLD_ENDGAME_START_LEVEL)
+    : 1;
+  const rawGold = level100Base * endgameMultiplier;
+  if (!Number.isFinite(rawGold)) return Number.MAX_SAFE_INTEGER;
+  return Math.min(Number.MAX_SAFE_INTEGER, Math.max(0, Math.floor(rawGold)));
 }
 
 function dropCapturedCityLevel(city) {
@@ -13395,7 +13410,11 @@ function getHarvestBonusGoldReward() {
 }
 
 function getHarvestBonusTroopReward() {
-  const passiveTroops = Math.floor(getTroopProductionPerSecond() * HARVEST_BONUS_TROOP_SECONDS);
+  const passiveTroopsPerSecond = playerCities().reduce(
+    (sum, city) => sum + getCityStats(city, { includeTimedItemBoosts: false }).troopProductionPerSecond,
+    0
+  );
+  const passiveTroops = Math.floor(passiveTroopsPerSecond * HARVEST_BONUS_TROOP_SECONDS);
   return clamp(Math.max(HARVEST_BONUS_MIN_TROOPS, passiveTroops), HARVEST_BONUS_MIN_TROOPS, HARVEST_BONUS_MAX_TROOPS);
 }
 
@@ -16348,6 +16367,20 @@ function relicCampProgressMarkup(config, progress, status = "ready") {
     <p class="camp-reward-reset">Relic Camp rewards reset at 00:00 UTC.</p>`;
 }
 
+function getRewardCampEstimatedRewards(config) {
+  const minimums = Array.isArray(config?.dailyRewards) ? config.dailyRewards : [];
+  const rewardHours = Array.isArray(config?.rewardHours) ? config.rewardHours : [];
+  const globalStats = normalizeGlobalStatsSnapshot(state?.globalStats);
+  const hourlyRate = config?.rewardType === "troops"
+    ? Math.max(0, Number(globalStats?.baseTroopPerHour) || 0)
+    : Math.max(0, Number(globalStats?.baseGoldPerHour) || 0);
+  return minimums.map((minimum, index) => Math.max(
+    0,
+    Math.floor(Number(minimum) || 0),
+    Math.floor(hourlyRate * Math.max(0, Number(rewardHours[index]) || 0))
+  ));
+}
+
 function rewardCampProgressMarkup(config, progress, status = "ready") {
   if (config?.type === "items") return relicCampProgressMarkup(config, progress, status);
   if (status === "loading") {
@@ -16356,7 +16389,9 @@ function rewardCampProgressMarkup(config, progress, status = "ready") {
   if (status === "error") {
     return `<div class="camp-reward-loading error"><strong>Reward progress unavailable</strong><p>Your rewards are still tracked by the server. Reopen this panel once the connection is ready.</p></div>`;
   }
-  const rewards = Array.isArray(config?.dailyRewards) ? config.dailyRewards : [];
+  const rewards = getRewardCampEstimatedRewards(config);
+  const minimums = Array.isArray(config?.dailyRewards) ? config.dailyRewards : [];
+  const rewardHours = Array.isArray(config?.rewardHours) ? config.rewardHours : [];
   const claimed = clamp(Math.floor(Number(progress?.count) || 0), 0, rewards.length);
   const completed = claimed >= rewards.length;
   const nextReward = completed ? 0 : Math.max(0, Math.floor(Number(rewards[claimed]) || 0));
@@ -16369,7 +16404,11 @@ function rewardCampProgressMarkup(config, progress, status = "ready") {
     return `
       <li class="camp-reward-row ${rowState}">
         <span class="camp-reward-check" aria-hidden="true">${isClaimed ? "&#10003;" : index + 1}</span>
-        <span class="camp-reward-copy"><small>Claim ${index + 1}</small><strong>${formatNumber(reward)} ${escapeHtml(config.rewardLabel)}</strong></span>
+        <span class="camp-reward-copy">
+          <small>Claim ${index + 1}${rewardHours[index] ? ` &middot; ${formatNumber(rewardHours[index])}h base production` : ""}</small>
+          <strong>${formatNumber(reward)} ${escapeHtml(config.rewardLabel)}</strong>
+          ${reward > minimums[index] ? `<small>Current estimate; minimum ${formatNumber(minimums[index])}</small>` : ""}
+        </span>
         <em>${stateLabel}</em>
       </li>`;
   }).join("");
@@ -16578,8 +16617,11 @@ function showRewardCampInfoModal(campId) {
   const rewardConditionMarkup = isDeedCamp
     ? `<p class="deed-camp-condition">Hold this camp for 1 hour to receive one random eligible neutral gray city. A player can receive one Deed Camp city per UTC day. This remains separate from the normal neutral-city capture limit.</p>`
     : isRelicCamp
-      ? `<p class="deed-camp-condition">Hold this camp for 30 minutes to receive one random usable item. Up to 5 Relic Camp item rewards can be earned per player each UTC day.</p>`
+      ? `<p class="deed-camp-condition">Hold this camp for 30 minutes to receive one random usable item. Up to ${formatNumber(RELIC_CAMP_DAILY_REWARD_LIMIT)} Relic Camp item rewards can be earned per player each UTC day.</p>`
       : "";
+  const estimatedCampRewards = !isDeedCamp && !isRelicCamp
+    ? getRewardCampEstimatedRewards(config)
+    : [];
   const rulesMarkup = isDeedCamp
     ? `
       <div class="gold-camp-description deed-camp-help">
@@ -16595,7 +16637,7 @@ function showRewardCampInfoModal(campId) {
       <div class="gold-camp-description deed-camp-help">
         <strong>How it works</strong>
         <p>Capture and hold the Relic Camp for 30 minutes. If you still control it when the public timer ends, you receive one random usable item based on rarity.</p>
-        <p>You can earn up to 5 Relic Camp item rewards per UTC day. After that, you can still attack, capture, reinforce, and hold the camp, but you will not receive another item until the daily reset.</p>
+        <p>You can earn up to ${formatNumber(RELIC_CAMP_DAILY_REWARD_LIMIT)} Relic Camp item rewards per UTC day. After that, you can still attack, capture, reinforce, and hold the camp, but you will not receive another item until the daily reset.</p>
         <p>The reward is added directly to your bag. No relic fragments, gold, troops, battle XP, or leaderboard points are awarded by the payout.</p>
         <p>Other players can attack and steal this camp before payout. Royal Peace Shield does not protect camp ownership, and the camp does not count as a city or use neutral-city capture limits.</p>
         <p>After payout or a no-reward completion, stationed troops march back to their origin city, or to the holder's main city if the origin was lost. The camp resets to neutral with its fixed defenders.</p>
@@ -16603,10 +16645,10 @@ function showRewardCampInfoModal(campId) {
     : `
       <div class="gold-camp-description">
         <strong>How it works</strong>
-        <p>Attack and capture this special objective, then hold it for ${formatNumber(holdMinutes)} minutes to earn ${formatNumber(config.baseReward)} ${escapeHtml(config.rewardLabel)}. The public timer begins when control changes and restarts if another ruler captures the camp before payout.</p>
+        <p>Attack and capture this special objective, then hold it for ${formatNumber(holdMinutes)} minutes. Rewards scale with your kingdom's permanent base production, with a guaranteed minimum. The public timer begins when control changes and restarts if another ruler captures the camp before payout.</p>
         <p>${escapeHtml(rewardDestination)} When the timer ends, all stationed troops leave in a return march to their origin city, or to the holder's main city if the origin was lost. The camp then resets to neutral.</p>
         <p>Camps do not count as cities, cannot be shielded, allow unlimited stationed defenders, and ignore weaker-kingdom attack limits.</p>
-        <p>Daily rewards: ${config.dailyRewards.map(value => `${formatNumber(value)} ${config.rewardLabel}`).join(", ")}. Further successful holds award 0 until the next UTC day.</p>
+        <p>Today's estimated rewards: ${estimatedCampRewards.map(value => `${formatNumber(value)} ${config.rewardLabel}`).join(", ")}. Further successful holds award 0 until the next UTC day.</p>
       </div>`;
   modalTitle.textContent = camp.name;
   modalBody.innerHTML = `
@@ -19129,23 +19171,37 @@ function getRecruitCost(city) {
   return Math.floor(25 + getCityStats(city).level * 5);
 }
 
-function getCityUpgradePrestigeMultiplier(targetLevel) {
-  const normalizedTarget = clampCityLevel(targetLevel);
-  if (normalizedTarget <= CITY_PRESTIGE_START_LEVEL) return 1;
-  const band = Math.floor((normalizedTarget - CITY_PRESTIGE_START_LEVEL - 1) / CITY_PRESTIGE_BAND_SIZE) + 1;
-  const multiplier = Math.pow(2, band);
-  return Number.isFinite(multiplier) ? multiplier : Infinity;
+function getCityUpgradeTargetHours(currentLevel) {
+  const level = clampCityLevel(currentLevel);
+  if (level <= CITY_UPGRADE_EARLY_END_LEVEL) {
+    const progress = (level - 1) / Math.max(1, CITY_UPGRADE_EARLY_END_LEVEL - 1);
+    return CITY_UPGRADE_EARLY_START_HOURS
+      + (CITY_UPGRADE_EARLY_END_HOURS - CITY_UPGRADE_EARLY_START_HOURS)
+        * Math.pow(progress, 1.35);
+  }
+  if (level <= CITY_UPGRADE_MID_END_LEVEL) {
+    const progress = (level - CITY_UPGRADE_EARLY_END_LEVEL)
+      / (CITY_UPGRADE_MID_END_LEVEL - CITY_UPGRADE_EARLY_END_LEVEL);
+    return CITY_UPGRADE_EARLY_END_HOURS
+      + (CITY_UPGRADE_MID_END_HOURS - CITY_UPGRADE_EARLY_END_HOURS)
+        * Math.pow(progress, 1.4);
+  }
+  const endgameProgress = (level - CITY_UPGRADE_MID_END_LEVEL)
+    / Math.max(1, 150 - CITY_UPGRADE_MID_END_LEVEL);
+  return Math.min(
+    CITY_UPGRADE_MAX_TARGET_HOURS,
+    CITY_UPGRADE_MID_END_HOURS
+      + (CITY_UPGRADE_END_LEVEL_150_HOURS - CITY_UPGRADE_MID_END_HOURS)
+        * Math.pow(endgameProgress, 1.5)
+  );
 }
 
 function getRawCityUpgradeCostAtLevel(currentLevel) {
   const startLevel = clampCityLevel(currentLevel);
   const targetLevel = startLevel + 1;
   if (!Number.isSafeInteger(targetLevel)) return Infinity;
-  const baseCost = MILLION_LORDS_CITY_COST_BASE * (
-    Math.pow(MILLION_LORDS_CITY_COST_GROWTH, targetLevel - 1)
-    - Math.pow(MILLION_LORDS_CITY_COST_GROWTH, startLevel - 1)
-  );
-  const cost = baseCost * getCityUpgradePrestigeMultiplier(targetLevel);
+  const cost = getMillionLordsPassiveGoldPerHour(startLevel)
+    * getCityUpgradeTargetHours(startLevel);
   return Number.isFinite(cost) ? cost : Infinity;
 }
 
@@ -19158,7 +19214,7 @@ function getCityUpgradeReductionPercent(city) {
 function getCityUpgradeCostAtLevel(currentLevel, reductionPercent = 0) {
   const rawCost = getRawCityUpgradeCostAtLevel(currentLevel);
   if (!Number.isFinite(rawCost)) return Infinity;
-  return Math.max(0, Math.floor(rawCost * (1 - Math.min(85, Math.max(0, reductionPercent)) / 100) + 0.000001));
+  return Math.max(10, Math.floor(rawCost * (1 - Math.min(85, Math.max(0, reductionPercent)) / 100) + 0.000001));
 }
 
 function getMultiLevelCost(city, levels) {
@@ -20485,12 +20541,12 @@ function showHelpModal() {
       <li>City defense is level x 3%, plus wall strength. Stoneworks increases the wall part of defense.</li>
       <li>Troop production is VP x 3, improved by Royal Granaries. Passive gold uses ML city production VP x ${formatNumber(MILLION_LORDS_PASSIVE_GOLD_PER_CITY_VP)}, improved by Tax Stewardship and stronghold bonuses.</li>
       <li>Army travel uses route distance plus troop-size bands. Larger armies march slower, scouts move as one troop, and March Orders reduces travel time.</li>
-      <li>Glowing pickups appear near your owned cities on the current island during active play once per minute, alternating between gold and stored troop-production rewards. Daily pickup limits are ${formatNumber(HARVEST_BONUS_DAILY_GOLD_LIMIT)} gold and ${formatNumber(HARVEST_BONUS_DAILY_TROOP_LIMIT)} troop pickups.</li>
+      <li>Glowing pickups appear near your owned cities on the current island during active play every three minutes, alternating between ten minutes of gold and troop production. Daily pickup limits are ${formatNumber(HARVEST_BONUS_DAILY_GOLD_LIMIT)} gold and ${formatNumber(HARVEST_BONUS_DAILY_TROOP_LIMIT)} troop pickups.</li>
       <li>Swordmastery boosts outgoing attack, Guild Charters reduces city upgrade cost, and Field Medics returns part of battle losses to your main city.</li>
       <li>Captured cities enter a one-hour XP cooldown. Attacking during cooldown still works, but capture XP is reduced.</li>
       <li>Main cities cannot be attacked. Use your main city as a protected home base while expanding from other cities.</li>
       <li>Demo Attacks protect weaker kingdoms: much stronger attackers send fewer effective troops, march slower, earn 0 XP, and defenders earn bonus XP.</li>
-      <li>Items and advisors are intentionally not included in this prototype pass.</li>
+      <li>Shop items have UTC daily purchase limits. Reward Camp items are earned separately through contested objectives.</li>
     </ul>
   `;
   modal.showModal();

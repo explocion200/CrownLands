@@ -37,6 +37,8 @@ if ([...expectedDrops.values()].reduce((total, chance) => total + chance, 0) !==
 
 requireMatch(serverSource, /RELIC_CAMP_HOLD_DURATION_MS\s*=\s*30\s*\*\s*60\s*\*\s*1000/, "Server Relic Camp hold time is not 30 minutes.");
 requireMatch(clientSource, /RELIC_CAMP_HOLD_SECONDS\s*=\s*30\s*\*\s*60/, "Client Relic Camp hold time is not 30 minutes.");
+requireMatch(serverSource, /RELIC_CAMP_DAILY_REWARD_LIMIT\s*=\s*2/, "Server Relic Camp daily reward limit should be two.");
+requireMatch(clientSource, /RELIC_CAMP_DAILY_REWARD_LIMIT\s*=\s*2/, "Client Relic Camp daily reward limit should be two.");
 requireMatch(serverSource, /items:\s*\{[\s\S]*?kind:\s*"relicCamp"[\s\S]*?rewardType:\s*"item"[\s\S]*?objectiveStatsId:\s*"relicCamp"[\s\S]*?maxDailyRewards:\s*RELIC_CAMP_DAILY_REWARD_LIMIT/, "Relic Camp server configuration is incomplete.");
 requireMatch(serverSource, /crypto\.randomInt\(1,\s*totalChance\s*\+\s*1\)/, "Relic Camp item rarity is not rolled on the server.");
 requireMatch(serverSource, /function cleanServerCampLayoutSeed\(camp = \{\}\)\s*\{\s*if \(!camp \|\| typeof camp !== "object"\) return \{\};/, "Missing camp seeds can still crash server army launches.");
@@ -44,10 +46,10 @@ requireMatch(serverSource, /function cleanServerCampLayoutSeed\(camp = \{\}\)\s*
 const payoutStart = serverSource.indexOf("async function resolveRewardCampPayoutByRef");
 const payoutEnd = serverSource.indexOf("async function resolveRewardCampPayoutAndStats", payoutStart);
 const payoutSource = serverSource.slice(payoutStart, payoutEnd);
-requireMatch(payoutSource, /relicDailyLimitReached\s*=\s*isRelicCamp\s*&&\s*priorClaims\s*>=\s*config\.maxDailyRewards/, "Relic Camp does not enforce five server-authoritative daily rewards.");
+requireMatch(payoutSource, /relicDailyLimitReached\s*=\s*isRelicCamp\s*&&\s*priorClaims\s*>=\s*config\.maxDailyRewards/, "Relic Camp does not enforce server-authoritative daily rewards.");
 requireMatch(payoutSource, /normalizeShopItems\(player\.shopItems\)[\s\S]*?rewardedShopItems\[relicRewardItem\.itemId\][\s\S]*?\+\s*1/, "Relic Camp payout does not increment the existing bag inventory.");
 requireMatch(payoutSource, /rewards:\s*relicRewardsToday[\s\S]*?maxDailyRewards:\s*config\.maxDailyRewards/, "Relic Camp daily reward history is not persisted with its limit.");
-requireMatch(payoutSource, /isRelicCamp\s*&&\s*relicDailyLimitReached[\s\S]*?"daily-limit"/, "Relic Camp sixth hold does not complete with a no-reward daily-limit status.");
+requireMatch(payoutSource, /isRelicCamp\s*&&\s*relicDailyLimitReached[\s\S]*?"daily-limit"/, "Relic Camp over-limit hold does not complete with a no-reward daily-limit status.");
 requireMatch(payoutSource, /rewardedShopItems\s*\?\s*\{\s*shopItems:\s*rewardedShopItems\s*\}/, "Relic Camp payout does not return updated inventory to the current player.");
 
 requireMatch(firebaseClientSource, /normalizedType\s*===\s*"items"[\s\S]*?"relicCamp"[\s\S]*?rewards:\s*\(Array\.isArray\(data\.rewards\)/, "Relic Camp reward progress is not loaded from the player's server-owned objective stats.");

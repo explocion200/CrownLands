@@ -75,8 +75,8 @@ vm.runInContext([
   readFunction("createServerDemoAttackSnapshot"),
 ].join("\n\n"), sandbox);
 
-if (sandbox.GLOBAL_PLAYER_STATS_VERSION !== 5) {
-  throw new Error(`Protection is not using King Power v5 (found v${sandbox.GLOBAL_PLAYER_STATS_VERSION}).`);
+if (sandbox.GLOBAL_PLAYER_STATS_VERSION !== 6) {
+  throw new Error(`Protection is not using King Power v6 (found v${sandbox.GLOBAL_PLAYER_STATS_VERSION}).`);
 }
 if (sandbox.DEMO_ATTACK_MIN_POWER_RATIO !== 3) {
   throw new Error(`Unexpected protection threshold ${sandbox.DEMO_ATTACK_MIN_POWER_RATIO}.`);
@@ -84,7 +84,7 @@ if (sandbox.DEMO_ATTACK_MIN_POWER_RATIO !== 3) {
 
 const validGlobalPower = sandbox.getPlayerPowerSnapshot({
   profile: { kingPowerVersion: 5, kingPower: 4_000_000, kingPowerUpdatedAtMs: 5000 },
-  globalStats: { version: 5, kingPower: 900_000, updatedAtMs: 4000 },
+  globalStats: { version: 6, kingPower: 900_000, updatedAtMs: 4000 },
   city: { powerFloor: 300_000 },
 });
 if (validGlobalPower !== 900_000) {
@@ -185,4 +185,4 @@ if (!clientSource.includes("authoritative: existingIsAuthoritative || force")
   throw new Error("Map city records can still overwrite or postpone canonical identity refreshes.");
 }
 
-console.log("Validated weaker-kingdom protection with King Power v5, directional limits, and objective exemptions.");
+console.log("Validated weaker-kingdom protection with King Power v6, directional limits, and objective exemptions.");

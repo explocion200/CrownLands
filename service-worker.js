@@ -1,4 +1,4 @@
-const CACHE_VERSION = "20260723-progression-v2";
+const CACHE_VERSION = "20260723-economy-v1";
 const CACHE_NAME = `crownlands-cache-${CACHE_VERSION}`;
 const STATIC_CACHE_URLS = [
   "/",
@@ -8,7 +8,7 @@ const STATIC_CACHE_URLS = [
   "/world-config.js",
   "/firebase-config.js?v=20260703-vapid-key",
   "/firebaseClient.js?v=20260723-utc-responsive-v1",
-  "/game.js?v=20260723-progression-v2",
+  "/game.js?v=20260723-economy-v1",
   "/route-worker.js?v=20260721-structure-route-clearance",
   "/assets/map-editor-data.js?v=20260723-utc-responsive-v1",
   "/assets/game-menu-background.jpg?v=20260702-login-page",

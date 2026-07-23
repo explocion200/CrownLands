@@ -14,27 +14,32 @@ const RESET_GENERATION = "fresh-2026-07-05-server-reset";
 const ONLINE_WORLD_ID = `main-${RESET_GENERATION}`;
 const TEST_STARTING_GOLD = 500;
 const PLAYER_NAME_MAX_LENGTH = 18;
-const MILLION_LORDS_CITY_COST_BASE = 50;
-const MILLION_LORDS_CITY_COST_GROWTH = 1.2;
-const CITY_PRESTIGE_START_LEVEL = 100;
-const CITY_PRESTIGE_BAND_SIZE = 10;
 const MILLION_LORDS_CITY_PRODUCTION_VP_BASE = 20;
 const MILLION_LORDS_CITY_PRODUCTION_VP_GROWTH = 1.115;
 const MILLION_LORDS_PASSIVE_GOLD_PER_CITY_VP = 15;
+const CITY_GOLD_ENDGAME_START_LEVEL = 100;
+const CITY_GOLD_ENDGAME_GROWTH = 1.08;
+const CITY_UPGRADE_EARLY_END_LEVEL = 50;
+const CITY_UPGRADE_MID_END_LEVEL = 100;
+const CITY_UPGRADE_EARLY_START_HOURS = 0.1;
+const CITY_UPGRADE_EARLY_END_HOURS = 4;
+const CITY_UPGRADE_MID_END_HOURS = 36;
+const CITY_UPGRADE_END_LEVEL_150_HOURS = 240;
+const CITY_UPGRADE_MAX_TARGET_HOURS = 720;
 const BASE_TROOP_ATTACK_POWER = 2;
 const DEFAULT_MARCH_PERCENT = 0.5;
 const DAILY_NEUTRAL_CAPTURE_LIMIT = 30;
 const NEUTRAL_CITY_COUNT_LIMIT = 30;
-const HARVEST_BONUS_DAILY_LIMIT = 200;
-const HARVEST_BONUS_DAILY_GOLD_LIMIT = 100;
-const HARVEST_BONUS_DAILY_TROOP_LIMIT = 100;
-const HARVEST_BONUS_GOLD_SECONDS = 180;
-const HARVEST_BONUS_MIN_GOLD = 300;
-const HARVEST_BONUS_TROOP_SECONDS = 300;
-const HARVEST_BONUS_MIN_TROOPS = 50;
-const HARVEST_BONUS_MAX_TROOPS = 2500;
-const HARVEST_BONUS_SPAWN_INTERVAL_SECONDS = 60;
-const HARVEST_BONUS_EXPIRE_SECONDS = 1800;
+const HARVEST_BONUS_DAILY_LIMIT = 12;
+const HARVEST_BONUS_DAILY_GOLD_LIMIT = 6;
+const HARVEST_BONUS_DAILY_TROOP_LIMIT = 6;
+const HARVEST_BONUS_GOLD_SECONDS = 10 * 60;
+const HARVEST_BONUS_MIN_GOLD = 50;
+const HARVEST_BONUS_TROOP_SECONDS = 10 * 60;
+const HARVEST_BONUS_MIN_TROOPS = 10;
+const HARVEST_BONUS_MAX_TROOPS = Number.MAX_SAFE_INTEGER;
+const HARVEST_BONUS_SPAWN_INTERVAL_SECONDS = 3 * 60;
+const HARVEST_BONUS_EXPIRE_SECONDS = 20 * 60;
 const HARVEST_BONUS_MAX_ACTIVE_PER_PLAYER = 1;
 const SCOUT_REPORT_SECONDS = 120;
 const ARMY_TRAVEL_SECONDS_PER_MAP_UNIT = 0.13;
@@ -98,15 +103,12 @@ const CITY_UPGRADE_XP_BASE = 18;
 const CITY_UPGRADE_XP_PER_LEVEL = 4;
 const ROYAL_PEACE_SHIELD_ITEM_ID = "shield_12h";
 const ROYAL_PEACE_SHIELD_DURATION_MS = 12 * 60 * 60 * 1000;
-const ROYAL_PEACE_SHIELD_DAILY_PURCHASE_LIMIT = 1;
 const WAR_DRUMS_ITEM_ID = "war_drums_30m";
 const WAR_DRUMS_DURATION_MS = 30 * 60 * 1000;
-const WAR_DRUMS_TROOP_PRODUCTION_BONUS_PERCENT = 50;
+const WAR_DRUMS_TROOP_PRODUCTION_BONUS_PERCENT = 5;
 const ROYAL_TAX_DECREE_ITEM_ID = "royal_tax_decree_30m";
 const ROYAL_TAX_DECREE_DURATION_MS = 30 * 60 * 1000;
 const ROYAL_TAX_DECREE_GOLD_PRODUCTION_BONUS_PERCENT = 50;
-const PRODUCTION_BOOST_PURCHASE_LIMIT = 3;
-const PRODUCTION_BOOST_ITEM_IDS = new Set([WAR_DRUMS_ITEM_ID, ROYAL_TAX_DECREE_ITEM_ID]);
 const VEIL_OF_SILENCE_ITEM_ID = "veil_of_silence_30m";
 const VEIL_OF_SILENCE_DURATION_MS = 5 * 60 * 1000;
 const SWIFT_MARCH_ORDER_ITEM_ID = "swift_march_order";
@@ -115,6 +117,15 @@ const SWIFT_MARCH_MINIMUM_REMAINING_MS = 1000;
 const RECALL_HORN_ITEM_ID = "recall_horn";
 const RECALL_HORN_MINIMUM_REMAINING_MS = 1000;
 const RECALL_HORN_MINIMUM_RETURN_MS = 1000;
+const ITEM_DAILY_PURCHASE_LIMITS = Object.freeze({
+  [ROYAL_PEACE_SHIELD_ITEM_ID]: 1,
+  [WAR_DRUMS_ITEM_ID]: 4,
+  [ROYAL_TAX_DECREE_ITEM_ID]: 2,
+  [VEIL_OF_SILENCE_ITEM_ID]: 4,
+  [SWIFT_MARCH_ORDER_ITEM_ID]: 2,
+  [RECALL_HORN_ITEM_ID]: 2,
+});
+const MAX_ITEM_DAILY_PURCHASE_LIMIT = Math.max(...Object.values(ITEM_DAILY_PURCHASE_LIMITS));
 const MAIN_CITY_CHANGE_CITY_LIMIT = 30;
 const MAIN_CITY_CHANGE_SMALL_KINGDOM_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000;
 const MAIN_CITY_CHANGE_LARGE_KINGDOM_COOLDOWN_MS = 14 * 24 * 60 * 60 * 1000;
@@ -125,7 +136,7 @@ const GAME_SERVER_CAPACITY = 50;
 const GAME_SERVER_ACTIVE_STALE_MS = 3 * 60 * 1000;
 const GAME_SERVER_WAITING_STALE_MS = 5 * 60 * 1000;
 const GAME_SERVER_MAX_WAITING = 500;
-const GLOBAL_PLAYER_STATS_VERSION = 5;
+const GLOBAL_PLAYER_STATS_VERSION = 6;
 const PLAYER_IDENTITY_SYNC_VERSION = 1;
 const MAIN_CITY_ASSIGNMENT_VERSION = 2;
 const ECONOMY_CITY_CHECKPOINT_MS = 5 * 60 * 1000;
@@ -148,12 +159,14 @@ const GOLD_CAMP_BASE_REWARD = 100_000;
 const GOLD_CAMP_BASE_DEFENDERS = 10_000;
 const GOLD_CAMP_DEFENSE_LEVEL = 30;
 const REWARD_CAMP_PAYOUT_SCAN_LIMIT = 40;
-const GOLD_CAMP_REWARD_BY_DAILY_CLAIM = [100_000, 100_000, 75_000, 50_000, 25_000];
+const GOLD_CAMP_REWARD_BY_DAILY_CLAIM = [100_000, 75_000, 50_000, 25_000];
+const GOLD_CAMP_REWARD_HOURS_BY_DAILY_CLAIM = [3, 2, 1, 0.5];
 const WARBAND_CAMP_HOLD_DURATION_MS = 15 * 60 * 1000;
 const WARBAND_CAMP_BASE_REWARD = 50_000;
 const WARBAND_CAMP_BASE_DEFENDERS = 10_000;
 const WARBAND_CAMP_DEFENSE_LEVEL = 30;
-const WARBAND_CAMP_REWARD_BY_DAILY_CLAIM = [50_000, 50_000, 37_500, 25_000, 12_500];
+const WARBAND_CAMP_REWARD_BY_DAILY_CLAIM = [50_000, 37_500, 25_000, 12_500];
+const WARBAND_CAMP_REWARD_HOURS_BY_DAILY_CLAIM = [6, 4, 3, 2];
 const DEED_CAMP_HOLD_DURATION_MS = 60 * 60 * 1000;
 const DEED_CAMP_BASE_DEFENDERS = 10_000;
 const DEED_CAMP_DEFENSE_LEVEL = 30;
@@ -163,7 +176,7 @@ const DEED_CAMP_FALLBACK_REGION_LIMIT = 6;
 const RELIC_CAMP_HOLD_DURATION_MS = 30 * 60 * 1000;
 const RELIC_CAMP_BASE_DEFENDERS = 10_000;
 const RELIC_CAMP_DEFENSE_LEVEL = 30;
-const RELIC_CAMP_DAILY_REWARD_LIMIT = 5;
+const RELIC_CAMP_DAILY_REWARD_LIMIT = 2;
 const RELIC_CAMP_DROP_TABLE = [
   { itemId: WAR_DRUMS_ITEM_ID, itemName: "War Drums", rarity: "Common", chance: 35 },
   { itemId: VEIL_OF_SILENCE_ITEM_ID, itemName: "Veil of Silence", rarity: "Common", chance: 25 },
@@ -185,6 +198,7 @@ const REWARD_CAMP_CONFIG = {
     baseDefenders: GOLD_CAMP_BASE_DEFENDERS,
     defenseLevel: GOLD_CAMP_DEFENSE_LEVEL,
     dailyRewards: GOLD_CAMP_REWARD_BY_DAILY_CLAIM,
+    rewardHours: GOLD_CAMP_REWARD_HOURS_BY_DAILY_CLAIM,
   },
   troops: {
     campType: "troops",
@@ -198,6 +212,7 @@ const REWARD_CAMP_CONFIG = {
     baseDefenders: WARBAND_CAMP_BASE_DEFENDERS,
     defenseLevel: WARBAND_CAMP_DEFENSE_LEVEL,
     dailyRewards: WARBAND_CAMP_REWARD_BY_DAILY_CLAIM,
+    rewardHours: WARBAND_CAMP_REWARD_HOURS_BY_DAILY_CLAIM,
   },
   deed: {
     campType: "deed",
@@ -228,9 +243,9 @@ const REWARD_CAMP_CONFIG = {
 };
 const SHOP_ITEMS = {
   [ROYAL_PEACE_SHIELD_ITEM_ID]: { id: ROYAL_PEACE_SHIELD_ITEM_ID, label: "Royal Peace Shield", cost: 1250000 },
-  [WAR_DRUMS_ITEM_ID]: { id: WAR_DRUMS_ITEM_ID, label: "War Drums", cost: 250000 },
+  [WAR_DRUMS_ITEM_ID]: { id: WAR_DRUMS_ITEM_ID, label: "War Drums", cost: 75000 },
   [ROYAL_TAX_DECREE_ITEM_ID]: { id: ROYAL_TAX_DECREE_ITEM_ID, label: "Royal Tax Decree", cost: 150000 },
-  [VEIL_OF_SILENCE_ITEM_ID]: { id: VEIL_OF_SILENCE_ITEM_ID, label: "Veil of Silence", cost: 175000 },
+  [VEIL_OF_SILENCE_ITEM_ID]: { id: VEIL_OF_SILENCE_ITEM_ID, label: "Veil of Silence", cost: 125000 },
   [SWIFT_MARCH_ORDER_ITEM_ID]: { id: SWIFT_MARCH_ORDER_ITEM_ID, label: "Swift March Order", cost: 300000 },
   [RECALL_HORN_ITEM_ID]: { id: RECALL_HORN_ITEM_ID, label: "Recall Horn", cost: 500000 },
 };
@@ -1169,10 +1184,16 @@ function getMillionLordsCityProductionVp(level) {
 }
 
 function getMillionLordsPassiveGoldPerHour(level) {
-  return Math.min(
-    Number.MAX_SAFE_INTEGER,
-    Math.floor(getMillionLordsCityProductionVp(level) * MILLION_LORDS_PASSIVE_GOLD_PER_CITY_VP)
-  );
+  const normalizedLevel = clampCityLevel(level);
+  const curveLevel = Math.min(normalizedLevel, CITY_GOLD_ENDGAME_START_LEVEL);
+  const level100Base = getMillionLordsCityProductionVp(curveLevel)
+    * MILLION_LORDS_PASSIVE_GOLD_PER_CITY_VP;
+  const endgameMultiplier = normalizedLevel > CITY_GOLD_ENDGAME_START_LEVEL
+    ? Math.pow(CITY_GOLD_ENDGAME_GROWTH, normalizedLevel - CITY_GOLD_ENDGAME_START_LEVEL)
+    : 1;
+  const rawGold = level100Base * endgameMultiplier;
+  if (!Number.isFinite(rawGold)) return Number.MAX_SAFE_INTEGER;
+  return Math.min(Number.MAX_SAFE_INTEGER, Math.max(0, Math.floor(rawGold)));
 }
 
 function getCityProductionStats(city = {}, profile = {}, bonuses = {}, options = {}) {
@@ -1396,6 +1417,8 @@ function createGlobalStatsSnapshot({
   let sustainableTroopPerHour = 0;
   let goldPerHour = 0;
   let troopPerHour = 0;
+  let baseGoldPerHour = 0;
+  let baseTroopPerHour = 0;
   // Include zeroes so Firestore merge writes clear regions where the player lost their final city.
   const cityCountsByRegion = Object.fromEntries(
     [...SERVER_WORLD_REGION_IDS].map(regionId => [regionId, 0])
@@ -1404,7 +1427,12 @@ function createGlobalStatsSnapshot({
   ownedEntries.forEach(entry => {
     const city = entry.city || {};
     const troopCount = Math.max(0, Math.floor(safeNumber(city.troops, 0)));
-    const stats = getCityProductionStats(city, profileForStats, resolvedBonuses);
+    const stats = getCityProductionStats(city, profileForStats, resolvedBonuses, { nowMs });
+    const baseStats = getCityProductionStats(city, profileForStats, resolvedBonuses, {
+      nowMs,
+      includeWarDrums: false,
+      includeRoyalTaxDecree: false,
+    });
     const powerComponents = getCityInfrastructurePowerComponents(city, resolvedBonuses);
     totalCityTroops += troopCount;
     totalVictoryPoints += Math.max(0, Math.floor(safeNumber(stats.victoryPoints, 0)));
@@ -1413,6 +1441,8 @@ function createGlobalStatsSnapshot({
     sustainableTroopPerHour += powerComponents.sustainableTroopPerHour;
     goldPerHour += Math.max(0, safeNumber(stats.goldProductionPerHour, 0));
     troopPerHour += Math.max(0, safeNumber(stats.troopProductionPerHour, 0));
+    baseGoldPerHour += Math.max(0, safeNumber(baseStats.goldProductionPerHour, 0));
+    baseTroopPerHour += Math.max(0, safeNumber(baseStats.troopProductionPerHour, 0));
     if (isStronghold(city)) {
       strongholdCount += 1;
     } else {
@@ -1474,6 +1504,8 @@ function createGlobalStatsSnapshot({
     cityCountsByRegion,
     goldPerHour: Math.max(0, Math.floor(goldPerHour)),
     troopPerHour: Math.max(0, Math.floor(troopPerHour)),
+    baseGoldPerHour: Math.max(0, Math.floor(baseGoldPerHour)),
+    baseTroopPerHour: Math.max(0, Math.floor(baseTroopPerHour)),
     sustainableTroopPerHour,
     armyPower,
     replacementPower,
@@ -2871,7 +2903,7 @@ function normalizeItemPurchaseTimestamps(value = {}) {
     .map(timestampToMs)
     .filter(timestamp => timestamp > 0)
     .sort((a, b) => a - b)
-    .slice(-PRODUCTION_BOOST_PURCHASE_LIMIT);
+    .slice(-MAX_ITEM_DAILY_PURCHASE_LIMIT);
 }
 
 function getNextUtcDayStartMs(nowMs = Date.now()) {
@@ -2904,21 +2936,15 @@ function normalizeDailyItemPurchaseCounter(value = {}, limit = 0) {
 }
 
 function getItemDailyPurchaseLimit(itemId) {
-  if (itemId === ROYAL_PEACE_SHIELD_ITEM_ID) return ROYAL_PEACE_SHIELD_DAILY_PURCHASE_LIMIT;
-  if (PRODUCTION_BOOST_ITEM_IDS.has(itemId)) return PRODUCTION_BOOST_PURCHASE_LIMIT;
-  return 0;
+  return Math.max(0, Math.floor(safeNumber(ITEM_DAILY_PURCHASE_LIMITS[itemId], 0)));
 }
 
 function normalizeItemPurchaseCooldowns(cooldowns = {}) {
-  const normalized = {
-    [ROYAL_PEACE_SHIELD_ITEM_ID]: { utcDate: "", purchaseCount: 0 },
-    [WAR_DRUMS_ITEM_ID]: { utcDate: "", purchaseCount: 0 },
-    [ROYAL_TAX_DECREE_ITEM_ID]: { utcDate: "", purchaseCount: 0 },
-  };
-  [
-    ROYAL_PEACE_SHIELD_ITEM_ID,
-    ...PRODUCTION_BOOST_ITEM_IDS,
-  ].forEach(itemId => {
+  const normalized = Object.fromEntries(
+    Object.keys(ITEM_DAILY_PURCHASE_LIMITS)
+      .map(itemId => [itemId, { utcDate: "", purchaseCount: 0 }])
+  );
+  Object.keys(ITEM_DAILY_PURCHASE_LIMITS).forEach(itemId => {
     normalized[itemId] = normalizeDailyItemPurchaseCounter(
       cooldowns?.[itemId],
       getItemDailyPurchaseLimit(itemId)
@@ -2988,12 +3014,29 @@ function getOwnedStrongholdBonuses(cities = []) {
   });
 }
 
-function getCityUpgradePrestigeMultiplier(targetLevel) {
-  const normalizedTarget = clampCityLevel(targetLevel);
-  if (normalizedTarget <= CITY_PRESTIGE_START_LEVEL) return 1;
-  const band = Math.floor((normalizedTarget - CITY_PRESTIGE_START_LEVEL - 1) / CITY_PRESTIGE_BAND_SIZE) + 1;
-  const multiplier = Math.pow(2, band);
-  return Number.isFinite(multiplier) ? multiplier : Infinity;
+function getCityUpgradeTargetHours(currentLevel) {
+  const level = clampCityLevel(currentLevel);
+  if (level <= CITY_UPGRADE_EARLY_END_LEVEL) {
+    const progress = (level - 1) / Math.max(1, CITY_UPGRADE_EARLY_END_LEVEL - 1);
+    return CITY_UPGRADE_EARLY_START_HOURS
+      + (CITY_UPGRADE_EARLY_END_HOURS - CITY_UPGRADE_EARLY_START_HOURS)
+        * Math.pow(progress, 1.35);
+  }
+  if (level <= CITY_UPGRADE_MID_END_LEVEL) {
+    const progress = (level - CITY_UPGRADE_EARLY_END_LEVEL)
+      / (CITY_UPGRADE_MID_END_LEVEL - CITY_UPGRADE_EARLY_END_LEVEL);
+    return CITY_UPGRADE_EARLY_END_HOURS
+      + (CITY_UPGRADE_MID_END_HOURS - CITY_UPGRADE_EARLY_END_HOURS)
+        * Math.pow(progress, 1.4);
+  }
+  const endgameProgress = (level - CITY_UPGRADE_MID_END_LEVEL)
+    / Math.max(1, 150 - CITY_UPGRADE_MID_END_LEVEL);
+  return Math.min(
+    CITY_UPGRADE_MAX_TARGET_HOURS,
+    CITY_UPGRADE_MID_END_HOURS
+      + (CITY_UPGRADE_END_LEVEL_150_HOURS - CITY_UPGRADE_MID_END_HOURS)
+        * Math.pow(endgameProgress, 1.5)
+  );
 }
 
 function getCityUpgradeCost(city = {}, bonuses = {}) {
@@ -3001,14 +3044,11 @@ function getCityUpgradeCost(city = {}, bonuses = {}) {
   const startLevel = clampCityLevel(city.level);
   const targetLevel = startLevel + 1;
   if (!Number.isSafeInteger(targetLevel)) return Infinity;
-  const baseCost = MILLION_LORDS_CITY_COST_BASE * (
-    Math.pow(MILLION_LORDS_CITY_COST_GROWTH, targetLevel - 1)
-      - Math.pow(MILLION_LORDS_CITY_COST_GROWTH, startLevel - 1)
-  );
-  const totalCost = baseCost * getCityUpgradePrestigeMultiplier(targetLevel);
+  const totalCost = getMillionLordsPassiveGoldPerHour(startLevel)
+    * getCityUpgradeTargetHours(startLevel);
   if (!Number.isFinite(totalCost)) return Infinity;
   const reduction = Math.max(0, safeNumber(bonuses.upgradeCostReductionPercent, 0));
-  return Math.max(0, Math.floor(totalCost * (1 - Math.min(85, reduction) / 100) + 0.000001));
+  return Math.max(10, Math.floor(totalCost * (1 - Math.min(85, reduction) / 100) + 0.000001));
 }
 
 function getCityUpgradeXpAward(city = {}) {
@@ -3845,6 +3885,7 @@ function getHarvestEconomyRates(economy = null) {
     const city = entry?.city || {};
     if (isStronghold(city) || getOwnerUid(city) !== economy.uid) return totals;
     const stats = getCityProductionStats(city, economy.profileAfter, economy.bonuses, {
+      includeWarDrums: false,
       includeRoyalTaxDecree: false,
     });
     totals.goldPerSecond += Math.max(0, safeNumber(stats.goldProductionPerSecond, 0));
@@ -5249,7 +5290,7 @@ exports.purchaseShopItem = onCall({ region: "us-central1", maxInstances: 20, inv
     }
     const purchaseStatus = getItemPurchaseStatus(itemId, economy.itemPurchaseCooldowns, nowMs);
     if (purchaseStatus.remainingMs > 0) {
-      const purchaseRule = itemId === ROYAL_PEACE_SHIELD_ITEM_ID
+      const purchaseRule = purchaseStatus.limit === 1
         ? "once per UTC day"
         : `${purchaseStatus.limit} times per UTC day`;
       throw new HttpsError(
@@ -7051,8 +7092,15 @@ function getUtcDateKey(nowMs = Date.now()) {
   return new Date(nowMs).toISOString().slice(0, 10);
 }
 
-function getRewardCampDailyReward(config, claimIndex = 0) {
-  return config?.dailyRewards?.[Math.max(0, Math.floor(safeNumber(claimIndex, 0)))] || 0;
+function getRewardCampDailyReward(config, claimIndex = 0, productionRates = {}) {
+  const index = Math.max(0, Math.floor(safeNumber(claimIndex, 0)));
+  const minimumReward = Math.max(0, Math.floor(safeNumber(config?.dailyRewards?.[index], 0)));
+  const rewardHours = Math.max(0, safeNumber(config?.rewardHours?.[index], 0));
+  if (!minimumReward || !rewardHours) return minimumReward;
+  const hourlyRate = config.rewardType === "troops"
+    ? Math.max(0, safeNumber(productionRates.baseTroopPerHour, productionRates.troopPerHour))
+    : Math.max(0, safeNumber(productionRates.baseGoldPerHour, productionRates.goldPerHour));
+  return Math.max(minimumReward, Math.floor(hourlyRate * rewardHours));
 }
 
 function rollRelicCampItem(dropTable = RELIC_CAMP_DROP_TABLE) {
@@ -7160,10 +7208,13 @@ async function resolveRewardCampPayoutByRef(campRef, nowMs = Date.now(), callerU
     const claimsRef = config.objectiveStatsId
       ? db.doc(`players/${holderUid}/objectiveStats/${config.objectiveStatsId}`)
       : null;
+    const playerStatsRef = playerGlobalStatsRef(holderUid);
     const playerSnap = await transaction.get(playerRef);
     const claimsSnap = claimsRef ? await transaction.get(claimsRef) : null;
+    const playerStatsSnap = await transaction.get(playerStatsRef);
     const player = playerSnap.exists ? playerSnap.data() || {} : {};
     const claimData = claimsSnap?.exists ? claimsSnap.data() || {} : {};
+    const playerStats = playerStatsSnap.exists ? playerStatsSnap.data() || {} : {};
     const today = getUtcDateKey(nowMs);
     const priorClaims = claimData.date === today
       ? Math.max(0, Math.floor(safeNumber(claimData.count, 0)))
@@ -7178,8 +7229,19 @@ async function resolveRewardCampPayoutByRef(campRef, nowMs = Date.now(), callerU
       ? deedDailyLimitReached ? 0 : 1
       : isRelicCamp
         ? relicRewardItem ? 1 : 0
-        : getRewardCampDailyReward(config, priorClaims);
-    let nextClaims = isDeedCamp || isRelicCamp ? priorClaims : priorClaims + 1;
+        : getRewardCampDailyReward(config, priorClaims, {
+            baseGoldPerHour: safeNumber(
+              playerStats.baseGoldPerHour,
+              safeNumber(player.globalStats?.baseGoldPerHour, playerStats.goldPerHour)
+            ),
+            baseTroopPerHour: safeNumber(
+              playerStats.baseTroopPerHour,
+              safeNumber(player.globalStats?.baseTroopPerHour, playerStats.troopPerHour)
+            ),
+          });
+    let nextClaims = isDeedCamp || isRelicCamp
+      ? priorClaims
+      : Math.min(config.dailyRewards.length, priorClaims + 1);
     if (relicRewardItem) nextClaims = priorClaims + 1;
 
     const mainCityInfo = getMainCityInfo(player);

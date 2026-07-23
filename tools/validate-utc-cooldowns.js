@@ -40,13 +40,15 @@ function extractFunction(fileSource, name) {
 const context = {
   Date,
   Math,
-  Set,
-  ROYAL_PEACE_SHIELD_ITEM_ID: "shield_12h",
-  ROYAL_PEACE_SHIELD_DAILY_PURCHASE_LIMIT: 1,
-  WAR_DRUMS_ITEM_ID: "war_drums_30m",
-  ROYAL_TAX_DECREE_ITEM_ID: "royal_tax_decree_30m",
-  PRODUCTION_BOOST_PURCHASE_LIMIT: 3,
-  PRODUCTION_BOOST_ITEM_IDS: new Set(["war_drums_30m", "royal_tax_decree_30m"]),
+  ITEM_DAILY_PURCHASE_LIMITS: {
+    shield_12h: 1,
+    war_drums_30m: 4,
+    royal_tax_decree_30m: 2,
+    veil_of_silence_30m: 4,
+    swift_march_order: 2,
+    recall_horn: 2,
+  },
+  MAX_ITEM_DAILY_PURCHASE_LIMIT: 4,
   timestampToMs: value => {
     if (typeof value === "number") return Number.isFinite(value) ? value : 0;
     if (value instanceof Date) return value.getTime();
@@ -77,10 +79,10 @@ assert.equal(shieldAfterReset.count, 0);
 assert.equal(shieldAfterReset.remainingMs, 0);
 
 const boostCooldowns = {
-  war_drums_30m: { utcDate: "2026-07-23", purchaseCount: 3 },
+  war_drums_30m: { utcDate: "2026-07-23", purchaseCount: 4 },
 };
 const boostBeforeReset = context.getItemPurchaseStatus("war_drums_30m", boostCooldowns, beforeMidnight);
-assert.equal(boostBeforeReset.count, 3);
+assert.equal(boostBeforeReset.count, 4);
 assert.equal(boostBeforeReset.remainingMs, 60_000);
 const boostAfterReset = context.getItemPurchaseStatus("war_drums_30m", boostCooldowns, afterMidnight);
 assert.equal(boostAfterReset.count, 0);
@@ -92,9 +94,17 @@ const migratedBoost = context.normalizeDailyItemPurchaseCounter({
     Date.parse("2026-07-23T00:01:00.000Z"),
     Date.parse("2026-07-23T12:00:00.000Z"),
   ],
-}, 3);
+}, 4);
 assert.equal(migratedBoost.utcDate, "2026-07-23");
 assert.equal(migratedBoost.purchaseCount, 2);
+
+for (const [itemId, limit] of Object.entries(context.ITEM_DAILY_PURCHASE_LIMITS)) {
+  assert.equal(context.getItemDailyPurchaseLimit(itemId), limit, `${itemId} is missing its daily cap.`);
+  const status = context.getItemPurchaseStatus(itemId, {
+    [itemId]: { utcDate: "2026-07-23", purchaseCount: limit },
+  }, beforeMidnight);
+  assert.equal(status.remainingMs, 60_000, `${itemId} should lock after its daily cap.`);
+}
 
 const selectionRenderSource = extractFunction(source, "renderSelectionChangeNow");
 assert.doesNotMatch(selectionRenderSource, /renderAll\(/, "Selection changes must not redraw the full map.");
