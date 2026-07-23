@@ -15,13 +15,54 @@ function readConstant(source, name) {
   return Number(match[1]);
 }
 
-for (const name of ["LEVEL_UP_TROOP_REWARD_BASE", "LEVEL_UP_TROOP_REWARD_MULTIPLIER"]) {
+for (const name of [
+  "LEVEL_UP_TROOP_REWARD_BASE",
+  "LEVEL_UP_TROOP_REWARD_MULTIPLIER",
+  "HERO_XP_SOFT_CAP_LEVEL",
+  "HERO_XP_HARD_CAP_LEVEL",
+  "HERO_XP_POST_50_SPAN",
+  "HERO_XP_POST_100_SPAN",
+  "HERO_XP_POST_50_MULTIPLIER",
+  "HERO_XP_POST_100_MULTIPLIER",
+  "HERO_XP_POST_50_EXPONENT",
+  "HERO_XP_POST_100_EXPONENT",
+  "LEVEL_UP_TROOP_REWARD_POST_50_SCALE",
+  "LEVEL_UP_TROOP_REWARD_POST_50_EXPONENT",
+  "LEVEL_UP_TROOP_REWARD_POST_100_SCALE",
+  "LEVEL_UP_TROOP_REWARD_POST_100_EXPONENT",
+]) {
   const serverValue = readConstant(serverSource, name);
   const clientValue = readConstant(clientSource, name);
   if (serverValue !== clientValue) {
     throw new Error(`${name} differs between server (${serverValue}) and client (${clientValue}).`);
   }
 }
+
+requireMatch(
+  serverSource,
+  /function capBattleXpForHeroLevel[\s\S]*?BATTLE_XP_LEVEL_REQUIREMENT_CAP_MULTIPLIER/,
+  "Server battle XP is not capped against the receiving hero level."
+);
+requireMatch(
+  serverSource,
+  /buildPlayerProgressPatch\(attackerProfile,[\s\S]*?capBattleXpForHeroLevel/,
+  "Attacker battle XP is not capped before level-up rewards are granted."
+);
+requireMatch(
+  serverSource,
+  /buildPlayerProgressPatch\(defenderProfile \|\| \{},[\s\S]*?capBattleXpForHeroLevel/,
+  "Defender battle XP is not capped before level-up rewards are granted."
+);
+requireMatch(
+  clientSource,
+  /function getXpRequiredForLevel[\s\S]*?HERO_XP_POST_100_MULTIPLIER/,
+  "Client XP requirement formula does not include the post-100 scaling."
+);
+requireMatch(
+  clientSource,
+  /function getLevelUpTroopReward[\s\S]*?LEVEL_UP_TROOP_REWARD_POST_100_SCALE/,
+  "Client level-up troop formula does not include the flattened post-100 reward."
+);
 
 requireMatch(
   serverSource,

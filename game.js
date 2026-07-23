@@ -662,6 +662,18 @@ const CHARACTER_START_LEVEL = 1;
 const CHARACTER_START_XP = 0;
 const LEVEL_UP_TROOP_REWARD_BASE = 50;
 const LEVEL_UP_TROOP_REWARD_MULTIPLIER = 1.15;
+const HERO_XP_SOFT_CAP_LEVEL = 50;
+const HERO_XP_HARD_CAP_LEVEL = 100;
+const HERO_XP_POST_50_SPAN = 50;
+const HERO_XP_POST_100_SPAN = 25;
+const HERO_XP_POST_50_MULTIPLIER = 2.5;
+const HERO_XP_POST_100_MULTIPLIER = 4;
+const HERO_XP_POST_50_EXPONENT = 1.5;
+const HERO_XP_POST_100_EXPONENT = 1.6;
+const LEVEL_UP_TROOP_REWARD_POST_50_SCALE = 720;
+const LEVEL_UP_TROOP_REWARD_POST_50_EXPONENT = 1.28;
+const LEVEL_UP_TROOP_REWARD_POST_100_SCALE = 1200;
+const LEVEL_UP_TROOP_REWARD_POST_100_EXPONENT = 1.1;
 const CITY_UPGRADE_XP_BASE = 18;
 const CITY_UPGRADE_XP_PER_LEVEL = 4;
 const CAPTURE_XP_BASE = 120;
@@ -5494,7 +5506,21 @@ function reconcileSkillPoints(character = state?.character, upgrades = state?.up
 
 function getXpRequiredForLevel(level) {
   const current = Math.max(1, Math.floor(Number(level) || 1));
-  return Math.floor(150 + current * 65 + Math.pow(current, 2.05) * 35);
+  const base = 150 + current * 65 + Math.pow(current, 2.05) * 35;
+  let multiplier = 1;
+  if (current > HERO_XP_SOFT_CAP_LEVEL) {
+    multiplier += Math.pow(
+      (current - HERO_XP_SOFT_CAP_LEVEL) / HERO_XP_POST_50_SPAN,
+      HERO_XP_POST_50_EXPONENT
+    ) * HERO_XP_POST_50_MULTIPLIER;
+  }
+  if (current > HERO_XP_HARD_CAP_LEVEL) {
+    multiplier += Math.pow(
+      (current - HERO_XP_HARD_CAP_LEVEL) / HERO_XP_POST_100_SPAN,
+      HERO_XP_POST_100_EXPONENT
+    ) * HERO_XP_POST_100_MULTIPLIER;
+  }
+  return Math.floor(base * multiplier);
 }
 
 function getLevelUpGoldReward(level) {
@@ -5504,7 +5530,23 @@ function getLevelUpGoldReward(level) {
 
 function getLevelUpTroopReward(level) {
   const current = Math.max(1, Math.floor(Number(level) || 1));
-  return Math.floor(LEVEL_UP_TROOP_REWARD_BASE * Math.pow(LEVEL_UP_TROOP_REWARD_MULTIPLIER, current - 1));
+  const softCapReward = LEVEL_UP_TROOP_REWARD_BASE * Math.pow(
+    LEVEL_UP_TROOP_REWARD_MULTIPLIER,
+    HERO_XP_SOFT_CAP_LEVEL - 1
+  );
+  if (current <= HERO_XP_SOFT_CAP_LEVEL) {
+    return Math.floor(LEVEL_UP_TROOP_REWARD_BASE * Math.pow(LEVEL_UP_TROOP_REWARD_MULTIPLIER, current - 1));
+  }
+  const post50Levels = Math.min(current, HERO_XP_HARD_CAP_LEVEL) - HERO_XP_SOFT_CAP_LEVEL;
+  const post50Reward = softCapReward
+    + Math.pow(post50Levels, LEVEL_UP_TROOP_REWARD_POST_50_EXPONENT)
+      * LEVEL_UP_TROOP_REWARD_POST_50_SCALE;
+  if (current <= HERO_XP_HARD_CAP_LEVEL) return Math.floor(post50Reward);
+  return Math.floor(
+    post50Reward
+      + Math.pow(current - HERO_XP_HARD_CAP_LEVEL, LEVEL_UP_TROOP_REWARD_POST_100_EXPONENT)
+        * LEVEL_UP_TROOP_REWARD_POST_100_SCALE
+  );
 }
 
 function getMainRewardCity(excludeCityId = null) {
