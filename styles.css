@@ -3400,11 +3400,6 @@ button.inventory-slot {
 .island-map-zoom-toolbar button:disabled {
   opacity: .42;
 }
-.island-map-zoom-toolbar input[type="range"] {
-  width: clamp(90px, 25vw, 180px);
-  min-width: 0;
-  accent-color: #d3a13f;
-}
 .island-map-zoom-toolbar output {
   width: 44px;
   min-width: 44px;
@@ -3436,7 +3431,8 @@ button.inventory-slot {
     #0d3555;
   box-shadow: inset 0 0 0 2px rgba(255,255,255,.06), inset 0 -16px 32px rgba(0,0,0,.22);
 }
-.island-map-picker.panning {
+.island-map-picker.panning,
+.island-map-picker.pinching {
   cursor: grabbing;
 }
 .island-map-picker::-webkit-scrollbar {
@@ -6761,9 +6757,6 @@ select:focus {
     width: 34px;
     height: 34px;
     min-width: 34px;
-  }
-  .island-map-zoom-toolbar input[type="range"] {
-    width: min(30vw, 116px);
   }
 }
 

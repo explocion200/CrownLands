@@ -8791,7 +8791,6 @@ function renderIslandSwitcherModalContent() {
     <div class="island-map-shell">
       <div class="island-map-zoom-toolbar" role="group" aria-label="Map zoom controls">
         <button type="button" data-island-map-zoom-out aria-label="Zoom map out" title="Zoom out">&minus;</button>
-        <input type="range" min="${ISLAND_PICKER_MIN_ZOOM}" max="${ISLAND_PICKER_MAX_ZOOM}" step="0.02" value="${zoom}" data-island-map-zoom-slider aria-label="Map zoom" />
         <button type="button" data-island-map-zoom-in aria-label="Zoom map in" title="Zoom in">&plus;</button>
         <button type="button" data-island-map-zoom-fit aria-label="Fit all maps" title="Fit all maps">&#x26F6;</button>
         <output data-island-map-zoom-value aria-live="polite">${Math.round(zoom * 100)}%</output>
@@ -8867,13 +8866,10 @@ function updateIslandMapPickerZoomControls(picker) {
   const shell = picker?.closest?.(".island-map-shell");
   if (!shell) return;
   const zoom = getIslandMapPickerZoom(picker);
-  const slider = shell.querySelector("[data-island-map-zoom-slider]");
   const value = shell.querySelector("[data-island-map-zoom-value]");
   const zoomOut = shell.querySelector("[data-island-map-zoom-out]");
   const zoomIn = shell.querySelector("[data-island-map-zoom-in]");
   const minimumZoom = getIslandMapPickerMinimumZoom(picker);
-  if (slider) slider.min = String(minimumZoom);
-  if (slider) slider.value = String(zoom);
   if (value) value.textContent = `${Math.round(zoom * 100)}%`;
   if (zoomOut) zoomOut.disabled = zoom <= minimumZoom + 0.001;
   if (zoomIn) zoomIn.disabled = zoom >= ISLAND_PICKER_MAX_ZOOM - 0.001;
@@ -8884,6 +8880,8 @@ function setIslandMapPickerZoom(picker, value, {
   remember = true,
   anchorClientX = null,
   anchorClientY = null,
+  targetClientX = null,
+  targetClientY = null,
 } = {}) {
   if (!picker) return false;
   const zoom = clampIslandMapPickerZoom(value, getIslandMapPickerMinimumZoom(picker));
@@ -8897,6 +8895,8 @@ function setIslandMapPickerZoom(picker, value, {
   const anchorY = Number.isFinite(Number(anchorClientY))
     ? Number(anchorClientY)
     : pickerBounds.top + picker.clientHeight / 2;
+  const targetX = Number.isFinite(Number(targetClientX)) ? Number(targetClientX) : anchorX;
+  const targetY = Number.isFinite(Number(targetClientY)) ? Number(targetClientY) : anchorY;
   const anchorRatioX = previousFrameBounds?.width
     ? clamp((anchorX - previousFrameBounds.left) / previousFrameBounds.width, 0, 1)
     : 0.5;
@@ -8915,10 +8915,10 @@ function setIslandMapPickerZoom(picker, value, {
     if (preserveCenter) {
       const nextFrameBounds = canvasFrame?.getBoundingClientRect();
       const anchoredLeft = nextFrameBounds
-        ? picker.scrollLeft + nextFrameBounds.left + nextFrameBounds.width * anchorRatioX - anchorX
+        ? picker.scrollLeft + nextFrameBounds.left + nextFrameBounds.width * anchorRatioX - targetX
         : picker.scrollLeft;
       const anchoredTop = nextFrameBounds
-        ? picker.scrollTop + nextFrameBounds.top + nextFrameBounds.height * anchorRatioY - anchorY
+        ? picker.scrollTop + nextFrameBounds.top + nextFrameBounds.height * anchorRatioY - targetY
         : picker.scrollTop;
       const next = clampIslandMapPickerScroll(
         picker,
@@ -8958,7 +8958,6 @@ function attachIslandMapPickerZoom(picker) {
   const shell = picker?.closest?.(".island-map-shell");
   if (!picker || !shell || shell.dataset.zoomReady === "true") return;
   shell.dataset.zoomReady = "true";
-  const slider = shell.querySelector("[data-island-map-zoom-slider]");
   const zoomOut = shell.querySelector("[data-island-map-zoom-out]");
   const zoomIn = shell.querySelector("[data-island-map-zoom-in]");
   const fitAll = shell.querySelector("[data-island-map-zoom-fit]");
@@ -8971,9 +8970,6 @@ function attachIslandMapPickerZoom(picker) {
   });
   zoomIn?.addEventListener("click", () => {
     setIslandMapPickerZoom(picker, getIslandMapPickerZoom(picker) + ISLAND_PICKER_ZOOM_STEP);
-  });
-  slider?.addEventListener("input", () => {
-    setIslandMapPickerZoom(picker, Number(slider.value));
   });
   fitAll?.addEventListener("click", () => {
     fitIslandMapPickerToView(picker);
@@ -9125,9 +9121,21 @@ function centerIslandMapPickerOnRegion(picker, regionId) {
   if (!apply()) requestAnimationFrame(apply);
 }
 
+function getIslandMapPinchGeometry(pointers) {
+  const points = Array.from(pointers?.values?.() || []).slice(0, 2);
+  if (points.length < 2) return null;
+  const [first, second] = points;
+  return {
+    centerX: (first.x + second.x) / 2,
+    centerY: (first.y + second.y) / 2,
+    distance: Math.max(1, Math.hypot(second.x - first.x, second.y - first.y)),
+  };
+}
+
 function attachIslandMapPickerPan(picker) {
   if (!picker || picker.dataset.panReady === "true") return;
   picker.dataset.panReady = "true";
+  const touchPointers = new Map();
   let pointerId = null;
   let startX = 0;
   let startY = 0;
@@ -9135,26 +9143,72 @@ function attachIslandMapPickerPan(picker) {
   let startScrollTop = 0;
   let moved = false;
   let tapRegionId = "";
+  let pinchGeometry = null;
 
   picker.addEventListener("scroll", () => {
     rememberIslandMapPickerView(picker);
   }, { passive: true });
 
-  picker.addEventListener("pointerdown", event => {
-    if (event.button !== undefined && event.button !== 0) return;
-    const tile = event.target?.closest?.("[data-island-region]");
-    pointerId = event.pointerId;
-    startX = event.clientX;
-    startY = event.clientY;
+  const beginPan = (id, x, y, regionId = "") => {
+    pointerId = id;
+    startX = x;
+    startY = y;
     startScrollLeft = picker.scrollLeft;
     startScrollTop = picker.scrollTop;
     moved = false;
-    tapRegionId = tile?.dataset?.islandRegion || "";
+    tapRegionId = regionId;
     picker.classList.add("panning");
+  };
+
+  const suppressTileActivation = () => {
+    picker.dataset.justDragged = "true";
+    window.setTimeout(() => {
+      if (picker) delete picker.dataset.justDragged;
+    }, 180);
+  };
+
+  picker.addEventListener("pointerdown", event => {
+    if (event.button !== undefined && event.button !== 0) return;
+    const tile = event.target?.closest?.("[data-island-region]");
     picker.setPointerCapture?.(event.pointerId);
+    if (event.pointerType === "touch") {
+      touchPointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+      if (touchPointers.size >= 2) {
+        pointerId = null;
+        moved = true;
+        tapRegionId = "";
+        pinchGeometry = getIslandMapPinchGeometry(touchPointers);
+        picker.classList.add("panning", "pinching");
+        event.preventDefault();
+        return;
+      }
+    }
+    if (pointerId !== null) return;
+    beginPan(event.pointerId, event.clientX, event.clientY, tile?.dataset?.islandRegion || "");
   });
 
   picker.addEventListener("pointermove", event => {
+    if (event.pointerType === "touch" && touchPointers.has(event.pointerId)) {
+      touchPointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+      if (touchPointers.size >= 2) {
+        const nextGeometry = getIslandMapPinchGeometry(touchPointers);
+        if (pinchGeometry && nextGeometry) {
+          const nextZoom = getIslandMapPickerZoom(picker) * (nextGeometry.distance / pinchGeometry.distance);
+          setIslandMapPickerZoom(picker, nextZoom, {
+            anchorClientX: pinchGeometry.centerX,
+            anchorClientY: pinchGeometry.centerY,
+            targetClientX: nextGeometry.centerX,
+            targetClientY: nextGeometry.centerY,
+            remember: false,
+          });
+        }
+        pinchGeometry = nextGeometry;
+        moved = true;
+        tapRegionId = "";
+        event.preventDefault();
+        return;
+      }
+    }
     if (pointerId !== event.pointerId) return;
     const dx = event.clientX - startX;
     const dy = event.clientY - startY;
@@ -9166,16 +9220,32 @@ function attachIslandMapPickerPan(picker) {
   });
 
   const stopPan = event => {
+    const wasPinching = picker.classList.contains("pinching");
+    if (event.pointerType === "touch") touchPointers.delete(event.pointerId);
+    picker.releasePointerCapture?.(event.pointerId);
+    if (wasPinching) {
+      pinchGeometry = getIslandMapPinchGeometry(touchPointers);
+      if (pinchGeometry) return;
+      picker.classList.remove("pinching");
+      rememberIslandMapPickerView(picker);
+      suppressTileActivation();
+      const remaining = touchPointers.entries().next().value;
+      if (remaining) {
+        const [remainingPointerId, point] = remaining;
+        beginPan(remainingPointerId, point.x, point.y);
+        moved = true;
+        return;
+      }
+      pointerId = null;
+      picker.classList.remove("panning");
+      return;
+    }
     if (pointerId !== event.pointerId) return;
     pointerId = null;
     picker.classList.remove("panning");
-    picker.releasePointerCapture?.(event.pointerId);
     if (moved) {
       rememberIslandMapPickerView(picker);
-      picker.dataset.justDragged = "true";
-      window.setTimeout(() => {
-        if (picker) delete picker.dataset.justDragged;
-      }, 120);
+      suppressTileActivation();
     } else if (tapRegionId) {
       const releasedTile = document.elementFromPoint(event.clientX, event.clientY)?.closest?.("[data-island-region]");
       if (releasedTile?.dataset?.islandRegion === tapRegionId) {

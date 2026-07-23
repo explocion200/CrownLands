@@ -51,6 +51,7 @@ vm.runInContext([
   extractFunction("getMarchEndpointInteractionClearance"),
   extractFunction("isMarchInsideEndpointInteractionClearance"),
   extractFunction("clampIslandMapPickerZoom"),
+  extractFunction("getIslandMapPinchGeometry"),
 ].join("\n"), context, { filename: gamePath });
 
 assert.equal(context.shouldUseLowZoomPerformance(false, 0.71), true);
@@ -66,11 +67,21 @@ assert.equal(context.clampIslandMapPickerZoom(0), context.ISLAND_PICKER_MIN_ZOOM
 assert.equal(context.clampIslandMapPickerZoom(0.2, 0.45), 0.45);
 assert.equal(context.clampIslandMapPickerZoom(0.5), 0.5);
 assert.equal(context.clampIslandMapPickerZoom(2), context.ISLAND_PICKER_MAX_ZOOM);
+const pinchGeometry = context.getIslandMapPinchGeometry(new Map([
+  [1, { x: 20, y: 30 }],
+  [2, { x: 80, y: 110 }],
+]));
+assert.equal(pinchGeometry.centerX, 50);
+assert.equal(pinchGeometry.centerY, 70);
+assert.equal(pinchGeometry.distance, 100);
 assert.match(source, /data-island-map-zoom-fit/, "The map picker should expose a fit-all control.");
+assert.doesNotMatch(source, /data-island-map-zoom-slider/, "The map picker should not render a zoom range slider.");
 assert.match(source, /fitIslandMapPickerToView/, "The map picker should calculate a fit-all zoom.");
 assert.match(source, /function getIslandMapPickerMinimumZoom[\s\S]*?getIslandMapPickerFitZoom/, "The map picker minimum zoom should stop at the all-maps view.");
 assert.match(source, /picker\.addEventListener\("wheel"[\s\S]*?event\.preventDefault\(\)[\s\S]*?anchorClientX/, "The mouse wheel should zoom the map around the pointer.");
 assert.match(source, /picker\.addEventListener\("pointerdown"[\s\S]*?picker\.scrollLeft = startScrollLeft - dx/, "The map picker should pan by dragging.");
+assert.match(source, /function getIslandMapPinchGeometry[\s\S]*?Math\.hypot/, "The map picker should calculate a two-pointer pinch gesture.");
+assert.match(source, /touchPointers\.size >= 2[\s\S]*?setIslandMapPickerZoom\(picker, nextZoom,[\s\S]*?targetClientX/, "Mobile pinch gestures should zoom around the moving finger midpoint.");
 assert.match(stylesSource, /\.island-map-canvas-frame[\s\S]*?--island-grid-scaled-w/, "The map picker should scale inside a bounded canvas frame.");
 
 const city = { id: "city", kind: "city", x: 0, y: 0 };
