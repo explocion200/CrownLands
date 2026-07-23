@@ -1,5 +1,6 @@
 const fs = require("fs");
 const path = require("path");
+const assert = require("node:assert/strict");
 
 const root = path.resolve(__dirname, "..");
 const serverSource = fs.readFileSync(path.join(root, "functions", "index.js"), "utf8");
@@ -16,8 +17,6 @@ function readConstant(source, name) {
 }
 
 for (const name of [
-  "LEVEL_UP_TROOP_REWARD_BASE",
-  "LEVEL_UP_TROOP_REWARD_MULTIPLIER",
   "HERO_XP_SOFT_CAP_LEVEL",
   "HERO_XP_HARD_CAP_LEVEL",
   "HERO_XP_POST_50_SPAN",
@@ -26,10 +25,26 @@ for (const name of [
   "HERO_XP_POST_100_MULTIPLIER",
   "HERO_XP_POST_50_EXPONENT",
   "HERO_XP_POST_100_EXPONENT",
-  "LEVEL_UP_TROOP_REWARD_POST_50_SCALE",
-  "LEVEL_UP_TROOP_REWARD_POST_50_EXPONENT",
-  "LEVEL_UP_TROOP_REWARD_POST_100_SCALE",
-  "LEVEL_UP_TROOP_REWARD_POST_100_EXPONENT",
+  "LEVEL_UP_GOLD_EARLY_UPGRADE_SHARE",
+  "LEVEL_UP_GOLD_MID_END_UPGRADE_SHARE",
+  "LEVEL_UP_GOLD_END_UPGRADE_SHARE",
+  "LEVEL_UP_GOLD_EARLY_PRODUCTION_HOURS",
+  "LEVEL_UP_GOLD_MID_END_PRODUCTION_HOURS",
+  "LEVEL_UP_GOLD_END_PRODUCTION_HOURS",
+  "LEVEL_UP_TROOP_REWARD_EARLY_BASE_HOURS",
+  "LEVEL_UP_TROOP_REWARD_EARLY_HOURS_PER_LEVEL",
+  "LEVEL_UP_TROOP_REWARD_MID_BASE_HOURS",
+  "LEVEL_UP_TROOP_REWARD_MID_HOURS_PER_LEVEL",
+  "LEVEL_UP_TROOP_REWARD_END_BASE_HOURS",
+  "LEVEL_UP_TROOP_REWARD_END_HOURS_PER_LEVEL",
+  "LEVEL_UP_TROOP_REWARD_MAX_HOURS",
+  "BATTLE_XP_TROOP_CREDIT_LEVEL_CAP_MULTIPLIER",
+  "BATTLE_XP_EARLY_LEVEL_CAP_RATE",
+  "BATTLE_XP_MID_START_LEVEL_CAP_RATE",
+  "BATTLE_XP_MID_END_LEVEL_CAP_RATE",
+  "BATTLE_XP_END_START_LEVEL_CAP_RATE",
+  "BATTLE_XP_END_FLOOR_LEVEL_CAP_RATE",
+  "BATTLE_XP_END_CAP_RAMP_LEVELS",
 ]) {
   const serverValue = readConstant(serverSource, name);
   const clientValue = readConstant(clientSource, name);
@@ -40,18 +55,18 @@ for (const name of [
 
 requireMatch(
   serverSource,
-  /function capBattleXpForHeroLevel[\s\S]*?BATTLE_XP_LEVEL_REQUIREMENT_CAP_MULTIPLIER/,
-  "Server battle XP is not capped against the receiving hero level."
+  /function capBattleXpForHeroLevel[\s\S]*?getBattleXpLevelCapRate/,
+  "Server battle XP is not capped against the receiving hero progression phase."
 );
 requireMatch(
   serverSource,
-  /buildPlayerProgressPatch\(attackerProfile,[\s\S]*?capBattleXpForHeroLevel/,
-  "Attacker battle XP is not capped before level-up rewards are granted."
+  /cappedAttackWinXp\s*=\s*capBattleXpForHeroLevel[\s\S]*?attackerXp\s*=\s*result\.success\s*\?\s*cappedAttackWinXp\s*:\s*getPartialBattleXpAward\(cappedAttackWinXp\)/,
+  "Attacker defeat XP must be one-third of the capped victory XP."
 );
 requireMatch(
   serverSource,
-  /buildPlayerProgressPatch\(defenderProfile \|\| \{},[\s\S]*?capBattleXpForHeroLevel/,
-  "Defender battle XP is not capped before level-up rewards are granted."
+  /cappedDefenseHeldXp\s*=\s*capBattleXpForHeroLevel[\s\S]*?defenderXp\s*=\s*result\.success\s*\?\s*getPartialBattleXpAward\(cappedDefenseHeldXp\)\s*:\s*cappedDefenseHeldXp/,
+  "Lost-defense XP must be one-third of the capped held-defense XP."
 );
 requireMatch(
   clientSource,
@@ -59,9 +74,24 @@ requireMatch(
   "Client XP requirement formula does not include the post-100 scaling."
 );
 requireMatch(
+  serverSource,
+  /function getLevelUpGoldReward[\s\S]*?getCityUpgradeCost[\s\S]*?getMillionLordsPassiveGoldPerHour/,
+  "Server level-up gold is not tied to upgrade cost and passive production."
+);
+requireMatch(
   clientSource,
-  /function getLevelUpTroopReward[\s\S]*?LEVEL_UP_TROOP_REWARD_POST_100_SCALE/,
-  "Client level-up troop formula does not include the flattened post-100 reward."
+  /function getLevelUpGoldReward[\s\S]*?getCityUpgradeCostAtLevel[\s\S]*?getMillionLordsPassiveGoldPerHour/,
+  "Client level-up gold is not tied to upgrade cost and passive production."
+);
+requireMatch(
+  serverSource,
+  /function getLevelUpTroopReward[\s\S]*?getCityProductionStats[\s\S]*?getLevelUpTroopRewardHours/,
+  "Server level-up troops are not tied to city troop production."
+);
+requireMatch(
+  clientSource,
+  /function getLevelUpTroopReward[\s\S]*?getCityStats[\s\S]*?getLevelUpTroopRewardHours/,
+  "Client level-up troops are not tied to city troop production."
 );
 
 requireMatch(
@@ -90,4 +120,67 @@ requireMatch(
   "Synced battle reports do not preserve level-up troop rewards."
 );
 
-console.log("Validated server-authoritative level-up troop rewards for upgrades, attacks, and defenses.");
+const constants = Object.fromEntries([
+  "HERO_XP_SOFT_CAP_LEVEL",
+  "HERO_XP_HARD_CAP_LEVEL",
+  "HERO_XP_POST_50_SPAN",
+  "HERO_XP_POST_100_SPAN",
+  "HERO_XP_POST_50_MULTIPLIER",
+  "HERO_XP_POST_100_MULTIPLIER",
+  "HERO_XP_POST_50_EXPONENT",
+  "HERO_XP_POST_100_EXPONENT",
+  "BATTLE_XP_EARLY_LEVEL_CAP_RATE",
+  "BATTLE_XP_MID_START_LEVEL_CAP_RATE",
+  "BATTLE_XP_MID_END_LEVEL_CAP_RATE",
+  "BATTLE_XP_END_START_LEVEL_CAP_RATE",
+  "BATTLE_XP_END_FLOOR_LEVEL_CAP_RATE",
+  "BATTLE_XP_END_CAP_RAMP_LEVELS",
+].map(name => [name, readConstant(serverSource, name)]));
+
+function xpRequired(level) {
+  const current = Math.max(1, Math.floor(level));
+  const base = 150 + current * 65 + Math.pow(current, 2.05) * 35;
+  let multiplier = 1;
+  if (current > constants.HERO_XP_SOFT_CAP_LEVEL) {
+    multiplier += Math.pow(
+      (current - constants.HERO_XP_SOFT_CAP_LEVEL) / constants.HERO_XP_POST_50_SPAN,
+      constants.HERO_XP_POST_50_EXPONENT
+    ) * constants.HERO_XP_POST_50_MULTIPLIER;
+  }
+  if (current > constants.HERO_XP_HARD_CAP_LEVEL) {
+    multiplier += Math.pow(
+      (current - constants.HERO_XP_HARD_CAP_LEVEL) / constants.HERO_XP_POST_100_SPAN,
+      constants.HERO_XP_POST_100_EXPONENT
+    ) * constants.HERO_XP_POST_100_MULTIPLIER;
+  }
+  return Math.floor(base * multiplier);
+}
+
+function battleCapRate(level) {
+  if (level <= constants.HERO_XP_SOFT_CAP_LEVEL) return constants.BATTLE_XP_EARLY_LEVEL_CAP_RATE;
+  if (level <= constants.HERO_XP_HARD_CAP_LEVEL) {
+    const progress = (level - constants.HERO_XP_SOFT_CAP_LEVEL)
+      / (constants.HERO_XP_HARD_CAP_LEVEL - constants.HERO_XP_SOFT_CAP_LEVEL);
+    return constants.BATTLE_XP_MID_START_LEVEL_CAP_RATE
+      + (constants.BATTLE_XP_MID_END_LEVEL_CAP_RATE - constants.BATTLE_XP_MID_START_LEVEL_CAP_RATE) * progress;
+  }
+  const progress = Math.min(
+    1,
+    (level - constants.HERO_XP_HARD_CAP_LEVEL) / constants.BATTLE_XP_END_CAP_RAMP_LEVELS
+  );
+  return Math.max(
+    constants.BATTLE_XP_END_FLOOR_LEVEL_CAP_RATE,
+    constants.BATTLE_XP_END_START_LEVEL_CAP_RATE
+      + (constants.BATTLE_XP_END_FLOOR_LEVEL_CAP_RATE - constants.BATTLE_XP_END_START_LEVEL_CAP_RATE) * progress
+  );
+}
+
+assert.equal(battleCapRate(50), 1, "Levels 1-50 should allow one decisive battle to fill one level.");
+assert.ok(battleCapRate(75) > 0.6 && battleCapRate(75) < 0.7, "Midgame battle pacing should need about two strong fights.");
+assert.equal(battleCapRate(100), 0.5, "Level 100 battle cap should be half a level.");
+assert.ok(battleCapRate(101) < 0.3, "Endgame pacing should become challenging immediately after level 100.");
+assert.equal(battleCapRate(150), 0.15, "Late endgame battle cap should settle at 15% of a level.");
+assert.ok(xpRequired(100) > xpRequired(50) * 10, "Levels 50-100 are not scaling enough.");
+assert.ok(xpRequired(150) > xpRequired(100) * 10, "Levels above 100 are not endgame-scaled.");
+
+console.log("Validated three-phase XP pacing and production-based level-up gold/troop relief.");

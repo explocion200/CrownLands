@@ -660,8 +660,6 @@ const ROUTE_CITY_CLEARANCE = 46;
 const ROUTE_STRONGHOLD_CLEARANCE = 88;
 const CHARACTER_START_LEVEL = 1;
 const CHARACTER_START_XP = 0;
-const LEVEL_UP_TROOP_REWARD_BASE = 50;
-const LEVEL_UP_TROOP_REWARD_MULTIPLIER = 1.15;
 const HERO_XP_SOFT_CAP_LEVEL = 50;
 const HERO_XP_HARD_CAP_LEVEL = 100;
 const HERO_XP_POST_50_SPAN = 50;
@@ -670,10 +668,19 @@ const HERO_XP_POST_50_MULTIPLIER = 2.5;
 const HERO_XP_POST_100_MULTIPLIER = 4;
 const HERO_XP_POST_50_EXPONENT = 1.5;
 const HERO_XP_POST_100_EXPONENT = 1.6;
-const LEVEL_UP_TROOP_REWARD_POST_50_SCALE = 720;
-const LEVEL_UP_TROOP_REWARD_POST_50_EXPONENT = 1.28;
-const LEVEL_UP_TROOP_REWARD_POST_100_SCALE = 1200;
-const LEVEL_UP_TROOP_REWARD_POST_100_EXPONENT = 1.1;
+const LEVEL_UP_GOLD_EARLY_UPGRADE_SHARE = 0.5;
+const LEVEL_UP_GOLD_MID_END_UPGRADE_SHARE = 0.3;
+const LEVEL_UP_GOLD_END_UPGRADE_SHARE = 0.2;
+const LEVEL_UP_GOLD_EARLY_PRODUCTION_HOURS = 4;
+const LEVEL_UP_GOLD_MID_END_PRODUCTION_HOURS = 12;
+const LEVEL_UP_GOLD_END_PRODUCTION_HOURS = 24;
+const LEVEL_UP_TROOP_REWARD_EARLY_BASE_HOURS = 4;
+const LEVEL_UP_TROOP_REWARD_EARLY_HOURS_PER_LEVEL = 0.4;
+const LEVEL_UP_TROOP_REWARD_MID_BASE_HOURS = 24;
+const LEVEL_UP_TROOP_REWARD_MID_HOURS_PER_LEVEL = 0.24;
+const LEVEL_UP_TROOP_REWARD_END_BASE_HOURS = 36;
+const LEVEL_UP_TROOP_REWARD_END_HOURS_PER_LEVEL = 0.12;
+const LEVEL_UP_TROOP_REWARD_MAX_HOURS = 48;
 const CITY_UPGRADE_XP_BASE = 18;
 const CITY_UPGRADE_XP_PER_LEVEL = 4;
 const CAPTURE_XP_BASE = 120;
@@ -687,7 +694,13 @@ const DEFENSE_HELD_XP_PER_ATTACKER = 0.45;
 const FAILED_BATTLE_XP_RATE = 1 / 3;
 const BATTLE_XP_TROOP_CREDIT_CITY_WALL_MULTIPLIER = 1;
 const BATTLE_XP_TROOP_CREDIT_VP_MULTIPLIER = 2;
-const BATTLE_XP_LEVEL_REQUIREMENT_CAP_MULTIPLIER = 3;
+const BATTLE_XP_TROOP_CREDIT_LEVEL_CAP_MULTIPLIER = 3;
+const BATTLE_XP_EARLY_LEVEL_CAP_RATE = 1;
+const BATTLE_XP_MID_START_LEVEL_CAP_RATE = 0.8;
+const BATTLE_XP_MID_END_LEVEL_CAP_RATE = 0.5;
+const BATTLE_XP_END_START_LEVEL_CAP_RATE = 0.3;
+const BATTLE_XP_END_FLOOR_LEVEL_CAP_RATE = 0.15;
+const BATTLE_XP_END_CAP_RAMP_LEVELS = 50;
 const DEMO_ATTACK_MIN_POWER_RATIO = 3;
 const DEMO_ATTACK_DEFENDER_XP_MULTIPLIER = 2;
 const DEMO_ATTACK_TIERS = [
@@ -5523,30 +5536,70 @@ function getXpRequiredForLevel(level) {
   return Math.floor(base * multiplier);
 }
 
+function getLevelUpGoldUpgradeShare(level) {
+  const current = Math.max(1, Math.floor(Number(level) || 1));
+  if (current <= HERO_XP_SOFT_CAP_LEVEL) return LEVEL_UP_GOLD_EARLY_UPGRADE_SHARE;
+  if (current <= HERO_XP_HARD_CAP_LEVEL) {
+    const progress = (current - HERO_XP_SOFT_CAP_LEVEL)
+      / (HERO_XP_HARD_CAP_LEVEL - HERO_XP_SOFT_CAP_LEVEL);
+    return LEVEL_UP_GOLD_EARLY_UPGRADE_SHARE
+      + (LEVEL_UP_GOLD_MID_END_UPGRADE_SHARE - LEVEL_UP_GOLD_EARLY_UPGRADE_SHARE) * progress;
+  }
+  return LEVEL_UP_GOLD_END_UPGRADE_SHARE;
+}
+
+function getLevelUpGoldProductionHours(level) {
+  const current = Math.max(1, Math.floor(Number(level) || 1));
+  if (current <= HERO_XP_SOFT_CAP_LEVEL) return LEVEL_UP_GOLD_EARLY_PRODUCTION_HOURS;
+  if (current <= HERO_XP_HARD_CAP_LEVEL) {
+    const progress = (current - HERO_XP_SOFT_CAP_LEVEL)
+      / (HERO_XP_HARD_CAP_LEVEL - HERO_XP_SOFT_CAP_LEVEL);
+    return LEVEL_UP_GOLD_EARLY_PRODUCTION_HOURS
+      + (LEVEL_UP_GOLD_MID_END_PRODUCTION_HOURS - LEVEL_UP_GOLD_EARLY_PRODUCTION_HOURS) * progress;
+  }
+  return LEVEL_UP_GOLD_END_PRODUCTION_HOURS;
+}
+
 function getLevelUpGoldReward(level) {
   const current = Math.max(1, Math.floor(Number(level) || 1));
-  return Math.floor(250 + current * 60 + Math.pow(current, 1.25) * 25);
+  const legacyReward = 250 + current * 60 + Math.pow(current, 1.25) * 25;
+  const referenceCityLevel = Math.max(1, current - 1);
+  const referenceUpgradeCost = getCityUpgradeCostAtLevel(referenceCityLevel, 0);
+  const upgradeRelief = Number.isFinite(referenceUpgradeCost)
+    ? referenceUpgradeCost * getLevelUpGoldUpgradeShare(current)
+    : 0;
+  const productionRelief = getMillionLordsPassiveGoldPerHour(current)
+    * getLevelUpGoldProductionHours(current);
+  return Math.floor(Math.max(legacyReward, Math.min(upgradeRelief, productionRelief)));
+}
+
+function getLevelUpTroopRewardHours(level) {
+  const current = Math.max(1, Math.floor(Number(level) || 1));
+  if (current <= HERO_XP_SOFT_CAP_LEVEL) {
+    return LEVEL_UP_TROOP_REWARD_EARLY_BASE_HOURS
+      + current * LEVEL_UP_TROOP_REWARD_EARLY_HOURS_PER_LEVEL;
+  }
+  if (current <= HERO_XP_HARD_CAP_LEVEL) {
+    return LEVEL_UP_TROOP_REWARD_MID_BASE_HOURS
+      + (current - HERO_XP_SOFT_CAP_LEVEL) * LEVEL_UP_TROOP_REWARD_MID_HOURS_PER_LEVEL;
+  }
+  return Math.min(
+    LEVEL_UP_TROOP_REWARD_MAX_HOURS,
+    LEVEL_UP_TROOP_REWARD_END_BASE_HOURS
+      + (current - HERO_XP_HARD_CAP_LEVEL) * LEVEL_UP_TROOP_REWARD_END_HOURS_PER_LEVEL
+  );
 }
 
 function getLevelUpTroopReward(level) {
   const current = Math.max(1, Math.floor(Number(level) || 1));
-  const softCapReward = LEVEL_UP_TROOP_REWARD_BASE * Math.pow(
-    LEVEL_UP_TROOP_REWARD_MULTIPLIER,
-    HERO_XP_SOFT_CAP_LEVEL - 1
-  );
-  if (current <= HERO_XP_SOFT_CAP_LEVEL) {
-    return Math.floor(LEVEL_UP_TROOP_REWARD_BASE * Math.pow(LEVEL_UP_TROOP_REWARD_MULTIPLIER, current - 1));
-  }
-  const post50Levels = Math.min(current, HERO_XP_HARD_CAP_LEVEL) - HERO_XP_SOFT_CAP_LEVEL;
-  const post50Reward = softCapReward
-    + Math.pow(post50Levels, LEVEL_UP_TROOP_REWARD_POST_50_EXPONENT)
-      * LEVEL_UP_TROOP_REWARD_POST_50_SCALE;
-  if (current <= HERO_XP_HARD_CAP_LEVEL) return Math.floor(post50Reward);
-  return Math.floor(
-    post50Reward
-      + Math.pow(current - HERO_XP_HARD_CAP_LEVEL, LEVEL_UP_TROOP_REWARD_POST_100_EXPONENT)
-        * LEVEL_UP_TROOP_REWARD_POST_100_SCALE
-  );
+  const production = getCityStats({ level: current }, {
+    includeSkillBoosts: false,
+    includeTimedItemBoosts: false,
+  });
+  return Math.floor(Math.max(
+    50,
+    production.troopProductionPerHour * getLevelUpTroopRewardHours(current)
+  ));
 }
 
 function getMainRewardCity(excludeCityId = null) {
@@ -5889,10 +5942,6 @@ function getFailedAttackXpAward(target, oldOwner, defendersAtStart, attackerOwne
   return getPartialBattleXpAward(getCaptureXpAward(target, oldOwner, defendersAtStart, attackerOwner));
 }
 
-function getLostDefenseXpAward(attackingTroops, target = null) {
-  return getPartialBattleXpAward(getDefenseHeldXpAward(attackingTroops, target));
-}
-
 function getCaptureXpEfficiency(target, oldOwner = target?.owner) {
   if (!target || !state) return 1;
   const pvpMultiplier = getPvpOpponentPowerXpMultiplier(target, oldOwner, "player");
@@ -5950,11 +5999,28 @@ function getOpponentPowerXpMultiplier(opponentRatio) {
   return 0;
 }
 
+function getBattleXpLevelCapRate(level) {
+  const current = Math.max(1, Math.floor(Number(level) || 1));
+  if (current <= HERO_XP_SOFT_CAP_LEVEL) return BATTLE_XP_EARLY_LEVEL_CAP_RATE;
+  if (current <= HERO_XP_HARD_CAP_LEVEL) {
+    const progress = (current - HERO_XP_SOFT_CAP_LEVEL)
+      / (HERO_XP_HARD_CAP_LEVEL - HERO_XP_SOFT_CAP_LEVEL);
+    return BATTLE_XP_MID_START_LEVEL_CAP_RATE
+      + (BATTLE_XP_MID_END_LEVEL_CAP_RATE - BATTLE_XP_MID_START_LEVEL_CAP_RATE) * progress;
+  }
+  const progress = Math.min(1, (current - HERO_XP_HARD_CAP_LEVEL) / BATTLE_XP_END_CAP_RAMP_LEVELS);
+  return Math.max(
+    BATTLE_XP_END_FLOOR_LEVEL_CAP_RATE,
+    BATTLE_XP_END_START_LEVEL_CAP_RATE
+      + (BATTLE_XP_END_FLOOR_LEVEL_CAP_RATE - BATTLE_XP_END_START_LEVEL_CAP_RATE) * progress
+  );
+}
+
 function capBattleXpForCurrentLevel(xp) {
   const base = Math.max(0, Math.floor(Number(xp) || 0));
   if (!state?.character) return base;
   const heroLevel = Math.max(1, Math.floor(Number(state.character.level) || 1));
-  const cap = Math.max(250, Math.floor(getXpRequiredForLevel(heroLevel) * BATTLE_XP_LEVEL_REQUIREMENT_CAP_MULTIPLIER));
+  const cap = Math.max(250, Math.floor(getXpRequiredForLevel(heroLevel) * getBattleXpLevelCapRate(heroLevel)));
   return Math.min(base, cap);
 }
 
@@ -14439,7 +14505,13 @@ function resolveAttack(attack) {
       addCharacterXp(xpAward, `${target.name} capture`);
     } else if (oldOwner === "player") {
       const savedDefenders = returnSavedTroops("fieldMedics", result.defenderLosses, `${target.name} defense`, target.id);
-      const defenseLossXp = applyDefenseOpponentXpMultiplier(getLostDefenseXpAward(attack.troops, target), attack, target, demoAttack);
+      const cappedDefenseHeldXp = applyDefenseOpponentXpMultiplier(
+        getDefenseHeldXpAward(attack.troops, target),
+        attack,
+        target,
+        demoAttack
+      );
+      const defenseLossXp = getPartialBattleXpAward(cappedDefenseHeldXp);
       addBattleReport({
         type: "defense",
         outcome: "lost",
