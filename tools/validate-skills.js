@@ -4,37 +4,38 @@ const path = require("node:path");
 const root = path.resolve(__dirname, "..");
 const serverSource = fs.readFileSync(path.join(root, "functions", "index.js"), "utf8");
 const clientSource = fs.readFileSync(path.join(root, "game.js"), "utf8");
-const expectedSkills = {
-  swordmastery: { percentPerLevel: 2, maxPercent: 60, maxLevel: 30 },
-  stoneworks: { percentPerLevel: 3, maxPercent: 75, maxLevel: 25 },
-  taxStewardship: { percentPerLevel: 3, maxPercent: 75, maxLevel: 25 },
-  royalGranaries: { percentPerLevel: 3, maxPercent: 75, maxLevel: 25 },
-  guildCharters: { percentPerLevel: 2, maxPercent: 50, maxLevel: 25 },
-  marchOrders: { percentPerLevel: 3, maxPercent: 60, maxLevel: 20 },
-  fieldMedics: { percentPerLevel: 2, maxPercent: 50, maxLevel: 25 },
-};
+const economyConfig = JSON.parse(fs.readFileSync(path.join(root, "functions", "economy-config.json"), "utf8"));
+const expectedSkillIds = [
+  "swordmastery",
+  "stoneworks",
+  "taxStewardship",
+  "royalGranaries",
+  "guildCharters",
+  "marchOrders",
+  "fieldMedics",
+];
 
 function requireMatch(source, pattern, message) {
   if (!pattern.test(source)) throw new Error(message);
 }
 
-function readSkillConfig(source, skill) {
-  const match = source.match(new RegExp(`${skill}:\\s*\\{[^}]*percentPerLevel:\\s*([0-9.]+)[^}]*maxPercent:\\s*([0-9.]+)`));
-  if (!match) throw new Error(`Missing ${skill} configuration.`);
-  return { percentPerLevel: Number(match[1]), maxPercent: Number(match[2]) };
-}
-
-for (const [skill, expected] of Object.entries(expectedSkills)) {
-  const serverConfig = readSkillConfig(serverSource, skill);
-  const clientConfig = readSkillConfig(clientSource, skill);
-  if (serverConfig.percentPerLevel !== clientConfig.percentPerLevel || serverConfig.maxPercent !== clientConfig.maxPercent) {
-    throw new Error(`${skill} differs between the server and client.`);
+for (const skill of expectedSkillIds) {
+  const config = economyConfig.skills?.[skill];
+  if (!config) throw new Error(`Missing ${skill} economy configuration.`);
+  const percentPerLevel = Number(config.percentPerLevel);
+  const maxPercent = Number(config.maxPercent);
+  if (!Number.isFinite(percentPerLevel) || percentPerLevel <= 0 || !Number.isFinite(maxPercent) || maxPercent < 0) {
+    throw new Error(`${skill} has invalid configurable bonus values.`);
   }
-  if (serverConfig.percentPerLevel !== expected.percentPerLevel || serverConfig.maxPercent !== expected.maxPercent) {
-    throw new Error(`${skill} no longer matches its approved boost configuration.`);
+  for (const [source, label] of [[serverSource, "Server"], [clientSource, "Client"]]) {
+    requireMatch(
+      source,
+      new RegExp(`${skill}:\\s*\\{[^}]*percentPerLevel:\\s*economyNumber\\("skills\\.${skill}\\.percentPerLevel"[^}]*maxPercent:\\s*economyNumber\\("skills\\.${skill}\\.maxPercent"`),
+      `${label} ${skill} is not read from the economy configuration.`
+    );
   }
-  const maxLevel = Math.ceil(serverConfig.maxPercent / serverConfig.percentPerLevel);
-  if (maxLevel !== expected.maxLevel || maxLevel * serverConfig.percentPerLevel < serverConfig.maxPercent) {
+  const maxLevel = Math.ceil(maxPercent / percentPerLevel);
+  if (!Number.isFinite(maxLevel) || maxLevel < 0 || maxLevel * percentPerLevel < maxPercent) {
     throw new Error(`${skill} has an invalid cap level.`);
   }
 }

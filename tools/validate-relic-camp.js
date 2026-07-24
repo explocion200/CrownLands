@@ -8,6 +8,7 @@ const clientSource = read("game.js");
 const firebaseClientSource = read("firebaseClient.js");
 const rulesSource = read("firestore.rules");
 const world = JSON.parse(read("functions/world-layout.json"));
+const economyConfig = JSON.parse(read("functions/economy-config.json"));
 
 function requireMatch(source, pattern, message) {
   if (!pattern.test(source)) throw new Error(message);
@@ -35,10 +36,16 @@ if ([...expectedDrops.values()].reduce((total, chance) => total + chance, 0) !==
   throw new Error("Relic Camp drop chances must total 100%.");
 }
 
-requireMatch(serverSource, /RELIC_CAMP_HOLD_DURATION_MS\s*=\s*30\s*\*\s*60\s*\*\s*1000/, "Server Relic Camp hold time is not 30 minutes.");
-requireMatch(clientSource, /RELIC_CAMP_HOLD_SECONDS\s*=\s*30\s*\*\s*60/, "Client Relic Camp hold time is not 30 minutes.");
-requireMatch(serverSource, /RELIC_CAMP_DAILY_REWARD_LIMIT\s*=\s*2/, "Server Relic Camp daily reward limit should be two.");
-requireMatch(clientSource, /RELIC_CAMP_DAILY_REWARD_LIMIT\s*=\s*2/, "Client Relic Camp daily reward limit should be two.");
+if (!Number.isFinite(Number(economyConfig.camps?.items?.holdMinutes))) {
+  throw new Error("Relic Camp hold time is missing from the economy configuration.");
+}
+if (!Number.isFinite(Number(economyConfig.camps?.items?.maxDailyRewards))) {
+  throw new Error("Relic Camp daily reward limit is missing from the economy configuration.");
+}
+requireMatch(serverSource, /RELIC_CAMP_HOLD_DURATION_MS\s*=\s*economyNumber\("camps\.items\.holdMinutes"/, "Server Relic Camp hold time is not configurable.");
+requireMatch(clientSource, /RELIC_CAMP_HOLD_SECONDS\s*=\s*economyNumber\("camps\.items\.holdMinutes"/, "Client Relic Camp hold time is not configurable.");
+requireMatch(serverSource, /RELIC_CAMP_DAILY_REWARD_LIMIT\s*=\s*economyNumber\("camps\.items\.maxDailyRewards"/, "Server Relic Camp daily reward limit is not configurable.");
+requireMatch(clientSource, /RELIC_CAMP_DAILY_REWARD_LIMIT\s*=\s*economyNumber\("camps\.items\.maxDailyRewards"/, "Client Relic Camp daily reward limit is not configurable.");
 requireMatch(serverSource, /items:\s*\{[\s\S]*?kind:\s*"relicCamp"[\s\S]*?rewardType:\s*"item"[\s\S]*?objectiveStatsId:\s*"relicCamp"[\s\S]*?maxDailyRewards:\s*RELIC_CAMP_DAILY_REWARD_LIMIT/, "Relic Camp server configuration is incomplete.");
 requireMatch(serverSource, /crypto\.randomInt\(1,\s*totalChance\s*\+\s*1\)/, "Relic Camp item rarity is not rolled on the server.");
 requireMatch(serverSource, /function cleanServerCampLayoutSeed\(camp = \{\}\)\s*\{\s*if \(!camp \|\| typeof camp !== "object"\) return \{\};/, "Missing camp seeds can still crash server army launches.");
@@ -56,7 +63,7 @@ requireMatch(firebaseClientSource, /normalizedType\s*===\s*"items"[\s\S]*?"relic
 requireMatch(rulesSource, /match \/objectiveStats\/\{objectiveId\}[\s\S]*?allow read: if ownsPlayerDoc\(uid\);[\s\S]*?allow create, update, delete: if false;/, "Relic Camp objective stats are not private to their player and server-owned.");
 requireMatch(clientSource, /function relicCampProgressMarkup[\s\S]*?Possible item drops[\s\S]*?Today's rewards/, "Relic Camp Reward tab is missing its drop table or daily history.");
 requireMatch(clientSource, /function relicCampProgressMarkup[\s\S]*?Daily reward limit reached/, "Relic Camp Reward tab is missing its daily-limit message.");
-requireMatch(clientSource, /Capture and hold the Relic Camp for 30 minutes[\s\S]*?No relic fragments, gold, troops, battle XP, or leaderboard points[\s\S]*?Royal Peace Shield does not protect camp ownership/, "Relic Camp help text is incomplete.");
+requireMatch(clientSource, /Capture and hold the Relic Camp for \$\{formatNumber\(holdMinutes\)\} minutes[\s\S]*?No relic fragments, gold, troops, battle XP, or leaderboard points[\s\S]*?Royal Peace Shield does not protect camp ownership/, "Relic Camp help text is incomplete or not driven by its configured timer.");
 requireMatch(serverSource, /ownerShieldExpiresAtMs:\s*0/, "Reward camps must remain outside Royal Peace Shield protection.");
 
 console.log("Validated Relic Camp placement, server rarity roll, bag payout, UTC daily limit, reward history, protection rules, and themed UI.");

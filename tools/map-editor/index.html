@@ -3,21 +3,22 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Crownlands World Editor</title>
-  <link rel="stylesheet" href="styles.css?v=20260723-ui-bounds" />
+  <title>Crownlands Game Editor</title>
+  <link rel="stylesheet" href="styles.css?v=20260723-game-economy-editor" />
 </head>
 <body>
   <main class="editor-shell">
     <header class="editor-toolbar">
       <div class="brand-block">
         <span>Crownlands</span>
-        <strong>Developer Map Editor</strong>
+        <strong>Developer Game Editor</strong>
       </div>
       <div class="mode-tabs" role="group" aria-label="Editor mode">
         <button id="worldModeBtn" class="tool-btn active" type="button">World Layout</button>
         <button id="regionModeBtn" class="tool-btn" type="button">Region Edit</button>
+        <button id="economyModeBtn" class="tool-btn" type="button">Economy</button>
       </div>
-      <div class="tool-strip" role="group" aria-label="Editor tools">
+      <div class="tool-strip map-tools" role="group" aria-label="Map editor tools">
         <button id="addRegionBtn" class="tool-btn" type="button">Add Region</button>
         <button id="addCityBtn" class="tool-btn" type="button">Add City</button>
         <button id="addStrongholdBtn" class="tool-btn" type="button">Add Stronghold</button>
@@ -26,7 +27,7 @@
         <button id="deleteSelectedBtn" class="tool-btn danger" type="button">Delete Selected</button>
       </div>
       <div class="tool-strip" role="group" aria-label="Data actions">
-        <button id="validateBtn" class="tool-btn" type="button">Validate World</button>
+        <button id="validateBtn" class="tool-btn" type="button">Validate Game</button>
         <button id="exportBtn" class="tool-btn" type="button">Export JSON</button>
         <button id="importBtn" class="tool-btn" type="button">Import JSON</button>
         <button id="saveBtn" class="tool-btn primary" type="button">Save to Game</button>
@@ -43,14 +44,14 @@
       <input id="regionImageFileInput" type="file" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" hidden />
     </header>
 
-    <section class="editor-body">
+    <section id="editorBody" class="editor-body">
       <section class="workspace">
         <div class="workspace-title">
           <div>
             <span id="workspaceKicker">World Layout</span>
             <strong id="workspaceTitle">Loading...</strong>
           </div>
-          <div class="context-tools">
+          <div id="contextTools" class="context-tools">
             <label class="compact-field">
               <span>Stronghold</span>
               <select id="strongholdTypeSelect">
@@ -104,6 +105,17 @@
             </div>
           </div>
         </div>
+
+        <div id="economyView" class="economy-view hidden">
+          <div class="economy-intro">
+            <div>
+              <span>Authoritative balance</span>
+              <strong>Game Economy</strong>
+            </div>
+            <p>Values saved here update both the Netlify game configuration and the Firebase Functions configuration. Firebase Functions must be deployed after server economy changes are pushed.</p>
+          </div>
+          <div id="economySections" class="economy-sections"></div>
+        </div>
       </section>
 
       <aside class="inspector" aria-label="Selected object">
@@ -135,7 +147,7 @@
             <span>Validation</span>
             <strong id="validationSummary">Not checked</strong>
           </div>
-          <div id="validationList" class="validation-list">Press Validate World when you want a full check.</div>
+          <div id="validationList" class="validation-list">Press Validate Game when you want a full map and economy check.</div>
         </section>
 
         <section class="panel">
@@ -156,6 +168,6 @@
 
     <footer id="statusBar" class="status-bar">Loading world data...</footer>
   </main>
-  <script src="editor.js?v=20260723-city-ui-bounds"></script>
+  <script src="editor.js?v=20260723-game-economy-editor"></script>
 </body>
 </html>

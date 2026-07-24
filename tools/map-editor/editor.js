@@ -1,5 +1,6 @@
 (function () {
   const WORLD_API = "/api/world-data";
+  const ECONOMY_API = "/api/economy-data";
   const MAP_IMAGE_API = "/api/map-image";
   const SIDES = ["north", "south", "east", "west"];
   const OPPOSITE_SIDE = { north: "south", south: "north", east: "west", west: "east" };
@@ -109,6 +110,37 @@
       size: 132,
     },
   };
+  const CAMP_REWARD_DEFAULTS = {
+    gold: [
+      { minimumReward: 100000, productionHours: 3 },
+      { minimumReward: 75000, productionHours: 2 },
+      { minimumReward: 50000, productionHours: 1 },
+      { minimumReward: 25000, productionHours: 0.5 },
+    ],
+    troops: [
+      { minimumReward: 50000, productionHours: 6 },
+      { minimumReward: 37500, productionHours: 4 },
+      { minimumReward: 25000, productionHours: 3 },
+      { minimumReward: 12500, productionHours: 2 },
+    ],
+  };
+  const SHOP_ITEM_EDITOR = [
+    { id: "shield_12h", label: "Royal Peace Shield", detail: "City protection. No percentage bonus.", duration: true },
+    { id: "war_drums_30m", label: "War Drums", detail: "Troop production bonus.", duration: true, bonus: true },
+    { id: "royal_tax_decree_30m", label: "Royal Tax Decree", detail: "Gold production bonus.", duration: true, bonus: true },
+    { id: "veil_of_silence_30m", label: "Veil of Silence", detail: "Blocks enemy scouting. No percentage bonus.", duration: true },
+    { id: "swift_march_order", label: "Swift March Order", detail: "Single-use march effect. No percentage bonus." },
+    { id: "recall_horn", label: "Recall Horn", detail: "Single-use recall. No percentage bonus." },
+  ];
+  const SKILL_EDITOR = [
+    { id: "swordmastery", label: "Swordmastery" },
+    { id: "stoneworks", label: "Stoneworks" },
+    { id: "taxStewardship", label: "Tax Stewardship" },
+    { id: "royalGranaries", label: "Royal Granaries" },
+    { id: "guildCharters", label: "Guild Charters" },
+    { id: "marchOrders", label: "March Orders" },
+    { id: "fieldMedics", label: "Field Medics" },
+  ];
 
   function readVisualSize(value, fallback) {
     const parsed = Math.floor(Number(value));
@@ -120,6 +152,8 @@
   const elements = {
     worldModeBtn: document.getElementById("worldModeBtn"),
     regionModeBtn: document.getElementById("regionModeBtn"),
+    economyModeBtn: document.getElementById("economyModeBtn"),
+    editorBody: document.getElementById("editorBody"),
     addRegionBtn: document.getElementById("addRegionBtn"),
     addCityBtn: document.getElementById("addCityBtn"),
     addStrongholdBtn: document.getElementById("addStrongholdBtn"),
@@ -151,6 +185,9 @@
     worldGrid: document.getElementById("worldGrid"),
     worldConnectionLayer: document.getElementById("worldConnectionLayer"),
     regionView: document.getElementById("regionView"),
+    economyView: document.getElementById("economyView"),
+    economySections: document.getElementById("economySections"),
+    contextTools: document.getElementById("contextTools"),
     regionViewport: document.getElementById("regionViewport"),
     regionCanvas: document.getElementById("regionCanvas"),
     regionImage: document.getElementById("regionImage"),
@@ -175,6 +212,7 @@
   const state = {
     layout: null,
     regions: [],
+    economy: null,
     editorMode: "world",
     tool: "select",
     activeRegionId: "",
@@ -364,6 +402,7 @@
       width: dimensions.width,
       height: dimensions.height,
       imagePath: region.imagePath || "",
+      thumbnailPath: region.thumbnailPath || "",
       cityCapacity: Math.max(0, Math.floor(Number(region.cityCapacity) || 0)),
       regionPath: region.regionPath || `assets/worlds/world_01/regions/${region.id}.json`,
     };
@@ -405,6 +444,7 @@
       width: dimensions.width,
       height: dimensions.height,
       imagePath: String(rawRegion.imagePath || rawRegion.imageSrc || ""),
+      thumbnailPath: String(rawRegion.thumbnailPath || rawRegion.thumbnailSrc || ""),
       cityCapacity: Math.max(0, Math.floor(Number(rawRegion.cityCapacity) || (type === "crownlands_main" ? 100 : 50))),
       cities: [],
       strongholds: [],
@@ -462,7 +502,7 @@
       ? camp.campType || camp.type
       : "gold";
     const defaults = CAMP_DEFAULTS[campType] || CAMP_DEFAULTS.gold;
-    return {
+    const normalized = {
       id: slugify(camp.id, `${region.id}_${campType}_camp_${index + 1}`),
       name: String(camp.name || defaults.name),
       regionId: region.id,
@@ -473,6 +513,24 @@
       size: readVisualSize(camp.size, defaults.size),
       notes: String(camp.notes || ""),
     };
+    if (campType === "gold" || campType === "troops") {
+      const fallback = CAMP_REWARD_DEFAULTS[campType];
+      const source = Array.isArray(camp.rewardSchedule) && camp.rewardSchedule.length
+        ? camp.rewardSchedule
+        : fallback;
+      normalized.rewardSchedule = source.slice(0, 12).map(entry => ({
+        minimumReward: Math.max(0, Math.floor(Number(entry?.minimumReward) || 0)),
+        productionHours: Math.max(0.01, Number(entry?.productionHours) || 1),
+      }));
+    }
+    if (campType === "items") {
+      const rawMaxDailyRewards = Number(camp.maxDailyRewards);
+      normalized.maxDailyRewards = Math.max(
+        0,
+        Math.floor(Number.isFinite(rawMaxDailyRewards) ? rawMaxDailyRewards : 2)
+      );
+    }
+    return normalized;
   }
 
   function normalizeBundle(data = {}) {
@@ -530,6 +588,13 @@
     }
   }
 
+  async function loadEconomyData() {
+    const response = await fetch(ECONOMY_API, { cache: "no-store" });
+    if (!response.ok) throw new Error(`Economy data failed: ${response.status}`);
+    const payload = await response.json();
+    state.economy = payload.config;
+  }
+
   function buildSavePayload() {
     materializeEdgeArrowPositions();
     state.layout.regions = state.regions.map(getRegionSummary);
@@ -558,7 +623,7 @@
     });
   }
 
-  async function saveWorldData() {
+  async function saveWorldData(options = {}) {
     const payload = buildSavePayload();
     const expectedCampCount = countCamps(payload.regions);
     const response = await fetch(WORLD_API, {
@@ -580,7 +645,38 @@
     applyEdgeArrowOverrides(state.regions);
     state.dirty = false;
     setStatus("Saved JSON world files and game compatibility data.");
-    render();
+    if (options.renderAfter !== false) render();
+  }
+
+  async function saveEconomyData(options = {}) {
+    if (!state.economy) throw new Error("Economy configuration is not loaded.");
+    const response = await fetch(ECONOMY_API, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ config: state.economy }),
+    });
+    if (!response.ok) {
+      const text = await response.text();
+      throw new Error(text || `Economy save failed: ${response.status}`);
+    }
+    const payload = await response.json();
+    state.economy = payload.config;
+    state.dirty = false;
+    if (options.renderAfter !== false) render();
+  }
+
+  async function saveAllData() {
+    elements.saveBtn.disabled = true;
+    setStatus("Saving map and economy configuration...", "busy");
+    try {
+      await saveWorldData({ renderAfter: false });
+      await saveEconomyData({ renderAfter: false });
+      state.dirty = false;
+      setStatus("Saved map data plus browser and Firebase economy configuration.", "success");
+      render();
+    } finally {
+      elements.saveBtn.disabled = false;
+    }
   }
 
   function markDirty(message = "", kind = "") {
@@ -589,7 +685,7 @@
   }
 
   function setEditorMode(mode) {
-    state.editorMode = mode === "region" ? "region" : "world";
+    state.editorMode = ["world", "region", "economy"].includes(mode) ? mode : "world";
     state.tool = "select";
     render();
   }
@@ -689,6 +785,10 @@
   function renderToolbar() {
     elements.worldModeBtn.classList.toggle("active", state.editorMode === "world");
     elements.regionModeBtn.classList.toggle("active", state.editorMode === "region");
+    elements.economyModeBtn.classList.toggle("active", state.editorMode === "economy");
+    elements.editorBody.classList.toggle("economy-mode", state.editorMode === "economy");
+    elements.contextTools.classList.toggle("economy-mode", state.editorMode === "economy");
+    document.querySelector(".editor-toolbar")?.classList.toggle("economy-mode", state.editorMode === "economy");
     elements.addCityBtn.classList.toggle("active", state.tool === "city");
     elements.addStrongholdBtn.classList.toggle("active", state.tool === "stronghold");
     elements.addCampBtn.classList.toggle("active", state.tool === "camp");
@@ -725,14 +825,193 @@
   }
 
   function renderWorkspace() {
-    elements.workspaceKicker.textContent = state.editorMode === "world" ? "World Layout" : "Region Edit";
+    elements.workspaceKicker.textContent = state.editorMode === "world"
+      ? "World Layout"
+      : state.editorMode === "region"
+        ? "Region Edit"
+        : "Balance Configuration";
     elements.workspaceTitle.textContent = state.editorMode === "world"
       ? state.layout.worldName
-      : currentRegion()?.name || "No region selected";
+      : state.editorMode === "region"
+        ? currentRegion()?.name || "No region selected"
+        : "Crownlands Economy";
     elements.worldView.classList.toggle("hidden", state.editorMode !== "world");
     elements.regionView.classList.toggle("hidden", state.editorMode !== "region");
+    elements.economyView.classList.toggle("hidden", state.editorMode !== "economy");
     if (state.editorMode === "world") renderWorldGrid();
-    else renderRegionEditor();
+    else if (state.editorMode === "region") renderRegionEditor();
+    else renderEconomySections();
+  }
+
+  function economyNumberInput(path, label, value, options = {}) {
+    const step = options.step ?? 1;
+    const min = options.min ?? 0;
+    const suffix = options.suffix ? `<small>${escapeHtml(options.suffix)}</small>` : "";
+    return `
+      <label>
+        <span>${escapeHtml(label)}</span>
+        <input data-economy-path="${escapeHtml(path)}" type="number" min="${min}" step="${step}" value="${escapeHtml(value)}" />
+        ${suffix}
+      </label>
+    `;
+  }
+
+  function renderEconomySections() {
+    if (!state.economy) {
+      elements.economySections.innerHTML = `<section class="economy-section"><p class="helper-text">Economy data is unavailable. Restart the local Game Editor server and reload this page.</p></section>`;
+      return;
+    }
+    const economy = state.economy;
+    const shopRows = SHOP_ITEM_EDITOR.map(item => {
+      const config = economy.shopItems[item.id];
+      return `
+        <tr>
+          <td><strong>${escapeHtml(item.label)}</strong><br><small>${escapeHtml(item.detail)}</small></td>
+          <td><input aria-label="${escapeHtml(item.label)} gold cost" data-economy-path="shopItems.${item.id}.cost" type="number" min="0" step="1000" value="${config.cost}" /></td>
+          <td><input aria-label="${escapeHtml(item.label)} daily purchase cap" data-economy-path="shopItems.${item.id}.dailyPurchaseLimit" type="number" min="0" step="1" value="${config.dailyPurchaseLimit}" /></td>
+          <td>${item.duration ? `<input aria-label="${escapeHtml(item.label)} effect duration in minutes" data-economy-path="shopItems.${item.id}.effectDurationMinutes" type="number" min="0.1" step="0.1" value="${config.effectDurationMinutes}" />` : "Single use"}</td>
+          <td>${item.bonus ? `<input aria-label="${escapeHtml(item.label)} percentage bonus" data-economy-path="shopItems.${item.id}.bonusPercent" type="number" min="0" step="0.1" value="${config.bonusPercent}" />` : "Not applicable"}</td>
+        </tr>
+      `;
+    }).join("");
+    const skillCards = SKILL_EDITOR.map(skill => {
+      const config = economy.skills[skill.id];
+      return `
+        <article class="economy-card">
+          <h3>${escapeHtml(skill.label)}</h3>
+          <div class="economy-grid">
+            ${economyNumberInput(`skills.${skill.id}.percentPerLevel`, "Bonus per skill point (%)", config.percentPerLevel, { step: 0.1 })}
+            ${economyNumberInput(`skills.${skill.id}.maxPercent`, "Maximum bonus (%)", config.maxPercent, { step: 0.1 })}
+          </div>
+        </article>
+      `;
+    }).join("");
+    const campCards = ["gold", "troops", "items", "deed"].map(campType => {
+      const config = economy.camps[campType];
+      const title = campType === "troops" ? "Warband Camp" : campType === "items" ? "Relic Camp" : campType === "deed" ? "Deed Camp" : "Gold Camp";
+      const schedule = Array.isArray(config.rewardSchedule)
+        ? config.rewardSchedule.map((reward, index) => `
+            <div class="camp-reward-row">
+              <strong>${index + 1}</strong>
+              ${economyNumberInput(`camps.${campType}.rewardSchedule.${index}.minimumReward`, `Minimum ${campType === "gold" ? "gold" : "troops"}`, reward.minimumReward)}
+              ${economyNumberInput(`camps.${campType}.rewardSchedule.${index}.productionHours`, "Production hours", reward.productionHours, { step: 0.1 })}
+              <span></span>
+            </div>
+          `).join("")
+        : "";
+      return `
+        <article class="economy-card">
+          <h3>${title} defaults</h3>
+          <p>These values are used when a placed camp does not have its own override.</p>
+          <div class="economy-grid">
+            ${economyNumberInput(`camps.${campType}.holdMinutes`, "Hold timer (minutes)", config.holdMinutes, { step: 0.1 })}
+            ${economyNumberInput(`camps.${campType}.baseDefenders`, "Neutral defenders", config.baseDefenders)}
+            ${economyNumberInput(`camps.${campType}.defenseLevel`, "Defense level", config.defenseLevel)}
+            ${campType === "items" && Number.isFinite(Number(config.maxDailyRewards))
+              ? economyNumberInput(`camps.${campType}.maxDailyRewards`, "Items per UTC day", config.maxDailyRewards)
+              : ""}
+          </div>
+          ${schedule ? `<div class="camp-reward-editor">${schedule}</div>` : ""}
+        </article>
+      `;
+    }).join("");
+    elements.economySections.innerHTML = `
+      <section class="economy-section wide">
+        <div class="economy-section-heading">
+          <div><span>Shop</span><strong>Item prices and daily limits</strong></div>
+          <p>The daily purchase cap is the shop cooldown measured per UTC day. Percentage inputs only appear for items that provide a percentage bonus.</p>
+        </div>
+        <table class="economy-table">
+          <thead><tr><th>Item</th><th>Gold cost</th><th>Purchases per UTC day</th><th>Effect minutes</th><th>Bonus %</th></tr></thead>
+          <tbody>${shopRows}</tbody>
+        </table>
+      </section>
+      <section class="economy-section">
+        <div class="economy-section-heading">
+          <div><span>Map pickups</span><strong>Spawn timing and awards</strong></div>
+          <p>Award production minutes multiply the player's permanent production rate. Daily caps reset at UTC midnight.</p>
+        </div>
+        <div class="economy-grid">
+          ${economyNumberInput("pickups.spawnIntervalMinutes", "Spawn timer (minutes)", economy.pickups.spawnIntervalMinutes, { step: 0.1 })}
+          ${economyNumberInput("pickups.expireMinutes", "Pickup expires after (minutes)", economy.pickups.expireMinutes, { step: 0.1 })}
+          ${economyNumberInput("pickups.goldAwardProductionMinutes", "Gold award production (minutes)", economy.pickups.goldAwardProductionMinutes, { step: 0.1 })}
+          ${economyNumberInput("pickups.troopAwardProductionMinutes", "Troop award production (minutes)", economy.pickups.troopAwardProductionMinutes, { step: 0.1 })}
+          ${economyNumberInput("pickups.dailyTotalCap", "All pickups daily cap", economy.pickups.dailyTotalCap)}
+          ${economyNumberInput("pickups.dailyGoldCap", "Gold pickups daily cap", economy.pickups.dailyGoldCap)}
+          ${economyNumberInput("pickups.dailyTroopCap", "Troop pickups daily cap", economy.pickups.dailyTroopCap)}
+          ${economyNumberInput("pickups.maxActivePerPlayer", "Maximum active pickups", economy.pickups.maxActivePerPlayer)}
+          ${economyNumberInput("pickups.minimumGold", "Minimum gold award", economy.pickups.minimumGold)}
+          ${economyNumberInput("pickups.minimumTroops", "Minimum troop award", economy.pickups.minimumTroops)}
+        </div>
+      </section>
+      <section class="economy-section">
+        <div class="economy-section-heading">
+          <div><span>Player actions</span><strong>Strategic gold costs</strong></div>
+          <p>These are authoritative costs checked by the game and Firebase Functions.</p>
+        </div>
+        <div class="economy-grid">
+          ${economyNumberInput("playerCosts.nearbyScoutGold", "Scout nearby cost (gold)", economy.playerCosts.nearbyScoutGold)}
+          ${economyNumberInput("playerCosts.regroupGold", "Regroup cost (gold)", economy.playerCosts.regroupGold)}
+          ${economyNumberInput("playerCosts.skillResetGold", "Reset skills cost (gold)", economy.playerCosts.skillResetGold)}
+        </div>
+      </section>
+      <section class="economy-section wide">
+        <div class="economy-section-heading">
+          <div><span>Cities</span><strong>Production and upgrade pacing</strong></div>
+          <p>Growth values are multipliers. Upgrade hours define the target production time required at each progression breakpoint.</p>
+        </div>
+        <div class="economy-grid four">
+          ${economyNumberInput("cityEconomy.productionVpBase", "Production VP base", economy.cityEconomy.productionVpBase, { step: 0.001 })}
+          ${economyNumberInput("cityEconomy.productionVpGrowth", "Production VP growth", economy.cityEconomy.productionVpGrowth, { step: 0.001 })}
+          ${economyNumberInput("cityEconomy.goldPerProductionVp", "Gold per production VP", economy.cityEconomy.goldPerProductionVp, { step: 0.1 })}
+          ${economyNumberInput("cityEconomy.troopsPerVictoryPoint", "Troops per victory point", economy.cityEconomy.troopsPerVictoryPoint, { step: 0.1 })}
+          ${economyNumberInput("cityEconomy.goldEndgameStartLevel", "Gold endgame starts at level", economy.cityEconomy.goldEndgameStartLevel)}
+          ${economyNumberInput("cityEconomy.goldEndgameGrowth", "Gold endgame growth", economy.cityEconomy.goldEndgameGrowth, { step: 0.001 })}
+          ${economyNumberInput("cityEconomy.upgradeEarlyEndLevel", "Early upgrade phase ends", economy.cityEconomy.upgradeEarlyEndLevel)}
+          ${economyNumberInput("cityEconomy.upgradeMidEndLevel", "Mid upgrade phase ends", economy.cityEconomy.upgradeMidEndLevel)}
+          ${economyNumberInput("cityEconomy.upgradeEarlyStartHours", "Level 1 target hours", economy.cityEconomy.upgradeEarlyStartHours, { step: 0.1 })}
+          ${economyNumberInput("cityEconomy.upgradeEarlyEndHours", "Early phase target hours", economy.cityEconomy.upgradeEarlyEndHours, { step: 0.1 })}
+          ${economyNumberInput("cityEconomy.upgradeMidEndHours", "Mid phase target hours", economy.cityEconomy.upgradeMidEndHours, { step: 0.1 })}
+          ${economyNumberInput("cityEconomy.upgradeLevel150Hours", "Level 150 target hours", economy.cityEconomy.upgradeLevel150Hours, { step: 0.1 })}
+          ${economyNumberInput("cityEconomy.upgradeMaximumHours", "Maximum target hours", economy.cityEconomy.upgradeMaximumHours, { step: 0.1 })}
+        </div>
+      </section>
+      <section class="economy-section wide">
+        <div class="economy-section-heading">
+          <div><span>Skills</span><strong>Bonus per point and caps</strong></div>
+          <p>These values apply to the seven active Crownlands skills.</p>
+        </div>
+        <div class="economy-grid">${skillCards}</div>
+      </section>
+      <section class="economy-section wide">
+        <div class="economy-section-heading">
+          <div><span>Level rewards</span><strong>Gold and troop relief</strong></div>
+          <p>Upgrade shares are decimal fractions. Production rewards are measured in hours of the player's current production.</p>
+        </div>
+        <div class="economy-grid four">
+          ${economyNumberInput("levelRewards.goldEarlyUpgradeShare", "Early gold upgrade share", economy.levelRewards.goldEarlyUpgradeShare, { step: 0.01 })}
+          ${economyNumberInput("levelRewards.goldMidUpgradeShare", "Mid gold upgrade share", economy.levelRewards.goldMidUpgradeShare, { step: 0.01 })}
+          ${economyNumberInput("levelRewards.goldEndgameUpgradeShare", "Endgame gold upgrade share", economy.levelRewards.goldEndgameUpgradeShare, { step: 0.01 })}
+          ${economyNumberInput("levelRewards.goldEarlyProductionHours", "Early gold production hours", economy.levelRewards.goldEarlyProductionHours, { step: 0.1 })}
+          ${economyNumberInput("levelRewards.goldMidProductionHours", "Mid gold production hours", economy.levelRewards.goldMidProductionHours, { step: 0.1 })}
+          ${economyNumberInput("levelRewards.goldEndgameProductionHours", "Endgame gold production hours", economy.levelRewards.goldEndgameProductionHours, { step: 0.1 })}
+          ${economyNumberInput("levelRewards.troopEarlyBaseHours", "Early troop base hours", economy.levelRewards.troopEarlyBaseHours, { step: 0.1 })}
+          ${economyNumberInput("levelRewards.troopEarlyHoursPerLevel", "Early troop hours per level", economy.levelRewards.troopEarlyHoursPerLevel, { step: 0.01 })}
+          ${economyNumberInput("levelRewards.troopMidBaseHours", "Mid troop base hours", economy.levelRewards.troopMidBaseHours, { step: 0.1 })}
+          ${economyNumberInput("levelRewards.troopMidHoursPerLevel", "Mid troop hours per level", economy.levelRewards.troopMidHoursPerLevel, { step: 0.01 })}
+          ${economyNumberInput("levelRewards.troopEndgameBaseHours", "Endgame troop base hours", economy.levelRewards.troopEndgameBaseHours, { step: 0.1 })}
+          ${economyNumberInput("levelRewards.troopEndgameHoursPerLevel", "Endgame troop hours per level", economy.levelRewards.troopEndgameHoursPerLevel, { step: 0.01 })}
+          ${economyNumberInput("levelRewards.troopMaximumHours", "Maximum troop reward hours", economy.levelRewards.troopMaximumHours, { step: 0.1 })}
+        </div>
+      </section>
+      <section class="economy-section wide">
+        <div class="economy-section-heading">
+          <div><span>Camps</span><strong>Default camp rewards</strong></div>
+          <p>Placed Gold, Warband, and Relic Camps can override their daily rewards from the Region Edit inspector.</p>
+        </div>
+        <div class="economy-grid">${campCards}</div>
+      </section>
+    `;
   }
 
   function getGridBounds() {
@@ -1375,6 +1654,7 @@
   function addCamp(region, point) {
     const campType = CAMP_TYPES.includes(elements.campTypeSelect.value) ? elements.campTypeSelect.value : "gold";
     const defaults = CAMP_DEFAULTS[campType] || CAMP_DEFAULTS.gold;
+    const economyDefaults = state.economy?.camps?.[campType] || {};
     const camp = normalizeCamp({
       id: uniqueId(region.camps, `${region.id}_${campType}_camp`),
       name: defaults.name,
@@ -1383,6 +1663,8 @@
       campType,
       artSrc: defaults.artSrc,
       size: defaults.size,
+      rewardSchedule: economyDefaults.rewardSchedule,
+      maxDailyRewards: economyDefaults.maxDailyRewards,
     }, region.camps.length, region);
     region.camps.push(camp);
     state.selected = { kind: "camp", regionId: region.id, index: region.camps.length - 1 };
@@ -1545,6 +1827,24 @@
   function renderCampForm(camp, region) {
     const px = Math.round(camp.xNorm * region.width);
     const py = Math.round(camp.yNorm * region.height);
+    const rewardEditor = camp.campType === "gold" || camp.campType === "troops"
+      ? `
+        <div class="camp-reward-editor">
+          <p class="helper-text">Each row is one reward available per UTC day. The payout is the greater of the minimum reward or the player's listed production hours.</p>
+          ${(camp.rewardSchedule || []).map((reward, index) => `
+            <div class="camp-reward-row">
+              <strong>${index + 1}</strong>
+              <label><span>Minimum ${camp.campType === "gold" ? "Gold" : "Troops"}</span><input data-camp-reward-index="${index}" data-camp-reward-field="minimumReward" type="number" min="0" step="1" value="${reward.minimumReward}" /></label>
+              <label><span>Production Hours</span><input data-camp-reward-index="${index}" data-camp-reward-field="productionHours" type="number" min="0.01" step="0.1" value="${reward.productionHours}" /></label>
+              <button type="button" data-camp-action="remove-reward" data-camp-reward-index="${index}" aria-label="Remove daily reward ${index + 1}">&times;</button>
+            </div>
+          `).join("")}
+          <button type="button" data-camp-action="add-reward">Add Daily Reward</button>
+        </div>
+      `
+      : camp.campType === "items"
+        ? `<label class="wide"><span>Items Awarded Per UTC Day</span><input data-field="maxDailyRewards" type="number" min="0" step="1" value="${camp.maxDailyRewards}" /></label>`
+        : `<p class="wide helper-text">Deed Camp rewards remain one neutral city deed and are not edited as gold, troops, or relic items.</p>`;
     elements.selectionTitle.textContent = camp.name;
     elements.selectionForm.innerHTML = `
       <div class="form-grid">
@@ -1559,6 +1859,7 @@
         <label><span>Visual Size</span><input data-field="size" type="number" min="1" value="${camp.size}" /></label>
         <label class="wide"><span>Art Path</span><input data-field="artSrc" value="${escapeHtml(camp.artSrc)}" /></label>
         <label class="wide"><span>Notes</span><textarea data-field="notes">${escapeHtml(camp.notes)}</textarea></label>
+        ${rewardEditor}
       </div>
     `;
   }
@@ -1589,7 +1890,7 @@
     const warnings = state.validation.filter(item => item.level === "warning").length;
     if (!state.validation.length) {
       elements.validationSummary.textContent = "Not checked";
-      elements.validationList.textContent = "Press Validate World when you want a full check.";
+      elements.validationList.textContent = "Press Validate Game when you want a full map and economy check.";
       return;
     }
     elements.validationSummary.textContent = errors ? `${errors} errors` : warnings ? `${warnings} warnings` : "Clean";
@@ -1608,6 +1909,10 @@
 
   function handleSelectionInput(event) {
     const target = event.target;
+    if (target.dataset.campRewardIndex !== undefined && target.dataset.campRewardField) {
+      updateCampRewardInput(target);
+      return;
+    }
     const field = target.dataset.field;
     if (!field || !state.selected) return;
     const item = getSelectedItem();
@@ -1623,6 +1928,10 @@
 
   function handleSelectionChange(event) {
     const target = event.target;
+    if (target.dataset.campRewardIndex !== undefined && target.dataset.campRewardField) {
+      updateCampRewardInput(target);
+      return;
+    }
     const field = target.dataset.field;
     if (!field || !state.selected) return;
     const item = getSelectedItem();
@@ -1644,7 +1953,7 @@
     }
     if (["xNorm", "yNorm", "start", "end", "arrowXNorm", "arrowYNorm"].includes(field)) item[field] = roundNorm(value);
     else if (field === "size") item[field] = readVisualSize(value, item.size);
-    else if (["level", "troops", "bonusAmount"].includes(field)) item[field] = Math.max(0, Math.floor(Number(value) || 0));
+    else if (["level", "troops", "bonusAmount", "maxDailyRewards"].includes(field)) item[field] = Math.max(0, Math.floor(Number(value) || 0));
     else if (field === "strongholdType") applyStrongholdType(item, value);
     else if (field === "campType") applyCampType(item, value);
     else if (field === "intentionalOuter") item[field] = Boolean(value);
@@ -1718,6 +2027,50 @@
     camp.name = defaults.name;
     camp.artSrc = defaults.artSrc;
     camp.size = defaults.size;
+    delete camp.rewardSchedule;
+    delete camp.maxDailyRewards;
+    if (nextType === "gold" || nextType === "troops") {
+      const economyDefaults = state.economy?.camps?.[nextType]?.rewardSchedule || CAMP_REWARD_DEFAULTS[nextType];
+      camp.rewardSchedule = deepClone(economyDefaults);
+    }
+    if (nextType === "items") {
+      camp.maxDailyRewards = Math.max(0, Math.floor(Number(state.economy?.camps?.items?.maxDailyRewards) || 2));
+    }
+  }
+
+  function updateCampRewardInput(target) {
+    const camp = getSelectedItem();
+    if (state.selected?.kind !== "camp" || !camp || !Array.isArray(camp.rewardSchedule)) return;
+    const index = Math.max(0, Math.floor(Number(target.dataset.campRewardIndex) || 0));
+    const reward = camp.rewardSchedule[index];
+    if (!reward) return;
+    if (target.dataset.campRewardField === "minimumReward") {
+      reward.minimumReward = Math.max(0, Math.floor(Number(target.value) || 0));
+    }
+    if (target.dataset.campRewardField === "productionHours") {
+      reward.productionHours = Math.max(0.01, Number(target.value) || 0.01);
+    }
+    markDirty("Updated this camp's daily reward schedule.");
+  }
+
+  function handleCampRewardAction(event) {
+    const button = event.target.closest("[data-camp-action]");
+    if (!button || state.selected?.kind !== "camp") return;
+    const camp = getSelectedItem();
+    if (!camp || !Array.isArray(camp.rewardSchedule)) return;
+    if (button.dataset.campAction === "add-reward" && camp.rewardSchedule.length < 12) {
+      const previous = camp.rewardSchedule[camp.rewardSchedule.length - 1] || { minimumReward: 0, productionHours: 1 };
+      camp.rewardSchedule.push({
+        minimumReward: Math.max(0, Math.floor(Number(previous.minimumReward) || 0)),
+        productionHours: Math.max(0.01, Number(previous.productionHours) || 1),
+      });
+    }
+    if (button.dataset.campAction === "remove-reward" && camp.rewardSchedule.length > 1) {
+      const index = Math.max(0, Math.floor(Number(button.dataset.campRewardIndex) || 0));
+      camp.rewardSchedule.splice(index, 1);
+    }
+    markDirty(`Updated ${camp.name}'s daily reward count.`);
+    renderInspector();
   }
 
   function moveEdgeRecord(region, fromSide, fromIndex, nextSide, options = {}) {
@@ -1791,6 +2144,14 @@
         if (!CAMP_TYPES.includes(camp.campType)) results.push({ level: "error", text: `${camp.name} has an unknown camp type.` });
         if (!isNormInside(camp.xNorm, camp.yNorm)) results.push({ level: "error", text: `${camp.name} is outside map bounds.` });
         if (!camp.artSrc) results.push({ level: "warning", text: `${camp.name} needs a camp image path.` });
+        if ((camp.campType === "gold" || camp.campType === "troops") && (!Array.isArray(camp.rewardSchedule) || !camp.rewardSchedule.length)) {
+          results.push({ level: "error", text: `${camp.name} needs at least one daily reward.` });
+        }
+        (camp.rewardSchedule || []).forEach((reward, index) => {
+          if (Number(reward.minimumReward) < 0 || Number(reward.productionHours) <= 0) {
+            results.push({ level: "error", text: `${camp.name} reward ${index + 1} needs a non-negative minimum and positive production hours.` });
+          }
+        });
       });
     });
 
@@ -1804,13 +2165,47 @@
         }
       });
     });
+    validateEconomy(results);
 
     if (!results.some(item => item.level === "error" || item.level === "warning")) {
-      results.push({ level: "ok", text: "World validation passed." });
+      results.push({ level: "ok", text: "Game map and economy validation passed." });
     }
     state.validation = results;
     renderValidationList();
-    setStatus("World validation complete.");
+    setStatus("Game validation complete.");
+  }
+
+  function validateEconomy(results) {
+    const economy = state.economy;
+    if (!economy) {
+      results.push({ level: "error", text: "Economy configuration is not loaded." });
+      return;
+    }
+    SHOP_ITEM_EDITOR.forEach(item => {
+      const config = economy.shopItems?.[item.id];
+      if (!config) {
+        results.push({ level: "error", text: `${item.label} is missing economy settings.` });
+        return;
+      }
+      if (Number(config.cost) < 0) results.push({ level: "error", text: `${item.label} cost cannot be negative.` });
+      if (Number(config.dailyPurchaseLimit) < 0) results.push({ level: "error", text: `${item.label} daily purchase cap cannot be negative.` });
+      if (item.duration && Number(config.effectDurationMinutes) <= 0) results.push({ level: "error", text: `${item.label} effect duration must be positive.` });
+      if (item.bonus && Number(config.bonusPercent) < 0) results.push({ level: "error", text: `${item.label} bonus cannot be negative.` });
+    });
+    const pickups = economy.pickups || {};
+    if (Number(pickups.spawnIntervalMinutes) <= 0) results.push({ level: "error", text: "Pickup spawn timer must be positive." });
+    if (Number(pickups.goldAwardProductionMinutes) <= 0 || Number(pickups.troopAwardProductionMinutes) <= 0) {
+      results.push({ level: "error", text: "Pickup production awards must be positive." });
+    }
+    if (Number(pickups.dailyGoldCap) + Number(pickups.dailyTroopCap) > Number(pickups.dailyTotalCap)) {
+      results.push({ level: "warning", text: "Gold and troop pickup caps exceed the combined daily pickup cap." });
+    }
+    ["gold", "troops"].forEach(campType => {
+      const schedule = economy.camps?.[campType]?.rewardSchedule;
+      if (!Array.isArray(schedule) || !schedule.length) {
+        results.push({ level: "error", text: `${campType === "gold" ? "Gold" : "Warband"} Camp defaults need at least one daily reward.` });
+      }
+    });
   }
 
   function addCheck(results, condition, level, text) {
@@ -1852,9 +2247,12 @@
   }
 
   function exportJson() {
-    const payload = buildSavePayload();
+    const payload = {
+      ...buildSavePayload(),
+      economy: deepClone(state.economy),
+    };
     downloadJson(`${state.layout.worldId || "world"}-bundle.json`, payload);
-    setStatus("Exported JSON bundle.");
+    setStatus("Exported map and economy JSON bundle.");
   }
 
   function downloadJson(filename, value) {
@@ -1870,9 +2268,11 @@
   async function importJsonFile(file) {
     if (!file) return;
     const text = await file.text();
-    const data = normalizeBundle(JSON.parse(text));
+    const imported = JSON.parse(text);
+    const data = normalizeBundle(imported);
     state.layout = data.layout;
     state.regions = data.regions;
+    if (imported.economy && typeof imported.economy === "object") state.economy = imported.economy;
     state.activeRegionId = state.regions[0]?.id || "";
     state.selected = null;
     state.validation = [];
@@ -2116,9 +2516,30 @@
     zoomRegion(direction * step, event);
   }
 
+  function setNestedEconomyValue(path, value) {
+    const parts = String(path || "").split(".").filter(Boolean);
+    if (!parts.length || !state.economy) return;
+    let target = state.economy;
+    for (let index = 0; index < parts.length - 1; index += 1) {
+      const key = /^\d+$/.test(parts[index]) ? Number(parts[index]) : parts[index];
+      if (!target[key] || typeof target[key] !== "object") target[key] = {};
+      target = target[key];
+    }
+    const last = /^\d+$/.test(parts[parts.length - 1]) ? Number(parts[parts.length - 1]) : parts[parts.length - 1];
+    target[last] = Math.max(0, Number(value) || 0);
+  }
+
+  function handleEconomyInput(event) {
+    const input = event.target.closest("[data-economy-path]");
+    if (!input) return;
+    setNestedEconomyValue(input.dataset.economyPath, input.value);
+    markDirty("Economy value changed. Save to Game writes both client and Firebase configuration.");
+  }
+
   function bindEvents() {
     elements.worldModeBtn.addEventListener("click", () => setEditorMode("world"));
     elements.regionModeBtn.addEventListener("click", () => setEditorMode("region"));
+    elements.economyModeBtn.addEventListener("click", () => setEditorMode("economy"));
     elements.addRegionBtn.addEventListener("click", addRegion);
     elements.addCityBtn.addEventListener("click", () => setTool(state.tool === "city" ? "select" : "city"));
     elements.addStrongholdBtn.addEventListener("click", () => setTool(state.tool === "stronghold" ? "select" : "stronghold"));
@@ -2128,7 +2549,7 @@
     elements.validateBtn.addEventListener("click", validateWorld);
     elements.exportBtn.addEventListener("click", exportJson);
     elements.importBtn.addEventListener("click", () => elements.importFileInput.click());
-    elements.saveBtn.addEventListener("click", () => saveWorldData().catch(error => setStatus(error.message || String(error), "error")));
+    elements.saveBtn.addEventListener("click", () => saveAllData().catch(error => setStatus(error.message || String(error), "error")));
     elements.importFileInput.addEventListener("change", event => {
       importJsonFile(event.target.files?.[0]).catch(error => setStatus(error.message || String(error), "error"));
       event.target.value = "";
@@ -2150,6 +2571,9 @@
     elements.worldNameInput.addEventListener("input", handleWorldFieldInput);
     elements.selectionForm.addEventListener("input", handleSelectionInput);
     elements.selectionForm.addEventListener("change", handleSelectionChange);
+    elements.selectionForm.addEventListener("click", handleCampRewardAction);
+    elements.economySections.addEventListener("input", handleEconomyInput);
+    elements.economySections.addEventListener("change", handleEconomyInput);
     elements.regionCanvas.addEventListener("click", event => {
       if (event.target.closest(".map-marker, .edge-zone, .edge-switch-arrow") || state.skipNextCanvasClick || state.tool === "select") return;
       placeFromEvent(event);
@@ -2209,7 +2633,7 @@
 
   async function init() {
     bindEvents();
-    await loadWorldData();
+    await Promise.all([loadWorldData(), loadEconomyData()]);
     render();
   }
 

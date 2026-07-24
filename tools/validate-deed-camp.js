@@ -8,6 +8,7 @@ const firebaseClientSource = fs.readFileSync(path.join(root, "firebaseClient.js"
 const rulesSource = fs.readFileSync(path.join(root, "firestore.rules"), "utf8");
 const firestoreIndexes = JSON.parse(fs.readFileSync(path.join(root, "firestore.indexes.json"), "utf8"));
 const worldLayout = JSON.parse(fs.readFileSync(path.join(root, "functions", "world-layout.json"), "utf8"));
+const economyConfig = JSON.parse(fs.readFileSync(path.join(root, "functions", "economy-config.json"), "utf8"));
 
 function requireMatch(source, pattern, message) {
   if (!pattern.test(source)) throw new Error(message);
@@ -23,8 +24,11 @@ if (deedCamps.length !== 1 || deedCamps[0].id !== "region_9_deed_camp") {
 for (const source of [serverSource, clientSource]) {
   requireMatch(source, /deed:\s*\{[\s\S]*?rewardType:\s*"city"[\s\S]*?baseReward:\s*1/, "Missing Deed Camp city reward configuration.");
 }
-requireMatch(serverSource, /DEED_CAMP_HOLD_DURATION_MS\s*=\s*60\s*\*\s*60\s*\*\s*1000/, "Server Deed Camp hold time is not one hour.");
-requireMatch(clientSource, /DEED_CAMP_HOLD_SECONDS\s*=\s*60\s*\*\s*60/, "Client Deed Camp hold time is not one hour.");
+if (!Number.isFinite(Number(economyConfig.camps?.deed?.holdMinutes))) {
+  throw new Error("Deed Camp hold time is missing from the economy configuration.");
+}
+requireMatch(serverSource, /DEED_CAMP_HOLD_DURATION_MS\s*=\s*economyNumber\("camps\.deed\.holdMinutes"/, "Server Deed Camp hold time is not configurable.");
+requireMatch(clientSource, /DEED_CAMP_HOLD_SECONDS\s*=\s*economyNumber\("camps\.deed\.holdMinutes"/, "Client Deed Camp hold time is not configurable.");
 requireMatch(serverSource, /deed:\s*\{[\s\S]*?objectiveStatsId:\s*"deedCamp"/, "Deed Camp is missing its per-player daily claim record.");
 requireMatch(serverSource, /deedDailyLimitReached\s*=\s*isDeedCamp\s*&&\s*priorClaims\s*>=\s*1/, "Deed Camp is not limited to one city award per player per UTC day.");
 requireMatch(serverSource, /status:\s*isDeedCamp[\s\S]*?"daily-limit"[\s\S]*?"no-eligible-city"/, "Deed Camp payout does not report its daily limit cleanly.");
@@ -57,6 +61,6 @@ requireMatch(rulesSource, /match \/rewardHistory\/\{entryId\}[\s\S]*?allow read:
 requireMatch(clientSource, /Reward History/, "Deed Camp UI is missing its public Reward History tab.");
 requireMatch(clientSource, /data-deed-history-jump[\s\S]*?focusBattleReportTarget/, "Deed Camp history does not provide cross-map city navigation.");
 requireMatch(clientSource, /function getDeedCampHistoryCityName[\s\S]*?getCanonicalCityName[\s\S]*?const cityName = getDeedCampHistoryCityName\(entry\)/, "Existing Deed Camp history entries do not resolve canonical city names.");
-requireMatch(clientSource, /Capture and hold the Deed Camp for 1 hour[\s\S]*?one Deed Camp city per UTC day[\s\S]*?No Deed Token or inventory item is given[\s\S]*?normal neutral-city capture limit still applies/, "Deed Camp help text is incomplete.");
+requireMatch(clientSource, /Capture and hold the Deed Camp for \$\{formatNumber\(holdMinutes\)\} minutes[\s\S]*?one Deed Camp city per UTC day[\s\S]*?No Deed Token or inventory item is given[\s\S]*?normal neutral-city capture limit still applies/, "Deed Camp help text is incomplete or not driven by its configured timer.");
 
 console.log("Validated Deed Camp placement, payout authority, neutral-city award, public history, navigation, and capture-limit isolation.");

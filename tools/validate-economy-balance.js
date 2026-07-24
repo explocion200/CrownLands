@@ -6,125 +6,75 @@ const vm = require("node:vm");
 const root = path.resolve(__dirname, "..");
 const serverSource = fs.readFileSync(path.join(root, "functions", "index.js"), "utf8");
 const clientSource = fs.readFileSync(path.join(root, "game.js"), "utf8");
-
-function readNumeric(source, name) {
-  const match = source.match(new RegExp(`const\\s+${name}\\s*=\\s*([^;]+);`));
-  assert.ok(match, `Missing ${name}.`);
-  return vm.runInNewContext(match[1], { Math, Number });
-}
-
-function readArray(source, name) {
-  const match = source.match(new RegExp(`const\\s+${name}\\s*=\\s*(\\[[^;]+\\]);`));
-  assert.ok(match, `Missing ${name}.`);
-  return vm.runInNewContext(match[1], { Math, Number });
-}
+const editorSource = fs.readFileSync(path.join(root, "tools", "map-editor", "editor.js"), "utf8");
+const editorServerSource = fs.readFileSync(path.join(root, "tools", "editor-server.js"), "utf8");
+const serverConfig = require(path.join(root, "functions", "economy-config.json"));
+const browserConfigSource = fs.readFileSync(path.join(root, "economy-config.js"), "utf8");
+const browserContext = { window: {} };
+vm.runInNewContext(browserConfigSource, browserContext);
+const browserConfig = JSON.parse(JSON.stringify(browserContext.window.CROWNLANDS_ECONOMY_CONFIG));
 
 function requireMatch(source, pattern, message) {
   assert.match(source, pattern, message);
 }
 
-const mirroredConstants = [
-  "MILLION_LORDS_CITY_PRODUCTION_VP_BASE",
-  "MILLION_LORDS_CITY_PRODUCTION_VP_GROWTH",
-  "MILLION_LORDS_PASSIVE_GOLD_PER_CITY_VP",
-  "CITY_GOLD_ENDGAME_START_LEVEL",
-  "CITY_GOLD_ENDGAME_GROWTH",
-  "CITY_UPGRADE_EARLY_END_LEVEL",
-  "CITY_UPGRADE_MID_END_LEVEL",
-  "CITY_UPGRADE_EARLY_START_HOURS",
-  "CITY_UPGRADE_EARLY_END_HOURS",
-  "CITY_UPGRADE_MID_END_HOURS",
-  "CITY_UPGRADE_END_LEVEL_150_HOURS",
-  "CITY_UPGRADE_MAX_TARGET_HOURS",
-  "HARVEST_BONUS_DAILY_LIMIT",
-  "HARVEST_BONUS_DAILY_GOLD_LIMIT",
-  "HARVEST_BONUS_DAILY_TROOP_LIMIT",
-  "HARVEST_BONUS_GOLD_SECONDS",
-  "HARVEST_BONUS_TROOP_SECONDS",
-  "HARVEST_BONUS_SPAWN_INTERVAL_SECONDS",
-  "WAR_DRUMS_TROOP_PRODUCTION_BONUS_PERCENT",
-  "ROYAL_TAX_DECREE_GOLD_PRODUCTION_BONUS_PERCENT",
-  "RELIC_CAMP_DAILY_REWARD_LIMIT",
-];
-
-for (const name of mirroredConstants) {
-  assert.equal(readNumeric(serverSource, name), readNumeric(clientSource, name), `${name} differs between server and client.`);
-}
-
-assert.equal(readNumeric(serverSource, "WAR_DRUMS_TROOP_PRODUCTION_BONUS_PERCENT"), 5);
-assert.equal(readNumeric(serverSource, "RELIC_CAMP_DAILY_REWARD_LIMIT"), 2);
+assert.deepEqual(browserConfig, serverConfig, "Browser and Firebase economy configurations differ.");
+assert.equal(serverConfig.shopItems.war_drums_30m.bonusPercent, 5);
+assert.equal(serverConfig.camps.items.maxDailyRewards, 2);
 assert.equal(
-  readNumeric(serverSource, "HARVEST_BONUS_DAILY_GOLD_LIMIT")
-    * readNumeric(serverSource, "HARVEST_BONUS_GOLD_SECONDS"),
-  3600,
+  serverConfig.pickups.dailyGoldCap * serverConfig.pickups.goldAwardProductionMinutes,
+  60,
   "Daily gold pickups should equal at most one hour of permanent production."
 );
 assert.equal(
-  readNumeric(serverSource, "HARVEST_BONUS_DAILY_TROOP_LIMIT")
-    * readNumeric(serverSource, "HARVEST_BONUS_TROOP_SECONDS"),
-  3600,
+  serverConfig.pickups.dailyTroopCap * serverConfig.pickups.troopAwardProductionMinutes,
+  60,
   "Daily troop pickups should equal at most one hour of permanent production."
 );
-assert.equal(readNumeric(serverSource, "HARVEST_BONUS_SPAWN_INTERVAL_SECONDS"), 180);
+assert.equal(serverConfig.pickups.spawnIntervalMinutes, 3);
 
-const expectedItemLimits = new Map([
-  ["ROYAL_PEACE_SHIELD_ITEM_ID", 1],
-  ["WAR_DRUMS_ITEM_ID", 4],
-  ["ROYAL_TAX_DECREE_ITEM_ID", 2],
-  ["VEIL_OF_SILENCE_ITEM_ID", 4],
-  ["SWIFT_MARCH_ORDER_ITEM_ID", 2],
-  ["RECALL_HORN_ITEM_ID", 2],
-]);
-for (const [itemId, limit] of expectedItemLimits) {
-  const pattern = new RegExp(`\\[${itemId}\\]:\\s*${limit}`);
-  requireMatch(serverSource, pattern, `Server daily purchase cap is wrong for ${itemId}.`);
-  requireMatch(clientSource, pattern, `Client daily purchase cap is wrong for ${itemId}.`);
+const expectedItemLimits = {
+  shield_12h: 1,
+  war_drums_30m: 4,
+  royal_tax_decree_30m: 2,
+  veil_of_silence_30m: 4,
+  swift_march_order: 2,
+  recall_horn: 2,
+};
+const expectedPrices = {
+  shield_12h: 1_250_000,
+  war_drums_30m: 75_000,
+  royal_tax_decree_30m: 150_000,
+  veil_of_silence_30m: 125_000,
+  swift_march_order: 300_000,
+  recall_horn: 500_000,
+};
+for (const [itemId, limit] of Object.entries(expectedItemLimits)) {
+  assert.equal(serverConfig.shopItems[itemId].dailyPurchaseLimit, limit, `${itemId} daily cap changed unexpectedly.`);
+  assert.equal(serverConfig.shopItems[itemId].cost, expectedPrices[itemId], `${itemId} price changed unexpectedly.`);
 }
 
-const expectedPrices = new Map([
-  ["ROYAL_PEACE_SHIELD_ITEM_ID", 1_250_000],
-  ["WAR_DRUMS_ITEM_ID", 75_000],
-  ["ROYAL_TAX_DECREE_ITEM_ID", 150_000],
-  ["VEIL_OF_SILENCE_ITEM_ID", 125_000],
-  ["SWIFT_MARCH_ORDER_ITEM_ID", 300_000],
-  ["RECALL_HORN_ITEM_ID", 500_000],
-]);
-for (const [itemId, price] of expectedPrices) {
-  requireMatch(
-    serverSource,
-    new RegExp(`\\[${itemId}\\]:\\s*\\{[^}]*cost:\\s*${price}`),
-    `Server shop price is wrong for ${itemId}.`
-  );
-}
-assert.deepEqual(
-  [...clientSource.matchAll(/id:\s*"([^"]+)"[\s\S]*?cost:\s*([\d_]+)/g)]
-    .slice(0, expectedPrices.size)
-    .map(match => [match[1], Number(match[2].replaceAll("_", ""))]),
-  [
-    ["shield_12h", 1_250_000],
-    ["war_drums_30m", 75_000],
-    ["royal_tax_decree_30m", 150_000],
-    ["veil_of_silence_30m", 125_000],
-    ["swift_march_order", 300_000],
-    ["recall_horn", 500_000],
-  ],
-  "Client shop prices or ordering changed."
-);
-
-const goldRewardHours = readArray(serverSource, "GOLD_CAMP_REWARD_HOURS_BY_DAILY_CLAIM");
-const troopRewardHours = readArray(serverSource, "WARBAND_CAMP_REWARD_HOURS_BY_DAILY_CLAIM");
-assert.deepEqual([...goldRewardHours], [3, 2, 1, 0.5]);
-assert.deepEqual([...troopRewardHours], [6, 4, 3, 2]);
-assert.equal(goldRewardHours.reduce((sum, hours) => sum + hours, 0), 6.5);
-assert.equal(troopRewardHours.reduce((sum, hours) => sum + hours, 0), 15);
+const goldSchedule = serverConfig.camps.gold.rewardSchedule;
+const troopSchedule = serverConfig.camps.troops.rewardSchedule;
+assert.deepEqual(goldSchedule.map(entry => entry.productionHours), [3, 2, 1, 0.5]);
+assert.deepEqual(troopSchedule.map(entry => entry.productionHours), [6, 4, 3, 2]);
+assert.equal(goldSchedule.reduce((sum, entry) => sum + entry.productionHours, 0), 6.5);
+assert.equal(troopSchedule.reduce((sum, entry) => sum + entry.productionHours, 0), 15);
 requireMatch(serverSource, /function getRewardCampDailyReward[\s\S]*?Math\.max\(minimumReward,\s*Math\.floor\(hourlyRate \* rewardHours\)\)/, "Camp rewards are not production-scaled with a minimum.");
 requireMatch(serverSource, /baseGoldPerHour:[\s\S]*?baseTroopPerHour:/, "Permanent production rates are missing from global stats.");
 
-const baseVp = readNumeric(serverSource, "MILLION_LORDS_CITY_PRODUCTION_VP_BASE");
-const vpGrowth = readNumeric(serverSource, "MILLION_LORDS_CITY_PRODUCTION_VP_GROWTH");
-const goldPerVp = readNumeric(serverSource, "MILLION_LORDS_PASSIVE_GOLD_PER_CITY_VP");
-const endgameStart = readNumeric(serverSource, "CITY_GOLD_ENDGAME_START_LEVEL");
-const endgameGrowth = readNumeric(serverSource, "CITY_GOLD_ENDGAME_GROWTH");
+const {
+  productionVpBase: baseVp,
+  productionVpGrowth: vpGrowth,
+  goldPerProductionVp: goldPerVp,
+  goldEndgameStartLevel: endgameStart,
+  goldEndgameGrowth: endgameGrowth,
+  upgradeEarlyStartHours,
+  upgradeEarlyEndHours,
+  upgradeMidEndHours,
+  upgradeLevel150Hours,
+  upgradeMaximumHours,
+} = serverConfig.cityEconomy;
 
 function goldPerHour(level) {
   const curveLevel = Math.min(level, endgameStart);
@@ -133,9 +83,9 @@ function goldPerHour(level) {
 }
 
 function upgradeTargetHours(level) {
-  if (level <= 50) return 0.1 + 3.9 * Math.pow((level - 1) / 49, 1.35);
-  if (level <= 100) return 4 + 32 * Math.pow((level - 50) / 50, 1.4);
-  return Math.min(720, 36 + 204 * Math.pow((level - 100) / 50, 1.5));
+  if (level <= 50) return upgradeEarlyStartHours + (upgradeEarlyEndHours - upgradeEarlyStartHours) * Math.pow((level - 1) / 49, 1.35);
+  if (level <= 100) return upgradeEarlyEndHours + (upgradeMidEndHours - upgradeEarlyEndHours) * Math.pow((level - 50) / 50, 1.4);
+  return Math.min(upgradeMaximumHours, upgradeMidEndHours + (upgradeLevel150Hours - upgradeMidEndHours) * Math.pow((level - 100) / 50, 1.5));
 }
 
 assert.equal(upgradeTargetHours(1), 0.1);
@@ -152,13 +102,20 @@ assert.ok(upgradeTargetHours(50) / 10 <= 0.5, "A ten-city level-50 kingdom shoul
 assert.ok(upgradeTargetHours(100) / 10 <= 4, "A ten-city level-100 kingdom should remain war-friendly.");
 assert.ok(upgradeTargetHours(150) / 10 >= 20, "Level 150 should feel like endgame progression.");
 
-for (const source of [serverSource, clientSource]) {
-  requireMatch(source, /taxStewardship:\s*\{[^}]*percentPerLevel:\s*3[^}]*maxPercent:\s*75/, "Tax Stewardship is not meaningful.");
-  requireMatch(source, /royalGranaries:\s*\{[^}]*percentPerLevel:\s*3[^}]*maxPercent:\s*75/, "Royal Granaries is not meaningful.");
-  requireMatch(source, /guildCharters:\s*\{[^}]*percentPerLevel:\s*2[^}]*maxPercent:\s*50/, "Guild Charters is not meaningful.");
-}
-assert.equal(readNumeric(clientSource, "SCOUT_NEARBY_COST"), 75_000);
-assert.equal(readNumeric(clientSource, "REGROUP_COST"), 150_000);
-assert.equal(readNumeric(clientSource, "SKILL_RESET_COST"), 750_000);
+assert.deepEqual(serverConfig.skills.taxStewardship, { percentPerLevel: 3, maxPercent: 75 });
+assert.deepEqual(serverConfig.skills.royalGranaries, { percentPerLevel: 3, maxPercent: 75 });
+assert.deepEqual(serverConfig.skills.guildCharters, { percentPerLevel: 2, maxPercent: 50 });
+assert.equal(serverConfig.playerCosts.nearbyScoutGold, 75_000);
+assert.equal(serverConfig.playerCosts.regroupGold, 150_000);
+assert.equal(serverConfig.playerCosts.skillResetGold, 750_000);
 
-console.log("Validated Crownlands production, upgrades, pickups, camps, shop prices, daily caps, and economy skill value.");
+for (const source of [serverSource, clientSource]) {
+  requireMatch(source, /economyNumber\(/, "Runtime is not reading the shared economy configuration.");
+  requireMatch(source, /rewardSchedule/, "Runtime does not support per-camp reward schedules.");
+}
+requireMatch(serverSource, /require\("\.\/economy-config\.json"\)/, "Firebase Functions do not load the generated economy config.");
+requireMatch(editorServerSource, /\/api\/economy-data/, "Game Editor economy API is missing.");
+requireMatch(editorSource, /renderEconomySections/, "Game Editor economy interface is missing.");
+requireMatch(editorSource, /data-camp-reward-field="productionHours"/, "Per-camp production-hour editor is missing.");
+
+console.log("Validated shared Crownlands economy config, production, upgrades, pickups, camps, shop prices, daily caps, and skills.");

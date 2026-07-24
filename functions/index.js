@@ -4,43 +4,58 @@ const { onDocumentWritten } = require("firebase-functions/v2/firestore");
 const admin = require("firebase-admin");
 const crypto = require("node:crypto");
 const SERVER_WORLD_LAYOUT = require("./world-layout.json");
+const ECONOMY_CONFIG = require("./economy-config.json");
 
 admin.initializeApp();
 
 const db = admin.firestore();
 const FieldValue = admin.firestore.FieldValue;
 
+function economyNumber(path, fallback) {
+  const value = String(path || "").split(".").filter(Boolean).reduce((current, key) => current?.[key], ECONOMY_CONFIG);
+  return Number.isFinite(Number(value)) ? Number(value) : fallback;
+}
+
+function economyRewardSchedule(campType, fallback = []) {
+  const schedule = ECONOMY_CONFIG?.camps?.[campType]?.rewardSchedule;
+  if (!Array.isArray(schedule) || !schedule.length) return fallback;
+  return schedule.map(entry => ({
+    minimumReward: Math.max(0, Math.floor(Number(entry?.minimumReward) || 0)),
+    productionHours: Math.max(0, Number(entry?.productionHours) || 0),
+  }));
+}
+
 const RESET_GENERATION = "fresh-2026-07-05-server-reset";
 const ONLINE_WORLD_ID = `main-${RESET_GENERATION}`;
 const TEST_STARTING_GOLD = 500;
 const PLAYER_NAME_MAX_LENGTH = 18;
-const MILLION_LORDS_CITY_PRODUCTION_VP_BASE = 20;
-const MILLION_LORDS_CITY_PRODUCTION_VP_GROWTH = 1.115;
-const MILLION_LORDS_PASSIVE_GOLD_PER_CITY_VP = 15;
-const CITY_GOLD_ENDGAME_START_LEVEL = 100;
-const CITY_GOLD_ENDGAME_GROWTH = 1.08;
-const CITY_UPGRADE_EARLY_END_LEVEL = 50;
-const CITY_UPGRADE_MID_END_LEVEL = 100;
-const CITY_UPGRADE_EARLY_START_HOURS = 0.1;
-const CITY_UPGRADE_EARLY_END_HOURS = 4;
-const CITY_UPGRADE_MID_END_HOURS = 36;
-const CITY_UPGRADE_END_LEVEL_150_HOURS = 240;
-const CITY_UPGRADE_MAX_TARGET_HOURS = 720;
+const MILLION_LORDS_CITY_PRODUCTION_VP_BASE = economyNumber("cityEconomy.productionVpBase", 20);
+const MILLION_LORDS_CITY_PRODUCTION_VP_GROWTH = economyNumber("cityEconomy.productionVpGrowth", 1.115);
+const MILLION_LORDS_PASSIVE_GOLD_PER_CITY_VP = economyNumber("cityEconomy.goldPerProductionVp", 15);
+const CITY_GOLD_ENDGAME_START_LEVEL = economyNumber("cityEconomy.goldEndgameStartLevel", 100);
+const CITY_GOLD_ENDGAME_GROWTH = economyNumber("cityEconomy.goldEndgameGrowth", 1.08);
+const CITY_UPGRADE_EARLY_END_LEVEL = economyNumber("cityEconomy.upgradeEarlyEndLevel", 50);
+const CITY_UPGRADE_MID_END_LEVEL = economyNumber("cityEconomy.upgradeMidEndLevel", 100);
+const CITY_UPGRADE_EARLY_START_HOURS = economyNumber("cityEconomy.upgradeEarlyStartHours", 0.1);
+const CITY_UPGRADE_EARLY_END_HOURS = economyNumber("cityEconomy.upgradeEarlyEndHours", 4);
+const CITY_UPGRADE_MID_END_HOURS = economyNumber("cityEconomy.upgradeMidEndHours", 36);
+const CITY_UPGRADE_END_LEVEL_150_HOURS = economyNumber("cityEconomy.upgradeLevel150Hours", 240);
+const CITY_UPGRADE_MAX_TARGET_HOURS = economyNumber("cityEconomy.upgradeMaximumHours", 720);
 const BASE_TROOP_ATTACK_POWER = 2;
 const DEFAULT_MARCH_PERCENT = 0.5;
 const DAILY_NEUTRAL_CAPTURE_LIMIT = 30;
 const NEUTRAL_CITY_COUNT_LIMIT = 30;
-const HARVEST_BONUS_DAILY_LIMIT = 12;
-const HARVEST_BONUS_DAILY_GOLD_LIMIT = 6;
-const HARVEST_BONUS_DAILY_TROOP_LIMIT = 6;
-const HARVEST_BONUS_GOLD_SECONDS = 10 * 60;
-const HARVEST_BONUS_MIN_GOLD = 50;
-const HARVEST_BONUS_TROOP_SECONDS = 10 * 60;
-const HARVEST_BONUS_MIN_TROOPS = 10;
+const HARVEST_BONUS_DAILY_LIMIT = economyNumber("pickups.dailyTotalCap", 12);
+const HARVEST_BONUS_DAILY_GOLD_LIMIT = economyNumber("pickups.dailyGoldCap", 6);
+const HARVEST_BONUS_DAILY_TROOP_LIMIT = economyNumber("pickups.dailyTroopCap", 6);
+const HARVEST_BONUS_GOLD_SECONDS = economyNumber("pickups.goldAwardProductionMinutes", 10) * 60;
+const HARVEST_BONUS_MIN_GOLD = economyNumber("pickups.minimumGold", 50);
+const HARVEST_BONUS_TROOP_SECONDS = economyNumber("pickups.troopAwardProductionMinutes", 10) * 60;
+const HARVEST_BONUS_MIN_TROOPS = economyNumber("pickups.minimumTroops", 10);
 const HARVEST_BONUS_MAX_TROOPS = Number.MAX_SAFE_INTEGER;
-const HARVEST_BONUS_SPAWN_INTERVAL_SECONDS = 3 * 60;
-const HARVEST_BONUS_EXPIRE_SECONDS = 20 * 60;
-const HARVEST_BONUS_MAX_ACTIVE_PER_PLAYER = 1;
+const HARVEST_BONUS_SPAWN_INTERVAL_SECONDS = economyNumber("pickups.spawnIntervalMinutes", 3) * 60;
+const HARVEST_BONUS_EXPIRE_SECONDS = economyNumber("pickups.expireMinutes", 20) * 60;
+const HARVEST_BONUS_MAX_ACTIVE_PER_PLAYER = economyNumber("pickups.maxActivePerPlayer", 1);
 const SCOUT_REPORT_SECONDS = 120;
 const ARMY_TRAVEL_SECONDS_PER_MAP_UNIT = 0.13;
 const ARMY_TRAVEL_MIN_SECONDS = 30;
@@ -84,33 +99,33 @@ const HERO_XP_POST_50_MULTIPLIER = 2.5;
 const HERO_XP_POST_100_MULTIPLIER = 4;
 const HERO_XP_POST_50_EXPONENT = 1.5;
 const HERO_XP_POST_100_EXPONENT = 1.6;
-const LEVEL_UP_GOLD_EARLY_UPGRADE_SHARE = 0.5;
-const LEVEL_UP_GOLD_MID_END_UPGRADE_SHARE = 0.3;
-const LEVEL_UP_GOLD_END_UPGRADE_SHARE = 0.2;
-const LEVEL_UP_GOLD_EARLY_PRODUCTION_HOURS = 4;
-const LEVEL_UP_GOLD_MID_END_PRODUCTION_HOURS = 12;
-const LEVEL_UP_GOLD_END_PRODUCTION_HOURS = 24;
-const LEVEL_UP_TROOP_REWARD_EARLY_BASE_HOURS = 4;
-const LEVEL_UP_TROOP_REWARD_EARLY_HOURS_PER_LEVEL = 0.4;
-const LEVEL_UP_TROOP_REWARD_MID_BASE_HOURS = 24;
-const LEVEL_UP_TROOP_REWARD_MID_HOURS_PER_LEVEL = 0.24;
-const LEVEL_UP_TROOP_REWARD_END_BASE_HOURS = 36;
-const LEVEL_UP_TROOP_REWARD_END_HOURS_PER_LEVEL = 0.12;
-const LEVEL_UP_TROOP_REWARD_MAX_HOURS = 48;
+const LEVEL_UP_GOLD_EARLY_UPGRADE_SHARE = economyNumber("levelRewards.goldEarlyUpgradeShare", 0.5);
+const LEVEL_UP_GOLD_MID_END_UPGRADE_SHARE = economyNumber("levelRewards.goldMidUpgradeShare", 0.3);
+const LEVEL_UP_GOLD_END_UPGRADE_SHARE = economyNumber("levelRewards.goldEndgameUpgradeShare", 0.2);
+const LEVEL_UP_GOLD_EARLY_PRODUCTION_HOURS = economyNumber("levelRewards.goldEarlyProductionHours", 4);
+const LEVEL_UP_GOLD_MID_END_PRODUCTION_HOURS = economyNumber("levelRewards.goldMidProductionHours", 12);
+const LEVEL_UP_GOLD_END_PRODUCTION_HOURS = economyNumber("levelRewards.goldEndgameProductionHours", 24);
+const LEVEL_UP_TROOP_REWARD_EARLY_BASE_HOURS = economyNumber("levelRewards.troopEarlyBaseHours", 4);
+const LEVEL_UP_TROOP_REWARD_EARLY_HOURS_PER_LEVEL = economyNumber("levelRewards.troopEarlyHoursPerLevel", 0.4);
+const LEVEL_UP_TROOP_REWARD_MID_BASE_HOURS = economyNumber("levelRewards.troopMidBaseHours", 24);
+const LEVEL_UP_TROOP_REWARD_MID_HOURS_PER_LEVEL = economyNumber("levelRewards.troopMidHoursPerLevel", 0.24);
+const LEVEL_UP_TROOP_REWARD_END_BASE_HOURS = economyNumber("levelRewards.troopEndgameBaseHours", 36);
+const LEVEL_UP_TROOP_REWARD_END_HOURS_PER_LEVEL = economyNumber("levelRewards.troopEndgameHoursPerLevel", 0.12);
+const LEVEL_UP_TROOP_REWARD_MAX_HOURS = economyNumber("levelRewards.troopMaximumHours", 48);
 const CHARACTER_START_LEVEL = 1;
 const CHARACTER_START_XP = 0;
 const CITY_UPGRADE_XP_BASE = 18;
 const CITY_UPGRADE_XP_PER_LEVEL = 4;
 const ROYAL_PEACE_SHIELD_ITEM_ID = "shield_12h";
-const ROYAL_PEACE_SHIELD_DURATION_MS = 12 * 60 * 60 * 1000;
+const ROYAL_PEACE_SHIELD_DURATION_MS = economyNumber("shopItems.shield_12h.effectDurationMinutes", 720) * 60 * 1000;
 const WAR_DRUMS_ITEM_ID = "war_drums_30m";
-const WAR_DRUMS_DURATION_MS = 30 * 60 * 1000;
-const WAR_DRUMS_TROOP_PRODUCTION_BONUS_PERCENT = 5;
+const WAR_DRUMS_DURATION_MS = economyNumber("shopItems.war_drums_30m.effectDurationMinutes", 30) * 60 * 1000;
+const WAR_DRUMS_TROOP_PRODUCTION_BONUS_PERCENT = economyNumber("shopItems.war_drums_30m.bonusPercent", 5);
 const ROYAL_TAX_DECREE_ITEM_ID = "royal_tax_decree_30m";
-const ROYAL_TAX_DECREE_DURATION_MS = 30 * 60 * 1000;
-const ROYAL_TAX_DECREE_GOLD_PRODUCTION_BONUS_PERCENT = 50;
+const ROYAL_TAX_DECREE_DURATION_MS = economyNumber("shopItems.royal_tax_decree_30m.effectDurationMinutes", 30) * 60 * 1000;
+const ROYAL_TAX_DECREE_GOLD_PRODUCTION_BONUS_PERCENT = economyNumber("shopItems.royal_tax_decree_30m.bonusPercent", 50);
 const VEIL_OF_SILENCE_ITEM_ID = "veil_of_silence_30m";
-const VEIL_OF_SILENCE_DURATION_MS = 5 * 60 * 1000;
+const VEIL_OF_SILENCE_DURATION_MS = economyNumber("shopItems.veil_of_silence_30m.effectDurationMinutes", 5) * 60 * 1000;
 const SWIFT_MARCH_ORDER_ITEM_ID = "swift_march_order";
 const SWIFT_MARCH_REMAINING_TIME_MULTIPLIER = 0.5;
 const SWIFT_MARCH_MINIMUM_REMAINING_MS = 1000;
@@ -118,12 +133,12 @@ const RECALL_HORN_ITEM_ID = "recall_horn";
 const RECALL_HORN_MINIMUM_REMAINING_MS = 1000;
 const RECALL_HORN_MINIMUM_RETURN_MS = 1000;
 const ITEM_DAILY_PURCHASE_LIMITS = Object.freeze({
-  [ROYAL_PEACE_SHIELD_ITEM_ID]: 1,
-  [WAR_DRUMS_ITEM_ID]: 4,
-  [ROYAL_TAX_DECREE_ITEM_ID]: 2,
-  [VEIL_OF_SILENCE_ITEM_ID]: 4,
-  [SWIFT_MARCH_ORDER_ITEM_ID]: 2,
-  [RECALL_HORN_ITEM_ID]: 2,
+  [ROYAL_PEACE_SHIELD_ITEM_ID]: economyNumber("shopItems.shield_12h.dailyPurchaseLimit", 1),
+  [WAR_DRUMS_ITEM_ID]: economyNumber("shopItems.war_drums_30m.dailyPurchaseLimit", 4),
+  [ROYAL_TAX_DECREE_ITEM_ID]: economyNumber("shopItems.royal_tax_decree_30m.dailyPurchaseLimit", 2),
+  [VEIL_OF_SILENCE_ITEM_ID]: economyNumber("shopItems.veil_of_silence_30m.dailyPurchaseLimit", 4),
+  [SWIFT_MARCH_ORDER_ITEM_ID]: economyNumber("shopItems.swift_march_order.dailyPurchaseLimit", 2),
+  [RECALL_HORN_ITEM_ID]: economyNumber("shopItems.recall_horn.dailyPurchaseLimit", 2),
 });
 const MAX_ITEM_DAILY_PURCHASE_LIMIT = Math.max(...Object.values(ITEM_DAILY_PURCHASE_LIMITS));
 const MAIN_CITY_CHANGE_CITY_LIMIT = 30;
@@ -154,29 +169,41 @@ const SERVER_DEFAULT_CAMP_VISUAL_SIZE = 132;
 const SERVER_ISLAND_MAP_PADDING = 560;
 const SERVER_ROUTE_INSET_MIN = 24;
 const SERVER_ROUTE_INSET_MAX = 58;
-const GOLD_CAMP_HOLD_DURATION_MS = 10 * 60 * 1000;
-const GOLD_CAMP_BASE_REWARD = 100_000;
-const GOLD_CAMP_BASE_DEFENDERS = 10_000;
-const GOLD_CAMP_DEFENSE_LEVEL = 30;
+const GOLD_CAMP_REWARD_SCHEDULE = economyRewardSchedule("gold", [
+  { minimumReward: 100_000, productionHours: 3 },
+  { minimumReward: 75_000, productionHours: 2 },
+  { minimumReward: 50_000, productionHours: 1 },
+  { minimumReward: 25_000, productionHours: 0.5 },
+]);
+const WARBAND_CAMP_REWARD_SCHEDULE = economyRewardSchedule("troops", [
+  { minimumReward: 50_000, productionHours: 6 },
+  { minimumReward: 37_500, productionHours: 4 },
+  { minimumReward: 25_000, productionHours: 3 },
+  { minimumReward: 12_500, productionHours: 2 },
+]);
+const GOLD_CAMP_HOLD_DURATION_MS = economyNumber("camps.gold.holdMinutes", 10) * 60 * 1000;
+const GOLD_CAMP_BASE_REWARD = GOLD_CAMP_REWARD_SCHEDULE[0]?.minimumReward || 100_000;
+const GOLD_CAMP_BASE_DEFENDERS = economyNumber("camps.gold.baseDefenders", 10_000);
+const GOLD_CAMP_DEFENSE_LEVEL = economyNumber("camps.gold.defenseLevel", 30);
 const REWARD_CAMP_PAYOUT_SCAN_LIMIT = 40;
-const GOLD_CAMP_REWARD_BY_DAILY_CLAIM = [100_000, 75_000, 50_000, 25_000];
-const GOLD_CAMP_REWARD_HOURS_BY_DAILY_CLAIM = [3, 2, 1, 0.5];
-const WARBAND_CAMP_HOLD_DURATION_MS = 15 * 60 * 1000;
-const WARBAND_CAMP_BASE_REWARD = 50_000;
-const WARBAND_CAMP_BASE_DEFENDERS = 10_000;
-const WARBAND_CAMP_DEFENSE_LEVEL = 30;
-const WARBAND_CAMP_REWARD_BY_DAILY_CLAIM = [50_000, 37_500, 25_000, 12_500];
-const WARBAND_CAMP_REWARD_HOURS_BY_DAILY_CLAIM = [6, 4, 3, 2];
-const DEED_CAMP_HOLD_DURATION_MS = 60 * 60 * 1000;
-const DEED_CAMP_BASE_DEFENDERS = 10_000;
-const DEED_CAMP_DEFENSE_LEVEL = 30;
+const GOLD_CAMP_REWARD_BY_DAILY_CLAIM = GOLD_CAMP_REWARD_SCHEDULE.map(entry => entry.minimumReward);
+const GOLD_CAMP_REWARD_HOURS_BY_DAILY_CLAIM = GOLD_CAMP_REWARD_SCHEDULE.map(entry => entry.productionHours);
+const WARBAND_CAMP_HOLD_DURATION_MS = economyNumber("camps.troops.holdMinutes", 15) * 60 * 1000;
+const WARBAND_CAMP_BASE_REWARD = WARBAND_CAMP_REWARD_SCHEDULE[0]?.minimumReward || 50_000;
+const WARBAND_CAMP_BASE_DEFENDERS = economyNumber("camps.troops.baseDefenders", 10_000);
+const WARBAND_CAMP_DEFENSE_LEVEL = economyNumber("camps.troops.defenseLevel", 30);
+const WARBAND_CAMP_REWARD_BY_DAILY_CLAIM = WARBAND_CAMP_REWARD_SCHEDULE.map(entry => entry.minimumReward);
+const WARBAND_CAMP_REWARD_HOURS_BY_DAILY_CLAIM = WARBAND_CAMP_REWARD_SCHEDULE.map(entry => entry.productionHours);
+const DEED_CAMP_HOLD_DURATION_MS = economyNumber("camps.deed.holdMinutes", 60) * 60 * 1000;
+const DEED_CAMP_BASE_DEFENDERS = economyNumber("camps.deed.baseDefenders", 10_000);
+const DEED_CAMP_DEFENSE_LEVEL = economyNumber("camps.deed.defenseLevel", 30);
 const DEED_CAMP_HISTORY_LIMIT = 25;
 const DEED_CAMP_CITY_QUERY_LIMIT = 50;
 const DEED_CAMP_FALLBACK_REGION_LIMIT = 6;
-const RELIC_CAMP_HOLD_DURATION_MS = 30 * 60 * 1000;
-const RELIC_CAMP_BASE_DEFENDERS = 10_000;
-const RELIC_CAMP_DEFENSE_LEVEL = 30;
-const RELIC_CAMP_DAILY_REWARD_LIMIT = 2;
+const RELIC_CAMP_HOLD_DURATION_MS = economyNumber("camps.items.holdMinutes", 30) * 60 * 1000;
+const RELIC_CAMP_BASE_DEFENDERS = economyNumber("camps.items.baseDefenders", 10_000);
+const RELIC_CAMP_DEFENSE_LEVEL = economyNumber("camps.items.defenseLevel", 30);
+const RELIC_CAMP_DAILY_REWARD_LIMIT = economyNumber("camps.items.maxDailyRewards", 2);
 const RELIC_CAMP_DROP_TABLE = [
   { itemId: WAR_DRUMS_ITEM_ID, itemName: "War Drums", rarity: "Common", chance: 35 },
   { itemId: VEIL_OF_SILENCE_ITEM_ID, itemName: "Veil of Silence", rarity: "Common", chance: 25 },
@@ -242,12 +269,12 @@ const REWARD_CAMP_CONFIG = {
   },
 };
 const SHOP_ITEMS = {
-  [ROYAL_PEACE_SHIELD_ITEM_ID]: { id: ROYAL_PEACE_SHIELD_ITEM_ID, label: "Royal Peace Shield", cost: 1250000 },
-  [WAR_DRUMS_ITEM_ID]: { id: WAR_DRUMS_ITEM_ID, label: "War Drums", cost: 75000 },
-  [ROYAL_TAX_DECREE_ITEM_ID]: { id: ROYAL_TAX_DECREE_ITEM_ID, label: "Royal Tax Decree", cost: 150000 },
-  [VEIL_OF_SILENCE_ITEM_ID]: { id: VEIL_OF_SILENCE_ITEM_ID, label: "Veil of Silence", cost: 125000 },
-  [SWIFT_MARCH_ORDER_ITEM_ID]: { id: SWIFT_MARCH_ORDER_ITEM_ID, label: "Swift March Order", cost: 300000 },
-  [RECALL_HORN_ITEM_ID]: { id: RECALL_HORN_ITEM_ID, label: "Recall Horn", cost: 500000 },
+  [ROYAL_PEACE_SHIELD_ITEM_ID]: { id: ROYAL_PEACE_SHIELD_ITEM_ID, label: "Royal Peace Shield", cost: economyNumber("shopItems.shield_12h.cost", 1_250_000) },
+  [WAR_DRUMS_ITEM_ID]: { id: WAR_DRUMS_ITEM_ID, label: "War Drums", cost: economyNumber("shopItems.war_drums_30m.cost", 75_000) },
+  [ROYAL_TAX_DECREE_ITEM_ID]: { id: ROYAL_TAX_DECREE_ITEM_ID, label: "Royal Tax Decree", cost: economyNumber("shopItems.royal_tax_decree_30m.cost", 150_000) },
+  [VEIL_OF_SILENCE_ITEM_ID]: { id: VEIL_OF_SILENCE_ITEM_ID, label: "Veil of Silence", cost: economyNumber("shopItems.veil_of_silence_30m.cost", 125_000) },
+  [SWIFT_MARCH_ORDER_ITEM_ID]: { id: SWIFT_MARCH_ORDER_ITEM_ID, label: "Swift March Order", cost: economyNumber("shopItems.swift_march_order.cost", 300_000) },
+  [RECALL_HORN_ITEM_ID]: { id: RECALL_HORN_ITEM_ID, label: "Recall Horn", cost: economyNumber("shopItems.recall_horn.cost", 500_000) },
 };
 const LEGACY_SHOP_ITEM_IDS = ["troop_boost_1h", "anti_scout_1h"];
 const CITY_LEVEL_STATS = {
@@ -258,16 +285,16 @@ const CITY_LEVEL_STATS = {
   defensePercentPerLevel: 3,
   cityWallsBase: 30,
   cityWallsPerLevel: 32,
-  troopProductionPerVictoryPoint: 3,
+  troopProductionPerVictoryPoint: economyNumber("cityEconomy.troopsPerVictoryPoint", 3),
 };
 const SKILL_CONFIG = {
-  swordmastery: { percentPerLevel: 2, maxPercent: 60 },
-  stoneworks: { percentPerLevel: 3, maxPercent: 75 },
-  taxStewardship: { percentPerLevel: 3, maxPercent: 75 },
-  royalGranaries: { percentPerLevel: 3, maxPercent: 75 },
-  guildCharters: { percentPerLevel: 2, maxPercent: 50 },
-  marchOrders: { percentPerLevel: 3, maxPercent: 60 },
-  fieldMedics: { percentPerLevel: 2, maxPercent: 50 },
+  swordmastery: { percentPerLevel: economyNumber("skills.swordmastery.percentPerLevel", 2), maxPercent: economyNumber("skills.swordmastery.maxPercent", 60) },
+  stoneworks: { percentPerLevel: economyNumber("skills.stoneworks.percentPerLevel", 3), maxPercent: economyNumber("skills.stoneworks.maxPercent", 75) },
+  taxStewardship: { percentPerLevel: economyNumber("skills.taxStewardship.percentPerLevel", 3), maxPercent: economyNumber("skills.taxStewardship.maxPercent", 75) },
+  royalGranaries: { percentPerLevel: economyNumber("skills.royalGranaries.percentPerLevel", 3), maxPercent: economyNumber("skills.royalGranaries.maxPercent", 75) },
+  guildCharters: { percentPerLevel: economyNumber("skills.guildCharters.percentPerLevel", 2), maxPercent: economyNumber("skills.guildCharters.maxPercent", 50) },
+  marchOrders: { percentPerLevel: economyNumber("skills.marchOrders.percentPerLevel", 3), maxPercent: economyNumber("skills.marchOrders.maxPercent", 60) },
+  fieldMedics: { percentPerLevel: economyNumber("skills.fieldMedics.percentPerLevel", 2), maxPercent: economyNumber("skills.fieldMedics.maxPercent", 50) },
 };
 const SKILL_ORDER = [
   "swordmastery",
@@ -278,7 +305,7 @@ const SKILL_ORDER = [
   "marchOrders",
   "fieldMedics",
 ];
-const SKILL_RESET_COST = 750_000;
+const SKILL_RESET_COST = economyNumber("playerCosts.skillResetGold", 750_000);
 const GOLD_STRONGHOLD_ID = "west_gold_stronghold";
 const TRAINING_STRONGHOLD_ID = "north_training_stronghold";
 const SPEED_STRONGHOLD_ID = "east_speed_stronghold";
@@ -2065,6 +2092,7 @@ function createNeutralRewardCampState(camp = {}) {
 }
 
 function getRewardCampConfig(campOrType = {}) {
+  const camp = typeof campOrType === "object" && campOrType ? campOrType : null;
   const rawType = typeof campOrType === "string"
     ? campOrType
     : campOrType?.campType
@@ -2072,8 +2100,30 @@ function getRewardCampConfig(campOrType = {}) {
       || (campOrType?.kind === "relicCamp" ? "items" : "")
       || (campOrType?.kind === "goldCamp" || campOrType?.targetType === "camp" ? "gold" : "");
   const normalizedType = safeString(rawType, 24).toLowerCase();
-  const campType = normalizedType === "relic" || normalizedType === "item" ? "items" : normalizedType;
-  return REWARD_CAMP_CONFIG[campType] || null;
+  const campType = normalizedType === "relic" || normalizedType === "item"
+    ? "items"
+    : normalizedType === "troop"
+      ? "troops"
+      : normalizedType;
+  const base = REWARD_CAMP_CONFIG[campType] || null;
+  if (!base || !camp) return base;
+  const rewardSchedule = Array.isArray(camp.rewardSchedule) && camp.rewardSchedule.length
+    ? camp.rewardSchedule.map(entry => ({
+        minimumReward: Math.max(0, Math.floor(safeNumber(entry?.minimumReward, 0))),
+        productionHours: Math.max(0, safeNumber(entry?.productionHours, 0)),
+      }))
+    : base.dailyRewards?.map((minimumReward, index) => ({
+        minimumReward,
+        productionHours: base.rewardHours?.[index] || 0,
+      })) || [];
+  return {
+    ...base,
+    baseReward: rewardSchedule[0]?.minimumReward ?? base.baseReward,
+    dailyRewards: rewardSchedule.map(entry => entry.minimumReward),
+    rewardHours: rewardSchedule.map(entry => entry.productionHours),
+    rewardSchedule,
+    maxDailyRewards: Math.max(0, Math.floor(safeNumber(camp.maxDailyRewards, base.maxDailyRewards || 0))),
+  };
 }
 
 function isRewardCamp(target = {}) {
@@ -2104,6 +2154,8 @@ function cleanServerCampLayoutSeed(camp = {}) {
     baseReward: config.baseReward,
     baseDefenders,
     defenseLevel: config.defenseLevel,
+    rewardSchedule: config.rewardSchedule,
+    maxDailyRewards: config.maxDailyRewards,
   };
 }
 
@@ -2198,26 +2250,32 @@ function normalizeActiveArmyIds(value = []) {
 }
 
 function getRewardCampCombatTarget(camp = {}) {
-  const config = getRewardCampConfig(camp);
+  const authoritativeSeed = camp?.id
+    ? getAuthoritativeRewardCampSeed(camp.regionId || camp.mapId, camp.id)
+    : null;
+  const resolvedCamp = { ...(authoritativeSeed || {}), ...camp };
+  const config = getRewardCampConfig(resolvedCamp);
   if (!config) return null;
-  const currentGarrison = Math.max(0, Math.floor(safeNumber(camp.currentGarrison, camp.baseDefenders || config.baseDefenders)));
+  const currentGarrison = Math.max(0, Math.floor(safeNumber(resolvedCamp.currentGarrison, resolvedCamp.baseDefenders || config.baseDefenders)));
   return {
-    ...camp,
+    ...resolvedCamp,
     kind: config.kind,
     targetType: "camp",
     campType: config.campType,
     rewardType: config.rewardType,
     holdDurationMs: config.holdDurationMs,
     baseReward: config.baseReward,
-    baseDefenders: Math.max(1, Math.floor(safeNumber(camp.baseDefenders, config.baseDefenders))),
+    baseDefenders: Math.max(1, Math.floor(safeNumber(resolvedCamp.baseDefenders, config.baseDefenders))),
     defenseLevel: config.defenseLevel,
     level: config.defenseLevel,
     troops: currentGarrison,
     troopFloat: currentGarrison,
-    ownerKind: camp.holderUid ? "player" : "neutral",
-    ownerUid: safeString(camp.holderUid || camp.ownerUid, 128),
-    ownerName: normalizePlayerName(camp.holderName || camp.ownerName, ""),
-    ownerFlag: camp.holderFlag || camp.ownerFlag || null,
+    rewardSchedule: config.rewardSchedule,
+    maxDailyRewards: config.maxDailyRewards,
+    ownerKind: resolvedCamp.holderUid ? "player" : "neutral",
+    ownerUid: safeString(resolvedCamp.holderUid || resolvedCamp.ownerUid, 128),
+    ownerName: normalizePlayerName(resolvedCamp.holderName || resolvedCamp.ownerName, ""),
+    ownerFlag: resolvedCamp.holderFlag || resolvedCamp.ownerFlag || null,
     defense: 1,
     isMainCity: false,
     ownerShieldExpiresAtMs: 0,
@@ -7118,9 +7176,10 @@ function rollRelicCampItem(dropTable = RELIC_CAMP_DROP_TABLE) {
   return { ...entries[entries.length - 1] };
 }
 
-function normalizeRelicCampRewardsToday(claimData = {}, today = "") {
+function normalizeRelicCampRewardsToday(claimData = {}, today = "", maxDailyRewards = RELIC_CAMP_DAILY_REWARD_LIMIT) {
   if (safeString(claimData.date, 10) !== today || !Array.isArray(claimData.rewards)) return [];
-  return claimData.rewards.slice(-RELIC_CAMP_DAILY_REWARD_LIMIT).map(entry => ({
+  const limit = Math.max(1, Math.floor(safeNumber(maxDailyRewards, RELIC_CAMP_DAILY_REWARD_LIMIT)));
+  return claimData.rewards.slice(-limit).map(entry => ({
     itemId: safeString(entry?.itemId, 64),
     itemName: safeString(entry?.itemName, 80),
     rarity: safeString(entry?.rarity, 24),
@@ -7221,7 +7280,9 @@ async function resolveRewardCampPayoutByRef(campRef, nowMs = Date.now(), callerU
       : 0;
     const deedDailyLimitReached = isDeedCamp && priorClaims >= 1;
     const relicDailyLimitReached = isRelicCamp && priorClaims >= config.maxDailyRewards;
-    const priorRelicRewards = isRelicCamp ? normalizeRelicCampRewardsToday(claimData, today) : [];
+    const priorRelicRewards = isRelicCamp
+      ? normalizeRelicCampRewardsToday(claimData, today, config.maxDailyRewards)
+      : [];
     const relicRewardItem = isRelicCamp && !relicDailyLimitReached
       ? rollRelicCampItem(config.itemDrops)
       : null;
@@ -7428,7 +7489,7 @@ async function resolveRewardCampPayoutByRef(campRef, nowMs = Date.now(), callerU
     }
     const relicRewardsToday = isRelicCamp
       ? [...priorRelicRewards, ...(relicRewardEntry ? [relicRewardEntry] : [])]
-          .slice(-RELIC_CAMP_DAILY_REWARD_LIMIT)
+          .slice(-Math.max(1, Math.floor(safeNumber(config.maxDailyRewards, RELIC_CAMP_DAILY_REWARD_LIMIT))))
       : [];
 
     const baseDefenders = Math.max(1, Math.floor(safeNumber(camp.baseDefenders, config.baseDefenders)));

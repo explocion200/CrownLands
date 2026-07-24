@@ -1,0 +1,173 @@
+{
+  "schemaVersion": 1,
+  "updatedAt": "2026-07-24T03:29:49.567Z",
+  "shopItems": {
+    "shield_12h": {
+      "cost": 1250000,
+      "dailyPurchaseLimit": 1,
+      "effectDurationMinutes": 720
+    },
+    "war_drums_30m": {
+      "cost": 75000,
+      "dailyPurchaseLimit": 4,
+      "effectDurationMinutes": 30,
+      "bonusPercent": 5
+    },
+    "royal_tax_decree_30m": {
+      "cost": 150000,
+      "dailyPurchaseLimit": 2,
+      "effectDurationMinutes": 30,
+      "bonusPercent": 50
+    },
+    "veil_of_silence_30m": {
+      "cost": 125000,
+      "dailyPurchaseLimit": 4,
+      "effectDurationMinutes": 5
+    },
+    "swift_march_order": {
+      "cost": 300000,
+      "dailyPurchaseLimit": 2
+    },
+    "recall_horn": {
+      "cost": 500000,
+      "dailyPurchaseLimit": 2
+    }
+  },
+  "pickups": {
+    "spawnIntervalMinutes": 3,
+    "expireMinutes": 20,
+    "goldAwardProductionMinutes": 10,
+    "troopAwardProductionMinutes": 10,
+    "dailyTotalCap": 12,
+    "dailyGoldCap": 6,
+    "dailyTroopCap": 6,
+    "maxActivePerPlayer": 1,
+    "minimumGold": 50,
+    "minimumTroops": 10
+  },
+  "cityEconomy": {
+    "productionVpBase": 20,
+    "productionVpGrowth": 1.115,
+    "goldPerProductionVp": 15,
+    "goldEndgameStartLevel": 100,
+    "goldEndgameGrowth": 1.08,
+    "troopsPerVictoryPoint": 3,
+    "upgradeEarlyEndLevel": 50,
+    "upgradeMidEndLevel": 100,
+    "upgradeEarlyStartHours": 0.1,
+    "upgradeEarlyEndHours": 4,
+    "upgradeMidEndHours": 36,
+    "upgradeLevel150Hours": 240,
+    "upgradeMaximumHours": 720
+  },
+  "playerCosts": {
+    "nearbyScoutGold": 75000,
+    "regroupGold": 150000,
+    "skillResetGold": 750000
+  },
+  "skills": {
+    "swordmastery": {
+      "percentPerLevel": 2,
+      "maxPercent": 60
+    },
+    "stoneworks": {
+      "percentPerLevel": 3,
+      "maxPercent": 75
+    },
+    "taxStewardship": {
+      "percentPerLevel": 3,
+      "maxPercent": 75
+    },
+    "royalGranaries": {
+      "percentPerLevel": 3,
+      "maxPercent": 75
+    },
+    "guildCharters": {
+      "percentPerLevel": 2,
+      "maxPercent": 50
+    },
+    "marchOrders": {
+      "percentPerLevel": 3,
+      "maxPercent": 60
+    },
+    "fieldMedics": {
+      "percentPerLevel": 2,
+      "maxPercent": 50
+    }
+  },
+  "levelRewards": {
+    "goldEarlyUpgradeShare": 0.5,
+    "goldMidUpgradeShare": 0.3,
+    "goldEndgameUpgradeShare": 0.2,
+    "goldEarlyProductionHours": 4,
+    "goldMidProductionHours": 12,
+    "goldEndgameProductionHours": 24,
+    "troopEarlyBaseHours": 4,
+    "troopEarlyHoursPerLevel": 0.4,
+    "troopMidBaseHours": 24,
+    "troopMidHoursPerLevel": 0.24,
+    "troopEndgameBaseHours": 36,
+    "troopEndgameHoursPerLevel": 0.12,
+    "troopMaximumHours": 48
+  },
+  "camps": {
+    "gold": {
+      "holdMinutes": 10,
+      "baseDefenders": 10000,
+      "defenseLevel": 30,
+      "rewardSchedule": [
+        {
+          "minimumReward": 100000,
+          "productionHours": 3
+        },
+        {
+          "minimumReward": 75000,
+          "productionHours": 2
+        },
+        {
+          "minimumReward": 50000,
+          "productionHours": 1
+        },
+        {
+          "minimumReward": 25000,
+          "productionHours": 0.5
+        }
+      ]
+    },
+    "troops": {
+      "holdMinutes": 15,
+      "baseDefenders": 10000,
+      "defenseLevel": 30,
+      "rewardSchedule": [
+        {
+          "minimumReward": 50000,
+          "productionHours": 6
+        },
+        {
+          "minimumReward": 37500,
+          "productionHours": 4
+        },
+        {
+          "minimumReward": 25000,
+          "productionHours": 3
+        },
+        {
+          "minimumReward": 12500,
+          "productionHours": 2
+        }
+      ]
+    },
+    "items": {
+      "holdMinutes": 30,
+      "baseDefenders": 10000,
+      "defenseLevel": 30,
+      "maxDailyRewards": 2
+    },
+    "deed": {
+      "holdMinutes": 60,
+      "baseDefenders": 10000,
+      "defenseLevel": 30,
+      "maxDailyRewards": 1
+    }
+  }
+}

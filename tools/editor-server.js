@@ -7,9 +7,13 @@ const vm = require("vm");
 const ROOT_DIR = path.resolve(__dirname, "..");
 const EDITOR_DIR = path.join(__dirname, "map-editor");
 const WORLD_CONFIG_PATH = path.join(ROOT_DIR, "world-config.js");
+const ECONOMY_CONFIG_PATH = path.join(ROOT_DIR, "economy-config.js");
+const SERVER_ECONOMY_CONFIG_PATH = path.join(ROOT_DIR, "functions", "economy-config.json");
+const DEFAULT_ECONOMY_CONFIG = require("../functions/economy-config.json");
 const WORLD_DATA_ROOT = path.join(ROOT_DIR, "assets", "worlds", "world_01");
 const WORLD_LAYOUT_PATH = path.join(WORLD_DATA_ROOT, "world-layout.json");
 const WORLD_REGIONS_DIR = path.join(WORLD_DATA_ROOT, "regions");
+const WORLD_THUMBNAILS_DIR = path.join(WORLD_DATA_ROOT, "thumbnails");
 const WORLD_MAPS_DIR = path.join(WORLD_DATA_ROOT, "maps");
 const MAP_EDITOR_DATA_PATH = path.join(ROOT_DIR, "assets", "map-editor-data.js");
 const SERVER_WORLD_LAYOUT_PATH = path.join(ROOT_DIR, "functions", "world-layout.json");
@@ -29,6 +33,7 @@ const ROOT_STATIC_FILES = new Set([
   "/index.html",
   "/styles.css",
   "/world-config.js",
+  "/economy-config.js",
 ]);
 
 const MIME_TYPES = new Map([
@@ -204,12 +209,123 @@ async function writeWorldConfig(config) {
   return safe;
 }
 
+function cleanRewardSchedule(value, fallback = []) {
+  const source = Array.isArray(value) && value.length ? value : fallback;
+  return source.slice(0, 12).map(entry => ({
+    minimumReward: Math.max(0, Math.floor(number(entry?.minimumReward, 0, 0, 1_000_000_000_000))),
+    productionHours: number(entry?.productionHours, 1, 0.01, 720),
+  }));
+}
+
+function sanitizeEconomyConfig(config = {}) {
+  const fallback = DEFAULT_ECONOMY_CONFIG;
+  const cleanSectionNumber = (section, key, min, max) => number(
+    config?.[section]?.[key],
+    fallback?.[section]?.[key],
+    min,
+    max
+  );
+  const itemIds = Object.keys(fallback.shopItems);
+  const skillIds = Object.keys(fallback.skills);
+  const campTypes = Object.keys(fallback.camps);
+  return {
+    schemaVersion: Math.max(1, Math.floor(number(config.schemaVersion, fallback.schemaVersion, 1, 1000))),
+    updatedAt: new Date().toISOString(),
+    shopItems: Object.fromEntries(itemIds.map(itemId => {
+      const item = config.shopItems?.[itemId] || {};
+      const itemFallback = fallback.shopItems[itemId];
+      const safe = {
+        cost: Math.max(0, Math.floor(number(item.cost, itemFallback.cost, 0, 1_000_000_000_000))),
+        dailyPurchaseLimit: Math.max(0, Math.floor(number(item.dailyPurchaseLimit, itemFallback.dailyPurchaseLimit, 0, 100))),
+      };
+      if (Number.isFinite(Number(itemFallback.effectDurationMinutes))) {
+        safe.effectDurationMinutes = number(item.effectDurationMinutes, itemFallback.effectDurationMinutes, 0.1, 43_200);
+      }
+      if (Number.isFinite(Number(itemFallback.bonusPercent))) {
+        safe.bonusPercent = number(item.bonusPercent, itemFallback.bonusPercent, 0, 1000);
+      }
+      return [itemId, safe];
+    })),
+    pickups: {
+      spawnIntervalMinutes: cleanSectionNumber("pickups", "spawnIntervalMinutes", 0.1, 1440),
+      expireMinutes: cleanSectionNumber("pickups", "expireMinutes", 0.1, 1440),
+      goldAwardProductionMinutes: cleanSectionNumber("pickups", "goldAwardProductionMinutes", 0, 1440),
+      troopAwardProductionMinutes: cleanSectionNumber("pickups", "troopAwardProductionMinutes", 0, 1440),
+      dailyTotalCap: Math.floor(cleanSectionNumber("pickups", "dailyTotalCap", 0, 10000)),
+      dailyGoldCap: Math.floor(cleanSectionNumber("pickups", "dailyGoldCap", 0, 10000)),
+      dailyTroopCap: Math.floor(cleanSectionNumber("pickups", "dailyTroopCap", 0, 10000)),
+      maxActivePerPlayer: Math.floor(cleanSectionNumber("pickups", "maxActivePerPlayer", 0, 100)),
+      minimumGold: Math.floor(cleanSectionNumber("pickups", "minimumGold", 0, 1_000_000_000)),
+      minimumTroops: Math.floor(cleanSectionNumber("pickups", "minimumTroops", 0, 1_000_000_000)),
+    },
+    cityEconomy: Object.fromEntries(Object.keys(fallback.cityEconomy).map(key => [
+      key,
+      cleanSectionNumber("cityEconomy", key, 0, 1_000_000),
+    ])),
+    playerCosts: Object.fromEntries(Object.keys(fallback.playerCosts).map(key => [
+      key,
+      Math.floor(cleanSectionNumber("playerCosts", key, 0, 1_000_000_000_000)),
+    ])),
+    skills: Object.fromEntries(skillIds.map(skillId => {
+      const skill = config.skills?.[skillId] || {};
+      const skillFallback = fallback.skills[skillId];
+      return [skillId, {
+        percentPerLevel: number(skill.percentPerLevel, skillFallback.percentPerLevel, 0, 100),
+        maxPercent: number(skill.maxPercent, skillFallback.maxPercent, 0, 1000),
+      }];
+    })),
+    levelRewards: Object.fromEntries(Object.keys(fallback.levelRewards).map(key => [
+      key,
+      cleanSectionNumber("levelRewards", key, 0, 1000),
+    ])),
+    camps: Object.fromEntries(campTypes.map(campType => {
+      const camp = config.camps?.[campType] || {};
+      const campFallback = fallback.camps[campType];
+      const safe = {
+        holdMinutes: number(camp.holdMinutes, campFallback.holdMinutes, 0.1, 10080),
+        baseDefenders: Math.max(1, Math.floor(number(camp.baseDefenders, campFallback.baseDefenders, 1, 1_000_000_000))),
+        defenseLevel: Math.max(1, Math.floor(number(camp.defenseLevel, campFallback.defenseLevel, 1, 1000))),
+      };
+      if (Array.isArray(campFallback.rewardSchedule)) {
+        safe.rewardSchedule = cleanRewardSchedule(camp.rewardSchedule, campFallback.rewardSchedule);
+      }
+      if (Number.isFinite(Number(campFallback.maxDailyRewards))) {
+        safe.maxDailyRewards = Math.max(0, Math.floor(number(camp.maxDailyRewards, campFallback.maxDailyRewards, 0, 100)));
+      }
+      return [campType, safe];
+    })),
+  };
+}
+
+async function readEconomyConfig() {
+  return sanitizeEconomyConfig(await readJsonFile(SERVER_ECONOMY_CONFIG_PATH, DEFAULT_ECONOMY_CONFIG));
+}
+
+async function writeEconomyConfig(config) {
+  const safe = sanitizeEconomyConfig(config);
+  const browserBody = `window.CROWNLANDS_ECONOMY_CONFIG = ${JSON.stringify(safe, null, 2)};\n`;
+  await fsp.writeFile(`${ECONOMY_CONFIG_PATH}.tmp`, browserBody, "utf8");
+  await fsp.rename(`${ECONOMY_CONFIG_PATH}.tmp`, ECONOMY_CONFIG_PATH);
+  await fsp.writeFile(`${SERVER_ECONOMY_CONFIG_PATH}.tmp`, `${JSON.stringify(safe, null, 2)}\n`, "utf8");
+  await fsp.rename(`${SERVER_ECONOMY_CONFIG_PATH}.tmp`, SERVER_ECONOMY_CONFIG_PATH);
+  return safe;
+}
+
 async function readJsonFile(filePath, fallback = null) {
   try {
     return JSON.parse(await fsp.readFile(filePath, "utf8"));
   } catch (error) {
     if (error.code === "ENOENT") return fallback;
     throw error;
+  }
+}
+
+async function fileExists(filePath) {
+  try {
+    await fsp.access(filePath);
+    return true;
+  } catch {
+    return false;
   }
 }
 
@@ -353,6 +469,7 @@ function cleanWorldRegionSummary(region) {
     width: dimensions.width,
     height: dimensions.height,
     imagePath: normalizePathForJson(region.imagePath || region.imageSrc),
+    thumbnailPath: normalizePathForJson(region.thumbnailPath || region.thumbnailSrc),
     cityCapacity: Math.floor(number(region.cityCapacity, region.type === "crownlands_main" ? 100 : 50, 0, 500)),
     regionPath: normalizePathForJson(region.regionPath || publicRegionPath(id)),
   };
@@ -410,7 +527,7 @@ function cleanCamp(camp, index, region) {
   const defaults = getCampDefaults(type);
   const xNorm = cleanNorm(camp.xNorm ?? (Number(camp.x) / Math.max(1, Number(region.width) || 1)), 0.5);
   const yNorm = cleanNorm(camp.yNorm ?? (Number(camp.y) / Math.max(1, Number(region.height) || 1)), 0.5);
-  return {
+  const cleaned = {
     id: cleanId(camp.id, `${region.id}_${type}_camp_${index + 1}`),
     name: cleanString(camp.name, defaults.name),
     regionId: region.id,
@@ -421,6 +538,19 @@ function cleanCamp(camp, index, region) {
     size: cleanVisualSize(camp.size, defaults.size),
     notes: cleanString(camp.notes, "").slice(0, 240),
   };
+  if (type === "gold" || type === "troops") {
+    const defaults = DEFAULT_ECONOMY_CONFIG.camps[type].rewardSchedule;
+    cleaned.rewardSchedule = cleanRewardSchedule(camp.rewardSchedule, defaults);
+  }
+  if (type === "items") {
+    cleaned.maxDailyRewards = Math.max(0, Math.floor(number(
+      camp.maxDailyRewards,
+      DEFAULT_ECONOMY_CONFIG.camps.items.maxDailyRewards,
+      0,
+      100
+    )));
+  }
+  return cleaned;
 }
 
 function getStrongholdDefaults(type) {
@@ -564,11 +694,44 @@ function normalizeWorldBundle(payload = {}) {
 async function readWorldData() {
   const layout = await readJsonFile(WORLD_LAYOUT_PATH, null);
   if (!layout) return buildWorldDataFromMapEditorData();
+  if (!Array.isArray(layout.regions) || !layout.regions.length) {
+    const regionFiles = await fsp.readdir(WORLD_REGIONS_DIR, { withFileTypes: true }).catch(() => []);
+    const recoveredRegions = [];
+    for (const entry of regionFiles) {
+      if (!entry.isFile() || path.extname(entry.name).toLowerCase() !== ".json") continue;
+      const region = await readJsonFile(path.join(WORLD_REGIONS_DIR, entry.name), null);
+      if (!region?.id) continue;
+      const thumbnailFileName = `${cleanId(region.id, "region")}-thumb.webp`;
+      if (await fileExists(path.join(WORLD_THUMBNAILS_DIR, thumbnailFileName))) {
+        region.thumbnailPath = normalizePathForJson(
+          path.posix.join("assets", "worlds", "world_01", "thumbnails", thumbnailFileName)
+        );
+      }
+      recoveredRegions.push(region);
+    }
+    recoveredRegions.sort((left, right) => (
+      number(left.gridY, 0) - number(right.gridY, 0)
+      || number(left.gridX, 0) - number(right.gridX, 0)
+      || String(left.id).localeCompare(String(right.id))
+    ));
+    if (recoveredRegions.length) return normalizeWorldBundle({ layout, regions: recoveredRegions });
+    return buildWorldDataFromMapEditorData();
+  }
   const regions = [];
   for (const summary of Array.isArray(layout.regions) ? layout.regions : []) {
     const filePath = regionFilePath(summary.id);
     const region = await readJsonFile(filePath, null);
-    regions.push(region ? { ...summary, ...region } : summary);
+    const merged = region ? { ...summary, ...region } : { ...summary };
+    if (!merged.thumbnailPath && !merged.thumbnailSrc) {
+      const thumbnailFileName = `${cleanId(merged.id, "region")}-thumb.webp`;
+      const thumbnailFilePath = path.join(WORLD_THUMBNAILS_DIR, thumbnailFileName);
+      if (await fileExists(thumbnailFilePath)) {
+        merged.thumbnailPath = normalizePathForJson(
+          path.posix.join("assets", "worlds", "world_01", "thumbnails", thumbnailFileName)
+        );
+      }
+    }
+    regions.push(merged);
   }
   return normalizeWorldBundle({ layout, regions });
 }
@@ -597,6 +760,7 @@ async function buildWorldDataFromMapEditorData() {
       width: dimensions.width,
       height: dimensions.height,
       imagePath: normalizePathForJson(map.imageSrc || map.image?.src),
+      thumbnailPath: normalizePathForJson(map.thumbnailSrc),
       compatRegion: map.region || null,
       cities: (Array.isArray(map.cities) ? map.cities : []).map((city, cityIndex) => ({
         id: city.id || `${id}_city_${String(cityIndex + 1).padStart(3, "0")}`,
@@ -631,6 +795,8 @@ async function buildWorldDataFromMapEditorData() {
         artSrc: camp.artSrc,
         size: camp.size,
         notes: camp.notes,
+        rewardSchedule: camp.rewardSchedule,
+        maxDailyRewards: camp.maxDailyRewards,
       })),
       edgeConnections: { north: [], south: [], east: [], west: [] },
     };
@@ -755,6 +921,8 @@ function buildCompatibilityMapData(layout, regions) {
         artSrc: camp.artSrc,
         size: camp.size,
         notes: camp.notes,
+        rewardSchedule: camp.rewardSchedule,
+        maxDailyRewards: camp.maxDailyRewards,
       })),
       edgeConnections: region.edgeConnections,
     })),
@@ -807,6 +975,33 @@ async function handleApi(request, response, pathname) {
         worldLayout: WORLD_LAYOUT_PATH,
         regions: WORLD_REGIONS_DIR,
         compatibilityData: MAP_EDITOR_DATA_PATH,
+      },
+    });
+    return;
+  }
+
+  if (pathname === "/api/economy-data" && request.method === "GET") {
+    const config = await readEconomyConfig();
+    sendJson(response, 200, {
+      config,
+      paths: {
+        browser: ECONOMY_CONFIG_PATH,
+        server: SERVER_ECONOMY_CONFIG_PATH,
+      },
+    });
+    return;
+  }
+
+  if (pathname === "/api/economy-data" && request.method === "POST") {
+    const rawBody = await readBody(request);
+    const payload = JSON.parse(rawBody || "{}");
+    const config = await writeEconomyConfig(payload.config || payload);
+    sendJson(response, 200, {
+      ok: true,
+      config,
+      paths: {
+        browser: ECONOMY_CONFIG_PATH,
+        server: SERVER_ECONOMY_CONFIG_PATH,
       },
     });
     return;
@@ -955,7 +1150,7 @@ function listenWithFallback(server, port) {
   });
 
   server.listen(port, HOST, () => {
-    console.log(`Crownlands editor running at http://${HOST}:${port}/editor/`);
+    console.log(`Crownlands Game Editor running at http://${HOST}:${port}/editor/`);
     console.log(`Game preview running at http://${HOST}:${port}/game/`);
   });
 }

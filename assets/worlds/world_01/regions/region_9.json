@@ -7,6 +7,7 @@
   "width": 1448,
   "height": 1086,
   "imagePath": "assets/worlds/world_01/maps/region_9-9-1783023202200.webp",
+  "thumbnailPath": "assets/worlds/world_01/thumbnails/region_9-thumb.webp",
   "cityCapacity": 50,
   "regionPath": "assets/worlds/world_01/regions/region_9.json",
   "cities": [

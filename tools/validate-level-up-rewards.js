@@ -5,6 +5,7 @@ const assert = require("node:assert/strict");
 const root = path.resolve(__dirname, "..");
 const serverSource = fs.readFileSync(path.join(root, "functions", "index.js"), "utf8");
 const clientSource = fs.readFileSync(path.join(root, "game.js"), "utf8");
+const economyConfig = JSON.parse(fs.readFileSync(path.join(root, "functions", "economy-config.json"), "utf8"));
 
 function requireMatch(source, pattern, message) {
   if (!pattern.test(source)) throw new Error(message);
@@ -25,19 +26,6 @@ for (const name of [
   "HERO_XP_POST_100_MULTIPLIER",
   "HERO_XP_POST_50_EXPONENT",
   "HERO_XP_POST_100_EXPONENT",
-  "LEVEL_UP_GOLD_EARLY_UPGRADE_SHARE",
-  "LEVEL_UP_GOLD_MID_END_UPGRADE_SHARE",
-  "LEVEL_UP_GOLD_END_UPGRADE_SHARE",
-  "LEVEL_UP_GOLD_EARLY_PRODUCTION_HOURS",
-  "LEVEL_UP_GOLD_MID_END_PRODUCTION_HOURS",
-  "LEVEL_UP_GOLD_END_PRODUCTION_HOURS",
-  "LEVEL_UP_TROOP_REWARD_EARLY_BASE_HOURS",
-  "LEVEL_UP_TROOP_REWARD_EARLY_HOURS_PER_LEVEL",
-  "LEVEL_UP_TROOP_REWARD_MID_BASE_HOURS",
-  "LEVEL_UP_TROOP_REWARD_MID_HOURS_PER_LEVEL",
-  "LEVEL_UP_TROOP_REWARD_END_BASE_HOURS",
-  "LEVEL_UP_TROOP_REWARD_END_HOURS_PER_LEVEL",
-  "LEVEL_UP_TROOP_REWARD_MAX_HOURS",
   "BATTLE_XP_TROOP_CREDIT_LEVEL_CAP_MULTIPLIER",
   "BATTLE_XP_EARLY_LEVEL_CAP_RATE",
   "BATTLE_XP_MID_START_LEVEL_CAP_RATE",
@@ -51,6 +39,28 @@ for (const name of [
   if (serverValue !== clientValue) {
     throw new Error(`${name} differs between server (${serverValue}) and client (${clientValue}).`);
   }
+}
+
+const levelRewardMappings = {
+  LEVEL_UP_GOLD_EARLY_UPGRADE_SHARE: "goldEarlyUpgradeShare",
+  LEVEL_UP_GOLD_MID_END_UPGRADE_SHARE: "goldMidUpgradeShare",
+  LEVEL_UP_GOLD_END_UPGRADE_SHARE: "goldEndgameUpgradeShare",
+  LEVEL_UP_GOLD_EARLY_PRODUCTION_HOURS: "goldEarlyProductionHours",
+  LEVEL_UP_GOLD_MID_END_PRODUCTION_HOURS: "goldMidProductionHours",
+  LEVEL_UP_GOLD_END_PRODUCTION_HOURS: "goldEndgameProductionHours",
+  LEVEL_UP_TROOP_REWARD_EARLY_BASE_HOURS: "troopEarlyBaseHours",
+  LEVEL_UP_TROOP_REWARD_EARLY_HOURS_PER_LEVEL: "troopEarlyHoursPerLevel",
+  LEVEL_UP_TROOP_REWARD_MID_BASE_HOURS: "troopMidBaseHours",
+  LEVEL_UP_TROOP_REWARD_MID_HOURS_PER_LEVEL: "troopMidHoursPerLevel",
+  LEVEL_UP_TROOP_REWARD_END_BASE_HOURS: "troopEndgameBaseHours",
+  LEVEL_UP_TROOP_REWARD_END_HOURS_PER_LEVEL: "troopEndgameHoursPerLevel",
+  LEVEL_UP_TROOP_REWARD_MAX_HOURS: "troopMaximumHours",
+};
+for (const [constantName, configKey] of Object.entries(levelRewardMappings)) {
+  assert.ok(Number.isFinite(Number(economyConfig.levelRewards?.[configKey])), `Missing levelRewards.${configKey}.`);
+  const pattern = new RegExp(`const\\s+${constantName}\\s*=\\s*economyNumber\\("levelRewards\\.${configKey}"`);
+  requireMatch(serverSource, pattern, `Server ${constantName} is not read from the economy configuration.`);
+  requireMatch(clientSource, pattern, `Client ${constantName} is not read from the economy configuration.`);
 }
 
 requireMatch(

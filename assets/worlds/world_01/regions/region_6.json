@@ -7,6 +7,7 @@
   "width": 1448,
   "height": 1086,
   "imagePath": "assets/worlds/world_01/maps/region_6-6-1783021585258.webp",
+  "thumbnailPath": "assets/worlds/world_01/thumbnails/region_6-thumb.webp",
   "cityCapacity": 100,
   "regionPath": "assets/worlds/world_01/regions/region_6.json",
   "cities": [
@@ -594,7 +595,25 @@
       "campType": "gold",
       "artSrc": "assets/camps/gold.png",
       "size": 132,
-      "notes": ""
+      "notes": "",
+      "rewardSchedule": [
+        {
+          "minimumReward": 100000,
+          "productionHours": 3
+        },
+        {
+          "minimumReward": 75000,
+          "productionHours": 2
+        },
+        {
+          "minimumReward": 50000,
+          "productionHours": 1
+        },
+        {
+          "minimumReward": 25000,
+          "productionHours": 0.5
+        }
+      ]
     }
   ],
   "edgeConnections": {

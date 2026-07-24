@@ -1,6 +1,6 @@
 {
-  "version": 202607210153,
-  "updatedAt": "2026-07-21T01:53:00.412Z",
+  "version": 202607240443,
+  "updatedAt": "2026-07-24T04:43:08.137Z",
   "worldId": "world_01",
   "worldName": "Crownlands World 01",
   "globalSettings": {
@@ -5580,7 +5580,25 @@
           "campType": "gold",
           "artSrc": "assets/camps/gold.png",
           "size": 132,
-          "notes": ""
+          "notes": "",
+          "rewardSchedule": [
+            {
+              "minimumReward": 100000,
+              "productionHours": 3
+            },
+            {
+              "minimumReward": 75000,
+              "productionHours": 2
+            },
+            {
+              "minimumReward": 50000,
+              "productionHours": 1
+            },
+            {
+              "minimumReward": 25000,
+              "productionHours": 0.5
+            }
+          ]
         }
       ],
       "edgeConnections": {
@@ -6520,7 +6538,8 @@
           "campType": "items",
           "artSrc": "assets/camps/items.png",
           "size": 132,
-          "notes": ""
+          "notes": "",
+          "maxDailyRewards": 2
         }
       ],
       "edgeConnections": {
@@ -8788,7 +8807,7 @@
       "camps": [
         {
           "id": "region_9_deed_camp",
-          "name": "Deed Camp",
+          "name": "City Deed Camp",
           "x": 715,
           "y": 508,
           "xNorm": 0.494,
@@ -9354,7 +9373,25 @@
           "campType": "troops",
           "artSrc": "assets/camps/troops.png",
           "size": 132,
-          "notes": ""
+          "notes": "",
+          "rewardSchedule": [
+            {
+              "minimumReward": 50000,
+              "productionHours": 6
+            },
+            {
+              "minimumReward": 37500,
+              "productionHours": 4
+            },
+            {
+              "minimumReward": 25000,
+              "productionHours": 3
+            },
+            {
+              "minimumReward": 12500,
+              "productionHours": 2
+            }
+          ]
         }
       ],
       "edgeConnections": {

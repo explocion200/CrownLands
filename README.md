@@ -85,7 +85,7 @@ Deploy Firebase rules and Functions after changing server multiplayer code:
 firebase deploy --only functions,firestore:rules,firestore:indexes
 ```
 
-## Local Web Editor
+## Local Game Editor
 
 Run the local editor from PowerShell:
 
@@ -93,13 +93,17 @@ Run the local editor from PowerShell:
 .\tools\start-editor.ps1
 ```
 
-Then open `http://127.0.0.1:8791/editor/`. The editor runs only on this computer and opens the developer world editor for `assets/worlds/world_01/`. Use World Layout mode to place regional maps on the grid, and Region Edit mode to place cities, strongholds, and edge connection zones.
+Then open `http://127.0.0.1:8791/editor/`. The Game Editor runs only on this computer. Use World Layout mode to arrange regional maps, Region Edit mode to place cities, strongholds, camps, and edge connections, and Economy mode to configure shop items, pickups, city production, skills, level rewards, action costs, and camp rewards.
 
 `Save to Game` writes:
 
 - `assets/worlds/world_01/world-layout.json`
 - `assets/worlds/world_01/regions/*.json`
 - `assets/map-editor-data.js` for current game compatibility
+- `economy-config.js` for the Netlify/browser game
+- `functions/economy-config.json` for server-authoritative Firebase Functions
+
+Gold and Warband Camps can override their default daily reward schedules per placed camp. Relic Camps can override their daily item reward count. Economy changes take effect on Netlify after pushing, and server-side values take effect after deploying Firebase Functions.
 
 The editor also serves the game at `/game/` for a quick browser preview.
 
