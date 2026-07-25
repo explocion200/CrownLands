@@ -2478,6 +2478,8 @@ let serverEconomyLastSyncAt = 0;
 let serverEconomyLastToastAt = 0;
 let lastAuthoritativeProfileRevisionMs = 0;
 let lastReportDrivenEconomyRefreshAtMs = 0;
+let activeLevelUpReward = null;
+const levelUpRewardQueue = [];
 let leaderboardSaveTimer = 0;
 let leaderboardSaveInFlight = false;
 let leaderboardLastSignature = "";
@@ -2646,6 +2648,11 @@ const modal = document.getElementById("modal");
 const modalTitle = document.getElementById("modalTitle");
 const modalBody = document.getElementById("modalBody");
 const closeModalBtn = document.getElementById("closeModalBtn");
+const levelUpRewardModal = document.getElementById("levelUpRewardModal");
+const levelUpRewardTitle = document.getElementById("levelUpRewardTitle");
+const levelUpRewardSubtitle = document.getElementById("levelUpRewardSubtitle");
+const levelUpRewardBody = document.getElementById("levelUpRewardBody");
+const collectLevelUpRewardsBtn = document.getElementById("collectLevelUpRewardsBtn");
 const logBtn = document.getElementById("logBtn");
 const leaderboardBtn = document.getElementById("leaderboardBtn");
 const outgoingAttackBtn = document.getElementById("outgoingAttackBtn");
@@ -5679,6 +5686,128 @@ function getMainRewardCity(excludeCityId = null) {
   return playerRegularCities().find(city => city.id !== excludeCityId) || null;
 }
 
+function getLevelUpRewardBundle(fromLevel, toLevel, options = {}) {
+  const startLevel = Math.max(1, Math.floor(Number(fromLevel) || 1));
+  const endLevel = Math.max(startLevel, Math.floor(Number(toLevel) || startLevel));
+  let calculatedGold = 0;
+  let calculatedTroops = 0;
+  for (let level = startLevel + 1; level <= endLevel; level += 1) {
+    calculatedGold += getLevelUpGoldReward(level);
+    calculatedTroops += getLevelUpTroopReward(level);
+  }
+  const hasGoldOverride = Number.isFinite(Number(options.gold));
+  const hasTroopOverride = Number.isFinite(Number(options.troops));
+  return {
+    fromLevel: startLevel,
+    toLevel: endLevel,
+    levelsGained: endLevel - startLevel,
+    skillPoints: endLevel - startLevel,
+    gold: Math.max(0, Math.floor(hasGoldOverride ? Number(options.gold) : calculatedGold)),
+    troops: Math.max(0, Math.floor(hasTroopOverride ? Number(options.troops) : calculatedTroops)),
+    cityName: String(options.cityName || getMainRewardCity()?.name || "your main city").trim() || "your main city",
+  };
+}
+
+function mergeLevelUpRewardBundles(first, second) {
+  return {
+    fromLevel: first.fromLevel,
+    toLevel: second.toLevel,
+    levelsGained: first.levelsGained + second.levelsGained,
+    skillPoints: first.skillPoints + second.skillPoints,
+    gold: first.gold + second.gold,
+    troops: first.troops + second.troops,
+    cityName: second.cityName || first.cityName,
+  };
+}
+
+function formatLevelUpRewardAmount(value) {
+  return Math.max(0, Math.floor(Number(value) || 0)).toLocaleString();
+}
+
+function renderLevelUpReward(reward) {
+  if (!reward || !levelUpRewardTitle || !levelUpRewardSubtitle || !levelUpRewardBody) return;
+  const multipleLevels = reward.levelsGained > 1;
+  levelUpRewardTitle.textContent = multipleLevels
+    ? `${formatLevelUpRewardAmount(reward.levelsGained)} Levels Gained`
+    : `Level ${formatLevelUpRewardAmount(reward.toLevel)} Reached`;
+  levelUpRewardSubtitle.textContent = multipleLevels
+    ? `Your hero advanced from level ${formatLevelUpRewardAmount(reward.fromLevel)} to ${formatLevelUpRewardAmount(reward.toLevel)}.`
+    : "Your hero grew stronger. These rewards are yours.";
+  levelUpRewardBody.innerHTML = `
+    <div class="level-up-step" aria-label="Level ${formatLevelUpRewardAmount(reward.fromLevel)} to level ${formatLevelUpRewardAmount(reward.toLevel)}">
+      <span>Level ${formatLevelUpRewardAmount(reward.fromLevel)}</span>
+      <strong aria-hidden="true">→</strong>
+      <span class="current">Level ${formatLevelUpRewardAmount(reward.toLevel)}</span>
+    </div>
+    <section class="level-up-reward-grid" aria-label="Level-up rewards">
+      <article class="level-up-reward-item skill">
+        <span class="level-up-reward-icon" aria-hidden="true">✦</span>
+        <div>
+          <small>Skill ${reward.skillPoints === 1 ? "Point" : "Points"}</small>
+          <strong>+${formatLevelUpRewardAmount(reward.skillPoints)}</strong>
+          <p>Ready to spend in your hero profile.</p>
+        </div>
+      </article>
+      <article class="level-up-reward-item gold">
+        <span class="level-up-reward-icon" aria-hidden="true">
+          <img src="assets/gold-pickup.png" alt="" />
+        </span>
+        <div>
+          <small>Gold</small>
+          <strong>+${formatLevelUpRewardAmount(reward.gold)}</strong>
+          <p>Added to your kingdom treasury.</p>
+        </div>
+      </article>
+      <article class="level-up-reward-item troops">
+        <span class="level-up-reward-icon" aria-hidden="true">
+          <img src="assets/troop-pickup.png" alt="" />
+        </span>
+        <div>
+          <small>Troops</small>
+          <strong>+${formatLevelUpRewardAmount(reward.troops)}</strong>
+          <p>Rallied directly to ${escapeHtml(reward.cityName)}.</p>
+        </div>
+      </article>
+    </section>
+    <div class="level-up-troop-destination">
+      <img src="assets/troop-pickup.png" alt="" aria-hidden="true" />
+      <span>
+        <small>Troop destination</small>
+        <strong>${escapeHtml(reward.cityName)}</strong>
+      </span>
+    </div>
+  `;
+}
+
+function showNextLevelUpReward() {
+  if (!levelUpRewardModal || levelUpRewardModal.open || activeLevelUpReward || modal?.open) return;
+  const nextReward = levelUpRewardQueue.shift();
+  if (!nextReward) return;
+  activeLevelUpReward = nextReward;
+  renderLevelUpReward(nextReward);
+  levelUpRewardModal.showModal();
+  requestAnimationFrame(() => levelUpRewardModal.classList.add("revealed"));
+}
+
+function queueLevelUpReward(fromLevel, toLevel, options = {}) {
+  const reward = getLevelUpRewardBundle(fromLevel, toLevel, options);
+  if (reward.levelsGained <= 0) return;
+
+  if (activeLevelUpReward && activeLevelUpReward.toLevel === reward.fromLevel) {
+    activeLevelUpReward = mergeLevelUpRewardBundles(activeLevelUpReward, reward);
+    renderLevelUpReward(activeLevelUpReward);
+    return;
+  }
+
+  const pendingReward = levelUpRewardQueue[levelUpRewardQueue.length - 1];
+  if (pendingReward && pendingReward.toLevel === reward.fromLevel) {
+    levelUpRewardQueue[levelUpRewardQueue.length - 1] = mergeLevelUpRewardBundles(pendingReward, reward);
+  } else {
+    levelUpRewardQueue.push(reward);
+  }
+  setTimeout(showNextLevelUpReward, 0);
+}
+
 function getLoadedMainCity() {
   if (!state?.mainCityId) return null;
   const main = cityById(state.mainCityId);
@@ -5950,6 +6079,7 @@ function addCharacterXp(amount, reason = "progress") {
   state.character = normalizeCharacterProgress(state.character);
   state.upgrades = normalizeUpgrades(state.upgrades, state.version);
   reconcileSkillPoints(state.character, state.upgrades);
+  const startingLevel = state.character.level;
   const gained = Math.max(0, Math.floor(Number(amount) || 0));
   if (!gained) return;
 
@@ -5983,6 +6113,11 @@ function addCharacterXp(amount, reason = "progress") {
 
     addLog(`Hero leveled to ${state.character.level}. Reward: ${formatNumber(levelsGained)} skill point, ${formatNumber(totalGoldReward)} gold, and ${formatNumber(totalTroopReward)} troops to ${mainCity ? mainCity.name : "the main city"}.`);
     showToast(`Hero Lv ${state.character.level}: +${formatNumber(levelsGained)} skill point, +${formatNumber(totalGoldReward)} gold, +${formatNumber(totalTroopReward)} troops`);
+    queueLevelUpReward(startingLevel, state.character.level, {
+      gold: totalGoldReward,
+      troops: totalTroopReward,
+      cityName: mainCity?.name || "your main city",
+    });
   }
   reconcileSkillPoints(state.character, state.upgrades);
 }
@@ -6217,6 +6352,7 @@ function applyGlobalStatsSnapshot(raw = null, options = {}) {
   if (changed && options.render !== false) {
     renderHud();
     updateIslandSwitcherUi();
+    renderCities();
     if (modal.open && modal.classList.contains("city-list-modal")) renderCityListModal();
     if (profileScreen?.classList.contains("open")) renderProfileScreen();
   }
@@ -6306,6 +6442,27 @@ function getAuthoritativeCityOwnerKingPowerSnapshot(city) {
 function getDemoAttackTier(powerRatio) {
   const ratio = Number(powerRatio) || 0;
   return DEMO_ATTACK_TIERS.find(tier => ratio >= tier.minRatio) || null;
+}
+
+function getEnemyCityPowerBand(
+  city,
+  playerKingPower = getKingPower(),
+  defenderKingPower = getAuthoritativeCityOwnerKingPowerSnapshot(city)
+) {
+  if (!city || city.owner !== "enemy" || isStronghold(city)) return "";
+  const attackerPower = Math.max(1, normalizePowerValue(playerKingPower));
+  const defenderPower = normalizePowerValue(defenderKingPower);
+  if (defenderPower <= 0) return "in-range";
+  if (getDemoAttackTier(attackerPower / defenderPower)) return "protected";
+  if (getDemoAttackTier(defenderPower / attackerPower)) return "overpowering";
+  return "in-range";
+}
+
+function getEnemyCityPowerBandLabel(powerBand) {
+  if (powerBand === "protected") return "Weaker kingdom protection applies";
+  if (powerBand === "overpowering") return "King Power far above yours";
+  if (powerBand === "in-range") return "Within your King Power range";
+  return "";
 }
 
 function normalizeDemoAttackSnapshot(demo = null) {
@@ -7584,9 +7741,10 @@ function getAuthoritativeProfileRevisionMs(profile = null) {
     || timestampToMs(profile.updatedAt);
 }
 
-function applyServerProfilePatch(patch = null) {
+function applyServerProfilePatch(patch = null, options = {}) {
   if (!state || !patch || typeof patch !== "object") return false;
   let changed = false;
+  const previousLevel = Math.max(1, Math.floor(Number(state.character?.level) || 1));
   if (patch.globalStats) {
     changed = applyGlobalStatsSnapshot(patch.globalStats, { render: false }) || changed;
   }
@@ -7667,6 +7825,14 @@ function applyServerProfilePatch(patch = null) {
     saveGame();
     renderHud();
     if (profileScreen?.classList.contains("open")) renderProfileScreen();
+  }
+  const nextLevel = Math.max(1, Math.floor(Number(state.character?.level) || 1));
+  if (patch.character && nextLevel > previousLevel && options.announceLevelUp !== false) {
+    queueLevelUpReward(previousLevel, nextLevel, {
+      gold: options.levelUpGold,
+      troops: options.levelUpTroops,
+      cityName: options.levelUpCityName || getMainRewardCity()?.name || "your main city",
+    });
   }
   return changed;
 }
@@ -7801,7 +7967,20 @@ function applyServerArmyResult(result = null) {
       }
     }
   }
-  if (result.currentUser) changed = applyServerProfilePatch(result.currentUser) || changed;
+  if (result.currentUser) {
+    const nextLevel = Math.max(1, Math.floor(Number(result.currentUser?.character?.level) || 1));
+    const levelRewardReport = Array.isArray(result.reports)
+      ? [...result.reports].reverse().find(report => (
+        Math.max(1, Math.floor(Number(report?.characterAfter?.level) || 1)) === nextLevel
+        && Math.max(0, Math.floor(Number(report?.xpAwarded) || 0)) > 0
+      ))
+      : null;
+    changed = applyServerProfilePatch(result.currentUser, {
+      levelUpGold: levelRewardReport?.goldAwarded,
+      levelUpTroops: levelRewardReport?.troopsAwarded,
+      levelUpCityName: result.troopRewardCityName,
+    }) || changed;
+  }
   return changed;
 }
 
@@ -7809,7 +7988,13 @@ function applyServerEconomyResult(result = null, options = {}) {
   if (!result || typeof result !== "object") return false;
   let changed = false;
   if (result.globalStats) changed = applyGlobalStatsSnapshot(result.globalStats, { render: false }) || changed;
-  if (result.currentUser) changed = applyServerProfilePatch(result.currentUser) || changed;
+  if (result.currentUser) {
+    changed = applyServerProfilePatch(result.currentUser, {
+      levelUpGold: result.levelUpGoldAwarded,
+      levelUpTroops: result.troopsAwarded,
+      levelUpCityName: result.troopRewardCityName,
+    }) || changed;
+  }
   if (Array.isArray(result.cityUpdates)) changed = applyServerCityUpdates(result.cityUpdates) || changed;
   const production = result.production || {};
   const goldGained = Math.max(0, Math.floor(Number(production.goldGained) || 0));
@@ -15620,6 +15805,7 @@ function getFlagSignature(flag) {
 
 function getCityRenderSignature(visibleCities, visibleCamps = []) {
   const playerFlag = getFlagSignature(state.flag);
+  const playerKingPower = getKingPower();
   const crownHolderUid = getCrownCitadelHolderUid();
   const upgradeBlockedTargets = new Set(getRenderableArmies()
     .filter(attack => attack?.kind === "attack" && attack.owner !== "player" && Math.max(0, Number(attack.remaining) || 0) > 0)
@@ -15634,6 +15820,7 @@ function getCityRenderSignature(visibleCities, visibleCamps = []) {
       city.ownerUid || "",
       city.ownerName || "",
       getFlagSignature(city.ownerFlag),
+      getEnemyCityPowerBand(city, playerKingPower),
       city.kind || "",
       city.strongholdType || "",
       isStronghold(city) ? getStrongholdVisualSize(city) : "",
@@ -15682,6 +15869,7 @@ function getCityRenderSignature(visibleCities, visibleCamps = []) {
 function updateVisibleCityDynamicText() {
   if (!state || !cityLayer) return;
   if (isCameraInteractionActive()) return;
+  const playerKingPower = getKingPower();
   const campInfoCountdown = modalBody?.querySelector("[data-camp-info-countdown]");
   if (campInfoCountdown) {
     const camp = getCampTargetById(campInfoCountdown.dataset.campInfoCountdown);
@@ -15728,7 +15916,8 @@ function updateVisibleCityDynamicText() {
     const knownTroops = city.owner === "player" ? troops : scoutReport?.troops;
     const ownerName = getCityOwnerDisplayName(city);
     const locationType = isStronghold(city) ? "Stronghold" : `Level ${city.level}`;
-    node.setAttribute("aria-label", `${city.name}. ${ownerName}. ${locationType}. ${knownTroops === undefined ? "Unknown troops" : `${formatNumber(knownTroops)} troops`}.`);
+    const powerBandLabel = getEnemyCityPowerBandLabel(getEnemyCityPowerBand(city, playerKingPower));
+    node.setAttribute("aria-label", `${city.name}. ${ownerName}. ${locationType}. ${knownTroops === undefined ? "Unknown troops" : `${formatNumber(knownTroops)} troops`}.${powerBandLabel ? ` ${powerBandLabel}.` : ""}`);
   });
 }
 
@@ -15753,6 +15942,7 @@ function renderCities(force = false) {
   const visibleCamps = WORLD_CAMPS
     .map(camp => getCampTargetById(camp.id) || camp)
     .filter(camp => shouldRenderCampNode(camp, visibleBounds));
+  const playerKingPower = getKingPower();
   updateMapDensityMode(visibleCities.length + visibleCamps.length);
   const signature = getCityRenderSignature(visibleCities, visibleCamps);
   if (!force && signature === cityRenderSignature) {
@@ -15825,6 +16015,13 @@ function renderCities(force = false) {
     btn.dataset.cityId = city.id;
     const castleStage = getCastleStage(city.level);
     btn.className = `city-node ${OWNER[city.owner].css} castle-stage-${castleStage}`;
+    const enemyPowerBand = getEnemyCityPowerBand(city, playerKingPower);
+    if (enemyPowerBand) {
+      btn.classList.add(`enemy-power-${enemyPowerBand}`);
+      btn.dataset.enemyPowerBand = enemyPowerBand;
+    } else {
+      delete btn.dataset.enemyPowerBand;
+    }
     if (stronghold) btn.classList.add("stronghold-node", `stronghold-${city.strongholdType || "generic"}`);
     const shielded = !stronghold && isCityProtectedByPeaceShield(city);
     if (shielded) btn.classList.add("peace-shielded");
@@ -15893,6 +16090,7 @@ function renderCities(force = false) {
         </span>`;
     const knownTroops = city.owner === "player" ? city.troops : scoutReport?.troops;
     const locationType = stronghold ? "Stronghold" : `Level ${city.level}`;
+    const powerBandLabel = getEnemyCityPowerBandLabel(enemyPowerBand);
     const structureHtml = stronghold
       ? `
       <span class="stronghold-glow" aria-hidden="true"></span>
@@ -15901,7 +16099,8 @@ function renderCities(force = false) {
       <span class="city-ring"></span>
       ${shielded ? `<span class="city-shield-field" aria-hidden="true"><img src="assets/royal-peace-shield-field.png?v=20260704-shield-badge" alt="" draggable="false" /></span>` : ""}
       <span class="city-castle stage-${castleStage}" aria-hidden="true"><img class="city-art" src="${getCastleAsset(castleStage)}" alt="" draggable="false" /></span>`;
-    btn.setAttribute("aria-label", `${city.name}. ${ownerName}. ${locationType}. ${knownTroops === undefined ? "Unknown troops" : `${formatNumber(knownTroops)} troops`}.`);
+    btn.setAttribute("aria-label", `${city.name}. ${ownerName}. ${locationType}. ${knownTroops === undefined ? "Unknown troops" : `${formatNumber(knownTroops)} troops`}.${powerBandLabel ? ` ${powerBandLabel}.` : ""}`);
+    btn.title = powerBandLabel ? `${city.name} - ${powerBandLabel}` : city.name;
     const cityHtml = `
       ${structureHtml}
       ${cityLabel}
@@ -21775,10 +21974,36 @@ modal.addEventListener("close", () => {
   modal.classList.remove("incoming-attack-modal");
   modal.classList.remove("outgoing-attack-modal");
   modal.classList.remove("relinquish-city-modal");
+  setTimeout(showNextLevelUpReward, 0);
   if (!troopSliderActive) return;
   troopSliderActive = false;
   cancelSendMode();
 });
+if (levelUpRewardModal) {
+  levelUpRewardModal.addEventListener("cancel", event => {
+    event.preventDefault();
+  });
+  levelUpRewardModal.addEventListener("click", event => {
+    if (event.target !== levelUpRewardModal) return;
+    event.preventDefault();
+    event.stopPropagation();
+  });
+  levelUpRewardModal.addEventListener("close", () => {
+    levelUpRewardModal.classList.remove("revealed");
+    activeLevelUpReward = null;
+    setTimeout(showNextLevelUpReward, 0);
+  });
+}
+if (collectLevelUpRewardsBtn) {
+  collectLevelUpRewardsBtn.addEventListener("click", () => {
+    if (!levelUpRewardModal?.open) return;
+    levelUpRewardModal.classList.add("collecting");
+    setTimeout(() => {
+      levelUpRewardModal.classList.remove("collecting");
+      levelUpRewardModal.close();
+    }, 140);
+  });
+}
 
 if (playerNameInput) playerNameInput.value = cleanName(getOnlineApi()?.getUser?.()?.displayName) || "Ricky";
 applyWorldDimensions();

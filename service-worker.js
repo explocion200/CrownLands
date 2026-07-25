@@ -1,20 +1,22 @@
-const CACHE_VERSION = "20260723-game-economy-editor";
+const CACHE_VERSION = "20260725-enemy-power-colors";
 const CACHE_NAME = `crownlands-cache-${CACHE_VERSION}`;
 const STATIC_CACHE_URLS = [
   "/",
   "/index.html",
   "/manifest.webmanifest",
-  "/styles.css?v=20260723-utc-responsive-v1",
+  "/styles.css?v=20260725-enemy-power-colors",
   "/world-config.js",
   "/economy-config.js?v=20260723-game-economy-editor",
   "/firebase-config.js?v=20260703-vapid-key",
   "/firebaseClient.js?v=20260723-utc-responsive-v1",
-  "/game.js?v=20260723-game-economy-editor",
+  "/game.js?v=20260725-enemy-power-colors",
   "/route-worker.js?v=20260721-structure-route-clearance",
   "/assets/map-editor-data.js?v=20260723-utc-responsive-v1",
   "/assets/game-menu-background.jpg?v=20260702-login-page",
   "/assets/loading-ring.png",
   "/assets/loading-crown.png",
+  "/assets/gold-pickup.png",
+  "/assets/troop-pickup.png",
   "/assets/royal-tax-decree-icon.webp?v=20260721-tax-decree",
   "/assets/icons/crownlands-icon-192.png",
   "/assets/icons/crownlands-icon-512.png",

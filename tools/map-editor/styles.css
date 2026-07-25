@@ -525,77 +525,235 @@ label > span,
 .map-marker.city {
   isolation: isolate;
   touch-action: none;
+  width: 64px;
+  height: 64px;
+  border: 0;
+  border-radius: 50%;
+  padding: 0;
+  transform: translate(-50%, -50%) scale(var(--editor-city-scale, 1));
+  transform-origin: center;
+  color: var(--text);
+  background: transparent;
+  box-shadow: none;
+  overflow: visible;
 }
 
-.city-marker-index {
-  position: relative;
-  z-index: 3;
+.map-marker.city.castle-stage-1 { --editor-city-art-size: 66px; }
+.map-marker.city.castle-stage-2 { --editor-city-art-size: 69px; }
+.map-marker.city.castle-stage-3 { --editor-city-art-size: 72px; }
+.map-marker.city.castle-stage-4 { --editor-city-art-size: 75px; }
+.map-marker.city.castle-stage-5 { --editor-city-art-size: 78px; }
+
+.editor-city-ring {
+  position: absolute;
+  inset: 5px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  box-shadow: none;
   pointer-events: none;
+  z-index: 0;
 }
 
-.city-ui-preview {
+.editor-city-castle {
   position: absolute;
   left: 50%;
-  top: calc(50% - var(--city-ui-label-offset, 21px));
-  width: var(--city-ui-label-width, 95px);
-  height: var(--city-ui-label-height, 32px);
+  bottom: -8px;
+  width: var(--editor-city-art-size, 66px);
+  height: var(--editor-city-art-size, 66px);
   display: grid;
-  align-content: center;
-  justify-items: center;
-  gap: 2px;
-  box-sizing: border-box;
-  padding: 3px 6px;
-  transform: translate(-50%, -100%);
-  border: 1px dashed rgba(108, 211, 255, 0.85);
-  border-radius: 3px;
-  background: rgba(5, 29, 43, 0.42);
-  color: #fff4ce;
-  font-size: var(--city-ui-label-font-size, 7px);
-  line-height: 1;
-  text-shadow: -1px -1px 0 #07111a, 1px -1px 0 #07111a, -1px 1px 0 #07111a, 1px 1px 0 #07111a;
+  place-items: center;
+  overflow: visible;
+  transform: translateX(-50%);
+  filter: drop-shadow(0 5px 5px rgba(0, 0, 0, 0.35));
   pointer-events: none;
-  z-index: 2;
+  z-index: 1;
 }
 
-.city-ui-preview strong {
+.editor-city-art {
+  display: block;
   width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  height: 100%;
+  object-fit: contain;
+  pointer-events: none;
 }
 
-.city-ui-preview small {
-  padding: 2px 5px;
-  border: 1px solid rgba(255, 255, 255, 0.7);
+.editor-city-label {
+  position: absolute;
+  left: 50%;
+  bottom: 74px;
+  width: max-content;
+  transform: translateX(-50%);
+  cursor: inherit;
+  pointer-events: none;
+  z-index: 3;
+}
+
+.editor-player-city-label,
+.editor-foreign-city-label {
+  display: grid;
+  justify-items: center;
+  gap: 0.2rem;
+  filter: drop-shadow(0 5px 4px rgba(0, 0, 0, 0.55));
+}
+
+.editor-player-city-banner {
+  display: grid;
+  grid-template-columns: 42px max-content;
+  align-items: end;
+}
+
+.editor-city-owner-column {
+  width: 42px;
+  min-height: 53px;
+  padding: 3px 3px 9px;
+  display: grid;
+  justify-items: center;
+  align-content: start;
+  gap: 0.13rem;
+  color: white;
+  background: #176cb7;
+  clip-path: polygon(0 0, 100% 0, 100% 84%, 50% 100%, 0 84%);
+}
+
+.editor-city-owner-flag {
+  width: 36px;
+  height: 29px;
+  display: grid;
+  place-items: center;
+  box-sizing: border-box;
+  border: 2px solid white;
   border-radius: 3px;
-  color: #fff;
-  background: rgba(74, 86, 96, 0.88);
-  font-size: inherit;
+  color: white;
+  background: rgba(16, 29, 39, 0.45);
+  font-size: 0.66rem;
+  font-weight: 950;
+  line-height: 1;
+}
+
+.editor-city-label-level {
+  color: white;
+  font-size: 0.72rem;
+  font-weight: 1000;
+  line-height: 1;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.65);
   white-space: nowrap;
 }
 
-.map-marker.city.selected .city-ui-preview {
-  border-color: rgba(255, 209, 92, 0.98);
-  background: rgba(255, 198, 69, 0.08);
-  box-shadow: 0 0 0 1px rgba(255, 204, 83, 0.48);
+.editor-player-city-data {
+  display: grid;
+  justify-items: start;
+  align-content: end;
+  min-width: max-content;
 }
 
-.map-marker.city.ui-overlap .city-ui-preview,
-.map-marker.city.ui-overlap-peer .city-ui-preview {
-  border-color: rgba(255, 91, 91, 0.95);
-  background: rgba(223, 48, 58, 0.11);
+.editor-city-ruler-name,
+.editor-foreign-ruler-name {
+  max-width: 170px;
+  overflow: hidden;
+  color: #fff0c7;
+  font-size: 0.76rem;
+  line-height: 1;
+  text-overflow: ellipsis;
+  text-shadow: -1px -1px 0 #080808, 1px -1px 0 #080808, -1px 1px 0 #080808, 1px 1px 0 #080808;
+  white-space: nowrap;
 }
 
-.map-marker.city.ui-overlap.selected .city-ui-preview {
-  border-color: #ff6969;
-  background: rgba(223, 48, 58, 0.12);
-  box-shadow: 0 0 0 2px rgba(255, 219, 111, 0.82);
+.editor-city-army-count {
+  min-width: 82px;
+  padding: 0.28rem 0.48rem;
+  color: white;
+  background: #247dce;
+  font-size: 0.76rem;
+  font-weight: 1000;
+  line-height: 1;
+  white-space: nowrap;
 }
 
-.map-marker.city.ui-overlap-peer {
-  border-color: #ff7777;
-  background: #a93342;
-  box-shadow: 0 0 0 3px rgba(255, 77, 89, 0.24), 0 8px 16px rgba(0, 0, 0, 0.36);
+.editor-player-city-data .editor-city-name {
+  padding: 0.16rem 0.28rem 0;
+  color: #fff0c7;
+  font-size: 0.72rem;
+}
+
+.editor-foreign-city-label {
+  gap: 0.16rem;
+}
+
+.editor-foreign-city-label > .editor-city-name {
+  max-width: 150px;
+  overflow: hidden;
+  color: #fff;
+  font-size: 0.76rem;
+  line-height: 1;
+  text-overflow: ellipsis;
+  text-shadow: -1px -1px 0 #090909, 1px -1px 0 #090909, -1px 1px 0 #090909, 1px 1px 0 #090909;
+  white-space: nowrap;
+}
+
+.editor-foreign-city-shield {
+  width: 46px;
+  min-height: 58px;
+  padding: 4px 4px 10px;
+  display: grid;
+  justify-items: center;
+  align-content: start;
+  gap: 0.2rem;
+  box-sizing: border-box;
+  color: white;
+  background: #6b655b;
+  clip-path: polygon(0 0, 100% 0, 100% 82%, 50% 100%, 0 82%);
+}
+
+.editor-foreign-city-shield .editor-city-owner-flag {
+  width: 38px;
+  height: 30px;
+  border-color: rgba(255, 255, 255, 0.78);
+}
+
+.map-marker.city.owner-enemy .editor-foreign-city-shield { background: #9e2928; }
+.map-marker.city.owner-player2 .editor-foreign-city-shield { background: #6946a9; }
+.map-marker.city.owner-player3 .editor-foreign-city-shield { background: #287e4c; }
+.map-marker.city.owner-neutral .editor-foreign-city-shield { background: #6b655b; }
+.map-marker.city.owner-enemy .editor-city-owner-flag { color: white; background: #b53131; }
+.map-marker.city.owner-player2 .editor-city-owner-flag { color: #160b36; background: #9d75ff; }
+.map-marker.city.owner-player3 .editor-city-owner-flag { color: #052813; background: #56d486; }
+.map-marker.city.owner-neutral .editor-city-owner-flag { color: #1e1914; background: #a79d8b; }
+
+.editor-city-name {
+  display: block;
+  color: #fff6d3;
+  font-size: 0.66rem;
+  line-height: 1.1;
+  white-space: nowrap;
+}
+
+.map-marker.city.selected {
+  outline: 0;
+  background: transparent;
+  box-shadow: none;
+  z-index: 10;
+}
+
+.map-marker.city.selected .editor-city-castle {
+  filter:
+    drop-shadow(0 5px 5px rgba(0, 0, 0, 0.35))
+    drop-shadow(0 0 5px rgba(255, 222, 111, 0.95))
+    drop-shadow(0 0 10px rgba(255, 192, 47, 0.72));
+}
+
+.map-marker.city.selected .editor-city-label {
+  filter:
+    drop-shadow(0 5px 4px rgba(0, 0, 0, 0.55))
+    drop-shadow(0 0 4px rgba(255, 210, 82, 0.9));
+}
+
+.map-marker.city.ui-overlap .editor-city-label,
+.map-marker.city.ui-overlap-peer .editor-city-label {
+  filter:
+    drop-shadow(0 5px 4px rgba(0, 0, 0, 0.55))
+    drop-shadow(0 0 3px rgba(255, 45, 58, 1))
+    drop-shadow(0 0 8px rgba(255, 45, 58, 0.9));
 }
 
 .map-marker.stronghold {
@@ -1055,6 +1213,223 @@ label > span,
   line-height: 1.35;
 }
 
+.economy-callout {
+  display: grid;
+  gap: 7px;
+  padding: 13px 14px;
+  border: 1px solid rgba(107, 178, 221, 0.42);
+  border-left: 4px solid #6bb2dd;
+  border-radius: 7px;
+  background: rgba(30, 78, 105, 0.34);
+}
+
+.economy-callout.important {
+  border-color: rgba(227, 182, 91, 0.5);
+  border-left-color: var(--gold);
+  background: rgba(109, 76, 22, 0.25);
+}
+
+.economy-callout.formula {
+  border-color: rgba(157, 128, 205, 0.45);
+  border-left-color: #ad8fe2;
+  background: rgba(67, 43, 99, 0.25);
+}
+
+.economy-callout strong {
+  font-size: 15px;
+}
+
+.economy-callout p {
+  margin: 0;
+  color: #c1d1dd;
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.economy-callout b {
+  color: var(--text);
+}
+
+.economy-callout code,
+.economy-fixed-formula code {
+  border: 1px solid rgba(153, 190, 216, 0.2);
+  border-radius: 4px;
+  padding: 2px 5px;
+  color: #d8edfb;
+  background: rgba(4, 13, 21, 0.56);
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 0.94em;
+}
+
+.economy-breakdown-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.economy-breakdown-card {
+  display: grid;
+  align-content: start;
+  gap: 12px;
+  padding: 13px;
+  border: 1px solid rgba(153, 190, 216, 0.2);
+  border-radius: 8px;
+  background: rgba(5, 15, 24, 0.62);
+}
+
+.economy-breakdown-card.full {
+  grid-column: 1 / -1;
+}
+
+.economy-breakdown-heading {
+  display: grid;
+  gap: 4px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgba(153, 190, 216, 0.16);
+}
+
+.economy-breakdown-heading > span,
+.economy-preview-heading span {
+  color: #8ac5e9;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.economy-breakdown-heading strong,
+.economy-preview-heading strong {
+  font-size: 16px;
+}
+
+.economy-breakdown-heading p,
+.economy-preview-heading p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.economy-fixed-formula {
+  display: grid;
+  gap: 6px;
+  padding: 10px;
+  border: 1px dashed rgba(227, 182, 91, 0.42);
+  border-radius: 7px;
+  background: rgba(108, 76, 26, 0.16);
+}
+
+.economy-fixed-formula > span {
+  color: var(--gold);
+  font-size: 10px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.economy-fixed-formula code {
+  width: fit-content;
+}
+
+.economy-fixed-formula small {
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.economy-explained-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.economy-explained-grid.three {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.economy-explained-field {
+  align-content: start;
+  padding: 10px;
+  border: 1px solid rgba(153, 190, 216, 0.16);
+  border-radius: 7px;
+  background: rgba(7, 23, 35, 0.72);
+}
+
+.economy-explained-field > span {
+  min-height: 28px;
+  color: #c6d7e2;
+  line-height: 1.3;
+}
+
+.economy-field-description {
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.economy-preview-panel {
+  display: grid;
+  gap: 10px;
+  padding: 13px;
+  border: 1px solid rgba(86, 169, 121, 0.38);
+  border-radius: 8px;
+  background: rgba(15, 57, 38, 0.22);
+}
+
+.economy-preview-heading {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.economy-preview-heading > div {
+  display: grid;
+  gap: 3px;
+}
+
+.economy-preview-heading span {
+  color: #81d4a1;
+}
+
+.economy-preview-heading p {
+  max-width: 620px;
+}
+
+.economy-preview-scroll {
+  overflow-x: auto;
+}
+
+.economy-preview-table {
+  width: 100%;
+  min-width: 760px;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+
+.economy-preview-table th,
+.economy-preview-table td {
+  padding: 8px 10px;
+  border-bottom: 1px solid rgba(153, 190, 216, 0.13);
+  text-align: right;
+  white-space: nowrap;
+}
+
+.economy-preview-table th {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.economy-preview-table th:first-child,
+.economy-preview-table td:first-child {
+  text-align: left;
+}
+
+.economy-preview-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
 .economy-table {
   width: 100%;
   border-collapse: collapse;
@@ -1119,6 +1494,10 @@ label > span,
   .economy-grid.four {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .economy-explained-grid.three {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 700px) {
@@ -1175,8 +1554,20 @@ label > span,
 
   .economy-sections,
   .economy-grid,
-  .economy-grid.four {
+  .economy-grid.four,
+  .economy-breakdown-grid,
+  .economy-explained-grid,
+  .economy-explained-grid.three {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .economy-breakdown-card.full {
+    grid-column: auto;
+  }
+
+  .economy-preview-heading {
+    flex-direction: column;
+    gap: 6px;
   }
 
   .economy-table,

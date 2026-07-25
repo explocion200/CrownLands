@@ -1,6 +1,6 @@
 window.CROWNLANDS_ECONOMY_CONFIG = {
   "schemaVersion": 1,
-  "updatedAt": "2026-07-24T03:29:49.567Z",
+  "updatedAt": "2026-07-25T19:52:40.388Z",
   "shopItems": {
     "shield_12h": {
       "cost": 1250000,
@@ -8,25 +8,25 @@ window.CROWNLANDS_ECONOMY_CONFIG = {
       "effectDurationMinutes": 720
     },
     "war_drums_30m": {
-      "cost": 75000,
+      "cost": 100000,
       "dailyPurchaseLimit": 4,
       "effectDurationMinutes": 30,
-      "bonusPercent": 5
+      "bonusPercent": 30
     },
     "royal_tax_decree_30m": {
-      "cost": 150000,
-      "dailyPurchaseLimit": 2,
+      "cost": 100000,
+      "dailyPurchaseLimit": 5,
       "effectDurationMinutes": 30,
       "bonusPercent": 50
     },
     "veil_of_silence_30m": {
       "cost": 125000,
-      "dailyPurchaseLimit": 4,
+      "dailyPurchaseLimit": 5,
       "effectDurationMinutes": 5
     },
     "swift_march_order": {
       "cost": 300000,
-      "dailyPurchaseLimit": 2
+      "dailyPurchaseLimit": 5
     },
     "recall_horn": {
       "cost": 500000,
@@ -36,14 +36,14 @@ window.CROWNLANDS_ECONOMY_CONFIG = {
   "pickups": {
     "spawnIntervalMinutes": 3,
     "expireMinutes": 20,
-    "goldAwardProductionMinutes": 10,
-    "troopAwardProductionMinutes": 10,
-    "dailyTotalCap": 12,
-    "dailyGoldCap": 6,
-    "dailyTroopCap": 6,
+    "goldAwardProductionMinutes": 60,
+    "troopAwardProductionMinutes": 60,
+    "dailyTotalCap": 50,
+    "dailyGoldCap": 25,
+    "dailyTroopCap": 25,
     "maxActivePerPlayer": 1,
-    "minimumGold": 50,
-    "minimumTroops": 10
+    "minimumGold": 250,
+    "minimumTroops": 250
   },
   "cityEconomy": {
     "productionVpBase": 20,
@@ -51,7 +51,7 @@ window.CROWNLANDS_ECONOMY_CONFIG = {
     "goldPerProductionVp": 15,
     "goldEndgameStartLevel": 100,
     "goldEndgameGrowth": 1.08,
-    "troopsPerVictoryPoint": 3,
+    "troopsPerVictoryPoint": 10,
     "upgradeEarlyEndLevel": 50,
     "upgradeMidEndLevel": 100,
     "upgradeEarlyStartHours": 0.1,
@@ -61,9 +61,9 @@ window.CROWNLANDS_ECONOMY_CONFIG = {
     "upgradeMaximumHours": 720
   },
   "playerCosts": {
-    "nearbyScoutGold": 75000,
-    "regroupGold": 150000,
-    "skillResetGold": 750000
+    "nearbyScoutGold": 250000,
+    "regroupGold": 250000,
+    "skillResetGold": 1000000
   },
   "skills": {
     "swordmastery": {
@@ -161,11 +161,11 @@ window.CROWNLANDS_ECONOMY_CONFIG = {
       "holdMinutes": 30,
       "baseDefenders": 10000,
       "defenseLevel": 30,
-      "maxDailyRewards": 2
+      "maxDailyRewards": 5
     },
     "deed": {
       "holdMinutes": 60,
-      "baseDefenders": 10000,
+      "baseDefenders": 25000,
       "defenseLevel": 30,
       "maxDailyRewards": 1
     }

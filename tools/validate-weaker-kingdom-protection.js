@@ -20,6 +20,20 @@ function readFunction(name) {
   throw new Error(`Could not parse ${name}.`);
 }
 
+function readClientFunction(name) {
+  const start = clientSource.indexOf(`function ${name}(`);
+  if (start < 0) throw new Error(`Missing client ${name}.`);
+  const bodyStart = clientSource.indexOf(") {", start) + 2;
+  if (bodyStart < 2) throw new Error(`Could not find the client body for ${name}.`);
+  let depth = 0;
+  for (let index = bodyStart; index < clientSource.length; index += 1) {
+    if (clientSource[index] === "{") depth += 1;
+    if (clientSource[index] === "}") depth -= 1;
+    if (depth === 0) return clientSource.slice(start, index + 1);
+  }
+  throw new Error(`Could not parse client ${name}.`);
+}
+
 function readConstant(name) {
   const match = source.match(new RegExp(`const\\s+${name}\\s*=\\s*([^;]+);`));
   if (!match) throw new Error(`Missing ${name}.`);
@@ -166,6 +180,43 @@ const strongholdAttack = sandbox.createServerDemoAttackSnapshot({
   attackerUid: "strong-player",
 });
 if (strongholdAttack) throw new Error("Stronghold attacks must remain exempt from weaker-kingdom protection.");
+
+const clientSandbox = {
+  DEMO_ATTACK_TIERS: sandbox.DEMO_ATTACK_TIERS,
+  getKingPower() {
+    return 0;
+  },
+  getAuthoritativeCityOwnerKingPowerSnapshot() {
+    return 0;
+  },
+  normalizePowerValue(value) {
+    return Math.max(0, Math.floor(Number(value) || 0));
+  },
+  isStronghold: sandbox.isStronghold,
+};
+vm.createContext(clientSandbox);
+vm.runInContext([
+  readClientFunction("getDemoAttackTier"),
+  readClientFunction("getEnemyCityPowerBand"),
+].join("\n\n"), clientSandbox);
+
+const enemyCity = { owner: "enemy" };
+if (clientSandbox.getEnemyCityPowerBand(enemyCity, 900_000, 100_000) !== "protected") {
+  throw new Error("A protected weaker enemy city is not assigned the pink power band.");
+}
+if (clientSandbox.getEnemyCityPowerBand(enemyCity, 100_000, 900_000) !== "overpowering") {
+  throw new Error("A much stronger enemy city is not assigned the dark-red power band.");
+}
+if (clientSandbox.getEnemyCityPowerBand(enemyCity, 11_000_000, 12_000_000) !== "in-range") {
+  throw new Error("A close King Power match is not assigned the bright-red power band.");
+}
+if (clientSandbox.getEnemyCityPowerBand(enemyCity, 500_000, 0) !== "in-range") {
+  throw new Error("An enemy with pending power data should retain the normal attackable color.");
+}
+if (clientSandbox.getEnemyCityPowerBand({ owner: "neutral" }, 900_000, 100_000) !== ""
+  || clientSandbox.getEnemyCityPowerBand({ owner: "enemy", kind: "stronghold" }, 900_000, 100_000) !== "") {
+  throw new Error("Neutral cities or strongholds are incorrectly receiving enemy power colors.");
+}
 
 if (!source.includes("const attackerStatsBeforeLaunch = createPreparedEconomyStatsSnapshot(attackerEconomy")) {
   throw new Error("Attack launch does not refresh the attacker's server-authoritative King Power.");
