@@ -10,6 +10,23 @@ service cloud.firestore {
       return signedIn() && request.auth.uid == uid;
     }
 
+    function currentResetGeneration() {
+      return 'fresh-2026-07-26-server-reset';
+    }
+
+    function currentWorldId() {
+      return 'main-fresh-2026-07-26-server-reset';
+    }
+
+    function isCurrentGeneration(data) {
+      return data.get('resetGeneration', '') == currentResetGeneration()
+        && data.get('worldId', '') == currentWorldId();
+    }
+
+    function isCurrentIslandId(islandId) {
+      return islandId.matches('^main-fresh-2026-07-26-server-reset-.*$');
+    }
+
     function shieldCount(data) {
       return data.get('shopItems', {}).get('shield_12h', 0);
     }
@@ -53,8 +70,15 @@ service cloud.firestore {
            'clanName',
            'clanTag',
            'clanRole',
+           'clanIdentityRevision',
+           'clanIdentityRevisionVersion',
+           'clanIdentityUpdatedAtMs',
            'clanJoinCooldownUntilMs',
-           'pendingClanApplicationId'
+           'pendingClanApplicationId',
+           'resetGeneration',
+           'worldId',
+           'releaseId',
+           'cloudSaveSlot'
         ]);
     }
 
@@ -91,8 +115,15 @@ service cloud.firestore {
         && profileFieldUnchanged('clanName')
         && profileFieldUnchanged('clanTag')
         && profileFieldUnchanged('clanRole')
+        && profileFieldUnchanged('clanIdentityRevision')
+        && profileFieldUnchanged('clanIdentityRevisionVersion')
+        && profileFieldUnchanged('clanIdentityUpdatedAtMs')
         && profileFieldUnchanged('clanJoinCooldownUntilMs')
-        && profileFieldUnchanged('pendingClanApplicationId');
+        && profileFieldUnchanged('pendingClanApplicationId')
+        && profileFieldUnchanged('resetGeneration')
+        && profileFieldUnchanged('worldId')
+        && profileFieldUnchanged('releaseId')
+        && profileFieldUnchanged('cloudSaveSlot');
     }
 
     function ownsCityOwnerIdentity() {
@@ -118,27 +149,28 @@ service cloud.firestore {
       allow delete: if false;
 
       match /saves/{saveId} {
-        allow read, create, update: if ownsPlayerDoc(uid);
-        allow delete: if ownsPlayerDoc(uid);
+        allow read, create, update: if ownsPlayerDoc(uid)
+          && saveId == 'default-fresh-2026-07-26-server-reset';
+        allow delete: if false;
       }
 
       match /serverReports/{reportId} {
-        allow read: if ownsPlayerDoc(uid);
+        allow read: if ownsPlayerDoc(uid) && isCurrentGeneration(resource.data);
         allow create, update, delete: if false;
       }
 
       match /stats/{statsId} {
-        allow read: if ownsPlayerDoc(uid);
+        allow read: if ownsPlayerDoc(uid) && isCurrentGeneration(resource.data);
         allow create, update, delete: if false;
       }
 
       match /objectiveStats/{objectiveId} {
-        allow read: if ownsPlayerDoc(uid);
+        allow read: if ownsPlayerDoc(uid) && isCurrentGeneration(resource.data);
         allow create, update, delete: if false;
       }
 
       match /serverMembership/{membershipId} {
-        allow read: if ownsPlayerDoc(uid);
+        allow read: if ownsPlayerDoc(uid) && isCurrentGeneration(resource.data);
         allow create, update, delete: if false;
       }
 
@@ -165,12 +197,13 @@ service cloud.firestore {
     }
 
     match /leaderboards/{boardId}/entries/{uid} {
-      allow read: if signedIn();
+      allow read: if signedIn() && boardId == currentResetGeneration() && isCurrentGeneration(resource.data);
       allow create, update, delete: if false;
     }
 
     function clanMember(clanId) {
       return signedIn()
+        && get(/databases/$(database)/documents/clans/$(clanId)).data.resetGeneration == currentResetGeneration()
         && exists(/databases/$(database)/documents/clans/$(clanId)/members/$(request.auth.uid));
     }
 
@@ -180,21 +213,23 @@ service cloud.firestore {
     }
 
     match /clans/{clanId} {
-      allow read: if signedIn();
+      allow read: if signedIn() && isCurrentGeneration(resource.data);
       allow create, update, delete: if false;
 
       match /members/{uid} {
-        allow read: if signedIn();
+        allow read: if signedIn() && isCurrentGeneration(resource.data);
         allow create, update, delete: if false;
       }
 
       match /applications/{uid} {
-        allow read: if signedIn() && (request.auth.uid == uid || clanManager(clanId));
+        allow read: if signedIn()
+          && isCurrentGeneration(resource.data)
+          && (request.auth.uid == uid || clanManager(clanId));
         allow create, update, delete: if false;
       }
 
       match /messages/{messageId} {
-        allow read: if clanMember(clanId);
+        allow read: if clanMember(clanId) && isCurrentGeneration(resource.data);
         allow create, update, delete: if false;
       }
 
@@ -208,7 +243,7 @@ service cloud.firestore {
     }
 
     match /clanLeaderboards/{resetId}/entries/{clanId} {
-      allow read: if signedIn();
+      allow read: if signedIn() && resetId == currentResetGeneration();
       allow create, update, delete: if false;
     }
 
@@ -220,8 +255,8 @@ service cloud.firestore {
       allow read, create, update, delete: if false;
     }
 
-    match /crownCitadelReigns/{uid} {
-      allow read: if signedIn();
+    match /crownCitadelReigns/{resetId}/entries/{uid} {
+      allow read: if signedIn() && resetId == currentResetGeneration() && isCurrentGeneration(resource.data);
       allow create, update, delete: if false;
     }
 
@@ -235,47 +270,63 @@ service cloud.firestore {
 
     match /armies/{armyId} {
       allow read: if signedIn()
+        && isCurrentGeneration(resource.data)
         && (resource.data.ownerUid == request.auth.uid
           || resource.data.targetOwnerUid == request.auth.uid);
       allow create, update, delete: if false;
     }
 
+    // Collection-group queries cannot prove a parent island path. Require both
+    // realm identifiers and ownership so archived generations never leak.
+    match /{path=**}/cities/{cityId} {
+      allow read: if signedIn()
+        && isCurrentGeneration(resource.data)
+        && resource.data.ownerUid == request.auth.uid;
+    }
+
+    match /{path=**}/camps/{campId} {
+      allow read: if signedIn()
+        && isCurrentGeneration(resource.data)
+        && resource.data.holderUid == request.auth.uid;
+    }
+
     // Multiplayer layout, economy, armies, combat, and reports are server-owned.
     match /islands/{islandId} {
-      allow read: if signedIn();
+      allow read: if signedIn()
+        && isCurrentIslandId(islandId);
       allow create, update, delete: if false;
 
       match /cities/{cityId} {
-        allow read: if signedIn();
+        allow read: if signedIn() && isCurrentIslandId(islandId);
         allow create: if false;
-        allow update: if signedIn() && cityIdentityOnlyUpdate();
+        allow update: if signedIn() && isCurrentIslandId(islandId) && cityIdentityOnlyUpdate();
         allow delete: if false;
       }
 
       match /camps/{campId} {
-        allow read: if signedIn();
+        allow read: if signedIn() && isCurrentIslandId(islandId);
         allow create, update, delete: if false;
 
         match /rewardHistory/{entryId} {
-          allow read: if signedIn();
+          allow read: if signedIn() && isCurrentIslandId(islandId);
           allow create, update, delete: if false;
         }
       }
 
       match /armies/{armyId} {
-        allow read: if signedIn();
+        allow read: if signedIn() && isCurrentIslandId(islandId);
         allow create, update, delete: if false;
       }
 
       match /reports/{reportId} {
-        allow read: if signedIn();
+        allow read: if signedIn() && isCurrentIslandId(islandId);
         allow create, update: if false;
         allow delete: if false;
       }
 
       match /presence/{uid} {
-        allow read: if signedIn();
-        allow create, update, delete: if ownsPlayerDoc(uid);
+        allow read: if signedIn() && isCurrentIslandId(islandId);
+        allow create, update, delete: if ownsPlayerDoc(uid) && isCurrentIslandId(islandId);
       }
     }
   }

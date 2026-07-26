@@ -2451,7 +2451,8 @@ input {
   filter: drop-shadow(0 5px 4px rgba(0,0,0,.55));
 }
 .citadel-city-crown {
-  display: block;
+  display: inline-grid;
+  place-items: center;
   min-width: 22px;
   height: 20px;
   color: #ffd76b;
@@ -2461,6 +2462,13 @@ input {
   text-align: center;
   text-shadow: 0 1px 0 #fff1a8, 0 2px 2px #6f3700, 0 0 8px rgba(255, 190, 45, .9);
   filter: drop-shadow(0 2px 2px rgba(0, 0, 0, .7));
+}
+.city-ruler-row {
+  display: flex;
+  max-width: 194px;
+  align-items: center;
+  justify-content: center;
+  gap: .2rem;
 }
 .city-ruler-name {
   max-width: 170px;
@@ -3105,6 +3113,10 @@ input {
   min-width: 0;
   display: grid;
   gap: .1rem;
+}
+.public-profile-clan .clan-shield-size-small {
+  width: 40px;
+  height: 44px;
 }
 .public-profile-location > span:last-child,
 .public-profile-location strong,
@@ -5767,6 +5779,40 @@ button.inventory-slot {
   pointer-events: none;
   user-select: none;
 }
+.clan-hud-btn {
+  position: relative;
+  isolation: isolate;
+}
+.clan-hud-icon {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+}
+.clan-hud-icon .clan-shield-size-small {
+  width: 52px;
+  height: 57px;
+}
+.clan-hud-btn.is-search::after {
+  content: "\2315";
+  position: absolute;
+  z-index: 2;
+  right: -2px;
+  bottom: -2px;
+  width: 21px;
+  height: 21px;
+  display: grid;
+  place-items: center;
+  border: 2px solid #fff0bd;
+  border-radius: 50%;
+  color: #fff8dd;
+  background: #174b74;
+  box-shadow: 0 3px 7px rgba(0,0,0,.45);
+  font-size: .92rem;
+  font-weight: 1000;
+  line-height: 1;
+}
 .profile-rank-btn:active {
   transform: translateY(1px);
 }
@@ -6481,6 +6527,52 @@ button.inventory-slot {
   background: transparent;
 }
 .profile-flag-edit { color: #9ed5ff; font-size: .78rem; font-weight: 900; }
+.profile-clan-affiliation {
+  width: min(390px, 100%);
+  min-height: 58px;
+  display: grid;
+  grid-template-columns: 46px minmax(0, 1fr);
+  align-items: center;
+  gap: .65rem;
+  padding: .4rem .65rem;
+  border: 1px solid rgba(131,215,155,.38);
+  border-radius: 9px;
+  color: #f3f7eb;
+  background: linear-gradient(115deg, rgba(29,82,48,.72), rgba(13,44,69,.7));
+  text-align: left;
+}
+.profile-clan-affiliation:hover,
+.profile-clan-affiliation:focus-visible {
+  border-color: #a8ec84;
+  background: linear-gradient(115deg, rgba(38,104,61,.86), rgba(19,65,98,.82));
+}
+.profile-clan-affiliation > span:last-child {
+  min-width: 0;
+  display: grid;
+  gap: .08rem;
+}
+.profile-clan-affiliation small {
+  color: #9ed5b1;
+  font-size: .66rem;
+  font-weight: 950;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+.profile-clan-affiliation strong {
+  overflow: hidden;
+  color: #fff1bd;
+  font-size: .86rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.profile-clan-shield {
+  display: grid;
+  place-items: center;
+}
+.profile-clan-shield .clan-shield-size-mini {
+  width: 40px;
+  height: 44px;
+}
 .profile-name-block { width: min(390px, 100%); display: grid; gap: .48rem; }
 .profile-name-row,
 .profile-name-editor {
@@ -6856,6 +6948,8 @@ button.inventory-slot {
   .portrait-placeholder { width: 74px; height: 58px; border-radius: 14px; }
   .profile-button .kingdom-flag-small { left: 19.5%; top: 25.4%; width: 60.8%; height: 52%; border-radius: 0; }
   .profile-rank-btn { width: 44px; height: 44px; }
+  .clan-hud-icon .clan-shield-size-small { width: 40px; height: 44px; }
+  .clan-hud-btn.is-search::after { right: -3px; bottom: -3px; width: 18px; height: 18px; font-size: .76rem; }
   .shop-btn { width: 56px; height: 56px; }
   .resource-pill.bag-btn,
   .resource-pill.shop-btn,

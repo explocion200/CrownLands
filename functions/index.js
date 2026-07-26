@@ -1,15 +1,21 @@
 const { onCall, HttpsError } = require("firebase-functions/v2/https");
 const { onSchedule } = require("firebase-functions/v2/scheduler");
-const { onDocumentWritten } = require("firebase-functions/v2/firestore");
+const { onDocumentCreated, onDocumentWritten } = require("firebase-functions/v2/firestore");
 const admin = require("firebase-admin");
+const { FieldValue, getFirestore } = require("firebase-admin/firestore");
 const crypto = require("node:crypto");
 const SERVER_WORLD_LAYOUT = require("./world-layout.json");
 const ECONOMY_CONFIG = require("./economy-config.json");
+const REALM_CONFIG = require("./release-config.json");
+
+function safeConfigString(value, fallback = "") {
+  const cleaned = String(value || "").trim().replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 120);
+  return cleaned || fallback;
+}
 
 admin.initializeApp();
 
-const db = admin.firestore();
-const FieldValue = admin.firestore.FieldValue;
+const db = getFirestore();
 
 function economyNumber(path, fallback) {
   const value = String(path || "").split(".").filter(Boolean).reduce((current, key) => current?.[key], ECONOMY_CONFIG);
@@ -25,8 +31,9 @@ function economyRewardSchedule(campType, fallback = []) {
   }));
 }
 
-const RESET_GENERATION = "fresh-2026-07-05-server-reset";
-const ONLINE_WORLD_ID = `main-${RESET_GENERATION}`;
+const REALM_RELEASE_ID = safeConfigString(REALM_CONFIG.releaseId, "crownlands-2026-07-26-reset-v1");
+const RESET_GENERATION = safeConfigString(REALM_CONFIG.resetGeneration, "fresh-2026-07-26-server-reset");
+const ONLINE_WORLD_ID = safeConfigString(REALM_CONFIG.worldId, `main-${RESET_GENERATION}`);
 const TEST_STARTING_GOLD = 100;
 const PLAYER_STARTING_TROOPS = 200;
 const PLAYER_NAME_MAX_LENGTH = 18;
@@ -172,6 +179,7 @@ const MAIN_CITY_CHANGE_LARGE_KINGDOM_COOLDOWN_MS = 14 * 24 * 60 * 60 * 1000;
 const MAX_SERVER_PRODUCTION_SECONDS = 7 * 24 * 60 * 60;
 const GAME_SERVER_ID = "crown-marches";
 const GAME_SERVER_NAME = "The Crown Marches";
+const GAME_SERVER_DOCUMENT_ID = `${GAME_SERVER_ID}-${RESET_GENERATION}`;
 const GAME_SERVER_CAPACITY = 50;
 const GAME_SERVER_ACTIVE_STALE_MS = 3 * 60 * 1000;
 const GAME_SERVER_WAITING_STALE_MS = 5 * 60 * 1000;
@@ -185,6 +193,7 @@ const CLAN_RESERVATION_RELEASE_MS = 7 * 24 * 60 * 60 * 1000;
 const CLAN_CHAT_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
 const CLAN_CHAT_RATE_WINDOW_MS = 30 * 1000;
 const CLAN_CHAT_RATE_LIMIT = 5;
+const CLAN_IDENTITY_REVISION_VERSION = 1;
 const CLAN_SHIELD_VERSION = 1;
 const CLAN_SHIELD_SHAPES = new Set(["castilian", "heater", "kite", "round"]);
 const CLAN_SHIELD_DIVISIONS = new Set(["solid", "pale", "fess", "quartered", "stripes", "bend", "saltire", "chevron"]);
@@ -377,9 +386,18 @@ const STRONGHOLD_LEVELS = {
   [CROWN_CITADEL_ID]: 100,
 };
 
-function requireAuth(request) {
+function requireCompatibleClient(data = {}) {
+  if (safeString(data.clientReleaseId, 120) !== REALM_RELEASE_ID
+    || safeString(data.clientResetGeneration, 120) !== RESET_GENERATION
+    || safeString(data.clientWorldId, 120) !== ONLINE_WORLD_ID) {
+    throw new HttpsError("failed-precondition", "Crownlands was updated. Refresh before continuing.");
+  }
+}
+
+function requireAuth(request, { allowRealmMismatch = false } = {}) {
   const uid = request.auth?.uid || "";
   if (!uid) throw new HttpsError("unauthenticated", "Sign in before sending troops.");
+  if (!allowRealmMismatch) requireCompatibleClient(request.data || {});
   return uid;
 }
 
@@ -416,6 +434,48 @@ function getOnlineIslandId(regionId = "west") {
 
 function safeString(value, max = 80) {
   return String(value || "").trim().slice(0, max);
+}
+
+function operationResultMetrics(result = null) {
+  const production = result?.production || {};
+  return {
+    status: safeString(result?.status || (result?.ok === false ? "failed" : "ok"), 32),
+    cityCount: Math.max(0, Math.floor(Number(production.cityCount) || 0)),
+    cityWrites: Math.max(0, Math.floor(Number(result?.cityWrites ?? result?.writes) || 0)),
+    scanned: Math.max(0, Math.floor(Number(result?.scanned) || 0)),
+    resolved: Math.max(0, Math.floor(Number(result?.resolved) || 0)),
+    failed: Math.max(0, Math.floor(Number(result?.failed) || 0)),
+  };
+}
+
+function logOperation(operation, startedAtMs, request = null, outcome = "ok", details = {}) {
+  console.log("crownlands_operation", {
+    event: "crownlands_operation",
+    operation: safeString(operation, 64),
+    outcome: safeString(outcome, 24),
+    durationMs: Math.max(0, Date.now() - startedAtMs),
+    releaseId: REALM_RELEASE_ID,
+    worldId: ONLINE_WORLD_ID,
+    resetGeneration: RESET_GENERATION,
+    appCheck: request?.app ? "valid" : "missing",
+    ...details,
+  });
+}
+
+function timedCallable(operation, options, handler) {
+  return onCall(options, async request => {
+    const startedAtMs = Date.now();
+    try {
+      const result = await handler(request);
+      logOperation(operation, startedAtMs, request, "ok", operationResultMetrics(result));
+      return result;
+    } catch (error) {
+      logOperation(operation, startedAtMs, request, "error", {
+        code: safeString(error?.code || "internal", 48),
+      });
+      throw error;
+    }
+  });
 }
 
 function requireGameServerId(value = GAME_SERVER_ID) {
@@ -504,6 +564,9 @@ function writeGameServerMembership(transaction, entry, status, nowMs = Date.now(
   transaction.set(db.doc(`players/${entry.uid}/serverMembership/current`), {
     serverId: GAME_SERVER_ID,
     serverName: GAME_SERVER_NAME,
+    worldId: ONLINE_WORLD_ID,
+    resetGeneration: RESET_GENERATION,
+    releaseId: REALM_RELEASE_ID,
     status,
     sessionId: entry.sessionId || "",
     displayName: entry.displayName || "Ruler",
@@ -519,6 +582,9 @@ function writeGameServerState(transaction, serverRef, state, nowMs = Date.now())
   transaction.set(serverRef, {
     id: GAME_SERVER_ID,
     name: GAME_SERVER_NAME,
+    worldId: ONLINE_WORLD_ID,
+    resetGeneration: RESET_GENERATION,
+    releaseId: REALM_RELEASE_ID,
     capacity: GAME_SERVER_CAPACITY,
     activeSlots: state.activeSlots,
     waitingQueue: state.waitingQueue,
@@ -529,7 +595,7 @@ function writeGameServerState(transaction, serverRef, state, nowMs = Date.now())
 }
 
 async function joinGameServerForPlayer({ uid, sessionId, displayName, nowMs = Date.now() }) {
-  const serverRef = db.doc(`gameServers/${GAME_SERVER_ID}`);
+  const serverRef = db.doc(`gameServers/${GAME_SERVER_DOCUMENT_ID}`);
   return db.runTransaction(async transaction => {
     const serverSnap = await transaction.get(serverRef);
     const state = createGameServerState(serverSnap.exists ? serverSnap.data() : {}, nowMs);
@@ -602,7 +668,7 @@ async function joinGameServerForPlayer({ uid, sessionId, displayName, nowMs = Da
 }
 
 async function leaveGameServerForPlayer({ uid, sessionId, nowMs = Date.now() }) {
-  const serverRef = db.doc(`gameServers/${GAME_SERVER_ID}`);
+  const serverRef = db.doc(`gameServers/${GAME_SERVER_DOCUMENT_ID}`);
   return db.runTransaction(async transaction => {
     const serverSnap = await transaction.get(serverRef);
     const state = createGameServerState(serverSnap.exists ? serverSnap.data() : {}, nowMs);
@@ -628,7 +694,7 @@ async function leaveGameServerForPlayer({ uid, sessionId, nowMs = Date.now() }) 
 }
 
 async function maintainGameServer(nowMs = Date.now()) {
-  const serverRef = db.doc(`gameServers/${GAME_SERVER_ID}`);
+  const serverRef = db.doc(`gameServers/${GAME_SERVER_DOCUMENT_ID}`);
   return db.runTransaction(async transaction => {
     const serverSnap = await transaction.get(serverRef);
     const state = createGameServerState(serverSnap.exists ? serverSnap.data() : {}, nowMs);
@@ -655,6 +721,11 @@ function normalizePlayerName(value, fallback = "Ruler") {
 const SERVER_WORLD_MAPS = Array.isArray(SERVER_WORLD_LAYOUT?.maps) ? SERVER_WORLD_LAYOUT.maps : [];
 const SERVER_WORLD_MAP_BY_ID = new Map(SERVER_WORLD_MAPS.map(map => [safeString(map?.id, 80), map]));
 const SERVER_WORLD_REGION_IDS = new Set(SERVER_WORLD_MAP_BY_ID.keys());
+const STARTER_REGION_IDS = Object.freeze(
+  SERVER_WORLD_MAPS
+    .filter(map => safeString(map?.type, 32).toLowerCase() === "starter")
+    .map(map => normalizeRegionId(map.id))
+);
 
 function isKnownWorldRegionId(regionId = "") {
   return SERVER_WORLD_REGION_IDS.has(normalizeRegionId(regionId));
@@ -1018,6 +1089,8 @@ function getAuthoritativeIslandSeed(regionId = "") {
     camps,
     meta: {
       worldId: ONLINE_WORLD_ID,
+      resetGeneration: RESET_GENERATION,
+      releaseId: REALM_RELEASE_ID,
       regionId: targetRegionId,
       regionName: safeString(map.label || map.name || targetRegionId, 80),
       version: Math.max(1, Math.floor(safeNumber(SERVER_WORLD_LAYOUT.version, 1))),
@@ -1114,7 +1187,7 @@ function getPublicStrongholdSnapshot(city = {}) {
 
 function crownCitadelReignRef(uid = "") {
   const safeUid = safeString(uid, 128).replace(/[^a-zA-Z0-9_-]/g, "_");
-  return safeUid ? db.doc(`crownCitadelReigns/${safeUid}`) : null;
+  return safeUid ? db.doc(`crownCitadelReigns/${RESET_GENERATION}/entries/${safeUid}`) : null;
 }
 
 async function recordCrownCitadelControlChange(transaction, {
@@ -1465,7 +1538,7 @@ function rewardedAdServerConfigRef() {
 }
 
 function leaderboardEntryRef(uid = "") {
-  return db.doc(`leaderboards/kingPower/entries/${safeString(uid, 128)}`);
+  return db.doc(`leaderboards/${RESET_GENERATION}/entries/${safeString(uid, 128)}`);
 }
 
 function getArmyStatsKey(army = {}) {
@@ -1491,12 +1564,16 @@ function createActiveArmiesFromSnapshot(uid = "", activeArmiesSnap = null) {
 function activeArmiesQueryForPlayer(uid = "") {
   return db.collection("armies")
     .where("ownerUid", "==", safeString(uid, 128))
+    .where("resetGeneration", "==", RESET_GENERATION)
+    .where("worldId", "==", ONLINE_WORLD_ID)
     .where("status", "==", "active");
 }
 
 function heldRewardCampsQueryForPlayer(uid = "") {
   return db.collectionGroup("camps")
-    .where("holderUid", "==", safeString(uid, 128));
+    .where("holderUid", "==", safeString(uid, 128))
+    .where("resetGeneration", "==", RESET_GENERATION)
+    .where("worldId", "==", ONLINE_WORLD_ID);
 }
 
 function createHeldCampEntriesFromSnapshot(uid = "", heldCampsSnap = null) {
@@ -2447,6 +2524,8 @@ function cleanServerCampLayoutSeed(camp = {}) {
   return {
     id: campId,
     campId,
+    worldId: ONLINE_WORLD_ID,
+    resetGeneration: RESET_GENERATION,
     name: safeString(camp.name || config.name, 80),
     mapId: safeString(camp.mapId || camp.regionId, 80),
     regionId: normalizeRegionId(camp.regionId || camp.mapId),
@@ -2609,6 +2688,8 @@ function cleanServerCityLayoutSeed(city = {}) {
   const isStrongholdCity = city.kind === "stronghold" || Boolean(city.strongholdType);
   return {
     id: cityId,
+    worldId: ONLINE_WORLD_ID,
+    resetGeneration: RESET_GENERATION,
     name: safeString(city.name || cityId, 80),
     x: safeNumber(city.x, 0),
     y: safeNumber(city.y, 0),
@@ -3871,7 +3952,10 @@ async function prepareEconomyCollection(transaction, uid, nowMs = Date.now(), op
   const economyRevisionMs = Math.max(nowMs, timestampToMs(rawProfile.economyUpdatedAtMs) + 1);
 
   const [ownedSnap, activeArmiesSnap, heldCampsSnap] = await Promise.all([
-    transaction.get(db.collectionGroup("cities").where("ownerUid", "==", uid)),
+    transaction.get(db.collectionGroup("cities")
+      .where("ownerUid", "==", uid)
+      .where("resetGeneration", "==", RESET_GENERATION)
+      .where("worldId", "==", ONLINE_WORLD_ID)),
     transaction.get(activeArmiesQueryForPlayer(uid)),
     transaction.get(heldRewardCampsQueryForPlayer(uid)),
   ]);
@@ -4103,6 +4187,8 @@ function writeGlobalStatsFromEconomy(transaction, economy = null, profileOverrid
   transaction.set(economy.globalStatsRef, stats, { merge: true });
   transaction.set(leaderboardEntryRef(economy.uid), {
     uid: economy.uid,
+    worldId: ONLINE_WORLD_ID,
+    resetGeneration: RESET_GENERATION,
     displayName: normalizePlayerName(profile.playerName || profile.displayName),
     playerName: normalizePlayerName(profile.playerName || profile.displayName),
     flag: profile.flag || null,
@@ -4169,7 +4255,11 @@ async function rebuildGlobalStatsForPlayer(uid = "") {
   const profileRef = db.doc(`players/${playerUid}`);
   const [profileSnap, ownedSnap, activeArmiesSnap, heldCampsSnap] = await Promise.all([
     profileRef.get(),
-    db.collectionGroup("cities").where("ownerUid", "==", playerUid).get(),
+    db.collectionGroup("cities")
+      .where("ownerUid", "==", playerUid)
+      .where("resetGeneration", "==", RESET_GENERATION)
+      .where("worldId", "==", ONLINE_WORLD_ID)
+      .get(),
     activeArmiesQueryForPlayer(playerUid).get(),
     heldRewardCampsQueryForPlayer(playerUid).get(),
   ]);
@@ -4211,6 +4301,8 @@ async function rebuildGlobalStatsForPlayer(uid = "") {
       ref: profileRef,
       data: {
         uid: playerUid,
+        worldId: ONLINE_WORLD_ID,
+        resetGeneration: RESET_GENERATION,
         playerName: identity.ownerName,
         displayName: identity.ownerName,
         flag: identity.ownerFlag,
@@ -4235,6 +4327,8 @@ async function rebuildGlobalStatsForPlayer(uid = "") {
       ref: leaderboardEntryRef(playerUid),
       data: {
         uid: playerUid,
+        worldId: ONLINE_WORLD_ID,
+        resetGeneration: RESET_GENERATION,
         displayName: identity.ownerName,
         playerName: identity.ownerName,
         flag: identity.ownerFlag,
@@ -4560,7 +4654,25 @@ async function sendIncomingArmyNotification(notification = {}) {
   return result.successCount > 0;
 }
 
-exports.joinGameServer = onCall({ region: "us-central1", maxInstances: 20, invoker: "public" }, async request => {
+exports.getRealmInfo = timedCallable(
+  "getRealmInfo",
+  { region: "us-central1", maxInstances: 20, invoker: "public" },
+  async request => {
+    requireAuth(request, { allowRealmMismatch: true });
+    return {
+      ok: true,
+      releaseId: REALM_RELEASE_ID,
+      resetGeneration: RESET_GENERATION,
+      worldId: ONLINE_WORLD_ID,
+      serverId: GAME_SERVER_ID,
+      serverName: GAME_SERVER_NAME,
+      capacity: GAME_SERVER_CAPACITY,
+      appCheckEnforced: false,
+    };
+  }
+);
+
+exports.joinGameServer = timedCallable("joinGameServer", { region: "us-central1", maxInstances: 20, invoker: "public" }, async request => {
   const uid = requireAuth(request);
   const data = request.data || {};
   requireGameServerId(data.serverId);
@@ -4572,7 +4684,7 @@ exports.joinGameServer = onCall({ region: "us-central1", maxInstances: 20, invok
   });
 });
 
-exports.heartbeatGameServer = onCall({ region: "us-central1", maxInstances: 20, invoker: "public" }, async request => {
+exports.heartbeatGameServer = timedCallable("heartbeatGameServer", { region: "us-central1", maxInstances: 20, invoker: "public" }, async request => {
   const uid = requireAuth(request);
   const data = request.data || {};
   requireGameServerId(data.serverId);
@@ -4595,7 +4707,7 @@ exports.leaveGameServer = onCall({ region: "us-central1", maxInstances: 20, invo
   });
 });
 
-exports.collectEconomy = onCall({ region: "us-central1", maxInstances: 30, invoker: "public" }, async request => {
+exports.collectEconomy = timedCallable("collectEconomy", { region: "us-central1", maxInstances: 30, invoker: "public" }, async request => {
   const uid = requireAuth(request);
   const nowMs = Date.now();
   return db.runTransaction(async transaction => {
@@ -5272,7 +5384,11 @@ exports.syncPlayerIdentity = onCall({ region: "us-central1", maxInstances: 20, i
   }
 
   const [ownedCitiesSnap, activeArmiesSnap, crownReignSnap] = await Promise.all([
-    db.collectionGroup("cities").where("ownerUid", "==", uid).get(),
+    db.collectionGroup("cities")
+      .where("ownerUid", "==", uid)
+      .where("resetGeneration", "==", RESET_GENERATION)
+      .where("worldId", "==", ONLINE_WORLD_ID)
+      .get(),
     activeArmiesQueryForPlayer(uid).get(),
     crownCitadelReignRef(uid).get(),
   ]);
@@ -5520,7 +5636,11 @@ exports.getCombatPlayerIdentity = onCall({
 
   const [profileSnap, ownedCitiesSnap] = await Promise.all([
     db.doc(`players/${targetUid}`).get(),
-    db.collectionGroup("cities").where("ownerUid", "==", targetUid).get(),
+    db.collectionGroup("cities")
+      .where("ownerUid", "==", targetUid)
+      .where("resetGeneration", "==", RESET_GENERATION)
+      .where("worldId", "==", ONLINE_WORLD_ID)
+      .get(),
   ]);
   const profile = profileSnap.exists ? profileSnap.data() || {} : {};
   const strongholds = createOwnedCityEntriesFromSnapshot(targetUid, ownedCitiesSnap)
@@ -5537,9 +5657,7 @@ exports.getCombatPlayerIdentity = onCall({
   };
 });
 
-exports.ensureMainIsland = onCall({ region: "us-central1", maxInstances: 20, invoker: "public" }, async request => {
-  const uid = requireAuth(request);
-  const data = request.data || {};
+async function ensureMainIslandForPlayer(uid, data = {}) {
   const requestedIslandId = safeString(data.islandId, 160);
   const requestedRegionId = data.regionId
     || data.meta?.regionId
@@ -5566,9 +5684,13 @@ exports.ensureMainIsland = onCall({ region: "us-central1", maxInstances: 20, inv
   const needsCitySeed = !islandSnap.exists || seededCityCount < targetCityCount;
   const needsCampSeed = targetCampCount > 0 && (!islandSnap.exists || seededCampCount < targetCampCount);
   const needsLayoutRefresh = islandSnap.exists && layoutSeedVersion < targetVersion;
+  const needsGenerationStamp = islandSnap.exists && (
+    safeString(islandData.worldId, 120) !== ONLINE_WORLD_ID
+    || safeString(islandData.resetGeneration, 120) !== RESET_GENERATION
+  );
   const safeMeta = seed.meta;
 
-  if (islandSnap.exists && !needsCitySeed && !needsCampSeed && !needsLayoutRefresh && seededCityCount === targetCityCount && seededCampCount === targetCampCount) {
+  if (islandSnap.exists && !needsCitySeed && !needsCampSeed && !needsLayoutRefresh && !needsGenerationStamp && seededCityCount === targetCityCount && seededCampCount === targetCampCount) {
     return {
       islandId,
       seeded: false,
@@ -5579,19 +5701,71 @@ exports.ensureMainIsland = onCall({ region: "us-central1", maxInstances: 20, inv
     };
   }
 
+  const seedLockRef = db.doc(`realmSeeds/${RESET_GENERATION}/islands/${seed.regionId}`);
+  const seedOwnerToken = crypto.randomBytes(12).toString("hex");
+  const seedLeaseMs = 60 * 1000;
+  const acquiredSeedLease = await db.runTransaction(async transaction => {
+    const lockSnap = await transaction.get(seedLockRef);
+    const lock = lockSnap.exists ? lockSnap.data() || {} : {};
+    const nowMs = Date.now();
+    const canAcquire = !lockSnap.exists
+      || lock.status === "ready"
+      || timestampToMs(lock.leaseUntilMs) <= nowMs
+      || Math.max(0, Math.floor(safeNumber(lock.layoutSeedVersion, 0))) < targetVersion;
+    if (!canAcquire) return false;
+    transaction.set(seedLockRef, {
+      worldId: ONLINE_WORLD_ID,
+      resetGeneration: RESET_GENERATION,
+      regionId: seed.regionId,
+      islandId,
+      status: "seeding",
+      ownerToken: seedOwnerToken,
+      layoutSeedVersion: targetVersion,
+      leaseUntilMs: nowMs + seedLeaseMs,
+      updatedAtMs: nowMs,
+      updatedAt: FieldValue.serverTimestamp(),
+    }, { merge: true });
+    return true;
+  });
+  if (!acquiredSeedLease) {
+    const waitStartedAtMs = Date.now();
+    while (Date.now() - waitStartedAtMs < seedLeaseMs) {
+      const lockSnap = await seedLockRef.get();
+      const lock = lockSnap.exists ? lockSnap.data() || {} : {};
+      if (lock.status === "ready"
+        && Math.max(0, Math.floor(safeNumber(lock.layoutSeedVersion, 0))) >= targetVersion) {
+        return ensureMainIslandForPlayer(uid, data);
+      }
+      if (timestampToMs(lock.leaseUntilMs) <= Date.now()) {
+        return ensureMainIslandForPlayer(uid, data);
+      }
+      await new Promise(resolve => setTimeout(resolve, 250));
+    }
+    throw new HttpsError("unavailable", "This Crownlands island is still being prepared. Try again.");
+  }
+
   const cityDocs = await citiesRef.get();
   const campDocs = targetCampCount ? await campsRef.get() : { docs: [] };
   const existingCityDataById = new Map(cityDocs.docs.map(cityDoc => [cityDoc.id, cityDoc.data() || {}]));
   const existingCityIds = new Set(existingCityDataById.keys());
   const existingCampIds = new Set(campDocs.docs.map(campDoc => campDoc.id));
-  const seedsToWrite = needsLayoutRefresh
+  const seedsToWrite = needsLayoutRefresh || needsGenerationStamp
     ? citySeeds
     : citySeeds.filter(city => !existingCityIds.has(city.id));
-  const campSeedsToWrite = needsLayoutRefresh
+  const campSeedsToWrite = needsLayoutRefresh || needsGenerationStamp
     ? campSeeds
     : campSeeds.filter(camp => !existingCampIds.has(camp.id));
 
   const batch = db.batch();
+  batch.set(seedLockRef, {
+    status: "ready",
+    ownerToken: seedOwnerToken,
+    layoutSeedVersion: targetVersion,
+    leaseUntilMs: 0,
+    readyAtMs: Date.now(),
+    updatedAtMs: Date.now(),
+    updatedAt: FieldValue.serverTimestamp(),
+  }, { merge: true });
   batch.set(islandRef, {
     id: islandId,
     ...safeMeta,
@@ -5671,15 +5845,21 @@ exports.ensureMainIsland = onCall({ region: "us-central1", maxInstances: 20, inv
   return {
     islandId,
     seeded: seedsToWrite.length > 0 || campSeedsToWrite.length > 0,
-    refreshed: needsLayoutRefresh,
+    refreshed: needsLayoutRefresh || needsGenerationStamp,
     writes: seedsToWrite.length + campSeedsToWrite.length,
     cityCount: targetCityCount,
     campCount: targetCampCount,
     version: targetVersion,
   };
-});
+}
 
-exports.claimStartingCity = onCall({ region: "us-central1", maxInstances: 20, invoker: "public" }, async request => {
+exports.ensureMainIsland = timedCallable(
+  "ensureMainIsland",
+  { region: "us-central1", maxInstances: 20, invoker: "public" },
+  async request => ensureMainIslandForPlayer(requireAuth(request), request.data || {})
+);
+
+const legacyClaimStartingCity = onCall({ region: "us-central1", maxInstances: 20, invoker: "public" }, async request => {
   const uid = requireAuth(request);
   const data = request.data || {};
   const authToken = request.auth?.token || {};
@@ -5713,7 +5893,10 @@ exports.claimStartingCity = onCall({ region: "us-central1", maxInstances: 20, in
     const nowMs = Date.now();
     const playerSnap = await transaction.get(playerRef);
     const playerData = playerSnap.exists ? playerSnap.data() || {} : {};
-    const ownedSnap = await transaction.get(db.collectionGroup("cities").where("ownerUid", "==", uid));
+    const ownedSnap = await transaction.get(db.collectionGroup("cities")
+      .where("ownerUid", "==", uid)
+      .where("resetGeneration", "==", RESET_GENERATION)
+      .where("worldId", "==", ONLINE_WORLD_ID));
     const ownedCityEntries = createOwnedCityEntriesFromSnapshot(uid, ownedSnap);
     const existingMainCityId = safeString(playerData.mainCityId, 96).replace(/[^a-zA-Z0-9_-]/g, "_");
     const existingMainIslandId = safeString(playerData.mainIslandId, 160);
@@ -5896,6 +6079,414 @@ exports.claimStartingCity = onCall({ region: "us-central1", maxInstances: 20, in
     };
   });
 });
+
+function shuffleStartingCityIds(regionId = "") {
+  const values = [...getServerWorldRegularCityIds(regionId)];
+  for (let index = values.length - 1; index > 0; index -= 1) {
+    const swapIndex = crypto.randomInt(0, index + 1);
+    [values[index], values[swapIndex]] = [values[swapIndex], values[index]];
+  }
+  return values;
+}
+
+function createFreshResetPlayerProfile({
+  uid = "",
+  previous = {},
+  authToken = {},
+  requestData = {},
+  cityId = "",
+  islandId = "",
+  regionId = "",
+  nowMs = Date.now(),
+} = {}) {
+  const displayName = safeString(requestData.displayName || authToken.name || previous.displayName, 80);
+  const playerName = normalizePlayerName(previous.playerName || requestData.playerName || displayName);
+  const flag = sanitizeJsonValue(previous.flag || requestData.flag || null);
+  const profile = {
+    uid,
+    displayName,
+    email: safeString(requestData.email || authToken.email || previous.email, 120),
+    photoURL: safeString(requestData.photoURL || authToken.picture || previous.photoURL, 300),
+    playerName,
+    flag,
+    resetGeneration: RESET_GENERATION,
+    worldId: ONLINE_WORLD_ID,
+    releaseId: REALM_RELEASE_ID,
+    cloudSaveSlot: `default-${RESET_GENERATION}`,
+    mainIslandId: islandId,
+    mainRegionId: regionId,
+    mainCityId: cityId,
+    mainCityAssignmentVersion: MAIN_CITY_ASSIGNMENT_VERSION,
+    gold: TEST_STARTING_GOLD,
+    goldFloat: TEST_STARTING_GOLD,
+    character: normalizeCharacterProgress({ level: CHARACTER_START_LEVEL, xp: CHARACTER_START_XP, skillPoints: 0 }),
+    upgrades: normalizeSkillUpgrades({}),
+    shopItems: createDefaultShopItems(),
+    itemEffects: normalizeItemEffects({}),
+    itemPurchaseCooldowns: normalizeItemPurchaseCooldowns({}),
+    daily: normalizeDaily({}, new Date(nowMs)),
+    harvestBonuses: [],
+    harvestSpawnTimer: HARVEST_BONUS_SPAWN_INTERVAL_SECONDS,
+    harvestNextSpawnAtMs: nowMs + HARVEST_BONUS_SPAWN_INTERVAL_SECONDS * 1000,
+    harvestNextBonusType: "gold",
+    scoutReports: {},
+    battleReports: [],
+    marchPercent: DEFAULT_MARCH_PERCENT,
+    gameSeconds: 0,
+    localGameSeconds: 0,
+    economyUpdatedAtMs: nowMs,
+    lastRealTimeMs: nowMs,
+    lastSeenAtMs: nowMs,
+    createdAt: previous.createdAt || FieldValue.serverTimestamp(),
+    updatedAt: FieldValue.serverTimestamp(),
+  };
+  if (previous.activeSession && typeof previous.activeSession === "object") {
+    profile.activeSession = sanitizeJsonValue(previous.activeSession);
+  }
+  if (previous.notificationPreferences && typeof previous.notificationPreferences === "object") {
+    profile.notificationPreferences = sanitizeJsonValue(previous.notificationPreferences);
+  }
+  return profile;
+}
+
+async function claimFreshStartingCity(request) {
+  const uid = requireAuth(request);
+  const data = request.data || {};
+  const authToken = request.auth?.token || {};
+  if (!STARTER_REGION_IDS.length) {
+    throw new HttpsError("failed-precondition", "No starter islands are configured.");
+  }
+
+  await Promise.all(STARTER_REGION_IDS.map(regionId => ensureMainIslandForPlayer(uid, { regionId })));
+  const shuffledCityIdsByRegion = new Map(
+    STARTER_REGION_IDS.map(regionId => [regionId, shuffleStartingCityIds(regionId)])
+  );
+  const playerRef = db.doc(`players/${uid}`);
+
+  const runClaimTransaction = async (transaction, placement) => {
+    const nowMs = Date.now();
+    const playerSnap = await transaction.get(playerRef);
+    const previous = playerSnap.exists ? playerSnap.data() || {} : {};
+    const currentProfile = safeString(previous.resetGeneration, 120) === RESET_GENERATION
+      && safeString(previous.worldId, 120) === ONLINE_WORLD_ID;
+    const existingMainCityId = safeString(previous.mainCityId, 96).replace(/[^a-zA-Z0-9_-]/g, "_");
+    const existingMainIslandId = safeString(previous.mainIslandId, 160);
+
+    if (currentProfile && existingMainCityId && isCurrentWorldIslandId(existingMainIslandId)) {
+      const existingMainRef = db.doc(`islands/${existingMainIslandId}/cities/${existingMainCityId}`);
+      const existingMainSnap = await transaction.get(existingMainRef);
+      if (existingMainSnap.exists && getOwnerUid(existingMainSnap.data() || {}) === uid) {
+        const existingRegionId = normalizeRegionId(
+          previous.mainRegionId || getRegionIdFromOnlineIslandId(existingMainIslandId)
+        );
+        return {
+          ok: true,
+          cityId: existingMainCityId,
+          islandId: existingMainIslandId,
+          mainRegionId: existingRegionId,
+          worldId: ONLINE_WORLD_ID,
+          resetGeneration: RESET_GENERATION,
+          releaseId: REALM_RELEASE_ID,
+          alreadyClaimed: true,
+          currentUser: {
+            playerName: normalizePlayerName(previous.playerName || previous.displayName),
+            flag: previous.flag || null,
+            gold: Math.max(0, Math.floor(safeNumber(previous.gold, TEST_STARTING_GOLD))),
+            character: normalizeCharacterProgress(previous.character),
+            mainCityId: existingMainCityId,
+            mainIslandId: existingMainIslandId,
+            mainRegionId: existingRegionId,
+            worldId: ONLINE_WORLD_ID,
+            resetGeneration: RESET_GENERATION,
+          },
+        };
+      }
+    }
+
+    const chosenIsland = placement.island;
+    const chosenIslandSnap = await transaction.get(chosenIsland.ref);
+    const placementSlotSnap = await transaction.get(placement.slotRef);
+    const placementSlot = placementSlotSnap.exists ? placementSlotSnap.data() || {} : {};
+    const currentPopulation = chosenIslandSnap.exists
+      ? Math.max(0, Math.floor(safeNumber(chosenIslandSnap.data()?.playerCount, 0)))
+      : -1;
+    if (
+      !chosenIslandSnap.exists
+      || safeString(chosenIslandSnap.data()?.resetGeneration, 120) !== RESET_GENERATION
+      || currentPopulation !== placement.expectedPopulation
+      || !placementSlotSnap.exists
+      || safeString(placementSlot.status, 24) !== "reserved"
+      || safeString(placementSlot.reservationId, 96) !== placement.reservationId
+    ) {
+      const contentionError = new Error("Starting-city placement changed while the claim was being prepared.");
+      contentionError.code = 10;
+      contentionError.details = "placement contention";
+      throw contentionError;
+    }
+    const candidateIds = shuffledCityIdsByRegion.get(chosenIsland.regionId) || [];
+
+    let chosenCityRef = null;
+    let chosenCity = null;
+    for (const cityId of candidateIds) {
+      const cityRef = db.doc(`islands/${chosenIsland.islandId}/cities/${cityId}`);
+      const citySnap = await transaction.get(cityRef);
+      if (!citySnap.exists) continue;
+      const city = { id: citySnap.id, ...citySnap.data() };
+      if (safeString(city.resetGeneration, 120) !== RESET_GENERATION) continue;
+      if (getOwnerUid(city) || isStronghold(city)) continue;
+      chosenCityRef = cityRef;
+      chosenCity = city;
+      break;
+    }
+    if (!chosenCityRef || !chosenCity) {
+      throw new HttpsError("resource-exhausted", "No unclaimed starting city is available.");
+    }
+
+    const freshProfile = createFreshResetPlayerProfile({
+      uid,
+      previous,
+      authToken,
+      requestData: data,
+      cityId: chosenCity.id,
+      islandId: chosenIsland.islandId,
+      regionId: chosenIsland.regionId,
+      nowMs,
+    });
+    const cityPatch = {
+      worldId: ONLINE_WORLD_ID,
+      resetGeneration: RESET_GENERATION,
+      ownerKind: "player",
+      ownerUid: uid,
+      ownerName: freshProfile.playerName,
+      ownerFlag: freshProfile.flag,
+      ownerKingPower: 0,
+      kingPowerVersion: GLOBAL_PLAYER_STATS_VERSION,
+      ownerShieldExpiresAtMs: 0,
+      troops: PLAYER_STARTING_TROOPS,
+      troopFloat: PLAYER_STARTING_TROOPS,
+      level: 1,
+      defense: 1,
+      investedGold: 0,
+      isMainCity: true,
+      claimedAt: FieldValue.serverTimestamp(),
+      productionUpdatedAtMs: nowMs,
+      relinquishedAtMs: 0,
+      relocatedAtMs: 0,
+      updatedAt: FieldValue.serverTimestamp(),
+    };
+    const stats = createGlobalStatsSnapshot({
+      uid,
+      profile: freshProfile,
+      cityEntries: [{
+        ref: chosenCityRef,
+        city: { ...chosenCity, ...cityPatch, id: chosenCity.id, regionId: chosenIsland.regionId },
+      }],
+      heldCamps: [],
+      activeArmies: [],
+      nowMs,
+    });
+
+    transaction.set(playerRef, {
+      ...freshProfile,
+      kingPower: stats.kingPower,
+      kingPowerVersion: GLOBAL_PLAYER_STATS_VERSION,
+      kingPowerUpdatedAtMs: nowMs,
+    });
+    transaction.set(chosenCityRef, cityPatch, { merge: true });
+    transaction.set(chosenIsland.ref, {
+      playerCount: placement.expectedPopulation + 1,
+      updatedAt: FieldValue.serverTimestamp(),
+    }, { merge: true });
+    transaction.set(placement.slotRef, {
+      status: "claimed",
+      expiresAtMs: 0,
+      claimedAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
+    }, { merge: true });
+    transaction.set(playerGlobalStatsRef(uid), stats);
+    transaction.set(leaderboardEntryRef(uid), {
+      uid,
+      displayName: freshProfile.playerName,
+      playerName: freshProfile.playerName,
+      flag: freshProfile.flag,
+      worldId: ONLINE_WORLD_ID,
+      resetGeneration: RESET_GENERATION,
+      kingPower: stats.kingPower,
+      kingPowerVersion: GLOBAL_PLAYER_STATS_VERSION,
+      kingPowerUpdatedAtMs: nowMs,
+      cityCount: 1,
+      totalTroops: PLAYER_STARTING_TROOPS,
+      mainCityId: chosenCity.id,
+      mainRegionId: chosenIsland.regionId,
+      mainIslandId: chosenIsland.islandId,
+      updatedAtMs: nowMs,
+      updatedAt: FieldValue.serverTimestamp(),
+    });
+    writeOwnershipChangeEvent(transaction, {
+      eventId: `claim_${uid}`,
+      targetType: "city",
+      targetId: chosenCity.id,
+      regionId: chosenIsland.regionId,
+      beforeOwnerUid: "",
+      afterOwnerUid: uid,
+      reason: "starting_city_claim",
+      nowMs,
+    });
+
+    return {
+      ok: true,
+      cityId: chosenCity.id,
+      islandId: chosenIsland.islandId,
+      mainRegionId: chosenIsland.regionId,
+      worldId: ONLINE_WORLD_ID,
+      resetGeneration: RESET_GENERATION,
+      releaseId: REALM_RELEASE_ID,
+      alreadyClaimed: false,
+      currentUser: {
+        playerName: freshProfile.playerName,
+        flag: freshProfile.flag,
+        gold: TEST_STARTING_GOLD,
+        character: freshProfile.character,
+        upgrades: freshProfile.upgrades,
+        shopItems: freshProfile.shopItems,
+        itemEffects: freshProfile.itemEffects,
+        itemPurchaseCooldowns: freshProfile.itemPurchaseCooldowns,
+        mainCityId: chosenCity.id,
+        mainIslandId: chosenIsland.islandId,
+        mainRegionId: chosenIsland.regionId,
+        worldId: ONLINE_WORLD_ID,
+        resetGeneration: RESET_GENERATION,
+        globalStats: globalStatsForClient(stats),
+      },
+    };
+  };
+
+  const releasePlacementReservation = async placement => {
+    if (!placement?.slotRef || !placement?.reservationId) return;
+    try {
+      const snapshot = await placement.slotRef.get();
+      const reservation = snapshot.exists ? snapshot.data() || {} : {};
+      if (
+        snapshot.exists
+        && safeString(reservation.status, 24) === "reserved"
+        && safeString(reservation.reservationId, 96) === placement.reservationId
+      ) {
+        await placement.slotRef.delete({ lastUpdateTime: snapshot.updateTime });
+      }
+    } catch (error) {
+      const code = Number(error?.code);
+      if (code !== 5 && code !== 9 && code !== 10) throw error;
+    }
+  };
+
+  const acquirePlacementReservation = async placement => {
+    const nowMs = Date.now();
+    const reservation = {
+      worldId: ONLINE_WORLD_ID,
+      resetGeneration: RESET_GENERATION,
+      regionId: placement.island.regionId,
+      islandId: placement.island.islandId,
+      populationOrdinal: placement.expectedPopulation,
+      claimedByUid: uid,
+      reservationId: placement.reservationId,
+      status: "reserved",
+      reservedAtMs: nowMs,
+      expiresAtMs: nowMs + 30_000,
+      createdAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
+    };
+    try {
+      await placement.slotRef.create(reservation);
+      return true;
+    } catch (error) {
+      const code = Number(error?.code);
+      const alreadyExists = code === 6
+        || safeString(error?.message, 240).toLowerCase().includes("already exists");
+      if (!alreadyExists) throw error;
+    }
+
+    return db.runTransaction(async transaction => {
+      const snapshot = await transaction.get(placement.slotRef);
+      const existing = snapshot.exists ? snapshot.data() || {} : {};
+      const expired = safeString(existing.status, 24) === "reserved"
+        && safeNumber(existing.expiresAtMs, 0) <= nowMs;
+      if (!snapshot.exists || expired) {
+        transaction.set(placement.slotRef, reservation);
+        return true;
+      }
+      return false;
+    }, { maxAttempts: 3 });
+  };
+
+  const maxContentionAttempts = 40;
+  for (let attempt = 1; attempt <= maxContentionAttempts; attempt += 1) {
+    const islandRefs = STARTER_REGION_IDS.map(regionId => db.doc(`islands/${getOnlineIslandId(regionId)}`));
+    const islandSnapshots = await db.getAll(...islandRefs);
+    const islandEntries = islandSnapshots.flatMap((snap, index) => {
+      const island = snap.exists ? snap.data() || {} : {};
+      if (!snap.exists || safeString(island.resetGeneration, 120) !== RESET_GENERATION) return [];
+      return [{
+        ref: snap.ref,
+        regionId: STARTER_REGION_IDS[index],
+        islandId: snap.id,
+        playerCount: Math.max(0, Math.floor(safeNumber(island.playerCount, 0))),
+      }];
+    });
+    if (!islandEntries.length) {
+      throw new HttpsError("failed-precondition", "Starter islands are still being prepared.");
+    }
+    const minimumPopulation = Math.min(...islandEntries.map(entry => entry.playerCount));
+    const leastPopulated = islandEntries.filter(entry => entry.playerCount === minimumPopulation);
+    const chosenIsland = leastPopulated[crypto.randomInt(0, leastPopulated.length)];
+    const placement = {
+      island: chosenIsland,
+      expectedPopulation: minimumPopulation,
+      reservationId: crypto.randomUUID(),
+      slotRef: db.doc(
+        `realmSeeds/${RESET_GENERATION}/startingSlots/${chosenIsland.regionId}_${minimumPopulation}`
+      ),
+    };
+
+    const reservationAcquired = await acquirePlacementReservation(placement);
+    if (!reservationAcquired) {
+      const reservationDelayMs = crypto.randomInt(10, Math.min(220, 20 + attempt * 12));
+      await new Promise(resolve => setTimeout(resolve, reservationDelayMs));
+      continue;
+    }
+
+    try {
+      const result = await db.runTransaction(
+        transaction => runClaimTransaction(transaction, placement),
+        { maxAttempts: 1 }
+      );
+      if (result?.alreadyClaimed) await releasePlacementReservation(placement);
+      return result;
+    } catch (error) {
+      await releasePlacementReservation(placement);
+      const errorCode = Number(error?.code);
+      const retryableContention = errorCode === 10
+        || safeString(error?.details, 200).toLowerCase().includes("transaction lock timeout")
+        || safeString(error?.message, 300).toLowerCase().includes("aborted");
+      if (!retryableContention || attempt >= maxContentionAttempts) throw error;
+
+      const backoffCeilingMs = Math.min(300, 15 * (2 ** Math.min(attempt - 1, 5)));
+      const retryDelayMs = crypto.randomInt(10, backoffCeilingMs + 11);
+      logOperation("claimStartingCityContention", Date.now(), request, "retry", {
+        attempt,
+        retryDelayMs,
+      });
+      await new Promise(resolve => setTimeout(resolve, retryDelayMs));
+    }
+  }
+
+  throw new HttpsError("aborted", "Starting-city placement is busy. Try again.");
+}
+
+exports.claimStartingCity = timedCallable(
+  "claimStartingCity",
+  { region: "us-central1", timeoutSeconds: 120, maxInstances: 20, invoker: "public" },
+  claimFreshStartingCity
+);
 
 exports.upgradeCity = onCall({ region: "us-central1", maxInstances: 20, invoker: "public" }, async request => {
   const uid = requireAuth(request);
@@ -6134,6 +6725,16 @@ exports.relinquishCity = onCall({ region: "us-central1", maxInstances: 20, invok
         nowMs,
       });
     }
+    writeOwnershipChangeEvent(transaction, {
+      eventId: `relinquish_${uid}_${source.id}_${nowMs}`,
+      targetType: "city",
+      targetId: source.id,
+      regionId: source.regionId || regionId,
+      beforeOwnerUid: uid,
+      afterOwnerUid: "",
+      reason: "city_relinquished",
+      nowMs,
+    });
 
     writePreparedEconomy(transaction, economy, {}, [
       { ref: sourceEntry.ref, city: source, patch: sourcePatch },
@@ -6615,6 +7216,8 @@ function clanPublicSnapshot(id = "", clan = {}) {
   const shield = normalizeClanShield(clan.shield || clan.banner);
   return {
     id,
+    worldId: safeString(clan.worldId, 120),
+    resetGeneration: safeString(clan.resetGeneration, 120),
     name: safeString(clan.name, 24),
     normalizedName: safeString(clan.normalizedName, 40),
     tag: safeString(clan.tag, 5),
@@ -6649,9 +7252,19 @@ function clanIdentityPatch(clanId = "", clan = {}, role = "") {
   };
 }
 
+function clanIdentityRevisionPatch(nowMs = Date.now()) {
+  return {
+    clanIdentityRevision: FieldValue.increment(1),
+    clanIdentityRevisionVersion: CLAN_IDENTITY_REVISION_VERSION,
+    clanIdentityUpdatedAtMs: nowMs,
+  };
+}
+
 function clanMemberSnapshot(uid = "", profile = {}, role = "member", nowMs = Date.now()) {
   return {
     uid,
+    worldId: ONLINE_WORLD_ID,
+    resetGeneration: RESET_GENERATION,
     role,
     displayName: normalizePlayerName(profile.playerName || profile.displayName || "Ruler"),
     flag: profile.flag || null,
@@ -6690,12 +7303,21 @@ function assertClanRole(member = {}, allowedRoles = []) {
   }
 }
 
+function assertCurrentClan(clan = {}) {
+  if (safeString(clan.resetGeneration, 120) !== RESET_GENERATION
+    || safeString(clan.worldId, 120) !== ONLINE_WORLD_ID) {
+    throw new HttpsError("failed-precondition", "That clan belongs to an archived Crownlands generation.");
+  }
+}
+
 function clanAuditRef(clanId = "") {
   return db.collection(`clans/${clanId}/audit`).doc();
 }
 
 function writeClanAudit(transaction, clanId, actorUid, action, details = {}, nowMs = Date.now()) {
   transaction.set(clanAuditRef(clanId), {
+    worldId: ONLINE_WORLD_ID,
+    resetGeneration: RESET_GENERATION,
     actorUid,
     action: safeString(action, 64),
     details,
@@ -6715,6 +7337,7 @@ function writeClanLeaderboard(transaction, clanId, clan = {}, patch = {}) {
     banner: clanShieldLegacyBanner(shield),
     memberCount: clampInt(combined.memberCount, 0, CLAN_MEMBER_LIMIT),
     totalKingPower: Math.max(0, Math.floor(safeNumber(combined.totalKingPower, 0))),
+    worldId: ONLINE_WORLD_ID,
     resetGeneration: RESET_GENERATION,
     updatedAtMs: Date.now(),
     updatedAt: FieldValue.serverTimestamp(),
@@ -6744,8 +7367,8 @@ exports.createClan = onCall({ region: "us-central1", maxInstances: 20, invoker: 
   const tag = normalizeClanTag(request.data?.tag);
   const clanId = db.collection("clans").doc().id;
   const clanRef = db.doc(`clans/${clanId}`);
-  const nameRef = db.doc(`clanNameReservations/${name.normalized}`);
-  const tagRef = db.doc(`clanTagReservations/${tag.normalized}`);
+  const nameRef = db.doc(`clanNameReservations/${RESET_GENERATION}_${name.normalized}`);
+  const tagRef = db.doc(`clanTagReservations/${RESET_GENERATION}_${tag.normalized}`);
   const profileRef = db.doc(`players/${uid}`);
   return db.runTransaction(async transaction => {
     const [profileSnap, nameSnap, tagSnap] = await Promise.all([
@@ -6770,6 +7393,9 @@ exports.createClan = onCall({ region: "us-central1", maxInstances: 20, invoker: 
     }
     const shield = normalizeClanShield(request.data?.shield || request.data?.banner);
     const clan = {
+      worldId: ONLINE_WORLD_ID,
+      resetGeneration: RESET_GENERATION,
+      releaseId: REALM_RELEASE_ID,
       name: name.display,
       normalizedName: name.normalized,
       tag: tag.display,
@@ -6798,6 +7424,7 @@ exports.createClan = onCall({ region: "us-central1", maxInstances: 20, invoker: 
     writePreparedEconomy(transaction, economy, {
       gold: availableGold - CLAN_CREATE_GOLD_COST,
       ...clanIdentityPatch(clanId, clan, "leader"),
+      ...clanIdentityRevisionPatch(nowMs),
     });
     transaction.set(leaderboardEntryRef(uid), clanIdentityPatch(clanId, clan, "leader"), { merge: true });
     writeClanLeaderboard(transaction, clanId, clan);
@@ -6840,6 +7467,7 @@ exports.updateClanProfile = onCall({ region: "us-central1", maxInstances: 20, in
 async function joinClanTransaction(transaction, { uid, clanId, profileSnap, clanSnap, applicationRef = null, nowMs = Date.now() }) {
   const profile = profileSnap.data() || {};
   const clan = clanSnap.data() || {};
+  assertCurrentClan(clan);
   assertClanUnlocked(profile);
   assertNoClan(profile, nowMs, applicationRef ? clanId : "");
   if (clan.status !== "active") throw new HttpsError("failed-precondition", "That clan is no longer active.");
@@ -6859,6 +7487,7 @@ async function joinClanTransaction(transaction, { uid, clanId, profileSnap, clan
   }, { merge: true });
   transaction.set(profileSnap.ref, {
     ...clanIdentityPatch(clanId, clan, "member"),
+    ...clanIdentityRevisionPatch(nowMs),
     clanJoinCooldownUntilMs: FieldValue.delete(),
     updatedAt: FieldValue.serverTimestamp(),
   }, { merge: true });
@@ -6897,6 +7526,7 @@ exports.applyToClan = onCall({ region: "us-central1", maxInstances: 30, invoker:
     if (!profileSnap.exists || !clanSnap.exists) throw new HttpsError("not-found", "Player or clan was not found.");
     const profile = profileSnap.data() || {};
     const clan = clanSnap.data() || {};
+    assertCurrentClan(clan);
     assertClanUnlocked(profile);
     assertNoClan(profile, nowMs, clanId);
     if (clan.admissionMode !== "approval") throw new HttpsError("failed-precondition", "That clan is open to direct joining.");
@@ -6908,6 +7538,8 @@ exports.applyToClan = onCall({ region: "us-central1", maxInstances: 30, invoker:
     transaction.set(applicationSnap.ref, {
       uid,
       clanId,
+      worldId: ONLINE_WORLD_ID,
+      resetGeneration: RESET_GENERATION,
       displayName: normalizePlayerName(profile.playerName || profile.displayName),
       flag: profile.flag || null,
       kingPower: Math.max(0, Math.floor(safeNumber(profile.kingPower, 0))),
@@ -6986,6 +7618,7 @@ async function removeClanMember({ actorUid, targetUid, clanId, reason = "left" }
     if (targetProfileSnap.exists) {
       transaction.set(targetProfileSnap.ref, {
         ...clanIdentityPatch(),
+        ...clanIdentityRevisionPatch(nowMs),
         pendingClanApplicationId: FieldValue.delete(),
         clanJoinCooldownUntilMs: nowMs + CLAN_JOIN_COOLDOWN_MS,
         updatedAt: FieldValue.serverTimestamp(),
@@ -7129,6 +7762,8 @@ exports.sendClanMessage = onCall({ region: "us-central1", maxInstances: 30, invo
   if (!memberSnap.exists) throw new HttpsError("permission-denied", "Clan membership could not be verified.");
   const ref = db.collection(`clans/${clanId}/messages`).doc();
   const message = {
+    worldId: ONLINE_WORLD_ID,
+    resetGeneration: RESET_GENERATION,
     senderUid: uid,
     senderName: normalizePlayerName(profile.playerName || profile.displayName),
     senderRole: memberSnap.data()?.role || "member",
@@ -7179,7 +7814,12 @@ exports.cleanupClanMessages = onSchedule({
   maxInstances: 1,
 }, async () => {
   const nowMs = Date.now();
-  const clansSnap = await db.collection("clans").where("status", "==", "active").limit(500).get();
+  const clansSnap = await db.collection("clans")
+    .where("status", "==", "active")
+    .where("resetGeneration", "==", RESET_GENERATION)
+    .where("worldId", "==", ONLINE_WORLD_ID)
+    .limit(500)
+    .get();
   for (const clanDoc of clansSnap.docs) {
     const messagesSnap = await clanDoc.ref.collection("messages").orderBy("createdAtMs", "desc").limit(700).get();
     const expiredOrExcess = messagesSnap.docs.filter((messageDoc, index) => (
@@ -7193,16 +7833,132 @@ exports.cleanupClanMessages = onSchedule({
   }
 });
 
+function clanIdentitySnapshotFields(identity = {}, revision = 0, target = "asset") {
+  const isLeaderboard = target === "leaderboard";
+  const patch = isLeaderboard
+    ? {
+      clanIdentityRevision: revision,
+      clanIdentityRevisionVersion: CLAN_IDENTITY_REVISION_VERSION,
+    }
+    : {
+      ownerClanIdentityRevision: revision,
+      ownerClanIdentityRevisionVersion: CLAN_IDENTITY_REVISION_VERSION,
+    };
+  if (identity.clanId) {
+    if (isLeaderboard) {
+      patch.clanId = identity.clanId;
+      patch.clanName = identity.clanName;
+      patch.clanTag = identity.clanTag;
+    } else {
+      patch.ownerClanId = identity.clanId;
+      patch.ownerClanName = identity.clanName;
+      patch.ownerClanTag = identity.clanTag;
+    }
+  } else if (isLeaderboard) {
+    patch.clanId = FieldValue.delete();
+    patch.clanName = FieldValue.delete();
+    patch.clanTag = FieldValue.delete();
+  } else {
+    patch.ownerClanId = FieldValue.delete();
+    patch.ownerClanName = FieldValue.delete();
+    patch.ownerClanTag = FieldValue.delete();
+  }
+  patch.updatedAt = FieldValue.serverTimestamp();
+  return patch;
+}
+
+function hasClanIdentitySnapshot(data = {}, identity = {}, revision = 0, target = "asset") {
+  const isLeaderboard = target === "leaderboard";
+  const storedRevision = Math.max(0, Math.floor(safeNumber(
+    isLeaderboard ? data.clanIdentityRevision : data.ownerClanIdentityRevision,
+    0
+  )));
+  if (storedRevision !== revision) return false;
+  return safeString(isLeaderboard ? data.clanId : data.ownerClanId, 128) === identity.clanId
+    && safeString(isLeaderboard ? data.clanName : data.ownerClanName, 24) === identity.clanName
+    && safeString(isLeaderboard ? data.clanTag : data.ownerClanTag, 5) === identity.clanTag;
+}
+
+async function writeClanIdentitySnapshot(ref, identity = {}, revision = 0, target = "asset") {
+  await db.runTransaction(async transaction => {
+    const snapshot = await transaction.get(ref);
+    if (!snapshot.exists) return;
+    const data = snapshot.data() || {};
+    const isLeaderboard = target === "leaderboard";
+    const storedRevision = Math.max(0, Math.floor(safeNumber(
+      isLeaderboard ? data.clanIdentityRevision : data.ownerClanIdentityRevision,
+      0
+    )));
+    if (storedRevision > revision || hasClanIdentitySnapshot(data, identity, revision, target)) return;
+    transaction.set(ref, clanIdentitySnapshotFields(identity, revision, target), { merge: true });
+  });
+}
+
+exports.syncClanIdentityOnMembershipChange = onDocumentWritten({
+  region: "us-central1",
+  document: "players/{uid}",
+  maxInstances: 20,
+}, async event => {
+  const uid = safeString(event.params?.uid, 128);
+  const before = event.data?.before?.exists ? event.data.before.data() || {} : {};
+  const after = event.data?.after?.exists ? event.data.after.data() || {} : {};
+  const beforeRevision = Math.max(0, Math.floor(safeNumber(before.clanIdentityRevision, 0)));
+  const afterRevision = Math.max(0, Math.floor(safeNumber(after.clanIdentityRevision, 0)));
+  const membershipChanged = beforeRevision !== afterRevision
+    || safeString(before.clanId, 128) !== safeString(after.clanId, 128)
+    || safeString(before.clanName, 24) !== safeString(after.clanName, 24)
+    || safeString(before.clanTag, 5) !== safeString(after.clanTag, 5);
+  if (!uid || !event.data?.after?.exists || !membershipChanged) return;
+
+  const latestProfileSnap = await db.doc(`players/${uid}`).get();
+  if (!latestProfileSnap.exists) return;
+  const latestProfile = latestProfileSnap.data() || {};
+  const revision = Math.max(0, Math.floor(safeNumber(latestProfile.clanIdentityRevision, 0)));
+  if (!revision || revision !== afterRevision) return;
+  const identity = getCanonicalPlayerIdentity(uid, latestProfile, {}, {});
+  const [ownedCitiesSnap, activeArmiesSnap] = await Promise.all([
+    db.collectionGroup("cities")
+      .where("ownerUid", "==", uid)
+      .where("resetGeneration", "==", RESET_GENERATION)
+      .where("worldId", "==", ONLINE_WORLD_ID)
+      .get(),
+    activeArmiesQueryForPlayer(uid).get(),
+  ]);
+  const targetRefs = [
+    ...ownedCitiesSnap.docs.filter(cityDoc => {
+      const islandId = safeString(cityDoc.ref.parent.parent?.id, 160);
+      return isCurrentWorldIslandId(islandId);
+    }).map(cityDoc => ({ ref: cityDoc.ref, target: "asset" })),
+    ...activeArmiesSnap.docs.filter(armyDoc => isCurrentWorldArmy({
+      id: armyDoc.id,
+      ...armyDoc.data(),
+    })).map(armyDoc => ({ ref: armyDoc.ref, target: "asset" })),
+    { ref: leaderboardEntryRef(uid), target: "leaderboard" },
+  ];
+
+  for (let index = 0; index < targetRefs.length; index += 25) {
+    await Promise.all(targetRefs.slice(index, index + 25).map(entry => (
+      writeClanIdentitySnapshot(entry.ref, identity, revision, entry.target)
+    )));
+  }
+});
+
 exports.rebuildClanPowerOnPlayerStats = onDocumentWritten({
   region: "us-central1",
   document: "players/{uid}/stats/global",
   maxInstances: 20,
 }, async event => {
   const uid = safeString(event.params?.uid, 128);
+  const beforeStats = event.data?.before?.exists ? event.data.before.data() || {} : {};
+  const afterStats = event.data?.after?.exists ? event.data.after.data() || {} : {};
+  if (safeString(afterStats.resetGeneration, 120) !== RESET_GENERATION) return;
+  const previousStatsPower = Math.max(0, Math.floor(safeNumber(beforeStats.kingPower, 0)));
+  const nextPower = Math.max(0, Math.floor(safeNumber(afterStats.kingPower, 0)));
+  if (previousStatsPower === nextPower) return;
   const profile = (await db.doc(`players/${uid}`).get()).data() || {};
+  if (safeString(profile.resetGeneration, 120) !== RESET_GENERATION) return;
   const clanId = safeString(profile.clanId, 128);
   if (!clanId) return;
-  const nextPower = Math.max(0, Math.floor(safeNumber(event.data?.after?.data()?.kingPower, 0)));
   await db.runTransaction(async transaction => {
     const [clanSnap, memberSnap] = await Promise.all([
       transaction.get(db.doc(`clans/${clanId}`)),
@@ -7323,7 +8079,7 @@ exports.previewArmyProtection = onCall({ region: "us-central1", maxInstances: 20
   });
 });
 
-exports.sendArmyOrder = onCall({ region: "us-central1", maxInstances: 20, invoker: "public" }, async request => {
+exports.sendArmyOrder = timedCallable("sendArmyOrder", { region: "us-central1", maxInstances: 20, invoker: "public" }, async request => {
   const uid = requireAuth(request);
   const nowMs = Date.now();
   const order = normalizeArmyPayload(request.data || {}, uid);
@@ -7353,7 +8109,7 @@ exports.sendArmyOrder = onCall({ region: "us-central1", maxInstances: 20, invoke
   let armyRefs = [canonicalArmyRef(order.id)];
   const legacyArmyRef = db.doc(`islands/${getOnlineIslandId(order.sourceRegionId)}/armies/${order.id}`);
   const playerRef = db.doc(`players/${uid}`);
-  const attackerLeaderboardRef = db.doc(`leaderboards/kingPower/entries/${uid}`);
+  const attackerLeaderboardRef = leaderboardEntryRef(uid);
 
   const result = await db.runTransaction(async transaction => {
     const [sourceSnap, targetSnap, canonicalArmySnap, legacyArmySnap, playerSnap, attackerLeaderboardSnap] = await Promise.all([
@@ -7426,7 +8182,7 @@ exports.sendArmyOrder = onCall({ region: "us-central1", maxInstances: 20, invoke
     const [defenderPowerSnap, defenderLeaderboardSnap, defenderGlobalStatsSnap] = targetOwnerUid && targetOwnerUid !== uid
       ? await Promise.all([
         transaction.get(db.doc(`players/${targetOwnerUid}`)),
-        transaction.get(db.doc(`leaderboards/kingPower/entries/${targetOwnerUid}`)),
+        transaction.get(leaderboardEntryRef(targetOwnerUid)),
         transaction.get(playerGlobalStatsRef(targetOwnerUid)),
       ])
       : [null, null, null];
@@ -8202,6 +8958,18 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
 
       writeParticipantEconomies();
       transaction.set(targetRef, campPatch, { merge: true });
+      if (battle.success) {
+        writeOwnershipChangeEvent(transaction, {
+          eventId: `army_${armyId}_camp_${target.id}`,
+          targetType: "camp",
+          targetId: target.id,
+          regionId: targetRegionId,
+          beforeOwnerUid: defenderUid,
+          afterOwnerUid: attackerUid,
+          reason: "camp_captured",
+          nowMs,
+        });
+      }
       writeReport(transaction, attackerUid, attackerReport, attackerProfileSnap);
       reports.push(attackerReport);
 
@@ -8621,6 +9389,16 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
         relocatedAtMs: 0,
       };
       transaction.set(targetRef, cleanCityUpdate(target, targetPatch), { merge: true });
+      writeOwnershipChangeEvent(transaction, {
+        eventId: `army_${armyId}_city_${target.id}`,
+        targetType: "city",
+        targetId: target.id,
+        regionId: targetRegionId,
+        beforeOwnerUid: oldOwnerUid,
+        afterOwnerUid: attackerUid,
+        reason: "city_captured",
+        nowMs,
+      });
       const targetCityUpdate = { id: target.id, regionId: targetRegionId, ...targetPatch };
       cityUpdates.push(targetCityUpdate);
 
@@ -8867,7 +9645,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
   });
 }
 
-exports.resolveArmyOrder = onCall({ region: "us-central1", maxInstances: 30, invoker: "public" }, async request => {
+exports.resolveArmyOrder = timedCallable("resolveArmyOrder", { region: "us-central1", maxInstances: 30, invoker: "public" }, async request => {
   const callerUid = requireAuth(request);
   const data = request.data || {};
   const armyId = safeString(data.armyId || data.id, 96).replace(/[^a-zA-Z0-9_-]/g, "_");
@@ -8880,6 +9658,8 @@ async function refreshActiveArmyTargetOwner(targetKey = "", targetOwnerUid = "")
   if (!safeTargetKey) return 0;
   const snapshot = await db.collection("armies")
     .where("targetKey", "==", safeTargetKey)
+    .where("resetGeneration", "==", RESET_GENERATION)
+    .where("worldId", "==", ONLINE_WORLD_ID)
     .where("status", "==", "active")
     .limit(400)
     .get();
@@ -8897,40 +9677,93 @@ async function refreshActiveArmyTargetOwner(targetKey = "", targetOwnerUid = "")
   return snapshot.size;
 }
 
-function getOwnerUidFromWrittenTarget(data = {}, targetType = "city") {
-  return targetType === "camp"
-    ? safeString(data.holderUid || data.ownerUid, 128)
-    : safeString(data.ownerUid, 128);
+function ownershipChangeRef(eventId = "") {
+  const safeEventId = safeString(eventId, 180).replace(/[^a-zA-Z0-9_-]/g, "_");
+  return safeEventId
+    ? db.doc(`realmEvents/${RESET_GENERATION}/ownershipChanges/${safeEventId}`)
+    : null;
 }
 
-async function handleTargetOwnershipWrite(event, targetType = "city") {
-  const before = event.data?.before?.exists ? event.data.before.data() || {} : {};
-  const after = event.data?.after?.exists ? event.data.after.data() || {} : {};
-  const beforeOwnerUid = getOwnerUidFromWrittenTarget(before, targetType);
-  const afterOwnerUid = getOwnerUidFromWrittenTarget(after, targetType);
-  if (beforeOwnerUid === afterOwnerUid) return;
-  const islandId = safeString(event.params?.islandId, 160);
-  if (!isCurrentWorldIslandId(islandId)) return;
-  const regionId = getRegionIdFromOnlineIslandId(islandId);
-  const targetId = safeString(targetType === "camp" ? event.params?.campId : event.params?.cityId, 96);
-  await refreshActiveArmyTargetOwner(`${regionId}:${targetId}`, afterOwnerUid);
+function writeOwnershipChangeEvent(transaction, {
+  eventId = "",
+  targetType = "city",
+  targetId = "",
+  regionId = "",
+  beforeOwnerUid = "",
+  afterOwnerUid = "",
+  reason = "",
+  nowMs = Date.now(),
+} = {}) {
+  const previousOwnerUid = safeString(beforeOwnerUid, 128);
+  const nextOwnerUid = safeString(afterOwnerUid, 128);
+  if (!transaction || previousOwnerUid === nextOwnerUid) return null;
+  const normalizedTargetType = targetType === "camp" ? "camp" : "city";
+  const normalizedRegionId = requireKnownWorldRegionId(regionId);
+  const normalizedTargetId = safeString(targetId, 96).replace(/[^a-zA-Z0-9_-]/g, "_");
+  const ref = ownershipChangeRef(eventId);
+  if (!ref || !normalizedTargetId) return null;
+  transaction.set(ref, {
+    eventId: ref.id,
+    worldId: ONLINE_WORLD_ID,
+    resetGeneration: RESET_GENERATION,
+    releaseId: REALM_RELEASE_ID,
+    targetType: normalizedTargetType,
+    targetId: normalizedTargetId,
+    regionId: normalizedRegionId,
+    targetKey: `${normalizedRegionId}:${normalizedTargetId}`,
+    beforeOwnerUid: previousOwnerUid,
+    afterOwnerUid: nextOwnerUid,
+    reason: safeString(reason, 64),
+    status: "pending",
+    attempts: 0,
+    createdAtMs: nowMs,
+    createdAt: FieldValue.serverTimestamp(),
+    updatedAt: FieldValue.serverTimestamp(),
+  });
+  return ref;
+}
+
+async function processOwnershipChangeEvent(event) {
+  const startedAtMs = Date.now();
+  const snapshot = event.data;
+  if (!snapshot?.exists) return null;
+  const change = snapshot.data() || {};
+  if (event.params?.resetGeneration !== RESET_GENERATION) return null;
+  if (safeString(change.worldId, 120) !== ONLINE_WORLD_ID) return null;
+  if (change.status === "processed") return null;
+  const targetType = change.targetType === "camp" ? "camp" : "city";
+  const beforeOwnerUid = safeString(change.beforeOwnerUid, 128);
+  const afterOwnerUid = safeString(change.afterOwnerUid, 128);
+  const armyUpdates = await refreshActiveArmyTargetOwner(change.targetKey, afterOwnerUid);
+  let statsUpdates = 0;
   if (targetType === "camp") {
     const affectedUids = [...new Set([beforeOwnerUid, afterOwnerUid].filter(Boolean))];
-    await Promise.all(affectedUids.map(uid => rebuildGlobalStatsForPlayer(uid)));
+    const results = await Promise.allSettled(affectedUids.map(uid => rebuildGlobalStatsForPlayer(uid)));
+    const failure = results.find(result => result.status === "rejected");
+    if (failure) throw failure.reason;
+    statsUpdates = results.length;
   }
+  await snapshot.ref.set({
+    status: "processed",
+    attempts: FieldValue.increment(1),
+    processedAtMs: Date.now(),
+    processedAt: FieldValue.serverTimestamp(),
+    updatedAt: FieldValue.serverTimestamp(),
+  }, { merge: true });
+  logOperation("processOwnershipChange", startedAtMs, null, "ok", {
+    targetType,
+    armyUpdates,
+    statsUpdates,
+  });
+  return { armyUpdates, statsUpdates };
 }
 
-exports.syncCityArmyTargetOwner = onDocumentWritten({
+exports.processOwnershipChange = onDocumentCreated({
   region: "us-central1",
-  document: "islands/{islandId}/cities/{cityId}",
+  document: "realmEvents/{resetGeneration}/ownershipChanges/{eventId}",
   maxInstances: 20,
-}, event => handleTargetOwnershipWrite(event, "city"));
-
-exports.syncCampArmyTargetOwner = onDocumentWritten({
-  region: "us-central1",
-  document: "islands/{islandId}/camps/{campId}",
-  maxInstances: 20,
-}, event => handleTargetOwnershipWrite(event, "camp"));
+  retry: true,
+}, processOwnershipChangeEvent);
 
 function getUtcDateKey(nowMs = Date.now()) {
   return new Date(nowMs).toISOString().slice(0, 10);
@@ -9058,7 +9891,8 @@ async function resolveRewardCampPayoutByRef(campRef, nowMs = Date.now(), callerU
     const claimsSnap = claimsRef ? await transaction.get(claimsRef) : null;
     const playerStatsSnap = await transaction.get(playerStatsRef);
     const player = playerSnap.exists ? playerSnap.data() || {} : {};
-    const claimData = claimsSnap?.exists ? claimsSnap.data() || {} : {};
+    const rawClaimData = claimsSnap?.exists ? claimsSnap.data() || {} : {};
+    const claimData = safeString(rawClaimData.resetGeneration, 120) === RESET_GENERATION ? rawClaimData : {};
     const playerStats = playerStatsSnap.exists ? playerStatsSnap.data() || {} : {};
     const today = getUtcDateKey(nowMs);
     const priorClaims = claimData.date === today
@@ -9244,6 +10078,16 @@ async function resolveRewardCampPayoutByRef(campRef, nowMs = Date.now(), callerU
         cleanCityUpdate(deedCityAward.city, deedCityPatch),
         { merge: true }
       );
+      writeOwnershipChangeEvent(transaction, {
+        eventId: `camp_payout_${camp.id}_city_${deedCityAward.city.id}_${payoutAtMs}`,
+        targetType: "city",
+        targetId: deedCityAward.city.id,
+        regionId: deedCityAward.regionId,
+        beforeOwnerUid: getOwnerUid(deedCityAward.city),
+        afterOwnerUid: holderUid,
+        reason: "deed_city_awarded",
+        nowMs,
+      });
       deedHistoryEntry = {
         campId: camp.id,
         cityId: deedCityAward.city.id,
@@ -9315,8 +10159,20 @@ async function resolveRewardCampPayoutByRef(campRef, nowMs = Date.now(), callerU
       updatedAt: FieldValue.serverTimestamp(),
     };
     transaction.set(campRef, campPatch, { merge: true });
+    writeOwnershipChangeEvent(transaction, {
+      eventId: `camp_payout_${camp.id}_${payoutAtMs}`,
+      targetType: "camp",
+      targetId: camp.id,
+      regionId: camp.regionId,
+      beforeOwnerUid: holderUid,
+      afterOwnerUid: "",
+      reason: "camp_payout_completed",
+      nowMs,
+    });
     if (claimsRef) {
       transaction.set(claimsRef, {
+        worldId: ONLINE_WORLD_ID,
+        resetGeneration: RESET_GENERATION,
         date: today,
         count: nextClaims,
         lastReward: reward,
@@ -9600,6 +10456,16 @@ exports.recallRewardCampGarrison = onCall({ region: "us-central1", maxInstances:
       updatedAt: FieldValue.serverTimestamp(),
     };
     transaction.set(campRef, campPatch, { merge: true });
+    writeOwnershipChangeEvent(transaction, {
+      eventId: `camp_recall_${camp.id}_${nowMs}`,
+      targetType: "camp",
+      targetId: camp.id,
+      regionId,
+      beforeOwnerUid: uid,
+      afterOwnerUid: "",
+      reason: "camp_recalled",
+      nowMs,
+    });
 
     return {
       ok: true,
@@ -9643,6 +10509,8 @@ async function loadDueArmyTargets(nowMs = Date.now()) {
   const [canonicalSnap, legacySnap] = await Promise.all([
     db.collection("armies")
       .where("status", "==", "active")
+      .where("resetGeneration", "==", RESET_GENERATION)
+      .where("worldId", "==", ONLINE_WORLD_ID)
       .where("arrivesAtMs", "<=", nowMs)
       .orderBy("arrivesAtMs", "asc")
       .limit(SCHEDULED_ARMY_RESOLVE_SCAN_LIMIT)
@@ -9650,6 +10518,8 @@ async function loadDueArmyTargets(nowMs = Date.now()) {
     // Keep resolving pre-migration marches until every legacy view has settled.
     db.collectionGroup("armies")
       .where("status", "==", "active")
+      .where("resetGeneration", "==", RESET_GENERATION)
+      .where("worldId", "==", ONLINE_WORLD_ID)
       .where("arrivesAtMs", "<=", nowMs)
       .orderBy("arrivesAtMs", "asc")
       .limit(Math.min(100, SCHEDULED_ARMY_RESOLVE_SCAN_LIMIT))
@@ -9737,6 +10607,8 @@ exports.resolveDueArmyOrders = onSchedule({
   });
 
   console.log("Scheduled army resolution finished", {
+    releaseId: REALM_RELEASE_ID,
+    resetGeneration: RESET_GENERATION,
     scanned: targets.length,
     resolved,
     skipped,
@@ -9755,6 +10627,8 @@ exports.resolveDueRewardCampPayouts = onSchedule({
   const nowMs = Date.now();
   const due = await db.collectionGroup("camps")
     .where("payoutPending", "==", true)
+    .where("resetGeneration", "==", RESET_GENERATION)
+    .where("worldId", "==", ONLINE_WORLD_ID)
     .where("payoutAtMs", "<=", nowMs)
     .limit(REWARD_CAMP_PAYOUT_SCAN_LIMIT)
     .get();

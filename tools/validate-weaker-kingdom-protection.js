@@ -8,6 +8,9 @@ const clientSource = fs.readFileSync(path.join(root, "game.js"), "utf8");
 const firebaseClientSource = fs.readFileSync(path.join(root, "firebaseClient.js"), "utf8");
 const stylesSource = fs.readFileSync(path.join(root, "styles.css"), "utf8");
 const firestoreRulesSource = fs.readFileSync(path.join(root, "firestore.rules"), "utf8");
+const realmConfig = JSON.parse(
+  fs.readFileSync(path.join(root, "functions", "release-config.json"), "utf8")
+);
 
 function readFunction(text, name) {
   const start = text.indexOf(`function ${name}(`);
@@ -48,11 +51,8 @@ numericConstants.forEach(name => {
 sandbox.ATTACK_PROTECTION_DEFENDER_XP_POLICY = vm.runInNewContext(
   readConstant(source, "ATTACK_PROTECTION_DEFENDER_XP_POLICY")
 );
-sandbox.RESET_GENERATION = vm.runInNewContext(readConstant(source, "RESET_GENERATION"));
-sandbox.ONLINE_WORLD_ID = vm.runInNewContext(
-  readConstant(source, "ONLINE_WORLD_ID"),
-  { RESET_GENERATION: sandbox.RESET_GENERATION }
-);
+sandbox.RESET_GENERATION = String(realmConfig.resetGeneration || "fresh-2026-07-26-server-reset");
+sandbox.ONLINE_WORLD_ID = String(realmConfig.worldId || `main-${sandbox.RESET_GENERATION}`);
 sandbox.DEMO_ATTACK_TIERS = vm.runInNewContext(
   readConstant(source, "DEMO_ATTACK_TIERS").replace(
     /DEMO_ATTACK_MIN_POWER_RATIO/g,

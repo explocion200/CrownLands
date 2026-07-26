@@ -4,6 +4,10 @@
   const ACTIVE_SESSION_STORAGE_KEY = "crownlands-active-session-id";
   const PLAYER_NAME_MAX_LENGTH = 18;
   const DEFAULT_GAME_SERVER_ID = "crown-marches";
+  const REALM_CONFIG = window.CROWNLANDS_REALM_CONFIG || {};
+  const RESET_GENERATION = String(REALM_CONFIG.resetGeneration || "fresh-2026-07-26-server-reset");
+  const ONLINE_WORLD_ID = String(REALM_CONFIG.worldId || `main-${RESET_GENERATION}`);
+  const APP_RELEASE_ID = String(REALM_CONFIG.releaseId || "");
   const ROYAL_PEACE_SHIELD_ITEM_ID = "shield_12h";
   const ROYAL_PEACE_SHIELD_COST = 175_000;
 
@@ -128,7 +132,18 @@
       doc(client.db, "players", uid),
       snapshot => {
         if (!snapshot.exists()) return;
-        const activeSession = snapshot.data()?.activeSession || {};
+        const profile = snapshot.data() || {};
+        const isCurrentRealm = String(profile.resetGeneration || "") === RESET_GENERATION
+          && String(profile.worldId || "") === ONLINE_WORLD_ID;
+        dispatch("player-clan", {
+          clanId: isCurrentRealm ? String(profile.clanId || "") : "",
+          clanName: isCurrentRealm ? String(profile.clanName || "") : "",
+          clanTag: isCurrentRealm ? String(profile.clanTag || "") : "",
+          clanRole: isCurrentRealm ? String(profile.clanRole || "") : "",
+          pendingClanApplicationId: isCurrentRealm ? String(profile.pendingClanApplicationId || "") : "",
+          clanJoinCooldownUntilMs: isCurrentRealm ? timestampToMs(profile.clanJoinCooldownUntilMs) : 0,
+        });
+        const activeSession = profile.activeSession || {};
         const remoteSessionId = String(activeSession.id || "");
         const localSessionId = getActiveSessionId();
         if (!remoteSessionId || !localSessionId || remoteSessionId === localSessionId) return;
@@ -253,7 +268,12 @@
       throw new Error("Firebase Functions did not load.");
     }
     const callable = client.modules.functions.httpsCallable(client.functions, name);
-    const result = await callable(sanitizeForFirestore(payload) || {});
+    const result = await callable(sanitizeForFirestore({
+      ...payload,
+      clientReleaseId: APP_RELEASE_ID,
+      clientResetGeneration: RESET_GENERATION,
+      clientWorldId: ONLINE_WORLD_ID,
+    }) || {});
     return result?.data || null;
   }
 
@@ -281,6 +301,9 @@
       serverId: String(serverId || DEFAULT_GAME_SERVER_ID).slice(0, 64),
       sessionId: getActiveSessionId(),
       displayName: cleanPlayerName(client.user?.displayName || "Ruler"),
+      releaseId: APP_RELEASE_ID,
+      resetGeneration: RESET_GENERATION,
+      worldId: ONLINE_WORLD_ID,
     };
   }
 
@@ -303,7 +326,12 @@
       doc(client.db, "players", client.user.uid, "serverMembership", "current"),
       snapshot => {
         if (typeof handlers.onMembership === "function") {
-          handlers.onMembership(snapshot.exists() ? { id: snapshot.id, ...snapshot.data() } : null);
+          const membership = snapshot.exists() ? { id: snapshot.id, ...snapshot.data() } : null;
+          handlers.onMembership(
+            membership?.resetGeneration === RESET_GENERATION && membership?.worldId === ONLINE_WORLD_ID
+              ? membership
+              : null
+          );
         }
       },
       error => {
@@ -455,7 +483,9 @@
     if (!requireSignedIn() || !clanId) return null;
     const { doc, getDoc } = client.modules.firestore;
     const snapshot = await getDoc(doc(client.db, "clans", String(clanId).slice(0, 128)));
-    return snapshot.exists() ? { id: snapshot.id, ...snapshot.data() } : null;
+    if (!snapshot.exists()) return null;
+    const clan = { id: snapshot.id, ...snapshot.data() };
+    return clan.resetGeneration === RESET_GENERATION && clan.worldId === ONLINE_WORLD_ID ? clan : null;
   }
 
   async function searchClans(searchText = "", limitCount = 30) {
@@ -466,8 +496,8 @@
     const normalized = String(searchText || "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
     const base = collection(client.db, "clans");
     const clanQuery = normalized
-      ? query(base, where("status", "==", "active"), orderBy("normalizedName"), startAt(normalized), endAt(`${normalized}\uf8ff`), limit(safeLimit))
-      : query(base, where("status", "==", "active"), orderBy("normalizedName"), limit(safeLimit));
+      ? query(base, where("resetGeneration", "==", RESET_GENERATION), where("worldId", "==", ONLINE_WORLD_ID), where("status", "==", "active"), orderBy("normalizedName"), startAt(normalized), endAt(`${normalized}\uf8ff`), limit(safeLimit))
+      : query(base, where("resetGeneration", "==", RESET_GENERATION), where("worldId", "==", ONLINE_WORLD_ID), where("status", "==", "active"), orderBy("normalizedName"), limit(safeLimit));
     const snapshot = await getDocs(clanQuery);
     return snapshot.docs.map(item => ({ id: item.id, ...item.data() }));
   }
@@ -497,7 +527,7 @@
     if (!requireSignedIn()) return [];
     const { collection, getDocs, query, orderBy, limit } = client.modules.firestore;
     const snapshot = await getDocs(query(
-      collection(client.db, "clanLeaderboards", "fresh-2026-07-05-server-reset", "entries"),
+      collection(client.db, "clanLeaderboards", RESET_GENERATION, "entries"),
       orderBy("totalKingPower", "desc"),
       limit(Math.max(1, Math.min(100, Math.floor(Number(limitCount) || 100))))
     ));
@@ -519,6 +549,42 @@
     );
   }
 
+  function subscribeClanState(clanId = "", handlers = {}) {
+    if (!client.db || !client.modules?.firestore?.onSnapshot || !client.user?.uid || !clanId) return () => {};
+    const { collection, doc, onSnapshot, query, orderBy } = client.modules.firestore;
+    const safeClanId = String(clanId).slice(0, 128);
+    const unsubscribers = [
+      onSnapshot(
+        doc(client.db, "clans", safeClanId),
+        snapshot => {
+          if (typeof handlers.onClan === "function") {
+            handlers.onClan(snapshot.exists() ? { id: snapshot.id, ...snapshot.data() } : null);
+          }
+        },
+        error => {
+          if (typeof handlers.onError === "function") handlers.onError(error, "clan");
+        }
+      ),
+      onSnapshot(
+        query(collection(client.db, "clans", safeClanId, "members"), orderBy("joinedAtMs", "asc")),
+        snapshot => {
+          if (typeof handlers.onMembers !== "function") return;
+          handlers.onMembers(
+            snapshot.docs.map(item => ({ id: item.id, ...item.data() })),
+            snapshot.docChanges().map(change => ({
+              type: change.type,
+              member: { id: change.doc.id, ...change.doc.data() },
+            }))
+          );
+        },
+        error => {
+          if (typeof handlers.onError === "function") handlers.onError(error, "members");
+        }
+      ),
+    ];
+    return () => unsubscribers.forEach(unsubscribe => unsubscribe());
+  }
+
   async function recalculatePlayerGlobalStats(payload = {}) {
     return callServerFunction("recalculatePlayerGlobalStats", payload);
   }
@@ -535,6 +601,14 @@
     const playerId = String(uid || "").trim().slice(0, 128);
     if (!playerId) throw new Error("Choose a player to inspect.");
     return callServerFunction("getCombatPlayerIdentity", { uid: playerId, includePublicProfile: true });
+  }
+
+  async function getRealmInfo() {
+    return callServerFunction("getRealmInfo", {
+      releaseId: APP_RELEASE_ID,
+      resetGeneration: RESET_GENERATION,
+      worldId: ONLINE_WORLD_ID,
+    });
   }
 
   async function ensureMainIsland(payload = {}) {
@@ -932,7 +1006,9 @@
     if (!uid) return null;
     const { doc, getDoc } = client.modules.firestore;
     const snap = await getDoc(doc(client.db, "players", uid, "stats", "global"));
-    return snap.exists() ? cleanGlobalStats({ id: snap.id, ...snap.data() }) : null;
+    if (!snap.exists()) return null;
+    const stats = cleanGlobalStats({ id: snap.id, ...snap.data() });
+    return stats?.resetGeneration === RESET_GENERATION && stats?.worldId === ONLINE_WORLD_ID ? stats : null;
   }
 
   async function loadRewardCampProgress(campType = "") {
@@ -950,7 +1026,8 @@
     if (!objectiveId) throw new Error("Unknown reward camp type.");
     const { doc, getDoc } = client.modules.firestore;
     const snap = await getDoc(doc(client.db, "players", uid, "objectiveStats", objectiveId));
-    const data = snap.exists() ? snap.data() || {} : {};
+    const rawData = snap.exists() ? snap.data() || {} : {};
+    const data = rawData.resetGeneration === RESET_GENERATION ? rawData : {};
     return {
       objectiveId,
       campType: normalizedType,
@@ -1008,7 +1085,7 @@
     if (!uid) return [];
     const safeLimit = Math.max(1, Math.min(100, Math.floor(Number(limitCount) || 100)));
     const { collection, getDocs, query: firestoreQuery, orderBy, limit } = client.modules.firestore;
-    const reignsRef = collection(client.db, "crownCitadelReigns");
+    const reignsRef = collection(client.db, "crownCitadelReigns", RESET_GENERATION, "entries");
     const reignsQuery = firestoreQuery && orderBy && limit
       ? firestoreQuery(reignsRef, orderBy("totalHeldMs", "desc"), limit(safeLimit))
       : reignsRef;
@@ -1039,7 +1116,12 @@
       doc(client.db, "players", client.user.uid, "stats", "global"),
       snapshot => {
         if (typeof handlers.onStats === "function") {
-          handlers.onStats(snapshot.exists() ? cleanGlobalStats({ id: snapshot.id, ...snapshot.data() }) : null);
+          const stats = snapshot.exists() ? cleanGlobalStats({ id: snapshot.id, ...snapshot.data() }) : null;
+          handlers.onStats(
+            stats?.resetGeneration === RESET_GENERATION && stats?.worldId === ONLINE_WORLD_ID
+              ? stats
+              : null
+          );
         }
       },
       error => {
@@ -1261,6 +1343,8 @@
     await setDoc(doc(client.db, "islands", islandId, "presence", uid), {
       ...cleanPresence({ ...presence, islandId, updatedAtMs: Date.now() }),
       uid,
+      worldId: ONLINE_WORLD_ID,
+      resetGeneration: RESET_GENERATION,
       updatedAt: serverTimestamp(),
     }, { merge: true });
     return true;
@@ -1269,6 +1353,8 @@
   function cleanLeaderboardEntry(entry = {}) {
     return {
       uid: client.user?.uid || "",
+      worldId: ONLINE_WORLD_ID,
+      resetGeneration: RESET_GENERATION,
       displayName: cleanPlayerName(entry.displayName || entry.playerName || client.user?.displayName),
       playerName: cleanPlayerName(entry.playerName || entry.displayName || client.user?.displayName),
       flag: entry.flag || null,
@@ -1295,7 +1381,7 @@
     const uid = requireSignedIn();
     if (!uid) return [];
     const { collection, getDocs, query: firestoreQuery, orderBy, limit: firestoreLimit } = client.modules.firestore;
-    const entriesRef = collection(client.db, "leaderboards", "kingPower", "entries");
+    const entriesRef = collection(client.db, "leaderboards", RESET_GENERATION, "entries");
     const safeLimit = Math.max(1, Math.min(100, Math.floor(Number(limitCount) || 100)));
     const queryRef = firestoreQuery && orderBy && firestoreLimit
       ? firestoreQuery(entriesRef, orderBy("kingPower", "desc"), firestoreLimit(safeLimit))
@@ -1435,7 +1521,12 @@
       .filter(Boolean))];
 
     if (collectionGroup) {
-      const ownedRef = firestoreQuery(collectionGroup(client.db, "cities"), where("ownerUid", "==", uid));
+      const ownedRef = firestoreQuery(
+        collectionGroup(client.db, "cities"),
+        where("ownerUid", "==", uid),
+        where("resetGeneration", "==", RESET_GENERATION),
+        where("worldId", "==", ONLINE_WORLD_ID)
+      );
       const snapshot = await getDocs(ownedRef);
       return snapshot.docs
         .map(cityDoc => {
@@ -1459,11 +1550,11 @@
     await init();
     const uid = requireSignedIn();
     if (!uid) return [];
-    const { collection, getDocs, query: firestoreQuery, orderBy, limit } = client.modules.firestore;
+    const { collection, getDocs, query: firestoreQuery, where, orderBy, limit } = client.modules.firestore;
     const reportsRef = collection(client.db, "players", uid, "serverReports");
     const safeLimit = Math.max(1, Math.min(200, Math.floor(Number(limitCount) || 120)));
     const reportsQuery = firestoreQuery && orderBy && limit
-      ? firestoreQuery(reportsRef, orderBy("createdAtMs", "desc"), limit(safeLimit))
+      ? firestoreQuery(reportsRef, where("resetGeneration", "==", RESET_GENERATION), where("worldId", "==", ONLINE_WORLD_ID), orderBy("createdAtMs", "desc"), limit(safeLimit))
       : reportsRef;
     const snapshot = await getDocs(reportsQuery);
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -1471,10 +1562,10 @@
 
   function subscribeServerReports(handlers = {}) {
     if (!client.configured || !client.db || !client.user?.uid) return () => {};
-    const { collection, onSnapshot, query: firestoreQuery, orderBy, limit } = client.modules.firestore;
+    const { collection, onSnapshot, query: firestoreQuery, where, orderBy, limit } = client.modules.firestore;
     const reportsRef = collection(client.db, "players", client.user.uid, "serverReports");
     const reportsQuery = firestoreQuery && orderBy && limit
-      ? firestoreQuery(reportsRef, orderBy("createdAtMs", "desc"), limit(120))
+      ? firestoreQuery(reportsRef, where("resetGeneration", "==", RESET_GENERATION), where("worldId", "==", ONLINE_WORLD_ID), orderBy("createdAtMs", "desc"), limit(120))
       : reportsRef;
     const unsubscribe = onSnapshot(
       reportsQuery,
@@ -1510,6 +1601,8 @@
       firestoreQuery(
         collection(client.db, "armies"),
         where(ownerField, "==", uid),
+        where("resetGeneration", "==", RESET_GENERATION),
+        where("worldId", "==", ONLINE_WORLD_ID),
         where("status", "==", "active")
       ),
       snapshot => {
@@ -1542,7 +1635,9 @@
 
     const heldCampsRef = firestoreQuery(
       collectionGroup(client.db, "camps"),
-      where("holderUid", "==", client.user.uid)
+      where("holderUid", "==", client.user.uid),
+      where("resetGeneration", "==", RESET_GENERATION),
+      where("worldId", "==", ONLINE_WORLD_ID)
     );
     return onSnapshot(
       heldCampsRef,
@@ -1677,11 +1772,13 @@
     loadClanMembers,
     loadClanApplications,
     loadClanLeaderboard,
+    subscribeClanState,
     subscribeClanMessages,
     recalculatePlayerGlobalStats,
     recalculateAllPlayerGlobalStats,
     getCombatPlayerIdentity,
     loadPublicPlayerProfile,
+    getRealmInfo,
     relinquishCity,
     purchaseShopItem,
     activateInventoryItem,

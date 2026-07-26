@@ -1,17 +1,18 @@
-const CACHE_VERSION = "20260726-login-display-ad";
+const CACHE_VERSION = "20260726-protected-ads-reset";
 const CACHE_NAME = `crownlands-cache-${CACHE_VERSION}`;
 const STATIC_CACHE_URLS = [
   "/",
   "/index.html",
   "/manifest.webmanifest",
-  "/styles.css?v=20260726-rewarded-ads",
+  "/styles.css?v=20260726-protected-ads-reset",
+  "/release-config.js",
   "/world-config.js",
   "/economy-config.js?v=20260726-offline-owned-production",
   "/ads-config.js?v=20260726-rewarded-ads",
   "/login-display-ad.js?v=20260726-login-display-ad",
-  "/firebase-config.js?v=20260726-app-check",
-  "/firebaseClient.js?v=20260726-rewarded-ads",
-  "/game.js?v=20260726-rewarded-ads",
+  "/firebase-config.js?v=20260726-protected-ads-reset",
+  "/firebaseClient.js?v=20260726-protected-ads-reset",
+  "/game.js?v=20260726-protected-ads-reset",
   "/route-worker.js?v=20260721-structure-route-clearance",
   "/assets/map-editor-data.js?v=20260723-utc-responsive-v1",
   "/assets/game-menu-background.jpg?v=20260702-login-page",

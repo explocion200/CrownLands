@@ -16,7 +16,7 @@ requireMatch(serverSource, /recordCrownCitadelControlChange[\s\S]*?totalHeldMs[\
 requireMatch(serverSource, /recordCrownCitadelControlChange[\s\S]*?worldId: ONLINE_WORLD_ID[\s\S]*?resetGeneration: RESET_GENERATION/, "Citadel reign scores are not scoped to the current world reset.");
 requireMatch(serverSource, /if \(isCrownCitadel\(target\)\)[\s\S]*?recordCrownCitadelControlChange/, "Citadel captures do not update the Reign Ledger.");
 requireMatch(serverSource, /if \(isCrownCitadel\(source\)\)[\s\S]*?recordCrownCitadelControlChange/, "Relinquishing the Citadel does not close the current reign.");
-requireMatch(rulesSource, /match \/crownCitadelReigns\/\{uid\}[\s\S]*?allow read: if signedIn\(\);[\s\S]*?allow create, update, delete: if false;/, "Citadel reign scores must be public to signed-in players and server-owned.");
+requireMatch(rulesSource, /match \/crownCitadelReigns\/(?:\{uid\}|\{resetId\}\/entries\/\{uid\})[\s\S]*?allow read: if signedIn\(\)(?:\s*&&[\s\S]*?)?;[\s\S]*?allow create, update, delete: if false;/, "Citadel reign scores must be public to signed-in players and server-owned.");
 requireMatch(firebaseClientSource, /loadCrownCitadelReignLeaderboard[\s\S]*?crownCitadelReigns/, "Missing public Reign Ledger loader.");
 requireMatch(firebaseClientSource, /subscribeCrownCitadel[\s\S]*?onCitadel/, "Missing lightweight Crown Citadel control listener.");
 requireMatch(clientSource, /Reign Ledger/, "Crown Citadel info is missing the Reign Ledger tab.");

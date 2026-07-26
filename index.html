@@ -12,11 +12,11 @@
   <meta name="apple-mobile-web-app-title" content="Crownlands" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="format-detection" content="telephone=no" />
-  <meta name="crownlands-build" content="20260726-rewarded-ads" />
+  <meta name="crownlands-build" content="20260726-protected-ads-reset" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700;800;900&family=Cinzel+Decorative:wght@700;900&family=IM+Fell+English:ital@0;1&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=20260726-rewarded-ads" />
+  <link rel="stylesheet" href="styles.css?v=20260726-protected-ads-reset" />
   <link rel="preload" as="image" href="assets/game-menu-background.jpg?v=20260702-login-page" />
   <link rel="preload" as="image" href="assets/loading-ring.png" />
   <link rel="preload" as="image" href="assets/loading-crown.png" />
@@ -99,6 +99,9 @@
             </button>
             <button id="leaderboardBtn" class="profile-rank-btn" type="button" aria-label="Open King Power ranks">
               <img class="profile-rank-icon" src="assets/leaderboard-icon.png?v=20260623-leaderboard-icon-new" alt="" draggable="false" decoding="async" />
+            </button>
+            <button id="clanHudBtn" class="profile-rank-btn clan-hud-btn is-search" type="button" aria-label="Find a clan">
+              <span id="clanHudIcon" class="clan-hud-icon" aria-hidden="true"></span>
             </button>
           </div>
           <div class="profile-gold"><span>&#129689;</span><strong id="goldText">0</strong></div>
@@ -231,6 +234,11 @@
               </div>
               <div class="profile-xp-track" aria-label="XP progress"><span id="profileXpFill"></span></div>
             </div>
+
+            <button id="profileClanAffiliation" class="profile-clan-affiliation" type="button" hidden>
+              <span id="profileClanShield" class="profile-clan-shield" aria-hidden="true"></span>
+              <span><small>Clan</small><strong id="profileClanName"></strong></span>
+            </button>
           </section>
 
           <section class="kingdom-overview" aria-label="Kingdom totals">
@@ -338,14 +346,15 @@
   </dialog>
 
   <script src="assets/map-editor-data.js?v=20260723-utc-responsive-v1"></script>
+  <script src="release-config.js"></script>
   <script src="world-config.js"></script>
   <script src="economy-config.js?v=20260726-offline-owned-production"></script>
   <script src="ads-config.js?v=20260726-rewarded-ads"></script>
   <script src="login-display-ad.js?v=20260726-login-display-ad"></script>
   <script src="ui-layout-config.js?v=20260726-hud-layout-editor"></script>
-  <script src="firebase-config.js?v=20260726-app-check"></script>
-  <script src="firebaseClient.js?v=20260726-rewarded-ads"></script>
-  <script src="game.js?v=20260726-rewarded-ads"></script>
+  <script src="firebase-config.js?v=20260726-protected-ads-reset"></script>
+  <script src="firebaseClient.js?v=20260726-protected-ads-reset"></script>
+  <script src="game.js?v=20260726-protected-ads-reset"></script>
   <script src="ui-layout-runtime.js?v=20260726-hud-layout-editor"></script>
 </body>
 </html>
