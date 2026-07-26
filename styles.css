@@ -3287,7 +3287,7 @@ input {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: .58rem;
 }
-.rewarded-ad-shop-item {
+.shop-item.rewarded-ad-shop-item {
   min-height: 0;
   grid-template-columns: 92px minmax(0, 1fr);
   align-items: start;
@@ -3296,22 +3296,50 @@ input {
   display: grid;
   justify-items: stretch;
   gap: .45rem;
+  min-width: 0;
 }
 .rewarded-ad-shop-action .shop-item-image-placeholder {
   width: 72px;
   height: 72px;
   justify-self: center;
 }
-.rewarded-ad-watch-btn {
+.shop-buy-btn.rewarded-ad-watch-btn {
   width: 100%;
   min-width: 0;
   min-height: 38px;
   padding-inline: .35rem;
   font-size: .78rem;
 }
+.rewarded-ad-shop-copy {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
 .rewarded-ad-shop-copy .rewarded-ad-availability {
   color: #ffe293;
   font-weight: 950;
+}
+@media (max-width: 620px) {
+  .shop-rewarded-heading {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: .2rem;
+  }
+  .shop-rewarded-heading small {
+    text-align: left;
+  }
+  .shop-rewarded-items {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .shop-item.rewarded-ad-shop-item {
+    grid-template-columns: 82px minmax(0, 1fr);
+  }
+  .rewarded-ad-shop-action .shop-item-image-placeholder {
+    width: 64px;
+    height: 64px;
+  }
+  .shop-buy-btn.rewarded-ad-watch-btn {
+    font-size: .7rem;
+  }
 }
 .rewarded-ad-confirmation-modal.modal {
   width: min(440px, calc(100vw - 1.3rem));
@@ -7019,9 +7047,9 @@ button.inventory-slot {
   .shop-buy-btn { min-width: 78px; min-height: 38px; }
   .shop-rewarded-section { padding: .5rem; }
   .shop-rewarded-items { grid-template-columns: minmax(0, 1fr); }
-  .rewarded-ad-shop-item { grid-template-columns: 82px minmax(0, 1fr); }
+  .shop-item.rewarded-ad-shop-item { grid-template-columns: 82px minmax(0, 1fr); }
   .rewarded-ad-shop-action .shop-item-image-placeholder { width: 64px; height: 64px; }
-  .rewarded-ad-watch-btn { min-width: 0; font-size: .7rem; }
+  .shop-buy-btn.rewarded-ad-watch-btn { min-width: 0; font-size: .7rem; }
   .city-list-modal.modal { width: min(760px, calc(100vw - .8rem)); }
   .city-list-toolbar { gap: .5rem; padding-inline: 0; }
   .city-list-toolbar button { min-width: 104px; min-height: 42px; }
