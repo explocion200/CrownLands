@@ -1,15 +1,15 @@
-const CACHE_VERSION = "20260726-combat-power-sync";
+const CACHE_VERSION = "20260726-enemy-color-stability";
 const CACHE_NAME = `crownlands-cache-${CACHE_VERSION}`;
 const STATIC_CACHE_URLS = [
   "/",
   "/index.html",
   "/manifest.webmanifest",
-  "/styles.css?v=20260726-combat-power-sync",
+  "/styles.css?v=20260726-enemy-color-stability",
   "/world-config.js",
-  "/economy-config.js?v=20260726-combat-power-sync",
+  "/economy-config.js?v=20260726-enemy-color-stability",
   "/firebase-config.js?v=20260703-vapid-key",
-  "/firebaseClient.js?v=20260726-combat-power-sync",
-  "/game.js?v=20260726-combat-power-sync",
+  "/firebaseClient.js?v=20260726-enemy-color-stability",
+  "/game.js?v=20260726-enemy-color-stability",
   "/route-worker.js?v=20260721-structure-route-clearance",
   "/assets/map-editor-data.js?v=20260723-utc-responsive-v1",
   "/assets/game-menu-background.jpg?v=20260702-login-page",

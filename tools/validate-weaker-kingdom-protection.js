@@ -213,6 +213,9 @@ const clientSandbox = {
   normalizePowerValue(value) {
     return Math.max(0, Math.floor(Number(value) || 0));
   },
+  normalizeTimestampMs(value) {
+    return Math.max(0, Number(value) || 0);
+  },
   isStronghold: sandbox.isStronghold,
 };
 vm.createContext(clientSandbox);
@@ -220,6 +223,7 @@ vm.runInContext([
   readClientFunction("getDemoAttackTier"),
   readClientFunction("getEnemyCityPowerBand"),
   readClientFunction("getTroopSliderSendLimit"),
+  readClientFunction("shouldReplacePlayerIdentity"),
 ].join("\n\n"), clientSandbox);
 
 const enemyCity = { owner: "enemy" };
@@ -256,6 +260,35 @@ if (clientSandbox.getTroopSliderSendLimit({ troops: 21_000_000 }, { demoMaxTroop
 if (clientSandbox.getTroopSliderSendLimit({ troops: 100_000 }, {}) !== 100_000) {
   throw new Error("The troop slider incorrectly caps unrestricted attacks and transfers.");
 }
+const verifiedIdentity = { kingPowerVersion: 8, updatedAtMs: 2000, authoritative: true };
+if (clientSandbox.shouldReplacePlayerIdentity(
+  verifiedIdentity,
+  { kingPowerVersion: 7, updatedAtMs: 3000 },
+  true
+)) {
+  throw new Error("A delayed older King Power version can replace a verified identity.");
+}
+if (clientSandbox.shouldReplacePlayerIdentity(
+  verifiedIdentity,
+  { kingPowerVersion: 8, updatedAtMs: 1000 },
+  true
+)) {
+  throw new Error("An older same-version identity can replace a newer verified identity.");
+}
+if (clientSandbox.shouldReplacePlayerIdentity(
+  verifiedIdentity,
+  { kingPowerVersion: 8 },
+  true
+)) {
+  throw new Error("An undated same-version identity can replace a newer verified identity.");
+}
+if (!clientSandbox.shouldReplacePlayerIdentity(
+  verifiedIdentity,
+  { kingPowerVersion: 8, updatedAtMs: 3000 },
+  true
+)) {
+  throw new Error("A genuinely newer verified identity cannot refresh the cache.");
+}
 if (!clientSource.includes('slider.max = String(sliderSendLimit)')
   || !clientSource.includes('selectedTroopAmount = clamp(selectedTroopAmount, 1, getTroopSliderSendLimit(source, target))')) {
   throw new Error("The visible slider and final confirmation do not reapply the legal troop limit.");
@@ -267,6 +300,15 @@ if (!clientSource.includes("ensureAuthoritativeCityOwnerKingPower(target)")
 if (!clientSource.includes("getCompatibleCityOwnerKingPowerSnapshot(city)")
   || !clientSource.includes("Could not verify that kingdom's attack limit. Try again.")) {
   throw new Error("Stale public power cannot color the map or fail closed before opening an attack slider.");
+}
+if (!clientSource.includes("right.version - left.version")
+  || !clientSource.includes("right.authority - left.authority")
+  || !clientSource.includes("const identityIsNewer = shouldReplacePlayerIdentity(existing, identity, force)")) {
+  throw new Error("Enemy color snapshots are not protected from out-of-order identity refreshes.");
+}
+if (readClientFunction("getAuthoritativeCityOwnerKingPowerSnapshot").includes("onlinePresence")
+  || clientSource.includes("rememberPlayerIdentities(onlinePresence, { force: true })")) {
+  throw new Error("Client-published presence can still override server-authoritative combat power.");
 }
 if (!firebaseClientSource.includes('callServerFunction("getCombatPlayerIdentity", payload)')
   || !firebaseClientSource.includes("getCombatPlayerIdentity,")) {
@@ -299,7 +341,7 @@ if (!clientSource.includes("function getAuthoritativeCityOwnerKingPowerSnapshot(
   || !clientSource.includes("getAuthoritativeCityOwnerKingPowerSnapshot(target)")) {
   throw new Error("Client demo previews do not require an authoritative opponent King Power snapshot.");
 }
-if (!clientSource.includes("authoritative: existingIsAuthoritative || force")
+if (!clientSource.includes("authoritative: existingIsAuthoritative || (force && identityIsNewer)")
   || !clientSource.includes("fetchedAtMs: force ? Date.now() : existing?.fetchedAtMs || 0")) {
   throw new Error("Map city records can still overwrite or postpone canonical identity refreshes.");
 }

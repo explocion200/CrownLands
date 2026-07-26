@@ -6444,12 +6444,7 @@ function getAuthoritativeCityOwnerKingPowerSnapshot(city) {
     ? normalizePowerValue(cachedIdentity.kingPower)
     : 0;
   if (cachedPower > 0) return cachedPower;
-  const presence = Array.isArray(onlinePresence)
-    ? onlinePresence.find(entry => entry?.uid === city.ownerUid)
-    : null;
-  return Math.max(0, Math.floor(Number(presence?.kingPowerVersion) || 0)) >= KING_POWER_AUTHORITY_VERSION
-    ? normalizePowerValue(presence.kingPower)
-    : 0;
+  return 0;
 }
 
 function getCompatibleCityOwnerKingPowerSnapshot(city) {
@@ -6457,22 +6452,45 @@ function getCompatibleCityOwnerKingPowerSnapshot(city) {
   const currentUid = getCurrentOnlineUid();
   if (city.owner === "player" && (!city.ownerUid || city.ownerUid === currentUid)) return getKingPower();
   const cachedIdentity = playerIdentityCache.get(city.ownerUid);
-  const cachedPower = Math.max(0, Math.floor(Number(cachedIdentity?.kingPowerVersion) || 0))
-    >= KING_POWER_COMPATIBILITY_VERSION
-    ? normalizePowerValue(cachedIdentity.kingPower)
-    : 0;
-  if (cachedPower > 0) return cachedPower;
   const presence = Array.isArray(onlinePresence)
     ? onlinePresence.find(entry => entry?.uid === city.ownerUid)
     : null;
-  return Math.max(
-    Math.max(0, Math.floor(Number(city.kingPowerVersion) || 0)) >= KING_POWER_COMPATIBILITY_VERSION
-      ? normalizePowerValue(city.ownerKingPower)
-      : 0,
-    Math.max(0, Math.floor(Number(presence?.kingPowerVersion) || 0)) >= KING_POWER_COMPATIBILITY_VERSION
-      ? normalizePowerValue(presence?.kingPower)
-      : 0
-  );
+  const candidates = [
+    {
+      power: cachedIdentity?.kingPower,
+      version: cachedIdentity?.kingPowerVersion,
+      updatedAtMs: cachedIdentity?.updatedAtMs,
+      authority: cachedIdentity?.authoritative ? 2 : 0,
+      priority: 3,
+    },
+    {
+      power: presence?.kingPower,
+      version: presence?.kingPowerVersion,
+      updatedAtMs: presence?.updatedAtMs,
+      authority: 0,
+      priority: 2,
+    },
+    {
+      power: city.ownerKingPower,
+      version: city.kingPowerVersion,
+      updatedAtMs: city.ownerKingPowerUpdatedAtMs || city.updatedAtMs || timestampToMs(city.updatedAt),
+      authority: 1,
+      priority: 1,
+    },
+  ].map(candidate => ({
+    power: normalizePowerValue(candidate.power),
+    version: Math.max(0, Math.floor(Number(candidate.version) || 0)),
+    updatedAtMs: normalizeTimestampMs(candidate.updatedAtMs),
+    authority: candidate.authority,
+    priority: candidate.priority,
+  })).filter(candidate => candidate.power > 0 && candidate.version >= KING_POWER_COMPATIBILITY_VERSION);
+  candidates.sort((left, right) => (
+    right.version - left.version
+    || right.authority - left.authority
+    || right.updatedAtMs - left.updatedAtMs
+    || right.priority - left.priority
+  ));
+  return candidates[0]?.power || 0;
 }
 
 async function ensureAuthoritativeCityOwnerKingPower(city) {
@@ -8624,6 +8642,21 @@ function getPlayerIdentitySignature(identity) {
   ].join("|");
 }
 
+function shouldReplacePlayerIdentity(existing, incoming, force = false) {
+  if (!existing) return true;
+  const existingVersion = Math.max(0, Math.floor(Number(existing.kingPowerVersion) || 0));
+  const incomingVersion = Math.max(0, Math.floor(Number(incoming?.kingPowerVersion) || 0));
+  if (incomingVersion < existingVersion) return false;
+  if (incomingVersion > existingVersion) return true;
+  const existingUpdatedAtMs = normalizeTimestampMs(existing.updatedAtMs);
+  const incomingUpdatedAtMs = normalizeTimestampMs(incoming?.updatedAtMs);
+  if (existingUpdatedAtMs && !incomingUpdatedAtMs) return false;
+  if (existingUpdatedAtMs && incomingUpdatedAtMs && incomingUpdatedAtMs < existingUpdatedAtMs) return false;
+  if (force) return true;
+  if (existing.authoritative) return false;
+  return !existingUpdatedAtMs || !incomingUpdatedAtMs || incomingUpdatedAtMs >= existingUpdatedAtMs;
+}
+
 function rememberPlayerIdentity(raw = {}, options = {}) {
   const identity = normalizePlayerIdentity(raw);
   if (!identity) return false;
@@ -8640,13 +8673,7 @@ function rememberPlayerIdentity(raw = {}, options = {}) {
   const before = getPlayerIdentitySignature(existing);
   const force = Boolean(options.force);
   const existingIsAuthoritative = Boolean(existing?.authoritative);
-  const identityIsNewer = !existing
-    || force
-    || (!existingIsAuthoritative && (
-      !existing.updatedAtMs
-      || !identity.updatedAtMs
-      || identity.updatedAtMs >= existing.updatedAtMs
-    ));
+  const identityIsNewer = shouldReplacePlayerIdentity(existing, identity, force);
   const next = {
     uid: identity.uid,
     displayName: identityIsNewer
@@ -8672,7 +8699,7 @@ function rememberPlayerIdentity(raw = {}, options = {}) {
       : existing?.mainIslandId || identity.mainIslandId || "",
     updatedAtMs: Math.max(existing?.updatedAtMs || 0, identity.updatedAtMs || 0),
     fetchedAtMs: force ? Date.now() : existing?.fetchedAtMs || 0,
-    authoritative: existingIsAuthoritative || force,
+    authoritative: existingIsAuthoritative || (force && identityIsNewer),
   };
   playerIdentityCache.set(identity.uid, next);
   playerIdentityLookupMisses.delete(identity.uid);
@@ -8741,15 +8768,23 @@ function resolvePlayerIdentityForUid(uid, fallback = {}) {
     };
   }
   const cached = ownerUid ? playerIdentityCache.get(ownerUid) : null;
-  const cachedPowerIsAuthoritative = Math.max(0, Math.floor(Number(cached?.kingPowerVersion) || 0)) >= KING_POWER_AUTHORITY_VERSION;
+  const cachedPowerVersion = Math.max(0, Math.floor(Number(cached?.kingPowerVersion) || 0));
+  const fallbackPowerVersion = Math.max(0, Math.floor(Number(fallbackIdentity.kingPowerVersion) || 0));
+  const cachedPowerIsPreferred = Boolean(cached) && (
+    cachedPowerVersion > fallbackPowerVersion
+    || (
+      cachedPowerVersion === fallbackPowerVersion
+      && normalizeTimestampMs(cached?.updatedAtMs) >= normalizeTimestampMs(fallbackIdentity.updatedAtMs)
+    )
+  );
   return {
     uid: ownerUid,
     displayName: cached?.displayName || fallbackIdentity.displayName || "",
     flag: cached?.flag || fallbackIdentity.flag || null,
-    kingPower: cachedPowerIsAuthoritative
+    kingPower: cachedPowerIsPreferred
       ? normalizePowerValue(cached.kingPower)
-      : cached?.kingPower || fallbackIdentity.kingPower || 0,
-    kingPowerVersion: Math.max(cached?.kingPowerVersion || 0, fallbackIdentity.kingPowerVersion || 0),
+      : normalizePowerValue(fallbackIdentity.kingPower),
+    kingPowerVersion: Math.max(cachedPowerVersion, fallbackPowerVersion),
     mainCityId: cached?.mainCityId || fallbackIdentity.mainCityId || "",
     mainRegionId: cached?.mainRegionId || fallbackIdentity.mainRegionId || "",
     mainIslandId: cached?.mainIslandId || fallbackIdentity.mainIslandId || "",
@@ -8769,6 +8804,10 @@ function applyCanonicalPlayerIdentityToRecord(record) {
   const nextPower = identity.kingPowerVersion >= KING_POWER_AUTHORITY_VERSION
     ? normalizePowerValue(identity.kingPower)
     : normalizePowerValue(identity.kingPower) || normalizePowerValue(record.ownerKingPower);
+  const nextPowerVersion = Math.max(
+    Math.max(0, Math.floor(Number(record.kingPowerVersion) || 0)),
+    Math.max(0, Math.floor(Number(identity.kingPowerVersion) || 0))
+  );
   let changed = false;
   if ((record.ownerName || "") !== nextName) {
     record.ownerName = nextName;
@@ -8780,6 +8819,10 @@ function applyCanonicalPlayerIdentityToRecord(record) {
   }
   if (normalizePowerValue(record.ownerKingPower) !== nextPower) {
     record.ownerKingPower = nextPower;
+    changed = true;
+  }
+  if (Math.max(0, Math.floor(Number(record.kingPowerVersion) || 0)) !== nextPowerVersion) {
+    record.kingPowerVersion = nextPowerVersion;
     changed = true;
   }
   if (record.attackerKingPower !== undefined && normalizePowerValue(record.attackerKingPower) !== nextPower) {
@@ -9945,7 +9988,7 @@ function applyOnlinePresence(rawPresence) {
     return;
   }
   onlinePresence = rawPresence.map(normalizePresence).filter(Boolean);
-  if (rememberPlayerIdentities(onlinePresence, { force: true }) && canonicalizeVisiblePlayerIdentities()) {
+  if (rememberPlayerIdentities(onlinePresence) && canonicalizeVisiblePlayerIdentities()) {
     renderCities();
     renderArmies();
     updateIncomingAttackUi();
