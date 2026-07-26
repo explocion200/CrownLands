@@ -17341,7 +17341,6 @@ function showScoutReportModal(cityId) {
         <div class="scout-defense-breakdown">
           ${scoutBreakdownRow("&#9817;", "Troops", "Reported garrison", report.troops)}
           ${scoutBreakdownRow("&#128737;", "City defense", `Lv ${cityLevel} - +${formatNumber(defensePercent)}%`, cityDefenseBonus)}
-          ${scoutBreakdownRow("&#10022;", "Stoneworks", `Lv ${report.stoneworksLevel || 0} - +${report.stoneworksPercent || 0}%`, stoneworksBonus)}
           ${scoutBreakdownRow("&#9819;", "City walls", `Lv ${cityLevel} base ${formatNumber(baseCityWalls)} (+${formatNumber(Math.max(0, cityWalls - baseCityWalls))})`, cityWalls)}
           <div class="scout-breakdown-total"><span>Total</span><strong>${formatBaseAndBonusStat(baseTotalDefense, report.totalDefense)}</strong></div>
         </div>

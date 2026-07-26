@@ -117,6 +117,17 @@ assert.doesNotMatch(
   /<span>Stoneworks<\/span>/,
   "City information repeats Stoneworks outside the City walls bonus breakdown."
 );
+const scoutReportSource = extractFunction(clientSource, "showScoutReportModal");
+assert.doesNotMatch(
+  scoutReportSource,
+  /scoutBreakdownRow\([^,]+,\s*"Stoneworks"/,
+  "Scout reports repeat Stoneworks as a separate enemy defense amount."
+);
+assert.match(
+  scoutReportSource,
+  /scoutSkillRow\("Stoneworks"/,
+  "Scout reports must keep Stoneworks under Enemy defense stats."
+);
 
 const formatterContext = {};
 vm.createContext(formatterContext);
