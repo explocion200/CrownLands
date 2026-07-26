@@ -33,11 +33,32 @@ requireMatch(server, /exports\.getRealmInfo[\s\S]*REALM_RELEASE_ID/, "The realm-
 requireMatch(client, /clientReleaseId: APP_RELEASE_ID[\s\S]*clientResetGeneration: RESET_GENERATION/, "Callable requests do not carry release identity.");
 requireMatch(game, /verifyRealmCompatibility[\s\S]*releaseMatches[\s\S]*generationMatches[\s\S]*worldMatches/, "Gameplay does not fail closed on release drift.");
 requireMatch(rules, new RegExp(serverRealm.resetGeneration.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")), "Firestore rules do not identify the active generation.");
+requireMatch(
+  client,
+  /loadKingPowerLeaderboard[\s\S]*?where\("resetGeneration",\s*"==",\s*RESET_GENERATION\)[\s\S]*?where\("worldId",\s*"==",\s*ONLINE_WORLD_ID\)[\s\S]*?orderBy\("kingPower",\s*"desc"\)/,
+  "The King Power leaderboard query is not generation- and world-scoped."
+);
+requireMatch(
+  client,
+  /loadPlayerIdentities[\s\S]*?doc\(client\.db,\s*"leaderboards",\s*RESET_GENERATION,\s*"entries",\s*identityUid\)/,
+  "Combat identity lookups are not reading the active generation leaderboard."
+);
+if (client.includes('doc(client.db, "leaderboards", "kingPower", "entries", identityUid)')) {
+  throw new Error("Combat identity lookups still reference the archived leaderboard path.");
+}
 
 const serializedIndexes = JSON.stringify(indexes);
 for (const field of ["resetGeneration", "worldId", "ownerUid", "holderUid", "targetKey", "arrivesAtMs"]) {
   if (!serializedIndexes.includes(`"${field}"`)) throw new Error(`Missing reset query index field: ${field}`);
 }
+const leaderboardIndex = indexes.indexes.find(index => (
+  index.collectionGroup === "entries"
+  && index.queryScope === "COLLECTION"
+  && index.fields.some(field => field.fieldPath === "resetGeneration")
+  && index.fields.some(field => field.fieldPath === "worldId")
+  && index.fields.some(field => field.fieldPath === "kingPower" && field.order === "DESCENDING")
+));
+if (!leaderboardIndex) throw new Error("Missing generation-scoped King Power leaderboard index.");
 
 for (const [label, source] of [["server", server], ["client", client]]) {
   const generationQueries = [...source.matchAll(/(?:\.where|where)\("resetGeneration",\s*"==",\s*RESET_GENERATION\)/g)];

@@ -150,6 +150,17 @@ async function main() {
   const sourceClaim = claims[0];
   const sourceRef = db.doc(`islands/${sourceClaim.islandId}/cities/${sourceClaim.cityId}`);
   const source = (await sourceRef.get()).data() || {};
+  const defenderClaim = claims[1];
+  const protectionPreview = await callFunction("previewArmyProtection", attacker.token, {
+    fromId: sourceClaim.cityId,
+    toId: defenderClaim.cityId,
+    sourceRegionId: sourceClaim.mainRegionId,
+    targetRegionId: defenderClaim.mainRegionId,
+    targetType: "city",
+    requestedTroops: Math.max(1, Math.floor(Number(source.troops) || 1)),
+  });
+  assert(protectionPreview?.ok === true, "Player attack protection preview failed.");
+
   const citySnapshot = await db.collection(`islands/${sourceClaim.islandId}/cities`)
     .where("ownerUid", "==", null)
     .get();
