@@ -8158,10 +8158,7 @@ function applyServerEconomyResult(result = null, options = {}) {
     showOfflineRewardsModal({
       goldGained,
       troopsGained,
-      troopsKeptInCities: troopsGained,
-      troopsRalliedToMain: 0,
       elapsed,
-      cityName: getMainRewardCity()?.name || "main city",
       lostCities: [],
     });
   }
@@ -14456,9 +14453,8 @@ function applyPendingOfflineProgress() {
     return;
   }
 
-  const goldGained = Math.floor(productionCities.reduce((sum, city) => sum + getCityStats(city).goldProductionPerSecond, 0) * elapsed);
+  let goldGainedFloat = 0;
   let troopsKeptInCities = 0;
-  let troopsRalliedToMain = 0;
   const changedOwnedCities = new Set();
   const lostCities = [];
   const lostCityIds = new Set();
@@ -14472,30 +14468,26 @@ function applyPendingOfflineProgress() {
         regionId: offlineCity.regionId || getCityRegionId(offlineCity.id),
       });
     }
+    if (!stillOwned) continue;
 
-    const growth = getCityStats(offlineCity).troopProductionPerSecond * elapsed;
+    const stats = getCityStats(offlineCity);
+    goldGainedFloat += stats.goldProductionPerSecond * elapsed;
+    const growth = stats.troopProductionPerSecond * elapsed;
     if (growth <= 0) continue;
     const gained = Math.floor(growth);
     if (gained <= 0) continue;
 
-    const currentCity = stillOwned ? restoreOfflineCityOwnership(offlineCity) : cityById(offlineCity.id);
-    if (stillOwned && currentCity) {
+    const currentCity = restoreOfflineCityOwnership(offlineCity);
+    if (currentCity) {
       currentCity.troopFloat = Math.max(0, Number(currentCity.troopFloat) || currentCity.troops || 0) + gained;
       currentCity.troops = Math.floor(currentCity.troopFloat);
       changedOwnedCities.add(currentCity.id);
       troopsKeptInCities += gained;
-    } else {
-      troopsRalliedToMain += gained;
     }
   }
-  const troopsGained = troopsKeptInCities + troopsRalliedToMain;
+  const goldGained = Math.floor(goldGainedFloat);
+  const troopsGained = troopsKeptInCities;
   if (goldGained > 0) state.gold += goldGained;
-  const mainCity = getMainRewardCity();
-  if (mainCity && troopsRalliedToMain > 0) {
-    mainCity.troopFloat = Math.max(0, Number(mainCity.troopFloat) || mainCity.troops || 0) + troopsRalliedToMain;
-    mainCity.troops = Math.floor(mainCity.troopFloat);
-    changedOwnedCities.add(mainCity.id);
-  }
   changedOwnedCities.forEach(cityId => {
     const city = cityById(cityId);
     if (city) markOwnedCityChanged(city, false);
@@ -14504,16 +14496,12 @@ function applyPendingOfflineProgress() {
   pendingOfflineOwnedCityIds = null;
 
   if (goldGained > 0 || troopsGained > 0 || lostCities.length > 0) {
-    const rallyText = troopsRalliedToMain > 0 ? ` ${formatNumber(troopsRalliedToMain)} troops from lost cities rallied to ${mainCity ? mainCity.name : "the main city"}.` : "";
     const lostText = lostCities.length ? ` Lost cities: ${lostCities.map(city => city.name).join(", ")}.` : "";
-    addLog(`Offline production: +${formatNumber(goldGained)} gold and +${formatNumber(troopsGained)} troops.${rallyText}${lostText}`);
+    addLog(`Offline production: +${formatNumber(goldGained)} gold and +${formatNumber(troopsGained)} troops.${lostText}`);
     showOfflineRewardsModal({
       goldGained,
       troopsGained,
-      troopsKeptInCities,
-      troopsRalliedToMain,
       elapsed,
-      cityName: mainCity?.name || "main city",
       lostCities,
     });
     syncOwnedCitiesToOnline(true);
@@ -14522,7 +14510,7 @@ function applyPendingOfflineProgress() {
   }
 }
 
-function showOfflineRewardsModal({ goldGained = 0, troopsGained = 0, troopsKeptInCities = 0, troopsRalliedToMain = 0, elapsed = 0, cityName = "main city", lostCities = [] } = {}) {
+function showOfflineRewardsModal({ goldGained = 0, troopsGained = 0, elapsed = 0, lostCities = [] } = {}) {
   const lostList = Array.isArray(lostCities) ? lostCities : [];
   const lostSummary = lostList.length
     ? `<section class="offline-lost-cities"><span>Cities lost while away</span><strong>${formatNumber(lostList.length)}</strong><ul>${lostList.slice(0, 8).map(city => `<li>${escapeHtml(city.name || city.id)} <small>${escapeHtml(getRegionLabel(city.regionId || getCityRegionId(city.id)))}</small></li>`).join("")}</ul>${lostList.length > 8 ? `<small>+${formatNumber(lostList.length - 8)} more</small>` : ""}</section>`
@@ -14534,8 +14522,7 @@ function showOfflineRewardsModal({ goldGained = 0, troopsGained = 0, troopsKeptI
       <p>Your kingdom kept producing while you were away for ${formatDuration(elapsed)}.</p>
       <div class="offline-reward-grid">
         <div><span>Gold collected</span><strong>${formatNumber(goldGained)}</strong></div>
-        <div><span>Troops produced</span><strong>${formatNumber(troopsGained)}</strong><small>${formatNumber(troopsKeptInCities)} stayed in their cities</small></div>
-        <div><span>Rallied home</span><strong>${formatNumber(troopsRalliedToMain)}</strong><small>${troopsRalliedToMain > 0 ? `Sent to ${escapeHtml(cityName)}` : "No cities lost offline"}</small></div>
+        <div><span>Troops produced</span><strong>${formatNumber(troopsGained)}</strong><small>Added to cities still owned</small></div>
       </div>
       ${lostSummary}
       <button id="offlineCollectBtn" class="offline-collect-btn" type="button">Collect</button>

@@ -117,5 +117,7 @@ requireMatch(serverSource, /require\("\.\/economy-config\.json"\)/, "Firebase Fu
 requireMatch(editorServerSource, /\/api\/economy-data/, "Game Editor economy API is missing.");
 requireMatch(editorSource, /renderEconomySections/, "Game Editor economy interface is missing.");
 requireMatch(editorSource, /data-camp-reward-field="productionHours"/, "Per-camp production-hour editor is missing.");
+assert.doesNotMatch(clientSource, /troopsRalliedToMain|Rallied home/, "Lost-city troop production can still be rallied to the main city.");
+requireMatch(clientSource, /if \(!stillOwned\) continue;[\s\S]*?goldGainedFloat \+= stats\.goldProductionPerSecond/, "Offline production still credits cities that are no longer owned.");
 
 console.log("Validated shared Crownlands economy config, production, upgrades, pickups, camps, shop prices, daily caps, and skills.");

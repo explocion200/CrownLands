@@ -1,15 +1,15 @@
-const CACHE_VERSION = "20260726-scout-stoneworks-cleanup";
+const CACHE_VERSION = "20260726-offline-owned-production";
 const CACHE_NAME = `crownlands-cache-${CACHE_VERSION}`;
 const STATIC_CACHE_URLS = [
   "/",
   "/index.html",
   "/manifest.webmanifest",
-  "/styles.css?v=20260726-scout-stoneworks-cleanup",
+  "/styles.css?v=20260726-offline-owned-production",
   "/world-config.js",
-  "/economy-config.js?v=20260726-scout-stoneworks-cleanup",
+  "/economy-config.js?v=20260726-offline-owned-production",
   "/firebase-config.js?v=20260703-vapid-key",
-  "/firebaseClient.js?v=20260726-scout-stoneworks-cleanup",
-  "/game.js?v=20260726-scout-stoneworks-cleanup",
+  "/firebaseClient.js?v=20260726-offline-owned-production",
+  "/game.js?v=20260726-offline-owned-production",
   "/route-worker.js?v=20260721-structure-route-clearance",
   "/assets/map-editor-data.js?v=20260723-utc-responsive-v1",
   "/assets/game-menu-background.jpg?v=20260702-login-page",
