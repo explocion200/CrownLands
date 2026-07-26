@@ -18,6 +18,31 @@
   const CITY_UI_LABEL_OFFSET = 58;
   const MAP_SWITCH_ARROW_ICON_SRC = "/assets/map-switch-arrow.png?v=20260702-map-arrow-bigger";
   const CITY_UI_MARKER_FOOTPRINT = 72;
+  const CITY_EDITOR_MAX_GAME_SCALE = 1;
+  const CITY_VICTORY_POINT_FORMULA = Object.freeze({
+    base: 6,
+    perLevel: 4,
+    exponent: 1.35,
+    exponentScale: 2,
+  });
+  const CITY_EDITOR_OWNER_UI = Object.freeze({
+    player: { key: "player", label: "You", flag: "\u25C6" },
+    player2: { key: "player2", label: "Player 2", flag: "\u2161" },
+    player3: { key: "player3", label: "Player 3", flag: "\u2162" },
+    enemy: { key: "enemy", label: "Enemy", flag: "\u265C" },
+    neutral: { key: "neutral", label: "Neutral", flag: "\u2022" },
+  });
+  const CITY_CASTLE_ASSETS = Object.freeze({
+    1: "assets/castles/shack.png?v=20260704-firebase-castles",
+    2: "assets/castles/fort.png?v=20260704-firebase-castles",
+    3: "assets/castles/keep.png?v=20260704-firebase-castles",
+    4: "assets/castles/castle.png?v=20260704-firebase-castles",
+    5: "assets/castles/city.png?v=20260704-firebase-castles",
+  });
+  const HERO_REWARD_EARLY_END_LEVEL = 50;
+  const HERO_REWARD_MID_END_LEVEL = 100;
+  const ECONOMY_CITY_PREVIEW_LEVELS = [1, 25, 50, 75, 100, 125, 150];
+  const ECONOMY_REWARD_PREVIEW_LEVELS = [10, 50, 51, 75, 100, 101, 125, 150];
   const CAMP_UI_FOOTPRINT_PAD = { x: 34, top: 30, bottom: 18 };
   const STRONGHOLD_UI_FOOTPRINT_PAD = { x: 58, top: 78, bottom: 42 };
   const CROWN_UI_FOOTPRINT_PAD = { x: 84, top: 116, bottom: 56 };
@@ -860,13 +885,215 @@
     const step = options.step ?? 1;
     const min = options.min ?? 0;
     const suffix = options.suffix ? `<small>${escapeHtml(options.suffix)}</small>` : "";
+    const description = options.description
+      ? `<small class="economy-field-description">${escapeHtml(options.description)}</small>`
+      : "";
     return `
-      <label>
+      <label class="${description ? "economy-explained-field" : ""}">
         <span>${escapeHtml(label)}</span>
         <input data-economy-path="${escapeHtml(path)}" type="number" min="${min}" step="${step}" value="${escapeHtml(value)}" />
         ${suffix}
+        ${description}
       </label>
     `;
+  }
+
+  function readEconomyNumber(value, fallback = 0) {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : fallback;
+  }
+
+  function normalizeEconomyPreviewLevel(value) {
+    return Math.max(1, Math.floor(readEconomyNumber(value, 1)));
+  }
+
+  function getEconomyPreviewVictoryPoints(level) {
+    const normalizedLevel = normalizeEconomyPreviewLevel(level);
+    const formula = CITY_VICTORY_POINT_FORMULA;
+    return Math.floor(
+      formula.base
+        + normalizedLevel * formula.perLevel
+        + Math.pow(normalizedLevel, formula.exponent) * formula.exponentScale
+    );
+  }
+
+  function getEconomyPreviewGoldCurveUnits(level, economy = state.economy) {
+    const config = economy?.cityEconomy || {};
+    const normalizedLevel = normalizeEconomyPreviewLevel(level);
+    const endgameStartLevel = normalizeEconomyPreviewLevel(config.goldEndgameStartLevel);
+    const curveLevel = Math.min(normalizedLevel, endgameStartLevel);
+    const base = Math.max(0, readEconomyNumber(config.productionVpBase));
+    const growth = Math.max(0, readEconomyNumber(config.productionVpGrowth));
+    const rawUnits = base * Math.pow(growth, curveLevel - 1);
+    if (!Number.isFinite(rawUnits)) return Number.MAX_SAFE_INTEGER;
+    return Math.min(Number.MAX_SAFE_INTEGER, Math.max(0, Math.floor(rawUnits + 0.000001)));
+  }
+
+  function getEconomyPreviewGoldPerHour(level, economy = state.economy) {
+    const config = economy?.cityEconomy || {};
+    const normalizedLevel = normalizeEconomyPreviewLevel(level);
+    const endgameStartLevel = normalizeEconomyPreviewLevel(config.goldEndgameStartLevel);
+    const goldPerUnit = Math.max(0, readEconomyNumber(config.goldPerProductionVp));
+    const endgameGrowth = Math.max(0, readEconomyNumber(config.goldEndgameGrowth));
+    const endgameMultiplier = normalizedLevel > endgameStartLevel
+      ? Math.pow(endgameGrowth, normalizedLevel - endgameStartLevel)
+      : 1;
+    const rawGold = getEconomyPreviewGoldCurveUnits(normalizedLevel, economy)
+      * goldPerUnit
+      * endgameMultiplier;
+    if (!Number.isFinite(rawGold)) return Number.MAX_SAFE_INTEGER;
+    return Math.min(Number.MAX_SAFE_INTEGER, Math.max(0, Math.floor(rawGold)));
+  }
+
+  function getEconomyPreviewUpgradeTargetHours(level, economy = state.economy) {
+    const config = economy?.cityEconomy || {};
+    const normalizedLevel = normalizeEconomyPreviewLevel(level);
+    const earlyEndLevel = normalizeEconomyPreviewLevel(config.upgradeEarlyEndLevel);
+    const midEndLevel = Math.max(earlyEndLevel + 1, normalizeEconomyPreviewLevel(config.upgradeMidEndLevel));
+    const earlyStartHours = Math.max(0, readEconomyNumber(config.upgradeEarlyStartHours));
+    const earlyEndHours = Math.max(0, readEconomyNumber(config.upgradeEarlyEndHours));
+    const midEndHours = Math.max(0, readEconomyNumber(config.upgradeMidEndHours));
+    const level150Hours = Math.max(0, readEconomyNumber(config.upgradeLevel150Hours));
+    const maximumHours = Math.max(0, readEconomyNumber(config.upgradeMaximumHours));
+    if (normalizedLevel <= earlyEndLevel) {
+      const progress = (normalizedLevel - 1) / Math.max(1, earlyEndLevel - 1);
+      return earlyStartHours
+        + (earlyEndHours - earlyStartHours) * Math.pow(progress, 1.35);
+    }
+    if (normalizedLevel <= midEndLevel) {
+      const progress = (normalizedLevel - earlyEndLevel) / Math.max(1, midEndLevel - earlyEndLevel);
+      return earlyEndHours
+        + (midEndHours - earlyEndHours) * Math.pow(progress, 1.4);
+    }
+    const endgameProgress = (normalizedLevel - midEndLevel) / Math.max(1, 150 - midEndLevel);
+    return Math.min(
+      maximumHours,
+      midEndHours + (level150Hours - midEndHours) * Math.pow(endgameProgress, 1.5)
+    );
+  }
+
+  function getEconomyPreviewUpgradeCost(level, economy = state.economy) {
+    const rawCost = getEconomyPreviewGoldPerHour(level, economy)
+      * getEconomyPreviewUpgradeTargetHours(level, economy);
+    if (!Number.isFinite(rawCost)) return Number.MAX_SAFE_INTEGER;
+    return Math.max(10, Math.floor(rawCost + 0.000001));
+  }
+
+  function getEconomyPreviewHeroGoldUpgradeShare(level, economy = state.economy) {
+    const config = economy?.levelRewards || {};
+    const normalizedLevel = normalizeEconomyPreviewLevel(level);
+    const earlyShare = Math.max(0, readEconomyNumber(config.goldEarlyUpgradeShare));
+    const midShare = Math.max(0, readEconomyNumber(config.goldMidUpgradeShare));
+    if (normalizedLevel <= HERO_REWARD_EARLY_END_LEVEL) return earlyShare;
+    if (normalizedLevel <= HERO_REWARD_MID_END_LEVEL) {
+      const progress = (normalizedLevel - HERO_REWARD_EARLY_END_LEVEL)
+        / (HERO_REWARD_MID_END_LEVEL - HERO_REWARD_EARLY_END_LEVEL);
+      return earlyShare + (midShare - earlyShare) * progress;
+    }
+    return Math.max(0, readEconomyNumber(config.goldEndgameUpgradeShare));
+  }
+
+  function getEconomyPreviewHeroGoldProductionHours(level, economy = state.economy) {
+    const config = economy?.levelRewards || {};
+    const normalizedLevel = normalizeEconomyPreviewLevel(level);
+    const earlyHours = Math.max(0, readEconomyNumber(config.goldEarlyProductionHours));
+    const midHours = Math.max(0, readEconomyNumber(config.goldMidProductionHours));
+    if (normalizedLevel <= HERO_REWARD_EARLY_END_LEVEL) return earlyHours;
+    if (normalizedLevel <= HERO_REWARD_MID_END_LEVEL) {
+      const progress = (normalizedLevel - HERO_REWARD_EARLY_END_LEVEL)
+        / (HERO_REWARD_MID_END_LEVEL - HERO_REWARD_EARLY_END_LEVEL);
+      return earlyHours + (midHours - earlyHours) * progress;
+    }
+    return Math.max(0, readEconomyNumber(config.goldEndgameProductionHours));
+  }
+
+  function getEconomyPreviewHeroTroopHours(level, economy = state.economy) {
+    const config = economy?.levelRewards || {};
+    const normalizedLevel = normalizeEconomyPreviewLevel(level);
+    if (normalizedLevel <= HERO_REWARD_EARLY_END_LEVEL) {
+      return Math.max(0, readEconomyNumber(config.troopEarlyBaseHours))
+        + normalizedLevel * Math.max(0, readEconomyNumber(config.troopEarlyHoursPerLevel));
+    }
+    if (normalizedLevel <= HERO_REWARD_MID_END_LEVEL) {
+      return Math.max(0, readEconomyNumber(config.troopMidBaseHours))
+        + (normalizedLevel - HERO_REWARD_EARLY_END_LEVEL)
+          * Math.max(0, readEconomyNumber(config.troopMidHoursPerLevel));
+    }
+    const endgameHours = Math.max(0, readEconomyNumber(config.troopEndgameBaseHours))
+      + (normalizedLevel - HERO_REWARD_MID_END_LEVEL)
+        * Math.max(0, readEconomyNumber(config.troopEndgameHoursPerLevel));
+    return Math.min(
+      Math.max(0, readEconomyNumber(config.troopMaximumHours)),
+      endgameHours
+    );
+  }
+
+  function getEconomyPreviewHeroLevelReward(level, economy = state.economy) {
+    const normalizedLevel = normalizeEconomyPreviewLevel(level);
+    const referenceCityLevel = Math.max(1, normalizedLevel - 1);
+    const legacyGoldFloor = 250 + normalizedLevel * 60 + Math.pow(normalizedLevel, 1.25) * 25;
+    const goldFromUpgradeShare = getEconomyPreviewUpgradeCost(referenceCityLevel, economy)
+      * getEconomyPreviewHeroGoldUpgradeShare(normalizedLevel, economy);
+    const goldFromProductionHours = getEconomyPreviewGoldPerHour(normalizedLevel, economy)
+      * getEconomyPreviewHeroGoldProductionHours(normalizedLevel, economy);
+    const gold = Math.floor(Math.max(
+      legacyGoldFloor,
+      Math.min(goldFromUpgradeShare, goldFromProductionHours)
+    ));
+    const troopHours = getEconomyPreviewHeroTroopHours(normalizedLevel, economy);
+    const baseTroopsPerHour = getEconomyPreviewVictoryPoints(normalizedLevel)
+      * Math.max(0, readEconomyNumber(economy?.cityEconomy?.troopsPerVictoryPoint));
+    return {
+      gold,
+      troopHours,
+      troops: Math.floor(Math.max(50, baseTroopsPerHour * troopHours)),
+    };
+  }
+
+  function formatEconomyPreviewNumber(value, maximumFractionDigits = 0) {
+    if (!Number.isFinite(Number(value))) return "—";
+    return new Intl.NumberFormat("en-US", { maximumFractionDigits }).format(Number(value));
+  }
+
+  function buildCityEconomyPreviewRows(economy = state.economy) {
+    return ECONOMY_CITY_PREVIEW_LEVELS.map(level => {
+      const victoryPoints = getEconomyPreviewVictoryPoints(level);
+      const troopsPerHour = victoryPoints
+        * Math.max(0, readEconomyNumber(economy?.cityEconomy?.troopsPerVictoryPoint));
+      return `
+        <tr>
+          <td>${level}</td>
+          <td>${formatEconomyPreviewNumber(victoryPoints)}</td>
+          <td>${formatEconomyPreviewNumber(troopsPerHour)}</td>
+          <td>${formatEconomyPreviewNumber(getEconomyPreviewGoldPerHour(level, economy))}</td>
+          <td>${formatEconomyPreviewNumber(getEconomyPreviewUpgradeTargetHours(level, economy), 1)} h</td>
+          <td>${formatEconomyPreviewNumber(getEconomyPreviewUpgradeCost(level, economy))}</td>
+        </tr>
+      `;
+    }).join("");
+  }
+
+  function buildLevelRewardPreviewRows(economy = state.economy) {
+    return ECONOMY_REWARD_PREVIEW_LEVELS.map(level => {
+      const reward = getEconomyPreviewHeroLevelReward(level, economy);
+      return `
+        <tr>
+          <td>${level}</td>
+          <td>${formatEconomyPreviewNumber(reward.gold)}</td>
+          <td>${formatEconomyPreviewNumber(reward.troopHours, 1)} h</td>
+          <td>${formatEconomyPreviewNumber(reward.troops)}</td>
+          <td>+1</td>
+        </tr>
+      `;
+    }).join("");
+  }
+
+  function updateEconomyBreakdownPreviews() {
+    if (!state.economy) return;
+    const cityPreview = elements.economySections.querySelector('[data-economy-preview="cities"]');
+    const rewardPreview = elements.economySections.querySelector('[data-economy-preview="level-rewards"]');
+    if (cityPreview) cityPreview.innerHTML = buildCityEconomyPreviewRows(state.economy);
+    if (rewardPreview) rewardPreview.innerHTML = buildLevelRewardPreviewRows(state.economy);
   }
 
   function renderEconomySections() {
@@ -970,23 +1197,172 @@
       </section>
       <section class="economy-section wide">
         <div class="economy-section-heading">
-          <div><span>Cities</span><strong>Production and upgrade pacing</strong></div>
-          <p>Growth values are multipliers. Upgrade hours define the target production time required at each progression breakpoint.</p>
+          <div><span>Cities</span><strong>What city levels produce and what upgrades cost</strong></div>
+          <p>These settings control one regular city's base production and its base cost to reach the next city level. Skills, items, and strongholds apply later as bonuses or discounts.</p>
         </div>
-        <div class="economy-grid four">
-          ${economyNumberInput("cityEconomy.productionVpBase", "Production VP base", economy.cityEconomy.productionVpBase, { step: 0.001 })}
-          ${economyNumberInput("cityEconomy.productionVpGrowth", "Production VP growth", economy.cityEconomy.productionVpGrowth, { step: 0.001 })}
-          ${economyNumberInput("cityEconomy.goldPerProductionVp", "Gold per production VP", economy.cityEconomy.goldPerProductionVp, { step: 0.1 })}
-          ${economyNumberInput("cityEconomy.troopsPerVictoryPoint", "Troops per victory point", economy.cityEconomy.troopsPerVictoryPoint, { step: 0.1 })}
-          ${economyNumberInput("cityEconomy.goldEndgameStartLevel", "Gold endgame starts at level", economy.cityEconomy.goldEndgameStartLevel)}
-          ${economyNumberInput("cityEconomy.goldEndgameGrowth", "Gold endgame growth", economy.cityEconomy.goldEndgameGrowth, { step: 0.001 })}
-          ${economyNumberInput("cityEconomy.upgradeEarlyEndLevel", "Early upgrade phase ends", economy.cityEconomy.upgradeEarlyEndLevel)}
-          ${economyNumberInput("cityEconomy.upgradeMidEndLevel", "Mid upgrade phase ends", economy.cityEconomy.upgradeMidEndLevel)}
-          ${economyNumberInput("cityEconomy.upgradeEarlyStartHours", "Level 1 target hours", economy.cityEconomy.upgradeEarlyStartHours, { step: 0.1 })}
-          ${economyNumberInput("cityEconomy.upgradeEarlyEndHours", "Early phase target hours", economy.cityEconomy.upgradeEarlyEndHours, { step: 0.1 })}
-          ${economyNumberInput("cityEconomy.upgradeMidEndHours", "Mid phase target hours", economy.cityEconomy.upgradeMidEndHours, { step: 0.1 })}
-          ${economyNumberInput("cityEconomy.upgradeLevel150Hours", "Level 150 target hours", economy.cityEconomy.upgradeLevel150Hours, { step: 0.1 })}
-          ${economyNumberInput("cityEconomy.upgradeMaximumHours", "Maximum target hours", economy.cityEconomy.upgradeMaximumHours, { step: 0.1 })}
+        <div class="economy-callout important">
+          <strong>Yes, Victory Points are used—but “Production VP” was a misleading label.</strong>
+          <p><b>Visible Victory Points (VP)</b> are shown in the game and are calculated from city level: <code>floor(6 + 4 × level + 2 × level^1.35)</code>. VP sets base troop production and contributes to battle and capture XP. Gold uses a separate, hidden curve value; the gold fields below now call it a <b>gold curve unit</b> so the two are not confused.</p>
+        </div>
+        <div class="economy-breakdown-grid">
+          <article class="economy-breakdown-card">
+            <div class="economy-breakdown-heading">
+              <span>Visible VP → troops</span>
+              <strong>Actual in-game Victory Points</strong>
+              <p>The VP curve itself is fixed in game code. This multiplier is the editable part of troop production.</p>
+            </div>
+            <div class="economy-fixed-formula">
+              <span>Fixed formula</span>
+              <code>VP = floor(6 + 4 × level + 2 × level^1.35)</code>
+              <small>Also contributes to the XP value of fighting over a city. It does not calculate city gold.</small>
+            </div>
+            ${economyNumberInput(
+              "cityEconomy.troopsPerVictoryPoint",
+              "Troops/hour per visible VP",
+              economy.cityEconomy.troopsPerVictoryPoint,
+              {
+                step: 0.1,
+                description: "Base troops per hour for one city = that city's visible VP × this value. Royal Granaries, strongholds, and War Drums multiply the result afterward.",
+              }
+            )}
+          </article>
+          <article class="economy-breakdown-card">
+            <div class="economy-breakdown-heading">
+              <span>Gold per city</span>
+              <strong>Internal gold curve</strong>
+              <p>Before endgame: gold curve units = floor(base × growth^(city level − 1)); base gold/hour = units × gold per unit.</p>
+            </div>
+            <div class="economy-explained-grid">
+              ${economyNumberInput(
+                "cityEconomy.productionVpBase",
+                "Level 1 gold curve units",
+                economy.cityEconomy.productionVpBase,
+                {
+                  step: 0.001,
+                  description: "Internal gold-only starting value at city level 1. This is not visible VP and does not affect troops or battle XP.",
+                }
+              )}
+              ${economyNumberInput(
+                "cityEconomy.productionVpGrowth",
+                "Gold curve multiplier per level",
+                economy.cityEconomy.productionVpGrowth,
+                {
+                  step: 0.001,
+                  description: "Multiplies the internal gold units for every city level up to the endgame switch. For example, 1.115 means roughly +11.5% per level.",
+                }
+              )}
+              ${economyNumberInput(
+                "cityEconomy.goldPerProductionVp",
+                "Gold/hour per curve unit",
+                economy.cityEconomy.goldPerProductionVp,
+                {
+                  step: 0.1,
+                  description: "Converts the hidden gold curve units into one city's base gold per hour before skills, items, and stronghold bonuses.",
+                }
+              )}
+              ${economyNumberInput(
+                "cityEconomy.goldEndgameStartLevel",
+                "Stop the main gold curve at level",
+                economy.cityEconomy.goldEndgameStartLevel,
+                {
+                  description: "This level still uses the main curve. Starting with the next level, the curve is frozen here and the endgame multiplier takes over.",
+                }
+              )}
+              ${economyNumberInput(
+                "cityEconomy.goldEndgameGrowth",
+                "Endgame gold multiplier per level",
+                economy.cityEconomy.goldEndgameGrowth,
+                {
+                  step: 0.001,
+                  description: "Applied once for every city level above the switch level. For example, 1.08 means +8% base gold per additional endgame level.",
+                }
+              )}
+            </div>
+          </article>
+          <article class="economy-breakdown-card full">
+            <div class="economy-breakdown-heading">
+              <span>Upgrade cost</span>
+              <strong>Base gold/hour × target hours</strong>
+              <p>The cost to upgrade a city from its current level to the next is that city's base gold/hour multiplied by the target hours from this curve. Upgrade skills and strongholds discount the result afterward.</p>
+            </div>
+            <div class="economy-explained-grid three">
+              ${economyNumberInput(
+                "cityEconomy.upgradeEarlyEndLevel",
+                "Early phase ends at city level",
+                economy.cityEconomy.upgradeEarlyEndLevel,
+                {
+                  description: "The target-hour curve runs from the Level 1 value to the Early-end value across levels 1 through this level.",
+                }
+              )}
+              ${economyNumberInput(
+                "cityEconomy.upgradeEarlyStartHours",
+                "Target hours at city level 1",
+                economy.cityEconomy.upgradeEarlyStartHours,
+                {
+                  step: 0.1,
+                  description: "A value of 0.1 prices the level 1→2 upgrade at 6 minutes of that level 1 city's base gold production.",
+                }
+              )}
+              ${economyNumberInput(
+                "cityEconomy.upgradeEarlyEndHours",
+                "Target hours at early phase end",
+                economy.cityEconomy.upgradeEarlyEndHours,
+                {
+                  step: 0.1,
+                  description: "Base-production hours used to price the next upgrade when the city reaches the early phase endpoint.",
+                }
+              )}
+              ${economyNumberInput(
+                "cityEconomy.upgradeMidEndLevel",
+                "Mid phase ends at city level",
+                economy.cityEconomy.upgradeMidEndLevel,
+                {
+                  description: "Between the early and mid endpoints, target hours rise smoothly toward the Mid-end target hours.",
+                }
+              )}
+              ${economyNumberInput(
+                "cityEconomy.upgradeMidEndHours",
+                "Target hours at mid phase end",
+                economy.cityEconomy.upgradeMidEndHours,
+                {
+                  step: 0.1,
+                  description: "Base-production hours used to price the next upgrade at the midgame endpoint.",
+                }
+              )}
+              ${economyNumberInput(
+                "cityEconomy.upgradeLevel150Hours",
+                "Target hours at city level 150",
+                economy.cityEconomy.upgradeLevel150Hours,
+                {
+                  step: 0.1,
+                  description: "Endgame pacing target. A ten-city kingdom with equal production earns this base cost in roughly one tenth of these hours before spending or bonuses.",
+                }
+              )}
+              ${economyNumberInput(
+                "cityEconomy.upgradeMaximumHours",
+                "Maximum target hours",
+                economy.cityEconomy.upgradeMaximumHours,
+                {
+                  step: 0.1,
+                  description: "Hard ceiling on the production-hour part of any one-city upgrade cost, even above level 150.",
+                }
+              )}
+            </div>
+          </article>
+        </div>
+        <div class="economy-preview-panel">
+          <div class="economy-preview-heading">
+            <div><span>Live preview</span><strong>One regular city, before bonuses</strong></div>
+            <p>Editing any city setting updates this table immediately. “Next upgrade” means upgrading from the listed city level to the next one.</p>
+          </div>
+          <div class="economy-preview-scroll">
+            <table class="economy-preview-table">
+              <thead>
+                <tr><th>City level</th><th>Visible VP</th><th>Base troops/hour</th><th>Base gold/hour</th><th>Target hours</th><th>Next upgrade gold</th></tr>
+              </thead>
+              <tbody data-economy-preview="cities">${buildCityEconomyPreviewRows(economy)}</tbody>
+            </table>
+          </div>
         </div>
       </section>
       <section class="economy-section wide">
@@ -998,23 +1374,176 @@
       </section>
       <section class="economy-section wide">
         <div class="economy-section-heading">
-          <div><span>Level rewards</span><strong>Gold and troop relief</strong></div>
-          <p>Upgrade shares are decimal fractions. Production rewards are measured in hours of the player's current production.</p>
+          <div><span>Level rewards</span><strong>What the player gets when the hero gains a level</strong></div>
+          <p>This is hero XP progression, not a city upgrade. The reward is calculated once for every hero level crossed, including when one XP award gains multiple levels.</p>
         </div>
-        <div class="economy-grid four">
-          ${economyNumberInput("levelRewards.goldEarlyUpgradeShare", "Early gold upgrade share", economy.levelRewards.goldEarlyUpgradeShare, { step: 0.01 })}
-          ${economyNumberInput("levelRewards.goldMidUpgradeShare", "Mid gold upgrade share", economy.levelRewards.goldMidUpgradeShare, { step: 0.01 })}
-          ${economyNumberInput("levelRewards.goldEndgameUpgradeShare", "Endgame gold upgrade share", economy.levelRewards.goldEndgameUpgradeShare, { step: 0.01 })}
-          ${economyNumberInput("levelRewards.goldEarlyProductionHours", "Early gold production hours", economy.levelRewards.goldEarlyProductionHours, { step: 0.1 })}
-          ${economyNumberInput("levelRewards.goldMidProductionHours", "Mid gold production hours", economy.levelRewards.goldMidProductionHours, { step: 0.1 })}
-          ${economyNumberInput("levelRewards.goldEndgameProductionHours", "Endgame gold production hours", economy.levelRewards.goldEndgameProductionHours, { step: 0.1 })}
-          ${economyNumberInput("levelRewards.troopEarlyBaseHours", "Early troop base hours", economy.levelRewards.troopEarlyBaseHours, { step: 0.1 })}
-          ${economyNumberInput("levelRewards.troopEarlyHoursPerLevel", "Early troop hours per level", economy.levelRewards.troopEarlyHoursPerLevel, { step: 0.01 })}
-          ${economyNumberInput("levelRewards.troopMidBaseHours", "Mid troop base hours", economy.levelRewards.troopMidBaseHours, { step: 0.1 })}
-          ${economyNumberInput("levelRewards.troopMidHoursPerLevel", "Mid troop hours per level", economy.levelRewards.troopMidHoursPerLevel, { step: 0.01 })}
-          ${economyNumberInput("levelRewards.troopEndgameBaseHours", "Endgame troop base hours", economy.levelRewards.troopEndgameBaseHours, { step: 0.1 })}
-          ${economyNumberInput("levelRewards.troopEndgameHoursPerLevel", "Endgame troop hours per level", economy.levelRewards.troopEndgameHoursPerLevel, { step: 0.01 })}
-          ${economyNumberInput("levelRewards.troopMaximumHours", "Maximum troop reward hours", economy.levelRewards.troopMaximumHours, { step: 0.1 })}
+        <div class="economy-callout">
+          <strong>Every hero level always grants three things.</strong>
+          <p><b>+1 skill point</b> (fixed in code), <b>gold</b> added to the player's balance, and <b>troops</b> added to the player's main city. These inputs change only the gold and troop amounts. They do not change XP requirements, battle XP, the skill point count, or city-level rewards.</p>
+        </div>
+        <div class="economy-callout formula">
+          <strong>Why changing one gold field may not change the final reward</strong>
+          <p>Hero-level gold is the <b>smaller</b> of two limits: <code>reference city upgrade cost × upgrade share</code> and <code>base gold/hour × production hours</code>. A small legacy minimum is the floor. Increasing one limit has no effect while the other limit is still lower.</p>
+        </div>
+        <div class="economy-breakdown-grid">
+          <article class="economy-breakdown-card">
+            <div class="economy-breakdown-heading">
+              <span>Gold limit 1</span>
+              <strong>Share of a reference city upgrade</strong>
+              <p>The reference cost is the base cost to upgrade a city from hero level − 1 to that hero level, with no discounts. Decimal shares mean 0.5 = 50%.</p>
+            </div>
+            <div class="economy-explained-grid">
+              ${economyNumberInput(
+                "levelRewards.goldEarlyUpgradeShare",
+                "Upgrade share through hero level 50",
+                economy.levelRewards.goldEarlyUpgradeShare,
+                {
+                  step: 0.01,
+                  description: "Used for every hero level gained up to and including level 50. Example: 0.5 limits gold to 50% of the reference city upgrade.",
+                }
+              )}
+              ${economyNumberInput(
+                "levelRewards.goldMidUpgradeShare",
+                "Upgrade share at hero level 100",
+                economy.levelRewards.goldMidUpgradeShare,
+                {
+                  step: 0.01,
+                  description: "Levels 51–100 smoothly move from the level-50 share to this level-100 endpoint; this is not a flat midgame value.",
+                }
+              )}
+              ${economyNumberInput(
+                "levelRewards.goldEndgameUpgradeShare",
+                "Upgrade share after hero level 100",
+                economy.levelRewards.goldEndgameUpgradeShare,
+                {
+                  step: 0.01,
+                  description: "Flat share used for every hero level gained from 101 onward.",
+                }
+              )}
+            </div>
+          </article>
+          <article class="economy-breakdown-card">
+            <div class="economy-breakdown-heading">
+              <span>Gold limit 2</span>
+              <strong>Hours of one reference city's gold</strong>
+              <p>This limit uses the base gold/hour of a city whose city level equals the new hero level. It excludes skills, items, and strongholds.</p>
+            </div>
+            <div class="economy-explained-grid">
+              ${economyNumberInput(
+                "levelRewards.goldEarlyProductionHours",
+                "Gold hours through hero level 50",
+                economy.levelRewards.goldEarlyProductionHours,
+                {
+                  step: 0.1,
+                  description: "Limits the reward to this many hours of the reference city's base gold production through hero level 50.",
+                }
+              )}
+              ${economyNumberInput(
+                "levelRewards.goldMidProductionHours",
+                "Gold hours at hero level 100",
+                economy.levelRewards.goldMidProductionHours,
+                {
+                  step: 0.1,
+                  description: "Levels 51–100 smoothly increase or decrease from the level-50 hours to this level-100 endpoint.",
+                }
+              )}
+              ${economyNumberInput(
+                "levelRewards.goldEndgameProductionHours",
+                "Gold hours after hero level 100",
+                economy.levelRewards.goldEndgameProductionHours,
+                {
+                  step: 0.1,
+                  description: "Flat production-hour limit used for every hero level gained from 101 onward.",
+                }
+              )}
+            </div>
+          </article>
+          <article class="economy-breakdown-card full">
+            <div class="economy-breakdown-heading">
+              <span>Troops → main city</span>
+              <strong>Reference troop production × reward hours</strong>
+              <p>The reference troop rate is the base production of a city whose level equals the new hero level: visible VP × Troops/hour per VP. Skills, items, and strongholds are excluded. The final reward has a minimum of 50 troops.</p>
+            </div>
+            <div class="economy-explained-grid three">
+              ${economyNumberInput(
+                "levelRewards.troopEarlyBaseHours",
+                "Early base troop hours",
+                economy.levelRewards.troopEarlyBaseHours,
+                {
+                  step: 0.1,
+                  description: "For hero levels through 50: reward hours = this base + (new hero level × early hours per level).",
+                }
+              )}
+              ${economyNumberInput(
+                "levelRewards.troopEarlyHoursPerLevel",
+                "Early troop hours added per level",
+                economy.levelRewards.troopEarlyHoursPerLevel,
+                {
+                  step: 0.01,
+                  description: "Slope for levels through 50. At level 50, 4 base + (50 × 0.4) produces 24 reward hours.",
+                }
+              )}
+              ${economyNumberInput(
+                "levelRewards.troopMidBaseHours",
+                "Midgame base troop hours",
+                economy.levelRewards.troopMidBaseHours,
+                {
+                  step: 0.1,
+                  description: "For levels 51–100: reward hours = this base + ((new hero level − 50) × midgame hours per level).",
+                }
+              )}
+              ${economyNumberInput(
+                "levelRewards.troopMidHoursPerLevel",
+                "Midgame troop hours added per level",
+                economy.levelRewards.troopMidHoursPerLevel,
+                {
+                  step: 0.01,
+                  description: "Slope applied to each hero level above 50 through level 100.",
+                }
+              )}
+              ${economyNumberInput(
+                "levelRewards.troopEndgameBaseHours",
+                "Endgame base troop hours",
+                economy.levelRewards.troopEndgameBaseHours,
+                {
+                  step: 0.1,
+                  description: "For levels 101+: reward hours = this base + ((new hero level − 100) × endgame hours per level).",
+                }
+              )}
+              ${economyNumberInput(
+                "levelRewards.troopEndgameHoursPerLevel",
+                "Endgame troop hours added per level",
+                economy.levelRewards.troopEndgameHoursPerLevel,
+                {
+                  step: 0.01,
+                  description: "Slope applied to every hero level above 100 until the maximum reward hours ceiling is reached.",
+                }
+              )}
+              ${economyNumberInput(
+                "levelRewards.troopMaximumHours",
+                "Maximum troop reward hours",
+                economy.levelRewards.troopMaximumHours,
+                {
+                  step: 0.1,
+                  description: "Hard ceiling on the troop-production hours used for one hero-level reward.",
+                }
+              )}
+            </div>
+          </article>
+        </div>
+        <div class="economy-preview-panel">
+          <div class="economy-preview-heading">
+            <div><span>Live preview</span><strong>Reward when each hero level is reached</strong></div>
+            <p>Gold goes to the player balance. Troops go to the main city. Calculations use the current city settings above and exclude all temporary or ownership bonuses.</p>
+          </div>
+          <div class="economy-preview-scroll">
+            <table class="economy-preview-table">
+              <thead>
+                <tr><th>Hero level reached</th><th>Gold to balance</th><th>Troop reward hours</th><th>Troops to main city</th><th>Skill points</th></tr>
+              </thead>
+              <tbody data-economy-preview="level-rewards">${buildLevelRewardPreviewRows(economy)}</tbody>
+            </table>
+          </div>
         </div>
       </section>
       <section class="economy-section wide">
@@ -1283,19 +1812,17 @@
     elements.markerLayer.innerHTML = "";
     const cityUiGuide = getSelectedCityUiGuide(region);
     region.cities.forEach((city, index) => {
-      elements.markerLayer.appendChild(createUiFootprint("city", city, index, region));
       const marker = createMarker("city", city, index, region);
       const isSelectedGuide = index === cityUiGuide.selectedIndex;
       const isOverlapPeer = cityUiGuide.overlapIndexes.has(index);
-      const showUiPreview = isSelectedGuide || isOverlapPeer;
+      const castleStage = getEditorCityCastleStage(city.level);
+      const ownerUi = getEditorCityOwnerUi(city.owner);
+      marker.classList.add(`castle-stage-${castleStage}`, `owner-${ownerUi.key}`);
+      marker.dataset.castleStage = String(castleStage);
+      marker.dataset.owner = ownerUi.key;
       marker.classList.toggle("ui-overlap", isSelectedGuide && cityUiGuide.overlapIndexes.size > 0);
       marker.classList.toggle("ui-overlap-peer", isOverlapPeer);
-      marker.innerHTML = `${showUiPreview ? `
-        <span class="city-ui-preview" aria-hidden="true">
-          <strong>${escapeHtml(city.name)}</strong>
-          <small>Lv ${escapeHtml(city.level)}</small>
-        </span>` : ""}
-        <span class="city-marker-index" aria-hidden="true">${escapeHtml((index + 1) % 10)}</span>`;
+      marker.innerHTML = renderEditorCityMarker(city, castleStage, ownerUi);
       if (isSelectedGuide && cityUiGuide.overlapIndexes.size > 0) {
         marker.title = `${city.name} - name/level UI overlaps ${cityUiGuide.overlapIndexes.size} nearby ${cityUiGuide.overlapIndexes.size === 1 ? "city" : "cities"}`;
       } else if (isOverlapPeer) {
@@ -1320,9 +1847,59 @@
     });
   }
 
+  function getEditorCityCastleStage(level) {
+    const normalizedLevel = Math.max(1, Math.floor(Number(level) || 1));
+    if (normalizedLevel >= 100) return 5;
+    if (normalizedLevel >= 75) return 4;
+    if (normalizedLevel >= 50) return 3;
+    if (normalizedLevel >= 25) return 2;
+    return 1;
+  }
+
+  function getEditorCityOwnerUi(owner) {
+    return CITY_EDITOR_OWNER_UI[String(owner || "").trim()] || CITY_EDITOR_OWNER_UI.neutral;
+  }
+
+  function renderEditorCityMarker(city, castleStage, ownerUi) {
+    const level = Math.max(1, Math.floor(Number(city.level) || 1));
+    const troops = Math.max(0, Math.floor(Number(city.troops) || 0));
+    const ownerFlag = `<span class="editor-city-owner-flag" aria-hidden="true">${escapeHtml(ownerUi.flag)}</span>`;
+    const cityLabel = ownerUi.key === "player"
+      ? `
+        <span class="editor-city-label editor-player-city-label" aria-hidden="true">
+          <span class="editor-player-city-banner">
+            <span class="editor-city-owner-column">
+              ${ownerFlag}
+              <span class="editor-city-label-level">${escapeHtml(level)}</span>
+            </span>
+            <span class="editor-player-city-data">
+              <strong class="editor-city-ruler-name">${escapeHtml(ownerUi.label)}</strong>
+              <span class="editor-city-army-count">${escapeHtml(troops)} troops</span>
+              <strong class="editor-city-name">${escapeHtml(city.name)}</strong>
+            </span>
+          </span>
+        </span>`
+      : `
+        <span class="editor-city-label editor-foreign-city-label" aria-hidden="true">
+          ${ownerUi.key === "neutral" ? "" : `<strong class="editor-foreign-ruler-name">${escapeHtml(ownerUi.label)}</strong>`}
+          <strong class="editor-city-name">${escapeHtml(city.name)}</strong>
+          <span class="editor-foreign-city-shield">
+            ${ownerFlag}
+            <span class="editor-city-label-level">${escapeHtml(level)}</span>
+          </span>
+        </span>`;
+    return `
+      <span class="editor-city-ring" aria-hidden="true"></span>
+      <span class="editor-city-castle stage-${castleStage}" aria-hidden="true">
+        <img class="editor-city-art" src="${escapeHtml(resolveAssetPath(CITY_CASTLE_ASSETS[castleStage] || CITY_CASTLE_ASSETS[1]))}" alt="" draggable="false" decoding="async" />
+      </span>
+      ${cityLabel}
+    `;
+  }
+
   function getSelectedCityUiGuide(region) {
     const cities = Array.isArray(region?.cities) ? region.cities : [];
-    const selectedIndex = state.selected.kind === "city" && state.selected.regionId === region.id
+    const selectedIndex = state.selected?.kind === "city" && state.selected.regionId === region.id
       ? state.selected.index
       : -1;
     const overlapIndexes = new Set();
@@ -1419,10 +1996,8 @@
 
   function applyMarkerVisualSize(marker, kind, item) {
     if (kind === "city") {
-      marker.style.setProperty("--city-ui-label-width", `${CITY_UI_LABEL_WIDTH * state.zoom}px`);
-      marker.style.setProperty("--city-ui-label-height", `${CITY_UI_LABEL_HEIGHT * state.zoom}px`);
-      marker.style.setProperty("--city-ui-label-offset", `${CITY_UI_LABEL_OFFSET * state.zoom}px`);
-      marker.style.setProperty("--city-ui-label-font-size", `${Math.max(7, 12 * state.zoom)}px`);
+      const gameScale = Math.min(CITY_EDITOR_MAX_GAME_SCALE, Math.max(MIN_REGION_ZOOM, state.zoom));
+      marker.style.setProperty("--editor-city-scale", String(gameScale));
       return;
     }
     if (kind !== "stronghold" && kind !== "camp") return;
@@ -2550,6 +3125,7 @@
     const input = event.target.closest("[data-economy-path]");
     if (!input) return;
     setNestedEconomyValue(input.dataset.economyPath, input.value);
+    updateEconomyBreakdownPreviews();
     markDirty("Economy value changed. Save to Game writes both client and Firebase configuration.");
   }
 

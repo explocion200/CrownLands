@@ -19,32 +19,32 @@ function requireMatch(source, pattern, message) {
 }
 
 assert.deepEqual(browserConfig, serverConfig, "Browser and Firebase economy configurations differ.");
-assert.equal(serverConfig.shopItems.war_drums_30m.bonusPercent, 5);
-assert.equal(serverConfig.camps.items.maxDailyRewards, 2);
+assert.equal(serverConfig.shopItems.war_drums_30m.bonusPercent, 30);
+assert.equal(serverConfig.camps.items.maxDailyRewards, 5);
 assert.equal(
   serverConfig.pickups.dailyGoldCap * serverConfig.pickups.goldAwardProductionMinutes,
-  60,
-  "Daily gold pickups should equal at most one hour of permanent production."
+  1_500,
+  "Daily gold pickup production-time budget changed unexpectedly."
 );
 assert.equal(
   serverConfig.pickups.dailyTroopCap * serverConfig.pickups.troopAwardProductionMinutes,
-  60,
-  "Daily troop pickups should equal at most one hour of permanent production."
+  1_500,
+  "Daily troop pickup production-time budget changed unexpectedly."
 );
 assert.equal(serverConfig.pickups.spawnIntervalMinutes, 3);
 
 const expectedItemLimits = {
   shield_12h: 1,
   war_drums_30m: 4,
-  royal_tax_decree_30m: 2,
-  veil_of_silence_30m: 4,
-  swift_march_order: 2,
+  royal_tax_decree_30m: 5,
+  veil_of_silence_30m: 5,
+  swift_march_order: 5,
   recall_horn: 2,
 };
 const expectedPrices = {
   shield_12h: 1_250_000,
-  war_drums_30m: 75_000,
-  royal_tax_decree_30m: 150_000,
+  war_drums_30m: 100_000,
+  royal_tax_decree_30m: 100_000,
   veil_of_silence_30m: 125_000,
   swift_march_order: 300_000,
   recall_horn: 500_000,
@@ -105,9 +105,9 @@ assert.ok(upgradeTargetHours(150) / 10 >= 20, "Level 150 should feel like endgam
 assert.deepEqual(serverConfig.skills.taxStewardship, { percentPerLevel: 3, maxPercent: 75 });
 assert.deepEqual(serverConfig.skills.royalGranaries, { percentPerLevel: 3, maxPercent: 75 });
 assert.deepEqual(serverConfig.skills.guildCharters, { percentPerLevel: 2, maxPercent: 50 });
-assert.equal(serverConfig.playerCosts.nearbyScoutGold, 75_000);
-assert.equal(serverConfig.playerCosts.regroupGold, 150_000);
-assert.equal(serverConfig.playerCosts.skillResetGold, 750_000);
+assert.equal(serverConfig.playerCosts.nearbyScoutGold, 250_000);
+assert.equal(serverConfig.playerCosts.regroupGold, 250_000);
+assert.equal(serverConfig.playerCosts.skillResetGold, 1_000_000);
 
 for (const source of [serverSource, clientSource]) {
   requireMatch(source, /economyNumber\(/, "Runtime is not reading the shared economy configuration.");
@@ -117,5 +117,7 @@ requireMatch(serverSource, /require\("\.\/economy-config\.json"\)/, "Firebase Fu
 requireMatch(editorServerSource, /\/api\/economy-data/, "Game Editor economy API is missing.");
 requireMatch(editorSource, /renderEconomySections/, "Game Editor economy interface is missing.");
 requireMatch(editorSource, /data-camp-reward-field="productionHours"/, "Per-camp production-hour editor is missing.");
+assert.doesNotMatch(clientSource, /troopsRalliedToMain|Rallied home/, "Lost-city troop production can still be rallied to the main city.");
+requireMatch(clientSource, /if \(!stillOwned\) continue;[\s\S]*?goldGainedFloat \+= stats\.goldProductionPerSecond/, "Offline production still credits cities that are no longer owned.");
 
 console.log("Validated shared Crownlands economy config, production, upgrades, pickups, camps, shop prices, daily caps, and skills.");

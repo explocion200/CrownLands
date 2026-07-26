@@ -43,7 +43,7 @@ const config = Object.fromEntries(constantNames.map(name => {
 
 const serverVersion = readConstant(serverSource, "GLOBAL_PLAYER_STATS_VERSION");
 const clientVersion = readConstant(clientSource, "KING_POWER_AUTHORITY_VERSION");
-if (serverVersion !== clientVersion || serverVersion !== 6) {
+if (serverVersion !== clientVersion || serverVersion !== 8) {
   throw new Error(`King Power authority versions differ or are stale (server ${serverVersion}, client ${clientVersion}).`);
 }
 
@@ -155,9 +155,9 @@ function cityMilitaryComponents(level, troops, bonuses = {}) {
   const victoryPoints = Math.floor(6 + level * 4 + Math.pow(level, 1.35) * 2);
   const sustainableTroopPerHour = victoryPoints * 3 * (1 + (bonuses.troop || 0) / 100);
   const replacementPower = Math.floor(sustainableTroopPerHour * config.KING_POWER_REPLACEMENT_HOURS);
-  const walls = 30 + (level - 1) * 32;
+  const walls = 200 + 3 * (Math.pow(level, 3) - 1);
   const totalDefense = Math.floor(
-    (walls + Math.floor(troops * (1 + level * 3 / 100))) * (1 + (bonuses.defense || 0) / 100)
+    (walls + Math.floor(troops * (1 + level * 2 / 100))) * (1 + (bonuses.defense || 0) / 100)
   );
   const defensivePower = Math.floor(
     Math.max(0, totalDefense - troops) * config.KING_POWER_DEFENSIVE_ADVANTAGE_WEIGHT
@@ -208,6 +208,6 @@ if (crown.replacementPower <= base.replacementPower || crown.defensivePower <= b
 }
 
 console.log(
-  `Validated King Power v6: 1x L100 + 10M troops = ${concentratedArmy.total.toLocaleString()}, `
+  `Validated King Power v${serverVersion}: 1x L100 + 10M troops = ${concentratedArmy.total.toLocaleString()}, `
     + `10x L75 + 1M troops = ${broadKingdom.total.toLocaleString()}.`
 );

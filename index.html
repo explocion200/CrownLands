@@ -12,11 +12,11 @@
   <meta name="apple-mobile-web-app-title" content="Crownlands" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="format-detection" content="telephone=no" />
-  <meta name="crownlands-build" content="20260723-utc-responsive-v1" />
+  <meta name="crownlands-build" content="20260726-offline-owned-production" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700;800;900&family=Cinzel+Decorative:wght@700;900&family=IM+Fell+English:ital@0;1&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=20260723-utc-responsive-v1" />
+  <link rel="stylesheet" href="styles.css?v=20260726-offline-owned-production" />
   <link rel="preload" as="image" href="assets/game-menu-background.jpg?v=20260702-login-page" />
   <link rel="preload" as="image" href="assets/loading-ring.png" />
   <link rel="preload" as="image" href="assets/loading-crown.png" />
@@ -294,13 +294,38 @@
     </article>
   </dialog>
 
+  <dialog
+    id="levelUpRewardModal"
+    class="modal level-up-reward-modal"
+    aria-labelledby="levelUpRewardTitle"
+    aria-describedby="levelUpRewardSubtitle"
+  >
+    <article class="modal-card level-up-reward-card">
+      <header class="level-up-reward-header">
+        <div class="level-up-crown-wrap" aria-hidden="true">
+          <span class="level-up-crown-glow"></span>
+          <img src="assets/loading-crown.png" alt="" />
+        </div>
+        <div>
+          <span class="level-up-eyebrow">Hero Level Up</span>
+          <h2 id="levelUpRewardTitle">Level reached</h2>
+          <p id="levelUpRewardSubtitle">Your kingdom rewards are ready.</p>
+        </div>
+      </header>
+      <div id="levelUpRewardBody" class="level-up-reward-body"></div>
+      <button id="collectLevelUpRewardsBtn" class="level-up-collect-btn" type="button">
+        Collect Rewards
+      </button>
+    </article>
+  </dialog>
+
   <script src="assets/map-editor-data.js?v=20260723-utc-responsive-v1"></script>
   <script src="world-config.js"></script>
-  <script src="economy-config.js?v=20260723-game-economy-editor"></script>
+  <script src="economy-config.js?v=20260726-offline-owned-production"></script>
   <script src="ui-layout-config.js?v=20260726-hud-layout-editor"></script>
   <script src="firebase-config.js?v=20260703-vapid-key"></script>
-  <script src="firebaseClient.js?v=20260723-utc-responsive-v1"></script>
-  <script src="game.js?v=20260723-game-economy-editor"></script>
+  <script src="firebaseClient.js?v=20260726-offline-owned-production"></script>
+  <script src="game.js?v=20260726-clans-ui-layout"></script>
   <script src="ui-layout-runtime.js?v=20260726-hud-layout-editor"></script>
 </body>
 </html>

@@ -2476,7 +2476,35 @@ input {
   background: #655e53;
   clip-path: polygon(0 0, 100% 0, 100% 82%, 50% 100%, 0 82%);
 }
-.city-node.enemy .foreign-city-shield { background: #9e2928; }
+.city-node.enemy {
+  --enemy-city-ui: #e12635;
+  --enemy-city-ui-dark: #7b1520;
+  --enemy-city-ui-border: #ff727c;
+  --enemy-city-name-bg: rgba(120, 16, 25, .88);
+  --enemy-city-name-border: rgba(255, 114, 124, .66);
+}
+.city-node.enemy.enemy-power-protected {
+  --enemy-city-ui: #ed8b8b;
+  --enemy-city-ui-dark: #a64e50;
+  --enemy-city-ui-border: #ffd0d0;
+  --enemy-city-name-bg: rgba(151, 65, 67, .9);
+  --enemy-city-name-border: rgba(255, 208, 208, .8);
+}
+.city-node.enemy.enemy-power-in-range {
+  --enemy-city-ui: #e12635;
+  --enemy-city-ui-dark: #7b1520;
+  --enemy-city-ui-border: #ff727c;
+  --enemy-city-name-bg: rgba(120, 16, 25, .88);
+  --enemy-city-name-border: rgba(255, 114, 124, .66);
+}
+.city-node.enemy.enemy-power-overpowering {
+  --enemy-city-ui: #59121a;
+  --enemy-city-ui-dark: #2b070b;
+  --enemy-city-ui-border: #9c3540;
+  --enemy-city-name-bg: rgba(38, 5, 9, .94);
+  --enemy-city-name-border: rgba(156, 53, 64, .74);
+}
+.city-node.enemy .foreign-city-shield { background: var(--enemy-city-ui); }
 .city-node.player2 .foreign-city-shield { background: #6946a9; }
 .city-node.player3 .foreign-city-shield { background: #287e4c; }
 .city-node.neutral .foreign-city-shield { background: #6b655b; }
@@ -2501,6 +2529,10 @@ input {
   border: 1px solid rgba(255, 178, 170, .42);
   font-size: .58rem;
   line-height: 1;
+}
+.city-node.enemy .foreign-ruler-name-inline {
+  background: var(--enemy-city-name-bg);
+  border-color: var(--enemy-city-name-border);
 }
 .foreign-selected-banner {
   display: grid;
@@ -2535,6 +2567,12 @@ input {
   align-content: center;
   background: #8e2423;
 }
+.city-node.enemy .foreign-selected-level,
+.city-node.enemy .foreign-selected-data { background: var(--enemy-city-ui); }
+.city-node.enemy .foreign-selected-crest {
+  background: var(--enemy-city-ui-dark);
+  border-color: var(--enemy-city-ui-border);
+}
 .foreign-selected-data .city-name { max-width: 142px; overflow: hidden; font-size: .74rem; text-overflow: ellipsis; }
 .foreign-garrison { color: #fff; font-size: .72rem; font-weight: 1000; white-space: nowrap; }
 .foreign-garrison.unknown { color: #ffe2dc; }
@@ -2552,6 +2590,24 @@ input {
 .city-node.enemy .owner-flag { color: white; background: var(--red); }
 .city-node.neutral .owner-flag { color: #1e1914; background: var(--neutral); }
 .city-name { display: block; color: #fff6d3; font-size: .66rem; line-height: 1.1; white-space: nowrap; }
+
+.city-node.player.main-city-node .city-owner-column,
+.city-node.player.main-city-node .city-army-count {
+  background: #123a60;
+}
+.city-node.enemy.main-city-node .foreign-city-shield,
+.city-node.enemy.main-city-node .foreign-selected-level,
+.city-node.enemy.main-city-node .foreign-selected-data {
+  background: #454b54;
+}
+.city-node.enemy.main-city-node .foreign-selected-crest {
+  background: #24282e;
+  border-color: #7f8994;
+}
+.city-node.enemy.main-city-node .foreign-ruler-name-inline {
+  background: rgba(36, 40, 46, .94);
+  border-color: rgba(127, 137, 148, .82);
+}
 
 .city-label.label-slot-top { --label-tether: 0px; left: 50%; right: auto; top: auto; bottom: 58px; transform: translateX(-50%); }
 .city-label.label-slot-top-high { --label-tether: 16px; left: 50%; right: auto; top: auto; bottom: 74px; transform: translateX(-50%); }
@@ -4508,7 +4564,7 @@ button.inventory-slot {
 }
 .offline-reward-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: .55rem;
 }
 .offline-reward-grid div {
@@ -7035,4 +7091,436 @@ select:focus {
 
 .rotate-warning strong {
   color: var(--ui-gold-bright);
+}
+
+/* Hero level-up rewards ----------------------------------------------------- */
+
+.level-up-reward-modal.modal {
+  width: min(680px, calc(100% - 1.3rem));
+  max-width: none;
+  overflow: visible;
+}
+
+.level-up-reward-modal::backdrop {
+  background:
+    radial-gradient(circle at 50% 42%, rgba(212, 155, 50, .2), transparent 34%),
+    rgba(1, 7, 13, .86);
+  backdrop-filter: blur(4px);
+}
+
+.level-up-reward-modal .level-up-reward-card {
+  position: relative;
+  max-height: min(92vh, 760px);
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: .88rem;
+  padding: 1.15rem;
+  overflow: hidden;
+  border: 2px solid rgba(242, 205, 111, .82);
+  border-radius: 20px;
+  background:
+    radial-gradient(circle at 50% -10%, rgba(240, 190, 75, .2), transparent 42%),
+    linear-gradient(180deg, #123954 0%, #071d30 48%, #030f1b 100%);
+  box-shadow:
+    0 0 0 1px rgba(47, 23, 4, .9),
+    0 0 38px rgba(231, 171, 49, .23),
+    0 30px 90px rgba(0, 0, 0, .72),
+    inset 0 1px 0 rgba(255, 239, 187, .2);
+  transform: translateY(18px) scale(.96);
+  opacity: 0;
+  transition: transform 220ms ease, opacity 180ms ease;
+}
+
+.level-up-reward-modal.revealed .level-up-reward-card {
+  transform: translateY(0) scale(1);
+  opacity: 1;
+}
+
+.level-up-reward-modal.collecting .level-up-reward-card {
+  transform: translateY(-4px) scale(.985);
+  opacity: .2;
+}
+
+.level-up-reward-card::before,
+.level-up-reward-card::after {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  width: 170px;
+  height: 170px;
+  border: 1px solid rgba(242, 205, 111, .16);
+  transform: rotate(45deg);
+  pointer-events: none;
+}
+
+.level-up-reward-card::before {
+  top: -118px;
+  left: -92px;
+}
+
+.level-up-reward-card::after {
+  right: -92px;
+  bottom: -118px;
+}
+
+.level-up-reward-header,
+.level-up-reward-body,
+.level-up-collect-btn {
+  position: relative;
+  z-index: 1;
+}
+
+.level-up-reward-header {
+  display: grid;
+  grid-template-columns: 104px minmax(0, 1fr);
+  align-items: center;
+  gap: 1rem;
+  padding: .35rem .45rem .9rem;
+  border-bottom: 1px solid rgba(242, 205, 111, .26);
+}
+
+.level-up-crown-wrap {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 96px;
+  height: 96px;
+}
+
+.level-up-crown-wrap::before,
+.level-up-crown-wrap::after {
+  content: "";
+  position: absolute;
+  inset: 8px;
+  border: 1px solid rgba(246, 215, 129, .38);
+  transform: rotate(45deg);
+}
+
+.level-up-crown-wrap::after {
+  inset: 18px;
+  border-color: rgba(246, 215, 129, .2);
+}
+
+.level-up-crown-glow {
+  position: absolute;
+  inset: 8px;
+  border-radius: 50%;
+  background: rgba(236, 175, 55, .22);
+  box-shadow: 0 0 34px rgba(245, 187, 62, .42);
+}
+
+.level-up-crown-wrap img {
+  position: relative;
+  z-index: 1;
+  width: 68px;
+  height: 68px;
+  object-fit: contain;
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, .6)) drop-shadow(0 0 10px rgba(255, 210, 94, .34));
+}
+
+.level-up-eyebrow {
+  display: block;
+  margin-bottom: .15rem;
+  color: #8fc9e7;
+  font: 800 .72rem/1 var(--font-system);
+  letter-spacing: .2em;
+  text-transform: uppercase;
+}
+
+.level-up-reward-card .level-up-reward-header h2 {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  color: #ffe6a3;
+  font-size: clamp(1.55rem, 4vw, 2.25rem);
+  line-height: 1.05;
+}
+
+.level-up-reward-header p {
+  margin: .32rem 0 0;
+  color: #c7dbe5;
+}
+
+.level-up-reward-body {
+  min-height: 0;
+  display: grid;
+  gap: .72rem;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 0 .12rem .15rem;
+  scrollbar-color: rgba(211, 161, 63, .72) rgba(4, 18, 31, .48);
+}
+
+.level-up-step {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: .7rem;
+  color: #a9bdc9;
+  font: 800 .78rem/1 var(--font-system);
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+.level-up-step span {
+  padding: .42rem .68rem;
+  border: 1px solid rgba(152, 194, 216, .22);
+  border-radius: 999px;
+  background: rgba(2, 14, 24, .62);
+}
+
+.level-up-step span.current {
+  color: #ffeca9;
+  border-color: rgba(242, 205, 111, .52);
+  background: rgba(151, 98, 22, .24);
+}
+
+.level-up-step strong {
+  color: #e6b957;
+  font-size: 1.15rem;
+}
+
+.level-up-reward-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: .6rem;
+}
+
+.level-up-reward-item {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: 54px minmax(0, 1fr);
+  align-items: center;
+  gap: .58rem;
+  padding: .78rem;
+  border: 1px solid rgba(255, 255, 255, .12);
+  border-radius: 14px;
+  background: linear-gradient(180deg, rgba(20, 57, 79, .76), rgba(3, 16, 27, .88));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .05), 0 8px 20px rgba(0, 0, 0, .2);
+}
+
+.level-up-reward-item.skill {
+  border-color: rgba(127, 196, 232, .34);
+}
+
+.level-up-reward-item.gold {
+  border-color: rgba(244, 198, 83, .38);
+}
+
+.level-up-reward-item.troops {
+  border-color: rgba(144, 199, 124, .34);
+}
+
+.level-up-reward-icon {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  border: 1px solid rgba(255, 255, 255, .12);
+  border-radius: 12px;
+  color: #a9e3ff;
+  background: rgba(1, 10, 18, .62);
+  font-size: 2rem;
+  text-shadow: 0 0 14px currentColor;
+}
+
+.level-up-reward-icon img {
+  width: 43px;
+  height: 43px;
+  object-fit: contain;
+  filter: drop-shadow(0 4px 6px rgba(0, 0, 0, .5));
+}
+
+.level-up-reward-item small,
+.level-up-reward-item strong,
+.level-up-reward-item p {
+  display: block;
+}
+
+.level-up-reward-item small {
+  color: #9db8c8;
+  font: 800 .68rem/1 var(--font-system);
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.level-up-reward-item strong {
+  margin-top: .15rem;
+  color: #fff2bd;
+  font-size: clamp(1.25rem, 3vw, 1.7rem);
+  line-height: 1;
+}
+
+.level-up-reward-item p {
+  margin: .28rem 0 0;
+  color: #aebfca;
+  font: 600 .7rem/1.25 var(--font-system);
+}
+
+.level-up-troop-destination {
+  display: flex;
+  align-items: center;
+  gap: .68rem;
+  padding: .65rem .78rem;
+  border: 1px solid rgba(144, 199, 124, .25);
+  border-radius: 12px;
+  background: rgba(19, 55, 39, .34);
+}
+
+.level-up-troop-destination > img {
+  width: 38px;
+  height: 38px;
+  object-fit: contain;
+}
+
+.level-up-troop-destination span,
+.level-up-troop-destination small,
+.level-up-troop-destination strong {
+  display: block;
+}
+
+.level-up-troop-destination small {
+  color: #9fb8aa;
+  font: 800 .65rem/1 var(--font-system);
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.level-up-troop-destination strong {
+  margin-top: .16rem;
+  color: #e4f4d7;
+}
+
+.level-up-collect-btn {
+  width: 100%;
+  min-height: 52px;
+  color: #271807;
+  border: 1px solid rgba(255, 239, 186, .9);
+  border-radius: 12px;
+  background: linear-gradient(180deg, #ffe59a, #d89c32 72%, #995c16);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .58), inset 0 -3px 0 rgba(75, 39, 5, .25), 0 8px 18px rgba(0, 0, 0, .34);
+  font: 900 .92rem/1 var(--font-system);
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  text-shadow: 0 1px 0 rgba(255, 245, 205, .34);
+}
+
+@media (hover: hover) {
+  .level-up-collect-btn:hover {
+    filter: brightness(1.08);
+  }
+}
+
+@media (max-width: 620px) {
+  .level-up-reward-modal .level-up-reward-card {
+    padding: .85rem;
+  }
+
+  .level-up-reward-header {
+    grid-template-columns: 76px minmax(0, 1fr);
+    gap: .7rem;
+    padding-inline: .15rem;
+  }
+
+  .level-up-crown-wrap {
+    width: 72px;
+    height: 72px;
+  }
+
+  .level-up-crown-wrap img {
+    width: 50px;
+    height: 50px;
+  }
+
+  .level-up-reward-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .level-up-reward-item {
+    grid-template-columns: 46px minmax(0, 1fr);
+    padding: .58rem .68rem;
+  }
+
+  .level-up-reward-icon {
+    width: 44px;
+    height: 44px;
+  }
+
+  .level-up-reward-icon img {
+    width: 37px;
+    height: 37px;
+  }
+}
+
+@media (max-height: 520px) and (orientation: landscape) {
+  .level-up-reward-modal .level-up-reward-card {
+    max-height: calc(100vh - .7rem);
+    grid-template-columns: minmax(210px, .72fr) minmax(0, 1.45fr);
+    grid-template-rows: minmax(0, 1fr) auto;
+    column-gap: .75rem;
+    padding: .7rem;
+  }
+
+  .level-up-reward-header {
+    grid-row: 1 / 3;
+    grid-template-columns: 1fr;
+    align-content: center;
+    text-align: center;
+    border-right: 1px solid rgba(242, 205, 111, .26);
+    border-bottom: 0;
+  }
+
+  .level-up-crown-wrap {
+    width: 68px;
+    height: 68px;
+    margin: 0 auto;
+  }
+
+  .level-up-crown-wrap img {
+    width: 48px;
+    height: 48px;
+  }
+
+  .level-up-reward-body {
+    gap: .45rem;
+  }
+
+  .level-up-step,
+  .level-up-troop-destination {
+    display: none;
+  }
+
+  .level-up-reward-grid {
+    grid-template-columns: 1fr;
+    gap: .38rem;
+  }
+
+  .level-up-reward-item {
+    grid-template-columns: 42px minmax(0, 1fr);
+    padding: .42rem .58rem;
+  }
+
+  .level-up-reward-icon {
+    width: 40px;
+    height: 40px;
+    font-size: 1.5rem;
+  }
+
+  .level-up-reward-icon img {
+    width: 34px;
+    height: 34px;
+  }
+
+  .level-up-reward-item p {
+    margin-top: .12rem;
+  }
+
+  .level-up-collect-btn {
+    min-height: 44px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .level-up-reward-modal .level-up-reward-card {
+    transition: none;
+  }
 }

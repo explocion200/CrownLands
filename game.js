@@ -48,6 +48,7 @@ const UPDATE_RELOAD_SAVE_TIMEOUT_MS = 3000;
 const UPDATE_RELOAD_PAUSE_MS = 650;
 const SETUP_LOADING_MIN_MS = 180;
 const IMAGE_PRELOAD_TIMEOUT_MS = 15000;
+const SIMULATION_UPDATE_INTERVAL_MS = 100;
 const HUD_RENDER_INTERVAL_MS = 250;
 const HUD_STATUS_RENDER_INTERVAL_MS = 1000;
 const MAP_RENDER_INTERVAL_MS = 1600;
@@ -679,10 +680,10 @@ const HARVEST_BONUS_STRONGHOLD_CLEARANCE_EXTRA = 72;
 const HARVEST_BONUS_CAMP_CLEARANCE_EXTRA = 64;
 const HARVEST_BONUS_SERVER_RETRY_SECONDS = 5;
 const NEUTRAL_CITY_COUNT_LIMIT = 30;
-const PLAYER_START_TROOPS = 50;
-const PLAYER_SLOT_START_TROOPS = 50;
+const PLAYER_START_TROOPS = 200;
+const PLAYER_SLOT_START_TROOPS = 200;
 const NEUTRAL_START_TROOPS = 10;
-const TEST_STARTING_GOLD = 500;
+const TEST_STARTING_GOLD = 100;
 const ISLAND_CITY_COUNT = WORLD_REGIONS.reduce((total, region) => total + (region.id === "center" ? CENTER_REGION_CITY_COUNT : REGION_CITY_COUNT), 0);
 const SCOUT_REPORT_SECONDS = 120;
 const SCOUT_NEARBY_COST = economyNumber("playerCosts.nearbyScoutGold", 75000);
@@ -755,21 +756,23 @@ const CITY_LEVEL_STATS = {
   victoryPointsPerLevel: 4,
   victoryPointsExponent: 1.35,
   victoryPointsExponentScale: 2,
-  defensePercentPerLevel: 3,
-  cityWallsBase: 30,
-  cityWallsPerLevel: 32,
+  defensePercentPerLevel: economyNumber("cityEconomy.defensePercentPerLevel", 2),
+  cityWallsBase: economyNumber("cityEconomy.wallDefenseBase", 200),
+  cityWallsExponent: economyNumber("cityEconomy.wallDefenseExponent", 3),
+  cityWallsExponentScale: economyNumber("cityEconomy.wallDefenseScale", 3),
   troopProductionPerVictoryPoint: economyNumber("cityEconomy.troopsPerVictoryPoint", 3),
   goldProductionPerMillionLordsVp: MILLION_LORDS_PASSIVE_GOLD_PER_CITY_VP,
 };
 const KING_POWER_ARMY_TROOP_VALUE = 2;
 const KING_POWER_REPLACEMENT_HOURS = 12;
 const KING_POWER_DEFENSIVE_ADVANTAGE_WEIGHT = 0.25;
-const KING_POWER_AUTHORITY_VERSION = 6;
+const KING_POWER_AUTHORITY_VERSION = 8;
+const KING_POWER_COMPATIBILITY_VERSION = 7;
 const SKILL_RESET_COST = economyNumber("playerCosts.skillResetGold", 750_000);
 
 const SKILL_CONFIG = {
   swordmastery: { label: "Swordmastery", percentPerLevel: economyNumber("skills.swordmastery.percentPerLevel", 2), maxPercent: economyNumber("skills.swordmastery.maxPercent", 60), description: "Outgoing attack power." },
-  stoneworks: { label: "Stoneworks", percentPerLevel: economyNumber("skills.stoneworks.percentPerLevel", 3), maxPercent: economyNumber("skills.stoneworks.maxPercent", 75), description: "City wall defense from level." },
+  stoneworks: { label: "Stoneworks", percentPerLevel: economyNumber("skills.stoneworks.percentPerLevel", 3), maxPercent: economyNumber("skills.stoneworks.maxPercent", 75), description: "City wall strength." },
   taxStewardship: { label: "Tax Stewardship", percentPerLevel: economyNumber("skills.taxStewardship.percentPerLevel", 3), maxPercent: economyNumber("skills.taxStewardship.maxPercent", 75), description: "Normal city gold production." },
   royalGranaries: { label: "Royal Granaries", percentPerLevel: economyNumber("skills.royalGranaries.percentPerLevel", 3), maxPercent: economyNumber("skills.royalGranaries.maxPercent", 75), description: "Normal city troop production." },
   guildCharters: { label: "Guild Charters", percentPerLevel: economyNumber("skills.guildCharters.percentPerLevel", 2), maxPercent: economyNumber("skills.guildCharters.maxPercent", 50), description: "Upgrade cost reduction." },
@@ -2376,11 +2379,14 @@ let activePointers = new Map();
 let pinchState = null;
 let suppressMapClick = false;
 let lastFrameTime = performance.now();
+let simulationUpdateAccumulatorMs = 0;
 let lastRenderTime = 0;
 let lastHudRenderTime = 0;
 let lastHudStatusRenderTime = 0;
 let lastArmyRenderTime = 0;
 let lastCityDynamicTextTime = 0;
+let renderableArmiesFrameCacheActive = false;
+let renderableArmiesFrameCache = null;
 let cameraTransformRaf = 0;
 let saveTimer = 0;
 let onlineSaveTimer = 0;
@@ -2478,6 +2484,8 @@ let serverEconomyLastSyncAt = 0;
 let serverEconomyLastToastAt = 0;
 let lastAuthoritativeProfileRevisionMs = 0;
 let lastReportDrivenEconomyRefreshAtMs = 0;
+let activeLevelUpReward = null;
+const levelUpRewardQueue = [];
 let leaderboardSaveTimer = 0;
 let leaderboardSaveInFlight = false;
 let leaderboardLastSignature = "";
@@ -2665,6 +2673,11 @@ const modal = document.getElementById("modal");
 const modalTitle = document.getElementById("modalTitle");
 const modalBody = document.getElementById("modalBody");
 const closeModalBtn = document.getElementById("closeModalBtn");
+const levelUpRewardModal = document.getElementById("levelUpRewardModal");
+const levelUpRewardTitle = document.getElementById("levelUpRewardTitle");
+const levelUpRewardSubtitle = document.getElementById("levelUpRewardSubtitle");
+const levelUpRewardBody = document.getElementById("levelUpRewardBody");
+const collectLevelUpRewardsBtn = document.getElementById("collectLevelUpRewardsBtn");
 const logBtn = document.getElementById("logBtn");
 const leaderboardBtn = document.getElementById("leaderboardBtn");
 const outgoingAttackBtn = document.getElementById("outgoingAttackBtn");
@@ -5698,6 +5711,128 @@ function getMainRewardCity(excludeCityId = null) {
   return playerRegularCities().find(city => city.id !== excludeCityId) || null;
 }
 
+function getLevelUpRewardBundle(fromLevel, toLevel, options = {}) {
+  const startLevel = Math.max(1, Math.floor(Number(fromLevel) || 1));
+  const endLevel = Math.max(startLevel, Math.floor(Number(toLevel) || startLevel));
+  let calculatedGold = 0;
+  let calculatedTroops = 0;
+  for (let level = startLevel + 1; level <= endLevel; level += 1) {
+    calculatedGold += getLevelUpGoldReward(level);
+    calculatedTroops += getLevelUpTroopReward(level);
+  }
+  const hasGoldOverride = Number.isFinite(Number(options.gold));
+  const hasTroopOverride = Number.isFinite(Number(options.troops));
+  return {
+    fromLevel: startLevel,
+    toLevel: endLevel,
+    levelsGained: endLevel - startLevel,
+    skillPoints: endLevel - startLevel,
+    gold: Math.max(0, Math.floor(hasGoldOverride ? Number(options.gold) : calculatedGold)),
+    troops: Math.max(0, Math.floor(hasTroopOverride ? Number(options.troops) : calculatedTroops)),
+    cityName: String(options.cityName || getMainRewardCity()?.name || "your main city").trim() || "your main city",
+  };
+}
+
+function mergeLevelUpRewardBundles(first, second) {
+  return {
+    fromLevel: first.fromLevel,
+    toLevel: second.toLevel,
+    levelsGained: first.levelsGained + second.levelsGained,
+    skillPoints: first.skillPoints + second.skillPoints,
+    gold: first.gold + second.gold,
+    troops: first.troops + second.troops,
+    cityName: second.cityName || first.cityName,
+  };
+}
+
+function formatLevelUpRewardAmount(value) {
+  return Math.max(0, Math.floor(Number(value) || 0)).toLocaleString();
+}
+
+function renderLevelUpReward(reward) {
+  if (!reward || !levelUpRewardTitle || !levelUpRewardSubtitle || !levelUpRewardBody) return;
+  const multipleLevels = reward.levelsGained > 1;
+  levelUpRewardTitle.textContent = multipleLevels
+    ? `${formatLevelUpRewardAmount(reward.levelsGained)} Levels Gained`
+    : `Level ${formatLevelUpRewardAmount(reward.toLevel)} Reached`;
+  levelUpRewardSubtitle.textContent = multipleLevels
+    ? `Your hero advanced from level ${formatLevelUpRewardAmount(reward.fromLevel)} to ${formatLevelUpRewardAmount(reward.toLevel)}.`
+    : "Your hero grew stronger. These rewards are yours.";
+  levelUpRewardBody.innerHTML = `
+    <div class="level-up-step" aria-label="Level ${formatLevelUpRewardAmount(reward.fromLevel)} to level ${formatLevelUpRewardAmount(reward.toLevel)}">
+      <span>Level ${formatLevelUpRewardAmount(reward.fromLevel)}</span>
+      <strong aria-hidden="true">→</strong>
+      <span class="current">Level ${formatLevelUpRewardAmount(reward.toLevel)}</span>
+    </div>
+    <section class="level-up-reward-grid" aria-label="Level-up rewards">
+      <article class="level-up-reward-item skill">
+        <span class="level-up-reward-icon" aria-hidden="true">✦</span>
+        <div>
+          <small>Skill ${reward.skillPoints === 1 ? "Point" : "Points"}</small>
+          <strong>+${formatLevelUpRewardAmount(reward.skillPoints)}</strong>
+          <p>Ready to spend in your hero profile.</p>
+        </div>
+      </article>
+      <article class="level-up-reward-item gold">
+        <span class="level-up-reward-icon" aria-hidden="true">
+          <img src="assets/gold-pickup.png" alt="" />
+        </span>
+        <div>
+          <small>Gold</small>
+          <strong>+${formatLevelUpRewardAmount(reward.gold)}</strong>
+          <p>Added to your kingdom treasury.</p>
+        </div>
+      </article>
+      <article class="level-up-reward-item troops">
+        <span class="level-up-reward-icon" aria-hidden="true">
+          <img src="assets/troop-pickup.png" alt="" />
+        </span>
+        <div>
+          <small>Troops</small>
+          <strong>+${formatLevelUpRewardAmount(reward.troops)}</strong>
+          <p>Rallied directly to ${escapeHtml(reward.cityName)}.</p>
+        </div>
+      </article>
+    </section>
+    <div class="level-up-troop-destination">
+      <img src="assets/troop-pickup.png" alt="" aria-hidden="true" />
+      <span>
+        <small>Troop destination</small>
+        <strong>${escapeHtml(reward.cityName)}</strong>
+      </span>
+    </div>
+  `;
+}
+
+function showNextLevelUpReward() {
+  if (!levelUpRewardModal || levelUpRewardModal.open || activeLevelUpReward || modal?.open) return;
+  const nextReward = levelUpRewardQueue.shift();
+  if (!nextReward) return;
+  activeLevelUpReward = nextReward;
+  renderLevelUpReward(nextReward);
+  levelUpRewardModal.showModal();
+  requestAnimationFrame(() => levelUpRewardModal.classList.add("revealed"));
+}
+
+function queueLevelUpReward(fromLevel, toLevel, options = {}) {
+  const reward = getLevelUpRewardBundle(fromLevel, toLevel, options);
+  if (reward.levelsGained <= 0) return;
+
+  if (activeLevelUpReward && activeLevelUpReward.toLevel === reward.fromLevel) {
+    activeLevelUpReward = mergeLevelUpRewardBundles(activeLevelUpReward, reward);
+    renderLevelUpReward(activeLevelUpReward);
+    return;
+  }
+
+  const pendingReward = levelUpRewardQueue[levelUpRewardQueue.length - 1];
+  if (pendingReward && pendingReward.toLevel === reward.fromLevel) {
+    levelUpRewardQueue[levelUpRewardQueue.length - 1] = mergeLevelUpRewardBundles(pendingReward, reward);
+  } else {
+    levelUpRewardQueue.push(reward);
+  }
+  setTimeout(showNextLevelUpReward, 0);
+}
+
 function getLoadedMainCity() {
   if (!state?.mainCityId) return null;
   const main = cityById(state.mainCityId);
@@ -5969,6 +6104,7 @@ function addCharacterXp(amount, reason = "progress") {
   state.character = normalizeCharacterProgress(state.character);
   state.upgrades = normalizeUpgrades(state.upgrades, state.version);
   reconcileSkillPoints(state.character, state.upgrades);
+  const startingLevel = state.character.level;
   const gained = Math.max(0, Math.floor(Number(amount) || 0));
   if (!gained) return;
 
@@ -6002,6 +6138,11 @@ function addCharacterXp(amount, reason = "progress") {
 
     addLog(`Hero leveled to ${state.character.level}. Reward: ${formatNumber(levelsGained)} skill point, ${formatNumber(totalGoldReward)} gold, and ${formatNumber(totalTroopReward)} troops to ${mainCity ? mainCity.name : "the main city"}.`);
     showToast(`Hero Lv ${state.character.level}: +${formatNumber(levelsGained)} skill point, +${formatNumber(totalGoldReward)} gold, +${formatNumber(totalTroopReward)} troops`);
+    queueLevelUpReward(startingLevel, state.character.level, {
+      gold: totalGoldReward,
+      troops: totalTroopReward,
+      cityName: mainCity?.name || "your main city",
+    });
   }
   reconcileSkillPoints(state.character, state.upgrades);
 }
@@ -6139,6 +6280,8 @@ function normalizeGlobalStatsSnapshot(raw = null) {
     resetGeneration: String(raw.resetGeneration || ""),
     version: Math.max(0, Math.floor(Number(raw.version) || 0)),
     kingPower: normalizePowerValue(raw.kingPower),
+    baseKingPower: normalizePowerValue(raw.baseKingPower ?? raw.kingPower),
+    kingPowerBonus: normalizePowerValue(raw.kingPowerBonus),
     totalCities: Math.max(0, Math.floor(Number(raw.totalCities) || 0)),
     totalTroops: Math.max(0, Math.floor(Number(raw.totalTroops) || 0)),
     totalCityTroops: Math.max(0, Math.floor(Number(raw.totalCityTroops) || 0)),
@@ -6152,10 +6295,14 @@ function normalizeGlobalStatsSnapshot(raw = null) {
     troopPerHour: Math.max(0, Math.floor(Number(raw.troopPerHour) || 0)),
     baseGoldPerHour: Math.max(0, Math.floor(Number(raw.baseGoldPerHour ?? raw.goldPerHour) || 0)),
     baseTroopPerHour: Math.max(0, Math.floor(Number(raw.baseTroopPerHour ?? raw.troopPerHour) || 0)),
+    untimedGoldPerHour: Math.max(0, Math.floor(Number(raw.untimedGoldPerHour ?? raw.baseGoldPerHour ?? raw.goldPerHour) || 0)),
+    untimedTroopPerHour: Math.max(0, Math.floor(Number(raw.untimedTroopPerHour ?? raw.baseTroopPerHour ?? raw.troopPerHour) || 0)),
     sustainableTroopPerHour: Math.max(0, Math.floor(Number(raw.sustainableTroopPerHour) || 0)),
     armyPower: normalizePowerValue(raw.armyPower),
     replacementPower: normalizePowerValue(raw.replacementPower),
     defensivePower: normalizePowerValue(raw.defensivePower),
+    baseReplacementPower: normalizePowerValue(raw.baseReplacementPower ?? raw.replacementPower),
+    baseDefensivePower: normalizePowerValue(raw.baseDefensivePower ?? raw.defensivePower),
     strongholdBonusesAuthoritative: raw.strongholdBonusesAuthoritative === true,
     strongholdBonusSource: String(raw.strongholdBonusSource || "").slice(0, 32),
     crownCitadelControlled: raw.crownCitadelControlled === true,
@@ -6236,6 +6383,7 @@ function applyGlobalStatsSnapshot(raw = null, options = {}) {
   if (changed && options.render !== false) {
     renderHud();
     updateIslandSwitcherUi();
+    renderCities();
     if (modal.open && modal.classList.contains("city-list-modal")) renderCityListModal();
     if (profileScreen?.classList.contains("open")) renderProfileScreen();
   }
@@ -6256,11 +6404,12 @@ function getTroopKingPower(troops = 0) {
   return Number.isFinite(power) ? Math.min(Number.MAX_SAFE_INTEGER, Math.floor(power)) : Number.MAX_SAFE_INTEGER;
 }
 
-function getCityInfrastructureKingPowerComponents(city) {
+function getCityInfrastructureKingPowerComponents(city, options = {}) {
   if (!city) return { replacementPower: 0, defensivePower: 0 };
   const troopCount = Math.max(0, Math.floor(Number(city.troops) || 0));
   const stats = getCityStats(city, {
     includeSkillBoosts: false,
+    includeStrongholdBoosts: options.includeStrongholdBoosts !== false,
     includeTimedItemBoosts: false,
   });
   const replacementPower = Math.max(0, Math.floor(
@@ -6314,17 +6463,121 @@ function getAuthoritativeCityOwnerKingPowerSnapshot(city) {
     ? normalizePowerValue(cachedIdentity.kingPower)
     : 0;
   if (cachedPower > 0) return cachedPower;
+  return 0;
+}
+
+function getCompatibleCityOwnerKingPowerSnapshot(city) {
+  if (!city) return 0;
+  const currentUid = getCurrentOnlineUid();
+  if (city.owner === "player" && (!city.ownerUid || city.ownerUid === currentUid)) return getKingPower();
+  const cachedIdentity = playerIdentityCache.get(city.ownerUid);
   const presence = Array.isArray(onlinePresence)
     ? onlinePresence.find(entry => entry?.uid === city.ownerUid)
     : null;
-  return Math.max(0, Math.floor(Number(presence?.kingPowerVersion) || 0)) >= KING_POWER_AUTHORITY_VERSION
-    ? normalizePowerValue(presence.kingPower)
-    : 0;
+  const candidates = [
+    {
+      power: cachedIdentity?.kingPower,
+      version: cachedIdentity?.kingPowerVersion,
+      updatedAtMs: cachedIdentity?.updatedAtMs,
+      authority: cachedIdentity?.authoritative ? 2 : 0,
+      priority: 3,
+    },
+    {
+      power: presence?.kingPower,
+      version: presence?.kingPowerVersion,
+      updatedAtMs: presence?.updatedAtMs,
+      authority: 0,
+      priority: 2,
+    },
+    {
+      power: city.ownerKingPower,
+      version: city.kingPowerVersion,
+      updatedAtMs: city.ownerKingPowerUpdatedAtMs || city.updatedAtMs || timestampToMs(city.updatedAt),
+      authority: 1,
+      priority: 1,
+    },
+  ].map(candidate => ({
+    power: normalizePowerValue(candidate.power),
+    version: Math.max(0, Math.floor(Number(candidate.version) || 0)),
+    updatedAtMs: normalizeTimestampMs(candidate.updatedAtMs),
+    authority: candidate.authority,
+    priority: candidate.priority,
+  })).filter(candidate => candidate.power > 0 && candidate.version >= KING_POWER_COMPATIBILITY_VERSION);
+  candidates.sort((left, right) => (
+    right.version - left.version
+    || right.authority - left.authority
+    || right.updatedAtMs - left.updatedAtMs
+    || right.priority - left.priority
+  ));
+  return candidates[0]?.power || 0;
+}
+
+async function ensureAuthoritativeCityOwnerKingPower(city) {
+  const existingPower = getAuthoritativeCityOwnerKingPowerSnapshot(city);
+  if (existingPower > 0 || !city || city.owner !== "enemy") return existingPower;
+  const ownerUid = String(city.ownerUid || "").trim();
+  const api = getOnlineApi();
+  if (!ownerUid || !api?.isSignedIn?.()) return 0;
+  let changed = false;
+  if (api?.loadPlayerIdentities) {
+    try {
+      const rows = await withTimeout(
+        api.loadPlayerIdentities([ownerUid]),
+        3500,
+        "Kingdom strength check is taking too long."
+      );
+      rememberPlayerIdentities(Array.isArray(rows) ? rows : [], { force: true });
+      changed = applyCanonicalPlayerIdentityToRecord(city) || changed;
+      const leaderboardPower = getAuthoritativeCityOwnerKingPowerSnapshot(city);
+      if (leaderboardPower > 0) {
+        if (changed) renderCities(true);
+        return leaderboardPower;
+      }
+    } catch (error) {
+      console.warn("Could not load defender leaderboard power", error);
+    }
+  }
+  if (!api?.getCombatPlayerIdentity) return 0;
+  try {
+    const identity = await withTimeout(
+      api.getCombatPlayerIdentity({ uid: ownerUid }),
+      15000,
+      "Kingdom strength check is taking too long."
+    );
+    if (identity) rememberPlayerIdentity(identity, { force: true });
+    changed = applyCanonicalPlayerIdentityToRecord(city) || changed;
+    if (changed) renderCities(true);
+    return getAuthoritativeCityOwnerKingPowerSnapshot(city);
+  } catch (error) {
+    console.warn("Could not load authoritative defender King Power", error);
+    return 0;
+  }
 }
 
 function getDemoAttackTier(powerRatio) {
   const ratio = Number(powerRatio) || 0;
   return DEMO_ATTACK_TIERS.find(tier => ratio >= tier.minRatio) || null;
+}
+
+function getEnemyCityPowerBand(
+  city,
+  playerKingPower = getKingPower(),
+  defenderKingPower = getCompatibleCityOwnerKingPowerSnapshot(city)
+) {
+  if (!city || city.owner !== "enemy" || isStronghold(city)) return "";
+  const attackerPower = Math.max(1, normalizePowerValue(playerKingPower));
+  const defenderPower = normalizePowerValue(defenderKingPower);
+  if (defenderPower <= 0) return "in-range";
+  if (getDemoAttackTier(attackerPower / defenderPower)) return "protected";
+  if (defenderPower > attackerPower) return "overpowering";
+  return "in-range";
+}
+
+function getEnemyCityPowerBandLabel(powerBand) {
+  if (powerBand === "protected") return "Weaker kingdom protection applies";
+  if (powerBand === "overpowering") return "King Power above yours";
+  if (powerBand === "in-range") return "Within your King Power range";
+  return "";
 }
 
 function normalizeDemoAttackSnapshot(demo = null) {
@@ -6630,25 +6883,41 @@ function formatCapturedCityLevelDrop(levelDrop) {
   return `Level ${formatNumber(levelDrop.previousLevel)} to ${formatNumber(levelDrop.nextLevel)}.`;
 }
 
+function getBaseCityWalls(level) {
+  const normalizedLevel = clampCityLevel(level);
+  const growth = (
+    Math.pow(normalizedLevel, CITY_LEVEL_STATS.cityWallsExponent) - 1
+  ) * CITY_LEVEL_STATS.cityWallsExponentScale;
+  const walls = CITY_LEVEL_STATS.cityWallsBase + Math.max(0, growth);
+  if (!Number.isFinite(walls)) return Number.MAX_SAFE_INTEGER;
+  return Math.min(Number.MAX_SAFE_INTEGER, Math.max(0, Math.floor(walls)));
+}
+
 function getCityStats(city, options = {}) {
   const stronghold = isStronghold(city);
   const level = stronghold ? getStrongholdDefenseLevel(city) : clampCityLevel(city?.level);
-  const step = level - 1;
   const victoryPoints = Math.floor(
     CITY_LEVEL_STATS.victoryPointsBase
     + level * CITY_LEVEL_STATS.victoryPointsPerLevel
     + Math.pow(level, CITY_LEVEL_STATS.victoryPointsExponent) * CITY_LEVEL_STATS.victoryPointsExponentScale
   );
   const defensePercent = level * CITY_LEVEL_STATS.defensePercentPerLevel;
-  const baseCityWalls = CITY_LEVEL_STATS.cityWallsBase + step * CITY_LEVEL_STATS.cityWallsPerLevel;
+  const baseCityWalls = getBaseCityWalls(level);
   const includeSkillBoosts = options.includeSkillBoosts !== false;
   const stoneworksPercent = includeSkillBoosts && city?.owner === "player" ? getSkillPercent("stoneworks") : 0;
   const cityWalls = Math.floor(baseCityWalls * (1 + stoneworksPercent / 100));
   const royalGranariesPercent = includeSkillBoosts && city?.owner === "player" ? getSkillPercent("royalGranaries") : 0;
   const taxStewardshipPercent = includeSkillBoosts && city?.owner === "player" ? getSkillPercent("taxStewardship") : 0;
-  const strongholdGoldBonusPercent = !stronghold && city?.owner === "player" ? getControlledStrongholdGoldBonusPercent("player") : 0;
-  const strongholdTroopBonusPercent = !stronghold && city?.owner === "player" ? getControlledStrongholdTroopBonusPercent("player") : 0;
-  const strongholdDefenseBonusPercent = !stronghold ? getControlledStrongholdCityDefenseBonusPercentForCity(city) : 0;
+  const includeStrongholdBoosts = options.includeStrongholdBoosts !== false;
+  const strongholdGoldBonusPercent = includeStrongholdBoosts && !stronghold && city?.owner === "player"
+    ? getControlledStrongholdGoldBonusPercent("player")
+    : 0;
+  const strongholdTroopBonusPercent = includeStrongholdBoosts && !stronghold && city?.owner === "player"
+    ? getControlledStrongholdTroopBonusPercent("player")
+    : 0;
+  const strongholdDefenseBonusPercent = includeStrongholdBoosts && !stronghold
+    ? getControlledStrongholdCityDefenseBonusPercentForCity(city)
+    : 0;
   const includeTimedItemBoosts = options.includeTimedItemBoosts !== false;
   const warDrumsTroopBonusPercent = includeTimedItemBoosts && !stronghold && city?.owner === "player" ? getWarDrumsTroopProductionBonusPercent() : 0;
   const royalTaxDecreeGoldBonusPercent = includeTimedItemBoosts && !stronghold && city?.owner === "player" && getActiveRoyalTaxDecreeExpiresAtMs() > Date.now()
@@ -6668,9 +6937,14 @@ function getCityStats(city, options = {}) {
     * (1 + strongholdGoldBonusPercent / 100)
     * (1 + royalTaxDecreeGoldBonusPercent / 100);
   const troopDefense = Math.floor((Number(city?.troops) || 0) * (1 + defensePercent / 100));
-  const baseTotalDefense = Math.floor(cityWalls + troopDefense);
-  const strongholdDefenseBonus = Math.floor(baseTotalDefense * strongholdDefenseBonusPercent / 100);
-  const totalDefense = baseTotalDefense + strongholdDefenseBonus;
+  const cityWallsBonus = Math.max(0, cityWalls - baseCityWalls);
+  const baseTotalDefense = Math.floor(baseCityWalls + troopDefense);
+  const preStrongholdTotalDefense = Math.floor(cityWalls + troopDefense);
+  const strongholdDefenseBonus = Math.floor(preStrongholdTotalDefense * strongholdDefenseBonusPercent / 100);
+  const totalDefense = preStrongholdTotalDefense + strongholdDefenseBonus;
+  const totalDefenseBonus = Math.max(0, totalDefense - baseTotalDefense);
+  const troopProductionBonusPerHour = Math.max(0, troopProductionPerHour - baseTroopProductionPerHour);
+  const goldProductionBonusPerHour = Math.max(0, goldProductionPerHour - baseGoldProductionPerHour);
 
   return {
     level,
@@ -6679,6 +6953,7 @@ function getCityStats(city, options = {}) {
     defensePercent,
     baseCityWalls,
     cityWalls,
+    cityWallsBonus,
     stoneworksPercent,
     royalGranariesPercent,
     taxStewardshipPercent,
@@ -6691,12 +6966,17 @@ function getCityStats(city, options = {}) {
     baseTroopProductionPerHour,
     royalGranariesBonusPerHour,
     troopProductionPerHour,
+    troopProductionBonusPerHour,
     millionLordsProductionVp,
     rawGoldProductionPerHour,
     baseGoldProductionPerHour,
     goldProductionPerHour,
+    goldProductionBonusPerHour,
     troopProductionPerSecond: troopProductionPerHour / 3600,
     goldProductionPerSecond: goldProductionPerHour / 3600,
+    troopDefense,
+    baseTotalDefense,
+    totalDefenseBonus,
     totalDefense,
   };
 }
@@ -6883,6 +7163,10 @@ function normalizeScoutReports(reports) {
   for (const [cityId, report] of Object.entries(reports)) {
     const troops = Math.max(0, Math.floor(Number(report?.troops) || 0));
     const totalDefense = Math.max(0, Math.floor(Number(report?.totalDefense) || 0));
+    const baseTotalDefense = Math.min(
+      totalDefense,
+      Math.max(0, Math.floor(Number(report?.baseTotalDefense ?? totalDefense) || 0))
+    );
     let scoutedAt = Math.max(0, Number(report?.scoutedAt) || 0);
     let expiresAt = Math.max(0, Number(report?.expiresAt) || 0);
     const scoutedAtMs = normalizeTimestampMs(report?.scoutedAtMs);
@@ -6899,7 +7183,17 @@ function normalizeScoutReports(reports) {
     }
     if (expiresAt <= scoutedAt) continue;
     if (currentGameSeconds > 0 && expiresAt <= currentGameSeconds) continue;
-    normalized[cityId] = { ...report, troops, totalDefense, scoutedAt, expiresAt, scoutedAtMs, expiresAtMs };
+    normalized[cityId] = {
+      ...report,
+      troops,
+      totalDefense,
+      baseTotalDefense,
+      totalDefenseBonus: Math.max(0, totalDefense - baseTotalDefense),
+      scoutedAt,
+      expiresAt,
+      scoutedAtMs,
+      expiresAtMs,
+    };
   }
   return normalized;
 }
@@ -6935,6 +7229,11 @@ function normalizeBattleReports(reports) {
         attackerLosses: Math.max(0, Math.floor(Number(report.attackerLosses) || 0)),
         defenderLosses: Math.max(0, Math.floor(Number(report.defenderLosses) || 0)),
         totalDefense: Math.max(0, Math.floor(Number(report.totalDefense) || 0)),
+        baseTotalDefense: Math.min(
+          Math.max(0, Math.floor(Number(report.totalDefense) || 0)),
+          Math.max(0, Math.floor(Number(report.baseTotalDefense ?? report.totalDefense) || 0))
+        ),
+        totalDefenseBonus: Math.max(0, Math.floor(Number(report.totalDefenseBonus) || 0)),
         opponentName: String(report.opponentName || "").slice(0, 40),
         ownerName: String(report.ownerName || "").slice(0, 40),
         summary: String(report.summary || "").slice(0, 220),
@@ -7323,6 +7622,8 @@ function completeScoutMission(attack, target) {
       sentTroops: joined,
       troopCount: target.troops,
       totalDefense: stats.totalDefense,
+      baseTotalDefense: stats.baseTotalDefense,
+      totalDefenseBonus: stats.totalDefenseBonus,
       ownerName: getCityOwnerDisplayName(target),
       opponentName: getCityOwnerDisplayName(target),
       summary: `Scout reached ${target.name}, now under your control. ${formatNumber(joined)} scout joined the garrison.`,
@@ -7343,6 +7644,8 @@ function completeScoutMission(attack, target) {
     cityLevel: report.cityLevel,
     troopCount: report.troops,
     totalDefense: report.totalDefense,
+    baseTotalDefense: report.baseTotalDefense,
+    totalDefenseBonus: report.totalDefenseBonus,
     ownerName: report.ownerName,
     opponentName: report.ownerName,
     summary: `Scout revealed ${formatNumber(report.troops)} troops at ${target.name}.`,
@@ -7367,10 +7670,13 @@ function createScoutReportSnapshot(target) {
   return {
     troops: baseTroopDefense,
     totalDefense: Math.floor(stats.totalDefense),
+    baseTotalDefense: Math.floor(stats.baseTotalDefense),
+    totalDefenseBonus: Math.floor(stats.totalDefenseBonus),
     owner: target.owner,
     ownerName: getCityOwnerDisplayName(target),
     cityLevel: stats.level,
     defensePercent: stats.defensePercent,
+    baseCityWalls: stats.baseCityWalls,
     cityWalls: stats.cityWalls,
     troopDefense,
     cityDefenseBonus: Math.max(0, troopDefense - baseTroopDefense),
@@ -7540,6 +7846,10 @@ function normalizeServerScoutReport(report = null) {
     ...report,
     troops: Math.max(0, Math.floor(Number(report.troops) || 0)),
     totalDefense: Math.max(0, Math.floor(Number(report.totalDefense) || 0)),
+    baseTotalDefense: Math.min(
+      Math.max(0, Math.floor(Number(report.totalDefense) || 0)),
+      Math.max(0, Math.floor(Number(report.baseTotalDefense ?? report.totalDefense) || 0))
+    ),
     cityLevel: clampCityLevel(report.cityLevel || 1),
     scoutedAt,
     expiresAt: scoutedAt + remainingSeconds,
@@ -7603,9 +7913,10 @@ function getAuthoritativeProfileRevisionMs(profile = null) {
     || timestampToMs(profile.updatedAt);
 }
 
-function applyServerProfilePatch(patch = null) {
+function applyServerProfilePatch(patch = null, options = {}) {
   if (!state || !patch || typeof patch !== "object") return false;
   let changed = false;
+  const previousLevel = Math.max(1, Math.floor(Number(state.character?.level) || 1));
   if (patch.globalStats) {
     changed = applyGlobalStatsSnapshot(patch.globalStats, { render: false }) || changed;
   }
@@ -7686,6 +7997,14 @@ function applyServerProfilePatch(patch = null) {
     saveGame();
     renderHud();
     if (profileScreen?.classList.contains("open")) renderProfileScreen();
+  }
+  const nextLevel = Math.max(1, Math.floor(Number(state.character?.level) || 1));
+  if (patch.character && nextLevel > previousLevel && options.announceLevelUp !== false) {
+    queueLevelUpReward(previousLevel, nextLevel, {
+      gold: options.levelUpGold,
+      troops: options.levelUpTroops,
+      cityName: options.levelUpCityName || getMainRewardCity()?.name || "your main city",
+    });
   }
   return changed;
 }
@@ -7820,7 +8139,20 @@ function applyServerArmyResult(result = null) {
       }
     }
   }
-  if (result.currentUser) changed = applyServerProfilePatch(result.currentUser) || changed;
+  if (result.currentUser) {
+    const nextLevel = Math.max(1, Math.floor(Number(result.currentUser?.character?.level) || 1));
+    const levelRewardReport = Array.isArray(result.reports)
+      ? [...result.reports].reverse().find(report => (
+        Math.max(1, Math.floor(Number(report?.characterAfter?.level) || 1)) === nextLevel
+        && Math.max(0, Math.floor(Number(report?.xpAwarded) || 0)) > 0
+      ))
+      : null;
+    changed = applyServerProfilePatch(result.currentUser, {
+      levelUpGold: levelRewardReport?.goldAwarded,
+      levelUpTroops: levelRewardReport?.troopsAwarded,
+      levelUpCityName: result.troopRewardCityName,
+    }) || changed;
+  }
   return changed;
 }
 
@@ -7828,7 +8160,13 @@ function applyServerEconomyResult(result = null, options = {}) {
   if (!result || typeof result !== "object") return false;
   let changed = false;
   if (result.globalStats) changed = applyGlobalStatsSnapshot(result.globalStats, { render: false }) || changed;
-  if (result.currentUser) changed = applyServerProfilePatch(result.currentUser) || changed;
+  if (result.currentUser) {
+    changed = applyServerProfilePatch(result.currentUser, {
+      levelUpGold: result.levelUpGoldAwarded,
+      levelUpTroops: result.troopsAwarded,
+      levelUpCityName: result.troopRewardCityName,
+    }) || changed;
+  }
   if (Array.isArray(result.cityUpdates)) changed = applyServerCityUpdates(result.cityUpdates) || changed;
   const production = result.production || {};
   const goldGained = Math.max(0, Math.floor(Number(production.goldGained) || 0));
@@ -7839,10 +8177,7 @@ function applyServerEconomyResult(result = null, options = {}) {
     showOfflineRewardsModal({
       goldGained,
       troopsGained,
-      troopsKeptInCities: troopsGained,
-      troopsRalliedToMain: 0,
       elapsed,
-      cityName: getMainRewardCity()?.name || "main city",
       lostCities: [],
     });
   }
@@ -8318,6 +8653,9 @@ function normalizePlayerIdentity(raw = {}, fallbackUid = "") {
     flag: raw.flag || raw.ownerFlag || null,
     kingPower: normalizePowerValue(raw.kingPower ?? raw.ownerKingPower ?? raw.attackerKingPower),
     kingPowerVersion: Math.max(0, Math.floor(Number(raw.kingPowerVersion) || 0)),
+    mainCityId: getKnownCityId(raw.mainCityId),
+    mainRegionId: String(raw.mainRegionId || "").trim(),
+    mainIslandId: String(raw.mainIslandId || "").trim(),
     updatedAtMs: normalizeTimestampMs(raw.updatedAtMs) || timestampToMs(raw.updatedAt),
     clanId: String(raw.clanId || raw.ownerClanId || ""),
     clanName: String(raw.clanName || raw.ownerClanName || ""),
@@ -8333,8 +8671,26 @@ function getPlayerIdentitySignature(identity) {
     getFlagSignature(identity.flag),
     normalizePowerValue(identity.kingPower),
     Math.max(0, Math.floor(Number(identity.kingPowerVersion) || 0)),
+    identity.mainCityId || "",
+    identity.mainRegionId || "",
     normalizeTimestampMs(identity.updatedAtMs),
   ].join("|");
+}
+
+function shouldReplacePlayerIdentity(existing, incoming, force = false) {
+  if (!existing) return true;
+  const existingVersion = Math.max(0, Math.floor(Number(existing.kingPowerVersion) || 0));
+  const incomingVersion = Math.max(0, Math.floor(Number(incoming?.kingPowerVersion) || 0));
+  if (incomingVersion < existingVersion) return false;
+  if (incomingVersion > existingVersion) return true;
+  if (force && !existing.authoritative) return true;
+  const existingUpdatedAtMs = normalizeTimestampMs(existing.updatedAtMs);
+  const incomingUpdatedAtMs = normalizeTimestampMs(incoming?.updatedAtMs);
+  if (existingUpdatedAtMs && !incomingUpdatedAtMs) return false;
+  if (existingUpdatedAtMs && incomingUpdatedAtMs && incomingUpdatedAtMs < existingUpdatedAtMs) return false;
+  if (force) return true;
+  if (existing.authoritative) return false;
+  return !existingUpdatedAtMs || !incomingUpdatedAtMs || incomingUpdatedAtMs >= existingUpdatedAtMs;
 }
 
 function rememberPlayerIdentity(raw = {}, options = {}) {
@@ -8353,13 +8709,7 @@ function rememberPlayerIdentity(raw = {}, options = {}) {
   const before = getPlayerIdentitySignature(existing);
   const force = Boolean(options.force);
   const existingIsAuthoritative = Boolean(existing?.authoritative);
-  const identityIsNewer = !existing
-    || force
-    || (!existingIsAuthoritative && (
-      !existing.updatedAtMs
-      || !identity.updatedAtMs
-      || identity.updatedAtMs >= existing.updatedAtMs
-    ));
+  const identityIsNewer = shouldReplacePlayerIdentity(existing, identity, force);
   const next = {
     uid: identity.uid,
     displayName: identityIsNewer
@@ -8374,9 +8724,18 @@ function rememberPlayerIdentity(raw = {}, options = {}) {
     kingPowerVersion: identityIsNewer
       ? identity.kingPowerVersion
       : Math.max(0, Math.floor(Number(existing?.kingPowerVersion) || 0)),
+    mainCityId: identityIsNewer
+      ? identity.mainCityId || existing?.mainCityId || ""
+      : existing?.mainCityId || identity.mainCityId || "",
+    mainRegionId: identityIsNewer
+      ? identity.mainRegionId || existing?.mainRegionId || ""
+      : existing?.mainRegionId || identity.mainRegionId || "",
+    mainIslandId: identityIsNewer
+      ? identity.mainIslandId || existing?.mainIslandId || ""
+      : existing?.mainIslandId || identity.mainIslandId || "",
     updatedAtMs: Math.max(existing?.updatedAtMs || 0, identity.updatedAtMs || 0),
     fetchedAtMs: force ? Date.now() : existing?.fetchedAtMs || 0,
-    authoritative: existingIsAuthoritative || force,
+    authoritative: existingIsAuthoritative || (force && identityIsNewer),
     clanId: identityIsNewer ? identity.clanId || existing?.clanId || "" : existing?.clanId || identity.clanId || "",
     clanName: identityIsNewer ? identity.clanName || existing?.clanName || "" : existing?.clanName || identity.clanName || "",
     clanTag: identityIsNewer ? identity.clanTag || existing?.clanTag || "" : existing?.clanTag || identity.clanTag || "",
@@ -8423,6 +8782,9 @@ function rememberCurrentPlayerIdentity() {
     flag: state.flag,
     kingPower: getKingPower(),
     kingPowerVersion: KING_POWER_AUTHORITY_VERSION,
+    mainCityId: state.mainCityId || "",
+    mainRegionId: state.online?.mainRegionId || getCityRegionId(state.mainCityId),
+    mainIslandId: state.online?.mainIslandId || getOnlineIslandId(getCityRegionId(state.mainCityId)),
     updatedAtMs: Date.now(),
   }, { force: true });
 }
@@ -8438,6 +8800,9 @@ function resolvePlayerIdentityForUid(uid, fallback = {}) {
       flag: state.flag || fallbackIdentity.flag || createDefaultFlag(),
       kingPower: getCurrentPlayerIdentityKingPower(fallbackIdentity.kingPower),
       kingPowerVersion: KING_POWER_AUTHORITY_VERSION,
+      mainCityId: state.mainCityId || fallbackIdentity.mainCityId || "",
+      mainRegionId: state.online?.mainRegionId || fallbackIdentity.mainRegionId || "",
+      mainIslandId: state.online?.mainIslandId || fallbackIdentity.mainIslandId || "",
       updatedAtMs: Date.now(),
       clanId: state.clanId || "",
       clanName: state.clanName || "",
@@ -8445,15 +8810,26 @@ function resolvePlayerIdentityForUid(uid, fallback = {}) {
     };
   }
   const cached = ownerUid ? playerIdentityCache.get(ownerUid) : null;
-  const cachedPowerIsAuthoritative = Math.max(0, Math.floor(Number(cached?.kingPowerVersion) || 0)) >= KING_POWER_AUTHORITY_VERSION;
+  const cachedPowerVersion = Math.max(0, Math.floor(Number(cached?.kingPowerVersion) || 0));
+  const fallbackPowerVersion = Math.max(0, Math.floor(Number(fallbackIdentity.kingPowerVersion) || 0));
+  const cachedPowerIsPreferred = Boolean(cached) && (
+    cachedPowerVersion > fallbackPowerVersion
+    || (
+      cachedPowerVersion === fallbackPowerVersion
+      && normalizeTimestampMs(cached?.updatedAtMs) >= normalizeTimestampMs(fallbackIdentity.updatedAtMs)
+    )
+  );
   return {
     uid: ownerUid,
     displayName: cached?.displayName || fallbackIdentity.displayName || "",
     flag: cached?.flag || fallbackIdentity.flag || null,
-    kingPower: cachedPowerIsAuthoritative
+    kingPower: cachedPowerIsPreferred
       ? normalizePowerValue(cached.kingPower)
-      : cached?.kingPower || fallbackIdentity.kingPower || 0,
-    kingPowerVersion: Math.max(cached?.kingPowerVersion || 0, fallbackIdentity.kingPowerVersion || 0),
+      : normalizePowerValue(fallbackIdentity.kingPower),
+    kingPowerVersion: Math.max(cachedPowerVersion, fallbackPowerVersion),
+    mainCityId: cached?.mainCityId || fallbackIdentity.mainCityId || "",
+    mainRegionId: cached?.mainRegionId || fallbackIdentity.mainRegionId || "",
+    mainIslandId: cached?.mainIslandId || fallbackIdentity.mainIslandId || "",
     updatedAtMs: Math.max(cached?.updatedAtMs || 0, fallbackIdentity.updatedAtMs || 0),
     clanId: cached?.clanId || fallbackIdentity.clanId || "",
     clanName: cached?.clanName || fallbackIdentity.clanName || "",
@@ -8473,6 +8849,10 @@ function applyCanonicalPlayerIdentityToRecord(record) {
   const nextPower = identity.kingPowerVersion >= KING_POWER_AUTHORITY_VERSION
     ? normalizePowerValue(identity.kingPower)
     : normalizePowerValue(identity.kingPower) || normalizePowerValue(record.ownerKingPower);
+  const nextPowerVersion = Math.max(
+    Math.max(0, Math.floor(Number(record.kingPowerVersion) || 0)),
+    Math.max(0, Math.floor(Number(identity.kingPowerVersion) || 0))
+  );
   let changed = false;
   if ((record.ownerName || "") !== nextName) {
     record.ownerName = nextName;
@@ -8484,6 +8864,10 @@ function applyCanonicalPlayerIdentityToRecord(record) {
   }
   if (normalizePowerValue(record.ownerKingPower) !== nextPower) {
     record.ownerKingPower = nextPower;
+    changed = true;
+  }
+  if (Math.max(0, Math.floor(Number(record.kingPowerVersion) || 0)) !== nextPowerVersion) {
+    record.kingPowerVersion = nextPowerVersion;
     changed = true;
   }
   if (record.attackerKingPower !== undefined && normalizePowerValue(record.attackerKingPower) !== nextPower) {
@@ -9649,7 +10033,7 @@ function applyOnlinePresence(rawPresence) {
     return;
   }
   onlinePresence = rawPresence.map(normalizePresence).filter(Boolean);
-  if (rememberPlayerIdentities(onlinePresence, { force: true }) && canonicalizeVisiblePlayerIdentities()) {
+  if (rememberPlayerIdentities(onlinePresence) && canonicalizeVisiblePlayerIdentities()) {
     renderCities();
     renderArmies();
     updateIncomingAttackUi();
@@ -12087,6 +12471,9 @@ function applyOnlineArmies(rawArmies, islandId = getActiveOnlineIslandId()) {
 
 function getRenderableArmies() {
   if (!state) return [];
+  if (renderableArmiesFrameCacheActive && renderableArmiesFrameCache) {
+    return renderableArmiesFrameCache;
+  }
   const localOnlineIds = new Set();
   const localArmies = state.attacks.map(attack => {
     if (attack.onlineId) localOnlineIds.add(attack.onlineId);
@@ -12119,7 +12506,9 @@ function getRenderableArmies() {
       remaining: Math.max(0, getOnlineArmyRemainingSeconds(mission)),
       serverPending: true,
     }));
-  return [...localArmies, ...remoteArmies, ...pendingArmies];
+  const renderableArmies = [...localArmies, ...remoteArmies, ...pendingArmies];
+  if (renderableArmiesFrameCacheActive) renderableArmiesFrameCache = renderableArmies;
+  return renderableArmies;
 }
 
 function getIncomingAttacks() {
@@ -13404,11 +13793,20 @@ function frame(now) {
   const rawDt = (now - lastFrameTime) / 1000;
   lastFrameTime = now;
   const dt = Math.min(rawDt, 0.25);
+  renderableArmiesFrameCacheActive = true;
+  renderableArmiesFrameCache = null;
   samplePerformancePanel(now);
   updateDeploymentCheck(dt);
 
   if (state && !isGamePausedByOutcome()) {
-    updateGame(dt);
+    simulationUpdateAccumulatorMs = Math.min(
+      250,
+      simulationUpdateAccumulatorMs + dt * 1000
+    );
+    if (simulationUpdateAccumulatorMs >= SIMULATION_UPDATE_INTERVAL_MS) {
+      updateGame(simulationUpdateAccumulatorMs / 1000);
+      simulationUpdateAccumulatorMs = 0;
+    }
     saveTimer += dt;
     if (saveTimer >= SAVE_EVERY_SECONDS) {
       saveTimer = 0;
@@ -13451,6 +13849,8 @@ function frame(now) {
         retryOverdueOnlineArmyResolutions();
       }
     }
+  } else {
+    simulationUpdateAccumulatorMs = 0;
   }
 
   if (state) {
@@ -13477,6 +13877,8 @@ function frame(now) {
     }
   }
 
+  renderableArmiesFrameCacheActive = false;
+  renderableArmiesFrameCache = null;
   requestAnimationFrame(frame);
 }
 
@@ -14088,9 +14490,8 @@ function applyPendingOfflineProgress() {
     return;
   }
 
-  const goldGained = Math.floor(productionCities.reduce((sum, city) => sum + getCityStats(city).goldProductionPerSecond, 0) * elapsed);
+  let goldGainedFloat = 0;
   let troopsKeptInCities = 0;
-  let troopsRalliedToMain = 0;
   const changedOwnedCities = new Set();
   const lostCities = [];
   const lostCityIds = new Set();
@@ -14104,30 +14505,26 @@ function applyPendingOfflineProgress() {
         regionId: offlineCity.regionId || getCityRegionId(offlineCity.id),
       });
     }
+    if (!stillOwned) continue;
 
-    const growth = getCityStats(offlineCity).troopProductionPerSecond * elapsed;
+    const stats = getCityStats(offlineCity);
+    goldGainedFloat += stats.goldProductionPerSecond * elapsed;
+    const growth = stats.troopProductionPerSecond * elapsed;
     if (growth <= 0) continue;
     const gained = Math.floor(growth);
     if (gained <= 0) continue;
 
-    const currentCity = stillOwned ? restoreOfflineCityOwnership(offlineCity) : cityById(offlineCity.id);
-    if (stillOwned && currentCity) {
+    const currentCity = restoreOfflineCityOwnership(offlineCity);
+    if (currentCity) {
       currentCity.troopFloat = Math.max(0, Number(currentCity.troopFloat) || currentCity.troops || 0) + gained;
       currentCity.troops = Math.floor(currentCity.troopFloat);
       changedOwnedCities.add(currentCity.id);
       troopsKeptInCities += gained;
-    } else {
-      troopsRalliedToMain += gained;
     }
   }
-  const troopsGained = troopsKeptInCities + troopsRalliedToMain;
+  const goldGained = Math.floor(goldGainedFloat);
+  const troopsGained = troopsKeptInCities;
   if (goldGained > 0) state.gold += goldGained;
-  const mainCity = getMainRewardCity();
-  if (mainCity && troopsRalliedToMain > 0) {
-    mainCity.troopFloat = Math.max(0, Number(mainCity.troopFloat) || mainCity.troops || 0) + troopsRalliedToMain;
-    mainCity.troops = Math.floor(mainCity.troopFloat);
-    changedOwnedCities.add(mainCity.id);
-  }
   changedOwnedCities.forEach(cityId => {
     const city = cityById(cityId);
     if (city) markOwnedCityChanged(city, false);
@@ -14136,16 +14533,12 @@ function applyPendingOfflineProgress() {
   pendingOfflineOwnedCityIds = null;
 
   if (goldGained > 0 || troopsGained > 0 || lostCities.length > 0) {
-    const rallyText = troopsRalliedToMain > 0 ? ` ${formatNumber(troopsRalliedToMain)} troops from lost cities rallied to ${mainCity ? mainCity.name : "the main city"}.` : "";
     const lostText = lostCities.length ? ` Lost cities: ${lostCities.map(city => city.name).join(", ")}.` : "";
-    addLog(`Offline production: +${formatNumber(goldGained)} gold and +${formatNumber(troopsGained)} troops.${rallyText}${lostText}`);
+    addLog(`Offline production: +${formatNumber(goldGained)} gold and +${formatNumber(troopsGained)} troops.${lostText}`);
     showOfflineRewardsModal({
       goldGained,
       troopsGained,
-      troopsKeptInCities,
-      troopsRalliedToMain,
       elapsed,
-      cityName: mainCity?.name || "main city",
       lostCities,
     });
     syncOwnedCitiesToOnline(true);
@@ -14154,7 +14547,7 @@ function applyPendingOfflineProgress() {
   }
 }
 
-function showOfflineRewardsModal({ goldGained = 0, troopsGained = 0, troopsKeptInCities = 0, troopsRalliedToMain = 0, elapsed = 0, cityName = "main city", lostCities = [] } = {}) {
+function showOfflineRewardsModal({ goldGained = 0, troopsGained = 0, elapsed = 0, lostCities = [] } = {}) {
   const lostList = Array.isArray(lostCities) ? lostCities : [];
   const lostSummary = lostList.length
     ? `<section class="offline-lost-cities"><span>Cities lost while away</span><strong>${formatNumber(lostList.length)}</strong><ul>${lostList.slice(0, 8).map(city => `<li>${escapeHtml(city.name || city.id)} <small>${escapeHtml(getRegionLabel(city.regionId || getCityRegionId(city.id)))}</small></li>`).join("")}</ul>${lostList.length > 8 ? `<small>+${formatNumber(lostList.length - 8)} more</small>` : ""}</section>`
@@ -14166,8 +14559,7 @@ function showOfflineRewardsModal({ goldGained = 0, troopsGained = 0, troopsKeptI
       <p>Your kingdom kept producing while you were away for ${formatDuration(elapsed)}.</p>
       <div class="offline-reward-grid">
         <div><span>Gold collected</span><strong>${formatNumber(goldGained)}</strong></div>
-        <div><span>Troops produced</span><strong>${formatNumber(troopsGained)}</strong><small>${formatNumber(troopsKeptInCities)} stayed in their cities</small></div>
-        <div><span>Rallied home</span><strong>${formatNumber(troopsRalliedToMain)}</strong><small>${troopsRalliedToMain > 0 ? `Sent to ${escapeHtml(cityName)}` : "No cities lost offline"}</small></div>
+        <div><span>Troops produced</span><strong>${formatNumber(troopsGained)}</strong><small>Added to cities still owned</small></div>
       </div>
       ${lostSummary}
       <button id="offlineCollectBtn" class="offline-collect-btn" type="button">Collect</button>
@@ -14229,8 +14621,25 @@ function updateAttacks(dt) {
   }
 }
 
+function identityMarksCityAsMain(city, identity = null) {
+  if (!city || !identity?.mainCityId || getKnownCityId(city.id) !== getKnownCityId(identity.mainCityId)) {
+    return false;
+  }
+  const identityRegionId = String(identity.mainRegionId || getRegionIdFromOnlineIslandId(identity.mainIslandId) || "").trim();
+  return !identityRegionId || getCityRegionId(city) === normalizeRegionId(identityRegionId);
+}
+
 function isProtectedMainCity(city) {
-  return Boolean(city && (city.isMainCity || city.id === state?.mainCityId));
+  if (!city) return false;
+  if (city.isMainCity || city.id === state?.mainCityId) return true;
+  const ownerUid = String(city.ownerUid || "").trim();
+  if (!ownerUid) return false;
+  const cachedIdentity = playerIdentityCache.get(ownerUid);
+  if (identityMarksCityAsMain(city, cachedIdentity)) return true;
+  const presence = Array.isArray(onlinePresence)
+    ? onlinePresence.find(entry => entry?.uid === ownerUid)
+    : null;
+  return identityMarksCityAsMain(city, presence);
 }
 
 function getMainCityAttackBlockReason(target, attackerOwner = "player", attackerOwnerUid = "") {
@@ -14448,7 +14857,8 @@ function resolveAttack(attack) {
   const attackSource = cityById(attack.fromId);
   const targetLevel = clampCityLevel(target.level);
   const defendersAtStart = Math.max(0, Math.floor(Number(target.troops) || 0));
-  const targetDefenseAtStart = getCityStats(target).totalDefense;
+  const targetStatsAtStart = getCityStats(target);
+  const targetDefenseAtStart = targetStatsAtStart.totalDefense;
   const mainCityBlockReason = getMainCityAttackBlockReason(target, attack.owner, attack.ownerUid);
   if (mainCityBlockReason) {
     const returned = returnSurvivingAttackersToSource(attack, attack.troops, `${target.name} protected main city`);
@@ -14469,6 +14879,8 @@ function resolveAttack(attack) {
         attackerLosses: 0,
         defenderLosses: 0,
         totalDefense: targetDefenseAtStart,
+        baseTotalDefense: targetStatsAtStart.baseTotalDefense,
+        totalDefenseBonus: targetStatsAtStart.totalDefenseBonus,
         opponentName: defenderName,
         summary: `Main cities cannot be attacked. ${returnText}`,
       });
@@ -14487,6 +14899,8 @@ function resolveAttack(attack) {
         attackerLosses: 0,
         defenderLosses: 0,
         totalDefense: targetDefenseAtStart,
+        baseTotalDefense: targetStatsAtStart.baseTotalDefense,
+        totalDefenseBonus: targetStatsAtStart.totalDefenseBonus,
         opponentName: attackerReportName,
         summary: `Main city protection blocked ${attackerReportName}'s attack. ${returnText}`,
       });
@@ -14516,6 +14930,8 @@ function resolveAttack(attack) {
         attackerLosses: 0,
         defenderLosses: 0,
         totalDefense: targetDefenseAtStart,
+        baseTotalDefense: targetStatsAtStart.baseTotalDefense,
+        totalDefenseBonus: targetStatsAtStart.totalDefenseBonus,
         opponentName: defenderName,
         summary: `Royal Peace Shield blocked the attack. ${returnText}`,
       });
@@ -14534,6 +14950,8 @@ function resolveAttack(attack) {
         attackerLosses: 0,
         defenderLosses: 0,
         totalDefense: targetDefenseAtStart,
+        baseTotalDefense: targetStatsAtStart.baseTotalDefense,
+        totalDefenseBonus: targetStatsAtStart.totalDefenseBonus,
         opponentName: attackerReportName,
         summary: `Royal Peace Shield blocked ${attackerReportName}'s attack. ${returnText}`,
       });
@@ -14560,6 +14978,8 @@ function resolveAttack(attack) {
       attackerLosses: 0,
       defenderLosses: 0,
       totalDefense: targetDefenseAtStart,
+      baseTotalDefense: targetStatsAtStart.baseTotalDefense,
+      totalDefenseBonus: targetStatsAtStart.totalDefenseBonus,
       opponentName: defenderName,
       summary: `${neutralBlockReason} The attack was canceled and ${formatNumber(returned)} troops returned.`,
     });
@@ -14627,6 +15047,8 @@ function resolveAttack(attack) {
         attackerLosses: result.attackerLosses,
         defenderLosses: result.defenderLosses,
         totalDefense: targetDefenseAtStart,
+        baseTotalDefense: targetStatsAtStart.baseTotalDefense,
+        totalDefenseBonus: targetStatsAtStart.totalDefenseBonus,
         opponentName: defenderName,
         summary: `Captured with ${formatNumber(result.survivors)} survivors. ${formatCapturedCityLevelDrop(levelDrop)} +${formatNumber(xpAward)} XP.${demoReportSuffix}`,
       });
@@ -14655,6 +15077,8 @@ function resolveAttack(attack) {
         attackerLosses: result.attackerLosses,
         defenderLosses: result.defenderLosses,
         totalDefense: targetDefenseAtStart,
+        baseTotalDefense: targetStatsAtStart.baseTotalDefense,
+        totalDefenseBonus: targetStatsAtStart.totalDefenseBonus,
         opponentName: attackerReportName,
         summary: `${target.name} was captured by ${attackerReportName}. ${formatCapturedCityLevelDrop(levelDrop)} +${formatNumber(defenseLossXp)} XP.${demoReportSuffix}`,
       });
@@ -14682,6 +15106,8 @@ function resolveAttack(attack) {
         attackerLosses: result.attackerLosses,
         defenderLosses: result.defenderLosses,
         totalDefense: targetDefenseAtStart,
+        baseTotalDefense: targetStatsAtStart.baseTotalDefense,
+        totalDefenseBonus: targetStatsAtStart.totalDefenseBonus,
         opponentName: defenderName,
         summary: `${formatNumber(result.defendersLeft)} defenders remained. +${formatNumber(failedAttackXp)} XP.${demoReportSuffix}`,
       });
@@ -14704,6 +15130,8 @@ function resolveAttack(attack) {
         attackerLosses: result.attackerLosses,
         defenderLosses: result.defenderLosses,
         totalDefense: targetDefenseAtStart,
+        baseTotalDefense: targetStatsAtStart.baseTotalDefense,
+        totalDefenseBonus: targetStatsAtStart.totalDefenseBonus,
         opponentName: attackerReportName,
         summary: `${target.name} survived with ${formatNumber(result.defendersLeft)} defenders. +${formatNumber(defenseHeldXp)} XP.${demoReportSuffix}`,
       });
@@ -14929,24 +15357,40 @@ function getKingdomSummary() {
       kingPower: globalStats.version >= KING_POWER_AUTHORITY_VERSION
         ? normalizePowerValue(globalStats.kingPower)
         : getKingPower(),
+      baseKingPower: globalStats.version >= KING_POWER_AUTHORITY_VERSION
+        ? normalizePowerValue(globalStats.baseKingPower ?? globalStats.kingPower)
+        : getKingPower(),
       cities: Math.max(0, Math.floor(Number(globalStats.totalCities) || 0)),
       troops: Math.max(0, Math.floor(Number(globalStats.totalTroops) || 0))
         + Math.max(0, Math.floor(Number(globalStats.totalMarchingTroops) || 0)),
       gold: Math.floor(Number(state.gold) || 0),
+      baseGoldProductionPerHour: Math.max(0, Math.floor(Number(globalStats.baseGoldPerHour) || 0)),
       goldProductionPerHour: Math.max(0, Math.floor(Number(globalStats.goldPerHour) || 0)),
+      baseTroopProductionPerHour: Math.max(0, Math.floor(Number(globalStats.baseTroopPerHour) || 0)),
       troopProductionPerHour: Math.max(0, Math.floor(Number(globalStats.troopPerHour) || 0)),
     };
   }
   const cities = getAllOwnedCitiesForDisplay();
   const regularCities = cities.filter(city => !isStronghold(city));
   const marchingTroops = getPlayerMarchingTroops();
+  const cityStats = cities.map(city => getCityStats(city));
+  const baseInfrastructurePower = cities.reduce((total, city) => {
+    const components = getCityInfrastructureKingPowerComponents(city, { includeStrongholdBoosts: false });
+    return total + components.replacementPower + components.defensivePower;
+  }, 0);
+  const baseKingPower = Math.max(0, Math.floor(baseInfrastructurePower + getTroopKingPower(
+    cities.reduce((total, city) => total + Math.max(0, Number(city.troops) || 0), marchingTroops)
+  )));
   return {
     kingPower: getKingPower(),
+    baseKingPower,
     cities: regularCities.length,
     troops: cities.reduce((total, city) => total + Math.max(0, Number(city.troops) || 0), marchingTroops),
     gold: Math.floor(state.gold),
-    goldProductionPerHour: cities.reduce((total, city) => total + getCityStats(city).goldProductionPerHour, 0),
-    troopProductionPerHour: cities.reduce((total, city) => total + getCityStats(city).troopProductionPerHour, 0),
+    baseGoldProductionPerHour: cityStats.reduce((total, stats) => total + stats.baseGoldProductionPerHour, 0),
+    goldProductionPerHour: cityStats.reduce((total, stats) => total + stats.goldProductionPerHour, 0),
+    baseTroopProductionPerHour: cityStats.reduce((total, stats) => total + stats.baseTroopProductionPerHour, 0),
+    troopProductionPerHour: cityStats.reduce((total, stats) => total + stats.troopProductionPerHour, 0),
   };
 }
 
@@ -15466,6 +15910,24 @@ function renderProfileScreen() {
   const defensivePower = hasMilitaryBreakdown
     ? globalStats.defensivePower
     : fallbackComponents.reduce((total, component) => total + component.defensivePower, 0);
+  const baseReplacementPower = hasMilitaryBreakdown
+    ? globalStats.baseReplacementPower
+    : ownedCities.reduce(
+      (total, city) => total + getCityInfrastructureKingPowerComponents(
+        city,
+        { includeStrongholdBoosts: false }
+      ).replacementPower,
+      0
+    );
+  const baseDefensivePower = hasMilitaryBreakdown
+    ? globalStats.baseDefensivePower
+    : ownedCities.reduce(
+      (total, city) => total + getCityInfrastructureKingPowerComponents(
+        city,
+        { includeStrongholdBoosts: false }
+      ).defensivePower,
+      0
+    );
   const strongholdTroopBonusPercent = hasMilitaryBreakdown
     ? globalStats.strongholdTroopBonusPercent
     : getControlledStrongholdTroopBonusPercent("player");
@@ -15480,9 +15942,11 @@ function renderProfileScreen() {
   if (profileLevelText) profileLevelText.textContent = `Level ${formatNumber(state.character.level)}`;
   if (profileXpLabel) profileXpLabel.textContent = `${formatNumber(state.character.xp)} / ${formatNumber(xpRequired)} XP`;
   if (profileXpFill) profileXpFill.style.width = `${Math.round(xpProgress * 100)}%`;
-  if (profileKingPowerStat) profileKingPowerStat.textContent = formatNumber(summary.kingPower);
+  if (profileKingPowerStat) {
+    profileKingPowerStat.textContent = formatBaseAndBonusStat(summary.baseKingPower, summary.kingPower);
+  }
   if (profileKingPowerBreakdown) {
-    profileKingPowerBreakdown.textContent = `Army ${formatNumber(armyPower)} | Replacement ${formatNumber(replacementPower)} | Defense ${formatNumber(defensivePower)}`;
+    profileKingPowerBreakdown.textContent = `Army ${formatBaseAndBonusStat(armyPower, armyPower)} | Replacement ${formatBaseAndBonusStat(baseReplacementPower, replacementPower)} | Defense ${formatBaseAndBonusStat(baseDefensivePower, defensivePower)}`;
   }
   if (profileKingPowerStrongholdBonus) {
     const bonusParts = [];
@@ -15494,8 +15958,20 @@ function renderProfileScreen() {
   if (profileCitiesStat) profileCitiesStat.textContent = formatNumber(summary.cities);
   if (profileGoldStat) profileGoldStat.textContent = formatNumber(summary.gold);
   if (profileTroopsStat) profileTroopsStat.textContent = formatNumber(summary.troops);
-  if (profileGoldProductionStat) profileGoldProductionStat.textContent = `${formatNumber(summary.goldProductionPerHour)}/h`;
-  if (profileTroopProductionStat) profileTroopProductionStat.textContent = `${formatNumber(summary.troopProductionPerHour)}/h`;
+  if (profileGoldProductionStat) {
+    profileGoldProductionStat.textContent = formatBaseAndBonusStat(
+      summary.baseGoldProductionPerHour,
+      summary.goldProductionPerHour,
+      "/h"
+    );
+  }
+  if (profileTroopProductionStat) {
+    profileTroopProductionStat.textContent = formatBaseAndBonusStat(
+      summary.baseTroopProductionPerHour,
+      summary.troopProductionPerHour,
+      "/h"
+    );
+  }
   applyFlagToElement(profileKingdomFlag, state.flag);
   updatePushAlertsUi();
   if (activeProfileTab === "skills") renderProfileSkills();
@@ -15918,6 +16394,7 @@ function getFlagSignature(flag) {
 
 function getCityRenderSignature(visibleCities, visibleCamps = []) {
   const playerFlag = getFlagSignature(state.flag);
+  const playerKingPower = getKingPower();
   const crownHolderUid = getCrownCitadelHolderUid();
   const upgradeBlockedTargets = new Set(getRenderableArmies()
     .filter(attack => attack?.kind === "attack" && attack.owner !== "player" && Math.max(0, Number(attack.remaining) || 0) > 0)
@@ -15934,6 +16411,7 @@ function getCityRenderSignature(visibleCities, visibleCamps = []) {
       getCityClanIdentity(city).clanId,
       getCityClanIdentity(city).clanTag,
       getFlagSignature(city.ownerFlag),
+      getEnemyCityPowerBand(city, playerKingPower),
       city.kind || "",
       city.strongholdType || "",
       isStronghold(city) ? getStrongholdVisualSize(city) : "",
@@ -15982,6 +16460,7 @@ function getCityRenderSignature(visibleCities, visibleCamps = []) {
 function updateVisibleCityDynamicText() {
   if (!state || !cityLayer) return;
   if (isCameraInteractionActive()) return;
+  const playerKingPower = getKingPower();
   const campInfoCountdown = modalBody?.querySelector("[data-camp-info-countdown]");
   if (campInfoCountdown) {
     const camp = getCampTargetById(campInfoCountdown.dataset.campInfoCountdown);
@@ -16028,7 +16507,8 @@ function updateVisibleCityDynamicText() {
     const knownTroops = city.owner === "player" ? troops : scoutReport?.troops;
     const ownerName = getCityOwnerDisplayName(city);
     const locationType = isStronghold(city) ? "Stronghold" : `Level ${city.level}`;
-    node.setAttribute("aria-label", `${city.name}. ${ownerName}. ${locationType}. ${knownTroops === undefined ? "Unknown troops" : `${formatNumber(knownTroops)} troops`}.`);
+    const powerBandLabel = getEnemyCityPowerBandLabel(getEnemyCityPowerBand(city, playerKingPower));
+    node.setAttribute("aria-label", `${city.name}. ${ownerName}. ${locationType}. ${knownTroops === undefined ? "Unknown troops" : `${formatNumber(knownTroops)} troops`}.${powerBandLabel ? ` ${powerBandLabel}.` : ""}`);
   });
 }
 
@@ -16053,6 +16533,7 @@ function renderCities(force = false) {
   const visibleCamps = WORLD_CAMPS
     .map(camp => getCampTargetById(camp.id) || camp)
     .filter(camp => shouldRenderCampNode(camp, visibleBounds));
+  const playerKingPower = getKingPower();
   updateMapDensityMode(visibleCities.length + visibleCamps.length);
   const signature = getCityRenderSignature(visibleCities, visibleCamps);
   if (!force && signature === cityRenderSignature) {
@@ -16127,7 +16608,18 @@ function renderCities(force = false) {
     btn.className = `city-node ${OWNER[city.owner].css} castle-stage-${castleStage}`;
     const clanAlly = isClanAllyCity(city);
     if (clanAlly) btn.classList.add("clan-ally");
+    const enemyPowerBand = getEnemyCityPowerBand(city, playerKingPower);
+    if (enemyPowerBand) {
+      btn.classList.add(`enemy-power-${enemyPowerBand}`);
+      btn.dataset.enemyPowerBand = enemyPowerBand;
+    } else {
+      delete btn.dataset.enemyPowerBand;
+    }
     if (stronghold) btn.classList.add("stronghold-node", `stronghold-${city.strongholdType || "generic"}`);
+    const mainCity = !stronghold && (city.owner === "player"
+      ? state.mainCityId ? city.id === state.mainCityId : Boolean(city.isMainCity)
+      : isProtectedMainCity(city));
+    if (mainCity) btn.classList.add("main-city-node");
     const shielded = !stronghold && isCityProtectedByPeaceShield(city);
     if (shielded) btn.classList.add("peace-shielded");
     if (city.id === selectedSourceId) btn.classList.add("selected");
@@ -16196,6 +16688,7 @@ function renderCities(force = false) {
         </span>`;
     const knownTroops = city.owner === "player" ? city.troops : scoutReport?.troops;
     const locationType = stronghold ? "Stronghold" : `Level ${city.level}`;
+    const powerBandLabel = getEnemyCityPowerBandLabel(enemyPowerBand);
     const structureHtml = stronghold
       ? `
       <span class="stronghold-glow" aria-hidden="true"></span>
@@ -16204,7 +16697,8 @@ function renderCities(force = false) {
       <span class="city-ring"></span>
       ${shielded ? `<span class="city-shield-field" aria-hidden="true"><img src="assets/royal-peace-shield-field.png?v=20260704-shield-badge" alt="" draggable="false" /></span>` : ""}
       <span class="city-castle stage-${castleStage}" aria-hidden="true"><img class="city-art" src="${getCastleAsset(castleStage)}" alt="" draggable="false" /></span>`;
-    btn.setAttribute("aria-label", `${city.name}. ${ownerName}. ${clanAlly ? "Clan Ally. " : ""}${locationType}. ${knownTroops === undefined ? "Unknown troops" : `${formatNumber(knownTroops)} troops`}.`);
+    btn.setAttribute("aria-label", `${city.name}. ${ownerName}. ${clanAlly ? "Clan Ally. " : ""}${locationType}. ${knownTroops === undefined ? "Unknown troops" : `${formatNumber(knownTroops)} troops`}.${powerBandLabel ? ` ${powerBandLabel}.` : ""}`);
+    btn.title = powerBandLabel ? `${city.name} - ${powerBandLabel}` : city.name;
     const cityHtml = `
       ${structureHtml}
       ${cityLabel}
@@ -16751,8 +17245,8 @@ function getRewardCampEstimatedRewards(config) {
   const rewardHours = Array.isArray(config?.rewardHours) ? config.rewardHours : [];
   const globalStats = normalizeGlobalStatsSnapshot(state?.globalStats);
   const hourlyRate = config?.rewardType === "troops"
-    ? Math.max(0, Number(globalStats?.baseTroopPerHour) || 0)
-    : Math.max(0, Number(globalStats?.baseGoldPerHour) || 0);
+    ? Math.max(0, Number(globalStats?.untimedTroopPerHour) || 0)
+    : Math.max(0, Number(globalStats?.untimedGoldPerHour) || 0);
   return minimums.map((minimum, index) => Math.max(
     0,
     Math.floor(Number(minimum) || 0),
@@ -16958,6 +17452,12 @@ function showRewardCampInfoModal(campId) {
           defenseLevel,
           defensePercent,
           troopDefense,
+          baseFortifications: holderHasAccess
+            ? Math.max(0, Math.floor(Number(liveStats.baseCityWalls) || 0))
+            : Math.max(0, Math.floor(
+              Number(report.baseCityWalls)
+              || Math.max(0, (Number(report.cityWalls) || 0) - (Number(report.stoneworksBonus) || 0))
+            )),
           fortifications: holderHasAccess
             ? Math.max(0, Math.floor(Number(liveStats.cityWalls) || 0))
             : Math.max(0, Math.floor(Number(report.cityWalls) || 0)),
@@ -16967,6 +17467,15 @@ function showRewardCampInfoModal(campId) {
           totalDefense: holderHasAccess
             ? Math.max(0, Math.floor(Number(liveStats.totalDefense) || 0))
             : Math.max(0, Math.floor(Number(report.totalDefense) || 0)),
+          baseTotalDefense: holderHasAccess
+            ? Math.max(0, Math.floor(Number(liveStats.baseTotalDefense) || 0))
+            : Math.max(0, Math.floor(
+              Number(report.baseTotalDefense)
+              || (troopDefense + Math.max(
+                0,
+                (Number(report.cityWalls) || 0) - (Number(report.stoneworksBonus) || 0)
+              ))
+            )),
         };
       })()
     : null;
@@ -16980,8 +17489,8 @@ function showRewardCampInfoModal(campId) {
         <div><span>Stationed troops</span><strong>${formatNumber(visibleStats.troops)}</strong></div>
         <div><span>Defense level</span><strong>${formatNumber(visibleStats.defenseLevel)}</strong></div>
         <div><span>Troop defense</span><strong>${formatNumber(visibleStats.troopDefense)}</strong><small>Level bonus +${formatNumber(visibleStats.defensePercent)}%</small></div>
-        <div><span>Fortifications</span><strong>${formatNumber(visibleStats.fortifications)}</strong><small>${visibleStats.territoryDefensePercent > 0 ? `Territory defense +${formatNumber(visibleStats.territoryDefensePercent)}%` : "Camp walls"}</small></div>
-        <div class="camp-total-defense"><span>Total defense</span><strong>${formatNumber(visibleStats.totalDefense)}</strong></div>
+        <div><span>Fortifications</span><strong>${formatBaseAndBonusStat(visibleStats.baseFortifications, visibleStats.fortifications)}</strong><small>Base walls and skill bonus</small></div>
+        <div class="camp-total-defense"><span>Total defense</span><strong>${formatBaseAndBonusStat(visibleStats.baseTotalDefense, visibleStats.totalDefense)}</strong><small>${visibleStats.territoryDefensePercent > 0 ? `Stronghold +${formatNumber(visibleStats.territoryDefensePercent)}%` : "Base defense and active bonuses"}</small></div>
       </div>
       ${report ? `<p class="camp-scout-expiry">Scout snapshot expires in <strong>${formatDuration(reportRemaining)}</strong>. Reinforcements or battles after the scout arrived are not revealed.</p>` : ""}`
     : `
@@ -17091,6 +17600,11 @@ function showScoutReportModal(cityId) {
   const cityWalls = Math.max(0, Math.floor(Number(report.cityWalls) || getCityStats({ ...city, level: cityLevel, troops: report.troops }).cityWalls));
   const cityDefenseBonus = Math.max(0, Math.floor(Number(report.cityDefenseBonus) || report.troops * defensePercent / 100));
   const stoneworksBonus = Math.max(0, Math.floor(Number(report.stoneworksBonus) || 0));
+  const baseCityWalls = Math.max(0, Math.floor(Number(report.baseCityWalls) || Math.max(0, cityWalls - stoneworksBonus)));
+  const baseTotalDefense = Math.max(
+    0,
+    Math.floor(Number(report.baseTotalDefense) || report.troops + cityDefenseBonus + baseCityWalls)
+  );
   modal.classList.add("scout-report-modal");
   modalTitle.textContent = "Detailed scout report";
   modalBody.innerHTML = `
@@ -17111,7 +17625,7 @@ function showScoutReportModal(cityId) {
 
       <div class="scout-report-overview">
         <div><span>Scouted troops</span><strong>${formatNumber(report.troops)}</strong></div>
-        <div><span>Total defense</span><strong>${formatNumber(report.totalDefense)}</strong></div>
+        <div><span>Total defense</span><strong>${formatBaseAndBonusStat(baseTotalDefense, report.totalDefense)}</strong></div>
       </div>
 
       <section class="scout-report-section">
@@ -17119,9 +17633,8 @@ function showScoutReportModal(cityId) {
         <div class="scout-defense-breakdown">
           ${scoutBreakdownRow("&#9817;", "Troops", "Reported garrison", report.troops)}
           ${scoutBreakdownRow("&#128737;", "City defense", `Lv ${cityLevel} - +${formatNumber(defensePercent)}%`, cityDefenseBonus)}
-          ${scoutBreakdownRow("&#10022;", "Stoneworks", `Lv ${report.stoneworksLevel || 0} - +${report.stoneworksPercent || 0}%`, stoneworksBonus)}
-          ${scoutBreakdownRow("&#9819;", "City walls", `Lv ${cityLevel}`, cityWalls)}
-          <div class="scout-breakdown-total"><span>Total</span><strong>${formatNumber(report.totalDefense)}</strong></div>
+          ${scoutBreakdownRow("&#9819;", "City walls", `Lv ${cityLevel} base ${formatNumber(baseCityWalls)} (+${formatNumber(Math.max(0, cityWalls - baseCityWalls))})`, cityWalls)}
+          <div class="scout-breakdown-total"><span>Total</span><strong>${formatBaseAndBonusStat(baseTotalDefense, report.totalDefense)}</strong></div>
         </div>
       </section>
 
@@ -17838,11 +18351,10 @@ async function showTroopSliderModalAsync(source, target) {
 
   const isTransfer = target.owner === "player";
   const campTarget = isRewardCampTarget(target);
+  const needsDefenderPower = target.owner === "enemy" && !campTarget && !isStronghold(target);
   const mainCityBlockReason = isTransfer || campTarget ? "" : getMainCityAttackBlockReason(target, "player");
   if (mainCityBlockReason) {
-    showToast(mainCityBlockReason);
-    cancelSendMode();
-    if (modal.open) modal.close();
+    showMainCityProtectedAttackModal(target);
     return;
   }
   const shieldBlockReason = isTransfer || campTarget ? "" : getPeaceShieldAttackBlockReason(target, "player");
@@ -17860,7 +18372,10 @@ async function showTroopSliderModalAsync(source, target) {
   showTroopRouteLoadingModal(source, target, isTransfer);
 
   await waitForSetupLoadingPaint(0);
-  const route = await findRouteAsync(source, target);
+  const [route, defenderPower] = await Promise.all([
+    findRouteAsync(source, target),
+    needsDefenderPower ? ensureAuthoritativeCityOwnerKingPower(target) : Promise.resolve(0),
+  ]);
   if (requestId !== activeTroopRouteRequestId) return;
 
   const freshSource = cityById(source.id);
@@ -17879,6 +18394,18 @@ async function showTroopSliderModalAsync(source, target) {
     if (modal.open) modal.close();
     return;
   }
+  if (
+    freshTarget.owner === "enemy"
+    && !isRewardCampTarget(freshTarget)
+    && !isStronghold(freshTarget)
+    && Math.max(
+      normalizePowerValue(defenderPower),
+      getAuthoritativeCityOwnerKingPowerSnapshot(freshTarget)
+    ) <= 0
+  ) {
+    showTroopPowerVerificationError(freshSource, freshTarget);
+    return;
+  }
   if (!route || !route.points.length) {
     showToast("No land route found around the terrain.");
     selectedTargetId = null;
@@ -17889,6 +18416,73 @@ async function showTroopSliderModalAsync(source, target) {
   }
 
   showTroopSliderModalWithRoute(freshSource, freshTarget, route);
+}
+
+function showMainCityProtectedAttackModal(target) {
+  troopSliderActive = false;
+  activeTroopSliderRoute = null;
+  modal.classList.remove("troop-slider-modal");
+  cancelSendMode();
+  modalTitle.textContent = "Protected home base";
+  modalBody.innerHTML = `
+    <div class="troop-slider-panel attack">
+      <div class="troop-slider-preview unknown" role="status">
+        <div><span>${escapeHtml(target.name)}</span><strong>Home base protected</strong><small>Main cities cannot be attacked or captured.</small></div>
+        <div><span>Attack status</span><strong>No troops sent</strong><small>Choose another enemy city.</small></div>
+      </div>
+      <div class="troop-slider-actions">
+        <button id="mainCityProtectedClose" class="troop-slider-cancel" type="button">Close</button>
+      </div>
+    </div>
+  `;
+  modalBody.querySelector("#mainCityProtectedClose")?.addEventListener("click", () => modal.close());
+  if (!modal.open) modal.showModal();
+}
+
+function showTroopPowerVerificationError(source, target) {
+  modal.classList.add("troop-slider-modal");
+  modalTitle.textContent = "Attack troops";
+  modalBody.innerHTML = `
+    <div class="troop-slider-panel attack">
+      <div class="troop-route-summary">
+        <div class="troop-route-city">
+          <span>From</span>
+          <strong>${escapeHtml(source.name)}</strong>
+          <small>${formatNumber(source.troops)} troops available</small>
+        </div>
+        <div class="troop-command-icon" aria-hidden="true">&#9876;</div>
+        <div class="troop-route-city destination">
+          <span>To</span>
+          <strong>${escapeHtml(target.name)}</strong>
+          <small>Enemy city</small>
+        </div>
+      </div>
+
+      <div class="troop-slider-preview unknown" role="alert">
+        <div><span>Kingdom strength</span><strong>Verification interrupted</strong><small>The attack limit could not be confirmed. No troops were sent.</small></div>
+        <div><span>Next step</span><strong>Try again</strong><small>Your selection will remain active.</small></div>
+      </div>
+
+      <div class="troop-slider-actions">
+        <button id="troopPowerRetry" class="troop-slider-confirm attack" type="button">
+          <span aria-hidden="true">&#8635;</span>Retry
+        </button>
+        <button id="troopSliderCancel" class="troop-slider-cancel" type="button">Cancel</button>
+      </div>
+    </div>
+  `;
+  modalBody.querySelector("#troopPowerRetry")?.addEventListener("click", () => {
+    const freshSource = cityById(source.id);
+    const freshTarget = getArmyTargetById(target.id);
+    if (!freshSource || !freshTarget) {
+      showToast("Order canceled. The map changed.");
+      if (modal.open) modal.close();
+      return;
+    }
+    void showTroopSliderModalAsync(freshSource, freshTarget);
+  });
+  modalBody.querySelector("#troopSliderCancel")?.addEventListener("click", () => modal.close());
+  if (!modal.open) modal.showModal();
 }
 
 function showTroopRouteLoadingModal(source, target, isTransfer) {
@@ -17929,6 +18523,15 @@ function showTroopRouteLoadingModal(source, target, isTransfer) {
   if (!modal.open) modal.showModal();
 }
 
+function getTroopSliderSendLimit(source, target) {
+  const availableTroops = Math.max(0, Math.floor(Number(source?.troops) || 0));
+  if (availableTroops < 1 || !target) return 0;
+  const demoAttack = createDemoAttackSnapshot(source, target, availableTroops, "player");
+  return demoAttack?.active
+    ? clamp(Math.floor(Number(demoAttack.maxTroops) || 1), 1, availableTroops)
+    : availableTroops;
+}
+
 function showTroopSliderModalWithRoute(source, target, route) {
   activeTroopSliderRoute = {
     sourceId: source.id,
@@ -17939,9 +18542,7 @@ function showTroopSliderModalWithRoute(source, target, route) {
   const campTarget = isRewardCampTarget(target);
   const mainCityBlockReason = isTransfer || campTarget ? "" : getMainCityAttackBlockReason(target, "player");
   if (mainCityBlockReason) {
-    showToast(mainCityBlockReason);
-    cancelSendMode();
-    if (modal.open) modal.close();
+    showMainCityProtectedAttackModal(target);
     return;
   }
   const shieldBlockReason = isTransfer || campTarget ? "" : getPeaceShieldAttackBlockReason(target, "player");
@@ -17954,7 +18555,9 @@ function showTroopSliderModalWithRoute(source, target, route) {
   const commandLabel = isTransfer ? "Transfer" : "Attack";
   const commandIcon = isTransfer ? "&#9822;" : "&#9876;";
   const shieldDropWarning = isTransfer ? "" : getPeaceShieldAttackWarning(target);
-  selectedTroopAmount = clamp(selectedTroopAmount, 1, source.troops);
+  const sliderSendLimit = getTroopSliderSendLimit(source, target);
+  const demoLimited = sliderSendLimit < source.troops;
+  selectedTroopAmount = clamp(selectedTroopAmount, 1, sliderSendLimit);
   troopSliderActive = true;
   modal.classList.add("troop-slider-modal");
   modalTitle.textContent = `${commandLabel} troops`;
@@ -17964,7 +18567,7 @@ function showTroopSliderModalWithRoute(source, target, route) {
         <div class="troop-route-city">
           <span>From</span>
           <strong>${escapeHtml(source.name)}</strong>
-          <small>${escapeHtml(getRegionLabel(getCityRegionId(source)))} &middot; <b id="troopSliderRemaining">${formatNumber(source.troops - selectedTroopAmount)}</b> remain</small>
+          <small>${escapeHtml(getRegionLabel(getCityRegionId(source)))} &middot; <b id="troopSliderRemaining">${formatNumber(source.troops - selectedTroopAmount)}</b> of ${formatNumber(source.troops)} remain</small>
         </div>
         <div class="troop-command-icon" aria-hidden="true">${commandIcon}</div>
         <div class="troop-route-city destination">
@@ -17981,8 +18584,8 @@ function showTroopSliderModalWithRoute(source, target, route) {
           <span>Troops to ${isTransfer ? "send" : "attack with"}</span>
           <strong id="troopSliderAmount">${formatNumber(selectedTroopAmount)}</strong>
         </div>
-        <input id="troopAmountSlider" class="troop-amount-slider" type="range" min="1" max="${source.troops}" value="${selectedTroopAmount}" aria-label="Troops to ${isTransfer ? "transfer" : "attack with"}" />
-        <div class="troop-slider-limits"><span>1</span><span>Max ${formatNumber(source.troops)}</span></div>
+        <input id="troopAmountSlider" class="troop-amount-slider" type="range" min="1" max="${sliderSendLimit}" value="${selectedTroopAmount}" aria-label="Troops to ${isTransfer ? "transfer" : "attack with"}" />
+        <div class="troop-slider-limits"><span>1</span><span id="troopSliderMaxLabel">${demoLimited ? "Protected max" : "Max"} ${formatNumber(sliderSendLimit)}</span></div>
       </div>
 
       <div id="troopSliderPreview" class="troop-slider-preview"></div>
@@ -17998,7 +18601,7 @@ function showTroopSliderModalWithRoute(source, target, route) {
 
   const slider = modalBody.querySelector("#troopAmountSlider");
   slider.addEventListener("input", () => {
-    selectedTroopAmount = clamp(Math.floor(Number(slider.value)), 1, source.troops);
+    selectedTroopAmount = clamp(Math.floor(Number(slider.value)), 1, getTroopSliderSendLimit(source, target));
     updateTroopSliderModal(source, target, route);
   });
   modalBody.querySelector("#troopSliderConfirm").addEventListener("click", confirmTroopSliderOrder);
@@ -18011,12 +18614,17 @@ function updateTroopSliderModal(source, target, route) {
   const slider = modalBody.querySelector("#troopAmountSlider");
   if (!slider || !source || !target) return;
   const routeSummary = getArmyRouteSummary(route, source, target);
-  selectedTroopAmount = clamp(selectedTroopAmount, 1, source.troops);
+  const sliderSendLimit = getTroopSliderSendLimit(source, target);
+  const demoLimited = sliderSendLimit < source.troops;
+  selectedTroopAmount = clamp(selectedTroopAmount, 1, sliderSendLimit);
+  slider.max = String(sliderSendLimit);
   slider.value = selectedTroopAmount;
-  const progress = source.troops <= 1 ? 100 : ((selectedTroopAmount - 1) / (source.troops - 1)) * 100;
+  const progress = sliderSendLimit <= 1 ? 100 : ((selectedTroopAmount - 1) / (sliderSendLimit - 1)) * 100;
   slider.style.setProperty("--slider-progress", `${progress}%`);
   modalBody.querySelector("#troopSliderAmount").textContent = formatNumber(selectedTroopAmount);
   modalBody.querySelector("#troopSliderRemaining").textContent = formatNumber(source.troops - selectedTroopAmount);
+  const maxLabel = modalBody.querySelector("#troopSliderMaxLabel");
+  if (maxLabel) maxLabel.textContent = `${demoLimited ? "Protected max" : "Max"} ${formatNumber(sliderSendLimit)}`;
 
   const travel = travelTime(source, target, "player", route.length, selectedTroopAmount, target.owner === "player" ? "transfer" : "attack");
   const previewEl = modalBody.querySelector("#troopSliderPreview");
@@ -18087,7 +18695,7 @@ function confirmTroopSliderOrder() {
     return;
   }
 
-  selectedTroopAmount = clamp(selectedTroopAmount, 1, source.troops);
+  selectedTroopAmount = clamp(selectedTroopAmount, 1, getTroopSliderSendLimit(source, target));
   const cachedRoute = activeTroopSliderRoute?.sourceId === source.id && activeTroopSliderRoute?.targetId === target.id
     ? activeTroopSliderRoute.route
     : null;
@@ -18523,7 +19131,11 @@ function showCrownCitadelInfoModal(city) {
           <div class="stat-chip"><span>Controller</span><strong>${escapeHtml(controller)}</strong></div>
           <div class="stat-chip"><span>Current reign</span><strong ${heldSinceMs ? `data-citadel-reign-score data-total-held-ms="0" data-current-held-since-ms="${heldSinceMs}"` : ""}>${heldSinceMs ? formatDuration(Math.floor((Date.now() - heldSinceMs) / 1000)) : "Unclaimed"}</strong></div>
           <div class="stat-chip"><span>Troops stationed</span><strong>${visibleTroops === undefined ? "Unknown" : formatNumber(visibleTroops)}</strong></div>
-          <div class="stat-chip"><span>Total defense</span><strong>${visibleDefense === undefined ? "Unknown" : formatNumber(visibleDefense)}</strong></div>
+          <div class="stat-chip"><span>Total defense</span><strong>${visibleDefense === undefined
+            ? "Unknown"
+            : owned
+              ? formatBaseAndBonusStat(stats.baseTotalDefense, stats.totalDefense)
+              : formatBaseAndBonusStat(report?.baseTotalDefense ?? visibleDefense, visibleDefense)}</strong></div>
           <div class="stat-chip"><span>Defense level</span><strong>${formatNumber(stats.level)}</strong><small>matches a level ${formatNumber(stats.level)} city</small></div>
           <div class="stat-chip"><span>Garrison limit</span><strong>Unlimited</strong></div>
           ${!owned && !report ? `<div class="stat-wide scout-required"><span>Defense report</span><strong>Scout to reveal</strong></div>` : ""}
@@ -18578,10 +19190,10 @@ function showCityInfoModal(cityId) {
         ${stronghold ? `<div class="stat-wide"><span>Stronghold bonus</span><strong>${strongholdBonusLabel}</strong><small>Bonus is active only for the current controller.</small></div>` : ""}
         <div class="stat-wide"><span>Owner</span><strong>${escapeHtml(getCityOwnerDisplayName(city))}</strong></div>
         <div class="stat-chip"><span>${stronghold ? "Defense level" : "City level"}</span><strong>${formatNumber(stats.level)}</strong></div>
-        <div class="stat-chip"><span>Victory points</span><strong>${formatNumber(stats.victoryPoints)}</strong></div>
         <div class="stat-chip"><span>Troops</span><strong>${report ? formatNumber(report.troops) : "Unknown"}</strong></div>
-        <div class="stat-chip"><span>Total defense</span><strong>${report ? formatNumber(report.totalDefense) : "Unknown"}</strong></div>
-        ${stronghold ? "" : renderCityLevelUpAction(city)}
+        <div class="stat-chip"><span>Total defense</span><strong>${report
+          ? formatBaseAndBonusStat(report.baseTotalDefense ?? report.totalDefense, report.totalDefense)
+          : "Unknown"}</strong></div>
         ${neutralStrongholdBase}
         ${report
           ? `<div class="stat-wide"><span>Scout report expires</span><strong>${formatDuration(remaining)}</strong></div>`
@@ -18620,11 +19232,11 @@ function showCityInfoModal(cityId) {
     modalBody.innerHTML = `
       <div class="city-stat-panel modal-city-stats stronghold-stat-panel">
         <div class="stat-wide stronghold-status"><span>Controlled bonus</span><strong>${strongholdBonusLabel}</strong><small>Active while you control this Stronghold.</small></div>
-        <div class="stat-wide"><span>Total defense</span><strong>${formatNumber(stats.totalDefense)}</strong></div>
+        <div class="stat-wide"><span>Total defense</span><strong>${formatBaseAndBonusStat(stats.baseTotalDefense, stats.totalDefense)}</strong><small>${getCityStatBonusSources(stats, "defense")}</small></div>
         <div class="stat-chip"><span>Owner</span><strong>${escapeHtml(getCityOwnerDisplayName(city))}</strong></div>
         <div class="stat-chip"><span>Troops stationed</span><strong>${formatNumber(city.troops)}</strong></div>
         <div class="stat-chip"><span>Defense level</span><strong>${formatNumber(stats.level)}</strong><small>matches a level ${formatNumber(stats.level)} city</small></div>
-        <div class="stat-chip"><span>City walls</span><strong>${formatNumber(stats.cityWalls)}</strong></div>
+        <div class="stat-chip"><span>City walls</span><strong>${formatBaseAndBonusStat(stats.baseCityWalls, stats.cityWalls)}</strong><small>${getCityStatBonusSources(stats, "walls")}</small></div>
         <div class="stat-chip"><span>Garrison limit</span><strong>Unlimited</strong><small>station as many troops as you can send</small></div>
         <div class="stat-chip"><span>Effect target</span><strong>${effectTargetLabel}</strong><small>${effectHelp}</small></div>
         ${renderRelinquishCityAction(city)}
@@ -18634,19 +19246,6 @@ function showCityInfoModal(cityId) {
     if (!modal.open) modal.showModal();
     return;
   }
-  modalTitle.textContent = `${city.name} \u00B7 Level ${city.level}`;
-  modalBody.innerHTML = `
-    <div class="city-stat-panel modal-city-stats">
-      <div class="stat-wide"><span>Total defense</span><strong>${formatNumber(stats.totalDefense)}</strong></div>
-      <div class="stat-chip"><span>Troops</span><strong>${formatNumber(city.troops)}</strong></div>
-      <div class="stat-chip"><span>Stoneworks</span><strong>${stats.stoneworksPercent}%</strong></div>
-      <div class="stat-chip"><span>City power</span><strong>${formatNumber(stats.cityPower)}</strong><small>+${CITY_LEVEL_STATS.victoryPointsPerLevel}/level</small></div>
-      <div class="stat-chip"><span>Defense</span><strong>${stats.defensePercent}%</strong><small>+${CITY_LEVEL_STATS.defensePercentPerLevel}%/level${stats.strongholdDefenseBonusPercent ? ` + Stronghold ${formatNumber(stats.strongholdDefenseBonusPercent)}%` : ""}</small></div>
-      <div class="stat-chip"><span>Troops production</span><strong>${formatNumber(stats.troopProductionPerHour)}/h</strong>${stats.warDrumsTroopBonusPercent ? `<small>War Drums +${formatNumber(stats.warDrumsTroopBonusPercent)}%</small>` : ""}</div>
-      <div class="stat-chip"><span>City walls</span><strong>${formatNumber(stats.cityWalls)}</strong><small>+${CITY_LEVEL_STATS.cityWallsPerLevel}/level</small></div>
-      <div class="stat-chip"><span>Gold production</span><strong>${formatNumber(stats.goldProductionPerHour)}/h</strong>${stats.royalTaxDecreeGoldBonusPercent ? `<small>Royal Tax Decree +${formatNumber(stats.royalTaxDecreeGoldBonusPercent)}%</small>` : ""}</div>
-    </div>
-  `;
   const cooldownRemaining = getCaptureCooldownRemaining(city);
   const mainCityStatus = getMainCityChangeStatus(city);
   const mainCityBlock = mainCityStatus.isMain
@@ -18665,22 +19264,22 @@ function showCityInfoModal(cityId) {
           <span>Change main city</span>
           ${mainCityStatus.cooldownText ? `<small>${escapeHtml(mainCityStatus.cooldownText)}</small>` : ""}
         </button>
-        ${!mainCityStatus.canChange && mainCityStatus.reason ? `<p class="main-city-change-reason">${escapeHtml(mainCityStatus.reason)}</p>` : ""}
+        ${!mainCityStatus.canChange && mainCityStatus.reason && !mainCityStatus.cooldownText
+          ? `<p class="main-city-change-reason">${escapeHtml(mainCityStatus.reason)}</p>`
+          : ""}
       </div>`;
   modalTitle.textContent = `${city.name} - Level ${city.level}`;
   modalBody.innerHTML = `
     <div class="city-stat-panel modal-city-stats">
       ${mainCityBlock}
       ${renderCityLevelUpAction(city)}
-      <div class="stat-wide"><span>Total defense</span><strong>${formatNumber(stats.totalDefense)}</strong></div>
+      <div class="stat-wide"><span>Total defense</span><strong>${formatBaseAndBonusStat(stats.baseTotalDefense, stats.totalDefense)}</strong><small>${getCityStatBonusSources(stats, "defense")}</small></div>
       <div class="stat-chip"><span>Owner</span><strong>${escapeHtml(getCityOwnerDisplayName(city))}</strong></div>
       <div class="stat-chip"><span>Troops</span><strong>${formatNumber(city.troops)}</strong></div>
-      <div class="stat-chip"><span>Victory points</span><strong>${formatNumber(stats.victoryPoints)}</strong><small>Drives growth and XP value</small></div>
-      <div class="stat-chip"><span>City defense</span><strong>${stats.defensePercent}%</strong><small>${CITY_LEVEL_STATS.defensePercentPerLevel}% per level${stats.strongholdDefenseBonusPercent ? ` + Stronghold ${formatNumber(stats.strongholdDefenseBonusPercent)}%` : ""}</small></div>
-      <div class="stat-chip"><span>City walls</span><strong>${formatNumber(stats.cityWalls)}</strong><small>Level-based static defense</small></div>
-      <div class="stat-chip"><span>Stoneworks</span><strong>${stats.stoneworksPercent}%</strong><small>Wall defense skill</small></div>
-      <div class="stat-chip"><span>Troops production</span><strong>${formatNumber(stats.troopProductionPerHour)}/h</strong>${stats.warDrumsTroopBonusPercent ? `<small>War Drums +${formatNumber(stats.warDrumsTroopBonusPercent)}%</small>` : ""}</div>
-      <div class="stat-chip"><span>Gold production</span><strong>${formatNumber(stats.goldProductionPerHour)}/h</strong>${stats.royalTaxDecreeGoldBonusPercent ? `<small>Royal Tax Decree +${formatNumber(stats.royalTaxDecreeGoldBonusPercent)}%</small>` : ""}</div>
+      <div class="stat-chip"><span>City defense</span><strong>${formatBaseAndBonusStat(stats.defensePercent, stats.defensePercent + stats.strongholdDefenseBonusPercent, "%")}</strong><small>${CITY_LEVEL_STATS.defensePercentPerLevel}% per level${stats.strongholdDefenseBonusPercent ? ` | Stronghold +${formatNumber(stats.strongholdDefenseBonusPercent)}%` : ""}</small></div>
+      <div class="stat-chip"><span>City walls</span><strong>${formatBaseAndBonusStat(stats.baseCityWalls, stats.cityWalls)}</strong><small>${getCityStatBonusSources(stats, "walls")}</small></div>
+      <div class="stat-chip"><span>Troops production</span><strong>${formatBaseAndBonusStat(stats.baseTroopProductionPerHour, stats.troopProductionPerHour, "/h")}</strong><small>${getCityStatBonusSources(stats, "troops")}</small></div>
+      <div class="stat-chip"><span>Gold production</span><strong>${formatBaseAndBonusStat(stats.baseGoldProductionPerHour, stats.goldProductionPerHour, "/h")}</strong><small>${getCityStatBonusSources(stats, "gold")}</small></div>
       <div class="stat-chip"><span>Invested gold</span><strong>${formatNumber(city.investedGold || 0)}</strong><small>Clears when captured</small></div>
       ${cooldownRemaining > 0 ? `<div class="stat-wide"><span>Capture XP cooldown</span><strong>${formatDuration(cooldownRemaining)}</strong></div>` : ""}
       ${renderRelinquishCityAction(city)}
@@ -19459,6 +20058,11 @@ async function upgradeCity(cityId, levels = 1) {
   const city = cityById(cityId);
   if (!city) return;
   const requestedLevels = Math.max(1, Math.floor(Number(levels) || 1));
+  if (city.owner !== "player") {
+    showToast("You do not own that city.");
+    renderAll();
+    return;
+  }
   if (isStronghold(city)) {
     showToast("Strongholds cannot be upgraded.");
     renderAll();
@@ -19652,20 +20256,15 @@ function renderCityLevelUpButton({ label, levels, cost, disabled, reason }) {
 }
 
 function renderCityLevelUpAction(city) {
+  if (!city || city.owner !== "player" || isStronghold(city)) return "";
   const currentLevel = clampCityLevel(city?.level || 1);
   const incomingBlockers = city ? getIncomingUpgradeBlockers(city.id) : [];
-  const owned = city?.owner === "player";
-  const stronghold = isStronghold(city);
   const inFlight = city ? serverCityUpgradeInFlightIds.has(city.id) : false;
-  const baseDisabledReason = !owned
-    ? "Own first"
-    : stronghold
-      ? "Fixed"
-      : incomingBlockers.length
-        ? "Incoming"
-        : inFlight
-          ? "Working"
-          : "";
+  const baseDisabledReason = incomingBlockers.length
+    ? "Incoming"
+    : inFlight
+      ? "Working"
+      : "";
   const oneCost = getMultiLevelCost(city, 1);
   const fiveCost = getMultiLevelCost(city, 5);
   const affordableMax = baseDisabledReason ? 0 : getAffordableCityUpgradeLevels(city);
@@ -20875,7 +21474,7 @@ function showBattleReportDetail(reportId) {
         <div><span>Type</span><strong>${escapeHtml(getBattleReportTypeLabel(report.type))}</strong></div>
         <div><span>Opponent</span><strong>${escapeHtml(report.opponentName || report.ownerName || "Unknown")}</strong></div>
         <div><span>${report.type === "scout" ? "Scouted troops" : "Troops sent"}</span><strong>${formatNumber(report.type === "scout" ? report.troopCount : report.sentTroops)}</strong></div>
-        <div><span>Total defense</span><strong>${formatNumber(report.totalDefense)}</strong></div>
+        <div><span>Total defense</span><strong>${formatBaseAndBonusStat(report.baseTotalDefense, report.totalDefense)}</strong></div>
         <div><span>Survivors</span><strong>${formatNumber(report.survivors)}</strong></div>
         <div><span>Defenders left</span><strong>${formatNumber(report.defendersLeft)}</strong></div>
         <div><span>Attackers lost</span><strong>${formatNumber(report.attackerLosses)}</strong></div>
@@ -20933,7 +21532,7 @@ function showHelpModal() {
       <li>The world has ${formatNumber(getRegionIds().length)} maps and ${formatNumber(ISLAND_CITY_COUNT)} total city slots.</li>
       <li>The center island keeps its middle clear for a future feature.</li>
       <li>New online players claim starting cities on starter maps with at least ${formatNumber(MIN_NEW_PLAYER_SPAWN_NEUTRAL_CITIES)} neutral cities, then midgame maps, then endgame maps.</li>
-      <li>Your main city starts with 50 troops. Gray cities start with 10 defending troops.</li>
+      <li>Your main city starts with 200 troops. Gray cities start with 10 defending troops.</li>
       <li>Use Recruit, Level Up, and Skills to grow faster. Leveling increases walls, defense %, troop production, and gold production.</li>
       <li>Every signed-in player claims one starting city, then expands through neutral captures and player combat.</li>
     </ul>
@@ -20941,7 +21540,7 @@ function showHelpModal() {
   modalBody.innerHTML = `
     <p>Crownlands is real-time conquest: cities produce troops and gold while armies travel across terrain-aware routes.</p>
     <ul>
-      <li>You start with one main city, 50 troops, and 500 gold.</li>
+      <li>You start with one main city, 200 troops, and 100 gold.</li>
       <li>Neutral expansion has two limits: 30 neutral captures per local day, and neutral captures stop once you own 30 cities.</li>
       <li>After that, expand by attacking player-owned cities.</li>
       <li>Send Troops is single-click after setup: pick a march percent, then tap one destination to launch.</li>
@@ -20949,7 +21548,7 @@ function showHelpModal() {
       <li>Regroup costs ${formatNumber(REGROUP_COST)} gold, previews a larger red radius, then sends all troops from nearby owned cities into the selected city.</li>
       <li>The top-right fullscreen button expands the game surface and the game disables page text selection while playing.</li>
       <li>City level creates victory points for combat value, while passive gold follows the Million Lords city production curve.</li>
-      <li>City defense is level x 3%, plus wall strength. Stoneworks increases the wall part of defense.</li>
+      <li>City defense adds ${formatNumber(CITY_LEVEL_STATS.defensePercentPerLevel)}% soldier defense per city level, plus separate wall strength. Stoneworks increases the wall part of defense.</li>
       <li>Troop production is VP x 3, improved by Royal Granaries. Passive gold uses ML city production VP x ${formatNumber(MILLION_LORDS_PASSIVE_GOLD_PER_CITY_VP)}, improved by Tax Stewardship and stronghold bonuses.</li>
       <li>Army travel uses route distance plus troop-size bands. Larger armies march slower, scouts move as one troop, and March Orders reduces travel time.</li>
       <li>Glowing pickups appear near your owned cities on the current island during active play every three minutes, alternating between ten minutes of gold and troop production. Daily pickup limits are ${formatNumber(HARVEST_BONUS_DAILY_GOLD_LIMIT)} gold and ${formatNumber(HARVEST_BONUS_DAILY_TROOP_LIMIT)} troop pickups.</li>
@@ -21022,6 +21621,34 @@ function formatNumber(value) {
   if (n >= 10_000) return `${Math.floor(n / 1000)}K`;
   if (n >= 1_000) return `${(n / 1000).toFixed(1)}K`;
   return String(n);
+}
+
+function formatBaseAndBonusStat(baseValue, totalValue, suffix = "") {
+  const base = Math.max(0, Math.floor(Number(baseValue) || 0));
+  const total = Math.max(base, Math.floor(Number(totalValue) || 0));
+  const bonus = Math.max(0, total - base);
+  return `${formatNumber(base)}${suffix} (+${formatNumber(bonus)}${suffix})`;
+}
+
+function getCityStatBonusSources(stats = {}, statType = "") {
+  const sources = [];
+  if (statType === "walls" || statType === "defense") {
+    if (stats.stoneworksPercent > 0) sources.push(`Stoneworks +${formatNumber(stats.stoneworksPercent)}%`);
+  }
+  if (statType === "defense" && stats.strongholdDefenseBonusPercent > 0) {
+    sources.push(`Stronghold +${formatNumber(stats.strongholdDefenseBonusPercent)}%`);
+  }
+  if (statType === "troops") {
+    if (stats.royalGranariesPercent > 0) sources.push(`Royal Granaries +${formatNumber(stats.royalGranariesPercent)}%`);
+    if (stats.strongholdTroopBonusPercent > 0) sources.push(`Stronghold +${formatNumber(stats.strongholdTroopBonusPercent)}%`);
+    if (stats.warDrumsTroopBonusPercent > 0) sources.push(`War Drums +${formatNumber(stats.warDrumsTroopBonusPercent)}%`);
+  }
+  if (statType === "gold") {
+    if (stats.taxStewardshipPercent > 0) sources.push(`Tax Stewardship +${formatNumber(stats.taxStewardshipPercent)}%`);
+    if (stats.strongholdGoldBonusPercent > 0) sources.push(`Stronghold +${formatNumber(stats.strongholdGoldBonusPercent)}%`);
+    if (stats.royalTaxDecreeGoldBonusPercent > 0) sources.push(`Royal Tax Decree +${formatNumber(stats.royalTaxDecreeGoldBonusPercent)}%`);
+  }
+  return sources.length ? `Bonus sources: ${sources.join(" | ")}` : "No active stat bonuses";
 }
 
 function formatDuration(seconds) {
@@ -22117,10 +22744,36 @@ modal.addEventListener("close", () => {
   modal.classList.remove("incoming-attack-modal");
   modal.classList.remove("outgoing-attack-modal");
   modal.classList.remove("relinquish-city-modal");
+  setTimeout(showNextLevelUpReward, 0);
   if (!troopSliderActive) return;
   troopSliderActive = false;
   cancelSendMode();
 });
+if (levelUpRewardModal) {
+  levelUpRewardModal.addEventListener("cancel", event => {
+    event.preventDefault();
+  });
+  levelUpRewardModal.addEventListener("click", event => {
+    if (event.target !== levelUpRewardModal) return;
+    event.preventDefault();
+    event.stopPropagation();
+  });
+  levelUpRewardModal.addEventListener("close", () => {
+    levelUpRewardModal.classList.remove("revealed");
+    activeLevelUpReward = null;
+    setTimeout(showNextLevelUpReward, 0);
+  });
+}
+if (collectLevelUpRewardsBtn) {
+  collectLevelUpRewardsBtn.addEventListener("click", () => {
+    if (!levelUpRewardModal?.open) return;
+    levelUpRewardModal.classList.add("collecting");
+    setTimeout(() => {
+      levelUpRewardModal.classList.remove("collecting");
+      levelUpRewardModal.close();
+    }, 140);
+  });
+}
 
 if (playerNameInput) playerNameInput.value = cleanName(getOnlineApi()?.getUser?.()?.displayName) || "Ricky";
 applyWorldDimensions();
