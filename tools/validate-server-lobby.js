@@ -43,9 +43,9 @@ function extractFunction(source, name) {
 requireMatch(serverSource, /GAME_SERVER_ID\s*=\s*"crown-marches"/, "The Crown Marches server id is missing.");
 requireMatch(serverSource, /GAME_SERVER_NAME\s*=\s*"The Crown Marches"/, "The medieval server name is missing.");
 requireMatch(serverSource, /GAME_SERVER_CAPACITY\s*=\s*50/, "The realm must be capped at exactly 50 active players.");
-requireMatch(serverSource, /exports\.joinGameServer\s*=\s*onCall/, "Missing server-authoritative realm admission.");
-requireMatch(serverSource, /exports\.heartbeatGameServer\s*=\s*onCall/, "Missing realm heartbeat callable.");
-requireMatch(serverSource, /exports\.leaveGameServer\s*=\s*onCall/, "Missing realm leave callable.");
+requireMatch(serverSource, /exports\.joinGameServer\s*=\s*(?:onCall|timedCallable)/, "Missing server-authoritative realm admission.");
+requireMatch(serverSource, /exports\.heartbeatGameServer\s*=\s*(?:onCall|timedCallable)/, "Missing realm heartbeat callable.");
+requireMatch(serverSource, /exports\.leaveGameServer\s*=\s*(?:onCall|timedCallable)/, "Missing realm leave callable.");
 requireMatch(serverSource, /exports\.maintainGameServer\s*=\s*onSchedule[\s\S]*?every 1 minutes/, "Missing scheduled stale-slot cleanup.");
 requireMatch(serverSource, /currentEntry\.sessionId\s*!==\s*sessionId[\s\S]*?session-replaced/, "An old browser session could release a newer session's slot.");
 
@@ -103,7 +103,7 @@ requireMatch(clientSource, /async function joinSelectedGameServer\(\) \{\s*if \(
 requireMatch(clientSource, /const realmIsReady = await joinSelectedGameServer\(\);[\s\S]*?state = createOnlineEntryState/, "Kingdom loading can start before realm admission.");
 requireMatch(clientSource, /membership\?\.status === "active"[\s\S]*?gameServerAutoEnter[\s\S]*?startFromInput/, "Waiting players are not resumed after promotion.");
 requireMatch(clientSource, /await leaveSelectedGameServer\(\);[\s\S]*?await api\.signOut\(\)/, "Sign-out does not release the realm slot first.");
-requireMatch(rulesSource, /match \/serverMembership\/\{membershipId\}[\s\S]*?allow read: if ownsPlayerDoc\(uid\);[\s\S]*?allow create, update, delete: if false;/, "Realm membership is not private and server-owned.");
+requireMatch(rulesSource, /match \/serverMembership\/\{membershipId\}[\s\S]*?allow read: if ownsPlayerDoc\(uid\)\s*&&\s*isCurrentGeneration\(resource\.data\);[\s\S]*?allow create, update, delete: if false;/, "Realm membership is not private, generation-scoped, and server-owned.");
 requireMatch(rulesSource, /match \/gameServers\/\{serverId\}[\s\S]*?allow read, create, update, delete: if false;/, "Realm capacity state must remain private and server-owned.");
 requireMatch(stylesSource, /\.server-realm-card[\s\S]*?\.server-queue-status/, "Realm list styling is missing.");
 
