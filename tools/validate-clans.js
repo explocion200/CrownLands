@@ -11,6 +11,10 @@ const styles = fs.readFileSync(path.join(root, "styles.css"), "utf8");
 const rules = fs.readFileSync(path.join(root, "firestore.rules"), "utf8");
 const firebaseConfig = fs.readFileSync(path.join(root, "firebase.json"), "utf8");
 const callableAccessCheck = fs.readFileSync(path.join(root, "tools", "validate-clan-callable-access.js"), "utf8");
+const showProfileSkillsSource = client.slice(
+  client.indexOf("function showProfileSkills()"),
+  client.indexOf("function showProfileSettings()")
+);
 
 function requires(source, pattern, message) {
   assert.match(source, pattern, message);
@@ -77,6 +81,7 @@ requires(client, /function isClanAllyCity[\s\S]*?function getClanFriendlyBlockRe
 requires(client, /clanRosterReady[\s\S]*?clanMemberUidSet\.has/, "Allied-city rendering does not use the event-maintained clan member UID set.");
 requires(client, /function applyClanMembersSnapshot[\s\S]*?\["added", "removed"\][\s\S]*?refreshClanRelationshipPresentation/, "Roster events do not refresh allied cities only when membership changes.");
 requires(client, /function showClanHub[\s\S]*?showProfileClan\(\)/, "The Clan HUD button does not open the Clan area directly.");
+requires(showProfileSkillsSource, /clanView\.hidden\s*=\s*true;/, "Switching from Clan to Skills does not hide the Clan panel.");
 requires(client, /function renderProfileClanAffiliation[\s\S]*?renderClanShield/, "Player profiles do not render a separate clan shield affiliation.");
 requires(client, /clanSearchResults\.map\(clan =>[\s\S]*?renderClanShield\(clan\.shield \|\| clan\.banner/, "Clan discovery results do not show each clan's public shield.");
 requires(client, /function showPublicPlayerProfile[\s\S]*?api\.loadClan\(profile\.clanId\)[\s\S]*?profile\.clanShield[\s\S]*?renderPublicPlayerProfile\(profile\)/, "Public player profiles do not load and display clan shields for nonmember viewers.");

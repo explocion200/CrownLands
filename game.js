@@ -16136,6 +16136,7 @@ function showProfileSkills() {
   profileView.hidden = true;
   skillsView.hidden = false;
   settingsView.hidden = true;
+  clanView.hidden = true;
   flagEditorView.hidden = true;
   flagDraft = null;
   cancelProfileNameEdit();
@@ -16415,7 +16416,6 @@ function showProfileClan() {
   profileView.hidden = true;
   skillsView.hidden = true;
   settingsView.hidden = true;
-  clanView.hidden = true;
   clanView.hidden = false;
   flagEditorView.hidden = true;
   updateProfileTabHeader();
