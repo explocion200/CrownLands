@@ -2952,6 +2952,137 @@ input {
 .modal-card p, .modal-card li { color: var(--muted); line-height: 1.42; }
 .modal-card ul { margin: .5rem 0 0; padding-left: 1.15rem; }
 .modal-card li { margin: .35rem 0; }
+.player-name-link {
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-color: transparent;
+  text-underline-offset: .18em;
+  transition: color .16s ease, text-decoration-color .16s ease;
+}
+.player-name-link:hover,
+.player-name-link:focus-visible {
+  color: #f3d88b;
+  text-decoration-color: currentColor;
+  outline: none;
+}
+.public-player-profile-modal .modal-card { width: min(92vw, 720px); }
+.public-player-profile {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: .7rem;
+}
+.public-profile-section {
+  min-width: 0;
+  padding: .85rem;
+  border: 1px solid rgba(214, 183, 106, .22);
+  border-radius: 14px;
+  background: linear-gradient(180deg, rgba(255,255,255,.065), rgba(0,0,0,.16));
+}
+.public-profile-heading {
+  margin-bottom: .75rem;
+  color: #d9bc75;
+  font-size: .72rem;
+  font-weight: 900;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+.public-profile-identity {
+  display: flex;
+  align-items: center;
+  gap: .65rem;
+  margin-bottom: .8rem;
+  font-size: 1.08rem;
+}
+.public-profile-flag {
+  flex: 0 0 auto;
+  width: 46px;
+  height: 46px;
+}
+.public-profile-location,
+.public-profile-clan {
+  width: 100%;
+  min-height: 58px;
+  display: flex;
+  align-items: center;
+  gap: .55rem;
+  padding: .6rem;
+  border: 1px solid rgba(217, 188, 117, .35);
+  border-radius: 10px;
+  color: #f6edda;
+  background: rgba(0,0,0,.22);
+  text-align: left;
+  cursor: pointer;
+}
+.public-profile-location > span:first-child { color: #e5c36f; font-size: 1.55rem; }
+.public-profile-location > span:last-child,
+.public-profile-clan { display: grid; }
+.public-profile-location small,
+.public-profile-clan small { color: #aeb4bd; }
+.public-profile-location:hover:not(:disabled),
+.public-profile-location:focus-visible,
+.public-profile-clan:hover,
+.public-profile-clan:focus-visible {
+  border-color: #e0bd68;
+  background: rgba(224, 189, 104, .1);
+  outline: none;
+}
+.public-profile-location:disabled { cursor: default; opacity: .6; }
+.public-profile-stat,
+.public-profile-strongholds > div {
+  display: flex;
+  align-items: baseline;
+  gap: .4rem;
+}
+.public-profile-stat strong,
+.public-profile-strongholds > div strong {
+  color: #f1d47d;
+  font-size: 1.45rem;
+}
+.public-profile-strongholds { margin-top: .8rem; }
+.public-profile-strongholds ul { margin-top: .45rem; }
+.public-profile-strongholds p,
+.public-profile-empty { margin: .45rem 0 0; }
+.public-profile-loading,
+.public-profile-error {
+  min-height: 180px;
+  display: grid;
+  place-content: center;
+  gap: .6rem;
+  text-align: center;
+}
+.public-profile-error button {
+  justify-self: center;
+  padding: .55rem .9rem;
+  border: 1px solid rgba(217,188,117,.4);
+  border-radius: 9px;
+  color: #f5ead1;
+  background: rgba(217,188,117,.12);
+}
+.public-clan-details {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: .8rem;
+  align-items: center;
+}
+.public-clan-details h3,
+.public-clan-details p { margin: .1rem 0; }
+.public-clan-details dl {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: .5rem;
+  margin: 0;
+}
+.public-clan-details dl div {
+  padding: .65rem;
+  border-radius: 9px;
+  background: rgba(0,0,0,.2);
+}
+.public-clan-details dt { color: #aeb4bd; font-size: .75rem; }
+.public-clan-details dd { margin: .15rem 0 0; color: #f1d47d; font-weight: 900; }
+@media (max-width: 720px) {
+  .public-player-profile { grid-template-columns: 1fr; }
+}
 .modal-close { position: absolute; z-index: 3; right: .7rem; top: .65rem; width: 34px; height: 34px; border-radius: 999px; color: var(--ink); background: rgba(255,255,255,.1); }
 .stat-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: .5rem; margin: .7rem 0; }
 .stat-card { padding: .65rem; border-radius: 14px; background: rgba(255,255,255,.07); border: 1px solid var(--line); }

@@ -2441,6 +2441,7 @@ let resolvingOnlineArmyIds = new Set();
 let resolvedOnlineArmyIds = new Set();
 let onlinePresence = [];
 const playerIdentityCache = new Map();
+let publicPlayerProfileRequestId = 0;
 const playerIdentityLookupQueue = new Set();
 const playerIdentityLookupMisses = new Map();
 let playerIdentityLookupInFlight = false;
@@ -8660,7 +8661,147 @@ function normalizePlayerIdentity(raw = {}, fallbackUid = "") {
     clanId: String(raw.clanId || raw.ownerClanId || ""),
     clanName: String(raw.clanName || raw.ownerClanName || ""),
     clanTag: String(raw.clanTag || raw.ownerClanTag || ""),
+    cityCount: Math.max(0, Math.floor(Number(raw.cityCount) || 0)),
+    strongholdCount: Math.max(0, Math.floor(Number(raw.strongholdCount) || 0)),
+    strongholds: (Array.isArray(raw.strongholds) ? raw.strongholds : []).map(stronghold => ({
+      id: String(stronghold?.id || "").slice(0, 96),
+      name: String(stronghold?.name || "Stronghold").slice(0, 80),
+      strongholdType: String(stronghold?.strongholdType || "").slice(0, 32),
+      regionId: normalizeRegionId(stronghold?.regionId || ""),
+    })).filter(stronghold => stronghold.id),
   };
+}
+
+function renderPlayerNameLink(uid = "", name = "Ruler", className = "") {
+  const playerUid = String(uid || "").trim();
+  const safeName = escapeHtml(cleanName(name) || "Ruler");
+  if (!playerUid) return `<strong class="${escapeHtml(className)}">${safeName}</strong>`;
+  return `<strong class="player-name-link ${escapeHtml(className)}" role="button" tabindex="0" data-player-profile-uid="${escapeHtml(playerUid)}" aria-label="View ${safeName}'s profile">${safeName}</strong>`;
+}
+
+function normalizePublicPlayerProfile(raw = {}, uid = "") {
+  const identity = normalizePlayerIdentity(raw, uid);
+  if (!identity) return null;
+  return {
+    ...identity,
+    displayName: identity.displayName || "Ruler",
+    flag: identity.flag || createDefaultFlag(),
+    cityCount: Math.max(1, identity.cityCount),
+    strongholdCount: identity.strongholds.length || identity.strongholdCount,
+  };
+}
+
+function renderPublicPlayerProfile(profile) {
+  if (!profile || !modalBody) return;
+  const strongholds = profile.strongholds || [];
+  modalTitle.textContent = `${profile.displayName}'s Profile`;
+  modalBody.innerHTML = `
+    <div class="public-player-profile">
+      <section class="public-profile-section public-profile-player">
+        <div class="public-profile-heading"><span>Player Info</span></div>
+        <div class="public-profile-identity">
+          <span id="publicPlayerFlag" class="kingdom-flag public-profile-flag" aria-hidden="true"><span class="flag-symbol"></span></span>
+          <strong>${escapeHtml(profile.displayName)}</strong>
+        </div>
+        <button class="public-profile-location" type="button" data-public-main-city="${escapeHtml(profile.mainCityId)}" data-public-main-region="${escapeHtml(profile.mainRegionId)}" ${profile.mainCityId ? "" : "disabled"}>
+          <span aria-hidden="true">⌖</span>
+          <span><strong>Main City</strong><small>${profile.mainCityId ? `${escapeHtml(getRegionLabel(profile.mainRegionId))} · View on map` : "Location unavailable"}</small></span>
+        </button>
+      </section>
+      <section class="public-profile-section">
+        <div class="public-profile-heading"><span>Kingdom</span></div>
+        <div class="public-profile-stat"><strong>${formatNumber(profile.cityCount)}</strong><span>${profile.cityCount === 1 ? "City" : "Cities"} owned</span></div>
+        <div class="public-profile-strongholds">
+          <div><strong>${formatNumber(profile.strongholdCount)}</strong><span>${profile.strongholdCount === 1 ? "Stronghold" : "Strongholds"} held</span></div>
+          ${strongholds.length ? `<ul>${strongholds.map(stronghold => `<li>${escapeHtml(stronghold.name)}</li>`).join("")}</ul>` : `<p>No strongholds held.</p>`}
+        </div>
+      </section>
+      <section class="public-profile-section">
+        <div class="public-profile-heading"><span>Clan</span></div>
+        ${profile.clanId
+          ? `<button class="public-profile-clan" type="button" data-public-clan-id="${escapeHtml(profile.clanId)}"><strong>${profile.clanTag ? `[${escapeHtml(profile.clanTag)}] ` : ""}${escapeHtml(profile.clanName || "Clan")}</strong><small>View clan details</small></button>`
+          : `<p class="public-profile-empty">Not in a clan.</p>`}
+      </section>
+    </div>`;
+  applyFlagToElement(modalBody.querySelector("#publicPlayerFlag"), profile.flag);
+}
+
+async function showPublicPlayerProfile(uid = "") {
+  const playerUid = String(uid || "").trim();
+  const api = getOnlineApi();
+  if (!playerUid || !api?.isSignedIn?.()) {
+    showToast("Sign in to view player profiles.");
+    return;
+  }
+  const requestId = ++publicPlayerProfileRequestId;
+  modal.classList.remove("battle-report-modal", "city-list-modal", "island-switcher-modal", "leaderboard-modal", "inventory-modal", "shop-modal", "incoming-attack-modal", "outgoing-attack-modal");
+  modal.classList.add("public-player-profile-modal");
+  modalTitle.textContent = "Player Profile";
+  modalBody.innerHTML = `<div class="public-profile-loading" role="status">Loading player profile…</div>`;
+  if (!modal.open) modal.showModal();
+  try {
+    const raw = await withTimeout(
+      api.loadPublicPlayerProfile?.(playerUid) || api.getCombatPlayerIdentity?.({ uid: playerUid }),
+      15000,
+      "Player profile is taking too long to load."
+    );
+    if (requestId !== publicPlayerProfileRequestId || !modal.open) return;
+    const profile = normalizePublicPlayerProfile(raw, playerUid);
+    if (!profile) throw new Error("That player profile is unavailable.");
+    rememberPlayerIdentity(profile, { force: true });
+    renderPublicPlayerProfile(profile);
+  } catch (error) {
+    if (requestId !== publicPlayerProfileRequestId || !modal.open) return;
+    modalBody.innerHTML = `<div class="public-profile-error"><p>${escapeHtml(error?.message || "Could not load that player profile.")}</p><button type="button" data-public-profile-retry="${escapeHtml(playerUid)}">Try again</button></div>`;
+  }
+}
+
+async function focusPublicPlayerMainCity(cityId = "", regionId = "") {
+  const targetId = String(cityId || "").trim();
+  const knownCity = cityById(targetId) || getOwnedCitySnapshotById(targetId);
+  const targetRegion = normalizeRegionId(regionId || (knownCity ? getCityRegionId(knownCity) : ""));
+  if (!targetId) {
+    showToast("That main city is unavailable.");
+    return;
+  }
+  if (modal.open) modal.close();
+  if (targetRegion && targetRegion !== getActiveMapRegionId()) {
+    const switched = await switchOnlineIsland(targetRegion);
+    if (!switched || targetRegion !== getActiveMapRegionId()) return;
+  }
+  const city = cityById(targetId);
+  if (!city) {
+    showToast("That main city is no longer available.");
+    return;
+  }
+  scoutNearbySourceId = null;
+  regroupSourceId = null;
+  sendMode = false;
+  selectedSourceId = null;
+  selectedTargetId = city.id;
+  renderSelectionChangeNow();
+  requestAnimationFrame(() => centerOnCity(city.id));
+  showToast(`Viewing ${city.name}`);
+}
+
+async function showPublicClanDetails(clanId = "") {
+  const api = getOnlineApi();
+  const id = String(clanId || "").trim();
+  if (!id || !api?.loadClan) return;
+  modalTitle.textContent = "Clan";
+  modalBody.innerHTML = `<div class="public-profile-loading" role="status">Loading clan details…</div>`;
+  try {
+    const clan = await api.loadClan(id);
+    if (!clan || !modal.open) throw new Error("That clan is unavailable.");
+    modalBody.innerHTML = `
+      <section class="public-clan-details">
+        <div class="clan-banner" style="--clan-primary:${escapeHtml(clan.banner?.primary || "#2f7a4a")};--clan-secondary:${escapeHtml(clan.banner?.secondary || "#d9e2e8")}"><strong>${escapeHtml(clan.tag || "")}</strong></div>
+        <div><h3>[${escapeHtml(clan.tag || "")}] ${escapeHtml(clan.name || "Clan")}</h3><p>${escapeHtml(clan.description || "No description yet.")}</p></div>
+        <dl><div><dt>Members</dt><dd>${formatNumber(clan.memberCount || 0)}/30</dd></div><div><dt>Clan Power</dt><dd>${formatNumber(clan.totalKingPower || 0)}</dd></div></dl>
+      </section>`;
+  } catch (error) {
+    if (modal.open) modalBody.innerHTML = `<div class="public-profile-error"><p>${escapeHtml(error?.message || "Could not load clan details.")}</p></div>`;
+  }
 }
 
 function getPlayerIdentitySignature(identity) {
@@ -15771,7 +15912,7 @@ function renderClanView() {
         <div class="profile-section-heading"><span>Household</span><h3>Roster</h3></div>
         <div class="clan-roster">${clanMembers.map(member => `
           <article class="clan-member-row">
-            <div><strong>${escapeHtml(member.displayName || "Ruler")}</strong><span>${clanRoleLabel(member.role)} · ${formatNumber(member.kingPower || 0)} power</span></div>
+            <div>${renderPlayerNameLink(member.uid || member.id, member.displayName || "Ruler")}<span>${clanRoleLabel(member.role)} · ${formatNumber(member.kingPower || 0)} power</span></div>
             <div class="clan-member-actions">
               ${member.uid !== getCurrentOnlineUid() ? `<button data-clan-action="mute" data-member-id="${escapeHtml(member.uid)}">${mutedClanMemberIds.has(member.uid) ? "Unmute" : "Mute"}</button>` : ""}
               ${canLead && member.uid !== getCurrentOnlineUid() && member.role === "member" ? `<button data-clan-action="promote" data-member-id="${escapeHtml(member.uid)}">Promote</button>` : ""}
@@ -15785,7 +15926,7 @@ function renderClanView() {
       <section class="clan-chat-panel">
         <div class="profile-section-heading"><span>Private channel</span><h3>Clan Chat</h3></div>
         <div class="clan-chat-log">${visibleMessages.length ? visibleMessages.map(message => `
-          <article class="clan-message"><div><strong>${escapeHtml(message.senderName || "Ruler")}</strong><small>${clanRoleLabel(message.senderRole)}</small>${message.senderUid !== getCurrentOnlineUid() ? `<button data-clan-action="report" data-message-id="${escapeHtml(message.id)}">Report</button>` : ""}</div><p>${escapeHtml(message.text || "")}</p></article>`).join("") : `<p class="clan-muted">No messages yet. Rally your clan.</p>`}</div>
+          <article class="clan-message"><div>${renderPlayerNameLink(message.senderUid, message.senderName || "Ruler")}<small>${clanRoleLabel(message.senderRole)}</small>${message.senderUid !== getCurrentOnlineUid() ? `<button data-clan-action="report" data-message-id="${escapeHtml(message.id)}">Report</button>` : ""}</div><p>${escapeHtml(message.text || "")}</p></article>`).join("") : `<p class="clan-muted">No messages yet. Rally your clan.</p>`}</div>
         <form data-clan-form="message" class="clan-message-form"><input name="text" maxlength="300" required autocomplete="off" placeholder="Message your clan…" aria-label="Clan message" /><button type="submit">Send</button></form>
       </section>
     </div>`;
@@ -15938,7 +16079,14 @@ function renderProfileScreen() {
   const xpRequired = getXpRequiredForLevel(state.character.level);
   const xpProgress = clamp(state.character.xp / Math.max(1, xpRequired), 0, 1);
 
-  if (profileNameText) profileNameText.textContent = state.playerName;
+  if (profileNameText) {
+    profileNameText.textContent = state.playerName;
+    profileNameText.classList.add("player-name-link");
+    profileNameText.dataset.playerProfileUid = getCurrentOnlineUid();
+    profileNameText.setAttribute("role", "button");
+    profileNameText.tabIndex = 0;
+    profileNameText.setAttribute("aria-label", `View ${state.playerName}'s profile`);
+  }
   if (profileLevelText) profileLevelText.textContent = `Level ${formatNumber(state.character.level)}`;
   if (profileXpLabel) profileXpLabel.textContent = `${formatNumber(state.character.xp)} / ${formatNumber(xpRequired)} XP`;
   if (profileXpFill) profileXpFill.style.width = `${Math.round(xpProgress * 100)}%`;
@@ -16644,7 +16792,7 @@ function renderCities(force = false) {
       ? `<span class="citadel-city-crown" title="Crown Citadel ruler" aria-label="Crown Citadel ruler">&#9819;</span>`
       : "";
     const rivalOwnerName = city.owner === "enemy" && ownerName && ownerName !== OWNER.enemy.label
-      ? `<strong class="foreign-ruler-name foreign-ruler-name-inline">${escapeHtml(ownerName)}${clanIdentity.clanTag ? ` <span class="city-clan-tag">[${escapeHtml(clanIdentity.clanTag)}]</span>` : ""}</strong>${clanAlly ? `<span class="clan-ally-label">Clan Ally</span>` : ""}`
+      ? `${renderPlayerNameLink(city.ownerUid, ownerName, "foreign-ruler-name foreign-ruler-name-inline")}${clanIdentity.clanTag ? ` <span class="city-clan-tag">[${escapeHtml(clanIdentity.clanTag)}]</span>` : ""}${clanAlly ? `<span class="clan-ally-label">Clan Ally</span>` : ""}`
       : "";
     const cityLabel = city.owner === "player"
       ? `
@@ -16656,7 +16804,7 @@ function renderCities(force = false) {
               <span class="city-label-level">${formatNumber(city.level)}</span>
             </span>
             <span class="player-city-data">
-              <strong class="city-ruler-name">${escapeHtml(state.playerName)}</strong>
+              ${renderPlayerNameLink(getCurrentOnlineUid(), state.playerName, "city-ruler-name")}
               <span class="city-army-count">${formatNumber(city.troops)} troops</span>
               <strong class="city-name">${escapeHtml(city.name)}</strong>
             </span>
@@ -16666,7 +16814,7 @@ function renderCities(force = false) {
         ? `
         <span class="city-label foreign-city-label selected-foreign-label">
           ${crownBadge}
-          <strong class="foreign-ruler-name">${escapeHtml(ownerName)}</strong>
+          ${renderPlayerNameLink(city.ownerUid, ownerName, "foreign-ruler-name")}
           <span class="foreign-selected-banner">
             <span class="foreign-selected-level">${formatNumber(city.level)}</span>
             <span class="foreign-selected-crest">${ownerFlag}</span>
@@ -19188,7 +19336,7 @@ function showCityInfoModal(cityId) {
       <div class="city-stat-panel modal-city-stats">
         ${clanAlly ? `<div class="stat-wide clan-ally-status"><span>Relationship</span><strong>Clan Ally [${escapeHtml(clanIdentity.clanTag)}]</strong><small>You cannot scout or attack this city.</small><button id="openCityClanBtn" class="profile-secondary-btn" type="button">Open Clan</button></div>` : clanIdentity.clanTag ? `<div class="stat-wide"><span>Clan</span><strong>[${escapeHtml(clanIdentity.clanTag)}] ${escapeHtml(clanIdentity.clanName)}</strong></div>` : ""}
         ${stronghold ? `<div class="stat-wide"><span>Stronghold bonus</span><strong>${strongholdBonusLabel}</strong><small>Bonus is active only for the current controller.</small></div>` : ""}
-        <div class="stat-wide"><span>Owner</span><strong>${escapeHtml(getCityOwnerDisplayName(city))}</strong></div>
+        <div class="stat-wide"><span>Owner</span>${renderPlayerNameLink(city.ownerUid || getCurrentOnlineUid(), getCityOwnerDisplayName(city))}</div>
         <div class="stat-chip"><span>${stronghold ? "Defense level" : "City level"}</span><strong>${formatNumber(stats.level)}</strong></div>
         <div class="stat-chip"><span>Troops</span><strong>${report ? formatNumber(report.troops) : "Unknown"}</strong></div>
         <div class="stat-chip"><span>Total defense</span><strong>${report
@@ -19233,7 +19381,7 @@ function showCityInfoModal(cityId) {
       <div class="city-stat-panel modal-city-stats stronghold-stat-panel">
         <div class="stat-wide stronghold-status"><span>Controlled bonus</span><strong>${strongholdBonusLabel}</strong><small>Active while you control this Stronghold.</small></div>
         <div class="stat-wide"><span>Total defense</span><strong>${formatBaseAndBonusStat(stats.baseTotalDefense, stats.totalDefense)}</strong><small>${getCityStatBonusSources(stats, "defense")}</small></div>
-        <div class="stat-chip"><span>Owner</span><strong>${escapeHtml(getCityOwnerDisplayName(city))}</strong></div>
+        <div class="stat-chip"><span>Owner</span>${renderPlayerNameLink(city.ownerUid || getCurrentOnlineUid(), getCityOwnerDisplayName(city))}</div>
         <div class="stat-chip"><span>Troops stationed</span><strong>${formatNumber(city.troops)}</strong></div>
         <div class="stat-chip"><span>Defense level</span><strong>${formatNumber(stats.level)}</strong><small>matches a level ${formatNumber(stats.level)} city</small></div>
         <div class="stat-chip"><span>City walls</span><strong>${formatBaseAndBonusStat(stats.baseCityWalls, stats.cityWalls)}</strong><small>${getCityStatBonusSources(stats, "walls")}</small></div>
@@ -19274,7 +19422,7 @@ function showCityInfoModal(cityId) {
       ${mainCityBlock}
       ${renderCityLevelUpAction(city)}
       <div class="stat-wide"><span>Total defense</span><strong>${formatBaseAndBonusStat(stats.baseTotalDefense, stats.totalDefense)}</strong><small>${getCityStatBonusSources(stats, "defense")}</small></div>
-      <div class="stat-chip"><span>Owner</span><strong>${escapeHtml(getCityOwnerDisplayName(city))}</strong></div>
+      <div class="stat-chip"><span>Owner</span>${renderPlayerNameLink(city.ownerUid || getCurrentOnlineUid(), getCityOwnerDisplayName(city))}</div>
       <div class="stat-chip"><span>Troops</span><strong>${formatNumber(city.troops)}</strong></div>
       <div class="stat-chip"><span>City defense</span><strong>${formatBaseAndBonusStat(stats.defensePercent, stats.defensePercent + stats.strongholdDefenseBonusPercent, "%")}</strong><small>${CITY_LEVEL_STATS.defensePercentPerLevel}% per level${stats.strongholdDefenseBonusPercent ? ` | Stronghold +${formatNumber(stats.strongholdDefenseBonusPercent)}%` : ""}</small></div>
       <div class="stat-chip"><span>City walls</span><strong>${formatBaseAndBonusStat(stats.baseCityWalls, stats.cityWalls)}</strong><small>${getCityStatBonusSources(stats, "walls")}</small></div>
@@ -21192,7 +21340,7 @@ function renderLeaderboardRow(entry, index, currentUid) {
       <span class="leaderboard-rank">#${formatNumber(index + 1)}</span>
       <span class="kingdom-flag kingdom-flag-small leaderboard-flag" data-leaderboard-flag="${index}" aria-hidden="true"><span class="flag-symbol"></span></span>
       <div class="leaderboard-ruler">
-        <strong>${entry.clanTag ? `<span class="city-clan-tag">[${escapeHtml(entry.clanTag)}]</span> ` : ""}${escapeHtml(entry.displayName)}</strong>
+        <div>${entry.clanTag ? `<span class="city-clan-tag">[${escapeHtml(entry.clanTag)}]</span> ` : ""}${renderPlayerNameLink(entry.uid, entry.displayName)}</div>
         <small>${escapeHtml(getRegionLabel(entry.mainRegionId))} - ${formatNumber(entry.cityCount)} ${entry.cityCount === 1 ? "city" : "cities"}${isCurrent ? " - You" : ""}</small>
       </div>
       <div class="leaderboard-power">
@@ -22718,6 +22866,40 @@ if (cityListBtn) cityListBtn.addEventListener("click", showCityListModal);
 if (helpBtn) helpBtn.addEventListener("click", showHelpModal);
 if (mainCityReturnBtn) mainCityReturnBtn.addEventListener("click", returnToMainCity);
 closeModalBtn.addEventListener("click", () => modal.close());
+document.addEventListener("click", event => {
+  const playerName = event.target.closest?.("[data-player-profile-uid]");
+  if (playerName) {
+    event.preventDefault();
+    event.stopPropagation();
+    showPublicPlayerProfile(playerName.dataset.playerProfileUid);
+    return;
+  }
+  const mainCity = event.target.closest?.("[data-public-main-city]");
+  if (mainCity) {
+    event.preventDefault();
+    focusPublicPlayerMainCity(mainCity.dataset.publicMainCity, mainCity.dataset.publicMainRegion);
+    return;
+  }
+  const clan = event.target.closest?.("[data-public-clan-id]");
+  if (clan) {
+    event.preventDefault();
+    showPublicClanDetails(clan.dataset.publicClanId);
+    return;
+  }
+  const retry = event.target.closest?.("[data-public-profile-retry]");
+  if (retry) {
+    event.preventDefault();
+    showPublicPlayerProfile(retry.dataset.publicProfileRetry);
+  }
+});
+document.addEventListener("keydown", event => {
+  if (event.key !== "Enter" && event.key !== " ") return;
+  const playerName = event.target.closest?.("[data-player-profile-uid]");
+  if (!playerName) return;
+  event.preventDefault();
+  event.stopPropagation();
+  showPublicPlayerProfile(playerName.dataset.playerProfileUid);
+});
 modal.addEventListener("click", event => {
   if (event.target !== modal) return;
   event.preventDefault();
@@ -22732,6 +22914,7 @@ document.addEventListener("pointerdown", event => {
   closeProfileScreen();
 }, true);
 modal.addEventListener("close", () => {
+  publicPlayerProfileRequestId += 1;
   modal.classList.remove("troop-slider-modal");
   modal.classList.remove("scout-report-modal");
   modal.classList.remove("battle-report-modal");
@@ -22744,6 +22927,7 @@ modal.addEventListener("close", () => {
   modal.classList.remove("incoming-attack-modal");
   modal.classList.remove("outgoing-attack-modal");
   modal.classList.remove("relinquish-city-modal");
+  modal.classList.remove("public-player-profile-modal");
   setTimeout(showNextLevelUpReward, 0);
   if (!troopSliderActive) return;
   troopSliderActive = false;

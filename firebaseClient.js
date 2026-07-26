@@ -481,6 +481,12 @@
     return callServerFunction("getCombatPlayerIdentity", payload);
   }
 
+  async function loadPublicPlayerProfile(uid = "") {
+    const playerId = String(uid || "").trim().slice(0, 128);
+    if (!playerId) throw new Error("Choose a player to inspect.");
+    return callServerFunction("getCombatPlayerIdentity", { uid: playerId, includePublicProfile: true });
+  }
+
   async function ensureMainIsland(payload = {}) {
     return callServerFunction("ensureMainIsland", payload);
   }
@@ -1622,6 +1628,7 @@
     recalculatePlayerGlobalStats,
     recalculateAllPlayerGlobalStats,
     getCombatPlayerIdentity,
+    loadPublicPlayerProfile,
     relinquishCity,
     purchaseShopItem,
     activateInventoryItem,

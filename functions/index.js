@@ -1053,6 +1053,24 @@ function isCrownCitadel(city = {}) {
   return isStronghold(city) && (type === "crown" || type === "crown_citadel" || city.id === CROWN_CITADEL_ID);
 }
 
+function getPublicStrongholdSnapshot(city = {}) {
+  if (!isStronghold(city)) return null;
+  const id = safeString(city.id, 96);
+  const fallbackNames = {
+    [GOLD_STRONGHOLD_ID]: "Aurum Keep",
+    [TRAINING_STRONGHOLD_ID]: "Greybanner Hold",
+    [SPEED_STRONGHOLD_ID]: "Swiftgate",
+    [DEFENSE_STRONGHOLD_ID]: "Ironwatch",
+    [CROWN_CITADEL_ID]: "Crown Citadel",
+  };
+  return {
+    id,
+    name: safeString(city.name || fallbackNames[id] || "Stronghold", 80),
+    strongholdType: safeString(city.strongholdType, 32),
+    regionId: normalizeRegionId(city.regionId || ""),
+  };
+}
+
 function crownCitadelReignRef(uid = "") {
   const safeUid = safeString(uid, 128).replace(/[^a-zA-Z0-9_-]/g, "_");
   return safeUid ? db.doc(`crownCitadelReigns/${safeUid}`) : null;
@@ -4862,7 +4880,7 @@ exports.getCombatPlayerIdentity = onCall({
   }
   if (!leaderboardSnap.exists) throw new HttpsError("not-found", "That kingdom could not be found.");
 
-  return {
+  const identity = {
     uid: targetUid,
     displayName: normalizePlayerName(leaderboard.playerName || leaderboard.displayName),
     playerName: normalizePlayerName(leaderboard.playerName || leaderboard.displayName),
@@ -4872,9 +4890,33 @@ exports.getCombatPlayerIdentity = onCall({
     mainCityId: safeString(leaderboard.mainCityId, 96),
     mainRegionId: safeString(leaderboard.mainRegionId, 160),
     mainIslandId: safeString(leaderboard.mainIslandId, 160),
+    cityCount: Math.max(0, Math.floor(safeNumber(leaderboard.cityCount, 0))),
+    strongholdCount: Math.max(0, Math.floor(safeNumber(leaderboard.strongholdCount, 0))),
+    clanId: safeString(leaderboard.clanId, 128),
+    clanName: safeString(leaderboard.clanName, 24),
+    clanTag: safeString(leaderboard.clanTag, 5),
     updatedAtMs: Math.max(0, timestampToMs(
       leaderboard.kingPowerUpdatedAtMs || leaderboard.updatedAtMs || leaderboard.updatedAt
     )),
+  };
+  if (request.data?.includePublicProfile !== true) return identity;
+
+  const [profileSnap, ownedCitiesSnap] = await Promise.all([
+    db.doc(`players/${targetUid}`).get(),
+    db.collectionGroup("cities").where("ownerUid", "==", targetUid).get(),
+  ]);
+  const profile = profileSnap.exists ? profileSnap.data() || {} : {};
+  const strongholds = createOwnedCityEntriesFromSnapshot(targetUid, ownedCitiesSnap)
+    .map(entry => getPublicStrongholdSnapshot(entry.city))
+    .filter(Boolean)
+    .sort((first, second) => first.name.localeCompare(second.name));
+  return {
+    ...identity,
+    strongholdCount: strongholds.length,
+    strongholds,
+    clanId: safeString(profile.clanId || leaderboard.clanId, 128),
+    clanName: safeString(profile.clanName || leaderboard.clanName, 24),
+    clanTag: safeString(profile.clanTag || leaderboard.clanTag, 5),
   };
 });
 
