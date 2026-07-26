@@ -809,6 +809,60 @@ const FLAG_SYMBOLS = [
   { key: "diamond", label: "Gem", glyph: "\u25C6" },
   { key: "spire", label: "Spire", glyph: "\u25B2" },
 ];
+const CLAN_SHIELD_COLORS = [
+  { value: "#7a2638", label: "Castilian crimson" },
+  { value: "#a84432", label: "Brick red" },
+  { value: "#d8bd78", label: "Old gold" },
+  { value: "#eee1bd", label: "Parchment" },
+  { value: "#19201d", label: "Iron black" },
+  { value: "#253f3a", label: "Forest green" },
+  { value: "#24445f", label: "Royal blue" },
+  { value: "#5c3566", label: "Royal purple" },
+  { value: "#b7c3bf", label: "Silver" },
+  { value: "#8a5835", label: "Leather brown" },
+];
+const CLAN_SHIELD_SHAPES = [
+  { key: "castilian", label: "Castilian" },
+  { key: "heater", label: "Heater" },
+  { key: "kite", label: "Kite" },
+  { key: "round", label: "Round" },
+];
+const CLAN_SHIELD_DIVISIONS = [
+  { key: "solid", label: "Solid" },
+  { key: "pale", label: "Per pale" },
+  { key: "fess", label: "Per fess" },
+  { key: "quartered", label: "Quartered" },
+  { key: "stripes", label: "Royal stripes" },
+  { key: "bend", label: "Diagonal bend" },
+  { key: "saltire", label: "Saltire" },
+  { key: "chevron", label: "Chevron" },
+];
+const CLAN_SHIELD_CHARGES = [
+  { key: "none", label: "None", glyph: "\u2014" },
+  { key: "castle", label: "Castle", glyph: "\u265C" },
+  { key: "lion", label: "Lion rampant", glyph: "\u264C" },
+  { key: "eagle", label: "Heraldic eagle", glyph: "\uD83E\uDD85" },
+  { key: "crown", label: "Crown", glyph: "\u265B" },
+  { key: "swords", label: "Crossed swords", glyph: "\u2694" },
+  { key: "fleur", label: "Fleur-de-lis", glyph: "\u269C" },
+  { key: "sun", label: "Sun", glyph: "\u2600" },
+];
+const CLAN_SHIELD_CHARGE_LAYOUTS = [
+  { key: "center", label: "Single" },
+  { key: "paired", label: "Paired" },
+  { key: "quartered", label: "Alternating quarters" },
+  { key: "chief", label: "Chief and base" },
+];
+const CLAN_SHIELD_TRIMS = [
+  { key: "plain", label: "Plain edge" },
+  { key: "double", label: "Double trim" },
+  { key: "riveted", label: "Riveted trim" },
+];
+const CLAN_SHIELD_FINISHES = [
+  { key: "polished", label: "Polished" },
+  { key: "weathered", label: "Weathered" },
+  { key: "battleworn", label: "Battle-worn" },
+];
 
 
 
@@ -2528,6 +2582,9 @@ let clanSearchResults = [];
 let clanMessages = [];
 let clanMessagesUnsubscribe = null;
 let clanUiLoading = false;
+let clanShieldDraft = null;
+let clanShieldEditorOpen = false;
+let clanShieldSaving = false;
 function loadMutedClanMemberIds() {
   try {
     const values = JSON.parse(localStorage.getItem("crownlands-muted-clan-members") || "[]");
@@ -5565,6 +5622,196 @@ function normalizeFlag(flag) {
     pattern: FLAG_PATTERNS.some(option => option.key === flag?.pattern) ? flag.pattern : defaults.pattern,
     symbol: FLAG_SYMBOLS.some(option => option.key === flag?.symbol) ? flag.symbol : defaults.symbol,
   };
+}
+
+function createDefaultClanShield() {
+  return {
+    version: 1,
+    shape: "castilian",
+    division: "quartered",
+    primary: "#7a2638",
+    secondary: "#d8bd78",
+    borderColor: "#d8bd78",
+    charge: "castle",
+    secondaryCharge: "lion",
+    chargeColor: "#19201d",
+    secondaryChargeColor: "#7a2638",
+    chargeLayout: "quartered",
+    trim: "double",
+    finish: "weathered",
+  };
+}
+
+function normalizeClanShieldColor(value, fallback) {
+  const color = String(value || "").trim().toLowerCase();
+  return /^#[0-9a-f]{6}$/.test(color) ? color : fallback;
+}
+
+function normalizeClanShieldChoice(value, options, fallback) {
+  const key = String(value || "").trim().toLowerCase();
+  return options.some(option => option.key === key) ? key : fallback;
+}
+
+function normalizeClanShield(value = null, legacyBanner = null) {
+  const defaults = createDefaultClanShield();
+  const source = value && typeof value === "object"
+    ? value
+    : legacyBanner && typeof legacyBanner === "object"
+      ? legacyBanner
+      : {};
+  const legacyPatternMap = { split: "pale", diagonal: "bend", band: "fess", cross: "quartered", chief: "fess" };
+  const legacySymbolMap = { tower: "castle", cross: "fleur", star: "sun", moon: "sun", knight: "swords", diamond: "fleur", spire: "fleur" };
+  return {
+    version: 1,
+    shape: normalizeClanShieldChoice(source.shape, CLAN_SHIELD_SHAPES, defaults.shape),
+    division: normalizeClanShieldChoice(legacyPatternMap[source.pattern] || source.division || source.pattern, CLAN_SHIELD_DIVISIONS, defaults.division),
+    primary: normalizeClanShieldColor(source.primary, defaults.primary),
+    secondary: normalizeClanShieldColor(source.secondary, defaults.secondary),
+    borderColor: normalizeClanShieldColor(source.borderColor, defaults.borderColor),
+    charge: normalizeClanShieldChoice(legacySymbolMap[source.symbol] || source.charge || source.symbol, CLAN_SHIELD_CHARGES, defaults.charge),
+    secondaryCharge: normalizeClanShieldChoice(source.secondaryCharge, CLAN_SHIELD_CHARGES, defaults.secondaryCharge),
+    chargeColor: normalizeClanShieldColor(source.chargeColor, defaults.chargeColor),
+    secondaryChargeColor: normalizeClanShieldColor(source.secondaryChargeColor, defaults.secondaryChargeColor),
+    chargeLayout: normalizeClanShieldChoice(source.chargeLayout, CLAN_SHIELD_CHARGE_LAYOUTS, defaults.chargeLayout),
+    trim: normalizeClanShieldChoice(source.trim, CLAN_SHIELD_TRIMS, defaults.trim),
+    finish: normalizeClanShieldChoice(source.finish, CLAN_SHIELD_FINISHES, defaults.finish),
+  };
+}
+
+function getClanShieldPath(shape = "castilian") {
+  return {
+    castilian: "M10 8 Q50 2 90 8 L90 56 Q88 82 50 99 Q12 82 10 56 Z",
+    heater: "M12 8 H88 V51 Q86 78 50 98 Q14 78 12 51 Z",
+    kite: "M18 7 Q50 2 82 7 V43 Q78 73 50 100 Q22 73 18 43 Z",
+    round: "M12 8 Q50 1 88 8 V61 Q86 89 50 98 Q14 89 12 61 Z",
+  }[shape] || "M10 8 Q50 2 90 8 L90 56 Q88 82 50 99 Q12 82 10 56 Z";
+}
+
+function renderClanShieldField(shield, clipId) {
+  const primary = escapeHtml(shield.primary);
+  const secondary = escapeHtml(shield.secondary);
+  let division = "";
+  if (shield.division === "pale") {
+    division = `<rect x="50" width="50" height="106" fill="${secondary}"/>`;
+  } else if (shield.division === "fess") {
+    division = `<rect y="51" width="100" height="55" fill="${secondary}"/>`;
+  } else if (shield.division === "quartered") {
+    division = `<rect x="50" width="50" height="53" fill="${secondary}"/><rect y="53" width="50" height="53" fill="${secondary}"/>`;
+  } else if (shield.division === "stripes") {
+    division = Array.from({ length: 5 }, (_, index) => `<rect x="${10 + index * 18}" width="9" height="106" fill="${secondary}"/>`).join("");
+  } else if (shield.division === "bend") {
+    division = `<path d="M-18 13 L2 -7 L118 86 L98 106 Z" fill="${secondary}"/>`;
+  } else if (shield.division === "saltire") {
+    division = `<path d="M-13 2 L1 -10 L113 96 L99 108 Z M99 -10 L113 2 L1 108 L-13 96 Z" fill="${secondary}"/>`;
+  } else if (shield.division === "chevron") {
+    division = `<path d="M4 70 L50 35 L96 70 L86 82 L50 54 L14 82 Z" fill="${secondary}"/>`;
+  }
+  return `<g clip-path="url(#${clipId})"><rect width="100" height="106" fill="${primary}"/>${division}</g>`;
+}
+
+function renderClanShieldCharge(charge, color, x, y, scale = 1) {
+  if (charge === "none") return "";
+  const fill = escapeHtml(color);
+  let art = "";
+  if (charge === "castle") {
+    art = `<path d="M23 28h12v9h9V24h12v13h9v-9h12v17h-6v32H29V45h-6zm14 17v22h9V53h8v14h9V45z" fill="${fill}"/><path d="M20 21h18v9H20zm30-4h18v13H50zm12 4h18v9H62z" fill="${fill}"/>`;
+  } else if (charge === "lion") {
+    art = `<circle cx="57" cy="28" r="8" fill="${fill}"/><path d="M50 34c-13 1-21 10-18 24l-9 11 7 5 11-12 7 4-5 16 8 2 7-18 9-6 8 14 8-3-8-20c-3-8-8-15-16-17l5-8-7-4z" fill="${fill}"/><path d="M38 49C20 43 29 24 16 22c8 8-1 19 6 28 4 5 10 7 16 7M60 40l16-8M58 44l19 2" fill="none" stroke="${fill}" stroke-width="5" stroke-linecap="round"/>`;
+  } else if (charge === "eagle") {
+    art = `<path d="M50 28l-8-10 8 3 8-3-8 10zm-4 5c-12-12-22-10-34-19 2 17 12 29 28 35l-20 2c5 11 15 16 27 14l3 20 3-20c12 2 22-3 27-14l-20-2c16-6 26-18 28-35-12 9-22 7-34 19l-4 9z" fill="${fill}"/><circle cx="46" cy="27" r="2" fill="${fill}"/><circle cx="54" cy="27" r="2" fill="${fill}"/>`;
+  } else if (charge === "crown") {
+    art = `<path d="M20 34l13 10 16-25 17 25 14-10-7 34H27zm8 39h44v9H28z" fill="${fill}"/><circle cx="20" cy="31" r="5" fill="${fill}"/><circle cx="50" cy="17" r="5" fill="${fill}"/><circle cx="80" cy="31" r="5" fill="${fill}"/>`;
+  } else if (charge === "swords") {
+    art = `<path d="M21 18l9 3 47 52-8 8-48-52zm58 0l-9 3-47 52 8 8 48-52z" fill="${fill}"/><path d="M17 72l19 19 5-5-19-19zm66 0L64 91l-5-5 19-19z" fill="${fill}"/>`;
+  } else if (charge === "fleur") {
+    art = `<path d="M50 15c-15 12-17 25-7 35-9-8-19-8-27 1 7 3 9 10 8 18 8-5 14-4 19 1l-6 16h26l-6-16c5-5 11-6 19-1-1-8 1-15 8-18-8-9-18-9-27-1 10-10 8-23-7-35z" fill="${fill}"/>`;
+  } else if (charge === "sun") {
+    art = `<circle cx="50" cy="50" r="19" fill="${fill}"/><path d="M50 12v15M50 73v15M12 50h15M73 50h15M23 23l11 11M66 66l11 11M77 23L66 34M34 66L23 77" fill="none" stroke="${fill}" stroke-width="7" stroke-linecap="round"/>`;
+  }
+  return `<g transform="translate(${x} ${y}) scale(${scale}) translate(-50 -50)">${art}</g>`;
+}
+
+function renderClanShieldCharges(shield, clipId) {
+  const placements = shield.chargeLayout === "paired"
+    ? [
+        [shield.charge, shield.chargeColor, 32, 53, 0.52],
+        [shield.secondaryCharge, shield.secondaryChargeColor, 68, 53, 0.52],
+      ]
+    : shield.chargeLayout === "quartered"
+      ? [
+          [shield.charge, shield.chargeColor, 31, 31, 0.38],
+          [shield.secondaryCharge, shield.secondaryChargeColor, 69, 31, 0.38],
+          [shield.secondaryCharge, shield.secondaryChargeColor, 31, 68, 0.38],
+          [shield.charge, shield.chargeColor, 69, 68, 0.38],
+        ]
+      : shield.chargeLayout === "chief"
+        ? [
+            [shield.charge, shield.chargeColor, 25, 29, 0.3],
+            [shield.charge, shield.chargeColor, 50, 27, 0.3],
+            [shield.charge, shield.chargeColor, 75, 29, 0.3],
+            [shield.secondaryCharge, shield.secondaryChargeColor, 50, 67, 0.55],
+          ]
+        : [[shield.charge, shield.chargeColor, 50, 53, 0.74]];
+  return `<g clip-path="url(#${clipId})">${placements.map(placement => renderClanShieldCharge(...placement)).join("")}</g>`;
+}
+
+function getClanShieldRenderId(shield) {
+  const signature = [
+    shield.shape,
+    shield.division,
+    shield.primary,
+    shield.secondary,
+    shield.borderColor,
+    shield.charge,
+    shield.secondaryCharge,
+    shield.chargeColor,
+    shield.secondaryChargeColor,
+    shield.chargeLayout,
+    shield.trim,
+    shield.finish,
+  ].join("|");
+  let hash = 2166136261;
+  for (let index = 0; index < signature.length; index += 1) {
+    hash ^= signature.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return (hash >>> 0).toString(36);
+}
+
+function renderClanShield(value = null, options = {}) {
+  const shield = normalizeClanShield(value);
+  const renderId = getClanShieldRenderId(shield);
+  const clipId = `clanShieldClip${renderId}`;
+  const textureId = `clanShieldTexture${renderId}`;
+  const path = getClanShieldPath(shield.shape);
+  const label = escapeHtml(options.label || "Clan heraldic shield");
+  const size = ["mini", "small", "large", "editor"].includes(options.size) ? options.size : "large";
+  const textureOpacity = shield.finish === "battleworn" ? 0.24 : shield.finish === "weathered" ? 0.13 : 0.035;
+  const doubleTrim = shield.trim === "double"
+    ? `<path d="${path}" transform="translate(50 53) scale(.9) translate(-50 -53)" fill="none" stroke="${escapeHtml(shield.borderColor)}" stroke-width="1.8" opacity=".9"/>`
+    : "";
+  const rivets = shield.trim === "riveted"
+    ? [[21,16],[39,11],[61,11],[79,16],[83,40],[76,69],[50,89],[24,69],[17,40]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="2.1" fill="${escapeHtml(shield.borderColor)}" stroke="#1b1711" stroke-width=".7"/>`).join("")
+    : "";
+  return `<span class="clan-shield clan-shield-size-${size} clan-shield-${escapeHtml(shield.finish)}">
+    <svg viewBox="0 0 100 106" role="img" aria-label="${label}" focusable="false">
+      <defs>
+        <clipPath id="${clipId}"><path d="${path}"/></clipPath>
+        <pattern id="${textureId}" width="17" height="19" patternUnits="userSpaceOnUse">
+          <path d="M2 3l5-1M11 9l4 2M4 15l3-4M15 17l1-4" stroke="#f7e6bd" stroke-width=".8" opacity=".8"/>
+          <path d="M8 5l2 5M1 10l4 1M12 2l3 4" stroke="#15110d" stroke-width=".65" opacity=".8"/>
+        </pattern>
+      </defs>
+      <path d="${path}" fill="#111712" stroke="#19140f" stroke-width="7" stroke-linejoin="round"/>
+      ${renderClanShieldField(shield, clipId)}
+      ${renderClanShieldCharges(shield, clipId)}
+      <rect width="100" height="106" clip-path="url(#${clipId})" fill="url(#${textureId})" opacity="${textureOpacity}"/>
+      ${shield.finish === "battleworn" ? `<g clip-path="url(#${clipId})" fill="none" stroke="#efe2c4" stroke-width="1.2" opacity=".24"><path d="M18 24l24 17M66 15L43 68M71 55L52 90M20 71l15-10"/></g>` : ""}
+      <path d="${path}" fill="none" stroke="${escapeHtml(shield.borderColor)}" stroke-width="4.5" stroke-linejoin="round"/>
+      ${doubleTrim}${rivets}
+      <path d="${path}" fill="none" stroke="#fff4d0" stroke-width=".9" opacity=".28"/>
+    </svg>
+  </span>`;
 }
 
 function setTextIfChanged(element, value) {
@@ -8795,7 +9042,7 @@ async function showPublicClanDetails(clanId = "") {
     if (!clan || !modal.open) throw new Error("That clan is unavailable.");
     modalBody.innerHTML = `
       <section class="public-clan-details">
-        <div class="clan-banner" style="--clan-primary:${escapeHtml(clan.banner?.primary || "#2f7a4a")};--clan-secondary:${escapeHtml(clan.banner?.secondary || "#d9e2e8")}"><strong>${escapeHtml(clan.tag || "")}</strong></div>
+        ${renderClanShield(clan.shield || clan.banner, { size: "large", label: `${clan.name || "Clan"} shield` })}
         <div><h3>[${escapeHtml(clan.tag || "")}] ${escapeHtml(clan.name || "Clan")}</h3><p>${escapeHtml(clan.description || "No description yet.")}</p></div>
         <dl><div><dt>Members</dt><dd>${formatNumber(clan.memberCount || 0)}/30</dd></div><div><dt>Clan Power</dt><dd>${formatNumber(clan.totalKingPower || 0)}</dd></div></dl>
       </section>`;
@@ -15785,6 +16032,8 @@ async function refreshClanState(options = {}) {
     clanMembers = [];
     clanApplications = [];
     clanSearchResults = [];
+    clanShieldEditorOpen = false;
+    clanShieldDraft = null;
     renderClanView();
     return;
   }
@@ -15799,6 +16048,10 @@ async function refreshClanState(options = {}) {
         api.loadClanMembers(state.clanId),
       ]);
       clanSnapshot = clan;
+      if (state.clanRole !== "leader") {
+        clanShieldEditorOpen = false;
+        clanShieldDraft = null;
+      }
       clanMembers = members;
       rememberPlayerIdentities(members.map(member => ({
         uid: member.uid || member.id,
@@ -15826,6 +16079,8 @@ async function refreshClanState(options = {}) {
       clanMembers = [];
       clanApplications = [];
       clanMessages = [];
+      clanShieldEditorOpen = false;
+      clanShieldDraft = null;
       if (typeof clanMessagesUnsubscribe === "function") clanMessagesUnsubscribe();
       clanMessagesUnsubscribe = null;
       clanSearchResults = await api.searchClans(options.search || "", 30);
@@ -15860,6 +16115,130 @@ function clanRoleLabel(role = "") {
   return role === "leader" ? "Leader" : role === "officer" ? "Officer" : "Member";
 }
 
+function renderClanShieldChoiceButtons(options, key, currentValue) {
+  const usesChargeIcons = key === "charge" || key === "secondaryCharge";
+  return `<div class="clan-shield-choice-grid">${options.map(option => {
+    const icon = usesChargeIcons
+      ? option.key === "none"
+        ? `<span class="clan-shield-choice-icon" aria-hidden="true">—</span>`
+        : `<span class="clan-shield-choice-icon" aria-hidden="true"><svg viewBox="0 0 100 100">${renderClanShieldCharge(option.key, "#f3d885", 50, 50, 0.82)}</svg></span>`
+      : "";
+    return `
+    <button type="button" data-clan-action="shield-option" data-shield-key="${escapeHtml(key)}" data-shield-value="${escapeHtml(option.key)}" class="${currentValue === option.key ? "active" : ""}" aria-pressed="${currentValue === option.key}">
+      ${icon}
+      <small>${escapeHtml(option.label)}</small>
+    </button>`;
+  }).join("")}</div>`;
+}
+
+function renderClanShieldColorSwatches(key, label, currentValue) {
+  return `<fieldset class="clan-shield-color-group">
+    <legend>${escapeHtml(label)}</legend>
+    <div class="clan-shield-swatch-grid">${CLAN_SHIELD_COLORS.map(color => `
+      <button type="button" data-clan-action="shield-color" data-shield-key="${escapeHtml(key)}" data-shield-value="${color.value}" class="${currentValue === color.value ? "active" : ""}" style="--shield-swatch:${color.value}" aria-label="${escapeHtml(label)}: ${escapeHtml(color.label)}" title="${escapeHtml(color.label)}" aria-pressed="${currentValue === color.value}"></button>`).join("")}</div>
+  </fieldset>`;
+}
+
+function renderClanShieldEditor(value = null) {
+  const shield = normalizeClanShield(value || clanShieldDraft || clanSnapshot?.shield, clanSnapshot?.banner);
+  return `
+    <section class="clan-shield-editor" aria-label="Clan shield editor">
+      <header class="clan-shield-editor-preview">
+        <div class="clan-shield-preview-stage">${renderClanShield(shield, { size: "editor", label: `Preview of ${clanSnapshot?.name || "clan"} shield` })}</div>
+        <div>
+          <span>House heraldry</span>
+          <h3>Clan Shield Editor</h3>
+          <p>Build a distinct coat of arms with historic field divisions, heraldic charges, metal trim, and a painted finish.</p>
+          <small>Only the clan leader can publish changes.</small>
+        </div>
+      </header>
+      <div class="clan-shield-editor-controls">
+        <fieldset class="clan-shield-control clan-shield-control-wide">
+          <legend>Shield shape</legend>
+          ${renderClanShieldChoiceButtons(CLAN_SHIELD_SHAPES, "shape", shield.shape)}
+        </fieldset>
+        <fieldset class="clan-shield-control clan-shield-control-wide">
+          <legend>Field division</legend>
+          ${renderClanShieldChoiceButtons(CLAN_SHIELD_DIVISIONS, "division", shield.division)}
+        </fieldset>
+        <section class="clan-shield-colors" aria-label="Heraldic colors">
+          ${renderClanShieldColorSwatches("primary", "Primary field", shield.primary)}
+          ${renderClanShieldColorSwatches("secondary", "Secondary field", shield.secondary)}
+          ${renderClanShieldColorSwatches("chargeColor", "Primary charge", shield.chargeColor)}
+          ${renderClanShieldColorSwatches("secondaryChargeColor", "Secondary charge", shield.secondaryChargeColor)}
+          ${renderClanShieldColorSwatches("borderColor", "Metal trim", shield.borderColor)}
+        </section>
+        <fieldset class="clan-shield-control">
+          <legend>Primary charge</legend>
+          ${renderClanShieldChoiceButtons(CLAN_SHIELD_CHARGES, "charge", shield.charge)}
+        </fieldset>
+        <fieldset class="clan-shield-control">
+          <legend>Secondary charge</legend>
+          ${renderClanShieldChoiceButtons(CLAN_SHIELD_CHARGES, "secondaryCharge", shield.secondaryCharge)}
+        </fieldset>
+        <fieldset class="clan-shield-control">
+          <legend>Charge arrangement</legend>
+          ${renderClanShieldChoiceButtons(CLAN_SHIELD_CHARGE_LAYOUTS, "chargeLayout", shield.chargeLayout)}
+        </fieldset>
+        <fieldset class="clan-shield-control">
+          <legend>Edge detail</legend>
+          ${renderClanShieldChoiceButtons(CLAN_SHIELD_TRIMS, "trim", shield.trim)}
+        </fieldset>
+        <fieldset class="clan-shield-control clan-shield-control-wide">
+          <legend>Paint finish</legend>
+          ${renderClanShieldChoiceButtons(CLAN_SHIELD_FINISHES, "finish", shield.finish)}
+        </fieldset>
+      </div>
+      <footer class="clan-shield-editor-actions">
+        <button class="profile-secondary-btn" type="button" data-clan-action="randomize-shield" ${clanShieldSaving ? "disabled" : ""}>Inspire Me</button>
+        <button class="profile-secondary-btn" type="button" data-clan-action="cancel-shield" ${clanShieldSaving ? "disabled" : ""}>Cancel</button>
+        <button class="profile-primary-btn" type="button" data-clan-action="save-shield" ${clanShieldSaving ? "disabled" : ""}>${clanShieldSaving ? "Saving…" : "Save Clan Shield"}</button>
+      </footer>
+    </section>`;
+}
+
+function randomizeClanShieldDraft() {
+  const primary = randomFrom(CLAN_SHIELD_COLORS)?.value || "#7a2638";
+  const remainingColors = CLAN_SHIELD_COLORS.filter(color => color.value !== primary);
+  const secondary = randomFrom(remainingColors)?.value || "#d8bd78";
+  const charges = CLAN_SHIELD_CHARGES.filter(option => option.key !== "none");
+  clanShieldDraft = normalizeClanShield({
+    shape: randomFrom(CLAN_SHIELD_SHAPES)?.key,
+    division: randomFrom(CLAN_SHIELD_DIVISIONS)?.key,
+    primary,
+    secondary,
+    borderColor: randomFrom(CLAN_SHIELD_COLORS.filter(color => ["#d8bd78", "#eee1bd", "#b7c3bf", "#19201d"].includes(color.value)))?.value,
+    charge: randomFrom(charges)?.key,
+    secondaryCharge: randomFrom(charges)?.key,
+    chargeColor: randomFrom(CLAN_SHIELD_COLORS)?.value,
+    secondaryChargeColor: randomFrom(CLAN_SHIELD_COLORS)?.value,
+    chargeLayout: randomFrom(CLAN_SHIELD_CHARGE_LAYOUTS)?.key,
+    trim: randomFrom(CLAN_SHIELD_TRIMS)?.key,
+    finish: randomFrom(CLAN_SHIELD_FINISHES)?.key,
+  });
+}
+
+async function saveClanShieldEditor() {
+  const api = getOnlineApi();
+  if (state?.clanRole !== "leader" || !api?.updateClanProfile || !clanShieldDraft || clanShieldSaving) return;
+  clanShieldSaving = true;
+  renderClanView();
+  try {
+    const shield = normalizeClanShield(clanShieldDraft);
+    const result = await api.updateClanProfile({ shield });
+    clanSnapshot = result?.clan || { ...clanSnapshot, shield };
+    clanShieldEditorOpen = false;
+    clanShieldDraft = null;
+    showToast("Clan shield published.");
+    await refreshClanState({ silent: true });
+  } catch (error) {
+    showToast(error?.message || "Could not save the clan shield.");
+  } finally {
+    clanShieldSaving = false;
+    renderClanView();
+  }
+}
+
 function renderClanView() {
   if (!clanContent || activeProfileTab !== "clan") return;
   const heroLevel = Math.max(1, Math.floor(Number(state?.character?.level) || 1));
@@ -15891,7 +16270,8 @@ function renderClanView() {
           <form data-clan-form="search" class="clan-search"><input name="search" maxlength="24" placeholder="Search by clan name" aria-label="Search clans" /><button type="submit">Search</button></form>
           <div class="clan-list">${clanSearchResults.length ? clanSearchResults.map(clan => `
             <article class="clan-list-row">
-              <div><strong>[${escapeHtml(clan.tag || "")}] ${escapeHtml(clan.name || "Clan")}</strong><span>${formatNumber(clan.totalKingPower || 0)} power · ${clan.memberCount || 0}/30 members</span><small>${escapeHtml(clan.description || "No description yet.")}</small></div>
+              ${renderClanShield(clan.shield || clan.banner, { size: "mini", label: `${clan.name || "Clan"} shield` })}
+              <div class="clan-list-copy"><strong>[${escapeHtml(clan.tag || "")}] ${escapeHtml(clan.name || "Clan")}</strong><span>${formatNumber(clan.totalKingPower || 0)} power · ${clan.memberCount || 0}/30 members</span><small>${escapeHtml(clan.description || "No description yet.")}</small></div>
               <button data-clan-action="${clan.admissionMode === "open" ? "join" : "apply"}" data-clan-id="${escapeHtml(clan.id)}" ${cooldownMs || clan.memberCount >= 30 ? "disabled" : ""}>${state?.pendingClanApplicationId === clan.id ? "Applied" : clan.admissionMode === "open" ? "Join" : "Apply"}</button>
             </article>`).join("") : `<p class="clan-muted">No clans matched your search.</p>`}</div>
         </section>
@@ -15903,11 +16283,14 @@ function renderClanView() {
   const visibleMessages = clanMessages.filter(message => !mutedClanMemberIds.has(message.senderUid));
   clanContent.innerHTML = `
     <section class="clan-hero">
-      <div class="clan-banner" style="--clan-primary:${escapeHtml(clanSnapshot.banner?.primary || "#2f7a4a")};--clan-secondary:${escapeHtml(clanSnapshot.banner?.secondary || "#d9e2e8")}"><strong>${escapeHtml(clanSnapshot.tag || "")}</strong></div>
+      <div class="clan-hero-shield">
+        ${renderClanShield(clanSnapshot.shield || clanSnapshot.banner, { size: "large", label: `${clanSnapshot.name || "Clan"} shield` })}
+        ${canLead ? `<button type="button" data-clan-action="edit-shield">${clanShieldEditorOpen ? "Editing Shield" : "Edit Shield"}</button>` : ""}
+      </div>
       <div><span>Your clan · ${clanRoleLabel(state.clanRole)}</span><h3>[${escapeHtml(clanSnapshot.tag || "")}] ${escapeHtml(clanSnapshot.name || "Clan")}</h3><p>${escapeHtml(clanSnapshot.description || "No description yet.")}</p></div>
       <div class="clan-power"><span>Clan Power</span><strong>${formatNumber(clanSnapshot.totalKingPower || 0)}</strong><small>${clanSnapshot.memberCount || 0}/30 members</small></div>
     </section>
-    <div class="clan-columns">
+    ${canLead && clanShieldEditorOpen ? renderClanShieldEditor(clanShieldDraft) : `<div class="clan-columns">
       <section class="clan-roster-panel">
         <div class="profile-section-heading"><span>Household</span><h3>Roster</h3></div>
         <div class="clan-roster">${clanMembers.map(member => `
@@ -15929,7 +16312,7 @@ function renderClanView() {
           <article class="clan-message"><div>${renderPlayerNameLink(message.senderUid, message.senderName || "Ruler")}<small>${clanRoleLabel(message.senderRole)}</small>${message.senderUid !== getCurrentOnlineUid() ? `<button data-clan-action="report" data-message-id="${escapeHtml(message.id)}">Report</button>` : ""}</div><p>${escapeHtml(message.text || "")}</p></article>`).join("") : `<p class="clan-muted">No messages yet. Rally your clan.</p>`}</div>
         <form data-clan-form="message" class="clan-message-form"><input name="text" maxlength="300" required autocomplete="off" placeholder="Message your clan…" aria-label="Clan message" /><button type="submit">Send</button></form>
       </section>
-    </div>`;
+    </div>`}`;
 }
 
 async function runClanAction(action, payload = {}) {
@@ -15991,6 +16374,37 @@ function handleClanClick(event) {
   const button = event.target.closest("[data-clan-action]");
   if (!button) return;
   const action = button.dataset.clanAction;
+  if (action === "edit-shield") {
+    if (state?.clanRole !== "leader") return;
+    clanShieldDraft = normalizeClanShield(clanSnapshot?.shield, clanSnapshot?.banner);
+    clanShieldEditorOpen = true;
+    renderClanView();
+    return;
+  }
+  if (action === "cancel-shield") {
+    clanShieldEditorOpen = false;
+    clanShieldDraft = null;
+    renderClanView();
+    return;
+  }
+  if (action === "randomize-shield") {
+    randomizeClanShieldDraft();
+    renderClanView();
+    return;
+  }
+  if (action === "save-shield") {
+    saveClanShieldEditor();
+    return;
+  }
+  if (action === "shield-option" || action === "shield-color") {
+    const key = String(button.dataset.shieldKey || "");
+    const allowedKeys = new Set(["shape", "division", "primary", "secondary", "borderColor", "charge", "secondaryCharge", "chargeColor", "secondaryChargeColor", "chargeLayout", "trim", "finish"]);
+    if (!clanShieldDraft || !allowedKeys.has(key)) return;
+    clanShieldDraft[key] = button.dataset.shieldValue || clanShieldDraft[key];
+    clanShieldDraft = normalizeClanShield(clanShieldDraft);
+    renderClanView();
+    return;
+  }
   const clanId = button.dataset.clanId || state?.clanId || "";
   const targetUid = button.dataset.memberId || "";
   if (action === "mute") {
@@ -21430,6 +21844,7 @@ async function refreshClanLeaderboardRows() {
     list.innerHTML = rows.length ? rows.map((entry, index) => `
       <article class="leaderboard-row clan-leaderboard-row ${entry.id === state?.clanId ? "current" : ""}">
         <span class="leaderboard-rank">#${formatNumber(index + 1)}</span>
+        ${renderClanShield(entry.shield || entry.banner, { size: "mini", label: `${entry.name || "Clan"} shield` })}
         <span class="clan-leaderboard-tag">[${escapeHtml(entry.tag || "")}]</span>
         <div class="leaderboard-ruler"><strong>${escapeHtml(entry.name || "Clan")}</strong><small>${formatNumber(entry.memberCount || 0)} members</small></div>
         <div class="leaderboard-power"><strong>${formatNumber(entry.totalKingPower || 0)}</strong><small>Clan Power</small></div>

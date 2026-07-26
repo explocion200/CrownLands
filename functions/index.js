@@ -161,6 +161,13 @@ const CLAN_RESERVATION_RELEASE_MS = 7 * 24 * 60 * 60 * 1000;
 const CLAN_CHAT_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
 const CLAN_CHAT_RATE_WINDOW_MS = 30 * 1000;
 const CLAN_CHAT_RATE_LIMIT = 5;
+const CLAN_SHIELD_VERSION = 1;
+const CLAN_SHIELD_SHAPES = new Set(["castilian", "heater", "kite", "round"]);
+const CLAN_SHIELD_DIVISIONS = new Set(["solid", "pale", "fess", "quartered", "stripes", "bend", "saltire", "chevron"]);
+const CLAN_SHIELD_CHARGES = new Set(["none", "castle", "lion", "eagle", "crown", "swords", "fleur", "sun"]);
+const CLAN_SHIELD_CHARGE_LAYOUTS = new Set(["center", "paired", "quartered", "chief"]);
+const CLAN_SHIELD_TRIMS = new Set(["plain", "double", "riveted"]);
+const CLAN_SHIELD_FINISHES = new Set(["polished", "weathered", "battleworn"]);
 const GLOBAL_PLAYER_STATS_VERSION = 8;
 const PLAYER_IDENTITY_SYNC_VERSION = 1;
 const MAIN_CITY_ASSIGNMENT_VERSION = 2;
@@ -5933,13 +5940,60 @@ function normalizeClanDescription(value = "") {
   return safeString(value, 280).replace(/[\u0000-\u001f\u007f]/g, "").trim();
 }
 
-function normalizeClanBanner(value = {}) {
+function normalizeClanShieldColor(value = "", fallback = "#2f7a4a") {
+  const color = safeString(value, 7).toLowerCase();
+  return /^#[0-9a-f]{6}$/.test(color) ? color : fallback;
+}
+
+function normalizeClanShieldChoice(value, allowed, fallback) {
+  const choice = safeString(value, 24).toLowerCase();
+  return allowed.has(choice) ? choice : fallback;
+}
+
+function normalizeClanShield(value = {}) {
   const source = value && typeof value === "object" ? value : {};
+  const legacyPatternMap = {
+    split: "pale",
+    diagonal: "bend",
+    band: "fess",
+    cross: "quartered",
+    chief: "fess",
+  };
+  const legacySymbolMap = {
+    tower: "castle",
+    cross: "fleur",
+    star: "sun",
+    moon: "sun",
+    knight: "swords",
+    diamond: "fleur",
+    spire: "fleur",
+  };
+  const requestedDivision = legacyPatternMap[source.pattern] || source.division || source.pattern;
+  const requestedCharge = legacySymbolMap[source.symbol] || source.charge || source.symbol;
   return {
-    primary: safeString(source.primary || "#2f7a4a", 16),
-    secondary: safeString(source.secondary || "#d9e2e8", 16),
-    pattern: safeString(source.pattern || "solid", 24),
-    symbol: safeString(source.symbol || "crown", 24),
+    version: CLAN_SHIELD_VERSION,
+    shape: normalizeClanShieldChoice(source.shape, CLAN_SHIELD_SHAPES, "castilian"),
+    division: normalizeClanShieldChoice(requestedDivision, CLAN_SHIELD_DIVISIONS, "quartered"),
+    primary: normalizeClanShieldColor(source.primary, "#7a2638"),
+    secondary: normalizeClanShieldColor(source.secondary, "#d8bd78"),
+    borderColor: normalizeClanShieldColor(source.borderColor, "#d8bd78"),
+    charge: normalizeClanShieldChoice(requestedCharge, CLAN_SHIELD_CHARGES, "castle"),
+    secondaryCharge: normalizeClanShieldChoice(source.secondaryCharge, CLAN_SHIELD_CHARGES, "lion"),
+    chargeColor: normalizeClanShieldColor(source.chargeColor, "#19201d"),
+    secondaryChargeColor: normalizeClanShieldColor(source.secondaryChargeColor, "#7a2638"),
+    chargeLayout: normalizeClanShieldChoice(source.chargeLayout, CLAN_SHIELD_CHARGE_LAYOUTS, "quartered"),
+    trim: normalizeClanShieldChoice(source.trim, CLAN_SHIELD_TRIMS, "double"),
+    finish: normalizeClanShieldChoice(source.finish, CLAN_SHIELD_FINISHES, "weathered"),
+  };
+}
+
+function clanShieldLegacyBanner(value = {}) {
+  const shield = normalizeClanShield(value);
+  return {
+    primary: shield.primary,
+    secondary: shield.secondary,
+    pattern: shield.division,
+    symbol: shield.charge,
   };
 }
 
@@ -5948,13 +6002,15 @@ function normalizeAdmissionMode(value = "") {
 }
 
 function clanPublicSnapshot(id = "", clan = {}) {
+  const shield = normalizeClanShield(clan.shield || clan.banner);
   return {
     id,
     name: safeString(clan.name, 24),
     normalizedName: safeString(clan.normalizedName, 40),
     tag: safeString(clan.tag, 5),
     description: safeString(clan.description, 280),
-    banner: normalizeClanBanner(clan.banner),
+    shield,
+    banner: clanShieldLegacyBanner(shield),
     admissionMode: normalizeAdmissionMode(clan.admissionMode),
     leaderUid: safeString(clan.leaderUid, 128),
     memberCount: clampInt(clan.memberCount, 0, CLAN_MEMBER_LIMIT),
@@ -6040,11 +6096,13 @@ function writeClanAudit(transaction, clanId, actorUid, action, details = {}, now
 
 function writeClanLeaderboard(transaction, clanId, clan = {}, patch = {}) {
   const combined = { ...clan, ...patch };
+  const shield = normalizeClanShield(combined.shield || combined.banner);
   transaction.set(db.doc(`clanLeaderboards/${RESET_GENERATION}/entries/${clanId}`), {
     clanId,
     name: safeString(combined.name, 24),
     tag: safeString(combined.tag, 5),
-    banner: normalizeClanBanner(combined.banner),
+    shield,
+    banner: clanShieldLegacyBanner(shield),
     memberCount: clampInt(combined.memberCount, 0, CLAN_MEMBER_LIMIT),
     totalKingPower: Math.max(0, Math.floor(safeNumber(combined.totalKingPower, 0))),
     resetGeneration: RESET_GENERATION,
@@ -6100,13 +6158,15 @@ exports.createClan = onCall({ region: "us-central1", maxInstances: 20, invoker: 
     if (availableGold < CLAN_CREATE_GOLD_COST) {
       throw new HttpsError("failed-precondition", `Creating a clan costs ${CLAN_CREATE_GOLD_COST.toLocaleString()} gold.`);
     }
+    const shield = normalizeClanShield(request.data?.shield || request.data?.banner);
     const clan = {
       name: name.display,
       normalizedName: name.normalized,
       tag: tag.display,
       normalizedTag: tag.normalized,
       description: normalizeClanDescription(request.data?.description),
-      banner: normalizeClanBanner(request.data?.banner),
+      shield,
+      banner: clanShieldLegacyBanner(shield),
       admissionMode: normalizeAdmissionMode(request.data?.admissionMode),
       leaderUid: uid,
       memberCount: 1,
@@ -6149,16 +6209,20 @@ exports.updateClanProfile = onCall({ region: "us-central1", maxInstances: 20, in
     if (!clanSnap.exists) throw new HttpsError("not-found", "Clan was not found.");
     assertClanRole(memberSnap.data(), ["leader"]);
     const clan = clanSnap.data() || {};
+    const shield = normalizeClanShield(request.data?.shield || request.data?.banner || clan.shield || clan.banner);
     const patch = {
       description: normalizeClanDescription(request.data?.description ?? clan.description),
-      banner: normalizeClanBanner(request.data?.banner ?? clan.banner),
+      shield,
+      banner: clanShieldLegacyBanner(shield),
       admissionMode: normalizeAdmissionMode(request.data?.admissionMode ?? clan.admissionMode),
       updatedAtMs: Date.now(),
       updatedAt: FieldValue.serverTimestamp(),
     };
     transaction.set(clanSnap.ref, patch, { merge: true });
     writeClanLeaderboard(transaction, clanId, clan, patch);
-    writeClanAudit(transaction, clanId, uid, "clan_profile_updated");
+    writeClanAudit(transaction, clanId, uid, "clan_profile_updated", {
+      shieldChanged: Boolean(request.data?.shield || request.data?.banner),
+    });
     return { ok: true, clan: clanPublicSnapshot(clanId, { ...clan, ...patch }) };
   });
 });
