@@ -3823,8 +3823,8 @@ button.inventory-slot {
 }
 .island-map-stage {
   position: relative;
-  width: max(100%, var(--island-grid-scaled-w, 1100px));
-  height: max(100%, var(--island-grid-scaled-h, 840px));
+  width: max(100%, var(--island-grid-base-w, 1100px));
+  height: max(100%, var(--island-grid-base-h, 840px));
   min-width: 100%;
   min-height: 100%;
   contain: layout style;
@@ -3833,9 +3833,12 @@ button.inventory-slot {
   position: absolute;
   left: 50%;
   top: 50%;
-  width: var(--island-grid-scaled-w, 1100px);
-  height: var(--island-grid-scaled-h, 840px);
-  transform: translate(-50%, -50%);
+  width: var(--island-grid-base-w, 1100px);
+  height: var(--island-grid-base-h, 840px);
+  transform: translate(-50%, -50%) scale(var(--island-map-zoom, 1));
+  transform-origin: center;
+  backface-visibility: hidden;
+  will-change: transform;
   contain: layout style;
 }
 .island-map-canvas {
@@ -3846,10 +3849,9 @@ button.inventory-slot {
   height: var(--island-grid-base-h, 840px);
   min-width: 0;
   min-height: 0;
-  transform: translate3d(0, 0, 0) scale(var(--island-map-zoom, 1));
+  transform: translate3d(0, 0, 0);
   transform-origin: left top;
   backface-visibility: hidden;
-  will-change: transform;
   background:
     linear-gradient(90deg, rgba(255,255,255,.09) 0 1px, transparent 1px var(--island-grid-cell-w, 272px)),
     linear-gradient(rgba(255,255,255,.09) 0 1px, transparent 1px var(--island-grid-cell-h, 213px)),

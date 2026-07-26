@@ -10148,8 +10148,6 @@ function getIslandMapPickerStyle() {
   return [
     `--island-grid-base-w:${Math.round(layout.stageWidth)}px`,
     `--island-grid-base-h:${Math.round(layout.stageHeight)}px`,
-    `--island-grid-scaled-w:${formatPathNumber(layout.stageWidth * zoom)}px`,
-    `--island-grid-scaled-h:${formatPathNumber(layout.stageHeight * zoom)}px`,
     `--island-grid-cell-w:${ISLAND_PICKER_TILE_WIDTH + ISLAND_PICKER_TILE_GAP}px`,
     `--island-grid-cell-h:${ISLAND_PICKER_TILE_HEIGHT + ISLAND_PICKER_TILE_GAP}px`,
     `--island-map-zoom:${formatPathNumber(zoom)}`,
@@ -10288,6 +10286,37 @@ function getIslandMapPickerZoom(picker = getIslandMapPickerElement()) {
   );
 }
 
+function getIslandMapPickerViewportMetrics(picker, zoom = getIslandMapPickerZoom(picker)) {
+  const layout = getIslandMapGridLayout();
+  const viewportWidth = Math.max(0, picker?.clientWidth || 0);
+  const viewportHeight = Math.max(0, picker?.clientHeight || 0);
+  const stageWidth = Math.max(viewportWidth, layout.stageWidth);
+  const stageHeight = Math.max(viewportHeight, layout.stageHeight);
+  const scaledWidth = layout.stageWidth * zoom;
+  const scaledHeight = layout.stageHeight * zoom;
+  const visualLeft = (stageWidth - scaledWidth) / 2;
+  const visualTop = (stageHeight - scaledHeight) / 2;
+  const scrollExtentX = Math.max(0, stageWidth - viewportWidth);
+  const scrollExtentY = Math.max(0, stageHeight - viewportHeight);
+  const centeredLeft = scrollExtentX / 2;
+  const centeredTop = scrollExtentY / 2;
+  const minLeft = scaledWidth <= viewportWidth ? centeredLeft : visualLeft;
+  const maxLeft = scaledWidth <= viewportWidth ? centeredLeft : visualLeft + scaledWidth - viewportWidth;
+  const minTop = scaledHeight <= viewportHeight ? centeredTop : visualTop;
+  const maxTop = scaledHeight <= viewportHeight ? centeredTop : visualTop + scaledHeight - viewportHeight;
+  return {
+    layout,
+    viewportWidth,
+    viewportHeight,
+    visualLeft,
+    visualTop,
+    minLeft: clamp(minLeft, 0, scrollExtentX),
+    maxLeft: clamp(maxLeft, 0, scrollExtentX),
+    minTop: clamp(minTop, 0, scrollExtentY),
+    maxTop: clamp(maxTop, 0, scrollExtentY),
+  };
+}
+
 function setIslandMapPickerZoom(picker, value, {
   preserveCenter = true,
   remember = true,
@@ -10296,48 +10325,71 @@ function setIslandMapPickerZoom(picker, value, {
   anchorClientY = null,
   targetClientX = null,
   targetClientY = null,
+  anchorViewportX: providedAnchorViewportX = null,
+  anchorViewportY: providedAnchorViewportY = null,
+  targetViewportX: providedTargetViewportX = null,
+  targetViewportY: providedTargetViewportY = null,
 } = {}) {
   if (!picker) return false;
+  const previousZoom = getIslandMapPickerZoom(picker);
   const zoom = clampIslandMapPickerZoom(value, getIslandMapPickerMinimumZoom(picker));
-  const layout = getIslandMapGridLayout();
-  const pickerBounds = picker.getBoundingClientRect();
-  const canvasFrame = picker.querySelector(".island-map-canvas-frame");
-  const previousFrameBounds = canvasFrame?.getBoundingClientRect();
-  const anchorX = anchorClientX !== null && Number.isFinite(Number(anchorClientX))
-    ? Number(anchorClientX)
-    : pickerBounds.left + picker.clientWidth / 2;
-  const anchorY = anchorClientY !== null && Number.isFinite(Number(anchorClientY))
-    ? Number(anchorClientY)
-    : pickerBounds.top + picker.clientHeight / 2;
-  const targetX = targetClientX !== null && Number.isFinite(Number(targetClientX)) ? Number(targetClientX) : anchorX;
-  const targetY = targetClientY !== null && Number.isFinite(Number(targetClientY)) ? Number(targetClientY) : anchorY;
-  const anchorRatioX = previousFrameBounds?.width
-    ? clamp((anchorX - previousFrameBounds.left) / previousFrameBounds.width, 0, 1)
-    : 0.5;
-  const anchorRatioY = previousFrameBounds?.height
-    ? clamp((anchorY - previousFrameBounds.top) / previousFrameBounds.height, 0, 1)
-    : 0.5;
-  const scaledWidth = layout.stageWidth * zoom;
-  const scaledHeight = layout.stageHeight * zoom;
-  const frameLeft = Math.max(0, (picker.clientWidth - scaledWidth) / 2);
-  const frameTop = Math.max(0, (picker.clientHeight - scaledHeight) / 2);
-  const targetViewportX = targetX - pickerBounds.left - picker.clientLeft;
-  const targetViewportY = targetY - pickerBounds.top - picker.clientTop;
-  const nextScrollLeft = frameLeft + scaledWidth * anchorRatioX - targetViewportX;
-  const nextScrollTop = frameTop + scaledHeight * anchorRatioY - targetViewportY;
-  const maxScrollLeft = Math.max(0, scaledWidth - picker.clientWidth);
-  const maxScrollTop = Math.max(0, scaledHeight - picker.clientHeight);
-
   picker.dataset.islandMapZoom = String(zoom);
   picker.style.setProperty("--island-map-zoom", formatPathNumber(zoom));
-  picker.style.setProperty("--island-grid-scaled-w", `${formatPathNumber(scaledWidth)}px`);
-  picker.style.setProperty("--island-grid-scaled-h", `${formatPathNumber(scaledHeight)}px`);
   islandMapPickerViewState.zoom = zoom;
+
+  let nextScrollLeft = picker.scrollLeft;
+  let nextScrollTop = picker.scrollTop;
+  if (preserveCenter) {
+    const hasAnchorViewportX = Number.isFinite(Number(providedAnchorViewportX));
+    const hasAnchorViewportY = Number.isFinite(Number(providedAnchorViewportY));
+    const hasTargetViewportX = Number.isFinite(Number(providedTargetViewportX));
+    const hasTargetViewportY = Number.isFinite(Number(providedTargetViewportY));
+    const needsPickerBounds = (!hasAnchorViewportX && Number.isFinite(Number(anchorClientX)))
+      || (!hasAnchorViewportY && Number.isFinite(Number(anchorClientY)))
+      || (!hasTargetViewportX && Number.isFinite(Number(targetClientX)))
+      || (!hasTargetViewportY && Number.isFinite(Number(targetClientY)));
+    const pickerBounds = needsPickerBounds ? picker.getBoundingClientRect() : null;
+    const anchorViewportX = hasAnchorViewportX
+      ? Number(providedAnchorViewportX)
+      : Number.isFinite(Number(anchorClientX))
+        ? Number(anchorClientX) - pickerBounds.left - picker.clientLeft
+        : picker.clientWidth / 2;
+    const anchorViewportY = hasAnchorViewportY
+      ? Number(providedAnchorViewportY)
+      : Number.isFinite(Number(anchorClientY))
+        ? Number(anchorClientY) - pickerBounds.top - picker.clientTop
+        : picker.clientHeight / 2;
+    const targetViewportX = hasTargetViewportX
+      ? Number(providedTargetViewportX)
+      : Number.isFinite(Number(targetClientX))
+        ? Number(targetClientX) - pickerBounds.left - picker.clientLeft
+        : anchorViewportX;
+    const targetViewportY = hasTargetViewportY
+      ? Number(providedTargetViewportY)
+      : Number.isFinite(Number(targetClientY))
+        ? Number(targetClientY) - pickerBounds.top - picker.clientTop
+        : anchorViewportY;
+    const previousMetrics = getIslandMapPickerViewportMetrics(picker, previousZoom);
+    const anchorWorldX = clamp(
+      (picker.scrollLeft + anchorViewportX - previousMetrics.visualLeft) / Math.max(previousZoom, 0.001),
+      0,
+      previousMetrics.layout.stageWidth
+    );
+    const anchorWorldY = clamp(
+      (picker.scrollTop + anchorViewportY - previousMetrics.visualTop) / Math.max(previousZoom, 0.001),
+      0,
+      previousMetrics.layout.stageHeight
+    );
+    const nextMetrics = getIslandMapPickerViewportMetrics(picker, zoom);
+    nextScrollLeft = nextMetrics.visualLeft + anchorWorldX * zoom - targetViewportX;
+    nextScrollTop = nextMetrics.visualTop + anchorWorldY * zoom - targetViewportY;
+  }
 
   const applyView = () => {
     if (preserveCenter) {
-      picker.scrollLeft = Math.min(Math.max(0, nextScrollLeft), maxScrollLeft);
-      picker.scrollTop = Math.min(Math.max(0, nextScrollTop), maxScrollTop);
+      const next = clampIslandMapPickerScroll(picker, nextScrollLeft, nextScrollTop, zoom);
+      picker.scrollLeft = next.left;
+      picker.scrollTop = next.top;
     }
     if (remember) rememberIslandMapPickerView(picker);
   };
@@ -10351,8 +10403,8 @@ function attachIslandMapPickerZoom(picker) {
   picker.dataset.zoomReady = "true";
   let wheelZoomFrame = 0;
   let wheelTargetZoom = getIslandMapPickerZoom(picker);
-  let wheelAnchorX = null;
-  let wheelAnchorY = null;
+  let wheelAnchorViewportX = null;
+  let wheelAnchorViewportY = null;
   let wheelZoomFrameAt = 0;
 
   const animateWheelZoom = timestamp => {
@@ -10365,8 +10417,8 @@ function attachIslandMapPickerZoom(picker) {
     const finished = Math.abs(difference) < ISLAND_PICKER_ZOOM_EPSILON;
     const nextZoom = finished ? wheelTargetZoom : currentZoom + difference * easing;
     setIslandMapPickerZoom(picker, nextZoom, {
-      anchorClientX: wheelAnchorX,
-      anchorClientY: wheelAnchorY,
+      anchorViewportX: wheelAnchorViewportX,
+      anchorViewportY: wheelAnchorViewportY,
       remember: false,
       settleNextFrame: false,
     });
@@ -10381,10 +10433,10 @@ function attachIslandMapPickerZoom(picker) {
     rememberIslandMapPickerView(picker);
   };
 
-  const queueWheelZoom = (value, anchorClientX = null, anchorClientY = null) => {
+  const queueWheelZoom = (value, anchorViewportX = null, anchorViewportY = null) => {
     wheelTargetZoom = clampIslandMapPickerZoom(value, getIslandMapPickerMinimumZoom(picker));
-    wheelAnchorX = anchorClientX !== null && Number.isFinite(Number(anchorClientX)) ? Number(anchorClientX) : null;
-    wheelAnchorY = anchorClientY !== null && Number.isFinite(Number(anchorClientY)) ? Number(anchorClientY) : null;
+    wheelAnchorViewportX = anchorViewportX !== null && Number.isFinite(Number(anchorViewportX)) ? Number(anchorViewportX) : null;
+    wheelAnchorViewportY = anchorViewportY !== null && Number.isFinite(Number(anchorViewportY)) ? Number(anchorViewportY) : null;
     picker.classList.add("zooming");
     if (!wheelZoomFrame) wheelZoomFrame = requestAnimationFrame(animateWheelZoom);
   };
@@ -10397,7 +10449,12 @@ function attachIslandMapPickerZoom(picker) {
       wheelTargetZoom * Math.exp(-boundedDelta * 0.0016),
       getIslandMapPickerMinimumZoom(picker)
     );
-    queueWheelZoom(nextTargetZoom, event.clientX, event.clientY);
+    const pickerBounds = picker.getBoundingClientRect();
+    queueWheelZoom(
+      nextTargetZoom,
+      event.clientX - pickerBounds.left - picker.clientLeft,
+      event.clientY - pickerBounds.top - picker.clientTop
+    );
   }, { passive: false });
   setIslandMapPickerZoom(picker, getIslandMapPickerZoom(picker), {
     preserveCenter: false,
@@ -10405,12 +10462,11 @@ function attachIslandMapPickerZoom(picker) {
   });
 }
 
-function clampIslandMapPickerScroll(picker, scrollLeft, scrollTop) {
-  const maxLeft = Math.max(0, (picker?.scrollWidth || 0) - (picker?.clientWidth || 0));
-  const maxTop = Math.max(0, (picker?.scrollHeight || 0) - (picker?.clientHeight || 0));
+function clampIslandMapPickerScroll(picker, scrollLeft, scrollTop, zoom = getIslandMapPickerZoom(picker)) {
+  const metrics = getIslandMapPickerViewportMetrics(picker, zoom);
   return {
-    left: Math.min(Math.max(0, Number(scrollLeft) || 0), maxLeft),
-    top: Math.min(Math.max(0, Number(scrollTop) || 0), maxTop),
+    left: clamp(Number(scrollLeft) || 0, metrics.minLeft, metrics.maxLeft),
+    top: clamp(Number(scrollTop) || 0, metrics.minTop, metrics.maxTop),
   };
 }
 
@@ -10552,6 +10608,8 @@ function attachIslandMapPickerPan(picker) {
   let pinchZoomFrame = 0;
   let panFrame = 0;
   let pendingPan = null;
+  let pickerViewportOriginX = 0;
+  let pickerViewportOriginY = 0;
 
   picker.addEventListener("scroll", () => {
     rememberIslandMapPickerView(picker);
@@ -10596,10 +10654,10 @@ function attachIslandMapPickerPan(picker) {
     if (!pinchGeometry || !nextGeometry) return;
     const nextZoom = getIslandMapPickerZoom(picker) * (nextGeometry.distance / pinchGeometry.distance);
     setIslandMapPickerZoom(picker, nextZoom, {
-      anchorClientX: pinchGeometry.centerX,
-      anchorClientY: pinchGeometry.centerY,
-      targetClientX: nextGeometry.centerX,
-      targetClientY: nextGeometry.centerY,
+      anchorViewportX: pinchGeometry.centerX - pickerViewportOriginX,
+      anchorViewportY: pinchGeometry.centerY - pickerViewportOriginY,
+      targetViewportX: nextGeometry.centerX - pickerViewportOriginX,
+      targetViewportY: nextGeometry.centerY - pickerViewportOriginY,
       remember: false,
       settleNextFrame: false,
     });
@@ -10611,6 +10669,11 @@ function attachIslandMapPickerPan(picker) {
     const tile = event.target?.closest?.("[data-island-region]");
     picker.setPointerCapture?.(event.pointerId);
     if (event.pointerType === "touch") {
+      if (touchPointers.size === 0) {
+        const pickerBounds = picker.getBoundingClientRect();
+        pickerViewportOriginX = pickerBounds.left + picker.clientLeft;
+        pickerViewportOriginY = pickerBounds.top + picker.clientTop;
+      }
       touchPointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
       if (touchPointers.size >= 2) {
         if (panFrame) cancelAnimationFrame(panFrame);

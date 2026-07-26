@@ -77,13 +77,14 @@ assert.equal(pinchGeometry.distance, 100);
 assert.doesNotMatch(source, /data-island-map-zoom-(?:out|in|fit|value)/, "The map picker should not render visible zoom controls.");
 assert.doesNotMatch(source, /data-island-map-zoom-slider/, "The map picker should not render a zoom range slider.");
 assert.match(source, /function getIslandMapPickerMinimumZoom[\s\S]*?getIslandMapPickerFitZoom/, "The map picker minimum zoom should stop at the all-maps view.");
-assert.match(source, /picker\.addEventListener\("wheel"[\s\S]*?event\.preventDefault\(\)[\s\S]*?anchorClientX/, "The mouse wheel should zoom the map around the pointer.");
+assert.match(source, /picker\.addEventListener\("wheel"[\s\S]*?event\.preventDefault\(\)[\s\S]*?queueWheelZoom[\s\S]*?event\.clientX/, "The mouse wheel should zoom the map around the pointer.");
 assert.match(source, /ISLAND_PICKER_ZOOM_EASE_MS\s*=\s*\d+[\s\S]*?function attachIslandMapPickerZoom[\s\S]*?animateWheelZoom[\s\S]*?Math\.exp\(-elapsed \/ ISLAND_PICKER_ZOOM_EASE_MS\)/, "Wheel zoom should ease across animation frames.");
 assert.match(source, /function attachIslandMapPickerPan[\s\S]*?const queuePan[\s\S]*?queuePan\(startScrollLeft - dx, startScrollTop - dy\)/, "The map picker should batch drag panning into animation frames.");
 assert.match(source, /function getIslandMapPinchGeometry[\s\S]*?Math\.hypot/, "The map picker should calculate a two-pointer pinch gesture.");
 assert.match(source, /touchPointers\.size >= 2[\s\S]*?requestAnimationFrame\(applyPendingPinchZoom\)/, "Mobile pinch updates should be coalesced to the display frame.");
-assert.match(source, /function attachIslandMapPickerPan[\s\S]*?applyPendingPinchZoom[\s\S]*?targetClientX/, "Mobile pinch gestures should zoom around the moving finger midpoint.");
-assert.match(stylesSource, /\.island-map-canvas-frame[\s\S]*?--island-grid-scaled-w/, "The map picker should scale inside a bounded canvas frame.");
+assert.match(source, /function attachIslandMapPickerPan[\s\S]*?applyPendingPinchZoom[\s\S]*?targetViewportX/, "Mobile pinch gestures should zoom around the moving finger midpoint.");
+assert.match(stylesSource, /\.island-map-canvas-frame[\s\S]*?--island-grid-base-w[\s\S]*?scale\(var\(--island-map-zoom/, "The map picker should zoom through a fixed-size transform layer.");
+assert.doesNotMatch(source, /setProperty\("--island-grid-scaled-(?:w|h)"/, "Zoom frames must not resize the map layout.");
 assert.match(stylesSource, /\.island-map-picker\s*\{[\s\S]*?scrollbar-width:\s*none;/, "The map picker should hide native scrollbars while remaining scrollable.");
 
 const city = { id: "city", kind: "city", x: 0, y: 0 };
