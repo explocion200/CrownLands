@@ -5593,6 +5593,7 @@ async function claimFreshStartingCity(request) {
     const chosenIsland = placement.island;
     const chosenIslandSnap = await transaction.get(chosenIsland.ref);
     const placementSlotSnap = await transaction.get(placement.slotRef);
+    const placementSlot = placementSlotSnap.exists ? placementSlotSnap.data() || {} : {};
     const currentPopulation = chosenIslandSnap.exists
       ? Math.max(0, Math.floor(safeNumber(chosenIslandSnap.data()?.playerCount, 0)))
       : -1;
@@ -5600,7 +5601,9 @@ async function claimFreshStartingCity(request) {
       !chosenIslandSnap.exists
       || safeString(chosenIslandSnap.data()?.resetGeneration, 120) !== RESET_GENERATION
       || currentPopulation !== placement.expectedPopulation
-      || placementSlotSnap.exists
+      || !placementSlotSnap.exists
+      || safeString(placementSlot.status, 24) !== "reserved"
+      || safeString(placementSlot.reservationId, 96) !== placement.reservationId
     ) {
       const contentionError = new Error("Starting-city placement changed while the claim was being prepared.");
       contentionError.code = 10;
@@ -5682,14 +5685,11 @@ async function claimFreshStartingCity(request) {
       updatedAt: FieldValue.serverTimestamp(),
     }, { merge: true });
     transaction.set(placement.slotRef, {
-      worldId: ONLINE_WORLD_ID,
-      resetGeneration: RESET_GENERATION,
-      regionId: chosenIsland.regionId,
-      islandId: chosenIsland.islandId,
-      populationOrdinal: placement.expectedPopulation,
-      claimedByUid: uid,
+      status: "claimed",
+      expiresAtMs: 0,
       claimedAt: FieldValue.serverTimestamp(),
-    });
+      updatedAt: FieldValue.serverTimestamp(),
+    }, { merge: true });
     transaction.set(playerGlobalStatsRef(uid), stats);
     transaction.set(leaderboardEntryRef(uid), {
       uid,
@@ -5748,6 +5748,63 @@ async function claimFreshStartingCity(request) {
     };
   };
 
+  const releasePlacementReservation = async placement => {
+    if (!placement?.slotRef || !placement?.reservationId) return;
+    try {
+      const snapshot = await placement.slotRef.get();
+      const reservation = snapshot.exists ? snapshot.data() || {} : {};
+      if (
+        snapshot.exists
+        && safeString(reservation.status, 24) === "reserved"
+        && safeString(reservation.reservationId, 96) === placement.reservationId
+      ) {
+        await placement.slotRef.delete({ lastUpdateTime: snapshot.updateTime });
+      }
+    } catch (error) {
+      const code = Number(error?.code);
+      if (code !== 5 && code !== 9 && code !== 10) throw error;
+    }
+  };
+
+  const acquirePlacementReservation = async placement => {
+    const nowMs = Date.now();
+    const reservation = {
+      worldId: ONLINE_WORLD_ID,
+      resetGeneration: RESET_GENERATION,
+      regionId: placement.island.regionId,
+      islandId: placement.island.islandId,
+      populationOrdinal: placement.expectedPopulation,
+      claimedByUid: uid,
+      reservationId: placement.reservationId,
+      status: "reserved",
+      reservedAtMs: nowMs,
+      expiresAtMs: nowMs + 30_000,
+      createdAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
+    };
+    try {
+      await placement.slotRef.create(reservation);
+      return true;
+    } catch (error) {
+      const code = Number(error?.code);
+      const alreadyExists = code === 6
+        || safeString(error?.message, 240).toLowerCase().includes("already exists");
+      if (!alreadyExists) throw error;
+    }
+
+    return db.runTransaction(async transaction => {
+      const snapshot = await transaction.get(placement.slotRef);
+      const existing = snapshot.exists ? snapshot.data() || {} : {};
+      const expired = safeString(existing.status, 24) === "reserved"
+        && safeNumber(existing.expiresAtMs, 0) <= nowMs;
+      if (!snapshot.exists || expired) {
+        transaction.set(placement.slotRef, reservation);
+        return true;
+      }
+      return false;
+    }, { maxAttempts: 3 });
+  };
+
   const maxContentionAttempts = 40;
   for (let attempt = 1; attempt <= maxContentionAttempts; attempt += 1) {
     const islandRefs = STARTER_REGION_IDS.map(regionId => db.doc(`islands/${getOnlineIslandId(regionId)}`));
@@ -5771,17 +5828,28 @@ async function claimFreshStartingCity(request) {
     const placement = {
       island: chosenIsland,
       expectedPopulation: minimumPopulation,
+      reservationId: crypto.randomUUID(),
       slotRef: db.doc(
         `realmSeeds/${RESET_GENERATION}/startingSlots/${chosenIsland.regionId}_${minimumPopulation}`
       ),
     };
 
+    const reservationAcquired = await acquirePlacementReservation(placement);
+    if (!reservationAcquired) {
+      const reservationDelayMs = crypto.randomInt(10, Math.min(220, 20 + attempt * 12));
+      await new Promise(resolve => setTimeout(resolve, reservationDelayMs));
+      continue;
+    }
+
     try {
-      return await db.runTransaction(
+      const result = await db.runTransaction(
         transaction => runClaimTransaction(transaction, placement),
         { maxAttempts: 1 }
       );
+      if (result?.alreadyClaimed) await releasePlacementReservation(placement);
+      return result;
     } catch (error) {
+      await releasePlacementReservation(placement);
       const errorCode = Number(error?.code);
       const retryableContention = errorCode === 10
         || safeString(error?.details, 200).toLowerCase().includes("transaction lock timeout")

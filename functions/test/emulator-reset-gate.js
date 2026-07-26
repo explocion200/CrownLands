@@ -152,44 +152,62 @@ async function main() {
   const source = (await sourceRef.get()).data() || {};
   const citySnapshot = await db.collection(`islands/${sourceClaim.islandId}/cities`)
     .where("ownerUid", "==", null)
-    .limit(10)
     .get();
-  const targetDoc = citySnapshot.docs.find(doc => !doc.data()?.strongholdType && doc.id !== sourceClaim.cityId);
-  assert(targetDoc, "No neutral target was available for the army smoke test.");
-  const target = targetDoc.data() || {};
-  await Promise.all([
-    sourceRef.set({ troops: 2_000, troopFloat: 2_000 }, { merge: true }),
-    targetDoc.ref.set({ level: 1, defense: 1, troops: 0, troopFloat: 0 }, { merge: true }),
-  ]);
-  const distance = Math.hypot(Number(target.x) - Number(source.x), Number(target.y) - Number(source.y));
-  const armyId = `reset_gate_${crypto.randomBytes(8).toString("hex")}`;
-  const order = {
-    army: {
-      id: armyId,
-      kind: "attack",
-      fromId: sourceClaim.cityId,
-      toId: targetDoc.id,
-      fromName: source.name || sourceClaim.cityId,
-      toName: target.name || targetDoc.id,
-      troops: 500,
-      requestedTroops: 500,
-      total: 500,
-      sourceRegionId: sourceClaim.mainRegionId,
-      targetRegionId: sourceClaim.mainRegionId,
-      routeRegionIds: [sourceClaim.mainRegionId],
-      viewRegionIds: [sourceClaim.mainRegionId],
-      path: [{ x: Number(source.x), y: Number(source.y) }, { x: Number(target.x), y: Number(target.y) }],
-      pathSegments: [{
-        regionId: sourceClaim.mainRegionId,
-        points: [{ x: Number(source.x), y: Number(source.y) }, { x: Number(target.x), y: Number(target.y) }],
-        length: distance,
-      }],
-      pathLength: distance,
-    },
-    sourceRegionId: sourceClaim.mainRegionId,
-    targetRegionId: sourceClaim.mainRegionId,
-  };
-  const sent = await callFunction("sendArmyOrder", attacker.token, order);
+  const targetCandidates = citySnapshot.docs
+    .filter(doc => !doc.data()?.strongholdType && doc.id !== sourceClaim.cityId)
+    .sort((left, right) => {
+      const leftData = left.data() || {};
+      const rightData = right.data() || {};
+      const leftDistance = Math.hypot(Number(leftData.x) - Number(source.x), Number(leftData.y) - Number(source.y));
+      const rightDistance = Math.hypot(Number(rightData.x) - Number(source.x), Number(rightData.y) - Number(source.y));
+      return leftDistance - rightDistance;
+    });
+  assert(targetCandidates.length, "No neutral target was available for the army smoke test.");
+  await sourceRef.set({ troops: 2_000, troopFloat: 2_000 }, { merge: true });
+
+  let targetDoc = null;
+  let armyId = "";
+  let sent = null;
+  for (const candidate of targetCandidates) {
+    const target = candidate.data() || {};
+    const distance = Math.hypot(Number(target.x) - Number(source.x), Number(target.y) - Number(source.y));
+    const candidateArmyId = `reset_gate_${crypto.randomBytes(8).toString("hex")}`;
+    await candidate.ref.set({ level: 1, defense: 1, troops: 0, troopFloat: 0 }, { merge: true });
+    try {
+      sent = await callFunction("sendArmyOrder", attacker.token, {
+        army: {
+          id: candidateArmyId,
+          kind: "attack",
+          fromId: sourceClaim.cityId,
+          toId: candidate.id,
+          fromName: source.name || sourceClaim.cityId,
+          toName: target.name || candidate.id,
+          troops: 500,
+          requestedTroops: 500,
+          total: 500,
+          sourceRegionId: sourceClaim.mainRegionId,
+          targetRegionId: sourceClaim.mainRegionId,
+          routeRegionIds: [sourceClaim.mainRegionId],
+          viewRegionIds: [sourceClaim.mainRegionId],
+          path: [{ x: Number(source.x), y: Number(source.y) }, { x: Number(target.x), y: Number(target.y) }],
+          pathSegments: [{
+            regionId: sourceClaim.mainRegionId,
+            points: [{ x: Number(source.x), y: Number(source.y) }, { x: Number(target.x), y: Number(target.y) }],
+            length: distance,
+          }],
+          pathLength: distance,
+        },
+        sourceRegionId: sourceClaim.mainRegionId,
+        targetRegionId: sourceClaim.mainRegionId,
+      });
+      targetDoc = candidate;
+      armyId = candidateArmyId;
+      break;
+    } catch (error) {
+      if (!String(error?.message || "").includes("route crosses")) throw error;
+    }
+  }
+  assert(targetDoc && sent, "No reachable neutral target was available for the army smoke test.");
   assert(sent?.movement?.id === armyId, "Army order was not created.");
   const armyRefs = [
     db.doc(`armies/${armyId}`),
