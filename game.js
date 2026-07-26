@@ -756,21 +756,22 @@ const CITY_LEVEL_STATS = {
   victoryPointsPerLevel: 4,
   victoryPointsExponent: 1.35,
   victoryPointsExponentScale: 2,
-  defensePercentPerLevel: 3,
-  cityWallsBase: 30,
-  cityWallsPerLevel: 32,
+  defensePercentPerLevel: economyNumber("cityEconomy.defensePercentPerLevel", 2),
+  cityWallsBase: economyNumber("cityEconomy.wallDefenseBase", 200),
+  cityWallsExponent: economyNumber("cityEconomy.wallDefenseExponent", 3),
+  cityWallsExponentScale: economyNumber("cityEconomy.wallDefenseScale", 3),
   troopProductionPerVictoryPoint: economyNumber("cityEconomy.troopsPerVictoryPoint", 3),
   goldProductionPerMillionLordsVp: MILLION_LORDS_PASSIVE_GOLD_PER_CITY_VP,
 };
 const KING_POWER_ARMY_TROOP_VALUE = 2;
 const KING_POWER_REPLACEMENT_HOURS = 12;
 const KING_POWER_DEFENSIVE_ADVANTAGE_WEIGHT = 0.25;
-const KING_POWER_AUTHORITY_VERSION = 6;
+const KING_POWER_AUTHORITY_VERSION = 8;
 const SKILL_RESET_COST = economyNumber("playerCosts.skillResetGold", 750_000);
 
 const SKILL_CONFIG = {
   swordmastery: { label: "Swordmastery", percentPerLevel: economyNumber("skills.swordmastery.percentPerLevel", 2), maxPercent: economyNumber("skills.swordmastery.maxPercent", 60), description: "Outgoing attack power." },
-  stoneworks: { label: "Stoneworks", percentPerLevel: economyNumber("skills.stoneworks.percentPerLevel", 3), maxPercent: economyNumber("skills.stoneworks.maxPercent", 75), description: "City wall defense from level." },
+  stoneworks: { label: "Stoneworks", percentPerLevel: economyNumber("skills.stoneworks.percentPerLevel", 3), maxPercent: economyNumber("skills.stoneworks.maxPercent", 75), description: "City wall strength." },
   taxStewardship: { label: "Tax Stewardship", percentPerLevel: economyNumber("skills.taxStewardship.percentPerLevel", 3), maxPercent: economyNumber("skills.taxStewardship.maxPercent", 75), description: "Normal city gold production." },
   royalGranaries: { label: "Royal Granaries", percentPerLevel: economyNumber("skills.royalGranaries.percentPerLevel", 3), maxPercent: economyNumber("skills.royalGranaries.maxPercent", 75), description: "Normal city troop production." },
   guildCharters: { label: "Guild Charters", percentPerLevel: economyNumber("skills.guildCharters.percentPerLevel", 2), maxPercent: economyNumber("skills.guildCharters.maxPercent", 50), description: "Upgrade cost reduction." },
@@ -6450,6 +6451,27 @@ function getAuthoritativeCityOwnerKingPowerSnapshot(city) {
     : 0;
 }
 
+async function ensureAuthoritativeCityOwnerKingPower(city) {
+  const existingPower = getAuthoritativeCityOwnerKingPowerSnapshot(city);
+  if (existingPower > 0 || !city || city.owner !== "enemy") return existingPower;
+  const ownerUid = String(city.ownerUid || "").trim();
+  const api = getOnlineApi();
+  if (!ownerUid || !api?.loadPlayerIdentities || !api?.isSignedIn?.()) return 0;
+  try {
+    const rows = await withTimeout(
+      api.loadPlayerIdentities([ownerUid]),
+      3500,
+      "Kingdom strength check is taking too long."
+    );
+    rememberPlayerIdentities(Array.isArray(rows) ? rows : [], { force: true });
+    applyCanonicalPlayerIdentityToRecord(city);
+    return getAuthoritativeCityOwnerKingPowerSnapshot(city);
+  } catch (error) {
+    console.warn("Could not load authoritative defender King Power", error);
+    return 0;
+  }
+}
+
 function getDemoAttackTier(powerRatio) {
   const ratio = Number(powerRatio) || 0;
   return DEMO_ATTACK_TIERS.find(tier => ratio >= tier.minRatio) || null;
@@ -6465,13 +6487,13 @@ function getEnemyCityPowerBand(
   const defenderPower = normalizePowerValue(defenderKingPower);
   if (defenderPower <= 0) return "in-range";
   if (getDemoAttackTier(attackerPower / defenderPower)) return "protected";
-  if (getDemoAttackTier(defenderPower / attackerPower)) return "overpowering";
+  if (defenderPower > attackerPower) return "overpowering";
   return "in-range";
 }
 
 function getEnemyCityPowerBandLabel(powerBand) {
   if (powerBand === "protected") return "Weaker kingdom protection applies";
-  if (powerBand === "overpowering") return "King Power far above yours";
+  if (powerBand === "overpowering") return "King Power above yours";
   if (powerBand === "in-range") return "Within your King Power range";
   return "";
 }
@@ -6779,17 +6801,26 @@ function formatCapturedCityLevelDrop(levelDrop) {
   return `Level ${formatNumber(levelDrop.previousLevel)} to ${formatNumber(levelDrop.nextLevel)}.`;
 }
 
+function getBaseCityWalls(level) {
+  const normalizedLevel = clampCityLevel(level);
+  const growth = (
+    Math.pow(normalizedLevel, CITY_LEVEL_STATS.cityWallsExponent) - 1
+  ) * CITY_LEVEL_STATS.cityWallsExponentScale;
+  const walls = CITY_LEVEL_STATS.cityWallsBase + Math.max(0, growth);
+  if (!Number.isFinite(walls)) return Number.MAX_SAFE_INTEGER;
+  return Math.min(Number.MAX_SAFE_INTEGER, Math.max(0, Math.floor(walls)));
+}
+
 function getCityStats(city, options = {}) {
   const stronghold = isStronghold(city);
   const level = stronghold ? getStrongholdDefenseLevel(city) : clampCityLevel(city?.level);
-  const step = level - 1;
   const victoryPoints = Math.floor(
     CITY_LEVEL_STATS.victoryPointsBase
     + level * CITY_LEVEL_STATS.victoryPointsPerLevel
     + Math.pow(level, CITY_LEVEL_STATS.victoryPointsExponent) * CITY_LEVEL_STATS.victoryPointsExponentScale
   );
   const defensePercent = level * CITY_LEVEL_STATS.defensePercentPerLevel;
-  const baseCityWalls = CITY_LEVEL_STATS.cityWallsBase + step * CITY_LEVEL_STATS.cityWallsPerLevel;
+  const baseCityWalls = getBaseCityWalls(level);
   const includeSkillBoosts = options.includeSkillBoosts !== false;
   const stoneworksPercent = includeSkillBoosts && city?.owner === "player" ? getSkillPercent("stoneworks") : 0;
   const cityWalls = Math.floor(baseCityWalls * (1 + stoneworksPercent / 100));
@@ -8537,6 +8568,9 @@ function normalizePlayerIdentity(raw = {}, fallbackUid = "") {
     flag: raw.flag || raw.ownerFlag || null,
     kingPower: normalizePowerValue(raw.kingPower ?? raw.ownerKingPower ?? raw.attackerKingPower),
     kingPowerVersion: Math.max(0, Math.floor(Number(raw.kingPowerVersion) || 0)),
+    mainCityId: getKnownCityId(raw.mainCityId),
+    mainRegionId: String(raw.mainRegionId || "").trim(),
+    mainIslandId: String(raw.mainIslandId || "").trim(),
     updatedAtMs: normalizeTimestampMs(raw.updatedAtMs) || timestampToMs(raw.updatedAt),
   };
 }
@@ -8549,6 +8583,8 @@ function getPlayerIdentitySignature(identity) {
     getFlagSignature(identity.flag),
     normalizePowerValue(identity.kingPower),
     Math.max(0, Math.floor(Number(identity.kingPowerVersion) || 0)),
+    identity.mainCityId || "",
+    identity.mainRegionId || "",
     normalizeTimestampMs(identity.updatedAtMs),
   ].join("|");
 }
@@ -8590,6 +8626,15 @@ function rememberPlayerIdentity(raw = {}, options = {}) {
     kingPowerVersion: identityIsNewer
       ? identity.kingPowerVersion
       : Math.max(0, Math.floor(Number(existing?.kingPowerVersion) || 0)),
+    mainCityId: identityIsNewer
+      ? identity.mainCityId || existing?.mainCityId || ""
+      : existing?.mainCityId || identity.mainCityId || "",
+    mainRegionId: identityIsNewer
+      ? identity.mainRegionId || existing?.mainRegionId || ""
+      : existing?.mainRegionId || identity.mainRegionId || "",
+    mainIslandId: identityIsNewer
+      ? identity.mainIslandId || existing?.mainIslandId || ""
+      : existing?.mainIslandId || identity.mainIslandId || "",
     updatedAtMs: Math.max(existing?.updatedAtMs || 0, identity.updatedAtMs || 0),
     fetchedAtMs: force ? Date.now() : existing?.fetchedAtMs || 0,
     authoritative: existingIsAuthoritative || force,
@@ -8636,6 +8681,9 @@ function rememberCurrentPlayerIdentity() {
     flag: state.flag,
     kingPower: getKingPower(),
     kingPowerVersion: KING_POWER_AUTHORITY_VERSION,
+    mainCityId: state.mainCityId || "",
+    mainRegionId: state.online?.mainRegionId || getCityRegionId(state.mainCityId),
+    mainIslandId: state.online?.mainIslandId || getOnlineIslandId(getCityRegionId(state.mainCityId)),
     updatedAtMs: Date.now(),
   }, { force: true });
 }
@@ -8651,6 +8699,9 @@ function resolvePlayerIdentityForUid(uid, fallback = {}) {
       flag: state.flag || fallbackIdentity.flag || createDefaultFlag(),
       kingPower: getCurrentPlayerIdentityKingPower(fallbackIdentity.kingPower),
       kingPowerVersion: KING_POWER_AUTHORITY_VERSION,
+      mainCityId: state.mainCityId || fallbackIdentity.mainCityId || "",
+      mainRegionId: state.online?.mainRegionId || fallbackIdentity.mainRegionId || "",
+      mainIslandId: state.online?.mainIslandId || fallbackIdentity.mainIslandId || "",
       updatedAtMs: Date.now(),
     };
   }
@@ -8664,6 +8715,9 @@ function resolvePlayerIdentityForUid(uid, fallback = {}) {
       ? normalizePowerValue(cached.kingPower)
       : cached?.kingPower || fallbackIdentity.kingPower || 0,
     kingPowerVersion: Math.max(cached?.kingPowerVersion || 0, fallbackIdentity.kingPowerVersion || 0),
+    mainCityId: cached?.mainCityId || fallbackIdentity.mainCityId || "",
+    mainRegionId: cached?.mainRegionId || fallbackIdentity.mainRegionId || "",
+    mainIslandId: cached?.mainIslandId || fallbackIdentity.mainIslandId || "",
     updatedAtMs: Math.max(cached?.updatedAtMs || 0, fallbackIdentity.updatedAtMs || 0),
   };
 }
@@ -14454,8 +14508,25 @@ function updateAttacks(dt) {
   }
 }
 
+function identityMarksCityAsMain(city, identity = null) {
+  if (!city || !identity?.mainCityId || getKnownCityId(city.id) !== getKnownCityId(identity.mainCityId)) {
+    return false;
+  }
+  const identityRegionId = String(identity.mainRegionId || getRegionIdFromOnlineIslandId(identity.mainIslandId) || "").trim();
+  return !identityRegionId || getCityRegionId(city) === normalizeRegionId(identityRegionId);
+}
+
 function isProtectedMainCity(city) {
-  return Boolean(city && (city.isMainCity || city.id === state?.mainCityId));
+  if (!city) return false;
+  if (city.isMainCity || city.id === state?.mainCityId) return true;
+  const ownerUid = String(city.ownerUid || "").trim();
+  if (!ownerUid) return false;
+  const cachedIdentity = playerIdentityCache.get(ownerUid);
+  if (identityMarksCityAsMain(city, cachedIdentity)) return true;
+  const presence = Array.isArray(onlinePresence)
+    ? onlinePresence.find(entry => entry?.uid === ownerUid)
+    : null;
+  return identityMarksCityAsMain(city, presence);
 }
 
 function getMainCityAttackBlockReason(target, attackerOwner = "player", attackerOwnerUid = "") {
@@ -17922,7 +17993,10 @@ async function showTroopSliderModalAsync(source, target) {
   showTroopRouteLoadingModal(source, target, isTransfer);
 
   await waitForSetupLoadingPaint(0);
-  const route = await findRouteAsync(source, target);
+  const [route] = await Promise.all([
+    findRouteAsync(source, target),
+    !isTransfer && !campTarget ? ensureAuthoritativeCityOwnerKingPower(target) : Promise.resolve(0),
+  ]);
   if (requestId !== activeTroopRouteRequestId) return;
 
   const freshSource = cityById(source.id);
@@ -20997,7 +21071,7 @@ function showHelpModal() {
       <li>Regroup costs ${formatNumber(REGROUP_COST)} gold, previews a larger red radius, then sends all troops from nearby owned cities into the selected city.</li>
       <li>The top-right fullscreen button expands the game surface and the game disables page text selection while playing.</li>
       <li>City level creates victory points for combat value, while passive gold follows the Million Lords city production curve.</li>
-      <li>City defense is level x 3%, plus wall strength. Stoneworks increases the wall part of defense.</li>
+      <li>City defense adds ${formatNumber(CITY_LEVEL_STATS.defensePercentPerLevel)}% soldier defense per city level, plus separate wall strength. Stoneworks increases the wall part of defense.</li>
       <li>Troop production is VP x 3, improved by Royal Granaries. Passive gold uses ML city production VP x ${formatNumber(MILLION_LORDS_PASSIVE_GOLD_PER_CITY_VP)}, improved by Tax Stewardship and stronghold bonuses.</li>
       <li>Army travel uses route distance plus troop-size bands. Larger armies march slower, scouts move as one troop, and March Orders reduces travel time.</li>
       <li>Glowing pickups appear near your owned cities on the current island during active play every three minutes, alternating between ten minutes of gold and troop production. Daily pickup limits are ${formatNumber(HARVEST_BONUS_DAILY_GOLD_LIMIT)} gold and ${formatNumber(HARVEST_BONUS_DAILY_TROOP_LIMIT)} troop pickups.</li>

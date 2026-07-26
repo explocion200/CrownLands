@@ -34,6 +34,49 @@ const sandbox = {
 vm.createContext(sandbox);
 vm.runInContext(`${singleMainSource}; this.createSingleMainCityPatches = createSingleMainCityPatches;`, sandbox);
 
+const mainCityProtectionSource = sourceBetween(
+  serverSource,
+  "function isProtectedMainCity",
+  "function getShieldExpiresAtMs"
+);
+const protectionSandbox = {
+  getOwnerUid(city) {
+    return String(city?.ownerUid || "");
+  },
+  safeString(value, max = 80) {
+    return String(value || "").trim().slice(0, max);
+  },
+  getRegionIdFromOnlineIslandId(value) {
+    return String(value || "").replace(/^crownlands-/, "");
+  },
+  normalizeRegionId(value) {
+    return String(value || "").trim().toLowerCase();
+  },
+};
+vm.createContext(protectionSandbox);
+vm.runInContext(`${mainCityProtectionSource}; this.isProtectedMainCity = isProtectedMainCity;`, protectionSandbox);
+const profileProtectedCity = { id: "east_watch", regionId: "east", ownerUid: "defender", isMainCity: false };
+const defenderProfile = { mainCityId: "east_watch", mainRegionId: "east" };
+assert.equal(
+  protectionSandbox.isProtectedMainCity(profileProtectedCity, "attacker", defenderProfile),
+  true,
+  "The profile main-city pointer must protect a city even when its document flag is stale."
+);
+assert.equal(
+  protectionSandbox.isProtectedMainCity(profileProtectedCity, "defender", defenderProfile),
+  false,
+  "A player must still be able to reinforce their own main city."
+);
+assert.equal(
+  protectionSandbox.isProtectedMainCity(
+    { ...profileProtectedCity, regionId: "west" },
+    "attacker",
+    defenderProfile
+  ),
+  false,
+  "A same-named city on another region must not be mistaken for the protected main city."
+);
+
 const westOldMain = {
   ref: { path: "islands/main-west/cities/west_keep" },
   city: { id: "west_keep", regionId: "west", isMainCity: true },
@@ -76,13 +119,16 @@ assert.match(serverSource, /exports\.changeMainCity[\s\S]*?getOwnerUid\(targetEn
 assert.match(serverSource, /exports\.changeMainCity[\s\S]*?mainCityId: targetEntry\.city\.id[\s\S]*?mainIslandId: targetIslandId[\s\S]*?mainRegionId: targetRegionId[\s\S]*?mainCityChangedAtMs: nowMs/, "Server must update every main-city profile pointer and the cooldown timestamp.");
 assert.match(serverSource, /exports\.changeMainCity[\s\S]*?createSingleMainCityPatches\(economy\.cityEntries, targetEntry\.ref\)[\s\S]*?writePreparedEconomy/, "Server switch must atomically repair all owned city flags.");
 assert.match(serverSource, /writeGlobalStatsFromEconomy[\s\S]*?mainCityId: stats\.mainCityId[\s\S]*?mainRegionId: stats\.mainRegionId[\s\S]*?mainIslandId: stats\.mainIslandId/, "Leaderboard/global stats must receive the new main-city location.");
-assert.match(serverSource, /function isProtectedMainCity[\s\S]*?city\.isMainCity/, "Server combat protection must follow the authoritative main-city flag.");
+assert.match(serverSource, /function isProtectedMainCity[\s\S]*?ownerProfile\?\.mainCityId[\s\S]*?city\.isMainCity/, "Server combat protection must use both the owner's authoritative main-city pointer and the city flag.");
+assert.match(serverSource, /const defenderMainCityProfile = getMainCityProtectionProfile\([\s\S]*?defenderPowerData[\s\S]*?defenderGlobalStatsData[\s\S]*?defenderLeaderboardData[\s\S]*?resolvedKind === "attack"[\s\S]*?isProtectedMainCity\(target, uid, defenderMainCityProfile\)[\s\S]*?Main cities cannot be attacked/, "Server launch authority must reject attacks using every authoritative main-city pointer.");
+assert.match(serverSource, /if \(isProtectedMainCity\(target, attackerUid, defenderProfile\)\)[\s\S]*?blocked: "main_city"/, "Server arrival authority must return armies if the destination is the defender's main city.");
 
 assert.match(clientSource, /function changeMainCity[\s\S]*?state\.mainCityId = nextMainCityId[\s\S]*?normalizeSingleMainCityAssignment\(nextMainCityId/, "Client must apply the new main-city ID before normalizing city flags.");
 assert.match(clientSource, /normalizeSingleMainCityAssignment[\s\S]*?const shouldBeMain = Boolean\(mainCityId && city\.id === mainCityId\)/, "Client must demote every loaded city except the selected main city.");
 assert.match(clientSource, /onlineOwnedCitiesCache = onlineOwnedCitiesCache\.map[\s\S]*?city\.id === mainCityId && !isStronghold\(city\)/, "Cross-map owned-city cache must retain exactly one main city.");
 assert.match(clientSource, /const mainCity = !stronghold[\s\S]*?city\.id === state\.mainCityId[\s\S]*?btn\.classList\.add\("main-city-node"\)/, "Map rendering must move the main-city marker to the selected owned city.");
+assert.match(clientSource, /function isProtectedMainCity[\s\S]*?playerIdentityCache\.get\(ownerUid\)[\s\S]*?onlinePresence/, "Client targeting must recognize foreign main cities from canonical identity and presence data.");
 assert.doesNotMatch(stylesSource, /\.city-node\.main-city-node \.city-art[\s\S]*?filter:/, "Main-city castle artwork must keep its normal colors.");
-assert.match(stylesSource, /\.city-node\.main-city-node \.city-owner-column,[\s\S]*?\.city-node\.main-city-node \.city-army-count[\s\S]*?background: #737980;/, "Main-city UI banners must render medium gray.");
+assert.match(stylesSource, /\.city-node\.main-city-node \.city-owner-column,[\s\S]*?\.city-node\.main-city-node \.city-army-count[\s\S]*?background: #B67A2A;/, "Main-city UI banners must render in the home-base bronze.");
 
-console.log("Validated atomic main-city switching, cross-map pointers, one-main-city repair, cooldowns, protection, and gray main-city UI markers.");
+console.log("Validated atomic main-city switching, cross-map pointers, one-main-city repair, cooldowns, protection, and bronze main-city UI markers.");

@@ -1,6 +1,6 @@
 window.CROWNLANDS_ECONOMY_CONFIG = {
   "schemaVersion": 1,
-  "updatedAt": "2026-07-25T19:52:40.388Z",
+  "updatedAt": "2026-07-26T01:45:14.566Z",
   "shopItems": {
     "shield_12h": {
       "cost": 1250000,
@@ -52,6 +52,10 @@ window.CROWNLANDS_ECONOMY_CONFIG = {
     "goldEndgameStartLevel": 100,
     "goldEndgameGrowth": 1.08,
     "troopsPerVictoryPoint": 10,
+    "defensePercentPerLevel": 2,
+    "wallDefenseBase": 200,
+    "wallDefenseExponent": 3,
+    "wallDefenseScale": 3,
     "upgradeEarlyEndLevel": 50,
     "upgradeMidEndLevel": 100,
     "upgradeEarlyStartHours": 0.1,

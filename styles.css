@@ -2477,32 +2477,32 @@ input {
   clip-path: polygon(0 0, 100% 0, 100% 82%, 50% 100%, 0 82%);
 }
 .city-node.enemy {
-  --enemy-city-ui: #dc2f3b;
-  --enemy-city-ui-dark: #761820;
-  --enemy-city-ui-border: #ff7179;
-  --enemy-city-name-bg: rgba(112, 18, 25, .86);
-  --enemy-city-name-border: rgba(255, 113, 121, .62);
+  --enemy-city-ui: #e12635;
+  --enemy-city-ui-dark: #7b1520;
+  --enemy-city-ui-border: #ff727c;
+  --enemy-city-name-bg: rgba(120, 16, 25, .88);
+  --enemy-city-name-border: rgba(255, 114, 124, .66);
 }
 .city-node.enemy.enemy-power-protected {
-  --enemy-city-ui: #df7373;
-  --enemy-city-ui-dark: #913638;
-  --enemy-city-ui-border: #ffc2c2;
-  --enemy-city-name-bg: rgba(126, 42, 44, .88);
-  --enemy-city-name-border: rgba(255, 199, 199, .74);
+  --enemy-city-ui: #ed8b8b;
+  --enemy-city-ui-dark: #a64e50;
+  --enemy-city-ui-border: #ffd0d0;
+  --enemy-city-name-bg: rgba(151, 65, 67, .9);
+  --enemy-city-name-border: rgba(255, 208, 208, .8);
 }
 .city-node.enemy.enemy-power-in-range {
-  --enemy-city-ui: #dc2f3b;
-  --enemy-city-ui-dark: #761820;
-  --enemy-city-ui-border: #ff7179;
-  --enemy-city-name-bg: rgba(112, 18, 25, .86);
-  --enemy-city-name-border: rgba(255, 113, 121, .62);
+  --enemy-city-ui: #e12635;
+  --enemy-city-ui-dark: #7b1520;
+  --enemy-city-ui-border: #ff727c;
+  --enemy-city-name-bg: rgba(120, 16, 25, .88);
+  --enemy-city-name-border: rgba(255, 114, 124, .66);
 }
 .city-node.enemy.enemy-power-overpowering {
-  --enemy-city-ui: #64151d;
-  --enemy-city-ui-dark: #350a0f;
-  --enemy-city-ui-border: #a83b46;
-  --enemy-city-name-bg: rgba(45, 7, 12, .92);
-  --enemy-city-name-border: rgba(168, 59, 70, .7);
+  --enemy-city-ui: #59121a;
+  --enemy-city-ui-dark: #2b070b;
+  --enemy-city-ui-border: #9c3540;
+  --enemy-city-name-bg: rgba(38, 5, 9, .94);
+  --enemy-city-name-border: rgba(156, 53, 64, .74);
 }
 .city-node.enemy .foreign-city-shield { background: var(--enemy-city-ui); }
 .city-node.player2 .foreign-city-shield { background: #6946a9; }
@@ -2596,15 +2596,15 @@ input {
 .city-node.main-city-node .foreign-city-shield,
 .city-node.main-city-node .foreign-selected-level,
 .city-node.main-city-node .foreign-selected-data {
-  background: #737980;
+  background: #B67A2A;
 }
 .city-node.main-city-node .foreign-selected-crest {
-  background: #555b62;
-  border-color: #a8adb3;
+  background: #744715;
+  border-color: #e0ac5f;
 }
 .city-node.main-city-node .foreign-ruler-name-inline {
-  background: rgba(79, 84, 90, .88);
-  border-color: rgba(203, 207, 211, .72);
+  background: rgba(116, 71, 21, .9);
+  border-color: rgba(224, 172, 95, .78);
 }
 
 .city-label.label-slot-top { --label-tether: 0px; left: 50%; right: auto; top: auto; bottom: 58px; transform: translateX(-50%); }

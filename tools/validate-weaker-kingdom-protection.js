@@ -5,6 +5,7 @@ const vm = require("vm");
 const root = path.resolve(__dirname, "..");
 const source = fs.readFileSync(path.join(root, "functions", "index.js"), "utf8");
 const clientSource = fs.readFileSync(path.join(root, "game.js"), "utf8");
+const stylesSource = fs.readFileSync(path.join(root, "styles.css"), "utf8");
 
 function readFunction(name) {
   const start = source.indexOf(`function ${name}(`);
@@ -89,29 +90,29 @@ vm.runInContext([
   readFunction("createServerDemoAttackSnapshot"),
 ].join("\n\n"), sandbox);
 
-if (sandbox.GLOBAL_PLAYER_STATS_VERSION !== 6) {
-  throw new Error(`Protection is not using King Power v6 (found v${sandbox.GLOBAL_PLAYER_STATS_VERSION}).`);
+if (sandbox.GLOBAL_PLAYER_STATS_VERSION !== 8) {
+  throw new Error(`Protection is not using King Power v8 (found v${sandbox.GLOBAL_PLAYER_STATS_VERSION}).`);
 }
 if (sandbox.DEMO_ATTACK_MIN_POWER_RATIO !== 3) {
   throw new Error(`Unexpected protection threshold ${sandbox.DEMO_ATTACK_MIN_POWER_RATIO}.`);
 }
 
 const validGlobalPower = sandbox.getPlayerPowerSnapshot({
-  profile: { kingPowerVersion: 5, kingPower: 4_000_000, kingPowerUpdatedAtMs: 5000 },
-  globalStats: { version: 6, kingPower: 900_000, updatedAtMs: 4000 },
+  profile: { kingPowerVersion: 6, kingPower: 4_000_000, kingPowerUpdatedAtMs: 5000 },
+  globalStats: { version: 8, kingPower: 900_000, updatedAtMs: 4000 },
   city: { powerFloor: 300_000 },
 });
 if (validGlobalPower !== 900_000) {
-  throw new Error("A newer mirrored profile snapshot overrides canonical v5 global stats.");
+  throw new Error("A newer legacy profile snapshot overrides canonical v8 global stats.");
 }
 
 const cityFloorPower = sandbox.getPlayerPowerSnapshot({
-  profile: { kingPowerVersion: 5, kingPower: 0, kingPowerUpdatedAtMs: 5000 },
-  leaderboard: { kingPowerVersion: 5, kingPower: 0, updatedAtMs: 5000 },
+  profile: { kingPowerVersion: 8, kingPower: 0, kingPowerUpdatedAtMs: 5000 },
+  leaderboard: { kingPowerVersion: 8, kingPower: 0, updatedAtMs: 5000 },
   city: { powerFloor: 450_000 },
 });
 if (cityFloorPower !== 450_000) {
-  throw new Error("Missing v5 snapshots do not fall back to the target city's military floor.");
+  throw new Error("Missing v8 snapshots do not fall back to the target city's military floor.");
 }
 
 const target = { ownerUid: "weak-player", cityWalls: 20_000 };
@@ -213,13 +214,21 @@ vm.runInContext([
 
 const enemyCity = { owner: "enemy" };
 if (clientSandbox.getEnemyCityPowerBand(enemyCity, 900_000, 100_000) !== "protected") {
-  throw new Error("A protected weaker enemy city is not assigned the pink power band.");
+  throw new Error("A protected weaker enemy city is not assigned the light-red power band.");
 }
 if (clientSandbox.getEnemyCityPowerBand(enemyCity, 100_000, 900_000) !== "overpowering") {
   throw new Error("A much stronger enemy city is not assigned the dark-red power band.");
 }
-if (clientSandbox.getEnemyCityPowerBand(enemyCity, 11_000_000, 12_000_000) !== "in-range") {
-  throw new Error("A close King Power match is not assigned the bright-red power band.");
+if (clientSandbox.getEnemyCityPowerBand(enemyCity, 11_000_000, 12_000_000) !== "overpowering") {
+  throw new Error("Any enemy stronger than the current player must use the dark-red power band.");
+}
+if (clientSandbox.getEnemyCityPowerBand(enemyCity, 12_000_000, 11_000_000) !== "in-range") {
+  throw new Error("An attackable weaker player inside the protection threshold must use bright red.");
+}
+for (const defenderPower of [300_000, 180_000, 80_000]) {
+  if (clientSandbox.getEnemyCityPowerBand(enemyCity, 1_000_000, defenderPower) !== "protected") {
+    throw new Error("Every protected weaker player must use the same light-red power band.");
+  }
 }
 if (clientSandbox.getEnemyCityPowerBand(enemyCity, 500_000, 0) !== "in-range") {
   throw new Error("An enemy with pending power data should retain the normal attackable color.");
@@ -237,6 +246,18 @@ if (clientSandbox.getTroopSliderSendLimit({ troops: 100_000 }, {}) !== 100_000) 
 if (!clientSource.includes('slider.max = String(sliderSendLimit)')
   || !clientSource.includes('selectedTroopAmount = clamp(selectedTroopAmount, 1, getTroopSliderSendLimit(source, target))')) {
   throw new Error("The visible slider and final confirmation do not reapply the legal troop limit.");
+}
+if (!clientSource.includes("ensureAuthoritativeCityOwnerKingPower(target)")
+  || !clientSource.includes("launchAttack(source.id, target.id, 1, \"player\", selectedTroopAmount")) {
+  throw new Error("Attack preparation does not load authoritative power and launch the exact capped slider amount.");
+}
+if (!source.includes("const troops = resolvedKind === \"scout\" ? 1 : (demoAttack?.effectiveTroops || requestedTroops)")) {
+  throw new Error("Server launch does not use the protected attack's capped troop count.");
+}
+if (!/\.city-node\.enemy\.enemy-power-protected\s*\{[\s\S]*?--enemy-city-ui:\s*#ed8b8b;/.test(stylesSource)
+  || !/\.city-node\.enemy\.enemy-power-in-range\s*\{[\s\S]*?--enemy-city-ui:\s*#e12635;/.test(stylesSource)
+  || !/\.city-node\.enemy\.enemy-power-overpowering\s*\{[\s\S]*?--enemy-city-ui:\s*#59121a;/.test(stylesSource)) {
+  throw new Error("Enemy power bands are not using the fixed light, bright, and dark red palette.");
 }
 
 if (!source.includes("const attackerStatsBeforeLaunch = createPreparedEconomyStatsSnapshot(attackerEconomy")) {
@@ -257,4 +278,4 @@ if (!clientSource.includes("authoritative: existingIsAuthoritative || force")
   throw new Error("Map city records can still overwrite or postpone canonical identity refreshes.");
 }
 
-console.log("Validated weaker-kingdom protection with King Power v6, directional limits, and objective exemptions.");
+console.log("Validated weaker-kingdom protection with King Power v8, directional limits, and objective exemptions.");

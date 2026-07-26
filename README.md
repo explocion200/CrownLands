@@ -18,7 +18,7 @@ Landscape / horizontal medieval island-conquest prototype inspired by the core l
 - A small floating home indicator appears when the main city is off-screen and recenters the map on click.
 - Troop production uses `VP x 3`, plus Recruiter skill bonus.
 - Gold production uses `VP x 8`, plus Prosperous skill bonus.
-- City defense uses `city level x 3%`, city walls, troop count, and Guardian skill.
+- City defense gives stationed soldiers `city level x 2%`, then adds city walls; Stoneworks strengthens the wall portion.
 - Neutral captures are limited to 30 per local day.
 - Neutral captures are also blocked once the player owns 30 cities; after that, expansion must come from player-owned cities.
 - Captured cities enter a 1-hour XP cooldown. Attacking still works, but capture XP is reduced during cooldown.

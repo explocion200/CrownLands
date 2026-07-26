@@ -152,7 +152,7 @@ const GAME_SERVER_CAPACITY = 50;
 const GAME_SERVER_ACTIVE_STALE_MS = 3 * 60 * 1000;
 const GAME_SERVER_WAITING_STALE_MS = 5 * 60 * 1000;
 const GAME_SERVER_MAX_WAITING = 500;
-const GLOBAL_PLAYER_STATS_VERSION = 6;
+const GLOBAL_PLAYER_STATS_VERSION = 8;
 const PLAYER_IDENTITY_SYNC_VERSION = 1;
 const MAIN_CITY_ASSIGNMENT_VERSION = 2;
 const ECONOMY_CITY_CHECKPOINT_MS = 5 * 60 * 1000;
@@ -283,9 +283,10 @@ const CITY_LEVEL_STATS = {
   victoryPointsPerLevel: 4,
   victoryPointsExponent: 1.35,
   victoryPointsExponentScale: 2,
-  defensePercentPerLevel: 3,
-  cityWallsBase: 30,
-  cityWallsPerLevel: 32,
+  defensePercentPerLevel: economyNumber("cityEconomy.defensePercentPerLevel", 2),
+  cityWallsBase: economyNumber("cityEconomy.wallDefenseBase", 200),
+  cityWallsExponent: economyNumber("cityEconomy.wallDefenseExponent", 3),
+  cityWallsExponentScale: economyNumber("cityEconomy.wallDefenseScale", 3),
   troopProductionPerVictoryPoint: economyNumber("cityEconomy.troopsPerVictoryPoint", 3),
 };
 const SKILL_CONFIG = {
@@ -1286,17 +1287,26 @@ function getCityProductionStats(city = {}, profile = {}, bonuses = {}, options =
   };
 }
 
+function getBaseCityWalls(level) {
+  const normalizedLevel = clampCityLevel(level);
+  const growth = (
+    Math.pow(normalizedLevel, CITY_LEVEL_STATS.cityWallsExponent) - 1
+  ) * CITY_LEVEL_STATS.cityWallsExponentScale;
+  const walls = CITY_LEVEL_STATS.cityWallsBase + Math.max(0, growth);
+  if (!Number.isFinite(walls)) return Number.MAX_SAFE_INTEGER;
+  return Math.min(Number.MAX_SAFE_INTEGER, Math.max(0, Math.floor(walls)));
+}
+
 function getCityStats(city = {}, defenderProfile = null, bonuses = {}) {
   const stronghold = isStronghold(city);
   const level = stronghold ? getStrongholdDefenseLevel(city) : clampCityLevel(city.level);
-  const step = level - 1;
   const victoryPoints = Math.floor(
     CITY_LEVEL_STATS.victoryPointsBase
       + level * CITY_LEVEL_STATS.victoryPointsPerLevel
       + Math.pow(level, CITY_LEVEL_STATS.victoryPointsExponent) * CITY_LEVEL_STATS.victoryPointsExponentScale
   );
   const defensePercent = level * CITY_LEVEL_STATS.defensePercentPerLevel;
-  const baseCityWalls = CITY_LEVEL_STATS.cityWallsBase + step * CITY_LEVEL_STATS.cityWallsPerLevel;
+  const baseCityWalls = getBaseCityWalls(level);
   const stoneworksPercent = defenderProfile ? getSkillPercent(defenderProfile, "stoneworks") : 0;
   const cityWalls = Math.floor(baseCityWalls * (1 + stoneworksPercent / 100));
   const troopDefense = Math.floor((Math.max(0, Math.floor(safeNumber(city.troops, 0)))) * (1 + defensePercent / 100));
@@ -1636,15 +1646,12 @@ function getLegacyGlobalStatsKingPower(stats = {}) {
   const totalLevels = Math.max(totalCities, Math.floor(safeNumber(stats.totalCityLevels, totalCities)));
   const stationedTroops = Math.max(0, Math.floor(safeNumber(stats.totalTroops, 0)));
   const totalTroops = stationedTroops + Math.max(0, Math.floor(safeNumber(stats.totalMarchingTroops, 0)));
-  const baseWalls = totalCities > 0
-    ? CITY_LEVEL_STATS.cityWallsBase * totalCities
-      + CITY_LEVEL_STATS.cityWallsPerLevel * Math.max(0, totalLevels - totalCities)
-    : 0;
+  const averageLevel = totalCities > 0 ? totalLevels / totalCities : 0;
+  const baseWalls = totalCities > 0 ? getBaseCityWalls(averageLevel) * totalCities : 0;
   const sustainableTroopPerHour = Math.max(0, Math.floor(
     safeNumber(stats.totalVictoryPoints, 0) * CITY_LEVEL_STATS.troopProductionPerVictoryPoint
   ));
   const replacementPower = Math.floor(sustainableTroopPerHour * KING_POWER_REPLACEMENT_HOURS);
-  const averageLevel = totalCities > 0 ? totalLevels / totalCities : 0;
   const defensiveAdvantage = baseWalls + stationedTroops
     * averageLevel * CITY_LEVEL_STATS.defensePercentPerLevel / 100;
   const defensivePower = Math.floor(
@@ -2601,8 +2608,38 @@ function getCanonicalPlayerIdentity(uid = "", profile = {}, data = {}, authToken
   };
 }
 
-function isProtectedMainCity(city = {}, attackerUid = "") {
-  return Boolean(city.isMainCity && getOwnerUid(city) && getOwnerUid(city) !== attackerUid);
+function isProtectedMainCity(city = {}, attackerUid = "", ownerProfile = null) {
+  const ownerUid = getOwnerUid(city);
+  if (!ownerUid || ownerUid === attackerUid) return false;
+  const cityId = safeString(city.id, 96);
+  const profileMainCityId = safeString(ownerProfile?.mainCityId, 96);
+  const profileMatchesCity = Boolean(cityId && profileMainCityId && cityId === profileMainCityId);
+  if (!profileMatchesCity) return Boolean(city.isMainCity);
+
+  const cityRegionId = safeString(city.regionId || city.startPool, 160);
+  const profileRegionId = safeString(
+    ownerProfile?.mainRegionId || getRegionIdFromOnlineIslandId(ownerProfile?.mainIslandId),
+    160
+  );
+  return !cityRegionId
+    || !profileRegionId
+    || normalizeRegionId(cityRegionId) === normalizeRegionId(profileRegionId);
+}
+
+function getMainCityProtectionProfile(...sources) {
+  const candidates = sources.filter(source => source && typeof source === "object");
+  const pointerSource = candidates.find(source => safeString(source.mainCityId, 96));
+  if (!pointerSource) return null;
+  const mainCityId = safeString(pointerSource.mainCityId, 96);
+  const locationSource = candidates.find(source => (
+    safeString(source.mainCityId, 96) === mainCityId
+    && (safeString(source.mainRegionId, 160) || safeString(source.mainIslandId, 160))
+  )) || pointerSource;
+  return {
+    mainCityId,
+    mainRegionId: safeString(locationSource.mainRegionId, 160),
+    mainIslandId: safeString(locationSource.mainIslandId, 160),
+  };
 }
 
 function getShieldExpiresAtMs(city = {}) {
@@ -5869,6 +5906,11 @@ exports.sendArmyOrder = onCall({ region: "us-central1", maxInstances: 20, invoke
     const defenderPowerData = defenderPowerSnap?.exists ? defenderPowerSnap.data() || {} : {};
     const defenderLeaderboardData = defenderLeaderboardSnap?.exists ? defenderLeaderboardSnap.data() || {} : {};
     const defenderGlobalStatsData = defenderGlobalStatsSnap?.exists ? defenderGlobalStatsSnap.data() || {} : {};
+    const defenderMainCityProfile = getMainCityProtectionProfile(
+      defenderPowerData,
+      defenderGlobalStatsData,
+      defenderLeaderboardData
+    );
 
     const sourceTroops = Math.max(0, Math.floor(safeNumber(source.troops, 0)));
     const resolvedKind = order.kind === "scout"
@@ -5917,14 +5959,14 @@ exports.sendArmyOrder = onCall({ region: "us-central1", maxInstances: 20, invoke
     const troops = resolvedKind === "scout" ? 1 : (demoAttack?.effectiveTroops || requestedTroops);
 
     if (sourceTroops < troops) throw new HttpsError("failed-precondition", "Not enough troops in the source city.");
-    if (order.targetType !== "camp" && resolvedKind === "scout" && isProtectedMainCity(target, uid)) {
+    if (order.targetType !== "camp" && resolvedKind === "scout" && isProtectedMainCity(target, uid, defenderMainCityProfile)) {
       throw new HttpsError("failed-precondition", "Main cities cannot be scouted.");
     }
     if (order.targetType !== "camp" && resolvedKind === "scout" && targetOwnerUid && targetOwnerUid !== uid && isVeilOfSilenceActive(defenderPowerData, nowMs)) {
       throw new HttpsError("failed-precondition", "That city is hidden by Veil of Silence.");
     }
     if (resolvedKind === "attack" && order.targetType !== "camp") {
-      if (isProtectedMainCity(target, uid)) {
+      if (isProtectedMainCity(target, uid, defenderMainCityProfile)) {
         throw new HttpsError("failed-precondition", "Main cities cannot be attacked.");
       }
       if (isCityShielded(target, uid, nowMs)) {
@@ -6591,7 +6633,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
     }
 
     if (army.kind === "scout") {
-      if (isProtectedMainCity(target, attackerUid)) {
+      if (isProtectedMainCity(target, attackerUid, defenderProfile)) {
         const returned = returnTroopsToSource(troopCount);
         writeParticipantEconomies({}, {}, { statsCityPatches: getLatestSourceReturnStatsPatches() });
         const report = makeReport({
@@ -6807,7 +6849,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
       };
     }
 
-    if (isProtectedMainCity(target, attackerUid)) {
+    if (isProtectedMainCity(target, attackerUid, defenderProfile)) {
       if (army.relinquishTransfer) {
         const destinationEntry = getOwnedMainCityDestination(attackerEconomy, attackerProfile);
         if (!destinationEntry?.city) {

@@ -5,6 +5,7 @@ const vm = require("node:vm");
 
 const root = path.resolve(__dirname, "..");
 const clientSource = fs.readFileSync(path.join(root, "game.js"), "utf8");
+const firebaseClientSource = fs.readFileSync(path.join(root, "firebaseClient.js"), "utf8");
 const serverSource = fs.readFileSync(path.join(root, "functions", "index.js"), "utf8");
 
 function requireMatch(source, pattern, message) {
@@ -14,7 +15,19 @@ function requireMatch(source, pattern, message) {
 function extractFunction(source, name) {
   const start = source.indexOf(`function ${name}(`);
   assert.ok(start >= 0, `Missing ${name}.`);
-  const bodyStart = source.indexOf("{", start);
+  const parametersStart = source.indexOf("(", start);
+  let parameterDepth = 0;
+  let parametersEnd = -1;
+  for (let index = parametersStart; index < source.length; index += 1) {
+    if (source[index] === "(") parameterDepth += 1;
+    if (source[index] === ")") parameterDepth -= 1;
+    if (parameterDepth === 0) {
+      parametersEnd = index;
+      break;
+    }
+  }
+  assert.ok(parametersEnd >= 0, `Could not parse ${name} parameters.`);
+  const bodyStart = source.indexOf("{", parametersEnd);
   let depth = 0;
   for (let index = bodyStart; index < source.length; index += 1) {
     if (source[index] === "{") depth += 1;
@@ -110,5 +123,38 @@ vm.runInContext(
 assert.equal(formatterContext.formatBaseAndBonusStat(1_000, 1_250), "1.0K (+250)");
 assert.equal(formatterContext.formatBaseAndBonusStat(900, 900, "/h"), "900/h (+0/h)");
 assert.equal(formatterContext.formatBaseAndBonusStat(30, 38, "%"), "30% (+8%)");
+
+const globalStatsContext = {
+  client: { user: { uid: "player-1" } },
+};
+vm.createContext(globalStatsContext);
+vm.runInContext(
+  `${extractFunction(firebaseClientSource, "timestampToMs")}\n${extractFunction(firebaseClientSource, "cleanGlobalStats")}`,
+  globalStatsContext,
+  { filename: path.join(root, "firebaseClient.js") }
+);
+const cleanedStats = globalStatsContext.cleanGlobalStats({
+  uid: "player-1",
+  kingPower: 1_450,
+  baseKingPower: 1_000,
+  kingPowerBonus: 450,
+  goldPerHour: 1_500,
+  baseGoldPerHour: 1_000,
+  untimedGoldPerHour: 1_250,
+  troopPerHour: 3_000,
+  baseTroopPerHour: 2_000,
+  untimedTroopPerHour: 2_500,
+  replacementPower: 600,
+  baseReplacementPower: 400,
+  defensivePower: 500,
+  baseDefensivePower: 450,
+});
+assert.equal(cleanedStats.baseGoldPerHour, 1_000, "Firebase live stats dropped base gold production.");
+assert.equal(cleanedStats.untimedGoldPerHour, 1_250, "Firebase live stats dropped permanent gold bonuses.");
+assert.equal(cleanedStats.baseTroopPerHour, 2_000, "Firebase live stats dropped base troop production.");
+assert.equal(cleanedStats.untimedTroopPerHour, 2_500, "Firebase live stats dropped permanent troop bonuses.");
+assert.equal(cleanedStats.baseKingPower, 1_000, "Firebase live stats dropped base King Power.");
+assert.equal(cleanedStats.baseReplacementPower, 400, "Firebase live stats dropped base replacement power.");
+assert.equal(cleanedStats.baseDefensivePower, 450, "Firebase live stats dropped base defensive power.");
 
 console.log("Validated base-plus-bonus stats across profile, city, Stronghold, camp, and report data.");
