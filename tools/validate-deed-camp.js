@@ -57,7 +57,7 @@ if (/neutralCaptures/.test(payoutSource)) throw new Error("Deed Camp payout must
 if (/buildPlayerProgressPatch|xpAwarded:\s*[1-9]/.test(payoutSource)) throw new Error("Deed Camp payout must not award battle XP.");
 
 requireMatch(firebaseClientSource, /loadRewardCampHistory\(\{[\s\S]*?limitCount\s*=\s*25[\s\S]*?orderBy\("awardedAtMs",\s*"desc"\)/, "Client history query is not ordered and bounded.");
-requireMatch(rulesSource, /match \/rewardHistory\/\{entryId\}[\s\S]*?allow read: if signedIn\(\);[\s\S]*?allow create, update, delete: if false;/, "Deed Camp history is not publicly readable and server-owned.");
+requireMatch(rulesSource, /match \/rewardHistory\/\{entryId\}[\s\S]*?allow read: if signedIn\(\)(?:\s*&&\s*isCurrentIslandId\(islandId\))?;[\s\S]*?allow create, update, delete: if false;/, "Deed Camp history is not publicly readable and server-owned.");
 requireMatch(clientSource, /Reward History/, "Deed Camp UI is missing its public Reward History tab.");
 requireMatch(clientSource, /data-deed-history-jump[\s\S]*?focusBattleReportTarget/, "Deed Camp history does not provide cross-map city navigation.");
 requireMatch(clientSource, /function getDeedCampHistoryCityName[\s\S]*?getCanonicalCityName[\s\S]*?const cityName = getDeedCampHistoryCityName\(entry\)/, "Existing Deed Camp history entries do not resolve canonical city names.");

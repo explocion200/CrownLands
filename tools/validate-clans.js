@@ -53,19 +53,33 @@ requires(callableAccessCheck, /payload\?\.error\?\.status[\s\S]*?"UNAUTHENTICATE
 requires(server, /safeString\(attackerProfile\.clanId,\s*128\)[\s\S]*?safeString\(defenderPowerData\.clanId,\s*128\)[\s\S]*?cannot scout or attack a clan ally/i, "Army launch does not reject clan allies.");
 requires(server, /const becameClanAllies[\s\S]*?outcome:\s*"allied_return"/, "Active armies do not return when their target becomes allied.");
 requires(server, /rebuildClanPowerOnPlayerStats\s*=\s*onDocumentWritten/, "Clan King Power is not updated from authoritative player stats.");
+requires(server, /function clanIdentitySnapshotFields[\s\S]*?ownerClanIdentityRevision/, "Clan asset snapshots do not store a monotonic clan identity revision.");
+requires(server, /syncClanIdentityOnMembershipChange\s*=\s*onDocumentWritten[\s\S]*?latestProfile\.clanIdentityRevision/, "Clan membership changes do not trigger durable identity propagation.");
+requires(server, /clanIdentityRevisionPatch\(nowMs\)/, "Clan membership transactions do not advance the clan identity revision.");
 requires(server, /cleanupClanMessages\s*=\s*onSchedule[\s\S]*?index >= 500[\s\S]*?expiresAtMs/, "Clan chat retention is not capped at 500 messages and 30 days.");
 requires(server, /function normalizeClanShield[\s\S]*?CLAN_SHIELD_SHAPES[\s\S]*?CLAN_SHIELD_DIVISIONS[\s\S]*?CLAN_SHIELD_CHARGES/, "Clan shield schema is not validated server-side.");
 requires(server, /exports\.updateClanProfile[\s\S]*?assertClanRole\(memberSnap\.data\(\), \["leader"\]\)[\s\S]*?const shield = normalizeClanShield/, "Clan shield edits are not leader-only.");
 requires(server, /writeClanLeaderboard[\s\S]*?shield,[\s\S]*?banner:\s*clanShieldLegacyBanner/, "Clan leaderboard snapshots do not include heraldic shields.");
 
 requires(rules, /match \/clans\/\{clanId\}[\s\S]*?allow create, update, delete: if false;/, "Clan writes must be server-owned.");
-requires(rules, /match \/messages\/\{messageId\}[\s\S]*?allow read: if clanMember\(clanId\);[\s\S]*?allow create, update, delete: if false;/, "Clan chat rules are not membership-gated and server-owned.");
+requires(rules, /match \/clans\/\{clanId\}[\s\S]*?allow read: if signedIn\(\)(?:\s*&&\s*isCurrentGeneration\(resource\.data\))?;/, "Signed-in nonmembers cannot view public clan identities and shields.");
+requires(rules, /match \/messages\/\{messageId\}[\s\S]*?allow read: if clanMember\(clanId\)(?:\s*&&\s*isCurrentGeneration\(resource\.data\))?;[\s\S]*?allow create, update, delete: if false;/, "Clan chat rules are not membership-gated and server-owned.");
 requires(rules, /profileFieldUnchanged\('clanId'\)/, "Players can mutate canonical clan membership directly.");
+requires(rules, /profileFieldUnchanged\('clanIdentityRevision'\)/, "Players can mutate the server-owned clan identity revision.");
 
 requires(firebaseClient, /createClan[\s\S]*?joinOpenClan[\s\S]*?reviewClanApplication[\s\S]*?sendClanMessage/, "Firebase client does not expose the clan callables.");
 requires(firebaseClient, /subscribeClanMessages/, "Firebase client is missing realtime clan chat.");
+requires(firebaseClient, /dispatch\("player-clan"[\s\S]*?function subscribeClanState[\s\S]*?snapshot\.docChanges\(\)/, "Firebase client is missing event-driven player and roster clan updates.");
 requires(html, /id="clanTabBtn"[\s\S]*?id="clanView"/, "Profile UI is missing its Clan tab.");
+requires(html, /id="leaderboardBtn"[\s\S]*?id="clanHudBtn"/, "The Clan HUD button is not beside the leaderboard.");
+requires(html, /id="profileKingdomFlag"[\s\S]*?id="profileClanAffiliation"/, "Player profiles do not keep clan shields separate from kingdom flags.");
 requires(client, /function isClanAllyCity[\s\S]*?function getClanFriendlyBlockReason/, "Client is missing clan-allied city detection.");
+requires(client, /clanRosterReady[\s\S]*?clanMemberUidSet\.has/, "Allied-city rendering does not use the event-maintained clan member UID set.");
+requires(client, /function applyClanMembersSnapshot[\s\S]*?\["added", "removed"\][\s\S]*?refreshClanRelationshipPresentation/, "Roster events do not refresh allied cities only when membership changes.");
+requires(client, /function showClanHub[\s\S]*?showProfileClan\(\)/, "The Clan HUD button does not open the Clan area directly.");
+requires(client, /function renderProfileClanAffiliation[\s\S]*?renderClanShield/, "Player profiles do not render a separate clan shield affiliation.");
+requires(client, /clanSearchResults\.map\(clan =>[\s\S]*?renderClanShield\(clan\.shield \|\| clan\.banner/, "Clan discovery results do not show each clan's public shield.");
+requires(client, /function showPublicPlayerProfile[\s\S]*?api\.loadClan\(profile\.clanId\)[\s\S]*?profile\.clanShield[\s\S]*?renderPublicPlayerProfile\(profile\)/, "Public player profiles do not load and display clan shields for nonmember viewers.");
 requires(client, /btn\.classList\.add\("clan-ally"\)/, "Allied cities do not receive their map class.");
 requires(client, /You cannot scout or attack a clan ally/, "Clan-friendly action explanation is missing.");
 requires(client, /function renderClanShield[\s\S]*?renderClanShieldField[\s\S]*?renderClanShieldCharges/, "Client is missing the vector clan shield renderer.");
@@ -74,7 +88,10 @@ requires(client, /function saveClanShieldEditor[\s\S]*?updateClanProfile\(\{\s*s
 requires(client, /data-clan-action="shield-tab"[\s\S]*?data-shield-panel="field"[\s\S]*?data-shield-panel="colors"[\s\S]*?data-shield-panel="charges"[\s\S]*?data-shield-panel="details"/, "Mobile clan shield editor tabs are incomplete.");
 requires(client, /CLAN_SHIELD_SHAPES[\s\S]*?CLAN_SHIELD_DIVISIONS[\s\S]*?CLAN_SHIELD_CHARGES[\s\S]*?CLAN_SHIELD_FINISHES/, "Clan shield editor options are incomplete.");
 requires(styles, /\.city-node\.clan-ally \.city-ring[\s\S]*?\.clan-ally-label/, "Green accessible allied-city styling is missing.");
+requires(client, /const clanAllyStatus = clanAlly[\s\S]*?<span class="clan-ally-label">Clan Ally<\/span>[\s\S]*?const rivalOwnerRow[\s\S]*?city-ruler-row[\s\S]*?crownBadge[\s\S]*?\$\{clanAllyStatus\}[\s\S]*?<strong class="city-name">/, "City labels do not show ruler, optional Clan Ally status, Citadel crown, and city name in the required order.");
+assert.doesNotMatch(client, /foreign-ruler-name foreign-ruler-name-inline"\)\}\$\{clanIdentity\.clanTag/, "Floating city labels must not insert clan tags between the ruler name and Clan Ally status.");
+requires(styles, /\.clan-hud-btn[\s\S]*?\.profile-clan-affiliation/, "Clan HUD and profile shield styling is missing.");
 requires(styles, /\.clan-shield-size-editor[\s\S]*?\.clan-shield-editor-controls[\s\S]*?\.clan-shield-swatch-grid/, "Clan shield editor styling is missing.");
 requires(styles, /\.clan-content\.shield-editor-open[\s\S]*?\.clan-shield-editor-preview[\s\S]*?\.clan-shield-editor-workspace[\s\S]*?\.clan-shield-editor-controls[\s\S]*?overflow-y:\s*auto/, "Mobile shield editor does not keep a fixed preview beside scrollable controls.");
 
-console.log("Validated clan gates, callable deployment access, server ownership, lifecycle APIs, friendly combat, chat, rankings, allied-city UI, and leader-owned heraldic shields.");
+console.log("Validated clan gates, event-driven roster updates, revisioned identity propagation, HUD access, profiles, friendly combat, chat, rankings, allied-city UI, and leader-owned heraldic shields.");
