@@ -1,15 +1,15 @@
-const CACHE_VERSION = "20260725-runtime-bottlenecks";
+const CACHE_VERSION = "20260725-demo-slider-cap";
 const CACHE_NAME = `crownlands-cache-${CACHE_VERSION}`;
 const STATIC_CACHE_URLS = [
   "/",
   "/index.html",
   "/manifest.webmanifest",
-  "/styles.css?v=20260725-runtime-bottlenecks",
+  "/styles.css?v=20260725-demo-slider-cap",
   "/world-config.js",
   "/economy-config.js?v=20260723-game-economy-editor",
   "/firebase-config.js?v=20260703-vapid-key",
   "/firebaseClient.js?v=20260723-utc-responsive-v1",
-  "/game.js?v=20260725-runtime-bottlenecks",
+  "/game.js?v=20260725-demo-slider-cap",
   "/route-worker.js?v=20260721-structure-route-clearance",
   "/assets/map-editor-data.js?v=20260723-utc-responsive-v1",
   "/assets/game-menu-background.jpg?v=20260702-login-page",

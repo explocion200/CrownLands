@@ -2354,9 +2354,6 @@ input {
 .city-castle.stage-4,
 .city-castle.stage-5 { background-image: none; }
 .city-art { display: block; width: 100%; height: 100%; object-fit: contain; }
-.city-node.main-city-node .city-art {
-  filter: grayscale(1) brightness(.2) contrast(1.65) drop-shadow(0 0 1px rgba(255, 224, 143, .92));
-}
 .city-level { display: none; }
 .city-label {
   --label-tether: 0px;
@@ -2593,6 +2590,22 @@ input {
 .city-node.enemy .owner-flag { color: white; background: var(--red); }
 .city-node.neutral .owner-flag { color: #1e1914; background: var(--neutral); }
 .city-name { display: block; color: #fff6d3; font-size: .66rem; line-height: 1.1; white-space: nowrap; }
+
+.city-node.main-city-node .city-owner-column,
+.city-node.main-city-node .city-army-count,
+.city-node.main-city-node .foreign-city-shield,
+.city-node.main-city-node .foreign-selected-level,
+.city-node.main-city-node .foreign-selected-data {
+  background: #737980;
+}
+.city-node.main-city-node .foreign-selected-crest {
+  background: #555b62;
+  border-color: #a8adb3;
+}
+.city-node.main-city-node .foreign-ruler-name-inline {
+  background: rgba(79, 84, 90, .88);
+  border-color: rgba(203, 207, 211, .72);
+}
 
 .city-label.label-slot-top { --label-tether: 0px; left: 50%; right: auto; top: auto; bottom: 58px; transform: translateX(-50%); }
 .city-label.label-slot-top-high { --label-tether: 16px; left: 50%; right: auto; top: auto; bottom: 74px; transform: translateX(-50%); }

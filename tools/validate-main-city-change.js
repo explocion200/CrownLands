@@ -82,6 +82,7 @@ assert.match(clientSource, /function changeMainCity[\s\S]*?state\.mainCityId = n
 assert.match(clientSource, /normalizeSingleMainCityAssignment[\s\S]*?const shouldBeMain = Boolean\(mainCityId && city\.id === mainCityId\)/, "Client must demote every loaded city except the selected main city.");
 assert.match(clientSource, /onlineOwnedCitiesCache = onlineOwnedCitiesCache\.map[\s\S]*?city\.id === mainCityId && !isStronghold\(city\)/, "Cross-map owned-city cache must retain exactly one main city.");
 assert.match(clientSource, /const mainCity = !stronghold[\s\S]*?city\.id === state\.mainCityId[\s\S]*?btn\.classList\.add\("main-city-node"\)/, "Map rendering must move the main-city marker to the selected owned city.");
-assert.match(stylesSource, /\.city-node\.main-city-node \.city-art[\s\S]*?grayscale\(1\)[\s\S]*?brightness\(\.2\)/, "Main-city castle artwork must render black.");
+assert.doesNotMatch(stylesSource, /\.city-node\.main-city-node \.city-art[\s\S]*?filter:/, "Main-city castle artwork must keep its normal colors.");
+assert.match(stylesSource, /\.city-node\.main-city-node \.city-owner-column,[\s\S]*?\.city-node\.main-city-node \.city-army-count[\s\S]*?background: #737980;/, "Main-city UI banners must render medium gray.");
 
-console.log("Validated atomic main-city switching, cross-map pointers, one-main-city repair, cooldowns, protection, and black map markers.");
+console.log("Validated atomic main-city switching, cross-map pointers, one-main-city repair, cooldowns, protection, and gray main-city UI markers.");

@@ -93,6 +93,13 @@ requireMatch(
   "City and report defense panels do not use the shared base-plus-bonus display."
 );
 
+const cityInfoSource = extractFunction(clientSource, "showCityInfoModal");
+assert.doesNotMatch(
+  cityInfoSource,
+  /Victory points|City power|stats\.victoryPoints|stats\.cityPower/,
+  "City and Stronghold information panels must not expose internal Victory Points."
+);
+
 const formatterContext = {};
 vm.createContext(formatterContext);
 vm.runInContext(

@@ -183,6 +183,16 @@ if (strongholdAttack) throw new Error("Stronghold attacks must remain exempt fro
 
 const clientSandbox = {
   DEMO_ATTACK_TIERS: sandbox.DEMO_ATTACK_TIERS,
+  clamp(value, min, max) {
+    return Math.max(min, Math.min(max, Number(value) || 0));
+  },
+  createDemoAttackSnapshot(source, target) {
+    if (!target.demoMaxTroops) return null;
+    return {
+      active: true,
+      maxTroops: Math.min(source.troops, target.demoMaxTroops),
+    };
+  },
   getKingPower() {
     return 0;
   },
@@ -198,6 +208,7 @@ vm.createContext(clientSandbox);
 vm.runInContext([
   readClientFunction("getDemoAttackTier"),
   readClientFunction("getEnemyCityPowerBand"),
+  readClientFunction("getTroopSliderSendLimit"),
 ].join("\n\n"), clientSandbox);
 
 const enemyCity = { owner: "enemy" };
@@ -216,6 +227,16 @@ if (clientSandbox.getEnemyCityPowerBand(enemyCity, 500_000, 0) !== "in-range") {
 if (clientSandbox.getEnemyCityPowerBand({ owner: "neutral" }, 900_000, 100_000) !== ""
   || clientSandbox.getEnemyCityPowerBand({ owner: "enemy", kind: "stronghold" }, 900_000, 100_000) !== "") {
   throw new Error("Neutral cities or strongholds are incorrectly receiving enemy power colors.");
+}
+if (clientSandbox.getTroopSliderSendLimit({ troops: 100_000 }, { demoMaxTroops: 20_000 }) !== 20_000) {
+  throw new Error("The troop slider does not stop at the weaker-kingdom attack limit.");
+}
+if (clientSandbox.getTroopSliderSendLimit({ troops: 100_000 }, {}) !== 100_000) {
+  throw new Error("The troop slider incorrectly caps unrestricted attacks and transfers.");
+}
+if (!clientSource.includes('slider.max = String(sliderSendLimit)')
+  || !clientSource.includes('selectedTroopAmount = clamp(selectedTroopAmount, 1, getTroopSliderSendLimit(source, target))')) {
+  throw new Error("The visible slider and final confirmation do not reapply the legal troop limit.");
 }
 
 if (!source.includes("const attackerStatsBeforeLaunch = createPreparedEconomyStatsSnapshot(attackerEconomy")) {

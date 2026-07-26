@@ -17991,6 +17991,15 @@ function showTroopRouteLoadingModal(source, target, isTransfer) {
   if (!modal.open) modal.showModal();
 }
 
+function getTroopSliderSendLimit(source, target) {
+  const availableTroops = Math.max(0, Math.floor(Number(source?.troops) || 0));
+  if (availableTroops < 1 || !target) return 0;
+  const demoAttack = createDemoAttackSnapshot(source, target, availableTroops, "player");
+  return demoAttack?.active
+    ? clamp(Math.floor(Number(demoAttack.maxTroops) || 1), 1, availableTroops)
+    : availableTroops;
+}
+
 function showTroopSliderModalWithRoute(source, target, route) {
   activeTroopSliderRoute = {
     sourceId: source.id,
@@ -18016,7 +18025,9 @@ function showTroopSliderModalWithRoute(source, target, route) {
   const commandLabel = isTransfer ? "Transfer" : "Attack";
   const commandIcon = isTransfer ? "&#9822;" : "&#9876;";
   const shieldDropWarning = isTransfer ? "" : getPeaceShieldAttackWarning(target);
-  selectedTroopAmount = clamp(selectedTroopAmount, 1, source.troops);
+  const sliderSendLimit = getTroopSliderSendLimit(source, target);
+  const demoLimited = sliderSendLimit < source.troops;
+  selectedTroopAmount = clamp(selectedTroopAmount, 1, sliderSendLimit);
   troopSliderActive = true;
   modal.classList.add("troop-slider-modal");
   modalTitle.textContent = `${commandLabel} troops`;
@@ -18026,7 +18037,7 @@ function showTroopSliderModalWithRoute(source, target, route) {
         <div class="troop-route-city">
           <span>From</span>
           <strong>${escapeHtml(source.name)}</strong>
-          <small>${escapeHtml(getRegionLabel(getCityRegionId(source)))} &middot; <b id="troopSliderRemaining">${formatNumber(source.troops - selectedTroopAmount)}</b> remain</small>
+          <small>${escapeHtml(getRegionLabel(getCityRegionId(source)))} &middot; <b id="troopSliderRemaining">${formatNumber(source.troops - selectedTroopAmount)}</b> of ${formatNumber(source.troops)} remain</small>
         </div>
         <div class="troop-command-icon" aria-hidden="true">${commandIcon}</div>
         <div class="troop-route-city destination">
@@ -18043,8 +18054,8 @@ function showTroopSliderModalWithRoute(source, target, route) {
           <span>Troops to ${isTransfer ? "send" : "attack with"}</span>
           <strong id="troopSliderAmount">${formatNumber(selectedTroopAmount)}</strong>
         </div>
-        <input id="troopAmountSlider" class="troop-amount-slider" type="range" min="1" max="${source.troops}" value="${selectedTroopAmount}" aria-label="Troops to ${isTransfer ? "transfer" : "attack with"}" />
-        <div class="troop-slider-limits"><span>1</span><span>Max ${formatNumber(source.troops)}</span></div>
+        <input id="troopAmountSlider" class="troop-amount-slider" type="range" min="1" max="${sliderSendLimit}" value="${selectedTroopAmount}" aria-label="Troops to ${isTransfer ? "transfer" : "attack with"}" />
+        <div class="troop-slider-limits"><span>1</span><span id="troopSliderMaxLabel">${demoLimited ? "Protected max" : "Max"} ${formatNumber(sliderSendLimit)}</span></div>
       </div>
 
       <div id="troopSliderPreview" class="troop-slider-preview"></div>
@@ -18060,7 +18071,7 @@ function showTroopSliderModalWithRoute(source, target, route) {
 
   const slider = modalBody.querySelector("#troopAmountSlider");
   slider.addEventListener("input", () => {
-    selectedTroopAmount = clamp(Math.floor(Number(slider.value)), 1, source.troops);
+    selectedTroopAmount = clamp(Math.floor(Number(slider.value)), 1, getTroopSliderSendLimit(source, target));
     updateTroopSliderModal(source, target, route);
   });
   modalBody.querySelector("#troopSliderConfirm").addEventListener("click", confirmTroopSliderOrder);
@@ -18073,12 +18084,17 @@ function updateTroopSliderModal(source, target, route) {
   const slider = modalBody.querySelector("#troopAmountSlider");
   if (!slider || !source || !target) return;
   const routeSummary = getArmyRouteSummary(route, source, target);
-  selectedTroopAmount = clamp(selectedTroopAmount, 1, source.troops);
+  const sliderSendLimit = getTroopSliderSendLimit(source, target);
+  const demoLimited = sliderSendLimit < source.troops;
+  selectedTroopAmount = clamp(selectedTroopAmount, 1, sliderSendLimit);
+  slider.max = String(sliderSendLimit);
   slider.value = selectedTroopAmount;
-  const progress = source.troops <= 1 ? 100 : ((selectedTroopAmount - 1) / (source.troops - 1)) * 100;
+  const progress = sliderSendLimit <= 1 ? 100 : ((selectedTroopAmount - 1) / (sliderSendLimit - 1)) * 100;
   slider.style.setProperty("--slider-progress", `${progress}%`);
   modalBody.querySelector("#troopSliderAmount").textContent = formatNumber(selectedTroopAmount);
   modalBody.querySelector("#troopSliderRemaining").textContent = formatNumber(source.troops - selectedTroopAmount);
+  const maxLabel = modalBody.querySelector("#troopSliderMaxLabel");
+  if (maxLabel) maxLabel.textContent = `${demoLimited ? "Protected max" : "Max"} ${formatNumber(sliderSendLimit)}`;
 
   const travel = travelTime(source, target, "player", route.length, selectedTroopAmount, target.owner === "player" ? "transfer" : "attack");
   const previewEl = modalBody.querySelector("#troopSliderPreview");
@@ -18149,7 +18165,7 @@ function confirmTroopSliderOrder() {
     return;
   }
 
-  selectedTroopAmount = clamp(selectedTroopAmount, 1, source.troops);
+  selectedTroopAmount = clamp(selectedTroopAmount, 1, getTroopSliderSendLimit(source, target));
   const cachedRoute = activeTroopSliderRoute?.sourceId === source.id && activeTroopSliderRoute?.targetId === target.id
     ? activeTroopSliderRoute.route
     : null;
@@ -18641,7 +18657,6 @@ function showCityInfoModal(cityId) {
         ${stronghold ? `<div class="stat-wide"><span>Stronghold bonus</span><strong>${strongholdBonusLabel}</strong><small>Bonus is active only for the current controller.</small></div>` : ""}
         <div class="stat-wide"><span>Owner</span><strong>${escapeHtml(getCityOwnerDisplayName(city))}</strong></div>
         <div class="stat-chip"><span>${stronghold ? "Defense level" : "City level"}</span><strong>${formatNumber(stats.level)}</strong></div>
-        <div class="stat-chip"><span>Victory points</span><strong>${formatNumber(stats.victoryPoints)}</strong></div>
         <div class="stat-chip"><span>Troops</span><strong>${report ? formatNumber(report.troops) : "Unknown"}</strong></div>
         <div class="stat-chip"><span>Total defense</span><strong>${report
           ? formatBaseAndBonusStat(report.baseTotalDefense ?? report.totalDefense, report.totalDefense)
@@ -18698,7 +18713,6 @@ function showCityInfoModal(cityId) {
       <div class="stat-wide"><span>Total defense</span><strong>${formatBaseAndBonusStat(stats.baseTotalDefense, stats.totalDefense)}</strong><small>${getCityStatBonusSources(stats, "defense")}</small></div>
       <div class="stat-chip"><span>Troops</span><strong>${formatNumber(city.troops)}</strong></div>
       <div class="stat-chip"><span>Stoneworks</span><strong>${stats.stoneworksPercent}%</strong></div>
-      <div class="stat-chip"><span>City power</span><strong>${formatNumber(stats.cityPower)}</strong><small>+${CITY_LEVEL_STATS.victoryPointsPerLevel}/level</small></div>
       <div class="stat-chip"><span>Defense</span><strong>${formatBaseAndBonusStat(stats.defensePercent, stats.defensePercent + stats.strongholdDefenseBonusPercent, "%")}</strong><small>${CITY_LEVEL_STATS.defensePercentPerLevel}% per level${stats.strongholdDefenseBonusPercent ? ` | Stronghold +${formatNumber(stats.strongholdDefenseBonusPercent)}%` : ""}</small></div>
       <div class="stat-chip"><span>Troops production</span><strong>${formatBaseAndBonusStat(stats.baseTroopProductionPerHour, stats.troopProductionPerHour, "/h")}</strong><small>${getCityStatBonusSources(stats, "troops")}</small></div>
       <div class="stat-chip"><span>City walls</span><strong>${formatBaseAndBonusStat(stats.baseCityWalls, stats.cityWalls)}</strong><small>${getCityStatBonusSources(stats, "walls")}</small></div>
@@ -18733,7 +18747,6 @@ function showCityInfoModal(cityId) {
       <div class="stat-wide"><span>Total defense</span><strong>${formatBaseAndBonusStat(stats.baseTotalDefense, stats.totalDefense)}</strong><small>${getCityStatBonusSources(stats, "defense")}</small></div>
       <div class="stat-chip"><span>Owner</span><strong>${escapeHtml(getCityOwnerDisplayName(city))}</strong></div>
       <div class="stat-chip"><span>Troops</span><strong>${formatNumber(city.troops)}</strong></div>
-      <div class="stat-chip"><span>Victory points</span><strong>${formatNumber(stats.victoryPoints)}</strong><small>Drives growth and XP value</small></div>
       <div class="stat-chip"><span>City defense</span><strong>${formatBaseAndBonusStat(stats.defensePercent, stats.defensePercent + stats.strongholdDefenseBonusPercent, "%")}</strong><small>${CITY_LEVEL_STATS.defensePercentPerLevel}% per level${stats.strongholdDefenseBonusPercent ? ` | Stronghold +${formatNumber(stats.strongholdDefenseBonusPercent)}%` : ""}</small></div>
       <div class="stat-chip"><span>City walls</span><strong>${formatBaseAndBonusStat(stats.baseCityWalls, stats.cityWalls)}</strong><small>${getCityStatBonusSources(stats, "walls")}</small></div>
       <div class="stat-chip"><span>Stoneworks</span><strong>${stats.stoneworksPercent}%</strong><small>Wall defense skill</small></div>
