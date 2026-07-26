@@ -9439,6 +9439,7 @@ function getPlayerIdentitySignature(identity) {
     identity.clanName || "",
     identity.clanTag || "",
     normalizeTimestampMs(identity.updatedAtMs),
+    identity.authoritative ? 1 : 0,
   ].join("|");
 }
 
@@ -9498,7 +9499,9 @@ function rememberPlayerIdentity(raw = {}, options = {}) {
     mainIslandId: identityIsNewer
       ? identity.mainIslandId || existing?.mainIslandId || ""
       : existing?.mainIslandId || identity.mainIslandId || "",
-    updatedAtMs: Math.max(existing?.updatedAtMs || 0, identity.updatedAtMs || 0),
+    updatedAtMs: identityIsNewer
+      ? Math.max(existing?.updatedAtMs || 0, identity.updatedAtMs || 0)
+      : existing?.updatedAtMs || identity.updatedAtMs || 0,
     fetchedAtMs: force ? Date.now() : existing?.fetchedAtMs || 0,
     authoritative: existingIsAuthoritative || (force && identityIsNewer),
     clanId: identityIsNewer ? identity.clanId || existing?.clanId || "" : existing?.clanId || identity.clanId || "",
@@ -9657,20 +9660,23 @@ function applyCanonicalPlayerIdentityToRecord(record) {
   return changed;
 }
 
-function queuePlayerIdentityLookupForUids(uids = []) {
+function queuePlayerIdentityLookupForUids(uids = [], options = {}) {
   const api = getOnlineApi();
   if (!api?.loadPlayerIdentities || !api?.isSignedIn?.()) return;
   const currentUid = getCurrentOnlineUid();
   const now = Date.now();
+  const refreshUids = options.refreshUids instanceof Set
+    ? options.refreshUids
+    : new Set(Array.isArray(options.refreshUids) ? options.refreshUids : []);
   const uniqueUids = [...new Set((Array.isArray(uids) ? uids : [])
     .map(uid => String(uid || "").trim())
     .filter(uid => uid && uid !== currentUid))];
   uniqueUids.forEach(uid => {
     const cached = playerIdentityCache.get(uid);
     const missedAt = playerIdentityLookupMisses.get(uid) || 0;
-    const fetchedAt = cached?.fetchedAtMs || cached?.updatedAtMs || 0;
-    if (fetchedAt && now - fetchedAt < PLAYER_IDENTITY_CACHE_STALE_MS) return;
-    if (missedAt && now - missedAt < PLAYER_IDENTITY_CACHE_STALE_MS) return;
+    const fetchedAt = cached?.authoritative ? cached.fetchedAtMs || 0 : 0;
+    if (!refreshUids.has(uid) && fetchedAt && now - fetchedAt < PLAYER_IDENTITY_CACHE_STALE_MS) return;
+    if (!refreshUids.has(uid) && missedAt && now - missedAt < PLAYER_IDENTITY_CACHE_STALE_MS) return;
     playerIdentityLookupQueue.add(uid);
   });
   if (!playerIdentityLookupQueue.size || playerIdentityLookupInFlight) return;
@@ -9679,8 +9685,33 @@ function queuePlayerIdentityLookupForUids(uids = []) {
 
 function queuePlayerIdentityLookupForRecords(records = []) {
   if (!Array.isArray(records) || !records.length) return;
+  const refreshUids = new Set();
+  records.forEach(record => {
+    const ownerUid = String(record?.ownerUid || record?.uid || "").trim();
+    if (!ownerUid) return;
+    const cached = playerIdentityCache.get(ownerUid);
+    const recordKingPowerVersion = Math.max(0, Math.floor(Number(record?.kingPowerVersion) || 0));
+    const recordKingPower = normalizePowerValue(
+      record?.ownerKingPower ?? record?.kingPower ?? record?.attackerKingPower
+    );
+    const recordUpdatedAtMs = normalizeTimestampMs(record?.kingPowerUpdatedAtMs)
+      || normalizeTimestampMs(record?.updatedAtMs)
+      || timestampToMs(record?.updatedAt);
+    if (recordKingPowerVersion >= KING_POWER_AUTHORITY_VERSION && recordKingPower > 0 && (
+      !cached?.authoritative
+      || (
+        recordKingPower !== normalizePowerValue(cached.kingPower)
+        || recordUpdatedAtMs > normalizeTimestampMs(cached.updatedAtMs)
+      )
+    )) {
+      refreshUids.add(ownerUid);
+    }
+  });
   rememberOwnerIdentitiesFromRecords(records);
-  queuePlayerIdentityLookupForUids(records.map(record => record?.ownerUid || record?.uid).filter(Boolean));
+  queuePlayerIdentityLookupForUids(
+    records.map(record => record?.ownerUid || record?.uid).filter(Boolean),
+    { refreshUids }
+  );
 }
 
 async function refreshQueuedPlayerIdentities() {
@@ -9706,8 +9737,9 @@ async function refreshQueuedPlayerIdentities() {
   } finally {
     playerIdentityLookupInFlight = false;
   }
-  if (changed && canonicalizeVisiblePlayerIdentities()) {
-    renderCities();
+  const recordsChanged = canonicalizeVisiblePlayerIdentities();
+  if (changed || recordsChanged) {
+    renderCities(true);
     renderPaths();
     renderArmies();
     updateIncomingAttackUi();

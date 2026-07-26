@@ -319,6 +319,52 @@ if (!clientSource.includes("clearEnemyPowerBandCache();")
   || !readFunction(clientSource, "startFromInput").includes("clearEnemyPowerBandCache()")) {
   throw new Error("Enemy strength tiers are not cleared when the world or player changes.");
 }
+const identityLookupQueueFunction = readFunction(clientSource, "queuePlayerIdentityLookupForUids");
+if (!identityLookupQueueFunction.includes("cached?.authoritative ? cached.fetchedAtMs || 0 : 0")
+  || !identityLookupQueueFunction.includes("refreshUids.has(uid)")
+  || !identityLookupQueueFunction.includes("!refreshUids.has(uid) && missedAt")
+  || identityLookupQueueFunction.includes("cached?.fetchedAtMs || cached?.updatedAtMs")) {
+  throw new Error("Unverified city timestamps can still suppress authoritative King Power lookups.");
+}
+const recordIdentityLookupFunction = readFunction(clientSource, "queuePlayerIdentityLookupForRecords");
+if (!recordIdentityLookupFunction.includes("recordKingPowerVersion >= KING_POWER_AUTHORITY_VERSION")
+  || !recordIdentityLookupFunction.includes("recordUpdatedAtMs > normalizeTimestampMs(cached.updatedAtMs)")
+  || !recordIdentityLookupFunction.includes("{ refreshUids }")) {
+  throw new Error("New King Power evidence does not force an authoritative identity refresh.");
+}
+const queuedIdentityRefreshFunction = readFunction(clientSource, "refreshQueuedPlayerIdentities");
+if (!queuedIdentityRefreshFunction.includes("changed || recordsChanged")
+  || !queuedIdentityRefreshFunction.includes("renderCities(true)")) {
+  throw new Error("Authoritative King Power results can arrive without repainting city colors.");
+}
+const rememberIdentityFunction = readFunction(clientSource, "rememberPlayerIdentity");
+if (!rememberIdentityFunction.includes("updatedAtMs: identityIsNewer")
+  || !rememberIdentityFunction.includes(": existing?.updatedAtMs || identity.updatedAtMs || 0")) {
+  throw new Error("Rejected city fallbacks can still advance an authoritative identity timestamp.");
+}
+if (!readFunction(clientSource, "getPlayerIdentitySignature").includes("identity.authoritative ? 1 : 0")) {
+  throw new Error("The first authoritative identity result does not invalidate the city render signature.");
+}
+const identitySignatureSandbox = {
+  getFlagSignature: flag => JSON.stringify(flag || null),
+  normalizePowerValue: value => Math.max(0, Math.floor(Number(value) || 0)),
+  normalizeTimestampMs: value => Math.max(0, Math.floor(Number(value) || 0)),
+};
+vm.createContext(identitySignatureSandbox);
+vm.runInContext(readFunction(clientSource, "getPlayerIdentitySignature"), identitySignatureSandbox);
+const unverifiedIdentity = {
+  uid: "defender",
+  displayName: "Defender",
+  kingPower: 100_000,
+  kingPowerVersion: 8,
+  updatedAtMs: 10_000,
+  authoritative: false,
+};
+const authoritativeIdentity = { ...unverifiedIdentity, authoritative: true };
+if (identitySignatureSandbox.getPlayerIdentitySignature(unverifiedIdentity)
+  === identitySignatureSandbox.getPlayerIdentitySignature(authoritativeIdentity)) {
+  throw new Error("An authoritative King Power lookup does not trigger a fresh city-color render.");
+}
 if (!/\.city-node\.enemy\.enemy-power-protected\s*\{[\s\S]*?--enemy-city-ui:\s*#ed8b8b;/.test(stylesSource)
   || !/\.city-node\.enemy\.enemy-power-in-range\s*\{[\s\S]*?--enemy-city-ui:\s*#e12635;/.test(stylesSource)
   || !/\.city-node\.enemy\.enemy-power-overpowering\s*\{[\s\S]*?--enemy-city-ui:\s*#59121a;/.test(stylesSource)) {
