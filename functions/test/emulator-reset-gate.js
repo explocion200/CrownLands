@@ -62,6 +62,24 @@ async function waitForOwnershipEvents(expected, timeoutMs = 30000) {
   throw new Error(`Ownership events did not settle at ${expected}.`);
 }
 
+async function mapWithConcurrency(values, limit, operation) {
+  const items = Array.from(values || []);
+  const results = new Array(items.length);
+  let nextIndex = 0;
+  const workers = Array.from(
+    { length: Math.min(Math.max(1, limit), items.length) },
+    async () => {
+      while (nextIndex < items.length) {
+        const index = nextIndex;
+        nextIndex += 1;
+        results[index] = await operation(items[index], index);
+      }
+    }
+  );
+  await Promise.all(workers);
+  return results;
+}
+
 async function main() {
   const users = await Promise.all(Array.from({ length: 50 }, (_, index) => createAuthUser(index)));
   const preservedFlag = {
@@ -97,9 +115,9 @@ async function main() {
     flag: { background: "#000000" },
   });
   assert(firstClaim.cityId, "The first reset player did not receive a city.");
-  const remainingClaims = await Promise.all(users.slice(1).map((user, index) => (
+  const remainingClaims = await mapWithConcurrency(users.slice(1), 5, (user, index) => (
     callFunction("claimStartingCity", user.token, { playerName: `Ruler ${index + 2}` })
-  )));
+  ));
   const claims = [firstClaim, ...remainingClaims];
   assert(new Set(claims.map(claim => claim.cityId)).size === 50, "Starting city assignments collided.");
 
