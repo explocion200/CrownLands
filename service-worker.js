@@ -1,16 +1,18 @@
-const CACHE_VERSION = "20260726-clan-live-allies";
+const CACHE_VERSION = "20260726-protected-ads-reset";
 const CACHE_NAME = `crownlands-cache-${CACHE_VERSION}`;
 const STATIC_CACHE_URLS = [
   "/",
   "/index.html",
   "/manifest.webmanifest",
-  "/styles.css?v=20260726-clan-live-allies",
+  "/styles.css?v=20260726-protected-ads-reset",
   "/release-config.js",
   "/world-config.js",
   "/economy-config.js?v=20260726-offline-owned-production",
-  "/firebase-config.js?v=20260703-vapid-key",
-  "/firebaseClient.js?v=20260726-offline-owned-production",
-  "/game.js?v=20260726-clan-live-allies",
+  "/ads-config.js?v=20260726-rewarded-ads",
+  "/login-display-ad.js?v=20260726-login-display-ad",
+  "/firebase-config.js?v=20260726-protected-ads-reset",
+  "/firebaseClient.js?v=20260726-protected-ads-reset",
+  "/game.js?v=20260726-protected-ads-reset",
   "/route-worker.js?v=20260721-structure-route-clearance",
   "/assets/map-editor-data.js?v=20260723-utc-responsive-v1",
   "/assets/game-menu-background.jpg?v=20260702-login-page",
@@ -18,6 +20,7 @@ const STATIC_CACHE_URLS = [
   "/assets/loading-crown.png",
   "/assets/gold-pickup.png",
   "/assets/troop-pickup.png",
+  "/privacy.html",
   "/assets/royal-tax-decree-icon.webp?v=20260721-tax-decree",
   "/assets/icons/crownlands-icon-192.png",
   "/assets/icons/crownlands-icon-512.png",

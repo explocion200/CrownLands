@@ -174,6 +174,18 @@ service cloud.firestore {
         allow create, update, delete: if false;
       }
 
+      match /rewardedAds/{document=**} {
+        allow read, create, update, delete: if false;
+      }
+
+      match /rewardedAdIntents/{intentId} {
+        allow read, create, update, delete: if false;
+      }
+
+      match /protectedDefenseXpClaims/{attackerUid} {
+        allow read, create, update, delete: if false;
+      }
+
       match /notificationTokens/{tokenId} {
         allow read: if ownsPlayerDoc(uid);
         allow create, update: if ownsPlayerDoc(uid)
@@ -249,6 +261,10 @@ service cloud.firestore {
     }
 
     match /gameServers/{serverId} {
+      allow read, create, update, delete: if false;
+    }
+
+    match /serverConfig/{configId} {
       allow read, create, update, delete: if false;
     }
 

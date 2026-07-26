@@ -15,6 +15,38 @@ This build keeps guest/local play working while adding Firebase for Google sign-
 
 The Firebase web config is not a password. Real protection comes from Firebase Authentication and Firestore rules.
 
+## Login Display Ad Setup
+
+The login screen has a responsive AdSense display-ad rail in the unused space beside the contained menu artwork. It only appears on sufficiently wide desktop screens, stays separate from the sign-in controls, and is never requested on an unapproved production hostname. Localhost shows a setup preview instead of requesting a real impression.
+
+To enable the live rail:
+
+1. Wait for the Crownlands site to be approved and marked ready in AdSense.
+2. In AdSense, open **Ads -> By ad unit -> Display ads**, create a responsive display unit named `Crownlands Login Side`, and copy the numeric `data-ad-slot` value from the generated code.
+3. Paste that number into `ads-config.js` as `loginDisplayAd.slotId`. The existing `ca-pub-6031755025291372` value is the publisher ID, not the ad-unit slot ID.
+4. Keep `loginDisplayAd.enabled` as the kill switch and keep every live hostname in `approvedProductionHosts`.
+5. Publish the required Google-certified consent message and final privacy policy before enabling live ads.
+
+Do not enable the slot if Google treats the login view as a non-content page. AdSense prohibits ads on non-content-based pages and ads positioned so close to controls that accidental clicks are likely. The Crownlands rail is desktop-only and separated from the sign-in card, but the publisher is still responsible for confirming that the approved login experience meets AdSense policy.
+
+## Rewarded Ad Setup
+
+The Shop includes two optional rewarded-web cards: Gold `.5h` and Troop `.5h`. A successful Google reward grants an immediate amount equal to 30 minutes of city-level base production. Both choices share one 30-minute cooldown and a combined limit of 20 successful rewards per UTC day.
+
+Before enabling production rewards:
+
+1. In Firebase Console, enable App Check for the Crownlands web app with the reCAPTCHA Enterprise provider. Add every production and local test domain, then paste the public site key into `firebase-config.js` as `appCheckSiteKey`.
+2. Grant the `Firebase App Check Token Verifier` role to the service account used by the Functions, then deploy `getRewardedAdStatus`, `prepareRewardedAd`, and `claimRewardedAd`. All three require authentication, enforced App Check, and consumed limited-use App Check tokens.
+3. In Firestore, create `serverConfig/rewardedAds` with `{ "enabled": true }` only after the rest of this checklist is complete. A missing document or `enabled: false` disables only the two ad reward cards without affecting paid Shop items.
+4. Enable Firestore TTL for the `rewardedAdIntents` collection group using the `deleteAfter` field. Intent documents are otherwise server-only and retained for claim replay prevention and auditing.
+5. In Google Ad Manager, create a rewarded-web ad unit, connect eligible Google demand, and approve the exact Netlify production host. Put its full `/NETWORK_CODE/AD_UNIT_CODE` path into `ads-config.js` as `productionAdUnitPath`, and keep every allowed live hostname in `approvedProductionHosts`.
+6. Configure matching Ad Manager frequency caps of one rewarded impression per 30 minutes and 20 per day.
+7. Publish a Google-certified consent message for the regions you serve and review `privacy.html` with the final business/contact details before switching the production ad unit on.
+
+Localhost, `127.0.0.1`, and `*.localhost` use Google's rewarded-web sample ad unit. All other hosts fail closed until `productionAdUnitPath` is set. Closing, blocking, skipping, unsupported rendering, and no-fill grant nothing. The client submits the claim only after Google Publisher Tag emits `rewardedSlotGranted`; the server claim is transactional and idempotent.
+
+The Google Publisher Tag script is loaded by `index.html`. Do not substitute a Google Ads campaign/customer ID: the web rewarded slot needs a Google Ad Manager network and rewarded-web ad unit path.
+
 ## Phase 1 Data
 
 The game currently writes private account data here:
