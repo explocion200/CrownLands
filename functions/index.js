@@ -5550,7 +5550,7 @@ async function claimFreshStartingCity(request) {
   );
   const playerRef = db.doc(`players/${uid}`);
 
-  const runClaimTransaction = async transaction => {
+  const runClaimTransaction = async (transaction, placement) => {
     const nowMs = Date.now();
     const playerSnap = await transaction.get(playerRef);
     const previous = playerSnap.exists ? playerSnap.data() || {} : {};
@@ -5590,26 +5590,23 @@ async function claimFreshStartingCity(request) {
       }
     }
 
-    const islandEntries = [];
-    for (const regionId of STARTER_REGION_IDS) {
-      const ref = db.doc(`islands/${getOnlineIslandId(regionId)}`);
-      const snap = await transaction.get(ref);
-      if (!snap.exists) continue;
-      const island = snap.data() || {};
-      if (safeString(island.resetGeneration, 120) !== RESET_GENERATION) continue;
-      islandEntries.push({
-        ref,
-        regionId,
-        islandId: ref.id,
-        playerCount: Math.max(0, Math.floor(safeNumber(island.playerCount, 0))),
-      });
+    const chosenIsland = placement.island;
+    const chosenIslandSnap = await transaction.get(chosenIsland.ref);
+    const placementSlotSnap = await transaction.get(placement.slotRef);
+    const currentPopulation = chosenIslandSnap.exists
+      ? Math.max(0, Math.floor(safeNumber(chosenIslandSnap.data()?.playerCount, 0)))
+      : -1;
+    if (
+      !chosenIslandSnap.exists
+      || safeString(chosenIslandSnap.data()?.resetGeneration, 120) !== RESET_GENERATION
+      || currentPopulation !== placement.expectedPopulation
+      || placementSlotSnap.exists
+    ) {
+      const contentionError = new Error("Starting-city placement changed while the claim was being prepared.");
+      contentionError.code = 10;
+      contentionError.details = "placement contention";
+      throw contentionError;
     }
-    if (!islandEntries.length) {
-      throw new HttpsError("failed-precondition", "Starter islands are still being prepared.");
-    }
-    const minimumPopulation = Math.min(...islandEntries.map(entry => entry.playerCount));
-    const leastPopulated = islandEntries.filter(entry => entry.playerCount === minimumPopulation);
-    const chosenIsland = leastPopulated[crypto.randomInt(0, leastPopulated.length)];
     const candidateIds = shuffledCityIdsByRegion.get(chosenIsland.regionId) || [];
 
     let chosenCityRef = null;
@@ -5681,9 +5678,18 @@ async function claimFreshStartingCity(request) {
     });
     transaction.set(chosenCityRef, cityPatch, { merge: true });
     transaction.set(chosenIsland.ref, {
-      playerCount: FieldValue.increment(1),
+      playerCount: placement.expectedPopulation + 1,
       updatedAt: FieldValue.serverTimestamp(),
     }, { merge: true });
+    transaction.set(placement.slotRef, {
+      worldId: ONLINE_WORLD_ID,
+      resetGeneration: RESET_GENERATION,
+      regionId: chosenIsland.regionId,
+      islandId: chosenIsland.islandId,
+      populationOrdinal: placement.expectedPopulation,
+      claimedByUid: uid,
+      claimedAt: FieldValue.serverTimestamp(),
+    });
     transaction.set(playerGlobalStatsRef(uid), stats);
     transaction.set(leaderboardEntryRef(uid), {
       uid,
@@ -5744,8 +5750,37 @@ async function claimFreshStartingCity(request) {
 
   const maxContentionAttempts = 40;
   for (let attempt = 1; attempt <= maxContentionAttempts; attempt += 1) {
+    const islandRefs = STARTER_REGION_IDS.map(regionId => db.doc(`islands/${getOnlineIslandId(regionId)}`));
+    const islandSnapshots = await db.getAll(...islandRefs);
+    const islandEntries = islandSnapshots.flatMap((snap, index) => {
+      const island = snap.exists ? snap.data() || {} : {};
+      if (!snap.exists || safeString(island.resetGeneration, 120) !== RESET_GENERATION) return [];
+      return [{
+        ref: snap.ref,
+        regionId: STARTER_REGION_IDS[index],
+        islandId: snap.id,
+        playerCount: Math.max(0, Math.floor(safeNumber(island.playerCount, 0))),
+      }];
+    });
+    if (!islandEntries.length) {
+      throw new HttpsError("failed-precondition", "Starter islands are still being prepared.");
+    }
+    const minimumPopulation = Math.min(...islandEntries.map(entry => entry.playerCount));
+    const leastPopulated = islandEntries.filter(entry => entry.playerCount === minimumPopulation);
+    const chosenIsland = leastPopulated[crypto.randomInt(0, leastPopulated.length)];
+    const placement = {
+      island: chosenIsland,
+      expectedPopulation: minimumPopulation,
+      slotRef: db.doc(
+        `realmSeeds/${RESET_GENERATION}/startingSlots/${chosenIsland.regionId}_${minimumPopulation}`
+      ),
+    };
+
     try {
-      return await db.runTransaction(runClaimTransaction, { maxAttempts: 1 });
+      return await db.runTransaction(
+        transaction => runClaimTransaction(transaction, placement),
+        { maxAttempts: 1 }
+      );
     } catch (error) {
       const errorCode = Number(error?.code);
       const retryableContention = errorCode === 10
@@ -5753,8 +5788,8 @@ async function claimFreshStartingCity(request) {
         || safeString(error?.message, 300).toLowerCase().includes("aborted");
       if (!retryableContention || attempt >= maxContentionAttempts) throw error;
 
-      const backoffCeilingMs = Math.min(1_000, 25 * (2 ** Math.min(attempt - 1, 6)));
-      const retryDelayMs = crypto.randomInt(15, backoffCeilingMs + 16);
+      const backoffCeilingMs = Math.min(300, 15 * (2 ** Math.min(attempt - 1, 5)));
+      const retryDelayMs = crypto.randomInt(10, backoffCeilingMs + 11);
       logOperation("claimStartingCityContention", Date.now(), request, "retry", {
         attempt,
         retryDelayMs,
@@ -5768,7 +5803,7 @@ async function claimFreshStartingCity(request) {
 
 exports.claimStartingCity = timedCallable(
   "claimStartingCity",
-  { region: "us-central1", maxInstances: 20, invoker: "public" },
+  { region: "us-central1", timeoutSeconds: 120, maxInstances: 20, invoker: "public" },
   claimFreshStartingCity
 );
 

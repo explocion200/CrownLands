@@ -172,6 +172,10 @@ async function main() {
   const targetDoc = citySnapshot.docs.find(doc => !doc.data()?.strongholdType && doc.id !== sourceClaim.cityId);
   assert(targetDoc, "No neutral target was available for the army smoke test.");
   const target = targetDoc.data() || {};
+  await Promise.all([
+    sourceRef.set({ troops: 2_000, troopFloat: 2_000 }, { merge: true }),
+    targetDoc.ref.set({ level: 1, defense: 1, troops: 0, troopFloat: 0 }, { merge: true }),
+  ]);
   const distance = Math.hypot(Number(target.x) - Number(source.x), Number(target.y) - Number(source.y));
   const armyId = `reset_gate_${crypto.randomBytes(8).toString("hex")}`;
   const order = {
@@ -182,9 +186,9 @@ async function main() {
       toId: targetDoc.id,
       fromName: source.name || sourceClaim.cityId,
       toName: target.name || targetDoc.id,
-      troops: 10,
-      requestedTroops: 10,
-      total: 30,
+      troops: 500,
+      requestedTroops: 500,
+      total: 500,
       sourceRegionId: sourceClaim.mainRegionId,
       targetRegionId: sourceClaim.mainRegionId,
       routeRegionIds: [sourceClaim.mainRegionId],
