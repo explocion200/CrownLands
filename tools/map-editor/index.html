@@ -17,6 +17,12 @@
         <button id="worldModeBtn" class="tool-btn active" type="button">World Layout</button>
         <button id="regionModeBtn" class="tool-btn" type="button">Region Edit</button>
         <button id="economyModeBtn" class="tool-btn" type="button">Economy</button>
+        <button id="gameUiModeBtn" class="tool-btn" type="button">Game UI</button>
+      </div>
+      <div class="feature-finder">
+        <label for="featureSearchInput">Find a feature</label>
+        <input id="featureSearchInput" type="search" placeholder="Try “shop price” or “commander box”" autocomplete="off" />
+        <div id="featureSearchResults" class="feature-search-results" hidden></div>
       </div>
       <div class="tool-strip map-tools" role="group" aria-label="Map editor tools">
         <button id="addRegionBtn" class="tool-btn" type="button">Add Region</button>
@@ -116,6 +122,59 @@
           </div>
           <div id="economySections" class="economy-sections"></div>
         </div>
+
+        <div id="gameUiView" class="game-ui-view hidden">
+          <div class="hud-editor-toolbar">
+            <label>Device
+              <select id="hudPresetSelect">
+                <option value="phonePortrait">Phone Portrait · 390×844</option>
+                <option value="landscapeTablet">Landscape / Tablet · 844×390</option>
+                <option value="desktop">Desktop · 1440×900</option>
+              </select>
+            </label>
+            <button id="hudSnapBtn" class="tool-btn active" type="button" aria-pressed="true">Snap On</button>
+            <label>Grid <input id="hudGridSizeInput" type="number" min="1" max="64" step="1" value="8" /></label>
+            <button id="hudPreviewBtn" class="tool-btn" type="button">Preview Only</button>
+            <button id="hudUndoBtn" class="tool-btn" type="button">Undo</button>
+            <button id="hudRedoBtn" class="tool-btn" type="button">Redo</button>
+          </div>
+          <div class="hud-layout-shell">
+            <aside class="hud-component-sidebar">
+              <div class="panel-heading"><span>Game UI</span><strong>Components</strong></div>
+              <div id="hudComponentTree" class="hud-component-tree"></div>
+            </aside>
+            <div class="hud-canvas-wrap">
+              <div id="hudCanvas" class="hud-canvas" tabindex="0" aria-label="HUD layout canvas">
+                <div class="hud-safe-area" aria-hidden="true"></div>
+                <div id="hudGuideLayer" class="hud-guide-layer" aria-hidden="true"></div>
+                <div id="hudComponentLayer" class="hud-component-layer"></div>
+              </div>
+            </div>
+            <aside class="hud-properties">
+              <div class="panel-heading"><span>Selection</span><strong id="hudSelectionTitle">None</strong></div>
+              <div id="hudPropertyForm" class="hud-property-form empty">Select a HUD component.</div>
+              <div class="hud-align-actions" aria-label="Alignment controls">
+                <button data-hud-action="alignLeft" type="button">Left</button>
+                <button data-hud-action="alignCenterX" type="button">Center X</button>
+                <button data-hud-action="alignRight" type="button">Right</button>
+                <button data-hud-action="alignTop" type="button">Top</button>
+                <button data-hud-action="alignCenterY" type="button">Center Y</button>
+                <button data-hud-action="alignBottom" type="button">Bottom</button>
+                <button data-hud-action="distributeX" type="button">Distribute X</button>
+                <button data-hud-action="distributeY" type="button">Distribute Y</button>
+                <button data-hud-action="matchWidth" type="button">Match Width</button>
+                <button data-hud-action="matchHeight" type="button">Match Height</button>
+              </div>
+              <div class="hud-reset-actions">
+                <button id="hudResetComponentBtn" type="button">Reset Selected</button>
+                <button id="hudResetPresetBtn" type="button">Reset Preset</button>
+                <button id="hudResetAllBtn" class="danger" type="button">Reset All Layouts</button>
+              </div>
+              <div class="panel-heading"><span>Checks</span><strong id="hudValidationSummary">Not checked</strong></div>
+              <div id="hudValidationList" class="validation-list">Press Validate Game to check HUD layouts.</div>
+            </aside>
+          </div>
+        </div>
       </section>
 
       <aside class="inspector" aria-label="Selected object">
@@ -168,6 +227,7 @@
 
     <footer id="statusBar" class="status-bar">Loading world data...</footer>
   </main>
-  <script src="editor.js?v=20260723-game-economy-editor"></script>
+  <script src="hud-editor.js?v=20260726-hud-layout-editor"></script>
+  <script src="editor.js?v=20260726-hud-layout-editor"></script>
 </body>
 </html>

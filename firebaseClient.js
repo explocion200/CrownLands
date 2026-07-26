@@ -340,6 +340,135 @@
     return callServerFunction("syncPlayerIdentity", payload);
   }
 
+  async function createClan(payload = {}) {
+    return callServerFunction("createClan", payload);
+  }
+
+  async function updateClanProfile(payload = {}) {
+    return callServerFunction("updateClanProfile", payload);
+  }
+
+  async function joinOpenClan(payload = {}) {
+    return callServerFunction("joinOpenClan", payload);
+  }
+
+  async function applyToClan(payload = {}) {
+    return callServerFunction("applyToClan", payload);
+  }
+
+  async function cancelClanApplication(payload = {}) {
+    return callServerFunction("cancelClanApplication", payload);
+  }
+
+  async function reviewClanApplication(payload = {}) {
+    return callServerFunction("reviewClanApplication", payload);
+  }
+
+  async function leaveClan(payload = {}) {
+    return callServerFunction("leaveClan", payload);
+  }
+
+  async function kickClanMember(payload = {}) {
+    return callServerFunction("kickClanMember", payload);
+  }
+
+  async function promoteClanMember(payload = {}) {
+    return callServerFunction("promoteClanMember", payload);
+  }
+
+  async function demoteClanOfficer(payload = {}) {
+    return callServerFunction("demoteClanOfficer", payload);
+  }
+
+  async function transferClanLeadership(payload = {}) {
+    return callServerFunction("transferClanLeadership", payload);
+  }
+
+  async function claimInactiveClanLeadership(payload = {}) {
+    return callServerFunction("claimInactiveClanLeadership", payload);
+  }
+
+  async function disbandClan(payload = {}) {
+    return callServerFunction("disbandClan", payload);
+  }
+
+  async function sendClanMessage(payload = {}) {
+    return callServerFunction("sendClanMessage", payload);
+  }
+
+  async function reportClanMessage(payload = {}) {
+    return callServerFunction("reportClanMessage", payload);
+  }
+
+  async function loadClan(clanId = "") {
+    await init();
+    if (!requireSignedIn() || !clanId) return null;
+    const { doc, getDoc } = client.modules.firestore;
+    const snapshot = await getDoc(doc(client.db, "clans", String(clanId).slice(0, 128)));
+    return snapshot.exists() ? { id: snapshot.id, ...snapshot.data() } : null;
+  }
+
+  async function searchClans(searchText = "", limitCount = 30) {
+    await init();
+    if (!requireSignedIn()) return [];
+    const { collection, getDocs, query, where, orderBy, limit, startAt, endAt } = client.modules.firestore;
+    const safeLimit = Math.max(1, Math.min(50, Math.floor(Number(limitCount) || 30)));
+    const normalized = String(searchText || "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+    const base = collection(client.db, "clans");
+    const clanQuery = normalized
+      ? query(base, where("status", "==", "active"), orderBy("normalizedName"), startAt(normalized), endAt(`${normalized}\uf8ff`), limit(safeLimit))
+      : query(base, where("status", "==", "active"), orderBy("normalizedName"), limit(safeLimit));
+    const snapshot = await getDocs(clanQuery);
+    return snapshot.docs.map(item => ({ id: item.id, ...item.data() }));
+  }
+
+  async function loadClanMembers(clanId = "") {
+    await init();
+    if (!requireSignedIn() || !clanId) return [];
+    const { collection, getDocs, query, orderBy } = client.modules.firestore;
+    const snapshot = await getDocs(query(collection(client.db, "clans", clanId, "members"), orderBy("joinedAtMs", "asc")));
+    return snapshot.docs.map(item => ({ id: item.id, ...item.data() }));
+  }
+
+  async function loadClanApplications(clanId = "") {
+    await init();
+    if (!requireSignedIn() || !clanId) return [];
+    const { collection, getDocs, query, where, orderBy } = client.modules.firestore;
+    const snapshot = await getDocs(query(
+      collection(client.db, "clans", clanId, "applications"),
+      where("status", "==", "pending"),
+      orderBy("createdAtMs", "asc")
+    ));
+    return snapshot.docs.map(item => ({ id: item.id, ...item.data() }));
+  }
+
+  async function loadClanLeaderboard(limitCount = 100) {
+    await init();
+    if (!requireSignedIn()) return [];
+    const { collection, getDocs, query, orderBy, limit } = client.modules.firestore;
+    const snapshot = await getDocs(query(
+      collection(client.db, "clanLeaderboards", "fresh-2026-07-05-server-reset", "entries"),
+      orderBy("totalKingPower", "desc"),
+      limit(Math.max(1, Math.min(100, Math.floor(Number(limitCount) || 100))))
+    ));
+    return snapshot.docs.map((item, index) => ({ id: item.id, rank: index + 1, ...item.data() }));
+  }
+
+  function subscribeClanMessages(clanId = "", handlers = {}) {
+    if (!client.db || !client.modules?.firestore?.onSnapshot || !client.user?.uid || !clanId) return () => {};
+    const { collection, onSnapshot, query, orderBy, limit } = client.modules.firestore;
+    return onSnapshot(
+      query(collection(client.db, "clans", clanId, "messages"), orderBy("createdAtMs", "desc"), limit(50)),
+      snapshot => {
+        const messages = snapshot.docs.map(item => ({ id: item.id, ...item.data() })).reverse();
+        if (typeof handlers.onMessages === "function") handlers.onMessages(messages);
+      },
+      error => {
+        if (typeof handlers.onError === "function") handlers.onError(error);
+      }
+    );
+  }
+
   async function recalculatePlayerGlobalStats(payload = {}) {
     return callServerFunction("recalculatePlayerGlobalStats", payload);
   }
@@ -1457,6 +1586,27 @@
     repairMainCityAssignment,
     changeMainCity,
     syncPlayerIdentity,
+    createClan,
+    updateClanProfile,
+    joinOpenClan,
+    applyToClan,
+    cancelClanApplication,
+    reviewClanApplication,
+    leaveClan,
+    kickClanMember,
+    promoteClanMember,
+    demoteClanOfficer,
+    transferClanLeadership,
+    claimInactiveClanLeadership,
+    disbandClan,
+    sendClanMessage,
+    reportClanMessage,
+    loadClan,
+    searchClans,
+    loadClanMembers,
+    loadClanApplications,
+    loadClanLeaderboard,
+    subscribeClanMessages,
     recalculatePlayerGlobalStats,
     recalculateAllPlayerGlobalStats,
     relinquishCity,

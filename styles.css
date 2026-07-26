@@ -5460,6 +5460,7 @@ button.inventory-slot {
 .profile-screen.open { display: grid; }
 .profile-screen.skills-active,
 .profile-screen.settings-active,
+.profile-screen.clan-active,
 .profile-screen.flag-editor-active {
   height: min(520px, calc(100dvh - 1.5rem));
   grid-template-rows: auto minmax(0, 1fr);
@@ -5498,6 +5499,131 @@ button.inventory-slot {
   font-weight: 950;
 }
 .profile-tabs button.active { color: #211508; background: #f2b84b; box-shadow: inset 0 0 0 1px rgba(255,255,255,.5); }
+.profile-tabs { grid-template-columns: repeat(4, minmax(64px, 1fr)); }
+
+.clan-view {
+  min-height: 0;
+  overflow: auto;
+  padding: .7rem;
+  color: #f7ead1;
+  background: radial-gradient(circle at 50% 0, rgba(47,122,74,.18), transparent 44%), #101b22;
+}
+.city-node.clan-ally .city-ring {
+  border-color: #5fd27c;
+  background: rgba(43, 139, 70, .28);
+  box-shadow: 0 0 0 4px rgba(70,181,99,.2), 0 0 22px rgba(69,218,108,.7);
+}
+.city-node.clan-ally .foreign-city-shield {
+  background: #267a43;
+  outline: 2px solid #8fe2a5;
+}
+.city-node.clan-ally .foreign-selected-banner {
+  border-color: #79d895;
+  box-shadow: 0 0 18px rgba(67,205,103,.7);
+}
+.city-clan-tag { color: #91e6aa; }
+.clan-ally-label {
+  padding: .12rem .4rem;
+  color: #eaffef;
+  border: 1px solid #86d99c;
+  border-radius: 999px;
+  background: #236c3b;
+  font-size: .58rem;
+  font-weight: 950;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+.clan-content { max-width: 1180px; margin: 0 auto; }
+.clan-empty { display: grid; min-height: 360px; place-content: center; gap: .65rem; text-align: center; }
+.clan-empty h3, .clan-empty p { margin: 0; }
+.clan-lock { color: #78c990; font-size: 4rem; }
+.clan-browser, .clan-columns { display: grid; grid-template-columns: minmax(260px,.72fr) minmax(360px,1.28fr); gap: .75rem; }
+.clan-create-card, .clan-discovery, .clan-roster-panel, .clan-chat-panel {
+  min-width: 0;
+  padding: .8rem;
+  border: 1px solid rgba(191,226,198,.2);
+  border-radius: 14px;
+  background: rgba(13,28,34,.88);
+  box-shadow: 0 14px 28px rgba(0,0,0,.24);
+}
+.clan-form { display: grid; gap: .55rem; }
+.clan-form input, .clan-form select, .clan-form textarea, .clan-search input, .clan-message-form input {
+  min-height: 40px;
+  padding: .55rem .7rem;
+  color: #fff7e8;
+  border: 1px solid rgba(178,216,188,.3);
+  border-radius: 8px;
+  background: #0b151a;
+}
+.clan-form textarea { min-height: 88px; resize: vertical; }
+.clan-search, .clan-message-form { display: grid; grid-template-columns: 1fr auto; gap: .45rem; }
+.clan-search button, .clan-message-form button, .clan-list-row > button, .clan-member-actions button, .clan-message button, .clan-applications button {
+  min-height: 36px;
+  padding: .35rem .65rem;
+  color: #eaffef;
+  border: 1px solid #4c9764;
+  border-radius: 8px;
+  background: #225c38;
+  font-weight: 800;
+}
+.clan-list { display: grid; gap: .45rem; margin-top: .65rem; }
+.clan-list-row, .clan-member-row, .clan-applications article {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .65rem;
+  padding: .65rem;
+  border-radius: 9px;
+  background: rgba(255,255,255,.055);
+}
+.clan-list-row div, .clan-member-row > div:first-child { display: grid; gap: .12rem; min-width: 0; }
+.clan-list-row span, .clan-list-row small, .clan-member-row span, .clan-muted { color: #a9c0b2; }
+.clan-hero {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: .8rem;
+  margin-bottom: .75rem;
+  padding: .85rem;
+  border: 1px solid rgba(139,218,160,.35);
+  border-radius: 15px;
+  background: linear-gradient(115deg, rgba(29,82,48,.9), rgba(15,34,41,.94));
+}
+.clan-hero h3, .clan-hero p { margin: .12rem 0; }
+.clan-banner {
+  display: grid;
+  width: 72px;
+  aspect-ratio: .8;
+  place-content: center;
+  color: var(--clan-secondary);
+  border: 3px solid var(--clan-secondary);
+  border-radius: 8px 8px 18px 18px;
+  background: var(--clan-primary);
+  text-shadow: 0 2px 2px #000;
+}
+.clan-power { display: grid; justify-items: end; }
+.clan-power strong { color: #8fe0a5; font-size: 1.4rem; }
+.clan-roster, .clan-chat-log { display: grid; gap: .35rem; overflow: auto; }
+.clan-roster { max-height: 310px; }
+.clan-chat-log { min-height: 260px; max-height: 390px; align-content: start; padding: .35rem; border-radius: 8px; background: rgba(0,0,0,.22); }
+.clan-member-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: .25rem; }
+.clan-message { padding: .5rem .6rem; border-radius: 8px; background: rgba(255,255,255,.06); }
+.clan-message > div { display: flex; align-items: center; gap: .4rem; }
+.clan-message p { margin: .25rem 0 0; overflow-wrap: anywhere; }
+.clan-message button { min-height: 26px; margin-left: auto; padding: .15rem .4rem; font-size: .68rem; }
+.clan-message-form { margin-top: .5rem; }
+.clan-applications { margin-top: .7rem; }
+.clan-warning { color: #f0c070; }
+.clan-leave { margin-top: .7rem; }
+.clan-leaderboard-heading { margin-top: .8rem; border-top: 1px solid rgba(124,211,149,.25); }
+.clan-leaderboard-heading small { display: block; color: #9bb8a2; }
+.clan-leaderboard-tag { color: #83d79b; font-weight: 950; }
+
+@media (max-width: 820px) {
+  .clan-browser, .clan-columns { grid-template-columns: 1fr; }
+  .clan-hero { grid-template-columns: auto 1fr; }
+  .clan-power { grid-column: 1 / -1; grid-template-columns: 1fr auto auto; justify-items: start; gap: .5rem; }
+}
 .profile-screen-close { grid-column: 3; justify-self: end; border-radius: 999px; }
 .profile-icon-btn {
   width: 42px;
@@ -5802,7 +5928,7 @@ button.inventory-slot {
 
 @media (max-width: 900px) and (orientation: landscape) {
   .profile-screen-header { min-height: 56px; padding-top: calc(.35rem + env(safe-area-inset-top)); padding-bottom: .35rem; }
-  .profile-tabs { grid-template-columns: repeat(3, minmax(68px, 1fr)); }
+  .profile-tabs { grid-template-columns: repeat(4, minmax(64px, 1fr)); }
   .profile-tabs button { min-height: 34px; padding: 0 .45rem; font-size: .72rem; }
   .profile-view { grid-template-columns: minmax(195px, .7fr) minmax(300px, 1.3fr); padding: .45rem; gap: .35rem; }
   .profile-identity, .kingdom-overview { padding: .32rem; }
@@ -6143,6 +6269,16 @@ body {
 :where(button, input, [tabindex]):focus-visible {
   outline: 2px solid var(--ui-gold-bright);
   outline-offset: 2px;
+}
+
+/* Optional positions written by the Game Editor. Existing HUD CSS remains the fallback. */
+.game-view > .hud-layout-managed,
+.game-view .hud-layout-managed {
+  position: absolute !important;
+  margin: 0 !important;
+}
+.game-view .hud-layout-hidden {
+  display: none !important;
 }
 
 .setup-card,

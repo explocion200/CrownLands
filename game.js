@@ -2512,6 +2512,22 @@ let toastTimer = null;
 let attackIdCounter = 1;
 let flagDraft = null;
 let activeProfileTab = "profile";
+let clanSnapshot = null;
+let clanMembers = [];
+let clanApplications = [];
+let clanSearchResults = [];
+let clanMessages = [];
+let clanMessagesUnsubscribe = null;
+let clanUiLoading = false;
+function loadMutedClanMemberIds() {
+  try {
+    const values = JSON.parse(localStorage.getItem("crownlands-muted-clan-members") || "[]");
+    return new Set(Array.isArray(values) ? values.map(String) : []);
+  } catch (_) {
+    return new Set();
+  }
+}
+const mutedClanMemberIds = loadMutedClanMemberIds();
 let battleReportFilter = "all";
 let cityListSortKey = "level";
 let cityListSortDirection = "desc";
@@ -2589,9 +2605,12 @@ const profileScreen = document.getElementById("profileScreen");
 const profileCloseBtn = document.getElementById("profileCloseBtn");
 const profileScreenTitle = document.getElementById("profileScreenTitle");
 const profileTabBtn = document.getElementById("profileTabBtn");
+const clanTabBtn = document.getElementById("clanTabBtn");
 const skillsTabBtn = document.getElementById("skillsTabBtn");
 const settingsTabBtn = document.getElementById("settingsTabBtn");
 const profileView = document.getElementById("profileView");
+const clanView = document.getElementById("clanView");
+const clanContent = document.getElementById("clanContent");
 const skillsView = document.getElementById("skillsView");
 const settingsView = document.getElementById("settingsView");
 const flagEditorView = document.getElementById("flagEditorView");
@@ -8003,6 +8022,12 @@ function mergeOnlineProfileSources(profile = null, cloudSnapshot = null) {
 function applyOnlineProfileSnapshot(profile = null, fallbackPlayerName = "Ricky") {
   if (!state || !profile || typeof profile !== "object") return;
   state.playerName = cleanName(profile.playerName || profile.displayName) || fallbackPlayerName;
+  state.clanId = String(profile.clanId || "");
+  state.clanName = String(profile.clanName || "");
+  state.clanTag = String(profile.clanTag || "");
+  state.clanRole = String(profile.clanRole || "");
+  state.clanJoinCooldownUntilMs = normalizeTimestampMs(profile.clanJoinCooldownUntilMs);
+  state.pendingClanApplicationId = String(profile.pendingClanApplicationId || "");
   state.flag = normalizeFlag(profile.flag);
   state.character = normalizeCharacterProgress(profile.character);
   state.upgrades = normalizeUpgrades(profile.upgrades, state.version || WORLD_SCHEMA_VERSION);
@@ -8294,6 +8319,9 @@ function normalizePlayerIdentity(raw = {}, fallbackUid = "") {
     kingPower: normalizePowerValue(raw.kingPower ?? raw.ownerKingPower ?? raw.attackerKingPower),
     kingPowerVersion: Math.max(0, Math.floor(Number(raw.kingPowerVersion) || 0)),
     updatedAtMs: normalizeTimestampMs(raw.updatedAtMs) || timestampToMs(raw.updatedAt),
+    clanId: String(raw.clanId || raw.ownerClanId || ""),
+    clanName: String(raw.clanName || raw.ownerClanName || ""),
+    clanTag: String(raw.clanTag || raw.ownerClanTag || ""),
   };
 }
 
@@ -8349,6 +8377,9 @@ function rememberPlayerIdentity(raw = {}, options = {}) {
     updatedAtMs: Math.max(existing?.updatedAtMs || 0, identity.updatedAtMs || 0),
     fetchedAtMs: force ? Date.now() : existing?.fetchedAtMs || 0,
     authoritative: existingIsAuthoritative || force,
+    clanId: identityIsNewer ? identity.clanId || existing?.clanId || "" : existing?.clanId || identity.clanId || "",
+    clanName: identityIsNewer ? identity.clanName || existing?.clanName || "" : existing?.clanName || identity.clanName || "",
+    clanTag: identityIsNewer ? identity.clanTag || existing?.clanTag || "" : existing?.clanTag || identity.clanTag || "",
   };
   playerIdentityCache.set(identity.uid, next);
   playerIdentityLookupMisses.delete(identity.uid);
@@ -8408,6 +8439,9 @@ function resolvePlayerIdentityForUid(uid, fallback = {}) {
       kingPower: getCurrentPlayerIdentityKingPower(fallbackIdentity.kingPower),
       kingPowerVersion: KING_POWER_AUTHORITY_VERSION,
       updatedAtMs: Date.now(),
+      clanId: state.clanId || "",
+      clanName: state.clanName || "",
+      clanTag: state.clanTag || "",
     };
   }
   const cached = ownerUid ? playerIdentityCache.get(ownerUid) : null;
@@ -8421,6 +8455,9 @@ function resolvePlayerIdentityForUid(uid, fallback = {}) {
       : cached?.kingPower || fallbackIdentity.kingPower || 0,
     kingPowerVersion: Math.max(cached?.kingPowerVersion || 0, fallbackIdentity.kingPowerVersion || 0),
     updatedAtMs: Math.max(cached?.updatedAtMs || 0, fallbackIdentity.updatedAtMs || 0),
+    clanId: cached?.clanId || fallbackIdentity.clanId || "",
+    clanName: cached?.clanName || fallbackIdentity.clanName || "",
+    clanTag: cached?.clanTag || fallbackIdentity.clanTag || "",
   };
 }
 
@@ -14197,12 +14234,16 @@ function isProtectedMainCity(city) {
 }
 
 function getMainCityAttackBlockReason(target, attackerOwner = "player", attackerOwnerUid = "") {
+  const friendlyReason = attackerOwner === "player" ? getClanFriendlyBlockReason(target) : "";
+  if (friendlyReason) return friendlyReason;
   if (!target || !isProtectedMainCity(target)) return "";
   if (isSameAttackOwner(target, attackerOwner, attackerOwnerUid)) return "";
   return `${target.name} is a main city and cannot be attacked.`;
 }
 
 function getMainCityScoutBlockReason(target, scoutOwner = "player", scoutOwnerUid = "") {
+  const friendlyReason = scoutOwner === "player" ? getClanFriendlyBlockReason(target) : "";
+  if (friendlyReason) return friendlyReason;
   if (!target || !isProtectedMainCity(target)) return "";
   if (isSameAttackOwner(target, scoutOwner, scoutOwnerUid)) return "";
   return `${target.name} is a main city and cannot be scouted.`;
@@ -15088,12 +15129,13 @@ function closeProfileScreen() {
 }
 
 function showProfileView() {
-  if (!profileView || !skillsView || !settingsView || !flagEditorView) return;
+  if (!profileView || !skillsView || !settingsView || !clanView || !flagEditorView) return;
   activeProfileTab = "profile";
-  profileScreen.classList.remove("skills-active", "settings-active", "flag-editor-active");
+  profileScreen.classList.remove("skills-active", "settings-active", "clan-active", "flag-editor-active");
   profileView.hidden = false;
   skillsView.hidden = true;
   settingsView.hidden = true;
+  clanView.hidden = true;
   flagEditorView.hidden = true;
   flagDraft = null;
   cancelProfileNameEdit();
@@ -15102,10 +15144,10 @@ function showProfileView() {
 }
 
 function showProfileSkills() {
-  if (!state || !profileView || !skillsView || !settingsView || !flagEditorView) return;
+  if (!state || !profileView || !skillsView || !settingsView || !clanView || !flagEditorView) return;
   activeProfileTab = "skills";
   profileScreen.classList.add("skills-active");
-  profileScreen.classList.remove("settings-active", "flag-editor-active");
+  profileScreen.classList.remove("settings-active", "clan-active", "flag-editor-active");
   profileView.hidden = true;
   skillsView.hidden = false;
   settingsView.hidden = true;
@@ -15117,13 +15159,14 @@ function showProfileSkills() {
 }
 
 function showProfileSettings() {
-  if (!state || !profileView || !skillsView || !settingsView || !flagEditorView) return;
+  if (!state || !profileView || !skillsView || !settingsView || !clanView || !flagEditorView) return;
   activeProfileTab = "settings";
   profileScreen.classList.add("settings-active");
-  profileScreen.classList.remove("skills-active", "flag-editor-active");
+  profileScreen.classList.remove("skills-active", "clan-active", "flag-editor-active");
   profileView.hidden = true;
   skillsView.hidden = true;
   settingsView.hidden = false;
+  clanView.hidden = true;
   flagEditorView.hidden = true;
   flagDraft = null;
   cancelProfileNameEdit();
@@ -15131,13 +15174,268 @@ function showProfileSettings() {
   updatePushAlertsUi();
 }
 
+function getCityClanIdentity(city) {
+  if (!city?.ownerUid) return { clanId: "", clanName: "", clanTag: "" };
+  const identity = resolvePlayerIdentityForUid(city.ownerUid, city);
+  return {
+    clanId: String(identity?.clanId || city.ownerClanId || ""),
+    clanName: String(identity?.clanName || city.ownerClanName || ""),
+    clanTag: String(identity?.clanTag || city.ownerClanTag || ""),
+  };
+}
+
+function isClanAllyCity(city) {
+  if (!city || city.owner === "player" || !state?.clanId) return false;
+  return getCityClanIdentity(city).clanId === state.clanId;
+}
+
+function getClanFriendlyBlockReason(target) {
+  return isClanAllyCity(target) ? "You cannot scout or attack a clan ally." : "";
+}
+
+async function refreshClanState(options = {}) {
+  const api = getOnlineApi();
+  if (!api?.isSignedIn?.()) {
+    clanSnapshot = null;
+    clanMembers = [];
+    clanApplications = [];
+    clanSearchResults = [];
+    renderClanView();
+    return;
+  }
+  clanUiLoading = true;
+  renderClanView();
+  try {
+    const profile = await api.loadPlayerProfile?.();
+    if (profile) applyOnlineProfileSnapshot(profile, state?.playerName || "Ruler");
+    if (state?.clanId) {
+      const [clan, members] = await Promise.all([
+        api.loadClan(state.clanId),
+        api.loadClanMembers(state.clanId),
+      ]);
+      clanSnapshot = clan;
+      clanMembers = members;
+      rememberPlayerIdentities(members.map(member => ({
+        uid: member.uid || member.id,
+        displayName: member.displayName,
+        flag: member.flag,
+        kingPower: member.kingPower,
+        clanId: clan.id,
+        clanName: clan.name,
+        clanTag: clan.tag,
+        updatedAtMs: member.updatedAtMs || Date.now(),
+      })), { force: true });
+      clanApplications = ["leader", "officer"].includes(state.clanRole)
+        ? await api.loadClanApplications(state.clanId).catch(() => [])
+        : [];
+      if (typeof clanMessagesUnsubscribe === "function") clanMessagesUnsubscribe();
+      clanMessagesUnsubscribe = api.subscribeClanMessages(state.clanId, {
+        onMessages: messages => {
+          clanMessages = messages;
+          if (activeProfileTab === "clan") renderClanView();
+        },
+        onError: error => console.warn("Clan chat subscription failed", error),
+      });
+    } else {
+      clanSnapshot = null;
+      clanMembers = [];
+      clanApplications = [];
+      clanMessages = [];
+      if (typeof clanMessagesUnsubscribe === "function") clanMessagesUnsubscribe();
+      clanMessagesUnsubscribe = null;
+      clanSearchResults = await api.searchClans(options.search || "", 30);
+    }
+  } catch (error) {
+    console.warn("Could not refresh clan state", error);
+    if (!options.silent) showToast(error?.message || "Could not load clans.");
+  } finally {
+    clanUiLoading = false;
+    renderClanView();
+    renderMap();
+  }
+}
+
+function showProfileClan() {
+  if (!state || !profileView || !skillsView || !settingsView || !clanView || !flagEditorView) return;
+  activeProfileTab = "clan";
+  profileScreen.classList.remove("skills-active", "settings-active", "clan-active", "flag-editor-active");
+  profileScreen.classList.add("clan-active");
+  profileView.hidden = true;
+  skillsView.hidden = true;
+  settingsView.hidden = true;
+  clanView.hidden = true;
+  clanView.hidden = false;
+  flagEditorView.hidden = true;
+  updateProfileTabHeader();
+  renderClanView();
+  refreshClanState({ silent: true });
+}
+
+function clanRoleLabel(role = "") {
+  return role === "leader" ? "Leader" : role === "officer" ? "Officer" : "Member";
+}
+
+function renderClanView() {
+  if (!clanContent || activeProfileTab !== "clan") return;
+  const heroLevel = Math.max(1, Math.floor(Number(state?.character?.level) || 1));
+  if (heroLevel < 20) {
+    clanContent.innerHTML = `<section class="clan-empty"><span class="clan-lock" aria-hidden="true">♜</span><h3>Clans unlock at Level 20</h3><p>Raise your Hero to Level 20 to create or join a clan.</p><strong>Level ${heroLevel} / 20</strong></section>`;
+    return;
+  }
+  if (clanUiLoading && !clanSnapshot && !clanSearchResults.length) {
+    clanContent.innerHTML = `<section class="clan-empty"><h3>Loading clans…</h3></section>`;
+    return;
+  }
+  if (!state?.clanId || !clanSnapshot) {
+    const cooldownMs = Math.max(0, Number(state?.clanJoinCooldownUntilMs || 0) - Date.now());
+    clanContent.innerHTML = `
+      <div class="clan-browser">
+        <section class="clan-create-card">
+          <div class="profile-section-heading"><span>Found a house</span><h3>Create Clan</h3></div>
+          <form data-clan-form="create" class="clan-form">
+            <input name="name" minlength="3" maxlength="24" required placeholder="Clan name" aria-label="Clan name" />
+            <input name="tag" minlength="3" maxlength="5" required pattern="[A-Za-z0-9]{3,5}" placeholder="TAG" aria-label="Clan tag" />
+            <select name="admissionMode" aria-label="Admission mode"><option value="approval">Approval required</option><option value="open">Open to join</option></select>
+            <textarea name="description" maxlength="280" placeholder="Clan description" aria-label="Clan description"></textarea>
+            <button class="profile-primary-btn" type="submit" ${cooldownMs ? "disabled" : ""}>Create — 100,000 gold</button>
+          </form>
+          ${cooldownMs ? `<p class="clan-warning">You can join or create again in ${formatDuration(Math.ceil(cooldownMs / 1000))}.</p>` : ""}
+        </section>
+        <section class="clan-discovery">
+          <div class="profile-section-heading"><span>Find allies</span><h3>Discover Clans</h3></div>
+          <form data-clan-form="search" class="clan-search"><input name="search" maxlength="24" placeholder="Search by clan name" aria-label="Search clans" /><button type="submit">Search</button></form>
+          <div class="clan-list">${clanSearchResults.length ? clanSearchResults.map(clan => `
+            <article class="clan-list-row">
+              <div><strong>[${escapeHtml(clan.tag || "")}] ${escapeHtml(clan.name || "Clan")}</strong><span>${formatNumber(clan.totalKingPower || 0)} power · ${clan.memberCount || 0}/30 members</span><small>${escapeHtml(clan.description || "No description yet.")}</small></div>
+              <button data-clan-action="${clan.admissionMode === "open" ? "join" : "apply"}" data-clan-id="${escapeHtml(clan.id)}" ${cooldownMs || clan.memberCount >= 30 ? "disabled" : ""}>${state?.pendingClanApplicationId === clan.id ? "Applied" : clan.admissionMode === "open" ? "Join" : "Apply"}</button>
+            </article>`).join("") : `<p class="clan-muted">No clans matched your search.</p>`}</div>
+        </section>
+      </div>`;
+    return;
+  }
+  const canManage = ["leader", "officer"].includes(state.clanRole);
+  const canLead = state.clanRole === "leader";
+  const visibleMessages = clanMessages.filter(message => !mutedClanMemberIds.has(message.senderUid));
+  clanContent.innerHTML = `
+    <section class="clan-hero">
+      <div class="clan-banner" style="--clan-primary:${escapeHtml(clanSnapshot.banner?.primary || "#2f7a4a")};--clan-secondary:${escapeHtml(clanSnapshot.banner?.secondary || "#d9e2e8")}"><strong>${escapeHtml(clanSnapshot.tag || "")}</strong></div>
+      <div><span>Your clan · ${clanRoleLabel(state.clanRole)}</span><h3>[${escapeHtml(clanSnapshot.tag || "")}] ${escapeHtml(clanSnapshot.name || "Clan")}</h3><p>${escapeHtml(clanSnapshot.description || "No description yet.")}</p></div>
+      <div class="clan-power"><span>Clan Power</span><strong>${formatNumber(clanSnapshot.totalKingPower || 0)}</strong><small>${clanSnapshot.memberCount || 0}/30 members</small></div>
+    </section>
+    <div class="clan-columns">
+      <section class="clan-roster-panel">
+        <div class="profile-section-heading"><span>Household</span><h3>Roster</h3></div>
+        <div class="clan-roster">${clanMembers.map(member => `
+          <article class="clan-member-row">
+            <div><strong>${escapeHtml(member.displayName || "Ruler")}</strong><span>${clanRoleLabel(member.role)} · ${formatNumber(member.kingPower || 0)} power</span></div>
+            <div class="clan-member-actions">
+              ${member.uid !== getCurrentOnlineUid() ? `<button data-clan-action="mute" data-member-id="${escapeHtml(member.uid)}">${mutedClanMemberIds.has(member.uid) ? "Unmute" : "Mute"}</button>` : ""}
+              ${canLead && member.uid !== getCurrentOnlineUid() && member.role === "member" ? `<button data-clan-action="promote" data-member-id="${escapeHtml(member.uid)}">Promote</button>` : ""}
+              ${canLead && member.role === "officer" ? `<button data-clan-action="demote" data-member-id="${escapeHtml(member.uid)}">Demote</button>` : ""}
+              ${canManage && member.uid !== getCurrentOnlineUid() && member.role === "member" ? `<button data-clan-action="kick" data-member-id="${escapeHtml(member.uid)}">Remove</button>` : ""}
+            </div>
+          </article>`).join("")}</div>
+        ${canManage && clanApplications.length ? `<div class="clan-applications"><h4>Applications</h4>${clanApplications.map(application => `<article><span>${escapeHtml(application.displayName || "Ruler")} · ${formatNumber(application.kingPower || 0)} power</span><button data-clan-action="accept" data-member-id="${escapeHtml(application.uid)}">Accept</button><button data-clan-action="reject" data-member-id="${escapeHtml(application.uid)}">Reject</button></article>`).join("")}</div>` : ""}
+        <button class="profile-secondary-btn clan-leave" data-clan-action="leave">${canLead && clanMembers.length === 1 ? "Disband Clan" : "Leave Clan"}</button>
+      </section>
+      <section class="clan-chat-panel">
+        <div class="profile-section-heading"><span>Private channel</span><h3>Clan Chat</h3></div>
+        <div class="clan-chat-log">${visibleMessages.length ? visibleMessages.map(message => `
+          <article class="clan-message"><div><strong>${escapeHtml(message.senderName || "Ruler")}</strong><small>${clanRoleLabel(message.senderRole)}</small>${message.senderUid !== getCurrentOnlineUid() ? `<button data-clan-action="report" data-message-id="${escapeHtml(message.id)}">Report</button>` : ""}</div><p>${escapeHtml(message.text || "")}</p></article>`).join("") : `<p class="clan-muted">No messages yet. Rally your clan.</p>`}</div>
+        <form data-clan-form="message" class="clan-message-form"><input name="text" maxlength="300" required autocomplete="off" placeholder="Message your clan…" aria-label="Clan message" /><button type="submit">Send</button></form>
+      </section>
+    </div>`;
+}
+
+async function runClanAction(action, payload = {}) {
+  const api = getOnlineApi();
+  if (!api) return;
+  clanUiLoading = true;
+  renderClanView();
+  try {
+    const method = {
+      join: "joinOpenClan",
+      apply: "applyToClan",
+      accept: "reviewClanApplication",
+      reject: "reviewClanApplication",
+      promote: "promoteClanMember",
+      demote: "demoteClanOfficer",
+      kick: "kickClanMember",
+      leave: clanMembers.length === 1 && state.clanRole === "leader" ? "disbandClan" : "leaveClan",
+      report: "reportClanMessage",
+    }[action];
+    if (!method || !api[method]) return;
+    const result = await api[method](payload);
+    if (Number.isFinite(Number(result?.gold))) state.gold = Number(result.gold);
+    showToast(action === "apply" ? "Application sent." : action === "report" ? "Message reported." : "Clan updated.");
+    await refreshClanState({ silent: true });
+  } catch (error) {
+    showToast(error?.message || "Clan action failed.");
+  } finally {
+    clanUiLoading = false;
+    renderClanView();
+  }
+}
+
+async function handleClanSubmit(event) {
+  const form = event.target.closest("[data-clan-form]");
+  if (!form) return;
+  event.preventDefault();
+  const data = Object.fromEntries(new FormData(form).entries());
+  const kind = form.dataset.clanForm;
+  const api = getOnlineApi();
+  try {
+    if (kind === "create") {
+      const result = await api.createClan(data);
+      if (Number.isFinite(Number(result?.gold))) state.gold = Number(result.gold);
+      showToast(`Clan [${result?.clan?.tag || data.tag}] founded.`);
+      await refreshClanState({ silent: true });
+    } else if (kind === "search") {
+      clanSearchResults = await api.searchClans(data.search || "", 30);
+      renderClanView();
+    } else if (kind === "message") {
+      await api.sendClanMessage({ text: data.text });
+      form.reset();
+    }
+  } catch (error) {
+    showToast(error?.message || "Clan action failed.");
+  }
+}
+
+function handleClanClick(event) {
+  const button = event.target.closest("[data-clan-action]");
+  if (!button) return;
+  const action = button.dataset.clanAction;
+  const clanId = button.dataset.clanId || state?.clanId || "";
+  const targetUid = button.dataset.memberId || "";
+  if (action === "mute") {
+    if (mutedClanMemberIds.has(targetUid)) mutedClanMemberIds.delete(targetUid);
+    else mutedClanMemberIds.add(targetUid);
+    localStorage.setItem("crownlands-muted-clan-members", JSON.stringify([...mutedClanMemberIds]));
+    renderClanView();
+    return;
+  }
+  runClanAction(action, {
+    clanId,
+    targetUid,
+    applicantUid: targetUid,
+    accept: action === "accept",
+    messageId: button.dataset.messageId || "",
+  });
+}
+
 function updateProfileTabHeader() {
   const showingSkills = activeProfileTab === "skills";
   const showingSettings = activeProfileTab === "settings";
-  if (profileScreenTitle) profileScreenTitle.textContent = showingSettings ? "Settings" : showingSkills ? "Skills" : "Profile";
+  const showingClan = activeProfileTab === "clan";
+  if (profileScreenTitle) profileScreenTitle.textContent = showingSettings ? "Settings" : showingSkills ? "Skills" : showingClan ? "Clan" : "Profile";
   if (profileTabBtn) {
-    profileTabBtn.classList.toggle("active", !showingSkills && !showingSettings);
-    profileTabBtn.setAttribute("aria-selected", String(!showingSkills && !showingSettings));
+    profileTabBtn.classList.toggle("active", !showingSkills && !showingSettings && !showingClan);
+    profileTabBtn.setAttribute("aria-selected", String(!showingSkills && !showingSettings && !showingClan));
+  }
+  if (clanTabBtn) {
+    clanTabBtn.classList.toggle("active", showingClan);
+    clanTabBtn.setAttribute("aria-selected", String(showingClan));
   }
   if (skillsTabBtn) {
     skillsTabBtn.classList.toggle("active", showingSkills);
@@ -15633,6 +15931,8 @@ function getCityRenderSignature(visibleCities, visibleCamps = []) {
       city.ownerKind || "",
       city.ownerUid || "",
       city.ownerName || "",
+      getCityClanIdentity(city).clanId,
+      getCityClanIdentity(city).clanTag,
       getFlagSignature(city.ownerFlag),
       city.kind || "",
       city.strongholdType || "",
@@ -15825,6 +16125,8 @@ function renderCities(force = false) {
     btn.dataset.cityId = city.id;
     const castleStage = getCastleStage(city.level);
     btn.className = `city-node ${OWNER[city.owner].css} castle-stage-${castleStage}`;
+    const clanAlly = isClanAllyCity(city);
+    if (clanAlly) btn.classList.add("clan-ally");
     if (stronghold) btn.classList.add("stronghold-node", `stronghold-${city.strongholdType || "generic"}`);
     const shielded = !stronghold && isCityProtectedByPeaceShield(city);
     if (shielded) btn.classList.add("peace-shielded");
@@ -15845,11 +16147,12 @@ function renderCities(force = false) {
     const isSelectedForeign = city.owner !== "player" && city.id === selectedTargetId && !sendMode;
     const ownerName = getCityOwnerDisplayName(city);
     const ownerFlag = renderCityOwnerFlag(city);
+    const clanIdentity = getCityClanIdentity(city);
     const crownBadge = cityOwnerHoldsCrownCitadel(city)
       ? `<span class="citadel-city-crown" title="Crown Citadel ruler" aria-label="Crown Citadel ruler">&#9819;</span>`
       : "";
     const rivalOwnerName = city.owner === "enemy" && ownerName && ownerName !== OWNER.enemy.label
-      ? `<strong class="foreign-ruler-name foreign-ruler-name-inline">${escapeHtml(ownerName)}</strong>`
+      ? `<strong class="foreign-ruler-name foreign-ruler-name-inline">${escapeHtml(ownerName)}${clanIdentity.clanTag ? ` <span class="city-clan-tag">[${escapeHtml(clanIdentity.clanTag)}]</span>` : ""}</strong>${clanAlly ? `<span class="clan-ally-label">Clan Ally</span>` : ""}`
       : "";
     const cityLabel = city.owner === "player"
       ? `
@@ -15901,7 +16204,7 @@ function renderCities(force = false) {
       <span class="city-ring"></span>
       ${shielded ? `<span class="city-shield-field" aria-hidden="true"><img src="assets/royal-peace-shield-field.png?v=20260704-shield-badge" alt="" draggable="false" /></span>` : ""}
       <span class="city-castle stage-${castleStage}" aria-hidden="true"><img class="city-art" src="${getCastleAsset(castleStage)}" alt="" draggable="false" /></span>`;
-    btn.setAttribute("aria-label", `${city.name}. ${ownerName}. ${locationType}. ${knownTroops === undefined ? "Unknown troops" : `${formatNumber(knownTroops)} troops`}.`);
+    btn.setAttribute("aria-label", `${city.name}. ${ownerName}. ${clanAlly ? "Clan Ally. " : ""}${locationType}. ${knownTroops === undefined ? "Unknown troops" : `${formatNumber(knownTroops)} troops`}.`);
     const cityHtml = `
       ${structureHtml}
       ${cityLabel}
@@ -16027,11 +16330,12 @@ function renderSelectedForeignWheel(city) {
   const wheel = document.createElement("div");
   const report = getScoutReport(city.id);
   const pendingScout = getPendingScoutMission(city.id);
-  const scoutBlockReason = getMainCityScoutBlockReason(city, "player");
+  const friendlyBlockReason = getClanFriendlyBlockReason(city);
+  const scoutBlockReason = friendlyBlockReason || getMainCityScoutBlockReason(city, "player");
   const canScout = !scoutBlockReason && !pendingScout && playerCities().some(playerCity => playerCity.troops >= 1);
-  const mainCityBlockReason = getMainCityAttackBlockReason(city, "player");
+  const mainCityBlockReason = friendlyBlockReason || getMainCityAttackBlockReason(city, "player");
   const shieldBlockReason = getPeaceShieldAttackBlockReason(city, "player");
-  const attackBlockLabel = mainCityBlockReason ? "Main City" : shieldBlockReason ? "Shielded" : "Attack";
+  const attackBlockLabel = friendlyBlockReason ? "Clan Ally" : mainCityBlockReason ? "Main City" : shieldBlockReason ? "Shielded" : "Attack";
   const canAttack = !mainCityBlockReason && !shieldBlockReason && playerCities().some(playerCity => playerCity.troops > 0);
   wheel.className = "city-action-wheel foreign-city-action-wheel";
   wheel.style.left = `${mapPoint.x}px`;
@@ -16040,7 +16344,7 @@ function renderSelectedForeignWheel(city) {
     <span class="city-wheel-ring" aria-hidden="true"></span>
     <button class="city-wheel-action wheel-scout" type="button" aria-label="${scoutBlockReason ? escapeHtml(scoutBlockReason) : `${pendingScout ? "Scout traveling to" : report ? "Scout again" : "Scout"} ${escapeHtml(city.name)}`}" ${canScout ? "" : "disabled"}>
       <span class="wheel-icon" aria-hidden="true">&#128301;</span>
-      <span class="wheel-action-name">${scoutBlockReason ? "Main City" : pendingScout ? "Scouting" : report ? "Rescout" : "Scout"}</span>
+      <span class="wheel-action-name">${friendlyBlockReason ? "Clan Ally" : scoutBlockReason ? "Main City" : pendingScout ? "Scouting" : report ? "Rescout" : "Scout"}</span>
     </button>
     <button class="city-wheel-action wheel-attack" type="button" aria-label="${mainCityBlockReason ? escapeHtml(mainCityBlockReason) : `Attack ${escapeHtml(city.name)}`}" ${canAttack ? "" : "disabled"}>
       <span class="wheel-icon" aria-hidden="true">&#9876;</span>
@@ -16079,11 +16383,12 @@ function renderSelectedStrongholdWheel(stronghold) {
   const mapPoint = worldToMapPoint(stronghold);
   const wheel = document.createElement("div");
   const owned = stronghold.owner === "player";
+  const clanAlly = isClanAllyCity(stronghold);
   const report = owned ? null : getScoutReport(stronghold.id);
   const pendingScout = owned ? null : getPendingScoutMission(stronghold.id);
   const availableSources = playerCities().filter(city => city.id !== stronghold.id && Math.floor(Number(city.troops) || 0) > 0);
-  const canScout = !owned && !pendingScout && availableSources.length > 0;
-  const canAttack = !owned && availableSources.length > 0;
+  const canScout = !owned && !clanAlly && !pendingScout && availableSources.length > 0;
+  const canAttack = !owned && !clanAlly && availableSources.length > 0;
   const canSend = owned && Math.floor(Number(stronghold.troops) || 0) > 0;
   const canReinforce = owned && availableSources.length > 0;
   const wheelSize = getStrongholdVisualSize(stronghold);
@@ -18259,6 +18564,8 @@ function showCityInfoModal(cityId) {
   if (city.owner !== "player") {
     const report = getScoutReport(city.id);
     const stats = getCityStats(city);
+    const clanIdentity = getCityClanIdentity(city);
+    const clanAlly = isClanAllyCity(city);
     const remaining = report ? Math.max(0, Math.ceil(report.expiresAt - state.gameSeconds)) : 0;
     const strongholdBonusLabel = stronghold ? getStrongholdBonusLabel(city) : "";
     const neutralStrongholdBase = stronghold && city.owner === "neutral"
@@ -18267,6 +18574,7 @@ function showCityInfoModal(cityId) {
     modalTitle.textContent = stronghold ? `${city.name} - Stronghold` : `${city.name} - Level ${city.level}`;
     modalBody.innerHTML = `
       <div class="city-stat-panel modal-city-stats">
+        ${clanAlly ? `<div class="stat-wide clan-ally-status"><span>Relationship</span><strong>Clan Ally [${escapeHtml(clanIdentity.clanTag)}]</strong><small>You cannot scout or attack this city.</small><button id="openCityClanBtn" class="profile-secondary-btn" type="button">Open Clan</button></div>` : clanIdentity.clanTag ? `<div class="stat-wide"><span>Clan</span><strong>[${escapeHtml(clanIdentity.clanTag)}] ${escapeHtml(clanIdentity.clanName)}</strong></div>` : ""}
         ${stronghold ? `<div class="stat-wide"><span>Stronghold bonus</span><strong>${strongholdBonusLabel}</strong><small>Bonus is active only for the current controller.</small></div>` : ""}
         <div class="stat-wide"><span>Owner</span><strong>${escapeHtml(getCityOwnerDisplayName(city))}</strong></div>
         <div class="stat-chip"><span>${stronghold ? "Defense level" : "City level"}</span><strong>${formatNumber(stats.level)}</strong></div>
@@ -18280,6 +18588,12 @@ function showCityInfoModal(cityId) {
           : `<div class="stat-wide scout-required"><span>Scout report</span><strong>Not available</strong></div>`}
       </div>
     `;
+    const openCityClanBtn = document.getElementById("openCityClanBtn");
+    if (openCityClanBtn) openCityClanBtn.addEventListener("click", () => {
+      modal.close();
+      showProfileScreen();
+      showProfileClan();
+    });
     if (!modal.open) modal.showModal();
     return;
   }
@@ -20279,7 +20593,7 @@ function renderLeaderboardRow(entry, index, currentUid) {
       <span class="leaderboard-rank">#${formatNumber(index + 1)}</span>
       <span class="kingdom-flag kingdom-flag-small leaderboard-flag" data-leaderboard-flag="${index}" aria-hidden="true"><span class="flag-symbol"></span></span>
       <div class="leaderboard-ruler">
-        <strong>${escapeHtml(entry.displayName)}</strong>
+        <strong>${entry.clanTag ? `<span class="city-clan-tag">[${escapeHtml(entry.clanTag)}]</span> ` : ""}${escapeHtml(entry.displayName)}</strong>
         <small>${escapeHtml(getRegionLabel(entry.mainRegionId))} - ${formatNumber(entry.cityCount)} ${entry.cityCount === 1 ? "city" : "cities"}${isCurrent ? " - You" : ""}</small>
       </div>
       <div class="leaderboard-power">
@@ -20359,6 +20673,25 @@ async function refreshLeaderboardRows({ forcePublish = false } = {}) {
   }
 }
 
+async function refreshClanLeaderboardRows() {
+  const api = getOnlineApi();
+  const list = modalBody?.querySelector("#clanLeaderboardRows");
+  if (!list || !api?.loadClanLeaderboard || !api?.isSignedIn?.()) return;
+  try {
+    const rows = await api.loadClanLeaderboard(KING_POWER_LEADERBOARD_LIMIT);
+    if (!modal.open || !modal.classList.contains("leaderboard-modal")) return;
+    list.innerHTML = rows.length ? rows.map((entry, index) => `
+      <article class="leaderboard-row clan-leaderboard-row ${entry.id === state?.clanId ? "current" : ""}">
+        <span class="leaderboard-rank">#${formatNumber(index + 1)}</span>
+        <span class="clan-leaderboard-tag">[${escapeHtml(entry.tag || "")}]</span>
+        <div class="leaderboard-ruler"><strong>${escapeHtml(entry.name || "Clan")}</strong><small>${formatNumber(entry.memberCount || 0)} members</small></div>
+        <div class="leaderboard-power"><strong>${formatNumber(entry.totalKingPower || 0)}</strong><small>Clan Power</small></div>
+      </article>`).join("") : `<div class="leaderboard-empty">No clan scores have been published yet.</div>`;
+  } catch (error) {
+    list.innerHTML = `<div class="leaderboard-empty">Could not load clan ranks right now.</div>`;
+  }
+}
+
 function showLeaderboardModal() {
   if (!state) return;
   modal.classList.remove("battle-report-modal");
@@ -20375,13 +20708,17 @@ function showLeaderboardModal() {
       <div id="leaderboardRows" class="leaderboard-list">
         <div class="leaderboard-empty">Loading King Power ranks...</div>
       </div>
+      <div class="leaderboard-toolbar clan-leaderboard-heading"><div><strong>Top Clans</strong><small>Combined member King Power</small></div></div>
+      <div id="clanLeaderboardRows" class="leaderboard-list"><div class="leaderboard-empty">Loading clan ranks...</div></div>
     </div>
   `;
   modalBody.querySelector("#leaderboardRefreshBtn")?.addEventListener("click", () => {
     refreshLeaderboardRows({ forcePublish: true });
+    refreshClanLeaderboardRows();
   });
   if (!modal.open) modal.showModal();
   refreshLeaderboardRows({ forcePublish: true });
+  refreshClanLeaderboardRows();
 }
 
 function showLogModal() {
@@ -21616,8 +21953,13 @@ if (islandSwitchBtn) islandSwitchBtn.addEventListener("click", showIslandSwitche
 if (profileBtn) profileBtn.addEventListener("click", showProfileScreen);
 if (profileCloseBtn) profileCloseBtn.addEventListener("click", closeProfileScreen);
 if (profileTabBtn) profileTabBtn.addEventListener("click", showProfileView);
+if (clanTabBtn) clanTabBtn.addEventListener("click", showProfileClan);
 if (skillsTabBtn) skillsTabBtn.addEventListener("click", showProfileSkills);
 if (settingsTabBtn) settingsTabBtn.addEventListener("click", showProfileSettings);
+if (clanContent) {
+  clanContent.addEventListener("submit", handleClanSubmit);
+  clanContent.addEventListener("click", handleClanClick);
+}
 if (pushAlertsOffBtn) pushAlertsOffBtn.addEventListener("click", disablePushNotificationsFromSettings);
 if (pushAlertsOnBtn) pushAlertsOnBtn.addEventListener("click", enablePushNotificationsFromSettings);
 if (profileFlagBtn) profileFlagBtn.addEventListener("click", showFlagEditor);

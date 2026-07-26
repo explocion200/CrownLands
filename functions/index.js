@@ -151,6 +151,15 @@ const GAME_SERVER_CAPACITY = 50;
 const GAME_SERVER_ACTIVE_STALE_MS = 3 * 60 * 1000;
 const GAME_SERVER_WAITING_STALE_MS = 5 * 60 * 1000;
 const GAME_SERVER_MAX_WAITING = 500;
+const CLAN_UNLOCK_LEVEL = 20;
+const CLAN_CREATE_GOLD_COST = 100_000;
+const CLAN_MEMBER_LIMIT = 30;
+const CLAN_JOIN_COOLDOWN_MS = 24 * 60 * 60 * 1000;
+const CLAN_LEADER_INACTIVE_MS = 14 * 24 * 60 * 60 * 1000;
+const CLAN_RESERVATION_RELEASE_MS = 7 * 24 * 60 * 60 * 1000;
+const CLAN_CHAT_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
+const CLAN_CHAT_RATE_WINDOW_MS = 30 * 1000;
+const CLAN_CHAT_RATE_LIMIT = 5;
 const GLOBAL_PLAYER_STATS_VERSION = 6;
 const PLAYER_IDENTITY_SYNC_VERSION = 1;
 const MAIN_CITY_ASSIGNMENT_VERSION = 2;
@@ -2553,6 +2562,9 @@ function getCanonicalPlayerIdentity(uid = "", profile = {}, data = {}, authToken
     ownerName,
     ownerFlag,
     ownerKingPower,
+    clanId: safeString(profile.clanId, 128),
+    clanName: safeString(profile.clanName, 24),
+    clanTag: safeString(profile.clanTag, 5),
   };
 }
 
@@ -2729,6 +2741,9 @@ function getPlayerIdentitySyncSignature(identity = {}) {
   return JSON.stringify([
     normalizePlayerName(identity.ownerName),
     normalizeServerFlag(identity.ownerFlag),
+    safeString(identity.clanId, 128),
+    safeString(identity.clanName, 24),
+    safeString(identity.clanTag, 5),
   ]);
 }
 
@@ -3776,6 +3791,12 @@ async function rebuildGlobalStatsForPlayer(uid = "") {
         playerName: identity.ownerName,
         displayName: identity.ownerName,
         flag: identity.ownerFlag,
+        clanId: identity.clanId,
+        clanName: identity.clanName,
+        clanTag: identity.clanTag,
+        clanId: identity.clanId,
+        clanName: identity.clanName,
+        clanTag: identity.clanTag,
         kingPower: stats.kingPower,
         kingPowerVersion: GLOBAL_PLAYER_STATS_VERSION,
         kingPowerUpdatedAtMs: nowMs,
@@ -3794,6 +3815,12 @@ async function rebuildGlobalStatsForPlayer(uid = "") {
         displayName: identity.ownerName,
         playerName: identity.ownerName,
         flag: identity.ownerFlag,
+        clanId: identity.clanId,
+        clanName: identity.clanName,
+        clanTag: identity.clanTag,
+        clanId: identity.clanId,
+        clanName: identity.clanName,
+        clanTag: identity.clanTag,
         kingPower: stats.kingPower,
         kingPowerVersion: GLOBAL_PLAYER_STATS_VERSION,
         kingPowerUpdatedAtMs: nowMs,
@@ -4607,6 +4634,9 @@ exports.syncPlayerIdentity = onCall({ region: "us-central1", maxInstances: 20, i
         ownerName: identity.ownerName,
         ownerFlag: identity.ownerFlag,
         ownerKingPower: serverKingPower,
+        ownerClanId: identity.clanId,
+        ownerClanName: identity.clanName,
+        ownerClanTag: identity.clanTag,
         kingPowerVersion: GLOBAL_PLAYER_STATS_VERSION,
         updatedAt: FieldValue.serverTimestamp(),
       },
@@ -4621,6 +4651,9 @@ exports.syncPlayerIdentity = onCall({ region: "us-central1", maxInstances: 20, i
         ownerKingPower: serverKingPower,
         attackerKingPower: serverKingPower,
         kingPowerVersion: GLOBAL_PLAYER_STATS_VERSION,
+        ownerClanId: identity.clanId,
+        ownerClanName: identity.clanName,
+        ownerClanTag: identity.clanTag,
         updatedAt: FieldValue.serverTimestamp(),
       },
     });
@@ -5683,6 +5716,638 @@ exports.useRecallHorn = onCall({ region: "us-central1", maxInstances: 20, invoke
   });
 });
 
+function normalizeClanName(value = "") {
+  const display = safeString(value, 24).replace(/\s+/g, " ").trim();
+  if (display.length < 3 || !/^[A-Za-z0-9 _.-]+$/.test(display)) {
+    throw new HttpsError("invalid-argument", "Clan names must be 3-24 letters, numbers, spaces, periods, underscores, or hyphens.");
+  }
+  return { display, normalized: display.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") };
+}
+
+function normalizeClanTag(value = "") {
+  const display = safeString(value, 5).trim().toUpperCase();
+  if (!/^[A-Z0-9]{3,5}$/.test(display)) {
+    throw new HttpsError("invalid-argument", "Clan tags must be 3-5 letters or numbers.");
+  }
+  return { display, normalized: display.toLowerCase() };
+}
+
+function normalizeClanDescription(value = "") {
+  return safeString(value, 280).replace(/[\u0000-\u001f\u007f]/g, "").trim();
+}
+
+function normalizeClanBanner(value = {}) {
+  const source = value && typeof value === "object" ? value : {};
+  return {
+    primary: safeString(source.primary || "#2f7a4a", 16),
+    secondary: safeString(source.secondary || "#d9e2e8", 16),
+    pattern: safeString(source.pattern || "solid", 24),
+    symbol: safeString(source.symbol || "crown", 24),
+  };
+}
+
+function normalizeAdmissionMode(value = "") {
+  return value === "open" ? "open" : "approval";
+}
+
+function clanPublicSnapshot(id = "", clan = {}) {
+  return {
+    id,
+    name: safeString(clan.name, 24),
+    normalizedName: safeString(clan.normalizedName, 40),
+    tag: safeString(clan.tag, 5),
+    description: safeString(clan.description, 280),
+    banner: normalizeClanBanner(clan.banner),
+    admissionMode: normalizeAdmissionMode(clan.admissionMode),
+    leaderUid: safeString(clan.leaderUid, 128),
+    memberCount: clampInt(clan.memberCount, 0, CLAN_MEMBER_LIMIT),
+    memberLimit: CLAN_MEMBER_LIMIT,
+    totalKingPower: Math.max(0, Math.floor(safeNumber(clan.totalKingPower, 0))),
+    status: clan.status === "disbanded" ? "disbanded" : "active",
+    createdAtMs: Math.max(0, timestampToMs(clan.createdAtMs || clan.createdAt)),
+    updatedAtMs: Math.max(0, timestampToMs(clan.updatedAtMs || clan.updatedAt)),
+  };
+}
+
+function clanIdentityPatch(clanId = "", clan = {}, role = "") {
+  if (!clanId) {
+    return {
+      clanId: FieldValue.delete(),
+      clanName: FieldValue.delete(),
+      clanTag: FieldValue.delete(),
+      clanRole: FieldValue.delete(),
+    };
+  }
+  return {
+    clanId,
+    clanName: safeString(clan.name, 24),
+    clanTag: safeString(clan.tag, 5),
+    clanRole: ["leader", "officer"].includes(role) ? role : "member",
+  };
+}
+
+function clanMemberSnapshot(uid = "", profile = {}, role = "member", nowMs = Date.now()) {
+  return {
+    uid,
+    role,
+    displayName: normalizePlayerName(profile.playerName || profile.displayName || "Ruler"),
+    flag: profile.flag || null,
+    kingPower: Math.max(0, Math.floor(safeNumber(profile.kingPower || profile.globalStats?.kingPower, 0))),
+    joinedAtMs: nowMs,
+    roleChangedAtMs: nowMs,
+    lastActiveAtMs: Math.max(nowMs, timestampToMs(profile.lastSeenAtMs || profile.updatedAt)),
+    status: "active",
+    updatedAtMs: nowMs,
+    updatedAt: FieldValue.serverTimestamp(),
+  };
+}
+
+function assertClanUnlocked(profile = {}) {
+  const level = Math.max(1, Math.floor(safeNumber(profile?.character?.level, 1)));
+  if (level < CLAN_UNLOCK_LEVEL) {
+    throw new HttpsError("failed-precondition", `Clans unlock at Hero Level ${CLAN_UNLOCK_LEVEL}.`);
+  }
+}
+
+function assertNoClan(profile = {}, nowMs = Date.now(), allowedApplicationClanId = "") {
+  if (safeString(profile.clanId, 128)) throw new HttpsError("failed-precondition", "You are already in a clan.");
+  const pendingClanApplicationId = safeString(profile.pendingClanApplicationId, 128);
+  if (pendingClanApplicationId && pendingClanApplicationId !== allowedApplicationClanId) {
+    throw new HttpsError("failed-precondition", "Cancel your existing clan application first.");
+  }
+  const cooldownUntilMs = Math.max(0, timestampToMs(profile.clanJoinCooldownUntilMs));
+  if (cooldownUntilMs > nowMs) {
+    throw new HttpsError("failed-precondition", "You must wait before joining another clan.", { cooldownUntilMs });
+  }
+}
+
+function assertClanRole(member = {}, allowedRoles = []) {
+  if (!member || member.status === "removed" || !allowedRoles.includes(member.role)) {
+    throw new HttpsError("permission-denied", "Your clan role does not allow that action.");
+  }
+}
+
+function clanAuditRef(clanId = "") {
+  return db.collection(`clans/${clanId}/audit`).doc();
+}
+
+function writeClanAudit(transaction, clanId, actorUid, action, details = {}, nowMs = Date.now()) {
+  transaction.set(clanAuditRef(clanId), {
+    actorUid,
+    action: safeString(action, 64),
+    details,
+    createdAtMs: nowMs,
+    createdAt: FieldValue.serverTimestamp(),
+  });
+}
+
+function writeClanLeaderboard(transaction, clanId, clan = {}, patch = {}) {
+  const combined = { ...clan, ...patch };
+  transaction.set(db.doc(`clanLeaderboards/${RESET_GENERATION}/entries/${clanId}`), {
+    clanId,
+    name: safeString(combined.name, 24),
+    tag: safeString(combined.tag, 5),
+    banner: normalizeClanBanner(combined.banner),
+    memberCount: clampInt(combined.memberCount, 0, CLAN_MEMBER_LIMIT),
+    totalKingPower: Math.max(0, Math.floor(safeNumber(combined.totalKingPower, 0))),
+    resetGeneration: RESET_GENERATION,
+    updatedAtMs: Date.now(),
+    updatedAt: FieldValue.serverTimestamp(),
+  }, { merge: true });
+}
+
+async function areClanmates(transaction, firstUid = "", secondUid = "", knownFirstProfile = null, knownSecondProfile = null) {
+  if (!firstUid || !secondUid || firstUid === secondUid) return false;
+  let firstProfile = knownFirstProfile;
+  let secondProfile = knownSecondProfile;
+  if (!firstProfile) {
+    const snap = await transaction.get(db.doc(`players/${firstUid}`));
+    firstProfile = snap.exists ? snap.data() || {} : {};
+  }
+  if (!secondProfile) {
+    const snap = await transaction.get(db.doc(`players/${secondUid}`));
+    secondProfile = snap.exists ? snap.data() || {} : {};
+  }
+  const clanId = safeString(firstProfile.clanId, 128);
+  return Boolean(clanId && clanId === safeString(secondProfile.clanId, 128));
+}
+
+exports.createClan = onCall({ region: "us-central1", maxInstances: 20, invoker: "public" }, async request => {
+  const uid = requireAuth(request);
+  const nowMs = Date.now();
+  const name = normalizeClanName(request.data?.name);
+  const tag = normalizeClanTag(request.data?.tag);
+  const clanId = db.collection("clans").doc().id;
+  const clanRef = db.doc(`clans/${clanId}`);
+  const nameRef = db.doc(`clanNameReservations/${name.normalized}`);
+  const tagRef = db.doc(`clanTagReservations/${tag.normalized}`);
+  const profileRef = db.doc(`players/${uid}`);
+  return db.runTransaction(async transaction => {
+    const [profileSnap, nameSnap, tagSnap] = await Promise.all([
+      transaction.get(profileRef),
+      transaction.get(nameRef),
+      transaction.get(tagRef),
+    ]);
+    if (!profileSnap.exists) throw new HttpsError("not-found", "Player profile was not found.");
+    const profile = profileSnap.data() || {};
+    assertClanUnlocked(profile);
+    assertNoClan(profile, nowMs);
+    if (nameSnap.exists && timestampToMs(nameSnap.data()?.reusableAtMs) > nowMs) {
+      throw new HttpsError("already-exists", "That clan name is already in use.");
+    }
+    if (tagSnap.exists && timestampToMs(tagSnap.data()?.reusableAtMs) > nowMs) {
+      throw new HttpsError("already-exists", "That clan tag is already in use.");
+    }
+    const economy = await prepareEconomyCollection(transaction, uid, nowMs, { profileRef, profileSnap });
+    const availableGold = Math.max(0, Math.floor(safeNumber(economy.profileAfter.gold, 0)));
+    if (availableGold < CLAN_CREATE_GOLD_COST) {
+      throw new HttpsError("failed-precondition", `Creating a clan costs ${CLAN_CREATE_GOLD_COST.toLocaleString()} gold.`);
+    }
+    const clan = {
+      name: name.display,
+      normalizedName: name.normalized,
+      tag: tag.display,
+      normalizedTag: tag.normalized,
+      description: normalizeClanDescription(request.data?.description),
+      banner: normalizeClanBanner(request.data?.banner),
+      admissionMode: normalizeAdmissionMode(request.data?.admissionMode),
+      leaderUid: uid,
+      memberCount: 1,
+      memberLimit: CLAN_MEMBER_LIMIT,
+      totalKingPower: Math.max(0, Math.floor(safeNumber(economy.globalStats?.kingPower || profile.kingPower, 0))),
+      status: "active",
+      createdAtMs: nowMs,
+      updatedAtMs: nowMs,
+      createdAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
+    };
+    transaction.set(clanRef, clan);
+    transaction.set(db.doc(`clans/${clanId}/members/${uid}`), clanMemberSnapshot(uid, {
+      ...profile,
+      kingPower: clan.totalKingPower,
+    }, "leader", nowMs));
+    transaction.set(nameRef, { clanId, reusableAtMs: Number.MAX_SAFE_INTEGER, updatedAt: FieldValue.serverTimestamp() });
+    transaction.set(tagRef, { clanId, reusableAtMs: Number.MAX_SAFE_INTEGER, updatedAt: FieldValue.serverTimestamp() });
+    writePreparedEconomy(transaction, economy, {
+      gold: availableGold - CLAN_CREATE_GOLD_COST,
+      ...clanIdentityPatch(clanId, clan, "leader"),
+    });
+    transaction.set(leaderboardEntryRef(uid), clanIdentityPatch(clanId, clan, "leader"), { merge: true });
+    writeClanLeaderboard(transaction, clanId, clan);
+    writeClanAudit(transaction, clanId, uid, "clan_created", { name: clan.name, tag: clan.tag }, nowMs);
+    return { ok: true, clan: clanPublicSnapshot(clanId, clan), role: "leader", gold: availableGold - CLAN_CREATE_GOLD_COST };
+  });
+});
+
+exports.updateClanProfile = onCall({ region: "us-central1", maxInstances: 20, invoker: "public" }, async request => {
+  const uid = requireAuth(request);
+  const profileSnap = await db.doc(`players/${uid}`).get();
+  const clanId = safeString(profileSnap.data()?.clanId, 128);
+  if (!clanId) throw new HttpsError("failed-precondition", "You are not in a clan.");
+  return db.runTransaction(async transaction => {
+    const [clanSnap, memberSnap] = await Promise.all([
+      transaction.get(db.doc(`clans/${clanId}`)),
+      transaction.get(db.doc(`clans/${clanId}/members/${uid}`)),
+    ]);
+    if (!clanSnap.exists) throw new HttpsError("not-found", "Clan was not found.");
+    assertClanRole(memberSnap.data(), ["leader"]);
+    const clan = clanSnap.data() || {};
+    const patch = {
+      description: normalizeClanDescription(request.data?.description ?? clan.description),
+      banner: normalizeClanBanner(request.data?.banner ?? clan.banner),
+      admissionMode: normalizeAdmissionMode(request.data?.admissionMode ?? clan.admissionMode),
+      updatedAtMs: Date.now(),
+      updatedAt: FieldValue.serverTimestamp(),
+    };
+    transaction.set(clanSnap.ref, patch, { merge: true });
+    writeClanLeaderboard(transaction, clanId, clan, patch);
+    writeClanAudit(transaction, clanId, uid, "clan_profile_updated");
+    return { ok: true, clan: clanPublicSnapshot(clanId, { ...clan, ...patch }) };
+  });
+});
+
+async function joinClanTransaction(transaction, { uid, clanId, profileSnap, clanSnap, applicationRef = null, nowMs = Date.now() }) {
+  const profile = profileSnap.data() || {};
+  const clan = clanSnap.data() || {};
+  assertClanUnlocked(profile);
+  assertNoClan(profile, nowMs, applicationRef ? clanId : "");
+  if (clan.status !== "active") throw new HttpsError("failed-precondition", "That clan is no longer active.");
+  if (clampInt(clan.memberCount, 0, CLAN_MEMBER_LIMIT) >= CLAN_MEMBER_LIMIT) {
+    throw new HttpsError("resource-exhausted", "That clan is full.");
+  }
+  const statsSnap = await transaction.get(playerGlobalStatsRef(uid));
+  const kingPower = Math.max(0, Math.floor(safeNumber(statsSnap.data()?.kingPower || profile.kingPower, 0)));
+  const nextCount = clampInt(clan.memberCount, 0, CLAN_MEMBER_LIMIT) + 1;
+  const nextPower = Math.max(0, Math.floor(safeNumber(clan.totalKingPower, 0))) + kingPower;
+  transaction.set(db.doc(`clans/${clanId}/members/${uid}`), clanMemberSnapshot(uid, { ...profile, kingPower }, "member", nowMs));
+  transaction.set(clanSnap.ref, {
+    memberCount: nextCount,
+    totalKingPower: nextPower,
+    updatedAtMs: nowMs,
+    updatedAt: FieldValue.serverTimestamp(),
+  }, { merge: true });
+  transaction.set(profileSnap.ref, {
+    ...clanIdentityPatch(clanId, clan, "member"),
+    clanJoinCooldownUntilMs: FieldValue.delete(),
+    updatedAt: FieldValue.serverTimestamp(),
+  }, { merge: true });
+  transaction.set(leaderboardEntryRef(uid), clanIdentityPatch(clanId, clan, "member"), { merge: true });
+  if (applicationRef) transaction.delete(applicationRef);
+  writeClanLeaderboard(transaction, clanId, clan, { memberCount: nextCount, totalKingPower: nextPower });
+  writeClanAudit(transaction, clanId, uid, "member_joined");
+  return { ok: true, clan: clanPublicSnapshot(clanId, { ...clan, memberCount: nextCount, totalKingPower: nextPower }), role: "member" };
+}
+
+exports.joinOpenClan = onCall({ region: "us-central1", maxInstances: 30, invoker: "public" }, async request => {
+  const uid = requireAuth(request);
+  const clanId = safeString(request.data?.clanId, 128);
+  if (!clanId) throw new HttpsError("invalid-argument", "Choose a clan.");
+  return db.runTransaction(async transaction => {
+    const [profileSnap, clanSnap] = await Promise.all([
+      transaction.get(db.doc(`players/${uid}`)),
+      transaction.get(db.doc(`clans/${clanId}`)),
+    ]);
+    if (!profileSnap.exists || !clanSnap.exists) throw new HttpsError("not-found", "Player or clan was not found.");
+    if (clanSnap.data()?.admissionMode !== "open") throw new HttpsError("failed-precondition", "That clan requires approval.");
+    return joinClanTransaction(transaction, { uid, clanId, profileSnap, clanSnap });
+  });
+});
+
+exports.applyToClan = onCall({ region: "us-central1", maxInstances: 30, invoker: "public" }, async request => {
+  const uid = requireAuth(request);
+  const clanId = safeString(request.data?.clanId, 128);
+  const nowMs = Date.now();
+  return db.runTransaction(async transaction => {
+    const [profileSnap, clanSnap, applicationSnap] = await Promise.all([
+      transaction.get(db.doc(`players/${uid}`)),
+      transaction.get(db.doc(`clans/${clanId}`)),
+      transaction.get(db.doc(`clans/${clanId}/applications/${uid}`)),
+    ]);
+    if (!profileSnap.exists || !clanSnap.exists) throw new HttpsError("not-found", "Player or clan was not found.");
+    const profile = profileSnap.data() || {};
+    const clan = clanSnap.data() || {};
+    assertClanUnlocked(profile);
+    assertNoClan(profile, nowMs, clanId);
+    if (clan.admissionMode !== "approval") throw new HttpsError("failed-precondition", "That clan is open to direct joining.");
+    if (clan.status !== "active" || clan.memberCount >= CLAN_MEMBER_LIMIT) throw new HttpsError("failed-precondition", "That clan cannot accept applications.");
+    if (safeString(profile.pendingClanApplicationId, 128) && profile.pendingClanApplicationId !== clanId) {
+      throw new HttpsError("failed-precondition", "Cancel your existing clan application first.");
+    }
+    if (applicationSnap.exists && applicationSnap.data()?.status === "pending") return { ok: true, pending: true };
+    transaction.set(applicationSnap.ref, {
+      uid,
+      clanId,
+      displayName: normalizePlayerName(profile.playerName || profile.displayName),
+      flag: profile.flag || null,
+      kingPower: Math.max(0, Math.floor(safeNumber(profile.kingPower, 0))),
+      message: safeString(request.data?.message, 160).trim(),
+      status: "pending",
+      createdAtMs: nowMs,
+      updatedAtMs: nowMs,
+      createdAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
+    });
+    transaction.set(profileSnap.ref, { pendingClanApplicationId: clanId, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
+    return { ok: true, pending: true };
+  });
+});
+
+exports.cancelClanApplication = onCall({ region: "us-central1", maxInstances: 20, invoker: "public" }, async request => {
+  const uid = requireAuth(request);
+  const clanId = safeString(request.data?.clanId, 128);
+  const batch = db.batch();
+  batch.delete(db.doc(`clans/${clanId}/applications/${uid}`));
+  batch.set(db.doc(`players/${uid}`), { pendingClanApplicationId: FieldValue.delete(), updatedAt: FieldValue.serverTimestamp() }, { merge: true });
+  await batch.commit();
+  return { ok: true };
+});
+
+exports.reviewClanApplication = onCall({ region: "us-central1", maxInstances: 30, invoker: "public" }, async request => {
+  const uid = requireAuth(request);
+  const clanId = safeString(request.data?.clanId, 128);
+  const applicantUid = safeString(request.data?.applicantUid, 128);
+  const accept = request.data?.accept === true;
+  return db.runTransaction(async transaction => {
+    const [clanSnap, reviewerSnap, applicantSnap, applicationSnap] = await Promise.all([
+      transaction.get(db.doc(`clans/${clanId}`)),
+      transaction.get(db.doc(`clans/${clanId}/members/${uid}`)),
+      transaction.get(db.doc(`players/${applicantUid}`)),
+      transaction.get(db.doc(`clans/${clanId}/applications/${applicantUid}`)),
+    ]);
+    if (!clanSnap.exists || !applicantSnap.exists || !applicationSnap.exists) throw new HttpsError("not-found", "Application was not found.");
+    assertClanRole(reviewerSnap.data(), ["leader", "officer"]);
+    if (applicationSnap.data()?.status !== "pending") throw new HttpsError("failed-precondition", "That application is no longer pending.");
+    if (accept) return joinClanTransaction(transaction, { uid: applicantUid, clanId, profileSnap: applicantSnap, clanSnap, applicationRef: applicationSnap.ref });
+    transaction.delete(applicationSnap.ref);
+    transaction.set(applicantSnap.ref, { pendingClanApplicationId: FieldValue.delete(), updatedAt: FieldValue.serverTimestamp() }, { merge: true });
+    writeClanAudit(transaction, clanId, uid, "application_rejected", { applicantUid });
+    return { ok: true, accepted: false };
+  });
+});
+
+async function removeClanMember({ actorUid, targetUid, clanId, reason = "left" }) {
+  const nowMs = Date.now();
+  return db.runTransaction(async transaction => {
+    const [clanSnap, actorMemberSnap, targetMemberSnap, targetProfileSnap] = await Promise.all([
+      transaction.get(db.doc(`clans/${clanId}`)),
+      transaction.get(db.doc(`clans/${clanId}/members/${actorUid}`)),
+      transaction.get(db.doc(`clans/${clanId}/members/${targetUid}`)),
+      transaction.get(db.doc(`players/${targetUid}`)),
+    ]);
+    if (!clanSnap.exists || !targetMemberSnap.exists) throw new HttpsError("not-found", "Clan member was not found.");
+    const clan = clanSnap.data() || {};
+    const actor = actorMemberSnap.data() || {};
+    const target = targetMemberSnap.data() || {};
+    const selfLeave = actorUid === targetUid;
+    if (!selfLeave) {
+      assertClanRole(actor, ["leader", "officer"]);
+      if (target.role === "leader" || (actor.role === "officer" && target.role === "officer")) {
+        throw new HttpsError("permission-denied", "You cannot remove that clan member.");
+      }
+    }
+    if (target.role === "leader" && clan.memberCount > 1) {
+      throw new HttpsError("failed-precondition", "Transfer leadership before leaving.");
+    }
+    const targetPower = Math.max(0, Math.floor(safeNumber(target.kingPower, 0)));
+    const nextCount = Math.max(0, clampInt(clan.memberCount, 0, CLAN_MEMBER_LIMIT) - 1);
+    const nextPower = Math.max(0, Math.floor(safeNumber(clan.totalKingPower, 0)) - targetPower);
+    transaction.delete(targetMemberSnap.ref);
+    if (targetProfileSnap.exists) {
+      transaction.set(targetProfileSnap.ref, {
+        ...clanIdentityPatch(),
+        pendingClanApplicationId: FieldValue.delete(),
+        clanJoinCooldownUntilMs: nowMs + CLAN_JOIN_COOLDOWN_MS,
+        updatedAt: FieldValue.serverTimestamp(),
+      }, { merge: true });
+    }
+    transaction.set(leaderboardEntryRef(targetUid), clanIdentityPatch(), { merge: true });
+    if (!nextCount) {
+      transaction.set(clanSnap.ref, { status: "disbanded", memberCount: 0, totalKingPower: 0, disbandedAtMs: nowMs, updatedAtMs: nowMs }, { merge: true });
+      transaction.set(db.doc(`clanNameReservations/${clan.normalizedName}`), { clanId, reusableAtMs: nowMs + CLAN_RESERVATION_RELEASE_MS }, { merge: true });
+      transaction.set(db.doc(`clanTagReservations/${clan.normalizedTag}`), { clanId, reusableAtMs: nowMs + CLAN_RESERVATION_RELEASE_MS }, { merge: true });
+      transaction.delete(db.doc(`clanLeaderboards/${RESET_GENERATION}/entries/${clanId}`));
+    } else {
+      transaction.set(clanSnap.ref, { memberCount: nextCount, totalKingPower: nextPower, updatedAtMs: nowMs, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
+      writeClanLeaderboard(transaction, clanId, clan, { memberCount: nextCount, totalKingPower: nextPower });
+    }
+    writeClanAudit(transaction, clanId, actorUid, reason, { targetUid });
+    return { ok: true, disbanded: nextCount === 0, cooldownUntilMs: nowMs + CLAN_JOIN_COOLDOWN_MS };
+  });
+}
+
+exports.leaveClan = onCall({ region: "us-central1", maxInstances: 20, invoker: "public" }, async request => {
+  const uid = requireAuth(request);
+  const profile = (await db.doc(`players/${uid}`).get()).data() || {};
+  const clanId = safeString(profile.clanId, 128);
+  if (!clanId) throw new HttpsError("failed-precondition", "You are not in a clan.");
+  return removeClanMember({ actorUid: uid, targetUid: uid, clanId, reason: "member_left" });
+});
+
+exports.kickClanMember = onCall({ region: "us-central1", maxInstances: 20, invoker: "public" }, async request => {
+  const uid = requireAuth(request);
+  const profile = (await db.doc(`players/${uid}`).get()).data() || {};
+  return removeClanMember({
+    actorUid: uid,
+    targetUid: safeString(request.data?.targetUid, 128),
+    clanId: safeString(profile.clanId, 128),
+    reason: "member_kicked",
+  });
+});
+
+async function changeClanRole(request, nextRole) {
+  const uid = requireAuth(request);
+  const targetUid = safeString(request.data?.targetUid, 128);
+  const profile = (await db.doc(`players/${uid}`).get()).data() || {};
+  const clanId = safeString(profile.clanId, 128);
+  return db.runTransaction(async transaction => {
+    const [actorSnap, targetSnap] = await Promise.all([
+      transaction.get(db.doc(`clans/${clanId}/members/${uid}`)),
+      transaction.get(db.doc(`clans/${clanId}/members/${targetUid}`)),
+    ]);
+    assertClanRole(actorSnap.data(), ["leader"]);
+    if (!targetSnap.exists || targetSnap.data()?.role === "leader") throw new HttpsError("failed-precondition", "That member's role cannot be changed.");
+    transaction.set(targetSnap.ref, { role: nextRole, roleChangedAtMs: Date.now(), updatedAt: FieldValue.serverTimestamp() }, { merge: true });
+    transaction.set(db.doc(`players/${targetUid}`), { clanRole: nextRole, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
+    transaction.set(leaderboardEntryRef(targetUid), { clanRole: nextRole }, { merge: true });
+    writeClanAudit(transaction, clanId, uid, nextRole === "officer" ? "member_promoted" : "officer_demoted", { targetUid });
+    return { ok: true, role: nextRole };
+  });
+}
+
+exports.promoteClanMember = onCall({ region: "us-central1", maxInstances: 20, invoker: "public" }, request => changeClanRole(request, "officer"));
+exports.demoteClanOfficer = onCall({ region: "us-central1", maxInstances: 20, invoker: "public" }, request => changeClanRole(request, "member"));
+
+exports.transferClanLeadership = onCall({ region: "us-central1", maxInstances: 20, invoker: "public" }, async request => {
+  const uid = requireAuth(request);
+  const targetUid = safeString(request.data?.targetUid, 128);
+  const profile = (await db.doc(`players/${uid}`).get()).data() || {};
+  const clanId = safeString(profile.clanId, 128);
+  return db.runTransaction(async transaction => {
+    const [clanSnap, actorSnap, targetSnap] = await Promise.all([
+      transaction.get(db.doc(`clans/${clanId}`)),
+      transaction.get(db.doc(`clans/${clanId}/members/${uid}`)),
+      transaction.get(db.doc(`clans/${clanId}/members/${targetUid}`)),
+    ]);
+    assertClanRole(actorSnap.data(), ["leader"]);
+    if (!targetSnap.exists || targetUid === uid) throw new HttpsError("failed-precondition", "Choose another clan member.");
+    transaction.set(clanSnap.ref, { leaderUid: targetUid, updatedAtMs: Date.now(), updatedAt: FieldValue.serverTimestamp() }, { merge: true });
+    transaction.set(actorSnap.ref, { role: "officer", roleChangedAtMs: Date.now() }, { merge: true });
+    transaction.set(targetSnap.ref, { role: "leader", roleChangedAtMs: Date.now() }, { merge: true });
+    transaction.set(db.doc(`players/${uid}`), { clanRole: "officer" }, { merge: true });
+    transaction.set(db.doc(`players/${targetUid}`), { clanRole: "leader" }, { merge: true });
+    writeClanAudit(transaction, clanId, uid, "leadership_transferred", { targetUid });
+    return { ok: true };
+  });
+});
+
+exports.claimInactiveClanLeadership = onCall({ region: "us-central1", maxInstances: 20, invoker: "public" }, async request => {
+  const uid = requireAuth(request);
+  const profile = (await db.doc(`players/${uid}`).get()).data() || {};
+  const clanId = safeString(profile.clanId, 128);
+  return db.runTransaction(async transaction => {
+    const clanSnap = await transaction.get(db.doc(`clans/${clanId}`));
+    if (!clanSnap.exists) throw new HttpsError("not-found", "Clan was not found.");
+    const clan = clanSnap.data() || {};
+    const [leaderProfileSnap, membersSnap] = await Promise.all([
+      transaction.get(db.doc(`players/${clan.leaderUid}`)),
+      transaction.get(db.collection(`clans/${clanId}/members`).orderBy("joinedAtMs", "asc")),
+    ]);
+    const inactiveSinceMs = Math.max(0, timestampToMs(leaderProfileSnap.data()?.lastSeenAtMs || leaderProfileSnap.data()?.updatedAt));
+    if (Date.now() - inactiveSinceMs < CLAN_LEADER_INACTIVE_MS) throw new HttpsError("failed-precondition", "The clan leader is still active.");
+    const members = membersSnap.docs.map(doc => ({ uid: doc.id, ...doc.data() })).filter(member => member.uid !== clan.leaderUid);
+    const eligible = members.some(member => member.role === "officer")
+      ? members.filter(member => member.role === "officer")
+      : members;
+    if (!eligible.length || eligible[0].uid !== uid) throw new HttpsError("permission-denied", "Another member has priority to claim leadership.");
+    transaction.set(clanSnap.ref, { leaderUid: uid, updatedAtMs: Date.now(), updatedAt: FieldValue.serverTimestamp() }, { merge: true });
+    transaction.set(db.doc(`clans/${clanId}/members/${clan.leaderUid}`), { role: "officer", roleChangedAtMs: Date.now() }, { merge: true });
+    transaction.set(db.doc(`clans/${clanId}/members/${uid}`), { role: "leader", roleChangedAtMs: Date.now() }, { merge: true });
+    transaction.set(db.doc(`players/${clan.leaderUid}`), { clanRole: "officer" }, { merge: true });
+    transaction.set(db.doc(`players/${uid}`), { clanRole: "leader" }, { merge: true });
+    writeClanAudit(transaction, clanId, uid, "inactive_leadership_claimed", { oldLeaderUid: clan.leaderUid });
+    return { ok: true };
+  });
+});
+
+exports.disbandClan = onCall({ region: "us-central1", maxInstances: 10, invoker: "public" }, async request => {
+  const uid = requireAuth(request);
+  const profile = (await db.doc(`players/${uid}`).get()).data() || {};
+  const clanId = safeString(profile.clanId, 128);
+  const membersSnap = await db.collection(`clans/${clanId}/members`).get();
+  if (membersSnap.size > 1) throw new HttpsError("failed-precondition", "Remove all other members before disbanding the clan.");
+  return removeClanMember({ actorUid: uid, targetUid: uid, clanId, reason: "clan_disbanded" });
+});
+
+exports.sendClanMessage = onCall({ region: "us-central1", maxInstances: 30, invoker: "public" }, async request => {
+  const uid = requireAuth(request);
+  const text = safeString(request.data?.text, 300).replace(/[\u0000-\u001f\u007f]/g, " ").replace(/\s+/g, " ").trim();
+  if (!text) throw new HttpsError("invalid-argument", "Write a message first.");
+  const nowMs = Date.now();
+  const profile = (await db.doc(`players/${uid}`).get()).data() || {};
+  const clanId = safeString(profile.clanId, 128);
+  if (!clanId) throw new HttpsError("failed-precondition", "You are not in a clan.");
+  const recentSnap = await db.collection(`clans/${clanId}/messages`)
+    .where("senderUid", "==", uid)
+    .where("createdAtMs", ">=", nowMs - CLAN_CHAT_RATE_WINDOW_MS)
+    .orderBy("createdAtMs", "desc")
+    .limit(CLAN_CHAT_RATE_LIMIT)
+    .get();
+  if (recentSnap.size >= CLAN_CHAT_RATE_LIMIT) throw new HttpsError("resource-exhausted", "You are sending messages too quickly.");
+  if (recentSnap.docs[0]?.data()?.normalizedText === text.toLowerCase()) throw new HttpsError("already-exists", "That message was already sent.");
+  const memberSnap = await db.doc(`clans/${clanId}/members/${uid}`).get();
+  if (!memberSnap.exists) throw new HttpsError("permission-denied", "Clan membership could not be verified.");
+  const ref = db.collection(`clans/${clanId}/messages`).doc();
+  const message = {
+    senderUid: uid,
+    senderName: normalizePlayerName(profile.playerName || profile.displayName),
+    senderRole: memberSnap.data()?.role || "member",
+    senderFlag: profile.flag || null,
+    text,
+    normalizedText: text.toLowerCase(),
+    status: "active",
+    reportCount: 0,
+    createdAtMs: nowMs,
+    expiresAtMs: nowMs + CLAN_CHAT_RETENTION_MS,
+    createdAt: FieldValue.serverTimestamp(),
+  };
+  await ref.set(message);
+  return { ok: true, message: { id: ref.id, ...message } };
+});
+
+exports.reportClanMessage = onCall({ region: "us-central1", maxInstances: 20, invoker: "public" }, async request => {
+  const uid = requireAuth(request);
+  const profile = (await db.doc(`players/${uid}`).get()).data() || {};
+  const clanId = safeString(profile.clanId, 128);
+  const messageId = safeString(request.data?.messageId, 128);
+  return db.runTransaction(async transaction => {
+    const [memberSnap, messageSnap, reportSnap] = await Promise.all([
+      transaction.get(db.doc(`clans/${clanId}/members/${uid}`)),
+      transaction.get(db.doc(`clans/${clanId}/messages/${messageId}`)),
+      transaction.get(db.doc(`clans/${clanId}/messageReports/${messageId}_${uid}`)),
+    ]);
+    if (!memberSnap.exists || !messageSnap.exists) throw new HttpsError("not-found", "Clan message was not found.");
+    if (reportSnap.exists) return { ok: true, duplicate: true };
+    transaction.set(reportSnap.ref, {
+      messageId,
+      reporterUid: uid,
+      senderUid: safeString(messageSnap.data()?.senderUid, 128),
+      reason: safeString(request.data?.reason || "inappropriate", 80),
+      createdAtMs: Date.now(),
+      createdAt: FieldValue.serverTimestamp(),
+    });
+    transaction.set(messageSnap.ref, { reportCount: FieldValue.increment(1) }, { merge: true });
+    writeClanAudit(transaction, clanId, uid, "message_reported", { messageId });
+    return { ok: true };
+  });
+});
+
+exports.cleanupClanMessages = onSchedule({
+  region: "us-central1",
+  schedule: "every 24 hours",
+  timeZone: "UTC",
+  maxInstances: 1,
+}, async () => {
+  const nowMs = Date.now();
+  const clansSnap = await db.collection("clans").where("status", "==", "active").limit(500).get();
+  for (const clanDoc of clansSnap.docs) {
+    const messagesSnap = await clanDoc.ref.collection("messages").orderBy("createdAtMs", "desc").limit(700).get();
+    const expiredOrExcess = messagesSnap.docs.filter((messageDoc, index) => (
+      index >= 500 || timestampToMs(messageDoc.data()?.expiresAtMs) <= nowMs
+    ));
+    for (let index = 0; index < expiredOrExcess.length; index += 450) {
+      const batch = db.batch();
+      expiredOrExcess.slice(index, index + 450).forEach(messageDoc => batch.delete(messageDoc.ref));
+      await batch.commit();
+    }
+  }
+});
+
+exports.rebuildClanPowerOnPlayerStats = onDocumentWritten({
+  region: "us-central1",
+  document: "players/{uid}/stats/global",
+  maxInstances: 20,
+}, async event => {
+  const uid = safeString(event.params?.uid, 128);
+  const profile = (await db.doc(`players/${uid}`).get()).data() || {};
+  const clanId = safeString(profile.clanId, 128);
+  if (!clanId) return;
+  const nextPower = Math.max(0, Math.floor(safeNumber(event.data?.after?.data()?.kingPower, 0)));
+  await db.runTransaction(async transaction => {
+    const [clanSnap, memberSnap] = await Promise.all([
+      transaction.get(db.doc(`clans/${clanId}`)),
+      transaction.get(db.doc(`clans/${clanId}/members/${uid}`)),
+    ]);
+    if (!clanSnap.exists || !memberSnap.exists) return;
+    const clan = clanSnap.data() || {};
+    const previousPower = Math.max(0, Math.floor(safeNumber(memberSnap.data()?.kingPower, 0)));
+    const totalKingPower = Math.max(0, Math.floor(safeNumber(clan.totalKingPower, 0)) - previousPower + nextPower);
+    transaction.set(memberSnap.ref, { kingPower: nextPower, updatedAtMs: Date.now(), updatedAt: FieldValue.serverTimestamp() }, { merge: true });
+    transaction.set(clanSnap.ref, { totalKingPower, updatedAtMs: Date.now(), updatedAt: FieldValue.serverTimestamp() }, { merge: true });
+    transaction.set(leaderboardEntryRef(uid), clanIdentityPatch(clanId, clan, memberSnap.data()?.role), { merge: true });
+    writeClanLeaderboard(transaction, clanId, clan, { totalKingPower });
+  });
+});
+
 exports.sendArmyOrder = onCall({ region: "us-central1", maxInstances: 20, invoker: "public" }, async request => {
   const uid = requireAuth(request);
   const nowMs = Date.now();
@@ -5800,6 +6465,20 @@ exports.sendArmyOrder = onCall({ region: "us-central1", maxInstances: 20, invoke
       : targetOwnerUid === uid
         ? "transfer"
         : "attack";
+    if (
+      order.targetType !== "camp"
+      && (resolvedKind === "scout" || resolvedKind === "attack")
+      && targetOwnerUid
+      && safeString(attackerProfile.clanId, 128)
+      && safeString(attackerProfile.clanId, 128) === safeString(defenderPowerData.clanId, 128)
+    ) {
+      writeClanAudit(transaction, attackerProfile.clanId, uid, "friendly_order_blocked", {
+        targetOwnerUid,
+        kind: resolvedKind,
+        targetId: order.toId,
+      }, nowMs);
+      throw new HttpsError("failed-precondition", "You cannot scout or attack a clan ally.");
+    }
     const neutralCaptureBlockReason = resolvedKind === "attack" && order.targetType !== "camp"
       ? getServerNeutralCaptureBlockReason(attackerEconomy, attackerProfile, target)
       : "";
@@ -6290,6 +6969,32 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
           { character: attackerProfile.character, gold: attackerEconomy?.gold, goldFloat: attackerEconomy?.goldFloat },
           null
         ),
+      };
+    }
+
+    const becameClanAllies = !isReturning
+      && targetType !== "camp"
+      && defenderUid
+      && defenderUid !== attackerUid
+      && safeString(attackerProfile?.clanId, 128)
+      && safeString(attackerProfile?.clanId, 128) === safeString(defenderProfile?.clanId, 128);
+    if (becameClanAllies) {
+      const returned = returnTroopsToSource(Math.max(0, Math.floor(safeNumber(army.troops, 0))));
+      writeParticipantEconomies({}, {}, { statsCityPatches: getLatestSourceReturnStatsPatches() });
+      markResolved({ kind: army.kind, outcome: "allied_return", returned });
+      writeClanAudit(transaction, attackerProfile.clanId, attackerUid, "friendly_march_returned", {
+        armyId,
+        defenderUid,
+        returned,
+      }, nowMs);
+      return {
+        ok: true,
+        status: "resolved",
+        kind: army.kind,
+        outcome: "allied_return",
+        returned,
+        cityUpdates: withEconomyCityUpdates(cityUpdates),
+        currentUser: profilePatchForCaller(attackerProfile, defenderProfile),
       };
     }
 
