@@ -2,6 +2,7 @@ const { onCall, HttpsError } = require("firebase-functions/v2/https");
 const { onSchedule } = require("firebase-functions/v2/scheduler");
 const { onDocumentCreated, onDocumentWritten } = require("firebase-functions/v2/firestore");
 const admin = require("firebase-admin");
+const { FieldValue, getFirestore } = require("firebase-admin/firestore");
 const crypto = require("node:crypto");
 const SERVER_WORLD_LAYOUT = require("./world-layout.json");
 const ECONOMY_CONFIG = require("./economy-config.json");
@@ -14,8 +15,7 @@ function safeConfigString(value, fallback = "") {
 
 admin.initializeApp();
 
-const db = admin.firestore();
-const FieldValue = admin.firestore.FieldValue;
+const db = getFirestore();
 
 function economyNumber(path, fallback) {
   const value = String(path || "").split(".").filter(Boolean).reduce((current, key) => current?.[key], ECONOMY_CONFIG);
