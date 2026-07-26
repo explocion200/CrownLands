@@ -35,8 +35,19 @@ requireMatch(game, /verifyRealmCompatibility[\s\S]*releaseMatches[\s\S]*generati
 requireMatch(rules, new RegExp(serverRealm.resetGeneration.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")), "Firestore rules do not identify the active generation.");
 
 const serializedIndexes = JSON.stringify(indexes);
-for (const field of ["resetGeneration", "ownerUid", "holderUid", "targetKey", "arrivesAtMs"]) {
+for (const field of ["resetGeneration", "worldId", "ownerUid", "holderUid", "targetKey", "arrivesAtMs"]) {
   if (!serializedIndexes.includes(`"${field}"`)) throw new Error(`Missing reset query index field: ${field}`);
+}
+
+for (const [label, source] of [["server", server], ["client", client]]) {
+  const generationQueries = [...source.matchAll(/(?:\.where|where)\("resetGeneration",\s*"==",\s*RESET_GENERATION\)/g)];
+  if (!generationQueries.length) throw new Error(`No ${label} generation-scoped queries were found.`);
+  for (const match of generationQueries) {
+    const queryTail = source.slice(match.index, match.index + 180);
+    if (!/(?:\.where|where)\("worldId",\s*"==",\s*(?:WORLD_ID|ONLINE_WORLD_ID)\)/.test(queryTail)) {
+      throw new Error(`${label} generation query is missing its worldId constraint near offset ${match.index}.`);
+    }
+  }
 }
 
 for (let trial = 0; trial < 500; trial += 1) {

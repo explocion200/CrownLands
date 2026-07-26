@@ -260,6 +260,20 @@ service cloud.firestore {
       allow create, update, delete: if false;
     }
 
+    // Collection-group queries cannot prove a parent island path. Require both
+    // realm identifiers and ownership so archived generations never leak.
+    match /{path=**}/cities/{cityId} {
+      allow read: if signedIn()
+        && isCurrentGeneration(resource.data)
+        && resource.data.ownerUid == request.auth.uid;
+    }
+
+    match /{path=**}/camps/{campId} {
+      allow read: if signedIn()
+        && isCurrentGeneration(resource.data)
+        && resource.data.holderUid == request.auth.uid;
+    }
+
     // Multiplayer layout, economy, armies, combat, and reports are server-owned.
     match /islands/{islandId} {
       allow read: if signedIn()
