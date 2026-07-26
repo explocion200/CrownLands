@@ -162,6 +162,8 @@ assert.ok(
 );
 assert.match(rewardRenderer, /today \(UTC\)/);
 assert.match(rewardRenderer, /Estimated reward:/);
+assert.doesNotMatch(rewardRenderer, /City levels only/);
+assert.doesNotMatch(gameSource, /Ad Manager setup required/);
 
 const paidRenderer = extractFunction(gameSource, "renderShopItem");
 assert.match(paidRenderer, /data-shop-buy/);
