@@ -5550,7 +5550,7 @@ async function claimFreshStartingCity(request) {
   );
   const playerRef = db.doc(`players/${uid}`);
 
-  return db.runTransaction(async transaction => {
+  const runClaimTransaction = async transaction => {
     const nowMs = Date.now();
     const playerSnap = await transaction.get(playerRef);
     const previous = playerSnap.exists ? playerSnap.data() || {} : {};
@@ -5740,7 +5740,30 @@ async function claimFreshStartingCity(request) {
         globalStats: globalStatsForClient(stats),
       },
     };
-  });
+  };
+
+  const maxContentionAttempts = 40;
+  for (let attempt = 1; attempt <= maxContentionAttempts; attempt += 1) {
+    try {
+      return await db.runTransaction(runClaimTransaction, { maxAttempts: 1 });
+    } catch (error) {
+      const errorCode = Number(error?.code);
+      const retryableContention = errorCode === 10
+        || safeString(error?.details, 200).toLowerCase().includes("transaction lock timeout")
+        || safeString(error?.message, 300).toLowerCase().includes("aborted");
+      if (!retryableContention || attempt >= maxContentionAttempts) throw error;
+
+      const backoffCeilingMs = Math.min(1_000, 25 * (2 ** Math.min(attempt - 1, 6)));
+      const retryDelayMs = crypto.randomInt(15, backoffCeilingMs + 16);
+      logOperation("claimStartingCityContention", Date.now(), request, "retry", {
+        attempt,
+        retryDelayMs,
+      });
+      await new Promise(resolve => setTimeout(resolve, retryDelayMs));
+    }
+  }
+
+  throw new HttpsError("aborted", "Starting-city placement is busy. Try again.");
 }
 
 exports.claimStartingCity = timedCallable(
