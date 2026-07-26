@@ -187,7 +187,10 @@ assert.ok(
 );
 
 assert.match(stylesSource, /\.rewarded-ad-shop-action[\s\S]*display:\s*grid/);
-assert.match(stylesSource, /\.rewarded-ad-watch-btn[\s\S]*width:\s*100%/);
+assert.match(stylesSource, /\.shop-item\.rewarded-ad-shop-item[\s\S]*grid-template-columns:\s*92px\s+minmax\(0,\s*1fr\)/);
+assert.match(stylesSource, /\.shop-buy-btn\.rewarded-ad-watch-btn[\s\S]*width:\s*100%[\s\S]*min-width:\s*0/);
+assert.match(stylesSource, /\.rewarded-ad-shop-copy[\s\S]*overflow-wrap:\s*anywhere/);
+assert.match(stylesSource, /@media\s*\(max-width:\s*620px\)[\s\S]*?\.shop-rewarded-items\s*\{[\s\S]*?grid-template-columns:\s*minmax\(0,\s*1fr\)/);
 assert.match(indexSource, /securepubads\.g\.doubleclick\.net\/tag\/js\/gpt\.js/);
 assert.match(indexSource, /adsbygoogle\.js\?client=ca-pub-6031755025291372/);
 assert.match(indexSource, /id="loginDisplayAd"[\s\S]*?aria-label="Advertisement"[\s\S]*?hidden/);
