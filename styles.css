@@ -2591,20 +2591,22 @@ input {
 .city-node.neutral .owner-flag { color: #1e1914; background: var(--neutral); }
 .city-name { display: block; color: #fff6d3; font-size: .66rem; line-height: 1.1; white-space: nowrap; }
 
-.city-node.main-city-node .city-owner-column,
-.city-node.main-city-node .city-army-count,
-.city-node.main-city-node .foreign-city-shield,
-.city-node.main-city-node .foreign-selected-level,
-.city-node.main-city-node .foreign-selected-data {
-  background: #B67A2A;
+.city-node.player.main-city-node .city-owner-column,
+.city-node.player.main-city-node .city-army-count {
+  background: #123a60;
 }
-.city-node.main-city-node .foreign-selected-crest {
-  background: #744715;
-  border-color: #e0ac5f;
+.city-node.enemy.main-city-node .foreign-city-shield,
+.city-node.enemy.main-city-node .foreign-selected-level,
+.city-node.enemy.main-city-node .foreign-selected-data {
+  background: #454b54;
 }
-.city-node.main-city-node .foreign-ruler-name-inline {
-  background: rgba(116, 71, 21, .9);
-  border-color: rgba(224, 172, 95, .78);
+.city-node.enemy.main-city-node .foreign-selected-crest {
+  background: #24282e;
+  border-color: #7f8994;
+}
+.city-node.enemy.main-city-node .foreign-ruler-name-inline {
+  background: rgba(36, 40, 46, .94);
+  border-color: rgba(127, 137, 148, .82);
 }
 
 .city-label.label-slot-top { --label-tether: 0px; left: 50%; right: auto; top: auto; bottom: 58px; transform: translateX(-50%); }

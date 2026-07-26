@@ -6499,25 +6499,35 @@ async function ensureAuthoritativeCityOwnerKingPower(city) {
   const ownerUid = String(city.ownerUid || "").trim();
   const api = getOnlineApi();
   if (!ownerUid || !api?.isSignedIn?.()) return 0;
-  try {
-    const identity = api?.getCombatPlayerIdentity
-      ? await withTimeout(
-        api.getCombatPlayerIdentity({ uid: ownerUid }),
-        6000,
-        "Kingdom strength check is taking too long."
-      )
-      : null;
-    if (identity) {
-      rememberPlayerIdentity(identity, { force: true });
-    } else if (api?.loadPlayerIdentities) {
+  let changed = false;
+  if (api?.loadPlayerIdentities) {
+    try {
       const rows = await withTimeout(
         api.loadPlayerIdentities([ownerUid]),
         3500,
         "Kingdom strength check is taking too long."
       );
       rememberPlayerIdentities(Array.isArray(rows) ? rows : [], { force: true });
+      changed = applyCanonicalPlayerIdentityToRecord(city) || changed;
+      const leaderboardPower = getAuthoritativeCityOwnerKingPowerSnapshot(city);
+      if (leaderboardPower > 0) {
+        if (changed) renderCities(true);
+        return leaderboardPower;
+      }
+    } catch (error) {
+      console.warn("Could not load defender leaderboard power", error);
     }
-    if (applyCanonicalPlayerIdentityToRecord(city)) renderCities(true);
+  }
+  if (!api?.getCombatPlayerIdentity) return 0;
+  try {
+    const identity = await withTimeout(
+      api.getCombatPlayerIdentity({ uid: ownerUid }),
+      15000,
+      "Kingdom strength check is taking too long."
+    );
+    if (identity) rememberPlayerIdentity(identity, { force: true });
+    changed = applyCanonicalPlayerIdentityToRecord(city) || changed;
+    if (changed) renderCities(true);
     return getAuthoritativeCityOwnerKingPowerSnapshot(city);
   } catch (error) {
     console.warn("Could not load authoritative defender King Power", error);
@@ -16318,7 +16328,7 @@ function renderCities(force = false) {
     if (stronghold) btn.classList.add("stronghold-node", `stronghold-${city.strongholdType || "generic"}`);
     const mainCity = !stronghold && (city.owner === "player"
       ? state.mainCityId ? city.id === state.mainCityId : Boolean(city.isMainCity)
-      : Boolean(city.isMainCity));
+      : isProtectedMainCity(city));
     if (mainCity) btn.classList.add("main-city-node");
     const shielded = !stronghold && isCityProtectedByPeaceShield(city);
     if (shielded) btn.classList.add("peace-shielded");
@@ -18052,9 +18062,7 @@ async function showTroopSliderModalAsync(source, target) {
   const needsDefenderPower = target.owner === "enemy" && !campTarget && !isStronghold(target);
   const mainCityBlockReason = isTransfer || campTarget ? "" : getMainCityAttackBlockReason(target, "player");
   if (mainCityBlockReason) {
-    showToast(mainCityBlockReason);
-    cancelSendMode();
-    if (modal.open) modal.close();
+    showMainCityProtectedAttackModal(target);
     return;
   }
   const shieldBlockReason = isTransfer || campTarget ? "" : getPeaceShieldAttackBlockReason(target, "player");
@@ -18103,9 +18111,7 @@ async function showTroopSliderModalAsync(source, target) {
       getAuthoritativeCityOwnerKingPowerSnapshot(freshTarget)
     ) <= 0
   ) {
-    showToast("Could not verify that kingdom's attack limit. Try again.");
-    cancelSendMode();
-    if (modal.open) modal.close();
+    showTroopPowerVerificationError(freshSource, freshTarget);
     return;
   }
   if (!route || !route.points.length) {
@@ -18118,6 +18124,73 @@ async function showTroopSliderModalAsync(source, target) {
   }
 
   showTroopSliderModalWithRoute(freshSource, freshTarget, route);
+}
+
+function showMainCityProtectedAttackModal(target) {
+  troopSliderActive = false;
+  activeTroopSliderRoute = null;
+  modal.classList.remove("troop-slider-modal");
+  cancelSendMode();
+  modalTitle.textContent = "Protected home base";
+  modalBody.innerHTML = `
+    <div class="troop-slider-panel attack">
+      <div class="troop-slider-preview unknown" role="status">
+        <div><span>${escapeHtml(target.name)}</span><strong>Home base protected</strong><small>Main cities cannot be attacked or captured.</small></div>
+        <div><span>Attack status</span><strong>No troops sent</strong><small>Choose another enemy city.</small></div>
+      </div>
+      <div class="troop-slider-actions">
+        <button id="mainCityProtectedClose" class="troop-slider-cancel" type="button">Close</button>
+      </div>
+    </div>
+  `;
+  modalBody.querySelector("#mainCityProtectedClose")?.addEventListener("click", () => modal.close());
+  if (!modal.open) modal.showModal();
+}
+
+function showTroopPowerVerificationError(source, target) {
+  modal.classList.add("troop-slider-modal");
+  modalTitle.textContent = "Attack troops";
+  modalBody.innerHTML = `
+    <div class="troop-slider-panel attack">
+      <div class="troop-route-summary">
+        <div class="troop-route-city">
+          <span>From</span>
+          <strong>${escapeHtml(source.name)}</strong>
+          <small>${formatNumber(source.troops)} troops available</small>
+        </div>
+        <div class="troop-command-icon" aria-hidden="true">&#9876;</div>
+        <div class="troop-route-city destination">
+          <span>To</span>
+          <strong>${escapeHtml(target.name)}</strong>
+          <small>Enemy city</small>
+        </div>
+      </div>
+
+      <div class="troop-slider-preview unknown" role="alert">
+        <div><span>Kingdom strength</span><strong>Verification interrupted</strong><small>The attack limit could not be confirmed. No troops were sent.</small></div>
+        <div><span>Next step</span><strong>Try again</strong><small>Your selection will remain active.</small></div>
+      </div>
+
+      <div class="troop-slider-actions">
+        <button id="troopPowerRetry" class="troop-slider-confirm attack" type="button">
+          <span aria-hidden="true">&#8635;</span>Retry
+        </button>
+        <button id="troopSliderCancel" class="troop-slider-cancel" type="button">Cancel</button>
+      </div>
+    </div>
+  `;
+  modalBody.querySelector("#troopPowerRetry")?.addEventListener("click", () => {
+    const freshSource = cityById(source.id);
+    const freshTarget = getArmyTargetById(target.id);
+    if (!freshSource || !freshTarget) {
+      showToast("Order canceled. The map changed.");
+      if (modal.open) modal.close();
+      return;
+    }
+    void showTroopSliderModalAsync(freshSource, freshTarget);
+  });
+  modalBody.querySelector("#troopSliderCancel")?.addEventListener("click", () => modal.close());
+  if (!modal.open) modal.showModal();
 }
 
 function showTroopRouteLoadingModal(source, target, isTransfer) {
@@ -18177,9 +18250,7 @@ function showTroopSliderModalWithRoute(source, target, route) {
   const campTarget = isRewardCampTarget(target);
   const mainCityBlockReason = isTransfer || campTarget ? "" : getMainCityAttackBlockReason(target, "player");
   if (mainCityBlockReason) {
-    showToast(mainCityBlockReason);
-    cancelSendMode();
-    if (modal.open) modal.close();
+    showMainCityProtectedAttackModal(target);
     return;
   }
   const shieldBlockReason = isTransfer || campTarget ? "" : getPeaceShieldAttackBlockReason(target, "player");

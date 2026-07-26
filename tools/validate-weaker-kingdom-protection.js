@@ -298,8 +298,18 @@ if (!clientSource.includes("ensureAuthoritativeCityOwnerKingPower(target)")
   throw new Error("Attack preparation does not load authoritative power and launch the exact capped slider amount.");
 }
 if (!clientSource.includes("getCompatibleCityOwnerKingPowerSnapshot(city)")
-  || !clientSource.includes("Could not verify that kingdom's attack limit. Try again.")) {
+  || !clientSource.includes("showTroopPowerVerificationError(freshSource, freshTarget)")) {
   throw new Error("Stale public power cannot color the map or fail closed before opening an attack slider.");
+}
+if (!clientSource.includes("api.loadPlayerIdentities([ownerUid])")
+  || !clientSource.includes("api.getCombatPlayerIdentity({ uid: ownerUid })")
+  || !clientSource.includes("15000")
+  || !clientSource.includes("id=\"troopPowerRetry\"")) {
+  throw new Error("Defender verification does not use the fast leaderboard path with a recoverable server fallback.");
+}
+if (!clientSource.includes("showMainCityProtectedAttackModal(target)")
+  || !clientSource.includes("Home base protected")) {
+  throw new Error("A late main-city protection result can still make the attack window disappear without explanation.");
 }
 if (!clientSource.includes("right.version - left.version")
   || !clientSource.includes("right.authority - left.authority")

@@ -127,8 +127,10 @@ assert.match(clientSource, /function changeMainCity[\s\S]*?state\.mainCityId = n
 assert.match(clientSource, /normalizeSingleMainCityAssignment[\s\S]*?const shouldBeMain = Boolean\(mainCityId && city\.id === mainCityId\)/, "Client must demote every loaded city except the selected main city.");
 assert.match(clientSource, /onlineOwnedCitiesCache = onlineOwnedCitiesCache\.map[\s\S]*?city\.id === mainCityId && !isStronghold\(city\)/, "Cross-map owned-city cache must retain exactly one main city.");
 assert.match(clientSource, /const mainCity = !stronghold[\s\S]*?city\.id === state\.mainCityId[\s\S]*?btn\.classList\.add\("main-city-node"\)/, "Map rendering must move the main-city marker to the selected owned city.");
+assert.match(clientSource, /const mainCity = !stronghold[\s\S]*?: isProtectedMainCity\(city\)/, "Enemy home-base styling must use the canonical main-city identity.");
 assert.match(clientSource, /function isProtectedMainCity[\s\S]*?playerIdentityCache\.get\(ownerUid\)[\s\S]*?onlinePresence/, "Client targeting must recognize foreign main cities from canonical identity and presence data.");
 assert.doesNotMatch(stylesSource, /\.city-node\.main-city-node \.city-art[\s\S]*?filter:/, "Main-city castle artwork must keep its normal colors.");
-assert.match(stylesSource, /\.city-node\.main-city-node \.city-owner-column,[\s\S]*?\.city-node\.main-city-node \.city-army-count[\s\S]*?background: #B67A2A;/, "Main-city UI banners must render in the home-base bronze.");
+assert.match(stylesSource, /\.city-node\.player\.main-city-node \.city-owner-column,[\s\S]*?\.city-node\.player\.main-city-node \.city-army-count[\s\S]*?background: #123a60;/, "The current player's main-city UI must render dark blue.");
+assert.match(stylesSource, /\.city-node\.enemy\.main-city-node \.foreign-city-shield,[\s\S]*?\.city-node\.enemy\.main-city-node \.foreign-selected-data[\s\S]*?background: #454b54;/, "Enemy main-city UI must render dark gray.");
 
-console.log("Validated atomic main-city switching, cross-map pointers, one-main-city repair, cooldowns, protection, and bronze main-city UI markers.");
+console.log("Validated atomic main-city switching, cross-map pointers, one-main-city repair, cooldowns, protection, and distinct home-base UI colors.");
