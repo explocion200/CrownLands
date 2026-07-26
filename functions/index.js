@@ -3104,6 +3104,10 @@ function isVeilOfSilenceActive(profile = {}, nowMs = Date.now()) {
   ) > nowMs;
 }
 
+function doesVeilOfSilenceBlock(kind = "", targetType = "city") {
+  return kind === "scout" && targetType !== "camp";
+}
+
 function normalizeItemPurchaseTimestamps(value = {}) {
   const rawTimestamps = Array.isArray(value?.purchaseTimestampsMs)
     ? value.purchaseTimestampsMs
@@ -6789,7 +6793,7 @@ exports.sendArmyOrder = onCall({ region: "us-central1", maxInstances: 20, invoke
     if (order.targetType !== "camp" && resolvedKind === "scout" && isProtectedMainCity(target, uid, defenderMainCityProfile)) {
       throw new HttpsError("failed-precondition", "Main cities cannot be scouted.");
     }
-    if (order.targetType !== "camp" && resolvedKind === "scout" && targetOwnerUid && targetOwnerUid !== uid && isVeilOfSilenceActive(defenderPowerData, nowMs)) {
+    if (doesVeilOfSilenceBlock(resolvedKind, order.targetType) && targetOwnerUid && targetOwnerUid !== uid && isVeilOfSilenceActive(defenderPowerData, nowMs)) {
       throw new HttpsError("failed-precondition", "That city is hidden by Veil of Silence.");
     }
     if (resolvedKind === "attack" && order.targetType !== "camp") {
@@ -7523,7 +7527,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
         };
       }
 
-      if (defenderUid && defenderUid !== attackerUid && isVeilOfSilenceActive(defenderProfile, nowMs)) {
+      if (doesVeilOfSilenceBlock(army.kind, army.targetType) && defenderUid && defenderUid !== attackerUid && isVeilOfSilenceActive(defenderProfile, nowMs)) {
         const returned = returnTroopsToSource(troopCount);
         writeParticipantEconomies({}, {}, { statsCityPatches: getLatestSourceReturnStatsPatches() });
         const report = makeReport({

@@ -16116,7 +16116,7 @@ async function refreshClanState(options = {}) {
   } finally {
     clanUiLoading = false;
     renderClanView();
-    renderMap();
+    renderCities(true);
   }
 }
 
@@ -16295,7 +16295,7 @@ async function saveClanShieldEditor() {
     clanShieldDraft = null;
     clanShieldEditorTab = "field";
     showToast("Clan shield published.");
-    renderMap();
+    renderCities(true);
   } catch (error) {
     showToast(error?.message || "Could not save the clan shield.");
   } finally {
