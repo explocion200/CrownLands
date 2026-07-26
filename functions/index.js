@@ -57,6 +57,23 @@ const HARVEST_BONUS_MAX_TROOPS = Number.MAX_SAFE_INTEGER;
 const HARVEST_BONUS_SPAWN_INTERVAL_SECONDS = economyNumber("pickups.spawnIntervalMinutes", 3) * 60;
 const HARVEST_BONUS_EXPIRE_SECONDS = economyNumber("pickups.expireMinutes", 20) * 60;
 const HARVEST_BONUS_MAX_ACTIVE_PER_PLAYER = economyNumber("pickups.maxActivePerPlayer", 1);
+const REWARDED_AD_REWARD_MINUTES = 30;
+const REWARDED_AD_COOLDOWN_MS = 30 * 60 * 1000;
+const REWARDED_AD_DAILY_LIMIT = 20;
+const REWARDED_AD_MINIMUM_CLAIM_DELAY_MS = 5 * 1000;
+const REWARDED_AD_SHOW_WINDOW_MS = 10 * 60 * 1000;
+const REWARDED_AD_CLAIM_WINDOW_MS = 30 * 60 * 1000;
+const REWARDED_AD_AUDIT_RETENTION_MS = 90 * 24 * 60 * 60 * 1000;
+const REWARDED_AD_STATUS_CALLABLE_OPTIONS = Object.freeze({
+  region: "us-central1",
+  maxInstances: 30,
+  invoker: "public",
+  enforceAppCheck: true,
+  consumeAppCheckToken: true,
+});
+const REWARDED_AD_MUTATION_CALLABLE_OPTIONS = Object.freeze({
+  ...REWARDED_AD_STATUS_CALLABLE_OPTIONS,
+});
 const SCOUT_REPORT_SECONDS = 120;
 const ARMY_TRAVEL_SECONDS_PER_MAP_UNIT = 0.13;
 const ARMY_TRAVEL_MIN_SECONDS = 30;
@@ -82,6 +99,13 @@ const BATTLE_XP_END_START_LEVEL_CAP_RATE = 0.3;
 const BATTLE_XP_END_FLOOR_LEVEL_CAP_RATE = 0.15;
 const BATTLE_XP_END_CAP_RAMP_LEVELS = 50;
 const KILL_GOLD_BASE = 5;
+const ATTACK_PROTECTION_VERSION = 2;
+const ATTACK_PROTECTION_ASSAULT_MIN_RATIO = 2;
+const ATTACK_PROTECTION_RAID_MIN_RATIO = 2.5;
+const ATTACK_PROTECTION_RAID_MAX_SCALE_RATIO = 5;
+const ATTACK_PROTECTION_DEFENDER_FIRST_XP_MULTIPLIER = 2;
+const ATTACK_PROTECTION_DEFENDER_REPEAT_XP_MULTIPLIER = 1;
+const ATTACK_PROTECTION_DEFENDER_XP_POLICY = "first-protected-battle-per-attacker-world";
 const DEMO_ATTACK_MIN_POWER_RATIO = 3;
 const DEMO_ATTACK_DEFENDER_XP_MULTIPLIER = 2;
 const DEMO_ATTACK_TIERS = [
@@ -357,6 +381,16 @@ function requireAuth(request) {
   const uid = request.auth?.uid || "";
   if (!uid) throw new HttpsError("unauthenticated", "Sign in before sending troops.");
   return uid;
+}
+
+function requireRewardedAdAppCheck(request, consume = false) {
+  if (!request.app) {
+    throw new HttpsError("unauthenticated", "Rewarded ads require a verified Crownlands browser.");
+  }
+  if (consume && request.app.alreadyConsumed) {
+    throw new HttpsError("permission-denied", "That rewarded-ad security token was already used.");
+  }
+  return request.app.appId || "";
 }
 
 function requireStatsAdmin(request) {
@@ -1418,6 +1452,18 @@ function playerGlobalStatsRef(uid = "") {
   return db.doc(`players/${safeString(uid, 128)}/stats/global`);
 }
 
+function rewardedAdStateRef(uid = "") {
+  return db.doc(`players/${safeString(uid, 128)}/rewardedAds/state`);
+}
+
+function rewardedAdIntentRef(uid = "", intentId = "") {
+  return db.doc(`players/${safeString(uid, 128)}/rewardedAdIntents/${safeString(intentId, 96)}`);
+}
+
+function rewardedAdServerConfigRef() {
+  return db.doc("serverConfig/rewardedAds");
+}
+
 function leaderboardEntryRef(uid = "") {
   return db.doc(`leaderboards/kingPower/entries/${safeString(uid, 128)}`);
 }
@@ -1734,6 +1780,164 @@ function getDemoAttackTier(powerRatio) {
   return DEMO_ATTACK_TIERS.find(tier => ratio >= tier.minRatio) || null;
 }
 
+function roundDownToTwoSignificantDigits(value) {
+  const integer = Math.max(0, Math.floor(safeNumber(value, 0)));
+  if (integer < 10) return integer;
+  const magnitude = 10 ** Math.max(0, Math.floor(Math.log10(integer)) - 1);
+  return Math.floor(integer / magnitude) * magnitude;
+}
+
+function getAttackProtectionMode(powerRatio) {
+  const ratio = Math.max(0, safeNumber(powerRatio, 0));
+  if (ratio >= ATTACK_PROTECTION_RAID_MIN_RATIO) return "raid";
+  if (ratio >= ATTACK_PROTECTION_ASSAULT_MIN_RATIO) return "assault";
+  return "normal";
+}
+
+function getAttackProtectionBreakEvenScale(mode, powerRatio) {
+  const ratio = Math.max(0, safeNumber(powerRatio, 0));
+  if (mode === "assault") {
+    const progress = clamp(
+      (ratio - ATTACK_PROTECTION_ASSAULT_MIN_RATIO)
+        / (ATTACK_PROTECTION_RAID_MIN_RATIO - ATTACK_PROTECTION_ASSAULT_MIN_RATIO),
+      0,
+      1
+    );
+    return 1.25 - progress * 0.2;
+  }
+  if (mode === "raid") {
+    const progress = clamp(
+      (ratio - ATTACK_PROTECTION_RAID_MIN_RATIO)
+        / (ATTACK_PROTECTION_RAID_MAX_SCALE_RATIO - ATTACK_PROTECTION_RAID_MIN_RATIO),
+      0,
+      1
+    );
+    return 0.5 - progress * 0.25;
+  }
+  return 1;
+}
+
+function normalizeAttackProtectionSnapshot(raw = null, legacyDemoAttack = null) {
+  if (raw && typeof raw === "object" && safeNumber(raw.version, 0) === ATTACK_PROTECTION_VERSION) {
+    const mode = raw.mode === "raid" ? "raid" : raw.mode === "assault" ? "assault" : "normal";
+    if (mode === "normal") return null;
+    const maxTroops = Math.max(1, Math.floor(safeNumber(raw.maxTroops, 1)));
+    const requestedTroops = Math.max(1, Math.floor(safeNumber(raw.requestedTroops, maxTroops)));
+    return {
+      version: ATTACK_PROTECTION_VERSION,
+      mode,
+      label: mode === "raid" ? "Protected Raid" : "Protected Assault",
+      powerRatio: Math.max(ATTACK_PROTECTION_ASSAULT_MIN_RATIO, safeNumber(raw.powerRatio, ATTACK_PROTECTION_ASSAULT_MIN_RATIO)),
+      maxTroops,
+      requestedTroops,
+      effectiveTroops: Math.max(1, Math.min(maxTroops, Math.floor(safeNumber(raw.effectiveTroops, requestedTroops)))),
+      captureAllowed: mode === "assault",
+      maxDefenderLossPercent: mode === "raid" ? 10 : 100,
+      attackerXpMultiplier: 0,
+      defenderXpPolicy: ATTACK_PROTECTION_DEFENDER_XP_POLICY,
+      legacyDemoAttack: raw.legacyDemoAttack === true,
+    };
+  }
+  const legacy = normalizeDemoAttackSnapshot(legacyDemoAttack);
+  if (!legacy) return null;
+  return {
+    version: ATTACK_PROTECTION_VERSION,
+    mode: "raid",
+    label: "Protected Raid",
+    powerRatio: Math.max(ATTACK_PROTECTION_RAID_MIN_RATIO, legacy.powerRatio),
+    maxTroops: legacy.maxTroops,
+    requestedTroops: legacy.requestedTroops,
+    effectiveTroops: legacy.effectiveTroops,
+    captureAllowed: false,
+    maxDefenderLossPercent: 10,
+    attackerXpMultiplier: 0,
+    defenderXpPolicy: ATTACK_PROTECTION_DEFENDER_XP_POLICY,
+    legacyDemoAttack: true,
+  };
+}
+
+function createServerAttackProtectionSnapshot({
+  sourceTroops = 1,
+  target = null,
+  targetType = "city",
+  requestedTroops = 1,
+  attackerKingPower = 0,
+  defenderKingPower = 1,
+  attackerUid = "",
+  attackerProfile = null,
+  defenderProfile = null,
+  defenderBonuses = {},
+} = {}) {
+  if (!target || targetType === "camp" || isStronghold(target)) return null;
+  const targetOwnerUid = getOwnerUid(target);
+  if (!targetOwnerUid || targetOwnerUid === attackerUid) return null;
+  const attackerPower = Math.max(0, Math.floor(safeNumber(attackerKingPower, 0)));
+  const defenderPower = Math.max(1, Math.floor(safeNumber(defenderKingPower, 1)));
+  const powerRatio = attackerPower / defenderPower;
+  const mode = getAttackProtectionMode(powerRatio);
+  if (mode === "normal") return null;
+
+  const availableTroops = Math.max(1, Math.floor(safeNumber(sourceTroops, 1)));
+  const requested = clampInt(requestedTroops, 1, availableTroops);
+  const attackPerTroop = Math.max(1, getAttackPower(1, attackerProfile));
+  const totalDefense = Math.max(1, getCityStats(target, defenderProfile, defenderBonuses).totalDefense);
+  const breakEvenTroops = Math.max(1, Math.floor(totalDefense / attackPerTroop) + 1);
+  const scaledCap = Math.max(1, Math.floor(
+    breakEvenTroops * getAttackProtectionBreakEvenScale(mode, powerRatio)
+  ));
+  const exposedCap = Math.max(1, roundDownToTwoSignificantDigits(scaledCap));
+  const maxTroops = Math.min(availableTroops, exposedCap);
+  return normalizeAttackProtectionSnapshot({
+    version: ATTACK_PROTECTION_VERSION,
+    mode,
+    powerRatio: Number(powerRatio.toFixed(4)),
+    maxTroops,
+    requestedTroops: requested,
+    effectiveTroops: Math.min(requested, maxTroops),
+  });
+}
+
+function createAttackProtectionPreview(snapshot = null, sourceTroops = 1, requestedTroops = 1) {
+  const availableTroops = Math.max(1, Math.floor(safeNumber(sourceTroops, 1)));
+  const requested = clampInt(requestedTroops, 1, availableTroops);
+  const protectedSnapshot = normalizeAttackProtectionSnapshot(snapshot);
+  if (protectedSnapshot) return protectedSnapshot;
+  return {
+    version: ATTACK_PROTECTION_VERSION,
+    mode: "normal",
+    label: "Normal Attack",
+    powerRatio: 0,
+    maxTroops: availableTroops,
+    requestedTroops: requested,
+    effectiveTroops: requested,
+    captureAllowed: true,
+    maxDefenderLossPercent: 100,
+    attackerXpMultiplier: 1,
+    defenderXpPolicy: "normal",
+  };
+}
+
+function getAttackProtectionQuoteSignature(snapshot = null, sourceTroops = 1, requestedTroops = 1) {
+  const preview = createAttackProtectionPreview(snapshot, sourceTroops, requestedTroops);
+  return [
+    preview.version,
+    preview.mode,
+    preview.maxTroops,
+    preview.captureAllowed ? 1 : 0,
+    preview.maxDefenderLossPercent,
+  ].join("|");
+}
+
+function isCurrentProtectedDefenseXpClaim(claim = null) {
+  return Boolean(
+    claim
+    && typeof claim === "object"
+    && safeString(claim.worldId, 128) === ONLINE_WORLD_ID
+    && safeString(claim.resetGeneration, 128) === RESET_GENERATION
+    && safeString(claim.firstResolvedArmyId, 96)
+  );
+}
+
 function normalizeDemoAttackSnapshot(demo = null) {
   if (!demo || typeof demo !== "object" || !demo.active) return null;
   const attackerKingPower = Math.max(0, Math.floor(safeNumber(demo.attackerKingPower, 0)));
@@ -1810,18 +2014,28 @@ function getAttackPower(troops, attackerProfile = null) {
 function calculateCombatResult(attackTroops, target, attackerProfile = null, defenderProfile = null, options = {}) {
   const troops = Math.max(0, Math.floor(safeNumber(attackTroops, 0)));
   const defendersAtStart = Math.max(0, Math.floor(safeNumber(target?.troops, 0)));
-  const demoAttack = normalizeDemoAttackSnapshot(options.demoAttack);
-  const attackPower = getAttackPower(troops, attackerProfile) * (demoAttack?.attackPowerMultiplier || 1);
+  const attackProtection = normalizeAttackProtectionSnapshot(options.attackProtection, options.demoAttack);
+  const attackPower = getAttackPower(troops, attackerProfile);
   const defensePower = getCityStats(target, defenderProfile, options.defenderBonuses).totalDefense;
   const ratio = attackPower / Math.max(1, defensePower);
-  const success = attackPower > defensePower;
+  const raid = attackProtection?.mode === "raid";
+  const success = !raid && attackPower > defensePower;
   const attackerBoost = attackerProfile ? skillMultiplier(attackerProfile, "swordmastery") : 1;
   let survivors = 0;
   let defendersLeft = defendersAtStart;
   let attackerLosses = troops;
   let defenderLosses = 0;
 
-  if (success) {
+  if (raid) {
+    const pressure = clamp(ratio, 0, 1);
+    const damageRate = Math.min(0.1, pressure * 0.2);
+    const damageCeiling = Math.floor(defendersAtStart * 0.1);
+    defenderLosses = Math.min(damageCeiling, Math.floor(defendersAtStart * damageRate));
+    if (defendersAtStart > 0) {
+      defenderLosses = Math.min(defenderLosses, defendersAtStart - 1);
+      defendersLeft = Math.max(1, defendersAtStart - defenderLosses);
+    }
+  } else if (success) {
     const leftoverPower = attackPower - defensePower * 0.68;
     survivors = clamp(Math.floor(leftoverPower / Math.max(BASE_TROOP_ATTACK_POWER * attackerBoost, 1)), 1, troops);
     attackerLosses = troops - survivors;
@@ -1829,7 +2043,7 @@ function calculateCombatResult(attackTroops, target, attackerProfile = null, def
     defendersLeft = 0;
   } else {
     const pressure = clamp(ratio, 0, 1);
-    defenderLosses = Math.min(defendersAtStart, Math.floor(defendersAtStart * (0.12 + pressure * 0.7)));
+    defenderLosses = Math.min(defendersAtStart, Math.floor(defendersAtStart * Math.min(0.82, pressure * 0.82)));
     defendersLeft = Math.max(defendersAtStart > 0 ? 1 : 0, defendersAtStart - defenderLosses);
   }
 
@@ -1844,7 +2058,9 @@ function calculateCombatResult(attackTroops, target, attackerProfile = null, def
     defenderLosses,
     killedAttackers: attackerLosses,
     killedDefenders: defenderLosses,
-    demoAttack,
+    attackProtection,
+    demoAttack: attackProtection?.legacyDemoAttack ? normalizeDemoAttackSnapshot(options.demoAttack) : null,
+    raidCompleted: raid,
   };
 }
 
@@ -2134,6 +2350,12 @@ function normalizeArmyPayload(data = {}, uid = "") {
     targetOwnerAtLaunch: safeString(raw.targetOwnerAtLaunch || "neutral", 32),
     attackerKingPower: Math.max(0, Math.floor(safeNumber(raw.attackerKingPower || raw.ownerKingPower, 0))),
     defenderKingPower: Math.max(0, Math.floor(safeNumber(raw.defenderKingPower, 0))),
+    acceptedAttackProtection: raw.acceptedAttackProtection && typeof raw.acceptedAttackProtection === "object"
+      ? raw.acceptedAttackProtection
+      : data.acceptedAttackProtection && typeof data.acceptedAttackProtection === "object"
+        ? data.acceptedAttackProtection
+        : null,
+    attackProtection: raw.attackProtection && typeof raw.attackProtection === "object" ? raw.attackProtection : null,
     demoAttack: raw.demoAttack && typeof raw.demoAttack === "object" ? raw.demoAttack : null,
   };
 }
@@ -2706,6 +2928,59 @@ function getCurrentDateKey(now = new Date()) {
   return `${year}-${month}-${day}`;
 }
 
+function normalizeRewardedAdState(raw = {}, nowMs = Date.now()) {
+  const dayKey = getCurrentDateKey(new Date(nowMs));
+  const sameDay = safeString(raw?.dayKey, 10) === dayKey;
+  return {
+    schemaVersion: 1,
+    dayKey,
+    claimedToday: sameDay ? clampInt(raw?.claimedToday, 0, REWARDED_AD_DAILY_LIMIT) : 0,
+    lastClaimedAtMs: Math.max(0, timestampToMs(raw?.lastClaimedAtMs)),
+    activeIntentId: safeString(raw?.activeIntentId, 96),
+  };
+}
+
+function createRewardedAdStatus(rawState = {}, enabled = true, nowMs = Date.now(), previewRewards = {}) {
+  const state = normalizeRewardedAdState(rawState, nowMs);
+  const cooldownEndsAtMs = state.lastClaimedAtMs
+    ? state.lastClaimedAtMs + REWARDED_AD_COOLDOWN_MS
+    : 0;
+  const cooldownRemainingMs = Math.max(0, cooldownEndsAtMs - nowMs);
+  const remainingToday = Math.max(0, REWARDED_AD_DAILY_LIMIT - state.claimedToday);
+  const eligible = Boolean(enabled && remainingToday > 0 && cooldownRemainingMs <= 0);
+  const reason = !enabled
+    ? "disabled"
+    : remainingToday <= 0
+      ? "daily-limit"
+      : cooldownRemainingMs > 0
+        ? "cooldown"
+        : "";
+  return {
+    enabled: Boolean(enabled),
+    eligible,
+    reason,
+    dayKey: state.dayKey,
+    claimedToday: state.claimedToday,
+    dailyLimit: REWARDED_AD_DAILY_LIMIT,
+    remainingToday,
+    rewardMinutes: REWARDED_AD_REWARD_MINUTES,
+    cooldownMinutes: Math.floor(REWARDED_AD_COOLDOWN_MS / 60000),
+    cooldownEndsAtMs,
+    cooldownRemainingMs,
+    previewRewards: {
+      gold: Math.max(0, Math.floor(safeNumber(previewRewards?.gold, 0))),
+      troops: Math.max(0, Math.floor(safeNumber(previewRewards?.troops, 0))),
+    },
+  };
+}
+
+function getRewardedAdServerConfigFromSnapshot(snapshot = null) {
+  const config = snapshot?.exists ? snapshot.data() || {} : {};
+  return {
+    enabled: config.enabled === true,
+  };
+}
+
 function normalizeDaily(daily = {}, now = new Date()) {
   const today = getCurrentDateKey(now);
   if (!daily || typeof daily !== "object" || daily.date !== today) {
@@ -2904,6 +3179,9 @@ function makeReport({
   troopsAwarded = 0,
   characterAfter = null,
   goldAfter = null,
+  attackProtection = null,
+  defenderXpMultiplierApplied = 1,
+  firstProtectedDefenseBonus = false,
   nowMs = Date.now(),
 }) {
   const normalizedTotalDefense = Math.max(0, Math.floor(safeNumber(totalDefense, result.defensePower || 0)));
@@ -2942,6 +3220,9 @@ function makeReport({
     troopsAwarded: Math.max(0, Math.floor(safeNumber(troopsAwarded, 0))),
     characterAfter,
     goldAfter,
+    attackProtection: normalizeAttackProtectionSnapshot(attackProtection),
+    defenderXpMultiplierApplied: Math.max(0, safeNumber(defenderXpMultiplierApplied, 1)),
+    firstProtectedDefenseBonus: firstProtectedDefenseBonus === true,
   };
 }
 
@@ -4121,6 +4402,36 @@ function getHarvestEconomyRates(economy = null) {
   }, { goldPerSecond: 0, troopProductionPerSecond: 0 });
 }
 
+function getRewardedAdBaseRates(economy = null) {
+  if (!economy) return { goldPerHour: 0, troopsPerHour: 0 };
+  return economy.cityEntries.reduce((totals, entry) => {
+    const city = entry?.city || {};
+    if (isStronghold(city) || getOwnerUid(city) !== economy.uid) return totals;
+    const stats = getCityProductionStats(city, economy.profileAfter, {}, {
+      includeStrongholdBoosts: false,
+      includeWarDrums: false,
+      includeRoyalTaxDecree: false,
+    });
+    totals.goldPerHour += Math.max(0, safeNumber(stats.baseGoldProductionPerHour, 0));
+    totals.troopsPerHour += Math.max(0, safeNumber(stats.baseTroopProductionPerHour, 0));
+    return totals;
+  }, { goldPerHour: 0, troopsPerHour: 0 });
+}
+
+function getRewardedAdRewardAmount(baseRatePerHour = 0) {
+  return Math.max(
+    0,
+    Math.floor(Math.max(0, safeNumber(baseRatePerHour, 0)) * REWARDED_AD_REWARD_MINUTES / 60)
+  );
+}
+
+function getRewardedAdPreviewRewardsFromStats(stats = {}) {
+  return {
+    gold: getRewardedAdRewardAmount(stats?.baseGoldPerHour),
+    troops: getRewardedAdRewardAmount(stats?.baseTroopPerHour),
+  };
+}
+
 function getHarvestBonusReward(economy = null, type = "gold") {
   const rates = getHarvestEconomyRates(economy);
   if (type === "troops") {
@@ -4291,6 +4602,301 @@ exports.collectEconomy = onCall({ region: "us-central1", maxInstances: 30, invok
     const economy = await prepareEconomyCollection(transaction, uid, nowMs);
     writePreparedEconomy(transaction, economy);
     return createEconomyResponse(economy);
+  });
+});
+
+exports.getRewardedAdStatus = onCall(REWARDED_AD_STATUS_CALLABLE_OPTIONS, async request => {
+  const uid = requireAuth(request);
+  requireRewardedAdAppCheck(request, true);
+  const nowMs = Date.now();
+  const [stateSnap, configSnap, statsSnap] = await Promise.all([
+    rewardedAdStateRef(uid).get(),
+    rewardedAdServerConfigRef().get(),
+    playerGlobalStatsRef(uid).get(),
+  ]);
+  const serverConfig = getRewardedAdServerConfigFromSnapshot(configSnap);
+  const previewRewards = getRewardedAdPreviewRewardsFromStats(statsSnap.exists ? statsSnap.data() : {});
+  return {
+    ok: true,
+    status: createRewardedAdStatus(
+      stateSnap.exists ? stateSnap.data() : {},
+      serverConfig.enabled,
+      nowMs,
+      previewRewards
+    ),
+  };
+});
+
+exports.prepareRewardedAd = onCall(REWARDED_AD_MUTATION_CALLABLE_OPTIONS, async request => {
+  const uid = requireAuth(request);
+  const appId = requireRewardedAdAppCheck(request, true);
+  const data = request.data || {};
+  const rewardType = safeString(data.rewardType, 16);
+  const sessionId = requireGameServerSessionId(data.sessionId);
+  if (rewardType !== "gold" && rewardType !== "troops") {
+    throw new HttpsError("invalid-argument", "Choose the gold or troop rewarded-ad boost.");
+  }
+  const nowMs = Date.now();
+
+  return db.runTransaction(async transaction => {
+    const stateRef = rewardedAdStateRef(uid);
+    const configRef = rewardedAdServerConfigRef();
+    const [stateSnap, configSnap] = await Promise.all([
+      transaction.get(stateRef),
+      transaction.get(configRef),
+    ]);
+    const rawState = stateSnap.exists ? stateSnap.data() || {} : {};
+    const serverConfig = getRewardedAdServerConfigFromSnapshot(configSnap);
+    const status = createRewardedAdStatus(rawState, serverConfig.enabled, nowMs);
+    if (!status.enabled) {
+      throw new HttpsError("failed-precondition", "Rewarded ads are temporarily disabled.");
+    }
+    if (!status.eligible) {
+      throw new HttpsError(
+        "failed-precondition",
+        status.reason === "daily-limit"
+          ? "The daily rewarded-ad limit has been reached."
+          : "The rewarded-ad boost is still cooling down.",
+        status
+      );
+    }
+
+    const economy = await prepareEconomyCollection(transaction, uid, nowMs);
+    const rates = getRewardedAdBaseRates(economy);
+    const baseRatePerHour = rewardType === "troops" ? rates.troopsPerHour : rates.goldPerHour;
+    const rewardAmount = getRewardedAdRewardAmount(baseRatePerHour);
+    if (rewardAmount <= 0) {
+      throw new HttpsError("failed-precondition", "Claim a producing city before watching a rewarded ad.");
+    }
+
+    const mainEntry = rewardType === "troops"
+      ? getCanonicalMainCityEntry(economy.profileAfter, economy.cityEntries)
+      : null;
+    if (
+      rewardType === "troops"
+      && (!mainEntry?.city || getOwnerUid(mainEntry.city) !== uid || isStronghold(mainEntry.city))
+    ) {
+      throw new HttpsError("failed-precondition", "Claim a main city before watching a troop rewarded ad.");
+    }
+
+    const normalizedState = normalizeRewardedAdState(rawState, nowMs);
+    const previousIntentRef = normalizedState.activeIntentId
+      ? rewardedAdIntentRef(uid, normalizedState.activeIntentId)
+      : null;
+    const previousIntentSnap = previousIntentRef
+      ? await transaction.get(previousIntentRef)
+      : null;
+    const intentId = crypto.randomUUID();
+    const intentRef = rewardedAdIntentRef(uid, intentId);
+    const preparedAtMs = nowMs;
+    const showByMs = nowMs + REWARDED_AD_SHOW_WINDOW_MS;
+    const claimByMs = nowMs + REWARDED_AD_CLAIM_WINDOW_MS;
+    const intent = {
+      schemaVersion: 1,
+      id: intentId,
+      uid,
+      status: "pending",
+      rewardType,
+      rewardAmount,
+      baseRatePerHour: Math.max(0, Math.floor(baseRatePerHour)),
+      rewardMinutes: REWARDED_AD_REWARD_MINUTES,
+      targetCityId: safeString(mainEntry?.city?.id, 96),
+      targetCityName: safeString(mainEntry?.city?.name || mainEntry?.city?.id, 40),
+      targetRegionId: normalizeRegionId(mainEntry?.city?.regionId || ""),
+      sessionId,
+      appId: safeString(appId, 160),
+      preparedAtMs,
+      showByMs,
+      claimByMs,
+      deleteAfter: admin.firestore.Timestamp.fromMillis(nowMs + REWARDED_AD_AUDIT_RETENTION_MS),
+      createdAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
+    };
+
+    writePreparedEconomy(transaction, economy);
+    if (previousIntentSnap?.exists && previousIntentSnap.data()?.status === "pending") {
+      transaction.set(previousIntentRef, {
+        status: "superseded",
+        supersededAtMs: nowMs,
+        updatedAt: FieldValue.serverTimestamp(),
+      }, { merge: true });
+    }
+    transaction.set(intentRef, intent);
+    transaction.set(stateRef, {
+      ...normalizedState,
+      activeIntentId: intentId,
+      updatedAtMs: nowMs,
+      updatedAt: FieldValue.serverTimestamp(),
+    }, { merge: true });
+
+    return createEconomyResponse(economy, {
+      rewardedAdIntent: {
+        intentId,
+        rewardType,
+        rewardAmount,
+        baseRatePerHour: intent.baseRatePerHour,
+        rewardMinutes: REWARDED_AD_REWARD_MINUTES,
+        targetCityId: intent.targetCityId,
+        targetCityName: intent.targetCityName,
+        showByMs,
+        claimByMs,
+      },
+      rewardedAdStatus: createRewardedAdStatus(
+        normalizedState,
+        true,
+        nowMs,
+        {
+          gold: getRewardedAdRewardAmount(rates.goldPerHour),
+          troops: getRewardedAdRewardAmount(rates.troopsPerHour),
+        }
+      ),
+    });
+  });
+});
+
+exports.claimRewardedAd = onCall(REWARDED_AD_MUTATION_CALLABLE_OPTIONS, async request => {
+  const uid = requireAuth(request);
+  const appId = requireRewardedAdAppCheck(request, true);
+  const data = request.data || {};
+  const intentId = safeString(data.intentId, 96).replace(/[^a-zA-Z0-9_-]/g, "");
+  const sessionId = requireGameServerSessionId(data.sessionId);
+  if (!intentId) throw new HttpsError("invalid-argument", "A rewarded-ad intent is required.");
+  const nowMs = Date.now();
+
+  return db.runTransaction(async transaction => {
+    const stateRef = rewardedAdStateRef(uid);
+    const intentRef = rewardedAdIntentRef(uid, intentId);
+    const configRef = rewardedAdServerConfigRef();
+    const [stateSnap, intentSnap, configSnap] = await Promise.all([
+      transaction.get(stateRef),
+      transaction.get(intentRef),
+      transaction.get(configRef),
+    ]);
+    if (!intentSnap.exists) {
+      throw new HttpsError("not-found", "That rewarded-ad request no longer exists.");
+    }
+
+    const rawState = stateSnap.exists ? stateSnap.data() || {} : {};
+    const state = normalizeRewardedAdState(rawState, nowMs);
+    const intent = intentSnap.data() || {};
+    if (safeString(intent.uid, 128) !== uid) {
+      throw new HttpsError("permission-denied", "That rewarded-ad request belongs to another player.");
+    }
+    if (intent.status === "claimed") {
+      return {
+        ok: true,
+        claimed: true,
+        replayed: true,
+        rewardType: intent.rewardType,
+        reward: Math.max(0, Math.floor(safeNumber(intent.rewardAmount, 0))),
+        targetCityId: safeString(intent.claimTargetCityId || intent.targetCityId, 96),
+        targetCityName: safeString(intent.claimTargetCityName || intent.targetCityName, 40),
+        rewardedAdStatus: createRewardedAdStatus(
+          state,
+          getRewardedAdServerConfigFromSnapshot(configSnap).enabled,
+          nowMs
+        ),
+      };
+    }
+    if (intent.status !== "pending" || state.activeIntentId !== intentId) {
+      throw new HttpsError("failed-precondition", "That rewarded-ad request was replaced or cancelled.");
+    }
+    if (safeString(intent.sessionId, 128) !== sessionId || safeString(intent.appId, 160) !== safeString(appId, 160)) {
+      throw new HttpsError("permission-denied", "Complete the rewarded ad in the browser session that started it.");
+    }
+
+    const preparedAtMs = timestampToMs(intent.preparedAtMs);
+    const claimByMs = timestampToMs(intent.claimByMs);
+    if (!preparedAtMs || nowMs - preparedAtMs < REWARDED_AD_MINIMUM_CLAIM_DELAY_MS) {
+      throw new HttpsError("failed-precondition", "The rewarded ad has not run long enough to grant its reward.");
+    }
+    if (!claimByMs || nowMs > claimByMs) {
+      throw new HttpsError("deadline-exceeded", "That rewarded-ad reward expired. Start a new ad.");
+    }
+
+    const serverConfig = getRewardedAdServerConfigFromSnapshot(configSnap);
+    const status = createRewardedAdStatus(state, serverConfig.enabled, nowMs);
+    if (!status.enabled) {
+      throw new HttpsError("failed-precondition", "Rewarded ads are temporarily disabled.");
+    }
+    if (!status.eligible) {
+      throw new HttpsError(
+        "failed-precondition",
+        status.reason === "daily-limit"
+          ? "The daily rewarded-ad limit has been reached."
+          : "The rewarded-ad boost is still cooling down.",
+        status
+      );
+    }
+
+    const rewardType = intent.rewardType === "troops" ? "troops" : "gold";
+    const rewardAmount = Math.max(0, Math.floor(safeNumber(intent.rewardAmount, 0)));
+    if (rewardAmount <= 0) {
+      throw new HttpsError("failed-precondition", "That rewarded-ad request has no valid reward.");
+    }
+    const economy = await prepareEconomyCollection(transaction, uid, nowMs);
+    let gold = economy.gold;
+    let goldFloat = economy.goldFloat;
+    let troopCredit = null;
+    const profileOverrides = {};
+
+    if (rewardType === "troops") {
+      troopCredit = creditLevelUpTroopsToMainCity(
+        economy,
+        economy.profileAfter,
+        rewardAmount,
+        nowMs
+      );
+      if (!troopCredit) {
+        throw new HttpsError("failed-precondition", "Claim a main city before receiving the troop reward.");
+      }
+    } else {
+      goldFloat = Math.max(0, safeNumber(economy.goldFloat, economy.gold)) + rewardAmount;
+      gold = Math.max(0, Math.floor(goldFloat));
+      profileOverrides.gold = gold;
+      profileOverrides.goldFloat = goldFloat;
+    }
+
+    writePreparedEconomy(transaction, economy, profileOverrides);
+    const claimedToday = Math.min(REWARDED_AD_DAILY_LIMIT, state.claimedToday + 1);
+    const nextState = {
+      ...state,
+      claimedToday,
+      lastClaimedAtMs: nowMs,
+      activeIntentId: "",
+      updatedAtMs: nowMs,
+      updatedAt: FieldValue.serverTimestamp(),
+    };
+    transaction.set(stateRef, nextState, { merge: true });
+    transaction.set(intentRef, {
+      status: "claimed",
+      claimedAtMs: nowMs,
+      claimDayKey: state.dayKey,
+      claimNumberToday: claimedToday,
+      claimTargetCityId: troopCredit?.cityId || "",
+      claimTargetCityName: troopCredit?.cityName || "",
+      updatedAt: FieldValue.serverTimestamp(),
+    }, { merge: true });
+
+    const rates = getRewardedAdBaseRates(economy);
+    return createEconomyResponse(economy, {
+      ...(rewardType === "gold" ? { gold, goldFloat } : {}),
+      claimed: true,
+      replayed: false,
+      rewardType,
+      reward: rewardAmount,
+      targetCityId: troopCredit?.cityId || "",
+      targetCityName: troopCredit?.cityName || "",
+      rewardedAdStatus: createRewardedAdStatus(
+        nextState,
+        true,
+        nowMs,
+        {
+          gold: getRewardedAdRewardAmount(rates.goldPerHour),
+          troops: getRewardedAdRewardAmount(rates.troopsPerHour),
+        }
+      ),
+    });
   });
 });
 
@@ -6613,6 +7219,110 @@ exports.rebuildClanPowerOnPlayerStats = onDocumentWritten({
   });
 });
 
+exports.previewArmyProtection = onCall({ region: "us-central1", maxInstances: 20, invoker: "public" }, async request => {
+  const uid = requireAuth(request);
+  const data = request.data || {};
+  const sourceRegionId = requireKnownWorldRegionId(data.sourceRegionId || data.fromRegionId);
+  const targetRegionId = requireKnownWorldRegionId(data.targetRegionId || data.toRegionId);
+  const fromId = safeString(data.fromId, 96);
+  const toId = safeString(data.toId, 96);
+  const targetType = data.targetType === "camp" ? "camp" : "city";
+  if (!fromId || !toId || fromId === toId) {
+    throw new HttpsError("invalid-argument", "Choose a valid source and destination city.");
+  }
+  if (!getServerWorldTargetIds(sourceRegionId).has(fromId)) {
+    throw new HttpsError("invalid-argument", "The source city is not part of the current Crownlands map.");
+  }
+  const allowedTargetIds = targetType === "camp"
+    ? getServerWorldCampIds(targetRegionId)
+    : getServerWorldTargetIds(targetRegionId);
+  if (!allowedTargetIds.has(toId)) {
+    throw new HttpsError("invalid-argument", "The destination is not part of the current Crownlands map.");
+  }
+
+  const sourceRef = cityRefForRegion(sourceRegionId, fromId);
+  const targetRef = targetType === "camp"
+    ? campRefForRegion(targetRegionId, toId)
+    : cityRefForRegion(targetRegionId, toId);
+  const playerRef = db.doc(`players/${uid}`);
+  const attackerLeaderboardRef = leaderboardEntryRef(uid);
+  const nowMs = Date.now();
+
+  return db.runTransaction(async transaction => {
+    const [sourceSnap, targetSnap, playerSnap, attackerLeaderboardSnap] = await Promise.all([
+      transaction.get(sourceRef),
+      transaction.get(targetRef),
+      transaction.get(playerRef),
+      transaction.get(attackerLeaderboardRef),
+    ]);
+    if (!sourceSnap.exists || !targetSnap.exists) {
+      throw new HttpsError("not-found", "The source or destination was not found.");
+    }
+    let source = { id: sourceSnap.id, ...sourceSnap.data() };
+    const target = targetType === "camp"
+      ? getRewardCampCombatTarget({ id: targetSnap.id, ...targetSnap.data() })
+      : { id: targetSnap.id, ...targetSnap.data() };
+    if (!target) throw new HttpsError("failed-precondition", "That camp is not an active reward objective.");
+    if (getOwnerUid(source) !== uid) {
+      throw new HttpsError("permission-denied", "You can only preview attacks from your own city.");
+    }
+
+    const attackerEconomy = await prepareEconomyCollection(transaction, uid, nowMs, {
+      profileRef: playerRef,
+      profileSnap: playerSnap,
+    });
+    const producedSourceEntry = getEconomyCityByRef(attackerEconomy, sourceRef);
+    if (producedSourceEntry?.city) source = producedSourceEntry.city;
+    const attackerProfile = attackerEconomy.profileAfter || playerSnap.data() || {};
+    const targetOwnerUid = getOwnerUid(target);
+    const [defenderProfileSnap, defenderLeaderboardSnap, defenderGlobalStatsSnap] = targetOwnerUid && targetOwnerUid !== uid
+      ? await Promise.all([
+        transaction.get(db.doc(`players/${targetOwnerUid}`)),
+        transaction.get(leaderboardEntryRef(targetOwnerUid)),
+        transaction.get(playerGlobalStatsRef(targetOwnerUid)),
+      ])
+      : [null, null, null];
+    const defenderProfile = defenderProfileSnap?.exists ? defenderProfileSnap.data() || {} : {};
+    const defenderLeaderboard = defenderLeaderboardSnap?.exists ? defenderLeaderboardSnap.data() || {} : {};
+    const defenderGlobalStats = defenderGlobalStatsSnap?.exists ? defenderGlobalStatsSnap.data() || {} : {};
+    const sourceTroops = Math.max(0, Math.floor(safeNumber(source.troops, 0)));
+    if (sourceTroops < 1) throw new HttpsError("failed-precondition", "No troops are available in the source city.");
+    const requestedTroops = clampInt(data.requestedTroops || sourceTroops, 1, sourceTroops);
+    const attackerStats = createPreparedEconomyStatsSnapshot(attackerEconomy, {}, { nowMs });
+    const attackerKingPower = Math.max(0, Math.floor(safeNumber(attackerStats?.kingPower, 0)))
+      || getPlayerPowerSnapshot({
+        profile: attackerProfile,
+        leaderboard: attackerLeaderboardSnap.exists ? attackerLeaderboardSnap.data() || {} : {},
+        globalStats: attackerEconomy.globalStats,
+        city: source,
+      });
+    const defenderKingPower = Math.max(1, getPlayerPowerSnapshot({
+      profile: defenderProfile,
+      leaderboard: defenderLeaderboard,
+      globalStats: defenderGlobalStats,
+      city: target,
+    }));
+    const attackProtection = createServerAttackProtectionSnapshot({
+      sourceTroops,
+      target,
+      targetType,
+      requestedTroops,
+      attackerKingPower,
+      defenderKingPower,
+      attackerUid: uid,
+      attackerProfile,
+      defenderProfile,
+      defenderBonuses: {
+        cityDefenseBonusPercent: Math.max(0, safeNumber(defenderGlobalStats.strongholdDefenseBonusPercent, 0)),
+      },
+    });
+    return {
+      ok: true,
+      attackProtection: createAttackProtectionPreview(attackProtection, sourceTroops, requestedTroops),
+    };
+  });
+});
+
 exports.sendArmyOrder = onCall({ region: "us-central1", maxInstances: 20, invoker: "public" }, async request => {
   const uid = requireAuth(request);
   const nowMs = Date.now();
@@ -6776,8 +7486,11 @@ exports.sendArmyOrder = onCall({ region: "us-central1", maxInstances: 20, invoke
       city: target,
       fallback: order.defenderKingPower,
     }));
-    const demoAttack = resolvedKind === "attack"
-      ? createServerDemoAttackSnapshot({
+    const defenderProtectionBonuses = {
+      cityDefenseBonusPercent: Math.max(0, safeNumber(defenderGlobalStatsData.strongholdDefenseBonusPercent, 0)),
+    };
+    const attackProtection = resolvedKind === "attack"
+      ? createServerAttackProtectionSnapshot({
         sourceTroops,
         target,
         targetType: order.targetType,
@@ -6785,9 +7498,12 @@ exports.sendArmyOrder = onCall({ region: "us-central1", maxInstances: 20, invoke
         attackerKingPower,
         defenderKingPower,
         attackerUid: uid,
+        attackerProfile,
+        defenderProfile: defenderPowerData,
+        defenderBonuses: defenderProtectionBonuses,
       })
       : null;
-    const troops = resolvedKind === "scout" ? 1 : (demoAttack?.effectiveTroops || requestedTroops);
+    const troops = resolvedKind === "scout" ? 1 : (attackProtection?.effectiveTroops || requestedTroops);
 
     if (sourceTroops < troops) throw new HttpsError("failed-precondition", "Not enough troops in the source city.");
     if (order.targetType !== "camp" && resolvedKind === "scout" && isProtectedMainCity(target, uid, defenderMainCityProfile)) {
@@ -6803,6 +7519,28 @@ exports.sendArmyOrder = onCall({ region: "us-central1", maxInstances: 20, invoke
       if (isCityShielded(target, uid, nowMs)) {
         throw new HttpsError("failed-precondition", "That city is protected by a Royal Peace Shield.");
       }
+      if (order.acceptedAttackProtection) {
+        const acceptedSignature = getAttackProtectionQuoteSignature(
+          order.acceptedAttackProtection,
+          sourceTroops,
+          requestedTroops
+        );
+        const currentSignature = getAttackProtectionQuoteSignature(
+          attackProtection,
+          sourceTroops,
+          requestedTroops
+        );
+        if (acceptedSignature !== currentSignature) {
+          throw new HttpsError(
+            "failed-precondition",
+            "Attack protection changed. Review the refreshed troop limit before sending.",
+            {
+              reason: "attack-protection-changed",
+              attackProtection: createAttackProtectionPreview(attackProtection, sourceTroops, requestedTroops),
+            }
+          );
+        }
+      }
     }
 
     const duration = calculateTravelTime({
@@ -6810,7 +7548,6 @@ exports.sendArmyOrder = onCall({ region: "us-central1", maxInstances: 20, invoke
       troopCount: troops,
       kind: resolvedKind,
       targetType: order.targetType,
-      demoAttack,
       speedMultiplier: skillMultiplier(attackerProfile, "marchOrders")
         * (1 + Math.max(0, safeNumber(attackerEconomy.bonuses.marchSpeedBonusPercent, 0)) / 100),
     });
@@ -6845,7 +7582,7 @@ exports.sendArmyOrder = onCall({ region: "us-central1", maxInstances: 20, invoke
       targetOwnerUid: targetOwnerUid || "",
       attackerKingPower: attackerKingPower || order.attackerKingPower || order.ownerKingPower,
       defenderKingPower,
-      demoAttack,
+      attackProtection,
       launchedAtMs: nowMs,
       arrivesAtMs: nowMs + Math.ceil(duration * 1000),
       status: "active",
@@ -7158,6 +7895,32 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
     const troopCount = Math.max(0, Math.floor(safeNumber(army.troops, 0)));
     const defenderBonuses = defenderEconomy?.bonuses || {};
     const targetStats = getCityStats(target, defenderProfile, defenderBonuses);
+    const attackProtection = army.kind === "attack" && targetType !== "camp"
+      ? normalizeAttackProtectionSnapshot(army.attackProtection, army.demoAttack)
+      : null;
+    const protectedDefenseClaimRef = attackProtection && defenderUid && defenderUid !== attackerUid
+      ? db.doc(`players/${defenderUid}/protectedDefenseXpClaims/${attackerUid}`)
+      : null;
+    const protectedDefenseClaimSnap = protectedDefenseClaimRef
+      ? await transaction.get(protectedDefenseClaimRef)
+      : null;
+    const protectedDefenseClaimData = protectedDefenseClaimSnap?.exists
+      ? protectedDefenseClaimSnap.data() || {}
+      : {};
+    const firstProtectedDefenseBonus = Boolean(
+      protectedDefenseClaimRef
+      && !isCurrentProtectedDefenseXpClaim(protectedDefenseClaimData)
+    );
+    const defenderXpMultiplierApplied = attackProtection
+      ? firstProtectedDefenseBonus
+        ? ATTACK_PROTECTION_DEFENDER_FIRST_XP_MULTIPLIER
+        : ATTACK_PROTECTION_DEFENDER_REPEAT_XP_MULTIPLIER
+      : 1;
+    const protectedDefenseXpSummary = attackProtection
+      ? firstProtectedDefenseBonus
+        ? " First protected defense: 2× XP."
+        : " Repeat protected defense: normal XP."
+      : "";
     const attackerName = normalizePlayerName(attackerProfile.playerName || army.ownerName, "Rival ruler");
     const defenderName = defenderUid
       ? normalizePlayerName(target.ownerName || defenderProfile.playerName, "Rival ruler")
@@ -7776,13 +8539,20 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
 
     const oldOwnerUid = defenderUid;
     const defendersAtStart = Math.max(0, Math.floor(safeNumber(target.troops, 0)));
-    const demoAttack = normalizeDemoAttackSnapshot(army.demoAttack);
-    const result = calculateCombatResult(troopCount, target, attackerProfile, defenderProfile, { demoAttack, defenderBonuses });
+    const result = calculateCombatResult(troopCount, target, attackerProfile, defenderProfile, {
+      attackProtection,
+      demoAttack: army.demoAttack,
+      defenderBonuses,
+    });
     const givenUpNeutralTarget = isGivenUpNeutralCity(target);
-    const attackWinXp = demoAttack || givenUpNeutralTarget ? 0 : getCaptureXpAward(target, oldOwnerUid, result.defenderLosses, defenderProfile);
-    const defenseHeldXp = applyDemoDefenderXpMultiplier(getDefenseHeldXpAward(troopCount, target, defenderProfile), demoAttack);
+    const attackWinXp = attackProtection || givenUpNeutralTarget
+      ? 0
+      : getCaptureXpAward(target, oldOwnerUid, result.defenderLosses, defenderProfile);
+    const defenseHeldXp = getDefenseHeldXpAward(troopCount, target, defenderProfile);
     const cappedAttackWinXp = capBattleXpForHeroLevel(attackWinXp, attackerProfile);
-    const cappedDefenseHeldXp = capBattleXpForHeroLevel(defenseHeldXp, defenderProfile || {});
+    const cappedDefenseHeldXp = Math.floor(
+      capBattleXpForHeroLevel(defenseHeldXp, defenderProfile || {}) * defenderXpMultiplierApplied
+    );
     const attackerXp = result.success ? cappedAttackWinXp : getPartialBattleXpAward(cappedAttackWinXp);
     const defenderXp = result.success ? getPartialBattleXpAward(cappedDefenseHeldXp) : cappedDefenseHeldXp;
     const attackerProgress = buildPlayerProgressPatch(attackerProfile, {
@@ -7793,6 +8563,17 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
         xp: defenderXp,
       })
       : null;
+    if (firstProtectedDefenseBonus && protectedDefenseClaimRef) {
+      transaction.set(protectedDefenseClaimRef, {
+        attackerUid,
+        defenderUid,
+        worldId: ONLINE_WORLD_ID,
+        resetGeneration: RESET_GENERATION,
+        firstResolvedArmyId: armyId,
+        claimedAtMs: nowMs,
+        claimedAt: FieldValue.serverTimestamp(),
+      });
+    }
     const attackerLevelTroopReward = creditLevelUpTroopsToMainCity(
       attackerEconomy,
       attackerProfile,
@@ -7855,12 +8636,15 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
         result,
         totalDefense: targetStats.totalDefense,
         defenseStats: targetStats,
-        summary: `Captured with ${result.survivors.toLocaleString()} survivors. Level ${clampCityLevel(target.level).toLocaleString()} to ${nextLevel.toLocaleString()}. +${attackerProgress.xpAwarded.toLocaleString()} XP.${attackerLevelTroopReward ? ` Hero level reward: +${attackerLevelTroopReward.credited.toLocaleString()} troops to ${attackerLevelTroopReward.cityName}.` : ""}`,
+        summary: `Captured with ${result.survivors.toLocaleString()} survivors. Level ${clampCityLevel(target.level).toLocaleString()} to ${nextLevel.toLocaleString()}. +${attackerProgress.xpAwarded.toLocaleString()} XP.${protectedDefenseXpSummary}${attackerLevelTroopReward ? ` Hero level reward: +${attackerLevelTroopReward.credited.toLocaleString()} troops to ${attackerLevelTroopReward.cityName}.` : ""}`,
         xpAwarded: attackerProgress.xpAwarded,
         goldAwarded: attackerProgress.goldAwarded,
         troopsAwarded: attackerLevelTroopReward?.credited || 0,
         characterAfter: attackerProgress.character,
         goldAfter: attackerProgress.gold,
+        attackProtection,
+        defenderXpMultiplierApplied,
+        firstProtectedDefenseBonus,
         nowMs,
       });
       const attackerDaily = !oldOwnerUid && !isStronghold(target)
@@ -7925,12 +8709,15 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
           result,
           totalDefense: targetStats.totalDefense,
           defenseStats: targetStats,
-          summary: `${target.name || target.id} was captured by ${attackerName}. Level ${clampCityLevel(target.level).toLocaleString()} to ${nextLevel.toLocaleString()}. +${defenderProgress.xpAwarded.toLocaleString()} XP.${defenderLevelTroopReward ? ` Hero level reward: +${defenderLevelTroopReward.credited.toLocaleString()} troops to ${defenderLevelTroopReward.cityName}.` : ""}${defenderRecoveredTroops > 0 ? ` Field Medics returned ${defenderRecoveredTroops.toLocaleString()} troops to your main city.` : ""}`,
+          summary: `${target.name || target.id} was captured by ${attackerName}. Level ${clampCityLevel(target.level).toLocaleString()} to ${nextLevel.toLocaleString()}. +${defenderProgress.xpAwarded.toLocaleString()} XP.${protectedDefenseXpSummary}${defenderLevelTroopReward ? ` Hero level reward: +${defenderLevelTroopReward.credited.toLocaleString()} troops to ${defenderLevelTroopReward.cityName}.` : ""}${defenderRecoveredTroops > 0 ? ` Field Medics returned ${defenderRecoveredTroops.toLocaleString()} troops to your main city.` : ""}`,
           xpAwarded: defenderProgress.xpAwarded,
           goldAwarded: defenderProgress.goldAwarded,
           troopsAwarded: defenderLevelTroopReward?.credited || 0,
           characterAfter: defenderProgress.character,
           goldAfter: defenderProgress.gold,
+          attackProtection,
+          defenderXpMultiplierApplied,
+          firstProtectedDefenseBonus,
           nowMs,
         });
         writeReport(transaction, defenderUid, defenderReport, defenderProfileSnap, {
@@ -7970,7 +8757,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
       id: `${armyId}_attack_${attackerUid}`,
       uid: attackerUid,
       type: "attack",
-      outcome: "defeat",
+      outcome: result.raidCompleted ? "raid" : "defeat",
       city: target,
       opponentName: defenderName,
       sentTroops: troopCount,
@@ -7978,20 +8765,27 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
       result,
       totalDefense: targetStats.totalDefense,
       defenseStats: targetStats,
-      summary: `${result.defendersLeft.toLocaleString()} defenders remained. +${attackerProgress.xpAwarded.toLocaleString()} XP.${attackerLevelTroopReward ? ` Hero level reward: +${attackerLevelTroopReward.credited.toLocaleString()} troops to ${attackerLevelTroopReward.cityName}.` : ""}`,
+      summary: result.raidCompleted
+        ? `Protected raid completed. ${result.defenderLosses.toLocaleString()} defenders lost; ${result.defendersLeft.toLocaleString()} remained. All ${troopCount.toLocaleString()} raiders were lost. +0 XP.${protectedDefenseXpSummary}`
+        : `${result.defendersLeft.toLocaleString()} defenders remained. +${attackerProgress.xpAwarded.toLocaleString()} XP.${protectedDefenseXpSummary}${attackerLevelTroopReward ? ` Hero level reward: +${attackerLevelTroopReward.credited.toLocaleString()} troops to ${attackerLevelTroopReward.cityName}.` : ""}`,
       xpAwarded: attackerProgress.xpAwarded,
       goldAwarded: attackerProgress.goldAwarded,
       troopsAwarded: attackerLevelTroopReward?.credited || 0,
       characterAfter: attackerProgress.character,
       goldAfter: attackerProgress.gold,
+      attackProtection,
+      defenderXpMultiplierApplied,
+      firstProtectedDefenseBonus,
       nowMs,
     });
-    const attackerRecoveredTroops = recoverBattleLossesToMainCity({
-      uid: attackerUid,
-      profile: attackerProfile,
-      economy: attackerEconomy,
-      losses: result.attackerLosses,
-    });
+    const attackerRecoveredTroops = result.raidCompleted
+      ? 0
+      : recoverBattleLossesToMainCity({
+        uid: attackerUid,
+        profile: attackerProfile,
+        economy: attackerEconomy,
+        losses: result.attackerLosses,
+      });
     const defenderRecoveredTroops = defenderUid && defenderUid !== attackerUid
       ? recoverBattleLossesToMainCity({
         uid: defenderUid,
@@ -8035,12 +8829,15 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
         result,
         totalDefense: targetStats.totalDefense,
         defenseStats: targetStats,
-        summary: `${target.name || target.id} survived with ${result.defendersLeft.toLocaleString()} defenders. +${defenderProgress.xpAwarded.toLocaleString()} XP.${defenderLevelTroopReward ? ` Hero level reward: +${defenderLevelTroopReward.credited.toLocaleString()} troops to ${defenderLevelTroopReward.cityName}.` : ""}${defenderRecoveredTroops > 0 ? ` Field Medics returned ${defenderRecoveredTroops.toLocaleString()} troops to your main city.` : ""}`,
+        summary: `${target.name || target.id} ${result.raidCompleted ? "survived a protected raid" : "survived"} with ${result.defendersLeft.toLocaleString()} defenders. +${defenderProgress.xpAwarded.toLocaleString()} XP.${protectedDefenseXpSummary}${defenderLevelTroopReward ? ` Hero level reward: +${defenderLevelTroopReward.credited.toLocaleString()} troops to ${defenderLevelTroopReward.cityName}.` : ""}${defenderRecoveredTroops > 0 ? ` Field Medics returned ${defenderRecoveredTroops.toLocaleString()} troops to your main city.` : ""}`,
         xpAwarded: defenderProgress.xpAwarded,
         goldAwarded: defenderProgress.goldAwarded,
         troopsAwarded: defenderLevelTroopReward?.credited || 0,
         characterAfter: defenderProgress.character,
         goldAfter: defenderProgress.gold,
+        attackProtection,
+        defenderXpMultiplierApplied,
+        firstProtectedDefenseBonus,
         nowMs,
       });
       writeReport(transaction, defenderUid, defenderReport, defenderProfileSnap, {
@@ -8053,7 +8850,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
 
     markResolved({
       kind: "attack",
-      outcome: "defeat",
+      outcome: result.raidCompleted ? "raid" : "defeat",
       defendersLeft: result.defendersLeft,
       attackerLosses: result.attackerLosses,
       defenderLosses: result.defenderLosses,
@@ -8062,7 +8859,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
       ok: true,
       status: "resolved",
       kind: "attack",
-      outcome: "defeat",
+      outcome: result.raidCompleted ? "raid" : "defeat",
       reports: reportsForCaller(),
       cityUpdates: withEconomyCityUpdates(cityUpdates),
       currentUser: profilePatchForCaller(attackerProgress, defenderProgress),

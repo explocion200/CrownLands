@@ -75,8 +75,8 @@ requireMatch(
 );
 requireMatch(
   serverSource,
-  /cappedDefenseHeldXp\s*=\s*capBattleXpForHeroLevel[\s\S]*?defenderXp\s*=\s*result\.success\s*\?\s*getPartialBattleXpAward\(cappedDefenseHeldXp\)\s*:\s*cappedDefenseHeldXp/,
-  "Lost-defense XP must be one-third of the capped held-defense XP."
+  /cappedDefenseHeldXp\s*=\s*(?:Math\.floor\(\s*)?capBattleXpForHeroLevel[\s\S]*?defenderXp\s*=\s*result\.success\s*\?\s*getPartialBattleXpAward\(cappedDefenseHeldXp\)\s*:\s*cappedDefenseHeldXp/,
+  "Lost-defense XP must be one-third of the capped held-defense XP after any protected-defense multiplier."
 );
 requireMatch(
   clientSource,

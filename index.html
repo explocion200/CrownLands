@@ -12,11 +12,11 @@
   <meta name="apple-mobile-web-app-title" content="Crownlands" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="format-detection" content="telephone=no" />
-  <meta name="crownlands-build" content="20260726-smooth-map-picker" />
+  <meta name="crownlands-build" content="20260726-rewarded-ads" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700;800;900&family=Cinzel+Decorative:wght@700;900&family=IM+Fell+English:ital@0;1&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=20260726-smooth-map-picker" />
+  <link rel="stylesheet" href="styles.css?v=20260726-rewarded-ads" />
   <link rel="preload" as="image" href="assets/game-menu-background.jpg?v=20260702-login-page" />
   <link rel="preload" as="image" href="assets/loading-ring.png" />
   <link rel="preload" as="image" href="assets/loading-crown.png" />
@@ -37,6 +37,10 @@
   <link rel="icon" type="image/png" sizes="192x192" href="/assets/icons/crownlands-icon-192.png" />
   <link rel="apple-touch-icon" href="/assets/icons/crownlands-icon-192.png" />
   <link rel="manifest" href="/manifest.webmanifest" />
+  <script>
+    window.googletag = window.googletag || { cmd: [] };
+  </script>
+  <script async src="https://securepubads.g.doubleclick.net/tag/js/gpt.js"></script>
 </head>
 <body>
   <main class="phone-shell" aria-label="Crownlands real-time medieval conquest prototype">
@@ -71,6 +75,7 @@
             <button id="googleSignOutBtn" class="ghost-btn" type="button" hidden>Sign out</button>
             <button id="installAppBtn" class="ghost-btn install-app-btn" type="button" hidden>Install Crownlands</button>
           </div>
+          <a class="privacy-link" href="/privacy.html" target="_blank" rel="noopener">Privacy</a>
         </div>
       </div>
     </section>
@@ -257,6 +262,10 @@
             </div>
             <span id="pushAlertsStatus" class="push-alerts-status" aria-live="polite" hidden>Notifications Off</span>
           </section>
+          <section class="profile-settings-section">
+            <div class="profile-section-heading"><span>Legal</span><h3>Privacy</h3></div>
+            <a class="profile-secondary-btn privacy-settings-link" href="/privacy.html" target="_blank" rel="noopener">View Privacy Policy</a>
+          </section>
         </div>
 
         <div id="flagEditorView" class="flag-editor-view" hidden>
@@ -322,10 +331,11 @@
   <script src="assets/map-editor-data.js?v=20260723-utc-responsive-v1"></script>
   <script src="world-config.js"></script>
   <script src="economy-config.js?v=20260726-offline-owned-production"></script>
+  <script src="ads-config.js?v=20260726-rewarded-ads"></script>
   <script src="ui-layout-config.js?v=20260726-hud-layout-editor"></script>
-  <script src="firebase-config.js?v=20260703-vapid-key"></script>
-  <script src="firebaseClient.js?v=20260726-offline-owned-production"></script>
-  <script src="game.js?v=20260726-smooth-map-picker"></script>
+  <script src="firebase-config.js?v=20260726-app-check"></script>
+  <script src="firebaseClient.js?v=20260726-rewarded-ads"></script>
+  <script src="game.js?v=20260726-rewarded-ads"></script>
   <script src="ui-layout-runtime.js?v=20260726-hud-layout-editor"></script>
 </body>
 </html>

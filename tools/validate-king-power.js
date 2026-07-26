@@ -193,6 +193,27 @@ const noCampPower = kingdomPower([{ level: 30, troops: 100_000 }]);
 if (campPower.armyPower - noCampPower.armyPower !== 50_000 * config.KING_POWER_ARMY_TROOP_VALUE) {
   throw new Error("Camp garrisons are not counted exactly once as controlled troops.");
 }
+const transferBefore = kingdomPower([
+  { level: 50, troops: 100_000 },
+  { level: 50, troops: 25_000 },
+]);
+const transferMarching = kingdomPower([
+  { level: 50, troops: 80_000 },
+  { level: 50, troops: 25_000 },
+], 20_000);
+const transferArrived = kingdomPower([
+  { level: 50, troops: 80_000 },
+  { level: 50, troops: 45_000 },
+]);
+if (transferBefore.armyPower !== transferMarching.armyPower
+  || transferMarching.armyPower !== transferArrived.armyPower) {
+  throw new Error("Troop King Power changes while an owned-city transfer is marching or arriving.");
+}
+if (!serverSource.includes("addActiveArmies: [movement]")
+  || !serverSource.includes("excludeArmyIds: [armyId]")
+  || !serverSource.includes("statsCityPatches: [{ ref: targetRef, city: target, patch: targetTroopPatch }]")) {
+  throw new Error("Transfer launch and arrival do not atomically move troops between garrisons and active armies.");
+}
 const base = cityMilitaryComponents(75, 1_000_000);
 const training = cityMilitaryComponents(75, 1_000_000, { troop: 15 });
 const defense = cityMilitaryComponents(75, 1_000_000, { defense: 15 });

@@ -36,6 +36,7 @@ const KING_POWER_LEADERBOARD_LIMIT = 100;
 const PLAYER_NAME_MAX_LENGTH = 18;
 const PLAYER_IDENTITY_LOOKUP_BATCH_SIZE = 80;
 const PLAYER_IDENTITY_CACHE_STALE_MS = 5 * 60 * 1000;
+const ENEMY_POWER_BAND_STABILIZE_MS = 3 * 1000;
 const ONLINE_OWNED_CITIES_REFRESH_MS = 15 * 1000;
 const ONLINE_INITIAL_CITY_LIST_TIMEOUT_MS = 18 * 1000;
 const ONLINE_INITIAL_CITY_LIST_FALLBACK_TIMEOUT_MS = 35 * 1000;
@@ -62,6 +63,25 @@ const CROWDED_MAP_ARMY_EXIT_THRESHOLD = 18;
 const CITY_LIST_PAGE_SIZE = 5;
 const INVENTORY_SLOT_COUNT = 6;
 const ECONOMY_CONFIG = window.CROWNLANDS_ECONOMY_CONFIG || {};
+const ADS_CONFIG = window.CROWNLANDS_ADS_CONFIG || {};
+const REWARDED_AD_PENDING_STORAGE_KEY = `crownlands-pending-rewarded-ad-${RESET_GENERATION}`;
+const REWARDED_AD_LOAD_TIMEOUT_MS = 20 * 1000;
+const REWARDED_AD_DECISION_TIMEOUT_MS = 10 * 60 * 1000;
+const REWARDED_AD_COMPLETION_TIMEOUT_MS = 15 * 60 * 1000;
+const REWARDED_AD_ITEMS = Object.freeze([
+  {
+    id: "gold",
+    label: "Gold .5h Boost",
+    rewardLabel: "gold",
+    icon: "assets/gold-pickup.png",
+  },
+  {
+    id: "troops",
+    label: "Troop .5h Boost",
+    rewardLabel: "troops",
+    icon: "assets/troop-pickup.png",
+  },
+]);
 
 function economyNumber(path, fallback) {
   const value = String(path || "").split(".").filter(Boolean).reduce((current, key) => current?.[key], ECONOMY_CONFIG);
@@ -743,6 +763,11 @@ const BATTLE_XP_MID_END_LEVEL_CAP_RATE = 0.5;
 const BATTLE_XP_END_START_LEVEL_CAP_RATE = 0.3;
 const BATTLE_XP_END_FLOOR_LEVEL_CAP_RATE = 0.15;
 const BATTLE_XP_END_CAP_RAMP_LEVELS = 50;
+const ATTACK_PROTECTION_VERSION = 2;
+const ATTACK_PROTECTION_ASSAULT_MIN_RATIO = 2;
+const ATTACK_PROTECTION_RAID_MIN_RATIO = 2.5;
+const ATTACK_PROTECTION_RAID_MAX_SCALE_RATIO = 5;
+const ATTACK_PROTECTION_DEFENDER_XP_POLICY = "first-protected-battle-per-attacker-world";
 const DEMO_ATTACK_MIN_POWER_RATIO = 3;
 const DEMO_ATTACK_DEFENDER_XP_MULTIPLIER = 2;
 const DEMO_ATTACK_TIERS = [
@@ -767,7 +792,6 @@ const KING_POWER_ARMY_TROOP_VALUE = 2;
 const KING_POWER_REPLACEMENT_HOURS = 12;
 const KING_POWER_DEFENSIVE_ADVANTAGE_WEIGHT = 0.25;
 const KING_POWER_AUTHORITY_VERSION = 8;
-const KING_POWER_COMPATIBILITY_VERSION = 7;
 const SKILL_RESET_COST = economyNumber("playerCosts.skillResetGold", 750_000);
 
 const SKILL_CONFIG = {
@@ -2421,6 +2445,7 @@ let selectedMarchPercent = DEFAULT_MARCH_PERCENT;
 let selectedTroopAmount = 1;
 let troopSliderActive = false;
 let activeTroopSliderRoute = null;
+let activeAttackProtectionPreview = null;
 let activeTroopRouteRequestId = 0;
 let scoutNearbySourceId = null;
 let regroupSourceId = null;
@@ -2495,6 +2520,8 @@ let resolvingOnlineArmyIds = new Set();
 let resolvedOnlineArmyIds = new Set();
 let onlinePresence = [];
 const playerIdentityCache = new Map();
+const enemyPowerBandCache = new Map();
+let enemyPowerBandCommitTimer = null;
 let publicPlayerProfileRequestId = 0;
 const playerIdentityLookupQueue = new Set();
 const playerIdentityLookupMisses = new Map();
@@ -2551,6 +2578,11 @@ let currentPlayerIdentityKingPowerOverride = null;
 let overdueArmyResolveTimer = 0;
 let pendingArmyRecoveryInFlight = false;
 let shopPurchaseInFlight = false;
+let rewardedAdStatus = null;
+let rewardedAdStatusLoading = false;
+let rewardedAdInFlight = false;
+let rewardedAdShopCountdownTimer = 0;
+let googlePublisherServicesEnabled = false;
 let skillActionInFlight = false;
 let serverCityUpgradeInFlightIds = new Set();
 let serverCityRelinquishInFlightIds = new Set();
@@ -6715,52 +6747,6 @@ function getAuthoritativeCityOwnerKingPowerSnapshot(city) {
   return 0;
 }
 
-function getCompatibleCityOwnerKingPowerSnapshot(city) {
-  if (!city) return 0;
-  const currentUid = getCurrentOnlineUid();
-  if (city.owner === "player" && (!city.ownerUid || city.ownerUid === currentUid)) return getKingPower();
-  const cachedIdentity = playerIdentityCache.get(city.ownerUid);
-  const presence = Array.isArray(onlinePresence)
-    ? onlinePresence.find(entry => entry?.uid === city.ownerUid)
-    : null;
-  const candidates = [
-    {
-      power: cachedIdentity?.kingPower,
-      version: cachedIdentity?.kingPowerVersion,
-      updatedAtMs: cachedIdentity?.updatedAtMs,
-      authority: cachedIdentity?.authoritative ? 2 : 0,
-      priority: 3,
-    },
-    {
-      power: presence?.kingPower,
-      version: presence?.kingPowerVersion,
-      updatedAtMs: presence?.updatedAtMs,
-      authority: 0,
-      priority: 2,
-    },
-    {
-      power: city.ownerKingPower,
-      version: city.kingPowerVersion,
-      updatedAtMs: city.ownerKingPowerUpdatedAtMs || city.updatedAtMs || timestampToMs(city.updatedAt),
-      authority: 1,
-      priority: 1,
-    },
-  ].map(candidate => ({
-    power: normalizePowerValue(candidate.power),
-    version: Math.max(0, Math.floor(Number(candidate.version) || 0)),
-    updatedAtMs: normalizeTimestampMs(candidate.updatedAtMs),
-    authority: candidate.authority,
-    priority: candidate.priority,
-  })).filter(candidate => candidate.power > 0 && candidate.version >= KING_POWER_COMPATIBILITY_VERSION);
-  candidates.sort((left, right) => (
-    right.version - left.version
-    || right.authority - left.authority
-    || right.updatedAtMs - left.updatedAtMs
-    || right.priority - left.priority
-  ));
-  return candidates[0]?.power || 0;
-}
-
 async function ensureAuthoritativeCityOwnerKingPower(city) {
   const existingPower = getAuthoritativeCityOwnerKingPowerSnapshot(city);
   if (existingPower > 0 || !city || city.owner !== "enemy") return existingPower;
@@ -6811,19 +6797,214 @@ function getDemoAttackTier(powerRatio) {
 function getEnemyCityPowerBand(
   city,
   playerKingPower = getKingPower(),
-  defenderKingPower = getCompatibleCityOwnerKingPowerSnapshot(city)
+  defenderKingPower = getAuthoritativeCityOwnerKingPowerSnapshot(city)
 ) {
   if (!city || city.owner !== "enemy" || isStronghold(city)) return "";
   const attackerPower = Math.max(1, normalizePowerValue(playerKingPower));
   const defenderPower = normalizePowerValue(defenderKingPower);
   if (defenderPower <= 0) return "in-range";
-  if (getDemoAttackTier(attackerPower / defenderPower)) return "protected";
+  if (attackerPower / defenderPower >= ATTACK_PROTECTION_ASSAULT_MIN_RATIO) return "protected";
   if (defenderPower > attackerPower) return "overpowering";
   return "in-range";
 }
 
-function getEnemyCityPowerBandLabel(powerBand) {
-  if (powerBand === "protected") return "Weaker kingdom protection applies";
+function getAuthoritativePlayerPowerBandSnapshot() {
+  const stats = getGlobalStatsSnapshot();
+  const power = normalizePowerValue(stats?.kingPower);
+  const version = Math.max(0, Math.floor(Number(stats?.version) || 0));
+  const updatedAtMs = normalizeTimestampMs(stats?.updatedAtMs);
+  if (power <= 0 || version < KING_POWER_AUTHORITY_VERSION || updatedAtMs <= 0) return null;
+  return {
+    power,
+    updatedAtMs,
+  };
+}
+
+function getAuthoritativeEnemyPowerBandSnapshot(city) {
+  const ownerUid = String(city?.ownerUid || "").trim();
+  const identity = ownerUid ? playerIdentityCache.get(ownerUid) : null;
+  const power = normalizePowerValue(identity?.kingPower);
+  const version = Math.max(0, Math.floor(Number(identity?.kingPowerVersion) || 0));
+  const updatedAtMs = normalizeTimestampMs(identity?.updatedAtMs);
+  if (!identity?.authoritative || power <= 0 || version < KING_POWER_AUTHORITY_VERSION || updatedAtMs <= 0) return null;
+  return {
+    power,
+    updatedAtMs,
+  };
+}
+
+function clearEnemyPowerBandPending(record) {
+  if (!record) return;
+  record.pendingBand = "";
+  record.pendingSinceMs = 0;
+  record.pendingAttackerPower = 0;
+  record.pendingDefenderPower = 0;
+  record.pendingAttackerUpdatedAtMs = 0;
+  record.pendingDefenderUpdatedAtMs = 0;
+}
+
+function scheduleEnemyPowerBandCommit() {
+  if (enemyPowerBandCommitTimer !== null) {
+    window.clearTimeout(enemyPowerBandCommitTimer);
+    enemyPowerBandCommitTimer = null;
+  }
+  let nextCommitAtMs = Infinity;
+  enemyPowerBandCache.forEach(record => {
+    if (!record?.pendingBand || !record.pendingSinceMs) return;
+    nextCommitAtMs = Math.min(nextCommitAtMs, record.pendingSinceMs + ENEMY_POWER_BAND_STABILIZE_MS);
+  });
+  if (!Number.isFinite(nextCommitAtMs)) return;
+  enemyPowerBandCommitTimer = window.setTimeout(() => {
+    enemyPowerBandCommitTimer = null;
+    if (!state) return;
+    if (isCameraInteractionActive()) {
+      queueDeferredMapRender();
+      return;
+    }
+    renderCities(true);
+    scheduleEnemyPowerBandCommit();
+  }, Math.max(50, nextCommitAtMs - Date.now()));
+}
+
+function clearEnemyPowerBandCache() {
+  enemyPowerBandCache.clear();
+  if (enemyPowerBandCommitTimer !== null) {
+    window.clearTimeout(enemyPowerBandCommitTimer);
+    enemyPowerBandCommitTimer = null;
+  }
+}
+
+function pruneEnemyPowerBandCache(cities = state?.cities) {
+  const eligibleOwnerUids = new Set((Array.isArray(cities) ? cities : [])
+    .filter(city => city?.owner === "enemy" && !isStronghold(city) && !isClanAllyCity(city))
+    .map(city => String(city.ownerUid || "").trim())
+    .filter(Boolean));
+  let changed = false;
+  enemyPowerBandCache.forEach((_, ownerUid) => {
+    if (eligibleOwnerUids.has(ownerUid)) return;
+    enemyPowerBandCache.delete(ownerUid);
+    changed = true;
+  });
+  if (changed) scheduleEnemyPowerBandCommit();
+}
+
+function getStableEnemyCityPowerBand(city, nowMs = Date.now()) {
+  if (!city || city.owner !== "enemy" || isStronghold(city)) return "";
+  const ownerUid = String(city.ownerUid || "").trim();
+  if (isClanAllyCity(city)) {
+    if (ownerUid && enemyPowerBandCache.delete(ownerUid)) scheduleEnemyPowerBandCommit();
+    return "";
+  }
+  if (!ownerUid) return "in-range";
+
+  const record = enemyPowerBandCache.get(ownerUid) || null;
+  const attackerSnapshot = getAuthoritativePlayerPowerBandSnapshot();
+  const defenderSnapshot = getAuthoritativeEnemyPowerBandSnapshot(city);
+  const snapshotsAreComplete = Boolean(
+    normalizePowerValue(attackerSnapshot?.power) > 0
+    && normalizeTimestampMs(attackerSnapshot?.updatedAtMs) > 0
+    && normalizePowerValue(defenderSnapshot?.power) > 0
+    && normalizeTimestampMs(defenderSnapshot?.updatedAtMs) > 0
+  );
+  if (!snapshotsAreComplete) {
+    if (record?.pendingBand) {
+      clearEnemyPowerBandPending(record);
+      scheduleEnemyPowerBandCommit();
+    }
+    return record?.confirmedBand || "in-range";
+  }
+
+  const attackerUpdatedAtMs = attackerSnapshot.updatedAtMs;
+  const defenderUpdatedAtMs = defenderSnapshot.updatedAtMs;
+  const staleAttacker = Boolean(
+    record?.lastAttackerUpdatedAtMs
+    && attackerUpdatedAtMs
+    && attackerUpdatedAtMs < record.lastAttackerUpdatedAtMs
+  );
+  const staleDefender = Boolean(
+    record?.lastDefenderUpdatedAtMs
+    && defenderUpdatedAtMs
+    && defenderUpdatedAtMs < record.lastDefenderUpdatedAtMs
+  );
+  if (staleAttacker || staleDefender) {
+    if (record?.pendingBand) {
+      clearEnemyPowerBandPending(record);
+      scheduleEnemyPowerBandCommit();
+    }
+    return record?.confirmedBand || "in-range";
+  }
+
+  const candidateBand = getEnemyCityPowerBand(city, attackerSnapshot.power, defenderSnapshot.power);
+  if (!record) {
+    enemyPowerBandCache.set(ownerUid, {
+      confirmedBand: candidateBand,
+      pendingBand: "",
+      pendingSinceMs: 0,
+      attackerPower: attackerSnapshot.power,
+      defenderPower: defenderSnapshot.power,
+      attackerUpdatedAtMs,
+      defenderUpdatedAtMs,
+      pendingAttackerPower: 0,
+      pendingDefenderPower: 0,
+      pendingAttackerUpdatedAtMs: 0,
+      pendingDefenderUpdatedAtMs: 0,
+      lastAttackerUpdatedAtMs: attackerUpdatedAtMs,
+      lastDefenderUpdatedAtMs: defenderUpdatedAtMs,
+    });
+    return candidateBand;
+  }
+
+  record.lastAttackerUpdatedAtMs = Math.max(record.lastAttackerUpdatedAtMs || 0, attackerUpdatedAtMs);
+  record.lastDefenderUpdatedAtMs = Math.max(record.lastDefenderUpdatedAtMs || 0, defenderUpdatedAtMs);
+  if (candidateBand === record.confirmedBand) {
+    record.attackerPower = attackerSnapshot.power;
+    record.defenderPower = defenderSnapshot.power;
+    record.attackerUpdatedAtMs = attackerUpdatedAtMs;
+    record.defenderUpdatedAtMs = defenderUpdatedAtMs;
+    if (record.pendingBand) {
+      clearEnemyPowerBandPending(record);
+      scheduleEnemyPowerBandCommit();
+    }
+    return record.confirmedBand;
+  }
+
+  if (record.pendingBand !== candidateBand) {
+    record.pendingBand = candidateBand;
+    record.pendingSinceMs = nowMs;
+    record.pendingAttackerPower = attackerSnapshot.power;
+    record.pendingDefenderPower = defenderSnapshot.power;
+    record.pendingAttackerUpdatedAtMs = attackerUpdatedAtMs;
+    record.pendingDefenderUpdatedAtMs = defenderUpdatedAtMs;
+    scheduleEnemyPowerBandCommit();
+    return record.confirmedBand;
+  }
+
+  record.pendingAttackerPower = attackerSnapshot.power;
+  record.pendingDefenderPower = defenderSnapshot.power;
+  record.pendingAttackerUpdatedAtMs = attackerUpdatedAtMs;
+  record.pendingDefenderUpdatedAtMs = defenderUpdatedAtMs;
+  if (nowMs - record.pendingSinceMs < ENEMY_POWER_BAND_STABILIZE_MS) return record.confirmedBand;
+
+  record.confirmedBand = record.pendingBand;
+  record.attackerPower = record.pendingAttackerPower;
+  record.defenderPower = record.pendingDefenderPower;
+  record.attackerUpdatedAtMs = record.pendingAttackerUpdatedAtMs;
+  record.defenderUpdatedAtMs = record.pendingDefenderUpdatedAtMs;
+  clearEnemyPowerBandPending(record);
+  scheduleEnemyPowerBandCommit();
+  return record.confirmedBand;
+}
+
+function getEnemyCityPowerBandLabel(powerBand, city = null) {
+  if (powerBand === "protected") {
+    const stableRecord = enemyPowerBandCache.get(String(city?.ownerUid || "").trim());
+    const attackerPower = Math.max(1, normalizePowerValue(stableRecord?.attackerPower) || normalizePowerValue(getKingPower()));
+    const defenderPower = normalizePowerValue(stableRecord?.defenderPower)
+      || normalizePowerValue(getAuthoritativeCityOwnerKingPowerSnapshot(city));
+    return defenderPower > 0 && attackerPower / defenderPower >= ATTACK_PROTECTION_RAID_MIN_RATIO
+      ? "Weaker kingdom protection: raid only, no capture"
+      : "Weaker kingdom protection: assault, capture possible";
+  }
   if (powerBand === "overpowering") return "King Power above yours";
   if (powerBand === "in-range") return "Within your King Power range";
   return "";
@@ -6860,6 +7041,133 @@ function normalizeDemoAttackSnapshot(demo = null) {
     attackerXpMultiplier: 0,
     defenderXpMultiplier: DEMO_ATTACK_DEFENDER_XP_MULTIPLIER,
   };
+}
+
+function roundDownToTwoSignificantDigits(value) {
+  const integer = Math.max(0, Math.floor(Number(value) || 0));
+  if (integer < 10) return integer;
+  const magnitude = 10 ** Math.max(0, Math.floor(Math.log10(integer)) - 1);
+  return Math.floor(integer / magnitude) * magnitude;
+}
+
+function getAttackProtectionMode(powerRatio) {
+  const ratio = Math.max(0, Number(powerRatio) || 0);
+  if (ratio >= ATTACK_PROTECTION_RAID_MIN_RATIO) return "raid";
+  if (ratio >= ATTACK_PROTECTION_ASSAULT_MIN_RATIO) return "assault";
+  return "normal";
+}
+
+function getAttackProtectionBreakEvenScale(mode, powerRatio) {
+  const ratio = Math.max(0, Number(powerRatio) || 0);
+  if (mode === "assault") {
+    const progress = clamp(
+      (ratio - ATTACK_PROTECTION_ASSAULT_MIN_RATIO)
+        / (ATTACK_PROTECTION_RAID_MIN_RATIO - ATTACK_PROTECTION_ASSAULT_MIN_RATIO),
+      0,
+      1
+    );
+    return 1.25 - progress * 0.2;
+  }
+  if (mode === "raid") {
+    const progress = clamp(
+      (ratio - ATTACK_PROTECTION_RAID_MIN_RATIO)
+        / (ATTACK_PROTECTION_RAID_MAX_SCALE_RATIO - ATTACK_PROTECTION_RAID_MIN_RATIO),
+      0,
+      1
+    );
+    return 0.5 - progress * 0.25;
+  }
+  return 1;
+}
+
+function normalizeAttackProtectionSnapshot(raw = null, legacyDemoAttack = null) {
+  if (raw && typeof raw === "object" && Number(raw.version) === ATTACK_PROTECTION_VERSION) {
+    const mode = raw.mode === "raid" ? "raid" : raw.mode === "assault" ? "assault" : "normal";
+    const maxTroops = Math.max(1, Math.floor(Number(raw.maxTroops) || 1));
+    const requestedTroops = Math.max(1, Math.floor(Number(raw.requestedTroops) || maxTroops));
+    return {
+      version: ATTACK_PROTECTION_VERSION,
+      mode,
+      label: mode === "raid" ? "Protected Raid" : mode === "assault" ? "Protected Assault" : "Normal Attack",
+      powerRatio: Math.max(0, Number(raw.powerRatio) || 0),
+      maxTroops,
+      requestedTroops,
+      effectiveTroops: Math.max(1, Math.min(maxTroops, Math.floor(Number(raw.effectiveTroops) || requestedTroops))),
+      captureAllowed: mode !== "raid",
+      maxDefenderLossPercent: mode === "raid" ? 10 : 100,
+      attackerXpMultiplier: mode === "normal" ? 1 : 0,
+      defenderXpPolicy: mode === "normal" ? "normal" : ATTACK_PROTECTION_DEFENDER_XP_POLICY,
+      legacyDemoAttack: raw.legacyDemoAttack === true,
+    };
+  }
+  const legacy = normalizeDemoAttackSnapshot(legacyDemoAttack);
+  if (!legacy) return null;
+  return {
+    version: ATTACK_PROTECTION_VERSION,
+    mode: "raid",
+    label: "Protected Raid",
+    powerRatio: Math.max(ATTACK_PROTECTION_RAID_MIN_RATIO, legacy.powerRatio),
+    maxTroops: legacy.maxTroops,
+    requestedTroops: legacy.requestedTroops,
+    effectiveTroops: legacy.effectiveTroops,
+    captureAllowed: false,
+    maxDefenderLossPercent: 10,
+    attackerXpMultiplier: 0,
+    defenderXpPolicy: ATTACK_PROTECTION_DEFENDER_XP_POLICY,
+    legacyDemoAttack: true,
+  };
+}
+
+function createAttackProtectionSnapshot(source, target, requestedTroops, owner = "player", overrides = {}) {
+  if (!source || !target || owner !== "player" || target.owner === owner || isStronghold(target) || isRewardCampTarget(target)) {
+    return null;
+  }
+  const targetOwnerUid = String(target.ownerUid || "").trim();
+  const currentUid = getCurrentOnlineUid();
+  const targetOwnedByPlayer = target.ownerKind === "player" || target.owner === "enemy" || Boolean(targetOwnerUid);
+  const targetOwnedByCurrentPlayer = target.owner === "player" || (targetOwnerUid && currentUid && targetOwnerUid === currentUid);
+  if (!targetOwnedByPlayer || targetOwnedByCurrentPlayer) return null;
+  const attackerKingPower = normalizePowerValue(overrides.attackerKingPower ?? getKingPower());
+  const defenderKingPower = normalizePowerValue(
+    overrides.defenderKingPower ?? getAuthoritativeCityOwnerKingPowerSnapshot(target)
+  );
+  if (defenderKingPower <= 0) return null;
+  const powerRatio = attackerKingPower / defenderKingPower;
+  const mode = getAttackProtectionMode(powerRatio);
+  if (mode === "normal") return null;
+  const sourceTroops = Math.max(1, Math.floor(Number(source.troops) || 1));
+  const requested = clamp(Math.floor(Number(requestedTroops) || 1), 1, sourceTroops);
+  const attackPerTroop = Math.max(1, getAttackPower(1, owner));
+  const totalDefense = Math.max(1, getCityStats(target).totalDefense);
+  const breakEvenTroops = Math.max(1, Math.floor(totalDefense / attackPerTroop) + 1);
+  const scaledCap = Math.max(1, Math.floor(
+    breakEvenTroops * getAttackProtectionBreakEvenScale(mode, powerRatio)
+  ));
+  const maxTroops = Math.min(sourceTroops, Math.max(1, roundDownToTwoSignificantDigits(scaledCap)));
+  return normalizeAttackProtectionSnapshot({
+    version: ATTACK_PROTECTION_VERSION,
+    mode,
+    powerRatio,
+    maxTroops,
+    requestedTroops: requested,
+    effectiveTroops: Math.min(requested, maxTroops),
+  });
+}
+
+function getAttackProtectionNotice(snapshot) {
+  const protection = normalizeAttackProtectionSnapshot(snapshot);
+  if (!protection || protection.mode === "normal") return "";
+  const captureText = protection.captureAllowed
+    ? "capture remains possible"
+    : `no capture; defender damage is capped at ${formatNumber(protection.maxDefenderLossPercent)}%`;
+  return `${protection.label}: maximum ${formatNumber(protection.maxTroops)} troops, ${captureText}, attacker earns 0 XP. Defender XP is 2× on their first protected battle against you this world; normal afterward.`;
+}
+
+function getAttackProtectionReportSuffix(snapshot) {
+  const protection = normalizeAttackProtectionSnapshot(snapshot);
+  return protection && protection.mode !== "normal"
+    ? ` ${protection.label}: attacker XP blocked; defender first-battle XP policy applied.`
+    : "";
 }
 
 function createDemoAttackSnapshot(source, target, requestedTroops, owner = "player", overrides = {}) {
@@ -6908,11 +7216,23 @@ function applyDemoDefenderXpMultiplier(xp, demoAttack) {
   return demo ? capBattleXpForCurrentLevel(Math.floor(base * demo.defenderXpMultiplier)) : base;
 }
 
-function applyDefenseOpponentXpMultiplier(xp, attack, target, demoAttack) {
+function applyDefenseOpponentXpMultiplier(xp, attack, target, attackProtection = null) {
   const base = Math.max(0, Math.floor(Number(xp) || 0));
   if (isStronghold(target)) return capBattleXpForCurrentLevel(base);
-  const demo = normalizeDemoAttackSnapshot(demoAttack);
-  if (demo) return applyDemoDefenderXpMultiplier(base, demo);
+  const protection = normalizeAttackProtectionSnapshot(attackProtection, attack?.demoAttack);
+  if (protection?.mode !== "normal") {
+    const attackerKey = String(attack?.ownerUid || attack?.ownerName || attack?.owner || "unknown");
+    const claimKey = `${ONLINE_WORLD_ID}:${RESET_GENERATION}:${attackerKey}`;
+    if (!state.protectedDefenseXpClaims || typeof state.protectedDefenseXpClaims !== "object") {
+      state.protectedDefenseXpClaims = {};
+    }
+    const firstProtectedDefense = !state.protectedDefenseXpClaims[claimKey];
+    state.protectedDefenseXpClaims[claimKey] = {
+      armyId: String(attack?.onlineId || attack?.id || ""),
+      claimedAtMs: Date.now(),
+    };
+    return Math.floor(capBattleXpForCurrentLevel(base) * (firstProtectedDefense ? 2 : 1));
+  }
 
   const defenderPower = Math.max(1, normalizePowerValue(getKingPower()));
   const attackerPower = Math.max(
@@ -7243,18 +7563,29 @@ function getAttackPower(troops, owner) {
 function calculateCombatResult(attackTroops, attackOwner, target, options = {}) {
   const troops = Math.max(0, Math.floor(Number(attackTroops) || 0));
   const defendersAtStart = Math.max(0, Math.floor(Number(target?.troops) || 0));
-  const demoAttack = normalizeDemoAttackSnapshot(options.demoAttack);
-  const attackPower = getAttackPower(troops, attackOwner) * (demoAttack?.attackPowerMultiplier || 1);
+  const attackProtection = normalizeAttackProtectionSnapshot(options.attackProtection, options.demoAttack);
+  const protectedAttack = attackProtection?.mode !== "normal" ? attackProtection : null;
+  const attackPower = getAttackPower(troops, attackOwner);
   const defensePower = getBattleDefensePower(target);
   const ratio = attackPower / Math.max(1, defensePower);
-  const success = attackPower > defensePower;
+  const raid = protectedAttack?.mode === "raid";
+  const success = !raid && attackPower > defensePower;
   const attackerBoost = attackOwner === "player" ? skillMultiplier("swordmastery") : 1.04;
   let survivors = 0;
   let defendersLeft = defendersAtStart;
   let attackerLosses = troops;
   let defenderLosses = 0;
 
-  if (success) {
+  if (raid) {
+    const pressure = clamp(ratio, 0, 1);
+    const damageRate = Math.min(0.1, pressure * 0.2);
+    const damageCeiling = Math.floor(defendersAtStart * 0.1);
+    defenderLosses = Math.min(damageCeiling, Math.floor(defendersAtStart * damageRate));
+    if (defendersAtStart > 0) {
+      defenderLosses = Math.min(defenderLosses, defendersAtStart - 1);
+      defendersLeft = Math.max(1, defendersAtStart - defenderLosses);
+    }
+  } else if (success) {
     const leftoverPower = attackPower - defensePower * 0.68;
     survivors = clamp(Math.floor(leftoverPower / Math.max(BASE_TROOP_ATTACK_POWER * attackerBoost, 1)), 1, troops);
     attackerLosses = troops - survivors;
@@ -7262,7 +7593,7 @@ function calculateCombatResult(attackTroops, attackOwner, target, options = {}) 
     defendersLeft = 0;
   } else {
     const pressure = clamp(ratio, 0, 1);
-    defenderLosses = Math.min(defendersAtStart, Math.floor(defendersAtStart * (0.12 + pressure * 0.7)));
+    defenderLosses = Math.min(defendersAtStart, Math.floor(defendersAtStart * Math.min(0.82, pressure * 0.82)));
     defendersLeft = Math.max(defendersAtStart > 0 ? 1 : 0, defendersAtStart - defenderLosses);
   }
 
@@ -7277,7 +7608,9 @@ function calculateCombatResult(attackTroops, attackOwner, target, options = {}) 
     defenderLosses,
     killedAttackers: attackerLosses,
     killedDefenders: defenderLosses,
-    demoAttack,
+    attackProtection: protectedAttack,
+    demoAttack: protectedAttack?.legacyDemoAttack ? normalizeDemoAttackSnapshot(options.demoAttack) : null,
+    raidCompleted: raid,
   };
 }
 
@@ -10858,6 +11191,7 @@ function disconnectOnlineWorld() {
   lastAuthoritativeProfileRevisionMs = 0;
   lastReportDrivenEconomyRefreshAtMs = 0;
   onlinePresence = [];
+  clearEnemyPowerBandCache();
   onlineCampStates = new Map();
   onlineHeldCampStates = new Map();
   resolvingRewardCampPayoutIds = new Set();
@@ -12150,6 +12484,8 @@ function prepareOnlineArmyMission(mission) {
   mission.ownerKingPower = getKingPower();
   mission.attackerKingPower = normalizePowerValue(mission.attackerKingPower) || mission.ownerKingPower;
   mission.defenderKingPower = normalizePowerValue(mission.defenderKingPower);
+  mission.attackProtection = normalizeAttackProtectionSnapshot(mission.attackProtection, mission.demoAttack);
+  mission.acceptedAttackProtection = normalizeAttackProtectionSnapshot(mission.acceptedAttackProtection);
   mission.demoAttack = normalizeDemoAttackSnapshot(mission.demoAttack);
   mission.launchedAtMs = mission.launchedAtMs || nowMs;
   mission.arrivesAtMs = mission.arrivesAtMs || nowMs + Math.max(0, Number(mission.total) || 0) * 1000;
@@ -12189,6 +12525,8 @@ function toOnlineArmyMovement(mission) {
     requestedTroops: Math.max(0, Math.floor(Number(mission.requestedTroops) || 0)),
     attackerKingPower: normalizePowerValue(mission.attackerKingPower),
     defenderKingPower: normalizePowerValue(mission.defenderKingPower),
+    attackProtection: normalizeAttackProtectionSnapshot(mission.attackProtection),
+    acceptedAttackProtection: normalizeAttackProtectionSnapshot(mission.acceptedAttackProtection),
     demoAttack: normalizeDemoAttackSnapshot(mission.demoAttack),
     launchedAtMs: Math.max(0, Number(mission.launchedAtMs) || Date.now()),
     arrivesAtMs: Math.max(0, Number(mission.arrivesAtMs) || Date.now()),
@@ -12230,6 +12568,29 @@ function rejectServerArmyMission(mission, reason = "", options = {}) {
   renderAll();
 }
 
+function getChangedAttackProtectionFromError(error) {
+  const details = error?.details || error?.customData?.details || error?.data || {};
+  if (details?.reason !== "attack-protection-changed") return null;
+  return normalizeAttackProtectionSnapshot(details.attackProtection);
+}
+
+function reopenAttackProtectionConfirmation(mission, refreshedProtection) {
+  const source = cityById(mission?.fromId);
+  const target = getArmyTargetById(mission?.toId);
+  if (!source || !target || source.owner !== "player") return;
+  selectedSourceId = source.id;
+  selectedTargetId = target.id;
+  sendMode = true;
+  activeAttackProtectionPreview = normalizeAttackProtectionSnapshot(refreshedProtection);
+  selectedTroopAmount = clamp(
+    Math.floor(Number(mission.requestedTroops) || 1),
+    1,
+    Math.max(1, Math.min(source.troops, activeAttackProtectionPreview?.maxTroops || source.troops))
+  );
+  showToast("Protection changed. Confirm the refreshed limit.");
+  void showTroopSliderModalAsync(source, target);
+}
+
 function applyServerMovementToMission(mission, movement = null) {
   if (!mission || !movement) return;
   const movementKind = String(movement.kind || "");
@@ -12264,6 +12625,9 @@ function applyServerMovementToMission(mission, movement = null) {
   mission.campRecall = Boolean(movement.campRecall || mission.campRecall);
   mission.attackerKingPower = normalizePowerValue(movement.attackerKingPower || mission.attackerKingPower);
   mission.defenderKingPower = normalizePowerValue(movement.defenderKingPower || mission.defenderKingPower);
+  if (movement.attackProtection !== undefined) {
+    mission.attackProtection = normalizeAttackProtectionSnapshot(movement.attackProtection, movement.demoAttack);
+  }
   if (movement.demoAttack !== undefined) mission.demoAttack = normalizeDemoAttackSnapshot(movement.demoAttack);
   mission.targetType = movement.targetType === "camp" ? "camp" : mission.targetType || "city";
   if (movement.targetOwnerUid !== undefined) mission.targetOwnerUid = String(movement.targetOwnerUid || "");
@@ -12344,6 +12708,11 @@ function publishOnlineArmyMovement(mission, options = {}) {
       mission.serverPending = false;
       onlineLastError = error?.message || String(error);
       console.warn("Server rejected army movement", error);
+      const refreshedProtection = getChangedAttackProtectionFromError(error);
+      if (refreshedProtection) {
+        reopenAttackProtectionConfirmation(mission, refreshedProtection);
+        return false;
+      }
       rejectServerArmyMission(mission, onlineLastError, options);
       return false;
     })
@@ -12443,6 +12812,7 @@ function normalizeOnlineArmyMovement(raw) {
     requestedTroops: Math.max(0, Math.floor(Number(raw.requestedTroops) || 0)),
     attackerKingPower: normalizePowerValue(raw.attackerKingPower || raw.ownerKingPower),
     defenderKingPower: normalizePowerValue(raw.defenderKingPower),
+    attackProtection: normalizeAttackProtectionSnapshot(raw.attackProtection, raw.demoAttack),
     demoAttack: normalizeDemoAttackSnapshot(raw.demoAttack),
     launchedAtMs,
     arrivesAtMs,
@@ -12712,6 +13082,7 @@ function createLocalAttackFromOnlineArmy(army, remaining = getOnlineArmyRemainin
     requestedTroops: Math.max(0, Math.floor(Number(army.requestedTroops) || 0)),
     attackerKingPower: normalizePowerValue(army.attackerKingPower || army.ownerKingPower),
     defenderKingPower: normalizePowerValue(army.defenderKingPower),
+    attackProtection: normalizeAttackProtectionSnapshot(army.attackProtection, army.demoAttack),
     demoAttack: normalizeDemoAttackSnapshot(army.demoAttack),
     launchedAtMs: army.launchedAtMs,
     arrivesAtMs: army.arrivesAtMs,
@@ -13068,6 +13439,7 @@ async function startFromInput(forceFresh = false) {
       showToast(`${GAME_SERVER_NAME} is full. You joined the waiting list.`);
       return;
     }
+    clearEnemyPowerBandCache();
     state = createOnlineEntryState(playerName);
     state.online = null;
     onlineWorldConnected = false;
@@ -13093,6 +13465,7 @@ async function startFromInput(forceFresh = false) {
     flushOnlineSave(true);
     refreshPushAlertRegistration(true);
     showToast("Online kingdom loaded.");
+    retryPendingRewardedAdClaim();
   } catch (error) {
     onlineLastError = error?.message || String(error);
     statusOverride = shouldConnectOnline ? `Online setup failed: ${onlineLastError}` : onlineLastError;
@@ -15129,11 +15502,18 @@ function launchAttack(sourceId, targetId, percent, owner, exactTroops = null, op
   const requestedSend = exactTroops !== null && Number.isFinite(Number(exactTroops))
     ? clamp(Math.floor(Number(exactTroops)), 1, source.troops)
     : clamp(Math.floor(source.troops * percent), 1, source.troops);
-  const demoAttack = kind === "attack"
-    ? createDemoAttackSnapshot(source, target, requestedSend, owner)
+  const acceptedAttackProtection = kind === "attack"
+    ? normalizeAttackProtectionSnapshot(options.attackProtection)
     : null;
-  const send = demoAttack?.active ? demoAttack.effectiveTroops : requestedSend;
-  const duration = travelTime(source, target, owner, route.length, send, kind, { demoAttack });
+  const attackProtection = kind === "attack"
+    ? acceptedAttackProtection
+      ? acceptedAttackProtection.mode === "normal" ? null : acceptedAttackProtection
+      : createAttackProtectionSnapshot(source, target, requestedSend, owner)
+    : null;
+  const send = attackProtection
+    ? Math.min(requestedSend, attackProtection.maxTroops)
+    : requestedSend;
+  const duration = travelTime(source, target, owner, route.length, send, kind);
   const mission = {
     id: attackIdCounter++,
     owner,
@@ -15149,9 +15529,11 @@ function launchAttack(sourceId, targetId, percent, owner, exactTroops = null, op
     pathLength: route.length,
     targetOwnerAtLaunch: target.owner,
     requestedTroops: requestedSend,
-    attackerKingPower: demoAttack?.attackerKingPower || (owner === "player" ? getKingPower() : 0),
-    defenderKingPower: demoAttack?.defenderKingPower || getCityOwnerKingPowerSnapshot(target),
-    demoAttack,
+    attackerKingPower: owner === "player" ? getKingPower() : 0,
+    defenderKingPower: getCityOwnerKingPowerSnapshot(target),
+    attackProtection,
+    acceptedAttackProtection,
+    demoAttack: null,
   };
   prepareOnlineArmyMission(mission);
 
@@ -15167,7 +15549,7 @@ function launchAttack(sourceId, targetId, percent, owner, exactTroops = null, op
         if (!accepted) return;
         const acceptedKind = mission.kind || kind;
         const acceptedTroops = Math.max(0, Math.floor(Number(mission.troops) || send));
-        const acceptedDemoAttack = normalizeDemoAttackSnapshot(mission.demoAttack) || demoAttack;
+        const acceptedProtection = normalizeAttackProtectionSnapshot(mission.attackProtection) || attackProtection;
         const peaceShieldDeactivated = Boolean(mission.peaceShieldDeactivated);
         if (acceptedKind === "transfer") {
           if (!options.silent) {
@@ -15175,13 +15557,15 @@ function launchAttack(sourceId, targetId, percent, owner, exactTroops = null, op
             showToast(`Reinforcements moving: ${source.name} \u2192 ${target.name}`);
           }
         } else {
-          const demoText = acceptedDemoAttack ? ` ${getDemoAttackNotice(acceptedDemoAttack)}` : "";
+          const protectionText = acceptedProtection?.mode !== "normal"
+            ? ` ${getAttackProtectionNotice(acceptedProtection)}`
+            : "";
           const shieldText = peaceShieldDeactivated ? " Royal Peace Shield deactivated." : "";
-          addLog(`You sent ${formatNumber(acceptedTroops)} troops from ${source.name} to attack ${target.name}.${demoText}${shieldText}`);
+          addLog(`You sent ${formatNumber(acceptedTroops)} troops from ${source.name} to attack ${target.name}.${protectionText}${shieldText}`);
           showToast(peaceShieldDeactivated
             ? "Shield dropped. Attack moving."
-            : acceptedDemoAttack
-              ? `Demo attack moving: ${formatNumber(acceptedTroops)} troops`
+            : acceptedProtection?.mode !== "normal"
+              ? `${acceptedProtection.label} moving: ${formatNumber(acceptedTroops)} troops`
               : `Attack moving: ${source.name} \u2192 ${target.name}`);
         }
       })
@@ -15210,10 +15594,10 @@ function launchAttack(sourceId, targetId, percent, owner, exactTroops = null, op
       showToast(`Reinforcements moving: ${source.name} \u2192 ${target.name}`);
     }
   } else if (owner === "player") {
-    const demoText = demoAttack ? ` ${getDemoAttackNotice(demoAttack)}` : "";
+    const protectionText = attackProtection ? ` ${getAttackProtectionNotice(attackProtection)}` : "";
     const shieldText = peaceShieldDeactivated ? " Royal Peace Shield deactivated." : "";
-    addLog(`You sent ${formatNumber(send)} troops from ${source.name} to attack ${target.name}.${demoText}${shieldText}`);
-    showToast(peaceShieldDeactivated ? "Shield dropped. Attack moving." : demoAttack ? `Demo attack moving: ${formatNumber(send)} troops` : `Attack moving: ${source.name} \u2192 ${target.name}`);
+    addLog(`You sent ${formatNumber(send)} troops from ${source.name} to attack ${target.name}.${protectionText}${shieldText}`);
+    showToast(peaceShieldDeactivated ? "Shield dropped. Attack moving." : attackProtection ? `${attackProtection.label} moving: ${formatNumber(send)} troops` : `Attack moving: ${source.name} \u2192 ${target.name}`);
   } else if (target.owner === "player") {
     addLog(`Enemy army is attacking ${target.name} with ${formatNumber(send)} troops.`);
     showToast(`Incoming attack on ${target.name}`);
@@ -15421,20 +15805,23 @@ function resolveAttack(attack) {
     return;
   }
 
-  const demoAttack = isStronghold(target)
+  const attackProtection = isStronghold(target)
     ? null
-    : normalizeDemoAttackSnapshot(attack.demoAttack)
-      || createDemoAttackSnapshot(attackSource, target, attack.troops, attack.owner, {
+    : normalizeAttackProtectionSnapshot(attack.attackProtection, attack.demoAttack)
+      || createAttackProtectionSnapshot(attackSource, target, attack.troops, attack.owner, {
         attackerKingPower: attack.attackerKingPower,
         defenderKingPower: attack.defenderKingPower,
       });
-  const demoReportSuffix = getDemoAttackReportSuffix(demoAttack);
+  const protectionReportSuffix = getAttackProtectionReportSuffix(attackProtection);
   const givenUpNeutralTarget = isGivenUpNeutralCity(target);
-  const result = calculateCombatResult(attack.troops, attack.owner, target, { demoAttack });
+  const result = calculateCombatResult(attack.troops, attack.owner, target, {
+    attackProtection,
+    demoAttack: attack.demoAttack,
+  });
 
   if (result.success) {
-    const xpEfficiency = attack.owner === "player" ? (demoAttack || givenUpNeutralTarget ? 0 : getCaptureXpEfficiency(target, oldOwner)) : 1;
-    const xpAward = attack.owner === "player" && !demoAttack && !givenUpNeutralTarget ? getCaptureXpAward(target, oldOwner, result.defenderLosses, attack.owner) : 0;
+    const xpEfficiency = attack.owner === "player" ? (attackProtection || givenUpNeutralTarget ? 0 : getCaptureXpEfficiency(target, oldOwner)) : 1;
+    const xpAward = attack.owner === "player" && !attackProtection && !givenUpNeutralTarget ? getCaptureXpAward(target, oldOwner, result.defenderLosses, attack.owner) : 0;
     if (attack.owner === "player") {
       target.owner = "player";
       target.ownerKind = "player";
@@ -15483,7 +15870,7 @@ function resolveAttack(attack) {
         baseTotalDefense: targetStatsAtStart.baseTotalDefense,
         totalDefenseBonus: targetStatsAtStart.totalDefenseBonus,
         opponentName: defenderName,
-        summary: `Captured with ${formatNumber(result.survivors)} survivors. ${formatCapturedCityLevelDrop(levelDrop)} +${formatNumber(xpAward)} XP.${demoReportSuffix}`,
+        summary: `Captured with ${formatNumber(result.survivors)} survivors. ${formatCapturedCityLevelDrop(levelDrop)} +${formatNumber(xpAward)} XP.${protectionReportSuffix}`,
       });
       addLog(`Victory: you captured ${target.name} with ${formatNumber(result.survivors)} survivors. ${formatNumber(savedAttackers)} troops recovered. ${formatCapturedCityLevelDrop(levelDrop)} XP efficiency ${Math.round(xpEfficiency * 100)}%.`);
       showToast(`Captured ${target.name}: +${formatNumber(xpAward)} XP`);
@@ -15494,7 +15881,7 @@ function resolveAttack(attack) {
         getDefenseHeldXpAward(attack.troops, target),
         attack,
         target,
-        demoAttack
+        attackProtection
       );
       const defenseLossXp = getPartialBattleXpAward(cappedDefenseHeldXp);
       addBattleReport({
@@ -15513,7 +15900,7 @@ function resolveAttack(attack) {
         baseTotalDefense: targetStatsAtStart.baseTotalDefense,
         totalDefenseBonus: targetStatsAtStart.totalDefenseBonus,
         opponentName: attackerReportName,
-        summary: `${target.name} was captured by ${attackerReportName}. ${formatCapturedCityLevelDrop(levelDrop)} +${formatNumber(defenseLossXp)} XP.${demoReportSuffix}`,
+        summary: `${target.name} was captured by ${attackerReportName}. ${formatCapturedCityLevelDrop(levelDrop)} +${formatNumber(defenseLossXp)} XP.${protectionReportSuffix}`,
       });
       addLog(`Lost: the enemy captured ${target.name}. ${formatCapturedCityLevelDrop(levelDrop)} ${formatNumber(savedDefenders)} troops recovered, and you gained ${formatNumber(defenseLossXp)} XP.`);
       showToast(`You lost ${target.name}: +${formatNumber(defenseLossXp)} XP`);
@@ -15524,11 +15911,13 @@ function resolveAttack(attack) {
     target.troops = result.defendersLeft;
 
     if (attack.owner === "player") {
-      const savedAttackers = returnSavedTroops("fieldMedics", result.attackerLosses, `${target.name} failed attack`);
-      const failedAttackXp = demoAttack || givenUpNeutralTarget ? 0 : getFailedAttackXpAward(target, oldOwner, defendersAtStart, attack.owner);
+      const savedAttackers = result.raidCompleted
+        ? 0
+        : returnSavedTroops("fieldMedics", result.attackerLosses, `${target.name} failed attack`);
+      const failedAttackXp = attackProtection || givenUpNeutralTarget ? 0 : getFailedAttackXpAward(target, oldOwner, defendersAtStart, attack.owner);
       addBattleReport({
         type: "attack",
-        outcome: "defeat",
+        outcome: result.raidCompleted ? "raid" : "defeat",
         cityId: target.id,
         cityName: target.name,
         cityLevel: targetLevel,
@@ -15542,14 +15931,21 @@ function resolveAttack(attack) {
         baseTotalDefense: targetStatsAtStart.baseTotalDefense,
         totalDefenseBonus: targetStatsAtStart.totalDefenseBonus,
         opponentName: defenderName,
-        summary: `${formatNumber(result.defendersLeft)} defenders remained. +${formatNumber(failedAttackXp)} XP.${demoReportSuffix}`,
+        summary: result.raidCompleted
+          ? `Protected raid completed. ${formatNumber(result.defenderLosses)} defenders lost; ${formatNumber(result.defendersLeft)} remained. All raiders were lost. +0 XP.${protectionReportSuffix}`
+          : `${formatNumber(result.defendersLeft)} defenders remained. +${formatNumber(failedAttackXp)} XP.${protectionReportSuffix}`,
       });
       addLog(`Defeat: your attack on ${target.name} failed. ${formatNumber(result.defendersLeft)} defenders remain. ${formatNumber(savedAttackers)} troops recovered, and you gained ${formatNumber(failedAttackXp)} XP.`);
       showToast(`Attack failed at ${target.name}: +${formatNumber(failedAttackXp)} XP`);
       addCharacterXp(failedAttackXp, `${target.name} failed attack`);
     } else if (oldOwner === "player") {
       const savedDefenders = returnSavedTroops("fieldMedics", result.defenderLosses, `${target.name} defense`);
-      const defenseHeldXp = applyDefenseOpponentXpMultiplier(getDefenseHeldXpAward(attack.troops, target), attack, target, demoAttack);
+      const defenseHeldXp = applyDefenseOpponentXpMultiplier(
+        getDefenseHeldXpAward(attack.troops, target),
+        attack,
+        target,
+        attackProtection
+      );
       addBattleReport({
         type: "defense",
         outcome: "held",
@@ -15566,7 +15962,7 @@ function resolveAttack(attack) {
         baseTotalDefense: targetStatsAtStart.baseTotalDefense,
         totalDefenseBonus: targetStatsAtStart.totalDefenseBonus,
         opponentName: attackerReportName,
-        summary: `${target.name} survived with ${formatNumber(result.defendersLeft)} defenders. +${formatNumber(defenseHeldXp)} XP.${demoReportSuffix}`,
+        summary: `${target.name} ${result.raidCompleted ? "survived a protected raid" : "survived"} with ${formatNumber(result.defendersLeft)} defenders. +${formatNumber(defenseHeldXp)} XP.${protectionReportSuffix}`,
       });
       addLog(`Defense held: ${target.name} survived the enemy attack.`);
       if (savedDefenders > 0) {
@@ -17056,7 +17452,6 @@ function getFlagSignature(flag) {
 
 function getCityRenderSignature(visibleCities, visibleCamps = []) {
   const playerFlag = getFlagSignature(state.flag);
-  const playerKingPower = getKingPower();
   const crownHolderUid = getCrownCitadelHolderUid();
   const upgradeBlockedTargets = new Set(getRenderableArmies()
     .filter(attack => attack?.kind === "attack" && attack.owner !== "player" && Math.max(0, Number(attack.remaining) || 0) > 0)
@@ -17073,7 +17468,7 @@ function getCityRenderSignature(visibleCities, visibleCamps = []) {
       getCityClanIdentity(city).clanId,
       getCityClanIdentity(city).clanTag,
       getFlagSignature(city.ownerFlag),
-      getEnemyCityPowerBand(city, playerKingPower),
+      getStableEnemyCityPowerBand(city),
       city.kind || "",
       city.strongholdType || "",
       isStronghold(city) ? getStrongholdVisualSize(city) : "",
@@ -17122,7 +17517,6 @@ function getCityRenderSignature(visibleCities, visibleCamps = []) {
 function updateVisibleCityDynamicText() {
   if (!state || !cityLayer) return;
   if (isCameraInteractionActive()) return;
-  const playerKingPower = getKingPower();
   const campInfoCountdown = modalBody?.querySelector("[data-camp-info-countdown]");
   if (campInfoCountdown) {
     const camp = getCampTargetById(campInfoCountdown.dataset.campInfoCountdown);
@@ -17169,7 +17563,7 @@ function updateVisibleCityDynamicText() {
     const knownTroops = city.owner === "player" ? troops : scoutReport?.troops;
     const ownerName = getCityOwnerDisplayName(city);
     const locationType = isStronghold(city) ? "Stronghold" : `Level ${city.level}`;
-    const powerBandLabel = getEnemyCityPowerBandLabel(getEnemyCityPowerBand(city, playerKingPower));
+    const powerBandLabel = getEnemyCityPowerBandLabel(getStableEnemyCityPowerBand(city), city);
     node.setAttribute("aria-label", `${city.name}. ${ownerName}. ${locationType}. ${knownTroops === undefined ? "Unknown troops" : `${formatNumber(knownTroops)} troops`}.${powerBandLabel ? ` ${powerBandLabel}.` : ""}`);
   });
 }
@@ -17195,7 +17589,7 @@ function renderCities(force = false) {
   const visibleCamps = WORLD_CAMPS
     .map(camp => getCampTargetById(camp.id) || camp)
     .filter(camp => shouldRenderCampNode(camp, visibleBounds));
-  const playerKingPower = getKingPower();
+  pruneEnemyPowerBandCache(state.cities);
   updateMapDensityMode(visibleCities.length + visibleCamps.length);
   const signature = getCityRenderSignature(visibleCities, visibleCamps);
   if (!force && signature === cityRenderSignature) {
@@ -17270,7 +17664,7 @@ function renderCities(force = false) {
     btn.className = `city-node ${OWNER[city.owner].css} castle-stage-${castleStage}`;
     const clanAlly = isClanAllyCity(city);
     if (clanAlly) btn.classList.add("clan-ally");
-    const enemyPowerBand = getEnemyCityPowerBand(city, playerKingPower);
+    const enemyPowerBand = getStableEnemyCityPowerBand(city);
     if (enemyPowerBand) {
       btn.classList.add(`enemy-power-${enemyPowerBand}`);
       btn.dataset.enemyPowerBand = enemyPowerBand;
@@ -17350,7 +17744,7 @@ function renderCities(force = false) {
         </span>`;
     const knownTroops = city.owner === "player" ? city.troops : scoutReport?.troops;
     const locationType = stronghold ? "Stronghold" : `Level ${city.level}`;
-    const powerBandLabel = getEnemyCityPowerBandLabel(enemyPowerBand);
+    const powerBandLabel = getEnemyCityPowerBandLabel(enemyPowerBand, city);
     const structureHtml = stronghold
       ? `
       <span class="stronghold-glow" aria-hidden="true"></span>
@@ -18882,7 +19276,7 @@ function renderSendConfirmPanel(source, target) {
   if (!isTransfer && route) {
     const preview = calculateBattlePreview(source, target, selectedMarchPercent);
     travel = preview.travel;
-    const demoNotice = getDemoAttackNotice(preview.demoAttack);
+    const protectionNotice = getAttackProtectionNotice(preview.attackProtection);
     outcomeHtml = `
       <div class="send-outcome ${preview.success ? "win" : "lose"}">
         <strong>${preview.success ? "Likely Victory" : "Likely Defeat"}</strong>
@@ -18890,7 +19284,7 @@ function renderSendConfirmPanel(source, target) {
         <small>${preview.success
           ? `Est. survivors: ${formatNumber(preview.survivors)} - ${preview.xpLabel} ${formatNumber(preview.captureXp)}`
           : `Est. defenders left: ${formatNumber(preview.defendersLeft)} - ${preview.xpLabel} ${formatNumber(preview.captureXp)}`}</small>
-        ${demoNotice ? `<small>${escapeHtml(demoNotice)}</small>` : ""}
+        ${protectionNotice ? `<small>${escapeHtml(protectionNotice)}</small>` : ""}
       </div>
     `;
   }
@@ -19003,6 +19397,27 @@ function showTroopSliderModal(source, target) {
   void showTroopSliderModalAsync(source, target);
 }
 
+async function loadAttackProtectionPreview(source, target) {
+  if (!source || !target || target.owner !== "enemy" || isRewardCampTarget(target) || isStronghold(target)) {
+    return null;
+  }
+  const api = getOnlineApi();
+  if (usesServerArmyAuthority() && api?.previewArmyProtection) {
+    const result = await api.previewArmyProtection({
+      worldId: ONLINE_WORLD_ID,
+      resetGeneration: RESET_GENERATION,
+      fromId: source.id,
+      toId: target.id,
+      sourceRegionId: getCityRegionId(source),
+      targetRegionId: getCityRegionId(target),
+      targetType: "city",
+      requestedTroops: Math.max(1, Math.floor(Number(source.troops) || 1)),
+    });
+    return normalizeAttackProtectionSnapshot(result?.attackProtection);
+  }
+  return createAttackProtectionSnapshot(source, target, source.troops, "player");
+}
+
 async function showTroopSliderModalAsync(source, target) {
   if (!source || !target || source.owner !== "player" || source.id === target.id) return;
   if (source.troops < 1) {
@@ -19031,12 +19446,18 @@ async function showTroopSliderModalAsync(source, target) {
   const requestId = ++activeTroopRouteRequestId;
   troopSliderActive = true;
   activeTroopSliderRoute = null;
+  activeAttackProtectionPreview = null;
   showTroopRouteLoadingModal(source, target, isTransfer);
 
   await waitForSetupLoadingPaint(0);
-  const [route, defenderPower] = await Promise.all([
+  const [route, defenderPower, protectionResult] = await Promise.all([
     findRouteAsync(source, target),
     needsDefenderPower ? ensureAuthoritativeCityOwnerKingPower(target) : Promise.resolve(0),
+    needsDefenderPower
+      ? loadAttackProtectionPreview(source, target)
+        .then(attackProtection => ({ attackProtection }))
+        .catch(error => ({ error }))
+      : Promise.resolve({ attackProtection: null }),
   ]);
   if (requestId !== activeTroopRouteRequestId) return;
 
@@ -19068,6 +19489,11 @@ async function showTroopSliderModalAsync(source, target) {
     showTroopPowerVerificationError(freshSource, freshTarget);
     return;
   }
+  if (protectionResult?.error) {
+    console.warn("Could not preview attack protection", protectionResult.error);
+    showTroopPowerVerificationError(freshSource, freshTarget);
+    return;
+  }
   if (!route || !route.points.length) {
     showToast("No land route found around the terrain.");
     selectedTargetId = null;
@@ -19077,12 +19503,15 @@ async function showTroopSliderModalAsync(source, target) {
     return;
   }
 
-  showTroopSliderModalWithRoute(freshSource, freshTarget, route);
+  showTroopSliderModalWithRoute(freshSource, freshTarget, route, {
+    attackProtection: protectionResult?.attackProtection || null,
+  });
 }
 
 function showMainCityProtectedAttackModal(target) {
   troopSliderActive = false;
   activeTroopSliderRoute = null;
+  activeAttackProtectionPreview = null;
   modal.classList.remove("troop-slider-modal");
   cancelSendMode();
   modalTitle.textContent = "Protected home base";
@@ -19188,18 +19617,23 @@ function showTroopRouteLoadingModal(source, target, isTransfer) {
 function getTroopSliderSendLimit(source, target) {
   const availableTroops = Math.max(0, Math.floor(Number(source?.troops) || 0));
   if (availableTroops < 1 || !target) return 0;
-  const demoAttack = createDemoAttackSnapshot(source, target, availableTroops, "player");
-  return demoAttack?.active
-    ? clamp(Math.floor(Number(demoAttack.maxTroops) || 1), 1, availableTroops)
+  const previewMatches = activeTroopSliderRoute?.sourceId === source.id
+    && activeTroopSliderRoute?.targetId === target.id;
+  const attackProtection = previewMatches
+    ? normalizeAttackProtectionSnapshot(activeAttackProtectionPreview)
+    : createAttackProtectionSnapshot(source, target, availableTroops, "player");
+  return attackProtection
+    ? clamp(Math.floor(Number(attackProtection.maxTroops) || 1), 1, availableTroops)
     : availableTroops;
 }
 
-function showTroopSliderModalWithRoute(source, target, route) {
+function showTroopSliderModalWithRoute(source, target, route, options = {}) {
   activeTroopSliderRoute = {
     sourceId: source.id,
     targetId: target.id,
     route: cloneRoute(route),
   };
+  activeAttackProtectionPreview = normalizeAttackProtectionSnapshot(options.attackProtection);
   const isTransfer = target.owner === "player";
   const campTarget = isRewardCampTarget(target);
   const mainCityBlockReason = isTransfer || campTarget ? "" : getMainCityAttackBlockReason(target, "player");
@@ -19321,25 +19755,31 @@ function updateTroopSliderModal(source, target, route) {
 
   const report = getScoutReport(target.id);
   if (!report) {
-    const demoAttack = createDemoAttackSnapshot(source, target, selectedTroopAmount, "player");
-    const effectiveTroops = demoAttack?.active ? demoAttack.effectiveTroops : selectedTroopAmount;
-    const demoTravel = travelTime(source, target, "player", route.length, effectiveTroops, "attack", { demoAttack });
-    const demoNotice = getDemoAttackNotice(demoAttack);
+    const attackProtection = normalizeAttackProtectionSnapshot(activeAttackProtectionPreview)
+      || createAttackProtectionSnapshot(source, target, selectedTroopAmount, "player");
+    const protectionNotice = getAttackProtectionNotice(attackProtection);
     previewEl.className = "troop-slider-preview unknown";
     previewEl.innerHTML = `
       <div><span>Battle forecast</span><strong>Garrison unknown</strong><small>Scout report required</small></div>
-      <div><span>Travel time</span><strong>About ${formatDuration(demoTravel)}</strong><small>${escapeHtml(routeSummary)}</small><small>Attack is still available</small>${demoNotice ? `<small>${escapeHtml(demoNotice)}</small>` : ""}</div>
+      <div><span>Travel time</span><strong>About ${formatDuration(travel)}</strong><small>${escapeHtml(routeSummary)}</small><small>Attack is still available</small>${protectionNotice ? `<small>${escapeHtml(protectionNotice)}</small>` : ""}</div>
     `;
     return;
   }
 
   const scoutedTarget = { ...target, troops: report.troops, troopFloat: report.troops };
-  const preview = calculateBattlePreviewForTroops(source, scoutedTarget, selectedTroopAmount, route);
-  const demoNotice = getDemoAttackNotice(preview.demoAttack);
+  const preview = calculateBattlePreviewForTroops(
+    source,
+    scoutedTarget,
+    selectedTroopAmount,
+    route,
+    activeAttackProtectionPreview
+  );
+  const protectionNotice = getAttackProtectionNotice(preview.attackProtection);
+  const raid = preview.attackProtection?.mode === "raid";
   previewEl.className = `troop-slider-preview ${preview.success ? "win" : "lose"}`;
   previewEl.innerHTML = `
-    <div><span>Scouted forecast</span><strong>${preview.success ? "Likely victory" : "Likely defeat"}</strong><small>${preview.label}</small></div>
-    <div><span>${preview.success ? "Estimated survivors" : "Defenders left"}</span><strong>${formatNumber(preview.success ? preview.survivors : preview.defendersLeft)}</strong><small>About ${formatDuration(preview.travel)} travel</small><small>${escapeHtml(routeSummary)}</small>${demoNotice ? `<small>${escapeHtml(demoNotice)}</small>` : ""}</div>
+    <div><span>Scouted forecast</span><strong>${raid ? "Protected raid" : preview.success ? "Likely victory" : "Likely defeat"}</strong><small>${preview.label}</small></div>
+    <div><span>${preview.success ? "Estimated survivors" : "Defenders left"}</span><strong>${formatNumber(preview.success ? preview.survivors : preview.defendersLeft)}</strong><small>About ${formatDuration(preview.travel)} travel</small><small>${escapeHtml(routeSummary)}</small>${protectionNotice ? `<small>${escapeHtml(protectionNotice)}</small>` : ""}</div>
   `;
 }
 
@@ -19349,6 +19789,7 @@ function confirmTroopSliderOrder() {
   if (!source || !target || source.owner !== "player" || source.troops < 1) {
     troopSliderActive = false;
     activeTroopSliderRoute = null;
+    activeAttackProtectionPreview = null;
     modal.classList.remove("troop-slider-modal");
     if (modal.open) modal.close();
     clearSelection(false);
@@ -19365,10 +19806,14 @@ function confirmTroopSliderOrder() {
     showToast("Route is still calculating.");
     return;
   }
-  const launched = launchAttack(source.id, target.id, 1, "player", selectedTroopAmount, { route: cachedRoute });
+  const launched = launchAttack(source.id, target.id, 1, "player", selectedTroopAmount, {
+    route: cachedRoute,
+    attackProtection: activeAttackProtectionPreview,
+  });
   if (!launched) return;
   troopSliderActive = false;
   activeTroopSliderRoute = null;
+  activeAttackProtectionPreview = null;
   modal.classList.remove("troop-slider-modal");
   if (modal.open) modal.close();
   clearSelection(false);
@@ -19382,6 +19827,7 @@ function cancelSendMode() {
   selectedTargetId = null;
   selectedTroopAmount = 1;
   activeTroopSliderRoute = null;
+  activeAttackProtectionPreview = null;
   renderAll();
 }
 
@@ -19628,6 +20074,10 @@ function confirmSendOrder() {
   const source = selectedSourceId ? cityById(selectedSourceId) : null;
   const target = selectedTargetId ? getArmyTargetById(selectedTargetId) : null;
   if (!source || !target) return;
+  if (target.owner !== "player") {
+    showTroopSliderModal(source, target);
+    return;
+  }
   const launched = launchAttack(source.id, target.id, selectedMarchPercent, "player");
   if (launched) {
     clearSelection(false);
@@ -19649,7 +20099,7 @@ function playerMarchTo(targetId) {
     return;
   }
 
-  showAttackPreview(source, target);
+  showTroopSliderModal(source, target);
 }
 
 function normalizeCrownCitadelReignEntry(raw = {}) {
@@ -20132,6 +20582,554 @@ function renderCityListRow(city) {
   `;
 }
 
+function getRewardedAdClientConfig() {
+  const hostname = String(window.location?.hostname || "").toLowerCase();
+  const isTestHost = hostname === "localhost"
+    || hostname === "127.0.0.1"
+    || hostname === "::1"
+    || hostname.endsWith(".localhost");
+  const testAdUnitPath = String(ADS_CONFIG.testAdUnitPath || "").trim();
+  const productionAdUnitPath = String(ADS_CONFIG.productionAdUnitPath || "").trim();
+  const approvedProductionHosts = new Set(
+    (Array.isArray(ADS_CONFIG.approvedProductionHosts) ? ADS_CONFIG.approvedProductionHosts : [])
+      .map(host => String(host || "").trim().toLowerCase())
+      .filter(Boolean)
+  );
+  const productionHostApproved = approvedProductionHosts.has(hostname);
+  return {
+    enabled: ADS_CONFIG.enabled !== false,
+    rewardMinutes: Math.max(1, Math.floor(Number(ADS_CONFIG.rewardMinutes) || 30)),
+    cooldownMinutes: Math.max(1, Math.floor(Number(ADS_CONFIG.cooldownMinutes) || 30)),
+    dailyLimit: Math.max(1, Math.floor(Number(ADS_CONFIG.dailyLimit) || 20)),
+    isTestHost,
+    productionHostApproved,
+    adUnitPath: isTestHost ? testAdUnitPath : productionHostApproved ? productionAdUnitPath : "",
+  };
+}
+
+function normalizeRewardedAdStatus(raw = {}) {
+  const source = raw?.status && typeof raw.status === "object" ? raw.status : raw;
+  const config = getRewardedAdClientConfig();
+  return {
+    enabled: source?.enabled !== false,
+    eligible: source?.eligible === true,
+    reason: String(source?.reason || ""),
+    dayKey: String(source?.dayKey || ""),
+    claimedToday: Math.max(0, Math.floor(Number(source?.claimedToday) || 0)),
+    dailyLimit: Math.max(1, Math.floor(Number(source?.dailyLimit) || config.dailyLimit)),
+    remainingToday: Math.max(0, Math.floor(Number(source?.remainingToday) || 0)),
+    rewardMinutes: Math.max(1, Math.floor(Number(source?.rewardMinutes) || config.rewardMinutes)),
+    cooldownMinutes: Math.max(1, Math.floor(Number(source?.cooldownMinutes) || config.cooldownMinutes)),
+    cooldownEndsAtMs: Math.max(0, Number(source?.cooldownEndsAtMs) || 0),
+    previewRewards: {
+      gold: Math.max(0, Math.floor(Number(source?.previewRewards?.gold) || 0)),
+      troops: Math.max(0, Math.floor(Number(source?.previewRewards?.troops) || 0)),
+    },
+  };
+}
+
+function getRewardedAdCooldownRemainingMs(status = rewardedAdStatus, nowMs = Date.now()) {
+  return Math.max(0, (Number(status?.cooldownEndsAtMs) || 0) - nowMs);
+}
+
+function formatRewardedAdCooldown(milliseconds = 0) {
+  const totalSeconds = Math.max(0, Math.ceil((Number(milliseconds) || 0) / 1000));
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${minutes}:${String(seconds).padStart(2, "0")}`;
+}
+
+function getPendingRewardedAdClaim() {
+  try {
+    const raw = window.localStorage?.getItem(REWARDED_AD_PENDING_STORAGE_KEY);
+    if (!raw) return null;
+    const pending = JSON.parse(raw);
+    const intentId = String(pending?.intentId || "");
+    const claimByMs = Math.max(0, Number(pending?.claimByMs) || 0);
+    if (!intentId || (claimByMs && claimByMs < Date.now())) {
+      window.localStorage?.removeItem(REWARDED_AD_PENDING_STORAGE_KEY);
+      return null;
+    }
+    return {
+      intentId,
+      claimByMs,
+      rewardType: pending.rewardType === "troops" ? "troops" : "gold",
+      rewardAmount: Math.max(0, Math.floor(Number(pending.rewardAmount) || 0)),
+      targetCityName: String(pending.targetCityName || ""),
+    };
+  } catch (_) {
+    return null;
+  }
+}
+
+function rememberPendingRewardedAdClaim(intent = {}) {
+  const pending = {
+    intentId: String(intent.intentId || ""),
+    claimByMs: Math.max(0, Number(intent.claimByMs) || 0),
+    rewardType: intent.rewardType === "troops" ? "troops" : "gold",
+    rewardAmount: Math.max(0, Math.floor(Number(intent.rewardAmount) || 0)),
+    targetCityName: String(intent.targetCityName || ""),
+  };
+  if (!pending.intentId) return false;
+  try {
+    window.localStorage?.setItem(REWARDED_AD_PENDING_STORAGE_KEY, JSON.stringify(pending));
+    return true;
+  } catch (_) {
+    return false;
+  }
+}
+
+function clearPendingRewardedAdClaim(intentId = "") {
+  const pending = getPendingRewardedAdClaim();
+  if (intentId && pending?.intentId && pending.intentId !== intentId) return;
+  try {
+    window.localStorage?.removeItem(REWARDED_AD_PENDING_STORAGE_KEY);
+  } catch (_) {
+    // Browser storage is best-effort; the server intent remains idempotent.
+  }
+}
+
+function createRewardedAdClientError(message, code = "ad-error") {
+  const error = new Error(message);
+  error.code = code;
+  return error;
+}
+
+function isPermanentRewardedAdClaimError(error = null) {
+  const code = String(error?.code || "").toLowerCase().replace(/^functions\//, "");
+  return new Set([
+    "invalid-argument",
+    "not-found",
+    "failed-precondition",
+    "permission-denied",
+    "deadline-exceeded",
+  ]).has(code);
+}
+
+function isRewardedAdSecurityReady() {
+  return Boolean(getOnlineApi()?.isRewardedAdSecurityReady?.());
+}
+
+async function refreshRewardedAdStatus(options = {}) {
+  if (rewardedAdStatusLoading) return rewardedAdStatus;
+  const config = getRewardedAdClientConfig();
+  const api = getOnlineApi();
+  if (!config.enabled || !config.adUnitPath || !isRewardedAdSecurityReady() || !api?.getRewardedAdStatus) {
+    rewardedAdStatus = normalizeRewardedAdStatus({
+      enabled: config.enabled,
+      eligible: false,
+      reason: !config.enabled
+        ? "disabled"
+        : !config.adUnitPath
+          ? "ad-unit-missing"
+          : !isRewardedAdSecurityReady()
+            ? "app-check-missing"
+            : "server-unavailable",
+      claimedToday: rewardedAdStatus?.claimedToday || 0,
+      dailyLimit: config.dailyLimit,
+      remainingToday: Math.max(0, config.dailyLimit - (rewardedAdStatus?.claimedToday || 0)),
+      rewardMinutes: config.rewardMinutes,
+      cooldownMinutes: config.cooldownMinutes,
+      cooldownEndsAtMs: rewardedAdStatus?.cooldownEndsAtMs || 0,
+      previewRewards: rewardedAdStatus?.previewRewards || {},
+    });
+    if (
+      options.render !== false
+      && modal.open
+      && modal.classList.contains("shop-modal")
+      && !modal.classList.contains("rewarded-ad-confirmation-modal")
+    ) {
+      renderShopModal();
+    }
+    return rewardedAdStatus;
+  }
+
+  rewardedAdStatusLoading = true;
+  if (
+    options.render !== false
+    && modal.open
+    && modal.classList.contains("shop-modal")
+    && !modal.classList.contains("rewarded-ad-confirmation-modal")
+  ) {
+    renderShopModal();
+  }
+  try {
+    const result = await api.getRewardedAdStatus();
+    rewardedAdStatus = normalizeRewardedAdStatus(result);
+    return rewardedAdStatus;
+  } catch (error) {
+    console.warn("Could not load rewarded-ad status", error);
+    rewardedAdStatus = normalizeRewardedAdStatus({
+      enabled: true,
+      eligible: false,
+      reason: "status-error",
+      claimedToday: rewardedAdStatus?.claimedToday || 0,
+      dailyLimit: config.dailyLimit,
+      remainingToday: Math.max(0, config.dailyLimit - (rewardedAdStatus?.claimedToday || 0)),
+      rewardMinutes: config.rewardMinutes,
+      cooldownMinutes: config.cooldownMinutes,
+      cooldownEndsAtMs: rewardedAdStatus?.cooldownEndsAtMs || 0,
+      previewRewards: rewardedAdStatus?.previewRewards || {},
+    });
+    return rewardedAdStatus;
+  } finally {
+    rewardedAdStatusLoading = false;
+    if (
+      options.render !== false
+      && modal.open
+      && modal.classList.contains("shop-modal")
+      && !modal.classList.contains("rewarded-ad-confirmation-modal")
+    ) {
+      renderShopModal();
+    }
+  }
+}
+
+function getRewardedAdAvailability(status = rewardedAdStatus) {
+  const config = getRewardedAdClientConfig();
+  const pending = getPendingRewardedAdClaim();
+  const cooldownRemainingMs = getRewardedAdCooldownRemainingMs(status);
+  if (pending) return { canWatch: false, text: "Claiming completed reward…" };
+  if (rewardedAdInFlight) return { canWatch: false, text: "Rewarded ad in progress…" };
+  if (!config.enabled || status?.reason === "disabled") return { canWatch: false, text: "Rewarded ads unavailable" };
+  if (!config.isTestHost && !config.productionHostApproved) {
+    return { canWatch: false, text: "Ads unavailable on this host" };
+  }
+  if (!config.adUnitPath) return { canWatch: false, text: "Ad Manager setup required" };
+  if (!isRewardedAdSecurityReady()) return { canWatch: false, text: "App Check setup required" };
+  if (rewardedAdStatusLoading || !status) return { canWatch: false, text: "Checking availability…" };
+  if (status.reason === "daily-limit" || status.remainingToday <= 0) return { canWatch: false, text: "Daily limit reached" };
+  if (cooldownRemainingMs > 0) {
+    return { canWatch: false, text: `Available in ${formatRewardedAdCooldown(cooldownRemainingMs)}` };
+  }
+  if (!status.eligible) return { canWatch: false, text: "Ad unavailable — retry" };
+  return { canWatch: true, text: "Available now" };
+}
+
+function renderRewardedAdShopItem(item = {}) {
+  const status = rewardedAdStatus;
+  const availability = getRewardedAdAvailability(status);
+  const rewardAmount = Math.max(0, Math.floor(Number(status?.previewRewards?.[item.id]) || 0));
+  const claimedToday = Math.max(0, Math.floor(Number(status?.claimedToday) || 0));
+  const dailyLimit = Math.max(1, Math.floor(Number(status?.dailyLimit) || getRewardedAdClientConfig().dailyLimit));
+  return `
+    <article class="shop-item rewarded-ad-shop-item">
+      <div class="rewarded-ad-shop-action">
+        <div class="shop-item-image-placeholder has-image" aria-hidden="true">
+          <img class="shop-item-image" src="${escapeHtml(item.icon)}" alt="" draggable="false" decoding="async" />
+        </div>
+        <button
+          class="shop-buy-btn rewarded-ad-watch-btn"
+          data-rewarded-ad-watch="${escapeHtml(item.id)}"
+          type="button"
+          ${availability.canWatch ? "" : "disabled"}
+        >Watch Ad</button>
+      </div>
+      <div class="shop-item-copy rewarded-ad-shop-copy">
+        <strong>${escapeHtml(item.label)}</strong>
+        <span>${Math.max(1, Math.floor(Number(status?.rewardMinutes) || 30))} minutes of base production</span>
+        <small>${rewardAmount > 0 ? `Estimated reward: ${formatNumber(rewardAmount)} ${escapeHtml(item.rewardLabel)}` : "Exact reward calculated before the ad"}</small>
+        <small class="shop-item-purchase-limit">Rewarded ads: ${formatNumber(claimedToday)}/${formatNumber(dailyLimit)} today (UTC)</small>
+        <small class="rewarded-ad-availability">${escapeHtml(availability.text)}</small>
+        <small>City levels only; skills, Strongholds, and timed item bonuses are excluded.</small>
+      </div>
+    </article>
+  `;
+}
+
+function startRewardedAdShopCountdown() {
+  if (rewardedAdShopCountdownTimer) window.clearInterval(rewardedAdShopCountdownTimer);
+  rewardedAdShopCountdownTimer = window.setInterval(() => {
+    if (
+      !modal.open
+      || !modal.classList.contains("shop-modal")
+      || modal.classList.contains("rewarded-ad-confirmation-modal")
+    ) {
+      window.clearInterval(rewardedAdShopCountdownTimer);
+      rewardedAdShopCountdownTimer = 0;
+      return;
+    }
+    if (getRewardedAdCooldownRemainingMs() > 0) renderShopModal();
+    else if (rewardedAdStatus?.reason === "cooldown") refreshRewardedAdStatus();
+  }, 1000);
+}
+
+function waitForGooglePublisherTag(timeoutMs = REWARDED_AD_LOAD_TIMEOUT_MS) {
+  return new Promise((resolve, reject) => {
+    const startedAtMs = Date.now();
+    const check = () => {
+      if (window.googletag?.apiReady && window.googletag?.pubads) {
+        resolve(window.googletag);
+        return;
+      }
+      if (Date.now() - startedAtMs >= timeoutMs) {
+        reject(createRewardedAdClientError("Google rewarded ads could not load.", "ad-blocked"));
+        return;
+      }
+      window.setTimeout(check, 100);
+    };
+    check();
+  });
+}
+
+function showRewardedAdDisclosure(intent = {}, readyEvent = null) {
+  return new Promise(resolve => {
+    const rewardType = intent.rewardType === "troops" ? "troops" : "gold";
+    const rewardAmount = Math.max(0, Math.floor(Number(intent.rewardAmount) || 0));
+    let finished = false;
+    const finish = accepted => {
+      if (finished) return;
+      finished = true;
+      modal.removeEventListener("close", handleClose);
+      resolve(Boolean(accepted));
+    };
+    const handleClose = () => finish(false);
+
+    modal.classList.add("rewarded-ad-confirmation-modal");
+    modalTitle.textContent = "Watch Ad for Reward";
+    modalBody.innerHTML = `
+      <section class="rewarded-ad-disclosure">
+        <img src="${rewardType === "troops" ? "assets/troop-pickup.png" : "assets/gold-pickup.png"}" alt="" />
+        <strong>Receive ${formatNumber(rewardAmount)} ${rewardType}</strong>
+        <p>Watch the rewarded advertisement to receive exactly 30 minutes of base ${rewardType === "troops" ? "troop" : "gold"} production.</p>
+        <small>Closing or skipping before Google grants the reward gives no boost.</small>
+        <div class="rewarded-ad-disclosure-actions">
+          <button class="profile-secondary-btn" data-rewarded-ad-cancel type="button">Cancel</button>
+          <button class="profile-primary-btn" data-rewarded-ad-confirm type="button">Watch Ad</button>
+        </div>
+      </section>
+    `;
+    if (!modal.open) modal.showModal();
+    modal.addEventListener("close", handleClose, { once: true });
+    modalBody.querySelector("[data-rewarded-ad-cancel]")?.addEventListener("click", () => {
+      renderShopModal();
+      finish(false);
+    });
+    modalBody.querySelector("[data-rewarded-ad-confirm]")?.addEventListener("click", event => {
+      event.currentTarget.disabled = true;
+      const visible = Boolean(readyEvent?.makeRewardedVisible?.());
+      if (!visible) {
+        showToast("The rewarded ad could not be displayed.");
+        renderShopModal();
+        finish(false);
+        return;
+      }
+      finish(true);
+    });
+  });
+}
+
+async function requestGoogleRewardedAd(intent = {}) {
+  const config = getRewardedAdClientConfig();
+  if (!config.adUnitPath) {
+    throw createRewardedAdClientError("The production rewarded-ad unit is not configured.", "ad-unit-missing");
+  }
+  const googletag = await waitForGooglePublisherTag();
+  return new Promise((resolve, reject) => {
+    let slot = null;
+    let granted = false;
+    let settled = false;
+    let cleaned = false;
+    let timeoutId = 0;
+
+    const pubads = googletag.pubads();
+    const cleanup = () => {
+      if (cleaned) return;
+      cleaned = true;
+      if (timeoutId) window.clearTimeout(timeoutId);
+      pubads.removeEventListener("rewardedSlotReady", handleReady);
+      pubads.removeEventListener("rewardedSlotGranted", handleGranted);
+      pubads.removeEventListener("rewardedSlotClosed", handleClosed);
+      pubads.removeEventListener("slotRenderEnded", handleRenderEnded);
+      if (slot) googletag.destroySlots([slot]);
+    };
+    const rejectOnce = error => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      reject(error);
+    };
+    const setPhaseTimeout = (durationMs, message, code) => {
+      if (timeoutId) window.clearTimeout(timeoutId);
+      timeoutId = window.setTimeout(() => {
+        rejectOnce(createRewardedAdClientError(message, code));
+      }, Math.max(1, Math.floor(Number(durationMs) || 1)));
+    };
+    const handleReady = event => {
+      if (event.slot !== slot) return;
+      const showByMs = Math.max(0, Number(intent.showByMs) || 0);
+      const decisionWindowMs = showByMs
+        ? Math.min(REWARDED_AD_DECISION_TIMEOUT_MS, Math.max(1, showByMs - Date.now()))
+        : REWARDED_AD_DECISION_TIMEOUT_MS;
+      setPhaseTimeout(
+        decisionWindowMs,
+        "That rewarded-ad offer expired before it was started.",
+        "ad-expired"
+      );
+      showRewardedAdDisclosure(intent, event)
+        .then(accepted => {
+          if (!accepted) {
+            rejectOnce(createRewardedAdClientError("Rewarded ad cancelled.", "ad-cancelled"));
+            return;
+          }
+          if (settled) return;
+          setPhaseTimeout(
+            REWARDED_AD_COMPLETION_TIMEOUT_MS,
+            "The rewarded ad did not complete.",
+            "ad-incomplete"
+          );
+        })
+        .catch(error => rejectOnce(error));
+    };
+    const handleGranted = event => {
+      if (event.slot !== slot || granted) return;
+      granted = true;
+      rememberPendingRewardedAdClaim(intent);
+      if (timeoutId) {
+        window.clearTimeout(timeoutId);
+        timeoutId = 0;
+      }
+      if (!settled) {
+        settled = true;
+        resolve({ granted: true });
+      }
+    };
+    const handleClosed = event => {
+      if (event.slot !== slot) return;
+      cleanup();
+      if (!granted && !settled) {
+        settled = true;
+        reject(createRewardedAdClientError("The ad closed before the reward was granted.", "ad-incomplete"));
+      }
+    };
+    const handleRenderEnded = event => {
+      if (event.slot === slot && event.isEmpty) {
+        rejectOnce(createRewardedAdClientError("No rewarded ad is available right now.", "ad-unavailable"));
+      }
+    };
+
+    googletag.cmd.push(() => {
+      slot = googletag.defineOutOfPageSlot(
+        config.adUnitPath,
+        googletag.enums.OutOfPageFormat.REWARDED
+      );
+      if (!slot) {
+        rejectOnce(createRewardedAdClientError("Rewarded ads are unsupported on this page or device.", "ad-unsupported"));
+        return;
+      }
+      slot.addService(pubads);
+      pubads.addEventListener("rewardedSlotReady", handleReady);
+      pubads.addEventListener("rewardedSlotGranted", handleGranted);
+      pubads.addEventListener("rewardedSlotClosed", handleClosed);
+      pubads.addEventListener("slotRenderEnded", handleRenderEnded);
+      if (!googlePublisherServicesEnabled) {
+        googletag.enableServices();
+        googlePublisherServicesEnabled = true;
+      }
+      googletag.display(slot);
+      setPhaseTimeout(
+        REWARDED_AD_LOAD_TIMEOUT_MS,
+        "No rewarded ad became available.",
+        "ad-timeout"
+      );
+    });
+  });
+}
+
+async function claimPreparedRewardedAd(intent = {}, options = {}) {
+  const api = getOnlineApi();
+  if (!api?.claimRewardedAd) throw new Error("The rewarded-ad server is unavailable.");
+  const result = await api.claimRewardedAd({ intentId: intent.intentId });
+  if (!result?.claimed) throw new Error("The rewarded-ad reward was not granted.");
+  clearPendingRewardedAdClaim(intent.intentId);
+  if (result.rewardedAdStatus) rewardedAdStatus = normalizeRewardedAdStatus(result.rewardedAdStatus);
+  if (result.replayed) await refreshServerEconomy(true, { renderCities: false });
+  else applyServerEconomyResult(result, { renderCities: false });
+
+  const rewardType = result.rewardType === "troops" ? "troops" : "gold";
+  const reward = Math.max(0, Math.floor(Number(result.reward) || Number(intent.rewardAmount) || 0));
+  const targetName = result.targetCityName || intent.targetCityName || "main city";
+  if (rewardType === "troops") {
+    addLog(`Rewarded ad: +${formatNumber(reward)} troops to ${targetName}.`);
+    showToast(`Reward received: +${formatNumber(reward)} troops to ${targetName}.`);
+  } else {
+    addLog(`Rewarded ad: +${formatNumber(reward)} gold.`);
+    showToast(`Reward received: +${formatNumber(reward)} gold.`);
+  }
+  if (!options.skipStatusRefresh && !result.rewardedAdStatus) await refreshRewardedAdStatus({ render: false });
+  return result;
+}
+
+async function retryPendingRewardedAdClaim() {
+  const pending = getPendingRewardedAdClaim();
+  if (!state || !pending || rewardedAdInFlight || !isRewardedAdSecurityReady()) return false;
+  rewardedAdInFlight = true;
+  if (modal.open && modal.classList.contains("shop-modal")) renderShopModal();
+  try {
+    await claimPreparedRewardedAd(pending);
+    return true;
+  } catch (error) {
+    console.warn("Could not retry rewarded-ad claim", error);
+    if (
+      (pending.claimByMs && pending.claimByMs <= Date.now())
+      || isPermanentRewardedAdClaimError(error)
+    ) {
+      clearPendingRewardedAdClaim(pending.intentId);
+      await refreshRewardedAdStatus({ render: false });
+    }
+    return false;
+  } finally {
+    rewardedAdInFlight = false;
+    if (modal.open && modal.classList.contains("shop-modal")) renderShopModal();
+  }
+}
+
+async function startRewardedAdBoost(rewardType = "gold") {
+  if (rewardedAdInFlight || getPendingRewardedAdClaim()) return;
+  const normalizedType = rewardType === "troops" ? "troops" : "gold";
+  const availability = getRewardedAdAvailability();
+  if (!availability.canWatch) {
+    showToast(availability.text);
+    return;
+  }
+  const api = getOnlineApi();
+  if (!api?.prepareRewardedAd || !api?.claimRewardedAd) {
+    showToast("The rewarded-ad server is unavailable.");
+    return;
+  }
+
+  rewardedAdInFlight = true;
+  renderShopModal();
+  try {
+    const prepared = await api.prepareRewardedAd({ rewardType: normalizedType });
+    if (prepared?.currentUser || prepared?.cityUpdates) {
+      applyServerEconomyResult(prepared, { renderCities: false });
+    }
+    if (prepared?.rewardedAdStatus) rewardedAdStatus = normalizeRewardedAdStatus(prepared.rewardedAdStatus);
+    const intent = prepared?.rewardedAdIntent;
+    if (!intent?.intentId || intent.rewardType !== normalizedType) {
+      throw new Error("The server did not create a valid rewarded-ad request.");
+    }
+    await requestGoogleRewardedAd(intent);
+    await claimPreparedRewardedAd(intent);
+  } catch (error) {
+    const pending = getPendingRewardedAdClaim();
+    if (pending && !isPermanentRewardedAdClaimError(error)) {
+      showToast("Your completed reward is saved and will retry when the server reconnects.");
+      window.setTimeout(retryPendingRewardedAdClaim, 1500);
+    } else if (error?.code !== "ad-cancelled") {
+      if (pending) clearPendingRewardedAdClaim(pending.intentId);
+      showToast(error?.message || "The rewarded ad was unavailable.");
+    }
+    console.warn("Rewarded-ad flow did not complete", error);
+  } finally {
+    rewardedAdInFlight = false;
+    modal.classList.remove("rewarded-ad-confirmation-modal");
+    if (modal.open) renderShopModal();
+    if (!getPendingRewardedAdClaim()) refreshRewardedAdStatus();
+  }
+}
+
 function getShopItemById(itemId) {
   return SHOP_ITEMS.find(item => item.id === itemId) || null;
 }
@@ -20173,6 +21171,7 @@ function renderShopItem(item, inventory) {
 function renderShopModal() {
   if (!state) return;
   const inventory = ensureShopItems();
+  modal.classList.remove("rewarded-ad-confirmation-modal");
   modalTitle.textContent = "Shop";
   modalBody.innerHTML = `
     <div class="shop-panel">
@@ -20180,11 +21179,26 @@ function renderShopModal() {
         <span>Gold available</span>
         <strong>${formatNumber(Math.floor(Number(state.gold) || 0))}</strong>
       </section>
+      <section class="shop-rewarded-section" aria-labelledby="shopRewardedHeading">
+        <header class="shop-rewarded-heading">
+          <div>
+            <span>Optional rewards</span>
+            <strong id="shopRewardedHeading">Free .5h Boosts</strong>
+          </div>
+          <small>One shared 30-minute cooldown</small>
+        </header>
+        <div class="shop-rewarded-items">
+          ${REWARDED_AD_ITEMS.map(renderRewardedAdShopItem).join("")}
+        </div>
+      </section>
       <div class="shop-items">
         ${SHOP_ITEMS.map(item => renderShopItem(item, inventory)).join("")}
       </div>
     </div>
   `;
+  modalBody.querySelectorAll("[data-rewarded-ad-watch]").forEach(button => {
+    button.addEventListener("click", () => startRewardedAdBoost(button.dataset.rewardedAdWatch));
+  });
   modalBody.querySelectorAll("[data-shop-buy]").forEach(button => {
     button.addEventListener("click", () => buyShopItem(button.dataset.shopBuy));
   });
@@ -20192,10 +21206,13 @@ function renderShopModal() {
 
 function showShopModal() {
   if (!state) return;
-  modal.classList.remove("battle-report-modal", "city-list-modal", "island-switcher-modal", "leaderboard-modal", "inventory-modal", "incoming-attack-modal", "outgoing-attack-modal");
+  modal.classList.remove("battle-report-modal", "city-list-modal", "island-switcher-modal", "leaderboard-modal", "inventory-modal", "incoming-attack-modal", "outgoing-attack-modal", "rewarded-ad-confirmation-modal");
   modal.classList.add("shop-modal");
   renderShopModal();
   if (!modal.open) modal.showModal();
+  startRewardedAdShopCountdown();
+  refreshRewardedAdStatus();
+  retryPendingRewardedAdClaim();
 }
 
 async function buyShopItem(itemId) {
@@ -20610,7 +21627,7 @@ function showAttackPreview(source, target) {
     showToast("No land route found around the terrain.");
     return;
   }
-  const demoNotice = getDemoAttackNotice(preview.demoAttack);
+  const protectionNotice = getAttackProtectionNotice(preview.attackProtection);
   const shieldDropWarning = getPeaceShieldAttackWarning(target);
   modalTitle.textContent = `Attack ${target.name}`;
   modalBody.innerHTML = `
@@ -20627,7 +21644,7 @@ function showAttackPreview(source, target) {
       <p>${preview.success
         ? `Expected capture with about <strong>${formatNumber(preview.survivors)}</strong> surviving troops.`
         : `Expected failure with about <strong>${formatNumber(preview.defendersLeft)}</strong> defenders left.`}</p>
-      ${demoNotice ? `<p class="tiny-warning">${escapeHtml(demoNotice)}</p>` : ""}
+      ${protectionNotice ? `<p class="tiny-warning">${escapeHtml(protectionNotice)}</p>` : ""}
       ${shieldDropWarning ? `<p class="shield-drop-warning"><strong>Shield warning</strong><span>${escapeHtml(shieldDropWarning)}</span></p>` : ""}
       <p class="tiny-warning">This is an estimate based on current numbers. Confirm launches using the current troop count.</p>
       <div class="modal-actions">
@@ -20653,7 +21670,7 @@ function showAttackPreview(source, target) {
       <p>${preview.success
         ? `Expected capture with about <strong>${formatNumber(preview.survivors)}</strong> surviving troops.`
         : `Expected failure with about <strong>${formatNumber(preview.defendersLeft)}</strong> defenders left.`}</p>
-      ${demoNotice ? `<p class="tiny-warning">${escapeHtml(demoNotice)}</p>` : ""}
+      ${protectionNotice ? `<p class="tiny-warning">${escapeHtml(protectionNotice)}</p>` : ""}
       ${shieldDropWarning ? `<p class="shield-drop-warning"><strong>Shield warning</strong><span>${escapeHtml(shieldDropWarning)}</span></p>` : ""}
       ${preview.cooldownRemaining > 0 ? `<p class="tiny-warning">Recent capture cooldown: XP is reduced for ${formatDuration(preview.cooldownRemaining)}.</p>` : ""}
       <p class="tiny-warning">This is an estimate based on current numbers. Confirm launches using the current troop count.</p>
@@ -20989,28 +22006,31 @@ function calculateBattlePreview(source, target, percent) {
   return calculateBattlePreviewForTroops(source, target, requestedSend);
 }
 
-function calculateBattlePreviewForTroops(source, target, amount, knownRoute = null) {
+function calculateBattlePreviewForTroops(source, target, amount, knownRoute = null, protectionOverride = null) {
   const requestedSend = clamp(Math.floor(amount), 1, source.troops);
-  const demoAttack = createDemoAttackSnapshot(source, target, requestedSend, "player");
-  const send = demoAttack?.active ? demoAttack.effectiveTroops : requestedSend;
-  const result = calculateCombatResult(send, "player", target, { demoAttack });
+  const normalizedOverride = normalizeAttackProtectionSnapshot(protectionOverride);
+  const attackProtection = normalizedOverride
+    ? normalizedOverride.mode === "normal" ? null : normalizedOverride
+    : createAttackProtectionSnapshot(source, target, requestedSend, "player");
+  const send = attackProtection ? Math.min(requestedSend, attackProtection.maxTroops) : requestedSend;
+  const result = calculateCombatResult(send, "player", target, { attackProtection });
   const givenUpNeutralTarget = isGivenUpNeutralCity(target);
-  const xpEfficiency = demoAttack?.active || givenUpNeutralTarget ? 0 : getCaptureXpEfficiency(target, target.owner);
-  const captureXp = demoAttack?.active || givenUpNeutralTarget
+  const xpEfficiency = attackProtection || givenUpNeutralTarget ? 0 : getCaptureXpEfficiency(target, target.owner);
+  const captureXp = attackProtection || givenUpNeutralTarget
     ? 0
     : result.success
       ? getCaptureXpAward(target, target.owner, result.defenderLosses, "player")
       : getFailedAttackXpAward(target, target.owner, Math.max(0, Math.floor(Number(target.troops) || 0)), "player");
-  const xpLabel = demoAttack?.active ? "attacker XP" : result.success ? "capture XP" : "defeat XP";
+  const xpLabel = attackProtection ? "attacker XP" : result.success ? "capture XP" : "defeat XP";
   const cooldownRemaining = getCaptureCooldownRemaining(target);
   let label = "Weak odds";
   if (result.ratio >= 1.35) label = "Overwhelming advantage";
   else if (result.ratio >= 1.12) label = "Good advantage";
   else if (result.ratio > 1) label = "Close win";
   else if (result.ratio >= .82) label = "Risky attack";
-  if (demoAttack?.active) label = `${demoAttack.label}: ${label}`;
+  if (attackProtection) label = `${attackProtection.label}: ${attackProtection.mode === "raid" ? "max 10% garrison damage" : label}`;
   const route = knownRoute || findRoute(source, target);
-  const travel = route ? travelTime(source, target, "player", route.length, send, "attack", { demoAttack }) : Infinity;
+  const travel = route ? travelTime(source, target, "player", route.length, send, "attack") : Infinity;
   return {
     requestedSend,
     send,
@@ -21027,7 +22047,8 @@ function calculateBattlePreviewForTroops(source, target, amount, knownRoute = nu
     xpLabel,
     cooldownRemaining,
     label,
-    demoAttack,
+    attackProtection,
+    demoAttack: null,
     travel,
     path: route?.points || null,
     pathLength: route?.length || 0,
@@ -23355,11 +24376,13 @@ document.addEventListener("visibilitychange", () => {
   if (document.visibilityState === "visible") {
     checkForDeployedUpdate(true);
     heartbeatGameServerMembership();
+    retryPendingRewardedAdClaim();
   }
 });
 window.addEventListener("online", () => {
   checkForDeployedUpdate(true);
   heartbeatGameServerMembership();
+  retryPendingRewardedAdClaim();
 });
 document.addEventListener("keydown", event => {
   if (event.key === "F8") {
@@ -23430,6 +24453,10 @@ document.addEventListener("pointerdown", event => {
 }, true);
 modal.addEventListener("close", () => {
   publicPlayerProfileRequestId += 1;
+  if (rewardedAdShopCountdownTimer) {
+    window.clearInterval(rewardedAdShopCountdownTimer);
+    rewardedAdShopCountdownTimer = 0;
+  }
   modal.classList.remove("troop-slider-modal");
   modal.classList.remove("scout-report-modal");
   modal.classList.remove("battle-report-modal");
@@ -23443,6 +24470,7 @@ modal.addEventListener("close", () => {
   modal.classList.remove("outgoing-attack-modal");
   modal.classList.remove("relinquish-city-modal");
   modal.classList.remove("public-player-profile-modal");
+  modal.classList.remove("rewarded-ad-confirmation-modal");
   setTimeout(showNextLevelUpReward, 0);
   if (!troopSliderActive) return;
   troopSliderActive = false;

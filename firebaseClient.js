@@ -16,6 +16,7 @@
     auth: null,
     db: null,
     functions: null,
+    appCheck: null,
     messaging: null,
     provider: null,
     modules: null,
@@ -167,13 +168,14 @@
   }
 
   async function loadModules() {
-    const [app, auth, firestore, functions] = await Promise.all([
+    const [app, auth, firestore, functions, appCheck] = await Promise.all([
       import(`https://www.gstatic.com/firebasejs/${FIREBASE_VERSION}/firebase-app.js`),
       import(`https://www.gstatic.com/firebasejs/${FIREBASE_VERSION}/firebase-auth.js`),
       import(`https://www.gstatic.com/firebasejs/${FIREBASE_VERSION}/firebase-firestore.js`),
       import(`https://www.gstatic.com/firebasejs/${FIREBASE_VERSION}/firebase-functions.js`),
+      import(`https://www.gstatic.com/firebasejs/${FIREBASE_VERSION}/firebase-app-check.js`),
     ]);
-    return { app, auth, firestore, functions };
+    return { app, auth, firestore, functions, appCheck };
   }
 
   async function loadMessagingModule() {
@@ -200,6 +202,13 @@
       try {
         client.modules = await loadModules();
         client.app = client.modules.app.initializeApp(config);
+        const appCheckSiteKey = String(config.appCheckSiteKey || "").trim();
+        if (appCheckSiteKey && client.modules.appCheck?.initializeAppCheck) {
+          client.appCheck = client.modules.appCheck.initializeAppCheck(client.app, {
+            provider: new client.modules.appCheck.ReCaptchaEnterpriseProvider(appCheckSiteKey),
+            isTokenAutoRefreshEnabled: true,
+          });
+        }
         client.auth = client.modules.auth.getAuth(client.app);
         client.db = client.modules.firestore.getFirestore(client.app);
         client.functions = client.modules.functions.getFunctions(client.app);
@@ -248,6 +257,25 @@
     return result?.data || null;
   }
 
+  async function callSensitiveServerFunction(name, payload = {}) {
+    await init();
+    const uid = requireSignedIn();
+    if (!uid) throw new Error("Sign in to use server multiplayer.");
+    if (!client.appCheck) {
+      throw new Error("Rewarded ads are waiting for Firebase App Check setup.");
+    }
+    if (!client.functions || !client.modules?.functions?.httpsCallable) {
+      throw new Error("Firebase Functions did not load.");
+    }
+    const callable = client.modules.functions.httpsCallable(
+      client.functions,
+      name,
+      { limitedUseAppCheckTokens: true }
+    );
+    const result = await callable(sanitizeForFirestore(payload) || {});
+    return result?.data || null;
+  }
+
   function createGameServerPayload(serverId = DEFAULT_GAME_SERVER_ID) {
     return {
       serverId: String(serverId || DEFAULT_GAME_SERVER_ID).slice(0, 64),
@@ -288,6 +316,10 @@
     return callServerFunction("sendArmyOrder", payload);
   }
 
+  async function previewArmyProtection(payload = {}) {
+    return callServerFunction("previewArmyProtection", payload);
+  }
+
   async function resolveArmyOrder(payload = {}) {
     return callServerFunction("resolveArmyOrder", payload);
   }
@@ -306,6 +338,24 @@
 
   async function collectEconomy(payload = {}) {
     return callServerFunction("collectEconomy", payload);
+  }
+
+  async function getRewardedAdStatus(payload = {}) {
+    return callSensitiveServerFunction("getRewardedAdStatus", payload);
+  }
+
+  async function prepareRewardedAd(payload = {}) {
+    return callSensitiveServerFunction("prepareRewardedAd", {
+      ...payload,
+      sessionId: getActiveSessionId(),
+    });
+  }
+
+  async function claimRewardedAd(payload = {}) {
+    return callSensitiveServerFunction("claimRewardedAd", {
+      ...payload,
+      sessionId: getActiveSessionId(),
+    });
   }
 
   async function collectHarvestBonus(payload = {}) {
@@ -1596,6 +1646,9 @@
     savePlayerProfile,
     loadPlayerProfile,
     collectEconomy,
+    getRewardedAdStatus,
+    prepareRewardedAd,
+    claimRewardedAd,
     reserveHarvestBonusSpawn,
     collectHarvestBonus,
     upgradeCity,
@@ -1642,6 +1695,7 @@
     loadCrownCitadelReignLeaderboard,
     subscribePlayerGlobalStats,
     sendArmyOrder,
+    previewArmyProtection,
     resolveArmyOrder,
     resolveGoldCampPayout,
     resolveRewardCampPayout,
@@ -1674,6 +1728,7 @@
     hasNotificationVapidKey: () => Boolean(getNotificationVapidKey()),
     usesServerArmyAuthority: () => Boolean(client.functions && client.modules?.functions?.httpsCallable),
     usesServerEconomyAuthority,
+    isRewardedAdSecurityReady: () => Boolean(client.appCheck),
     isConfigured: () => client.configured,
     isReady: () => client.ready,
     isSignedIn: () => Boolean(client.user?.uid),

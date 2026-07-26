@@ -1,15 +1,16 @@
-const CACHE_VERSION = "20260726-smooth-map-picker";
+const CACHE_VERSION = "20260726-rewarded-ads";
 const CACHE_NAME = `crownlands-cache-${CACHE_VERSION}`;
 const STATIC_CACHE_URLS = [
   "/",
   "/index.html",
   "/manifest.webmanifest",
-  "/styles.css?v=20260726-smooth-map-picker",
+  "/styles.css?v=20260726-rewarded-ads",
   "/world-config.js",
   "/economy-config.js?v=20260726-offline-owned-production",
-  "/firebase-config.js?v=20260703-vapid-key",
-  "/firebaseClient.js?v=20260726-offline-owned-production",
-  "/game.js?v=20260726-smooth-map-picker",
+  "/ads-config.js?v=20260726-rewarded-ads",
+  "/firebase-config.js?v=20260726-app-check",
+  "/firebaseClient.js?v=20260726-rewarded-ads",
+  "/game.js?v=20260726-rewarded-ads",
   "/route-worker.js?v=20260721-structure-route-clearance",
   "/assets/map-editor-data.js?v=20260723-utc-responsive-v1",
   "/assets/game-menu-background.jpg?v=20260702-login-page",
@@ -17,6 +18,7 @@ const STATIC_CACHE_URLS = [
   "/assets/loading-crown.png",
   "/assets/gold-pickup.png",
   "/assets/troop-pickup.png",
+  "/privacy.html",
   "/assets/royal-tax-decree-icon.webp?v=20260721-tax-decree",
   "/assets/icons/crownlands-icon-192.png",
   "/assets/icons/crownlands-icon-512.png",
