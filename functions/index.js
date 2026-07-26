@@ -1519,13 +1519,15 @@ function activeArmiesQueryForPlayer(uid = "") {
   return db.collection("armies")
     .where("ownerUid", "==", safeString(uid, 128))
     .where("resetGeneration", "==", RESET_GENERATION)
+    .where("worldId", "==", ONLINE_WORLD_ID)
     .where("status", "==", "active");
 }
 
 function heldRewardCampsQueryForPlayer(uid = "") {
   return db.collectionGroup("camps")
     .where("holderUid", "==", safeString(uid, 128))
-    .where("resetGeneration", "==", RESET_GENERATION);
+    .where("resetGeneration", "==", RESET_GENERATION)
+    .where("worldId", "==", ONLINE_WORLD_ID);
 }
 
 function createHeldCampEntriesFromSnapshot(uid = "", heldCampsSnap = null) {
@@ -3671,7 +3673,8 @@ async function prepareEconomyCollection(transaction, uid, nowMs = Date.now(), op
   const [ownedSnap, activeArmiesSnap, heldCampsSnap] = await Promise.all([
     transaction.get(db.collectionGroup("cities")
       .where("ownerUid", "==", uid)
-      .where("resetGeneration", "==", RESET_GENERATION)),
+      .where("resetGeneration", "==", RESET_GENERATION)
+      .where("worldId", "==", ONLINE_WORLD_ID)),
     transaction.get(activeArmiesQueryForPlayer(uid)),
     transaction.get(heldRewardCampsQueryForPlayer(uid)),
   ]);
@@ -3974,6 +3977,7 @@ async function rebuildGlobalStatsForPlayer(uid = "") {
     db.collectionGroup("cities")
       .where("ownerUid", "==", playerUid)
       .where("resetGeneration", "==", RESET_GENERATION)
+      .where("worldId", "==", ONLINE_WORLD_ID)
       .get(),
     activeArmiesQueryForPlayer(playerUid).get(),
     heldRewardCampsQueryForPlayer(playerUid).get(),
@@ -4777,6 +4781,7 @@ exports.syncPlayerIdentity = onCall({ region: "us-central1", maxInstances: 20, i
     db.collectionGroup("cities")
       .where("ownerUid", "==", uid)
       .where("resetGeneration", "==", RESET_GENERATION)
+      .where("worldId", "==", ONLINE_WORLD_ID)
       .get(),
     activeArmiesQueryForPlayer(uid).get(),
     crownCitadelReignRef(uid).get(),
@@ -5028,6 +5033,7 @@ exports.getCombatPlayerIdentity = onCall({
     db.collectionGroup("cities")
       .where("ownerUid", "==", targetUid)
       .where("resetGeneration", "==", RESET_GENERATION)
+      .where("worldId", "==", ONLINE_WORLD_ID)
       .get(),
   ]);
   const profile = profileSnap.exists ? profileSnap.data() || {} : {};
@@ -5283,7 +5289,8 @@ const legacyClaimStartingCity = onCall({ region: "us-central1", maxInstances: 20
     const playerData = playerSnap.exists ? playerSnap.data() || {} : {};
     const ownedSnap = await transaction.get(db.collectionGroup("cities")
       .where("ownerUid", "==", uid)
-      .where("resetGeneration", "==", RESET_GENERATION));
+      .where("resetGeneration", "==", RESET_GENERATION)
+      .where("worldId", "==", ONLINE_WORLD_ID));
     const ownedCityEntries = createOwnedCityEntriesFromSnapshot(uid, ownedSnap);
     const existingMainCityId = safeString(playerData.mainCityId, 96).replace(/[^a-zA-Z0-9_-]/g, "_");
     const existingMainIslandId = safeString(playerData.mainIslandId, 160);
@@ -7204,6 +7211,7 @@ exports.cleanupClanMessages = onSchedule({
   const clansSnap = await db.collection("clans")
     .where("status", "==", "active")
     .where("resetGeneration", "==", RESET_GENERATION)
+    .where("worldId", "==", ONLINE_WORLD_ID)
     .limit(500)
     .get();
   for (const clanDoc of clansSnap.docs) {
@@ -7306,6 +7314,7 @@ exports.syncClanIdentityOnMembershipChange = onDocumentWritten({
     db.collectionGroup("cities")
       .where("ownerUid", "==", uid)
       .where("resetGeneration", "==", RESET_GENERATION)
+      .where("worldId", "==", ONLINE_WORLD_ID)
       .get(),
     activeArmiesQueryForPlayer(uid).get(),
   ]);
@@ -8853,6 +8862,7 @@ async function refreshActiveArmyTargetOwner(targetKey = "", targetOwnerUid = "")
   const snapshot = await db.collection("armies")
     .where("targetKey", "==", safeTargetKey)
     .where("resetGeneration", "==", RESET_GENERATION)
+    .where("worldId", "==", ONLINE_WORLD_ID)
     .where("status", "==", "active")
     .limit(400)
     .get();
@@ -9703,6 +9713,7 @@ async function loadDueArmyTargets(nowMs = Date.now()) {
     db.collection("armies")
       .where("status", "==", "active")
       .where("resetGeneration", "==", RESET_GENERATION)
+      .where("worldId", "==", ONLINE_WORLD_ID)
       .where("arrivesAtMs", "<=", nowMs)
       .orderBy("arrivesAtMs", "asc")
       .limit(SCHEDULED_ARMY_RESOLVE_SCAN_LIMIT)
@@ -9711,6 +9722,7 @@ async function loadDueArmyTargets(nowMs = Date.now()) {
     db.collectionGroup("armies")
       .where("status", "==", "active")
       .where("resetGeneration", "==", RESET_GENERATION)
+      .where("worldId", "==", ONLINE_WORLD_ID)
       .where("arrivesAtMs", "<=", nowMs)
       .orderBy("arrivesAtMs", "asc")
       .limit(Math.min(100, SCHEDULED_ARMY_RESOLVE_SCAN_LIMIT))
@@ -9819,6 +9831,7 @@ exports.resolveDueRewardCampPayouts = onSchedule({
   const due = await db.collectionGroup("camps")
     .where("payoutPending", "==", true)
     .where("resetGeneration", "==", RESET_GENERATION)
+    .where("worldId", "==", ONLINE_WORLD_ID)
     .where("payoutAtMs", "<=", nowMs)
     .limit(REWARD_CAMP_PAYOUT_SCAN_LIMIT)
     .get();

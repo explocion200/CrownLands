@@ -446,8 +446,8 @@
     const normalized = String(searchText || "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
     const base = collection(client.db, "clans");
     const clanQuery = normalized
-      ? query(base, where("resetGeneration", "==", RESET_GENERATION), where("status", "==", "active"), orderBy("normalizedName"), startAt(normalized), endAt(`${normalized}\uf8ff`), limit(safeLimit))
-      : query(base, where("resetGeneration", "==", RESET_GENERATION), where("status", "==", "active"), orderBy("normalizedName"), limit(safeLimit));
+      ? query(base, where("resetGeneration", "==", RESET_GENERATION), where("worldId", "==", ONLINE_WORLD_ID), where("status", "==", "active"), orderBy("normalizedName"), startAt(normalized), endAt(`${normalized}\uf8ff`), limit(safeLimit))
+      : query(base, where("resetGeneration", "==", RESET_GENERATION), where("worldId", "==", ONLINE_WORLD_ID), where("status", "==", "active"), orderBy("normalizedName"), limit(safeLimit));
     const snapshot = await getDocs(clanQuery);
     return snapshot.docs.map(item => ({ id: item.id, ...item.data() }));
   }
@@ -1474,7 +1474,8 @@
       const ownedRef = firestoreQuery(
         collectionGroup(client.db, "cities"),
         where("ownerUid", "==", uid),
-        where("resetGeneration", "==", RESET_GENERATION)
+        where("resetGeneration", "==", RESET_GENERATION),
+        where("worldId", "==", ONLINE_WORLD_ID)
       );
       const snapshot = await getDocs(ownedRef);
       return snapshot.docs
@@ -1503,7 +1504,7 @@
     const reportsRef = collection(client.db, "players", uid, "serverReports");
     const safeLimit = Math.max(1, Math.min(200, Math.floor(Number(limitCount) || 120)));
     const reportsQuery = firestoreQuery && orderBy && limit
-      ? firestoreQuery(reportsRef, where("resetGeneration", "==", RESET_GENERATION), orderBy("createdAtMs", "desc"), limit(safeLimit))
+      ? firestoreQuery(reportsRef, where("resetGeneration", "==", RESET_GENERATION), where("worldId", "==", ONLINE_WORLD_ID), orderBy("createdAtMs", "desc"), limit(safeLimit))
       : reportsRef;
     const snapshot = await getDocs(reportsQuery);
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -1514,7 +1515,7 @@
     const { collection, onSnapshot, query: firestoreQuery, where, orderBy, limit } = client.modules.firestore;
     const reportsRef = collection(client.db, "players", client.user.uid, "serverReports");
     const reportsQuery = firestoreQuery && orderBy && limit
-      ? firestoreQuery(reportsRef, where("resetGeneration", "==", RESET_GENERATION), orderBy("createdAtMs", "desc"), limit(120))
+      ? firestoreQuery(reportsRef, where("resetGeneration", "==", RESET_GENERATION), where("worldId", "==", ONLINE_WORLD_ID), orderBy("createdAtMs", "desc"), limit(120))
       : reportsRef;
     const unsubscribe = onSnapshot(
       reportsQuery,
@@ -1551,6 +1552,7 @@
         collection(client.db, "armies"),
         where(ownerField, "==", uid),
         where("resetGeneration", "==", RESET_GENERATION),
+        where("worldId", "==", ONLINE_WORLD_ID),
         where("status", "==", "active")
       ),
       snapshot => {
@@ -1584,7 +1586,8 @@
     const heldCampsRef = firestoreQuery(
       collectionGroup(client.db, "camps"),
       where("holderUid", "==", client.user.uid),
-      where("resetGeneration", "==", RESET_GENERATION)
+      where("resetGeneration", "==", RESET_GENERATION),
+      where("worldId", "==", ONLINE_WORLD_ID)
     );
     return onSnapshot(
       heldCampsRef,
