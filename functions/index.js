@@ -27,7 +27,8 @@ function economyRewardSchedule(campType, fallback = []) {
 
 const RESET_GENERATION = "fresh-2026-07-05-server-reset";
 const ONLINE_WORLD_ID = `main-${RESET_GENERATION}`;
-const TEST_STARTING_GOLD = 500;
+const TEST_STARTING_GOLD = 100;
+const PLAYER_STARTING_TROOPS = 200;
 const PLAYER_NAME_MAX_LENGTH = 18;
 const MILLION_LORDS_CITY_PRODUCTION_VP_BASE = economyNumber("cityEconomy.productionVpBase", 20);
 const MILLION_LORDS_CITY_PRODUCTION_VP_GROWTH = economyNumber("cityEconomy.productionVpGrowth", 1.115);
@@ -1231,8 +1232,16 @@ function getCityProductionStats(city = {}, profile = {}, bonuses = {}, options =
       + level * CITY_LEVEL_STATS.victoryPointsPerLevel
       + Math.pow(level, CITY_LEVEL_STATS.victoryPointsExponent) * CITY_LEVEL_STATS.victoryPointsExponentScale
   );
-  const royalGranariesPercent = getSkillPercent(profile, "royalGranaries");
-  const taxStewardshipPercent = getSkillPercent(profile, "taxStewardship");
+  const includeSkillBoosts = options.includeSkillBoosts !== false;
+  const includeStrongholdBoosts = options.includeStrongholdBoosts !== false;
+  const royalGranariesPercent = includeSkillBoosts ? getSkillPercent(profile, "royalGranaries") : 0;
+  const taxStewardshipPercent = includeSkillBoosts ? getSkillPercent(profile, "taxStewardship") : 0;
+  const strongholdTroopBonusPercent = includeStrongholdBoosts
+    ? Math.max(0, safeNumber(bonuses.troopBonusPercent, 0))
+    : 0;
+  const strongholdGoldBonusPercent = includeStrongholdBoosts
+    ? Math.max(0, safeNumber(bonuses.goldBonusPercent, 0))
+    : 0;
   const nowMs = Math.max(0, safeNumber(options.nowMs, Date.now()));
   const warDrumsExpiresAtMs = Math.max(0, Math.floor(safeNumber(profile?.itemEffects?.warDrumsExpiresAtMs, 0)));
   const warDrumsTroopBonusPercent = options.includeWarDrums !== false && !stronghold && warDrumsExpiresAtMs > nowMs
@@ -1243,21 +1252,33 @@ function getCityProductionStats(city = {}, profile = {}, bonuses = {}, options =
     ? ROYAL_TAX_DECREE_GOLD_PRODUCTION_BONUS_PERCENT
     : 0;
   const baseTroopProductionPerHour = stronghold ? 0 : victoryPoints * CITY_LEVEL_STATS.troopProductionPerVictoryPoint;
-  const troopProductionPerHour = baseTroopProductionPerHour
+  const untimedTroopProductionPerHour = baseTroopProductionPerHour
     * (1 + royalGranariesPercent / 100)
-    * (1 + Math.max(0, safeNumber(bonuses.troopBonusPercent, 0)) / 100)
+    * (1 + strongholdTroopBonusPercent / 100);
+  const troopProductionPerHour = untimedTroopProductionPerHour
     * (1 + warDrumsTroopBonusPercent / 100);
   const rawGoldProductionPerHour = stronghold ? 0 : getMillionLordsPassiveGoldPerHour(level);
-  const goldProductionPerHour = rawGoldProductionPerHour
+  const untimedGoldProductionPerHour = rawGoldProductionPerHour
     * (1 + taxStewardshipPercent / 100)
-    * (1 + Math.max(0, safeNumber(bonuses.goldBonusPercent, 0)) / 100)
+    * (1 + strongholdGoldBonusPercent / 100);
+  const goldProductionPerHour = untimedGoldProductionPerHour
     * (1 + royalTaxDecreeGoldBonusPercent / 100);
 
   return {
     level,
     victoryPoints,
+    baseTroopProductionPerHour,
+    untimedTroopProductionPerHour,
     troopProductionPerHour,
+    troopProductionBonusPerHour: Math.max(0, troopProductionPerHour - baseTroopProductionPerHour),
+    baseGoldProductionPerHour: rawGoldProductionPerHour,
+    untimedGoldProductionPerHour,
     goldProductionPerHour,
+    goldProductionBonusPerHour: Math.max(0, goldProductionPerHour - rawGoldProductionPerHour),
+    royalGranariesPercent,
+    taxStewardshipPercent,
+    strongholdTroopBonusPercent,
+    strongholdGoldBonusPercent,
     warDrumsTroopBonusPercent,
     royalTaxDecreeGoldBonusPercent,
     troopProductionPerSecond: troopProductionPerHour / 3600,
@@ -1279,10 +1300,12 @@ function getCityStats(city = {}, defenderProfile = null, bonuses = {}) {
   const stoneworksPercent = defenderProfile ? getSkillPercent(defenderProfile, "stoneworks") : 0;
   const cityWalls = Math.floor(baseCityWalls * (1 + stoneworksPercent / 100));
   const troopDefense = Math.floor((Math.max(0, Math.floor(safeNumber(city.troops, 0)))) * (1 + defensePercent / 100));
-  const baseTotalDefense = Math.floor(cityWalls + troopDefense);
+  const cityWallsBonus = Math.max(0, cityWalls - baseCityWalls);
+  const baseTotalDefense = Math.floor(baseCityWalls + troopDefense);
+  const preStrongholdTotalDefense = Math.floor(cityWalls + troopDefense);
   const strongholdDefenseBonusPercent = !stronghold ? Math.max(0, safeNumber(bonuses.cityDefenseBonusPercent, 0)) : 0;
-  const strongholdDefenseBonus = Math.floor(baseTotalDefense * strongholdDefenseBonusPercent / 100);
-  const totalDefense = baseTotalDefense + strongholdDefenseBonus;
+  const strongholdDefenseBonus = Math.floor(preStrongholdTotalDefense * strongholdDefenseBonusPercent / 100);
+  const totalDefense = preStrongholdTotalDefense + strongholdDefenseBonus;
 
   return {
     level,
@@ -1290,9 +1313,13 @@ function getCityStats(city = {}, defenderProfile = null, bonuses = {}) {
     defensePercent,
     baseCityWalls,
     cityWalls,
+    cityWallsBonus,
     stoneworksPercent,
+    troopDefense,
+    baseTotalDefense,
     strongholdDefenseBonusPercent,
     strongholdDefenseBonus,
+    totalDefenseBonus: Math.max(0, totalDefense - baseTotalDefense),
     totalDefense,
   };
 }
@@ -1441,11 +1468,15 @@ function createGlobalStatsSnapshot({
   let totalVictoryPoints = 0;
   let replacementPower = 0;
   let defensivePower = 0;
+  let baseReplacementPower = 0;
+  let baseDefensivePower = 0;
   let sustainableTroopPerHour = 0;
   let goldPerHour = 0;
   let troopPerHour = 0;
   let baseGoldPerHour = 0;
   let baseTroopPerHour = 0;
+  let untimedGoldPerHour = 0;
+  let untimedTroopPerHour = 0;
   // Include zeroes so Firestore merge writes clear regions where the player lost their final city.
   const cityCountsByRegion = Object.fromEntries(
     [...SERVER_WORLD_REGION_IDS].map(regionId => [regionId, 0])
@@ -1455,21 +1486,21 @@ function createGlobalStatsSnapshot({
     const city = entry.city || {};
     const troopCount = Math.max(0, Math.floor(safeNumber(city.troops, 0)));
     const stats = getCityProductionStats(city, profileForStats, resolvedBonuses, { nowMs });
-    const baseStats = getCityProductionStats(city, profileForStats, resolvedBonuses, {
-      nowMs,
-      includeWarDrums: false,
-      includeRoyalTaxDecree: false,
-    });
     const powerComponents = getCityInfrastructurePowerComponents(city, resolvedBonuses);
+    const basePowerComponents = getCityInfrastructurePowerComponents(city, {});
     totalCityTroops += troopCount;
     totalVictoryPoints += Math.max(0, Math.floor(safeNumber(stats.victoryPoints, 0)));
     replacementPower += powerComponents.replacementPower;
     defensivePower += powerComponents.defensivePower;
+    baseReplacementPower += basePowerComponents.replacementPower;
+    baseDefensivePower += basePowerComponents.defensivePower;
     sustainableTroopPerHour += powerComponents.sustainableTroopPerHour;
     goldPerHour += Math.max(0, safeNumber(stats.goldProductionPerHour, 0));
     troopPerHour += Math.max(0, safeNumber(stats.troopProductionPerHour, 0));
-    baseGoldPerHour += Math.max(0, safeNumber(baseStats.goldProductionPerHour, 0));
-    baseTroopPerHour += Math.max(0, safeNumber(baseStats.troopProductionPerHour, 0));
+    baseGoldPerHour += Math.max(0, safeNumber(stats.baseGoldProductionPerHour, 0));
+    baseTroopPerHour += Math.max(0, safeNumber(stats.baseTroopProductionPerHour, 0));
+    untimedGoldPerHour += Math.max(0, safeNumber(stats.untimedGoldProductionPerHour, 0));
+    untimedTroopPerHour += Math.max(0, safeNumber(stats.untimedTroopProductionPerHour, 0));
     if (isStronghold(city)) {
       strongholdCount += 1;
     } else {
@@ -1487,8 +1518,10 @@ function createGlobalStatsSnapshot({
     if (!isCurrentWorldIslandId(islandId)) return;
     const troopCount = Math.max(0, Math.floor(safeNumber(camp.troops, 0)));
     const powerComponents = getCityInfrastructurePowerComponents(camp, resolvedBonuses);
+    const basePowerComponents = getCityInfrastructurePowerComponents(camp, {});
     totalCampTroops += troopCount;
     defensivePower += powerComponents.defensivePower;
+    baseDefensivePower += basePowerComponents.defensivePower;
   });
 
   const marchingById = new Map();
@@ -1509,9 +1542,15 @@ function createGlobalStatsSnapshot({
   const marchingPower = getTroopKingPower(totalMarchingTroops);
   replacementPower = Math.min(Number.MAX_SAFE_INTEGER, Math.max(0, Math.floor(replacementPower)));
   defensivePower = Math.min(Number.MAX_SAFE_INTEGER, Math.max(0, Math.floor(defensivePower)));
+  baseReplacementPower = Math.min(Number.MAX_SAFE_INTEGER, Math.max(0, Math.floor(baseReplacementPower)));
+  baseDefensivePower = Math.min(Number.MAX_SAFE_INTEGER, Math.max(0, Math.floor(baseDefensivePower)));
   sustainableTroopPerHour = Math.min(Number.MAX_SAFE_INTEGER, Math.max(0, Math.floor(sustainableTroopPerHour)));
   const cityPower = Math.min(Number.MAX_SAFE_INTEGER, replacementPower + defensivePower);
   const kingPower = Math.min(Number.MAX_SAFE_INTEGER, Math.max(0, Math.floor(armyPower + cityPower)));
+  const baseKingPower = Math.min(
+    Number.MAX_SAFE_INTEGER,
+    Math.max(0, Math.floor(armyPower + baseReplacementPower + baseDefensivePower))
+  );
   const character = normalizeCharacterProgress(profileForStats.character);
 
   return {
@@ -1533,10 +1572,14 @@ function createGlobalStatsSnapshot({
     troopPerHour: Math.max(0, Math.floor(troopPerHour)),
     baseGoldPerHour: Math.max(0, Math.floor(baseGoldPerHour)),
     baseTroopPerHour: Math.max(0, Math.floor(baseTroopPerHour)),
+    untimedGoldPerHour: Math.max(0, Math.floor(untimedGoldPerHour)),
+    untimedTroopPerHour: Math.max(0, Math.floor(untimedTroopPerHour)),
     sustainableTroopPerHour,
     armyPower,
     replacementPower,
     defensivePower,
+    baseReplacementPower,
+    baseDefensivePower,
     strongholdBonusesAuthoritative: true,
     strongholdBonusSource: safeString(resolvedBonuses.source, 32),
     crownCitadelControlled: Boolean(resolvedBonuses.crownCitadelControlled),
@@ -1557,6 +1600,8 @@ function createGlobalStatsSnapshot({
     fortificationPower: defensivePower,
     strongholdPower: 0,
     kingPower,
+    baseKingPower,
+    kingPowerBonus: Math.max(0, kingPower - baseKingPower),
     characterLevel: character.level,
     mainCityId: safeString(profileForStats.mainCityId, 96),
     mainIslandId: safeString(profileForStats.mainIslandId, 160),
@@ -2744,10 +2789,13 @@ function createScoutReportSnapshot(target = {}, defenderProfile = null, nowMs = 
   return {
     troops: baseTroopDefense,
     totalDefense: Math.floor(stats.totalDefense),
+    baseTotalDefense: Math.floor(stats.baseTotalDefense),
+    totalDefenseBonus: Math.floor(stats.totalDefenseBonus),
     owner: getOwnerUid(target) ? "enemy" : "neutral",
     ownerName: getOwnerName(target),
     cityLevel: stats.level,
     defensePercent: stats.defensePercent,
+    baseCityWalls: stats.baseCityWalls,
     cityWalls: stats.cityWalls,
     troopDefense,
     cityDefenseBonus: Math.max(0, troopDefense - baseTroopDefense),
@@ -2760,7 +2808,33 @@ function createScoutReportSnapshot(target = {}, defenderProfile = null, nowMs = 
   };
 }
 
-function makeReport({ id, uid, type, outcome, city, opponentName = "", summary = "", sentTroops = 0, troopCount = 0, result = {}, totalDefense = 0, scoutReport = null, xpAwarded = 0, goldAwarded = 0, troopsAwarded = 0, characterAfter = null, goldAfter = null, nowMs = Date.now() }) {
+function makeReport({
+  id,
+  uid,
+  type,
+  outcome,
+  city,
+  opponentName = "",
+  summary = "",
+  sentTroops = 0,
+  troopCount = 0,
+  result = {},
+  totalDefense = 0,
+  defenseStats = null,
+  scoutReport = null,
+  xpAwarded = 0,
+  goldAwarded = 0,
+  troopsAwarded = 0,
+  characterAfter = null,
+  goldAfter = null,
+  nowMs = Date.now(),
+}) {
+  const normalizedTotalDefense = Math.max(0, Math.floor(safeNumber(totalDefense, result.defensePower || 0)));
+  const defenseBreakdown = defenseStats || scoutReport;
+  const normalizedBaseDefense = Math.min(
+    normalizedTotalDefense,
+    Math.max(0, Math.floor(safeNumber(defenseBreakdown?.baseTotalDefense, normalizedTotalDefense)))
+  );
   return {
     id,
     uid,
@@ -2776,7 +2850,9 @@ function makeReport({ id, uid, type, outcome, city, opponentName = "", summary =
     defendersLeft: Math.max(0, Math.floor(safeNumber(result.defendersLeft, 0))),
     attackerLosses: Math.max(0, Math.floor(safeNumber(result.attackerLosses, 0))),
     defenderLosses: Math.max(0, Math.floor(safeNumber(result.defenderLosses, 0))),
-    totalDefense: Math.max(0, Math.floor(safeNumber(totalDefense, result.defensePower || 0))),
+    totalDefense: normalizedTotalDefense,
+    baseTotalDefense: normalizedBaseDefense,
+    totalDefenseBonus: Math.max(0, normalizedTotalDefense - normalizedBaseDefense),
     opponentName: normalizePlayerName(opponentName, "Unknown ruler"),
     ownerName: normalizePlayerName(city?.ownerName, ""),
     summary: safeString(summary, 220),
@@ -4908,7 +4984,7 @@ exports.claimStartingCity = onCall({ region: "us-central1", maxInstances: 20, in
 
     const writeCityOwner = (cityRef, cityData = {}, { setStartingTroops = false } = {}) => {
       const baseTroops = Math.max(0, Math.floor(safeNumber(cityData.troops, 0)));
-      const troops = setStartingTroops ? Math.max(50, baseTroops) : baseTroops;
+      const troops = setStartingTroops ? Math.max(PLAYER_STARTING_TROOPS, baseTroops) : baseTroops;
       transaction.set(cityRef, {
         ownerKind: "player",
         ownerUid: uid,
@@ -6242,6 +6318,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
           sentTroops: troopCount,
           troopCount: Math.max(0, Math.floor(safeNumber(target.troops, 0))),
           totalDefense: targetStats.totalDefense,
+          defenseStats: targetStats,
           summary: reportSummary,
           nowMs,
         });
@@ -6343,6 +6420,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
           sentTroops: troopCount,
           troopCount: scoutReport.troops,
           totalDefense: scoutReport.totalDefense,
+          defenseStats: scoutReport,
           summary: `Scout revealed ${scoutReport.troops.toLocaleString()} defenders at ${campTarget.name || campTarget.id}.`,
           scoutReport,
           nowMs,
@@ -6423,6 +6501,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
         troopCount: defendersAtStart,
         result: battle,
         totalDefense: campStats.totalDefense,
+        defenseStats: campStats,
         summary: `${battle.success
           ? `Captured ${campTarget.name || campConfig.name} with ${battle.survivors.toLocaleString()} troops. Hold it for ${Math.floor(campConfig.holdDurationMs / 60000)} minutes to earn ${campConfig.rewardType}.`
           : `${battle.defendersLeft.toLocaleString()} defenders remained at ${campTarget.name || campConfig.name}.`}${attackerRecoveredTroops > 0 ? ` Field Medics returned ${attackerRecoveredTroops.toLocaleString()} troops to your main city.` : ""}`,
@@ -6476,6 +6555,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
           troopCount: defendersAtStart,
           result: battle,
           totalDefense: campStats.totalDefense,
+          defenseStats: campStats,
           summary: `${battle.success
             ? `${attackerName} captured ${campTarget.name || campConfig.name}.`
             : `${campTarget.name || campConfig.name} held with ${battle.defendersLeft.toLocaleString()} defenders.`}${defenderRecoveredTroops > 0 ? ` Field Medics returned ${defenderRecoveredTroops.toLocaleString()} troops to your main city.` : ""}`,
@@ -6524,6 +6604,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
           sentTroops: troopCount,
           troopCount: Math.max(0, Math.floor(safeNumber(target.troops, 0))),
           totalDefense: targetStats.totalDefense,
+          defenseStats: targetStats,
           summary: `Main cities cannot be scouted. ${returned.toLocaleString()} scout returned.`,
           nowMs,
         });
@@ -6604,6 +6685,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
           sentTroops: troopCount,
           troopCount: nextTroops,
           totalDefense: ownCityStats.totalDefense,
+          defenseStats: ownCityStats,
           summary: `Scout reached ${target.name || target.id}, now under your control. ${troopCount.toLocaleString()} scout joined the garrison.`,
           nowMs,
         });
@@ -6635,6 +6717,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
         sentTroops: troopCount,
         troopCount: scoutReport.troops,
         totalDefense: scoutReport.totalDefense,
+        defenseStats: scoutReport,
         summary: `Scout revealed ${scoutReport.troops.toLocaleString()} troops at ${target.name || target.id}.`,
         scoutReport,
         nowMs,
@@ -6704,6 +6787,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
         sentTroops: troopCount,
         troopCount: Math.max(0, Math.floor(safeNumber(target.troops, 0))),
         totalDefense: targetStats.totalDefense,
+        defenseStats: targetStats,
         summary: `${neutralCaptureBlockReason} The attack was canceled and ${returned.toLocaleString()} troops returned.`,
         nowMs,
       });
@@ -6747,6 +6831,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
         sentTroops: troopCount,
         troopCount: Math.max(0, Math.floor(safeNumber(target.troops, 0))),
         totalDefense: targetStats.totalDefense,
+        defenseStats: targetStats,
         summary: `Main cities cannot be attacked. ${returned.toLocaleString()} troops returned.`,
         nowMs,
       });
@@ -6780,6 +6865,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
         sentTroops: troopCount,
         troopCount: Math.max(0, Math.floor(safeNumber(target.troops, 0))),
         totalDefense: targetStats.totalDefense,
+        defenseStats: targetStats,
         summary: `Royal Peace Shield blocked the attack. ${returned.toLocaleString()} troops returned.`,
         nowMs,
       });
@@ -6869,6 +6955,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
         troopCount: defendersAtStart,
         result,
         totalDefense: targetStats.totalDefense,
+        defenseStats: targetStats,
         summary: `Captured with ${result.survivors.toLocaleString()} survivors. Level ${clampCityLevel(target.level).toLocaleString()} to ${nextLevel.toLocaleString()}. +${attackerProgress.xpAwarded.toLocaleString()} XP.${attackerLevelTroopReward ? ` Hero level reward: +${attackerLevelTroopReward.credited.toLocaleString()} troops to ${attackerLevelTroopReward.cityName}.` : ""}`,
         xpAwarded: attackerProgress.xpAwarded,
         goldAwarded: attackerProgress.goldAwarded,
@@ -6938,6 +7025,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
           troopCount: defendersAtStart,
           result,
           totalDefense: targetStats.totalDefense,
+          defenseStats: targetStats,
           summary: `${target.name || target.id} was captured by ${attackerName}. Level ${clampCityLevel(target.level).toLocaleString()} to ${nextLevel.toLocaleString()}. +${defenderProgress.xpAwarded.toLocaleString()} XP.${defenderLevelTroopReward ? ` Hero level reward: +${defenderLevelTroopReward.credited.toLocaleString()} troops to ${defenderLevelTroopReward.cityName}.` : ""}${defenderRecoveredTroops > 0 ? ` Field Medics returned ${defenderRecoveredTroops.toLocaleString()} troops to your main city.` : ""}`,
           xpAwarded: defenderProgress.xpAwarded,
           goldAwarded: defenderProgress.goldAwarded,
@@ -6990,6 +7078,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
       troopCount: defendersAtStart,
       result,
       totalDefense: targetStats.totalDefense,
+      defenseStats: targetStats,
       summary: `${result.defendersLeft.toLocaleString()} defenders remained. +${attackerProgress.xpAwarded.toLocaleString()} XP.${attackerLevelTroopReward ? ` Hero level reward: +${attackerLevelTroopReward.credited.toLocaleString()} troops to ${attackerLevelTroopReward.cityName}.` : ""}`,
       xpAwarded: attackerProgress.xpAwarded,
       goldAwarded: attackerProgress.goldAwarded,
@@ -7046,6 +7135,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
         troopCount: defendersAtStart,
         result,
         totalDefense: targetStats.totalDefense,
+        defenseStats: targetStats,
         summary: `${target.name || target.id} survived with ${result.defendersLeft.toLocaleString()} defenders. +${defenderProgress.xpAwarded.toLocaleString()} XP.${defenderLevelTroopReward ? ` Hero level reward: +${defenderLevelTroopReward.credited.toLocaleString()} troops to ${defenderLevelTroopReward.cityName}.` : ""}${defenderRecoveredTroops > 0 ? ` Field Medics returned ${defenderRecoveredTroops.toLocaleString()} troops to your main city.` : ""}`,
         xpAwarded: defenderProgress.xpAwarded,
         goldAwarded: defenderProgress.goldAwarded,
@@ -7292,12 +7382,18 @@ async function resolveRewardCampPayoutByRef(campRef, nowMs = Date.now(), callerU
         ? relicRewardItem ? 1 : 0
         : getRewardCampDailyReward(config, priorClaims, {
             baseGoldPerHour: safeNumber(
-              playerStats.baseGoldPerHour,
-              safeNumber(player.globalStats?.baseGoldPerHour, playerStats.goldPerHour)
+              playerStats.untimedGoldPerHour,
+              safeNumber(
+                player.globalStats?.untimedGoldPerHour,
+                safeNumber(playerStats.baseGoldPerHour, playerStats.goldPerHour)
+              )
             ),
             baseTroopPerHour: safeNumber(
-              playerStats.baseTroopPerHour,
-              safeNumber(player.globalStats?.baseTroopPerHour, playerStats.troopPerHour)
+              playerStats.untimedTroopPerHour,
+              safeNumber(
+                player.globalStats?.untimedTroopPerHour,
+                safeNumber(playerStats.baseTroopPerHour, playerStats.troopPerHour)
+              )
             ),
           });
     let nextClaims = isDeedCamp || isRelicCamp

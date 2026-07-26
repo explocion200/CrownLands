@@ -2354,6 +2354,9 @@ input {
 .city-castle.stage-4,
 .city-castle.stage-5 { background-image: none; }
 .city-art { display: block; width: 100%; height: 100%; object-fit: contain; }
+.city-node.main-city-node .city-art {
+  filter: grayscale(1) brightness(.2) contrast(1.65) drop-shadow(0 0 1px rgba(255, 224, 143, .92));
+}
 .city-level { display: none; }
 .city-label {
   --label-tether: 0px;
@@ -2484,11 +2487,11 @@ input {
   --enemy-city-name-border: rgba(255, 113, 121, .62);
 }
 .city-node.enemy.enemy-power-protected {
-  --enemy-city-ui: #db8297;
-  --enemy-city-ui-dark: #8d3c50;
-  --enemy-city-ui-border: #ffc0cf;
-  --enemy-city-name-bg: rgba(130, 55, 75, .88);
-  --enemy-city-name-border: rgba(255, 205, 216, .72);
+  --enemy-city-ui: #df7373;
+  --enemy-city-ui-dark: #913638;
+  --enemy-city-ui-border: #ffc2c2;
+  --enemy-city-name-bg: rgba(126, 42, 44, .88);
+  --enemy-city-name-border: rgba(255, 199, 199, .74);
 }
 .city-node.enemy.enemy-power-in-range {
   --enemy-city-ui: #dc2f3b;

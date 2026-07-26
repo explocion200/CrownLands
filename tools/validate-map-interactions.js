@@ -104,8 +104,21 @@ assert.match(strongholdWheelSource, /Send[\s\S]*?Reinforce/, "Owned strongholds 
 assert.doesNotMatch(strongholdWheelSource, /Level|upgradeCity/, "Stronghold action plaques must not expose leveling.");
 
 const cityInfoSource = extractFunction("showCityInfoModal");
-assert.match(cityInfoSource, /stronghold \? "" : renderCityLevelUpAction\(city\)/, "Foreign stronghold information should omit city leveling controls.");
-assert.equal((cityInfoSource.match(/renderCityLevelUpAction\(city\)/g) || []).length, 2, "Only regular city information should render leveling controls.");
+assert.doesNotMatch(
+  cityInfoSource,
+  /if \(city\.owner !== "player"\) \{[\s\S]*?renderCityLevelUpAction\(city\)[\s\S]*?return;/,
+  "Foreign city information must not render leveling controls."
+);
+assert.equal((cityInfoSource.match(/renderCityLevelUpAction\(city\)/g) || []).length, 1, "Only owned regular city information should render leveling controls.");
+const cityLevelUpSource = extractFunction("renderCityLevelUpAction");
+assert.match(
+  cityLevelUpSource,
+  /if \(!city \|\| city\.owner !== "player" \|\| isStronghold\(city\)\) return "";/,
+  "The shared level-up renderer must reject foreign cities and every stronghold."
+);
+const upgradeCitySource = extractFunction("upgradeCity");
+assert.match(upgradeCitySource, /city\.owner !== "player"[\s\S]*?return;/, "The upgrade handler must reject cities the player does not own.");
+assert.match(upgradeCitySource, /isStronghold\(city\)[\s\S]*?return;/, "The upgrade handler must reject strongholds.");
 assert.match(stylesSource, /\.stronghold-objective-action-wheel\s*\{[\s\S]*?translate\(-50%, -62%\)/, "Stronghold action plaques should align to stronghold artwork.");
 
 console.log("Validated stable map performance modes, march endpoint clearance, and stronghold action plaques.");
