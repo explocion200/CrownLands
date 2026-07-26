@@ -32,8 +32,7 @@
     const width = window.innerWidth;
     const height = window.innerHeight;
     if (width >= 1100 && height >= 650) return config.presets.desktop;
-    if (width > height) return config.presets.landscapeTablet;
-    return config.presets.phonePortrait;
+    return config.presets.landscapeTablet;
   }
 
   function positionFor(component) {
@@ -56,6 +55,9 @@
     Object.entries(preset?.components || {}).forEach(([id, component]) => {
       const element = document.querySelector(selectors[id]);
       if (!element || !component || typeof component !== "object") return;
+      if ((id === "outgoingMarch" || id === "incomingMarch") && element.parentElement?.classList.contains("bottom-nav")) {
+        document.querySelector(".game-view")?.appendChild(element);
+      }
       const position = positionFor(component);
       element.classList.add("hud-layout-managed");
       Object.entries(position).forEach(([property, value]) => { element.style[property] = value; });

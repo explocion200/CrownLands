@@ -315,7 +315,6 @@ async function writeEconomyConfig(config) {
 }
 
 const UI_LAYOUT_PRESETS = {
-  phonePortrait: { label: "Phone Portrait", width: 390, height: 844 },
   landscapeTablet: { label: "Landscape / Tablet", width: 844, height: 390 },
   desktop: { label: "Desktop", width: 1440, height: 900 },
 };

@@ -1,7 +1,6 @@
 (function () {
   const API = "/api/ui-layout-data";
   const PRESETS = {
-    phonePortrait: { label: "Phone Portrait", width: 390, height: 844 },
     landscapeTablet: { label: "Landscape / Tablet", width: 844, height: 390 },
     desktop: { label: "Desktop", width: 1440, height: 900 },
   };
@@ -23,29 +22,21 @@
   const ANCHORS = ["topLeft", "topCenter", "topRight", "centerLeft", "center", "centerRight", "bottomLeft", "bottomCenter", "bottomRight"];
   const HANDLE_NAMES = ["n", "ne", "e", "se", "s", "sw", "w", "nw"];
   const defaultsByPreset = {
-    phonePortrait: {
-      profile: ["topLeft", 12, 14, 142, 82, 30], fullscreen: ["topRight", 12, 14, 40, 40, 30],
-      inventory: ["topRight", 12, 72, 52, 52, 30], shop: ["topRight", 12, 132, 52, 52, 30],
-      activeEffects: ["topLeft", 12, 106, 64, 176, 25], cityList: ["topRight", 12, 192, 52, 52, 30],
-      islandSwitch: ["topRight", 12, 252, 52, 52, 30], returnHome: ["centerLeft", 12, 0, 52, 52, 30],
-      commanderPanel: ["bottomCenter", 0, 82, 350, 150, 40], outgoingMarch: ["bottomCenter", -55, 18, 100, 54, 35],
-      incomingMarch: ["bottomCenter", 55, 18, 100, 54, 35], reportsNav: ["bottomLeft", 12, 18, 92, 58, 35],
-    },
     landscapeTablet: {
-      profile: ["topLeft", 14, 12, 150, 80, 30], fullscreen: ["topRight", 14, 12, 40, 40, 30],
-      inventory: ["topRight", 14, 62, 48, 48, 30], shop: ["topRight", 14, 118, 48, 48, 30],
-      activeEffects: ["topLeft", 176, 12, 230, 48, 25], cityList: ["topRight", 14, 174, 48, 48, 30],
-      islandSwitch: ["topRight", 14, 230, 48, 48, 30], returnHome: ["centerLeft", 14, 0, 48, 48, 30],
-      commanderPanel: ["bottomCenter", 0, 18, 430, 126, 40], outgoingMarch: ["bottomRight", 126, 18, 108, 56, 35],
-      incomingMarch: ["bottomRight", 14, 18, 108, 56, 35], reportsNav: ["bottomLeft", 14, 18, 104, 58, 35],
+      profile: ["topLeft", 12, 9, 164, 114, 40], fullscreen: ["topRight", 12, 9, 38, 38, 40],
+      inventory: ["bottomRight", 240, 12, 64, 64, 55], shop: ["bottomRight", 164, 12, 64, 64, 55],
+      activeEffects: ["centerRight", 12, 0, 66, 176, 56], cityList: ["bottomRight", 88, 12, 64, 64, 55],
+      islandSwitch: ["bottomRight", 12, 12, 64, 64, 55], returnHome: ["centerLeft", 12, 0, 42, 42, 54],
+      commanderPanel: ["topRight", 12, 70, 318, 308, 50], outgoingMarch: ["bottomLeft", 122, 18, 94, 50, 56],
+      incomingMarch: ["bottomLeft", 222, 18, 94, 50, 56], reportsNav: ["bottomLeft", 12, 12, 112, 62, 55],
     },
     desktop: {
-      profile: ["topLeft", 24, 20, 180, 92, 30], fullscreen: ["topRight", 24, 20, 44, 44, 30],
-      inventory: ["topRight", 24, 78, 56, 56, 30], shop: ["topRight", 24, 146, 56, 56, 30],
-      activeEffects: ["topLeft", 224, 20, 300, 52, 25], cityList: ["topRight", 24, 214, 56, 56, 30],
-      islandSwitch: ["topRight", 24, 282, 56, 56, 30], returnHome: ["centerLeft", 24, 0, 56, 56, 30],
-      commanderPanel: ["bottomCenter", 0, 24, 560, 150, 40], outgoingMarch: ["bottomRight", 154, 24, 126, 62, 35],
-      incomingMarch: ["bottomRight", 20, 24, 126, 62, 35], reportsNav: ["bottomLeft", 20, 24, 126, 62, 35],
+      profile: ["topLeft", 12, 9, 164, 114, 40], fullscreen: ["topRight", 12, 9, 38, 38, 40],
+      inventory: ["bottomRight", 240, 12, 64, 64, 55], shop: ["bottomRight", 164, 12, 64, 64, 55],
+      activeEffects: ["centerRight", 12, 0, 66, 176, 56], cityList: ["bottomRight", 88, 12, 64, 64, 55],
+      islandSwitch: ["bottomRight", 12, 12, 64, 64, 55], returnHome: ["centerLeft", 12, 0, 42, 42, 54],
+      commanderPanel: ["topRight", 12, 70, 410, 818, 50], outgoingMarch: ["bottomLeft", 128, 18, 98, 50, 56],
+      incomingMarch: ["bottomLeft", 232, 18, 98, 50, 56], reportsNav: ["bottomLeft", 12, 12, 122, 62, 55],
     },
   };
 
@@ -63,7 +54,7 @@
   }
 
   const state = {
-    config: defaultConfig(), presetId: "phonePortrait", selected: [], locked: new Set(), snap: true,
+    config: defaultConfig(), presetId: "landscapeTablet", selected: [], locked: new Set(), snap: true,
     grid: 8, preview: false, history: [], future: [], drag: null, dirty: false, active: false,
   };
   let elements = {};
@@ -161,6 +152,36 @@
     }).join("");
   }
 
+  function previewMarkup(id) {
+    const icon = (src, alt) => `<img src="${src}" alt="${alt}" draggable="false" />`;
+    if (id === "profile") return `<div class="hud-preview-profile">
+      <div class="hud-preview-profile-row">
+        <div class="hud-preview-profile-frame"><span class="hud-preview-flag">♔</span><b>Lv 42</b></div>
+        ${icon("/assets/leaderboard-icon.png?v=20260623-leaderboard-icon-new", "King Power ranks")}
+      </div>
+      <div class="hud-preview-gold"><span>🪙</span><strong>1,250,000</strong></div>
+    </div>`;
+    if (id === "fullscreen") return `<div class="hud-preview-fullscreen">⛶</div>`;
+    if (id === "inventory") return icon("/assets/bag-icon.png?v=20260623-bag-inventory", "Bag");
+    if (id === "shop") return icon("/assets/shop-icon.png?v=20260623-shop-ui", "Shop");
+    if (id === "cityList") return icon("/assets/city-list-icon.png?v=20260623-city-icon-hud", "City list");
+    if (id === "islandSwitch") return icon("/assets/map-icon.png?v=20260623-map-icon-framed", "Island map");
+    if (id === "returnHome") return `<div class="hud-preview-home">⌂</div>`;
+    if (id === "activeEffects") return `<div class="hud-preview-effects">
+      <div>${icon("/assets/royal-peace-shield-icon.webp?v=20260703-shop-icons", "Shield")}<strong>11:42</strong></div>
+      <div>${icon("/assets/war-drums-icon.webp?v=20260703-shop-icons", "War Drums")}<strong>24:18</strong></div>
+    </div>`;
+    if (id === "commanderPanel") return `<div class="hud-preview-commander">
+      <header><span><strong>Caer Leon</strong><small>Your city · Level 38</small></span><b>×</b></header>
+      <div class="hud-preview-stats"><span>Troops<strong>82,450</strong></span><span>Defense<strong>+18%</strong></span></div>
+      <div class="hud-preview-actions"><b>Move</b><b>Upgrade</b><b>Info</b></div>
+    </div>`;
+    if (id === "outgoingMarch") return `<div class="hud-preview-march outgoing"><span>➤</span><strong>2</strong><small>Marches</small></div>`;
+    if (id === "incomingMarch") return `<div class="hud-preview-march incoming"><span>⚔</span><strong>1</strong><small>Incoming</small></div>`;
+    if (id === "reportsNav") return `<div class="hud-preview-reports">${icon("/assets/report-icon.png?v=20260702-report-icon", "Reports")}<strong>Reports</strong></div>`;
+    return COMPONENT_MAP[id]?.label || id;
+  }
+
   function renderCanvas() {
     const preset = currentPreset();
     const availableWidth = Math.max(280, elements.canvas.parentElement.clientWidth - 60);
@@ -181,7 +202,7 @@
         ? HANDLE_NAMES.map(handle => `<span class="hud-resize-handle" data-handle="${handle}"></span>`).join("") : "";
       return `<div class="hud-component ${selected ? "selected" : ""} ${state.locked.has(meta.id) ? "locked" : ""} ${component.visible ? "" : "hidden-component"}"
         data-hud-id="${meta.id}" style="left:${rect.x}px;top:${rect.y}px;width:${rect.width}px;height:${rect.height}px;z-index:${component.zIndex}">
-        <span>${meta.icon}<small>${meta.label}</small></span>${handles}
+        <div class="hud-component-visual">${previewMarkup(meta.id)}</div><span class="hud-component-caption">${meta.label}</span>${handles}
       </div>`;
     }).join("");
   }
