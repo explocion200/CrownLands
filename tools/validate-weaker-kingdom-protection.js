@@ -261,6 +261,13 @@ if (clientSandbox.getTroopSliderSendLimit({ troops: 100_000 }, {}) !== 100_000) 
   throw new Error("The troop slider incorrectly caps unrestricted attacks and transfers.");
 }
 const verifiedIdentity = { kingPowerVersion: 8, updatedAtMs: 2000, authoritative: true };
+if (!clientSandbox.shouldReplacePlayerIdentity(
+  { kingPowerVersion: 8, updatedAtMs: 3000, authoritative: false },
+  { kingPowerVersion: 8, updatedAtMs: 2000 },
+  true
+)) {
+  throw new Error("A presence heartbeat can prevent trusted leaderboard power from becoming authoritative.");
+}
 if (clientSandbox.shouldReplacePlayerIdentity(
   verifiedIdentity,
   { kingPowerVersion: 7, updatedAtMs: 3000 },

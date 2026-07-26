@@ -8658,6 +8658,7 @@ function shouldReplacePlayerIdentity(existing, incoming, force = false) {
   const incomingVersion = Math.max(0, Math.floor(Number(incoming?.kingPowerVersion) || 0));
   if (incomingVersion < existingVersion) return false;
   if (incomingVersion > existingVersion) return true;
+  if (force && !existing.authoritative) return true;
   const existingUpdatedAtMs = normalizeTimestampMs(existing.updatedAtMs);
   const incomingUpdatedAtMs = normalizeTimestampMs(incoming?.updatedAtMs);
   if (existingUpdatedAtMs && !incomingUpdatedAtMs) return false;
