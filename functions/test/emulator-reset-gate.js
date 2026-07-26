@@ -232,6 +232,110 @@ async function main() {
   assert(resolved?.status === "resolved" && resolved?.outcome === "victory", "Army capture smoke test failed.");
   await waitForOwnershipEvents(51);
 
+  const reinforcementTarget = (await targetDoc.ref.get()).data() || {};
+  const reinforcementDistance = Math.hypot(
+    Number(reinforcementTarget.x) - Number(source.x),
+    Number(reinforcementTarget.y) - Number(source.y)
+  );
+  const reinforcementArmyId = `retarget_gate_${crypto.randomBytes(8).toString("hex")}`;
+  await sourceRef.set({ troops: 1_000, troopFloat: 1_000 }, { merge: true });
+  const reinforcement = await callFunction("sendArmyOrder", attacker.token, {
+    army: {
+      id: reinforcementArmyId,
+      kind: "transfer",
+      fromId: sourceClaim.cityId,
+      toId: targetDoc.id,
+      fromName: source.name || sourceClaim.cityId,
+      toName: reinforcementTarget.name || targetDoc.id,
+      troops: 250,
+      requestedTroops: 250,
+      sourceRegionId: sourceClaim.mainRegionId,
+      targetRegionId: sourceClaim.mainRegionId,
+      routeRegionIds: [sourceClaim.mainRegionId],
+      viewRegionIds: [sourceClaim.mainRegionId],
+      path: [
+        { x: Number(source.x), y: Number(source.y) },
+        { x: Number(reinforcementTarget.x), y: Number(reinforcementTarget.y) },
+      ],
+      pathSegments: [{
+        regionId: sourceClaim.mainRegionId,
+        points: [
+          { x: Number(source.x), y: Number(source.y) },
+          { x: Number(reinforcementTarget.x), y: Number(reinforcementTarget.y) },
+        ],
+        length: reinforcementDistance,
+      }],
+      pathLength: reinforcementDistance,
+    },
+    sourceRegionId: sourceClaim.mainRegionId,
+    targetRegionId: sourceClaim.mainRegionId,
+  });
+  assert(reinforcement?.movement?.kind === "transfer", "Owned-city reinforcement did not launch as a transfer.");
+
+  const retargetEventId = `retarget_gate_${crypto.randomBytes(8).toString("hex")}`;
+  const retargetBatch = db.batch();
+  retargetBatch.set(targetDoc.ref, {
+    ownerKind: "player",
+    ownerUid: users[1].uid,
+    ownerName: "Ruler 2",
+    ownerFlag: null,
+    ownerShieldExpiresAtMs: 0,
+    isMainCity: false,
+    troops: 0,
+    troopFloat: 0,
+    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+  }, { merge: true });
+  retargetBatch.set(
+    db.doc(`realmEvents/${realm.resetGeneration}/ownershipChanges/${retargetEventId}`),
+    {
+      eventId: retargetEventId,
+      worldId: realm.worldId,
+      resetGeneration: realm.resetGeneration,
+      releaseId: realm.releaseId,
+      targetType: "city",
+      targetId: targetDoc.id,
+      regionId: sourceClaim.mainRegionId,
+      targetKey: `${sourceClaim.mainRegionId}:${targetDoc.id}`,
+      beforeOwnerUid: attacker.uid,
+      afterOwnerUid: users[1].uid,
+      reason: "emulator_retarget_gate",
+      status: "pending",
+      attempts: 0,
+      createdAtMs: Date.now(),
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    }
+  );
+  await retargetBatch.commit();
+  await waitForOwnershipEvents(52);
+
+  const retargetedArmyRef = db.doc(`armies/${reinforcementArmyId}`);
+  const retargetedArmy = (await retargetedArmyRef.get()).data() || {};
+  assert(retargetedArmy.kind === "attack", "Reinforcement did not become an attack after its target changed owner.");
+  assert(retargetedArmy.targetOwnerUid === users[1].uid, "Retargeted attack did not follow the new city owner.");
+  assert(retargetedArmy.retargetedFromKind === "transfer", "Retargeted attack lost its reinforcement origin.");
+  assert(
+    retargetedArmy.lastIncomingNotificationOwnerUid === users[1].uid,
+    "The new defender was not marked for an incoming-attack notification."
+  );
+
+  const reinforcementArmyRefs = [
+    retargetedArmyRef,
+    db.doc(`islands/${sourceClaim.islandId}/armies/${reinforcementArmyId}`),
+  ];
+  await Promise.all(reinforcementArmyRefs.map(ref => ref.set({ arrivesAtMs: Date.now() - 1 }, { merge: true })));
+  const retargetedResolution = await callFunction("resolveArmyOrder", attacker.token, {
+    armyId: reinforcementArmyId,
+    routeRegionIds: [sourceClaim.mainRegionId],
+  });
+  assert(
+    retargetedResolution?.status === "resolved"
+      && retargetedResolution?.kind === "attack"
+      && retargetedResolution?.outcome === "victory",
+    "Retargeted reinforcement did not fight as an attack on arrival."
+  );
+  await waitForOwnershipEvents(53);
+
   console.log(`Emulator reset gate passed for 50 players: ${counts.join("/")} across starter islands.`);
 }
 

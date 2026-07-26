@@ -12846,6 +12846,17 @@ function normalizeOnlineArmyMovement(raw) {
   const ownerUid = String(raw.ownerUid || "").trim();
   const rawOwnerKind = raw.ownerKind || raw.owner || "player";
   if (rawOwnerKind !== "neutral" && !ownerUid) return null;
+  const targetOwnerUid = String(raw.targetOwnerUid || "").trim();
+  const rawKind = ["attack", "transfer", "scout"].includes(raw.kind) ? raw.kind : "attack";
+  const effectiveKind = rawKind === "transfer"
+    && targetOwnerUid
+    && ownerUid
+    && targetOwnerUid !== ownerUid
+    && !raw.returning
+    && !raw.campReturn
+    && !raw.relinquishTransfer
+    ? "attack"
+    : rawKind;
   const total = Math.max(0.1, Number(raw.total) || 0.1);
   const launchedAtMs = Math.max(0, Number(raw.launchedAtMs) || 0);
   const arrivesAtMs = Math.max(
@@ -12864,7 +12875,7 @@ function normalizeOnlineArmyMovement(raw) {
     ownerName: ownerIdentity?.displayName || raw.ownerName || "",
     ownerFlag: ownerIdentity?.flag || raw.ownerFlag || null,
     ownerKingPower: normalizePowerValue(ownerIdentity?.kingPower) || normalizePowerValue(raw.ownerKingPower),
-    kind: ["attack", "transfer", "scout"].includes(raw.kind) ? raw.kind : "attack",
+    kind: effectiveKind,
     targetType: raw.targetType === "camp" ? "camp" : "city",
     fromId: raw.fromId || "",
     toId: raw.toId || "",
@@ -12879,7 +12890,7 @@ function normalizeOnlineArmyMovement(raw) {
     pathSegments,
     pathLength: Math.max(0, Number(raw.pathLength) || pathSegments.reduce((total, segment) => total + segment.length, 0) || routeLength(path)),
     targetOwnerAtLaunch: raw.targetOwnerAtLaunch || "neutral",
-    targetOwnerUid: String(raw.targetOwnerUid || ""),
+    targetOwnerUid,
     requestedTroops: Math.max(0, Math.floor(Number(raw.requestedTroops) || 0)),
     attackerKingPower: normalizePowerValue(raw.attackerKingPower || raw.ownerKingPower),
     defenderKingPower: normalizePowerValue(raw.defenderKingPower),

@@ -2410,6 +2410,7 @@ function normalizeArmyPayload(data = {}, uid = "") {
     ownerFlag: raw.ownerFlag || data.ownerFlag || null,
     ownerKingPower: Math.max(0, Math.floor(safeNumber(raw.ownerKingPower, 0))),
     kind,
+    launchKind: ["attack", "transfer", "scout"].includes(raw.launchKind) ? raw.launchKind : kind,
     targetType: raw.targetType === "camp" || data.targetType === "camp" ? "camp" : "city",
     fromId,
     toId,
@@ -2425,6 +2426,7 @@ function normalizeArmyPayload(data = {}, uid = "") {
     sourceRegionId,
     targetRegionId,
     targetOwnerAtLaunch: safeString(raw.targetOwnerAtLaunch || "neutral", 32),
+    originalTargetOwnerUid: safeString(raw.originalTargetOwnerUid || raw.targetOwnerUid, 128),
     attackerKingPower: Math.max(0, Math.floor(safeNumber(raw.attackerKingPower || raw.ownerKingPower, 0))),
     defenderKingPower: Math.max(0, Math.floor(safeNumber(raw.defenderKingPower, 0))),
     acceptedAttackProtection: raw.acceptedAttackProtection && typeof raw.acceptedAttackProtection === "object"
@@ -8318,6 +8320,7 @@ exports.sendArmyOrder = timedCallable("sendArmyOrder", { region: "us-central1", 
       ownerKingPower: attackerKingPower,
       kingPowerVersion: GLOBAL_PLAYER_STATS_VERSION,
       kind: resolvedKind,
+      launchKind: resolvedKind,
       targetType: order.targetType,
       fromId: order.fromId,
       toId: order.toId,
@@ -8335,7 +8338,9 @@ exports.sendArmyOrder = timedCallable("sendArmyOrder", { region: "us-central1", 
       pathLength: validatedRoute.pathLength,
       targetKey: `${order.targetRegionId}:${order.toId}`,
       targetOwnerAtLaunch: targetOwnerUid ? "player" : "neutral",
+      originalTargetOwnerUid: targetOwnerUid || "",
       targetOwnerUid: targetOwnerUid || "",
+      lastIncomingNotificationOwnerUid: ["attack", "scout"].includes(resolvedKind) ? targetOwnerUid || "" : "",
       attackerKingPower: attackerKingPower || order.attackerKingPower || order.ownerKingPower,
       defenderKingPower,
       attackProtection,
@@ -8649,11 +8654,50 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
     };
 
     const troopCount = Math.max(0, Math.floor(safeNumber(army.troops, 0)));
+    const effectiveKind = army.kind === "scout"
+      ? "scout"
+      : defenderUid === attackerUid
+        ? "transfer"
+        : "attack";
     const defenderBonuses = defenderEconomy?.bonuses || {};
     const targetStats = getCityStats(target, defenderProfile, defenderBonuses);
-    const attackProtection = army.kind === "attack" && targetType !== "camp"
+    const storedAttackProtection = effectiveKind === "attack" && targetType !== "camp"
       ? normalizeAttackProtectionSnapshot(army.attackProtection, army.demoAttack)
       : null;
+    const convertedReinforcement = effectiveKind === "attack" && (
+      army.kind === "transfer"
+      || army.launchKind === "transfer"
+      || army.retargetedFromKind === "transfer"
+    );
+    const attackProtection = storedAttackProtection || (
+      convertedReinforcement && targetType !== "camp"
+        ? createServerAttackProtectionSnapshot({
+          sourceTroops: Math.max(
+            troopCount,
+            Math.floor(safeNumber(army.requestedTroops, troopCount))
+          ),
+          target,
+          targetType,
+          requestedTroops: Math.max(1, Math.floor(safeNumber(army.requestedTroops, troopCount))),
+          attackerKingPower: getPlayerPowerSnapshot({
+            profile: attackerProfile,
+            globalStats: attackerEconomy?.globalStats,
+            city: source,
+            fallback: army.attackerKingPower || army.ownerKingPower,
+          }),
+          defenderKingPower: getPlayerPowerSnapshot({
+            profile: defenderProfile || {},
+            globalStats: defenderEconomy?.globalStats,
+            city: target,
+            fallback: army.defenderKingPower,
+          }),
+          attackerUid,
+          attackerProfile,
+          defenderProfile: defenderProfile || {},
+          defenderBonuses,
+        })
+        : null
+    );
     const protectedDefenseClaimRef = attackProtection && defenderUid && defenderUid !== attackerUid
       ? db.doc(`players/${defenderUid}/protectedDefenseXpClaims/${attackerUid}`)
       : null;
@@ -9174,7 +9218,6 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
       };
     }
 
-    const effectiveKind = defenderUid === attackerUid ? "transfer" : "attack";
     if (effectiveKind === "transfer") {
       const nextTroops = Math.max(0, Math.floor(safeNumber(target.troops, 0))) + troopCount;
       const targetTroopPatch = {
@@ -9653,9 +9696,35 @@ exports.resolveArmyOrder = timedCallable("resolveArmyOrder", { region: "us-centr
   return resolveArmyOrderById({ armyId, requestedRegions, callerUid });
 });
 
+function getActiveArmyTargetDisposition(army = {}, targetOwnerUid = "") {
+  const currentKind = ["attack", "transfer", "scout"].includes(army.kind) ? army.kind : "attack";
+  const ownerUid = safeString(army.ownerUid, 128);
+  const nextTargetOwnerUid = safeString(targetOwnerUid, 128);
+  if (
+    currentKind === "scout"
+    || army.returning
+    || army.campReturn
+    || army.relinquishTransfer
+  ) {
+    return {
+      kind: currentKind,
+      converted: false,
+      convertedToAttack: false,
+      targetOwnerUid: nextTargetOwnerUid,
+    };
+  }
+  const kind = ownerUid && ownerUid === nextTargetOwnerUid ? "transfer" : "attack";
+  return {
+    kind,
+    converted: kind !== currentKind,
+    convertedToAttack: currentKind === "transfer" && kind === "attack",
+    targetOwnerUid: nextTargetOwnerUid,
+  };
+}
+
 async function refreshActiveArmyTargetOwner(targetKey = "", targetOwnerUid = "") {
   const safeTargetKey = safeString(targetKey, 180);
-  if (!safeTargetKey) return 0;
+  if (!safeTargetKey) return { updated: 0, convertedToAttacks: 0, notifications: [] };
   const snapshot = await db.collection("armies")
     .where("targetKey", "==", safeTargetKey)
     .where("resetGeneration", "==", RESET_GENERATION)
@@ -9663,18 +9732,53 @@ async function refreshActiveArmyTargetOwner(targetKey = "", targetOwnerUid = "")
     .where("status", "==", "active")
     .limit(400)
     .get();
+  const notifications = [];
+  let convertedToAttacks = 0;
   await processWithConcurrency(snapshot.docs, 8, async armyDoc => {
     const army = armyDoc.data() || {};
+    const disposition = getActiveArmyTargetDisposition(army, targetOwnerUid);
+    const ownerUid = safeString(army.ownerUid, 128);
+    const previousNotificationOwnerUid = safeString(army.lastIncomingNotificationOwnerUid, 128);
+    const shouldNotify = disposition.kind === "attack"
+      && disposition.targetOwnerUid
+      && disposition.targetOwnerUid !== ownerUid
+      && previousNotificationOwnerUid !== disposition.targetOwnerUid;
+    if (disposition.convertedToAttack) convertedToAttacks += 1;
     const refs = armyRefsForRegions(army.viewRegionIds || army.routeRegionIds || [], armyDoc.id);
     const batch = db.batch();
-    refs.forEach(ref => batch.set(ref, {
-      targetOwnerUid: safeString(targetOwnerUid, 128),
-      targetOwnerUpdatedAtMs: Date.now(),
+    const nowMs = Date.now();
+    const patch = {
+      kind: disposition.kind,
+      launchKind: ["attack", "transfer", "scout"].includes(army.launchKind)
+        ? army.launchKind
+        : army.kind,
+      targetOwnerUid: disposition.targetOwnerUid,
+      targetOwnerUpdatedAtMs: nowMs,
+      lastIncomingNotificationOwnerUid: shouldNotify
+        ? disposition.targetOwnerUid
+        : disposition.kind === "transfer"
+          ? ""
+          : previousNotificationOwnerUid,
       updatedAt: FieldValue.serverTimestamp(),
-    }, { merge: true }));
+    };
+    if (disposition.converted) {
+      patch.retargetedFromKind = safeString(army.retargetedFromKind || army.kind, 16);
+      patch.retargetedAtMs = nowMs;
+    }
+    refs.forEach(ref => batch.set(ref, patch, { merge: true }));
     await batch.commit();
+    if (shouldNotify) {
+      const notification = createIncomingArmyNotification({
+        defenderUid: disposition.targetOwnerUid,
+        attackerUid: ownerUid,
+        movement: { ...army, ...patch },
+        source: { name: army.fromName },
+        target: { name: army.toName },
+      });
+      if (notification) notifications.push(notification);
+    }
   });
-  return snapshot.size;
+  return { updated: snapshot.size, convertedToAttacks, notifications };
 }
 
 function ownershipChangeRef(eventId = "") {
@@ -9734,7 +9838,18 @@ async function processOwnershipChangeEvent(event) {
   const targetType = change.targetType === "camp" ? "camp" : "city";
   const beforeOwnerUid = safeString(change.beforeOwnerUid, 128);
   const afterOwnerUid = safeString(change.afterOwnerUid, 128);
-  const armyUpdates = await refreshActiveArmyTargetOwner(change.targetKey, afterOwnerUid);
+  const armyRefresh = await refreshActiveArmyTargetOwner(change.targetKey, afterOwnerUid);
+  const notificationResults = await Promise.allSettled(
+    armyRefresh.notifications.map(notification => sendIncomingArmyNotification(notification))
+  );
+  const notificationFailures = notificationResults.filter(result => result.status === "rejected").length;
+  if (notificationFailures) {
+    console.warn("Could not send some retargeted incoming army notifications", {
+      failed: notificationFailures,
+      attempted: notificationResults.length,
+    });
+  }
+  const armyUpdates = armyRefresh.updated;
   let statsUpdates = 0;
   if (targetType === "camp") {
     const affectedUids = [...new Set([beforeOwnerUid, afterOwnerUid].filter(Boolean))];
@@ -9753,6 +9868,9 @@ async function processOwnershipChangeEvent(event) {
   logOperation("processOwnershipChange", startedAtMs, null, "ok", {
     targetType,
     armyUpdates,
+    convertedToAttacks: armyRefresh.convertedToAttacks,
+    notificationsAttempted: notificationResults.length,
+    notificationFailures,
     statsUpdates,
   });
   return { armyUpdates, statsUpdates };
