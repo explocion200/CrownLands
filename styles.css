@@ -3031,8 +3031,15 @@ input {
   cursor: pointer;
 }
 .public-profile-location > span:first-child { color: #e5c36f; font-size: 1.55rem; }
-.public-profile-location > span:last-child,
-.public-profile-clan { display: grid; }
+.public-profile-location > span:last-child { display: grid; }
+.public-profile-clan > .clan-shield {
+  flex: 0 0 auto;
+}
+.public-profile-clan-copy {
+  min-width: 0;
+  display: grid;
+  gap: .1rem;
+}
 .public-profile-location > span:last-child,
 .public-profile-location strong,
 .public-profile-location small,

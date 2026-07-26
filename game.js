@@ -8942,6 +8942,9 @@ function normalizePublicPlayerProfile(raw = {}, uid = "") {
 function renderPublicPlayerProfile(profile) {
   if (!profile || !modalBody) return;
   const strongholds = profile.strongholds || [];
+  const clan = profile.clan || {};
+  const clanName = clan.name || profile.clanName || "Clan";
+  const clanTag = clan.tag || profile.clanTag || "";
   modalTitle.textContent = `${profile.displayName}'s Profile`;
   modalBody.innerHTML = `
     <div class="public-player-profile">
@@ -8967,7 +8970,10 @@ function renderPublicPlayerProfile(profile) {
       <section class="public-profile-section">
         <div class="public-profile-heading"><span>Clan</span></div>
         ${profile.clanId
-          ? `<button class="public-profile-clan" type="button" data-public-clan-id="${escapeHtml(profile.clanId)}"><strong>${profile.clanTag ? `[${escapeHtml(profile.clanTag)}] ` : ""}${escapeHtml(profile.clanName || "Clan")}</strong><small>View clan details</small></button>`
+          ? `<button class="public-profile-clan" type="button" data-public-clan-id="${escapeHtml(profile.clanId)}" aria-label="View ${escapeHtml(clanName)} clan profile">
+              ${renderClanShield(clan.shield || clan.banner, { size: "small", label: `${clanName} shield` })}
+              <span class="public-profile-clan-copy"><strong>${clanTag ? `[${escapeHtml(clanTag)}] ` : ""}${escapeHtml(clanName)}</strong><small>View clan public profile</small></span>
+            </button>`
           : `<p class="public-profile-empty">Not in a clan.</p>`}
       </section>
     </div>`;
@@ -8998,6 +9004,21 @@ async function showPublicPlayerProfile(uid = "") {
     if (!profile) throw new Error("That player profile is unavailable.");
     rememberPlayerIdentity(profile, { force: true });
     renderPublicPlayerProfile(profile);
+    if (profile.clanId && api.loadClan) {
+      try {
+        const clan = await withTimeout(
+          api.loadClan(profile.clanId),
+          5000,
+          "Clan profile is taking too long to load."
+        );
+        if (requestId === publicPlayerProfileRequestId && modal.open && clan) {
+          profile.clan = clan;
+          renderPublicPlayerProfile(profile);
+        }
+      } catch (clanError) {
+        console.warn("Could not load player clan shield", clanError);
+      }
+    }
   } catch (error) {
     if (requestId !== publicPlayerProfileRequestId || !modal.open) return;
     modalBody.innerHTML = `<div class="public-profile-error"><p>${escapeHtml(error?.message || "Could not load that player profile.")}</p><button type="button" data-public-profile-retry="${escapeHtml(playerUid)}">Try again</button></div>`;
