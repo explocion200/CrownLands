@@ -133,7 +133,7 @@ Crownlands can now be installed as a Progressive Web App from the Netlify site. 
 
 The service worker caches the app shell, core scripts, manifest, loading art, HUD icons, castle images, stronghold images, camp images, item images, thumbnails, and the current starter-region map assets. It does not cache Firebase Auth, Firestore, Cloud Functions, Netlify Functions, API calls, POST requests, or future live multiplayer server state.
 
-To update the PWA cache after changing cached assets, change `CACHE_VERSION` in `service-worker.js` and update any changed version query strings in `index.html` and `STATIC_CACHE_URLS`. Add new static art paths to `STATIC_CACHE_URLS` only when they are safe to cache as files. Do not add server data endpoints, player data, army orders, reports, or auth URLs to the cache list.
+Netlify runs `tools/stamp-deploy-build.js` for every deployment. It stamps the deployed commit into the HTML build marker, local JavaScript/CSS URLs, and service-worker cache version. Signed-in clients detect that new build within 60 seconds, save current state, activate the new service worker, and restart on the new version. Add new static art paths to `STATIC_CACHE_URLS` only when they are safe to cache as files. Do not add server data endpoints, player data, army orders, reports, or auth URLs to the cache list.
 
 Local PWA test:
 

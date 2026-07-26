@@ -1,6 +1,6 @@
 [build]
   publish = "."
-  command = ""
+  command = "node tools/stamp-deploy-build.js"
 
 [[redirects]]
   from = "/Crownlands-current-build"
