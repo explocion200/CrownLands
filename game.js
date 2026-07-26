@@ -9695,6 +9695,8 @@ const ISLAND_PICKER_STAGE_PADDING = 260;
 const ISLAND_PICKER_GRID_CELL_WORLD_SIZE = 2300;
 const ISLAND_PICKER_MIN_ZOOM = 0.18;
 const ISLAND_PICKER_MAX_ZOOM = 1;
+const ISLAND_PICKER_ZOOM_EASE_MS = 96;
+const ISLAND_PICKER_ZOOM_EPSILON = 0.00035;
 
 function getIslandMapGridCoordinate(region) {
   const regionId = normalizeRegionId(region?.id);
@@ -9945,29 +9947,27 @@ function setIslandMapPickerZoom(picker, value, {
   const anchorRatioY = previousFrameBounds?.height
     ? clamp((anchorY - previousFrameBounds.top) / previousFrameBounds.height, 0, 1)
     : 0.5;
+  const scaledWidth = layout.stageWidth * zoom;
+  const scaledHeight = layout.stageHeight * zoom;
+  const frameLeft = Math.max(0, (picker.clientWidth - scaledWidth) / 2);
+  const frameTop = Math.max(0, (picker.clientHeight - scaledHeight) / 2);
+  const targetViewportX = targetX - pickerBounds.left - picker.clientLeft;
+  const targetViewportY = targetY - pickerBounds.top - picker.clientTop;
+  const nextScrollLeft = frameLeft + scaledWidth * anchorRatioX - targetViewportX;
+  const nextScrollTop = frameTop + scaledHeight * anchorRatioY - targetViewportY;
+  const maxScrollLeft = Math.max(0, scaledWidth - picker.clientWidth);
+  const maxScrollTop = Math.max(0, scaledHeight - picker.clientHeight);
 
   picker.dataset.islandMapZoom = String(zoom);
   picker.style.setProperty("--island-map-zoom", formatPathNumber(zoom));
-  picker.style.setProperty("--island-grid-scaled-w", `${formatPathNumber(layout.stageWidth * zoom)}px`);
-  picker.style.setProperty("--island-grid-scaled-h", `${formatPathNumber(layout.stageHeight * zoom)}px`);
+  picker.style.setProperty("--island-grid-scaled-w", `${formatPathNumber(scaledWidth)}px`);
+  picker.style.setProperty("--island-grid-scaled-h", `${formatPathNumber(scaledHeight)}px`);
   islandMapPickerViewState.zoom = zoom;
 
   const applyView = () => {
     if (preserveCenter) {
-      const nextFrameBounds = canvasFrame?.getBoundingClientRect();
-      const anchoredLeft = nextFrameBounds
-        ? picker.scrollLeft + nextFrameBounds.left + nextFrameBounds.width * anchorRatioX - targetX
-        : picker.scrollLeft;
-      const anchoredTop = nextFrameBounds
-        ? picker.scrollTop + nextFrameBounds.top + nextFrameBounds.height * anchorRatioY - targetY
-        : picker.scrollTop;
-      const next = clampIslandMapPickerScroll(
-        picker,
-        anchoredLeft,
-        anchoredTop
-      );
-      picker.scrollLeft = next.left;
-      picker.scrollTop = next.top;
+      picker.scrollLeft = Math.min(Math.max(0, nextScrollLeft), maxScrollLeft);
+      picker.scrollTop = Math.min(Math.max(0, nextScrollTop), maxScrollTop);
     }
     if (remember) rememberIslandMapPickerView(picker);
   };
@@ -9990,9 +9990,9 @@ function attachIslandMapPickerZoom(picker) {
     if (!picker.isConnected) return;
     const currentZoom = getIslandMapPickerZoom(picker);
     const elapsed = wheelZoomFrameAt ? Math.min(40, Math.max(8, timestamp - wheelZoomFrameAt)) : 16;
-    const easing = 1 - Math.exp(-elapsed / 58);
+    const easing = 1 - Math.exp(-elapsed / ISLAND_PICKER_ZOOM_EASE_MS);
     const difference = wheelTargetZoom - currentZoom;
-    const finished = Math.abs(difference) < 0.0005;
+    const finished = Math.abs(difference) < ISLAND_PICKER_ZOOM_EPSILON;
     const nextZoom = finished ? wheelTargetZoom : currentZoom + difference * easing;
     setIslandMapPickerZoom(picker, nextZoom, {
       anchorClientX: wheelAnchorX,
@@ -10007,6 +10007,7 @@ function attachIslandMapPickerZoom(picker) {
     }
     wheelTargetZoom = getIslandMapPickerZoom(picker);
     wheelZoomFrameAt = 0;
+    picker.classList.remove("zooming");
     rememberIslandMapPickerView(picker);
   };
 
@@ -10014,6 +10015,7 @@ function attachIslandMapPickerZoom(picker) {
     wheelTargetZoom = clampIslandMapPickerZoom(value, getIslandMapPickerMinimumZoom(picker));
     wheelAnchorX = anchorClientX !== null && Number.isFinite(Number(anchorClientX)) ? Number(anchorClientX) : null;
     wheelAnchorY = anchorClientY !== null && Number.isFinite(Number(anchorClientY)) ? Number(anchorClientY) : null;
+    picker.classList.add("zooming");
     if (!wheelZoomFrame) wheelZoomFrame = requestAnimationFrame(animateWheelZoom);
   };
 
@@ -10178,6 +10180,8 @@ function attachIslandMapPickerPan(picker) {
   let pinchGeometry = null;
   let pendingPinchGeometry = null;
   let pinchZoomFrame = 0;
+  let panFrame = 0;
+  let pendingPan = null;
 
   picker.addEventListener("scroll", () => {
     rememberIslandMapPickerView(picker);
@@ -10199,6 +10203,20 @@ function attachIslandMapPickerPan(picker) {
     window.setTimeout(() => {
       if (picker) delete picker.dataset.justDragged;
     }, 180);
+  };
+
+  const applyPendingPan = () => {
+    panFrame = 0;
+    if (!pendingPan) return;
+    const next = pendingPan;
+    pendingPan = null;
+    picker.scrollLeft = next.left;
+    picker.scrollTop = next.top;
+  };
+
+  const queuePan = (left, top) => {
+    pendingPan = clampIslandMapPickerScroll(picker, left, top);
+    if (!panFrame) panFrame = requestAnimationFrame(applyPendingPan);
   };
 
   const applyPendingPinchZoom = () => {
@@ -10225,6 +10243,9 @@ function attachIslandMapPickerPan(picker) {
     if (event.pointerType === "touch") {
       touchPointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
       if (touchPointers.size >= 2) {
+        if (panFrame) cancelAnimationFrame(panFrame);
+        panFrame = 0;
+        pendingPan = null;
         pointerId = null;
         moved = true;
         tapRegionId = "";
@@ -10256,12 +10277,14 @@ function attachIslandMapPickerPan(picker) {
     const dy = event.clientY - startY;
     if (Math.abs(dx) > 4 || Math.abs(dy) > 4) moved = true;
     if (moved) event.preventDefault();
-    picker.scrollLeft = startScrollLeft - dx;
-    picker.scrollTop = startScrollTop - dy;
-    rememberIslandMapPickerView(picker);
+    queuePan(startScrollLeft - dx, startScrollTop - dy);
   });
 
   const stopPan = event => {
+    if (panFrame) {
+      cancelAnimationFrame(panFrame);
+      applyPendingPan();
+    }
     const wasPinching = picker.classList.contains("pinching");
     if (wasPinching && pinchZoomFrame) {
       cancelAnimationFrame(pinchZoomFrame);

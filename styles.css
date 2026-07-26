@@ -3607,6 +3607,8 @@ button.inventory-slot {
   -ms-overflow-style: none;
   scrollbar-width: none;
   touch-action: none;
+  contain: layout paint style;
+  isolation: isolate;
   border-radius: 16px;
   border: 1px solid rgba(175, 228, 255, .26);
   background:
@@ -3631,6 +3633,7 @@ button.inventory-slot {
   height: max(100%, var(--island-grid-scaled-h, 840px));
   min-width: 100%;
   min-height: 100%;
+  contain: layout style;
 }
 .island-map-canvas-frame {
   position: absolute;
@@ -3639,6 +3642,7 @@ button.inventory-slot {
   width: var(--island-grid-scaled-w, 1100px);
   height: var(--island-grid-scaled-h, 840px);
   transform: translate(-50%, -50%);
+  contain: layout style;
 }
 .island-map-canvas {
   position: absolute;
@@ -3648,7 +3652,7 @@ button.inventory-slot {
   height: var(--island-grid-base-h, 840px);
   min-width: 0;
   min-height: 0;
-  transform: scale(var(--island-map-zoom, 1));
+  transform: translate3d(0, 0, 0) scale(var(--island-map-zoom, 1));
   transform-origin: left top;
   backface-visibility: hidden;
   will-change: transform;
@@ -3775,6 +3779,7 @@ button.inventory-slot {
   border: 2px solid rgba(188, 231, 255, .5);
   background: rgba(5, 20, 34, .72);
   box-shadow: 0 11px 22px rgba(0,0,0,.34), inset 0 0 0 1px rgba(255,255,255,.08);
+  backface-visibility: hidden;
 }
 .island-map-picker .island-map-icon.active {
   color: #fff7d7;

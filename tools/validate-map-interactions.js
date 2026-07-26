@@ -78,8 +78,8 @@ assert.doesNotMatch(source, /data-island-map-zoom-(?:out|in|fit|value)/, "The ma
 assert.doesNotMatch(source, /data-island-map-zoom-slider/, "The map picker should not render a zoom range slider.");
 assert.match(source, /function getIslandMapPickerMinimumZoom[\s\S]*?getIslandMapPickerFitZoom/, "The map picker minimum zoom should stop at the all-maps view.");
 assert.match(source, /picker\.addEventListener\("wheel"[\s\S]*?event\.preventDefault\(\)[\s\S]*?anchorClientX/, "The mouse wheel should zoom the map around the pointer.");
-assert.match(source, /function attachIslandMapPickerZoom[\s\S]*?animateWheelZoom[\s\S]*?Math\.exp\(-elapsed \/ 58\)/, "Wheel zoom should ease across animation frames.");
-assert.match(source, /picker\.addEventListener\("pointerdown"[\s\S]*?picker\.scrollLeft = startScrollLeft - dx/, "The map picker should pan by dragging.");
+assert.match(source, /ISLAND_PICKER_ZOOM_EASE_MS\s*=\s*\d+[\s\S]*?function attachIslandMapPickerZoom[\s\S]*?animateWheelZoom[\s\S]*?Math\.exp\(-elapsed \/ ISLAND_PICKER_ZOOM_EASE_MS\)/, "Wheel zoom should ease across animation frames.");
+assert.match(source, /function attachIslandMapPickerPan[\s\S]*?const queuePan[\s\S]*?queuePan\(startScrollLeft - dx, startScrollTop - dy\)/, "The map picker should batch drag panning into animation frames.");
 assert.match(source, /function getIslandMapPinchGeometry[\s\S]*?Math\.hypot/, "The map picker should calculate a two-pointer pinch gesture.");
 assert.match(source, /touchPointers\.size >= 2[\s\S]*?requestAnimationFrame\(applyPendingPinchZoom\)/, "Mobile pinch updates should be coalesced to the display frame.");
 assert.match(source, /function attachIslandMapPickerPan[\s\S]*?applyPendingPinchZoom[\s\S]*?targetClientX/, "Mobile pinch gestures should zoom around the moving finger midpoint.");
