@@ -1,15 +1,15 @@
-const CACHE_VERSION = "20260726-combat-trust-order";
+const CACHE_VERSION = "20260726-city-info-cleanup";
 const CACHE_NAME = `crownlands-cache-${CACHE_VERSION}`;
 const STATIC_CACHE_URLS = [
   "/",
   "/index.html",
   "/manifest.webmanifest",
-  "/styles.css?v=20260726-combat-trust-order",
+  "/styles.css?v=20260726-city-info-cleanup",
   "/world-config.js",
-  "/economy-config.js?v=20260726-combat-trust-order",
+  "/economy-config.js?v=20260726-city-info-cleanup",
   "/firebase-config.js?v=20260703-vapid-key",
-  "/firebaseClient.js?v=20260726-combat-trust-order",
-  "/game.js?v=20260726-combat-trust-order",
+  "/firebaseClient.js?v=20260726-city-info-cleanup",
+  "/game.js?v=20260726-city-info-cleanup",
   "/route-worker.js?v=20260721-structure-route-clearance",
   "/assets/map-editor-data.js?v=20260723-utc-responsive-v1",
   "/assets/game-menu-background.jpg?v=20260702-login-page",

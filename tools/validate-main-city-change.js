@@ -124,6 +124,7 @@ assert.match(serverSource, /const defenderMainCityProfile = getMainCityProtectio
 assert.match(serverSource, /if \(isProtectedMainCity\(target, attackerUid, defenderProfile\)\)[\s\S]*?blocked: "main_city"/, "Server arrival authority must return armies if the destination is the defender's main city.");
 
 assert.match(clientSource, /function changeMainCity[\s\S]*?state\.mainCityId = nextMainCityId[\s\S]*?normalizeSingleMainCityAssignment\(nextMainCityId/, "Client must apply the new main-city ID before normalizing city flags.");
+assert.match(clientSource, /mainCityStatus\.reason && !mainCityStatus\.cooldownText/, "City info must keep the main-city cooldown inside the change button instead of repeating it below.");
 assert.match(clientSource, /normalizeSingleMainCityAssignment[\s\S]*?const shouldBeMain = Boolean\(mainCityId && city\.id === mainCityId\)/, "Client must demote every loaded city except the selected main city.");
 assert.match(clientSource, /onlineOwnedCitiesCache = onlineOwnedCitiesCache\.map[\s\S]*?city\.id === mainCityId && !isStronghold\(city\)/, "Cross-map owned-city cache must retain exactly one main city.");
 assert.match(clientSource, /const mainCity = !stronghold[\s\S]*?city\.id === state\.mainCityId[\s\S]*?btn\.classList\.add\("main-city-node"\)/, "Map rendering must move the main-city marker to the selected owned city.");

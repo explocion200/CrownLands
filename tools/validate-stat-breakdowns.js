@@ -112,6 +112,11 @@ assert.doesNotMatch(
   /Victory points|City power|stats\.victoryPoints|stats\.cityPower/,
   "City and Stronghold information panels must not expose internal Victory Points."
 );
+assert.doesNotMatch(
+  cityInfoSource,
+  /<span>Stoneworks<\/span>/,
+  "City information repeats Stoneworks outside the City walls bonus breakdown."
+);
 
 const formatterContext = {};
 vm.createContext(formatterContext);

@@ -18946,18 +18946,6 @@ function showCityInfoModal(cityId) {
     if (!modal.open) modal.showModal();
     return;
   }
-  modalTitle.textContent = `${city.name} \u00B7 Level ${city.level}`;
-  modalBody.innerHTML = `
-    <div class="city-stat-panel modal-city-stats">
-      <div class="stat-wide"><span>Total defense</span><strong>${formatBaseAndBonusStat(stats.baseTotalDefense, stats.totalDefense)}</strong><small>${getCityStatBonusSources(stats, "defense")}</small></div>
-      <div class="stat-chip"><span>Troops</span><strong>${formatNumber(city.troops)}</strong></div>
-      <div class="stat-chip"><span>Stoneworks</span><strong>${stats.stoneworksPercent}%</strong></div>
-      <div class="stat-chip"><span>Defense</span><strong>${formatBaseAndBonusStat(stats.defensePercent, stats.defensePercent + stats.strongholdDefenseBonusPercent, "%")}</strong><small>${CITY_LEVEL_STATS.defensePercentPerLevel}% per level${stats.strongholdDefenseBonusPercent ? ` | Stronghold +${formatNumber(stats.strongholdDefenseBonusPercent)}%` : ""}</small></div>
-      <div class="stat-chip"><span>Troops production</span><strong>${formatBaseAndBonusStat(stats.baseTroopProductionPerHour, stats.troopProductionPerHour, "/h")}</strong><small>${getCityStatBonusSources(stats, "troops")}</small></div>
-      <div class="stat-chip"><span>City walls</span><strong>${formatBaseAndBonusStat(stats.baseCityWalls, stats.cityWalls)}</strong><small>${getCityStatBonusSources(stats, "walls")}</small></div>
-      <div class="stat-chip"><span>Gold production</span><strong>${formatBaseAndBonusStat(stats.baseGoldProductionPerHour, stats.goldProductionPerHour, "/h")}</strong><small>${getCityStatBonusSources(stats, "gold")}</small></div>
-    </div>
-  `;
   const cooldownRemaining = getCaptureCooldownRemaining(city);
   const mainCityStatus = getMainCityChangeStatus(city);
   const mainCityBlock = mainCityStatus.isMain
@@ -18976,7 +18964,9 @@ function showCityInfoModal(cityId) {
           <span>Change main city</span>
           ${mainCityStatus.cooldownText ? `<small>${escapeHtml(mainCityStatus.cooldownText)}</small>` : ""}
         </button>
-        ${!mainCityStatus.canChange && mainCityStatus.reason ? `<p class="main-city-change-reason">${escapeHtml(mainCityStatus.reason)}</p>` : ""}
+        ${!mainCityStatus.canChange && mainCityStatus.reason && !mainCityStatus.cooldownText
+          ? `<p class="main-city-change-reason">${escapeHtml(mainCityStatus.reason)}</p>`
+          : ""}
       </div>`;
   modalTitle.textContent = `${city.name} - Level ${city.level}`;
   modalBody.innerHTML = `
@@ -18988,7 +18978,6 @@ function showCityInfoModal(cityId) {
       <div class="stat-chip"><span>Troops</span><strong>${formatNumber(city.troops)}</strong></div>
       <div class="stat-chip"><span>City defense</span><strong>${formatBaseAndBonusStat(stats.defensePercent, stats.defensePercent + stats.strongholdDefenseBonusPercent, "%")}</strong><small>${CITY_LEVEL_STATS.defensePercentPerLevel}% per level${stats.strongholdDefenseBonusPercent ? ` | Stronghold +${formatNumber(stats.strongholdDefenseBonusPercent)}%` : ""}</small></div>
       <div class="stat-chip"><span>City walls</span><strong>${formatBaseAndBonusStat(stats.baseCityWalls, stats.cityWalls)}</strong><small>${getCityStatBonusSources(stats, "walls")}</small></div>
-      <div class="stat-chip"><span>Stoneworks</span><strong>${stats.stoneworksPercent}%</strong><small>Wall defense skill</small></div>
       <div class="stat-chip"><span>Troops production</span><strong>${formatBaseAndBonusStat(stats.baseTroopProductionPerHour, stats.troopProductionPerHour, "/h")}</strong><small>${getCityStatBonusSources(stats, "troops")}</small></div>
       <div class="stat-chip"><span>Gold production</span><strong>${formatBaseAndBonusStat(stats.baseGoldProductionPerHour, stats.goldProductionPerHour, "/h")}</strong><small>${getCityStatBonusSources(stats, "gold")}</small></div>
       <div class="stat-chip"><span>Invested gold</span><strong>${formatNumber(city.investedGold || 0)}</strong><small>Clears when captured</small></div>
