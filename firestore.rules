@@ -48,7 +48,13 @@ service cloud.firestore {
            'mainIslandId',
            'mainRegionId',
            'mainCityChangedAtMs',
-           'mainCityAssignmentVersion'
+           'mainCityAssignmentVersion',
+           'clanId',
+           'clanName',
+           'clanTag',
+           'clanRole',
+           'clanJoinCooldownUntilMs',
+           'pendingClanApplicationId'
         ]);
     }
 
@@ -80,7 +86,13 @@ service cloud.firestore {
         && profileFieldUnchanged('mainIslandId')
         && profileFieldUnchanged('mainRegionId')
         && profileFieldUnchanged('mainCityChangedAtMs')
-        && profileFieldUnchanged('mainCityAssignmentVersion');
+        && profileFieldUnchanged('mainCityAssignmentVersion')
+        && profileFieldUnchanged('clanId')
+        && profileFieldUnchanged('clanName')
+        && profileFieldUnchanged('clanTag')
+        && profileFieldUnchanged('clanRole')
+        && profileFieldUnchanged('clanJoinCooldownUntilMs')
+        && profileFieldUnchanged('pendingClanApplicationId');
     }
 
     function ownsCityOwnerIdentity() {
@@ -143,6 +155,57 @@ service cloud.firestore {
     match /leaderboards/{boardId}/entries/{uid} {
       allow read: if signedIn();
       allow create, update, delete: if false;
+    }
+
+    function clanMember(clanId) {
+      return signedIn()
+        && exists(/databases/$(database)/documents/clans/$(clanId)/members/$(request.auth.uid));
+    }
+
+    function clanManager(clanId) {
+      return clanMember(clanId)
+        && get(/databases/$(database)/documents/clans/$(clanId)/members/$(request.auth.uid)).data.role in ['leader', 'officer'];
+    }
+
+    match /clans/{clanId} {
+      allow read: if signedIn();
+      allow create, update, delete: if false;
+
+      match /members/{uid} {
+        allow read: if signedIn();
+        allow create, update, delete: if false;
+      }
+
+      match /applications/{uid} {
+        allow read: if signedIn() && (request.auth.uid == uid || clanManager(clanId));
+        allow create, update, delete: if false;
+      }
+
+      match /messages/{messageId} {
+        allow read: if clanMember(clanId);
+        allow create, update, delete: if false;
+      }
+
+      match /messageReports/{reportId} {
+        allow read, create, update, delete: if false;
+      }
+
+      match /audit/{eventId} {
+        allow read, create, update, delete: if false;
+      }
+    }
+
+    match /clanLeaderboards/{resetId}/entries/{clanId} {
+      allow read: if signedIn();
+      allow create, update, delete: if false;
+    }
+
+    match /clanNameReservations/{reservationId} {
+      allow read, create, update, delete: if false;
+    }
+
+    match /clanTagReservations/{reservationId} {
+      allow read, create, update, delete: if false;
     }
 
     match /crownCitadelReigns/{uid} {

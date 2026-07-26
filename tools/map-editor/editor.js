@@ -178,6 +178,7 @@
     worldModeBtn: document.getElementById("worldModeBtn"),
     regionModeBtn: document.getElementById("regionModeBtn"),
     economyModeBtn: document.getElementById("economyModeBtn"),
+    gameUiModeBtn: document.getElementById("gameUiModeBtn"),
     editorBody: document.getElementById("editorBody"),
     addRegionBtn: document.getElementById("addRegionBtn"),
     addCityBtn: document.getElementById("addCityBtn"),
@@ -211,6 +212,7 @@
     worldConnectionLayer: document.getElementById("worldConnectionLayer"),
     regionView: document.getElementById("regionView"),
     economyView: document.getElementById("economyView"),
+    gameUiView: document.getElementById("gameUiView"),
     economySections: document.getElementById("economySections"),
     contextTools: document.getElementById("contextTools"),
     regionViewport: document.getElementById("regionViewport"),
@@ -692,12 +694,18 @@
 
   async function saveAllData() {
     elements.saveBtn.disabled = true;
-    setStatus("Saving map and economy configuration...", "busy");
+    setStatus("Saving map, economy, and HUD layout configuration...", "busy");
     try {
-      await saveWorldData({ renderAfter: false });
-      await saveEconomyData({ renderAfter: false });
+      const results = await Promise.allSettled([
+        saveWorldData({ renderAfter: false }),
+        saveEconomyData({ renderAfter: false }),
+        window.CrownlandsHudEditor.save(),
+      ]);
+      const labels = ["Map", "Economy", "HUD layout"];
+      const failures = results.map((result, index) => result.status === "rejected" ? `${labels[index]}: ${result.reason?.message || result.reason}` : "").filter(Boolean);
+      if (failures.length) throw new Error(`Some data did not save. ${failures.join(" | ")}`);
       state.dirty = false;
-      setStatus("Saved map data plus browser and Firebase economy configuration.", "success");
+      setStatus("Saved map, browser/Firebase economy, and responsive HUD layouts.", "success");
       render();
     } finally {
       elements.saveBtn.disabled = false;
@@ -710,8 +718,9 @@
   }
 
   function setEditorMode(mode) {
-    state.editorMode = ["world", "region", "economy"].includes(mode) ? mode : "world";
+    state.editorMode = ["world", "region", "economy", "gameui"].includes(mode) ? mode : "world";
     state.tool = "select";
+    window.CrownlandsHudEditor?.setActive(state.editorMode === "gameui");
     render();
   }
 
@@ -811,9 +820,12 @@
     elements.worldModeBtn.classList.toggle("active", state.editorMode === "world");
     elements.regionModeBtn.classList.toggle("active", state.editorMode === "region");
     elements.economyModeBtn.classList.toggle("active", state.editorMode === "economy");
+    elements.gameUiModeBtn.classList.toggle("active", state.editorMode === "gameui");
     elements.editorBody.classList.toggle("economy-mode", state.editorMode === "economy");
+    elements.editorBody.classList.toggle("game-ui-mode", state.editorMode === "gameui");
     elements.contextTools.classList.toggle("economy-mode", state.editorMode === "economy");
     document.querySelector(".editor-toolbar")?.classList.toggle("economy-mode", state.editorMode === "economy");
+    document.querySelector(".editor-toolbar")?.classList.toggle("game-ui-mode", state.editorMode === "gameui");
     elements.addCityBtn.classList.toggle("active", state.tool === "city");
     elements.addStrongholdBtn.classList.toggle("active", state.tool === "stronghold");
     elements.addCampBtn.classList.toggle("active", state.tool === "camp");
@@ -854,18 +866,19 @@
       ? "World Layout"
       : state.editorMode === "region"
         ? "Region Edit"
-        : "Balance Configuration";
+        : state.editorMode === "economy" ? "Balance Configuration" : "Responsive HUD Layout";
     elements.workspaceTitle.textContent = state.editorMode === "world"
       ? state.layout.worldName
       : state.editorMode === "region"
         ? currentRegion()?.name || "No region selected"
-        : "Crownlands Economy";
+        : state.editorMode === "economy" ? "Crownlands Economy" : "Main Game UI";
     elements.worldView.classList.toggle("hidden", state.editorMode !== "world");
     elements.regionView.classList.toggle("hidden", state.editorMode !== "region");
     elements.economyView.classList.toggle("hidden", state.editorMode !== "economy");
+    elements.gameUiView.classList.toggle("hidden", state.editorMode !== "gameui");
     if (state.editorMode === "world") renderWorldGrid();
     else if (state.editorMode === "region") renderRegionEditor();
-    else renderEconomySections();
+    else if (state.editorMode === "economy") renderEconomySections();
   }
 
   function economyNumberInput(path, label, value, options = {}) {
@@ -2741,9 +2754,11 @@
       });
     });
     validateEconomy(results);
+    const hudIssues = window.CrownlandsHudEditor?.validate() || [];
+    hudIssues.forEach(text => results.push({ level: "warning", text }));
 
     if (!results.some(item => item.level === "error" || item.level === "warning")) {
-      results.push({ level: "ok", text: "Game map and economy validation passed." });
+      results.push({ level: "ok", text: "Game map, economy, and HUD layout validation passed." });
     }
     state.validation = results;
     renderValidationList();
@@ -2825,9 +2840,10 @@
     const payload = {
       ...buildSavePayload(),
       economy: deepClone(state.economy),
+      uiLayout: window.CrownlandsHudEditor?.getConfig(),
     };
     downloadJson(`${state.layout.worldId || "world"}-bundle.json`, payload);
-    setStatus("Exported map and economy JSON bundle.");
+    setStatus("Exported map, economy, and HUD layout JSON bundle.");
   }
 
   function downloadJson(filename, value) {
@@ -2848,6 +2864,7 @@
     state.layout = data.layout;
     state.regions = data.regions;
     if (imported.economy && typeof imported.economy === "object") state.economy = imported.economy;
+    if (imported.uiLayout && typeof imported.uiLayout === "object") window.CrownlandsHudEditor?.replaceConfig(imported.uiLayout);
     state.activeRegionId = state.regions[0]?.id || "";
     state.selected = null;
     state.validation = [];
@@ -3116,6 +3133,7 @@
     elements.worldModeBtn.addEventListener("click", () => setEditorMode("world"));
     elements.regionModeBtn.addEventListener("click", () => setEditorMode("region"));
     elements.economyModeBtn.addEventListener("click", () => setEditorMode("economy"));
+    elements.gameUiModeBtn.addEventListener("click", () => setEditorMode("gameui"));
     elements.addRegionBtn.addEventListener("click", addRegion);
     elements.addCityBtn.addEventListener("click", () => setTool(state.tool === "city" ? "select" : "city"));
     elements.addStrongholdBtn.addEventListener("click", () => setTool(state.tool === "stronghold" ? "select" : "stronghold"));
@@ -3124,7 +3142,9 @@
     elements.deleteSelectedBtn.addEventListener("click", deleteSelected);
     elements.validateBtn.addEventListener("click", validateWorld);
     elements.exportBtn.addEventListener("click", exportJson);
-    elements.importBtn.addEventListener("click", () => elements.importFileInput.click());
+    elements.importBtn.addEventListener("click", () => {
+      if (!state.dirty || window.confirm("Importing will replace your unsaved editor changes. Continue?")) elements.importFileInput.click();
+    });
     elements.saveBtn.addEventListener("click", () => saveAllData().catch(error => setStatus(error.message || String(error), "error")));
     elements.importFileInput.addEventListener("change", event => {
       importJsonFile(event.target.files?.[0]).catch(error => setStatus(error.message || String(error), "error"));
@@ -3209,7 +3229,15 @@
 
   async function init() {
     bindEvents();
-    await Promise.all([loadWorldData(), loadEconomyData()]);
+    await Promise.all([
+      loadWorldData(),
+      loadEconomyData(),
+      window.CrownlandsHudEditor.init({
+        onDirty: message => markDirty(message),
+        onStatus: setStatus,
+        setMode: setEditorMode,
+      }),
+    ]);
     render();
   }
 

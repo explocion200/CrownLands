@@ -8,6 +8,7 @@ const ROOT_DIR = path.resolve(__dirname, "..");
 const EDITOR_DIR = path.join(__dirname, "map-editor");
 const WORLD_CONFIG_PATH = path.join(ROOT_DIR, "world-config.js");
 const ECONOMY_CONFIG_PATH = path.join(ROOT_DIR, "economy-config.js");
+const UI_LAYOUT_CONFIG_PATH = path.join(ROOT_DIR, "ui-layout-config.js");
 const SERVER_ECONOMY_CONFIG_PATH = path.join(ROOT_DIR, "functions", "economy-config.json");
 const DEFAULT_ECONOMY_CONFIG = require("../functions/economy-config.json");
 const WORLD_DATA_ROOT = path.join(ROOT_DIR, "assets", "worlds", "world_01");
@@ -34,6 +35,8 @@ const ROOT_STATIC_FILES = new Set([
   "/styles.css",
   "/world-config.js",
   "/economy-config.js",
+  "/ui-layout-config.js",
+  "/ui-layout-runtime.js",
 ]);
 
 const MIME_TYPES = new Map([
@@ -308,6 +311,75 @@ async function writeEconomyConfig(config) {
   await fsp.rename(`${ECONOMY_CONFIG_PATH}.tmp`, ECONOMY_CONFIG_PATH);
   await fsp.writeFile(`${SERVER_ECONOMY_CONFIG_PATH}.tmp`, `${JSON.stringify(safe, null, 2)}\n`, "utf8");
   await fsp.rename(`${SERVER_ECONOMY_CONFIG_PATH}.tmp`, SERVER_ECONOMY_CONFIG_PATH);
+  return safe;
+}
+
+const UI_LAYOUT_PRESETS = {
+  landscapeTablet: { label: "Landscape / Tablet", width: 844, height: 390 },
+  desktop: { label: "Desktop", width: 1440, height: 900 },
+};
+const UI_LAYOUT_COMPONENT_IDS = new Set([
+  "profile", "fullscreen", "inventory", "shop", "activeEffects", "cityList",
+  "islandSwitch", "returnHome", "commanderPanel", "outgoingMarch",
+  "incomingMarch", "reportsNav",
+]);
+const UI_LAYOUT_ANCHORS = new Set([
+  "topLeft", "topCenter", "topRight", "centerLeft", "center", "centerRight",
+  "bottomLeft", "bottomCenter", "bottomRight",
+]);
+
+function sanitizeUiLayoutConfig(config = {}) {
+  if (Number(config.schemaVersion) !== 1) {
+    throw new Error("HUD layout schemaVersion must be 1.");
+  }
+  const incomingPresets = config.presets;
+  if (!incomingPresets || typeof incomingPresets !== "object" || Array.isArray(incomingPresets)) {
+    throw new Error("HUD layout presets must be an object.");
+  }
+  const presets = {};
+  for (const [presetId, defaults] of Object.entries(UI_LAYOUT_PRESETS)) {
+    const source = incomingPresets[presetId] || {};
+    const sourceComponents = source.components || {};
+    if (typeof sourceComponents !== "object" || Array.isArray(sourceComponents)) {
+      throw new Error(`${presetId} components must be an object.`);
+    }
+    const unknown = Object.keys(sourceComponents).find(id => !UI_LAYOUT_COMPONENT_IDS.has(id));
+    if (unknown) throw new Error(`Unsupported HUD component: ${unknown}.`);
+    const components = {};
+    for (const [id, raw] of Object.entries(sourceComponents)) {
+      if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+        throw new Error(`${id} layout must be an object.`);
+      }
+      const anchor = String(raw.anchor || "topLeft");
+      if (!UI_LAYOUT_ANCHORS.has(anchor)) throw new Error(`Unsupported anchor for ${id}: ${anchor}.`);
+      components[id] = {
+        anchor,
+        offsetX: Math.round(number(raw.offsetX, 0, -defaults.width * 2, defaults.width * 2)),
+        offsetY: Math.round(number(raw.offsetY, 0, -defaults.height * 2, defaults.height * 2)),
+        width: Math.round(number(raw.width, 48, 24, defaults.width)),
+        height: Math.round(number(raw.height, 48, 24, defaults.height)),
+        visible: raw.visible !== false,
+        zIndex: Math.round(number(raw.zIndex, 20, 0, 999)),
+      };
+    }
+    presets[presetId] = { ...defaults, components };
+  }
+  return { schemaVersion: 1, updatedAt: new Date().toISOString(), presets };
+}
+
+async function readUiLayoutConfig() {
+  const source = await fsp.readFile(UI_LAYOUT_CONFIG_PATH, "utf8");
+  const context = { window: {} };
+  vm.createContext(context);
+  vm.runInContext(source, context, { filename: "ui-layout-config.js", timeout: 1000 });
+  return sanitizeUiLayoutConfig(context.window.CROWNLANDS_UI_LAYOUT_CONFIG || {});
+}
+
+async function writeUiLayoutConfig(config) {
+  const safe = sanitizeUiLayoutConfig(config);
+  const body = `window.CROWNLANDS_UI_LAYOUT_CONFIG = ${JSON.stringify(safe, null, 2)};\n`;
+  await fsp.writeFile(`${UI_LAYOUT_CONFIG_PATH}.tmp`, body, "utf8");
+  await fsp.rename(`${UI_LAYOUT_CONFIG_PATH}.tmp`, UI_LAYOUT_CONFIG_PATH);
   return safe;
 }
 
@@ -1004,6 +1076,20 @@ async function handleApi(request, response, pathname) {
         server: SERVER_ECONOMY_CONFIG_PATH,
       },
     });
+    return;
+  }
+
+  if (pathname === "/api/ui-layout-data" && request.method === "GET") {
+    const config = await readUiLayoutConfig();
+    sendJson(response, 200, { config, path: UI_LAYOUT_CONFIG_PATH });
+    return;
+  }
+
+  if (pathname === "/api/ui-layout-data" && request.method === "POST") {
+    const rawBody = await readBody(request);
+    const payload = JSON.parse(rawBody || "{}");
+    const config = await writeUiLayoutConfig(payload.config || payload);
+    sendJson(response, 200, { ok: true, config, path: UI_LAYOUT_CONFIG_PATH });
     return;
   }
 

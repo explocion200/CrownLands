@@ -1,0 +1,58 @@
+const assert = require("node:assert/strict");
+const fs = require("node:fs");
+const path = require("node:path");
+
+const root = path.resolve(__dirname, "..");
+const server = fs.readFileSync(path.join(root, "functions", "index.js"), "utf8");
+const client = fs.readFileSync(path.join(root, "game.js"), "utf8");
+const firebaseClient = fs.readFileSync(path.join(root, "firebaseClient.js"), "utf8");
+const html = fs.readFileSync(path.join(root, "index.html"), "utf8");
+const styles = fs.readFileSync(path.join(root, "styles.css"), "utf8");
+const rules = fs.readFileSync(path.join(root, "firestore.rules"), "utf8");
+
+function requires(source, pattern, message) {
+  assert.match(source, pattern, message);
+}
+
+requires(server, /CLAN_UNLOCK_LEVEL\s*=\s*20/, "Clan unlock must be Hero Level 20.");
+requires(server, /CLAN_CREATE_GOLD_COST\s*=\s*100_000/, "Clan creation must cost 100,000 gold.");
+requires(server, /CLAN_MEMBER_LIMIT\s*=\s*30/, "Clan member capacity must be 30.");
+requires(server, /CLAN_JOIN_COOLDOWN_MS\s*=\s*24\s*\*\s*60\s*\*\s*60\s*\*\s*1000/, "Clan join cooldown must be 24 hours.");
+requires(server, /CLAN_LEADER_INACTIVE_MS\s*=\s*14\s*\*\s*24\s*\*\s*60\s*\*\s*60\s*\*\s*1000/, "Inactive leadership claims must wait 14 days.");
+
+[
+  "createClan",
+  "updateClanProfile",
+  "joinOpenClan",
+  "applyToClan",
+  "cancelClanApplication",
+  "reviewClanApplication",
+  "leaveClan",
+  "kickClanMember",
+  "promoteClanMember",
+  "demoteClanOfficer",
+  "transferClanLeadership",
+  "claimInactiveClanLeadership",
+  "disbandClan",
+  "sendClanMessage",
+  "reportClanMessage",
+].forEach(name => requires(server, new RegExp(`exports\\.${name}\\s*=\\s*onCall`), `Missing ${name} callable.`));
+
+requires(server, /safeString\(attackerProfile\.clanId,\s*128\)[\s\S]*?safeString\(defenderPowerData\.clanId,\s*128\)[\s\S]*?cannot scout or attack a clan ally/i, "Army launch does not reject clan allies.");
+requires(server, /const becameClanAllies[\s\S]*?outcome:\s*"allied_return"/, "Active armies do not return when their target becomes allied.");
+requires(server, /rebuildClanPowerOnPlayerStats\s*=\s*onDocumentWritten/, "Clan King Power is not updated from authoritative player stats.");
+requires(server, /cleanupClanMessages\s*=\s*onSchedule[\s\S]*?index >= 500[\s\S]*?expiresAtMs/, "Clan chat retention is not capped at 500 messages and 30 days.");
+
+requires(rules, /match \/clans\/\{clanId\}[\s\S]*?allow create, update, delete: if false;/, "Clan writes must be server-owned.");
+requires(rules, /match \/messages\/\{messageId\}[\s\S]*?allow read: if clanMember\(clanId\);[\s\S]*?allow create, update, delete: if false;/, "Clan chat rules are not membership-gated and server-owned.");
+requires(rules, /profileFieldUnchanged\('clanId'\)/, "Players can mutate canonical clan membership directly.");
+
+requires(firebaseClient, /createClan[\s\S]*?joinOpenClan[\s\S]*?reviewClanApplication[\s\S]*?sendClanMessage/, "Firebase client does not expose the clan callables.");
+requires(firebaseClient, /subscribeClanMessages/, "Firebase client is missing realtime clan chat.");
+requires(html, /id="clanTabBtn"[\s\S]*?id="clanView"/, "Profile UI is missing its Clan tab.");
+requires(client, /function isClanAllyCity[\s\S]*?function getClanFriendlyBlockReason/, "Client is missing clan-allied city detection.");
+requires(client, /btn\.classList\.add\("clan-ally"\)/, "Allied cities do not receive their map class.");
+requires(client, /You cannot scout or attack a clan ally/, "Clan-friendly action explanation is missing.");
+requires(styles, /\.city-node\.clan-ally \.city-ring[\s\S]*?\.clan-ally-label/, "Green accessible allied-city styling is missing.");
+
+console.log("Validated clan gates, server ownership, lifecycle APIs, friendly combat, chat, rankings, and allied-city UI.");
