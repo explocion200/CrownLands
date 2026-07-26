@@ -2965,8 +2965,25 @@ input {
   text-decoration-color: currentColor;
   outline: none;
 }
-.public-player-profile-modal .modal-card { width: min(92vw, 720px); }
+.public-player-profile-modal.modal {
+  width: min(720px, calc(100vw - 1.3rem));
+  max-width: calc(100vw - 1.3rem);
+}
+.public-player-profile-modal .modal-card {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+.public-player-profile-modal #modalBody {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow-x: hidden;
+}
 .public-player-profile {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: .7rem;
@@ -3016,6 +3033,14 @@ input {
 .public-profile-location > span:first-child { color: #e5c36f; font-size: 1.55rem; }
 .public-profile-location > span:last-child,
 .public-profile-clan { display: grid; }
+.public-profile-location > span:last-child,
+.public-profile-location strong,
+.public-profile-location small,
+.public-profile-clan strong,
+.public-profile-clan small {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
 .public-profile-location small,
 .public-profile-clan small { color: #aeb4bd; }
 .public-profile-location:hover:not(:disabled),
@@ -3082,6 +3107,8 @@ input {
 .public-clan-details dd { margin: .15rem 0 0; color: #f1d47d; font-weight: 900; }
 @media (max-width: 720px) {
   .public-player-profile { grid-template-columns: 1fr; }
+  .public-player-profile-modal .modal-card { padding: .75rem; }
+  .public-profile-section { padding: .7rem; }
 }
 .modal-close { position: absolute; z-index: 3; right: .7rem; top: .65rem; width: 34px; height: 34px; border-radius: 999px; color: var(--ink); background: rgba(255,255,255,.1); }
 .stat-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: .5rem; margin: .7rem 0; }
