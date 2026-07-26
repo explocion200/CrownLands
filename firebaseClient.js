@@ -1380,11 +1380,24 @@
     await init();
     const uid = requireSignedIn();
     if (!uid) return [];
-    const { collection, getDocs, query: firestoreQuery, orderBy, limit: firestoreLimit } = client.modules.firestore;
+    const {
+      collection,
+      getDocs,
+      query: firestoreQuery,
+      where,
+      orderBy,
+      limit: firestoreLimit,
+    } = client.modules.firestore;
     const entriesRef = collection(client.db, "leaderboards", RESET_GENERATION, "entries");
     const safeLimit = Math.max(1, Math.min(100, Math.floor(Number(limitCount) || 100)));
-    const queryRef = firestoreQuery && orderBy && firestoreLimit
-      ? firestoreQuery(entriesRef, orderBy("kingPower", "desc"), firestoreLimit(safeLimit))
+    const queryRef = firestoreQuery && where && orderBy && firestoreLimit
+      ? firestoreQuery(
+          entriesRef,
+          where("resetGeneration", "==", RESET_GENERATION),
+          where("worldId", "==", ONLINE_WORLD_ID),
+          orderBy("kingPower", "desc"),
+          firestoreLimit(safeLimit)
+        )
       : entriesRef;
     const snapshot = await getDocs(queryRef);
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -1401,7 +1414,7 @@
       .slice(0, 80);
     if (!uniqueUids.length) return [];
     const rows = await Promise.all(uniqueUids.map(identityUid => (
-      getDoc(doc(client.db, "leaderboards", "kingPower", "entries", identityUid))
+      getDoc(doc(client.db, "leaderboards", RESET_GENERATION, "entries", identityUid))
         .then(snapshot => (snapshot.exists() ? { id: snapshot.id, ...snapshot.data() } : null))
         .catch(() => null)
     )));
