@@ -9,6 +9,8 @@ const firebaseClient = fs.readFileSync(path.join(root, "firebaseClient.js"), "ut
 const html = fs.readFileSync(path.join(root, "index.html"), "utf8");
 const styles = fs.readFileSync(path.join(root, "styles.css"), "utf8");
 const rules = fs.readFileSync(path.join(root, "firestore.rules"), "utf8");
+const firebaseConfig = fs.readFileSync(path.join(root, "firebase.json"), "utf8");
+const callableAccessCheck = fs.readFileSync(path.join(root, "tools", "validate-clan-callable-access.js"), "utf8");
 
 function requires(source, pattern, message) {
   assert.match(source, pattern, message);
@@ -38,6 +40,16 @@ requires(server, /CLAN_LEADER_INACTIVE_MS\s*=\s*14\s*\*\s*24\s*\*\s*60\s*\*\s*60
   "reportClanMessage",
 ].forEach(name => requires(server, new RegExp(`exports\\.${name}\\s*=\\s*onCall`), `Missing ${name} callable.`));
 
+requires(firebaseConfig, /postdeploy[\s\S]*?validate-clan-callable-access\.js/, "Function deploys do not verify clan callable access.");
+[
+  "applyToClan",
+  "joinOpenClan",
+  "reviewClanApplication",
+  "sendClanMessage",
+].forEach(name => requires(callableAccessCheck, new RegExp(`"${name}"`), `Callable access check is missing ${name}.`));
+requires(callableAccessCheck, /assert\.notEqual\(response\.status,\s*403/, "Callable access check does not detect private Cloud Run services.");
+requires(callableAccessCheck, /payload\?\.error\?\.status[\s\S]*?"UNAUTHENTICATED"/, "Callable access check does not verify Firebase authentication.");
+
 requires(server, /safeString\(attackerProfile\.clanId,\s*128\)[\s\S]*?safeString\(defenderPowerData\.clanId,\s*128\)[\s\S]*?cannot scout or attack a clan ally/i, "Army launch does not reject clan allies.");
 requires(server, /const becameClanAllies[\s\S]*?outcome:\s*"allied_return"/, "Active armies do not return when their target becomes allied.");
 requires(server, /rebuildClanPowerOnPlayerStats\s*=\s*onDocumentWritten/, "Clan King Power is not updated from authoritative player stats.");
@@ -63,4 +75,4 @@ requires(client, /CLAN_SHIELD_SHAPES[\s\S]*?CLAN_SHIELD_DIVISIONS[\s\S]*?CLAN_SH
 requires(styles, /\.city-node\.clan-ally \.city-ring[\s\S]*?\.clan-ally-label/, "Green accessible allied-city styling is missing.");
 requires(styles, /\.clan-shield-size-editor[\s\S]*?\.clan-shield-editor-controls[\s\S]*?\.clan-shield-swatch-grid/, "Clan shield editor styling is missing.");
 
-console.log("Validated clan gates, server ownership, lifecycle APIs, friendly combat, chat, rankings, allied-city UI, and leader-owned heraldic shields.");
+console.log("Validated clan gates, callable deployment access, server ownership, lifecycle APIs, friendly combat, chat, rankings, allied-city UI, and leader-owned heraldic shields.");

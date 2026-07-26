@@ -7,7 +7,10 @@
     {
       "source": "functions",
       "codebase": "default",
-      "runtime": "nodejs22"
+      "runtime": "nodejs22",
+      "postdeploy": [
+        "node tools/validate-clan-callable-access.js"
+      ]
     }
   ],
   "hosting": {
