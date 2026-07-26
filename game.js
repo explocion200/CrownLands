@@ -21133,7 +21133,7 @@ function getRewardedAdAvailability(status = rewardedAdStatus) {
   if (!config.isTestHost && !config.productionHostApproved) {
     return { canWatch: false, text: "Ads unavailable on this host" };
   }
-  if (!config.adUnitPath) return { canWatch: false, text: "Ad Manager setup required" };
+  if (!config.adUnitPath) return { canWatch: false, text: "" };
   if (!isRewardedAdSecurityReady()) return { canWatch: false, text: "App Check setup required" };
   if (rewardedAdStatusLoading || !status) return { canWatch: false, text: "Checking availability…" };
   if (status.reason === "daily-limit" || status.remainingToday <= 0) return { canWatch: false, text: "Daily limit reached" };
@@ -21168,8 +21168,7 @@ function renderRewardedAdShopItem(item = {}) {
         <span>${Math.max(1, Math.floor(Number(status?.rewardMinutes) || 30))} minutes of base production</span>
         <small>${rewardAmount > 0 ? `Estimated reward: ${formatNumber(rewardAmount)} ${escapeHtml(item.rewardLabel)}` : "Exact reward calculated before the ad"}</small>
         <small class="shop-item-purchase-limit">Rewarded ads: ${formatNumber(claimedToday)}/${formatNumber(dailyLimit)} today (UTC)</small>
-        <small class="rewarded-ad-availability">${escapeHtml(availability.text)}</small>
-        <small>City levels only; skills, Strongholds, and timed item bonuses are excluded.</small>
+        ${availability.text ? `<small class="rewarded-ad-availability">${escapeHtml(availability.text)}</small>` : ""}
       </div>
     </article>
   `;
