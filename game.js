@@ -2585,6 +2585,7 @@ let clanUiLoading = false;
 let clanShieldDraft = null;
 let clanShieldEditorOpen = false;
 let clanShieldSaving = false;
+let clanShieldEditorTab = "field";
 function loadMutedClanMemberIds() {
   try {
     const values = JSON.parse(localStorage.getItem("crownlands-muted-clan-members") || "[]");
@@ -16034,6 +16035,7 @@ async function refreshClanState(options = {}) {
     clanSearchResults = [];
     clanShieldEditorOpen = false;
     clanShieldDraft = null;
+    clanShieldEditorTab = "field";
     renderClanView();
     return;
   }
@@ -16051,6 +16053,7 @@ async function refreshClanState(options = {}) {
       if (state.clanRole !== "leader") {
         clanShieldEditorOpen = false;
         clanShieldDraft = null;
+        clanShieldEditorTab = "field";
       }
       clanMembers = members;
       rememberPlayerIdentities(members.map(member => ({
@@ -16081,6 +16084,7 @@ async function refreshClanState(options = {}) {
       clanMessages = [];
       clanShieldEditorOpen = false;
       clanShieldDraft = null;
+      clanShieldEditorTab = "field";
       if (typeof clanMessagesUnsubscribe === "function") clanMessagesUnsubscribe();
       clanMessagesUnsubscribe = null;
       clanSearchResults = await api.searchClans(options.search || "", 30);
@@ -16141,60 +16145,91 @@ function renderClanShieldColorSwatches(key, label, currentValue) {
 
 function renderClanShieldEditor(value = null) {
   const shield = normalizeClanShield(value || clanShieldDraft || clanSnapshot?.shield, clanSnapshot?.banner);
+  const editorTabs = [
+    { key: "field", label: "Field" },
+    { key: "colors", label: "Colors" },
+    { key: "charges", label: "Charges" },
+    { key: "details", label: "Details" },
+  ];
+  const activeTab = editorTabs.some(tab => tab.key === clanShieldEditorTab) ? clanShieldEditorTab : "field";
   return `
     <section class="clan-shield-editor" aria-label="Clan shield editor">
       <header class="clan-shield-editor-preview">
         <div class="clan-shield-preview-stage">${renderClanShield(shield, { size: "editor", label: `Preview of ${clanSnapshot?.name || "clan"} shield` })}</div>
-        <div>
+        <div class="clan-shield-editor-intro">
           <span>House heraldry</span>
           <h3>Clan Shield Editor</h3>
           <p>Build a distinct coat of arms with historic field divisions, heraldic charges, metal trim, and a painted finish.</p>
           <small>Only the clan leader can publish changes.</small>
         </div>
       </header>
-      <div class="clan-shield-editor-controls">
-        <fieldset class="clan-shield-control clan-shield-control-wide">
-          <legend>Shield shape</legend>
-          ${renderClanShieldChoiceButtons(CLAN_SHIELD_SHAPES, "shape", shield.shape)}
-        </fieldset>
-        <fieldset class="clan-shield-control clan-shield-control-wide">
-          <legend>Field division</legend>
-          ${renderClanShieldChoiceButtons(CLAN_SHIELD_DIVISIONS, "division", shield.division)}
-        </fieldset>
-        <section class="clan-shield-colors" aria-label="Heraldic colors">
-          ${renderClanShieldColorSwatches("primary", "Primary field", shield.primary)}
-          ${renderClanShieldColorSwatches("secondary", "Secondary field", shield.secondary)}
-          ${renderClanShieldColorSwatches("chargeColor", "Primary charge", shield.chargeColor)}
-          ${renderClanShieldColorSwatches("secondaryChargeColor", "Secondary charge", shield.secondaryChargeColor)}
-          ${renderClanShieldColorSwatches("borderColor", "Metal trim", shield.borderColor)}
-        </section>
-        <fieldset class="clan-shield-control">
-          <legend>Primary charge</legend>
-          ${renderClanShieldChoiceButtons(CLAN_SHIELD_CHARGES, "charge", shield.charge)}
-        </fieldset>
-        <fieldset class="clan-shield-control">
-          <legend>Secondary charge</legend>
-          ${renderClanShieldChoiceButtons(CLAN_SHIELD_CHARGES, "secondaryCharge", shield.secondaryCharge)}
-        </fieldset>
-        <fieldset class="clan-shield-control">
-          <legend>Charge arrangement</legend>
-          ${renderClanShieldChoiceButtons(CLAN_SHIELD_CHARGE_LAYOUTS, "chargeLayout", shield.chargeLayout)}
-        </fieldset>
-        <fieldset class="clan-shield-control">
-          <legend>Edge detail</legend>
-          ${renderClanShieldChoiceButtons(CLAN_SHIELD_TRIMS, "trim", shield.trim)}
-        </fieldset>
-        <fieldset class="clan-shield-control clan-shield-control-wide">
-          <legend>Paint finish</legend>
-          ${renderClanShieldChoiceButtons(CLAN_SHIELD_FINISHES, "finish", shield.finish)}
-        </fieldset>
+      <div class="clan-shield-editor-workspace">
+        <nav class="clan-shield-editor-tabs" aria-label="Shield editing sections" role="tablist">
+          ${editorTabs.map(tab => `<button type="button" role="tab" data-clan-action="shield-tab" data-shield-tab="${tab.key}" class="${activeTab === tab.key ? "active" : ""}" aria-selected="${activeTab === tab.key}">${tab.label}</button>`).join("")}
+        </nav>
+        <div class="clan-shield-editor-controls">
+          <section class="clan-shield-panel ${activeTab === "field" ? "active" : ""}" data-shield-panel="field" role="tabpanel">
+            <fieldset class="clan-shield-control clan-shield-control-wide">
+              <legend>Shield shape</legend>
+              ${renderClanShieldChoiceButtons(CLAN_SHIELD_SHAPES, "shape", shield.shape)}
+            </fieldset>
+            <fieldset class="clan-shield-control clan-shield-control-wide">
+              <legend>Field division</legend>
+              ${renderClanShieldChoiceButtons(CLAN_SHIELD_DIVISIONS, "division", shield.division)}
+            </fieldset>
+          </section>
+          <section class="clan-shield-panel ${activeTab === "colors" ? "active" : ""}" data-shield-panel="colors" role="tabpanel">
+            <section class="clan-shield-colors" aria-label="Heraldic colors">
+              ${renderClanShieldColorSwatches("primary", "Primary field", shield.primary)}
+              ${renderClanShieldColorSwatches("secondary", "Secondary field", shield.secondary)}
+              ${renderClanShieldColorSwatches("chargeColor", "Primary charge", shield.chargeColor)}
+              ${renderClanShieldColorSwatches("secondaryChargeColor", "Secondary charge", shield.secondaryChargeColor)}
+              ${renderClanShieldColorSwatches("borderColor", "Metal trim", shield.borderColor)}
+            </section>
+          </section>
+          <section class="clan-shield-panel ${activeTab === "charges" ? "active" : ""}" data-shield-panel="charges" role="tabpanel">
+            <fieldset class="clan-shield-control">
+              <legend>Primary charge</legend>
+              ${renderClanShieldChoiceButtons(CLAN_SHIELD_CHARGES, "charge", shield.charge)}
+            </fieldset>
+            <fieldset class="clan-shield-control">
+              <legend>Secondary charge</legend>
+              ${renderClanShieldChoiceButtons(CLAN_SHIELD_CHARGES, "secondaryCharge", shield.secondaryCharge)}
+            </fieldset>
+            <fieldset class="clan-shield-control">
+              <legend>Charge arrangement</legend>
+              ${renderClanShieldChoiceButtons(CLAN_SHIELD_CHARGE_LAYOUTS, "chargeLayout", shield.chargeLayout)}
+            </fieldset>
+          </section>
+          <section class="clan-shield-panel ${activeTab === "details" ? "active" : ""}" data-shield-panel="details" role="tabpanel">
+            <fieldset class="clan-shield-control">
+              <legend>Edge detail</legend>
+              ${renderClanShieldChoiceButtons(CLAN_SHIELD_TRIMS, "trim", shield.trim)}
+            </fieldset>
+            <fieldset class="clan-shield-control clan-shield-control-wide">
+              <legend>Paint finish</legend>
+              ${renderClanShieldChoiceButtons(CLAN_SHIELD_FINISHES, "finish", shield.finish)}
+            </fieldset>
+          </section>
+        </div>
       </div>
       <footer class="clan-shield-editor-actions">
         <button class="profile-secondary-btn" type="button" data-clan-action="randomize-shield" ${clanShieldSaving ? "disabled" : ""}>Inspire Me</button>
         <button class="profile-secondary-btn" type="button" data-clan-action="cancel-shield" ${clanShieldSaving ? "disabled" : ""}>Cancel</button>
-        <button class="profile-primary-btn" type="button" data-clan-action="save-shield" ${clanShieldSaving ? "disabled" : ""}>${clanShieldSaving ? "Saving…" : "Save Clan Shield"}</button>
+        <button class="profile-primary-btn clan-shield-save" type="button" data-clan-action="save-shield" ${clanShieldSaving ? "disabled" : ""}>${clanShieldSaving ? "Saving…" : "Save Clan Shield"}</button>
       </footer>
     </section>`;
+}
+
+function rerenderClanShieldEditor({ preserveScroll = true } = {}) {
+  const scrollTop = preserveScroll
+    ? clanContent?.querySelector(".clan-shield-editor-controls")?.scrollTop || 0
+    : 0;
+  renderClanView();
+  requestAnimationFrame(() => {
+    const controls = clanContent?.querySelector(".clan-shield-editor-controls");
+    if (controls) controls.scrollTop = scrollTop;
+  });
 }
 
 function randomizeClanShieldDraft() {
@@ -16220,17 +16255,26 @@ function randomizeClanShieldDraft() {
 
 async function saveClanShieldEditor() {
   const api = getOnlineApi();
-  if (state?.clanRole !== "leader" || !api?.updateClanProfile || !clanShieldDraft || clanShieldSaving) return;
+  if (clanShieldSaving) return;
+  if (state?.clanRole !== "leader" || !api?.updateClanProfile || !clanShieldDraft) {
+    showToast("The clan shield editor is not ready. Reopen it and try again.");
+    return;
+  }
   clanShieldSaving = true;
   renderClanView();
   try {
     const shield = normalizeClanShield(clanShieldDraft);
     const result = await api.updateClanProfile({ shield });
-    clanSnapshot = result?.clan || { ...clanSnapshot, shield };
+    if (!result?.ok || !result?.clan?.shield) {
+      throw new Error("The server did not confirm the new clan shield.");
+    }
+    const savedShield = normalizeClanShield(result.clan.shield, result.clan.banner);
+    clanSnapshot = { ...clanSnapshot, ...result.clan, shield: savedShield };
     clanShieldEditorOpen = false;
     clanShieldDraft = null;
+    clanShieldEditorTab = "field";
     showToast("Clan shield published.");
-    await refreshClanState({ silent: true });
+    renderMap();
   } catch (error) {
     showToast(error?.message || "Could not save the clan shield.");
   } finally {
@@ -16241,6 +16285,9 @@ async function saveClanShieldEditor() {
 
 function renderClanView() {
   if (!clanContent || activeProfileTab !== "clan") return;
+  const shieldEditorVisible = Boolean(state?.clanId && clanSnapshot && state?.clanRole === "leader" && clanShieldEditorOpen);
+  clanContent.classList.toggle("shield-editor-open", shieldEditorVisible);
+  clanView?.classList.toggle("shield-editor-active", shieldEditorVisible);
   const heroLevel = Math.max(1, Math.floor(Number(state?.character?.level) || 1));
   if (heroLevel < 20) {
     clanContent.innerHTML = `<section class="clan-empty"><span class="clan-lock" aria-hidden="true">♜</span><h3>Clans unlock at Level 20</h3><p>Raise your Hero to Level 20 to create or join a clan.</p><strong>Level ${heroLevel} / 20</strong></section>`;
@@ -16377,6 +16424,7 @@ function handleClanClick(event) {
   if (action === "edit-shield") {
     if (state?.clanRole !== "leader") return;
     clanShieldDraft = normalizeClanShield(clanSnapshot?.shield, clanSnapshot?.banner);
+    clanShieldEditorTab = "field";
     clanShieldEditorOpen = true;
     renderClanView();
     return;
@@ -16384,16 +16432,24 @@ function handleClanClick(event) {
   if (action === "cancel-shield") {
     clanShieldEditorOpen = false;
     clanShieldDraft = null;
+    clanShieldEditorTab = "field";
     renderClanView();
     return;
   }
   if (action === "randomize-shield") {
     randomizeClanShieldDraft();
-    renderClanView();
+    rerenderClanShieldEditor();
     return;
   }
   if (action === "save-shield") {
     saveClanShieldEditor();
+    return;
+  }
+  if (action === "shield-tab") {
+    const tab = String(button.dataset.shieldTab || "");
+    if (!["field", "colors", "charges", "details"].includes(tab)) return;
+    clanShieldEditorTab = tab;
+    rerenderClanShieldEditor({ preserveScroll: false });
     return;
   }
   if (action === "shield-option" || action === "shield-color") {
@@ -16402,7 +16458,7 @@ function handleClanClick(event) {
     if (!clanShieldDraft || !allowedKeys.has(key)) return;
     clanShieldDraft[key] = button.dataset.shieldValue || clanShieldDraft[key];
     clanShieldDraft = normalizeClanShield(clanShieldDraft);
-    renderClanView();
+    rerenderClanShieldEditor();
     return;
   }
   const clanId = button.dataset.clanId || state?.clanId || "";
