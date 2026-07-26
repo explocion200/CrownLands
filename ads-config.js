@@ -8,6 +8,14 @@ window.CROWNLANDS_ADS_CONFIG = Object.freeze({
   approvedProductionHosts: Object.freeze([
     "crownland.netlify.app",
   ]),
+  loginDisplayAd: Object.freeze({
+    enabled: true,
+    publisherId: "ca-pub-6031755025291372",
+    // AdSense > Ads > By ad unit > Display ads. Paste only the numeric
+    // data-ad-slot value here after Crownlands is approved for ads.
+    slotId: "",
+    showLocalPreview: true,
+  }),
   // Google Ad Manager > Inventory > Ad units. Use the full path:
   // /NETWORK_CODE/CROWNLANDS_REWARDED_AD_UNIT
   productionAdUnitPath: "",

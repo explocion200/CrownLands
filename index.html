@@ -41,11 +41,20 @@
     window.googletag = window.googletag || { cmd: [] };
   </script>
   <script async src="https://securepubads.g.doubleclick.net/tag/js/gpt.js"></script>
+  <script
+    async
+    src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6031755025291372"
+    crossorigin="anonymous"
+  ></script>
 </head>
 <body>
   <main class="phone-shell" aria-label="Crownlands real-time medieval conquest prototype">
     <section id="setupScreen" class="setup-screen visible">
       <button id="setupFullscreenBtn" class="hud-btn fullscreen-btn setup-fullscreen-btn" type="button" aria-label="Enter fullscreen" data-fullscreen-toggle><span class="fullscreen-glyph" aria-hidden="true">&#x26F6;</span></button>
+      <aside id="loginDisplayAd" class="login-display-ad" aria-label="Advertisement" hidden>
+        <span class="login-display-ad-label">Advertisement</span>
+        <div id="loginDisplayAdMount" class="login-display-ad-mount"></div>
+      </aside>
       <div class="setup-card">
         <h1 class="sr-only">Crownlands</h1>
         <p class="sr-only">Sign in with Google, then enter your kingdom.</p>
@@ -332,6 +341,7 @@
   <script src="world-config.js"></script>
   <script src="economy-config.js?v=20260726-offline-owned-production"></script>
   <script src="ads-config.js?v=20260726-rewarded-ads"></script>
+  <script src="login-display-ad.js?v=20260726-login-display-ad"></script>
   <script src="ui-layout-config.js?v=20260726-hud-layout-editor"></script>
   <script src="firebase-config.js?v=20260726-app-check"></script>
   <script src="firebaseClient.js?v=20260726-rewarded-ads"></script>

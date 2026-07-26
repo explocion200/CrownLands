@@ -15,6 +15,20 @@ This build keeps guest/local play working while adding Firebase for Google sign-
 
 The Firebase web config is not a password. Real protection comes from Firebase Authentication and Firestore rules.
 
+## Login Display Ad Setup
+
+The login screen has a responsive AdSense display-ad rail in the unused space beside the contained menu artwork. It only appears on sufficiently wide desktop screens, stays separate from the sign-in controls, and is never requested on an unapproved production hostname. Localhost shows a setup preview instead of requesting a real impression.
+
+To enable the live rail:
+
+1. Wait for the Crownlands site to be approved and marked ready in AdSense.
+2. In AdSense, open **Ads -> By ad unit -> Display ads**, create a responsive display unit named `Crownlands Login Side`, and copy the numeric `data-ad-slot` value from the generated code.
+3. Paste that number into `ads-config.js` as `loginDisplayAd.slotId`. The existing `ca-pub-6031755025291372` value is the publisher ID, not the ad-unit slot ID.
+4. Keep `loginDisplayAd.enabled` as the kill switch and keep every live hostname in `approvedProductionHosts`.
+5. Publish the required Google-certified consent message and final privacy policy before enabling live ads.
+
+Do not enable the slot if Google treats the login view as a non-content page. AdSense prohibits ads on non-content-based pages and ads positioned so close to controls that accidental clicks are likely. The Crownlands rail is desktop-only and separated from the sign-in card, but the publisher is still responsible for confirming that the approved login experience meets AdSense policy.
+
 ## Rewarded Ad Setup
 
 The Shop includes two optional rewarded-web cards: Gold `.5h` and Troop `.5h`. A successful Google reward grants an immediate amount equal to 30 minutes of city-level base production. Both choices share one 30-minute cooldown and a combined limit of 20 successful rewards per UTC day.

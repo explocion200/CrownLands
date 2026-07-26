@@ -1,4 +1,4 @@
-const CACHE_VERSION = "20260726-rewarded-ads";
+const CACHE_VERSION = "20260726-login-display-ad";
 const CACHE_NAME = `crownlands-cache-${CACHE_VERSION}`;
 const STATIC_CACHE_URLS = [
   "/",
@@ -8,6 +8,7 @@ const STATIC_CACHE_URLS = [
   "/world-config.js",
   "/economy-config.js?v=20260726-offline-owned-production",
   "/ads-config.js?v=20260726-rewarded-ads",
+  "/login-display-ad.js?v=20260726-login-display-ad",
   "/firebase-config.js?v=20260726-app-check",
   "/firebaseClient.js?v=20260726-rewarded-ads",
   "/game.js?v=20260726-rewarded-ads",
