@@ -5,6 +5,7 @@ const vm = require("vm");
 const root = path.resolve(__dirname, "..");
 const source = fs.readFileSync(path.join(root, "functions", "index.js"), "utf8");
 const clientSource = fs.readFileSync(path.join(root, "game.js"), "utf8");
+const firebaseClientSource = fs.readFileSync(path.join(root, "firebaseClient.js"), "utf8");
 const stylesSource = fs.readFileSync(path.join(root, "styles.css"), "utf8");
 
 function readFunction(name) {
@@ -38,6 +39,12 @@ function readClientFunction(name) {
 function readConstant(name) {
   const match = source.match(new RegExp(`const\\s+${name}\\s*=\\s*([^;]+);`));
   if (!match) throw new Error(`Missing ${name}.`);
+  return match[1];
+}
+
+function readClientConstant(name) {
+  const match = clientSource.match(new RegExp(`const\\s+${name}\\s*=\\s*([^;]+);`));
+  if (!match) throw new Error(`Missing client ${name}.`);
   return match[1];
 }
 
@@ -92,6 +99,9 @@ vm.runInContext([
 
 if (sandbox.GLOBAL_PLAYER_STATS_VERSION !== 8) {
   throw new Error(`Protection is not using King Power v8 (found v${sandbox.GLOBAL_PLAYER_STATS_VERSION}).`);
+}
+if (Number(readClientConstant("KING_POWER_COMPATIBILITY_VERSION")) !== 7) {
+  throw new Error("Map colors do not support the immediately previous public King Power snapshot.");
 }
 if (sandbox.DEMO_ATTACK_MIN_POWER_RATIO !== 3) {
   throw new Error(`Unexpected protection threshold ${sandbox.DEMO_ATTACK_MIN_POWER_RATIO}.`);
@@ -240,6 +250,9 @@ if (clientSandbox.getEnemyCityPowerBand({ owner: "neutral" }, 900_000, 100_000) 
 if (clientSandbox.getTroopSliderSendLimit({ troops: 100_000 }, { demoMaxTroops: 20_000 }) !== 20_000) {
   throw new Error("The troop slider does not stop at the weaker-kingdom attack limit.");
 }
+if (clientSandbox.getTroopSliderSendLimit({ troops: 21_000_000 }, { demoMaxTroops: 287 }) !== 287) {
+  throw new Error("A large army can still slide past the server's small protected attack limit.");
+}
 if (clientSandbox.getTroopSliderSendLimit({ troops: 100_000 }, {}) !== 100_000) {
   throw new Error("The troop slider incorrectly caps unrestricted attacks and transfers.");
 }
@@ -250,6 +263,19 @@ if (!clientSource.includes('slider.max = String(sliderSendLimit)')
 if (!clientSource.includes("ensureAuthoritativeCityOwnerKingPower(target)")
   || !clientSource.includes("launchAttack(source.id, target.id, 1, \"player\", selectedTroopAmount")) {
   throw new Error("Attack preparation does not load authoritative power and launch the exact capped slider amount.");
+}
+if (!clientSource.includes("getCompatibleCityOwnerKingPowerSnapshot(city)")
+  || !clientSource.includes("Could not verify that kingdom's attack limit. Try again.")) {
+  throw new Error("Stale public power cannot color the map or fail closed before opening an attack slider.");
+}
+if (!firebaseClientSource.includes('callServerFunction("getCombatPlayerIdentity", payload)')
+  || !firebaseClientSource.includes("getCombatPlayerIdentity,")) {
+  throw new Error("The browser does not expose the combat identity lookup.");
+}
+if (!source.includes("exports.getCombatPlayerIdentity = onCall")
+  || !source.includes("await rebuildGlobalStatsForPlayer(targetUid)")
+  || !source.includes("kingPowerVersion: Math.max(0, Math.floor(safeNumber(leaderboard.kingPowerVersion, 0)))")) {
+  throw new Error("The server does not upgrade and return authoritative combat King Power.");
 }
 if (!source.includes("const troops = resolvedKind === \"scout\" ? 1 : (demoAttack?.effectiveTroops || requestedTroops)")) {
   throw new Error("Server launch does not use the protected attack's capped troop count.");

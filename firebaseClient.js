@@ -348,6 +348,10 @@
     return callServerFunction("recalculateAllPlayerGlobalStats", payload);
   }
 
+  async function getCombatPlayerIdentity(payload = {}) {
+    return callServerFunction("getCombatPlayerIdentity", payload);
+  }
+
   async function ensureMainIsland(payload = {}) {
     return callServerFunction("ensureMainIsland", payload);
   }
@@ -1467,6 +1471,7 @@
     syncPlayerIdentity,
     recalculatePlayerGlobalStats,
     recalculateAllPlayerGlobalStats,
+    getCombatPlayerIdentity,
     relinquishCity,
     purchaseShopItem,
     activateInventoryItem,

@@ -767,6 +767,7 @@ const KING_POWER_ARMY_TROOP_VALUE = 2;
 const KING_POWER_REPLACEMENT_HOURS = 12;
 const KING_POWER_DEFENSIVE_ADVANTAGE_WEIGHT = 0.25;
 const KING_POWER_AUTHORITY_VERSION = 8;
+const KING_POWER_COMPATIBILITY_VERSION = 7;
 const SKILL_RESET_COST = economyNumber("playerCosts.skillResetGold", 750_000);
 
 const SKILL_CONFIG = {
@@ -6451,20 +6452,54 @@ function getAuthoritativeCityOwnerKingPowerSnapshot(city) {
     : 0;
 }
 
+function getCompatibleCityOwnerKingPowerSnapshot(city) {
+  if (!city) return 0;
+  const currentUid = getCurrentOnlineUid();
+  if (city.owner === "player" && (!city.ownerUid || city.ownerUid === currentUid)) return getKingPower();
+  const cachedIdentity = playerIdentityCache.get(city.ownerUid);
+  const cachedPower = Math.max(0, Math.floor(Number(cachedIdentity?.kingPowerVersion) || 0))
+    >= KING_POWER_COMPATIBILITY_VERSION
+    ? normalizePowerValue(cachedIdentity.kingPower)
+    : 0;
+  if (cachedPower > 0) return cachedPower;
+  const presence = Array.isArray(onlinePresence)
+    ? onlinePresence.find(entry => entry?.uid === city.ownerUid)
+    : null;
+  return Math.max(
+    Math.max(0, Math.floor(Number(city.kingPowerVersion) || 0)) >= KING_POWER_COMPATIBILITY_VERSION
+      ? normalizePowerValue(city.ownerKingPower)
+      : 0,
+    Math.max(0, Math.floor(Number(presence?.kingPowerVersion) || 0)) >= KING_POWER_COMPATIBILITY_VERSION
+      ? normalizePowerValue(presence?.kingPower)
+      : 0
+  );
+}
+
 async function ensureAuthoritativeCityOwnerKingPower(city) {
   const existingPower = getAuthoritativeCityOwnerKingPowerSnapshot(city);
   if (existingPower > 0 || !city || city.owner !== "enemy") return existingPower;
   const ownerUid = String(city.ownerUid || "").trim();
   const api = getOnlineApi();
-  if (!ownerUid || !api?.loadPlayerIdentities || !api?.isSignedIn?.()) return 0;
+  if (!ownerUid || !api?.isSignedIn?.()) return 0;
   try {
-    const rows = await withTimeout(
-      api.loadPlayerIdentities([ownerUid]),
-      3500,
-      "Kingdom strength check is taking too long."
-    );
-    rememberPlayerIdentities(Array.isArray(rows) ? rows : [], { force: true });
-    applyCanonicalPlayerIdentityToRecord(city);
+    const identity = api?.getCombatPlayerIdentity
+      ? await withTimeout(
+        api.getCombatPlayerIdentity({ uid: ownerUid }),
+        6000,
+        "Kingdom strength check is taking too long."
+      )
+      : null;
+    if (identity) {
+      rememberPlayerIdentity(identity, { force: true });
+    } else if (api?.loadPlayerIdentities) {
+      const rows = await withTimeout(
+        api.loadPlayerIdentities([ownerUid]),
+        3500,
+        "Kingdom strength check is taking too long."
+      );
+      rememberPlayerIdentities(Array.isArray(rows) ? rows : [], { force: true });
+    }
+    if (applyCanonicalPlayerIdentityToRecord(city)) renderCities(true);
     return getAuthoritativeCityOwnerKingPowerSnapshot(city);
   } catch (error) {
     console.warn("Could not load authoritative defender King Power", error);
@@ -6480,7 +6515,7 @@ function getDemoAttackTier(powerRatio) {
 function getEnemyCityPowerBand(
   city,
   playerKingPower = getKingPower(),
-  defenderKingPower = getAuthoritativeCityOwnerKingPowerSnapshot(city)
+  defenderKingPower = getCompatibleCityOwnerKingPowerSnapshot(city)
 ) {
   if (!city || city.owner !== "enemy" || isStronghold(city)) return "";
   const attackerPower = Math.max(1, normalizePowerValue(playerKingPower));
@@ -17971,6 +18006,7 @@ async function showTroopSliderModalAsync(source, target) {
 
   const isTransfer = target.owner === "player";
   const campTarget = isRewardCampTarget(target);
+  const needsDefenderPower = target.owner === "enemy" && !campTarget && !isStronghold(target);
   const mainCityBlockReason = isTransfer || campTarget ? "" : getMainCityAttackBlockReason(target, "player");
   if (mainCityBlockReason) {
     showToast(mainCityBlockReason);
@@ -17993,9 +18029,9 @@ async function showTroopSliderModalAsync(source, target) {
   showTroopRouteLoadingModal(source, target, isTransfer);
 
   await waitForSetupLoadingPaint(0);
-  const [route] = await Promise.all([
+  const [route, defenderPower] = await Promise.all([
     findRouteAsync(source, target),
-    !isTransfer && !campTarget ? ensureAuthoritativeCityOwnerKingPower(target) : Promise.resolve(0),
+    needsDefenderPower ? ensureAuthoritativeCityOwnerKingPower(target) : Promise.resolve(0),
   ]);
   if (requestId !== activeTroopRouteRequestId) return;
 
@@ -18011,6 +18047,20 @@ async function showTroopSliderModalAsync(source, target) {
   if (!modal.open || !modal.classList.contains("troop-slider-modal")) return;
   if (freshSource.troops < 1) {
     showToast("No troops available to send.");
+    cancelSendMode();
+    if (modal.open) modal.close();
+    return;
+  }
+  if (
+    freshTarget.owner === "enemy"
+    && !isRewardCampTarget(freshTarget)
+    && !isStronghold(freshTarget)
+    && Math.max(
+      normalizePowerValue(defenderPower),
+      getAuthoritativeCityOwnerKingPowerSnapshot(freshTarget)
+    ) <= 0
+  ) {
+    showToast("Could not verify that kingdom's attack limit. Try again.");
     cancelSendMode();
     if (modal.open) modal.close();
     return;

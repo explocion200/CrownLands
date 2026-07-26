@@ -4803,6 +4803,48 @@ exports.recalculateAllPlayerGlobalStats = onCall({ region: "us-central1", timeou
   };
 });
 
+exports.getCombatPlayerIdentity = onCall({
+  region: "us-central1",
+  timeoutSeconds: 60,
+  memory: "256MiB",
+  maxInstances: 20,
+  invoker: "public",
+}, async request => {
+  requireAuth(request);
+  const targetUid = safeString(request.data?.uid || request.data?.playerId, 128);
+  if (!targetUid) throw new HttpsError("invalid-argument", "Choose a player to inspect.");
+
+  let leaderboardSnap = await leaderboardEntryRef(targetUid).get();
+  let leaderboard = leaderboardSnap.exists ? leaderboardSnap.data() || {} : {};
+  const needsRebuild = !leaderboardSnap.exists
+    || Math.max(0, Math.floor(safeNumber(leaderboard.kingPowerVersion, 0))) < GLOBAL_PLAYER_STATS_VERSION
+    || Math.max(0, Math.floor(safeNumber(leaderboard.kingPower, 0))) <= 0;
+
+  if (needsRebuild) {
+    const profileSnap = await db.doc(`players/${targetUid}`).get();
+    if (!profileSnap.exists) throw new HttpsError("not-found", "That kingdom could not be found.");
+    await rebuildGlobalStatsForPlayer(targetUid);
+    leaderboardSnap = await leaderboardEntryRef(targetUid).get();
+    leaderboard = leaderboardSnap.exists ? leaderboardSnap.data() || {} : {};
+  }
+  if (!leaderboardSnap.exists) throw new HttpsError("not-found", "That kingdom could not be found.");
+
+  return {
+    uid: targetUid,
+    displayName: normalizePlayerName(leaderboard.playerName || leaderboard.displayName),
+    playerName: normalizePlayerName(leaderboard.playerName || leaderboard.displayName),
+    flag: leaderboard.flag || null,
+    kingPower: Math.max(0, Math.floor(safeNumber(leaderboard.kingPower, 0))),
+    kingPowerVersion: Math.max(0, Math.floor(safeNumber(leaderboard.kingPowerVersion, 0))),
+    mainCityId: safeString(leaderboard.mainCityId, 96),
+    mainRegionId: safeString(leaderboard.mainRegionId, 160),
+    mainIslandId: safeString(leaderboard.mainIslandId, 160),
+    updatedAtMs: Math.max(0, timestampToMs(
+      leaderboard.kingPowerUpdatedAtMs || leaderboard.updatedAtMs || leaderboard.updatedAt
+    )),
+  };
+});
+
 exports.ensureMainIsland = onCall({ region: "us-central1", maxInstances: 20, invoker: "public" }, async request => {
   const uid = requireAuth(request);
   const data = request.data || {};
