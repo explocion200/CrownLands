@@ -70,6 +70,7 @@ const REWARDED_AD_PENDING_STORAGE_KEY = `crownlands-pending-rewarded-ad-${RESET_
 const REWARDED_AD_LOAD_TIMEOUT_MS = 20 * 1000;
 const REWARDED_AD_DECISION_TIMEOUT_MS = 10 * 60 * 1000;
 const REWARDED_AD_COMPLETION_TIMEOUT_MS = 15 * 60 * 1000;
+const GOOGLE_PUBLISHER_TAG_URL = "https://securepubads.g.doubleclick.net/tag/js/gpt.js";
 const REWARDED_AD_ITEMS = Object.freeze([
   {
     id: "gold",
@@ -2631,6 +2632,7 @@ let rewardedAdStatusLoading = false;
 let rewardedAdInFlight = false;
 let rewardedAdShopCountdownTimer = 0;
 let googlePublisherServicesEnabled = false;
+let googlePublisherTagLoadPromise = null;
 let skillActionInFlight = false;
 let serverCityUpgradeInFlightIds = new Set();
 let serverCityRelinquishInFlightIds = new Set();
@@ -22458,6 +22460,29 @@ function waitForGooglePublisherTag(timeoutMs = REWARDED_AD_LOAD_TIMEOUT_MS) {
   });
 }
 
+function loadGooglePublisherTag(timeoutMs = REWARDED_AD_LOAD_TIMEOUT_MS) {
+  if (window.googletag?.apiReady && window.googletag?.pubads) {
+    return Promise.resolve(window.googletag);
+  }
+  if (googlePublisherTagLoadPromise) return googlePublisherTagLoadPromise;
+
+  window.googletag = window.googletag || { cmd: [] };
+  if (!document.querySelector("script[data-crownlands-rewarded-gpt]")) {
+    const script = document.createElement("script");
+    script.async = true;
+    script.src = GOOGLE_PUBLISHER_TAG_URL;
+    script.dataset.crownlandsRewardedGpt = "true";
+    document.head.append(script);
+  }
+
+  googlePublisherTagLoadPromise = waitForGooglePublisherTag(timeoutMs)
+    .catch(error => {
+      googlePublisherTagLoadPromise = null;
+      throw error;
+    });
+  return googlePublisherTagLoadPromise;
+}
+
 function showRewardedAdDisclosure(intent = {}, readyEvent = null) {
   return new Promise(resolve => {
     const rewardType = intent.rewardType === "troops" ? "troops" : "gold";
@@ -22510,7 +22535,7 @@ async function requestGoogleRewardedAd(intent = {}) {
   if (!config.adUnitPath) {
     throw createRewardedAdClientError("The production rewarded-ad unit is not configured.", "ad-unit-missing");
   }
-  const googletag = await waitForGooglePublisherTag();
+  const googletag = await loadGooglePublisherTag();
   return new Promise((resolve, reject) => {
     let slot = null;
     let granted = false;

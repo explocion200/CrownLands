@@ -198,55 +198,74 @@ html:fullscreen::backdrop {
   box-shadow: 0 18px 46px rgba(0,0,0,.48), inset 0 0 0 1px rgba(255,255,255,.08);
   backdrop-filter: blur(8px);
 }
-.login-display-ad {
+.login-game-info {
   position: absolute;
   z-index: 2;
   top: 50%;
   right: max(1rem, env(safe-area-inset-right));
-  width: min(300px, max(132px, calc((100vw - 133.333dvh) / 2 - 1rem)));
-  padding: .45rem;
-  border: 1px solid rgba(255, 255, 255, .18);
-  border-radius: 10px;
-  background: rgba(5, 10, 18, .78);
-  box-shadow: 0 14px 34px rgba(0, 0, 0, .42);
+  width: min(320px, 26vw);
+  min-width: 250px;
+  padding: 1rem;
+  border: 1px solid rgba(255, 226, 147, .32);
+  border-radius: 16px;
+  background: linear-gradient(180deg, rgba(8, 23, 39, .88), rgba(4, 11, 20, .94));
+  box-shadow: 0 18px 44px rgba(0, 0, 0, .46), inset 0 0 0 1px rgba(255,255,255,.05);
   transform: translateY(-50%);
+  backdrop-filter: blur(9px);
 }
-.login-display-ad[hidden] {
-  display: none;
-}
-.login-display-ad-label {
+.login-game-info-eyebrow {
   display: block;
-  margin-bottom: .35rem;
-  color: rgba(255, 255, 255, .72);
-  font: 700 .6rem/1 var(--font-ui);
+  color: #f2ca72;
+  font-size: .65rem;
+  font-weight: 900;
   letter-spacing: .12em;
-  text-align: center;
   text-transform: uppercase;
 }
-.login-display-ad-mount,
-.login-display-ad-mount .adsbygoogle {
-  display: block;
-  width: 100%;
-  min-width: 0;
+.login-game-info h2 {
+  margin: .4rem 0 .55rem;
+  color: #fff0b4;
+  font-size: clamp(1.05rem, 1.5vw, 1.35rem);
+  line-height: 1.2;
 }
-.login-display-ad.is-preview .login-display-ad-mount {
+.login-game-info p {
+  margin: 0;
+  color: #d9e7ef;
+  font-size: .84rem;
+  line-height: 1.45;
+}
+.login-game-info ul {
   display: grid;
-  min-height: clamp(250px, 52vh, 520px);
-  place-items: center;
-  border: 1px dashed rgba(255, 226, 147, .35);
-  background:
-    linear-gradient(135deg, rgba(255, 226, 147, .04), rgba(85, 178, 255, .06)),
-    rgba(1, 7, 13, .66);
+  gap: .48rem;
+  margin: .75rem 0;
+  padding: 0;
+  list-style: none;
 }
-.login-display-ad-preview {
-  max-width: 18ch;
-  padding: .8rem;
-  color: rgba(255, 246, 208, .78);
-  font: 700 .72rem/1.45 var(--font-ui);
-  text-align: center;
+.login-game-info li {
+  padding-left: .8rem;
+  color: #b9cddd;
+  font-family: var(--font-lore);
+  font-size: .76rem;
+  line-height: 1.38;
+  border-left: 2px solid rgba(242, 202, 114, .48);
+}
+.login-game-info li strong {
+  color: #f3e2bd;
+}
+.login-game-info > a {
+  display: inline-flex;
+  min-height: 36px;
+  align-items: center;
+  justify-content: center;
+  padding: .5rem .72rem;
+  color: #261704;
+  border-radius: 9px;
+  background: linear-gradient(#ffe19a, #dc9a2d);
+  font-size: .72rem;
+  font-weight: 950;
+  text-decoration: none;
 }
 @media (max-width: 1199px), (max-height: 699px), (max-aspect-ratio: 5/3) {
-  .login-display-ad {
+  .login-game-info {
     display: none !important;
   }
 }
@@ -430,18 +449,22 @@ input {
   grid-template-columns: 1fr;
   gap: .38rem;
 }
-.privacy-link {
-  display: block;
-  width: fit-content;
-  margin: .55rem auto 0;
+.public-site-links {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: .22rem .62rem;
+  margin-top: .62rem;
+}
+.public-site-links a {
   color: #cfe9ff;
-  font-size: .72rem;
+  font-size: .66rem;
   font-weight: 850;
   text-decoration: underline;
   text-underline-offset: .18em;
 }
-.privacy-link:hover,
-.privacy-link:focus-visible {
+.public-site-links a:hover,
+.public-site-links a:focus-visible {
   color: #fff0a7;
 }
 .online-login .ghost-btn,

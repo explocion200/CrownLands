@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Crownlands - Medieval Island Conquest</title>
   <meta name="description" content="Crownlands is a medieval real-time browser strategy game." />
+  <meta name="google-adsense-account" content="ca-pub-6031755025291372" />
   <meta name="application-name" content="Crownlands" />
   <meta name="theme-color" content="#10233a" />
   <meta name="mobile-web-app-capable" content="yes" />
@@ -38,23 +39,21 @@
   <link rel="icon" type="image/png" sizes="192x192" href="/assets/icons/crownlands-icon-192.png" />
   <link rel="apple-touch-icon" href="/assets/icons/crownlands-icon-192.png" />
   <link rel="manifest" href="/manifest.webmanifest" />
-  <script>
-    window.googletag = window.googletag || { cmd: [] };
-  </script>
-  <script async src="https://securepubads.g.doubleclick.net/tag/js/gpt.js"></script>
-  <script
-    async
-    src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6031755025291372"
-    crossorigin="anonymous"
-  ></script>
 </head>
 <body>
   <main class="phone-shell" aria-label="Crownlands real-time medieval conquest prototype">
     <section id="setupScreen" class="setup-screen visible">
       <button id="setupFullscreenBtn" class="hud-btn fullscreen-btn setup-fullscreen-btn" type="button" aria-label="Enter fullscreen" data-fullscreen-toggle><span class="fullscreen-glyph" aria-hidden="true">&#x26F6;</span></button>
-      <aside id="loginDisplayAd" class="login-display-ad" aria-label="Advertisement" hidden>
-        <span class="login-display-ad-label">Advertisement</span>
-        <div id="loginDisplayAdMount" class="login-display-ad-mount"></div>
+      <aside class="login-game-info" aria-label="About Crownlands">
+        <span class="login-game-info-eyebrow">Free browser strategy game</span>
+        <h2>Build a kingdom across living islands</h2>
+        <p>Claim cities, grow a real-time economy, scout rival rulers, and command marches across a shared medieval world.</p>
+        <ul>
+          <li><strong>Plan every conquest.</strong> Scout defenses, compare power, and study battle reports.</li>
+          <li><strong>Shape your realm.</strong> Upgrade cities, develop skills, join a clan, and compete for Strongholds.</li>
+          <li><strong>Rule together.</strong> Reinforce allies and contest the Crown Citadel in The Crown Marches.</li>
+        </ul>
+        <a href="/about.html">Discover Crownlands</a>
       </aside>
       <div class="setup-card">
         <h1 class="sr-only">Crownlands</h1>
@@ -85,7 +84,13 @@
             <button id="googleSignOutBtn" class="ghost-btn" type="button" hidden>Sign out</button>
             <button id="installAppBtn" class="ghost-btn install-app-btn" type="button" hidden>Install Crownlands</button>
           </div>
-          <a class="privacy-link" href="/privacy.html" target="_blank" rel="noopener">Privacy</a>
+          <nav class="public-site-links" aria-label="Crownlands information">
+            <a href="/about.html">About</a>
+            <a href="/how-to-play.html">How to Play</a>
+            <a href="/game-rules.html">Rules</a>
+            <a href="/support.html">Support</a>
+            <a href="/privacy.html">Privacy</a>
+          </nav>
         </div>
       </div>
     </section>
@@ -355,7 +360,6 @@
   <script src="world-config.js"></script>
   <script src="economy-config.js?v=20260726-offline-owned-production"></script>
   <script src="ads-config.js?v=20260726-rewarded-ads"></script>
-  <script src="login-display-ad.js?v=20260726-login-display-ad"></script>
   <script src="ui-layout-config.js?v=20260726-hud-layout-editor"></script>
   <script src="firebase-config.js?v=20260726-protected-ads-reset"></script>
   <script src="firebaseClient.js?v=20260726-protected-ads-reset"></script>
