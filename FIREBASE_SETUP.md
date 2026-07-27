@@ -15,19 +15,18 @@ This build keeps guest/local play working while adding Firebase for Google sign-
 
 The Firebase web config is not a password. Real protection comes from Firebase Authentication and Firestore rules.
 
-## Login Display Ad Setup
+## AdSense Site Review and Public Content
 
-The login screen has a responsive AdSense display-ad rail in the unused space beside the contained menu artwork. It only appears on sufficiently wide desktop screens, stays separate from the sign-in controls, and is never requested on an unapproved production hostname. Localhost shows a setup preview instead of requesting a real impression.
+The Crownlands login screen is intentionally ad-free. It must not contain an AdSense display unit, Auto ad loader, Google Publisher Tag loader, or another Google-served placement. Google identifies login pages as screens where publisher-content is not the focus.
 
-To enable the live rail:
+Site ownership is verified without requesting an advertisement:
 
-1. Wait for the Crownlands site to be approved and marked ready in AdSense.
-2. In AdSense, open **Ads -> By ad unit -> Display ads**, create a responsive display unit named `Crownlands Login Side`, and copy the numeric `data-ad-slot` value from the generated code.
-3. Paste that number into `ads-config.js` as `loginDisplayAd.slotId`. The existing `ca-pub-6031755025291372` value is the publisher ID, not the ad-unit slot ID.
-4. Keep `loginDisplayAd.enabled` as the kill switch and keep every live hostname in `approvedProductionHosts`.
-5. Publish the required Google-certified consent message and final privacy policy before enabling live ads.
+1. `index.html` and the public information pages contain the non-serving `google-adsense-account` meta tag.
+2. `ads.txt` contains the authorized seller line for the Crownlands publisher account.
+3. `about.html`, `how-to-play.html`, `game-rules.html`, `support.html`, and `privacy.html` provide original, crawlable content without requiring an account.
+4. `robots.txt` permits crawling and points to `sitemap.xml`.
 
-Do not enable the slot if Google treats the login view as a non-content page. AdSense prohibits ads on non-content-based pages and ads positioned so close to controls that accidental clicks are likely. The Crownlands rail is desktop-only and separated from the sign-in card, but the publisher is still responsible for confirming that the approved login experience meets AdSense policy.
+Keep AdSense Auto ads disabled for the login/game application. If AdSense display advertising is introduced after the site is approved, add it only to an eligible public content page after a placement-specific policy review. Never add display advertising to login, navigation, queue, alert, modal, error, or other behavioral screens.
 
 ## Rewarded Ad Setup
 
@@ -45,7 +44,7 @@ Before enabling production rewards:
 
 Localhost, `127.0.0.1`, and `*.localhost` use Google's rewarded-web sample ad unit. All other hosts fail closed until `productionAdUnitPath` is set. Closing, blocking, skipping, unsupported rendering, and no-fill grant nothing. The client submits the claim only after Google Publisher Tag emits `rewardedSlotGranted`; the server claim is transactional and idempotent.
 
-The Google Publisher Tag script is loaded by `index.html`. Do not substitute a Google Ads campaign/customer ID: the web rewarded slot needs a Google Ad Manager network and rewarded-web ad unit path.
+Google Publisher Tag is loaded on demand only after an eligible signed-in player starts the rewarded flow; it is not loaded by the login page or public content pages. Do not substitute a Google Ads campaign/customer ID: the web rewarded slot needs a Google Ad Manager network and rewarded-web ad unit path.
 
 ## Phase 1 Data
 

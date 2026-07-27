@@ -29,6 +29,14 @@ const MAP_ASPECT_TOLERANCE = 0.02;
 const DEFAULT_MAP_WIDTH = 2048;
 const DEFAULT_MAP_HEIGHT = 1536;
 const ROOT_STATIC_FILES = new Set([
+  "/about.html",
+  "/game-rules.html",
+  "/how-to-play.html",
+  "/privacy.html",
+  "/robots.txt",
+  "/sitemap.xml",
+  "/site-info.css",
+  "/support.html",
   "/firebaseClient.js",
   "/game.js",
   "/index.html",
