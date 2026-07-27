@@ -31,7 +31,7 @@ function economyRewardSchedule(campType, fallback = []) {
   }));
 }
 
-const REALM_RELEASE_ID = safeConfigString(REALM_CONFIG.releaseId, "crownlands-2026-07-27-daily-login-v1");
+const REALM_RELEASE_ID = safeConfigString(REALM_CONFIG.releaseId, "crownlands-2026-07-27-camp-rebalance-v1");
 const RESET_GENERATION = safeConfigString(REALM_CONFIG.resetGeneration, "fresh-2026-07-26-server-reset");
 const ONLINE_WORLD_ID = safeConfigString(REALM_CONFIG.worldId, `main-${RESET_GENERATION}`);
 const TEST_STARTING_GOLD = 100;
@@ -232,26 +232,26 @@ const SERVER_ISLAND_MAP_PADDING = 560;
 const SERVER_ROUTE_INSET_MIN = 24;
 const SERVER_ROUTE_INSET_MAX = 58;
 const GOLD_CAMP_REWARD_SCHEDULE = economyRewardSchedule("gold", [
-  { minimumReward: 100_000, productionHours: 3 },
-  { minimumReward: 75_000, productionHours: 2 },
-  { minimumReward: 50_000, productionHours: 1 },
-  { minimumReward: 25_000, productionHours: 0.5 },
+  { minimumReward: 20_000, productionHours: 0.4 },
+  { minimumReward: 40_000, productionHours: 0.8 },
+  { minimumReward: 60_000, productionHours: 1.6 },
+  { minimumReward: 80_000, productionHours: 2.4 },
 ]);
 const WARBAND_CAMP_REWARD_SCHEDULE = economyRewardSchedule("troops", [
-  { minimumReward: 50_000, productionHours: 6 },
-  { minimumReward: 37_500, productionHours: 4 },
-  { minimumReward: 25_000, productionHours: 3 },
-  { minimumReward: 12_500, productionHours: 2 },
+  { minimumReward: 10_000, productionHours: 1.6 },
+  { minimumReward: 20_000, productionHours: 2.4 },
+  { minimumReward: 30_000, productionHours: 3.2 },
+  { minimumReward: 40_000, productionHours: 4.8 },
 ]);
 const GOLD_CAMP_HOLD_DURATION_MS = economyNumber("camps.gold.holdMinutes", 10) * 60 * 1000;
-const GOLD_CAMP_BASE_REWARD = GOLD_CAMP_REWARD_SCHEDULE[0]?.minimumReward || 100_000;
+const GOLD_CAMP_BASE_REWARD = GOLD_CAMP_REWARD_SCHEDULE[0]?.minimumReward || 20_000;
 const GOLD_CAMP_BASE_DEFENDERS = economyNumber("camps.gold.baseDefenders", 10_000);
 const GOLD_CAMP_DEFENSE_LEVEL = economyNumber("camps.gold.defenseLevel", 30);
 const REWARD_CAMP_PAYOUT_SCAN_LIMIT = 40;
 const GOLD_CAMP_REWARD_BY_DAILY_CLAIM = GOLD_CAMP_REWARD_SCHEDULE.map(entry => entry.minimumReward);
 const GOLD_CAMP_REWARD_HOURS_BY_DAILY_CLAIM = GOLD_CAMP_REWARD_SCHEDULE.map(entry => entry.productionHours);
 const WARBAND_CAMP_HOLD_DURATION_MS = economyNumber("camps.troops.holdMinutes", 15) * 60 * 1000;
-const WARBAND_CAMP_BASE_REWARD = WARBAND_CAMP_REWARD_SCHEDULE[0]?.minimumReward || 50_000;
+const WARBAND_CAMP_BASE_REWARD = WARBAND_CAMP_REWARD_SCHEDULE[0]?.minimumReward || 10_000;
 const WARBAND_CAMP_BASE_DEFENDERS = economyNumber("camps.troops.baseDefenders", 10_000);
 const WARBAND_CAMP_DEFENSE_LEVEL = economyNumber("camps.troops.defenseLevel", 30);
 const WARBAND_CAMP_REWARD_BY_DAILY_CLAIM = WARBAND_CAMP_REWARD_SCHEDULE.map(entry => entry.minimumReward);
@@ -1128,6 +1128,8 @@ function getAuthoritativeIslandSeed(regionId = "") {
       size: serverImageSizeToWorld(targetRegionId, camp.size || 132),
       artSrc: camp.artSrc,
       campType: camp.campType || camp.type,
+      rewardSchedule: camp.rewardSchedule,
+      maxDailyRewards: camp.maxDailyRewards,
     });
   }).filter(camp => camp.id && isRewardCamp(camp));
   const world = getServerWorldDimensions();
@@ -2758,7 +2760,7 @@ function getRewardCampCombatTarget(camp = {}) {
   const authoritativeSeed = camp?.id
     ? getAuthoritativeRewardCampSeed(camp.regionId || camp.mapId, camp.id)
     : null;
-  const resolvedCamp = { ...(authoritativeSeed || {}), ...camp };
+  const resolvedCamp = authoritativeSeed ? { ...camp, ...authoritativeSeed } : camp;
   const config = getRewardCampConfig(resolvedCamp);
   if (!config) return null;
   const currentGarrison = Math.max(0, Math.floor(safeNumber(resolvedCamp.currentGarrison, resolvedCamp.baseDefenders || config.baseDefenders)));

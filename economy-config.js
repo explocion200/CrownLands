@@ -1,6 +1,6 @@
 window.CROWNLANDS_ECONOMY_CONFIG = {
   "schemaVersion": 1,
-  "updatedAt": "2026-07-26T01:45:14.566Z",
+  "updatedAt": "2026-07-27T05:22:27.960Z",
   "shopItems": {
     "shield_12h": {
       "cost": 1250000,
@@ -169,20 +169,20 @@ window.CROWNLANDS_ECONOMY_CONFIG = {
       "defenseLevel": 30,
       "rewardSchedule": [
         {
-          "minimumReward": 100000,
-          "productionHours": 3
+          "minimumReward": 20000,
+          "productionHours": 0.4
         },
         {
-          "minimumReward": 75000,
-          "productionHours": 2
+          "minimumReward": 40000,
+          "productionHours": 0.8
         },
         {
-          "minimumReward": 50000,
-          "productionHours": 1
+          "minimumReward": 60000,
+          "productionHours": 1.6
         },
         {
-          "minimumReward": 25000,
-          "productionHours": 0.5
+          "minimumReward": 80000,
+          "productionHours": 2.4
         }
       ]
     },
@@ -192,20 +192,20 @@ window.CROWNLANDS_ECONOMY_CONFIG = {
       "defenseLevel": 30,
       "rewardSchedule": [
         {
-          "minimumReward": 50000,
-          "productionHours": 6
+          "minimumReward": 10000,
+          "productionHours": 1.6
         },
         {
-          "minimumReward": 37500,
-          "productionHours": 4
+          "minimumReward": 20000,
+          "productionHours": 2.4
         },
         {
-          "minimumReward": 25000,
-          "productionHours": 3
+          "minimumReward": 30000,
+          "productionHours": 3.2
         },
         {
-          "minimumReward": 12500,
-          "productionHours": 2
+          "minimumReward": 40000,
+          "productionHours": 4.8
         }
       ]
     },

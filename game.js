@@ -322,22 +322,22 @@ const MIN_STRONGHOLD_VISUAL_SIZE = 1;
 const DEFAULT_CAMP_VISUAL_SIZE = 132;
 const MIN_CAMP_VISUAL_SIZE = 1;
 const GOLD_CAMP_REWARD_SCHEDULE = economyRewardSchedule("gold", [
-  { minimumReward: 100000, productionHours: 3 },
-  { minimumReward: 75000, productionHours: 2 },
-  { minimumReward: 50000, productionHours: 1 },
-  { minimumReward: 25000, productionHours: 0.5 },
+  { minimumReward: 20000, productionHours: 0.4 },
+  { minimumReward: 40000, productionHours: 0.8 },
+  { minimumReward: 60000, productionHours: 1.6 },
+  { minimumReward: 80000, productionHours: 2.4 },
 ]);
 const WARBAND_CAMP_REWARD_SCHEDULE = economyRewardSchedule("troops", [
-  { minimumReward: 50000, productionHours: 6 },
-  { minimumReward: 37500, productionHours: 4 },
-  { minimumReward: 25000, productionHours: 3 },
-  { minimumReward: 12500, productionHours: 2 },
+  { minimumReward: 10000, productionHours: 1.6 },
+  { minimumReward: 20000, productionHours: 2.4 },
+  { minimumReward: 30000, productionHours: 3.2 },
+  { minimumReward: 40000, productionHours: 4.8 },
 ]);
-const GOLD_CAMP_BASE_REWARD = GOLD_CAMP_REWARD_SCHEDULE[0]?.minimumReward || 100000;
+const GOLD_CAMP_BASE_REWARD = GOLD_CAMP_REWARD_SCHEDULE[0]?.minimumReward || 20000;
 const GOLD_CAMP_BASE_DEFENDERS = economyNumber("camps.gold.baseDefenders", 10000);
 const GOLD_CAMP_DEFENSE_LEVEL = economyNumber("camps.gold.defenseLevel", 30);
 const GOLD_CAMP_HOLD_SECONDS = economyNumber("camps.gold.holdMinutes", 10) * 60;
-const WARBAND_CAMP_BASE_REWARD = WARBAND_CAMP_REWARD_SCHEDULE[0]?.minimumReward || 50000;
+const WARBAND_CAMP_BASE_REWARD = WARBAND_CAMP_REWARD_SCHEDULE[0]?.minimumReward || 10000;
 const WARBAND_CAMP_BASE_DEFENDERS = economyNumber("camps.troops.baseDefenders", 10000);
 const WARBAND_CAMP_DEFENSE_LEVEL = economyNumber("camps.troops.defenseLevel", 30);
 const WARBAND_CAMP_HOLD_SECONDS = economyNumber("camps.troops.holdMinutes", 15) * 60;
@@ -12240,7 +12240,7 @@ function normalizeOnlineCampState(raw = {}) {
   if (!id) return null;
   const campType = String(raw.campType || "gold").toLowerCase();
   const base = WORLD_CAMPS.find(camp => camp.id === id) || {};
-  const config = getRewardCampConfig({ ...base, ...raw, campType });
+  const config = getRewardCampConfig({ ...raw, ...base, campType });
   if (!config) return null;
   return {
     ...raw,
@@ -12259,7 +12259,7 @@ function normalizeOnlineCampState(raw = {}) {
     payoutPending: Boolean(raw.payoutPending),
     currentGarrison: Math.max(0, Math.floor(Number(raw.currentGarrison) || 0)),
     baseDefenders: Math.max(1, Math.floor(Number(raw.baseDefenders) || config.baseDefenders)),
-    baseReward: Math.max(0, Math.floor(Number(raw.baseReward) || config.baseReward)),
+    baseReward: config.baseReward,
     defenseLevel: Math.max(1, Math.floor(Number(raw.defenseLevel) || config.defenseLevel)),
     rewardSchedule: config.rewardSchedule,
     maxDailyRewards: config.maxDailyRewards,
@@ -12299,7 +12299,7 @@ function getCampTargetById(campId) {
   const base = WORLD_CAMPS.find(camp => camp.id === id);
   if (!base) return null;
   const online = onlineCampStates.get(id) || onlineHeldCampStates.get(id) || {};
-  const config = getRewardCampConfig({ ...base, ...online });
+  const config = getRewardCampConfig({ ...online, ...base });
   if (!config) return null;
   const holderUid = String(online.holderUid || "").trim();
   const currentUid = getCurrentOnlineUid();
@@ -12332,7 +12332,7 @@ function getCampTargetById(campId) {
     troopFloat: currentGarrison,
     currentGarrison,
     baseDefenders: Math.max(1, Math.floor(Number(online.baseDefenders) || config.baseDefenders)),
-    baseReward: Math.max(0, Math.floor(Number(online.baseReward) || config.baseReward)),
+    baseReward: config.baseReward,
     payoutAtMs: normalizeTimestampMs(online.payoutAtMs),
     heldSinceMs: normalizeTimestampMs(online.heldSinceMs),
     payoutPending: Boolean(online.payoutPending),

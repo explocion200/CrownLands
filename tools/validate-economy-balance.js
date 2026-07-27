@@ -56,11 +56,35 @@ for (const [itemId, limit] of Object.entries(expectedItemLimits)) {
 
 const goldSchedule = serverConfig.camps.gold.rewardSchedule;
 const troopSchedule = serverConfig.camps.troops.rewardSchedule;
-assert.deepEqual(goldSchedule.map(entry => entry.productionHours), [3, 2, 1, 0.5]);
-assert.deepEqual(troopSchedule.map(entry => entry.productionHours), [6, 4, 3, 2]);
-assert.equal(goldSchedule.reduce((sum, entry) => sum + entry.productionHours, 0), 6.5);
-assert.equal(troopSchedule.reduce((sum, entry) => sum + entry.productionHours, 0), 15);
+assert.deepEqual(goldSchedule, [
+  { minimumReward: 20_000, productionHours: 0.4 },
+  { minimumReward: 40_000, productionHours: 0.8 },
+  { minimumReward: 60_000, productionHours: 1.6 },
+  { minimumReward: 80_000, productionHours: 2.4 },
+]);
+assert.deepEqual(troopSchedule, [
+  { minimumReward: 10_000, productionHours: 1.6 },
+  { minimumReward: 20_000, productionHours: 2.4 },
+  { minimumReward: 30_000, productionHours: 3.2 },
+  { minimumReward: 40_000, productionHours: 4.8 },
+]);
+assert.equal(goldSchedule.reduce((sum, entry) => sum + entry.productionHours, 0), 5.2);
+assert.equal(troopSchedule.reduce((sum, entry) => sum + entry.productionHours, 0), 12);
+for (const [campName, schedule] of [["Gold Camp", goldSchedule], ["Warband Camp", troopSchedule]]) {
+  for (let index = 1; index < schedule.length; index += 1) {
+    assert.ok(
+      schedule[index].minimumReward > schedule[index - 1].minimumReward,
+      `${campName} guaranteed rewards must rise with each claim.`
+    );
+    assert.ok(
+      schedule[index].productionHours > schedule[index - 1].productionHours,
+      `${campName} production-hour rewards must rise with each claim.`
+    );
+  }
+}
 requireMatch(serverSource, /function getRewardCampDailyReward[\s\S]*?Math\.max\(minimumReward,\s*Math\.floor\(hourlyRate \* rewardHours\)\)/, "Camp rewards are not production-scaled with a minimum.");
+requireMatch(serverSource, /const resolvedCamp = authoritativeSeed \? \{ \.\.\.camp, \.\.\.authoritativeSeed \} : camp;/, "Stored camp schedules can override the authoritative world reward schedule.");
+requireMatch(clientSource, /getRewardCampConfig\(\{ \.\.\.raw, \.\.\.base, campType \}\)/, "Online camp state can override the client world's authoritative reward schedule.");
 requireMatch(serverSource, /baseGoldPerHour:[\s\S]*?baseTroopPerHour:/, "Permanent production rates are missing from global stats.");
 
 const {
