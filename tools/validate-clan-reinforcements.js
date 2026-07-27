@@ -45,6 +45,11 @@ requires(
   /function beginReinforcementReturn[\s\S]*?getOwnedMainCityDestination[\s\S]*?createReinforcementReturnMovement/,
   "Safe full-contribution return marches are missing."
 );
+requires(
+  server,
+  /const returnInitiatorRole[\s\S]*?returnInitiatorRole === "holder"[\s\S]*?returnInitiatorRole === "contributor"[\s\S]*?currentUser:/,
+  "Holding-owner dismissal can expose or apply the troop contributor's private player snapshot."
+);
 requires(server, /exports\.returnClanReinforcement\s*=\s*timedCallable/, "Return reinforcement callable is missing.");
 requires(
   server,
@@ -98,6 +103,16 @@ requires(
 requires(client, /two holdings at once, with one reinforcement per holding/, "The reinforcement slider does not show the active support limit.");
 requires(client, /renderHoldingReinforcementPanel[\s\S]*?Send Home[\s\S]*?Recall/, "Private Recall and Send Home controls are missing.");
 requires(client, /label:\s*"Reinforcements"/, "Marches UI does not expose a Reinforcements section.");
+requires(
+  client,
+  /getIncomingClanReinforcementMarches[\s\S]*?incomingClanReinforcement[\s\S]*?Stationed with allies[\s\S]*?Defending your holdings/,
+  "Marches UI does not distinguish incoming, sent, and received clan support."
+);
+requires(
+  client,
+  /Stationed troops remain at their destination until recalled, sent home, invalidated, or lost in battle/,
+  "Marches UI does not explain that stationed troops remain at their holding."
+);
 
 requires(
   rules,

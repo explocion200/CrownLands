@@ -21361,7 +21361,9 @@ function renderHoldingReinforcementPanel(target) {
         <strong>${formatNumber(visible.reduce((total, entry) => total + Math.max(0, Math.floor(Number(entry.troops) || 0)), 0))} troops</strong>
       </div>
       ${rows}
-      <small>${isHolder ? "Only you can see every contributor and send their full contribution home." : "Only you and the holding owner can see your contribution."}</small>
+      <small>${isHolder
+        ? "These troops stay at this holding until their sender recalls them, you send them home, or they are lost in battle."
+        : "Your troops stay at this holding until you recall them, the holding owner sends them home, or they are lost in battle."}</small>
     </section>`;
 }
 
@@ -21381,11 +21383,19 @@ async function returnClanReinforcement(reinforcementId) {
   }
   reinforcementReturnRequests.add(id);
   refreshOpenHoldingReinforcementPanel();
+  if (modal.open && modal.classList.contains("outgoing-attack-modal")) {
+    renderOutgoingAttacksModalContent();
+  }
   try {
     const result = await api.returnClanReinforcement({ reinforcementId: id });
     applyServerArmyResult(result);
-    if (result?.movement) adoptServerArmyMovement(result.movement);
-    showToast(`${formatNumber(result?.troops || 0)} reinforcement troops are returning home.`);
+    if (result?.movement && result?.returnInitiatorRole === "contributor") {
+      adoptServerArmyMovement(result.movement);
+    }
+    onlineReinforcements = onlineReinforcements.filter(entry => entry?.id !== id);
+    showToast(result?.returnInitiatorRole === "holder"
+      ? `${formatNumber(result?.troops || 0)} allied troops were sent home.`
+      : `${formatNumber(result?.troops || 0)} reinforcement troops are returning home.`);
     updateOutgoingAttackUi();
     return true;
   } catch (error) {
@@ -21395,6 +21405,9 @@ async function returnClanReinforcement(reinforcementId) {
   } finally {
     reinforcementReturnRequests.delete(id);
     refreshOpenHoldingReinforcementPanel();
+    if (modal.open && modal.classList.contains("outgoing-attack-modal")) {
+      renderOutgoingAttacksModalContent();
+    }
   }
 }
 
@@ -23787,7 +23800,7 @@ function updateIncomingAttackUi() {
 function updateOutgoingAttackUi() {
   if (!outgoingAttackBtn) return;
   const operations = getActiveOperationsSnapshot();
-  const total = operations.marches.length + operations.camps.length + operations.strongholds.length + onlineReinforcements.length;
+  const total = operations.marches.length + operations.reinforcements.length + operations.camps.length + operations.strongholds.length;
   outgoingAttackBtn.hidden = total === 0;
   outgoingAttackBtn.classList.toggle("active", total > 0);
   if (!total) {
@@ -23802,13 +23815,16 @@ function updateOutgoingAttackUi() {
   const soonestCamp = operations.camps
     .filter(camp => camp.payoutAtMs > Date.now())
     .sort((a, b) => a.payoutAtMs - b.payoutAtMs)[0];
-  const status = operations.marches.length
-    ? operations.marches[0].serverPending ? "Sending" : formatDuration(operations.marches[0].remaining)
+  const travelingArmies = [...operations.marches, ...operations.reinforcements.filter(entry => !entry.stationed)]
+    .sort((a, b) => Math.max(0, Number(a.remaining) || 0) - Math.max(0, Number(b.remaining) || 0));
+  const status = travelingArmies.length
+    ? travelingArmies[0].serverPending ? "Sending" : formatDuration(travelingArmies[0].remaining)
     : soonestCamp
       ? formatDuration(Math.max(0, Math.ceil((soonestCamp.payoutAtMs - Date.now()) / 1000)))
-      : "Holdings";
+      : operations.reinforcements.length ? "Support" : "Holdings";
   const titleParts = [];
   if (operations.marches.length) titleParts.push(formatOutgoingMissionSummary(operations.marches));
+  if (operations.reinforcements.length) titleParts.push(formatReinforcementOperationSummary(operations.reinforcements));
   if (operations.camps.length) titleParts.push(`${formatNumber(operations.camps.length)} held ${operations.camps.length === 1 ? "camp" : "camps"}`);
   if (operations.strongholds.length) titleParts.push(`${formatNumber(operations.strongholds.length)} held ${operations.strongholds.length === 1 ? "stronghold" : "strongholds"}`);
   if (outgoingAttackCount) outgoingAttackCount.textContent = formatNumber(total);
@@ -23849,16 +23865,64 @@ function getHeldStrongholdsForActiveOperations() {
 }
 
 function getActiveOperationsSnapshot() {
-  const marches = getOutgoingAttacks();
+  const outgoingMarches = getOutgoingAttacks();
+  const outgoingReinforcements = outgoingMarches
+    .filter(mission => mission.kind === "reinforce" || mission.reinforcementReturn);
+  const incomingReinforcements = getIncomingClanReinforcementMarches();
   return {
-    marches,
+    marches: outgoingMarches.filter(mission => mission.kind !== "reinforce" && !mission.reinforcementReturn),
     camps: getHeldCampsForActiveOperations(),
     strongholds: getHeldStrongholdsForActiveOperations(),
     reinforcements: [
-      ...marches.filter(mission => mission.kind === "reinforce" || mission.reinforcementReturn),
+      ...outgoingReinforcements,
+      ...incomingReinforcements,
       ...onlineReinforcements.map(entry => ({ ...entry, stationed: true })),
     ],
   };
+}
+
+function getIncomingClanReinforcementMarches() {
+  const currentUid = getCurrentOnlineUid();
+  if (!state || !currentUid) return [];
+  const seen = new Set();
+  return getRenderableArmies()
+    .map(army => {
+      if (
+        !army
+        || army.kind !== "reinforce"
+        || army.owner === "player"
+        || String(army.targetOwnerUid || "") !== currentUid
+      ) return null;
+      const key = String(army.onlineId || army.id || `${army.fromId}:${army.toId}:${army.launchedAtMs || ""}`);
+      if (seen.has(key)) return null;
+      seen.add(key);
+      const remaining = Math.max(0, Number(army.remaining) || 0);
+      const isResolving = remaining <= 0 && Boolean(army.onlineId) && !resolvedOnlineArmyIds.has(key);
+      if (remaining <= 0 && !isResolving) return null;
+      return {
+        ...army,
+        key,
+        target: getArmyTargetById(army.toId),
+        source: cityById(army.fromId),
+        remaining,
+        isResolving,
+        incomingClanReinforcement: true,
+      };
+    })
+    .filter(Boolean)
+    .sort((a, b) => a.remaining - b.remaining);
+}
+
+function formatReinforcementOperationSummary(entries = []) {
+  const currentUid = getCurrentOnlineUid();
+  const traveling = entries.filter(entry => !entry.stationed);
+  const stationedSent = entries.filter(entry => entry.stationed && entry.ownerUid === currentUid).length;
+  const stationedReceived = entries.filter(entry => entry.stationed && entry.targetOwnerUid === currentUid && entry.ownerUid !== currentUid).length;
+  const parts = [];
+  if (traveling.length) parts.push(`${formatNumber(traveling.length)} traveling support ${traveling.length === 1 ? "march" : "marches"}`);
+  if (stationedSent) parts.push(`${formatNumber(stationedSent)} stationed with allies`);
+  if (stationedReceived) parts.push(`${formatNumber(stationedReceived)} defending your holdings`);
+  return parts.join(", ") || "No clan support";
 }
 
 function getArmyKindCounts(missions) {
@@ -23986,7 +24050,7 @@ async function focusIncomingAttackCity(cityId) {
 
 function showOutgoingAttacksModal() {
   const operations = getActiveOperationsSnapshot();
-  const total = operations.marches.length + operations.camps.length + operations.strongholds.length + onlineReinforcements.length;
+  const total = operations.marches.length + operations.reinforcements.length + operations.camps.length + operations.strongholds.length;
   if (!total) {
     showToast("No active marches or controlled objectives right now.");
     updateOutgoingAttackUi();
@@ -24069,29 +24133,68 @@ function renderOutgoingAttacksModalContent(operations = getActiveOperationsSnaps
 
 function renderReinforcementOperationPanel(entries = []) {
   if (!entries.length) return `<div class="incoming-attack-empty">No clan reinforcements are traveling or stationed.</div>`;
+  const currentUid = getCurrentOnlineUid();
+  const traveling = entries.filter(entry => !entry.stationed);
+  const stationedWithAllies = entries.filter(entry => entry.stationed && entry.ownerUid === currentUid);
+  const defendingYourHoldings = entries.filter(entry => (
+    entry.stationed
+    && entry.targetOwnerUid === currentUid
+    && entry.ownerUid !== currentUid
+  ));
+  const renderGroup = (label, description, groupEntries) => {
+    if (!groupEntries.length) return "";
+    return `
+      <section class="reinforcement-operation-group">
+        <div class="reinforcement-operation-heading">
+          <span><strong>${escapeHtml(label)}</strong><small>${escapeHtml(description)}</small></span>
+          <b>${formatNumber(groupEntries.length)}</b>
+        </div>
+        <div class="reinforcement-operations-list">
+          ${groupEntries.map(renderReinforcementOperationCard).join("")}
+        </div>
+      </section>`;
+  };
   return `
-    <div class="reinforcement-operations-list">
-      ${entries.map(entry => {
-        if (!entry.stationed) {
-          const returning = entry.reinforcementReturn;
-          return `
-            <article class="reinforcement-operation-card traveling">
-              <span><strong>${returning ? "Returning home" : "Traveling support"}</strong><small>${escapeHtml(entry.fromName || "Holding")} &rarr; ${escapeHtml(entry.toName || "Holding")}</small></span>
-              <strong>${formatNumber(entry.troops)} troops</strong>
-              <small>${entry.isResolving ? "Arriving" : formatDuration(entry.remaining)}</small>
-            </article>`;
-        }
-        const currentUid = getCurrentOnlineUid();
-        const holderView = entry.targetOwnerUid === currentUid;
-        const returning = reinforcementReturnRequests.has(entry.id);
-        return `
-          <article class="reinforcement-operation-card stationed">
-            <span><strong>${escapeHtml(entry.targetName || entry.targetId || "Allied holding")}</strong><small>${holderView ? `${escapeHtml(entry.ownerName || "Clan member")}'s support` : "Your stationed support"}</small></span>
-            <strong>${formatNumber(entry.troops)} troops</strong>
-            <button data-return-clan-reinforcement="${escapeHtml(entry.id)}" type="button" ${returning ? "disabled" : ""}>${returning ? "Returning..." : holderView && entry.ownerUid !== currentUid ? "Send Home" : "Recall"}</button>
-          </article>`;
-      }).join("")}
+    <div class="reinforcement-operation-summary">
+      <strong>${formatNumber(entries.length)} active support ${entries.length === 1 ? "assignment" : "assignments"}</strong>
+      <small>Stationed troops remain at their destination until recalled, sent home, invalidated, or lost in battle.</small>
+    </div>
+    <div class="reinforcement-operation-groups">
+      ${renderGroup("Traveling", "Friendly support currently marching.", traveling)}
+      ${renderGroup("Stationed with allies", "Your troops defending clan holdings.", stationedWithAllies)}
+      ${renderGroup("Defending your holdings", "Clan troops currently held in your cities and objectives.", defendingYourHoldings)}
     </div>`;
+}
+
+function renderReinforcementOperationCard(entry) {
+  const currentUid = getCurrentOnlineUid();
+  if (!entry.stationed) {
+    const returning = entry.reinforcementReturn;
+    const incoming = entry.incomingClanReinforcement || (
+      entry.targetOwnerUid === currentUid && entry.ownerUid !== currentUid
+    );
+    const label = returning ? "Returning home" : incoming ? "Incoming support" : "Support en route";
+    const detail = incoming && !returning
+      ? `${escapeHtml(entry.ownerName || "Clan member")} is reinforcing ${escapeHtml(entry.toName || "your holding")}`
+      : `${escapeHtml(entry.fromName || "Holding")} &rarr; ${escapeHtml(entry.toName || "Holding")}`;
+    return `
+      <article class="reinforcement-operation-card traveling">
+        <span><strong>${label}</strong><small>${detail}</small></span>
+        <strong>${formatNumber(entry.troops)} troops</strong>
+        <small>${entry.isResolving ? "Arriving" : formatDuration(entry.remaining)}</small>
+      </article>`;
+  }
+  const holderView = entry.targetOwnerUid === currentUid;
+  const returning = reinforcementReturnRequests.has(entry.id);
+  const detail = holderView
+    ? `${escapeHtml(entry.ownerName || "Clan member")}'s troops are defending your holding`
+    : `Your troops are stationed with ${escapeHtml(entry.targetOwnerName || "a clan ally")}`;
+  return `
+    <article class="reinforcement-operation-card stationed">
+      <span><strong>${escapeHtml(entry.targetName || entry.targetId || "Allied holding")}</strong><small>${detail}</small></span>
+      <strong>${formatNumber(entry.troops)} troops</strong>
+      <button data-return-clan-reinforcement="${escapeHtml(entry.id)}" type="button" ${returning ? "disabled" : ""}>${returning ? "Returning..." : holderView && entry.ownerUid !== currentUid ? "Send Home" : "Recall"}</button>
+    </article>`;
 }
 
 function renderMarchesOperationPanel(marches) {

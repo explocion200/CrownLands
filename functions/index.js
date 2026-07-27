@@ -4361,6 +4361,16 @@ async function beginReinforcementReturn({
     if (callerUid && callerUid !== ownerUid && callerUid !== currentHolderUid) {
       throw new HttpsError("permission-denied", "Only the troop owner or holding owner can return these reinforcements.");
     }
+    const returnInitiatorRole = callerUid === ownerUid
+      ? "contributor"
+      : callerUid === currentHolderUid
+        ? "holder"
+        : "server";
+    const effectiveReturnReason = returnInitiatorRole === "contributor"
+      ? "contributor_recall"
+      : returnInitiatorRole === "holder"
+        ? "holder_send_home"
+        : safeString(reason, 40) || "server_return";
 
     const economy = await prepareEconomyCollection(transaction, ownerUid, nowMs);
     const profile = economy.profileAfter || {};
@@ -4375,7 +4385,7 @@ async function beginReinforcementReturn({
       economy,
       profile,
       nowMs,
-      reason,
+      reason: effectiveReturnReason,
     });
     const currentStationed = getProfileStationedReinforcementTroops(profile);
     const returningTroops = Math.max(0, Math.floor(safeNumber(contribution.troops, 0)));
@@ -4411,7 +4421,7 @@ async function beginReinforcementReturn({
       status: REINFORCEMENT_STATUS_RETURNING,
       returnRevision: clampInt(contribution.returnRevision, 0, 999999) + 1,
       returnArmyId: movement.id,
-      returnReason: safeString(reason, 40),
+      returnReason: effectiveReturnReason,
       returnedAtMs: nowMs,
       updatedAt: FieldValue.serverTimestamp(),
     }, { merge: true });
@@ -4420,15 +4430,20 @@ async function beginReinforcementReturn({
       ok: true,
       status: REINFORCEMENT_STATUS_RETURNING,
       reinforcementId: id,
+      returnInitiatorRole,
       troops: returningTroops,
       movement,
       ...targetUpdate,
-      currentUser: createEconomyResponse(economy, {
-        currentUser: {
-          ...createEconomyResponse(economy).currentUser,
-          globalStats: globalStatsForClient(economy.lastGlobalStats || economy.globalStats),
-        },
-      }).currentUser,
+      ...(returnInitiatorRole === "contributor"
+        ? {
+          currentUser: createEconomyResponse(economy, {
+            currentUser: {
+              ...createEconomyResponse(economy).currentUser,
+              globalStats: globalStatsForClient(economy.lastGlobalStats || economy.globalStats),
+            },
+          }).currentUser,
+        }
+        : {}),
     };
   });
 }
