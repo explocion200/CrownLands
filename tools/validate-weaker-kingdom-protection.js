@@ -39,6 +39,7 @@ const numericConstants = [
   "ATTACK_PROTECTION_RAID_MAX_SCALE_RATIO",
   "ATTACK_PROTECTION_DEFENDER_FIRST_XP_MULTIPLIER",
   "ATTACK_PROTECTION_DEFENDER_REPEAT_XP_MULTIPLIER",
+  "PROTECTED_ASSAULT_BREACH_VERSION",
   "DEMO_ATTACK_MIN_POWER_RATIO",
   "DEMO_ATTACK_DEFENDER_XP_MULTIPLIER",
   "BASE_TROOP_ATTACK_POWER",
@@ -105,6 +106,7 @@ vm.runInContext([
   readFunction(source, "getDemoAttackTier"),
   readFunction(source, "normalizeDemoAttackSnapshot"),
   readFunction(source, "roundDownToTwoSignificantDigits"),
+  readFunction(source, "roundUpToTwoSignificantDigits"),
   readFunction(source, "getAttackProtectionMode"),
   readFunction(source, "getAttackProtectionBreakEvenScale"),
   readFunction(source, "normalizeAttackProtectionSnapshot"),
@@ -112,6 +114,8 @@ vm.runInContext([
   readFunction(source, "createServerAttackProtectionSnapshot"),
   readFunction(source, "createAttackProtectionPreview"),
   readFunction(source, "getAttackProtectionQuoteSignature"),
+  readFunction(source, "getCityOwnershipStartedAtMs"),
+  readFunction(source, "isCurrentProtectedAssaultBreach"),
   readFunction(source, "isCurrentProtectedDefenseXpClaim"),
   readFunction(source, "calculateCombatResult"),
 ].join("\n\n"), sandbox);
@@ -149,12 +153,23 @@ function protectionAt(ratio, overrides = {}) {
 
 if (protectionAt(1.99)) throw new Error("A 1.99× attack is incorrectly protected.");
 const atTwo = protectionAt(2);
-if (atTwo?.mode !== "assault" || !atTwo.captureAllowed || atTwo.maxTroops !== 620) {
-  throw new Error("The 2× protected-assault boundary or 125% break-even cap is wrong.");
+if (atTwo?.mode !== "assault" || atTwo.captureAllowed || !atTwo.breachRequired
+  || atTwo.assaultStage !== "breach" || atTwo.maxTroops !== 510) {
+  throw new Error("The first 2× assault is not capped at the rounded capture-safe breach force.");
 }
 const atTwoFortyNine = protectionAt(2.49);
-if (atTwoFortyNine?.mode !== "assault" || !atTwoFortyNine.captureAllowed || atTwoFortyNine.maxTroops !== 520) {
-  throw new Error("The 2.49× assault cap does not approach 105% of break-even.");
+if (atTwoFortyNine?.mode !== "assault" || atTwoFortyNine.captureAllowed
+  || atTwoFortyNine.assaultStage !== "breach" || atTwoFortyNine.maxTroops !== 510) {
+  throw new Error("The first 2.49× assault can overcommit troops or capture immediately.");
+}
+const atTwoCapture = protectionAt(2, { assaultStage: "capture" });
+if (atTwoCapture?.mode !== "assault" || !atTwoCapture.captureAllowed
+  || atTwoCapture.breachRequired || atTwoCapture.maxTroops !== 620) {
+  throw new Error("A breached city does not receive the capture-capable 2× follow-up allowance.");
+}
+const atTwoFortyNineCapture = protectionAt(2.49, { assaultStage: "capture" });
+if (!atTwoFortyNineCapture?.captureAllowed || atTwoFortyNineCapture.maxTroops !== 520) {
+  throw new Error("The 2.49× follow-up cap is not capture-safe.");
 }
 const atTwoFive = protectionAt(2.5);
 if (atTwoFive?.mode !== "raid" || atTwoFive.captureAllowed
@@ -197,15 +212,26 @@ const pressuredFailure = sandbox.calculateCombatResult(
 if (pressuredFailure.success || pressuredFailure.defenderLosses !== 820) {
   throw new Error("Normal failed attacks do not use 82% × pressure capped at 82%.");
 }
-const assaultWin = sandbox.calculateCombatResult(
-  600,
+const firstAssaultWin = sandbox.calculateCombatResult(
+  atTwo.maxTroops,
   target,
   null,
   null,
   { attackProtection: atTwo }
 );
-if (!assaultWin.success || assaultWin.survivors < 1) {
-  throw new Error("Permitted protected-assault troops do not retain normal capture strength.");
+if (firstAssaultWin.success || !firstAssaultWin.breachCompleted || !firstAssaultWin.battleWon
+  || firstAssaultWin.survivors < 1 || firstAssaultWin.defendersLeft !== 1) {
+  throw new Error("The first protected assault can capture or cannot complete a wall breach.");
+}
+const followUpAssaultWin = sandbox.calculateCombatResult(
+  600,
+  target,
+  null,
+  null,
+  { attackProtection: atTwoCapture }
+);
+if (!followUpAssaultWin.success || followUpAssaultWin.breachCompleted || followUpAssaultWin.survivors < 1) {
+  throw new Error("A capture-stage protected assault cannot take a breached city.");
 }
 const raid = sandbox.calculateCombatResult(
   10_000,
@@ -258,6 +284,36 @@ if (legacyRaid?.mode !== "raid" || legacyRaid.captureAllowed || !legacyRaid.lega
 if (sandbox.getAttackProtectionQuoteSignature(atTwo, 1000, 500)
   === sandbox.getAttackProtectionQuoteSignature(atTwoFive, 1000, 500)) {
   throw new Error("Assault and raid previews have indistinguishable reconfirmation signatures.");
+}
+if (sandbox.getAttackProtectionQuoteSignature(atTwo, 1000, 500)
+  === sandbox.getAttackProtectionQuoteSignature(atTwoCapture, 1000, 500)) {
+  throw new Error("Breach and capture assault previews have indistinguishable reconfirmation signatures.");
+}
+const currentBreach = {
+  version: sandbox.PROTECTED_ASSAULT_BREACH_VERSION,
+  status: "active",
+  attackerUid: "attacker",
+  defenderUid: "defender",
+  cityId: "city-1",
+  defenderOwnershipStartedAtMs: 1234,
+  firstResolvedArmyId: "army-first",
+  worldId: sandbox.ONLINE_WORLD_ID,
+  resetGeneration: sandbox.RESET_GENERATION,
+};
+if (!sandbox.isCurrentProtectedAssaultBreach(currentBreach, {
+  attackerUid: "attacker",
+  defenderUid: "defender",
+  city: { id: "city-1", lastCapturedAtMs: 1234 },
+}) || sandbox.isCurrentProtectedAssaultBreach(currentBreach, {
+  attackerUid: "attacker",
+  defenderUid: "different-defender",
+  city: { id: "city-1", lastCapturedAtMs: 1234 },
+}) || sandbox.isCurrentProtectedAssaultBreach(currentBreach, {
+  attackerUid: "attacker",
+  defenderUid: "defender",
+  city: { id: "city-1", lastCapturedAtMs: 9999 },
+})) {
+  throw new Error("Protected-assault breaches are not scoped to attacker, defender, city ownership, and world.");
 }
 if (!sandbox.isCurrentProtectedDefenseXpClaim({
   worldId: sandbox.ONLINE_WORLD_ID,
@@ -382,6 +438,11 @@ const requiredServerSnippets = [
   "attackerXpMultiplier: 0",
   "attackProtection,",
   "demoAttack: army.demoAttack",
+  "protectedAssaultBreaches",
+  "assaultStage: resolutionAssaultStage",
+  "outcome: \"breach\"",
+  "Walls breached.",
+  "returnRecalledTroops(result.survivors)",
 ];
 requiredServerSnippets.forEach(snippet => {
   if (!source.includes(snippet)) throw new Error(`Missing server protection behavior: ${snippet}`);
@@ -391,6 +452,9 @@ if (!source.includes("capBattleXpForHeroLevel(defenseHeldXp, defenderProfile || 
 }
 if (!/match\s+\/protectedDefenseXpClaims\/\{attackerUid\}\s*\{[\s\S]*?allow read, create, update, delete:\s*if false;/.test(firestoreRulesSource)) {
   throw new Error("Protected defensive-XP claims are not explicitly server-owned in Firestore rules.");
+}
+if (!/match\s+\/protectedAssaultBreaches\/\{attackerUid\}\s*\{[\s\S]*?allow read, create, update, delete:\s*if false;/.test(firestoreRulesSource)) {
+  throw new Error("Protected-assault breach records are not explicitly server-owned in Firestore rules.");
 }
 if (!source.includes("const duration = calculateTravelTime({")
   || /const duration = calculateTravelTime\(\{[\s\S]{0,260}\bdemoAttack,/.test(
@@ -407,6 +471,8 @@ const requiredClientSnippets = [
   "getChangedAttackProtectionFromError(error)",
   "Protection changed. Confirm the refreshed limit.",
   "no capture; defender damage is capped",
+  "first assault; a victory breaches the walls but cannot capture",
+  "follow-up assault; capture is possible",
   "2× on their first protected battle against you this world; normal afterward.",
   "activeAttackProtectionPreview",
 ];
@@ -416,9 +482,14 @@ requiredClientSnippets.forEach(snippet => {
     : clientSource;
   if (!haystack.includes(snippet)) throw new Error(`Missing client protection behavior: ${snippet}`);
 });
+if (!readFunction(clientSource, "normalizeBattleReports").includes("\"breach\", \"breached\"")
+  || !readFunction(clientSource, "getBattleReportBadge").includes("label: \"BREACH\"")
+  || !readFunction(clientSource, "calculateBattlePreviewForTroops").includes("breachCompleted")) {
+  throw new Error("Protected breach previews or battle reports are not represented in the client UI.");
+}
 if (!clientSource.includes("slider.max = String(sliderSendLimit)")
   || !clientSource.includes("selectedTroopAmount = clamp(selectedTroopAmount, 1, getTroopSliderSendLimit(source, target))")) {
   throw new Error("The visible slider and final confirmation do not reapply the legal troop cap.");
 }
 
-console.log("Validated weaker-player protection v2 boundaries, caps, raids, XP claims, previews, and stable colors.");
+console.log("Validated weaker-player protection v2 boundaries, two-stage breaches, caps, raids, XP claims, previews, and stable colors.");

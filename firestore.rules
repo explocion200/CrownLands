@@ -301,6 +301,10 @@ service cloud.firestore {
         allow create: if false;
         allow update: if signedIn() && isCurrentIslandId(islandId) && cityIdentityOnlyUpdate();
         allow delete: if false;
+
+        match /protectedAssaultBreaches/{attackerUid} {
+          allow read, create, update, delete: if false;
+        }
       }
 
       match /camps/{campId} {
