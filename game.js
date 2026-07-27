@@ -7583,8 +7583,11 @@ function calculateCombatResult(attackTroops, attackOwner, target, options = {}) 
   const attackPower = getAttackPower(troops, attackOwner);
   const defensePower = getBattleDefensePower(target);
   const ratio = attackPower / Math.max(1, defensePower);
-  const raid = protectedAttack?.mode === "raid";
-  const success = !raid && attackPower > defensePower;
+  const protectedRaid = protectedAttack?.mode === "raid";
+  const convertedReinforcement = options.convertedReinforcement === true;
+  const convertedReinforcementCanCapture = protectedRaid && convertedReinforcement;
+  const success = (!protectedRaid || convertedReinforcementCanCapture) && attackPower > defensePower;
+  const raid = protectedRaid && !success;
   const attackerBoost = attackOwner === "player" ? skillMultiplier("swordmastery") : 1.04;
   let survivors = 0;
   let defendersLeft = defendersAtStart;
@@ -7626,6 +7629,8 @@ function calculateCombatResult(attackTroops, attackOwner, target, options = {}) 
     attackProtection: protectedAttack,
     demoAttack: protectedAttack?.legacyDemoAttack ? normalizeDemoAttackSnapshot(options.demoAttack) : null,
     raidCompleted: raid,
+    convertedReinforcement,
+    convertedReinforcementCapture: convertedReinforcementCanCapture && success,
   };
 }
 
@@ -12616,6 +12621,9 @@ function prepareOnlineArmyMission(mission) {
   mission.ownerName = state.playerName;
   mission.ownerFlag = state.flag;
   mission.ownerKingPower = getKingPower();
+  mission.launchKind = ["attack", "transfer", "scout"].includes(mission.launchKind)
+    ? mission.launchKind
+    : mission.kind;
   mission.attackerKingPower = normalizePowerValue(mission.attackerKingPower) || mission.ownerKingPower;
   mission.defenderKingPower = normalizePowerValue(mission.defenderKingPower);
   mission.attackProtection = normalizeAttackProtectionSnapshot(mission.attackProtection, mission.demoAttack);
@@ -12644,6 +12652,9 @@ function toOnlineArmyMovement(mission) {
     ownerFlag: mission.ownerFlag || state.flag,
     ownerKingPower: normalizePowerValue(mission.ownerKingPower) || getKingPower(),
     kind: mission.kind || "attack",
+    launchKind: ["attack", "transfer", "scout"].includes(mission.launchKind)
+      ? mission.launchKind
+      : mission.kind || "attack",
     targetType: mission.targetType === "camp" || isRewardCampTarget(to) ? "camp" : "city",
     fromId: mission.fromId,
     toId: mission.toId,
@@ -12733,6 +12744,12 @@ function applyServerMovementToMission(mission, movement = null) {
   const rawRemaining = Number(movement.remaining);
   mission.onlineId = movement.id || mission.onlineId;
   if (["attack", "transfer", "scout"].includes(movementKind)) mission.kind = movementKind;
+  if (["attack", "transfer", "scout"].includes(movement.launchKind)) {
+    mission.launchKind = movement.launchKind;
+  }
+  if (["attack", "transfer", "scout"].includes(movement.retargetedFromKind)) {
+    mission.retargetedFromKind = movement.retargetedFromKind;
+  }
   mission.troops = Math.max(0, Math.floor(Number(movement.troops) || mission.troops || 0));
   mission.requestedTroops = Math.max(0, Math.floor(Number(movement.requestedTroops) || mission.requestedTroops || mission.troops || 0));
   mission.total = Math.max(0.1, Number(movement.total) || mission.total || 0.1);
@@ -12939,6 +12956,10 @@ function normalizeOnlineArmyMovement(raw) {
     ownerFlag: ownerIdentity?.flag || raw.ownerFlag || null,
     ownerKingPower: normalizePowerValue(ownerIdentity?.kingPower) || normalizePowerValue(raw.ownerKingPower),
     kind: effectiveKind,
+    launchKind: ["attack", "transfer", "scout"].includes(raw.launchKind) ? raw.launchKind : rawKind,
+    retargetedFromKind: ["attack", "transfer", "scout"].includes(raw.retargetedFromKind)
+      ? raw.retargetedFromKind
+      : "",
     targetType: raw.targetType === "camp" ? "camp" : "city",
     fromId: raw.fromId || "",
     toId: raw.toId || "",
@@ -13212,6 +13233,8 @@ function createLocalAttackFromOnlineArmy(army, remaining = getOnlineArmyRemainin
     ownerFlag: army.ownerFlag || state.flag,
     ownerKingPower: normalizePowerValue(army.ownerKingPower),
     kind: army.kind,
+    launchKind: army.launchKind || army.kind,
+    retargetedFromKind: army.retargetedFromKind || "",
     targetType: army.targetType === "camp" ? "camp" : "city",
     fromId: army.fromId,
     toId: army.toId,
@@ -15957,11 +15980,15 @@ function resolveAttack(attack) {
         attackerKingPower: attack.attackerKingPower,
         defenderKingPower: attack.defenderKingPower,
       });
+  const convertedReinforcement = attack.kind === "transfer"
+    || attack.launchKind === "transfer"
+    || attack.retargetedFromKind === "transfer";
   const protectionReportSuffix = getAttackProtectionReportSuffix(attackProtection);
   const givenUpNeutralTarget = isGivenUpNeutralCity(target);
   const result = calculateCombatResult(attack.troops, attack.owner, target, {
     attackProtection,
     demoAttack: attack.demoAttack,
+    convertedReinforcement,
   });
 
   if (result.success) {
@@ -16015,7 +16042,7 @@ function resolveAttack(attack) {
         baseTotalDefense: targetStatsAtStart.baseTotalDefense,
         totalDefenseBonus: targetStatsAtStart.totalDefenseBonus,
         opponentName: defenderName,
-        summary: `Captured with ${formatNumber(result.survivors)} survivors. ${formatCapturedCityLevelDrop(levelDrop)} +${formatNumber(xpAward)} XP.${protectionReportSuffix}`,
+        summary: `${convertedReinforcement ? "Reinforcements converted to an attack and captured the city" : "Captured"} with ${formatNumber(result.survivors)} survivors. ${formatCapturedCityLevelDrop(levelDrop)} +${formatNumber(xpAward)} XP.${protectionReportSuffix}`,
       });
       addLog(`Victory: you captured ${target.name} with ${formatNumber(result.survivors)} survivors. ${formatNumber(savedAttackers)} troops recovered. ${formatCapturedCityLevelDrop(levelDrop)} XP efficiency ${Math.round(xpEfficiency * 100)}%.`);
       showToast(`Captured ${target.name}: +${formatNumber(xpAward)} XP`);
@@ -16045,7 +16072,7 @@ function resolveAttack(attack) {
         baseTotalDefense: targetStatsAtStart.baseTotalDefense,
         totalDefenseBonus: targetStatsAtStart.totalDefenseBonus,
         opponentName: attackerReportName,
-        summary: `${target.name} was captured by ${attackerReportName}. ${formatCapturedCityLevelDrop(levelDrop)} +${formatNumber(defenseLossXp)} XP.${protectionReportSuffix}`,
+        summary: `${target.name} was captured by ${attackerReportName}${convertedReinforcement ? " after incoming reinforcements converted to an attack" : ""}. ${formatCapturedCityLevelDrop(levelDrop)} +${formatNumber(defenseLossXp)} XP.${protectionReportSuffix}`,
       });
       addLog(`Lost: the enemy captured ${target.name}. ${formatCapturedCityLevelDrop(levelDrop)} ${formatNumber(savedDefenders)} troops recovered, and you gained ${formatNumber(defenseLossXp)} XP.`);
       showToast(`You lost ${target.name}: +${formatNumber(defenseLossXp)} XP`);

@@ -93,11 +93,38 @@ assert.match(
   /convertedReinforcement[\s\S]*?createServerAttackProtectionSnapshot/,
   "Converted reinforcements must receive server-authoritative attack protection."
 );
+assert.match(
+  resolveSource,
+  /calculateCombatResult\(troopCount[\s\S]*?convertedReinforcement,/,
+  "Arrival combat must pass the server-derived converted-reinforcement state."
+);
+
+const combatSource = extractFunction("calculateCombatResult");
+assert.match(
+  combatSource,
+  /convertedReinforcementCanCapture[\s\S]*?attackPower > defensePower[\s\S]*?const raid = protectedRaid && !success/,
+  "Only a winning converted reinforcement may bypass the protected-raid capture block."
+);
+assert.match(
+  combatSource,
+  /convertedReinforcementCapture:\s*convertedReinforcementCanCapture && success/,
+  "Converted protected-raid captures must be recorded explicitly in the result."
+);
 
 assert.match(
   clientSource,
   /const effectiveKind = rawKind === "transfer"[\s\S]*?targetOwnerUid !== ownerUid[\s\S]*?\? "attack"/,
   "The client must defensively display stale transferred armies as incoming attacks."
 );
+assert.match(
+  clientSource,
+  /launchKind:\s*\["attack", "transfer", "scout"\]\.includes\(raw\.launchKind\)[\s\S]*?retargetedFromKind:/,
+  "The client must retain server provenance for converted reinforcements."
+);
+assert.match(
+  clientSource,
+  /const convertedReinforcement = attack\.kind === "transfer"[\s\S]*?convertedReinforcement,/,
+  "Local combat parity must apply the converted-reinforcement exception only to transferred armies."
+);
 
-console.log("Validated reinforcement-to-attack retargeting and incoming notifications.");
+console.log("Validated reinforcement retargeting, incoming notifications, and survivor captures.");
