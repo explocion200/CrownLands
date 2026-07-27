@@ -122,6 +122,16 @@ requires(client, /function saveClanShieldEditor[\s\S]*?updateClanProfile\(\{\s*s
 requires(client, /data-clan-action="shield-tab"[\s\S]*?data-shield-panel="field"[\s\S]*?data-shield-panel="colors"[\s\S]*?data-shield-panel="charges"[\s\S]*?data-shield-panel="details"/, "Mobile clan shield editor tabs are incomplete.");
 requires(client, /CLAN_SHIELD_SHAPES[\s\S]*?CLAN_SHIELD_DIVISIONS[\s\S]*?CLAN_SHIELD_CHARGES[\s\S]*?CLAN_SHIELD_FINISHES/, "Clan shield editor options are incomplete.");
 requires(styles, /\.city-node\.clan-ally \.city-ring[\s\S]*?\.clan-ally-label/, "Green accessible allied-city styling is missing.");
+requires(
+  styles,
+  /\.city-node\.clan-ally\.targeted:not\(\.stronghold-node\)::before[\s\S]*?stroke='%2379d895'[\s\S]*?\.city-node\.clan-ally \.foreign-selected-level[\s\S]*?\.city-node\.clan-ally \.foreign-selected-crest[\s\S]*?\.clan-ally-action-wheel \.city-wheel-ring/,
+  "Selected clan-allied holdings can fall back to rival red styling."
+);
+requires(
+  client,
+  /wheel\.className = "city-action-wheel foreign-city-action-wheel";\s*if \(clanAlly\) wheel\.classList\.add\("clan-ally-action-wheel"\)[\s\S]*?wheel\.className = "gold-camp-action-wheel stronghold-objective-action-wheel";\s*if \(clanAlly\) wheel\.classList\.add\("clan-ally-action-wheel"\)[\s\S]*?wheel\.className = "gold-camp-action-wheel";\s*if \(clanAlly\) wheel\.classList\.add\("clan-ally-action-wheel"\)/,
+  "Selected allied cities, Strongholds, and camps do not retain the green action treatment."
+);
 requires(client, /const clanAllyStatus = clanAlly[\s\S]*?<span class="clan-ally-label">Clan Ally<\/span>[\s\S]*?const rivalOwnerRow[\s\S]*?city-ruler-row[\s\S]*?crownBadge[\s\S]*?\$\{clanAllyStatus\}[\s\S]*?<strong class="city-name">/, "City labels do not show ruler, optional Clan Ally status, Citadel crown, and city name in the required order.");
 assert.doesNotMatch(client, /foreign-ruler-name foreign-ruler-name-inline"\)\}\$\{clanIdentity\.clanTag/, "Floating city labels must not insert clan tags between the ruler name and Clan Ally status.");
 requires(styles, /\.clan-hud-btn[\s\S]*?\.profile-clan-affiliation/, "Clan HUD and profile shield styling is missing.");

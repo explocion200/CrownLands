@@ -18839,6 +18839,7 @@ function renderSelectedForeignWheel(city) {
   const attackBlockLabel = alliedHomeCity ? "Home City" : clanAlly ? "Reinforce" : mainCityBlockReason ? "Main City" : shieldBlockReason ? "Shielded" : "Attack";
   const canAttack = !alliedHomeCity && !mainCityBlockReason && !shieldBlockReason && playerCities().some(playerCity => playerCity.troops > 0);
   wheel.className = "city-action-wheel foreign-city-action-wheel";
+  if (clanAlly) wheel.classList.add("clan-ally-action-wheel");
   wheel.style.left = `${mapPoint.x}px`;
   wheel.style.top = `${mapPoint.y}px`;
   wheel.innerHTML = `
@@ -18897,6 +18898,7 @@ function renderSelectedStrongholdWheel(stronghold) {
   const actionOffset = Math.max(86, Math.min(148, wheelSize * .62));
 
   wheel.className = "gold-camp-action-wheel stronghold-objective-action-wheel";
+  if (clanAlly) wheel.classList.add("clan-ally-action-wheel");
   if (isCrownCitadel(stronghold)) wheel.classList.add("crown-objective-action-wheel");
   wheel.style.left = `${mapPoint.x}px`;
   wheel.style.top = `${mapPoint.y}px`;
@@ -18975,6 +18977,7 @@ function renderSelectedRewardCampWheel(camp) {
   const canRecall = isHeldByPlayer && camp.payoutPending && !rewardCampRecallRequests.has(camp.id);
   const wheelSize = Math.max(112, Number(camp.size) || 132);
   wheel.className = "gold-camp-action-wheel";
+  if (clanAlly) wheel.classList.add("clan-ally-action-wheel");
   wheel.style.left = `${mapPoint.x}px`;
   wheel.style.top = `${mapPoint.y}px`;
   wheel.style.setProperty("--camp-wheel-size", `${wheelSize}px`);
