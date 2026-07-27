@@ -9346,9 +9346,6 @@ exports.sendArmyOrder = timedCallable("sendArmyOrder", { region: "us-central1", 
       if (!clanSnap.exists || clanSnap.data()?.status !== "active") {
         throw new HttpsError("failed-precondition", "Your clan is no longer active.");
       }
-      if (order.targetType !== "camp" && isProtectedMainCity(target, uid, defenderMainCityProfile)) {
-        throw new HttpsError("failed-precondition", "Clan allies cannot reinforce a main city.");
-      }
       activeClanReinforcementTargets = await getActiveClanReinforcementTargetsForLaunch(
         transaction,
         uid,
@@ -10149,26 +10146,6 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
     }
 
     if (effectiveKind === "reinforce") {
-      if (targetType !== "camp" && isProtectedMainCity(target, attackerUid, defenderProfile || {})) {
-        const returnedArmy = returnRecalledTroops(troopCount);
-        releaseClanReinforcementTarget(transaction, attackerUid, reinforcementTargetKey);
-        writeParticipantEconomies({}, {}, { statsCityPatches: getLatestSourceReturnStatsPatches() });
-        markResolved({
-          kind: "reinforce",
-          outcome: "main_city_return",
-          returned: returnedArmy.returned,
-        });
-        return {
-          ok: true,
-          status: "resolved",
-          kind: "reinforce",
-          outcome: "main_city_return",
-          returned: returnedArmy.returned,
-          cityUpdates: withEconomyCityUpdates(cityUpdates),
-          currentUser: profilePatchForCaller(attackerProfile, defenderProfile),
-        };
-      }
-
       const contributionRef = reinforcementRef(attackerUid, reinforcementTargetKey);
       const existingContribution = targetReinforcements.find(entry => entry.ref.path === contributionRef.path);
       const nextContributionTroops = Math.min(
