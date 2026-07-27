@@ -113,6 +113,7 @@ const ATTACK_PROTECTION_RAID_MAX_SCALE_RATIO = 5;
 const ATTACK_PROTECTION_DEFENDER_FIRST_XP_MULTIPLIER = 2;
 const ATTACK_PROTECTION_DEFENDER_REPEAT_XP_MULTIPLIER = 1;
 const ATTACK_PROTECTION_DEFENDER_XP_POLICY = "first-protected-battle-per-attacker-world";
+const PROTECTED_ASSAULT_BREACH_VERSION = 1;
 const DEMO_ATTACK_MIN_POWER_RATIO = 3;
 const DEMO_ATTACK_DEFENDER_XP_MULTIPLIER = 2;
 const DEMO_ATTACK_TIERS = [
@@ -1864,6 +1865,13 @@ function roundDownToTwoSignificantDigits(value) {
   return Math.floor(integer / magnitude) * magnitude;
 }
 
+function roundUpToTwoSignificantDigits(value) {
+  const integer = Math.max(0, Math.ceil(safeNumber(value, 0)));
+  if (integer < 10) return integer;
+  const magnitude = 10 ** Math.max(0, Math.floor(Math.log10(integer)) - 1);
+  return Math.ceil(integer / magnitude) * magnitude;
+}
+
 function getAttackProtectionMode(powerRatio) {
   const ratio = Math.max(0, safeNumber(powerRatio, 0));
   if (ratio >= ATTACK_PROTECTION_RAID_MIN_RATIO) return "raid";
@@ -1898,17 +1906,24 @@ function normalizeAttackProtectionSnapshot(raw = null, legacyDemoAttack = null) 
   if (raw && typeof raw === "object" && safeNumber(raw.version, 0) === ATTACK_PROTECTION_VERSION) {
     const mode = raw.mode === "raid" ? "raid" : raw.mode === "assault" ? "assault" : "normal";
     if (mode === "normal") return null;
+    const assaultStage = mode === "assault" && raw.assaultStage === "capture" ? "capture" : mode === "assault" ? "breach" : "";
     const maxTroops = Math.max(1, Math.floor(safeNumber(raw.maxTroops, 1)));
     const requestedTroops = Math.max(1, Math.floor(safeNumber(raw.requestedTroops, maxTroops)));
     return {
       version: ATTACK_PROTECTION_VERSION,
       mode,
-      label: mode === "raid" ? "Protected Raid" : "Protected Assault",
+      assaultStage,
+      label: mode === "raid"
+        ? "Protected Raid"
+        : assaultStage === "capture"
+          ? "Protected Capture Assault"
+          : "Protected Breach Assault",
       powerRatio: Math.max(ATTACK_PROTECTION_ASSAULT_MIN_RATIO, safeNumber(raw.powerRatio, ATTACK_PROTECTION_ASSAULT_MIN_RATIO)),
       maxTroops,
       requestedTroops,
       effectiveTroops: Math.max(1, Math.min(maxTroops, Math.floor(safeNumber(raw.effectiveTroops, requestedTroops)))),
-      captureAllowed: mode === "assault",
+      captureAllowed: mode === "assault" && assaultStage === "capture",
+      breachRequired: mode === "assault" && assaultStage === "breach",
       maxDefenderLossPercent: mode === "raid" ? 10 : 100,
       attackerXpMultiplier: 0,
       defenderXpPolicy: ATTACK_PROTECTION_DEFENDER_XP_POLICY,
@@ -1920,12 +1935,14 @@ function normalizeAttackProtectionSnapshot(raw = null, legacyDemoAttack = null) 
   return {
     version: ATTACK_PROTECTION_VERSION,
     mode: "raid",
+    assaultStage: "",
     label: "Protected Raid",
     powerRatio: Math.max(ATTACK_PROTECTION_RAID_MIN_RATIO, legacy.powerRatio),
     maxTroops: legacy.maxTroops,
     requestedTroops: legacy.requestedTroops,
     effectiveTroops: legacy.effectiveTroops,
     captureAllowed: false,
+    breachRequired: false,
     maxDefenderLossPercent: 10,
     attackerXpMultiplier: 0,
     defenderXpPolicy: ATTACK_PROTECTION_DEFENDER_XP_POLICY,
@@ -1944,6 +1961,7 @@ function createServerAttackProtectionSnapshot({
   attackerProfile = null,
   defenderProfile = null,
   defenderBonuses = {},
+  assaultStage = "breach",
 } = {}) {
   if (!target || targetType === "camp" || isStronghold(target)) return null;
   const targetOwnerUid = getOwnerUid(target);
@@ -1959,14 +1977,21 @@ function createServerAttackProtectionSnapshot({
   const attackPerTroop = Math.max(1, getAttackPower(1, attackerProfile));
   const totalDefense = Math.max(1, getCityStats(target, defenderProfile, defenderBonuses).totalDefense);
   const breakEvenTroops = Math.max(1, Math.floor(totalDefense / attackPerTroop) + 1);
+  const normalizedAssaultStage = mode === "assault" && assaultStage === "capture" ? "capture" : "breach";
+  const captureSafeCap = Math.max(1, roundUpToTwoSignificantDigits(breakEvenTroops));
   const scaledCap = Math.max(1, Math.floor(
     breakEvenTroops * getAttackProtectionBreakEvenScale(mode, powerRatio)
   ));
-  const exposedCap = Math.max(1, roundDownToTwoSignificantDigits(scaledCap));
+  const exposedCap = mode === "assault"
+    ? normalizedAssaultStage === "breach"
+      ? captureSafeCap
+      : Math.max(captureSafeCap, roundDownToTwoSignificantDigits(scaledCap))
+    : Math.max(1, roundDownToTwoSignificantDigits(scaledCap));
   const maxTroops = Math.min(availableTroops, exposedCap);
   return normalizeAttackProtectionSnapshot({
     version: ATTACK_PROTECTION_VERSION,
     mode,
+    assaultStage: normalizedAssaultStage,
     powerRatio: Number(powerRatio.toFixed(4)),
     maxTroops,
     requestedTroops: requested,
@@ -1982,12 +2007,14 @@ function createAttackProtectionPreview(snapshot = null, sourceTroops = 1, reques
   return {
     version: ATTACK_PROTECTION_VERSION,
     mode: "normal",
+    assaultStage: "",
     label: "Normal Attack",
     powerRatio: 0,
     maxTroops: availableTroops,
     requestedTroops: requested,
     effectiveTroops: requested,
     captureAllowed: true,
+    breachRequired: false,
     maxDefenderLossPercent: 100,
     attackerXpMultiplier: 1,
     defenderXpPolicy: "normal",
@@ -1999,6 +2026,7 @@ function getAttackProtectionQuoteSignature(snapshot = null, sourceTroops = 1, re
   return [
     preview.version,
     preview.mode,
+    preview.assaultStage || "",
     preview.maxTroops,
     preview.captureAllowed ? 1 : 0,
     preview.maxDefenderLossPercent,
@@ -2098,7 +2126,11 @@ function calculateCombatResult(attackTroops, target, attackerProfile = null, def
   const protectedRaid = attackProtection?.mode === "raid";
   const convertedReinforcement = options.convertedReinforcement === true;
   const convertedReinforcementCanCapture = protectedRaid && convertedReinforcement;
-  const success = (!protectedRaid || convertedReinforcementCanCapture) && attackPower > defensePower;
+  const breachOnly = attackProtection?.mode === "assault"
+    && attackProtection.captureAllowed !== true
+    && !convertedReinforcement;
+  const battleWon = (!protectedRaid || convertedReinforcementCanCapture) && attackPower > defensePower;
+  const success = battleWon && !breachOnly;
   const raid = protectedRaid && !success;
   const attackerBoost = attackerProfile ? skillMultiplier(attackerProfile, "swordmastery") : 1;
   let survivors = 0;
@@ -2115,12 +2147,12 @@ function calculateCombatResult(attackTroops, target, attackerProfile = null, def
       defenderLosses = Math.min(defenderLosses, defendersAtStart - 1);
       defendersLeft = Math.max(1, defendersAtStart - defenderLosses);
     }
-  } else if (success) {
+  } else if (battleWon) {
     const leftoverPower = attackPower - defensePower * 0.68;
     survivors = clamp(Math.floor(leftoverPower / Math.max(BASE_TROOP_ATTACK_POWER * attackerBoost, 1)), 1, troops);
     attackerLosses = troops - survivors;
-    defenderLosses = defendersAtStart;
-    defendersLeft = 0;
+    defenderLosses = breachOnly ? Math.max(0, defendersAtStart - 1) : defendersAtStart;
+    defendersLeft = breachOnly && defendersAtStart > 0 ? 1 : 0;
   } else {
     const pressure = clamp(ratio, 0, 1);
     defenderLosses = Math.min(defendersAtStart, Math.floor(defendersAtStart * Math.min(0.82, pressure * 0.82)));
@@ -2131,6 +2163,7 @@ function calculateCombatResult(attackTroops, target, attackerProfile = null, def
     attackPower,
     defensePower,
     ratio,
+    battleWon,
     success,
     survivors,
     defendersLeft,
@@ -2141,6 +2174,7 @@ function calculateCombatResult(attackTroops, target, attackerProfile = null, def
     attackProtection,
     demoAttack: attackProtection?.legacyDemoAttack ? normalizeDemoAttackSnapshot(options.demoAttack) : null,
     raidCompleted: raid,
+    breachCompleted: breachOnly && battleWon,
     convertedReinforcement,
     convertedReinforcementCapture: convertedReinforcementCanCapture && success,
   };
@@ -2446,6 +2480,35 @@ function normalizeArmyPayload(data = {}, uid = "") {
 
 function cityRefForRegion(regionId, cityId) {
   return db.doc(`islands/${getOnlineIslandId(regionId)}/cities/${cityId}`);
+}
+
+function protectedAssaultBreachRef(cityRef, attackerUid = "") {
+  const safeAttackerUid = safeString(attackerUid, 128).replace(/[^a-zA-Z0-9_-]/g, "_");
+  return cityRef.collection("protectedAssaultBreaches").doc(safeAttackerUid || "unknown");
+}
+
+function getCityOwnershipStartedAtMs(city = {}) {
+  return Math.max(0, timestampToMs(city.lastCapturedAtMs || city.lastCapturedAt));
+}
+
+function isCurrentProtectedAssaultBreach(
+  breach = null,
+  { attackerUid = "", defenderUid = "", city = null } = {}
+) {
+  return Boolean(
+    breach
+    && typeof breach === "object"
+    && Math.max(0, Math.floor(safeNumber(breach.version, 0))) === PROTECTED_ASSAULT_BREACH_VERSION
+    && breach.status === "active"
+    && safeString(breach.worldId, 128) === ONLINE_WORLD_ID
+    && safeString(breach.resetGeneration, 128) === RESET_GENERATION
+    && safeString(breach.attackerUid, 128) === safeString(attackerUid, 128)
+    && safeString(breach.defenderUid, 128) === safeString(defenderUid, 128)
+    && safeString(breach.cityId, 96) === safeString(city?.id, 96)
+    && Math.max(0, timestampToMs(breach.defenderOwnershipStartedAtMs))
+      === getCityOwnershipStartedAtMs(city)
+    && safeString(breach.firstResolvedArmyId, 96)
+  );
 }
 
 function campRefForRegion(regionId, campId) {
@@ -8093,6 +8156,15 @@ exports.previewArmyProtection = onCall({ region: "us-central1", maxInstances: 20
     const defenderProfile = defenderProfileSnap?.exists ? defenderProfileSnap.data() || {} : {};
     const defenderLeaderboard = defenderLeaderboardSnap?.exists ? defenderLeaderboardSnap.data() || {} : {};
     const defenderGlobalStats = defenderGlobalStatsSnap?.exists ? defenderGlobalStatsSnap.data() || {} : {};
+    const protectedAssaultBreachSnap = targetType === "city" && targetOwnerUid && targetOwnerUid !== uid
+      ? await transaction.get(protectedAssaultBreachRef(targetRef, uid))
+      : null;
+    const assaultStage = isCurrentProtectedAssaultBreach(
+      protectedAssaultBreachSnap?.exists ? protectedAssaultBreachSnap.data() || {} : null,
+      { attackerUid: uid, defenderUid: targetOwnerUid, city: target }
+    )
+      ? "capture"
+      : "breach";
     const sourceTroops = Math.max(0, Math.floor(safeNumber(source.troops, 0)));
     if (sourceTroops < 1) throw new HttpsError("failed-precondition", "No troops are available in the source city.");
     const requestedTroops = clampInt(data.requestedTroops || sourceTroops, 1, sourceTroops);
@@ -8123,6 +8195,7 @@ exports.previewArmyProtection = onCall({ region: "us-central1", maxInstances: 20
       defenderBonuses: {
         cityDefenseBonusPercent: Math.max(0, safeNumber(defenderGlobalStats.strongholdDefenseBonusPercent, 0)),
       },
+      assaultStage,
     });
     return {
       ok: true,
@@ -8241,6 +8314,15 @@ exports.sendArmyOrder = timedCallable("sendArmyOrder", { region: "us-central1", 
     const defenderPowerData = defenderPowerSnap?.exists ? defenderPowerSnap.data() || {} : {};
     const defenderLeaderboardData = defenderLeaderboardSnap?.exists ? defenderLeaderboardSnap.data() || {} : {};
     const defenderGlobalStatsData = defenderGlobalStatsSnap?.exists ? defenderGlobalStatsSnap.data() || {} : {};
+    const protectedAssaultBreachSnap = order.targetType === "city" && targetOwnerUid && targetOwnerUid !== uid
+      ? await transaction.get(protectedAssaultBreachRef(targetRef, uid))
+      : null;
+    const assaultStage = isCurrentProtectedAssaultBreach(
+      protectedAssaultBreachSnap?.exists ? protectedAssaultBreachSnap.data() || {} : null,
+      { attackerUid: uid, defenderUid: targetOwnerUid, city: target }
+    )
+      ? "capture"
+      : "breach";
     const defenderMainCityProfile = getMainCityProtectionProfile(
       defenderPowerData,
       defenderGlobalStatsData,
@@ -8309,6 +8391,7 @@ exports.sendArmyOrder = timedCallable("sendArmyOrder", { region: "us-central1", 
         attackerProfile,
         defenderProfile: defenderPowerData,
         defenderBonuses: defenderProtectionBonuses,
+        assaultStage,
       })
       : null;
     const troops = resolvedKind === "scout" ? 1 : (attackProtection?.effectiveTroops || requestedTroops);
@@ -8711,6 +8794,21 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
         : "attack";
     const defenderBonuses = defenderEconomy?.bonuses || {};
     const targetStats = getCityStats(target, defenderProfile, defenderBonuses);
+    const protectedAssaultBreachDocumentRef = effectiveKind === "attack"
+      && targetType === "city"
+      && defenderUid
+      && defenderUid !== attackerUid
+      ? protectedAssaultBreachRef(targetRef, attackerUid)
+      : null;
+    const protectedAssaultBreachSnap = protectedAssaultBreachDocumentRef
+      ? await transaction.get(protectedAssaultBreachDocumentRef)
+      : null;
+    const resolutionAssaultStage = isCurrentProtectedAssaultBreach(
+      protectedAssaultBreachSnap?.exists ? protectedAssaultBreachSnap.data() || {} : null,
+      { attackerUid, defenderUid, city: target }
+    )
+      ? "capture"
+      : "breach";
     const storedAttackProtection = effectiveKind === "attack" && targetType !== "camp"
       ? normalizeAttackProtectionSnapshot(army.attackProtection, army.demoAttack)
       : null;
@@ -8719,7 +8817,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
       || army.launchKind === "transfer"
       || army.retargetedFromKind === "transfer"
     );
-    const attackProtection = storedAttackProtection || (
+    const baseAttackProtection = storedAttackProtection || (
       convertedReinforcement && targetType !== "camp"
         ? createServerAttackProtectionSnapshot({
           sourceTroops: Math.max(
@@ -8745,9 +8843,16 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
           attackerProfile,
           defenderProfile: defenderProfile || {},
           defenderBonuses,
+          assaultStage: resolutionAssaultStage,
         })
         : null
     );
+    const attackProtection = baseAttackProtection?.mode === "assault"
+      ? normalizeAttackProtectionSnapshot({
+        ...baseAttackProtection,
+        assaultStage: resolutionAssaultStage,
+      })
+      : baseAttackProtection;
     const protectedDefenseClaimRef = attackProtection && defenderUid && defenderUid !== attackerUid
       ? db.doc(`players/${defenderUid}/protectedDefenseXpClaims/${attackerUid}`)
       : null;
@@ -9451,7 +9556,152 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
       )
       : null;
 
+    if (result.breachCompleted) {
+      const targetPatch = {
+        troops: result.defendersLeft,
+        troopFloat: result.defendersLeft,
+      };
+      const returnedArmy = returnRecalledTroops(result.survivors);
+      const attackerRecoveredTroops = recoverBattleLossesToMainCity({
+        uid: attackerUid,
+        profile: attackerProfile,
+        economy: attackerEconomy,
+        losses: result.attackerLosses,
+      });
+      const defenderRecoveredTroops = defenderUid && defenderUid !== attackerUid
+        ? recoverBattleLossesToMainCity({
+          uid: defenderUid,
+          profile: defenderProfile,
+          economy: defenderEconomy,
+          losses: result.defenderLosses,
+        })
+        : 0;
+      if (protectedAssaultBreachDocumentRef) {
+        transaction.set(protectedAssaultBreachDocumentRef, {
+          version: PROTECTED_ASSAULT_BREACH_VERSION,
+          status: "active",
+          attackerUid,
+          defenderUid,
+          cityId: target.id,
+          regionId: targetRegionId,
+          worldId: ONLINE_WORLD_ID,
+          resetGeneration: RESET_GENERATION,
+          defenderOwnershipStartedAtMs: getCityOwnershipStartedAtMs(target),
+          firstResolvedArmyId: armyId,
+          breachedAtMs: nowMs,
+          breachedAt: FieldValue.serverTimestamp(),
+          updatedAt: FieldValue.serverTimestamp(),
+        });
+      }
+      transaction.set(targetRef, cleanCityUpdate(target, targetPatch), { merge: true });
+      cityUpdates.push({ id: target.id, regionId: targetRegionId, ...targetPatch });
+      writeParticipantEconomies({
+        character: attackerProgress.character,
+        gold: attackerProgress.gold,
+        goldFloat: attackerProgress.goldFloat,
+      }, defenderProgress ? {
+        character: defenderProgress.character,
+        gold: defenderProgress.gold,
+        goldFloat: defenderProgress.goldFloat,
+      } : {}, {
+        statsCityPatches: [{ ref: targetRef, city: target, patch: targetPatch }],
+      });
+
+      const returnedSummary = returnedArmy.returned > 0
+        ? ` ${returnedArmy.returned.toLocaleString()} survivors returned to ${source?.name || "your kingdom"}.`
+        : "";
+      const attackerReport = makeReport({
+        id: `${armyId}_attack_${attackerUid}`,
+        uid: attackerUid,
+        type: "attack",
+        outcome: "breach",
+        city: target,
+        opponentName: defenderName,
+        sentTroops: troopCount,
+        troopCount: defendersAtStart,
+        result,
+        totalDefense: targetStats.totalDefense,
+        defenseStats: targetStats,
+        summary: `Walls breached. ${target.name || target.id} remains under ${defenderName}'s control; your follow-up protected assault can capture it.${returnedSummary} +0 XP.${protectedDefenseXpSummary}${attackerRecoveredTroops > 0 ? ` Field Medics returned ${attackerRecoveredTroops.toLocaleString()} troops.` : ""}`,
+        xpAwarded: attackerProgress.xpAwarded,
+        goldAwarded: attackerProgress.goldAwarded,
+        troopsAwarded: attackerLevelTroopReward?.credited || 0,
+        characterAfter: attackerProgress.character,
+        goldAfter: attackerProgress.gold,
+        attackProtection,
+        defenderXpMultiplierApplied,
+        firstProtectedDefenseBonus,
+        nowMs,
+      });
+      writeReport(transaction, attackerUid, attackerReport, attackerProfileSnap, {
+        character: attackerProgress.character,
+        gold: attackerProgress.gold,
+        goldFloat: attackerProgress.goldFloat,
+      });
+      reports.push(attackerReport);
+
+      if (defenderUid && defenderUid !== attackerUid) {
+        const defenderReport = makeReport({
+          id: `${armyId}_defense_${defenderUid}`,
+          uid: defenderUid,
+          type: "defense",
+          outcome: "breached",
+          city: target,
+          opponentName: attackerName,
+          sentTroops: troopCount,
+          troopCount: defendersAtStart,
+          result,
+          totalDefense: targetStats.totalDefense,
+          defenseStats: targetStats,
+          summary: `${attackerName} breached the walls at ${target.name || target.id}, but did not capture the city. A follow-up protected assault from that ruler can capture it. +${defenderProgress.xpAwarded.toLocaleString()} XP.${protectedDefenseXpSummary}${defenderLevelTroopReward ? ` Hero level reward: +${defenderLevelTroopReward.credited.toLocaleString()} troops to ${defenderLevelTroopReward.cityName}.` : ""}${defenderRecoveredTroops > 0 ? ` Field Medics returned ${defenderRecoveredTroops.toLocaleString()} troops to your main city.` : ""}`,
+          xpAwarded: defenderProgress.xpAwarded,
+          goldAwarded: defenderProgress.goldAwarded,
+          troopsAwarded: defenderLevelTroopReward?.credited || 0,
+          characterAfter: defenderProgress.character,
+          goldAfter: defenderProgress.gold,
+          attackProtection,
+          defenderXpMultiplierApplied,
+          firstProtectedDefenseBonus,
+          nowMs,
+        });
+        writeReport(transaction, defenderUid, defenderReport, defenderProfileSnap, {
+          character: defenderProgress.character,
+          gold: defenderProgress.gold,
+          goldFloat: defenderProgress.goldFloat,
+        });
+        reports.push(defenderReport);
+      }
+
+      markResolved({
+        kind: "attack",
+        outcome: "breach",
+        survivors: result.survivors,
+        returned: returnedArmy.returned,
+        attackerLosses: result.attackerLosses,
+        defenderLosses: result.defenderLosses,
+        defendersLeft: result.defendersLeft,
+      });
+      return {
+        ok: true,
+        status: "resolved",
+        kind: "attack",
+        outcome: "breach",
+        reports: reportsForCaller(),
+        cityUpdates: withEconomyCityUpdates(cityUpdates),
+        currentUser: profilePatchForCaller(attackerProgress, defenderProgress),
+      };
+    }
+
     if (result.success) {
+      if (attackProtection?.mode === "assault" && protectedAssaultBreachDocumentRef) {
+        transaction.set(protectedAssaultBreachDocumentRef, {
+          status: "consumed",
+          consumedByArmyId: armyId,
+          consumedAtMs: nowMs,
+          consumedAt: FieldValue.serverTimestamp(),
+          updatedAt: FieldValue.serverTimestamp(),
+        }, { merge: true });
+      }
       const daily = normalizeDaily(attackerProfile.daily);
       const nextLevel = dropCapturedCityLevel(target);
       if (isCrownCitadel(target)) {

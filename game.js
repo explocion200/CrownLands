@@ -7022,7 +7022,7 @@ function getEnemyCityPowerBandLabel(powerBand, city = null) {
       || normalizePowerValue(getAuthoritativeCityOwnerKingPowerSnapshot(city));
     return defenderPower > 0 && attackerPower / defenderPower >= ATTACK_PROTECTION_RAID_MIN_RATIO
       ? "Weaker kingdom protection: raid only, no capture"
-      : "Weaker kingdom protection: assault, capture possible";
+      : "Weaker kingdom protection: two-stage assault required";
   }
   if (powerBand === "overpowering") return "King Power above yours";
   if (powerBand === "in-range") return "Within your King Power range";
@@ -7069,6 +7069,13 @@ function roundDownToTwoSignificantDigits(value) {
   return Math.floor(integer / magnitude) * magnitude;
 }
 
+function roundUpToTwoSignificantDigits(value) {
+  const integer = Math.max(0, Math.ceil(Number(value) || 0));
+  if (integer < 10) return integer;
+  const magnitude = 10 ** Math.max(0, Math.floor(Math.log10(integer)) - 1);
+  return Math.ceil(integer / magnitude) * magnitude;
+}
+
 function getAttackProtectionMode(powerRatio) {
   const ratio = Math.max(0, Number(powerRatio) || 0);
   if (ratio >= ATTACK_PROTECTION_RAID_MIN_RATIO) return "raid";
@@ -7102,17 +7109,26 @@ function getAttackProtectionBreakEvenScale(mode, powerRatio) {
 function normalizeAttackProtectionSnapshot(raw = null, legacyDemoAttack = null) {
   if (raw && typeof raw === "object" && Number(raw.version) === ATTACK_PROTECTION_VERSION) {
     const mode = raw.mode === "raid" ? "raid" : raw.mode === "assault" ? "assault" : "normal";
+    const assaultStage = mode === "assault" && raw.assaultStage === "capture" ? "capture" : mode === "assault" ? "breach" : "";
     const maxTroops = Math.max(1, Math.floor(Number(raw.maxTroops) || 1));
     const requestedTroops = Math.max(1, Math.floor(Number(raw.requestedTroops) || maxTroops));
     return {
       version: ATTACK_PROTECTION_VERSION,
       mode,
-      label: mode === "raid" ? "Protected Raid" : mode === "assault" ? "Protected Assault" : "Normal Attack",
+      assaultStage,
+      label: mode === "raid"
+        ? "Protected Raid"
+        : mode === "assault"
+          ? assaultStage === "capture"
+            ? "Protected Capture Assault"
+            : "Protected Breach Assault"
+          : "Normal Attack",
       powerRatio: Math.max(0, Number(raw.powerRatio) || 0),
       maxTroops,
       requestedTroops,
       effectiveTroops: Math.max(1, Math.min(maxTroops, Math.floor(Number(raw.effectiveTroops) || requestedTroops))),
-      captureAllowed: mode !== "raid",
+      captureAllowed: mode === "normal" || (mode === "assault" && assaultStage === "capture"),
+      breachRequired: mode === "assault" && assaultStage === "breach",
       maxDefenderLossPercent: mode === "raid" ? 10 : 100,
       attackerXpMultiplier: mode === "normal" ? 1 : 0,
       defenderXpPolicy: mode === "normal" ? "normal" : ATTACK_PROTECTION_DEFENDER_XP_POLICY,
@@ -7124,12 +7140,14 @@ function normalizeAttackProtectionSnapshot(raw = null, legacyDemoAttack = null) 
   return {
     version: ATTACK_PROTECTION_VERSION,
     mode: "raid",
+    assaultStage: "",
     label: "Protected Raid",
     powerRatio: Math.max(ATTACK_PROTECTION_RAID_MIN_RATIO, legacy.powerRatio),
     maxTroops: legacy.maxTroops,
     requestedTroops: legacy.requestedTroops,
     effectiveTroops: legacy.effectiveTroops,
     captureAllowed: false,
+    breachRequired: false,
     maxDefenderLossPercent: 10,
     attackerXpMultiplier: 0,
     defenderXpPolicy: ATTACK_PROTECTION_DEFENDER_XP_POLICY,
@@ -7142,6 +7160,7 @@ function createAttackProtectionSnapshot(source, target, requestedTroops, owner =
     return null;
   }
   const targetOwnerUid = String(target.ownerUid || "").trim();
+  const targetProtectionOwnerKey = targetOwnerUid || String(target.owner || "").trim();
   const currentUid = getCurrentOnlineUid();
   const targetOwnedByPlayer = target.ownerKind === "player" || target.owner === "enemy" || Boolean(targetOwnerUid);
   const targetOwnedByCurrentPlayer = target.owner === "player" || (targetOwnerUid && currentUid && targetOwnerUid === currentUid);
@@ -7159,13 +7178,27 @@ function createAttackProtectionSnapshot(source, target, requestedTroops, owner =
   const attackPerTroop = Math.max(1, getAttackPower(1, owner));
   const totalDefense = Math.max(1, getCityStats(target).totalDefense);
   const breakEvenTroops = Math.max(1, Math.floor(totalDefense / attackPerTroop) + 1);
+  const assaultStage = mode === "assault" && (
+    overrides.assaultStage === "capture"
+    || target.protectedAssaultBreach?.attackerUid === (currentUid || "player")
+      && target.protectedAssaultBreach?.defenderUid === targetProtectionOwnerKey
+  )
+    ? "capture"
+    : "breach";
+  const captureSafeCap = Math.max(1, roundUpToTwoSignificantDigits(breakEvenTroops));
   const scaledCap = Math.max(1, Math.floor(
     breakEvenTroops * getAttackProtectionBreakEvenScale(mode, powerRatio)
   ));
-  const maxTroops = Math.min(sourceTroops, Math.max(1, roundDownToTwoSignificantDigits(scaledCap)));
+  const exposedCap = mode === "assault"
+    ? assaultStage === "breach"
+      ? captureSafeCap
+      : Math.max(captureSafeCap, roundDownToTwoSignificantDigits(scaledCap))
+    : Math.max(1, roundDownToTwoSignificantDigits(scaledCap));
+  const maxTroops = Math.min(sourceTroops, exposedCap);
   return normalizeAttackProtectionSnapshot({
     version: ATTACK_PROTECTION_VERSION,
     mode,
+    assaultStage,
     powerRatio,
     maxTroops,
     requestedTroops: requested,
@@ -7176,9 +7209,11 @@ function createAttackProtectionSnapshot(source, target, requestedTroops, owner =
 function getAttackProtectionNotice(snapshot) {
   const protection = normalizeAttackProtectionSnapshot(snapshot);
   if (!protection || protection.mode === "normal") return "";
-  const captureText = protection.captureAllowed
-    ? "capture remains possible"
-    : `no capture; defender damage is capped at ${formatNumber(protection.maxDefenderLossPercent)}%`;
+  const captureText = protection.mode === "raid"
+    ? `no capture; defender damage is capped at ${formatNumber(protection.maxDefenderLossPercent)}%`
+    : protection.captureAllowed
+      ? "follow-up assault; capture is possible"
+      : "first assault; a victory breaches the walls but cannot capture";
   return `${protection.label}: maximum ${formatNumber(protection.maxTroops)} troops, ${captureText}, attacker earns 0 XP. Defender XP is 2× on their first protected battle against you this world; normal afterward.`;
 }
 
@@ -7590,7 +7625,11 @@ function calculateCombatResult(attackTroops, attackOwner, target, options = {}) 
   const protectedRaid = protectedAttack?.mode === "raid";
   const convertedReinforcement = options.convertedReinforcement === true;
   const convertedReinforcementCanCapture = protectedRaid && convertedReinforcement;
-  const success = (!protectedRaid || convertedReinforcementCanCapture) && attackPower > defensePower;
+  const breachOnly = protectedAttack?.mode === "assault"
+    && protectedAttack.captureAllowed !== true
+    && !convertedReinforcement;
+  const battleWon = (!protectedRaid || convertedReinforcementCanCapture) && attackPower > defensePower;
+  const success = battleWon && !breachOnly;
   const raid = protectedRaid && !success;
   const attackerBoost = attackOwner === "player" ? skillMultiplier("swordmastery") : 1.04;
   let survivors = 0;
@@ -7607,12 +7646,12 @@ function calculateCombatResult(attackTroops, attackOwner, target, options = {}) 
       defenderLosses = Math.min(defenderLosses, defendersAtStart - 1);
       defendersLeft = Math.max(1, defendersAtStart - defenderLosses);
     }
-  } else if (success) {
+  } else if (battleWon) {
     const leftoverPower = attackPower - defensePower * 0.68;
     survivors = clamp(Math.floor(leftoverPower / Math.max(BASE_TROOP_ATTACK_POWER * attackerBoost, 1)), 1, troops);
     attackerLosses = troops - survivors;
-    defenderLosses = defendersAtStart;
-    defendersLeft = 0;
+    defenderLosses = breachOnly ? Math.max(0, defendersAtStart - 1) : defendersAtStart;
+    defendersLeft = breachOnly && defendersAtStart > 0 ? 1 : 0;
   } else {
     const pressure = clamp(ratio, 0, 1);
     defenderLosses = Math.min(defendersAtStart, Math.floor(defendersAtStart * Math.min(0.82, pressure * 0.82)));
@@ -7623,6 +7662,7 @@ function calculateCombatResult(attackTroops, attackOwner, target, options = {}) 
     attackPower,
     defensePower,
     ratio,
+    battleWon,
     success,
     survivors,
     defendersLeft,
@@ -7633,6 +7673,7 @@ function calculateCombatResult(attackTroops, attackOwner, target, options = {}) 
     attackProtection: protectedAttack,
     demoAttack: protectedAttack?.legacyDemoAttack ? normalizeDemoAttackSnapshot(options.demoAttack) : null,
     raidCompleted: raid,
+    breachCompleted: breachOnly && battleWon,
     convertedReinforcement,
     convertedReinforcementCapture: convertedReinforcementCanCapture && success,
   };
@@ -7815,7 +7856,7 @@ function normalizeBattleReports(reports) {
       const inferredRegionId = cityId ? getCityRegionId(cityId) : "";
       const rawRegionId = report.regionId || report.targetRegionId || report.city?.regionId || report.city?.startPool || inferredRegionId;
       const fallbackOutcome = type === "scout" ? "scout" : "defeat";
-      const outcome = ["victory", "defeat", "held", "lost", "scout"].includes(report.outcome)
+      const outcome = ["victory", "defeat", "held", "lost", "scout", "raid", "breach", "breached"].includes(report.outcome)
         ? report.outcome
         : fallbackOutcome;
       return {
@@ -9493,6 +9534,7 @@ function getPlayerIdentitySignature(identity) {
     identity.clanName || "",
     identity.clanTag || "",
     normalizeTimestampMs(identity.updatedAtMs),
+    identity.authoritative ? 1 : 0,
   ].join("|");
 }
 
@@ -9552,7 +9594,9 @@ function rememberPlayerIdentity(raw = {}, options = {}) {
     mainIslandId: identityIsNewer
       ? identity.mainIslandId || existing?.mainIslandId || ""
       : existing?.mainIslandId || identity.mainIslandId || "",
-    updatedAtMs: Math.max(existing?.updatedAtMs || 0, identity.updatedAtMs || 0),
+    updatedAtMs: identityIsNewer
+      ? Math.max(existing?.updatedAtMs || 0, identity.updatedAtMs || 0)
+      : existing?.updatedAtMs || identity.updatedAtMs || 0,
     fetchedAtMs: force ? Date.now() : existing?.fetchedAtMs || 0,
     authoritative: existingIsAuthoritative || (force && identityIsNewer),
     clanId: identityIsNewer ? identity.clanId || existing?.clanId || "" : existing?.clanId || identity.clanId || "",
@@ -9711,20 +9755,23 @@ function applyCanonicalPlayerIdentityToRecord(record) {
   return changed;
 }
 
-function queuePlayerIdentityLookupForUids(uids = []) {
+function queuePlayerIdentityLookupForUids(uids = [], options = {}) {
   const api = getOnlineApi();
   if (!api?.loadPlayerIdentities || !api?.isSignedIn?.()) return;
   const currentUid = getCurrentOnlineUid();
   const now = Date.now();
+  const refreshUids = options.refreshUids instanceof Set
+    ? options.refreshUids
+    : new Set(Array.isArray(options.refreshUids) ? options.refreshUids : []);
   const uniqueUids = [...new Set((Array.isArray(uids) ? uids : [])
     .map(uid => String(uid || "").trim())
     .filter(uid => uid && uid !== currentUid))];
   uniqueUids.forEach(uid => {
     const cached = playerIdentityCache.get(uid);
     const missedAt = playerIdentityLookupMisses.get(uid) || 0;
-    const fetchedAt = cached?.fetchedAtMs || cached?.updatedAtMs || 0;
-    if (fetchedAt && now - fetchedAt < PLAYER_IDENTITY_CACHE_STALE_MS) return;
-    if (missedAt && now - missedAt < PLAYER_IDENTITY_CACHE_STALE_MS) return;
+    const fetchedAt = cached?.authoritative ? cached.fetchedAtMs || 0 : 0;
+    if (!refreshUids.has(uid) && fetchedAt && now - fetchedAt < PLAYER_IDENTITY_CACHE_STALE_MS) return;
+    if (!refreshUids.has(uid) && missedAt && now - missedAt < PLAYER_IDENTITY_CACHE_STALE_MS) return;
     playerIdentityLookupQueue.add(uid);
   });
   if (!playerIdentityLookupQueue.size || playerIdentityLookupInFlight) return;
@@ -9733,8 +9780,33 @@ function queuePlayerIdentityLookupForUids(uids = []) {
 
 function queuePlayerIdentityLookupForRecords(records = []) {
   if (!Array.isArray(records) || !records.length) return;
+  const refreshUids = new Set();
+  records.forEach(record => {
+    const ownerUid = String(record?.ownerUid || record?.uid || "").trim();
+    if (!ownerUid) return;
+    const cached = playerIdentityCache.get(ownerUid);
+    const recordKingPowerVersion = Math.max(0, Math.floor(Number(record?.kingPowerVersion) || 0));
+    const recordKingPower = normalizePowerValue(
+      record?.ownerKingPower ?? record?.kingPower ?? record?.attackerKingPower
+    );
+    const recordUpdatedAtMs = normalizeTimestampMs(record?.kingPowerUpdatedAtMs)
+      || normalizeTimestampMs(record?.updatedAtMs)
+      || timestampToMs(record?.updatedAt);
+    if (recordKingPowerVersion >= KING_POWER_AUTHORITY_VERSION && recordKingPower > 0 && (
+      !cached?.authoritative
+      || (
+        recordKingPower !== normalizePowerValue(cached.kingPower)
+        || recordUpdatedAtMs > normalizeTimestampMs(cached.updatedAtMs)
+      )
+    )) {
+      refreshUids.add(ownerUid);
+    }
+  });
   rememberOwnerIdentitiesFromRecords(records);
-  queuePlayerIdentityLookupForUids(records.map(record => record?.ownerUid || record?.uid).filter(Boolean));
+  queuePlayerIdentityLookupForUids(
+    records.map(record => record?.ownerUid || record?.uid).filter(Boolean),
+    { refreshUids }
+  );
 }
 
 async function refreshQueuedPlayerIdentities() {
@@ -9760,8 +9832,9 @@ async function refreshQueuedPlayerIdentities() {
   } finally {
     playerIdentityLookupInFlight = false;
   }
-  if (changed && canonicalizeVisiblePlayerIdentities()) {
-    renderCities();
+  const recordsChanged = canonicalizeVisiblePlayerIdentities();
+  if (changed || recordsChanged) {
+    renderCities(true);
     renderPaths();
     renderArmies();
     updateIncomingAttackUi();
@@ -12769,20 +12842,38 @@ function getChangedAttackProtectionFromError(error) {
 }
 
 function reopenAttackProtectionConfirmation(mission, refreshedProtection) {
-  const source = cityById(mission?.fromId);
-  const target = getArmyTargetById(mission?.toId);
+  const sourceId = mission?.fromId;
+  const targetId = mission?.toId;
+  const source = cityById(sourceId);
+  const target = getArmyTargetById(targetId);
   if (!source || !target || source.owner !== "player") return;
-  selectedSourceId = source.id;
-  selectedTargetId = target.id;
-  sendMode = true;
-  activeAttackProtectionPreview = normalizeAttackProtectionSnapshot(refreshedProtection);
-  selectedTroopAmount = clamp(
-    Math.floor(Number(mission.requestedTroops) || 1),
-    1,
-    Math.max(1, Math.min(source.troops, activeAttackProtectionPreview?.maxTroops || source.troops))
-  );
+  const refreshedProtectionSnapshot = normalizeAttackProtectionSnapshot(refreshedProtection);
+  const requestedTroops = Math.max(1, Math.floor(Number(mission.requestedTroops) || 1));
+  troopSliderActive = false;
   showToast("Protection changed. Confirm the refreshed limit.");
-  void showTroopSliderModalAsync(source, target);
+  window.setTimeout(() => {
+    const freshSource = cityById(sourceId);
+    const freshTarget = getArmyTargetById(targetId);
+    if (!freshSource || !freshTarget || freshSource.owner !== "player") {
+      showToast("Order canceled. The map changed.");
+      return;
+    }
+    selectedSourceId = freshSource.id;
+    selectedTargetId = freshTarget.id;
+    sendMode = true;
+    activeAttackProtectionPreview = refreshedProtectionSnapshot;
+    selectedTroopAmount = clamp(
+      requestedTroops,
+      1,
+      Math.max(1, Math.min(
+        freshSource.troops,
+        refreshedProtectionSnapshot?.maxTroops || freshSource.troops
+      ))
+    );
+    void showTroopSliderModalAsync(freshSource, freshTarget, {
+      attackProtection: refreshedProtectionSnapshot,
+    });
+  }, 0);
 }
 
 function applyServerMovementToMission(mission, movement = null) {
@@ -16022,13 +16113,28 @@ function resolveAttack(attack) {
     return;
   }
 
-  const attackProtection = isStronghold(target)
+  let attackProtection = isStronghold(target)
     ? null
     : normalizeAttackProtectionSnapshot(attack.attackProtection, attack.demoAttack)
       || createAttackProtectionSnapshot(attackSource, target, attack.troops, attack.owner, {
         attackerKingPower: attack.attackerKingPower,
         defenderKingPower: attack.defenderKingPower,
       });
+  if (attackProtection?.mode === "assault") {
+    const assaultAttackerUid = String(
+      attack.ownerUid || (attack.owner === "player" ? getCurrentOnlineUid() || "player" : attack.owner)
+    ).trim();
+    const assaultDefenderUid = String(target.ownerUid || target.owner || "").trim();
+    const activeBreach = target.protectedAssaultBreach;
+    const assaultStage = activeBreach?.attackerUid === assaultAttackerUid
+      && activeBreach?.defenderUid === assaultDefenderUid
+      ? "capture"
+      : "breach";
+    attackProtection = normalizeAttackProtectionSnapshot({
+      ...attackProtection,
+      assaultStage,
+    });
+  }
   const convertedReinforcement = attack.kind === "transfer"
     || attack.launchKind === "transfer"
     || attack.retargetedFromKind === "transfer";
@@ -16040,7 +16146,72 @@ function resolveAttack(attack) {
     convertedReinforcement,
   });
 
-  if (result.success) {
+  if (result.breachCompleted) {
+    target.troopFloat = result.defendersLeft;
+    target.troops = result.defendersLeft;
+    const assaultAttackerUid = String(
+      attack.ownerUid || (attack.owner === "player" ? getCurrentOnlineUid() || "player" : attack.owner)
+    ).trim();
+    const assaultDefenderUid = String(target.ownerUid || target.owner || "").trim();
+    target.protectedAssaultBreach = {
+      attackerUid: assaultAttackerUid,
+      defenderUid: assaultDefenderUid,
+      firstResolvedArmyId: attack.id,
+    };
+    const returned = returnSurvivingAttackersToSource(attack, result.survivors, `${target.name} wall breach`);
+    if (attack.owner === "player") {
+      const savedAttackers = returnSavedTroops("fieldMedics", result.attackerLosses, `${target.name} breach assault`);
+      addBattleReport({
+        type: "attack",
+        outcome: "breach",
+        cityId: target.id,
+        cityName: target.name,
+        cityLevel: targetLevel,
+        sentTroops: attack.troops,
+        troopCount: defendersAtStart,
+        survivors: returned,
+        defendersLeft: result.defendersLeft,
+        attackerLosses: result.attackerLosses,
+        defenderLosses: result.defenderLosses,
+        totalDefense: targetDefenseAtStart,
+        baseTotalDefense: targetStatsAtStart.baseTotalDefense,
+        totalDefenseBonus: targetStatsAtStart.totalDefenseBonus,
+        opponentName: defenderName,
+        summary: `Walls breached. ${target.name} remains under enemy control; your follow-up protected assault can capture it. ${formatNumber(returned)} survivors returned. +0 XP.${protectionReportSuffix}`,
+      });
+      addLog(`Breach: you broke the walls at ${target.name}. ${formatNumber(returned)} survivors and ${formatNumber(savedAttackers)} recovered troops returned.`);
+      showToast(`Walls breached at ${target.name}`);
+    } else if (oldOwner === "player") {
+      const savedDefenders = returnSavedTroops("fieldMedics", result.defenderLosses, `${target.name} breached defense`);
+      const defenseHeldXp = applyDefenseOpponentXpMultiplier(
+        getDefenseHeldXpAward(attack.troops, target),
+        attack,
+        target,
+        attackProtection
+      );
+      addBattleReport({
+        type: "defense",
+        outcome: "breached",
+        cityId: target.id,
+        cityName: target.name,
+        cityLevel: targetLevel,
+        sentTroops: attack.troops,
+        troopCount: defendersAtStart,
+        survivors: returned,
+        defendersLeft: result.defendersLeft,
+        attackerLosses: result.attackerLosses,
+        defenderLosses: result.defenderLosses,
+        totalDefense: targetDefenseAtStart,
+        baseTotalDefense: targetStatsAtStart.baseTotalDefense,
+        totalDefenseBonus: targetStatsAtStart.totalDefenseBonus,
+        opponentName: attackerReportName,
+        summary: `${attackerReportName} breached ${target.name}, but did not capture it. A follow-up protected assault can capture the city. +${formatNumber(defenseHeldXp)} XP.${protectionReportSuffix}`,
+      });
+      if (savedDefenders > 0) addLog(`Field Medics recovered ${formatNumber(savedDefenders)} defenders.`);
+      addCharacterXp(defenseHeldXp, `${target.name} breached defense`);
+      showToast(`Walls breached at ${target.name}`);
+    }
+  } else if (result.success) {
     const xpEfficiency = attack.owner === "player" ? (attackProtection || givenUpNeutralTarget ? 0 : getCaptureXpEfficiency(target, oldOwner)) : 1;
     const xpAward = attack.owner === "player" && !attackProtection && !givenUpNeutralTarget ? getCaptureXpAward(target, oldOwner, result.defenderLosses, attack.owner) : 0;
     if (attack.owner === "player") {
@@ -16071,6 +16242,7 @@ function resolveAttack(attack) {
     target.lastCapturedAt = state.gameSeconds;
     target.relinquishedAtMs = 0;
     target.relocatedAtMs = 0;
+    delete target.protectedAssaultBreach;
     if (neutralCapture) recordNeutralCapture();
 
     if (attack.owner === "player") {
@@ -19909,7 +20081,7 @@ async function loadAttackProtectionPreview(source, target) {
   return createAttackProtectionSnapshot(source, target, source.troops, "player");
 }
 
-async function showTroopSliderModalAsync(source, target) {
+async function showTroopSliderModalAsync(source, target, options = {}) {
   if (!source || !target || source.owner !== "player" || source.id === target.id) return;
   if (source.troops < 1) {
     showToast("No troops available to send.");
@@ -19935,9 +20107,10 @@ async function showTroopSliderModalAsync(source, target) {
 
   cancelPendingRouteWorkerRequests("A newer route was selected.");
   const requestId = ++activeTroopRouteRequestId;
+  const providedAttackProtection = normalizeAttackProtectionSnapshot(options.attackProtection);
   troopSliderActive = true;
   activeTroopSliderRoute = null;
-  activeAttackProtectionPreview = null;
+  activeAttackProtectionPreview = providedAttackProtection;
   showTroopRouteLoadingModal(source, target, isTransfer);
 
   await waitForSetupLoadingPaint(0);
@@ -19945,9 +20118,11 @@ async function showTroopSliderModalAsync(source, target) {
     findRouteAsync(source, target),
     needsDefenderPower ? ensureAuthoritativeCityOwnerKingPower(target) : Promise.resolve(0),
     needsDefenderPower
-      ? loadAttackProtectionPreview(source, target)
-        .then(attackProtection => ({ attackProtection }))
-        .catch(error => ({ error }))
+      ? providedAttackProtection
+        ? Promise.resolve({ attackProtection: providedAttackProtection })
+        : loadAttackProtectionPreview(source, target)
+          .then(attackProtection => ({ attackProtection }))
+          .catch(error => ({ error }))
       : Promise.resolve({ attackProtection: null }),
   ]);
   if (requestId !== activeTroopRouteRequestId) return;
@@ -20267,10 +20442,13 @@ function updateTroopSliderModal(source, target, route) {
   );
   const protectionNotice = getAttackProtectionNotice(preview.attackProtection);
   const raid = preview.attackProtection?.mode === "raid";
-  previewEl.className = `troop-slider-preview ${preview.success ? "win" : "lose"}`;
+  const breach = preview.attackProtection?.mode === "assault"
+    && preview.attackProtection?.assaultStage === "breach";
+  const favorableOutcome = preview.success || preview.breachCompleted;
+  previewEl.className = `troop-slider-preview ${favorableOutcome ? "win" : "lose"}`;
   previewEl.innerHTML = `
-    <div><span>Scouted forecast</span><strong>${raid ? "Protected raid" : preview.success ? "Likely victory" : "Likely defeat"}</strong><small>${preview.label}</small></div>
-    <div><span>${preview.success ? "Estimated survivors" : "Defenders left"}</span><strong>${formatNumber(preview.success ? preview.survivors : preview.defendersLeft)}</strong><small>About ${formatDuration(preview.travel)} travel</small><small>${escapeHtml(routeSummary)}</small>${protectionNotice ? `<small>${escapeHtml(protectionNotice)}</small>` : ""}</div>
+    <div><span>Scouted forecast</span><strong>${raid ? "Protected raid" : preview.breachCompleted ? "Likely wall breach" : preview.success ? "Likely capture" : "Likely defeat"}</strong><small>${preview.label}</small></div>
+    <div><span>${favorableOutcome ? breach ? "Estimated return" : "Estimated survivors" : "Defenders left"}</span><strong>${formatNumber(favorableOutcome ? preview.survivors : preview.defendersLeft)}</strong><small>About ${formatDuration(preview.travel)} travel</small><small>${escapeHtml(routeSummary)}</small>${protectionNotice ? `<small>${escapeHtml(protectionNotice)}</small>` : ""}</div>
   `;
 }
 
@@ -22519,7 +22697,15 @@ function calculateBattlePreviewForTroops(source, target, amount, knownRoute = nu
   else if (result.ratio >= 1.12) label = "Good advantage";
   else if (result.ratio > 1) label = "Close win";
   else if (result.ratio >= .82) label = "Risky attack";
-  if (attackProtection) label = `${attackProtection.label}: ${attackProtection.mode === "raid" ? "max 10% garrison damage" : label}`;
+  if (attackProtection) {
+    label = `${attackProtection.label}: ${
+      attackProtection.mode === "raid"
+        ? "max 10% garrison damage"
+        : attackProtection.assaultStage === "breach"
+          ? result.breachCompleted ? "walls will be breached" : label
+          : label
+    }`;
+  }
   const route = knownRoute || findRoute(source, target);
   const travel = route ? travelTime(source, target, "player", route.length, send, "attack") : Infinity;
   return {
@@ -22528,7 +22714,9 @@ function calculateBattlePreviewForTroops(source, target, amount, knownRoute = nu
     attackPower: result.attackPower,
     defensePower: result.defensePower,
     ratio: result.ratio,
+    battleWon: result.battleWon,
     success: result.success,
+    breachCompleted: result.breachCompleted,
     survivors: result.survivors,
     defendersLeft: result.defendersLeft,
     attackerLosses: result.attackerLosses,
@@ -23668,6 +23856,8 @@ function showBattleReportDetail(reportId) {
 
 function getBattleReportBadge(report) {
   if (report.type === "scout") return { label: "SCOUT", tone: "scout" };
+  if (report.outcome === "breach") return { label: "BREACH", tone: "victory" };
+  if (report.outcome === "breached") return { label: "BREACHED", tone: "defeat" };
   if (report.outcome === "victory") return { label: "VICTORY", tone: "victory" };
   if (report.outcome === "held") return { label: "VICTORY", tone: "victory" };
   return { label: "DEFEAT", tone: "defeat" };
@@ -23682,6 +23872,8 @@ function getBattleReportTypeLabel(type) {
 
 function getBattleReportSummary(report) {
   if (report.type === "scout") return `${formatNumber(report.troopCount)} troops reported.`;
+  if (report.outcome === "breach") return `Walls breached with ${formatNumber(report.survivors)} survivors returned.`;
+  if (report.outcome === "breached") return `The walls were breached; the city was not captured.`;
   if (report.outcome === "victory") return `Captured with ${formatNumber(report.survivors)} survivors.`;
   if (report.outcome === "held") return `${formatNumber(report.defendersLeft)} defenders held the city.`;
   if (report.outcome === "lost") return "The city was captured.";
