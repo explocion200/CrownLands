@@ -3322,8 +3322,8 @@ function isProtectedMainCity(city = {}, attackerUid = "", ownerProfile = null) {
   if (!ownerUid || ownerUid === attackerUid) return false;
   const cityId = safeString(city.id, 96);
   const profileMainCityId = safeString(ownerProfile?.mainCityId, 96);
-  const profileMatchesCity = Boolean(cityId && profileMainCityId && cityId === profileMainCityId);
-  if (!profileMatchesCity) return Boolean(city.isMainCity);
+  if (!profileMainCityId) return Boolean(city.isMainCity);
+  if (!cityId || cityId !== profileMainCityId) return false;
 
   const cityRegionId = safeString(city.regionId || city.startPool, 160);
   const profileRegionId = safeString(
