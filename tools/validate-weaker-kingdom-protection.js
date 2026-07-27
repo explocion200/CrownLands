@@ -244,6 +244,36 @@ if (raid.success || !raid.raidCompleted || raid.survivors !== 0 || raid.attacker
   || raid.defenderLosses !== 100 || raid.defendersLeft !== 900) {
   throw new Error("Protected raids can capture, exceed 10% damage, or return attacking troops.");
 }
+const convertedReinforcementWin = sandbox.calculateCombatResult(
+  10_000,
+  target,
+  null,
+  null,
+  { attackProtection: atTwoFive, convertedReinforcement: true }
+);
+if (!convertedReinforcementWin.success
+  || convertedReinforcementWin.raidCompleted
+  || !convertedReinforcementWin.convertedReinforcementCapture
+  || convertedReinforcementWin.survivors < 1
+  || convertedReinforcementWin.defendersLeft !== 0
+  || convertedReinforcementWin.attackerLosses >= 10_000) {
+  throw new Error("A winning converted reinforcement cannot capture with its surviving troops.");
+}
+const convertedReinforcementRaid = sandbox.calculateCombatResult(
+  1,
+  { troops: 1000, totalDefense: 100_000 },
+  null,
+  null,
+  { attackProtection: atTwoFive, convertedReinforcement: true }
+);
+if (convertedReinforcementRaid.success
+  || !convertedReinforcementRaid.raidCompleted
+  || convertedReinforcementRaid.convertedReinforcementCapture
+  || convertedReinforcementRaid.survivors !== 0
+  || convertedReinforcementRaid.attackerLosses !== 1
+  || convertedReinforcementRaid.defenderLosses !== 0) {
+  throw new Error("An insufficient converted reinforcement no longer follows protected-raid losses.");
+}
 const negligibleRaid = sandbox.calculateCombatResult(
   1,
   { troops: 1000, totalDefense: 100_000 },

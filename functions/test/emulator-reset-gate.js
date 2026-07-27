@@ -146,6 +146,67 @@ async function main() {
   assert(firstStats.resetGeneration === realm.resetGeneration, "Stats were written to the wrong generation.");
   assert(firstStats.totalCities === 1, "Archived cities leaked into current-generation statistics.");
 
+  const clanLeader = users[48];
+  const clanApplicant = users[49];
+  const clanLeaderRef = db.doc(`players/${clanLeader.uid}`);
+  const clanApplicantRef = db.doc(`players/${clanApplicant.uid}`);
+  await Promise.all([
+    clanLeaderRef.set({
+      character: { level: 20, xp: 0, skillPoints: 19 },
+      gold: 100_000,
+      goldFloat: 100_000,
+      economyUpdatedAtMs: Date.now(),
+    }, { merge: true }),
+    clanApplicantRef.set({
+      character: { level: 20, xp: 0, skillPoints: 19 },
+    }, { merge: true }),
+  ]);
+  const createdClan = await callFunction("createClan", clanLeader.token, {
+    name: "Application Gate",
+    tag: "APGT",
+    description: "Exercises approval applications in the release gate.",
+    admissionMode: "approval",
+  });
+  const applicationClanId = createdClan?.clan?.id;
+  assert(applicationClanId, "The clan application gate could not create its approval clan.");
+
+  const firstApplication = await callFunction("applyToClan", clanApplicant.token, {
+    clanId: applicationClanId,
+    message: "First application",
+  });
+  assert(firstApplication?.pending === true, "Applying to an approval clan did not return pending status.");
+  let applicationSnapshot = await db.doc(`clans/${applicationClanId}/applications/${clanApplicant.uid}`).get();
+  let applicantProfile = (await clanApplicantRef.get()).data() || {};
+  assert(applicationSnapshot.exists, "The pending clan application was not persisted.");
+  assert(applicationSnapshot.data()?.resetGeneration === realm.resetGeneration, "The clan application was written to the wrong reset.");
+  assert(applicationSnapshot.data()?.worldId === realm.worldId, "The clan application was written to the wrong world.");
+  assert(applicantProfile.pendingClanApplicationId === applicationClanId, "The applicant profile did not track its pending clan.");
+
+  await callFunction("cancelClanApplication", clanApplicant.token, { clanId: applicationClanId });
+  applicationSnapshot = await db.doc(`clans/${applicationClanId}/applications/${clanApplicant.uid}`).get();
+  applicantProfile = (await clanApplicantRef.get()).data() || {};
+  assert(!applicationSnapshot.exists, "Canceling a clan application did not remove it.");
+  assert(!applicantProfile.pendingClanApplicationId, "Canceling a clan application did not clear the applicant profile.");
+
+  await callFunction("applyToClan", clanApplicant.token, {
+    clanId: applicationClanId,
+    message: "Second application",
+  });
+  const reviewedApplication = await callFunction("reviewClanApplication", clanLeader.token, {
+    clanId: applicationClanId,
+    applicantUid: clanApplicant.uid,
+    accept: true,
+  });
+  assert(reviewedApplication?.ok === true && reviewedApplication?.role === "member", "Accepting a clan application did not join the applicant.");
+  const [acceptedMemberSnapshot, acceptedApplicationSnapshot, acceptedApplicantSnapshot] = await Promise.all([
+    db.doc(`clans/${applicationClanId}/members/${clanApplicant.uid}`).get(),
+    db.doc(`clans/${applicationClanId}/applications/${clanApplicant.uid}`).get(),
+    clanApplicantRef.get(),
+  ]);
+  assert(acceptedMemberSnapshot.exists, "The accepted applicant was not added to the clan roster.");
+  assert(!acceptedApplicationSnapshot.exists, "The accepted clan application was not removed.");
+  assert(acceptedApplicantSnapshot.data()?.clanId === applicationClanId, "The accepted applicant profile did not receive clan identity.");
+
   const attacker = users[0];
   const sourceClaim = claims[0];
   const sourceRef = db.doc(`islands/${sourceClaim.islandId}/cities/${sourceClaim.cityId}`);
@@ -238,7 +299,7 @@ async function main() {
     Number(reinforcementTarget.y) - Number(source.y)
   );
   const reinforcementArmyId = `retarget_gate_${crypto.randomBytes(8).toString("hex")}`;
-  await sourceRef.set({ troops: 1_000, troopFloat: 1_000 }, { merge: true });
+  await sourceRef.set({ troops: 100_000, troopFloat: 100_000 }, { merge: true });
   const reinforcement = await callFunction("sendArmyOrder", attacker.token, {
     army: {
       id: reinforcementArmyId,
@@ -247,8 +308,8 @@ async function main() {
       toId: targetDoc.id,
       fromName: source.name || sourceClaim.cityId,
       toName: reinforcementTarget.name || targetDoc.id,
-      troops: 250,
-      requestedTroops: 250,
+      troops: 20_000,
+      requestedTroops: 20_000,
       sourceRegionId: sourceClaim.mainRegionId,
       targetRegionId: sourceClaim.mainRegionId,
       routeRegionIds: [sourceClaim.mainRegionId],
@@ -281,8 +342,8 @@ async function main() {
     ownerFlag: null,
     ownerShieldExpiresAtMs: 0,
     isMainCity: false,
-    troops: 0,
-    troopFloat: 0,
+    troops: 1_000,
+    troopFloat: 1_000,
     updatedAt: admin.firestore.FieldValue.serverTimestamp(),
   }, { merge: true });
   retargetBatch.set(
@@ -332,7 +393,20 @@ async function main() {
     retargetedResolution?.status === "resolved"
       && retargetedResolution?.kind === "attack"
       && retargetedResolution?.outcome === "victory",
-    "Retargeted reinforcement did not fight as an attack on arrival."
+    "Protected retargeted reinforcement did not capture after winning on arrival."
+  );
+  const retargetedAttackReport = (retargetedResolution.reports || [])
+    .find(report => report.type === "attack" && report.outcome === "victory");
+  assert(
+    retargetedAttackReport?.attackProtection?.mode === "raid"
+      && retargetedAttackReport.attackProtection.captureAllowed === false,
+    "The converted reinforcement gate did not exercise recalculated protected-raid rules."
+  );
+  assert(
+    retargetedAttackReport.survivors > 0
+      && retargetedAttackReport.attackerLosses < retargetedAttackReport.sentTroops
+      && /Reinforcements converted to an attack and captured the city/.test(retargetedAttackReport.summary),
+    "Winning converted reinforcements did not retain survivors or report the capture clearly."
   );
   await waitForOwnershipEvents(53);
 

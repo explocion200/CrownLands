@@ -2618,6 +2618,9 @@ let clanSearchResults = [];
 let clanMessages = [];
 let clanMessagesUnsubscribe = null;
 let activeClanMessageSubscriptionId = "";
+let clanApplicationsUnsubscribe = null;
+let activeClanApplicationsSubscriptionId = "";
+let clanApplicationsError = "";
 let clanStateUnsubscribe = null;
 let activeClanSubscriptionId = "";
 let clanMemberUidSet = new Set();
@@ -7618,10 +7621,15 @@ function calculateCombatResult(attackTroops, attackOwner, target, options = {}) 
   const attackPower = getAttackPower(troops, attackOwner);
   const defensePower = getBattleDefensePower(target);
   const ratio = attackPower / Math.max(1, defensePower);
-  const raid = protectedAttack?.mode === "raid";
-  const breachOnly = protectedAttack?.mode === "assault" && protectedAttack.captureAllowed !== true;
-  const battleWon = !raid && attackPower > defensePower;
+  const protectedRaid = protectedAttack?.mode === "raid";
+  const convertedReinforcement = options.convertedReinforcement === true;
+  const convertedReinforcementCanCapture = protectedRaid && convertedReinforcement;
+  const breachOnly = protectedAttack?.mode === "assault"
+    && protectedAttack.captureAllowed !== true
+    && !convertedReinforcement;
+  const battleWon = (!protectedRaid || convertedReinforcementCanCapture) && attackPower > defensePower;
   const success = battleWon && !breachOnly;
+  const raid = protectedRaid && !success;
   const attackerBoost = attackOwner === "player" ? skillMultiplier("swordmastery") : 1.04;
   let survivors = 0;
   let defendersLeft = defendersAtStart;
@@ -7665,6 +7673,8 @@ function calculateCombatResult(attackTroops, attackOwner, target, options = {}) 
     demoAttack: protectedAttack?.legacyDemoAttack ? normalizeDemoAttackSnapshot(options.demoAttack) : null,
     raidCompleted: raid,
     breachCompleted: breachOnly && battleWon,
+    convertedReinforcement,
+    convertedReinforcementCapture: convertedReinforcementCanCapture && success,
   };
 }
 
@@ -12687,6 +12697,9 @@ function prepareOnlineArmyMission(mission) {
   mission.ownerName = state.playerName;
   mission.ownerFlag = state.flag;
   mission.ownerKingPower = getKingPower();
+  mission.launchKind = ["attack", "transfer", "scout"].includes(mission.launchKind)
+    ? mission.launchKind
+    : mission.kind;
   mission.attackerKingPower = normalizePowerValue(mission.attackerKingPower) || mission.ownerKingPower;
   mission.defenderKingPower = normalizePowerValue(mission.defenderKingPower);
   mission.attackProtection = normalizeAttackProtectionSnapshot(mission.attackProtection, mission.demoAttack);
@@ -12715,6 +12728,9 @@ function toOnlineArmyMovement(mission) {
     ownerFlag: mission.ownerFlag || state.flag,
     ownerKingPower: normalizePowerValue(mission.ownerKingPower) || getKingPower(),
     kind: mission.kind || "attack",
+    launchKind: ["attack", "transfer", "scout"].includes(mission.launchKind)
+      ? mission.launchKind
+      : mission.kind || "attack",
     targetType: mission.targetType === "camp" || isRewardCampTarget(to) ? "camp" : "city",
     fromId: mission.fromId,
     toId: mission.toId,
@@ -12804,6 +12820,12 @@ function applyServerMovementToMission(mission, movement = null) {
   const rawRemaining = Number(movement.remaining);
   mission.onlineId = movement.id || mission.onlineId;
   if (["attack", "transfer", "scout"].includes(movementKind)) mission.kind = movementKind;
+  if (["attack", "transfer", "scout"].includes(movement.launchKind)) {
+    mission.launchKind = movement.launchKind;
+  }
+  if (["attack", "transfer", "scout"].includes(movement.retargetedFromKind)) {
+    mission.retargetedFromKind = movement.retargetedFromKind;
+  }
   mission.troops = Math.max(0, Math.floor(Number(movement.troops) || mission.troops || 0));
   mission.requestedTroops = Math.max(0, Math.floor(Number(movement.requestedTroops) || mission.requestedTroops || mission.troops || 0));
   mission.total = Math.max(0.1, Number(movement.total) || mission.total || 0.1);
@@ -13010,6 +13032,10 @@ function normalizeOnlineArmyMovement(raw) {
     ownerFlag: ownerIdentity?.flag || raw.ownerFlag || null,
     ownerKingPower: normalizePowerValue(ownerIdentity?.kingPower) || normalizePowerValue(raw.ownerKingPower),
     kind: effectiveKind,
+    launchKind: ["attack", "transfer", "scout"].includes(raw.launchKind) ? raw.launchKind : rawKind,
+    retargetedFromKind: ["attack", "transfer", "scout"].includes(raw.retargetedFromKind)
+      ? raw.retargetedFromKind
+      : "",
     targetType: raw.targetType === "camp" ? "camp" : "city",
     fromId: raw.fromId || "",
     toId: raw.toId || "",
@@ -13283,6 +13309,8 @@ function createLocalAttackFromOnlineArmy(army, remaining = getOnlineArmyRemainin
     ownerFlag: army.ownerFlag || state.flag,
     ownerKingPower: normalizePowerValue(army.ownerKingPower),
     kind: army.kind,
+    launchKind: army.launchKind || army.kind,
+    retargetedFromKind: army.retargetedFromKind || "",
     targetType: army.targetType === "camp" ? "camp" : "city",
     fromId: army.fromId,
     toId: army.toId,
@@ -16043,11 +16071,15 @@ function resolveAttack(attack) {
       assaultStage,
     });
   }
+  const convertedReinforcement = attack.kind === "transfer"
+    || attack.launchKind === "transfer"
+    || attack.retargetedFromKind === "transfer";
   const protectionReportSuffix = getAttackProtectionReportSuffix(attackProtection);
   const givenUpNeutralTarget = isGivenUpNeutralCity(target);
   const result = calculateCombatResult(attack.troops, attack.owner, target, {
     attackProtection,
     demoAttack: attack.demoAttack,
+    convertedReinforcement,
   });
 
   if (result.breachCompleted) {
@@ -16167,7 +16199,7 @@ function resolveAttack(attack) {
         baseTotalDefense: targetStatsAtStart.baseTotalDefense,
         totalDefenseBonus: targetStatsAtStart.totalDefenseBonus,
         opponentName: defenderName,
-        summary: `Captured with ${formatNumber(result.survivors)} survivors. ${formatCapturedCityLevelDrop(levelDrop)} +${formatNumber(xpAward)} XP.${protectionReportSuffix}`,
+        summary: `${convertedReinforcement ? "Reinforcements converted to an attack and captured the city" : "Captured"} with ${formatNumber(result.survivors)} survivors. ${formatCapturedCityLevelDrop(levelDrop)} +${formatNumber(xpAward)} XP.${protectionReportSuffix}`,
       });
       addLog(`Victory: you captured ${target.name} with ${formatNumber(result.survivors)} survivors. ${formatNumber(savedAttackers)} troops recovered. ${formatCapturedCityLevelDrop(levelDrop)} XP efficiency ${Math.round(xpEfficiency * 100)}%.`);
       showToast(`Captured ${target.name}: +${formatNumber(xpAward)} XP`);
@@ -16197,7 +16229,7 @@ function resolveAttack(attack) {
         baseTotalDefense: targetStatsAtStart.baseTotalDefense,
         totalDefenseBonus: targetStatsAtStart.totalDefenseBonus,
         opponentName: attackerReportName,
-        summary: `${target.name} was captured by ${attackerReportName}. ${formatCapturedCityLevelDrop(levelDrop)} +${formatNumber(defenseLossXp)} XP.${protectionReportSuffix}`,
+        summary: `${target.name} was captured by ${attackerReportName}${convertedReinforcement ? " after incoming reinforcements converted to an attack" : ""}. ${formatCapturedCityLevelDrop(levelDrop)} +${formatNumber(defenseLossXp)} XP.${protectionReportSuffix}`,
       });
       addLog(`Lost: the enemy captured ${target.name}. ${formatCapturedCityLevelDrop(levelDrop)} ${formatNumber(savedDefenders)} troops recovered, and you gained ${formatNumber(defenseLossXp)} XP.`);
       showToast(`You lost ${target.name}: +${formatNumber(defenseLossXp)} XP`);
@@ -16880,9 +16912,14 @@ function stopClanRealtimeSubscriptions({ clear = true } = {}) {
   if (typeof clanMessagesUnsubscribe === "function") clanMessagesUnsubscribe();
   clanMessagesUnsubscribe = null;
   activeClanMessageSubscriptionId = "";
+  if (typeof clanApplicationsUnsubscribe === "function") clanApplicationsUnsubscribe();
+  clanApplicationsUnsubscribe = null;
+  activeClanApplicationsSubscriptionId = "";
+  clanApplicationsError = "";
   if (clear) {
     clanSnapshot = null;
     clanMembers = [];
+    clanApplications = [];
     clanMessages = [];
   }
 }
@@ -16975,6 +17012,35 @@ function startClanMessageSubscription(api, clanId) {
   });
 }
 
+function stopClanApplicationSubscription({ clear = true } = {}) {
+  if (typeof clanApplicationsUnsubscribe === "function") clanApplicationsUnsubscribe();
+  clanApplicationsUnsubscribe = null;
+  activeClanApplicationsSubscriptionId = "";
+  clanApplicationsError = "";
+  if (clear) clanApplications = [];
+}
+
+function startClanApplicationSubscription(api, clanId) {
+  const id = String(clanId || "").trim();
+  if (!id || !api?.subscribeClanApplications) return false;
+  if (activeClanApplicationsSubscriptionId === id && typeof clanApplicationsUnsubscribe === "function") return true;
+  stopClanApplicationSubscription({ clear: true });
+  activeClanApplicationsSubscriptionId = id;
+  clanApplicationsUnsubscribe = api.subscribeClanApplications(id, {
+    onApplications: applications => {
+      clanApplications = Array.isArray(applications) ? applications : [];
+      clanApplicationsError = "";
+      if (activeProfileTab === "clan") renderClanView();
+    },
+    onError: error => {
+      console.warn("Clan application subscription failed", error);
+      clanApplicationsError = "Applications could not be loaded. Reopen the Clan screen to retry.";
+      if (activeProfileTab === "clan") renderClanView();
+    },
+  });
+  return true;
+}
+
 async function refreshClanState(options = {}) {
   const api = getOnlineApi();
   if (!api?.isSignedIn?.()) {
@@ -17008,9 +17074,15 @@ async function refreshClanState(options = {}) {
         clanShieldDraft = null;
         clanShieldEditorTab = "field";
       }
-      clanApplications = ["leader", "officer"].includes(state.clanRole)
-        ? await api.loadClanApplications(state.clanId).catch(() => [])
-        : [];
+      if (["leader", "officer"].includes(state.clanRole)) {
+        const applicationSubscriptionStarted = startClanApplicationSubscription(api, state.clanId);
+        if (!applicationSubscriptionStarted) {
+          clanApplications = await api.loadClanApplications(state.clanId);
+          clanApplicationsError = "";
+        }
+      } else {
+        stopClanApplicationSubscription({ clear: true });
+      }
       startClanMessageSubscription(api, state.clanId);
     } else {
       stopClanRealtimeSubscriptions({ clear: true });
@@ -17070,6 +17142,22 @@ function renderClanShieldChoiceButtons(options, key, currentValue) {
       <small>${escapeHtml(option.label)}</small>
     </button>`;
   }).join("")}</div>`;
+}
+
+function renderClanDiscoveryAction(clan, cooldownMs = 0) {
+  const clanId = String(clan?.id || "");
+  const pendingClanId = String(state?.pendingClanApplicationId || "");
+  if (pendingClanId && pendingClanId === clanId) {
+    return `<button data-clan-action="cancel-application" data-clan-id="${escapeHtml(clanId)}">Cancel application</button>`;
+  }
+  const admissionMode = clan?.admissionMode === "open" ? "open" : "approval";
+  const disabled = Boolean(cooldownMs || Number(clan?.memberCount || 0) >= 30 || pendingClanId);
+  const label = pendingClanId
+    ? "Application pending"
+    : admissionMode === "open"
+      ? "Join"
+      : "Apply";
+  return `<button data-clan-action="${admissionMode === "open" ? "join" : "apply"}" data-clan-id="${escapeHtml(clanId)}" ${disabled ? "disabled" : ""}>${label}</button>`;
 }
 
 function renderClanShieldColorSwatches(key, label, currentValue) {
@@ -17256,7 +17344,7 @@ function renderClanView() {
             <article class="clan-list-row">
               ${renderClanShield(clan.shield || clan.banner, { size: "mini", label: `${clan.name || "Clan"} shield` })}
               <div class="clan-list-copy"><strong>[${escapeHtml(clan.tag || "")}] ${escapeHtml(clan.name || "Clan")}</strong><span>${formatNumber(clan.totalKingPower || 0)} power · ${clan.memberCount || 0}/30 members</span><small>${escapeHtml(clan.description || "No description yet.")}</small></div>
-              <button data-clan-action="${clan.admissionMode === "open" ? "join" : "apply"}" data-clan-id="${escapeHtml(clan.id)}" ${cooldownMs || clan.memberCount >= 30 ? "disabled" : ""}>${state?.pendingClanApplicationId === clan.id ? "Applied" : clan.admissionMode === "open" ? "Join" : "Apply"}</button>
+              ${renderClanDiscoveryAction(clan, cooldownMs)}
             </article>`).join("") : `<p class="clan-muted">No clans matched your search.</p>`}</div>
         </section>
       </div>`;
@@ -17287,7 +17375,11 @@ function renderClanView() {
               ${canManage && member.uid !== getCurrentOnlineUid() && member.role === "member" ? `<button data-clan-action="kick" data-member-id="${escapeHtml(member.uid)}">Remove</button>` : ""}
             </div>
           </article>`).join("")}</div>
-        ${canManage && clanApplications.length ? `<div class="clan-applications"><h4>Applications</h4>${clanApplications.map(application => `<article><span>${escapeHtml(application.displayName || "Ruler")} · ${formatNumber(application.kingPower || 0)} power</span><button data-clan-action="accept" data-member-id="${escapeHtml(application.uid)}">Accept</button><button data-clan-action="reject" data-member-id="${escapeHtml(application.uid)}">Reject</button></article>`).join("")}</div>` : ""}
+        ${canManage ? `<div class="clan-applications"><h4>Applications</h4>${clanApplicationsError
+          ? `<p class="clan-warning">${escapeHtml(clanApplicationsError)}</p>`
+          : clanApplications.length
+            ? clanApplications.map(application => `<article><span>${escapeHtml(application.displayName || "Ruler")} · ${formatNumber(application.kingPower || 0)} power</span><button data-clan-action="accept" data-member-id="${escapeHtml(application.uid)}">Accept</button><button data-clan-action="reject" data-member-id="${escapeHtml(application.uid)}">Reject</button></article>`).join("")
+            : `<p class="clan-muted">No pending applications.</p>`}</div>` : ""}
         <button class="profile-secondary-btn clan-leave" data-clan-action="leave">${canLead && clanMembers.length === 1 ? "Disband Clan" : "Leave Clan"}</button>
       </section>
       <section class="clan-chat-panel">
@@ -17308,6 +17400,7 @@ async function runClanAction(action, payload = {}) {
     const method = {
       join: "joinOpenClan",
       apply: "applyToClan",
+      "cancel-application": "cancelClanApplication",
       accept: "reviewClanApplication",
       reject: "reviewClanApplication",
       promote: "promoteClanMember",
@@ -17319,7 +17412,13 @@ async function runClanAction(action, payload = {}) {
     if (!method || !api[method]) return;
     const result = await api[method](payload);
     if (Number.isFinite(Number(result?.gold))) state.gold = Number(result.gold);
-    showToast(action === "apply" ? "Application sent." : action === "report" ? "Message reported." : "Clan updated.");
+    showToast(action === "apply"
+      ? "Application sent."
+      : action === "cancel-application"
+        ? "Application canceled."
+        : action === "report"
+          ? "Message reported."
+          : "Clan updated.");
     await refreshClanState({ silent: true });
   } catch (error) {
     showToast(error?.message || "Clan action failed.");
