@@ -516,6 +516,8 @@
     const { collection, getDocs, query, where, orderBy } = client.modules.firestore;
     const snapshot = await getDocs(query(
       collection(client.db, "clans", clanId, "applications"),
+      where("resetGeneration", "==", RESET_GENERATION),
+      where("worldId", "==", ONLINE_WORLD_ID),
       where("status", "==", "pending"),
       orderBy("createdAtMs", "asc")
     ));
@@ -542,6 +544,30 @@
       snapshot => {
         const messages = snapshot.docs.map(item => ({ id: item.id, ...item.data() })).reverse();
         if (typeof handlers.onMessages === "function") handlers.onMessages(messages);
+      },
+      error => {
+        if (typeof handlers.onError === "function") handlers.onError(error);
+      }
+    );
+  }
+
+  function subscribeClanApplications(clanId = "", handlers = {}) {
+    if (!client.db || !client.modules?.firestore?.onSnapshot || !client.user?.uid || !clanId) return () => {};
+    const { collection, onSnapshot, query, where, orderBy } = client.modules.firestore;
+    const safeClanId = String(clanId).slice(0, 128);
+    return onSnapshot(
+      query(
+        collection(client.db, "clans", safeClanId, "applications"),
+        where("resetGeneration", "==", RESET_GENERATION),
+        where("worldId", "==", ONLINE_WORLD_ID),
+        where("status", "==", "pending"),
+        orderBy("createdAtMs", "asc")
+      ),
+      snapshot => {
+        const applications = snapshot.docs.map(item => ({ id: item.id, ...item.data() }));
+        if (typeof handlers.onApplications === "function") {
+          handlers.onApplications(applications, snapshot.docChanges());
+        }
       },
       error => {
         if (typeof handlers.onError === "function") handlers.onError(error);
@@ -1786,6 +1812,7 @@
     loadClanApplications,
     loadClanLeaderboard,
     subscribeClanState,
+    subscribeClanApplications,
     subscribeClanMessages,
     recalculatePlayerGlobalStats,
     recalculateAllPlayerGlobalStats,

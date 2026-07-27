@@ -10,6 +10,7 @@ const html = fs.readFileSync(path.join(root, "index.html"), "utf8");
 const styles = fs.readFileSync(path.join(root, "styles.css"), "utf8");
 const rules = fs.readFileSync(path.join(root, "firestore.rules"), "utf8");
 const firebaseConfig = fs.readFileSync(path.join(root, "firebase.json"), "utf8");
+const firestoreIndexes = fs.readFileSync(path.join(root, "firestore.indexes.json"), "utf8");
 const callableAccessCheck = fs.readFileSync(path.join(root, "tools", "validate-clan-callable-access.js"), "utf8");
 const showProfileSkillsSource = client.slice(
   client.indexOf("function showProfileSkills()"),
@@ -73,6 +74,9 @@ requires(rules, /profileFieldUnchanged\('clanIdentityRevision'\)/, "Players can 
 
 requires(firebaseClient, /createClan[\s\S]*?joinOpenClan[\s\S]*?reviewClanApplication[\s\S]*?sendClanMessage/, "Firebase client does not expose the clan callables.");
 requires(firebaseClient, /subscribeClanMessages/, "Firebase client is missing realtime clan chat.");
+requires(firebaseClient, /function subscribeClanApplications[\s\S]*?where\("resetGeneration",\s*"==",\s*RESET_GENERATION\)[\s\S]*?where\("worldId",\s*"==",\s*ONLINE_WORLD_ID\)[\s\S]*?where\("status",\s*"==",\s*"pending"\)[\s\S]*?onSnapshot/, "Clan managers do not have a rule-compatible realtime application inbox.");
+requires(firebaseClient, /async function loadClanApplications[\s\S]*?where\("resetGeneration",\s*"==",\s*RESET_GENERATION\)[\s\S]*?where\("worldId",\s*"==",\s*ONLINE_WORLD_ID\)/, "The clan application fallback query does not prove current-realm access to Firestore rules.");
+requires(firestoreIndexes, /"collectionGroup":\s*"applications"[\s\S]*?"fieldPath":\s*"resetGeneration"[\s\S]*?"fieldPath":\s*"worldId"[\s\S]*?"fieldPath":\s*"status"[\s\S]*?"fieldPath":\s*"createdAtMs"/, "Clan applications are missing their current-realm manager inbox index.");
 requires(firebaseClient, /dispatch\("player-clan"[\s\S]*?function subscribeClanState[\s\S]*?snapshot\.docChanges\(\)/, "Firebase client is missing event-driven player and roster clan updates.");
 requires(html, /id="clanTabBtn"[\s\S]*?id="clanView"/, "Profile UI is missing its Clan tab.");
 requires(html, /id="leaderboardBtn"[\s\S]*?id="clanHudBtn"/, "The Clan HUD button is not beside the leaderboard.");
@@ -81,6 +85,8 @@ requires(client, /function isClanAllyCity[\s\S]*?function getClanFriendlyBlockRe
 requires(client, /clanRosterReady[\s\S]*?clanMemberUidSet\.has/, "Allied-city rendering does not use the event-maintained clan member UID set.");
 requires(client, /function applyClanMembersSnapshot[\s\S]*?\["added", "removed"\][\s\S]*?refreshClanRelationshipPresentation/, "Roster events do not refresh allied cities only when membership changes.");
 requires(client, /function showClanHub[\s\S]*?showProfileClan\(\)/, "The Clan HUD button does not open the Clan area directly.");
+requires(client, /function startClanApplicationSubscription[\s\S]*?onApplications[\s\S]*?clanApplications\s*=[\s\S]*?renderClanView/, "Clan applications do not appear live for leaders and officers.");
+requires(client, /data-clan-action="cancel-application"[\s\S]*?"cancel-application":\s*"cancelClanApplication"/, "Applicants cannot cancel a pending clan application.");
 requires(showProfileSkillsSource, /clanView\.hidden\s*=\s*true;/, "Switching from Clan to Skills does not hide the Clan panel.");
 requires(client, /function renderProfileClanAffiliation[\s\S]*?renderClanShield/, "Player profiles do not render a separate clan shield affiliation.");
 requires(client, /clanSearchResults\.map\(clan =>[\s\S]*?renderClanShield\(clan\.shield \|\| clan\.banner/, "Clan discovery results do not show each clan's public shield.");
