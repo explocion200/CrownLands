@@ -411,6 +411,9 @@ const CROWN_CITADEL_TROOP_BONUS_PERCENT = 10;
 const CROWN_CITADEL_DEFENSE_BONUS_PERCENT = 10;
 const CROWN_CITADEL_MARCH_SPEED_BONUS_PERCENT = 10;
 const CROWN_CITADEL_UPGRADE_COST_REDUCTION_PERCENT = 10;
+const CLAN_OBJECTIVE_BENEFIT_MODEL_VERSION = 1;
+const CLAN_SHARED_OBJECTIVE_MULTIPLIER = 0.5;
+const BATTLE_SNAPSHOT_MODEL_VERSION = 1;
 const STRONGHOLD_IDS = new Set([
   GOLD_STRONGHOLD_ID,
   TRAINING_STRONGHOLD_ID,
@@ -777,6 +780,18 @@ function normalizePlayerName(value, fallback = "Ruler") {
 const SERVER_WORLD_MAPS = Array.isArray(SERVER_WORLD_LAYOUT?.maps) ? SERVER_WORLD_LAYOUT.maps : [];
 const SERVER_WORLD_MAP_BY_ID = new Map(SERVER_WORLD_MAPS.map(map => [safeString(map?.id, 80), map]));
 const SERVER_WORLD_REGION_IDS = new Set(SERVER_WORLD_MAP_BY_ID.keys());
+const SERVER_WORLD_OBJECTIVE_TARGETS = SERVER_WORLD_MAPS.flatMap(map => (
+  Array.isArray(map?.objectives) ? map.objectives : []
+).map(objective => ({
+  id: safeString(objective?.id, 96),
+  regionId: safeString(map?.id, 80),
+  strongholdType: safeString(objective?.strongholdType || objective?.type, 32),
+}))).filter(objective => objective.id && objective.regionId);
+const SERVER_WORLD_OBJECTIVE_TARGET_KEYS = new Set(
+  SERVER_WORLD_OBJECTIVE_TARGETS.map(objective => (
+    `${normalizeRegionId(objective.regionId)}:${objective.id}`
+  ))
+);
 const STARTER_REGION_IDS = Object.freeze(
   SERVER_WORLD_MAPS
     .filter(map => safeString(map?.type, 32).toLowerCase() === "starter")
@@ -1512,7 +1527,7 @@ function getCityStats(city = {}, defenderProfile = null, bonuses = {}) {
   const cityWallsBonus = Math.max(0, cityWalls - baseCityWalls);
   const baseTotalDefense = Math.floor(baseCityWalls + troopDefense);
   const preStrongholdTotalDefense = Math.floor(cityWalls + troopDefense);
-  const strongholdDefenseBonusPercent = !stronghold ? Math.max(0, safeNumber(bonuses.cityDefenseBonusPercent, 0)) : 0;
+  const strongholdDefenseBonusPercent = Math.max(0, safeNumber(bonuses.cityDefenseBonusPercent, 0));
   const strongholdDefenseBonus = Math.floor(preStrongholdTotalDefense * strongholdDefenseBonusPercent / 100);
   const totalDefense = preStrongholdTotalDefense + strongholdDefenseBonus;
 
@@ -1842,6 +1857,18 @@ function createGlobalStatsSnapshot({
     strongholdMarchSpeedBonusPercent: Math.max(0, Math.floor(safeNumber(resolvedBonuses.marchSpeedBonusPercent, 0))),
     strongholdDefenseBonusPercent: Math.max(0, Math.floor(safeNumber(resolvedBonuses.cityDefenseBonusPercent, 0))),
     strongholdUpgradeCostReductionPercent: Math.max(0, Math.floor(safeNumber(resolvedBonuses.upgradeCostReductionPercent, 0))),
+    personalStrongholdGoldBonusPercent: Math.max(0, safeNumber(resolvedBonuses.personalGoldBonusPercent, resolvedBonuses.goldBonusPercent)),
+    personalStrongholdTroopBonusPercent: Math.max(0, safeNumber(resolvedBonuses.personalTroopBonusPercent, resolvedBonuses.troopBonusPercent)),
+    personalStrongholdMarchSpeedBonusPercent: Math.max(0, safeNumber(resolvedBonuses.personalMarchSpeedBonusPercent, resolvedBonuses.marchSpeedBonusPercent)),
+    personalStrongholdDefenseBonusPercent: Math.max(0, safeNumber(resolvedBonuses.personalDefenseBonusPercent, resolvedBonuses.cityDefenseBonusPercent)),
+    personalStrongholdUpgradeCostReductionPercent: Math.max(0, safeNumber(resolvedBonuses.personalUpgradeCostReductionPercent, resolvedBonuses.upgradeCostReductionPercent)),
+    sharedClanGoldBonusPercent: Math.max(0, safeNumber(resolvedBonuses.sharedGoldBonusPercent, 0)),
+    sharedClanTroopBonusPercent: Math.max(0, safeNumber(resolvedBonuses.sharedTroopBonusPercent, 0)),
+    sharedClanMarchSpeedBonusPercent: Math.max(0, safeNumber(resolvedBonuses.sharedMarchSpeedBonusPercent, 0)),
+    sharedClanDefenseBonusPercent: Math.max(0, safeNumber(resolvedBonuses.sharedDefenseBonusPercent, 0)),
+    sharedClanUpgradeCostReductionPercent: Math.max(0, safeNumber(resolvedBonuses.sharedUpgradeCostReductionPercent, 0)),
+    clanCitadelBonusPercent: Math.max(0, safeNumber(resolvedBonuses.clanCitadelBonusPercent, 0)),
+    clanObjectiveBenefitRevision: Math.max(0, Math.floor(safeNumber(resolvedBonuses.clanObjectiveBenefitRevision, 0))),
     stationedTroopPower: Math.max(0, Math.floor(stationedTroopPower)),
     campTroopPower: Math.max(0, Math.floor(campTroopPower)),
     reinforcementTroopPower: Math.max(0, Math.floor(reinforcementTroopPower)),
@@ -2049,6 +2076,7 @@ function createServerAttackProtectionSnapshot({
   attackerProfile = null,
   defenderProfile = null,
   defenderBonuses = {},
+  defensePower = null,
   assaultStage = "breach",
 } = {}) {
   if (!target || targetType === "camp" || isStronghold(target)) return null;
@@ -2063,7 +2091,12 @@ function createServerAttackProtectionSnapshot({
   const availableTroops = Math.max(1, Math.floor(safeNumber(sourceTroops, 1)));
   const requested = clampInt(requestedTroops, 1, availableTroops);
   const attackPerTroop = Math.max(1, getAttackPower(1, attackerProfile));
-  const totalDefense = Math.max(1, getCityStats(target, defenderProfile, defenderBonuses).totalDefense);
+  const totalDefense = Math.max(
+    1,
+    defensePower !== null && defensePower !== undefined && Number.isFinite(Number(defensePower))
+      ? Math.floor(Number(defensePower))
+      : getCityStats(target, defenderProfile, defenderBonuses).totalDefense
+  );
   const breakEvenTroops = Math.max(1, Math.floor(totalDefense / attackPerTroop) + 1);
   const normalizedAssaultStage = mode === "assault" && assaultStage === "capture" ? "capture" : "breach";
   const captureSafeCap = Math.max(1, roundUpToTwoSignificantDigits(breakEvenTroops));
@@ -2209,7 +2242,9 @@ function calculateCombatResult(attackTroops, target, attackerProfile = null, def
   const defendersAtStart = Math.max(0, Math.floor(safeNumber(target?.troops, 0)));
   const attackProtection = normalizeAttackProtectionSnapshot(options.attackProtection, options.demoAttack);
   const attackPower = getAttackPower(troops, attackerProfile);
-  const defensePower = getCityStats(target, defenderProfile, options.defenderBonuses).totalDefense;
+  const defensePower = Number.isFinite(Number(options.defensePower))
+    ? Math.max(0, Math.floor(Number(options.defensePower)))
+    : getCityStats(target, defenderProfile, options.defenderBonuses).totalDefense;
   const ratio = attackPower / Math.max(1, defensePower);
   const protectedRaid = attackProtection?.mode === "raid";
   const convertedReinforcement = options.convertedReinforcement === true;
@@ -3230,6 +3265,13 @@ function reportRef(uid, reportId) {
   return db.doc(`players/${uid}/serverReports/${reportId}`);
 }
 
+function battleSnapshotRef(battleId = "") {
+  const safeBattleId = safeString(battleId, 160).replace(/[^a-zA-Z0-9_-]/g, "_");
+  return safeBattleId
+    ? db.doc(`battleSnapshots/${RESET_GENERATION}/entries/${safeBattleId}`)
+    : null;
+}
+
 function islandReportRef(regionId, reportId) {
   return db.doc(`islands/${getOnlineIslandId(regionId)}/reports/${reportId}`);
 }
@@ -3579,8 +3621,8 @@ function getPlayerIdentitySyncSignature(identity = {}) {
   ]);
 }
 
-function createScoutReportSnapshot(target = {}, defenderProfile = null, nowMs = Date.now(), bonuses = {}) {
-  const stats = getCityStats(target, defenderProfile, bonuses);
+function createScoutReportSnapshot(target = {}, defenderProfile = null, nowMs = Date.now(), bonuses = {}, statsOverride = null) {
+  const stats = statsOverride || getCityStats(target, defenderProfile, bonuses);
   const baseTroopDefense = Math.max(0, Math.floor(safeNumber(target.troops, 0)));
   const troopDefense = Math.floor(baseTroopDefense * (1 + stats.defensePercent / 100));
   const skillSnapshot = {};
@@ -3632,6 +3674,8 @@ function makeReport({
   attackProtection = null,
   defenderXpMultiplierApplied = 1,
   firstProtectedDefenseBonus = false,
+  battleId = "",
+  fieldMedicsRecovered = 0,
   nowMs = Date.now(),
 }) {
   const normalizedTotalDefense = Math.max(0, Math.floor(safeNumber(totalDefense, result.defensePower || 0)));
@@ -3673,7 +3717,156 @@ function makeReport({
     attackProtection: normalizeAttackProtectionSnapshot(attackProtection),
     defenderXpMultiplierApplied: Math.max(0, safeNumber(defenderXpMultiplierApplied, 1)),
     firstProtectedDefenseBonus: firstProtectedDefenseBonus === true,
+    battleId: safeString(battleId, 160),
+    battleSnapshotVersion: battleId ? BATTLE_SNAPSHOT_MODEL_VERSION : 0,
+    fieldMedicsRecovered: Math.max(0, Math.floor(safeNumber(fieldMedicsRecovered, 0))),
   };
+}
+
+function battleClanIdentity(profile = {}) {
+  const clanId = safeString(profile.clanId, 128);
+  return clanId ? {
+    clanId,
+    clanName: safeString(profile.clanName, 24),
+    clanTag: safeString(profile.clanTag, 5),
+  } : null;
+}
+
+function createDetailedBattleSnapshot({
+  battleId = "",
+  armyId = "",
+  target = {},
+  targetType = "city",
+  attackerUid = "",
+  attackerProfile = {},
+  defenderUid = "",
+  defenderProfile = {},
+  defenderBonuses = {},
+  defensePackages = null,
+  allocation = null,
+  result = {},
+  outcome = "",
+  nowMs = Date.now(),
+} = {}) {
+  if (!battleId || !defensePackages) return null;
+  const allocationByUid = new Map((allocation?.contributions || []).map(entry => [entry.ownerUid, entry]));
+  const ownerLosses = Math.max(0, Math.floor(safeNumber(allocation?.ownerLosses, 0)));
+  const ownerTroops = Math.max(0, Math.floor(safeNumber(defensePackages.owner?.troops, 0)));
+  const reinforcementRows = (defensePackages.reinforcements || []).map(row => {
+    const settled = allocationByUid.get(row.ownerUid) || {};
+    return {
+      ownerUid: row.ownerUid,
+      ownerName: row.ownerName,
+      ownerFlag: row.ownerFlag || null,
+      reinforcementId: row.reinforcementId,
+      startingTroops: row.troops,
+      basePower: row.basePower,
+      personalDefenseBonusPercent: row.personalBonusPercent,
+      sharedDefenseBonusPercent: row.sharedBonusPercent,
+      totalDefenseBonusPercent: row.bonusPercent,
+      effectivePower: row.effectivePower,
+      losses: Math.max(0, Math.floor(safeNumber(settled.losses, 0))),
+      survivors: Math.max(0, Math.floor(safeNumber(settled.remaining, row.troops))),
+    };
+  });
+  const participants = [...new Set([
+    safeString(attackerUid, 128),
+    safeString(defenderUid, 128),
+    ...reinforcementRows.map(row => row.ownerUid),
+  ].filter(Boolean))];
+  const defendersAtStart = ownerTroops + reinforcementRows.reduce((total, row) => total + row.startingTroops, 0);
+  const defenderLosses = Math.max(0, Math.floor(safeNumber(result.defenderLosses, 0)));
+  return {
+    battleId,
+    armyId: safeString(armyId, 96),
+    modelVersion: BATTLE_SNAPSHOT_MODEL_VERSION,
+    combatModel: "per_owner_reinforcement_stats",
+    worldId: ONLINE_WORLD_ID,
+    resetGeneration: RESET_GENERATION,
+    participantUids: participants,
+    target: {
+      id: safeString(target.id, 96),
+      name: safeString(target.name || target.id, 80),
+      regionId: normalizeRegionId(target.regionId),
+      targetType: targetType === "camp" ? "camp" : "city",
+      strongholdType: safeString(target.strongholdType, 32),
+      level: clampCityLevel(target.level || 1),
+      fortifications: {
+        cityLevelDefensePercent: defensePackages.owner.cityLevelDefensePercent,
+        baseCityWalls: defensePackages.owner.baseCityWalls,
+        cityWalls: defensePackages.owner.cityWalls,
+        stoneworksPercent: defensePackages.owner.stoneworksPercent,
+      },
+    },
+    attacker: {
+      ownerUid: safeString(attackerUid, 128),
+      ownerName: normalizePlayerName(attackerProfile.playerName || attackerProfile.displayName, "Rival ruler"),
+      ownerFlag: attackerProfile.flag || null,
+      clan: battleClanIdentity(attackerProfile),
+      startingTroops: Math.max(0, Math.floor(safeNumber(result.attackerLosses, 0)))
+        + Math.max(0, Math.floor(safeNumber(result.survivors, 0))),
+      basePower: Math.max(0, Math.floor(
+        (Math.max(0, safeNumber(result.attackerLosses, 0)) + Math.max(0, safeNumber(result.survivors, 0)))
+        * BASE_TROOP_ATTACK_POWER
+      )),
+      swordmasteryLevel: getSkillLevel(attackerProfile, "swordmastery"),
+      swordmasteryPercent: getSkillPercent(attackerProfile, "swordmastery"),
+      effectivePower: Math.max(0, Math.floor(safeNumber(result.attackPower, 0))),
+      losses: Math.max(0, Math.floor(safeNumber(result.attackerLosses, 0))),
+      survivors: Math.max(0, Math.floor(safeNumber(result.survivors, 0))),
+    },
+    defender: {
+      ownerUid: safeString(defenderUid, 128),
+      ownerName: defensePackages.owner.ownerName,
+      ownerFlag: defensePackages.owner.ownerFlag || null,
+      clan: battleClanIdentity(defenderProfile),
+      startingTroops: ownerTroops,
+      basePower: defensePackages.owner.basePower,
+      personalDefenseBonusPercent: Math.max(
+        0,
+        safeNumber(defenderBonuses.personalDefenseBonusPercent, defenderBonuses.cityDefenseBonusPercent)
+      ),
+      sharedDefenseBonusPercent: Math.max(0, safeNumber(defenderBonuses.sharedDefenseBonusPercent, 0)),
+      totalDefenseBonusPercent: defensePackages.owner.bonusPercent,
+      effectivePower: defensePackages.owner.effectivePower,
+      losses: ownerLosses,
+      survivors: Math.max(0, ownerTroops - ownerLosses),
+      fortifications: {
+        cityLevelDefensePercent: defensePackages.owner.cityLevelDefensePercent,
+        baseCityWalls: defensePackages.owner.baseCityWalls,
+        cityWalls: defensePackages.owner.cityWalls,
+        stoneworksPercent: defensePackages.owner.stoneworksPercent,
+      },
+    },
+    reinforcements: reinforcementRows,
+    totals: {
+      attackers: Math.max(0, Math.floor(safeNumber(result.attackerLosses, 0)))
+        + Math.max(0, Math.floor(safeNumber(result.survivors, 0))),
+      defenders: defendersAtStart,
+      attackPower: Math.max(0, Math.floor(safeNumber(result.attackPower, 0))),
+      defensePower: Math.max(0, Math.floor(safeNumber(result.defensePower, defensePackages.totalDefense))),
+      attackerLosses: Math.max(0, Math.floor(safeNumber(result.attackerLosses, 0))),
+      defenderLosses,
+      attackerSurvivors: Math.max(0, Math.floor(safeNumber(result.survivors, 0))),
+      defenderSurvivors: Math.max(0, defendersAtStart - defenderLosses),
+    },
+    formula: {
+      powerRatio: Math.max(0, safeNumber(result.ratio, 0)),
+      defenderCasualtyPercent: defendersAtStart > 0 ? defenderLosses * 100 / defendersAtStart : 0,
+      captureRequiresAttackPowerAboveDefense: true,
+      captureThresholdPower: Math.max(0, Math.floor(safeNumber(result.defensePower, defensePackages.totalDefense))) + 1,
+    },
+    outcome: safeString(outcome, 24),
+    createdAtMs: nowMs,
+    createdAt: FieldValue.serverTimestamp(),
+  };
+}
+
+function writeDetailedBattleSnapshot(transaction, snapshot = null) {
+  const ref = battleSnapshotRef(snapshot?.battleId);
+  if (!transaction || !ref || !snapshot) return null;
+  transaction.set(ref, snapshot, { merge: false });
+  return ref;
 }
 
 function setNestedScoutReportPatch(cityId, report) {
@@ -3746,6 +3939,17 @@ async function getProfileSnapshots(transaction, uids) {
     const ref = db.doc(`players/${uid}`);
     const snap = await transaction.get(ref);
     entries.push([uid, { ref, snap, data: snap.exists ? snap.data() || {} : {} }]);
+  }
+  return new Map(entries);
+}
+
+async function getGlobalStatsSnapshots(transaction, uids) {
+  const uniqueUids = [...new Set((Array.isArray(uids) ? uids : []).filter(Boolean))];
+  const entries = [];
+  for (const uid of uniqueUids) {
+    const ref = playerGlobalStatsRef(uid);
+    const snap = await transaction.get(ref);
+    entries.push([uid, snap.exists ? snap.data() || {} : {}]);
   }
   return new Map(entries);
 }
@@ -3998,8 +4202,143 @@ function formatCooldownMs(ms) {
   return `${totalSeconds}s`;
 }
 
+function emptyObjectiveBonuses() {
+  return {
+    goldBonusPercent: 0,
+    troopBonusPercent: 0,
+    marchSpeedBonusPercent: 0,
+    cityDefenseBonusPercent: 0,
+    upgradeCostReductionPercent: 0,
+  };
+}
+
+function calculateDefenderArmyPackages({
+  target = {},
+  targetType = "city",
+  ownerProfile = {},
+  ownerBonuses = {},
+  contributions = [],
+  contributorProfiles = new Map(),
+  contributorStats = new Map(),
+} = {}) {
+  const ownerTroops = getTargetOwnerTroops(target, targetType);
+  const ownerTarget = {
+    ...target,
+    troops: ownerTroops,
+    troopFloat: ownerTroops,
+    alliedReinforcementTroops: 0,
+  };
+  const ownerStats = getCityStats(ownerTarget, ownerProfile, ownerBonuses);
+  const ownerPackage = {
+    ownerUid: safeString(getOwnerUid(target), 128),
+    ownerName: normalizePlayerName(getOwnerName(target) || ownerProfile.playerName, "Neutral defenders"),
+    ownerFlag: ownerProfile.flag || target.ownerFlag || null,
+    troops: ownerTroops,
+    basePower: Math.max(0, ownerStats.totalDefense - ownerStats.strongholdDefenseBonus),
+    bonusPercent: Math.max(0, safeNumber(ownerStats.strongholdDefenseBonusPercent, 0)),
+    effectivePower: Math.max(0, Math.floor(safeNumber(ownerStats.totalDefense, 0))),
+    cityLevelDefensePercent: Math.max(0, safeNumber(ownerStats.defensePercent, 0)),
+    baseCityWalls: Math.max(0, Math.floor(safeNumber(ownerStats.baseCityWalls, 0))),
+    cityWalls: Math.max(0, Math.floor(safeNumber(ownerStats.cityWalls, 0))),
+    stoneworksPercent: Math.max(0, safeNumber(ownerStats.stoneworksPercent, 0)),
+  };
+  const reinforcementPackages = (Array.isArray(contributions) ? contributions : []).map(contribution => {
+    const profile = contributorProfiles.get(contribution.ownerUid) || {};
+    const stats = contributorStats.get(contribution.ownerUid) || {};
+    const troops = Math.max(0, Math.floor(safeNumber(contribution.troops, 0)));
+    const bonusPercent = Math.max(0, safeNumber(stats.strongholdDefenseBonusPercent, 0));
+    return {
+      reinforcementId: contribution.id,
+      ownerUid: safeString(contribution.ownerUid, 128),
+      ownerName: normalizePlayerName(profile.playerName || contribution.ownerName, "Ruler"),
+      ownerFlag: profile.flag || contribution.ownerFlag || null,
+      troops,
+      basePower: troops,
+      bonusPercent,
+      personalBonusPercent: Math.max(0, safeNumber(stats.personalStrongholdDefenseBonusPercent, bonusPercent)),
+      sharedBonusPercent: Math.max(0, safeNumber(stats.sharedClanDefenseBonusPercent, 0)),
+      effectivePower: Math.max(0, Math.floor(troops * (1 + bonusPercent / 100))),
+    };
+  }).filter(row => row.ownerUid && row.troops > 0);
+  return {
+    owner: ownerPackage,
+    reinforcements: reinforcementPackages,
+    totalDefense: Math.max(
+      0,
+      ownerPackage.effectivePower
+        + reinforcementPackages.reduce((total, row) => total + row.effectivePower, 0)
+    ),
+  };
+}
+
+function normalizeObjectiveBonuses(value = {}) {
+  return {
+    goldBonusPercent: Math.max(0, safeNumber(value.goldBonusPercent, 0)),
+    troopBonusPercent: Math.max(0, safeNumber(value.troopBonusPercent, 0)),
+    marchSpeedBonusPercent: Math.max(0, safeNumber(value.marchSpeedBonusPercent, 0)),
+    cityDefenseBonusPercent: Math.max(0, safeNumber(value.cityDefenseBonusPercent, 0)),
+    upgradeCostReductionPercent: Math.max(0, safeNumber(value.upgradeCostReductionPercent, 0)),
+  };
+}
+
+function addObjectiveBonuses(left = {}, right = {}) {
+  const first = normalizeObjectiveBonuses(left);
+  const second = normalizeObjectiveBonuses(right);
+  return {
+    goldBonusPercent: first.goldBonusPercent + second.goldBonusPercent,
+    troopBonusPercent: first.troopBonusPercent + second.troopBonusPercent,
+    marchSpeedBonusPercent: first.marchSpeedBonusPercent + second.marchSpeedBonusPercent,
+    cityDefenseBonusPercent: first.cityDefenseBonusPercent + second.cityDefenseBonusPercent,
+    upgradeCostReductionPercent: first.upgradeCostReductionPercent + second.upgradeCostReductionPercent,
+  };
+}
+
+function subtractObjectiveBonuses(left = {}, right = {}) {
+  const first = normalizeObjectiveBonuses(left);
+  const second = normalizeObjectiveBonuses(right);
+  return {
+    goldBonusPercent: Math.max(0, first.goldBonusPercent - second.goldBonusPercent),
+    troopBonusPercent: Math.max(0, first.troopBonusPercent - second.troopBonusPercent),
+    marchSpeedBonusPercent: Math.max(0, first.marchSpeedBonusPercent - second.marchSpeedBonusPercent),
+    cityDefenseBonusPercent: Math.max(0, first.cityDefenseBonusPercent - second.cityDefenseBonusPercent),
+    upgradeCostReductionPercent: Math.max(0, first.upgradeCostReductionPercent - second.upgradeCostReductionPercent),
+  };
+}
+
+function scaleObjectiveBonuses(value = {}, multiplier = 1) {
+  const bonuses = normalizeObjectiveBonuses(value);
+  const scale = Math.max(0, safeNumber(multiplier, 0));
+  return {
+    goldBonusPercent: bonuses.goldBonusPercent * scale,
+    troopBonusPercent: bonuses.troopBonusPercent * scale,
+    marchSpeedBonusPercent: bonuses.marchSpeedBonusPercent * scale,
+    cityDefenseBonusPercent: bonuses.cityDefenseBonusPercent * scale,
+    upgradeCostReductionPercent: bonuses.upgradeCostReductionPercent * scale,
+  };
+}
+
+function objectiveBonusForCity(city = {}, multiplier = 1) {
+  const scale = Math.max(0, safeNumber(multiplier, 0));
+  if (isCrownCitadel(city)) {
+    return {
+      goldBonusPercent: CROWN_CITADEL_GOLD_BONUS_PERCENT * scale,
+      troopBonusPercent: CROWN_CITADEL_TROOP_BONUS_PERCENT * scale,
+      marchSpeedBonusPercent: CROWN_CITADEL_MARCH_SPEED_BONUS_PERCENT * scale,
+      cityDefenseBonusPercent: CROWN_CITADEL_DEFENSE_BONUS_PERCENT * scale,
+      upgradeCostReductionPercent: CROWN_CITADEL_UPGRADE_COST_REDUCTION_PERCENT * scale,
+    };
+  }
+  const bonuses = emptyObjectiveBonuses();
+  if (isGoldStronghold(city)) bonuses.goldBonusPercent += getStrongholdBonusPercent(city) * scale;
+  if (isTrainingStronghold(city)) bonuses.troopBonusPercent += getStrongholdBonusPercent(city) * scale;
+  if (isSpeedStronghold(city)) bonuses.marchSpeedBonusPercent += getStrongholdBonusPercent(city) * scale;
+  if (isDefenseStronghold(city)) bonuses.cityDefenseBonusPercent += getStrongholdBonusPercent(city) * scale;
+  return bonuses;
+}
+
 function getOwnedStrongholdBonuses(cities = []) {
-  const ownsCrownCitadel = cities.some(entry => isCrownCitadel(entry.city));
+  const ownedCities = (Array.isArray(cities) ? cities : []).map(entry => entry?.city || entry).filter(Boolean);
+  const ownsCrownCitadel = ownedCities.some(isCrownCitadel);
   if (ownsCrownCitadel) {
     return {
       source: "crown_citadel",
@@ -4009,14 +4348,31 @@ function getOwnedStrongholdBonuses(cities = []) {
       marchSpeedBonusPercent: CROWN_CITADEL_MARCH_SPEED_BONUS_PERCENT,
       cityDefenseBonusPercent: CROWN_CITADEL_DEFENSE_BONUS_PERCENT,
       upgradeCostReductionPercent: CROWN_CITADEL_UPGRADE_COST_REDUCTION_PERCENT,
+      personalGoldBonusPercent: CROWN_CITADEL_GOLD_BONUS_PERCENT,
+      personalTroopBonusPercent: CROWN_CITADEL_TROOP_BONUS_PERCENT,
+      personalMarchSpeedBonusPercent: CROWN_CITADEL_MARCH_SPEED_BONUS_PERCENT,
+      personalDefenseBonusPercent: CROWN_CITADEL_DEFENSE_BONUS_PERCENT,
+      personalUpgradeCostReductionPercent: CROWN_CITADEL_UPGRADE_COST_REDUCTION_PERCENT,
+      sharedGoldBonusPercent: 0,
+      sharedTroopBonusPercent: 0,
+      sharedMarchSpeedBonusPercent: 0,
+      sharedDefenseBonusPercent: 0,
+      sharedUpgradeCostReductionPercent: 0,
+      clanCitadelBonusPercent: 0,
+      clanObjectiveBenefitRevision: 0,
     };
   }
   return cities.reduce((bonuses, entry) => {
-    const city = entry.city || {};
+    const city = entry?.city || entry;
+    if (!city) return bonuses;
     if (isGoldStronghold(city)) bonuses.goldBonusPercent += getStrongholdBonusPercent(city);
     if (isTrainingStronghold(city)) bonuses.troopBonusPercent += getStrongholdBonusPercent(city);
     if (isSpeedStronghold(city)) bonuses.marchSpeedBonusPercent += getStrongholdBonusPercent(city);
     if (isDefenseStronghold(city)) bonuses.cityDefenseBonusPercent += getStrongholdBonusPercent(city);
+    bonuses.personalGoldBonusPercent = bonuses.goldBonusPercent;
+    bonuses.personalTroopBonusPercent = bonuses.troopBonusPercent;
+    bonuses.personalMarchSpeedBonusPercent = bonuses.marchSpeedBonusPercent;
+    bonuses.personalDefenseBonusPercent = bonuses.cityDefenseBonusPercent;
     return bonuses;
   }, {
     source: "individual",
@@ -4026,7 +4382,311 @@ function getOwnedStrongholdBonuses(cities = []) {
     marchSpeedBonusPercent: 0,
     cityDefenseBonusPercent: 0,
     upgradeCostReductionPercent: 0,
+    personalGoldBonusPercent: 0,
+    personalTroopBonusPercent: 0,
+    personalMarchSpeedBonusPercent: 0,
+    personalDefenseBonusPercent: 0,
+    personalUpgradeCostReductionPercent: 0,
+    sharedGoldBonusPercent: 0,
+    sharedTroopBonusPercent: 0,
+    sharedMarchSpeedBonusPercent: 0,
+    sharedDefenseBonusPercent: 0,
+    sharedUpgradeCostReductionPercent: 0,
+    clanCitadelBonusPercent: 0,
+    clanObjectiveBenefitRevision: 0,
   });
+}
+
+function getLiveClanBenefitIntegrals(benefits = {}, nowMs = Date.now()) {
+  const lastIntegratedAtMs = Math.max(0, timestampToMs(benefits.lastIntegratedAtMs));
+  const elapsedMs = Math.max(0, nowMs - lastIntegratedAtMs);
+  const shared = normalizeObjectiveBonuses(benefits.sharedBonuses);
+  return {
+    goldPercentMs: Math.max(0, safeNumber(benefits.cumulativeGoldPercentMs, 0))
+      + shared.goldBonusPercent * elapsedMs,
+    troopPercentMs: Math.max(0, safeNumber(benefits.cumulativeTroopPercentMs, 0))
+      + shared.troopBonusPercent * elapsedMs,
+    atMs: nowMs,
+  };
+}
+
+function clanBenefitAccrualBaseline(benefits = {}, clanId = "", nowMs = Date.now()) {
+  const integrals = getLiveClanBenefitIntegrals(benefits, nowMs);
+  return {
+    modelVersion: CLAN_OBJECTIVE_BENEFIT_MODEL_VERSION,
+    resetGeneration: RESET_GENERATION,
+    clanId: safeString(clanId, 128),
+    goldPercentMs: integrals.goldPercentMs,
+    troopPercentMs: integrals.troopPercentMs,
+    checkpointAtMs: nowMs,
+  };
+}
+
+function buildClanBenefitExitPatch(profile = {}, benefits = {}, clanId = "", nowMs = Date.now()) {
+  const live = getLiveClanBenefitIntegrals(benefits, nowMs);
+  const accrual = profile.clanObjectiveAccrual && typeof profile.clanObjectiveAccrual === "object"
+    ? profile.clanObjectiveAccrual
+    : {};
+  const matching = safeString(accrual.clanId, 128) === safeString(clanId, 128)
+    && safeString(accrual.resetGeneration, 120) === RESET_GENERATION;
+  const pending = profile.pendingClanObjectiveAccrual && typeof profile.pendingClanObjectiveAccrual === "object"
+    ? profile.pendingClanObjectiveAccrual
+    : {};
+  return {
+    clanObjectiveAccrual: FieldValue.delete(),
+    pendingClanObjectiveAccrual: {
+      resetGeneration: RESET_GENERATION,
+      goldPercentMs: Math.max(0, safeNumber(pending.goldPercentMs, 0))
+        + (matching ? Math.max(0, live.goldPercentMs - safeNumber(accrual.goldPercentMs, live.goldPercentMs)) : 0),
+      troopPercentMs: Math.max(0, safeNumber(pending.troopPercentMs, 0))
+        + (matching ? Math.max(0, live.troopPercentMs - safeNumber(accrual.troopPercentMs, live.troopPercentMs)) : 0),
+      citadelControllerUid: safeString(benefits.citadelControllerUid, 128),
+      endedAtMs: nowMs,
+    },
+  };
+}
+
+function combinePlayerObjectiveBonuses(uid = "", ownedEntries = [], benefits = null) {
+  const playerUid = safeString(uid, 128);
+  const ownedCities = (Array.isArray(ownedEntries) ? ownedEntries : [])
+    .map(entry => entry?.city || entry)
+    .filter(city => city && isStronghold(city));
+  if (!benefits || safeString(benefits.resetGeneration, 120) !== RESET_GENERATION) {
+    return getOwnedStrongholdBonuses(ownedEntries);
+  }
+
+  const clanCitadelControllerUid = safeString(benefits.citadelControllerUid, 128);
+  const ownsClanCitadel = Boolean(clanCitadelControllerUid && clanCitadelControllerUid === playerUid);
+  const nonCitadelOwned = ownedCities.filter(city => !isCrownCitadel(city));
+  const fullPersonalStrongholds = nonCitadelOwned.reduce(
+    (bonuses, city) => addObjectiveBonuses(bonuses, objectiveBonusForCity(city)),
+    emptyObjectiveBonuses()
+  );
+  const halfPersonalStrongholds = scaleObjectiveBonuses(fullPersonalStrongholds, CLAN_SHARED_OBJECTIVE_MULTIPLIER);
+  const citadelPersonal = ownsClanCitadel
+    ? objectiveBonusForCity(ownedCities.find(isCrownCitadel) || { id: CROWN_CITADEL_ID, kind: "stronghold", strongholdType: "crown_citadel" })
+    : emptyObjectiveBonuses();
+  const personal = ownsClanCitadel
+    ? addObjectiveBonuses(citadelPersonal, halfPersonalStrongholds)
+    : fullPersonalStrongholds;
+  const rawShared = normalizeObjectiveBonuses(benefits.sharedBonuses);
+  const shared = ownsClanCitadel
+    ? emptyObjectiveBonuses()
+    : clanCitadelControllerUid
+      ? rawShared
+      : subtractObjectiveBonuses(rawShared, halfPersonalStrongholds);
+  const total = addObjectiveBonuses(personal, shared);
+  return {
+    source: clanCitadelControllerUid ? "clan_crown_citadel" : "clan_objectives",
+    crownCitadelControlled: ownsClanCitadel,
+    ...total,
+    personalGoldBonusPercent: personal.goldBonusPercent,
+    personalTroopBonusPercent: personal.troopBonusPercent,
+    personalMarchSpeedBonusPercent: personal.marchSpeedBonusPercent,
+    personalDefenseBonusPercent: personal.cityDefenseBonusPercent,
+    personalUpgradeCostReductionPercent: personal.upgradeCostReductionPercent,
+    sharedGoldBonusPercent: shared.goldBonusPercent,
+    sharedTroopBonusPercent: shared.troopBonusPercent,
+    sharedMarchSpeedBonusPercent: shared.marchSpeedBonusPercent,
+    sharedDefenseBonusPercent: shared.cityDefenseBonusPercent,
+    sharedUpgradeCostReductionPercent: shared.upgradeCostReductionPercent,
+    clanCitadelBonusPercent: clanCitadelControllerUid
+      ? ownsClanCitadel ? CROWN_CITADEL_GOLD_BONUS_PERCENT : CROWN_CITADEL_GOLD_BONUS_PERCENT * CLAN_SHARED_OBJECTIVE_MULTIPLIER
+      : 0,
+    clanObjectiveBenefitRevision: Math.max(0, Math.floor(safeNumber(benefits.revision, 0))),
+  };
+}
+
+async function resolvePlayerObjectiveBenefits(
+  transaction,
+  uid = "",
+  profile = {},
+  ownedEntries = [],
+  nowMs = Date.now(),
+  elapsedMs = 0
+) {
+  const clanId = safeString(profile.clanId, 128);
+  const pending = safeString(profile.pendingClanObjectiveAccrual?.resetGeneration, 120) === RESET_GENERATION
+    ? profile.pendingClanObjectiveAccrual
+    : {};
+  const pendingGoldPercentMs = Math.max(0, safeNumber(pending.goldPercentMs, 0));
+  const pendingTroopPercentMs = Math.max(0, safeNumber(pending.troopPercentMs, 0));
+  const benefitsRef = clanWorldBenefitsRef(clanId);
+  const benefitsSnap = benefitsRef ? await transaction.get(benefitsRef) : null;
+  const benefits = benefitsSnap?.exists ? benefitsSnap.data() || {} : null;
+  const currentBonuses = combinePlayerObjectiveBonuses(uid, ownedEntries, benefits);
+  let accruedGoldPercentMs = pendingGoldPercentMs;
+  let accruedTroopPercentMs = pendingTroopPercentMs;
+  let nextAccrual = FieldValue.delete();
+
+  if (clanId && benefits && benefits.status !== "inactive") {
+    const live = getLiveClanBenefitIntegrals(benefits, nowMs);
+    const accrual = profile.clanObjectiveAccrual && typeof profile.clanObjectiveAccrual === "object"
+      ? profile.clanObjectiveAccrual
+      : {};
+    const matching = safeString(accrual.clanId, 128) === clanId
+      && safeString(accrual.resetGeneration, 120) === RESET_GENERATION;
+    const baselineGold = matching ? safeNumber(accrual.goldPercentMs, live.goldPercentMs) : live.goldPercentMs;
+    const baselineTroops = matching ? safeNumber(accrual.troopPercentMs, live.troopPercentMs) : live.troopPercentMs;
+    accruedGoldPercentMs += Math.max(0, live.goldPercentMs - baselineGold);
+    accruedTroopPercentMs += Math.max(0, live.troopPercentMs - baselineTroops);
+    nextAccrual = clanBenefitAccrualBaseline(benefits, clanId, nowMs);
+  }
+
+  const boundedElapsedMs = Math.max(1, safeNumber(elapsedMs, 0));
+  const rawAverageSharedGold = accruedGoldPercentMs / boundedElapsedMs;
+  const rawAverageSharedTroops = accruedTroopPercentMs / boundedElapsedMs;
+  const citadelControllerUid = safeString(
+    benefits?.citadelControllerUid || pending.citadelControllerUid,
+    128
+  );
+  const ownsClanCitadel = Boolean(citadelControllerUid && citadelControllerUid === safeString(uid, 128));
+  const averageSharedGold = ownsClanCitadel
+    ? 0
+    : citadelControllerUid
+      ? rawAverageSharedGold
+      : Math.max(
+        0,
+        rawAverageSharedGold
+          - safeNumber(currentBonuses.personalGoldBonusPercent, 0) * CLAN_SHARED_OBJECTIVE_MULTIPLIER
+      );
+  const averageSharedTroops = ownsClanCitadel
+    ? 0
+    : citadelControllerUid
+      ? rawAverageSharedTroops
+      : Math.max(
+        0,
+        rawAverageSharedTroops
+          - safeNumber(currentBonuses.personalTroopBonusPercent, 0) * CLAN_SHARED_OBJECTIVE_MULTIPLIER
+      );
+  const productionBonuses = {
+    ...currentBonuses,
+    goldBonusPercent: Math.max(0, safeNumber(currentBonuses.personalGoldBonusPercent, currentBonuses.goldBonusPercent))
+      + averageSharedGold,
+    troopBonusPercent: Math.max(0, safeNumber(currentBonuses.personalTroopBonusPercent, currentBonuses.troopBonusPercent))
+      + averageSharedTroops,
+  };
+
+  return {
+    currentBonuses,
+    productionBonuses,
+    profilePatch: {
+      clanObjectiveAccrual: nextAccrual,
+      pendingClanObjectiveAccrual: FieldValue.delete(),
+    },
+  };
+}
+
+function buildClanSharedObjectiveBonuses(objectives = []) {
+  const citadel = objectives.find(objective => isCrownCitadel(objective));
+  if (citadel) {
+    return {
+      sharedBonuses: objectiveBonusForCity(citadel, CLAN_SHARED_OBJECTIVE_MULTIPLIER),
+      citadelControllerUid: safeString(citadel.ownerUid, 128),
+    };
+  }
+  return {
+    sharedBonuses: objectives.reduce(
+      (bonuses, objective) => addObjectiveBonuses(
+        bonuses,
+        objectiveBonusForCity(objective, CLAN_SHARED_OBJECTIVE_MULTIPLIER)
+      ),
+      emptyObjectiveBonuses()
+    ),
+    citadelControllerUid: "",
+  };
+}
+
+async function rebuildClanWorldBenefits(clanId = "", effectiveAtMs = Date.now()) {
+  const safeClanId = safeString(clanId, 128);
+  const benefitsRef = clanWorldBenefitsRef(safeClanId);
+  if (!safeClanId || !benefitsRef) return null;
+  const clanSnap = await db.doc(`clans/${safeClanId}`).get();
+  const clan = clanSnap.exists ? clanSnap.data() || {} : {};
+  const objectiveRefs = SERVER_WORLD_OBJECTIVE_TARGETS.map(objective => cityRefForRegion(objective.regionId, objective.id));
+  const objectiveSnaps = objectiveRefs.length ? await db.getAll(...objectiveRefs) : [];
+  const ownerUids = [...new Set(objectiveSnaps
+    .filter(snapshot => snapshot.exists)
+    .map(snapshot => safeString(snapshot.data()?.ownerUid, 128))
+    .filter(Boolean))];
+  const ownerProfileRefs = ownerUids.map(uid => db.doc(`players/${uid}`));
+  const ownerProfileSnaps = ownerProfileRefs.length ? await db.getAll(...ownerProfileRefs) : [];
+  const ownerClanByUid = new Map(ownerProfileSnaps.map(snapshot => [
+    snapshot.id,
+    safeString(snapshot.data()?.clanId, 128),
+  ]));
+  const controlledObjectives = objectiveSnaps.map(snapshot => {
+    if (!snapshot.exists) return null;
+    const city = { id: snapshot.id, ...snapshot.data() };
+    const ownerUid = safeString(city.ownerUid, 128);
+    if (!ownerUid || ownerClanByUid.get(ownerUid) !== safeClanId || !isStronghold(city)) return null;
+    return {
+      id: city.id,
+      regionId: normalizeRegionId(city.regionId || getRegionIdFromOnlineIslandId(snapshot.ref.parent?.parent?.id)),
+      strongholdType: safeString(city.strongholdType, 32),
+      ownerUid,
+      ownerName: normalizePlayerName(city.ownerName || ownerUid, "Ruler"),
+      bonusPercent: getStrongholdBonusPercent(city),
+      ...city,
+    };
+  }).filter(Boolean);
+  const next = buildClanSharedObjectiveBonuses(controlledObjectives);
+  const normalizedEffectiveAtMs = Math.max(0, Math.floor(safeNumber(effectiveAtMs, Date.now())));
+
+  return db.runTransaction(async transaction => {
+    const priorSnap = await transaction.get(benefitsRef);
+    const prior = priorSnap.exists ? priorSnap.data() || {} : {};
+    const priorLastAtMs = Math.max(0, timestampToMs(prior.lastIntegratedAtMs));
+    const integrationAtMs = Math.max(priorLastAtMs, normalizedEffectiveAtMs);
+    const priorShared = normalizeObjectiveBonuses(prior.sharedBonuses);
+    const integrationElapsedMs = Math.max(0, integrationAtMs - priorLastAtMs);
+    const status = clanSnap.exists && clan.status === "active" ? "active" : "inactive";
+    const data = {
+      clanId: safeClanId,
+      worldId: ONLINE_WORLD_ID,
+      resetGeneration: RESET_GENERATION,
+      modelVersion: CLAN_OBJECTIVE_BENEFIT_MODEL_VERSION,
+      status,
+      objectives: status === "active" ? controlledObjectives.map(objective => ({
+        id: objective.id,
+        regionId: objective.regionId,
+        strongholdType: objective.strongholdType,
+        ownerUid: objective.ownerUid,
+        ownerName: objective.ownerName,
+        bonusPercent: objective.bonusPercent,
+      })) : [],
+      sharedBonuses: status === "active" ? next.sharedBonuses : emptyObjectiveBonuses(),
+      citadelControllerUid: status === "active" ? next.citadelControllerUid : "",
+      cumulativeGoldPercentMs: Math.max(0, safeNumber(prior.cumulativeGoldPercentMs, 0))
+        + priorShared.goldBonusPercent * integrationElapsedMs,
+      cumulativeTroopPercentMs: Math.max(0, safeNumber(prior.cumulativeTroopPercentMs, 0))
+        + priorShared.troopBonusPercent * integrationElapsedMs,
+      lastIntegratedAtMs: integrationAtMs,
+      effectiveAtMs: normalizedEffectiveAtMs,
+      revision: Math.max(0, Math.floor(safeNumber(prior.revision, 0))) + 1,
+      updatedAtMs: Date.now(),
+      updatedAt: FieldValue.serverTimestamp(),
+      ...(priorSnap.exists ? {} : {
+        createdAtMs: normalizedEffectiveAtMs,
+        createdAt: FieldValue.serverTimestamp(),
+      }),
+    };
+    transaction.set(benefitsRef, data, { merge: true });
+    return data;
+  });
+}
+
+async function rebuildClanBenefitsAndMemberStats(clanId = "", effectiveAtMs = Date.now()) {
+  const safeClanId = safeString(clanId, 128);
+  if (!safeClanId) return { clanId: "", membersUpdated: 0 };
+  const benefits = await rebuildClanWorldBenefits(safeClanId, effectiveAtMs);
+  const membersSnap = await db.collection(`clans/${safeClanId}/members`).get();
+  let membersUpdated = 0;
+  await processWithConcurrency(membersSnap.docs, 4, async memberDoc => {
+    await rebuildGlobalStatsForPlayer(memberDoc.id);
+    membersUpdated += 1;
+  });
+  return { clanId: safeClanId, benefits, membersUpdated };
 }
 
 function getCityUpgradeTargetHours(currentLevel) {
@@ -4619,12 +5279,21 @@ async function prepareEconomyCollection(transaction, uid, nowMs = Date.now(), op
   const cityUpdates = [...mainCityRepair.cityUpdates];
   const productionCityPatches = [];
 
-  const bonuses = getOwnedStrongholdBonuses(cityEntries);
   const lastEconomyAtMs = Math.min(
     nowMs,
     timestampToMs(rawProfile.economyUpdatedAtMs) || fallbackProductionAtMs
   );
   const goldElapsedSeconds = clamp((nowMs - lastEconomyAtMs) / 1000, 0, MAX_SERVER_PRODUCTION_SECONDS);
+  const objectiveBenefits = await resolvePlayerObjectiveBenefits(
+    transaction,
+    uid,
+    rawProfile,
+    cityEntries,
+    nowMs,
+    goldElapsedSeconds * 1000
+  );
+  const bonuses = objectiveBenefits.currentBonuses;
+  const productionBonuses = objectiveBenefits.productionBonuses;
   let goldGainFloat = 0;
   let troopsGained = 0;
   let maxElapsedSeconds = goldElapsedSeconds;
@@ -4638,7 +5307,7 @@ async function prepareEconomyCollection(transaction, uid, nowMs = Date.now(), op
     );
     const elapsedSeconds = clamp((nowMs - lastProductionAtMs) / 1000, 0, MAX_SERVER_PRODUCTION_SECONDS);
     maxElapsedSeconds = Math.max(maxElapsedSeconds, elapsedSeconds);
-    const stats = getCityProductionStats(city, { ...rawProfile, character, upgrades, itemEffects }, bonuses, {
+    const stats = getCityProductionStats(city, { ...rawProfile, character, upgrades, itemEffects }, productionBonuses, {
       nowMs,
       includeWarDrums: false,
       includeRoyalTaxDecree: false,
@@ -4726,6 +5395,7 @@ async function prepareEconomyCollection(transaction, uid, nowMs = Date.now(), op
     itemEffects,
     itemPurchaseCooldowns,
     ...mainCityRepair.profileFields,
+    ...objectiveBenefits.profilePatch,
     economyUpdatedAtMs: economyRevisionMs,
   };
 
@@ -4821,7 +5491,7 @@ function createPreparedEconomyStatsSnapshot(economy = null, profileOverrides = {
     cityEntries: createPatchedCityEntriesForStats(economy, options.extraCityPatches),
     heldCamps: economy.heldCamps,
     activeArmies: createPatchedActiveArmiesForStats(economy, options),
-    bonuses: null,
+    bonuses: economy.bonuses || null,
     nowMs: options.nowMs || Date.now(),
   });
 }
@@ -4920,6 +5590,14 @@ async function rebuildGlobalStatsForPlayer(uid = "") {
   const profile = profileSnap.exists ? profileSnap.data() || {} : {};
   const identity = getCanonicalPlayerIdentity(playerUid, profile, {}, {});
   const cityEntries = createOwnedCityEntriesFromSnapshot(playerUid, ownedSnap);
+  const clanBenefitsSnap = identity.clanId
+    ? await clanWorldBenefitsRef(identity.clanId).get()
+    : null;
+  const objectiveBonuses = combinePlayerObjectiveBonuses(
+    playerUid,
+    cityEntries,
+    clanBenefitsSnap?.exists ? clanBenefitsSnap.data() || {} : null
+  );
   const mainRepair = createMainCityAssignmentRepair(playerUid, profile, cityEntries);
   const activeArmyDocs = activeArmiesSnap.docs.filter(armyDoc => {
     const army = {
@@ -4944,6 +5622,7 @@ async function rebuildGlobalStatsForPlayer(uid = "") {
     cityEntries,
     heldCamps,
     activeArmies,
+    bonuses: objectiveBonuses,
     nowMs,
   });
   const mainRegionId = mainRepair.canonicalMainRegionId
@@ -6245,11 +6924,20 @@ exports.syncPlayerIdentity = onCall({ region: "us-central1", maxInstances: 20, i
     ...mainCityRepair.profileFields,
   };
   const activeArmies = createActiveArmiesFromSnapshot(uid, activeArmiesSnap);
+  const clanBenefitsSnap = identity.clanId
+    ? await clanWorldBenefitsRef(identity.clanId).get()
+    : null;
+  const objectiveBonuses = combinePlayerObjectiveBonuses(
+    uid,
+    ownedCityEntries,
+    clanBenefitsSnap?.exists ? clanBenefitsSnap.data() || {} : null
+  );
   const globalStats = createGlobalStatsSnapshot({
     uid,
     profile: profileForStats,
     cityEntries: ownedCityEntries,
     activeArmies,
+    bonuses: objectiveBonuses,
     nowMs,
   });
   const serverKingPower = globalStats.kingPower;
@@ -8133,6 +8821,11 @@ function clanQuestProgressRef(clanId = "") {
   return db.doc(`clans/${clanId}/questProgress/${RESET_GENERATION}`);
 }
 
+function clanWorldBenefitsRef(clanId = "") {
+  const safeClanId = safeString(clanId, 128);
+  return safeClanId ? db.doc(`clans/${safeClanId}/worldBenefits/${RESET_GENERATION}`) : null;
+}
+
 function clanQuestCaptureReceiptRef(clanId = "", eventId = "") {
   const safeEventId = safeString(eventId, 180).replace(/[^a-zA-Z0-9_-]/g, "_");
   return safeEventId ? db.doc(`clans/${clanId}/questCaptureReceipts/${safeEventId}`) : null;
@@ -8334,12 +9027,40 @@ exports.createClan = onCall({ region: "us-central1", maxInstances: 20, invoker: 
       createdAt: FieldValue.serverTimestamp(),
       updatedAt: FieldValue.serverTimestamp(),
     });
+    transaction.set(clanWorldBenefitsRef(clanId), {
+      clanId,
+      worldId: ONLINE_WORLD_ID,
+      resetGeneration: RESET_GENERATION,
+      modelVersion: CLAN_OBJECTIVE_BENEFIT_MODEL_VERSION,
+      status: "active",
+      objectives: [],
+      sharedBonuses: emptyObjectiveBonuses(),
+      citadelControllerUid: "",
+      cumulativeGoldPercentMs: 0,
+      cumulativeTroopPercentMs: 0,
+      lastIntegratedAtMs: nowMs,
+      effectiveAtMs: nowMs,
+      revision: 1,
+      createdAtMs: nowMs,
+      updatedAtMs: nowMs,
+      createdAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
+    });
     transaction.set(nameRef, { clanId, reusableAtMs: Number.MAX_SAFE_INTEGER, updatedAt: FieldValue.serverTimestamp() });
     transaction.set(tagRef, { clanId, reusableAtMs: Number.MAX_SAFE_INTEGER, updatedAt: FieldValue.serverTimestamp() });
     writePreparedEconomy(transaction, economy, {
       gold: availableGold - CLAN_CREATE_GOLD_COST,
       ...clanIdentityPatch(clanId, clan, "leader"),
       ...clanIdentityRevisionPatch(nowMs),
+      clanObjectiveAccrual: {
+        modelVersion: CLAN_OBJECTIVE_BENEFIT_MODEL_VERSION,
+        resetGeneration: RESET_GENERATION,
+        clanId,
+        goldPercentMs: 0,
+        troopPercentMs: 0,
+        checkpointAtMs: nowMs,
+      },
+      pendingClanObjectiveAccrual: FieldValue.delete(),
     });
     transaction.set(leaderboardEntryRef(uid), clanIdentityPatch(clanId, clan, "leader"), { merge: true });
     writeClanLeaderboard(transaction, clanId, clan);
@@ -8390,6 +9111,8 @@ async function joinClanTransaction(transaction, { uid, clanId, profileSnap, clan
     throw new HttpsError("resource-exhausted", "That clan is full.");
   }
   const statsSnap = await transaction.get(playerGlobalStatsRef(uid));
+  const benefitsSnap = await transaction.get(clanWorldBenefitsRef(clanId));
+  const benefits = benefitsSnap.exists ? benefitsSnap.data() || {} : {};
   const kingPower = Math.max(0, Math.floor(safeNumber(statsSnap.data()?.kingPower || profile.kingPower, 0)));
   const nextCount = clampInt(clan.memberCount, 0, CLAN_MEMBER_LIMIT) + 1;
   const nextPower = Math.max(0, Math.floor(safeNumber(clan.totalKingPower, 0))) + kingPower;
@@ -8404,6 +9127,7 @@ async function joinClanTransaction(transaction, { uid, clanId, profileSnap, clan
   transaction.set(profileSnap.ref, {
     ...clanIdentityPatch(clanId, clan, "member"),
     ...clanIdentityRevisionPatch(nowMs),
+    clanObjectiveAccrual: clanBenefitAccrualBaseline(benefits, clanId, nowMs),
     clanJoinCooldownUntilMs: FieldValue.delete(),
     updatedAt: FieldValue.serverTimestamp(),
   }, { merge: true });
@@ -8541,11 +9265,12 @@ exports.reviewClanApplication = onCall({ region: "us-central1", maxInstances: 30
 async function removeClanMember({ actorUid, targetUid, clanId, reason = "left" }) {
   const nowMs = Date.now();
   return db.runTransaction(async transaction => {
-    const [clanSnap, actorMemberSnap, targetMemberSnap, targetProfileSnap] = await Promise.all([
+    const [clanSnap, actorMemberSnap, targetMemberSnap, targetProfileSnap, benefitsSnap] = await Promise.all([
       transaction.get(db.doc(`clans/${clanId}`)),
       transaction.get(db.doc(`clans/${clanId}/members/${actorUid}`)),
       transaction.get(db.doc(`clans/${clanId}/members/${targetUid}`)),
       transaction.get(db.doc(`players/${targetUid}`)),
+      transaction.get(clanWorldBenefitsRef(clanId)),
     ]);
     if (!clanSnap.exists || !targetMemberSnap.exists) throw new HttpsError("not-found", "Clan member was not found.");
     const clan = clanSnap.data() || {};
@@ -8567,9 +9292,16 @@ async function removeClanMember({ actorUid, targetUid, clanId, reason = "left" }
     transaction.delete(targetMemberSnap.ref);
     transaction.delete(clanMemberRewardsRef(clanId, targetUid));
     if (targetProfileSnap.exists) {
+      const targetProfile = targetProfileSnap.data() || {};
       transaction.set(targetProfileSnap.ref, {
         ...clanIdentityPatch(),
         ...clanIdentityRevisionPatch(nowMs),
+        ...buildClanBenefitExitPatch(
+          targetProfile,
+          benefitsSnap.exists ? benefitsSnap.data() || {} : {},
+          clanId,
+          nowMs
+        ),
         pendingClanApplicationId: FieldValue.delete(),
         clanJoinCooldownUntilMs: nowMs + CLAN_JOIN_COOLDOWN_MS,
         updatedAt: FieldValue.serverTimestamp(),
@@ -8578,6 +9310,21 @@ async function removeClanMember({ actorUid, targetUid, clanId, reason = "left" }
     transaction.set(leaderboardEntryRef(targetUid), clanIdentityPatch(), { merge: true });
     if (!nextCount) {
       transaction.set(clanSnap.ref, { status: "disbanded", memberCount: 0, totalKingPower: 0, disbandedAtMs: nowMs, updatedAtMs: nowMs }, { merge: true });
+      const priorBenefits = benefitsSnap.exists ? benefitsSnap.data() || {} : {};
+      const liveIntegrals = getLiveClanBenefitIntegrals(priorBenefits, nowMs);
+      transaction.set(clanWorldBenefitsRef(clanId), {
+        status: "inactive",
+        objectives: [],
+        sharedBonuses: emptyObjectiveBonuses(),
+        citadelControllerUid: "",
+        cumulativeGoldPercentMs: liveIntegrals.goldPercentMs,
+        cumulativeTroopPercentMs: liveIntegrals.troopPercentMs,
+        lastIntegratedAtMs: nowMs,
+        effectiveAtMs: nowMs,
+        revision: Math.max(0, Math.floor(safeNumber(priorBenefits.revision, 0))) + 1,
+        updatedAtMs: nowMs,
+        updatedAt: FieldValue.serverTimestamp(),
+      }, { merge: true });
       transaction.set(db.doc(`clanNameReservations/${clan.normalizedName}`), { clanId, reusableAtMs: nowMs + CLAN_RESERVATION_RELEASE_MS }, { merge: true });
       transaction.set(db.doc(`clanTagReservations/${clan.normalizedTag}`), { clanId, reusableAtMs: nowMs + CLAN_RESERVATION_RELEASE_MS }, { merge: true });
       transaction.delete(db.doc(`clanLeaderboards/${RESET_GENERATION}/entries/${clanId}`));
@@ -9047,6 +9794,15 @@ exports.syncClanIdentityOnMembershipChange = onDocumentWritten({
     )));
   }
   await reconcileClanReinforcementsForPlayer(uid);
+  const affectedClanIds = [...new Set([
+    safeString(before.clanId, 128),
+    safeString(after.clanId, 128),
+  ].filter(Boolean))];
+  const effectiveAtMs = Math.max(
+    timestampToMs(after.clanIdentityUpdatedAtMs),
+    timestampToMs(before.clanIdentityUpdatedAtMs)
+  ) || Date.now();
+  await Promise.all(affectedClanIds.map(clanId => rebuildClanBenefitsAndMemberStats(clanId, effectiveAtMs)));
 });
 
 exports.rebuildClanPowerOnPlayerStats = onDocumentWritten({
@@ -9688,6 +10444,11 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
       defenderUid,
       ...targetReinforcements.map(entry => entry.ownerUid),
     ]);
+    const participantGlobalStats = await getGlobalStatsSnapshots(transaction, [
+      attackerUid,
+      defenderUid,
+      ...targetReinforcements.map(entry => entry.ownerUid),
+    ]);
     const attackerProfileEntry = participantProfiles.get(attackerUid) || {};
     const defenderProfileEntry = defenderUid ? participantProfiles.get(defenderUid) || {} : null;
     const attackerProfileSnap = participantProfiles.get(attackerUid)?.snap || null;
@@ -9715,6 +10476,10 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
     const reinforcementProfiles = new Map(targetReinforcements.map(entry => [
       entry.ownerUid,
       participantProfiles.get(entry.ownerUid)?.data || {},
+    ]));
+    const reinforcementGlobalStats = new Map(targetReinforcements.map(entry => [
+      entry.ownerUid,
+      participantGlobalStats.get(entry.ownerUid) || {},
     ]));
     const reports = [];
     const cityUpdates = [];
@@ -9892,7 +10657,31 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
       ...target,
       alliedReinforcementTroops: alliedTroopsAtStart,
     }, targetType);
-    const targetStats = getCityStats(combatTarget, defenderProfile, defenderBonuses);
+    const defensePackages = calculateDefenderArmyPackages({
+      target,
+      targetType,
+      ownerProfile: defenderProfile || {},
+      ownerBonuses: defenderBonuses,
+      contributions: targetReinforcements,
+      contributorProfiles: reinforcementProfiles,
+      contributorStats: reinforcementGlobalStats,
+    });
+    const holderTargetStats = getCityStats({
+      ...target,
+      troops: getTargetOwnerTroops(target, targetType),
+    }, defenderProfile, defenderBonuses);
+    const targetStats = {
+      ...holderTargetStats,
+      baseTotalDefense: defensePackages.owner.basePower
+        + defensePackages.reinforcements.reduce((total, row) => total + row.basePower, 0),
+      totalDefense: defensePackages.totalDefense,
+      totalDefenseBonus: Math.max(
+        0,
+        defensePackages.totalDefense
+          - defensePackages.owner.basePower
+          - defensePackages.reinforcements.reduce((total, row) => total + row.basePower, 0)
+      ),
+    };
     const protectedAssaultBreachDocumentRef = effectiveKind === "attack"
       && targetType === "city"
       && defenderUid
@@ -9948,6 +10737,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
           attackerProfile,
           defenderProfile: defenderProfile || {},
           defenderBonuses,
+          defensePower: defensePackages.totalDefense,
           assaultStage: resolutionAssaultStage,
         })
         : null
@@ -9986,6 +10776,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
     const defenderName = defenderUid
       ? normalizePlayerName(target.ownerName || defenderProfile.playerName, "Rival ruler")
       : "Neutral city";
+    let currentBattleId = "";
     const applyReinforcementDefenseSettlement = ({
       allocation = null,
       defenseXpPool = 0,
@@ -10037,6 +10828,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
           worldId: ONLINE_WORLD_ID,
           resetGeneration: RESET_GENERATION,
           armyId,
+          battleId: currentBattleId,
           reinforcementId: entry.id,
           contributorUid: entry.ownerUid,
           contributorName: normalizePlayerName(profile.playerName || entry.ownerName, "Ruler"),
@@ -10051,6 +10843,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
           losses: entry.losses,
           survivors: entry.remaining,
           xpAwarded,
+          fieldMedicsPercent: getSkillPercent(profile, "fieldMedics"),
           createdAtMs: nowMs,
           createdAt: FieldValue.serverTimestamp(),
           updatedAt: FieldValue.serverTimestamp(),
@@ -10288,7 +11081,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
     if (targetType === "camp") {
       if (army.kind === "scout") {
         const campTarget = createReinforcedCombatTarget(getRewardCampCombatTarget(target), "camp");
-        const scoutReport = createScoutReportSnapshot(campTarget, defenderProfile, nowMs, defenderBonuses);
+        const scoutReport = createScoutReportSnapshot(campTarget, defenderProfile, nowMs, defenderBonuses, targetStats);
         const report = makeReport({
           id: `${armyId}_${campTarget.campType}_camp_scout_${attackerUid}`,
           uid: attackerUid,
@@ -10352,14 +11145,33 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
 
       const campTarget = createReinforcedCombatTarget(getRewardCampCombatTarget(target), "camp");
       const campConfig = getRewardCampConfig(campTarget);
-      const campStats = getCityStats(campTarget, defenderProfile, defenderBonuses);
       const defendersAtStart = Math.max(0, Math.floor(safeNumber(campTarget.troops, 0)));
-      const battle = calculateCombatResult(troopCount, campTarget, attackerProfile, defenderProfile, { defenderBonuses });
+      const battle = calculateCombatResult(troopCount, campTarget, attackerProfile, defenderProfile, {
+        defenderBonuses,
+        defensePower: defensePackages.totalDefense,
+      });
       const defenseAllocation = allocateDefenderLosses(
         getTargetOwnerTroops(target, "camp"),
         targetReinforcements,
         battle.defenderLosses
       );
+      currentBattleId = safeString(armyId, 160);
+      writeDetailedBattleSnapshot(transaction, createDetailedBattleSnapshot({
+        battleId: currentBattleId,
+        armyId,
+        target: campTarget,
+        targetType: "camp",
+        attackerUid,
+        attackerProfile,
+        defenderUid,
+        defenderProfile: defenderProfile || {},
+        defenderBonuses,
+        defensePackages,
+        allocation: defenseAllocation,
+        result: battle,
+        outcome: battle.success ? "victory" : "held",
+        nowMs,
+      }));
       applyReinforcementDefenseSettlement({
         allocation: defenseAllocation,
         defenseXpPool: 0,
@@ -10389,11 +11201,13 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
         sentTroops: troopCount,
         troopCount: defendersAtStart,
         result: battle,
-        totalDefense: campStats.totalDefense,
-        defenseStats: campStats,
+        totalDefense: targetStats.totalDefense,
+        defenseStats: targetStats,
         summary: `${battle.success
           ? `Captured ${campTarget.name || campConfig.name} with ${battle.survivors.toLocaleString()} troops. Hold it for ${Math.floor(campConfig.holdDurationMs / 60000)} minutes to earn ${campConfig.rewardType}.`
           : `${battle.defendersLeft.toLocaleString()} defenders remained at ${campTarget.name || campConfig.name}.`}${attackerRecoveredTroops > 0 ? ` Field Medics returned ${attackerRecoveredTroops.toLocaleString()} troops to your main city.` : ""}`,
+        battleId: currentBattleId,
+        fieldMedicsRecovered: attackerRecoveredTroops,
         nowMs,
       });
 
@@ -10457,11 +11271,13 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
           sentTroops: troopCount,
           troopCount: defendersAtStart,
           result: battle,
-          totalDefense: campStats.totalDefense,
-          defenseStats: campStats,
+          totalDefense: targetStats.totalDefense,
+          defenseStats: targetStats,
           summary: `${battle.success
             ? `${attackerName} captured ${campTarget.name || campConfig.name}.`
             : `${campTarget.name || campConfig.name} held with ${battle.defendersLeft.toLocaleString()} defenders.`}${defenderRecoveredTroops > 0 ? ` Field Medics returned ${defenderRecoveredTroops.toLocaleString()} troops to your main city.` : ""}`,
+          battleId: currentBattleId,
+          fieldMedicsRecovered: defenderRecoveredTroops,
           nowMs,
         });
         writeReport(transaction, defenderUid, defenderReport, defenderProfileSnap);
@@ -10609,7 +11425,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
       }
 
       writeParticipantEconomies();
-      const scoutReport = createScoutReportSnapshot(combatTarget, defenderProfile, nowMs, defenderBonuses);
+      const scoutReport = createScoutReportSnapshot(combatTarget, defenderProfile, nowMs, defenderBonuses, targetStats);
       const report = makeReport({
         id: `${armyId}_scout_${attackerUid}`,
         uid: attackerUid,
@@ -10795,6 +11611,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
       attackProtection,
       demoAttack: army.demoAttack,
       defenderBonuses,
+      defensePower: defensePackages.totalDefense,
       convertedReinforcement,
       convertedReinforcementCaptureAllowed: convertedTransferReinforcement,
     });
@@ -10803,6 +11620,23 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
       targetReinforcements,
       result.defenderLosses
     );
+    currentBattleId = safeString(armyId, 160);
+    writeDetailedBattleSnapshot(transaction, createDetailedBattleSnapshot({
+      battleId: currentBattleId,
+      armyId,
+      target,
+      targetType: "city",
+      attackerUid,
+      attackerProfile,
+      defenderUid,
+      defenderProfile: defenderProfile || {},
+      defenderBonuses,
+      defensePackages,
+      allocation: defenseAllocation,
+      result,
+      outcome: result.success ? "victory" : result.breachCompleted ? "breach" : "held",
+      nowMs,
+    }));
     const givenUpNeutralTarget = isGivenUpNeutralCity(target);
     const attackWinXp = attackProtection || givenUpNeutralTarget
       ? 0
@@ -10928,6 +11762,8 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
         attackProtection,
         defenderXpMultiplierApplied,
         firstProtectedDefenseBonus,
+        battleId: currentBattleId,
+        fieldMedicsRecovered: attackerRecoveredTroops,
         nowMs,
       });
       writeReport(transaction, attackerUid, attackerReport, attackerProfileSnap, {
@@ -10959,6 +11795,8 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
           attackProtection,
           defenderXpMultiplierApplied,
           firstProtectedDefenseBonus,
+          battleId: currentBattleId,
+          fieldMedicsRecovered: defenderRecoveredTroops,
           nowMs,
         });
         writeReport(transaction, defenderUid, defenderReport, defenderProfileSnap, {
@@ -11018,6 +11856,11 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
         ownerName: attackerName,
         ownerFlag: attackerProfile.flag || army.ownerFlag || null,
         ownerKingPower: Math.max(0, Math.floor(safeNumber(attackerProfile.kingPower || army.ownerKingPower, 0))),
+        ownerClanId: safeString(attackerProfile.clanId, 128),
+        ownerClanName: safeString(attackerProfile.clanName, 24),
+        ownerClanTag: safeString(attackerProfile.clanTag, 5),
+        ownerClanIdentityRevision: Math.max(0, Math.floor(safeNumber(attackerProfile.clanIdentityRevision, 0))),
+        ownerClanIdentityRevisionVersion: CLAN_IDENTITY_REVISION_VERSION,
         ownerShieldExpiresAtMs: 0,
         troops: result.survivors,
         troopFloat: result.survivors,
@@ -11065,6 +11908,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
         attackProtection,
         defenderXpMultiplierApplied,
         firstProtectedDefenseBonus,
+        battleId: currentBattleId,
         nowMs,
       });
       const attackerDaily = !oldOwnerUid && !isStronghold(target)
@@ -11107,6 +11951,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
       if (attackerRecoveredTroops > 0) {
         attackerReport.summary = `${attackerReport.summary} Field Medics returned ${attackerRecoveredTroops.toLocaleString()} troops to your main city.`;
       }
+      attackerReport.fieldMedicsRecovered = attackerRecoveredTroops;
       transaction.set(targetRef, cleanCityUpdate(target, targetPatch), { merge: true });
       writeReport(transaction, attackerUid, attackerReport, attackerProfileSnap, {
         character: attackerProgress.character,
@@ -11138,6 +11983,8 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
           attackProtection,
           defenderXpMultiplierApplied,
           firstProtectedDefenseBonus,
+          battleId: currentBattleId,
+          fieldMedicsRecovered: defenderRecoveredTroops,
           nowMs,
         });
         writeReport(transaction, defenderUid, defenderReport, defenderProfileSnap, {
@@ -11197,6 +12044,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
       attackProtection,
       defenderXpMultiplierApplied,
       firstProtectedDefenseBonus,
+      battleId: currentBattleId,
       nowMs,
     });
     const attackerRecoveredTroops = result.raidCompleted
@@ -11229,6 +12077,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
     if (attackerRecoveredTroops > 0) {
       attackerReport.summary = `${attackerReport.summary} Field Medics returned ${attackerRecoveredTroops.toLocaleString()} troops to your main city.`;
     }
+    attackerReport.fieldMedicsRecovered = attackerRecoveredTroops;
     transaction.set(targetRef, cleanCityUpdate(target, targetPatch), { merge: true });
     writeReport(transaction, attackerUid, attackerReport, attackerProfileSnap, {
       character: attackerProgress.character,
@@ -11259,6 +12108,8 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
         attackProtection,
         defenderXpMultiplierApplied,
         firstProtectedDefenseBonus,
+        battleId: currentBattleId,
+        fieldMedicsRecovered: defenderRecoveredTroops,
         nowMs,
       });
       writeReport(transaction, defenderUid, defenderReport, defenderProfileSnap, {
@@ -11756,6 +12607,30 @@ async function processOwnershipChangeEvent(event) {
   const reinforcementReturns = await returnReinforcementsAfterOwnershipChange(change);
   let statsUpdates = 0;
   const clanConquest = await recordClanConquest(change, snapshot.id);
+  let clanBenefitUpdates = [];
+  const objectiveOwnershipChanged = targetType === "city"
+    && SERVER_WORLD_OBJECTIVE_TARGET_KEYS.has(
+      `${normalizeRegionId(change.regionId)}:${safeString(change.targetId, 96)}`
+    );
+  if (objectiveOwnershipChanged) {
+    const ownerProfileSnaps = await Promise.all(
+      [...new Set([beforeOwnerUid, afterOwnerUid].filter(Boolean))]
+        .map(uid => db.doc(`players/${uid}`).get())
+    );
+    const affectedClanIds = [...new Set(ownerProfileSnaps
+      .map(profileSnap => safeString(profileSnap.data()?.clanId, 128))
+      .filter(Boolean))];
+    clanBenefitUpdates = await Promise.all(affectedClanIds.map(clanId => (
+      rebuildClanBenefitsAndMemberStats(
+        clanId,
+        Math.max(0, timestampToMs(change.createdAtMs)) || startedAtMs
+      )
+    )));
+    statsUpdates += clanBenefitUpdates.reduce(
+      (total, update) => total + Math.max(0, Math.floor(safeNumber(update?.membersUpdated, 0))),
+      0
+    );
+  }
   if (targetType === "camp") {
     const affectedUids = [...new Set([beforeOwnerUid, afterOwnerUid].filter(Boolean))];
     const results = await Promise.allSettled(affectedUids.map(uid => rebuildGlobalStatsForPlayer(uid)));
@@ -11780,8 +12655,9 @@ async function processOwnershipChangeEvent(event) {
     reinforcementReturnFailures: reinforcementReturns.failed,
     statsUpdates,
     clanQuestCaptureCount: clanConquest.captureCount || 0,
+    clanBenefitClansUpdated: clanBenefitUpdates.length,
   });
-  return { armyUpdates, reinforcementReturns, statsUpdates, clanConquest };
+  return { armyUpdates, reinforcementReturns, statsUpdates, clanConquest, clanBenefitUpdates };
 }
 
 exports.processOwnershipChange = onDocumentCreated({
@@ -11822,7 +12698,7 @@ async function settleReinforcementBattleReceipt(event) {
     );
     const recoveredTroops = Math.floor(
       Math.max(0, safeNumber(receipt.losses, 0))
-      * getSkillPercent(profile, "fieldMedics")
+      * Math.max(0, safeNumber(receipt.fieldMedicsPercent, getSkillPercent(profile, "fieldMedics")))
       / 100
     );
     let recovery = null;
@@ -11867,6 +12743,8 @@ async function settleReinforcementBattleReceipt(event) {
       troopsAwarded: levelTroopReward?.credited || 0,
       characterAfter: progress.character,
       goldAfter: progress.gold,
+      battleId: safeString(receipt.battleId, 160),
+      fieldMedicsRecovered: recovery?.credited || 0,
       nowMs,
     });
     writePreparedEconomy(transaction, economy, {
