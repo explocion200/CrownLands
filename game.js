@@ -2526,6 +2526,7 @@ const playerIdentityCache = new Map();
 const enemyPowerBandCache = new Map();
 let enemyPowerBandCommitTimer = null;
 let publicPlayerProfileRequestId = 0;
+let publicClanProfileRequestId = 0;
 const playerIdentityLookupQueue = new Set();
 const playerIdentityLookupMisses = new Map();
 let playerIdentityLookupInFlight = false;
@@ -9327,13 +9328,15 @@ function renderPlayerNameLink(uid = "", name = "Ruler", className = "") {
 function normalizePublicPlayerProfile(raw = {}, uid = "") {
   const identity = normalizePlayerIdentity(raw, uid);
   if (!identity) return null;
+  const clan = raw.clan && typeof raw.clan === "object" ? raw.clan : null;
   return {
     ...identity,
     displayName: identity.displayName || "Ruler",
     flag: identity.flag || createDefaultFlag(),
     cityCount: Math.max(1, identity.cityCount),
     strongholdCount: identity.strongholds.length || identity.strongholdCount,
-    clanShield: raw.clanShield || raw.shield || raw.banner || null,
+    clan,
+    clanShield: clan?.shield || clan?.banner || raw.clanShield || null,
   };
 }
 
@@ -9385,6 +9388,7 @@ async function showPublicPlayerProfile(uid = "") {
     showToast("Sign in to view player profiles.");
     return;
   }
+  publicClanProfileRequestId += 1;
   const requestId = ++publicPlayerProfileRequestId;
   modal.classList.remove("battle-report-modal", "city-list-modal", "island-switcher-modal", "leaderboard-modal", "inventory-modal", "shop-modal", "incoming-attack-modal", "outgoing-attack-modal");
   modal.classList.add("public-player-profile-modal");
@@ -9402,7 +9406,7 @@ async function showPublicPlayerProfile(uid = "") {
     if (!profile) throw new Error("That player profile is unavailable.");
     rememberPlayerIdentity(profile, { force: true });
     renderPublicPlayerProfile(profile);
-    if (profile.clanId && api.loadClan) {
+    if (profile.clanId && !profile.clanShield && api.loadClan) {
       try {
         const clan = await withTimeout(
           api.loadClan(profile.clanId),
@@ -9457,20 +9461,62 @@ async function focusPublicPlayerMainCity(cityId = "", regionId = "") {
 async function showPublicClanDetails(clanId = "") {
   const api = getOnlineApi();
   const id = String(clanId || "").trim();
-  if (!id || !api?.loadClan) return;
-  modalTitle.textContent = "Clan";
-  modalBody.innerHTML = `<div class="public-profile-loading" role="status">Loading clan details…</div>`;
+  if (!id || !api?.isSignedIn?.() || !api?.loadClan || !api?.loadClanMembers) {
+    showToast("Sign in to view clan profiles.");
+    return;
+  }
+  publicPlayerProfileRequestId += 1;
+  const requestId = ++publicClanProfileRequestId;
+  modal.classList.remove("battle-report-modal", "city-list-modal", "island-switcher-modal", "leaderboard-modal", "inventory-modal", "shop-modal", "incoming-attack-modal", "outgoing-attack-modal");
+  modal.classList.add("public-player-profile-modal");
+  modalTitle.textContent = "Clan Profile";
+  modalBody.innerHTML = `<div class="public-profile-loading" role="status">Loading clan profile…</div>`;
+  if (!modal.open) modal.showModal();
   try {
-    const clan = await api.loadClan(id);
-    if (!clan || !modal.open) throw new Error("That clan is unavailable.");
+    const [clan, loadedMembers] = await withTimeout(
+      Promise.all([api.loadClan(id), api.loadClanMembers(id)]),
+      10000,
+      "Clan profile is taking too long to load."
+    );
+    if (requestId !== publicClanProfileRequestId || !modal.open) return;
+    if (!clan || clan.status !== "active") throw new Error("That clan is unavailable.");
+    const roleOrder = { leader: 0, officer: 1, member: 2 };
+    const members = (Array.isArray(loadedMembers) ? loadedMembers : [])
+      .filter(member => member?.status !== "removed")
+      .sort((first, second) => (
+        (roleOrder[first?.role] ?? 3) - (roleOrder[second?.role] ?? 3)
+        || normalizePowerValue(second?.kingPower) - normalizePowerValue(first?.kingPower)
+        || String(first?.displayName || "").localeCompare(String(second?.displayName || ""))
+      ));
+    modalTitle.textContent = `${clan.name || "Clan"} Clan`;
     modalBody.innerHTML = `
       <section class="public-clan-details">
-        ${renderClanShield(clan.shield || clan.banner, { size: "large", label: `${clan.name || "Clan"} shield` })}
-        <div><h3>[${escapeHtml(clan.tag || "")}] ${escapeHtml(clan.name || "Clan")}</h3><p>${escapeHtml(clan.description || "No description yet.")}</p></div>
-        <dl><div><dt>Members</dt><dd>${formatNumber(clan.memberCount || 0)}/30</dd></div><div><dt>Clan Power</dt><dd>${formatNumber(clan.totalKingPower || 0)}</dd></div></dl>
+        <div class="public-clan-identity">
+          ${renderClanShield(clan.shield || clan.banner, { size: "large", instance: `public-clan-${id}`, label: `${clan.name || "Clan"} shield` })}
+          <div><span>Public Clan Profile</span><h3>[${escapeHtml(clan.tag || "")}] ${escapeHtml(clan.name || "Clan")}</h3><p>${escapeHtml(clan.description || "No description yet.")}</p></div>
+        </div>
+        <dl>
+          <div><dt>Members</dt><dd>${formatNumber(clan.memberCount || members.length)}/30</dd></div>
+          <div><dt>Clan Power</dt><dd>${formatNumber(clan.totalKingPower || 0)}</dd></div>
+          <div><dt>Admission</dt><dd>${clan.admissionMode === "open" ? "Open" : "Approval"}</dd></div>
+        </dl>
+        <div class="public-clan-roster-heading"><span>Roster</span><strong>${formatNumber(members.length)} members</strong></div>
+        <div class="public-clan-roster">${members.length ? members.map(member => `
+          <article class="public-clan-member">
+            <div>
+              ${renderPlayerNameLink(member.uid || member.id, member.displayName || "Ruler")}
+              <small>${escapeHtml(clanRoleLabel(member.role))}</small>
+            </div>
+            <div class="public-clan-member-power">
+              <strong>${formatNumber(member.kingPower || 0)}</strong>
+              <small>King Power</small>
+            </div>
+          </article>`).join("") : `<p class="public-profile-empty">No active members found.</p>`}</div>
       </section>`;
   } catch (error) {
-    if (modal.open) modalBody.innerHTML = `<div class="public-profile-error"><p>${escapeHtml(error?.message || "Could not load clan details.")}</p></div>`;
+    if (requestId === publicClanProfileRequestId && modal.open) {
+      modalBody.innerHTML = `<div class="public-profile-error"><p>${escapeHtml(error?.message || "Could not load clan profile.")}</p><button type="button" data-public-clan-id="${escapeHtml(id)}">Try again</button></div>`;
+    }
   }
 }
 
@@ -17343,7 +17389,7 @@ function renderClanView() {
           <div class="clan-list">${clanSearchResults.length ? clanSearchResults.map(clan => `
             <article class="clan-list-row">
               ${renderClanShield(clan.shield || clan.banner, { size: "mini", label: `${clan.name || "Clan"} shield` })}
-              <div class="clan-list-copy"><strong>[${escapeHtml(clan.tag || "")}] ${escapeHtml(clan.name || "Clan")}</strong><span>${formatNumber(clan.totalKingPower || 0)} power · ${clan.memberCount || 0}/30 members</span><small>${escapeHtml(clan.description || "No description yet.")}</small></div>
+              <div class="clan-list-copy"><button class="clan-name-link" type="button" data-public-clan-id="${escapeHtml(clan.id)}" aria-label="View ${escapeHtml(clan.name || "Clan")} public clan profile">[${escapeHtml(clan.tag || "")}] ${escapeHtml(clan.name || "Clan")}</button><span>${formatNumber(clan.totalKingPower || 0)} power · ${clan.memberCount || 0}/30 members</span><small>${escapeHtml(clan.description || "No description yet.")}</small></div>
               ${renderClanDiscoveryAction(clan, cooldownMs)}
             </article>`).join("") : `<p class="clan-muted">No clans matched your search.</p>`}</div>
         </section>
@@ -25072,6 +25118,7 @@ document.addEventListener("pointerdown", event => {
 }, true);
 modal.addEventListener("close", () => {
   publicPlayerProfileRequestId += 1;
+  publicClanProfileRequestId += 1;
   if (rewardedAdShopCountdownTimer) {
     window.clearInterval(rewardedAdShopCountdownTimer);
     rewardedAdShopCountdownTimer = 0;

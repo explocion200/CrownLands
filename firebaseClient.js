@@ -505,8 +505,13 @@
   async function loadClanMembers(clanId = "") {
     await init();
     if (!requireSignedIn() || !clanId) return [];
-    const { collection, getDocs, query, orderBy } = client.modules.firestore;
-    const snapshot = await getDocs(query(collection(client.db, "clans", clanId, "members"), orderBy("joinedAtMs", "asc")));
+    const { collection, getDocs, query, where, orderBy } = client.modules.firestore;
+    const snapshot = await getDocs(query(
+      collection(client.db, "clans", clanId, "members"),
+      where("resetGeneration", "==", RESET_GENERATION),
+      where("worldId", "==", ONLINE_WORLD_ID),
+      orderBy("joinedAtMs", "asc")
+    ));
     return snapshot.docs.map(item => ({ id: item.id, ...item.data() }));
   }
 
@@ -577,7 +582,7 @@
 
   function subscribeClanState(clanId = "", handlers = {}) {
     if (!client.db || !client.modules?.firestore?.onSnapshot || !client.user?.uid || !clanId) return () => {};
-    const { collection, doc, onSnapshot, query, orderBy } = client.modules.firestore;
+    const { collection, doc, onSnapshot, query, where, orderBy } = client.modules.firestore;
     const safeClanId = String(clanId).slice(0, 128);
     const unsubscribers = [
       onSnapshot(
@@ -592,7 +597,12 @@
         }
       ),
       onSnapshot(
-        query(collection(client.db, "clans", safeClanId, "members"), orderBy("joinedAtMs", "asc")),
+        query(
+          collection(client.db, "clans", safeClanId, "members"),
+          where("resetGeneration", "==", RESET_GENERATION),
+          where("worldId", "==", ONLINE_WORLD_ID),
+          orderBy("joinedAtMs", "asc")
+        ),
         snapshot => {
           if (typeof handlers.onMembers !== "function") return;
           handlers.onMembers(

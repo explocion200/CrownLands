@@ -5704,15 +5704,24 @@ exports.getCombatPlayerIdentity = onCall({
   };
   if (request.data?.includePublicProfile !== true) return identity;
 
-  const [profileSnap, ownedCitiesSnap] = await Promise.all([
-    db.doc(`players/${targetUid}`).get(),
+  const profileSnap = await db.doc(`players/${targetUid}`).get();
+  const profile = profileSnap.exists ? profileSnap.data() || {} : {};
+  const profileClanId = safeString(profile.clanId || leaderboard.clanId, 128);
+  const [ownedCitiesSnap, clanSnap] = await Promise.all([
     db.collectionGroup("cities")
       .where("ownerUid", "==", targetUid)
       .where("resetGeneration", "==", RESET_GENERATION)
       .where("worldId", "==", ONLINE_WORLD_ID)
       .get(),
+    profileClanId ? db.doc(`clans/${profileClanId}`).get() : Promise.resolve(null),
   ]);
-  const profile = profileSnap.exists ? profileSnap.data() || {} : {};
+  const clanData = clanSnap?.exists ? clanSnap.data() || {} : null;
+  const clan = clanData
+    && clanData.status === "active"
+    && safeString(clanData.resetGeneration, 120) === RESET_GENERATION
+    && safeString(clanData.worldId, 120) === ONLINE_WORLD_ID
+    ? clanPublicSnapshot(profileClanId, clanData)
+    : null;
   const strongholds = createOwnedCityEntriesFromSnapshot(targetUid, ownedCitiesSnap)
     .map(entry => getPublicStrongholdSnapshot(entry.city))
     .filter(Boolean)
@@ -5721,9 +5730,11 @@ exports.getCombatPlayerIdentity = onCall({
     ...identity,
     strongholdCount: strongholds.length,
     strongholds,
-    clanId: safeString(profile.clanId || leaderboard.clanId, 128),
-    clanName: safeString(profile.clanName || leaderboard.clanName, 24),
-    clanTag: safeString(profile.clanTag || leaderboard.clanTag, 5),
+    clanId: clan?.id || profileClanId,
+    clanName: clan?.name || safeString(profile.clanName || leaderboard.clanName, 24),
+    clanTag: clan?.tag || safeString(profile.clanTag || leaderboard.clanTag, 5),
+    clanShield: clan?.shield || null,
+    clan,
   };
 });
 
