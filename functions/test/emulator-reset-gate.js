@@ -917,6 +917,46 @@ async function main() {
     "The holding owner could not receive independent reinforcements from multiple clan allies."
   );
 
+  const [sharedTargetBeforeEconomy, leaderContributionBeforeEconomy, otherContributionBeforeEconomy] = await Promise.all([
+    clanReinforcementTargetDoc.ref.get(),
+    db.doc(`reinforcements/${reinforcementId}`).get(),
+    db.doc(`reinforcements/${otherSenderReinforcementId}`).get(),
+  ]);
+  await Promise.all([
+    callFunction("collectEconomy", clanLeader.token),
+    callFunction("collectEconomy", clanApplicant.token),
+    callFunction("collectEconomy", clanSecondSender.token),
+  ]);
+  const [sharedTargetAfterEconomy, leaderContributionAfterEconomy, otherContributionAfterEconomy] = await Promise.all([
+    clanReinforcementTargetDoc.ref.get(),
+    db.doc(`reinforcements/${reinforcementId}`).get(),
+    db.doc(`reinforcements/${otherSenderReinforcementId}`).get(),
+  ]);
+  assert(
+    Number(sharedTargetBeforeEconomy.data()?.alliedReinforcementTroops || 0) === 800
+      && Number(sharedTargetAfterEconomy.data()?.alliedReinforcementTroops || 0) === 800
+      && leaderContributionBeforeEconomy.data()?.status === "stationed"
+      && leaderContributionAfterEconomy.data()?.status === "stationed"
+      && Number(leaderContributionAfterEconomy.data()?.troops || 0) === 600
+      && otherContributionBeforeEconomy.data()?.status === "stationed"
+      && otherContributionAfterEconomy.data()?.status === "stationed"
+      && Number(otherContributionAfterEconomy.data()?.troops || 0) === 200,
+    "Passive economy collection moved, expired, or detached stationed clan troops."
+  );
+
+  let unauthorizedReinforcementReturnError = null;
+  try {
+    await callFunction("returnClanReinforcement", users[0].token, {
+      reinforcementId,
+    });
+  } catch (error) {
+    unauthorizedReinforcementReturnError = error;
+  }
+  assert(
+    /Only the troop owner or holding owner/.test(String(unauthorizedReinforcementReturnError?.message || "")),
+    "An unrelated player could return another member's stationed reinforcement."
+  );
+
   let reinforcedMainCityError = null;
   try {
     await callFunction("changeMainCity", clanApplicant.token, {
@@ -936,8 +976,10 @@ async function main() {
   });
   assert(
     holderDismissal?.status === "returning"
-      && Number(holderDismissal?.troops || 0) === 600,
-    "The holding owner could not send an allied contributor home."
+      && Number(holderDismissal?.troops || 0) === 600
+      && holderDismissal?.returnInitiatorRole === "holder"
+      && !holderDismissal?.currentUser,
+    "The holding owner could not send allied troops home without receiving the contributor's private player snapshot."
   );
   const holderDismissalArrival = await forceResolveMovement(holderDismissal.movement, clanLeader.token);
   assert(
@@ -968,7 +1010,9 @@ async function main() {
   });
   assert(
     contributorRecall?.status === "returning"
-      && Number(contributorRecall?.troops || 0) === 200,
+      && Number(contributorRecall?.troops || 0) === 200
+      && contributorRecall?.returnInitiatorRole === "contributor"
+      && contributorRecall?.currentUser,
     "The contributor could not recall their full stationed contribution."
   );
   await forceResolveMovement(contributorRecall.movement, clanLeader.token);
