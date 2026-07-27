@@ -5296,19 +5296,19 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
           "rewardSchedule": [
             {
               "minimumReward": 20000,
-              "productionHours": 0.4
+              "productionHours": 0.5
             },
             {
               "minimumReward": 40000,
-              "productionHours": 0.8
+              "productionHours": 1
             },
             {
               "minimumReward": 60000,
-              "productionHours": 1.6
+              "productionHours": 1.5
             },
             {
               "minimumReward": 80000,
-              "productionHours": 2.4
+              "productionHours": 2
             }
           ]
         }
@@ -9053,19 +9053,19 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
           "rewardSchedule": [
             {
               "minimumReward": 10000,
-              "productionHours": 1.6
+              "productionHours": 0.5
             },
             {
               "minimumReward": 20000,
-              "productionHours": 2.4
+              "productionHours": 1
             },
             {
               "minimumReward": 30000,
-              "productionHours": 3.2
+              "productionHours": 1.5
             },
             {
               "minimumReward": 40000,
-              "productionHours": 4.8
+              "productionHours": 2
             }
           ]
         }

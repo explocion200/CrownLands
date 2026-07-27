@@ -322,16 +322,16 @@ const MIN_STRONGHOLD_VISUAL_SIZE = 1;
 const DEFAULT_CAMP_VISUAL_SIZE = 132;
 const MIN_CAMP_VISUAL_SIZE = 1;
 const GOLD_CAMP_REWARD_SCHEDULE = economyRewardSchedule("gold", [
-  { minimumReward: 20000, productionHours: 0.4 },
-  { minimumReward: 40000, productionHours: 0.8 },
-  { minimumReward: 60000, productionHours: 1.6 },
-  { minimumReward: 80000, productionHours: 2.4 },
+  { minimumReward: 20000, productionHours: 0.5 },
+  { minimumReward: 40000, productionHours: 1 },
+  { minimumReward: 60000, productionHours: 1.5 },
+  { minimumReward: 80000, productionHours: 2 },
 ]);
 const WARBAND_CAMP_REWARD_SCHEDULE = economyRewardSchedule("troops", [
-  { minimumReward: 10000, productionHours: 1.6 },
-  { minimumReward: 20000, productionHours: 2.4 },
-  { minimumReward: 30000, productionHours: 3.2 },
-  { minimumReward: 40000, productionHours: 4.8 },
+  { minimumReward: 10000, productionHours: 0.5 },
+  { minimumReward: 20000, productionHours: 1 },
+  { minimumReward: 30000, productionHours: 1.5 },
+  { minimumReward: 40000, productionHours: 2 },
 ]);
 const GOLD_CAMP_BASE_REWARD = GOLD_CAMP_REWARD_SCHEDULE[0]?.minimumReward || 20000;
 const GOLD_CAMP_BASE_DEFENDERS = economyNumber("camps.gold.baseDefenders", 10000);

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-07-27T05:22:27.960Z",
+  "updatedAt": "2026-07-27T05:39:59.562Z",
   "shopItems": {
     "shield_12h": {
       "cost": 1250000,
@@ -170,19 +170,19 @@
       "rewardSchedule": [
         {
           "minimumReward": 20000,
-          "productionHours": 0.4
+          "productionHours": 0.5
         },
         {
           "minimumReward": 40000,
-          "productionHours": 0.8
+          "productionHours": 1
         },
         {
           "minimumReward": 60000,
-          "productionHours": 1.6
+          "productionHours": 1.5
         },
         {
           "minimumReward": 80000,
-          "productionHours": 2.4
+          "productionHours": 2
         }
       ]
     },
@@ -193,19 +193,19 @@
       "rewardSchedule": [
         {
           "minimumReward": 10000,
-          "productionHours": 1.6
+          "productionHours": 0.5
         },
         {
           "minimumReward": 20000,
-          "productionHours": 2.4
+          "productionHours": 1
         },
         {
           "minimumReward": 30000,
-          "productionHours": 3.2
+          "productionHours": 1.5
         },
         {
           "minimumReward": 40000,
-          "productionHours": 4.8
+          "productionHours": 2
         }
       ]
     },

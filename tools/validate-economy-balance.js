@@ -57,19 +57,19 @@ for (const [itemId, limit] of Object.entries(expectedItemLimits)) {
 const goldSchedule = serverConfig.camps.gold.rewardSchedule;
 const troopSchedule = serverConfig.camps.troops.rewardSchedule;
 assert.deepEqual(goldSchedule, [
-  { minimumReward: 20_000, productionHours: 0.4 },
-  { minimumReward: 40_000, productionHours: 0.8 },
-  { minimumReward: 60_000, productionHours: 1.6 },
-  { minimumReward: 80_000, productionHours: 2.4 },
+  { minimumReward: 20_000, productionHours: 0.5 },
+  { minimumReward: 40_000, productionHours: 1 },
+  { minimumReward: 60_000, productionHours: 1.5 },
+  { minimumReward: 80_000, productionHours: 2 },
 ]);
 assert.deepEqual(troopSchedule, [
-  { minimumReward: 10_000, productionHours: 1.6 },
-  { minimumReward: 20_000, productionHours: 2.4 },
-  { minimumReward: 30_000, productionHours: 3.2 },
-  { minimumReward: 40_000, productionHours: 4.8 },
+  { minimumReward: 10_000, productionHours: 0.5 },
+  { minimumReward: 20_000, productionHours: 1 },
+  { minimumReward: 30_000, productionHours: 1.5 },
+  { minimumReward: 40_000, productionHours: 2 },
 ]);
-assert.equal(goldSchedule.reduce((sum, entry) => sum + entry.productionHours, 0), 5.2);
-assert.equal(troopSchedule.reduce((sum, entry) => sum + entry.productionHours, 0), 12);
+assert.equal(goldSchedule.reduce((sum, entry) => sum + entry.productionHours, 0), 5);
+assert.equal(troopSchedule.reduce((sum, entry) => sum + entry.productionHours, 0), 5);
 for (const [campName, schedule] of [["Gold Camp", goldSchedule], ["Warband Camp", troopSchedule]]) {
   for (let index = 1; index < schedule.length; index += 1) {
     assert.ok(

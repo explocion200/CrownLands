@@ -137,16 +137,16 @@
   };
   const CAMP_REWARD_DEFAULTS = {
     gold: [
-      { minimumReward: 20000, productionHours: 0.4 },
-      { minimumReward: 40000, productionHours: 0.8 },
-      { minimumReward: 60000, productionHours: 1.6 },
-      { minimumReward: 80000, productionHours: 2.4 },
+      { minimumReward: 20000, productionHours: 0.5 },
+      { minimumReward: 40000, productionHours: 1 },
+      { minimumReward: 60000, productionHours: 1.5 },
+      { minimumReward: 80000, productionHours: 2 },
     ],
     troops: [
-      { minimumReward: 10000, productionHours: 1.6 },
-      { minimumReward: 20000, productionHours: 2.4 },
-      { minimumReward: 30000, productionHours: 3.2 },
-      { minimumReward: 40000, productionHours: 4.8 },
+      { minimumReward: 10000, productionHours: 0.5 },
+      { minimumReward: 20000, productionHours: 1 },
+      { minimumReward: 30000, productionHours: 1.5 },
+      { minimumReward: 40000, productionHours: 2 },
     ],
   };
   const SHOP_ITEM_EDITOR = [

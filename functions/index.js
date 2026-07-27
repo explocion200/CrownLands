@@ -31,7 +31,7 @@ function economyRewardSchedule(campType, fallback = []) {
   }));
 }
 
-const REALM_RELEASE_ID = safeConfigString(REALM_CONFIG.releaseId, "crownlands-2026-07-27-camp-rebalance-v1");
+const REALM_RELEASE_ID = safeConfigString(REALM_CONFIG.releaseId, "crownlands-2026-07-27-camp-hours-v2");
 const RESET_GENERATION = safeConfigString(REALM_CONFIG.resetGeneration, "fresh-2026-07-26-server-reset");
 const ONLINE_WORLD_ID = safeConfigString(REALM_CONFIG.worldId, `main-${RESET_GENERATION}`);
 const TEST_STARTING_GOLD = 100;
@@ -232,16 +232,16 @@ const SERVER_ISLAND_MAP_PADDING = 560;
 const SERVER_ROUTE_INSET_MIN = 24;
 const SERVER_ROUTE_INSET_MAX = 58;
 const GOLD_CAMP_REWARD_SCHEDULE = economyRewardSchedule("gold", [
-  { minimumReward: 20_000, productionHours: 0.4 },
-  { minimumReward: 40_000, productionHours: 0.8 },
-  { minimumReward: 60_000, productionHours: 1.6 },
-  { minimumReward: 80_000, productionHours: 2.4 },
+  { minimumReward: 20_000, productionHours: 0.5 },
+  { minimumReward: 40_000, productionHours: 1 },
+  { minimumReward: 60_000, productionHours: 1.5 },
+  { minimumReward: 80_000, productionHours: 2 },
 ]);
 const WARBAND_CAMP_REWARD_SCHEDULE = economyRewardSchedule("troops", [
-  { minimumReward: 10_000, productionHours: 1.6 },
-  { minimumReward: 20_000, productionHours: 2.4 },
-  { minimumReward: 30_000, productionHours: 3.2 },
-  { minimumReward: 40_000, productionHours: 4.8 },
+  { minimumReward: 10_000, productionHours: 0.5 },
+  { minimumReward: 20_000, productionHours: 1 },
+  { minimumReward: 30_000, productionHours: 1.5 },
+  { minimumReward: 40_000, productionHours: 2 },
 ]);
 const GOLD_CAMP_HOLD_DURATION_MS = economyNumber("camps.gold.holdMinutes", 10) * 60 * 1000;
 const GOLD_CAMP_BASE_REWARD = GOLD_CAMP_REWARD_SCHEDULE[0]?.minimumReward || 20_000;
