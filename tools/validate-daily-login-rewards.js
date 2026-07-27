@@ -85,9 +85,12 @@ requireMatch(html, /id="clanHudBtn"[\s\S]*id="dailyLoginRewardBtn"/, "Daily rewa
 requireMatch(html, /daily-reward-icon\.svg/, "Daily reward art is not loaded by the HUD.");
 requireMatch(game, /DAILY_LOGIN_REWARD_AUTO_OPEN_PREFIX[\s\S]*localStorage[\s\S]*showDailyLoginRewardsModal/, "Once-per-device UTC auto-open behavior is missing.");
 requireMatch(game, /daily-reward-grid[\s\S]*DAILY_LOGIN_REWARD_DAYS\.map/, "The 30-day reward panel is not rendered from shared configuration.");
+requireMatch(game, /data-daily-reward-claim-card[\s\S]*addEventListener\("click",\s*claimDailyLoginReward\)/, "The available day card cannot be clicked to claim its reward.");
 requireMatch(game, /refreshDailyLoginRewardStatus\(\{\s*autoOpen:\s*true,\s*silent:\s*true\s*\}\)/, "Gameplay startup does not refresh and auto-open daily rewards.");
 requireMatch(game, /visibilitychange[\s\S]*refreshDailyLoginRewardStatus/, "Visible sessions do not refresh daily reward eligibility.");
 requireMatch(styles, /\.daily-login-reward-btn[\s\S]*dailyRewardHudGlow/, "Daily reward HUD styles are incomplete.");
+requireMatch(styles, /\.daily-login-reward-icon\s*\{[\s\S]*width:\s*86%[\s\S]*height:\s*86%/, "The daily reward HUD artwork was not reduced without shrinking its hit target.");
+requireMatch(styles, /button\.daily-reward-card\.available[\s\S]*cursor:\s*pointer/, "The claimable day card does not expose an interactive state.");
 requireMatch(styles, /\.daily-reward-grid[\s\S]*@media \(max-width: 430px\)/, "Daily reward responsive panel styles are incomplete.");
 requireMatch(serviceWorker, /daily-reward-icon\.svg/, "Daily reward art is not available to the PWA cache.");
 requireMatch(rules, /'dailyLoginReward'/, "Firestore rules do not protect daily reward state.");

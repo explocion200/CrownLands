@@ -21849,15 +21849,20 @@ function renderDailyLoginRewardModal() {
               : cardState === "waiting"
                 ? "Tomorrow"
                 : "Locked";
+          const isClaimableCard = cardState === "available";
+          const cardTag = isClaimableCard ? "button" : "article";
+          const cardAttributes = isClaimableCard
+            ? `type="button" data-daily-reward-claim-card ${dailyLoginRewardClaimInFlight ? "disabled" : ""}`
+            : "";
           return `
-            <article class="daily-reward-card ${cardState}" aria-label="Day ${reward.day}, ${stateLabel}">
+            <${cardTag} class="daily-reward-card ${cardState}" ${cardAttributes} aria-label="Day ${reward.day}, ${isClaimableCard ? "claim this reward" : stateLabel}">
               <div class="daily-reward-card-head">
                 <strong>Day ${formatNumber(reward.day)}</strong>
                 <span>${stateLabel}</span>
               </div>
               ${renderDailyLoginRewardResources(reward)}
               ${renderDailyLoginRewardItems(reward.items)}
-            </article>
+            </${cardTag}>
           `;
         }).join("")}
       </div>
@@ -21868,6 +21873,7 @@ function renderDailyLoginRewardModal() {
     </section>
   `;
   modalBody.querySelector("[data-daily-reward-claim]")?.addEventListener("click", claimDailyLoginReward);
+  modalBody.querySelector("[data-daily-reward-claim-card]")?.addEventListener("click", claimDailyLoginReward);
   updateDailyLoginRewardCountdown();
 }
 
