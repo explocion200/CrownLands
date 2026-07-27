@@ -978,8 +978,10 @@ async function main() {
     holderDismissal?.status === "returning"
       && Number(holderDismissal?.troops || 0) === 600
       && holderDismissal?.returnInitiatorRole === "holder"
-      && !holderDismissal?.currentUser,
-    "The holding owner could not send allied troops home without receiving the contributor's private player snapshot."
+      && !holderDismissal?.currentUser
+      && Array.isArray(holderDismissal?.cityUpdates)
+      && Number(holderDismissal.cityUpdates[0]?.alliedReinforcementTroops || 0) === 200,
+    "The holding owner could not send allied troops home with an immediate, private-safe city update."
   );
   const holderDismissalArrival = await forceResolveMovement(holderDismissal.movement, clanLeader.token);
   assert(
