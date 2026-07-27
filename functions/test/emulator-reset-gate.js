@@ -152,15 +152,33 @@ async function main() {
   const clanApplicantRef = db.doc(`players/${clanApplicant.uid}`);
   await Promise.all([
     clanLeaderRef.set({
-      character: { level: 20, xp: 0, skillPoints: 19 },
+      character: { level: 9, xp: 0, skillPoints: 8 },
       gold: 100_000,
       goldFloat: 100_000,
       economyUpdatedAtMs: Date.now(),
     }, { merge: true }),
     clanApplicantRef.set({
-      character: { level: 20, xp: 0, skillPoints: 19 },
+      character: { level: 10, xp: 0, skillPoints: 9 },
     }, { merge: true }),
   ]);
+  let lockedClanError = null;
+  try {
+    await callFunction("createClan", clanLeader.token, {
+      name: "Application Gate",
+      tag: "APGT",
+      description: "Exercises approval applications in the release gate.",
+      admissionMode: "approval",
+    });
+  } catch (error) {
+    lockedClanError = error;
+  }
+  assert(
+    /Clans unlock at Hero Level 10/.test(String(lockedClanError?.message || "")),
+    "A Level 9 player was not blocked from creating a clan."
+  );
+  await clanLeaderRef.set({
+    character: { level: 10, xp: 0, skillPoints: 9 },
+  }, { merge: true });
   const createdClan = await callFunction("createClan", clanLeader.token, {
     name: "Application Gate",
     tag: "APGT",

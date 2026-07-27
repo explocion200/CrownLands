@@ -16909,7 +16909,7 @@ function renderClanHudAccess() {
   const clanTag = activeClan?.tag || state.clanTag || "";
   const shield = hasClan ? activeClan?.shield || activeClan?.banner : null;
   const signature = [
-    heroLevel < 20 ? "locked" : "unlocked",
+    heroLevel < 10 ? "locked" : "unlocked",
     state.clanId || "",
     clanName,
     clanTag,
@@ -16921,8 +16921,8 @@ function renderClanHudAccess() {
   clanHudBtn.classList.toggle("has-clan", hasClan);
   clanHudBtn.setAttribute(
     "aria-label",
-    heroLevel < 20
-      ? "Clan unlocks at Hero Level 20"
+    heroLevel < 10
+      ? "Clan unlocks at Hero Level 10"
       : hasClan
         ? `Open ${clanTag ? `[${clanTag}] ` : ""}${clanName}`
         : "Find a clan"
@@ -17378,8 +17378,8 @@ function renderClanView() {
   clanContent.classList.toggle("shield-editor-open", shieldEditorVisible);
   clanView?.classList.toggle("shield-editor-active", shieldEditorVisible);
   const heroLevel = Math.max(1, Math.floor(Number(state?.character?.level) || 1));
-  if (heroLevel < 20) {
-    clanContent.innerHTML = `<section class="clan-empty"><span class="clan-lock" aria-hidden="true">♜</span><h3>Clans unlock at Level 20</h3><p>Raise your Hero to Level 20 to create or join a clan.</p><strong>Level ${heroLevel} / 20</strong></section>`;
+  if (heroLevel < 10) {
+    clanContent.innerHTML = `<section class="clan-empty"><span class="clan-lock" aria-hidden="true">♜</span><h3>Clans unlock at Level 10</h3><p>Raise your Hero to Level 10 to create or join a clan.</p><strong>Level ${heroLevel} / 10</strong></section>`;
     return;
   }
   if ((clanUiLoading && !clanSnapshot && !clanSearchResults.length) || (state?.clanId && !clanSnapshot)) {
