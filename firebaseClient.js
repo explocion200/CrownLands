@@ -589,6 +589,17 @@
           if (typeof handlers.onError === "function") handlers.onError(error, "memberRewards");
         }
       ),
+      onSnapshot(
+        doc(client.db, "clans", safeClanId, "worldBenefits", RESET_GENERATION),
+        snapshot => {
+          if (typeof handlers.onWorldBenefits === "function") {
+            handlers.onWorldBenefits(snapshot.exists() ? { id: snapshot.id, ...snapshot.data() } : null);
+          }
+        },
+        error => {
+          if (typeof handlers.onError === "function") handlers.onError(error, "worldBenefits");
+        }
+      ),
     ];
     return () => unsubscribers.forEach(unsubscribe => unsubscribe());
   }
@@ -1056,6 +1067,18 @@
       strongholdMarchSpeedBonusPercent: Math.max(0, Math.floor(Number(stats.strongholdMarchSpeedBonusPercent) || 0)),
       strongholdDefenseBonusPercent: Math.max(0, Math.floor(Number(stats.strongholdDefenseBonusPercent) || 0)),
       strongholdUpgradeCostReductionPercent: Math.max(0, Math.floor(Number(stats.strongholdUpgradeCostReductionPercent) || 0)),
+      personalStrongholdGoldBonusPercent: Math.max(0, Number(stats.personalStrongholdGoldBonusPercent) || 0),
+      personalStrongholdTroopBonusPercent: Math.max(0, Number(stats.personalStrongholdTroopBonusPercent) || 0),
+      personalStrongholdMarchSpeedBonusPercent: Math.max(0, Number(stats.personalStrongholdMarchSpeedBonusPercent) || 0),
+      personalStrongholdDefenseBonusPercent: Math.max(0, Number(stats.personalStrongholdDefenseBonusPercent) || 0),
+      personalStrongholdUpgradeCostReductionPercent: Math.max(0, Number(stats.personalStrongholdUpgradeCostReductionPercent) || 0),
+      sharedClanGoldBonusPercent: Math.max(0, Number(stats.sharedClanGoldBonusPercent) || 0),
+      sharedClanTroopBonusPercent: Math.max(0, Number(stats.sharedClanTroopBonusPercent) || 0),
+      sharedClanMarchSpeedBonusPercent: Math.max(0, Number(stats.sharedClanMarchSpeedBonusPercent) || 0),
+      sharedClanDefenseBonusPercent: Math.max(0, Number(stats.sharedClanDefenseBonusPercent) || 0),
+      sharedClanUpgradeCostReductionPercent: Math.max(0, Number(stats.sharedClanUpgradeCostReductionPercent) || 0),
+      clanCitadelBonusPercent: Math.max(0, Number(stats.clanCitadelBonusPercent) || 0),
+      clanObjectiveBenefitRevision: Math.max(0, Math.floor(Number(stats.clanObjectiveBenefitRevision) || 0)),
       stationedTroopPower: Math.max(0, Math.floor(Number(stats.stationedTroopPower) || 0)),
       campTroopPower: Math.max(0, Math.floor(Number(stats.campTroopPower) || 0)),
       reinforcementTroopPower: Math.max(0, Math.floor(Number(stats.reinforcementTroopPower) || 0)),
@@ -1650,6 +1673,26 @@
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
   }
 
+  async function loadBattleSnapshot(battleId = "") {
+    await init();
+    const uid = requireSignedIn();
+    const safeBattleId = String(battleId || "").replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 160);
+    if (!uid || !safeBattleId) return null;
+    const { doc, getDoc } = client.modules.firestore;
+    const snapshot = await getDoc(doc(
+      client.db,
+      "battleSnapshots",
+      RESET_GENERATION,
+      "entries",
+      safeBattleId
+    ));
+    if (!snapshot.exists()) return null;
+    const battle = { id: snapshot.id, ...snapshot.data() };
+    return battle.resetGeneration === RESET_GENERATION && battle.worldId === ONLINE_WORLD_ID
+      ? battle
+      : null;
+  }
+
   function subscribeServerReports(handlers = {}) {
     if (!client.configured || !client.db || !client.user?.uid) return () => {};
     const { collection, onSnapshot, query: firestoreQuery, where, orderBy, limit } = client.modules.firestore;
@@ -1950,6 +1993,7 @@
     loadIslandCitySummary,
     loadOwnedCitiesAcrossIslands,
     loadServerReports,
+    loadBattleSnapshot,
     subscribeIsland,
     subscribePlayerArmies,
     subscribePlayerReinforcements,

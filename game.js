@@ -442,6 +442,7 @@ const CROWN_CITADEL_TROOP_BONUS_PERCENT = 10;
 const CROWN_CITADEL_MARCH_SPEED_BONUS_PERCENT = 10;
 const CROWN_CITADEL_DEFENSE_BONUS_PERCENT = 10;
 const CROWN_CITADEL_UPGRADE_COST_REDUCTION_PERCENT = 10;
+const CLAN_SHARED_OBJECTIVE_MULTIPLIER = 0.5;
 const CROWN_CITADEL_LEVEL = 100;
 const CROWN_CITADEL_START_TROOPS = 50000000;
 const CROWN_CITADEL_VISUAL_SIZE = 260;
@@ -2663,6 +2664,7 @@ let clanApplications = [];
 let clanSearchResults = [];
 let clanQuestProgress = null;
 let clanMemberRewards = null;
+let clanWorldBenefits = null;
 let clanSocialStateUnsubscribe = null;
 let activeClanSocialSubscriptionId = "";
 let clanApplicationsUnsubscribe = null;
@@ -2682,6 +2684,8 @@ let clanGiftActionInFlight = false;
 let clanQuestClaimInFlightId = "";
 let clanGiftCountdownTimer = 0;
 let battleReportFilter = "all";
+const battleSnapshotCache = new Map();
+const clanPublicSnapshotCache = new Map();
 let cityListSortKey = "level";
 let cityListSortDirection = "desc";
 let cityListPage = 0;
@@ -6657,6 +6661,18 @@ function normalizeGlobalStatsSnapshot(raw = null) {
     strongholdMarchSpeedBonusPercent: Math.max(0, Math.floor(Number(raw.strongholdMarchSpeedBonusPercent) || 0)),
     strongholdDefenseBonusPercent: Math.max(0, Math.floor(Number(raw.strongholdDefenseBonusPercent) || 0)),
     strongholdUpgradeCostReductionPercent: Math.max(0, Math.floor(Number(raw.strongholdUpgradeCostReductionPercent) || 0)),
+    personalStrongholdGoldBonusPercent: Math.max(0, Number(raw.personalStrongholdGoldBonusPercent) || 0),
+    personalStrongholdTroopBonusPercent: Math.max(0, Number(raw.personalStrongholdTroopBonusPercent) || 0),
+    personalStrongholdMarchSpeedBonusPercent: Math.max(0, Number(raw.personalStrongholdMarchSpeedBonusPercent) || 0),
+    personalStrongholdDefenseBonusPercent: Math.max(0, Number(raw.personalStrongholdDefenseBonusPercent) || 0),
+    personalStrongholdUpgradeCostReductionPercent: Math.max(0, Number(raw.personalStrongholdUpgradeCostReductionPercent) || 0),
+    sharedClanGoldBonusPercent: Math.max(0, Number(raw.sharedClanGoldBonusPercent) || 0),
+    sharedClanTroopBonusPercent: Math.max(0, Number(raw.sharedClanTroopBonusPercent) || 0),
+    sharedClanMarchSpeedBonusPercent: Math.max(0, Number(raw.sharedClanMarchSpeedBonusPercent) || 0),
+    sharedClanDefenseBonusPercent: Math.max(0, Number(raw.sharedClanDefenseBonusPercent) || 0),
+    sharedClanUpgradeCostReductionPercent: Math.max(0, Number(raw.sharedClanUpgradeCostReductionPercent) || 0),
+    clanCitadelBonusPercent: Math.max(0, Number(raw.clanCitadelBonusPercent) || 0),
+    clanObjectiveBenefitRevision: Math.max(0, Math.floor(Number(raw.clanObjectiveBenefitRevision) || 0)),
     stationedTroopPower: normalizePowerValue(raw.stationedTroopPower),
     campTroopPower: normalizePowerValue(raw.campTroopPower),
     cityPower: normalizePowerValue(raw.cityPower),
@@ -7935,6 +7951,9 @@ function normalizeBattleReports(reports) {
         xpAwarded: Math.max(0, Math.floor(Number(report.xpAwarded) || 0)),
         goldAwarded: Math.max(0, Math.floor(Number(report.goldAwarded) || 0)),
         troopsAwarded: Math.max(0, Math.floor(Number(report.troopsAwarded) || 0)),
+        fieldMedicsRecovered: Math.max(0, Math.floor(Number(report.fieldMedicsRecovered) || 0)),
+        battleId: String(report.battleId || "").replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 160),
+        battleSnapshotVersion: Math.max(0, Math.floor(Number(report.battleSnapshotVersion) || 0)),
         scoutReport: report.scoutReport || null,
       };
     })
@@ -9536,6 +9555,7 @@ async function showPublicClanDetails(clanId = "") {
     );
     if (requestId !== publicClanProfileRequestId || !modal.open) return;
     if (!clan || clan.status !== "active") throw new Error("That clan is unavailable.");
+    clanPublicSnapshotCache.set(id, clan);
     const roleOrder = { leader: 0, officer: 1, member: 2 };
     const members = (Array.isArray(loadedMembers) ? loadedMembers : [])
       .filter(member => member?.status !== "removed")
@@ -17022,6 +17042,87 @@ function getCityClanIdentity(city) {
   };
 }
 
+function getCachedClanPublicSnapshot(clanId = "") {
+  const id = String(clanId || "").trim();
+  if (!id) return null;
+  if (clanSnapshot?.id === id) return clanSnapshot;
+  return clanPublicSnapshotCache.get(id) || null;
+}
+
+function renderObjectiveClanAffiliation(city = null) {
+  if (!city || (!city.ownerUid && city.ownerKind !== "player" && city.owner !== "player" && city.owner !== "enemy")) return "";
+  const identity = getCityClanIdentity(city);
+  if (!identity.clanId) {
+    return `<div class="stat-wide objective-clan-affiliation no-clan" data-objective-clan-affiliation="${escapeHtml(city.id)}"><span>Holding clan</span><strong>No clan</strong></div>`;
+  }
+  const clan = getCachedClanPublicSnapshot(identity.clanId);
+  const name = clan?.name || identity.clanName || "Clan";
+  const tag = clan?.tag || identity.clanTag || "";
+  return `
+    <div class="stat-wide objective-clan-affiliation" data-objective-clan-affiliation="${escapeHtml(city.id)}">
+      <span>Holding clan</span>
+      <button class="objective-clan-link" type="button" data-public-clan-id="${escapeHtml(identity.clanId)}" aria-label="Open ${escapeHtml(name)} clan profile">
+        ${renderClanShield(clan?.shield || clan?.banner, { size: "mini", instance: `objective-${city.id}`, label: `${name} shield` })}
+        <span><strong>${tag ? `[${escapeHtml(tag)}] ` : ""}${escapeHtml(name)}</strong><small>View clan profile</small></span>
+      </button>
+    </div>`;
+}
+
+async function hydrateObjectiveClanAffiliation(city = null) {
+  const identity = getCityClanIdentity(city);
+  if (!city?.id || !identity.clanId || getCachedClanPublicSnapshot(identity.clanId)) return;
+  const api = getOnlineApi();
+  if (!api?.loadClan || !api?.isSignedIn?.()) return;
+  try {
+    const clan = await api.loadClan(identity.clanId);
+    if (!clan) return;
+    clanPublicSnapshotCache.set(identity.clanId, clan);
+    const holder = [...(modalBody?.querySelectorAll("[data-objective-clan-affiliation]") || [])]
+      .find(element => element.dataset.objectiveClanAffiliation === city.id);
+    if (!holder || modal.dataset.cityInfoId !== city.id) return;
+    const wrapper = document.createElement("div");
+    wrapper.innerHTML = renderObjectiveClanAffiliation(city);
+    if (wrapper.firstElementChild) holder.replaceWith(wrapper.firstElementChild);
+  } catch (error) {
+    console.warn("Could not load objective clan shield", error);
+  }
+}
+
+function getControlledObjectiveBenefitBreakdown(city = null) {
+  if (!city || city.owner !== "player" || !isStronghold(city)) return "";
+  const stats = getGlobalStatsSnapshot() || {};
+  const ownsCitadel = Boolean(stats.crownCitadelControlled);
+  const ownedObjectives = getAllOwnedCitiesForDisplay()
+    .filter(candidate => candidate?.owner === "player" && isStronghold(candidate));
+  if (!ownedObjectives.some(candidate => candidate.id === city.id)) ownedObjectives.push(city);
+  const parts = [];
+  if (ownsCitadel) {
+    parts.push(`Citadel +${formatNumber(CROWN_CITADEL_GOLD_BONUS_PERCENT)}%`);
+  }
+  ownedObjectives
+    .filter(candidate => !isCrownCitadel(candidate))
+    .sort((first, second) => String(first.name || first.id).localeCompare(String(second.name || second.id)))
+    .forEach(objective => {
+      const percent = getStrongholdBonusPercent(objective)
+        * (ownsCitadel ? CLAN_SHARED_OBJECTIVE_MULTIPLIER : 1);
+      parts.push(`${getStrongholdName(objective)} +${formatNumber(percent)}%`);
+    });
+  if (!ownsCitadel && Number(stats.clanCitadelBonusPercent) > 0) {
+    parts.push(`Shared Citadel +${formatNumber(stats.clanCitadelBonusPercent)}%`);
+  } else if (!ownsCitadel) {
+    const sharedCategories = [
+      ["gold", stats.sharedClanGoldBonusPercent],
+      ["troops", stats.sharedClanTroopBonusPercent],
+      ["speed", stats.sharedClanMarchSpeedBonusPercent],
+      ["defense", stats.sharedClanDefenseBonusPercent],
+    ].filter(([, percent]) => Number(percent) > 0);
+    sharedCategories.forEach(([label, percent]) => {
+      parts.push(`Shared clan ${label} +${formatNumber(percent)}%`);
+    });
+  }
+  return parts.join(" · ") || `${getStrongholdName(city)} +${formatNumber(getStrongholdBonusPercent(city))}%`;
+}
+
 function isClanAllyCity(city) {
   if (!city || city.owner === "player" || !state?.clanId) return false;
   if (clanRosterReady && activeClanSubscriptionId === state.clanId) {
@@ -17122,6 +17223,7 @@ function stopClanRealtimeSubscriptions({ clear = true } = {}) {
     clanApplications = [];
     clanQuestProgress = null;
     clanMemberRewards = null;
+    clanWorldBenefits = null;
     selectedClanMemberUid = "";
   }
 }
@@ -17218,6 +17320,7 @@ function startClanSocialStateSubscription(api, clanId) {
   activeClanSocialSubscriptionId = id;
   clanQuestProgress = null;
   clanMemberRewards = null;
+  clanWorldBenefits = null;
   clanSocialStateUnsubscribe = api.subscribeClanSocialState(id, {
     onQuestProgress: progress => {
       clanQuestProgress = progress;
@@ -17226,6 +17329,14 @@ function startClanSocialStateSubscription(api, clanId) {
     onMemberRewards: rewards => {
       clanMemberRewards = rewards;
       if (activeProfileTab === "clan") renderClanView();
+    },
+    onWorldBenefits: benefits => {
+      const previousRevision = Number(clanWorldBenefits?.revision) || 0;
+      clanWorldBenefits = benefits;
+      if ((Number(benefits?.revision) || 0) !== previousRevision) {
+        renderPanel();
+        if (modal?.open && modal.dataset.cityInfoId) showCityInfoModal(modal.dataset.cityInfoId);
+      }
     },
     onError: (error, source) => console.warn(`Clan ${source || "social"} subscription failed`, error),
   });
@@ -21454,7 +21565,9 @@ function showCrownCitadelInfoModal(city) {
       </div>
       <section id="citadelOverviewPanel" class="camp-info-tab-panel" role="tabpanel" aria-labelledby="citadelOverviewTab" data-citadel-info-panel="overview">
         <div class="city-stat-panel modal-city-stats stronghold-stat-panel">
-          <div class="stat-wide stronghold-status"><span>Controlled bonus</span><strong>${getCrownCitadelBonusLabel()}</strong><small>Replaces the controller's individual Stronghold bonuses.</small></div>
+          <div class="stat-wide stronghold-status"><span>Controlled bonus</span><strong>${getCrownCitadelBonusLabel()}</strong><small>Clanmates receive the shared 5% Citadel package while it is held.</small></div>
+          ${renderObjectiveClanAffiliation(city)}
+          ${owned ? `<div class="stat-wide"><span>Your active objective benefit</span><strong>${escapeHtml(getControlledObjectiveBenefitBreakdown(city))}</strong><small>Personal and shared clan benefits are calculated separately by the server.</small></div>` : ""}
           <div class="stat-chip"><span>Controller</span><strong>${escapeHtml(controller)}</strong></div>
           <div class="stat-chip"><span>Current reign</span><strong ${heldSinceMs ? `data-citadel-reign-score data-total-held-ms="0" data-current-held-since-ms="${heldSinceMs}"` : ""}>${heldSinceMs ? formatDuration(Math.floor((Date.now() - heldSinceMs) / 1000)) : "Unclaimed"}</strong></div>
           <div class="stat-chip"><span>Troops stationed</span><strong>${visibleTroops === undefined ? "Unknown" : formatNumber(visibleTroops)}</strong></div>
@@ -21492,6 +21605,7 @@ function showCrownCitadelInfoModal(city) {
   bindHoldingReinforcementButtons();
   if (owned) bindRelinquishCityButton(city);
   if (!modal.open) modal.showModal();
+  void hydrateObjectiveClanAffiliation(city);
 }
 
 function showCityInfoModal(cityId) {
@@ -21517,7 +21631,8 @@ function showCityInfoModal(cityId) {
     modalBody.innerHTML = `
       <div class="city-stat-panel modal-city-stats">
         ${clanAlly ? `<div class="stat-wide clan-ally-status"><span>Relationship</span><strong>Clan Ally [${escapeHtml(clanIdentity.clanTag)}]</strong><small>Scout and Attack are disabled. You may send clan reinforcements.</small><button id="openCityClanBtn" class="profile-secondary-btn" type="button">Open Clan</button></div>` : clanIdentity.clanTag ? `<div class="stat-wide"><span>Clan</span><strong>[${escapeHtml(clanIdentity.clanTag)}] ${escapeHtml(clanIdentity.clanName)}</strong></div>` : ""}
-        ${stronghold ? `<div class="stat-wide"><span>Stronghold bonus</span><strong>${strongholdBonusLabel}</strong><small>Bonus is active only for the current controller.</small></div>` : ""}
+        ${stronghold ? renderObjectiveClanAffiliation(city) : ""}
+        ${stronghold ? `<div class="stat-wide"><span>Stronghold bonus</span><strong>${strongholdBonusLabel}</strong><small>The controller receives 8%; current clanmates receive 4%, subject to Citadel precedence.</small></div>` : ""}
         <div class="stat-wide"><span>Owner</span>${renderPlayerNameLink(city.ownerUid || getCurrentOnlineUid(), getCityOwnerDisplayName(city))}</div>
         <div class="stat-chip"><span>${stronghold ? "Defense level" : "City level"}</span><strong>${formatNumber(stats.level)}</strong></div>
         <div class="stat-chip"><span>Troops</span><strong>${report ? formatNumber(report.troops) : "Unknown"}</strong></div>
@@ -21539,6 +21654,7 @@ function showCityInfoModal(cityId) {
     });
     bindHoldingReinforcementButtons();
     if (!modal.open) modal.showModal();
+    if (stronghold) void hydrateObjectiveClanAffiliation(city);
     return;
   }
   const stats = getCityStats(city);
@@ -21563,7 +21679,9 @@ function showCityInfoModal(cityId) {
     modalTitle.textContent = `${city.name} - Stronghold`;
     modalBody.innerHTML = `
       <div class="city-stat-panel modal-city-stats stronghold-stat-panel">
-        <div class="stat-wide stronghold-status"><span>Controlled bonus</span><strong>${strongholdBonusLabel}</strong><small>Active while you control this Stronghold.</small></div>
+        <div class="stat-wide stronghold-status"><span>Controlled bonus</span><strong>${strongholdBonusLabel}</strong><small>Your clanmates receive half of this benefit while your clan controls it.</small></div>
+        ${renderObjectiveClanAffiliation(city)}
+        <div class="stat-wide"><span>Your active objective benefit</span><strong>${escapeHtml(getControlledObjectiveBenefitBreakdown(city))}</strong><small>Citadel precedence is applied by the server.</small></div>
         <div class="stat-wide"><span>Total defense</span><strong>${formatBaseAndBonusStat(stats.baseTotalDefense, stats.totalDefense)}</strong><small>${getCityStatBonusSources(stats, "defense")}</small></div>
         <div class="stat-chip"><span>Owner</span>${renderPlayerNameLink(city.ownerUid || getCurrentOnlineUid(), getCityOwnerDisplayName(city))}</div>
         <div class="stat-chip"><span>Troops stationed</span><strong>${formatNumber(city.troops)}</strong></div>
@@ -21578,6 +21696,7 @@ function showCityInfoModal(cityId) {
     bindRelinquishCityButton(city);
     bindHoldingReinforcementButtons();
     if (!modal.open) modal.showModal();
+    void hydrateObjectiveClanAffiliation(city);
     return;
   }
   const cooldownRemaining = getCaptureCooldownRemaining(city);
@@ -24886,17 +25005,201 @@ function bindBattleReportJumpButtons() {
   });
 }
 
-function showBattleReportDetail(reportId) {
-  const report = normalizeBattleReports(state?.battleReports || []).find(item => item.id === reportId);
-  if (!report) {
-    showToast("That report is no longer available.");
-    showLogModal();
-    return;
+function normalizeBattleParticipant(value = {}, { reinforcement = false } = {}) {
+  const participant = value && typeof value === "object" ? value : {};
+  const clan = !reinforcement && participant.clan && typeof participant.clan === "object"
+    ? {
+        clanId: String(participant.clan.clanId || "").slice(0, 128),
+        clanName: String(participant.clan.clanName || "").slice(0, 24),
+        clanTag: String(participant.clan.clanTag || "").slice(0, 5),
+      }
+    : null;
+  const fortifications = participant.fortifications && typeof participant.fortifications === "object"
+    ? {
+        cityLevelDefensePercent: Math.max(0, Number(participant.fortifications.cityLevelDefensePercent) || 0),
+        baseCityWalls: Math.max(0, Math.floor(Number(participant.fortifications.baseCityWalls) || 0)),
+        cityWalls: Math.max(0, Math.floor(Number(participant.fortifications.cityWalls) || 0)),
+        stoneworksPercent: Math.max(0, Number(participant.fortifications.stoneworksPercent) || 0),
+      }
+    : null;
+  return {
+    ownerUid: String(participant.ownerUid || "").slice(0, 128),
+    ownerName: String(participant.ownerName || "Unknown ruler").slice(0, 40),
+    ownerFlag: normalizeFlag(participant.ownerFlag || createDefaultFlag()),
+    clan: clan?.clanId ? clan : null,
+    reinforcementId: reinforcement ? String(participant.reinforcementId || "").slice(0, 180) : "",
+    startingTroops: Math.max(0, Math.floor(Number(participant.startingTroops) || 0)),
+    basePower: Math.max(0, Math.floor(Number(participant.basePower) || 0)),
+    swordmasteryLevel: Math.max(0, Math.floor(Number(participant.swordmasteryLevel) || 0)),
+    swordmasteryPercent: Math.max(0, Number(participant.swordmasteryPercent) || 0),
+    personalDefenseBonusPercent: Math.max(0, Number(participant.personalDefenseBonusPercent) || 0),
+    sharedDefenseBonusPercent: Math.max(0, Number(participant.sharedDefenseBonusPercent) || 0),
+    totalDefenseBonusPercent: Math.max(0, Number(participant.totalDefenseBonusPercent) || 0),
+    effectivePower: Math.max(0, Math.floor(Number(participant.effectivePower) || 0)),
+    losses: Math.max(0, Math.floor(Number(participant.losses) || 0)),
+    survivors: Math.max(0, Math.floor(Number(participant.survivors) || 0)),
+    fortifications,
+  };
+}
+
+function normalizeDetailedBattleSnapshot(value = null) {
+  if (!value || typeof value !== "object") return null;
+  const modelVersion = Math.max(0, Math.floor(Number(value.modelVersion) || 0));
+  if (modelVersion < 1 || !value.attacker || !value.defender || !value.target) return null;
+  const target = value.target && typeof value.target === "object" ? value.target : {};
+  const totals = value.totals && typeof value.totals === "object" ? value.totals : {};
+  const formula = value.formula && typeof value.formula === "object" ? value.formula : {};
+  return {
+    battleId: String(value.battleId || value.id || "").slice(0, 160),
+    modelVersion,
+    combatModel: String(value.combatModel || "").slice(0, 80),
+    outcome: String(value.outcome || "").slice(0, 24),
+    createdAtMs: normalizeTimestampMs(value.createdAtMs),
+    target: {
+      id: String(target.id || "").slice(0, 96),
+      name: String(target.name || "Unknown holding").slice(0, 80),
+      regionId: String(target.regionId || "").slice(0, 80),
+      targetType: target.targetType === "camp" ? "camp" : "city",
+      strongholdType: String(target.strongholdType || "").slice(0, 32),
+      level: clampCityLevel(target.level || 1),
+    },
+    attacker: normalizeBattleParticipant(value.attacker),
+    defender: normalizeBattleParticipant(value.defender),
+    reinforcements: (Array.isArray(value.reinforcements) ? value.reinforcements : [])
+      .map(row => normalizeBattleParticipant(row, { reinforcement: true }))
+      .filter(row => row.ownerUid && row.startingTroops > 0),
+    totals: {
+      attackers: Math.max(0, Math.floor(Number(totals.attackers) || 0)),
+      defenders: Math.max(0, Math.floor(Number(totals.defenders) || 0)),
+      attackPower: Math.max(0, Math.floor(Number(totals.attackPower) || 0)),
+      defensePower: Math.max(0, Math.floor(Number(totals.defensePower) || 0)),
+      attackerLosses: Math.max(0, Math.floor(Number(totals.attackerLosses) || 0)),
+      defenderLosses: Math.max(0, Math.floor(Number(totals.defenderLosses) || 0)),
+      attackerSurvivors: Math.max(0, Math.floor(Number(totals.attackerSurvivors) || 0)),
+      defenderSurvivors: Math.max(0, Math.floor(Number(totals.defenderSurvivors) || 0)),
+    },
+    formula: {
+      powerRatio: Math.max(0, Number(formula.powerRatio) || 0),
+      defenderCasualtyPercent: Math.max(0, Number(formula.defenderCasualtyPercent) || 0),
+      captureThresholdPower: Math.max(0, Math.floor(Number(formula.captureThresholdPower) || 0)),
+    },
+  };
+}
+
+async function loadDetailedBattleSnapshot(report) {
+  const battleId = String(report?.battleId || "").trim();
+  if (!battleId) return null;
+  if (battleSnapshotCache.has(battleId)) return battleSnapshotCache.get(battleId);
+  const api = getOnlineApi();
+  if (!api?.loadBattleSnapshot || !api?.isSignedIn?.()) return null;
+  const snapshot = normalizeDetailedBattleSnapshot(await api.loadBattleSnapshot(battleId));
+  if (snapshot) battleSnapshotCache.set(battleId, snapshot);
+  return snapshot;
+}
+
+async function loadBattleClanSnapshots(snapshot = null) {
+  const api = getOnlineApi();
+  if (!snapshot || !api?.loadClan || !api?.isSignedIn?.()) return;
+  const ids = [...new Set([
+    snapshot.attacker?.clan?.clanId,
+    snapshot.defender?.clan?.clanId,
+  ].filter(Boolean))];
+  await Promise.all(ids.map(async clanId => {
+    if (getCachedClanPublicSnapshot(clanId)) return;
+    try {
+      const clan = await api.loadClan(clanId);
+      if (clan) clanPublicSnapshotCache.set(clanId, clan);
+    } catch (error) {
+      console.warn("Could not load battle clan shield", error);
+    }
+  }));
+}
+
+function renderBattleKingdomFlag(key, label) {
+  return `<span class="kingdom-flag kingdom-flag-small battle-participant-flag" data-battle-participant-flag="${escapeHtml(key)}" role="img" aria-label="${escapeHtml(label)} kingdom flag"><span class="flag-symbol"></span></span>`;
+}
+
+function renderBattleClanIdentity(participant = {}, key = "") {
+  const identity = participant.clan;
+  if (!identity?.clanId) return "";
+  const clan = getCachedClanPublicSnapshot(identity.clanId);
+  const name = clan?.name || identity.clanName || "Clan";
+  const tag = clan?.tag || identity.clanTag || "";
+  return `
+    <button class="battle-primary-clan" type="button" data-public-clan-id="${escapeHtml(identity.clanId)}" aria-label="Open ${escapeHtml(name)} clan profile">
+      ${renderClanShield(clan?.shield || clan?.banner, { size: "mini", instance: `battle-${key}`, label: `${name} shield` })}
+      <span><strong>${tag ? `[${escapeHtml(tag)}]` : "Clan"}</strong><small>${escapeHtml(name)}</small></span>
+    </button>`;
+}
+
+function renderBattleMetric(label, value, help = "") {
+  return `<div class="battle-participant-metric"><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong>${help ? `<small>${escapeHtml(help)}</small>` : ""}</div>`;
+}
+
+function formatBattlePercent(value) {
+  const amount = Math.max(0, Number(value) || 0);
+  return `${Number.isInteger(amount) ? formatNumber(amount) : amount.toFixed(1)}%`;
+}
+
+function renderBattlePrimaryParticipant(participant, {
+  side = "attacker",
+  title = "",
+  key = "",
+} = {}) {
+  const attacker = side === "attacker";
+  const fortifications = participant.fortifications;
+  const bonusParts = attacker
+    ? [`Swordmastery +${formatBattlePercent(participant.swordmasteryPercent)}`]
+    : [
+        `Personal +${formatBattlePercent(participant.personalDefenseBonusPercent)}`,
+        `Clan shared +${formatBattlePercent(participant.sharedDefenseBonusPercent)}`,
+      ];
+  if (!attacker && fortifications) {
+    bonusParts.unshift(
+      `City level +${formatBattlePercent(fortifications.cityLevelDefensePercent)}`,
+      `Stoneworks +${formatBattlePercent(fortifications.stoneworksPercent)}`
+    );
   }
-  const badge = getBattleReportBadge(report);
-  modal.classList.add("battle-report-modal");
-  modalTitle.textContent = "Report Details";
-  modalBody.innerHTML = `
+  return `
+    <section class="battle-participant-card battle-primary-participant ${attacker ? "attacker" : "defender"}">
+      <h3>${escapeHtml(title)}</h3>
+      <div class="battle-participant-identity">
+        ${renderBattleKingdomFlag(key, participant.ownerName)}
+        <div><strong>${renderPlayerNameLink(participant.ownerUid, participant.ownerName)}</strong><small>${attacker ? "Army commander" : "Holding owner"}</small></div>
+      </div>
+      ${renderBattleClanIdentity(participant, key)}
+      <div class="battle-participant-metrics">
+        ${renderBattleMetric(attacker ? "Starting troops" : "Garrison troops", formatNumber(participant.startingTroops))}
+        ${renderBattleMetric("Base power", formatNumber(participant.basePower))}
+        ${renderBattleMetric(attacker ? "Attack power" : "Defense power", formatNumber(participant.effectivePower))}
+        ${renderBattleMetric("Applied bonuses", bonusParts.join(" · "))}
+        ${!attacker && fortifications ? renderBattleMetric("Fortifications", `${formatNumber(fortifications.cityWalls)} walls`, `Base ${formatNumber(fortifications.baseCityWalls)}`) : ""}
+        ${renderBattleMetric("Troops lost", formatNumber(participant.losses))}
+        ${renderBattleMetric("Survivors", formatNumber(participant.survivors))}
+      </div>
+    </section>`;
+}
+
+function renderBattleReinforcementRow(participant, index) {
+  const key = `reinforcement-${index}`;
+  return `
+    <article class="battle-reinforcement-row">
+      <div class="battle-participant-identity">
+        ${renderBattleKingdomFlag(key, participant.ownerName)}
+        <div><strong>${renderPlayerNameLink(participant.ownerUid, participant.ownerName)}</strong><small>Clan reinforcement</small></div>
+      </div>
+      <div class="battle-reinforcement-stats">
+        <span><small>Troops</small><strong>${formatNumber(participant.startingTroops)}</strong></span>
+        <span><small>Bonuses</small><strong>Personal +${formatBattlePercent(participant.personalDefenseBonusPercent)} · Shared +${formatBattlePercent(participant.sharedDefenseBonusPercent)}</strong></span>
+        <span><small>Defense</small><strong>${formatNumber(participant.effectivePower)}</strong></span>
+        <span><small>Lost</small><strong>${formatNumber(participant.losses)}</strong></span>
+        <span><small>Survived</small><strong>${formatNumber(participant.survivors)}</strong></span>
+      </div>
+    </article>`;
+}
+
+function renderLegacyBattleReportDetail(report, badge, message = "") {
+  return `
     <div class="battle-report-detail ${badge.tone}">
       <button id="battleReportBackBtn" class="battle-report-back" type="button">Back to reports</button>
       <div class="battle-report-detail-head">
@@ -24905,6 +25208,7 @@ function showBattleReportDetail(reportId) {
         <small>Level ${formatNumber(report.cityLevel)} - ${formatDuration(Math.max(0, state.gameSeconds - report.createdAt))} ago</small>
         ${renderBattleReportLocateButton(report, "battle-report-locate-detail")}
       </div>
+      ${message ? `<p class="battle-report-detail-notice">${escapeHtml(message)}</p>` : ""}
       <div class="battle-report-detail-grid">
         <div><span>Type</span><strong>${escapeHtml(getBattleReportTypeLabel(report.type))}</strong></div>
         <div><span>Opponent</span><strong>${escapeHtml(report.opponentName || report.ownerName || "Unknown")}</strong></div>
@@ -24917,13 +25221,106 @@ function showBattleReportDetail(reportId) {
         ${report.xpAwarded > 0 ? `<div><span>XP earned</span><strong>+${formatNumber(report.xpAwarded)}</strong></div>` : ""}
         ${report.goldAwarded > 0 ? `<div><span>Gold earned</span><strong>+${formatNumber(report.goldAwarded)}</strong></div>` : ""}
         ${report.troopsAwarded > 0 ? `<div><span>Level-up troops</span><strong>+${formatNumber(report.troopsAwarded)}</strong></div>` : ""}
+        ${report.fieldMedicsRecovered > 0 ? `<div><span>Field Medics recovered</span><strong>+${formatNumber(report.fieldMedicsRecovered)}</strong></div>` : ""}
       </div>
       <p>${escapeHtml(report.summary || getBattleReportSummary(report))}</p>
-    </div>
-  `;
+    </div>`;
+}
+
+function renderDetailedBattleReport(report, snapshot, badge) {
+  const ratioText = snapshot.formula.powerRatio > 0 ? `${snapshot.formula.powerRatio.toFixed(2)}×` : "0×";
+  const rewardMetrics = [
+    report.xpAwarded > 0 ? renderBattleMetric("Your XP", `+${formatNumber(report.xpAwarded)}`) : "",
+    report.fieldMedicsRecovered > 0 ? renderBattleMetric("Field Medics recovered", `+${formatNumber(report.fieldMedicsRecovered)}`) : "",
+    report.goldAwarded > 0 ? renderBattleMetric("Gold earned", `+${formatNumber(report.goldAwarded)}`) : "",
+    report.troopsAwarded > 0 ? renderBattleMetric("Level-up troops", `+${formatNumber(report.troopsAwarded)}`) : "",
+  ].filter(Boolean).join("");
+  return `
+    <div class="battle-report-detail detailed-battle-report ${badge.tone}">
+      <button id="battleReportBackBtn" class="battle-report-back" type="button">Back to reports</button>
+      <div class="battle-report-detail-head">
+        <span>${badge.label}</span>
+        <strong>${escapeHtml(snapshot.target.name || report.cityName)}</strong>
+        <small>Level ${formatNumber(snapshot.target.level)} ${escapeHtml(snapshot.target.targetType === "camp" ? "reward camp" : snapshot.target.strongholdType ? "objective" : "city")} · ${formatDuration(Math.max(0, state.gameSeconds - report.createdAt))} ago</small>
+        ${renderBattleReportLocateButton(report, "battle-report-locate-detail")}
+      </div>
+      <div class="battle-report-comparison" aria-label="Attacker and defender comparison">
+        ${renderBattlePrimaryParticipant(snapshot.attacker, { side: "attacker", title: "Attacker", key: "attacker" })}
+        <div class="battle-defender-column">
+          ${renderBattlePrimaryParticipant(snapshot.defender, { side: "defender", title: "Defenders", key: "defender" })}
+          ${snapshot.reinforcements.length ? `
+            <div class="battle-reinforcement-list">
+              <h4>Reinforcements <span>${formatNumber(snapshot.reinforcements.length)}</span></h4>
+              ${snapshot.reinforcements.map(renderBattleReinforcementRow).join("")}
+            </div>` : `<p class="battle-no-reinforcements">No allied reinforcements were stationed.</p>`}
+        </div>
+      </div>
+      <section class="battle-formula-explanation">
+        <h3>Combat result</h3>
+        <div class="battle-formula-grid">
+          ${renderBattleMetric("Power ratio", ratioText, `${formatNumber(snapshot.totals.attackPower)} attack vs ${formatNumber(snapshot.totals.defensePower)} defense`)}
+          ${renderBattleMetric("Defender casualties", formatBattlePercent(snapshot.formula.defenderCasualtyPercent), `${formatNumber(snapshot.totals.defenderLosses)} troops lost`)}
+          ${renderBattleMetric("Capture threshold", formatNumber(snapshot.formula.captureThresholdPower), "Attack power must exceed this defense threshold")}
+        </div>
+        ${rewardMetrics ? `<div class="battle-viewer-rewards">${rewardMetrics}</div>` : ""}
+        <p>${escapeHtml(report.summary || getBattleReportSummary(report))}</p>
+      </section>
+    </div>`;
+}
+
+function applyDetailedBattleFlags(snapshot) {
+  const flags = new Map([
+    ["attacker", snapshot.attacker.ownerFlag],
+    ["defender", snapshot.defender.ownerFlag],
+    ...snapshot.reinforcements.map((participant, index) => [`reinforcement-${index}`, participant.ownerFlag]),
+  ]);
+  modalBody.querySelectorAll("[data-battle-participant-flag]").forEach(element => {
+    applyFlagToElement(element, flags.get(element.dataset.battleParticipantFlag) || createDefaultFlag());
+  });
+}
+
+async function showBattleReportDetail(reportId) {
+  const report = normalizeBattleReports(state?.battleReports || []).find(item => item.id === reportId);
+  if (!report) {
+    showToast("That report is no longer available.");
+    showLogModal();
+    return;
+  }
+  const badge = getBattleReportBadge(report);
+  modal.dataset.battleReportDetailId = report.id;
+  modal.classList.add("battle-report-modal");
+  modalTitle.textContent = "Report Details";
+  modalBody.innerHTML = report.type === "scout" || !report.battleId
+    ? renderLegacyBattleReportDetail(report, badge)
+    : `
+      <div class="battle-report-detail ${badge.tone}">
+        <button id="battleReportBackBtn" class="battle-report-back" type="button">Back to reports</button>
+        <div class="battle-report-detail-head"><span>${badge.label}</span><strong>${escapeHtml(report.cityName)}</strong><small>Loading participant battle statistics…</small></div>
+        <div class="battle-report-detail-loading" role="status">Loading the authoritative battle snapshot…</div>
+      </div>`;
   modalBody.querySelector("#battleReportBackBtn")?.addEventListener("click", showLogModal);
   bindBattleReportJumpButtons();
   if (!modal.open) modal.showModal();
+  if (report.type === "scout" || !report.battleId) return;
+
+  try {
+    const snapshot = await loadDetailedBattleSnapshot(report);
+    if (!snapshot) throw new Error("The detailed snapshot is unavailable.");
+    await loadBattleClanSnapshots(snapshot);
+    if (!modal.open || modal.dataset.battleReportDetailId !== report.id) return;
+    modalBody.innerHTML = renderDetailedBattleReport(report, snapshot, badge);
+    applyDetailedBattleFlags(snapshot);
+  } catch (error) {
+    console.warn("Could not load detailed battle snapshot", error);
+    if (!modal.open || modal.dataset.battleReportDetailId !== report.id) return;
+    modalBody.innerHTML = renderLegacyBattleReportDetail(
+      report,
+      badge,
+      "Detailed participant statistics are unavailable for this report."
+    );
+  }
+  modalBody.querySelector("#battleReportBackBtn")?.addEventListener("click", showLogModal);
+  bindBattleReportJumpButtons();
 }
 
 function getBattleReportBadge(report) {

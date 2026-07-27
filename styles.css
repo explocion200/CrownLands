@@ -4475,6 +4475,230 @@ button.inventory-slot {
   color: rgba(246,239,228,.72);
   font-size: .78rem;
 }
+.battle-report-detail-loading,
+.battle-report-detail-notice {
+  margin: 0;
+  padding: .85rem;
+  border: 1px solid rgba(157, 204, 228, .24);
+  border-radius: 12px;
+  color: #cde7f4;
+  background: rgba(4, 15, 27, .62);
+}
+.battle-report-comparison {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: .7rem;
+  align-items: start;
+}
+.battle-participant-card,
+.battle-defender-column,
+.battle-formula-explanation {
+  min-width: 0;
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 13px;
+  background: rgba(4, 15, 27, .68);
+}
+.battle-participant-card {
+  display: grid;
+  gap: .62rem;
+  padding: .78rem;
+}
+.battle-participant-card > h3,
+.battle-formula-explanation > h3,
+.battle-reinforcement-list > h4 {
+  margin: 0;
+  color: #ffe29a;
+}
+.battle-primary-participant.attacker {
+  border-top: 3px solid #d46a4d;
+}
+.battle-primary-participant.defender {
+  border-top: 3px solid #72b6df;
+}
+.battle-defender-column {
+  display: grid;
+  gap: .58rem;
+  padding: .58rem;
+}
+.battle-defender-column > .battle-participant-card {
+  border: 0;
+  padding: .2rem;
+  background: transparent;
+}
+.battle-participant-identity {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: .55rem;
+  align-items: center;
+  min-width: 0;
+}
+.battle-participant-identity > div {
+  display: grid;
+  gap: .08rem;
+  min-width: 0;
+}
+.battle-participant-identity strong,
+.battle-participant-identity small {
+  min-width: 0;
+}
+.battle-participant-identity small {
+  color: rgba(246,239,228,.68);
+  font-size: .69rem;
+}
+.battle-participant-identity .player-name-link {
+  max-width: 100%;
+}
+.battle-primary-clan {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  justify-self: stretch;
+  gap: .5rem;
+  min-height: 48px;
+  padding: .34rem .5rem;
+  color: #f8e8bd;
+  text-align: left;
+  border: 1px solid rgba(211,161,63,.32);
+  border-radius: 10px;
+  background: rgba(211,161,63,.1);
+}
+.battle-primary-clan > span {
+  display: grid;
+  min-width: 0;
+}
+.battle-primary-clan small {
+  overflow: hidden;
+  color: #d6c9ad;
+  font-size: .68rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.battle-participant-metrics,
+.battle-formula-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: .38rem;
+}
+.battle-participant-metric {
+  min-width: 0;
+  padding: .48rem;
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 9px;
+  background: rgba(255,255,255,.045);
+}
+.battle-participant-metric > span,
+.battle-participant-metric > strong,
+.battle-participant-metric > small {
+  display: block;
+  overflow-wrap: anywhere;
+}
+.battle-participant-metric > span {
+  color: #9dcce4;
+  font-size: .65rem;
+}
+.battle-participant-metric > strong {
+  margin-top: .1rem;
+  color: #ffe29a;
+  font-size: .82rem;
+}
+.battle-participant-metric > small {
+  margin-top: .1rem;
+  color: rgba(246,239,228,.64);
+  font-size: .61rem;
+}
+.battle-reinforcement-list {
+  display: grid;
+  gap: .42rem;
+}
+.battle-reinforcement-list > h4 {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: .82rem;
+}
+.battle-reinforcement-list > h4 span {
+  color: #9dcce4;
+}
+.battle-reinforcement-row {
+  display: grid;
+  gap: .45rem;
+  padding: .55rem;
+  border: 1px solid rgba(114,182,223,.2);
+  border-radius: 10px;
+  background: rgba(17,67,95,.34);
+}
+.battle-reinforcement-stats {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: .28rem;
+}
+.battle-reinforcement-stats > span {
+  min-width: 0;
+}
+.battle-reinforcement-stats small,
+.battle-reinforcement-stats strong {
+  display: block;
+  overflow-wrap: anywhere;
+}
+.battle-reinforcement-stats small {
+  color: #9dcce4;
+  font-size: .58rem;
+}
+.battle-reinforcement-stats strong {
+  margin-top: .06rem;
+  color: #f6efe4;
+  font-size: .68rem;
+}
+.battle-no-reinforcements {
+  margin: 0;
+  padding: .55rem;
+  color: rgba(246,239,228,.65);
+  font-size: .72rem;
+  text-align: center;
+}
+.battle-formula-explanation {
+  display: grid;
+  gap: .6rem;
+  padding: .75rem;
+}
+.battle-formula-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.battle-viewer-rewards {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: .38rem;
+  padding-top: .55rem;
+  border-top: 1px solid rgba(255,255,255,.1);
+}
+.battle-formula-explanation > p {
+  margin: 0;
+  color: rgba(246,239,228,.75);
+  font-size: .76rem;
+}
+
+.objective-clan-link {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: .55rem;
+  width: 100%;
+  min-height: 48px;
+  padding: .3rem .45rem;
+  color: #f8e8bd;
+  text-align: left;
+  border: 1px solid rgba(211,161,63,.28);
+  border-radius: 10px;
+  background: rgba(211,161,63,.09);
+}
+.objective-clan-link > span {
+  display: grid;
+  min-width: 0;
+}
+.objective-clan-link small {
+  color: #9dcce4;
+  font-size: .68rem;
+}
 
 .leaderboard-modal.modal {
   width: min(820px, calc(100vw - 1.4rem));
@@ -4933,6 +5157,65 @@ button.inventory-slot {
   }
   .battle-report-detail-grid {
     grid-template-columns: 1fr;
+  }
+  .battle-report-comparison {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: .38rem;
+  }
+  .battle-participant-card,
+  .battle-defender-column,
+  .battle-formula-explanation {
+    border-radius: 10px;
+  }
+  .battle-participant-card,
+  .battle-defender-column {
+    padding: .42rem;
+  }
+  .battle-participant-identity {
+    grid-template-columns: 32px minmax(0, 1fr);
+    gap: .34rem;
+  }
+  .battle-participant-identity .battle-participant-flag {
+    width: 32px;
+    height: 29px;
+  }
+  .battle-participant-identity .battle-participant-flag .flag-symbol {
+    font-size: .82rem;
+  }
+  .battle-primary-clan {
+    grid-template-columns: 31px minmax(0, 1fr);
+    gap: .3rem;
+    min-height: 40px;
+    padding: .25rem .3rem;
+  }
+  .battle-primary-clan .clan-shield-size-mini {
+    width: 31px;
+    height: 35px;
+  }
+  .battle-participant-metrics,
+  .battle-formula-grid,
+  .battle-viewer-rewards {
+    grid-template-columns: 1fr;
+  }
+  .battle-participant-metric {
+    padding: .35rem;
+  }
+  .battle-participant-metric > span,
+  .battle-reinforcement-stats small {
+    font-size: .54rem;
+  }
+  .battle-participant-metric > strong {
+    font-size: .69rem;
+  }
+  .battle-participant-metric > small,
+  .battle-reinforcement-stats strong {
+    font-size: .56rem;
+  }
+  .battle-reinforcement-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .battle-reinforcement-stats > span:nth-child(2) {
+    grid-column: 1 / -1;
   }
   .leaderboard-modal.modal {
     width: min(560px, calc(100vw - 1rem));
