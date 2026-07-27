@@ -17195,8 +17195,10 @@ function renderProfileClanAffiliation() {
 
 function refreshClanRelationshipPresentation() {
   cityRenderSignature = "";
+  pathRenderSignature = "";
   renderHud();
   renderCities(true);
+  renderPaths();
   renderPanel();
   if (modal?.open && modal.dataset.cityInfoId) showCityInfoModal(modal.dataset.cityInfoId);
   if (profileScreen?.classList.contains("open")) renderProfileScreen();
@@ -18367,6 +18369,32 @@ function isPersonalArmy(mission) {
   return mission?.owner === "player" || Boolean(currentUid && mission?.ownerUid === currentUid);
 }
 
+function isCurrentClanmateArmy(mission) {
+  const ownerUid = String(mission?.ownerUid || "").trim();
+  const currentUid = getCurrentOnlineUid();
+  const currentClanId = String(state?.clanId || "").trim();
+  if (!ownerUid || !currentClanId || ownerUid === currentUid || isPersonalArmy(mission)) return false;
+  if (clanRosterReady && activeClanSubscriptionId === currentClanId) {
+    return clanMemberUidSet.has(ownerUid);
+  }
+  const identity = resolvePlayerIdentityForUid(ownerUid, mission);
+  return String(identity?.clanId || "") === currentClanId;
+}
+
+function getArmyRouteRelationshipClass(mission) {
+  if (isPersonalArmy(mission)) return "player-route";
+  if (!isCurrentClanmateArmy(mission)) return "enemy-route";
+  const isSupportMovement = Boolean(
+    mission?.returning
+    || mission?.reinforcementReturn
+    || mission?.campReturn
+    || mission?.relinquishTransfer
+    || mission?.kind === "transfer"
+    || mission?.kind === "reinforce"
+  );
+  return isSupportMovement ? "clan-support-route" : "clan-hostile-route";
+}
+
 function getMissionPointAtProgress(mission, progress) {
   const segments = getMissionRouteSegments(mission);
   if (!segments.length) {
@@ -18404,14 +18432,14 @@ function renderPaths() {
   const signature = [
     activeRegionId,
     visibleArmySegments
-      .map(({ attack, segments }) => `${attack.id}:${attack.kind || ""}:${attack.owner || ""}:${attack.ownerUid || ""}:${attack.fromId}:${attack.toId}:${attack.pathLength || 0}:${segments.map(segment => segment.points.length).join(",")}`)
+      .map(({ attack, segments }) => `${attack.id}:${attack.kind || ""}:${getArmyRouteRelationshipClass(attack)}:${attack.owner || ""}:${attack.ownerUid || ""}:${attack.fromId}:${attack.toId}:${attack.pathLength || 0}:${segments.map(segment => segment.points.length).join(",")}`)
       .join("|"),
   ].join(";");
   if (signature === pathRenderSignature) return;
   pathRenderSignature = signature;
   pathsSvg.innerHTML = "";
   for (const { attack, segments } of visibleArmySegments) {
-    const ownerClass = isPersonalArmy(attack) ? "player-route" : "enemy-route";
+    const ownerClass = getArmyRouteRelationshipClass(attack);
     const kindClass = attack.kind === "transfer" || attack.kind === "reinforce"
       ? "transfer-route"
       : attack.kind === "scout"
