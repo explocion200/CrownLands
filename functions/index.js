@@ -4414,7 +4414,7 @@ async function beginReinforcementReturn({
       transaction.set(targetRef, patch, { merge: true });
       targetUpdate = contribution.targetType === "camp"
         ? { campUpdate: campUpdateForClient(target.id, contribution.targetRegionId, patch) }
-        : { cityUpdate: { id: target.id, regionId: contribution.targetRegionId, ...patch } };
+        : { cityUpdates: [{ id: target.id, regionId: contribution.targetRegionId, ...patch }] };
     }
     transaction.set(contributionRef, {
       troops: 0,

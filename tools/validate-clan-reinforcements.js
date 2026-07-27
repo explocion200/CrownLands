@@ -50,6 +50,11 @@ requires(
   /const returnInitiatorRole[\s\S]*?returnInitiatorRole === "holder"[\s\S]*?returnInitiatorRole === "contributor"[\s\S]*?currentUser:/,
   "Holding-owner dismissal can expose or apply the troop contributor's private player snapshot."
 );
+requires(
+  server,
+  /targetUpdate = contribution\.targetType === "camp"[\s\S]*?cityUpdates:\s*\[\{\s*id:\s*target\.id,\s*regionId:\s*contribution\.targetRegionId,\s*\.\.\.patch\s*\}\]/,
+  "City reinforcement returns do not provide an immediate client-compatible garrison update."
+);
 requires(server, /exports\.returnClanReinforcement\s*=\s*timedCallable/, "Return reinforcement callable is missing.");
 requires(
   server,
