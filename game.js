@@ -737,6 +737,7 @@ const ARMY_TRAVEL_MIN_SECONDS = 30;
 const ARMY_TRAVEL_SCOUT_MIN_SECONDS = 10;
 const ARMY_TRAVEL_MAX_SECONDS = 1800;
 const ARMY_TRAVEL_KIND_MULTIPLIERS = { scout: 0.35, transfer: 0.95, reinforce: 0.95, attack: 1 };
+const CLAN_REINFORCEMENT_ACTIVE_LIMIT = 2;
 const ARMY_TRAVEL_TROOP_BAND_LIMITS = [10, 100, 1000, 10000, 100000, 1000000, 10000000, 100000000];
 const ARMY_TRAVEL_TROOP_BAND_MULTIPLIERS = [1, 1.18, 1.38, 1.62, 1.9, 2.24, 2.62, 3.06, 3.5];
 const ROUTE_CITY_CLEARANCE = 46;
@@ -13197,6 +13198,7 @@ function normalizeOnlineArmyMovement(raw) {
     campRecall: Boolean(raw.campRecall),
     reinforcementReturn: Boolean(raw.reinforcementReturn),
     reinforcementId: String(raw.reinforcementId || ""),
+    reinforcementTargetKey: String(raw.reinforcementTargetKey || ""),
     status: raw.status || "active",
     onlineRegionIds: Array.isArray(raw.routeRegionIds) ? raw.routeRegionIds.map(normalizeRegionId) : [],
   };
@@ -15885,6 +15887,11 @@ function launchAttack(sourceId, targetId, percent, owner, exactTroops = null, op
     }
     if (!campTarget && isProtectedMainCity(target)) {
       if (owner === "player") showToast("A clan ally's home city cannot be reinforced.");
+      return false;
+    }
+    const reinforcementBlockReason = getClanReinforcementBlockReason(target);
+    if (reinforcementBlockReason) {
+      if (owner === "player") showToast(reinforcementBlockReason);
       return false;
     }
   }
@@ -19694,6 +19701,50 @@ function findPreferredAttackSource(target) {
   return findNearestOwnedSourceCandidate(target, 1);
 }
 
+function getClanReinforcementTargetKey(target = null) {
+  if (!target?.id) return "";
+  const targetType = isRewardCampTarget(target) ? "camp" : "city";
+  return `${targetType}:${normalizeRegionId(getCityRegionId(target))}:${String(target.id)}`;
+}
+
+function getActiveClanReinforcementTargetKeys() {
+  const currentUid = getCurrentOnlineUid();
+  const targets = new Set();
+  getOutgoingAttacks().forEach(mission => {
+    const launchedAsReinforcement = mission.kind === "reinforce"
+      || mission.launchKind === "reinforce"
+      || mission.retargetedFromKind === "reinforce";
+    if (!launchedAsReinforcement || (mission.returning && !mission.reinforcementReturn)) return;
+    const targetKey = String(
+      mission.reinforcementTargetKey
+        || `${mission.targetType === "camp" ? "camp" : "city"}:${normalizeRegionId(mission.targetRegionId)}:${String(mission.toId || "")}`
+    );
+    if (targetKey) targets.add(targetKey);
+  });
+  onlineReinforcements.forEach(entry => {
+    if (entry?.status !== "stationed" || String(entry.ownerUid || "") !== currentUid) return;
+    const targetKey = String(
+      entry.targetKey
+        || `${entry.targetType === "camp" ? "camp" : "city"}:${normalizeRegionId(entry.targetRegionId)}:${String(entry.targetId || "")}`
+    );
+    if (targetKey) targets.add(targetKey);
+  });
+  return targets;
+}
+
+function getClanReinforcementBlockReason(target = null) {
+  const targetKey = getClanReinforcementTargetKey(target);
+  if (!targetKey) return "That allied holding is unavailable.";
+  const activeTargets = getActiveClanReinforcementTargetKeys();
+  if (activeTargets.has(targetKey)) {
+    return "You already have one active reinforcement assigned to this holding.";
+  }
+  if (activeTargets.size >= CLAN_REINFORCEMENT_ACTIVE_LIMIT) {
+    return `You can have at most ${CLAN_REINFORCEMENT_ACTIVE_LIMIT} active clan reinforcements at one time.`;
+  }
+  return "";
+}
+
 function beginClanReinforcement(targetOrId) {
   const target = typeof targetOrId === "object"
     ? targetOrId
@@ -19704,6 +19755,11 @@ function beginClanReinforcement(targetOrId) {
   }
   if (!isRewardCampTarget(target) && isProtectedMainCity(target)) {
     showToast("A clan ally's home city cannot be reinforced.");
+    return;
+  }
+  const reinforcementBlockReason = getClanReinforcementBlockReason(target);
+  if (reinforcementBlockReason) {
+    showToast(reinforcementBlockReason);
     return;
   }
   const sourceOption = findPreferredAttackSource(target);
@@ -20429,6 +20485,13 @@ async function showTroopSliderModalAsync(source, target, options = {}) {
     showMainCityProtectedAttackModal(target);
     return;
   }
+  const reinforcementBlockReason = isReinforcement ? getClanReinforcementBlockReason(target) : "";
+  if (reinforcementBlockReason) {
+    showToast(reinforcementBlockReason);
+    cancelSendMode();
+    if (modal.open) modal.close();
+    return;
+  }
   const shieldBlockReason = orderKind !== "attack" || campTarget ? "" : getPeaceShieldAttackBlockReason(target, "player");
   if (shieldBlockReason) {
     showToast(shieldBlockReason);
@@ -20650,6 +20713,13 @@ function showTroopSliderModalWithRoute(source, target, route, options = {}) {
     showMainCityProtectedAttackModal(target);
     return;
   }
+  const reinforcementBlockReason = isReinforcement ? getClanReinforcementBlockReason(target) : "";
+  if (reinforcementBlockReason) {
+    showToast(reinforcementBlockReason);
+    cancelSendMode();
+    if (modal.open) modal.close();
+    return;
+  }
   const shieldBlockReason = orderKind !== "attack" || campTarget ? "" : getPeaceShieldAttackBlockReason(target, "player");
   if (shieldBlockReason) {
     showToast(shieldBlockReason);
@@ -20664,6 +20734,7 @@ function showTroopSliderModalWithRoute(source, target, route, options = {}) {
       ? "Launching clan reinforcements immediately removes your Royal Peace Shield. Your ally's shield is not affected."
       : ""
     : isTransfer ? "" : getPeaceShieldAttackWarning(target);
+  const reinforcementUsage = isReinforcement ? getActiveClanReinforcementTargetKeys().size : 0;
   const sliderSendLimit = getTroopSliderSendLimit(source, target);
   const demoLimited = sliderSendLimit < source.troops;
   selectedTroopAmount = clamp(selectedTroopAmount, 1, sliderSendLimit);
@@ -20687,6 +20758,7 @@ function showTroopSliderModalWithRoute(source, target, route, options = {}) {
       </div>
 
       ${shieldDropWarning ? `<div class="shield-drop-warning" role="alert"><strong>Shield warning</strong><span>${escapeHtml(shieldDropWarning)}</span></div>` : ""}
+      ${isReinforcement ? `<div class="reinforcement-limit-note"><strong>${formatNumber(reinforcementUsage)} / ${formatNumber(CLAN_REINFORCEMENT_ACTIVE_LIMIT)} active</strong><span>You may support two holdings at once, with one reinforcement per holding.</span></div>` : ""}
 
       <div class="troop-slider-control">
         <div class="troop-slider-readout">

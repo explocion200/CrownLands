@@ -498,6 +498,21 @@ async function main() {
     "Clan gift collection did not immediately credit the player's gold."
   );
 
+  const clanSecondSender = users[46];
+  const clanSecondSenderRef = db.doc(`players/${clanSecondSender.uid}`);
+  await clanSecondSenderRef.set({
+    character: { level: 10, xp: 0, skillPoints: 9 },
+  }, { merge: true });
+  await callFunction("applyToClan", clanSecondSender.token, {
+    clanId: applicationClanId,
+    message: "Reinforcement recipient-cap gate",
+  });
+  await callFunction("reviewClanApplication", clanLeader.token, {
+    clanId: applicationClanId,
+    applicantUid: clanSecondSender.uid,
+    accept: true,
+  });
+
   const clanReinforcementSourceClaim = claims[48];
   const clanReinforcementHolderClaim = claims[49];
   const clanReinforcementSourceRef = db.doc(
@@ -644,61 +659,262 @@ async function main() {
   const reinforcementId = firstClanReinforcementArrival.reinforcementId;
   assert(reinforcementId, "Clan reinforcement arrival did not return its contribution id.");
 
-  const secondClanReinforcementArmyId = `clan_reinforce_b_${crypto.randomBytes(8).toString("hex")}`;
-  const targetForSecondSend = (await clanReinforcementTargetDoc.ref.get()).data() || {};
-  const secondDistance = Math.hypot(
-    Number(targetForSecondSend.x) - Number(clanReinforcementSource.x),
-    Number(targetForSecondSend.y) - Number(clanReinforcementSource.y)
-  );
-  const secondClanReinforcement = await callFunction("sendArmyOrder", clanLeader.token, {
-    army: {
-      id: secondClanReinforcementArmyId,
-      kind: "reinforce",
-      fromId: clanReinforcementSourceClaim.cityId,
-      toId: clanReinforcementTargetDoc.id,
-      fromName: clanReinforcementSource.name || clanReinforcementSourceClaim.cityId,
-      toName: targetForSecondSend.name || clanReinforcementTargetDoc.id,
-      troops: 400,
-      requestedTroops: 400,
+  let duplicateTargetError = null;
+  try {
+    await callFunction("sendArmyOrder", clanLeader.token, {
+      army: {
+        ...firstClanReinforcement.movement,
+        id: `clan_reinforce_duplicate_${crypto.randomBytes(8).toString("hex")}`,
+        troops: 400,
+        requestedTroops: 400,
+      },
       sourceRegionId: clanReinforcementSourceClaim.mainRegionId,
       targetRegionId: clanReinforcementSourceClaim.mainRegionId,
-      routeRegionIds: [clanReinforcementSourceClaim.mainRegionId],
-      viewRegionIds: [clanReinforcementSourceClaim.mainRegionId],
-      path: [
-        { x: Number(clanReinforcementSource.x), y: Number(clanReinforcementSource.y) },
-        { x: Number(targetForSecondSend.x), y: Number(targetForSecondSend.y) },
-      ],
-      pathSegments: [{
-        regionId: clanReinforcementSourceClaim.mainRegionId,
-        points: [
-          { x: Number(clanReinforcementSource.x), y: Number(clanReinforcementSource.y) },
-          { x: Number(targetForSecondSend.x), y: Number(targetForSecondSend.y) },
-        ],
-        length: secondDistance,
-      }],
-      pathLength: secondDistance,
-    },
-    sourceRegionId: clanReinforcementSourceClaim.mainRegionId,
-    targetRegionId: clanReinforcementSourceClaim.mainRegionId,
-  });
+    });
+  } catch (error) {
+    duplicateTargetError = error;
+  }
+  assert(
+    /already have one active reinforcement/.test(String(duplicateTargetError?.message || "")),
+    "A sender launched more than one active reinforcement to the same holding."
+  );
+
+  let secondClanReinforcementTargetDoc = null;
+  let secondClanReinforcement = null;
+  for (const candidate of clanReinforcementCandidates.filter(doc => doc.id !== clanReinforcementTargetDoc.id)) {
+    const originalTarget = candidate.data() || {};
+    const distance = Math.hypot(
+      Number(originalTarget.x) - Number(clanReinforcementSource.x),
+      Number(originalTarget.y) - Number(clanReinforcementSource.y)
+    );
+    await candidate.ref.set({
+      ownerKind: "player",
+      ownerUid: clanApplicant.uid,
+      ownerName: "Ruler 50",
+      ownerFlag: null,
+      ownerShieldExpiresAtMs: shieldExpiresAtMs,
+      isMainCity: false,
+      level: 1,
+      defense: 1,
+      troops: 100,
+      troopFloat: 100,
+    }, { merge: true });
+    try {
+      secondClanReinforcement = await callFunction("sendArmyOrder", clanLeader.token, {
+        army: {
+          id: `clan_reinforce_b_${crypto.randomBytes(8).toString("hex")}`,
+          kind: "reinforce",
+          fromId: clanReinforcementSourceClaim.cityId,
+          toId: candidate.id,
+          fromName: clanReinforcementSource.name || clanReinforcementSourceClaim.cityId,
+          toName: originalTarget.name || candidate.id,
+          troops: 400,
+          requestedTroops: 400,
+          sourceRegionId: clanReinforcementSourceClaim.mainRegionId,
+          targetRegionId: clanReinforcementSourceClaim.mainRegionId,
+          routeRegionIds: [clanReinforcementSourceClaim.mainRegionId],
+          viewRegionIds: [clanReinforcementSourceClaim.mainRegionId],
+          path: [
+            { x: Number(clanReinforcementSource.x), y: Number(clanReinforcementSource.y) },
+            { x: Number(originalTarget.x), y: Number(originalTarget.y) },
+          ],
+          pathSegments: [{
+            regionId: clanReinforcementSourceClaim.mainRegionId,
+            points: [
+              { x: Number(clanReinforcementSource.x), y: Number(clanReinforcementSource.y) },
+              { x: Number(originalTarget.x), y: Number(originalTarget.y) },
+            ],
+            length: distance,
+          }],
+          pathLength: distance,
+        },
+        sourceRegionId: clanReinforcementSourceClaim.mainRegionId,
+        targetRegionId: clanReinforcementSourceClaim.mainRegionId,
+      });
+      secondClanReinforcementTargetDoc = candidate;
+      break;
+    } catch (error) {
+      await candidate.ref.set(originalTarget);
+      if (!String(error?.message || "").includes("route crosses")) throw error;
+    }
+  }
+  assert(secondClanReinforcementTargetDoc && secondClanReinforcement, "A second reachable clan reinforcement target was unavailable.");
+
+  let maxReinforcementLimitError = null;
+  for (const candidate of clanReinforcementCandidates.filter(doc => (
+    doc.id !== clanReinforcementTargetDoc.id && doc.id !== secondClanReinforcementTargetDoc.id
+  ))) {
+    const originalTarget = candidate.data() || {};
+    const distance = Math.hypot(
+      Number(originalTarget.x) - Number(clanReinforcementSource.x),
+      Number(originalTarget.y) - Number(clanReinforcementSource.y)
+    );
+    await candidate.ref.set({
+      ownerKind: "player",
+      ownerUid: clanApplicant.uid,
+      ownerName: "Ruler 50",
+      ownerFlag: null,
+      ownerShieldExpiresAtMs: shieldExpiresAtMs,
+      isMainCity: false,
+      level: 1,
+      defense: 1,
+      troops: 100,
+      troopFloat: 100,
+    }, { merge: true });
+    try {
+      await callFunction("sendArmyOrder", clanLeader.token, {
+        army: {
+          id: `clan_reinforce_limit_${crypto.randomBytes(8).toString("hex")}`,
+          kind: "reinforce",
+          fromId: clanReinforcementSourceClaim.cityId,
+          toId: candidate.id,
+          fromName: clanReinforcementSource.name || clanReinforcementSourceClaim.cityId,
+          toName: originalTarget.name || candidate.id,
+          troops: 200,
+          requestedTroops: 200,
+          sourceRegionId: clanReinforcementSourceClaim.mainRegionId,
+          targetRegionId: clanReinforcementSourceClaim.mainRegionId,
+          routeRegionIds: [clanReinforcementSourceClaim.mainRegionId],
+          viewRegionIds: [clanReinforcementSourceClaim.mainRegionId],
+          path: [
+            { x: Number(clanReinforcementSource.x), y: Number(clanReinforcementSource.y) },
+            { x: Number(originalTarget.x), y: Number(originalTarget.y) },
+          ],
+          pathSegments: [{
+            regionId: clanReinforcementSourceClaim.mainRegionId,
+            points: [
+              { x: Number(clanReinforcementSource.x), y: Number(clanReinforcementSource.y) },
+              { x: Number(originalTarget.x), y: Number(originalTarget.y) },
+            ],
+            length: distance,
+          }],
+          pathLength: distance,
+        },
+        sourceRegionId: clanReinforcementSourceClaim.mainRegionId,
+        targetRegionId: clanReinforcementSourceClaim.mainRegionId,
+      });
+      throw new Error("A sender launched a third active clan reinforcement.");
+    } catch (error) {
+      if (String(error?.message || "").includes("route crosses")) {
+        await candidate.ref.set(originalTarget);
+        continue;
+      }
+      maxReinforcementLimitError = error;
+      break;
+    }
+  }
+  assert(
+    /at most 2 active clan reinforcements/.test(String(maxReinforcementLimitError?.message || "")),
+    "A sender was not capped at two active clan reinforcements."
+  );
+
   const secondClanReinforcementArrival = await forceResolveMovement(
     secondClanReinforcement.movement,
     clanLeader.token
   );
-  assert(
-    secondClanReinforcementArrival?.reinforcementId === reinforcementId,
-    "Repeated clan support created a second contribution instead of aggregating."
-  );
-  const [aggregatedContribution, aggregatedTarget, aggregatedLeader] = await Promise.all([
+  const secondReinforcementId = secondClanReinforcementArrival?.reinforcementId;
+  assert(secondReinforcementId, "The sender's second reinforcement did not station.");
+
+  const [firstContribution, secondContribution, leaderAtLimit] = await Promise.all([
     db.doc(`reinforcements/${reinforcementId}`).get(),
-    clanReinforcementTargetDoc.ref.get(),
+    db.doc(`reinforcements/${secondReinforcementId}`).get(),
     clanLeaderRef.get(),
   ]);
   assert(
-    Number(aggregatedContribution.data()?.troops || 0) === 1_000
-      && Number(aggregatedTarget.data()?.alliedReinforcementTroops || 0) === 1_000
-      && Number(aggregatedLeader.data()?.stationedReinforcementTroops || 0) === 1_000,
-    "Repeated clan support did not aggregate into one sender-owned 1,000 troop contribution."
+    Number(firstContribution.data()?.troops || 0) === 600
+      && Number(secondContribution.data()?.troops || 0) === 400
+      && Number(leaderAtLimit.data()?.stationedReinforcementTroops || 0) === 1_000
+      && leaderAtLimit.data()?.activeClanReinforcementTargets?.length === 2,
+    "Two allowed sender reinforcement slots were not tracked independently."
+  );
+
+  const sharedTarget = (await clanReinforcementTargetDoc.ref.get()).data() || {};
+  let otherSenderReinforcement = null;
+  const otherSenderSourceCandidates = clanReinforcementCandidates
+    .filter(doc => (
+      doc.id !== clanReinforcementTargetDoc.id
+      && doc.id !== secondClanReinforcementTargetDoc.id
+    ))
+    .sort((left, right) => {
+      const leftData = left.data() || {};
+      const rightData = right.data() || {};
+      return Math.hypot(
+        Number(leftData.x) - Number(sharedTarget.x),
+        Number(leftData.y) - Number(sharedTarget.y)
+      ) - Math.hypot(
+        Number(rightData.x) - Number(sharedTarget.x),
+        Number(rightData.y) - Number(sharedTarget.y)
+      );
+    });
+  for (const candidate of otherSenderSourceCandidates) {
+    const currentSource = (await candidate.ref.get()).data() || {};
+    if (currentSource.ownerUid) continue;
+    const sharedTargetDistance = Math.hypot(
+      Number(sharedTarget.x) - Number(currentSource.x),
+      Number(sharedTarget.y) - Number(currentSource.y)
+    );
+    await candidate.ref.set({
+      ownerKind: "player",
+      ownerUid: clanSecondSender.uid,
+      ownerName: "Ruler 47",
+      ownerFlag: null,
+      isMainCity: false,
+      level: 1,
+      defense: 1,
+      troops: 10_000,
+      troopFloat: 10_000,
+    }, { merge: true });
+    try {
+      otherSenderReinforcement = await callFunction("sendArmyOrder", clanSecondSender.token, {
+        army: {
+          id: `clan_reinforce_other_sender_${crypto.randomBytes(8).toString("hex")}`,
+          kind: "reinforce",
+          fromId: candidate.id,
+          toId: clanReinforcementTargetDoc.id,
+          fromName: currentSource.name || candidate.id,
+          toName: sharedTarget.name || clanReinforcementTargetDoc.id,
+          troops: 200,
+          requestedTroops: 200,
+          sourceRegionId: clanReinforcementSourceClaim.mainRegionId,
+          targetRegionId: clanReinforcementSourceClaim.mainRegionId,
+          routeRegionIds: [clanReinforcementSourceClaim.mainRegionId],
+          viewRegionIds: [clanReinforcementSourceClaim.mainRegionId],
+          path: [
+            { x: Number(currentSource.x), y: Number(currentSource.y) },
+            { x: Number(sharedTarget.x), y: Number(sharedTarget.y) },
+          ],
+          pathSegments: [{
+            regionId: clanReinforcementSourceClaim.mainRegionId,
+            points: [
+              { x: Number(currentSource.x), y: Number(currentSource.y) },
+              { x: Number(sharedTarget.x), y: Number(sharedTarget.y) },
+            ],
+            length: sharedTargetDistance,
+          }],
+          pathLength: sharedTargetDistance,
+        },
+        sourceRegionId: clanReinforcementSourceClaim.mainRegionId,
+        targetRegionId: clanReinforcementSourceClaim.mainRegionId,
+      });
+      break;
+    } catch (error) {
+      await candidate.ref.set(currentSource);
+      if (!String(error?.message || "").includes("route crosses")) throw error;
+    }
+  }
+  assert(otherSenderReinforcement, "A valid second allied sender source was unavailable.");
+  const otherSenderArrival = await forceResolveMovement(otherSenderReinforcement.movement, clanSecondSender.token);
+  const otherSenderReinforcementId = otherSenderArrival?.reinforcementId;
+  const sharedTargetContributions = await db.collection("reinforcements")
+    .where("targetKey", "==", `city:${clanReinforcementSourceClaim.mainRegionId}:${clanReinforcementTargetDoc.id}`)
+    .where("resetGeneration", "==", realm.resetGeneration)
+    .where("worldId", "==", realm.worldId)
+    .where("status", "==", "stationed")
+    .get();
+  assert(
+    otherSenderReinforcementId
+      && sharedTargetContributions.docs.filter(doc => Number(doc.data()?.troops || 0) > 0).length === 2,
+    "The holding owner could not receive independent reinforcements from multiple clan allies."
   );
 
   let reinforcedMainCityError = null;
@@ -720,7 +936,7 @@ async function main() {
   });
   assert(
     holderDismissal?.status === "returning"
-      && Number(holderDismissal?.troops || 0) === 1_000,
+      && Number(holderDismissal?.troops || 0) === 600,
     "The holding owner could not send an allied contributor home."
   );
   const holderDismissalArrival = await forceResolveMovement(holderDismissal.movement, clanLeader.token);
@@ -733,7 +949,7 @@ async function main() {
   const thirdClanReinforcementArmyId = `clan_reinforce_c_${crypto.randomBytes(8).toString("hex")}`;
   const thirdClanReinforcement = await callFunction("sendArmyOrder", clanLeader.token, {
     army: {
-      ...secondClanReinforcement.movement,
+      ...firstClanReinforcement.movement,
       id: thirdClanReinforcementArmyId,
       kind: "reinforce",
       launchKind: "reinforce",
@@ -758,6 +974,27 @@ async function main() {
   await forceResolveMovement(contributorRecall.movement, clanLeader.token);
   const finalReinforcementState = await db.doc(`reinforcements/${reinforcementId}`).get();
   assert(finalReinforcementState.data()?.status === "returned", "Recalled clan troops were not marked returned.");
+  const [secondTargetRecall, otherSenderRecall] = await Promise.all([
+    callFunction("returnClanReinforcement", clanLeader.token, {
+      reinforcementId: secondReinforcementId,
+    }),
+    callFunction("returnClanReinforcement", clanSecondSender.token, {
+      reinforcementId: otherSenderReinforcementId,
+    }),
+  ]);
+  await Promise.all([
+    forceResolveMovement(secondTargetRecall.movement, clanLeader.token),
+    forceResolveMovement(otherSenderRecall.movement, clanSecondSender.token),
+  ]);
+  const [leaderAfterReturns, otherSenderAfterReturns] = await Promise.all([
+    clanLeaderRef.get(),
+    clanSecondSenderRef.get(),
+  ]);
+  assert(
+    (leaderAfterReturns.data()?.activeClanReinforcementTargets || []).length === 0
+      && (otherSenderAfterReturns.data()?.activeClanReinforcementTargets || []).length === 0,
+    "Completed reinforcement returns did not release sender slots."
+  );
 
   const attacker = users[0];
   const sourceClaim = claims[0];
