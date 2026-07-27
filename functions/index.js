@@ -2095,8 +2095,11 @@ function calculateCombatResult(attackTroops, target, attackerProfile = null, def
   const attackPower = getAttackPower(troops, attackerProfile);
   const defensePower = getCityStats(target, defenderProfile, options.defenderBonuses).totalDefense;
   const ratio = attackPower / Math.max(1, defensePower);
-  const raid = attackProtection?.mode === "raid";
-  const success = !raid && attackPower > defensePower;
+  const protectedRaid = attackProtection?.mode === "raid";
+  const convertedReinforcement = options.convertedReinforcement === true;
+  const convertedReinforcementCanCapture = protectedRaid && convertedReinforcement;
+  const success = (!protectedRaid || convertedReinforcementCanCapture) && attackPower > defensePower;
+  const raid = protectedRaid && !success;
   const attackerBoost = attackerProfile ? skillMultiplier(attackerProfile, "swordmastery") : 1;
   let survivors = 0;
   let defendersLeft = defendersAtStart;
@@ -2138,6 +2141,8 @@ function calculateCombatResult(attackTroops, target, attackerProfile = null, def
     attackProtection,
     demoAttack: attackProtection?.legacyDemoAttack ? normalizeDemoAttackSnapshot(options.demoAttack) : null,
     raidCompleted: raid,
+    convertedReinforcement,
+    convertedReinforcementCapture: convertedReinforcementCanCapture && success,
   };
 }
 
@@ -9354,6 +9359,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
       attackProtection,
       demoAttack: army.demoAttack,
       defenderBonuses,
+      convertedReinforcement,
     });
     const givenUpNeutralTarget = isGivenUpNeutralCity(target);
     const attackWinXp = attackProtection || givenUpNeutralTarget
@@ -9457,7 +9463,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
         result,
         totalDefense: targetStats.totalDefense,
         defenseStats: targetStats,
-        summary: `Captured with ${result.survivors.toLocaleString()} survivors. Level ${clampCityLevel(target.level).toLocaleString()} to ${nextLevel.toLocaleString()}. +${attackerProgress.xpAwarded.toLocaleString()} XP.${protectedDefenseXpSummary}${attackerLevelTroopReward ? ` Hero level reward: +${attackerLevelTroopReward.credited.toLocaleString()} troops to ${attackerLevelTroopReward.cityName}.` : ""}`,
+        summary: `${convertedReinforcement ? "Reinforcements converted to an attack and captured the city" : "Captured"} with ${result.survivors.toLocaleString()} survivors. Level ${clampCityLevel(target.level).toLocaleString()} to ${nextLevel.toLocaleString()}. +${attackerProgress.xpAwarded.toLocaleString()} XP.${protectedDefenseXpSummary}${attackerLevelTroopReward ? ` Hero level reward: +${attackerLevelTroopReward.credited.toLocaleString()} troops to ${attackerLevelTroopReward.cityName}.` : ""}`,
         xpAwarded: attackerProgress.xpAwarded,
         goldAwarded: attackerProgress.goldAwarded,
         troopsAwarded: attackerLevelTroopReward?.credited || 0,
@@ -9530,7 +9536,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
           result,
           totalDefense: targetStats.totalDefense,
           defenseStats: targetStats,
-          summary: `${target.name || target.id} was captured by ${attackerName}. Level ${clampCityLevel(target.level).toLocaleString()} to ${nextLevel.toLocaleString()}. +${defenderProgress.xpAwarded.toLocaleString()} XP.${protectedDefenseXpSummary}${defenderLevelTroopReward ? ` Hero level reward: +${defenderLevelTroopReward.credited.toLocaleString()} troops to ${defenderLevelTroopReward.cityName}.` : ""}${defenderRecoveredTroops > 0 ? ` Field Medics returned ${defenderRecoveredTroops.toLocaleString()} troops to your main city.` : ""}`,
+          summary: `${target.name || target.id} was captured by ${attackerName}${convertedReinforcement ? " after incoming reinforcements converted to an attack" : ""}. Level ${clampCityLevel(target.level).toLocaleString()} to ${nextLevel.toLocaleString()}. +${defenderProgress.xpAwarded.toLocaleString()} XP.${protectedDefenseXpSummary}${defenderLevelTroopReward ? ` Hero level reward: +${defenderLevelTroopReward.credited.toLocaleString()} troops to ${defenderLevelTroopReward.cityName}.` : ""}${defenderRecoveredTroops > 0 ? ` Field Medics returned ${defenderRecoveredTroops.toLocaleString()} troops to your main city.` : ""}`,
           xpAwarded: defenderProgress.xpAwarded,
           goldAwarded: defenderProgress.goldAwarded,
           troopsAwarded: defenderLevelTroopReward?.credited || 0,
