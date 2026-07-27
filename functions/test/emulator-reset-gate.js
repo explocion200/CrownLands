@@ -146,6 +146,67 @@ async function main() {
   assert(firstStats.resetGeneration === realm.resetGeneration, "Stats were written to the wrong generation.");
   assert(firstStats.totalCities === 1, "Archived cities leaked into current-generation statistics.");
 
+  const clanLeader = users[48];
+  const clanApplicant = users[49];
+  const clanLeaderRef = db.doc(`players/${clanLeader.uid}`);
+  const clanApplicantRef = db.doc(`players/${clanApplicant.uid}`);
+  await Promise.all([
+    clanLeaderRef.set({
+      character: { level: 20, xp: 0, skillPoints: 19 },
+      gold: 100_000,
+      goldFloat: 100_000,
+      economyUpdatedAtMs: Date.now(),
+    }, { merge: true }),
+    clanApplicantRef.set({
+      character: { level: 20, xp: 0, skillPoints: 19 },
+    }, { merge: true }),
+  ]);
+  const createdClan = await callFunction("createClan", clanLeader.token, {
+    name: "Application Gate",
+    tag: "APGT",
+    description: "Exercises approval applications in the release gate.",
+    admissionMode: "approval",
+  });
+  const applicationClanId = createdClan?.clan?.id;
+  assert(applicationClanId, "The clan application gate could not create its approval clan.");
+
+  const firstApplication = await callFunction("applyToClan", clanApplicant.token, {
+    clanId: applicationClanId,
+    message: "First application",
+  });
+  assert(firstApplication?.pending === true, "Applying to an approval clan did not return pending status.");
+  let applicationSnapshot = await db.doc(`clans/${applicationClanId}/applications/${clanApplicant.uid}`).get();
+  let applicantProfile = (await clanApplicantRef.get()).data() || {};
+  assert(applicationSnapshot.exists, "The pending clan application was not persisted.");
+  assert(applicationSnapshot.data()?.resetGeneration === realm.resetGeneration, "The clan application was written to the wrong reset.");
+  assert(applicationSnapshot.data()?.worldId === realm.worldId, "The clan application was written to the wrong world.");
+  assert(applicantProfile.pendingClanApplicationId === applicationClanId, "The applicant profile did not track its pending clan.");
+
+  await callFunction("cancelClanApplication", clanApplicant.token, { clanId: applicationClanId });
+  applicationSnapshot = await db.doc(`clans/${applicationClanId}/applications/${clanApplicant.uid}`).get();
+  applicantProfile = (await clanApplicantRef.get()).data() || {};
+  assert(!applicationSnapshot.exists, "Canceling a clan application did not remove it.");
+  assert(!applicantProfile.pendingClanApplicationId, "Canceling a clan application did not clear the applicant profile.");
+
+  await callFunction("applyToClan", clanApplicant.token, {
+    clanId: applicationClanId,
+    message: "Second application",
+  });
+  const reviewedApplication = await callFunction("reviewClanApplication", clanLeader.token, {
+    clanId: applicationClanId,
+    applicantUid: clanApplicant.uid,
+    accept: true,
+  });
+  assert(reviewedApplication?.ok === true && reviewedApplication?.role === "member", "Accepting a clan application did not join the applicant.");
+  const [acceptedMemberSnapshot, acceptedApplicationSnapshot, acceptedApplicantSnapshot] = await Promise.all([
+    db.doc(`clans/${applicationClanId}/members/${clanApplicant.uid}`).get(),
+    db.doc(`clans/${applicationClanId}/applications/${clanApplicant.uid}`).get(),
+    clanApplicantRef.get(),
+  ]);
+  assert(acceptedMemberSnapshot.exists, "The accepted applicant was not added to the clan roster.");
+  assert(!acceptedApplicationSnapshot.exists, "The accepted clan application was not removed.");
+  assert(acceptedApplicantSnapshot.data()?.clanId === applicationClanId, "The accepted applicant profile did not receive clan identity.");
+
   const attacker = users[0];
   const sourceClaim = claims[0];
   const sourceRef = db.doc(`islands/${sourceClaim.islandId}/cities/${sourceClaim.cityId}`);

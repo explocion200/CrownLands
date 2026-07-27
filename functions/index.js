@@ -7523,12 +7523,14 @@ exports.joinOpenClan = onCall({ region: "us-central1", maxInstances: 30, invoker
 exports.applyToClan = onCall({ region: "us-central1", maxInstances: 30, invoker: "public" }, async request => {
   const uid = requireAuth(request);
   const clanId = safeString(request.data?.clanId, 128);
+  if (!clanId) throw new HttpsError("invalid-argument", "Choose a clan before applying.");
   const nowMs = Date.now();
   return db.runTransaction(async transaction => {
-    const [profileSnap, clanSnap, applicationSnap] = await Promise.all([
+    const [profileSnap, clanSnap, applicationSnap, statsSnap] = await Promise.all([
       transaction.get(db.doc(`players/${uid}`)),
       transaction.get(db.doc(`clans/${clanId}`)),
       transaction.get(db.doc(`clans/${clanId}/applications/${uid}`)),
+      transaction.get(playerGlobalStatsRef(uid)),
     ]);
     if (!profileSnap.exists || !clanSnap.exists) throw new HttpsError("not-found", "Player or clan was not found.");
     const profile = profileSnap.data() || {};
@@ -7541,7 +7543,13 @@ exports.applyToClan = onCall({ region: "us-central1", maxInstances: 30, invoker:
     if (safeString(profile.pendingClanApplicationId, 128) && profile.pendingClanApplicationId !== clanId) {
       throw new HttpsError("failed-precondition", "Cancel your existing clan application first.");
     }
-    if (applicationSnap.exists && applicationSnap.data()?.status === "pending") return { ok: true, pending: true };
+    if (applicationSnap.exists && applicationSnap.data()?.status === "pending") {
+      transaction.set(profileSnap.ref, {
+        pendingClanApplicationId: clanId,
+        updatedAt: FieldValue.serverTimestamp(),
+      }, { merge: true });
+      return { ok: true, pending: true };
+    }
     transaction.set(applicationSnap.ref, {
       uid,
       clanId,
@@ -7549,7 +7557,7 @@ exports.applyToClan = onCall({ region: "us-central1", maxInstances: 30, invoker:
       resetGeneration: RESET_GENERATION,
       displayName: normalizePlayerName(profile.playerName || profile.displayName),
       flag: profile.flag || null,
-      kingPower: Math.max(0, Math.floor(safeNumber(profile.kingPower, 0))),
+      kingPower: Math.max(0, Math.floor(safeNumber(statsSnap.data()?.kingPower || profile.kingPower, 0))),
       message: safeString(request.data?.message, 160).trim(),
       status: "pending",
       createdAtMs: nowMs,
@@ -7558,6 +7566,7 @@ exports.applyToClan = onCall({ region: "us-central1", maxInstances: 30, invoker:
       updatedAt: FieldValue.serverTimestamp(),
     });
     transaction.set(profileSnap.ref, { pendingClanApplicationId: clanId, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
+    writeClanAudit(transaction, clanId, uid, "application_submitted");
     return { ok: true, pending: true };
   });
 });
@@ -7565,17 +7574,37 @@ exports.applyToClan = onCall({ region: "us-central1", maxInstances: 30, invoker:
 exports.cancelClanApplication = onCall({ region: "us-central1", maxInstances: 20, invoker: "public" }, async request => {
   const uid = requireAuth(request);
   const clanId = safeString(request.data?.clanId, 128);
-  const batch = db.batch();
-  batch.delete(db.doc(`clans/${clanId}/applications/${uid}`));
-  batch.set(db.doc(`players/${uid}`), { pendingClanApplicationId: FieldValue.delete(), updatedAt: FieldValue.serverTimestamp() }, { merge: true });
-  await batch.commit();
-  return { ok: true };
+  if (!clanId) throw new HttpsError("invalid-argument", "Choose an application to cancel.");
+  return db.runTransaction(async transaction => {
+    const profileRef = db.doc(`players/${uid}`);
+    const applicationRef = db.doc(`clans/${clanId}/applications/${uid}`);
+    const [profileSnap, applicationSnap] = await Promise.all([
+      transaction.get(profileRef),
+      transaction.get(applicationRef),
+    ]);
+    const pendingClanId = safeString(profileSnap.data()?.pendingClanApplicationId, 128);
+    if (pendingClanId && pendingClanId !== clanId) {
+      throw new HttpsError("failed-precondition", "That is not your current clan application.");
+    }
+    if (applicationSnap.exists) transaction.delete(applicationRef);
+    if (profileSnap.exists) {
+      transaction.set(profileRef, {
+        pendingClanApplicationId: FieldValue.delete(),
+        updatedAt: FieldValue.serverTimestamp(),
+      }, { merge: true });
+    }
+    if (applicationSnap.exists || pendingClanId === clanId) {
+      writeClanAudit(transaction, clanId, uid, "application_canceled");
+    }
+    return { ok: true };
+  });
 });
 
 exports.reviewClanApplication = onCall({ region: "us-central1", maxInstances: 30, invoker: "public" }, async request => {
   const uid = requireAuth(request);
   const clanId = safeString(request.data?.clanId, 128);
   const applicantUid = safeString(request.data?.applicantUid, 128);
+  if (!clanId || !applicantUid) throw new HttpsError("invalid-argument", "Choose a clan application to review.");
   const accept = request.data?.accept === true;
   return db.runTransaction(async transaction => {
     const [clanSnap, reviewerSnap, applicantSnap, applicationSnap] = await Promise.all([
@@ -7586,7 +7615,12 @@ exports.reviewClanApplication = onCall({ region: "us-central1", maxInstances: 30
     ]);
     if (!clanSnap.exists || !applicantSnap.exists || !applicationSnap.exists) throw new HttpsError("not-found", "Application was not found.");
     assertClanRole(reviewerSnap.data(), ["leader", "officer"]);
-    if (applicationSnap.data()?.status !== "pending") throw new HttpsError("failed-precondition", "That application is no longer pending.");
+    const application = applicationSnap.data() || {};
+    assertCurrentClan(application);
+    if (safeString(application.uid, 128) !== applicantUid || safeString(application.clanId, 128) !== clanId) {
+      throw new HttpsError("failed-precondition", "That application no longer matches this clan.");
+    }
+    if (application.status !== "pending") throw new HttpsError("failed-precondition", "That application is no longer pending.");
     if (accept) return joinClanTransaction(transaction, { uid: applicantUid, clanId, profileSnap: applicantSnap, clanSnap, applicationRef: applicationSnap.ref });
     transaction.delete(applicationSnap.ref);
     transaction.set(applicantSnap.ref, { pendingClanApplicationId: FieldValue.delete(), updatedAt: FieldValue.serverTimestamp() }, { merge: true });

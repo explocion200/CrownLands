@@ -2618,6 +2618,9 @@ let clanSearchResults = [];
 let clanMessages = [];
 let clanMessagesUnsubscribe = null;
 let activeClanMessageSubscriptionId = "";
+let clanApplicationsUnsubscribe = null;
+let activeClanApplicationsSubscriptionId = "";
+let clanApplicationsError = "";
 let clanStateUnsubscribe = null;
 let activeClanSubscriptionId = "";
 let clanMemberUidSet = new Set();
@@ -16755,9 +16758,14 @@ function stopClanRealtimeSubscriptions({ clear = true } = {}) {
   if (typeof clanMessagesUnsubscribe === "function") clanMessagesUnsubscribe();
   clanMessagesUnsubscribe = null;
   activeClanMessageSubscriptionId = "";
+  if (typeof clanApplicationsUnsubscribe === "function") clanApplicationsUnsubscribe();
+  clanApplicationsUnsubscribe = null;
+  activeClanApplicationsSubscriptionId = "";
+  clanApplicationsError = "";
   if (clear) {
     clanSnapshot = null;
     clanMembers = [];
+    clanApplications = [];
     clanMessages = [];
   }
 }
@@ -16850,6 +16858,35 @@ function startClanMessageSubscription(api, clanId) {
   });
 }
 
+function stopClanApplicationSubscription({ clear = true } = {}) {
+  if (typeof clanApplicationsUnsubscribe === "function") clanApplicationsUnsubscribe();
+  clanApplicationsUnsubscribe = null;
+  activeClanApplicationsSubscriptionId = "";
+  clanApplicationsError = "";
+  if (clear) clanApplications = [];
+}
+
+function startClanApplicationSubscription(api, clanId) {
+  const id = String(clanId || "").trim();
+  if (!id || !api?.subscribeClanApplications) return false;
+  if (activeClanApplicationsSubscriptionId === id && typeof clanApplicationsUnsubscribe === "function") return true;
+  stopClanApplicationSubscription({ clear: true });
+  activeClanApplicationsSubscriptionId = id;
+  clanApplicationsUnsubscribe = api.subscribeClanApplications(id, {
+    onApplications: applications => {
+      clanApplications = Array.isArray(applications) ? applications : [];
+      clanApplicationsError = "";
+      if (activeProfileTab === "clan") renderClanView();
+    },
+    onError: error => {
+      console.warn("Clan application subscription failed", error);
+      clanApplicationsError = "Applications could not be loaded. Reopen the Clan screen to retry.";
+      if (activeProfileTab === "clan") renderClanView();
+    },
+  });
+  return true;
+}
+
 async function refreshClanState(options = {}) {
   const api = getOnlineApi();
   if (!api?.isSignedIn?.()) {
@@ -16883,9 +16920,15 @@ async function refreshClanState(options = {}) {
         clanShieldDraft = null;
         clanShieldEditorTab = "field";
       }
-      clanApplications = ["leader", "officer"].includes(state.clanRole)
-        ? await api.loadClanApplications(state.clanId).catch(() => [])
-        : [];
+      if (["leader", "officer"].includes(state.clanRole)) {
+        const applicationSubscriptionStarted = startClanApplicationSubscription(api, state.clanId);
+        if (!applicationSubscriptionStarted) {
+          clanApplications = await api.loadClanApplications(state.clanId);
+          clanApplicationsError = "";
+        }
+      } else {
+        stopClanApplicationSubscription({ clear: true });
+      }
       startClanMessageSubscription(api, state.clanId);
     } else {
       stopClanRealtimeSubscriptions({ clear: true });
@@ -16945,6 +16988,22 @@ function renderClanShieldChoiceButtons(options, key, currentValue) {
       <small>${escapeHtml(option.label)}</small>
     </button>`;
   }).join("")}</div>`;
+}
+
+function renderClanDiscoveryAction(clan, cooldownMs = 0) {
+  const clanId = String(clan?.id || "");
+  const pendingClanId = String(state?.pendingClanApplicationId || "");
+  if (pendingClanId && pendingClanId === clanId) {
+    return `<button data-clan-action="cancel-application" data-clan-id="${escapeHtml(clanId)}">Cancel application</button>`;
+  }
+  const admissionMode = clan?.admissionMode === "open" ? "open" : "approval";
+  const disabled = Boolean(cooldownMs || Number(clan?.memberCount || 0) >= 30 || pendingClanId);
+  const label = pendingClanId
+    ? "Application pending"
+    : admissionMode === "open"
+      ? "Join"
+      : "Apply";
+  return `<button data-clan-action="${admissionMode === "open" ? "join" : "apply"}" data-clan-id="${escapeHtml(clanId)}" ${disabled ? "disabled" : ""}>${label}</button>`;
 }
 
 function renderClanShieldColorSwatches(key, label, currentValue) {
@@ -17131,7 +17190,7 @@ function renderClanView() {
             <article class="clan-list-row">
               ${renderClanShield(clan.shield || clan.banner, { size: "mini", label: `${clan.name || "Clan"} shield` })}
               <div class="clan-list-copy"><strong>[${escapeHtml(clan.tag || "")}] ${escapeHtml(clan.name || "Clan")}</strong><span>${formatNumber(clan.totalKingPower || 0)} power · ${clan.memberCount || 0}/30 members</span><small>${escapeHtml(clan.description || "No description yet.")}</small></div>
-              <button data-clan-action="${clan.admissionMode === "open" ? "join" : "apply"}" data-clan-id="${escapeHtml(clan.id)}" ${cooldownMs || clan.memberCount >= 30 ? "disabled" : ""}>${state?.pendingClanApplicationId === clan.id ? "Applied" : clan.admissionMode === "open" ? "Join" : "Apply"}</button>
+              ${renderClanDiscoveryAction(clan, cooldownMs)}
             </article>`).join("") : `<p class="clan-muted">No clans matched your search.</p>`}</div>
         </section>
       </div>`;
@@ -17162,7 +17221,11 @@ function renderClanView() {
               ${canManage && member.uid !== getCurrentOnlineUid() && member.role === "member" ? `<button data-clan-action="kick" data-member-id="${escapeHtml(member.uid)}">Remove</button>` : ""}
             </div>
           </article>`).join("")}</div>
-        ${canManage && clanApplications.length ? `<div class="clan-applications"><h4>Applications</h4>${clanApplications.map(application => `<article><span>${escapeHtml(application.displayName || "Ruler")} · ${formatNumber(application.kingPower || 0)} power</span><button data-clan-action="accept" data-member-id="${escapeHtml(application.uid)}">Accept</button><button data-clan-action="reject" data-member-id="${escapeHtml(application.uid)}">Reject</button></article>`).join("")}</div>` : ""}
+        ${canManage ? `<div class="clan-applications"><h4>Applications</h4>${clanApplicationsError
+          ? `<p class="clan-warning">${escapeHtml(clanApplicationsError)}</p>`
+          : clanApplications.length
+            ? clanApplications.map(application => `<article><span>${escapeHtml(application.displayName || "Ruler")} · ${formatNumber(application.kingPower || 0)} power</span><button data-clan-action="accept" data-member-id="${escapeHtml(application.uid)}">Accept</button><button data-clan-action="reject" data-member-id="${escapeHtml(application.uid)}">Reject</button></article>`).join("")
+            : `<p class="clan-muted">No pending applications.</p>`}</div>` : ""}
         <button class="profile-secondary-btn clan-leave" data-clan-action="leave">${canLead && clanMembers.length === 1 ? "Disband Clan" : "Leave Clan"}</button>
       </section>
       <section class="clan-chat-panel">
@@ -17183,6 +17246,7 @@ async function runClanAction(action, payload = {}) {
     const method = {
       join: "joinOpenClan",
       apply: "applyToClan",
+      "cancel-application": "cancelClanApplication",
       accept: "reviewClanApplication",
       reject: "reviewClanApplication",
       promote: "promoteClanMember",
@@ -17194,7 +17258,13 @@ async function runClanAction(action, payload = {}) {
     if (!method || !api[method]) return;
     const result = await api[method](payload);
     if (Number.isFinite(Number(result?.gold))) state.gold = Number(result.gold);
-    showToast(action === "apply" ? "Application sent." : action === "report" ? "Message reported." : "Clan updated.");
+    showToast(action === "apply"
+      ? "Application sent."
+      : action === "cancel-application"
+        ? "Application canceled."
+        : action === "report"
+          ? "Message reported."
+          : "Clan updated.");
     await refreshClanState({ silent: true });
   } catch (error) {
     showToast(error?.message || "Clan action failed.");
