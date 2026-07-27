@@ -521,5 +521,13 @@ if (!clientSource.includes("slider.max = String(sliderSendLimit)")
   || !clientSource.includes("selectedTroopAmount = clamp(selectedTroopAmount, 1, getTroopSliderSendLimit(source, target))")) {
   throw new Error("The visible slider and final confirmation do not reapply the legal troop cap.");
 }
+const reopenProtectionSource = readFunction(clientSource, "reopenAttackProtectionConfirmation");
+const showTroopSliderSource = readFunction(clientSource, "showTroopSliderModalAsync");
+if (!reopenProtectionSource.includes("window.setTimeout")
+  || !reopenProtectionSource.includes("attackProtection: refreshedProtectionSnapshot")
+  || !showTroopSliderSource.includes("options.attackProtection")
+  || !showTroopSliderSource.includes("Promise.resolve({ attackProtection: providedAttackProtection })")) {
+  throw new Error("A changed protection quote can close the attack screen instead of reopening with the refreshed limit.");
+}
 
 console.log("Validated weaker-player protection v2 boundaries, two-stage breaches, caps, raids, XP claims, previews, and stable colors.");

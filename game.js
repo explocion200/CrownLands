@@ -12842,20 +12842,38 @@ function getChangedAttackProtectionFromError(error) {
 }
 
 function reopenAttackProtectionConfirmation(mission, refreshedProtection) {
-  const source = cityById(mission?.fromId);
-  const target = getArmyTargetById(mission?.toId);
+  const sourceId = mission?.fromId;
+  const targetId = mission?.toId;
+  const source = cityById(sourceId);
+  const target = getArmyTargetById(targetId);
   if (!source || !target || source.owner !== "player") return;
-  selectedSourceId = source.id;
-  selectedTargetId = target.id;
-  sendMode = true;
-  activeAttackProtectionPreview = normalizeAttackProtectionSnapshot(refreshedProtection);
-  selectedTroopAmount = clamp(
-    Math.floor(Number(mission.requestedTroops) || 1),
-    1,
-    Math.max(1, Math.min(source.troops, activeAttackProtectionPreview?.maxTroops || source.troops))
-  );
+  const refreshedProtectionSnapshot = normalizeAttackProtectionSnapshot(refreshedProtection);
+  const requestedTroops = Math.max(1, Math.floor(Number(mission.requestedTroops) || 1));
+  troopSliderActive = false;
   showToast("Protection changed. Confirm the refreshed limit.");
-  void showTroopSliderModalAsync(source, target);
+  window.setTimeout(() => {
+    const freshSource = cityById(sourceId);
+    const freshTarget = getArmyTargetById(targetId);
+    if (!freshSource || !freshTarget || freshSource.owner !== "player") {
+      showToast("Order canceled. The map changed.");
+      return;
+    }
+    selectedSourceId = freshSource.id;
+    selectedTargetId = freshTarget.id;
+    sendMode = true;
+    activeAttackProtectionPreview = refreshedProtectionSnapshot;
+    selectedTroopAmount = clamp(
+      requestedTroops,
+      1,
+      Math.max(1, Math.min(
+        freshSource.troops,
+        refreshedProtectionSnapshot?.maxTroops || freshSource.troops
+      ))
+    );
+    void showTroopSliderModalAsync(freshSource, freshTarget, {
+      attackProtection: refreshedProtectionSnapshot,
+    });
+  }, 0);
 }
 
 function applyServerMovementToMission(mission, movement = null) {
@@ -20063,7 +20081,7 @@ async function loadAttackProtectionPreview(source, target) {
   return createAttackProtectionSnapshot(source, target, source.troops, "player");
 }
 
-async function showTroopSliderModalAsync(source, target) {
+async function showTroopSliderModalAsync(source, target, options = {}) {
   if (!source || !target || source.owner !== "player" || source.id === target.id) return;
   if (source.troops < 1) {
     showToast("No troops available to send.");
@@ -20089,9 +20107,10 @@ async function showTroopSliderModalAsync(source, target) {
 
   cancelPendingRouteWorkerRequests("A newer route was selected.");
   const requestId = ++activeTroopRouteRequestId;
+  const providedAttackProtection = normalizeAttackProtectionSnapshot(options.attackProtection);
   troopSliderActive = true;
   activeTroopSliderRoute = null;
-  activeAttackProtectionPreview = null;
+  activeAttackProtectionPreview = providedAttackProtection;
   showTroopRouteLoadingModal(source, target, isTransfer);
 
   await waitForSetupLoadingPaint(0);
@@ -20099,9 +20118,11 @@ async function showTroopSliderModalAsync(source, target) {
     findRouteAsync(source, target),
     needsDefenderPower ? ensureAuthoritativeCityOwnerKingPower(target) : Promise.resolve(0),
     needsDefenderPower
-      ? loadAttackProtectionPreview(source, target)
-        .then(attackProtection => ({ attackProtection }))
-        .catch(error => ({ error }))
+      ? providedAttackProtection
+        ? Promise.resolve({ attackProtection: providedAttackProtection })
+        : loadAttackProtectionPreview(source, target)
+          .then(attackProtection => ({ attackProtection }))
+          .catch(error => ({ error }))
       : Promise.resolve({ attackProtection: null }),
   ]);
   if (requestId !== activeTroopRouteRequestId) return;
