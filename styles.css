@@ -5842,6 +5842,99 @@ button.daily-reward-card.available:disabled {
   box-shadow: 0 5px 12px rgba(0,0,0,.4);
 }
 .troop-slider-limits { display: flex; justify-content: space-between; margin-top: .35rem; color: var(--muted); font-size: .68rem; font-weight: 900; }
+.swift-march-launch-option {
+  min-width: 0;
+  min-height: 50px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: .7rem;
+  align-items: center;
+  padding: .48rem .68rem;
+  border-radius: 14px;
+  background: rgba(30, 57, 38, .72);
+  border: 1px solid rgba(139, 205, 118, .42);
+}
+.swift-march-launch-copy {
+  min-width: 0;
+}
+.swift-march-launch-copy strong,
+.swift-march-launch-copy small {
+  display: block;
+}
+.swift-march-launch-copy strong {
+  overflow: hidden;
+  color: #efffdc;
+  font-size: .8rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.swift-march-launch-copy small {
+  color: #b9d7ad;
+  font-size: .66rem;
+  font-weight: 850;
+}
+.swift-march-launch-option.unavailable {
+  opacity: .58;
+  border-color: rgba(255,255,255,.16);
+  background: rgba(255,255,255,.05);
+}
+.swift-march-launch-toggle {
+  min-width: 82px;
+  display: grid;
+  grid-template-columns: auto 42px;
+  gap: .42rem;
+  align-items: center;
+  justify-content: end;
+  color: #d9ead3;
+  cursor: pointer;
+  font-size: .7rem;
+  font-weight: 950;
+}
+.swift-march-launch-toggle input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+.swift-march-launch-toggle i {
+  position: relative;
+  width: 42px;
+  height: 24px;
+  display: block;
+  border-radius: 999px;
+  background: #263c48;
+  border: 1px solid rgba(255,255,255,.2);
+  transition: background .16s ease, border-color .16s ease;
+}
+.swift-march-launch-toggle i::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #d4dde2;
+  box-shadow: 0 2px 6px rgba(0,0,0,.4);
+  transition: transform .16s ease, background .16s ease;
+}
+.swift-march-launch-toggle input:checked + i {
+  background: #477c3d;
+  border-color: rgba(177, 220, 139, .7);
+}
+.swift-march-launch-toggle input:checked + i::after {
+  transform: translateX(18px);
+  background: #f0ffde;
+}
+.swift-march-launch-toggle input:focus-visible + i {
+  outline: 2px solid #f3d27a;
+  outline-offset: 2px;
+}
+.swift-march-launch-toggle:has(input:disabled) {
+  cursor: not-allowed;
+}
 .troop-slider-preview {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -5882,6 +5975,7 @@ button.daily-reward-card.available:disabled {
   .troop-slider-control { padding: .48rem .62rem .4rem; }
   .troop-slider-readout { margin-bottom: .28rem; }
   .troop-slider-readout strong { font-size: 1.08rem; }
+  .swift-march-launch-option { min-height: 42px; padding: .36rem .55rem; }
   .troop-slider-preview > div { padding: .4rem .55rem; }
   .troop-slider-actions button { min-height: 40px; }
   .modal.scout-report-modal .modal-card { padding: .72rem; }

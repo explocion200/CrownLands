@@ -2601,6 +2601,7 @@ function normalizeArmyPayload(data = {}, uid = "") {
         : null,
     attackProtection: raw.attackProtection && typeof raw.attackProtection === "object" ? raw.attackProtection : null,
     demoAttack: raw.demoAttack && typeof raw.demoAttack === "object" ? raw.demoAttack : null,
+    useSwiftMarchOrder: raw.useSwiftMarchOrder === true || data.useSwiftMarchOrder === true,
   };
 }
 
@@ -10263,7 +10264,31 @@ exports.sendArmyOrder = timedCallable("sendArmyOrder", { region: "us-central1", 
       }
     }
 
-    const duration = calculateTravelTime({
+    const useSwiftMarchOrder = Boolean(order.useSwiftMarchOrder);
+    if (useSwiftMarchOrder) {
+      const swiftMarchArmy = {
+        ownerUid: uid,
+        kind: resolvedKind,
+        targetType: order.targetType,
+        relinquishTransfer: false,
+      };
+      if (!canUseSwiftMarchOrderOnTransfer(swiftMarchArmy, source, target, uid)) {
+        throw new HttpsError(
+          "failed-precondition",
+          "Swift March Orders only work on transfers between owned cities or reinforcements to an owned Stronghold."
+        );
+      }
+      const ownedSwiftMarchOrders = Math.max(
+        0,
+        Math.floor(safeNumber(attackerEconomy.shopItems[SWIFT_MARCH_ORDER_ITEM_ID], 0))
+      );
+      if (ownedSwiftMarchOrders <= 0) {
+        throw new HttpsError("failed-precondition", "You do not have a Swift March Order.");
+      }
+      attackerEconomy.shopItems[SWIFT_MARCH_ORDER_ITEM_ID] = ownedSwiftMarchOrders - 1;
+    }
+
+    const originalDuration = calculateTravelTime({
       pathLength: validatedRoute.pathLength,
       troopCount: troops,
       kind: resolvedKind,
@@ -10271,6 +10296,15 @@ exports.sendArmyOrder = timedCallable("sendArmyOrder", { region: "us-central1", 
       speedMultiplier: skillMultiplier(attackerProfile, "marchOrders")
         * (1 + Math.max(0, safeNumber(attackerEconomy.bonuses.marchSpeedBonusPercent, 0)) / 100),
     });
+    const originalArrivesAtMs = nowMs + Math.ceil(originalDuration * 1000);
+    const swiftMarchDurationMs = useSwiftMarchOrder
+      ? Math.max(
+          SWIFT_MARCH_MINIMUM_REMAINING_MS,
+          Math.ceil((originalArrivesAtMs - nowMs) * SWIFT_MARCH_REMAINING_TIME_MULTIPLIER)
+        )
+      : 0;
+    const duration = useSwiftMarchOrder ? swiftMarchDurationMs / 1000 : originalDuration;
+    const arrivesAtMs = useSwiftMarchOrder ? nowMs + swiftMarchDurationMs : originalArrivesAtMs;
     const movement = {
       id: order.id,
       worldId: ONLINE_WORLD_ID,
@@ -10308,7 +10342,13 @@ exports.sendArmyOrder = timedCallable("sendArmyOrder", { region: "us-central1", 
       defenderKingPower,
       attackProtection,
       launchedAtMs: nowMs,
-      arrivesAtMs: nowMs + Math.ceil(duration * 1000),
+      arrivesAtMs,
+      ...(useSwiftMarchOrder ? {
+        swiftMarchUsedAtMs: nowMs,
+        swiftMarchOriginalArrivesAtMs: originalArrivesAtMs,
+        swiftMarchProgressAtUse: 0,
+        swiftMarchRemainingMultiplier: SWIFT_MARCH_REMAINING_TIME_MULTIPLIER,
+      } : {}),
       status: "active",
       createdByServer: true,
       reinforcementModelVersion: resolvedKind === "reinforce" ? REINFORCEMENT_MODEL_VERSION : 0,

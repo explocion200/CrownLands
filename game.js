@@ -157,6 +157,8 @@ const ROYAL_TAX_DECREE_GOLD_PRODUCTION_BONUS_PERCENT = economyNumber("shopItems.
 const VEIL_OF_SILENCE_ITEM_ID = "veil_of_silence_30m";
 const VEIL_OF_SILENCE_DURATION_MS = economyNumber("shopItems.veil_of_silence_30m.effectDurationMinutes", 5) * 60 * 1000;
 const SWIFT_MARCH_ORDER_ITEM_ID = "swift_march_order";
+const SWIFT_MARCH_REMAINING_TIME_MULTIPLIER = 0.5;
+const SWIFT_MARCH_MINIMUM_REMAINING_SECONDS = 1;
 const RECALL_HORN_ITEM_ID = "recall_horn";
 const DAILY_LOGIN_REWARD_SCHEMA_VERSION = 1;
 const DAILY_LOGIN_REWARD_DAYS = Object.freeze(
@@ -2484,6 +2486,7 @@ let troopSliderActive = false;
 let activeTroopSliderRoute = null;
 let activeAttackProtectionPreview = null;
 let activeTroopOrderKind = "";
+let activeSwiftMarchOrderSelected = false;
 let activeTroopRouteRequestId = 0;
 let scoutNearbySourceId = null;
 let regroupSourceId = null;
@@ -12878,6 +12881,7 @@ function toOnlineArmyMovement(mission) {
     attackProtection: normalizeAttackProtectionSnapshot(mission.attackProtection),
     acceptedAttackProtection: normalizeAttackProtectionSnapshot(mission.acceptedAttackProtection),
     demoAttack: normalizeDemoAttackSnapshot(mission.demoAttack),
+    useSwiftMarchOrder: Boolean(mission.useSwiftMarchOrder),
     launchedAtMs: Math.max(0, Number(mission.launchedAtMs) || Date.now()),
     arrivesAtMs: Math.max(0, Number(mission.arrivesAtMs) || Date.now()),
     status: "active",
@@ -15958,7 +15962,18 @@ function launchAttack(sourceId, targetId, percent, owner, exactTroops = null, op
   const send = attackProtection
     ? Math.min(requestedSend, attackProtection.maxTroops)
     : requestedSend;
-  const duration = travelTime(source, target, owner, route.length, send, kind);
+  const baseDuration = travelTime(source, target, owner, route.length, send, kind);
+  const useSwiftMarchOrder = Boolean(
+    options.useSwiftMarchOrder
+    && kind === "transfer"
+    && canUseSwiftMarchOrderOnLaunch(source, target)
+  );
+  const duration = useSwiftMarchOrder
+    ? Math.max(
+        SWIFT_MARCH_MINIMUM_REMAINING_SECONDS,
+        baseDuration * SWIFT_MARCH_REMAINING_TIME_MULTIPLIER
+      )
+    : baseDuration;
   const mission = {
     id: attackIdCounter++,
     owner,
@@ -15979,6 +15994,7 @@ function launchAttack(sourceId, targetId, percent, owner, exactTroops = null, op
     attackProtection,
     acceptedAttackProtection,
     demoAttack: null,
+    useSwiftMarchOrder,
   };
   prepareOnlineArmyMission(mission);
 
@@ -15997,9 +16013,12 @@ function launchAttack(sourceId, targetId, percent, owner, exactTroops = null, op
         const acceptedProtection = normalizeAttackProtectionSnapshot(mission.attackProtection) || attackProtection;
         const peaceShieldDeactivated = Boolean(mission.peaceShieldDeactivated);
         if (acceptedKind === "transfer") {
+          const swiftMarchApplied = Math.max(0, Number(mission.swiftMarchUsedAtMs) || 0) > 0;
           if (!options.silent) {
-            addLog(`You moved ${formatNumber(acceptedTroops)} troops from ${source.name} to ${target.name}.`);
-            showToast(`Reinforcements moving: ${source.name} \u2192 ${target.name}`);
+            addLog(`You moved ${formatNumber(acceptedTroops)} troops from ${source.name} to ${target.name}${swiftMarchApplied ? " with a Swift March Order" : ""}.`);
+            showToast(swiftMarchApplied
+              ? `Swift reinforcements moving: ${source.name} \u2192 ${target.name}`
+              : `Reinforcements moving: ${source.name} \u2192 ${target.name}`);
           }
         } else if (acceptedKind === "reinforce") {
           const shieldText = peaceShieldDeactivated ? " Your Royal Peace Shield was removed." : "";
@@ -20836,6 +20855,20 @@ function getTroopSliderSendLimit(source, target) {
     : availableTroops;
 }
 
+function canUseSwiftMarchOrderOnLaunch(source, target) {
+  if (
+    !source
+    || !target
+    || source.owner !== "player"
+    || target.owner !== "player"
+    || isRewardCampTarget(target)
+  ) {
+    return false;
+  }
+  if (isStronghold(target)) return true;
+  return !isStronghold(source);
+}
+
 function showTroopSliderModalWithRoute(source, target, route, options = {}) {
   activeTroopSliderRoute = {
     sourceId: source.id,
@@ -20843,11 +20876,18 @@ function showTroopSliderModalWithRoute(source, target, route, options = {}) {
     route: cloneRoute(route),
   };
   activeAttackProtectionPreview = normalizeAttackProtectionSnapshot(options.attackProtection);
+  activeSwiftMarchOrderSelected = false;
   const orderKind = getTroopOrderKind(target, options.orderKind || activeTroopOrderKind);
   activeTroopOrderKind = orderKind;
   const isTransfer = orderKind === "transfer";
   const isReinforcement = orderKind === "reinforce";
   const campTarget = isRewardCampTarget(target);
+  const swiftMarchEligible = canUseSwiftMarchOrderOnLaunch(source, target);
+  const swiftMarchOrderCount = Math.max(
+    0,
+    Math.floor(Number(ensureShopItems()[SWIFT_MARCH_ORDER_ITEM_ID]) || 0)
+  );
+  const swiftMarchDisabled = swiftMarchOrderCount <= 0 || !usesServerArmyAuthority();
   const mainCityBlockReason = isTransfer || isReinforcement || campTarget
     ? ""
     : getMainCityAttackBlockReason(target, "player");
@@ -20911,6 +20951,20 @@ function showTroopSliderModalWithRoute(source, target, route, options = {}) {
         <div class="troop-slider-limits"><span>1</span><span id="troopSliderMaxLabel">${demoLimited ? "Protected max" : "Max"} ${formatNumber(sliderSendLimit)}</span></div>
       </div>
 
+      ${swiftMarchEligible ? `
+        <div class="swift-march-launch-option${swiftMarchDisabled ? " unavailable" : ""}">
+          <div class="swift-march-launch-copy">
+            <strong>Swift March Order</strong>
+            <small id="swiftMarchLaunchAvailable">Available: ${formatNumber(swiftMarchOrderCount)}</small>
+          </div>
+          <label class="swift-march-launch-toggle" for="swiftMarchLaunchToggle">
+            <span id="swiftMarchLaunchState">Off</span>
+            <input id="swiftMarchLaunchToggle" type="checkbox" role="switch" aria-label="Use a Swift March Order" ${swiftMarchDisabled ? "disabled" : ""} />
+            <i aria-hidden="true"></i>
+          </label>
+        </div>
+      ` : ""}
+
       <div id="troopSliderPreview" class="troop-slider-preview"></div>
 
       <div class="troop-slider-actions">
@@ -20925,6 +20979,20 @@ function showTroopSliderModalWithRoute(source, target, route, options = {}) {
   const slider = modalBody.querySelector("#troopAmountSlider");
   slider.addEventListener("input", () => {
     selectedTroopAmount = clamp(Math.floor(Number(slider.value)), 1, getTroopSliderSendLimit(source, target));
+    updateTroopSliderModal(source, target, route);
+  });
+  const swiftMarchToggle = modalBody.querySelector("#swiftMarchLaunchToggle");
+  swiftMarchToggle?.addEventListener("change", () => {
+    const available = Math.max(
+      0,
+      Math.floor(Number(ensureShopItems()[SWIFT_MARCH_ORDER_ITEM_ID]) || 0)
+    );
+    activeSwiftMarchOrderSelected = Boolean(
+      swiftMarchToggle.checked
+      && available > 0
+      && usesServerArmyAuthority()
+      && canUseSwiftMarchOrderOnLaunch(source, target)
+    );
     updateTroopSliderModal(source, target, route);
   });
   modalBody.querySelector("#troopSliderConfirm").addEventListener("click", confirmTroopSliderOrder);
@@ -20950,13 +21018,37 @@ function updateTroopSliderModal(source, target, route) {
   if (maxLabel) maxLabel.textContent = `${demoLimited ? "Protected max" : "Max"} ${formatNumber(sliderSendLimit)}`;
 
   const orderKind = getTroopOrderKind(target, activeTroopOrderKind);
-  const travel = travelTime(source, target, "player", route.length, selectedTroopAmount, orderKind);
+  const swiftMarchToggle = modalBody.querySelector("#swiftMarchLaunchToggle");
+  const swiftMarchOrderCount = Math.max(
+    0,
+    Math.floor(Number(ensureShopItems()[SWIFT_MARCH_ORDER_ITEM_ID]) || 0)
+  );
+  const swiftMarchAvailable = swiftMarchOrderCount > 0 && usesServerArmyAuthority();
+  if (swiftMarchToggle) {
+    if (!swiftMarchAvailable) activeSwiftMarchOrderSelected = false;
+    swiftMarchToggle.disabled = !swiftMarchAvailable;
+    swiftMarchToggle.checked = activeSwiftMarchOrderSelected;
+    const option = swiftMarchToggle.closest(".swift-march-launch-option");
+    option?.classList.toggle("unavailable", !swiftMarchAvailable);
+    const availableLabel = modalBody.querySelector("#swiftMarchLaunchAvailable");
+    const stateLabel = modalBody.querySelector("#swiftMarchLaunchState");
+    if (availableLabel) availableLabel.textContent = `Available: ${formatNumber(swiftMarchOrderCount)}`;
+    if (stateLabel) stateLabel.textContent = activeSwiftMarchOrderSelected ? "On" : "Off";
+  }
+
+  const baseTravel = travelTime(source, target, "player", route.length, selectedTroopAmount, orderKind);
+  const travel = activeSwiftMarchOrderSelected
+    ? Math.max(
+        SWIFT_MARCH_MINIMUM_REMAINING_SECONDS,
+        baseTravel * SWIFT_MARCH_REMAINING_TIME_MULTIPLIER
+      )
+    : baseTravel;
   const previewEl = modalBody.querySelector("#troopSliderPreview");
   if (orderKind === "transfer") {
     previewEl.className = "troop-slider-preview transfer";
     previewEl.innerHTML = `
       <div><span>Arrival</span><strong>${formatNumber(target.troops + selectedTroopAmount)} troops</strong></div>
-      <div><span>Travel time</span><strong>About ${formatDuration(travel)}</strong><small>${escapeHtml(routeSummary)}</small></div>
+      <div><span>Travel time</span><strong>About ${formatDuration(travel)}</strong>${activeSwiftMarchOrderSelected ? `<small>Swift March Order &middot; normally ${formatDuration(baseTravel)}</small>` : ""}<small>${escapeHtml(routeSummary)}</small></div>
     `;
     return;
   }
@@ -21033,6 +21125,7 @@ function confirmTroopSliderOrder() {
     troopSliderActive = false;
     activeTroopSliderRoute = null;
     activeAttackProtectionPreview = null;
+    activeSwiftMarchOrderSelected = false;
     modal.classList.remove("troop-slider-modal");
     if (modal.open) modal.close();
     clearSelection(false);
@@ -21053,12 +21146,14 @@ function confirmTroopSliderOrder() {
     route: cachedRoute,
     attackProtection: activeAttackProtectionPreview,
     kind: activeTroopOrderKind,
+    useSwiftMarchOrder: activeSwiftMarchOrderSelected && canUseSwiftMarchOrderOnLaunch(source, target),
   });
   if (!launched) return;
   troopSliderActive = false;
   activeTroopSliderRoute = null;
   activeAttackProtectionPreview = null;
   activeTroopOrderKind = "";
+  activeSwiftMarchOrderSelected = false;
   modal.classList.remove("troop-slider-modal");
   if (modal.open) modal.close();
   clearSelection(false);
@@ -21074,6 +21169,7 @@ function cancelSendMode() {
   activeTroopSliderRoute = null;
   activeAttackProtectionPreview = null;
   activeTroopOrderKind = "";
+  activeSwiftMarchOrderSelected = false;
   renderAll();
 }
 
