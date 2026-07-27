@@ -17,8 +17,18 @@ function requires(source, pattern, message) {
 requires(server, /ARMY_ORDER_KINDS\s*=\s*Object\.freeze\(\[[^\]]*"reinforce"/, "Server army orders do not include reinforce.");
 requires(
   server,
-  /resolvedKind === "reinforce"[\s\S]*?sameActiveClan[\s\S]*?status !== "active"[\s\S]*?cannot reinforce a main city/i,
-  "Reinforcement launch does not validate canonical clan status and main-city protection."
+  /resolvedKind === "reinforce"[\s\S]*?sameActiveClan[\s\S]*?status !== "active"[\s\S]*?getActiveClanReinforcementTargetsForLaunch/,
+  "Reinforcement launch does not validate canonical clan status."
+);
+assert.doesNotMatch(
+  server,
+  /resolvedKind === "reinforce"[\s\S]{0,1200}?cannot reinforce a main city/i,
+  "Server launch still blocks proactive reinforcement of an allied main city."
+);
+assert.doesNotMatch(
+  server,
+  /effectiveKind === "reinforce"[\s\S]{0,1200}?outcome:\s*"main_city_return"/,
+  "Server arrival still returns reinforcement sent to an allied main city."
 );
 requires(
   server,
@@ -100,6 +110,16 @@ requires(
 requires(firebaseClient, /returnClanReinforcement[\s\S]*?subscribePlayerReinforcements/, "Firebase reinforcement callable or subscription is missing.");
 requires(client, /beginClanReinforcement[\s\S]*?orderKind:\s*"reinforce"/, "Clan ally Reinforce client action is missing.");
 requires(client, /Launching clan reinforcements immediately removes your Royal Peace Shield/, "Reinforcement shield warning is missing.");
+requires(
+  client,
+  /const attackBlockLabel = clanAlly \? "Reinforce"[\s\S]*?aria-label="\$\{clanAlly \? `Reinforce/,
+  "Allied main-city markers do not expose the proactive Reinforce action."
+);
+assert.doesNotMatch(
+  client,
+  /clan ally's home city cannot be reinforced|Home cities cannot be reinforced|Clan allies cannot reinforce a home city/i,
+  "Client still routes allied main-city support into the protected-home UI."
+);
 requires(
   client,
   /CLAN_REINFORCEMENT_ACTIVE_LIMIT\s*=\s*2[\s\S]*?getClanReinforcementBlockReason[\s\S]*?already have one active reinforcement[\s\S]*?at most \$\{CLAN_REINFORCEMENT_ACTIVE_LIMIT\}/,

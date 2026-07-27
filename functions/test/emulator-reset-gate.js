@@ -519,6 +519,15 @@ async function main() {
     `islands/${clanReinforcementSourceClaim.islandId}/cities/${clanReinforcementSourceClaim.cityId}`
   );
   const clanReinforcementSource = (await clanReinforcementSourceRef.get()).data() || {};
+  const clanApplicantProfileBeforeReinforcement = (await clanApplicantRef.get()).data() || {};
+  const originalApplicantMainCity = {
+    id: clanApplicantProfileBeforeReinforcement.mainCityId || clanReinforcementHolderClaim.cityId,
+    islandId: clanApplicantProfileBeforeReinforcement.mainIslandId || clanReinforcementHolderClaim.islandId,
+    regionId: clanApplicantProfileBeforeReinforcement.mainRegionId || clanReinforcementHolderClaim.mainRegionId,
+  };
+  const originalApplicantMainCityRef = db.doc(
+    `islands/${originalApplicantMainCity.islandId}/cities/${originalApplicantMainCity.id}`
+  );
   const shieldExpiresAtMs = Date.now() + 6 * 60 * 60 * 1000;
   await Promise.all([
     clanLeaderRef.set({
@@ -563,20 +572,25 @@ async function main() {
       Number(originalTarget.x) - Number(clanReinforcementSource.x),
       Number(originalTarget.y) - Number(clanReinforcementSource.y)
     );
-    await candidate.ref.set({
-      ownerKind: "player",
-      ownerUid: clanApplicant.uid,
-      ownerName: "Ruler 50",
-      ownerFlag: null,
-      ownerShieldExpiresAtMs: shieldExpiresAtMs,
-      // Simulate a stale former-home snapshot while the holder's canonical
-      // player profile points to their actual current main city.
-      isMainCity: true,
-      level: 1,
-      defense: 1,
-      troops: 100,
-      troopFloat: 100,
-    }, { merge: true });
+    await Promise.all([
+      candidate.ref.set({
+        ownerKind: "player",
+        ownerUid: clanApplicant.uid,
+        ownerName: "Ruler 50",
+        ownerFlag: null,
+        ownerShieldExpiresAtMs: shieldExpiresAtMs,
+        isMainCity: true,
+        level: 1,
+        defense: 1,
+        troops: 100,
+        troopFloat: 100,
+      }, { merge: true }),
+      clanApplicantRef.set({
+        mainCityId: candidate.id,
+        mainIslandId: clanReinforcementSourceClaim.islandId,
+        mainRegionId: clanReinforcementSourceClaim.mainRegionId,
+      }, { merge: true }),
+    ]);
     try {
       firstClanReinforcement = await callFunction("sendArmyOrder", clanLeader.token, {
         army: {
@@ -618,8 +632,8 @@ async function main() {
   }
   assert(clanReinforcementTargetDoc && firstClanReinforcement, "No reachable clan reinforcement target was available.");
   assert(
-    clanReinforcementTargetDoc.id !== (await clanApplicantRef.get()).data()?.mainCityId,
-    "The stale former-home regression target unexpectedly matched the holder's canonical main city."
+    clanReinforcementTargetDoc.id === (await clanApplicantRef.get()).data()?.mainCityId,
+    "The proactive reinforcement target was not the holder's canonical main city."
   );
   assert(firstClanReinforcement?.movement?.kind === "reinforce", "Clan support did not launch as a reinforcement.");
   assert(firstClanReinforcement?.peaceShieldDeactivated === true, "Launching clan support did not drop the sender's shield.");
@@ -664,6 +678,25 @@ async function main() {
   );
   const reinforcementId = firstClanReinforcementArrival.reinforcementId;
   assert(reinforcementId, "Clan reinforcement arrival did not return its contribution id.");
+  await Promise.all([
+    clanApplicantRef.set({
+      mainCityId: originalApplicantMainCity.id,
+      mainIslandId: originalApplicantMainCity.islandId,
+      mainRegionId: originalApplicantMainCity.regionId,
+    }, { merge: true }),
+    db.doc(`players/${clanApplicant.uid}/stats/global`).set({
+      mainCityId: originalApplicantMainCity.id,
+      mainIslandId: originalApplicantMainCity.islandId,
+      mainRegionId: originalApplicantMainCity.regionId,
+    }, { merge: true }),
+    db.doc(`leaderboards/${realm.resetGeneration}/entries/${clanApplicant.uid}`).set({
+      mainCityId: originalApplicantMainCity.id,
+      mainIslandId: originalApplicantMainCity.islandId,
+      mainRegionId: originalApplicantMainCity.regionId,
+    }, { merge: true }),
+    originalApplicantMainCityRef.set({ isMainCity: true }, { merge: true }),
+    clanReinforcementTargetDoc.ref.set({ isMainCity: false }, { merge: true }),
+  ]);
 
   let duplicateTargetError = null;
   try {

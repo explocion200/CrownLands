@@ -15892,10 +15892,6 @@ function launchAttack(sourceId, targetId, percent, owner, exactTroops = null, op
       if (owner === "player") showToast("Clan reinforcements require a current allied holding.");
       return false;
     }
-    if (!campTarget && isProtectedMainCity(target)) {
-      if (owner === "player") showToast("A clan ally's home city cannot be reinforced.");
-      return false;
-    }
     const reinforcementBlockReason = getClanReinforcementBlockReason(target);
     if (reinforcementBlockReason) {
       if (owner === "player") showToast(reinforcementBlockReason);
@@ -18840,11 +18836,10 @@ function renderSelectedForeignWheel(city) {
   const clanAlly = Boolean(friendlyBlockReason);
   const scoutBlockReason = friendlyBlockReason || getMainCityScoutBlockReason(city, "player");
   const canScout = !scoutBlockReason && !pendingScout && playerCities().some(playerCity => playerCity.troops >= 1);
-  const alliedHomeCity = clanAlly && isProtectedMainCity(city);
   const mainCityBlockReason = clanAlly ? "" : getMainCityAttackBlockReason(city, "player");
   const shieldBlockReason = clanAlly ? "" : getPeaceShieldAttackBlockReason(city, "player");
-  const attackBlockLabel = alliedHomeCity ? "Home City" : clanAlly ? "Reinforce" : mainCityBlockReason ? "Main City" : shieldBlockReason ? "Shielded" : "Attack";
-  const canAttack = !alliedHomeCity && !mainCityBlockReason && !shieldBlockReason && playerCities().some(playerCity => playerCity.troops > 0);
+  const attackBlockLabel = clanAlly ? "Reinforce" : mainCityBlockReason ? "Main City" : shieldBlockReason ? "Shielded" : "Attack";
+  const canAttack = !mainCityBlockReason && !shieldBlockReason && playerCities().some(playerCity => playerCity.troops > 0);
   wheel.className = "city-action-wheel foreign-city-action-wheel";
   if (clanAlly) wheel.classList.add("clan-ally-action-wheel");
   wheel.style.left = `${mapPoint.x}px`;
@@ -18855,7 +18850,7 @@ function renderSelectedForeignWheel(city) {
       <span class="wheel-icon" aria-hidden="true">&#128301;</span>
       <span class="wheel-action-name">${friendlyBlockReason ? "Clan Ally" : scoutBlockReason ? "Main City" : pendingScout ? "Scouting" : report ? "Rescout" : "Scout"}</span>
     </button>
-    <button class="city-wheel-action wheel-attack${clanAlly ? " wheel-reinforce" : ""}" type="button" aria-label="${alliedHomeCity ? "Clan allies cannot reinforce a home city" : clanAlly ? `Reinforce ${escapeHtml(city.name)}` : mainCityBlockReason ? escapeHtml(mainCityBlockReason) : `Attack ${escapeHtml(city.name)}`}" ${canAttack ? "" : "disabled"}>
+    <button class="city-wheel-action wheel-attack${clanAlly ? " wheel-reinforce" : ""}" type="button" aria-label="${clanAlly ? `Reinforce ${escapeHtml(city.name)}` : mainCityBlockReason ? escapeHtml(mainCityBlockReason) : `Attack ${escapeHtml(city.name)}`}" ${canAttack ? "" : "disabled"}>
       <span class="wheel-icon" aria-hidden="true">${clanAlly ? "&#8649;" : "&#9876;"}</span>
       <span class="wheel-action-name">${attackBlockLabel}</span>
     </button>
@@ -19763,10 +19758,6 @@ function beginClanReinforcement(targetOrId) {
     showToast("That holding is no longer controlled by a clan ally.");
     return;
   }
-  if (!isRewardCampTarget(target) && isProtectedMainCity(target)) {
-    showToast("A clan ally's home city cannot be reinforced.");
-    return;
-  }
   const reinforcementBlockReason = getClanReinforcementBlockReason(target);
   if (reinforcementBlockReason) {
     showToast(reinforcementBlockReason);
@@ -20488,9 +20479,9 @@ async function showTroopSliderModalAsync(source, target, options = {}) {
   const isReinforcement = orderKind === "reinforce";
   const campTarget = isRewardCampTarget(target);
   const needsDefenderPower = orderKind === "attack" && target.owner === "enemy" && !campTarget && !isStronghold(target);
-  const mainCityBlockReason = isReinforcement && !campTarget && isProtectedMainCity(target)
-    ? `${target.name} is a clan ally's home city and cannot be reinforced.`
-    : isTransfer || campTarget ? "" : getMainCityAttackBlockReason(target, "player");
+  const mainCityBlockReason = isTransfer || isReinforcement || campTarget
+    ? ""
+    : getMainCityAttackBlockReason(target, "player");
   if (mainCityBlockReason) {
     showMainCityProtectedAttackModal(target);
     return;
@@ -20716,9 +20707,9 @@ function showTroopSliderModalWithRoute(source, target, route, options = {}) {
   const isTransfer = orderKind === "transfer";
   const isReinforcement = orderKind === "reinforce";
   const campTarget = isRewardCampTarget(target);
-  const mainCityBlockReason = isReinforcement && !campTarget && isProtectedMainCity(target)
-    ? `${target.name} is a clan ally's home city and cannot be reinforced.`
-    : isTransfer || campTarget ? "" : getMainCityAttackBlockReason(target, "player");
+  const mainCityBlockReason = isTransfer || isReinforcement || campTarget
+    ? ""
+    : getMainCityAttackBlockReason(target, "player");
   if (mainCityBlockReason) {
     showMainCityProtectedAttackModal(target);
     return;
@@ -21523,7 +21514,7 @@ function showCityInfoModal(cityId) {
     modalTitle.textContent = stronghold ? `${city.name} - Stronghold` : `${city.name} - Level ${city.level}`;
     modalBody.innerHTML = `
       <div class="city-stat-panel modal-city-stats">
-        ${clanAlly ? `<div class="stat-wide clan-ally-status"><span>Relationship</span><strong>Clan Ally [${escapeHtml(clanIdentity.clanTag)}]</strong><small>${isProtectedMainCity(city) ? "Home cities cannot be reinforced." : "Scout and Attack are disabled. You may send clan reinforcements."}</small><button id="openCityClanBtn" class="profile-secondary-btn" type="button">Open Clan</button></div>` : clanIdentity.clanTag ? `<div class="stat-wide"><span>Clan</span><strong>[${escapeHtml(clanIdentity.clanTag)}] ${escapeHtml(clanIdentity.clanName)}</strong></div>` : ""}
+        ${clanAlly ? `<div class="stat-wide clan-ally-status"><span>Relationship</span><strong>Clan Ally [${escapeHtml(clanIdentity.clanTag)}]</strong><small>Scout and Attack are disabled. You may send clan reinforcements.</small><button id="openCityClanBtn" class="profile-secondary-btn" type="button">Open Clan</button></div>` : clanIdentity.clanTag ? `<div class="stat-wide"><span>Clan</span><strong>[${escapeHtml(clanIdentity.clanTag)}] ${escapeHtml(clanIdentity.clanName)}</strong></div>` : ""}
         ${stronghold ? `<div class="stat-wide"><span>Stronghold bonus</span><strong>${strongholdBonusLabel}</strong><small>Bonus is active only for the current controller.</small></div>` : ""}
         <div class="stat-wide"><span>Owner</span>${renderPlayerNameLink(city.ownerUid || getCurrentOnlineUid(), getCityOwnerDisplayName(city))}</div>
         <div class="stat-chip"><span>${stronghold ? "Defense level" : "City level"}</span><strong>${formatNumber(stats.level)}</strong></div>
