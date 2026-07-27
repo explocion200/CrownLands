@@ -20,6 +20,7 @@ const STATIC_CACHE_URLS = [
   "/assets/loading-crown.png",
   "/assets/gold-pickup.png",
   "/assets/troop-pickup.png",
+  "/assets/daily-reward-icon.svg?v=20260727-daily-login",
   "/privacy.html",
   "/assets/royal-tax-decree-icon.webp?v=20260721-tax-decree",
   "/assets/icons/crownlands-icon-192.png",

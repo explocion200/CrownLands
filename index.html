@@ -21,6 +21,7 @@
   <link rel="preload" as="image" href="assets/loading-ring.png" />
   <link rel="preload" as="image" href="assets/loading-crown.png" />
   <link rel="preload" as="image" href="assets/leaderboard-icon.png?v=20260623-leaderboard-icon-new" />
+  <link rel="preload" as="image" href="assets/daily-reward-icon.svg?v=20260727-daily-login" />
   <link rel="preload" as="image" href="assets/profile-hud-frame.png?v=20260702-profile-frame" />
   <link rel="preload" as="image" href="assets/city-list-icon.png?v=20260623-city-icon-hud" />
   <link rel="preload" as="image" href="assets/map-icon.png?v=20260623-map-icon-framed" />
@@ -102,6 +103,10 @@
             </button>
             <button id="clanHudBtn" class="profile-rank-btn clan-hud-btn is-search" type="button" aria-label="Find a clan">
               <span id="clanHudIcon" class="clan-hud-icon" aria-hidden="true"></span>
+            </button>
+            <button id="dailyLoginRewardBtn" class="profile-rank-btn daily-login-reward-btn" type="button" aria-label="Open daily rewards">
+              <img class="daily-login-reward-icon" src="assets/daily-reward-icon.svg?v=20260727-daily-login" alt="" draggable="false" decoding="async" />
+              <span id="dailyLoginRewardBadge" class="daily-login-reward-badge" aria-hidden="true" hidden>!</span>
             </button>
           </div>
           <div class="profile-gold"><span>&#129689;</span><strong id="goldText">0</strong></div>

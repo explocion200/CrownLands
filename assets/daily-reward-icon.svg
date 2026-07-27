@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title">
+  <title id="title">Daily royal reward</title>
+  <defs>
+    <linearGradient id="frame" x1="10" y1="7" x2="53" y2="57" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#fff2a8"/>
+      <stop offset=".5" stop-color="#d6a23c"/>
+      <stop offset="1" stop-color="#7c4818"/>
+    </linearGradient>
+    <linearGradient id="panel" x1="18" y1="15" x2="47" y2="51" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#267bb1"/>
+      <stop offset="1" stop-color="#0c2f54"/>
+    </linearGradient>
+  </defs>
+  <path fill="url(#frame)" stroke="#4e2a10" stroke-width="2" d="M32 3 47 8l10 12-1 23-10 13-14 5-15-5L7 43 6 20 17 8z"/>
+  <path fill="url(#panel)" stroke="#fff0a8" stroke-width="2" d="M16 16h32v35H16z"/>
+  <path fill="#e8bd52" d="M16 16h32v9H16z"/>
+  <path fill="#fff7cb" d="M21 11h5v10h-5zm17 0h5v10h-5z"/>
+  <path fill="#c43d35" stroke="#fff0a8" stroke-width="1.5" d="M21 33h22v15H21z"/>
+  <path fill="#f4d15d" d="M29 33h6v15h-6z"/>
+  <path fill="none" stroke="#f4d15d" stroke-width="4" d="M32 33c-8-1-9-8-4-8 3 0 4 4 4 8Zm0 0c8-1 9-8 4-8-3 0-4 4-4 8Z"/>
+  <path fill="#fff7cb" d="m32 6 2 4 5 .7-3.5 3.4.8 4.9-4.3-2.3-4.3 2.3.8-4.9-3.5-3.4 5-.7z"/>
+</svg>

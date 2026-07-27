@@ -50,6 +50,30 @@ async function callFunction(name, token, data = {}) {
   return body.result;
 }
 
+async function attemptClientDailyRewardMutation(user) {
+  const firestoreHost = process.env.FIRESTORE_EMULATOR_HOST;
+  const url = `http://${firestoreHost}/v1/projects/${projectId}/databases/(default)/documents/players/${user.uid}?updateMask.fieldPaths=dailyLoginReward`;
+  return fetch(url, {
+    method: "PATCH",
+    headers: {
+      authorization: `Bearer ${user.token}`,
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({
+      fields: {
+        dailyLoginReward: {
+          mapValue: {
+            fields: {
+              cycle: { integerValue: "99" },
+              nextDay: { integerValue: "30" },
+            },
+          },
+        },
+      },
+    }),
+  });
+}
+
 async function waitForOwnershipEvents(expected, timeoutMs = 30000) {
   const startedAt = Date.now();
   const ref = db.collection(`realmEvents/${realm.resetGeneration}/ownershipChanges`);
@@ -160,6 +184,186 @@ async function main() {
   const firstStats = (await db.doc(`players/${users[0].uid}/stats/global`).get()).data() || {};
   assert(firstStats.resetGeneration === realm.resetGeneration, "Stats were written to the wrong generation.");
   assert(firstStats.totalCities === 1, "Archived cities leaked into current-generation statistics.");
+
+  const dailyStatus = await callFunction("getDailyLoginRewardStatus", users[0].token);
+  assert(
+    dailyStatus?.dailyLoginRewardStatus?.eligible === true
+      && dailyStatus.dailyLoginRewardStatus.nextDay === 1
+      && dailyStatus.dailyLoginRewardStatus.cycle === 1,
+    "A fresh reset profile did not begin on daily reward cycle 1, day 1."
+  );
+  const dailyGoldBefore = Number((await db.doc(`players/${users[0].uid}`).get()).data()?.gold || 0);
+  const concurrentDailyClaims = await Promise.all([
+    callFunction("claimDailyLoginReward", users[0].token),
+    callFunction("claimDailyLoginReward", users[0].token),
+  ]);
+  assert(
+    concurrentDailyClaims.filter(result => result?.replayed === false).length === 1
+      && concurrentDailyClaims.filter(result => result?.replayed === true).length === 1,
+    "Concurrent daily reward claims did not produce one payout and one replay."
+  );
+  const dayOneClaim = concurrentDailyClaims.find(result => result?.replayed === false);
+  const dayOneReplay = concurrentDailyClaims.find(result => result?.replayed === true);
+  assert(
+    dayOneClaim?.receipt?.day === 1
+      && dayOneClaim.receipt.goldHours === 0.5
+      && dayOneClaim.receipt.gold > 0
+      && JSON.stringify(dayOneClaim.receipt) === JSON.stringify(dayOneReplay?.receipt),
+    "The day-1 daily reward receipt was not deterministic."
+  );
+  const dayOneProfile = (await db.doc(`players/${users[0].uid}`).get()).data() || {};
+  assert(dayOneProfile.dailyLoginReward?.totalClaims === 1, "A concurrent daily claim advanced the track more than once.");
+  assert(
+    Number(dayOneProfile.gold || 0) >= dailyGoldBefore + Number(dayOneClaim.receipt.gold || 0),
+    "The day-1 gold reward was not credited."
+  );
+  const sameDayReplay = await callFunction("claimDailyLoginReward", users[0].token);
+  assert(sameDayReplay?.replayed === true, "A repeated same-day daily reward claim was not idempotent.");
+
+  const previousUtcDayKey = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  await db.doc(`players/${users[0].uid}`).set({
+    upgrades: { taxStewardship: 25, royalGranaries: 25 },
+    itemEffects: {
+      warDrumsExpiresAtMs: Date.now() + 60 * 60 * 1000,
+      royalTaxDecreeExpiresAtMs: Date.now() + 60 * 60 * 1000,
+    },
+    dailyLoginReward: {
+      schemaVersion: 1,
+      cycle: 1,
+      nextDay: 5,
+      totalClaims: 4,
+      lastClaimDayKey: previousUtcDayKey,
+      lastClaimedAtMs: Date.now() - 24 * 60 * 60 * 1000,
+    },
+  }, { merge: true });
+  const dayFiveProfileBefore = (await db.doc(`players/${users[0].uid}`).get()).data() || {};
+  const dayFiveCityRef = db.doc(`islands/${claims[0].islandId}/cities/${claims[0].cityId}`);
+  const dayFiveCityBefore = (await dayFiveCityRef.get()).data() || {};
+  const dayFiveClaim = await callFunction("claimDailyLoginReward", users[0].token);
+  assert(
+    dayFiveClaim?.receipt?.day === 5
+      && dayFiveClaim.receipt.goldHours === 1.5
+      && dayFiveClaim.receipt.troopHours === 1.5
+      && dayFiveClaim.receipt.items?.war_drums_30m === 1,
+    "The day-5 mixed daily reward did not match the fixed schedule."
+  );
+  assert(
+    dayFiveClaim.receipt.gold === Math.floor(Number(firstStats.baseGoldPerHour || 0) * 1.5)
+      && dayFiveClaim.receipt.troops === Math.floor(Number(firstStats.baseTroopPerHour || 0) * 1.5),
+    "Daily rewards included skill, Stronghold, or temporary production bonuses."
+  );
+  const dayFiveProfileAfter = (await db.doc(`players/${users[0].uid}`).get()).data() || {};
+  const dayFiveCityAfter = (await dayFiveCityRef.get()).data() || {};
+  assert(
+    Number(dayFiveProfileAfter.shopItems?.war_drums_30m || 0)
+      === Number(dayFiveProfileBefore.shopItems?.war_drums_30m || 0) + 1,
+    "The day-5 item was not added to the bag."
+  );
+  assert(
+    Number(dayFiveCityAfter.troops || 0) >= Number(dayFiveCityBefore.troops || 0) + Number(dayFiveClaim.receipt.troops || 0),
+    "The day-5 troop reward was not credited to the main city."
+  );
+  const dayFiveStatsAfter = (await db.doc(`players/${users[0].uid}/stats/global`).get()).data() || {};
+  assert(
+    Number(dayFiveStatsAfter.totalTroops || 0)
+      >= Number(firstStats.totalTroops || 0) + Number(dayFiveClaim.receipt.troops || 0),
+    "The day-5 troop reward did not update global player statistics."
+  );
+
+  await db.doc(`players/${users[0].uid}`).set({
+    dailyLoginReward: {
+      schemaVersion: 1,
+      cycle: 1,
+      nextDay: 30,
+      totalClaims: 29,
+      lastClaimDayKey: previousUtcDayKey,
+      lastClaimedAtMs: Date.now() - 24 * 60 * 60 * 1000,
+    },
+  }, { merge: true });
+  const dayThirtyItemsBefore = (await db.doc(`players/${users[0].uid}`).get()).data()?.shopItems || {};
+  const dayThirtyClaim = await callFunction("claimDailyLoginReward", users[0].token);
+  const expectedDayThirtyItems = [
+    "shield_12h",
+    "war_drums_30m",
+    "royal_tax_decree_30m",
+    "veil_of_silence_30m",
+    "swift_march_order",
+    "recall_horn",
+  ];
+  assert(
+    dayThirtyClaim?.receipt?.day === 30
+      && dayThirtyClaim.receipt.goldHours === 12
+      && dayThirtyClaim.receipt.troopHours === 12
+      && dayThirtyClaim.dailyLoginRewardStatus?.cycle === 2
+      && dayThirtyClaim.dailyLoginRewardStatus?.nextDay === 1,
+    "Day 30 did not complete the cycle and restart at cycle 2, day 1."
+  );
+  const dayThirtyItemsAfter = (await db.doc(`players/${users[0].uid}`).get()).data()?.shopItems || {};
+  expectedDayThirtyItems.forEach(itemId => {
+    assert(dayThirtyClaim.receipt.items?.[itemId] === 1, `Day 30 did not include ${itemId}.`);
+    assert(
+      Number(dayThirtyItemsAfter[itemId] || 0) === Number(dayThirtyItemsBefore[itemId] || 0) + 1,
+      `Day 30 did not credit ${itemId}.`
+    );
+  });
+
+  await db.doc(`players/${users[1].uid}`).set({
+    dailyLoginReward: {
+      schemaVersion: 1,
+      cycle: 3,
+      nextDay: 14,
+      totalClaims: 73,
+      lastClaimDayKey: "2020-01-01",
+      lastClaimedAtMs: Date.UTC(2020, 0, 1),
+    },
+  }, { merge: true });
+  const pausedDailyStatus = await callFunction("getDailyLoginRewardStatus", users[1].token);
+  assert(
+    pausedDailyStatus?.dailyLoginRewardStatus?.eligible === true
+      && pausedDailyStatus.dailyLoginRewardStatus.cycle === 3
+      && pausedDailyStatus.dailyLoginRewardStatus.nextDay === 14,
+    "Missing UTC days reset or skipped daily reward progress."
+  );
+  const deniedDailyMutation = await attemptClientDailyRewardMutation(users[1]);
+  assert(deniedDailyMutation.status === 403, "Firestore rules allowed a client to rewrite daily reward state.");
+
+  const invalidMainCityRef = db.doc(`islands/${claims[2].islandId}/cities/${claims[2].cityId}`);
+  const invalidMainCityBefore = (await invalidMainCityRef.get()).data() || {};
+  const invalidMainProfileRef = db.doc(`players/${users[2].uid}`);
+  const invalidMainProfileBefore = (await invalidMainProfileRef.get()).data() || {};
+  await invalidMainCityRef.set({ ownerKind: "neutral", ownerUid: "" }, { merge: true });
+  let invalidMainRejected = false;
+  try {
+    await callFunction("claimDailyLoginReward", users[2].token);
+  } catch (error) {
+    invalidMainRejected = /main city/i.test(String(error?.message || error));
+  }
+  assert(invalidMainRejected, "A daily reward was allowed without a valid current-generation main city.");
+  const invalidMainProfileAfter = (await invalidMainProfileRef.get()).data() || {};
+  assert(
+    Number(invalidMainProfileAfter.gold || 0) === Number(invalidMainProfileBefore.gold || 0)
+      && Number(invalidMainProfileAfter.dailyLoginReward?.totalClaims || 0)
+        === Number(invalidMainProfileBefore.dailyLoginReward?.totalClaims || 0),
+    "A rejected daily claim partially credited or advanced the player."
+  );
+  await invalidMainCityRef.set(invalidMainCityBefore);
+
+  const mismatchedProfileRef = db.doc(`players/${users[3].uid}`);
+  await mismatchedProfileRef.set({
+    resetGeneration: "archived-generation",
+    worldId: "main-archived-generation",
+  }, { merge: true });
+  let mismatchedGenerationRejected = false;
+  try {
+    await callFunction("getDailyLoginRewardStatus", users[3].token);
+  } catch (error) {
+    mismatchedGenerationRejected = /current crownlands world/i.test(String(error?.message || error));
+  }
+  assert(mismatchedGenerationRejected, "An archived-generation profile received a daily reward status.");
+  await mismatchedProfileRef.set({
+    resetGeneration: realm.resetGeneration,
+    worldId: realm.worldId,
+  }, { merge: true });
 
   const clanLeader = users[48];
   const clanApplicant = users[49];
@@ -629,7 +833,7 @@ async function main() {
   );
   await callFunction("demoteClanOfficer", clanLeader.token, { targetUid: clanApplicant.uid });
 
-  console.log(`Emulator reset gate passed for 50 players with clan gifts and conquest quests: ${counts.join("/")} across starter islands.`);
+  console.log(`Emulator reset gate passed for 50 players with daily rewards, clan gifts, and conquest quests: ${counts.join("/")} across starter islands.`);
 }
 
 main().catch(error => {

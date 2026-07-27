@@ -33,6 +33,54 @@ window.CROWNLANDS_ECONOMY_CONFIG = {
       "dailyPurchaseLimit": 2
     }
   },
+  "dailyLoginRewards": {
+    "schemaVersion": 1,
+    "cycleLengthDays": 30,
+    "days": [
+      { "day": 1, "goldHours": 0.5, "troopHours": 0, "items": {} },
+      { "day": 2, "goldHours": 0, "troopHours": 0.5, "items": {} },
+      { "day": 3, "goldHours": 1, "troopHours": 0, "items": {} },
+      { "day": 4, "goldHours": 0, "troopHours": 1, "items": {} },
+      { "day": 5, "goldHours": 1.5, "troopHours": 1.5, "items": { "war_drums_30m": 1 } },
+      { "day": 6, "goldHours": 2, "troopHours": 0, "items": {} },
+      { "day": 7, "goldHours": 0, "troopHours": 2, "items": {} },
+      { "day": 8, "goldHours": 2.5, "troopHours": 0, "items": {} },
+      { "day": 9, "goldHours": 0, "troopHours": 2.5, "items": {} },
+      { "day": 10, "goldHours": 3, "troopHours": 3, "items": { "veil_of_silence_30m": 1 } },
+      { "day": 11, "goldHours": 3.5, "troopHours": 0, "items": {} },
+      { "day": 12, "goldHours": 0, "troopHours": 3.5, "items": {} },
+      { "day": 13, "goldHours": 4, "troopHours": 0, "items": {} },
+      { "day": 14, "goldHours": 0, "troopHours": 4, "items": {} },
+      { "day": 15, "goldHours": 4.5, "troopHours": 4.5, "items": { "war_drums_30m": 1, "royal_tax_decree_30m": 1 } },
+      { "day": 16, "goldHours": 5, "troopHours": 0, "items": {} },
+      { "day": 17, "goldHours": 0, "troopHours": 5, "items": {} },
+      { "day": 18, "goldHours": 5.5, "troopHours": 0, "items": {} },
+      { "day": 19, "goldHours": 0, "troopHours": 5.5, "items": {} },
+      { "day": 20, "goldHours": 6, "troopHours": 6, "items": { "royal_tax_decree_30m": 1, "swift_march_order": 1 } },
+      { "day": 21, "goldHours": 7, "troopHours": 0, "items": {} },
+      { "day": 22, "goldHours": 0, "troopHours": 7, "items": {} },
+      { "day": 23, "goldHours": 8, "troopHours": 0, "items": {} },
+      { "day": 24, "goldHours": 0, "troopHours": 8, "items": {} },
+      { "day": 25, "goldHours": 9, "troopHours": 9, "items": { "veil_of_silence_30m": 1, "swift_march_order": 1, "recall_horn": 1 } },
+      { "day": 26, "goldHours": 9.5, "troopHours": 0, "items": {} },
+      { "day": 27, "goldHours": 0, "troopHours": 10, "items": {} },
+      { "day": 28, "goldHours": 10.5, "troopHours": 0, "items": {} },
+      { "day": 29, "goldHours": 0, "troopHours": 11, "items": {} },
+      {
+        "day": 30,
+        "goldHours": 12,
+        "troopHours": 12,
+        "items": {
+          "shield_12h": 1,
+          "war_drums_30m": 1,
+          "royal_tax_decree_30m": 1,
+          "veil_of_silence_30m": 1,
+          "swift_march_order": 1,
+          "recall_horn": 1
+        }
+      }
+    ]
+  },
   "pickups": {
     "spawnIntervalMinutes": 3,
     "expireMinutes": 20,

@@ -143,6 +143,11 @@
           pendingClanApplicationId: isCurrentRealm ? String(profile.pendingClanApplicationId || "") : "",
           clanJoinCooldownUntilMs: isCurrentRealm ? timestampToMs(profile.clanJoinCooldownUntilMs) : 0,
         });
+        dispatch("daily-login-reward", {
+          state: isCurrentRealm && profile.dailyLoginReward && typeof profile.dailyLoginReward === "object"
+            ? sanitizeForFirestore(profile.dailyLoginReward)
+            : null,
+        });
         const activeSession = profile.activeSession || {};
         const remoteSessionId = String(activeSession.id || "");
         const localSessionId = getActiveSessionId();
@@ -366,6 +371,14 @@
 
   async function collectEconomy(payload = {}) {
     return callServerFunction("collectEconomy", payload);
+  }
+
+  async function getDailyLoginRewardStatus(payload = {}) {
+    return callServerFunction("getDailyLoginRewardStatus", payload);
+  }
+
+  async function claimDailyLoginReward(payload = {}) {
+    return callServerFunction("claimDailyLoginReward", payload);
   }
 
   async function getRewardedAdStatus(payload = {}) {
@@ -956,6 +969,7 @@
     delete cleanProfile.mainIslandId;
     delete cleanProfile.mainRegionId;
     delete cleanProfile.mainCityChangedAtMs;
+    delete cleanProfile.dailyLoginReward;
     if (cleanProfile.shopItems && typeof cleanProfile.shopItems === "object" && deleteField) {
       cleanProfile.shopItems = {
         ...cleanProfile.shopItems,
@@ -1810,6 +1824,8 @@
     savePlayerProfile,
     loadPlayerProfile,
     collectEconomy,
+    getDailyLoginRewardStatus,
+    claimDailyLoginReward,
     getRewardedAdStatus,
     prepareRewardedAd,
     claimRewardedAd,

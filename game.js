@@ -157,6 +157,25 @@ const VEIL_OF_SILENCE_ITEM_ID = "veil_of_silence_30m";
 const VEIL_OF_SILENCE_DURATION_MS = economyNumber("shopItems.veil_of_silence_30m.effectDurationMinutes", 5) * 60 * 1000;
 const SWIFT_MARCH_ORDER_ITEM_ID = "swift_march_order";
 const RECALL_HORN_ITEM_ID = "recall_horn";
+const DAILY_LOGIN_REWARD_SCHEMA_VERSION = 1;
+const DAILY_LOGIN_REWARD_DAYS = Object.freeze(
+  (Array.isArray(ECONOMY_CONFIG?.dailyLoginRewards?.days) ? ECONOMY_CONFIG.dailyLoginRewards.days : [])
+    .map((entry, index) => Object.freeze({
+      day: Math.max(1, Math.floor(Number(entry?.day) || index + 1)),
+      goldHours: Math.max(0, Number(entry?.goldHours) || 0),
+      troopHours: Math.max(0, Number(entry?.troopHours) || 0),
+      items: Object.freeze(Object.fromEntries(
+        Object.entries(entry?.items || {})
+          .filter(([itemId, quantity]) => SHOP_ITEMS.some(item => item.id === itemId) && Number(quantity) > 0)
+          .map(([itemId, quantity]) => [itemId, Math.max(1, Math.floor(Number(quantity) || 1))])
+      )),
+    }))
+);
+const DAILY_LOGIN_REWARD_CYCLE_DAYS = Math.max(
+  1,
+  Math.floor(Number(ECONOMY_CONFIG?.dailyLoginRewards?.cycleLengthDays) || DAILY_LOGIN_REWARD_DAYS.length)
+);
+const DAILY_LOGIN_REWARD_AUTO_OPEN_PREFIX = `crownlands-daily-reward-opened-${RESET_GENERATION}`;
 const ITEM_DAILY_PURCHASE_LIMITS = Object.freeze({
   [ROYAL_PEACE_SHIELD_ITEM_ID]: economyNumber("shopItems.shield_12h.dailyPurchaseLimit", 1),
   [WAR_DRUMS_ITEM_ID]: economyNumber("shopItems.war_drums_30m.dailyPurchaseLimit", 4),
@@ -2596,6 +2615,12 @@ let currentPlayerIdentityKingPowerOverride = null;
 let overdueArmyResolveTimer = 0;
 let pendingArmyRecoveryInFlight = false;
 let shopPurchaseInFlight = false;
+let dailyLoginRewardStatus = null;
+let dailyLoginRewardStatusLoading = false;
+let dailyLoginRewardClaimInFlight = false;
+let dailyLoginRewardUtcTimer = 0;
+let dailyLoginRewardCountdownTimer = 0;
+let dailyLoginRewardError = "";
 let rewardedAdStatus = null;
 let rewardedAdStatusLoading = false;
 let rewardedAdInFlight = false;
@@ -2798,6 +2823,8 @@ const logBtn = document.getElementById("logBtn");
 const leaderboardBtn = document.getElementById("leaderboardBtn");
 const clanHudBtn = document.getElementById("clanHudBtn");
 const clanHudIcon = document.getElementById("clanHudIcon");
+const dailyLoginRewardBtn = document.getElementById("dailyLoginRewardBtn");
+const dailyLoginRewardBadge = document.getElementById("dailyLoginRewardBadge");
 const outgoingAttackBtn = document.getElementById("outgoingAttackBtn");
 const outgoingAttackCount = document.getElementById("outgoingAttackCount");
 const outgoingAttackTime = document.getElementById("outgoingAttackTime");
@@ -8599,6 +8626,10 @@ function applyServerProfilePatch(patch = null, options = {}) {
     state.daily = normalizeDailyCaptureTracker(patch.daily);
     changed = true;
   }
+  if (patch.dailyLoginReward && typeof patch.dailyLoginReward === "object") {
+    applyDailyLoginRewardProfileState(patch.dailyLoginReward, { autoOpen: false });
+    changed = true;
+  }
   if (Array.isArray(patch.harvestBonuses)) {
     state.harvestBonuses = enforceHarvestBonusActiveLimit(normalizeHarvestBonuses(patch.harvestBonuses));
     changed = true;
@@ -8912,6 +8943,7 @@ function stripServerEconomyProfileFields(profile = {}) {
   delete clean.shopItems;
   delete clean.itemEffects;
   delete clean.itemPurchaseCooldowns;
+  delete clean.dailyLoginReward;
   delete clean.offlineProductionCities;
   delete clean.harvestBonuses;
   delete clean.harvestSpawnTimer;
@@ -9025,6 +9057,9 @@ function applyOnlineProfileSnapshot(profile = null, fallbackPlayerName = "Ricky"
   state.shopItems = normalizeShopItems(profile.shopItems);
   state.itemEffects = normalizeItemEffects(profile.itemEffects);
   state.itemPurchaseCooldowns = normalizeItemPurchaseCooldowns(profile.itemPurchaseCooldowns);
+  if (profile.dailyLoginReward && typeof profile.dailyLoginReward === "object") {
+    applyDailyLoginRewardProfileState(profile.dailyLoginReward, { autoOpen: false });
+  }
   syncCharacterSkillPoints(state.character, state.upgrades, profile.character?.skillPoints);
   const profileGold = Number(profile.gold);
   state.gold = Math.max(0, Math.floor(Number.isFinite(profileGold) ? profileGold : TEST_STARTING_GOLD));
@@ -13782,6 +13817,7 @@ async function startFromInput(forceFresh = false) {
     flushOnlineSave(true);
     refreshPushAlertRegistration(true);
     showToast("Online kingdom loaded.");
+    refreshDailyLoginRewardStatus({ autoOpen: true, silent: true });
     retryPendingRewardedAdClaim();
   } catch (error) {
     onlineLastError = error?.message || String(error);
@@ -16428,6 +16464,7 @@ function renderHud() {
     applyFlagToElement(hudKingdomFlag, state.flag);
   }
   renderClanHudAccess();
+  renderDailyLoginRewardButton();
   const regularCityCount = getOwnedRegularCityCountForDisplay();
   setTextIfChanged(cityText, `${formatNumber(regularCityCount)} cities`);
   if (cityListBtn) cityListBtn.setAttribute("aria-label", `Open city list, ${formatNumber(regularCityCount)} cities owned`);
@@ -16821,6 +16858,13 @@ function handleOnlinePlayerClanSnapshot(event) {
     renderClanView();
   }
   if (previousClanId !== state.clanId) refreshClanRelationshipPresentation();
+}
+
+function handleOnlineDailyLoginRewardSnapshot(event) {
+  if (!state || !getOnlineApi()?.isSignedIn?.()) return;
+  const rewardState = event?.detail?.state;
+  if (!rewardState || typeof rewardState !== "object") return;
+  applyDailyLoginRewardProfileState(rewardState, { autoOpen: false });
 }
 
 function showProfileScreen() {
@@ -21522,6 +21566,365 @@ function clearPendingRewardedAdClaim(intentId = "") {
   }
 }
 
+function normalizeDailyLoginRewardReceipt(raw = null) {
+  if (!raw || typeof raw !== "object") return null;
+  const dayKey = String(raw.dayKey || "").slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dayKey)) return null;
+  return {
+    cycle: Math.max(1, Math.floor(Number(raw.cycle) || 1)),
+    day: clamp(Math.floor(Number(raw.day) || 1), 1, DAILY_LOGIN_REWARD_CYCLE_DAYS),
+    dayKey,
+    claimedAtMs: normalizeTimestampMs(raw.claimedAtMs || raw.claimedAt),
+    goldHours: Math.max(0, Number(raw.goldHours) || 0),
+    troopHours: Math.max(0, Number(raw.troopHours) || 0),
+    gold: Math.max(0, Math.floor(Number(raw.gold) || 0)),
+    troops: Math.max(0, Math.floor(Number(raw.troops) || 0)),
+    items: Object.fromEntries(
+      Object.entries(raw.items || {})
+        .filter(([itemId, quantity]) => SHOP_ITEMS.some(item => item.id === itemId) && Number(quantity) > 0)
+        .map(([itemId, quantity]) => [itemId, Math.max(1, Math.floor(Number(quantity) || 1))])
+    ),
+    targetCityId: String(raw.targetCityId || "").slice(0, 96),
+  };
+}
+
+function normalizeDailyLoginRewardStatus(raw = null, nowMs = Date.now()) {
+  const source = raw && typeof raw === "object" ? raw : {};
+  const serverTimeMs = normalizeTimestampMs(source.serverTimeMs) || Math.max(0, Number(nowMs) || Date.now());
+  const dayKey = /^\d{4}-\d{2}-\d{2}$/.test(String(source.dayKey || ""))
+    ? String(source.dayKey)
+    : getUtcDateKeyAtMs(serverTimeMs);
+  const lastClaimDayKey = /^\d{4}-\d{2}-\d{2}$/.test(String(source.lastClaimDayKey || ""))
+    ? String(source.lastClaimDayKey)
+    : "";
+  const claimedToday = typeof source.claimedToday === "boolean"
+    ? source.claimedToday
+    : lastClaimDayKey === dayKey;
+  return {
+    schemaVersion: DAILY_LOGIN_REWARD_SCHEMA_VERSION,
+    cycle: Math.max(1, Math.floor(Number(source.cycle) || 1)),
+    nextDay: clamp(Math.floor(Number(source.nextDay) || 1), 1, DAILY_LOGIN_REWARD_CYCLE_DAYS),
+    totalClaims: Math.max(0, Math.floor(Number(source.totalClaims) || 0)),
+    lastClaimDayKey,
+    lastClaimedAtMs: normalizeTimestampMs(source.lastClaimedAtMs || source.lastClaimedAt),
+    lastReceipt: normalizeDailyLoginRewardReceipt(source.lastReceipt),
+    eligible: typeof source.eligible === "boolean" ? source.eligible : !claimedToday,
+    claimedToday,
+    dayKey,
+    serverTimeMs,
+    nextUtcUnlockAtMs: normalizeTimestampMs(source.nextUtcUnlockAtMs)
+      || (claimedToday ? getNextUtcDayStartMs(serverTimeMs) : 0),
+    cycleLengthDays: DAILY_LOGIN_REWARD_CYCLE_DAYS,
+  };
+}
+
+function applyDailyLoginRewardProfileState(rawState = null, options = {}) {
+  if (!rawState || typeof rawState !== "object") return false;
+  const nowMs = Date.now();
+  const nextStatus = normalizeDailyLoginRewardStatus({
+    ...rawState,
+    dayKey: getUtcDateKeyAtMs(nowMs),
+    serverTimeMs: nowMs,
+  }, nowMs);
+  const previousSignature = JSON.stringify(dailyLoginRewardStatus || null);
+  dailyLoginRewardStatus = nextStatus;
+  dailyLoginRewardError = "";
+  scheduleDailyLoginRewardUtcRefresh();
+  renderDailyLoginRewardButton();
+  if (modal?.open && modal.classList.contains("daily-login-reward-modal")) {
+    renderDailyLoginRewardModal();
+  }
+  if (options.autoOpen) maybeAutoOpenDailyLoginRewards();
+  return previousSignature !== JSON.stringify(nextStatus);
+}
+
+function renderDailyLoginRewardButton() {
+  if (!dailyLoginRewardBtn) return;
+  const active = Boolean(state && isOnlineWorldActive() && getOnlineApi()?.isSignedIn?.());
+  const status = dailyLoginRewardStatus;
+  const eligible = Boolean(active && status?.eligible);
+  dailyLoginRewardBtn.disabled = !active || dailyLoginRewardStatusLoading;
+  dailyLoginRewardBtn.classList.toggle("is-claimable", eligible);
+  if (dailyLoginRewardBadge) dailyLoginRewardBadge.hidden = !eligible;
+  const label = !active
+    ? "Daily rewards require an online kingdom"
+    : dailyLoginRewardStatusLoading
+      ? "Loading daily rewards"
+      : status
+        ? eligible
+          ? `Claim daily reward, cycle ${status.cycle} day ${status.nextDay}`
+          : `Daily reward claimed, next is cycle ${status.cycle} day ${status.nextDay}`
+        : "Open daily rewards";
+  dailyLoginRewardBtn.setAttribute("aria-label", label);
+}
+
+function scheduleDailyLoginRewardUtcRefresh() {
+  if (dailyLoginRewardUtcTimer) {
+    window.clearTimeout(dailyLoginRewardUtcTimer);
+    dailyLoginRewardUtcTimer = 0;
+  }
+  if (!dailyLoginRewardStatus || !getOnlineApi()?.isSignedIn?.()) return;
+  const serverNowMs = dailyLoginRewardStatus.serverTimeMs || Date.now();
+  const targetMs = dailyLoginRewardStatus.nextUtcUnlockAtMs || getNextUtcDayStartMs(serverNowMs);
+  const delayMs = clamp(targetMs - serverNowMs + 750, 1000, 24 * 60 * 60 * 1000);
+  dailyLoginRewardUtcTimer = window.setTimeout(() => {
+    dailyLoginRewardUtcTimer = 0;
+    refreshDailyLoginRewardStatus({ autoOpen: true, silent: true });
+  }, delayMs);
+}
+
+async function refreshDailyLoginRewardStatus(options = {}) {
+  const api = getOnlineApi();
+  if (!state || !isOnlineWorldActive() || !api?.isSignedIn?.() || !api?.getDailyLoginRewardStatus) {
+    dailyLoginRewardStatus = null;
+    dailyLoginRewardError = "";
+    renderDailyLoginRewardButton();
+    return null;
+  }
+  if (dailyLoginRewardStatusLoading) return dailyLoginRewardStatus;
+  dailyLoginRewardStatusLoading = true;
+  renderDailyLoginRewardButton();
+  try {
+    const result = await api.getDailyLoginRewardStatus();
+    dailyLoginRewardStatus = normalizeDailyLoginRewardStatus(result?.dailyLoginRewardStatus);
+    dailyLoginRewardError = "";
+    scheduleDailyLoginRewardUtcRefresh();
+    if (options.autoOpen) maybeAutoOpenDailyLoginRewards();
+    return dailyLoginRewardStatus;
+  } catch (error) {
+    dailyLoginRewardError = error?.message || "Daily rewards could not be loaded.";
+    if (!options.silent) showToast(dailyLoginRewardError);
+    console.warn("Daily login reward status failed", error);
+    return null;
+  } finally {
+    dailyLoginRewardStatusLoading = false;
+    renderDailyLoginRewardButton();
+    if (modal?.open && modal.classList.contains("daily-login-reward-modal")) {
+      renderDailyLoginRewardModal();
+    }
+  }
+}
+
+function getDailyLoginRewardAutoOpenKey(status = dailyLoginRewardStatus) {
+  const uid = getCurrentOnlineUid();
+  const dayKey = String(status?.dayKey || getUtcDateKeyAtMs());
+  return uid && dayKey ? `${DAILY_LOGIN_REWARD_AUTO_OPEN_PREFIX}-${uid}-${dayKey}` : "";
+}
+
+function maybeAutoOpenDailyLoginRewards() {
+  if (
+    !dailyLoginRewardStatus?.eligible
+    || !state
+    || !isOnlineWorldActive()
+    || setupScreen?.classList.contains("visible")
+    || document.visibilityState !== "visible"
+    || modal?.open
+    || profileScreen?.classList.contains("open")
+  ) {
+    return false;
+  }
+  const key = getDailyLoginRewardAutoOpenKey();
+  if (!key) return false;
+  try {
+    if (window.localStorage?.getItem(key) === "1") return false;
+    window.localStorage?.setItem(key, "1");
+  } catch (_) {
+    // Auto-opening is best-effort when storage is unavailable.
+  }
+  showDailyLoginRewardsModal({ skipRefresh: true });
+  return true;
+}
+
+function getDailyLoginRewardCardState(day, status = dailyLoginRewardStatus) {
+  if (!status) return "locked";
+  if (day < status.nextDay) return "claimed";
+  if (day === status.nextDay) return status.eligible ? "available" : "waiting";
+  return "locked";
+}
+
+function formatDailyLoginRewardHours(value = 0) {
+  const hours = Math.max(0, Number(value) || 0);
+  return Number.isInteger(hours) ? String(hours) : hours.toFixed(1).replace(/\.0$/, "");
+}
+
+function renderDailyLoginRewardItems(items = {}) {
+  const entries = Object.entries(items).filter(([, quantity]) => Number(quantity) > 0);
+  if (!entries.length) return "";
+  return `<div class="daily-reward-item-list">${entries.map(([itemId, quantity]) => {
+    const item = getShopItemById(itemId);
+    if (!item) return "";
+    return `
+      <span class="daily-reward-item" title="${escapeHtml(item.label)} ×${formatNumber(quantity)}">
+        <img src="${escapeHtml(item.icon)}" alt="" draggable="false" />
+        <strong>×${formatNumber(quantity)}</strong>
+      </span>
+    `;
+  }).join("")}</div>`;
+}
+
+function renderDailyLoginRewardResources(reward = {}) {
+  const resources = [];
+  if (reward.goldHours > 0) {
+    resources.push(`<span class="daily-reward-resource gold"><img src="assets/gold-pickup.png" alt="" /><strong>${formatDailyLoginRewardHours(reward.goldHours)}h</strong></span>`);
+  }
+  if (reward.troopHours > 0) {
+    resources.push(`<span class="daily-reward-resource troops"><img src="assets/troop-pickup.png" alt="" /><strong>${formatDailyLoginRewardHours(reward.troopHours)}h</strong></span>`);
+  }
+  return `<div class="daily-reward-resource-list">${resources.join("")}</div>`;
+}
+
+function renderDailyLoginRewardReceipt(receipt = null) {
+  if (!receipt) return "";
+  const parts = [];
+  if (receipt.gold > 0) parts.push(`+${formatNumber(receipt.gold)} gold`);
+  if (receipt.troops > 0) parts.push(`+${formatNumber(receipt.troops)} troops`);
+  const itemCount = Object.values(receipt.items || {}).reduce((sum, quantity) => sum + Math.max(0, Number(quantity) || 0), 0);
+  if (itemCount > 0) parts.push(`${formatNumber(itemCount)} item${itemCount === 1 ? "" : "s"}`);
+  if (!parts.length) return "";
+  return `
+    <div class="daily-reward-receipt" role="status">
+      <span>Cycle ${formatNumber(receipt.cycle)} · Day ${formatNumber(receipt.day)} collected</span>
+      <strong>${escapeHtml(parts.join(" · "))}</strong>
+    </div>
+  `;
+}
+
+function getDailyLoginRewardCountdownText(status = dailyLoginRewardStatus) {
+  if (!status?.claimedToday || !status.nextUtcUnlockAtMs) return "";
+  const remainingSeconds = Math.max(0, Math.ceil((status.nextUtcUnlockAtMs - Date.now()) / 1000));
+  return remainingSeconds > 0 ? `Next claim in ${formatDuration(remainingSeconds)} (UTC)` : "Refreshing daily reward…";
+}
+
+function updateDailyLoginRewardCountdown() {
+  if (!modal?.open || !modal.classList.contains("daily-login-reward-modal")) return;
+  const countdown = modalBody?.querySelector("[data-daily-reward-countdown]");
+  if (countdown) countdown.textContent = getDailyLoginRewardCountdownText();
+}
+
+function renderDailyLoginRewardModal() {
+  if (!modalBody || !modal.classList.contains("daily-login-reward-modal")) return;
+  const status = dailyLoginRewardStatus;
+  if (dailyLoginRewardStatusLoading && !status) {
+    modalBody.innerHTML = `<div class="daily-reward-loading" role="status">Opening the royal reward ledger…</div>`;
+    return;
+  }
+  if (!status) {
+    modalBody.innerHTML = `
+      <div class="daily-reward-error" role="alert">
+        <p>${escapeHtml(dailyLoginRewardError || "Daily rewards are unavailable.")}</p>
+        <button class="primary" type="button" data-daily-reward-retry>Try again</button>
+      </div>
+    `;
+    modalBody.querySelector("[data-daily-reward-retry]")?.addEventListener("click", () => {
+      refreshDailyLoginRewardStatus({ silent: false });
+    });
+    return;
+  }
+
+  const claimLabel = dailyLoginRewardClaimInFlight
+    ? "Collecting…"
+    : `Claim Cycle ${formatNumber(status.cycle)} · Day ${formatNumber(status.nextDay)}`;
+  modalBody.innerHTML = `
+    <section class="daily-reward-panel">
+      <header class="daily-reward-hero">
+        <img src="assets/daily-reward-icon.svg?v=20260727-daily-login" alt="" />
+        <div>
+          <span>Cycle ${formatNumber(status.cycle)}</span>
+          <h3>Day ${formatNumber(status.nextDay)} of ${formatNumber(DAILY_LOGIN_REWARD_CYCLE_DAYS)}</h3>
+          <p>Missing a day never resets your progress. Rewards scale from your permanent base city production.</p>
+        </div>
+      </header>
+      ${status.claimedToday ? renderDailyLoginRewardReceipt(status.lastReceipt) : ""}
+      <div class="daily-reward-status-row">
+        <strong>${status.eligible ? "Today’s reward is ready" : "Today’s reward is collected"}</strong>
+        <span data-daily-reward-countdown>${escapeHtml(getDailyLoginRewardCountdownText(status))}</span>
+      </div>
+      <div class="daily-reward-grid" aria-label="30-day daily reward track">
+        ${DAILY_LOGIN_REWARD_DAYS.map(reward => {
+          const cardState = getDailyLoginRewardCardState(reward.day, status);
+          const stateLabel = cardState === "claimed"
+            ? "Claimed"
+            : cardState === "available"
+              ? "Ready"
+              : cardState === "waiting"
+                ? "Tomorrow"
+                : "Locked";
+          return `
+            <article class="daily-reward-card ${cardState}" aria-label="Day ${reward.day}, ${stateLabel}">
+              <div class="daily-reward-card-head">
+                <strong>Day ${formatNumber(reward.day)}</strong>
+                <span>${stateLabel}</span>
+              </div>
+              ${renderDailyLoginRewardResources(reward)}
+              ${renderDailyLoginRewardItems(reward.items)}
+            </article>
+          `;
+        }).join("")}
+      </div>
+      <footer class="daily-reward-actions">
+        <button class="primary daily-reward-claim-btn" type="button" data-daily-reward-claim ${!status.eligible || dailyLoginRewardClaimInFlight ? "disabled" : ""}>${escapeHtml(claimLabel)}</button>
+        <small>One claim per UTC day. Day 30 restarts the track at day 1 on the following UTC day.</small>
+      </footer>
+    </section>
+  `;
+  modalBody.querySelector("[data-daily-reward-claim]")?.addEventListener("click", claimDailyLoginReward);
+  updateDailyLoginRewardCountdown();
+}
+
+async function showDailyLoginRewardsModal(options = {}) {
+  if (!modal || !modalBody || !state) return;
+  modal.classList.add("daily-login-reward-modal");
+  modalTitle.textContent = "Daily Royal Rewards";
+  renderDailyLoginRewardModal();
+  if (!modal.open) modal.showModal();
+  if (dailyLoginRewardCountdownTimer) window.clearInterval(dailyLoginRewardCountdownTimer);
+  dailyLoginRewardCountdownTimer = window.setInterval(updateDailyLoginRewardCountdown, 1000);
+  if (!options.skipRefresh) {
+    await refreshDailyLoginRewardStatus({ silent: true });
+  }
+}
+
+async function claimDailyLoginReward() {
+  const api = getOnlineApi();
+  if (!api?.claimDailyLoginReward || dailyLoginRewardClaimInFlight || !dailyLoginRewardStatus?.eligible) return;
+  dailyLoginRewardClaimInFlight = true;
+  dailyLoginRewardError = "";
+  renderDailyLoginRewardModal();
+  try {
+    const result = await api.claimDailyLoginReward();
+    if (result?.currentUser || result?.cityUpdates) {
+      applyServerEconomyResult(result, { renderCities: true });
+    }
+    dailyLoginRewardStatus = normalizeDailyLoginRewardStatus(result?.dailyLoginRewardStatus);
+    scheduleDailyLoginRewardUtcRefresh();
+    renderDailyLoginRewardButton();
+    const receipt = normalizeDailyLoginRewardReceipt(result?.receipt);
+    if (result?.replayed) {
+      showToast("Today’s daily reward was already collected.");
+    } else if (receipt) {
+      const parts = [];
+      if (receipt.gold > 0) parts.push(`${formatNumber(receipt.gold)} gold`);
+      if (receipt.troops > 0) parts.push(`${formatNumber(receipt.troops)} troops`);
+      const itemCount = Object.values(receipt.items).reduce((sum, quantity) => sum + quantity, 0);
+      if (itemCount > 0) parts.push(`${formatNumber(itemCount)} item${itemCount === 1 ? "" : "s"}`);
+      const summary = parts.join(", ");
+      addLog(`Daily reward cycle ${receipt.cycle}, day ${receipt.day}: ${summary}.`);
+      showToast(`Daily reward collected: ${summary}`);
+    }
+    saveGame();
+    queueOnlineSave();
+  } catch (error) {
+    dailyLoginRewardError = error?.message || "The daily reward could not be collected.";
+    console.warn("Daily login reward claim failed", error);
+    showToast(dailyLoginRewardError);
+  } finally {
+    dailyLoginRewardClaimInFlight = false;
+    if (modal?.open && modal.classList.contains("daily-login-reward-modal")) {
+      renderDailyLoginRewardModal();
+    }
+  }
+}
+
 function createRewardedAdClientError(message, code = "ad-error") {
   const error = new Error(message);
   error.code = code;
@@ -25083,8 +25486,16 @@ window.addEventListener("crownlands:online-ready", () => {
   if (getOnlineApi()?.isSignedIn?.()) watchGameServerMembership();
 });
 window.addEventListener("crownlands:auth", async () => {
-  if (getOnlineApi()?.isSignedIn?.()) watchGameServerMembership();
-  else stopGameServerMembershipWatcher({ clear: true });
+  if (getOnlineApi()?.isSignedIn?.()) {
+    watchGameServerMembership();
+  } else {
+    stopGameServerMembershipWatcher({ clear: true });
+    dailyLoginRewardStatus = null;
+    dailyLoginRewardError = "";
+    if (dailyLoginRewardUtcTimer) window.clearTimeout(dailyLoginRewardUtcTimer);
+    dailyLoginRewardUtcTimer = 0;
+    renderDailyLoginRewardButton();
+  }
   updateOnlineUi();
   refreshPushAlertRegistration(true);
   if (state) {
@@ -25094,6 +25505,7 @@ window.addEventListener("crownlands:auth", async () => {
 });
 window.addEventListener("crownlands:push-message", handlePushMessage);
 window.addEventListener("crownlands:player-clan", handleOnlinePlayerClanSnapshot);
+window.addEventListener("crownlands:daily-login-reward", handleOnlineDailyLoginRewardSnapshot);
 window.addEventListener("crownlands:online-error", event => {
   onlineLastError = event.detail?.message || "Firebase could not start.";
   updateOnlineUi();
@@ -25110,6 +25522,7 @@ if (shopBtn) shopBtn.addEventListener("click", showShopModal);
 if (islandSwitchBtn) islandSwitchBtn.addEventListener("click", showIslandSwitcherModal);
 if (profileBtn) profileBtn.addEventListener("click", showProfileScreen);
 if (clanHudBtn) clanHudBtn.addEventListener("click", showClanHub);
+if (dailyLoginRewardBtn) dailyLoginRewardBtn.addEventListener("click", () => showDailyLoginRewardsModal());
 if (profileClanAffiliation) profileClanAffiliation.addEventListener("click", showProfileClan);
 if (profileCloseBtn) profileCloseBtn.addEventListener("click", closeProfileScreen);
 if (profileTabBtn) profileTabBtn.addEventListener("click", showProfileView);
@@ -25225,12 +25638,14 @@ document.addEventListener("visibilitychange", () => {
   if (document.visibilityState === "visible") {
     checkForDeployedUpdate(true);
     heartbeatGameServerMembership();
+    refreshDailyLoginRewardStatus({ autoOpen: true, silent: true });
     retryPendingRewardedAdClaim();
   }
 });
 window.addEventListener("online", () => {
   checkForDeployedUpdate(true);
   heartbeatGameServerMembership();
+  refreshDailyLoginRewardStatus({ autoOpen: true, silent: true });
   retryPendingRewardedAdClaim();
 });
 document.addEventListener("keydown", event => {
@@ -25295,7 +25710,7 @@ modal.addEventListener("click", event => {
 });
 document.addEventListener("pointerdown", event => {
   if (!profileScreen?.classList.contains("open") || modal.open) return;
-  if (profileScreen.contains(event.target) || profileBtn?.contains(event.target) || clanHudBtn?.contains(event.target)) return;
+  if (profileScreen.contains(event.target) || profileBtn?.contains(event.target) || clanHudBtn?.contains(event.target) || dailyLoginRewardBtn?.contains(event.target)) return;
   event.preventDefault();
   event.stopPropagation();
   closeProfileScreen();
@@ -25306,6 +25721,10 @@ modal.addEventListener("close", () => {
   if (rewardedAdShopCountdownTimer) {
     window.clearInterval(rewardedAdShopCountdownTimer);
     rewardedAdShopCountdownTimer = 0;
+  }
+  if (dailyLoginRewardCountdownTimer) {
+    window.clearInterval(dailyLoginRewardCountdownTimer);
+    dailyLoginRewardCountdownTimer = 0;
   }
   delete modal.dataset.cityInfoId;
   modal.classList.remove("troop-slider-modal");
@@ -25322,6 +25741,8 @@ modal.addEventListener("close", () => {
   modal.classList.remove("relinquish-city-modal");
   modal.classList.remove("public-player-profile-modal");
   modal.classList.remove("rewarded-ad-confirmation-modal");
+  modal.classList.remove("daily-login-reward-modal");
+  window.setTimeout(maybeAutoOpenDailyLoginRewards, 0);
   setTimeout(showNextLevelUpReward, 0);
   if (!troopSliderActive) return;
   troopSliderActive = false;

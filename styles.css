@@ -4997,6 +4997,230 @@ button.inventory-slot {
   background: linear-gradient(180deg, #102b44, #132033 68%, #11151f);
   border-color: rgba(255, 214, 126, .55);
 }
+.daily-login-reward-modal.modal {
+  width: min(860px, calc(100% - 1rem));
+}
+.daily-login-reward-modal .modal-card {
+  background:
+    radial-gradient(circle at 50% -15%, rgba(242, 197, 75, .2), transparent 42%),
+    linear-gradient(180deg, #102f4c, #0b1b2e 72%, #08111d);
+  border-color: rgba(255, 221, 128, .62);
+}
+.daily-reward-panel {
+  display: grid;
+  gap: .72rem;
+}
+.daily-reward-hero {
+  display: grid;
+  grid-template-columns: 76px minmax(0, 1fr);
+  gap: .75rem;
+  align-items: center;
+  padding: .72rem;
+  border: 1px solid rgba(255, 224, 132, .34);
+  border-radius: 16px;
+  background: linear-gradient(135deg, rgba(25, 85, 126, .88), rgba(6, 28, 52, .92));
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.04);
+}
+.daily-reward-hero > img {
+  width: 76px;
+  height: 76px;
+  filter: drop-shadow(0 8px 10px rgba(0,0,0,.38));
+}
+.daily-reward-hero span {
+  color: #9edcff;
+  font-size: .72rem;
+  font-weight: 950;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+.daily-reward-hero h3 {
+  margin: .08rem 0 .18rem;
+  color: #fff1a9;
+  font-size: 1.3rem;
+}
+.daily-reward-hero p {
+  margin: 0;
+  color: #d7e9f6;
+  font-size: .78rem;
+}
+.daily-reward-status-row,
+.daily-reward-receipt {
+  display: flex;
+  justify-content: space-between;
+  gap: .7rem;
+  align-items: center;
+  padding: .55rem .68rem;
+  border-radius: 12px;
+}
+.daily-reward-status-row {
+  color: #d9efff;
+  background: rgba(6, 25, 45, .82);
+  border: 1px solid rgba(139, 207, 255, .22);
+  font-size: .75rem;
+}
+.daily-reward-status-row span {
+  color: #9ed5ff;
+  text-align: right;
+}
+.daily-reward-receipt {
+  color: #fff6c8;
+  background: rgba(38, 92, 53, .62);
+  border: 1px solid rgba(152, 221, 126, .42);
+  font-size: .78rem;
+}
+.daily-reward-receipt span,
+.daily-reward-receipt strong {
+  display: block;
+}
+.daily-reward-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: .48rem;
+}
+.daily-reward-card {
+  min-width: 0;
+  min-height: 108px;
+  display: grid;
+  align-content: start;
+  gap: .42rem;
+  padding: .5rem;
+  border: 1px solid rgba(142, 193, 230, .18);
+  border-radius: 13px;
+  background: linear-gradient(180deg, rgba(17, 49, 76, .92), rgba(5, 19, 34, .94));
+  box-shadow: inset 0 -4px 0 rgba(0,0,0,.16);
+}
+.daily-reward-card.claimed {
+  border-color: rgba(126, 191, 108, .35);
+  background: linear-gradient(180deg, rgba(37, 79, 55, .78), rgba(8, 33, 27, .9));
+}
+.daily-reward-card.available {
+  border-color: rgba(255, 224, 111, .84);
+  background: linear-gradient(180deg, rgba(80, 69, 23, .84), rgba(33, 29, 10, .94));
+  box-shadow: 0 0 15px rgba(255, 209, 67, .2), inset 0 0 0 1px rgba(255, 245, 179, .14);
+}
+.daily-reward-card.waiting {
+  border-color: rgba(133, 195, 239, .46);
+}
+.daily-reward-card.locked {
+  opacity: .65;
+}
+.daily-reward-card-head {
+  display: flex;
+  justify-content: space-between;
+  gap: .3rem;
+  align-items: baseline;
+}
+.daily-reward-card-head strong {
+  color: #fff0a4;
+  font-size: .74rem;
+}
+.daily-reward-card-head span {
+  color: #9bcbe9;
+  font-size: .55rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+.daily-reward-resource-list,
+.daily-reward-item-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .25rem;
+}
+.daily-reward-resource,
+.daily-reward-item {
+  position: relative;
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: .18rem;
+  padding: .16rem .25rem;
+  border-radius: 8px;
+  background: rgba(1, 12, 23, .66);
+  border: 1px solid rgba(255,255,255,.09);
+}
+.daily-reward-resource img,
+.daily-reward-item img {
+  width: 23px;
+  height: 23px;
+  object-fit: cover;
+  border-radius: 6px;
+}
+.daily-reward-resource strong,
+.daily-reward-item strong {
+  color: #fff7cf;
+  font-size: .62rem;
+}
+.daily-reward-actions {
+  display: grid;
+  justify-items: stretch;
+  gap: .38rem;
+}
+.daily-reward-claim-btn,
+.daily-reward-error button {
+  min-height: 46px;
+  padding: .6rem .8rem;
+  border-radius: 13px;
+  color: #201300;
+  background: linear-gradient(#ffe785, #d9931f);
+  border: 1px solid #fff0ad;
+  font-weight: 1000;
+  box-shadow: inset 0 -4px 0 rgba(92, 50, 5, .2), 0 8px 18px rgba(0,0,0,.24);
+}
+.daily-reward-claim-btn:disabled {
+  color: #a9b4bf;
+  background: rgba(56, 72, 88, .72);
+  border-color: rgba(255,255,255,.12);
+  box-shadow: none;
+}
+.daily-reward-actions small {
+  color: #9db8cc;
+  text-align: center;
+}
+.daily-reward-loading,
+.daily-reward-error {
+  min-height: 180px;
+  display: grid;
+  place-items: center;
+  gap: .65rem;
+  padding: 1rem;
+  text-align: center;
+}
+@media (max-width: 700px) {
+  .daily-reward-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+@media (max-width: 430px) {
+  .daily-login-reward-modal.modal {
+    width: calc(100% - .55rem);
+  }
+  .daily-login-reward-modal .modal-card {
+    padding: .68rem;
+  }
+  .daily-reward-hero {
+    grid-template-columns: 58px minmax(0, 1fr);
+    padding: .55rem;
+  }
+  .daily-reward-hero > img {
+    width: 58px;
+    height: 58px;
+  }
+  .daily-reward-hero h3 {
+    font-size: 1rem;
+  }
+  .daily-reward-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .daily-reward-status-row,
+  .daily-reward-receipt {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: .2rem;
+  }
+  .daily-reward-status-row span {
+    text-align: left;
+  }
+}
 .offline-reward-panel {
   display: grid;
   gap: .78rem;
@@ -5890,6 +6114,47 @@ button.inventory-slot {
   font-size: .92rem;
   font-weight: 1000;
   line-height: 1;
+}
+.daily-login-reward-btn {
+  position: relative;
+  isolation: isolate;
+}
+.daily-login-reward-icon {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  pointer-events: none;
+  user-select: none;
+  filter: drop-shadow(0 6px 8px rgba(0, 0, 0, .42));
+}
+.daily-login-reward-btn.is-claimable .daily-login-reward-icon {
+  animation: dailyRewardHudGlow 1.8s ease-in-out infinite;
+}
+.daily-login-reward-btn:disabled {
+  opacity: .58;
+}
+.daily-login-reward-badge {
+  position: absolute;
+  z-index: 3;
+  right: -3px;
+  top: -4px;
+  width: 21px;
+  height: 21px;
+  display: grid;
+  place-items: center;
+  border: 2px solid #fff4bd;
+  border-radius: 50%;
+  color: #271500;
+  background: linear-gradient(#ffe775, #e99b20);
+  box-shadow: 0 3px 8px rgba(0,0,0,.48), 0 0 12px rgba(255, 219, 88, .72);
+  font-size: .72rem;
+  font-weight: 1000;
+  line-height: 1;
+}
+@keyframes dailyRewardHudGlow {
+  0%, 100% { filter: drop-shadow(0 6px 8px rgba(0,0,0,.42)) drop-shadow(0 0 0 rgba(255,224,101,0)); transform: translateY(0); }
+  50% { filter: drop-shadow(0 6px 8px rgba(0,0,0,.42)) drop-shadow(0 0 8px rgba(255,224,101,.9)); transform: translateY(-2px); }
 }
 .profile-rank-btn:active {
   transform: translateY(1px);
@@ -7130,6 +7395,7 @@ button.inventory-slot {
   .profile-rank-btn { width: 44px; height: 44px; }
   .clan-hud-icon .clan-shield-size-small { width: 40px; height: 44px; }
   .clan-hud-btn.is-search::after { right: -3px; bottom: -3px; width: 18px; height: 18px; font-size: .76rem; }
+  .daily-login-reward-badge { width: 18px; height: 18px; font-size: .62rem; }
   .shop-btn { width: 56px; height: 56px; }
   .resource-pill.bag-btn,
   .resource-pill.shop-btn,

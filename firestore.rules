@@ -52,6 +52,7 @@ service cloud.firestore {
           'shopItems',
           'itemEffects',
           'itemPurchaseCooldowns',
+          'dailyLoginReward',
           'economyUpdatedAtMs',
           'offlineProductionCities',
           'kingPower',
@@ -92,6 +93,7 @@ service cloud.firestore {
         && profileFieldUnchanged('shopItems')
         && profileFieldUnchanged('itemEffects')
         && profileFieldUnchanged('itemPurchaseCooldowns')
+        && profileFieldUnchanged('dailyLoginReward')
         && profileFieldUnchanged('economyUpdatedAtMs')
         && profileFieldUnchanged('offlineProductionCities')
         && profileFieldUnchanged('kingPower')

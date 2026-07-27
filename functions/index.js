@@ -31,7 +31,7 @@ function economyRewardSchedule(campType, fallback = []) {
   }));
 }
 
-const REALM_RELEASE_ID = safeConfigString(REALM_CONFIG.releaseId, "crownlands-2026-07-26-reset-v1");
+const REALM_RELEASE_ID = safeConfigString(REALM_CONFIG.releaseId, "crownlands-2026-07-27-daily-login-v1");
 const RESET_GENERATION = safeConfigString(REALM_CONFIG.resetGeneration, "fresh-2026-07-26-server-reset");
 const ONLINE_WORLD_ID = safeConfigString(REALM_CONFIG.worldId, `main-${RESET_GENERATION}`);
 const TEST_STARTING_GOLD = 100;
@@ -338,6 +338,27 @@ const SHOP_ITEMS = {
   [SWIFT_MARCH_ORDER_ITEM_ID]: { id: SWIFT_MARCH_ORDER_ITEM_ID, label: "Swift March Order", cost: economyNumber("shopItems.swift_march_order.cost", 300_000) },
   [RECALL_HORN_ITEM_ID]: { id: RECALL_HORN_ITEM_ID, label: "Recall Horn", cost: economyNumber("shopItems.recall_horn.cost", 500_000) },
 };
+const DAILY_LOGIN_REWARD_SCHEMA_VERSION = 1;
+const DAILY_LOGIN_REWARD_DAYS = Object.freeze(
+  (Array.isArray(ECONOMY_CONFIG?.dailyLoginRewards?.days) ? ECONOMY_CONFIG.dailyLoginRewards.days : [])
+    .map((entry, index) => Object.freeze({
+      day: Math.max(1, Math.floor(Number(entry?.day) || index + 1)),
+      goldHours: Math.max(0, Number(entry?.goldHours) || 0),
+      troopHours: Math.max(0, Number(entry?.troopHours) || 0),
+      items: Object.freeze(Object.fromEntries(
+        Object.entries(entry?.items || {})
+          .filter(([itemId, quantity]) => SHOP_ITEMS[itemId] && Number(quantity) > 0)
+          .map(([itemId, quantity]) => [itemId, Math.max(1, Math.floor(Number(quantity) || 1))])
+      )),
+    }))
+);
+const DAILY_LOGIN_REWARD_CYCLE_DAYS = Math.max(
+  1,
+  Math.floor(Number(ECONOMY_CONFIG?.dailyLoginRewards?.cycleLengthDays) || DAILY_LOGIN_REWARD_DAYS.length)
+);
+if (DAILY_LOGIN_REWARD_DAYS.length !== DAILY_LOGIN_REWARD_CYCLE_DAYS) {
+  throw new Error("Daily login reward configuration must define every day in the cycle.");
+}
 const LEGACY_SHOP_ITEM_IDS = ["troop_boost_1h", "anti_scout_1h"];
 const CITY_LEVEL_STATS = {
   victoryPointsBase: 6,
@@ -450,7 +471,7 @@ function safeString(value, max = 80) {
 
 function operationResultMetrics(result = null) {
   const production = result?.production || {};
-  return {
+  const metrics = {
     status: safeString(result?.status || (result?.ok === false ? "failed" : "ok"), 32),
     cityCount: Math.max(0, Math.floor(Number(production.cityCount) || 0)),
     cityWrites: Math.max(0, Math.floor(Number(result?.cityWrites ?? result?.writes) || 0)),
@@ -458,6 +479,22 @@ function operationResultMetrics(result = null) {
     resolved: Math.max(0, Math.floor(Number(result?.resolved) || 0)),
     failed: Math.max(0, Math.floor(Number(result?.failed) || 0)),
   };
+  const dailyStatus = result?.dailyLoginRewardStatus;
+  const receipt = result?.receipt;
+  if (dailyStatus && typeof dailyStatus === "object") {
+    metrics.cycle = Math.max(1, Math.floor(Number(receipt?.cycle || dailyStatus.cycle) || 1));
+    metrics.day = Math.max(1, Math.floor(Number(receipt?.day || dailyStatus.nextDay) || 1));
+    metrics.eligible = Boolean(dailyStatus.eligible);
+  }
+  if (receipt && typeof receipt === "object") {
+    metrics.rewardTypes = [
+      Number(receipt.gold) > 0 ? "gold" : "",
+      Number(receipt.troops) > 0 ? "troops" : "",
+      Object.keys(receipt.items || {}).length ? "items" : "",
+    ].filter(Boolean);
+    metrics.itemKinds = Object.keys(receipt.items || {}).length;
+  }
+  return metrics;
 }
 
 function logOperation(operation, startedAtMs, request = null, outcome = "ok", details = {}) {
@@ -3569,6 +3606,75 @@ function getNextUtcDayStartMs(nowMs = Date.now()) {
   return Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate() + 1);
 }
 
+function normalizeDailyLoginRewardReceipt(raw = {}) {
+  if (!raw || typeof raw !== "object") return null;
+  const day = clampInt(raw.day, 1, DAILY_LOGIN_REWARD_CYCLE_DAYS);
+  const cycle = Math.max(1, Math.floor(safeNumber(raw.cycle, 1)));
+  const dayKey = safeString(raw.dayKey, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dayKey)) return null;
+  const items = Object.fromEntries(
+    Object.entries(raw.items || {})
+      .filter(([itemId, quantity]) => SHOP_ITEMS[itemId] && Number(quantity) > 0)
+      .map(([itemId, quantity]) => [itemId, Math.max(1, Math.floor(safeNumber(quantity, 1)))])
+  );
+  return {
+    cycle,
+    day,
+    dayKey,
+    claimedAtMs: Math.max(0, timestampToMs(raw.claimedAtMs || raw.claimedAt)),
+    goldHours: Math.max(0, safeNumber(raw.goldHours, 0)),
+    troopHours: Math.max(0, safeNumber(raw.troopHours, 0)),
+    gold: Math.max(0, Math.floor(safeNumber(raw.gold, 0))),
+    troops: Math.max(0, Math.floor(safeNumber(raw.troops, 0))),
+    items,
+    targetCityId: safeString(raw.targetCityId, 96),
+  };
+}
+
+function normalizeDailyLoginRewardState(raw = {}) {
+  const cycle = Math.max(1, Math.floor(safeNumber(raw?.cycle, 1)));
+  const nextDay = clampInt(raw?.nextDay, 1, DAILY_LOGIN_REWARD_CYCLE_DAYS);
+  const lastClaimDayKey = safeString(raw?.lastClaimDayKey, 10);
+  return {
+    schemaVersion: DAILY_LOGIN_REWARD_SCHEMA_VERSION,
+    cycle,
+    nextDay,
+    totalClaims: Math.max(0, Math.floor(safeNumber(raw?.totalClaims, 0))),
+    lastClaimDayKey: /^\d{4}-\d{2}-\d{2}$/.test(lastClaimDayKey) ? lastClaimDayKey : "",
+    lastClaimedAtMs: Math.max(0, timestampToMs(raw?.lastClaimedAtMs || raw?.lastClaimedAt)),
+    lastReceipt: normalizeDailyLoginRewardReceipt(raw?.lastReceipt),
+  };
+}
+
+function createDefaultDailyLoginRewardState() {
+  return normalizeDailyLoginRewardState({});
+}
+
+function createDailyLoginRewardStatus(rawState = {}, nowMs = Date.now()) {
+  const state = normalizeDailyLoginRewardState(rawState);
+  const serverTimeMs = Math.max(0, Math.floor(safeNumber(nowMs, Date.now())));
+  const dayKey = getCurrentDateKey(new Date(serverTimeMs));
+  const claimedToday = state.lastClaimDayKey === dayKey;
+  return {
+    ...state,
+    eligible: !claimedToday,
+    claimedToday,
+    dayKey,
+    serverTimeMs,
+    nextUtcUnlockAtMs: claimedToday ? getNextUtcDayStartMs(serverTimeMs) : 0,
+    cycleLengthDays: DAILY_LOGIN_REWARD_CYCLE_DAYS,
+  };
+}
+
+function assertCurrentPlayerProfile(profile = {}) {
+  if (
+    safeString(profile.resetGeneration, 120) !== RESET_GENERATION
+    || safeString(profile.worldId, 120) !== ONLINE_WORLD_ID
+  ) {
+    throw new HttpsError("failed-precondition", "Enter the current Crownlands world before claiming a daily reward.");
+  }
+}
+
 function normalizeDailyItemPurchaseCounter(value = {}, limit = 0) {
   const safeLimit = Math.max(0, Math.floor(safeNumber(limit, 0)));
   const explicitDate = safeString(value?.utcDate || value?.date, 10);
@@ -4507,6 +4613,7 @@ function createEconomyResponse(economy = null, overrides = {}) {
     character,
     upgrades,
     daily,
+    dailyLoginReward,
     harvestBonuses,
     harvestSpawnTimer,
     harvestNextSpawnAtMs,
@@ -4537,6 +4644,9 @@ function createEconomyResponse(economy = null, overrides = {}) {
   };
   if (globalStats) currentUser.globalStats = globalStats;
   if (daily !== undefined) currentUser.daily = normalizeDaily(daily);
+  if (dailyLoginReward !== undefined) {
+    currentUser.dailyLoginReward = normalizeDailyLoginRewardState(dailyLoginReward);
+  }
   if (resolvedHarvestBonuses !== undefined) currentUser.harvestBonuses = enforceHarvestBonusActiveLimit(resolvedHarvestBonuses);
   if (harvestSpawnTimer !== undefined) {
     currentUser.harvestSpawnTimer = clampInt(harvestSpawnTimer, 0, HARVEST_BONUS_SPAWN_INTERVAL_SECONDS);
@@ -4797,6 +4907,132 @@ exports.collectEconomy = timedCallable("collectEconomy", { region: "us-central1"
     return createEconomyResponse(economy);
   });
 });
+
+exports.getDailyLoginRewardStatus = timedCallable(
+  "getDailyLoginRewardStatus",
+  { region: "us-central1", maxInstances: 30, invoker: "public" },
+  async request => {
+    const uid = requireAuth(request);
+    const nowMs = Date.now();
+    const profileSnap = await db.doc(`players/${uid}`).get();
+    if (!profileSnap.exists) {
+      throw new HttpsError("failed-precondition", "Claim a starting city before opening daily rewards.");
+    }
+    const profile = profileSnap.data() || {};
+    assertCurrentPlayerProfile(profile);
+    return {
+      ok: true,
+      dailyLoginRewardStatus: createDailyLoginRewardStatus(profile.dailyLoginReward, nowMs),
+    };
+  }
+);
+
+exports.claimDailyLoginReward = timedCallable(
+  "claimDailyLoginReward",
+  { region: "us-central1", maxInstances: 30, invoker: "public" },
+  async request => {
+    const uid = requireAuth(request);
+    const nowMs = Date.now();
+    return db.runTransaction(async transaction => {
+      const profileRef = db.doc(`players/${uid}`);
+      const profileSnap = await transaction.get(profileRef);
+      if (!profileSnap.exists) {
+        throw new HttpsError("failed-precondition", "Claim a starting city before collecting daily rewards.");
+      }
+      const profile = profileSnap.data() || {};
+      assertCurrentPlayerProfile(profile);
+      const statusBefore = createDailyLoginRewardStatus(profile.dailyLoginReward, nowMs);
+      if (!statusBefore.eligible) {
+        return {
+          ok: true,
+          claimed: true,
+          replayed: true,
+          receipt: statusBefore.lastReceipt,
+          dailyLoginRewardStatus: statusBefore,
+        };
+      }
+
+      const reward = DAILY_LOGIN_REWARD_DAYS[statusBefore.nextDay - 1];
+      if (!reward || reward.day !== statusBefore.nextDay) {
+        throw new HttpsError("internal", "The daily reward schedule is unavailable.");
+      }
+      const economy = await prepareEconomyCollection(transaction, uid, nowMs, { profileRef, profileSnap });
+      const mainCityEntry = getCanonicalMainCityEntry(economy.profileAfter, economy.cityEntries);
+      if (
+        !mainCityEntry?.ref
+        || !mainCityEntry.city
+        || getOwnerUid(mainCityEntry.city) !== uid
+        || isStronghold(mainCityEntry.city)
+        || safeString(mainCityEntry.city.resetGeneration, 120) !== RESET_GENERATION
+        || safeString(mainCityEntry.city.worldId, 120) !== ONLINE_WORLD_ID
+      ) {
+        throw new HttpsError("failed-precondition", "Verify your current-world main city before receiving a daily reward.");
+      }
+      const rates = getRewardedAdBaseRates(economy);
+      const goldReward = Math.max(0, Math.floor(rates.goldPerHour * reward.goldHours));
+      const troopReward = Math.max(0, Math.floor(rates.troopsPerHour * reward.troopHours));
+      const goldFloat = Math.max(0, safeNumber(economy.goldFloat, economy.gold)) + goldReward;
+      const gold = Math.max(0, Math.floor(goldFloat));
+      const shopItems = { ...economy.shopItems };
+      Object.entries(reward.items).forEach(([itemId, quantity]) => {
+        shopItems[itemId] = Math.max(0, Math.floor(safeNumber(shopItems[itemId], 0)))
+          + Math.max(1, Math.floor(safeNumber(quantity, 1)));
+      });
+
+      const troopCredit = troopReward > 0
+        ? creditLevelUpTroopsToMainCity(economy, economy.profileAfter, troopReward, nowMs)
+        : null;
+      if (troopReward > 0 && !troopCredit) {
+        throw new HttpsError("failed-precondition", "Verify your main city before receiving the troop reward.");
+      }
+
+      const claimedCycle = statusBefore.cycle;
+      const claimedDay = statusBefore.nextDay;
+      const nextCycle = claimedDay >= DAILY_LOGIN_REWARD_CYCLE_DAYS ? claimedCycle + 1 : claimedCycle;
+      const nextDay = claimedDay >= DAILY_LOGIN_REWARD_CYCLE_DAYS ? 1 : claimedDay + 1;
+      const receipt = {
+        cycle: claimedCycle,
+        day: claimedDay,
+        dayKey: statusBefore.dayKey,
+        claimedAtMs: nowMs,
+        goldHours: reward.goldHours,
+        troopHours: reward.troopHours,
+        gold: goldReward,
+        troops: troopReward,
+        items: { ...reward.items },
+        targetCityId: troopCredit?.cityId || "",
+      };
+      const nextState = {
+        schemaVersion: DAILY_LOGIN_REWARD_SCHEMA_VERSION,
+        cycle: nextCycle,
+        nextDay,
+        totalClaims: statusBefore.totalClaims + 1,
+        lastClaimDayKey: statusBefore.dayKey,
+        lastClaimedAtMs: nowMs,
+        lastReceipt: receipt,
+      };
+
+      writePreparedEconomy(transaction, economy, {
+        gold,
+        goldFloat,
+        shopItems,
+        dailyLoginReward: nextState,
+      });
+      return createEconomyResponse(economy, {
+        gold,
+        goldFloat,
+        shopItems,
+        dailyLoginReward: nextState,
+        claimed: true,
+        replayed: false,
+        receipt,
+        dailyLoginRewardStatus: createDailyLoginRewardStatus(nextState, nowMs),
+        targetCityId: troopCredit?.cityId || "",
+        targetCityName: troopCredit?.cityName || "",
+      });
+    });
+  }
+);
 
 exports.getRewardedAdStatus = onCall(REWARDED_AD_STATUS_CALLABLE_OPTIONS, async request => {
   const uid = requireAuth(request);
@@ -6229,6 +6465,7 @@ function createFreshResetPlayerProfile({
     shopItems: createDefaultShopItems(),
     itemEffects: normalizeItemEffects({}),
     itemPurchaseCooldowns: normalizeItemPurchaseCooldowns({}),
+    dailyLoginReward: createDefaultDailyLoginRewardState(),
     daily: normalizeDaily({}, new Date(nowMs)),
     harvestBonuses: [],
     harvestSpawnTimer: HARVEST_BONUS_SPAWN_INTERVAL_SECONDS,
@@ -6456,6 +6693,7 @@ async function claimFreshStartingCity(request) {
         shopItems: freshProfile.shopItems,
         itemEffects: freshProfile.itemEffects,
         itemPurchaseCooldowns: freshProfile.itemPurchaseCooldowns,
+        dailyLoginReward: freshProfile.dailyLoginReward,
         mainCityId: chosenCity.id,
         mainIslandId: chosenIsland.islandId,
         mainRegionId: chosenIsland.regionId,
