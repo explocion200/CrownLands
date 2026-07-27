@@ -63,7 +63,7 @@ requires(callableAccessCheck, /assert\.notEqual\(response\.status,\s*403/, "Call
 requires(callableAccessCheck, /payload\?\.error\?\.status[\s\S]*?"UNAUTHENTICATED"/, "Callable access check does not verify Firebase authentication.");
 
 requires(server, /safeString\(attackerProfile\.clanId,\s*128\)[\s\S]*?safeString\(defenderPowerData\.clanId,\s*128\)[\s\S]*?cannot scout or attack a clan ally/i, "Army launch does not reject clan allies.");
-requires(server, /const becameClanAllies[\s\S]*?outcome:\s*"allied_return"/, "Active armies do not return when their target becomes allied.");
+requires(server, /const becameClanAllies[\s\S]*?createAlliedTargetReturnMovement\(army,\s*nowMs\)[\s\S]*?status:\s*"returning"[\s\S]*?outcome:\s*"allied_return_started"/, "Active armies do not begin a routed return when their target becomes allied.");
 requires(server, /rebuildClanPowerOnPlayerStats\s*=\s*onDocumentWritten/, "Clan King Power is not updated from authoritative player stats.");
 requires(server, /function clanIdentitySnapshotFields[\s\S]*?ownerClanIdentityRevision/, "Clan asset snapshots do not store a monotonic clan identity revision.");
 requires(server, /syncClanIdentityOnMembershipChange\s*=\s*onDocumentWritten[\s\S]*?latestProfile\.clanIdentityRevision/, "Clan membership changes do not trigger durable identity propagation.");
