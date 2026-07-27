@@ -191,9 +191,20 @@ const CLAN_MEMBER_LIMIT = 30;
 const CLAN_JOIN_COOLDOWN_MS = 24 * 60 * 60 * 1000;
 const CLAN_LEADER_INACTIVE_MS = 14 * 24 * 60 * 60 * 1000;
 const CLAN_RESERVATION_RELEASE_MS = 7 * 24 * 60 * 60 * 1000;
-const CLAN_CHAT_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
-const CLAN_CHAT_RATE_WINDOW_MS = 30 * 1000;
-const CLAN_CHAT_RATE_LIMIT = 5;
+const CLAN_GIFT_COOLDOWN_MS = 5 * 60 * 60 * 1000;
+const CLAN_GIFT_PRODUCTION_MINUTES = 30;
+const CLAN_QUEST_REWARDS = Object.freeze([
+  { id: "capture_5", captures: 5, rewardType: "gold", productionMinutes: 30 },
+  { id: "capture_15", captures: 15, rewardType: "troops", productionMinutes: 30 },
+  { id: "capture_25", captures: 25, rewardType: "gold", productionMinutes: 60 },
+  { id: "capture_35", captures: 35, rewardType: "troops", productionMinutes: 60 },
+  { id: "capture_45", captures: 45, rewardType: "gold", productionMinutes: 90 },
+  { id: "capture_50", captures: 50, rewardType: "troops", productionMinutes: 120 },
+  { id: "capture_65", captures: 65, rewardType: "gold", productionMinutes: 120 },
+  { id: "capture_75", captures: 75, rewardType: "troops", productionMinutes: 180 },
+  { id: "capture_90", captures: 90, rewardType: "gold", productionMinutes: 180 },
+  { id: "capture_100", captures: 100, rewardType: "troops", productionMinutes: 360 },
+]);
 const CLAN_IDENTITY_REVISION_VERSION = 1;
 const CLAN_SHIELD_VERSION = 1;
 const CLAN_SHIELD_SHAPES = new Set(["castilian", "heater", "kite", "round"]);
@@ -5558,6 +5569,19 @@ exports.syncPlayerIdentity = onCall({ region: "us-central1", maxInstances: 20, i
       },
     },
   ];
+  if (identity.clanId) {
+    writes.push({
+      ref: db.doc(`clans/${identity.clanId}/members/${uid}`),
+      data: {
+        uid,
+        displayName: identity.ownerName,
+        flag: identity.ownerFlag,
+        kingPower: serverKingPower,
+        updatedAtMs: nowMs,
+        updatedAt: FieldValue.serverTimestamp(),
+      },
+    });
+  }
 
   cityDocs.forEach(cityDoc => {
     writes.push({
@@ -7359,6 +7383,58 @@ function clanMemberSnapshot(uid = "", profile = {}, role = "member", nowMs = Dat
   };
 }
 
+function clanQuestProgressRef(clanId = "") {
+  return db.doc(`clans/${clanId}/questProgress/${RESET_GENERATION}`);
+}
+
+function clanQuestCaptureReceiptRef(clanId = "", eventId = "") {
+  const safeEventId = safeString(eventId, 180).replace(/[^a-zA-Z0-9_-]/g, "_");
+  return safeEventId ? db.doc(`clans/${clanId}/questCaptureReceipts/${safeEventId}`) : null;
+}
+
+function clanMemberRewardsRef(clanId = "", uid = "") {
+  return db.doc(`clans/${clanId}/memberRewards/${uid}`);
+}
+
+function createClanMemberRewards(uid = "", nowMs = Date.now()) {
+  return {
+    uid,
+    worldId: ONLINE_WORLD_ID,
+    resetGeneration: RESET_GENERATION,
+    pendingGiftGoldMinutes: 0,
+    giftCountReceived: 0,
+    giftCountSent: 0,
+    giftGoldMinutesClaimed: 0,
+    lastGiftSentAtMs: 0,
+    questClaims: {},
+    createdAtMs: nowMs,
+    updatedAtMs: nowMs,
+    createdAt: FieldValue.serverTimestamp(),
+    updatedAt: FieldValue.serverTimestamp(),
+  };
+}
+
+function normalizeClanQuestClaims(value = {}) {
+  const source = value && typeof value === "object" ? value : {};
+  return Object.fromEntries(CLAN_QUEST_REWARDS
+    .filter(reward => source[reward.id] && typeof source[reward.id] === "object")
+    .map(reward => [reward.id, source[reward.id]]));
+}
+
+function clanMemberRewardsForClient(value = {}, nowMs = Date.now()) {
+  const lastGiftSentAtMs = Math.max(0, timestampToMs(value.lastGiftSentAtMs));
+  return {
+    pendingGiftGoldMinutes: Math.max(0, Math.floor(safeNumber(value.pendingGiftGoldMinutes, 0))),
+    giftCountReceived: Math.max(0, Math.floor(safeNumber(value.giftCountReceived, 0))),
+    giftCountSent: Math.max(0, Math.floor(safeNumber(value.giftCountSent, 0))),
+    giftGoldMinutesClaimed: Math.max(0, Math.floor(safeNumber(value.giftGoldMinutesClaimed, 0))),
+    lastGiftSentAtMs,
+    giftCooldownUntilMs: lastGiftSentAtMs ? lastGiftSentAtMs + CLAN_GIFT_COOLDOWN_MS : 0,
+    canSendGift: !lastGiftSentAtMs || nowMs - lastGiftSentAtMs >= CLAN_GIFT_COOLDOWN_MS,
+    questClaims: normalizeClanQuestClaims(value.questClaims),
+  };
+}
+
 function assertClanUnlocked(profile = {}) {
   const level = Math.max(1, Math.floor(safeNumber(profile?.character?.level, 1)));
   if (level < CLAN_UNLOCK_LEVEL) {
@@ -7500,6 +7576,18 @@ exports.createClan = onCall({ region: "us-central1", maxInstances: 20, invoker: 
       ...profile,
       kingPower: clan.totalKingPower,
     }, "leader", nowMs));
+    transaction.set(clanMemberRewardsRef(clanId, uid), createClanMemberRewards(uid, nowMs));
+    transaction.set(clanQuestProgressRef(clanId), {
+      clanId,
+      worldId: ONLINE_WORLD_ID,
+      resetGeneration: RESET_GENERATION,
+      captureCount: 0,
+      milestoneUnlocks: {},
+      createdAtMs: nowMs,
+      updatedAtMs: nowMs,
+      createdAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
+    });
     transaction.set(nameRef, { clanId, reusableAtMs: Number.MAX_SAFE_INTEGER, updatedAt: FieldValue.serverTimestamp() });
     transaction.set(tagRef, { clanId, reusableAtMs: Number.MAX_SAFE_INTEGER, updatedAt: FieldValue.serverTimestamp() });
     writePreparedEconomy(transaction, economy, {
@@ -7560,6 +7648,7 @@ async function joinClanTransaction(transaction, { uid, clanId, profileSnap, clan
   const nextCount = clampInt(clan.memberCount, 0, CLAN_MEMBER_LIMIT) + 1;
   const nextPower = Math.max(0, Math.floor(safeNumber(clan.totalKingPower, 0))) + kingPower;
   transaction.set(db.doc(`clans/${clanId}/members/${uid}`), clanMemberSnapshot(uid, { ...profile, kingPower }, "member", nowMs));
+  transaction.set(clanMemberRewardsRef(clanId, uid), createClanMemberRewards(uid, nowMs));
   transaction.set(clanSnap.ref, {
     memberCount: nextCount,
     totalKingPower: nextPower,
@@ -7718,8 +7807,8 @@ async function removeClanMember({ actorUid, targetUid, clanId, reason = "left" }
     const target = targetMemberSnap.data() || {};
     const selfLeave = actorUid === targetUid;
     if (!selfLeave) {
-      assertClanRole(actor, ["leader", "officer"]);
-      if (target.role === "leader" || (actor.role === "officer" && target.role === "officer")) {
+      assertClanRole(actor, ["leader"]);
+      if (target.role === "leader") {
         throw new HttpsError("permission-denied", "You cannot remove that clan member.");
       }
     }
@@ -7730,6 +7819,7 @@ async function removeClanMember({ actorUid, targetUid, clanId, reason = "left" }
     const nextCount = Math.max(0, clampInt(clan.memberCount, 0, CLAN_MEMBER_LIMIT) - 1);
     const nextPower = Math.max(0, Math.floor(safeNumber(clan.totalKingPower, 0)) - targetPower);
     transaction.delete(targetMemberSnap.ref);
+    transaction.delete(clanMemberRewardsRef(clanId, targetUid));
     if (targetProfileSnap.exists) {
       transaction.set(targetProfileSnap.ref, {
         ...clanIdentityPatch(),
@@ -7857,95 +7947,249 @@ exports.disbandClan = onCall({ region: "us-central1", maxInstances: 10, invoker:
   return removeClanMember({ actorUid: uid, targetUid: uid, clanId, reason: "clan_disbanded" });
 });
 
-exports.sendClanMessage = onCall({ region: "us-central1", maxInstances: 30, invoker: "public" }, async request => {
+exports.sendClanGift = onCall({ region: "us-central1", maxInstances: 20, invoker: "public" }, async request => {
   const uid = requireAuth(request);
-  const text = safeString(request.data?.text, 300).replace(/[\u0000-\u001f\u007f]/g, " ").replace(/\s+/g, " ").trim();
-  if (!text) throw new HttpsError("invalid-argument", "Write a message first.");
   const nowMs = Date.now();
-  const profile = (await db.doc(`players/${uid}`).get()).data() || {};
-  const clanId = safeString(profile.clanId, 128);
-  if (!clanId) throw new HttpsError("failed-precondition", "You are not in a clan.");
-  const recentSnap = await db.collection(`clans/${clanId}/messages`)
-    .where("senderUid", "==", uid)
-    .where("createdAtMs", ">=", nowMs - CLAN_CHAT_RATE_WINDOW_MS)
-    .orderBy("createdAtMs", "desc")
-    .limit(CLAN_CHAT_RATE_LIMIT)
-    .get();
-  if (recentSnap.size >= CLAN_CHAT_RATE_LIMIT) throw new HttpsError("resource-exhausted", "You are sending messages too quickly.");
-  if (recentSnap.docs[0]?.data()?.normalizedText === text.toLowerCase()) throw new HttpsError("already-exists", "That message was already sent.");
-  const memberSnap = await db.doc(`clans/${clanId}/members/${uid}`).get();
-  if (!memberSnap.exists) throw new HttpsError("permission-denied", "Clan membership could not be verified.");
-  const ref = db.collection(`clans/${clanId}/messages`).doc();
-  const message = {
-    worldId: ONLINE_WORLD_ID,
-    resetGeneration: RESET_GENERATION,
-    senderUid: uid,
-    senderName: normalizePlayerName(profile.playerName || profile.displayName),
-    senderRole: memberSnap.data()?.role || "member",
-    senderFlag: profile.flag || null,
-    text,
-    normalizedText: text.toLowerCase(),
-    status: "active",
-    reportCount: 0,
-    createdAtMs: nowMs,
-    expiresAtMs: nowMs + CLAN_CHAT_RETENTION_MS,
-    createdAt: FieldValue.serverTimestamp(),
-  };
-  await ref.set(message);
-  return { ok: true, message: { id: ref.id, ...message } };
-});
-
-exports.reportClanMessage = onCall({ region: "us-central1", maxInstances: 20, invoker: "public" }, async request => {
-  const uid = requireAuth(request);
-  const profile = (await db.doc(`players/${uid}`).get()).data() || {};
-  const clanId = safeString(profile.clanId, 128);
-  const messageId = safeString(request.data?.messageId, 128);
   return db.runTransaction(async transaction => {
-    const [memberSnap, messageSnap, reportSnap] = await Promise.all([
+    const profileSnap = await transaction.get(db.doc(`players/${uid}`));
+    const profile = profileSnap.data() || {};
+    const clanId = safeString(profile.clanId, 128);
+    if (!clanId) throw new HttpsError("failed-precondition", "You are not in a clan.");
+    const senderRewardsRef = clanMemberRewardsRef(clanId, uid);
+    const [clanSnap, senderMemberSnap, senderRewardsSnap, membersSnap] = await Promise.all([
+      transaction.get(db.doc(`clans/${clanId}`)),
       transaction.get(db.doc(`clans/${clanId}/members/${uid}`)),
-      transaction.get(db.doc(`clans/${clanId}/messages/${messageId}`)),
-      transaction.get(db.doc(`clans/${clanId}/messageReports/${messageId}_${uid}`)),
+      transaction.get(senderRewardsRef),
+      transaction.get(db.collection(`clans/${clanId}/members`)),
     ]);
-    if (!memberSnap.exists || !messageSnap.exists) throw new HttpsError("not-found", "Clan message was not found.");
-    if (reportSnap.exists) return { ok: true, duplicate: true };
-    transaction.set(reportSnap.ref, {
-      messageId,
-      reporterUid: uid,
-      senderUid: safeString(messageSnap.data()?.senderUid, 128),
-      reason: safeString(request.data?.reason || "inappropriate", 80),
-      createdAtMs: Date.now(),
-      createdAt: FieldValue.serverTimestamp(),
+    if (!clanSnap.exists || !senderMemberSnap.exists) {
+      throw new HttpsError("permission-denied", "Clan membership could not be verified.");
+    }
+    const clan = clanSnap.data() || {};
+    assertCurrentClan(clan);
+    if (clan.status !== "active") throw new HttpsError("failed-precondition", "That clan is no longer active.");
+    const senderRewards = senderRewardsSnap.exists ? senderRewardsSnap.data() || {} : {};
+    const lastGiftSentAtMs = Math.max(0, timestampToMs(senderRewards.lastGiftSentAtMs));
+    const cooldownUntilMs = lastGiftSentAtMs + CLAN_GIFT_COOLDOWN_MS;
+    if (lastGiftSentAtMs && cooldownUntilMs > nowMs) {
+      throw new HttpsError("failed-precondition", "Your clan gift is still cooling down.", { cooldownUntilMs });
+    }
+    const recipients = membersSnap.docs.filter(memberDoc => memberDoc.id !== uid && memberDoc.data()?.status !== "removed");
+    const nextSentCount = Math.max(0, Math.floor(safeNumber(senderRewards.giftCountSent, 0))) + 1;
+    transaction.set(senderRewardsRef, {
+      uid,
+      worldId: ONLINE_WORLD_ID,
+      resetGeneration: RESET_GENERATION,
+      lastGiftSentAtMs: nowMs,
+      giftCountSent: nextSentCount,
+      updatedAtMs: nowMs,
+      updatedAt: FieldValue.serverTimestamp(),
+      ...(senderRewardsSnap.exists ? {} : {
+        pendingGiftGoldMinutes: 0,
+        giftCountReceived: 0,
+        giftGoldMinutesClaimed: 0,
+        questClaims: {},
+        createdAtMs: nowMs,
+        createdAt: FieldValue.serverTimestamp(),
+      }),
+    }, { merge: true });
+    recipients.forEach(memberDoc => {
+      transaction.set(clanMemberRewardsRef(clanId, memberDoc.id), {
+        uid: memberDoc.id,
+        worldId: ONLINE_WORLD_ID,
+        resetGeneration: RESET_GENERATION,
+        pendingGiftGoldMinutes: FieldValue.increment(CLAN_GIFT_PRODUCTION_MINUTES),
+        giftCountReceived: FieldValue.increment(1),
+        updatedAtMs: nowMs,
+        updatedAt: FieldValue.serverTimestamp(),
+      }, { merge: true });
     });
-    transaction.set(messageSnap.ref, { reportCount: FieldValue.increment(1) }, { merge: true });
-    writeClanAudit(transaction, clanId, uid, "message_reported", { messageId });
-    return { ok: true };
+    writeClanAudit(transaction, clanId, uid, "clan_gift_sent", {
+      recipientCount: recipients.length,
+      productionMinutes: CLAN_GIFT_PRODUCTION_MINUTES,
+    }, nowMs);
+    return {
+      ok: true,
+      recipientCount: recipients.length,
+      productionMinutes: CLAN_GIFT_PRODUCTION_MINUTES,
+      memberRewards: clanMemberRewardsForClient({
+        ...senderRewards,
+        giftCountSent: nextSentCount,
+        lastGiftSentAtMs: nowMs,
+      }, nowMs),
+    };
   });
 });
 
-exports.cleanupClanMessages = onSchedule({
-  region: "us-central1",
-  schedule: "every 24 hours",
-  timeZone: "UTC",
-  maxInstances: 1,
-}, async () => {
+exports.claimClanGiftPool = onCall({ region: "us-central1", maxInstances: 20, invoker: "public" }, async request => {
+  const uid = requireAuth(request);
   const nowMs = Date.now();
-  const clansSnap = await db.collection("clans")
-    .where("status", "==", "active")
-    .where("resetGeneration", "==", RESET_GENERATION)
-    .where("worldId", "==", ONLINE_WORLD_ID)
-    .limit(500)
-    .get();
-  for (const clanDoc of clansSnap.docs) {
-    const messagesSnap = await clanDoc.ref.collection("messages").orderBy("createdAtMs", "desc").limit(700).get();
-    const expiredOrExcess = messagesSnap.docs.filter((messageDoc, index) => (
-      index >= 500 || timestampToMs(messageDoc.data()?.expiresAtMs) <= nowMs
-    ));
-    for (let index = 0; index < expiredOrExcess.length; index += 450) {
-      const batch = db.batch();
-      expiredOrExcess.slice(index, index + 450).forEach(messageDoc => batch.delete(messageDoc.ref));
-      await batch.commit();
+  return db.runTransaction(async transaction => {
+    const profileSnap = await transaction.get(db.doc(`players/${uid}`));
+    const profile = profileSnap.data() || {};
+    const clanId = safeString(profile.clanId, 128);
+    if (!clanId) throw new HttpsError("failed-precondition", "You are not in a clan.");
+    const rewardsRef = clanMemberRewardsRef(clanId, uid);
+    const [clanSnap, memberSnap, rewardsSnap] = await Promise.all([
+      transaction.get(db.doc(`clans/${clanId}`)),
+      transaction.get(db.doc(`clans/${clanId}/members/${uid}`)),
+      transaction.get(rewardsRef),
+    ]);
+    if (!clanSnap.exists || !memberSnap.exists) {
+      throw new HttpsError("permission-denied", "Clan membership could not be verified.");
     }
-  }
+    assertCurrentClan(clanSnap.data() || {});
+    const rewards = rewardsSnap.exists ? rewardsSnap.data() || {} : {};
+    const pendingMinutes = Math.max(0, Math.floor(safeNumber(rewards.pendingGiftGoldMinutes, 0)));
+    if (!pendingMinutes) {
+      return {
+        ok: true,
+        claimed: false,
+        reward: 0,
+        productionMinutes: 0,
+        memberRewards: clanMemberRewardsForClient(rewards, nowMs),
+      };
+    }
+    const economy = await prepareEconomyCollection(transaction, uid, nowMs, { profileRef: profileSnap.ref, profileSnap });
+    const baseGoldPerHour = getRewardedAdBaseRates(economy).goldPerHour;
+    const rewardAmount = Math.max(0, Math.floor(baseGoldPerHour * pendingMinutes / 60));
+    const goldFloat = Math.max(0, safeNumber(economy.goldFloat, economy.gold)) + rewardAmount;
+    const gold = Math.max(0, Math.floor(goldFloat));
+    const totalClaimedMinutes = Math.max(0, Math.floor(safeNumber(rewards.giftGoldMinutesClaimed, 0))) + pendingMinutes;
+    writePreparedEconomy(transaction, economy, { gold, goldFloat });
+    transaction.set(rewardsRef, {
+      uid,
+      worldId: ONLINE_WORLD_ID,
+      resetGeneration: RESET_GENERATION,
+      pendingGiftGoldMinutes: 0,
+      giftGoldMinutesClaimed: totalClaimedMinutes,
+      lastGiftClaimedAtMs: nowMs,
+      updatedAtMs: nowMs,
+      updatedAt: FieldValue.serverTimestamp(),
+    }, { merge: true });
+    writeClanAudit(transaction, clanId, uid, "clan_gift_claimed", {
+      productionMinutes: pendingMinutes,
+      rewardAmount,
+    }, nowMs);
+    return createEconomyResponse(economy, {
+      gold,
+      goldFloat,
+      claimed: true,
+      rewardType: "gold",
+      reward: rewardAmount,
+      productionMinutes: pendingMinutes,
+      memberRewards: clanMemberRewardsForClient({
+        ...rewards,
+        pendingGiftGoldMinutes: 0,
+        giftGoldMinutesClaimed: totalClaimedMinutes,
+      }, nowMs),
+    });
+  });
+});
+
+exports.claimClanQuestReward = onCall({ region: "us-central1", maxInstances: 20, invoker: "public" }, async request => {
+  const uid = requireAuth(request);
+  const rewardId = safeString(request.data?.rewardId, 40);
+  const rewardConfig = CLAN_QUEST_REWARDS.find(reward => reward.id === rewardId);
+  if (!rewardConfig) throw new HttpsError("invalid-argument", "Choose a valid clan quest reward.");
+  const nowMs = Date.now();
+  return db.runTransaction(async transaction => {
+    const profileSnap = await transaction.get(db.doc(`players/${uid}`));
+    const profile = profileSnap.data() || {};
+    const clanId = safeString(profile.clanId, 128);
+    if (!clanId) throw new HttpsError("failed-precondition", "You are not in a clan.");
+    const rewardsRef = clanMemberRewardsRef(clanId, uid);
+    const [clanSnap, memberSnap, progressSnap, rewardsSnap] = await Promise.all([
+      transaction.get(db.doc(`clans/${clanId}`)),
+      transaction.get(db.doc(`clans/${clanId}/members/${uid}`)),
+      transaction.get(clanQuestProgressRef(clanId)),
+      transaction.get(rewardsRef),
+    ]);
+    if (!clanSnap.exists || !memberSnap.exists) {
+      throw new HttpsError("permission-denied", "Clan membership could not be verified.");
+    }
+    assertCurrentClan(clanSnap.data() || {});
+    const member = memberSnap.data() || {};
+    const progress = progressSnap.exists ? progressSnap.data() || {} : {};
+    const unlockedAtMs = Math.max(0, timestampToMs(progress.milestoneUnlocks?.[rewardId]));
+    if (!unlockedAtMs || Math.max(0, Math.floor(safeNumber(progress.captureCount, 0))) < rewardConfig.captures) {
+      throw new HttpsError("failed-precondition", "That clan quest reward is still locked.");
+    }
+    const joinedAtMs = Math.max(0, timestampToMs(member.joinedAtMs));
+    if (!joinedAtMs || joinedAtMs >= unlockedAtMs) {
+      throw new HttpsError("permission-denied", "You joined after that reward was unlocked.");
+    }
+    const rewards = rewardsSnap.exists ? rewardsSnap.data() || {} : {};
+    const questClaims = normalizeClanQuestClaims(rewards.questClaims);
+    if (questClaims[rewardId]) {
+      return {
+        ok: true,
+        claimed: true,
+        replayed: true,
+        rewardId,
+        memberRewards: clanMemberRewardsForClient(rewards, nowMs),
+      };
+    }
+    const economy = await prepareEconomyCollection(transaction, uid, nowMs, { profileRef: profileSnap.ref, profileSnap });
+    const rates = getRewardedAdBaseRates(economy);
+    const baseRatePerHour = rewardConfig.rewardType === "troops" ? rates.troopsPerHour : rates.goldPerHour;
+    const rewardAmount = Math.max(0, Math.floor(baseRatePerHour * rewardConfig.productionMinutes / 60));
+    let gold = economy.gold;
+    let goldFloat = economy.goldFloat;
+    let troopCredit = null;
+    const profileOverrides = {};
+    if (rewardConfig.rewardType === "troops") {
+      troopCredit = creditLevelUpTroopsToMainCity(economy, economy.profileAfter, rewardAmount, nowMs);
+      if (!troopCredit) {
+        throw new HttpsError("failed-precondition", "Claim a main city before receiving the troop reward.");
+      }
+    } else {
+      goldFloat = Math.max(0, safeNumber(economy.goldFloat, economy.gold)) + rewardAmount;
+      gold = Math.max(0, Math.floor(goldFloat));
+      profileOverrides.gold = gold;
+      profileOverrides.goldFloat = goldFloat;
+    }
+    writePreparedEconomy(transaction, economy, profileOverrides);
+    const nextClaims = {
+      ...questClaims,
+      [rewardId]: {
+        claimedAtMs: nowMs,
+        rewardType: rewardConfig.rewardType,
+        productionMinutes: rewardConfig.productionMinutes,
+        rewardAmount,
+      },
+    };
+    transaction.set(rewardsRef, {
+      uid,
+      worldId: ONLINE_WORLD_ID,
+      resetGeneration: RESET_GENERATION,
+      questClaims: nextClaims,
+      updatedAtMs: nowMs,
+      updatedAt: FieldValue.serverTimestamp(),
+    }, { merge: true });
+    writeClanAudit(transaction, clanId, uid, "clan_quest_reward_claimed", {
+      rewardId,
+      captures: rewardConfig.captures,
+      rewardType: rewardConfig.rewardType,
+      productionMinutes: rewardConfig.productionMinutes,
+      rewardAmount,
+    }, nowMs);
+    return createEconomyResponse(economy, {
+      ...(rewardConfig.rewardType === "gold" ? { gold, goldFloat } : {}),
+      claimed: true,
+      replayed: false,
+      rewardId,
+      rewardType: rewardConfig.rewardType,
+      reward: rewardAmount,
+      productionMinutes: rewardConfig.productionMinutes,
+      targetCityId: troopCredit?.cityId || "",
+      targetCityName: troopCredit?.cityName || "",
+      memberRewards: clanMemberRewardsForClient({
+        ...rewards,
+        questClaims: nextClaims,
+      }, nowMs),
+    });
+  });
 });
 
 function clanIdentitySnapshotFields(identity = {}, revision = 0, target = "asset") {
@@ -10128,6 +10372,105 @@ function writeOwnershipChangeEvent(transaction, {
   return ref;
 }
 
+async function recordClanConquest(change = {}, eventId = "") {
+  const targetType = change.targetType === "camp" ? "camp" : "city";
+  const beforeOwnerUid = safeString(change.beforeOwnerUid, 128);
+  const afterOwnerUid = safeString(change.afterOwnerUid, 128);
+  if (
+    targetType !== "city"
+    || safeString(change.reason, 64) !== "city_captured"
+    || !beforeOwnerUid
+    || !afterOwnerUid
+    || beforeOwnerUid === afterOwnerUid
+  ) {
+    return { counted: false };
+  }
+  const attackerProfileSnap = await db.doc(`players/${afterOwnerUid}`).get();
+  const clanId = safeString(attackerProfileSnap.data()?.clanId, 128);
+  if (!clanId) return { counted: false };
+  const receiptRef = clanQuestCaptureReceiptRef(clanId, eventId || change.eventId);
+  if (!receiptRef) return { counted: false };
+  const nowMs = Date.now();
+  return db.runTransaction(async transaction => {
+    const [latestProfileSnap, clanSnap, memberSnap, progressSnap, receiptSnap] = await Promise.all([
+      transaction.get(db.doc(`players/${afterOwnerUid}`)),
+      transaction.get(db.doc(`clans/${clanId}`)),
+      transaction.get(db.doc(`clans/${clanId}/members/${afterOwnerUid}`)),
+      transaction.get(clanQuestProgressRef(clanId)),
+      transaction.get(receiptRef),
+    ]);
+    if (receiptSnap.exists) return { counted: false, duplicate: true };
+    const latestProfile = latestProfileSnap.data() || {};
+    const clan = clanSnap.data() || {};
+    if (
+      !clanSnap.exists
+      || !memberSnap.exists
+      || safeString(latestProfile.clanId, 128) !== clanId
+      || clan.status !== "active"
+      || safeString(clan.resetGeneration, 120) !== RESET_GENERATION
+      || safeString(clan.worldId, 120) !== ONLINE_WORLD_ID
+    ) {
+      return { counted: false };
+    }
+    const progress = progressSnap.exists ? progressSnap.data() || {} : {};
+    const captureCount = Math.max(0, Math.floor(safeNumber(progress.captureCount, 0))) + 1;
+    const milestoneUnlocks = progress.milestoneUnlocks && typeof progress.milestoneUnlocks === "object"
+      ? { ...progress.milestoneUnlocks }
+      : {};
+    const newlyUnlocked = CLAN_QUEST_REWARDS.filter(reward => (
+      captureCount >= reward.captures && !timestampToMs(milestoneUnlocks[reward.id])
+    ));
+    newlyUnlocked.forEach(reward => {
+      milestoneUnlocks[reward.id] = nowMs;
+    });
+    transaction.set(clanQuestProgressRef(clanId), {
+      clanId,
+      worldId: ONLINE_WORLD_ID,
+      resetGeneration: RESET_GENERATION,
+      captureCount,
+      milestoneUnlocks,
+      lastCaptureEventId: receiptRef.id,
+      lastCapturedByUid: afterOwnerUid,
+      lastCapturedTargetId: safeString(change.targetId, 96),
+      lastCapturedRegionId: safeString(change.regionId, 80),
+      lastCapturedAtMs: Math.max(0, timestampToMs(change.createdAtMs) || nowMs),
+      updatedAtMs: nowMs,
+      updatedAt: FieldValue.serverTimestamp(),
+      ...(progressSnap.exists ? {} : {
+        createdAtMs: nowMs,
+        createdAt: FieldValue.serverTimestamp(),
+      }),
+    }, { merge: true });
+    transaction.set(receiptRef, {
+      eventId: receiptRef.id,
+      clanId,
+      attackerUid: afterOwnerUid,
+      defenderUid: beforeOwnerUid,
+      targetId: safeString(change.targetId, 96),
+      regionId: safeString(change.regionId, 80),
+      worldId: ONLINE_WORLD_ID,
+      resetGeneration: RESET_GENERATION,
+      captureNumber: captureCount,
+      createdAtMs: nowMs,
+      createdAt: FieldValue.serverTimestamp(),
+    });
+    newlyUnlocked.forEach(reward => {
+      writeClanAudit(transaction, clanId, afterOwnerUid, "clan_quest_unlocked", {
+        rewardId: reward.id,
+        captures: reward.captures,
+        rewardType: reward.rewardType,
+        productionMinutes: reward.productionMinutes,
+      }, nowMs);
+    });
+    return {
+      counted: true,
+      clanId,
+      captureCount,
+      unlockedRewardIds: newlyUnlocked.map(reward => reward.id),
+    };
+  });
+}
+
 async function processOwnershipChangeEvent(event) {
   const startedAtMs = Date.now();
   const snapshot = event.data;
@@ -10152,6 +10495,7 @@ async function processOwnershipChangeEvent(event) {
   }
   const armyUpdates = armyRefresh.updated;
   let statsUpdates = 0;
+  const clanConquest = await recordClanConquest(change, snapshot.id);
   if (targetType === "camp") {
     const affectedUids = [...new Set([beforeOwnerUid, afterOwnerUid].filter(Boolean))];
     const results = await Promise.allSettled(affectedUids.map(uid => rebuildGlobalStatsForPlayer(uid)));
@@ -10173,8 +10517,9 @@ async function processOwnershipChangeEvent(event) {
     notificationsAttempted: notificationResults.length,
     notificationFailures,
     statsUpdates,
+    clanQuestCaptureCount: clanConquest.captureCount || 0,
   });
-  return { armyUpdates, statsUpdates };
+  return { armyUpdates, statsUpdates, clanConquest };
 }
 
 exports.processOwnershipChange = onDocumentCreated({

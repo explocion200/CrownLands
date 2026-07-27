@@ -228,9 +228,26 @@ service cloud.firestore {
         allow create, update, delete: if false;
       }
 
-      match /messages/{messageId} {
-        allow read: if clanMember(clanId) && isCurrentGeneration(resource.data);
+      match /questProgress/{resetId} {
+        allow read: if clanMember(clanId)
+          && resetId == currentResetGeneration()
+          && isCurrentGeneration(resource.data);
         allow create, update, delete: if false;
+      }
+
+      match /memberRewards/{uid} {
+        allow read: if clanMember(clanId)
+          && request.auth.uid == uid
+          && isCurrentGeneration(resource.data);
+        allow create, update, delete: if false;
+      }
+
+      match /questCaptureReceipts/{eventId} {
+        allow read, create, update, delete: if false;
+      }
+
+      match /messages/{messageId} {
+        allow read, create, update, delete: if false;
       }
 
       match /messageReports/{reportId} {

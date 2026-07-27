@@ -62,6 +62,21 @@ async function waitForOwnershipEvents(expected, timeoutMs = 30000) {
   throw new Error(`Ownership events did not settle at ${expected}.`);
 }
 
+async function waitForOwnershipEventIds(eventIds, timeoutMs = 30000) {
+  const ids = [...new Set(eventIds.filter(Boolean))];
+  const startedAt = Date.now();
+  while (Date.now() - startedAt < timeoutMs) {
+    const snapshots = await Promise.all(ids.map(eventId => (
+      db.doc(`realmEvents/${realm.resetGeneration}/ownershipChanges/${eventId}`).get()
+    )));
+    if (snapshots.every(snapshot => snapshot.exists && snapshot.data()?.status === "processed")) {
+      return snapshots;
+    }
+    await new Promise(resolve => setTimeout(resolve, 250));
+  }
+  throw new Error(`Ownership events did not settle: ${ids.join(", ")}.`);
+}
+
 async function main() {
   const users = await Promise.all(Array.from({ length: 50 }, (_, index) => createAuthUser(index)));
   const preservedFlag = {
@@ -237,6 +252,44 @@ async function main() {
   assert(
     JSON.stringify(publicApplicantProfile?.clanShield) === JSON.stringify(createdClan?.clan?.shield),
     "The public player profile did not return the shield belonging to the player's clan."
+  );
+  const [leaderRewardsBeforeGift, applicantRewardsBeforeGift] = await Promise.all([
+    db.doc(`clans/${applicationClanId}/memberRewards/${clanLeader.uid}`).get(),
+    db.doc(`clans/${applicationClanId}/memberRewards/${clanApplicant.uid}`).get(),
+  ]);
+  assert(leaderRewardsBeforeGift.exists && applicantRewardsBeforeGift.exists, "Clan member reward state was not created with membership.");
+  const sentGift = await callFunction("sendClanGift", clanLeader.token);
+  assert(sentGift?.recipientCount === 1 && sentGift?.productionMinutes === 30, "Clan gift did not reach every other current member.");
+  const [leaderRewardsAfterGift, applicantRewardsAfterGift] = await Promise.all([
+    db.doc(`clans/${applicationClanId}/memberRewards/${clanLeader.uid}`).get(),
+    db.doc(`clans/${applicationClanId}/memberRewards/${clanApplicant.uid}`).get(),
+  ]);
+  assert(
+    Number(leaderRewardsAfterGift.data()?.pendingGiftGoldMinutes || 0) === 0,
+    "The clan gift sender received their own gift."
+  );
+  assert(
+    Number(applicantRewardsAfterGift.data()?.pendingGiftGoldMinutes || 0) === 30,
+    "The clan gift recipient did not receive 30 pending production minutes."
+  );
+  let giftCooldownError = null;
+  try {
+    await callFunction("sendClanGift", clanLeader.token);
+  } catch (error) {
+    giftCooldownError = error;
+  }
+  assert(/still cooling down/.test(String(giftCooldownError?.message || "")), "The five-hour clan gift cooldown was not enforced.");
+  const applicantGoldBeforeGiftClaim = Number((await clanApplicantRef.get()).data()?.gold || 0);
+  const giftClaim = await callFunction("claimClanGiftPool", clanApplicant.token);
+  const applicantRewardsAfterClaim = await db.doc(`clans/${applicationClanId}/memberRewards/${clanApplicant.uid}`).get();
+  assert(giftClaim?.claimed === true && giftClaim?.reward > 0, "Clan gift collection did not award current base gold production.");
+  assert(
+    Number(applicantRewardsAfterClaim.data()?.pendingGiftGoldMinutes || 0) === 0,
+    "Clan gift collection did not clear the pending production pool."
+  );
+  assert(
+    Number((await clanApplicantRef.get()).data()?.gold || 0) >= applicantGoldBeforeGiftClaim + Number(giftClaim.reward || 0),
+    "Clan gift collection did not immediately credit the player's gold."
   );
 
   const attacker = users[0];
@@ -442,7 +495,141 @@ async function main() {
   );
   await waitForOwnershipEvents(53);
 
-  console.log(`Emulator reset gate passed for 50 players: ${counts.join("/")} across starter islands.`);
+  const clanQuestEventIds = Array.from({ length: 5 }, (_, index) => (
+    `clan_quest_gate_${index}_${crypto.randomBytes(6).toString("hex")}`
+  ));
+  const clanQuestBatch = db.batch();
+  clanQuestEventIds.forEach((eventId, index) => {
+    clanQuestBatch.set(
+      db.doc(`realmEvents/${realm.resetGeneration}/ownershipChanges/${eventId}`),
+      {
+        eventId,
+        worldId: realm.worldId,
+        resetGeneration: realm.resetGeneration,
+        releaseId: realm.releaseId,
+        targetType: "city",
+        targetId: `quest_gate_city_${index}`,
+        regionId: sourceClaim.mainRegionId,
+        targetKey: `${sourceClaim.mainRegionId}:quest_gate_city_${index}`,
+        beforeOwnerUid: users[index].uid,
+        afterOwnerUid: clanApplicant.uid,
+        reason: "city_captured",
+        status: "pending",
+        attempts: 0,
+        createdAtMs: Date.now() + index,
+        createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      }
+    );
+  });
+  await clanQuestBatch.commit();
+  await waitForOwnershipEventIds(clanQuestEventIds);
+  const questProgressRef = db.doc(`clans/${applicationClanId}/questProgress/${realm.resetGeneration}`);
+  const questProgressAtFive = (await questProgressRef.get()).data() || {};
+  assert(questProgressAtFive.captureCount === 5, "Five eligible player-owned captures did not advance the clan quest.");
+  assert(Number(questProgressAtFive.milestoneUnlocks?.capture_5 || 0) > 0, "The five-capture clan milestone did not unlock.");
+  const questGoldBeforeClaim = Number((await clanApplicantRef.get()).data()?.gold || 0);
+  const questClaim = await callFunction("claimClanQuestReward", clanApplicant.token, { rewardId: "capture_5" });
+  assert(questClaim?.claimed === true && questClaim?.replayed === false && questClaim?.reward > 0, "The first clan quest claim did not award base gold.");
+  assert(
+    Number((await clanApplicantRef.get()).data()?.gold || 0) >= questGoldBeforeClaim + Number(questClaim.reward || 0),
+    "The clan quest reward was not immediately credited."
+  );
+  const replayedQuestClaim = await callFunction("claimClanQuestReward", clanApplicant.token, { rewardId: "capture_5" });
+  assert(replayedQuestClaim?.replayed === true, "A repeated clan quest claim was not idempotent.");
+
+  const excludedQuestEventIds = [
+    `clan_quest_neutral_${crypto.randomBytes(6).toString("hex")}`,
+    `clan_quest_camp_${crypto.randomBytes(6).toString("hex")}`,
+  ];
+  const excludedQuestBatch = db.batch();
+  excludedQuestBatch.set(
+    db.doc(`realmEvents/${realm.resetGeneration}/ownershipChanges/${excludedQuestEventIds[0]}`),
+    {
+      eventId: excludedQuestEventIds[0],
+      worldId: realm.worldId,
+      resetGeneration: realm.resetGeneration,
+      releaseId: realm.releaseId,
+      targetType: "city",
+      targetId: "quest_gate_neutral",
+      regionId: sourceClaim.mainRegionId,
+      targetKey: `${sourceClaim.mainRegionId}:quest_gate_neutral`,
+      beforeOwnerUid: "",
+      afterOwnerUid: clanApplicant.uid,
+      reason: "city_captured",
+      status: "pending",
+      attempts: 0,
+      createdAtMs: Date.now(),
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    }
+  );
+  excludedQuestBatch.set(
+    db.doc(`realmEvents/${realm.resetGeneration}/ownershipChanges/${excludedQuestEventIds[1]}`),
+    {
+      eventId: excludedQuestEventIds[1],
+      worldId: realm.worldId,
+      resetGeneration: realm.resetGeneration,
+      releaseId: realm.releaseId,
+      targetType: "camp",
+      targetId: "quest_gate_camp",
+      regionId: sourceClaim.mainRegionId,
+      targetKey: `${sourceClaim.mainRegionId}:quest_gate_camp`,
+      beforeOwnerUid: users[0].uid,
+      afterOwnerUid: clanApplicant.uid,
+      reason: "city_captured",
+      status: "pending",
+      attempts: 0,
+      createdAtMs: Date.now(),
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    }
+  );
+  await excludedQuestBatch.commit();
+  await waitForOwnershipEventIds(excludedQuestEventIds);
+  assert(
+    Number((await questProgressRef.get()).data()?.captureCount || 0) === 5,
+    "Neutral territory or reward camps advanced clan conquest progress."
+  );
+
+  const lateClanMember = users[47];
+  await db.doc(`players/${lateClanMember.uid}`).set({
+    character: { level: 10, xp: 0, skillPoints: 9 },
+  }, { merge: true });
+  await callFunction("applyToClan", lateClanMember.token, {
+    clanId: applicationClanId,
+    message: "Late quest applicant",
+  });
+  await callFunction("reviewClanApplication", clanLeader.token, {
+    clanId: applicationClanId,
+    applicantUid: lateClanMember.uid,
+    accept: true,
+  });
+  let lateClaimError = null;
+  try {
+    await callFunction("claimClanQuestReward", lateClanMember.token, { rewardId: "capture_5" });
+  } catch (error) {
+    lateClaimError = error;
+  }
+  assert(/joined after that reward was unlocked/.test(String(lateClaimError?.message || "")), "A late clan member collected an earlier quest milestone.");
+  await callFunction("promoteClanMember", clanLeader.token, { targetUid: clanApplicant.uid });
+  let officerRemovalError = null;
+  try {
+    await callFunction("kickClanMember", clanApplicant.token, { targetUid: lateClanMember.uid });
+  } catch (error) {
+    officerRemovalError = error;
+  }
+  assert(
+    /clan role does not allow that action/.test(String(officerRemovalError?.message || "")),
+    "An officer removal request was not rejected by the leader-only server permission."
+  );
+  assert(
+    (await db.doc(`clans/${applicationClanId}/members/${lateClanMember.uid}`).get()).exists,
+    "The rejected officer removal changed the clan roster."
+  );
+  await callFunction("demoteClanOfficer", clanLeader.token, { targetUid: clanApplicant.uid });
+
+  console.log(`Emulator reset gate passed for 50 players with clan gifts and conquest quests: ${counts.join("/")} across starter islands.`);
 }
 
 main().catch(error => {

@@ -539,20 +539,6 @@
       ]
     },
     {
-      "collectionGroup": "messages",
-      "queryScope": "COLLECTION",
-      "fields": [
-        {
-          "fieldPath": "senderUid",
-          "order": "ASCENDING"
-        },
-        {
-          "fieldPath": "createdAtMs",
-          "order": "DESCENDING"
-        }
-      ]
-    },
-    {
       "collectionGroup": "applications",
       "queryScope": "COLLECTION",
       "fields": [
