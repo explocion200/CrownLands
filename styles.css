@@ -5481,6 +5481,19 @@ button.daily-reward-card.available:disabled {
 .shield-drop-warning span { display: block; }
 .shield-drop-warning strong { color: #fff4c8; font-size: .72rem; font-weight: 950; text-transform: uppercase; }
 .shield-drop-warning span { color: #ffe6a3; font-size: .72rem; font-weight: 850; line-height: 1.28; }
+.reinforcement-limit-note {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .65rem;
+  padding: .52rem .68rem;
+  border-radius: 12px;
+  color: #dfffd7;
+  background: linear-gradient(180deg, rgba(25, 86, 51, .92), rgba(9, 41, 24, .94));
+  border: 1px solid rgba(126, 227, 139, .5);
+}
+.reinforcement-limit-note strong { flex: 0 0 auto; font-size: .76rem; font-weight: 950; }
+.reinforcement-limit-note span { font-size: .7rem; font-weight: 800; line-height: 1.25; text-align: right; }
 .troop-slider-control {
   padding: .66rem .76rem .58rem;
   border-radius: 16px;

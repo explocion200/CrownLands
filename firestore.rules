@@ -60,6 +60,8 @@ service cloud.firestore {
           'kingPowerUpdatedAtMs',
           'stationedReinforcementTroops',
           'reinforcementResetGeneration',
+          'activeClanReinforcementTargets',
+          'clanReinforcementLimitResetGeneration',
           'cityCount',
           'globalStats',
           'character',
@@ -103,6 +105,8 @@ service cloud.firestore {
         && profileFieldUnchanged('kingPowerUpdatedAtMs')
         && profileFieldUnchanged('stationedReinforcementTroops')
         && profileFieldUnchanged('reinforcementResetGeneration')
+        && profileFieldUnchanged('activeClanReinforcementTargets')
+        && profileFieldUnchanged('clanReinforcementLimitResetGeneration')
         && profileFieldUnchanged('cityCount')
         && profileFieldUnchanged('globalStats');
     }

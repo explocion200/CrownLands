@@ -22,13 +22,23 @@ requires(
 );
 requires(
   server,
+  /CLAN_REINFORCEMENT_ACTIVE_LIMIT\s*=\s*2[\s\S]*?getActiveClanReinforcementTargetsForLaunch[\s\S]*?activeClanReinforcementTargets\.includes\(reinforcementTargetKey\)[\s\S]*?activeClanReinforcementTargets\.length >= CLAN_REINFORCEMENT_ACTIVE_LIMIT/,
+  "Reinforcement launch does not enforce two active targets per sender and one contribution per holding."
+);
+requires(
+  server,
+  /activeClanReinforcementTargets:\s*\[\.\.\.activeClanReinforcementTargets, reinforcementTargetKey\][\s\S]*?clanReinforcementLimitResetGeneration:\s*RESET_GENERATION/,
+  "Accepted reinforcement launches do not reserve a concurrency-safe sender slot."
+);
+requires(
+  server,
   /resolvedKind === "reinforce" \|\| shouldDeactivatePeaceShieldForAttack[\s\S]*?shieldExpiresAtMs = 0/,
   "An accepted reinforcement launch does not remove the sender's shield."
 );
 requires(
   server,
   /effectiveKind === "reinforce"[\s\S]*?reinforcementRef\(attackerUid, reinforcementTargetKey\)[\s\S]*?nextContributionTroops[\s\S]*?alliedReinforcementTroops/,
-  "Reinforcement arrivals do not aggregate by sender and holding."
+  "Reinforcement arrivals do not maintain one sender-owned record per holding."
 );
 requires(
   server,
@@ -71,10 +81,21 @@ requires(
   /totalReinforcementTroops[\s\S]*?reinforcementTroopPower/,
   "Contributor King Power does not include stationed reinforcement troops."
 );
+requires(
+  server,
+  /finalizeReinforcementReturn[\s\S]*?releaseClanReinforcementTarget[\s\S]*?entry\.remaining <= 0[\s\S]*?releaseClanReinforcementTarget/,
+  "Returned or depleted support does not release the sender's reinforcement slot."
+);
 
 requires(firebaseClient, /returnClanReinforcement[\s\S]*?subscribePlayerReinforcements/, "Firebase reinforcement callable or subscription is missing.");
 requires(client, /beginClanReinforcement[\s\S]*?orderKind:\s*"reinforce"/, "Clan ally Reinforce client action is missing.");
 requires(client, /Launching clan reinforcements immediately removes your Royal Peace Shield/, "Reinforcement shield warning is missing.");
+requires(
+  client,
+  /CLAN_REINFORCEMENT_ACTIVE_LIMIT\s*=\s*2[\s\S]*?getClanReinforcementBlockReason[\s\S]*?already have one active reinforcement[\s\S]*?at most \$\{CLAN_REINFORCEMENT_ACTIVE_LIMIT\}/,
+  "The client does not explain the two-active and one-per-holding reinforcement limits."
+);
+requires(client, /two holdings at once, with one reinforcement per holding/, "The reinforcement slider does not show the active support limit.");
 requires(client, /renderHoldingReinforcementPanel[\s\S]*?Send Home[\s\S]*?Recall/, "Private Recall and Send Home controls are missing.");
 requires(client, /label:\s*"Reinforcements"/, "Marches UI does not expose a Reinforcements section.");
 
@@ -87,6 +108,11 @@ requires(
   rules,
   /match \/reinforcementBattleReceipts\/\{resetId\}\/entries\/\{receiptId\}[\s\S]*?allow read, create, update, delete: if false/,
   "Battle settlement receipts are not server-only."
+);
+requires(
+  rules,
+  /profileFieldUnchanged\('activeClanReinforcementTargets'\)[\s\S]*?profileFieldUnchanged\('clanReinforcementLimitResetGeneration'\)/,
+  "Clients can mutate the server-authoritative reinforcement slot state."
 );
 
 const reinforcementIndexes = indexes.indexes.filter(index => index.collectionGroup === "reinforcements");
