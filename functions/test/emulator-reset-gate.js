@@ -569,7 +569,9 @@ async function main() {
       ownerName: "Ruler 50",
       ownerFlag: null,
       ownerShieldExpiresAtMs: shieldExpiresAtMs,
-      isMainCity: false,
+      // Simulate a stale former-home snapshot while the holder's canonical
+      // player profile points to their actual current main city.
+      isMainCity: true,
       level: 1,
       defense: 1,
       troops: 100,
@@ -615,6 +617,10 @@ async function main() {
     }
   }
   assert(clanReinforcementTargetDoc && firstClanReinforcement, "No reachable clan reinforcement target was available.");
+  assert(
+    clanReinforcementTargetDoc.id !== (await clanApplicantRef.get()).data()?.mainCityId,
+    "The stale former-home regression target unexpectedly matched the holder's canonical main city."
+  );
   assert(firstClanReinforcement?.movement?.kind === "reinforce", "Clan support did not launch as a reinforcement.");
   assert(firstClanReinforcement?.peaceShieldDeactivated === true, "Launching clan support did not drop the sender's shield.");
   const [leaderAfterReinforcementLaunch, holderAfterReinforcementLaunch, alliedTargetAfterLaunch] = await Promise.all([

@@ -12185,6 +12185,9 @@ function applyOnlineCities(onlineCities, regionId = getActiveOnlineRegionId()) {
     const ownerFlag = onlineOwnership.ownerFlag;
     const ownerKingPower = onlineOwnership.ownerKingPower;
     const ownerShieldExpiresAtMs = onlineOwnership.ownerShieldExpiresAtMs;
+    const foreignMainCityFlag = Object.prototype.hasOwnProperty.call(online, "isMainCity")
+      ? Boolean(online.isMainCity)
+      : Boolean(current.isMainCity);
     const localOwner = onlineOwnership.owner;
     const normalizedOwnerKind = onlineOwnership.ownerKind;
     const currentIsLocalPlayerCity = current.owner === "player" && (!current.ownerUid || current.ownerUid === currentUid);
@@ -12218,7 +12221,7 @@ function applyOnlineCities(onlineCities, regionId = getActiveOnlineRegionId()) {
       lastCapturedAtMs: normalizeTimestampMs(keepLocalPlayerCity
         ? current.lastCapturedAtMs ?? online.lastCapturedAtMs ?? current.lastCapturedAt ?? online.lastCapturedAt
         : online.lastCapturedAtMs ?? current.lastCapturedAtMs ?? online.lastCapturedAt ?? current.lastCapturedAt),
-      isMainCity: !isStronghold(base) && (localOwner === "player" ? base.id === state.mainCityId : Boolean(online.isMainCity || current.isMainCity)),
+      isMainCity: !isStronghold(base) && (localOwner === "player" ? base.id === state.mainCityId : foreignMainCityFlag),
       relinquishedAtMs: keepLocalPlayerCity || normalizedOwnerKind === "player" ? 0 : timestampToMs(online.relinquishedAtMs ?? current.relinquishedAtMs),
       relocatedAtMs: keepLocalPlayerCity || normalizedOwnerKind === "player" ? 0 : timestampToMs(online.relocatedAtMs ?? current.relocatedAtMs),
       startPool: base.startPool,
@@ -15837,15 +15840,19 @@ function identityMarksCityAsMain(city, identity = null) {
 
 function isProtectedMainCity(city) {
   if (!city) return false;
-  if (city.isMainCity || city.id === state?.mainCityId) return true;
   const ownerUid = String(city.ownerUid || "").trim();
-  if (!ownerUid) return false;
+  const currentUid = getCurrentOnlineUid();
+  if (city.owner === "player" || (ownerUid && ownerUid === currentUid)) {
+    return Boolean(city.id === state?.mainCityId || city.isMainCity);
+  }
+  if (!ownerUid) return Boolean(city.isMainCity);
   const cachedIdentity = playerIdentityCache.get(ownerUid);
-  if (identityMarksCityAsMain(city, cachedIdentity)) return true;
+  if (cachedIdentity?.mainCityId) return identityMarksCityAsMain(city, cachedIdentity);
   const presence = Array.isArray(onlinePresence)
     ? onlinePresence.find(entry => entry?.uid === ownerUid)
     : null;
-  return identityMarksCityAsMain(city, presence);
+  if (presence?.mainCityId) return identityMarksCityAsMain(city, presence);
+  return Boolean(city.isMainCity);
 }
 
 function getMainCityAttackBlockReason(target, attackerOwner = "player", attackerOwnerUid = "") {

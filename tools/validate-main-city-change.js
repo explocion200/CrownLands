@@ -76,6 +76,71 @@ assert.equal(
   false,
   "A same-named city on another region must not be mistaken for the protected main city."
 );
+assert.equal(
+  protectionSandbox.isProtectedMainCity(
+    { id: "west_keep", regionId: "west", ownerUid: "defender", isMainCity: true },
+    "attacker",
+    defenderProfile
+  ),
+  false,
+  "A stale city flag must not keep the previous home protected after the owner profile moves elsewhere."
+);
+
+const clientMainCityProtectionSource = sourceBetween(
+  clientSource,
+  "function identityMarksCityAsMain",
+  "function getMainCityAttackBlockReason"
+);
+const clientProtectionSandbox = {
+  state: { mainCityId: "west_keep" },
+  onlinePresence: [],
+  playerIdentityCache: new Map([[
+    "ally",
+    { mainCityId: "east_watch", mainRegionId: "east" },
+  ]]),
+  getCurrentOnlineUid() {
+    return "current-player";
+  },
+  getKnownCityId(value) {
+    return String(value || "");
+  },
+  getCityRegionId(city) {
+    return String(city?.regionId || "");
+  },
+  getRegionIdFromOnlineIslandId(value) {
+    return String(value || "").replace(/^crownlands-/, "");
+  },
+  normalizeRegionId(value) {
+    return String(value || "").trim().toLowerCase();
+  },
+};
+vm.createContext(clientProtectionSandbox);
+vm.runInContext(
+  `${clientMainCityProtectionSource}; this.clientIsProtectedMainCity = isProtectedMainCity;`,
+  clientProtectionSandbox
+);
+assert.equal(
+  clientProtectionSandbox.clientIsProtectedMainCity({
+    id: "west_keep",
+    regionId: "west",
+    owner: "enemy",
+    ownerUid: "ally",
+    isMainCity: true,
+  }),
+  false,
+  "The client must allow reinforcement of a stale former home when canonical identity points elsewhere."
+);
+assert.equal(
+  clientProtectionSandbox.clientIsProtectedMainCity({
+    id: "east_watch",
+    regionId: "east",
+    owner: "enemy",
+    ownerUid: "ally",
+    isMainCity: false,
+  }),
+  true,
+  "The client must still block the ally's canonical current home."
+);
 
 const westOldMain = {
   ref: { path: "islands/main-west/cities/west_keep" },
@@ -130,6 +195,8 @@ assert.match(clientSource, /onlineOwnedCitiesCache = onlineOwnedCitiesCache\.map
 assert.match(clientSource, /const mainCity = !stronghold[\s\S]*?city\.id === state\.mainCityId[\s\S]*?btn\.classList\.add\("main-city-node"\)/, "Map rendering must move the main-city marker to the selected owned city.");
 assert.match(clientSource, /const mainCity = !stronghold[\s\S]*?: isProtectedMainCity\(city\)/, "Enemy home-base styling must use the canonical main-city identity.");
 assert.match(clientSource, /function isProtectedMainCity[\s\S]*?playerIdentityCache\.get\(ownerUid\)[\s\S]*?onlinePresence/, "Client targeting must recognize foreign main cities from canonical identity and presence data.");
+assert.match(clientSource, /foreignMainCityFlag = Object\.prototype\.hasOwnProperty\.call\(online, "isMainCity"\)[\s\S]*?\? Boolean\(online\.isMainCity\)[\s\S]*?: Boolean\(current\.isMainCity\)/, "An authoritative false main-city snapshot must clear a stale client flag.");
+assert.match(clientSource, /if \(cachedIdentity\?\.mainCityId\) return identityMarksCityAsMain\(city, cachedIdentity\);[\s\S]*?return Boolean\(city\.isMainCity\);/, "A canonical foreign-player home pointer must override a stale city flag.");
 assert.doesNotMatch(stylesSource, /\.city-node\.main-city-node \.city-art[\s\S]*?filter:/, "Main-city castle artwork must keep its normal colors.");
 assert.match(stylesSource, /\.city-node\.player\.main-city-node \.city-owner-column,[\s\S]*?\.city-node\.player\.main-city-node \.city-army-count[\s\S]*?background: #123a60;/, "The current player's main-city UI must render dark blue.");
 assert.match(stylesSource, /\.city-node\.enemy\.main-city-node \.foreign-city-shield,[\s\S]*?\.city-node\.enemy\.main-city-node \.foreign-selected-data[\s\S]*?background: #454b54;/, "Enemy main-city UI must render dark gray.");
