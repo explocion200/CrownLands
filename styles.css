@@ -3170,16 +3170,28 @@ input {
 }
 .public-clan-details {
   display: grid;
-  grid-template-columns: auto 1fr;
+  gap: .8rem;
+}
+.public-clan-identity {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
   gap: .8rem;
   align-items: center;
+}
+.public-clan-identity > div { min-width: 0; }
+.public-clan-identity > div > span,
+.public-clan-roster-heading > span {
+  color: #d9bc75;
+  font-size: .68rem;
+  font-weight: 900;
+  letter-spacing: .1em;
+  text-transform: uppercase;
 }
 .public-clan-details h3,
 .public-clan-details p { margin: .1rem 0; }
 .public-clan-details dl {
-  grid-column: 1 / -1;
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: .5rem;
   margin: 0;
 }
@@ -3190,10 +3202,46 @@ input {
 }
 .public-clan-details dt { color: #aeb4bd; font-size: .75rem; }
 .public-clan-details dd { margin: .15rem 0 0; color: #f1d47d; font-weight: 900; }
+.public-clan-roster-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .7rem;
+  padding-top: .15rem;
+}
+.public-clan-roster-heading > strong { color: #f1d47d; font-size: .78rem; }
+.public-clan-roster {
+  display: grid;
+  gap: .38rem;
+}
+.public-clan-member {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: .65rem;
+  padding: .62rem .7rem;
+  border: 1px solid rgba(214, 183, 106, .14);
+  border-radius: 9px;
+  background: rgba(255,255,255,.045);
+}
+.public-clan-member > div:first-child,
+.public-clan-member-power {
+  min-width: 0;
+  display: grid;
+  gap: .08rem;
+}
+.public-clan-member small { color: #aeb4bd; font-size: .7rem; }
+.public-clan-member-power {
+  justify-items: end;
+  text-align: right;
+}
+.public-clan-member-power strong { color: #f1d47d; }
 @media (max-width: 720px) {
   .public-player-profile { grid-template-columns: 1fr; }
   .public-player-profile-modal .modal-card { padding: .75rem; }
   .public-profile-section { padding: .7rem; }
+  .public-clan-details dl { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .public-clan-details dl div:last-child { grid-column: 1 / -1; }
 }
 .modal-close { position: absolute; z-index: 3; right: .7rem; top: .65rem; width: 34px; height: 34px; border-radius: 999px; color: var(--ink); background: rgba(255,255,255,.1); }
 .stat-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: .5rem; margin: .7rem 0; }
@@ -6066,6 +6114,26 @@ button.inventory-slot {
 }
 .clan-list-row div, .clan-member-row > div:first-child { display: grid; gap: .12rem; min-width: 0; }
 .clan-list-row span, .clan-list-row small, .clan-member-row span, .clan-muted { color: #a9c0b2; }
+.clan-name-link {
+  justify-self: start;
+  min-width: 0;
+  padding: 0;
+  overflow-wrap: anywhere;
+  color: #f4e4bd;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  font-weight: 900;
+  text-align: left;
+  cursor: pointer;
+}
+.clan-name-link:hover,
+.clan-name-link:focus-visible {
+  color: #8fe0a5;
+  text-decoration: underline;
+  text-underline-offset: .16em;
+  outline: none;
+}
 .clan-hero {
   display: grid;
   grid-template-columns: auto 1fr auto;

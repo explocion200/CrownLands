@@ -206,6 +206,20 @@ async function main() {
   assert(acceptedMemberSnapshot.exists, "The accepted applicant was not added to the clan roster.");
   assert(!acceptedApplicationSnapshot.exists, "The accepted clan application was not removed.");
   assert(acceptedApplicantSnapshot.data()?.clanId === applicationClanId, "The accepted applicant profile did not receive clan identity.");
+  const acceptedApplicantStats = (await db.doc(`players/${clanApplicant.uid}/stats/global`).get()).data() || {};
+  assert(
+    acceptedMemberSnapshot.data()?.kingPower === acceptedApplicantStats.kingPower,
+    "The public clan roster did not store the member's authoritative King Power."
+  );
+  const publicApplicantProfile = await callFunction("getCombatPlayerIdentity", clanLeader.token, {
+    uid: clanApplicant.uid,
+    includePublicProfile: true,
+  });
+  assert(publicApplicantProfile?.clan?.id === applicationClanId, "The public player profile did not resolve the player's canonical clan.");
+  assert(
+    JSON.stringify(publicApplicantProfile?.clanShield) === JSON.stringify(createdClan?.clan?.shield),
+    "The public player profile did not return the shield belonging to the player's clan."
+  );
 
   const attacker = users[0];
   const sourceClaim = claims[0];
