@@ -16,8 +16,9 @@ const clanCallables = [
   "transferClanLeadership",
   "claimInactiveClanLeadership",
   "disbandClan",
-  "sendClanMessage",
-  "reportClanMessage",
+  "sendClanGift",
+  "claimClanGiftPool",
+  "claimClanQuestReward",
 ];
 
 async function validateCallable(name) {

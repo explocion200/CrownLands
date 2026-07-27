@@ -470,12 +470,16 @@
     return callServerFunction("disbandClan", payload);
   }
 
-  async function sendClanMessage(payload = {}) {
-    return callServerFunction("sendClanMessage", payload);
+  async function sendClanGift(payload = {}) {
+    return callServerFunction("sendClanGift", payload);
   }
 
-  async function reportClanMessage(payload = {}) {
-    return callServerFunction("reportClanMessage", payload);
+  async function claimClanGiftPool(payload = {}) {
+    return callServerFunction("claimClanGiftPool", payload);
+  }
+
+  async function claimClanQuestReward(payload = {}) {
+    return callServerFunction("claimClanQuestReward", payload);
   }
 
   async function loadClan(clanId = "") {
@@ -541,19 +545,35 @@
     return snapshot.docs.map((item, index) => ({ id: item.id, rank: index + 1, ...item.data() }));
   }
 
-  function subscribeClanMessages(clanId = "", handlers = {}) {
+  function subscribeClanSocialState(clanId = "", handlers = {}) {
     if (!client.db || !client.modules?.firestore?.onSnapshot || !client.user?.uid || !clanId) return () => {};
-    const { collection, onSnapshot, query, orderBy, limit } = client.modules.firestore;
-    return onSnapshot(
-      query(collection(client.db, "clans", clanId, "messages"), orderBy("createdAtMs", "desc"), limit(50)),
-      snapshot => {
-        const messages = snapshot.docs.map(item => ({ id: item.id, ...item.data() })).reverse();
-        if (typeof handlers.onMessages === "function") handlers.onMessages(messages);
-      },
-      error => {
-        if (typeof handlers.onError === "function") handlers.onError(error);
-      }
-    );
+    const { doc, onSnapshot } = client.modules.firestore;
+    const safeClanId = String(clanId).slice(0, 128);
+    const unsubscribers = [
+      onSnapshot(
+        doc(client.db, "clans", safeClanId, "questProgress", RESET_GENERATION),
+        snapshot => {
+          if (typeof handlers.onQuestProgress === "function") {
+            handlers.onQuestProgress(snapshot.exists() ? { id: snapshot.id, ...snapshot.data() } : null);
+          }
+        },
+        error => {
+          if (typeof handlers.onError === "function") handlers.onError(error, "questProgress");
+        }
+      ),
+      onSnapshot(
+        doc(client.db, "clans", safeClanId, "memberRewards", client.user.uid),
+        snapshot => {
+          if (typeof handlers.onMemberRewards === "function") {
+            handlers.onMemberRewards(snapshot.exists() ? { id: snapshot.id, ...snapshot.data() } : null);
+          }
+        },
+        error => {
+          if (typeof handlers.onError === "function") handlers.onError(error, "memberRewards");
+        }
+      ),
+    ];
+    return () => unsubscribers.forEach(unsubscribe => unsubscribe());
   }
 
   function subscribeClanApplications(clanId = "", handlers = {}) {
@@ -1814,8 +1834,9 @@
     transferClanLeadership,
     claimInactiveClanLeadership,
     disbandClan,
-    sendClanMessage,
-    reportClanMessage,
+    sendClanGift,
+    claimClanGiftPool,
+    claimClanQuestReward,
     loadClan,
     searchClans,
     loadClanMembers,
@@ -1823,7 +1844,7 @@
     loadClanLeaderboard,
     subscribeClanState,
     subscribeClanApplications,
-    subscribeClanMessages,
+    subscribeClanSocialState,
     recalculatePlayerGlobalStats,
     recalculateAllPlayerGlobalStats,
     getCombatPlayerIdentity,

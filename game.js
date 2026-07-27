@@ -889,6 +889,19 @@ const CLAN_SHIELD_FINISHES = [
   { key: "weathered", label: "Weathered" },
   { key: "battleworn", label: "Battle-worn" },
 ];
+const CLAN_GIFT_COOLDOWN_MS = 5 * 60 * 60 * 1000;
+const CLAN_QUEST_REWARDS = Object.freeze([
+  { id: "capture_5", captures: 5, rewardType: "gold", productionMinutes: 30 },
+  { id: "capture_15", captures: 15, rewardType: "troops", productionMinutes: 30 },
+  { id: "capture_25", captures: 25, rewardType: "gold", productionMinutes: 60 },
+  { id: "capture_35", captures: 35, rewardType: "troops", productionMinutes: 60 },
+  { id: "capture_45", captures: 45, rewardType: "gold", productionMinutes: 90 },
+  { id: "capture_50", captures: 50, rewardType: "troops", productionMinutes: 120 },
+  { id: "capture_65", captures: 65, rewardType: "gold", productionMinutes: 120 },
+  { id: "capture_75", captures: 75, rewardType: "troops", productionMinutes: 180 },
+  { id: "capture_90", captures: 90, rewardType: "gold", productionMinutes: 180 },
+  { id: "capture_100", captures: 100, rewardType: "troops", productionMinutes: 360 },
+]);
 
 
 
@@ -2616,9 +2629,10 @@ let clanSnapshot = null;
 let clanMembers = [];
 let clanApplications = [];
 let clanSearchResults = [];
-let clanMessages = [];
-let clanMessagesUnsubscribe = null;
-let activeClanMessageSubscriptionId = "";
+let clanQuestProgress = null;
+let clanMemberRewards = null;
+let clanSocialStateUnsubscribe = null;
+let activeClanSocialSubscriptionId = "";
 let clanApplicationsUnsubscribe = null;
 let activeClanApplicationsSubscriptionId = "";
 let clanApplicationsError = "";
@@ -2631,15 +2645,10 @@ let clanShieldDraft = null;
 let clanShieldEditorOpen = false;
 let clanShieldSaving = false;
 let clanShieldEditorTab = "field";
-function loadMutedClanMemberIds() {
-  try {
-    const values = JSON.parse(localStorage.getItem("crownlands-muted-clan-members") || "[]");
-    return new Set(Array.isArray(values) ? values.map(String) : []);
-  } catch (_) {
-    return new Set();
-  }
-}
-const mutedClanMemberIds = loadMutedClanMemberIds();
+let selectedClanMemberUid = "";
+let clanGiftActionInFlight = false;
+let clanQuestClaimInFlightId = "";
+let clanGiftCountdownTimer = 0;
 let battleReportFilter = "all";
 let cityListSortKey = "level";
 let cityListSortDirection = "desc";
@@ -16973,9 +16982,11 @@ function stopClanRealtimeSubscriptions({ clear = true } = {}) {
   activeClanSubscriptionId = "";
   clanRosterReady = false;
   clanMemberUidSet = new Set();
-  if (typeof clanMessagesUnsubscribe === "function") clanMessagesUnsubscribe();
-  clanMessagesUnsubscribe = null;
-  activeClanMessageSubscriptionId = "";
+  if (typeof clanSocialStateUnsubscribe === "function") clanSocialStateUnsubscribe();
+  clanSocialStateUnsubscribe = null;
+  activeClanSocialSubscriptionId = "";
+  if (clanGiftCountdownTimer) clearInterval(clanGiftCountdownTimer);
+  clanGiftCountdownTimer = 0;
   if (typeof clanApplicationsUnsubscribe === "function") clanApplicationsUnsubscribe();
   clanApplicationsUnsubscribe = null;
   activeClanApplicationsSubscriptionId = "";
@@ -16984,7 +16995,9 @@ function stopClanRealtimeSubscriptions({ clear = true } = {}) {
     clanSnapshot = null;
     clanMembers = [];
     clanApplications = [];
-    clanMessages = [];
+    clanQuestProgress = null;
+    clanMemberRewards = null;
+    selectedClanMemberUid = "";
   }
 }
 
@@ -17002,6 +17015,7 @@ function applyClanMembersSnapshot(members = [], changes = []) {
   clanMembers = nextMembers;
   clanMemberUidSet = nextMemberUids;
   clanRosterReady = true;
+  if (selectedClanMemberUid && !nextMemberUids.has(selectedClanMemberUid)) selectedClanMemberUid = "";
 
   const clanId = activeClanSubscriptionId || state?.clanId || "";
   const clanName = clanSnapshot?.name || state?.clanName || "";
@@ -17061,19 +17075,38 @@ function startClanRealtimeSubscriptions(api, clanId) {
   return true;
 }
 
-function startClanMessageSubscription(api, clanId) {
+function updateClanGiftCountdown() {
+  const countdown = clanContent?.querySelector("[data-clan-gift-cooldown]");
+  const sendButton = clanContent?.querySelector('[data-clan-action="send-gift"]');
+  if (!countdown && !sendButton) return;
+  const lastGiftSentAtMs = normalizeTimestampMs(clanMemberRewards?.lastGiftSentAtMs);
+  const cooldownMs = Math.max(0, lastGiftSentAtMs + CLAN_GIFT_COOLDOWN_MS - Date.now());
+  if (countdown) countdown.textContent = cooldownMs ? `Ready in ${formatDuration(Math.ceil(cooldownMs / 1000))}` : "Ready now";
+  if (sendButton) sendButton.disabled = clanGiftActionInFlight || cooldownMs > 0;
+}
+
+function startClanSocialStateSubscription(api, clanId) {
   const id = String(clanId || "").trim();
-  if (!id || !api?.subscribeClanMessages) return;
-  if (activeClanMessageSubscriptionId === id && typeof clanMessagesUnsubscribe === "function") return;
-  if (typeof clanMessagesUnsubscribe === "function") clanMessagesUnsubscribe();
-  activeClanMessageSubscriptionId = id;
-  clanMessagesUnsubscribe = api.subscribeClanMessages(id, {
-    onMessages: messages => {
-      clanMessages = messages;
+  if (!id || !api?.subscribeClanSocialState) return false;
+  if (activeClanSocialSubscriptionId === id && typeof clanSocialStateUnsubscribe === "function") return true;
+  if (typeof clanSocialStateUnsubscribe === "function") clanSocialStateUnsubscribe();
+  activeClanSocialSubscriptionId = id;
+  clanQuestProgress = null;
+  clanMemberRewards = null;
+  clanSocialStateUnsubscribe = api.subscribeClanSocialState(id, {
+    onQuestProgress: progress => {
+      clanQuestProgress = progress;
       if (activeProfileTab === "clan") renderClanView();
     },
-    onError: error => console.warn("Clan chat subscription failed", error),
+    onMemberRewards: rewards => {
+      clanMemberRewards = rewards;
+      if (activeProfileTab === "clan") renderClanView();
+    },
+    onError: (error, source) => console.warn(`Clan ${source || "social"} subscription failed`, error),
   });
+  if (clanGiftCountdownTimer) clearInterval(clanGiftCountdownTimer);
+  clanGiftCountdownTimer = setInterval(updateClanGiftCountdown, 1000);
+  return true;
 }
 
 function stopClanApplicationSubscription({ clear = true } = {}) {
@@ -17137,6 +17170,7 @@ async function refreshClanState(options = {}) {
         clanShieldEditorOpen = false;
         clanShieldDraft = null;
         clanShieldEditorTab = "field";
+        selectedClanMemberUid = "";
       }
       if (["leader", "officer"].includes(state.clanRole)) {
         const applicationSubscriptionStarted = startClanApplicationSubscription(api, state.clanId);
@@ -17147,13 +17181,14 @@ async function refreshClanState(options = {}) {
       } else {
         stopClanApplicationSubscription({ clear: true });
       }
-      startClanMessageSubscription(api, state.clanId);
+      startClanSocialStateSubscription(api, state.clanId);
     } else {
       stopClanRealtimeSubscriptions({ clear: true });
       clanApplications = [];
       clanShieldEditorOpen = false;
       clanShieldDraft = null;
       clanShieldEditorTab = "field";
+      selectedClanMemberUid = "";
       clanSearchResults = await api.searchClans(options.search || "", 30);
     }
   } catch (error) {
@@ -17372,6 +17407,111 @@ async function saveClanShieldEditor() {
   }
 }
 
+function formatClanProductionHours(minutes = 0) {
+  const hours = Math.max(0, Number(minutes) || 0) / 60;
+  return Number.isInteger(hours) ? String(hours) : hours.toFixed(1).replace(/\.0$/, "");
+}
+
+function renderClanMemberFlag(index, className = "") {
+  return `<span class="kingdom-flag kingdom-flag-small clan-member-flag ${escapeHtml(className)}" data-clan-member-flag="${index}" aria-hidden="true"><span class="flag-symbol"></span></span>`;
+}
+
+function renderClanApplicantFlag(index) {
+  return `<span class="kingdom-flag kingdom-flag-small clan-member-flag" data-clan-applicant-flag="${index}" aria-hidden="true"><span class="flag-symbol"></span></span>`;
+}
+
+function applyClanRosterFlags() {
+  clanMembers.forEach((member, index) => {
+    applyFlagToElement(clanContent?.querySelector(`[data-clan-member-flag="${index}"]`), member.flag || createDefaultFlag());
+  });
+  clanApplications.forEach((application, index) => {
+    applyFlagToElement(clanContent?.querySelector(`[data-clan-applicant-flag="${index}"]`), application.flag || createDefaultFlag());
+  });
+}
+
+function renderClanRosterMember(member, index, canLead) {
+  const uid = String(member?.uid || member?.id || "");
+  const self = uid === getCurrentOnlineUid();
+  const selected = canLead && !self && selectedClanMemberUid === uid;
+  const memberName = escapeHtml(cleanName(member?.displayName) || "Ruler");
+  const nameControl = canLead && !self
+    ? `<button type="button" class="clan-member-select" data-clan-action="select-member" data-member-id="${escapeHtml(uid)}" aria-expanded="${selected}">${memberName}</button>`
+    : renderPlayerNameLink(uid, member?.displayName || "Ruler");
+  const actionPanel = selected ? `
+    <div class="clan-member-selection">
+      <button type="button" class="clan-member-profile-link" data-player-profile-uid="${escapeHtml(uid)}">View Profile</button>
+      ${member.role === "officer"
+        ? `<button type="button" data-clan-action="demote" data-member-id="${escapeHtml(uid)}">Demote</button>`
+        : `<button type="button" data-clan-action="promote" data-member-id="${escapeHtml(uid)}">Promote</button>`}
+      <button type="button" class="danger" data-clan-action="kick" data-member-id="${escapeHtml(uid)}">Remove</button>
+    </div>` : "";
+  return `
+    <article class="clan-member-row ${selected ? "selected" : ""}">
+      ${renderClanMemberFlag(index)}
+      <div class="clan-member-copy">${nameControl}<span>${clanRoleLabel(member.role)} · ${formatNumber(member.kingPower || 0)} power</span></div>
+      ${actionPanel}
+    </article>`;
+}
+
+function renderClanGiftPanel() {
+  const pendingMinutes = Math.max(0, Math.floor(Number(clanMemberRewards?.pendingGiftGoldMinutes) || 0));
+  const lastGiftSentAtMs = normalizeTimestampMs(clanMemberRewards?.lastGiftSentAtMs);
+  const cooldownMs = Math.max(0, lastGiftSentAtMs + CLAN_GIFT_COOLDOWN_MS - Date.now());
+  const hours = formatClanProductionHours(pendingMinutes);
+  return `
+    <section class="clan-gift-panel">
+      <div class="profile-section-heading"><span>Clan generosity</span><h3>Gold Gifts</h3></div>
+      <p>Send every other clan member 30 minutes of base gold production once every five hours.</p>
+      <div class="clan-gift-actions">
+        <button type="button" data-clan-action="send-gift" ${clanGiftActionInFlight || cooldownMs ? "disabled" : ""}>${clanGiftActionInFlight ? "Sending…" : "Send .5h Gold Gift"}</button>
+        <small data-clan-gift-cooldown>${cooldownMs ? `Ready in ${formatDuration(Math.ceil(cooldownMs / 1000))}` : "Ready now"}</small>
+        <button type="button" class="profile-primary-btn" data-clan-action="collect-gifts" ${clanGiftActionInFlight || !pendingMinutes ? "disabled" : ""}>${clanGiftActionInFlight ? "Collecting…" : `Collect ${hours}h Gold`}</button>
+      </div>
+      <div class="clan-gift-stats">
+        <span>Sent <strong>${formatNumber(clanMemberRewards?.giftCountSent || 0)}</strong></span>
+        <span>Received <strong>${formatNumber(clanMemberRewards?.giftCountReceived || 0)}</strong></span>
+        <span>Collected <strong>${formatClanProductionHours(clanMemberRewards?.giftGoldMinutesClaimed || 0)}h</strong></span>
+      </div>
+    </section>`;
+}
+
+function renderClanQuestPanel() {
+  const captureCount = Math.max(0, Math.floor(Number(clanQuestProgress?.captureCount) || 0));
+  const unlocks = clanQuestProgress?.milestoneUnlocks && typeof clanQuestProgress.milestoneUnlocks === "object"
+    ? clanQuestProgress.milestoneUnlocks
+    : {};
+  const claims = clanMemberRewards?.questClaims && typeof clanMemberRewards.questClaims === "object"
+    ? clanMemberRewards.questClaims
+    : {};
+  const selfUid = getCurrentOnlineUid();
+  const selfMember = clanMembers.find(member => String(member?.uid || member?.id || "") === selfUid);
+  const joinedAtMs = normalizeTimestampMs(selfMember?.joinedAtMs);
+  const progressPercent = Math.min(100, captureCount);
+  return `
+    <section class="clan-quest-panel">
+      <div class="profile-section-heading"><span>World campaign</span><h3>Conquest Quests</h3></div>
+      <div class="clan-quest-progress">
+        <div><strong>${formatNumber(captureCount)} / 100</strong><span>player-owned territories conquered</span></div>
+        <span class="clan-quest-progress-track"><i style="width:${progressPercent}%"></i></span>
+      </div>
+      <div class="clan-quest-grid">${CLAN_QUEST_REWARDS.map(reward => {
+        const unlockedAtMs = normalizeTimestampMs(unlocks[reward.id]);
+        const claimed = Boolean(claims[reward.id]);
+        const joinedTooLate = Boolean(unlockedAtMs && (!joinedAtMs || joinedAtMs >= unlockedAtMs));
+        const unlocked = Boolean(unlockedAtMs && captureCount >= reward.captures);
+        const inFlight = clanQuestClaimInFlightId === reward.id;
+        const rewardHours = formatClanProductionHours(reward.productionMinutes);
+        const status = claimed ? "Collected" : joinedTooLate ? "Joined too late" : unlocked ? "Ready" : `${Math.min(captureCount, reward.captures)} / ${reward.captures}`;
+        return `
+          <article class="clan-quest-card ${claimed ? "claimed" : unlocked ? "unlocked" : "locked"}">
+            <div><span>Conquer ${formatNumber(reward.captures)}</span><strong>${rewardHours}h ${reward.rewardType === "troops" ? "Troops" : "Gold"}</strong></div>
+            <small>${status}</small>
+            <button type="button" data-clan-action="claim-quest" data-reward-id="${escapeHtml(reward.id)}" ${claimed || joinedTooLate || !unlocked || inFlight ? "disabled" : ""}>${inFlight ? "Collecting…" : claimed ? "Collected" : joinedTooLate ? "Ineligible" : unlocked ? "Collect" : "Locked"}</button>
+          </article>`;
+      }).join("")}</div>
+    </section>`;
+}
+
 function renderClanView() {
   if (!clanContent || activeProfileTab !== "clan") return;
   const shieldEditorVisible = Boolean(state?.clanId && clanSnapshot && state?.clanRole === "leader" && clanShieldEditorOpen);
@@ -17414,9 +17554,8 @@ function renderClanView() {
       </div>`;
     return;
   }
-  const canManage = ["leader", "officer"].includes(state.clanRole);
+  const canManageApplications = ["leader", "officer"].includes(state.clanRole);
   const canLead = state.clanRole === "leader";
-  const visibleMessages = clanMessages.filter(message => !mutedClanMemberIds.has(message.senderUid));
   clanContent.innerHTML = `
     <section class="clan-hero">
       <div class="clan-hero-shield">
@@ -17426,33 +17565,24 @@ function renderClanView() {
       <div><span>Your clan · ${clanRoleLabel(state.clanRole)}</span><h3>[${escapeHtml(clanSnapshot.tag || "")}] ${escapeHtml(clanSnapshot.name || "Clan")}</h3><p>${escapeHtml(clanSnapshot.description || "No description yet.")}</p></div>
       <div class="clan-power"><span>Clan Power</span><strong>${formatNumber(clanSnapshot.totalKingPower || 0)}</strong><small>${clanSnapshot.memberCount || 0}/30 members</small></div>
     </section>
-    ${canLead && clanShieldEditorOpen ? renderClanShieldEditor(clanShieldDraft) : `<div class="clan-columns">
+    ${canLead && clanShieldEditorOpen ? renderClanShieldEditor(clanShieldDraft) : `<div class="clan-columns clan-social-layout">
       <section class="clan-roster-panel">
         <div class="profile-section-heading"><span>Household</span><h3>Roster</h3></div>
-        <div class="clan-roster">${clanMembers.map(member => `
-          <article class="clan-member-row">
-            <div>${renderPlayerNameLink(member.uid || member.id, member.displayName || "Ruler")}<span>${clanRoleLabel(member.role)} · ${formatNumber(member.kingPower || 0)} power</span></div>
-            <div class="clan-member-actions">
-              ${member.uid !== getCurrentOnlineUid() ? `<button data-clan-action="mute" data-member-id="${escapeHtml(member.uid)}">${mutedClanMemberIds.has(member.uid) ? "Unmute" : "Mute"}</button>` : ""}
-              ${canLead && member.uid !== getCurrentOnlineUid() && member.role === "member" ? `<button data-clan-action="promote" data-member-id="${escapeHtml(member.uid)}">Promote</button>` : ""}
-              ${canLead && member.role === "officer" ? `<button data-clan-action="demote" data-member-id="${escapeHtml(member.uid)}">Demote</button>` : ""}
-              ${canManage && member.uid !== getCurrentOnlineUid() && member.role === "member" ? `<button data-clan-action="kick" data-member-id="${escapeHtml(member.uid)}">Remove</button>` : ""}
-            </div>
-          </article>`).join("")}</div>
-        ${canManage ? `<div class="clan-applications"><h4>Applications</h4>${clanApplicationsError
+        <div class="clan-roster">${clanMembers.map((member, index) => renderClanRosterMember(member, index, canLead)).join("")}</div>
+        ${canManageApplications ? `<div class="clan-applications"><h4>Applications</h4>${clanApplicationsError
           ? `<p class="clan-warning">${escapeHtml(clanApplicationsError)}</p>`
           : clanApplications.length
-            ? clanApplications.map(application => `<article><span>${escapeHtml(application.displayName || "Ruler")} · ${formatNumber(application.kingPower || 0)} power</span><button data-clan-action="accept" data-member-id="${escapeHtml(application.uid)}">Accept</button><button data-clan-action="reject" data-member-id="${escapeHtml(application.uid)}">Reject</button></article>`).join("")
+            ? clanApplications.map((application, index) => `<article>${renderClanApplicantFlag(index)}<span>${renderPlayerNameLink(application.uid, application.displayName || "Ruler")}<small>${formatNumber(application.kingPower || 0)} power</small></span><div><button data-clan-action="accept" data-member-id="${escapeHtml(application.uid)}">Accept</button><button data-clan-action="reject" data-member-id="${escapeHtml(application.uid)}">Reject</button></div></article>`).join("")
             : `<p class="clan-muted">No pending applications.</p>`}</div>` : ""}
         <button class="profile-secondary-btn clan-leave" data-clan-action="leave">${canLead && clanMembers.length === 1 ? "Disband Clan" : "Leave Clan"}</button>
       </section>
-      <section class="clan-chat-panel">
-        <div class="profile-section-heading"><span>Private channel</span><h3>Clan Chat</h3></div>
-        <div class="clan-chat-log">${visibleMessages.length ? visibleMessages.map(message => `
-          <article class="clan-message"><div>${renderPlayerNameLink(message.senderUid, message.senderName || "Ruler")}<small>${clanRoleLabel(message.senderRole)}</small>${message.senderUid !== getCurrentOnlineUid() ? `<button data-clan-action="report" data-message-id="${escapeHtml(message.id)}">Report</button>` : ""}</div><p>${escapeHtml(message.text || "")}</p></article>`).join("") : `<p class="clan-muted">No messages yet. Rally your clan.</p>`}</div>
-        <form data-clan-form="message" class="clan-message-form"><input name="text" maxlength="300" required autocomplete="off" placeholder="Message your clan…" aria-label="Clan message" /><button type="submit">Send</button></form>
-      </section>
+      <div class="clan-social-panels">
+        ${renderClanGiftPanel()}
+        ${renderClanQuestPanel()}
+      </div>
     </div>`}`;
+  applyClanRosterFlags();
+  updateClanGiftCountdown();
 }
 
 async function runClanAction(action, payload = {}) {
@@ -17471,7 +17601,6 @@ async function runClanAction(action, payload = {}) {
       demote: "demoteClanOfficer",
       kick: "kickClanMember",
       leave: clanMembers.length === 1 && state.clanRole === "leader" ? "disbandClan" : "leaveClan",
-      report: "reportClanMessage",
     }[action];
     if (!method || !api[method]) return;
     const result = await api[method](payload);
@@ -17480,14 +17609,47 @@ async function runClanAction(action, payload = {}) {
       ? "Application sent."
       : action === "cancel-application"
         ? "Application canceled."
-        : action === "report"
-          ? "Message reported."
-          : "Clan updated.");
+        : "Clan updated.");
+    if (action === "kick") selectedClanMemberUid = "";
     await refreshClanState({ silent: true });
   } catch (error) {
     showToast(error?.message || "Clan action failed.");
   } finally {
     clanUiLoading = false;
+    renderClanView();
+  }
+}
+
+async function runClanSocialAction(action, rewardId = "") {
+  const api = getOnlineApi();
+  if (!api || clanGiftActionInFlight || clanQuestClaimInFlightId) return;
+  if (action === "send-gift" || action === "collect-gifts") clanGiftActionInFlight = true;
+  if (action === "claim-quest") clanQuestClaimInFlightId = rewardId;
+  renderClanView();
+  try {
+    let result;
+    if (action === "send-gift") result = await api.sendClanGift();
+    else if (action === "collect-gifts") result = await api.claimClanGiftPool();
+    else if (action === "claim-quest") result = await api.claimClanQuestReward({ rewardId });
+    if (!result) return;
+    if (result.memberRewards) clanMemberRewards = { ...(clanMemberRewards || {}), ...result.memberRewards };
+    applyServerEconomyResult(result);
+    if (action === "send-gift") {
+      showToast(`Gift sent to ${formatNumber(result.recipientCount || 0)} clan members.`);
+    } else if (action === "collect-gifts") {
+      showToast(result.claimed
+        ? `Collected ${formatClanProductionHours(result.productionMinutes)}h gold: +${formatNumber(result.reward || 0)}.`
+        : "No clan gifts are waiting.");
+    } else {
+      showToast(result.replayed
+        ? "That clan quest reward was already collected."
+        : `Quest reward: +${formatNumber(result.reward || 0)} ${result.rewardType === "troops" ? "troops" : "gold"}.`);
+    }
+  } catch (error) {
+    showToast(error?.message || "Clan reward action failed.");
+  } finally {
+    clanGiftActionInFlight = false;
+    clanQuestClaimInFlightId = "";
     renderClanView();
   }
 }
@@ -17508,9 +17670,6 @@ async function handleClanSubmit(event) {
     } else if (kind === "search") {
       clanSearchResults = await api.searchClans(data.search || "", 30);
       renderClanView();
-    } else if (kind === "message") {
-      await api.sendClanMessage({ text: data.text });
-      form.reset();
     }
   } catch (error) {
     showToast(error?.message || "Clan action failed.");
@@ -17561,21 +17720,25 @@ function handleClanClick(event) {
     rerenderClanShieldEditor();
     return;
   }
-  const clanId = button.dataset.clanId || state?.clanId || "";
-  const targetUid = button.dataset.memberId || "";
-  if (action === "mute") {
-    if (mutedClanMemberIds.has(targetUid)) mutedClanMemberIds.delete(targetUid);
-    else mutedClanMemberIds.add(targetUid);
-    localStorage.setItem("crownlands-muted-clan-members", JSON.stringify([...mutedClanMemberIds]));
+  if (action === "select-member") {
+    if (state?.clanRole !== "leader") return;
+    const uid = String(button.dataset.memberId || "");
+    if (!uid || uid === getCurrentOnlineUid()) return;
+    selectedClanMemberUid = selectedClanMemberUid === uid ? "" : uid;
     renderClanView();
     return;
   }
+  if (action === "send-gift" || action === "collect-gifts" || action === "claim-quest") {
+    runClanSocialAction(action, String(button.dataset.rewardId || ""));
+    return;
+  }
+  const clanId = button.dataset.clanId || state?.clanId || "";
+  const targetUid = button.dataset.memberId || "";
   runClanAction(action, {
     clanId,
     targetUid,
     applicantUid: targetUid,
     accept: action === "accept",
-    messageId: button.dataset.messageId || "",
   });
 }
 

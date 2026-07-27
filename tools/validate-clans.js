@@ -41,8 +41,9 @@ requires(server, /CLAN_LEADER_INACTIVE_MS\s*=\s*14\s*\*\s*24\s*\*\s*60\s*\*\s*60
   "transferClanLeadership",
   "claimInactiveClanLeadership",
   "disbandClan",
-  "sendClanMessage",
-  "reportClanMessage",
+  "sendClanGift",
+  "claimClanGiftPool",
+  "claimClanQuestReward",
 ].forEach(name => requires(server, new RegExp(`exports\\.${name}\\s*=\\s*onCall`), `Missing ${name} callable.`));
 
 requires(firebaseConfig, /postdeploy[\s\S]*?validate-clan-callable-access\.js/, "Function deploys do not verify clan callable access.");
@@ -50,7 +51,9 @@ requires(firebaseConfig, /postdeploy[\s\S]*?validate-clan-callable-access\.js/, 
   "applyToClan",
   "joinOpenClan",
   "reviewClanApplication",
-  "sendClanMessage",
+  "sendClanGift",
+  "claimClanGiftPool",
+  "claimClanQuestReward",
 ].forEach(name => requires(callableAccessCheck, new RegExp(`"${name}"`), `Callable access check is missing ${name}.`));
 requires(callableAccessCheck, /assert\.notEqual\(response\.status,\s*403/, "Callable access check does not detect private Cloud Run services.");
 requires(callableAccessCheck, /payload\?\.error\?\.status[\s\S]*?"UNAUTHENTICATED"/, "Callable access check does not verify Firebase authentication.");
@@ -61,19 +64,30 @@ requires(server, /rebuildClanPowerOnPlayerStats\s*=\s*onDocumentWritten/, "Clan 
 requires(server, /function clanIdentitySnapshotFields[\s\S]*?ownerClanIdentityRevision/, "Clan asset snapshots do not store a monotonic clan identity revision.");
 requires(server, /syncClanIdentityOnMembershipChange\s*=\s*onDocumentWritten[\s\S]*?latestProfile\.clanIdentityRevision/, "Clan membership changes do not trigger durable identity propagation.");
 requires(server, /clanIdentityRevisionPatch\(nowMs\)/, "Clan membership transactions do not advance the clan identity revision.");
-requires(server, /cleanupClanMessages\s*=\s*onSchedule[\s\S]*?index >= 500[\s\S]*?expiresAtMs/, "Clan chat retention is not capped at 500 messages and 30 days.");
+requires(server, /CLAN_GIFT_COOLDOWN_MS\s*=\s*5\s*\*\s*60\s*\*\s*60\s*\*\s*1000[\s\S]*?CLAN_GIFT_PRODUCTION_MINUTES\s*=\s*30/, "Clan gift cadence must be 30 production minutes every five hours.");
+requires(server, /CLAN_QUEST_REWARDS\s*=\s*Object\.freeze\(\[[\s\S]*?captures:\s*5[\s\S]*?productionMinutes:\s*30[\s\S]*?captures:\s*100[\s\S]*?rewardType:\s*"troops"[\s\S]*?productionMinutes:\s*360/, "Clan conquest rewards do not contain the approved 10-tier track.");
+requires(server, /exports\.sendClanGift[\s\S]*?memberDoc\.id\s*!==\s*uid[\s\S]*?FieldValue\.increment\(CLAN_GIFT_PRODUCTION_MINUTES\)/, "Clan gifts do not exclude the sender and fan out 30 production minutes.");
+requires(server, /exports\.claimClanGiftPool[\s\S]*?getRewardedAdBaseRates\(economy\)\.goldPerHour[\s\S]*?pendingGiftGoldMinutes:\s*0/, "Clan gift collection does not use current permanent base gold production and clear the pool.");
+requires(server, /exports\.claimClanQuestReward[\s\S]*?joinedAtMs\s*>=\s*unlockedAtMs[\s\S]*?getRewardedAdBaseRates\(economy\)[\s\S]*?creditLevelUpTroopsToMainCity/, "Clan quest claims do not enforce unlock eligibility and current base production rewards.");
+requires(server, /function recordClanConquest[\s\S]*?targetType\s*!==\s*"city"[\s\S]*?safeString\(change\.reason,\s*64\)\s*!==\s*"city_captured"[\s\S]*?!beforeOwnerUid[\s\S]*?clanQuestCaptureReceiptRef[\s\S]*?receiptSnap\.exists/, "Clan conquest capture processing is not filtered and receipt-idempotent.");
+requires(server, /async function removeClanMember[\s\S]*?assertClanRole\(actor,\s*\["leader"\]\)[\s\S]*?transaction\.delete\(clanMemberRewardsRef\(clanId,\s*targetUid\)\)/, "Clan removal must be leader-only and forfeit the departing member's rewards.");
+assert.doesNotMatch(server, /exports\.(?:sendClanMessage|reportClanMessage|cleanupClanMessages)\s*=/, "Retired clan chat Functions are still exported.");
 requires(server, /function normalizeClanShield[\s\S]*?CLAN_SHIELD_SHAPES[\s\S]*?CLAN_SHIELD_DIVISIONS[\s\S]*?CLAN_SHIELD_CHARGES/, "Clan shield schema is not validated server-side.");
 requires(server, /exports\.updateClanProfile[\s\S]*?assertClanRole\(memberSnap\.data\(\), \["leader"\]\)[\s\S]*?const shield = normalizeClanShield/, "Clan shield edits are not leader-only.");
 requires(server, /writeClanLeaderboard[\s\S]*?shield,[\s\S]*?banner:\s*clanShieldLegacyBanner/, "Clan leaderboard snapshots do not include heraldic shields.");
 
 requires(rules, /match \/clans\/\{clanId\}[\s\S]*?allow create, update, delete: if false;/, "Clan writes must be server-owned.");
 requires(rules, /match \/clans\/\{clanId\}[\s\S]*?allow read: if signedIn\(\)(?:\s*&&\s*isCurrentGeneration\(resource\.data\))?;/, "Signed-in nonmembers cannot view public clan identities and shields.");
-requires(rules, /match \/messages\/\{messageId\}[\s\S]*?allow read: if clanMember\(clanId\)(?:\s*&&\s*isCurrentGeneration\(resource\.data\))?;[\s\S]*?allow create, update, delete: if false;/, "Clan chat rules are not membership-gated and server-owned.");
+requires(rules, /match \/questProgress\/\{resetId\}[\s\S]*?allow read: if clanMember\(clanId\)[\s\S]*?allow create, update, delete: if false;/, "Current clan members cannot safely read quest progress.");
+requires(rules, /match \/memberRewards\/\{uid\}[\s\S]*?request\.auth\.uid == uid[\s\S]*?allow create, update, delete: if false;/, "Clan reward state is not restricted to its member.");
+requires(rules, /match \/questCaptureReceipts\/\{eventId\}[\s\S]*?allow read, create, update, delete: if false;/, "Clan capture receipts are not server-only.");
+requires(rules, /match \/messages\/\{messageId\}[\s\S]*?allow read, create, update, delete: if false;/, "Legacy clan messages are still accessible.");
 requires(rules, /profileFieldUnchanged\('clanId'\)/, "Players can mutate canonical clan membership directly.");
 requires(rules, /profileFieldUnchanged\('clanIdentityRevision'\)/, "Players can mutate the server-owned clan identity revision.");
 
-requires(firebaseClient, /createClan[\s\S]*?joinOpenClan[\s\S]*?reviewClanApplication[\s\S]*?sendClanMessage/, "Firebase client does not expose the clan callables.");
-requires(firebaseClient, /subscribeClanMessages/, "Firebase client is missing realtime clan chat.");
+requires(firebaseClient, /createClan[\s\S]*?joinOpenClan[\s\S]*?reviewClanApplication[\s\S]*?sendClanGift[\s\S]*?claimClanGiftPool[\s\S]*?claimClanQuestReward/, "Firebase client does not expose clan membership, gift, and quest callables.");
+requires(firebaseClient, /function subscribeClanSocialState[\s\S]*?questProgress[\s\S]*?memberRewards[\s\S]*?onSnapshot/, "Firebase client is missing realtime clan gift and quest state.");
+assert.doesNotMatch(firebaseClient, /sendClanMessage|reportClanMessage|subscribeClanMessages/, "Firebase client still exposes retired clan chat APIs.");
 requires(firebaseClient, /function subscribeClanApplications[\s\S]*?where\("resetGeneration",\s*"==",\s*RESET_GENERATION\)[\s\S]*?where\("worldId",\s*"==",\s*ONLINE_WORLD_ID\)[\s\S]*?where\("status",\s*"==",\s*"pending"\)[\s\S]*?onSnapshot/, "Clan managers do not have a rule-compatible realtime application inbox.");
 requires(firebaseClient, /async function loadClanApplications[\s\S]*?where\("resetGeneration",\s*"==",\s*RESET_GENERATION\)[\s\S]*?where\("worldId",\s*"==",\s*ONLINE_WORLD_ID\)/, "The clan application fallback query does not prove current-realm access to Firestore rules.");
 requires(firestoreIndexes, /"collectionGroup":\s*"applications"[\s\S]*?"fieldPath":\s*"resetGeneration"[\s\S]*?"fieldPath":\s*"worldId"[\s\S]*?"fieldPath":\s*"status"[\s\S]*?"fieldPath":\s*"createdAtMs"/, "Clan applications are missing their current-realm manager inbox index.");
@@ -100,6 +114,9 @@ requires(client, /function showPublicClanDetails[\s\S]*?Promise\.all\(\[api\.loa
 requires(client, /btn\.classList\.add\("clan-ally"\)/, "Allied cities do not receive their map class.");
 requires(client, /You cannot scout or attack a clan ally/, "Clan-friendly action explanation is missing.");
 requires(client, /function renderClanShield[\s\S]*?renderClanShieldField[\s\S]*?renderClanShieldCharges/, "Client is missing the vector clan shield renderer.");
+requires(client, /function renderClanRosterMember[\s\S]*?data-clan-action="select-member"[\s\S]*?Demote[\s\S]*?Promote[\s\S]*?Remove[\s\S]*?renderClanMemberFlag/, "Clan roster is missing flags or leader-selected member controls.");
+requires(client, /function renderClanGiftPanel[\s\S]*?Send \.5h Gold Gift[\s\S]*?Collect \$\{hours\}h Gold[\s\S]*?function renderClanQuestPanel[\s\S]*?Conquest Quests[\s\S]*?Joined too late/, "Clan gift and conquest quest panels are incomplete.");
+assert.doesNotMatch(client, /Clan Chat|sendClanMessage|reportClanMessage|data-clan-action="mute"/, "Retired clan chat or mute UI remains in the client.");
 requires(client, /data-clan-action="edit-shield"/, "Leader clan shield editor entry point is missing.");
 requires(client, /function saveClanShieldEditor[\s\S]*?updateClanProfile\(\{\s*shield\s*\}\)[\s\S]*?result\?\.clan\?\.shield[\s\S]*?clanSnapshot\s*=\s*\{[\s\S]*?savedShield/, "Clan shield editor does not retain the server-confirmed saved shield.");
 requires(client, /data-clan-action="shield-tab"[\s\S]*?data-shield-panel="field"[\s\S]*?data-shield-panel="colors"[\s\S]*?data-shield-panel="charges"[\s\S]*?data-shield-panel="details"/, "Mobile clan shield editor tabs are incomplete.");
@@ -111,5 +128,6 @@ requires(styles, /\.clan-hud-btn[\s\S]*?\.profile-clan-affiliation/, "Clan HUD a
 requires(styles, /\.public-clan-roster[\s\S]*?\.public-clan-member[\s\S]*?\.public-clan-member-power[\s\S]*?\.clan-name-link/, "Public clan roster and discovery profile links are not styled.");
 requires(styles, /\.clan-shield-size-editor[\s\S]*?\.clan-shield-editor-controls[\s\S]*?\.clan-shield-swatch-grid/, "Clan shield editor styling is missing.");
 requires(styles, /\.clan-content\.shield-editor-open[\s\S]*?\.clan-shield-editor-preview[\s\S]*?\.clan-shield-editor-workspace[\s\S]*?\.clan-shield-editor-controls[\s\S]*?overflow-y:\s*auto/, "Mobile shield editor does not keep a fixed preview beside scrollable controls.");
+requires(styles, /\.clan-member-row[\s\S]*?\.clan-member-selection[\s\S]*?\.clan-gift-panel[\s\S]*?\.clan-quest-grid[\s\S]*?\.clan-quest-card/, "Compact roster, gift, and conquest quest styling is missing.");
 
-console.log("Validated clan gates, event-driven roster updates, revisioned identity propagation, HUD access, profiles, friendly combat, chat, rankings, allied-city UI, and leader-owned heraldic shields.");
+console.log("Validated clan gates, event-driven roster updates, gifts, conquest quests, HUD access, profiles, friendly combat, rankings, allied-city UI, and leader-owned heraldic shields.");
