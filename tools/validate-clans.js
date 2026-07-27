@@ -21,7 +21,7 @@ function requires(source, pattern, message) {
   assert.match(source, pattern, message);
 }
 
-requires(server, /CLAN_UNLOCK_LEVEL\s*=\s*20/, "Clan unlock must be Hero Level 20.");
+requires(server, /CLAN_UNLOCK_LEVEL\s*=\s*10/, "Clan unlock must be Hero Level 10.");
 requires(server, /CLAN_CREATE_GOLD_COST\s*=\s*100_000/, "Clan creation must cost 100,000 gold.");
 requires(server, /CLAN_MEMBER_LIMIT\s*=\s*30/, "Clan member capacity must be 30.");
 requires(server, /CLAN_JOIN_COOLDOWN_MS\s*=\s*24\s*\*\s*60\s*\*\s*60\s*\*\s*1000/, "Clan join cooldown must be 24 hours.");
