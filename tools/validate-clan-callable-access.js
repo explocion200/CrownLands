@@ -21,6 +21,7 @@ const publicCallables = [
   "sendClanGift",
   "claimClanGiftPool",
   "claimClanQuestReward",
+  "returnClanReinforcement",
 ];
 
 async function validateCallable(name) {

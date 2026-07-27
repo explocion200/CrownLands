@@ -53,7 +53,7 @@ const marchOrderUses = serverSource.match(/speedMultiplier:\s*skillMultiplier\([
 if (marchOrderUses.length < 5) {
   throw new Error(`March Orders is only wired into ${marchOrderUses.length} server march paths; expected at least 5.`);
 }
-requireMatch(serverSource, /if \(targetType === "camp"\)[\s\S]*?recoverBattleLossesToMainCity\([\s\S]*?losses: battle\.attackerLosses[\s\S]*?losses: battle\.defenderLosses/, "Field Medics is missing from camp battles.");
+requireMatch(serverSource, /if \(targetType === "camp"\)[\s\S]*?applyReinforcementDefenseSettlement[\s\S]*?recoverBattleLossesToMainCity\([\s\S]*?losses: battle\.attackerLosses[\s\S]*?losses: defenseAllocation\.ownerLosses/, "Field Medics is missing from camp battles or reinforcement loss allocation.");
 requireMatch(serverSource, /const recoverBattleLossesToMainCity[\s\S]*?getCanonicalMainCityEntry/, "Field Medics does not use the canonical main city.");
 
 console.log("Validated all seven skill configurations and their server-authoritative boost paths.");

@@ -24,6 +24,7 @@ function extractFunction(name) {
 }
 
 const sandbox = {
+  ARMY_ORDER_KINDS: ["attack", "transfer", "reinforce", "scout"],
   safeString(value, limit = 120) {
     return String(value || "").trim().slice(0, limit);
   },
@@ -118,7 +119,7 @@ assert.match(
 );
 assert.match(
   clientSource,
-  /launchKind:\s*\["attack", "transfer", "scout"\]\.includes\(raw\.launchKind\)[\s\S]*?retargetedFromKind:/,
+  /launchKind:\s*\["attack", "transfer", "reinforce", "scout"\]\.includes\(raw\.launchKind\)[\s\S]*?retargetedFromKind:/,
   "The client must retain server provenance for converted reinforcements."
 );
 assert.match(

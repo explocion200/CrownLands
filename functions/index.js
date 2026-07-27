@@ -86,7 +86,13 @@ const ARMY_TRAVEL_SECONDS_PER_MAP_UNIT = 0.13;
 const ARMY_TRAVEL_MIN_SECONDS = 30;
 const ARMY_TRAVEL_SCOUT_MIN_SECONDS = 10;
 const ARMY_TRAVEL_MAX_SECONDS = 1800;
-const ARMY_TRAVEL_KIND_MULTIPLIERS = { scout: 0.35, transfer: 0.95, attack: 1 };
+const ARMY_TRAVEL_KIND_MULTIPLIERS = { scout: 0.35, transfer: 0.95, reinforce: 0.95, attack: 1 };
+const ARMY_ORDER_KINDS = Object.freeze(["attack", "transfer", "reinforce", "scout"]);
+const REINFORCEMENT_STATUS_STATIONED = "stationed";
+const REINFORCEMENT_STATUS_RETURNING = "returning";
+const REINFORCEMENT_STATUS_DEPLETED = "depleted";
+const REINFORCEMENT_STATUS_RETURNED = "returned";
+const REINFORCEMENT_MODEL_VERSION = 1;
 const ARMY_TRAVEL_TROOP_BAND_LIMITS = [10, 100, 1000, 10000, 100000, 1000000, 10000000, 100000000];
 const ARMY_TRAVEL_TROOP_BAND_MULTIPLIERS = [1, 1.18, 1.38, 1.62, 1.9, 2.24, 2.62, 3.06, 3.5];
 const CAPTURE_XP_BASE = 120;
@@ -1526,6 +1532,30 @@ function getCityStats(city = {}, defenderProfile = null, bonuses = {}) {
   };
 }
 
+function getAlliedReinforcementTroops(target = {}) {
+  return Math.max(0, Math.floor(safeNumber(target.alliedReinforcementTroops, 0)));
+}
+
+function getTargetOwnerTroops(target = {}, targetType = "city") {
+  return Math.max(0, Math.floor(safeNumber(
+    targetType === "camp" ? target.currentGarrison : target.troops,
+    target.troops
+  )));
+}
+
+function createReinforcedCombatTarget(target = {}, targetType = "city") {
+  const ownerTroops = getTargetOwnerTroops(target, targetType);
+  const alliedTroops = getAlliedReinforcementTroops(target);
+  const totalTroops = Math.min(Number.MAX_SAFE_INTEGER, ownerTroops + alliedTroops);
+  return {
+    ...target,
+    troops: totalTroops,
+    troopFloat: totalTroops,
+    ownerGarrisonTroops: ownerTroops,
+    alliedReinforcementTroops: alliedTroops,
+  };
+}
+
 function getTroopKingPower(troops = 0) {
   const troopCount = Math.max(0, Math.floor(safeNumber(troops, 0)));
   if (!troopCount) return 0;
@@ -1677,6 +1707,9 @@ function createGlobalStatsSnapshot({
     ...profile,
     itemEffects: normalizeItemEffects(profile.itemEffects),
   };
+  const stationedReinforcementTroops = safeString(profileForStats.reinforcementResetGeneration, 120) === RESET_GENERATION
+    ? Math.max(0, Math.floor(safeNumber(profileForStats.stationedReinforcementTroops, 0)))
+    : 0;
 
   let totalCities = 0;
   let strongholdCount = 0;
@@ -1752,11 +1785,12 @@ function createGlobalStatsSnapshot({
   const totalMarchingTroops = [...marchingById.values()]
     .reduce((total, army) => total + Math.max(0, Math.floor(safeNumber(army.troops, 0))), 0);
   const totalTroops = totalCityTroops + totalCampTroops;
-  const totalMilitaryTroops = totalTroops + totalMarchingTroops;
+  const totalMilitaryTroops = totalTroops + totalMarchingTroops + stationedReinforcementTroops;
   const armyPower = getTroopKingPower(totalMilitaryTroops);
   const cityTroopPower = getTroopKingPower(totalCityTroops);
   const campTroopPower = getTroopKingPower(totalCampTroops);
-  const stationedTroopPower = Math.min(Number.MAX_SAFE_INTEGER, cityTroopPower + campTroopPower);
+  const reinforcementTroopPower = getTroopKingPower(stationedReinforcementTroops);
+  const stationedTroopPower = Math.min(Number.MAX_SAFE_INTEGER, cityTroopPower + campTroopPower + reinforcementTroopPower);
   const marchingPower = getTroopKingPower(totalMarchingTroops);
   replacementPower = Math.min(Number.MAX_SAFE_INTEGER, Math.max(0, Math.floor(replacementPower)));
   defensivePower = Math.min(Number.MAX_SAFE_INTEGER, Math.max(0, Math.floor(defensivePower)));
@@ -1782,6 +1816,7 @@ function createGlobalStatsSnapshot({
     totalCityTroops,
     totalCampTroops,
     totalMarchingTroops,
+    totalReinforcementTroops: stationedReinforcementTroops,
     totalCityLevels,
     totalVictoryPoints,
     strongholdCount,
@@ -1808,6 +1843,7 @@ function createGlobalStatsSnapshot({
     strongholdUpgradeCostReductionPercent: Math.max(0, Math.floor(safeNumber(resolvedBonuses.upgradeCostReductionPercent, 0))),
     stationedTroopPower: Math.max(0, Math.floor(stationedTroopPower)),
     campTroopPower: Math.max(0, Math.floor(campTroopPower)),
+    reinforcementTroopPower: Math.max(0, Math.floor(reinforcementTroopPower)),
     cityPower: Math.max(0, Math.floor(cityPower)),
     marchingPower: Math.max(0, Math.floor(marchingPower)),
     troopPower: Math.max(0, Math.floor(armyPower)),
@@ -1852,7 +1888,8 @@ function getLegacyGlobalStatsKingPower(stats = {}) {
   if (!stats || typeof stats !== "object") return 0;
   const totalCities = Math.max(0, Math.floor(safeNumber(stats.totalCities, stats.cityCount)));
   const totalLevels = Math.max(totalCities, Math.floor(safeNumber(stats.totalCityLevels, totalCities)));
-  const stationedTroops = Math.max(0, Math.floor(safeNumber(stats.totalTroops, 0)));
+  const stationedTroops = Math.max(0, Math.floor(safeNumber(stats.totalTroops, 0)))
+    + Math.max(0, Math.floor(safeNumber(stats.totalReinforcementTroops, 0)));
   const totalTroops = stationedTroops + Math.max(0, Math.floor(safeNumber(stats.totalMarchingTroops, 0)));
   const averageLevel = totalCities > 0 ? totalLevels / totalCities : 0;
   const baseWalls = totalCities > 0 ? getBaseCityWalls(averageLevel) * totalCities : 0;
@@ -2175,10 +2212,12 @@ function calculateCombatResult(attackTroops, target, attackerProfile = null, def
   const ratio = attackPower / Math.max(1, defensePower);
   const protectedRaid = attackProtection?.mode === "raid";
   const convertedReinforcement = options.convertedReinforcement === true;
-  const convertedReinforcementCanCapture = protectedRaid && convertedReinforcement;
+  const convertedReinforcementCaptureAllowed = convertedReinforcement
+    && options.convertedReinforcementCaptureAllowed !== false;
+  const convertedReinforcementCanCapture = protectedRaid && convertedReinforcementCaptureAllowed;
   const breachOnly = attackProtection?.mode === "assault"
     && attackProtection.captureAllowed !== true
-    && !convertedReinforcement;
+    && !convertedReinforcementCaptureAllowed;
   const battleWon = (!protectedRaid || convertedReinforcementCanCapture) && attackPower > defensePower;
   const success = battleWon && !breachOnly;
   const raid = protectedRaid && !success;
@@ -2474,7 +2513,7 @@ function normalizeArmyPayload(data = {}, uid = "") {
   const raw = data.army && typeof data.army === "object" ? data.army : data.movement || {};
   const fromId = safeString(raw.fromId || data.fromId, 96);
   const toId = safeString(raw.toId || data.toId, 96);
-  const kind = ["attack", "transfer", "scout"].includes(raw.kind) ? raw.kind : "attack";
+  const kind = ARMY_ORDER_KINDS.includes(raw.kind) ? raw.kind : "attack";
   const sourceRegionId = normalizeRegionId(data.sourceRegionId || raw.sourceRegionId || data.fromRegionId);
   const targetRegionId = normalizeRegionId(data.targetRegionId || raw.targetRegionId || data.toRegionId);
   const pathSegments = normalizePathSegments(raw.pathSegments || data.pathSegments);
@@ -2499,7 +2538,7 @@ function normalizeArmyPayload(data = {}, uid = "") {
     ownerFlag: raw.ownerFlag || data.ownerFlag || null,
     ownerKingPower: Math.max(0, Math.floor(safeNumber(raw.ownerKingPower, 0))),
     kind,
-    launchKind: ["attack", "transfer", "scout"].includes(raw.launchKind) ? raw.launchKind : kind,
+    launchKind: ARMY_ORDER_KINDS.includes(raw.launchKind) ? raw.launchKind : kind,
     targetType: raw.targetType === "camp" || data.targetType === "camp" ? "camp" : "city",
     fromId,
     toId,
@@ -2528,8 +2567,155 @@ function normalizeArmyPayload(data = {}, uid = "") {
   };
 }
 
+function allocateDefenderLosses(ownerTroops = 0, contributions = [], totalLosses = 0) {
+  const ownerStart = Math.max(0, Math.floor(safeNumber(ownerTroops, 0)));
+  const rows = (Array.isArray(contributions) ? contributions : [])
+    .map(entry => ({
+      ...entry,
+      troops: Math.max(0, Math.floor(safeNumber(entry?.troops, 0))),
+    }))
+    .filter(entry => entry.ownerUid && entry.troops > 0);
+  const alliedStart = rows.reduce((total, entry) => total + entry.troops, 0);
+  const defendersAtStart = ownerStart + alliedStart;
+  const losses = Math.min(defendersAtStart, Math.max(0, Math.floor(safeNumber(totalLosses, 0))));
+  if (!defendersAtStart || !losses) {
+    return {
+      ownerStart,
+      ownerLosses: 0,
+      ownerRemaining: ownerStart,
+      alliedStart,
+      alliedLosses: 0,
+      alliedRemaining: alliedStart,
+      contributions: rows.map(entry => ({ ...entry, losses: 0, remaining: entry.troops })),
+    };
+  }
+
+  const ownerExact = losses * ownerStart / defendersAtStart;
+  let ownerLosses = Math.min(ownerStart, Math.floor(ownerExact));
+  const allocated = rows.map(entry => {
+    const exact = losses * entry.troops / defendersAtStart;
+    const entryLosses = Math.min(entry.troops, Math.floor(exact));
+    return {
+      ...entry,
+      exact,
+      losses: entryLosses,
+      remaining: entry.troops - entryLosses,
+    };
+  });
+  let assigned = ownerLosses + allocated.reduce((total, entry) => total + entry.losses, 0);
+  let remainder = Math.max(0, losses - assigned);
+
+  const ownerCapacity = Math.max(0, ownerStart - ownerLosses);
+  const ownerRemainder = Math.min(ownerCapacity, remainder);
+  ownerLosses += ownerRemainder;
+  remainder -= ownerRemainder;
+  if (remainder > 0) {
+    allocated
+      .sort((a, b) => (b.exact - Math.floor(b.exact)) - (a.exact - Math.floor(a.exact))
+        || a.ownerUid.localeCompare(b.ownerUid))
+      .forEach(entry => {
+        if (remainder <= 0 || entry.losses >= entry.troops) return;
+        entry.losses += 1;
+        entry.remaining -= 1;
+        remainder -= 1;
+      });
+  }
+  assigned = ownerLosses + allocated.reduce((total, entry) => total + entry.losses, 0);
+  if (assigned < losses) {
+    for (const entry of allocated) {
+      const capacity = entry.troops - entry.losses;
+      const extra = Math.min(capacity, losses - assigned);
+      entry.losses += extra;
+      entry.remaining -= extra;
+      assigned += extra;
+      if (assigned >= losses) break;
+    }
+  }
+  allocated.sort((a, b) => a.ownerUid.localeCompare(b.ownerUid));
+  const alliedLosses = allocated.reduce((total, entry) => total + entry.losses, 0);
+  return {
+    ownerStart,
+    ownerLosses,
+    ownerRemaining: Math.max(0, ownerStart - ownerLosses),
+    alliedStart,
+    alliedLosses,
+    alliedRemaining: Math.max(0, alliedStart - alliedLosses),
+    contributions: allocated,
+  };
+}
+
+function allocateDefenseXp(totalXp = 0, ownerTroops = 0, contributions = []) {
+  const pool = Math.max(0, Math.floor(safeNumber(totalXp, 0)));
+  const ownerStart = Math.max(0, Math.floor(safeNumber(ownerTroops, 0)));
+  const rows = (Array.isArray(contributions) ? contributions : []).filter(entry => entry?.ownerUid && entry.troops > 0);
+  const totalTroops = ownerStart + rows.reduce((total, entry) => total + entry.troops, 0);
+  if (!pool || !totalTroops) {
+    return { ownerXp: pool, contributorXp: new Map(rows.map(entry => [entry.ownerUid, 0])) };
+  }
+  const contributorXp = new Map();
+  let assigned = 0;
+  rows.forEach(entry => {
+    const value = Math.max(0, Math.floor(pool * entry.troops / totalTroops));
+    contributorXp.set(entry.ownerUid, value);
+    assigned += value;
+  });
+  return {
+    ownerXp: Math.max(0, pool - assigned),
+    contributorXp,
+  };
+}
+
 function cityRefForRegion(regionId, cityId) {
   return db.doc(`islands/${getOnlineIslandId(regionId)}/cities/${cityId}`);
+}
+
+function getReinforcementTargetKey(targetType = "city", regionId = "", targetId = "") {
+  return `${targetType === "camp" ? "camp" : "city"}:${normalizeRegionId(regionId)}:${safeString(targetId, 96)}`;
+}
+
+function getReinforcementId(ownerUid = "", targetKey = "") {
+  const digest = crypto.createHash("sha256")
+    .update(`${RESET_GENERATION}|${safeString(ownerUid, 128)}|${safeString(targetKey, 220)}`)
+    .digest("hex")
+    .slice(0, 40);
+  return `reinforce_${digest}`;
+}
+
+function reinforcementRef(ownerUid = "", targetKey = "") {
+  return db.doc(`reinforcements/${getReinforcementId(ownerUid, targetKey)}`);
+}
+
+function stationedReinforcementsForTargetQuery(targetKey = "") {
+  return db.collection("reinforcements")
+    .where("targetKey", "==", safeString(targetKey, 220))
+    .where("resetGeneration", "==", RESET_GENERATION)
+    .where("worldId", "==", ONLINE_WORLD_ID)
+    .where("status", "==", REINFORCEMENT_STATUS_STATIONED);
+}
+
+function normalizeReinforcementContribution(doc = null) {
+  if (!doc?.exists) return null;
+  const data = doc.data() || {};
+  if (
+    safeString(data.resetGeneration, 120) !== RESET_GENERATION
+    || safeString(data.worldId, 120) !== ONLINE_WORLD_ID
+    || data.status !== REINFORCEMENT_STATUS_STATIONED
+  ) return null;
+  const troops = Math.max(0, Math.floor(safeNumber(data.troops, 0)));
+  if (!troops) return null;
+  return {
+    id: doc.id,
+    ref: doc.ref,
+    ...data,
+    ownerUid: safeString(data.ownerUid, 128),
+    targetOwnerUid: safeString(data.targetOwnerUid, 128),
+    troops,
+  };
+}
+
+function getProfileStationedReinforcementTroops(profile = {}) {
+  if (safeString(profile.reinforcementResetGeneration, 120) !== RESET_GENERATION) return 0;
+  return Math.max(0, Math.floor(safeNumber(profile.stationedReinforcementTroops, 0)));
 }
 
 function protectedAssaultBreachRef(cityRef, attackerUid = "") {
@@ -3985,6 +4171,204 @@ function createRelinquishContinuationMovement({
   };
 }
 
+function getReinforcementTargetRef(contribution = {}) {
+  const targetType = contribution.targetType === "camp" ? "camp" : "city";
+  const regionId = normalizeRegionId(contribution.targetRegionId);
+  const targetId = safeString(contribution.targetId, 96);
+  if (!regionId || !targetId) return null;
+  return targetType === "camp"
+    ? campRefForRegion(regionId, targetId)
+    : cityRefForRegion(regionId, targetId);
+}
+
+function createReinforcementReturnMovement({
+  contribution = {},
+  source = {},
+  destinationEntry = null,
+  economy = null,
+  profile = {},
+  nowMs = Date.now(),
+  reason = "recalled",
+} = {}) {
+  if (!destinationEntry?.city || !economy?.uid) {
+    throw new HttpsError("failed-precondition", "The troop owner's main city is unavailable.");
+  }
+  const destination = destinationEntry.city;
+  const route = buildServerGeneratedArmyRoute(source, destination);
+  const revision = clampInt(contribution.returnRevision, 0, 999999) + 1;
+  const rawId = safeString(contribution.id || "reinforcement", 64).replace(/[^a-zA-Z0-9_-]/g, "_");
+  const suffix = `_return_${revision}`;
+  const movementId = `${rawId.slice(0, Math.max(1, 96 - suffix.length))}${suffix}`;
+  const sourceRegionId = normalizeRegionId(source.regionId || contribution.targetRegionId);
+  const destinationRegionId = normalizeRegionId(destination.regionId || getRegionIdFromOnlineIslandId(getCityEntryIslandId(destinationEntry)));
+  const troops = Math.max(0, Math.floor(safeNumber(contribution.troops, 0)));
+  const stats = createPreparedEconomyStatsSnapshot(economy, profile, { nowMs });
+  const duration = calculateTravelTime({
+    pathLength: route.pathLength,
+    troopCount: troops,
+    kind: "transfer",
+    speedMultiplier: skillMultiplier(profile, "marchOrders")
+      * (1 + Math.max(0, safeNumber(economy.bonuses?.marchSpeedBonusPercent, 0)) / 100),
+  });
+  return {
+    id: movementId,
+    worldId: ONLINE_WORLD_ID,
+    resetGeneration: RESET_GENERATION,
+    ownerKind: "player",
+    ownerUid: economy.uid,
+    ownerName: normalizePlayerName(profile.playerName || contribution.ownerName, "Ruler"),
+    ownerFlag: profile.flag || contribution.ownerFlag || null,
+    ownerKingPower: Math.max(0, Math.floor(safeNumber(stats?.kingPower, contribution.ownerKingPower))),
+    kingPowerVersion: GLOBAL_PLAYER_STATS_VERSION,
+    kind: "transfer",
+    launchKind: "reinforce",
+    reinforcementReturn: true,
+    reinforcementId: safeString(contribution.id, 96),
+    returnReason: safeString(reason, 40),
+    targetType: "city",
+    fromId: safeString(source.id || contribution.targetId, 96),
+    toId: safeString(destination.id, 96),
+    fromName: safeString(source.name || contribution.targetName || "Allied holding", 40),
+    toName: safeString(destination.name || "Main city", 40),
+    sourceRegionId,
+    targetRegionId: destinationRegionId,
+    troops,
+    requestedTroops: troops,
+    total: duration,
+    path: route.path,
+    pathSegments: route.pathSegments,
+    routeRegionIds: route.routeRegionIds,
+    viewRegionIds: route.routeRegionIds,
+    pathLength: route.pathLength,
+    targetKey: `${destinationRegionId}:${destination.id}`,
+    targetOwnerAtLaunch: "player",
+    originalTargetOwnerUid: economy.uid,
+    targetOwnerUid: economy.uid,
+    attackerKingPower: Math.max(0, Math.floor(safeNumber(stats?.kingPower, contribution.ownerKingPower))),
+    defenderKingPower: Math.max(0, Math.floor(safeNumber(stats?.kingPower, contribution.ownerKingPower))),
+    launchedAtMs: nowMs,
+    arrivesAtMs: nowMs + Math.ceil(duration * 1000),
+    status: "active",
+    createdByServer: true,
+    reinforcementModelVersion: REINFORCEMENT_MODEL_VERSION,
+    serverAuthorityVersion: 3,
+  };
+}
+
+async function beginReinforcementReturn({
+  reinforcementId = "",
+  callerUid = "",
+  reason = "recalled",
+  nowMs = Date.now(),
+} = {}) {
+  const id = safeString(reinforcementId, 96).replace(/[^a-zA-Z0-9_-]/g, "_");
+  if (!id) throw new HttpsError("invalid-argument", "Choose reinforcements to return.");
+  const contributionRef = db.doc(`reinforcements/${id}`);
+  return db.runTransaction(async transaction => {
+    const contributionSnap = await transaction.get(contributionRef);
+    if (!contributionSnap.exists) throw new HttpsError("not-found", "Those reinforcements were not found.");
+    const contribution = { id: contributionSnap.id, ...contributionSnap.data() };
+    if (
+      safeString(contribution.resetGeneration, 120) !== RESET_GENERATION
+      || safeString(contribution.worldId, 120) !== ONLINE_WORLD_ID
+    ) {
+      throw new HttpsError("failed-precondition", "Those reinforcements belong to an archived world.");
+    }
+    if (contribution.status !== REINFORCEMENT_STATUS_STATIONED || safeNumber(contribution.troops, 0) <= 0) {
+      return { ok: true, duplicate: true, status: contribution.status || REINFORCEMENT_STATUS_DEPLETED };
+    }
+
+    const ownerUid = safeString(contribution.ownerUid, 128);
+    const targetRef = getReinforcementTargetRef(contribution);
+    if (!ownerUid || !targetRef) throw new HttpsError("failed-precondition", "Reinforcement ownership data is incomplete.");
+    const targetSnap = await transaction.get(targetRef);
+    const target = targetSnap.exists
+      ? contribution.targetType === "camp"
+        ? getRewardCampCombatTarget({ id: targetSnap.id, ...targetSnap.data() })
+        : { id: targetSnap.id, ...targetSnap.data() }
+      : {
+        id: safeString(contribution.targetId, 96),
+        name: safeString(contribution.targetName, 40),
+        regionId: normalizeRegionId(contribution.targetRegionId),
+        x: safeNumber(contribution.targetX, 0),
+        y: safeNumber(contribution.targetY, 0),
+      };
+    const currentHolderUid = targetSnap.exists ? getOwnerUid(target) : safeString(contribution.targetOwnerUid, 128);
+    if (callerUid && callerUid !== ownerUid && callerUid !== currentHolderUid) {
+      throw new HttpsError("permission-denied", "Only the troop owner or holding owner can return these reinforcements.");
+    }
+
+    const economy = await prepareEconomyCollection(transaction, ownerUid, nowMs);
+    const profile = economy.profileAfter || {};
+    const destinationEntry = getOwnedMainCityDestination(economy, profile);
+    if (!destinationEntry?.city) {
+      throw new HttpsError("failed-precondition", "The troop owner's main city is unavailable.");
+    }
+    const movement = createReinforcementReturnMovement({
+      contribution,
+      source: target,
+      destinationEntry,
+      economy,
+      profile,
+      nowMs,
+      reason,
+    });
+    const currentStationed = getProfileStationedReinforcementTroops(profile);
+    const returningTroops = Math.max(0, Math.floor(safeNumber(contribution.troops, 0)));
+    const profileOverrides = {
+      stationedReinforcementTroops: Math.max(0, currentStationed - returningTroops),
+      reinforcementResetGeneration: RESET_GENERATION,
+    };
+    writePreparedEconomy(transaction, economy, profileOverrides, [], {
+      addActiveArmies: [movement],
+      nowMs,
+    });
+    armyRefsForRegions(movement.routeRegionIds, movement.id).forEach(ref => {
+      transaction.set(ref, {
+        ...movement,
+        createdAt: FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp(),
+      }, { merge: true });
+    });
+
+    let targetUpdate = null;
+    if (targetSnap.exists && target) {
+      const alliedTroops = getAlliedReinforcementTroops(target);
+      const patch = {
+        alliedReinforcementTroops: Math.max(0, alliedTroops - returningTroops),
+      };
+      transaction.set(targetRef, patch, { merge: true });
+      targetUpdate = contribution.targetType === "camp"
+        ? { campUpdate: campUpdateForClient(target.id, contribution.targetRegionId, patch) }
+        : { cityUpdate: { id: target.id, regionId: contribution.targetRegionId, ...patch } };
+    }
+    transaction.set(contributionRef, {
+      troops: 0,
+      status: REINFORCEMENT_STATUS_RETURNING,
+      returnRevision: clampInt(contribution.returnRevision, 0, 999999) + 1,
+      returnArmyId: movement.id,
+      returnReason: safeString(reason, 40),
+      returnedAtMs: nowMs,
+      updatedAt: FieldValue.serverTimestamp(),
+    }, { merge: true });
+
+    return {
+      ok: true,
+      status: REINFORCEMENT_STATUS_RETURNING,
+      reinforcementId: id,
+      troops: returningTroops,
+      movement,
+      ...targetUpdate,
+      currentUser: createEconomyResponse(economy, {
+        currentUser: {
+          ...createEconomyResponse(economy).currentUser,
+          globalStats: globalStatsForClient(economy.lastGlobalStats || economy.globalStats),
+        },
+      }).currentUser,
+    };
+  });
+}
+
 function getCityEntryIslandId(entry = {}) {
   return safeString(entry?.ref?.parent?.parent?.id || getOnlineIslandId(entry?.city?.regionId), 160);
 }
@@ -4388,7 +4772,9 @@ function writeGlobalStatsFromEconomy(transaction, economy = null, profileOverrid
     totalTroops: stats.totalTroops,
     totalCampTroops: stats.totalCampTroops,
     totalMarchingTroops: stats.totalMarchingTroops,
+    totalReinforcementTroops: stats.totalReinforcementTroops,
     armyPower: stats.armyPower,
+    reinforcementTroopPower: stats.reinforcementTroopPower,
     replacementPower: stats.replacementPower,
     defensivePower: stats.defensivePower,
     goldPerHour: stats.goldPerHour,
@@ -4534,7 +4920,9 @@ async function rebuildGlobalStatsForPlayer(uid = "") {
         totalTroops: stats.totalTroops,
         totalCampTroops: stats.totalCampTroops,
         totalMarchingTroops: stats.totalMarchingTroops,
+        totalReinforcementTroops: stats.totalReinforcementTroops,
         armyPower: stats.armyPower,
+        reinforcementTroopPower: stats.reinforcementTroopPower,
         replacementPower: stats.replacementPower,
         defensivePower: stats.defensivePower,
         goldPerHour: stats.goldPerHour,
@@ -4744,15 +5132,23 @@ function formatNotificationNumber(value) {
 }
 
 function createIncomingArmyNotification({ defenderUid = "", attackerUid = "", movement = {}, source = {}, target = {} } = {}) {
-  const kind = movement.kind === "scout" ? "scout" : movement.kind === "attack" ? "attack" : "";
+  const kind = movement.kind === "scout"
+    ? "scout"
+    : movement.kind === "attack"
+      ? "attack"
+      : movement.kind === "reinforce"
+        ? "reinforce"
+        : "";
   if (!defenderUid || !attackerUid || defenderUid === attackerUid || !kind) return null;
   const attackerName = normalizePlayerName(movement.ownerName || source.ownerName, "A rival ruler");
   const sourceName = safeString(movement.fromName || source.name || movement.fromId || "Unknown city", 40);
   const targetName = safeString(movement.toName || target.name || movement.toId || "your city", 40);
-  const title = kind === "scout" ? "Scout incoming" : "Attack incoming";
+  const title = kind === "scout" ? "Scout incoming" : kind === "reinforce" ? "Clan reinforcement incoming" : "Attack incoming";
   const body = kind === "scout"
     ? `${attackerName} is scouting ${targetName} from ${sourceName}.`
-    : `${attackerName} is attacking ${targetName} with ${formatNotificationNumber(movement.troops)} troops.`;
+    : kind === "reinforce"
+      ? `${attackerName} is reinforcing ${targetName} with ${formatNotificationNumber(movement.troops)} troops.`
+      : `${attackerName} is attacking ${targetName} with ${formatNotificationNumber(movement.troops)} troops.`;
   return {
     defenderUid,
     attackerUid,
@@ -5475,6 +5871,14 @@ exports.changeMainCity = onCall({ region: "us-central1", maxInstances: 20, invok
 
     const targetRegionId = normalizeRegionId(targetEntry.city.regionId || regionId || getRegionIdFromOnlineIslandId(getCityEntryIslandId(targetEntry)));
     const targetIslandId = getCityEntryIslandId(targetEntry) || getOnlineIslandId(targetRegionId);
+    const targetKey = getReinforcementTargetKey("city", targetRegionId, targetEntry.city.id);
+    const stationedReinforcementsSnap = await transaction.get(stationedReinforcementsForTargetQuery(targetKey));
+    if (!stationedReinforcementsSnap.empty) {
+      throw new HttpsError(
+        "failed-precondition",
+        "Send allied reinforcements home before making this your main city."
+      );
+    }
     const currentMainCityId = safeString(economy.profileAfter.mainCityId || economy.profileBefore.mainCityId, 96);
     const currentMainIslandId = safeString(economy.profileAfter.mainIslandId || economy.profileBefore.mainIslandId, 160);
     if (currentMainCityId === targetEntry.city.id && currentMainIslandId === targetIslandId) {
@@ -5529,6 +5933,16 @@ exports.changeMainCity = onCall({ region: "us-central1", maxInstances: 20, invok
     });
   });
 });
+
+exports.returnClanReinforcement = timedCallable(
+  "returnClanReinforcement",
+  { region: "us-central1", maxInstances: 30, invoker: "public" },
+  async request => beginReinforcementReturn({
+    reinforcementId: request.data?.reinforcementId || request.data?.id,
+    callerUid: requireAuth(request),
+    reason: safeString(request.data?.reason, 40) || "recalled",
+  })
+);
 
 exports.collectHarvestBonus = onCall({ region: "us-central1", maxInstances: 30, invoker: "public" }, async request => {
   const uid = requireAuth(request);
@@ -8540,6 +8954,7 @@ exports.syncClanIdentityOnMembershipChange = onDocumentWritten({
       writeClanIdentitySnapshot(entry.ref, identity, revision, entry.target)
     )));
   }
+  await reconcileClanReinforcementsForPlayer(uid);
 });
 
 exports.rebuildClanPowerOnPlayerStats = onDocumentWritten({
@@ -8814,17 +9229,37 @@ exports.sendArmyOrder = timedCallable("sendArmyOrder", { region: "us-central1", 
     );
 
     const sourceTroops = Math.max(0, Math.floor(safeNumber(source.troops, 0)));
-    const resolvedKind = order.kind === "scout"
-      ? "scout"
-      : targetOwnerUid === uid
-        ? "transfer"
-        : "attack";
-    if (
-      order.targetType !== "camp"
-      && (resolvedKind === "scout" || resolvedKind === "attack")
+    const attackerClanId = safeString(attackerProfile.clanId, 128);
+    const defenderClanId = safeString(defenderPowerData.clanId, 128);
+    const sameActiveClan = Boolean(
+      attackerClanId
       && targetOwnerUid
-      && safeString(attackerProfile.clanId, 128)
-      && safeString(attackerProfile.clanId, 128) === safeString(defenderPowerData.clanId, 128)
+      && targetOwnerUid !== uid
+      && attackerClanId === defenderClanId
+    );
+    let resolvedKind = order.kind === "scout"
+      ? "scout"
+      : order.kind === "reinforce"
+        ? "reinforce"
+        : targetOwnerUid === uid
+          ? "transfer"
+          : "attack";
+    if (resolvedKind === "reinforce") {
+      if (!targetOwnerUid || targetOwnerUid === uid || !sameActiveClan) {
+        throw new HttpsError("failed-precondition", "You can only reinforce a current clan ally.");
+      }
+      const clanSnap = await transaction.get(db.doc(`clans/${attackerClanId}`));
+      if (!clanSnap.exists || clanSnap.data()?.status !== "active") {
+        throw new HttpsError("failed-precondition", "Your clan is no longer active.");
+      }
+      if (order.targetType !== "camp" && isProtectedMainCity(target, uid, defenderMainCityProfile)) {
+        throw new HttpsError("failed-precondition", "Clan allies cannot reinforce a main city.");
+      }
+    }
+    if (
+      (resolvedKind === "scout" || resolvedKind === "attack")
+      && targetOwnerUid
+      && sameActiveClan
     ) {
       writeClanAudit(transaction, attackerProfile.clanId, uid, "friendly_order_blocked", {
         targetOwnerUid,
@@ -8954,10 +9389,11 @@ exports.sendArmyOrder = timedCallable("sendArmyOrder", { region: "us-central1", 
       viewRegionIds: validatedRoute.routeRegionIds,
       pathLength: validatedRoute.pathLength,
       targetKey: `${order.targetRegionId}:${order.toId}`,
+      reinforcementTargetKey: getReinforcementTargetKey(order.targetType, order.targetRegionId, order.toId),
       targetOwnerAtLaunch: targetOwnerUid ? "player" : "neutral",
       originalTargetOwnerUid: targetOwnerUid || "",
       targetOwnerUid: targetOwnerUid || "",
-      lastIncomingNotificationOwnerUid: ["attack", "scout"].includes(resolvedKind) ? targetOwnerUid || "" : "",
+      lastIncomingNotificationOwnerUid: ["attack", "reinforce", "scout"].includes(resolvedKind) ? targetOwnerUid || "" : "",
       attackerKingPower: attackerKingPower || order.attackerKingPower || order.ownerKingPower,
       defenderKingPower,
       attackProtection,
@@ -8965,14 +9401,15 @@ exports.sendArmyOrder = timedCallable("sendArmyOrder", { region: "us-central1", 
       arrivesAtMs: nowMs + Math.ceil(duration * 1000),
       status: "active",
       createdByServer: true,
-      serverAuthorityVersion: 2,
+      reinforcementModelVersion: resolvedKind === "reinforce" ? REINFORCEMENT_MODEL_VERSION : 0,
+      serverAuthorityVersion: 3,
     };
 
     let profileOverrides = {};
     let peaceShieldDeactivated = false;
     const launchCityPatches = [];
     const launchCityUpdates = [];
-    if (shouldDeactivatePeaceShieldForAttack(target, order.targetType, uid, resolvedKind)) {
+    if (resolvedKind === "reinforce" || shouldDeactivatePeaceShieldForAttack(target, order.targetType, uid, resolvedKind)) {
       const itemEffects = { ...(attackerEconomy.itemEffects || {}) };
       const shieldIsActive = safeNumber(itemEffects.shieldExpiresAtMs, 0) > nowMs
         || attackerEconomy.cityEntries.some(entry => (
@@ -9107,7 +9544,10 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
     const [sourceSnap, targetSnap] = await Promise.all([transaction.get(sourceRef), transaction.get(targetRef)]);
     const isReturning = Boolean(army.returning && army.returnReason === RECALL_HORN_ITEM_ID);
     const isCampReturn = Boolean(army.campReturn);
-    if (!targetSnap.exists && !isReturning && !isCampReturn) throw new HttpsError("not-found", "Target city was not found.");
+    const isReinforcementReturn = Boolean(army.reinforcementReturn);
+    if (!targetSnap.exists && !isReturning && !isCampReturn && !isReinforcementReturn) {
+      throw new HttpsError("not-found", "Target city was not found.");
+    }
 
     let source = sourceSnap.exists ? { id: sourceSnap.id, ...sourceSnap.data() } : null;
     let target = targetSnap.exists
@@ -9120,7 +9560,21 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
     }
     const attackerUid = safeString(army.ownerUid, 128);
     const defenderUid = isReturning ? "" : getOwnerUid(target);
-    const participantProfiles = await getProfileSnapshots(transaction, [attackerUid, defenderUid]);
+    const reinforcementTargetKey = safeString(
+      army.reinforcementTargetKey || getReinforcementTargetKey(targetType, targetRegionId, army.toId),
+      220
+    );
+    const targetReinforcementsSnap = defenderUid
+      ? await transaction.get(stationedReinforcementsForTargetQuery(reinforcementTargetKey))
+      : null;
+    const targetReinforcements = targetReinforcementsSnap
+      ? targetReinforcementsSnap.docs.map(normalizeReinforcementContribution).filter(Boolean)
+      : [];
+    const participantProfiles = await getProfileSnapshots(transaction, [
+      attackerUid,
+      defenderUid,
+      ...targetReinforcements.map(entry => entry.ownerUid),
+    ]);
     const attackerProfileEntry = participantProfiles.get(attackerUid) || {};
     const defenderProfileEntry = defenderUid ? participantProfiles.get(defenderUid) || {} : null;
     const attackerProfileSnap = participantProfiles.get(attackerUid)?.snap || null;
@@ -9145,6 +9599,10 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
     if (producedTargetEntry?.city) target = producedTargetEntry.city;
     const attackerProfile = attackerEconomy?.profileAfter || attackerProfileEntry.data || {};
     const defenderProfile = defenderUid ? defenderEconomy?.profileAfter || defenderProfileEntry?.data || {} : null;
+    const reinforcementProfiles = new Map(targetReinforcements.map(entry => [
+      entry.ownerUid,
+      participantProfiles.get(entry.ownerUid)?.data || {},
+    ]));
     const reports = [];
     const cityUpdates = [];
     const economyCityUpdates = () => {
@@ -9205,6 +9663,16 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
         updatedAt: FieldValue.serverTimestamp(),
       };
       armyRefs.forEach(ref => transaction.set(ref, patch, { merge: true }));
+    };
+    const finalizeReinforcementReturn = (returnedTroops = troopCount) => {
+      if (!isReinforcementReturn || !army.reinforcementId) return;
+      transaction.set(db.doc(`reinforcements/${safeString(army.reinforcementId, 96)}`), {
+        status: REINFORCEMENT_STATUS_RETURNED,
+        returnArmyId: armyId,
+        returnedTroops: Math.max(0, Math.floor(safeNumber(returnedTroops, 0))),
+        returnArrivedAtMs: nowMs,
+        updatedAt: FieldValue.serverTimestamp(),
+      }, { merge: true });
     };
     let latestSourceReturnStatsPatch = null;
     const getLatestSourceReturnStatsPatches = () => (latestSourceReturnStatsPatch ? [latestSourceReturnStatsPatch] : []);
@@ -9270,14 +9738,40 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
       return recovered;
     };
 
-    const troopCount = Math.max(0, Math.floor(safeNumber(army.troops, 0)));
+    let troopCount = Math.max(0, Math.floor(safeNumber(army.troops, 0)));
+    const launchedAsClanReinforcement = army.kind === "reinforce"
+      || army.launchKind === "reinforce"
+      || army.retargetedFromKind === "reinforce";
+    const matchingClanId = safeString(attackerProfile?.clanId, 128);
+    const matchingClanSnap = launchedAsClanReinforcement
+      && matchingClanId
+      && matchingClanId === safeString(defenderProfile?.clanId, 128)
+      ? await transaction.get(db.doc(`clans/${matchingClanId}`))
+      : null;
+    const currentClanAllies = Boolean(
+      defenderUid
+      && defenderUid !== attackerUid
+      && matchingClanId
+      && matchingClanId === safeString(defenderProfile?.clanId, 128)
+      && matchingClanSnap?.exists
+      && matchingClanSnap.data()?.status === "active"
+    );
     const effectiveKind = army.kind === "scout"
       ? "scout"
-      : defenderUid === attackerUid
+      : isReinforcementReturn
         ? "transfer"
-        : "attack";
+        : launchedAsClanReinforcement && currentClanAllies
+          ? "reinforce"
+          : defenderUid === attackerUid
+            ? "transfer"
+            : "attack";
     const defenderBonuses = defenderEconomy?.bonuses || {};
-    const targetStats = getCityStats(target, defenderProfile, defenderBonuses);
+    const alliedTroopsAtStart = targetReinforcements.reduce((total, entry) => total + entry.troops, 0);
+    const combatTarget = createReinforcedCombatTarget({
+      ...target,
+      alliedReinforcementTroops: alliedTroopsAtStart,
+    }, targetType);
+    const targetStats = getCityStats(combatTarget, defenderProfile, defenderBonuses);
     const protectedAssaultBreachDocumentRef = effectiveKind === "attack"
       && targetType === "city"
       && defenderUid
@@ -9296,11 +9790,17 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
     const storedAttackProtection = effectiveKind === "attack" && targetType !== "camp"
       ? normalizeAttackProtectionSnapshot(army.attackProtection, army.demoAttack)
       : null;
-    const convertedReinforcement = effectiveKind === "attack" && (
+    const convertedTransferReinforcement = effectiveKind === "attack" && (
       army.kind === "transfer"
       || army.launchKind === "transfer"
       || army.retargetedFromKind === "transfer"
     );
+    const convertedClanReinforcement = effectiveKind === "attack" && (
+      army.kind === "reinforce"
+      || army.launchKind === "reinforce"
+      || army.retargetedFromKind === "reinforce"
+    );
+    const convertedReinforcement = convertedTransferReinforcement || convertedClanReinforcement;
     const baseAttackProtection = storedAttackProtection || (
       convertedReinforcement && targetType !== "camp"
         ? createServerAttackProtectionSnapshot({
@@ -9308,7 +9808,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
             troopCount,
             Math.floor(safeNumber(army.requestedTroops, troopCount))
           ),
-          target,
+          target: combatTarget,
           targetType,
           requestedTroops: Math.max(1, Math.floor(safeNumber(army.requestedTroops, troopCount))),
           attackerKingPower: getPlayerPowerSnapshot({
@@ -9337,6 +9837,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
         assaultStage: resolutionAssaultStage,
       })
       : baseAttackProtection;
+    let convertedExcessReturned = 0;
     const protectedDefenseClaimRef = attackProtection && defenderUid && defenderUid !== attackerUid
       ? db.doc(`players/${defenderUid}/protectedDefenseXpClaims/${attackerUid}`)
       : null;
@@ -9364,6 +9865,78 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
     const defenderName = defenderUid
       ? normalizePlayerName(target.ownerName || defenderProfile.playerName, "Rival ruler")
       : "Neutral city";
+    const applyReinforcementDefenseSettlement = ({
+      allocation = null,
+      defenseXpPool = 0,
+      outcome = "held",
+      opponentName = attackerName,
+    } = {}) => {
+      if (!allocation?.contributions?.length) {
+        return {
+          ownerXp: Math.max(0, Math.floor(safeNumber(defenseXpPool, 0))),
+          contributorXp: new Map(),
+        };
+      }
+      const xpAllocation = allocateDefenseXp(
+        defenseXpPool,
+        allocation.ownerStart,
+        allocation.contributions
+      );
+      allocation.contributions.forEach(entry => {
+        const profileEntry = participantProfiles.get(entry.ownerUid) || {};
+        const profile = profileEntry.data || {};
+        const rawXp = Math.max(0, Math.floor(safeNumber(xpAllocation.contributorXp.get(entry.ownerUid), 0)));
+        const xpAwarded = capBattleXpForHeroLevel(rawXp, profile);
+        const currentStationed = getProfileStationedReinforcementTroops(profile);
+        transaction.set(entry.ref, {
+          troops: entry.remaining,
+          status: entry.remaining > 0 ? REINFORCEMENT_STATUS_STATIONED : REINFORCEMENT_STATUS_DEPLETED,
+          lastBattleArmyId: armyId,
+          lastBattleAtMs: nowMs,
+          lastBattleLosses: entry.losses,
+          updatedAtMs: nowMs,
+          updatedAt: FieldValue.serverTimestamp(),
+        }, { merge: true });
+        if (profileEntry.ref && entry.losses > 0) {
+          transaction.set(profileEntry.ref, {
+            stationedReinforcementTroops: Math.max(0, currentStationed - entry.losses),
+            reinforcementResetGeneration: RESET_GENERATION,
+            updatedAt: FieldValue.serverTimestamp(),
+          }, { merge: true });
+        }
+        const receiptRef = db.doc(
+          `reinforcementBattleReceipts/${RESET_GENERATION}/entries/${safeString(`${armyId}_${entry.ownerUid}`, 180).replace(/[^a-zA-Z0-9_-]/g, "_")}`
+        );
+        transaction.set(receiptRef, {
+          id: receiptRef.id,
+          status: "pending",
+          worldId: ONLINE_WORLD_ID,
+          resetGeneration: RESET_GENERATION,
+          armyId,
+          reinforcementId: entry.id,
+          contributorUid: entry.ownerUid,
+          contributorName: normalizePlayerName(profile.playerName || entry.ownerName, "Ruler"),
+          targetOwnerUid: defenderUid,
+          targetId: safeString(target.id, 96),
+          targetName: safeString(target.name || target.id, 40),
+          targetRegionId,
+          targetType,
+          opponentName,
+          outcome,
+          committedTroops: entry.troops,
+          losses: entry.losses,
+          survivors: entry.remaining,
+          xpAwarded,
+          createdAtMs: nowMs,
+          createdAt: FieldValue.serverTimestamp(),
+          updatedAt: FieldValue.serverTimestamp(),
+        }, { merge: false });
+      });
+      return {
+        ownerXp: capBattleXpForHeroLevel(xpAllocation.ownerXp, defenderProfile || {}),
+        contributorXp: xpAllocation.contributorXp,
+      };
+    };
     const continueRelinquishMarch = ({ destinationEntry = null, reason = "released_destination", reportSummary = "" } = {}) => {
       const movement = createRelinquishContinuationMovement({
         army,
@@ -9418,12 +9991,14 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
       };
     };
 
-    if (isCampReturn && defenderUid !== attackerUid) {
+    if ((isCampReturn || isReinforcementReturn) && defenderUid !== attackerUid) {
       const returnedArmy = returnRecalledTroops(troopCount);
+      finalizeReinforcementReturn(returnedArmy.returned);
       writeParticipantEconomies({}, {}, { statsCityPatches: getLatestSourceReturnStatsPatches() });
       markResolved({
         kind: "return",
-        campReturn: true,
+        campReturn: isCampReturn,
+        reinforcementReturn: isReinforcementReturn,
         rerouted: true,
         returned: returnedArmy.returned,
         returnCityId: returnedArmy.cityId,
@@ -9432,7 +10007,8 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
         ok: true,
         status: "resolved",
         kind: "return",
-        campReturn: true,
+        campReturn: isCampReturn,
+        reinforcementReturn: isReinforcementReturn,
         rerouted: true,
         returned: returnedArmy.returned,
         returnCityId: returnedArmy.cityId,
@@ -9445,8 +10021,105 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
       };
     }
 
+    if (effectiveKind === "reinforce") {
+      if (targetType !== "camp" && isProtectedMainCity(target, attackerUid, defenderProfile || {})) {
+        const returnedArmy = returnRecalledTroops(troopCount);
+        writeParticipantEconomies({}, {}, { statsCityPatches: getLatestSourceReturnStatsPatches() });
+        markResolved({
+          kind: "reinforce",
+          outcome: "main_city_return",
+          returned: returnedArmy.returned,
+        });
+        return {
+          ok: true,
+          status: "resolved",
+          kind: "reinforce",
+          outcome: "main_city_return",
+          returned: returnedArmy.returned,
+          cityUpdates: withEconomyCityUpdates(cityUpdates),
+          currentUser: profilePatchForCaller(attackerProfile, defenderProfile),
+        };
+      }
+
+      const contributionRef = reinforcementRef(attackerUid, reinforcementTargetKey);
+      const existingContribution = targetReinforcements.find(entry => entry.ref.path === contributionRef.path);
+      const nextContributionTroops = Math.min(
+        Number.MAX_SAFE_INTEGER,
+        Math.max(0, Math.floor(safeNumber(existingContribution?.troops, 0))) + troopCount
+      );
+      const nextAlliedTroops = Math.min(Number.MAX_SAFE_INTEGER, alliedTroopsAtStart + troopCount);
+      const targetPatch = { alliedReinforcementTroops: nextAlliedTroops };
+      const currentStationedTroops = getProfileStationedReinforcementTroops(attackerProfile);
+      const attackerOverrides = {
+        stationedReinforcementTroops: Math.min(Number.MAX_SAFE_INTEGER, currentStationedTroops + troopCount),
+        reinforcementResetGeneration: RESET_GENERATION,
+      };
+      writeParticipantEconomies(attackerOverrides, {}, {
+        statsCityPatches: targetType === "city" && defenderUid === attackerUid
+          ? [{ ref: targetRef, city: target, patch: targetPatch }]
+          : [],
+      });
+      transaction.set(targetRef, targetPatch, { merge: true });
+      transaction.set(contributionRef, {
+        id: contributionRef.id,
+        modelVersion: REINFORCEMENT_MODEL_VERSION,
+        worldId: ONLINE_WORLD_ID,
+        resetGeneration: RESET_GENERATION,
+        ownerUid: attackerUid,
+        ownerName: attackerName,
+        ownerFlag: attackerProfile.flag || army.ownerFlag || null,
+        ownerKingPower: Math.max(0, Math.floor(safeNumber(attackerProfile.kingPower || army.ownerKingPower, 0))),
+        clanId: safeString(attackerProfile.clanId, 128),
+        targetKey: reinforcementTargetKey,
+        targetType,
+        targetId: safeString(target.id, 96),
+        targetName: safeString(target.name || target.id, 40),
+        targetRegionId,
+        targetOwnerUid: defenderUid,
+        targetOwnerName: defenderName,
+        targetX: safeNumber(target.x, 0),
+        targetY: safeNumber(target.y, 0),
+        troops: nextContributionTroops,
+        status: REINFORCEMENT_STATUS_STATIONED,
+        lastArrivalArmyId: armyId,
+        lastArrivedAtMs: nowMs,
+        createdAtMs: Math.max(0, Math.floor(safeNumber(existingContribution?.createdAtMs, nowMs))),
+        updatedAtMs: nowMs,
+        createdAt: existingContribution?.createdAt || FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp(),
+      }, { merge: true });
+      const targetUpdate = targetType === "camp"
+        ? { campUpdate: campUpdateForClient(target.id, targetRegionId, targetPatch) }
+        : { cityUpdates: withEconomyCityUpdates([
+          { id: target.id, regionId: targetRegionId, ...targetPatch },
+        ]) };
+      markResolved({
+        kind: "reinforce",
+        outcome: "stationed",
+        troops: troopCount,
+        reinforcementId: contributionRef.id,
+      });
+      writeClanAudit(transaction, attackerProfile.clanId, attackerUid, "reinforcement_arrived", {
+        armyId,
+        reinforcementId: contributionRef.id,
+        targetOwnerUid: defenderUid,
+        targetId: target.id,
+        troops: troopCount,
+      }, nowMs);
+      return {
+        ok: true,
+        status: "resolved",
+        kind: "reinforce",
+        outcome: "stationed",
+        reinforcementId: contributionRef.id,
+        troops: troopCount,
+        ...targetUpdate,
+        currentUser: profilePatchForCaller(attackerProfile, defenderProfile),
+      };
+    }
+
     const becameClanAllies = !isReturning
-      && targetType !== "camp"
+      && !launchedAsClanReinforcement
       && defenderUid
       && defenderUid !== attackerUid
       && safeString(attackerProfile?.clanId, 128)
@@ -9509,7 +10182,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
 
     if (targetType === "camp") {
       if (army.kind === "scout") {
-        const campTarget = getRewardCampCombatTarget(target);
+        const campTarget = createReinforcedCombatTarget(getRewardCampCombatTarget(target), "camp");
         const scoutReport = createScoutReportSnapshot(campTarget, defenderProfile, nowMs, defenderBonuses);
         const report = makeReport({
           id: `${armyId}_${campTarget.campType}_camp_scout_${attackerUid}`,
@@ -9572,11 +10245,21 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
         };
       }
 
-      const campTarget = getRewardCampCombatTarget(target);
+      const campTarget = createReinforcedCombatTarget(getRewardCampCombatTarget(target), "camp");
       const campConfig = getRewardCampConfig(campTarget);
       const campStats = getCityStats(campTarget, defenderProfile, defenderBonuses);
       const defendersAtStart = Math.max(0, Math.floor(safeNumber(campTarget.troops, 0)));
       const battle = calculateCombatResult(troopCount, campTarget, attackerProfile, defenderProfile, { defenderBonuses });
+      const defenseAllocation = allocateDefenderLosses(
+        getTargetOwnerTroops(target, "camp"),
+        targetReinforcements,
+        battle.defenderLosses
+      );
+      applyReinforcementDefenseSettlement({
+        allocation: defenseAllocation,
+        defenseXpPool: 0,
+        outcome: battle.success ? "lost" : "held",
+      });
       const attackerRecoveredTroops = recoverBattleLossesToMainCity({
         uid: attackerUid,
         profile: attackerProfile,
@@ -9588,7 +10271,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
           uid: defenderUid,
           profile: defenderProfile,
           economy: defenderEconomy,
-          losses: battle.defenderLosses,
+          losses: defenseAllocation.ownerLosses,
         })
         : 0;
       const attackerReport = makeReport({
@@ -9619,6 +10302,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
           payoutAtMs: nowMs + campConfig.holdDurationMs,
           payoutPending: true,
           currentGarrison: battle.survivors,
+          alliedReinforcementTroops: 0,
           returnSourceCityId: army.fromId,
           returnSourceRegionId: sourceRegionId,
           returnSourceCityName: source?.name || army.fromName || "Origin city",
@@ -9632,7 +10316,8 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
         };
       } else {
         campPatch = {
-          currentGarrison: battle.defendersLeft,
+          currentGarrison: defenseAllocation.ownerRemaining,
+          alliedReinforcementTroops: defenseAllocation.alliedRemaining,
           activeArmyIds: remainingActiveArmyIds,
           state: getRewardCampState(remainingActiveArmyIds, defenderUid),
           updatedAt: FieldValue.serverTimestamp(),
@@ -9819,7 +10504,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
       }
 
       writeParticipantEconomies();
-      const scoutReport = createScoutReportSnapshot(target, defenderProfile, nowMs, defenderBonuses);
+      const scoutReport = createScoutReportSnapshot(combatTarget, defenderProfile, nowMs, defenderBonuses);
       const report = makeReport({
         id: `${armyId}_scout_${attackerUid}`,
         uid: attackerUid,
@@ -9866,6 +10551,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
       writeParticipantEconomies({}, {}, { statsCityPatches: [{ ref: targetRef, city: target, patch: targetTroopPatch }] });
       transaction.set(targetRef, cleanCityUpdate(target, targetTroopPatch), { merge: true });
       cityUpdates.push({ id: target.id, regionId: targetRegionId, troops: nextTroops });
+      finalizeReinforcementReturn(troopCount);
       markResolved({ kind: "transfer", troops: troopCount });
       return { ok: true, status: "resolved", kind: "transfer", cityUpdates: withEconomyCityUpdates(cityUpdates) };
     }
@@ -9987,31 +10673,52 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
       return { ok: true, status: "resolved", kind: "attack", reports: reportsForCaller(), cityUpdates: withEconomyCityUpdates(cityUpdates) };
     }
 
+    if (
+      convertedClanReinforcement
+      && attackProtection
+      && Math.max(1, Math.floor(safeNumber(attackProtection.effectiveTroops, troopCount))) < troopCount
+    ) {
+      const allowedTroops = Math.max(1, Math.floor(safeNumber(attackProtection.effectiveTroops, 1)));
+      const excess = Math.max(0, troopCount - allowedTroops);
+      convertedExcessReturned = returnRecalledTroops(excess).returned;
+      troopCount = allowedTroops;
+    }
+
     const oldOwnerUid = defenderUid;
-    const defendersAtStart = Math.max(0, Math.floor(safeNumber(target.troops, 0)));
-    const result = calculateCombatResult(troopCount, target, attackerProfile, defenderProfile, {
+    const defendersAtStart = Math.max(0, Math.floor(safeNumber(combatTarget.troops, 0)));
+    const result = calculateCombatResult(troopCount, combatTarget, attackerProfile, defenderProfile, {
       attackProtection,
       demoAttack: army.demoAttack,
       defenderBonuses,
       convertedReinforcement,
+      convertedReinforcementCaptureAllowed: convertedTransferReinforcement,
     });
+    const defenseAllocation = allocateDefenderLosses(
+      getTargetOwnerTroops(target, "city"),
+      targetReinforcements,
+      result.defenderLosses
+    );
     const givenUpNeutralTarget = isGivenUpNeutralCity(target);
     const attackWinXp = attackProtection || givenUpNeutralTarget
       ? 0
       : getCaptureXpAward(target, oldOwnerUid, result.defenderLosses, defenderProfile);
     const defenseHeldXp = getDefenseHeldXpAward(troopCount, target, defenderProfile);
     const cappedAttackWinXp = capBattleXpForHeroLevel(attackWinXp, attackerProfile);
-    const cappedDefenseHeldXp = Math.floor(
-      capBattleXpForHeroLevel(defenseHeldXp, defenderProfile || {}) * defenderXpMultiplierApplied
-    );
+    const cappedDefenseHeldXp = Math.floor(capBattleXpForHeroLevel(defenseHeldXp, defenderProfile || {}) * defenderXpMultiplierApplied);
     const attackerXp = result.success ? cappedAttackWinXp : getPartialBattleXpAward(cappedAttackWinXp);
     const defenderXp = result.success ? getPartialBattleXpAward(cappedDefenseHeldXp) : cappedDefenseHeldXp;
+    const reinforcementDefenseSettlement = applyReinforcementDefenseSettlement({
+      allocation: defenseAllocation,
+      defenseXpPool: defenderXp,
+      outcome: result.success ? "lost" : result.breachCompleted ? "breached" : "held",
+    });
+    const settledDefenderXp = reinforcementDefenseSettlement.ownerXp;
     const attackerProgress = buildPlayerProgressPatch(attackerProfile, {
       xp: attackerXp,
     });
     const defenderProgress = defenderUid
       ? buildPlayerProgressPatch(defenderProfile || {}, {
-        xp: defenderXp,
+        xp: settledDefenderXp,
       })
       : null;
     if (firstProtectedDefenseBonus && protectedDefenseClaimRef) {
@@ -10042,8 +10749,9 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
 
     if (result.breachCompleted) {
       const targetPatch = {
-        troops: result.defendersLeft,
-        troopFloat: result.defendersLeft,
+        troops: defenseAllocation.ownerRemaining,
+        troopFloat: defenseAllocation.ownerRemaining,
+        alliedReinforcementTroops: defenseAllocation.alliedRemaining,
       };
       const returnedArmy = returnRecalledTroops(result.survivors);
       const attackerRecoveredTroops = recoverBattleLossesToMainCity({
@@ -10057,7 +10765,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
           uid: defenderUid,
           profile: defenderProfile,
           economy: defenderEconomy,
-          losses: result.defenderLosses,
+          losses: defenseAllocation.ownerLosses,
         })
         : 0;
       if (protectedAssaultBreachDocumentRef) {
@@ -10213,6 +10921,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
         investedGold: 0,
         lastCapturedAtMs: nowMs,
         isMainCity: false,
+        alliedReinforcementTroops: 0,
         relinquishedAtMs: 0,
         relocatedAtMs: 0,
       };
@@ -10267,7 +10976,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
           uid: defenderUid,
           profile: defenderProfile,
           economy: defenderEconomy,
-          losses: result.defenderLosses,
+          losses: defenseAllocation.ownerLosses,
         })
         : 0;
       const participantStats = writeParticipantEconomies({
@@ -10353,8 +11062,9 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
     }
 
     const targetPatch = {
-      troops: result.defendersLeft,
-      troopFloat: result.defendersLeft,
+      troops: defenseAllocation.ownerRemaining,
+      troopFloat: defenseAllocation.ownerRemaining,
+      alliedReinforcementTroops: defenseAllocation.alliedRemaining,
     };
     transaction.set(targetRef, cleanCityUpdate(target, targetPatch), { merge: true });
     cityUpdates.push({ id: target.id, regionId: targetRegionId, ...targetPatch });
@@ -10397,7 +11107,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
         uid: defenderUid,
         profile: defenderProfile,
         economy: defenderEconomy,
-        losses: result.defenderLosses,
+        losses: defenseAllocation.ownerLosses,
       })
       : 0;
     writeParticipantEconomies({
@@ -10482,7 +11192,7 @@ exports.resolveArmyOrder = timedCallable("resolveArmyOrder", { region: "us-centr
 });
 
 function getActiveArmyTargetDisposition(army = {}, targetOwnerUid = "") {
-  const currentKind = ["attack", "transfer", "scout"].includes(army.kind) ? army.kind : "attack";
+  const currentKind = ARMY_ORDER_KINDS.includes(army.kind) ? army.kind : "attack";
   const ownerUid = safeString(army.ownerUid, 128);
   const nextTargetOwnerUid = safeString(targetOwnerUid, 128);
   if (
@@ -10490,6 +11200,7 @@ function getActiveArmyTargetDisposition(army = {}, targetOwnerUid = "") {
     || army.returning
     || army.campReturn
     || army.relinquishTransfer
+    || army.reinforcementReturn
   ) {
     return {
       kind: currentKind,
@@ -10498,11 +11209,15 @@ function getActiveArmyTargetDisposition(army = {}, targetOwnerUid = "") {
       targetOwnerUid: nextTargetOwnerUid,
     };
   }
-  const kind = ownerUid && ownerUid === nextTargetOwnerUid ? "transfer" : "attack";
+  const kind = currentKind === "reinforce"
+    ? "reinforce"
+    : ownerUid && ownerUid === nextTargetOwnerUid
+      ? "transfer"
+      : "attack";
   return {
     kind,
     converted: kind !== currentKind,
-    convertedToAttack: currentKind === "transfer" && kind === "attack",
+    convertedToAttack: (currentKind === "transfer" || currentKind === "reinforce") && kind === "attack",
     targetOwnerUid: nextTargetOwnerUid,
   };
 }
@@ -10519,10 +11234,26 @@ async function refreshActiveArmyTargetOwner(targetKey = "", targetOwnerUid = "")
     .get();
   const notifications = [];
   let convertedToAttacks = 0;
+  const allianceCache = new Map();
   await processWithConcurrency(snapshot.docs, 8, async armyDoc => {
     const army = armyDoc.data() || {};
-    const disposition = getActiveArmyTargetDisposition(army, targetOwnerUid);
+    let disposition = getActiveArmyTargetDisposition(army, targetOwnerUid);
     const ownerUid = safeString(army.ownerUid, 128);
+    const launchedAsReinforcement = !army.reinforcementReturn && (
+      army.kind === "reinforce"
+      || army.launchKind === "reinforce"
+      || army.retargetedFromKind === "reinforce"
+    );
+    if (launchedAsReinforcement) {
+      const allied = await getCurrentClanAlliance(ownerUid, disposition.targetOwnerUid, allianceCache);
+      const nextKind = allied ? "reinforce" : "attack";
+      disposition = {
+        ...disposition,
+        kind: nextKind,
+        converted: nextKind !== army.kind,
+        convertedToAttack: nextKind === "attack" && army.kind !== "attack",
+      };
+    }
     const previousNotificationOwnerUid = safeString(army.lastIncomingNotificationOwnerUid, 128);
     const shouldNotify = disposition.kind === "attack"
       && disposition.targetOwnerUid
@@ -10534,7 +11265,7 @@ async function refreshActiveArmyTargetOwner(targetKey = "", targetOwnerUid = "")
     const nowMs = Date.now();
     const patch = {
       kind: disposition.kind,
-      launchKind: ["attack", "transfer", "scout"].includes(army.launchKind)
+      launchKind: ARMY_ORDER_KINDS.includes(army.launchKind)
         ? army.launchKind
         : army.kind,
       targetOwnerUid: disposition.targetOwnerUid,
@@ -10564,6 +11295,153 @@ async function refreshActiveArmyTargetOwner(targetKey = "", targetOwnerUid = "")
     }
   });
   return { updated: snapshot.size, convertedToAttacks, notifications };
+}
+
+async function getCurrentClanAlliance(ownerUid = "", holderUid = "", cache = new Map()) {
+  const senderUid = safeString(ownerUid, 128);
+  const targetOwnerUid = safeString(holderUid, 128);
+  if (!senderUid || !targetOwnerUid || senderUid === targetOwnerUid) return false;
+  const getProfile = async uid => {
+    const key = `profile:${uid}`;
+    if (!cache.has(key)) cache.set(key, db.doc(`players/${uid}`).get());
+    const snap = await cache.get(key);
+    return snap.exists ? snap.data() || {} : {};
+  };
+  const [senderProfile, holderProfile] = await Promise.all([
+    getProfile(senderUid),
+    getProfile(targetOwnerUid),
+  ]);
+  const clanId = safeString(senderProfile.clanId, 128);
+  if (!clanId || clanId !== safeString(holderProfile.clanId, 128)) return false;
+  const clanKey = `clan:${clanId}`;
+  if (!cache.has(clanKey)) cache.set(clanKey, db.doc(`clans/${clanId}`).get());
+  const clanSnap = await cache.get(clanKey);
+  return clanSnap.exists && clanSnap.data()?.status === "active";
+}
+
+async function reconcileActiveClanReinforcementArmy(armyDoc, cache = new Map()) {
+  const army = { id: armyDoc.id, ...armyDoc.data() };
+  const launchedAsReinforcement = army.launchKind === "reinforce"
+    || army.kind === "reinforce"
+    || army.retargetedFromKind === "reinforce";
+  if (
+    !launchedAsReinforcement
+    || army.reinforcementReturn
+    || army.status !== "active"
+    || !isCurrentWorldArmy(army)
+  ) {
+    return { updated: false, convertedToAttack: false, notification: null };
+  }
+  const ownerUid = safeString(army.ownerUid, 128);
+  const targetOwnerUid = safeString(army.targetOwnerUid, 128);
+  const allied = await getCurrentClanAlliance(ownerUid, targetOwnerUid, cache);
+  const nextKind = allied ? "reinforce" : "attack";
+  if (army.kind === nextKind) {
+    return { updated: false, convertedToAttack: false, notification: null };
+  }
+  const nowMs = Date.now();
+  const convertedToAttack = nextKind === "attack";
+  const previousNotificationOwnerUid = safeString(army.lastIncomingNotificationOwnerUid, 128);
+  const shouldNotify = convertedToAttack
+    && targetOwnerUid
+    && targetOwnerUid !== ownerUid
+    && previousNotificationOwnerUid !== targetOwnerUid;
+  const patch = {
+    kind: nextKind,
+    launchKind: "reinforce",
+    retargetedFromKind: safeString(army.retargetedFromKind || army.kind, 16),
+    retargetedAtMs: nowMs,
+    lastIncomingNotificationOwnerUid: shouldNotify
+      ? targetOwnerUid
+      : allied
+        ? ""
+        : previousNotificationOwnerUid,
+    updatedAt: FieldValue.serverTimestamp(),
+  };
+  const batch = db.batch();
+  armyRefsForRegions(army.viewRegionIds || army.routeRegionIds || [], armyDoc.id)
+    .forEach(ref => batch.set(ref, patch, { merge: true }));
+  await batch.commit();
+  const notification = shouldNotify
+    ? createIncomingArmyNotification({
+      defenderUid: targetOwnerUid,
+      attackerUid: ownerUid,
+      movement: { ...army, ...patch },
+      source: { name: army.fromName },
+      target: { name: army.toName },
+    })
+    : null;
+  if (notification) await sendIncomingArmyNotification(notification);
+  return { updated: true, convertedToAttack, notification };
+}
+
+async function reconcileClanReinforcementsForPlayer(uid = "") {
+  const playerUid = safeString(uid, 128);
+  if (!playerUid) return { armiesUpdated: 0, returnsStarted: 0, returnFailures: 0 };
+  const [ownedArmiesSnap, targetedArmiesSnap, ownedContributionsSnap, heldContributionsSnap] = await Promise.all([
+    activeArmiesQueryForPlayer(playerUid).get(),
+    db.collection("armies")
+      .where("targetOwnerUid", "==", playerUid)
+      .where("resetGeneration", "==", RESET_GENERATION)
+      .where("worldId", "==", ONLINE_WORLD_ID)
+      .where("status", "==", "active")
+      .get(),
+    db.collection("reinforcements")
+      .where("ownerUid", "==", playerUid)
+      .where("resetGeneration", "==", RESET_GENERATION)
+      .where("worldId", "==", ONLINE_WORLD_ID)
+      .where("status", "==", REINFORCEMENT_STATUS_STATIONED)
+      .get(),
+    db.collection("reinforcements")
+      .where("targetOwnerUid", "==", playerUid)
+      .where("resetGeneration", "==", RESET_GENERATION)
+      .where("worldId", "==", ONLINE_WORLD_ID)
+      .where("status", "==", REINFORCEMENT_STATUS_STATIONED)
+      .get(),
+  ]);
+  const armyDocs = new Map();
+  [...ownedArmiesSnap.docs, ...targetedArmiesSnap.docs].forEach(doc => armyDocs.set(doc.id, doc));
+  const cache = new Map();
+  const armyResults = [];
+  await processWithConcurrency([...armyDocs.values()], 8, async doc => {
+    armyResults.push(await reconcileActiveClanReinforcementArmy(doc, cache));
+  });
+  const contributionDocs = new Map();
+  [...ownedContributionsSnap.docs, ...heldContributionsSnap.docs].forEach(doc => contributionDocs.set(doc.id, doc));
+  const invalidContributions = [];
+  await processWithConcurrency([...contributionDocs.values()], 8, async doc => {
+    const contribution = doc.data() || {};
+    const targetRef = getReinforcementTargetRef(contribution);
+    const targetSnap = targetRef ? await targetRef.get() : null;
+    const target = targetSnap?.exists
+      ? contribution.targetType === "camp"
+        ? getRewardCampCombatTarget({ id: targetSnap.id, ...targetSnap.data() })
+        : { id: targetSnap.id, ...targetSnap.data() }
+      : null;
+    const currentHolderUid = target ? getOwnerUid(target) : safeString(contribution.targetOwnerUid, 128);
+    const allied = await getCurrentClanAlliance(contribution.ownerUid, currentHolderUid, cache);
+    if (!allied) invalidContributions.push(doc.id);
+  });
+  const returnResults = [];
+  await processWithConcurrency(invalidContributions, 4, async reinforcementId => {
+    const result = await beginReinforcementReturn({
+      reinforcementId,
+      reason: "clan_membership_changed",
+    }).then(() => ({ ok: true })).catch(error => {
+      console.warn("Could not automatically return invalid clan reinforcements", {
+        reinforcementId,
+        error: error?.message || String(error),
+      });
+      return { ok: false };
+    });
+    returnResults.push(result);
+  });
+  return {
+    armiesUpdated: armyResults.filter(result => result?.updated).length,
+    convertedToAttacks: armyResults.filter(result => result?.convertedToAttack).length,
+    returnsStarted: returnResults.filter(result => result?.ok).length,
+    returnFailures: returnResults.filter(result => !result?.ok).length,
+  };
 }
 
 function ownershipChangeRef(eventId = "") {
@@ -10711,6 +11589,42 @@ async function recordClanConquest(change = {}, eventId = "") {
   });
 }
 
+async function returnReinforcementsAfterOwnershipChange(change = {}) {
+  const targetKey = getReinforcementTargetKey(
+    change.targetType === "camp" ? "camp" : "city",
+    change.regionId,
+    change.targetId
+  );
+  if (!targetKey || safeString(change.beforeOwnerUid, 128) === safeString(change.afterOwnerUid, 128)) {
+    return { started: 0, failed: 0 };
+  }
+  const snapshot = await db.collection("reinforcements")
+    .where("targetKey", "==", targetKey)
+    .where("resetGeneration", "==", RESET_GENERATION)
+    .where("worldId", "==", ONLINE_WORLD_ID)
+    .where("status", "==", REINFORCEMENT_STATUS_STATIONED)
+    .get();
+  let started = 0;
+  let failed = 0;
+  await processWithConcurrency(snapshot.docs, 4, async doc => {
+    try {
+      await beginReinforcementReturn({
+        reinforcementId: doc.id,
+        reason: safeString(change.reason, 40) || "ownership_changed",
+      });
+      started += 1;
+    } catch (error) {
+      failed += 1;
+      console.warn("Could not automatically return reinforcements after ownership changed", {
+        reinforcementId: doc.id,
+        targetKey,
+        error: error?.message || String(error),
+      });
+    }
+  });
+  return { started, failed };
+}
+
 async function processOwnershipChangeEvent(event) {
   const startedAtMs = Date.now();
   const snapshot = event.data;
@@ -10734,6 +11648,7 @@ async function processOwnershipChangeEvent(event) {
     });
   }
   const armyUpdates = armyRefresh.updated;
+  const reinforcementReturns = await returnReinforcementsAfterOwnershipChange(change);
   let statsUpdates = 0;
   const clanConquest = await recordClanConquest(change, snapshot.id);
   if (targetType === "camp") {
@@ -10756,10 +11671,12 @@ async function processOwnershipChangeEvent(event) {
     convertedToAttacks: armyRefresh.convertedToAttacks,
     notificationsAttempted: notificationResults.length,
     notificationFailures,
+    reinforcementReturnsStarted: reinforcementReturns.started,
+    reinforcementReturnFailures: reinforcementReturns.failed,
     statsUpdates,
     clanQuestCaptureCount: clanConquest.captureCount || 0,
   });
-  return { armyUpdates, statsUpdates, clanConquest };
+  return { armyUpdates, reinforcementReturns, statsUpdates, clanConquest };
 }
 
 exports.processOwnershipChange = onDocumentCreated({
@@ -10768,6 +11685,121 @@ exports.processOwnershipChange = onDocumentCreated({
   maxInstances: 20,
   retry: true,
 }, processOwnershipChangeEvent);
+
+async function settleReinforcementBattleReceipt(event) {
+  const snapshot = event.data;
+  if (!snapshot?.exists) return null;
+  if (event.params?.resetGeneration !== RESET_GENERATION) return null;
+  const contributorUid = safeString(snapshot.data()?.contributorUid, 128);
+  if (!contributorUid) return null;
+  const nowMs = Date.now();
+  return db.runTransaction(async transaction => {
+    const receiptSnap = await transaction.get(snapshot.ref);
+    if (!receiptSnap.exists) return null;
+    const receipt = receiptSnap.data() || {};
+    if (
+      receipt.status !== "pending"
+      || safeString(receipt.worldId, 120) !== ONLINE_WORLD_ID
+      || safeString(receipt.resetGeneration, 120) !== RESET_GENERATION
+    ) {
+      return null;
+    }
+    const economy = await prepareEconomyCollection(transaction, contributorUid, nowMs);
+    const profile = economy.profileAfter || {};
+    const progress = buildPlayerProgressPatch(profile, {
+      xp: Math.max(0, Math.floor(safeNumber(receipt.xpAwarded, 0))),
+    });
+    const levelTroopReward = creditLevelUpTroopsToMainCity(
+      economy,
+      profile,
+      progress.levelTroopReward,
+      nowMs
+    );
+    const recoveredTroops = Math.floor(
+      Math.max(0, safeNumber(receipt.losses, 0))
+      * getSkillPercent(profile, "fieldMedics")
+      / 100
+    );
+    let recovery = null;
+    if (recoveredTroops > 0) {
+      const mainEntry = getCanonicalMainCityEntry(profile, economy.cityEntries);
+      const mainCity = mainEntry?.city;
+      if (mainEntry?.ref && mainCity && getOwnerUid(mainCity) === contributorUid) {
+        const troopFloat = Math.max(0, safeNumber(mainCity.troopFloat, mainCity.troops || 0)) + recoveredTroops;
+        const patch = {
+          troops: Math.max(0, Math.floor(troopFloat)),
+          troopFloat,
+          productionUpdatedAtMs: nowMs,
+        };
+        appendEconomyCityPatch(economy, mainEntry.ref, mainCity, patch);
+        recovery = {
+          credited: recoveredTroops,
+          cityId: safeString(mainCity.id, 96),
+          cityName: safeString(mainCity.name || mainCity.id || "main city", 40),
+        };
+      }
+    }
+    const report = makeReport({
+      id: `${safeString(receipt.armyId, 96)}_reinforcement_${contributorUid}`,
+      uid: contributorUid,
+      type: "defense",
+      outcome: safeString(receipt.outcome, 24) || "held",
+      city: {
+        id: receipt.targetId,
+        name: receipt.targetName,
+        regionId: receipt.targetRegionId,
+      },
+      opponentName: receipt.opponentName,
+      sentTroops: receipt.committedTroops,
+      troopCount: receipt.committedTroops,
+      result: {
+        defendersLeft: receipt.survivors,
+        defenderLosses: receipt.losses,
+      },
+      summary: `Your reinforcement committed ${Math.max(0, Math.floor(safeNumber(receipt.committedTroops, 0))).toLocaleString()} troops, lost ${Math.max(0, Math.floor(safeNumber(receipt.losses, 0))).toLocaleString()}, and has ${Math.max(0, Math.floor(safeNumber(receipt.survivors, 0))).toLocaleString()} stationed. +${progress.xpAwarded.toLocaleString()} XP.${recovery ? ` Field Medics returned ${recovery.credited.toLocaleString()} troops to ${recovery.cityName}.` : ""}`,
+      xpAwarded: progress.xpAwarded,
+      goldAwarded: progress.goldAwarded,
+      troopsAwarded: levelTroopReward?.credited || 0,
+      characterAfter: progress.character,
+      goldAfter: progress.gold,
+      nowMs,
+    });
+    writePreparedEconomy(transaction, economy, {
+      character: progress.character,
+      gold: progress.gold,
+      goldFloat: progress.goldFloat,
+    });
+    writeReport(transaction, contributorUid, report, economy.profileSnap, {
+      character: progress.character,
+      gold: progress.gold,
+      goldFloat: progress.goldFloat,
+    });
+    transaction.set(snapshot.ref, {
+      status: "settled",
+      xpAwarded: progress.xpAwarded,
+      goldAwarded: progress.goldAwarded,
+      levelTroopsAwarded: levelTroopReward?.credited || 0,
+      fieldMedicsRecovered: recovery?.credited || 0,
+      reportId: report.id,
+      settledAtMs: nowMs,
+      settledAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
+    }, { merge: true });
+    return {
+      contributorUid,
+      reportId: report.id,
+      xpAwarded: progress.xpAwarded,
+      recoveredTroops: recovery?.credited || 0,
+    };
+  });
+}
+
+exports.settleReinforcementBattle = onDocumentCreated({
+  region: "us-central1",
+  document: "reinforcementBattleReceipts/{resetGeneration}/entries/{receiptId}",
+  maxInstances: 20,
+  retry: true,
+}, settleReinforcementBattleReceipt);
 
 function getUtcDateKey(nowMs = Date.now()) {
   return new Date(nowMs).toISOString().slice(0, 10);

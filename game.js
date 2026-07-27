@@ -736,7 +736,7 @@ const ARMY_TRAVEL_SECONDS_PER_MAP_UNIT = 0.13;
 const ARMY_TRAVEL_MIN_SECONDS = 30;
 const ARMY_TRAVEL_SCOUT_MIN_SECONDS = 10;
 const ARMY_TRAVEL_MAX_SECONDS = 1800;
-const ARMY_TRAVEL_KIND_MULTIPLIERS = { scout: 0.35, transfer: 0.95, attack: 1 };
+const ARMY_TRAVEL_KIND_MULTIPLIERS = { scout: 0.35, transfer: 0.95, reinforce: 0.95, attack: 1 };
 const ARMY_TRAVEL_TROOP_BAND_LIMITS = [10, 100, 1000, 10000, 100000, 1000000, 10000000, 100000000];
 const ARMY_TRAVEL_TROOP_BAND_MULTIPLIERS = [1, 1.18, 1.38, 1.62, 1.9, 2.24, 2.62, 3.06, 3.5];
 const ROUTE_CITY_CLEARANCE = 46;
@@ -2480,6 +2480,7 @@ let selectedTroopAmount = 1;
 let troopSliderActive = false;
 let activeTroopSliderRoute = null;
 let activeAttackProtectionPreview = null;
+let activeTroopOrderKind = "";
 let activeTroopRouteRequestId = 0;
 let scoutNearbySourceId = null;
 let regroupSourceId = null;
@@ -2537,12 +2538,15 @@ let onlineCitySyncInFlight = false;
 let onlineCitySyncQueued = false;
 let onlineArmies = [];
 let onlineArmiesByIsland = new Map();
+let onlineReinforcements = [];
 const PLAYER_RELEVANT_ARMIES_CACHE_KEY = "player-relevant";
 let pendingOutgoingMissions = new Map();
 let onlineCampStates = new Map();
 let onlineHeldCampStates = new Map();
 let resolvingRewardCampPayoutIds = new Set();
 let onlineArmyUnsubscribes = [];
+let onlineReinforcementsUnsubscribe = null;
+const reinforcementReturnRequests = new Set();
 let onlineHeldCampsUnsubscribe = null;
 let onlineServerReportsUnsubscribe = null;
 let onlineGlobalStatsUnsubscribe = null;
@@ -6323,6 +6327,7 @@ function getMainCityChangeStatus(city, now = Date.now()) {
   const cooldownMs = getMainCityChangeCooldownRemainingMs(now, ownedCount);
   const cooldownText = cooldownMs > 0 ? formatDuration(Math.ceil(cooldownMs / 1000)) : "";
   const isMain = isMainCityForList(city);
+  const hasAlliedReinforcements = getStationedReinforcementsForTarget(city).length > 0;
   let reason = "";
 
   if (!state) reason = "Game is not ready.";
@@ -6330,15 +6335,17 @@ function getMainCityChangeStatus(city, now = Date.now()) {
   else if (city.owner !== "player") reason = "Only owned cities can become your main city.";
   else if (isStronghold(city)) reason = "Strongholds cannot become your main city.";
   else if (isMain) reason = "This city is already your main city.";
+  else if (hasAlliedReinforcements) reason = "Send all clan reinforcements home before making this your main city.";
   else if (cooldownMs > 0) reason = `Main city can change again in ${cooldownText}.`;
 
   return {
-    canChange: Boolean(state && city && city.owner === "player" && !isStronghold(city) && !isMain && cooldownMs <= 0),
+    canChange: Boolean(state && city && city.owner === "player" && !isStronghold(city) && !isMain && !hasAlliedReinforcements && cooldownMs <= 0),
     cooldownDurationMs,
     cooldownMs,
     cooldownText,
     ownedCount,
     isMain,
+    hasAlliedReinforcements,
     reason,
   };
 }
@@ -7595,7 +7602,9 @@ function getCityStats(city, options = {}) {
     * (1 + taxStewardshipPercent / 100)
     * (1 + strongholdGoldBonusPercent / 100)
     * (1 + royalTaxDecreeGoldBonusPercent / 100);
-  const troopDefense = Math.floor((Number(city?.troops) || 0) * (1 + defensePercent / 100));
+  const defendingTroops = Math.max(0, Number(city?.troops) || 0)
+    + (city?.owner === "player" ? Math.max(0, Number(city?.alliedReinforcementTroops) || 0) : 0);
+  const troopDefense = Math.floor(defendingTroops * (1 + defensePercent / 100));
   const cityWallsBonus = Math.max(0, cityWalls - baseCityWalls);
   const baseTotalDefense = Math.floor(baseCityWalls + troopDefense);
   const preStrongholdTotalDefense = Math.floor(cityWalls + troopDefense);
@@ -11455,6 +11464,7 @@ function disconnectOnlineWorld() {
   onlineIslandUnsubscribe = null;
   stopClanRealtimeSubscriptions({ clear: true });
   clearOnlineArmyWatchers();
+  clearOnlineReinforcementWatcher();
   clearOnlineHeldCampWatcher();
   clearOnlineServerReportWatcher();
   clearOnlineGlobalStatsWatcher();
@@ -12119,6 +12129,7 @@ async function connectOnlineIsland(regionId, { claimHome = false, homeRegionId =
     onlineWorldConnected = true;
     onlineLastError = "";
     subscribeOnlineArmyWatchers(islandId);
+    subscribeOnlineReinforcements();
     subscribeOnlineHeldCamps();
     subscribeOnlineServerReports();
     subscribeOnlineGlobalStats();
@@ -12258,6 +12269,7 @@ function normalizeOnlineCampState(raw = {}) {
     payoutAtMs: normalizeTimestampMs(raw.payoutAtMs),
     payoutPending: Boolean(raw.payoutPending),
     currentGarrison: Math.max(0, Math.floor(Number(raw.currentGarrison) || 0)),
+    alliedReinforcementTroops: Math.max(0, Math.floor(Number(raw.alliedReinforcementTroops) || 0)),
     baseDefenders: Math.max(1, Math.floor(Number(raw.baseDefenders) || config.baseDefenders)),
     baseReward: config.baseReward,
     defenseLevel: Math.max(1, Math.floor(Number(raw.defenseLevel) || config.defenseLevel)),
@@ -12331,6 +12343,7 @@ function getCampTargetById(campId) {
     troops: currentGarrison,
     troopFloat: currentGarrison,
     currentGarrison,
+    alliedReinforcementTroops: Math.max(0, Math.floor(Number(online.alliedReinforcementTroops) || 0)),
     baseDefenders: Math.max(1, Math.floor(Number(online.baseDefenders) || config.baseDefenders)),
     baseReward: config.baseReward,
     payoutAtMs: normalizeTimestampMs(online.payoutAtMs),
@@ -12787,7 +12800,7 @@ function prepareOnlineArmyMission(mission) {
   mission.ownerName = state.playerName;
   mission.ownerFlag = state.flag;
   mission.ownerKingPower = getKingPower();
-  mission.launchKind = ["attack", "transfer", "scout"].includes(mission.launchKind)
+  mission.launchKind = ["attack", "transfer", "reinforce", "scout"].includes(mission.launchKind)
     ? mission.launchKind
     : mission.kind;
   mission.attackerKingPower = normalizePowerValue(mission.attackerKingPower) || mission.ownerKingPower;
@@ -12818,7 +12831,7 @@ function toOnlineArmyMovement(mission) {
     ownerFlag: mission.ownerFlag || state.flag,
     ownerKingPower: normalizePowerValue(mission.ownerKingPower) || getKingPower(),
     kind: mission.kind || "attack",
-    launchKind: ["attack", "transfer", "scout"].includes(mission.launchKind)
+    launchKind: ["attack", "transfer", "reinforce", "scout"].includes(mission.launchKind)
       ? mission.launchKind
       : mission.kind || "attack",
     targetType: mission.targetType === "camp" || isRewardCampTarget(to) ? "camp" : "city",
@@ -12927,11 +12940,11 @@ function applyServerMovementToMission(mission, movement = null) {
   const arrivesAtMs = normalizeTimestampMs(movement.arrivesAtMs);
   const rawRemaining = Number(movement.remaining);
   mission.onlineId = movement.id || mission.onlineId;
-  if (["attack", "transfer", "scout"].includes(movementKind)) mission.kind = movementKind;
-  if (["attack", "transfer", "scout"].includes(movement.launchKind)) {
+  if (["attack", "transfer", "reinforce", "scout"].includes(movementKind)) mission.kind = movementKind;
+  if (["attack", "transfer", "reinforce", "scout"].includes(movement.launchKind)) {
     mission.launchKind = movement.launchKind;
   }
-  if (["attack", "transfer", "scout"].includes(movement.retargetedFromKind)) {
+  if (["attack", "transfer", "reinforce", "scout"].includes(movement.retargetedFromKind)) {
     mission.retargetedFromKind = movement.retargetedFromKind;
   }
   mission.troops = Math.max(0, Math.floor(Number(movement.troops) || mission.troops || 0));
@@ -12958,6 +12971,8 @@ function applyServerMovementToMission(mission, movement = null) {
   mission.relinquishTransfer = Boolean(movement.relinquishTransfer || mission.relinquishTransfer);
   mission.campReturn = Boolean(movement.campReturn || mission.campReturn);
   mission.campRecall = Boolean(movement.campRecall || mission.campRecall);
+  mission.reinforcementReturn = Boolean(movement.reinforcementReturn || mission.reinforcementReturn);
+  mission.reinforcementId = String(movement.reinforcementId || mission.reinforcementId || "");
   mission.attackerKingPower = normalizePowerValue(movement.attackerKingPower || mission.attackerKingPower);
   mission.defenderKingPower = normalizePowerValue(movement.defenderKingPower || mission.defenderKingPower);
   if (movement.attackProtection !== undefined) {
@@ -13111,7 +13126,7 @@ function normalizeOnlineArmyMovement(raw) {
   const rawOwnerKind = raw.ownerKind || raw.owner || "player";
   if (rawOwnerKind !== "neutral" && !ownerUid) return null;
   const targetOwnerUid = String(raw.targetOwnerUid || "").trim();
-  const rawKind = ["attack", "transfer", "scout"].includes(raw.kind) ? raw.kind : "attack";
+  const rawKind = ["attack", "transfer", "reinforce", "scout"].includes(raw.kind) ? raw.kind : "attack";
   const effectiveKind = rawKind === "transfer"
     && targetOwnerUid
     && ownerUid
@@ -13140,8 +13155,8 @@ function normalizeOnlineArmyMovement(raw) {
     ownerFlag: ownerIdentity?.flag || raw.ownerFlag || null,
     ownerKingPower: normalizePowerValue(ownerIdentity?.kingPower) || normalizePowerValue(raw.ownerKingPower),
     kind: effectiveKind,
-    launchKind: ["attack", "transfer", "scout"].includes(raw.launchKind) ? raw.launchKind : rawKind,
-    retargetedFromKind: ["attack", "transfer", "scout"].includes(raw.retargetedFromKind)
+    launchKind: ["attack", "transfer", "reinforce", "scout"].includes(raw.launchKind) ? raw.launchKind : rawKind,
+    retargetedFromKind: ["attack", "transfer", "reinforce", "scout"].includes(raw.retargetedFromKind)
       ? raw.retargetedFromKind
       : "",
     targetType: raw.targetType === "camp" ? "camp" : "city",
@@ -13180,6 +13195,8 @@ function normalizeOnlineArmyMovement(raw) {
     relinquishTransfer: Boolean(raw.relinquishTransfer),
     campReturn: Boolean(raw.campReturn),
     campRecall: Boolean(raw.campRecall),
+    reinforcementReturn: Boolean(raw.reinforcementReturn),
+    reinforcementId: String(raw.reinforcementId || ""),
     status: raw.status || "active",
     onlineRegionIds: Array.isArray(raw.routeRegionIds) ? raw.routeRegionIds.map(normalizeRegionId) : [],
   };
@@ -13206,6 +13223,13 @@ function clearOnlineArmyWatchers() {
   onlineArmiesByIsland = new Map();
   onlineArmies = [];
   pendingOutgoingMissions = new Map();
+}
+
+function clearOnlineReinforcementWatcher() {
+  if (typeof onlineReinforcementsUnsubscribe === "function") onlineReinforcementsUnsubscribe();
+  onlineReinforcementsUnsubscribe = null;
+  onlineReinforcements = [];
+  reinforcementReturnRequests.clear();
 }
 
 function clearOnlineHeldCampWatcher() {
@@ -13395,6 +13419,25 @@ function subscribeOnlineArmyWatchers() {
   if (typeof unsubscribe === "function") onlineArmyUnsubscribes.push(unsubscribe);
 }
 
+function subscribeOnlineReinforcements() {
+  const api = getOnlineApi();
+  if (typeof onlineReinforcementsUnsubscribe === "function") return;
+  if (!state || !api?.subscribePlayerReinforcements || !api?.isSignedIn?.()) return;
+  onlineReinforcementsUnsubscribe = api.subscribePlayerReinforcements({
+    onReinforcements: reinforcements => {
+      onlineReinforcements = Array.isArray(reinforcements) ? reinforcements : [];
+      updateOutgoingAttackUi();
+      if (modal.open && (modal.dataset.cityInfoId || modal.dataset.campInfoId)) {
+        refreshOpenHoldingReinforcementPanel();
+      }
+    },
+    onError: error => {
+      clearOnlineReinforcementWatcher();
+      console.warn("Could not subscribe to clan reinforcements", error);
+    },
+  });
+}
+
 function isOnlineArmyVisible(army) {
   if (!army || army.status !== "active") return false;
   const onlineId = getOnlineArmyResolutionId(army);
@@ -13452,6 +13495,8 @@ function createLocalAttackFromOnlineArmy(army, remaining = getOnlineArmyRemainin
     relinquishTransfer: Boolean(army.relinquishTransfer),
     campReturn: Boolean(army.campReturn),
     campRecall: Boolean(army.campRecall),
+    reinforcementReturn: Boolean(army.reinforcementReturn),
+    reinforcementId: String(army.reinforcementId || ""),
     sourceRegionId: army.sourceRegionId,
     targetRegionId: army.targetRegionId,
     onlineRegionIds: army.onlineRegionIds?.length ? army.onlineRegionIds : getMissionRegionIds(army),
@@ -13703,7 +13748,7 @@ function getOutgoingAttacks() {
   const seen = new Set();
   return getRenderableArmies()
     .map(attack => {
-      if (!attack || !["attack", "scout", "transfer"].includes(attack.kind) || attack.owner !== "player") return null;
+      if (!attack || !["attack", "scout", "transfer", "reinforce"].includes(attack.kind) || attack.owner !== "player") return null;
       const key = String(attack.onlineId || attack.id || `${attack.fromId}:${attack.toId}:${attack.launchedAtMs || ""}`);
       if (seen.has(key)) return null;
       seen.add(key);
@@ -15826,8 +15871,23 @@ function launchAttack(sourceId, targetId, percent, owner, exactTroops = null, op
   if (source.troops < 1) return false;
   if (owner === "player" && !canUseOnlineArmyOrders()) return false;
 
-  const kind = target.owner === owner ? "transfer" : "attack";
+  const requestedKind = options.kind === "reinforce" ? "reinforce" : "";
+  const kind = owner === "player"
+    ? getTroopOrderKind(target, requestedKind)
+    : target.owner === owner
+      ? "transfer"
+      : "attack";
   const campTarget = isRewardCampTarget(target);
+  if (kind === "reinforce") {
+    if (!usesServerArmyAuthority() || !isClanAllyCity(target)) {
+      if (owner === "player") showToast("Clan reinforcements require a current allied holding.");
+      return false;
+    }
+    if (!campTarget && isProtectedMainCity(target)) {
+      if (owner === "player") showToast("A clan ally's home city cannot be reinforced.");
+      return false;
+    }
+  }
   const mainCityBlockReason = kind === "attack" && !campTarget ? getMainCityAttackBlockReason(target, owner) : "";
   if (mainCityBlockReason) {
     if (owner === "player") showToast(mainCityBlockReason);
@@ -15840,7 +15900,7 @@ function launchAttack(sourceId, targetId, percent, owner, exactTroops = null, op
     return false;
   }
 
-  const neutralBlockReason = campTarget ? "" : getNeutralCaptureBlockReason(target, owner);
+  const neutralBlockReason = kind === "attack" && !campTarget ? getNeutralCaptureBlockReason(target, owner) : "";
   if (neutralBlockReason) {
     if (owner === "player") showNeutralCaptureLimitModal(neutralBlockReason);
     return false;
@@ -15909,6 +15969,12 @@ function launchAttack(sourceId, targetId, percent, owner, exactTroops = null, op
             addLog(`You moved ${formatNumber(acceptedTroops)} troops from ${source.name} to ${target.name}.`);
             showToast(`Reinforcements moving: ${source.name} \u2192 ${target.name}`);
           }
+        } else if (acceptedKind === "reinforce") {
+          const shieldText = peaceShieldDeactivated ? " Your Royal Peace Shield was removed." : "";
+          addLog(`You sent ${formatNumber(acceptedTroops)} clan reinforcements from ${source.name} to ${target.name}.${shieldText}`);
+          showToast(peaceShieldDeactivated
+            ? "Shield dropped. Clan reinforcements moving."
+            : `Clan reinforcements moving: ${source.name} \u2192 ${target.name}`);
         } else {
           const protectionText = acceptedProtection?.mode !== "normal"
             ? ` ${getAttackProtectionNotice(acceptedProtection)}`
@@ -15927,7 +15993,7 @@ function launchAttack(sourceId, targetId, percent, owner, exactTroops = null, op
     return true;
   }
 
-  const peaceShieldDeactivated = owner === "player" && kind === "attack"
+  const peaceShieldDeactivated = owner === "player" && (kind === "attack" || kind === "reinforce")
     ? deactivatePeaceShieldForPlayerAttack(target)
     : false;
 
@@ -15946,6 +16012,9 @@ function launchAttack(sourceId, targetId, percent, owner, exactTroops = null, op
       addLog(`You moved ${formatNumber(send)} troops from ${source.name} to ${target.name}.`);
       showToast(`Reinforcements moving: ${source.name} \u2192 ${target.name}`);
     }
+  } else if (owner === "player" && kind === "reinforce") {
+    addLog(`You sent ${formatNumber(send)} clan reinforcements from ${source.name} to ${target.name}.`);
+    showToast(peaceShieldDeactivated ? "Shield dropped. Clan reinforcements moving." : `Clan reinforcements moving: ${source.name} \u2192 ${target.name}`);
   } else if (owner === "player") {
     const protectionText = attackProtection ? ` ${getAttackProtectionNotice(attackProtection)}` : "";
     const shieldText = peaceShieldDeactivated ? " Royal Peace Shield deactivated." : "";
@@ -18220,7 +18289,7 @@ function renderPaths() {
   pathsSvg.innerHTML = "";
   for (const { attack, segments } of visibleArmySegments) {
     const ownerClass = isPersonalArmy(attack) ? "player-route" : "enemy-route";
-    const kindClass = attack.kind === "transfer"
+    const kindClass = attack.kind === "transfer" || attack.kind === "reinforce"
       ? "transfer-route"
       : attack.kind === "scout"
         ? "scout-route"
@@ -18361,7 +18430,9 @@ function getCityRenderSignature(visibleCities, visibleCamps = []) {
       camp.size,
       camp.ownerUid || "",
       camp.ownerName || "",
+      isClanAllyCity(camp) ? 1 : 0,
       camp.currentGarrison || 0,
+      camp.alliedReinforcementTroops || 0,
       camp.payoutAtMs || 0,
       camp.state || "neutral",
       report ? `${Math.floor(Number(report.troops) || 0)}:${report.expiresAt > state.gameSeconds ? 1 : 0}` : "",
@@ -18487,9 +18558,10 @@ function renderCities(force = false) {
     campNode.dataset.renderCampId = camp.id;
     if (interactiveRewardCamp) campNode.dataset.campId = camp.id;
     else delete campNode.dataset.campId;
-    campNode.className = `camp-node camp-${camp.campType || "gold"} ${interactiveRewardCamp ? camp.owner || "neutral" : "decorative"}`;
+    const clanAllyCamp = interactiveRewardCamp && isClanAllyCity(camp);
+    campNode.className = `camp-node camp-${camp.campType || "gold"} ${interactiveRewardCamp ? camp.owner || "neutral" : "decorative"}${clanAllyCamp ? " clan-ally" : ""}`;
     if (interactiveRewardCamp && camp.id === selectedTargetId) campNode.classList.add("selected");
-    if (interactiveRewardCamp && sendMode && source) campNode.classList.add(camp.owner === "player" ? "supportable" : "attackable");
+    if (interactiveRewardCamp && sendMode && source) campNode.classList.add(camp.owner === "player" || clanAllyCamp ? "supportable" : "attackable");
     campNode.style.left = `${mapPoint.x}px`;
     campNode.style.top = `${mapPoint.y}px`;
     campNode.style.setProperty("--camp-size", `${camp.size}px`);
@@ -18751,12 +18823,14 @@ function renderSelectedForeignWheel(city) {
   const report = getScoutReport(city.id);
   const pendingScout = getPendingScoutMission(city.id);
   const friendlyBlockReason = getClanFriendlyBlockReason(city);
+  const clanAlly = Boolean(friendlyBlockReason);
   const scoutBlockReason = friendlyBlockReason || getMainCityScoutBlockReason(city, "player");
   const canScout = !scoutBlockReason && !pendingScout && playerCities().some(playerCity => playerCity.troops >= 1);
-  const mainCityBlockReason = friendlyBlockReason || getMainCityAttackBlockReason(city, "player");
-  const shieldBlockReason = getPeaceShieldAttackBlockReason(city, "player");
-  const attackBlockLabel = friendlyBlockReason ? "Clan Ally" : mainCityBlockReason ? "Main City" : shieldBlockReason ? "Shielded" : "Attack";
-  const canAttack = !mainCityBlockReason && !shieldBlockReason && playerCities().some(playerCity => playerCity.troops > 0);
+  const alliedHomeCity = clanAlly && isProtectedMainCity(city);
+  const mainCityBlockReason = clanAlly ? "" : getMainCityAttackBlockReason(city, "player");
+  const shieldBlockReason = clanAlly ? "" : getPeaceShieldAttackBlockReason(city, "player");
+  const attackBlockLabel = alliedHomeCity ? "Home City" : clanAlly ? "Reinforce" : mainCityBlockReason ? "Main City" : shieldBlockReason ? "Shielded" : "Attack";
+  const canAttack = !alliedHomeCity && !mainCityBlockReason && !shieldBlockReason && playerCities().some(playerCity => playerCity.troops > 0);
   wheel.className = "city-action-wheel foreign-city-action-wheel";
   wheel.style.left = `${mapPoint.x}px`;
   wheel.style.top = `${mapPoint.y}px`;
@@ -18766,8 +18840,8 @@ function renderSelectedForeignWheel(city) {
       <span class="wheel-icon" aria-hidden="true">&#128301;</span>
       <span class="wheel-action-name">${friendlyBlockReason ? "Clan Ally" : scoutBlockReason ? "Main City" : pendingScout ? "Scouting" : report ? "Rescout" : "Scout"}</span>
     </button>
-    <button class="city-wheel-action wheel-attack" type="button" aria-label="${mainCityBlockReason ? escapeHtml(mainCityBlockReason) : `Attack ${escapeHtml(city.name)}`}" ${canAttack ? "" : "disabled"}>
-      <span class="wheel-icon" aria-hidden="true">&#9876;</span>
+    <button class="city-wheel-action wheel-attack${clanAlly ? " wheel-reinforce" : ""}" type="button" aria-label="${alliedHomeCity ? "Clan allies cannot reinforce a home city" : clanAlly ? `Reinforce ${escapeHtml(city.name)}` : mainCityBlockReason ? escapeHtml(mainCityBlockReason) : `Attack ${escapeHtml(city.name)}`}" ${canAttack ? "" : "disabled"}>
+      <span class="wheel-icon" aria-hidden="true">${clanAlly ? "&#8649;" : "&#9876;"}</span>
       <span class="wheel-action-name">${attackBlockLabel}</span>
     </button>
     <button class="city-wheel-action wheel-info" type="button" aria-label="View ${escapeHtml(city.name)} information">
@@ -18786,7 +18860,8 @@ function renderSelectedForeignWheel(city) {
   });
   wheel.querySelector(".wheel-attack").addEventListener("click", event => {
     event.stopPropagation();
-    attackForeignCity(city.id);
+    if (clanAlly) beginClanReinforcement(city);
+    else attackForeignCity(city.id);
   });
   wheel.querySelector(".wheel-info").addEventListener("click", event => {
     event.stopPropagation();
@@ -18808,7 +18883,7 @@ function renderSelectedStrongholdWheel(stronghold) {
   const pendingScout = owned ? null : getPendingScoutMission(stronghold.id);
   const availableSources = playerCities().filter(city => city.id !== stronghold.id && Math.floor(Number(city.troops) || 0) > 0);
   const canScout = !owned && !clanAlly && !pendingScout && availableSources.length > 0;
-  const canAttack = !owned && !clanAlly && availableSources.length > 0;
+  const canAttack = !owned && availableSources.length > 0;
   const canSend = owned && Math.floor(Number(stronghold.troops) || 0) > 0;
   const canReinforce = owned && availableSources.length > 0;
   const wheelSize = getStrongholdVisualSize(stronghold);
@@ -18829,9 +18904,9 @@ function renderSelectedStrongholdWheel(stronghold) {
       <span aria-hidden="true">i</span>
       <strong>Info</strong>
     </button>
-    <button class="gold-camp-wheel-action camp-order-action" type="button" aria-label="${owned ? "Reinforce" : "Attack"} ${escapeHtml(stronghold.name)}" ${owned ? canReinforce ? "" : "disabled" : canAttack ? "" : "disabled"}>
-      <span aria-hidden="true">${owned ? "&#8649;" : "&#9876;"}</span>
-      <strong>${owned ? "Reinforce" : "Attack"}</strong>
+    <button class="gold-camp-wheel-action camp-order-action${clanAlly ? " clan-reinforce-action" : ""}" type="button" aria-label="${owned || clanAlly ? "Reinforce" : "Attack"} ${escapeHtml(stronghold.name)}" ${owned ? canReinforce ? "" : "disabled" : canAttack ? "" : "disabled"}>
+      <span aria-hidden="true">${owned || clanAlly ? "&#8649;" : "&#9876;"}</span>
+      <strong>${owned || clanAlly ? "Reinforce" : "Attack"}</strong>
     </button>
     ${report ? `
       <button class="gold-camp-wheel-action camp-report-action" type="button" aria-label="Open scout report for ${escapeHtml(stronghold.name)}">
@@ -18848,6 +18923,7 @@ function renderSelectedStrongholdWheel(stronghold) {
   wheel.querySelector(".camp-order-action")?.addEventListener("click", event => {
     event.stopPropagation();
     if (owned) beginStrongholdReinforcement(stronghold.id);
+    else if (clanAlly) beginClanReinforcement(stronghold);
     else attackForeignCity(stronghold.id);
   });
   wheel.querySelector(".camp-info-action")?.addEventListener("click", event => {
@@ -18884,10 +18960,11 @@ function renderSelectedRewardCampWheel(camp) {
   const mapPoint = worldToMapPoint(camp);
   const wheel = document.createElement("div");
   const isHeldByPlayer = camp.owner === "player";
+  const clanAlly = isClanAllyCity(camp);
   const report = getScoutReport(camp.id);
   const pendingScout = getPendingScoutMission(camp.id);
   const canSend = playerCities().some(city => Math.floor(Number(city.troops) || 0) > 0);
-  const canScout = !isHeldByPlayer && !pendingScout && canSend;
+  const canScout = !isHeldByPlayer && !clanAlly && !pendingScout && canSend;
   const canRecall = isHeldByPlayer && camp.payoutPending && !rewardCampRecallRequests.has(camp.id);
   const wheelSize = Math.max(112, Number(camp.size) || 132);
   wheel.className = "gold-camp-action-wheel";
@@ -18896,17 +18973,17 @@ function renderSelectedRewardCampWheel(camp) {
   wheel.style.setProperty("--camp-wheel-size", `${wheelSize}px`);
   wheel.style.setProperty("--camp-action-offset", `${Math.max(82, Math.min(116, wheelSize * .7))}px`);
   wheel.innerHTML = `
-    <button class="gold-camp-wheel-action ${isHeldByPlayer ? "camp-recall-action" : "camp-scout-action"}" type="button" aria-label="${isHeldByPlayer ? `Recall stationed troops from ${escapeHtml(camp.name)}` : pendingScout ? `Scout traveling to ${escapeHtml(camp.name)}` : report ? `Scout ${escapeHtml(camp.name)} again` : `Scout ${escapeHtml(camp.name)}`}" ${isHeldByPlayer ? canRecall ? "" : "disabled" : canScout ? "" : "disabled"}>
+    <button class="gold-camp-wheel-action ${isHeldByPlayer ? "camp-recall-action" : "camp-scout-action"}" type="button" aria-label="${isHeldByPlayer ? `Recall stationed troops from ${escapeHtml(camp.name)}` : clanAlly ? "Clan allies cannot be scouted" : pendingScout ? `Scout traveling to ${escapeHtml(camp.name)}` : report ? `Scout ${escapeHtml(camp.name)} again` : `Scout ${escapeHtml(camp.name)}`}" ${isHeldByPlayer ? canRecall ? "" : "disabled" : canScout ? "" : "disabled"}>
       <span aria-hidden="true">${isHeldByPlayer ? "&#8630;" : "&#128301;"}</span>
-      <strong>${isHeldByPlayer ? rewardCampRecallRequests.has(camp.id) ? "Recalling" : "Recall" : pendingScout ? "Scouting" : report ? "Rescout" : "Scout"}</strong>
+      <strong>${isHeldByPlayer ? rewardCampRecallRequests.has(camp.id) ? "Recalling" : "Recall" : clanAlly ? "Clan Ally" : pendingScout ? "Scouting" : report ? "Rescout" : "Scout"}</strong>
     </button>
     <button class="gold-camp-wheel-action camp-info-action" type="button" aria-label="Open ${escapeHtml(camp.name)} information">
       <span aria-hidden="true">i</span>
       <strong>Info</strong>
     </button>
-    <button class="gold-camp-wheel-action camp-order-action" type="button" aria-label="${isHeldByPlayer ? "Reinforce" : "Attack"} ${escapeHtml(camp.name)}" ${canSend ? "" : "disabled"}>
-      <span aria-hidden="true">${isHeldByPlayer ? "&#8649;" : "&#9876;"}</span>
-      <strong>${isHeldByPlayer ? "Reinforce" : "Attack"}</strong>
+    <button class="gold-camp-wheel-action camp-order-action${clanAlly ? " clan-reinforce-action" : ""}" type="button" aria-label="${isHeldByPlayer || clanAlly ? "Reinforce" : "Attack"} ${escapeHtml(camp.name)}" ${canSend ? "" : "disabled"}>
+      <span aria-hidden="true">${isHeldByPlayer || clanAlly ? "&#8649;" : "&#9876;"}</span>
+      <strong>${isHeldByPlayer || clanAlly ? "Reinforce" : "Attack"}</strong>
     </button>
     ${report ? `
       <button class="gold-camp-wheel-action camp-report-action" type="button" aria-label="Open scout report for ${escapeHtml(camp.name)}">
@@ -18924,7 +19001,8 @@ function renderSelectedRewardCampWheel(camp) {
   });
   wheel.querySelector(".camp-order-action")?.addEventListener("click", event => {
     event.stopPropagation();
-    beginRewardCampOrder(camp.id);
+    if (clanAlly) beginClanReinforcement(camp);
+    else beginRewardCampOrder(camp.id);
   });
   wheel.querySelector(".camp-info-action")?.addEventListener("click", event => {
     event.stopPropagation();
@@ -19346,6 +19424,7 @@ function showRewardCampInfoModal(campId) {
   }
   const config = getRewardCampConfig(camp);
   if (!config) return;
+  modal.dataset.campInfoId = camp.id;
   const isDeedCamp = config.type === "deed";
   const isRelicCamp = config.type === "items";
   const holdMinutes = Math.floor(config.holdSeconds / 60);
@@ -19481,6 +19560,7 @@ function showRewardCampInfoModal(campId) {
         </div>
         ${rewardConditionMarkup}
         ${statsMarkup}
+        ${renderHoldingReinforcementPanel(camp)}
       </section>
 
       <section id="campRewardPanel" class="camp-info-tab-panel" role="tabpanel" aria-labelledby="campRewardTab" data-camp-info-panel="reward" data-camp-reward-panel="${escapeHtml(camp.id)}" hidden>
@@ -19505,6 +19585,7 @@ function showRewardCampInfoModal(campId) {
     });
     if (isDeedCamp && selectedTab === "reward") refreshDeedCampHistoryPanel(camp, { force: true });
   }));
+  bindHoldingReinforcementButtons();
   if (!modal.open) modal.showModal();
   if (!isDeedCamp) refreshRewardCampProgressPanel(camp.id, config);
 }
@@ -19613,9 +19694,42 @@ function findPreferredAttackSource(target) {
   return findNearestOwnedSourceCandidate(target, 1);
 }
 
+function beginClanReinforcement(targetOrId) {
+  const target = typeof targetOrId === "object"
+    ? targetOrId
+    : getArmyTargetById(targetOrId);
+  if (!target || !isClanAllyCity(target)) {
+    showToast("That holding is no longer controlled by a clan ally.");
+    return;
+  }
+  if (!isRewardCampTarget(target) && isProtectedMainCity(target)) {
+    showToast("A clan ally's home city cannot be reinforced.");
+    return;
+  }
+  const sourceOption = findPreferredAttackSource(target);
+  if (!sourceOption) {
+    showToast("No owned holding with troops can reach this clan ally.");
+    return;
+  }
+  selectedSourceId = sourceOption.city.id;
+  rememberOwnedAttackSource(sourceOption.city);
+  selectedTargetId = target.id;
+  scoutNearbySourceId = null;
+  regroupSourceId = null;
+  sendMode = true;
+  activeTroopOrderKind = "reinforce";
+  selectedTroopAmount = clamp(Math.floor(sourceOption.city.troops / 2), 1, sourceOption.city.troops);
+  renderSelectionChangeNow();
+  void showTroopSliderModalAsync(sourceOption.city, target, { orderKind: "reinforce" });
+}
+
 function attackForeignCity(cityId) {
   const target = cityById(cityId);
   if (!target || target.owner === "player") return;
+  if (isClanAllyCity(target)) {
+    beginClanReinforcement(target);
+    return;
+  }
   const mainCityBlockReason = getMainCityAttackBlockReason(target, "player");
   if (mainCityBlockReason) {
     showToast(mainCityBlockReason);
@@ -20267,6 +20381,13 @@ function showTroopSliderModal(source, target) {
   void showTroopSliderModalAsync(source, target);
 }
 
+function getTroopOrderKind(target, requestedKind = "") {
+  if (requestedKind === "reinforce" && isClanAllyCity(target)) return "reinforce";
+  if (target?.owner === "player") return "transfer";
+  if (isClanAllyCity(target)) return "reinforce";
+  return "attack";
+}
+
 async function loadAttackProtectionPreview(source, target) {
   if (!source || !target || target.owner !== "enemy" || isRewardCampTarget(target) || isStronghold(target)) {
     return null;
@@ -20296,15 +20417,19 @@ async function showTroopSliderModalAsync(source, target, options = {}) {
     return;
   }
 
-  const isTransfer = target.owner === "player";
+  const orderKind = getTroopOrderKind(target, options.orderKind);
+  const isTransfer = orderKind === "transfer";
+  const isReinforcement = orderKind === "reinforce";
   const campTarget = isRewardCampTarget(target);
-  const needsDefenderPower = target.owner === "enemy" && !campTarget && !isStronghold(target);
-  const mainCityBlockReason = isTransfer || campTarget ? "" : getMainCityAttackBlockReason(target, "player");
+  const needsDefenderPower = orderKind === "attack" && target.owner === "enemy" && !campTarget && !isStronghold(target);
+  const mainCityBlockReason = isReinforcement && !campTarget && isProtectedMainCity(target)
+    ? `${target.name} is a clan ally's home city and cannot be reinforced.`
+    : isTransfer || campTarget ? "" : getMainCityAttackBlockReason(target, "player");
   if (mainCityBlockReason) {
     showMainCityProtectedAttackModal(target);
     return;
   }
-  const shieldBlockReason = isTransfer || campTarget ? "" : getPeaceShieldAttackBlockReason(target, "player");
+  const shieldBlockReason = orderKind !== "attack" || campTarget ? "" : getPeaceShieldAttackBlockReason(target, "player");
   if (shieldBlockReason) {
     showToast(shieldBlockReason);
     cancelSendMode();
@@ -20318,7 +20443,8 @@ async function showTroopSliderModalAsync(source, target, options = {}) {
   troopSliderActive = true;
   activeTroopSliderRoute = null;
   activeAttackProtectionPreview = providedAttackProtection;
-  showTroopRouteLoadingModal(source, target, isTransfer);
+  activeTroopOrderKind = orderKind;
+  showTroopRouteLoadingModal(source, target, orderKind);
 
   await waitForSetupLoadingPaint(0);
   const [route, defenderPower, protectionResult] = await Promise.all([
@@ -20351,7 +20477,8 @@ async function showTroopSliderModalAsync(source, target, options = {}) {
     return;
   }
   if (
-    freshTarget.owner === "enemy"
+    orderKind === "attack"
+    && freshTarget.owner === "enemy"
     && !isRewardCampTarget(freshTarget)
     && !isStronghold(freshTarget)
     && Math.max(
@@ -20378,6 +20505,7 @@ async function showTroopSliderModalAsync(source, target, options = {}) {
 
   showTroopSliderModalWithRoute(freshSource, freshTarget, route, {
     attackProtection: protectionResult?.attackProtection || null,
+    orderKind,
   });
 }
 
@@ -20449,13 +20577,15 @@ function showTroopPowerVerificationError(source, target) {
   if (!modal.open) modal.showModal();
 }
 
-function showTroopRouteLoadingModal(source, target, isTransfer) {
-  const commandLabel = isTransfer ? "Transfer" : "Attack";
-  const commandIcon = isTransfer ? "&#9822;" : "&#9876;";
+function showTroopRouteLoadingModal(source, target, orderKind = "attack") {
+  const isTransfer = orderKind === "transfer";
+  const isReinforcement = orderKind === "reinforce";
+  const commandLabel = isTransfer ? "Transfer" : isReinforcement ? "Reinforce" : "Attack";
+  const commandIcon = isTransfer ? "&#9822;" : isReinforcement ? "&#8649;" : "&#9876;";
   modal.classList.add("troop-slider-modal");
   modalTitle.textContent = `${commandLabel} troops`;
   modalBody.innerHTML = `
-    <div class="troop-slider-panel ${isTransfer ? "transfer" : "attack"}">
+    <div class="troop-slider-panel ${isTransfer || isReinforcement ? "transfer reinforce" : "attack"}">
       <div class="troop-route-summary">
         <div class="troop-route-city">
           <span>From</span>
@@ -20466,7 +20596,7 @@ function showTroopRouteLoadingModal(source, target, isTransfer) {
         <div class="troop-route-city destination">
           <span>To</span>
           <strong>${escapeHtml(target.name)}</strong>
-          <small>${escapeHtml(getRegionLabel(getCityRegionId(target)))} &middot; ${isRewardCampTarget(target) ? (isTransfer ? `Your ${escapeHtml(target.name)}` : `${OWNER[target.owner].label} ${escapeHtml(target.name)}`) : isTransfer ? "Your city" : `${OWNER[target.owner].label} city`}</small>
+          <small>${escapeHtml(getRegionLabel(getCityRegionId(target)))} &middot; ${isReinforcement ? "Clan allied holding" : isRewardCampTarget(target) ? (isTransfer ? `Your ${escapeHtml(target.name)}` : `${OWNER[target.owner].label} ${escapeHtml(target.name)}`) : isTransfer ? "Your city" : `${OWNER[target.owner].label} city`}</small>
         </div>
       </div>
 
@@ -20476,7 +20606,7 @@ function showTroopRouteLoadingModal(source, target, isTransfer) {
       </div>
 
       <div class="troop-slider-actions">
-        <button id="troopSliderConfirm" class="troop-slider-confirm ${isTransfer ? "transfer" : "attack"}" type="button" disabled>
+        <button id="troopSliderConfirm" class="troop-slider-confirm ${isTransfer || isReinforcement ? "transfer reinforce" : "attack"}" type="button" disabled>
           <span aria-hidden="true">${commandIcon}</span>Calculating
         </button>
         <button id="troopSliderCancel" class="troop-slider-cancel" type="button">Cancel</button>
@@ -20490,6 +20620,7 @@ function showTroopRouteLoadingModal(source, target, isTransfer) {
 function getTroopSliderSendLimit(source, target) {
   const availableTroops = Math.max(0, Math.floor(Number(source?.troops) || 0));
   if (availableTroops < 1 || !target) return 0;
+  if (activeTroopOrderKind === "transfer" || activeTroopOrderKind === "reinforce") return availableTroops;
   const previewMatches = activeTroopSliderRoute?.sourceId === source.id
     && activeTroopSliderRoute?.targetId === target.id;
   const attackProtection = previewMatches
@@ -20507,23 +20638,32 @@ function showTroopSliderModalWithRoute(source, target, route, options = {}) {
     route: cloneRoute(route),
   };
   activeAttackProtectionPreview = normalizeAttackProtectionSnapshot(options.attackProtection);
-  const isTransfer = target.owner === "player";
+  const orderKind = getTroopOrderKind(target, options.orderKind || activeTroopOrderKind);
+  activeTroopOrderKind = orderKind;
+  const isTransfer = orderKind === "transfer";
+  const isReinforcement = orderKind === "reinforce";
   const campTarget = isRewardCampTarget(target);
-  const mainCityBlockReason = isTransfer || campTarget ? "" : getMainCityAttackBlockReason(target, "player");
+  const mainCityBlockReason = isReinforcement && !campTarget && isProtectedMainCity(target)
+    ? `${target.name} is a clan ally's home city and cannot be reinforced.`
+    : isTransfer || campTarget ? "" : getMainCityAttackBlockReason(target, "player");
   if (mainCityBlockReason) {
     showMainCityProtectedAttackModal(target);
     return;
   }
-  const shieldBlockReason = isTransfer || campTarget ? "" : getPeaceShieldAttackBlockReason(target, "player");
+  const shieldBlockReason = orderKind !== "attack" || campTarget ? "" : getPeaceShieldAttackBlockReason(target, "player");
   if (shieldBlockReason) {
     showToast(shieldBlockReason);
     cancelSendMode();
     if (modal.open) modal.close();
     return;
   }
-  const commandLabel = isTransfer ? "Transfer" : "Attack";
-  const commandIcon = isTransfer ? "&#9822;" : "&#9876;";
-  const shieldDropWarning = isTransfer ? "" : getPeaceShieldAttackWarning(target);
+  const commandLabel = isTransfer ? "Transfer" : isReinforcement ? "Reinforce" : "Attack";
+  const commandIcon = isTransfer ? "&#9822;" : isReinforcement ? "&#8649;" : "&#9876;";
+  const shieldDropWarning = isReinforcement
+    ? getActivePeaceShieldExpiresAtMs() > Date.now()
+      ? "Launching clan reinforcements immediately removes your Royal Peace Shield. Your ally's shield is not affected."
+      : ""
+    : isTransfer ? "" : getPeaceShieldAttackWarning(target);
   const sliderSendLimit = getTroopSliderSendLimit(source, target);
   const demoLimited = sliderSendLimit < source.troops;
   selectedTroopAmount = clamp(selectedTroopAmount, 1, sliderSendLimit);
@@ -20531,7 +20671,7 @@ function showTroopSliderModalWithRoute(source, target, route, options = {}) {
   modal.classList.add("troop-slider-modal");
   modalTitle.textContent = `${commandLabel} troops`;
   modalBody.innerHTML = `
-    <div class="troop-slider-panel ${isTransfer ? "transfer" : "attack"}">
+    <div class="troop-slider-panel ${isTransfer || isReinforcement ? "transfer reinforce" : "attack"}">
       <div class="troop-route-summary">
         <div class="troop-route-city">
           <span>From</span>
@@ -20542,7 +20682,7 @@ function showTroopSliderModalWithRoute(source, target, route, options = {}) {
         <div class="troop-route-city destination">
           <span>To</span>
           <strong>${escapeHtml(target.name)}</strong>
-          <small>${escapeHtml(getRegionLabel(getCityRegionId(target)))} &middot; ${campTarget ? (isTransfer ? `Your ${escapeHtml(target.name)}` : `${OWNER[target.owner].label} ${escapeHtml(target.name)}`) : isTransfer ? "Your city" : `${OWNER[target.owner].label} city`}</small>
+          <small>${escapeHtml(getRegionLabel(getCityRegionId(target)))} &middot; ${isReinforcement ? "Clan allied holding" : campTarget ? (isTransfer ? `Your ${escapeHtml(target.name)}` : `${OWNER[target.owner].label} ${escapeHtml(target.name)}`) : isTransfer ? "Your city" : `${OWNER[target.owner].label} city`}</small>
         </div>
       </div>
 
@@ -20550,17 +20690,17 @@ function showTroopSliderModalWithRoute(source, target, route, options = {}) {
 
       <div class="troop-slider-control">
         <div class="troop-slider-readout">
-          <span>Troops to ${isTransfer ? "send" : "attack with"}</span>
+          <span>Troops to ${isTransfer || isReinforcement ? "send" : "attack with"}</span>
           <strong id="troopSliderAmount">${formatNumber(selectedTroopAmount)}</strong>
         </div>
-        <input id="troopAmountSlider" class="troop-amount-slider" type="range" min="1" max="${sliderSendLimit}" value="${selectedTroopAmount}" aria-label="Troops to ${isTransfer ? "transfer" : "attack with"}" />
+        <input id="troopAmountSlider" class="troop-amount-slider" type="range" min="1" max="${sliderSendLimit}" value="${selectedTroopAmount}" aria-label="Troops to ${isReinforcement ? "reinforce with" : isTransfer ? "transfer" : "attack with"}" />
         <div class="troop-slider-limits"><span>1</span><span id="troopSliderMaxLabel">${demoLimited ? "Protected max" : "Max"} ${formatNumber(sliderSendLimit)}</span></div>
       </div>
 
       <div id="troopSliderPreview" class="troop-slider-preview"></div>
 
       <div class="troop-slider-actions">
-        <button id="troopSliderConfirm" class="troop-slider-confirm ${isTransfer ? "transfer" : "attack"}" type="button">
+        <button id="troopSliderConfirm" class="troop-slider-confirm ${isTransfer || isReinforcement ? "transfer reinforce" : "attack"}" type="button">
           <span aria-hidden="true">${commandIcon}</span>${commandLabel}
         </button>
         <button id="troopSliderCancel" class="troop-slider-cancel" type="button">Cancel</button>
@@ -20595,13 +20735,26 @@ function updateTroopSliderModal(source, target, route) {
   const maxLabel = modalBody.querySelector("#troopSliderMaxLabel");
   if (maxLabel) maxLabel.textContent = `${demoLimited ? "Protected max" : "Max"} ${formatNumber(sliderSendLimit)}`;
 
-  const travel = travelTime(source, target, "player", route.length, selectedTroopAmount, target.owner === "player" ? "transfer" : "attack");
+  const orderKind = getTroopOrderKind(target, activeTroopOrderKind);
+  const travel = travelTime(source, target, "player", route.length, selectedTroopAmount, orderKind);
   const previewEl = modalBody.querySelector("#troopSliderPreview");
-  if (target.owner === "player") {
+  if (orderKind === "transfer") {
     previewEl.className = "troop-slider-preview transfer";
     previewEl.innerHTML = `
       <div><span>Arrival</span><strong>${formatNumber(target.troops + selectedTroopAmount)} troops</strong></div>
       <div><span>Travel time</span><strong>About ${formatDuration(travel)}</strong><small>${escapeHtml(routeSummary)}</small></div>
+    `;
+    return;
+  }
+
+  if (orderKind === "reinforce") {
+    const ownStationed = getStationedReinforcementsForTarget(target)
+      .find(entry => entry.ownerUid === getCurrentOnlineUid());
+    const afterArrival = Math.max(0, Math.floor(Number(ownStationed?.troops) || 0)) + selectedTroopAmount;
+    previewEl.className = "troop-slider-preview transfer reinforce";
+    previewEl.innerHTML = `
+      <div><span>Your stationed support</span><strong>${formatNumber(afterArrival)} troops</strong><small>Owned by you and merged at this holding</small></div>
+      <div><span>Travel time</span><strong>About ${formatDuration(travel)}</strong><small>${escapeHtml(routeSummary)}</small><small>Defends automatically with the holder's bonuses</small></div>
     `;
     return;
   }
@@ -20685,11 +20838,13 @@ function confirmTroopSliderOrder() {
   const launched = launchAttack(source.id, target.id, 1, "player", selectedTroopAmount, {
     route: cachedRoute,
     attackProtection: activeAttackProtectionPreview,
+    kind: activeTroopOrderKind,
   });
   if (!launched) return;
   troopSliderActive = false;
   activeTroopSliderRoute = null;
   activeAttackProtectionPreview = null;
+  activeTroopOrderKind = "";
   modal.classList.remove("troop-slider-modal");
   if (modal.open) modal.close();
   clearSelection(false);
@@ -20704,6 +20859,7 @@ function cancelSendMode() {
   selectedTroopAmount = 1;
   activeTroopSliderRoute = null;
   activeAttackProtectionPreview = null;
+  activeTroopOrderKind = "";
   renderAll();
 }
 
@@ -21094,7 +21250,102 @@ async function refreshCrownCitadelReignPanel({ force = false } = {}) {
   return crownCitadelReignRequest;
 }
 
+function getStationedReinforcementsForTarget(target) {
+  if (!target) return [];
+  const targetType = isRewardCampTarget(target) ? "camp" : "city";
+  const regionId = normalizeRegionId(getCityRegionId(target));
+  return onlineReinforcements
+    .filter(entry => entry?.status === "stationed")
+    .filter(entry => String(entry.targetType || "city") === targetType)
+    .filter(entry => String(entry.targetId || "") === String(target.id || ""))
+    .filter(entry => normalizeRegionId(entry.targetRegionId) === regionId)
+    .sort((a, b) => String(a.ownerName || "").localeCompare(String(b.ownerName || "")));
+}
+
+function renderHoldingReinforcementPanel(target) {
+  if (!target?.ownerUid) return "";
+  const currentUid = getCurrentOnlineUid();
+  const isHolder = target.ownerUid === currentUid;
+  const contributions = getStationedReinforcementsForTarget(target);
+  const visible = isHolder
+    ? contributions
+    : contributions.filter(entry => entry.ownerUid === currentUid);
+  if (!isHolder && !isClanAllyCity(target) && !visible.length) return "";
+  const rows = visible.length
+    ? visible.map(entry => {
+      const returning = reinforcementReturnRequests.has(entry.id);
+      const actionLabel = isHolder && entry.ownerUid !== currentUid ? "Send Home" : "Recall";
+      return `
+        <article class="holding-reinforcement-row">
+          <span><strong>${escapeHtml(entry.ownerUid === currentUid ? "Your troops" : entry.ownerName || "Clan member")}</strong><small>${formatNumber(entry.troops)} stationed</small></span>
+          <button data-return-clan-reinforcement="${escapeHtml(entry.id)}" type="button" ${returning ? "disabled" : ""}>${returning ? "Returning..." : actionLabel}</button>
+        </article>`;
+    }).join("")
+    : `<p class="holding-reinforcement-empty">${isHolder ? "No allied troops are stationed here." : "You have no troops stationed at this allied holding."}</p>`;
+  return `
+    <section class="holding-reinforcement-panel" data-holding-reinforcement-panel data-target-id="${escapeHtml(target.id)}" data-target-type="${isRewardCampTarget(target) ? "camp" : "city"}">
+      <div class="holding-reinforcement-heading">
+        <span>Clan reinforcements</span>
+        <strong>${formatNumber(visible.reduce((total, entry) => total + Math.max(0, Math.floor(Number(entry.troops) || 0)), 0))} troops</strong>
+      </div>
+      ${rows}
+      <small>${isHolder ? "Only you can see every contributor and send their full contribution home." : "Only you and the holding owner can see your contribution."}</small>
+    </section>`;
+}
+
+function bindHoldingReinforcementButtons(root = modalBody) {
+  root?.querySelectorAll("[data-return-clan-reinforcement]").forEach(button => {
+    button.addEventListener("click", () => returnClanReinforcement(button.dataset.returnClanReinforcement));
+  });
+}
+
+async function returnClanReinforcement(reinforcementId) {
+  const id = String(reinforcementId || "");
+  const api = getOnlineApi();
+  if (!id || reinforcementReturnRequests.has(id)) return false;
+  if (!api?.returnClanReinforcement || !api?.isSignedIn?.()) {
+    showToast("Reinforcement returns require the Crownlands server.");
+    return false;
+  }
+  reinforcementReturnRequests.add(id);
+  refreshOpenHoldingReinforcementPanel();
+  try {
+    const result = await api.returnClanReinforcement({ reinforcementId: id });
+    applyServerArmyResult(result);
+    if (result?.movement) adoptServerArmyMovement(result.movement);
+    showToast(`${formatNumber(result?.troops || 0)} reinforcement troops are returning home.`);
+    updateOutgoingAttackUi();
+    return true;
+  } catch (error) {
+    console.warn("Could not return clan reinforcements", error);
+    showToast(error?.message || "Could not return those reinforcements.");
+    return false;
+  } finally {
+    reinforcementReturnRequests.delete(id);
+    refreshOpenHoldingReinforcementPanel();
+  }
+}
+
+function refreshOpenHoldingReinforcementPanel() {
+  const panel = modalBody?.querySelector("[data-holding-reinforcement-panel]");
+  if (!panel) return;
+  const target = panel.dataset.targetType === "camp"
+    ? getCampTargetById(panel.dataset.targetId)
+    : cityById(panel.dataset.targetId);
+  if (!target) return;
+  const wrapper = document.createElement("div");
+  wrapper.innerHTML = renderHoldingReinforcementPanel(target);
+  const replacement = wrapper.firstElementChild;
+  if (!replacement) {
+    panel.remove();
+    return;
+  }
+  panel.replaceWith(replacement);
+  bindHoldingReinforcementButtons(replacement);
+}
+
 function showCrownCitadelInfoModal(city) {
+  modal.dataset.cityInfoId = city.id;
   const owned = city.owner === "player";
   const report = owned ? null : getScoutReport(city.id);
   const stats = getCityStats(city);
@@ -21128,6 +21379,7 @@ function showCrownCitadelInfoModal(city) {
           <div class="stat-chip"><span>Garrison limit</span><strong>Unlimited</strong></div>
           ${!owned && !report ? `<div class="stat-wide scout-required"><span>Defense report</span><strong>Scout to reveal</strong></div>` : ""}
           ${owned ? renderRelinquishCityAction(city) : ""}
+          ${renderHoldingReinforcementPanel(city)}
         </div>
       </section>
       <section id="citadelReignsPanel" class="camp-info-tab-panel" role="tabpanel" aria-labelledby="citadelReignsTab" data-citadel-info-panel="reigns" hidden>
@@ -21149,6 +21401,7 @@ function showCrownCitadelInfoModal(city) {
     });
     if (selectedTab === "reigns") refreshCrownCitadelReignPanel();
   }));
+  bindHoldingReinforcementButtons();
   if (owned) bindRelinquishCityButton(city);
   if (!modal.open) modal.showModal();
 }
@@ -21175,7 +21428,7 @@ function showCityInfoModal(cityId) {
     modalTitle.textContent = stronghold ? `${city.name} - Stronghold` : `${city.name} - Level ${city.level}`;
     modalBody.innerHTML = `
       <div class="city-stat-panel modal-city-stats">
-        ${clanAlly ? `<div class="stat-wide clan-ally-status"><span>Relationship</span><strong>Clan Ally [${escapeHtml(clanIdentity.clanTag)}]</strong><small>You cannot scout or attack this city.</small><button id="openCityClanBtn" class="profile-secondary-btn" type="button">Open Clan</button></div>` : clanIdentity.clanTag ? `<div class="stat-wide"><span>Clan</span><strong>[${escapeHtml(clanIdentity.clanTag)}] ${escapeHtml(clanIdentity.clanName)}</strong></div>` : ""}
+        ${clanAlly ? `<div class="stat-wide clan-ally-status"><span>Relationship</span><strong>Clan Ally [${escapeHtml(clanIdentity.clanTag)}]</strong><small>${isProtectedMainCity(city) ? "Home cities cannot be reinforced." : "Scout and Attack are disabled. You may send clan reinforcements."}</small><button id="openCityClanBtn" class="profile-secondary-btn" type="button">Open Clan</button></div>` : clanIdentity.clanTag ? `<div class="stat-wide"><span>Clan</span><strong>[${escapeHtml(clanIdentity.clanTag)}] ${escapeHtml(clanIdentity.clanName)}</strong></div>` : ""}
         ${stronghold ? `<div class="stat-wide"><span>Stronghold bonus</span><strong>${strongholdBonusLabel}</strong><small>Bonus is active only for the current controller.</small></div>` : ""}
         <div class="stat-wide"><span>Owner</span>${renderPlayerNameLink(city.ownerUid || getCurrentOnlineUid(), getCityOwnerDisplayName(city))}</div>
         <div class="stat-chip"><span>${stronghold ? "Defense level" : "City level"}</span><strong>${formatNumber(stats.level)}</strong></div>
@@ -21187,6 +21440,7 @@ function showCityInfoModal(cityId) {
         ${report
           ? `<div class="stat-wide"><span>Scout report expires</span><strong>${formatDuration(remaining)}</strong></div>`
           : `<div class="stat-wide scout-required"><span>Scout report</span><strong>Not available</strong></div>`}
+        ${renderHoldingReinforcementPanel(city)}
       </div>
     `;
     const openCityClanBtn = document.getElementById("openCityClanBtn");
@@ -21195,6 +21449,7 @@ function showCityInfoModal(cityId) {
       showProfileScreen();
       showProfileClan();
     });
+    bindHoldingReinforcementButtons();
     if (!modal.open) modal.showModal();
     return;
   }
@@ -21229,9 +21484,11 @@ function showCityInfoModal(cityId) {
         <div class="stat-chip"><span>Garrison limit</span><strong>Unlimited</strong><small>station as many troops as you can send</small></div>
         <div class="stat-chip"><span>Effect target</span><strong>${effectTargetLabel}</strong><small>${effectHelp}</small></div>
         ${renderRelinquishCityAction(city)}
+        ${renderHoldingReinforcementPanel(city)}
       </div>
     `;
     bindRelinquishCityButton(city);
+    bindHoldingReinforcementButtons();
     if (!modal.open) modal.showModal();
     return;
   }
@@ -21272,6 +21529,7 @@ function showCityInfoModal(cityId) {
       <div class="stat-chip"><span>Invested gold</span><strong>${formatNumber(city.investedGold || 0)}</strong><small>Clears when captured</small></div>
       ${cooldownRemaining > 0 ? `<div class="stat-wide"><span>Capture XP cooldown</span><strong>${formatDuration(cooldownRemaining)}</strong></div>` : ""}
       ${renderRelinquishCityAction(city)}
+      ${renderHoldingReinforcementPanel(city)}
     </div>
   `;
   modalBody.querySelector("#changeMainCityBtn")?.addEventListener("click", () => {
@@ -21279,6 +21537,7 @@ function showCityInfoModal(cityId) {
   });
   bindCityLevelUpButtons(city);
   bindRelinquishCityButton(city);
+  bindHoldingReinforcementButtons();
   if (!modal.open) modal.showModal();
 }
 
@@ -23456,7 +23715,7 @@ function updateIncomingAttackUi() {
 function updateOutgoingAttackUi() {
   if (!outgoingAttackBtn) return;
   const operations = getActiveOperationsSnapshot();
-  const total = operations.marches.length + operations.camps.length + operations.strongholds.length;
+  const total = operations.marches.length + operations.camps.length + operations.strongholds.length + onlineReinforcements.length;
   outgoingAttackBtn.hidden = total === 0;
   outgoingAttackBtn.classList.toggle("active", total > 0);
   if (!total) {
@@ -23518,10 +23777,15 @@ function getHeldStrongholdsForActiveOperations() {
 }
 
 function getActiveOperationsSnapshot() {
+  const marches = getOutgoingAttacks();
   return {
-    marches: getOutgoingAttacks(),
+    marches,
     camps: getHeldCampsForActiveOperations(),
     strongholds: getHeldStrongholdsForActiveOperations(),
+    reinforcements: [
+      ...marches.filter(mission => mission.kind === "reinforce" || mission.reinforcementReturn),
+      ...onlineReinforcements.map(entry => ({ ...entry, stationed: true })),
+    ],
   };
 }
 
@@ -23530,9 +23794,10 @@ function getArmyKindCounts(missions) {
     if (mission.returning) counts.returns += 1;
     else if (mission.kind === "scout") counts.scouts += 1;
     else if (mission.kind === "transfer") counts.transfers += 1;
+    else if (mission.kind === "reinforce") counts.reinforcements += 1;
     else counts.attacks += 1;
     return counts;
-  }, { attacks: 0, scouts: 0, transfers: 0, returns: 0 });
+  }, { attacks: 0, scouts: 0, transfers: 0, reinforcements: 0, returns: 0 });
 }
 
 function getIncomingThreatCounts(incoming) {
@@ -23553,6 +23818,7 @@ function formatOutgoingMissionSummary(outgoing) {
   if (counts.attacks) parts.push(`${formatNumber(counts.attacks)} outgoing ${counts.attacks === 1 ? "attack" : "attacks"}`);
   if (counts.scouts) parts.push(`${formatNumber(counts.scouts)} outgoing ${counts.scouts === 1 ? "scout" : "scouts"}`);
   if (counts.transfers) parts.push(`${formatNumber(counts.transfers)} ${counts.transfers === 1 ? "troop transfer" : "troop transfers"}`);
+  if (counts.reinforcements) parts.push(`${formatNumber(counts.reinforcements)} clan ${counts.reinforcements === 1 ? "reinforcement" : "reinforcements"}`);
   if (counts.returns) parts.push(`${formatNumber(counts.returns)} returning ${counts.returns === 1 ? "army" : "armies"}`);
   return parts.join(", ") || "No active marches";
 }
@@ -23648,7 +23914,7 @@ async function focusIncomingAttackCity(cityId) {
 
 function showOutgoingAttacksModal() {
   const operations = getActiveOperationsSnapshot();
-  const total = operations.marches.length + operations.camps.length + operations.strongholds.length;
+  const total = operations.marches.length + operations.camps.length + operations.strongholds.length + onlineReinforcements.length;
   if (!total) {
     showToast("No active marches or controlled objectives right now.");
     updateOutgoingAttackUi();
@@ -23657,6 +23923,8 @@ function showOutgoingAttacksModal() {
   if (!operations[activeOperationsTab]?.length) {
     activeOperationsTab = operations.marches.length
       ? "marches"
+      : operations.reinforcements.length
+        ? "reinforcements"
       : operations.camps.length
         ? "camps"
         : "strongholds";
@@ -23670,15 +23938,18 @@ function showOutgoingAttacksModal() {
 function renderOutgoingAttacksModalContent(operations = getActiveOperationsSnapshot()) {
   const normalizedOperations = operations?.marches
     ? operations
-    : { marches: Array.isArray(operations) ? operations : [], camps: getHeldCampsForActiveOperations(), strongholds: getHeldStrongholdsForActiveOperations() };
-  const { marches, camps, strongholds } = normalizedOperations;
+    : { marches: Array.isArray(operations) ? operations : [], camps: getHeldCampsForActiveOperations(), strongholds: getHeldStrongholdsForActiveOperations(), reinforcements: [] };
+  const { marches, camps, strongholds, reinforcements = [] } = normalizedOperations;
   const tabs = [
     { id: "marches", label: "Marches", count: marches.length },
+    { id: "reinforcements", label: "Reinforcements", count: reinforcements.length },
     { id: "camps", label: "Camps", count: camps.length },
     { id: "strongholds", label: "Strongholds", count: strongholds.length },
   ];
   if (!tabs.some(tab => tab.id === activeOperationsTab)) activeOperationsTab = "marches";
-  const panel = activeOperationsTab === "camps"
+  const panel = activeOperationsTab === "reinforcements"
+    ? renderReinforcementOperationPanel(reinforcements)
+    : activeOperationsTab === "camps"
     ? renderHeldCampsOperationPanel(camps)
     : activeOperationsTab === "strongholds"
       ? renderHeldStrongholdsOperationPanel(strongholds)
@@ -23721,6 +23992,34 @@ function renderOutgoingAttacksModalContent(operations = getActiveOperationsSnaps
   modalBody.querySelectorAll("[data-recall-horn]").forEach(button => {
     button.addEventListener("click", () => useRecallHornOnMission(button.dataset.recallHorn));
   });
+  bindHoldingReinforcementButtons();
+}
+
+function renderReinforcementOperationPanel(entries = []) {
+  if (!entries.length) return `<div class="incoming-attack-empty">No clan reinforcements are traveling or stationed.</div>`;
+  return `
+    <div class="reinforcement-operations-list">
+      ${entries.map(entry => {
+        if (!entry.stationed) {
+          const returning = entry.reinforcementReturn;
+          return `
+            <article class="reinforcement-operation-card traveling">
+              <span><strong>${returning ? "Returning home" : "Traveling support"}</strong><small>${escapeHtml(entry.fromName || "Holding")} &rarr; ${escapeHtml(entry.toName || "Holding")}</small></span>
+              <strong>${formatNumber(entry.troops)} troops</strong>
+              <small>${entry.isResolving ? "Arriving" : formatDuration(entry.remaining)}</small>
+            </article>`;
+        }
+        const currentUid = getCurrentOnlineUid();
+        const holderView = entry.targetOwnerUid === currentUid;
+        const returning = reinforcementReturnRequests.has(entry.id);
+        return `
+          <article class="reinforcement-operation-card stationed">
+            <span><strong>${escapeHtml(entry.targetName || entry.targetId || "Allied holding")}</strong><small>${holderView ? `${escapeHtml(entry.ownerName || "Clan member")}'s support` : "Your stationed support"}</small></span>
+            <strong>${formatNumber(entry.troops)} troops</strong>
+            <button data-return-clan-reinforcement="${escapeHtml(entry.id)}" type="button" ${returning ? "disabled" : ""}>${returning ? "Returning..." : holderView && entry.ownerUid !== currentUid ? "Send Home" : "Recall"}</button>
+          </article>`;
+      }).join("")}
+    </div>`;
 }
 
 function renderMarchesOperationPanel(marches) {
@@ -25733,6 +26032,8 @@ modal.addEventListener("close", () => {
     dailyLoginRewardCountdownTimer = 0;
   }
   delete modal.dataset.cityInfoId;
+  delete modal.dataset.campInfoId;
+  if (!troopSliderActive) activeTroopOrderKind = "";
   modal.classList.remove("troop-slider-modal");
   modal.classList.remove("scout-report-modal");
   modal.classList.remove("battle-report-modal");

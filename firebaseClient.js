@@ -357,6 +357,10 @@
     return callServerFunction("resolveArmyOrder", payload);
   }
 
+  async function returnClanReinforcement(payload = {}) {
+    return callServerFunction("returnClanReinforcement", payload);
+  }
+
   async function resolveGoldCampPayout(payload = {}) {
     return callServerFunction("resolveGoldCampPayout", payload);
   }
@@ -1023,6 +1027,7 @@
       totalCityTroops: Math.max(0, Math.floor(Number(stats.totalCityTroops) || 0)),
       totalCampTroops: Math.max(0, Math.floor(Number(stats.totalCampTroops) || 0)),
       totalMarchingTroops: Math.max(0, Math.floor(Number(stats.totalMarchingTroops) || 0)),
+      totalReinforcementTroops: Math.max(0, Math.floor(Number(stats.totalReinforcementTroops) || 0)),
       totalCityLevels: Math.max(0, Math.floor(Number(stats.totalCityLevels) || 0)),
       totalVictoryPoints: Math.max(0, Math.floor(Number(stats.totalVictoryPoints) || 0)),
       strongholdCount: Math.max(0, Math.floor(Number(stats.strongholdCount) || 0)),
@@ -1053,6 +1058,7 @@
       strongholdUpgradeCostReductionPercent: Math.max(0, Math.floor(Number(stats.strongholdUpgradeCostReductionPercent) || 0)),
       stationedTroopPower: Math.max(0, Math.floor(Number(stats.stationedTroopPower) || 0)),
       campTroopPower: Math.max(0, Math.floor(Number(stats.campTroopPower) || 0)),
+      reinforcementTroopPower: Math.max(0, Math.floor(Number(stats.reinforcementTroopPower) || 0)),
       cityPower: Math.max(0, Math.floor(Number(stats.cityPower) || 0)),
       marchingPower: Math.max(0, Math.floor(Number(stats.marchingPower) || 0)),
       troopPower: Math.max(0, Math.floor(Number(stats.troopPower) || 0)),
@@ -1266,6 +1272,7 @@
       level: Math.max(1, Math.floor(Number(city.level) || 1)),
       troops: Math.max(0, Math.floor(Number(city.troops) || 0)),
       troopFloat: Math.max(0, Number(city.troopFloat) || Number(city.troops) || 0),
+      alliedReinforcementTroops: Math.max(0, Math.floor(Number(city.alliedReinforcementTroops) || 0)),
       defense: 1,
       investedGold: Math.max(0, Math.floor(Number(city.investedGold) || 0)),
       lastCapturedAt: city.lastCapturedAt ?? null,
@@ -1711,6 +1718,47 @@
     return () => unsubscribers.forEach(unsubscribe => unsubscribe());
   }
 
+  function subscribePlayerReinforcements(handlers = {}) {
+    if (!client.configured || !client.db || !client.user?.uid) return () => {};
+    const { collection, onSnapshot, query: firestoreQuery, where } = client.modules.firestore;
+    if (!collection || !onSnapshot || !firestoreQuery || !where) return () => {};
+    const uid = client.user.uid;
+    const rowsBySource = new Map([
+      ["contributor", new Map()],
+      ["holder", new Map()],
+    ]);
+    const emit = () => {
+      if (typeof handlers.onReinforcements !== "function") return;
+      const merged = new Map();
+      rowsBySource.forEach(rows => rows.forEach((entry, id) => merged.set(id, entry)));
+      handlers.onReinforcements([...merged.values()]);
+    };
+    const subscribe = (source, ownerField) => onSnapshot(
+      firestoreQuery(
+        collection(client.db, "reinforcements"),
+        where(ownerField, "==", uid),
+        where("resetGeneration", "==", RESET_GENERATION),
+        where("worldId", "==", ONLINE_WORLD_ID),
+        where("status", "==", "stationed")
+      ),
+      snapshot => {
+        rowsBySource.set(source, new Map(snapshot.docs.map(doc => [
+          doc.id,
+          { id: doc.id, ...doc.data() },
+        ])));
+        emit();
+      },
+      error => {
+        if (typeof handlers.onError === "function") handlers.onError(error, source);
+      }
+    );
+    const unsubscribers = [
+      subscribe("contributor", "ownerUid"),
+      subscribe("holder", "targetOwnerUid"),
+    ];
+    return () => unsubscribers.forEach(unsubscribe => unsubscribe());
+  }
+
   function subscribePlayerCamps(handlers = {}) {
     if (!client.configured || !client.db || !client.user?.uid) return () => {};
     const { collectionGroup, onSnapshot, query: firestoreQuery, where } = client.modules.firestore;
@@ -1881,6 +1929,7 @@
     sendArmyOrder,
     previewArmyProtection,
     resolveArmyOrder,
+    returnClanReinforcement,
     resolveGoldCampPayout,
     resolveRewardCampPayout,
     recallRewardCampGarrison,
@@ -1903,6 +1952,7 @@
     loadServerReports,
     subscribeIsland,
     subscribePlayerArmies,
+    subscribePlayerReinforcements,
     subscribePlayerCamps,
     subscribeCrownCitadel,
     subscribeServerReports,

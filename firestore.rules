@@ -58,6 +58,8 @@ service cloud.firestore {
           'kingPower',
           'kingPowerVersion',
           'kingPowerUpdatedAtMs',
+          'stationedReinforcementTroops',
+          'reinforcementResetGeneration',
           'cityCount',
           'globalStats',
           'character',
@@ -99,6 +101,8 @@ service cloud.firestore {
         && profileFieldUnchanged('kingPower')
         && profileFieldUnchanged('kingPowerVersion')
         && profileFieldUnchanged('kingPowerUpdatedAtMs')
+        && profileFieldUnchanged('stationedReinforcementTroops')
+        && profileFieldUnchanged('reinforcementResetGeneration')
         && profileFieldUnchanged('cityCount')
         && profileFieldUnchanged('globalStats');
     }
@@ -293,6 +297,19 @@ service cloud.firestore {
         && (resource.data.ownerUid == request.auth.uid
           || resource.data.targetOwnerUid == request.auth.uid);
       allow create, update, delete: if false;
+    }
+
+    match /reinforcements/{reinforcementId} {
+      allow read: if signedIn()
+        && isCurrentGeneration(resource.data)
+        && resource.data.status == 'stationed'
+        && (resource.data.ownerUid == request.auth.uid
+          || resource.data.targetOwnerUid == request.auth.uid);
+      allow create, update, delete: if false;
+    }
+
+    match /reinforcementBattleReceipts/{resetId}/entries/{receiptId} {
+      allow read, create, update, delete: if false;
     }
 
     // Collection-group queries cannot prove a parent island path. Require both

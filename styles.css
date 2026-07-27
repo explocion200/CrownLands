@@ -4584,7 +4584,7 @@ button.inventory-slot {
 }
 .active-operations-tabs {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 2px;
   padding: 3px;
   border: 1px solid rgba(132, 199, 239, .3);
@@ -6342,6 +6342,93 @@ button.daily-reward-card.available:disabled {
 .city-node.clan-ally .foreign-selected-banner {
   border-color: #79d895;
   box-shadow: 0 0 18px rgba(67,205,103,.7);
+}
+.camp-node.clan-ally .camp-art {
+  filter: drop-shadow(0 0 8px rgba(76, 231, 117, .95)) drop-shadow(0 0 18px rgba(42, 155, 76, .82));
+}
+.camp-node.clan-ally .gold-camp-label {
+  border-color: #79d895;
+  background: linear-gradient(180deg, rgba(37, 111, 60, .96), rgba(12, 54, 30, .96));
+}
+.wheel-reinforce,
+.clan-reinforce-action {
+  border-color: rgba(131, 225, 154, .72) !important;
+  color: #ecfff1 !important;
+  background: linear-gradient(180deg, rgba(58, 136, 76, .98), rgba(18, 71, 38, .98)) !important;
+}
+.holding-reinforcement-panel {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: .45rem;
+  margin-top: .35rem;
+  padding: .7rem;
+  border: 1px solid rgba(123, 221, 147, .42);
+  border-radius: 10px;
+  color: #eaffef;
+  background: linear-gradient(180deg, rgba(29, 87, 48, .72), rgba(8, 37, 25, .88));
+}
+.holding-reinforcement-heading,
+.holding-reinforcement-row,
+.reinforcement-operation-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .65rem;
+}
+.holding-reinforcement-heading span {
+  color: #aee9bd;
+  font-size: .68rem;
+  font-weight: 950;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+}
+.holding-reinforcement-row {
+  padding: .5rem .58rem;
+  border: 1px solid rgba(153, 224, 169, .2);
+  border-radius: 7px;
+  background: rgba(3, 24, 15, .55);
+}
+.holding-reinforcement-row span,
+.holding-reinforcement-row small {
+  display: block;
+}
+.holding-reinforcement-row small,
+.holding-reinforcement-panel > small,
+.holding-reinforcement-empty {
+  color: #a9cdb3;
+  font-size: .65rem;
+}
+.holding-reinforcement-row button,
+.reinforcement-operation-card button {
+  min-height: 34px;
+  padding: .35rem .62rem;
+  border: 1px solid rgba(163, 231, 178, .48);
+  border-radius: 6px;
+  color: #effff2;
+  background: linear-gradient(#408c55, #1b5330);
+  font-weight: 900;
+}
+.reinforcement-operations-list {
+  display: grid;
+  gap: .5rem;
+}
+.reinforcement-operation-card {
+  padding: .68rem .75rem;
+  border: 1px solid rgba(116, 213, 141, .32);
+  border-radius: 10px;
+  color: #effff2;
+  background: rgba(12, 55, 31, .64);
+}
+.reinforcement-operation-card span small,
+.reinforcement-operation-card > small {
+  display: block;
+  color: #a9cdb3;
+  font-size: .66rem;
+}
+@media (max-width: 620px) {
+  .active-operations-tabs { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .holding-reinforcement-row,
+  .reinforcement-operation-card { align-items: flex-start; flex-wrap: wrap; }
 }
 .city-clan-tag { color: #91e6aa; }
 .clan-ally-label {
