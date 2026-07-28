@@ -100,6 +100,7 @@ const CAPTURE_XP_BASE = 120;
 const CAPTURE_XP_PER_CITY_LEVEL = 45;
 const CAPTURE_XP_PER_DEFENDER = 1.5;
 const ENEMY_CAPTURE_XP_BONUS = 300;
+const CAPTURE_XP_COOLDOWN_MS = 60 * 60 * 1000;
 const DEFENSE_HELD_XP_BASE = 80;
 const DEFENSE_HELD_XP_PER_ATTACKER = 0.45;
 const FAILED_BATTLE_XP_RATE = 1 / 3;
@@ -107,10 +108,10 @@ const BATTLE_XP_TROOP_CREDIT_CITY_WALL_MULTIPLIER = 1;
 const BATTLE_XP_TROOP_CREDIT_VP_MULTIPLIER = 2;
 const BATTLE_XP_TROOP_CREDIT_LEVEL_CAP_MULTIPLIER = 3;
 const BATTLE_XP_EARLY_LEVEL_CAP_RATE = 1;
-const BATTLE_XP_MID_START_LEVEL_CAP_RATE = 0.8;
+const BATTLE_XP_MID_START_LEVEL_CAP_RATE = 1;
 const BATTLE_XP_MID_END_LEVEL_CAP_RATE = 0.5;
-const BATTLE_XP_END_START_LEVEL_CAP_RATE = 0.3;
-const BATTLE_XP_END_FLOOR_LEVEL_CAP_RATE = 0.15;
+const BATTLE_XP_END_START_LEVEL_CAP_RATE = 0.5;
+const BATTLE_XP_END_FLOOR_LEVEL_CAP_RATE = 0.35;
 const BATTLE_XP_END_CAP_RAMP_LEVELS = 50;
 const KILL_GOLD_BASE = 5;
 const ATTACK_PROTECTION_VERSION = 2;
@@ -133,12 +134,8 @@ const KING_POWER_REPLACEMENT_HOURS = 12;
 const KING_POWER_DEFENSIVE_ADVANTAGE_WEIGHT = 0.25;
 const HERO_XP_SOFT_CAP_LEVEL = 50;
 const HERO_XP_HARD_CAP_LEVEL = 100;
-const HERO_XP_POST_50_SPAN = 50;
-const HERO_XP_POST_100_SPAN = 25;
-const HERO_XP_POST_50_MULTIPLIER = 2.5;
-const HERO_XP_POST_100_MULTIPLIER = 4;
-const HERO_XP_POST_50_EXPONENT = 1.5;
-const HERO_XP_POST_100_EXPONENT = 1.6;
+const HERO_XP_EXPONENTIAL_START_LEVEL = 25;
+const HERO_XP_EXPONENTIAL_GROWTH_RATE = 1.1;
 const LEVEL_UP_GOLD_EARLY_UPGRADE_SHARE = economyNumber("levelRewards.goldEarlyUpgradeShare", 0.5);
 const LEVEL_UP_GOLD_MID_END_UPGRADE_SHARE = economyNumber("levelRewards.goldMidUpgradeShare", 0.3);
 const LEVEL_UP_GOLD_END_UPGRADE_SHARE = economyNumber("levelRewards.goldEndgameUpgradeShare", 0.2);
@@ -154,8 +151,6 @@ const LEVEL_UP_TROOP_REWARD_END_HOURS_PER_LEVEL = economyNumber("levelRewards.tr
 const LEVEL_UP_TROOP_REWARD_MAX_HOURS = economyNumber("levelRewards.troopMaximumHours", 48);
 const CHARACTER_START_LEVEL = 1;
 const CHARACTER_START_XP = 0;
-const CITY_UPGRADE_XP_BASE = 18;
-const CITY_UPGRADE_XP_PER_LEVEL = 4;
 const ROYAL_PEACE_SHIELD_ITEM_ID = "shield_12h";
 const ROYAL_PEACE_SHIELD_DURATION_MS = economyNumber("shopItems.shield_12h.effectDurationMinutes", 720) * 60 * 1000;
 const WAR_DRUMS_ITEM_ID = "war_drums_30m";
@@ -2307,21 +2302,20 @@ function calculateCombatResult(attackTroops, target, attackerProfile = null, def
 
 function getXpRequiredForLevel(level) {
   const current = Math.max(1, Math.floor(safeNumber(level, 1)));
-  const base = 150 + current * 65 + Math.pow(current, 2.05) * 35;
-  let multiplier = 1;
-  if (current > HERO_XP_SOFT_CAP_LEVEL) {
-    multiplier += Math.pow(
-      (current - HERO_XP_SOFT_CAP_LEVEL) / HERO_XP_POST_50_SPAN,
-      HERO_XP_POST_50_EXPONENT
-    ) * HERO_XP_POST_50_MULTIPLIER;
-  }
-  if (current > HERO_XP_HARD_CAP_LEVEL) {
-    multiplier += Math.pow(
-      (current - HERO_XP_HARD_CAP_LEVEL) / HERO_XP_POST_100_SPAN,
-      HERO_XP_POST_100_EXPONENT
-    ) * HERO_XP_POST_100_MULTIPLIER;
-  }
-  return Math.floor(base * multiplier);
+  const legacyRequirement = value => Math.floor(
+    150 + value * 65 + Math.pow(value, 2.05) * 35
+  );
+  if (current <= HERO_XP_EXPONENTIAL_START_LEVEL) return legacyRequirement(current);
+  const anchor = legacyRequirement(HERO_XP_EXPONENTIAL_START_LEVEL);
+  const requirement = anchor * Math.pow(
+    HERO_XP_EXPONENTIAL_GROWTH_RATE,
+    current - HERO_XP_EXPONENTIAL_START_LEVEL
+  );
+  if (!Number.isFinite(requirement)) return Number.MAX_SAFE_INTEGER;
+  return Math.min(
+    Number.MAX_SAFE_INTEGER,
+    Math.floor(requirement)
+  );
 }
 
 function getLevelUpGoldUpgradeShare(level) {
@@ -2430,16 +2424,74 @@ function getBattleXpTroopCredit(target = {}, troops = 0, defenderProfile = null)
         + stats.victoryPoints * BATTLE_XP_TROOP_CREDIT_VP_MULTIPLIER
     )
   );
-  const hardCap = getXpRequiredForLevel(stats.level) * BATTLE_XP_TROOP_CREDIT_LEVEL_CAP_MULTIPLIER;
+  const hardCap = Math.min(
+    Number.MAX_SAFE_INTEGER,
+    getXpRequiredForLevel(stats.level) * BATTLE_XP_TROOP_CREDIT_LEVEL_CAP_MULTIPLIER
+  );
   return Math.min(Math.max(0, Math.floor(safeNumber(troops, 0))), Math.max(cap, hardCap));
 }
 
-function getCaptureXpAward(target = {}, oldOwnerUid = "", defendersAtStart = 0, defenderProfile = null) {
+function getOpponentPowerXpMultiplier(opponentRatio) {
+  const ratio = safeNumber(opponentRatio, 0);
+  if (ratio >= 2) return 2;
+  if (ratio >= 1.5) return 1.5;
+  if (ratio >= 0.5) return 1;
+  return 0;
+}
+
+function getCaptureXpCooldownRemainingMs(city = {}, nowMs = Date.now()) {
+  const capturedAtMs = Math.max(0, timestampToMs(city.lastCapturedAtMs || city.lastCapturedAt));
+  if (!capturedAtMs) return 0;
+  return Math.max(0, CAPTURE_XP_COOLDOWN_MS - Math.max(0, nowMs - capturedAtMs));
+}
+
+function getCityXpScore(target = {}, oldOwnerUid = "", defenderProfile = null) {
+  const stats = getCityStats(target, defenderProfile);
+  const ownerBonus = oldOwnerUid ? 45 : 10;
+  return stats.victoryPoints
+    + getBattleXpTroopCredit(target, target.troops, defenderProfile) * 0.25
+    + ownerBonus;
+}
+
+function getCaptureXpEfficiency(target = {}, oldOwnerUid = "", {
+  attackerProfile = null,
+  defenderProfile = null,
+  attackerKingPower = 0,
+  defenderKingPower = 0,
+  attackerCityCount = 0,
+} = {}) {
+  if (oldOwnerUid) {
+    const attackerPower = Math.max(1, Math.floor(safeNumber(attackerKingPower, 1)));
+    const defenderPower = Math.max(1, Math.floor(safeNumber(defenderKingPower, 1)));
+    return getOpponentPowerXpMultiplier(defenderPower / attackerPower);
+  }
+
+  const heroLevel = normalizeCharacterProgress(attackerProfile?.character || {}).level;
+  const empirePressure = 48 + heroLevel * 20 + Math.max(0, Math.floor(safeNumber(attackerCityCount, 0))) * 2;
+  const targetScore = getCityXpScore(target, oldOwnerUid, defenderProfile);
+  return Number(clamp(0.35 + targetScore / Math.max(1, empirePressure), 0.25, 2).toFixed(2));
+}
+
+function getCaptureXpAward(
+  target = {},
+  oldOwnerUid = "",
+  defenderLosses = 0,
+  defenderProfile = null,
+  options = {}
+) {
   if (isGivenUpNeutralCity(target)) return 0;
   const level = clampCityLevel(target.level);
-  const defenderXp = Math.floor(getBattleXpTroopCredit(target, defendersAtStart, defenderProfile) * CAPTURE_XP_PER_DEFENDER);
-  const ownerBonus = oldOwnerUid ? ENEMY_CAPTURE_XP_BONUS : 0;
-  return Math.floor(CAPTURE_XP_BASE + level * CAPTURE_XP_PER_CITY_LEVEL + defenderXp + ownerBonus);
+  const troopXp = Math.floor(
+    getBattleXpTroopCredit(target, defenderLosses, defenderProfile) * CAPTURE_XP_PER_DEFENDER
+  );
+  const cityXp = getCaptureXpCooldownRemainingMs(target, options.nowMs) > 0
+    ? 0
+    : CAPTURE_XP_BASE + level * CAPTURE_XP_PER_CITY_LEVEL + (oldOwnerUid ? ENEMY_CAPTURE_XP_BONUS : 0);
+  const efficiency = getCaptureXpEfficiency(target, oldOwnerUid, {
+    ...options,
+    defenderProfile,
+  });
+  return Math.floor((cityXp + troopXp) * efficiency);
 }
 
 function getDefenseHeldXpAward(attackingTroops, target = {}, defenderProfile = null) {
@@ -4724,10 +4776,6 @@ function getCityUpgradeCost(city = {}, bonuses = {}) {
   if (!Number.isFinite(totalCost)) return Infinity;
   const reduction = Math.max(0, safeNumber(bonuses.upgradeCostReductionPercent, 0));
   return Math.max(10, Math.floor(totalCost * (1 - Math.min(85, reduction) / 100) + 0.000001));
-}
-
-function getCityUpgradeXpAward(city = {}) {
-  return Math.floor(CITY_UPGRADE_XP_BASE + clampCityLevel(city.level) * CITY_UPGRADE_XP_PER_LEVEL);
 }
 
 function getEconomyCityByRef(economy = null, ref = null) {
@@ -8040,7 +8088,6 @@ exports.upgradeCity = onCall({ region: "us-central1", maxInstances: 20, invoker:
     let investedGold = Math.max(0, Math.floor(safeNumber(city.investedGold, 0)));
     let upgraded = 0;
     let spentGold = 0;
-    let xpAward = 0;
     const upgradeBonuses = {
       ...economy.bonuses,
       upgradeCostReductionPercent: Math.min(
@@ -8060,7 +8107,6 @@ exports.upgradeCity = onCall({ region: "us-central1", maxInstances: 20, invoker:
       investedGold += cost;
       city.level = nextLevel;
       spentGold += cost;
-      xpAward += getCityUpgradeXpAward(city);
       upgraded += 1;
     }
 
@@ -8073,13 +8119,6 @@ exports.upgradeCity = onCall({ region: "us-central1", maxInstances: 20, invoker:
       );
     }
 
-    const progress = buildPlayerProgressPatch({ ...economy.profileAfter, gold, goldFloat }, { xp: xpAward });
-    const levelTroopReward = creditLevelUpTroopsToMainCity(
-      economy,
-      economy.profileAfter,
-      progress.levelTroopReward,
-      nowMs
-    );
     const cityPatch = {
       level: city.level,
       investedGold,
@@ -8095,22 +8134,16 @@ exports.upgradeCity = onCall({ region: "us-central1", maxInstances: 20, invoker:
     };
 
     writePreparedEconomy(transaction, economy, {
-      character: progress.character,
-      gold: progress.gold,
-      goldFloat: progress.goldFloat,
+      gold,
+      goldFloat,
     }, [{ ref: cityRef, city, patch: cityPatch }]);
 
     return createEconomyResponse(economy, {
-      gold: progress.gold,
-      goldFloat: progress.goldFloat,
-      character: progress.character,
+      gold,
+      goldFloat,
       cityUpdates: [...economy.cityUpdates, cityUpdate],
       spentGold,
       upgraded,
-      xpAwarded: progress.xpAwarded,
-      troopsAwarded: levelTroopReward?.credited || 0,
-      troopRewardCityId: levelTroopReward?.cityId || "",
-      troopRewardCityName: levelTroopReward?.cityName || "",
     });
   });
 });
@@ -10711,6 +10744,40 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
       || army.retargetedFromKind === "reinforce"
     );
     const convertedReinforcement = convertedTransferReinforcement || convertedClanReinforcement;
+    const currentAttackerKingPower = getPlayerPowerSnapshot({
+      profile: attackerProfile,
+      globalStats: attackerEconomy?.globalStats,
+      city: source,
+      fallback: army.attackerKingPower || army.ownerKingPower,
+    });
+    const currentDefenderKingPower = getPlayerPowerSnapshot({
+      profile: defenderProfile || {},
+      globalStats: defenderEconomy?.globalStats,
+      city: target,
+      fallback: army.defenderKingPower,
+    });
+    const launchAttackerKingPower = Math.max(
+      0,
+      Math.floor(safeNumber(army.attackerKingPower || army.ownerKingPower, 0))
+    );
+    const attackerKingPowerForXp = Math.max(
+      1,
+      launchAttackerKingPower || currentAttackerKingPower
+    );
+    const launchTargetOwnerUid = safeString(
+      army.originalTargetOwnerUid || army.targetOwnerUid,
+      128
+    );
+    const launchDefenderKingPower = Math.max(
+      0,
+      Math.floor(safeNumber(army.defenderKingPower, 0))
+    );
+    const defenderKingPowerForXp = Math.max(
+      1,
+      launchTargetOwnerUid && launchTargetOwnerUid === defenderUid
+        ? launchDefenderKingPower || currentDefenderKingPower
+        : currentDefenderKingPower
+    );
     const baseAttackProtection = storedAttackProtection || (
       convertedReinforcement && targetType !== "camp"
         ? createServerAttackProtectionSnapshot({
@@ -10721,18 +10788,8 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
           target: combatTarget,
           targetType,
           requestedTroops: Math.max(1, Math.floor(safeNumber(army.requestedTroops, troopCount))),
-          attackerKingPower: getPlayerPowerSnapshot({
-            profile: attackerProfile,
-            globalStats: attackerEconomy?.globalStats,
-            city: source,
-            fallback: army.attackerKingPower || army.ownerKingPower,
-          }),
-          defenderKingPower: getPlayerPowerSnapshot({
-            profile: defenderProfile || {},
-            globalStats: defenderEconomy?.globalStats,
-            city: target,
-            fallback: army.defenderKingPower,
-          }),
+          attackerKingPower: attackerKingPowerForXp,
+          defenderKingPower: defenderKingPowerForXp,
           attackerUid,
           attackerProfile,
           defenderProfile: defenderProfile || {},
@@ -11640,8 +11697,23 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
     const givenUpNeutralTarget = isGivenUpNeutralCity(target);
     const attackWinXp = attackProtection || givenUpNeutralTarget
       ? 0
-      : getCaptureXpAward(target, oldOwnerUid, result.defenderLosses, defenderProfile);
-    const defenseHeldXp = getDefenseHeldXpAward(troopCount, target, defenderProfile);
+      : getCaptureXpAward(target, oldOwnerUid, result.defenderLosses, defenderProfile, {
+        nowMs,
+        attackerProfile,
+        attackerKingPower: attackerKingPowerForXp,
+        defenderKingPower: defenderKingPowerForXp,
+        attackerCityCount: attackerEconomy?.cityEntries.filter(entry => (
+          entry?.city
+          && getOwnerUid(entry.city) === attackerUid
+          && !isStronghold(entry.city)
+        )).length || 0,
+      });
+    const defenseOpponentXpMultiplier = attackProtection
+      ? 1
+      : getOpponentPowerXpMultiplier(attackerKingPowerForXp / defenderKingPowerForXp);
+    const defenseHeldXp = Math.floor(
+      getDefenseHeldXpAward(troopCount, target, defenderProfile) * defenseOpponentXpMultiplier
+    );
     const cappedAttackWinXp = capBattleXpForHeroLevel(attackWinXp, attackerProfile);
     const cappedDefenseHeldXp = Math.floor(capBattleXpForHeroLevel(defenseHeldXp, defenderProfile || {}) * defenderXpMultiplierApplied);
     const attackerXp = result.success ? cappedAttackWinXp : getPartialBattleXpAward(cappedAttackWinXp);

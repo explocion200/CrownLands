@@ -74,7 +74,7 @@ Troop orders and online economy updates now go through Firebase callable functio
 - `sendArmyOrder`: validates source ownership, troop count, target protection, travel timing, deducts troops, and creates visible army docs for every route region.
 - `resolveArmyOrder`: can be triggered by any signed-in player who sees an overdue army. It resolves scouts, transfers, attacks, defenses, city capture, level drops, XP, gold rewards, and server reports in one Firestore transaction.
 - `collectEconomy`: collects passive/offline gold and troop production for every owned city across all region maps.
-- `upgradeCity`: collects production, spends server gold, upgrades the city, records invested gold, and awards upgrade XP in one transaction.
+- `upgradeCity`: collects production, spends server gold, upgrades the city, and records invested gold in one transaction. City upgrades do not award hero XP.
 - `purchaseShopItem` and `activateInventoryItem`: spend gold, update inventory, apply Peace Shield/War Drums timers, and sync shield expiry to owned city docs from the server.
 - `resolveDueArmyOrders`: runs from Cloud Scheduler once per minute, finds overdue active attack/scout/transfer armies, and resolves them on the server even when every player is offline.
 

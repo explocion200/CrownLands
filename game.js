@@ -748,12 +748,8 @@ const CHARACTER_START_LEVEL = 1;
 const CHARACTER_START_XP = 0;
 const HERO_XP_SOFT_CAP_LEVEL = 50;
 const HERO_XP_HARD_CAP_LEVEL = 100;
-const HERO_XP_POST_50_SPAN = 50;
-const HERO_XP_POST_100_SPAN = 25;
-const HERO_XP_POST_50_MULTIPLIER = 2.5;
-const HERO_XP_POST_100_MULTIPLIER = 4;
-const HERO_XP_POST_50_EXPONENT = 1.5;
-const HERO_XP_POST_100_EXPONENT = 1.6;
+const HERO_XP_EXPONENTIAL_START_LEVEL = 25;
+const HERO_XP_EXPONENTIAL_GROWTH_RATE = 1.1;
 const LEVEL_UP_GOLD_EARLY_UPGRADE_SHARE = economyNumber("levelRewards.goldEarlyUpgradeShare", 0.5);
 const LEVEL_UP_GOLD_MID_END_UPGRADE_SHARE = economyNumber("levelRewards.goldMidUpgradeShare", 0.3);
 const LEVEL_UP_GOLD_END_UPGRADE_SHARE = economyNumber("levelRewards.goldEndgameUpgradeShare", 0.2);
@@ -767,14 +763,11 @@ const LEVEL_UP_TROOP_REWARD_MID_HOURS_PER_LEVEL = economyNumber("levelRewards.tr
 const LEVEL_UP_TROOP_REWARD_END_BASE_HOURS = economyNumber("levelRewards.troopEndgameBaseHours", 36);
 const LEVEL_UP_TROOP_REWARD_END_HOURS_PER_LEVEL = economyNumber("levelRewards.troopEndgameHoursPerLevel", 0.12);
 const LEVEL_UP_TROOP_REWARD_MAX_HOURS = economyNumber("levelRewards.troopMaximumHours", 48);
-const CITY_UPGRADE_XP_BASE = 18;
-const CITY_UPGRADE_XP_PER_LEVEL = 4;
 const CAPTURE_XP_BASE = 120;
 const CAPTURE_XP_PER_CITY_LEVEL = 45;
 const CAPTURE_XP_PER_DEFENDER = 1.5;
 const ENEMY_CAPTURE_XP_BONUS = 300;
 const CAPTURE_XP_COOLDOWN_SECONDS = 3600;
-const RECENT_CAPTURE_XP_MULTIPLIER = 0.25;
 const DEFENSE_HELD_XP_BASE = 80;
 const DEFENSE_HELD_XP_PER_ATTACKER = 0.45;
 const FAILED_BATTLE_XP_RATE = 1 / 3;
@@ -782,10 +775,10 @@ const BATTLE_XP_TROOP_CREDIT_CITY_WALL_MULTIPLIER = 1;
 const BATTLE_XP_TROOP_CREDIT_VP_MULTIPLIER = 2;
 const BATTLE_XP_TROOP_CREDIT_LEVEL_CAP_MULTIPLIER = 3;
 const BATTLE_XP_EARLY_LEVEL_CAP_RATE = 1;
-const BATTLE_XP_MID_START_LEVEL_CAP_RATE = 0.8;
+const BATTLE_XP_MID_START_LEVEL_CAP_RATE = 1;
 const BATTLE_XP_MID_END_LEVEL_CAP_RATE = 0.5;
-const BATTLE_XP_END_START_LEVEL_CAP_RATE = 0.3;
-const BATTLE_XP_END_FLOOR_LEVEL_CAP_RATE = 0.15;
+const BATTLE_XP_END_START_LEVEL_CAP_RATE = 0.5;
+const BATTLE_XP_END_FLOOR_LEVEL_CAP_RATE = 0.35;
 const BATTLE_XP_END_CAP_RAMP_LEVELS = 50;
 const ATTACK_PROTECTION_VERSION = 2;
 const ATTACK_PROTECTION_ASSAULT_MIN_RATIO = 2;
@@ -5969,21 +5962,20 @@ function reconcileSkillPoints(character = state?.character, upgrades = state?.up
 
 function getXpRequiredForLevel(level) {
   const current = Math.max(1, Math.floor(Number(level) || 1));
-  const base = 150 + current * 65 + Math.pow(current, 2.05) * 35;
-  let multiplier = 1;
-  if (current > HERO_XP_SOFT_CAP_LEVEL) {
-    multiplier += Math.pow(
-      (current - HERO_XP_SOFT_CAP_LEVEL) / HERO_XP_POST_50_SPAN,
-      HERO_XP_POST_50_EXPONENT
-    ) * HERO_XP_POST_50_MULTIPLIER;
-  }
-  if (current > HERO_XP_HARD_CAP_LEVEL) {
-    multiplier += Math.pow(
-      (current - HERO_XP_HARD_CAP_LEVEL) / HERO_XP_POST_100_SPAN,
-      HERO_XP_POST_100_EXPONENT
-    ) * HERO_XP_POST_100_MULTIPLIER;
-  }
-  return Math.floor(base * multiplier);
+  const legacyRequirement = value => Math.floor(
+    150 + value * 65 + Math.pow(value, 2.05) * 35
+  );
+  if (current <= HERO_XP_EXPONENTIAL_START_LEVEL) return legacyRequirement(current);
+  const anchor = legacyRequirement(HERO_XP_EXPONENTIAL_START_LEVEL);
+  const requirement = anchor * Math.pow(
+    HERO_XP_EXPONENTIAL_GROWTH_RATE,
+    current - HERO_XP_EXPONENTIAL_START_LEVEL
+  );
+  if (!Number.isFinite(requirement)) return Number.MAX_SAFE_INTEGER;
+  return Math.min(
+    Number.MAX_SAFE_INTEGER,
+    Math.floor(requirement)
+  );
 }
 
 function getLevelUpGoldUpgradeShare(level) {
@@ -6497,18 +6489,16 @@ function addCharacterXp(amount, reason = "progress") {
   reconcileSkillPoints(state.character, state.upgrades);
 }
 
-function getCaptureXpAward(target, oldOwner, defendersAtStart, attackerOwner = "player") {
+function getCaptureXpAward(target, oldOwner, defenderLosses, attackerOwner = "player") {
   if (isGivenUpNeutralCity(target)) return 0;
   const level = clampCityLevel(target?.level);
-  const defenderXp = Math.floor(getBattleXpTroopCredit(target, defendersAtStart) * CAPTURE_XP_PER_DEFENDER);
+  const troopXp = Math.floor(getBattleXpTroopCredit(target, defenderLosses) * CAPTURE_XP_PER_DEFENDER);
   const ownerBonus = oldOwner === "enemy" ? ENEMY_CAPTURE_XP_BONUS : 0;
-  const baseXp = CAPTURE_XP_BASE + level * CAPTURE_XP_PER_CITY_LEVEL + defenderXp + ownerBonus;
+  const cityXp = getCaptureCooldownRemaining(target) > 0
+    ? 0
+    : CAPTURE_XP_BASE + level * CAPTURE_XP_PER_CITY_LEVEL + ownerBonus;
   const efficiency = attackerOwner === "player" ? getCaptureXpEfficiency(target, oldOwner) : 1;
-  return capBattleXpForCurrentLevel(Math.floor(baseXp * efficiency));
-}
-
-function getCityUpgradeXpAward(city) {
-  return Math.floor(CITY_UPGRADE_XP_BASE + clampCityLevel(city?.level) * CITY_UPGRADE_XP_PER_LEVEL);
+  return capBattleXpForCurrentLevel(Math.floor((cityXp + troopXp) * efficiency));
 }
 
 function getDefenseHeldXpAward(attackingTroops, target = null) {
@@ -6519,21 +6509,20 @@ function getPartialBattleXpAward(fullWinXp) {
   return Math.floor(Math.max(0, Number(fullWinXp) || 0) * FAILED_BATTLE_XP_RATE);
 }
 
-function getFailedAttackXpAward(target, oldOwner, defendersAtStart, attackerOwner = "player") {
-  return getPartialBattleXpAward(getCaptureXpAward(target, oldOwner, defendersAtStart, attackerOwner));
+function getFailedAttackXpAward(target, oldOwner, defenderLosses, attackerOwner = "player") {
+  return getPartialBattleXpAward(getCaptureXpAward(target, oldOwner, defenderLosses, attackerOwner));
 }
 
 function getCaptureXpEfficiency(target, oldOwner = target?.owner) {
   if (!target || !state) return 1;
   const pvpMultiplier = getPvpOpponentPowerXpMultiplier(target, oldOwner, "player");
-  const cooldownMultiplier = getCaptureCooldownRemaining(target) > 0 ? RECENT_CAPTURE_XP_MULTIPLIER : 1;
-  if (pvpMultiplier !== null) return Number(clamp(pvpMultiplier * cooldownMultiplier, 0, 2).toFixed(2));
+  if (pvpMultiplier !== null) return Number(clamp(pvpMultiplier, 0, 2).toFixed(2));
 
   const heroLevel = Math.max(1, Math.floor(Number(state.character?.level) || 1));
   const empirePressure = 48 + heroLevel * 20 + getOwnedRegularCityCountForDisplay() * 2;
   const targetScore = getCityXpScore(target, oldOwner);
   const strengthEfficiency = clamp(0.35 + targetScore / Math.max(1, empirePressure), 0.25, 2);
-  return Number(clamp(strengthEfficiency * cooldownMultiplier, 0.05, 2).toFixed(2));
+  return Number(clamp(strengthEfficiency, 0.25, 2).toFixed(2));
 }
 
 function getCityXpScore(target, oldOwner = target?.owner) {
@@ -6544,13 +6533,18 @@ function getCityXpScore(target, oldOwner = target?.owner) {
 
 function getBattleXpTroopCreditCap(target) {
   const stats = getCityStats(target || {});
-  return Math.max(
+  const cityCap = Math.max(
     25,
     Math.floor(
       stats.cityWalls * BATTLE_XP_TROOP_CREDIT_CITY_WALL_MULTIPLIER
       + stats.victoryPoints * BATTLE_XP_TROOP_CREDIT_VP_MULTIPLIER
     )
   );
+  const levelCap = Math.min(
+    Number.MAX_SAFE_INTEGER,
+    getXpRequiredForLevel(stats.level) * BATTLE_XP_TROOP_CREDIT_LEVEL_CAP_MULTIPLIER
+  );
+  return Math.max(cityCap, levelCap);
 }
 
 function getBattleXpTroopCredit(target, troops) {
@@ -6606,11 +6600,23 @@ function capBattleXpForCurrentLevel(xp) {
 }
 
 function getCaptureCooldownRemaining(city) {
-  if (!state || !city || city.lastCapturedAt === null || city.lastCapturedAt === undefined) return 0;
-  const capturedAt = Number(city.lastCapturedAt);
-  if (!Number.isFinite(capturedAt)) return 0;
-  const elapsed = Math.max(0, state.gameSeconds - capturedAt);
-  return Math.max(0, CAPTURE_XP_COOLDOWN_SECONDS - elapsed);
+  if (!state || !city) return 0;
+  const capturedAtMs = Math.max(0, normalizeTimestampMs(city.lastCapturedAtMs));
+  if (capturedAtMs > 0) {
+    const elapsedSeconds = Math.max(0, (Date.now() - capturedAtMs) / 1000);
+    return Math.max(0, CAPTURE_XP_COOLDOWN_SECONDS - elapsedSeconds);
+  }
+  if (city.lastCapturedAt && typeof city.lastCapturedAt === "object") {
+    const legacyCapturedAtMs = Math.max(0, normalizeTimestampMs(city.lastCapturedAt));
+    if (legacyCapturedAtMs > 0) {
+      const elapsedSeconds = Math.max(0, (Date.now() - legacyCapturedAtMs) / 1000);
+      return Math.max(0, CAPTURE_XP_COOLDOWN_SECONDS - elapsedSeconds);
+    }
+  }
+  const capturedAtSeconds = Number(city.lastCapturedAt);
+  if (!Number.isFinite(capturedAtSeconds)) return 0;
+  const elapsedSeconds = Math.max(0, state.gameSeconds - capturedAtSeconds);
+  return Math.max(0, CAPTURE_XP_COOLDOWN_SECONDS - elapsedSeconds);
 }
 
 function normalizePowerValue(value) {
@@ -16453,7 +16459,9 @@ function resolveAttack(attack) {
       const savedAttackers = result.raidCompleted
         ? 0
         : returnSavedTroops("fieldMedics", result.attackerLosses, `${target.name} failed attack`);
-      const failedAttackXp = attackProtection || givenUpNeutralTarget ? 0 : getFailedAttackXpAward(target, oldOwner, defendersAtStart, attack.owner);
+      const failedAttackXp = attackProtection || givenUpNeutralTarget
+        ? 0
+        : getFailedAttackXpAward(target, oldOwner, result.defenderLosses, attack.owner);
       addBattleReport({
         type: "attack",
         outcome: result.raidCompleted ? "raid" : "defeat",
@@ -21734,7 +21742,7 @@ function showCityInfoModal(cityId) {
       <div class="stat-chip"><span>Troops production</span><strong>${formatBaseAndBonusStat(stats.baseTroopProductionPerHour, stats.troopProductionPerHour, "/h")}</strong><small>${getCityStatBonusSources(stats, "troops")}</small></div>
       <div class="stat-chip"><span>Gold production</span><strong>${formatBaseAndBonusStat(stats.baseGoldProductionPerHour, stats.goldProductionPerHour, "/h")}</strong><small>${getCityStatBonusSources(stats, "gold")}</small></div>
       <div class="stat-chip"><span>Invested gold</span><strong>${formatNumber(city.investedGold || 0)}</strong><small>Clears when captured</small></div>
-      ${cooldownRemaining > 0 ? `<div class="stat-wide"><span>Capture XP cooldown</span><strong>${formatDuration(cooldownRemaining)}</strong></div>` : ""}
+      ${cooldownRemaining > 0 ? `<div class="stat-wide"><span>City XP cooldown</span><strong>${formatDuration(cooldownRemaining)}</strong></div>` : ""}
       ${renderRelinquishCityAction(city)}
       ${renderHoldingReinforcementPanel(city)}
     </div>
@@ -23402,7 +23410,7 @@ function showAttackPreview(source, target) {
         : `Expected failure with about <strong>${formatNumber(preview.defendersLeft)}</strong> defenders left.`}</p>
       ${protectionNotice ? `<p class="tiny-warning">${escapeHtml(protectionNotice)}</p>` : ""}
       ${shieldDropWarning ? `<p class="shield-drop-warning"><strong>Shield warning</strong><span>${escapeHtml(shieldDropWarning)}</span></p>` : ""}
-      ${preview.cooldownRemaining > 0 ? `<p class="tiny-warning">Recent capture cooldown: XP is reduced for ${formatDuration(preview.cooldownRemaining)}.</p>` : ""}
+      ${preview.cooldownRemaining > 0 ? `<p class="tiny-warning">Recent capture cooldown: city/wall XP is unavailable for ${formatDuration(preview.cooldownRemaining)}; troop-loss XP still applies.</p>` : ""}
       <p class="tiny-warning">This is an estimate based on current numbers. Confirm launches using the current troop count.</p>
       <div class="modal-actions">
         <button id="confirmAttackBtn" class="danger-action" type="button">Attack</button>
@@ -23492,7 +23500,6 @@ async function upgradeCity(cityId, levels = 1) {
     serverCityUpgradeInFlightIds.add(inFlightKey);
     let totalUpgraded = 0;
     let totalSpent = 0;
-    let totalTroopsAwarded = 0;
     try {
       let remainingLevels = requestedLevels;
       while (remainingLevels > 0) {
@@ -23506,14 +23513,13 @@ async function upgradeCity(cityId, levels = 1) {
         const upgraded = Math.max(0, Math.floor(Number(result?.upgraded) || chunkLevels));
         totalUpgraded += upgraded;
         totalSpent += Math.max(0, Math.floor(Number(result?.spentGold) || 0));
-        totalTroopsAwarded += Math.max(0, Math.floor(Number(result?.troopsAwarded) || 0));
         remainingLevels -= upgraded;
         if (upgraded < chunkLevels) break;
       }
       const updatedCity = cityById(city.id) || city;
       const levelText = totalUpgraded > 1 ? `${formatNumber(totalUpgraded)} levels` : "1 level";
       addLog(`${updatedCity.name} upgraded ${levelText} to level ${formatNumber(updatedCity.level)}${totalSpent ? ` for ${formatNumber(totalSpent)} gold` : ""}.`);
-      showToast(`${updatedCity.name} upgraded ${levelText}${totalTroopsAwarded ? ` · +${formatNumber(totalTroopsAwarded)} level-up troops` : ""}`);
+      showToast(`${updatedCity.name} upgraded ${levelText}`);
       renderAll();
     } catch (error) {
       onlineLastError = error?.message || String(error);
@@ -23531,7 +23537,6 @@ async function upgradeCity(cityId, levels = 1) {
     return;
   }
   let upgraded = 0;
-  let xpAward = 0;
   while (upgraded < requestedLevels) {
     const cost = getLevelCost(city);
     if (!Number.isFinite(cost) || state.gold < cost) break;
@@ -23540,7 +23545,6 @@ async function upgradeCity(cityId, levels = 1) {
     const nextLevel = clampCityLevel(city.level + 1);
     if (nextLevel <= city.level) break;
     city.level = nextLevel;
-    xpAward += getCityUpgradeXpAward(city);
     upgraded += 1;
   }
 
@@ -23552,7 +23556,6 @@ async function upgradeCity(cityId, levels = 1) {
 
   addLog(`${city.name} upgraded to level ${city.level}.`);
   showToast(`${city.name} upgraded`);
-  addCharacterXp(xpAward, `${city.name} upgrade`);
   markOwnedCityChanged(city);
   saveGame();
   renderAll();
@@ -23750,7 +23753,7 @@ function calculateBattlePreviewForTroops(source, target, amount, knownRoute = nu
     ? 0
     : result.success
       ? getCaptureXpAward(target, target.owner, result.defenderLosses, "player")
-      : getFailedAttackXpAward(target, target.owner, Math.max(0, Math.floor(Number(target.troops) || 0)), "player");
+      : getFailedAttackXpAward(target, target.owner, result.defenderLosses, "player");
   const xpLabel = attackProtection ? "attacker XP" : result.success ? "capture XP" : "defeat XP";
   const cooldownRemaining = getCaptureCooldownRemaining(target);
   let label = "Weak odds";
@@ -25389,7 +25392,7 @@ function showHelpModal() {
       <li>Army travel uses route distance plus troop-size bands. Larger armies march slower, scouts move as one troop, and March Orders reduces travel time.</li>
       <li>Glowing pickups appear near your owned cities on the current island during active play every three minutes, alternating between ten minutes of gold and troop production. Daily pickup limits are ${formatNumber(HARVEST_BONUS_DAILY_GOLD_LIMIT)} gold and ${formatNumber(HARVEST_BONUS_DAILY_TROOP_LIMIT)} troop pickups.</li>
       <li>Swordmastery boosts outgoing attack, Guild Charters reduces city upgrade cost, and Field Medics returns part of battle losses to your main city.</li>
-      <li>Captured cities enter a one-hour XP cooldown. Attacking during cooldown still works, but capture XP is reduced.</li>
+      <li>Captured cities enter a one-hour city-XP cooldown. Attacks still earn troop-loss XP, but the fixed city/wall XP component is unavailable until the cooldown ends.</li>
       <li>Main cities cannot be attacked. Use your main city as a protected home base while expanding from other cities.</li>
       <li>Demo Attacks protect weaker kingdoms: much stronger attackers send fewer effective troops, march slower, earn 0 XP, and defenders earn bonus XP.</li>
       <li>Shop items have UTC daily purchase limits. Reward Camp items are earned separately through contested objectives.</li>
