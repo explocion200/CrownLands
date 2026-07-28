@@ -6976,7 +6976,7 @@ button.daily-reward-card.available:disabled {
 .clan-empty h3, .clan-empty p { margin: 0; }
 .clan-lock { color: #78c990; font-size: 4rem; }
 .clan-browser, .clan-columns { display: grid; grid-template-columns: minmax(260px,.72fr) minmax(360px,1.28fr); gap: .75rem; }
-.clan-create-card, .clan-discovery, .clan-roster-panel, .clan-gift-panel, .clan-quest-panel, .clan-social-card {
+.clan-create-card, .clan-discovery, .clan-roster-panel, .clan-gift-panel, .clan-quest-panel, .clan-social-card, .clan-rename-card {
   min-width: 0;
   padding: .8rem;
   border: 1px solid rgba(191,226,198,.2);
@@ -7213,7 +7213,8 @@ button.daily-reward-card.available:disabled {
 .clan-shield-polished svg { filter: saturate(1.08) brightness(1.04); }
 .clan-shield-battleworn svg { filter: saturate(.82) contrast(1.09); }
 .clan-hero-shield { display: grid; justify-items: center; gap: .24rem; }
-.clan-hero-shield > button {
+.clan-hero-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: .28rem; }
+.clan-hero-actions button {
   min-height: 27px;
   padding: .15rem .5rem;
   color: #fff0c1;
@@ -7223,6 +7224,21 @@ button.daily-reward-card.available:disabled {
   font-size: .62rem;
   font-weight: 950;
 }
+.clan-rename-card {
+  margin-bottom: .75rem;
+  border-color: rgba(230,190,99,.38);
+  background: linear-gradient(125deg, rgba(45,31,18,.94), rgba(13,28,34,.92));
+}
+.clan-rename-card > p { margin: 0 0 .65rem; color: #c8c0ad; }
+.clan-rename-form { grid-template-columns: minmax(220px,1fr) auto; align-items: end; }
+.clan-rename-form label { display: grid; gap: .28rem; color: #d9cfb7; font-size: .72rem; font-weight: 900; }
+.clan-rename-summary { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: .35rem .8rem; color: #b9c9be; font-size: .75rem; }
+.clan-rename-summary strong { color: #f3d27a; }
+.clan-rename-form > small { color: #d9c584; font-weight: 800; }
+.clan-rename-form .clan-warning { grid-column: 1 / -1; margin: 0; }
+.clan-rename-actions { display: flex; justify-content: flex-end; gap: .45rem; }
+.clan-rename-actions button { min-height: 38px; }
+.clan-rename-actions button:disabled { opacity: .52; cursor: not-allowed; }
 .clan-power { display: grid; justify-items: end; }
 .clan-power strong { color: #8fe0a5; font-size: 1.4rem; }
 .clan-social-layout { grid-template-columns: minmax(260px,.68fr) minmax(420px,1.32fr); align-items: start; }
@@ -7451,13 +7467,16 @@ button.daily-reward-card.available:disabled {
   gap: .55rem;
 }
 .clan-shield-editor button:focus-visible,
-.clan-hero-shield > button:focus-visible {
+.clan-hero-actions button:focus-visible {
   outline: 3px solid #f3d27a;
   outline-offset: 2px;
 }
 
 @media (max-width: 900px) {
   .clan-browser, .clan-columns { grid-template-columns: 1fr; }
+  .clan-rename-form { grid-template-columns: 1fr; }
+  .clan-rename-summary, .clan-rename-actions { justify-content: stretch; }
+  .clan-rename-actions { display: grid; grid-template-columns: 1fr 1.4fr; }
   .clan-hero { grid-template-columns: auto 1fr; }
   .clan-power { grid-column: 1 / -1; grid-template-columns: 1fr auto auto; justify-items: start; gap: .5rem; }
   .clan-view.shield-editor-active {
