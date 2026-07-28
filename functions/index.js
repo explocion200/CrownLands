@@ -2,7 +2,7 @@ const { onCall, HttpsError } = require("firebase-functions/v2/https");
 const { onSchedule } = require("firebase-functions/v2/scheduler");
 const { onDocumentCreated, onDocumentWritten } = require("firebase-functions/v2/firestore");
 const admin = require("firebase-admin");
-const { FieldValue, getFirestore } = require("firebase-admin/firestore");
+const { FieldPath, FieldValue, getFirestore } = require("firebase-admin/firestore");
 const crypto = require("node:crypto");
 const SERVER_WORLD_LAYOUT = require("./world-layout.json");
 const ECONOMY_CONFIG = require("./economy-config.json");
@@ -110,6 +110,9 @@ const RALLY_RETURN_REASON = "rally_recall";
 const RALLY_FRIENDLY_RETURN_REASON = "rally_target_became_friendly";
 const ARMY_TRAVEL_TROOP_BAND_LIMITS = [10, 100, 1000, 10000, 100000, 1000000, 10000000, 100000000];
 const ARMY_TRAVEL_TROOP_BAND_MULTIPLIERS = [1, 1.18, 1.38, 1.62, 1.9, 2.24, 2.62, 3.06, 3.5];
+const ARMY_TROOP_VISIBILITY_VERSION = 1;
+const ARMY_TROOP_ESTIMATE_DECADE_MAX = 1_000_000;
+const ARMY_TROOP_ESTIMATE_BACKFILL_PAGE_SIZE = 50;
 const CAPTURE_XP_BASE = 120;
 const CAPTURE_XP_PER_CITY_LEVEL = 45;
 const CAPTURE_XP_PER_DEFENDER = 1.5;
@@ -3610,12 +3613,167 @@ function canonicalArmyRef(armyId = "") {
   return db.doc(`armies/${safeString(armyId, 96).replace(/[^a-zA-Z0-9_-]/g, "_")}`);
 }
 
+function incomingArmyViewRef(uid = "", armyId = "") {
+  const safeUid = safeString(uid, 128).replace(/[^a-zA-Z0-9_-]/g, "_");
+  const safeArmyId = safeString(armyId, 96).replace(/[^a-zA-Z0-9_-]/g, "_");
+  return safeUid && safeArmyId
+    ? db.doc(`players/${safeUid}/incomingArmies/${safeArmyId}`)
+    : null;
+}
+
 function armyViewRefsForRegions(regionIds, armyId) {
   return normalizeRegionIds(regionIds).map(regionId => db.doc(`islands/${getOnlineIslandId(regionId)}/armies/${armyId}`));
 }
 
 function armyRefsForRegions(regionIds, armyId) {
   return [canonicalArmyRef(armyId), ...armyViewRefsForRegions(regionIds, armyId)];
+}
+
+function formatTroopEstimateBound(value = 0) {
+  const count = Math.max(0, Math.floor(safeNumber(value, 0)));
+  const units = [
+    { value: 1_000_000_000_000, suffix: "T" },
+    { value: 1_000_000_000, suffix: "B" },
+    { value: 1_000_000, suffix: "M" },
+    { value: 1_000, suffix: "K" },
+  ];
+  const unit = units.find(entry => count >= entry.value);
+  if (!unit) return count.toLocaleString("en-US");
+  const scaled = count / unit.value;
+  const digits = Number.isInteger(scaled) ? 0 : 1;
+  return `${scaled.toFixed(digits)}${unit.suffix}`;
+}
+
+function getIncomingTroopEstimate(troops = 0) {
+  const count = Math.max(1, Math.floor(safeNumber(troops, 1)));
+  let min = 1;
+  let max = 10;
+  if (count > 10 && count <= ARMY_TROOP_ESTIMATE_DECADE_MAX) {
+    max = 10 ** Math.ceil(Math.log10(count));
+    min = max / 10;
+  } else if (count > ARMY_TROOP_ESTIMATE_DECADE_MAX) {
+    min = ARMY_TROOP_ESTIMATE_DECADE_MAX;
+    max = 5_000_000;
+    if (count > max) {
+      min = max;
+      max = 10_000_000;
+    }
+    if (count > max) {
+      let base = 10_000_000;
+      min = base;
+      let matched = false;
+      while (!matched && Number.isFinite(base) && base <= Number.MAX_SAFE_INTEGER / 10) {
+        for (const multiplier of [2, 5, 10]) {
+          const candidate = base * multiplier;
+          if (count <= candidate) {
+            max = candidate;
+            matched = true;
+            break;
+          }
+          min = candidate;
+        }
+        base *= 10;
+      }
+      if (!matched) max = Number.MAX_SAFE_INTEGER;
+    }
+  }
+  return {
+    min: Math.max(1, Math.floor(min)),
+    max: Math.max(1, Math.floor(max)),
+    label: `${formatTroopEstimateBound(min)}\u2013${formatTroopEstimateBound(max)}`,
+  };
+}
+
+function isEstimatedAttackMovement(movement = {}) {
+  return Boolean(
+    movement
+    && (
+      movement.kind === "attack"
+      || movement.launchKind === "attack"
+      || movement.rallyAttack
+    )
+  );
+}
+
+function createArmyPublicProjection(movement = {}) {
+  const projection = {
+    ...movement,
+    armyTroopVisibilityVersion: ARMY_TROOP_VISIBILITY_VERSION,
+  };
+  delete projection.id;
+  if (isEstimatedAttackMovement(movement)) {
+    const estimate = getIncomingTroopEstimate(movement.troops);
+    projection.troopVisibility = "estimate";
+    projection.troopEstimateMin = estimate.min;
+    projection.troopEstimateMax = estimate.max;
+    projection.troopEstimateLabel = estimate.label;
+    projection.troops = FieldValue.delete();
+    projection.requestedTroops = FieldValue.delete();
+    projection.attackProtection = FieldValue.delete();
+    projection.demoAttack = FieldValue.delete();
+  } else {
+    projection.troopVisibility = "exact";
+    projection.troopEstimateMin = FieldValue.delete();
+    projection.troopEstimateMax = FieldValue.delete();
+    projection.troopEstimateLabel = FieldValue.delete();
+  }
+  return projection;
+}
+
+function shouldWriteIncomingArmyView(movement = {}) {
+  const ownerUid = safeString(movement.ownerUid, 128);
+  const targetOwnerUid = safeString(movement.targetOwnerUid, 128);
+  return Boolean(
+    targetOwnerUid
+    && targetOwnerUid !== ownerUid
+    && movement.status === "active"
+    && !movement.returning
+  );
+}
+
+function writeArmyMovementCopies(writer, movement = {}, {
+  includeCreatedAt = false,
+  previousTargetOwnerUid = "",
+} = {}) {
+  const armyId = safeString(movement.id, 96).replace(/[^a-zA-Z0-9_-]/g, "_");
+  if (!armyId) throw new HttpsError("invalid-argument", "Army movement id is missing.");
+  const timestampPatch = {
+    ...(includeCreatedAt ? { createdAt: FieldValue.serverTimestamp() } : {}),
+    updatedAt: FieldValue.serverTimestamp(),
+  };
+  const canonicalMovement = {
+    ...movement,
+    armyTroopVisibilityVersion: ARMY_TROOP_VISIBILITY_VERSION,
+    ...timestampPatch,
+  };
+  delete canonicalMovement.id;
+  writer.set(canonicalArmyRef(armyId), canonicalMovement, { merge: true });
+
+  const publicMovement = {
+    ...createArmyPublicProjection(movement),
+    ...timestampPatch,
+  };
+  armyViewRefsForRegions(movement.viewRegionIds || movement.routeRegionIds || [], armyId)
+    .forEach(ref => writer.set(ref, publicMovement, { merge: true }));
+
+  const priorTargetUid = safeString(previousTargetOwnerUid || movement.targetOwnerUid, 128);
+  const nextTargetUid = shouldWriteIncomingArmyView(movement)
+    ? safeString(movement.targetOwnerUid, 128)
+    : "";
+  if (priorTargetUid && priorTargetUid !== nextTargetUid) {
+    const oldViewRef = incomingArmyViewRef(priorTargetUid, armyId);
+    if (oldViewRef) writer.delete(oldViewRef);
+  }
+  if (nextTargetUid) {
+    const incomingView = {
+      ...createArmyPublicProjection(movement),
+      id: armyId,
+      viewerAccess: "target",
+      ...timestampPatch,
+    };
+    const nextViewRef = incomingArmyViewRef(nextTargetUid, armyId);
+    if (nextViewRef) writer.set(nextViewRef, incomingView, { merge: true });
+  }
 }
 
 function rallyJoinPublicMovement(movement = {}) {
@@ -5800,13 +5958,7 @@ async function beginReinforcementReturn({
       addActiveArmies: [movement],
       nowMs,
     });
-    armyRefsForRegions(movement.routeRegionIds, movement.id).forEach(ref => {
-      transaction.set(ref, {
-        ...movement,
-        createdAt: FieldValue.serverTimestamp(),
-        updatedAt: FieldValue.serverTimestamp(),
-      }, { merge: true });
-    });
+    writeArmyMovementCopies(transaction, movement, { includeCreatedAt: true });
 
     let targetUpdate = null;
     if (targetSnap.exists && target) {
@@ -6645,12 +6797,13 @@ function createIncomingArmyNotification({ defenderUid = "", attackerUid = "", mo
   const sourceName = safeString(movement.fromName || source.name || movement.fromId || "Unknown city", 40);
   const targetName = safeString(movement.toName || target.name || movement.toId || "your city", 40);
   const title = kind === "scout" ? "Scout incoming" : kind === "reinforce" ? "Clan reinforcement incoming" : "Attack incoming";
+  const troopEstimate = kind === "attack" ? getIncomingTroopEstimate(movement.troops) : null;
   const body = kind === "scout"
     ? `${attackerName} is scouting ${targetName} from ${sourceName}.`
     : kind === "reinforce"
       ? `${attackerName} is reinforcing ${targetName} with ${formatNotificationNumber(movement.troops)} troops.`
-      : `${attackerName} is attacking ${targetName} with ${formatNotificationNumber(movement.troops)} troops.`;
-  return {
+      : `${attackerName} is attacking ${targetName} with an estimated ${troopEstimate.label} troops.`;
+  const notification = {
     defenderUid,
     attackerUid,
     title,
@@ -6662,10 +6815,17 @@ function createIncomingArmyNotification({ defenderUid = "", attackerUid = "", mo
     targetName,
     sourceName,
     attackerName,
-    troops: String(Math.max(0, Math.floor(safeNumber(movement.troops, 0)))),
+    troopVisibility: kind === "attack" ? "estimate" : "exact",
+    troopEstimateMin: troopEstimate ? String(troopEstimate.min) : "",
+    troopEstimateMax: troopEstimate ? String(troopEstimate.max) : "",
+    troopEstimateLabel: troopEstimate?.label || "",
     arrivesAtMs: String(Math.max(0, Math.floor(safeNumber(movement.arrivesAtMs, 0)))),
     url: "/",
   };
+  if (kind === "reinforce") {
+    notification.troops = String(Math.max(0, Math.floor(safeNumber(movement.troops, 0))));
+  }
+  return notification;
 }
 
 function isInvalidMessagingTokenError(error = {}) {
@@ -6710,10 +6870,16 @@ async function sendIncomingArmyNotification(notification = {}) {
     targetName: safeString(notification.targetName, 60),
     sourceName: safeString(notification.sourceName, 60),
     attackerName: safeString(notification.attackerName, 60),
-    troops: safeString(notification.troops, 32),
+    troopVisibility: safeString(notification.troopVisibility, 16),
+    troopEstimateMin: safeString(notification.troopEstimateMin, 32),
+    troopEstimateMax: safeString(notification.troopEstimateMax, 32),
+    troopEstimateLabel: safeString(notification.troopEstimateLabel, 40),
     arrivesAtMs: safeString(notification.arrivesAtMs, 32),
     url: safeString(notification.url || "/", 160),
   };
+  if (notification.troops !== undefined) {
+    data.troops = safeString(notification.troops, 32);
+  }
 
   const messages = tokenDocs.map(entry => ({
     token: entry.token,
@@ -8997,11 +9163,7 @@ exports.relinquishCity = onCall({ region: "us-central1", maxInstances: 20, invok
       nowMs,
     });
 
-    armyRefs.forEach(ref => transaction.set(ref, {
-      ...movement,
-      updatedAt: FieldValue.serverTimestamp(),
-      createdAt: FieldValue.serverTimestamp(),
-    }, { merge: true }));
+    writeArmyMovementCopies(transaction, movement, { includeCreatedAt: true });
 
     return createEconomyResponse(economy, {
       cityUpdates: [...economy.cityUpdates, sourceUpdate],
@@ -9250,8 +9412,8 @@ exports.useSwiftMarchOrder = onCall({ region: "us-central1", maxInstances: 20, i
       sourceRegionId,
       targetRegionId,
     ]);
-    armyRefsForRegions(routeRegionIds, armyId).forEach(ref => {
-      transaction.set(ref, movementPatch, { merge: true });
+    writeArmyMovementCopies(transaction, { ...army, ...movementPatch, id: armyId }, {
+      previousTargetOwnerUid: army.targetOwnerUid,
     });
     shopItems[SWIFT_MARCH_ORDER_ITEM_ID] = owned - 1;
     transaction.set(profileRef, {
@@ -9374,8 +9536,8 @@ exports.useRecallHorn = onCall({ region: "us-central1", maxInstances: 20, invoke
       transaction.set(targetCampRef, campPatch, { merge: true });
       campUpdate = campUpdateForClient(camp.id, targetRegionId, campPatch);
     }
-    armyRefsForRegions(routeRegionIds, armyId).forEach(ref => {
-      transaction.set(ref, movementPatch, { merge: true });
+    writeArmyMovementCopies(transaction, { ...army, ...movementPatch, id: armyId }, {
+      previousTargetOwnerUid: army.targetOwnerUid,
     });
     if (rallyRef && rally) {
       transaction.set(rallyRef, {
@@ -11250,13 +11412,7 @@ async function withdrawClanRallyContributionRequest(request) {
         addActiveArmies: [movement],
         nowMs,
       });
-      armyRefsForRegions(movement.routeRegionIds, movement.id).forEach(ref => {
-        transaction.set(ref, {
-          ...movement,
-          createdAt: FieldValue.serverTimestamp(),
-          updatedAt: FieldValue.serverTimestamp(),
-        }, { merge: true });
-      });
+      writeArmyMovementCopies(transaction, movement, { includeCreatedAt: true });
     }
     const participants = activeRallyParticipants(rally).filter(entry => entry.uid !== uid);
     const totals = rallyParticipantTotals(participants);
@@ -11392,13 +11548,7 @@ async function cancelClanRallyRequest(request) {
           addActiveArmies: [movement],
           nowMs,
         });
-        armyRefsForRegions(movement.routeRegionIds, movement.id).forEach(ref => {
-          transaction.set(ref, {
-            ...movement,
-            createdAt: FieldValue.serverTimestamp(),
-            updatedAt: FieldValue.serverTimestamp(),
-          }, { merge: true });
-        });
+        writeArmyMovementCopies(transaction, movement, { includeCreatedAt: true });
         movements.push(movement);
       }
     }
@@ -11677,13 +11827,7 @@ exports.launchClanRally = timedCallable("launchClanRally", { region: "us-central
         arrivesAtMs: returning.arrivesAtMs,
       });
     }
-    armyRefsForRegions(movement.routeRegionIds, movement.id).forEach(ref => {
-      transaction.set(ref, {
-        ...movement,
-        createdAt: FieldValue.serverTimestamp(),
-        updatedAt: FieldValue.serverTimestamp(),
-      }, { merge: true });
-    });
+    writeArmyMovementCopies(transaction, movement, { includeCreatedAt: true });
     if (rally.targetType === "camp") {
       transaction.set(targetRef, {
         activeArmyIds: normalizeActiveArmyIds([...(target.activeArmyIds || []), movement.id]),
@@ -12274,11 +12418,7 @@ exports.sendArmyOrder = timedCallable("sendArmyOrder", { region: "us-central1", 
       nowMs,
     });
 
-    armyRefs.forEach(ref => transaction.set(ref, {
-      ...movement,
-      updatedAt: FieldValue.serverTimestamp(),
-      createdAt: FieldValue.serverTimestamp(),
-    }, { merge: true }));
+    writeArmyMovementCopies(transaction, movement, { includeCreatedAt: true });
 
     if (order.targetType === "camp" && resolvedKind === "attack") {
       const activeArmyIds = normalizeActiveArmyIds([...(target.activeArmyIds || []), order.id]);
@@ -12613,7 +12753,9 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
         result: resultPatch || {},
         updatedAt: FieldValue.serverTimestamp(),
       };
-      armyRefs.forEach(ref => transaction.set(ref, patch, { merge: true }));
+      writeArmyMovementCopies(transaction, { ...army, ...patch, id: armyId }, {
+        previousTargetOwnerUid: army.targetOwnerUid,
+      });
     };
     const finalizeReinforcementReturn = (returnedTroops = troopCount) => {
       if (!isReinforcementReturn || !army.reinforcementId) return;
@@ -12704,10 +12846,8 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
         returnReason: RALLY_FRIENDLY_RETURN_REASON,
         rallyReturn: true,
       };
-      const movementPatch = { ...movement, updatedAt: FieldValue.serverTimestamp() };
-      delete movementPatch.id;
-      armyRefsForRegions(movement.routeRegionIds, movement.id).forEach(ref => {
-        transaction.set(ref, movementPatch, { merge: true });
+      writeArmyMovementCopies(transaction, movement, {
+        previousTargetOwnerUid: army.targetOwnerUid,
       });
       let campUpdate = null;
       if (targetType === "camp" && targetSnap.exists && target) {
@@ -13014,13 +13154,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
         nowMs,
         reason,
       });
-      armyRefsForRegions(movement.routeRegionIds, movement.id).forEach(ref => {
-        transaction.set(ref, {
-          ...movement,
-          createdAt: FieldValue.serverTimestamp(),
-          updatedAt: FieldValue.serverTimestamp(),
-        }, { merge: true });
-      });
+      writeArmyMovementCopies(transaction, movement, { includeCreatedAt: true });
       writeParticipantEconomies({}, {}, { addActiveArmies: [movement] });
       if (reportSummary) {
         const report = makeReport({
@@ -13174,10 +13308,8 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
       && safeString(attackerProfile?.clanId, 128) === safeString(defenderProfile?.clanId, 128);
     if (becameClanAllies) {
       const movement = createAlliedTargetReturnMovement(army, nowMs);
-      const movementPatch = { ...movement, updatedAt: FieldValue.serverTimestamp() };
-      delete movementPatch.id;
-      armyRefsForRegions(movement.routeRegionIds, armyId).forEach(ref => {
-        transaction.set(ref, movementPatch, { merge: true });
+      writeArmyMovementCopies(transaction, movement, {
+        previousTargetOwnerUid: army.targetOwnerUid,
       });
       let campUpdate = null;
       if (targetType === "camp" && targetSnap.exists && target) {
@@ -13311,7 +13443,9 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
         updatedAtMs: nowMs,
         updatedAt: FieldValue.serverTimestamp(),
       }, { merge: true });
-      armyRefs.forEach(ref => transaction.set(ref, {
+      const resolvedMovement = {
+        ...army,
+        id: armyId,
         status: "resolved",
         resolvedAtMs: nowMs,
         result: {
@@ -13322,8 +13456,10 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
           returnedLeaderTroops: returnedLeader.returned,
           alliedReturnReceipts: returnReceipts,
         },
-        updatedAt: FieldValue.serverTimestamp(),
-      }, { merge: true }));
+      };
+      writeArmyMovementCopies(transaction, resolvedMovement, {
+        previousTargetOwnerUid: army.targetOwnerUid,
+      });
       writeClanAudit(transaction, rallyAttack.clanId, attackerUid, "rally_return_arrived", {
         rallyId: rallyAttack.id,
         armyId,
@@ -14952,11 +15088,10 @@ async function refreshActiveArmyTargetOwner(targetKey = "", targetOwnerUid = "")
         returnReason: RALLY_FRIENDLY_RETURN_REASON,
         rallyReturn: true,
       };
-      const patch = { ...movement, updatedAt: FieldValue.serverTimestamp() };
-      delete patch.id;
       const batch = db.batch();
-      armyRefsForRegions(movement.viewRegionIds || movement.routeRegionIds || [], armyDoc.id)
-        .forEach(ref => batch.set(ref, patch, { merge: true }));
+      writeArmyMovementCopies(batch, movement, {
+        previousTargetOwnerUid: army.targetOwnerUid,
+      });
       if (army.rallyClanId && army.rallyId) {
         batch.set(clanRallyRef(army.rallyClanId, army.rallyId), {
           status: RALLY_STATUS_RECALLING,
@@ -14990,7 +15125,6 @@ async function refreshActiveArmyTargetOwner(targetKey = "", targetOwnerUid = "")
       && disposition.targetOwnerUid !== ownerUid
       && previousNotificationOwnerUid !== disposition.targetOwnerUid;
     if (disposition.convertedToAttack) convertedToAttacks += 1;
-    const refs = armyRefsForRegions(army.viewRegionIds || army.routeRegionIds || [], armyDoc.id);
     const batch = db.batch();
     const nowMs = Date.now();
     const patch = {
@@ -15011,7 +15145,9 @@ async function refreshActiveArmyTargetOwner(targetKey = "", targetOwnerUid = "")
       patch.retargetedFromKind = safeString(army.retargetedFromKind || army.kind, 16);
       patch.retargetedAtMs = nowMs;
     }
-    refs.forEach(ref => batch.set(ref, patch, { merge: true }));
+    writeArmyMovementCopies(batch, { ...army, ...patch, id: armyDoc.id }, {
+      previousTargetOwnerUid: army.targetOwnerUid,
+    });
     await batch.commit();
     if (shouldNotify) {
       const notification = createIncomingArmyNotification({
@@ -15089,8 +15225,9 @@ async function reconcileActiveClanReinforcementArmy(armyDoc, cache = new Map()) 
     updatedAt: FieldValue.serverTimestamp(),
   };
   const batch = db.batch();
-  armyRefsForRegions(army.viewRegionIds || army.routeRegionIds || [], armyDoc.id)
-    .forEach(ref => batch.set(ref, patch, { merge: true }));
+  writeArmyMovementCopies(batch, { ...army, ...patch, id: armyDoc.id }, {
+    previousTargetOwnerUid: army.targetOwnerUid,
+  });
   await batch.commit();
   const notification = shouldNotify
     ? createIncomingArmyNotification({
@@ -15687,14 +15824,10 @@ async function settleRallyBattleReceipt(event) {
       nowMs,
     });
     if (movement) {
-      armyRefsForRegions(movement.routeRegionIds, movement.id).forEach(ref => {
-        transaction.set(ref, {
-          ...movement,
-          rallyParticipantUid: contributorUid,
-          createdAt: FieldValue.serverTimestamp(),
-          updatedAt: FieldValue.serverTimestamp(),
-        }, { merge: true });
-      });
+      writeArmyMovementCopies(transaction, {
+        ...movement,
+        rallyParticipantUid: contributorUid,
+      }, { includeCreatedAt: true });
     }
     const report = makeReport({
       id: `${safeString(receipt.armyId, 96)}_rally_${contributorUid}`,
@@ -16044,13 +16177,7 @@ async function resolveRewardCampPayoutByRef(campRef, nowMs = Date.now(), callerU
         createdByServer: true,
         serverAuthorityVersion: 2,
       };
-      armyRefsForRegions(route.routeRegionIds, returnArmyId).forEach(ref => {
-        transaction.set(ref, {
-          ...returnArmy,
-          createdAt: FieldValue.serverTimestamp(),
-          updatedAt: FieldValue.serverTimestamp(),
-        }, { merge: true });
-      });
+      writeArmyMovementCopies(transaction, returnArmy, { includeCreatedAt: true });
     }
 
     let deedCityPatch = null;
@@ -16441,13 +16568,7 @@ exports.recallRewardCampGarrison = onCall({ region: "us-central1", maxInstances:
         createdByServer: true,
         serverAuthorityVersion: 2,
       };
-      armyRefsForRegions(route.routeRegionIds, armyId).forEach(ref => {
-        transaction.set(ref, {
-          ...movement,
-          createdAt: FieldValue.serverTimestamp(),
-          updatedAt: FieldValue.serverTimestamp(),
-        }, { merge: true });
-      });
+      writeArmyMovementCopies(transaction, movement, { includeCreatedAt: true });
     }
 
     const activeArmyIds = normalizeActiveArmyIds(rawCamp.activeArmyIds);
@@ -16570,16 +16691,72 @@ async function processWithConcurrency(items = [], concurrency = 1, worker) {
   await Promise.all(workers);
 }
 
+async function backfillActiveArmyVisibilityViews() {
+  const markerRef = db.doc(`serverConfig/armyTroopVisibilityV${ARMY_TROOP_VISIBILITY_VERSION}-${RESET_GENERATION}`);
+  const markerSnap = await markerRef.get();
+  const marker = markerSnap.exists ? markerSnap.data() || {} : {};
+  if (
+    marker.complete === true
+    && safeString(marker.worldId, 128) === ONLINE_WORLD_ID
+    && safeNumber(marker.version, 0) === ARMY_TROOP_VISIBILITY_VERSION
+  ) {
+    return { complete: true, processed: 0, cursor: safeString(marker.cursor, 96) };
+  }
+
+  let query = db.collection("armies")
+    .where("status", "==", "active")
+    .where("resetGeneration", "==", RESET_GENERATION)
+    .where("worldId", "==", ONLINE_WORLD_ID)
+    .orderBy(FieldPath.documentId())
+    .limit(ARMY_TROOP_ESTIMATE_BACKFILL_PAGE_SIZE);
+  const cursor = safeString(marker.cursor, 96);
+  if (cursor) query = query.startAfter(cursor);
+  const snapshot = await query.get();
+
+  await processWithConcurrency(snapshot.docs, 8, async armyDoc => {
+    await db.runTransaction(async transaction => {
+      const currentSnap = await transaction.get(armyDoc.ref);
+      if (!currentSnap.exists) return;
+      const army = { id: currentSnap.id, ...currentSnap.data() };
+      if (
+        army.status !== "active"
+        || safeString(army.worldId, 128) !== ONLINE_WORLD_ID
+        || safeString(army.resetGeneration, 128) !== RESET_GENERATION
+      ) return;
+      writeArmyMovementCopies(transaction, army, {
+        previousTargetOwnerUid: army.targetOwnerUid,
+      });
+    });
+  });
+
+  const nextCursor = snapshot.docs.at(-1)?.id || cursor;
+  const complete = snapshot.size < ARMY_TROOP_ESTIMATE_BACKFILL_PAGE_SIZE;
+  await markerRef.set({
+    version: ARMY_TROOP_VISIBILITY_VERSION,
+    worldId: ONLINE_WORLD_ID,
+    resetGeneration: RESET_GENERATION,
+    cursor: nextCursor,
+    complete,
+    processed: Math.max(0, Math.floor(safeNumber(marker.processed, 0))) + snapshot.size,
+    updatedAtMs: Date.now(),
+    updatedAt: FieldValue.serverTimestamp(),
+  }, { merge: true });
+  return { complete, processed: snapshot.size, cursor: nextCursor };
+}
+
 exports.maintainGameServer = onSchedule({
   region: "us-central1",
   schedule: "every 1 minutes",
   timeZone: "Etc/UTC",
   maxInstances: 1,
-  timeoutSeconds: 60,
+  timeoutSeconds: 120,
   memory: "256MiB",
 }, async () => {
-  const result = await maintainGameServer(Date.now());
-  console.log("Crownlands realm capacity maintained", result);
+  const [result, armyVisibilityBackfill] = await Promise.all([
+    maintainGameServer(Date.now()),
+    backfillActiveArmyVisibilityViews(),
+  ]);
+  console.log("Crownlands realm capacity maintained", { ...result, armyVisibilityBackfill });
 });
 
 exports.resolveDueArmyOrders = onSchedule({

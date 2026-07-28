@@ -157,6 +157,24 @@
         {
           "fieldPath": "worldId",
           "order": "ASCENDING"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "armies",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "status",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "resetGeneration",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "worldId",
+          "order": "ASCENDING"
         },
         {
           "fieldPath": "arrivesAtMs",

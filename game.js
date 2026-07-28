@@ -13222,6 +13222,21 @@ function normalizeOnlineArmyMovement(raw) {
   const path = normalizeArmyPath(raw.path);
   const pathSegments = normalizeArmyPathSegments(raw.pathSegments);
   const ownerIdentity = ownerUid ? resolvePlayerIdentityForUid(ownerUid, raw) : null;
+  const viewerAccess = ["owner", "target", "public"].includes(raw.viewerAccess)
+    ? raw.viewerAccess
+    : "public";
+  const rawTroops = Number.isFinite(Number(raw.troops))
+    ? Math.max(0, Math.floor(Number(raw.troops)))
+    : null;
+  const isAttackMovement = effectiveKind === "attack"
+    || raw.launchKind === "attack"
+    || Boolean(raw.rallyAttack);
+  const estimateForViewer = isAttackMovement
+    && ownerUid !== getCurrentOnlineUid()
+    && viewerAccess !== "owner";
+  const troopEstimate = estimateForViewer
+    ? normalizeArmyTroopEstimate(raw, rawTroops)
+    : null;
   return {
     id,
     onlineId: id,
@@ -13243,7 +13258,12 @@ function normalizeOnlineArmyMovement(raw) {
     toName: raw.toName || "",
     sourceRegionId: normalizeRegionId(raw.sourceRegionId),
     targetRegionId: normalizeRegionId(raw.targetRegionId),
-    troops: Math.max(0, Math.floor(Number(raw.troops) || 0)),
+    troops: estimateForViewer ? null : rawTroops,
+    troopVisibility: estimateForViewer ? "estimate" : "exact",
+    troopEstimateMin: troopEstimate?.min || 0,
+    troopEstimateMax: troopEstimate?.max || 0,
+    troopEstimateLabel: troopEstimate?.label || "",
+    viewerAccess,
     total,
     remaining: Math.max(0, (arrivesAtMs - Date.now()) / 1000),
     path,
@@ -13251,7 +13271,9 @@ function normalizeOnlineArmyMovement(raw) {
     pathLength: Math.max(0, Number(raw.pathLength) || pathSegments.reduce((total, segment) => total + segment.length, 0) || routeLength(path)),
     targetOwnerAtLaunch: raw.targetOwnerAtLaunch || "neutral",
     targetOwnerUid,
-    requestedTroops: Math.max(0, Math.floor(Number(raw.requestedTroops) || 0)),
+    requestedTroops: estimateForViewer
+      ? null
+      : Math.max(0, Math.floor(Number(raw.requestedTroops) || 0)),
     attackerKingPower: normalizePowerValue(raw.attackerKingPower || raw.ownerKingPower),
     defenderKingPower: normalizePowerValue(raw.defenderKingPower),
     attackProtection: normalizeAttackProtectionSnapshot(raw.attackProtection, raw.demoAttack),
@@ -13287,16 +13309,19 @@ function normalizeOnlineArmyMovement(raw) {
 }
 
 function rebuildOnlineArmies() {
-  const seen = new Set();
-  onlineArmies = Array.from(onlineArmiesByIsland.values())
+  const armiesById = new Map();
+  const accessPriority = { public: 0, target: 1, owner: 2 };
+  Array.from(onlineArmiesByIsland.values())
     .flat()
-    .filter(army => {
+    .forEach(army => {
       const key = String(army?.id || army?.onlineId || "");
-      if (!key) return false;
-      if (seen.has(key)) return false;
-      seen.add(key);
-      return true;
+      if (!key) return;
+      const current = armiesById.get(key);
+      const currentPriority = accessPriority[current?.viewerAccess] ?? 0;
+      const nextPriority = accessPriority[army?.viewerAccess] ?? 0;
+      if (!current || nextPriority > currentPriority) armiesById.set(key, army);
     });
+  onlineArmies = [...armiesById.values()];
 }
 
 function clearOnlineArmyWatchers() {
@@ -20597,10 +20622,97 @@ function layoutCityLabels() {
   }
 }
 
+function formatTroopEstimateBound(value = 0) {
+  const count = Math.max(0, Math.floor(Number(value) || 0));
+  const units = [
+    { value: 1_000_000_000_000, suffix: "T" },
+    { value: 1_000_000_000, suffix: "B" },
+    { value: 1_000_000, suffix: "M" },
+    { value: 1_000, suffix: "K" },
+  ];
+  const unit = units.find(entry => count >= entry.value);
+  if (!unit) return count.toLocaleString("en-US");
+  const scaled = count / unit.value;
+  return `${scaled.toFixed(Number.isInteger(scaled) ? 0 : 1)}${unit.suffix}`;
+}
+
+function getIncomingTroopEstimate(troops = 0) {
+  const count = Math.max(1, Math.floor(Number(troops) || 1));
+  let min = 1;
+  let max = 10;
+  if (count > 10 && count <= 1_000_000) {
+    max = 10 ** Math.ceil(Math.log10(count));
+    min = max / 10;
+  } else if (count > 1_000_000) {
+    min = 1_000_000;
+    max = 5_000_000;
+    if (count > max) {
+      min = max;
+      max = 10_000_000;
+    }
+    if (count > max) {
+      let base = 10_000_000;
+      min = base;
+      let matched = false;
+      while (!matched && Number.isFinite(base) && base <= Number.MAX_SAFE_INTEGER / 10) {
+        for (const multiplier of [2, 5, 10]) {
+          const candidate = base * multiplier;
+          if (count <= candidate) {
+            max = candidate;
+            matched = true;
+            break;
+          }
+          min = candidate;
+        }
+        base *= 10;
+      }
+      if (!matched) max = Number.MAX_SAFE_INTEGER;
+    }
+  }
+  const normalizedMin = Math.max(1, Math.floor(min));
+  const normalizedMax = Math.max(normalizedMin, Math.floor(max));
+  return {
+    min: normalizedMin,
+    max: normalizedMax,
+    label: `${formatTroopEstimateBound(normalizedMin)}\u2013${formatTroopEstimateBound(normalizedMax)}`,
+  };
+}
+
+function normalizeArmyTroopEstimate(army = {}, legacyExactTroops = null) {
+  const min = Math.max(0, Math.floor(Number(army.troopEstimateMin) || 0));
+  const max = Math.max(0, Math.floor(Number(army.troopEstimateMax) || 0));
+  if (min > 0 && max >= min) {
+    return {
+      min,
+      max,
+      label: `${formatTroopEstimateBound(min)}\u2013${formatTroopEstimateBound(max)}`,
+    };
+  }
+  return getIncomingTroopEstimate(legacyExactTroops);
+}
+
 function canViewArmyTroopAmount(attack) {
   if (!attack) return false;
   if (attack.kind !== "transfer") return true;
   return isPersonalArmy(attack);
+}
+
+function isArmyTroopEstimate(attack) {
+  return Boolean(
+    attack
+    && (
+      attack.troopVisibility === "estimate"
+      || (attack.kind === "attack" && !isPersonalArmy(attack))
+    )
+  );
+}
+
+function getArmyTroopDisplayText(attack) {
+  if (!canViewArmyTroopAmount(attack)) return "";
+  if (isArmyTroopEstimate(attack)) {
+    return normalizeArmyTroopEstimate(attack, attack.troops).label;
+  }
+  return formatNumber(attack?.troops);
 }
 
 function getArmyTokenId(attack) {
@@ -20767,7 +20879,7 @@ function updateArmyTokenElement(token, attack, mapPoint, targetCity, endpointInt
   if (countElement) {
     if (countElement.hidden === showTroops) countElement.hidden = !showTroops;
     if (showTroops) {
-      const troopText = formatNumber(attack.troops);
+      const troopText = getArmyTroopDisplayText(attack);
       if (countElement.textContent !== troopText) countElement.textContent = troopText;
     }
   }
@@ -20792,13 +20904,19 @@ function updateArmyTokenElement(token, attack, mapPoint, targetCity, endpointInt
       toButton.setAttribute("aria-label", `Go to ${toDetails.name}`);
     }
   }
+  const troopDisplay = showTroops ? getArmyTroopDisplayText(attack) : "";
+  const troopDescription = isArmyTroopEstimate(attack)
+    ? `estimated ${troopDisplay} troops`
+    : troopDisplay
+      ? `${troopDisplay} troops`
+      : "";
   const tokenLabel = endpointInteractionDisabled
     ? `${attack.kind || "Army"} march near an endpoint. Select the location beneath it.`
-    : `${attack.kind || "Army"} march to ${targetCity?.name || attack.toName || "destination"}. Show route locations.`;
+    : `${attack.kind || "Army"} march${troopDescription ? ` with ${troopDescription}` : ""} to ${targetCity?.name || attack.toName || "destination"}. Show route locations.`;
   if (token.getAttribute("aria-label") !== tokenLabel) token.setAttribute("aria-label", tokenLabel);
   if (attack.ownerName) {
     const titlePrefix = `${attack.ownerName}: ${attack.kind} to ${targetCity?.name || "target"}`;
-    const title = showTroops ? titlePrefix : `${titlePrefix} - ${formatDuration(attack.remaining)} remaining`;
+    const title = `${titlePrefix}${troopDescription ? ` - ${troopDescription}` : ""} - ${formatDuration(attack.remaining)} remaining`;
     if (token.title !== title) token.title = title;
   }
 }
@@ -24951,9 +25069,10 @@ function renderIncomingAttackCard(attack) {
   const isScout = attack.kind === "scout";
   const threatLabel = isScout ? "Scout" : "Attack";
   const forceLabel = isScout ? "Scout" : "Attacker";
+  const estimatedTroops = getArmyTroopDisplayText(attack);
   const forceDetails = isScout
     ? `1 scout from ${escapeHtml(sourceName)}`
-    : `${formatNumber(attack.troops)} troops from ${escapeHtml(sourceName)}`;
+    : `Estimated troops: ${escapeHtml(estimatedTroops)} from ${escapeHtml(sourceName)}`;
   return `
     <article class="incoming-attack-card ${isScout ? "incoming-scout-card" : ""}">
       <div class="incoming-attack-badge">

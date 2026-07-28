@@ -1779,33 +1779,57 @@
       rowsBySource.forEach(rows => rows.forEach((army, armyId) => merged.set(armyId, army)));
       handlers.onArmies([...merged.values()]);
     };
-    const subscribe = (source, ownerField) => onSnapshot(
+    const subscribeOutgoing = () => onSnapshot(
       firestoreQuery(
         collection(client.db, "armies"),
-        where(ownerField, "==", uid),
+        where("ownerUid", "==", uid),
         where("resetGeneration", "==", RESET_GENERATION),
         where("worldId", "==", ONLINE_WORLD_ID),
         where("status", "==", "active")
       ),
       snapshot => {
-        rowsBySource.set(source, new Map(snapshot.docs.map(doc => [
+        rowsBySource.set("outgoing", new Map(snapshot.docs.map(doc => [
           doc.id,
           {
             id: doc.id,
             islandId: doc.data()?.sourceRegionId || "",
             ...doc.data(),
+            viewerAccess: "owner",
           },
         ])));
         emit();
       },
       error => {
-        if (typeof handlers.onError === "function") handlers.onError(error, source);
+        if (typeof handlers.onError === "function") handlers.onError(error, "outgoing");
+      }
+    );
+
+    const subscribeIncoming = () => onSnapshot(
+      collection(client.db, "players", uid, "incomingArmies"),
+      snapshot => {
+        rowsBySource.set("incoming", new Map(snapshot.docs
+          .map(doc => ({
+            id: doc.id,
+            islandId: doc.data()?.sourceRegionId || "",
+            ...doc.data(),
+            viewerAccess: "target",
+          }))
+          .filter(army => (
+            army.resetGeneration === RESET_GENERATION
+            && army.worldId === ONLINE_WORLD_ID
+            && army.status === "active"
+          ))
+          .map(army => [army.id, army])));
+        emit();
+      },
+      error => {
+        if (typeof handlers.onError === "function") handlers.onError(error, "incoming");
       }
     );
 
     const unsubscribers = [
-      subscribe("outgoing", "ownerUid"),
-      subscribe("incoming", "targetOwnerUid"),
+      subscribeOutgoing(),
+      subscribeIncoming(),
     ];
     return () => unsubscribers.forEach(unsubscribe => unsubscribe());
   }

@@ -76,6 +76,21 @@ async function attemptClientDailyRewardMutation(user) {
   });
 }
 
+async function attemptClientDocumentRead(user, documentPath) {
+  const firestoreHost = process.env.FIRESTORE_EMULATOR_HOST;
+  const normalizedPath = String(documentPath || "")
+    .split("/")
+    .filter(Boolean)
+    .map(encodeURIComponent)
+    .join("/");
+  const url = `http://${firestoreHost}/v1/projects/${projectId}/databases/(default)/documents/${normalizedPath}`;
+  return fetch(url, {
+    headers: {
+      authorization: `Bearer ${user.token}`,
+    },
+  });
+}
+
 async function waitForOwnershipEvents(expected, timeoutMs = 30000) {
   const startedAt = Date.now();
   const ref = db.collection(`realmEvents/${realm.resetGeneration}/ownershipChanges`);
@@ -707,6 +722,49 @@ async function main() {
   assert(alliedBounceTargetDoc && alliedBounceLaunch, "No reachable enemy city was available for the allied bounce gate.");
   const alliedBounceTroops = Number(alliedBounceLaunch.movement.troops || 0);
   assert(alliedBounceTroops > 0, "The allied bounce gate did not launch troops.");
+  const alliedBouncePublicPath = `islands/${clanReinforcementSourceClaim.islandId}/armies/${alliedBounceArmyId}`;
+  const alliedBounceIncomingPath = `players/${users[47].uid}/incomingArmies/${alliedBounceArmyId}`;
+  const [
+    alliedBounceCanonicalProjection,
+    alliedBouncePublicProjection,
+    alliedBounceIncomingProjection,
+    defenderCanonicalRead,
+    defenderIncomingRead,
+    attackerCanonicalRead,
+  ] = await Promise.all([
+    db.doc(`armies/${alliedBounceArmyId}`).get(),
+    db.doc(alliedBouncePublicPath).get(),
+    db.doc(alliedBounceIncomingPath).get(),
+    attemptClientDocumentRead(users[47], `armies/${alliedBounceArmyId}`),
+    attemptClientDocumentRead(users[47], alliedBounceIncomingPath),
+    attemptClientDocumentRead(clanLeader, `armies/${alliedBounceArmyId}`),
+  ]);
+  assert(
+    Number(alliedBounceCanonicalProjection.data()?.troops || 0) === alliedBounceTroops,
+    "The army owner lost the exact canonical troop count."
+  );
+  assert(
+    alliedBouncePublicProjection.exists
+      && alliedBouncePublicProjection.data()?.troops === undefined
+      && alliedBouncePublicProjection.data()?.troopVisibility === "estimate"
+      && Number(alliedBouncePublicProjection.data()?.troopEstimateMin || 0) < alliedBounceTroops
+      && Number(alliedBouncePublicProjection.data()?.troopEstimateMax || 0) >= alliedBounceTroops
+      && Boolean(alliedBouncePublicProjection.data()?.troopEstimateLabel),
+    "The public hostile-army projection exposed exact troops or used the wrong estimate."
+  );
+  assert(
+    alliedBounceIncomingProjection.exists
+      && alliedBounceIncomingProjection.data()?.troops === undefined
+      && alliedBounceIncomingProjection.data()?.troopVisibility === "estimate"
+      && Number(alliedBounceIncomingProjection.data()?.troopEstimateMin || 0) < alliedBounceTroops
+      && Number(alliedBounceIncomingProjection.data()?.troopEstimateMax || 0) >= alliedBounceTroops
+      && alliedBounceIncomingProjection.data()?.troopEstimateLabel
+        === alliedBouncePublicProjection.data()?.troopEstimateLabel,
+    "The defender's private incoming projection exposed exact troops or used the wrong estimate."
+  );
+  assert(defenderCanonicalRead.status === 403, "The defender could read the canonical exact army document.");
+  assert(defenderIncomingRead.status === 200, "The defender could not read their incoming army estimate.");
+  assert(attackerCanonicalRead.status === 200, "The army owner could not read their canonical exact army document.");
   const alliedBounceArmyRefs = [
     db.doc(`armies/${alliedBounceArmyId}`),
     db.doc(`islands/${clanReinforcementSourceClaim.islandId}/armies/${alliedBounceArmyId}`),
@@ -737,9 +795,10 @@ async function main() {
     armyId: alliedBounceArmyId,
     routeRegionIds: [clanReinforcementSourceClaim.mainRegionId],
   });
-  const [alliedBounceActiveSnapshot, alliedBounceSourceWhileReturning] = await Promise.all([
+  const [alliedBounceActiveSnapshot, alliedBounceSourceWhileReturning, alliedBounceIncomingAfterReturn] = await Promise.all([
     alliedBounceArmyRefs[0].get(),
     clanReinforcementSourceRef.get(),
+    db.doc(alliedBounceIncomingPath).get(),
   ]);
   const alliedBounceActive = alliedBounceActiveSnapshot.data() || {};
   assert(
@@ -759,6 +818,7 @@ async function main() {
     Number(alliedBounceSourceWhileReturning.data()?.troops || 0) < alliedBounceSourceAfterLaunch + alliedBounceTroops,
     "The allied-target troops teleported into their source city before the return arrived."
   );
+  assert(!alliedBounceIncomingAfterReturn.exists, "A defender incoming estimate remained after the army began returning.");
   const alliedBounceSourceBeforeReturn = Number((await clanReinforcementSourceRef.get()).data()?.troops || 0);
   const alliedBounceCompleted = await forceResolveMovement(alliedBounceStarted.movement, clanLeader.token);
   const [alliedBounceResolvedSnapshot, alliedBounceSourceAfterReturn] = await Promise.all([
