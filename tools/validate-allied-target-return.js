@@ -102,7 +102,11 @@ const alliedBranchStart = resolveSource.indexOf("if (becameClanAllies)");
 const returningBranchStart = resolveSource.indexOf("if (isReturning)", alliedBranchStart);
 const alliedBranch = resolveSource.slice(alliedBranchStart, returningBranchStart);
 assert.match(alliedBranch, /createAlliedTargetReturnMovement\(army,\s*nowMs\)/);
-assert.match(alliedBranch, /armyRefsForRegions\(movement\.routeRegionIds,\s*armyId\)[\s\S]*?transaction\.set\(ref,\s*movementPatch/);
+assert.match(
+  alliedBranch,
+  /writeArmyMovementCopies\(transaction,\s*movement,\s*\{[\s\S]*?previousTargetOwnerUid:\s*army\.targetOwnerUid/,
+  "The returning movement must update canonical, public, and private defender copies together."
+);
 assert.match(alliedBranch, /addActiveArmies:\s*\[movement\]/, "The returning troops must remain in active-army power.");
 assert.doesNotMatch(
   alliedBranch,

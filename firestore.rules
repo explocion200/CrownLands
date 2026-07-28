@@ -172,6 +172,11 @@ service cloud.firestore {
         allow delete: if false;
       }
 
+      match /incomingArmies/{armyId} {
+        allow read: if ownsPlayerDoc(uid) && isCurrentGeneration(resource.data);
+        allow create, update, delete: if false;
+      }
+
       match /serverReports/{reportId} {
         allow read: if ownsPlayerDoc(uid) && isCurrentGeneration(resource.data);
         allow create, update, delete: if false;
@@ -323,7 +328,6 @@ service cloud.firestore {
       allow read: if signedIn()
         && isCurrentGeneration(resource.data)
         && (resource.data.ownerUid == request.auth.uid
-          || resource.data.targetOwnerUid == request.auth.uid
           || (resource.data.participantUids is list
             && request.auth.uid in resource.data.participantUids));
       allow create, update, delete: if false;
