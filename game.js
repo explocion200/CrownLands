@@ -23369,7 +23369,7 @@ function renderDailyLoginRewardModal() {
   modalBody.innerHTML = `
     <section class="daily-reward-panel">
       <header class="daily-reward-hero">
-        <img src="assets/daily-reward-icon.svg?v=20260727-daily-login" alt="" />
+        <img src="assets/daily-reward-icon-cutout.webp?v=20260728-daily-reward-cutout" alt="" />
         <div>
           <span>Cycle ${formatNumber(status.cycle)}</span>
           <h3>Day ${formatNumber(status.nextDay)} of ${formatNumber(DAILY_LOGIN_REWARD_CYCLE_DAYS)}</h3>
