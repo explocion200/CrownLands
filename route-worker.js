@@ -91,7 +91,23 @@ function findLandRouteForLeg(job, constants, leg) {
   const target = makeRoutePoint(leg.end, "target");
   const context = createRouteContext(job, regionId, source, target);
   const primaryBudget = { visited: 0, max: constants.searchMaxVisitedCells };
-  return findLandRouteWithContext(job, constants, source, target, regionId, context, primaryBudget);
+  const route = findLandRouteWithContext(job, constants, source, target, regionId, context, primaryBudget);
+  if (route?.points?.length) return route;
+
+  const reverseBudget = {
+    visited: 0,
+    max: Math.max(constants.searchMaxVisitedCells, constants.gridCols * constants.gridRows),
+  };
+  const reverseRouteResult = findLandRouteWithContext(
+    job,
+    constants,
+    target,
+    source,
+    regionId,
+    context,
+    reverseBudget
+  );
+  return reverseRouteResult?.points?.length ? reverseRoute(reverseRouteResult) : null;
 }
 
 function createRouteContext(job, regionId, source, target) {

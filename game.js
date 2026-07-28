@@ -2467,6 +2467,7 @@ const ROUTE_CELL_FALLBACK_CANDIDATES = 24;
 const ROUTE_CELL_FALLBACK_PAIR_LIMIT = 16;
 const ROUTE_SEARCH_MAX_VISITED_CELLS = Math.max(2500, Math.min(10000, GRID_COLS * GRID_ROWS));
 const ROUTE_WORKER_TIMEOUT_MS = 6000;
+const ROUTE_WORKER_RETRY_TIMEOUT_MS = 15000;
 const ASYNC_ROUTE_CACHE_LIMIT = 320;
 const NEAREST_SOURCE_ROUTE_CHECK_LIMIT = 18;
 const SCOUT_SOURCE_ROUTE_CHECK_LIMIT = 10;
@@ -14673,7 +14674,7 @@ function scheduleRouteWorkerWarmup() {
   }
 }
 
-function requestRouteFromWorker(job) {
+function requestRouteFromWorker(job, timeoutMs = ROUTE_WORKER_TIMEOUT_MS) {
   const worker = getRouteWorker();
   if (!worker) return Promise.reject(new Error("Route worker unavailable."));
   const id = ++routeWorkerRequestId;
@@ -14684,7 +14685,7 @@ function requestRouteFromWorker(job) {
       rejectPendingRouteWorkerRequests(timeoutError);
       routeWorker?.terminate?.();
       routeWorker = null;
-    }, ROUTE_WORKER_TIMEOUT_MS);
+    }, Math.max(1000, Number(timeoutMs) || ROUTE_WORKER_TIMEOUT_MS));
     routeWorkerRequests.set(id, { resolve, reject, timeoutId });
     worker.postMessage({ type: "route", id, job });
   });
@@ -14710,7 +14711,21 @@ async function findRouteAsync(source, target) {
     return cloneRoute(workerRoute);
   } catch (error) {
     if (error?.routeCanceled) return null;
-    if (error?.routeTimedOut || isBitmapRouteWorkerJob(job)) {
+    if (error?.routeTimedOut) {
+      console.warn("Route calculation timed out; retrying with a fresh worker.", error);
+      try {
+        const retryRoute = await requestRouteFromWorker(job, ROUTE_WORKER_RETRY_TIMEOUT_MS);
+        if (!retryRoute?.points?.length) return null;
+        cacheAsyncRoute(cacheKey, retryRoute);
+        return cloneRoute(retryRoute);
+      } catch (retryError) {
+        if (retryError?.routeCanceled) return null;
+        console.warn("Route calculation retry failed.", retryError);
+        if (isBitmapRouteWorkerJob(job)) return null;
+        return findRoute(source, target);
+      }
+    }
+    if (isBitmapRouteWorkerJob(job)) {
       console.warn("Route worker failed; route calculation canceled to keep the map responsive.", error);
       return null;
     }
@@ -14947,10 +14962,25 @@ function findPortalRoute(source, target, sourceRegionId = getCityRegionId(source
 function findLandRoute(source, target, regionId = getCityRegionId(source)) {
   const normalizedRegionId = normalizeRegionId(regionId);
   const routeContext = createRouteContext(normalizedRegionId, source, target);
-  return findLandRouteWithContext(source, target, normalizedRegionId, routeContext);
+  const route = findLandRouteWithContext(source, target, normalizedRegionId, routeContext);
+  if (route?.points?.length) return route;
+  const reverseRouteResult = findLandRouteWithContext(
+    target,
+    source,
+    normalizedRegionId,
+    routeContext,
+    GRID_COLS * GRID_ROWS
+  );
+  return reverseRouteResult?.points?.length ? reverseRoute(reverseRouteResult) : null;
 }
 
-function findLandRouteWithContext(source, target, normalizedRegionId, routeContext = null) {
+function findLandRouteWithContext(
+  source,
+  target,
+  normalizedRegionId,
+  routeContext = null,
+  searchMaxVisitedCells = ROUTE_SEARCH_MAX_VISITED_CELLS
+) {
   const cacheKey = `land-cityblock-v2:${normalizedRegionId}:${routeContext?.cacheKey || "terrain"}:${getRoutePointId(source, "source")}|${getRoutePointId(target, "target")}`;
   if (routeCache.has(cacheKey)) return cloneRoute(routeCache.get(cacheKey));
   const contextReverseKey = `land-cityblock-v2:${normalizedRegionId}:${routeContext?.cacheKey || "terrain"}:${getRoutePointId(target, "target")}|${getRoutePointId(source, "source")}`;
@@ -14975,7 +15005,10 @@ function findLandRouteWithContext(source, target, normalizedRegionId, routeConte
   const start = nearestWalkableCellInRegion(source.x, source.y, normalizedRegionId, routeContext);
   const goal = nearestWalkableCellInRegion(target.x, target.y, normalizedRegionId, routeContext);
   const triedCellPairs = new Set();
-  const searchBudget = { visited: 0, max: ROUTE_SEARCH_MAX_VISITED_CELLS };
+  const searchBudget = {
+    visited: 0,
+    max: Math.max(ROUTE_SEARCH_MAX_VISITED_CELLS, Math.floor(Number(searchMaxVisitedCells) || 0)),
+  };
   const commitRoute = route => {
     if (!route) return null;
     routeCache.set(cacheKey, cloneRoute(route));
