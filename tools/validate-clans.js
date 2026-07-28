@@ -27,6 +27,8 @@ function requires(source, pattern, message) {
 
 requires(server, /CLAN_UNLOCK_LEVEL\s*=\s*10/, "Clan unlock must be Hero Level 10.");
 requires(server, /CLAN_CREATE_GOLD_COST\s*=\s*100_000/, "Clan creation must cost 100,000 gold.");
+requires(server, /CLAN_NAME_CHANGE_GOLD_COST\s*=\s*500_000/, "Clan renaming must cost 500,000 gold.");
+requires(server, /CLAN_NAME_CHANGE_COOLDOWN_MS\s*=\s*7\s*\*\s*24\s*\*\s*60\s*\*\s*60\s*\*\s*1000/, "Clan renaming must have a seven-day cooldown.");
 requires(server, /CLAN_MEMBER_LIMIT\s*=\s*30/, "Clan member capacity must be 30.");
 requires(server, /CLAN_JOIN_COOLDOWN_MS\s*=\s*24\s*\*\s*60\s*\*\s*60\s*\*\s*1000/, "Clan join cooldown must be 24 hours.");
 requires(server, /CLAN_LEADER_INACTIVE_MS\s*=\s*14\s*\*\s*24\s*\*\s*60\s*\*\s*60\s*\*\s*1000/, "Inactive leadership claims must wait 14 days.");
@@ -78,6 +80,10 @@ requires(server, /async function removeClanMember[\s\S]*?assertClanRole\(actor,\
 assert.doesNotMatch(server, /exports\.(?:sendClanMessage|reportClanMessage|cleanupClanMessages)\s*=/, "Retired clan chat Functions are still exported.");
 requires(server, /function normalizeClanShield[\s\S]*?CLAN_SHIELD_SHAPES[\s\S]*?CLAN_SHIELD_DIVISIONS[\s\S]*?CLAN_SHIELD_CHARGES/, "Clan shield schema is not validated server-side.");
 requires(server, /exports\.updateClanProfile[\s\S]*?assertClanRole\(memberSnap\.data\(\), \["leader"\]\)[\s\S]*?const shield = normalizeClanShield/, "Clan shield edits are not leader-only.");
+requires(server, /exports\.updateClanProfile[\s\S]*?nameChanged[\s\S]*?getClanNameChangeCooldownUntilMs\(clan\)[\s\S]*?prepareEconomyCollection[\s\S]*?CLAN_NAME_CHANGE_GOLD_COST[\s\S]*?writePreparedEconomy/, "Clan renaming is not charging authoritative gold behind the weekly leader gate.");
+requires(server, /exports\.updateClanProfile[\s\S]*?clanNameReservationRef\(requestedName\.normalized\)[\s\S]*?already in use[\s\S]*?clanNameReservationRef\(clan\.normalizedName\)[\s\S]*?CLAN_RESERVATION_RELEASE_MS/, "Clan renaming does not transactionally reserve the new name and release the previous one.");
+requires(server, /exports\.updateClanProfile[\s\S]*?membersSnap\.docs\.forEach[\s\S]*?clanName:\s*requestedName\.display[\s\S]*?clanIdentityRevisionPatch\(nowMs\)[\s\S]*?writeClanLeaderboard/, "Clan renaming does not propagate the canonical identity to members and leaderboard snapshots.");
+requires(server, /writeClanAudit\(transaction,\s*clanId,\s*uid,\s*"clan_renamed"[\s\S]*?goldCost:\s*CLAN_NAME_CHANGE_GOLD_COST/, "Clan renaming does not create a cost-bearing audit event.");
 requires(server, /writeClanLeaderboard[\s\S]*?shield,[\s\S]*?banner:\s*clanShieldLegacyBanner/, "Clan leaderboard snapshots do not include heraldic shields.");
 
 requires(rules, /match \/clans\/\{clanId\}[\s\S]*?allow create, update, delete: if false;/, "Clan writes must be server-owned.");
@@ -127,6 +133,10 @@ requires(client, /function renderClanRosterMember[\s\S]*?data-clan-action="selec
 requires(client, /function renderClanGiftPanel[\s\S]*?Send \.5h Gold Gift[\s\S]*?Collect \$\{hours\}h Gold[\s\S]*?function renderClanQuestPanel[\s\S]*?Conquest Quests[\s\S]*?Joined too late/, "Clan gift and conquest quest panels are incomplete.");
 assert.doesNotMatch(client, /Clan Chat|sendClanMessage|reportClanMessage|data-clan-action="mute"/, "Retired clan chat or mute UI remains in the client.");
 requires(client, /data-clan-action="edit-shield"/, "Leader clan shield editor entry point is missing.");
+requires(client, /function renderClanRenameEditor[\s\S]*?500,000 gold[\s\S]*?data-clan-form="rename"/, "Leader clan rename form is missing.");
+requires(client, /data-clan-action="rename-clan"/, "Leader clan rename entry point is missing.");
+requires(client, /function getClanNameChangeCooldownMs[\s\S]*?CLAN_NAME_CHANGE_COOLDOWN_MS[\s\S]*?function updateClanNameChangeCountdown[\s\S]*?data-clan-name-cooldown[\s\S]*?data-clan-rename-submit/, "Clan rename cooldown feedback is incomplete.");
+requires(client, /kind === "rename"[\s\S]*?updateClanProfile\(\{\s*name:\s*requestedName\s*\}\)[\s\S]*?state\.gold\s*=\s*Number\(result\.gold\)[\s\S]*?state\.clanName\s*=\s*result\.clan\.name/, "Clan rename submissions do not retain the authoritative name and gold balance.");
 requires(client, /function saveClanShieldEditor[\s\S]*?updateClanProfile\(\{\s*shield\s*\}\)[\s\S]*?result\?\.clan\?\.shield[\s\S]*?clanSnapshot\s*=\s*\{[\s\S]*?savedShield/, "Clan shield editor does not retain the server-confirmed saved shield.");
 requires(client, /data-clan-action="shield-tab"[\s\S]*?data-shield-panel="field"[\s\S]*?data-shield-panel="colors"[\s\S]*?data-shield-panel="charges"[\s\S]*?data-shield-panel="details"/, "Mobile clan shield editor tabs are incomplete.");
 requires(client, /CLAN_SHIELD_SHAPES[\s\S]*?CLAN_SHIELD_DIVISIONS[\s\S]*?CLAN_SHIELD_CHARGES[\s\S]*?CLAN_SHIELD_FINISHES/, "Clan shield editor options are incomplete.");
@@ -151,7 +161,8 @@ assert.doesNotMatch(client, /foreign-ruler-name foreign-ruler-name-inline"\)\}\$
 requires(styles, /\.clan-hud-btn[\s\S]*?\.profile-clan-affiliation/, "Clan HUD and profile shield styling is missing.");
 requires(styles, /\.public-clan-roster[\s\S]*?\.public-clan-member[\s\S]*?\.public-clan-member-power[\s\S]*?\.clan-name-link/, "Public clan roster and discovery profile links are not styled.");
 requires(styles, /\.clan-shield-size-editor[\s\S]*?\.clan-shield-editor-controls[\s\S]*?\.clan-shield-swatch-grid/, "Clan shield editor styling is missing.");
+requires(styles, /\.clan-rename-card[\s\S]*?\.clan-rename-form[\s\S]*?\.clan-rename-actions/, "Clan rename management UI is not styled.");
 requires(styles, /\.clan-content\.shield-editor-open[\s\S]*?\.clan-shield-editor-preview[\s\S]*?\.clan-shield-editor-workspace[\s\S]*?\.clan-shield-editor-controls[\s\S]*?overflow-y:\s*auto/, "Mobile shield editor does not keep a fixed preview beside scrollable controls.");
 requires(styles, /\.clan-member-row[\s\S]*?\.clan-member-selection[\s\S]*?\.clan-gift-panel[\s\S]*?\.clan-quest-grid[\s\S]*?\.clan-quest-card/, "Compact roster, gift, and conquest quest styling is missing.");
 
-console.log("Validated clan gates, event-driven roster and allied route updates, gifts, conquest quests, HUD access, profiles, friendly combat, rankings, allied-city UI, and leader-owned heraldic shields.");
+console.log("Validated clan gates, weekly paid renaming, event-driven roster and allied route updates, gifts, conquest quests, HUD access, profiles, friendly combat, rankings, allied-city UI, and leader-owned heraldic shields.");

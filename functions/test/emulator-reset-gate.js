@@ -459,6 +459,111 @@ async function main() {
     JSON.stringify(publicApplicantProfile?.clanShield) === JSON.stringify(createdClan?.clan?.shield),
     "The public player profile did not return the shield belonging to the player's clan."
   );
+  let memberRenameError = null;
+  try {
+    await callFunction("updateClanProfile", clanApplicant.token, { name: "Member Renamed Clan" });
+  } catch (error) {
+    memberRenameError = error;
+  }
+  assert(
+    /clan role does not allow that action/i.test(String(memberRenameError?.message || "")),
+    "A nonleader was allowed to rename the clan."
+  );
+  const renameFundedAtMs = Date.now();
+  await clanLeaderRef.set({
+    gold: 600_000,
+    goldFloat: 600_000,
+    economyUpdatedAtMs: renameFundedAtMs,
+  }, { merge: true });
+  await db.doc(`clanNameReservations/${realm.resetGeneration}_taken-gate`).set({
+    clanId: "another-clan",
+    reusableAtMs: Number.MAX_SAFE_INTEGER,
+  });
+  let duplicateRenameError = null;
+  try {
+    await callFunction("updateClanProfile", clanLeader.token, { name: "Taken Gate" });
+  } catch (error) {
+    duplicateRenameError = error;
+  }
+  assert(
+    /already in use/i.test(String(duplicateRenameError?.message || ""))
+      && Number((await clanLeaderRef.get()).data()?.gold || 0) === 600_000,
+    "A reserved clan name was accepted or charged gold."
+  );
+  const renameStartedAtMs = Date.now();
+  const renamedClanResult = await callFunction("updateClanProfile", clanLeader.token, {
+    name: "Renamed Gate",
+  });
+  const renameFinishedAtMs = Date.now();
+  assert(
+    renamedClanResult?.nameChanged === true
+      && renamedClanResult?.clan?.name === "Renamed Gate"
+      && renamedClanResult?.gold === 100_000,
+    "A valid leader clan rename did not charge exactly 500,000 gold."
+  );
+  const [
+    renamedClanSnap,
+    renamedLeaderSnap,
+    renamedApplicantSnap,
+    renamedClanLeaderboardSnap,
+    newNameReservationSnap,
+    oldNameReservationSnap,
+  ] = await Promise.all([
+    db.doc(`clans/${applicationClanId}`).get(),
+    clanLeaderRef.get(),
+    clanApplicantRef.get(),
+    db.doc(`clanLeaderboards/${realm.resetGeneration}/entries/${applicationClanId}`).get(),
+    db.doc(`clanNameReservations/${realm.resetGeneration}_renamed-gate`).get(),
+    db.doc(`clanNameReservations/${realm.resetGeneration}_application-gate`).get(),
+  ]);
+  const renamedClanData = renamedClanSnap.data() || {};
+  assert(
+    renamedClanData.name === "Renamed Gate"
+      && renamedClanData.normalizedName === "renamed-gate"
+      && Number(renamedClanData.lastNameChangedAtMs || 0) >= renameStartedAtMs
+      && Number(renamedClanData.nextNameChangeAtMs || 0) >= renameStartedAtMs + (7 * 24 * 60 * 60 * 1000)
+      && Number(renamedClanData.nextNameChangeAtMs || 0) <= renameFinishedAtMs + (7 * 24 * 60 * 60 * 1000),
+    "The clan rename did not persist its canonical name and seven-day cooldown."
+  );
+  assert(
+    renamedLeaderSnap.data()?.clanName === "Renamed Gate"
+      && renamedApplicantSnap.data()?.clanName === "Renamed Gate"
+      && renamedClanLeaderboardSnap.data()?.name === "Renamed Gate"
+      && Number(renamedLeaderSnap.data()?.goldFloat || 0) < 100_001,
+    "The renamed clan identity did not propagate to member profiles and clan rankings."
+  );
+  assert(
+    newNameReservationSnap.data()?.clanId === applicationClanId
+      && Number(newNameReservationSnap.data()?.reusableAtMs || 0) === Number.MAX_SAFE_INTEGER,
+    "The new clan name was not reserved transactionally."
+  );
+  assert(
+    oldNameReservationSnap.data()?.clanId === applicationClanId
+      && Number(oldNameReservationSnap.data()?.reusableAtMs || 0) >= renameStartedAtMs + (7 * 24 * 60 * 60 * 1000),
+    "The previous clan name was not held for its seven-day release period."
+  );
+  const goldAfterRename = Number(renamedLeaderSnap.data()?.gold || 0);
+  const replayedRename = await callFunction("updateClanProfile", clanLeader.token, {
+    name: "Renamed Gate",
+  });
+  assert(
+    replayedRename?.nameChanged === false
+      && Number((await clanLeaderRef.get()).data()?.gold || 0) === goldAfterRename
+      && Number((await db.doc(`clans/${applicationClanId}`).get()).data()?.nextNameChangeAtMs || 0)
+        === Number(renamedClanData.nextNameChangeAtMs || 0),
+    "Retrying the confirmed clan name charged gold or extended the cooldown."
+  );
+  let weeklyRenameError = null;
+  try {
+    await callFunction("updateClanProfile", clanLeader.token, { name: "Renamed Too Soon" });
+  } catch (error) {
+    weeklyRenameError = error;
+  }
+  assert(
+    /once every seven days/i.test(String(weeklyRenameError?.message || ""))
+      && Number((await clanLeaderRef.get()).data()?.gold || 0) === goldAfterRename,
+    "The seven-day clan rename cooldown was not enforced without charging gold."
+  );
   const [leaderRewardsBeforeGift, applicantRewardsBeforeGift] = await Promise.all([
     db.doc(`clans/${applicationClanId}/memberRewards/${clanLeader.uid}`).get(),
     db.doc(`clans/${applicationClanId}/memberRewards/${clanApplicant.uid}`).get(),

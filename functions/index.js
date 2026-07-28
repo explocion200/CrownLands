@@ -204,6 +204,8 @@ const GAME_SERVER_WAITING_STALE_MS = 5 * 60 * 1000;
 const GAME_SERVER_MAX_WAITING = 500;
 const CLAN_UNLOCK_LEVEL = 10;
 const CLAN_CREATE_GOLD_COST = 100_000;
+const CLAN_NAME_CHANGE_GOLD_COST = 500_000;
+const CLAN_NAME_CHANGE_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000;
 const CLAN_MEMBER_LIMIT = 30;
 const CLAN_JOIN_COOLDOWN_MS = 24 * 60 * 60 * 1000;
 const CLAN_LEADER_INACTIVE_MS = 14 * 24 * 60 * 60 * 1000;
@@ -9416,6 +9418,22 @@ function normalizeClanTag(value = "") {
   return { display, normalized: display.toLowerCase() };
 }
 
+function clanNameReservationRef(normalizedName = "") {
+  return db.doc(`clanNameReservations/${RESET_GENERATION}_${safeString(normalizedName, 40)}`);
+}
+
+function clanTagReservationRef(normalizedTag = "") {
+  return db.doc(`clanTagReservations/${RESET_GENERATION}_${safeString(normalizedTag, 40)}`);
+}
+
+function getClanNameChangeCooldownUntilMs(clan = {}) {
+  return Math.max(
+    0,
+    timestampToMs(clan.nextNameChangeAtMs),
+    timestampToMs(clan.lastNameChangedAtMs) + CLAN_NAME_CHANGE_COOLDOWN_MS
+  );
+}
+
 function normalizeClanDescription(value = "") {
   return safeString(value, 280).replace(/[\u0000-\u001f\u007f]/g, "").trim();
 }
@@ -9499,6 +9517,8 @@ function clanPublicSnapshot(id = "", clan = {}) {
     memberLimit: CLAN_MEMBER_LIMIT,
     totalKingPower: Math.max(0, Math.floor(safeNumber(clan.totalKingPower, 0))),
     status: clan.status === "disbanded" ? "disbanded" : "active",
+    lastNameChangedAtMs: Math.max(0, timestampToMs(clan.lastNameChangedAtMs)),
+    nextNameChangeAtMs: getClanNameChangeCooldownUntilMs(clan),
     createdAtMs: Math.max(0, timestampToMs(clan.createdAtMs || clan.createdAt)),
     updatedAtMs: Math.max(0, timestampToMs(clan.updatedAtMs || clan.updatedAt)),
   };
@@ -9693,8 +9713,8 @@ exports.createClan = onCall({ region: "us-central1", maxInstances: 20, invoker: 
   const tag = normalizeClanTag(request.data?.tag);
   const clanId = db.collection("clans").doc().id;
   const clanRef = db.doc(`clans/${clanId}`);
-  const nameRef = db.doc(`clanNameReservations/${RESET_GENERATION}_${name.normalized}`);
-  const tagRef = db.doc(`clanTagReservations/${RESET_GENERATION}_${tag.normalized}`);
+  const nameRef = clanNameReservationRef(name.normalized);
+  const tagRef = clanTagReservationRef(tag.normalized);
   const profileRef = db.doc(`players/${uid}`);
   return db.runTransaction(async transaction => {
     const [profileSnap, nameSnap, tagSnap] = await Promise.all([
@@ -9735,6 +9755,8 @@ exports.createClan = onCall({ region: "us-central1", maxInstances: 20, invoker: 
       memberLimit: CLAN_MEMBER_LIMIT,
       totalKingPower: Math.max(0, Math.floor(safeNumber(economy.globalStats?.kingPower || profile.kingPower, 0))),
       status: "active",
+      lastNameChangedAtMs: 0,
+      nextNameChangeAtMs: 0,
       createdAtMs: nowMs,
       updatedAtMs: nowMs,
       createdAt: FieldValue.serverTimestamp(),
@@ -9801,32 +9823,149 @@ exports.createClan = onCall({ region: "us-central1", maxInstances: 20, invoker: 
 
 exports.updateClanProfile = onCall({ region: "us-central1", maxInstances: 20, invoker: "public" }, async request => {
   const uid = requireAuth(request);
-  const profileSnap = await db.doc(`players/${uid}`).get();
+  const nowMs = Date.now();
+  const requestData = request.data && typeof request.data === "object" ? request.data : {};
+  const requestedName = Object.prototype.hasOwnProperty.call(requestData, "name")
+    ? normalizeClanName(requestData.name)
+    : null;
+  const profileRef = db.doc(`players/${uid}`);
+  const profileSnap = await profileRef.get();
   const clanId = safeString(profileSnap.data()?.clanId, 128);
   if (!clanId) throw new HttpsError("failed-precondition", "You are not in a clan.");
   return db.runTransaction(async transaction => {
-    const [clanSnap, memberSnap] = await Promise.all([
-      transaction.get(db.doc(`clans/${clanId}`)),
+    const clanRef = db.doc(`clans/${clanId}`);
+    const [currentProfileSnap, clanSnap, memberSnap] = await Promise.all([
+      transaction.get(profileRef),
+      transaction.get(clanRef),
       transaction.get(db.doc(`clans/${clanId}/members/${uid}`)),
     ]);
     if (!clanSnap.exists) throw new HttpsError("not-found", "Clan was not found.");
     assertClanRole(memberSnap.data(), ["leader"]);
     const clan = clanSnap.data() || {};
-    const shield = normalizeClanShield(request.data?.shield || request.data?.banner || clan.shield || clan.banner);
+    assertCurrentClan(clan);
+    if (!currentProfileSnap.exists || safeString(currentProfileSnap.data()?.clanId, 128) !== clanId) {
+      throw new HttpsError("failed-precondition", "Your clan membership changed. Reopen the Clan screen and try again.");
+    }
+    const nameChanged = Boolean(requestedName && requestedName.display !== safeString(clan.name, 24));
+    let economy = null;
+    let membersSnap = null;
+    let availableGold = Math.max(0, Math.floor(safeNumber(currentProfileSnap.data()?.gold, 0)));
+    let remainingGold = availableGold;
+    let remainingGoldFloat = Math.max(0, safeNumber(currentProfileSnap.data()?.goldFloat, availableGold));
+    let nextNameChangeAtMs = getClanNameChangeCooldownUntilMs(clan);
+    const newNameRef = nameChanged ? clanNameReservationRef(requestedName.normalized) : null;
+    if (nameChanged) {
+      const [loadedMembersSnap, newNameReservationSnap, preparedEconomy] = await Promise.all([
+        transaction.get(db.collection(`clans/${clanId}/members`)),
+        transaction.get(newNameRef),
+        prepareEconomyCollection(transaction, uid, nowMs, { profileRef, profileSnap: currentProfileSnap }),
+      ]);
+      membersSnap = loadedMembersSnap;
+      economy = preparedEconomy;
+      if (nextNameChangeAtMs > nowMs) {
+        throw new HttpsError(
+          "failed-precondition",
+          "The clan name can only be changed once every seven days.",
+          { nextNameChangeAtMs }
+        );
+      }
+      const reservation = newNameReservationSnap.exists ? newNameReservationSnap.data() || {} : {};
+      if (
+        newNameReservationSnap.exists
+        && safeString(reservation.clanId, 128) !== clanId
+        && timestampToMs(reservation.reusableAtMs) > nowMs
+      ) {
+        throw new HttpsError("already-exists", "That clan name is already in use.");
+      }
+      availableGold = Math.max(0, Math.floor(safeNumber(economy.profileAfter.gold, 0)));
+      if (availableGold < CLAN_NAME_CHANGE_GOLD_COST) {
+        throw new HttpsError(
+          "failed-precondition",
+          `Changing a clan name costs ${CLAN_NAME_CHANGE_GOLD_COST.toLocaleString()} gold.`
+        );
+      }
+      remainingGoldFloat = Math.max(
+        0,
+        safeNumber(economy.profileAfter.goldFloat, availableGold) - CLAN_NAME_CHANGE_GOLD_COST
+      );
+      remainingGold = Math.max(0, Math.floor(remainingGoldFloat));
+      nextNameChangeAtMs = nowMs + CLAN_NAME_CHANGE_COOLDOWN_MS;
+    }
+    const shield = normalizeClanShield(requestData.shield || requestData.banner || clan.shield || clan.banner);
     const patch = {
-      description: normalizeClanDescription(request.data?.description ?? clan.description),
+      description: normalizeClanDescription(requestData.description ?? clan.description),
       shield,
       banner: clanShieldLegacyBanner(shield),
-      admissionMode: normalizeAdmissionMode(request.data?.admissionMode ?? clan.admissionMode),
-      updatedAtMs: Date.now(),
+      admissionMode: normalizeAdmissionMode(requestData.admissionMode ?? clan.admissionMode),
+      ...(nameChanged ? {
+        name: requestedName.display,
+        normalizedName: requestedName.normalized,
+        lastNameChangedAtMs: nowMs,
+        nextNameChangeAtMs,
+      } : {}),
+      updatedAtMs: nowMs,
       updatedAt: FieldValue.serverTimestamp(),
     };
     transaction.set(clanSnap.ref, patch, { merge: true });
+    if (nameChanged) {
+      const previousNameRef = clanNameReservationRef(clan.normalizedName);
+      transaction.set(newNameRef, {
+        clanId,
+        reusableAtMs: Number.MAX_SAFE_INTEGER,
+        updatedAt: FieldValue.serverTimestamp(),
+      });
+      if (previousNameRef.path !== newNameRef.path) {
+        transaction.set(previousNameRef, {
+          clanId,
+          reusableAtMs: nowMs + CLAN_RESERVATION_RELEASE_MS,
+          updatedAt: FieldValue.serverTimestamp(),
+        }, { merge: true });
+      }
+      const renamedClan = { ...clan, ...patch };
+      writePreparedEconomy(transaction, economy, {
+        gold: remainingGold,
+        goldFloat: remainingGoldFloat,
+        ...clanIdentityPatch(clanId, renamedClan, "leader"),
+        ...clanIdentityRevisionPatch(nowMs),
+      });
+      membersSnap.docs.forEach(memberDoc => {
+        const memberUid = safeString(memberDoc.id, 128);
+        if (!memberUid) return;
+        if (memberUid !== uid) {
+          transaction.set(db.doc(`players/${memberUid}`), {
+            clanName: requestedName.display,
+            ...clanIdentityRevisionPatch(nowMs),
+            updatedAt: FieldValue.serverTimestamp(),
+          }, { merge: true });
+        }
+        transaction.set(leaderboardEntryRef(memberUid), {
+          clanName: requestedName.display,
+          updatedAt: FieldValue.serverTimestamp(),
+        }, { merge: true });
+      });
+    }
     writeClanLeaderboard(transaction, clanId, clan, patch);
     writeClanAudit(transaction, clanId, uid, "clan_profile_updated", {
-      shieldChanged: Boolean(request.data?.shield || request.data?.banner),
-    });
-    return { ok: true, clan: clanPublicSnapshot(clanId, { ...clan, ...patch }) };
+      shieldChanged: Boolean(requestData.shield || requestData.banner),
+      nameChanged,
+    }, nowMs);
+    if (nameChanged) {
+      writeClanAudit(transaction, clanId, uid, "clan_renamed", {
+        previousName: safeString(clan.name, 24),
+        name: requestedName.display,
+        goldCost: CLAN_NAME_CHANGE_GOLD_COST,
+        nextNameChangeAtMs,
+      }, nowMs);
+    }
+    return {
+      ok: true,
+      clan: clanPublicSnapshot(clanId, { ...clan, ...patch }),
+      ...(nameChanged ? {
+        nameChanged: true,
+        gold: remainingGold,
+        nextNameChangeAtMs,
+      } : { nameChanged: false }),
+    };
   });
 });
 
@@ -10109,8 +10248,8 @@ async function removeClanMember({ actorUid, targetUid, clanId, reason = "left" }
         updatedAtMs: nowMs,
         updatedAt: FieldValue.serverTimestamp(),
       }, { merge: true });
-      transaction.set(db.doc(`clanNameReservations/${clan.normalizedName}`), { clanId, reusableAtMs: nowMs + CLAN_RESERVATION_RELEASE_MS }, { merge: true });
-      transaction.set(db.doc(`clanTagReservations/${clan.normalizedTag}`), { clanId, reusableAtMs: nowMs + CLAN_RESERVATION_RELEASE_MS }, { merge: true });
+      transaction.set(clanNameReservationRef(clan.normalizedName), { clanId, reusableAtMs: nowMs + CLAN_RESERVATION_RELEASE_MS }, { merge: true });
+      transaction.set(clanTagReservationRef(clan.normalizedTag), { clanId, reusableAtMs: nowMs + CLAN_RESERVATION_RELEASE_MS }, { merge: true });
       transaction.delete(db.doc(`clanLeaderboards/${RESET_GENERATION}/entries/${clanId}`));
     } else {
       transaction.set(clanSnap.ref, { memberCount: nextCount, totalKingPower: nextPower, updatedAtMs: nowMs, updatedAt: FieldValue.serverTimestamp() }, { merge: true });
