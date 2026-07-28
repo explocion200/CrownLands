@@ -1,4 +1,4 @@
-const CACHE_VERSION = "20260727-city-names-v1";
+const CACHE_VERSION = "20260728-level-rewards-v1";
 const CACHE_NAME = `crownlands-cache-${CACHE_VERSION}`;
 const STATIC_CACHE_URLS = [
   "/",
@@ -7,11 +7,11 @@ const STATIC_CACHE_URLS = [
   "/styles.css?v=20260727-city-names-v1",
   "/release-config.js",
   "/world-config.js",
-  "/economy-config.js?v=20260726-offline-owned-production",
+  "/economy-config.js?v=20260728-level-rewards-v1",
   "/ads-config.js?v=20260726-rewarded-ads",
   "/firebase-config.js?v=20260726-protected-ads-reset",
   "/firebaseClient.js?v=20260727-city-names-v1",
-  "/game.js?v=20260727-city-names-v1",
+  "/game.js?v=20260728-level-rewards-v1",
   "/route-worker.js?v=20260721-structure-route-clearance",
   "/assets/map-editor-data.js?v=20260723-utc-responsive-v1",
   "/assets/game-menu-background.jpg?v=20260702-login-page",
