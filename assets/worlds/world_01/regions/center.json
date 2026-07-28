@@ -739,7 +739,7 @@
     },
     {
       "id": "center_city_071",
-      "name": "City 71",
+      "name": "Starmarket Mead",
       "regionId": "center",
       "xNorm": 0.832,
       "yNorm": 0.203,
@@ -750,7 +750,7 @@
     },
     {
       "id": "center_city_072",
-      "name": "City 72",
+      "name": "Ravenport",
       "regionId": "center",
       "xNorm": 0.881,
       "yNorm": 0.237,
@@ -761,7 +761,7 @@
     },
     {
       "id": "center_city_073",
-      "name": "City 73",
+      "name": "Brookmarket",
       "regionId": "center",
       "xNorm": 0.623,
       "yNorm": 0.125,
@@ -772,7 +772,7 @@
     },
     {
       "id": "center_city_075",
-      "name": "City 75",
+      "name": "Flintbridge",
       "regionId": "center",
       "xNorm": 0.262,
       "yNorm": 0.354,
@@ -783,7 +783,7 @@
     },
     {
       "id": "center_city_075_2",
-      "name": "City 75",
+      "name": "Queenstead",
       "regionId": "center",
       "xNorm": 0.167,
       "yNorm": 0.655,
@@ -794,7 +794,7 @@
     },
     {
       "id": "center_city_076",
-      "name": "City 76",
+      "name": "Goldwall Abbey",
       "regionId": "center",
       "xNorm": 0.785,
       "yNorm": 0.389,
@@ -805,7 +805,7 @@
     },
     {
       "id": "center_city_077",
-      "name": "City 77",
+      "name": "Oakfall",
       "regionId": "center",
       "xNorm": 0.653,
       "yNorm": 0.57,
@@ -816,7 +816,7 @@
     },
     {
       "id": "center_city_078",
-      "name": "City 78",
+      "name": "Brindlewall",
       "regionId": "center",
       "xNorm": 0.707,
       "yNorm": 0.56,
@@ -827,7 +827,7 @@
     },
     {
       "id": "center_city_079",
-      "name": "City 79",
+      "name": "Wolfgate",
       "regionId": "center",
       "xNorm": 0.71,
       "yNorm": 0.722,
@@ -838,7 +838,7 @@
     },
     {
       "id": "center_city_080",
-      "name": "City 80",
+      "name": "Fenhurst",
       "regionId": "center",
       "xNorm": 0.792,
       "yNorm": 0.781,
@@ -849,7 +849,7 @@
     },
     {
       "id": "center_city_081",
-      "name": "City 81",
+      "name": "Kingwatch Mead",
       "regionId": "center",
       "xNorm": 0.836,
       "yNorm": 0.816,
@@ -860,7 +860,7 @@
     },
     {
       "id": "center_city_082",
-      "name": "City 82",
+      "name": "Lowcliffe",
       "regionId": "center",
       "xNorm": 0.666,
       "yNorm": 0.87,
@@ -871,7 +871,7 @@
     },
     {
       "id": "center_city_083",
-      "name": "City 83",
+      "name": "Briarwatch",
       "regionId": "center",
       "xNorm": 0.488,
       "yNorm": 0.871,
@@ -882,7 +882,7 @@
     },
     {
       "id": "center_city_084",
-      "name": "City 84",
+      "name": "Whitereach",
       "regionId": "center",
       "xNorm": 0.524,
       "yNorm": 0.832,
@@ -893,7 +893,7 @@
     },
     {
       "id": "center_city_085",
-      "name": "City 85",
+      "name": "Fairhollow",
       "regionId": "center",
       "xNorm": 0.468,
       "yNorm": 0.753,
@@ -904,7 +904,7 @@
     },
     {
       "id": "center_city_086",
-      "name": "City 86",
+      "name": "Queenmoor Abbey",
       "regionId": "center",
       "xNorm": 0.193,
       "yNorm": 0.78,
@@ -915,7 +915,7 @@
     },
     {
       "id": "center_city_087",
-      "name": "City 87",
+      "name": "Kingsbrook",
       "regionId": "center",
       "xNorm": 0.234,
       "yNorm": 0.843,
@@ -926,7 +926,7 @@
     },
     {
       "id": "center_city_088",
-      "name": "City 88",
+      "name": "Blackmoor",
       "regionId": "center",
       "xNorm": 0.121,
       "yNorm": 0.636,
@@ -937,7 +937,7 @@
     },
     {
       "id": "center_city_089",
-      "name": "City 89",
+      "name": "Valemere",
       "regionId": "center",
       "xNorm": 0.197,
       "yNorm": 0.517,
@@ -948,7 +948,7 @@
     },
     {
       "id": "center_city_090",
-      "name": "City 90",
+      "name": "Embercross",
       "regionId": "center",
       "xNorm": 0.109,
       "yNorm": 0.458,
@@ -959,7 +959,7 @@
     },
     {
       "id": "center_city_091",
-      "name": "City 91",
+      "name": "Royalstead Mead",
       "regionId": "center",
       "xNorm": 0.19,
       "yNorm": 0.354,
@@ -970,7 +970,7 @@
     },
     {
       "id": "center_city_092",
-      "name": "City 92",
+      "name": "Ironworth",
       "regionId": "center",
       "xNorm": 0.278,
       "yNorm": 0.158,
@@ -981,7 +981,7 @@
     },
     {
       "id": "center_city_093",
-      "name": "City 93",
+      "name": "Bellstead",
       "regionId": "center",
       "xNorm": 0.398,
       "yNorm": 0.226,
@@ -992,7 +992,7 @@
     },
     {
       "id": "center_city_094",
-      "name": "City 94",
+      "name": "Thornfield",
       "regionId": "center",
       "xNorm": 0.392,
       "yNorm": 0.43,
@@ -1003,7 +1003,7 @@
     },
     {
       "id": "center_city_095",
-      "name": "City 95",
+      "name": "Elderwick Keep",
       "regionId": "center",
       "xNorm": 0.522,
       "yNorm": 0.167,
@@ -1014,7 +1014,7 @@
     },
     {
       "id": "center_city_096",
-      "name": "City 96",
+      "name": "Scepterden Abbey",
       "regionId": "center",
       "xNorm": 0.468,
       "yNorm": 0.308,
@@ -1025,7 +1025,7 @@
     },
     {
       "id": "center_city_097",
-      "name": "City 97",
+      "name": "Highford",
       "regionId": "center",
       "xNorm": 0.426,
       "yNorm": 0.165,
@@ -1036,7 +1036,7 @@
     },
     {
       "id": "center_city_098",
-      "name": "City 98",
+      "name": "Barrowden",
       "regionId": "center",
       "xNorm": 0.719,
       "yNorm": 0.141,
@@ -1047,7 +1047,7 @@
     },
     {
       "id": "center_city_099",
-      "name": "City 99",
+      "name": "Stonebury",
       "regionId": "center",
       "xNorm": 0.576,
       "yNorm": 0.265,
@@ -1058,7 +1058,7 @@
     },
     {
       "id": "center_city_100",
-      "name": "City 100",
+      "name": "Dunvale",
       "regionId": "center",
       "xNorm": 0.621,
       "yNorm": 0.224,
@@ -1069,7 +1069,7 @@
     },
     {
       "id": "center_city_101",
-      "name": "City 101",
+      "name": "Regalport Mead",
       "regionId": "center",
       "xNorm": 0.724,
       "yNorm": 0.267,
@@ -1080,7 +1080,7 @@
     },
     {
       "id": "center_city_102",
-      "name": "City 102",
+      "name": "Hartmarket",
       "regionId": "center",
       "xNorm": 0.871,
       "yNorm": 0.467,
@@ -1091,7 +1091,7 @@
     },
     {
       "id": "center_city_103",
-      "name": "City 103",
+      "name": "Ashport",
       "regionId": "center",
       "xNorm": 0.778,
       "yNorm": 0.477,
@@ -1102,7 +1102,7 @@
     },
     {
       "id": "center_city_104",
-      "name": "City 104",
+      "name": "Silverbridge",
       "regionId": "center",
       "xNorm": 0.691,
       "yNorm": 0.635,
@@ -1113,7 +1113,7 @@
     },
     {
       "id": "center_city_105",
-      "name": "City 105",
+      "name": "Crowham",
       "regionId": "center",
       "xNorm": 0.591,
       "yNorm": 0.858,
@@ -1124,7 +1124,7 @@
     },
     {
       "id": "center_city_106",
-      "name": "City 106",
+      "name": "Lionfall Abbey",
       "regionId": "center",
       "xNorm": 0.369,
       "yNorm": 0.537,

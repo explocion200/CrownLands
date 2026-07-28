@@ -563,7 +563,7 @@
     },
     {
       "id": "east_city_051",
-      "name": "City 51",
+      "name": "Crowwick March",
       "regionId": "east",
       "xNorm": 0.764,
       "yNorm": 0.395,
@@ -574,7 +574,7 @@
     },
     {
       "id": "east_city_052",
-      "name": "City 52",
+      "name": "Oakden",
       "regionId": "east",
       "xNorm": 0.685,
       "yNorm": 0.233,
@@ -585,7 +585,7 @@
     },
     {
       "id": "east_city_053",
-      "name": "City 53",
+      "name": "Rosebury",
       "regionId": "east",
       "xNorm": 0.824,
       "yNorm": 0.504,
@@ -596,7 +596,7 @@
     },
     {
       "id": "east_city_054",
-      "name": "City 54",
+      "name": "Cedarvale",
       "regionId": "east",
       "xNorm": 0.261,
       "yNorm": 0.262,
@@ -607,7 +607,7 @@
     },
     {
       "id": "east_city_055",
-      "name": "City 55",
+      "name": "Lowport",
       "regionId": "east",
       "xNorm": 0.379,
       "yNorm": 0.316,
@@ -618,7 +618,7 @@
     },
     {
       "id": "east_city_056",
-      "name": "City 56",
+      "name": "Falconbridge Rise",
       "regionId": "east",
       "xNorm": 0.428,
       "yNorm": 0.155,
@@ -629,7 +629,7 @@
     },
     {
       "id": "east_city_057",
-      "name": "City 57",
+      "name": "Brookham",
       "regionId": "east",
       "xNorm": 0.612,
       "yNorm": 0.266,
@@ -640,7 +640,7 @@
     },
     {
       "id": "east_city_058",
-      "name": "City 58",
+      "name": "Kingsfall",
       "regionId": "east",
       "xNorm": 0.693,
       "yNorm": 0.478,
@@ -651,7 +651,7 @@
     },
     {
       "id": "east_city_059",
-      "name": "City 59",
+      "name": "Brighthurst",
       "regionId": "east",
       "xNorm": 0.673,
       "yNorm": 0.6,
@@ -662,7 +662,7 @@
     },
     {
       "id": "east_city_060",
-      "name": "City 60",
+      "name": "Brindlegate",
       "regionId": "east",
       "xNorm": 0.785,
       "yNorm": 0.575,
@@ -673,7 +673,7 @@
     },
     {
       "id": "east_city_061",
-      "name": "City 61",
+      "name": "Ironcliffe March",
       "regionId": "east",
       "xNorm": 0.459,
       "yNorm": 0.675,
@@ -684,7 +684,7 @@
     },
     {
       "id": "east_city_062",
-      "name": "City 62",
+      "name": "Goldhollow",
       "regionId": "east",
       "xNorm": 0.194,
       "yNorm": 0.596,
@@ -695,7 +695,7 @@
     },
     {
       "id": "east_city_063",
-      "name": "City 63",
+      "name": "Briarreach",
       "regionId": "east",
       "xNorm": 0.153,
       "yNorm": 0.799,
@@ -706,7 +706,7 @@
     },
     {
       "id": "east_city_064",
-      "name": "City 64",
+      "name": "Highbrook",
       "regionId": "east",
       "xNorm": 0.326,
       "yNorm": 0.368,
@@ -717,7 +717,7 @@
     },
     {
       "id": "east_city_065",
-      "name": "City 65",
+      "name": "Dawncross",
       "regionId": "east",
       "xNorm": 0.761,
       "yNorm": 0.266,

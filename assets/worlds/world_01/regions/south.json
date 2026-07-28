@@ -464,7 +464,7 @@
     },
     {
       "id": "south_city_052",
-      "name": "City 52",
+      "name": "Thornwick",
       "regionId": "south",
       "xNorm": 0.647,
       "yNorm": 0.234,
@@ -475,7 +475,7 @@
     },
     {
       "id": "south_city_053",
-      "name": "City 53",
+      "name": "Pearlden",
       "regionId": "south",
       "xNorm": 0.728,
       "yNorm": 0.327,
@@ -486,7 +486,7 @@
     },
     {
       "id": "south_city_054",
-      "name": "City 54",
+      "name": "Fairford",
       "regionId": "south",
       "xNorm": 0.79,
       "yNorm": 0.55,
@@ -497,7 +497,7 @@
     },
     {
       "id": "south_city_055",
-      "name": "City 55",
+      "name": "Stonevale",
       "regionId": "south",
       "xNorm": 0.561,
       "yNorm": 0.374,
@@ -508,7 +508,7 @@
     },
     {
       "id": "south_city_056",
-      "name": "City 56",
+      "name": "Bloomport Abbey",
       "regionId": "south",
       "xNorm": 0.852,
       "yNorm": 0.735,
@@ -519,7 +519,7 @@
     },
     {
       "id": "south_city_057",
-      "name": "City 57",
+      "name": "Embermarket",
       "regionId": "south",
       "xNorm": 0.849,
       "yNorm": 0.687,
@@ -530,7 +530,7 @@
     },
     {
       "id": "south_city_058",
-      "name": "City 58",
+      "name": "Silverham",
       "regionId": "south",
       "xNorm": 0.67,
       "yNorm": 0.724,
@@ -541,7 +541,7 @@
     },
     {
       "id": "south_city_059",
-      "name": "City 59",
+      "name": "Warmfall",
       "regionId": "south",
       "xNorm": 0.635,
       "yNorm": 0.795,
@@ -552,7 +552,7 @@
     },
     {
       "id": "south_city_060",
-      "name": "City 60",
+      "name": "Elderwall",
       "regionId": "south",
       "xNorm": 0.572,
       "yNorm": 0.82,
@@ -563,7 +563,7 @@
     },
     {
       "id": "south_city_061",
-      "name": "City 61",
+      "name": "Redgate Mead",
       "regionId": "south",
       "xNorm": 0.477,
       "yNorm": 0.835,
@@ -574,7 +574,7 @@
     },
     {
       "id": "south_city_062",
-      "name": "City 62",
+      "name": "Tidecliffe",
       "regionId": "south",
       "xNorm": 0.221,
       "yNorm": 0.702,
@@ -585,7 +585,7 @@
     },
     {
       "id": "south_city_063",
-      "name": "City 63",
+      "name": "Dunwatch",
       "regionId": "south",
       "xNorm": 0.22,
       "yNorm": 0.293,
@@ -596,7 +596,7 @@
     },
     {
       "id": "south_city_064",
-      "name": "City 64",
+      "name": "Ravenreach",
       "regionId": "south",
       "xNorm": 0.199,
       "yNorm": 0.416,
@@ -607,7 +607,7 @@
     },
     {
       "id": "south_city_065",
-      "name": "City 65",
+      "name": "Marshbrook",
       "regionId": "south",
       "xNorm": 0.129,
       "yNorm": 0.674,
@@ -618,7 +618,7 @@
     },
     {
       "id": "south_city_067",
-      "name": "City 67",
+      "name": "Oakmere",
       "regionId": "south",
       "xNorm": 0.386,
       "yNorm": 0.663,
@@ -629,7 +629,7 @@
     },
     {
       "id": "south_city_068",
-      "name": "City 68",
+      "name": "Roseworth",
       "regionId": "south",
       "xNorm": 0.334,
       "yNorm": 0.708,

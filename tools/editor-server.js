@@ -3,6 +3,7 @@ const fsp = require("fs/promises");
 const http = require("http");
 const path = require("path");
 const vm = require("vm");
+const { getCanonicalLayoutCityName } = require("./city-name-utils");
 
 const ROOT_DIR = path.resolve(__dirname, "..");
 const EDITOR_DIR = path.join(__dirname, "map-editor");
@@ -566,9 +567,10 @@ function titleCase(value) {
 function cleanCity(city, index, region) {
   const xNorm = cleanNorm(city.xNorm ?? (Number(city.x) / Math.max(1, Number(region.width) || 1)), 0.5);
   const yNorm = cleanNorm(city.yNorm ?? (Number(city.y) / Math.max(1, Number(region.height) || 1)), 0.5);
+  const id = cleanId(city.id, `${region.id}_city_${String(index + 1).padStart(3, "0")}`);
   return {
-    id: cleanId(city.id, `${region.id}_city_${String(index + 1).padStart(3, "0")}`),
-    name: cleanString(city.name, `City ${index + 1}`),
+    id,
+    name: cleanString(getCanonicalLayoutCityName({ ...city, id }, region.id, index), "Alderwatch"),
     regionId: region.id,
     xNorm,
     yNorm,
@@ -844,7 +846,10 @@ async function buildWorldDataFromMapEditorData() {
       compatRegion: map.region || null,
       cities: (Array.isArray(map.cities) ? map.cities : []).map((city, cityIndex) => ({
         id: city.id || `${id}_city_${String(cityIndex + 1).padStart(3, "0")}`,
-        name: city.name || `City ${cityIndex + 1}`,
+        name: getCanonicalLayoutCityName({
+          ...city,
+          id: city.id || `${id}_city_${String(cityIndex + 1).padStart(3, "0")}`,
+        }, id, cityIndex),
         xNorm: cleanNorm(city.xNorm ?? ((Number(city.x) || 0) / sourceWidth), 0.5),
         yNorm: cleanNorm(city.yNorm ?? ((Number(city.y) || 0) / sourceHeight), 0.5),
         level: Math.max(1, Math.floor(Number(city.level) || 1)),

@@ -3552,9 +3552,16 @@ function hasEditorCityDefinitions(regionId) {
 
 function createEditorCitySlot(region, city, index) {
   const chosen = islandImagePointToWorld(region.id, getEditorPoint(city));
+  const id = String(city?.id || `${region.id}_${String(index + 1).padStart(3, "0")}`);
   return {
-    id: String(city?.id || `${region.id}_${String(index + 1).padStart(3, "0")}`),
-    name: generateCityName(region, index),
+    id,
+    name: getCanonicalCityName({
+      ...city,
+      id,
+      regionId: region.id,
+      startPool: region.id,
+      index,
+    }),
     regionId: region.id,
     startPool: region.id,
     x: Math.round(chosen.x),
@@ -4087,6 +4094,14 @@ function generateCityName(region, index, cityId = "") {
   return cityIndex % 5 === 0 ? `${prefix}${suffix} ${title}` : `${prefix}${suffix}`;
 }
 
+function isGenericCityName(value = "", cityId = "") {
+  const name = String(value || "").trim();
+  if (!name) return true;
+  if (/\d/.test(name)) return true;
+  if (/^city(?:\s+|[-_])\d+$/i.test(name)) return true;
+  return Boolean(cityId) && name.toLowerCase() === String(cityId).trim().toLowerCase();
+}
+
 function getCanonicalCityName(base = {}, fallback = null) {
   const fallbackRecord = fallback && typeof fallback === "object" ? fallback : {};
   const source = { ...fallbackRecord, ...base };
@@ -4094,6 +4109,8 @@ function getCanonicalCityName(base = {}, fallback = null) {
   const regionId = normalizeRegionId(source.regionId || source.startPool || fallbackRecord.regionId || fallbackRecord.startPool);
   const region = getRegionById(regionId) || { id: regionId || "center" };
   const cityId = source.id || fallbackRecord.id || "";
+  const configuredName = String(base?.name || fallbackRecord.name || "").trim();
+  if (!isGenericCityName(configuredName, cityId)) return configuredName.slice(0, 80);
   const index = getCityNameIndex(cityId, source.index);
   return generateCityName(region, index, cityId);
 }
