@@ -1,6 +1,6 @@
 window.CROWNLANDS_MAP_EDITOR_DATA = {
-  "version": 202607251952,
-  "updatedAt": "2026-07-25T19:52:40.376Z",
+  "version": 202607270001,
+  "updatedAt": "2026-07-27T00:01:00.000Z",
   "worldId": "world_01",
   "worldName": "Crownlands World 01",
   "globalSettings": {
@@ -832,7 +832,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "center_city_071",
-          "name": "City 71",
+          "name": "Starmarket Mead",
           "x": 1205,
           "y": 220,
           "xNorm": 0.832,
@@ -844,7 +844,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "center_city_072",
-          "name": "City 72",
+          "name": "Ravenport",
           "x": 1276,
           "y": 257,
           "xNorm": 0.881,
@@ -856,7 +856,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "center_city_073",
-          "name": "City 73",
+          "name": "Brookmarket",
           "x": 902,
           "y": 136,
           "xNorm": 0.623,
@@ -868,7 +868,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "center_city_075",
-          "name": "City 75",
+          "name": "Flintbridge",
           "x": 379,
           "y": 384,
           "xNorm": 0.262,
@@ -880,7 +880,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "center_city_075_2",
-          "name": "City 75",
+          "name": "Queenstead",
           "x": 242,
           "y": 711,
           "xNorm": 0.167,
@@ -892,7 +892,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "center_city_076",
-          "name": "City 76",
+          "name": "Goldwall Abbey",
           "x": 1137,
           "y": 422,
           "xNorm": 0.785,
@@ -904,7 +904,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "center_city_077",
-          "name": "City 77",
+          "name": "Oakfall",
           "x": 946,
           "y": 619,
           "xNorm": 0.653,
@@ -916,7 +916,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "center_city_078",
-          "name": "City 78",
+          "name": "Brindlewall",
           "x": 1024,
           "y": 608,
           "xNorm": 0.707,
@@ -928,7 +928,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "center_city_079",
-          "name": "City 79",
+          "name": "Wolfgate",
           "x": 1028,
           "y": 784,
           "xNorm": 0.71,
@@ -940,7 +940,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "center_city_080",
-          "name": "City 80",
+          "name": "Fenhurst",
           "x": 1147,
           "y": 848,
           "xNorm": 0.792,
@@ -952,7 +952,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "center_city_081",
-          "name": "City 81",
+          "name": "Kingwatch Mead",
           "x": 1211,
           "y": 886,
           "xNorm": 0.836,
@@ -964,7 +964,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "center_city_082",
-          "name": "City 82",
+          "name": "Lowcliffe",
           "x": 964,
           "y": 945,
           "xNorm": 0.666,
@@ -976,7 +976,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "center_city_083",
-          "name": "City 83",
+          "name": "Briarwatch",
           "x": 707,
           "y": 946,
           "xNorm": 0.488,
@@ -988,7 +988,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "center_city_084",
-          "name": "City 84",
+          "name": "Whitereach",
           "x": 759,
           "y": 904,
           "xNorm": 0.524,
@@ -1000,7 +1000,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "center_city_085",
-          "name": "City 85",
+          "name": "Fairhollow",
           "x": 678,
           "y": 818,
           "xNorm": 0.468,
@@ -1012,7 +1012,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "center_city_086",
-          "name": "City 86",
+          "name": "Queenmoor Abbey",
           "x": 279,
           "y": 847,
           "xNorm": 0.193,
@@ -1024,7 +1024,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "center_city_087",
-          "name": "City 87",
+          "name": "Kingsbrook",
           "x": 339,
           "y": 915,
           "xNorm": 0.234,
@@ -1036,7 +1036,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "center_city_088",
-          "name": "City 88",
+          "name": "Blackmoor",
           "x": 175,
           "y": 691,
           "xNorm": 0.121,
@@ -1048,7 +1048,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "center_city_089",
-          "name": "City 89",
+          "name": "Valemere",
           "x": 285,
           "y": 561,
           "xNorm": 0.197,
@@ -1060,7 +1060,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "center_city_090",
-          "name": "City 90",
+          "name": "Embercross",
           "x": 158,
           "y": 497,
           "xNorm": 0.109,
@@ -1072,7 +1072,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "center_city_091",
-          "name": "City 91",
+          "name": "Royalstead Mead",
           "x": 275,
           "y": 384,
           "xNorm": 0.19,
@@ -1084,7 +1084,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "center_city_092",
-          "name": "City 92",
+          "name": "Ironworth",
           "x": 403,
           "y": 172,
           "xNorm": 0.278,
@@ -1096,7 +1096,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "center_city_093",
-          "name": "City 93",
+          "name": "Bellstead",
           "x": 576,
           "y": 245,
           "xNorm": 0.398,
@@ -1108,7 +1108,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "center_city_094",
-          "name": "City 94",
+          "name": "Thornfield",
           "x": 568,
           "y": 467,
           "xNorm": 0.392,
@@ -1120,7 +1120,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "center_city_095",
-          "name": "City 95",
+          "name": "Elderwick Keep",
           "x": 756,
           "y": 181,
           "xNorm": 0.522,
@@ -1132,7 +1132,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "center_city_096",
-          "name": "City 96",
+          "name": "Scepterden Abbey",
           "x": 678,
           "y": 334,
           "xNorm": 0.468,
@@ -1144,7 +1144,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "center_city_097",
-          "name": "City 97",
+          "name": "Highford",
           "x": 617,
           "y": 179,
           "xNorm": 0.426,
@@ -1156,7 +1156,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "center_city_098",
-          "name": "City 98",
+          "name": "Barrowden",
           "x": 1041,
           "y": 153,
           "xNorm": 0.719,
@@ -1168,7 +1168,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "center_city_099",
-          "name": "City 99",
+          "name": "Stonebury",
           "x": 834,
           "y": 288,
           "xNorm": 0.576,
@@ -1180,7 +1180,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "center_city_100",
-          "name": "City 100",
+          "name": "Dunvale",
           "x": 899,
           "y": 243,
           "xNorm": 0.621,
@@ -1192,7 +1192,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "center_city_101",
-          "name": "City 101",
+          "name": "Regalport Mead",
           "x": 1048,
           "y": 290,
           "xNorm": 0.724,
@@ -1204,7 +1204,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "center_city_102",
-          "name": "City 102",
+          "name": "Hartmarket",
           "x": 1261,
           "y": 507,
           "xNorm": 0.871,
@@ -1216,7 +1216,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "center_city_103",
-          "name": "City 103",
+          "name": "Ashport",
           "x": 1127,
           "y": 518,
           "xNorm": 0.778,
@@ -1228,7 +1228,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "center_city_104",
-          "name": "City 104",
+          "name": "Silverbridge",
           "x": 1001,
           "y": 690,
           "xNorm": 0.691,
@@ -1240,7 +1240,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "center_city_105",
-          "name": "City 105",
+          "name": "Crowham",
           "x": 856,
           "y": 932,
           "xNorm": 0.591,
@@ -1252,7 +1252,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "center_city_106",
-          "name": "City 106",
+          "name": "Lionfall Abbey",
           "x": 534,
           "y": 583,
           "xNorm": 0.369,
@@ -1971,7 +1971,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "west_city_051",
-          "name": "City 51",
+          "name": "Ashbury Mead",
           "x": 1051,
           "y": 363,
           "xNorm": 0.726,
@@ -1983,7 +1983,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "west_city_052",
-          "name": "City 52",
+          "name": "Wyvernvale",
           "x": 895,
           "y": 469,
           "xNorm": 0.618,
@@ -1995,7 +1995,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "west_city_053",
-          "name": "City 53",
+          "name": "Redford",
           "x": 862,
           "y": 540,
           "xNorm": 0.595,
@@ -2007,7 +2007,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "west_city_054",
-          "name": "City 54",
+          "name": "Hartfield",
           "x": 824,
           "y": 417,
           "xNorm": 0.569,
@@ -2019,7 +2019,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "west_city_055",
-          "name": "City 55",
+          "name": "Elderstead",
           "x": 650,
           "y": 748,
           "xNorm": 0.449,
@@ -2031,7 +2031,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "west_city_056",
-          "name": "City 56",
+          "name": "Blackcross Abbey",
           "x": 449,
           "y": 715,
           "xNorm": 0.31,
@@ -2043,7 +2043,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "west_city_057",
-          "name": "City 57",
+          "name": "Woodmere",
           "x": 692,
           "y": 842,
           "xNorm": 0.478,
@@ -2055,7 +2055,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "west_city_058",
-          "name": "City 58",
+          "name": "Thornmoor",
           "x": 1003,
           "y": 689,
           "xNorm": 0.693,
@@ -2067,7 +2067,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "west_city_059",
-          "name": "City 59",
+          "name": "Kingshollow",
           "x": 1001,
           "y": 545,
           "xNorm": 0.691,
@@ -2079,7 +2079,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "west_city_060",
-          "name": "City 60",
+          "name": "Fencliffe",
           "x": 1226,
           "y": 605,
           "xNorm": 0.847,
@@ -2091,7 +2091,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "west_city_061",
-          "name": "City 61",
+          "name": "Brookgate Mead",
           "x": 1176,
           "y": 671,
           "xNorm": 0.812,
@@ -2771,7 +2771,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "east_city_051",
-          "name": "City 51",
+          "name": "Crowwick March",
           "x": 1106,
           "y": 429,
           "xNorm": 0.764,
@@ -2783,7 +2783,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "east_city_052",
-          "name": "City 52",
+          "name": "Oakden",
           "x": 992,
           "y": 253,
           "xNorm": 0.685,
@@ -2795,7 +2795,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "east_city_053",
-          "name": "City 53",
+          "name": "Rosebury",
           "x": 1193,
           "y": 547,
           "xNorm": 0.824,
@@ -2807,7 +2807,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "east_city_054",
-          "name": "City 54",
+          "name": "Cedarvale",
           "x": 378,
           "y": 285,
           "xNorm": 0.261,
@@ -2819,7 +2819,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "east_city_055",
-          "name": "City 55",
+          "name": "Lowport",
           "x": 549,
           "y": 343,
           "xNorm": 0.379,
@@ -2831,7 +2831,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "east_city_056",
-          "name": "City 56",
+          "name": "Falconbridge Rise",
           "x": 620,
           "y": 168,
           "xNorm": 0.428,
@@ -2843,7 +2843,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "east_city_057",
-          "name": "City 57",
+          "name": "Brookham",
           "x": 886,
           "y": 289,
           "xNorm": 0.612,
@@ -2855,7 +2855,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "east_city_058",
-          "name": "City 58",
+          "name": "Kingsfall",
           "x": 1003,
           "y": 519,
           "xNorm": 0.693,
@@ -2867,7 +2867,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "east_city_059",
-          "name": "City 59",
+          "name": "Brighthurst",
           "x": 975,
           "y": 652,
           "xNorm": 0.673,
@@ -2879,7 +2879,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "east_city_060",
-          "name": "City 60",
+          "name": "Brindlegate",
           "x": 1137,
           "y": 624,
           "xNorm": 0.785,
@@ -2891,7 +2891,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "east_city_061",
-          "name": "City 61",
+          "name": "Ironcliffe March",
           "x": 665,
           "y": 733,
           "xNorm": 0.459,
@@ -2903,7 +2903,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "east_city_062",
-          "name": "City 62",
+          "name": "Goldhollow",
           "x": 281,
           "y": 647,
           "xNorm": 0.194,
@@ -2915,7 +2915,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "east_city_063",
-          "name": "City 63",
+          "name": "Briarreach",
           "x": 222,
           "y": 868,
           "xNorm": 0.153,
@@ -2927,7 +2927,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "east_city_064",
-          "name": "City 64",
+          "name": "Highbrook",
           "x": 472,
           "y": 400,
           "xNorm": 0.326,
@@ -2939,7 +2939,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "east_city_065",
-          "name": "City 65",
+          "name": "Dawncross",
           "x": 1102,
           "y": 289,
           "xNorm": 0.761,
@@ -3571,7 +3571,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "north_city_051",
-          "name": "City 51",
+          "name": "Coldport Mead",
           "x": 811,
           "y": 287,
           "xNorm": 0.56,
@@ -3583,7 +3583,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "north_city_052",
-          "name": "City 52",
+          "name": "Eldermarket",
           "x": 860,
           "y": 240,
           "xNorm": 0.594,
@@ -3595,7 +3595,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "north_city_053",
-          "name": "City 53",
+          "name": "Redham",
           "x": 902,
           "y": 203,
           "xNorm": 0.623,
@@ -3607,7 +3607,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "north_city_054",
-          "name": "City 54",
+          "name": "Peakfall",
           "x": 670,
           "y": 225,
           "xNorm": 0.463,
@@ -3619,7 +3619,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "north_city_055",
-          "name": "City 55",
+          "name": "Dunwall",
           "x": 565,
           "y": 427,
           "xNorm": 0.39,
@@ -3631,7 +3631,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "north_city_056",
-          "name": "City 56",
+          "name": "Ravengate Abbey",
           "x": 430,
           "y": 735,
           "xNorm": 0.297,
@@ -3643,7 +3643,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "north_city_057",
-          "name": "City 57",
+          "name": "Mooncliffe",
           "x": 621,
           "y": 755,
           "xNorm": 0.429,
@@ -3655,7 +3655,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "north_city_059",
-          "name": "City 59",
+          "name": "Oakreach",
           "x": 498,
           "y": 887,
           "xNorm": 0.344,
@@ -3667,7 +3667,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "north_city_060",
-          "name": "City 60",
+          "name": "Stormbrook",
           "x": 427,
           "y": 857,
           "xNorm": 0.295,
@@ -3679,7 +3679,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "north_city_061",
-          "name": "City 61",
+          "name": "Cedarmoor Mead",
           "x": 814,
           "y": 906,
           "xNorm": 0.562,
@@ -3691,7 +3691,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "north_city_062",
-          "name": "City 62",
+          "name": "Lowmere",
           "x": 964,
           "y": 801,
           "xNorm": 0.666,
@@ -3703,7 +3703,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "north_city_063",
-          "name": "City 63",
+          "name": "Winterworth",
           "x": 956,
           "y": 566,
           "xNorm": 0.66,
@@ -3715,7 +3715,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "north_city_064",
-          "name": "City 64",
+          "name": "Brookstead",
           "x": 1027,
           "y": 502,
           "xNorm": 0.709,
@@ -3727,7 +3727,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "north_city_065",
-          "name": "City 65",
+          "name": "Kingsfield",
           "x": 1151,
           "y": 478,
           "xNorm": 0.795,
@@ -3739,7 +3739,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "north_city_066",
-          "name": "City 66",
+          "name": "Pineford Abbey",
           "x": 1202,
           "y": 520,
           "xNorm": 0.83,
@@ -3751,7 +3751,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "north_city_067",
-          "name": "City 67",
+          "name": "Brindleden",
           "x": 1148,
           "y": 614,
           "xNorm": 0.793,
@@ -3763,7 +3763,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "north_city_068",
-          "name": "City 68",
+          "name": "Ironbury",
           "x": 1102,
           "y": 278,
           "xNorm": 0.761,
@@ -3775,7 +3775,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "north_city_069",
-          "name": "City 69",
+          "name": "Snowmarket",
           "x": 1014,
           "y": 296,
           "xNorm": 0.7,
@@ -3787,7 +3787,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "north_city_070",
-          "name": "City 70",
+          "name": "Briarport",
           "x": 413,
           "y": 296,
           "xNorm": 0.285,
@@ -3799,7 +3799,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "north_city_071",
-          "name": "City 71",
+          "name": "Highbridge Mead",
           "x": 410,
           "y": 595,
           "xNorm": 0.283,
@@ -3811,7 +3811,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "north_city_072",
-          "name": "City 72",
+          "name": "Frostwall",
           "x": 789,
           "y": 829,
           "xNorm": 0.545,
@@ -3823,7 +3823,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "north_city_073",
-          "name": "City 73",
+          "name": "Blackfall",
           "x": 750,
           "y": 724,
           "xNorm": 0.518,
@@ -3835,7 +3835,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "north_city_074",
-          "name": "City 74",
+          "name": "Harthurst",
           "x": 540,
           "y": 624,
           "xNorm": 0.373,
@@ -3847,7 +3847,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "north_city_075",
-          "name": "City 75",
+          "name": "Wyvernwatch",
           "x": 776,
           "y": 653,
           "xNorm": 0.536,
@@ -4419,7 +4419,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "south_city_052",
-          "name": "City 52",
+          "name": "Thornwick",
           "x": 937,
           "y": 254,
           "xNorm": 0.647,
@@ -4431,7 +4431,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "south_city_053",
-          "name": "City 53",
+          "name": "Pearlden",
           "x": 1054,
           "y": 355,
           "xNorm": 0.728,
@@ -4443,7 +4443,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "south_city_054",
-          "name": "City 54",
+          "name": "Fairford",
           "x": 1144,
           "y": 597,
           "xNorm": 0.79,
@@ -4455,7 +4455,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "south_city_055",
-          "name": "City 55",
+          "name": "Stonevale",
           "x": 812,
           "y": 406,
           "xNorm": 0.561,
@@ -4467,7 +4467,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "south_city_056",
-          "name": "City 56",
+          "name": "Bloomport Abbey",
           "x": 1234,
           "y": 798,
           "xNorm": 0.852,
@@ -4479,7 +4479,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "south_city_057",
-          "name": "City 57",
+          "name": "Embermarket",
           "x": 1229,
           "y": 746,
           "xNorm": 0.849,
@@ -4491,7 +4491,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "south_city_058",
-          "name": "City 58",
+          "name": "Silverham",
           "x": 970,
           "y": 786,
           "xNorm": 0.67,
@@ -4503,7 +4503,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "south_city_059",
-          "name": "City 59",
+          "name": "Warmfall",
           "x": 919,
           "y": 863,
           "xNorm": 0.635,
@@ -4515,7 +4515,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "south_city_060",
-          "name": "City 60",
+          "name": "Elderwall",
           "x": 828,
           "y": 891,
           "xNorm": 0.572,
@@ -4527,7 +4527,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "south_city_061",
-          "name": "City 61",
+          "name": "Redgate Mead",
           "x": 691,
           "y": 907,
           "xNorm": 0.477,
@@ -4539,7 +4539,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "south_city_062",
-          "name": "City 62",
+          "name": "Tidecliffe",
           "x": 320,
           "y": 762,
           "xNorm": 0.221,
@@ -4551,7 +4551,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "south_city_063",
-          "name": "City 63",
+          "name": "Dunwatch",
           "x": 319,
           "y": 318,
           "xNorm": 0.22,
@@ -4563,7 +4563,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "south_city_064",
-          "name": "City 64",
+          "name": "Ravenreach",
           "x": 288,
           "y": 452,
           "xNorm": 0.199,
@@ -4575,7 +4575,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "south_city_065",
-          "name": "City 65",
+          "name": "Marshbrook",
           "x": 187,
           "y": 732,
           "xNorm": 0.129,
@@ -4587,7 +4587,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "south_city_067",
-          "name": "City 67",
+          "name": "Oakmere",
           "x": 559,
           "y": 720,
           "xNorm": 0.386,
@@ -4599,7 +4599,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "south_city_068",
-          "name": "City 68",
+          "name": "Roseworth",
           "x": 484,
           "y": 769,
           "xNorm": 0.334,
@@ -4692,7 +4692,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
       "cities": [
         {
           "id": "region_6_city_002",
-          "name": "City 2",
+          "name": "Redwatch",
           "x": 779,
           "y": 994,
           "xNorm": 0.538,
@@ -4704,7 +4704,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_6_city_003",
-          "name": "City 3",
+          "name": "Greyham",
           "x": 898,
           "y": 613,
           "xNorm": 0.62,
@@ -4716,7 +4716,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_6_city_004",
-          "name": "City 4",
+          "name": "Crowden",
           "x": 1092,
           "y": 1000,
           "xNorm": 0.754,
@@ -4728,7 +4728,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_6_city_005",
-          "name": "City 5",
+          "name": "Ashmere",
           "x": 1024,
           "y": 976,
           "xNorm": 0.707,
@@ -4740,7 +4740,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_6_city_006",
-          "name": "City 6",
+          "name": "Silverreach Moor",
           "x": 1192,
           "y": 859,
           "xNorm": 0.823,
@@ -4752,7 +4752,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_6_city_007",
-          "name": "City 7",
+          "name": "Hartfall",
           "x": 1063,
           "y": 798,
           "xNorm": 0.734,
@@ -4764,7 +4764,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_6_city_008",
-          "name": "City 8",
+          "name": "Dunbury",
           "x": 902,
           "y": 782,
           "xNorm": 0.623,
@@ -4776,7 +4776,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_6_city_009",
-          "name": "City 9",
+          "name": "Barrowworth",
           "x": 579,
           "y": 553,
           "xNorm": 0.4,
@@ -4788,7 +4788,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_6_city_010",
-          "name": "City 10",
+          "name": "Stonebrook",
           "x": 998,
           "y": 649,
           "xNorm": 0.689,
@@ -4800,7 +4800,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_6_city_011",
-          "name": "City 11",
+          "name": "Highhurst Cross",
           "x": 1132,
           "y": 716,
           "xNorm": 0.782,
@@ -4812,7 +4812,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_6_city_012",
-          "name": "City 12",
+          "name": "Eldermarket",
           "x": 1266,
           "y": 784,
           "xNorm": 0.874,
@@ -4824,7 +4824,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_6_city_013",
-          "name": "City 13",
+          "name": "Bellwick",
           "x": 1364,
           "y": 692,
           "xNorm": 0.942,
@@ -4836,7 +4836,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_6_city_015",
-          "name": "City 15",
+          "name": "Ironwatch",
           "x": 1239,
           "y": 497,
           "xNorm": 0.856,
@@ -4848,7 +4848,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_6_city_016",
-          "name": "City 16",
+          "name": "Emberham Moor",
           "x": 996,
           "y": 481,
           "xNorm": 0.688,
@@ -4860,7 +4860,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_6_city_017",
-          "name": "City 17",
+          "name": "Blackden",
           "x": 988,
           "y": 376,
           "xNorm": 0.682,
@@ -4872,7 +4872,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_6_city_018",
-          "name": "City 18",
+          "name": "Valestead",
           "x": 947,
           "y": 231,
           "xNorm": 0.654,
@@ -4884,7 +4884,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_6_city_019",
-          "name": "City 19",
+          "name": "Kingsreach",
           "x": 1176,
           "y": 266,
           "xNorm": 0.812,
@@ -4896,7 +4896,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_6_city_020",
-          "name": "City 20",
+          "name": "Fairfall",
           "x": 1034,
           "y": 130,
           "xNorm": 0.714,
@@ -4908,7 +4908,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_6_city_021",
-          "name": "City 21",
+          "name": "Briarbury Cross",
           "x": 1367,
           "y": 334,
           "xNorm": 0.944,
@@ -4920,7 +4920,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_6_city_022",
-          "name": "City 22",
+          "name": "Whitefield",
           "x": 1273,
           "y": 314,
           "xNorm": 0.879,
@@ -4932,7 +4932,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_6_city_023",
-          "name": "City 23",
+          "name": "Lowbrook",
           "x": 633,
           "y": 859,
           "xNorm": 0.437,
@@ -4944,7 +4944,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_6_city_024",
-          "name": "City 24",
+          "name": "Fenhurst",
           "x": 1109,
           "y": 113,
           "xNorm": 0.766,
@@ -4956,7 +4956,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_6_city_025",
-          "name": "City 25",
+          "name": "Brindlemarket",
           "x": 1166,
           "y": 529,
           "xNorm": 0.805,
@@ -4968,7 +4968,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_6_city_026",
-          "name": "City 26",
+          "name": "Wolfford Moor",
           "x": 471,
           "y": 645,
           "xNorm": 0.325,
@@ -4980,7 +4980,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_6_city_027",
-          "name": "City 27",
+          "name": "Oakcross",
           "x": 731,
           "y": 338,
           "xNorm": 0.505,
@@ -4992,7 +4992,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_6_city_028",
-          "name": "City 28",
+          "name": "Flintwatch",
           "x": 817,
           "y": 331,
           "xNorm": 0.564,
@@ -5004,7 +5004,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_6_city_029",
-          "name": "City 29",
+          "name": "Brookham",
           "x": 1274,
           "y": 586,
           "xNorm": 0.88,
@@ -5016,7 +5016,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_6_city_030",
-          "name": "City 30",
+          "name": "Wyvernvale",
           "x": 1312,
           "y": 490,
           "xNorm": 0.906,
@@ -5028,7 +5028,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_6_city_031",
-          "name": "City 31",
+          "name": "Ravenstead Cross",
           "x": 1374,
           "y": 598,
           "xNorm": 0.949,
@@ -5040,7 +5040,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_6_city_032",
-          "name": "City 32",
+          "name": "Greenreach",
           "x": 1351,
           "y": 784,
           "xNorm": 0.933,
@@ -5052,7 +5052,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_6_city_033",
-          "name": "City 33",
+          "name": "Cedarfall",
           "x": 1203,
           "y": 734,
           "xNorm": 0.831,
@@ -5064,7 +5064,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_6_city_034",
-          "name": "City 34",
+          "name": "Alderbury",
           "x": 1073,
           "y": 654,
           "xNorm": 0.741,
@@ -5076,7 +5076,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_6_city_035",
-          "name": "City 35",
+          "name": "Redfield",
           "x": 985,
           "y": 757,
           "xNorm": 0.68,
@@ -5088,7 +5088,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_6_city_036",
-          "name": "City 36",
+          "name": "Greybrook Moor",
           "x": 1122,
           "y": 882,
           "xNorm": 0.775,
@@ -5100,7 +5100,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_6_city_038",
-          "name": "City 38",
+          "name": "Ashmarket",
           "x": 1212,
           "y": 1015,
           "xNorm": 0.837,
@@ -5112,7 +5112,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_6_city_039",
-          "name": "City 39",
+          "name": "Silverford",
           "x": 1054,
           "y": 891,
           "xNorm": 0.728,
@@ -5124,7 +5124,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_6_city_040",
-          "name": "City 40",
+          "name": "Hartcross",
           "x": 617,
           "y": 635,
           "xNorm": 0.426,
@@ -5136,7 +5136,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_6_city_041",
-          "name": "City 41",
+          "name": "Dunwatch Cross",
           "x": 640,
           "y": 765,
           "xNorm": 0.442,
@@ -5148,7 +5148,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_6_city_042",
-          "name": "City 42",
+          "name": "Barrowham",
           "x": 744,
           "y": 449,
           "xNorm": 0.514,
@@ -5160,7 +5160,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_6_city_043",
-          "name": "City 43",
+          "name": "Stonevale",
           "x": 1073,
           "y": 426,
           "xNorm": 0.741,
@@ -5172,7 +5172,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_6_city_044",
-          "name": "City 44",
+          "name": "Highstead",
           "x": 724,
           "y": 863,
           "xNorm": 0.5,
@@ -5184,7 +5184,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_6_city_045",
-          "name": "City 45",
+          "name": "Elderreach",
           "x": 720,
           "y": 771,
           "xNorm": 0.497,
@@ -5196,7 +5196,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_6_city_046",
-          "name": "City 46",
+          "name": "Bellfall Moor",
           "x": 812,
           "y": 786,
           "xNorm": 0.561,
@@ -5208,7 +5208,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_6_city_047",
-          "name": "City 47",
+          "name": "Thornport",
           "x": 1015,
           "y": 230,
           "xNorm": 0.701,
@@ -5220,7 +5220,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_6_city_048",
-          "name": "City 48",
+          "name": "Ironfield",
           "x": 1098,
           "y": 274,
           "xNorm": 0.758,
@@ -5232,7 +5232,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_6_city_049",
-          "name": "City 49",
+          "name": "Emberbrook",
           "x": 1171,
           "y": 126,
           "xNorm": 0.809,
@@ -5244,7 +5244,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_6_city_050",
-          "name": "City 50",
+          "name": "Blackhurst",
           "x": 849,
           "y": 489,
           "xNorm": 0.586,
@@ -5256,7 +5256,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_6_city_051",
-          "name": "City 51",
+          "name": "Valebridge Cross",
           "x": 967,
           "y": 848,
           "xNorm": 0.668,
@@ -5268,7 +5268,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_6_city_052",
-          "name": "City 52",
+          "name": "Kingsford",
           "x": 1157,
           "y": 960,
           "xNorm": 0.799,
@@ -5374,7 +5374,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
       "cities": [
         {
           "id": "region_7_city_001",
-          "name": "City 1",
+          "name": "Dunhurst Abbey",
           "x": 184,
           "y": 402,
           "xNorm": 0.127,
@@ -5386,7 +5386,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_7_city_002",
-          "name": "City 2",
+          "name": "Barrowmarket",
           "x": 249,
           "y": 478,
           "xNorm": 0.172,
@@ -5398,7 +5398,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_7_city_003",
-          "name": "City 3",
+          "name": "Stoneford",
           "x": 374,
           "y": 500,
           "xNorm": 0.258,
@@ -5410,7 +5410,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_7_city_004",
-          "name": "City 4",
+          "name": "Highcross",
           "x": 300,
           "y": 566,
           "xNorm": 0.207,
@@ -5422,7 +5422,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_7_city_005",
-          "name": "City 5",
+          "name": "Elderwatch",
           "x": 1206,
           "y": 955,
           "xNorm": 0.833,
@@ -5434,7 +5434,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_7_city_006",
-          "name": "City 6",
+          "name": "Bellham Mead",
           "x": 405,
           "y": 598,
           "xNorm": 0.28,
@@ -5446,7 +5446,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_7_city_007",
-          "name": "City 7",
+          "name": "Thornvale",
           "x": 611,
           "y": 798,
           "xNorm": 0.422,
@@ -5458,7 +5458,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_7_city_008",
-          "name": "City 8",
+          "name": "Ironstead",
           "x": 544,
           "y": 564,
           "xNorm": 0.376,
@@ -5470,7 +5470,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_7_city_009",
-          "name": "City 9",
+          "name": "Emberreach",
           "x": 495,
           "y": 640,
           "xNorm": 0.342,
@@ -5482,7 +5482,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_7_city_010",
-          "name": "City 10",
+          "name": "Blackfall",
           "x": 624,
           "y": 593,
           "xNorm": 0.431,
@@ -5494,7 +5494,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_7_city_011",
-          "name": "City 11",
+          "name": "Valeport Abbey",
           "x": 714,
           "y": 678,
           "xNorm": 0.493,
@@ -5506,7 +5506,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_7_city_012",
-          "name": "City 12",
+          "name": "Kingsfield",
           "x": 637,
           "y": 695,
           "xNorm": 0.44,
@@ -5518,7 +5518,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_7_city_013",
-          "name": "City 13",
+          "name": "Fairbrook",
           "x": 471,
           "y": 762,
           "xNorm": 0.325,
@@ -5530,7 +5530,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_7_city_014",
-          "name": "City 14",
+          "name": "Briarhurst",
           "x": 552,
           "y": 758,
           "xNorm": 0.381,
@@ -5542,7 +5542,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_7_city_015",
-          "name": "City 15",
+          "name": "Whitebridge",
           "x": 413,
           "y": 910,
           "xNorm": 0.285,
@@ -5554,7 +5554,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_7_city_017",
-          "name": "City 17",
+          "name": "Fencross",
           "x": 323,
           "y": 314,
           "xNorm": 0.223,
@@ -5566,7 +5566,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_7_city_018",
-          "name": "City 18",
+          "name": "Brindlewatch",
           "x": 317,
           "y": 426,
           "xNorm": 0.219,
@@ -5578,7 +5578,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_7_city_019",
-          "name": "City 19",
+          "name": "Wolfwall",
           "x": 398,
           "y": 405,
           "xNorm": 0.275,
@@ -5590,7 +5590,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_7_city_020",
-          "name": "City 20",
+          "name": "Oakvale",
           "x": 488,
           "y": 491,
           "xNorm": 0.337,
@@ -5602,7 +5602,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_7_city_021",
-          "name": "City 21",
+          "name": "Flintstead Abbey",
           "x": 579,
           "y": 433,
           "xNorm": 0.4,
@@ -5614,7 +5614,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_7_city_022",
-          "name": "City 22",
+          "name": "Brookreach",
           "x": 611,
           "y": 353,
           "xNorm": 0.422,
@@ -5626,7 +5626,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_7_city_023",
-          "name": "City 23",
+          "name": "Wyverngate",
           "x": 618,
           "y": 273,
           "xNorm": 0.427,
@@ -5638,7 +5638,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_7_city_024",
-          "name": "City 24",
+          "name": "Ravenport",
           "x": 520,
           "y": 291,
           "xNorm": 0.359,
@@ -5650,7 +5650,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_7_city_025",
-          "name": "City 25",
+          "name": "Greenfield",
           "x": 546,
           "y": 204,
           "xNorm": 0.377,
@@ -5662,7 +5662,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_7_city_026",
-          "name": "City 26",
+          "name": "Cedarbrook Mead",
           "x": 475,
           "y": 392,
           "xNorm": 0.328,
@@ -5674,7 +5674,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_7_city_027",
-          "name": "City 27",
+          "name": "Alderhurst",
           "x": 420,
           "y": 302,
           "xNorm": 0.29,
@@ -5686,7 +5686,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_7_city_028",
-          "name": "City 28",
+          "name": "Redbridge",
           "x": 695,
           "y": 193,
           "xNorm": 0.48,
@@ -5698,7 +5698,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_7_city_029",
-          "name": "City 29",
+          "name": "Greyford",
           "x": 780,
           "y": 248,
           "xNorm": 0.539,
@@ -5710,7 +5710,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_7_city_030",
-          "name": "City 30",
+          "name": "Crowcross",
           "x": 714,
           "y": 314,
           "xNorm": 0.493,
@@ -5722,7 +5722,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_7_city_031",
-          "name": "City 31",
+          "name": "Ashwatch Abbey",
           "x": 930,
           "y": 203,
           "xNorm": 0.642,
@@ -5734,7 +5734,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_7_city_032",
-          "name": "City 32",
+          "name": "Silverwall",
           "x": 1037,
           "y": 220,
           "xNorm": 0.716,
@@ -5746,7 +5746,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_7_city_033",
-          "name": "City 33",
+          "name": "Hartvale",
           "x": 1011,
           "y": 314,
           "xNorm": 0.698,
@@ -5758,7 +5758,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_7_city_034",
-          "name": "City 34",
+          "name": "Dunstead",
           "x": 1086,
           "y": 341,
           "xNorm": 0.75,
@@ -5770,7 +5770,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_7_city_035",
-          "name": "City 35",
+          "name": "Barrowreach",
           "x": 1138,
           "y": 421,
           "xNorm": 0.786,
@@ -5782,7 +5782,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_7_city_036",
-          "name": "City 36",
+          "name": "Stonegate Mead",
           "x": 1122,
           "y": 523,
           "xNorm": 0.775,
@@ -5794,7 +5794,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_7_city_037",
-          "name": "City 37",
+          "name": "Highport",
           "x": 1035,
           "y": 556,
           "xNorm": 0.715,
@@ -5806,7 +5806,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_7_city_038",
-          "name": "City 38",
+          "name": "Elderfield",
           "x": 1098,
           "y": 611,
           "xNorm": 0.758,
@@ -5818,7 +5818,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_7_city_039",
-          "name": "City 39",
+          "name": "Bellbrook",
           "x": 1295,
           "y": 760,
           "xNorm": 0.894,
@@ -5830,7 +5830,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_7_city_040",
-          "name": "City 40",
+          "name": "Thorncliffe",
           "x": 1043,
           "y": 863,
           "xNorm": 0.72,
@@ -5842,7 +5842,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_7_city_041",
-          "name": "City 41",
+          "name": "Ironbridge Abbey",
           "x": 1024,
           "y": 672,
           "xNorm": 0.707,
@@ -5854,7 +5854,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_7_city_042",
-          "name": "City 42",
+          "name": "Emberford",
           "x": 911,
           "y": 759,
           "xNorm": 0.629,
@@ -5866,7 +5866,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_7_city_043",
-          "name": "City 43",
+          "name": "Blackcross",
           "x": 843,
           "y": 788,
           "xNorm": 0.582,
@@ -5878,7 +5878,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_7_city_044",
-          "name": "City 44",
+          "name": "Valehollow",
           "x": 778,
           "y": 733,
           "xNorm": 0.537,
@@ -5890,7 +5890,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_7_city_045",
-          "name": "City 45",
+          "name": "Kingswall",
           "x": 843,
           "y": 675,
           "xNorm": 0.582,
@@ -5902,7 +5902,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_7_city_046",
-          "name": "City 46",
+          "name": "Fairvale Mead",
           "x": 898,
           "y": 653,
           "xNorm": 0.62,
@@ -5914,7 +5914,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_7_city_047",
-          "name": "City 47",
+          "name": "Briarstead",
           "x": 866,
           "y": 557,
           "xNorm": 0.598,
@@ -5926,7 +5926,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_7_city_048",
-          "name": "City 48",
+          "name": "Whitemoor",
           "x": 948,
           "y": 555,
           "xNorm": 0.655,
@@ -5938,7 +5938,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_7_city_049",
-          "name": "City 49",
+          "name": "Lowgate",
           "x": 1041,
           "y": 451,
           "xNorm": 0.719,
@@ -5950,7 +5950,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_7_city_050",
-          "name": "City 50",
+          "name": "Fenport",
           "x": 975,
           "y": 405,
           "xNorm": 0.673,
@@ -5962,7 +5962,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_7_city_051",
-          "name": "City 51",
+          "name": "Brindlefield Abbey",
           "x": 908,
           "y": 481,
           "xNorm": 0.627,
@@ -5974,7 +5974,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_7_city_052",
-          "name": "City 52",
+          "name": "Wolfmere",
           "x": 924,
           "y": 315,
           "xNorm": 0.638,
@@ -5986,7 +5986,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_7_city_053",
-          "name": "City 53",
+          "name": "Oakcliffe",
           "x": 873,
           "y": 397,
           "xNorm": 0.603,
@@ -5998,7 +5998,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_7_city_054",
-          "name": "City 54",
+          "name": "Flintbridge",
           "x": 850,
           "y": 283,
           "xNorm": 0.587,
@@ -6010,7 +6010,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_7_city_055",
-          "name": "City 55",
+          "name": "Brookford",
           "x": 804,
           "y": 371,
           "xNorm": 0.555,
@@ -6022,7 +6022,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_7_city_056",
-          "name": "City 56",
+          "name": "Wyvernworth Mead",
           "x": 688,
           "y": 413,
           "xNorm": 0.475,
@@ -6034,7 +6034,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_7_city_057",
-          "name": "City 57",
+          "name": "Ravenhollow",
           "x": 630,
           "y": 500,
           "xNorm": 0.435,
@@ -6046,7 +6046,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_7_city_058",
-          "name": "City 58",
+          "name": "Greenwall",
           "x": 681,
           "y": 779,
           "xNorm": 0.47,
@@ -6058,7 +6058,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_7_city_059",
-          "name": "City 59",
+          "name": "Cedarvale",
           "x": 565,
           "y": 969,
           "xNorm": 0.39,
@@ -6070,7 +6070,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_7_city_060",
-          "name": "City 60",
+          "name": "Alderstead",
           "x": 798,
           "y": 1000,
           "xNorm": 0.551,
@@ -6082,7 +6082,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_7_city_061",
-          "name": "City 61",
+          "name": "Redmoor Abbey",
           "x": 814,
           "y": 882,
           "xNorm": 0.562,
@@ -6094,7 +6094,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_7_city_062",
-          "name": "City 62",
+          "name": "Greygate",
           "x": 688,
           "y": 875,
           "xNorm": 0.475,
@@ -6106,7 +6106,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_7_city_063",
-          "name": "City 63",
+          "name": "Crowport",
           "x": 1206,
           "y": 796,
           "xNorm": 0.833,
@@ -6118,7 +6118,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_7_city_064",
-          "name": "City 64",
+          "name": "Ashfield",
           "x": 1125,
           "y": 894,
           "xNorm": 0.777,
@@ -6130,7 +6130,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_7_city_065",
-          "name": "City 65",
+          "name": "Silvermere",
           "x": 1323,
           "y": 845,
           "xNorm": 0.914,
@@ -6142,7 +6142,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_7_city_066",
-          "name": "City 66",
+          "name": "Hartcliffe Mead",
           "x": 156,
           "y": 578,
           "xNorm": 0.108,
@@ -6154,7 +6154,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_7_city_067",
-          "name": "City 67",
+          "name": "Dunbridge",
           "x": 504,
           "y": 848,
           "xNorm": 0.348,
@@ -6166,7 +6166,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_7_city_068",
-          "name": "City 68",
+          "name": "Barrowford",
           "x": 597,
           "y": 889,
           "xNorm": 0.412,
@@ -6178,7 +6178,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_7_city_069",
-          "name": "City 69",
+          "name": "Stoneworth",
           "x": 750,
           "y": 945,
           "xNorm": 0.518,
@@ -6190,7 +6190,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_7_city_070",
-          "name": "City 70",
+          "name": "Highhollow",
           "x": 877,
           "y": 1013,
           "xNorm": 0.606,
@@ -6202,7 +6202,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_7_city_071",
-          "name": "City 71",
+          "name": "Elderwall Abbey",
           "x": 951,
           "y": 697,
           "xNorm": 0.657,
@@ -6214,7 +6214,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_7_city_072",
-          "name": "City 72",
+          "name": "Bellvale",
           "x": 569,
           "y": 659,
           "xNorm": 0.393,
@@ -6316,7 +6316,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
       "cities": [
         {
           "id": "region_8_city_001",
-          "name": "City 1",
+          "name": "Wyvernwatch March",
           "x": 164,
           "y": 129,
           "xNorm": 0.113,
@@ -6328,7 +6328,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_8_city_002",
-          "name": "City 2",
+          "name": "Ravenham",
           "x": 59,
           "y": 169,
           "xNorm": 0.041,
@@ -6340,7 +6340,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_8_city_003",
-          "name": "City 3",
+          "name": "Greenden",
           "x": 333,
           "y": 146,
           "xNorm": 0.23,
@@ -6352,7 +6352,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_8_city_004",
-          "name": "City 4",
+          "name": "Cedarmere",
           "x": 420,
           "y": 177,
           "xNorm": 0.29,
@@ -6364,7 +6364,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_8_city_005",
-          "name": "City 5",
+          "name": "Aldercliffe",
           "x": 639,
           "y": 126,
           "xNorm": 0.441,
@@ -6376,7 +6376,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_8_city_006",
-          "name": "City 6",
+          "name": "Redfall Rise",
           "x": 673,
           "y": 209,
           "xNorm": 0.465,
@@ -6388,7 +6388,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_8_city_007",
-          "name": "City 7",
+          "name": "Greybury",
           "x": 584,
           "y": 218,
           "xNorm": 0.403,
@@ -6400,7 +6400,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_8_city_008",
-          "name": "City 8",
+          "name": "Crowworth",
           "x": 678,
           "y": 313,
           "xNorm": 0.468,
@@ -6412,7 +6412,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_8_city_009",
-          "name": "City 9",
+          "name": "Ashhollow",
           "x": 553,
           "y": 392,
           "xNorm": 0.382,
@@ -6424,7 +6424,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_8_city_010",
-          "name": "City 10",
+          "name": "Silverhurst",
           "x": 650,
           "y": 434,
           "xNorm": 0.449,
@@ -6436,7 +6436,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_8_city_011",
-          "name": "City 11",
+          "name": "Hartmarket March",
           "x": 439,
           "y": 349,
           "xNorm": 0.303,
@@ -6448,7 +6448,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_8_city_012",
-          "name": "City 12",
+          "name": "Dunwick",
           "x": 497,
           "y": 445,
           "xNorm": 0.343,
@@ -6460,7 +6460,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_8_city_013",
-          "name": "City 13",
+          "name": "Barrowmoor",
           "x": 382,
           "y": 494,
           "xNorm": 0.264,
@@ -6472,7 +6472,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_8_city_014",
-          "name": "City 14",
+          "name": "Stonewatch",
           "x": 379,
           "y": 408,
           "xNorm": 0.262,
@@ -6484,7 +6484,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_8_city_015",
-          "name": "City 15",
+          "name": "Highham",
           "x": 321,
           "y": 327,
           "xNorm": 0.222,
@@ -6496,7 +6496,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_8_city_016",
-          "name": "City 16",
+          "name": "Elderden Rise",
           "x": 236,
           "y": 462,
           "xNorm": 0.163,
@@ -6508,7 +6508,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_8_city_017",
-          "name": "City 17",
+          "name": "Bellmere",
           "x": 127,
           "y": 415,
           "xNorm": 0.088,
@@ -6520,7 +6520,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_8_city_018",
-          "name": "City 18",
+          "name": "Thornreach",
           "x": 197,
           "y": 358,
           "xNorm": 0.136,
@@ -6532,7 +6532,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_8_city_019",
-          "name": "City 19",
+          "name": "Ironfall",
           "x": 75,
           "y": 742,
           "xNorm": 0.052,
@@ -6544,7 +6544,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_8_city_020",
-          "name": "City 20",
+          "name": "Emberbury",
           "x": 168,
           "y": 687,
           "xNorm": 0.116,
@@ -6556,7 +6556,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_8_city_021",
-          "name": "City 21",
+          "name": "Blackworth March",
           "x": 129,
           "y": 959,
           "xNorm": 0.089,
@@ -6568,7 +6568,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_8_city_022",
-          "name": "City 22",
+          "name": "Valebrook",
           "x": 181,
           "y": 877,
           "xNorm": 0.125,
@@ -6580,7 +6580,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_8_city_023",
-          "name": "City 23",
+          "name": "Kingshurst",
           "x": 450,
           "y": 1016,
           "xNorm": 0.311,
@@ -6592,7 +6592,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_8_city_024",
-          "name": "City 24",
+          "name": "Fairmarket",
           "x": 432,
           "y": 873,
           "xNorm": 0.298,
@@ -6604,7 +6604,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_8_city_025",
-          "name": "City 25",
+          "name": "Briarwick",
           "x": 323,
           "y": 772,
           "xNorm": 0.223,
@@ -6616,7 +6616,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_8_city_026",
-          "name": "City 26",
+          "name": "Whitecross Rise",
           "x": 447,
           "y": 776,
           "xNorm": 0.309,
@@ -6628,7 +6628,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_8_city_027",
-          "name": "City 27",
+          "name": "Lowwatch",
           "x": 640,
           "y": 926,
           "xNorm": 0.442,
@@ -6640,7 +6640,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_8_city_028",
-          "name": "City 28",
+          "name": "Fenham",
           "x": 669,
           "y": 817,
           "xNorm": 0.462,
@@ -6652,7 +6652,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_8_city_029",
-          "name": "City 29",
+          "name": "Brindleden",
           "x": 707,
           "y": 666,
           "xNorm": 0.488,
@@ -6664,7 +6664,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_8_city_030",
-          "name": "City 30",
+          "name": "Wolfstead",
           "x": 701,
           "y": 556,
           "xNorm": 0.484,
@@ -6676,7 +6676,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_8_city_031",
-          "name": "City 31",
+          "name": "Oakreach March",
           "x": 544,
           "y": 563,
           "xNorm": 0.376,
@@ -6688,7 +6688,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_8_city_032",
-          "name": "City 32",
+          "name": "Flintfall",
           "x": 555,
           "y": 662,
           "xNorm": 0.383,
@@ -6700,7 +6700,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_8_city_033",
-          "name": "City 33",
+          "name": "Brookbury",
           "x": 407,
           "y": 573,
           "xNorm": 0.281,
@@ -6712,7 +6712,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_8_city_034",
-          "name": "City 34",
+          "name": "Wyvernfield",
           "x": 224,
           "y": 599,
           "xNorm": 0.155,
@@ -6724,7 +6724,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_8_city_035",
-          "name": "City 35",
+          "name": "Ravenbrook",
           "x": 802,
           "y": 910,
           "xNorm": 0.554,
@@ -6736,7 +6736,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_8_city_036",
-          "name": "City 36",
+          "name": "Greenhurst Rise",
           "x": 972,
           "y": 876,
           "xNorm": 0.671,
@@ -6748,7 +6748,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_8_city_037",
-          "name": "City 37",
+          "name": "Cedarmarket",
           "x": 999,
           "y": 965,
           "xNorm": 0.69,
@@ -6760,7 +6760,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_8_city_038",
-          "name": "City 38",
+          "name": "Alderwick",
           "x": 1138,
           "y": 868,
           "xNorm": 0.786,
@@ -6772,7 +6772,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_8_city_039",
-          "name": "City 39",
+          "name": "Redcross",
           "x": 1192,
           "y": 937,
           "xNorm": 0.823,
@@ -6784,7 +6784,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_8_city_040",
-          "name": "City 40",
+          "name": "Greywatch",
           "x": 1300,
           "y": 791,
           "xNorm": 0.898,
@@ -6796,7 +6796,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_8_city_041",
-          "name": "City 41",
+          "name": "Crowham March",
           "x": 996,
           "y": 759,
           "xNorm": 0.688,
@@ -6808,7 +6808,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_8_city_042",
-          "name": "City 42",
+          "name": "Ashden",
           "x": 795,
           "y": 815,
           "xNorm": 0.549,
@@ -6820,7 +6820,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_8_city_043",
-          "name": "City 43",
+          "name": "Silverstead",
           "x": 792,
           "y": 705,
           "xNorm": 0.547,
@@ -6832,7 +6832,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_8_city_045",
-          "name": "City 45",
+          "name": "Dunfall",
           "x": 789,
           "y": 547,
           "xNorm": 0.545,
@@ -6844,7 +6844,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_8_city_046",
-          "name": "City 46",
+          "name": "Barrowbury Rise",
           "x": 844,
           "y": 492,
           "xNorm": 0.583,
@@ -6856,7 +6856,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_8_city_047",
-          "name": "City 47",
+          "name": "Stonefield",
           "x": 1027,
           "y": 496,
           "xNorm": 0.709,
@@ -6868,7 +6868,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_8_city_048",
-          "name": "City 48",
+          "name": "Highbrook",
           "x": 1070,
           "y": 415,
           "xNorm": 0.739,
@@ -6880,7 +6880,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_8_city_049",
-          "name": "City 49",
+          "name": "Elderhurst",
           "x": 1192,
           "y": 491,
           "xNorm": 0.823,
@@ -6892,7 +6892,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_8_city_050",
-          "name": "City 50",
+          "name": "Bellmarket",
           "x": 1253,
           "y": 431,
           "xNorm": 0.865,
@@ -6904,7 +6904,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_8_city_051",
-          "name": "City 51",
+          "name": "Thornford March",
           "x": 985,
           "y": 250,
           "xNorm": 0.68,
@@ -6916,7 +6916,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_8_city_052",
-          "name": "City 52",
+          "name": "Ironcross",
           "x": 899,
           "y": 310,
           "xNorm": 0.621,
@@ -6928,7 +6928,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_8_city_053",
-          "name": "City 53",
+          "name": "Emberwatch",
           "x": 808,
           "y": 338,
           "xNorm": 0.558,
@@ -6940,7 +6940,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_8_city_054",
-          "name": "City 54",
+          "name": "Blackham",
           "x": 759,
           "y": 456,
           "xNorm": 0.524,
@@ -6952,7 +6952,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_8_city_055",
-          "name": "City 55",
+          "name": "Valevale",
           "x": 875,
           "y": 142,
           "xNorm": 0.604,
@@ -6964,7 +6964,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_8_city_056",
-          "name": "City 56",
+          "name": "Kingsstead Rise",
           "x": 908,
           "y": 213,
           "xNorm": 0.627,
@@ -6976,7 +6976,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_8_city_057",
-          "name": "City 57",
+          "name": "Fairreach",
           "x": 1070,
           "y": 113,
           "xNorm": 0.739,
@@ -6988,7 +6988,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_8_city_058",
-          "name": "City 58",
+          "name": "Briarfall",
           "x": 1212,
           "y": 109,
           "xNorm": 0.837,
@@ -7000,7 +7000,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_8_city_059",
-          "name": "City 59",
+          "name": "Whiteport",
           "x": 1099,
           "y": 573,
           "xNorm": 0.759,
@@ -7012,7 +7012,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_8_city_060",
-          "name": "City 60",
+          "name": "Lowfield",
           "x": 938,
           "y": 661,
           "xNorm": 0.648,
@@ -7024,7 +7024,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_8_city_061",
-          "name": "City 61",
+          "name": "Fenbrook March",
           "x": 895,
           "y": 839,
           "xNorm": 0.618,
@@ -7036,7 +7036,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_8_city_062",
-          "name": "City 62",
+          "name": "Brindlehurst",
           "x": 1225,
           "y": 781,
           "xNorm": 0.846,
@@ -7048,7 +7048,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_8_city_063",
-          "name": "City 63",
+          "name": "Wolfbridge",
           "x": 628,
           "y": 605,
           "xNorm": 0.434,
@@ -7060,7 +7060,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_8_city_064",
-          "name": "City 64",
+          "name": "Oakford",
           "x": 298,
           "y": 849,
           "xNorm": 0.206,
@@ -7072,7 +7072,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_8_city_065",
-          "name": "City 65",
+          "name": "Flintcross",
           "x": 1100,
           "y": 937,
           "xNorm": 0.76,
@@ -7084,7 +7084,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_8_city_066",
-          "name": "City 66",
+          "name": "Brookwatch Rise",
           "x": 933,
           "y": 746,
           "xNorm": 0.644,
@@ -7096,7 +7096,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_8_city_067",
-          "name": "City 67",
+          "name": "Wyvernwall",
           "x": 1247,
           "y": 867,
           "xNorm": 0.861,
@@ -7108,7 +7108,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_8_city_068",
-          "name": "City 68",
+          "name": "Ravenvale",
           "x": 985,
           "y": 568,
           "xNorm": 0.68,
@@ -7120,7 +7120,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_8_city_069",
-          "name": "City 69",
+          "name": "Greenstead",
           "x": 975,
           "y": 428,
           "xNorm": 0.673,
@@ -7132,7 +7132,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_8_city_070",
-          "name": "City 70",
+          "name": "Cedarreach",
           "x": 1115,
           "y": 491,
           "xNorm": 0.77,
@@ -7144,7 +7144,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_8_city_071",
-          "name": "City 71",
+          "name": "Alderfall March",
           "x": 925,
           "y": 512,
           "xNorm": 0.639,
@@ -7156,7 +7156,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_8_city_072",
-          "name": "City 72",
+          "name": "Redport",
           "x": 880,
           "y": 571,
           "xNorm": 0.608,
@@ -7168,7 +7168,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_8_city_073",
-          "name": "City 73",
+          "name": "Greyfield",
           "x": 854,
           "y": 661,
           "xNorm": 0.59,
@@ -7180,7 +7180,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_8_city_074",
-          "name": "City 74",
+          "name": "Crowbrook",
           "x": 870,
           "y": 755,
           "xNorm": 0.601,
@@ -7192,7 +7192,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_8_city_075",
-          "name": "City 75",
+          "name": "Ashhurst",
           "x": 911,
           "y": 921,
           "xNorm": 0.629,
@@ -7204,7 +7204,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_8_city_076",
-          "name": "City 76",
+          "name": "Silverbridge Rise",
           "x": 592,
           "y": 851,
           "xNorm": 0.409,
@@ -7216,7 +7216,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_8_city_077",
-          "name": "City 77",
+          "name": "Hartford",
           "x": 372,
           "y": 955,
           "xNorm": 0.257,
@@ -7228,7 +7228,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_8_city_078",
-          "name": "City 78",
+          "name": "Duncross",
           "x": 261,
           "y": 934,
           "xNorm": 0.18,
@@ -7240,7 +7240,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_8_city_079",
-          "name": "City 79",
+          "name": "Barrowwatch",
           "x": 214,
           "y": 767,
           "xNorm": 0.148,
@@ -7252,7 +7252,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_8_city_080",
-          "name": "City 80",
+          "name": "Stonewall",
           "x": 132,
           "y": 807,
           "xNorm": 0.091,
@@ -7264,7 +7264,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_8_city_081",
-          "name": "City 81",
+          "name": "Highvale March",
           "x": 269,
           "y": 684,
           "xNorm": 0.186,
@@ -7276,7 +7276,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_8_city_082",
-          "name": "City 82",
+          "name": "Elderstead",
           "x": 62,
           "y": 901,
           "xNorm": 0.043,
@@ -7288,7 +7288,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_8_city_083",
-          "name": "City 83",
+          "name": "Bellreach",
           "x": 479,
           "y": 610,
           "xNorm": 0.331,
@@ -7300,7 +7300,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_8_city_084",
-          "name": "City 84",
+          "name": "Thorngate",
           "x": 453,
           "y": 496,
           "xNorm": 0.313,
@@ -7312,7 +7312,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_8_city_085",
-          "name": "City 85",
+          "name": "Ironport",
           "x": 311,
           "y": 510,
           "xNorm": 0.215,
@@ -7324,7 +7324,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_8_city_086",
-          "name": "City 86",
+          "name": "Emberfield Rise",
           "x": 601,
           "y": 330,
           "xNorm": 0.415,
@@ -7336,7 +7336,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_8_city_087",
-          "name": "City 87",
+          "name": "Blackbrook",
           "x": 505,
           "y": 195,
           "xNorm": 0.349,
@@ -7348,7 +7348,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_8_city_088",
-          "name": "City 88",
+          "name": "Valecliffe",
           "x": 101,
           "y": 226,
           "xNorm": 0.07,
@@ -7360,7 +7360,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_8_city_089",
-          "name": "City 89",
+          "name": "Kingsbridge",
           "x": 222,
           "y": 65,
           "xNorm": 0.153,
@@ -7372,7 +7372,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_8_city_090",
-          "name": "City 90",
+          "name": "Fairford",
           "x": 575,
           "y": 91,
           "xNorm": 0.397,
@@ -7384,7 +7384,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_8_city_091",
-          "name": "City 91",
+          "name": "Briarcross March",
           "x": 789,
           "y": 184,
           "xNorm": 0.545,
@@ -7396,7 +7396,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_8_city_092",
-          "name": "City 92",
+          "name": "Whitehollow",
           "x": 982,
           "y": 340,
           "xNorm": 0.678,
@@ -7408,7 +7408,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_8_city_093",
-          "name": "City 93",
+          "name": "Lowwall",
           "x": 1148,
           "y": 91,
           "xNorm": 0.793,
@@ -7420,7 +7420,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_8_city_094",
-          "name": "City 94",
+          "name": "Fenvale",
           "x": 627,
           "y": 730,
           "xNorm": 0.433,
@@ -7520,7 +7520,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
       "cities": [
         {
           "id": "region_9_city_001",
-          "name": "City 1",
+          "name": "Crowmarket Gate",
           "x": 232,
           "y": 433,
           "xNorm": 0.16,
@@ -7532,7 +7532,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_9_city_002",
-          "name": "City 2",
+          "name": "Ashwick",
           "x": 287,
           "y": 350,
           "xNorm": 0.198,
@@ -7544,7 +7544,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_9_city_003",
-          "name": "City 3",
+          "name": "Silvercross",
           "x": 366,
           "y": 390,
           "xNorm": 0.253,
@@ -7556,7 +7556,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_9_city_004",
-          "name": "City 4",
+          "name": "Hartwatch",
           "x": 362,
           "y": 252,
           "xNorm": 0.25,
@@ -7568,7 +7568,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_9_city_005",
-          "name": "City 5",
+          "name": "Dunham",
           "x": 505,
           "y": 334,
           "xNorm": 0.349,
@@ -7580,7 +7580,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_9_city_006",
-          "name": "City 6",
+          "name": "Barrowden Rest",
           "x": 592,
           "y": 253,
           "xNorm": 0.409,
@@ -7592,7 +7592,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_9_city_007",
-          "name": "City 7",
+          "name": "Stonestead",
           "x": 772,
           "y": 294,
           "xNorm": 0.533,
@@ -7604,7 +7604,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_9_city_008",
-          "name": "City 8",
+          "name": "Highreach",
           "x": 948,
           "y": 262,
           "xNorm": 0.655,
@@ -7616,7 +7616,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_9_city_009",
-          "name": "City 9",
+          "name": "Elderfall",
           "x": 956,
           "y": 429,
           "xNorm": 0.66,
@@ -7628,7 +7628,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_9_city_010",
-          "name": "City 10",
+          "name": "Bellbury",
           "x": 1200,
           "y": 464,
           "xNorm": 0.829,
@@ -7640,7 +7640,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_9_city_011",
-          "name": "City 11",
+          "name": "Thornfield Gate",
           "x": 1093,
           "y": 497,
           "xNorm": 0.755,
@@ -7652,7 +7652,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_9_city_012",
-          "name": "City 12",
+          "name": "Ironbrook",
           "x": 946,
           "y": 531,
           "xNorm": 0.653,
@@ -7664,7 +7664,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_9_city_013",
-          "name": "City 13",
+          "name": "Emberhurst",
           "x": 794,
           "y": 366,
           "xNorm": 0.548,
@@ -7676,7 +7676,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_9_city_014",
-          "name": "City 14",
+          "name": "Blackmarket",
           "x": 654,
           "y": 340,
           "xNorm": 0.452,
@@ -7688,7 +7688,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_9_city_015",
-          "name": "City 15",
+          "name": "Valeford",
           "x": 579,
           "y": 504,
           "xNorm": 0.4,
@@ -7700,7 +7700,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_9_city_016",
-          "name": "City 16",
+          "name": "Kingscross Rest",
           "x": 453,
           "y": 522,
           "xNorm": 0.313,
@@ -7712,7 +7712,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_9_city_017",
-          "name": "City 17",
+          "name": "Fairwatch",
           "x": 443,
           "y": 427,
           "xNorm": 0.306,
@@ -7724,7 +7724,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_9_city_018",
-          "name": "City 18",
+          "name": "Briarham",
           "x": 191,
           "y": 568,
           "xNorm": 0.132,
@@ -7736,7 +7736,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_9_city_019",
-          "name": "City 19",
+          "name": "Whitevale",
           "x": 275,
           "y": 649,
           "xNorm": 0.19,
@@ -7748,7 +7748,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_9_city_020",
-          "name": "City 20",
+          "name": "Lowstead",
           "x": 375,
           "y": 561,
           "xNorm": 0.259,
@@ -7760,7 +7760,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_9_city_021",
-          "name": "City 21",
+          "name": "Fenreach Gate",
           "x": 479,
           "y": 702,
           "xNorm": 0.331,
@@ -7772,7 +7772,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_9_city_022",
-          "name": "City 22",
+          "name": "Brindlefall",
           "x": 652,
           "y": 642,
           "xNorm": 0.45,
@@ -7784,7 +7784,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_9_city_023",
-          "name": "City 23",
+          "name": "Wolfport",
           "x": 628,
           "y": 735,
           "xNorm": 0.434,
@@ -7796,7 +7796,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_9_city_024",
-          "name": "City 24",
+          "name": "Oakfield",
           "x": 695,
           "y": 824,
           "xNorm": 0.48,
@@ -7808,7 +7808,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_9_city_025",
-          "name": "City 25",
+          "name": "Flintbrook",
           "x": 626,
           "y": 963,
           "xNorm": 0.432,
@@ -7820,7 +7820,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_9_city_026",
-          "name": "City 26",
+          "name": "Brookhurst Rest",
           "x": 501,
           "y": 974,
           "xNorm": 0.346,
@@ -7832,7 +7832,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_9_city_027",
-          "name": "City 27",
+          "name": "Wyvernbridge",
           "x": 288,
           "y": 944,
           "xNorm": 0.199,
@@ -7844,7 +7844,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_9_city_028",
-          "name": "City 28",
+          "name": "Ravenford",
           "x": 465,
           "y": 853,
           "xNorm": 0.321,
@@ -7856,7 +7856,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_9_city_029",
-          "name": "City 29",
+          "name": "Greencross",
           "x": 623,
           "y": 834,
           "xNorm": 0.43,
@@ -7868,7 +7868,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_9_city_030",
-          "name": "City 30",
+          "name": "Cedarwatch",
           "x": 766,
           "y": 888,
           "xNorm": 0.529,
@@ -7880,7 +7880,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_9_city_031",
-          "name": "City 31",
+          "name": "Alderham Gate",
           "x": 869,
           "y": 911,
           "xNorm": 0.6,
@@ -7892,7 +7892,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_9_city_032",
-          "name": "City 32",
+          "name": "Redvale",
           "x": 749,
           "y": 765,
           "xNorm": 0.517,
@@ -7904,7 +7904,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_9_city_033",
-          "name": "City 33",
+          "name": "Greystead",
           "x": 902,
           "y": 779,
           "xNorm": 0.623,
@@ -7916,7 +7916,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_9_city_034",
-          "name": "City 34",
+          "name": "Crowreach",
           "x": 977,
           "y": 837,
           "xNorm": 0.675,
@@ -7928,7 +7928,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_9_city_035",
-          "name": "City 35",
+          "name": "Ashfall",
           "x": 1037,
           "y": 960,
           "xNorm": 0.716,
@@ -7940,7 +7940,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_9_city_036",
-          "name": "City 36",
+          "name": "Silverport Rest",
           "x": 1186,
           "y": 964,
           "xNorm": 0.819,
@@ -7952,7 +7952,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_9_city_037",
-          "name": "City 37",
+          "name": "Hartfield",
           "x": 1361,
           "y": 957,
           "xNorm": 0.94,
@@ -7964,7 +7964,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_9_city_038",
-          "name": "City 38",
+          "name": "Dunbrook",
           "x": 1222,
           "y": 846,
           "xNorm": 0.844,
@@ -7976,7 +7976,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_9_city_039",
-          "name": "City 39",
+          "name": "Barrowhurst",
           "x": 1253,
           "y": 762,
           "xNorm": 0.865,
@@ -7988,7 +7988,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_9_city_040",
-          "name": "City 40",
+          "name": "Stonebridge",
           "x": 1137,
           "y": 844,
           "xNorm": 0.785,
@@ -8000,7 +8000,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_9_city_041",
-          "name": "City 41",
+          "name": "Highford Gate",
           "x": 1180,
           "y": 686,
           "xNorm": 0.815,
@@ -8012,7 +8012,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_9_city_042",
-          "name": "City 42",
+          "name": "Eldercross",
           "x": 1121,
           "y": 741,
           "xNorm": 0.774,
@@ -8024,7 +8024,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_9_city_043",
-          "name": "City 43",
+          "name": "Bellwatch",
           "x": 1008,
           "y": 746,
           "xNorm": 0.696,
@@ -8036,7 +8036,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_9_city_044",
-          "name": "City 44",
+          "name": "Thornwall",
           "x": 744,
           "y": 648,
           "xNorm": 0.514,
@@ -8048,7 +8048,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_9_city_045",
-          "name": "City 45",
+          "name": "Ironvale",
           "x": 843,
           "y": 651,
           "xNorm": 0.582,
@@ -8060,7 +8060,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_9_city_046",
-          "name": "City 46",
+          "name": "Emberstead Rest",
           "x": 999,
           "y": 614,
           "xNorm": 0.69,
@@ -8072,7 +8072,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_9_city_047",
-          "name": "City 47",
+          "name": "Blackreach",
           "x": 1086,
           "y": 578,
           "xNorm": 0.75,
@@ -8084,7 +8084,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_9_city_048",
-          "name": "City 48",
+          "name": "Valegate",
           "x": 1239,
           "y": 547,
           "xNorm": 0.856,
@@ -8096,7 +8096,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_9_city_049",
-          "name": "City 49",
+          "name": "Kingsport",
           "x": 833,
           "y": 441,
           "xNorm": 0.575,
@@ -8108,7 +8108,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_9_city_050",
-          "name": "City 50",
+          "name": "Fairfield",
           "x": 529,
           "y": 433,
           "xNorm": 0.365,
@@ -8120,7 +8120,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_9_city_051",
-          "name": "City 51",
+          "name": "Briarbrook Gate",
           "x": 1018,
           "y": 449,
           "xNorm": 0.703,
@@ -8132,7 +8132,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_9_city_052",
-          "name": "City 52",
+          "name": "Whitecliffe",
           "x": 849,
           "y": 337,
           "xNorm": 0.586,
@@ -8144,7 +8144,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_9_city_053",
-          "name": "City 53",
+          "name": "Lowbridge",
           "x": 883,
           "y": 491,
           "xNorm": 0.61,
@@ -8156,7 +8156,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_9_city_054",
-          "name": "City 54",
+          "name": "Fenford",
           "x": 523,
           "y": 516,
           "xNorm": 0.361,
@@ -8168,7 +8168,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_9_city_055",
-          "name": "City 55",
+          "name": "Brindlecross",
           "x": 397,
           "y": 310,
           "xNorm": 0.274,
@@ -8180,7 +8180,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_9_city_056",
-          "name": "City 56",
+          "name": "Wolfhollow Rest",
           "x": 310,
           "y": 433,
           "xNorm": 0.214,
@@ -8192,7 +8192,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_9_city_057",
-          "name": "City 57",
+          "name": "Oakwall",
           "x": 197,
           "y": 690,
           "xNorm": 0.136,
@@ -8204,7 +8204,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_9_city_058",
-          "name": "City 58",
+          "name": "Flintvale",
           "x": 546,
           "y": 826,
           "xNorm": 0.377,
@@ -8216,7 +8216,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_9_city_059",
-          "name": "City 59",
+          "name": "Brookstead",
           "x": 537,
           "y": 606,
           "xNorm": 0.371,
@@ -8228,7 +8228,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_9_city_060",
-          "name": "City 60",
+          "name": "Wyvernmoor",
           "x": 582,
           "y": 655,
           "xNorm": 0.402,
@@ -8240,7 +8240,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_9_city_061",
-          "name": "City 61",
+          "name": "Ravengate Gate",
           "x": 547,
           "y": 732,
           "xNorm": 0.378,
@@ -8252,7 +8252,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_9_city_062",
-          "name": "City 62",
+          "name": "Greenport",
           "x": 556,
           "y": 917,
           "xNorm": 0.384,
@@ -8264,7 +8264,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_9_city_063",
-          "name": "City 63",
+          "name": "Cedarfield",
           "x": 127,
           "y": 881,
           "xNorm": 0.088,
@@ -8276,7 +8276,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_9_city_064",
-          "name": "City 64",
+          "name": "Alderbrook",
           "x": 1070,
           "y": 893,
           "xNorm": 0.739,
@@ -8288,7 +8288,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_9_city_065",
-          "name": "City 65",
+          "name": "Redcliffe",
           "x": 1290,
           "y": 912,
           "xNorm": 0.891,
@@ -8300,7 +8300,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_9_city_066",
-          "name": "City 66",
+          "name": "Greybridge Rest",
           "x": 1099,
           "y": 1001,
           "xNorm": 0.759,
@@ -8312,7 +8312,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_9_city_067",
-          "name": "City 67",
+          "name": "Crowford",
           "x": 822,
           "y": 786,
           "xNorm": 0.568,
@@ -8324,7 +8324,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_9_city_068",
-          "name": "City 68",
+          "name": "Ashcross",
           "x": 699,
           "y": 719,
           "xNorm": 0.483,
@@ -8336,7 +8336,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_9_city_069",
-          "name": "City 69",
+          "name": "Silverhollow",
           "x": 792,
           "y": 708,
           "xNorm": 0.547,
@@ -8348,7 +8348,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_9_city_070",
-          "name": "City 70",
+          "name": "Hartwall",
           "x": 906,
           "y": 628,
           "xNorm": 0.626,
@@ -8360,7 +8360,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_9_city_071",
-          "name": "City 71",
+          "name": "Dunvale Gate",
           "x": 938,
           "y": 711,
           "xNorm": 0.648,
@@ -8372,7 +8372,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_9_city_072",
-          "name": "City 72",
+          "name": "Barrowstead",
           "x": 1169,
           "y": 605,
           "xNorm": 0.807,
@@ -8384,7 +8384,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_9_city_073",
-          "name": "City 73",
+          "name": "Stonemoor",
           "x": 1102,
           "y": 658,
           "xNorm": 0.761,
@@ -8396,7 +8396,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_9_city_074",
-          "name": "City 74",
+          "name": "Highgate",
           "x": 717,
           "y": 366,
           "xNorm": 0.495,
@@ -8408,7 +8408,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_9_city_075",
-          "name": "City 75",
+          "name": "Elderport",
           "x": 578,
           "y": 343,
           "xNorm": 0.399,
@@ -8420,7 +8420,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_9_city_076",
-          "name": "City 76",
+          "name": "Bellfield Rest",
           "x": 702,
           "y": 282,
           "xNorm": 0.485,
@@ -8432,7 +8432,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_9_city_078",
-          "name": "City 78",
+          "name": "Ironcliffe",
           "x": 921,
           "y": 337,
           "xNorm": 0.636,
@@ -8444,7 +8444,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_9_city_079",
-          "name": "City 79",
+          "name": "Emberbridge",
           "x": 992,
           "y": 306,
           "xNorm": 0.685,
@@ -8456,7 +8456,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_9_city_080",
-          "name": "City 80",
+          "name": "Blackford",
           "x": 901,
           "y": 409,
           "xNorm": 0.622,
@@ -8468,7 +8468,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_9_city_081",
-          "name": "City 81",
+          "name": "Valeworth Gate",
           "x": 458,
           "y": 293,
           "xNorm": 0.316,
@@ -8569,7 +8569,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
       "cities": [
         {
           "id": "region_10_city_001",
-          "name": "City 1",
+          "name": "Barrowbridge Gate",
           "x": 180,
           "y": 580,
           "xNorm": 0.124,
@@ -8581,7 +8581,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_10_city_002",
-          "name": "City 2",
+          "name": "Stonebury",
           "x": 265,
           "y": 545,
           "xNorm": 0.183,
@@ -8593,7 +8593,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_10_city_003",
-          "name": "City 3",
+          "name": "Highworth",
           "x": 401,
           "y": 541,
           "xNorm": 0.277,
@@ -8605,7 +8605,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_10_city_004",
-          "name": "City 4",
+          "name": "Elderhollow",
           "x": 294,
           "y": 449,
           "xNorm": 0.203,
@@ -8617,7 +8617,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_10_city_005",
-          "name": "City 5",
+          "name": "Bellwall",
           "x": 206,
           "y": 250,
           "xNorm": 0.142,
@@ -8629,7 +8629,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_10_city_006",
-          "name": "City 6",
+          "name": "Thornmarket Rest",
           "x": 395,
           "y": 205,
           "xNorm": 0.273,
@@ -8641,7 +8641,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_10_city_007",
-          "name": "City 7",
+          "name": "Ironwick",
           "x": 515,
           "y": 268,
           "xNorm": 0.356,
@@ -8653,7 +8653,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_10_city_008",
-          "name": "City 8",
+          "name": "Embermoor",
           "x": 727,
           "y": 180,
           "xNorm": 0.502,
@@ -8665,7 +8665,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_10_city_009",
-          "name": "City 9",
+          "name": "Blackgate",
           "x": 773,
           "y": 265,
           "xNorm": 0.534,
@@ -8677,7 +8677,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_10_city_010",
-          "name": "City 10",
+          "name": "Valeham",
           "x": 1045,
           "y": 225,
           "xNorm": 0.722,
@@ -8689,7 +8689,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_10_city_011",
-          "name": "City 11",
+          "name": "Kingsden Gate",
           "x": 1208,
           "y": 290,
           "xNorm": 0.834,
@@ -8701,7 +8701,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_10_city_012",
-          "name": "City 12",
+          "name": "Fairmere",
           "x": 941,
           "y": 203,
           "xNorm": 0.65,
@@ -8713,7 +8713,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_10_city_013",
-          "name": "City 13",
+          "name": "Briarcliffe",
           "x": 1027,
           "y": 432,
           "xNorm": 0.709,
@@ -8725,7 +8725,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_10_city_014",
-          "name": "City 14",
+          "name": "Whitefall",
           "x": 1135,
           "y": 520,
           "xNorm": 0.784,
@@ -8737,7 +8737,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_10_city_015",
-          "name": "City 15",
+          "name": "Lowbury",
           "x": 1074,
           "y": 595,
           "xNorm": 0.742,
@@ -8749,7 +8749,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_10_city_016",
-          "name": "City 16",
+          "name": "Fenworth Rest",
           "x": 828,
           "y": 912,
           "xNorm": 0.572,
@@ -8761,7 +8761,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_10_city_017",
-          "name": "City 17",
+          "name": "Brindlehollow",
           "x": 744,
           "y": 881,
           "xNorm": 0.514,
@@ -8773,7 +8773,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_10_city_018",
-          "name": "City 18",
+          "name": "Wolfhurst",
           "x": 786,
           "y": 808,
           "xNorm": 0.543,
@@ -8785,7 +8785,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_10_city_019",
-          "name": "City 19",
+          "name": "Oakmarket",
           "x": 780,
           "y": 703,
           "xNorm": 0.539,
@@ -8797,7 +8797,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_10_city_020",
-          "name": "City 20",
+          "name": "Flintwick",
           "x": 822,
           "y": 618,
           "xNorm": 0.568,
@@ -8809,7 +8809,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_10_city_021",
-          "name": "City 21",
+          "name": "Brookmoor Gate",
           "x": 980,
           "y": 622,
           "xNorm": 0.677,
@@ -8821,7 +8821,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_10_city_022",
-          "name": "City 22",
+          "name": "Wyvernwatch",
           "x": 902,
           "y": 536,
           "xNorm": 0.623,
@@ -8833,7 +8833,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_10_city_023",
-          "name": "City 23",
+          "name": "Ravenham",
           "x": 830,
           "y": 503,
           "xNorm": 0.573,
@@ -8845,7 +8845,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_10_city_024",
-          "name": "City 24",
+          "name": "Greenden",
           "x": 847,
           "y": 338,
           "xNorm": 0.585,
@@ -8857,7 +8857,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_10_city_025",
-          "name": "City 25",
+          "name": "Cedarmere",
           "x": 782,
           "y": 401,
           "xNorm": 0.54,
@@ -8869,7 +8869,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_10_city_026",
-          "name": "City 26",
+          "name": "Aldercliffe Rest",
           "x": 678,
           "y": 315,
           "xNorm": 0.468,
@@ -8881,7 +8881,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_10_city_027",
-          "name": "City 27",
+          "name": "Redfall",
           "x": 563,
           "y": 365,
           "xNorm": 0.389,
@@ -8893,7 +8893,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_10_city_028",
-          "name": "City 28",
+          "name": "Greybury",
           "x": 498,
           "y": 466,
           "xNorm": 0.344,
@@ -8905,7 +8905,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_10_city_029",
-          "name": "City 29",
+          "name": "Crowworth",
           "x": 491,
           "y": 606,
           "xNorm": 0.339,
@@ -8917,7 +8917,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_10_city_030",
-          "name": "City 30",
+          "name": "Ashhollow",
           "x": 573,
           "y": 645,
           "xNorm": 0.396,
@@ -8929,7 +8929,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_10_city_031",
-          "name": "City 31",
+          "name": "Silverhurst Gate",
           "x": 571,
           "y": 522,
           "xNorm": 0.394,
@@ -8941,7 +8941,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_10_city_032",
-          "name": "City 32",
+          "name": "Hartmarket",
           "x": 662,
           "y": 733,
           "xNorm": 0.457,
@@ -8953,7 +8953,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_10_city_033",
-          "name": "City 33",
+          "name": "Dunwick",
           "x": 634,
           "y": 833,
           "xNorm": 0.438,
@@ -8965,7 +8965,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_10_city_034",
-          "name": "City 34",
+          "name": "Barrowmoor",
           "x": 542,
           "y": 742,
           "xNorm": 0.374,
@@ -8977,7 +8977,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_10_city_035",
-          "name": "City 35",
+          "name": "Stonewatch",
           "x": 449,
           "y": 818,
           "xNorm": 0.31,
@@ -8989,7 +8989,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_10_city_036",
-          "name": "City 36",
+          "name": "Highham Rest",
           "x": 346,
           "y": 818,
           "xNorm": 0.239,
@@ -9001,7 +9001,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_10_city_037",
-          "name": "City 37",
+          "name": "Elderden",
           "x": 239,
           "y": 792,
           "xNorm": 0.165,
@@ -9013,7 +9013,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_10_city_038",
-          "name": "City 38",
+          "name": "Bellmere",
           "x": 588,
           "y": 227,
           "xNorm": 0.406,
@@ -9025,7 +9025,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_10_city_039",
-          "name": "City 39",
+          "name": "Thornreach",
           "x": 915,
           "y": 411,
           "xNorm": 0.632,
@@ -9131,7 +9131,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
       "cities": [
         {
           "id": "region_11_city_001",
-          "name": "City 1",
+          "name": "Redhollow March",
           "x": 340,
           "y": 222,
           "xNorm": 0.235,
@@ -9143,7 +9143,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_11_city_002",
-          "name": "City 2",
+          "name": "Greywall",
           "x": 465,
           "y": 243,
           "xNorm": 0.321,
@@ -9155,7 +9155,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_11_city_003",
-          "name": "City 3",
+          "name": "Crowvale",
           "x": 529,
           "y": 154,
           "xNorm": 0.365,
@@ -9167,7 +9167,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_11_city_004",
-          "name": "City 4",
+          "name": "Ashstead",
           "x": 750,
           "y": 141,
           "xNorm": 0.518,
@@ -9179,7 +9179,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_11_city_005",
-          "name": "City 5",
+          "name": "Silvermoor",
           "x": 867,
           "y": 161,
           "xNorm": 0.599,
@@ -9191,7 +9191,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_11_city_006",
-          "name": "City 6",
+          "name": "Hartgate Rise",
           "x": 1021,
           "y": 141,
           "xNorm": 0.705,
@@ -9203,7 +9203,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_11_city_007",
-          "name": "City 7",
+          "name": "Dunport",
           "x": 1140,
           "y": 90,
           "xNorm": 0.787,
@@ -9215,7 +9215,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_11_city_008",
-          "name": "City 8",
+          "name": "Barrowfield",
           "x": 1173,
           "y": 191,
           "xNorm": 0.81,
@@ -9227,7 +9227,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_11_city_009",
-          "name": "City 9",
+          "name": "Stonemere",
           "x": 1260,
           "y": 255,
           "xNorm": 0.87,
@@ -9239,7 +9239,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_11_city_010",
-          "name": "City 10",
+          "name": "Highcliffe",
           "x": 1218,
           "y": 369,
           "xNorm": 0.841,
@@ -9251,7 +9251,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_11_city_011",
-          "name": "City 11",
+          "name": "Elderbridge March",
           "x": 1239,
           "y": 500,
           "xNorm": 0.856,
@@ -9263,7 +9263,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_11_city_012",
-          "name": "City 12",
+          "name": "Bellford",
           "x": 1079,
           "y": 450,
           "xNorm": 0.745,
@@ -9275,7 +9275,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_11_city_013",
-          "name": "City 13",
+          "name": "Thornworth",
           "x": 1054,
           "y": 375,
           "xNorm": 0.728,
@@ -9287,7 +9287,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_11_city_014",
-          "name": "City 14",
+          "name": "Ironhollow",
           "x": 1073,
           "y": 302,
           "xNorm": 0.741,
@@ -9299,7 +9299,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_11_city_015",
-          "name": "City 15",
+          "name": "Emberwall",
           "x": 953,
           "y": 237,
           "xNorm": 0.658,
@@ -9311,7 +9311,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_11_city_016",
-          "name": "City 16",
+          "name": "Blackvale Rise",
           "x": 798,
           "y": 262,
           "xNorm": 0.551,
@@ -9323,7 +9323,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_11_city_017",
-          "name": "City 17",
+          "name": "Valewick",
           "x": 870,
           "y": 328,
           "xNorm": 0.601,
@@ -9335,7 +9335,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_11_city_018",
-          "name": "City 18",
+          "name": "Kingsmoor",
           "x": 613,
           "y": 293,
           "xNorm": 0.423,
@@ -9347,7 +9347,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_11_city_019",
-          "name": "City 19",
+          "name": "Fairgate",
           "x": 368,
           "y": 340,
           "xNorm": 0.254,
@@ -9359,7 +9359,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_11_city_020",
-          "name": "City 20",
+          "name": "Briarport",
           "x": 366,
           "y": 500,
           "xNorm": 0.253,
@@ -9371,7 +9371,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_11_city_021",
-          "name": "City 21",
+          "name": "Whiteden March",
           "x": 460,
           "y": 455,
           "xNorm": 0.318,
@@ -9383,7 +9383,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_11_city_022",
-          "name": "City 22",
+          "name": "Lowmere",
           "x": 537,
           "y": 388,
           "xNorm": 0.371,
@@ -9395,7 +9395,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_11_city_023",
-          "name": "City 23",
+          "name": "Fencliffe",
           "x": 701,
           "y": 356,
           "xNorm": 0.484,
@@ -9407,7 +9407,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_11_city_024",
-          "name": "City 24",
+          "name": "Brindlebridge",
           "x": 753,
           "y": 427,
           "xNorm": 0.52,
@@ -9419,7 +9419,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_11_city_025",
-          "name": "City 25",
+          "name": "Wolfbury",
           "x": 835,
           "y": 516,
           "xNorm": 0.577,
@@ -9431,7 +9431,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_11_city_026",
-          "name": "City 26",
+          "name": "Oakworth Rise",
           "x": 928,
           "y": 498,
           "xNorm": 0.641,
@@ -9443,7 +9443,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_11_city_027",
-          "name": "City 27",
+          "name": "Flinthollow",
           "x": 1045,
           "y": 555,
           "xNorm": 0.722,
@@ -9455,7 +9455,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_11_city_028",
-          "name": "City 28",
+          "name": "Brookwall",
           "x": 1158,
           "y": 577,
           "xNorm": 0.8,
@@ -9467,7 +9467,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_11_city_029",
-          "name": "City 29",
+          "name": "Wyvernmarket",
           "x": 1250,
           "y": 645,
           "xNorm": 0.863,
@@ -9479,7 +9479,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_11_city_030",
-          "name": "City 30",
+          "name": "Ravenwick",
           "x": 1360,
           "y": 668,
           "xNorm": 0.939,
@@ -9491,7 +9491,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_11_city_031",
-          "name": "City 31",
+          "name": "Greenmoor March",
           "x": 1273,
           "y": 796,
           "xNorm": 0.879,
@@ -9503,7 +9503,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_11_city_032",
-          "name": "City 32",
+          "name": "Cedargate",
           "x": 1121,
           "y": 856,
           "xNorm": 0.774,
@@ -9515,7 +9515,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_11_city_033",
-          "name": "City 33",
+          "name": "Alderport",
           "x": 948,
           "y": 859,
           "xNorm": 0.655,
@@ -9527,7 +9527,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_11_city_034",
-          "name": "City 34",
+          "name": "Redden",
           "x": 731,
           "y": 824,
           "xNorm": 0.505,
@@ -9539,7 +9539,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_11_city_035",
-          "name": "City 35",
+          "name": "Greymere",
           "x": 482,
           "y": 747,
           "xNorm": 0.333,
@@ -9551,7 +9551,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_11_city_036",
-          "name": "City 36",
+          "name": "Crowcliffe Rise",
           "x": 397,
           "y": 693,
           "xNorm": 0.274,
@@ -9563,7 +9563,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_11_city_037",
-          "name": "City 37",
+          "name": "Ashbridge",
           "x": 562,
           "y": 668,
           "xNorm": 0.388,
@@ -9575,7 +9575,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_11_city_038",
-          "name": "City 38",
+          "name": "Silverbury",
           "x": 529,
           "y": 561,
           "xNorm": 0.365,
@@ -9587,7 +9587,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_11_city_039",
-          "name": "City 39",
+          "name": "Hartworth",
           "x": 640,
           "y": 573,
           "xNorm": 0.442,
@@ -9599,7 +9599,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_11_city_040",
-          "name": "City 40",
+          "name": "Dunhollow",
           "x": 670,
           "y": 459,
           "xNorm": 0.463,
@@ -9611,7 +9611,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_11_city_041",
-          "name": "City 41",
+          "name": "Barrowwall March",
           "x": 747,
           "y": 596,
           "xNorm": 0.516,
@@ -9623,7 +9623,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_11_city_042",
-          "name": "City 42",
+          "name": "Stonemarket",
           "x": 944,
           "y": 622,
           "xNorm": 0.652,
@@ -9635,7 +9635,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_11_city_043",
-          "name": "City 43",
+          "name": "Highwick",
           "x": 891,
           "y": 765,
           "xNorm": 0.615,
@@ -9647,7 +9647,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_11_city_044",
-          "name": "City 44",
+          "name": "Eldermoor",
           "x": 685,
           "y": 729,
           "xNorm": 0.473,
@@ -9659,7 +9659,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_11_city_045",
-          "name": "City 45",
+          "name": "Bellgate",
           "x": 864,
           "y": 664,
           "xNorm": 0.597,
@@ -9671,7 +9671,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_11_city_046",
-          "name": "City 46",
+          "name": "Thornham Rise",
           "x": 1072,
           "y": 743,
           "xNorm": 0.74,
@@ -9683,7 +9683,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_11_city_047",
-          "name": "City 47",
+          "name": "Ironden",
           "x": 1032,
           "y": 683,
           "xNorm": 0.713,
@@ -9695,7 +9695,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_11_city_048",
-          "name": "City 48",
+          "name": "Embermere",
           "x": 724,
           "y": 515,
           "xNorm": 0.5,
@@ -9707,7 +9707,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_11_city_049",
-          "name": "City 49",
+          "name": "Blackcliffe",
           "x": 569,
           "y": 801,
           "xNorm": 0.393,
@@ -9719,7 +9719,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_11_city_050",
-          "name": "City 50",
+          "name": "Valefall",
           "x": 775,
           "y": 725,
           "xNorm": 0.535,
@@ -9731,7 +9731,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_11_city_051",
-          "name": "City 51",
+          "name": "Kingsbury March",
           "x": 953,
           "y": 708,
           "xNorm": 0.658,
@@ -9743,7 +9743,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_11_city_052",
-          "name": "City 52",
+          "name": "Fairworth",
           "x": 992,
           "y": 795,
           "xNorm": 0.685,
@@ -9755,7 +9755,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_11_city_053",
-          "name": "City 53",
+          "name": "Briarhollow",
           "x": 860,
           "y": 578,
           "xNorm": 0.594,
@@ -9767,7 +9767,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_11_city_054",
-          "name": "City 54",
+          "name": "Whitehurst",
           "x": 1102,
           "y": 623,
           "xNorm": 0.761,
@@ -9779,7 +9779,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_11_city_055",
-          "name": "City 55",
+          "name": "Lowmarket",
           "x": 1012,
           "y": 617,
           "xNorm": 0.699,
@@ -9791,7 +9791,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_11_city_056",
-          "name": "City 56",
+          "name": "Fenwick Rise",
           "x": 1173,
           "y": 667,
           "xNorm": 0.81,
@@ -9803,7 +9803,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_11_city_057",
-          "name": "City 57",
+          "name": "Brindlemoor",
           "x": 1315,
           "y": 723,
           "xNorm": 0.908,
@@ -9815,7 +9815,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_11_city_058",
-          "name": "City 58",
+          "name": "Wolfwatch",
           "x": 694,
           "y": 670,
           "xNorm": 0.479,
@@ -9827,7 +9827,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_11_city_059",
-          "name": "City 59",
+          "name": "Oakham",
           "x": 578,
           "y": 435,
           "xNorm": 0.399,
@@ -9839,7 +9839,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_11_city_060",
-          "name": "City 60",
+          "name": "Flintden",
           "x": 624,
           "y": 515,
           "xNorm": 0.431,
@@ -9851,7 +9851,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_11_city_061",
-          "name": "City 61",
+          "name": "Brookmere March",
           "x": 458,
           "y": 607,
           "xNorm": 0.316,
@@ -9863,7 +9863,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_11_city_062",
-          "name": "City 62",
+          "name": "Wyvernreach",
           "x": 403,
           "y": 411,
           "xNorm": 0.278,
@@ -9875,7 +9875,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_11_city_063",
-          "name": "City 63",
+          "name": "Ravenfall",
           "x": 397,
           "y": 279,
           "xNorm": 0.274,
@@ -9887,7 +9887,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_11_city_064",
-          "name": "City 64",
+          "name": "Greenbury",
           "x": 414,
           "y": 189,
           "xNorm": 0.286,
@@ -9899,7 +9899,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_11_city_065",
-          "name": "City 65",
+          "name": "Cedarworth",
           "x": 872,
           "y": 244,
           "xNorm": 0.602,
@@ -9911,7 +9911,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_11_city_066",
-          "name": "City 66",
+          "name": "Alderhollow Rise",
           "x": 1156,
           "y": 283,
           "xNorm": 0.798,
@@ -9923,7 +9923,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_11_city_067",
-          "name": "City 67",
+          "name": "Redhurst",
           "x": 1024,
           "y": 219,
           "xNorm": 0.707,
@@ -9935,7 +9935,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_11_city_068",
-          "name": "City 68",
+          "name": "Greymarket",
           "x": 954,
           "y": 173,
           "xNorm": 0.659,
@@ -9947,7 +9947,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_11_city_069",
-          "name": "City 69",
+          "name": "Crowwick",
           "x": 1148,
           "y": 393,
           "xNorm": 0.793,
@@ -9959,7 +9959,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_11_city_070",
-          "name": "City 70",
+          "name": "Ashmoor",
           "x": 969,
           "y": 362,
           "xNorm": 0.669,
@@ -9971,7 +9971,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_11_city_071",
-          "name": "City 71",
+          "name": "Silverwatch March",
           "x": 934,
           "y": 304,
           "xNorm": 0.645,
@@ -9983,7 +9983,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_11_city_072",
-          "name": "City 72",
+          "name": "Hartham",
           "x": 805,
           "y": 200,
           "xNorm": 0.556,
@@ -9995,7 +9995,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_11_city_073",
-          "name": "City 73",
+          "name": "Dunden",
           "x": 850,
           "y": 404,
           "xNorm": 0.587,
@@ -10007,7 +10007,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_11_city_074",
-          "name": "City 74",
+          "name": "Barrowmere",
           "x": 714,
           "y": 233,
           "xNorm": 0.493,
@@ -10019,7 +10019,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_11_city_075",
-          "name": "City 75",
+          "name": "Stonereach",
           "x": 634,
           "y": 369,
           "xNorm": 0.438,
@@ -10031,7 +10031,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_11_city_076",
-          "name": "City 76",
+          "name": "Highfall Rise",
           "x": 611,
           "y": 231,
           "xNorm": 0.422,
@@ -10043,7 +10043,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_11_city_077",
-          "name": "City 77",
+          "name": "Elderbury",
           "x": 537,
           "y": 251,
           "xNorm": 0.371,
@@ -10055,7 +10055,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_11_city_078",
-          "name": "City 78",
+          "name": "Bellworth",
           "x": 782,
           "y": 482,
           "xNorm": 0.54,
@@ -10067,7 +10067,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_11_city_079",
-          "name": "City 79",
+          "name": "Thornbrook",
           "x": 950,
           "y": 555,
           "xNorm": 0.656,
@@ -10141,7 +10141,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
       "cities": [
         {
           "id": "region_12_city_001",
-          "name": "City 1",
+          "name": "Flintstead Market",
           "x": 450,
           "y": 224,
           "xNorm": 0.311,
@@ -10153,7 +10153,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_12_city_002",
-          "name": "City 2",
+          "name": "Brookreach",
           "x": 681,
           "y": 195,
           "xNorm": 0.47,
@@ -10165,7 +10165,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_12_city_003",
-          "name": "City 3",
+          "name": "Wyverngate",
           "x": 559,
           "y": 212,
           "xNorm": 0.386,
@@ -10177,7 +10177,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_12_city_004",
-          "name": "City 4",
+          "name": "Ravenport",
           "x": 589,
           "y": 312,
           "xNorm": 0.407,
@@ -10189,7 +10189,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_12_city_005",
-          "name": "City 5",
+          "name": "Greenfield",
           "x": 701,
           "y": 328,
           "xNorm": 0.484,
@@ -10201,7 +10201,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_12_city_006",
-          "name": "City 6",
+          "name": "Cedarbrook Watch",
           "x": 652,
           "y": 453,
           "xNorm": 0.45,
@@ -10213,7 +10213,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_12_city_007",
-          "name": "City 7",
+          "name": "Alderhurst",
           "x": 637,
           "y": 564,
           "xNorm": 0.44,
@@ -10225,7 +10225,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_12_city_008",
-          "name": "City 8",
+          "name": "Redbridge",
           "x": 524,
           "y": 488,
           "xNorm": 0.362,
@@ -10237,7 +10237,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_12_city_009",
-          "name": "City 9",
+          "name": "Greyford",
           "x": 507,
           "y": 390,
           "xNorm": 0.35,
@@ -10249,7 +10249,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_12_city_010",
-          "name": "City 10",
+          "name": "Crowcross",
           "x": 392,
           "y": 539,
           "xNorm": 0.271,
@@ -10261,7 +10261,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_12_city_011",
-          "name": "City 11",
+          "name": "Ashwatch Market",
           "x": 316,
           "y": 512,
           "xNorm": 0.218,
@@ -10273,7 +10273,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_12_city_012",
-          "name": "City 12",
+          "name": "Silverwall",
           "x": 217,
           "y": 392,
           "xNorm": 0.15,
@@ -10285,7 +10285,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_12_city_013",
-          "name": "City 13",
+          "name": "Hartvale",
           "x": 275,
           "y": 328,
           "xNorm": 0.19,
@@ -10297,7 +10297,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_12_city_014",
-          "name": "City 14",
+          "name": "Dunstead",
           "x": 290,
           "y": 599,
           "xNorm": 0.2,
@@ -10309,7 +10309,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_12_city_015",
-          "name": "City 15",
+          "name": "Barrowreach",
           "x": 353,
           "y": 708,
           "xNorm": 0.244,
@@ -10321,7 +10321,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_12_city_016",
-          "name": "City 16",
+          "name": "Stonegate Watch",
           "x": 536,
           "y": 753,
           "xNorm": 0.37,
@@ -10333,7 +10333,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_12_city_017",
-          "name": "City 17",
+          "name": "Highport",
           "x": 686,
           "y": 687,
           "xNorm": 0.474,
@@ -10345,7 +10345,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_12_city_018",
-          "name": "City 18",
+          "name": "Elderfield",
           "x": 804,
           "y": 718,
           "xNorm": 0.555,
@@ -10357,7 +10357,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_12_city_019",
-          "name": "City 19",
+          "name": "Bellbrook",
           "x": 947,
           "y": 736,
           "xNorm": 0.654,
@@ -10369,7 +10369,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_12_city_020",
-          "name": "City 20",
+          "name": "Thorncliffe",
           "x": 1153,
           "y": 706,
           "xNorm": 0.796,
@@ -10381,7 +10381,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_12_city_021",
-          "name": "City 21",
+          "name": "Ironbridge Market",
           "x": 1184,
           "y": 602,
           "xNorm": 0.818,
@@ -10393,7 +10393,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_12_city_022",
-          "name": "City 22",
+          "name": "Emberford",
           "x": 1095,
           "y": 488,
           "xNorm": 0.756,
@@ -10405,7 +10405,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_12_city_023",
-          "name": "City 23",
+          "name": "Blackcross",
           "x": 1253,
           "y": 302,
           "xNorm": 0.865,
@@ -10417,7 +10417,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_12_city_024",
-          "name": "City 24",
+          "name": "Valehollow",
           "x": 1085,
           "y": 344,
           "xNorm": 0.749,
@@ -10429,7 +10429,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_12_city_025",
-          "name": "City 25",
+          "name": "Kingswall",
           "x": 1002,
           "y": 439,
           "xNorm": 0.692,
@@ -10441,7 +10441,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_12_city_026",
-          "name": "City 26",
+          "name": "Fairvale Watch",
           "x": 1016,
           "y": 590,
           "xNorm": 0.702,
@@ -10453,7 +10453,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_12_city_027",
-          "name": "City 27",
+          "name": "Briarstead",
           "x": 902,
           "y": 633,
           "xNorm": 0.623,
@@ -10465,7 +10465,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_12_city_028",
-          "name": "City 28",
+          "name": "Whitemoor",
           "x": 489,
           "y": 628,
           "xNorm": 0.338,
@@ -10477,7 +10477,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_12_city_029",
-          "name": "City 29",
+          "name": "Lowgate",
           "x": 752,
           "y": 572,
           "xNorm": 0.519,
@@ -10489,7 +10489,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_12_city_030",
-          "name": "City 30",
+          "name": "Fenport",
           "x": 859,
           "y": 545,
           "xNorm": 0.593,
@@ -10501,7 +10501,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_12_city_031",
-          "name": "City 31",
+          "name": "Brindlefield Market",
           "x": 763,
           "y": 449,
           "xNorm": 0.527,
@@ -10513,7 +10513,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_12_city_032",
-          "name": "City 32",
+          "name": "Wolfmere",
           "x": 873,
           "y": 370,
           "xNorm": 0.603,
@@ -10525,7 +10525,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_12_city_033",
-          "name": "City 33",
+          "name": "Oakcliffe",
           "x": 888,
           "y": 283,
           "xNorm": 0.613,
@@ -10537,7 +10537,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_12_city_034",
-          "name": "City 34",
+          "name": "Flintbridge",
           "x": 796,
           "y": 222,
           "xNorm": 0.55,
@@ -10549,7 +10549,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_12_city_035",
-          "name": "City 35",
+          "name": "Brookford",
           "x": 779,
           "y": 361,
           "xNorm": 0.538,
@@ -10561,7 +10561,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_12_city_036",
-          "name": "City 36",
+          "name": "Wyvernworth Watch",
           "x": 982,
           "y": 368,
           "xNorm": 0.678,
@@ -10573,7 +10573,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_12_city_037",
-          "name": "City 37",
+          "name": "Ravenhollow",
           "x": 321,
           "y": 442,
           "xNorm": 0.222,
@@ -10585,7 +10585,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_12_city_038",
-          "name": "City 38",
+          "name": "Greenwall",
           "x": 387,
           "y": 606,
           "xNorm": 0.267,
@@ -10597,7 +10597,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_12_city_039",
-          "name": "City 39",
+          "name": "Cedarvale",
           "x": 430,
           "y": 666,
           "xNorm": 0.297,
@@ -10609,7 +10609,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_12_city_040",
-          "name": "City 40",
+          "name": "Alderstead",
           "x": 465,
           "y": 722,
           "xNorm": 0.321,
@@ -10621,7 +10621,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_12_city_041",
-          "name": "City 41",
+          "name": "Redmoor Market",
           "x": 608,
           "y": 629,
           "xNorm": 0.42,
@@ -10633,7 +10633,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_12_city_042",
-          "name": "City 42",
+          "name": "Greygate",
           "x": 879,
           "y": 697,
           "xNorm": 0.607,
@@ -10645,7 +10645,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_12_city_043",
-          "name": "City 43",
+          "name": "Crowport",
           "x": 1128,
           "y": 640,
           "xNorm": 0.779,
@@ -10657,7 +10657,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_12_city_044",
-          "name": "City 44",
+          "name": "Ashfield",
           "x": 947,
           "y": 519,
           "xNorm": 0.654,
@@ -10669,7 +10669,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_12_city_045",
-          "name": "City 45",
+          "name": "Silvermere",
           "x": 1064,
           "y": 411,
           "xNorm": 0.735,
@@ -10681,7 +10681,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_12_city_046",
-          "name": "City 46",
+          "name": "Hartcliffe Watch",
           "x": 604,
           "y": 400,
           "xNorm": 0.417,
@@ -10693,7 +10693,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_12_city_047",
-          "name": "City 47",
+          "name": "Dunbridge",
           "x": 789,
           "y": 286,
           "xNorm": 0.545,
@@ -10705,7 +10705,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_12_city_048",
-          "name": "City 48",
+          "name": "Barrowford",
           "x": 893,
           "y": 202,
           "xNorm": 0.617,
@@ -10717,7 +10717,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_12_city_049",
-          "name": "City 49",
+          "name": "Stoneworth",
           "x": 959,
           "y": 301,
           "xNorm": 0.662,
@@ -10729,7 +10729,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_12_city_050",
-          "name": "City 50",
+          "name": "Highhollow",
           "x": 1018,
           "y": 325,
           "xNorm": 0.703,
@@ -10741,7 +10741,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_12_city_051",
-          "name": "City 51",
+          "name": "Elderwall Market",
           "x": 1151,
           "y": 312,
           "xNorm": 0.795,
@@ -10753,7 +10753,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_12_city_052",
-          "name": "City 52",
+          "name": "Bellvale",
           "x": 1140,
           "y": 408,
           "xNorm": 0.787,
@@ -10765,7 +10765,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_12_city_053",
-          "name": "City 53",
+          "name": "Thornwick",
           "x": 1169,
           "y": 510,
           "xNorm": 0.807,
@@ -10777,7 +10777,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_12_city_054",
-          "name": "City 54",
+          "name": "Ironmoor",
           "x": 801,
           "y": 533,
           "xNorm": 0.553,
@@ -10789,7 +10789,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_12_city_055",
-          "name": "City 55",
+          "name": "Embergate",
           "x": 840,
           "y": 608,
           "xNorm": 0.58,
@@ -10801,7 +10801,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_12_city_056",
-          "name": "City 56",
+          "name": "Blackport Watch",
           "x": 961,
           "y": 609,
           "xNorm": 0.664,
@@ -10813,7 +10813,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_12_city_057",
-          "name": "City 57",
+          "name": "Valeden",
           "x": 1224,
           "y": 554,
           "xNorm": 0.845,
@@ -10825,7 +10825,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_12_city_058",
-          "name": "City 58",
+          "name": "Kingsmere",
           "x": 1203,
           "y": 664,
           "xNorm": 0.831,
@@ -10837,7 +10837,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_12_city_059",
-          "name": "City 59",
+          "name": "Faircliffe",
           "x": 604,
           "y": 773,
           "xNorm": 0.417,
@@ -10849,7 +10849,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_12_city_060",
-          "name": "City 60",
+          "name": "Briarbridge",
           "x": 599,
           "y": 512,
           "xNorm": 0.414,
@@ -10861,7 +10861,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_12_city_061",
-          "name": "City 61",
+          "name": "Whitebury Market",
           "x": 285,
           "y": 681,
           "xNorm": 0.197,
@@ -10873,7 +10873,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_12_city_062",
-          "name": "City 62",
+          "name": "Lowworth",
           "x": 243,
           "y": 456,
           "xNorm": 0.168,
@@ -10885,7 +10885,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_12_city_063",
-          "name": "City 63",
+          "name": "Fenhollow",
           "x": 524,
           "y": 275,
           "xNorm": 0.362,
@@ -10897,7 +10897,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_12_city_064",
-          "name": "City 64",
+          "name": "Brindlewall",
           "x": 442,
           "y": 422,
           "xNorm": 0.305,
@@ -10909,7 +10909,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_12_city_065",
-          "name": "City 65",
+          "name": "Wolfmarket",
           "x": 628,
           "y": 263,
           "xNorm": 0.434,
@@ -10921,7 +10921,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_12_city_066",
-          "name": "City 66",
+          "name": "Oakwick Watch",
           "x": 462,
           "y": 565,
           "xNorm": 0.319,
@@ -10933,7 +10933,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_12_city_067",
-          "name": "City 67",
+          "name": "Flintmoor",
           "x": 559,
           "y": 580,
           "xNorm": 0.386,
@@ -10945,7 +10945,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_12_city_068",
-          "name": "City 68",
+          "name": "Brookgate",
           "x": 546,
           "y": 675,
           "xNorm": 0.377,
@@ -10957,7 +10957,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_12_city_069",
-          "name": "City 69",
+          "name": "Wyvernham",
           "x": 695,
           "y": 618,
           "xNorm": 0.48,
@@ -10969,7 +10969,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_12_city_070",
-          "name": "City 70",
+          "name": "Ravenden",
           "x": 736,
           "y": 744,
           "xNorm": 0.508,
@@ -10981,7 +10981,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_12_city_071",
-          "name": "City 71",
+          "name": "Greenmere Market",
           "x": 611,
           "y": 171,
           "xNorm": 0.422,
@@ -10993,7 +10993,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_12_city_072",
-          "name": "City 72",
+          "name": "Cedarcliffe",
           "x": 390,
           "y": 470,
           "xNorm": 0.269,
@@ -11005,7 +11005,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_12_city_073",
-          "name": "City 73",
+          "name": "Alderbridge",
           "x": 935,
           "y": 449,
           "xNorm": 0.646,
@@ -11017,7 +11017,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_12_city_074",
-          "name": "City 74",
+          "name": "Redbury",
           "x": 675,
           "y": 400,
           "xNorm": 0.466,
@@ -11104,7 +11104,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
       "cities": [
         {
           "id": "region_13_city_001",
-          "name": "City 1",
+          "name": "Briarbury Mead",
           "x": 553,
           "y": 189,
           "xNorm": 0.382,
@@ -11116,7 +11116,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_13_city_002",
-          "name": "City 2",
+          "name": "Whitefield",
           "x": 791,
           "y": 182,
           "xNorm": 0.546,
@@ -11128,7 +11128,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_13_city_003",
-          "name": "City 3",
+          "name": "Lowbrook",
           "x": 866,
           "y": 204,
           "xNorm": 0.598,
@@ -11140,7 +11140,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_13_city_004",
-          "name": "City 4",
+          "name": "Fenhurst",
           "x": 966,
           "y": 235,
           "xNorm": 0.667,
@@ -11152,7 +11152,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_13_city_005",
-          "name": "City 5",
+          "name": "Brindlemarket",
           "x": 1063,
           "y": 299,
           "xNorm": 0.734,
@@ -11164,7 +11164,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_13_city_006",
-          "name": "City 6",
+          "name": "Wolfford Abbey",
           "x": 1148,
           "y": 210,
           "xNorm": 0.793,
@@ -11176,7 +11176,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_13_city_007",
-          "name": "City 7",
+          "name": "Oakcross",
           "x": 1167,
           "y": 312,
           "xNorm": 0.806,
@@ -11188,7 +11188,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_13_city_008",
-          "name": "City 8",
+          "name": "Flintwatch",
           "x": 1261,
           "y": 400,
           "xNorm": 0.871,
@@ -11200,7 +11200,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_13_city_009",
-          "name": "City 9",
+          "name": "Brookham",
           "x": 1205,
           "y": 504,
           "xNorm": 0.832,
@@ -11212,7 +11212,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_13_city_010",
-          "name": "City 10",
+          "name": "Wyvernvale",
           "x": 1124,
           "y": 496,
           "xNorm": 0.776,
@@ -11224,7 +11224,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_13_city_011",
-          "name": "City 11",
+          "name": "Ravenstead Mead",
           "x": 1157,
           "y": 422,
           "xNorm": 0.799,
@@ -11236,7 +11236,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_13_city_012",
-          "name": "City 12",
+          "name": "Greenreach",
           "x": 921,
           "y": 440,
           "xNorm": 0.636,
@@ -11248,7 +11248,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_13_city_013",
-          "name": "City 13",
+          "name": "Cedarfall",
           "x": 1001,
           "y": 348,
           "xNorm": 0.691,
@@ -11260,7 +11260,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_13_city_014",
-          "name": "City 14",
+          "name": "Alderbury",
           "x": 795,
           "y": 255,
           "xNorm": 0.549,
@@ -11272,7 +11272,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_13_city_015",
-          "name": "City 15",
+          "name": "Redfield",
           "x": 919,
           "y": 319,
           "xNorm": 0.635,
@@ -11284,7 +11284,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_13_city_016",
-          "name": "City 16",
+          "name": "Greybrook Abbey",
           "x": 615,
           "y": 290,
           "xNorm": 0.425,
@@ -11296,7 +11296,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_13_city_017",
-          "name": "City 17",
+          "name": "Crowhurst",
           "x": 544,
           "y": 270,
           "xNorm": 0.376,
@@ -11308,7 +11308,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_13_city_018",
-          "name": "City 18",
+          "name": "Ashmarket",
           "x": 426,
           "y": 257,
           "xNorm": 0.294,
@@ -11320,7 +11320,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_13_city_019",
-          "name": "City 19",
+          "name": "Silverford",
           "x": 198,
           "y": 344,
           "xNorm": 0.137,
@@ -11332,7 +11332,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_13_city_020",
-          "name": "City 20",
+          "name": "Hartcross",
           "x": 223,
           "y": 449,
           "xNorm": 0.154,
@@ -11344,7 +11344,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_13_city_021",
-          "name": "City 21",
+          "name": "Dunwatch Mead",
           "x": 333,
           "y": 442,
           "xNorm": 0.23,
@@ -11356,7 +11356,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_13_city_022",
-          "name": "City 22",
+          "name": "Barrowham",
           "x": 553,
           "y": 379,
           "xNorm": 0.382,
@@ -11368,7 +11368,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_13_city_023",
-          "name": "City 23",
+          "name": "Stonevale",
           "x": 641,
           "y": 362,
           "xNorm": 0.443,
@@ -11380,7 +11380,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_13_city_024",
-          "name": "City 24",
+          "name": "Highstead",
           "x": 696,
           "y": 422,
           "xNorm": 0.481,
@@ -11392,7 +11392,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_13_city_025",
-          "name": "City 25",
+          "name": "Elderreach",
           "x": 876,
           "y": 501,
           "xNorm": 0.605,
@@ -11404,7 +11404,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_13_city_026",
-          "name": "City 26",
+          "name": "Bellfall Abbey",
           "x": 792,
           "y": 557,
           "xNorm": 0.547,
@@ -11416,7 +11416,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_13_city_027",
-          "name": "City 27",
+          "name": "Thornport",
           "x": 711,
           "y": 533,
           "xNorm": 0.491,
@@ -11428,7 +11428,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_13_city_028",
-          "name": "City 28",
+          "name": "Ironfield",
           "x": 639,
           "y": 503,
           "xNorm": 0.441,
@@ -11440,7 +11440,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_13_city_029",
-          "name": "City 29",
+          "name": "Emberbrook",
           "x": 540,
           "y": 484,
           "xNorm": 0.373,
@@ -11452,7 +11452,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_13_city_030",
-          "name": "City 30",
+          "name": "Blackhurst",
           "x": 513,
           "y": 574,
           "xNorm": 0.354,
@@ -11464,7 +11464,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_13_city_031",
-          "name": "City 31",
+          "name": "Valebridge Mead",
           "x": 394,
           "y": 526,
           "xNorm": 0.272,
@@ -11476,7 +11476,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_13_city_032",
-          "name": "City 32",
+          "name": "Kingsford",
           "x": 207,
           "y": 653,
           "xNorm": 0.143,
@@ -11488,7 +11488,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_13_city_033",
-          "name": "City 33",
+          "name": "Faircross",
           "x": 287,
           "y": 664,
           "xNorm": 0.198,
@@ -11500,7 +11500,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_13_city_034",
-          "name": "City 34",
+          "name": "Briarwatch",
           "x": 368,
           "y": 734,
           "xNorm": 0.254,
@@ -11512,7 +11512,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_13_city_035",
-          "name": "City 35",
+          "name": "Whitewall",
           "x": 418,
           "y": 609,
           "xNorm": 0.289,
@@ -11524,7 +11524,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_13_city_036",
-          "name": "City 36",
+          "name": "Lowvale Abbey",
           "x": 529,
           "y": 652,
           "xNorm": 0.365,
@@ -11536,7 +11536,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_13_city_037",
-          "name": "City 37",
+          "name": "Fenstead",
           "x": 620,
           "y": 716,
           "xNorm": 0.428,
@@ -11548,7 +11548,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_13_city_038",
-          "name": "City 38",
+          "name": "Brindlereach",
           "x": 630,
           "y": 602,
           "xNorm": 0.435,
@@ -11560,7 +11560,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_13_city_039",
-          "name": "City 39",
+          "name": "Wolfgate",
           "x": 707,
           "y": 673,
           "xNorm": 0.488,
@@ -11572,7 +11572,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_13_city_040",
-          "name": "City 40",
+          "name": "Oakport",
           "x": 753,
           "y": 842,
           "xNorm": 0.52,
@@ -11584,7 +11584,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_13_city_041",
-          "name": "City 41",
+          "name": "Flintfield Mead",
           "x": 814,
           "y": 779,
           "xNorm": 0.562,
@@ -11596,7 +11596,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_13_city_042",
-          "name": "City 42",
+          "name": "Brookbrook",
           "x": 807,
           "y": 691,
           "xNorm": 0.557,
@@ -11608,7 +11608,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_13_city_043",
-          "name": "City 43",
+          "name": "Wyverncliffe",
           "x": 867,
           "y": 613,
           "xNorm": 0.599,
@@ -11620,7 +11620,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_13_city_044",
-          "name": "City 44",
+          "name": "Ravenbridge",
           "x": 960,
           "y": 571,
           "xNorm": 0.663,
@@ -11632,7 +11632,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_13_city_045",
-          "name": "City 45",
+          "name": "Greenford",
           "x": 970,
           "y": 664,
           "xNorm": 0.67,
@@ -11644,7 +11644,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_13_city_046",
-          "name": "City 46",
+          "name": "Cedarcross Abbey",
           "x": 1077,
           "y": 670,
           "xNorm": 0.744,
@@ -11656,7 +11656,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_13_city_047",
-          "name": "City 47",
+          "name": "Alderwatch",
           "x": 1176,
           "y": 707,
           "xNorm": 0.812,
@@ -11668,7 +11668,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_13_city_048",
-          "name": "City 48",
+          "name": "Redwall",
           "x": 1008,
           "y": 768,
           "xNorm": 0.696,
@@ -11680,7 +11680,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_13_city_049",
-          "name": "City 49",
+          "name": "Greyvale",
           "x": 1153,
           "y": 597,
           "xNorm": 0.796,
@@ -11692,7 +11692,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_13_city_050",
-          "name": "City 50",
+          "name": "Crowstead",
           "x": 1260,
           "y": 592,
           "xNorm": 0.87,
@@ -11704,7 +11704,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_13_city_051",
-          "name": "City 51",
+          "name": "Ashreach Mead",
           "x": 494,
           "y": 803,
           "xNorm": 0.341,
@@ -11716,7 +11716,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_13_city_052",
-          "name": "City 52",
+          "name": "Silvergate",
           "x": 162,
           "y": 761,
           "xNorm": 0.112,
@@ -11728,7 +11728,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_13_city_053",
-          "name": "City 53",
+          "name": "Hartport",
           "x": 844,
           "y": 392,
           "xNorm": 0.583,
@@ -11740,7 +11740,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_13_city_054",
-          "name": "City 54",
+          "name": "Dunfield",
           "x": 782,
           "y": 627,
           "xNorm": 0.54,
@@ -11752,7 +11752,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_13_city_055",
-          "name": "City 55",
+          "name": "Barrowbrook",
           "x": 737,
           "y": 738,
           "xNorm": 0.509,
@@ -11764,7 +11764,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_13_city_056",
-          "name": "City 56",
+          "name": "Stonecliffe Abbey",
           "x": 640,
           "y": 660,
           "xNorm": 0.442,
@@ -11776,7 +11776,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_13_city_057",
-          "name": "City 57",
+          "name": "Highbridge",
           "x": 586,
           "y": 558,
           "xNorm": 0.405,
@@ -11788,7 +11788,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_13_city_058",
-          "name": "City 58",
+          "name": "Elderford",
           "x": 442,
           "y": 766,
           "xNorm": 0.305,
@@ -11800,7 +11800,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_13_city_059",
-          "name": "City 59",
+          "name": "Bellcross",
           "x": 455,
           "y": 670,
           "xNorm": 0.314,
@@ -11812,7 +11812,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_13_city_060",
-          "name": "City 60",
+          "name": "Thornhollow",
           "x": 281,
           "y": 525,
           "xNorm": 0.194,
@@ -11824,7 +11824,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_13_city_061",
-          "name": "City 61",
+          "name": "Ironwall Mead",
           "x": 198,
           "y": 586,
           "xNorm": 0.137,
@@ -11836,7 +11836,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_13_city_062",
-          "name": "City 62",
+          "name": "Embervale",
           "x": 1299,
           "y": 798,
           "xNorm": 0.897,
@@ -11848,7 +11848,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_13_city_063",
-          "name": "City 63",
+          "name": "Blackstead",
           "x": 849,
           "y": 909,
           "xNorm": 0.586,
@@ -11860,7 +11860,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_13_city_064",
-          "name": "City 64",
+          "name": "Valemoor",
           "x": 862,
           "y": 280,
           "xNorm": 0.595,
@@ -11872,7 +11872,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_13_city_065",
-          "name": "City 65",
+          "name": "Kingsgate",
           "x": 1056,
           "y": 480,
           "xNorm": 0.729,
@@ -11884,7 +11884,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_13_city_066",
-          "name": "City 66",
+          "name": "Fairport Abbey",
           "x": 1077,
           "y": 383,
           "xNorm": 0.744,
@@ -11896,7 +11896,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_13_city_067",
-          "name": "City 67",
+          "name": "Briarfield",
           "x": 1002,
           "y": 433,
           "xNorm": 0.692,
@@ -11908,7 +11908,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_13_city_068",
-          "name": "City 68",
+          "name": "Whitemere",
           "x": 731,
           "y": 281,
           "xNorm": 0.505,
@@ -11920,7 +11920,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_13_city_069",
-          "name": "City 69",
+          "name": "Lowcliffe",
           "x": 507,
           "y": 325,
           "xNorm": 0.35,
@@ -11932,7 +11932,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_13_city_070",
-          "name": "City 70",
+          "name": "Fenbridge",
           "x": 611,
           "y": 438,
           "xNorm": 0.422,
@@ -11944,7 +11944,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_13_city_071",
-          "name": "City 71",
+          "name": "Brindleford Mead",
           "x": 707,
           "y": 605,
           "xNorm": 0.488,
@@ -11956,7 +11956,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_13_city_072",
-          "name": "City 72",
+          "name": "Wolfworth",
           "x": 361,
           "y": 656,
           "xNorm": 0.249,
@@ -11968,7 +11968,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_13_city_073",
-          "name": "City 73",
+          "name": "Oakhollow",
           "x": 418,
           "y": 393,
           "xNorm": 0.289,
@@ -11980,7 +11980,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_13_city_074",
-          "name": "City 74",
+          "name": "Flintwall",
           "x": 343,
           "y": 313,
           "xNorm": 0.237,
@@ -11992,7 +11992,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_13_city_075",
-          "name": "City 75",
+          "name": "Brookvale",
           "x": 316,
           "y": 225,
           "xNorm": 0.218,
@@ -12004,7 +12004,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_13_city_076",
-          "name": "City 76",
+          "name": "Wyvernwick Abbey",
           "x": 475,
           "y": 205,
           "xNorm": 0.328,
@@ -12091,7 +12091,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
       "cities": [
         {
           "id": "region_14_city_001",
-          "name": "City 1",
+          "name": "Crowport Rise",
           "x": 385,
           "y": 76,
           "xNorm": 0.266,
@@ -12103,7 +12103,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_14_city_002",
-          "name": "City 2",
+          "name": "Ashfield",
           "x": 311,
           "y": 253,
           "xNorm": 0.215,
@@ -12115,7 +12115,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_14_city_003",
-          "name": "City 3",
+          "name": "Silvermere",
           "x": 230,
           "y": 275,
           "xNorm": 0.159,
@@ -12127,7 +12127,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_14_city_004",
-          "name": "City 4",
+          "name": "Hartcliffe",
           "x": 311,
           "y": 411,
           "xNorm": 0.215,
@@ -12139,7 +12139,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_14_city_005",
-          "name": "City 5",
+          "name": "Dunbridge",
           "x": 447,
           "y": 368,
           "xNorm": 0.309,
@@ -12151,7 +12151,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_14_city_006",
-          "name": "City 6",
+          "name": "Barrowford March",
           "x": 394,
           "y": 292,
           "xNorm": 0.272,
@@ -12163,7 +12163,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_14_city_007",
-          "name": "City 7",
+          "name": "Stoneworth",
           "x": 408,
           "y": 209,
           "xNorm": 0.282,
@@ -12175,7 +12175,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_14_city_008",
-          "name": "City 8",
+          "name": "Highhollow",
           "x": 692,
           "y": 324,
           "xNorm": 0.478,
@@ -12187,7 +12187,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_14_city_009",
-          "name": "City 9",
+          "name": "Elderwall",
           "x": 770,
           "y": 306,
           "xNorm": 0.532,
@@ -12199,7 +12199,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_14_city_010",
-          "name": "City 10",
+          "name": "Bellvale",
           "x": 762,
           "y": 198,
           "xNorm": 0.526,
@@ -12211,7 +12211,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_14_city_011",
-          "name": "City 11",
+          "name": "Thornwick Rise",
           "x": 867,
           "y": 135,
           "xNorm": 0.599,
@@ -12223,7 +12223,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_14_city_012",
-          "name": "City 12",
+          "name": "Ironmoor",
           "x": 646,
           "y": 100,
           "xNorm": 0.446,
@@ -12235,7 +12235,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_14_city_013",
-          "name": "City 13",
+          "name": "Embergate",
           "x": 1112,
           "y": 341,
           "xNorm": 0.768,
@@ -12247,7 +12247,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_14_city_014",
-          "name": "City 14",
+          "name": "Blackport",
           "x": 1238,
           "y": 274,
           "xNorm": 0.855,
@@ -12259,7 +12259,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_14_city_015",
-          "name": "City 15",
+          "name": "Valeden",
           "x": 1114,
           "y": 154,
           "xNorm": 0.769,
@@ -12271,7 +12271,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_14_city_016",
-          "name": "City 16",
+          "name": "Kingsmere March",
           "x": 1153,
           "y": 478,
           "xNorm": 0.796,
@@ -12283,7 +12283,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_14_city_017",
-          "name": "City 17",
+          "name": "Faircliffe",
           "x": 1347,
           "y": 613,
           "xNorm": 0.93,
@@ -12295,7 +12295,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_14_city_018",
-          "name": "City 18",
+          "name": "Briarbridge",
           "x": 1160,
           "y": 564,
           "xNorm": 0.801,
@@ -12307,7 +12307,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_14_city_019",
-          "name": "City 19",
+          "name": "Whitebury",
           "x": 1072,
           "y": 556,
           "xNorm": 0.74,
@@ -12319,7 +12319,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_14_city_020",
-          "name": "City 20",
+          "name": "Lowworth",
           "x": 1022,
           "y": 661,
           "xNorm": 0.706,
@@ -12331,7 +12331,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_14_city_021",
-          "name": "City 21",
+          "name": "Fenhollow Rise",
           "x": 969,
           "y": 761,
           "xNorm": 0.669,
@@ -12343,7 +12343,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_14_city_022",
-          "name": "City 22",
+          "name": "Brindlewall",
           "x": 1060,
           "y": 732,
           "xNorm": 0.732,
@@ -12355,7 +12355,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_14_city_023",
-          "name": "City 23",
+          "name": "Wolfmarket",
           "x": 853,
           "y": 671,
           "xNorm": 0.589,
@@ -12367,7 +12367,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_14_city_024",
-          "name": "City 24",
+          "name": "Oakwick",
           "x": 756,
           "y": 773,
           "xNorm": 0.522,
@@ -12379,7 +12379,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_14_city_025",
-          "name": "City 25",
+          "name": "Flintmoor",
           "x": 730,
           "y": 690,
           "xNorm": 0.504,
@@ -12391,7 +12391,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_14_city_026",
-          "name": "City 26",
+          "name": "Brookgate March",
           "x": 689,
           "y": 792,
           "xNorm": 0.476,
@@ -12403,7 +12403,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_14_city_027",
-          "name": "City 27",
+          "name": "Wyvernham",
           "x": 604,
           "y": 690,
           "xNorm": 0.417,
@@ -12415,7 +12415,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_14_city_028",
-          "name": "City 28",
+          "name": "Ravenden",
           "x": 544,
           "y": 761,
           "xNorm": 0.376,
@@ -12427,7 +12427,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_14_city_029",
-          "name": "City 29",
+          "name": "Greenmere",
           "x": 450,
           "y": 754,
           "xNorm": 0.311,
@@ -12439,7 +12439,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_14_city_030",
-          "name": "City 30",
+          "name": "Cedarcliffe",
           "x": 329,
           "y": 684,
           "xNorm": 0.227,
@@ -12451,7 +12451,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_14_city_031",
-          "name": "City 31",
+          "name": "Alderbridge Rise",
           "x": 523,
           "y": 626,
           "xNorm": 0.361,
@@ -12463,7 +12463,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_14_city_032",
-          "name": "City 32",
+          "name": "Redbury",
           "x": 437,
           "y": 633,
           "xNorm": 0.302,
@@ -12475,7 +12475,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_14_city_033",
-          "name": "City 33",
+          "name": "Greyworth",
           "x": 291,
           "y": 483,
           "xNorm": 0.201,
@@ -12487,7 +12487,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_14_city_034",
-          "name": "City 34",
+          "name": "Crowhollow",
           "x": 462,
           "y": 554,
           "xNorm": 0.319,
@@ -12499,7 +12499,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_14_city_035",
-          "name": "City 35",
+          "name": "Ashwall",
           "x": 542,
           "y": 530,
           "xNorm": 0.374,
@@ -12511,7 +12511,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_14_city_036",
-          "name": "City 36",
+          "name": "Silvermarket March",
           "x": 463,
           "y": 429,
           "xNorm": 0.32,
@@ -12523,7 +12523,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_14_city_037",
-          "name": "City 37",
+          "name": "Hartwick",
           "x": 733,
           "y": 394,
           "xNorm": 0.506,
@@ -12535,7 +12535,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_14_city_038",
-          "name": "City 38",
+          "name": "Dunmoor",
           "x": 724,
           "y": 477,
           "xNorm": 0.5,
@@ -12547,7 +12547,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_14_city_039",
-          "name": "City 39",
+          "name": "Barrowgate",
           "x": 922,
           "y": 412,
           "xNorm": 0.637,
@@ -12559,7 +12559,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_14_city_040",
-          "name": "City 40",
+          "name": "Stoneham",
           "x": 941,
           "y": 501,
           "xNorm": 0.65,
@@ -12571,7 +12571,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_14_city_041",
-          "name": "City 41",
+          "name": "Highden Rise",
           "x": 838,
           "y": 592,
           "xNorm": 0.579,
@@ -12583,7 +12583,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_14_city_042",
-          "name": "City 42",
+          "name": "Eldermere",
           "x": 788,
           "y": 542,
           "xNorm": 0.544,
@@ -12595,7 +12595,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_14_city_043",
-          "name": "City 43",
+          "name": "Bellcliffe",
           "x": 859,
           "y": 343,
           "xNorm": 0.593,
@@ -12607,7 +12607,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_14_city_044",
-          "name": "City 44",
+          "name": "Thornfall",
           "x": 1154,
           "y": 661,
           "xNorm": 0.797,
@@ -12619,7 +12619,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_14_city_045",
-          "name": "City 45",
+          "name": "Ironbury",
           "x": 833,
           "y": 273,
           "xNorm": 0.575,
@@ -12631,7 +12631,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_14_city_046",
-          "name": "City 46",
+          "name": "Emberworth March",
           "x": 1171,
           "y": 296,
           "xNorm": 0.809,
@@ -12643,7 +12643,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_14_city_047",
-          "name": "City 47",
+          "name": "Blackhollow",
           "x": 488,
           "y": 301,
           "xNorm": 0.337,
@@ -12655,7 +12655,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_14_city_048",
-          "name": "City 48",
+          "name": "Valehurst",
           "x": 316,
           "y": 116,
           "xNorm": 0.218,
@@ -12667,7 +12667,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_14_city_049",
-          "name": "City 49",
+          "name": "Kingsmarket",
           "x": 249,
           "y": 343,
           "xNorm": 0.172,
@@ -12679,7 +12679,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_14_city_050",
-          "name": "City 50",
+          "name": "Fairwick",
           "x": 374,
           "y": 371,
           "xNorm": 0.258,
@@ -12691,7 +12691,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_14_city_051",
-          "name": "City 51",
+          "name": "Briarmoor Rise",
           "x": 400,
           "y": 568,
           "xNorm": 0.276,
@@ -12703,7 +12703,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_14_city_052",
-          "name": "City 52",
+          "name": "Whitewatch",
           "x": 430,
           "y": 488,
           "xNorm": 0.297,
@@ -12715,7 +12715,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_14_city_053",
-          "name": "City 53",
+          "name": "Lowham",
           "x": 404,
           "y": 697,
           "xNorm": 0.279,
@@ -12727,7 +12727,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_14_city_054",
-          "name": "City 54",
+          "name": "Fenden",
           "x": 613,
           "y": 779,
           "xNorm": 0.423,
@@ -12739,7 +12739,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_14_city_055",
-          "name": "City 55",
+          "name": "Brindlemere",
           "x": 668,
           "y": 727,
           "xNorm": 0.461,
@@ -12751,7 +12751,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_14_city_056",
-          "name": "City 56",
+          "name": "Wolfreach March",
           "x": 792,
           "y": 717,
           "xNorm": 0.547,
@@ -12763,7 +12763,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_14_city_057",
-          "name": "City 57",
+          "name": "Oakfall",
           "x": 934,
           "y": 691,
           "xNorm": 0.645,
@@ -12775,7 +12775,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_14_city_058",
-          "name": "City 58",
+          "name": "Flintbury",
           "x": 1086,
           "y": 629,
           "xNorm": 0.75,
@@ -12787,7 +12787,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_14_city_059",
-          "name": "City 59",
+          "name": "Brookworth",
           "x": 1264,
           "y": 580,
           "xNorm": 0.873,
@@ -12799,7 +12799,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_14_city_060",
-          "name": "City 60",
+          "name": "Wyvernbrook",
           "x": 876,
           "y": 529,
           "xNorm": 0.605,
@@ -12811,7 +12811,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_14_city_061",
-          "name": "City 61",
+          "name": "Ravenhurst Rise",
           "x": 838,
           "y": 458,
           "xNorm": 0.579,
@@ -12898,7 +12898,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
       "cities": [
         {
           "id": "region_15_city_001",
-          "name": "City 1",
+          "name": "Wyverncliffe Watch",
           "x": 565,
           "y": 166,
           "xNorm": 0.39,
@@ -12910,7 +12910,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_15_city_002",
-          "name": "City 2",
+          "name": "Ravenbridge",
           "x": 676,
           "y": 218,
           "xNorm": 0.467,
@@ -12922,7 +12922,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_15_city_003",
-          "name": "City 3",
+          "name": "Greenford",
           "x": 851,
           "y": 185,
           "xNorm": 0.588,
@@ -12934,7 +12934,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_15_city_004",
-          "name": "City 4",
+          "name": "Cedarcross",
           "x": 1116,
           "y": 169,
           "xNorm": 0.771,
@@ -12946,7 +12946,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_15_city_005",
-          "name": "City 5",
+          "name": "Alderwatch",
           "x": 1183,
           "y": 372,
           "xNorm": 0.817,
@@ -12958,7 +12958,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_15_city_006",
-          "name": "City 6",
+          "name": "Redwall Market",
           "x": 1125,
           "y": 452,
           "xNorm": 0.777,
@@ -12970,7 +12970,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_15_city_007",
-          "name": "City 7",
+          "name": "Greyvale",
           "x": 1035,
           "y": 523,
           "xNorm": 0.715,
@@ -12982,7 +12982,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_15_city_008",
-          "name": "City 8",
+          "name": "Crowstead",
           "x": 989,
           "y": 406,
           "xNorm": 0.683,
@@ -12994,7 +12994,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_15_city_009",
-          "name": "City 9",
+          "name": "Ashreach",
           "x": 805,
           "y": 337,
           "xNorm": 0.556,
@@ -13006,7 +13006,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_15_city_010",
-          "name": "City 10",
+          "name": "Silvergate",
           "x": 727,
           "y": 285,
           "xNorm": 0.502,
@@ -13018,7 +13018,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_15_city_011",
-          "name": "City 11",
+          "name": "Hartport Watch",
           "x": 723,
           "y": 374,
           "xNorm": 0.499,
@@ -13030,7 +13030,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_15_city_012",
-          "name": "City 12",
+          "name": "Dunfield",
           "x": 747,
           "y": 455,
           "xNorm": 0.516,
@@ -13042,7 +13042,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_15_city_013",
-          "name": "City 13",
+          "name": "Barrowbrook",
           "x": 794,
           "y": 538,
           "xNorm": 0.548,
@@ -13054,7 +13054,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_15_city_014",
-          "name": "City 14",
+          "name": "Stonecliffe",
           "x": 912,
           "y": 594,
           "xNorm": 0.63,
@@ -13066,7 +13066,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_15_city_015",
-          "name": "City 15",
+          "name": "Highbridge",
           "x": 733,
           "y": 605,
           "xNorm": 0.506,
@@ -13078,7 +13078,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_15_city_016",
-          "name": "City 16",
+          "name": "Elderford Market",
           "x": 799,
           "y": 672,
           "xNorm": 0.552,
@@ -13090,7 +13090,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_15_city_017",
-          "name": "City 17",
+          "name": "Bellcross",
           "x": 885,
           "y": 745,
           "xNorm": 0.611,
@@ -13102,7 +13102,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_15_city_018",
-          "name": "City 18",
+          "name": "Thornhollow",
           "x": 1105,
           "y": 717,
           "xNorm": 0.763,
@@ -13114,7 +13114,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_15_city_019",
-          "name": "City 19",
+          "name": "Ironwall",
           "x": 1183,
           "y": 801,
           "xNorm": 0.817,
@@ -13126,7 +13126,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_15_city_020",
-          "name": "City 20",
+          "name": "Embervale",
           "x": 1124,
           "y": 528,
           "xNorm": 0.776,
@@ -13138,7 +13138,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_15_city_021",
-          "name": "City 21",
+          "name": "Blackstead Watch",
           "x": 1018,
           "y": 998,
           "xNorm": 0.703,
@@ -13150,7 +13150,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_15_city_022",
-          "name": "City 22",
+          "name": "Valemoor",
           "x": 938,
           "y": 952,
           "xNorm": 0.648,
@@ -13162,7 +13162,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_15_city_023",
-          "name": "City 23",
+          "name": "Kingsgate",
           "x": 831,
           "y": 808,
           "xNorm": 0.574,
@@ -13174,7 +13174,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_15_city_024",
-          "name": "City 24",
+          "name": "Fairport",
           "x": 686,
           "y": 905,
           "xNorm": 0.474,
@@ -13186,7 +13186,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_15_city_025",
-          "name": "City 25",
+          "name": "Briarfield",
           "x": 617,
           "y": 1009,
           "xNorm": 0.426,
@@ -13198,7 +13198,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_15_city_026",
-          "name": "City 26",
+          "name": "Whitemere Market",
           "x": 566,
           "y": 805,
           "xNorm": 0.391,
@@ -13210,7 +13210,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_15_city_027",
-          "name": "City 27",
+          "name": "Lowcliffe",
           "x": 584,
           "y": 695,
           "xNorm": 0.403,
@@ -13222,7 +13222,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_15_city_028",
-          "name": "City 28",
+          "name": "Fenbridge",
           "x": 471,
           "y": 712,
           "xNorm": 0.325,
@@ -13234,7 +13234,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_15_city_029",
-          "name": "City 29",
+          "name": "Brindleford",
           "x": 361,
           "y": 834,
           "xNorm": 0.249,
@@ -13246,7 +13246,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_15_city_030",
-          "name": "City 30",
+          "name": "Wolfworth",
           "x": 314,
           "y": 643,
           "xNorm": 0.217,
@@ -13258,7 +13258,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_15_city_031",
-          "name": "City 31",
+          "name": "Oakhollow Watch",
           "x": 355,
           "y": 558,
           "xNorm": 0.245,
@@ -13270,7 +13270,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_15_city_032",
-          "name": "City 32",
+          "name": "Flintwall",
           "x": 510,
           "y": 555,
           "xNorm": 0.352,
@@ -13282,7 +13282,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_15_city_033",
-          "name": "City 33",
+          "name": "Brookvale",
           "x": 572,
           "y": 489,
           "xNorm": 0.395,
@@ -13294,7 +13294,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_15_city_034",
-          "name": "City 34",
+          "name": "Wyvernwick",
           "x": 662,
           "y": 496,
           "xNorm": 0.457,
@@ -13306,7 +13306,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_15_city_035",
-          "name": "City 35",
+          "name": "Ravenmoor",
           "x": 450,
           "y": 433,
           "xNorm": 0.311,
@@ -13318,7 +13318,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_15_city_036",
-          "name": "City 36",
+          "name": "Greengate Market",
           "x": 339,
           "y": 320,
           "xNorm": 0.234,
@@ -13330,7 +13330,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_15_city_037",
-          "name": "City 37",
+          "name": "Cedarport",
           "x": 482,
           "y": 291,
           "xNorm": 0.333,
@@ -13342,7 +13342,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_15_city_038",
-          "name": "City 38",
+          "name": "Alderfield",
           "x": 1014,
           "y": 83,
           "xNorm": 0.7,
@@ -13354,7 +13354,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_15_city_039",
-          "name": "City 39",
+          "name": "Redmere",
           "x": 601,
           "y": 235,
           "xNorm": 0.415,
@@ -13366,7 +13366,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_15_city_040",
-          "name": "City 40",
+          "name": "Greycliffe",
           "x": 1074,
           "y": 113,
           "xNorm": 0.742,
@@ -13378,7 +13378,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_15_city_041",
-          "name": "City 41",
+          "name": "Crowbridge Watch",
           "x": 1063,
           "y": 213,
           "xNorm": 0.734,
@@ -13390,7 +13390,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_15_city_042",
-          "name": "City 42",
+          "name": "Ashford",
           "x": 1164,
           "y": 264,
           "xNorm": 0.804,
@@ -13402,7 +13402,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_15_city_043",
-          "name": "City 43",
+          "name": "Silverworth",
           "x": 1245,
           "y": 325,
           "xNorm": 0.86,
@@ -13414,7 +13414,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_15_city_044",
-          "name": "City 44",
+          "name": "Harthollow",
           "x": 1195,
           "y": 437,
           "xNorm": 0.825,
@@ -13426,7 +13426,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_15_city_045",
-          "name": "City 45",
+          "name": "Dunwall",
           "x": 1102,
           "y": 593,
           "xNorm": 0.761,
@@ -13438,7 +13438,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_15_city_046",
-          "name": "City 46",
+          "name": "Barrowvale Market",
           "x": 1173,
           "y": 667,
           "xNorm": 0.81,
@@ -13450,7 +13450,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_15_city_047",
-          "name": "City 47",
+          "name": "Stonewick",
           "x": 1008,
           "y": 740,
           "xNorm": 0.696,
@@ -13462,7 +13462,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_15_city_048",
-          "name": "City 48",
+          "name": "Highmoor",
           "x": 1011,
           "y": 910,
           "xNorm": 0.698,
@@ -13474,7 +13474,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_15_city_049",
-          "name": "City 49",
+          "name": "Eldergate",
           "x": 870,
           "y": 884,
           "xNorm": 0.601,
@@ -13486,7 +13486,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_15_city_050",
-          "name": "City 50",
+          "name": "Bellport",
           "x": 831,
           "y": 1009,
           "xNorm": 0.574,
@@ -13498,7 +13498,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_15_city_051",
-          "name": "City 51",
+          "name": "Thornden Watch",
           "x": 653,
           "y": 758,
           "xNorm": 0.451,
@@ -13510,7 +13510,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_15_city_052",
-          "name": "City 52",
+          "name": "Ironmere",
           "x": 339,
           "y": 493,
           "xNorm": 0.234,
@@ -13522,7 +13522,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_15_city_053",
-          "name": "City 53",
+          "name": "Embercliffe",
           "x": 462,
           "y": 503,
           "xNorm": 0.319,
@@ -13534,7 +13534,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_15_city_054",
-          "name": "City 54",
+          "name": "Blackbridge",
           "x": 555,
           "y": 416,
           "xNorm": 0.383,
@@ -13546,7 +13546,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_15_city_055",
-          "name": "City 55",
+          "name": "Valebury",
           "x": 630,
           "y": 364,
           "xNorm": 0.435,
@@ -13558,7 +13558,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_15_city_056",
-          "name": "City 56",
+          "name": "Kingsworth Market",
           "x": 660,
           "y": 289,
           "xNorm": 0.456,
@@ -13570,7 +13570,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_15_city_057",
-          "name": "City 57",
+          "name": "Fairhollow",
           "x": 766,
           "y": 188,
           "xNorm": 0.529,
@@ -13582,7 +13582,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_15_city_058",
-          "name": "City 58",
+          "name": "Briarwall",
           "x": 675,
           "y": 428,
           "xNorm": 0.466,
@@ -13594,7 +13594,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_15_city_059",
-          "name": "City 59",
+          "name": "Whitemarket",
           "x": 885,
           "y": 525,
           "xNorm": 0.611,
@@ -13606,7 +13606,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_15_city_060",
-          "name": "City 60",
+          "name": "Lowwick",
           "x": 734,
           "y": 515,
           "xNorm": 0.507,
@@ -13618,7 +13618,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_15_city_061",
-          "name": "City 61",
+          "name": "Fenmoor Watch",
           "x": 663,
           "y": 634,
           "xNorm": 0.458,
@@ -13630,7 +13630,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_15_city_062",
-          "name": "City 62",
+          "name": "Brindlegate",
           "x": 618,
           "y": 554,
           "xNorm": 0.427,
@@ -13642,7 +13642,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_15_city_063",
-          "name": "City 63",
+          "name": "Wolfham",
           "x": 834,
           "y": 400,
           "xNorm": 0.576,
@@ -13654,7 +13654,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_15_city_064",
-          "name": "City 64",
+          "name": "Oakden",
           "x": 924,
           "y": 438,
           "xNorm": 0.638,
@@ -13666,7 +13666,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_15_city_065",
-          "name": "City 65",
+          "name": "Flintmere",
           "x": 957,
           "y": 522,
           "xNorm": 0.661,
@@ -13678,7 +13678,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_15_city_066",
-          "name": "City 66",
+          "name": "Brookcliffe Market",
           "x": 835,
           "y": 599,
           "xNorm": 0.577,
@@ -13690,7 +13690,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_15_city_067",
-          "name": "City 67",
+          "name": "Wyvernfall",
           "x": 776,
           "y": 766,
           "xNorm": 0.536,
@@ -13702,7 +13702,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_15_city_068",
-          "name": "City 68",
+          "name": "Ravenbury",
           "x": 762,
           "y": 866,
           "xNorm": 0.526,
@@ -13714,7 +13714,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_15_city_069",
-          "name": "City 69",
+          "name": "Greenworth",
           "x": 411,
           "y": 640,
           "xNorm": 0.284,
@@ -13726,7 +13726,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_15_city_070",
-          "name": "City 70",
+          "name": "Cedarhollow",
           "x": 361,
           "y": 704,
           "xNorm": 0.249,
@@ -13738,7 +13738,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_15_city_071",
-          "name": "City 71",
+          "name": "Alderwall Watch",
           "x": 524,
           "y": 239,
           "xNorm": 0.362,
@@ -13750,7 +13750,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_15_city_072",
-          "name": "City 72",
+          "name": "Redmarket",
           "x": 417,
           "y": 368,
           "xNorm": 0.288,
@@ -13762,7 +13762,7 @@ window.CROWNLANDS_MAP_EDITOR_DATA = {
         },
         {
           "id": "region_15_city_073",
-          "name": "City 73",
+          "name": "Greywick",
           "x": 358,
           "y": 404,
           "xNorm": 0.247,

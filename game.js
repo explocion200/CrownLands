@@ -909,6 +909,8 @@ const CLAN_SHIELD_FINISHES = [
   { key: "battleworn", label: "Battle-worn" },
 ];
 const CLAN_GIFT_COOLDOWN_MS = 5 * 60 * 60 * 1000;
+const CLAN_NAME_CHANGE_GOLD_COST = 500_000;
+const CLAN_NAME_CHANGE_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000;
 const CLAN_QUEST_REWARDS = Object.freeze([
   { id: "capture_5", captures: 5, rewardType: "gold", productionMinutes: 30 },
   { id: "capture_15", captures: 15, rewardType: "troops", productionMinutes: 30 },
@@ -2681,6 +2683,8 @@ let clanShieldDraft = null;
 let clanShieldEditorOpen = false;
 let clanShieldSaving = false;
 let clanShieldEditorTab = "field";
+let clanRenameEditorOpen = false;
+let clanRenameSaving = false;
 let selectedClanMemberUid = "";
 let clanGiftActionInFlight = false;
 let clanQuestClaimInFlightId = "";
@@ -3548,9 +3552,16 @@ function hasEditorCityDefinitions(regionId) {
 
 function createEditorCitySlot(region, city, index) {
   const chosen = islandImagePointToWorld(region.id, getEditorPoint(city));
+  const id = String(city?.id || `${region.id}_${String(index + 1).padStart(3, "0")}`);
   return {
-    id: String(city?.id || `${region.id}_${String(index + 1).padStart(3, "0")}`),
-    name: generateCityName(region, index),
+    id,
+    name: getCanonicalCityName({
+      ...city,
+      id,
+      regionId: region.id,
+      startPool: region.id,
+      index,
+    }),
     regionId: region.id,
     startPool: region.id,
     x: Math.round(chosen.x),
@@ -4083,6 +4094,14 @@ function generateCityName(region, index, cityId = "") {
   return cityIndex % 5 === 0 ? `${prefix}${suffix} ${title}` : `${prefix}${suffix}`;
 }
 
+function isGenericCityName(value = "", cityId = "") {
+  const name = String(value || "").trim();
+  if (!name) return true;
+  if (/\d/.test(name)) return true;
+  if (/^city(?:\s+|[-_])\d+$/i.test(name)) return true;
+  return Boolean(cityId) && name.toLowerCase() === String(cityId).trim().toLowerCase();
+}
+
 function getCanonicalCityName(base = {}, fallback = null) {
   const fallbackRecord = fallback && typeof fallback === "object" ? fallback : {};
   const source = { ...fallbackRecord, ...base };
@@ -4090,6 +4109,8 @@ function getCanonicalCityName(base = {}, fallback = null) {
   const regionId = normalizeRegionId(source.regionId || source.startPool || fallbackRecord.regionId || fallbackRecord.startPool);
   const region = getRegionById(regionId) || { id: regionId || "center" };
   const cityId = source.id || fallbackRecord.id || "";
+  const configuredName = String(base?.name || fallbackRecord.name || "").trim();
+  if (!isGenericCityName(configuredName, cityId)) return configuredName.slice(0, 80);
   const index = getCityNameIndex(cityId, source.index);
   return generateCityName(region, index, cityId);
 }
@@ -17325,6 +17346,8 @@ function stopClanRealtimeSubscriptions({ clear = true } = {}) {
     clanMemberRewards = null;
     clanWorldBenefits = null;
     selectedClanMemberUid = "";
+    clanRenameEditorOpen = false;
+    clanRenameSaving = false;
   }
 }
 
@@ -17436,6 +17459,30 @@ function updateClanGiftCountdown() {
   if (sendButton) sendButton.disabled = clanGiftActionInFlight || cooldownMs > 0;
 }
 
+function getClanNameChangeCooldownMs() {
+  const lastChangedAtMs = normalizeTimestampMs(clanSnapshot?.lastNameChangedAtMs);
+  const explicitCooldownUntilMs = normalizeTimestampMs(clanSnapshot?.nextNameChangeAtMs);
+  return Math.max(
+    0,
+    explicitCooldownUntilMs,
+    lastChangedAtMs + CLAN_NAME_CHANGE_COOLDOWN_MS
+  ) - Date.now();
+}
+
+function updateClanNameChangeCountdown() {
+  const countdown = clanContent?.querySelector("[data-clan-name-cooldown]");
+  const renameButton = clanContent?.querySelector("[data-clan-rename-submit]");
+  if (!countdown && !renameButton) return;
+  const cooldownMs = Math.max(0, getClanNameChangeCooldownMs());
+  const hasEnoughGold = Math.max(0, Number(state?.gold) || 0) >= CLAN_NAME_CHANGE_GOLD_COST;
+  if (countdown) {
+    countdown.textContent = cooldownMs
+      ? `Available again in ${formatDuration(Math.ceil(cooldownMs / 1000))}`
+      : "Name change available now";
+  }
+  if (renameButton) renameButton.disabled = clanRenameSaving || cooldownMs > 0 || !hasEnoughGold;
+}
+
 function startClanSocialStateSubscription(api, clanId) {
   const id = String(clanId || "").trim();
   if (!id || !api?.subscribeClanSocialState) return false;
@@ -17465,7 +17512,10 @@ function startClanSocialStateSubscription(api, clanId) {
     onError: (error, source) => console.warn(`Clan ${source || "social"} subscription failed`, error),
   });
   if (clanGiftCountdownTimer) clearInterval(clanGiftCountdownTimer);
-  clanGiftCountdownTimer = setInterval(updateClanGiftCountdown, 1000);
+  clanGiftCountdownTimer = setInterval(() => {
+    updateClanGiftCountdown();
+    updateClanNameChangeCountdown();
+  }, 1000);
   return true;
 }
 
@@ -17813,6 +17863,33 @@ function renderClanRosterMember(member, index, canLead) {
     </article>`;
 }
 
+function renderClanRenameEditor() {
+  const cooldownMs = Math.max(0, getClanNameChangeCooldownMs());
+  const hasEnoughGold = Math.max(0, Number(state?.gold) || 0) >= CLAN_NAME_CHANGE_GOLD_COST;
+  const disabled = clanRenameSaving || cooldownMs > 0 || !hasEnoughGold;
+  return `
+    <section class="clan-rename-card">
+      <div class="profile-section-heading"><span>Leader management</span><h3>Rename Clan</h3></div>
+      <p>Choose a unique name for 500,000 gold. A clan can be renamed once every seven days.</p>
+      <form data-clan-form="rename" class="clan-form clan-rename-form">
+        <label>
+          <span>New clan name</span>
+          <input name="name" minlength="3" maxlength="24" required pattern="[A-Za-z0-9 _.-]{3,24}" value="${escapeHtml(clanSnapshot?.name || "")}" aria-label="New clan name" ${clanRenameSaving ? "disabled" : ""} />
+        </label>
+        <div class="clan-rename-summary">
+          <span>Cost <strong>500,000 gold</strong></span>
+          <span>Available <strong>${formatNumber(Math.max(0, Number(state?.gold) || 0))} gold</strong></span>
+        </div>
+        <small data-clan-name-cooldown>${cooldownMs ? `Available again in ${formatDuration(Math.ceil(cooldownMs / 1000))}` : "Name change available now"}</small>
+        ${!hasEnoughGold ? `<p class="clan-warning">You need ${formatNumber(CLAN_NAME_CHANGE_GOLD_COST - Math.max(0, Number(state?.gold) || 0))} more gold.</p>` : ""}
+        <div class="clan-rename-actions">
+          <button class="profile-secondary-btn" type="button" data-clan-action="cancel-rename" ${clanRenameSaving ? "disabled" : ""}>Cancel</button>
+          <button class="profile-primary-btn" type="submit" data-clan-rename-submit ${disabled ? "disabled" : ""}>${clanRenameSaving ? "Renaming…" : "Rename — 500,000 Gold"}</button>
+        </div>
+      </form>
+    </section>`;
+}
+
 function renderClanGiftPanel() {
   const pendingMinutes = Math.max(0, Math.floor(Number(clanMemberRewards?.pendingGiftGoldMinutes) || 0));
   const lastGiftSentAtMs = normalizeTimestampMs(clanMemberRewards?.lastGiftSentAtMs);
@@ -18097,6 +18174,10 @@ function bindClanRallyControls(root = document) {
 
 function renderClanView() {
   if (!clanContent || activeProfileTab !== "clan") return;
+  if (state?.clanRole !== "leader") {
+    clanRenameEditorOpen = false;
+    clanRenameSaving = false;
+  }
   const shieldEditorVisible = Boolean(state?.clanId && clanSnapshot && state?.clanRole === "leader" && clanShieldEditorOpen);
   clanContent.classList.toggle("shield-editor-open", shieldEditorVisible);
   clanView?.classList.toggle("shield-editor-active", shieldEditorVisible);
@@ -18143,11 +18224,15 @@ function renderClanView() {
     <section class="clan-hero">
       <div class="clan-hero-shield">
         ${renderClanShield(clanSnapshot.shield || clanSnapshot.banner, { size: "large", label: `${clanSnapshot.name || "Clan"} shield` })}
-        ${canLead ? `<button type="button" data-clan-action="edit-shield">${clanShieldEditorOpen ? "Editing Shield" : "Edit Shield"}</button>` : ""}
+        ${canLead ? `<div class="clan-hero-actions">
+          <button type="button" data-clan-action="edit-shield">${clanShieldEditorOpen ? "Editing Shield" : "Edit Shield"}</button>
+          <button type="button" data-clan-action="rename-clan">${clanRenameEditorOpen ? "Renaming Clan" : "Rename Clan"}</button>
+        </div>` : ""}
       </div>
       <div><span>Your clan · ${clanRoleLabel(state.clanRole)}</span><h3>[${escapeHtml(clanSnapshot.tag || "")}] ${escapeHtml(clanSnapshot.name || "Clan")}</h3><p>${escapeHtml(clanSnapshot.description || "No description yet.")}</p></div>
       <div class="clan-power"><span>Clan Power</span><strong>${formatNumber(clanSnapshot.totalKingPower || 0)}</strong><small>${clanSnapshot.memberCount || 0}/30 members</small></div>
     </section>
+    ${canLead && clanRenameEditorOpen ? renderClanRenameEditor() : ""}
     ${canLead && clanShieldEditorOpen ? renderClanShieldEditor(clanShieldDraft) : `<div class="clan-columns clan-social-layout">
       <section class="clan-roster-panel">
         <div class="profile-section-heading"><span>Household</span><h3>Roster</h3></div>
@@ -18168,6 +18253,7 @@ function renderClanView() {
   applyClanRosterFlags();
   bindClanRallyControls(clanContent);
   updateClanGiftCountdown();
+  updateClanNameChangeCountdown();
 }
 
 async function runClanAction(action, payload = {}) {
@@ -18246,6 +18332,34 @@ async function handleClanSubmit(event) {
   const data = Object.fromEntries(new FormData(form).entries());
   const kind = form.dataset.clanForm;
   const api = getOnlineApi();
+  if (kind === "rename") {
+    if (clanRenameSaving || state?.clanRole !== "leader" || !api?.updateClanProfile) return;
+    const requestedName = String(data.name || "").replace(/\s+/g, " ").trim();
+    if (requestedName === String(clanSnapshot?.name || "")) {
+      showToast("Enter a different clan name.");
+      return;
+    }
+    clanRenameSaving = true;
+    renderClanView();
+    try {
+      const result = await api.updateClanProfile({ name: requestedName });
+      if (!result?.ok || !result?.nameChanged || !result?.clan?.name) {
+        throw new Error("The server did not confirm the new clan name.");
+      }
+      if (Number.isFinite(Number(result.gold))) state.gold = Number(result.gold);
+      clanSnapshot = { ...(clanSnapshot || {}), ...result.clan };
+      state.clanName = result.clan.name;
+      clanRenameEditorOpen = false;
+      showToast(`Clan renamed to ${result.clan.name}.`);
+      refreshClanRelationshipPresentation();
+    } catch (error) {
+      showToast(error?.message || "Could not rename the clan.");
+    } finally {
+      clanRenameSaving = false;
+      renderClanView();
+    }
+    return;
+  }
   try {
     if (kind === "create") {
       const result = await api.createClan(data);
@@ -18267,9 +18381,24 @@ function handleClanClick(event) {
   const action = button.dataset.clanAction;
   if (action === "edit-shield") {
     if (state?.clanRole !== "leader") return;
+    clanRenameEditorOpen = false;
     clanShieldDraft = normalizeClanShield(clanSnapshot?.shield, clanSnapshot?.banner);
     clanShieldEditorTab = "field";
     clanShieldEditorOpen = true;
+    renderClanView();
+    return;
+  }
+  if (action === "rename-clan") {
+    if (state?.clanRole !== "leader") return;
+    clanShieldEditorOpen = false;
+    clanShieldDraft = null;
+    clanShieldEditorTab = "field";
+    clanRenameEditorOpen = true;
+    renderClanView();
+    return;
+  }
+  if (action === "cancel-rename") {
+    clanRenameEditorOpen = false;
     renderClanView();
     return;
   }

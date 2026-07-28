@@ -563,7 +563,7 @@
     },
     {
       "id": "west_city_051",
-      "name": "City 51",
+      "name": "Ashbury Mead",
       "regionId": "west",
       "xNorm": 0.726,
       "yNorm": 0.334,
@@ -574,7 +574,7 @@
     },
     {
       "id": "west_city_052",
-      "name": "City 52",
+      "name": "Wyvernvale",
       "regionId": "west",
       "xNorm": 0.618,
       "yNorm": 0.432,
@@ -585,7 +585,7 @@
     },
     {
       "id": "west_city_053",
-      "name": "City 53",
+      "name": "Redford",
       "regionId": "west",
       "xNorm": 0.595,
       "yNorm": 0.497,
@@ -596,7 +596,7 @@
     },
     {
       "id": "west_city_054",
-      "name": "City 54",
+      "name": "Hartfield",
       "regionId": "west",
       "xNorm": 0.569,
       "yNorm": 0.384,
@@ -607,7 +607,7 @@
     },
     {
       "id": "west_city_055",
-      "name": "City 55",
+      "name": "Elderstead",
       "regionId": "west",
       "xNorm": 0.449,
       "yNorm": 0.689,
@@ -618,7 +618,7 @@
     },
     {
       "id": "west_city_056",
-      "name": "City 56",
+      "name": "Blackcross Abbey",
       "regionId": "west",
       "xNorm": 0.31,
       "yNorm": 0.658,
@@ -629,7 +629,7 @@
     },
     {
       "id": "west_city_057",
-      "name": "City 57",
+      "name": "Woodmere",
       "regionId": "west",
       "xNorm": 0.478,
       "yNorm": 0.775,
@@ -640,7 +640,7 @@
     },
     {
       "id": "west_city_058",
-      "name": "City 58",
+      "name": "Thornmoor",
       "regionId": "west",
       "xNorm": 0.693,
       "yNorm": 0.634,
@@ -651,7 +651,7 @@
     },
     {
       "id": "west_city_059",
-      "name": "City 59",
+      "name": "Kingshollow",
       "regionId": "west",
       "xNorm": 0.691,
       "yNorm": 0.502,
@@ -662,7 +662,7 @@
     },
     {
       "id": "west_city_060",
-      "name": "City 60",
+      "name": "Fencliffe",
       "regionId": "west",
       "xNorm": 0.847,
       "yNorm": 0.557,
@@ -673,7 +673,7 @@
     },
     {
       "id": "west_city_061",
-      "name": "City 61",
+      "name": "Brookgate Mead",
       "regionId": "west",
       "xNorm": 0.812,
       "yNorm": 0.618,
