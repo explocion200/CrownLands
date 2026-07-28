@@ -756,19 +756,23 @@ const HERO_XP_SOFT_CAP_LEVEL = 50;
 const HERO_XP_HARD_CAP_LEVEL = 100;
 const HERO_XP_EXPONENTIAL_START_LEVEL = 25;
 const HERO_XP_EXPONENTIAL_GROWTH_RATE = 1.1;
-const LEVEL_UP_GOLD_EARLY_UPGRADE_SHARE = economyNumber("levelRewards.goldEarlyUpgradeShare", 0.5);
-const LEVEL_UP_GOLD_MID_END_UPGRADE_SHARE = economyNumber("levelRewards.goldMidUpgradeShare", 0.3);
-const LEVEL_UP_GOLD_END_UPGRADE_SHARE = economyNumber("levelRewards.goldEndgameUpgradeShare", 0.2);
-const LEVEL_UP_GOLD_EARLY_PRODUCTION_HOURS = economyNumber("levelRewards.goldEarlyProductionHours", 4);
-const LEVEL_UP_GOLD_MID_END_PRODUCTION_HOURS = economyNumber("levelRewards.goldMidProductionHours", 12);
-const LEVEL_UP_GOLD_END_PRODUCTION_HOURS = economyNumber("levelRewards.goldEndgameProductionHours", 24);
+const LEVEL_UP_GOLD_FLOOR_BASE = economyNumber("levelRewards.goldFloorBase", 500);
+const LEVEL_UP_GOLD_FLOOR_PER_LEVEL = economyNumber("levelRewards.goldFloorPerLevel", 250);
+const LEVEL_UP_GOLD_FLOOR_EXPONENT = economyNumber("levelRewards.goldFloorExponent", 1.25);
+const LEVEL_UP_GOLD_FLOOR_EXPONENT_SCALE = economyNumber("levelRewards.goldFloorExponentScale", 40);
+const LEVEL_UP_GOLD_EARLY_UPGRADE_SHARE = economyNumber("levelRewards.goldEarlyUpgradeShare", 0.75);
+const LEVEL_UP_GOLD_MID_END_UPGRADE_SHARE = economyNumber("levelRewards.goldMidUpgradeShare", 0.4);
+const LEVEL_UP_GOLD_END_UPGRADE_SHARE = economyNumber("levelRewards.goldEndgameUpgradeShare", 0.4);
+const LEVEL_UP_GOLD_EARLY_PRODUCTION_HOURS = economyNumber("levelRewards.goldEarlyProductionHours", 6);
+const LEVEL_UP_GOLD_MID_END_PRODUCTION_HOURS = economyNumber("levelRewards.goldMidProductionHours", 16);
+const LEVEL_UP_GOLD_END_PRODUCTION_HOURS = economyNumber("levelRewards.goldEndgameProductionHours", 36);
 const LEVEL_UP_TROOP_REWARD_EARLY_BASE_HOURS = economyNumber("levelRewards.troopEarlyBaseHours", 4);
 const LEVEL_UP_TROOP_REWARD_EARLY_HOURS_PER_LEVEL = economyNumber("levelRewards.troopEarlyHoursPerLevel", 0.4);
 const LEVEL_UP_TROOP_REWARD_MID_BASE_HOURS = economyNumber("levelRewards.troopMidBaseHours", 24);
-const LEVEL_UP_TROOP_REWARD_MID_HOURS_PER_LEVEL = economyNumber("levelRewards.troopMidHoursPerLevel", 0.24);
-const LEVEL_UP_TROOP_REWARD_END_BASE_HOURS = economyNumber("levelRewards.troopEndgameBaseHours", 36);
-const LEVEL_UP_TROOP_REWARD_END_HOURS_PER_LEVEL = economyNumber("levelRewards.troopEndgameHoursPerLevel", 0.12);
-const LEVEL_UP_TROOP_REWARD_MAX_HOURS = economyNumber("levelRewards.troopMaximumHours", 48);
+const LEVEL_UP_TROOP_REWARD_MID_HOURS_PER_LEVEL = economyNumber("levelRewards.troopMidHoursPerLevel", 0.48);
+const LEVEL_UP_TROOP_REWARD_END_BASE_HOURS = economyNumber("levelRewards.troopEndgameBaseHours", 48);
+const LEVEL_UP_TROOP_REWARD_END_HOURS_PER_LEVEL = economyNumber("levelRewards.troopEndgameHoursPerLevel", 0.32);
+const LEVEL_UP_TROOP_REWARD_MAX_HOURS = economyNumber("levelRewards.troopMaximumHours", 96);
 const CAPTURE_XP_BASE = 120;
 const CAPTURE_XP_PER_CITY_LEVEL = 45;
 const CAPTURE_XP_PER_DEFENDER = 1.5;
@@ -6052,9 +6056,16 @@ function getLevelUpGoldProductionHours(level) {
   return LEVEL_UP_GOLD_END_PRODUCTION_HOURS;
 }
 
+function getLevelUpGoldFloor(level) {
+  const current = Math.max(1, Math.floor(Number(level) || 1));
+  return LEVEL_UP_GOLD_FLOOR_BASE
+    + current * LEVEL_UP_GOLD_FLOOR_PER_LEVEL
+    + Math.pow(current, LEVEL_UP_GOLD_FLOOR_EXPONENT) * LEVEL_UP_GOLD_FLOOR_EXPONENT_SCALE;
+}
+
 function getLevelUpGoldReward(level) {
   const current = Math.max(1, Math.floor(Number(level) || 1));
-  const legacyReward = 250 + current * 60 + Math.pow(current, 1.25) * 25;
+  const goldFloor = getLevelUpGoldFloor(current);
   const referenceCityLevel = Math.max(1, current - 1);
   const referenceUpgradeCost = getCityUpgradeCostAtLevel(referenceCityLevel, 0);
   const upgradeRelief = Number.isFinite(referenceUpgradeCost)
@@ -6062,7 +6073,7 @@ function getLevelUpGoldReward(level) {
     : 0;
   const productionRelief = getMillionLordsPassiveGoldPerHour(current)
     * getLevelUpGoldProductionHours(current);
-  return Math.floor(Math.max(legacyReward, Math.min(upgradeRelief, productionRelief)));
+  return Math.floor(Math.max(goldFloor, Math.min(upgradeRelief, productionRelief)));
 }
 
 function getLevelUpTroopRewardHours(level) {

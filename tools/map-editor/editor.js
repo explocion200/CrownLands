@@ -63,7 +63,7 @@
   const HERO_REWARD_EARLY_END_LEVEL = 50;
   const HERO_REWARD_MID_END_LEVEL = 100;
   const ECONOMY_CITY_PREVIEW_LEVELS = [1, 25, 50, 75, 100, 125, 150];
-  const ECONOMY_REWARD_PREVIEW_LEVELS = [10, 50, 51, 75, 100, 101, 125, 150];
+  const ECONOMY_REWARD_PREVIEW_LEVELS = [2, 10, 25, 50, 51, 75, 100, 101, 125, 150, 200];
   const CAMP_UI_FOOTPRINT_PAD = { x: 34, top: 30, bottom: 18 };
   const STRONGHOLD_UI_FOOTPRINT_PAD = { x: 58, top: 78, bottom: 42 };
   const CROWN_UI_FOOTPRINT_PAD = { x: 84, top: 116, bottom: 56 };
@@ -1076,6 +1076,17 @@
     return Math.max(0, readEconomyNumber(config.goldEndgameProductionHours));
   }
 
+  function getEconomyPreviewHeroGoldFloor(level, economy = state.economy) {
+    const config = economy?.levelRewards || {};
+    const normalizedLevel = normalizeEconomyPreviewLevel(level);
+    return Math.max(0, readEconomyNumber(config.goldFloorBase))
+      + normalizedLevel * Math.max(0, readEconomyNumber(config.goldFloorPerLevel))
+      + Math.pow(
+        normalizedLevel,
+        Math.max(0, readEconomyNumber(config.goldFloorExponent))
+      ) * Math.max(0, readEconomyNumber(config.goldFloorExponentScale));
+  }
+
   function getEconomyPreviewHeroTroopHours(level, economy = state.economy) {
     const config = economy?.levelRewards || {};
     const normalizedLevel = normalizeEconomyPreviewLevel(level);
@@ -1100,13 +1111,13 @@
   function getEconomyPreviewHeroLevelReward(level, economy = state.economy) {
     const normalizedLevel = normalizeEconomyPreviewLevel(level);
     const referenceCityLevel = Math.max(1, normalizedLevel - 1);
-    const legacyGoldFloor = 250 + normalizedLevel * 60 + Math.pow(normalizedLevel, 1.25) * 25;
+    const goldFloor = getEconomyPreviewHeroGoldFloor(normalizedLevel, economy);
     const goldFromUpgradeShare = getEconomyPreviewUpgradeCost(referenceCityLevel, economy)
       * getEconomyPreviewHeroGoldUpgradeShare(normalizedLevel, economy);
     const goldFromProductionHours = getEconomyPreviewGoldPerHour(normalizedLevel, economy)
       * getEconomyPreviewHeroGoldProductionHours(normalizedLevel, economy);
     const gold = Math.floor(Math.max(
-      legacyGoldFloor,
+      goldFloor,
       Math.min(goldFromUpgradeShare, goldFromProductionHours)
     ));
     const troopHours = getEconomyPreviewHeroTroopHours(normalizedLevel, economy);
@@ -1452,14 +1463,59 @@
         </div>
         <div class="economy-callout formula">
           <strong>Why changing one gold field may not change the final reward</strong>
-          <p>Hero-level gold is the <b>smaller</b> of two limits: <code>reference city upgrade cost × upgrade share</code> and <code>base gold/hour × production hours</code>. A small legacy minimum is the floor. Increasing one limit has no effect while the other limit is still lower.</p>
+          <p>Hero-level gold is the <b>greater</b> of the configurable minimum and the <b>smaller</b> of two limits: <code>reference city upgrade cost × upgrade share</code> and <code>base gold/hour × production hours</code>. Increasing one limit has no effect while the other limit is still lower.</p>
         </div>
         <div class="economy-breakdown-grid">
           <article class="economy-breakdown-card">
             <div class="economy-breakdown-heading">
+              <span>Gold minimum</span>
+              <strong>Guaranteed floor at every hero level</strong>
+              <p>The floor is base + (new hero level × gold per level) + (new hero level raised to the exponent × exponent scale). The final reward can be higher when both gold limits allow it.</p>
+            </div>
+            <div class="economy-explained-grid">
+              ${economyNumberInput(
+                "levelRewards.goldFloorBase",
+                "Base gold floor",
+                economy.levelRewards.goldFloorBase,
+                {
+                  step: 1,
+                  description: "Flat gold included in the guaranteed minimum for every hero level.",
+                }
+              )}
+              ${economyNumberInput(
+                "levelRewards.goldFloorPerLevel",
+                "Gold floor per hero level",
+                economy.levelRewards.goldFloorPerLevel,
+                {
+                  step: 1,
+                  description: "Linear gold added to the guaranteed minimum for each new hero level.",
+                }
+              )}
+              ${economyNumberInput(
+                "levelRewards.goldFloorExponent",
+                "Gold floor exponent",
+                economy.levelRewards.goldFloorExponent,
+                {
+                  step: 0.01,
+                  description: "Controls how the curved part of the minimum accelerates at higher levels.",
+                }
+              )}
+              ${economyNumberInput(
+                "levelRewards.goldFloorExponentScale",
+                "Gold floor exponent scale",
+                economy.levelRewards.goldFloorExponentScale,
+                {
+                  step: 1,
+                  description: "Multiplies the curved part of the guaranteed minimum.",
+                }
+              )}
+            </div>
+          </article>
+          <article class="economy-breakdown-card">
+            <div class="economy-breakdown-heading">
               <span>Gold limit 1</span>
               <strong>Share of a reference city upgrade</strong>
-              <p>The reference cost is the base cost to upgrade a city from hero level − 1 to that hero level, with no discounts. Decimal shares mean 0.5 = 50%.</p>
+              <p>The reference cost is the base cost to upgrade a city from hero level − 1 to that hero level, with no discounts. Decimal shares mean 0.75 = 75%.</p>
             </div>
             <div class="economy-explained-grid">
               ${economyNumberInput(
@@ -1468,7 +1524,7 @@
                 economy.levelRewards.goldEarlyUpgradeShare,
                 {
                   step: 0.01,
-                  description: "Used for every hero level gained up to and including level 50. Example: 0.5 limits gold to 50% of the reference city upgrade.",
+                  description: "Used for every hero level gained up to and including level 50. Example: 0.75 limits gold to 75% of the reference city upgrade.",
                 }
               )}
               ${economyNumberInput(
@@ -1567,7 +1623,7 @@
                 economy.levelRewards.troopMidHoursPerLevel,
                 {
                   step: 0.01,
-                  description: "Slope applied to each hero level above 50 through level 100.",
+                  description: "Slope applied to each hero level above 50 through level 100. With 24 base and 0.48 per level, level 100 grants 48 reward hours.",
                 }
               )}
               ${economyNumberInput(

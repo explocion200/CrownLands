@@ -1,6 +1,6 @@
 window.CROWNLANDS_ECONOMY_CONFIG = {
   "schemaVersion": 1,
-  "updatedAt": "2026-07-27T05:39:59.562Z",
+  "updatedAt": "2026-07-28T03:40:00.000Z",
   "shopItems": {
     "shield_12h": {
       "cost": 1250000,
@@ -148,19 +148,23 @@ window.CROWNLANDS_ECONOMY_CONFIG = {
     }
   },
   "levelRewards": {
-    "goldEarlyUpgradeShare": 0.5,
-    "goldMidUpgradeShare": 0.3,
-    "goldEndgameUpgradeShare": 0.2,
-    "goldEarlyProductionHours": 4,
-    "goldMidProductionHours": 12,
-    "goldEndgameProductionHours": 24,
+    "goldFloorBase": 500,
+    "goldFloorPerLevel": 250,
+    "goldFloorExponent": 1.25,
+    "goldFloorExponentScale": 40,
+    "goldEarlyUpgradeShare": 0.75,
+    "goldMidUpgradeShare": 0.4,
+    "goldEndgameUpgradeShare": 0.4,
+    "goldEarlyProductionHours": 6,
+    "goldMidProductionHours": 16,
+    "goldEndgameProductionHours": 36,
     "troopEarlyBaseHours": 4,
     "troopEarlyHoursPerLevel": 0.4,
     "troopMidBaseHours": 24,
-    "troopMidHoursPerLevel": 0.24,
-    "troopEndgameBaseHours": 36,
-    "troopEndgameHoursPerLevel": 0.12,
-    "troopMaximumHours": 48
+    "troopMidHoursPerLevel": 0.48,
+    "troopEndgameBaseHours": 48,
+    "troopEndgameHoursPerLevel": 0.32,
+    "troopMaximumHours": 96
   },
   "camps": {
     "gold": {
