@@ -879,12 +879,23 @@ function getServerCityNameIndex(cityId = "", fallbackIndex = 0) {
   return Math.max(0, Math.floor(safeNumber(fallbackIndex, 0)));
 }
 
+function isServerGenericCityName(value = "", cityId = "") {
+  const name = safeString(value, 80);
+  if (!name) return true;
+  if (/\d/.test(name)) return true;
+  if (/^city(?:\s+|[-_])\d+$/i.test(name)) return true;
+  return Boolean(cityId) && name.toLowerCase() === safeString(cityId, 96).toLowerCase();
+}
+
 function getServerCanonicalCityName(city = {}, regionId = "") {
   const cityId = safeString(city.id, 96);
   const normalizedRegionId = normalizeRegionId(regionId || city.regionId || city.startPool);
   const map = getServerWorldMap(normalizedRegionId);
   const mapCities = Array.isArray(map?.cities) ? map.cities : [];
   const mapIndex = mapCities.findIndex(entry => safeString(entry?.id, 96) === cityId);
+  const mapCity = mapIndex >= 0 ? mapCities[mapIndex] : null;
+  const configuredName = safeString(mapCity?.name || city.name, 80);
+  if (!isServerGenericCityName(configuredName, cityId)) return configuredName;
   const cityIndex = getServerCityNameIndex(cityId, mapIndex >= 0 ? mapIndex : city.index);
   const prefixes = [...new Set([
     ...SERVER_MEDIEVAL_CITY_PREFIXES,
@@ -1121,9 +1132,11 @@ function getAuthoritativeIslandSeed(regionId = "") {
   const map = getServerWorldMap(targetRegionId);
   const cities = (Array.isArray(map.cities) ? map.cities : []).map((city, index) => {
     const point = serverImagePointToWorld(targetRegionId, city);
+    const id = city.id || `${targetRegionId}_${String(index + 1).padStart(3, "0")}`;
     return cleanServerCityLayoutSeed({
-      id: city.id || `${targetRegionId}_${String(index + 1).padStart(3, "0")}`,
-      name: city.name || city.id,
+      ...city,
+      id,
+      name: getServerCanonicalCityName({ ...city, id, index }, targetRegionId),
       regionId: targetRegionId,
       startPool: targetRegionId,
       x: Math.round(point.x),
@@ -4530,8 +4543,17 @@ function dropCapturedCityLevel(city = {}) {
 }
 
 function cleanCityUpdate(city = {}, patch = {}) {
+  const merged = { ...city, ...patch };
+  const cityId = safeString(merged.id, 96);
+  const regionId = normalizeRegionId(merged.regionId || merged.startPool);
+  const shouldCanonicalizeName = cityId
+    && !isStronghold(merged)
+    && getServerWorldRegularCityIds(regionId).has(cityId);
   return {
     ...patch,
+    ...(shouldCanonicalizeName
+      ? { name: getServerCanonicalCityName(merged, regionId) }
+      : {}),
     updatedAt: FieldValue.serverTimestamp(),
   };
 }

@@ -13,7 +13,7 @@
   "cities": [
     {
       "id": "region_12_city_001",
-      "name": "City 1",
+      "name": "Flintstead Market",
       "regionId": "region_12",
       "xNorm": 0.311,
       "yNorm": 0.206,
@@ -24,7 +24,7 @@
     },
     {
       "id": "region_12_city_002",
-      "name": "City 2",
+      "name": "Brookreach",
       "regionId": "region_12",
       "xNorm": 0.47,
       "yNorm": 0.18,
@@ -35,7 +35,7 @@
     },
     {
       "id": "region_12_city_003",
-      "name": "City 3",
+      "name": "Wyverngate",
       "regionId": "region_12",
       "xNorm": 0.386,
       "yNorm": 0.195,
@@ -46,7 +46,7 @@
     },
     {
       "id": "region_12_city_004",
-      "name": "City 4",
+      "name": "Ravenport",
       "regionId": "region_12",
       "xNorm": 0.407,
       "yNorm": 0.287,
@@ -57,7 +57,7 @@
     },
     {
       "id": "region_12_city_005",
-      "name": "City 5",
+      "name": "Greenfield",
       "regionId": "region_12",
       "xNorm": 0.484,
       "yNorm": 0.302,
@@ -68,7 +68,7 @@
     },
     {
       "id": "region_12_city_006",
-      "name": "City 6",
+      "name": "Cedarbrook Watch",
       "regionId": "region_12",
       "xNorm": 0.45,
       "yNorm": 0.417,
@@ -79,7 +79,7 @@
     },
     {
       "id": "region_12_city_007",
-      "name": "City 7",
+      "name": "Alderhurst",
       "regionId": "region_12",
       "xNorm": 0.44,
       "yNorm": 0.519,
@@ -90,7 +90,7 @@
     },
     {
       "id": "region_12_city_008",
-      "name": "City 8",
+      "name": "Redbridge",
       "regionId": "region_12",
       "xNorm": 0.362,
       "yNorm": 0.449,
@@ -101,7 +101,7 @@
     },
     {
       "id": "region_12_city_009",
-      "name": "City 9",
+      "name": "Greyford",
       "regionId": "region_12",
       "xNorm": 0.35,
       "yNorm": 0.359,
@@ -112,7 +112,7 @@
     },
     {
       "id": "region_12_city_010",
-      "name": "City 10",
+      "name": "Crowcross",
       "regionId": "region_12",
       "xNorm": 0.271,
       "yNorm": 0.496,
@@ -123,7 +123,7 @@
     },
     {
       "id": "region_12_city_011",
-      "name": "City 11",
+      "name": "Ashwatch Market",
       "regionId": "region_12",
       "xNorm": 0.218,
       "yNorm": 0.471,
@@ -134,7 +134,7 @@
     },
     {
       "id": "region_12_city_012",
-      "name": "City 12",
+      "name": "Silverwall",
       "regionId": "region_12",
       "xNorm": 0.15,
       "yNorm": 0.361,
@@ -145,7 +145,7 @@
     },
     {
       "id": "region_12_city_013",
-      "name": "City 13",
+      "name": "Hartvale",
       "regionId": "region_12",
       "xNorm": 0.19,
       "yNorm": 0.302,
@@ -156,7 +156,7 @@
     },
     {
       "id": "region_12_city_014",
-      "name": "City 14",
+      "name": "Dunstead",
       "regionId": "region_12",
       "xNorm": 0.2,
       "yNorm": 0.552,
@@ -167,7 +167,7 @@
     },
     {
       "id": "region_12_city_015",
-      "name": "City 15",
+      "name": "Barrowreach",
       "regionId": "region_12",
       "xNorm": 0.244,
       "yNorm": 0.652,
@@ -178,7 +178,7 @@
     },
     {
       "id": "region_12_city_016",
-      "name": "City 16",
+      "name": "Stonegate Watch",
       "regionId": "region_12",
       "xNorm": 0.37,
       "yNorm": 0.693,
@@ -189,7 +189,7 @@
     },
     {
       "id": "region_12_city_017",
-      "name": "City 17",
+      "name": "Highport",
       "regionId": "region_12",
       "xNorm": 0.474,
       "yNorm": 0.633,
@@ -200,7 +200,7 @@
     },
     {
       "id": "region_12_city_018",
-      "name": "City 18",
+      "name": "Elderfield",
       "regionId": "region_12",
       "xNorm": 0.555,
       "yNorm": 0.661,
@@ -211,7 +211,7 @@
     },
     {
       "id": "region_12_city_019",
-      "name": "City 19",
+      "name": "Bellbrook",
       "regionId": "region_12",
       "xNorm": 0.654,
       "yNorm": 0.678,
@@ -222,7 +222,7 @@
     },
     {
       "id": "region_12_city_020",
-      "name": "City 20",
+      "name": "Thorncliffe",
       "regionId": "region_12",
       "xNorm": 0.796,
       "yNorm": 0.65,
@@ -233,7 +233,7 @@
     },
     {
       "id": "region_12_city_021",
-      "name": "City 21",
+      "name": "Ironbridge Market",
       "regionId": "region_12",
       "xNorm": 0.818,
       "yNorm": 0.554,
@@ -244,7 +244,7 @@
     },
     {
       "id": "region_12_city_022",
-      "name": "City 22",
+      "name": "Emberford",
       "regionId": "region_12",
       "xNorm": 0.756,
       "yNorm": 0.449,
@@ -255,7 +255,7 @@
     },
     {
       "id": "region_12_city_023",
-      "name": "City 23",
+      "name": "Blackcross",
       "regionId": "region_12",
       "xNorm": 0.865,
       "yNorm": 0.278,
@@ -266,7 +266,7 @@
     },
     {
       "id": "region_12_city_024",
-      "name": "City 24",
+      "name": "Valehollow",
       "regionId": "region_12",
       "xNorm": 0.749,
       "yNorm": 0.317,
@@ -277,7 +277,7 @@
     },
     {
       "id": "region_12_city_025",
-      "name": "City 25",
+      "name": "Kingswall",
       "regionId": "region_12",
       "xNorm": 0.692,
       "yNorm": 0.404,
@@ -288,7 +288,7 @@
     },
     {
       "id": "region_12_city_026",
-      "name": "City 26",
+      "name": "Fairvale Watch",
       "regionId": "region_12",
       "xNorm": 0.702,
       "yNorm": 0.543,
@@ -299,7 +299,7 @@
     },
     {
       "id": "region_12_city_027",
-      "name": "City 27",
+      "name": "Briarstead",
       "regionId": "region_12",
       "xNorm": 0.623,
       "yNorm": 0.583,
@@ -310,7 +310,7 @@
     },
     {
       "id": "region_12_city_028",
-      "name": "City 28",
+      "name": "Whitemoor",
       "regionId": "region_12",
       "xNorm": 0.338,
       "yNorm": 0.578,
@@ -321,7 +321,7 @@
     },
     {
       "id": "region_12_city_029",
-      "name": "City 29",
+      "name": "Lowgate",
       "regionId": "region_12",
       "xNorm": 0.519,
       "yNorm": 0.527,
@@ -332,7 +332,7 @@
     },
     {
       "id": "region_12_city_030",
-      "name": "City 30",
+      "name": "Fenport",
       "regionId": "region_12",
       "xNorm": 0.593,
       "yNorm": 0.502,
@@ -343,7 +343,7 @@
     },
     {
       "id": "region_12_city_031",
-      "name": "City 31",
+      "name": "Brindlefield Market",
       "regionId": "region_12",
       "xNorm": 0.527,
       "yNorm": 0.413,
@@ -354,7 +354,7 @@
     },
     {
       "id": "region_12_city_032",
-      "name": "City 32",
+      "name": "Wolfmere",
       "regionId": "region_12",
       "xNorm": 0.603,
       "yNorm": 0.341,
@@ -365,7 +365,7 @@
     },
     {
       "id": "region_12_city_033",
-      "name": "City 33",
+      "name": "Oakcliffe",
       "regionId": "region_12",
       "xNorm": 0.613,
       "yNorm": 0.261,
@@ -376,7 +376,7 @@
     },
     {
       "id": "region_12_city_034",
-      "name": "City 34",
+      "name": "Flintbridge",
       "regionId": "region_12",
       "xNorm": 0.55,
       "yNorm": 0.204,
@@ -387,7 +387,7 @@
     },
     {
       "id": "region_12_city_035",
-      "name": "City 35",
+      "name": "Brookford",
       "regionId": "region_12",
       "xNorm": 0.538,
       "yNorm": 0.332,
@@ -398,7 +398,7 @@
     },
     {
       "id": "region_12_city_036",
-      "name": "City 36",
+      "name": "Wyvernworth Watch",
       "regionId": "region_12",
       "xNorm": 0.678,
       "yNorm": 0.339,
@@ -409,7 +409,7 @@
     },
     {
       "id": "region_12_city_037",
-      "name": "City 37",
+      "name": "Ravenhollow",
       "regionId": "region_12",
       "xNorm": 0.222,
       "yNorm": 0.407,
@@ -420,7 +420,7 @@
     },
     {
       "id": "region_12_city_038",
-      "name": "City 38",
+      "name": "Greenwall",
       "regionId": "region_12",
       "xNorm": 0.267,
       "yNorm": 0.558,
@@ -431,7 +431,7 @@
     },
     {
       "id": "region_12_city_039",
-      "name": "City 39",
+      "name": "Cedarvale",
       "regionId": "region_12",
       "xNorm": 0.297,
       "yNorm": 0.613,
@@ -442,7 +442,7 @@
     },
     {
       "id": "region_12_city_040",
-      "name": "City 40",
+      "name": "Alderstead",
       "regionId": "region_12",
       "xNorm": 0.321,
       "yNorm": 0.665,
@@ -453,7 +453,7 @@
     },
     {
       "id": "region_12_city_041",
-      "name": "City 41",
+      "name": "Redmoor Market",
       "regionId": "region_12",
       "xNorm": 0.42,
       "yNorm": 0.579,
@@ -464,7 +464,7 @@
     },
     {
       "id": "region_12_city_042",
-      "name": "City 42",
+      "name": "Greygate",
       "regionId": "region_12",
       "xNorm": 0.607,
       "yNorm": 0.642,
@@ -475,7 +475,7 @@
     },
     {
       "id": "region_12_city_043",
-      "name": "City 43",
+      "name": "Crowport",
       "regionId": "region_12",
       "xNorm": 0.779,
       "yNorm": 0.589,
@@ -486,7 +486,7 @@
     },
     {
       "id": "region_12_city_044",
-      "name": "City 44",
+      "name": "Ashfield",
       "regionId": "region_12",
       "xNorm": 0.654,
       "yNorm": 0.478,
@@ -497,7 +497,7 @@
     },
     {
       "id": "region_12_city_045",
-      "name": "City 45",
+      "name": "Silvermere",
       "regionId": "region_12",
       "xNorm": 0.735,
       "yNorm": 0.378,
@@ -508,7 +508,7 @@
     },
     {
       "id": "region_12_city_046",
-      "name": "City 46",
+      "name": "Hartcliffe Watch",
       "regionId": "region_12",
       "xNorm": 0.417,
       "yNorm": 0.368,
@@ -519,7 +519,7 @@
     },
     {
       "id": "region_12_city_047",
-      "name": "City 47",
+      "name": "Dunbridge",
       "regionId": "region_12",
       "xNorm": 0.545,
       "yNorm": 0.263,
@@ -530,7 +530,7 @@
     },
     {
       "id": "region_12_city_048",
-      "name": "City 48",
+      "name": "Barrowford",
       "regionId": "region_12",
       "xNorm": 0.617,
       "yNorm": 0.186,
@@ -541,7 +541,7 @@
     },
     {
       "id": "region_12_city_049",
-      "name": "City 49",
+      "name": "Stoneworth",
       "regionId": "region_12",
       "xNorm": 0.662,
       "yNorm": 0.277,
@@ -552,7 +552,7 @@
     },
     {
       "id": "region_12_city_050",
-      "name": "City 50",
+      "name": "Highhollow",
       "regionId": "region_12",
       "xNorm": 0.703,
       "yNorm": 0.299,
@@ -563,7 +563,7 @@
     },
     {
       "id": "region_12_city_051",
-      "name": "City 51",
+      "name": "Elderwall Market",
       "regionId": "region_12",
       "xNorm": 0.795,
       "yNorm": 0.287,
@@ -574,7 +574,7 @@
     },
     {
       "id": "region_12_city_052",
-      "name": "City 52",
+      "name": "Bellvale",
       "regionId": "region_12",
       "xNorm": 0.787,
       "yNorm": 0.376,
@@ -585,7 +585,7 @@
     },
     {
       "id": "region_12_city_053",
-      "name": "City 53",
+      "name": "Thornwick",
       "regionId": "region_12",
       "xNorm": 0.807,
       "yNorm": 0.47,
@@ -596,7 +596,7 @@
     },
     {
       "id": "region_12_city_054",
-      "name": "City 54",
+      "name": "Ironmoor",
       "regionId": "region_12",
       "xNorm": 0.553,
       "yNorm": 0.491,
@@ -607,7 +607,7 @@
     },
     {
       "id": "region_12_city_055",
-      "name": "City 55",
+      "name": "Embergate",
       "regionId": "region_12",
       "xNorm": 0.58,
       "yNorm": 0.56,
@@ -618,7 +618,7 @@
     },
     {
       "id": "region_12_city_056",
-      "name": "City 56",
+      "name": "Blackport Watch",
       "regionId": "region_12",
       "xNorm": 0.664,
       "yNorm": 0.561,
@@ -629,7 +629,7 @@
     },
     {
       "id": "region_12_city_057",
-      "name": "City 57",
+      "name": "Valeden",
       "regionId": "region_12",
       "xNorm": 0.845,
       "yNorm": 0.51,
@@ -640,7 +640,7 @@
     },
     {
       "id": "region_12_city_058",
-      "name": "City 58",
+      "name": "Kingsmere",
       "regionId": "region_12",
       "xNorm": 0.831,
       "yNorm": 0.611,
@@ -651,7 +651,7 @@
     },
     {
       "id": "region_12_city_059",
-      "name": "City 59",
+      "name": "Faircliffe",
       "regionId": "region_12",
       "xNorm": 0.417,
       "yNorm": 0.712,
@@ -662,7 +662,7 @@
     },
     {
       "id": "region_12_city_060",
-      "name": "City 60",
+      "name": "Briarbridge",
       "regionId": "region_12",
       "xNorm": 0.414,
       "yNorm": 0.471,
@@ -673,7 +673,7 @@
     },
     {
       "id": "region_12_city_061",
-      "name": "City 61",
+      "name": "Whitebury Market",
       "regionId": "region_12",
       "xNorm": 0.197,
       "yNorm": 0.627,
@@ -684,7 +684,7 @@
     },
     {
       "id": "region_12_city_062",
-      "name": "City 62",
+      "name": "Lowworth",
       "regionId": "region_12",
       "xNorm": 0.168,
       "yNorm": 0.42,
@@ -695,7 +695,7 @@
     },
     {
       "id": "region_12_city_063",
-      "name": "City 63",
+      "name": "Fenhollow",
       "regionId": "region_12",
       "xNorm": 0.362,
       "yNorm": 0.253,
@@ -706,7 +706,7 @@
     },
     {
       "id": "region_12_city_064",
-      "name": "City 64",
+      "name": "Brindlewall",
       "regionId": "region_12",
       "xNorm": 0.305,
       "yNorm": 0.389,
@@ -717,7 +717,7 @@
     },
     {
       "id": "region_12_city_065",
-      "name": "City 65",
+      "name": "Wolfmarket",
       "regionId": "region_12",
       "xNorm": 0.434,
       "yNorm": 0.242,
@@ -728,7 +728,7 @@
     },
     {
       "id": "region_12_city_066",
-      "name": "City 66",
+      "name": "Oakwick Watch",
       "regionId": "region_12",
       "xNorm": 0.319,
       "yNorm": 0.52,
@@ -739,7 +739,7 @@
     },
     {
       "id": "region_12_city_067",
-      "name": "City 67",
+      "name": "Flintmoor",
       "regionId": "region_12",
       "xNorm": 0.386,
       "yNorm": 0.534,
@@ -750,7 +750,7 @@
     },
     {
       "id": "region_12_city_068",
-      "name": "City 68",
+      "name": "Brookgate",
       "regionId": "region_12",
       "xNorm": 0.377,
       "yNorm": 0.622,
@@ -761,7 +761,7 @@
     },
     {
       "id": "region_12_city_069",
-      "name": "City 69",
+      "name": "Wyvernham",
       "regionId": "region_12",
       "xNorm": 0.48,
       "yNorm": 0.569,
@@ -772,7 +772,7 @@
     },
     {
       "id": "region_12_city_070",
-      "name": "City 70",
+      "name": "Ravenden",
       "regionId": "region_12",
       "xNorm": 0.508,
       "yNorm": 0.685,
@@ -783,7 +783,7 @@
     },
     {
       "id": "region_12_city_071",
-      "name": "City 71",
+      "name": "Greenmere Market",
       "regionId": "region_12",
       "xNorm": 0.422,
       "yNorm": 0.157,
@@ -794,7 +794,7 @@
     },
     {
       "id": "region_12_city_072",
-      "name": "City 72",
+      "name": "Cedarcliffe",
       "regionId": "region_12",
       "xNorm": 0.269,
       "yNorm": 0.433,
@@ -805,7 +805,7 @@
     },
     {
       "id": "region_12_city_073",
-      "name": "City 73",
+      "name": "Alderbridge",
       "regionId": "region_12",
       "xNorm": 0.646,
       "yNorm": 0.413,
@@ -816,7 +816,7 @@
     },
     {
       "id": "region_12_city_074",
-      "name": "City 74",
+      "name": "Redbury",
       "regionId": "region_12",
       "xNorm": 0.466,
       "yNorm": 0.368,
