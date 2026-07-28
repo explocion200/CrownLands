@@ -205,6 +205,10 @@ const GAME_SERVER_CAPACITY = 50;
 const GAME_SERVER_ACTIVE_STALE_MS = 3 * 60 * 1000;
 const GAME_SERVER_WAITING_STALE_MS = 5 * 60 * 1000;
 const GAME_SERVER_MAX_WAITING = 500;
+const GAME_SERVER_HEARTBEAT_MODEL_VERSION = 2;
+const GAME_SERVER_ADMISSION_LEASE_MS = 15 * 1000;
+const GAME_SERVER_ADMISSION_WAIT_MS = 55 * 1000;
+let gameServerAdmissionQueue = Promise.resolve();
 const CLAN_UNLOCK_LEVEL = 10;
 const CLAN_CREATE_GOLD_COST = 100_000;
 const CLAN_NAME_CHANGE_GOLD_COST = 500_000;
@@ -552,6 +556,37 @@ function timedCallable(operation, options, handler) {
   });
 }
 
+function isRetryableTransactionInfrastructureError(error) {
+  const code = String(error?.code || "").toLowerCase();
+  const details = String(error?.details || error?.message || "").toLowerCase();
+  return code === "10"
+    || code === "aborted"
+    || code.endsWith("/aborted")
+    || details.includes("transaction lock timeout")
+    || (code === "3" && details.includes("transaction is invalid or closed"));
+}
+
+async function runTransactionWithInfrastructureRetry(operation, label = "transaction", maxAttempts = 3) {
+  let lastError = null;
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    try {
+      return await db.runTransaction(operation);
+    } catch (error) {
+      lastError = error;
+      if (!isRetryableTransactionInfrastructureError(error) || attempt >= maxAttempts) throw error;
+      const delayMs = 75 * attempt + Math.floor(Math.random() * 75);
+      console.warn("Retrying Crownlands Firestore transaction", {
+        label: safeString(label, 64),
+        attempt,
+        code: safeString(error?.code || "internal", 48),
+        delayMs,
+      });
+      await new Promise(resolve => setTimeout(resolve, delayMs));
+    }
+  }
+  throw lastError;
+}
+
 function requireGameServerId(value = GAME_SERVER_ID) {
   const serverId = safeString(value || GAME_SERVER_ID, 64).toLowerCase();
   if (serverId !== GAME_SERVER_ID) {
@@ -592,15 +627,46 @@ function normalizeGameServerEntries(raw = {}, nowMs = Date.now(), staleMs = 0) {
   return entries;
 }
 
-function createGameServerState(raw = {}, nowMs = Date.now()) {
+function createGameServerState(raw = {}, nowMs = Date.now(), { pruneStale = true } = {}) {
   return {
     id: GAME_SERVER_ID,
     name: GAME_SERVER_NAME,
     capacity: GAME_SERVER_CAPACITY,
     nextTicket: Math.max(1, Math.floor(safeNumber(raw.nextTicket, 1))),
-    activeSlots: normalizeGameServerEntries(raw.activeSlots, nowMs, GAME_SERVER_ACTIVE_STALE_MS),
-    waitingQueue: normalizeGameServerEntries(raw.waitingQueue, nowMs, GAME_SERVER_WAITING_STALE_MS),
+    activeSlots: normalizeGameServerEntries(
+      raw.activeSlots,
+      nowMs,
+      pruneStale ? GAME_SERVER_ACTIVE_STALE_MS : 0
+    ),
+    waitingQueue: normalizeGameServerEntries(
+      raw.waitingQueue,
+      nowMs,
+      pruneStale ? GAME_SERVER_WAITING_STALE_MS : 0
+    ),
   };
+}
+
+function applyGameServerMemberHeartbeats(raw = {}, memberRows = []) {
+  const activeSlots = { ...(raw.activeSlots && typeof raw.activeSlots === "object" ? raw.activeSlots : {}) };
+  const waitingQueue = { ...(raw.waitingQueue && typeof raw.waitingQueue === "object" ? raw.waitingQueue : {}) };
+  (Array.isArray(memberRows) ? memberRows : []).forEach(row => {
+    const uid = safeString(row?.uid, 128);
+    const sessionId = safeString(row?.sessionId, 128);
+    const lastSeenAtMs = Math.max(0, Math.floor(safeNumber(row?.lastSeenAtMs, 0)));
+    if (!uid || !sessionId || !lastSeenAtMs) return;
+    const current = activeSlots[uid] || waitingQueue[uid];
+    if (!current || safeString(current.sessionId, 128) !== sessionId) return;
+    const next = {
+      ...current,
+      lastSeenAtMs: Math.max(
+        Math.max(0, Math.floor(safeNumber(current.lastSeenAtMs, 0))),
+        lastSeenAtMs
+      ),
+    };
+    if (activeSlots[uid]) activeSlots[uid] = next;
+    else waitingQueue[uid] = next;
+  });
+  return { ...raw, activeSlots, waitingQueue };
 }
 
 function getOrderedGameServerWaiters(state) {
@@ -652,27 +718,136 @@ function writeGameServerMembership(transaction, entry, status, nowMs = Date.now(
   }, { merge: true });
 }
 
+function writeGameServerMember(transaction, entry, status, nowMs = Date.now()) {
+  if (!entry?.uid) return;
+  transaction.set(db.doc(`gameServers/${GAME_SERVER_DOCUMENT_ID}/members/${entry.uid}`), {
+    uid: entry.uid,
+    serverId: GAME_SERVER_ID,
+    worldId: ONLINE_WORLD_ID,
+    resetGeneration: RESET_GENERATION,
+    releaseId: REALM_RELEASE_ID,
+    heartbeatModelVersion: GAME_SERVER_HEARTBEAT_MODEL_VERSION,
+    status,
+    sessionId: entry.sessionId || "",
+    displayName: entry.displayName || "Ruler",
+    queuedAtMs: status === "waiting" ? entry.queuedAtMs || nowMs : 0,
+    admittedAtMs: status === "active" ? entry.admittedAtMs || nowMs : 0,
+    lastSeenAtMs: nowMs,
+    updatedAtMs: nowMs,
+    updatedAt: FieldValue.serverTimestamp(),
+  }, { merge: true });
+}
+
 function writeGameServerState(transaction, serverRef, state, nowMs = Date.now()) {
-  transaction.set(serverRef, {
+  const serverState = {
     id: GAME_SERVER_ID,
     name: GAME_SERVER_NAME,
     worldId: ONLINE_WORLD_ID,
     resetGeneration: RESET_GENERATION,
     releaseId: REALM_RELEASE_ID,
     capacity: GAME_SERVER_CAPACITY,
+    heartbeatModelVersion: GAME_SERVER_HEARTBEAT_MODEL_VERSION,
+    activeCount: Object.keys(state.activeSlots).length,
+    waitingCount: Object.keys(state.waitingQueue).length,
     activeSlots: state.activeSlots,
     waitingQueue: state.waitingQueue,
     nextTicket: state.nextTicket,
     updatedAtMs: nowMs,
     updatedAt: FieldValue.serverTimestamp(),
-  }, { merge: true });
+  };
+  transaction.set(serverRef, serverState, { mergeFields: Object.keys(serverState) });
+}
+
+function serializeGameServerAdmission(operation) {
+  const result = gameServerAdmissionQueue.then(operation, operation);
+  gameServerAdmissionQueue = result.then(
+    () => undefined,
+    () => undefined
+  );
+  return result;
+}
+
+function isGameServerLeaseAlreadyHeld(error) {
+  const code = String(error?.code || "").toLowerCase();
+  const message = String(error?.message || error?.details || "").toLowerCase();
+  return code === "6"
+    || code === "already-exists"
+    || code.endsWith("/already-exists")
+    || message.includes("already exists");
+}
+
+function isGameServerLeaseRace(error) {
+  const code = String(error?.code || "").toLowerCase();
+  return isGameServerLeaseAlreadyHeld(error)
+    || code === "5"
+    || code === "9"
+    || code === "not-found"
+    || code === "failed-precondition"
+    || code.endsWith("/not-found")
+    || code.endsWith("/failed-precondition");
+}
+
+function waitForGameServerAdmission(attempt = 0) {
+  const backoffMs = Math.min(300, 20 * (1.35 ** Math.min(12, attempt)));
+  const jitterMs = Math.floor(Math.random() * 40);
+  return new Promise(resolve => setTimeout(resolve, Math.ceil(backoffMs + jitterMs)));
+}
+
+async function withGameServerAdmissionLease(operation) {
+  const leaseRef = db.doc(`gameServers/${GAME_SERVER_DOCUMENT_ID}/coordination/admission`);
+  const ownerId = `${process.pid}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+  const deadlineMs = Date.now() + GAME_SERVER_ADMISSION_WAIT_MS;
+  let leaseWrite = null;
+  let attempt = 0;
+
+  while (!leaseWrite) {
+    const nowMs = Date.now();
+    try {
+      leaseWrite = await leaseRef.create({
+        ownerId,
+        acquiredAtMs: nowMs,
+        expiresAtMs: nowMs + GAME_SERVER_ADMISSION_LEASE_MS,
+        resetGeneration: RESET_GENERATION,
+        updatedAt: FieldValue.serverTimestamp(),
+      });
+    } catch (error) {
+      if (!isGameServerLeaseAlreadyHeld(error)) throw error;
+      const leaseSnap = await leaseRef.get();
+      if (leaseSnap.exists && safeNumber(leaseSnap.data()?.expiresAtMs, 0) <= Date.now()) {
+        try {
+          await leaseRef.delete({ lastUpdateTime: leaseSnap.updateTime });
+        } catch (deleteError) {
+          if (!isGameServerLeaseRace(deleteError)) throw deleteError;
+        }
+      }
+      if (Date.now() >= deadlineMs) {
+        throw new HttpsError("resource-exhausted", "Realm admission is busy. Try entering again shortly.");
+      }
+      await waitForGameServerAdmission(attempt);
+      attempt += 1;
+    }
+  }
+
+  try {
+    return await operation();
+  } finally {
+    try {
+      await leaseRef.delete({ lastUpdateTime: leaseWrite.updateTime });
+    } catch (error) {
+      if (!isGameServerLeaseRace(error)) {
+        console.error("Failed to release Crownlands realm admission lease", {
+          code: safeString(error?.code || "internal", 48),
+        });
+      }
+    }
+  }
 }
 
 async function joinGameServerForPlayer({ uid, sessionId, displayName, nowMs = Date.now() }) {
   const serverRef = db.doc(`gameServers/${GAME_SERVER_DOCUMENT_ID}`);
-  return db.runTransaction(async transaction => {
+  return serializeGameServerAdmission(() => withGameServerAdmissionLease(() => db.runTransaction(async transaction => {
     const serverSnap = await transaction.get(serverRef);
-    const state = createGameServerState(serverSnap.exists ? serverSnap.data() : {}, nowMs);
+    const state = createGameServerState(serverSnap.exists ? serverSnap.data() : {}, nowMs, { pruneStale: false });
     const promoted = promoteGameServerWaiters(state, nowMs);
     let activeEntry = state.activeSlots[uid] || null;
     let waitingEntry = state.waitingQueue[uid] || null;
@@ -729,7 +904,10 @@ async function joinGameServerForPlayer({ uid, sessionId, displayName, nowMs = Da
     const membershipWrites = new Map(promoted.map(entry => [entry.uid, { entry, status: "active" }]));
     if (activeEntry) membershipWrites.set(uid, { entry: activeEntry, status: "active" });
     else if (waitingEntry) membershipWrites.set(uid, { entry: waitingEntry, status: "waiting" });
-    membershipWrites.forEach(({ entry, status }) => writeGameServerMembership(transaction, entry, status, nowMs));
+    membershipWrites.forEach(({ entry, status }) => {
+      writeGameServerMember(transaction, entry, status, nowMs);
+      writeGameServerMembership(transaction, entry, status, nowMs);
+    });
 
     return {
       serverId: GAME_SERVER_ID,
@@ -738,14 +916,48 @@ async function joinGameServerForPlayer({ uid, sessionId, displayName, nowMs = Da
       admittedAtMs: activeEntry?.admittedAtMs || 0,
       queuedAtMs: waitingEntry?.queuedAtMs || 0,
     };
+  })));
+}
+
+async function heartbeatGameServerForPlayer({ uid, sessionId, displayName, nowMs = Date.now() }) {
+  const serverRef = db.doc(`gameServers/${GAME_SERVER_DOCUMENT_ID}`);
+  const result = await db.runTransaction(async transaction => {
+    const serverSnap = await transaction.get(serverRef);
+    const state = createGameServerState(
+      serverSnap.exists ? serverSnap.data() : {},
+      nowMs,
+      { pruneStale: false }
+    );
+    const activeEntry = state.activeSlots[uid] || null;
+    const waitingEntry = state.waitingQueue[uid] || null;
+    const currentEntry = activeEntry || waitingEntry;
+    if (!currentEntry) return { status: "missing" };
+    if (currentEntry.sessionId !== sessionId) {
+      return { serverId: GAME_SERVER_ID, serverName: GAME_SERVER_NAME, status: "session-replaced" };
+    }
+    const status = activeEntry ? "active" : "waiting";
+    const entry = cleanGameServerEntry(currentEntry, { uid, sessionId, displayName });
+    entry.displayName = displayName;
+    entry.lastSeenAtMs = nowMs;
+    writeGameServerMember(transaction, entry, status, nowMs);
+    writeGameServerMembership(transaction, entry, status, nowMs);
+    return {
+      serverId: GAME_SERVER_ID,
+      serverName: GAME_SERVER_NAME,
+      status,
+      admittedAtMs: status === "active" ? entry.admittedAtMs || 0 : 0,
+      queuedAtMs: status === "waiting" ? entry.queuedAtMs || 0 : 0,
+    };
   });
+  if (result.status !== "missing") return result;
+  return joinGameServerForPlayer({ uid, sessionId, displayName, nowMs });
 }
 
 async function leaveGameServerForPlayer({ uid, sessionId, nowMs = Date.now() }) {
   const serverRef = db.doc(`gameServers/${GAME_SERVER_DOCUMENT_ID}`);
-  return db.runTransaction(async transaction => {
+  return serializeGameServerAdmission(() => withGameServerAdmissionLease(() => db.runTransaction(async transaction => {
     const serverSnap = await transaction.get(serverRef);
-    const state = createGameServerState(serverSnap.exists ? serverSnap.data() : {}, nowMs);
+    const state = createGameServerState(serverSnap.exists ? serverSnap.data() : {}, nowMs, { pruneStale: false });
     const activeEntry = state.activeSlots[uid] || null;
     const waitingEntry = state.waitingQueue[uid] || null;
     const currentEntry = activeEntry || waitingEntry;
@@ -757,30 +969,53 @@ async function leaveGameServerForPlayer({ uid, sessionId, nowMs = Date.now() }) 
     delete state.waitingQueue[uid];
     const promoted = promoteGameServerWaiters(state, nowMs);
     writeGameServerState(transaction, serverRef, state, nowMs);
-    promoted.forEach(entry => writeGameServerMembership(transaction, entry, "active", nowMs));
+    promoted.forEach(entry => {
+      writeGameServerMember(transaction, entry, "active", nowMs);
+      writeGameServerMembership(transaction, entry, "active", nowMs);
+    });
+    transaction.delete(db.doc(`gameServers/${GAME_SERVER_DOCUMENT_ID}/members/${uid}`));
     writeGameServerMembership(transaction, {
       uid,
       sessionId,
       displayName: currentEntry?.displayName || "Ruler",
     }, "left", nowMs);
     return { serverId: GAME_SERVER_ID, serverName: GAME_SERVER_NAME, status: "left" };
-  });
+  })));
 }
 
 async function maintainGameServer(nowMs = Date.now()) {
   const serverRef = db.doc(`gameServers/${GAME_SERVER_DOCUMENT_ID}`);
-  return db.runTransaction(async transaction => {
-    const serverSnap = await transaction.get(serverRef);
-    const state = createGameServerState(serverSnap.exists ? serverSnap.data() : {}, nowMs);
+  return serializeGameServerAdmission(() => withGameServerAdmissionLease(() => db.runTransaction(async transaction => {
+    const staleBeforeMs = nowMs - GAME_SERVER_WAITING_STALE_MS;
+    const memberQuery = serverRef.collection("members")
+      .where("lastSeenAtMs", ">=", staleBeforeMs);
+    const staleMemberQuery = serverRef.collection("members")
+      .where("lastSeenAtMs", "<", staleBeforeMs)
+      .limit(100);
+    const [serverSnap, memberSnap, staleMemberSnap] = await Promise.all([
+      transaction.get(serverRef),
+      transaction.get(memberQuery),
+      transaction.get(staleMemberQuery),
+    ]);
+    const rawState = applyGameServerMemberHeartbeats(
+      serverSnap.exists ? serverSnap.data() : {},
+      memberSnap.docs.map(doc => ({ uid: doc.id, ...doc.data() }))
+    );
+    const state = createGameServerState(rawState, nowMs);
     const promoted = promoteGameServerWaiters(state, nowMs);
     writeGameServerState(transaction, serverRef, state, nowMs);
-    promoted.forEach(entry => writeGameServerMembership(transaction, entry, "active", nowMs));
+    promoted.forEach(entry => {
+      writeGameServerMember(transaction, entry, "active", nowMs);
+      writeGameServerMembership(transaction, entry, "active", nowMs);
+    });
+    staleMemberSnap.docs.forEach(doc => transaction.delete(doc.ref));
     return {
       active: Object.keys(state.activeSlots).length,
       waiting: Object.keys(state.waitingQueue).length,
       promoted: promoted.length,
+      staleMembersDeleted: staleMemberSnap.size,
     };
-  });
+  })));
 }
 
 function normalizePlayerName(value, fallback = "Ruler") {
@@ -6537,9 +6772,6 @@ async function rebuildGlobalStatsForPlayer(uid = "") {
         clanId: identity.clanId,
         clanName: identity.clanName,
         clanTag: identity.clanTag,
-        clanId: identity.clanId,
-        clanName: identity.clanName,
-        clanTag: identity.clanTag,
         kingPower: stats.kingPower,
         kingPowerVersion: GLOBAL_PLAYER_STATS_VERSION,
         kingPowerUpdatedAtMs: nowMs,
@@ -6560,9 +6792,6 @@ async function rebuildGlobalStatsForPlayer(uid = "") {
         displayName: identity.ownerName,
         playerName: identity.ownerName,
         flag: identity.ownerFlag,
-        clanId: identity.clanId,
-        clanName: identity.clanName,
-        clanTag: identity.clanTag,
         clanId: identity.clanId,
         clanName: identity.clanName,
         clanTag: identity.clanTag,
@@ -6923,12 +7152,21 @@ exports.getRealmInfo = timedCallable(
       serverId: GAME_SERVER_ID,
       serverName: GAME_SERVER_NAME,
       capacity: GAME_SERVER_CAPACITY,
+      heartbeatModelVersion: GAME_SERVER_HEARTBEAT_MODEL_VERSION,
+      capabilities: {
+        shardedGameServerHeartbeats: true,
+      },
       appCheckEnforced: false,
     };
   }
 );
 
-exports.joinGameServer = timedCallable("joinGameServer", { region: "us-central1", maxInstances: 20, invoker: "public" }, async request => {
+exports.joinGameServer = timedCallable("joinGameServer", {
+  region: "us-central1",
+  maxInstances: 1,
+  concurrency: 80,
+  invoker: "public",
+}, async request => {
   const uid = requireAuth(request);
   const data = request.data || {};
   requireGameServerId(data.serverId);
@@ -6944,7 +7182,7 @@ exports.heartbeatGameServer = timedCallable("heartbeatGameServer", { region: "us
   const uid = requireAuth(request);
   const data = request.data || {};
   requireGameServerId(data.serverId);
-  return joinGameServerForPlayer({
+  return heartbeatGameServerForPlayer({
     uid,
     sessionId: requireGameServerSessionId(data.sessionId),
     displayName: normalizePlayerName(data.displayName || request.auth?.token?.name || "Ruler"),
@@ -12035,7 +12273,7 @@ exports.sendArmyOrder = timedCallable("sendArmyOrder", { region: "us-central1", 
   const playerRef = db.doc(`players/${uid}`);
   const attackerLeaderboardRef = leaderboardEntryRef(uid);
 
-  const result = await db.runTransaction(async transaction => {
+  const result = await runTransactionWithInfrastructureRetry(async transaction => {
     const [sourceSnap, targetSnap, canonicalArmySnap, legacyArmySnap, playerSnap, attackerLeaderboardSnap] = await Promise.all([
       transaction.get(sourceRef),
       transaction.get(targetRef),
@@ -12460,7 +12698,7 @@ exports.sendArmyOrder = timedCallable("sendArmyOrder", { region: "us-central1", 
         target,
       }),
     };
-  });
+  }, "sendArmyOrder");
 
   const incomingNotification = result.incomingNotification || null;
   delete result.incomingNotification;
@@ -16620,10 +16858,6 @@ exports.recallRewardCampGarrison = onCall({ region: "us-central1", maxInstances:
   });
 });
 
-function getScheduledArmyDedupeKey(armyId = "", ownerUid = "") {
-  return `${safeString(ownerUid, 128)}:${safeString(armyId, 96)}`;
-}
-
 function getScheduledArmyTarget(doc = null) {
   if (!doc) return null;
   const data = doc.data() || {};
@@ -16643,33 +16877,20 @@ function getScheduledArmyTarget(doc = null) {
 }
 
 async function loadDueArmyTargets(nowMs = Date.now()) {
-  const [canonicalSnap, legacySnap] = await Promise.all([
-    db.collection("armies")
-      .where("status", "==", "active")
-      .where("resetGeneration", "==", RESET_GENERATION)
-      .where("worldId", "==", ONLINE_WORLD_ID)
-      .where("arrivesAtMs", "<=", nowMs)
-      .orderBy("arrivesAtMs", "asc")
-      .limit(SCHEDULED_ARMY_RESOLVE_SCAN_LIMIT)
-      .get(),
-    // Keep resolving pre-migration marches until every legacy view has settled.
-    db.collectionGroup("armies")
-      .where("status", "==", "active")
-      .where("resetGeneration", "==", RESET_GENERATION)
-      .where("worldId", "==", ONLINE_WORLD_ID)
-      .where("arrivesAtMs", "<=", nowMs)
-      .orderBy("arrivesAtMs", "asc")
-      .limit(Math.min(100, SCHEDULED_ARMY_RESOLVE_SCAN_LIMIT))
-      .get(),
-  ]);
-  const targetsByKey = new Map();
-  [...canonicalSnap.docs, ...legacySnap.docs].forEach(doc => {
-    const target = getScheduledArmyTarget(doc);
-    if (!target) return;
-    const key = getScheduledArmyDedupeKey(target.armyId, target.ownerUid);
-    if (!targetsByKey.has(key)) targetsByKey.set(key, target);
-  });
-  return Array.from(targetsByKey.values())
+  // Canonical army documents predate the current fresh reset, so current-world
+  // marches always have a root entry. Island army documents are projections and
+  // must not be scanned again by the scheduler.
+  const canonicalSnap = await db.collection("armies")
+    .where("status", "==", "active")
+    .where("resetGeneration", "==", RESET_GENERATION)
+    .where("worldId", "==", ONLINE_WORLD_ID)
+    .where("arrivesAtMs", "<=", nowMs)
+    .orderBy("arrivesAtMs", "asc")
+    .limit(SCHEDULED_ARMY_RESOLVE_SCAN_LIMIT)
+    .get();
+  return canonicalSnap.docs
+    .map(getScheduledArmyTarget)
+    .filter(Boolean)
     .sort((a, b) => a.arrivesAtMs - b.arrivesAtMs)
     .slice(0, SCHEDULED_ARMY_RESOLVE_MAX_PER_RUN);
 }

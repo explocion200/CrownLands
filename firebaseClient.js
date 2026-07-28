@@ -9,7 +9,6 @@
   const ONLINE_WORLD_ID = String(REALM_CONFIG.worldId || `main-${RESET_GENERATION}`);
   const APP_RELEASE_ID = String(REALM_CONFIG.releaseId || "");
   const ROYAL_PEACE_SHIELD_ITEM_ID = "shield_12h";
-  const ROYAL_PEACE_SHIELD_COST = 175_000;
 
   const client = {
     configured: false,

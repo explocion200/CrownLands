@@ -143,10 +143,10 @@ const canonicalRulesStart = rulesSource.indexOf("match /armies/{armyId}");
 const canonicalRulesEnd = rulesSource.indexOf("match /reinforcements/{reinforcementId}", canonicalRulesStart);
 const canonicalArmyRules = rulesSource.slice(canonicalRulesStart, canonicalRulesEnd);
 assert.ok(canonicalRulesStart >= 0 && canonicalRulesEnd > canonicalRulesStart, "Canonical army rules must exist.");
-assert.doesNotMatch(
+assert.match(
   canonicalArmyRules,
-  /targetOwnerUid == request\.auth\.uid/,
-  "Defenders must not read canonical army documents containing exact troops."
+  /resource\.data\.ownerUid == request\.auth\.uid[\s\S]*?\|\| \(resource\.data\.rallyAttack == true\s*&& resource\.data\.targetOwnerUid == request\.auth\.uid\)[\s\S]*?participantUids/,
+  "Canonical exact armies must stay private to their owner and rally participants, with a defender exception only for launched rallies."
 );
 assert.match(
   serverSource,

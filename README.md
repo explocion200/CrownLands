@@ -1,14 +1,14 @@
 # Crownlands - Medieval Browser Strategy Prototype
 
-Landscape / horizontal medieval island-conquest prototype inspired by the core loop of Million Lords. This pass focuses on XP, troops, city levels, attack, defense, economy, skills, saves, scouting, and battle reports. Items and advisors are intentionally excluded.
+Landscape / horizontal medieval island-conquest game inspired by the core loop of Million Lords. The current online-first build includes XP, troops, city levels, attack, defense, economy, skills, items, camps, clans, rallies, scouting, and battle reports.
 
 ## Current Mechanics Pass
 
-- Player starts with 1 main city, 50 troops, and 500 gold.
+- Player starts with 1 main city, 200 troops, and 100 gold.
 - Google sign-in connects the account first; the player enters the live kingdom with a separate Enter Kingdom button.
 - Each account can have one active browser session; signing in on another device signs out the older device.
-- The current placeholder world contains 5 regional maps arranged on a square grid: center, west, east, north, and south.
-- The current map reset is `fresh-2026-07-05-server-reset`, so online players start fresh in a new Firebase world slot.
+- The current world contains 15 connected regional maps.
+- The current map reset is `fresh-2026-07-26-server-reset`, with world ID `main-fresh-2026-07-26-server-reset`.
 - New online players claim starting cities from the available starter regions first; the center Crownlands region is intended as the main battleground.
 - Cities produce troops and gold in real time while the game is active.
 - Offline production catches up when the player returns: troops stay in the cities that produced them, while troops from cities lost offline rally to the main city.
@@ -16,18 +16,16 @@ Landscape / horizontal medieval island-conquest prototype inspired by the core l
 - Victory points drive troop production, gold production, and capture XP value.
 - The city counter opens a city list with the main city pinned first and level/troop sorting.
 - A small floating home indicator appears when the main city is off-screen and recenters the map on click.
-- Troop production uses `VP x 3`, plus Recruiter skill bonus.
-- Gold production uses `VP x 8`, plus Prosperous skill bonus.
+- Troop production uses configured production VP multiplied by 10, plus Royal Granaries and objective bonuses.
+- Gold production uses configured production VP multiplied by 15, the level-100+ growth curve, Tax Stewardship, item effects, and objective bonuses.
 - City defense gives stationed soldiers `city level x 2%`, then adds city walls; Stoneworks strengthens the wall portion.
 - Neutral captures are limited to 30 per local day.
 - Neutral captures are also blocked once the player owns 30 cities; after that, expansion must come from player-owned cities.
 - Captured cities enter a 1-hour city-XP cooldown. Attacking still works and troop-loss XP remains available, but the fixed city/wall XP component is unavailable during cooldown.
 - Hero XP keeps the early progression curve through level 25, then each level requires 10% more XP. A single battle can award up to 100% of a level through level 50, declining smoothly to 50% at level 100 and 35% at level 150.
 - Hero levels award skill points.
-- Skill tree now includes Striker, Fearless, Brave, Guardian, Prosperous, Recruiter, Rusher, Scavenger, Salvager, and Cautious.
-- Fearless and Brave return some losses to the main city.
-- Scavenger and Salvager recover gold from kills.
-- Cautious refunds part of invested city upgrade gold when a player city is lost.
+- The skill tree includes Swordmastery, Stoneworks, Tax Stewardship, Royal Granaries, Guild Charters, March Orders, and Field Medics.
+- Field Medics returns a percentage of battle losses to the main city.
 - Failed player attacks and lost defenses still award one-third of the matching victory XP.
 - Captured cities lose 1 level on takeover, but never drop below Level 1.
 - Combat preview shows attack power, defense power, estimated losses/survivors, capture or defeat XP, and XP efficiency.
@@ -60,18 +58,19 @@ Open the Netlify site, sign in with Google, then use the live map to scout, atta
 
 ## Online Multiplayer Foundation
 
-This build has Firebase Auth, Firestore, and callable Functions added without breaking guest play.
+The live game is online-first and uses Firebase Auth, Firestore, and callable Functions as the authority for shared gameplay. Local simulation remains for editor and automated-test workflows.
 
-- `firebase-config.js` holds the Firebase web app config placeholders.
-- `firebaseClient.js` loads Firebase Auth, Firestore, and Functions only after real config values are pasted in.
+- `firebase-config.js` holds the public Firebase web-app configuration and optional App Check/rewarded-ad settings.
+- `firebaseClient.js` initializes Firebase Auth, Firestore, and Functions for signed-in play.
 - The setup screen now uses Google sign-in as the only entry button.
-- Signed-in players save a private cloud snapshot to the current reset slot, `players/{uid}/saves/default-fresh-2026-07-05-server-reset`.
+- Signed-in players save a private cloud snapshot to the current reset slot, `players/{uid}/saves/default-fresh-2026-07-26-server-reset`.
 - After sign-in, the game automatically checks the current reset slot in Firebase first, then falls back to the current browser save key.
-- `firestore.rules` allows private player saves and shared city setup, but blocks browser writes to army movement and report collections.
-- Phase 2 now shards the world into one Firestore island per region, such as `islands/main-fresh-2026-07-05-server-reset-west`.
+- `firestore.rules` allows private player saves and narrowly scoped identity updates, while blocking browser writes to server-owned economy, city, army, rally, and report state.
+- The world is sharded into one Firestore island per region, such as `islands/main-fresh-2026-07-26-server-reset-west`.
 - The browser loads and subscribes to one active island at a time, starting with the player's home island.
 - The island switcher lets signed-in players load a different island, unsubscribing from the previous island before opening the next one.
-- While online, the browser syncs the signed-in player's owned cities back to Firestore for the currently loaded island.
+- While online, the browser subscribes to server-owned city state; gameplay mutations go through callable Functions.
+- The Crown Marches admits exactly 50 active players and queues overflow in ticket order. Join, leave, promotion, and stale cleanup share a short server-only admission lease; routine player heartbeats write separate member documents so 50 connected players never hammer one shared capacity document.
 - Online troop orders now call Firebase Functions: `sendArmyOrder` creates and validates marches server-side, and `resolveArmyOrder` resolves scouts, transfers, attacks, defenses, city capture, level drops, XP, gold rewards, and battle reports in Firestore transactions.
 - Clan rallies are server-authoritative three-player attacks against Strongholds, the Crown Citadel, and reward camps. Forming targets live in clan-private Firestore documents; public `rally_join` marches reveal only the contribution route to the assembly city. The leader controls launch, cancellation, and the combined army's Recall Horn, while ally casualties, XP, Field Medics recovery, and survivor returns settle separately through idempotent receipts.
 - Server-written reports are stored under `players/{uid}/serverReports/{reportId}` and merged into the in-game Reports UI.
@@ -162,6 +161,7 @@ Deploying to Netlify still works through GitHub push. `netlify.toml` keeps `inde
 - Large map child layers avoid forced 3D compositing, and crowded-map mode disables extra shadows/animations when many city or army markers are visible.
 - City marker rebuilds are reserved for structural changes such as owner, level, selection, flag, shield, visibility, or report state. Troop counts update separately on a short interval so normal production does not rebuild every visible city.
 - Army tokens are reused and moved with `translate3d` transforms instead of being rebuilt each movement tick.
+- Region, camp, route, and city lookups use bounded/indexed caches. Remote and pending army view objects are reused between movement ticks, and repeated owned-city queries share one result inside each display frame to reduce garbage-collection spikes.
 - Pan and pinch movement schedule camera transforms through `requestAnimationFrame` to reduce mobile pointer-event work.
 - Press `F8` or open the game with `?perf=1` to show the developer performance panel with FPS, active region, visible marker counts, active army tokens, loaded image count, neighbor preload status, and service-worker state.
 - Map art remains lazy-loaded and cache-first. The service worker should cache app shell and core art, while live Firebase/Auth/Functions/server requests remain uncached.

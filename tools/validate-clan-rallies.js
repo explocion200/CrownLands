@@ -31,6 +31,8 @@ function extractFunction(source, name, nextName) {
 ].forEach(name => requires(server, new RegExp(`exports\\.${name}\\s*=\\s*timedCallable`), `Missing ${name} callable.`));
 
 requires(server, /RALLY_MAX_PARTICIPANTS\s*=\s*3[\s\S]*?CLAN_FORMING_RALLY_LIMIT\s*=\s*3/, "Rally participant or clan forming limits changed.");
+requires(server, /ARMY_TRAVEL_KIND_MULTIPLIERS\s*=\s*\{[^}]*rally_join:\s*0\.95/, "The server rally assembly travel multiplier is missing.");
+requires(client, /ARMY_TRAVEL_KIND_MULTIPLIERS\s*=\s*\{[^}]*rally_join:\s*0\.95/, "The client rally assembly travel multiplier drifted from the server.");
 requires(server, /isRallyObjectiveTarget[\s\S]*?getRewardCampConfig\(target\)[\s\S]*?isStronghold\(target\)/, "Rallies are not restricted to reward camps and Strongholds.");
 requires(server, /state\.leaderUids\.includes\(uid\)[\s\S]*?state\.leaderUids\.length >= CLAN_FORMING_RALLY_LIMIT/, "Leader and clan rally limits are not transactionally enforced.");
 requires(server, /activeRallyParticipants\(rally\)\.length >= RALLY_MAX_PARTICIPANTS/, "The three-player participant limit is missing.");
@@ -91,6 +93,11 @@ requires(
 );
 requires(rules, /match \/rallyState\/\{resetId\}[\s\S]*?allow read, create, update, delete: if false/, "Rally concurrency state is not server-only.");
 requires(rules, /match \/rallyBattleReceipts\/\{resetId\}\/entries\/\{receiptId\}[\s\S]*?allow read, create, update, delete: if false/, "Rally settlement receipts are not server-only.");
+requires(
+  rules,
+  /match \/armies\/\{armyId\}[\s\S]*?resource\.data\.rallyAttack == true[\s\S]*?resource\.data\.targetOwnerUid == request\.auth\.uid[\s\S]*?participantUids/,
+  "Launched rally armies are not visible to their defender while preserving canonical normal-army privacy."
+);
 requires(rules, /profileFieldUnchanged\('committedRallyTroops'\)[\s\S]*?profileFieldUnchanged\('rallyResetGeneration'\)/, "Clients can mutate committed rally troop state.");
 
 const rallyIndexes = indexes.indexes.filter(index => index.collectionGroup === "rallies");

@@ -4,14 +4,49 @@ const realm = require("../release-config.json");
 
 const projectId = process.env.GCLOUD_PROJECT || process.env.GOOGLE_CLOUD_PROJECT || "crown-land-b15e0";
 const authHost = process.env.FIREBASE_AUTH_EMULATOR_HOST || "127.0.0.1:9099";
-const functionsHost = process.env.CROWNLANDS_FUNCTIONS_EMULATOR_HOST
-  || process.env.FUNCTIONS_EMULATOR_HOST
-  || "127.0.0.1:5001";
+const configuredFunctionsHost = process.env.CROWNLANDS_FUNCTIONS_EMULATOR_HOST
+  || process.env.FUNCTIONS_EMULATOR_HOST;
 if (!process.env.FIRESTORE_EMULATOR_HOST) throw new Error("FIRESTORE_EMULATOR_HOST is required.");
 
 admin.initializeApp({ projectId });
 const db = admin.firestore();
 db.settings({ ignoreUndefinedProperties: true });
+
+let functionsHostPromise = null;
+
+function formatEmulatorHost(host, port) {
+  const normalizedHost = String(host || "127.0.0.1").trim();
+  const formattedHost = normalizedHost.includes(":") && !normalizedHost.startsWith("[")
+    ? `[${normalizedHost}]`
+    : normalizedHost;
+  return `${formattedHost}:${port}`;
+}
+
+async function resolveFunctionsHost() {
+  if (configuredFunctionsHost) return configuredFunctionsHost;
+  if (!functionsHostPromise) {
+    functionsHostPromise = (async () => {
+      const hubHost = String(process.env.FIREBASE_EMULATOR_HUB || "").trim();
+      if (hubHost) {
+        const response = await fetch(`http://${hubHost}/emulators`);
+        if (!response.ok) {
+          throw new Error(`Firebase Emulator Hub discovery failed with HTTP ${response.status}.`);
+        }
+        const emulators = await response.json();
+        const functions = emulators?.functions || {};
+        const listen = Array.isArray(functions.listen) ? functions.listen[0] : functions.listen;
+        const host = functions.host || listen?.address;
+        const port = Number(functions.port || listen?.port);
+        if (host && Number.isInteger(port) && port > 0) {
+          return formatEmulatorHost(host, port);
+        }
+        throw new Error("Firebase Emulator Hub did not report a running Functions emulator.");
+      }
+      return "127.0.0.1:5001";
+    })();
+  }
+  return functionsHostPromise;
+}
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
@@ -30,6 +65,7 @@ async function createAuthUser(index) {
 }
 
 async function callFunction(name, token, data = {}) {
+  const functionsHost = await resolveFunctionsHost();
   const response = await fetch(`http://${functionsHost}/${projectId}/us-central1/${name}`, {
     method: "POST",
     headers: {
@@ -120,6 +156,86 @@ async function waitForOwnershipEventIds(eventIds, timeoutMs = 30000) {
 
 async function main() {
   const users = await Promise.all(Array.from({ length: 50 }, (_, index) => createAuthUser(index)));
+  const queuedUser = await createAuthUser(50);
+  const lobbySessions = users.map((_, index) => `lobby-session-${index}`);
+  const lobbyJoins = await Promise.all(users.map((user, index) => callFunction("joinGameServer", user.token, {
+    serverId: "crown-marches",
+    sessionId: lobbySessions[index],
+    displayName: `Lobby Ruler ${index + 1}`,
+  })));
+  assert(lobbyJoins.every(result => result?.status === "active"), "The first 50 concurrent realm joins were not all admitted.");
+  const queuedJoin = await callFunction("joinGameServer", queuedUser.token, {
+    serverId: "crown-marches",
+    sessionId: "lobby-session-50",
+    displayName: "Queued Ruler",
+  });
+  assert(queuedJoin?.status === "waiting", "The 51st realm join bypassed the waiting queue.");
+
+  const serverDocumentId = `crown-marches-${realm.resetGeneration}`;
+  const serverRef = db.doc(`gameServers/${serverDocumentId}`);
+  const serverAfterJoins = (await serverRef.get()).data() || {};
+  assert(
+    Object.keys(serverAfterJoins.activeSlots || {}).length === 50
+      && Object.keys(serverAfterJoins.waitingQueue || {}).length === 1
+      && Number(serverAfterJoins.activeCount || 0) === 50
+      && Number(serverAfterJoins.waitingCount || 0) === 1,
+    "Realm capacity counters or queue state drifted after concurrent joins."
+  );
+  const sharedServerUpdatedAtMs = Number(serverAfterJoins.updatedAtMs || 0);
+  const heartbeatResults = await Promise.all([
+    ...users.map((user, index) => callFunction("heartbeatGameServer", user.token, {
+      serverId: "crown-marches",
+      sessionId: lobbySessions[index],
+      displayName: `Lobby Ruler ${index + 1}`,
+    })),
+    callFunction("heartbeatGameServer", queuedUser.token, {
+      serverId: "crown-marches",
+      sessionId: "lobby-session-50",
+      displayName: "Queued Ruler",
+    }),
+  ]);
+  assert(
+    heartbeatResults.filter(result => result?.status === "active").length === 50
+      && heartbeatResults.filter(result => result?.status === "waiting").length === 1,
+    "Sharded heartbeats changed realm admission state."
+  );
+  const serverAfterHeartbeats = (await serverRef.get()).data() || {};
+  assert(
+    Number(serverAfterHeartbeats.updatedAtMs || 0) === sharedServerUpdatedAtMs,
+    "Player heartbeats rewrote the shared realm-capacity document."
+  );
+  const memberSnapshot = await serverRef.collection("members").get();
+  assert(
+    memberSnapshot.size === 51
+      && memberSnapshot.docs.every(doc => Number(doc.data()?.heartbeatModelVersion || 0) === 2),
+    "Per-player realm heartbeat documents were not written for every active or waiting player."
+  );
+  const replacedHeartbeat = await callFunction("heartbeatGameServer", users[0].token, {
+    serverId: "crown-marches",
+    sessionId: "replaced-lobby-session",
+    displayName: "Old Browser",
+  });
+  assert(replacedHeartbeat?.status === "session-replaced", "An old browser heartbeat replaced the current realm session.");
+  const leaveResult = await callFunction("leaveGameServer", users[0].token, {
+    serverId: "crown-marches",
+    sessionId: lobbySessions[0],
+  });
+  assert(leaveResult?.status === "left", "An active realm slot could not be released.");
+  const [serverAfterPromotionSnap, queuedMembershipSnap] = await Promise.all([
+    serverRef.get(),
+    db.doc(`players/${queuedUser.uid}/serverMembership/current`).get(),
+  ]);
+  const serverAfterPromotion = serverAfterPromotionSnap.data() || {};
+  const promotionActiveCount = Object.keys(serverAfterPromotion.activeSlots || {}).length;
+  const promotionWaitingCount = Object.keys(serverAfterPromotion.waitingQueue || {}).length;
+  const promotedMembershipStatus = queuedMembershipSnap.data()?.status || "missing";
+  assert(
+    promotionActiveCount === 50
+      && promotionWaitingCount === 0
+      && promotedMembershipStatus === "active",
+    `Leaving an active slot did not promote the first waiting player (active=${promotionActiveCount}, waiting=${promotionWaitingCount}, membership=${promotedMembershipStatus}).`
+  );
+
   const preservedFlag = {
     background: "#17324d",
     pattern: "split",

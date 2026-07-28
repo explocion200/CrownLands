@@ -5,6 +5,8 @@ const WORLD_SCHEMA_VERSION = Math.max(Number(WORLD_CONFIG.version) || 23, Number
 const APP_BUILD_ID = getCurrentDocumentBuildId();
 const APP_RELEASE_ID = String(REALM_CONFIG.releaseId || "");
 const WORLD_REGIONS = getMergedWorldRegions(WORLD_CONFIG, MAP_EDITOR_DATA);
+const WORLD_REGIONS_BY_ID = new Map(WORLD_REGIONS.map(region => [region.id, region]));
+const WORLD_REGION_IDS = Object.freeze(WORLD_REGIONS.map(region => region.id).filter(Boolean));
 const LAND_BRIDGES = getMergedLandBridges(WORLD_CONFIG, MAP_EDITOR_DATA);
 const REGION_CITY_COUNT = Math.max(1, Math.floor(Number(WORLD_CONFIG.cityCountPerRegion) || 50));
 const STARTER_REGION_TYPE = "starter";
@@ -742,7 +744,7 @@ const ARMY_TRAVEL_SECONDS_PER_MAP_UNIT = 0.13;
 const ARMY_TRAVEL_MIN_SECONDS = 30;
 const ARMY_TRAVEL_SCOUT_MIN_SECONDS = 10;
 const ARMY_TRAVEL_MAX_SECONDS = 1800;
-const ARMY_TRAVEL_KIND_MULTIPLIERS = { scout: 0.35, transfer: 0.95, reinforce: 0.95, attack: 1 };
+const ARMY_TRAVEL_KIND_MULTIPLIERS = { scout: 0.35, transfer: 0.95, reinforce: 0.95, rally_join: 0.95, attack: 1 };
 const CLAN_REINFORCEMENT_ACTIVE_LIMIT = 2;
 const ARMY_TRAVEL_TROOP_BAND_LIMITS = [10, 100, 1000, 10000, 100000, 1000000, 10000000, 100000000];
 const ARMY_TRAVEL_TROOP_BAND_MULTIPLIERS = [1, 1.18, 1.38, 1.62, 1.9, 2.24, 2.62, 3.06, 3.5];
@@ -2456,12 +2458,17 @@ const WALKABLE_TERRAIN_ROWS = [
 const TERRAIN_BLOCKERS = createWorldTerrainBlockers();
 const NO_CITY_TERRAIN = createWorldNoCityTerrain();
 const WORLD_CAMPS = generateWorldCampSlots();
+const WORLD_CAMPS_BY_ID = new Map(WORLD_CAMPS.map(camp => [camp.id, camp]));
 const routeCache = new Map();
 const asyncRouteCache = new Map();
 const routeEdgePassableCache = new Map();
 const normalizedArmyPathCache = new WeakMap();
 const normalizedArmyPathSegmentsCache = new WeakMap();
 const pathMetricCache = new WeakMap();
+const ROUTE_CACHE_LIMIT = 6000;
+const ROUTE_EDGE_PASSABLE_CACHE_LIMIT = 160000;
+const ROUTE_OBSTACLE_BUCKET_SIZE = 240;
+const ROUTE_OBSTACLE_BUCKET_PADDING = 48;
 const ROUTE_CELL_FALLBACK_RADIUS = 32;
 const ROUTE_CELL_FALLBACK_CANDIDATES = 24;
 const ROUTE_CELL_FALLBACK_PAIR_LIMIT = 16;
@@ -2469,6 +2476,14 @@ const ROUTE_SEARCH_MAX_VISITED_CELLS = Math.max(2500, Math.min(10000, GRID_COLS 
 const ROUTE_WORKER_TIMEOUT_MS = 6000;
 const ROUTE_WORKER_RETRY_TIMEOUT_MS = 15000;
 const ASYNC_ROUTE_CACHE_LIMIT = 320;
+
+function setBoundedRouteCacheValue(cache, key, value, limit) {
+  cache.delete(key);
+  cache.set(key, value);
+  while (cache.size > limit) {
+    cache.delete(cache.keys().next().value);
+  }
+}
 const NEAREST_SOURCE_ROUTE_CHECK_LIMIT = 18;
 const SCOUT_SOURCE_ROUTE_CHECK_LIMIT = 10;
 
@@ -2506,6 +2521,8 @@ let lastArmyRenderTime = 0;
 let lastCityDynamicTextTime = 0;
 let renderableArmiesFrameCacheActive = false;
 let renderableArmiesFrameCache = null;
+let playerCitiesFrameCacheActive = false;
+let playerCitiesFrameCache = null;
 let cameraTransformRaf = 0;
 let saveTimer = 0;
 let onlineSaveTimer = 0;
@@ -2543,6 +2560,8 @@ let onlineCitySyncInFlight = false;
 let onlineCitySyncQueued = false;
 let onlineArmies = [];
 let onlineArmiesByIsland = new Map();
+const renderableRemoteArmyCache = new WeakMap();
+const renderablePendingArmyCache = new WeakMap();
 let onlineReinforcements = [];
 const PLAYER_RELEVANT_ARMIES_CACHE_KEY = "player-relevant";
 let pendingOutgoingMissions = new Map();
@@ -2852,11 +2871,11 @@ const incomingAttackTime = document.getElementById("incomingAttackTime");
 const helpBtn = document.getElementById("helpBtn");
 
 function getRegionById(regionId) {
-  return WORLD_REGIONS.find(region => region.id === regionId) || WORLD_REGIONS[0] || null;
+  return WORLD_REGIONS_BY_ID.get(String(regionId || "")) || WORLD_REGIONS[0] || null;
 }
 
 function getRegionIds() {
-  return WORLD_REGIONS.map(region => region.id).filter(Boolean);
+  return WORLD_REGION_IDS;
 }
 
 function getRegionLabel(regionId) {
@@ -12313,7 +12332,7 @@ function normalizeOnlineCampState(raw = {}) {
   const id = String(raw.id || raw.campId || "").trim();
   if (!id) return null;
   const campType = String(raw.campType || "gold").toLowerCase();
-  const base = WORLD_CAMPS.find(camp => camp.id === id) || {};
+  const base = WORLD_CAMPS_BY_ID.get(id) || {};
   const config = getRewardCampConfig({ ...raw, ...base, campType });
   if (!config) return null;
   return {
@@ -12371,7 +12390,7 @@ function applyOnlineHeldCamps(rawCamps = []) {
 
 function getCampTargetById(campId) {
   const id = String(campId || "");
-  const base = WORLD_CAMPS.find(camp => camp.id === id);
+  const base = WORLD_CAMPS_BY_ID.get(id);
   if (!base) return null;
   const online = onlineCampStates.get(id) || onlineHeldCampStates.get(id) || {};
   const config = getRewardCampConfig({ ...online, ...base });
@@ -13786,43 +13805,66 @@ function applyOnlineArmies(rawArmies, islandId = getActiveOnlineIslandId()) {
   retryOverdueOnlineArmyResolutions();
 }
 
+function getRenderableRemoteArmy(army) {
+  let renderable = renderableRemoteArmyCache.get(army);
+  if (!renderable) {
+    renderable = { ...army };
+    renderableRemoteArmyCache.set(army, renderable);
+  }
+  const identity = army.ownerUid ? resolvePlayerIdentityForUid(army.ownerUid, army) : null;
+  const ownerKingPower = normalizePowerValue(identity?.kingPower) || normalizePowerValue(army.ownerKingPower);
+  Object.assign(renderable, army, {
+    owner: resolveOnlineArmyOwner(army),
+    ownerName: identity?.displayName || army.ownerName || "",
+    ownerFlag: identity?.flag || army.ownerFlag || null,
+    ownerKingPower,
+    attackerKingPower: normalizePowerValue(army.attackerKingPower) || ownerKingPower,
+    remaining: Math.max(0, getOnlineArmyRemainingSeconds(army)),
+  });
+  return renderable;
+}
+
+function getRenderablePendingArmy(mission) {
+  let renderable = renderablePendingArmyCache.get(mission);
+  if (!renderable) {
+    renderable = { ...mission };
+    renderablePendingArmyCache.set(mission, renderable);
+  }
+  Object.assign(renderable, mission, {
+    owner: "player",
+    remaining: Math.max(0, getOnlineArmyRemainingSeconds(mission)),
+    serverPending: true,
+  });
+  return renderable;
+}
+
 function getRenderableArmies() {
   if (!state) return [];
   if (renderableArmiesFrameCacheActive && renderableArmiesFrameCache) {
     return renderableArmiesFrameCache;
   }
   const localOnlineIds = new Set();
+  const currentUid = getCurrentOnlineUid();
   const localArmies = state.attacks.map(attack => {
     if (attack.onlineId) localOnlineIds.add(attack.onlineId);
     return attack;
   });
   const remoteArmies = onlineArmies
     .filter(isOnlineArmyVisible)
-    .filter(army => !(army.ownerUid === getCurrentOnlineUid() && localOnlineIds.has(army.id)))
-    .map(army => {
-      const identity = army.ownerUid ? resolvePlayerIdentityForUid(army.ownerUid, army) : null;
-      const ownerKingPower = normalizePowerValue(identity?.kingPower) || normalizePowerValue(army.ownerKingPower);
-      return {
-        ...army,
-        owner: resolveOnlineArmyOwner(army),
-        ownerName: identity?.displayName || army.ownerName || "",
-        ownerFlag: identity?.flag || army.ownerFlag || null,
-        ownerKingPower,
-        attackerKingPower: normalizePowerValue(army.attackerKingPower) || ownerKingPower,
-        remaining: Math.max(0, getOnlineArmyRemainingSeconds(army)),
-      };
-    });
-  const knownOnlineIds = new Set([...localArmies, ...remoteArmies]
-    .map(getOnlineArmyResolutionId)
-    .filter(Boolean));
+    .filter(army => !(army.ownerUid === currentUid && localOnlineIds.has(army.id)))
+    .map(getRenderableRemoteArmy);
+  const knownOnlineIds = new Set();
+  localArmies.forEach(army => {
+    const id = getOnlineArmyResolutionId(army);
+    if (id) knownOnlineIds.add(id);
+  });
+  remoteArmies.forEach(army => {
+    const id = getOnlineArmyResolutionId(army);
+    if (id) knownOnlineIds.add(id);
+  });
   const pendingArmies = Array.from(pendingOutgoingMissions.values())
     .filter(mission => !knownOnlineIds.has(getOnlineArmyResolutionId(mission)))
-    .map(mission => ({
-      ...mission,
-      owner: "player",
-      remaining: Math.max(0, getOnlineArmyRemainingSeconds(mission)),
-      serverPending: true,
-    }));
+    .map(getRenderablePendingArmy);
   const renderableArmies = [...localArmies, ...remoteArmies, ...pendingArmies];
   if (renderableArmiesFrameCacheActive) renderableArmiesFrameCache = renderableArmies;
   return renderableArmies;
@@ -14039,7 +14081,10 @@ function cityByIdSafe(cities, id) {
 }
 
 function playerCities() {
-  return state.cities.filter(city => city.owner === "player");
+  if (playerCitiesFrameCacheActive && playerCitiesFrameCache) return playerCitiesFrameCache;
+  const ownedCities = state?.cities?.filter(city => city.owner === "player") || [];
+  if (playerCitiesFrameCacheActive) playerCitiesFrameCache = ownedCities;
+  return ownedCities;
 }
 
 function playerRegularCities() {
@@ -14314,13 +14359,37 @@ function createRouteContext(regionId, source = null, target = null) {
     regionId: normalizedRegionId,
     ignoredIds,
     obstacles,
+    obstacleGrid: createRouteObstacleGrid(obstacles),
+    edgePassableCache: new Map(),
     cacheKey: `structure-block:${normalizedRegionId}:${[...ignoredIds].sort().join(",")}`,
   };
 }
 
+function createRouteObstacleGrid(obstacles = []) {
+  const grid = new Map();
+  for (const obstacle of obstacles) {
+    const reach = obstacle.radius + ROUTE_OBSTACLE_BUCKET_PADDING;
+    const minX = Math.floor((obstacle.x - reach) / ROUTE_OBSTACLE_BUCKET_SIZE);
+    const maxX = Math.floor((obstacle.x + reach) / ROUTE_OBSTACLE_BUCKET_SIZE);
+    const minY = Math.floor((obstacle.y - reach) / ROUTE_OBSTACLE_BUCKET_SIZE);
+    const maxY = Math.floor((obstacle.y + reach) / ROUTE_OBSTACLE_BUCKET_SIZE);
+    for (let bucketY = minY; bucketY <= maxY; bucketY += 1) {
+      for (let bucketX = minX; bucketX <= maxX; bucketX += 1) {
+        const key = `${bucketX},${bucketY}`;
+        const bucket = grid.get(key) || [];
+        bucket.push(obstacle);
+        grid.set(key, bucket);
+      }
+    }
+  }
+  return grid;
+}
+
 function isRouteCityBlockedPoint(x, y, context, padding = 0) {
   if (!context?.obstacles?.length) return false;
-  for (const obstacle of context.obstacles) {
+  const bucketKey = `${Math.floor(x / ROUTE_OBSTACLE_BUCKET_SIZE)},${Math.floor(y / ROUTE_OBSTACLE_BUCKET_SIZE)}`;
+  const obstacles = context.obstacleGrid?.get(bucketKey) || context.obstacles;
+  for (const obstacle of obstacles) {
     const radius = obstacle.radius + padding;
     const dx = obstacle.x - x;
     const dy = obstacle.y - y;
@@ -14436,13 +14505,31 @@ function linePassable(a, b) {
 }
 
 function linePassableInRegion(a, b, regionId, context = null) {
+  return lineTerrainPassableInRegion(a, b, regionId)
+    && lineRouteObstaclesPassable(a, b, context);
+}
+
+function lineTerrainPassableInRegion(a, b, regionId) {
   const distance = Math.hypot(a.x - b.x, a.y - b.y);
   const steps = Math.max(2, Math.ceil(distance / 22));
   for (let i = 0; i <= steps; i++) {
     const t = i / steps;
     const x = a.x + (b.x - a.x) * t;
     const y = a.y + (b.y - a.y) * t;
-    if (!isRouteWalkablePointInRegion(x, y, regionId, context, 6)) return false;
+    if (!isRegionWalkablePoint(x, y, regionId, 6)) return false;
+  }
+  return true;
+}
+
+function lineRouteObstaclesPassable(a, b, context = null) {
+  if (!context?.obstacles?.length) return true;
+  const distance = Math.hypot(a.x - b.x, a.y - b.y);
+  const steps = Math.max(2, Math.ceil(distance / 22));
+  for (let i = 0; i <= steps; i++) {
+    const t = i / steps;
+    const x = a.x + (b.x - a.x) * t;
+    const y = a.y + (b.y - a.y) * t;
+    if (isRouteCityBlockedPoint(x, y, context, 6)) return false;
   }
   return true;
 }
@@ -14452,9 +14539,8 @@ function gridEdgePassable(cx, cy, nx, ny) {
   const nextIndex = ny * GRID_COLS + nx;
   const key = currentIndex < nextIndex ? `${currentIndex}|${nextIndex}` : `${nextIndex}|${currentIndex}`;
   if (routeEdgePassableCache.has(key)) return routeEdgePassableCache.get(key);
-  if (routeEdgePassableCache.size > 400000) routeEdgePassableCache.clear();
   const passable = linePassable(gridToWorld(cx, cy), gridToWorld(nx, ny));
-  routeEdgePassableCache.set(key, passable);
+  setBoundedRouteCacheValue(routeEdgePassableCache, key, passable, ROUTE_EDGE_PASSABLE_CACHE_LIMIT);
   return passable;
 }
 
@@ -14462,11 +14548,16 @@ function gridEdgePassableInRegion(cx, cy, nx, ny, regionId, context = null) {
   const currentIndex = cy * GRID_COLS + cx;
   const nextIndex = ny * GRID_COLS + nx;
   const baseKey = currentIndex < nextIndex ? `${currentIndex}|${nextIndex}` : `${nextIndex}|${currentIndex}`;
-  const key = `${normalizeRegionId(regionId)}:${context?.cacheKey || "terrain"}:${baseKey}`;
-  if (routeEdgePassableCache.has(key)) return routeEdgePassableCache.get(key);
-  if (routeEdgePassableCache.size > 400000) routeEdgePassableCache.clear();
-  const passable = linePassableInRegion(gridToWorld(cx, cy), gridToWorld(nx, ny), regionId, context);
-  routeEdgePassableCache.set(key, passable);
+  if (context?.edgePassableCache?.has(baseKey)) return context.edgePassableCache.get(baseKey);
+  const key = `${normalizeRegionId(regionId)}:terrain:${baseKey}`;
+  let terrainPassable = routeEdgePassableCache.get(key);
+  if (terrainPassable === undefined) {
+    terrainPassable = lineTerrainPassableInRegion(gridToWorld(cx, cy), gridToWorld(nx, ny), regionId);
+    setBoundedRouteCacheValue(routeEdgePassableCache, key, terrainPassable, ROUTE_EDGE_PASSABLE_CACHE_LIMIT);
+  }
+  const passable = terrainPassable
+    && lineRouteObstaclesPassable(gridToWorld(cx, cy), gridToWorld(nx, ny), context);
+  context?.edgePassableCache?.set(baseKey, passable);
   return passable;
 }
 
@@ -14910,7 +15001,7 @@ function findPortalRoute(source, target, sourceRegionId = getCityRegionId(source
   if (routeCache.has(cacheKey)) return cloneRoute(routeCache.get(cacheKey));
   if (routeCache.has(reverseKey)) {
     const reverse = reverseRoute(routeCache.get(reverseKey));
-    routeCache.set(cacheKey, cloneRoute(reverse));
+    setBoundedRouteCacheValue(routeCache, cacheKey, cloneRoute(reverse), ROUTE_CACHE_LIMIT);
     return reverse;
   }
 
@@ -14955,7 +15046,7 @@ function findPortalRoute(source, target, sourceRegionId = getCityRegionId(source
   }
 
   const route = { points, segments, length };
-  routeCache.set(cacheKey, cloneRoute(route));
+  setBoundedRouteCacheValue(routeCache, cacheKey, cloneRoute(route), ROUTE_CACHE_LIMIT);
   return route;
 }
 
@@ -14986,7 +15077,7 @@ function findLandRouteWithContext(
   const contextReverseKey = `land-cityblock-v2:${normalizedRegionId}:${routeContext?.cacheKey || "terrain"}:${getRoutePointId(target, "target")}|${getRoutePointId(source, "source")}`;
   if (routeCache.has(contextReverseKey)) {
     const reverse = reverseRoute(routeCache.get(contextReverseKey));
-    routeCache.set(cacheKey, cloneRoute(reverse));
+    setBoundedRouteCacheValue(routeCache, cacheKey, cloneRoute(reverse), ROUTE_CACHE_LIMIT);
     return reverse;
   }
 
@@ -14998,7 +15089,7 @@ function findLandRouteWithContext(
       segments: [{ regionId: normalizedRegionId, points: [startPoint, endPoint], length: Math.hypot(source.x - target.x, source.y - target.y) }],
       length: Math.hypot(source.x - target.x, source.y - target.y),
     };
-    routeCache.set(cacheKey, cloneRoute(direct));
+    setBoundedRouteCacheValue(routeCache, cacheKey, cloneRoute(direct), ROUTE_CACHE_LIMIT);
     return direct;
   }
 
@@ -15011,7 +15102,7 @@ function findLandRouteWithContext(
   };
   const commitRoute = route => {
     if (!route) return null;
-    routeCache.set(cacheKey, cloneRoute(route));
+    setBoundedRouteCacheValue(routeCache, cacheKey, cloneRoute(route), ROUTE_CACHE_LIMIT);
     return route;
   };
   const tryCells = (candidateStart, candidateGoal) => {
@@ -15147,6 +15238,8 @@ function frame(now) {
   const dt = Math.min(rawDt, 0.25);
   renderableArmiesFrameCacheActive = true;
   renderableArmiesFrameCache = null;
+  playerCitiesFrameCacheActive = true;
+  playerCitiesFrameCache = null;
   samplePerformancePanel(now);
   updateDeploymentCheck(dt);
 
@@ -15158,6 +15251,7 @@ function frame(now) {
     if (simulationUpdateAccumulatorMs >= SIMULATION_UPDATE_INTERVAL_MS) {
       updateGame(simulationUpdateAccumulatorMs / 1000);
       simulationUpdateAccumulatorMs = 0;
+      playerCitiesFrameCache = null;
     }
     saveTimer += dt;
     if (saveTimer >= SAVE_EVERY_SECONDS) {
@@ -15231,6 +15325,8 @@ function frame(now) {
 
   renderableArmiesFrameCacheActive = false;
   renderableArmiesFrameCache = null;
+  playerCitiesFrameCacheActive = false;
+  playerCitiesFrameCache = null;
   requestAnimationFrame(frame);
 }
 

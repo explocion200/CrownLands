@@ -318,6 +318,14 @@ service cloud.firestore {
 
     match /gameServers/{serverId} {
       allow read, create, update, delete: if false;
+
+      match /members/{uid} {
+        allow read, create, update, delete: if false;
+      }
+
+      match /coordination/{documentId} {
+        allow read, create, update, delete: if false;
+      }
     }
 
     match /serverConfig/{configId} {
@@ -328,6 +336,8 @@ service cloud.firestore {
       allow read: if signedIn()
         && isCurrentGeneration(resource.data)
         && (resource.data.ownerUid == request.auth.uid
+          || (resource.data.rallyAttack == true
+            && resource.data.targetOwnerUid == request.auth.uid)
           || (resource.data.participantUids is list
             && request.auth.uid in resource.data.participantUids));
       allow create, update, delete: if false;
