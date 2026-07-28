@@ -154,6 +154,20 @@ async function waitForOwnershipEventIds(eventIds, timeoutMs = 30000) {
   throw new Error(`Ownership events did not settle: ${ids.join(", ")}.`);
 }
 
+async function mapWithConcurrency(items, concurrency, mapper) {
+  const results = new Array(items.length);
+  let nextIndex = 0;
+  const workerCount = Math.min(Math.max(1, concurrency), items.length);
+  await Promise.all(Array.from({ length: workerCount }, async () => {
+    while (nextIndex < items.length) {
+      const index = nextIndex;
+      nextIndex += 1;
+      results[index] = await mapper(items[index], index);
+    }
+  }));
+  return results;
+}
+
 async function main() {
   const users = await Promise.all(Array.from({ length: 50 }, (_, index) => createAuthUser(index)));
   const queuedUser = await createAuthUser(50);
@@ -309,7 +323,11 @@ async function main() {
 
   await waitForOwnershipEvents(50);
   const eventsBeforeEconomy = await db.collection(`realmEvents/${realm.resetGeneration}/ownershipChanges`).get();
-  const economyResults = await Promise.all(users.map(user => callFunction("collectEconomy", user.token)));
+  const economyResults = await mapWithConcurrency(
+    users,
+    10,
+    user => callFunction("collectEconomy", user.token),
+  );
   assert(economyResults.every(result => result?.ok !== false), "A 50-player economy collection failed.");
   const eventsAfterEconomy = await db.collection(`realmEvents/${realm.resetGeneration}/ownershipChanges`).get();
   assert(eventsAfterEconomy.size === eventsBeforeEconomy.size, "Economy checkpoints created ownership events.");
