@@ -4363,7 +4363,6 @@ button.inventory-slot {
 }
 .battle-report-result small,
 .battle-report-troops small,
-.battle-report-opponent small,
 .battle-report-detail-head small {
   color: rgba(246,239,228,.72);
 }
@@ -4387,11 +4386,24 @@ button.inventory-slot {
   background: linear-gradient(#ca3328, #831912);
 }
 .battle-report-city strong,
-.battle-report-opponent strong,
-.battle-report-opponent small {
+.battle-report-opponent strong {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+.battle-report-opponent {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  gap: .45rem;
+}
+.battle-report-opponent strong {
+  min-width: 0;
+}
+.battle-report-target-flag {
+  flex: 0 0 auto;
+  width: 34px;
+  height: 38px;
 }
 .battle-report-troops {
   display: grid;
