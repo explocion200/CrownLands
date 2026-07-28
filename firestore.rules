@@ -60,6 +60,8 @@ service cloud.firestore {
           'kingPowerUpdatedAtMs',
           'stationedReinforcementTroops',
           'reinforcementResetGeneration',
+          'committedRallyTroops',
+          'rallyResetGeneration',
           'activeClanReinforcementTargets',
           'clanReinforcementLimitResetGeneration',
           'clanObjectiveAccrual',
@@ -107,6 +109,8 @@ service cloud.firestore {
         && profileFieldUnchanged('kingPowerUpdatedAtMs')
         && profileFieldUnchanged('stationedReinforcementTroops')
         && profileFieldUnchanged('reinforcementResetGeneration')
+        && profileFieldUnchanged('committedRallyTroops')
+        && profileFieldUnchanged('rallyResetGeneration')
         && profileFieldUnchanged('activeClanReinforcementTargets')
         && profileFieldUnchanged('clanReinforcementLimitResetGeneration')
         && profileFieldUnchanged('clanObjectiveAccrual')
@@ -267,6 +271,15 @@ service cloud.firestore {
         allow read, create, update, delete: if false;
       }
 
+      match /rallies/{rallyId} {
+        allow read: if clanMember(clanId) && isCurrentGeneration(resource.data);
+        allow create, update, delete: if false;
+      }
+
+      match /rallyState/{resetId} {
+        allow read, create, update, delete: if false;
+      }
+
       match /messages/{messageId} {
         allow read, create, update, delete: if false;
       }
@@ -310,7 +323,9 @@ service cloud.firestore {
       allow read: if signedIn()
         && isCurrentGeneration(resource.data)
         && (resource.data.ownerUid == request.auth.uid
-          || resource.data.targetOwnerUid == request.auth.uid);
+          || resource.data.targetOwnerUid == request.auth.uid
+          || (resource.data.participantUids is list
+            && request.auth.uid in resource.data.participantUids));
       allow create, update, delete: if false;
     }
 
@@ -324,6 +339,10 @@ service cloud.firestore {
     }
 
     match /reinforcementBattleReceipts/{resetId}/entries/{receiptId} {
+      allow read, create, update, delete: if false;
+    }
+
+    match /rallyBattleReceipts/{resetId}/entries/{receiptId} {
       allow read, create, update, delete: if false;
     }
 

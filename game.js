@@ -303,6 +303,8 @@ const MIN_ZOOM = 0.40;
 const MAX_ZOOM = 1;
 const WHEEL_ZOOM_STEP = 1.12;
 const MAP_TOUCH_PAN_THRESHOLD = 12;
+const MAP_TOUCH_TAP_TOLERANCE = 16;
+const MAP_LOW_ZOOM_TAP_TOLERANCE_BONUS = 4;
 const ZOOM_RENDER_SETTLE_MS = 260;
 const PAN_RENDER_SETTLE_MS = 180;
 const MAIN_CITY_RETURN_CAMERA_THROTTLE_MS = 180;
@@ -750,12 +752,8 @@ const CHARACTER_START_LEVEL = 1;
 const CHARACTER_START_XP = 0;
 const HERO_XP_SOFT_CAP_LEVEL = 50;
 const HERO_XP_HARD_CAP_LEVEL = 100;
-const HERO_XP_POST_50_SPAN = 50;
-const HERO_XP_POST_100_SPAN = 25;
-const HERO_XP_POST_50_MULTIPLIER = 2.5;
-const HERO_XP_POST_100_MULTIPLIER = 4;
-const HERO_XP_POST_50_EXPONENT = 1.5;
-const HERO_XP_POST_100_EXPONENT = 1.6;
+const HERO_XP_EXPONENTIAL_START_LEVEL = 25;
+const HERO_XP_EXPONENTIAL_GROWTH_RATE = 1.1;
 const LEVEL_UP_GOLD_EARLY_UPGRADE_SHARE = economyNumber("levelRewards.goldEarlyUpgradeShare", 0.5);
 const LEVEL_UP_GOLD_MID_END_UPGRADE_SHARE = economyNumber("levelRewards.goldMidUpgradeShare", 0.3);
 const LEVEL_UP_GOLD_END_UPGRADE_SHARE = economyNumber("levelRewards.goldEndgameUpgradeShare", 0.2);
@@ -769,14 +767,11 @@ const LEVEL_UP_TROOP_REWARD_MID_HOURS_PER_LEVEL = economyNumber("levelRewards.tr
 const LEVEL_UP_TROOP_REWARD_END_BASE_HOURS = economyNumber("levelRewards.troopEndgameBaseHours", 36);
 const LEVEL_UP_TROOP_REWARD_END_HOURS_PER_LEVEL = economyNumber("levelRewards.troopEndgameHoursPerLevel", 0.12);
 const LEVEL_UP_TROOP_REWARD_MAX_HOURS = economyNumber("levelRewards.troopMaximumHours", 48);
-const CITY_UPGRADE_XP_BASE = 18;
-const CITY_UPGRADE_XP_PER_LEVEL = 4;
 const CAPTURE_XP_BASE = 120;
 const CAPTURE_XP_PER_CITY_LEVEL = 45;
 const CAPTURE_XP_PER_DEFENDER = 1.5;
 const ENEMY_CAPTURE_XP_BONUS = 300;
 const CAPTURE_XP_COOLDOWN_SECONDS = 3600;
-const RECENT_CAPTURE_XP_MULTIPLIER = 0.25;
 const DEFENSE_HELD_XP_BASE = 80;
 const DEFENSE_HELD_XP_PER_ATTACKER = 0.45;
 const FAILED_BATTLE_XP_RATE = 1 / 3;
@@ -784,10 +779,10 @@ const BATTLE_XP_TROOP_CREDIT_CITY_WALL_MULTIPLIER = 1;
 const BATTLE_XP_TROOP_CREDIT_VP_MULTIPLIER = 2;
 const BATTLE_XP_TROOP_CREDIT_LEVEL_CAP_MULTIPLIER = 3;
 const BATTLE_XP_EARLY_LEVEL_CAP_RATE = 1;
-const BATTLE_XP_MID_START_LEVEL_CAP_RATE = 0.8;
+const BATTLE_XP_MID_START_LEVEL_CAP_RATE = 1;
 const BATTLE_XP_MID_END_LEVEL_CAP_RATE = 0.5;
-const BATTLE_XP_END_START_LEVEL_CAP_RATE = 0.3;
-const BATTLE_XP_END_FLOOR_LEVEL_CAP_RATE = 0.15;
+const BATTLE_XP_END_START_LEVEL_CAP_RATE = 0.5;
+const BATTLE_XP_END_FLOOR_LEVEL_CAP_RATE = 0.35;
 const BATTLE_XP_END_CAP_RAMP_LEVELS = 50;
 const ATTACK_PROTECTION_VERSION = 2;
 const ATTACK_PROTECTION_ASSAULT_MIN_RATIO = 2;
@@ -2486,6 +2481,7 @@ let troopSliderActive = false;
 let activeTroopSliderRoute = null;
 let activeAttackProtectionPreview = null;
 let activeTroopOrderKind = "";
+let activeRallyOrderContext = null;
 let activeSwiftMarchOrderSelected = false;
 let activeTroopRouteRequestId = 0;
 let scoutNearbySourceId = null;
@@ -2675,6 +2671,9 @@ let activeClanApplicationsSubscriptionId = "";
 let clanApplicationsError = "";
 let clanStateUnsubscribe = null;
 let activeClanSubscriptionId = "";
+let clanRalliesUnsubscribe = null;
+let onlineClanRallies = [];
+const rallyActionRequests = new Set();
 let clanMemberUidSet = new Set();
 let clanRosterReady = false;
 let clanUiLoading = false;
@@ -5972,21 +5971,20 @@ function reconcileSkillPoints(character = state?.character, upgrades = state?.up
 
 function getXpRequiredForLevel(level) {
   const current = Math.max(1, Math.floor(Number(level) || 1));
-  const base = 150 + current * 65 + Math.pow(current, 2.05) * 35;
-  let multiplier = 1;
-  if (current > HERO_XP_SOFT_CAP_LEVEL) {
-    multiplier += Math.pow(
-      (current - HERO_XP_SOFT_CAP_LEVEL) / HERO_XP_POST_50_SPAN,
-      HERO_XP_POST_50_EXPONENT
-    ) * HERO_XP_POST_50_MULTIPLIER;
-  }
-  if (current > HERO_XP_HARD_CAP_LEVEL) {
-    multiplier += Math.pow(
-      (current - HERO_XP_HARD_CAP_LEVEL) / HERO_XP_POST_100_SPAN,
-      HERO_XP_POST_100_EXPONENT
-    ) * HERO_XP_POST_100_MULTIPLIER;
-  }
-  return Math.floor(base * multiplier);
+  const legacyRequirement = value => Math.floor(
+    150 + value * 65 + Math.pow(value, 2.05) * 35
+  );
+  if (current <= HERO_XP_EXPONENTIAL_START_LEVEL) return legacyRequirement(current);
+  const anchor = legacyRequirement(HERO_XP_EXPONENTIAL_START_LEVEL);
+  const requirement = anchor * Math.pow(
+    HERO_XP_EXPONENTIAL_GROWTH_RATE,
+    current - HERO_XP_EXPONENTIAL_START_LEVEL
+  );
+  if (!Number.isFinite(requirement)) return Number.MAX_SAFE_INTEGER;
+  return Math.min(
+    Number.MAX_SAFE_INTEGER,
+    Math.floor(requirement)
+  );
 }
 
 function getLevelUpGoldUpgradeShare(level) {
@@ -6500,18 +6498,16 @@ function addCharacterXp(amount, reason = "progress") {
   reconcileSkillPoints(state.character, state.upgrades);
 }
 
-function getCaptureXpAward(target, oldOwner, defendersAtStart, attackerOwner = "player") {
+function getCaptureXpAward(target, oldOwner, defenderLosses, attackerOwner = "player") {
   if (isGivenUpNeutralCity(target)) return 0;
   const level = clampCityLevel(target?.level);
-  const defenderXp = Math.floor(getBattleXpTroopCredit(target, defendersAtStart) * CAPTURE_XP_PER_DEFENDER);
+  const troopXp = Math.floor(getBattleXpTroopCredit(target, defenderLosses) * CAPTURE_XP_PER_DEFENDER);
   const ownerBonus = oldOwner === "enemy" ? ENEMY_CAPTURE_XP_BONUS : 0;
-  const baseXp = CAPTURE_XP_BASE + level * CAPTURE_XP_PER_CITY_LEVEL + defenderXp + ownerBonus;
+  const cityXp = getCaptureCooldownRemaining(target) > 0
+    ? 0
+    : CAPTURE_XP_BASE + level * CAPTURE_XP_PER_CITY_LEVEL + ownerBonus;
   const efficiency = attackerOwner === "player" ? getCaptureXpEfficiency(target, oldOwner) : 1;
-  return capBattleXpForCurrentLevel(Math.floor(baseXp * efficiency));
-}
-
-function getCityUpgradeXpAward(city) {
-  return Math.floor(CITY_UPGRADE_XP_BASE + clampCityLevel(city?.level) * CITY_UPGRADE_XP_PER_LEVEL);
+  return capBattleXpForCurrentLevel(Math.floor((cityXp + troopXp) * efficiency));
 }
 
 function getDefenseHeldXpAward(attackingTroops, target = null) {
@@ -6522,21 +6518,20 @@ function getPartialBattleXpAward(fullWinXp) {
   return Math.floor(Math.max(0, Number(fullWinXp) || 0) * FAILED_BATTLE_XP_RATE);
 }
 
-function getFailedAttackXpAward(target, oldOwner, defendersAtStart, attackerOwner = "player") {
-  return getPartialBattleXpAward(getCaptureXpAward(target, oldOwner, defendersAtStart, attackerOwner));
+function getFailedAttackXpAward(target, oldOwner, defenderLosses, attackerOwner = "player") {
+  return getPartialBattleXpAward(getCaptureXpAward(target, oldOwner, defenderLosses, attackerOwner));
 }
 
 function getCaptureXpEfficiency(target, oldOwner = target?.owner) {
   if (!target || !state) return 1;
   const pvpMultiplier = getPvpOpponentPowerXpMultiplier(target, oldOwner, "player");
-  const cooldownMultiplier = getCaptureCooldownRemaining(target) > 0 ? RECENT_CAPTURE_XP_MULTIPLIER : 1;
-  if (pvpMultiplier !== null) return Number(clamp(pvpMultiplier * cooldownMultiplier, 0, 2).toFixed(2));
+  if (pvpMultiplier !== null) return Number(clamp(pvpMultiplier, 0, 2).toFixed(2));
 
   const heroLevel = Math.max(1, Math.floor(Number(state.character?.level) || 1));
   const empirePressure = 48 + heroLevel * 20 + getOwnedRegularCityCountForDisplay() * 2;
   const targetScore = getCityXpScore(target, oldOwner);
   const strengthEfficiency = clamp(0.35 + targetScore / Math.max(1, empirePressure), 0.25, 2);
-  return Number(clamp(strengthEfficiency * cooldownMultiplier, 0.05, 2).toFixed(2));
+  return Number(clamp(strengthEfficiency, 0.25, 2).toFixed(2));
 }
 
 function getCityXpScore(target, oldOwner = target?.owner) {
@@ -6547,13 +6542,18 @@ function getCityXpScore(target, oldOwner = target?.owner) {
 
 function getBattleXpTroopCreditCap(target) {
   const stats = getCityStats(target || {});
-  return Math.max(
+  const cityCap = Math.max(
     25,
     Math.floor(
       stats.cityWalls * BATTLE_XP_TROOP_CREDIT_CITY_WALL_MULTIPLIER
       + stats.victoryPoints * BATTLE_XP_TROOP_CREDIT_VP_MULTIPLIER
     )
   );
+  const levelCap = Math.min(
+    Number.MAX_SAFE_INTEGER,
+    getXpRequiredForLevel(stats.level) * BATTLE_XP_TROOP_CREDIT_LEVEL_CAP_MULTIPLIER
+  );
+  return Math.max(cityCap, levelCap);
 }
 
 function getBattleXpTroopCredit(target, troops) {
@@ -6609,11 +6609,23 @@ function capBattleXpForCurrentLevel(xp) {
 }
 
 function getCaptureCooldownRemaining(city) {
-  if (!state || !city || city.lastCapturedAt === null || city.lastCapturedAt === undefined) return 0;
-  const capturedAt = Number(city.lastCapturedAt);
-  if (!Number.isFinite(capturedAt)) return 0;
-  const elapsed = Math.max(0, state.gameSeconds - capturedAt);
-  return Math.max(0, CAPTURE_XP_COOLDOWN_SECONDS - elapsed);
+  if (!state || !city) return 0;
+  const capturedAtMs = Math.max(0, normalizeTimestampMs(city.lastCapturedAtMs));
+  if (capturedAtMs > 0) {
+    const elapsedSeconds = Math.max(0, (Date.now() - capturedAtMs) / 1000);
+    return Math.max(0, CAPTURE_XP_COOLDOWN_SECONDS - elapsedSeconds);
+  }
+  if (city.lastCapturedAt && typeof city.lastCapturedAt === "object") {
+    const legacyCapturedAtMs = Math.max(0, normalizeTimestampMs(city.lastCapturedAt));
+    if (legacyCapturedAtMs > 0) {
+      const elapsedSeconds = Math.max(0, (Date.now() - legacyCapturedAtMs) / 1000);
+      return Math.max(0, CAPTURE_XP_COOLDOWN_SECONDS - elapsedSeconds);
+    }
+  }
+  const capturedAtSeconds = Number(city.lastCapturedAt);
+  if (!Number.isFinite(capturedAtSeconds)) return 0;
+  const elapsedSeconds = Math.max(0, state.gameSeconds - capturedAtSeconds);
+  return Math.max(0, CAPTURE_XP_COOLDOWN_SECONDS - elapsedSeconds);
 }
 
 function normalizePowerValue(value) {
@@ -12829,7 +12841,7 @@ function prepareOnlineArmyMission(mission) {
   mission.ownerName = state.playerName;
   mission.ownerFlag = state.flag;
   mission.ownerKingPower = getKingPower();
-  mission.launchKind = ["attack", "transfer", "reinforce", "scout"].includes(mission.launchKind)
+  mission.launchKind = ["attack", "transfer", "reinforce", "scout"].includes(mission.launchKind) || mission.launchKind === "rally_join"
     ? mission.launchKind
     : mission.kind;
   mission.attackerKingPower = normalizePowerValue(mission.attackerKingPower) || mission.ownerKingPower;
@@ -12860,7 +12872,7 @@ function toOnlineArmyMovement(mission) {
     ownerFlag: mission.ownerFlag || state.flag,
     ownerKingPower: normalizePowerValue(mission.ownerKingPower) || getKingPower(),
     kind: mission.kind || "attack",
-    launchKind: ["attack", "transfer", "reinforce", "scout"].includes(mission.launchKind)
+    launchKind: ["attack", "transfer", "reinforce", "scout"].includes(mission.launchKind) || mission.launchKind === "rally_join"
       ? mission.launchKind
       : mission.kind || "attack",
     targetType: mission.targetType === "camp" || isRewardCampTarget(to) ? "camp" : "city",
@@ -12882,6 +12894,12 @@ function toOnlineArmyMovement(mission) {
     acceptedAttackProtection: normalizeAttackProtectionSnapshot(mission.acceptedAttackProtection),
     demoAttack: normalizeDemoAttackSnapshot(mission.demoAttack),
     useSwiftMarchOrder: Boolean(mission.useSwiftMarchOrder),
+    rallyJoin: Boolean(mission.rallyJoin),
+    rallyAttack: Boolean(mission.rallyAttack),
+    rallyId: String(mission.rallyId || ""),
+    rallyClanId: String(mission.rallyClanId || ""),
+    rallyParticipantCount: Math.max(0, Math.floor(Number(mission.rallyParticipantCount) || 0)),
+    participantUids: Array.isArray(mission.participantUids) ? mission.participantUids.map(String).filter(Boolean).slice(0, 8) : [],
     launchedAtMs: Math.max(0, Number(mission.launchedAtMs) || Date.now()),
     arrivesAtMs: Math.max(0, Number(mission.arrivesAtMs) || Date.now()),
     status: "active",
@@ -12970,11 +12988,11 @@ function applyServerMovementToMission(mission, movement = null) {
   const arrivesAtMs = normalizeTimestampMs(movement.arrivesAtMs);
   const rawRemaining = Number(movement.remaining);
   mission.onlineId = movement.id || mission.onlineId;
-  if (["attack", "transfer", "reinforce", "scout"].includes(movementKind)) mission.kind = movementKind;
-  if (["attack", "transfer", "reinforce", "scout"].includes(movement.launchKind)) {
+  if (["attack", "transfer", "reinforce", "scout"].includes(movementKind) || movementKind === "rally_join") mission.kind = movementKind;
+  if (["attack", "transfer", "reinforce", "scout"].includes(movement.launchKind) || movement.launchKind === "rally_join") {
     mission.launchKind = movement.launchKind;
   }
-  if (["attack", "transfer", "reinforce", "scout"].includes(movement.retargetedFromKind)) {
+  if (["attack", "transfer", "reinforce", "scout"].includes(movement.retargetedFromKind) || movement.retargetedFromKind === "rally_join") {
     mission.retargetedFromKind = movement.retargetedFromKind;
   }
   mission.troops = Math.max(0, Math.floor(Number(movement.troops) || mission.troops || 0));
@@ -13003,6 +13021,14 @@ function applyServerMovementToMission(mission, movement = null) {
   mission.campRecall = Boolean(movement.campRecall || mission.campRecall);
   mission.reinforcementReturn = Boolean(movement.reinforcementReturn || mission.reinforcementReturn);
   mission.reinforcementId = String(movement.reinforcementId || mission.reinforcementId || "");
+  mission.rallyJoin = Boolean(movement.rallyJoin || mission.rallyJoin);
+  mission.rallyAttack = Boolean(movement.rallyAttack || mission.rallyAttack);
+  mission.rallyId = String(movement.rallyId || mission.rallyId || "");
+  mission.rallyClanId = String(movement.rallyClanId || mission.rallyClanId || "");
+  mission.rallyParticipantCount = Math.max(0, Math.floor(Number(movement.rallyParticipantCount) || mission.rallyParticipantCount || 0));
+  mission.participantUids = Array.isArray(movement.participantUids)
+    ? movement.participantUids.map(String).filter(Boolean).slice(0, 8)
+    : mission.participantUids || [];
   mission.attackerKingPower = normalizePowerValue(movement.attackerKingPower || mission.attackerKingPower);
   mission.defenderKingPower = normalizePowerValue(movement.defenderKingPower || mission.defenderKingPower);
   if (movement.attackProtection !== undefined) {
@@ -13156,7 +13182,7 @@ function normalizeOnlineArmyMovement(raw) {
   const rawOwnerKind = raw.ownerKind || raw.owner || "player";
   if (rawOwnerKind !== "neutral" && !ownerUid) return null;
   const targetOwnerUid = String(raw.targetOwnerUid || "").trim();
-  const rawKind = ["attack", "transfer", "reinforce", "scout"].includes(raw.kind) ? raw.kind : "attack";
+  const rawKind = ["attack", "transfer", "reinforce", "scout"].includes(raw.kind) || raw.kind === "rally_join" ? raw.kind : "attack";
   const effectiveKind = rawKind === "transfer"
     && targetOwnerUid
     && ownerUid
@@ -13185,8 +13211,8 @@ function normalizeOnlineArmyMovement(raw) {
     ownerFlag: ownerIdentity?.flag || raw.ownerFlag || null,
     ownerKingPower: normalizePowerValue(ownerIdentity?.kingPower) || normalizePowerValue(raw.ownerKingPower),
     kind: effectiveKind,
-    launchKind: ["attack", "transfer", "reinforce", "scout"].includes(raw.launchKind) ? raw.launchKind : rawKind,
-    retargetedFromKind: ["attack", "transfer", "reinforce", "scout"].includes(raw.retargetedFromKind)
+    launchKind: ["attack", "transfer", "reinforce", "scout"].includes(raw.launchKind) ? raw.launchKind : raw.launchKind === "rally_join" ? "rally_join" : rawKind,
+    retargetedFromKind: ["attack", "transfer", "reinforce", "scout"].includes(raw.retargetedFromKind) || raw.retargetedFromKind === "rally_join"
       ? raw.retargetedFromKind
       : "",
     targetType: raw.targetType === "camp" ? "camp" : "city",
@@ -13228,6 +13254,12 @@ function normalizeOnlineArmyMovement(raw) {
     reinforcementReturn: Boolean(raw.reinforcementReturn),
     reinforcementId: String(raw.reinforcementId || ""),
     reinforcementTargetKey: String(raw.reinforcementTargetKey || ""),
+    rallyJoin: Boolean(raw.rallyJoin || rawKind === "rally_join"),
+    rallyAttack: Boolean(raw.rallyAttack),
+    rallyId: String(raw.rallyId || ""),
+    rallyClanId: String(raw.rallyClanId || ""),
+    rallyParticipantCount: Math.max(0, Math.floor(Number(raw.rallyParticipantCount) || 0)),
+    participantUids: Array.isArray(raw.participantUids) ? raw.participantUids.map(String).filter(Boolean).slice(0, 8) : [],
     status: raw.status || "active",
     onlineRegionIds: Array.isArray(raw.routeRegionIds) ? raw.routeRegionIds.map(normalizeRegionId) : [],
   };
@@ -13528,6 +13560,12 @@ function createLocalAttackFromOnlineArmy(army, remaining = getOnlineArmyRemainin
     campRecall: Boolean(army.campRecall),
     reinforcementReturn: Boolean(army.reinforcementReturn),
     reinforcementId: String(army.reinforcementId || ""),
+    rallyJoin: Boolean(army.rallyJoin || army.kind === "rally_join"),
+    rallyAttack: Boolean(army.rallyAttack),
+    rallyId: String(army.rallyId || ""),
+    rallyClanId: String(army.rallyClanId || ""),
+    rallyParticipantCount: Math.max(0, Math.floor(Number(army.rallyParticipantCount) || 0)),
+    participantUids: Array.isArray(army.participantUids) ? army.participantUids.map(String).filter(Boolean).slice(0, 8) : [],
     sourceRegionId: army.sourceRegionId,
     targetRegionId: army.targetRegionId,
     onlineRegionIds: army.onlineRegionIds?.length ? army.onlineRegionIds : getMissionRegionIds(army),
@@ -13779,7 +13817,7 @@ function getOutgoingAttacks() {
   const seen = new Set();
   return getRenderableArmies()
     .map(attack => {
-      if (!attack || !["attack", "scout", "transfer", "reinforce"].includes(attack.kind) || attack.owner !== "player") return null;
+      if (!attack || !["attack", "scout", "transfer", "reinforce", "rally_join"].includes(attack.kind) || attack.owner !== "player") return null;
       const key = String(attack.onlineId || attack.id || `${attack.fromId}:${attack.toId}:${attack.launchedAtMs || ""}`);
       if (seen.has(key)) return null;
       seen.add(key);
@@ -16472,7 +16510,9 @@ function resolveAttack(attack) {
       const savedAttackers = result.raidCompleted
         ? 0
         : returnSavedTroops("fieldMedics", result.attackerLosses, `${target.name} failed attack`);
-      const failedAttackXp = attackProtection || givenUpNeutralTarget ? 0 : getFailedAttackXpAward(target, oldOwner, defendersAtStart, attack.owner);
+      const failedAttackXp = attackProtection || givenUpNeutralTarget
+        ? 0
+        : getFailedAttackXpAward(target, oldOwner, result.defenderLosses, attack.owner);
       addBattleReport({
         type: "attack",
         outcome: result.raidCompleted ? "raid" : "defeat",
@@ -17167,12 +17207,23 @@ function renderClanHudAccess() {
     state.clanId || "",
     clanName,
     clanTag,
+    onlineClanRallies.length,
     getClanShieldRenderId(normalizeClanShield(shield)),
   ].join("|");
   if (signature === lastClanHudSignature) return;
   lastClanHudSignature = signature;
   clanHudBtn.classList.toggle("is-search", !hasClan);
   clanHudBtn.classList.toggle("has-clan", hasClan);
+  clanHudBtn.classList.toggle("has-rallies", hasClan && onlineClanRallies.length > 0);
+  clanHudBtn.dataset.rallyCount = hasClan && onlineClanRallies.length
+    ? String(onlineClanRallies.length)
+    : "";
+  if (clanTabBtn) {
+    clanTabBtn.classList.toggle("has-rallies", hasClan && onlineClanRallies.length > 0);
+    clanTabBtn.dataset.rallyCount = hasClan && onlineClanRallies.length
+      ? String(onlineClanRallies.length)
+      : "";
+  }
   clanHudBtn.setAttribute(
     "aria-label",
     heroLevel < 10
@@ -17226,6 +17277,9 @@ function refreshClanRelationshipPresentation() {
 function stopClanRealtimeSubscriptions({ clear = true } = {}) {
   if (typeof clanStateUnsubscribe === "function") clanStateUnsubscribe();
   clanStateUnsubscribe = null;
+  if (typeof clanRalliesUnsubscribe === "function") clanRalliesUnsubscribe();
+  clanRalliesUnsubscribe = null;
+  onlineClanRallies = [];
   activeClanSubscriptionId = "";
   clanRosterReady = false;
   clanMemberUidSet = new Set();
@@ -17292,7 +17346,12 @@ function applyClanMembersSnapshot(members = [], changes = []) {
 function startClanRealtimeSubscriptions(api, clanId) {
   const id = String(clanId || "").trim();
   if (!id || !api?.subscribeClanState) return false;
-  if (activeClanSubscriptionId === id && typeof clanStateUnsubscribe === "function") return true;
+  if (activeClanSubscriptionId === id && typeof clanStateUnsubscribe === "function") {
+    if (!clanRalliesUnsubscribe && api?.subscribeClanRallies) {
+      startClanRallySubscription(api, id);
+    }
+    return true;
+  }
   stopClanRealtimeSubscriptions({ clear: true });
   activeClanSubscriptionId = id;
   clanRosterReady = false;
@@ -17318,6 +17377,25 @@ function startClanRealtimeSubscriptions(api, clanId) {
     onError: (error, source) => {
       console.warn(`Clan ${source || "state"} subscription failed`, error);
       if (source === "members") clanRosterReady = false;
+    },
+  });
+  startClanRallySubscription(api, id);
+  return true;
+}
+
+function startClanRallySubscription(api, clanId) {
+  const id = String(clanId || "").trim();
+  if (!id || !api?.subscribeClanRallies) return false;
+  if (typeof clanRalliesUnsubscribe === "function") clanRalliesUnsubscribe();
+  clanRalliesUnsubscribe = api.subscribeClanRallies(id, {
+    onRallies: rallies => {
+      onlineClanRallies = Array.isArray(rallies) ? rallies : [];
+      renderClanHudAccess();
+      if (activeProfileTab === "clan") renderClanView();
+      updateOutgoingAttackUi();
+    },
+    onError: error => {
+      console.warn("Clan rally subscription failed", error);
     },
   });
   return true;
@@ -17769,6 +17847,229 @@ function renderClanQuestPanel() {
     </section>`;
 }
 
+function getRallyParticipantForCurrentPlayer(rally) {
+  const uid = getCurrentOnlineUid();
+  return (Array.isArray(rally?.participants) ? rally.participants : [])
+    .find(participant => String(participant?.uid || participant?.ownerUid || "") === uid) || null;
+}
+
+function renderClanRallyCard(rally) {
+  const currentUid = getCurrentOnlineUid();
+  const participants = Array.isArray(rally?.participants) ? rally.participants : [];
+  const activeParticipants = participants.filter(participant => ["assembled", "inbound"].includes(participant.status));
+  const assembledTroops = activeParticipants
+    .filter(participant => participant.status === "assembled")
+    .reduce((total, participant) => total + Math.max(0, Number(participant.troops) || 0), 0);
+  const inboundTroops = activeParticipants
+    .filter(participant => participant.status === "inbound")
+    .reduce((total, participant) => total + Math.max(0, Number(participant.troops) || 0), 0);
+  const ownParticipant = getRallyParticipantForCurrentPlayer(rally);
+  const leader = String(rally.leaderUid || "") === currentUid;
+  const forming = rally.status === "forming";
+  const launched = rally.status === "launched";
+  const recalling = rally.status === "recalling";
+  const busy = rallyActionRequests.has(rally.id);
+  const launchArmy = launched
+    ? getRenderableArmies().find(army => getOnlineArmyResolutionId(army) === String(rally.armyId || ""))
+    : null;
+  const canRecall = leader && launchArmy && isRecallHornEligible(launchArmy);
+  const participantRows = participants.map(participant => {
+    const inbound = participant.status === "inbound";
+    const etaMs = normalizeTimestampMs(participant.arrivesAtMs);
+    const eta = inbound && etaMs > Date.now()
+      ? formatDuration(Math.max(0, Math.ceil((etaMs - Date.now()) / 1000)))
+      : participant.status === "assembled"
+        ? "Ready"
+        : participant.status === "returning"
+          ? "Returning"
+          : "Settled";
+    return `
+      <li class="${escapeHtml(participant.status || "")}">
+        <span><strong>${escapeHtml(participant.ownerName || "Ruler")}</strong><small>${participant.role === "leader" ? "Leader" : "Ally"} · ${escapeHtml(eta)}</small></span>
+        <b>${formatNumber(participant.troops || 0)}</b>
+      </li>`;
+  }).join("");
+  let controls = "";
+  if (forming && leader) {
+    controls = `
+      <button data-rally-action="launch" data-rally-id="${escapeHtml(rally.id)}" type="button" ${busy ? "disabled" : ""}>Launch</button>
+      <button class="danger-action" data-rally-action="cancel" data-rally-id="${escapeHtml(rally.id)}" type="button" ${busy ? "disabled" : ""}>Cancel</button>`;
+  } else if (forming && ownParticipant) {
+    controls = `<button class="danger-action" data-rally-action="withdraw" data-rally-id="${escapeHtml(rally.id)}" type="button" ${busy ? "disabled" : ""}>Withdraw</button>`;
+  } else if (forming && activeParticipants.length < 3) {
+    controls = `<button data-rally-action="join" data-rally-id="${escapeHtml(rally.id)}" type="button" ${busy ? "disabled" : ""}>Join Rally</button>`;
+  } else if (launched && leader) {
+    controls = `<button data-rally-action="recall" data-rally-id="${escapeHtml(rally.id)}" data-rally-army-id="${escapeHtml(rally.armyId || "")}" type="button" ${busy || !canRecall ? "disabled" : ""}>${canRecall ? "Recall · 1 Horn" : "Rally Marching"}</button>`;
+  }
+  return `
+    <article class="clan-rally-card ${escapeHtml(rally.status || "")}">
+      <header>
+        <span><small>${escapeHtml(getRegionLabel(rally.targetRegionId))}</small><strong>${escapeHtml(rally.targetName || rally.targetId || "Objective")}</strong></span>
+        <b>${activeParticipants.length || participants.length}/3</b>
+      </header>
+      <div class="clan-rally-summary">
+        <span>Leader <strong>${escapeHtml(rally.leaderName || "Ruler")}</strong></span>
+        <span><strong>${formatNumber(assembledTroops)}</strong> assembled</span>
+        <span><strong>${formatNumber(inboundTroops)}</strong> inbound</span>
+        <span class="clan-rally-status">${recalling ? "Returning" : launched ? "Launched" : "Forming"}</span>
+      </div>
+      <ul>${participantRows}</ul>
+      ${controls ? `<footer>${controls}</footer>` : ""}
+    </article>`;
+}
+
+function renderClanRallyPanel() {
+  return `
+    <section class="clan-social-card clan-rallies-panel">
+      <div class="clan-social-heading">
+        <span><small>Coordinated assaults</small><strong>Rallies</strong></span>
+        <b>${formatNumber(onlineClanRallies.length)}</b>
+      </div>
+      <p class="clan-rally-note">Targets stay private to the clan until the leader launches. Joining immediately removes your Peace Shield.</p>
+      <div class="clan-rally-list">
+        ${onlineClanRallies.length
+          ? onlineClanRallies.map(renderClanRallyCard).join("")
+          : `<p class="clan-muted">No rally requests are active.</p>`}
+      </div>
+    </section>`;
+}
+
+function upsertClanRallySnapshot(rally = null) {
+  if (!rally?.id) return;
+  const active = ["forming", "launched", "recalling"].includes(rally.status);
+  onlineClanRallies = active
+    ? [
+      rally,
+      ...onlineClanRallies.filter(entry => entry.id !== rally.id),
+    ].sort((left, right) => normalizeTimestampMs(right.updatedAtMs) - normalizeTimestampMs(left.updatedAtMs))
+    : onlineClanRallies.filter(entry => entry.id !== rally.id);
+  renderClanHudAccess();
+  renderClanView();
+  updateOutgoingAttackUi();
+}
+
+function confirmClanRallyAction(rally, action) {
+  const inbound = (Array.isArray(rally?.participants) ? rally.participants : [])
+    .filter(participant => participant.status === "inbound");
+  const launching = action === "launch";
+  const inboundList = inbound.length
+    ? `<ul>${inbound.map(participant => `
+        <li><span>${escapeHtml(participant.ownerName || "Clan ally")}</span><strong>${formatNumber(participant.troops || 0)} troops</strong></li>`).join("")}</ul>`
+    : `<p class="clan-muted">No contributions are still inbound.</p>`;
+  modal.classList.remove("incoming-attack-modal", "outgoing-attack-modal");
+  modal.classList.add("clan-rally-confirmation-modal");
+  modalTitle.textContent = launching ? "Launch Clan Rally?" : "Cancel Clan Rally?";
+  modalBody.innerHTML = `
+    <section class="clan-rally-confirmation">
+      <div>
+        <small>${escapeHtml(getRegionLabel(rally.targetRegionId))}</small>
+        <h3>${escapeHtml(rally.targetName || "Rally objective")}</h3>
+      </div>
+      ${launching
+        ? `<p>Only troops already assembled will attack. These inbound contributions will automatically turn around:</p>${inboundList}`
+        : `<p>Your waiting troops return to the assembly immediately. Assembled allies and inbound contributions will march home. Peace Shields are not restored.</p>`}
+      <footer>
+        <button type="button" class="profile-secondary-btn" data-rally-confirm="cancel">Keep Forming</button>
+        <button type="button" class="${launching ? "profile-primary-btn" : "danger-action"}" data-rally-confirm="accept">${launching ? "Launch Assembled Troops" : "Cancel Rally"}</button>
+      </footer>
+    </section>`;
+  if (!modal.open) modal.showModal();
+  return new Promise(resolve => {
+    let settled = false;
+    const finish = accepted => {
+      if (settled) return;
+      settled = true;
+      modal.classList.remove("clan-rally-confirmation-modal");
+      resolve(accepted);
+    };
+    modalBody.querySelector("[data-rally-confirm='cancel']")?.addEventListener("click", () => {
+      finish(false);
+      if (modal.open) modal.close();
+    });
+    modalBody.querySelector("[data-rally-confirm='accept']")?.addEventListener("click", () => {
+      finish(true);
+      if (modal.open) modal.close();
+    });
+    modal.addEventListener("close", () => finish(false), { once: true });
+  });
+}
+
+async function runClanRallyAction(action, rally) {
+  if (!rally?.id || rallyActionRequests.has(rally.id)) return;
+  if (action === "join") {
+    if (modal.open) modal.close();
+    beginJoinClanRallyContribution(rally);
+    return;
+  }
+  if (action === "recall") {
+    await useRecallHornOnMission(rally.armyId);
+    return;
+  }
+  const api = getOnlineApi();
+  const method = action === "withdraw"
+    ? "withdrawClanRallyContribution"
+    : action === "launch"
+      ? "launchClanRally"
+      : action === "cancel"
+        ? "cancelClanRally"
+        : "";
+  if (!method || !api?.[method] || !api.isSignedIn?.()) {
+    showToast("That clan rally action requires the online Crownlands server.");
+    return;
+  }
+  if (["launch", "cancel"].includes(action)) {
+    const confirmed = await confirmClanRallyAction(rally, action);
+    if (!confirmed) return;
+  }
+  rallyActionRequests.add(rally.id);
+  renderClanView();
+  try {
+    const request = {
+      clanId: rally.clanId || state?.clanId,
+      rallyId: rally.id,
+    };
+    if (action === "launch") request.armyId = `rally_attack_${rally.id}`;
+    const result = await api[method](request);
+    applyServerArmyResult(result);
+    if (result?.movement) adoptServerArmyMovement(result.movement);
+    (Array.isArray(result?.movements) ? result.movements : []).forEach(adoptServerArmyMovement);
+    if (result?.rally) upsertClanRallySnapshot(result.rally);
+    if (action === "withdraw") {
+      showToast("Your rally contribution is returning home.");
+    } else if (action === "launch") {
+      const returned = Array.isArray(result?.returnedInbound) ? result.returnedInbound.length : 0;
+      showToast(returned
+        ? `Rally launched. ${formatNumber(returned)} inbound contribution${returned === 1 ? " is" : "s are"} returning.`
+        : "Rally launched.");
+    } else {
+      showToast("Rally cancelled. Committed forces are returning.");
+    }
+  } catch (error) {
+    console.warn(`Clan rally ${action} failed`, error);
+    showToast(error?.message || `Could not ${action} the rally.`);
+  } finally {
+    rallyActionRequests.delete(rally.id);
+    renderClanHudAccess();
+    renderClanView();
+    if (modal?.open && modal.classList.contains("outgoing-attack-modal")) {
+      renderOutgoingAttacksModalContent();
+    }
+  }
+}
+
+function bindClanRallyControls(root = document) {
+  root?.querySelectorAll?.("[data-rally-action]").forEach(button => {
+    button.addEventListener("click", () => {
+      const rally = onlineClanRallies.find(entry => entry.id === button.dataset.rallyId);
+      if (!rally) {
+        showToast("That clan rally is no longer active.");
+        return;
+      }
+      void runClanRallyAction(button.dataset.rallyAction, rally);
+    });
+  });
+}
+
 function renderClanView() {
   if (!clanContent || activeProfileTab !== "clan") return;
   const shieldEditorVisible = Boolean(state?.clanId && clanSnapshot && state?.clanRole === "leader" && clanShieldEditorOpen);
@@ -17834,11 +18135,13 @@ function renderClanView() {
         <button class="profile-secondary-btn clan-leave" data-clan-action="leave">${canLead && clanMembers.length === 1 ? "Disband Clan" : "Leave Clan"}</button>
       </section>
       <div class="clan-social-panels">
+        ${renderClanRallyPanel()}
         ${renderClanGiftPanel()}
         ${renderClanQuestPanel()}
       </div>
     </div>`}`;
   applyClanRosterFlags();
+  bindClanRallyControls(clanContent);
   updateClanGiftCountdown();
 }
 
@@ -18410,6 +18713,7 @@ function getArmyRouteRelationshipClass(mission) {
     || mission?.relinquishTransfer
     || mission?.kind === "transfer"
     || mission?.kind === "reinforce"
+    || mission?.kind === "rally_join"
   );
   return isSupportMovement ? "clan-support-route" : "clan-hostile-route";
 }
@@ -18459,7 +18763,7 @@ function renderPaths() {
   pathsSvg.innerHTML = "";
   for (const { attack, segments } of visibleArmySegments) {
     const ownerClass = getArmyRouteRelationshipClass(attack);
-    const kindClass = attack.kind === "transfer" || attack.kind === "reinforce"
+    const kindClass = attack.kind === "transfer" || attack.kind === "reinforce" || attack.kind === "rally_join"
       ? "transfer-route"
       : attack.kind === "scout"
         ? "scout-route"
@@ -19054,6 +19358,7 @@ function renderSelectedStrongholdWheel(stronghold) {
   const availableSources = playerCities().filter(city => city.id !== stronghold.id && Math.floor(Number(city.troops) || 0) > 0);
   const canScout = !owned && !clanAlly && !pendingScout && availableSources.length > 0;
   const canAttack = !owned && availableSources.length > 0;
+  const canRally = Boolean(state?.clanId && !owned && !clanAlly && availableSources.length > 0);
   const canSend = owned && Math.floor(Number(stronghold.troops) || 0) > 0;
   const canReinforce = owned && availableSources.length > 0;
   const wheelSize = getStrongholdVisualSize(stronghold);
@@ -19079,6 +19384,12 @@ function renderSelectedStrongholdWheel(stronghold) {
       <span aria-hidden="true">${owned || clanAlly ? "&#8649;" : "&#9876;"}</span>
       <strong>${owned || clanAlly ? "Reinforce" : "Attack"}</strong>
     </button>
+    ${canRally ? `
+      <button class="gold-camp-wheel-action camp-rally-action" type="button" aria-label="Form a clan rally against ${escapeHtml(stronghold.name)}">
+        <span aria-hidden="true">&#9873;</span>
+        <strong>Rally</strong>
+      </button>
+    ` : ""}
     ${report ? `
       <button class="gold-camp-wheel-action camp-report-action" type="button" aria-label="Open scout report for ${escapeHtml(stronghold.name)}">
         <span aria-hidden="true">&#128221;</span>
@@ -19100,6 +19411,10 @@ function renderSelectedStrongholdWheel(stronghold) {
   wheel.querySelector(".camp-info-action")?.addEventListener("click", event => {
     event.stopPropagation();
     showCityInfoModal(stronghold.id);
+  });
+  wheel.querySelector(".camp-rally-action")?.addEventListener("click", event => {
+    event.stopPropagation();
+    beginCreateClanRally(stronghold);
   });
   wheel.querySelector(".camp-report-action")?.addEventListener("click", event => {
     event.stopPropagation();
@@ -19136,6 +19451,7 @@ function renderSelectedRewardCampWheel(camp) {
   const pendingScout = getPendingScoutMission(camp.id);
   const canSend = playerCities().some(city => Math.floor(Number(city.troops) || 0) > 0);
   const canScout = !isHeldByPlayer && !clanAlly && !pendingScout && canSend;
+  const canRally = Boolean(state?.clanId && !isHeldByPlayer && !clanAlly && canSend);
   const canRecall = isHeldByPlayer && camp.payoutPending && !rewardCampRecallRequests.has(camp.id);
   const wheelSize = Math.max(112, Number(camp.size) || 132);
   wheel.className = "gold-camp-action-wheel";
@@ -19157,6 +19473,12 @@ function renderSelectedRewardCampWheel(camp) {
       <span aria-hidden="true">${isHeldByPlayer || clanAlly ? "&#8649;" : "&#9876;"}</span>
       <strong>${isHeldByPlayer || clanAlly ? "Reinforce" : "Attack"}</strong>
     </button>
+    ${canRally ? `
+      <button class="gold-camp-wheel-action camp-rally-action" type="button" aria-label="Form a clan rally against ${escapeHtml(camp.name)}">
+        <span aria-hidden="true">&#9873;</span>
+        <strong>Rally</strong>
+      </button>
+    ` : ""}
     ${report ? `
       <button class="gold-camp-wheel-action camp-report-action" type="button" aria-label="Open scout report for ${escapeHtml(camp.name)}">
         <span aria-hidden="true">&#128221;</span>
@@ -19179,6 +19501,10 @@ function renderSelectedRewardCampWheel(camp) {
   wheel.querySelector(".camp-info-action")?.addEventListener("click", event => {
     event.stopPropagation();
     showRewardCampInfoModal(camp.id);
+  });
+  wheel.querySelector(".camp-rally-action")?.addEventListener("click", event => {
+    event.stopPropagation();
+    beginCreateClanRally(camp);
   });
   wheel.querySelector(".camp-report-action")?.addEventListener("click", event => {
     event.stopPropagation();
@@ -19940,6 +20266,85 @@ function beginClanReinforcement(targetOrId) {
   void showTroopSliderModalAsync(sourceOption.city, target, { orderKind: "reinforce" });
 }
 
+function beginCreateClanRally(targetOrId) {
+  const target = typeof targetOrId === "object" ? targetOrId : getArmyTargetById(targetOrId);
+  const eligibleObjective = target && (isStronghold(target) || isRewardCampTarget(target));
+  if (!state?.clanId || !eligibleObjective || target.owner === "player" || isClanAllyCity(target)) {
+    showToast(!state?.clanId ? "Join a clan before forming a rally." : "That objective is not eligible for a clan rally.");
+    return;
+  }
+  const api = getOnlineApi();
+  if (!usesServerArmyAuthority() || !api?.createClanRally || !api?.isSignedIn?.()) {
+    showToast("Clan rallies require the online Crownlands server.");
+    return;
+  }
+  const sourceOption = findPreferredAttackSource(target);
+  if (!sourceOption) {
+    showToast("No owned city or Stronghold with troops can reach that objective.");
+    return;
+  }
+  activeRallyOrderContext = {
+    mode: "create",
+    target,
+  };
+  selectedSourceId = sourceOption.city.id;
+  rememberOwnedAttackSource(sourceOption.city);
+  selectedTargetId = target.id;
+  scoutNearbySourceId = null;
+  regroupSourceId = null;
+  sendMode = true;
+  activeTroopOrderKind = "rally_create";
+  selectedTroopAmount = clamp(Math.floor(sourceOption.city.troops / 2), 1, sourceOption.city.troops);
+  renderSelectionChangeNow();
+  void showTroopSliderModalAsync(sourceOption.city, target, { orderKind: "rally_create" });
+}
+
+function beginJoinClanRallyContribution(rally) {
+  if (!rally || rally.status !== "forming" || !state?.clanId) {
+    showToast("That rally is no longer accepting contributions.");
+    return;
+  }
+  const api = getOnlineApi();
+  if (!usesServerArmyAuthority() || !api?.joinClanRally || !api?.isSignedIn?.()) {
+    showToast("Clan rallies require the online Crownlands server.");
+    return;
+  }
+  const knownAssembly = getArmyTargetById(rally.assemblyCityId);
+  const assembly = {
+    ...(knownAssembly || {}),
+    id: rally.assemblyCityId,
+    name: rally.assemblyCityName || knownAssembly?.name || "Rally assembly",
+    regionId: normalizeRegionId(rally.assemblyRegionId),
+    startPool: normalizeRegionId(rally.assemblyRegionId),
+    x: Number(rally.assemblyX) || Number(knownAssembly?.x) || 0,
+    y: Number(rally.assemblyY) || Number(knownAssembly?.y) || 0,
+    owner: knownAssembly?.owner || "enemy",
+    ownerUid: rally.leaderUid,
+    kind: knownAssembly?.kind || "city",
+  };
+  const sourceOption = findPreferredAttackSource(assembly);
+  if (!sourceOption) {
+    showToast("No owned city or Stronghold with troops can reach the rally assembly.");
+    return;
+  }
+  activeRallyOrderContext = {
+    mode: "join",
+    rallyId: rally.id,
+    rally,
+    target: assembly,
+  };
+  selectedSourceId = sourceOption.city.id;
+  rememberOwnedAttackSource(sourceOption.city);
+  selectedTargetId = assembly.id;
+  scoutNearbySourceId = null;
+  regroupSourceId = null;
+  sendMode = true;
+  activeTroopOrderKind = "rally_join";
+  selectedTroopAmount = clamp(Math.floor(sourceOption.city.troops / 2), 1, sourceOption.city.troops);
+  renderSelectionChangeNow();
+  void showTroopSliderModalAsync(sourceOption.city, assembly, { orderKind: "rally_join" });
+}
+
 function attackForeignCity(cityId) {
   const target = cityById(cityId);
   if (!target || target.owner === "player") return;
@@ -20599,10 +21004,15 @@ function showTroopSliderModal(source, target) {
 }
 
 function getTroopOrderKind(target, requestedKind = "") {
+  if (["rally_create", "rally_join"].includes(requestedKind)) return requestedKind;
   if (requestedKind === "reinforce" && isClanAllyCity(target)) return "reinforce";
   if (target?.owner === "player") return "transfer";
   if (isClanAllyCity(target)) return "reinforce";
   return "attack";
+}
+
+function isRallyTroopOrderKind(orderKind = activeTroopOrderKind) {
+  return orderKind === "rally_create" || orderKind === "rally_join";
 }
 
 async function loadAttackProtectionPreview(source, target) {
@@ -20635,11 +21045,12 @@ async function showTroopSliderModalAsync(source, target, options = {}) {
   }
 
   const orderKind = getTroopOrderKind(target, options.orderKind);
+  const rallyOrder = isRallyTroopOrderKind(orderKind);
   const isTransfer = orderKind === "transfer";
   const isReinforcement = orderKind === "reinforce";
   const campTarget = isRewardCampTarget(target);
   const needsDefenderPower = orderKind === "attack" && target.owner === "enemy" && !campTarget && !isStronghold(target);
-  const mainCityBlockReason = isTransfer || isReinforcement || campTarget
+  const mainCityBlockReason = rallyOrder || isTransfer || isReinforcement || campTarget
     ? ""
     : getMainCityAttackBlockReason(target, "player");
   if (mainCityBlockReason) {
@@ -20685,7 +21096,9 @@ async function showTroopSliderModalAsync(source, target, options = {}) {
   if (requestId !== activeTroopRouteRequestId) return;
 
   const freshSource = cityById(source.id);
-  const freshTarget = getArmyTargetById(target.id);
+  const freshTarget = activeRallyOrderContext?.target?.id === target.id
+    ? activeRallyOrderContext.target
+    : getArmyTargetById(target.id);
   if (!freshSource || !freshTarget || freshSource.owner !== "player" || freshSource.id === freshTarget.id) {
     showToast("Order canceled. The map changed.");
     cancelSendMode();
@@ -20802,14 +21215,15 @@ function showTroopPowerVerificationError(source, target) {
 }
 
 function showTroopRouteLoadingModal(source, target, orderKind = "attack") {
+  const rallyOrder = isRallyTroopOrderKind(orderKind);
   const isTransfer = orderKind === "transfer";
   const isReinforcement = orderKind === "reinforce";
-  const commandLabel = isTransfer ? "Transfer" : isReinforcement ? "Reinforce" : "Attack";
-  const commandIcon = isTransfer ? "&#9822;" : isReinforcement ? "&#8649;" : "&#9876;";
+  const commandLabel = orderKind === "rally_create" ? "Create Rally" : orderKind === "rally_join" ? "Join Rally" : isTransfer ? "Transfer" : isReinforcement ? "Reinforce" : "Attack";
+  const commandIcon = rallyOrder ? "&#9873;" : isTransfer ? "&#9822;" : isReinforcement ? "&#8649;" : "&#9876;";
   modal.classList.add("troop-slider-modal");
   modalTitle.textContent = `${commandLabel} troops`;
   modalBody.innerHTML = `
-    <div class="troop-slider-panel ${isTransfer || isReinforcement ? "transfer reinforce" : "attack"}">
+    <div class="troop-slider-panel ${rallyOrder ? "rally" : isTransfer || isReinforcement ? "transfer reinforce" : "attack"}">
       <div class="troop-route-summary">
         <div class="troop-route-city">
           <span>From</span>
@@ -20820,7 +21234,7 @@ function showTroopRouteLoadingModal(source, target, orderKind = "attack") {
         <div class="troop-route-city destination">
           <span>To</span>
           <strong>${escapeHtml(target.name)}</strong>
-          <small>${escapeHtml(getRegionLabel(getCityRegionId(target)))} &middot; ${isReinforcement ? "Clan allied holding" : isRewardCampTarget(target) ? (isTransfer ? `Your ${escapeHtml(target.name)}` : `${OWNER[target.owner].label} ${escapeHtml(target.name)}`) : isTransfer ? "Your city" : `${OWNER[target.owner].label} city`}</small>
+          <small>${escapeHtml(getRegionLabel(getCityRegionId(target)))} &middot; ${orderKind === "rally_join" ? "Rally assembly city" : orderKind === "rally_create" ? "Clan rally objective" : isReinforcement ? "Clan allied holding" : isRewardCampTarget(target) ? (isTransfer ? `Your ${escapeHtml(target.name)}` : `${OWNER[target.owner].label} ${escapeHtml(target.name)}`) : isTransfer ? "Your city" : `${OWNER[target.owner].label} city`}</small>
         </div>
       </div>
 
@@ -20844,7 +21258,7 @@ function showTroopRouteLoadingModal(source, target, orderKind = "attack") {
 function getTroopSliderSendLimit(source, target) {
   const availableTroops = Math.max(0, Math.floor(Number(source?.troops) || 0));
   if (availableTroops < 1 || !target) return 0;
-  if (activeTroopOrderKind === "transfer" || activeTroopOrderKind === "reinforce") return availableTroops;
+  if (activeTroopOrderKind === "transfer" || activeTroopOrderKind === "reinforce" || isRallyTroopOrderKind()) return availableTroops;
   const previewMatches = activeTroopSliderRoute?.sourceId === source.id
     && activeTroopSliderRoute?.targetId === target.id;
   const attackProtection = previewMatches
@@ -20879,16 +21293,17 @@ function showTroopSliderModalWithRoute(source, target, route, options = {}) {
   activeSwiftMarchOrderSelected = false;
   const orderKind = getTroopOrderKind(target, options.orderKind || activeTroopOrderKind);
   activeTroopOrderKind = orderKind;
+  const rallyOrder = isRallyTroopOrderKind(orderKind);
   const isTransfer = orderKind === "transfer";
   const isReinforcement = orderKind === "reinforce";
   const campTarget = isRewardCampTarget(target);
-  const swiftMarchEligible = canUseSwiftMarchOrderOnLaunch(source, target);
+  const swiftMarchEligible = !rallyOrder && canUseSwiftMarchOrderOnLaunch(source, target);
   const swiftMarchOrderCount = Math.max(
     0,
     Math.floor(Number(ensureShopItems()[SWIFT_MARCH_ORDER_ITEM_ID]) || 0)
   );
   const swiftMarchDisabled = swiftMarchOrderCount <= 0 || !usesServerArmyAuthority();
-  const mainCityBlockReason = isTransfer || isReinforcement || campTarget
+  const mainCityBlockReason = rallyOrder || isTransfer || isReinforcement || campTarget
     ? ""
     : getMainCityAttackBlockReason(target, "player");
   if (mainCityBlockReason) {
@@ -20909,9 +21324,13 @@ function showTroopSliderModalWithRoute(source, target, route, options = {}) {
     if (modal.open) modal.close();
     return;
   }
-  const commandLabel = isTransfer ? "Transfer" : isReinforcement ? "Reinforce" : "Attack";
-  const commandIcon = isTransfer ? "&#9822;" : isReinforcement ? "&#8649;" : "&#9876;";
-  const shieldDropWarning = isReinforcement
+  const commandLabel = orderKind === "rally_create" ? "Create Rally" : orderKind === "rally_join" ? "Join Rally" : isTransfer ? "Transfer" : isReinforcement ? "Reinforce" : "Attack";
+  const commandIcon = rallyOrder ? "&#9873;" : isTransfer ? "&#9822;" : isReinforcement ? "&#8649;" : "&#9876;";
+  const shieldDropWarning = rallyOrder
+    ? getActivePeaceShieldExpiresAtMs() > Date.now()
+      ? "Committing rally troops immediately removes your Royal Peace Shield. It will not be restored if you withdraw or the rally is cancelled."
+      : ""
+    : isReinforcement
     ? getActivePeaceShieldExpiresAtMs() > Date.now()
       ? "Launching clan reinforcements immediately removes your Royal Peace Shield. Your ally's shield is not affected."
       : ""
@@ -20924,7 +21343,7 @@ function showTroopSliderModalWithRoute(source, target, route, options = {}) {
   modal.classList.add("troop-slider-modal");
   modalTitle.textContent = `${commandLabel} troops`;
   modalBody.innerHTML = `
-    <div class="troop-slider-panel ${isTransfer || isReinforcement ? "transfer reinforce" : "attack"}">
+    <div class="troop-slider-panel ${rallyOrder ? "rally" : isTransfer || isReinforcement ? "transfer reinforce" : "attack"}">
       <div class="troop-route-summary">
         <div class="troop-route-city">
           <span>From</span>
@@ -20935,19 +21354,20 @@ function showTroopSliderModalWithRoute(source, target, route, options = {}) {
         <div class="troop-route-city destination">
           <span>To</span>
           <strong>${escapeHtml(target.name)}</strong>
-          <small>${escapeHtml(getRegionLabel(getCityRegionId(target)))} &middot; ${isReinforcement ? "Clan allied holding" : campTarget ? (isTransfer ? `Your ${escapeHtml(target.name)}` : `${OWNER[target.owner].label} ${escapeHtml(target.name)}`) : isTransfer ? "Your city" : `${OWNER[target.owner].label} city`}</small>
+          <small>${escapeHtml(getRegionLabel(getCityRegionId(target)))} &middot; ${orderKind === "rally_join" ? "Rally assembly city" : orderKind === "rally_create" ? "Clan rally objective" : isReinforcement ? "Clan allied holding" : campTarget ? (isTransfer ? `Your ${escapeHtml(target.name)}` : `${OWNER[target.owner].label} ${escapeHtml(target.name)}`) : isTransfer ? "Your city" : `${OWNER[target.owner].label} city`}</small>
         </div>
       </div>
 
       ${shieldDropWarning ? `<div class="shield-drop-warning" role="alert"><strong>Shield warning</strong><span>${escapeHtml(shieldDropWarning)}</span></div>` : ""}
       ${isReinforcement ? `<div class="reinforcement-limit-note"><strong>${formatNumber(reinforcementUsage)} / ${formatNumber(CLAN_REINFORCEMENT_ACTIVE_LIMIT)} active</strong><span>You may support two holdings at once, with one reinforcement per holding.</span></div>` : ""}
+      ${rallyOrder ? `<div class="reinforcement-limit-note rally-limit-note"><strong>3 participant limit</strong><span>${orderKind === "rally_create" ? "You will lead this rally and choose when to launch." : "Your troops march visibly to the assembly city; the objective remains clan-private."}</span></div>` : ""}
 
       <div class="troop-slider-control">
         <div class="troop-slider-readout">
-          <span>Troops to ${isTransfer || isReinforcement ? "send" : "attack with"}</span>
+          <span>Troops to ${rallyOrder ? "commit" : isTransfer || isReinforcement ? "send" : "attack with"}</span>
           <strong id="troopSliderAmount">${formatNumber(selectedTroopAmount)}</strong>
         </div>
-        <input id="troopAmountSlider" class="troop-amount-slider" type="range" min="1" max="${sliderSendLimit}" value="${selectedTroopAmount}" aria-label="Troops to ${isReinforcement ? "reinforce with" : isTransfer ? "transfer" : "attack with"}" />
+        <input id="troopAmountSlider" class="troop-amount-slider" type="range" min="1" max="${sliderSendLimit}" value="${selectedTroopAmount}" aria-label="Troops to ${rallyOrder ? "commit" : isReinforcement ? "reinforce with" : isTransfer ? "transfer" : "attack with"}" />
         <div class="troop-slider-limits"><span>1</span><span id="troopSliderMaxLabel">${demoLimited ? "Protected max" : "Max"} ${formatNumber(sliderSendLimit)}</span></div>
       </div>
 
@@ -20968,7 +21388,7 @@ function showTroopSliderModalWithRoute(source, target, route, options = {}) {
       <div id="troopSliderPreview" class="troop-slider-preview"></div>
 
       <div class="troop-slider-actions">
-        <button id="troopSliderConfirm" class="troop-slider-confirm ${isTransfer || isReinforcement ? "transfer reinforce" : "attack"}" type="button">
+        <button id="troopSliderConfirm" class="troop-slider-confirm ${rallyOrder ? "rally" : isTransfer || isReinforcement ? "transfer reinforce" : "attack"}" type="button">
           <span aria-hidden="true">${commandIcon}</span>${commandLabel}
         </button>
         <button id="troopSliderCancel" class="troop-slider-cancel" type="button">Cancel</button>
@@ -21036,7 +21456,14 @@ function updateTroopSliderModal(source, target, route) {
     if (stateLabel) stateLabel.textContent = activeSwiftMarchOrderSelected ? "On" : "Off";
   }
 
-  const baseTravel = travelTime(source, target, "player", route.length, selectedTroopAmount, orderKind);
+  const baseTravel = travelTime(
+    source,
+    target,
+    "player",
+    route.length,
+    selectedTroopAmount,
+    orderKind === "rally_join" ? "transfer" : orderKind === "rally_create" ? "attack" : orderKind
+  );
   const travel = activeSwiftMarchOrderSelected
     ? Math.max(
         SWIFT_MARCH_MINIMUM_REMAINING_SECONDS,
@@ -21044,6 +21471,15 @@ function updateTroopSliderModal(source, target, route) {
       )
     : baseTravel;
   const previewEl = modalBody.querySelector("#troopSliderPreview");
+  if (isRallyTroopOrderKind(orderKind)) {
+    const isJoin = orderKind === "rally_join";
+    previewEl.className = "troop-slider-preview transfer reinforce rally";
+    previewEl.innerHTML = `
+      <div><span>${isJoin ? "Contribution" : "Leader force"}</span><strong>${formatNumber(selectedTroopAmount)} troops</strong><small>${isJoin ? "One participant slot will be reserved immediately" : "Troops wait at the assembly city until you launch or cancel"}</small></div>
+      <div><span>${isJoin ? "Assembly time" : "Final march"}</span><strong>About ${formatDuration(baseTravel)}</strong><small>${escapeHtml(routeSummary)}</small><small>Royal Peace Shields are removed on commitment</small></div>
+    `;
+    return;
+  }
   if (orderKind === "transfer") {
     previewEl.className = "troop-slider-preview transfer";
     previewEl.innerHTML = `
@@ -21118,9 +21554,101 @@ function updateTroopSliderModal(source, target, route) {
   `;
 }
 
-function confirmTroopSliderOrder() {
+async function submitClanRallyTroopOrder(source, target, route) {
+  const api = getOnlineApi();
+  const context = activeRallyOrderContext;
+  if (!api || !context || !isRallyTroopOrderKind() || !state?.clanId) return false;
+  const method = activeTroopOrderKind === "rally_create" ? "createClanRally" : "joinClanRally";
+  if (!api[method] || !api.isSignedIn?.()) {
+    showToast("Clan rallies require the online Crownlands server.");
+    return false;
+  }
+  const requestKey = activeTroopOrderKind === "rally_create"
+    ? `create:${source.id}:${target.id}`
+    : `join:${context.rallyId}`;
+  if (rallyActionRequests.has(requestKey)) return false;
+  const segments = getRouteSegments(route, getCityRegionId(source));
+  const routeRegionIds = [...new Set([
+    getCityRegionId(source),
+    ...segments.map(segment => segment.regionId),
+    getCityRegionId(target),
+  ].map(normalizeRegionId).filter(Boolean))];
+  const armyId = createOnlineArmyId(activeTroopOrderKind === "rally_create" ? "rally" : "rally_join");
+  const payload = {
+    clanId: state.clanId,
+    rallyId: activeTroopOrderKind === "rally_create" ? armyId : context.rallyId,
+    armyId,
+    sourceRegionId: getCityRegionId(source),
+    targetRegionId: getCityRegionId(target),
+    routeRegionIds,
+    army: {
+      id: armyId,
+      kind: activeTroopOrderKind === "rally_join" ? "rally_join" : "attack",
+      fromId: source.id,
+      toId: target.id,
+      fromName: source.name,
+      toName: target.name,
+      targetType: isRewardCampTarget(target) ? "camp" : "city",
+      troops: selectedTroopAmount,
+      requestedTroops: selectedTroopAmount,
+      path: normalizeArmyPath(route.points),
+      pathSegments: segments,
+      routeRegionIds,
+      pathLength: Math.max(0, Number(route.length) || routeLength(route.points)),
+      sourceRegionId: getCityRegionId(source),
+      targetRegionId: getCityRegionId(target),
+    },
+  };
+  rallyActionRequests.add(requestKey);
+  const confirmButton = modalBody.querySelector("#troopSliderConfirm");
+  if (confirmButton) {
+    confirmButton.disabled = true;
+    confirmButton.textContent = activeTroopOrderKind === "rally_create" ? "Creating..." : "Joining...";
+  }
+  try {
+    const result = await api[method](payload);
+    applyServerArmyResult({
+      currentUser: result?.currentUser,
+      cityUpdates: Array.isArray(result?.cityUpdates)
+        ? result.cityUpdates
+        : result?.sourceCity ? [result.sourceCity] : [],
+    });
+    if (result?.movement) adoptServerArmyMovement(result.movement);
+    if (result?.rally) {
+      onlineClanRallies = [
+        result.rally,
+        ...onlineClanRallies.filter(rally => rally.id !== result.rally.id),
+      ];
+    }
+    const shieldText = result?.peaceShieldDeactivated ? " Your Royal Peace Shield was removed." : "";
+    addLog(activeTroopOrderKind === "rally_create"
+      ? `You formed a clan rally against ${target.name} with ${formatNumber(selectedTroopAmount)} troops.${shieldText}`
+      : `You committed ${formatNumber(selectedTroopAmount)} troops to ${context.rally?.leaderName || "your ally"}'s rally.${shieldText}`);
+    showToast(activeTroopOrderKind === "rally_create"
+      ? `Rally formed against ${target.name}.`
+      : `Contribution marching to ${target.name}.`);
+    renderClanHudAccess();
+    renderClanView();
+    updateOutgoingAttackUi();
+    return true;
+  } catch (error) {
+    console.warn("Clan rally order failed", error);
+    showToast(error?.message || "Could not submit the rally order.");
+    if (confirmButton) {
+      confirmButton.disabled = false;
+      confirmButton.textContent = activeTroopOrderKind === "rally_create" ? "Create Rally" : "Join Rally";
+    }
+    return false;
+  } finally {
+    rallyActionRequests.delete(requestKey);
+  }
+}
+
+async function confirmTroopSliderOrder() {
   const source = selectedSourceId ? cityById(selectedSourceId) : null;
-  const target = selectedTargetId ? getArmyTargetById(selectedTargetId) : null;
+  const target = activeRallyOrderContext?.target?.id === selectedTargetId
+    ? activeRallyOrderContext.target
+    : selectedTargetId ? getArmyTargetById(selectedTargetId) : null;
   if (!source || !target || source.owner !== "player" || source.troops < 1) {
     troopSliderActive = false;
     activeTroopSliderRoute = null;
@@ -21142,6 +21670,21 @@ function confirmTroopSliderOrder() {
     showToast("Route is still calculating.");
     return;
   }
+  if (isRallyTroopOrderKind()) {
+    const accepted = await submitClanRallyTroopOrder(source, target, cachedRoute);
+    if (!accepted) return;
+    troopSliderActive = false;
+    activeTroopSliderRoute = null;
+    activeAttackProtectionPreview = null;
+    activeTroopOrderKind = "";
+    activeRallyOrderContext = null;
+    activeSwiftMarchOrderSelected = false;
+    modal.classList.remove("troop-slider-modal");
+    if (modal.open) modal.close();
+    clearSelection(false);
+    renderAll();
+    return;
+  }
   const launched = launchAttack(source.id, target.id, 1, "player", selectedTroopAmount, {
     route: cachedRoute,
     attackProtection: activeAttackProtectionPreview,
@@ -21153,6 +21696,7 @@ function confirmTroopSliderOrder() {
   activeTroopSliderRoute = null;
   activeAttackProtectionPreview = null;
   activeTroopOrderKind = "";
+  activeRallyOrderContext = null;
   activeSwiftMarchOrderSelected = false;
   modal.classList.remove("troop-slider-modal");
   if (modal.open) modal.close();
@@ -21169,6 +21713,7 @@ function cancelSendMode() {
   activeTroopSliderRoute = null;
   activeAttackProtectionPreview = null;
   activeTroopOrderKind = "";
+  activeRallyOrderContext = null;
   activeSwiftMarchOrderSelected = false;
   renderAll();
 }
@@ -21858,7 +22403,7 @@ function showCityInfoModal(cityId) {
       <div class="stat-chip"><span>Troops production</span><strong>${formatBaseAndBonusStat(stats.baseTroopProductionPerHour, stats.troopProductionPerHour, "/h")}</strong><small>${getCityStatBonusSources(stats, "troops")}</small></div>
       <div class="stat-chip"><span>Gold production</span><strong>${formatBaseAndBonusStat(stats.baseGoldProductionPerHour, stats.goldProductionPerHour, "/h")}</strong><small>${getCityStatBonusSources(stats, "gold")}</small></div>
       <div class="stat-chip"><span>Invested gold</span><strong>${formatNumber(city.investedGold || 0)}</strong><small>Clears when captured</small></div>
-      ${cooldownRemaining > 0 ? `<div class="stat-wide"><span>Capture XP cooldown</span><strong>${formatDuration(cooldownRemaining)}</strong></div>` : ""}
+      ${cooldownRemaining > 0 ? `<div class="stat-wide"><span>City XP cooldown</span><strong>${formatDuration(cooldownRemaining)}</strong></div>` : ""}
       ${renderRelinquishCityAction(city)}
       ${renderHoldingReinforcementPanel(city)}
     </div>
@@ -23526,7 +24071,7 @@ function showAttackPreview(source, target) {
         : `Expected failure with about <strong>${formatNumber(preview.defendersLeft)}</strong> defenders left.`}</p>
       ${protectionNotice ? `<p class="tiny-warning">${escapeHtml(protectionNotice)}</p>` : ""}
       ${shieldDropWarning ? `<p class="shield-drop-warning"><strong>Shield warning</strong><span>${escapeHtml(shieldDropWarning)}</span></p>` : ""}
-      ${preview.cooldownRemaining > 0 ? `<p class="tiny-warning">Recent capture cooldown: XP is reduced for ${formatDuration(preview.cooldownRemaining)}.</p>` : ""}
+      ${preview.cooldownRemaining > 0 ? `<p class="tiny-warning">Recent capture cooldown: city/wall XP is unavailable for ${formatDuration(preview.cooldownRemaining)}; troop-loss XP still applies.</p>` : ""}
       <p class="tiny-warning">This is an estimate based on current numbers. Confirm launches using the current troop count.</p>
       <div class="modal-actions">
         <button id="confirmAttackBtn" class="danger-action" type="button">Attack</button>
@@ -23616,7 +24161,6 @@ async function upgradeCity(cityId, levels = 1) {
     serverCityUpgradeInFlightIds.add(inFlightKey);
     let totalUpgraded = 0;
     let totalSpent = 0;
-    let totalTroopsAwarded = 0;
     try {
       let remainingLevels = requestedLevels;
       while (remainingLevels > 0) {
@@ -23630,14 +24174,13 @@ async function upgradeCity(cityId, levels = 1) {
         const upgraded = Math.max(0, Math.floor(Number(result?.upgraded) || chunkLevels));
         totalUpgraded += upgraded;
         totalSpent += Math.max(0, Math.floor(Number(result?.spentGold) || 0));
-        totalTroopsAwarded += Math.max(0, Math.floor(Number(result?.troopsAwarded) || 0));
         remainingLevels -= upgraded;
         if (upgraded < chunkLevels) break;
       }
       const updatedCity = cityById(city.id) || city;
       const levelText = totalUpgraded > 1 ? `${formatNumber(totalUpgraded)} levels` : "1 level";
       addLog(`${updatedCity.name} upgraded ${levelText} to level ${formatNumber(updatedCity.level)}${totalSpent ? ` for ${formatNumber(totalSpent)} gold` : ""}.`);
-      showToast(`${updatedCity.name} upgraded ${levelText}${totalTroopsAwarded ? ` · +${formatNumber(totalTroopsAwarded)} level-up troops` : ""}`);
+      showToast(`${updatedCity.name} upgraded ${levelText}`);
       renderAll();
     } catch (error) {
       onlineLastError = error?.message || String(error);
@@ -23655,7 +24198,6 @@ async function upgradeCity(cityId, levels = 1) {
     return;
   }
   let upgraded = 0;
-  let xpAward = 0;
   while (upgraded < requestedLevels) {
     const cost = getLevelCost(city);
     if (!Number.isFinite(cost) || state.gold < cost) break;
@@ -23664,7 +24206,6 @@ async function upgradeCity(cityId, levels = 1) {
     const nextLevel = clampCityLevel(city.level + 1);
     if (nextLevel <= city.level) break;
     city.level = nextLevel;
-    xpAward += getCityUpgradeXpAward(city);
     upgraded += 1;
   }
 
@@ -23676,7 +24217,6 @@ async function upgradeCity(cityId, levels = 1) {
 
   addLog(`${city.name} upgraded to level ${city.level}.`);
   showToast(`${city.name} upgraded`);
-  addCharacterXp(xpAward, `${city.name} upgrade`);
   markOwnedCityChanged(city);
   saveGame();
   renderAll();
@@ -23874,7 +24414,7 @@ function calculateBattlePreviewForTroops(source, target, amount, knownRoute = nu
     ? 0
     : result.success
       ? getCaptureXpAward(target, target.owner, result.defenderLosses, "player")
-      : getFailedAttackXpAward(target, target.owner, Math.max(0, Math.floor(Number(target.troops) || 0)), "player");
+      : getFailedAttackXpAward(target, target.owner, result.defenderLosses, "player");
   const xpLabel = attackProtection ? "attacker XP" : result.success ? "capture XP" : "defeat XP";
   const cooldownRemaining = getCaptureCooldownRemaining(target);
   let label = "Weak odds";
@@ -24069,7 +24609,7 @@ function updateIncomingAttackUi() {
 function updateOutgoingAttackUi() {
   if (!outgoingAttackBtn) return;
   const operations = getActiveOperationsSnapshot();
-  const total = operations.marches.length + operations.reinforcements.length + operations.camps.length + operations.strongholds.length;
+  const total = operations.marches.length + operations.rallies.length + operations.reinforcements.length + operations.camps.length + operations.strongholds.length;
   outgoingAttackBtn.hidden = total === 0;
   outgoingAttackBtn.classList.toggle("active", total > 0);
   if (!total) {
@@ -24088,11 +24628,14 @@ function updateOutgoingAttackUi() {
     .sort((a, b) => Math.max(0, Number(a.remaining) || 0) - Math.max(0, Number(b.remaining) || 0));
   const status = travelingArmies.length
     ? travelingArmies[0].serverPending ? "Sending" : formatDuration(travelingArmies[0].remaining)
+    : operations.rallies.length
+      ? "Rallies"
     : soonestCamp
       ? formatDuration(Math.max(0, Math.ceil((soonestCamp.payoutAtMs - Date.now()) / 1000)))
       : operations.reinforcements.length ? "Support" : "Holdings";
   const titleParts = [];
   if (operations.marches.length) titleParts.push(formatOutgoingMissionSummary(operations.marches));
+  if (operations.rallies.length) titleParts.push(`${formatNumber(operations.rallies.length)} active ${operations.rallies.length === 1 ? "rally" : "rallies"}`);
   if (operations.reinforcements.length) titleParts.push(formatReinforcementOperationSummary(operations.reinforcements));
   if (operations.camps.length) titleParts.push(`${formatNumber(operations.camps.length)} held ${operations.camps.length === 1 ? "camp" : "camps"}`);
   if (operations.strongholds.length) titleParts.push(`${formatNumber(operations.strongholds.length)} held ${operations.strongholds.length === 1 ? "stronghold" : "strongholds"}`);
@@ -24140,6 +24683,7 @@ function getActiveOperationsSnapshot() {
   const incomingReinforcements = getIncomingClanReinforcementMarches();
   return {
     marches: outgoingMarches.filter(mission => mission.kind !== "reinforce" && !mission.reinforcementReturn),
+    rallies: onlineClanRallies.slice(),
     camps: getHeldCampsForActiveOperations(),
     strongholds: getHeldStrongholdsForActiveOperations(),
     reinforcements: [
@@ -24200,9 +24744,10 @@ function getArmyKindCounts(missions) {
     else if (mission.kind === "scout") counts.scouts += 1;
     else if (mission.kind === "transfer") counts.transfers += 1;
     else if (mission.kind === "reinforce") counts.reinforcements += 1;
+    else if (mission.kind === "rally_join") counts.rallyJoins += 1;
     else counts.attacks += 1;
     return counts;
-  }, { attacks: 0, scouts: 0, transfers: 0, reinforcements: 0, returns: 0 });
+  }, { attacks: 0, scouts: 0, transfers: 0, reinforcements: 0, rallyJoins: 0, returns: 0 });
 }
 
 function getIncomingThreatCounts(incoming) {
@@ -24224,6 +24769,7 @@ function formatOutgoingMissionSummary(outgoing) {
   if (counts.scouts) parts.push(`${formatNumber(counts.scouts)} outgoing ${counts.scouts === 1 ? "scout" : "scouts"}`);
   if (counts.transfers) parts.push(`${formatNumber(counts.transfers)} ${counts.transfers === 1 ? "troop transfer" : "troop transfers"}`);
   if (counts.reinforcements) parts.push(`${formatNumber(counts.reinforcements)} clan ${counts.reinforcements === 1 ? "reinforcement" : "reinforcements"}`);
+  if (counts.rallyJoins) parts.push(`${formatNumber(counts.rallyJoins)} rally ${counts.rallyJoins === 1 ? "contribution" : "contributions"}`);
   if (counts.returns) parts.push(`${formatNumber(counts.returns)} returning ${counts.returns === 1 ? "army" : "armies"}`);
   return parts.join(", ") || "No active marches";
 }
@@ -24319,7 +24865,7 @@ async function focusIncomingAttackCity(cityId) {
 
 function showOutgoingAttacksModal() {
   const operations = getActiveOperationsSnapshot();
-  const total = operations.marches.length + operations.reinforcements.length + operations.camps.length + operations.strongholds.length;
+  const total = operations.marches.length + operations.rallies.length + operations.reinforcements.length + operations.camps.length + operations.strongholds.length;
   if (!total) {
     showToast("No active marches or controlled objectives right now.");
     updateOutgoingAttackUi();
@@ -24328,6 +24874,8 @@ function showOutgoingAttacksModal() {
   if (!operations[activeOperationsTab]?.length) {
     activeOperationsTab = operations.marches.length
       ? "marches"
+      : operations.rallies.length
+        ? "rallies"
       : operations.reinforcements.length
         ? "reinforcements"
       : operations.camps.length
@@ -24343,16 +24891,19 @@ function showOutgoingAttacksModal() {
 function renderOutgoingAttacksModalContent(operations = getActiveOperationsSnapshot()) {
   const normalizedOperations = operations?.marches
     ? operations
-    : { marches: Array.isArray(operations) ? operations : [], camps: getHeldCampsForActiveOperations(), strongholds: getHeldStrongholdsForActiveOperations(), reinforcements: [] };
-  const { marches, camps, strongholds, reinforcements = [] } = normalizedOperations;
+    : { marches: Array.isArray(operations) ? operations : [], rallies: onlineClanRallies.slice(), camps: getHeldCampsForActiveOperations(), strongholds: getHeldStrongholdsForActiveOperations(), reinforcements: [] };
+  const { marches, rallies = [], camps, strongholds, reinforcements = [] } = normalizedOperations;
   const tabs = [
     { id: "marches", label: "Marches", count: marches.length },
+    { id: "rallies", label: "Rallies", count: rallies.length },
     { id: "reinforcements", label: "Reinforcements", count: reinforcements.length },
     { id: "camps", label: "Camps", count: camps.length },
     { id: "strongholds", label: "Strongholds", count: strongholds.length },
   ];
   if (!tabs.some(tab => tab.id === activeOperationsTab)) activeOperationsTab = "marches";
-  const panel = activeOperationsTab === "reinforcements"
+  const panel = activeOperationsTab === "rallies"
+    ? renderClanRallyOperationPanel(rallies)
+    : activeOperationsTab === "reinforcements"
     ? renderReinforcementOperationPanel(reinforcements)
     : activeOperationsTab === "camps"
     ? renderHeldCampsOperationPanel(camps)
@@ -24397,7 +24948,21 @@ function renderOutgoingAttacksModalContent(operations = getActiveOperationsSnaps
   modalBody.querySelectorAll("[data-recall-horn]").forEach(button => {
     button.addEventListener("click", () => useRecallHornOnMission(button.dataset.recallHorn));
   });
+  bindClanRallyControls(modalBody);
   bindHoldingReinforcementButtons();
+}
+
+function renderClanRallyOperationPanel(rallies = []) {
+  if (!rallies.length) return `<div class="incoming-attack-empty">No clan rallies are active.</div>`;
+  return `
+    <div class="clan-rally-operation-panel">
+      <div class="incoming-attack-summary">
+        <strong>${formatNumber(rallies.length)}</strong>
+        <span>${rallies.length === 1 ? "One coordinated assault is" : `${formatNumber(rallies.length)} coordinated assaults are`} active.</span>
+        <small>Only clan members can see forming rally targets.</small>
+      </div>
+      <div class="clan-rally-list">${rallies.map(renderClanRallyCard).join("")}</div>
+    </div>`;
 }
 
 function renderReinforcementOperationPanel(entries = []) {
@@ -24594,7 +25159,7 @@ function isSwiftMarchOrderEligible(mission) {
 }
 
 function isRecallHornEligible(mission) {
-  if (!mission || mission.owner !== "player" || mission.kind === "scout" || mission.returning || mission.campReturn) return false;
+  if (!mission || mission.owner !== "player" || ["scout", "rally_join"].includes(mission.kind) || mission.returning || mission.campReturn) return false;
   if (mission.serverPending || mission.isResolving) return false;
   if (!getOnlineArmyResolutionId(mission)) return false;
   return Math.max(0, Number(mission.remaining) || 0) > 1;
@@ -24718,9 +25283,10 @@ function renderOutgoingAttackCard(mission) {
   const ownerName = city ? getBattleReportOwnerName(city, city.owner) : "Unknown owner";
   const isScout = mission.kind === "scout";
   const isTransfer = mission.kind === "transfer";
+  const isRallyJoin = mission.kind === "rally_join";
   const isCampReturn = isTransfer && Boolean(mission.campReturn);
   const isReinforcement = isTransfer && Boolean(city && (isStronghold(city) || isRewardCampTarget(city)));
-  const missionLabel = isReturning ? "Returning" : isScout ? "Scout" : isCampReturn ? "Camp Recall" : isReinforcement ? "Reinforce" : isTransfer ? "Transfer" : "Attack";
+  const missionLabel = isReturning ? "Returning" : isScout ? "Scout" : isRallyJoin ? "Rally Assembly" : isCampReturn ? "Camp Recall" : isReinforcement ? "Reinforce" : isTransfer ? "Transfer" : "Attack";
   const forceDetails = isScout
     ? `1 scout from ${escapeHtml(sourceName)}`
     : `${formatNumber(mission.troops)} troops from ${escapeHtml(sourceName)}`;
@@ -24728,6 +25294,8 @@ function renderOutgoingAttackCard(mission) {
     ? `Recalled before reaching ${escapeHtml(originalTargetName)}`
     : isCampReturn
     ? `Withdrawing stationed troops to ${escapeHtml(targetName)}`
+    : isRallyJoin
+    ? `Joining the clan rally at ${escapeHtml(targetName)}`
     : isTransfer
     ? `${isReinforcement ? "Reinforcing" : "Moving troops to"} ${escapeHtml(targetName)}`
     : city
@@ -24756,7 +25324,7 @@ function renderOutgoingAttackCard(mission) {
     : "";
 
   return `
-    <article class="incoming-attack-card outgoing-attack-card ${isReturning ? "outgoing-return-card" : isScout ? "outgoing-scout-card" : isTransfer ? "outgoing-transfer-card" : ""}">
+    <article class="incoming-attack-card outgoing-attack-card ${isReturning ? "outgoing-return-card" : isScout ? "outgoing-scout-card" : isTransfer || isRallyJoin ? "outgoing-transfer-card" : ""}">
       <div class="incoming-attack-badge">
         <strong>${mission.serverPending ? "Sending" : mission.isResolving ? "Resolving" : formatDuration(mission.remaining)}</strong>
         <small>${missionLabel}</small>
@@ -25513,7 +26081,7 @@ function showHelpModal() {
       <li>Army travel uses route distance plus troop-size bands. Larger armies march slower, scouts move as one troop, and March Orders reduces travel time.</li>
       <li>Glowing pickups appear near your owned cities on the current island during active play every three minutes, alternating between ten minutes of gold and troop production. Daily pickup limits are ${formatNumber(HARVEST_BONUS_DAILY_GOLD_LIMIT)} gold and ${formatNumber(HARVEST_BONUS_DAILY_TROOP_LIMIT)} troop pickups.</li>
       <li>Swordmastery boosts outgoing attack, Guild Charters reduces city upgrade cost, and Field Medics returns part of battle losses to your main city.</li>
-      <li>Captured cities enter a one-hour XP cooldown. Attacking during cooldown still works, but capture XP is reduced.</li>
+      <li>Captured cities enter a one-hour city-XP cooldown. Attacks still earn troop-loss XP, but the fixed city/wall XP component is unavailable until the cooldown ends.</li>
       <li>Main cities cannot be attacked. Use your main city as a protected home base while expanding from other cities.</li>
       <li>Demo Attacks protect weaker kingdoms: much stronger attackers send fewer effective troops, march slower, earn 0 XP, and defenders earn bonus XP.</li>
       <li>Shop items have UTC daily purchase limits. Reward Camp items are earned separately through contested objectives.</li>
@@ -26202,6 +26770,31 @@ function resolveArmyTapToken(event) {
   return token && armyLayer.contains(token) && token.dataset.endpointInteractionDisabled !== "true" ? token : null;
 }
 
+function resolveMapTapTargets(event, prioritizeCity = false) {
+  if (prioritizeCity) {
+    const cityButton = resolveCityTapButton(event);
+    if (cityButton) return { cityButton, armyToken: null };
+    return { cityButton: null, armyToken: resolveArmyTapToken(event) };
+  }
+  const armyToken = resolveArmyTapToken(event);
+  if (armyToken) return { cityButton: null, armyToken };
+  return { cityButton: resolveCityTapButton(event), armyToken: null };
+}
+
+function getMapNodeTapMovementTolerance(pointerType = "", zoomLevel = zoom) {
+  const baseTolerance = pointerType === "touch" ? MAP_TOUCH_TAP_TOLERANCE : MAP_TOUCH_PAN_THRESHOLD;
+  const lowZoomBonus = Number(zoomLevel) <= LOW_ZOOM_PERFORMANCE_THRESHOLD
+    ? MAP_LOW_ZOOM_TAP_TOLERANCE_BONUS
+    : 0;
+  return baseTolerance + lowZoomBonus;
+}
+
+function hasMapTapMoved(tapState, event) {
+  if (!tapState || !event) return true;
+  const tolerance = getMapNodeTapMovementTolerance(tapState.pointerType, tapState.zoom);
+  return Math.hypot(event.clientX - tapState.x, event.clientY - tapState.y) > tolerance;
+}
+
 function trackCityTap(event, cityButton = resolveCityTapButton(event)) {
   if (!cityButton || !cityLayer.contains(cityButton)) return null;
   cityTapState = {
@@ -26209,6 +26802,8 @@ function trackCityTap(event, cityButton = resolveCityTapButton(event)) {
     cityId: cityButton.dataset.cityId,
     x: event.clientX,
     y: event.clientY,
+    pointerType: event.pointerType || "",
+    zoom,
     selected: false,
   };
   return cityButton;
@@ -26221,6 +26816,8 @@ function trackCampTap(event, campButton = resolveCampTapButton(event)) {
     campId: campButton.dataset.campId,
     x: event.clientX,
     y: event.clientY,
+    pointerType: event.pointerType || "",
+    zoom,
   };
   return campButton;
 }
@@ -26232,6 +26829,8 @@ function trackArmyTap(event, token = resolveArmyTapToken(event)) {
     tokenId: token.dataset.armyTokenId,
     x: event.clientX,
     y: event.clientY,
+    pointerType: event.pointerType || "",
+    zoom,
   };
   return token;
 }
@@ -26253,6 +26852,8 @@ function beginTrackedPan(event, startedOnMapNode = false) {
     cameraY: camera.y,
     moved: false,
     startedOnMapNode,
+    pointerType: event.pointerType || "",
+    zoom,
   };
   suppressMapClick = false;
   mapFrame.classList.add("dragging");
@@ -26263,8 +26864,9 @@ function startPan(event) {
 
   const isTouch = event.pointerType === "touch";
   const startedOnCommand = isMapCommandInteractionTarget(event.target);
-  const armyToken = startedOnCommand ? null : resolveArmyTapToken(event);
-  const cityButton = armyToken || startedOnCommand ? null : resolveCityTapButton(event);
+  const { cityButton, armyToken } = startedOnCommand
+    ? { cityButton: null, armyToken: null }
+    : resolveMapTapTargets(event, sendMode);
   if (cityButton) trackCityTap(event, cityButton);
   if (armyToken) trackArmyTap(event, armyToken);
   const startedOnMapNode = Boolean(cityButton || armyToken) || isMapNodeInteractionTarget(event.target);
@@ -26297,7 +26899,9 @@ function movePan(event) {
   const dx = event.clientX - panState.startX;
   const dy = event.clientY - panState.startY;
   const distance = Math.hypot(dx, dy);
-  const movementThreshold = panState.startedOnMapNode ? MAP_TOUCH_PAN_THRESHOLD : 5;
+  const movementThreshold = panState.startedOnMapNode
+    ? getMapNodeTapMovementTolerance(panState.pointerType, panState.zoom)
+    : 5;
   if (distance > movementThreshold) {
     panState.moved = true;
     if (cityTapState?.pointerId === event.pointerId) cityTapState = null;
@@ -26340,8 +26944,7 @@ function trySelectTrackedCityTap(event, { requireSameTarget = false } = {}) {
   if (!cityTapState || cityTapState.pointerId !== event.pointerId) return false;
   const tapState = cityTapState;
   cityTapState = null;
-  const moved = Math.hypot(event.clientX - tapState.x, event.clientY - tapState.y) > 12;
-  if (moved) return false;
+  if (hasMapTapMoved(tapState, event)) return false;
   if (requireSameTarget) {
     const cityButton = resolveCityTapButton(event);
     const sameCity = cityButton && cityLayer.contains(cityButton) && cityButton.dataset.cityId === tapState.cityId;
@@ -26360,8 +26963,7 @@ function trySelectTrackedCampTap(event, { requireSameTarget = false } = {}) {
   if (!campTapState || campTapState.pointerId !== event.pointerId) return false;
   const tapState = campTapState;
   campTapState = null;
-  const moved = Math.hypot(event.clientX - tapState.x, event.clientY - tapState.y) > 12;
-  if (moved) return false;
+  if (hasMapTapMoved(tapState, event)) return false;
   if (requireSameTarget) {
     const campButton = resolveCampTapButton(event);
     const sameCamp = campButton?.dataset.campId === tapState.campId;
@@ -26380,8 +26982,7 @@ function trySelectTrackedArmyTap(event) {
   if (!armyTapState || armyTapState.pointerId !== event.pointerId) return false;
   const tapState = armyTapState;
   armyTapState = null;
-  const moved = Math.hypot(event.clientX - tapState.x, event.clientY - tapState.y) > 12;
-  if (moved || !getArmyByTokenId(tapState.tokenId)) return false;
+  if (hasMapTapMoved(tapState, event) || !getArmyByTokenId(tapState.tokenId)) return false;
   suppressMapClick = true;
   selectedArmyTokenId = selectedArmyTokenId === tapState.tokenId ? "" : tapState.tokenId;
   updateArmyTokenNavigationSelection();
@@ -26589,7 +27190,7 @@ cityLayer.addEventListener("pointerup", event => {
   if (isMapInteractionBlocked()) return;
   if (campTapState?.pointerId === event.pointerId) {
     const campButton = resolveCampTapButton(event);
-    const moved = Math.hypot(event.clientX - campTapState.x, event.clientY - campTapState.y) > 12;
+    const moved = hasMapTapMoved(campTapState, event);
     const sameCamp = campButton?.dataset.campId === campTapState.campId;
     if (!moved && sameCamp) {
       event.stopPropagation();
@@ -26602,7 +27203,7 @@ cityLayer.addEventListener("pointerup", event => {
   }
   if (!cityTapState || cityTapState.pointerId !== event.pointerId) return;
   const cityButton = resolveCityTapButton(event);
-  const moved = Math.hypot(event.clientX - cityTapState.x, event.clientY - cityTapState.y) > 12;
+  const moved = hasMapTapMoved(cityTapState, event);
   const sameCity = cityButton && cityLayer.contains(cityButton) && cityButton.dataset.cityId === cityTapState.cityId;
   if (!moved && sameCity) {
     event.stopPropagation();

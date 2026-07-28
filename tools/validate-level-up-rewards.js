@@ -20,12 +20,17 @@ function readConstant(source, name) {
 for (const name of [
   "HERO_XP_SOFT_CAP_LEVEL",
   "HERO_XP_HARD_CAP_LEVEL",
-  "HERO_XP_POST_50_SPAN",
-  "HERO_XP_POST_100_SPAN",
-  "HERO_XP_POST_50_MULTIPLIER",
-  "HERO_XP_POST_100_MULTIPLIER",
-  "HERO_XP_POST_50_EXPONENT",
-  "HERO_XP_POST_100_EXPONENT",
+  "HERO_XP_EXPONENTIAL_START_LEVEL",
+  "HERO_XP_EXPONENTIAL_GROWTH_RATE",
+  "CAPTURE_XP_BASE",
+  "CAPTURE_XP_PER_CITY_LEVEL",
+  "CAPTURE_XP_PER_DEFENDER",
+  "ENEMY_CAPTURE_XP_BONUS",
+  "DEFENSE_HELD_XP_BASE",
+  "DEFENSE_HELD_XP_PER_ATTACKER",
+  "FAILED_BATTLE_XP_RATE",
+  "BATTLE_XP_TROOP_CREDIT_CITY_WALL_MULTIPLIER",
+  "BATTLE_XP_TROOP_CREDIT_VP_MULTIPLIER",
   "BATTLE_XP_TROOP_CREDIT_LEVEL_CAP_MULTIPLIER",
   "BATTLE_XP_EARLY_LEVEL_CAP_RATE",
   "BATTLE_XP_MID_START_LEVEL_CAP_RATE",
@@ -80,8 +85,53 @@ requireMatch(
 );
 requireMatch(
   clientSource,
-  /function getXpRequiredForLevel[\s\S]*?HERO_XP_POST_100_MULTIPLIER/,
-  "Client XP requirement formula does not include the post-100 scaling."
+  /function getXpRequiredForLevel[\s\S]*?HERO_XP_EXPONENTIAL_GROWTH_RATE/,
+  "Client XP requirement formula does not include the post-25 exponential scaling."
+);
+requireMatch(
+  serverSource,
+  /function getBattleXpTroopCredit[\s\S]*?getXpRequiredForLevel\(stats\.level\)\s*\*\s*BATTLE_XP_TROOP_CREDIT_LEVEL_CAP_MULTIPLIER/,
+  "Server battle troop credit is not bounded by the target-level XP allowance."
+);
+requireMatch(
+  clientSource,
+  /function getBattleXpTroopCreditCap[\s\S]*?getXpRequiredForLevel\(stats\.level\)\s*\*\s*BATTLE_XP_TROOP_CREDIT_LEVEL_CAP_MULTIPLIER/,
+  "Client battle troop credit preview is missing the server target-level XP allowance."
+);
+requireMatch(
+  serverSource,
+  /function getCaptureXpAward[\s\S]*?const troopXp[\s\S]*?const cityXp\s*=\s*getCaptureXpCooldownRemainingMs[\s\S]*?\?\s*0[\s\S]*?return Math\.floor\(\(cityXp \+ troopXp\) \* efficiency\)/,
+  "Server capture cooldown must remove only fixed city XP while preserving troop-loss XP."
+);
+requireMatch(
+  clientSource,
+  /function getCaptureXpAward[\s\S]*?const troopXp[\s\S]*?const cityXp\s*=\s*getCaptureCooldownRemaining[\s\S]*?\?\s*0[\s\S]*?return capBattleXpForCurrentLevel\(Math\.floor\(\(cityXp \+ troopXp\) \* efficiency\)\)/,
+  "Client capture preview must remove only fixed city XP while preserving troop-loss XP."
+);
+assert.doesNotMatch(
+  clientSource,
+  /RECENT_CAPTURE_XP_MULTIPLIER/,
+  "Client still applies a blanket recent-capture XP multiplier."
+);
+requireMatch(
+  serverSource,
+  /defenseOpponentXpMultiplier\s*=\s*attackProtection[\s\S]*?getOpponentPowerXpMultiplier\(attackerKingPowerForXp\s*\/\s*defenderKingPowerForXp\)/,
+  "Server defense XP does not use the same relative-power bands as the client."
+);
+requireMatch(
+  serverSource,
+  /getCaptureXpAward\([\s\S]*?attackerKingPower:\s*attackerKingPowerForXp[\s\S]*?defenderKingPower:\s*defenderKingPowerForXp/,
+  "Server attacker XP is not based on the army's authoritative King Power snapshots."
+);
+requireMatch(
+  clientSource,
+  /getFailedAttackXpAward\(target,\s*target\.owner,\s*result\.defenderLosses/,
+  "Client battle preview does not use actual predicted defender losses for defeat XP."
+);
+requireMatch(
+  serverSource,
+  /getCaptureXpAward\(target,\s*oldOwnerUid,\s*result\.defenderLosses/,
+  "Server battle settlement does not use actual defender losses for attacker XP."
 );
 requireMatch(
   serverSource,
@@ -109,10 +159,31 @@ requireMatch(
   /function creditLevelUpTroopsToMainCity[\s\S]*?getCanonicalMainCityEntry[\s\S]*?appendEconomyCityPatch/,
   "Server level-up troops are not credited to the canonical main city through the economy write path."
 );
-requireMatch(
+const serverUpgradeCitySource = serverSource.match(
+  /exports\.upgradeCity[\s\S]*?(?=exports\.relinquishCity)/
+)?.[0] || "";
+const clientUpgradeCitySource = clientSource.match(
+  /async function upgradeCity[\s\S]*?(?=function fortifyCity)/
+)?.[0] || "";
+assert.doesNotMatch(
   serverSource,
-  /exports\.upgradeCity[\s\S]*?creditLevelUpTroopsToMainCity\([\s\S]*?progress\.levelTroopReward/,
-  "City-upgrade XP does not credit its level-up troop reward."
+  /CITY_UPGRADE_XP|getCityUpgradeXpAward/,
+  "Server still defines city-upgrade XP."
+);
+assert.doesNotMatch(
+  clientSource,
+  /CITY_UPGRADE_XP|getCityUpgradeXpAward/,
+  "Client still defines city-upgrade XP."
+);
+assert.doesNotMatch(
+  serverUpgradeCitySource,
+  /buildPlayerProgressPatch|creditLevelUpTroopsToMainCity|xpAwarded|troopsAwarded/,
+  "Server city upgrades must not award hero XP or level-up troops."
+);
+assert.doesNotMatch(
+  clientUpgradeCitySource,
+  /addCharacterXp|xpAward|troopsAwarded/,
+  "Client city upgrades must not award hero XP or level-up troops."
 );
 requireMatch(
   serverSource,
@@ -133,12 +204,8 @@ requireMatch(
 const constants = Object.fromEntries([
   "HERO_XP_SOFT_CAP_LEVEL",
   "HERO_XP_HARD_CAP_LEVEL",
-  "HERO_XP_POST_50_SPAN",
-  "HERO_XP_POST_100_SPAN",
-  "HERO_XP_POST_50_MULTIPLIER",
-  "HERO_XP_POST_100_MULTIPLIER",
-  "HERO_XP_POST_50_EXPONENT",
-  "HERO_XP_POST_100_EXPONENT",
+  "HERO_XP_EXPONENTIAL_START_LEVEL",
+  "HERO_XP_EXPONENTIAL_GROWTH_RATE",
   "BATTLE_XP_EARLY_LEVEL_CAP_RATE",
   "BATTLE_XP_MID_START_LEVEL_CAP_RATE",
   "BATTLE_XP_MID_END_LEVEL_CAP_RATE",
@@ -149,21 +216,20 @@ const constants = Object.fromEntries([
 
 function xpRequired(level) {
   const current = Math.max(1, Math.floor(level));
-  const base = 150 + current * 65 + Math.pow(current, 2.05) * 35;
-  let multiplier = 1;
-  if (current > constants.HERO_XP_SOFT_CAP_LEVEL) {
-    multiplier += Math.pow(
-      (current - constants.HERO_XP_SOFT_CAP_LEVEL) / constants.HERO_XP_POST_50_SPAN,
-      constants.HERO_XP_POST_50_EXPONENT
-    ) * constants.HERO_XP_POST_50_MULTIPLIER;
-  }
-  if (current > constants.HERO_XP_HARD_CAP_LEVEL) {
-    multiplier += Math.pow(
-      (current - constants.HERO_XP_HARD_CAP_LEVEL) / constants.HERO_XP_POST_100_SPAN,
-      constants.HERO_XP_POST_100_EXPONENT
-    ) * constants.HERO_XP_POST_100_MULTIPLIER;
-  }
-  return Math.floor(base * multiplier);
+  const legacyRequirement = value => Math.floor(
+    150 + value * 65 + Math.pow(value, 2.05) * 35
+  );
+  if (current <= constants.HERO_XP_EXPONENTIAL_START_LEVEL) return legacyRequirement(current);
+  const anchor = legacyRequirement(constants.HERO_XP_EXPONENTIAL_START_LEVEL);
+  const requirement = anchor * Math.pow(
+    constants.HERO_XP_EXPONENTIAL_GROWTH_RATE,
+    current - constants.HERO_XP_EXPONENTIAL_START_LEVEL
+  );
+  if (!Number.isFinite(requirement)) return Number.MAX_SAFE_INTEGER;
+  return Math.min(
+    Number.MAX_SAFE_INTEGER,
+    Math.floor(requirement)
+  );
 }
 
 function battleCapRate(level) {
@@ -186,11 +252,20 @@ function battleCapRate(level) {
 }
 
 assert.equal(battleCapRate(50), 1, "Levels 1-50 should allow one decisive battle to fill one level.");
-assert.ok(battleCapRate(75) > 0.6 && battleCapRate(75) < 0.7, "Midgame battle pacing should need about two strong fights.");
+assert.equal(battleCapRate(51), 0.99, "The post-50 cap should decline smoothly without a cliff.");
+assert.equal(battleCapRate(75), 0.75, "Level 75 should allow up to 75% of one level per battle.");
 assert.equal(battleCapRate(100), 0.5, "Level 100 battle cap should be half a level.");
-assert.ok(battleCapRate(101) < 0.3, "Endgame pacing should become challenging immediately after level 100.");
-assert.equal(battleCapRate(150), 0.15, "Late endgame battle cap should settle at 15% of a level.");
+assert.equal(battleCapRate(101), 0.497, "The post-100 cap should decline smoothly without a cliff.");
+assert.equal(battleCapRate(125), 0.425, "Level 125 should allow up to 42.5% of one level per battle.");
+assert.equal(battleCapRate(150), 0.35, "Late endgame battle cap should settle at 35% of a level.");
+assert.equal(battleCapRate(200), 0.35, "The late-game cap floor must remain stable.");
+assert.equal(xpRequired(25), 27469, "The current level-25 progression anchor changed.");
+assert.equal(xpRequired(50), 297618, "Level 50 does not use the recommended 10% post-25 curve.");
+assert.equal(xpRequired(75), 3224609, "Level 75 does not use the recommended 10% post-25 curve.");
+assert.equal(xpRequired(100), 34937693, "Level 100 does not use the recommended 10% post-25 curve.");
+assert.equal(xpRequired(150), 4101365691, "Level 150 does not use the recommended 10% post-25 curve.");
+assert.equal(xpRequired(500), Number.MAX_SAFE_INTEGER, "Extreme hero levels must stay within safe integer bounds.");
 assert.ok(xpRequired(100) > xpRequired(50) * 10, "Levels 50-100 are not scaling enough.");
 assert.ok(xpRequired(150) > xpRequired(100) * 10, "Levels above 100 are not endgame-scaled.");
 
-console.log("Validated three-phase XP pacing and production-based level-up gold/troop relief.");
+console.log("Validated aligned battle XP, smooth caps, post-25 progression, battle-only XP, and level-up relief.");

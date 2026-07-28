@@ -33,5 +33,5 @@ jobs:
         run: node tools/stamp-deploy-build.js --check
       - name: Install pinned Firebase CLI
         run: npm install --global firebase-tools@15.22.4
-      - name: Run 50-player emulator gate
-        run: firebase emulators:exec --project crown-land-b15e0 --only auth,firestore,functions "node functions/test/emulator-reset-gate.js"
+      - name: Run 50-player and rally emulator gates
+        run: firebase emulators:exec --project crown-land-b15e0 --only auth,firestore,functions "node functions/test/emulator-reset-gate.js && node functions/test/emulator-rally-rules.js"

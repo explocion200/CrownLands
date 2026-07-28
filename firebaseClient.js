@@ -349,6 +349,26 @@
     return callServerFunction("sendArmyOrder", payload);
   }
 
+  async function createClanRally(payload = {}) {
+    return callServerFunction("createClanRally", payload);
+  }
+
+  async function joinClanRally(payload = {}) {
+    return callServerFunction("joinClanRally", payload);
+  }
+
+  async function withdrawClanRallyContribution(payload = {}) {
+    return callServerFunction("withdrawClanRallyContribution", payload);
+  }
+
+  async function launchClanRally(payload = {}) {
+    return callServerFunction("launchClanRally", payload);
+  }
+
+  async function cancelClanRally(payload = {}) {
+    return callServerFunction("cancelClanRally", payload);
+  }
+
   async function previewArmyProtection(payload = {}) {
     return callServerFunction("previewArmyProtection", payload);
   }
@@ -624,6 +644,35 @@
       },
       error => {
         if (typeof handlers.onError === "function") handlers.onError(error);
+      }
+    );
+  }
+
+  function subscribeClanRallies(clanId = "", handlers = {}) {
+    if (!client.db || !client.modules?.firestore?.onSnapshot || !client.user?.uid || !clanId) return () => {};
+    const { collection, onSnapshot, query, where } = client.modules.firestore;
+    const safeClanId = String(clanId).slice(0, 128);
+    return onSnapshot(
+      query(
+        collection(client.db, "clans", safeClanId, "rallies"),
+        where("resetGeneration", "==", RESET_GENERATION),
+        where("worldId", "==", ONLINE_WORLD_ID),
+        where("status", "in", ["forming", "launched", "recalling"])
+      ),
+      snapshot => {
+        if (typeof handlers.onRallies !== "function") return;
+        handlers.onRallies(
+          snapshot.docs
+            .map(item => ({ id: item.id, ...item.data() }))
+            .sort((left, right) => Number(right.createdAtMs || 0) - Number(left.createdAtMs || 0)),
+          snapshot.docChanges().map(change => ({
+            type: change.type,
+            rally: { id: change.doc.id, ...change.doc.data() },
+          }))
+        );
+      },
+      error => {
+        if (typeof handlers.onError === "function") handlers.onError(error, "rallies");
       }
     );
   }
@@ -1952,6 +2001,7 @@
     subscribeClanState,
     subscribeClanApplications,
     subscribeClanSocialState,
+    subscribeClanRallies,
     recalculatePlayerGlobalStats,
     recalculateAllPlayerGlobalStats,
     getCombatPlayerIdentity,
@@ -1970,6 +2020,11 @@
     loadCrownCitadelReignLeaderboard,
     subscribePlayerGlobalStats,
     sendArmyOrder,
+    createClanRally,
+    joinClanRally,
+    withdrawClanRallyContribution,
+    launchClanRally,
+    cancelClanRally,
     previewArmyProtection,
     resolveArmyOrder,
     returnClanReinforcement,
