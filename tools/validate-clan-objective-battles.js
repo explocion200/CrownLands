@@ -7,6 +7,7 @@ const root = path.resolve(__dirname, "..");
 const read = file => fs.readFileSync(path.join(root, file), "utf8");
 const server = read("functions/index.js");
 const client = read("game.js");
+const styles = read("styles.css");
 const firebaseClient = read("firebaseClient.js");
 const rules = read("firestore.rules");
 const packageJson = JSON.parse(read("functions/package.json"));
@@ -241,6 +242,32 @@ assert.doesNotMatch(
   /renderBattleClanIdentity|renderClanShield|clanTag|clanName/,
   "Reinforcement rows repeat the defending clan's branding."
 );
+const compactReportCard = extractFunction(client, "renderBattleReportCard");
+assert.doesNotMatch(
+  compactReportCard,
+  /report\.summary|getBattleReportSummary|<small>\$\{escapeHtml\(report/,
+  "Compact report rows expose battle detail text beneath the target name."
+);
+requires(
+  compactReportCard,
+  /data-battle-report-target-flag[\s\S]*?battle-report-opponent[\s\S]*?<strong>\$\{escapeHtml\(opponent\)\}<\/strong>/,
+  "Compact report rows do not limit the target identity to its optional kingdom flag and name."
+);
+requires(
+  client,
+  /function applyBattleReportTargetFlags[\s\S]*?applyFlagToElement\(flag,\s*report\.opponentFlag\)/,
+  "Compact report target flags are not hydrated from report snapshots."
+);
+requires(
+  server,
+  /function makeReport[\s\S]*?opponentFlag:\s*normalizeServerFlag\(opponentFlag\)/,
+  "Authoritative battle reports do not preserve the opponent kingdom flag."
+);
+requires(
+  styles,
+  /\.battle-report-opponent\s*\{[\s\S]*?display:\s*flex[\s\S]*?\.battle-report-target-flag\s*\{/,
+  "Compact report target flags are not aligned with the target name."
+);
 requires(
   client,
   /function renderObjectiveClanAffiliation[\s\S]*?renderClanShield[\s\S]*?data-public-clan-id/,
@@ -251,4 +278,4 @@ assert.ok(
   "The clan objective battle validator is not part of the Functions validation suite."
 );
 
-console.log("Validated clan objective precedence, benefit authority, per-owner defense, private snapshots, and detailed report presentation.");
+console.log("Validated clan objective precedence, benefit authority, per-owner defense, private snapshots, and compact/detailed report presentation.");

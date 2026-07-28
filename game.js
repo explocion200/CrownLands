@@ -8013,6 +8013,9 @@ function normalizeBattleReports(reports) {
         ),
         totalDefenseBonus: Math.max(0, Math.floor(Number(report.totalDefenseBonus) || 0)),
         opponentName: String(report.opponentName || "").slice(0, 40),
+        opponentFlag: report.opponentFlag && typeof report.opponentFlag === "object"
+          ? normalizeFlag(report.opponentFlag)
+          : null,
         ownerName: String(report.ownerName || "").slice(0, 40),
         summary: String(report.summary || "").slice(0, 220),
         xpAwarded: Math.max(0, Math.floor(Number(report.xpAwarded) || 0)),
@@ -8407,6 +8410,7 @@ function completeScoutMission(attack, target) {
       totalDefenseBonus: stats.totalDefenseBonus,
       ownerName: getCityOwnerDisplayName(target),
       opponentName: getCityOwnerDisplayName(target),
+      opponentFlag: getCityOwnerFlag(target),
       summary: `Scout reached ${target.name}, now under your control. ${formatNumber(joined)} scout joined the garrison.`,
     });
     addLog(`The scout joined your garrison at ${target.name}.`);
@@ -8429,6 +8433,7 @@ function completeScoutMission(attack, target) {
     totalDefenseBonus: report.totalDefenseBonus,
     ownerName: report.ownerName,
     opponentName: report.ownerName,
+    opponentFlag: getCityOwnerFlag(target),
     summary: `Scout revealed ${formatNumber(report.troops)} troops at ${target.name}.`,
   });
   addLog(`Scouts reported ${formatNumber(target.troops)} troops stationed at ${target.name}.`);
@@ -16368,6 +16373,10 @@ function resolveAttack(attack) {
   const attackerReportName = attack.owner === "player"
     ? getBattleReportOwnerName(null, attack.owner)
     : attackOwnerIdentity?.displayName || attack.ownerName || getBattleReportOwnerName(null, attack.owner);
+  const attackerReportFlag = attack.owner === "player"
+    ? normalizeFlag(state.flag)
+    : attackOwnerIdentity?.flag || attack.ownerFlag || null;
+  const defenderReportFlag = oldOwner === "neutral" ? null : getCityOwnerFlag(target);
   const attackSource = cityById(attack.fromId);
   const targetLevel = clampCityLevel(target.level);
   const defendersAtStart = Math.max(0, Math.floor(Number(target.troops) || 0));
@@ -16396,6 +16405,7 @@ function resolveAttack(attack) {
         baseTotalDefense: targetStatsAtStart.baseTotalDefense,
         totalDefenseBonus: targetStatsAtStart.totalDefenseBonus,
         opponentName: defenderName,
+        opponentFlag: defenderReportFlag,
         summary: `Main cities cannot be attacked. ${returnText}`,
       });
       showToast(`${target.name} is a main city. Troops returned.`);
@@ -16416,6 +16426,7 @@ function resolveAttack(attack) {
         baseTotalDefense: targetStatsAtStart.baseTotalDefense,
         totalDefenseBonus: targetStatsAtStart.totalDefenseBonus,
         opponentName: attackerReportName,
+        opponentFlag: attackerReportFlag,
         summary: `Main city protection blocked ${attackerReportName}'s attack. ${returnText}`,
       });
       showToast(`Main city protection blocked an attack on ${target.name}`);
@@ -16447,6 +16458,7 @@ function resolveAttack(attack) {
         baseTotalDefense: targetStatsAtStart.baseTotalDefense,
         totalDefenseBonus: targetStatsAtStart.totalDefenseBonus,
         opponentName: defenderName,
+        opponentFlag: defenderReportFlag,
         summary: `Royal Peace Shield blocked the attack. ${returnText}`,
       });
       showToast(`${target.name} is shielded. Troops returned.`);
@@ -16467,6 +16479,7 @@ function resolveAttack(attack) {
         baseTotalDefense: targetStatsAtStart.baseTotalDefense,
         totalDefenseBonus: targetStatsAtStart.totalDefenseBonus,
         opponentName: attackerReportName,
+        opponentFlag: attackerReportFlag,
         summary: `Royal Peace Shield blocked ${attackerReportName}'s attack. ${returnText}`,
       });
       showToast(`Shield blocked an attack on ${target.name}`);
@@ -16495,6 +16508,7 @@ function resolveAttack(attack) {
       baseTotalDefense: targetStatsAtStart.baseTotalDefense,
       totalDefenseBonus: targetStatsAtStart.totalDefenseBonus,
       opponentName: defenderName,
+      opponentFlag: defenderReportFlag,
       summary: `${neutralBlockReason} The attack was canceled and ${formatNumber(returned)} troops returned.`,
     });
     addLog(`${attackerName} could not attack ${target.name}. ${neutralBlockReason}`);
@@ -16566,6 +16580,7 @@ function resolveAttack(attack) {
         baseTotalDefense: targetStatsAtStart.baseTotalDefense,
         totalDefenseBonus: targetStatsAtStart.totalDefenseBonus,
         opponentName: defenderName,
+        opponentFlag: defenderReportFlag,
         summary: `Walls breached. ${target.name} remains under enemy control; your follow-up protected assault can capture it. ${formatNumber(returned)} survivors returned. +0 XP.${protectionReportSuffix}`,
       });
       addLog(`Breach: you broke the walls at ${target.name}. ${formatNumber(returned)} survivors and ${formatNumber(savedAttackers)} recovered troops returned.`);
@@ -16594,6 +16609,7 @@ function resolveAttack(attack) {
         baseTotalDefense: targetStatsAtStart.baseTotalDefense,
         totalDefenseBonus: targetStatsAtStart.totalDefenseBonus,
         opponentName: attackerReportName,
+        opponentFlag: attackerReportFlag,
         summary: `${attackerReportName} breached ${target.name}, but did not capture it. A follow-up protected assault can capture the city. +${formatNumber(defenseHeldXp)} XP.${protectionReportSuffix}`,
       });
       if (savedDefenders > 0) addLog(`Field Medics recovered ${formatNumber(savedDefenders)} defenders.`);
@@ -16652,6 +16668,7 @@ function resolveAttack(attack) {
         baseTotalDefense: targetStatsAtStart.baseTotalDefense,
         totalDefenseBonus: targetStatsAtStart.totalDefenseBonus,
         opponentName: defenderName,
+        opponentFlag: defenderReportFlag,
         summary: `${convertedReinforcement ? "Reinforcements converted to an attack and captured the city" : "Captured"} with ${formatNumber(result.survivors)} survivors. ${formatCapturedCityLevelDrop(levelDrop)} +${formatNumber(xpAward)} XP.${protectionReportSuffix}`,
       });
       addLog(`Victory: you captured ${target.name} with ${formatNumber(result.survivors)} survivors. ${formatNumber(savedAttackers)} troops recovered. ${formatCapturedCityLevelDrop(levelDrop)} XP efficiency ${Math.round(xpEfficiency * 100)}%.`);
@@ -16682,6 +16699,7 @@ function resolveAttack(attack) {
         baseTotalDefense: targetStatsAtStart.baseTotalDefense,
         totalDefenseBonus: targetStatsAtStart.totalDefenseBonus,
         opponentName: attackerReportName,
+        opponentFlag: attackerReportFlag,
         summary: `${target.name} was captured by ${attackerReportName}${convertedReinforcement ? " after incoming reinforcements converted to an attack" : ""}. ${formatCapturedCityLevelDrop(levelDrop)} +${formatNumber(defenseLossXp)} XP.${protectionReportSuffix}`,
       });
       addLog(`Lost: the enemy captured ${target.name}. ${formatCapturedCityLevelDrop(levelDrop)} ${formatNumber(savedDefenders)} troops recovered, and you gained ${formatNumber(defenseLossXp)} XP.`);
@@ -16715,6 +16733,7 @@ function resolveAttack(attack) {
         baseTotalDefense: targetStatsAtStart.baseTotalDefense,
         totalDefenseBonus: targetStatsAtStart.totalDefenseBonus,
         opponentName: defenderName,
+        opponentFlag: defenderReportFlag,
         summary: result.raidCompleted
           ? `Protected raid completed. ${formatNumber(result.defenderLosses)} defenders lost; ${formatNumber(result.defendersLeft)} remained. All raiders were lost. +0 XP.${protectionReportSuffix}`
           : `${formatNumber(result.defendersLeft)} defenders remained. +${formatNumber(failedAttackXp)} XP.${protectionReportSuffix}`,
@@ -16746,6 +16765,7 @@ function resolveAttack(attack) {
         baseTotalDefense: targetStatsAtStart.baseTotalDefense,
         totalDefenseBonus: targetStatsAtStart.totalDefenseBonus,
         opponentName: attackerReportName,
+        opponentFlag: attackerReportFlag,
         summary: `${target.name} ${result.raidCompleted ? "survived a protected raid" : "survived"} with ${formatNumber(result.defendersLeft)} defenders. +${formatNumber(defenseHeldXp)} XP.${protectionReportSuffix}`,
       });
       addLog(`Defense held: ${target.name} survived the enemy attack.`);
@@ -25982,12 +26002,13 @@ function showLogModal() {
       </div>
       <div class="battle-report-list">
         ${filteredReports.length
-          ? filteredReports.map(renderBattleReportCard).join("")
+          ? filteredReports.map((report, index) => renderBattleReportCard(report, index)).join("")
           : `<div class="battle-report-empty">No ${battleReportFilter === "all" ? "battle" : battleReportFilter} reports yet.</div>`}
       </div>
     </div>
   `;
 
+  applyBattleReportTargetFlags(filteredReports);
   modalBody.querySelectorAll("[data-report-filter]").forEach(button => {
     button.addEventListener("click", () => {
       battleReportFilter = button.dataset.reportFilter || "all";
@@ -26001,13 +26022,16 @@ function showLogModal() {
   if (!modal.open) modal.showModal();
 }
 
-function renderBattleReportCard(report) {
+function renderBattleReportCard(report, index = 0) {
   const badge = getBattleReportBadge(report);
   const age = formatDuration(Math.max(0, state.gameSeconds - report.createdAt));
   const troopValue = report.type === "scout"
     ? report.troopCount
     : (report.sentTroops || report.troopCount || report.defendersLeft);
   const opponent = report.opponentName || report.ownerName || "Unknown";
+  const opponentFlag = report.opponentFlag
+    ? `<span class="kingdom-flag kingdom-flag-small battle-report-target-flag" data-battle-report-target-flag="${index}" role="img" aria-label="${escapeHtml(opponent)} kingdom flag"><span class="flag-symbol"></span></span>`
+    : "";
   const troopLabel = report.type === "scout" ? "reported" : "sent";
   const locateButton = renderBattleReportLocateButton(report);
   return `
@@ -26026,8 +26050,8 @@ function renderBattleReportCard(report) {
         <small>${troopLabel}</small>
       </div>
       <div class="battle-report-opponent">
+        ${opponentFlag}
         <strong>${escapeHtml(opponent)}</strong>
-        <small>${escapeHtml(report.summary || getBattleReportSummary(report))}</small>
       </div>
       <div class="battle-report-actions">
         ${locateButton}
@@ -26035,6 +26059,14 @@ function renderBattleReportCard(report) {
       </div>
     </article>
   `;
+}
+
+function applyBattleReportTargetFlags(reports = []) {
+  reports.forEach((report, index) => {
+    if (!report?.opponentFlag) return;
+    const flag = modalBody.querySelector(`[data-battle-report-target-flag="${index}"]`);
+    applyFlagToElement(flag, report.opponentFlag);
+  });
 }
 
 function renderBattleReportLocateButton(report, extraClass = "") {
