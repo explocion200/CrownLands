@@ -519,6 +519,158 @@ async function main() {
     `islands/${clanReinforcementSourceClaim.islandId}/cities/${clanReinforcementSourceClaim.cityId}`
   );
   const clanReinforcementSource = (await clanReinforcementSourceRef.get()).data() || {};
+  await clanReinforcementSourceRef.set({ troops: 10_000, troopFloat: 10_000 }, { merge: true });
+  const alliedBounceCandidatesSnapshot = await db
+    .collection(`islands/${clanReinforcementSourceClaim.islandId}/cities`)
+    .where("ownerUid", "==", null)
+    .get();
+  const alliedBounceCandidates = alliedBounceCandidatesSnapshot.docs
+    .filter(doc => !doc.data()?.strongholdType && doc.id !== clanReinforcementSourceClaim.cityId)
+    .sort((left, right) => {
+      const leftData = left.data() || {};
+      const rightData = right.data() || {};
+      const leftDistance = Math.hypot(
+        Number(leftData.x) - Number(clanReinforcementSource.x),
+        Number(leftData.y) - Number(clanReinforcementSource.y)
+      );
+      const rightDistance = Math.hypot(
+        Number(rightData.x) - Number(clanReinforcementSource.x),
+        Number(rightData.y) - Number(clanReinforcementSource.y)
+      );
+      return leftDistance - rightDistance;
+    });
+  let alliedBounceTargetDoc = null;
+  let alliedBounceLaunch = null;
+  const alliedBounceArmyId = `allied_bounce_${crypto.randomBytes(8).toString("hex")}`;
+  for (const candidate of alliedBounceCandidates) {
+    const originalTarget = candidate.data() || {};
+    const distance = Math.hypot(
+      Number(originalTarget.x) - Number(clanReinforcementSource.x),
+      Number(originalTarget.y) - Number(clanReinforcementSource.y)
+    );
+    await candidate.ref.set({
+      ownerKind: "player",
+      ownerUid: users[47].uid,
+      ownerName: "Ruler 48",
+      ownerFlag: null,
+      ownerShieldExpiresAtMs: 0,
+      isMainCity: false,
+      level: 1,
+      defense: 1,
+      troops: 100,
+      troopFloat: 100,
+    }, { merge: true });
+    try {
+      alliedBounceLaunch = await callFunction("sendArmyOrder", clanLeader.token, {
+        army: {
+          id: alliedBounceArmyId,
+          kind: "attack",
+          fromId: clanReinforcementSourceClaim.cityId,
+          toId: candidate.id,
+          fromName: clanReinforcementSource.name || clanReinforcementSourceClaim.cityId,
+          toName: originalTarget.name || candidate.id,
+          troops: 500,
+          requestedTroops: 500,
+          sourceRegionId: clanReinforcementSourceClaim.mainRegionId,
+          targetRegionId: clanReinforcementSourceClaim.mainRegionId,
+          routeRegionIds: [clanReinforcementSourceClaim.mainRegionId],
+          viewRegionIds: [clanReinforcementSourceClaim.mainRegionId],
+          path: [
+            { x: Number(clanReinforcementSource.x), y: Number(clanReinforcementSource.y) },
+            { x: Number(originalTarget.x), y: Number(originalTarget.y) },
+          ],
+          pathSegments: [{
+            regionId: clanReinforcementSourceClaim.mainRegionId,
+            points: [
+              { x: Number(clanReinforcementSource.x), y: Number(clanReinforcementSource.y) },
+              { x: Number(originalTarget.x), y: Number(originalTarget.y) },
+            ],
+            length: distance,
+          }],
+          pathLength: distance,
+        },
+        sourceRegionId: clanReinforcementSourceClaim.mainRegionId,
+        targetRegionId: clanReinforcementSourceClaim.mainRegionId,
+      });
+      alliedBounceTargetDoc = candidate;
+      break;
+    } catch (error) {
+      await candidate.ref.set(originalTarget);
+      if (!String(error?.message || "").includes("route crosses")) throw error;
+    }
+  }
+  assert(alliedBounceTargetDoc && alliedBounceLaunch, "No reachable enemy city was available for the allied bounce gate.");
+  const alliedBounceTroops = Number(alliedBounceLaunch.movement.troops || 0);
+  assert(alliedBounceTroops > 0, "The allied bounce gate did not launch troops.");
+  const alliedBounceArmyRefs = [
+    db.doc(`armies/${alliedBounceArmyId}`),
+    db.doc(`islands/${clanReinforcementSourceClaim.islandId}/armies/${alliedBounceArmyId}`),
+  ];
+  const alliedBounceTravelMs = Math.max(
+    1000,
+    Number(alliedBounceLaunch.movement.arrivesAtMs) - Number(alliedBounceLaunch.movement.launchedAtMs)
+  );
+  const forcedAlliedBounceArrivalMs = Date.now();
+  await Promise.all([
+    ...alliedBounceArmyRefs.map(ref => ref.set({
+      launchedAtMs: forcedAlliedBounceArrivalMs - alliedBounceTravelMs,
+      arrivesAtMs: forcedAlliedBounceArrivalMs - 1,
+    }, { merge: true })),
+    alliedBounceTargetDoc.ref.set({
+      ownerKind: "player",
+      ownerUid: clanApplicant.uid,
+      ownerName: "Ruler 50",
+      ownerFlag: null,
+      ownerShieldExpiresAtMs: 0,
+      isMainCity: false,
+      troops: 100,
+      troopFloat: 100,
+    }, { merge: true }),
+  ]);
+  const alliedBounceSourceAfterLaunch = Number((await clanReinforcementSourceRef.get()).data()?.troops || 0);
+  const alliedBounceStarted = await callFunction("resolveArmyOrder", clanLeader.token, {
+    armyId: alliedBounceArmyId,
+    routeRegionIds: [clanReinforcementSourceClaim.mainRegionId],
+  });
+  const [alliedBounceActiveSnapshot, alliedBounceSourceWhileReturning] = await Promise.all([
+    alliedBounceArmyRefs[0].get(),
+    clanReinforcementSourceRef.get(),
+  ]);
+  const alliedBounceActive = alliedBounceActiveSnapshot.data() || {};
+  assert(
+    alliedBounceStarted?.status === "returning"
+      && alliedBounceStarted?.outcome === "allied_return_started",
+    "An attack whose target became allied did not start a routed return."
+  );
+  assert(
+    alliedBounceActive.status === "active"
+      && alliedBounceActive.returning === true
+      && alliedBounceActive.returnStartProgress === 1
+      && alliedBounceActive.returnDestinationId === clanReinforcementSourceClaim.cityId
+      && Number(alliedBounceActive.arrivesAtMs) > Date.now(),
+    "The allied-target army did not remain active on its original reverse route."
+  );
+  assert(
+    Number(alliedBounceSourceWhileReturning.data()?.troops || 0) < alliedBounceSourceAfterLaunch + alliedBounceTroops,
+    "The allied-target troops teleported into their source city before the return arrived."
+  );
+  const alliedBounceSourceBeforeReturn = Number((await clanReinforcementSourceRef.get()).data()?.troops || 0);
+  const alliedBounceCompleted = await forceResolveMovement(alliedBounceStarted.movement, clanLeader.token);
+  const [alliedBounceResolvedSnapshot, alliedBounceSourceAfterReturn] = await Promise.all([
+    alliedBounceArmyRefs[0].get(),
+    clanReinforcementSourceRef.get(),
+  ]);
+  assert(
+    alliedBounceCompleted?.status === "resolved"
+      && alliedBounceCompleted?.kind === "return"
+      && alliedBounceCompleted?.returned === alliedBounceTroops,
+    "The routed allied-target return did not resolve at its origin."
+  );
+  assert(alliedBounceResolvedSnapshot.data()?.status === "resolved", "The completed allied return stayed active.");
+  assert(
+    Number(alliedBounceSourceAfterReturn.data()?.troops || 0) >= alliedBounceSourceBeforeReturn + alliedBounceTroops,
+    "The allied-target troops were not credited after the return reached its origin."
+  );
   const clanApplicantProfileBeforeReinforcement = (await clanApplicantRef.get()).data() || {};
   const originalApplicantMainCity = {
     id: clanApplicantProfileBeforeReinforcement.mainCityId || clanReinforcementHolderClaim.cityId,
@@ -660,11 +812,19 @@ async function main() {
         db.doc(`islands/${realm.worldId}-${regionId}/armies/${movement.id}`)
       )),
     ];
-    await Promise.all(refs.map(ref => ref.set({ arrivesAtMs: Date.now() - 1 }, { merge: true })));
-    return callFunction("resolveArmyOrder", token, {
-      armyId: movement.id,
-      routeRegionIds,
-    });
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      await Promise.all(refs.map(ref => ref.set({ arrivesAtMs: Date.now() - 1000 }, { merge: true })));
+      try {
+        return await callFunction("resolveArmyOrder", token, {
+          armyId: movement.id,
+          routeRegionIds,
+        });
+      } catch (error) {
+        if (attempt >= 2 || !/not arrived/i.test(String(error?.message || ""))) throw error;
+        await new Promise(resolve => setTimeout(resolve, 50));
+      }
+    }
+    throw new Error("Forced army resolution exhausted its retry budget.");
   }
 
   const firstClanReinforcementArrival = await forceResolveMovement(
@@ -1155,15 +1315,7 @@ async function main() {
   }
   assert(targetDoc && sent, "No reachable neutral target was available for the army smoke test.");
   assert(sent?.movement?.id === armyId, "Army order was not created.");
-  const armyRefs = [
-    db.doc(`armies/${armyId}`),
-    db.doc(`islands/${sourceClaim.islandId}/armies/${armyId}`),
-  ];
-  await Promise.all(armyRefs.map(ref => ref.set({ arrivesAtMs: Date.now() - 1 }, { merge: true })));
-  const resolved = await callFunction("resolveArmyOrder", attacker.token, {
-    armyId,
-    routeRegionIds: [sourceClaim.mainRegionId],
-  });
+  const resolved = await forceResolveMovement(sent.movement, attacker.token);
   assert(resolved?.status === "resolved" && resolved?.outcome === "victory", "Army capture smoke test failed.");
   await waitForOwnershipEvents(51);
 
@@ -1254,15 +1406,10 @@ async function main() {
     "The new defender was not marked for an incoming-attack notification."
   );
 
-  const reinforcementArmyRefs = [
-    retargetedArmyRef,
-    db.doc(`islands/${sourceClaim.islandId}/armies/${reinforcementArmyId}`),
-  ];
-  await Promise.all(reinforcementArmyRefs.map(ref => ref.set({ arrivesAtMs: Date.now() - 1 }, { merge: true })));
-  const retargetedResolution = await callFunction("resolveArmyOrder", attacker.token, {
-    armyId: reinforcementArmyId,
-    routeRegionIds: [sourceClaim.mainRegionId],
-  });
+  const retargetedResolution = await forceResolveMovement({
+    id: reinforcementArmyId,
+    ...retargetedArmy,
+  }, attacker.token);
   assert(
     retargetedResolution?.status === "resolved"
       && retargetedResolution?.kind === "attack"

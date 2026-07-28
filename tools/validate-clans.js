@@ -16,6 +16,10 @@ const showProfileSkillsSource = client.slice(
   client.indexOf("function showProfileSkills()"),
   client.indexOf("function showProfileSettings()")
 );
+const updateArmyTokenElementSource = client.slice(
+  client.indexOf("function updateArmyTokenElement("),
+  client.indexOf("function hasRenderableArmyWork()")
+);
 
 function requires(source, pattern, message) {
   assert.match(source, pattern, message);
@@ -59,7 +63,7 @@ requires(callableAccessCheck, /assert\.notEqual\(response\.status,\s*403/, "Call
 requires(callableAccessCheck, /payload\?\.error\?\.status[\s\S]*?"UNAUTHENTICATED"/, "Callable access check does not verify Firebase authentication.");
 
 requires(server, /safeString\(attackerProfile\.clanId,\s*128\)[\s\S]*?safeString\(defenderPowerData\.clanId,\s*128\)[\s\S]*?cannot scout or attack a clan ally/i, "Army launch does not reject clan allies.");
-requires(server, /const becameClanAllies[\s\S]*?outcome:\s*"allied_return"/, "Active armies do not return when their target becomes allied.");
+requires(server, /const becameClanAllies[\s\S]*?createAlliedTargetReturnMovement\(army,\s*nowMs\)[\s\S]*?status:\s*"returning"[\s\S]*?outcome:\s*"allied_return_started"/, "Active armies do not begin a routed return when their target becomes allied.");
 requires(server, /rebuildClanPowerOnPlayerStats\s*=\s*onDocumentWritten/, "Clan King Power is not updated from authoritative player stats.");
 requires(server, /function clanIdentitySnapshotFields[\s\S]*?ownerClanIdentityRevision/, "Clan asset snapshots do not store a monotonic clan identity revision.");
 requires(server, /syncClanIdentityOnMembershipChange\s*=\s*onDocumentWritten[\s\S]*?latestProfile\.clanIdentityRevision/, "Clan membership changes do not trigger durable identity propagation.");
@@ -101,6 +105,11 @@ requires(html, /id="profileKingdomFlag"[\s\S]*?id="profileClanAffiliation"/, "Pl
 requires(client, /function isClanAllyCity[\s\S]*?function getClanFriendlyBlockReason/, "Client is missing clan-allied city detection.");
 requires(client, /clanRosterReady[\s\S]*?clanMemberUidSet\.has/, "Allied-city rendering does not use the event-maintained clan member UID set.");
 requires(client, /function applyClanMembersSnapshot[\s\S]*?\["added", "removed"\][\s\S]*?refreshClanRelationshipPresentation/, "Roster events do not refresh allied cities only when membership changes.");
+requires(client, /function isCurrentClanmateArmy[\s\S]*?clanMemberUidSet\.has\(ownerUid\)[\s\S]*?identity\?\.clanId/, "Allied march paths do not use current event-driven clan membership with an identity fallback.");
+requires(client, /function getArmyRouteRelationshipClass[\s\S]*?player-route[\s\S]*?enemy-route[\s\S]*?mission\?\.returning[\s\S]*?mission\?\.reinforcementReturn[\s\S]*?mission\?\.campReturn[\s\S]*?mission\?\.kind === "transfer"[\s\S]*?mission\?\.kind === "reinforce"[\s\S]*?clan-support-route[\s\S]*?clan-hostile-route/, "March relationship classification does not distinguish personal, enemy, allied support/returns, and allied hostile routes.");
+requires(client, /function renderPaths[\s\S]*?getArmyRouteRelationshipClass\(attack\)[\s\S]*?classList\.add\("army-route-ribbon", ownerClass, kindClass\)[\s\S]*?classList\.add\("army-route-flow", ownerClass, kindClass\)/, "Rendered route ribbons and flows do not use the current clan relationship class.");
+requires(client, /function refreshClanRelationshipPresentation[\s\S]*?pathRenderSignature\s*=\s*""[\s\S]*?renderPaths\(\)/, "Clan membership events do not immediately invalidate and redraw march paths.");
+assert.doesNotMatch(updateArmyTokenElementSource, /clan-support-route|clan-hostile-route|isCurrentClanmateArmy/, "Clan path colors must not recolor moving army markers.");
 requires(client, /function showClanHub[\s\S]*?showProfileClan\(\)/, "The Clan HUD button does not open the Clan area directly.");
 requires(client, /function startClanApplicationSubscription[\s\S]*?onApplications[\s\S]*?clanApplications\s*=[\s\S]*?renderClanView/, "Clan applications do not appear live for leaders and officers.");
 requires(client, /data-clan-action="cancel-application"[\s\S]*?"cancel-application":\s*"cancelClanApplication"/, "Applicants cannot cancel a pending clan application.");
@@ -122,6 +131,11 @@ requires(client, /function saveClanShieldEditor[\s\S]*?updateClanProfile\(\{\s*s
 requires(client, /data-clan-action="shield-tab"[\s\S]*?data-shield-panel="field"[\s\S]*?data-shield-panel="colors"[\s\S]*?data-shield-panel="charges"[\s\S]*?data-shield-panel="details"/, "Mobile clan shield editor tabs are incomplete.");
 requires(client, /CLAN_SHIELD_SHAPES[\s\S]*?CLAN_SHIELD_DIVISIONS[\s\S]*?CLAN_SHIELD_CHARGES[\s\S]*?CLAN_SHIELD_FINISHES/, "Clan shield editor options are incomplete.");
 requires(styles, /\.city-node\.clan-ally \.city-ring[\s\S]*?\.clan-ally-label/, "Green accessible allied-city styling is missing.");
+requires(styles, /\.army-route-ribbon\.clan-support-route\s*\{\s*fill:\s*rgba\(43,\s*139,\s*70,/, "Allied support route ribbons do not use the city UI's dark green.");
+requires(styles, /\.army-route-flow\.clan-support-route\s*\{\s*stroke:\s*rgba\(143,\s*226,\s*165,/, "Allied support route flows do not use the city UI's light green.");
+requires(styles, /\.army-route-ribbon\.clan-hostile-route\s*\{\s*fill:\s*rgba\(239,\s*62,\s*57,/, "Allied hostile route ribbons do not retain the hostile red.");
+requires(styles, /\.army-route-flow\.clan-hostile-route\s*\{\s*stroke:\s*rgba\(121,\s*216,\s*149,/, "Allied hostile route flows do not identify the clanmate in green.");
+requires(styles, /\.army-route-flow\.scout-route\s*\{\s*stroke-dasharray:\s*8\s+15/, "Allied scouts cannot retain the scout dash pattern.");
 requires(
   styles,
   /\.city-node\.clan-ally\.targeted:not\(\.stronghold-node\)::before[\s\S]*?stroke='%2379d895'[\s\S]*?\.city-node\.clan-ally \.foreign-selected-level[\s\S]*?\.city-node\.clan-ally \.foreign-selected-crest[\s\S]*?\.clan-ally-action-wheel \.city-wheel-ring/,
@@ -140,4 +154,4 @@ requires(styles, /\.clan-shield-size-editor[\s\S]*?\.clan-shield-editor-controls
 requires(styles, /\.clan-content\.shield-editor-open[\s\S]*?\.clan-shield-editor-preview[\s\S]*?\.clan-shield-editor-workspace[\s\S]*?\.clan-shield-editor-controls[\s\S]*?overflow-y:\s*auto/, "Mobile shield editor does not keep a fixed preview beside scrollable controls.");
 requires(styles, /\.clan-member-row[\s\S]*?\.clan-member-selection[\s\S]*?\.clan-gift-panel[\s\S]*?\.clan-quest-grid[\s\S]*?\.clan-quest-card/, "Compact roster, gift, and conquest quest styling is missing.");
 
-console.log("Validated clan gates, event-driven roster updates, gifts, conquest quests, HUD access, profiles, friendly combat, rankings, allied-city UI, and leader-owned heraldic shields.");
+console.log("Validated clan gates, event-driven roster and allied route updates, gifts, conquest quests, HUD access, profiles, friendly combat, rankings, allied-city UI, and leader-owned heraldic shields.");

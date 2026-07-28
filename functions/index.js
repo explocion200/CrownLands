@@ -167,6 +167,7 @@ const SWIFT_MARCH_MINIMUM_REMAINING_MS = 1000;
 const RECALL_HORN_ITEM_ID = "recall_horn";
 const RECALL_HORN_MINIMUM_REMAINING_MS = 1000;
 const RECALL_HORN_MINIMUM_RETURN_MS = 1000;
+const ALLIED_TARGET_RETURN_REASON = "target_became_clan_ally";
 const ITEM_DAILY_PURCHASE_LIMITS = Object.freeze({
   [ROYAL_PEACE_SHIELD_ITEM_ID]: economyNumber("shopItems.shield_12h.dailyPurchaseLimit", 1),
   [WAR_DRUMS_ITEM_ID]: economyNumber("shopItems.war_drums_30m.dailyPurchaseLimit", 4),
@@ -2652,6 +2653,7 @@ function normalizeArmyPayload(data = {}, uid = "") {
         : null,
     attackProtection: raw.attackProtection && typeof raw.attackProtection === "object" ? raw.attackProtection : null,
     demoAttack: raw.demoAttack && typeof raw.demoAttack === "object" ? raw.demoAttack : null,
+    useSwiftMarchOrder: raw.useSwiftMarchOrder === true || data.useSwiftMarchOrder === true,
   };
 }
 
@@ -3189,6 +3191,51 @@ function getArmyRouteProgressAtMs(army = {}, nowMs = Date.now()) {
   }
   const totalMs = Math.max(100, safeNumber(army.total, 0.1) * 1000);
   return clamp(1 - Math.max(0, arrivesAtMs - nowMs) / totalMs, 0, 1);
+}
+
+function createAlliedTargetReturnMovement(army = {}, nowMs = Date.now()) {
+  const sourceRegionId = normalizeRegionId(army.sourceRegionId);
+  const targetRegionId = normalizeRegionId(army.targetRegionId);
+  if (!sourceRegionId || !targetRegionId || !army.fromId || !army.toId) {
+    throw new HttpsError("failed-precondition", "That troop march is missing its return route.");
+  }
+  const oldArrivesAtMs = Math.max(0, Math.floor(safeNumber(army.arrivesAtMs, 0)));
+  const fallbackTotalMs = Math.max(100, safeNumber(army.total, 0.1) * 1000);
+  const launchedAtMs = Math.max(0, Math.floor(safeNumber(
+    army.launchedAtMs,
+    oldArrivesAtMs - fallbackTotalMs
+  )));
+  const originalArrivesAtMs = Math.max(
+    oldArrivesAtMs,
+    Math.floor(safeNumber(army.swiftMarchOriginalArrivesAtMs, oldArrivesAtMs))
+  );
+  const returnDurationMs = Math.max(
+    RECALL_HORN_MINIMUM_RETURN_MS,
+    originalArrivesAtMs - launchedAtMs
+  );
+  const originalKind = ARMY_ORDER_KINDS.includes(army.kind) ? army.kind : "attack";
+  return {
+    ...army,
+    kind: "transfer",
+    launchKind: ARMY_ORDER_KINDS.includes(army.launchKind) ? army.launchKind : originalKind,
+    retargetedFromKind: originalKind,
+    returning: true,
+    returnReason: ALLIED_TARGET_RETURN_REASON,
+    recalledAtMs: nowMs,
+    recallOriginalArrivesAtMs: oldArrivesAtMs,
+    returnStartProgress: 1,
+    returnDestinationId: army.fromId,
+    returnDestinationRegionId: sourceRegionId,
+    arrivesAtMs: nowMs + returnDurationMs,
+    total: Math.max(0.1, returnDurationMs / 1000),
+    targetOwnerUid: "",
+    routeRegionIds: normalizeRegionIds([
+      ...(army.routeRegionIds || []),
+      sourceRegionId,
+      targetRegionId,
+    ]),
+    status: "active",
+  };
 }
 
 function reverseArmyRoute(pathSegments = []) {
@@ -10250,7 +10297,31 @@ exports.sendArmyOrder = timedCallable("sendArmyOrder", { region: "us-central1", 
       }
     }
 
-    const duration = calculateTravelTime({
+    const useSwiftMarchOrder = Boolean(order.useSwiftMarchOrder);
+    if (useSwiftMarchOrder) {
+      const swiftMarchArmy = {
+        ownerUid: uid,
+        kind: resolvedKind,
+        targetType: order.targetType,
+        relinquishTransfer: false,
+      };
+      if (!canUseSwiftMarchOrderOnTransfer(swiftMarchArmy, source, target, uid)) {
+        throw new HttpsError(
+          "failed-precondition",
+          "Swift March Orders only work on transfers between owned cities or reinforcements to an owned Stronghold."
+        );
+      }
+      const ownedSwiftMarchOrders = Math.max(
+        0,
+        Math.floor(safeNumber(attackerEconomy.shopItems[SWIFT_MARCH_ORDER_ITEM_ID], 0))
+      );
+      if (ownedSwiftMarchOrders <= 0) {
+        throw new HttpsError("failed-precondition", "You do not have a Swift March Order.");
+      }
+      attackerEconomy.shopItems[SWIFT_MARCH_ORDER_ITEM_ID] = ownedSwiftMarchOrders - 1;
+    }
+
+    const originalDuration = calculateTravelTime({
       pathLength: validatedRoute.pathLength,
       troopCount: troops,
       kind: resolvedKind,
@@ -10258,6 +10329,15 @@ exports.sendArmyOrder = timedCallable("sendArmyOrder", { region: "us-central1", 
       speedMultiplier: skillMultiplier(attackerProfile, "marchOrders")
         * (1 + Math.max(0, safeNumber(attackerEconomy.bonuses.marchSpeedBonusPercent, 0)) / 100),
     });
+    const originalArrivesAtMs = nowMs + Math.ceil(originalDuration * 1000);
+    const swiftMarchDurationMs = useSwiftMarchOrder
+      ? Math.max(
+          SWIFT_MARCH_MINIMUM_REMAINING_MS,
+          Math.ceil((originalArrivesAtMs - nowMs) * SWIFT_MARCH_REMAINING_TIME_MULTIPLIER)
+        )
+      : 0;
+    const duration = useSwiftMarchOrder ? swiftMarchDurationMs / 1000 : originalDuration;
+    const arrivesAtMs = useSwiftMarchOrder ? nowMs + swiftMarchDurationMs : originalArrivesAtMs;
     const movement = {
       id: order.id,
       worldId: ONLINE_WORLD_ID,
@@ -10295,7 +10375,13 @@ exports.sendArmyOrder = timedCallable("sendArmyOrder", { region: "us-central1", 
       defenderKingPower,
       attackProtection,
       launchedAtMs: nowMs,
-      arrivesAtMs: nowMs + Math.ceil(duration * 1000),
+      arrivesAtMs,
+      ...(useSwiftMarchOrder ? {
+        swiftMarchUsedAtMs: nowMs,
+        swiftMarchOriginalArrivesAtMs: originalArrivesAtMs,
+        swiftMarchProgressAtUse: 0,
+        swiftMarchRemainingMultiplier: SWIFT_MARCH_REMAINING_TIME_MULTIPLIER,
+      } : {}),
       status: "active",
       createdByServer: true,
       reinforcementModelVersion: resolvedKind === "reinforce" ? REINFORCEMENT_MODEL_VERSION : 0,
@@ -10444,7 +10530,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
       ? campRefForRegion(targetRegionId, army.toId)
       : cityRefForRegion(targetRegionId, army.toId);
     const [sourceSnap, targetSnap] = await Promise.all([transaction.get(sourceRef), transaction.get(targetRef)]);
-    const isReturning = Boolean(army.returning && army.returnReason === RECALL_HORN_ITEM_ID);
+    const isReturning = Boolean(army.returning);
     const isCampReturn = Boolean(army.campReturn);
     const isReinforcementReturn = Boolean(army.reinforcementReturn);
     if (!targetSnap.exists && !isReturning && !isCampReturn && !isReinforcementReturn) {
@@ -11080,21 +11166,41 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
       && safeString(attackerProfile?.clanId, 128)
       && safeString(attackerProfile?.clanId, 128) === safeString(defenderProfile?.clanId, 128);
     if (becameClanAllies) {
-      const returned = returnTroopsToSource(Math.max(0, Math.floor(safeNumber(army.troops, 0))));
-      writeParticipantEconomies({}, {}, { statsCityPatches: getLatestSourceReturnStatsPatches() });
-      markResolved({ kind: army.kind, outcome: "allied_return", returned });
-      writeClanAudit(transaction, attackerProfile.clanId, attackerUid, "friendly_march_returned", {
+      const movement = createAlliedTargetReturnMovement(army, nowMs);
+      const movementPatch = { ...movement, updatedAt: FieldValue.serverTimestamp() };
+      delete movementPatch.id;
+      armyRefsForRegions(movement.routeRegionIds, armyId).forEach(ref => {
+        transaction.set(ref, movementPatch, { merge: true });
+      });
+      let campUpdate = null;
+      if (targetType === "camp" && targetSnap.exists && target) {
+        const remainingActiveArmyIds = removeActiveCampArmyId(target, armyId);
+        const campPatch = {
+          activeArmyIds: remainingActiveArmyIds,
+          state: getRewardCampState(remainingActiveArmyIds, getOwnerUid(target)),
+          updatedAt: FieldValue.serverTimestamp(),
+        };
+        transaction.set(targetRef, campPatch, { merge: true });
+        campUpdate = campUpdateForClient(target.id, targetRegionId, campPatch);
+      }
+      writeParticipantEconomies({}, {}, { addActiveArmies: [movement] });
+      writeClanAudit(transaction, attackerProfile.clanId, attackerUid, "friendly_march_return_started", {
         armyId,
         defenderUid,
-        returned,
+        troops: troopCount,
+        returnDestinationId: movement.returnDestinationId,
+        returnDestinationRegionId: movement.returnDestinationRegionId,
+        returnArrivesAtMs: movement.arrivesAtMs,
       }, nowMs);
       return {
         ok: true,
-        status: "resolved",
-        kind: army.kind,
-        outcome: "allied_return",
-        returned,
-        cityUpdates: withEconomyCityUpdates(cityUpdates),
+        status: "returning",
+        kind: "transfer",
+        outcome: "allied_return_started",
+        movement,
+        campUpdate,
+        returnSeconds: Math.max(1, Math.ceil((movement.arrivesAtMs - nowMs) / 1000)),
+        cityUpdates: withEconomyCityUpdates([]),
         currentUser: profilePatchForCaller(attackerProfile, defenderProfile),
       };
     }
@@ -11115,10 +11221,20 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
       writeParticipantEconomies({}, {}, { statsCityPatches: getLatestSourceReturnStatsPatches() });
       markResolved({
         kind: "return",
-        recalled: true,
+        recalled: army.returnReason === RECALL_HORN_ITEM_ID,
+        alliedReturn: army.returnReason === ALLIED_TARGET_RETURN_REASON,
+        returnReason: safeString(army.returnReason, 40),
         returned: returnedArmy.returned,
         returnCityId: returnedArmy.cityId,
       });
+      if (army.returnReason === ALLIED_TARGET_RETURN_REASON && attackerProfile.clanId) {
+        writeClanAudit(transaction, attackerProfile.clanId, attackerUid, "friendly_march_returned", {
+          armyId,
+          returned: returnedArmy.returned,
+          returnCityId: returnedArmy.cityId,
+          returnRegionId: returnedArmy.regionId,
+        }, nowMs);
+      }
       return {
         ok: true,
         status: "resolved",
