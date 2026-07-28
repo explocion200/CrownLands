@@ -1510,6 +1510,13 @@ input {
   top: calc(100% + 48px);
   background: linear-gradient(180deg, #4b5579, #171e39);
 }
+.camp-rally-action {
+  left: calc(50% - var(--camp-action-offset, 92px));
+  top: calc(100% + 48px);
+  border-color: #e8c064;
+  color: #fff6d1;
+  background: linear-gradient(180deg, #7b4f9c, #34204e);
+}
 .gold-camp-info-panel {
   display: grid;
   gap: 12px;
@@ -6557,6 +6564,34 @@ button.daily-reward-card.available:disabled {
   font-weight: 1000;
   line-height: 1;
 }
+.clan-hud-btn.has-rallies::before,
+.profile-tabs button.has-rallies::after {
+  content: attr(data-rally-count);
+  position: absolute;
+  z-index: 4;
+  min-width: 20px;
+  height: 20px;
+  display: grid;
+  place-items: center;
+  padding: 0 5px;
+  border: 2px solid #fff0bd;
+  border-radius: 999px;
+  color: #fff;
+  background: linear-gradient(#c84545, #791e2a);
+  box-shadow: 0 3px 8px rgba(0,0,0,.52);
+  font: 900 .66rem/1 var(--font-ui);
+}
+.clan-hud-btn.has-rallies::before {
+  right: -5px;
+  top: -4px;
+}
+.profile-tabs button {
+  position: relative;
+}
+.profile-tabs button.has-rallies::after {
+  right: -5px;
+  top: -7px;
+}
 .daily-login-reward-btn {
   position: relative;
   isolation: isolate;
@@ -6941,13 +6976,159 @@ button.daily-reward-card.available:disabled {
 .clan-empty h3, .clan-empty p { margin: 0; }
 .clan-lock { color: #78c990; font-size: 4rem; }
 .clan-browser, .clan-columns { display: grid; grid-template-columns: minmax(260px,.72fr) minmax(360px,1.28fr); gap: .75rem; }
-.clan-create-card, .clan-discovery, .clan-roster-panel, .clan-gift-panel, .clan-quest-panel {
+.clan-create-card, .clan-discovery, .clan-roster-panel, .clan-gift-panel, .clan-quest-panel, .clan-social-card {
   min-width: 0;
   padding: .8rem;
   border: 1px solid rgba(191,226,198,.2);
   border-radius: 14px;
   background: rgba(13,28,34,.88);
   box-shadow: 0 14px 28px rgba(0,0,0,.24);
+}
+.clan-rallies-panel {
+  display: grid;
+  gap: .58rem;
+  border-color: rgba(212, 169, 91, .38);
+  background: linear-gradient(145deg, rgba(55, 37, 67, .92), rgba(12, 28, 34, .94));
+}
+.clan-social-heading,
+.clan-rally-card header,
+.clan-rally-summary,
+.clan-rally-card footer,
+.clan-rally-card li,
+.clan-rally-confirmation li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .65rem;
+}
+.clan-social-heading span,
+.clan-rally-card header span,
+.clan-rally-card li span {
+  display: grid;
+  min-width: 0;
+}
+.clan-social-heading small,
+.clan-rally-card header small,
+.clan-rally-card li small {
+  color: #bbaec4;
+  font-size: .62rem;
+}
+.clan-social-heading > b,
+.clan-rally-card header > b {
+  min-width: 32px;
+  padding: .2rem .45rem;
+  border: 1px solid rgba(235, 199, 119, .42);
+  border-radius: 999px;
+  color: #ffe7a3;
+  text-align: center;
+  background: rgba(75, 45, 89, .7);
+}
+.clan-rally-note {
+  margin: 0;
+  color: #cfc2d6;
+  font-size: .67rem;
+  line-height: 1.4;
+}
+.clan-rally-list {
+  display: grid;
+  gap: .55rem;
+}
+.clan-rally-card {
+  display: grid;
+  gap: .48rem;
+  padding: .68rem;
+  border: 1px solid rgba(210, 175, 105, .3);
+  border-radius: 10px;
+  color: #f8ecd4;
+  background: rgba(8, 18, 29, .72);
+}
+.clan-rally-card.launched {
+  border-color: rgba(198, 89, 80, .5);
+  background: linear-gradient(135deg, rgba(86, 27, 36, .72), rgba(8, 18, 29, .78));
+}
+.clan-rally-card.recalling {
+  border-color: rgba(100, 172, 210, .48);
+}
+.clan-rally-summary {
+  align-items: stretch;
+  flex-wrap: wrap;
+  padding: .42rem .5rem;
+  border-radius: 7px;
+  color: #b9cbd3;
+  background: rgba(255,255,255,.045);
+  font-size: .63rem;
+}
+.clan-rally-summary span {
+  display: grid;
+  gap: .08rem;
+}
+.clan-rally-summary strong {
+  color: #fff0bf;
+}
+.clan-rally-status {
+  color: #e7bc77;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+.clan-rally-card ul,
+.clan-rally-confirmation ul {
+  display: grid;
+  gap: .26rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.clan-rally-card li {
+  padding: .4rem .5rem;
+  border-left: 3px solid #55a873;
+  border-radius: 4px;
+  background: rgba(255,255,255,.045);
+}
+.clan-rally-card li.inbound {
+  border-left-color: #5eadd2;
+}
+.clan-rally-card li.returning {
+  border-left-color: #c58b55;
+}
+.clan-rally-card footer {
+  justify-content: flex-end;
+}
+.clan-rally-card footer button,
+.clan-rally-confirmation footer button {
+  min-height: 35px;
+  padding: .4rem .68rem;
+  border: 1px solid rgba(230, 193, 112, .48);
+  border-radius: 7px;
+  color: #fff5d0;
+  background: linear-gradient(#73508d, #3d2955);
+  font-weight: 900;
+}
+.clan-rally-card footer button.danger-action,
+.clan-rally-confirmation footer button.danger-action {
+  border-color: rgba(234, 119, 102, .55);
+  background: linear-gradient(#9b3e42, #5c1f2a);
+}
+.clan-rally-confirmation-modal.modal {
+  width: min(620px, calc(100vw - 1.4rem));
+}
+.clan-rally-confirmation {
+  display: grid;
+  gap: .7rem;
+}
+.clan-rally-confirmation h3,
+.clan-rally-confirmation p {
+  margin: .12rem 0;
+}
+.clan-rally-confirmation li {
+  padding: .5rem .62rem;
+  border: 1px solid rgba(201, 168, 104, .24);
+  border-radius: 7px;
+  background: rgba(255,255,255,.05);
+}
+.clan-rally-confirmation footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: .5rem;
 }
 .clan-form { display: grid; gap: .55rem; }
 .clan-form input, .clan-form select, .clan-form textarea, .clan-search input {

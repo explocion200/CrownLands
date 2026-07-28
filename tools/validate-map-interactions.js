@@ -34,6 +34,9 @@ const context = {
   CROWDED_MAP_ARMY_EXIT_THRESHOLD: readNumberConstant("CROWDED_MAP_ARMY_EXIT_THRESHOLD"),
   LOW_ZOOM_PERFORMANCE_THRESHOLD: readNumberConstant("LOW_ZOOM_PERFORMANCE_THRESHOLD"),
   LOW_ZOOM_PERFORMANCE_EXIT_THRESHOLD: readNumberConstant("LOW_ZOOM_PERFORMANCE_EXIT_THRESHOLD"),
+  MAP_TOUCH_PAN_THRESHOLD: readNumberConstant("MAP_TOUCH_PAN_THRESHOLD"),
+  MAP_TOUCH_TAP_TOLERANCE: readNumberConstant("MAP_TOUCH_TAP_TOLERANCE"),
+  MAP_LOW_ZOOM_TAP_TOLERANCE_BONUS: readNumberConstant("MAP_LOW_ZOOM_TAP_TOLERANCE_BONUS"),
   MARCH_ENDPOINT_INTERACTION_MIN_CLEARANCE: readNumberConstant("MARCH_ENDPOINT_INTERACTION_MIN_CLEARANCE"),
   MARCH_ENDPOINT_INTERACTION_SIZE_RATIO: readNumberConstant("MARCH_ENDPOINT_INTERACTION_SIZE_RATIO"),
   ISLAND_PICKER_MIN_ZOOM: readNumberConstant("ISLAND_PICKER_MIN_ZOOM"),
@@ -42,12 +45,16 @@ const context = {
   isRewardCampTarget: target => target?.kind === "camp",
   isStronghold: target => target?.kind === "stronghold",
   getStrongholdVisualSize: target => Number(target?.size) || 154,
+  resolveCityTapButton: event => event?.cityButton || null,
+  resolveArmyTapToken: event => event?.armyToken || null,
 };
 
 vm.createContext(context);
 vm.runInContext([
   extractFunction("shouldUseCrowdedMapPerformance"),
   extractFunction("shouldUseLowZoomPerformance"),
+  extractFunction("resolveMapTapTargets"),
+  extractFunction("getMapNodeTapMovementTolerance"),
   extractFunction("getMarchEndpointInteractionClearance"),
   extractFunction("isMarchInsideEndpointInteractionClearance"),
   extractFunction("clampIslandMapPickerZoom"),
@@ -57,6 +64,15 @@ vm.runInContext([
 assert.equal(context.shouldUseLowZoomPerformance(false, 0.71), true);
 assert.equal(context.shouldUseLowZoomPerformance(true, 0.75), true, "Low-zoom mode should not flap near its entry threshold.");
 assert.equal(context.shouldUseLowZoomPerformance(true, 0.79), false);
+assert.equal(context.getMapNodeTapMovementTolerance("mouse", 1), 12);
+assert.equal(context.getMapNodeTapMovementTolerance("mouse", 0.4), 16);
+assert.equal(context.getMapNodeTapMovementTolerance("touch", 1), 16);
+assert.equal(context.getMapNodeTapMovementTolerance("touch", 0.4), 20);
+const overlappingMapTargets = { cityButton: "city", armyToken: "army" };
+assert.equal(context.resolveMapTapTargets(overlappingMapTargets, false).armyToken, "army");
+assert.equal(context.resolveMapTapTargets(overlappingMapTargets, false).cityButton, null);
+assert.equal(context.resolveMapTapTargets(overlappingMapTargets, true).cityButton, "city");
+assert.equal(context.resolveMapTapTargets(overlappingMapTargets, true).armyToken, null);
 
 assert.equal(context.shouldUseCrowdedMapPerformance(false, 69, 23), false);
 assert.equal(context.shouldUseCrowdedMapPerformance(false, 70, 0), true);
@@ -97,6 +113,16 @@ assert.equal(context.isMarchInsideEndpointInteractionClearance({ x: 120, y: 0 },
 assert.equal(context.isMarchInsideEndpointInteractionClearance({ x: 130, y: 0 }, stronghold, target), false);
 
 assert.match(stylesSource, /\.army-token\.endpoint-clearance\s*\{[\s\S]*?pointer-events:\s*none;/, "Endpoint march markers must pass pointer input through to cities.");
+assert.match(
+  source,
+  /function startPan[\s\S]*?resolveMapTapTargets\(event, sendMode\)/,
+  "Destination selection must prioritize city targets over overlapping army markers."
+);
+assert.match(
+  source,
+  /function movePan[\s\S]*?getMapNodeTapMovementTolerance\(panState\.pointerType, panState\.zoom\)/,
+  "Map-node taps must use the zoom-aware movement tolerance before becoming pans."
+);
 
 const strongholdWheelSource = extractFunction("renderSelectedStrongholdWheel");
 assert.match(strongholdWheelSource, /gold-camp-action-wheel stronghold-objective-action-wheel/, "Strongholds should use the camp-style action plaque.");
@@ -122,4 +148,4 @@ assert.match(upgradeCitySource, /city\.owner !== "player"[\s\S]*?return;/, "The 
 assert.match(upgradeCitySource, /isStronghold\(city\)[\s\S]*?return;/, "The upgrade handler must reject strongholds.");
 assert.match(stylesSource, /\.stronghold-objective-action-wheel\s*\{[\s\S]*?translate\(-50%, -62%\)/, "Stronghold action plaques should align to stronghold artwork.");
 
-console.log("Validated stable map performance modes, march endpoint clearance, and stronghold action plaques.");
+console.log("Validated stable map performance modes, low-zoom destination taps, march endpoint clearance, and stronghold action plaques.");

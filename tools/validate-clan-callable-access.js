@@ -22,6 +22,11 @@ const publicCallables = [
   "claimClanGiftPool",
   "claimClanQuestReward",
   "returnClanReinforcement",
+  "createClanRally",
+  "joinClanRally",
+  "withdrawClanRallyContribution",
+  "launchClanRally",
+  "cancelClanRally",
 ];
 
 async function validateCallable(name) {

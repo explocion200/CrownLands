@@ -86,14 +86,28 @@ const ARMY_TRAVEL_SECONDS_PER_MAP_UNIT = 0.13;
 const ARMY_TRAVEL_MIN_SECONDS = 30;
 const ARMY_TRAVEL_SCOUT_MIN_SECONDS = 10;
 const ARMY_TRAVEL_MAX_SECONDS = 1800;
-const ARMY_TRAVEL_KIND_MULTIPLIERS = { scout: 0.35, transfer: 0.95, reinforce: 0.95, attack: 1 };
-const ARMY_ORDER_KINDS = Object.freeze(["attack", "transfer", "reinforce", "scout"]);
+const ARMY_TRAVEL_KIND_MULTIPLIERS = { scout: 0.35, transfer: 0.95, reinforce: 0.95, rally_join: 0.95, attack: 1 };
+const ARMY_ORDER_KINDS = Object.freeze(["attack", "transfer", "reinforce", "rally_join", "scout"]);
 const REINFORCEMENT_STATUS_STATIONED = "stationed";
 const REINFORCEMENT_STATUS_RETURNING = "returning";
 const REINFORCEMENT_STATUS_DEPLETED = "depleted";
 const REINFORCEMENT_STATUS_RETURNED = "returned";
 const REINFORCEMENT_MODEL_VERSION = 1;
 const CLAN_REINFORCEMENT_ACTIVE_LIMIT = 2;
+const RALLY_MODEL_VERSION = 1;
+const RALLY_MAX_PARTICIPANTS = 3;
+const CLAN_FORMING_RALLY_LIMIT = 3;
+const RALLY_STATUS_FORMING = "forming";
+const RALLY_STATUS_LAUNCHED = "launched";
+const RALLY_STATUS_RECALLING = "recalling";
+const RALLY_STATUS_RESOLVED = "resolved";
+const RALLY_STATUS_CANCELLED = "cancelled";
+const RALLY_PARTICIPANT_ASSEMBLED = "assembled";
+const RALLY_PARTICIPANT_INBOUND = "inbound";
+const RALLY_PARTICIPANT_RETURNING = "returning";
+const RALLY_PARTICIPANT_RETURNED = "returned";
+const RALLY_RETURN_REASON = "rally_recall";
+const RALLY_FRIENDLY_RETURN_REASON = "rally_target_became_friendly";
 const ARMY_TRAVEL_TROOP_BAND_LIMITS = [10, 100, 1000, 10000, 100000, 1000000, 10000000, 100000000];
 const ARMY_TRAVEL_TROOP_BAND_MULTIPLIERS = [1, 1.18, 1.38, 1.62, 1.9, 2.24, 2.62, 3.06, 3.5];
 const CAPTURE_XP_BASE = 120;
@@ -1722,6 +1736,9 @@ function createGlobalStatsSnapshot({
   const stationedReinforcementTroops = safeString(profileForStats.reinforcementResetGeneration, 120) === RESET_GENERATION
     ? Math.max(0, Math.floor(safeNumber(profileForStats.stationedReinforcementTroops, 0)))
     : 0;
+  const committedRallyTroops = safeString(profileForStats.rallyResetGeneration, 120) === RESET_GENERATION
+    ? Math.max(0, Math.floor(safeNumber(profileForStats.committedRallyTroops, 0)))
+    : 0;
 
   let totalCities = 0;
   let strongholdCount = 0;
@@ -1790,6 +1807,7 @@ function createGlobalStatsSnapshot({
   const marchingById = new Map();
   (Array.isArray(activeArmies) ? activeArmies : []).forEach(army => {
     if (!army || getOwnerUid(army) !== playerUid || army.status !== "active" || !isCurrentWorldArmy(army)) return;
+    if (army.rallyAttack === true) return;
     const key = getArmyStatsKey(army);
     if (!key || marchingById.has(key)) return;
     marchingById.set(key, army);
@@ -1797,12 +1815,16 @@ function createGlobalStatsSnapshot({
   const totalMarchingTroops = [...marchingById.values()]
     .reduce((total, army) => total + Math.max(0, Math.floor(safeNumber(army.troops, 0))), 0);
   const totalTroops = totalCityTroops + totalCampTroops;
-  const totalMilitaryTroops = totalTroops + totalMarchingTroops + stationedReinforcementTroops;
+  const totalMilitaryTroops = totalTroops + totalMarchingTroops + stationedReinforcementTroops + committedRallyTroops;
   const armyPower = getTroopKingPower(totalMilitaryTroops);
   const cityTroopPower = getTroopKingPower(totalCityTroops);
   const campTroopPower = getTroopKingPower(totalCampTroops);
   const reinforcementTroopPower = getTroopKingPower(stationedReinforcementTroops);
-  const stationedTroopPower = Math.min(Number.MAX_SAFE_INTEGER, cityTroopPower + campTroopPower + reinforcementTroopPower);
+  const rallyTroopPower = getTroopKingPower(committedRallyTroops);
+  const stationedTroopPower = Math.min(
+    Number.MAX_SAFE_INTEGER,
+    cityTroopPower + campTroopPower + reinforcementTroopPower + rallyTroopPower
+  );
   const marchingPower = getTroopKingPower(totalMarchingTroops);
   replacementPower = Math.min(Number.MAX_SAFE_INTEGER, Math.max(0, Math.floor(replacementPower)));
   defensivePower = Math.min(Number.MAX_SAFE_INTEGER, Math.max(0, Math.floor(defensivePower)));
@@ -1829,6 +1851,7 @@ function createGlobalStatsSnapshot({
     totalCampTroops,
     totalMarchingTroops,
     totalReinforcementTroops: stationedReinforcementTroops,
+    totalRallyTroops: committedRallyTroops,
     totalCityLevels,
     totalVictoryPoints,
     strongholdCount,
@@ -1868,6 +1891,7 @@ function createGlobalStatsSnapshot({
     stationedTroopPower: Math.max(0, Math.floor(stationedTroopPower)),
     campTroopPower: Math.max(0, Math.floor(campTroopPower)),
     reinforcementTroopPower: Math.max(0, Math.floor(reinforcementTroopPower)),
+    rallyTroopPower: Math.max(0, Math.floor(rallyTroopPower)),
     cityPower: Math.max(0, Math.floor(cityPower)),
     marchingPower: Math.max(0, Math.floor(marchingPower)),
     troopPower: Math.max(0, Math.floor(armyPower)),
@@ -2237,7 +2261,9 @@ function calculateCombatResult(attackTroops, target, attackerProfile = null, def
   const troops = Math.max(0, Math.floor(safeNumber(attackTroops, 0)));
   const defendersAtStart = Math.max(0, Math.floor(safeNumber(target?.troops, 0)));
   const attackProtection = normalizeAttackProtectionSnapshot(options.attackProtection, options.demoAttack);
-  const attackPower = getAttackPower(troops, attackerProfile);
+  const attackPower = Number.isFinite(Number(options.attackPower))
+    ? Math.max(0, Math.floor(Number(options.attackPower)))
+    : getAttackPower(troops, attackerProfile);
   const defensePower = Number.isFinite(Number(options.defensePower))
     ? Math.max(0, Math.floor(Number(options.defensePower)))
     : getCityStats(target, defenderProfile, options.defenderBonuses).totalDefense;
@@ -2270,7 +2296,9 @@ function calculateCombatResult(attackTroops, target, attackerProfile = null, def
     }
   } else if (battleWon) {
     const leftoverPower = attackPower - defensePower * 0.68;
-    survivors = clamp(Math.floor(leftoverPower / Math.max(BASE_TROOP_ATTACK_POWER * attackerBoost, 1)), 1, troops);
+    survivors = Number.isFinite(Number(options.attackPower))
+      ? clamp(Math.floor(troops * leftoverPower / Math.max(attackPower, 1)), 1, troops)
+      : clamp(Math.floor(leftoverPower / Math.max(BASE_TROOP_ATTACK_POWER * attackerBoost, 1)), 1, troops);
     attackerLosses = troops - survivors;
     defenderLosses = breachOnly ? Math.max(0, defendersAtStart - 1) : defendersAtStart;
     defendersLeft = breachOnly && defendersAtStart > 0 ? 1 : 0;
@@ -2870,6 +2898,404 @@ function releaseClanReinforcementTarget(transaction, ownerUid = "", targetKey = 
   }, { merge: true });
 }
 
+function normalizeRallyId(value = "") {
+  return safeString(value, 96).replace(/[^a-zA-Z0-9_-]/g, "_");
+}
+
+function clanRallyRef(clanId = "", rallyId = "") {
+  return db.doc(`clans/${safeString(clanId, 128)}/rallies/${normalizeRallyId(rallyId)}`);
+}
+
+function clanRallyStateRef(clanId = "") {
+  return db.doc(`clans/${safeString(clanId, 128)}/rallyState/${RESET_GENERATION}`);
+}
+
+function rallyBattleReceiptRef(armyId = "", contributorUid = "") {
+  const receiptId = safeString(`${armyId}_${contributorUid}`, 190).replace(/[^a-zA-Z0-9_-]/g, "_");
+  return db.doc(`rallyBattleReceipts/${RESET_GENERATION}/entries/${receiptId}`);
+}
+
+function getProfileCommittedRallyTroops(profile = {}) {
+  if (safeString(profile.rallyResetGeneration, 120) !== RESET_GENERATION) return 0;
+  return Math.max(0, Math.floor(safeNumber(profile.committedRallyTroops, 0)));
+}
+
+function normalizeRallyParticipant(raw = {}) {
+  const uid = safeString(raw.uid || raw.ownerUid, 128);
+  const troops = Math.max(0, Math.floor(safeNumber(raw.troops, 0)));
+  if (!uid || !troops) return null;
+  const status = [
+    RALLY_PARTICIPANT_ASSEMBLED,
+    RALLY_PARTICIPANT_INBOUND,
+    RALLY_PARTICIPANT_RETURNING,
+    RALLY_PARTICIPANT_RETURNED,
+  ].includes(raw.status)
+    ? raw.status
+    : RALLY_PARTICIPANT_INBOUND;
+  return {
+    uid,
+    ownerUid: uid,
+    ownerName: normalizePlayerName(raw.ownerName, "Ruler"),
+    ownerFlag: raw.ownerFlag || null,
+    role: raw.role === "leader" ? "leader" : "ally",
+    sourceId: safeString(raw.sourceId, 96),
+    sourceName: safeString(raw.sourceName, 40),
+    sourceRegionId: normalizeRegionId(raw.sourceRegionId),
+    troops,
+    status,
+    joinArmyId: normalizeRallyId(raw.joinArmyId),
+    joinedAtMs: Math.max(0, Math.floor(safeNumber(raw.joinedAtMs, 0))),
+    assembledAtMs: Math.max(0, Math.floor(safeNumber(raw.assembledAtMs, 0))),
+    arrivesAtMs: Math.max(0, Math.floor(safeNumber(raw.arrivesAtMs, 0))),
+    returnArmyId: normalizeRallyId(raw.returnArmyId),
+    attackSkillLevel: Math.max(0, Math.floor(safeNumber(raw.attackSkillLevel, 0))),
+    attackBonusPercent: Math.max(0, safeNumber(raw.attackBonusPercent, 0)),
+    fieldMedicsPercent: Math.max(0, safeNumber(raw.fieldMedicsPercent, 0)),
+    ownerKingPower: Math.max(0, Math.floor(safeNumber(raw.ownerKingPower, 0))),
+    losses: Math.max(0, Math.floor(safeNumber(raw.losses, 0))),
+    survivors: Math.max(0, Math.floor(safeNumber(raw.survivors, troops))),
+    xpAwarded: Math.max(0, Math.floor(safeNumber(raw.xpAwarded, 0))),
+    settledAtMs: Math.max(0, Math.floor(safeNumber(raw.settledAtMs, 0))),
+  };
+}
+
+function normalizeRallyParticipants(value = []) {
+  const byUid = new Map();
+  (Array.isArray(value) ? value : []).forEach(raw => {
+    const participant = normalizeRallyParticipant(raw);
+    if (participant && !byUid.has(participant.uid)) byUid.set(participant.uid, participant);
+  });
+  return [...byUid.values()].slice(0, RALLY_MAX_PARTICIPANTS);
+}
+
+function activeRallyParticipants(rally = {}) {
+  return normalizeRallyParticipants(rally.participants)
+    .filter(participant => [
+      RALLY_PARTICIPANT_ASSEMBLED,
+      RALLY_PARTICIPANT_INBOUND,
+    ].includes(participant.status));
+}
+
+function assembledRallyParticipants(rally = {}) {
+  return activeRallyParticipants(rally)
+    .filter(participant => participant.status === RALLY_PARTICIPANT_ASSEMBLED);
+}
+
+function getRallyParticipant(rally = {}, uid = "") {
+  const playerUid = safeString(uid, 128);
+  return activeRallyParticipants(rally).find(participant => participant.uid === playerUid) || null;
+}
+
+function normalizeClanRally(snapshotOrData = null) {
+  const exists = snapshotOrData?.exists;
+  const data = exists ? snapshotOrData.data() || {} : snapshotOrData || {};
+  const id = normalizeRallyId(exists ? snapshotOrData.id : data.id);
+  if (
+    !id
+    || safeString(data.worldId, 120) !== ONLINE_WORLD_ID
+    || safeString(data.resetGeneration, 120) !== RESET_GENERATION
+  ) return null;
+  return {
+    ...data,
+    id,
+    clanId: safeString(data.clanId, 128),
+    leaderUid: safeString(data.leaderUid, 128),
+    status: safeString(data.status, 24),
+    targetType: data.targetType === "camp" ? "camp" : "city",
+    targetId: safeString(data.targetId, 96),
+    targetRegionId: normalizeRegionId(data.targetRegionId),
+    assemblyCityId: safeString(data.assemblyCityId, 96),
+    assemblyRegionId: normalizeRegionId(data.assemblyRegionId),
+    participants: normalizeRallyParticipants(data.participants),
+    routeRegionIds: normalizeRegionIds(data.routeRegionIds),
+    pathSegments: normalizePathSegments(data.pathSegments),
+    path: normalizePath(data.path),
+    pathLength: Math.max(0, safeNumber(data.pathLength, 0)),
+    armyId: normalizeRallyId(data.armyId),
+  };
+}
+
+function isRallyObjectiveTarget(target = {}, targetType = "city") {
+  return targetType === "camp" ? Boolean(getRewardCampConfig(target)) : isStronghold(target);
+}
+
+function rallyTargetRef(rally = {}) {
+  if (!rally.targetRegionId || !rally.targetId) return null;
+  return rally.targetType === "camp"
+    ? campRefForRegion(rally.targetRegionId, rally.targetId)
+    : cityRefForRegion(rally.targetRegionId, rally.targetId);
+}
+
+function rallyAssemblyRef(rally = {}) {
+  if (!rally.assemblyRegionId || !rally.assemblyCityId) return null;
+  return cityRefForRegion(rally.assemblyRegionId, rally.assemblyCityId);
+}
+
+function normalizeRallyState(raw = {}) {
+  if (
+    safeString(raw.worldId, 120) !== ONLINE_WORLD_ID
+    || safeString(raw.resetGeneration, 120) !== RESET_GENERATION
+  ) {
+    return { leaderUids: [] };
+  }
+  return {
+    leaderUids: [...new Set((Array.isArray(raw.leaderUids) ? raw.leaderUids : [])
+      .map(uid => safeString(uid, 128))
+      .filter(Boolean))]
+      .slice(0, CLAN_FORMING_RALLY_LIMIT),
+  };
+}
+
+function releaseFormingRallySlot(transaction, stateRef, state = {}, leaderUid = "", nowMs = Date.now()) {
+  const playerUid = safeString(leaderUid, 128);
+  const leaderUids = normalizeRallyState(state).leaderUids.filter(uid => uid !== playerUid);
+  transaction.set(stateRef, {
+    worldId: ONLINE_WORLD_ID,
+    resetGeneration: RESET_GENERATION,
+    activeCount: leaderUids.length,
+    leaderUids,
+    updatedAtMs: nowMs,
+    updatedAt: FieldValue.serverTimestamp(),
+  }, { merge: true });
+}
+
+function getRallyParticipantAttackPower(participant = {}) {
+  const troops = Math.max(0, Math.floor(safeNumber(participant.troops, 0)));
+  const bonusPercent = Math.max(0, safeNumber(participant.attackBonusPercent, 0));
+  return Math.max(0, Math.floor(troops * BASE_TROOP_ATTACK_POWER * (1 + bonusPercent / 100)));
+}
+
+function getRallyAttackPackages(rally = {}) {
+  return assembledRallyParticipants(rally).map(participant => ({
+    ...participant,
+    effectivePower: getRallyParticipantAttackPower(participant),
+  }));
+}
+
+function allocateRallyAttackerLosses(packages = [], totalLosses = 0) {
+  const rows = (Array.isArray(packages) ? packages : [])
+    .map(entry => ({
+      ...entry,
+      troops: Math.max(0, Math.floor(safeNumber(entry?.troops, 0))),
+    }))
+    .filter(entry => entry.uid && entry.troops > 0);
+  const totalTroops = rows.reduce((total, entry) => total + entry.troops, 0);
+  const losses = Math.min(totalTroops, Math.max(0, Math.floor(safeNumber(totalLosses, 0))));
+  let survivorsToAssign = Math.max(0, totalTroops - losses);
+  const allocated = rows.map(entry => {
+    const exact = totalTroops ? survivorsToAssign * entry.troops / totalTroops : 0;
+    const survivors = Math.min(entry.troops, Math.floor(exact));
+    return {
+      ...entry,
+      exact,
+      survivors,
+      losses: entry.troops - survivors,
+    };
+  });
+  let assigned = allocated.reduce((total, entry) => total + entry.survivors, 0);
+  allocated
+    .sort((left, right) => (
+      (right.exact - Math.floor(right.exact)) - (left.exact - Math.floor(left.exact))
+      || Number(right.role === "leader") - Number(left.role === "leader")
+      || left.uid.localeCompare(right.uid)
+    ))
+    .forEach(entry => {
+      if (assigned >= survivorsToAssign || entry.survivors >= entry.troops) return;
+      entry.survivors += 1;
+      entry.losses -= 1;
+      assigned += 1;
+    });
+  const leader = allocated.find(entry => entry.role === "leader");
+  if (survivorsToAssign > 0 && leader && leader.survivors <= 0) {
+    const donor = allocated.find(entry => entry.role !== "leader" && entry.survivors > 0);
+    if (donor) {
+      donor.survivors -= 1;
+      donor.losses += 1;
+      leader.survivors = 1;
+      leader.losses = Math.max(0, leader.troops - 1);
+    }
+  }
+  return allocated.sort((left, right) => (
+    Number(right.role === "leader") - Number(left.role === "leader")
+    || left.uid.localeCompare(right.uid)
+  ));
+}
+
+function allocateRallyAttackXp(totalXp = 0, packages = []) {
+  const pool = Math.max(0, Math.floor(safeNumber(totalXp, 0)));
+  const rows = (Array.isArray(packages) ? packages : []).filter(entry => entry?.uid && entry.effectivePower > 0);
+  const totalPower = rows.reduce((total, entry) => total + entry.effectivePower, 0);
+  const result = new Map(rows.map(entry => [entry.uid, 0]));
+  if (!pool || !totalPower) return result;
+  let assigned = 0;
+  rows
+    .slice()
+    .sort((left, right) => (
+      Number(right.role === "leader") - Number(left.role === "leader")
+      || left.uid.localeCompare(right.uid)
+    ))
+    .forEach((entry, index, ordered) => {
+      const value = index === ordered.length - 1
+        ? Math.max(0, pool - assigned)
+        : Math.max(0, Math.floor(pool * entry.effectivePower / totalPower));
+      result.set(entry.uid, value);
+      assigned += value;
+    });
+  return result;
+}
+
+function createRallyParticipantSnapshot({
+  uid = "",
+  profile = {},
+  source = {},
+  sourceRegionId = "",
+  troops = 0,
+  role = "ally",
+  status = RALLY_PARTICIPANT_INBOUND,
+  joinArmyId = "",
+  joinedAtMs = Date.now(),
+  assembledAtMs = 0,
+  ownerKingPower = 0,
+} = {}) {
+  return normalizeRallyParticipant({
+    uid,
+    ownerName: normalizePlayerName(profile.playerName || profile.displayName || source.ownerName, "Ruler"),
+    ownerFlag: profile.flag || source.ownerFlag || null,
+    role,
+    sourceId: source.id,
+    sourceName: source.name || source.id,
+    sourceRegionId: normalizeRegionId(sourceRegionId || source.regionId),
+    troops,
+    status,
+    joinArmyId,
+    joinedAtMs,
+    assembledAtMs,
+    attackSkillLevel: getSkillLevel(profile, "swordmastery"),
+    attackBonusPercent: getSkillPercent(profile, "swordmastery"),
+    fieldMedicsPercent: getSkillPercent(profile, "fieldMedics"),
+    ownerKingPower,
+  });
+}
+
+function rallyForClient(rally = {}) {
+  const participants = normalizeRallyParticipants(rally.participants);
+  return {
+    id: normalizeRallyId(rally.id),
+    clanId: safeString(rally.clanId, 128),
+    status: safeString(rally.status, 24),
+    leaderUid: safeString(rally.leaderUid, 128),
+    leaderName: normalizePlayerName(rally.leaderName, "Ruler"),
+    targetType: rally.targetType === "camp" ? "camp" : "city",
+    targetId: safeString(rally.targetId, 96),
+    targetName: safeString(rally.targetName || rally.targetId, 80),
+    targetRegionId: normalizeRegionId(rally.targetRegionId),
+    assemblyCityId: safeString(rally.assemblyCityId, 96),
+    assemblyCityName: safeString(rally.assemblyCityName || rally.assemblyCityId, 80),
+    assemblyRegionId: normalizeRegionId(rally.assemblyRegionId),
+    participantUids: participants.map(participant => participant.uid),
+    participants,
+    participantCount: activeRallyParticipants({ participants }).length,
+    assembledTroops: participants
+      .filter(participant => participant.status === RALLY_PARTICIPANT_ASSEMBLED)
+      .reduce((total, participant) => total + participant.troops, 0),
+    inboundTroops: participants
+      .filter(participant => participant.status === RALLY_PARTICIPANT_INBOUND)
+      .reduce((total, participant) => total + participant.troops, 0),
+    armyId: normalizeRallyId(rally.armyId),
+    createdAtMs: Math.max(0, timestampToMs(rally.createdAtMs)),
+    launchedAtMs: Math.max(0, timestampToMs(rally.launchedAtMs)),
+    updatedAtMs: Math.max(0, timestampToMs(rally.updatedAtMs)),
+  };
+}
+
+function rallyParticipantTotals(participants = []) {
+  const normalized = normalizeRallyParticipants(participants);
+  return {
+    participantUids: normalized.map(participant => participant.uid),
+    participantCount: activeRallyParticipants({ participants: normalized }).length,
+    assembledTroops: normalized
+      .filter(participant => participant.status === RALLY_PARTICIPANT_ASSEMBLED)
+      .reduce((total, participant) => total + participant.troops, 0),
+    inboundTroops: normalized
+      .filter(participant => participant.status === RALLY_PARTICIPANT_INBOUND)
+      .reduce((total, participant) => total + participant.troops, 0),
+  };
+}
+
+function createRallyAssemblyMovement({
+  order = {},
+  rally = {},
+  participant = {},
+  source = {},
+  assembly = {},
+  profile = {},
+  economy = null,
+  validatedRoute = {},
+  nowMs = Date.now(),
+} = {}) {
+  const troops = Math.max(1, Math.floor(safeNumber(participant.troops, 1)));
+  const stats = createPreparedEconomyStatsSnapshot(economy, {}, { nowMs });
+  const speedMultiplier = skillMultiplier(profile, "marchOrders")
+    * (1 + Math.max(0, safeNumber(economy?.bonuses?.marchSpeedBonusPercent, 0)) / 100);
+  const duration = calculateTravelTime({
+    pathLength: validatedRoute.pathLength,
+    troopCount: troops,
+    kind: "rally_join",
+    speedMultiplier,
+  });
+  return {
+    id: normalizeRallyId(order.id),
+    worldId: ONLINE_WORLD_ID,
+    resetGeneration: RESET_GENERATION,
+    ownerKind: "player",
+    ownerUid: participant.uid,
+    ownerName: participant.ownerName,
+    ownerFlag: participant.ownerFlag || null,
+    ownerKingPower: Math.max(0, Math.floor(safeNumber(stats?.kingPower, participant.ownerKingPower))),
+    kingPowerVersion: GLOBAL_PLAYER_STATS_VERSION,
+    kind: "rally_join",
+    launchKind: "rally_join",
+    rallyJoin: true,
+    rallyId: normalizeRallyId(rally.id),
+    rallyClanId: safeString(rally.clanId, 128),
+    targetType: "city",
+    fromId: safeString(source.id, 96),
+    toId: safeString(assembly.id, 96),
+    sourceRegionId: normalizeRegionId(order.sourceRegionId),
+    targetRegionId: normalizeRegionId(rally.assemblyRegionId),
+    fromName: safeString(source.name || source.id, 40),
+    toName: safeString(assembly.name || assembly.id, 40),
+    troops,
+    requestedTroops: troops,
+    total: duration,
+    path: validatedRoute.path,
+    pathSegments: validatedRoute.pathSegments,
+    routeRegionIds: validatedRoute.routeRegionIds,
+    viewRegionIds: validatedRoute.routeRegionIds,
+    pathLength: validatedRoute.pathLength,
+    targetKey: `${rally.assemblyRegionId}:${rally.assemblyCityId}`,
+    targetOwnerAtLaunch: "player",
+    originalTargetOwnerUid: rally.leaderUid,
+    targetOwnerUid: rally.leaderUid,
+    lastIncomingNotificationOwnerUid: "",
+    attackerKingPower: Math.max(0, Math.floor(safeNumber(stats?.kingPower, participant.ownerKingPower))),
+    defenderKingPower: Math.max(0, Math.floor(safeNumber(rally.leaderKingPower, 0))),
+    launchedAtMs: nowMs,
+    arrivesAtMs: nowMs + Math.ceil(duration * 1000),
+    status: "active",
+    createdByServer: true,
+    rallyModelVersion: RALLY_MODEL_VERSION,
+    serverAuthorityVersion: 3,
+  };
+}
+
+function isRallyTargetFriendly(targetOwnerUid = "", targetOwnerProfile = {}, rally = {}) {
+  const ownerUid = safeString(targetOwnerUid, 128);
+  if (!ownerUid) return false;
+  if (ownerUid === safeString(rally.leaderUid, 128)) return true;
+  return safeString(targetOwnerProfile.clanId, 128) === safeString(rally.clanId, 128);
+}
+
 function protectedAssaultBreachRef(cityRef, attackerUid = "") {
   const safeAttackerUid = safeString(attackerUid, 128).replace(/[^a-zA-Z0-9_-]/g, "_");
   return cityRef.collection("protectedAssaultBreaches").doc(safeAttackerUid || "unknown");
@@ -3175,6 +3601,60 @@ function armyViewRefsForRegions(regionIds, armyId) {
 
 function armyRefsForRegions(regionIds, armyId) {
   return [canonicalArmyRef(armyId), ...armyViewRefsForRegions(regionIds, armyId)];
+}
+
+function rallyJoinPublicMovement(movement = {}) {
+  return {
+    worldId: safeString(movement.worldId, 120),
+    resetGeneration: safeString(movement.resetGeneration, 120),
+    ownerKind: "player",
+    ownerUid: safeString(movement.ownerUid, 128),
+    ownerName: normalizePlayerName(movement.ownerName, "Ruler"),
+    kind: "rally_join",
+    launchKind: "rally_join",
+    rallyJoin: true,
+    targetType: "city",
+    fromId: safeString(movement.fromId, 96),
+    toId: safeString(movement.toId, 96),
+    fromName: safeString(movement.fromName, 40),
+    toName: safeString(movement.toName, 40),
+    sourceRegionId: normalizeRegionId(movement.sourceRegionId),
+    targetRegionId: normalizeRegionId(movement.targetRegionId),
+    troops: Math.max(0, Math.floor(safeNumber(movement.troops, 0))),
+    total: Math.max(0.1, safeNumber(movement.total, 0.1)),
+    path: normalizePath(movement.path),
+    pathSegments: normalizePathSegments(movement.pathSegments),
+    routeRegionIds: normalizeRegionIds(movement.routeRegionIds),
+    viewRegionIds: normalizeRegionIds(movement.viewRegionIds || movement.routeRegionIds),
+    pathLength: Math.max(0, safeNumber(movement.pathLength, 0)),
+    launchedAtMs: Math.max(0, Math.floor(safeNumber(movement.launchedAtMs, 0))),
+    arrivesAtMs: Math.max(0, Math.floor(safeNumber(movement.arrivesAtMs, 0))),
+    returning: Boolean(movement.returning),
+    returnStartProgress: clamp(safeNumber(movement.returnStartProgress, 0), 0, 1),
+    returnDestinationId: safeString(movement.returnDestinationId, 96),
+    returnDestinationRegionId: normalizeRegionId(movement.returnDestinationRegionId),
+    status: movement.status === "resolved" ? "resolved" : "active",
+    createdByServer: true,
+    serverAuthorityVersion: Math.max(3, Math.floor(safeNumber(movement.serverAuthorityVersion, 3))),
+  };
+}
+
+function writeRallyJoinMovementCopies(transaction, movement = {}, { includeCreatedAt = false } = {}) {
+  const canonicalPatch = {
+    ...movement,
+    ...(includeCreatedAt ? { createdAt: FieldValue.serverTimestamp() } : {}),
+    updatedAt: FieldValue.serverTimestamp(),
+  };
+  delete canonicalPatch.id;
+  transaction.set(canonicalArmyRef(movement.id), canonicalPatch, { merge: true });
+  const publicPatch = {
+    ...rallyJoinPublicMovement(movement),
+    ...(includeCreatedAt ? { createdAt: FieldValue.serverTimestamp() } : {}),
+    updatedAt: FieldValue.serverTimestamp(),
+  };
+  armyViewRefsForRegions(movement.routeRegionIds, movement.id).forEach(ref => {
+    transaction.set(ref, publicPatch, { merge: true });
+  });
 }
 
 function getArmyRouteProgressAtMs(army = {}, nowMs = Date.now()) {
@@ -3843,6 +4323,8 @@ function createDetailedBattleSnapshot({
   defenderBonuses = {},
   defensePackages = null,
   allocation = null,
+  attackerPackages = [],
+  attackerAllocation = [],
   result = {},
   outcome = "",
   nowMs = Date.now(),
@@ -3868,9 +4350,29 @@ function createDetailedBattleSnapshot({
       survivors: Math.max(0, Math.floor(safeNumber(settled.remaining, row.troops))),
     };
   });
+  const rallyAttackers = (Array.isArray(attackerPackages) ? attackerPackages : []).map(row => {
+    const settled = (Array.isArray(attackerAllocation) ? attackerAllocation : [])
+      .find(entry => entry.uid === row.uid) || {};
+    return {
+      ownerUid: safeString(row.uid, 128),
+      ownerName: normalizePlayerName(row.ownerName, "Ruler"),
+      ownerFlag: row.ownerFlag || null,
+      role: row.role === "leader" ? "leader" : "ally",
+      sourceId: safeString(row.sourceId, 96),
+      sourceRegionId: normalizeRegionId(row.sourceRegionId),
+      startingTroops: Math.max(0, Math.floor(safeNumber(row.troops, 0))),
+      basePower: Math.max(0, Math.floor(safeNumber(row.troops, 0) * BASE_TROOP_ATTACK_POWER)),
+      swordmasteryLevel: Math.max(0, Math.floor(safeNumber(row.attackSkillLevel, 0))),
+      swordmasteryPercent: Math.max(0, safeNumber(row.attackBonusPercent, 0)),
+      effectivePower: Math.max(0, Math.floor(safeNumber(row.effectivePower, 0))),
+      losses: Math.max(0, Math.floor(safeNumber(settled.losses, 0))),
+      survivors: Math.max(0, Math.floor(safeNumber(settled.survivors, row.troops))),
+    };
+  });
   const participants = [...new Set([
     safeString(attackerUid, 128),
     safeString(defenderUid, 128),
+    ...rallyAttackers.map(row => row.ownerUid),
     ...reinforcementRows.map(row => row.ownerUid),
   ].filter(Boolean))];
   const defendersAtStart = ownerTroops + reinforcementRows.reduce((total, row) => total + row.startingTroops, 0);
@@ -3914,6 +4416,7 @@ function createDetailedBattleSnapshot({
       losses: Math.max(0, Math.floor(safeNumber(result.attackerLosses, 0))),
       survivors: Math.max(0, Math.floor(safeNumber(result.survivors, 0))),
     },
+    attackers: rallyAttackers,
     defender: {
       ownerUid: safeString(defenderUid, 128),
       ownerName: defensePackages.owner.ownerName,
@@ -4909,6 +5412,127 @@ function getOwnedMainCityDestination(economy = null, profile = {}) {
     && !isStronghold(entry.city)
   ));
   return getCanonicalMainCityEntry(profile, ownedEntries);
+}
+
+function getRallyReturnDestination(economy = null, profile = {}, participant = {}) {
+  if (!economy?.uid) return null;
+  const sourceRegionId = normalizeRegionId(participant.sourceRegionId);
+  const sourceId = safeString(participant.sourceId, 96);
+  const sourceRef = sourceRegionId && sourceId ? cityRefForRegion(sourceRegionId, sourceId) : null;
+  const originalEntry = sourceRef ? getEconomyCityByRef(economy, sourceRef) : null;
+  if (originalEntry?.city && getOwnerUid(originalEntry.city) === economy.uid) return originalEntry;
+  return getOwnedMainCityDestination(economy, profile)
+    || economy.cityEntries.find(entry => entry?.city && getOwnerUid(entry.city) === economy.uid)
+    || null;
+}
+
+function createRallyReturnMovement({
+  rally = {},
+  participant = {},
+  source = {},
+  destinationEntry = null,
+  economy = null,
+  profile = {},
+  nowMs = Date.now(),
+  reason = "rally_return",
+  movementId = "",
+} = {}) {
+  if (!destinationEntry?.city || !economy?.uid) {
+    throw new HttpsError("failed-precondition", "The rally participant has no owned return destination.");
+  }
+  const destination = destinationEntry.city;
+  const route = buildServerGeneratedArmyRoute(source, destination);
+  const rawId = normalizeRallyId(movementId || `${rally.id}_${participant.uid}_return_${nowMs.toString(36)}`);
+  const troops = Math.max(0, Math.floor(safeNumber(participant.survivors, participant.troops)));
+  const sourceRegionId = normalizeRegionId(source.regionId || rally.targetRegionId || rally.assemblyRegionId);
+  const destinationRegionId = normalizeRegionId(
+    destination.regionId || getRegionIdFromOnlineIslandId(getCityEntryIslandId(destinationEntry))
+  );
+  const stats = createPreparedEconomyStatsSnapshot(economy, profile, { nowMs });
+  const duration = calculateTravelTime({
+    pathLength: route.pathLength,
+    troopCount: troops,
+    kind: "transfer",
+    speedMultiplier: skillMultiplier(profile, "marchOrders")
+      * (1 + Math.max(0, safeNumber(economy.bonuses?.marchSpeedBonusPercent, 0)) / 100),
+  });
+  return {
+    id: rawId,
+    worldId: ONLINE_WORLD_ID,
+    resetGeneration: RESET_GENERATION,
+    ownerKind: "player",
+    ownerUid: economy.uid,
+    ownerName: normalizePlayerName(profile.playerName || participant.ownerName, "Ruler"),
+    ownerFlag: profile.flag || participant.ownerFlag || null,
+    ownerKingPower: Math.max(0, Math.floor(safeNumber(stats?.kingPower, participant.ownerKingPower))),
+    kingPowerVersion: GLOBAL_PLAYER_STATS_VERSION,
+    kind: "transfer",
+    launchKind: "rally_join",
+    rallyReturn: true,
+    rallyId: normalizeRallyId(rally.id),
+    rallyClanId: safeString(rally.clanId, 128),
+    returnReason: safeString(reason, 40),
+    targetType: "city",
+    fromId: safeString(source.id || rally.targetId || rally.assemblyCityId, 96),
+    toId: safeString(destination.id, 96),
+    fromName: safeString(source.name || rally.targetName || rally.assemblyCityName || "Rally", 40),
+    toName: safeString(destination.name || "Return city", 40),
+    sourceRegionId,
+    targetRegionId: destinationRegionId,
+    troops,
+    requestedTroops: troops,
+    total: duration,
+    path: route.path,
+    pathSegments: route.pathSegments,
+    routeRegionIds: route.routeRegionIds,
+    viewRegionIds: route.routeRegionIds,
+    pathLength: route.pathLength,
+    targetKey: `${destinationRegionId}:${destination.id}`,
+    targetOwnerAtLaunch: "player",
+    originalTargetOwnerUid: economy.uid,
+    targetOwnerUid: economy.uid,
+    attackerKingPower: Math.max(0, Math.floor(safeNumber(stats?.kingPower, participant.ownerKingPower))),
+    defenderKingPower: Math.max(0, Math.floor(safeNumber(stats?.kingPower, participant.ownerKingPower))),
+    launchedAtMs: nowMs,
+    arrivesAtMs: nowMs + Math.ceil(duration * 1000),
+    status: "active",
+    createdByServer: true,
+    rallyModelVersion: RALLY_MODEL_VERSION,
+    serverAuthorityVersion: 3,
+  };
+}
+
+function getRallyShieldDeactivation(economy = null, nowMs = Date.now()) {
+  if (!economy) return { deactivated: false, profileOverrides: {}, cityPatches: [], cityUpdates: [] };
+  const itemEffects = { ...(economy.itemEffects || {}) };
+  const shieldIsActive = safeNumber(itemEffects.shieldExpiresAtMs, 0) > nowMs
+    || economy.cityEntries.some(entry => (
+      entry?.city
+      && !isStronghold(entry.city)
+      && getShieldExpiresAtMs(entry.city) > nowMs
+    ));
+  if (!shieldIsActive) {
+    return { deactivated: false, profileOverrides: {}, cityPatches: [], cityUpdates: [] };
+  }
+  itemEffects.shieldExpiresAtMs = 0;
+  const cityPatches = [];
+  const cityUpdates = [];
+  economy.cityEntries.forEach(entry => {
+    if (!entry?.ref || !entry.city || isStronghold(entry.city)) return;
+    const patch = { ownerShieldExpiresAtMs: 0 };
+    cityPatches.push({ ref: entry.ref, city: entry.city, patch });
+    cityUpdates.push({
+      id: entry.city.id,
+      regionId: normalizeRegionId(entry.city.regionId || getRegionIdFromOnlineIslandId(getCityEntryIslandId(entry))),
+      ...patch,
+    });
+  });
+  return {
+    deactivated: true,
+    profileOverrides: { itemEffects },
+    cityPatches,
+    cityUpdates,
+  };
 }
 
 function createRelinquishContinuationMovement({
@@ -8656,6 +9280,19 @@ exports.useRecallHorn = onCall({ region: "us-central1", maxInstances: 20, invoke
     }
     const targetCampRef = army.targetType === "camp" ? campRefForRegion(targetRegionId, army.toId) : null;
     const targetCampSnap = targetCampRef ? await transaction.get(targetCampRef) : null;
+    const rallyRef = army.rallyAttack && army.rallyClanId && army.rallyId
+      ? clanRallyRef(army.rallyClanId, army.rallyId)
+      : null;
+    const rallySnap = rallyRef ? await transaction.get(rallyRef) : null;
+    const rally = normalizeClanRally(rallySnap);
+    if (army.rallyAttack && (
+      !rally
+      || rally.leaderUid !== uid
+      || rally.armyId !== armyId
+      || ![RALLY_STATUS_LAUNCHED, RALLY_STATUS_RECALLING].includes(rally.status)
+    )) {
+      throw new HttpsError("failed-precondition", "That rally can no longer be recalled.");
+    }
 
     const oldArrivesAtMs = Math.max(0, Math.floor(safeNumber(army.arrivesAtMs, 0)));
     const remainingBeforeMs = oldArrivesAtMs - nowMs;
@@ -8716,6 +9353,19 @@ exports.useRecallHorn = onCall({ region: "us-central1", maxInstances: 20, invoke
     armyRefsForRegions(routeRegionIds, armyId).forEach(ref => {
       transaction.set(ref, movementPatch, { merge: true });
     });
+    if (rallyRef && rally) {
+      transaction.set(rallyRef, {
+        status: RALLY_STATUS_RECALLING,
+        recalledAtMs: nowMs,
+        updatedAtMs: nowMs,
+        updatedAt: FieldValue.serverTimestamp(),
+      }, { merge: true });
+      writeClanAudit(transaction, rally.clanId, uid, "rally_recalled", {
+        rallyId: rally.id,
+        armyId,
+        troops: Math.max(0, Math.floor(safeNumber(army.troops, 0))),
+      }, nowMs);
+    }
     const launchedAsClanReinforcement = !army.reinforcementReturn && (
       army.kind === "reinforce"
       || army.launchKind === "reinforce"
@@ -9342,8 +9992,62 @@ exports.reviewClanApplication = onCall({ region: "us-central1", maxInstances: 30
   });
 });
 
+function internalRallyCallableRequest(uid = "", clanId = "", rallyId = "") {
+  return {
+    auth: { uid: safeString(uid, 128), token: { serverReconciliation: true } },
+    data: {
+      clanId: safeString(clanId, 128),
+      rallyId: normalizeRallyId(rallyId),
+      clientReleaseId: REALM_RELEASE_ID,
+      clientResetGeneration: RESET_GENERATION,
+      clientWorldId: ONLINE_WORLD_ID,
+    },
+  };
+}
+
+async function reconcileClanRalliesBeforeDeparture(uid = "", clanId = "") {
+  const playerUid = safeString(uid, 128);
+  const currentClanId = safeString(clanId, 128);
+  if (!playerUid || !currentClanId) return;
+  const snapshot = await db.collection(`clans/${currentClanId}/rallies`)
+    .where("resetGeneration", "==", RESET_GENERATION)
+    .where("worldId", "==", ONLINE_WORLD_ID)
+    .where("status", "==", RALLY_STATUS_FORMING)
+    .get();
+  const relevant = snapshot.docs
+    .map(normalizeClanRally)
+    .filter(rally => rally && activeRallyParticipants(rally).some(participant => participant.uid === playerUid));
+  for (const rally of relevant) {
+    const request = internalRallyCallableRequest(playerUid, currentClanId, rally.id);
+    if (rally.leaderUid === playerUid) await cancelClanRallyRequest(request);
+    else await withdrawClanRallyContributionRequest(request);
+  }
+}
+
 async function removeClanMember({ actorUid, targetUid, clanId, reason = "left" }) {
   const nowMs = Date.now();
+  const [preflightClanSnap, preflightActorSnap, preflightTargetSnap] = await Promise.all([
+    db.doc(`clans/${clanId}`).get(),
+    db.doc(`clans/${clanId}/members/${actorUid}`).get(),
+    db.doc(`clans/${clanId}/members/${targetUid}`).get(),
+  ]);
+  if (!preflightClanSnap.exists || !preflightTargetSnap.exists) {
+    throw new HttpsError("not-found", "Clan member was not found.");
+  }
+  const preflightClan = preflightClanSnap.data() || {};
+  const preflightActor = preflightActorSnap.data() || {};
+  const preflightTarget = preflightTargetSnap.data() || {};
+  const selfLeave = actorUid === targetUid;
+  if (!selfLeave) {
+    assertClanRole(preflightActor, ["leader"]);
+    if (preflightTarget.role === "leader") {
+      throw new HttpsError("permission-denied", "You cannot remove that clan member.");
+    }
+  }
+  if (preflightTarget.role === "leader" && preflightClan.memberCount > 1) {
+    throw new HttpsError("failed-precondition", "Transfer leadership before leaving.");
+  }
+  await reconcileClanRalliesBeforeDeparture(targetUid, clanId);
   return db.runTransaction(async transaction => {
     const [clanSnap, actorMemberSnap, targetMemberSnap, targetProfileSnap, benefitsSnap] = await Promise.all([
       transaction.get(db.doc(`clans/${clanId}`)),
@@ -9874,9 +10578,14 @@ exports.syncClanIdentityOnMembershipChange = onDocumentWritten({
     )));
   }
   await reconcileClanReinforcementsForPlayer(uid);
+  const previousClanId = safeString(before.clanId, 128);
+  const currentClanId = safeString(after.clanId, 128);
+  if (previousClanId && previousClanId !== currentClanId) {
+    await reconcileClanRalliesBeforeDeparture(uid, previousClanId);
+  }
   const affectedClanIds = [...new Set([
-    safeString(before.clanId, 128),
-    safeString(after.clanId, 128),
+    previousClanId,
+    currentClanId,
   ].filter(Boolean))];
   const effectiveAtMs = Math.max(
     timestampToMs(after.clanIdentityUpdatedAtMs),
@@ -9915,6 +10624,964 @@ exports.rebuildClanPowerOnPlayerStats = onDocumentWritten({
     transaction.set(leaderboardEntryRef(uid), clanIdentityPatch(clanId, clan, memberSnap.data()?.role), { merge: true });
     writeClanLeaderboard(transaction, clanId, clan, { totalKingPower });
   });
+});
+
+exports.createClanRally = timedCallable("createClanRally", { region: "us-central1", maxInstances: 20, invoker: "public" }, async request => {
+  const uid = requireAuth(request);
+  const nowMs = Date.now();
+  const order = normalizeArmyPayload(request.data || {}, uid);
+  order.kind = "attack";
+  order.launchKind = "attack";
+  if (!order.fromId || !order.toId || order.fromId === order.toId) {
+    throw new HttpsError("invalid-argument", "Choose a valid assembly city and rally objective.");
+  }
+  order.sourceRegionId = requireKnownWorldRegionId(order.sourceRegionId);
+  order.targetRegionId = requireKnownWorldRegionId(order.targetRegionId);
+  if (!getServerWorldTargetIds(order.sourceRegionId).has(order.fromId)) {
+    throw new HttpsError("invalid-argument", "The assembly city is not part of the current Crownlands map.");
+  }
+  const allowedTargetIds = order.targetType === "camp"
+    ? getServerWorldCampIds(order.targetRegionId)
+    : getServerWorldTargetIds(order.targetRegionId);
+  if (!allowedTargetIds.has(order.toId)) {
+    throw new HttpsError("invalid-argument", "The rally objective is not part of the current Crownlands map.");
+  }
+  const requestedRallyId = normalizeRallyId(
+    request.data?.rallyId || request.data?.requestId || order.id || `rally_${uid}_${nowMs.toString(36)}`
+  );
+  if (!requestedRallyId) throw new HttpsError("invalid-argument", "Missing rally id.");
+  const sourceRef = cityRefForRegion(order.sourceRegionId, order.fromId);
+  const targetRef = order.targetType === "camp"
+    ? campRefForRegion(order.targetRegionId, order.toId)
+    : cityRefForRegion(order.targetRegionId, order.toId);
+  const playerRef = db.doc(`players/${uid}`);
+
+  return db.runTransaction(async transaction => {
+    const [sourceSnap, targetSnap, playerSnap] = await Promise.all([
+      transaction.get(sourceRef),
+      transaction.get(targetRef),
+      transaction.get(playerRef),
+    ]);
+    if (!sourceSnap.exists) throw new HttpsError("not-found", "The assembly city was not found.");
+    const missingTargetCamp = order.targetType === "camp" && !targetSnap.exists
+      ? createNeutralRewardCampState(getAuthoritativeRewardCampSeed(order.targetRegionId, order.toId))
+      : null;
+    if (!targetSnap.exists && !missingTargetCamp) {
+      throw new HttpsError("not-found", "The rally objective was not found.");
+    }
+    const profile = playerSnap.exists ? playerSnap.data() || {} : {};
+    const clanId = safeString(profile.clanId, 128);
+    if (!clanId) throw new HttpsError("failed-precondition", "Join a clan before creating a rally.");
+    const rallyRef = clanRallyRef(clanId, requestedRallyId);
+    const stateRef = clanRallyStateRef(clanId);
+    const memberRef = db.doc(`clans/${clanId}/members/${uid}`);
+    const [clanSnap, memberSnap, rallySnap, stateSnap] = await Promise.all([
+      transaction.get(db.doc(`clans/${clanId}`)),
+      transaction.get(memberRef),
+      transaction.get(rallyRef),
+      transaction.get(stateRef),
+    ]);
+    if (!clanSnap.exists || clanSnap.data()?.status !== "active" || !memberSnap.exists) {
+      throw new HttpsError("failed-precondition", "Your clan membership is no longer active.");
+    }
+    if (rallySnap.exists) {
+      const existing = normalizeClanRally(rallySnap);
+      if (existing?.leaderUid === uid) {
+        return { ok: true, duplicate: true, rally: rallyForClient(existing) };
+      }
+      throw new HttpsError("already-exists", "That rally request already exists.");
+    }
+    const state = normalizeRallyState(stateSnap.exists ? stateSnap.data() || {} : {});
+    if (state.leaderUids.includes(uid)) {
+      throw new HttpsError("failed-precondition", "You may lead only one forming rally at a time.");
+    }
+    if (state.leaderUids.length >= CLAN_FORMING_RALLY_LIMIT) {
+      throw new HttpsError("resource-exhausted", `Your clan already has ${CLAN_FORMING_RALLY_LIMIT} forming rallies.`);
+    }
+
+    let source = { id: sourceSnap.id, ...sourceSnap.data() };
+    const rawTarget = targetSnap.exists
+      ? { id: targetSnap.id, ...targetSnap.data() }
+      : missingTargetCamp;
+    const target = order.targetType === "camp"
+      ? getRewardCampCombatTarget(rawTarget)
+      : rawTarget;
+    if (getOwnerUid(source) !== uid) {
+      throw new HttpsError("permission-denied", "You can only assemble a rally in your own city or Stronghold.");
+    }
+    if (!target || !isRallyObjectiveTarget(target, order.targetType)) {
+      throw new HttpsError("failed-precondition", "Rallies may target only Strongholds, the Crown Citadel, or reward camps.");
+    }
+    const targetOwnerUid = getOwnerUid(target);
+    const targetOwnerProfileSnap = targetOwnerUid
+      ? await transaction.get(db.doc(`players/${targetOwnerUid}`))
+      : null;
+    if (isRallyTargetFriendly(
+      targetOwnerUid,
+      targetOwnerProfileSnap?.exists ? targetOwnerProfileSnap.data() || {} : {},
+      { leaderUid: uid, clanId }
+    )) {
+      throw new HttpsError("failed-precondition", "You cannot form a rally against your own or a current clan ally's objective.");
+    }
+    const validatedRoute = validateArmyRoute(order, source, target);
+    const economy = await prepareEconomyCollection(transaction, uid, nowMs, {
+      profileRef: playerRef,
+      profileSnap: playerSnap,
+    });
+    const producedSource = getEconomyCityByRef(economy, sourceRef);
+    if (producedSource?.city) source = producedSource.city;
+    const currentProfile = economy.profileAfter || profile;
+    const sourceTroops = Math.max(0, Math.floor(safeNumber(source.troops, 0)));
+    const troops = clampInt(order.requestedTroops || order.troops, 1, Math.max(1, sourceTroops));
+    if (!sourceTroops || sourceTroops < troops) {
+      throw new HttpsError("failed-precondition", "Not enough troops in the assembly city.");
+    }
+    const stats = createPreparedEconomyStatsSnapshot(economy, {}, { nowMs });
+    const participant = createRallyParticipantSnapshot({
+      uid,
+      profile: currentProfile,
+      source,
+      sourceRegionId: order.sourceRegionId,
+      troops,
+      role: "leader",
+      status: RALLY_PARTICIPANT_ASSEMBLED,
+      joinedAtMs: nowMs,
+      assembledAtMs: nowMs,
+      ownerKingPower: stats?.kingPower,
+    });
+    const shield = getRallyShieldDeactivation(economy, nowMs);
+    const committedRallyTroops = getProfileCommittedRallyTroops(currentProfile) + troops;
+    const sourcePatch = {
+      troops: sourceTroops - troops,
+      troopFloat: Math.max(0, safeNumber(source.troopFloat, sourceTroops) - troops),
+    };
+    const participants = [participant];
+    const totals = rallyParticipantTotals(participants);
+    const rally = {
+      id: requestedRallyId,
+      modelVersion: RALLY_MODEL_VERSION,
+      worldId: ONLINE_WORLD_ID,
+      resetGeneration: RESET_GENERATION,
+      clanId,
+      status: RALLY_STATUS_FORMING,
+      leaderUid: uid,
+      leaderName: participant.ownerName,
+      leaderFlag: participant.ownerFlag || null,
+      leaderKingPower: Math.max(0, Math.floor(safeNumber(stats?.kingPower, 0))),
+      assemblyCityId: source.id,
+      assemblyCityName: safeString(source.name || source.id, 80),
+      assemblyRegionId: order.sourceRegionId,
+      assemblyX: safeNumber(source.x, 0),
+      assemblyY: safeNumber(source.y, 0),
+      targetType: order.targetType,
+      targetId: target.id,
+      targetName: safeString(target.name || target.id, 80),
+      targetRegionId: order.targetRegionId,
+      targetX: safeNumber(target.x, 0),
+      targetY: safeNumber(target.y, 0),
+      validatedRouteVersion: 1,
+      path: validatedRoute.path,
+      pathSegments: validatedRoute.pathSegments,
+      routeRegionIds: validatedRoute.routeRegionIds,
+      pathLength: validatedRoute.pathLength,
+      participants,
+      ...totals,
+      armyId: "",
+      createdAtMs: nowMs,
+      updatedAtMs: nowMs,
+      createdAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
+    };
+    if (missingTargetCamp) {
+      transaction.set(targetRef, {
+        ...missingTargetCamp,
+        createdAt: FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp(),
+      }, { merge: true });
+    }
+    writePreparedEconomy(transaction, economy, {
+      ...shield.profileOverrides,
+      committedRallyTroops,
+      rallyResetGeneration: RESET_GENERATION,
+    }, [
+      ...shield.cityPatches,
+      { ref: sourceRef, city: source, patch: sourcePatch },
+    ], { nowMs });
+    transaction.create(rallyRef, rally);
+    transaction.set(stateRef, {
+      worldId: ONLINE_WORLD_ID,
+      resetGeneration: RESET_GENERATION,
+      activeCount: state.leaderUids.length + 1,
+      leaderUids: [...state.leaderUids, uid],
+      updatedAtMs: nowMs,
+      updatedAt: FieldValue.serverTimestamp(),
+    }, { merge: true });
+    writeClanAudit(transaction, clanId, uid, "rally_created", {
+      rallyId: requestedRallyId,
+      targetType: order.targetType,
+      targetId: target.id,
+      targetRegionId: order.targetRegionId,
+      troops,
+    }, nowMs);
+    return {
+      ok: true,
+      peaceShieldDeactivated: shield.deactivated,
+      rally: rallyForClient(rally),
+      sourceCity: {
+        id: source.id,
+        regionId: order.sourceRegionId,
+        troops: sourcePatch.troops,
+        troopFloat: sourcePatch.troopFloat,
+      },
+      cityUpdates: [
+        ...shield.cityUpdates,
+        { id: source.id, regionId: order.sourceRegionId, ...sourcePatch },
+      ],
+      currentUser: {
+        committedRallyTroops,
+        rallyResetGeneration: RESET_GENERATION,
+        itemEffects: shield.profileOverrides.itemEffects || economy.itemEffects,
+        globalStats: globalStatsForClient(economy.lastGlobalStats || economy.globalStats),
+      },
+    };
+  });
+});
+
+exports.joinClanRally = timedCallable("joinClanRally", { region: "us-central1", maxInstances: 20, invoker: "public" }, async request => {
+  const uid = requireAuth(request);
+  const nowMs = Date.now();
+  const clanId = safeString(request.data?.clanId, 128);
+  const rallyId = normalizeRallyId(request.data?.rallyId);
+  if (!clanId || !rallyId) throw new HttpsError("invalid-argument", "Choose a rally to join.");
+  const order = normalizeArmyPayload(request.data || {}, uid);
+  if (!order.fromId) throw new HttpsError("invalid-argument", "Choose a source city.");
+  order.sourceRegionId = requireKnownWorldRegionId(order.sourceRegionId);
+  if (!getServerWorldTargetIds(order.sourceRegionId).has(order.fromId)) {
+    throw new HttpsError("invalid-argument", "The source city is not part of the current Crownlands map.");
+  }
+  const rallyRef = clanRallyRef(clanId, rallyId);
+  const playerRef = db.doc(`players/${uid}`);
+  const sourceRef = cityRefForRegion(order.sourceRegionId, order.fromId);
+  const joinArmyId = normalizeRallyId(
+    request.data?.armyId || order.id || `${rallyId}_${uid}_join`
+  );
+  const canonicalJoinRef = canonicalArmyRef(joinArmyId);
+
+  return db.runTransaction(async transaction => {
+    const [rallySnap, playerSnap, sourceSnap, clanSnap, memberSnap, joinArmySnap] = await Promise.all([
+      transaction.get(rallyRef),
+      transaction.get(playerRef),
+      transaction.get(sourceRef),
+      transaction.get(db.doc(`clans/${clanId}`)),
+      transaction.get(db.doc(`clans/${clanId}/members/${uid}`)),
+      transaction.get(canonicalJoinRef),
+    ]);
+    const rally = normalizeClanRally(rallySnap);
+    if (!rally || rally.status !== RALLY_STATUS_FORMING) {
+      throw new HttpsError("failed-precondition", "That rally is no longer forming.");
+    }
+    const profile = playerSnap.exists ? playerSnap.data() || {} : {};
+    if (
+      safeString(profile.clanId, 128) !== clanId
+      || !clanSnap.exists
+      || clanSnap.data()?.status !== "active"
+      || !memberSnap.exists
+    ) {
+      throw new HttpsError("permission-denied", "Only current clan members may join this rally.");
+    }
+    const existingParticipant = getRallyParticipant(rally, uid);
+    if (existingParticipant) {
+      return {
+        ok: true,
+        duplicate: true,
+        rally: rallyForClient(rally),
+        movement: existingParticipant.joinArmyId && joinArmySnap.exists
+          ? { id: joinArmySnap.id, ...joinArmySnap.data() }
+          : null,
+      };
+    }
+    if (activeRallyParticipants(rally).length >= RALLY_MAX_PARTICIPANTS) {
+      throw new HttpsError("resource-exhausted", "That rally already has three participants.");
+    }
+    if (joinArmySnap.exists) {
+      throw new HttpsError("already-exists", "That rally contribution order already exists.");
+    }
+    if (!sourceSnap.exists) throw new HttpsError("not-found", "The source city was not found.");
+    const assemblyRef = rallyAssemblyRef(rally);
+    if (!assemblyRef) throw new HttpsError("failed-precondition", "The rally assembly city is unavailable.");
+    const assemblySnap = await transaction.get(assemblyRef);
+    if (!assemblySnap.exists) throw new HttpsError("failed-precondition", "The rally assembly city no longer exists.");
+    let source = { id: sourceSnap.id, ...sourceSnap.data() };
+    const assembly = { id: assemblySnap.id, ...assemblySnap.data() };
+    if (getOwnerUid(source) !== uid) {
+      throw new HttpsError("permission-denied", "You can only contribute troops from your own city or Stronghold.");
+    }
+    if (getOwnerUid(assembly) !== rally.leaderUid) {
+      throw new HttpsError("failed-precondition", "The leader no longer owns the rally assembly city.");
+    }
+    const joinOrder = {
+      ...order,
+      id: joinArmyId,
+      kind: "rally_join",
+      launchKind: "rally_join",
+      toId: rally.assemblyCityId,
+      targetType: "city",
+      targetRegionId: rally.assemblyRegionId,
+    };
+    const validatedRoute = validateArmyRoute(joinOrder, source, assembly);
+    const economy = await prepareEconomyCollection(transaction, uid, nowMs, {
+      profileRef: playerRef,
+      profileSnap: playerSnap,
+    });
+    const producedSource = getEconomyCityByRef(economy, sourceRef);
+    if (producedSource?.city) source = producedSource.city;
+    const currentProfile = economy.profileAfter || profile;
+    const sourceTroops = Math.max(0, Math.floor(safeNumber(source.troops, 0)));
+    const troops = clampInt(order.requestedTroops || order.troops, 1, Math.max(1, sourceTroops));
+    if (!sourceTroops || sourceTroops < troops) {
+      throw new HttpsError("failed-precondition", "Not enough troops in the source city.");
+    }
+    const stats = createPreparedEconomyStatsSnapshot(economy, {}, { nowMs });
+    const participant = createRallyParticipantSnapshot({
+      uid,
+      profile: currentProfile,
+      source,
+      sourceRegionId: order.sourceRegionId,
+      troops,
+      role: "ally",
+      status: RALLY_PARTICIPANT_INBOUND,
+      joinArmyId,
+      joinedAtMs: nowMs,
+      ownerKingPower: stats?.kingPower,
+    });
+    const movement = createRallyAssemblyMovement({
+      order: joinOrder,
+      rally,
+      participant,
+      source,
+      assembly,
+      profile: currentProfile,
+      economy,
+      validatedRoute,
+      nowMs,
+    });
+    participant.arrivesAtMs = movement.arrivesAtMs;
+    const participants = [...activeRallyParticipants(rally), participant];
+    const totals = rallyParticipantTotals(participants);
+    const shield = getRallyShieldDeactivation(economy, nowMs);
+    const sourcePatch = {
+      troops: sourceTroops - troops,
+      troopFloat: Math.max(0, safeNumber(source.troopFloat, sourceTroops) - troops),
+    };
+    writePreparedEconomy(transaction, economy, shield.profileOverrides, [
+      ...shield.cityPatches,
+      { ref: sourceRef, city: source, patch: sourcePatch },
+    ], {
+      addActiveArmies: [movement],
+      nowMs,
+    });
+    writeRallyJoinMovementCopies(transaction, movement, { includeCreatedAt: true });
+    transaction.set(rallyRef, {
+      participants,
+      ...totals,
+      updatedAtMs: nowMs,
+      updatedAt: FieldValue.serverTimestamp(),
+    }, { merge: true });
+    writeClanAudit(transaction, clanId, uid, "rally_joined", {
+      rallyId,
+      troops,
+      sourceId: source.id,
+      sourceRegionId: order.sourceRegionId,
+      arrivesAtMs: movement.arrivesAtMs,
+    }, nowMs);
+    return {
+      ok: true,
+      peaceShieldDeactivated: shield.deactivated,
+      rally: rallyForClient({ ...rally, participants, ...totals, updatedAtMs: nowMs }),
+      movement,
+      sourceCity: { id: source.id, regionId: order.sourceRegionId, ...sourcePatch },
+      cityUpdates: [
+        ...shield.cityUpdates,
+        { id: source.id, regionId: order.sourceRegionId, ...sourcePatch },
+      ],
+      currentUser: {
+        itemEffects: shield.profileOverrides.itemEffects || economy.itemEffects,
+        globalStats: globalStatsForClient(economy.lastGlobalStats || economy.globalStats),
+      },
+    };
+  });
+});
+
+async function withdrawClanRallyContributionRequest(request) {
+  const uid = requireAuth(request);
+  const nowMs = Date.now();
+  const clanId = safeString(request.data?.clanId, 128);
+  const rallyId = normalizeRallyId(request.data?.rallyId);
+  if (!clanId || !rallyId) throw new HttpsError("invalid-argument", "Choose a rally contribution to withdraw.");
+  const rallyRef = clanRallyRef(clanId, rallyId);
+
+  return db.runTransaction(async transaction => {
+    const [rallySnap, profileSnap, memberSnap] = await Promise.all([
+      transaction.get(rallyRef),
+      transaction.get(db.doc(`players/${uid}`)),
+      transaction.get(db.doc(`clans/${clanId}/members/${uid}`)),
+    ]);
+    const rally = normalizeClanRally(rallySnap);
+    if (!rally || rally.status !== RALLY_STATUS_FORMING) {
+      throw new HttpsError("failed-precondition", "That rally is no longer forming.");
+    }
+    if (rally.leaderUid === uid) {
+      throw new HttpsError("failed-precondition", "The rally leader must cancel the rally instead.");
+    }
+    const participant = getRallyParticipant(rally, uid);
+    if (!participant) {
+      return { ok: true, duplicate: true, rally: rallyForClient(rally), movement: null };
+    }
+    const profile = profileSnap.exists ? profileSnap.data() || {} : {};
+    if (safeString(profile.clanId, 128) === clanId && !memberSnap.exists) {
+      throw new HttpsError("failed-precondition", "Your clan membership is still synchronizing. Try again.");
+    }
+    let movement = null;
+    let economy = null;
+    let committedRallyTroops = getProfileCommittedRallyTroops(profile);
+    if (participant.status === RALLY_PARTICIPANT_INBOUND) {
+      const joinRef = canonicalArmyRef(participant.joinArmyId);
+      const joinSnap = await transaction.get(joinRef);
+      if (!joinSnap.exists || joinSnap.data()?.status !== "active") {
+        throw new HttpsError("aborted", "The contribution arrival is being processed. Try again.");
+      }
+      const joinArmy = { id: joinSnap.id, ...joinSnap.data() };
+      movement = joinArmy.returning
+        ? joinArmy
+        : {
+          ...createAlliedTargetReturnMovement(joinArmy, nowMs),
+          returnReason: RALLY_RETURN_REASON,
+          rallyReturn: true,
+        };
+      writeRallyJoinMovementCopies(transaction, movement);
+    } else if (participant.status === RALLY_PARTICIPANT_ASSEMBLED) {
+      const assemblyRef = rallyAssemblyRef(rally);
+      const assemblySnap = assemblyRef ? await transaction.get(assemblyRef) : null;
+      if (!assemblySnap?.exists) {
+        throw new HttpsError("failed-precondition", "The rally assembly city no longer exists.");
+      }
+      economy = await prepareEconomyCollection(transaction, uid, nowMs, {
+        profileRef: db.doc(`players/${uid}`),
+        profileSnap,
+      });
+      const destinationEntry = getRallyReturnDestination(economy, profile, participant);
+      movement = createRallyReturnMovement({
+        rally,
+        participant,
+        source: { id: assemblySnap.id, ...assemblySnap.data(), regionId: rally.assemblyRegionId },
+        destinationEntry,
+        economy,
+        profile: economy.profileAfter || profile,
+        nowMs,
+        reason: RALLY_RETURN_REASON,
+        movementId: `${rally.id}_${uid}_withdraw`,
+      });
+      committedRallyTroops = Math.max(0, getProfileCommittedRallyTroops(economy.profileAfter || profile) - participant.troops);
+      writePreparedEconomy(transaction, economy, {
+        committedRallyTroops,
+        rallyResetGeneration: RESET_GENERATION,
+      }, [], {
+        addActiveArmies: [movement],
+        nowMs,
+      });
+      armyRefsForRegions(movement.routeRegionIds, movement.id).forEach(ref => {
+        transaction.set(ref, {
+          ...movement,
+          createdAt: FieldValue.serverTimestamp(),
+          updatedAt: FieldValue.serverTimestamp(),
+        }, { merge: true });
+      });
+    }
+    const participants = activeRallyParticipants(rally).filter(entry => entry.uid !== uid);
+    const totals = rallyParticipantTotals(participants);
+    transaction.set(rallyRef, {
+      participants,
+      ...totals,
+      updatedAtMs: nowMs,
+      updatedAt: FieldValue.serverTimestamp(),
+    }, { merge: true });
+    writeClanAudit(transaction, clanId, uid, "rally_contribution_withdrawn", {
+      rallyId,
+      troops: participant.troops,
+      previousStatus: participant.status,
+    }, nowMs);
+    return {
+      ok: true,
+      rally: rallyForClient({ ...rally, participants, ...totals, updatedAtMs: nowMs }),
+      movement,
+      currentUser: economy ? {
+        committedRallyTroops,
+        rallyResetGeneration: RESET_GENERATION,
+        globalStats: globalStatsForClient(economy.lastGlobalStats || economy.globalStats),
+      } : null,
+    };
+  });
+}
+
+exports.withdrawClanRallyContribution = timedCallable(
+  "withdrawClanRallyContribution",
+  { region: "us-central1", maxInstances: 20, invoker: "public" },
+  withdrawClanRallyContributionRequest
+);
+
+async function cancelClanRallyRequest(request) {
+  const uid = requireAuth(request);
+  const nowMs = Date.now();
+  const clanId = safeString(request.data?.clanId, 128);
+  const rallyId = normalizeRallyId(request.data?.rallyId);
+  if (!clanId || !rallyId) throw new HttpsError("invalid-argument", "Choose a rally to cancel.");
+  const rallyRef = clanRallyRef(clanId, rallyId);
+  const stateRef = clanRallyStateRef(clanId);
+
+  return db.runTransaction(async transaction => {
+    const [rallySnap, stateSnap] = await Promise.all([
+      transaction.get(rallyRef),
+      transaction.get(stateRef),
+    ]);
+    const rally = normalizeClanRally(rallySnap);
+    if (!rally) throw new HttpsError("not-found", "That rally was not found.");
+    if (rally.leaderUid !== uid) throw new HttpsError("permission-denied", "Only the rally leader may cancel it.");
+    if (rally.status === RALLY_STATUS_CANCELLED) {
+      return { ok: true, duplicate: true, rally: rallyForClient(rally), movements: [] };
+    }
+    if (rally.status !== RALLY_STATUS_FORMING) {
+      throw new HttpsError("failed-precondition", "Only a forming rally may be cancelled.");
+    }
+    const participants = activeRallyParticipants(rally);
+    const inboundParticipants = participants.filter(participant => participant.status === RALLY_PARTICIPANT_INBOUND);
+    const assembledParticipants = participants.filter(participant => participant.status === RALLY_PARTICIPANT_ASSEMBLED);
+    const inboundSnaps = new Map();
+    for (const participant of inboundParticipants) {
+      if (!participant.joinArmyId) continue;
+      const snapshot = await transaction.get(canonicalArmyRef(participant.joinArmyId));
+      inboundSnaps.set(participant.uid, snapshot);
+    }
+    const assemblyRef = rallyAssemblyRef(rally);
+    const assemblySnap = assemblyRef ? await transaction.get(assemblyRef) : null;
+    const economies = new Map();
+    for (const participant of assembledParticipants) {
+      const economy = await prepareEconomyCollection(transaction, participant.uid, nowMs);
+      economies.set(participant.uid, economy);
+    }
+    const movements = [];
+    const immediateCityUpdates = [];
+    const committedTroopsByUid = new Map();
+    for (const participant of inboundParticipants) {
+      const joinSnap = inboundSnaps.get(participant.uid);
+      if (!joinSnap?.exists || joinSnap.data()?.status !== "active" || joinSnap.data()?.returning) continue;
+      const joinArmy = { id: joinSnap.id, ...joinSnap.data() };
+      const movement = {
+        ...createAlliedTargetReturnMovement(joinArmy, nowMs),
+        returnReason: RALLY_RETURN_REASON,
+        rallyReturn: true,
+      };
+      writeRallyJoinMovementCopies(transaction, movement);
+      movements.push(movement);
+    }
+    for (const participant of assembledParticipants) {
+      const economy = economies.get(participant.uid);
+      const profile = economy?.profileAfter || {};
+      if (!economy) continue;
+      const committedRallyTroops = Math.max(0, getProfileCommittedRallyTroops(profile) - participant.troops);
+      committedTroopsByUid.set(participant.uid, committedRallyTroops);
+      const profileOverrides = {
+        committedRallyTroops,
+        rallyResetGeneration: RESET_GENERATION,
+      };
+      const assembly = assemblySnap?.exists
+        ? { id: assemblySnap.id, ...assemblySnap.data(), regionId: rally.assemblyRegionId }
+        : {
+          id: rally.assemblyCityId,
+          name: rally.assemblyCityName,
+          regionId: rally.assemblyRegionId,
+          x: rally.assemblyX,
+          y: rally.assemblyY,
+        };
+      if (participant.role === "leader" && assemblySnap?.exists && getOwnerUid(assembly) === participant.uid) {
+        const nextTroops = Math.max(0, Math.floor(safeNumber(assembly.troops, 0))) + participant.troops;
+        const nextTroopFloat = Math.max(0, safeNumber(assembly.troopFloat, assembly.troops || 0)) + participant.troops;
+        const patch = { troops: nextTroops, troopFloat: nextTroopFloat };
+        writePreparedEconomy(transaction, economy, profileOverrides, [
+          { ref: assemblyRef, city: assembly, patch },
+        ], { nowMs });
+        immediateCityUpdates.push({
+          id: assembly.id,
+          regionId: rally.assemblyRegionId,
+          ...patch,
+        });
+      } else {
+        const destinationEntry = getRallyReturnDestination(economy, profile, participant);
+        const movement = createRallyReturnMovement({
+          rally,
+          participant,
+          source: assembly,
+          destinationEntry,
+          economy,
+          profile,
+          nowMs,
+          reason: RALLY_RETURN_REASON,
+          movementId: `${rally.id}_${participant.uid}_cancel`,
+        });
+        writePreparedEconomy(transaction, economy, profileOverrides, [], {
+          addActiveArmies: [movement],
+          nowMs,
+        });
+        armyRefsForRegions(movement.routeRegionIds, movement.id).forEach(ref => {
+          transaction.set(ref, {
+            ...movement,
+            createdAt: FieldValue.serverTimestamp(),
+            updatedAt: FieldValue.serverTimestamp(),
+          }, { merge: true });
+        });
+        movements.push(movement);
+      }
+    }
+    const terminalParticipants = participants.map(participant => ({
+      ...participant,
+      status: participant.status === RALLY_PARTICIPANT_INBOUND
+        ? RALLY_PARTICIPANT_RETURNING
+        : participant.role === "leader" && immediateCityUpdates.length
+          ? RALLY_PARTICIPANT_RETURNED
+          : RALLY_PARTICIPANT_RETURNING,
+    }));
+    transaction.set(rallyRef, {
+      status: RALLY_STATUS_CANCELLED,
+      participants: terminalParticipants,
+      participantUids: terminalParticipants.map(participant => participant.uid),
+      participantCount: 0,
+      assembledTroops: 0,
+      inboundTroops: 0,
+      cancelledAtMs: nowMs,
+      cancelledByUid: uid,
+      updatedAtMs: nowMs,
+      updatedAt: FieldValue.serverTimestamp(),
+    }, { merge: true });
+    releaseFormingRallySlot(transaction, stateRef, stateSnap.exists ? stateSnap.data() || {} : {}, uid, nowMs);
+    writeClanAudit(transaction, clanId, uid, "rally_cancelled", {
+      rallyId,
+      participantCount: participants.length,
+      troops: participants.reduce((total, participant) => total + participant.troops, 0),
+    }, nowMs);
+    return {
+      ok: true,
+      rally: rallyForClient({
+        ...rally,
+        status: RALLY_STATUS_CANCELLED,
+        participants: terminalParticipants,
+        cancelledAtMs: nowMs,
+        updatedAtMs: nowMs,
+      }),
+      movements,
+      cityUpdates: immediateCityUpdates,
+      currentUser: economies.get(uid) ? {
+        committedRallyTroops: committedTroopsByUid.get(uid) || 0,
+        rallyResetGeneration: RESET_GENERATION,
+        globalStats: globalStatsForClient(economies.get(uid).lastGlobalStats || economies.get(uid).globalStats),
+      } : null,
+    };
+  });
+}
+
+exports.cancelClanRally = timedCallable(
+  "cancelClanRally",
+  { region: "us-central1", maxInstances: 20, invoker: "public" },
+  cancelClanRallyRequest
+);
+
+exports.launchClanRally = timedCallable("launchClanRally", { region: "us-central1", maxInstances: 20, invoker: "public" }, async request => {
+  const uid = requireAuth(request);
+  const nowMs = Date.now();
+  const clanId = safeString(request.data?.clanId, 128);
+  const rallyId = normalizeRallyId(request.data?.rallyId);
+  if (!clanId || !rallyId) throw new HttpsError("invalid-argument", "Choose a rally to launch.");
+  const rallyRef = clanRallyRef(clanId, rallyId);
+  const stateRef = clanRallyStateRef(clanId);
+
+  const result = await db.runTransaction(async transaction => {
+    const [rallySnap, stateSnap, leaderProfileSnap, clanSnap, leaderMemberSnap] = await Promise.all([
+      transaction.get(rallyRef),
+      transaction.get(stateRef),
+      transaction.get(db.doc(`players/${uid}`)),
+      transaction.get(db.doc(`clans/${clanId}`)),
+      transaction.get(db.doc(`clans/${clanId}/members/${uid}`)),
+    ]);
+    const rally = normalizeClanRally(rallySnap);
+    if (!rally) throw new HttpsError("not-found", "That rally was not found.");
+    if (rally.leaderUid !== uid) throw new HttpsError("permission-denied", "Only the rally leader may launch it.");
+    if (rally.status === RALLY_STATUS_LAUNCHED && rally.armyId) {
+      const armySnap = await transaction.get(canonicalArmyRef(rally.armyId));
+      return {
+        ok: true,
+        duplicate: true,
+        rally: rallyForClient(rally),
+        movement: armySnap.exists ? { id: armySnap.id, ...armySnap.data() } : null,
+      };
+    }
+    if (rally.status !== RALLY_STATUS_FORMING) {
+      throw new HttpsError("failed-precondition", "That rally is no longer forming.");
+    }
+    const leaderProfile = leaderProfileSnap.exists ? leaderProfileSnap.data() || {} : {};
+    if (
+      safeString(leaderProfile.clanId, 128) !== clanId
+      || !clanSnap.exists
+      || clanSnap.data()?.status !== "active"
+      || !leaderMemberSnap.exists
+    ) {
+      throw new HttpsError("failed-precondition", "The leader's clan membership is no longer active.");
+    }
+    const assemblyRef = rallyAssemblyRef(rally);
+    const targetRef = rallyTargetRef(rally);
+    if (!assemblyRef || !targetRef) throw new HttpsError("failed-precondition", "The rally route is incomplete.");
+    const [assemblySnap, targetSnap] = await Promise.all([
+      transaction.get(assemblyRef),
+      transaction.get(targetRef),
+    ]);
+    if (!assemblySnap.exists || getOwnerUid(assemblySnap.data() || {}) !== uid) {
+      throw new HttpsError("failed-precondition", "You no longer own the rally assembly city.");
+    }
+    if (!targetSnap.exists) throw new HttpsError("failed-precondition", "The rally objective no longer exists.");
+    const assembly = { id: assemblySnap.id, ...assemblySnap.data() };
+    const target = rally.targetType === "camp"
+      ? getRewardCampCombatTarget({ id: targetSnap.id, ...targetSnap.data() })
+      : { id: targetSnap.id, ...targetSnap.data() };
+    if (!target || !isRallyObjectiveTarget(target, rally.targetType)) {
+      throw new HttpsError("failed-precondition", "That location is no longer an eligible rally objective.");
+    }
+    const targetOwnerUid = getOwnerUid(target);
+    const targetOwnerProfileSnap = targetOwnerUid
+      ? await transaction.get(db.doc(`players/${targetOwnerUid}`))
+      : null;
+    const targetOwnerProfile = targetOwnerProfileSnap?.exists ? targetOwnerProfileSnap.data() || {} : {};
+    if (isRallyTargetFriendly(targetOwnerUid, targetOwnerProfile, rally)) {
+      throw new HttpsError("failed-precondition", "The objective is currently owned by you or a current clan ally.");
+    }
+    const launchOrder = {
+      id: normalizeRallyId(request.data?.armyId || `rally_attack_${rally.id}`),
+      fromId: rally.assemblyCityId,
+      toId: rally.targetId,
+      sourceRegionId: rally.assemblyRegionId,
+      targetRegionId: rally.targetRegionId,
+      targetType: rally.targetType,
+      routeRegionIds: rally.routeRegionIds,
+      pathSegments: rally.pathSegments,
+      path: rally.path,
+      pathLength: rally.pathLength,
+    };
+    const validatedRoute = validateArmyRoute(launchOrder, assembly, target);
+    const inboundParticipants = activeRallyParticipants(rally)
+      .filter(participant => participant.status === RALLY_PARTICIPANT_INBOUND);
+    const assembledParticipants = assembledRallyParticipants(rally);
+    if (!assembledParticipants.length || !assembledParticipants.some(participant => participant.uid === uid)) {
+      throw new HttpsError("failed-precondition", "The leader has no assembled troops to launch.");
+    }
+    const existingArmyRef = canonicalArmyRef(launchOrder.id);
+    const existingArmySnap = await transaction.get(existingArmyRef);
+    if (existingArmySnap.exists) {
+      throw new HttpsError("already-exists", "That rally launch already exists.");
+    }
+    const inboundSnaps = new Map();
+    for (const participant of inboundParticipants) {
+      if (!participant.joinArmyId) continue;
+      inboundSnaps.set(participant.uid, await transaction.get(canonicalArmyRef(participant.joinArmyId)));
+    }
+    const participantProfiles = new Map();
+    for (const participant of assembledParticipants) {
+      const [profileSnap, globalStatsSnap] = await Promise.all([
+        participant.uid === uid
+          ? Promise.resolve(leaderProfileSnap)
+          : transaction.get(db.doc(`players/${participant.uid}`)),
+        transaction.get(playerGlobalStatsRef(participant.uid)),
+      ]);
+      participantProfiles.set(participant.uid, {
+        profile: profileSnap.exists ? profileSnap.data() || {} : {},
+        globalStats: globalStatsSnap.exists ? globalStatsSnap.data() || {} : {},
+      });
+    }
+    const leaderEconomy = await prepareEconomyCollection(transaction, uid, nowMs, {
+      profileRef: db.doc(`players/${uid}`),
+      profileSnap: leaderProfileSnap,
+    });
+    const snapshottedParticipants = assembledParticipants.map(participant => {
+      const entry = participantProfiles.get(participant.uid) || {};
+      const profile = entry.profile || {};
+      return createRallyParticipantSnapshot({
+        uid: participant.uid,
+        profile,
+        source: {
+          id: participant.sourceId,
+          name: participant.sourceName,
+          regionId: participant.sourceRegionId,
+        },
+        sourceRegionId: participant.sourceRegionId,
+        troops: participant.troops,
+        role: participant.uid === uid ? "leader" : "ally",
+        status: RALLY_PARTICIPANT_ASSEMBLED,
+        joinArmyId: participant.joinArmyId,
+        joinedAtMs: participant.joinedAtMs,
+        assembledAtMs: participant.assembledAtMs,
+        ownerKingPower: getPlayerPowerSnapshot({
+          profile,
+          globalStats: entry.globalStats,
+          fallback: participant.ownerKingPower,
+        }),
+      });
+    });
+    const attackPackages = getRallyAttackPackages({ participants: snapshottedParticipants });
+    const totalTroops = attackPackages.reduce((total, participant) => total + participant.troops, 0);
+    if (!totalTroops) throw new HttpsError("failed-precondition", "The rally has no assembled troops.");
+    const leaderStats = createPreparedEconomyStatsSnapshot(leaderEconomy, {}, { nowMs });
+    const attackerKingPower = Math.max(
+      0,
+      Math.floor(safeNumber(leaderStats?.kingPower, rally.leaderKingPower))
+    );
+    const defenderKingPower = Math.max(1, getPlayerPowerSnapshot({
+      profile: targetOwnerProfile,
+      city: target,
+    }));
+    const duration = calculateTravelTime({
+      pathLength: validatedRoute.pathLength,
+      troopCount: totalTroops,
+      kind: "attack",
+      speedMultiplier: skillMultiplier(leaderEconomy.profileAfter || leaderProfile, "marchOrders")
+        * (1 + Math.max(0, safeNumber(leaderEconomy.bonuses?.marchSpeedBonusPercent, 0)) / 100),
+    });
+    const movement = {
+      id: launchOrder.id,
+      worldId: ONLINE_WORLD_ID,
+      resetGeneration: RESET_GENERATION,
+      ownerKind: "player",
+      ownerUid: uid,
+      ownerName: normalizePlayerName(leaderProfile.playerName || rally.leaderName, "Ruler"),
+      ownerFlag: leaderProfile.flag || rally.leaderFlag || null,
+      ownerKingPower: attackerKingPower,
+      kingPowerVersion: GLOBAL_PLAYER_STATS_VERSION,
+      kind: "attack",
+      launchKind: "attack",
+      rallyAttack: true,
+      rallyId: rally.id,
+      rallyClanId: clanId,
+      rallyParticipantCount: attackPackages.length,
+      participantUids: attackPackages.map(participant => participant.uid),
+      targetType: rally.targetType,
+      fromId: rally.assemblyCityId,
+      toId: rally.targetId,
+      sourceRegionId: rally.assemblyRegionId,
+      targetRegionId: rally.targetRegionId,
+      fromName: safeString(rally.assemblyCityName || assembly.name, 40),
+      toName: safeString(rally.targetName || target.name, 40),
+      troops: totalTroops,
+      requestedTroops: totalTroops,
+      total: duration,
+      path: validatedRoute.path,
+      pathSegments: validatedRoute.pathSegments,
+      routeRegionIds: validatedRoute.routeRegionIds,
+      viewRegionIds: validatedRoute.routeRegionIds,
+      pathLength: validatedRoute.pathLength,
+      targetKey: `${rally.targetRegionId}:${rally.targetId}`,
+      targetOwnerAtLaunch: targetOwnerUid ? "player" : "neutral",
+      originalTargetOwnerUid: targetOwnerUid || "",
+      targetOwnerUid: targetOwnerUid || "",
+      lastIncomingNotificationOwnerUid: targetOwnerUid || "",
+      attackerKingPower,
+      defenderKingPower,
+      attackProtection: null,
+      launchedAtMs: nowMs,
+      arrivesAtMs: nowMs + Math.ceil(duration * 1000),
+      status: "active",
+      createdByServer: true,
+      rallyModelVersion: RALLY_MODEL_VERSION,
+      serverAuthorityVersion: 3,
+    };
+    const returnedInbound = [];
+    for (const participant of inboundParticipants) {
+      const joinSnap = inboundSnaps.get(participant.uid);
+      if (!joinSnap?.exists || joinSnap.data()?.status !== "active" || joinSnap.data()?.returning) continue;
+      const inbound = { id: joinSnap.id, ...joinSnap.data() };
+      const returning = {
+        ...createAlliedTargetReturnMovement(inbound, nowMs),
+        returnReason: RALLY_RETURN_REASON,
+        rallyReturn: true,
+      };
+      writeRallyJoinMovementCopies(transaction, returning);
+      returnedInbound.push({
+        uid: participant.uid,
+        ownerName: participant.ownerName,
+        troops: participant.troops,
+        movementId: returning.id,
+        arrivesAtMs: returning.arrivesAtMs,
+      });
+    }
+    armyRefsForRegions(movement.routeRegionIds, movement.id).forEach(ref => {
+      transaction.set(ref, {
+        ...movement,
+        createdAt: FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp(),
+      }, { merge: true });
+    });
+    if (rally.targetType === "camp") {
+      transaction.set(targetRef, {
+        activeArmyIds: normalizeActiveArmyIds([...(target.activeArmyIds || []), movement.id]),
+        state: "contested",
+        updatedAt: FieldValue.serverTimestamp(),
+      }, { merge: true });
+    }
+    const totals = rallyParticipantTotals(snapshottedParticipants);
+    transaction.set(rallyRef, {
+      status: RALLY_STATUS_LAUNCHED,
+      armyId: movement.id,
+      participants: snapshottedParticipants,
+      ...totals,
+      inboundTroops: 0,
+      returnedInbound,
+      attackPower: attackPackages.reduce((total, participant) => total + participant.effectivePower, 0),
+      launchedAtMs: nowMs,
+      updatedAtMs: nowMs,
+      updatedAt: FieldValue.serverTimestamp(),
+    }, { merge: true });
+    releaseFormingRallySlot(transaction, stateRef, stateSnap.exists ? stateSnap.data() || {} : {}, uid, nowMs);
+    writeClanAudit(transaction, clanId, uid, "rally_launched", {
+      rallyId,
+      armyId: movement.id,
+      assembledParticipants: snapshottedParticipants.length,
+      assembledTroops: totalTroops,
+      returnedInboundParticipants: returnedInbound.length,
+    }, nowMs);
+    return {
+      ok: true,
+      rally: rallyForClient({
+        ...rally,
+        status: RALLY_STATUS_LAUNCHED,
+        armyId: movement.id,
+        participants: snapshottedParticipants,
+        ...totals,
+        inboundTroops: 0,
+        launchedAtMs: nowMs,
+        updatedAtMs: nowMs,
+      }),
+      movement,
+      returnedInbound,
+      incomingNotification: createIncomingArmyNotification({
+        defenderUid: targetOwnerUid,
+        attackerUid: uid,
+        movement,
+        source: assembly,
+        target,
+      }),
+    };
+  });
+  const incomingNotification = result.incomingNotification || null;
+  delete result.incomingNotification;
+  if (incomingNotification) {
+    await sendIncomingArmyNotification(incomingNotification).catch(error => {
+      console.warn("Could not send rally incoming army notification", error);
+    });
+  }
+  return result;
 });
 
 exports.previewArmyProtection = onCall({ region: "us-central1", maxInstances: 20, invoker: "public" }, async request => {
@@ -10548,6 +12215,132 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
     }
     const attackerUid = safeString(army.ownerUid, 128);
     const defenderUid = isReturning ? "" : getOwnerUid(target);
+    const rallyAttackDocumentRef = army.rallyAttack && army.rallyClanId && army.rallyId
+      ? clanRallyRef(army.rallyClanId, army.rallyId)
+      : null;
+    const rallyAttackSnap = rallyAttackDocumentRef
+      ? await transaction.get(rallyAttackDocumentRef)
+      : null;
+    const rallyAttack = normalizeClanRally(rallyAttackSnap);
+    if (army.rallyAttack && (
+      !rallyAttack
+      || rallyAttack.armyId !== armyId
+      || rallyAttack.leaderUid !== attackerUid
+      || ![RALLY_STATUS_LAUNCHED, RALLY_STATUS_RECALLING].includes(rallyAttack.status)
+    )) {
+      throw new HttpsError("failed-precondition", "The rally state is unavailable for this army.");
+    }
+    if (army.kind === "rally_join" && !isReturning) {
+      const clanId = safeString(army.rallyClanId, 128);
+      const rallyId = normalizeRallyId(army.rallyId);
+      const rallyRef = clanId && rallyId ? clanRallyRef(clanId, rallyId) : null;
+      const [rallySnap, attackerProfileSnap, clanSnap, memberSnap] = rallyRef
+        ? await Promise.all([
+          transaction.get(rallyRef),
+          transaction.get(db.doc(`players/${attackerUid}`)),
+          transaction.get(db.doc(`clans/${clanId}`)),
+          transaction.get(db.doc(`clans/${clanId}/members/${attackerUid}`)),
+        ])
+        : [null, null, null, null];
+      const rally = normalizeClanRally(rallySnap);
+      const participant = rally ? getRallyParticipant(rally, attackerUid) : null;
+      const attackerProfile = attackerProfileSnap?.exists ? attackerProfileSnap.data() || {} : {};
+      const canAssemble = Boolean(
+        rally
+        && rally.status === RALLY_STATUS_FORMING
+        && participant
+        && participant.status === RALLY_PARTICIPANT_INBOUND
+        && participant.joinArmyId === armyId
+        && getOwnerUid(target) === rally.leaderUid
+        && safeString(attackerProfile.clanId, 128) === clanId
+        && clanSnap?.exists
+        && clanSnap.data()?.status === "active"
+        && memberSnap?.exists
+      );
+      if (!canAssemble) {
+        const movement = {
+          ...createAlliedTargetReturnMovement(army, nowMs),
+          returnReason: RALLY_RETURN_REASON,
+          rallyReturn: true,
+        };
+        writeRallyJoinMovementCopies(transaction, movement);
+        return {
+          ok: true,
+          status: "returning",
+          kind: "rally_join",
+          outcome: "rally_unavailable",
+          movement,
+          returnSeconds: Math.max(1, Math.ceil((movement.arrivesAtMs - nowMs) / 1000)),
+        };
+      }
+      const economy = await prepareEconomyCollection(transaction, attackerUid, nowMs, {
+        profileRef: db.doc(`players/${attackerUid}`),
+        profileSnap: attackerProfileSnap,
+      });
+      const currentProfile = economy.profileAfter || attackerProfile;
+      const committedRallyTroops = getProfileCommittedRallyTroops(currentProfile) + participant.troops;
+      const participants = activeRallyParticipants(rally).map(entry => (
+        entry.uid === attackerUid
+          ? {
+            ...entry,
+            status: RALLY_PARTICIPANT_ASSEMBLED,
+            assembledAtMs: nowMs,
+          }
+          : entry
+      ));
+      const totals = rallyParticipantTotals(participants);
+      writePreparedEconomy(transaction, economy, {
+        committedRallyTroops,
+        rallyResetGeneration: RESET_GENERATION,
+      }, [], {
+        excludeArmyIds: [armyId],
+        nowMs,
+      });
+      transaction.set(rallyRef, {
+        participants,
+        ...totals,
+        updatedAtMs: nowMs,
+        updatedAt: FieldValue.serverTimestamp(),
+      }, { merge: true });
+      transaction.set(canonicalArmyRef(armyId), {
+        status: "resolved",
+        resolvedAtMs: nowMs,
+        result: {
+          kind: "rally_join",
+          outcome: "assembled",
+          rallyId,
+          troops: participant.troops,
+        },
+        updatedAt: FieldValue.serverTimestamp(),
+      }, { merge: true });
+      armyViewRefsForRegions(army.routeRegionIds, armyId).forEach(ref => transaction.set(ref, {
+        status: "resolved",
+        resolvedAtMs: nowMs,
+        result: {
+          kind: "rally_join",
+          outcome: "assembled",
+          troops: participant.troops,
+        },
+        updatedAt: FieldValue.serverTimestamp(),
+      }, { merge: true }));
+      writeClanAudit(transaction, clanId, attackerUid, "rally_contribution_assembled", {
+        rallyId,
+        armyId,
+        troops: participant.troops,
+      }, nowMs);
+      return {
+        ok: true,
+        status: "resolved",
+        kind: "rally_join",
+        outcome: "assembled",
+        rally: rallyForClient({ ...rally, participants, ...totals, updatedAtMs: nowMs }),
+        currentUser: {
+          committedRallyTroops,
+          rallyResetGeneration: RESET_GENERATION,
+          globalStats: globalStatsForClient(economy.lastGlobalStats || economy.globalStats),
+        },
+      };
+    }
     const reinforcementTargetKey = safeString(
       army.reinforcementTargetKey || getReinforcementTargetKey(targetType, targetRegionId, army.toId),
       220
@@ -10739,6 +12532,59 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
       cityUpdates.push({ id: city.id, regionId: mainRegionId, ...patch });
       return recovered;
     };
+
+    if (
+      rallyAttack
+      && !isReturning
+      && isRallyTargetFriendly(defenderUid, defenderProfile || {}, rallyAttack)
+    ) {
+      const movement = {
+        ...createAlliedTargetReturnMovement(army, nowMs),
+        returnReason: RALLY_FRIENDLY_RETURN_REASON,
+        rallyReturn: true,
+      };
+      const movementPatch = { ...movement, updatedAt: FieldValue.serverTimestamp() };
+      delete movementPatch.id;
+      armyRefsForRegions(movement.routeRegionIds, movement.id).forEach(ref => {
+        transaction.set(ref, movementPatch, { merge: true });
+      });
+      let campUpdate = null;
+      if (targetType === "camp" && targetSnap.exists && target) {
+        const remainingActiveArmyIds = removeActiveCampArmyId(target, armyId);
+        const campPatch = {
+          activeArmyIds: remainingActiveArmyIds,
+          state: getRewardCampState(remainingActiveArmyIds, getOwnerUid(target)),
+          updatedAt: FieldValue.serverTimestamp(),
+        };
+        transaction.set(targetRef, campPatch, { merge: true });
+        campUpdate = campUpdateForClient(target.id, targetRegionId, campPatch);
+      }
+      writeParticipantEconomies({}, {}, { addActiveArmies: [movement] });
+      transaction.set(rallyAttackDocumentRef, {
+        status: RALLY_STATUS_RECALLING,
+        friendlyReturnStartedAtMs: nowMs,
+        friendlyReturnOwnerUid: defenderUid,
+        updatedAtMs: nowMs,
+        updatedAt: FieldValue.serverTimestamp(),
+      }, { merge: true });
+      writeClanAudit(transaction, rallyAttack.clanId, attackerUid, "rally_friendly_return_started", {
+        rallyId: rallyAttack.id,
+        armyId,
+        targetOwnerUid: defenderUid,
+        troops: Math.max(0, Math.floor(safeNumber(army.troops, 0))),
+      }, nowMs);
+      return {
+        ok: true,
+        status: "returning",
+        kind: "attack",
+        outcome: "friendly_return_started",
+        movement,
+        campUpdate,
+        returnSeconds: Math.max(1, Math.ceil((movement.arrivesAtMs - nowMs) / 1000)),
+        cityUpdates: withEconomyCityUpdates([]),
+        currentUser: profilePatchForCaller(attackerProfile, defenderProfile),
+      };
+    }
 
     let troopCount = Math.max(0, Math.floor(safeNumber(army.troops, 0)));
     const launchedAsClanReinforcement = army.kind === "reinforce"
@@ -11205,6 +13051,143 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
       };
     }
 
+    if (isReturning && rallyAttack) {
+      const attackPackages = getRallyAttackPackages(rallyAttack);
+      const startingTroops = attackPackages.reduce((total, participant) => total + participant.troops, 0);
+      const attackerAllocation = allocateRallyAttackerLosses(
+        attackPackages,
+        Math.max(0, startingTroops - troopCount)
+      );
+      const leaderAllocation = attackerAllocation.find(entry => entry.uid === attackerUid);
+      if (!leaderAllocation) {
+        throw new HttpsError("failed-precondition", "The rally leader contribution is unavailable.");
+      }
+      const returnedLeader = returnRecalledTroops(leaderAllocation.survivors);
+      const leaderCommittedTroops = Math.max(
+        0,
+        getProfileCommittedRallyTroops(attackerProfile) - leaderAllocation.troops
+      );
+      const returnReceipts = [];
+      attackerAllocation
+        .filter(entry => entry.uid !== attackerUid)
+        .forEach(entry => {
+          const receiptRef = rallyBattleReceiptRef(armyId, entry.uid);
+          const receipt = {
+            id: receiptRef.id,
+            receiptKind: "rally_return",
+            status: "pending",
+            worldId: ONLINE_WORLD_ID,
+            resetGeneration: RESET_GENERATION,
+            rallyId: rallyAttack.id,
+            clanId: rallyAttack.clanId,
+            armyId,
+            battleId: "",
+            contributorUid: entry.uid,
+            contributorName: entry.ownerName,
+            contributorFlag: entry.ownerFlag || null,
+            sourceId: entry.sourceId,
+            sourceName: entry.sourceName,
+            sourceRegionId: entry.sourceRegionId,
+            returnSourceType: "city",
+            returnSourceId: rallyAttack.assemblyCityId,
+            returnSourceName: rallyAttack.assemblyCityName,
+            returnSourceRegionId: rallyAttack.assemblyRegionId,
+            returnSourceX: safeNumber(rallyAttack.assemblyX, safeNumber(source?.x, 0)),
+            returnSourceY: safeNumber(rallyAttack.assemblyY, safeNumber(source?.y, 0)),
+            targetId: rallyAttack.targetId,
+            targetName: rallyAttack.targetName,
+            targetRegionId: rallyAttack.targetRegionId,
+            targetType: rallyAttack.targetType,
+            opponentName: "Rally recalled",
+            outcome: "recalled",
+            committedTroops: entry.troops,
+            losses: entry.losses,
+            survivors: entry.survivors,
+            xpAwarded: 0,
+            fieldMedicsPercent: entry.fieldMedicsPercent,
+            returnReason: safeString(army.returnReason, 40) || RALLY_RETURN_REASON,
+            createdAtMs: nowMs,
+            createdAt: FieldValue.serverTimestamp(),
+            updatedAt: FieldValue.serverTimestamp(),
+          };
+          transaction.set(receiptRef, receipt, { merge: false });
+          returnReceipts.push(receiptRef.id);
+        });
+      let campUpdate = null;
+      if (targetType === "camp" && targetSnap.exists && target) {
+        const remainingActiveArmyIds = removeActiveCampArmyId(target, armyId);
+        const campPatch = {
+          activeArmyIds: remainingActiveArmyIds,
+          state: getRewardCampState(remainingActiveArmyIds, getOwnerUid(target)),
+          updatedAt: FieldValue.serverTimestamp(),
+        };
+        transaction.set(targetRef, campPatch, { merge: true });
+        campUpdate = campUpdateForClient(target.id, targetRegionId, campPatch);
+      }
+      writeParticipantEconomies({
+        committedRallyTroops: leaderCommittedTroops,
+        rallyResetGeneration: RESET_GENERATION,
+      }, {}, {
+        statsCityPatches: getLatestSourceReturnStatsPatches(),
+      });
+      const settledParticipants = attackerAllocation.map(entry => ({
+        ...entry,
+        status: entry.uid === attackerUid && returnedLeader.returned >= entry.survivors
+          ? RALLY_PARTICIPANT_RETURNED
+          : entry.survivors > 0
+            ? RALLY_PARTICIPANT_RETURNING
+            : RALLY_PARTICIPANT_RETURNED,
+      }));
+      transaction.set(rallyAttackDocumentRef, {
+        status: RALLY_STATUS_RESOLVED,
+        participants: settledParticipants,
+        participantUids: settledParticipants.map(entry => entry.uid),
+        participantCount: 0,
+        assembledTroops: 0,
+        inboundTroops: 0,
+        resolutionOutcome: safeString(army.returnReason, 40) || "recalled",
+        resolvedAtMs: nowMs,
+        updatedAtMs: nowMs,
+        updatedAt: FieldValue.serverTimestamp(),
+      }, { merge: true });
+      armyRefs.forEach(ref => transaction.set(ref, {
+        status: "resolved",
+        resolvedAtMs: nowMs,
+        result: {
+          kind: "return",
+          rallyAttack: true,
+          rallyId: rallyAttack.id,
+          returnReason: safeString(army.returnReason, 40),
+          returnedLeaderTroops: returnedLeader.returned,
+          alliedReturnReceipts: returnReceipts,
+        },
+        updatedAt: FieldValue.serverTimestamp(),
+      }, { merge: true }));
+      writeClanAudit(transaction, rallyAttack.clanId, attackerUid, "rally_return_arrived", {
+        rallyId: rallyAttack.id,
+        armyId,
+        leaderReturnedTroops: returnedLeader.returned,
+        alliedReturnCount: returnReceipts.length,
+      }, nowMs);
+      return {
+        ok: true,
+        status: "resolved",
+        kind: "return",
+        rallyAttack: true,
+        returned: returnedLeader.returned,
+        returnCityId: returnedLeader.cityId,
+        returnRegionId: returnedLeader.regionId,
+        alliedReturnCount: returnReceipts.length,
+        campUpdate,
+        cityUpdates: withEconomyCityUpdates(cityUpdates),
+        currentUser: {
+          committedRallyTroops: leaderCommittedTroops,
+          rallyResetGeneration: RESET_GENERATION,
+          globalStats: globalStatsForClient(attackerEconomy?.lastGlobalStats || attackerEconomy?.globalStats),
+        },
+      };
+    }
+
     if (isReturning) {
       const returnedArmy = returnRecalledTroops(troopCount);
       let campUpdate = null;
@@ -11248,6 +13231,415 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
           { character: attackerProfile.character, gold: attackerEconomy?.gold, goldFloat: attackerEconomy?.goldFloat },
           null
         ),
+      };
+    }
+
+    if (rallyAttack) {
+      if (!isRallyObjectiveTarget(target, targetType)) {
+        throw new HttpsError("failed-precondition", "The rally target is no longer an eligible objective.");
+      }
+      const attackPackages = getRallyAttackPackages(rallyAttack);
+      const totalAttackPower = attackPackages.reduce(
+        (total, participant) => total + Math.max(0, Math.floor(safeNumber(participant.effectivePower, 0))),
+        0
+      );
+      if (!attackPackages.length || !totalAttackPower) {
+        throw new HttpsError("failed-precondition", "The rally has no valid attacker contribution packages.");
+      }
+      const result = calculateCombatResult(troopCount, combatTarget, attackerProfile, defenderProfile, {
+        attackPower: totalAttackPower,
+        defenderBonuses,
+        defensePower: defensePackages.totalDefense,
+      });
+      const attackerAllocation = allocateRallyAttackerLosses(attackPackages, result.attackerLosses);
+      const leaderAllocation = attackerAllocation.find(entry => entry.uid === attackerUid);
+      if (!leaderAllocation) {
+        throw new HttpsError("failed-precondition", "The rally leader contribution is unavailable.");
+      }
+      const defenseAllocation = allocateDefenderLosses(
+        getTargetOwnerTroops(target, targetType),
+        targetReinforcements,
+        result.defenderLosses
+      );
+      const oldOwnerUid = defenderUid;
+      const defendersAtStart = Math.max(0, Math.floor(safeNumber(combatTarget.troops, 0)));
+      const battleOutcome = result.success ? "victory" : "defeat";
+      if (result.success && targetType === "city" && isCrownCitadel(target)) {
+        await recordCrownCitadelControlChange(transaction, {
+          citadel: target,
+          previousOwnerUid: oldOwnerUid,
+          previousOwnerName: defenderName,
+          nextOwnerUid: attackerUid,
+          nextOwnerName: attackerName,
+          nextOwnerFlag: attackerProfile.flag || army.ownerFlag || null,
+          nowMs,
+        });
+      }
+      currentBattleId = safeString(armyId, 160);
+      writeDetailedBattleSnapshot(transaction, createDetailedBattleSnapshot({
+        battleId: currentBattleId,
+        armyId,
+        target,
+        targetType,
+        attackerUid,
+        attackerProfile,
+        defenderUid,
+        defenderProfile: defenderProfile || {},
+        defenderBonuses,
+        defensePackages,
+        allocation: defenseAllocation,
+        attackerPackages: attackPackages,
+        attackerAllocation,
+        result,
+        outcome: battleOutcome,
+        nowMs,
+      }));
+      const rawAttackWinXp = getCaptureXpAward(target, oldOwnerUid, result.defenderLosses, defenderProfile, {
+        nowMs,
+        attackerProfile,
+        attackerKingPower: attackerKingPowerForXp,
+        defenderKingPower: defenderKingPowerForXp,
+        attackerCityCount: attackerEconomy?.cityEntries.filter(entry => (
+          entry?.city
+          && getOwnerUid(entry.city) === attackerUid
+          && !isStronghold(entry.city)
+        )).length || 0,
+      });
+      const attackXpPool = result.success
+        ? rawAttackWinXp
+        : getPartialBattleXpAward(rawAttackWinXp);
+      const attackXpAllocation = allocateRallyAttackXp(attackXpPool, attackPackages);
+      const leaderXp = capBattleXpForHeroLevel(
+        attackXpAllocation.get(attackerUid) || 0,
+        attackerProfile
+      );
+      const defenseOpponentXpMultiplier = getOpponentPowerXpMultiplier(
+        attackerKingPowerForXp / defenderKingPowerForXp
+      );
+      const defenseHeldXp = Math.floor(
+        getDefenseHeldXpAward(troopCount, target, defenderProfile) * defenseOpponentXpMultiplier
+      );
+      const defenderXpPool = result.success
+        ? getPartialBattleXpAward(capBattleXpForHeroLevel(defenseHeldXp, defenderProfile || {}))
+        : capBattleXpForHeroLevel(defenseHeldXp, defenderProfile || {});
+      const reinforcementDefenseSettlement = applyReinforcementDefenseSettlement({
+        allocation: defenseAllocation,
+        defenseXpPool: defenderXpPool,
+        outcome: result.success ? "lost" : "held",
+      });
+      const attackerProgress = buildPlayerProgressPatch(attackerProfile, { xp: leaderXp });
+      const defenderProgress = defenderUid
+        ? buildPlayerProgressPatch(defenderProfile || {}, {
+          xp: reinforcementDefenseSettlement.ownerXp,
+        })
+        : null;
+      const attackerLevelTroopReward = creditLevelUpTroopsToMainCity(
+        attackerEconomy,
+        attackerProfile,
+        attackerProgress.levelTroopReward,
+        nowMs
+      );
+      const defenderLevelTroopReward = defenderProgress
+        ? creditLevelUpTroopsToMainCity(
+          defenderEconomy,
+          defenderProfile || {},
+          defenderProgress.levelTroopReward,
+          nowMs
+        )
+        : null;
+      const attackerRecoveredTroops = recoverBattleLossesToMainCity({
+        uid: attackerUid,
+        profile: attackerProfile,
+        economy: attackerEconomy,
+        losses: leaderAllocation.losses,
+      });
+      const defenderRecoveredTroops = defenderUid && defenderUid !== attackerUid
+        ? recoverBattleLossesToMainCity({
+          uid: defenderUid,
+          profile: defenderProfile,
+          economy: defenderEconomy,
+          losses: defenseAllocation.ownerLosses,
+        })
+        : 0;
+      const remainingActiveArmyIds = targetType === "camp"
+        ? removeActiveCampArmyId(target, armyId)
+        : [];
+      let targetPatch;
+      let targetUpdate;
+      if (targetType === "camp") {
+        const campConfig = getRewardCampConfig(target);
+        targetPatch = result.success
+          ? {
+            holderUid: attackerUid,
+            holderName: attackerName,
+            holderFlag: attackerProfile.flag || army.ownerFlag || null,
+            heldSinceMs: nowMs,
+            payoutAtMs: nowMs + campConfig.holdDurationMs,
+            payoutPending: true,
+            currentGarrison: leaderAllocation.survivors,
+            alliedReinforcementTroops: 0,
+            returnSourceCityId: rallyAttack.assemblyCityId,
+            returnSourceRegionId: rallyAttack.assemblyRegionId,
+            returnSourceCityName: rallyAttack.assemblyCityName || army.fromName || "Rally assembly",
+            returnPathSegments: normalizePathSegments(army.pathSegments),
+            returnRouteRegionIds: normalizeRegionIds(army.routeRegionIds),
+            returnPathLength: Math.max(0, safeNumber(army.pathLength, 0)),
+            activeArmyIds: remainingActiveArmyIds,
+            state: getRewardCampState(remainingActiveArmyIds, attackerUid),
+            lastCapturedAtMs: nowMs,
+            updatedAt: FieldValue.serverTimestamp(),
+          }
+          : {
+            currentGarrison: defenseAllocation.ownerRemaining,
+            alliedReinforcementTroops: defenseAllocation.alliedRemaining,
+            activeArmyIds: remainingActiveArmyIds,
+            state: getRewardCampState(remainingActiveArmyIds, defenderUid),
+            updatedAt: FieldValue.serverTimestamp(),
+          };
+        targetUpdate = campUpdateForClient(target.id, targetRegionId, targetPatch);
+      } else if (result.success) {
+        targetPatch = {
+          ownerKind: "player",
+          ownerUid: attackerUid,
+          ownerName: attackerName,
+          ownerFlag: attackerProfile.flag || army.ownerFlag || null,
+          ownerKingPower: Math.max(0, Math.floor(safeNumber(attackerProfile.kingPower || army.ownerKingPower, 0))),
+          ownerClanId: safeString(attackerProfile.clanId, 128),
+          ownerClanName: safeString(attackerProfile.clanName, 24),
+          ownerClanTag: safeString(attackerProfile.clanTag, 5),
+          ownerClanIdentityRevision: Math.max(0, Math.floor(safeNumber(attackerProfile.clanIdentityRevision, 0))),
+          ownerClanIdentityRevisionVersion: CLAN_IDENTITY_REVISION_VERSION,
+          ownerShieldExpiresAtMs: 0,
+          troops: leaderAllocation.survivors,
+          troopFloat: leaderAllocation.survivors,
+          level: dropCapturedCityLevel(target),
+          defense: 1,
+          investedGold: 0,
+          lastCapturedAtMs: nowMs,
+          isMainCity: false,
+          alliedReinforcementTroops: 0,
+          relinquishedAtMs: 0,
+          relocatedAtMs: 0,
+        };
+        targetUpdate = { id: target.id, regionId: targetRegionId, ...targetPatch };
+      } else {
+        targetPatch = {
+          troops: defenseAllocation.ownerRemaining,
+          troopFloat: defenseAllocation.ownerRemaining,
+          alliedReinforcementTroops: defenseAllocation.alliedRemaining,
+        };
+        targetUpdate = { id: target.id, regionId: targetRegionId, ...targetPatch };
+      }
+      const leaderCommittedRallyTroops = Math.max(
+        0,
+        getProfileCommittedRallyTroops(attackerProfile) - leaderAllocation.troops
+      );
+      const attackerReport = makeReport({
+        id: `${armyId}_rally_attack_${attackerUid}`,
+        uid: attackerUid,
+        type: "attack",
+        outcome: battleOutcome,
+        city: target,
+        opponentName: defenderName,
+        sentTroops: troopCount,
+        troopCount: defendersAtStart,
+        result,
+        totalDefense: targetStats.totalDefense,
+        defenseStats: targetStats,
+        summary: result.success
+          ? `Your rally captured ${target.name || target.id}. Your ${leaderAllocation.survivors.toLocaleString()} surviving troops now hold the objective; allied survivors are returning home. +${attackerProgress.xpAwarded.toLocaleString()} XP.${attackerLevelTroopReward ? ` Hero level reward: +${attackerLevelTroopReward.credited.toLocaleString()} troops to ${attackerLevelTroopReward.cityName}.` : ""}${attackerRecoveredTroops > 0 ? ` Field Medics returned ${attackerRecoveredTroops.toLocaleString()} troops to your main city.` : ""}`
+          : `Your rally was defeated at ${target.name || target.id}; ${result.defendersLeft.toLocaleString()} defenders remained. +${attackerProgress.xpAwarded.toLocaleString()} XP.${attackerLevelTroopReward ? ` Hero level reward: +${attackerLevelTroopReward.credited.toLocaleString()} troops to ${attackerLevelTroopReward.cityName}.` : ""}${attackerRecoveredTroops > 0 ? ` Field Medics returned ${attackerRecoveredTroops.toLocaleString()} troops to your main city.` : ""}`,
+        xpAwarded: attackerProgress.xpAwarded,
+        goldAwarded: attackerProgress.goldAwarded,
+        troopsAwarded: attackerLevelTroopReward?.credited || 0,
+        characterAfter: attackerProgress.character,
+        goldAfter: attackerProgress.gold,
+        battleId: currentBattleId,
+        fieldMedicsRecovered: attackerRecoveredTroops,
+        nowMs,
+      });
+      const alliedReceiptIds = [];
+      attackerAllocation
+        .filter(entry => entry.uid !== attackerUid)
+        .forEach(entry => {
+          const receiptRef = rallyBattleReceiptRef(armyId, entry.uid);
+          transaction.set(receiptRef, {
+            id: receiptRef.id,
+            receiptKind: "rally_battle",
+            status: "pending",
+            worldId: ONLINE_WORLD_ID,
+            resetGeneration: RESET_GENERATION,
+            rallyId: rallyAttack.id,
+            clanId: rallyAttack.clanId,
+            armyId,
+            battleId: currentBattleId,
+            contributorUid: entry.uid,
+            contributorName: entry.ownerName,
+            contributorFlag: entry.ownerFlag || null,
+            sourceId: entry.sourceId,
+            sourceName: entry.sourceName,
+            sourceRegionId: entry.sourceRegionId,
+            returnSourceType: targetType,
+            returnSourceId: target.id,
+            returnSourceName: target.name || target.id,
+            returnSourceRegionId: targetRegionId,
+            returnSourceX: safeNumber(target.x, 0),
+            returnSourceY: safeNumber(target.y, 0),
+            targetId: target.id,
+            targetName: target.name || target.id,
+            targetRegionId,
+            targetType,
+            opponentName: defenderName,
+            outcome: battleOutcome,
+            committedTroops: entry.troops,
+            losses: entry.losses,
+            survivors: entry.survivors,
+            xpAwarded: Math.max(0, Math.floor(safeNumber(attackXpAllocation.get(entry.uid), 0))),
+            fieldMedicsPercent: entry.fieldMedicsPercent,
+            returnReason: "rally_battle_survivors",
+            createdAtMs: nowMs,
+            createdAt: FieldValue.serverTimestamp(),
+            updatedAt: FieldValue.serverTimestamp(),
+          }, { merge: false });
+          alliedReceiptIds.push(receiptRef.id);
+        });
+      const defenderReport = defenderUid && defenderUid !== attackerUid
+        ? makeReport({
+          id: `${armyId}_rally_defense_${defenderUid}`,
+          uid: defenderUid,
+          type: "defense",
+          outcome: result.success ? "lost" : "held",
+          city: target,
+          opponentName: attackerName,
+          sentTroops: troopCount,
+          troopCount: defendersAtStart,
+          result,
+          totalDefense: targetStats.totalDefense,
+          defenseStats: targetStats,
+          summary: result.success
+            ? `${attackerName}'s clan rally captured ${target.name || target.id}. +${defenderProgress.xpAwarded.toLocaleString()} XP.${defenderLevelTroopReward ? ` Hero level reward: +${defenderLevelTroopReward.credited.toLocaleString()} troops to ${defenderLevelTroopReward.cityName}.` : ""}${defenderRecoveredTroops > 0 ? ` Field Medics returned ${defenderRecoveredTroops.toLocaleString()} troops to your main city.` : ""}`
+            : `${target.name || target.id} held against ${attackerName}'s clan rally with ${result.defendersLeft.toLocaleString()} defenders. +${defenderProgress.xpAwarded.toLocaleString()} XP.${defenderLevelTroopReward ? ` Hero level reward: +${defenderLevelTroopReward.credited.toLocaleString()} troops to ${defenderLevelTroopReward.cityName}.` : ""}${defenderRecoveredTroops > 0 ? ` Field Medics returned ${defenderRecoveredTroops.toLocaleString()} troops to your main city.` : ""}`,
+          xpAwarded: defenderProgress.xpAwarded,
+          goldAwarded: defenderProgress.goldAwarded,
+          troopsAwarded: defenderLevelTroopReward?.credited || 0,
+          characterAfter: defenderProgress.character,
+          goldAfter: defenderProgress.gold,
+          battleId: currentBattleId,
+          fieldMedicsRecovered: defenderRecoveredTroops,
+          nowMs,
+        })
+        : null;
+      const statsCityPatches = targetType === "city"
+        ? [{ ref: targetRef, city: target, patch: targetPatch }]
+        : [];
+      const participantStats = writeParticipantEconomies({
+        character: attackerProgress.character,
+        gold: attackerProgress.gold,
+        goldFloat: attackerProgress.goldFloat,
+        committedRallyTroops: leaderCommittedRallyTroops,
+        rallyResetGeneration: RESET_GENERATION,
+      }, defenderProgress ? {
+        character: defenderProgress.character,
+        gold: defenderProgress.gold,
+        goldFloat: defenderProgress.goldFloat,
+      } : {}, {
+        statsCityPatches,
+      });
+      if (result.success && targetType === "city" && participantStats.attackerStats) {
+        targetPatch.ownerKingPower = participantStats.attackerStats.kingPower;
+        targetPatch.kingPowerVersion = GLOBAL_PLAYER_STATS_VERSION;
+        Object.assign(targetUpdate, {
+          ownerKingPower: targetPatch.ownerKingPower,
+          kingPowerVersion: targetPatch.kingPowerVersion,
+        });
+      }
+      transaction.set(targetRef, targetType === "city"
+        ? cleanCityUpdate(target, targetPatch)
+        : targetPatch, { merge: true });
+      if (result.success) {
+        writeOwnershipChangeEvent(transaction, {
+          eventId: `army_${armyId}_${targetType}_${target.id}`,
+          targetType,
+          targetId: target.id,
+          regionId: targetRegionId,
+          beforeOwnerUid: oldOwnerUid,
+          afterOwnerUid: attackerUid,
+          reason: targetType === "camp" ? "camp_captured" : "city_captured",
+          nowMs,
+        });
+      }
+      writeReport(transaction, attackerUid, attackerReport, attackerProfileSnap, {
+        character: attackerProgress.character,
+        gold: attackerProgress.gold,
+        goldFloat: attackerProgress.goldFloat,
+        committedRallyTroops: leaderCommittedRallyTroops,
+        rallyResetGeneration: RESET_GENERATION,
+      });
+      reports.push(attackerReport);
+      if (defenderReport) {
+        writeReport(transaction, defenderUid, defenderReport, defenderProfileSnap, {
+          character: defenderProgress.character,
+          gold: defenderProgress.gold,
+          goldFloat: defenderProgress.goldFloat,
+        });
+        reports.push(defenderReport);
+      }
+      const settledParticipants = attackerAllocation.map(entry => ({
+        ...entry,
+        status: entry.uid === attackerUid
+          ? RALLY_PARTICIPANT_RETURNED
+          : entry.survivors > 0
+            ? RALLY_PARTICIPANT_RETURNING
+            : RALLY_PARTICIPANT_RETURNED,
+        xpAwarded: Math.max(0, Math.floor(safeNumber(attackXpAllocation.get(entry.uid), 0))),
+      }));
+      transaction.set(rallyAttackDocumentRef, {
+        status: RALLY_STATUS_RESOLVED,
+        participants: settledParticipants,
+        participantUids: settledParticipants.map(entry => entry.uid),
+        participantCount: 0,
+        assembledTroops: 0,
+        inboundTroops: 0,
+        resolutionOutcome: battleOutcome,
+        battleId: currentBattleId,
+        resolvedAtMs: nowMs,
+        updatedAtMs: nowMs,
+        updatedAt: FieldValue.serverTimestamp(),
+      }, { merge: true });
+      markResolved({
+        kind: "attack",
+        rallyAttack: true,
+        rallyId: rallyAttack.id,
+        outcome: battleOutcome,
+        survivors: result.survivors,
+        leaderSurvivors: leaderAllocation.survivors,
+        attackerLosses: result.attackerLosses,
+        defenderLosses: result.defenderLosses,
+        alliedSettlementReceipts: alliedReceiptIds,
+      });
+      writeClanAudit(transaction, rallyAttack.clanId, attackerUid, "rally_resolved", {
+        rallyId: rallyAttack.id,
+        armyId,
+        outcome: battleOutcome,
+        leaderSurvivors: leaderAllocation.survivors,
+        alliedSettlementCount: alliedReceiptIds.length,
+      }, nowMs);
+      return {
+        ok: true,
+        status: "resolved",
+        kind: "attack",
+        rallyAttack: true,
+        outcome: battleOutcome,
+        reports: reportsForCaller(),
+        ...(targetType === "camp"
+          ? { campUpdate: targetUpdate }
+          : { cityUpdates: withEconomyCityUpdates([targetUpdate]) }),
+        currentUser: {
+          ...profilePatchForCaller(attackerProgress, defenderProgress),
+          committedRallyTroops: leaderCommittedRallyTroops,
+          rallyResetGeneration: RESET_GENERATION,
+          globalStats: globalStatsForClient(attackerEconomy?.lastGlobalStats || attackerEconomy?.globalStats),
+        },
       };
     }
 
@@ -12383,6 +14775,39 @@ async function refreshActiveArmyTargetOwner(targetKey = "", targetOwnerUid = "")
     const army = armyDoc.data() || {};
     let disposition = getActiveArmyTargetDisposition(army, targetOwnerUid);
     const ownerUid = safeString(army.ownerUid, 128);
+    const rallyTargetFriendly = Boolean(
+      army.rallyAttack
+      && ownerUid
+      && targetOwnerUid
+      && (
+        ownerUid === safeString(targetOwnerUid, 128)
+        || await getCurrentClanAlliance(ownerUid, targetOwnerUid, allianceCache)
+      )
+    );
+    if (rallyTargetFriendly) {
+      const nowMs = Date.now();
+      const movement = {
+        ...createAlliedTargetReturnMovement({ id: armyDoc.id, ...army }, nowMs),
+        returnReason: RALLY_FRIENDLY_RETURN_REASON,
+        rallyReturn: true,
+      };
+      const patch = { ...movement, updatedAt: FieldValue.serverTimestamp() };
+      delete patch.id;
+      const batch = db.batch();
+      armyRefsForRegions(movement.viewRegionIds || movement.routeRegionIds || [], armyDoc.id)
+        .forEach(ref => batch.set(ref, patch, { merge: true }));
+      if (army.rallyClanId && army.rallyId) {
+        batch.set(clanRallyRef(army.rallyClanId, army.rallyId), {
+          status: RALLY_STATUS_RECALLING,
+          friendlyReturnStartedAtMs: nowMs,
+          friendlyReturnOwnerUid: safeString(targetOwnerUid, 128),
+          updatedAtMs: nowMs,
+          updatedAt: FieldValue.serverTimestamp(),
+        }, { merge: true });
+      }
+      await batch.commit();
+      return;
+    }
     const launchedAsReinforcement = !army.reinforcementReturn && (
       army.kind === "reinforce"
       || army.launchKind === "reinforce"
@@ -12971,6 +15396,229 @@ exports.settleReinforcementBattle = onDocumentCreated({
   maxInstances: 20,
   retry: true,
 }, settleReinforcementBattleReceipt);
+
+async function settleRallyBattleReceipt(event) {
+  const snapshot = event.data;
+  if (!snapshot?.exists || event.params?.resetGeneration !== RESET_GENERATION) return null;
+  const contributorUid = safeString(snapshot.data()?.contributorUid, 128);
+  if (!contributorUid) return null;
+  const nowMs = Date.now();
+  return db.runTransaction(async transaction => {
+    const receiptSnap = await transaction.get(snapshot.ref);
+    if (!receiptSnap.exists) return null;
+    const receipt = receiptSnap.data() || {};
+    if (
+      receipt.status !== "pending"
+      || safeString(receipt.worldId, 120) !== ONLINE_WORLD_ID
+      || safeString(receipt.resetGeneration, 120) !== RESET_GENERATION
+      || safeString(receipt.contributorUid, 128) !== contributorUid
+    ) {
+      return null;
+    }
+    const sourceRegionId = normalizeRegionId(receipt.returnSourceRegionId);
+    const sourceId = safeString(receipt.returnSourceId, 96);
+    const sourceRef = sourceRegionId && sourceId
+      ? receipt.returnSourceType === "camp"
+        ? campRefForRegion(sourceRegionId, sourceId)
+        : cityRefForRegion(sourceRegionId, sourceId)
+      : null;
+    const sourceSnap = sourceRef ? await transaction.get(sourceRef) : null;
+    const rallyRef = receipt.clanId && receipt.rallyId
+      ? clanRallyRef(receipt.clanId, receipt.rallyId)
+      : null;
+    const rallySnap = rallyRef ? await transaction.get(rallyRef) : null;
+    const economy = await prepareEconomyCollection(transaction, contributorUid, nowMs);
+    const profile = economy.profileAfter || {};
+    const xpAwarded = capBattleXpForHeroLevel(
+      Math.max(0, Math.floor(safeNumber(receipt.xpAwarded, 0))),
+      profile
+    );
+    const progress = buildPlayerProgressPatch(profile, { xp: xpAwarded });
+    const levelTroopReward = creditLevelUpTroopsToMainCity(
+      economy,
+      profile,
+      progress.levelTroopReward,
+      nowMs
+    );
+    const recoveredTroops = Math.floor(
+      Math.max(0, safeNumber(receipt.losses, 0))
+      * Math.max(0, safeNumber(receipt.fieldMedicsPercent, getSkillPercent(profile, "fieldMedics")))
+      / 100
+    );
+    let recovery = null;
+    if (recoveredTroops > 0) {
+      const mainEntry = getCanonicalMainCityEntry(profile, economy.cityEntries);
+      const mainCity = mainEntry?.city;
+      if (mainEntry?.ref && mainCity && getOwnerUid(mainCity) === contributorUid) {
+        const troopFloat = Math.max(0, safeNumber(mainCity.troopFloat, mainCity.troops || 0)) + recoveredTroops;
+        const patch = {
+          troops: Math.max(0, Math.floor(troopFloat)),
+          troopFloat,
+          productionUpdatedAtMs: nowMs,
+        };
+        appendEconomyCityPatch(economy, mainEntry.ref, mainCity, patch);
+        recovery = {
+          credited: recoveredTroops,
+          cityId: safeString(mainCity.id, 96),
+          cityName: safeString(mainCity.name || mainCity.id || "main city", 40),
+        };
+      }
+    }
+    const participant = {
+      uid: contributorUid,
+      ownerName: receipt.contributorName,
+      ownerFlag: receipt.contributorFlag || null,
+      sourceId: receipt.sourceId,
+      sourceName: receipt.sourceName,
+      sourceRegionId: receipt.sourceRegionId,
+      troops: Math.max(0, Math.floor(safeNumber(receipt.committedTroops, 0))),
+      survivors: Math.max(0, Math.floor(safeNumber(receipt.survivors, 0))),
+    };
+    const source = sourceSnap?.exists
+      ? {
+        id: sourceSnap.id,
+        ...sourceSnap.data(),
+        regionId: sourceRegionId,
+      }
+      : {
+        id: sourceId,
+        name: safeString(receipt.returnSourceName || sourceId, 80),
+        regionId: sourceRegionId,
+        x: safeNumber(receipt.returnSourceX, 0),
+        y: safeNumber(receipt.returnSourceY, 0),
+      };
+    let movement = null;
+    if (participant.survivors > 0) {
+      const destinationEntry = getRallyReturnDestination(economy, profile, participant);
+      movement = createRallyReturnMovement({
+        rally: {
+          id: receipt.rallyId,
+          clanId: receipt.clanId,
+          targetId: receipt.targetId,
+          targetName: receipt.targetName,
+          targetRegionId: receipt.targetRegionId,
+          assemblyCityId: receipt.returnSourceId,
+          assemblyCityName: receipt.returnSourceName,
+          assemblyRegionId: receipt.returnSourceRegionId,
+        },
+        participant,
+        source,
+        destinationEntry,
+        economy,
+        profile,
+        nowMs,
+        reason: receipt.returnReason || "rally_battle_survivors",
+        movementId: `${receipt.armyId}_${contributorUid}_survivors`,
+      });
+    }
+    const committedRallyTroops = Math.max(
+      0,
+      getProfileCommittedRallyTroops(profile) - participant.troops
+    );
+    writePreparedEconomy(transaction, economy, {
+      character: progress.character,
+      gold: progress.gold,
+      goldFloat: progress.goldFloat,
+      committedRallyTroops,
+      rallyResetGeneration: RESET_GENERATION,
+    }, [], {
+      addActiveArmies: movement ? [movement] : [],
+      nowMs,
+    });
+    if (movement) {
+      armyRefsForRegions(movement.routeRegionIds, movement.id).forEach(ref => {
+        transaction.set(ref, {
+          ...movement,
+          rallyParticipantUid: contributorUid,
+          createdAt: FieldValue.serverTimestamp(),
+          updatedAt: FieldValue.serverTimestamp(),
+        }, { merge: true });
+      });
+    }
+    const report = makeReport({
+      id: `${safeString(receipt.armyId, 96)}_rally_${contributorUid}`,
+      uid: contributorUid,
+      type: "attack",
+      outcome: safeString(receipt.outcome, 24) || "defeat",
+      city: {
+        id: receipt.targetId,
+        name: receipt.targetName,
+        regionId: receipt.targetRegionId,
+      },
+      opponentName: receipt.opponentName,
+      sentTroops: participant.troops,
+      troopCount: participant.troops,
+      result: {
+        attackerLosses: receipt.losses,
+        survivors: participant.survivors,
+      },
+      summary: `Your rally contribution committed ${participant.troops.toLocaleString()} troops, lost ${Math.max(0, Math.floor(safeNumber(receipt.losses, 0))).toLocaleString()}, and has ${participant.survivors.toLocaleString()} survivors.${movement ? ` Survivors are returning to ${movement.toName}.` : ""} +${progress.xpAwarded.toLocaleString()} XP.${levelTroopReward ? ` Hero level reward: +${levelTroopReward.credited.toLocaleString()} troops to ${levelTroopReward.cityName}.` : ""}${recovery ? ` Field Medics returned ${recovery.credited.toLocaleString()} troops to ${recovery.cityName}.` : ""}`,
+      xpAwarded: progress.xpAwarded,
+      goldAwarded: progress.goldAwarded,
+      troopsAwarded: levelTroopReward?.credited || 0,
+      characterAfter: progress.character,
+      goldAfter: progress.gold,
+      battleId: safeString(receipt.battleId, 160),
+      fieldMedicsRecovered: recovery?.credited || 0,
+      nowMs,
+    });
+    writeReport(transaction, contributorUid, report, economy.profileSnap, {
+      character: progress.character,
+      gold: progress.gold,
+      goldFloat: progress.goldFloat,
+      committedRallyTroops,
+      rallyResetGeneration: RESET_GENERATION,
+    });
+    if (rallyRef && rallySnap?.exists) {
+      const rally = normalizeClanRally(rallySnap);
+      if (rally) {
+        transaction.set(rallyRef, {
+          participants: normalizeRallyParticipants(rally.participants).map(entry => (
+            entry.uid === contributorUid
+              ? {
+                ...entry,
+                status: movement ? RALLY_PARTICIPANT_RETURNING : RALLY_PARTICIPANT_RETURNED,
+                returnArmyId: movement?.id || "",
+                settledAtMs: nowMs,
+              }
+              : entry
+          )),
+          updatedAtMs: nowMs,
+          updatedAt: FieldValue.serverTimestamp(),
+        }, { merge: true });
+      }
+    }
+    transaction.set(snapshot.ref, {
+      status: "settled",
+      xpAwarded: progress.xpAwarded,
+      goldAwarded: progress.goldAwarded,
+      levelTroopsAwarded: levelTroopReward?.credited || 0,
+      fieldMedicsRecovered: recovery?.credited || 0,
+      returnArmyId: movement?.id || "",
+      returnDestinationId: movement?.toId || "",
+      returnDestinationRegionId: movement?.targetRegionId || "",
+      returnArrivesAtMs: movement?.arrivesAtMs || 0,
+      reportId: report.id,
+      settledAtMs: nowMs,
+      settledAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
+    }, { merge: true });
+    return {
+      contributorUid,
+      reportId: report.id,
+      xpAwarded: progress.xpAwarded,
+      recoveredTroops: recovery?.credited || 0,
+      returnArmyId: movement?.id || "",
+    };
+  });
+}
+
+exports.settleRallyBattle = onDocumentCreated({
+  region: "us-central1",
+  document: "rallyBattleReceipts/{resetGeneration}/entries/{receiptId}",
+  maxInstances: 20,
+  retry: true,
+}, settleRallyBattleReceipt);
 
 function getUtcDateKey(nowMs = Date.now()) {
   return new Date(nowMs).toISOString().slice(0, 10);
