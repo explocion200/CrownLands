@@ -538,4 +538,60 @@ function validateAllCityRoutes() {
   console.log("Every city is reachable locally and through the live portal route worker.");
 }
 
-validateAllCityRoutes();
+function validateRegionCityPairs(regionId) {
+  const worldConfig = readWindowData(path.join(ROOT_DIR, "world-config.js"), "CROWNLANDS_WORLD_CONFIG");
+  const editorData = readWindowData(path.join(ROOT_DIR, "assets", "map-editor-data.js"), "CROWNLANDS_MAP_EDITOR_DATA");
+  const terrainBlockers = getTerrainBlockers();
+  const { models, worldSize } = createMapModels(worldConfig, editorData, terrainBlockers);
+  const model = models.get(cleanRegionId(regionId));
+  if (!model) throw new Error(`Unknown route-validation region: ${regionId}`);
+
+  const calculateRoutes = [createWorker(), createWorker()];
+  const failures = [];
+  let checked = 0;
+  const startedAt = Date.now();
+  for (let sourceIndex = 0; sourceIndex < model.cities.length; sourceIndex += 1) {
+    for (let targetIndex = sourceIndex + 1; targetIndex < model.cities.length; targetIndex += 1) {
+      const firstCity = model.cities[sourceIndex];
+      const secondCity = model.cities[targetIndex];
+      const directedRoutes = [[firstCity, secondCity], [secondCity, firstCity]];
+      for (let directionIndex = 0; directionIndex < directedRoutes.length; directionIndex += 1) {
+        const [source, target] = directedRoutes[directionIndex];
+        try {
+          runRoute(
+            calculateRoutes[directionIndex],
+            models,
+            worldSize,
+            worldConfig,
+            [{ regionId: model.id, start: source, end: target }],
+            `${model.label} / ${source.name} -> ${target.name}`
+          );
+        } catch (error) {
+          failures.push(error.message);
+        }
+        checked += 1;
+      }
+    }
+    if ((sourceIndex + 1) % 5 === 0) {
+      console.log(`Checked ${sourceIndex + 1}/${model.cities.length} ${model.label} cities (${checked} directed routes, ${failures.length} failures).`);
+    }
+  }
+
+  const elapsedSeconds = ((Date.now() - startedAt) / 1000).toFixed(2);
+  console.log(`Pairwise route validation: ${model.label}, ${checked} directed city routes in ${elapsedSeconds}s.`);
+  if (failures.length) {
+    console.error(`Pairwise route failures found (${failures.length}):`);
+    failures.slice(0, 100).forEach(failure => console.error(`- ${failure}`));
+    if (failures.length > 100) console.error(`- ...and ${failures.length - 100} more.`);
+    process.exitCode = 1;
+    return;
+  }
+  console.log(`Every city pair in ${model.label} is reachable in both directions through the live route worker.`);
+}
+
+const pairwiseRegionArgument = process.argv.find(argument => argument.startsWith("--pairwise-region="));
+if (pairwiseRegionArgument) {
+  validateRegionCityPairs(pairwiseRegionArgument.slice("--pairwise-region=".length));
+} else {
+  validateAllCityRoutes();
+}

@@ -1510,6 +1510,13 @@ input {
   top: calc(100% + 48px);
   background: linear-gradient(180deg, #4b5579, #171e39);
 }
+.camp-rally-action {
+  left: calc(50% - var(--camp-action-offset, 92px));
+  top: calc(100% + 48px);
+  border-color: #e8c064;
+  color: #fff6d1;
+  background: linear-gradient(180deg, #7b4f9c, #34204e);
+}
 .gold-camp-info-panel {
   display: grid;
   gap: 12px;
@@ -4356,7 +4363,6 @@ button.inventory-slot {
 }
 .battle-report-result small,
 .battle-report-troops small,
-.battle-report-opponent small,
 .battle-report-detail-head small {
   color: rgba(246,239,228,.72);
 }
@@ -4380,11 +4386,24 @@ button.inventory-slot {
   background: linear-gradient(#ca3328, #831912);
 }
 .battle-report-city strong,
-.battle-report-opponent strong,
-.battle-report-opponent small {
+.battle-report-opponent strong {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+.battle-report-opponent {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  gap: .45rem;
+}
+.battle-report-opponent strong {
+  min-width: 0;
+}
+.battle-report-target-flag {
+  flex: 0 0 auto;
+  width: 34px;
+  height: 38px;
 }
 .battle-report-troops {
   display: grid;
@@ -5308,7 +5327,7 @@ button.inventory-slot {
   border-color: rgba(255, 214, 126, .55);
 }
 .daily-login-reward-modal.modal {
-  width: min(860px, calc(100% - 1rem));
+  width: min(980px, calc(100% - 1rem));
 }
 .daily-login-reward-modal .modal-card {
   background:
@@ -5327,7 +5346,7 @@ button.inventory-slot {
   align-items: center;
   padding: .72rem;
   border: 1px solid rgba(255, 224, 132, .34);
-  border-radius: 16px;
+  border-radius: 8px;
   background: linear-gradient(135deg, rgba(25, 85, 126, .88), rgba(6, 28, 52, .92));
   box-shadow: inset 0 0 0 1px rgba(255,255,255,.04);
 }
@@ -5360,7 +5379,7 @@ button.inventory-slot {
   gap: .7rem;
   align-items: center;
   padding: .55rem .68rem;
-  border-radius: 12px;
+  border-radius: 8px;
 }
 .daily-reward-status-row {
   color: #d9efff;
@@ -5384,19 +5403,23 @@ button.inventory-slot {
 }
 .daily-reward-grid {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: .48rem;
 }
 .daily-reward-card {
+  position: relative;
   width: 100%;
   min-width: 0;
-  min-height: 108px;
+  min-height: 112px;
+  aspect-ratio: 1.12;
   display: grid;
-  align-content: start;
-  gap: .42rem;
-  padding: .5rem;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: .3rem;
+  padding: .45rem;
+  overflow: hidden;
   border: 1px solid rgba(142, 193, 230, .18);
-  border-radius: 13px;
+  border-radius: 8px;
   background: linear-gradient(180deg, rgba(17, 49, 76, .92), rgba(5, 19, 34, .94));
   box-shadow: inset 0 -4px 0 rgba(0,0,0,.16);
   color: inherit;
@@ -5407,10 +5430,19 @@ button.inventory-slot {
   border-color: rgba(126, 191, 108, .35);
   background: linear-gradient(180deg, rgba(37, 79, 55, .78), rgba(8, 33, 27, .9));
 }
+.daily-reward-card.claimed .daily-reward-card-icon,
+.daily-reward-card.claimed .daily-reward-card-label {
+  opacity: .48;
+}
 .daily-reward-card.available {
   border-color: rgba(255, 224, 111, .84);
   background: linear-gradient(180deg, rgba(80, 69, 23, .84), rgba(33, 29, 10, .94));
-  box-shadow: 0 0 15px rgba(255, 209, 67, .2), inset 0 0 0 1px rgba(255, 245, 179, .14);
+  box-shadow: 0 0 18px rgba(255, 209, 67, .3), inset 0 0 0 1px rgba(255, 245, 179, .2);
+}
+.daily-reward-card.queued {
+  border-color: rgba(93, 190, 255, .72);
+  background: linear-gradient(180deg, rgba(29, 72, 105, .92), rgba(8, 28, 49, .96));
+  box-shadow: inset 0 0 0 1px rgba(144, 216, 255, .14);
 }
 button.daily-reward-card.available {
   cursor: pointer;
@@ -5433,11 +5465,11 @@ button.daily-reward-card.available:disabled {
   cursor: wait;
   opacity: .76;
 }
-.daily-reward-card.waiting {
+.daily-reward-card.next {
   border-color: rgba(133, 195, 239, .46);
 }
 .daily-reward-card.locked {
-  opacity: .65;
+  opacity: .55;
 }
 .daily-reward-card-head {
   display: flex;
@@ -5451,39 +5483,43 @@ button.daily-reward-card.available:disabled {
 }
 .daily-reward-card-head span {
   color: #9bcbe9;
-  font-size: .55rem;
+  font-size: .52rem;
   font-weight: 900;
   text-transform: uppercase;
 }
-.daily-reward-resource-list,
-.daily-reward-item-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: .25rem;
-}
-.daily-reward-resource,
-.daily-reward-item {
-  position: relative;
-  min-width: 0;
-  display: inline-flex;
-  align-items: center;
-  gap: .18rem;
-  padding: .16rem .25rem;
-  border-radius: 8px;
-  background: rgba(1, 12, 23, .66);
-  border: 1px solid rgba(255,255,255,.09);
-}
-.daily-reward-resource img,
-.daily-reward-item img {
-  width: 23px;
-  height: 23px;
-  object-fit: cover;
+.daily-reward-card-icon {
+  width: min(62px, 72%);
+  height: min(62px, 72%);
+  min-height: 0;
+  place-self: center;
+  object-fit: contain;
   border-radius: 6px;
+  filter: drop-shadow(0 5px 7px rgba(0,0,0,.42));
 }
-.daily-reward-resource strong,
-.daily-reward-item strong {
+.daily-reward-card-label {
+  min-width: 0;
+  width: 100%;
   color: #fff7cf;
-  font-size: .62rem;
+  font-size: .64rem;
+  line-height: 1.08;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+.daily-reward-check {
+  position: absolute;
+  inset: 50% auto auto 50%;
+  translate: -50% -50%;
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border: 2px solid #caffad;
+  border-radius: 50%;
+  color: #ecffe0;
+  background: rgba(24, 106, 48, .9);
+  box-shadow: 0 4px 12px rgba(0,0,0,.35);
+  font-size: 1.25rem;
+  font-weight: 1000;
 }
 .daily-reward-actions {
   display: grid;
@@ -5494,7 +5530,7 @@ button.daily-reward-card.available:disabled {
 .daily-reward-error button {
   min-height: 46px;
   padding: .6rem .8rem;
-  border-radius: 13px;
+  border-radius: 8px;
   color: #201300;
   background: linear-gradient(#ffe785, #d9931f);
   border: 1px solid #fff0ad;
@@ -5522,10 +5558,13 @@ button.daily-reward-card.available:disabled {
 }
 @media (max-width: 700px) {
   .daily-reward-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+  .daily-reward-card {
+    min-height: 102px;
   }
 }
-@media (max-width: 430px) {
+@media (max-width: 520px) {
   .daily-login-reward-modal.modal {
     width: calc(100% - .55rem);
   }
@@ -5544,7 +5583,14 @@ button.daily-reward-card.available:disabled {
     font-size: 1rem;
   }
   .daily-reward-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .daily-reward-card {
+    min-height: 104px;
+  }
+  .daily-reward-card-icon {
+    width: min(54px, 70%);
+    height: min(54px, 70%);
   }
   .daily-reward-status-row,
   .daily-reward-receipt {
@@ -6557,6 +6603,34 @@ button.daily-reward-card.available:disabled {
   font-weight: 1000;
   line-height: 1;
 }
+.clan-hud-btn.has-rallies::before,
+.profile-tabs button.has-rallies::after {
+  content: attr(data-rally-count);
+  position: absolute;
+  z-index: 4;
+  min-width: 20px;
+  height: 20px;
+  display: grid;
+  place-items: center;
+  padding: 0 5px;
+  border: 2px solid #fff0bd;
+  border-radius: 999px;
+  color: #fff;
+  background: linear-gradient(#c84545, #791e2a);
+  box-shadow: 0 3px 8px rgba(0,0,0,.52);
+  font: 900 .66rem/1 var(--font-ui);
+}
+.clan-hud-btn.has-rallies::before {
+  right: -5px;
+  top: -4px;
+}
+.profile-tabs button {
+  position: relative;
+}
+.profile-tabs button.has-rallies::after {
+  right: -5px;
+  top: -7px;
+}
 .daily-login-reward-btn {
   position: relative;
   isolation: isolate;
@@ -6940,14 +7014,213 @@ button.daily-reward-card.available:disabled {
 .clan-empty { display: grid; min-height: 360px; place-content: center; gap: .65rem; text-align: center; }
 .clan-empty h3, .clan-empty p { margin: 0; }
 .clan-lock { color: #78c990; font-size: 4rem; }
+.clan-section-nav,
+.clan-browser-nav { display: none; }
+.clan-section-panel,
+.clan-browser-panel { min-width: 0; }
 .clan-browser, .clan-columns { display: grid; grid-template-columns: minmax(260px,.72fr) minmax(360px,1.28fr); gap: .75rem; }
-.clan-create-card, .clan-discovery, .clan-roster-panel, .clan-gift-panel, .clan-quest-panel {
+.clan-create-card, .clan-discovery, .clan-roster-panel, .clan-gift-panel, .clan-quest-panel, .clan-social-card, .clan-rename-card {
   min-width: 0;
   padding: .8rem;
   border: 1px solid rgba(191,226,198,.2);
   border-radius: 14px;
   background: rgba(13,28,34,.88);
   box-shadow: 0 14px 28px rgba(0,0,0,.24);
+}
+.clan-overview-panel { margin-bottom: .75rem; }
+.clan-overview-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: .45rem;
+}
+.clan-overview-grid button {
+  min-width: 0;
+  min-height: 68px;
+  display: grid;
+  align-content: center;
+  justify-items: start;
+  gap: .08rem;
+  padding: .55rem .65rem;
+  color: #f8ecd4;
+  border: 1px solid rgba(139,218,160,.24);
+  border-radius: 10px;
+  background: linear-gradient(145deg, rgba(26,72,44,.66), rgba(9,27,35,.9));
+  text-align: left;
+}
+.clan-overview-grid button:hover,
+.clan-overview-grid button:focus-visible {
+  border-color: rgba(147,231,169,.7);
+  background: linear-gradient(145deg, rgba(39,99,59,.82), rgba(10,35,43,.96));
+  outline: none;
+}
+.clan-overview-grid button > span {
+  color: #a9cdb3;
+  font-size: .62rem;
+  font-weight: 950;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+}
+.clan-overview-grid button > strong {
+  max-width: 100%;
+  overflow: hidden;
+  color: #ffe5a1;
+  font-size: .92rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.clan-overview-grid button > small {
+  color: #9fb4ae;
+  font-size: .63rem;
+}
+.clan-rewards-panel {
+  display: grid;
+  gap: .75rem;
+}
+.clan-rallies-panel {
+  display: grid;
+  gap: .58rem;
+  border-color: rgba(212, 169, 91, .38);
+  background: linear-gradient(145deg, rgba(55, 37, 67, .92), rgba(12, 28, 34, .94));
+}
+.clan-social-heading,
+.clan-rally-card header,
+.clan-rally-summary,
+.clan-rally-card footer,
+.clan-rally-card li,
+.clan-rally-confirmation li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .65rem;
+}
+.clan-social-heading span,
+.clan-rally-card header span,
+.clan-rally-card li span {
+  display: grid;
+  min-width: 0;
+}
+.clan-social-heading small,
+.clan-rally-card header small,
+.clan-rally-card li small {
+  color: #bbaec4;
+  font-size: .62rem;
+}
+.clan-social-heading > b,
+.clan-rally-card header > b {
+  min-width: 32px;
+  padding: .2rem .45rem;
+  border: 1px solid rgba(235, 199, 119, .42);
+  border-radius: 999px;
+  color: #ffe7a3;
+  text-align: center;
+  background: rgba(75, 45, 89, .7);
+}
+.clan-rally-note {
+  margin: 0;
+  color: #cfc2d6;
+  font-size: .67rem;
+  line-height: 1.4;
+}
+.clan-rally-list {
+  display: grid;
+  gap: .55rem;
+}
+.clan-rally-card {
+  display: grid;
+  gap: .48rem;
+  padding: .68rem;
+  border: 1px solid rgba(210, 175, 105, .3);
+  border-radius: 10px;
+  color: #f8ecd4;
+  background: rgba(8, 18, 29, .72);
+}
+.clan-rally-card.launched {
+  border-color: rgba(198, 89, 80, .5);
+  background: linear-gradient(135deg, rgba(86, 27, 36, .72), rgba(8, 18, 29, .78));
+}
+.clan-rally-card.recalling {
+  border-color: rgba(100, 172, 210, .48);
+}
+.clan-rally-summary {
+  align-items: stretch;
+  flex-wrap: wrap;
+  padding: .42rem .5rem;
+  border-radius: 7px;
+  color: #b9cbd3;
+  background: rgba(255,255,255,.045);
+  font-size: .63rem;
+}
+.clan-rally-summary span {
+  display: grid;
+  gap: .08rem;
+}
+.clan-rally-summary strong {
+  color: #fff0bf;
+}
+.clan-rally-status {
+  color: #e7bc77;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+.clan-rally-card ul,
+.clan-rally-confirmation ul {
+  display: grid;
+  gap: .26rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.clan-rally-card li {
+  padding: .4rem .5rem;
+  border-left: 3px solid #55a873;
+  border-radius: 4px;
+  background: rgba(255,255,255,.045);
+}
+.clan-rally-card li.inbound {
+  border-left-color: #5eadd2;
+}
+.clan-rally-card li.returning {
+  border-left-color: #c58b55;
+}
+.clan-rally-card footer {
+  justify-content: flex-end;
+}
+.clan-rally-card footer button,
+.clan-rally-confirmation footer button {
+  min-height: 35px;
+  padding: .4rem .68rem;
+  border: 1px solid rgba(230, 193, 112, .48);
+  border-radius: 7px;
+  color: #fff5d0;
+  background: linear-gradient(#73508d, #3d2955);
+  font-weight: 900;
+}
+.clan-rally-card footer button.danger-action,
+.clan-rally-confirmation footer button.danger-action {
+  border-color: rgba(234, 119, 102, .55);
+  background: linear-gradient(#9b3e42, #5c1f2a);
+}
+.clan-rally-confirmation-modal.modal {
+  width: min(620px, calc(100vw - 1.4rem));
+}
+.clan-rally-confirmation {
+  display: grid;
+  gap: .7rem;
+}
+.clan-rally-confirmation h3,
+.clan-rally-confirmation p {
+  margin: .12rem 0;
+}
+.clan-rally-confirmation li {
+  padding: .5rem .62rem;
+  border: 1px solid rgba(201, 168, 104, .24);
+  border-radius: 7px;
+  background: rgba(255,255,255,.05);
+}
+.clan-rally-confirmation footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: .5rem;
 }
 .clan-form { display: grid; gap: .55rem; }
 .clan-form input, .clan-form select, .clan-form textarea, .clan-search input {
@@ -7017,6 +7290,22 @@ button.daily-reward-card.available:disabled {
   background: linear-gradient(115deg, rgba(29,82,48,.9), rgba(15,34,41,.94));
 }
 .clan-hero h3, .clan-hero p { margin: .12rem 0; }
+.clan-hero-copy { min-width: 0; }
+.clan-hero-copy > span {
+  color: #a9cdb3;
+  font-size: .68rem;
+  font-weight: 900;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+.clan-hero-copy h3 {
+  overflow-wrap: anywhere;
+  color: #ffe5a1;
+}
+.clan-hero-copy p {
+  color: #c0cec5;
+  line-height: 1.35;
+}
 .clan-shield {
   display: inline-grid;
   flex: 0 0 auto;
@@ -7032,7 +7321,8 @@ button.daily-reward-card.available:disabled {
 .clan-shield-polished svg { filter: saturate(1.08) brightness(1.04); }
 .clan-shield-battleworn svg { filter: saturate(.82) contrast(1.09); }
 .clan-hero-shield { display: grid; justify-items: center; gap: .24rem; }
-.clan-hero-shield > button {
+.clan-hero-actions { display: flex; flex-wrap: wrap; justify-content: flex-start; gap: .28rem; margin-top: .35rem; }
+.clan-hero-actions button {
   min-height: 27px;
   padding: .15rem .5rem;
   color: #fff0c1;
@@ -7042,10 +7332,45 @@ button.daily-reward-card.available:disabled {
   font-size: .62rem;
   font-weight: 950;
 }
+.clan-rename-card {
+  margin-bottom: .75rem;
+  border-color: rgba(230,190,99,.38);
+  background: linear-gradient(125deg, rgba(45,31,18,.94), rgba(13,28,34,.92));
+}
+.clan-rename-card > p { margin: 0 0 .65rem; color: #c8c0ad; }
+.clan-rename-form { grid-template-columns: minmax(220px,1fr) auto; align-items: end; }
+.clan-rename-form label { display: grid; gap: .28rem; color: #d9cfb7; font-size: .72rem; font-weight: 900; }
+.clan-rename-summary { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: .35rem .8rem; color: #b9c9be; font-size: .75rem; }
+.clan-rename-summary strong { color: #f3d27a; }
+.clan-rename-form > small { color: #d9c584; font-weight: 800; }
+.clan-rename-form .clan-warning { grid-column: 1 / -1; margin: 0; }
+.clan-rename-actions { display: flex; justify-content: flex-end; gap: .45rem; }
+.clan-rename-actions button { min-height: 38px; }
+.clan-rename-actions button:disabled { opacity: .52; cursor: not-allowed; }
 .clan-power { display: grid; justify-items: end; }
 .clan-power strong { color: #8fe0a5; font-size: 1.4rem; }
+.clan-power span,
+.clan-power small { color: #a9cdb3; }
 .clan-social-layout { grid-template-columns: minmax(260px,.68fr) minmax(420px,1.32fr); align-items: start; }
 .clan-social-panels { display: grid; min-width: 0; gap: .75rem; }
+.clan-panel-heading {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  text-align: left;
+}
+.clan-panel-heading > span,
+.clan-panel-heading > h3 { grid-column: 1; }
+.clan-panel-heading > b {
+  grid-column: 2;
+  grid-row: 1 / 3;
+  align-self: center;
+  padding: .18rem .48rem;
+  color: #bce8c8;
+  border: 1px solid rgba(143,221,163,.28);
+  border-radius: 999px;
+  background: rgba(35,95,53,.5);
+  font-size: .68rem;
+}
 .clan-roster { display: grid; max-height: 440px; gap: .3rem; overflow: auto; }
 .clan-member-row {
   display: grid;
@@ -7088,6 +7413,22 @@ button.daily-reward-card.available:disabled {
 .clan-member-selection .danger { border-color: #ad5a5a; background: #682f34; }
 .clan-member-profile-link { background: #263f49 !important; border-color: #537b87 !important; }
 .clan-applications { margin-top: .7rem; }
+.clan-subsection-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .5rem;
+}
+.clan-subsection-heading h4 { margin: .25rem 0 .45rem; }
+.clan-subsection-heading b {
+  min-width: 24px;
+  padding: .1rem .36rem;
+  color: #251709;
+  border-radius: 999px;
+  background: #e6b954;
+  text-align: center;
+  font-size: .65rem;
+}
 .clan-applications article { padding: .45rem .5rem; }
 .clan-applications article > span { display: grid; min-width: 0; margin-right: auto; }
 .clan-applications article > span small { color: #a9c0b2; font-size: .7rem; }
@@ -7097,11 +7438,23 @@ button.daily-reward-card.available:disabled {
 .clan-gift-panel > p { margin: 0 0 .65rem; color: #b9c9be; line-height: 1.4; }
 .clan-gift-actions {
   display: grid;
-  grid-template-columns: minmax(150px,1fr) auto minmax(150px,1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   align-items: center;
   gap: .5rem;
 }
-.clan-gift-actions small { color: #d9c584; font-weight: 800; text-align: center; }
+.clan-gift-actions small {
+  grid-column: 1 / -1;
+  grid-row: 2;
+  color: #d9c584;
+  font-weight: 800;
+  text-align: center;
+}
+.clan-gift-actions button {
+  width: 100%;
+  min-width: 0;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
 .clan-gift-actions button:disabled, .clan-quest-card button:disabled { opacity: .52; cursor: not-allowed; }
 .clan-gift-stats { display: flex; flex-wrap: wrap; gap: .45rem; margin-top: .55rem; }
 .clan-gift-stats span { padding: .25rem .45rem; color: #a9c0b2; border-radius: 999px; background: rgba(255,255,255,.055); font-size: .72rem; }
@@ -7270,15 +7623,199 @@ button.daily-reward-card.available:disabled {
   gap: .55rem;
 }
 .clan-shield-editor button:focus-visible,
-.clan-hero-shield > button:focus-visible {
+.clan-hero-actions button:focus-visible {
   outline: 3px solid #f3d27a;
   outline-offset: 2px;
 }
 
 @media (max-width: 900px) {
   .clan-browser, .clan-columns { grid-template-columns: 1fr; }
-  .clan-hero { grid-template-columns: auto 1fr; }
-  .clan-power { grid-column: 1 / -1; grid-template-columns: 1fr auto auto; justify-items: start; gap: .5rem; }
+  .clan-rename-form { grid-template-columns: 1fr; }
+  .clan-rename-summary, .clan-rename-actions { justify-content: stretch; }
+  .clan-rename-actions { display: grid; grid-template-columns: 1fr 1.4fr; }
+  .clan-view {
+    padding: .35rem;
+    overscroll-behavior: contain;
+  }
+  .clan-content:not(.shield-editor-open) {
+    width: 100%;
+    display: grid;
+    gap: .45rem;
+  }
+  .clan-section-nav,
+  .clan-browser-nav {
+    position: sticky;
+    z-index: 8;
+    top: -.35rem;
+    display: grid;
+    padding: .3rem;
+    border: 1px solid rgba(205,169,87,.34);
+    border-radius: 10px;
+    background: rgba(5,19,28,.98);
+    box-shadow: 0 8px 18px rgba(0,0,0,.34);
+  }
+  .clan-section-nav {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: .25rem;
+  }
+  .clan-browser-nav {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: .35rem;
+  }
+  .clan-section-nav button,
+  .clan-browser-nav button {
+    position: relative;
+    min-width: 0;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: .3rem;
+    padding: .35rem .45rem;
+    overflow: hidden;
+    color: #a9c7ba;
+    border: 1px solid transparent;
+    border-radius: 7px;
+    background: transparent;
+    font-size: .7rem;
+    font-weight: 950;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .clan-section-nav button.active,
+  .clan-browser-nav button.active {
+    color: #241708;
+    border-color: #fff0bd;
+    background: linear-gradient(#f2d27e, #c8933e);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.46);
+  }
+  .clan-section-nav button:focus-visible,
+  .clan-browser-nav button:focus-visible {
+    outline: 3px solid #f3d27a;
+    outline-offset: 1px;
+  }
+  .clan-section-nav-mark {
+    color: #e2bd69;
+    font-size: .86rem;
+  }
+  .clan-section-nav button.active .clan-section-nav-mark { color: #40270e; }
+  .clan-section-nav button > b {
+    min-width: 20px;
+    padding: .1rem .3rem;
+    color: #dff7e5;
+    border: 1px solid rgba(139,218,160,.25);
+    border-radius: 999px;
+    background: rgba(31,91,50,.72);
+    font-size: .59rem;
+    line-height: 1.2;
+  }
+  .clan-section-nav button > b.alert {
+    color: #fff3c5;
+    border-color: rgba(239,194,92,.5);
+    background: #7d4d1d;
+  }
+  .clan-section-nav button.active > b {
+    color: #fff3c5;
+    border-color: rgba(72,40,10,.35);
+    background: #563412;
+  }
+  .clan-content:not(.shield-editor-open) .clan-columns,
+  .clan-content:not(.shield-editor-open) .clan-social-panels,
+  .clan-browser {
+    display: contents;
+  }
+  .clan-section-panel,
+  .clan-browser-panel {
+    display: none;
+  }
+  .clan-section-panel.active,
+  .clan-browser-panel.active {
+    display: block;
+  }
+  .clan-overview-panel.active,
+  .clan-rallies-panel.active,
+  .clan-rewards-panel.active {
+    display: grid;
+  }
+  .clan-overview-panel {
+    gap: .5rem;
+    margin: 0;
+  }
+  .clan-overview-panel .clan-hero {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: .62rem;
+    margin: 0;
+    padding: .58rem .68rem;
+    border-radius: 11px;
+  }
+  .clan-overview-panel .clan-shield-size-large {
+    width: 62px;
+    height: 68px;
+  }
+  .clan-overview-panel .clan-hero-copy h3 { font-size: 1.03rem; }
+  .clan-overview-panel .clan-hero-copy p {
+    max-width: 56ch;
+    overflow: hidden;
+    font-size: .7rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .clan-overview-panel .clan-power {
+    grid-column: auto;
+    grid-template-columns: 1fr;
+    justify-items: end;
+    gap: 0;
+    text-align: right;
+  }
+  .clan-overview-panel .clan-power strong { font-size: 1.08rem; }
+  .clan-overview-panel .clan-power span,
+  .clan-overview-panel .clan-power small { font-size: .62rem; }
+  .clan-hero-actions button {
+    min-height: 44px;
+    padding: .3rem .65rem;
+  }
+  .clan-overview-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: .35rem;
+  }
+  .clan-overview-grid button {
+    min-height: 70px;
+    padding: .45rem .55rem;
+  }
+  .clan-create-card,
+  .clan-discovery,
+  .clan-roster-panel,
+  .clan-gift-panel,
+  .clan-quest-panel,
+  .clan-social-card,
+  .clan-rename-card {
+    padding: .65rem;
+    border-radius: 11px;
+  }
+  .clan-rewards-panel.active {
+    grid-template-columns: minmax(240px, .78fr) minmax(0, 1.22fr);
+    align-items: start;
+    gap: .55rem;
+  }
+  .clan-gift-actions {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .clan-gift-actions small {
+    grid-column: 1;
+    grid-row: auto;
+  }
+  .clan-roster {
+    max-height: none;
+    overflow: visible;
+  }
+  .clan-search button,
+  .clan-list-row > button,
+  .clan-member-selection button,
+  .clan-applications button,
+  .clan-gift-actions button,
+  .clan-quest-card button {
+    min-height: 44px;
+  }
   .clan-view.shield-editor-active {
     overflow: hidden;
     padding: .35rem;
@@ -7427,6 +7964,28 @@ button.daily-reward-card.available:disabled {
 }
 
 @media (max-width: 580px) {
+  .clan-section-nav button,
+  .clan-browser-nav button {
+    padding-inline: .3rem;
+    font-size: .64rem;
+  }
+  .clan-section-nav-mark { display: none; }
+  .clan-overview-panel .clan-hero {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+  .clan-overview-panel .clan-shield-size-large {
+    width: 54px;
+    height: 60px;
+  }
+  .clan-overview-panel .clan-power {
+    grid-column: 1 / -1;
+    grid-template-columns: 1fr auto auto;
+    justify-items: start;
+    gap: .5rem;
+    text-align: left;
+  }
+  .clan-overview-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .clan-rewards-panel.active { grid-template-columns: 1fr; }
   .clan-list-row { grid-template-columns: auto minmax(0, 1fr); }
   .clan-list-row > button { grid-column: 1 / -1; width: 100%; }
   .clan-gift-actions { grid-template-columns: 1fr; }

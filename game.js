@@ -5,6 +5,8 @@ const WORLD_SCHEMA_VERSION = Math.max(Number(WORLD_CONFIG.version) || 23, Number
 const APP_BUILD_ID = getCurrentDocumentBuildId();
 const APP_RELEASE_ID = String(REALM_CONFIG.releaseId || "");
 const WORLD_REGIONS = getMergedWorldRegions(WORLD_CONFIG, MAP_EDITOR_DATA);
+const WORLD_REGIONS_BY_ID = new Map(WORLD_REGIONS.map(region => [region.id, region]));
+const WORLD_REGION_IDS = Object.freeze(WORLD_REGIONS.map(region => region.id).filter(Boolean));
 const LAND_BRIDGES = getMergedLandBridges(WORLD_CONFIG, MAP_EDITOR_DATA);
 const REGION_CITY_COUNT = Math.max(1, Math.floor(Number(WORLD_CONFIG.cityCountPerRegion) || 50));
 const STARTER_REGION_TYPE = "starter";
@@ -160,7 +162,7 @@ const SWIFT_MARCH_ORDER_ITEM_ID = "swift_march_order";
 const SWIFT_MARCH_REMAINING_TIME_MULTIPLIER = 0.5;
 const SWIFT_MARCH_MINIMUM_REMAINING_SECONDS = 1;
 const RECALL_HORN_ITEM_ID = "recall_horn";
-const DAILY_LOGIN_REWARD_SCHEMA_VERSION = 1;
+const DAILY_LOGIN_REWARD_SCHEMA_VERSION = 2;
 const DAILY_LOGIN_REWARD_DAYS = Object.freeze(
   (Array.isArray(ECONOMY_CONFIG?.dailyLoginRewards?.days) ? ECONOMY_CONFIG.dailyLoginRewards.days : [])
     .map((entry, index) => Object.freeze({
@@ -177,6 +179,10 @@ const DAILY_LOGIN_REWARD_DAYS = Object.freeze(
 const DAILY_LOGIN_REWARD_CYCLE_DAYS = Math.max(
   1,
   Math.floor(Number(ECONOMY_CONFIG?.dailyLoginRewards?.cycleLengthDays) || DAILY_LOGIN_REWARD_DAYS.length)
+);
+const DAILY_LOGIN_REWARD_MAX_PENDING = Math.max(
+  1,
+  Math.floor(Number(ECONOMY_CONFIG?.dailyLoginRewards?.maxPendingRewards) || 2)
 );
 const DAILY_LOGIN_REWARD_AUTO_OPEN_PREFIX = `crownlands-daily-reward-opened-${RESET_GENERATION}`;
 const ITEM_DAILY_PURCHASE_LIMITS = Object.freeze({
@@ -303,6 +309,8 @@ const MIN_ZOOM = 0.40;
 const MAX_ZOOM = 1;
 const WHEEL_ZOOM_STEP = 1.12;
 const MAP_TOUCH_PAN_THRESHOLD = 12;
+const MAP_TOUCH_TAP_TOLERANCE = 16;
+const MAP_LOW_ZOOM_TAP_TOLERANCE_BONUS = 4;
 const ZOOM_RENDER_SETTLE_MS = 260;
 const PAN_RENDER_SETTLE_MS = 180;
 const MAIN_CITY_RETURN_CAMERA_THROTTLE_MS = 180;
@@ -740,7 +748,7 @@ const ARMY_TRAVEL_SECONDS_PER_MAP_UNIT = 0.13;
 const ARMY_TRAVEL_MIN_SECONDS = 30;
 const ARMY_TRAVEL_SCOUT_MIN_SECONDS = 10;
 const ARMY_TRAVEL_MAX_SECONDS = 1800;
-const ARMY_TRAVEL_KIND_MULTIPLIERS = { scout: 0.35, transfer: 0.95, reinforce: 0.95, attack: 1 };
+const ARMY_TRAVEL_KIND_MULTIPLIERS = { scout: 0.35, transfer: 0.95, reinforce: 0.95, rally_join: 0.95, attack: 1 };
 const CLAN_REINFORCEMENT_ACTIVE_LIMIT = 2;
 const ARMY_TRAVEL_TROOP_BAND_LIMITS = [10, 100, 1000, 10000, 100000, 1000000, 10000000, 100000000];
 const ARMY_TRAVEL_TROOP_BAND_MULTIPLIERS = [1, 1.18, 1.38, 1.62, 1.9, 2.24, 2.62, 3.06, 3.5];
@@ -750,33 +758,30 @@ const CHARACTER_START_LEVEL = 1;
 const CHARACTER_START_XP = 0;
 const HERO_XP_SOFT_CAP_LEVEL = 50;
 const HERO_XP_HARD_CAP_LEVEL = 100;
-const HERO_XP_POST_50_SPAN = 50;
-const HERO_XP_POST_100_SPAN = 25;
-const HERO_XP_POST_50_MULTIPLIER = 2.5;
-const HERO_XP_POST_100_MULTIPLIER = 4;
-const HERO_XP_POST_50_EXPONENT = 1.5;
-const HERO_XP_POST_100_EXPONENT = 1.6;
-const LEVEL_UP_GOLD_EARLY_UPGRADE_SHARE = economyNumber("levelRewards.goldEarlyUpgradeShare", 0.5);
-const LEVEL_UP_GOLD_MID_END_UPGRADE_SHARE = economyNumber("levelRewards.goldMidUpgradeShare", 0.3);
-const LEVEL_UP_GOLD_END_UPGRADE_SHARE = economyNumber("levelRewards.goldEndgameUpgradeShare", 0.2);
-const LEVEL_UP_GOLD_EARLY_PRODUCTION_HOURS = economyNumber("levelRewards.goldEarlyProductionHours", 4);
-const LEVEL_UP_GOLD_MID_END_PRODUCTION_HOURS = economyNumber("levelRewards.goldMidProductionHours", 12);
-const LEVEL_UP_GOLD_END_PRODUCTION_HOURS = economyNumber("levelRewards.goldEndgameProductionHours", 24);
+const HERO_XP_EXPONENTIAL_START_LEVEL = 25;
+const HERO_XP_EXPONENTIAL_GROWTH_RATE = 1.1;
+const LEVEL_UP_GOLD_FLOOR_BASE = economyNumber("levelRewards.goldFloorBase", 500);
+const LEVEL_UP_GOLD_FLOOR_PER_LEVEL = economyNumber("levelRewards.goldFloorPerLevel", 250);
+const LEVEL_UP_GOLD_FLOOR_EXPONENT = economyNumber("levelRewards.goldFloorExponent", 1.25);
+const LEVEL_UP_GOLD_FLOOR_EXPONENT_SCALE = economyNumber("levelRewards.goldFloorExponentScale", 40);
+const LEVEL_UP_GOLD_EARLY_UPGRADE_SHARE = economyNumber("levelRewards.goldEarlyUpgradeShare", 0.75);
+const LEVEL_UP_GOLD_MID_END_UPGRADE_SHARE = economyNumber("levelRewards.goldMidUpgradeShare", 0.4);
+const LEVEL_UP_GOLD_END_UPGRADE_SHARE = economyNumber("levelRewards.goldEndgameUpgradeShare", 0.4);
+const LEVEL_UP_GOLD_EARLY_PRODUCTION_HOURS = economyNumber("levelRewards.goldEarlyProductionHours", 6);
+const LEVEL_UP_GOLD_MID_END_PRODUCTION_HOURS = economyNumber("levelRewards.goldMidProductionHours", 16);
+const LEVEL_UP_GOLD_END_PRODUCTION_HOURS = economyNumber("levelRewards.goldEndgameProductionHours", 36);
 const LEVEL_UP_TROOP_REWARD_EARLY_BASE_HOURS = economyNumber("levelRewards.troopEarlyBaseHours", 4);
 const LEVEL_UP_TROOP_REWARD_EARLY_HOURS_PER_LEVEL = economyNumber("levelRewards.troopEarlyHoursPerLevel", 0.4);
 const LEVEL_UP_TROOP_REWARD_MID_BASE_HOURS = economyNumber("levelRewards.troopMidBaseHours", 24);
-const LEVEL_UP_TROOP_REWARD_MID_HOURS_PER_LEVEL = economyNumber("levelRewards.troopMidHoursPerLevel", 0.24);
-const LEVEL_UP_TROOP_REWARD_END_BASE_HOURS = economyNumber("levelRewards.troopEndgameBaseHours", 36);
-const LEVEL_UP_TROOP_REWARD_END_HOURS_PER_LEVEL = economyNumber("levelRewards.troopEndgameHoursPerLevel", 0.12);
-const LEVEL_UP_TROOP_REWARD_MAX_HOURS = economyNumber("levelRewards.troopMaximumHours", 48);
-const CITY_UPGRADE_XP_BASE = 18;
-const CITY_UPGRADE_XP_PER_LEVEL = 4;
+const LEVEL_UP_TROOP_REWARD_MID_HOURS_PER_LEVEL = economyNumber("levelRewards.troopMidHoursPerLevel", 0.48);
+const LEVEL_UP_TROOP_REWARD_END_BASE_HOURS = economyNumber("levelRewards.troopEndgameBaseHours", 48);
+const LEVEL_UP_TROOP_REWARD_END_HOURS_PER_LEVEL = economyNumber("levelRewards.troopEndgameHoursPerLevel", 0.32);
+const LEVEL_UP_TROOP_REWARD_MAX_HOURS = economyNumber("levelRewards.troopMaximumHours", 96);
 const CAPTURE_XP_BASE = 120;
 const CAPTURE_XP_PER_CITY_LEVEL = 45;
 const CAPTURE_XP_PER_DEFENDER = 1.5;
 const ENEMY_CAPTURE_XP_BONUS = 300;
 const CAPTURE_XP_COOLDOWN_SECONDS = 3600;
-const RECENT_CAPTURE_XP_MULTIPLIER = 0.25;
 const DEFENSE_HELD_XP_BASE = 80;
 const DEFENSE_HELD_XP_PER_ATTACKER = 0.45;
 const FAILED_BATTLE_XP_RATE = 1 / 3;
@@ -784,10 +789,10 @@ const BATTLE_XP_TROOP_CREDIT_CITY_WALL_MULTIPLIER = 1;
 const BATTLE_XP_TROOP_CREDIT_VP_MULTIPLIER = 2;
 const BATTLE_XP_TROOP_CREDIT_LEVEL_CAP_MULTIPLIER = 3;
 const BATTLE_XP_EARLY_LEVEL_CAP_RATE = 1;
-const BATTLE_XP_MID_START_LEVEL_CAP_RATE = 0.8;
+const BATTLE_XP_MID_START_LEVEL_CAP_RATE = 1;
 const BATTLE_XP_MID_END_LEVEL_CAP_RATE = 0.5;
-const BATTLE_XP_END_START_LEVEL_CAP_RATE = 0.3;
-const BATTLE_XP_END_FLOOR_LEVEL_CAP_RATE = 0.15;
+const BATTLE_XP_END_START_LEVEL_CAP_RATE = 0.5;
+const BATTLE_XP_END_FLOOR_LEVEL_CAP_RATE = 0.35;
 const BATTLE_XP_END_CAP_RAMP_LEVELS = 50;
 const ATTACK_PROTECTION_VERSION = 2;
 const ATTACK_PROTECTION_ASSAULT_MIN_RATIO = 2;
@@ -914,6 +919,8 @@ const CLAN_SHIELD_FINISHES = [
   { key: "battleworn", label: "Battle-worn" },
 ];
 const CLAN_GIFT_COOLDOWN_MS = 5 * 60 * 60 * 1000;
+const CLAN_NAME_CHANGE_GOLD_COST = 500_000;
+const CLAN_NAME_CHANGE_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000;
 const CLAN_QUEST_REWARDS = Object.freeze([
   { id: "capture_5", captures: 5, rewardType: "gold", productionMinutes: 30 },
   { id: "capture_15", captures: 15, rewardType: "troops", productionMinutes: 30 },
@@ -2459,18 +2466,32 @@ const WALKABLE_TERRAIN_ROWS = [
 const TERRAIN_BLOCKERS = createWorldTerrainBlockers();
 const NO_CITY_TERRAIN = createWorldNoCityTerrain();
 const WORLD_CAMPS = generateWorldCampSlots();
+const WORLD_CAMPS_BY_ID = new Map(WORLD_CAMPS.map(camp => [camp.id, camp]));
 const routeCache = new Map();
 const asyncRouteCache = new Map();
 const routeEdgePassableCache = new Map();
 const normalizedArmyPathCache = new WeakMap();
 const normalizedArmyPathSegmentsCache = new WeakMap();
 const pathMetricCache = new WeakMap();
+const ROUTE_CACHE_LIMIT = 6000;
+const ROUTE_EDGE_PASSABLE_CACHE_LIMIT = 160000;
+const ROUTE_OBSTACLE_BUCKET_SIZE = 240;
+const ROUTE_OBSTACLE_BUCKET_PADDING = 48;
 const ROUTE_CELL_FALLBACK_RADIUS = 32;
 const ROUTE_CELL_FALLBACK_CANDIDATES = 24;
 const ROUTE_CELL_FALLBACK_PAIR_LIMIT = 16;
 const ROUTE_SEARCH_MAX_VISITED_CELLS = Math.max(2500, Math.min(10000, GRID_COLS * GRID_ROWS));
 const ROUTE_WORKER_TIMEOUT_MS = 6000;
+const ROUTE_WORKER_RETRY_TIMEOUT_MS = 15000;
 const ASYNC_ROUTE_CACHE_LIMIT = 320;
+
+function setBoundedRouteCacheValue(cache, key, value, limit) {
+  cache.delete(key);
+  cache.set(key, value);
+  while (cache.size > limit) {
+    cache.delete(cache.keys().next().value);
+  }
+}
 const NEAREST_SOURCE_ROUTE_CHECK_LIMIT = 18;
 const SCOUT_SOURCE_ROUTE_CHECK_LIMIT = 10;
 
@@ -2486,6 +2507,7 @@ let troopSliderActive = false;
 let activeTroopSliderRoute = null;
 let activeAttackProtectionPreview = null;
 let activeTroopOrderKind = "";
+let activeRallyOrderContext = null;
 let activeSwiftMarchOrderSelected = false;
 let activeTroopRouteRequestId = 0;
 let scoutNearbySourceId = null;
@@ -2507,6 +2529,8 @@ let lastArmyRenderTime = 0;
 let lastCityDynamicTextTime = 0;
 let renderableArmiesFrameCacheActive = false;
 let renderableArmiesFrameCache = null;
+let playerCitiesFrameCacheActive = false;
+let playerCitiesFrameCache = null;
 let cameraTransformRaf = 0;
 let saveTimer = 0;
 let onlineSaveTimer = 0;
@@ -2544,6 +2568,8 @@ let onlineCitySyncInFlight = false;
 let onlineCitySyncQueued = false;
 let onlineArmies = [];
 let onlineArmiesByIsland = new Map();
+const renderableRemoteArmyCache = new WeakMap();
+const renderablePendingArmyCache = new WeakMap();
 let onlineReinforcements = [];
 const PLAYER_RELEVANT_ARMIES_CACHE_KEY = "player-relevant";
 let pendingOutgoingMissions = new Map();
@@ -2632,6 +2658,7 @@ let dailyLoginRewardClaimInFlight = false;
 let dailyLoginRewardUtcTimer = 0;
 let dailyLoginRewardCountdownTimer = 0;
 let dailyLoginRewardError = "";
+let dailyLoginRewardPendingClaim = null;
 let rewardedAdStatus = null;
 let rewardedAdStatusLoading = false;
 let rewardedAdInFlight = false;
@@ -2676,6 +2703,9 @@ let activeClanApplicationsSubscriptionId = "";
 let clanApplicationsError = "";
 let clanStateUnsubscribe = null;
 let activeClanSubscriptionId = "";
+let clanRalliesUnsubscribe = null;
+let onlineClanRallies = [];
+const rallyActionRequests = new Set();
 let clanMemberUidSet = new Set();
 let clanRosterReady = false;
 let clanUiLoading = false;
@@ -2683,7 +2713,14 @@ let clanShieldDraft = null;
 let clanShieldEditorOpen = false;
 let clanShieldSaving = false;
 let clanShieldEditorTab = "field";
+let clanRenameEditorOpen = false;
+let clanRenameSaving = false;
 let selectedClanMemberUid = "";
+const CLAN_MOBILE_SECTIONS = Object.freeze(["overview", "rallies", "rewards", "members"]);
+const CLAN_BROWSER_SECTIONS = Object.freeze(["discover", "create"]);
+let activeClanMobileSection = "overview";
+let activeClanBrowserSection = "discover";
+let clanNavigationClanId = "";
 let clanGiftActionInFlight = false;
 let clanQuestClaimInFlightId = "";
 let clanGiftCountdownTimer = 0;
@@ -2849,11 +2886,11 @@ const incomingAttackTime = document.getElementById("incomingAttackTime");
 const helpBtn = document.getElementById("helpBtn");
 
 function getRegionById(regionId) {
-  return WORLD_REGIONS.find(region => region.id === regionId) || WORLD_REGIONS[0] || null;
+  return WORLD_REGIONS_BY_ID.get(String(regionId || "")) || WORLD_REGIONS[0] || null;
 }
 
 function getRegionIds() {
-  return WORLD_REGIONS.map(region => region.id).filter(Boolean);
+  return WORLD_REGION_IDS;
 }
 
 function getRegionLabel(regionId) {
@@ -3550,9 +3587,16 @@ function hasEditorCityDefinitions(regionId) {
 
 function createEditorCitySlot(region, city, index) {
   const chosen = islandImagePointToWorld(region.id, getEditorPoint(city));
+  const id = String(city?.id || `${region.id}_${String(index + 1).padStart(3, "0")}`);
   return {
-    id: String(city?.id || `${region.id}_${String(index + 1).padStart(3, "0")}`),
-    name: generateCityName(region, index),
+    id,
+    name: getCanonicalCityName({
+      ...city,
+      id,
+      regionId: region.id,
+      startPool: region.id,
+      index,
+    }),
     regionId: region.id,
     startPool: region.id,
     x: Math.round(chosen.x),
@@ -4085,6 +4129,14 @@ function generateCityName(region, index, cityId = "") {
   return cityIndex % 5 === 0 ? `${prefix}${suffix} ${title}` : `${prefix}${suffix}`;
 }
 
+function isGenericCityName(value = "", cityId = "") {
+  const name = String(value || "").trim();
+  if (!name) return true;
+  if (/\d/.test(name)) return true;
+  if (/^city(?:\s+|[-_])\d+$/i.test(name)) return true;
+  return Boolean(cityId) && name.toLowerCase() === String(cityId).trim().toLowerCase();
+}
+
 function getCanonicalCityName(base = {}, fallback = null) {
   const fallbackRecord = fallback && typeof fallback === "object" ? fallback : {};
   const source = { ...fallbackRecord, ...base };
@@ -4092,6 +4144,8 @@ function getCanonicalCityName(base = {}, fallback = null) {
   const regionId = normalizeRegionId(source.regionId || source.startPool || fallbackRecord.regionId || fallbackRecord.startPool);
   const region = getRegionById(regionId) || { id: regionId || "center" };
   const cityId = source.id || fallbackRecord.id || "";
+  const configuredName = String(base?.name || fallbackRecord.name || "").trim();
+  if (!isGenericCityName(configuredName, cityId)) return configuredName.slice(0, 80);
   const index = getCityNameIndex(cityId, source.index);
   return generateCityName(region, index, cityId);
 }
@@ -5973,21 +6027,20 @@ function reconcileSkillPoints(character = state?.character, upgrades = state?.up
 
 function getXpRequiredForLevel(level) {
   const current = Math.max(1, Math.floor(Number(level) || 1));
-  const base = 150 + current * 65 + Math.pow(current, 2.05) * 35;
-  let multiplier = 1;
-  if (current > HERO_XP_SOFT_CAP_LEVEL) {
-    multiplier += Math.pow(
-      (current - HERO_XP_SOFT_CAP_LEVEL) / HERO_XP_POST_50_SPAN,
-      HERO_XP_POST_50_EXPONENT
-    ) * HERO_XP_POST_50_MULTIPLIER;
-  }
-  if (current > HERO_XP_HARD_CAP_LEVEL) {
-    multiplier += Math.pow(
-      (current - HERO_XP_HARD_CAP_LEVEL) / HERO_XP_POST_100_SPAN,
-      HERO_XP_POST_100_EXPONENT
-    ) * HERO_XP_POST_100_MULTIPLIER;
-  }
-  return Math.floor(base * multiplier);
+  const legacyRequirement = value => Math.floor(
+    150 + value * 65 + Math.pow(value, 2.05) * 35
+  );
+  if (current <= HERO_XP_EXPONENTIAL_START_LEVEL) return legacyRequirement(current);
+  const anchor = legacyRequirement(HERO_XP_EXPONENTIAL_START_LEVEL);
+  const requirement = anchor * Math.pow(
+    HERO_XP_EXPONENTIAL_GROWTH_RATE,
+    current - HERO_XP_EXPONENTIAL_START_LEVEL
+  );
+  if (!Number.isFinite(requirement)) return Number.MAX_SAFE_INTEGER;
+  return Math.min(
+    Number.MAX_SAFE_INTEGER,
+    Math.floor(requirement)
+  );
 }
 
 function getLevelUpGoldUpgradeShare(level) {
@@ -6014,9 +6067,16 @@ function getLevelUpGoldProductionHours(level) {
   return LEVEL_UP_GOLD_END_PRODUCTION_HOURS;
 }
 
+function getLevelUpGoldFloor(level) {
+  const current = Math.max(1, Math.floor(Number(level) || 1));
+  return LEVEL_UP_GOLD_FLOOR_BASE
+    + current * LEVEL_UP_GOLD_FLOOR_PER_LEVEL
+    + Math.pow(current, LEVEL_UP_GOLD_FLOOR_EXPONENT) * LEVEL_UP_GOLD_FLOOR_EXPONENT_SCALE;
+}
+
 function getLevelUpGoldReward(level) {
   const current = Math.max(1, Math.floor(Number(level) || 1));
-  const legacyReward = 250 + current * 60 + Math.pow(current, 1.25) * 25;
+  const goldFloor = getLevelUpGoldFloor(current);
   const referenceCityLevel = Math.max(1, current - 1);
   const referenceUpgradeCost = getCityUpgradeCostAtLevel(referenceCityLevel, 0);
   const upgradeRelief = Number.isFinite(referenceUpgradeCost)
@@ -6024,7 +6084,7 @@ function getLevelUpGoldReward(level) {
     : 0;
   const productionRelief = getMillionLordsPassiveGoldPerHour(current)
     * getLevelUpGoldProductionHours(current);
-  return Math.floor(Math.max(legacyReward, Math.min(upgradeRelief, productionRelief)));
+  return Math.floor(Math.max(goldFloor, Math.min(upgradeRelief, productionRelief)));
 }
 
 function getLevelUpTroopRewardHours(level) {
@@ -6501,18 +6561,16 @@ function addCharacterXp(amount, reason = "progress") {
   reconcileSkillPoints(state.character, state.upgrades);
 }
 
-function getCaptureXpAward(target, oldOwner, defendersAtStart, attackerOwner = "player") {
+function getCaptureXpAward(target, oldOwner, defenderLosses, attackerOwner = "player") {
   if (isGivenUpNeutralCity(target)) return 0;
   const level = clampCityLevel(target?.level);
-  const defenderXp = Math.floor(getBattleXpTroopCredit(target, defendersAtStart) * CAPTURE_XP_PER_DEFENDER);
+  const troopXp = Math.floor(getBattleXpTroopCredit(target, defenderLosses) * CAPTURE_XP_PER_DEFENDER);
   const ownerBonus = oldOwner === "enemy" ? ENEMY_CAPTURE_XP_BONUS : 0;
-  const baseXp = CAPTURE_XP_BASE + level * CAPTURE_XP_PER_CITY_LEVEL + defenderXp + ownerBonus;
+  const cityXp = getCaptureCooldownRemaining(target) > 0
+    ? 0
+    : CAPTURE_XP_BASE + level * CAPTURE_XP_PER_CITY_LEVEL + ownerBonus;
   const efficiency = attackerOwner === "player" ? getCaptureXpEfficiency(target, oldOwner) : 1;
-  return capBattleXpForCurrentLevel(Math.floor(baseXp * efficiency));
-}
-
-function getCityUpgradeXpAward(city) {
-  return Math.floor(CITY_UPGRADE_XP_BASE + clampCityLevel(city?.level) * CITY_UPGRADE_XP_PER_LEVEL);
+  return capBattleXpForCurrentLevel(Math.floor((cityXp + troopXp) * efficiency));
 }
 
 function getDefenseHeldXpAward(attackingTroops, target = null) {
@@ -6523,21 +6581,20 @@ function getPartialBattleXpAward(fullWinXp) {
   return Math.floor(Math.max(0, Number(fullWinXp) || 0) * FAILED_BATTLE_XP_RATE);
 }
 
-function getFailedAttackXpAward(target, oldOwner, defendersAtStart, attackerOwner = "player") {
-  return getPartialBattleXpAward(getCaptureXpAward(target, oldOwner, defendersAtStart, attackerOwner));
+function getFailedAttackXpAward(target, oldOwner, defenderLosses, attackerOwner = "player") {
+  return getPartialBattleXpAward(getCaptureXpAward(target, oldOwner, defenderLosses, attackerOwner));
 }
 
 function getCaptureXpEfficiency(target, oldOwner = target?.owner) {
   if (!target || !state) return 1;
   const pvpMultiplier = getPvpOpponentPowerXpMultiplier(target, oldOwner, "player");
-  const cooldownMultiplier = getCaptureCooldownRemaining(target) > 0 ? RECENT_CAPTURE_XP_MULTIPLIER : 1;
-  if (pvpMultiplier !== null) return Number(clamp(pvpMultiplier * cooldownMultiplier, 0, 2).toFixed(2));
+  if (pvpMultiplier !== null) return Number(clamp(pvpMultiplier, 0, 2).toFixed(2));
 
   const heroLevel = Math.max(1, Math.floor(Number(state.character?.level) || 1));
   const empirePressure = 48 + heroLevel * 20 + getOwnedRegularCityCountForDisplay() * 2;
   const targetScore = getCityXpScore(target, oldOwner);
   const strengthEfficiency = clamp(0.35 + targetScore / Math.max(1, empirePressure), 0.25, 2);
-  return Number(clamp(strengthEfficiency * cooldownMultiplier, 0.05, 2).toFixed(2));
+  return Number(clamp(strengthEfficiency, 0.25, 2).toFixed(2));
 }
 
 function getCityXpScore(target, oldOwner = target?.owner) {
@@ -6548,13 +6605,18 @@ function getCityXpScore(target, oldOwner = target?.owner) {
 
 function getBattleXpTroopCreditCap(target) {
   const stats = getCityStats(target || {});
-  return Math.max(
+  const cityCap = Math.max(
     25,
     Math.floor(
       stats.cityWalls * BATTLE_XP_TROOP_CREDIT_CITY_WALL_MULTIPLIER
       + stats.victoryPoints * BATTLE_XP_TROOP_CREDIT_VP_MULTIPLIER
     )
   );
+  const levelCap = Math.min(
+    Number.MAX_SAFE_INTEGER,
+    getXpRequiredForLevel(stats.level) * BATTLE_XP_TROOP_CREDIT_LEVEL_CAP_MULTIPLIER
+  );
+  return Math.max(cityCap, levelCap);
 }
 
 function getBattleXpTroopCredit(target, troops) {
@@ -6610,11 +6672,23 @@ function capBattleXpForCurrentLevel(xp) {
 }
 
 function getCaptureCooldownRemaining(city) {
-  if (!state || !city || city.lastCapturedAt === null || city.lastCapturedAt === undefined) return 0;
-  const capturedAt = Number(city.lastCapturedAt);
-  if (!Number.isFinite(capturedAt)) return 0;
-  const elapsed = Math.max(0, state.gameSeconds - capturedAt);
-  return Math.max(0, CAPTURE_XP_COOLDOWN_SECONDS - elapsed);
+  if (!state || !city) return 0;
+  const capturedAtMs = Math.max(0, normalizeTimestampMs(city.lastCapturedAtMs));
+  if (capturedAtMs > 0) {
+    const elapsedSeconds = Math.max(0, (Date.now() - capturedAtMs) / 1000);
+    return Math.max(0, CAPTURE_XP_COOLDOWN_SECONDS - elapsedSeconds);
+  }
+  if (city.lastCapturedAt && typeof city.lastCapturedAt === "object") {
+    const legacyCapturedAtMs = Math.max(0, normalizeTimestampMs(city.lastCapturedAt));
+    if (legacyCapturedAtMs > 0) {
+      const elapsedSeconds = Math.max(0, (Date.now() - legacyCapturedAtMs) / 1000);
+      return Math.max(0, CAPTURE_XP_COOLDOWN_SECONDS - elapsedSeconds);
+    }
+  }
+  const capturedAtSeconds = Number(city.lastCapturedAt);
+  if (!Number.isFinite(capturedAtSeconds)) return 0;
+  const elapsedSeconds = Math.max(0, state.gameSeconds - capturedAtSeconds);
+  return Math.max(0, CAPTURE_XP_COOLDOWN_SECONDS - elapsedSeconds);
 }
 
 function normalizePowerValue(value) {
@@ -7950,6 +8024,9 @@ function normalizeBattleReports(reports) {
         ),
         totalDefenseBonus: Math.max(0, Math.floor(Number(report.totalDefenseBonus) || 0)),
         opponentName: String(report.opponentName || "").slice(0, 40),
+        opponentFlag: report.opponentFlag && typeof report.opponentFlag === "object"
+          ? normalizeFlag(report.opponentFlag)
+          : null,
         ownerName: String(report.ownerName || "").slice(0, 40),
         summary: String(report.summary || "").slice(0, 220),
         xpAwarded: Math.max(0, Math.floor(Number(report.xpAwarded) || 0)),
@@ -8344,6 +8421,7 @@ function completeScoutMission(attack, target) {
       totalDefenseBonus: stats.totalDefenseBonus,
       ownerName: getCityOwnerDisplayName(target),
       opponentName: getCityOwnerDisplayName(target),
+      opponentFlag: getCityOwnerFlag(target),
       summary: `Scout reached ${target.name}, now under your control. ${formatNumber(joined)} scout joined the garrison.`,
     });
     addLog(`The scout joined your garrison at ${target.name}.`);
@@ -8366,6 +8444,7 @@ function completeScoutMission(attack, target) {
     totalDefenseBonus: report.totalDefenseBonus,
     ownerName: report.ownerName,
     opponentName: report.ownerName,
+    opponentFlag: getCityOwnerFlag(target),
     summary: `Scout revealed ${formatNumber(report.troops)} troops at ${target.name}.`,
   });
   addLog(`Scouts reported ${formatNumber(target.troops)} troops stationed at ${target.name}.`);
@@ -12335,7 +12414,7 @@ function normalizeOnlineCampState(raw = {}) {
   const id = String(raw.id || raw.campId || "").trim();
   if (!id) return null;
   const campType = String(raw.campType || "gold").toLowerCase();
-  const base = WORLD_CAMPS.find(camp => camp.id === id) || {};
+  const base = WORLD_CAMPS_BY_ID.get(id) || {};
   const config = getRewardCampConfig({ ...raw, ...base, campType });
   if (!config) return null;
   return {
@@ -12393,7 +12472,7 @@ function applyOnlineHeldCamps(rawCamps = []) {
 
 function getCampTargetById(campId) {
   const id = String(campId || "");
-  const base = WORLD_CAMPS.find(camp => camp.id === id);
+  const base = WORLD_CAMPS_BY_ID.get(id);
   if (!base) return null;
   const online = onlineCampStates.get(id) || onlineHeldCampStates.get(id) || {};
   const config = getRewardCampConfig({ ...online, ...base });
@@ -12885,7 +12964,7 @@ function prepareOnlineArmyMission(mission) {
   mission.ownerName = state.playerName;
   mission.ownerFlag = state.flag;
   mission.ownerKingPower = getKingPower();
-  mission.launchKind = ["attack", "transfer", "reinforce", "scout"].includes(mission.launchKind)
+  mission.launchKind = ["attack", "transfer", "reinforce", "scout"].includes(mission.launchKind) || mission.launchKind === "rally_join"
     ? mission.launchKind
     : mission.kind;
   mission.attackerKingPower = normalizePowerValue(mission.attackerKingPower) || mission.ownerKingPower;
@@ -12916,7 +12995,7 @@ function toOnlineArmyMovement(mission) {
     ownerFlag: mission.ownerFlag || state.flag,
     ownerKingPower: normalizePowerValue(mission.ownerKingPower) || getKingPower(),
     kind: mission.kind || "attack",
-    launchKind: ["attack", "transfer", "reinforce", "scout"].includes(mission.launchKind)
+    launchKind: ["attack", "transfer", "reinforce", "scout"].includes(mission.launchKind) || mission.launchKind === "rally_join"
       ? mission.launchKind
       : mission.kind || "attack",
     targetType: mission.targetType === "camp" || isRewardCampTarget(to) ? "camp" : "city",
@@ -12938,6 +13017,12 @@ function toOnlineArmyMovement(mission) {
     acceptedAttackProtection: normalizeAttackProtectionSnapshot(mission.acceptedAttackProtection),
     demoAttack: normalizeDemoAttackSnapshot(mission.demoAttack),
     useSwiftMarchOrder: Boolean(mission.useSwiftMarchOrder),
+    rallyJoin: Boolean(mission.rallyJoin),
+    rallyAttack: Boolean(mission.rallyAttack),
+    rallyId: String(mission.rallyId || ""),
+    rallyClanId: String(mission.rallyClanId || ""),
+    rallyParticipantCount: Math.max(0, Math.floor(Number(mission.rallyParticipantCount) || 0)),
+    participantUids: Array.isArray(mission.participantUids) ? mission.participantUids.map(String).filter(Boolean).slice(0, 8) : [],
     launchedAtMs: Math.max(0, Number(mission.launchedAtMs) || Date.now()),
     arrivesAtMs: Math.max(0, Number(mission.arrivesAtMs) || Date.now()),
     status: "active",
@@ -13026,11 +13111,11 @@ function applyServerMovementToMission(mission, movement = null) {
   const arrivesAtMs = normalizeTimestampMs(movement.arrivesAtMs);
   const rawRemaining = Number(movement.remaining);
   mission.onlineId = movement.id || mission.onlineId;
-  if (["attack", "transfer", "reinforce", "scout"].includes(movementKind)) mission.kind = movementKind;
-  if (["attack", "transfer", "reinforce", "scout"].includes(movement.launchKind)) {
+  if (["attack", "transfer", "reinforce", "scout"].includes(movementKind) || movementKind === "rally_join") mission.kind = movementKind;
+  if (["attack", "transfer", "reinforce", "scout"].includes(movement.launchKind) || movement.launchKind === "rally_join") {
     mission.launchKind = movement.launchKind;
   }
-  if (["attack", "transfer", "reinforce", "scout"].includes(movement.retargetedFromKind)) {
+  if (["attack", "transfer", "reinforce", "scout"].includes(movement.retargetedFromKind) || movement.retargetedFromKind === "rally_join") {
     mission.retargetedFromKind = movement.retargetedFromKind;
   }
   mission.troops = Math.max(0, Math.floor(Number(movement.troops) || mission.troops || 0));
@@ -13059,6 +13144,14 @@ function applyServerMovementToMission(mission, movement = null) {
   mission.campRecall = Boolean(movement.campRecall || mission.campRecall);
   mission.reinforcementReturn = Boolean(movement.reinforcementReturn || mission.reinforcementReturn);
   mission.reinforcementId = String(movement.reinforcementId || mission.reinforcementId || "");
+  mission.rallyJoin = Boolean(movement.rallyJoin || mission.rallyJoin);
+  mission.rallyAttack = Boolean(movement.rallyAttack || mission.rallyAttack);
+  mission.rallyId = String(movement.rallyId || mission.rallyId || "");
+  mission.rallyClanId = String(movement.rallyClanId || mission.rallyClanId || "");
+  mission.rallyParticipantCount = Math.max(0, Math.floor(Number(movement.rallyParticipantCount) || mission.rallyParticipantCount || 0));
+  mission.participantUids = Array.isArray(movement.participantUids)
+    ? movement.participantUids.map(String).filter(Boolean).slice(0, 8)
+    : mission.participantUids || [];
   mission.attackerKingPower = normalizePowerValue(movement.attackerKingPower || mission.attackerKingPower);
   mission.defenderKingPower = normalizePowerValue(movement.defenderKingPower || mission.defenderKingPower);
   if (movement.attackProtection !== undefined) {
@@ -13212,7 +13305,7 @@ function normalizeOnlineArmyMovement(raw) {
   const rawOwnerKind = raw.ownerKind || raw.owner || "player";
   if (rawOwnerKind !== "neutral" && !ownerUid) return null;
   const targetOwnerUid = String(raw.targetOwnerUid || "").trim();
-  const rawKind = ["attack", "transfer", "reinforce", "scout"].includes(raw.kind) ? raw.kind : "attack";
+  const rawKind = ["attack", "transfer", "reinforce", "scout"].includes(raw.kind) || raw.kind === "rally_join" ? raw.kind : "attack";
   const effectiveKind = rawKind === "transfer"
     && targetOwnerUid
     && ownerUid
@@ -13231,6 +13324,21 @@ function normalizeOnlineArmyMovement(raw) {
   const path = normalizeArmyPath(raw.path);
   const pathSegments = normalizeArmyPathSegments(raw.pathSegments);
   const ownerIdentity = ownerUid ? resolvePlayerIdentityForUid(ownerUid, raw) : null;
+  const viewerAccess = ["owner", "target", "public"].includes(raw.viewerAccess)
+    ? raw.viewerAccess
+    : "public";
+  const rawTroops = Number.isFinite(Number(raw.troops))
+    ? Math.max(0, Math.floor(Number(raw.troops)))
+    : null;
+  const isAttackMovement = effectiveKind === "attack"
+    || raw.launchKind === "attack"
+    || Boolean(raw.rallyAttack);
+  const estimateForViewer = isAttackMovement
+    && ownerUid !== getCurrentOnlineUid()
+    && viewerAccess !== "owner";
+  const troopEstimate = estimateForViewer
+    ? normalizeArmyTroopEstimate(raw, rawTroops)
+    : null;
   return {
     id,
     onlineId: id,
@@ -13241,8 +13349,8 @@ function normalizeOnlineArmyMovement(raw) {
     ownerFlag: ownerIdentity?.flag || raw.ownerFlag || null,
     ownerKingPower: normalizePowerValue(ownerIdentity?.kingPower) || normalizePowerValue(raw.ownerKingPower),
     kind: effectiveKind,
-    launchKind: ["attack", "transfer", "reinforce", "scout"].includes(raw.launchKind) ? raw.launchKind : rawKind,
-    retargetedFromKind: ["attack", "transfer", "reinforce", "scout"].includes(raw.retargetedFromKind)
+    launchKind: ["attack", "transfer", "reinforce", "scout"].includes(raw.launchKind) ? raw.launchKind : raw.launchKind === "rally_join" ? "rally_join" : rawKind,
+    retargetedFromKind: ["attack", "transfer", "reinforce", "scout"].includes(raw.retargetedFromKind) || raw.retargetedFromKind === "rally_join"
       ? raw.retargetedFromKind
       : "",
     targetType: raw.targetType === "camp" ? "camp" : "city",
@@ -13252,7 +13360,12 @@ function normalizeOnlineArmyMovement(raw) {
     toName: raw.toName || "",
     sourceRegionId: normalizeRegionId(raw.sourceRegionId),
     targetRegionId: normalizeRegionId(raw.targetRegionId),
-    troops: Math.max(0, Math.floor(Number(raw.troops) || 0)),
+    troops: estimateForViewer ? null : rawTroops,
+    troopVisibility: estimateForViewer ? "estimate" : "exact",
+    troopEstimateMin: troopEstimate?.min || 0,
+    troopEstimateMax: troopEstimate?.max || 0,
+    troopEstimateLabel: troopEstimate?.label || "",
+    viewerAccess,
     total,
     remaining: Math.max(0, (arrivesAtMs - Date.now()) / 1000),
     path,
@@ -13260,7 +13373,9 @@ function normalizeOnlineArmyMovement(raw) {
     pathLength: Math.max(0, Number(raw.pathLength) || pathSegments.reduce((total, segment) => total + segment.length, 0) || routeLength(path)),
     targetOwnerAtLaunch: raw.targetOwnerAtLaunch || "neutral",
     targetOwnerUid,
-    requestedTroops: Math.max(0, Math.floor(Number(raw.requestedTroops) || 0)),
+    requestedTroops: estimateForViewer
+      ? null
+      : Math.max(0, Math.floor(Number(raw.requestedTroops) || 0)),
     attackerKingPower: normalizePowerValue(raw.attackerKingPower || raw.ownerKingPower),
     defenderKingPower: normalizePowerValue(raw.defenderKingPower),
     attackProtection: normalizeAttackProtectionSnapshot(raw.attackProtection, raw.demoAttack),
@@ -13284,22 +13399,31 @@ function normalizeOnlineArmyMovement(raw) {
     reinforcementReturn: Boolean(raw.reinforcementReturn),
     reinforcementId: String(raw.reinforcementId || ""),
     reinforcementTargetKey: String(raw.reinforcementTargetKey || ""),
+    rallyJoin: Boolean(raw.rallyJoin || rawKind === "rally_join"),
+    rallyAttack: Boolean(raw.rallyAttack),
+    rallyId: String(raw.rallyId || ""),
+    rallyClanId: String(raw.rallyClanId || ""),
+    rallyParticipantCount: Math.max(0, Math.floor(Number(raw.rallyParticipantCount) || 0)),
+    participantUids: Array.isArray(raw.participantUids) ? raw.participantUids.map(String).filter(Boolean).slice(0, 8) : [],
     status: raw.status || "active",
     onlineRegionIds: Array.isArray(raw.routeRegionIds) ? raw.routeRegionIds.map(normalizeRegionId) : [],
   };
 }
 
 function rebuildOnlineArmies() {
-  const seen = new Set();
-  onlineArmies = Array.from(onlineArmiesByIsland.values())
+  const armiesById = new Map();
+  const accessPriority = { public: 0, target: 1, owner: 2 };
+  Array.from(onlineArmiesByIsland.values())
     .flat()
-    .filter(army => {
+    .forEach(army => {
       const key = String(army?.id || army?.onlineId || "");
-      if (!key) return false;
-      if (seen.has(key)) return false;
-      seen.add(key);
-      return true;
+      if (!key) return;
+      const current = armiesById.get(key);
+      const currentPriority = accessPriority[current?.viewerAccess] ?? 0;
+      const nextPriority = accessPriority[army?.viewerAccess] ?? 0;
+      if (!current || nextPriority > currentPriority) armiesById.set(key, army);
     });
+  onlineArmies = [...armiesById.values()];
 }
 
 function clearOnlineArmyWatchers() {
@@ -13584,6 +13708,12 @@ function createLocalAttackFromOnlineArmy(army, remaining = getOnlineArmyRemainin
     campRecall: Boolean(army.campRecall),
     reinforcementReturn: Boolean(army.reinforcementReturn),
     reinforcementId: String(army.reinforcementId || ""),
+    rallyJoin: Boolean(army.rallyJoin || army.kind === "rally_join"),
+    rallyAttack: Boolean(army.rallyAttack),
+    rallyId: String(army.rallyId || ""),
+    rallyClanId: String(army.rallyClanId || ""),
+    rallyParticipantCount: Math.max(0, Math.floor(Number(army.rallyParticipantCount) || 0)),
+    participantUids: Array.isArray(army.participantUids) ? army.participantUids.map(String).filter(Boolean).slice(0, 8) : [],
     sourceRegionId: army.sourceRegionId,
     targetRegionId: army.targetRegionId,
     onlineRegionIds: army.onlineRegionIds?.length ? army.onlineRegionIds : getMissionRegionIds(army),
@@ -13757,43 +13887,66 @@ function applyOnlineArmies(rawArmies, islandId = getActiveOnlineIslandId()) {
   retryOverdueOnlineArmyResolutions();
 }
 
+function getRenderableRemoteArmy(army) {
+  let renderable = renderableRemoteArmyCache.get(army);
+  if (!renderable) {
+    renderable = { ...army };
+    renderableRemoteArmyCache.set(army, renderable);
+  }
+  const identity = army.ownerUid ? resolvePlayerIdentityForUid(army.ownerUid, army) : null;
+  const ownerKingPower = normalizePowerValue(identity?.kingPower) || normalizePowerValue(army.ownerKingPower);
+  Object.assign(renderable, army, {
+    owner: resolveOnlineArmyOwner(army),
+    ownerName: identity?.displayName || army.ownerName || "",
+    ownerFlag: identity?.flag || army.ownerFlag || null,
+    ownerKingPower,
+    attackerKingPower: normalizePowerValue(army.attackerKingPower) || ownerKingPower,
+    remaining: Math.max(0, getOnlineArmyRemainingSeconds(army)),
+  });
+  return renderable;
+}
+
+function getRenderablePendingArmy(mission) {
+  let renderable = renderablePendingArmyCache.get(mission);
+  if (!renderable) {
+    renderable = { ...mission };
+    renderablePendingArmyCache.set(mission, renderable);
+  }
+  Object.assign(renderable, mission, {
+    owner: "player",
+    remaining: Math.max(0, getOnlineArmyRemainingSeconds(mission)),
+    serverPending: true,
+  });
+  return renderable;
+}
+
 function getRenderableArmies() {
   if (!state) return [];
   if (renderableArmiesFrameCacheActive && renderableArmiesFrameCache) {
     return renderableArmiesFrameCache;
   }
   const localOnlineIds = new Set();
+  const currentUid = getCurrentOnlineUid();
   const localArmies = state.attacks.map(attack => {
     if (attack.onlineId) localOnlineIds.add(attack.onlineId);
     return attack;
   });
   const remoteArmies = onlineArmies
     .filter(isOnlineArmyVisible)
-    .filter(army => !(army.ownerUid === getCurrentOnlineUid() && localOnlineIds.has(army.id)))
-    .map(army => {
-      const identity = army.ownerUid ? resolvePlayerIdentityForUid(army.ownerUid, army) : null;
-      const ownerKingPower = normalizePowerValue(identity?.kingPower) || normalizePowerValue(army.ownerKingPower);
-      return {
-        ...army,
-        owner: resolveOnlineArmyOwner(army),
-        ownerName: identity?.displayName || army.ownerName || "",
-        ownerFlag: identity?.flag || army.ownerFlag || null,
-        ownerKingPower,
-        attackerKingPower: normalizePowerValue(army.attackerKingPower) || ownerKingPower,
-        remaining: Math.max(0, getOnlineArmyRemainingSeconds(army)),
-      };
-    });
-  const knownOnlineIds = new Set([...localArmies, ...remoteArmies]
-    .map(getOnlineArmyResolutionId)
-    .filter(Boolean));
+    .filter(army => !(army.ownerUid === currentUid && localOnlineIds.has(army.id)))
+    .map(getRenderableRemoteArmy);
+  const knownOnlineIds = new Set();
+  localArmies.forEach(army => {
+    const id = getOnlineArmyResolutionId(army);
+    if (id) knownOnlineIds.add(id);
+  });
+  remoteArmies.forEach(army => {
+    const id = getOnlineArmyResolutionId(army);
+    if (id) knownOnlineIds.add(id);
+  });
   const pendingArmies = Array.from(pendingOutgoingMissions.values())
     .filter(mission => !knownOnlineIds.has(getOnlineArmyResolutionId(mission)))
-    .map(mission => ({
-      ...mission,
-      owner: "player",
-      remaining: Math.max(0, getOnlineArmyRemainingSeconds(mission)),
-      serverPending: true,
-    }));
+    .map(getRenderablePendingArmy);
   const renderableArmies = [...localArmies, ...remoteArmies, ...pendingArmies];
   if (renderableArmiesFrameCacheActive) renderableArmiesFrameCache = renderableArmies;
   return renderableArmies;
@@ -13835,7 +13988,7 @@ function getOutgoingAttacks() {
   const seen = new Set();
   return getRenderableArmies()
     .map(attack => {
-      if (!attack || !["attack", "scout", "transfer", "reinforce"].includes(attack.kind) || attack.owner !== "player") return null;
+      if (!attack || !["attack", "scout", "transfer", "reinforce", "rally_join"].includes(attack.kind) || attack.owner !== "player") return null;
       const key = String(attack.onlineId || attack.id || `${attack.fromId}:${attack.toId}:${attack.launchedAtMs || ""}`);
       if (seen.has(key)) return null;
       seen.add(key);
@@ -14013,7 +14166,10 @@ function cityByIdSafe(cities, id) {
 }
 
 function playerCities() {
-  return state.cities.filter(city => city.owner === "player");
+  if (playerCitiesFrameCacheActive && playerCitiesFrameCache) return playerCitiesFrameCache;
+  const ownedCities = state?.cities?.filter(city => city.owner === "player") || [];
+  if (playerCitiesFrameCacheActive) playerCitiesFrameCache = ownedCities;
+  return ownedCities;
 }
 
 function playerRegularCities() {
@@ -14288,13 +14444,37 @@ function createRouteContext(regionId, source = null, target = null) {
     regionId: normalizedRegionId,
     ignoredIds,
     obstacles,
+    obstacleGrid: createRouteObstacleGrid(obstacles),
+    edgePassableCache: new Map(),
     cacheKey: `structure-block:${normalizedRegionId}:${[...ignoredIds].sort().join(",")}`,
   };
 }
 
+function createRouteObstacleGrid(obstacles = []) {
+  const grid = new Map();
+  for (const obstacle of obstacles) {
+    const reach = obstacle.radius + ROUTE_OBSTACLE_BUCKET_PADDING;
+    const minX = Math.floor((obstacle.x - reach) / ROUTE_OBSTACLE_BUCKET_SIZE);
+    const maxX = Math.floor((obstacle.x + reach) / ROUTE_OBSTACLE_BUCKET_SIZE);
+    const minY = Math.floor((obstacle.y - reach) / ROUTE_OBSTACLE_BUCKET_SIZE);
+    const maxY = Math.floor((obstacle.y + reach) / ROUTE_OBSTACLE_BUCKET_SIZE);
+    for (let bucketY = minY; bucketY <= maxY; bucketY += 1) {
+      for (let bucketX = minX; bucketX <= maxX; bucketX += 1) {
+        const key = `${bucketX},${bucketY}`;
+        const bucket = grid.get(key) || [];
+        bucket.push(obstacle);
+        grid.set(key, bucket);
+      }
+    }
+  }
+  return grid;
+}
+
 function isRouteCityBlockedPoint(x, y, context, padding = 0) {
   if (!context?.obstacles?.length) return false;
-  for (const obstacle of context.obstacles) {
+  const bucketKey = `${Math.floor(x / ROUTE_OBSTACLE_BUCKET_SIZE)},${Math.floor(y / ROUTE_OBSTACLE_BUCKET_SIZE)}`;
+  const obstacles = context.obstacleGrid?.get(bucketKey) || context.obstacles;
+  for (const obstacle of obstacles) {
     const radius = obstacle.radius + padding;
     const dx = obstacle.x - x;
     const dy = obstacle.y - y;
@@ -14410,13 +14590,31 @@ function linePassable(a, b) {
 }
 
 function linePassableInRegion(a, b, regionId, context = null) {
+  return lineTerrainPassableInRegion(a, b, regionId)
+    && lineRouteObstaclesPassable(a, b, context);
+}
+
+function lineTerrainPassableInRegion(a, b, regionId) {
   const distance = Math.hypot(a.x - b.x, a.y - b.y);
   const steps = Math.max(2, Math.ceil(distance / 22));
   for (let i = 0; i <= steps; i++) {
     const t = i / steps;
     const x = a.x + (b.x - a.x) * t;
     const y = a.y + (b.y - a.y) * t;
-    if (!isRouteWalkablePointInRegion(x, y, regionId, context, 6)) return false;
+    if (!isRegionWalkablePoint(x, y, regionId, 6)) return false;
+  }
+  return true;
+}
+
+function lineRouteObstaclesPassable(a, b, context = null) {
+  if (!context?.obstacles?.length) return true;
+  const distance = Math.hypot(a.x - b.x, a.y - b.y);
+  const steps = Math.max(2, Math.ceil(distance / 22));
+  for (let i = 0; i <= steps; i++) {
+    const t = i / steps;
+    const x = a.x + (b.x - a.x) * t;
+    const y = a.y + (b.y - a.y) * t;
+    if (isRouteCityBlockedPoint(x, y, context, 6)) return false;
   }
   return true;
 }
@@ -14426,9 +14624,8 @@ function gridEdgePassable(cx, cy, nx, ny) {
   const nextIndex = ny * GRID_COLS + nx;
   const key = currentIndex < nextIndex ? `${currentIndex}|${nextIndex}` : `${nextIndex}|${currentIndex}`;
   if (routeEdgePassableCache.has(key)) return routeEdgePassableCache.get(key);
-  if (routeEdgePassableCache.size > 400000) routeEdgePassableCache.clear();
   const passable = linePassable(gridToWorld(cx, cy), gridToWorld(nx, ny));
-  routeEdgePassableCache.set(key, passable);
+  setBoundedRouteCacheValue(routeEdgePassableCache, key, passable, ROUTE_EDGE_PASSABLE_CACHE_LIMIT);
   return passable;
 }
 
@@ -14436,11 +14633,16 @@ function gridEdgePassableInRegion(cx, cy, nx, ny, regionId, context = null) {
   const currentIndex = cy * GRID_COLS + cx;
   const nextIndex = ny * GRID_COLS + nx;
   const baseKey = currentIndex < nextIndex ? `${currentIndex}|${nextIndex}` : `${nextIndex}|${currentIndex}`;
-  const key = `${normalizeRegionId(regionId)}:${context?.cacheKey || "terrain"}:${baseKey}`;
-  if (routeEdgePassableCache.has(key)) return routeEdgePassableCache.get(key);
-  if (routeEdgePassableCache.size > 400000) routeEdgePassableCache.clear();
-  const passable = linePassableInRegion(gridToWorld(cx, cy), gridToWorld(nx, ny), regionId, context);
-  routeEdgePassableCache.set(key, passable);
+  if (context?.edgePassableCache?.has(baseKey)) return context.edgePassableCache.get(baseKey);
+  const key = `${normalizeRegionId(regionId)}:terrain:${baseKey}`;
+  let terrainPassable = routeEdgePassableCache.get(key);
+  if (terrainPassable === undefined) {
+    terrainPassable = lineTerrainPassableInRegion(gridToWorld(cx, cy), gridToWorld(nx, ny), regionId);
+    setBoundedRouteCacheValue(routeEdgePassableCache, key, terrainPassable, ROUTE_EDGE_PASSABLE_CACHE_LIMIT);
+  }
+  const passable = terrainPassable
+    && lineRouteObstaclesPassable(gridToWorld(cx, cy), gridToWorld(nx, ny), context);
+  context?.edgePassableCache?.set(baseKey, passable);
   return passable;
 }
 
@@ -14648,7 +14850,7 @@ function scheduleRouteWorkerWarmup() {
   }
 }
 
-function requestRouteFromWorker(job) {
+function requestRouteFromWorker(job, timeoutMs = ROUTE_WORKER_TIMEOUT_MS) {
   const worker = getRouteWorker();
   if (!worker) return Promise.reject(new Error("Route worker unavailable."));
   const id = ++routeWorkerRequestId;
@@ -14659,7 +14861,7 @@ function requestRouteFromWorker(job) {
       rejectPendingRouteWorkerRequests(timeoutError);
       routeWorker?.terminate?.();
       routeWorker = null;
-    }, ROUTE_WORKER_TIMEOUT_MS);
+    }, Math.max(1000, Number(timeoutMs) || ROUTE_WORKER_TIMEOUT_MS));
     routeWorkerRequests.set(id, { resolve, reject, timeoutId });
     worker.postMessage({ type: "route", id, job });
   });
@@ -14685,7 +14887,21 @@ async function findRouteAsync(source, target) {
     return cloneRoute(workerRoute);
   } catch (error) {
     if (error?.routeCanceled) return null;
-    if (error?.routeTimedOut || isBitmapRouteWorkerJob(job)) {
+    if (error?.routeTimedOut) {
+      console.warn("Route calculation timed out; retrying with a fresh worker.", error);
+      try {
+        const retryRoute = await requestRouteFromWorker(job, ROUTE_WORKER_RETRY_TIMEOUT_MS);
+        if (!retryRoute?.points?.length) return null;
+        cacheAsyncRoute(cacheKey, retryRoute);
+        return cloneRoute(retryRoute);
+      } catch (retryError) {
+        if (retryError?.routeCanceled) return null;
+        console.warn("Route calculation retry failed.", retryError);
+        if (isBitmapRouteWorkerJob(job)) return null;
+        return findRoute(source, target);
+      }
+    }
+    if (isBitmapRouteWorkerJob(job)) {
       console.warn("Route worker failed; route calculation canceled to keep the map responsive.", error);
       return null;
     }
@@ -14870,7 +15086,7 @@ function findPortalRoute(source, target, sourceRegionId = getCityRegionId(source
   if (routeCache.has(cacheKey)) return cloneRoute(routeCache.get(cacheKey));
   if (routeCache.has(reverseKey)) {
     const reverse = reverseRoute(routeCache.get(reverseKey));
-    routeCache.set(cacheKey, cloneRoute(reverse));
+    setBoundedRouteCacheValue(routeCache, cacheKey, cloneRoute(reverse), ROUTE_CACHE_LIMIT);
     return reverse;
   }
 
@@ -14915,23 +15131,38 @@ function findPortalRoute(source, target, sourceRegionId = getCityRegionId(source
   }
 
   const route = { points, segments, length };
-  routeCache.set(cacheKey, cloneRoute(route));
+  setBoundedRouteCacheValue(routeCache, cacheKey, cloneRoute(route), ROUTE_CACHE_LIMIT);
   return route;
 }
 
 function findLandRoute(source, target, regionId = getCityRegionId(source)) {
   const normalizedRegionId = normalizeRegionId(regionId);
   const routeContext = createRouteContext(normalizedRegionId, source, target);
-  return findLandRouteWithContext(source, target, normalizedRegionId, routeContext);
+  const route = findLandRouteWithContext(source, target, normalizedRegionId, routeContext);
+  if (route?.points?.length) return route;
+  const reverseRouteResult = findLandRouteWithContext(
+    target,
+    source,
+    normalizedRegionId,
+    routeContext,
+    GRID_COLS * GRID_ROWS
+  );
+  return reverseRouteResult?.points?.length ? reverseRoute(reverseRouteResult) : null;
 }
 
-function findLandRouteWithContext(source, target, normalizedRegionId, routeContext = null) {
+function findLandRouteWithContext(
+  source,
+  target,
+  normalizedRegionId,
+  routeContext = null,
+  searchMaxVisitedCells = ROUTE_SEARCH_MAX_VISITED_CELLS
+) {
   const cacheKey = `land-cityblock-v2:${normalizedRegionId}:${routeContext?.cacheKey || "terrain"}:${getRoutePointId(source, "source")}|${getRoutePointId(target, "target")}`;
   if (routeCache.has(cacheKey)) return cloneRoute(routeCache.get(cacheKey));
   const contextReverseKey = `land-cityblock-v2:${normalizedRegionId}:${routeContext?.cacheKey || "terrain"}:${getRoutePointId(target, "target")}|${getRoutePointId(source, "source")}`;
   if (routeCache.has(contextReverseKey)) {
     const reverse = reverseRoute(routeCache.get(contextReverseKey));
-    routeCache.set(cacheKey, cloneRoute(reverse));
+    setBoundedRouteCacheValue(routeCache, cacheKey, cloneRoute(reverse), ROUTE_CACHE_LIMIT);
     return reverse;
   }
 
@@ -14943,17 +15174,20 @@ function findLandRouteWithContext(source, target, normalizedRegionId, routeConte
       segments: [{ regionId: normalizedRegionId, points: [startPoint, endPoint], length: Math.hypot(source.x - target.x, source.y - target.y) }],
       length: Math.hypot(source.x - target.x, source.y - target.y),
     };
-    routeCache.set(cacheKey, cloneRoute(direct));
+    setBoundedRouteCacheValue(routeCache, cacheKey, cloneRoute(direct), ROUTE_CACHE_LIMIT);
     return direct;
   }
 
   const start = nearestWalkableCellInRegion(source.x, source.y, normalizedRegionId, routeContext);
   const goal = nearestWalkableCellInRegion(target.x, target.y, normalizedRegionId, routeContext);
   const triedCellPairs = new Set();
-  const searchBudget = { visited: 0, max: ROUTE_SEARCH_MAX_VISITED_CELLS };
+  const searchBudget = {
+    visited: 0,
+    max: Math.max(ROUTE_SEARCH_MAX_VISITED_CELLS, Math.floor(Number(searchMaxVisitedCells) || 0)),
+  };
   const commitRoute = route => {
     if (!route) return null;
-    routeCache.set(cacheKey, cloneRoute(route));
+    setBoundedRouteCacheValue(routeCache, cacheKey, cloneRoute(route), ROUTE_CACHE_LIMIT);
     return route;
   };
   const tryCells = (candidateStart, candidateGoal) => {
@@ -15089,6 +15323,8 @@ function frame(now) {
   const dt = Math.min(rawDt, 0.25);
   renderableArmiesFrameCacheActive = true;
   renderableArmiesFrameCache = null;
+  playerCitiesFrameCacheActive = true;
+  playerCitiesFrameCache = null;
   samplePerformancePanel(now);
   updateDeploymentCheck(dt);
 
@@ -15100,6 +15336,7 @@ function frame(now) {
     if (simulationUpdateAccumulatorMs >= SIMULATION_UPDATE_INTERVAL_MS) {
       updateGame(simulationUpdateAccumulatorMs / 1000);
       simulationUpdateAccumulatorMs = 0;
+      playerCitiesFrameCache = null;
     }
     saveTimer += dt;
     if (saveTimer >= SAVE_EVERY_SECONDS) {
@@ -15173,6 +15410,8 @@ function frame(now) {
 
   renderableArmiesFrameCacheActive = false;
   renderableArmiesFrameCache = null;
+  playerCitiesFrameCacheActive = false;
+  playerCitiesFrameCache = null;
   requestAnimationFrame(frame);
 }
 
@@ -16206,6 +16445,10 @@ function resolveAttack(attack) {
   const attackerReportName = attack.owner === "player"
     ? getBattleReportOwnerName(null, attack.owner)
     : attackOwnerIdentity?.displayName || attack.ownerName || getBattleReportOwnerName(null, attack.owner);
+  const attackerReportFlag = attack.owner === "player"
+    ? normalizeFlag(state.flag)
+    : attackOwnerIdentity?.flag || attack.ownerFlag || null;
+  const defenderReportFlag = oldOwner === "neutral" ? null : getCityOwnerFlag(target);
   const attackSource = cityById(attack.fromId);
   const targetLevel = clampCityLevel(target.level);
   const defendersAtStart = Math.max(0, Math.floor(Number(target.troops) || 0));
@@ -16234,6 +16477,7 @@ function resolveAttack(attack) {
         baseTotalDefense: targetStatsAtStart.baseTotalDefense,
         totalDefenseBonus: targetStatsAtStart.totalDefenseBonus,
         opponentName: defenderName,
+        opponentFlag: defenderReportFlag,
         summary: `Main cities cannot be attacked. ${returnText}`,
       });
       showToast(`${target.name} is a main city. Troops returned.`);
@@ -16254,6 +16498,7 @@ function resolveAttack(attack) {
         baseTotalDefense: targetStatsAtStart.baseTotalDefense,
         totalDefenseBonus: targetStatsAtStart.totalDefenseBonus,
         opponentName: attackerReportName,
+        opponentFlag: attackerReportFlag,
         summary: `Main city protection blocked ${attackerReportName}'s attack. ${returnText}`,
       });
       showToast(`Main city protection blocked an attack on ${target.name}`);
@@ -16285,6 +16530,7 @@ function resolveAttack(attack) {
         baseTotalDefense: targetStatsAtStart.baseTotalDefense,
         totalDefenseBonus: targetStatsAtStart.totalDefenseBonus,
         opponentName: defenderName,
+        opponentFlag: defenderReportFlag,
         summary: `Royal Peace Shield blocked the attack. ${returnText}`,
       });
       showToast(`${target.name} is shielded. Troops returned.`);
@@ -16305,6 +16551,7 @@ function resolveAttack(attack) {
         baseTotalDefense: targetStatsAtStart.baseTotalDefense,
         totalDefenseBonus: targetStatsAtStart.totalDefenseBonus,
         opponentName: attackerReportName,
+        opponentFlag: attackerReportFlag,
         summary: `Royal Peace Shield blocked ${attackerReportName}'s attack. ${returnText}`,
       });
       showToast(`Shield blocked an attack on ${target.name}`);
@@ -16333,6 +16580,7 @@ function resolveAttack(attack) {
       baseTotalDefense: targetStatsAtStart.baseTotalDefense,
       totalDefenseBonus: targetStatsAtStart.totalDefenseBonus,
       opponentName: defenderName,
+      opponentFlag: defenderReportFlag,
       summary: `${neutralBlockReason} The attack was canceled and ${formatNumber(returned)} troops returned.`,
     });
     addLog(`${attackerName} could not attack ${target.name}. ${neutralBlockReason}`);
@@ -16404,6 +16652,7 @@ function resolveAttack(attack) {
         baseTotalDefense: targetStatsAtStart.baseTotalDefense,
         totalDefenseBonus: targetStatsAtStart.totalDefenseBonus,
         opponentName: defenderName,
+        opponentFlag: defenderReportFlag,
         summary: `Walls breached. ${target.name} remains under enemy control; your follow-up protected assault can capture it. ${formatNumber(returned)} survivors returned. +0 XP.${protectionReportSuffix}`,
       });
       addLog(`Breach: you broke the walls at ${target.name}. ${formatNumber(returned)} survivors and ${formatNumber(savedAttackers)} recovered troops returned.`);
@@ -16432,6 +16681,7 @@ function resolveAttack(attack) {
         baseTotalDefense: targetStatsAtStart.baseTotalDefense,
         totalDefenseBonus: targetStatsAtStart.totalDefenseBonus,
         opponentName: attackerReportName,
+        opponentFlag: attackerReportFlag,
         summary: `${attackerReportName} breached ${target.name}, but did not capture it. A follow-up protected assault can capture the city. +${formatNumber(defenseHeldXp)} XP.${protectionReportSuffix}`,
       });
       if (savedDefenders > 0) addLog(`Field Medics recovered ${formatNumber(savedDefenders)} defenders.`);
@@ -16490,6 +16740,7 @@ function resolveAttack(attack) {
         baseTotalDefense: targetStatsAtStart.baseTotalDefense,
         totalDefenseBonus: targetStatsAtStart.totalDefenseBonus,
         opponentName: defenderName,
+        opponentFlag: defenderReportFlag,
         summary: `${convertedReinforcement ? "Reinforcements converted to an attack and captured the city" : "Captured"} with ${formatNumber(result.survivors)} survivors. ${formatCapturedCityLevelDrop(levelDrop)} +${formatNumber(xpAward)} XP.${protectionReportSuffix}`,
       });
       addLog(`Victory: you captured ${target.name} with ${formatNumber(result.survivors)} survivors. ${formatNumber(savedAttackers)} troops recovered. ${formatCapturedCityLevelDrop(levelDrop)} XP efficiency ${Math.round(xpEfficiency * 100)}%.`);
@@ -16520,6 +16771,7 @@ function resolveAttack(attack) {
         baseTotalDefense: targetStatsAtStart.baseTotalDefense,
         totalDefenseBonus: targetStatsAtStart.totalDefenseBonus,
         opponentName: attackerReportName,
+        opponentFlag: attackerReportFlag,
         summary: `${target.name} was captured by ${attackerReportName}${convertedReinforcement ? " after incoming reinforcements converted to an attack" : ""}. ${formatCapturedCityLevelDrop(levelDrop)} +${formatNumber(defenseLossXp)} XP.${protectionReportSuffix}`,
       });
       addLog(`Lost: the enemy captured ${target.name}. ${formatCapturedCityLevelDrop(levelDrop)} ${formatNumber(savedDefenders)} troops recovered, and you gained ${formatNumber(defenseLossXp)} XP.`);
@@ -16534,7 +16786,9 @@ function resolveAttack(attack) {
       const savedAttackers = result.raidCompleted
         ? 0
         : returnSavedTroops("fieldMedics", result.attackerLosses, `${target.name} failed attack`);
-      const failedAttackXp = attackProtection || givenUpNeutralTarget ? 0 : getFailedAttackXpAward(target, oldOwner, defendersAtStart, attack.owner);
+      const failedAttackXp = attackProtection || givenUpNeutralTarget
+        ? 0
+        : getFailedAttackXpAward(target, oldOwner, result.defenderLosses, attack.owner);
       addBattleReport({
         type: "attack",
         outcome: result.raidCompleted ? "raid" : "defeat",
@@ -16551,6 +16805,7 @@ function resolveAttack(attack) {
         baseTotalDefense: targetStatsAtStart.baseTotalDefense,
         totalDefenseBonus: targetStatsAtStart.totalDefenseBonus,
         opponentName: defenderName,
+        opponentFlag: defenderReportFlag,
         summary: result.raidCompleted
           ? `Protected raid completed. ${formatNumber(result.defenderLosses)} defenders lost; ${formatNumber(result.defendersLeft)} remained. All raiders were lost. +0 XP.${protectionReportSuffix}`
           : `${formatNumber(result.defendersLeft)} defenders remained. +${formatNumber(failedAttackXp)} XP.${protectionReportSuffix}`,
@@ -16582,6 +16837,7 @@ function resolveAttack(attack) {
         baseTotalDefense: targetStatsAtStart.baseTotalDefense,
         totalDefenseBonus: targetStatsAtStart.totalDefenseBonus,
         opponentName: attackerReportName,
+        opponentFlag: attackerReportFlag,
         summary: `${target.name} ${result.raidCompleted ? "survived a protected raid" : "survived"} with ${formatNumber(result.defendersLeft)} defenders. +${formatNumber(defenseHeldXp)} XP.${protectionReportSuffix}`,
       });
       addLog(`Defense held: ${target.name} survived the enemy attack.`);
@@ -17032,6 +17288,11 @@ function handleOnlinePlayerClanSnapshot(event) {
   const subscriptionChanged = previousClanId !== state.clanId
     || activeClanSubscriptionId !== state.clanId;
   const permissionsChanged = previousRole !== state.clanRole;
+  if (previousClanId !== state.clanId) {
+    activeClanMobileSection = "overview";
+    activeClanBrowserSection = "discover";
+    clanNavigationClanId = String(state.clanId || "");
+  }
   if (subscriptionChanged || permissionsChanged) {
     refreshClanState({ silent: true, skipProfileLoad: true });
   } else {
@@ -17229,12 +17490,23 @@ function renderClanHudAccess() {
     state.clanId || "",
     clanName,
     clanTag,
+    onlineClanRallies.length,
     getClanShieldRenderId(normalizeClanShield(shield)),
   ].join("|");
   if (signature === lastClanHudSignature) return;
   lastClanHudSignature = signature;
   clanHudBtn.classList.toggle("is-search", !hasClan);
   clanHudBtn.classList.toggle("has-clan", hasClan);
+  clanHudBtn.classList.toggle("has-rallies", hasClan && onlineClanRallies.length > 0);
+  clanHudBtn.dataset.rallyCount = hasClan && onlineClanRallies.length
+    ? String(onlineClanRallies.length)
+    : "";
+  if (clanTabBtn) {
+    clanTabBtn.classList.toggle("has-rallies", hasClan && onlineClanRallies.length > 0);
+    clanTabBtn.dataset.rallyCount = hasClan && onlineClanRallies.length
+      ? String(onlineClanRallies.length)
+      : "";
+  }
   clanHudBtn.setAttribute(
     "aria-label",
     heroLevel < 10
@@ -17288,6 +17560,9 @@ function refreshClanRelationshipPresentation() {
 function stopClanRealtimeSubscriptions({ clear = true } = {}) {
   if (typeof clanStateUnsubscribe === "function") clanStateUnsubscribe();
   clanStateUnsubscribe = null;
+  if (typeof clanRalliesUnsubscribe === "function") clanRalliesUnsubscribe();
+  clanRalliesUnsubscribe = null;
+  onlineClanRallies = [];
   activeClanSubscriptionId = "";
   clanRosterReady = false;
   clanMemberUidSet = new Set();
@@ -17308,6 +17583,8 @@ function stopClanRealtimeSubscriptions({ clear = true } = {}) {
     clanMemberRewards = null;
     clanWorldBenefits = null;
     selectedClanMemberUid = "";
+    clanRenameEditorOpen = false;
+    clanRenameSaving = false;
   }
 }
 
@@ -17354,7 +17631,12 @@ function applyClanMembersSnapshot(members = [], changes = []) {
 function startClanRealtimeSubscriptions(api, clanId) {
   const id = String(clanId || "").trim();
   if (!id || !api?.subscribeClanState) return false;
-  if (activeClanSubscriptionId === id && typeof clanStateUnsubscribe === "function") return true;
+  if (activeClanSubscriptionId === id && typeof clanStateUnsubscribe === "function") {
+    if (!clanRalliesUnsubscribe && api?.subscribeClanRallies) {
+      startClanRallySubscription(api, id);
+    }
+    return true;
+  }
   stopClanRealtimeSubscriptions({ clear: true });
   activeClanSubscriptionId = id;
   clanRosterReady = false;
@@ -17382,6 +17664,25 @@ function startClanRealtimeSubscriptions(api, clanId) {
       if (source === "members") clanRosterReady = false;
     },
   });
+  startClanRallySubscription(api, id);
+  return true;
+}
+
+function startClanRallySubscription(api, clanId) {
+  const id = String(clanId || "").trim();
+  if (!id || !api?.subscribeClanRallies) return false;
+  if (typeof clanRalliesUnsubscribe === "function") clanRalliesUnsubscribe();
+  clanRalliesUnsubscribe = api.subscribeClanRallies(id, {
+    onRallies: rallies => {
+      onlineClanRallies = Array.isArray(rallies) ? rallies : [];
+      renderClanHudAccess();
+      if (activeProfileTab === "clan") renderClanView();
+      updateOutgoingAttackUi();
+    },
+    onError: error => {
+      console.warn("Clan rally subscription failed", error);
+    },
+  });
   return true;
 }
 
@@ -17393,6 +17694,30 @@ function updateClanGiftCountdown() {
   const cooldownMs = Math.max(0, lastGiftSentAtMs + CLAN_GIFT_COOLDOWN_MS - Date.now());
   if (countdown) countdown.textContent = cooldownMs ? `Ready in ${formatDuration(Math.ceil(cooldownMs / 1000))}` : "Ready now";
   if (sendButton) sendButton.disabled = clanGiftActionInFlight || cooldownMs > 0;
+}
+
+function getClanNameChangeCooldownMs() {
+  const lastChangedAtMs = normalizeTimestampMs(clanSnapshot?.lastNameChangedAtMs);
+  const explicitCooldownUntilMs = normalizeTimestampMs(clanSnapshot?.nextNameChangeAtMs);
+  return Math.max(
+    0,
+    explicitCooldownUntilMs,
+    lastChangedAtMs + CLAN_NAME_CHANGE_COOLDOWN_MS
+  ) - Date.now();
+}
+
+function updateClanNameChangeCountdown() {
+  const countdown = clanContent?.querySelector("[data-clan-name-cooldown]");
+  const renameButton = clanContent?.querySelector("[data-clan-rename-submit]");
+  if (!countdown && !renameButton) return;
+  const cooldownMs = Math.max(0, getClanNameChangeCooldownMs());
+  const hasEnoughGold = Math.max(0, Number(state?.gold) || 0) >= CLAN_NAME_CHANGE_GOLD_COST;
+  if (countdown) {
+    countdown.textContent = cooldownMs
+      ? `Available again in ${formatDuration(Math.ceil(cooldownMs / 1000))}`
+      : "Name change available now";
+  }
+  if (renameButton) renameButton.disabled = clanRenameSaving || cooldownMs > 0 || !hasEnoughGold;
 }
 
 function startClanSocialStateSubscription(api, clanId) {
@@ -17424,7 +17749,10 @@ function startClanSocialStateSubscription(api, clanId) {
     onError: (error, source) => console.warn(`Clan ${source || "social"} subscription failed`, error),
   });
   if (clanGiftCountdownTimer) clearInterval(clanGiftCountdownTimer);
-  clanGiftCountdownTimer = setInterval(updateClanGiftCountdown, 1000);
+  clanGiftCountdownTimer = setInterval(() => {
+    updateClanGiftCountdown();
+    updateClanNameChangeCountdown();
+  }, 1000);
   return true;
 }
 
@@ -17522,6 +17850,12 @@ async function refreshClanState(options = {}) {
 
 function showProfileClan() {
   if (!state || !profileView || !skillsView || !settingsView || !clanView || !flagEditorView) return;
+  const enteringClan = activeProfileTab !== "clan";
+  if (enteringClan) {
+    activeClanMobileSection = "overview";
+    activeClanBrowserSection = "discover";
+    clanView.scrollTop = 0;
+  }
   activeProfileTab = "clan";
   profileScreen.classList.remove("skills-active", "settings-active", "clan-active", "flag-editor-active");
   profileScreen.classList.add("clan-active");
@@ -17537,6 +17871,9 @@ function showProfileClan() {
 
 function showClanHub() {
   if (!state || !profileScreen) return;
+  activeClanMobileSection = "overview";
+  activeClanBrowserSection = "discover";
+  if (clanView) clanView.scrollTop = 0;
   profileScreen.classList.add("open");
   profileScreen.setAttribute("aria-hidden", "false");
   showProfileClan();
@@ -17716,6 +18053,7 @@ async function saveClanShieldEditor() {
     clanShieldEditorOpen = false;
     clanShieldDraft = null;
     clanShieldEditorTab = "field";
+    activeClanMobileSection = "overview";
     showToast("Clan shield published.");
     renderCities(true);
   } catch (error) {
@@ -17729,6 +18067,162 @@ async function saveClanShieldEditor() {
 function formatClanProductionHours(minutes = 0) {
   const hours = Math.max(0, Number(minutes) || 0) / 60;
   return Number.isInteger(hours) ? String(hours) : hours.toFixed(1).replace(/\.0$/, "");
+}
+
+function syncClanNavigationState() {
+  const currentClanId = String(state?.clanId || "");
+  if (currentClanId === clanNavigationClanId) return;
+  clanNavigationClanId = currentClanId;
+  activeClanMobileSection = "overview";
+  activeClanBrowserSection = "discover";
+}
+
+function isClanSectionActive(section) {
+  return activeClanMobileSection === section;
+}
+
+function renderClanSectionNavigation(canManageApplications = false) {
+  const pendingMinutes = Math.max(0, Math.floor(Number(clanMemberRewards?.pendingGiftGoldMinutes) || 0));
+  const selfUid = getCurrentOnlineUid();
+  const selfMember = clanMembers.find(member => String(member?.uid || member?.id || "") === selfUid);
+  const joinedAtMs = normalizeTimestampMs(selfMember?.joinedAtMs);
+  const captureCount = Math.max(0, Math.floor(Number(clanQuestProgress?.captureCount) || 0));
+  const unlocks = clanQuestProgress?.milestoneUnlocks && typeof clanQuestProgress.milestoneUnlocks === "object"
+    ? clanQuestProgress.milestoneUnlocks
+    : {};
+  const claims = clanMemberRewards?.questClaims && typeof clanMemberRewards.questClaims === "object"
+    ? clanMemberRewards.questClaims
+    : {};
+  const readyQuestCount = CLAN_QUEST_REWARDS.filter(reward => {
+    const unlockedAtMs = normalizeTimestampMs(unlocks[reward.id]);
+    return Boolean(
+      unlockedAtMs
+      && captureCount >= reward.captures
+      && joinedAtMs
+      && joinedAtMs < unlockedAtMs
+      && !claims[reward.id]
+    );
+  }).length;
+  const rewardReadyCount = readyQuestCount + (pendingMinutes > 0 ? 1 : 0);
+  const definitions = [
+    { key: "overview", label: "Overview", mark: "◆", count: 0, countLabel: "" },
+    {
+      key: "rallies",
+      label: "Rallies",
+      mark: "⚔",
+      count: onlineClanRallies.length,
+      countLabel: `${onlineClanRallies.length} active ${onlineClanRallies.length === 1 ? "rally" : "rallies"}`,
+    },
+    {
+      key: "rewards",
+      label: "Rewards",
+      mark: "✦",
+      count: rewardReadyCount,
+      countLabel: `${rewardReadyCount} ready ${rewardReadyCount === 1 ? "reward" : "rewards"}`,
+      alert: rewardReadyCount > 0,
+    },
+    {
+      key: "members",
+      label: "Members",
+      mark: "♟",
+      count: canManageApplications && clanApplications.length ? clanApplications.length : clanMembers.length,
+      countLabel: canManageApplications && clanApplications.length
+        ? `${clanApplications.length} pending ${clanApplications.length === 1 ? "application" : "applications"}`
+        : `${clanMembers.length} clan ${clanMembers.length === 1 ? "member" : "members"}`,
+      alert: canManageApplications && clanApplications.length > 0,
+    },
+  ];
+  return `
+    <nav class="clan-section-nav" role="tablist" aria-label="Clan sections">
+      ${definitions.map(section => {
+        const active = isClanSectionActive(section.key);
+        const description = section.countLabel ? `${section.label}, ${section.countLabel}` : section.label;
+        return `
+          <button id="clanSectionTab${section.key[0].toUpperCase()}${section.key.slice(1)}" type="button" role="tab"
+            data-clan-action="section" data-clan-section="${section.key}"
+            aria-selected="${active}" aria-controls="clan${section.key[0].toUpperCase()}${section.key.slice(1)}Panel"
+            aria-label="${escapeHtml(description)}" tabindex="${active ? "0" : "-1"}" class="${active ? "active" : ""}">
+            <span class="clan-section-nav-mark" aria-hidden="true">${section.mark}</span>
+            <span>${section.label}</span>
+            ${section.count ? `<b class="${section.alert ? "alert" : ""}" aria-hidden="true">${formatNumber(section.count)}</b>` : ""}
+          </button>`;
+      }).join("")}
+    </nav>`;
+}
+
+function renderClanBrowserNavigation() {
+  const definitions = [
+    { key: "discover", label: "Find Clan", mark: "⌕" },
+    { key: "create", label: "Create Clan", mark: "+" },
+  ];
+  return `
+    <nav class="clan-browser-nav" role="tablist" aria-label="Find or create a clan">
+      ${definitions.map(section => {
+        const active = activeClanBrowserSection === section.key;
+        return `
+          <button id="clanBrowserTab${section.key[0].toUpperCase()}${section.key.slice(1)}" type="button" role="tab"
+            data-clan-action="browser-section" data-clan-browser-section="${section.key}"
+            aria-selected="${active}" aria-controls="clanBrowser${section.key[0].toUpperCase()}${section.key.slice(1)}Panel"
+            tabindex="${active ? "0" : "-1"}" class="${active ? "active" : ""}">
+            <span aria-hidden="true">${section.mark}</span>${section.label}
+          </button>`;
+      }).join("")}
+    </nav>`;
+}
+
+function focusClanNavigationButton(attribute, value) {
+  requestAnimationFrame(() => {
+    clanContent?.querySelector(`[${attribute}="${value}"]`)?.focus();
+  });
+}
+
+function revealClanSection(section) {
+  requestAnimationFrame(() => {
+    if (window.matchMedia?.("(max-width: 900px)")?.matches) {
+      if (clanView) clanView.scrollTop = 0;
+      return;
+    }
+    const panelId = `clan${section[0].toUpperCase()}${section.slice(1)}Panel`;
+    document.getElementById(panelId)?.scrollIntoView?.({ block: "nearest" });
+  });
+}
+
+function setClanMobileSection(section, options = {}) {
+  const value = String(section || "");
+  if (!CLAN_MOBILE_SECTIONS.includes(value)) return;
+  activeClanMobileSection = value;
+  if (value !== "overview") clanRenameEditorOpen = false;
+  renderClanView();
+  revealClanSection(value);
+  if (options.focus) focusClanNavigationButton("data-clan-section", value);
+}
+
+function setClanBrowserSection(section, options = {}) {
+  const value = String(section || "");
+  if (!CLAN_BROWSER_SECTIONS.includes(value)) return;
+  activeClanBrowserSection = value;
+  renderClanView();
+  requestAnimationFrame(() => {
+    if (clanView) clanView.scrollTop = 0;
+  });
+  if (options.focus) focusClanNavigationButton("data-clan-browser-section", value);
+}
+
+function handleClanNavigationKeydown(event) {
+  const sectionTab = event.target.closest?.('[role="tab"][data-clan-section]');
+  const browserTab = event.target.closest?.('[role="tab"][data-clan-browser-section]');
+  const tab = sectionTab || browserTab;
+  if (!tab || !["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+  const values = sectionTab ? CLAN_MOBILE_SECTIONS : CLAN_BROWSER_SECTIONS;
+  const currentValue = sectionTab ? tab.dataset.clanSection : tab.dataset.clanBrowserSection;
+  let index = Math.max(0, values.indexOf(currentValue));
+  if (event.key === "Home") index = 0;
+  else if (event.key === "End") index = values.length - 1;
+  else if (event.key === "ArrowRight") index = (index + 1) % values.length;
+  else index = (index - 1 + values.length) % values.length;
+  event.preventDefault();
+  if (sectionTab) setClanMobileSection(values[index], { focus: true });
+  else setClanBrowserSection(values[index], { focus: true });
 }
 
 function renderClanMemberFlag(index, className = "") {
@@ -17770,6 +18264,33 @@ function renderClanRosterMember(member, index, canLead) {
       <div class="clan-member-copy">${nameControl}<span>${clanRoleLabel(member.role)} · ${formatNumber(member.kingPower || 0)} power</span></div>
       ${actionPanel}
     </article>`;
+}
+
+function renderClanRenameEditor() {
+  const cooldownMs = Math.max(0, getClanNameChangeCooldownMs());
+  const hasEnoughGold = Math.max(0, Number(state?.gold) || 0) >= CLAN_NAME_CHANGE_GOLD_COST;
+  const disabled = clanRenameSaving || cooldownMs > 0 || !hasEnoughGold;
+  return `
+    <section class="clan-rename-card">
+      <div class="profile-section-heading"><span>Leader management</span><h3>Rename Clan</h3></div>
+      <p>Choose a unique name for 500,000 gold. A clan can be renamed once every seven days.</p>
+      <form data-clan-form="rename" class="clan-form clan-rename-form">
+        <label>
+          <span>New clan name</span>
+          <input name="name" minlength="3" maxlength="24" required pattern="[A-Za-z0-9 _.-]{3,24}" value="${escapeHtml(clanSnapshot?.name || "")}" aria-label="New clan name" ${clanRenameSaving ? "disabled" : ""} />
+        </label>
+        <div class="clan-rename-summary">
+          <span>Cost <strong>500,000 gold</strong></span>
+          <span>Available <strong>${formatNumber(Math.max(0, Number(state?.gold) || 0))} gold</strong></span>
+        </div>
+        <small data-clan-name-cooldown>${cooldownMs ? `Available again in ${formatDuration(Math.ceil(cooldownMs / 1000))}` : "Name change available now"}</small>
+        ${!hasEnoughGold ? `<p class="clan-warning">You need ${formatNumber(CLAN_NAME_CHANGE_GOLD_COST - Math.max(0, Number(state?.gold) || 0))} more gold.</p>` : ""}
+        <div class="clan-rename-actions">
+          <button class="profile-secondary-btn" type="button" data-clan-action="cancel-rename" ${clanRenameSaving ? "disabled" : ""}>Cancel</button>
+          <button class="profile-primary-btn" type="submit" data-clan-rename-submit ${disabled ? "disabled" : ""}>${clanRenameSaving ? "Renaming…" : "Rename — 500,000 Gold"}</button>
+        </div>
+      </form>
+    </section>`;
 }
 
 function renderClanGiftPanel() {
@@ -17831,8 +18352,318 @@ function renderClanQuestPanel() {
     </section>`;
 }
 
+function renderClanOverviewPanel(canLead = false) {
+  const pendingMinutes = Math.max(0, Math.floor(Number(clanMemberRewards?.pendingGiftGoldMinutes) || 0));
+  const captureCount = Math.max(0, Math.floor(Number(clanQuestProgress?.captureCount) || 0));
+  const lastGiftSentAtMs = normalizeTimestampMs(clanMemberRewards?.lastGiftSentAtMs);
+  const giftCooldownMs = Math.max(0, lastGiftSentAtMs + CLAN_GIFT_COOLDOWN_MS - Date.now());
+  const giftValue = pendingMinutes
+    ? `${formatClanProductionHours(pendingMinutes)}h ready`
+    : giftCooldownMs
+      ? `Ready in ${formatDuration(Math.ceil(giftCooldownMs / 1000))}`
+      : "Send now";
+  const activeClass = isClanSectionActive("overview") ? "active" : "";
+  return `
+    <section id="clanOverviewPanel" class="clan-section-panel clan-overview-panel ${activeClass}" role="tabpanel" aria-labelledby="clanSectionTabOverview">
+      <section class="clan-hero">
+        <div class="clan-hero-shield">
+          ${renderClanShield(clanSnapshot.shield || clanSnapshot.banner, { size: "large", label: `${clanSnapshot.name || "Clan"} shield` })}
+        </div>
+        <div class="clan-hero-copy">
+          <span>Your clan · ${clanRoleLabel(state.clanRole)}</span>
+          <h3>[${escapeHtml(clanSnapshot.tag || "")}] ${escapeHtml(clanSnapshot.name || "Clan")}</h3>
+          <p>${escapeHtml(clanSnapshot.description || "No description yet.")}</p>
+          ${canLead ? `<div class="clan-hero-actions" aria-label="Leader clan management">
+            <button type="button" data-clan-action="edit-shield">${clanShieldEditorOpen ? "Editing Shield" : "Edit Shield"}</button>
+            <button type="button" data-clan-action="rename-clan">${clanRenameEditorOpen ? "Renaming Clan" : "Rename Clan"}</button>
+          </div>` : ""}
+        </div>
+        <div class="clan-power">
+          <span>Clan Power</span>
+          <strong>${formatNumber(clanSnapshot.totalKingPower || 0)}</strong>
+          <small>${clanSnapshot.memberCount || 0}/30 members</small>
+        </div>
+      </section>
+      <div class="clan-overview-grid" aria-label="Clan activity summary">
+        <button type="button" data-clan-action="section" data-clan-section="rallies" aria-label="Open Rallies, ${formatNumber(onlineClanRallies.length)} active">
+          <span>Active rallies</span><strong>${formatNumber(onlineClanRallies.length)}</strong><small>Coordinate attacks</small>
+        </button>
+        <button type="button" data-clan-action="section" data-clan-section="rewards" aria-label="Open Rewards, gold gifts ${escapeHtml(giftValue)}">
+          <span>Gold gifts</span><strong>${escapeHtml(giftValue)}</strong><small>Send or collect</small>
+        </button>
+        <button type="button" data-clan-action="section" data-clan-section="rewards" aria-label="Open Rewards, conquest progress ${formatNumber(captureCount)} of 100">
+          <span>Conquest</span><strong>${formatNumber(captureCount)} / 100</strong><small>Quest progress</small>
+        </button>
+        <button type="button" data-clan-action="section" data-clan-section="members" aria-label="Open Members, ${formatNumber(clanMembers.length)} in the roster">
+          <span>Roster</span><strong>${formatNumber(clanMembers.length)} / 30</strong><small>View household</small>
+        </button>
+      </div>
+      ${canLead && clanRenameEditorOpen ? renderClanRenameEditor() : ""}
+    </section>`;
+}
+
+function renderClanMembersPanel(canLead = false, canManageApplications = false) {
+  const activeClass = isClanSectionActive("members") ? "active" : "";
+  return `
+    <section id="clanMembersPanel" class="clan-section-panel clan-roster-panel ${activeClass}" role="tabpanel" aria-labelledby="clanSectionTabMembers">
+      <div class="profile-section-heading clan-panel-heading">
+        <span>Household</span>
+        <h3>Members</h3>
+        <b>${formatNumber(clanMembers.length)} / 30</b>
+      </div>
+      <div class="clan-roster">${clanMembers.map((member, index) => renderClanRosterMember(member, index, canLead)).join("")}</div>
+      ${canManageApplications ? `<div class="clan-applications">
+        <div class="clan-subsection-heading"><h4>Applications</h4>${clanApplications.length ? `<b>${formatNumber(clanApplications.length)}</b>` : ""}</div>
+        ${clanApplicationsError
+          ? `<p class="clan-warning">${escapeHtml(clanApplicationsError)}</p>`
+          : clanApplications.length
+            ? clanApplications.map((application, index) => `<article>${renderClanApplicantFlag(index)}<span>${renderPlayerNameLink(application.uid, application.displayName || "Ruler")}<small>${formatNumber(application.kingPower || 0)} power</small></span><div><button data-clan-action="accept" data-member-id="${escapeHtml(application.uid)}">Accept</button><button data-clan-action="reject" data-member-id="${escapeHtml(application.uid)}">Reject</button></div></article>`).join("")
+            : `<p class="clan-muted">No pending applications.</p>`}
+      </div>` : ""}
+      <button class="profile-secondary-btn clan-leave" data-clan-action="leave">${canLead && clanMembers.length === 1 ? "Disband Clan" : "Leave Clan"}</button>
+    </section>`;
+}
+
+function renderClanRewardsPanel() {
+  const activeClass = isClanSectionActive("rewards") ? "active" : "";
+  return `
+    <section id="clanRewardsPanel" class="clan-section-panel clan-rewards-panel ${activeClass}" role="tabpanel" aria-labelledby="clanSectionTabRewards">
+      ${renderClanGiftPanel()}
+      ${renderClanQuestPanel()}
+    </section>`;
+}
+
+function getRallyParticipantForCurrentPlayer(rally) {
+  const uid = getCurrentOnlineUid();
+  return (Array.isArray(rally?.participants) ? rally.participants : [])
+    .find(participant => String(participant?.uid || participant?.ownerUid || "") === uid) || null;
+}
+
+function renderClanRallyCard(rally) {
+  const currentUid = getCurrentOnlineUid();
+  const participants = Array.isArray(rally?.participants) ? rally.participants : [];
+  const activeParticipants = participants.filter(participant => ["assembled", "inbound"].includes(participant.status));
+  const assembledTroops = activeParticipants
+    .filter(participant => participant.status === "assembled")
+    .reduce((total, participant) => total + Math.max(0, Number(participant.troops) || 0), 0);
+  const inboundTroops = activeParticipants
+    .filter(participant => participant.status === "inbound")
+    .reduce((total, participant) => total + Math.max(0, Number(participant.troops) || 0), 0);
+  const ownParticipant = getRallyParticipantForCurrentPlayer(rally);
+  const leader = String(rally.leaderUid || "") === currentUid;
+  const forming = rally.status === "forming";
+  const launched = rally.status === "launched";
+  const recalling = rally.status === "recalling";
+  const busy = rallyActionRequests.has(rally.id);
+  const launchArmy = launched
+    ? getRenderableArmies().find(army => getOnlineArmyResolutionId(army) === String(rally.armyId || ""))
+    : null;
+  const canRecall = leader && launchArmy && isRecallHornEligible(launchArmy);
+  const participantRows = participants.map(participant => {
+    const inbound = participant.status === "inbound";
+    const etaMs = normalizeTimestampMs(participant.arrivesAtMs);
+    const eta = inbound && etaMs > Date.now()
+      ? formatDuration(Math.max(0, Math.ceil((etaMs - Date.now()) / 1000)))
+      : participant.status === "assembled"
+        ? "Ready"
+        : participant.status === "returning"
+          ? "Returning"
+          : "Settled";
+    return `
+      <li class="${escapeHtml(participant.status || "")}">
+        <span><strong>${escapeHtml(participant.ownerName || "Ruler")}</strong><small>${participant.role === "leader" ? "Leader" : "Ally"} · ${escapeHtml(eta)}</small></span>
+        <b>${formatNumber(participant.troops || 0)}</b>
+      </li>`;
+  }).join("");
+  let controls = "";
+  if (forming && leader) {
+    controls = `
+      <button data-rally-action="launch" data-rally-id="${escapeHtml(rally.id)}" type="button" ${busy ? "disabled" : ""}>Launch</button>
+      <button class="danger-action" data-rally-action="cancel" data-rally-id="${escapeHtml(rally.id)}" type="button" ${busy ? "disabled" : ""}>Cancel</button>`;
+  } else if (forming && ownParticipant) {
+    controls = `<button class="danger-action" data-rally-action="withdraw" data-rally-id="${escapeHtml(rally.id)}" type="button" ${busy ? "disabled" : ""}>Withdraw</button>`;
+  } else if (forming && activeParticipants.length < 3) {
+    controls = `<button data-rally-action="join" data-rally-id="${escapeHtml(rally.id)}" type="button" ${busy ? "disabled" : ""}>Join Rally</button>`;
+  } else if (launched && leader) {
+    controls = `<button data-rally-action="recall" data-rally-id="${escapeHtml(rally.id)}" data-rally-army-id="${escapeHtml(rally.armyId || "")}" type="button" ${busy || !canRecall ? "disabled" : ""}>${canRecall ? "Recall · 1 Horn" : "Rally Marching"}</button>`;
+  }
+  return `
+    <article class="clan-rally-card ${escapeHtml(rally.status || "")}">
+      <header>
+        <span><small>${escapeHtml(getRegionLabel(rally.targetRegionId))}</small><strong>${escapeHtml(rally.targetName || rally.targetId || "Objective")}</strong></span>
+        <b>${activeParticipants.length || participants.length}/3</b>
+      </header>
+      <div class="clan-rally-summary">
+        <span>Leader <strong>${escapeHtml(rally.leaderName || "Ruler")}</strong></span>
+        <span><strong>${formatNumber(assembledTroops)}</strong> assembled</span>
+        <span><strong>${formatNumber(inboundTroops)}</strong> inbound</span>
+        <span class="clan-rally-status">${recalling ? "Returning" : launched ? "Launched" : "Forming"}</span>
+      </div>
+      <ul>${participantRows}</ul>
+      ${controls ? `<footer>${controls}</footer>` : ""}
+    </article>`;
+}
+
+function renderClanRallyPanel() {
+  const activeClass = isClanSectionActive("rallies") ? "active" : "";
+  return `
+    <section id="clanRalliesPanel" class="clan-section-panel clan-social-card clan-rallies-panel ${activeClass}" role="tabpanel" aria-labelledby="clanSectionTabRallies">
+      <div class="clan-social-heading">
+        <span><small>Coordinated assaults</small><strong>Rallies</strong></span>
+        <b>${formatNumber(onlineClanRallies.length)}</b>
+      </div>
+      <p class="clan-rally-note">Targets stay private to the clan until the leader launches. Joining immediately removes your Peace Shield.</p>
+      <div class="clan-rally-list">
+        ${onlineClanRallies.length
+          ? onlineClanRallies.map(renderClanRallyCard).join("")
+          : `<p class="clan-muted">No rally requests are active.</p>`}
+      </div>
+    </section>`;
+}
+
+function upsertClanRallySnapshot(rally = null) {
+  if (!rally?.id) return;
+  const active = ["forming", "launched", "recalling"].includes(rally.status);
+  onlineClanRallies = active
+    ? [
+      rally,
+      ...onlineClanRallies.filter(entry => entry.id !== rally.id),
+    ].sort((left, right) => normalizeTimestampMs(right.updatedAtMs) - normalizeTimestampMs(left.updatedAtMs))
+    : onlineClanRallies.filter(entry => entry.id !== rally.id);
+  renderClanHudAccess();
+  renderClanView();
+  updateOutgoingAttackUi();
+}
+
+function confirmClanRallyAction(rally, action) {
+  const inbound = (Array.isArray(rally?.participants) ? rally.participants : [])
+    .filter(participant => participant.status === "inbound");
+  const launching = action === "launch";
+  const inboundList = inbound.length
+    ? `<ul>${inbound.map(participant => `
+        <li><span>${escapeHtml(participant.ownerName || "Clan ally")}</span><strong>${formatNumber(participant.troops || 0)} troops</strong></li>`).join("")}</ul>`
+    : `<p class="clan-muted">No contributions are still inbound.</p>`;
+  modal.classList.remove("incoming-attack-modal", "outgoing-attack-modal");
+  modal.classList.add("clan-rally-confirmation-modal");
+  modalTitle.textContent = launching ? "Launch Clan Rally?" : "Cancel Clan Rally?";
+  modalBody.innerHTML = `
+    <section class="clan-rally-confirmation">
+      <div>
+        <small>${escapeHtml(getRegionLabel(rally.targetRegionId))}</small>
+        <h3>${escapeHtml(rally.targetName || "Rally objective")}</h3>
+      </div>
+      ${launching
+        ? `<p>Only troops already assembled will attack. These inbound contributions will automatically turn around:</p>${inboundList}`
+        : `<p>Your waiting troops return to the assembly immediately. Assembled allies and inbound contributions will march home. Peace Shields are not restored.</p>`}
+      <footer>
+        <button type="button" class="profile-secondary-btn" data-rally-confirm="cancel">Keep Forming</button>
+        <button type="button" class="${launching ? "profile-primary-btn" : "danger-action"}" data-rally-confirm="accept">${launching ? "Launch Assembled Troops" : "Cancel Rally"}</button>
+      </footer>
+    </section>`;
+  if (!modal.open) modal.showModal();
+  return new Promise(resolve => {
+    let settled = false;
+    const finish = accepted => {
+      if (settled) return;
+      settled = true;
+      modal.classList.remove("clan-rally-confirmation-modal");
+      resolve(accepted);
+    };
+    modalBody.querySelector("[data-rally-confirm='cancel']")?.addEventListener("click", () => {
+      finish(false);
+      if (modal.open) modal.close();
+    });
+    modalBody.querySelector("[data-rally-confirm='accept']")?.addEventListener("click", () => {
+      finish(true);
+      if (modal.open) modal.close();
+    });
+    modal.addEventListener("close", () => finish(false), { once: true });
+  });
+}
+
+async function runClanRallyAction(action, rally) {
+  if (!rally?.id || rallyActionRequests.has(rally.id)) return;
+  if (action === "join") {
+    if (modal.open) modal.close();
+    beginJoinClanRallyContribution(rally);
+    return;
+  }
+  if (action === "recall") {
+    await useRecallHornOnMission(rally.armyId);
+    return;
+  }
+  const api = getOnlineApi();
+  const method = action === "withdraw"
+    ? "withdrawClanRallyContribution"
+    : action === "launch"
+      ? "launchClanRally"
+      : action === "cancel"
+        ? "cancelClanRally"
+        : "";
+  if (!method || !api?.[method] || !api.isSignedIn?.()) {
+    showToast("That clan rally action requires the online Crownlands server.");
+    return;
+  }
+  if (["launch", "cancel"].includes(action)) {
+    const confirmed = await confirmClanRallyAction(rally, action);
+    if (!confirmed) return;
+  }
+  rallyActionRequests.add(rally.id);
+  renderClanView();
+  try {
+    const request = {
+      clanId: rally.clanId || state?.clanId,
+      rallyId: rally.id,
+    };
+    if (action === "launch") request.armyId = `rally_attack_${rally.id}`;
+    const result = await api[method](request);
+    applyServerArmyResult(result);
+    if (result?.movement) adoptServerArmyMovement(result.movement);
+    (Array.isArray(result?.movements) ? result.movements : []).forEach(adoptServerArmyMovement);
+    if (result?.rally) upsertClanRallySnapshot(result.rally);
+    if (action === "withdraw") {
+      showToast("Your rally contribution is returning home.");
+    } else if (action === "launch") {
+      const returned = Array.isArray(result?.returnedInbound) ? result.returnedInbound.length : 0;
+      showToast(returned
+        ? `Rally launched. ${formatNumber(returned)} inbound contribution${returned === 1 ? " is" : "s are"} returning.`
+        : "Rally launched.");
+    } else {
+      showToast("Rally cancelled. Committed forces are returning.");
+    }
+  } catch (error) {
+    console.warn(`Clan rally ${action} failed`, error);
+    showToast(error?.message || `Could not ${action} the rally.`);
+  } finally {
+    rallyActionRequests.delete(rally.id);
+    renderClanHudAccess();
+    renderClanView();
+    if (modal?.open && modal.classList.contains("outgoing-attack-modal")) {
+      renderOutgoingAttacksModalContent();
+    }
+  }
+}
+
+function bindClanRallyControls(root = document) {
+  root?.querySelectorAll?.("[data-rally-action]").forEach(button => {
+    button.addEventListener("click", () => {
+      const rally = onlineClanRallies.find(entry => entry.id === button.dataset.rallyId);
+      if (!rally) {
+        showToast("That clan rally is no longer active.");
+        return;
+      }
+      void runClanRallyAction(button.dataset.rallyAction, rally);
+    });
+  });
+}
+
 function renderClanView() {
   if (!clanContent || activeProfileTab !== "clan") return;
+  syncClanNavigationState();
+  if (state?.clanRole !== "leader") {
+    clanRenameEditorOpen = false;
+    clanRenameSaving = false;
+  }
   const shieldEditorVisible = Boolean(state?.clanId && clanSnapshot && state?.clanRole === "leader" && clanShieldEditorOpen);
   clanContent.classList.toggle("shield-editor-open", shieldEditorVisible);
   clanView?.classList.toggle("shield-editor-active", shieldEditorVisible);
@@ -17848,8 +18679,9 @@ function renderClanView() {
   if (!state?.clanId || !clanSnapshot) {
     const cooldownMs = Math.max(0, Number(state?.clanJoinCooldownUntilMs || 0) - Date.now());
     clanContent.innerHTML = `
+      ${renderClanBrowserNavigation()}
       <div class="clan-browser">
-        <section class="clan-create-card">
+        <section id="clanBrowserCreatePanel" class="clan-browser-panel clan-create-card ${activeClanBrowserSection === "create" ? "active" : ""}" role="tabpanel" aria-labelledby="clanBrowserTabCreate">
           <div class="profile-section-heading"><span>Found a house</span><h3>Create Clan</h3></div>
           <form data-clan-form="create" class="clan-form">
             <input name="name" minlength="3" maxlength="24" required placeholder="Clan name" aria-label="Clan name" />
@@ -17860,7 +18692,7 @@ function renderClanView() {
           </form>
           ${cooldownMs ? `<p class="clan-warning">You can join or create again in ${formatDuration(Math.ceil(cooldownMs / 1000))}.</p>` : ""}
         </section>
-        <section class="clan-discovery">
+        <section id="clanBrowserDiscoverPanel" class="clan-browser-panel clan-discovery ${activeClanBrowserSection === "discover" ? "active" : ""}" role="tabpanel" aria-labelledby="clanBrowserTabDiscover">
           <div class="profile-section-heading"><span>Find allies</span><h3>Discover Clans</h3></div>
           <form data-clan-form="search" class="clan-search"><input name="search" maxlength="24" placeholder="Search by clan name" aria-label="Search clans" /><button type="submit">Search</button></form>
           <div class="clan-list">${clanSearchResults.length ? clanSearchResults.map(clan => `
@@ -17875,33 +18707,24 @@ function renderClanView() {
   }
   const canManageApplications = ["leader", "officer"].includes(state.clanRole);
   const canLead = state.clanRole === "leader";
+  if (canLead && clanShieldEditorOpen) {
+    clanContent.innerHTML = renderClanShieldEditor(clanShieldDraft);
+    return;
+  }
   clanContent.innerHTML = `
-    <section class="clan-hero">
-      <div class="clan-hero-shield">
-        ${renderClanShield(clanSnapshot.shield || clanSnapshot.banner, { size: "large", label: `${clanSnapshot.name || "Clan"} shield` })}
-        ${canLead ? `<button type="button" data-clan-action="edit-shield">${clanShieldEditorOpen ? "Editing Shield" : "Edit Shield"}</button>` : ""}
-      </div>
-      <div><span>Your clan · ${clanRoleLabel(state.clanRole)}</span><h3>[${escapeHtml(clanSnapshot.tag || "")}] ${escapeHtml(clanSnapshot.name || "Clan")}</h3><p>${escapeHtml(clanSnapshot.description || "No description yet.")}</p></div>
-      <div class="clan-power"><span>Clan Power</span><strong>${formatNumber(clanSnapshot.totalKingPower || 0)}</strong><small>${clanSnapshot.memberCount || 0}/30 members</small></div>
-    </section>
-    ${canLead && clanShieldEditorOpen ? renderClanShieldEditor(clanShieldDraft) : `<div class="clan-columns clan-social-layout">
-      <section class="clan-roster-panel">
-        <div class="profile-section-heading"><span>Household</span><h3>Roster</h3></div>
-        <div class="clan-roster">${clanMembers.map((member, index) => renderClanRosterMember(member, index, canLead)).join("")}</div>
-        ${canManageApplications ? `<div class="clan-applications"><h4>Applications</h4>${clanApplicationsError
-          ? `<p class="clan-warning">${escapeHtml(clanApplicationsError)}</p>`
-          : clanApplications.length
-            ? clanApplications.map((application, index) => `<article>${renderClanApplicantFlag(index)}<span>${renderPlayerNameLink(application.uid, application.displayName || "Ruler")}<small>${formatNumber(application.kingPower || 0)} power</small></span><div><button data-clan-action="accept" data-member-id="${escapeHtml(application.uid)}">Accept</button><button data-clan-action="reject" data-member-id="${escapeHtml(application.uid)}">Reject</button></div></article>`).join("")
-            : `<p class="clan-muted">No pending applications.</p>`}</div>` : ""}
-        <button class="profile-secondary-btn clan-leave" data-clan-action="leave">${canLead && clanMembers.length === 1 ? "Disband Clan" : "Leave Clan"}</button>
-      </section>
+    ${renderClanSectionNavigation(canManageApplications)}
+    ${renderClanOverviewPanel(canLead)}
+    <div class="clan-columns clan-social-layout">
+      ${renderClanMembersPanel(canLead, canManageApplications)}
       <div class="clan-social-panels">
-        ${renderClanGiftPanel()}
-        ${renderClanQuestPanel()}
+        ${renderClanRallyPanel()}
+        ${renderClanRewardsPanel()}
       </div>
-    </div>`}`;
+    </div>`;
   applyClanRosterFlags();
+  bindClanRallyControls(clanContent);
   updateClanGiftCountdown();
+  updateClanNameChangeCountdown();
 }
 
 async function runClanAction(action, payload = {}) {
@@ -17980,6 +18803,34 @@ async function handleClanSubmit(event) {
   const data = Object.fromEntries(new FormData(form).entries());
   const kind = form.dataset.clanForm;
   const api = getOnlineApi();
+  if (kind === "rename") {
+    if (clanRenameSaving || state?.clanRole !== "leader" || !api?.updateClanProfile) return;
+    const requestedName = String(data.name || "").replace(/\s+/g, " ").trim();
+    if (requestedName === String(clanSnapshot?.name || "")) {
+      showToast("Enter a different clan name.");
+      return;
+    }
+    clanRenameSaving = true;
+    renderClanView();
+    try {
+      const result = await api.updateClanProfile({ name: requestedName });
+      if (!result?.ok || !result?.nameChanged || !result?.clan?.name) {
+        throw new Error("The server did not confirm the new clan name.");
+      }
+      if (Number.isFinite(Number(result.gold))) state.gold = Number(result.gold);
+      clanSnapshot = { ...(clanSnapshot || {}), ...result.clan };
+      state.clanName = result.clan.name;
+      clanRenameEditorOpen = false;
+      showToast(`Clan renamed to ${result.clan.name}.`);
+      refreshClanRelationshipPresentation();
+    } catch (error) {
+      showToast(error?.message || "Could not rename the clan.");
+    } finally {
+      clanRenameSaving = false;
+      renderClanView();
+    }
+    return;
+  }
   try {
     if (kind === "create") {
       const result = await api.createClan(data);
@@ -17999,11 +18850,36 @@ function handleClanClick(event) {
   const button = event.target.closest("[data-clan-action]");
   if (!button) return;
   const action = button.dataset.clanAction;
+  if (action === "section") {
+    setClanMobileSection(button.dataset.clanSection);
+    return;
+  }
+  if (action === "browser-section") {
+    setClanBrowserSection(button.dataset.clanBrowserSection);
+    return;
+  }
   if (action === "edit-shield") {
     if (state?.clanRole !== "leader") return;
+    activeClanMobileSection = "overview";
+    clanRenameEditorOpen = false;
     clanShieldDraft = normalizeClanShield(clanSnapshot?.shield, clanSnapshot?.banner);
     clanShieldEditorTab = "field";
     clanShieldEditorOpen = true;
+    renderClanView();
+    return;
+  }
+  if (action === "rename-clan") {
+    if (state?.clanRole !== "leader") return;
+    activeClanMobileSection = "overview";
+    clanShieldEditorOpen = false;
+    clanShieldDraft = null;
+    clanShieldEditorTab = "field";
+    clanRenameEditorOpen = true;
+    renderClanView();
+    return;
+  }
+  if (action === "cancel-rename") {
+    clanRenameEditorOpen = false;
     renderClanView();
     return;
   }
@@ -18011,6 +18887,7 @@ function handleClanClick(event) {
     clanShieldEditorOpen = false;
     clanShieldDraft = null;
     clanShieldEditorTab = "field";
+    activeClanMobileSection = "overview";
     renderClanView();
     return;
   }
@@ -18472,6 +19349,7 @@ function getArmyRouteRelationshipClass(mission) {
     || mission?.relinquishTransfer
     || mission?.kind === "transfer"
     || mission?.kind === "reinforce"
+    || mission?.kind === "rally_join"
   );
   return isSupportMovement ? "clan-support-route" : "clan-hostile-route";
 }
@@ -18521,7 +19399,7 @@ function renderPaths() {
   pathsSvg.innerHTML = "";
   for (const { attack, segments } of visibleArmySegments) {
     const ownerClass = getArmyRouteRelationshipClass(attack);
-    const kindClass = attack.kind === "transfer" || attack.kind === "reinforce"
+    const kindClass = attack.kind === "transfer" || attack.kind === "reinforce" || attack.kind === "rally_join"
       ? "transfer-route"
       : attack.kind === "scout"
         ? "scout-route"
@@ -19116,6 +19994,7 @@ function renderSelectedStrongholdWheel(stronghold) {
   const availableSources = playerCities().filter(city => city.id !== stronghold.id && Math.floor(Number(city.troops) || 0) > 0);
   const canScout = !owned && !clanAlly && !pendingScout && availableSources.length > 0;
   const canAttack = !owned && availableSources.length > 0;
+  const canRally = Boolean(state?.clanId && !owned && !clanAlly && availableSources.length > 0);
   const canSend = owned && Math.floor(Number(stronghold.troops) || 0) > 0;
   const canReinforce = owned && availableSources.length > 0;
   const wheelSize = getStrongholdVisualSize(stronghold);
@@ -19141,6 +20020,12 @@ function renderSelectedStrongholdWheel(stronghold) {
       <span aria-hidden="true">${owned || clanAlly ? "&#8649;" : "&#9876;"}</span>
       <strong>${owned || clanAlly ? "Reinforce" : "Attack"}</strong>
     </button>
+    ${canRally ? `
+      <button class="gold-camp-wheel-action camp-rally-action" type="button" aria-label="Form a clan rally against ${escapeHtml(stronghold.name)}">
+        <span aria-hidden="true">&#9873;</span>
+        <strong>Rally</strong>
+      </button>
+    ` : ""}
     ${report ? `
       <button class="gold-camp-wheel-action camp-report-action" type="button" aria-label="Open scout report for ${escapeHtml(stronghold.name)}">
         <span aria-hidden="true">&#128221;</span>
@@ -19162,6 +20047,10 @@ function renderSelectedStrongholdWheel(stronghold) {
   wheel.querySelector(".camp-info-action")?.addEventListener("click", event => {
     event.stopPropagation();
     showCityInfoModal(stronghold.id);
+  });
+  wheel.querySelector(".camp-rally-action")?.addEventListener("click", event => {
+    event.stopPropagation();
+    beginCreateClanRally(stronghold);
   });
   wheel.querySelector(".camp-report-action")?.addEventListener("click", event => {
     event.stopPropagation();
@@ -19198,6 +20087,7 @@ function renderSelectedRewardCampWheel(camp) {
   const pendingScout = getPendingScoutMission(camp.id);
   const canSend = playerCities().some(city => Math.floor(Number(city.troops) || 0) > 0);
   const canScout = !isHeldByPlayer && !clanAlly && !pendingScout && canSend;
+  const canRally = Boolean(state?.clanId && !isHeldByPlayer && !clanAlly && canSend);
   const canRecall = isHeldByPlayer && camp.payoutPending && !rewardCampRecallRequests.has(camp.id);
   const wheelSize = Math.max(112, Number(camp.size) || 132);
   wheel.className = "gold-camp-action-wheel";
@@ -19219,6 +20109,12 @@ function renderSelectedRewardCampWheel(camp) {
       <span aria-hidden="true">${isHeldByPlayer || clanAlly ? "&#8649;" : "&#9876;"}</span>
       <strong>${isHeldByPlayer || clanAlly ? "Reinforce" : "Attack"}</strong>
     </button>
+    ${canRally ? `
+      <button class="gold-camp-wheel-action camp-rally-action" type="button" aria-label="Form a clan rally against ${escapeHtml(camp.name)}">
+        <span aria-hidden="true">&#9873;</span>
+        <strong>Rally</strong>
+      </button>
+    ` : ""}
     ${report ? `
       <button class="gold-camp-wheel-action camp-report-action" type="button" aria-label="Open scout report for ${escapeHtml(camp.name)}">
         <span aria-hidden="true">&#128221;</span>
@@ -19241,6 +20137,10 @@ function renderSelectedRewardCampWheel(camp) {
   wheel.querySelector(".camp-info-action")?.addEventListener("click", event => {
     event.stopPropagation();
     showRewardCampInfoModal(camp.id);
+  });
+  wheel.querySelector(".camp-rally-action")?.addEventListener("click", event => {
+    event.stopPropagation();
+    beginCreateClanRally(camp);
   });
   wheel.querySelector(".camp-report-action")?.addEventListener("click", event => {
     event.stopPropagation();
@@ -20002,6 +20902,85 @@ function beginClanReinforcement(targetOrId) {
   void showTroopSliderModalAsync(sourceOption.city, target, { orderKind: "reinforce" });
 }
 
+function beginCreateClanRally(targetOrId) {
+  const target = typeof targetOrId === "object" ? targetOrId : getArmyTargetById(targetOrId);
+  const eligibleObjective = target && (isStronghold(target) || isRewardCampTarget(target));
+  if (!state?.clanId || !eligibleObjective || target.owner === "player" || isClanAllyCity(target)) {
+    showToast(!state?.clanId ? "Join a clan before forming a rally." : "That objective is not eligible for a clan rally.");
+    return;
+  }
+  const api = getOnlineApi();
+  if (!usesServerArmyAuthority() || !api?.createClanRally || !api?.isSignedIn?.()) {
+    showToast("Clan rallies require the online Crownlands server.");
+    return;
+  }
+  const sourceOption = findPreferredAttackSource(target);
+  if (!sourceOption) {
+    showToast("No owned city or Stronghold with troops can reach that objective.");
+    return;
+  }
+  activeRallyOrderContext = {
+    mode: "create",
+    target,
+  };
+  selectedSourceId = sourceOption.city.id;
+  rememberOwnedAttackSource(sourceOption.city);
+  selectedTargetId = target.id;
+  scoutNearbySourceId = null;
+  regroupSourceId = null;
+  sendMode = true;
+  activeTroopOrderKind = "rally_create";
+  selectedTroopAmount = clamp(Math.floor(sourceOption.city.troops / 2), 1, sourceOption.city.troops);
+  renderSelectionChangeNow();
+  void showTroopSliderModalAsync(sourceOption.city, target, { orderKind: "rally_create" });
+}
+
+function beginJoinClanRallyContribution(rally) {
+  if (!rally || rally.status !== "forming" || !state?.clanId) {
+    showToast("That rally is no longer accepting contributions.");
+    return;
+  }
+  const api = getOnlineApi();
+  if (!usesServerArmyAuthority() || !api?.joinClanRally || !api?.isSignedIn?.()) {
+    showToast("Clan rallies require the online Crownlands server.");
+    return;
+  }
+  const knownAssembly = getArmyTargetById(rally.assemblyCityId);
+  const assembly = {
+    ...(knownAssembly || {}),
+    id: rally.assemblyCityId,
+    name: rally.assemblyCityName || knownAssembly?.name || "Rally assembly",
+    regionId: normalizeRegionId(rally.assemblyRegionId),
+    startPool: normalizeRegionId(rally.assemblyRegionId),
+    x: Number(rally.assemblyX) || Number(knownAssembly?.x) || 0,
+    y: Number(rally.assemblyY) || Number(knownAssembly?.y) || 0,
+    owner: knownAssembly?.owner || "enemy",
+    ownerUid: rally.leaderUid,
+    kind: knownAssembly?.kind || "city",
+  };
+  const sourceOption = findPreferredAttackSource(assembly);
+  if (!sourceOption) {
+    showToast("No owned city or Stronghold with troops can reach the rally assembly.");
+    return;
+  }
+  activeRallyOrderContext = {
+    mode: "join",
+    rallyId: rally.id,
+    rally,
+    target: assembly,
+  };
+  selectedSourceId = sourceOption.city.id;
+  rememberOwnedAttackSource(sourceOption.city);
+  selectedTargetId = assembly.id;
+  scoutNearbySourceId = null;
+  regroupSourceId = null;
+  sendMode = true;
+  activeTroopOrderKind = "rally_join";
+  selectedTroopAmount = clamp(Math.floor(sourceOption.city.troops / 2), 1, sourceOption.city.troops);
+  renderSelectionChangeNow();
+  void showTroopSliderModalAsync(sourceOption.city, assembly, { orderKind: "rally_join" });
+}
+
 function attackForeignCity(cityId) {
   const target = cityById(cityId);
   if (!target || target.owner === "player") return;
@@ -20125,10 +21104,97 @@ function layoutCityLabels() {
   }
 }
 
+function formatTroopEstimateBound(value = 0) {
+  const count = Math.max(0, Math.floor(Number(value) || 0));
+  const units = [
+    { value: 1_000_000_000_000, suffix: "T" },
+    { value: 1_000_000_000, suffix: "B" },
+    { value: 1_000_000, suffix: "M" },
+    { value: 1_000, suffix: "K" },
+  ];
+  const unit = units.find(entry => count >= entry.value);
+  if (!unit) return count.toLocaleString("en-US");
+  const scaled = count / unit.value;
+  return `${scaled.toFixed(Number.isInteger(scaled) ? 0 : 1)}${unit.suffix}`;
+}
+
+function getIncomingTroopEstimate(troops = 0) {
+  const count = Math.max(1, Math.floor(Number(troops) || 1));
+  let min = 1;
+  let max = 10;
+  if (count > 10 && count <= 1_000_000) {
+    max = 10 ** Math.ceil(Math.log10(count));
+    min = max / 10;
+  } else if (count > 1_000_000) {
+    min = 1_000_000;
+    max = 5_000_000;
+    if (count > max) {
+      min = max;
+      max = 10_000_000;
+    }
+    if (count > max) {
+      let base = 10_000_000;
+      min = base;
+      let matched = false;
+      while (!matched && Number.isFinite(base) && base <= Number.MAX_SAFE_INTEGER / 10) {
+        for (const multiplier of [2, 5, 10]) {
+          const candidate = base * multiplier;
+          if (count <= candidate) {
+            max = candidate;
+            matched = true;
+            break;
+          }
+          min = candidate;
+        }
+        base *= 10;
+      }
+      if (!matched) max = Number.MAX_SAFE_INTEGER;
+    }
+  }
+  const normalizedMin = Math.max(1, Math.floor(min));
+  const normalizedMax = Math.max(normalizedMin, Math.floor(max));
+  return {
+    min: normalizedMin,
+    max: normalizedMax,
+    label: `${formatTroopEstimateBound(normalizedMin)}\u2013${formatTroopEstimateBound(normalizedMax)}`,
+  };
+}
+
+function normalizeArmyTroopEstimate(army = {}, legacyExactTroops = null) {
+  const min = Math.max(0, Math.floor(Number(army.troopEstimateMin) || 0));
+  const max = Math.max(0, Math.floor(Number(army.troopEstimateMax) || 0));
+  if (min > 0 && max >= min) {
+    return {
+      min,
+      max,
+      label: `${formatTroopEstimateBound(min)}\u2013${formatTroopEstimateBound(max)}`,
+    };
+  }
+  return getIncomingTroopEstimate(legacyExactTroops);
+}
+
 function canViewArmyTroopAmount(attack) {
   if (!attack) return false;
   if (attack.kind !== "transfer") return true;
   return isPersonalArmy(attack);
+}
+
+function isArmyTroopEstimate(attack) {
+  return Boolean(
+    attack
+    && (
+      attack.troopVisibility === "estimate"
+      || (attack.kind === "attack" && !isPersonalArmy(attack))
+    )
+  );
+}
+
+function getArmyTroopDisplayText(attack) {
+  if (!canViewArmyTroopAmount(attack)) return "";
+  if (isArmyTroopEstimate(attack)) {
+    return normalizeArmyTroopEstimate(attack, attack.troops).label;
+  }
+  return formatNumber(attack?.troops);
 }
 
 function getArmyTokenId(attack) {
@@ -20295,7 +21361,7 @@ function updateArmyTokenElement(token, attack, mapPoint, targetCity, endpointInt
   if (countElement) {
     if (countElement.hidden === showTroops) countElement.hidden = !showTroops;
     if (showTroops) {
-      const troopText = formatNumber(attack.troops);
+      const troopText = getArmyTroopDisplayText(attack);
       if (countElement.textContent !== troopText) countElement.textContent = troopText;
     }
   }
@@ -20320,13 +21386,19 @@ function updateArmyTokenElement(token, attack, mapPoint, targetCity, endpointInt
       toButton.setAttribute("aria-label", `Go to ${toDetails.name}`);
     }
   }
+  const troopDisplay = showTroops ? getArmyTroopDisplayText(attack) : "";
+  const troopDescription = isArmyTroopEstimate(attack)
+    ? `estimated ${troopDisplay} troops`
+    : troopDisplay
+      ? `${troopDisplay} troops`
+      : "";
   const tokenLabel = endpointInteractionDisabled
     ? `${attack.kind || "Army"} march near an endpoint. Select the location beneath it.`
-    : `${attack.kind || "Army"} march to ${targetCity?.name || attack.toName || "destination"}. Show route locations.`;
+    : `${attack.kind || "Army"} march${troopDescription ? ` with ${troopDescription}` : ""} to ${targetCity?.name || attack.toName || "destination"}. Show route locations.`;
   if (token.getAttribute("aria-label") !== tokenLabel) token.setAttribute("aria-label", tokenLabel);
   if (attack.ownerName) {
     const titlePrefix = `${attack.ownerName}: ${attack.kind} to ${targetCity?.name || "target"}`;
-    const title = showTroops ? titlePrefix : `${titlePrefix} - ${formatDuration(attack.remaining)} remaining`;
+    const title = `${titlePrefix}${troopDescription ? ` - ${troopDescription}` : ""} - ${formatDuration(attack.remaining)} remaining`;
     if (token.title !== title) token.title = title;
   }
 }
@@ -20661,10 +21733,15 @@ function showTroopSliderModal(source, target) {
 }
 
 function getTroopOrderKind(target, requestedKind = "") {
+  if (["rally_create", "rally_join"].includes(requestedKind)) return requestedKind;
   if (requestedKind === "reinforce" && isClanAllyCity(target)) return "reinforce";
   if (target?.owner === "player") return "transfer";
   if (isClanAllyCity(target)) return "reinforce";
   return "attack";
+}
+
+function isRallyTroopOrderKind(orderKind = activeTroopOrderKind) {
+  return orderKind === "rally_create" || orderKind === "rally_join";
 }
 
 async function loadAttackProtectionPreview(source, target) {
@@ -20697,11 +21774,12 @@ async function showTroopSliderModalAsync(source, target, options = {}) {
   }
 
   const orderKind = getTroopOrderKind(target, options.orderKind);
+  const rallyOrder = isRallyTroopOrderKind(orderKind);
   const isTransfer = orderKind === "transfer";
   const isReinforcement = orderKind === "reinforce";
   const campTarget = isRewardCampTarget(target);
   const needsDefenderPower = orderKind === "attack" && target.owner === "enemy" && !campTarget && !isStronghold(target);
-  const mainCityBlockReason = isTransfer || isReinforcement || campTarget
+  const mainCityBlockReason = rallyOrder || isTransfer || isReinforcement || campTarget
     ? ""
     : getMainCityAttackBlockReason(target, "player");
   if (mainCityBlockReason) {
@@ -20747,7 +21825,9 @@ async function showTroopSliderModalAsync(source, target, options = {}) {
   if (requestId !== activeTroopRouteRequestId) return;
 
   const freshSource = cityById(source.id);
-  const freshTarget = getArmyTargetById(target.id);
+  const freshTarget = activeRallyOrderContext?.target?.id === target.id
+    ? activeRallyOrderContext.target
+    : getArmyTargetById(target.id);
   if (!freshSource || !freshTarget || freshSource.owner !== "player" || freshSource.id === freshTarget.id) {
     showToast("Order canceled. The map changed.");
     cancelSendMode();
@@ -20864,14 +21944,15 @@ function showTroopPowerVerificationError(source, target) {
 }
 
 function showTroopRouteLoadingModal(source, target, orderKind = "attack") {
+  const rallyOrder = isRallyTroopOrderKind(orderKind);
   const isTransfer = orderKind === "transfer";
   const isReinforcement = orderKind === "reinforce";
-  const commandLabel = isTransfer ? "Transfer" : isReinforcement ? "Reinforce" : "Attack";
-  const commandIcon = isTransfer ? "&#9822;" : isReinforcement ? "&#8649;" : "&#9876;";
+  const commandLabel = orderKind === "rally_create" ? "Create Rally" : orderKind === "rally_join" ? "Join Rally" : isTransfer ? "Transfer" : isReinforcement ? "Reinforce" : "Attack";
+  const commandIcon = rallyOrder ? "&#9873;" : isTransfer ? "&#9822;" : isReinforcement ? "&#8649;" : "&#9876;";
   modal.classList.add("troop-slider-modal");
   modalTitle.textContent = `${commandLabel} troops`;
   modalBody.innerHTML = `
-    <div class="troop-slider-panel ${isTransfer || isReinforcement ? "transfer reinforce" : "attack"}">
+    <div class="troop-slider-panel ${rallyOrder ? "rally" : isTransfer || isReinforcement ? "transfer reinforce" : "attack"}">
       <div class="troop-route-summary">
         <div class="troop-route-city">
           <span>From</span>
@@ -20882,7 +21963,7 @@ function showTroopRouteLoadingModal(source, target, orderKind = "attack") {
         <div class="troop-route-city destination">
           <span>To</span>
           <strong>${escapeHtml(target.name)}</strong>
-          <small>${escapeHtml(getRegionLabel(getCityRegionId(target)))} &middot; ${isReinforcement ? "Clan allied holding" : isRewardCampTarget(target) ? (isTransfer ? `Your ${escapeHtml(target.name)}` : `${OWNER[target.owner].label} ${escapeHtml(target.name)}`) : isTransfer ? "Your city" : `${OWNER[target.owner].label} city`}</small>
+          <small>${escapeHtml(getRegionLabel(getCityRegionId(target)))} &middot; ${orderKind === "rally_join" ? "Rally assembly city" : orderKind === "rally_create" ? "Clan rally objective" : isReinforcement ? "Clan allied holding" : isRewardCampTarget(target) ? (isTransfer ? `Your ${escapeHtml(target.name)}` : `${OWNER[target.owner].label} ${escapeHtml(target.name)}`) : isTransfer ? "Your city" : `${OWNER[target.owner].label} city`}</small>
         </div>
       </div>
 
@@ -20906,7 +21987,7 @@ function showTroopRouteLoadingModal(source, target, orderKind = "attack") {
 function getTroopSliderSendLimit(source, target) {
   const availableTroops = Math.max(0, Math.floor(Number(source?.troops) || 0));
   if (availableTroops < 1 || !target) return 0;
-  if (activeTroopOrderKind === "transfer" || activeTroopOrderKind === "reinforce") return availableTroops;
+  if (activeTroopOrderKind === "transfer" || activeTroopOrderKind === "reinforce" || isRallyTroopOrderKind()) return availableTroops;
   const previewMatches = activeTroopSliderRoute?.sourceId === source.id
     && activeTroopSliderRoute?.targetId === target.id;
   const attackProtection = previewMatches
@@ -20941,16 +22022,17 @@ function showTroopSliderModalWithRoute(source, target, route, options = {}) {
   activeSwiftMarchOrderSelected = false;
   const orderKind = getTroopOrderKind(target, options.orderKind || activeTroopOrderKind);
   activeTroopOrderKind = orderKind;
+  const rallyOrder = isRallyTroopOrderKind(orderKind);
   const isTransfer = orderKind === "transfer";
   const isReinforcement = orderKind === "reinforce";
   const campTarget = isRewardCampTarget(target);
-  const swiftMarchEligible = canUseSwiftMarchOrderOnLaunch(source, target);
+  const swiftMarchEligible = !rallyOrder && canUseSwiftMarchOrderOnLaunch(source, target);
   const swiftMarchOrderCount = Math.max(
     0,
     Math.floor(Number(ensureShopItems()[SWIFT_MARCH_ORDER_ITEM_ID]) || 0)
   );
   const swiftMarchDisabled = swiftMarchOrderCount <= 0 || !usesServerArmyAuthority();
-  const mainCityBlockReason = isTransfer || isReinforcement || campTarget
+  const mainCityBlockReason = rallyOrder || isTransfer || isReinforcement || campTarget
     ? ""
     : getMainCityAttackBlockReason(target, "player");
   if (mainCityBlockReason) {
@@ -20971,9 +22053,13 @@ function showTroopSliderModalWithRoute(source, target, route, options = {}) {
     if (modal.open) modal.close();
     return;
   }
-  const commandLabel = isTransfer ? "Transfer" : isReinforcement ? "Reinforce" : "Attack";
-  const commandIcon = isTransfer ? "&#9822;" : isReinforcement ? "&#8649;" : "&#9876;";
-  const shieldDropWarning = isReinforcement
+  const commandLabel = orderKind === "rally_create" ? "Create Rally" : orderKind === "rally_join" ? "Join Rally" : isTransfer ? "Transfer" : isReinforcement ? "Reinforce" : "Attack";
+  const commandIcon = rallyOrder ? "&#9873;" : isTransfer ? "&#9822;" : isReinforcement ? "&#8649;" : "&#9876;";
+  const shieldDropWarning = rallyOrder
+    ? getActivePeaceShieldExpiresAtMs() > Date.now()
+      ? "Committing rally troops immediately removes your Royal Peace Shield. It will not be restored if you withdraw or the rally is cancelled."
+      : ""
+    : isReinforcement
     ? getActivePeaceShieldExpiresAtMs() > Date.now()
       ? "Launching clan reinforcements immediately removes your Royal Peace Shield. Your ally's shield is not affected."
       : ""
@@ -20986,7 +22072,7 @@ function showTroopSliderModalWithRoute(source, target, route, options = {}) {
   modal.classList.add("troop-slider-modal");
   modalTitle.textContent = `${commandLabel} troops`;
   modalBody.innerHTML = `
-    <div class="troop-slider-panel ${isTransfer || isReinforcement ? "transfer reinforce" : "attack"}">
+    <div class="troop-slider-panel ${rallyOrder ? "rally" : isTransfer || isReinforcement ? "transfer reinforce" : "attack"}">
       <div class="troop-route-summary">
         <div class="troop-route-city">
           <span>From</span>
@@ -20997,19 +22083,20 @@ function showTroopSliderModalWithRoute(source, target, route, options = {}) {
         <div class="troop-route-city destination">
           <span>To</span>
           <strong>${escapeHtml(target.name)}</strong>
-          <small>${escapeHtml(getRegionLabel(getCityRegionId(target)))} &middot; ${isReinforcement ? "Clan allied holding" : campTarget ? (isTransfer ? `Your ${escapeHtml(target.name)}` : `${OWNER[target.owner].label} ${escapeHtml(target.name)}`) : isTransfer ? "Your city" : `${OWNER[target.owner].label} city`}</small>
+          <small>${escapeHtml(getRegionLabel(getCityRegionId(target)))} &middot; ${orderKind === "rally_join" ? "Rally assembly city" : orderKind === "rally_create" ? "Clan rally objective" : isReinforcement ? "Clan allied holding" : campTarget ? (isTransfer ? `Your ${escapeHtml(target.name)}` : `${OWNER[target.owner].label} ${escapeHtml(target.name)}`) : isTransfer ? "Your city" : `${OWNER[target.owner].label} city`}</small>
         </div>
       </div>
 
       ${shieldDropWarning ? `<div class="shield-drop-warning" role="alert"><strong>Shield warning</strong><span>${escapeHtml(shieldDropWarning)}</span></div>` : ""}
       ${isReinforcement ? `<div class="reinforcement-limit-note"><strong>${formatNumber(reinforcementUsage)} / ${formatNumber(CLAN_REINFORCEMENT_ACTIVE_LIMIT)} active</strong><span>You may support two holdings at once, with one reinforcement per holding.</span></div>` : ""}
+      ${rallyOrder ? `<div class="reinforcement-limit-note rally-limit-note"><strong>3 participant limit</strong><span>${orderKind === "rally_create" ? "You will lead this rally and choose when to launch." : "Your troops march visibly to the assembly city; the objective remains clan-private."}</span></div>` : ""}
 
       <div class="troop-slider-control">
         <div class="troop-slider-readout">
-          <span>Troops to ${isTransfer || isReinforcement ? "send" : "attack with"}</span>
+          <span>Troops to ${rallyOrder ? "commit" : isTransfer || isReinforcement ? "send" : "attack with"}</span>
           <strong id="troopSliderAmount">${formatNumber(selectedTroopAmount)}</strong>
         </div>
-        <input id="troopAmountSlider" class="troop-amount-slider" type="range" min="1" max="${sliderSendLimit}" value="${selectedTroopAmount}" aria-label="Troops to ${isReinforcement ? "reinforce with" : isTransfer ? "transfer" : "attack with"}" />
+        <input id="troopAmountSlider" class="troop-amount-slider" type="range" min="1" max="${sliderSendLimit}" value="${selectedTroopAmount}" aria-label="Troops to ${rallyOrder ? "commit" : isReinforcement ? "reinforce with" : isTransfer ? "transfer" : "attack with"}" />
         <div class="troop-slider-limits"><span>1</span><span id="troopSliderMaxLabel">${demoLimited ? "Protected max" : "Max"} ${formatNumber(sliderSendLimit)}</span></div>
       </div>
 
@@ -21030,7 +22117,7 @@ function showTroopSliderModalWithRoute(source, target, route, options = {}) {
       <div id="troopSliderPreview" class="troop-slider-preview"></div>
 
       <div class="troop-slider-actions">
-        <button id="troopSliderConfirm" class="troop-slider-confirm ${isTransfer || isReinforcement ? "transfer reinforce" : "attack"}" type="button">
+        <button id="troopSliderConfirm" class="troop-slider-confirm ${rallyOrder ? "rally" : isTransfer || isReinforcement ? "transfer reinforce" : "attack"}" type="button">
           <span aria-hidden="true">${commandIcon}</span>${commandLabel}
         </button>
         <button id="troopSliderCancel" class="troop-slider-cancel" type="button">Cancel</button>
@@ -21098,7 +22185,14 @@ function updateTroopSliderModal(source, target, route) {
     if (stateLabel) stateLabel.textContent = activeSwiftMarchOrderSelected ? "On" : "Off";
   }
 
-  const baseTravel = travelTime(source, target, "player", route.length, selectedTroopAmount, orderKind);
+  const baseTravel = travelTime(
+    source,
+    target,
+    "player",
+    route.length,
+    selectedTroopAmount,
+    orderKind === "rally_join" ? "transfer" : orderKind === "rally_create" ? "attack" : orderKind
+  );
   const travel = activeSwiftMarchOrderSelected
     ? Math.max(
         SWIFT_MARCH_MINIMUM_REMAINING_SECONDS,
@@ -21106,6 +22200,15 @@ function updateTroopSliderModal(source, target, route) {
       )
     : baseTravel;
   const previewEl = modalBody.querySelector("#troopSliderPreview");
+  if (isRallyTroopOrderKind(orderKind)) {
+    const isJoin = orderKind === "rally_join";
+    previewEl.className = "troop-slider-preview transfer reinforce rally";
+    previewEl.innerHTML = `
+      <div><span>${isJoin ? "Contribution" : "Leader force"}</span><strong>${formatNumber(selectedTroopAmount)} troops</strong><small>${isJoin ? "One participant slot will be reserved immediately" : "Troops wait at the assembly city until you launch or cancel"}</small></div>
+      <div><span>${isJoin ? "Assembly time" : "Final march"}</span><strong>About ${formatDuration(baseTravel)}</strong><small>${escapeHtml(routeSummary)}</small><small>Royal Peace Shields are removed on commitment</small></div>
+    `;
+    return;
+  }
   if (orderKind === "transfer") {
     previewEl.className = "troop-slider-preview transfer";
     previewEl.innerHTML = `
@@ -21180,9 +22283,101 @@ function updateTroopSliderModal(source, target, route) {
   `;
 }
 
-function confirmTroopSliderOrder() {
+async function submitClanRallyTroopOrder(source, target, route) {
+  const api = getOnlineApi();
+  const context = activeRallyOrderContext;
+  if (!api || !context || !isRallyTroopOrderKind() || !state?.clanId) return false;
+  const method = activeTroopOrderKind === "rally_create" ? "createClanRally" : "joinClanRally";
+  if (!api[method] || !api.isSignedIn?.()) {
+    showToast("Clan rallies require the online Crownlands server.");
+    return false;
+  }
+  const requestKey = activeTroopOrderKind === "rally_create"
+    ? `create:${source.id}:${target.id}`
+    : `join:${context.rallyId}`;
+  if (rallyActionRequests.has(requestKey)) return false;
+  const segments = getRouteSegments(route, getCityRegionId(source));
+  const routeRegionIds = [...new Set([
+    getCityRegionId(source),
+    ...segments.map(segment => segment.regionId),
+    getCityRegionId(target),
+  ].map(normalizeRegionId).filter(Boolean))];
+  const armyId = createOnlineArmyId(activeTroopOrderKind === "rally_create" ? "rally" : "rally_join");
+  const payload = {
+    clanId: state.clanId,
+    rallyId: activeTroopOrderKind === "rally_create" ? armyId : context.rallyId,
+    armyId,
+    sourceRegionId: getCityRegionId(source),
+    targetRegionId: getCityRegionId(target),
+    routeRegionIds,
+    army: {
+      id: armyId,
+      kind: activeTroopOrderKind === "rally_join" ? "rally_join" : "attack",
+      fromId: source.id,
+      toId: target.id,
+      fromName: source.name,
+      toName: target.name,
+      targetType: isRewardCampTarget(target) ? "camp" : "city",
+      troops: selectedTroopAmount,
+      requestedTroops: selectedTroopAmount,
+      path: normalizeArmyPath(route.points),
+      pathSegments: segments,
+      routeRegionIds,
+      pathLength: Math.max(0, Number(route.length) || routeLength(route.points)),
+      sourceRegionId: getCityRegionId(source),
+      targetRegionId: getCityRegionId(target),
+    },
+  };
+  rallyActionRequests.add(requestKey);
+  const confirmButton = modalBody.querySelector("#troopSliderConfirm");
+  if (confirmButton) {
+    confirmButton.disabled = true;
+    confirmButton.textContent = activeTroopOrderKind === "rally_create" ? "Creating..." : "Joining...";
+  }
+  try {
+    const result = await api[method](payload);
+    applyServerArmyResult({
+      currentUser: result?.currentUser,
+      cityUpdates: Array.isArray(result?.cityUpdates)
+        ? result.cityUpdates
+        : result?.sourceCity ? [result.sourceCity] : [],
+    });
+    if (result?.movement) adoptServerArmyMovement(result.movement);
+    if (result?.rally) {
+      onlineClanRallies = [
+        result.rally,
+        ...onlineClanRallies.filter(rally => rally.id !== result.rally.id),
+      ];
+    }
+    const shieldText = result?.peaceShieldDeactivated ? " Your Royal Peace Shield was removed." : "";
+    addLog(activeTroopOrderKind === "rally_create"
+      ? `You formed a clan rally against ${target.name} with ${formatNumber(selectedTroopAmount)} troops.${shieldText}`
+      : `You committed ${formatNumber(selectedTroopAmount)} troops to ${context.rally?.leaderName || "your ally"}'s rally.${shieldText}`);
+    showToast(activeTroopOrderKind === "rally_create"
+      ? `Rally formed against ${target.name}.`
+      : `Contribution marching to ${target.name}.`);
+    renderClanHudAccess();
+    renderClanView();
+    updateOutgoingAttackUi();
+    return true;
+  } catch (error) {
+    console.warn("Clan rally order failed", error);
+    showToast(error?.message || "Could not submit the rally order.");
+    if (confirmButton) {
+      confirmButton.disabled = false;
+      confirmButton.textContent = activeTroopOrderKind === "rally_create" ? "Create Rally" : "Join Rally";
+    }
+    return false;
+  } finally {
+    rallyActionRequests.delete(requestKey);
+  }
+}
+
+async function confirmTroopSliderOrder() {
   const source = selectedSourceId ? cityById(selectedSourceId) : null;
-  const target = selectedTargetId ? getArmyTargetById(selectedTargetId) : null;
+  const target = activeRallyOrderContext?.target?.id === selectedTargetId
+    ? activeRallyOrderContext.target
+    : selectedTargetId ? getArmyTargetById(selectedTargetId) : null;
   if (!source || !target || source.owner !== "player" || source.troops < 1) {
     troopSliderActive = false;
     activeTroopSliderRoute = null;
@@ -21204,6 +22399,21 @@ function confirmTroopSliderOrder() {
     showToast("Route is still calculating.");
     return;
   }
+  if (isRallyTroopOrderKind()) {
+    const accepted = await submitClanRallyTroopOrder(source, target, cachedRoute);
+    if (!accepted) return;
+    troopSliderActive = false;
+    activeTroopSliderRoute = null;
+    activeAttackProtectionPreview = null;
+    activeTroopOrderKind = "";
+    activeRallyOrderContext = null;
+    activeSwiftMarchOrderSelected = false;
+    modal.classList.remove("troop-slider-modal");
+    if (modal.open) modal.close();
+    clearSelection(false);
+    renderAll();
+    return;
+  }
   const launched = launchAttack(source.id, target.id, 1, "player", selectedTroopAmount, {
     route: cachedRoute,
     attackProtection: activeAttackProtectionPreview,
@@ -21215,6 +22425,7 @@ function confirmTroopSliderOrder() {
   activeTroopSliderRoute = null;
   activeAttackProtectionPreview = null;
   activeTroopOrderKind = "";
+  activeRallyOrderContext = null;
   activeSwiftMarchOrderSelected = false;
   modal.classList.remove("troop-slider-modal");
   if (modal.open) modal.close();
@@ -21231,6 +22442,7 @@ function cancelSendMode() {
   activeTroopSliderRoute = null;
   activeAttackProtectionPreview = null;
   activeTroopOrderKind = "";
+  activeRallyOrderContext = null;
   activeSwiftMarchOrderSelected = false;
   renderAll();
 }
@@ -21920,7 +23132,7 @@ function showCityInfoModal(cityId) {
       <div class="stat-chip"><span>Troops production</span><strong>${formatBaseAndBonusStat(stats.baseTroopProductionPerHour, stats.troopProductionPerHour, "/h")}</strong><small>${getCityStatBonusSources(stats, "troops")}</small></div>
       <div class="stat-chip"><span>Gold production</span><strong>${formatBaseAndBonusStat(stats.baseGoldProductionPerHour, stats.goldProductionPerHour, "/h")}</strong><small>${getCityStatBonusSources(stats, "gold")}</small></div>
       <div class="stat-chip"><span>Invested gold</span><strong>${formatNumber(city.investedGold || 0)}</strong><small>Clears when captured</small></div>
-      ${cooldownRemaining > 0 ? `<div class="stat-wide"><span>Capture XP cooldown</span><strong>${formatDuration(cooldownRemaining)}</strong></div>` : ""}
+      ${cooldownRemaining > 0 ? `<div class="stat-wide"><span>City XP cooldown</span><strong>${formatDuration(cooldownRemaining)}</strong></div>` : ""}
       ${renderRelinquishCityAction(city)}
       ${renderHoldingReinforcementPanel(city)}
     </div>
@@ -22222,9 +23434,16 @@ function normalizeDailyLoginRewardReceipt(raw = null) {
   if (!raw || typeof raw !== "object") return null;
   const dayKey = String(raw.dayKey || "").slice(0, 10);
   if (!/^\d{4}-\d{2}-\d{2}$/.test(dayKey)) return null;
+  const cycle = Math.max(1, Math.floor(Number(raw.cycle) || 1));
+  const day = clamp(Math.floor(Number(raw.day) || 1), 1, DAILY_LOGIN_REWARD_CYCLE_DAYS);
   return {
-    cycle: Math.max(1, Math.floor(Number(raw.cycle) || 1)),
-    day: clamp(Math.floor(Number(raw.day) || 1), 1, DAILY_LOGIN_REWARD_CYCLE_DAYS),
+    cycle,
+    day,
+    ordinal: Math.max(
+      1,
+      Math.floor(Number(raw.ordinal) || ((cycle - 1) * DAILY_LOGIN_REWARD_CYCLE_DAYS) + day)
+    ),
+    claimId: String(raw.claimId || "").slice(0, 96),
     dayKey,
     claimedAtMs: normalizeTimestampMs(raw.claimedAtMs || raw.claimedAt),
     goldHours: Math.max(0, Number(raw.goldHours) || 0),
@@ -22240,6 +23459,21 @@ function normalizeDailyLoginRewardReceipt(raw = null) {
   };
 }
 
+function getDailyLoginRewardOrdinal(cycle = 1, day = 1) {
+  const safeCycle = Math.max(1, Math.floor(Number(cycle) || 1));
+  const safeDay = clamp(Math.floor(Number(day) || 1), 1, DAILY_LOGIN_REWARD_CYCLE_DAYS);
+  return ((safeCycle - 1) * DAILY_LOGIN_REWARD_CYCLE_DAYS) + safeDay;
+}
+
+function getDailyLoginRewardPosition(ordinal = 1) {
+  const safeOrdinal = Math.max(1, Math.floor(Number(ordinal) || 1));
+  return {
+    ordinal: safeOrdinal,
+    cycle: Math.floor((safeOrdinal - 1) / DAILY_LOGIN_REWARD_CYCLE_DAYS) + 1,
+    day: ((safeOrdinal - 1) % DAILY_LOGIN_REWARD_CYCLE_DAYS) + 1,
+  };
+}
+
 function normalizeDailyLoginRewardStatus(raw = null, nowMs = Date.now()) {
   const source = raw && typeof raw === "object" ? raw : {};
   const serverTimeMs = normalizeTimestampMs(source.serverTimeMs) || Math.max(0, Number(nowMs) || Date.now());
@@ -22249,23 +23483,69 @@ function normalizeDailyLoginRewardStatus(raw = null, nowMs = Date.now()) {
   const lastClaimDayKey = /^\d{4}-\d{2}-\d{2}$/.test(String(source.lastClaimDayKey || ""))
     ? String(source.lastClaimDayKey)
     : "";
+  const lastAttendanceDayKey = /^\d{4}-\d{2}-\d{2}$/.test(String(source.lastAttendanceDayKey || ""))
+    ? String(source.lastAttendanceDayKey)
+    : Number(source.schemaVersion) < DAILY_LOGIN_REWARD_SCHEMA_VERSION
+      ? lastClaimDayKey
+      : "";
+  const deferredAttendanceDayKey = /^\d{4}-\d{2}-\d{2}$/.test(String(source.deferredAttendanceDayKey || ""))
+    ? String(source.deferredAttendanceDayKey)
+    : "";
+  const legacyCycle = Math.max(1, Math.floor(Number(source.cycle) || 1));
+  const legacyNextDay = clamp(Math.floor(Number(source.nextDay) || 1), 1, DAILY_LOGIN_REWARD_CYCLE_DAYS);
+  const nextClaimOrdinal = Math.max(
+    1,
+    Math.floor(Number(source.nextClaimOrdinal) || getDailyLoginRewardOrdinal(legacyCycle, legacyNextDay))
+  );
+  const earnedThroughOrdinal = Math.min(
+    nextClaimOrdinal + DAILY_LOGIN_REWARD_MAX_PENDING - 1,
+    Math.max(
+      nextClaimOrdinal - 1,
+      Math.floor(Number(source.earnedThroughOrdinal) || (nextClaimOrdinal - 1))
+    )
+  );
+  const nextPosition = getDailyLoginRewardPosition(nextClaimOrdinal);
+  const earnedPosition = earnedThroughOrdinal >= nextClaimOrdinal
+    ? getDailyLoginRewardPosition(earnedThroughOrdinal)
+    : null;
+  const pendingCount = Math.max(0, earnedThroughOrdinal - nextClaimOrdinal + 1);
+  const attendedToday = typeof source.attendedToday === "boolean"
+    ? source.attendedToday
+    : lastAttendanceDayKey === dayKey;
   const claimedToday = typeof source.claimedToday === "boolean"
     ? source.claimedToday
     : lastClaimDayKey === dayKey;
   return {
     schemaVersion: DAILY_LOGIN_REWARD_SCHEMA_VERSION,
-    cycle: Math.max(1, Math.floor(Number(source.cycle) || 1)),
-    nextDay: clamp(Math.floor(Number(source.nextDay) || 1), 1, DAILY_LOGIN_REWARD_CYCLE_DAYS),
+    cycle: nextPosition.cycle,
+    nextDay: nextPosition.day,
+    nextClaimOrdinal,
+    earnedThroughOrdinal,
+    pendingCount,
+    queuedCount: Math.max(0, pendingCount - 1),
+    maxPendingRewards: Math.max(
+      1,
+      Math.floor(Number(source.maxPendingRewards) || DAILY_LOGIN_REWARD_MAX_PENDING)
+    ),
     totalClaims: Math.max(0, Math.floor(Number(source.totalClaims) || 0)),
+    lastAttendanceDayKey,
+    deferredAttendanceDayKey,
     lastClaimDayKey,
     lastClaimedAtMs: normalizeTimestampMs(source.lastClaimedAtMs || source.lastClaimedAt),
+    lastClaimRequestId: String(source.lastClaimRequestId || "").slice(0, 96),
     lastReceipt: normalizeDailyLoginRewardReceipt(source.lastReceipt),
-    eligible: typeof source.eligible === "boolean" ? source.eligible : !claimedToday,
+    eligible: pendingCount > 0,
+    attendedToday,
+    attendanceDeferred: typeof source.attendanceDeferred === "boolean"
+      ? source.attendanceDeferred
+      : deferredAttendanceDayKey === dayKey,
     claimedToday,
+    earnedThroughCycle: earnedPosition?.cycle || nextPosition.cycle,
+    earnedThroughDay: earnedPosition?.day || Math.max(0, nextPosition.day - 1),
     dayKey,
     serverTimeMs,
     nextUtcUnlockAtMs: normalizeTimestampMs(source.nextUtcUnlockAtMs)
-      || (claimedToday ? getNextUtcDayStartMs(serverTimeMs) : 0),
+      || (attendedToday ? getNextUtcDayStartMs(serverTimeMs) : 0),
     cycleLengthDays: DAILY_LOGIN_REWARD_CYCLE_DAYS,
   };
 }
@@ -22280,6 +23560,12 @@ function applyDailyLoginRewardProfileState(rawState = null, options = {}) {
   }, nowMs);
   const previousSignature = JSON.stringify(dailyLoginRewardStatus || null);
   dailyLoginRewardStatus = nextStatus;
+  if (
+    dailyLoginRewardPendingClaim
+    && dailyLoginRewardPendingClaim.expectedOrdinal !== nextStatus.nextClaimOrdinal
+  ) {
+    dailyLoginRewardPendingClaim = null;
+  }
   dailyLoginRewardError = "";
   scheduleDailyLoginRewardUtcRefresh();
   renderDailyLoginRewardButton();
@@ -22304,8 +23590,8 @@ function renderDailyLoginRewardButton() {
       ? "Loading daily rewards"
       : status
         ? eligible
-          ? `Claim daily reward, cycle ${status.cycle} day ${status.nextDay}`
-          : `Daily reward claimed, next is cycle ${status.cycle} day ${status.nextDay}`
+          ? `Claim ${status.pendingCount} daily reward${status.pendingCount === 1 ? "" : "s"}, next is cycle ${status.cycle} day ${status.nextDay}`
+          : `Daily attendance recorded, next reward is cycle ${status.cycle} day ${status.nextDay}`
         : "Open daily rewards";
   dailyLoginRewardBtn.setAttribute("aria-label", label);
 }
@@ -22329,6 +23615,7 @@ async function refreshDailyLoginRewardStatus(options = {}) {
   const api = getOnlineApi();
   if (!state || !isOnlineWorldActive() || !api?.isSignedIn?.() || !api?.getDailyLoginRewardStatus) {
     dailyLoginRewardStatus = null;
+    dailyLoginRewardPendingClaim = null;
     dailyLoginRewardError = "";
     renderDailyLoginRewardButton();
     return null;
@@ -22339,6 +23626,12 @@ async function refreshDailyLoginRewardStatus(options = {}) {
   try {
     const result = await api.getDailyLoginRewardStatus();
     dailyLoginRewardStatus = normalizeDailyLoginRewardStatus(result?.dailyLoginRewardStatus);
+    if (
+      dailyLoginRewardPendingClaim
+      && dailyLoginRewardPendingClaim.expectedOrdinal !== dailyLoginRewardStatus.nextClaimOrdinal
+    ) {
+      dailyLoginRewardPendingClaim = null;
+    }
     dailyLoginRewardError = "";
     scheduleDailyLoginRewardUtcRefresh();
     if (options.autoOpen) maybeAutoOpenDailyLoginRewards();
@@ -22389,8 +23682,11 @@ function maybeAutoOpenDailyLoginRewards() {
 
 function getDailyLoginRewardCardState(day, status = dailyLoginRewardStatus) {
   if (!status) return "locked";
-  if (day < status.nextDay) return "claimed";
-  if (day === status.nextDay) return status.eligible ? "available" : "waiting";
+  const ordinal = getDailyLoginRewardOrdinal(status.cycle, day);
+  if (ordinal < status.nextClaimOrdinal) return "claimed";
+  if (ordinal === status.nextClaimOrdinal && ordinal <= status.earnedThroughOrdinal) return "available";
+  if (ordinal > status.nextClaimOrdinal && ordinal <= status.earnedThroughOrdinal) return "queued";
+  if (ordinal === status.nextClaimOrdinal) return "next";
   return "locked";
 }
 
@@ -22399,30 +23695,40 @@ function formatDailyLoginRewardHours(value = 0) {
   return Number.isInteger(hours) ? String(hours) : hours.toFixed(1).replace(/\.0$/, "");
 }
 
-function renderDailyLoginRewardItems(items = {}) {
-  const entries = Object.entries(items).filter(([, quantity]) => Number(quantity) > 0);
-  if (!entries.length) return "";
-  return `<div class="daily-reward-item-list">${entries.map(([itemId, quantity]) => {
-    const item = getShopItemById(itemId);
-    if (!item) return "";
-    return `
-      <span class="daily-reward-item" title="${escapeHtml(item.label)} ×${formatNumber(quantity)}">
-        <img src="${escapeHtml(item.icon)}" alt="" draggable="false" />
-        <strong>×${formatNumber(quantity)}</strong>
-      </span>
-    `;
-  }).join("")}</div>`;
-}
-
-function renderDailyLoginRewardResources(reward = {}) {
-  const resources = [];
+function getDailyLoginRewardPresentation(reward = {}) {
   if (reward.goldHours > 0) {
-    resources.push(`<span class="daily-reward-resource gold"><img src="assets/gold-pickup.png" alt="" /><strong>${formatDailyLoginRewardHours(reward.goldHours)}h</strong></span>`);
+    return {
+      kind: "gold",
+      icon: "assets/gold-pickup.png",
+      label: `${formatDailyLoginRewardHours(reward.goldHours)}h Gold`,
+      title: `${formatDailyLoginRewardHours(reward.goldHours)} hours of city gold production`,
+    };
   }
   if (reward.troopHours > 0) {
-    resources.push(`<span class="daily-reward-resource troops"><img src="assets/troop-pickup.png" alt="" /><strong>${formatDailyLoginRewardHours(reward.troopHours)}h</strong></span>`);
+    return {
+      kind: "troops",
+      icon: "assets/troop-pickup.png",
+      label: `${formatDailyLoginRewardHours(reward.troopHours)}h Troops`,
+      title: `${formatDailyLoginRewardHours(reward.troopHours)} hours of city troop production`,
+    };
   }
-  return `<div class="daily-reward-resource-list">${resources.join("")}</div>`;
+  const [itemEntry] = Object.entries(reward.items || {}).filter(([, quantity]) => Number(quantity) > 0);
+  const item = itemEntry ? getShopItemById(itemEntry[0]) : null;
+  const quantity = itemEntry ? Math.max(1, Math.floor(Number(itemEntry[1]) || 1)) : 0;
+  if (item) {
+    return {
+      kind: "item",
+      icon: item.icon,
+      label: `${quantity > 1 ? `${formatNumber(quantity)}× ` : ""}${item.label}`,
+      title: item.label,
+    };
+  }
+  return {
+    kind: "unknown",
+    icon: "assets/daily-reward-icon-cutout.webp?v=20260728-daily-reward-cutout",
+    label: "Royal Reward",
+    title: "Royal Reward",
+  };
 }
 
 function renderDailyLoginRewardReceipt(receipt = null) {
@@ -22442,9 +23748,11 @@ function renderDailyLoginRewardReceipt(receipt = null) {
 }
 
 function getDailyLoginRewardCountdownText(status = dailyLoginRewardStatus) {
-  if (!status?.claimedToday || !status.nextUtcUnlockAtMs) return "";
+  if (!status?.attendedToday || !status.nextUtcUnlockAtMs) return "Recording today’s attendance…";
   const remainingSeconds = Math.max(0, Math.ceil((status.nextUtcUnlockAtMs - Date.now()) / 1000));
-  return remainingSeconds > 0 ? `Next claim in ${formatDuration(remainingSeconds)} (UTC)` : "Refreshing daily reward…";
+  return remainingSeconds > 0
+    ? `Next attendance in ${formatDuration(remainingSeconds)} (UTC)`
+    : "Refreshing attendance…";
 }
 
 function updateDailyLoginRewardCountdown() {
@@ -22473,33 +23781,42 @@ function renderDailyLoginRewardModal() {
     return;
   }
 
+  const pendingLabel = `${formatNumber(status.pendingCount)} reward${status.pendingCount === 1 ? "" : "s"} ready`;
   const claimLabel = dailyLoginRewardClaimInFlight
     ? "Collecting…"
-    : `Claim Cycle ${formatNumber(status.cycle)} · Day ${formatNumber(status.nextDay)}`;
+    : `Collect Day ${formatNumber(status.nextDay)}`;
+  const attendanceMessage = status.attendanceDeferred
+    ? "Today’s attendance is saved. Collect one reward to add it to the queue."
+    : status.pendingCount >= status.maxPendingRewards
+      ? `Reward queue full (${status.pendingCount}/${status.maxPendingRewards}).`
+      : "Today’s attendance has been recorded.";
   modalBody.innerHTML = `
     <section class="daily-reward-panel">
       <header class="daily-reward-hero">
-        <img src="assets/daily-reward-icon.svg?v=20260727-daily-login" alt="" />
+        <img src="assets/daily-reward-icon-cutout.webp?v=20260728-daily-reward-cutout" alt="" />
         <div>
-          <span>Cycle ${formatNumber(status.cycle)}</span>
-          <h3>Day ${formatNumber(status.nextDay)} of ${formatNumber(DAILY_LOGIN_REWARD_CYCLE_DAYS)}</h3>
-          <p>Missing a day never resets your progress. Rewards scale from your permanent base city production.</p>
+          <span>Royal Attendance · Cycle ${formatNumber(status.cycle)}</span>
+          <h3>${escapeHtml(pendingLabel)}</h3>
+          <p>${escapeHtml(attendanceMessage)}</p>
         </div>
       </header>
       ${status.claimedToday ? renderDailyLoginRewardReceipt(status.lastReceipt) : ""}
       <div class="daily-reward-status-row">
-        <strong>${status.eligible ? "Today’s reward is ready" : "Today’s reward is collected"}</strong>
+        <strong>${status.eligible ? `Next: Day ${formatNumber(status.nextDay)}` : "Next reward is not earned yet"}</strong>
         <span data-daily-reward-countdown>${escapeHtml(getDailyLoginRewardCountdownText(status))}</span>
       </div>
       <div class="daily-reward-grid" aria-label="30-day daily reward track">
         ${DAILY_LOGIN_REWARD_DAYS.map(reward => {
           const cardState = getDailyLoginRewardCardState(reward.day, status);
+          const presentation = getDailyLoginRewardPresentation(reward);
           const stateLabel = cardState === "claimed"
             ? "Claimed"
             : cardState === "available"
               ? "Ready"
-              : cardState === "waiting"
-                ? "Tomorrow"
+              : cardState === "queued"
+                ? "Queued"
+                : cardState === "next"
+                  ? "Next"
                 : "Locked";
           const isClaimableCard = cardState === "available";
           const cardTag = isClaimableCard ? "button" : "article";
@@ -22507,20 +23824,21 @@ function renderDailyLoginRewardModal() {
             ? `type="button" data-daily-reward-claim-card ${dailyLoginRewardClaimInFlight ? "disabled" : ""}`
             : "";
           return `
-            <${cardTag} class="daily-reward-card ${cardState}" ${cardAttributes} aria-label="Day ${reward.day}, ${isClaimableCard ? "claim this reward" : stateLabel}">
+            <${cardTag} class="daily-reward-card ${cardState} ${presentation.kind}" ${cardAttributes} aria-label="Day ${reward.day}, ${escapeHtml(presentation.title)}, ${isClaimableCard ? "claim this reward" : stateLabel}">
               <div class="daily-reward-card-head">
                 <strong>Day ${formatNumber(reward.day)}</strong>
                 <span>${stateLabel}</span>
               </div>
-              ${renderDailyLoginRewardResources(reward)}
-              ${renderDailyLoginRewardItems(reward.items)}
+              <img class="daily-reward-card-icon" src="${escapeHtml(presentation.icon)}" alt="" draggable="false" />
+              <strong class="daily-reward-card-label">${escapeHtml(presentation.label)}</strong>
+              ${cardState === "claimed" ? `<span class="daily-reward-check" aria-hidden="true">✓</span>` : ""}
             </${cardTag}>
           `;
         }).join("")}
       </div>
       <footer class="daily-reward-actions">
         <button class="primary daily-reward-claim-btn" type="button" data-daily-reward-claim ${!status.eligible || dailyLoginRewardClaimInFlight ? "disabled" : ""}>${escapeHtml(claimLabel)}</button>
-        <small>One claim per UTC day. Day 30 restarts the track at day 1 on the following UTC day.</small>
+        <small>Log in once per UTC day to earn the next reward. Up to ${formatNumber(status.maxPendingRewards)} earned rewards can wait for collection. Missing a day pauses the track.</small>
       </footer>
     </section>
   `;
@@ -22542,23 +23860,41 @@ async function showDailyLoginRewardsModal(options = {}) {
   }
 }
 
+function createDailyLoginRewardClaimId() {
+  if (window.crypto?.randomUUID) return window.crypto.randomUUID();
+  const random = Math.random().toString(36).slice(2, 12);
+  return `daily-${Date.now().toString(36)}-${random}`;
+}
+
 async function claimDailyLoginReward() {
   const api = getOnlineApi();
   if (!api?.claimDailyLoginReward || dailyLoginRewardClaimInFlight || !dailyLoginRewardStatus?.eligible) return;
+  if (
+    !dailyLoginRewardPendingClaim
+    || dailyLoginRewardPendingClaim.expectedOrdinal !== dailyLoginRewardStatus.nextClaimOrdinal
+  ) {
+    dailyLoginRewardPendingClaim = {
+      claimId: createDailyLoginRewardClaimId(),
+      expectedOrdinal: dailyLoginRewardStatus.nextClaimOrdinal,
+    };
+  }
   dailyLoginRewardClaimInFlight = true;
   dailyLoginRewardError = "";
   renderDailyLoginRewardModal();
   try {
-    const result = await api.claimDailyLoginReward();
+    const result = await api.claimDailyLoginReward(dailyLoginRewardPendingClaim);
     if (result?.currentUser || result?.cityUpdates) {
       applyServerEconomyResult(result, { renderCities: true });
     }
     dailyLoginRewardStatus = normalizeDailyLoginRewardStatus(result?.dailyLoginRewardStatus);
+    dailyLoginRewardPendingClaim = null;
     scheduleDailyLoginRewardUtcRefresh();
     renderDailyLoginRewardButton();
     const receipt = normalizeDailyLoginRewardReceipt(result?.receipt);
     if (result?.replayed) {
-      showToast("Today’s daily reward was already collected.");
+      showToast("That daily reward was already collected.");
+    } else if (result?.claimed === false) {
+      showToast("No earned daily reward is waiting.");
     } else if (receipt) {
       const parts = [];
       if (receipt.gold > 0) parts.push(`${formatNumber(receipt.gold)} gold`);
@@ -22572,6 +23908,11 @@ async function claimDailyLoginReward() {
     saveGame();
     queueOnlineSave();
   } catch (error) {
+    const errorCode = String(error?.code || "").toLowerCase().replace(/^functions\//, "");
+    if (errorCode === "aborted" || errorCode === "failed-precondition") {
+      dailyLoginRewardPendingClaim = null;
+      await refreshDailyLoginRewardStatus({ silent: true });
+    }
     dailyLoginRewardError = error?.message || "The daily reward could not be collected.";
     console.warn("Daily login reward claim failed", error);
     showToast(dailyLoginRewardError);
@@ -23588,7 +24929,7 @@ function showAttackPreview(source, target) {
         : `Expected failure with about <strong>${formatNumber(preview.defendersLeft)}</strong> defenders left.`}</p>
       ${protectionNotice ? `<p class="tiny-warning">${escapeHtml(protectionNotice)}</p>` : ""}
       ${shieldDropWarning ? `<p class="shield-drop-warning"><strong>Shield warning</strong><span>${escapeHtml(shieldDropWarning)}</span></p>` : ""}
-      ${preview.cooldownRemaining > 0 ? `<p class="tiny-warning">Recent capture cooldown: XP is reduced for ${formatDuration(preview.cooldownRemaining)}.</p>` : ""}
+      ${preview.cooldownRemaining > 0 ? `<p class="tiny-warning">Recent capture cooldown: city/wall XP is unavailable for ${formatDuration(preview.cooldownRemaining)}; troop-loss XP still applies.</p>` : ""}
       <p class="tiny-warning">This is an estimate based on current numbers. Confirm launches using the current troop count.</p>
       <div class="modal-actions">
         <button id="confirmAttackBtn" class="danger-action" type="button">Attack</button>
@@ -23678,7 +25019,6 @@ async function upgradeCity(cityId, levels = 1) {
     serverCityUpgradeInFlightIds.add(inFlightKey);
     let totalUpgraded = 0;
     let totalSpent = 0;
-    let totalTroopsAwarded = 0;
     try {
       let remainingLevels = requestedLevels;
       while (remainingLevels > 0) {
@@ -23692,14 +25032,13 @@ async function upgradeCity(cityId, levels = 1) {
         const upgraded = Math.max(0, Math.floor(Number(result?.upgraded) || chunkLevels));
         totalUpgraded += upgraded;
         totalSpent += Math.max(0, Math.floor(Number(result?.spentGold) || 0));
-        totalTroopsAwarded += Math.max(0, Math.floor(Number(result?.troopsAwarded) || 0));
         remainingLevels -= upgraded;
         if (upgraded < chunkLevels) break;
       }
       const updatedCity = cityById(city.id) || city;
       const levelText = totalUpgraded > 1 ? `${formatNumber(totalUpgraded)} levels` : "1 level";
       addLog(`${updatedCity.name} upgraded ${levelText} to level ${formatNumber(updatedCity.level)}${totalSpent ? ` for ${formatNumber(totalSpent)} gold` : ""}.`);
-      showToast(`${updatedCity.name} upgraded ${levelText}${totalTroopsAwarded ? ` · +${formatNumber(totalTroopsAwarded)} level-up troops` : ""}`);
+      showToast(`${updatedCity.name} upgraded ${levelText}`);
       renderAll();
     } catch (error) {
       onlineLastError = error?.message || String(error);
@@ -23717,7 +25056,6 @@ async function upgradeCity(cityId, levels = 1) {
     return;
   }
   let upgraded = 0;
-  let xpAward = 0;
   while (upgraded < requestedLevels) {
     const cost = getLevelCost(city);
     if (!Number.isFinite(cost) || state.gold < cost) break;
@@ -23726,7 +25064,6 @@ async function upgradeCity(cityId, levels = 1) {
     const nextLevel = clampCityLevel(city.level + 1);
     if (nextLevel <= city.level) break;
     city.level = nextLevel;
-    xpAward += getCityUpgradeXpAward(city);
     upgraded += 1;
   }
 
@@ -23738,7 +25075,6 @@ async function upgradeCity(cityId, levels = 1) {
 
   addLog(`${city.name} upgraded to level ${city.level}.`);
   showToast(`${city.name} upgraded`);
-  addCharacterXp(xpAward, `${city.name} upgrade`);
   markOwnedCityChanged(city);
   saveGame();
   renderAll();
@@ -23936,7 +25272,7 @@ function calculateBattlePreviewForTroops(source, target, amount, knownRoute = nu
     ? 0
     : result.success
       ? getCaptureXpAward(target, target.owner, result.defenderLosses, "player")
-      : getFailedAttackXpAward(target, target.owner, Math.max(0, Math.floor(Number(target.troops) || 0)), "player");
+      : getFailedAttackXpAward(target, target.owner, result.defenderLosses, "player");
   const xpLabel = attackProtection ? "attacker XP" : result.success ? "capture XP" : "defeat XP";
   const cooldownRemaining = getCaptureCooldownRemaining(target);
   let label = "Weak odds";
@@ -24131,7 +25467,7 @@ function updateIncomingAttackUi() {
 function updateOutgoingAttackUi() {
   if (!outgoingAttackBtn) return;
   const operations = getActiveOperationsSnapshot();
-  const total = operations.marches.length + operations.reinforcements.length + operations.camps.length + operations.strongholds.length;
+  const total = operations.marches.length + operations.rallies.length + operations.reinforcements.length + operations.camps.length + operations.strongholds.length;
   outgoingAttackBtn.hidden = total === 0;
   outgoingAttackBtn.classList.toggle("active", total > 0);
   if (!total) {
@@ -24150,11 +25486,14 @@ function updateOutgoingAttackUi() {
     .sort((a, b) => Math.max(0, Number(a.remaining) || 0) - Math.max(0, Number(b.remaining) || 0));
   const status = travelingArmies.length
     ? travelingArmies[0].serverPending ? "Sending" : formatDuration(travelingArmies[0].remaining)
+    : operations.rallies.length
+      ? "Rallies"
     : soonestCamp
       ? formatDuration(Math.max(0, Math.ceil((soonestCamp.payoutAtMs - Date.now()) / 1000)))
       : operations.reinforcements.length ? "Support" : "Holdings";
   const titleParts = [];
   if (operations.marches.length) titleParts.push(formatOutgoingMissionSummary(operations.marches));
+  if (operations.rallies.length) titleParts.push(`${formatNumber(operations.rallies.length)} active ${operations.rallies.length === 1 ? "rally" : "rallies"}`);
   if (operations.reinforcements.length) titleParts.push(formatReinforcementOperationSummary(operations.reinforcements));
   if (operations.camps.length) titleParts.push(`${formatNumber(operations.camps.length)} held ${operations.camps.length === 1 ? "camp" : "camps"}`);
   if (operations.strongholds.length) titleParts.push(`${formatNumber(operations.strongholds.length)} held ${operations.strongholds.length === 1 ? "stronghold" : "strongholds"}`);
@@ -24202,6 +25541,7 @@ function getActiveOperationsSnapshot() {
   const incomingReinforcements = getIncomingClanReinforcementMarches();
   return {
     marches: outgoingMarches.filter(mission => mission.kind !== "reinforce" && !mission.reinforcementReturn),
+    rallies: onlineClanRallies.slice(),
     camps: getHeldCampsForActiveOperations(),
     strongholds: getHeldStrongholdsForActiveOperations(),
     reinforcements: [
@@ -24262,9 +25602,10 @@ function getArmyKindCounts(missions) {
     else if (mission.kind === "scout") counts.scouts += 1;
     else if (mission.kind === "transfer") counts.transfers += 1;
     else if (mission.kind === "reinforce") counts.reinforcements += 1;
+    else if (mission.kind === "rally_join") counts.rallyJoins += 1;
     else counts.attacks += 1;
     return counts;
-  }, { attacks: 0, scouts: 0, transfers: 0, reinforcements: 0, returns: 0 });
+  }, { attacks: 0, scouts: 0, transfers: 0, reinforcements: 0, rallyJoins: 0, returns: 0 });
 }
 
 function getIncomingThreatCounts(incoming) {
@@ -24286,6 +25627,7 @@ function formatOutgoingMissionSummary(outgoing) {
   if (counts.scouts) parts.push(`${formatNumber(counts.scouts)} outgoing ${counts.scouts === 1 ? "scout" : "scouts"}`);
   if (counts.transfers) parts.push(`${formatNumber(counts.transfers)} ${counts.transfers === 1 ? "troop transfer" : "troop transfers"}`);
   if (counts.reinforcements) parts.push(`${formatNumber(counts.reinforcements)} clan ${counts.reinforcements === 1 ? "reinforcement" : "reinforcements"}`);
+  if (counts.rallyJoins) parts.push(`${formatNumber(counts.rallyJoins)} rally ${counts.rallyJoins === 1 ? "contribution" : "contributions"}`);
   if (counts.returns) parts.push(`${formatNumber(counts.returns)} returning ${counts.returns === 1 ? "army" : "armies"}`);
   return parts.join(", ") || "No active marches";
 }
@@ -24338,9 +25680,10 @@ function renderIncomingAttackCard(attack) {
   const isScout = attack.kind === "scout";
   const threatLabel = isScout ? "Scout" : "Attack";
   const forceLabel = isScout ? "Scout" : "Attacker";
+  const estimatedTroops = getArmyTroopDisplayText(attack);
   const forceDetails = isScout
     ? `1 scout from ${escapeHtml(sourceName)}`
-    : `${formatNumber(attack.troops)} troops from ${escapeHtml(sourceName)}`;
+    : `Estimated troops: ${escapeHtml(estimatedTroops)} from ${escapeHtml(sourceName)}`;
   return `
     <article class="incoming-attack-card ${isScout ? "incoming-scout-card" : ""}">
       <div class="incoming-attack-badge">
@@ -24381,7 +25724,7 @@ async function focusIncomingAttackCity(cityId) {
 
 function showOutgoingAttacksModal() {
   const operations = getActiveOperationsSnapshot();
-  const total = operations.marches.length + operations.reinforcements.length + operations.camps.length + operations.strongholds.length;
+  const total = operations.marches.length + operations.rallies.length + operations.reinforcements.length + operations.camps.length + operations.strongholds.length;
   if (!total) {
     showToast("No active marches or controlled objectives right now.");
     updateOutgoingAttackUi();
@@ -24390,6 +25733,8 @@ function showOutgoingAttacksModal() {
   if (!operations[activeOperationsTab]?.length) {
     activeOperationsTab = operations.marches.length
       ? "marches"
+      : operations.rallies.length
+        ? "rallies"
       : operations.reinforcements.length
         ? "reinforcements"
       : operations.camps.length
@@ -24405,16 +25750,19 @@ function showOutgoingAttacksModal() {
 function renderOutgoingAttacksModalContent(operations = getActiveOperationsSnapshot()) {
   const normalizedOperations = operations?.marches
     ? operations
-    : { marches: Array.isArray(operations) ? operations : [], camps: getHeldCampsForActiveOperations(), strongholds: getHeldStrongholdsForActiveOperations(), reinforcements: [] };
-  const { marches, camps, strongholds, reinforcements = [] } = normalizedOperations;
+    : { marches: Array.isArray(operations) ? operations : [], rallies: onlineClanRallies.slice(), camps: getHeldCampsForActiveOperations(), strongholds: getHeldStrongholdsForActiveOperations(), reinforcements: [] };
+  const { marches, rallies = [], camps, strongholds, reinforcements = [] } = normalizedOperations;
   const tabs = [
     { id: "marches", label: "Marches", count: marches.length },
+    { id: "rallies", label: "Rallies", count: rallies.length },
     { id: "reinforcements", label: "Reinforcements", count: reinforcements.length },
     { id: "camps", label: "Camps", count: camps.length },
     { id: "strongholds", label: "Strongholds", count: strongholds.length },
   ];
   if (!tabs.some(tab => tab.id === activeOperationsTab)) activeOperationsTab = "marches";
-  const panel = activeOperationsTab === "reinforcements"
+  const panel = activeOperationsTab === "rallies"
+    ? renderClanRallyOperationPanel(rallies)
+    : activeOperationsTab === "reinforcements"
     ? renderReinforcementOperationPanel(reinforcements)
     : activeOperationsTab === "camps"
     ? renderHeldCampsOperationPanel(camps)
@@ -24443,8 +25791,8 @@ function renderOutgoingAttacksModalContent(operations = getActiveOperationsSnaps
       renderOutgoingAttacksModalContent();
     });
   });
-  modalBody.querySelectorAll("[data-outgoing-city]").forEach(button => {
-    button.addEventListener("click", () => focusOutgoingAttackCity(button.dataset.outgoingCity));
+  modalBody.querySelectorAll("[data-outgoing-march]").forEach(button => {
+    button.addEventListener("click", () => focusOutgoingMarchLocation(button.dataset.outgoingMarch));
   });
   modalBody.querySelectorAll("[data-operation-location]").forEach(button => {
     button.addEventListener("click", () => focusActiveOperationLocation({
@@ -24459,7 +25807,21 @@ function renderOutgoingAttacksModalContent(operations = getActiveOperationsSnaps
   modalBody.querySelectorAll("[data-recall-horn]").forEach(button => {
     button.addEventListener("click", () => useRecallHornOnMission(button.dataset.recallHorn));
   });
+  bindClanRallyControls(modalBody);
   bindHoldingReinforcementButtons();
+}
+
+function renderClanRallyOperationPanel(rallies = []) {
+  if (!rallies.length) return `<div class="incoming-attack-empty">No clan rallies are active.</div>`;
+  return `
+    <div class="clan-rally-operation-panel">
+      <div class="incoming-attack-summary">
+        <strong>${formatNumber(rallies.length)}</strong>
+        <span>${rallies.length === 1 ? "One coordinated assault is" : `${formatNumber(rallies.length)} coordinated assaults are`} active.</span>
+        <small>Only clan members can see forming rally targets.</small>
+      </div>
+      <div class="clan-rally-list">${rallies.map(renderClanRallyCard).join("")}</div>
+    </div>`;
 }
 
 function renderReinforcementOperationPanel(entries = []) {
@@ -24656,7 +26018,7 @@ function isSwiftMarchOrderEligible(mission) {
 }
 
 function isRecallHornEligible(mission) {
-  if (!mission || mission.owner !== "player" || mission.kind === "scout" || mission.returning || mission.campReturn) return false;
+  if (!mission || mission.owner !== "player" || ["scout", "rally_join"].includes(mission.kind) || mission.returning || mission.campReturn) return false;
   if (mission.serverPending || mission.isResolving) return false;
   if (!getOnlineArmyResolutionId(mission)) return false;
   return Math.max(0, Number(mission.remaining) || 0) > 1;
@@ -24780,9 +26142,10 @@ function renderOutgoingAttackCard(mission) {
   const ownerName = city ? getBattleReportOwnerName(city, city.owner) : "Unknown owner";
   const isScout = mission.kind === "scout";
   const isTransfer = mission.kind === "transfer";
+  const isRallyJoin = mission.kind === "rally_join";
   const isCampReturn = isTransfer && Boolean(mission.campReturn);
   const isReinforcement = isTransfer && Boolean(city && (isStronghold(city) || isRewardCampTarget(city)));
-  const missionLabel = isReturning ? "Returning" : isScout ? "Scout" : isCampReturn ? "Camp Recall" : isReinforcement ? "Reinforce" : isTransfer ? "Transfer" : "Attack";
+  const missionLabel = isReturning ? "Returning" : isScout ? "Scout" : isRallyJoin ? "Rally Assembly" : isCampReturn ? "Camp Recall" : isReinforcement ? "Reinforce" : isTransfer ? "Transfer" : "Attack";
   const forceDetails = isScout
     ? `1 scout from ${escapeHtml(sourceName)}`
     : `${formatNumber(mission.troops)} troops from ${escapeHtml(sourceName)}`;
@@ -24790,16 +26153,18 @@ function renderOutgoingAttackCard(mission) {
     ? `Recalled before reaching ${escapeHtml(originalTargetName)}`
     : isCampReturn
     ? `Withdrawing stationed troops to ${escapeHtml(targetName)}`
+    : isRallyJoin
+    ? `Joining the clan rally at ${escapeHtml(targetName)}`
     : isTransfer
     ? `${isReinforcement ? "Reinforcing" : "Moving troops to"} ${escapeHtml(targetName)}`
     : city
     ? `${escapeHtml(ownerName)} - ${formatNumber(city.troops)} troops`
     : "Target details are loading";
-  const locateCity = isReturning ? sourceCity : city;
-  const locateButton = locateCity
-    ? `<button class="incoming-attack-locate" data-outgoing-city="${escapeHtml(locateCity.id)}" type="button" aria-label="Go to ${escapeHtml(locateCity.name)}">&#8982;</button>`
-    : `<button class="incoming-attack-locate" type="button" aria-label="Target unavailable" disabled>&#8982;</button>`;
   const onlineId = getOnlineArmyResolutionId(mission);
+  const marchId = String(mission.key || onlineId || "").trim();
+  const locateButton = marchId
+    ? `<button class="incoming-attack-locate" data-outgoing-march="${escapeHtml(marchId)}" type="button" title="Go to current march location" aria-label="Go to current march location">&#8982;</button>`
+    : `<button class="incoming-attack-locate" type="button" aria-label="March location unavailable" disabled>&#8982;</button>`;
   const itemActionBusy = swiftMarchOrderRequests.has(onlineId) || recallHornRequests.has(onlineId);
   const swiftItemCount = Math.max(0, Math.floor(Number(ensureShopItems()[SWIFT_MARCH_ORDER_ITEM_ID]) || 0));
   const swiftOrderButton = isSwiftMarchOrderEligible(mission) && swiftItemCount > 0
@@ -24818,7 +26183,7 @@ function renderOutgoingAttackCard(mission) {
     : "";
 
   return `
-    <article class="incoming-attack-card outgoing-attack-card ${isReturning ? "outgoing-return-card" : isScout ? "outgoing-scout-card" : isTransfer ? "outgoing-transfer-card" : ""}">
+    <article class="incoming-attack-card outgoing-attack-card ${isReturning ? "outgoing-return-card" : isScout ? "outgoing-scout-card" : isTransfer || isRallyJoin ? "outgoing-transfer-card" : ""}">
       <div class="incoming-attack-badge">
         <strong>${mission.serverPending ? "Sending" : mission.isResolving ? "Resolving" : formatDuration(mission.remaining)}</strong>
         <small>${missionLabel}</small>
@@ -24839,20 +26204,43 @@ function renderOutgoingAttackCard(mission) {
   `;
 }
 
-async function focusOutgoingAttackCity(cityId) {
-  const city = getArmyTargetById(cityId);
-  if (!city) {
-    showToast("That target is no longer available.");
+async function focusOutgoingMarchLocation(marchId) {
+  const normalizedMarchId = String(marchId || "").trim();
+  const mission = getOutgoingAttacks().find(entry => (
+    entry.key === normalizedMarchId
+    || getOnlineArmyResolutionId(entry) === normalizedMarchId
+  ));
+  if (!mission) {
+    showToast("That march is no longer active.");
     return;
   }
-  const regionId = getCityRegionId(city);
+  const progress = getArmyTravelProgress(mission, Date.now());
+  const location = getMissionPointAtProgress(mission, progress);
+  const rawRegionId = String(location?.regionId || "").trim();
+  const point = {
+    x: Number(location?.point?.x),
+    y: Number(location?.point?.y),
+  };
+  if (!rawRegionId || !Number.isFinite(point.x) || !Number.isFinite(point.y)) {
+    showToast("That march location is still syncing.");
+    return;
+  }
+  const regionId = normalizeRegionId(rawRegionId);
   if (modal.open) modal.close();
   if (regionId !== getActiveMapRegionId()) {
-    await switchOnlineIsland(regionId);
+    const switched = await switchOnlineIsland(regionId);
+    if (!switched) {
+      showToast(`Could not open ${getRegionLabel(regionId)}.`);
+      return;
+    }
   }
   requestAnimationFrame(() => {
-    centerOnCity(city.id);
-    showToast(`Viewing ${city.name}`);
+    if (!centerOnWorldPoint(point, regionId)) {
+      showToast("That march location is still syncing.");
+      return;
+    }
+    renderArmies(true);
+    showToast("Viewing current march location");
   });
 }
 
@@ -25088,12 +26476,13 @@ function showLogModal() {
       </div>
       <div class="battle-report-list">
         ${filteredReports.length
-          ? filteredReports.map(renderBattleReportCard).join("")
+          ? filteredReports.map((report, index) => renderBattleReportCard(report, index)).join("")
           : `<div class="battle-report-empty">No ${battleReportFilter === "all" ? "battle" : battleReportFilter} reports yet.</div>`}
       </div>
     </div>
   `;
 
+  applyBattleReportTargetFlags(filteredReports);
   modalBody.querySelectorAll("[data-report-filter]").forEach(button => {
     button.addEventListener("click", () => {
       battleReportFilter = button.dataset.reportFilter || "all";
@@ -25107,13 +26496,16 @@ function showLogModal() {
   if (!modal.open) modal.showModal();
 }
 
-function renderBattleReportCard(report) {
+function renderBattleReportCard(report, index = 0) {
   const badge = getBattleReportBadge(report);
   const age = formatDuration(Math.max(0, state.gameSeconds - report.createdAt));
   const troopValue = report.type === "scout"
     ? report.troopCount
     : (report.sentTroops || report.troopCount || report.defendersLeft);
   const opponent = report.opponentName || report.ownerName || "Unknown";
+  const opponentFlag = report.opponentFlag
+    ? `<span class="kingdom-flag kingdom-flag-small battle-report-target-flag" data-battle-report-target-flag="${index}" role="img" aria-label="${escapeHtml(opponent)} kingdom flag"><span class="flag-symbol"></span></span>`
+    : "";
   const troopLabel = report.type === "scout" ? "reported" : "sent";
   const locateButton = renderBattleReportLocateButton(report);
   return `
@@ -25132,8 +26524,8 @@ function renderBattleReportCard(report) {
         <small>${troopLabel}</small>
       </div>
       <div class="battle-report-opponent">
+        ${opponentFlag}
         <strong>${escapeHtml(opponent)}</strong>
-        <small>${escapeHtml(report.summary || getBattleReportSummary(report))}</small>
       </div>
       <div class="battle-report-actions">
         ${locateButton}
@@ -25141,6 +26533,14 @@ function renderBattleReportCard(report) {
       </div>
     </article>
   `;
+}
+
+function applyBattleReportTargetFlags(reports = []) {
+  reports.forEach((report, index) => {
+    if (!report?.opponentFlag) return;
+    const flag = modalBody.querySelector(`[data-battle-report-target-flag="${index}"]`);
+    applyFlagToElement(flag, report.opponentFlag);
+  });
 }
 
 function renderBattleReportLocateButton(report, extraClass = "") {
@@ -25575,7 +26975,7 @@ function showHelpModal() {
       <li>Army travel uses route distance plus troop-size bands. Larger armies march slower, scouts move as one troop, and March Orders reduces travel time.</li>
       <li>Glowing pickups appear near your owned cities on the current island during active play every three minutes, alternating between ten minutes of gold and troop production. Daily pickup limits are ${formatNumber(HARVEST_BONUS_DAILY_GOLD_LIMIT)} gold and ${formatNumber(HARVEST_BONUS_DAILY_TROOP_LIMIT)} troop pickups.</li>
       <li>Swordmastery boosts outgoing attack, Guild Charters reduces city upgrade cost, and Field Medics returns part of battle losses to your main city.</li>
-      <li>Captured cities enter a one-hour XP cooldown. Attacking during cooldown still works, but capture XP is reduced.</li>
+      <li>Captured cities enter a one-hour city-XP cooldown. Attacks still earn troop-loss XP, but the fixed city/wall XP component is unavailable until the cooldown ends.</li>
       <li>Main cities cannot be attacked. Use your main city as a protected home base while expanding from other cities.</li>
       <li>Demo Attacks protect weaker kingdoms: much stronger attackers send fewer effective troops, march slower, earn 0 XP, and defenders earn bonus XP.</li>
       <li>Shop items have UTC daily purchase limits. Reward Camp items are earned separately through contested objectives.</li>
@@ -25874,6 +27274,27 @@ function centerOnMap() {
   updateCameraTransform();
 }
 
+function centerOnWorldPoint(point, regionId = getActiveMapRegionId()) {
+  const targetRegionId = normalizeRegionId(regionId);
+  const x = Number(point?.x);
+  const y = Number(point?.y);
+  if (
+    !mapFrame
+    || targetRegionId !== getActiveMapRegionId()
+    || !Number.isFinite(x)
+    || !Number.isFinite(y)
+  ) return false;
+  const rect = mapFrame.getBoundingClientRect();
+  const mapPoint = worldToMapPoint({ x, y });
+  const dimensions = getActiveMapDimensions();
+  zoom = clampZoomForViewport(zoom, rect, dimensions);
+  const offset = getMapViewportOffset(rect, dimensions);
+  camera.x = mapPoint.x - (rect.width / 2 - offset.x) / zoom;
+  camera.y = mapPoint.y - (rect.height / 2 - offset.y) / zoom;
+  updateCameraTransform();
+  return true;
+}
+
 function centerOnCity(cityId) {
   const city = getArmyTargetById(cityId);
   if (!city || !mapFrame) return;
@@ -25881,14 +27302,7 @@ function centerOnCity(cityId) {
     centerOnMap();
     return;
   }
-  const rect = mapFrame.getBoundingClientRect();
-  const mapPoint = worldToMapPoint(city);
-  const dimensions = getActiveMapDimensions();
-  zoom = clampZoomForViewport(zoom, rect, dimensions);
-  const offset = getMapViewportOffset(rect, dimensions);
-  camera.x = mapPoint.x - (rect.width / 2 - offset.x) / zoom;
-  camera.y = mapPoint.y - (rect.height / 2 - offset.y) / zoom;
-  updateCameraTransform();
+  centerOnWorldPoint(city, getCityRegionId(city));
 }
 
 function getElementAvoidRect(element, viewRect, padding = 12) {
@@ -26264,6 +27678,31 @@ function resolveArmyTapToken(event) {
   return token && armyLayer.contains(token) && token.dataset.endpointInteractionDisabled !== "true" ? token : null;
 }
 
+function resolveMapTapTargets(event, prioritizeCity = false) {
+  if (prioritizeCity) {
+    const cityButton = resolveCityTapButton(event);
+    if (cityButton) return { cityButton, armyToken: null };
+    return { cityButton: null, armyToken: resolveArmyTapToken(event) };
+  }
+  const armyToken = resolveArmyTapToken(event);
+  if (armyToken) return { cityButton: null, armyToken };
+  return { cityButton: resolveCityTapButton(event), armyToken: null };
+}
+
+function getMapNodeTapMovementTolerance(pointerType = "", zoomLevel = zoom) {
+  const baseTolerance = pointerType === "touch" ? MAP_TOUCH_TAP_TOLERANCE : MAP_TOUCH_PAN_THRESHOLD;
+  const lowZoomBonus = Number(zoomLevel) <= LOW_ZOOM_PERFORMANCE_THRESHOLD
+    ? MAP_LOW_ZOOM_TAP_TOLERANCE_BONUS
+    : 0;
+  return baseTolerance + lowZoomBonus;
+}
+
+function hasMapTapMoved(tapState, event) {
+  if (!tapState || !event) return true;
+  const tolerance = getMapNodeTapMovementTolerance(tapState.pointerType, tapState.zoom);
+  return Math.hypot(event.clientX - tapState.x, event.clientY - tapState.y) > tolerance;
+}
+
 function trackCityTap(event, cityButton = resolveCityTapButton(event)) {
   if (!cityButton || !cityLayer.contains(cityButton)) return null;
   cityTapState = {
@@ -26271,6 +27710,8 @@ function trackCityTap(event, cityButton = resolveCityTapButton(event)) {
     cityId: cityButton.dataset.cityId,
     x: event.clientX,
     y: event.clientY,
+    pointerType: event.pointerType || "",
+    zoom,
     selected: false,
   };
   return cityButton;
@@ -26283,6 +27724,8 @@ function trackCampTap(event, campButton = resolveCampTapButton(event)) {
     campId: campButton.dataset.campId,
     x: event.clientX,
     y: event.clientY,
+    pointerType: event.pointerType || "",
+    zoom,
   };
   return campButton;
 }
@@ -26294,6 +27737,8 @@ function trackArmyTap(event, token = resolveArmyTapToken(event)) {
     tokenId: token.dataset.armyTokenId,
     x: event.clientX,
     y: event.clientY,
+    pointerType: event.pointerType || "",
+    zoom,
   };
   return token;
 }
@@ -26315,6 +27760,8 @@ function beginTrackedPan(event, startedOnMapNode = false) {
     cameraY: camera.y,
     moved: false,
     startedOnMapNode,
+    pointerType: event.pointerType || "",
+    zoom,
   };
   suppressMapClick = false;
   mapFrame.classList.add("dragging");
@@ -26325,8 +27772,9 @@ function startPan(event) {
 
   const isTouch = event.pointerType === "touch";
   const startedOnCommand = isMapCommandInteractionTarget(event.target);
-  const armyToken = startedOnCommand ? null : resolveArmyTapToken(event);
-  const cityButton = armyToken || startedOnCommand ? null : resolveCityTapButton(event);
+  const { cityButton, armyToken } = startedOnCommand
+    ? { cityButton: null, armyToken: null }
+    : resolveMapTapTargets(event, sendMode);
   if (cityButton) trackCityTap(event, cityButton);
   if (armyToken) trackArmyTap(event, armyToken);
   const startedOnMapNode = Boolean(cityButton || armyToken) || isMapNodeInteractionTarget(event.target);
@@ -26359,7 +27807,9 @@ function movePan(event) {
   const dx = event.clientX - panState.startX;
   const dy = event.clientY - panState.startY;
   const distance = Math.hypot(dx, dy);
-  const movementThreshold = panState.startedOnMapNode ? MAP_TOUCH_PAN_THRESHOLD : 5;
+  const movementThreshold = panState.startedOnMapNode
+    ? getMapNodeTapMovementTolerance(panState.pointerType, panState.zoom)
+    : 5;
   if (distance > movementThreshold) {
     panState.moved = true;
     if (cityTapState?.pointerId === event.pointerId) cityTapState = null;
@@ -26402,8 +27852,7 @@ function trySelectTrackedCityTap(event, { requireSameTarget = false } = {}) {
   if (!cityTapState || cityTapState.pointerId !== event.pointerId) return false;
   const tapState = cityTapState;
   cityTapState = null;
-  const moved = Math.hypot(event.clientX - tapState.x, event.clientY - tapState.y) > 12;
-  if (moved) return false;
+  if (hasMapTapMoved(tapState, event)) return false;
   if (requireSameTarget) {
     const cityButton = resolveCityTapButton(event);
     const sameCity = cityButton && cityLayer.contains(cityButton) && cityButton.dataset.cityId === tapState.cityId;
@@ -26422,8 +27871,7 @@ function trySelectTrackedCampTap(event, { requireSameTarget = false } = {}) {
   if (!campTapState || campTapState.pointerId !== event.pointerId) return false;
   const tapState = campTapState;
   campTapState = null;
-  const moved = Math.hypot(event.clientX - tapState.x, event.clientY - tapState.y) > 12;
-  if (moved) return false;
+  if (hasMapTapMoved(tapState, event)) return false;
   if (requireSameTarget) {
     const campButton = resolveCampTapButton(event);
     const sameCamp = campButton?.dataset.campId === tapState.campId;
@@ -26442,8 +27890,7 @@ function trySelectTrackedArmyTap(event) {
   if (!armyTapState || armyTapState.pointerId !== event.pointerId) return false;
   const tapState = armyTapState;
   armyTapState = null;
-  const moved = Math.hypot(event.clientX - tapState.x, event.clientY - tapState.y) > 12;
-  if (moved || !getArmyByTokenId(tapState.tokenId)) return false;
+  if (hasMapTapMoved(tapState, event) || !getArmyByTokenId(tapState.tokenId)) return false;
   suppressMapClick = true;
   selectedArmyTokenId = selectedArmyTokenId === tapState.tokenId ? "" : tapState.tokenId;
   updateArmyTokenNavigationSelection();
@@ -26580,6 +28027,7 @@ window.addEventListener("crownlands:auth", async () => {
   } else {
     stopGameServerMembershipWatcher({ clear: true });
     dailyLoginRewardStatus = null;
+    dailyLoginRewardPendingClaim = null;
     dailyLoginRewardError = "";
     if (dailyLoginRewardUtcTimer) window.clearTimeout(dailyLoginRewardUtcTimer);
     dailyLoginRewardUtcTimer = 0;
@@ -26621,6 +28069,7 @@ if (settingsTabBtn) settingsTabBtn.addEventListener("click", showProfileSettings
 if (clanContent) {
   clanContent.addEventListener("submit", handleClanSubmit);
   clanContent.addEventListener("click", handleClanClick);
+  clanContent.addEventListener("keydown", handleClanNavigationKeydown);
 }
 if (pushAlertsOffBtn) pushAlertsOffBtn.addEventListener("click", disablePushNotificationsFromSettings);
 if (pushAlertsOnBtn) pushAlertsOnBtn.addEventListener("click", enablePushNotificationsFromSettings);
@@ -26651,7 +28100,7 @@ cityLayer.addEventListener("pointerup", event => {
   if (isMapInteractionBlocked()) return;
   if (campTapState?.pointerId === event.pointerId) {
     const campButton = resolveCampTapButton(event);
-    const moved = Math.hypot(event.clientX - campTapState.x, event.clientY - campTapState.y) > 12;
+    const moved = hasMapTapMoved(campTapState, event);
     const sameCamp = campButton?.dataset.campId === campTapState.campId;
     if (!moved && sameCamp) {
       event.stopPropagation();
@@ -26664,7 +28113,7 @@ cityLayer.addEventListener("pointerup", event => {
   }
   if (!cityTapState || cityTapState.pointerId !== event.pointerId) return;
   const cityButton = resolveCityTapButton(event);
-  const moved = Math.hypot(event.clientX - cityTapState.x, event.clientY - cityTapState.y) > 12;
+  const moved = hasMapTapMoved(cityTapState, event);
   const sameCity = cityButton && cityLayer.contains(cityButton) && cityButton.dataset.cityId === cityTapState.cityId;
   if (!moved && sameCity) {
     event.stopPropagation();

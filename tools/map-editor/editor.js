@@ -25,6 +25,27 @@
     exponent: 1.35,
     exponentScale: 2,
   });
+  const MEDIEVAL_CITY_PREFIXES = [
+    "Alder", "Ash", "Barrow", "Bell", "Black", "Briar", "Brindle", "Brook", "Cedar", "Crow",
+    "Dun", "Elder", "Ember", "Fair", "Fen", "Flint", "Green", "Grey", "Hart", "High",
+    "Iron", "Kings", "Low", "Oak", "Raven", "Red", "Silver", "Stone", "Thorn", "Vale",
+    "White", "Wolf", "Wyvern",
+  ];
+  const MEDIEVAL_REGION_PREFIXES = {
+    center: ["Crown", "Lion", "Regal", "Scepter", "Royal", "Queen", "King", "High", "Gold", "Star"],
+    north: ["Frost", "Snow", "Pine", "Winter", "Storm", "Moon", "Peak", "Cold", "Cloud", "Hawk"],
+    south: ["Sun", "Salt", "Reed", "Willow", "Rose", "Marsh", "Tide", "Warm", "Bloom", "Pearl"],
+    west: ["Oak", "Thorn", "Fox", "Ash", "Briar", "Crow", "Wild", "Wood", "Moss", "Fern"],
+    east: ["Dawn", "Gold", "Bright", "Falcon", "Rose", "Wind", "Star", "Pearl", "Blue", "Ivory"],
+  };
+  const MEDIEVAL_CITY_SUFFIXES = [
+    "bury", "ford", "wick", "stead", "mere", "brook", "hollow", "watch", "gate", "fall",
+    "bridge", "market", "vale", "den", "field", "worth", "cross", "moor", "reach", "cliffe",
+    "hurst", "wall", "ham", "port",
+  ];
+  const MEDIEVAL_CITY_TITLES = [
+    "Abbey", "Cross", "Gate", "March", "Market", "Mead", "Moor", "Rest", "Rise", "Watch",
+  ];
   const CITY_EDITOR_OWNER_UI = Object.freeze({
     player: { key: "player", label: "You", flag: "\u25C6" },
     player2: { key: "player2", label: "Player 2", flag: "\u2161" },
@@ -42,7 +63,7 @@
   const HERO_REWARD_EARLY_END_LEVEL = 50;
   const HERO_REWARD_MID_END_LEVEL = 100;
   const ECONOMY_CITY_PREVIEW_LEVELS = [1, 25, 50, 75, 100, 125, 150];
-  const ECONOMY_REWARD_PREVIEW_LEVELS = [10, 50, 51, 75, 100, 101, 125, 150];
+  const ECONOMY_REWARD_PREVIEW_LEVELS = [2, 10, 25, 50, 51, 75, 100, 101, 125, 150, 200];
   const CAMP_UI_FOOTPRINT_PAD = { x: 34, top: 30, bottom: 18 };
   const STRONGHOLD_UI_FOOTPRINT_PAD = { x: 58, top: 78, bottom: 42 };
   const CROWN_UI_FOOTPRINT_PAD = { x: 84, top: 116, bottom: 56 };
@@ -149,6 +170,53 @@
       { minimumReward: 40000, productionHours: 2 },
     ],
   };
+
+  function hashEditorCityName(value = "") {
+    let hash = 2166136261;
+    const text = String(value || "");
+    for (let index = 0; index < text.length; index += 1) {
+      hash ^= text.charCodeAt(index);
+      hash = Math.imul(hash, 16777619);
+    }
+    return hash >>> 0;
+  }
+
+  function getEditorCityNameIndex(cityId = "", fallbackIndex = 0) {
+    const match = String(cityId || "").match(/_(\d+)$/);
+    if (match) return Math.max(0, Math.floor(Number(match[1]) || 1) - 1);
+    return Math.max(0, Math.floor(Number(fallbackIndex) || 0));
+  }
+
+  function generateEditorCityName(regionId = "", index = 0, cityId = "") {
+    const normalizedRegionId = String(regionId || "center").trim().toLowerCase() || "center";
+    const cityIndex = getEditorCityNameIndex(cityId, index);
+    const prefixes = [...new Set([
+      ...MEDIEVAL_CITY_PREFIXES,
+      ...(MEDIEVAL_REGION_PREFIXES[normalizedRegionId] || []),
+    ])];
+    const comboCount = prefixes.length * MEDIEVAL_CITY_SUFFIXES.length;
+    const offset = hashEditorCityName(`medieval-city:${normalizedRegionId}`) % comboCount;
+    const comboIndex = (cityIndex * 487 + offset) % comboCount;
+    const prefix = prefixes[comboIndex % prefixes.length];
+    const suffix = MEDIEVAL_CITY_SUFFIXES[
+      Math.floor(comboIndex / prefixes.length) % MEDIEVAL_CITY_SUFFIXES.length
+    ];
+    const title = MEDIEVAL_CITY_TITLES[
+      (cityIndex * 191 + offset) % MEDIEVAL_CITY_TITLES.length
+    ];
+    return cityIndex % 5 === 0 ? `${prefix}${suffix} ${title}` : `${prefix}${suffix}`;
+  }
+
+  function getEditorCanonicalCityName(value = "", regionId = "", index = 0, cityId = "") {
+    const configuredName = String(value || "").trim();
+    const isPlaceholder = !configuredName
+      || /\d/.test(configuredName)
+      || /^city(?:\s+|[-_])\d+$/i.test(configuredName)
+      || configuredName.toLowerCase() === String(cityId || "").trim().toLowerCase();
+    return isPlaceholder
+      ? generateEditorCityName(regionId, index, cityId)
+      : configuredName.slice(0, 80);
+  }
   const SHOP_ITEM_EDITOR = [
     { id: "shield_12h", label: "Royal Peace Shield", detail: "City protection. No percentage bonus.", duration: true },
     { id: "war_drums_30m", label: "War Drums", detail: "Troop production bonus.", duration: true, bonus: true },
@@ -488,9 +556,10 @@
   }
 
   function normalizeCity(city = {}, index = 0, region) {
+    const id = slugify(city.id, `${region.id}_city_${String(index + 1).padStart(3, "0")}`);
     return {
-      id: slugify(city.id, `${region.id}_city_${String(index + 1).padStart(3, "0")}`),
-      name: String(city.name || `City ${index + 1}`),
+      id,
+      name: getEditorCanonicalCityName(city.name, region.id, index, id),
       regionId: region.id,
       xNorm: roundNorm(city.xNorm ?? ((Number(city.x) || 0) / region.width)),
       yNorm: roundNorm(city.yNorm ?? ((Number(city.y) || 0) / region.height)),
@@ -1007,6 +1076,17 @@
     return Math.max(0, readEconomyNumber(config.goldEndgameProductionHours));
   }
 
+  function getEconomyPreviewHeroGoldFloor(level, economy = state.economy) {
+    const config = economy?.levelRewards || {};
+    const normalizedLevel = normalizeEconomyPreviewLevel(level);
+    return Math.max(0, readEconomyNumber(config.goldFloorBase))
+      + normalizedLevel * Math.max(0, readEconomyNumber(config.goldFloorPerLevel))
+      + Math.pow(
+        normalizedLevel,
+        Math.max(0, readEconomyNumber(config.goldFloorExponent))
+      ) * Math.max(0, readEconomyNumber(config.goldFloorExponentScale));
+  }
+
   function getEconomyPreviewHeroTroopHours(level, economy = state.economy) {
     const config = economy?.levelRewards || {};
     const normalizedLevel = normalizeEconomyPreviewLevel(level);
@@ -1031,13 +1111,13 @@
   function getEconomyPreviewHeroLevelReward(level, economy = state.economy) {
     const normalizedLevel = normalizeEconomyPreviewLevel(level);
     const referenceCityLevel = Math.max(1, normalizedLevel - 1);
-    const legacyGoldFloor = 250 + normalizedLevel * 60 + Math.pow(normalizedLevel, 1.25) * 25;
+    const goldFloor = getEconomyPreviewHeroGoldFloor(normalizedLevel, economy);
     const goldFromUpgradeShare = getEconomyPreviewUpgradeCost(referenceCityLevel, economy)
       * getEconomyPreviewHeroGoldUpgradeShare(normalizedLevel, economy);
     const goldFromProductionHours = getEconomyPreviewGoldPerHour(normalizedLevel, economy)
       * getEconomyPreviewHeroGoldProductionHours(normalizedLevel, economy);
     const gold = Math.floor(Math.max(
-      legacyGoldFloor,
+      goldFloor,
       Math.min(goldFromUpgradeShare, goldFromProductionHours)
     ));
     const troopHours = getEconomyPreviewHeroTroopHours(normalizedLevel, economy);
@@ -1383,14 +1463,59 @@
         </div>
         <div class="economy-callout formula">
           <strong>Why changing one gold field may not change the final reward</strong>
-          <p>Hero-level gold is the <b>smaller</b> of two limits: <code>reference city upgrade cost × upgrade share</code> and <code>base gold/hour × production hours</code>. A small legacy minimum is the floor. Increasing one limit has no effect while the other limit is still lower.</p>
+          <p>Hero-level gold is the <b>greater</b> of the configurable minimum and the <b>smaller</b> of two limits: <code>reference city upgrade cost × upgrade share</code> and <code>base gold/hour × production hours</code>. Increasing one limit has no effect while the other limit is still lower.</p>
         </div>
         <div class="economy-breakdown-grid">
           <article class="economy-breakdown-card">
             <div class="economy-breakdown-heading">
+              <span>Gold minimum</span>
+              <strong>Guaranteed floor at every hero level</strong>
+              <p>The floor is base + (new hero level × gold per level) + (new hero level raised to the exponent × exponent scale). The final reward can be higher when both gold limits allow it.</p>
+            </div>
+            <div class="economy-explained-grid">
+              ${economyNumberInput(
+                "levelRewards.goldFloorBase",
+                "Base gold floor",
+                economy.levelRewards.goldFloorBase,
+                {
+                  step: 1,
+                  description: "Flat gold included in the guaranteed minimum for every hero level.",
+                }
+              )}
+              ${economyNumberInput(
+                "levelRewards.goldFloorPerLevel",
+                "Gold floor per hero level",
+                economy.levelRewards.goldFloorPerLevel,
+                {
+                  step: 1,
+                  description: "Linear gold added to the guaranteed minimum for each new hero level.",
+                }
+              )}
+              ${economyNumberInput(
+                "levelRewards.goldFloorExponent",
+                "Gold floor exponent",
+                economy.levelRewards.goldFloorExponent,
+                {
+                  step: 0.01,
+                  description: "Controls how the curved part of the minimum accelerates at higher levels.",
+                }
+              )}
+              ${economyNumberInput(
+                "levelRewards.goldFloorExponentScale",
+                "Gold floor exponent scale",
+                economy.levelRewards.goldFloorExponentScale,
+                {
+                  step: 1,
+                  description: "Multiplies the curved part of the guaranteed minimum.",
+                }
+              )}
+            </div>
+          </article>
+          <article class="economy-breakdown-card">
+            <div class="economy-breakdown-heading">
               <span>Gold limit 1</span>
               <strong>Share of a reference city upgrade</strong>
-              <p>The reference cost is the base cost to upgrade a city from hero level − 1 to that hero level, with no discounts. Decimal shares mean 0.5 = 50%.</p>
+              <p>The reference cost is the base cost to upgrade a city from hero level − 1 to that hero level, with no discounts. Decimal shares mean 0.75 = 75%.</p>
             </div>
             <div class="economy-explained-grid">
               ${economyNumberInput(
@@ -1399,7 +1524,7 @@
                 economy.levelRewards.goldEarlyUpgradeShare,
                 {
                   step: 0.01,
-                  description: "Used for every hero level gained up to and including level 50. Example: 0.5 limits gold to 50% of the reference city upgrade.",
+                  description: "Used for every hero level gained up to and including level 50. Example: 0.75 limits gold to 75% of the reference city upgrade.",
                 }
               )}
               ${economyNumberInput(
@@ -1498,7 +1623,7 @@
                 economy.levelRewards.troopMidHoursPerLevel,
                 {
                   step: 0.01,
-                  description: "Slope applied to each hero level above 50 through level 100.",
+                  description: "Slope applied to each hero level above 50 through level 100. With 24 base and 0.48 per level, level 100 grants 48 reward hours.",
                 }
               )}
               ${economyNumberInput(
@@ -2197,9 +2322,10 @@
   }
 
   function addCity(region, point) {
+    const id = uniqueId(region.cities, `${region.id}_city_${String(region.cities.length + 1).padStart(3, "0")}`);
     const city = normalizeCity({
-      id: uniqueId(region.cities, `${region.id}_city_${String(region.cities.length + 1).padStart(3, "0")}`),
-      name: `City ${region.cities.length + 1}`,
+      id,
+      name: generateEditorCityName(region.id, region.cities.length, id),
       xNorm: point.xNorm,
       yNorm: point.yNorm,
       level: 1,

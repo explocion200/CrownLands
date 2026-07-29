@@ -27,6 +27,33 @@ function readNumberConstant(name) {
   return Number(match[1]);
 }
 
+function routeLengthForTest(points = []) {
+  return points.slice(1).reduce((total, point, index) => (
+    total + Math.hypot(point.x - points[index].x, point.y - points[index].y)
+  ), 0);
+}
+
+function pointAlongRouteForTest(points = [], progress = 0) {
+  const totalLength = routeLengthForTest(points);
+  if (!points.length) return null;
+  if (points.length === 1 || totalLength <= 0) return { ...points[0] };
+  let wanted = totalLength * Math.max(0, Math.min(1, progress));
+  for (let index = 1; index < points.length; index += 1) {
+    const from = points[index - 1];
+    const to = points[index];
+    const length = Math.hypot(to.x - from.x, to.y - from.y);
+    if (wanted <= length || index === points.length - 1) {
+      const ratio = length > 0 ? wanted / length : 0;
+      return {
+        x: from.x + (to.x - from.x) * ratio,
+        y: from.y + (to.y - from.y) * ratio,
+      };
+    }
+    wanted -= length;
+  }
+  return { ...points[points.length - 1] };
+}
+
 const context = {
   CROWDED_MAP_CITY_THRESHOLD: readNumberConstant("CROWDED_MAP_CITY_THRESHOLD"),
   CROWDED_MAP_ARMY_THRESHOLD: readNumberConstant("CROWDED_MAP_ARMY_THRESHOLD"),
@@ -34,6 +61,9 @@ const context = {
   CROWDED_MAP_ARMY_EXIT_THRESHOLD: readNumberConstant("CROWDED_MAP_ARMY_EXIT_THRESHOLD"),
   LOW_ZOOM_PERFORMANCE_THRESHOLD: readNumberConstant("LOW_ZOOM_PERFORMANCE_THRESHOLD"),
   LOW_ZOOM_PERFORMANCE_EXIT_THRESHOLD: readNumberConstant("LOW_ZOOM_PERFORMANCE_EXIT_THRESHOLD"),
+  MAP_TOUCH_PAN_THRESHOLD: readNumberConstant("MAP_TOUCH_PAN_THRESHOLD"),
+  MAP_TOUCH_TAP_TOLERANCE: readNumberConstant("MAP_TOUCH_TAP_TOLERANCE"),
+  MAP_LOW_ZOOM_TAP_TOLERANCE_BONUS: readNumberConstant("MAP_LOW_ZOOM_TAP_TOLERANCE_BONUS"),
   MARCH_ENDPOINT_INTERACTION_MIN_CLEARANCE: readNumberConstant("MARCH_ENDPOINT_INTERACTION_MIN_CLEARANCE"),
   MARCH_ENDPOINT_INTERACTION_SIZE_RATIO: readNumberConstant("MARCH_ENDPOINT_INTERACTION_SIZE_RATIO"),
   ISLAND_PICKER_MIN_ZOOM: readNumberConstant("ISLAND_PICKER_MIN_ZOOM"),
@@ -42,21 +72,43 @@ const context = {
   isRewardCampTarget: target => target?.kind === "camp",
   isStronghold: target => target?.kind === "stronghold",
   getStrongholdVisualSize: target => Number(target?.size) || 154,
+  resolveCityTapButton: event => event?.cityButton || null,
+  resolveArmyTapToken: event => event?.armyToken || null,
+  clamp: (value, minimum, maximum) => Math.max(minimum, Math.min(maximum, value)),
+  normalizeTimestampMs: value => Math.max(0, Number(value) || 0),
+  getMissionRouteSegments: mission => mission?.segments || [],
+  normalizeArmyPath: path => Array.isArray(path) ? path : [],
+  getCityRegionId: mission => mission?.sourceRegionId || "west",
+  routeLength: routeLengthForTest,
+  pointAlongRoute: pointAlongRouteForTest,
 };
 
 vm.createContext(context);
 vm.runInContext([
   extractFunction("shouldUseCrowdedMapPerformance"),
   extractFunction("shouldUseLowZoomPerformance"),
+  extractFunction("resolveMapTapTargets"),
+  extractFunction("getMapNodeTapMovementTolerance"),
   extractFunction("getMarchEndpointInteractionClearance"),
   extractFunction("isMarchInsideEndpointInteractionClearance"),
   extractFunction("clampIslandMapPickerZoom"),
   extractFunction("getIslandMapPinchGeometry"),
+  extractFunction("getMissionPointAtProgress"),
+  extractFunction("getArmyTravelProgress"),
 ].join("\n"), context, { filename: gamePath });
 
 assert.equal(context.shouldUseLowZoomPerformance(false, 0.71), true);
 assert.equal(context.shouldUseLowZoomPerformance(true, 0.75), true, "Low-zoom mode should not flap near its entry threshold.");
 assert.equal(context.shouldUseLowZoomPerformance(true, 0.79), false);
+assert.equal(context.getMapNodeTapMovementTolerance("mouse", 1), 12);
+assert.equal(context.getMapNodeTapMovementTolerance("mouse", 0.4), 16);
+assert.equal(context.getMapNodeTapMovementTolerance("touch", 1), 16);
+assert.equal(context.getMapNodeTapMovementTolerance("touch", 0.4), 20);
+const overlappingMapTargets = { cityButton: "city", armyToken: "army" };
+assert.equal(context.resolveMapTapTargets(overlappingMapTargets, false).armyToken, "army");
+assert.equal(context.resolveMapTapTargets(overlappingMapTargets, false).cityButton, null);
+assert.equal(context.resolveMapTapTargets(overlappingMapTargets, true).cityButton, "city");
+assert.equal(context.resolveMapTapTargets(overlappingMapTargets, true).armyToken, null);
 
 assert.equal(context.shouldUseCrowdedMapPerformance(false, 69, 23), false);
 assert.equal(context.shouldUseCrowdedMapPerformance(false, 70, 0), true);
@@ -96,7 +148,58 @@ const stronghold = { id: "stronghold", kind: "stronghold", size: 200, x: 0, y: 0
 assert.equal(context.isMarchInsideEndpointInteractionClearance({ x: 120, y: 0 }, stronghold, target), true);
 assert.equal(context.isMarchInsideEndpointInteractionClearance({ x: 130, y: 0 }, stronghold, target), false);
 
+const twoIslandMarch = {
+  launchedAtMs: 1000,
+  arrivesAtMs: 3000,
+  pathLength: 200,
+  segments: [
+    { regionId: "west", length: 100, points: [{ x: 0, y: 0 }, { x: 100, y: 0 }] },
+    { regionId: "north", length: 100, points: [{ x: 0, y: 100 }, { x: 100, y: 100 }] },
+  ],
+};
+for (const kind of ["attack", "scout", "transfer", "rally_join"]) {
+  const mission = { ...twoIslandMarch, kind };
+  const firstLocation = context.getMissionPointAtProgress(mission, context.getArmyTravelProgress(mission, 1500));
+  const laterLocation = context.getMissionPointAtProgress(mission, context.getArmyTravelProgress(mission, 2500));
+  assert.equal(firstLocation.regionId, "west", `${kind} should begin on its current source-side route segment.`);
+  assert.equal(firstLocation.point.x, 50);
+  assert.equal(laterLocation.regionId, "north", `${kind} should move to its current cross-island route segment.`);
+  assert.equal(laterLocation.point.x, 50);
+}
+const returningMarch = {
+  ...twoIslandMarch,
+  returning: true,
+  recalledAtMs: 2000,
+  arrivesAtMs: 3000,
+  returnStartProgress: 0.75,
+};
+const returnProgress = context.getArmyTravelProgress(returningMarch, 2500);
+const returnLocation = context.getMissionPointAtProgress(returningMarch, returnProgress);
+assert.equal(returnProgress, 0.375);
+assert.equal(returnLocation.regionId, "west");
+assert.equal(returnLocation.point.x, 75, "A recalled march should center on its current reverse-route position.");
+const swiftMarch = {
+  ...twoIslandMarch,
+  swiftMarchUsedAtMs: 2000,
+  swiftMarchProgressAtUse: 0.4,
+};
+const swiftProgress = context.getArmyTravelProgress(swiftMarch, 2500);
+const swiftLocation = context.getMissionPointAtProgress(swiftMarch, swiftProgress);
+assert.equal(swiftProgress, 0.7);
+assert.equal(swiftLocation.regionId, "north");
+assert.equal(swiftLocation.point.x, 40, "Swift March should center using accelerated live progress.");
+
 assert.match(stylesSource, /\.army-token\.endpoint-clearance\s*\{[\s\S]*?pointer-events:\s*none;/, "Endpoint march markers must pass pointer input through to cities.");
+assert.match(
+  source,
+  /function startPan[\s\S]*?resolveMapTapTargets\(event, sendMode\)/,
+  "Destination selection must prioritize city targets over overlapping army markers."
+);
+assert.match(
+  source,
+  /function movePan[\s\S]*?getMapNodeTapMovementTolerance\(panState\.pointerType, panState\.zoom\)/,
+  "Map-node taps must use the zoom-aware movement tolerance before becoming pans."
+);
 
 const strongholdWheelSource = extractFunction("renderSelectedStrongholdWheel");
 assert.match(strongholdWheelSource, /gold-camp-action-wheel stronghold-objective-action-wheel/, "Strongholds should use the camp-style action plaque.");
@@ -122,4 +225,16 @@ assert.match(upgradeCitySource, /city\.owner !== "player"[\s\S]*?return;/, "The 
 assert.match(upgradeCitySource, /isStronghold\(city\)[\s\S]*?return;/, "The upgrade handler must reject strongholds.");
 assert.match(stylesSource, /\.stronghold-objective-action-wheel\s*\{[\s\S]*?translate\(-50%, -62%\)/, "Stronghold action plaques should align to stronghold artwork.");
 
-console.log("Validated stable map performance modes, march endpoint clearance, and stronghold action plaques.");
+const outgoingMarchCardSource = extractFunction("renderOutgoingAttackCard");
+assert.match(outgoingMarchCardSource, /data-outgoing-march="\$\{escapeHtml\(marchId\)\}"/, "March cards should identify their live march instead of an endpoint city.");
+assert.match(outgoingMarchCardSource, /aria-label="Go to current march location"/, "March location controls need a current-location accessible label.");
+assert.doesNotMatch(outgoingMarchCardSource, /data-outgoing-city/, "March cards must not retain destination-based location controls.");
+const focusOutgoingMarchSource = extractFunction("focusOutgoingMarchLocation");
+assert.match(focusOutgoingMarchSource, /getOutgoingAttacks\(\)\.find/, "The location action should resolve the latest march snapshot when clicked.");
+assert.match(focusOutgoingMarchSource, /getArmyTravelProgress\(mission, Date\.now\(\)\)[\s\S]*?getMissionPointAtProgress/, "The location action should calculate a fresh interpolated route position.");
+assert.match(focusOutgoingMarchSource, /switchOnlineIsland\(regionId\)/, "Cross-island marches should open their current route segment.");
+assert.match(focusOutgoingMarchSource, /centerOnWorldPoint\(point, regionId\)/, "The map should center on the current march point rather than a city.");
+assert.match(source, /querySelectorAll\("\[data-outgoing-march\]"\)[\s\S]*?focusOutgoingMarchLocation/, "Kingdom Activity should bind the current march location control.");
+assert.doesNotMatch(source, /function focusOutgoingAttackCity/, "The destination-only march focus handler should be removed.");
+
+console.log("Validated stable map performance modes, live march focusing, low-zoom destination taps, march endpoint clearance, and stronghold action plaques.");

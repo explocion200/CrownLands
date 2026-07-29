@@ -2,6 +2,7 @@ const assert = require("node:assert/strict");
 
 const projectId = process.argv[2] || process.env.GCLOUD_PROJECT || "crown-land-b15e0";
 const region = process.env.FUNCTION_REGION || "us-central1";
+const MAX_PARALLEL_PROBES = 4;
 const publicCallables = [
   "getDailyLoginRewardStatus",
   "claimDailyLoginReward",
@@ -22,6 +23,11 @@ const publicCallables = [
   "claimClanGiftPool",
   "claimClanQuestReward",
   "returnClanReinforcement",
+  "createClanRally",
+  "joinClanRally",
+  "withdrawClanRallyContribution",
+  "launchClanRally",
+  "cancelClanRally",
 ];
 
 async function validateCallable(name) {
@@ -46,7 +52,15 @@ async function validateCallable(name) {
   );
 }
 
-Promise.all(publicCallables.map(validateCallable))
+async function validateCallables() {
+  for (let index = 0; index < publicCallables.length; index += MAX_PARALLEL_PROBES) {
+    await Promise.all(publicCallables
+      .slice(index, index + MAX_PARALLEL_PROBES)
+      .map(validateCallable));
+  }
+}
+
+validateCallables()
   .then(() => {
     console.log(`Validated public access to ${publicCallables.length} authenticated callable endpoints in ${projectId}.`);
   })

@@ -519,7 +519,7 @@
     },
     {
       "id": "north_city_051",
-      "name": "City 51",
+      "name": "Coldport Mead",
       "regionId": "north",
       "xNorm": 0.56,
       "yNorm": 0.264,
@@ -530,7 +530,7 @@
     },
     {
       "id": "north_city_052",
-      "name": "City 52",
+      "name": "Eldermarket",
       "regionId": "north",
       "xNorm": 0.594,
       "yNorm": 0.221,
@@ -541,7 +541,7 @@
     },
     {
       "id": "north_city_053",
-      "name": "City 53",
+      "name": "Redham",
       "regionId": "north",
       "xNorm": 0.623,
       "yNorm": 0.187,
@@ -552,7 +552,7 @@
     },
     {
       "id": "north_city_054",
-      "name": "City 54",
+      "name": "Peakfall",
       "regionId": "north",
       "xNorm": 0.463,
       "yNorm": 0.207,
@@ -563,7 +563,7 @@
     },
     {
       "id": "north_city_055",
-      "name": "City 55",
+      "name": "Dunwall",
       "regionId": "north",
       "xNorm": 0.39,
       "yNorm": 0.393,
@@ -574,7 +574,7 @@
     },
     {
       "id": "north_city_056",
-      "name": "City 56",
+      "name": "Ravengate Abbey",
       "regionId": "north",
       "xNorm": 0.297,
       "yNorm": 0.677,
@@ -585,7 +585,7 @@
     },
     {
       "id": "north_city_057",
-      "name": "City 57",
+      "name": "Mooncliffe",
       "regionId": "north",
       "xNorm": 0.429,
       "yNorm": 0.695,
@@ -596,7 +596,7 @@
     },
     {
       "id": "north_city_059",
-      "name": "City 59",
+      "name": "Oakreach",
       "regionId": "north",
       "xNorm": 0.344,
       "yNorm": 0.817,
@@ -607,7 +607,7 @@
     },
     {
       "id": "north_city_060",
-      "name": "City 60",
+      "name": "Stormbrook",
       "regionId": "north",
       "xNorm": 0.295,
       "yNorm": 0.789,
@@ -618,7 +618,7 @@
     },
     {
       "id": "north_city_061",
-      "name": "City 61",
+      "name": "Cedarmoor Mead",
       "regionId": "north",
       "xNorm": 0.562,
       "yNorm": 0.834,
@@ -629,7 +629,7 @@
     },
     {
       "id": "north_city_062",
-      "name": "City 62",
+      "name": "Lowmere",
       "regionId": "north",
       "xNorm": 0.666,
       "yNorm": 0.738,
@@ -640,7 +640,7 @@
     },
     {
       "id": "north_city_063",
-      "name": "City 63",
+      "name": "Winterworth",
       "regionId": "north",
       "xNorm": 0.66,
       "yNorm": 0.521,
@@ -651,7 +651,7 @@
     },
     {
       "id": "north_city_064",
-      "name": "City 64",
+      "name": "Brookstead",
       "regionId": "north",
       "xNorm": 0.709,
       "yNorm": 0.462,
@@ -662,7 +662,7 @@
     },
     {
       "id": "north_city_065",
-      "name": "City 65",
+      "name": "Kingsfield",
       "regionId": "north",
       "xNorm": 0.795,
       "yNorm": 0.44,
@@ -673,7 +673,7 @@
     },
     {
       "id": "north_city_066",
-      "name": "City 66",
+      "name": "Pineford Abbey",
       "regionId": "north",
       "xNorm": 0.83,
       "yNorm": 0.479,
@@ -684,7 +684,7 @@
     },
     {
       "id": "north_city_067",
-      "name": "City 67",
+      "name": "Brindleden",
       "regionId": "north",
       "xNorm": 0.793,
       "yNorm": 0.565,
@@ -695,7 +695,7 @@
     },
     {
       "id": "north_city_068",
-      "name": "City 68",
+      "name": "Ironbury",
       "regionId": "north",
       "xNorm": 0.761,
       "yNorm": 0.256,
@@ -706,7 +706,7 @@
     },
     {
       "id": "north_city_069",
-      "name": "City 69",
+      "name": "Snowmarket",
       "regionId": "north",
       "xNorm": 0.7,
       "yNorm": 0.273,
@@ -717,7 +717,7 @@
     },
     {
       "id": "north_city_070",
-      "name": "City 70",
+      "name": "Briarport",
       "regionId": "north",
       "xNorm": 0.285,
       "yNorm": 0.273,
@@ -728,7 +728,7 @@
     },
     {
       "id": "north_city_071",
-      "name": "City 71",
+      "name": "Highbridge Mead",
       "regionId": "north",
       "xNorm": 0.283,
       "yNorm": 0.548,
@@ -739,7 +739,7 @@
     },
     {
       "id": "north_city_072",
-      "name": "City 72",
+      "name": "Frostwall",
       "regionId": "north",
       "xNorm": 0.545,
       "yNorm": 0.763,
@@ -750,7 +750,7 @@
     },
     {
       "id": "north_city_073",
-      "name": "City 73",
+      "name": "Blackfall",
       "regionId": "north",
       "xNorm": 0.518,
       "yNorm": 0.667,
@@ -761,7 +761,7 @@
     },
     {
       "id": "north_city_074",
-      "name": "City 74",
+      "name": "Harthurst",
       "regionId": "north",
       "xNorm": 0.373,
       "yNorm": 0.575,
@@ -772,7 +772,7 @@
     },
     {
       "id": "north_city_075",
-      "name": "City 75",
+      "name": "Wyvernwatch",
       "regionId": "north",
       "xNorm": 0.536,
       "yNorm": 0.601,

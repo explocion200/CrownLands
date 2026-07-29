@@ -4,14 +4,49 @@ const realm = require("../release-config.json");
 
 const projectId = process.env.GCLOUD_PROJECT || process.env.GOOGLE_CLOUD_PROJECT || "crown-land-b15e0";
 const authHost = process.env.FIREBASE_AUTH_EMULATOR_HOST || "127.0.0.1:9099";
-const functionsHost = process.env.CROWNLANDS_FUNCTIONS_EMULATOR_HOST
-  || process.env.FUNCTIONS_EMULATOR_HOST
-  || "127.0.0.1:5001";
+const configuredFunctionsHost = process.env.CROWNLANDS_FUNCTIONS_EMULATOR_HOST
+  || process.env.FUNCTIONS_EMULATOR_HOST;
 if (!process.env.FIRESTORE_EMULATOR_HOST) throw new Error("FIRESTORE_EMULATOR_HOST is required.");
 
 admin.initializeApp({ projectId });
 const db = admin.firestore();
 db.settings({ ignoreUndefinedProperties: true });
+
+let functionsHostPromise = null;
+
+function formatEmulatorHost(host, port) {
+  const normalizedHost = String(host || "127.0.0.1").trim();
+  const formattedHost = normalizedHost.includes(":") && !normalizedHost.startsWith("[")
+    ? `[${normalizedHost}]`
+    : normalizedHost;
+  return `${formattedHost}:${port}`;
+}
+
+async function resolveFunctionsHost() {
+  if (configuredFunctionsHost) return configuredFunctionsHost;
+  if (!functionsHostPromise) {
+    functionsHostPromise = (async () => {
+      const hubHost = String(process.env.FIREBASE_EMULATOR_HUB || "").trim();
+      if (hubHost) {
+        const response = await fetch(`http://${hubHost}/emulators`);
+        if (!response.ok) {
+          throw new Error(`Firebase Emulator Hub discovery failed with HTTP ${response.status}.`);
+        }
+        const emulators = await response.json();
+        const functions = emulators?.functions || {};
+        const listen = Array.isArray(functions.listen) ? functions.listen[0] : functions.listen;
+        const host = functions.host || listen?.address;
+        const port = Number(functions.port || listen?.port);
+        if (host && Number.isInteger(port) && port > 0) {
+          return formatEmulatorHost(host, port);
+        }
+        throw new Error("Firebase Emulator Hub did not report a running Functions emulator.");
+      }
+      return "127.0.0.1:5001";
+    })();
+  }
+  return functionsHostPromise;
+}
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
@@ -30,6 +65,7 @@ async function createAuthUser(index) {
 }
 
 async function callFunction(name, token, data = {}) {
+  const functionsHost = await resolveFunctionsHost();
   const response = await fetch(`http://${functionsHost}/${projectId}/us-central1/${name}`, {
     method: "POST",
     headers: {
@@ -76,6 +112,21 @@ async function attemptClientDailyRewardMutation(user) {
   });
 }
 
+async function attemptClientDocumentRead(user, documentPath) {
+  const firestoreHost = process.env.FIRESTORE_EMULATOR_HOST;
+  const normalizedPath = String(documentPath || "")
+    .split("/")
+    .filter(Boolean)
+    .map(encodeURIComponent)
+    .join("/");
+  const url = `http://${firestoreHost}/v1/projects/${projectId}/databases/(default)/documents/${normalizedPath}`;
+  return fetch(url, {
+    headers: {
+      authorization: `Bearer ${user.token}`,
+    },
+  });
+}
+
 async function waitForOwnershipEvents(expected, timeoutMs = 30000) {
   const startedAt = Date.now();
   const ref = db.collection(`realmEvents/${realm.resetGeneration}/ownershipChanges`);
@@ -103,8 +154,102 @@ async function waitForOwnershipEventIds(eventIds, timeoutMs = 30000) {
   throw new Error(`Ownership events did not settle: ${ids.join(", ")}.`);
 }
 
+async function mapWithConcurrency(items, concurrency, mapper) {
+  const results = new Array(items.length);
+  let nextIndex = 0;
+  const workerCount = Math.min(Math.max(1, concurrency), items.length);
+  await Promise.all(Array.from({ length: workerCount }, async () => {
+    while (nextIndex < items.length) {
+      const index = nextIndex;
+      nextIndex += 1;
+      results[index] = await mapper(items[index], index);
+    }
+  }));
+  return results;
+}
+
 async function main() {
   const users = await Promise.all(Array.from({ length: 50 }, (_, index) => createAuthUser(index)));
+  const queuedUser = await createAuthUser(50);
+  const lobbySessions = users.map((_, index) => `lobby-session-${index}`);
+  const lobbyJoins = await Promise.all(users.map((user, index) => callFunction("joinGameServer", user.token, {
+    serverId: "crown-marches",
+    sessionId: lobbySessions[index],
+    displayName: `Lobby Ruler ${index + 1}`,
+  })));
+  assert(lobbyJoins.every(result => result?.status === "active"), "The first 50 concurrent realm joins were not all admitted.");
+  const queuedJoin = await callFunction("joinGameServer", queuedUser.token, {
+    serverId: "crown-marches",
+    sessionId: "lobby-session-50",
+    displayName: "Queued Ruler",
+  });
+  assert(queuedJoin?.status === "waiting", "The 51st realm join bypassed the waiting queue.");
+
+  const serverDocumentId = `crown-marches-${realm.resetGeneration}`;
+  const serverRef = db.doc(`gameServers/${serverDocumentId}`);
+  const serverAfterJoins = (await serverRef.get()).data() || {};
+  assert(
+    Object.keys(serverAfterJoins.activeSlots || {}).length === 50
+      && Object.keys(serverAfterJoins.waitingQueue || {}).length === 1
+      && Number(serverAfterJoins.activeCount || 0) === 50
+      && Number(serverAfterJoins.waitingCount || 0) === 1,
+    "Realm capacity counters or queue state drifted after concurrent joins."
+  );
+  const sharedServerUpdatedAtMs = Number(serverAfterJoins.updatedAtMs || 0);
+  const heartbeatResults = await Promise.all([
+    ...users.map((user, index) => callFunction("heartbeatGameServer", user.token, {
+      serverId: "crown-marches",
+      sessionId: lobbySessions[index],
+      displayName: `Lobby Ruler ${index + 1}`,
+    })),
+    callFunction("heartbeatGameServer", queuedUser.token, {
+      serverId: "crown-marches",
+      sessionId: "lobby-session-50",
+      displayName: "Queued Ruler",
+    }),
+  ]);
+  assert(
+    heartbeatResults.filter(result => result?.status === "active").length === 50
+      && heartbeatResults.filter(result => result?.status === "waiting").length === 1,
+    "Sharded heartbeats changed realm admission state."
+  );
+  const serverAfterHeartbeats = (await serverRef.get()).data() || {};
+  assert(
+    Number(serverAfterHeartbeats.updatedAtMs || 0) === sharedServerUpdatedAtMs,
+    "Player heartbeats rewrote the shared realm-capacity document."
+  );
+  const memberSnapshot = await serverRef.collection("members").get();
+  assert(
+    memberSnapshot.size === 51
+      && memberSnapshot.docs.every(doc => Number(doc.data()?.heartbeatModelVersion || 0) === 2),
+    "Per-player realm heartbeat documents were not written for every active or waiting player."
+  );
+  const replacedHeartbeat = await callFunction("heartbeatGameServer", users[0].token, {
+    serverId: "crown-marches",
+    sessionId: "replaced-lobby-session",
+    displayName: "Old Browser",
+  });
+  assert(replacedHeartbeat?.status === "session-replaced", "An old browser heartbeat replaced the current realm session.");
+  const leaveResult = await callFunction("leaveGameServer", users[0].token, {
+    serverId: "crown-marches",
+    sessionId: lobbySessions[0],
+  });
+  assert(leaveResult?.status === "left", "An active realm slot could not be released.");
+  const [serverAfterPromotionSnap, queuedMembershipSnap] = await Promise.all([
+    serverRef.get(),
+    db.doc(`players/${queuedUser.uid}/serverMembership/current`).get(),
+  ]);
+  const serverAfterPromotion = serverAfterPromotionSnap.data() || {};
+  const promotionActiveCount = Object.keys(serverAfterPromotion.activeSlots || {}).length;
+  const promotionWaitingCount = Object.keys(serverAfterPromotion.waitingQueue || {}).length;
+  const promotedMembershipStatus = queuedMembershipSnap.data()?.status || "missing";
+  assert(
+    promotionActiveCount === 50
+      && promotionWaitingCount === 0
+      && promotedMembershipStatus === "active",
+    `Leaving an active slot did not promote the first waiting player (active=${promotionActiveCount}, waiting=${promotionWaitingCount}, membership=${promotedMembershipStatus}).`
+  );
+
   const preservedFlag = {
     background: "#17324d",
     pattern: "split",
@@ -164,9 +309,11 @@ async function main() {
   assert(counts.reduce((sum, count) => sum + count, 0) === 50, `Starter counts do not total 50: ${counts.join(",")}`);
   assert(Math.max(...counts) - Math.min(...counts) <= 1, `Starter islands are imbalanced: ${counts.join(",")}`);
 
-  const idempotentResults = await Promise.all(users.map((user, index) => (
-    callFunction("claimStartingCity", user.token, { playerName: `Changed ${index}` })
-  )));
+  const idempotentResults = await mapWithConcurrency(
+    users,
+    10,
+    (user, index) => callFunction("claimStartingCity", user.token, { playerName: `Changed ${index}` }),
+  );
   idempotentResults.forEach((result, index) => {
     assert(result.alreadyClaimed === true, `Repeated claim ${index} was not idempotent.`);
     assert(result.cityId === claims[index].cityId, `Repeated claim ${index} changed city.`);
@@ -178,7 +325,11 @@ async function main() {
 
   await waitForOwnershipEvents(50);
   const eventsBeforeEconomy = await db.collection(`realmEvents/${realm.resetGeneration}/ownershipChanges`).get();
-  const economyResults = await Promise.all(users.map(user => callFunction("collectEconomy", user.token)));
+  const economyResults = await mapWithConcurrency(
+    users,
+    10,
+    user => callFunction("collectEconomy", user.token),
+  );
   assert(economyResults.every(result => result?.ok !== false), "A 50-player economy collection failed.");
   const eventsAfterEconomy = await db.collection(`realmEvents/${realm.resetGeneration}/ownershipChanges`).get();
   assert(eventsAfterEconomy.size === eventsBeforeEconomy.size, "Economy checkpoints created ownership events.");
@@ -191,13 +342,19 @@ async function main() {
   assert(
     dailyStatus?.dailyLoginRewardStatus?.eligible === true
       && dailyStatus.dailyLoginRewardStatus.nextDay === 1
-      && dailyStatus.dailyLoginRewardStatus.cycle === 1,
+      && dailyStatus.dailyLoginRewardStatus.cycle === 1
+      && dailyStatus.dailyLoginRewardStatus.pendingCount === 1
+      && dailyStatus.dailyLoginRewardStatus.attendedToday === true,
     "A fresh reset profile did not begin on daily reward cycle 1, day 1."
   );
   const dailyGoldBefore = Number((await db.doc(`players/${users[0].uid}`).get()).data()?.gold || 0);
+  const dayOneClaimRequest = {
+    claimId: "emulator-day-1",
+    expectedOrdinal: 1,
+  };
   const concurrentDailyClaims = await Promise.all([
-    callFunction("claimDailyLoginReward", users[0].token),
-    callFunction("claimDailyLoginReward", users[0].token),
+    callFunction("claimDailyLoginReward", users[0].token, dayOneClaimRequest),
+    callFunction("claimDailyLoginReward", users[0].token, dayOneClaimRequest),
   ]);
   assert(
     concurrentDailyClaims.filter(result => result?.replayed === false).length === 1
@@ -208,7 +365,9 @@ async function main() {
   const dayOneReplay = concurrentDailyClaims.find(result => result?.replayed === true);
   assert(
     dayOneClaim?.receipt?.day === 1
-      && dayOneClaim.receipt.goldHours === 0.5
+      && dayOneClaim.receipt.ordinal === 1
+      && dayOneClaim.receipt.claimId === dayOneClaimRequest.claimId
+      && dayOneClaim.receipt.goldHours === 1
       && dayOneClaim.receipt.gold > 0
       && JSON.stringify(dayOneClaim.receipt) === JSON.stringify(dayOneReplay?.receipt),
     "The day-1 daily reward receipt was not deterministic."
@@ -219,9 +378,10 @@ async function main() {
     Number(dayOneProfile.gold || 0) >= dailyGoldBefore + Number(dayOneClaim.receipt.gold || 0),
     "The day-1 gold reward was not credited."
   );
-  const sameDayReplay = await callFunction("claimDailyLoginReward", users[0].token);
+  const sameDayReplay = await callFunction("claimDailyLoginReward", users[0].token, dayOneClaimRequest);
   assert(sameDayReplay?.replayed === true, "A repeated same-day daily reward claim was not idempotent.");
 
+  const currentUtcDayKey = new Date().toISOString().slice(0, 10);
   const previousUtcDayKey = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
   await db.doc(`players/${users[0].uid}`).set({
     upgrades: { taxStewardship: 25, royalGranaries: 25 },
@@ -230,86 +390,114 @@ async function main() {
       royalTaxDecreeExpiresAtMs: Date.now() + 60 * 60 * 1000,
     },
     dailyLoginReward: {
-      schemaVersion: 1,
-      cycle: 1,
-      nextDay: 5,
+      schemaVersion: 2,
+      nextClaimOrdinal: 5,
+      earnedThroughOrdinal: 5,
       totalClaims: 4,
+      lastAttendanceDayKey: currentUtcDayKey,
       lastClaimDayKey: previousUtcDayKey,
       lastClaimedAtMs: Date.now() - 24 * 60 * 60 * 1000,
     },
   }, { merge: true });
   const dayFiveProfileBefore = (await db.doc(`players/${users[0].uid}`).get()).data() || {};
   const dayFiveCityRef = db.doc(`islands/${claims[0].islandId}/cities/${claims[0].cityId}`);
-  const dayFiveCityBefore = (await dayFiveCityRef.get()).data() || {};
-  const dayFiveClaim = await callFunction("claimDailyLoginReward", users[0].token);
+  const dayFiveClaim = await callFunction("claimDailyLoginReward", users[0].token, {
+    claimId: "emulator-day-5",
+    expectedOrdinal: 5,
+  });
   assert(
     dayFiveClaim?.receipt?.day === 5
-      && dayFiveClaim.receipt.goldHours === 1.5
-      && dayFiveClaim.receipt.troopHours === 1.5
+      && dayFiveClaim.receipt.goldHours === 0
+      && dayFiveClaim.receipt.troopHours === 0
       && dayFiveClaim.receipt.items?.war_drums_30m === 1,
-    "The day-5 mixed daily reward did not match the fixed schedule."
-  );
-  assert(
-    dayFiveClaim.receipt.gold === Math.floor(Number(firstStats.baseGoldPerHour || 0) * 1.5)
-      && dayFiveClaim.receipt.troops === Math.floor(Number(firstStats.baseTroopPerHour || 0) * 1.5),
-    "Daily rewards included skill, Stronghold, or temporary production bonuses."
+    "The day-5 item reward did not match the fixed schedule."
   );
   const dayFiveProfileAfter = (await db.doc(`players/${users[0].uid}`).get()).data() || {};
-  const dayFiveCityAfter = (await dayFiveCityRef.get()).data() || {};
   assert(
     Number(dayFiveProfileAfter.shopItems?.war_drums_30m || 0)
       === Number(dayFiveProfileBefore.shopItems?.war_drums_30m || 0) + 1,
     "The day-5 item was not added to the bag."
   );
+
+  await db.doc(`players/${users[0].uid}`).set({
+    dailyLoginReward: {
+      schemaVersion: 2,
+      nextClaimOrdinal: 6,
+      earnedThroughOrdinal: 6,
+      totalClaims: 5,
+      lastAttendanceDayKey: currentUtcDayKey,
+    },
+  }, { merge: true });
+  const daySixClaim = await callFunction("claimDailyLoginReward", users[0].token, {
+    claimId: "emulator-day-6",
+    expectedOrdinal: 6,
+  });
   assert(
-    Number(dayFiveCityAfter.troops || 0) >= Number(dayFiveCityBefore.troops || 0) + Number(dayFiveClaim.receipt.troops || 0),
-    "The day-5 troop reward was not credited to the main city."
-  );
-  const dayFiveStatsAfter = (await db.doc(`players/${users[0].uid}/stats/global`).get()).data() || {};
-  assert(
-    Number(dayFiveStatsAfter.totalTroops || 0)
-      >= Number(firstStats.totalTroops || 0) + Number(dayFiveClaim.receipt.troops || 0),
-    "The day-5 troop reward did not update global player statistics."
+    daySixClaim?.receipt?.day === 6
+      && daySixClaim.receipt.goldHours === 3
+      && daySixClaim.receipt.gold === Math.floor(Number(firstStats.baseGoldPerHour || 0) * 3),
+    "Daily gold hours included skill, Stronghold, or temporary production bonuses."
   );
 
   await db.doc(`players/${users[0].uid}`).set({
     dailyLoginReward: {
-      schemaVersion: 1,
-      cycle: 1,
-      nextDay: 30,
+      schemaVersion: 2,
+      nextClaimOrdinal: 7,
+      earnedThroughOrdinal: 7,
+      totalClaims: 6,
+      lastAttendanceDayKey: currentUtcDayKey,
+    },
+  }, { merge: true });
+  const daySevenCityBefore = (await dayFiveCityRef.get()).data() || {};
+  const daySevenClaim = await callFunction("claimDailyLoginReward", users[0].token, {
+    claimId: "emulator-day-7",
+    expectedOrdinal: 7,
+  });
+  const daySevenCityAfter = (await dayFiveCityRef.get()).data() || {};
+  assert(
+    daySevenClaim?.receipt?.day === 7
+      && daySevenClaim.receipt.troopHours === 3
+      && daySevenClaim.receipt.troops === Math.floor(Number(firstStats.baseTroopPerHour || 0) * 3),
+    "Daily troop hours included skill, Stronghold, or temporary production bonuses."
+  );
+  assert(
+    Number(daySevenCityAfter.troops || 0)
+      >= Number(daySevenCityBefore.troops || 0) + Number(daySevenClaim.receipt.troops || 0),
+    "The day-7 troop reward was not credited to the main city."
+  );
+
+  await db.doc(`players/${users[0].uid}`).set({
+    dailyLoginReward: {
+      schemaVersion: 2,
+      nextClaimOrdinal: 30,
+      earnedThroughOrdinal: 30,
       totalClaims: 29,
+      lastAttendanceDayKey: currentUtcDayKey,
       lastClaimDayKey: previousUtcDayKey,
       lastClaimedAtMs: Date.now() - 24 * 60 * 60 * 1000,
     },
   }, { merge: true });
   const dayThirtyItemsBefore = (await db.doc(`players/${users[0].uid}`).get()).data()?.shopItems || {};
-  const dayThirtyClaim = await callFunction("claimDailyLoginReward", users[0].token);
-  const expectedDayThirtyItems = [
-    "shield_12h",
-    "war_drums_30m",
-    "royal_tax_decree_30m",
-    "veil_of_silence_30m",
-    "swift_march_order",
-    "recall_horn",
-  ];
+  const dayThirtyClaim = await callFunction("claimDailyLoginReward", users[0].token, {
+    claimId: "emulator-day-30",
+    expectedOrdinal: 30,
+  });
   assert(
     dayThirtyClaim?.receipt?.day === 30
-      && dayThirtyClaim.receipt.goldHours === 12
-      && dayThirtyClaim.receipt.troopHours === 12
+      && dayThirtyClaim.receipt.goldHours === 0
+      && dayThirtyClaim.receipt.troopHours === 0
+      && dayThirtyClaim.receipt.items?.shield_12h === 1
       && dayThirtyClaim.dailyLoginRewardStatus?.cycle === 2
       && dayThirtyClaim.dailyLoginRewardStatus?.nextDay === 1,
     "Day 30 did not complete the cycle and restart at cycle 2, day 1."
   );
   const dayThirtyItemsAfter = (await db.doc(`players/${users[0].uid}`).get()).data()?.shopItems || {};
-  expectedDayThirtyItems.forEach(itemId => {
-    assert(dayThirtyClaim.receipt.items?.[itemId] === 1, `Day 30 did not include ${itemId}.`);
-    assert(
-      Number(dayThirtyItemsAfter[itemId] || 0) === Number(dayThirtyItemsBefore[itemId] || 0) + 1,
-      `Day 30 did not credit ${itemId}.`
-    );
-  });
+  assert(
+    Number(dayThirtyItemsAfter.shield_12h || 0) === Number(dayThirtyItemsBefore.shield_12h || 0) + 1,
+    "Day 30 did not credit the Royal Peace Shield."
+  );
 
-  await db.doc(`players/${users[1].uid}`).set({
+  await db.doc(`players/${users[1].uid}`).update({
     dailyLoginReward: {
       schemaVersion: 1,
       cycle: 3,
@@ -318,7 +506,7 @@ async function main() {
       lastClaimDayKey: "2020-01-01",
       lastClaimedAtMs: Date.UTC(2020, 0, 1),
     },
-  }, { merge: true });
+  });
   const pausedDailyStatus = await callFunction("getDailyLoginRewardStatus", users[1].token);
   assert(
     pausedDailyStatus?.dailyLoginRewardStatus?.eligible === true
@@ -458,6 +646,121 @@ async function main() {
   assert(
     JSON.stringify(publicApplicantProfile?.clanShield) === JSON.stringify(createdClan?.clan?.shield),
     "The public player profile did not return the shield belonging to the player's clan."
+  );
+  let memberRenameError = null;
+  try {
+    await callFunction("updateClanProfile", clanApplicant.token, { name: "Member Renamed Clan" });
+  } catch (error) {
+    memberRenameError = error;
+  }
+  assert(
+    /clan role does not allow that action/i.test(String(memberRenameError?.message || "")),
+    "A nonleader was allowed to rename the clan."
+  );
+  const renameFundedAtMs = Date.now();
+  await clanLeaderRef.set({
+    gold: 600_000,
+    goldFloat: 600_000,
+    economyUpdatedAtMs: renameFundedAtMs,
+  }, { merge: true });
+  await db.doc(`clanNameReservations/${realm.resetGeneration}_taken-gate`).set({
+    clanId: "another-clan",
+    reusableAtMs: Number.MAX_SAFE_INTEGER,
+  });
+  let duplicateRenameError = null;
+  try {
+    await callFunction("updateClanProfile", clanLeader.token, { name: "Taken Gate" });
+  } catch (error) {
+    duplicateRenameError = error;
+  }
+  assert(
+    /already in use/i.test(String(duplicateRenameError?.message || ""))
+      && Number((await clanLeaderRef.get()).data()?.gold || 0) === 600_000,
+    "A reserved clan name was accepted or charged gold."
+  );
+  const renameStartedAtMs = Date.now();
+  const renamedClanResult = await callFunction("updateClanProfile", clanLeader.token, {
+    name: "Renamed Gate",
+  });
+  const renameFinishedAtMs = Date.now();
+  assert(
+    renamedClanResult?.nameChanged === true
+      && renamedClanResult?.clan?.name === "Renamed Gate"
+      && renamedClanResult?.gold === 100_000,
+    "A valid leader clan rename did not charge exactly 500,000 gold."
+  );
+  const [
+    renamedClanSnap,
+    renamedLeaderSnap,
+    renamedApplicantSnap,
+    renamedClanLeaderboardSnap,
+    newNameReservationSnap,
+    oldNameReservationSnap,
+  ] = await Promise.all([
+    db.doc(`clans/${applicationClanId}`).get(),
+    clanLeaderRef.get(),
+    clanApplicantRef.get(),
+    db.doc(`clanLeaderboards/${realm.resetGeneration}/entries/${applicationClanId}`).get(),
+    db.doc(`clanNameReservations/${realm.resetGeneration}_renamed-gate`).get(),
+    db.doc(`clanNameReservations/${realm.resetGeneration}_application-gate`).get(),
+  ]);
+  const renamedClanData = renamedClanSnap.data() || {};
+  const renamedClanState = {
+    name: renamedClanData.name,
+    normalizedName: renamedClanData.normalizedName,
+    lastNameChangedAtMs: Number(renamedClanData.lastNameChangedAtMs || 0),
+    nextNameChangeAtMs: Number(renamedClanData.nextNameChangeAtMs || 0),
+    renameStartedAtMs,
+    renameFinishedAtMs,
+  };
+  assert(
+    renamedClanState.name === "Renamed Gate"
+      && renamedClanState.normalizedName === "renamed-gate"
+      && renamedClanState.lastNameChangedAtMs >= renameStartedAtMs - 1_000
+      && renamedClanState.lastNameChangedAtMs <= renameFinishedAtMs + 1_000
+      && renamedClanState.nextNameChangeAtMs - renamedClanState.lastNameChangedAtMs
+        === 7 * 24 * 60 * 60 * 1000,
+    `The clan rename did not persist its canonical name and seven-day cooldown: ${JSON.stringify(renamedClanState)}`
+  );
+  assert(
+    renamedLeaderSnap.data()?.clanName === "Renamed Gate"
+      && renamedApplicantSnap.data()?.clanName === "Renamed Gate"
+      && renamedClanLeaderboardSnap.data()?.name === "Renamed Gate"
+      && Number(renamedLeaderSnap.data()?.goldFloat || 0) < 100_001,
+    "The renamed clan identity did not propagate to member profiles and clan rankings."
+  );
+  assert(
+    newNameReservationSnap.data()?.clanId === applicationClanId
+      && Number(newNameReservationSnap.data()?.reusableAtMs || 0) === Number.MAX_SAFE_INTEGER,
+    "The new clan name was not reserved transactionally."
+  );
+  assert(
+    oldNameReservationSnap.data()?.clanId === applicationClanId
+      && Number(oldNameReservationSnap.data()?.reusableAtMs || 0)
+        === renamedClanState.lastNameChangedAtMs + (7 * 24 * 60 * 60 * 1000),
+    "The previous clan name was not held for its seven-day release period."
+  );
+  const goldAfterRename = Number(renamedLeaderSnap.data()?.gold || 0);
+  const replayedRename = await callFunction("updateClanProfile", clanLeader.token, {
+    name: "Renamed Gate",
+  });
+  assert(
+    replayedRename?.nameChanged === false
+      && Number((await clanLeaderRef.get()).data()?.gold || 0) === goldAfterRename
+      && Number((await db.doc(`clans/${applicationClanId}`).get()).data()?.nextNameChangeAtMs || 0)
+        === Number(renamedClanData.nextNameChangeAtMs || 0),
+    "Retrying the confirmed clan name charged gold or extended the cooldown."
+  );
+  let weeklyRenameError = null;
+  try {
+    await callFunction("updateClanProfile", clanLeader.token, { name: "Renamed Too Soon" });
+  } catch (error) {
+    weeklyRenameError = error;
+  }
+  assert(
+    /once every seven days/i.test(String(weeklyRenameError?.message || ""))
+      && Number((await clanLeaderRef.get()).data()?.gold || 0) === goldAfterRename,
+    "The seven-day clan rename cooldown was not enforced without charging gold."
   );
   const [leaderRewardsBeforeGift, applicantRewardsBeforeGift] = await Promise.all([
     db.doc(`clans/${applicationClanId}/memberRewards/${clanLeader.uid}`).get(),
@@ -602,6 +905,49 @@ async function main() {
   assert(alliedBounceTargetDoc && alliedBounceLaunch, "No reachable enemy city was available for the allied bounce gate.");
   const alliedBounceTroops = Number(alliedBounceLaunch.movement.troops || 0);
   assert(alliedBounceTroops > 0, "The allied bounce gate did not launch troops.");
+  const alliedBouncePublicPath = `islands/${clanReinforcementSourceClaim.islandId}/armies/${alliedBounceArmyId}`;
+  const alliedBounceIncomingPath = `players/${users[47].uid}/incomingArmies/${alliedBounceArmyId}`;
+  const [
+    alliedBounceCanonicalProjection,
+    alliedBouncePublicProjection,
+    alliedBounceIncomingProjection,
+    defenderCanonicalRead,
+    defenderIncomingRead,
+    attackerCanonicalRead,
+  ] = await Promise.all([
+    db.doc(`armies/${alliedBounceArmyId}`).get(),
+    db.doc(alliedBouncePublicPath).get(),
+    db.doc(alliedBounceIncomingPath).get(),
+    attemptClientDocumentRead(users[47], `armies/${alliedBounceArmyId}`),
+    attemptClientDocumentRead(users[47], alliedBounceIncomingPath),
+    attemptClientDocumentRead(clanLeader, `armies/${alliedBounceArmyId}`),
+  ]);
+  assert(
+    Number(alliedBounceCanonicalProjection.data()?.troops || 0) === alliedBounceTroops,
+    "The army owner lost the exact canonical troop count."
+  );
+  assert(
+    alliedBouncePublicProjection.exists
+      && alliedBouncePublicProjection.data()?.troops === undefined
+      && alliedBouncePublicProjection.data()?.troopVisibility === "estimate"
+      && Number(alliedBouncePublicProjection.data()?.troopEstimateMin || 0) < alliedBounceTroops
+      && Number(alliedBouncePublicProjection.data()?.troopEstimateMax || 0) >= alliedBounceTroops
+      && Boolean(alliedBouncePublicProjection.data()?.troopEstimateLabel),
+    "The public hostile-army projection exposed exact troops or used the wrong estimate."
+  );
+  assert(
+    alliedBounceIncomingProjection.exists
+      && alliedBounceIncomingProjection.data()?.troops === undefined
+      && alliedBounceIncomingProjection.data()?.troopVisibility === "estimate"
+      && Number(alliedBounceIncomingProjection.data()?.troopEstimateMin || 0) < alliedBounceTroops
+      && Number(alliedBounceIncomingProjection.data()?.troopEstimateMax || 0) >= alliedBounceTroops
+      && alliedBounceIncomingProjection.data()?.troopEstimateLabel
+        === alliedBouncePublicProjection.data()?.troopEstimateLabel,
+    "The defender's private incoming projection exposed exact troops or used the wrong estimate."
+  );
+  assert(defenderCanonicalRead.status === 403, "The defender could read the canonical exact army document.");
+  assert(defenderIncomingRead.status === 200, "The defender could not read their incoming army estimate.");
+  assert(attackerCanonicalRead.status === 200, "The army owner could not read their canonical exact army document.");
   const alliedBounceArmyRefs = [
     db.doc(`armies/${alliedBounceArmyId}`),
     db.doc(`islands/${clanReinforcementSourceClaim.islandId}/armies/${alliedBounceArmyId}`),
@@ -632,9 +978,10 @@ async function main() {
     armyId: alliedBounceArmyId,
     routeRegionIds: [clanReinforcementSourceClaim.mainRegionId],
   });
-  const [alliedBounceActiveSnapshot, alliedBounceSourceWhileReturning] = await Promise.all([
+  const [alliedBounceActiveSnapshot, alliedBounceSourceWhileReturning, alliedBounceIncomingAfterReturn] = await Promise.all([
     alliedBounceArmyRefs[0].get(),
     clanReinforcementSourceRef.get(),
+    db.doc(alliedBounceIncomingPath).get(),
   ]);
   const alliedBounceActive = alliedBounceActiveSnapshot.data() || {};
   assert(
@@ -654,6 +1001,7 @@ async function main() {
     Number(alliedBounceSourceWhileReturning.data()?.troops || 0) < alliedBounceSourceAfterLaunch + alliedBounceTroops,
     "The allied-target troops teleported into their source city before the return arrived."
   );
+  assert(!alliedBounceIncomingAfterReturn.exists, "A defender incoming estimate remained after the army began returning.");
   const alliedBounceSourceBeforeReturn = Number((await clanReinforcementSourceRef.get()).data()?.troops || 0);
   const alliedBounceCompleted = await forceResolveMovement(alliedBounceStarted.movement, clanLeader.token);
   const [alliedBounceResolvedSnapshot, alliedBounceSourceAfterReturn] = await Promise.all([
@@ -1241,6 +1589,60 @@ async function main() {
     "Completed reinforcement returns did not release sender slots."
   );
 
+  const capturedReinforcementArmyId = `clan_reinforce_captured_${crypto.randomBytes(8).toString("hex")}`;
+  const capturedReinforcement = await callFunction("sendArmyOrder", clanLeader.token, {
+    army: {
+      ...firstClanReinforcement.movement,
+      id: capturedReinforcementArmyId,
+      kind: "reinforce",
+      launchKind: "reinforce",
+      troops: 200,
+      requestedTroops: 200,
+    },
+    sourceRegionId: clanReinforcementSourceClaim.mainRegionId,
+    targetRegionId: clanReinforcementSourceClaim.mainRegionId,
+  });
+  assert(
+    capturedReinforcement?.movement?.kind === "reinforce",
+    "Captured-destination gate did not launch as allied support."
+  );
+  await clanReinforcementTargetDoc.ref.set({
+    ownerKind: "player",
+    ownerUid: users[1].uid,
+    ownerName: "Ruler 2",
+    ownerFlag: null,
+    ownerShieldExpiresAtMs: 0,
+    isMainCity: false,
+    level: 1,
+    defense: 1,
+    troops: 100_000,
+    troopFloat: 100_000,
+    alliedReinforcementTroops: 0,
+  }, { merge: true });
+  const capturedReinforcementResolution = await forceResolveMovement(
+    capturedReinforcement.movement,
+    clanLeader.token
+  );
+  const [capturedReinforcementArmy, leaderAfterCapturedReinforcement] = await Promise.all([
+    db.doc(`armies/${capturedReinforcementArmyId}`).get(),
+    clanLeaderRef.get(),
+  ]);
+  assert(
+    capturedReinforcementResolution?.status === "resolved"
+      && capturedReinforcementResolution?.kind === "attack"
+      && capturedReinforcementResolution?.outcome === "defeat",
+    "Support whose allied destination was captured did not fight the new owner."
+  );
+  assert(
+    capturedReinforcementArmy.data()?.status === "resolved"
+      && (leaderAfterCapturedReinforcement.data()?.activeClanReinforcementTargets || []).length === 0,
+    "Converted support remained active or retained its reinforcement slot after combat."
+  );
+  await clanReinforcementTargetDoc.ref.set({
+    troops: 0,
+    troopFloat: 0,
+  }, { merge: true });
+
   const attacker = users[0];
   const sourceClaim = claims[0];
   const sourceRef = db.doc(`islands/${sourceClaim.islandId}/cities/${sourceClaim.cityId}`);
@@ -1421,7 +1823,9 @@ async function main() {
   assert(
     retargetedAttackReport?.attackProtection?.mode === "raid"
       && retargetedAttackReport.attackProtection.captureAllowed === false,
-    "The converted reinforcement gate did not exercise recalculated protected-raid rules."
+    `The converted reinforcement gate did not exercise recalculated protected-raid rules: ${
+      JSON.stringify(retargetedAttackReport?.attackProtection || null)
+    }`
   );
   assert(
     retargetedAttackReport.survivors > 0

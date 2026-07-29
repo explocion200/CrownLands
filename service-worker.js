@@ -1,17 +1,17 @@
-const CACHE_VERSION = "20260726-transform-map-picker";
+const CACHE_VERSION = "20260728-daily-attendance-v2";
 const CACHE_NAME = `crownlands-cache-${CACHE_VERSION}`;
 const STATIC_CACHE_URLS = [
   "/",
   "/index.html",
   "/manifest.webmanifest",
-  "/styles.css?v=20260726-transform-map-picker",
+  "/styles.css?v=20260728-daily-attendance-v2",
   "/release-config.js",
   "/world-config.js",
-  "/economy-config.js?v=20260726-offline-owned-production",
+  "/economy-config.js?v=20260728-daily-attendance-v2",
   "/ads-config.js?v=20260726-rewarded-ads",
   "/firebase-config.js?v=20260726-protected-ads-reset",
-  "/firebaseClient.js?v=20260726-protected-ads-reset",
-  "/game.js?v=20260726-transform-map-picker",
+  "/firebaseClient.js?v=20260727-city-names-v1",
+  "/game.js?v=20260728-daily-attendance-v2",
   "/route-worker.js?v=20260721-structure-route-clearance",
   "/assets/map-editor-data.js?v=20260723-utc-responsive-v1",
   "/assets/game-menu-background.jpg?v=20260702-login-page",
@@ -19,7 +19,7 @@ const STATIC_CACHE_URLS = [
   "/assets/loading-crown.png",
   "/assets/gold-pickup.png",
   "/assets/troop-pickup.png",
-  "/assets/daily-reward-icon.svg?v=20260727-daily-login",
+  "/assets/daily-reward-icon-cutout.webp?v=20260728-daily-reward-cutout",
   "/site-info.css?v=20260727-adsense-policy",
   "/about.html",
   "/how-to-play.html",

@@ -43,10 +43,16 @@ requireMatch(
   /doesVeilOfSilenceBlock\(army\.kind,\s*army\.targetType\)[\s\S]*?Veil of Silence blocked the scout/,
   "Army resolution must use the scout-only Veil predicate.",
 );
+const armyKindsMatch = serverSource.match(/const ARMY_ORDER_KINDS = Object\.freeze\((\[[^\]]+\])\)/);
+if (!armyKindsMatch) throw new Error("Canonical army order kinds are missing.");
+const armyKinds = JSON.parse(armyKindsMatch[1]);
+["attack", "transfer", "reinforce", "rally_join", "scout"].forEach(kind => {
+  if (!armyKinds.includes(kind)) throw new Error(`Army payload normalization does not preserve ${kind} orders.`);
+});
 requireMatch(
   serverSource,
-  /const kind = \["attack", "transfer", "scout"\]\.includes\(raw\.kind\) \? raw\.kind : "attack"/,
-  "Army payload normalization must preserve explicit attack, transfer, and scout kinds.",
+  /const kind = ARMY_ORDER_KINDS\.includes\(raw\.kind\) \? raw\.kind : "attack"/,
+  "Army payload normalization must use the canonical order-kind list.",
 );
 if (/\brenderMap\(\)/.test(clientSource)) {
   throw new Error("Client still calls the nonexistent renderMap function.");

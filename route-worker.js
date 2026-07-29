@@ -2,8 +2,18 @@
 
 const routeCache = new Map();
 const routeEdgePassableCache = new Map();
+const ROUTE_CACHE_LIMIT = 6000;
+const ROUTE_EDGE_PASSABLE_CACHE_LIMIT = 160000;
 const ROUTE_OBSTACLE_BUCKET_SIZE = 240;
 const ROUTE_OBSTACLE_BUCKET_PADDING = 48;
+
+function setBoundedRouteCacheValue(cache, key, value, limit) {
+  cache.delete(key);
+  cache.set(key, value);
+  while (cache.size > limit) {
+    cache.delete(cache.keys().next().value);
+  }
+}
 
 self.onmessage = event => {
   const message = event.data || {};
@@ -91,7 +101,23 @@ function findLandRouteForLeg(job, constants, leg) {
   const target = makeRoutePoint(leg.end, "target");
   const context = createRouteContext(job, regionId, source, target);
   const primaryBudget = { visited: 0, max: constants.searchMaxVisitedCells };
-  return findLandRouteWithContext(job, constants, source, target, regionId, context, primaryBudget);
+  const route = findLandRouteWithContext(job, constants, source, target, regionId, context, primaryBudget);
+  if (route?.points?.length) return route;
+
+  const reverseBudget = {
+    visited: 0,
+    max: Math.max(constants.searchMaxVisitedCells, constants.gridCols * constants.gridRows),
+  };
+  const reverseRouteResult = findLandRouteWithContext(
+    job,
+    constants,
+    target,
+    source,
+    regionId,
+    context,
+    reverseBudget
+  );
+  return reverseRouteResult?.points?.length ? reverseRoute(reverseRouteResult) : null;
 }
 
 function createRouteContext(job, regionId, source, target) {
@@ -108,6 +134,7 @@ function createRouteContext(job, regionId, source, target) {
     regionId,
     obstacles,
     obstacleGrid: createRouteObstacleGrid(obstacles),
+    edgePassableCache: new Map(),
     cacheKey: `structure-block:${regionId}:${Array.from(ignoredIds).sort().join(",")}`,
   };
 }
@@ -138,7 +165,7 @@ function findLandRouteWithContext(job, constants, source, target, regionId, cont
   const reverseKey = `land-worker-v1:${regionId}:${context.cacheKey}:${getRoutePointId(target, "target")}|${getRoutePointId(source, "source")}`;
   if (routeCache.has(reverseKey)) {
     const reverse = reverseRoute(routeCache.get(reverseKey));
-    routeCache.set(cacheKey, cloneRoute(reverse));
+    setBoundedRouteCacheValue(routeCache, cacheKey, cloneRoute(reverse), ROUTE_CACHE_LIMIT);
     return reverse;
   }
 
@@ -150,7 +177,7 @@ function findLandRouteWithContext(job, constants, source, target, regionId, cont
       segments: [{ regionId, points: [startPoint, endPoint], length: Math.hypot(source.x - target.x, source.y - target.y) }],
       length: Math.hypot(source.x - target.x, source.y - target.y),
     };
-    routeCache.set(cacheKey, cloneRoute(direct));
+    setBoundedRouteCacheValue(routeCache, cacheKey, cloneRoute(direct), ROUTE_CACHE_LIMIT);
     return direct;
   }
 
@@ -193,8 +220,7 @@ function findLandRouteWithContext(job, constants, source, target, regionId, cont
 }
 
 function commitRoute(cacheKey, route) {
-  routeCache.set(cacheKey, cloneRoute(route));
-  if (routeCache.size > 6000) routeCache.clear();
+  setBoundedRouteCacheValue(routeCache, cacheKey, cloneRoute(route), ROUTE_CACHE_LIMIT);
   return route;
 }
 
@@ -342,13 +368,31 @@ function isBitmapTerrainBlockedForRegion(job, x, y, regionId, padding = 0) {
 }
 
 function linePassableInRegion(job, constants, a, b, regionId, context) {
+  return lineTerrainPassableInRegion(job, constants, a, b, regionId)
+    && lineRouteObstaclesPassable(constants, a, b, context);
+}
+
+function lineTerrainPassableInRegion(job, constants, a, b, regionId) {
   const distance = Math.hypot(a.x - b.x, a.y - b.y);
   const steps = Math.max(2, Math.ceil(distance / 22));
   for (let i = 0; i <= steps; i += 1) {
     const t = i / steps;
     const x = a.x + (b.x - a.x) * t;
     const y = a.y + (b.y - a.y) * t;
-    if (!isRouteWalkablePointInRegion(job, x, y, regionId, context, 6)) return false;
+    if (!isRegionWalkablePoint(job, x, y, regionId, 6)) return false;
+  }
+  return true;
+}
+
+function lineRouteObstaclesPassable(constants, a, b, context) {
+  if (!context?.obstacles?.length) return true;
+  const distance = Math.hypot(a.x - b.x, a.y - b.y);
+  const steps = Math.max(2, Math.ceil(distance / 22));
+  for (let i = 0; i <= steps; i += 1) {
+    const t = i / steps;
+    const x = a.x + (b.x - a.x) * t;
+    const y = a.y + (b.y - a.y) * t;
+    if (isRouteCityBlockedPoint(x, y, context, 6)) return false;
   }
   return true;
 }
@@ -357,11 +401,27 @@ function gridEdgePassableInRegion(job, constants, cx, cy, nx, ny, regionId, cont
   const currentIndex = cy * constants.gridCols + cx;
   const nextIndex = ny * constants.gridCols + nx;
   const baseKey = currentIndex < nextIndex ? `${currentIndex}|${nextIndex}` : `${nextIndex}|${currentIndex}`;
-  const key = `${regionId}:${context?.cacheKey || "terrain"}:${baseKey}`;
-  if (routeEdgePassableCache.has(key)) return routeEdgePassableCache.get(key);
-  if (routeEdgePassableCache.size > 400000) routeEdgePassableCache.clear();
-  const passable = linePassableInRegion(job, constants, gridToWorld(constants, cx, cy), gridToWorld(constants, nx, ny), regionId, context);
-  routeEdgePassableCache.set(key, passable);
+  if (context?.edgePassableCache?.has(baseKey)) return context.edgePassableCache.get(baseKey);
+  const key = `${regionId}:terrain:${baseKey}`;
+  let terrainPassable = routeEdgePassableCache.get(key);
+  if (terrainPassable === undefined) {
+    terrainPassable = lineTerrainPassableInRegion(
+      job,
+      constants,
+      gridToWorld(constants, cx, cy),
+      gridToWorld(constants, nx, ny),
+      regionId
+    );
+    setBoundedRouteCacheValue(routeEdgePassableCache, key, terrainPassable, ROUTE_EDGE_PASSABLE_CACHE_LIMIT);
+  }
+  const passable = terrainPassable
+    && lineRouteObstaclesPassable(
+      constants,
+      gridToWorld(constants, cx, cy),
+      gridToWorld(constants, nx, ny),
+      context
+    );
+  context?.edgePassableCache?.set(baseKey, passable);
   return passable;
 }
 

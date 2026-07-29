@@ -9,7 +9,6 @@
   const ONLINE_WORLD_ID = String(REALM_CONFIG.worldId || `main-${RESET_GENERATION}`);
   const APP_RELEASE_ID = String(REALM_CONFIG.releaseId || "");
   const ROYAL_PEACE_SHIELD_ITEM_ID = "shield_12h";
-  const ROYAL_PEACE_SHIELD_COST = 175_000;
 
   const client = {
     configured: false,
@@ -349,6 +348,26 @@
     return callServerFunction("sendArmyOrder", payload);
   }
 
+  async function createClanRally(payload = {}) {
+    return callServerFunction("createClanRally", payload);
+  }
+
+  async function joinClanRally(payload = {}) {
+    return callServerFunction("joinClanRally", payload);
+  }
+
+  async function withdrawClanRallyContribution(payload = {}) {
+    return callServerFunction("withdrawClanRallyContribution", payload);
+  }
+
+  async function launchClanRally(payload = {}) {
+    return callServerFunction("launchClanRally", payload);
+  }
+
+  async function cancelClanRally(payload = {}) {
+    return callServerFunction("cancelClanRally", payload);
+  }
+
   async function previewArmyProtection(payload = {}) {
     return callServerFunction("previewArmyProtection", payload);
   }
@@ -624,6 +643,35 @@
       },
       error => {
         if (typeof handlers.onError === "function") handlers.onError(error);
+      }
+    );
+  }
+
+  function subscribeClanRallies(clanId = "", handlers = {}) {
+    if (!client.db || !client.modules?.firestore?.onSnapshot || !client.user?.uid || !clanId) return () => {};
+    const { collection, onSnapshot, query, where } = client.modules.firestore;
+    const safeClanId = String(clanId).slice(0, 128);
+    return onSnapshot(
+      query(
+        collection(client.db, "clans", safeClanId, "rallies"),
+        where("resetGeneration", "==", RESET_GENERATION),
+        where("worldId", "==", ONLINE_WORLD_ID),
+        where("status", "in", ["forming", "launched", "recalling"])
+      ),
+      snapshot => {
+        if (typeof handlers.onRallies !== "function") return;
+        handlers.onRallies(
+          snapshot.docs
+            .map(item => ({ id: item.id, ...item.data() }))
+            .sort((left, right) => Number(right.createdAtMs || 0) - Number(left.createdAtMs || 0)),
+          snapshot.docChanges().map(change => ({
+            type: change.type,
+            rally: { id: change.doc.id, ...change.doc.data() },
+          }))
+        );
+      },
+      error => {
+        if (typeof handlers.onError === "function") handlers.onError(error, "rallies");
       }
     );
   }
@@ -1732,33 +1780,57 @@
       rowsBySource.forEach(rows => rows.forEach((army, armyId) => merged.set(armyId, army)));
       handlers.onArmies([...merged.values()]);
     };
-    const subscribe = (source, ownerField) => onSnapshot(
+    const subscribeOutgoing = () => onSnapshot(
       firestoreQuery(
         collection(client.db, "armies"),
-        where(ownerField, "==", uid),
+        where("ownerUid", "==", uid),
         where("resetGeneration", "==", RESET_GENERATION),
         where("worldId", "==", ONLINE_WORLD_ID),
         where("status", "==", "active")
       ),
       snapshot => {
-        rowsBySource.set(source, new Map(snapshot.docs.map(doc => [
+        rowsBySource.set("outgoing", new Map(snapshot.docs.map(doc => [
           doc.id,
           {
             id: doc.id,
             islandId: doc.data()?.sourceRegionId || "",
             ...doc.data(),
+            viewerAccess: "owner",
           },
         ])));
         emit();
       },
       error => {
-        if (typeof handlers.onError === "function") handlers.onError(error, source);
+        if (typeof handlers.onError === "function") handlers.onError(error, "outgoing");
+      }
+    );
+
+    const subscribeIncoming = () => onSnapshot(
+      collection(client.db, "players", uid, "incomingArmies"),
+      snapshot => {
+        rowsBySource.set("incoming", new Map(snapshot.docs
+          .map(doc => ({
+            id: doc.id,
+            islandId: doc.data()?.sourceRegionId || "",
+            ...doc.data(),
+            viewerAccess: "target",
+          }))
+          .filter(army => (
+            army.resetGeneration === RESET_GENERATION
+            && army.worldId === ONLINE_WORLD_ID
+            && army.status === "active"
+          ))
+          .map(army => [army.id, army])));
+        emit();
+      },
+      error => {
+        if (typeof handlers.onError === "function") handlers.onError(error, "incoming");
       }
     );
 
     const unsubscribers = [
-      subscribe("outgoing", "ownerUid"),
-      subscribe("incoming", "targetOwnerUid"),
+      subscribeOutgoing(),
+      subscribeIncoming(),
     ];
     return () => unsubscribers.forEach(unsubscribe => unsubscribe());
   }
@@ -1954,6 +2026,7 @@
     subscribeClanState,
     subscribeClanApplications,
     subscribeClanSocialState,
+    subscribeClanRallies,
     recalculatePlayerGlobalStats,
     recalculateAllPlayerGlobalStats,
     getCombatPlayerIdentity,
@@ -1972,6 +2045,11 @@
     loadCrownCitadelReignLeaderboard,
     subscribePlayerGlobalStats,
     sendArmyOrder,
+    createClanRally,
+    joinClanRally,
+    withdrawClanRallyContribution,
+    launchClanRally,
+    cancelClanRally,
     previewArmyProtection,
     resolveArmyOrder,
     returnClanReinforcement,
