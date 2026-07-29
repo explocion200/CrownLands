@@ -53,6 +53,8 @@ service cloud.firestore {
           'itemEffects',
           'itemPurchaseCooldowns',
           'dailyLoginReward',
+          'inactivityNotice',
+          'worldSlotResetAtMs',
           'economyUpdatedAtMs',
           'offlineProductionCities',
           'kingPower',
@@ -117,6 +119,8 @@ service cloud.firestore {
 
     function validPlayerProfileUpdate() {
       return playerEconomyUnchanged()
+        && profileFieldUnchanged('inactivityNotice')
+        && profileFieldUnchanged('worldSlotResetAtMs')
         && (profileFieldUnchanged('playerName') || validPlayerNameValue(request.resource.data.playerName))
         && profileFieldUnchanged('character')
         && profileFieldUnchanged('upgrades')
@@ -299,6 +303,10 @@ service cloud.firestore {
     }
 
     match /gameServers/{serverId} {
+      allow read, create, update, delete: if false;
+    }
+
+    match /realmMaintenance/{resetId}/inactivePlayers/{uid} {
       allow read, create, update, delete: if false;
     }
 

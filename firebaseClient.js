@@ -985,6 +985,8 @@
     delete cleanProfile.mainRegionId;
     delete cleanProfile.mainCityChangedAtMs;
     delete cleanProfile.dailyLoginReward;
+    delete cleanProfile.inactivityNotice;
+    delete cleanProfile.worldSlotResetAtMs;
     if (cleanProfile.shopItems && typeof cleanProfile.shopItems === "object" && deleteField) {
       cleanProfile.shopItems = {
         ...cleanProfile.shopItems,
