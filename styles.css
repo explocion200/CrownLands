@@ -7438,11 +7438,23 @@ button.daily-reward-card.available:disabled {
 .clan-gift-panel > p { margin: 0 0 .65rem; color: #b9c9be; line-height: 1.4; }
 .clan-gift-actions {
   display: grid;
-  grid-template-columns: minmax(150px,1fr) auto minmax(150px,1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   align-items: center;
   gap: .5rem;
 }
-.clan-gift-actions small { color: #d9c584; font-weight: 800; text-align: center; }
+.clan-gift-actions small {
+  grid-column: 1 / -1;
+  grid-row: 2;
+  color: #d9c584;
+  font-weight: 800;
+  text-align: center;
+}
+.clan-gift-actions button {
+  width: 100%;
+  min-width: 0;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
 .clan-gift-actions button:disabled, .clan-quest-card button:disabled { opacity: .52; cursor: not-allowed; }
 .clan-gift-stats { display: flex; flex-wrap: wrap; gap: .45rem; margin-top: .55rem; }
 .clan-gift-stats span { padding: .25rem .45rem; color: #a9c0b2; border-radius: 999px; background: rgba(255,255,255,.055); font-size: .72rem; }
@@ -7784,6 +7796,13 @@ button.daily-reward-card.available:disabled {
     grid-template-columns: minmax(240px, .78fr) minmax(0, 1.22fr);
     align-items: start;
     gap: .55rem;
+  }
+  .clan-gift-actions {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .clan-gift-actions small {
+    grid-column: 1;
+    grid-row: auto;
   }
   .clan-roster {
     max-height: none;
