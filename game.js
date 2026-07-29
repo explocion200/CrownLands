@@ -311,6 +311,7 @@ const WHEEL_ZOOM_STEP = 1.12;
 const MAP_TOUCH_PAN_THRESHOLD = 12;
 const MAP_TOUCH_TAP_TOLERANCE = 16;
 const MAP_LOW_ZOOM_TAP_TOLERANCE_BONUS = 4;
+const MAP_CITY_TAP_RADIUS_PX = 44;
 const ZOOM_RENDER_SETTLE_MS = 260;
 const PAN_RENDER_SETTLE_MS = 180;
 const MAIN_CITY_RETURN_CAMERA_THROTTLE_MS = 180;
@@ -27745,12 +27746,32 @@ function isMapCommandInteractionTarget(target) {
   return Boolean(target?.closest(".city-wheel-action, .gold-camp-wheel-action, .teleport-node, .harvest-bonus-node, .army-token-nav button"));
 }
 
-function resolveCityTapButton(event) {
+function findNearestCityTapNode(candidateNodes, distanceToNode, excludedCityId = "") {
+  const excludedId = String(excludedCityId || "");
+  let nearestNode = null;
+  let nearestDistance = Infinity;
+  for (const node of candidateNodes || []) {
+    const cityId = String(node?.dataset?.cityId || "");
+    if (!cityId || cityId === excludedId) continue;
+    const distance = Number(distanceToNode(node));
+    if (!Number.isFinite(distance) || distance >= nearestDistance) continue;
+    nearestNode = node;
+    nearestDistance = distance;
+  }
+  return nearestNode;
+}
+
+function getCityTapExcludedSourceId() {
+  return sendMode ? String(selectedSourceId || "") : "";
+}
+
+function resolveCityTapButton(event, excludedCityId = "") {
   if (!event || !cityLayer) return null;
   const clientX = Number(event.clientX);
   const clientY = Number(event.clientY);
   if (!Number.isFinite(clientX) || !Number.isFinite(clientY)) return event.target?.closest?.(".city-node") || null;
 
+  const excludedId = String(excludedCityId || "");
   const directNode = event.target?.closest?.(".city-node") || null;
   const candidateNodes = [];
   const seenIds = new Set();
@@ -27767,27 +27788,19 @@ function resolveCityTapButton(event) {
     const city = cityById(node?.dataset.cityId);
     return city ? Math.hypot(city.x - worldPoint.x, city.y - worldPoint.y) : Infinity;
   };
-  if (candidateNodes.length > 1) {
-    return candidateNodes.reduce((best, node) => distanceToNode(node) < distanceToNode(best) ? node : best);
-  }
-  if (directNode && !directNode.classList.contains("stronghold-node")) return directNode;
+  const directIsEligible = Boolean(directNode && directNode.dataset.cityId !== excludedId);
+  if (excludedId && directIsEligible && !directNode.classList.contains("stronghold-node")) return directNode;
+  const overlappingNode = candidateNodes.length > 1 || excludedId
+    ? findNearestCityTapNode(candidateNodes, distanceToNode, excludedId)
+    : null;
+  if (overlappingNode) return overlappingNode;
+  if (!excludedId && directNode && !directNode.classList.contains("stronghold-node")) return directNode;
 
-  const nearbyRadius = 44 / Math.max(0.1, zoom);
-  let nearestCity = null;
-  let nearestDistance = Infinity;
-  (state?.cities || []).forEach(city => {
-    if (!isCityInActiveMap(city)) return;
-    const distance = Math.hypot(city.x - worldPoint.x, city.y - worldPoint.y);
-    if (distance <= nearbyRadius && distance < nearestDistance) {
-      nearestCity = city;
-      nearestDistance = distance;
-    }
-  });
-  if (nearestCity) {
-    for (const child of cityLayer.children) {
-      if (child.classList?.contains("city-node") && child.dataset.cityId === nearestCity.id) return child;
-    }
-  }
+  const nearbyRadius = MAP_CITY_TAP_RADIUS_PX / Math.max(0.1, zoom);
+  const nearbyNodes = [...cityLayer.querySelectorAll(".city-node[data-city-id]")]
+    .filter(node => distanceToNode(node) <= nearbyRadius);
+  const nearbyNode = findNearestCityTapNode(nearbyNodes, distanceToNode, excludedId);
+  if (nearbyNode) return nearbyNode;
 
   return directNode || candidateNodes[0] || null;
 }
@@ -27804,15 +27817,15 @@ function resolveArmyTapToken(event) {
   return token && armyLayer.contains(token) && token.dataset.endpointInteractionDisabled !== "true" ? token : null;
 }
 
-function resolveMapTapTargets(event, prioritizeCity = false) {
+function resolveMapTapTargets(event, prioritizeCity = false, excludedCityId = "") {
   if (prioritizeCity) {
-    const cityButton = resolveCityTapButton(event);
+    const cityButton = resolveCityTapButton(event, excludedCityId);
     if (cityButton) return { cityButton, armyToken: null };
     return { cityButton: null, armyToken: resolveArmyTapToken(event) };
   }
   const armyToken = resolveArmyTapToken(event);
   if (armyToken) return { cityButton: null, armyToken };
-  return { cityButton: resolveCityTapButton(event), armyToken: null };
+  return { cityButton: resolveCityTapButton(event, excludedCityId), armyToken: null };
 }
 
 function getMapNodeTapMovementTolerance(pointerType = "", zoomLevel = zoom) {
@@ -27829,7 +27842,7 @@ function hasMapTapMoved(tapState, event) {
   return Math.hypot(event.clientX - tapState.x, event.clientY - tapState.y) > tolerance;
 }
 
-function trackCityTap(event, cityButton = resolveCityTapButton(event)) {
+function trackCityTap(event, cityButton = resolveCityTapButton(event, getCityTapExcludedSourceId())) {
   if (!cityButton || !cityLayer.contains(cityButton)) return null;
   cityTapState = {
     pointerId: event.pointerId,
@@ -27900,7 +27913,7 @@ function startPan(event) {
   const startedOnCommand = isMapCommandInteractionTarget(event.target);
   const { cityButton, armyToken } = startedOnCommand
     ? { cityButton: null, armyToken: null }
-    : resolveMapTapTargets(event, sendMode);
+    : resolveMapTapTargets(event, sendMode, getCityTapExcludedSourceId());
   if (cityButton) trackCityTap(event, cityButton);
   if (armyToken) trackArmyTap(event, armyToken);
   const startedOnMapNode = Boolean(cityButton || armyToken) || isMapNodeInteractionTarget(event.target);
@@ -27980,7 +27993,7 @@ function trySelectTrackedCityTap(event, { requireSameTarget = false } = {}) {
   cityTapState = null;
   if (hasMapTapMoved(tapState, event)) return false;
   if (requireSameTarget) {
-    const cityButton = resolveCityTapButton(event);
+    const cityButton = resolveCityTapButton(event, getCityTapExcludedSourceId());
     const sameCity = cityButton && cityLayer.contains(cityButton) && cityButton.dataset.cityId === tapState.cityId;
     if (!sameCity) return false;
   }
@@ -28045,7 +28058,7 @@ function handleMapClick(event) {
     updateArmyTokenNavigationSelection();
   }
   if (event.target?.closest?.(".army-token")) return;
-  if (resolveCityTapButton(event)) return;
+  if (resolveCityTapButton(event, getCityTapExcludedSourceId())) return;
   clearSelection();
 }
 function randomChoice(items) {
@@ -28216,7 +28229,7 @@ clearSelectBtn.addEventListener("click", () => clearSelection());
 cityLayer.addEventListener("pointerdown", event => {
   if (isMapInteractionBlocked()) return;
   const startedOnCommand = isMapCommandInteractionTarget(event.target);
-  const cityButton = startedOnCommand ? null : resolveCityTapButton(event);
+  const cityButton = startedOnCommand ? null : resolveCityTapButton(event, getCityTapExcludedSourceId());
   const campButton = cityButton || startedOnCommand ? null : resolveCampTapButton(event);
   if (cityButton) trackCityTap(event, cityButton);
   else if (campButton) trackCampTap(event, campButton);
@@ -28238,7 +28251,7 @@ cityLayer.addEventListener("pointerup", event => {
     return;
   }
   if (!cityTapState || cityTapState.pointerId !== event.pointerId) return;
-  const cityButton = resolveCityTapButton(event);
+  const cityButton = resolveCityTapButton(event, getCityTapExcludedSourceId());
   const moved = hasMapTapMoved(cityTapState, event);
   const sameCity = cityButton && cityLayer.contains(cityButton) && cityButton.dataset.cityId === cityTapState.cityId;
   if (!moved && sameCity) {
@@ -28274,7 +28287,7 @@ cityLayer.addEventListener("click", event => {
     selectRewardCamp(campButton.dataset.campId);
     return;
   }
-  const cityButton = resolveCityTapButton(event);
+  const cityButton = resolveCityTapButton(event, getCityTapExcludedSourceId());
   if (!cityButton || !cityLayer.contains(cityButton)) return;
   event.stopPropagation();
   if (cityTapState?.selected && cityTapState.cityId === cityButton.dataset.cityId) {

@@ -64,6 +64,7 @@ const context = {
   MAP_TOUCH_PAN_THRESHOLD: readNumberConstant("MAP_TOUCH_PAN_THRESHOLD"),
   MAP_TOUCH_TAP_TOLERANCE: readNumberConstant("MAP_TOUCH_TAP_TOLERANCE"),
   MAP_LOW_ZOOM_TAP_TOLERANCE_BONUS: readNumberConstant("MAP_LOW_ZOOM_TAP_TOLERANCE_BONUS"),
+  MAP_CITY_TAP_RADIUS_PX: readNumberConstant("MAP_CITY_TAP_RADIUS_PX"),
   MARCH_ENDPOINT_INTERACTION_MIN_CLEARANCE: readNumberConstant("MARCH_ENDPOINT_INTERACTION_MIN_CLEARANCE"),
   MARCH_ENDPOINT_INTERACTION_SIZE_RATIO: readNumberConstant("MARCH_ENDPOINT_INTERACTION_SIZE_RATIO"),
   ISLAND_PICKER_MIN_ZOOM: readNumberConstant("ISLAND_PICKER_MIN_ZOOM"),
@@ -97,6 +98,54 @@ vm.runInContext([
   extractFunction("getArmyTravelProgress"),
 ].join("\n"), context, { filename: gamePath });
 
+function createCityTapHarness({
+  zoom = 0.4,
+  directId = "source",
+  hitIds = ["source"],
+  renderedIds = hitIds,
+  cityPositions = {},
+  strongholdIds = [],
+} = {}) {
+  const allIds = [...new Set([...hitIds, ...renderedIds, ...Object.keys(cityPositions)])];
+  const nodes = new Map(allIds.map(id => {
+    const node = {
+      dataset: { cityId: id },
+      classList: {
+        contains: className => className === "stronghold-node" && strongholdIds.includes(id),
+      },
+    };
+    node.closest = selector => selector.includes(".city-node") ? node : null;
+    return [id, node];
+  }));
+  const renderedNodes = renderedIds.map(id => nodes.get(id)).filter(Boolean);
+  const cityLayer = {
+    contains: node => renderedNodes.includes(node),
+    querySelectorAll: () => renderedNodes,
+  };
+  const tapContext = {
+    MAP_CITY_TAP_RADIUS_PX: context.MAP_CITY_TAP_RADIUS_PX,
+    zoom,
+    cityLayer,
+    document: {
+      elementsFromPoint: () => hitIds.map(id => nodes.get(id)).filter(Boolean),
+    },
+    screenToWorld: () => ({ x: 0, y: 0 }),
+    cityById: id => cityPositions[id] ? { id, ...cityPositions[id] } : null,
+  };
+  vm.createContext(tapContext);
+  vm.runInContext([
+    extractFunction("findNearestCityTapNode"),
+    extractFunction("resolveCityTapButton"),
+  ].join("\n"), tapContext, { filename: gamePath });
+  const directNode = nodes.get(directId) || null;
+  const event = {
+    clientX: 100,
+    clientY: 100,
+    target: directNode || { closest: () => null },
+  };
+  return { context: tapContext, event, nodes };
+}
+
 assert.equal(context.shouldUseLowZoomPerformance(false, 0.71), true);
 assert.equal(context.shouldUseLowZoomPerformance(true, 0.75), true, "Low-zoom mode should not flap near its entry threshold.");
 assert.equal(context.shouldUseLowZoomPerformance(true, 0.79), false);
@@ -109,6 +158,104 @@ assert.equal(context.resolveMapTapTargets(overlappingMapTargets, false).armyToke
 assert.equal(context.resolveMapTapTargets(overlappingMapTargets, false).cityButton, null);
 assert.equal(context.resolveMapTapTargets(overlappingMapTargets, true).cityButton, "city");
 assert.equal(context.resolveMapTapTargets(overlappingMapTargets, true).armyToken, null);
+
+const overlappingDestinationTap = createCityTapHarness({
+  directId: "source",
+  hitIds: ["source", "target"],
+  renderedIds: ["source", "target"],
+  cityPositions: {
+    source: { x: 0, y: 0 },
+    target: { x: 12, y: 0 },
+  },
+});
+assert.equal(
+  overlappingDestinationTap.context.resolveCityTapButton(overlappingDestinationTap.event, "source"),
+  overlappingDestinationTap.nodes.get("target"),
+  "Destination mode must select a city underneath the higher-stacked source marker.",
+);
+
+const directDestinationTap = createCityTapHarness({
+  directId: "target",
+  hitIds: ["source", "target"],
+  renderedIds: ["source", "target"],
+  cityPositions: {
+    source: { x: 0, y: 0 },
+    target: { x: 20, y: 0 },
+  },
+});
+assert.equal(
+  directDestinationTap.context.resolveCityTapButton(directDestinationTap.event, "source"),
+  directDestinationTap.nodes.get("target"),
+  "A directly tapped destination must win even when the source center is closer.",
+);
+assert.equal(
+  directDestinationTap.context.resolveCityTapButton(directDestinationTap.event),
+  directDestinationTap.nodes.get("source"),
+  "Normal browsing must retain nearest-city resolution for overlapping markers.",
+);
+
+const nearestDestinationTap = createCityTapHarness({
+  directId: "source",
+  hitIds: ["source", "far-target", "near-target"],
+  renderedIds: ["source", "far-target", "near-target"],
+  cityPositions: {
+    source: { x: 0, y: 0 },
+    "far-target": { x: 24, y: 0 },
+    "near-target": { x: 8, y: 0 },
+  },
+});
+assert.equal(
+  nearestDestinationTap.context.resolveCityTapButton(nearestDestinationTap.event, "source"),
+  nearestDestinationTap.nodes.get("near-target"),
+  "Ambiguous destination taps must select the nearest non-source city.",
+);
+
+const strongholdDestinationTap = createCityTapHarness({
+  directId: "source",
+  hitIds: ["source", "stronghold"],
+  renderedIds: ["source", "stronghold"],
+  cityPositions: {
+    source: { x: 0, y: 0 },
+    stronghold: { x: 18, y: 0 },
+  },
+  strongholdIds: ["stronghold"],
+});
+assert.equal(
+  strongholdDestinationTap.context.resolveCityTapButton(strongholdDestinationTap.event, "source"),
+  strongholdDestinationTap.nodes.get("stronghold"),
+  "Owned and foreign Strongholds must remain selectable destinations under the source marker.",
+);
+
+const lowZoomNearbyTap = createCityTapHarness({
+  zoom: 0.4,
+  directId: "source",
+  hitIds: ["source"],
+  renderedIds: ["source", "target"],
+  cityPositions: {
+    source: { x: 0, y: 0 },
+    target: { x: 100, y: 0 },
+  },
+});
+assert.equal(
+  lowZoomNearbyTap.context.resolveCityTapButton(lowZoomNearbyTap.event, "source"),
+  lowZoomNearbyTap.nodes.get("target"),
+  "The fixed screen-space radius must find a nearby destination at minimum zoom.",
+);
+const fullZoomSourceTap = createCityTapHarness({
+  zoom: 1,
+  directId: "source",
+  hitIds: ["source"],
+  renderedIds: ["source", "target"],
+  cityPositions: {
+    source: { x: 0, y: 0 },
+    target: { x: 100, y: 0 },
+  },
+});
+assert.equal(
+  fullZoomSourceTap.context.resolveCityTapButton(fullZoomSourceTap.event, "source"),
+  fullZoomSourceTap.nodes.get("source"),
+  "A source-only tap must preserve the existing choose-a-different-destination response.",
+);
 
 assert.equal(context.shouldUseCrowdedMapPerformance(false, 69, 23), false);
 assert.equal(context.shouldUseCrowdedMapPerformance(false, 70, 0), true);
@@ -192,8 +339,13 @@ assert.equal(swiftLocation.point.x, 40, "Swift March should center using acceler
 assert.match(stylesSource, /\.army-token\.endpoint-clearance\s*\{[\s\S]*?pointer-events:\s*none;/, "Endpoint march markers must pass pointer input through to cities.");
 assert.match(
   source,
-  /function startPan[\s\S]*?resolveMapTapTargets\(event, sendMode\)/,
-  "Destination selection must prioritize city targets over overlapping army markers."
+  /function startPan[\s\S]*?resolveMapTapTargets\(event, sendMode, getCityTapExcludedSourceId\(\)\)/,
+  "Destination selection must prioritize non-source city targets over overlapping map markers."
+);
+assert.match(
+  source,
+  /function resolveCityTapButton[\s\S]*?cityLayer\.querySelectorAll\("\.city-node\[data-city-id\]"\)/,
+  "Low-zoom fallback selection must rank only city markers rendered on the active map.",
 );
 assert.match(
   source,
