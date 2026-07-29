@@ -851,7 +851,7 @@
   async function getServiceWorkerRegistration() {
     if (client.serviceWorkerRegistration) return client.serviceWorkerRegistration;
     if (!("serviceWorker" in navigator)) throw new Error("This browser does not support notifications.");
-    const workerUrl = new URL("/service-worker.js", window.location.origin);
+    const workerUrl = new URL("./service-worker.js", document.baseURI);
     client.serviceWorkerRegistration = await navigator.serviceWorker.register(workerUrl.href);
     return client.serviceWorkerRegistration;
   }
