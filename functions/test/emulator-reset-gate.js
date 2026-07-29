@@ -309,9 +309,11 @@ async function main() {
   assert(counts.reduce((sum, count) => sum + count, 0) === 50, `Starter counts do not total 50: ${counts.join(",")}`);
   assert(Math.max(...counts) - Math.min(...counts) <= 1, `Starter islands are imbalanced: ${counts.join(",")}`);
 
-  const idempotentResults = await Promise.all(users.map((user, index) => (
-    callFunction("claimStartingCity", user.token, { playerName: `Changed ${index}` })
-  )));
+  const idempotentResults = await mapWithConcurrency(
+    users,
+    10,
+    (user, index) => callFunction("claimStartingCity", user.token, { playerName: `Changed ${index}` }),
+  );
   idempotentResults.forEach((result, index) => {
     assert(result.alreadyClaimed === true, `Repeated claim ${index} was not idempotent.`);
     assert(result.cityId === claims[index].cityId, `Repeated claim ${index} changed city.`);
