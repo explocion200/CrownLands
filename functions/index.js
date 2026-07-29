@@ -2,11 +2,12 @@ const { onCall, HttpsError } = require("firebase-functions/v2/https");
 const { onSchedule } = require("firebase-functions/v2/scheduler");
 const { onDocumentCreated, onDocumentWritten } = require("firebase-functions/v2/firestore");
 const admin = require("firebase-admin");
-const { FieldPath, FieldValue, getFirestore } = require("firebase-admin/firestore");
+const { FieldPath, FieldValue, Timestamp, getFirestore } = require("firebase-admin/firestore");
 const crypto = require("node:crypto");
 const SERVER_WORLD_LAYOUT = require("./world-layout.json");
 const ECONOMY_CONFIG = require("./economy-config.json");
 const REALM_CONFIG = require("./release-config.json");
+const { getClanQuestPeriod } = require("./clanQuestPeriod.js");
 
 function safeConfigString(value, fallback = "") {
   const cleaned = String(value || "").trim().replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 120);
@@ -233,17 +234,18 @@ const CLAN_RESERVATION_RELEASE_MS = 7 * 24 * 60 * 60 * 1000;
 const CLAN_GIFT_COOLDOWN_MS = 5 * 60 * 60 * 1000;
 const CLAN_GIFT_PRODUCTION_MINUTES = 30;
 const CLAN_QUEST_REWARDS = Object.freeze([
-  { id: "capture_5", captures: 5, rewardType: "gold", productionMinutes: 30 },
-  { id: "capture_15", captures: 15, rewardType: "troops", productionMinutes: 30 },
-  { id: "capture_25", captures: 25, rewardType: "gold", productionMinutes: 60 },
-  { id: "capture_35", captures: 35, rewardType: "troops", productionMinutes: 60 },
-  { id: "capture_45", captures: 45, rewardType: "gold", productionMinutes: 90 },
-  { id: "capture_50", captures: 50, rewardType: "troops", productionMinutes: 120 },
-  { id: "capture_65", captures: 65, rewardType: "gold", productionMinutes: 120 },
-  { id: "capture_75", captures: 75, rewardType: "troops", productionMinutes: 180 },
-  { id: "capture_90", captures: 90, rewardType: "gold", productionMinutes: 180 },
-  { id: "capture_100", captures: 100, rewardType: "troops", productionMinutes: 360 },
+  { id: "capture_25", captures: 25, rewardType: "gold", productionMinutes: 30 },
+  { id: "capture_75", captures: 75, rewardType: "troops", productionMinutes: 30 },
+  { id: "capture_150", captures: 150, rewardType: "gold", productionMinutes: 60 },
+  { id: "capture_250", captures: 250, rewardType: "troops", productionMinutes: 60 },
+  { id: "capture_400", captures: 400, rewardType: "gold", productionMinutes: 90 },
+  { id: "capture_600", captures: 600, rewardType: "troops", productionMinutes: 120 },
+  { id: "capture_850", captures: 850, rewardType: "gold", productionMinutes: 150 },
+  { id: "capture_1150", captures: 1150, rewardType: "troops", productionMinutes: 180 },
+  { id: "capture_1500", captures: 1500, rewardType: "gold", productionMinutes: 240 },
+  { id: "capture_2000", captures: 2000, rewardType: "troops", productionMinutes: 360 },
 ]);
+const CLAN_QUEST_MAX_CAPTURES = 2_000;
 const CLAN_IDENTITY_REVISION_VERSION = 1;
 const CLAN_SHIELD_VERSION = 1;
 const CLAN_SHIELD_SHAPES = new Set(["castilian", "heater", "kite", "round"]);
@@ -8326,11 +8328,14 @@ exports.getRealmInfo = timedCallable(
   { region: "us-central1", maxInstances: 20, invoker: "public" },
   async request => {
     requireAuth(request, { allowRealmMismatch: true });
+    const serverTimeMs = Date.now();
     return {
       ok: true,
       releaseId: REALM_RELEASE_ID,
       resetGeneration: RESET_GENERATION,
       worldId: ONLINE_WORLD_ID,
+      serverTimeMs,
+      clanQuestPeriod: getClanQuestPeriod(serverTimeMs, RESET_GENERATION),
       serverId: GAME_SERVER_ID,
       serverName: GAME_SERVER_NAME,
       capacity: GAME_SERVER_CAPACITY,
@@ -11208,8 +11213,36 @@ function clanMemberSnapshot(uid = "", profile = {}, role = "member", nowMs = Dat
   };
 }
 
-function clanQuestProgressRef(clanId = "") {
-  return db.doc(`clans/${clanId}/questProgress/${RESET_GENERATION}`);
+function clanQuestProgressRef(clanId = "", period = null) {
+  const questPeriod = period?.questPeriodId
+    ? period
+    : getClanQuestPeriod(period === null ? Date.now() : period, RESET_GENERATION);
+  return db.doc(`clans/${clanId}/questProgress/${questPeriod.questPeriodId}`);
+}
+
+function createClanQuestProgress(clanId = "", period = null, nowMs = Date.now()) {
+  const questPeriod = period?.questPeriodId
+    ? period
+    : getClanQuestPeriod(nowMs, RESET_GENERATION);
+  return {
+    clanId,
+    worldId: ONLINE_WORLD_ID,
+    resetGeneration: RESET_GENERATION,
+    questPeriodId: questPeriod.questPeriodId,
+    periodId: questPeriod.questPeriodId,
+    weekKey: questPeriod.weekKey,
+    weekStartAtMs: questPeriod.weekStartAtMs,
+    weekEndAtMs: questPeriod.weekEndAtMs,
+    weekStartAt: Timestamp.fromMillis(questPeriod.weekStartAtMs),
+    weekEndAt: Timestamp.fromMillis(questPeriod.weekEndAtMs),
+    maximumCaptures: CLAN_QUEST_MAX_CAPTURES,
+    captureCount: 0,
+    milestoneUnlocks: {},
+    createdAtMs: nowMs,
+    updatedAtMs: nowMs,
+    createdAt: FieldValue.serverTimestamp(),
+    updatedAt: FieldValue.serverTimestamp(),
+  };
 }
 
 function clanWorldBenefitsRef(clanId = "") {
@@ -11226,7 +11259,16 @@ function clanMemberRewardsRef(clanId = "", uid = "") {
   return db.doc(`clans/${clanId}/memberRewards/${uid}`);
 }
 
+function clanQuestClaimHistoryRef(clanId = "", uid = "", questPeriodId = "") {
+  const safeUid = safeString(uid, 128).replace(/[^a-zA-Z0-9_-]/g, "_");
+  const safePeriodId = safeString(questPeriodId, 160).replace(/[^a-zA-Z0-9_-]/g, "_");
+  return safeUid && safePeriodId
+    ? db.doc(`clans/${clanId}/memberRewardHistory/${safeUid}_${safePeriodId}`)
+    : null;
+}
+
 function createClanMemberRewards(uid = "", nowMs = Date.now()) {
+  const questPeriod = getClanQuestPeriod(nowMs, RESET_GENERATION);
   return {
     uid,
     worldId: ONLINE_WORLD_ID,
@@ -11236,6 +11278,7 @@ function createClanMemberRewards(uid = "", nowMs = Date.now()) {
     giftCountSent: 0,
     giftGoldMinutesClaimed: 0,
     lastGiftSentAtMs: 0,
+    questPeriodId: questPeriod.questPeriodId,
     questClaims: {},
     createdAtMs: nowMs,
     updatedAtMs: nowMs,
@@ -11253,6 +11296,8 @@ function normalizeClanQuestClaims(value = {}) {
 
 function clanMemberRewardsForClient(value = {}, nowMs = Date.now()) {
   const lastGiftSentAtMs = Math.max(0, timestampToMs(value.lastGiftSentAtMs));
+  const questPeriod = getClanQuestPeriod(nowMs, RESET_GENERATION);
+  const claimsMatchCurrentPeriod = safeString(value.questPeriodId, 160) === questPeriod.questPeriodId;
   return {
     pendingGiftGoldMinutes: Math.max(0, Math.floor(safeNumber(value.pendingGiftGoldMinutes, 0))),
     giftCountReceived: Math.max(0, Math.floor(safeNumber(value.giftCountReceived, 0))),
@@ -11261,7 +11306,8 @@ function clanMemberRewardsForClient(value = {}, nowMs = Date.now()) {
     lastGiftSentAtMs,
     giftCooldownUntilMs: lastGiftSentAtMs ? lastGiftSentAtMs + CLAN_GIFT_COOLDOWN_MS : 0,
     canSendGift: !lastGiftSentAtMs || nowMs - lastGiftSentAtMs >= CLAN_GIFT_COOLDOWN_MS,
-    questClaims: normalizeClanQuestClaims(value.questClaims),
+    questPeriodId: questPeriod.questPeriodId,
+    questClaims: claimsMatchCurrentPeriod ? normalizeClanQuestClaims(value.questClaims) : {},
   };
 }
 
@@ -11409,17 +11455,8 @@ exports.createClan = onCall({ region: "us-central1", maxInstances: 20, invoker: 
       kingPower: clan.totalKingPower,
     }, "leader", nowMs));
     transaction.set(clanMemberRewardsRef(clanId, uid), createClanMemberRewards(uid, nowMs));
-    transaction.set(clanQuestProgressRef(clanId), {
-      clanId,
-      worldId: ONLINE_WORLD_ID,
-      resetGeneration: RESET_GENERATION,
-      captureCount: 0,
-      milestoneUnlocks: {},
-      createdAtMs: nowMs,
-      updatedAtMs: nowMs,
-      createdAt: FieldValue.serverTimestamp(),
-      updatedAt: FieldValue.serverTimestamp(),
-    });
+    const questPeriod = getClanQuestPeriod(nowMs, RESET_GENERATION);
+    transaction.set(clanQuestProgressRef(clanId, questPeriod), createClanQuestProgress(clanId, questPeriod, nowMs));
     transaction.set(clanWorldBenefitsRef(clanId), {
       clanId,
       worldId: ONLINE_WORLD_ID,
@@ -12045,6 +12082,7 @@ exports.sendClanGift = onCall({ region: "us-central1", maxInstances: 20, invoker
         pendingGiftGoldMinutes: 0,
         giftCountReceived: 0,
         giftGoldMinutesClaimed: 0,
+        questPeriodId: getClanQuestPeriod(nowMs, RESET_GENERATION).questPeriodId,
         questClaims: {},
         createdAtMs: nowMs,
         createdAt: FieldValue.serverTimestamp(),
@@ -12150,6 +12188,14 @@ exports.claimClanQuestReward = onCall({ region: "us-central1", maxInstances: 20,
   const rewardConfig = CLAN_QUEST_REWARDS.find(reward => reward.id === rewardId);
   if (!rewardConfig) throw new HttpsError("invalid-argument", "Choose a valid clan quest reward.");
   const nowMs = Date.now();
+  const questPeriod = getClanQuestPeriod(nowMs, RESET_GENERATION);
+  const requestedQuestPeriodId = safeString(request.data?.questPeriodId, 160);
+  if (!requestedQuestPeriodId || requestedQuestPeriodId !== questPeriod.questPeriodId) {
+    throw new HttpsError("failed-precondition", "That weekly quest period has expired.", {
+      currentQuestPeriodId: questPeriod.questPeriodId,
+      weekEndAtMs: questPeriod.weekEndAtMs,
+    });
+  }
   return db.runTransaction(async transaction => {
     const profileSnap = await transaction.get(db.doc(`players/${uid}`));
     const profile = profileSnap.data() || {};
@@ -12159,7 +12205,7 @@ exports.claimClanQuestReward = onCall({ region: "us-central1", maxInstances: 20,
     const [clanSnap, memberSnap, progressSnap, rewardsSnap] = await Promise.all([
       transaction.get(db.doc(`clans/${clanId}`)),
       transaction.get(db.doc(`clans/${clanId}/members/${uid}`)),
-      transaction.get(clanQuestProgressRef(clanId)),
+      transaction.get(clanQuestProgressRef(clanId, questPeriod)),
       transaction.get(rewardsRef),
     ]);
     if (!clanSnap.exists || !memberSnap.exists) {
@@ -12168,6 +12214,9 @@ exports.claimClanQuestReward = onCall({ region: "us-central1", maxInstances: 20,
     assertCurrentClan(clanSnap.data() || {});
     const member = memberSnap.data() || {};
     const progress = progressSnap.exists ? progressSnap.data() || {} : {};
+    if (safeString(progress.questPeriodId, 160) !== questPeriod.questPeriodId) {
+      throw new HttpsError("failed-precondition", "That weekly clan quest has not started yet.");
+    }
     const unlockedAtMs = Math.max(0, timestampToMs(progress.milestoneUnlocks?.[rewardId]));
     if (!unlockedAtMs || Math.max(0, Math.floor(safeNumber(progress.captureCount, 0))) < rewardConfig.captures) {
       throw new HttpsError("failed-precondition", "That clan quest reward is still locked.");
@@ -12177,13 +12226,17 @@ exports.claimClanQuestReward = onCall({ region: "us-central1", maxInstances: 20,
       throw new HttpsError("permission-denied", "You joined after that reward was unlocked.");
     }
     const rewards = rewardsSnap.exists ? rewardsSnap.data() || {} : {};
-    const questClaims = normalizeClanQuestClaims(rewards.questClaims);
+    const storedQuestPeriodId = safeString(rewards.questPeriodId, 160);
+    const questClaims = storedQuestPeriodId === questPeriod.questPeriodId
+      ? normalizeClanQuestClaims(rewards.questClaims)
+      : {};
     if (questClaims[rewardId]) {
       return {
         ok: true,
         claimed: true,
         replayed: true,
         rewardId,
+        questPeriodId: questPeriod.questPeriodId,
         memberRewards: clanMemberRewardsForClient(rewards, nowMs),
       };
     }
@@ -12211,21 +12264,44 @@ exports.claimClanQuestReward = onCall({ region: "us-central1", maxInstances: 20,
       ...questClaims,
       [rewardId]: {
         claimedAtMs: nowMs,
+        questPeriodId: questPeriod.questPeriodId,
         rewardType: rewardConfig.rewardType,
         productionMinutes: rewardConfig.productionMinutes,
         rewardAmount,
       },
     };
+    const previousClaims = rewards.questClaims && typeof rewards.questClaims === "object"
+      ? rewards.questClaims
+      : {};
+    if (storedQuestPeriodId !== questPeriod.questPeriodId && Object.keys(previousClaims).length) {
+      const historicalPeriodId = storedQuestPeriodId || `legacy_${RESET_GENERATION}`;
+      const historyRef = clanQuestClaimHistoryRef(clanId, uid, historicalPeriodId);
+      if (historyRef) {
+        transaction.set(historyRef, {
+          uid,
+          clanId,
+          worldId: ONLINE_WORLD_ID,
+          resetGeneration: RESET_GENERATION,
+          questPeriodId: historicalPeriodId,
+          questClaims: previousClaims,
+          archivedAtMs: nowMs,
+          archivedAt: FieldValue.serverTimestamp(),
+        }, { merge: true });
+      }
+    }
     transaction.set(rewardsRef, {
       uid,
       worldId: ONLINE_WORLD_ID,
       resetGeneration: RESET_GENERATION,
+      questPeriodId: questPeriod.questPeriodId,
       questClaims: nextClaims,
       updatedAtMs: nowMs,
       updatedAt: FieldValue.serverTimestamp(),
     }, { merge: true });
     writeClanAudit(transaction, clanId, uid, "clan_quest_reward_claimed", {
       rewardId,
+      questPeriodId: questPeriod.questPeriodId,
+      weekKey: questPeriod.weekKey,
       captures: rewardConfig.captures,
       rewardType: rewardConfig.rewardType,
       productionMinutes: rewardConfig.productionMinutes,
@@ -12236,6 +12312,7 @@ exports.claimClanQuestReward = onCall({ region: "us-central1", maxInstances: 20,
       claimed: true,
       replayed: false,
       rewardId,
+      questPeriodId: questPeriod.questPeriodId,
       rewardType: rewardConfig.rewardType,
       reward: rewardAmount,
       productionMinutes: rewardConfig.productionMinutes,
@@ -12243,6 +12320,7 @@ exports.claimClanQuestReward = onCall({ region: "us-central1", maxInstances: 20,
       targetCityName: troopCredit?.cityName || "",
       memberRewards: clanMemberRewardsForClient({
         ...rewards,
+        questPeriodId: questPeriod.questPeriodId,
         questClaims: nextClaims,
       }, nowMs),
     });
@@ -16863,12 +16941,18 @@ async function recordClanConquest(change = {}, eventId = "") {
   const receiptRef = clanQuestCaptureReceiptRef(clanId, eventId || change.eventId);
   if (!receiptRef) return { counted: false };
   const nowMs = Date.now();
+  const captureEventAtMs = Math.max(
+    0,
+    timestampToMs(change.createdAtMs) || timestampToMs(change.createdAt) || nowMs
+  );
+  const questPeriod = getClanQuestPeriod(captureEventAtMs, RESET_GENERATION);
+  const progressRef = clanQuestProgressRef(clanId, questPeriod);
   return db.runTransaction(async transaction => {
     const [latestProfileSnap, clanSnap, memberSnap, progressSnap, receiptSnap] = await Promise.all([
       transaction.get(db.doc(`players/${afterOwnerUid}`)),
       transaction.get(db.doc(`clans/${clanId}`)),
       transaction.get(db.doc(`clans/${clanId}/members/${afterOwnerUid}`)),
-      transaction.get(clanQuestProgressRef(clanId)),
+      transaction.get(progressRef),
       transaction.get(receiptRef),
     ]);
     if (receiptSnap.exists) return { counted: false, duplicate: true };
@@ -16893,25 +16977,25 @@ async function recordClanConquest(change = {}, eventId = "") {
       captureCount >= reward.captures && !timestampToMs(milestoneUnlocks[reward.id])
     ));
     newlyUnlocked.forEach(reward => {
-      milestoneUnlocks[reward.id] = nowMs;
+      milestoneUnlocks[reward.id] = captureEventAtMs;
     });
-    transaction.set(clanQuestProgressRef(clanId), {
-      clanId,
-      worldId: ONLINE_WORLD_ID,
-      resetGeneration: RESET_GENERATION,
+    transaction.set(progressRef, {
+      ...createClanQuestProgress(clanId, questPeriod, nowMs),
       captureCount,
       milestoneUnlocks,
       lastCaptureEventId: receiptRef.id,
       lastCapturedByUid: afterOwnerUid,
+      lastCapturedDefenderUid: beforeOwnerUid,
+      lastCapturedTargetType: targetType,
       lastCapturedTargetId: safeString(change.targetId, 96),
       lastCapturedRegionId: safeString(change.regionId, 80),
-      lastCapturedAtMs: Math.max(0, timestampToMs(change.createdAtMs) || nowMs),
+      lastCapturedAtMs: captureEventAtMs,
       updatedAtMs: nowMs,
       updatedAt: FieldValue.serverTimestamp(),
-      ...(progressSnap.exists ? {} : {
-        createdAtMs: nowMs,
-        createdAt: FieldValue.serverTimestamp(),
-      }),
+      ...(progressSnap.exists ? {
+        createdAtMs: progress.createdAtMs || nowMs,
+        createdAt: progress.createdAt || FieldValue.serverTimestamp(),
+      } : {}),
     }, { merge: true });
     transaction.set(receiptRef, {
       eventId: receiptRef.id,
@@ -16922,6 +17006,9 @@ async function recordClanConquest(change = {}, eventId = "") {
       regionId: safeString(change.regionId, 80),
       worldId: ONLINE_WORLD_ID,
       resetGeneration: RESET_GENERATION,
+      questPeriodId: questPeriod.questPeriodId,
+      weekKey: questPeriod.weekKey,
+      captureEventAtMs,
       captureNumber: captureCount,
       createdAtMs: nowMs,
       createdAt: FieldValue.serverTimestamp(),
@@ -16929,6 +17016,9 @@ async function recordClanConquest(change = {}, eventId = "") {
     newlyUnlocked.forEach(reward => {
       writeClanAudit(transaction, clanId, afterOwnerUid, "clan_quest_unlocked", {
         rewardId: reward.id,
+        questPeriodId: questPeriod.questPeriodId,
+        weekKey: questPeriod.weekKey,
+        unlockedAtMs: captureEventAtMs,
         captures: reward.captures,
         rewardType: reward.rewardType,
         productionMinutes: reward.productionMinutes,
@@ -16937,6 +17027,7 @@ async function recordClanConquest(change = {}, eventId = "") {
     return {
       counted: true,
       clanId,
+      questPeriodId: questPeriod.questPeriodId,
       captureCount,
       unlockedRewardIds: newlyUnlocked.map(reward => reward.id),
     };

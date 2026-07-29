@@ -587,17 +587,6 @@
     const safeClanId = String(clanId).slice(0, 128);
     const unsubscribers = [
       onSnapshot(
-        doc(client.db, "clans", safeClanId, "questProgress", RESET_GENERATION),
-        snapshot => {
-          if (typeof handlers.onQuestProgress === "function") {
-            handlers.onQuestProgress(snapshot.exists() ? { id: snapshot.id, ...snapshot.data() } : null);
-          }
-        },
-        error => {
-          if (typeof handlers.onError === "function") handlers.onError(error, "questProgress");
-        }
-      ),
-      onSnapshot(
         doc(client.db, "clans", safeClanId, "memberRewards", client.user.uid),
         snapshot => {
           if (typeof handlers.onMemberRewards === "function") {
@@ -621,6 +610,30 @@
       ),
     ];
     return () => unsubscribers.forEach(unsubscribe => unsubscribe());
+  }
+
+  function subscribeClanQuestProgress(clanId = "", questPeriodId = "", handlers = {}) {
+    if (
+      !client.db
+      || !client.modules?.firestore?.onSnapshot
+      || !client.user?.uid
+      || !clanId
+      || !questPeriodId
+    ) return () => {};
+    const { doc, onSnapshot } = client.modules.firestore;
+    const safeClanId = String(clanId).slice(0, 128);
+    const safeQuestPeriodId = String(questPeriodId).replace(/[^a-zA-Z0-9_-]/g, "_").slice(0, 160);
+    return onSnapshot(
+      doc(client.db, "clans", safeClanId, "questProgress", safeQuestPeriodId),
+      snapshot => {
+        if (typeof handlers.onQuestProgress === "function") {
+          handlers.onQuestProgress(snapshot.exists() ? { id: snapshot.id, ...snapshot.data() } : null);
+        }
+      },
+      error => {
+        if (typeof handlers.onError === "function") handlers.onError(error, "questProgress");
+      }
+    );
   }
 
   function subscribeClanApplications(clanId = "", handlers = {}) {
@@ -2026,6 +2039,7 @@
     subscribeClanState,
     subscribeClanApplications,
     subscribeClanSocialState,
+    subscribeClanQuestProgress,
     subscribeClanRallies,
     recalculatePlayerGlobalStats,
     recalculateAllPlayerGlobalStats,

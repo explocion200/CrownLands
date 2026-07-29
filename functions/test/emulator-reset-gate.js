@@ -1,6 +1,8 @@
 const admin = require("firebase-admin");
 const crypto = require("node:crypto");
+const { Timestamp } = require("firebase-admin/firestore");
 const realm = require("../release-config.json");
+const { getClanQuestPeriod } = require("../clanQuestPeriod.js");
 
 const projectId = process.env.GCLOUD_PROJECT || process.env.GOOGLE_CLOUD_PROJECT || "crown-land-b15e0";
 const authHost = process.env.FIREBASE_AUTH_EMULATOR_HOST || "127.0.0.1:9099";
@@ -1835,7 +1837,9 @@ async function main() {
   );
   await waitForOwnershipEvents(53);
 
-  const clanQuestEventIds = Array.from({ length: 5 }, (_, index) => (
+  const clanQuestPeriod = getClanQuestPeriod(Date.now(), realm.resetGeneration);
+  const clanQuestDefenders = users.filter(user => user.uid !== clanApplicant.uid).slice(0, 25);
+  const clanQuestEventIds = Array.from({ length: 25 }, (_, index) => (
     `clan_quest_gate_${index}_${crypto.randomBytes(6).toString("hex")}`
   ));
   const clanQuestBatch = db.batch();
@@ -1851,7 +1855,7 @@ async function main() {
         targetId: `quest_gate_city_${index}`,
         regionId: sourceClaim.mainRegionId,
         targetKey: `${sourceClaim.mainRegionId}:quest_gate_city_${index}`,
-        beforeOwnerUid: users[index].uid,
+        beforeOwnerUid: clanQuestDefenders[index].uid,
         afterOwnerUid: clanApplicant.uid,
         reason: "city_captured",
         status: "pending",
@@ -1864,18 +1868,41 @@ async function main() {
   });
   await clanQuestBatch.commit();
   await waitForOwnershipEventIds(clanQuestEventIds);
-  const questProgressRef = db.doc(`clans/${applicationClanId}/questProgress/${realm.resetGeneration}`);
-  const questProgressAtFive = (await questProgressRef.get()).data() || {};
-  assert(questProgressAtFive.captureCount === 5, "Five eligible player-owned captures did not advance the clan quest.");
-  assert(Number(questProgressAtFive.milestoneUnlocks?.capture_5 || 0) > 0, "The five-capture clan milestone did not unlock.");
+  const questProgressRef = db.doc(`clans/${applicationClanId}/questProgress/${clanQuestPeriod.questPeriodId}`);
+  const questProgressAtTwentyFive = (await questProgressRef.get()).data() || {};
+  assert(questProgressAtTwentyFive.captureCount === 25, "Twenty-five eligible player-owned captures did not advance the weekly clan quest.");
+  assert(
+    Number(questProgressAtTwentyFive.milestoneUnlocks?.capture_25 || 0) > 0,
+    "The 25-capture weekly clan milestone did not unlock."
+  );
+  assert(
+    questProgressAtTwentyFive.questPeriodId === clanQuestPeriod.questPeriodId,
+    "Weekly clan quest progress was written to the wrong period."
+  );
+  let staleQuestClaimError = null;
+  try {
+    await callFunction("claimClanQuestReward", clanApplicant.token, {
+      rewardId: "capture_25",
+      questPeriodId: `${clanQuestPeriod.questPeriodId}_expired`,
+    });
+  } catch (error) {
+    staleQuestClaimError = error;
+  }
+  assert(/weekly quest period has expired/.test(String(staleQuestClaimError?.message || "")), "A stale weekly clan quest period was accepted.");
   const questGoldBeforeClaim = Number((await clanApplicantRef.get()).data()?.gold || 0);
-  const questClaim = await callFunction("claimClanQuestReward", clanApplicant.token, { rewardId: "capture_5" });
+  const questClaim = await callFunction("claimClanQuestReward", clanApplicant.token, {
+    rewardId: "capture_25",
+    questPeriodId: clanQuestPeriod.questPeriodId,
+  });
   assert(questClaim?.claimed === true && questClaim?.replayed === false && questClaim?.reward > 0, "The first clan quest claim did not award base gold.");
   assert(
     Number((await clanApplicantRef.get()).data()?.gold || 0) >= questGoldBeforeClaim + Number(questClaim.reward || 0),
     "The clan quest reward was not immediately credited."
   );
-  const replayedQuestClaim = await callFunction("claimClanQuestReward", clanApplicant.token, { rewardId: "capture_5" });
+  const replayedQuestClaim = await callFunction("claimClanQuestReward", clanApplicant.token, {
+    rewardId: "capture_25",
+    questPeriodId: clanQuestPeriod.questPeriodId,
+  });
   assert(replayedQuestClaim?.replayed === true, "A repeated clan quest claim was not idempotent.");
 
   const excludedQuestEventIds = [
@@ -1928,8 +1955,38 @@ async function main() {
   await excludedQuestBatch.commit();
   await waitForOwnershipEventIds(excludedQuestEventIds);
   assert(
-    Number((await questProgressRef.get()).data()?.captureCount || 0) === 5,
+    Number((await questProgressRef.get()).data()?.captureCount || 0) === 25,
     "Neutral territory or reward camps advanced clan conquest progress."
+  );
+
+  const priorQuestPeriod = getClanQuestPeriod(clanQuestPeriod.weekStartAtMs - 1, realm.resetGeneration);
+  const delayedQuestEventId = `clan_quest_delayed_${crypto.randomBytes(6).toString("hex")}`;
+  await db.doc(`realmEvents/${realm.resetGeneration}/ownershipChanges/${delayedQuestEventId}`).set({
+    eventId: delayedQuestEventId,
+    worldId: realm.worldId,
+    resetGeneration: realm.resetGeneration,
+    releaseId: realm.releaseId,
+    targetType: "city",
+    targetId: "quest_gate_delayed_city",
+    regionId: sourceClaim.mainRegionId,
+    targetKey: `${sourceClaim.mainRegionId}:quest_gate_delayed_city`,
+    beforeOwnerUid: clanQuestDefenders[0].uid,
+    afterOwnerUid: clanApplicant.uid,
+    reason: "city_captured",
+    status: "pending",
+    attempts: 0,
+    createdAtMs: clanQuestPeriod.weekStartAtMs - 1,
+    createdAt: Timestamp.fromMillis(clanQuestPeriod.weekStartAtMs - 1),
+    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+  });
+  await waitForOwnershipEventIds([delayedQuestEventId]);
+  const priorQuestProgress = (
+    await db.doc(`clans/${applicationClanId}/questProgress/${priorQuestPeriod.questPeriodId}`).get()
+  ).data() || {};
+  assert(priorQuestProgress.captureCount === 1, "A delayed conquest did not remain in its original UTC week.");
+  assert(
+    Number((await questProgressRef.get()).data()?.captureCount || 0) === 25,
+    "A delayed prior-week conquest contaminated the active weekly period."
   );
 
   const lateClanMember = users[47];
@@ -1947,7 +2004,10 @@ async function main() {
   });
   let lateClaimError = null;
   try {
-    await callFunction("claimClanQuestReward", lateClanMember.token, { rewardId: "capture_5" });
+    await callFunction("claimClanQuestReward", lateClanMember.token, {
+      rewardId: "capture_25",
+      questPeriodId: clanQuestPeriod.questPeriodId,
+    });
   } catch (error) {
     lateClaimError = error;
   }

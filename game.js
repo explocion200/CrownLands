@@ -922,17 +922,19 @@ const CLAN_GIFT_COOLDOWN_MS = 5 * 60 * 60 * 1000;
 const CLAN_NAME_CHANGE_GOLD_COST = 500_000;
 const CLAN_NAME_CHANGE_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000;
 const CLAN_QUEST_REWARDS = Object.freeze([
-  { id: "capture_5", captures: 5, rewardType: "gold", productionMinutes: 30 },
-  { id: "capture_15", captures: 15, rewardType: "troops", productionMinutes: 30 },
-  { id: "capture_25", captures: 25, rewardType: "gold", productionMinutes: 60 },
-  { id: "capture_35", captures: 35, rewardType: "troops", productionMinutes: 60 },
-  { id: "capture_45", captures: 45, rewardType: "gold", productionMinutes: 90 },
-  { id: "capture_50", captures: 50, rewardType: "troops", productionMinutes: 120 },
-  { id: "capture_65", captures: 65, rewardType: "gold", productionMinutes: 120 },
-  { id: "capture_75", captures: 75, rewardType: "troops", productionMinutes: 180 },
-  { id: "capture_90", captures: 90, rewardType: "gold", productionMinutes: 180 },
-  { id: "capture_100", captures: 100, rewardType: "troops", productionMinutes: 360 },
+  { id: "capture_25", captures: 25, rewardType: "gold", productionMinutes: 30 },
+  { id: "capture_75", captures: 75, rewardType: "troops", productionMinutes: 30 },
+  { id: "capture_150", captures: 150, rewardType: "gold", productionMinutes: 60 },
+  { id: "capture_250", captures: 250, rewardType: "troops", productionMinutes: 60 },
+  { id: "capture_400", captures: 400, rewardType: "gold", productionMinutes: 90 },
+  { id: "capture_600", captures: 600, rewardType: "troops", productionMinutes: 120 },
+  { id: "capture_850", captures: 850, rewardType: "gold", productionMinutes: 150 },
+  { id: "capture_1150", captures: 1150, rewardType: "troops", productionMinutes: 180 },
+  { id: "capture_1500", captures: 1500, rewardType: "gold", productionMinutes: 240 },
+  { id: "capture_2000", captures: 2000, rewardType: "troops", productionMinutes: 360 },
 ]);
+const CLAN_QUEST_MAX_CAPTURES = 2_000;
+const CLAN_QUEST_EXPIRATION_WARNING_MS = 24 * 60 * 60 * 1000;
 
 
 
@@ -2698,6 +2700,10 @@ let clanMemberRewards = null;
 let clanWorldBenefits = null;
 let clanSocialStateUnsubscribe = null;
 let activeClanSocialSubscriptionId = "";
+let clanQuestProgressUnsubscribe = null;
+let activeClanQuestSubscriptionKey = "";
+let activeClanQuestPeriod = null;
+let clanQuestServerClockOffsetMs = 0;
 let clanApplicationsUnsubscribe = null;
 let activeClanApplicationsSubscriptionId = "";
 let clanApplicationsError = "";
@@ -11935,6 +11941,7 @@ async function verifyRealmCompatibility(api, { force = false } = {}) {
     && verifiedRealmInfo?.worldId === ONLINE_WORLD_ID) {
     return verifiedRealmInfo;
   }
+  const requestStartedAtMs = Date.now();
   const realm = await withTimeout(
     api.getRealmInfo(),
     10000,
@@ -11946,6 +11953,12 @@ async function verifyRealmCompatibility(api, { force = false } = {}) {
   if (!releaseMatches || !generationMatches || !worldMatches) {
     throw new Error("A Crownlands update is still deploying. Refresh before entering the kingdom.");
   }
+  const responseReceivedAtMs = Date.now();
+  const serverTimeMs = Number(realm?.serverTimeMs);
+  if (Number.isFinite(serverTimeMs) && serverTimeMs > 0) {
+    clanQuestServerClockOffsetMs = serverTimeMs - Math.round((requestStartedAtMs + responseReceivedAtMs) / 2);
+  }
+  activeClanQuestPeriod = getCurrentClanQuestPeriod();
   verifiedRealmInfo = realm;
   return realm;
 }
@@ -17557,6 +17570,109 @@ function refreshClanRelationshipPresentation() {
   if (profileScreen?.classList.contains("open")) renderProfileScreen();
 }
 
+function getClanQuestServerNowMs() {
+  return Date.now() + (Number(clanQuestServerClockOffsetMs) || 0);
+}
+
+function getCurrentClanQuestPeriod(nowMs = getClanQuestServerNowMs()) {
+  const helper = globalThis.CrownlandsClanQuestPeriod;
+  if (typeof helper?.getClanQuestPeriod === "function") {
+    return helper.getClanQuestPeriod(nowMs, RESET_GENERATION);
+  }
+  const current = new Date(nowMs);
+  const daysSinceMonday = (current.getUTCDay() + 6) % 7;
+  const weekStartAtMs = Date.UTC(
+    current.getUTCFullYear(),
+    current.getUTCMonth(),
+    current.getUTCDate() - daysSinceMonday
+  );
+  const weekEndAtMs = weekStartAtMs + (7 * 24 * 60 * 60 * 1000);
+  const weekKey = new Date(weekStartAtMs).toISOString().slice(0, 10);
+  const safeResetGeneration = String(RESET_GENERATION || "realm").replace(/[^a-zA-Z0-9_-]/g, "_");
+  const questPeriodId = `v2_${safeResetGeneration}_${weekKey}`;
+  return { version: 2, questPeriodId, periodId: questPeriodId, weekKey, weekStartAtMs, weekEndAtMs };
+}
+
+function getCurrentClanQuestProgress() {
+  const period = activeClanQuestPeriod || getCurrentClanQuestPeriod();
+  return String(clanQuestProgress?.questPeriodId || "") === String(period?.questPeriodId || "")
+    ? clanQuestProgress
+    : null;
+}
+
+function getCurrentClanQuestClaims() {
+  const period = activeClanQuestPeriod || getCurrentClanQuestPeriod();
+  return String(clanMemberRewards?.questPeriodId || "") === String(period?.questPeriodId || "")
+    && clanMemberRewards?.questClaims
+    && typeof clanMemberRewards.questClaims === "object"
+    ? clanMemberRewards.questClaims
+    : {};
+}
+
+function formatClanQuestPeriod(period = activeClanQuestPeriod || getCurrentClanQuestPeriod()) {
+  const startAtMs = Number(period?.weekStartAtMs) || 0;
+  const endAtMs = Number(period?.weekEndAtMs) || 0;
+  if (!startAtMs || !endAtMs) return "Current UTC week";
+  const formatDate = value => new Date(value).toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+    timeZone: "UTC",
+  });
+  return `${formatDate(startAtMs)} – ${formatDate(endAtMs - 1)} UTC`;
+}
+
+function formatClanQuestResetCountdown(remainingMs = 0) {
+  const totalSeconds = Math.max(0, Math.ceil((Number(remainingMs) || 0) / 1000));
+  const days = Math.floor(totalSeconds / 86400);
+  const hours = Math.floor((totalSeconds % 86400) / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  if (days) return `${days}d ${hours}h ${minutes}m`;
+  return `${hours}h ${minutes}m ${seconds}s`;
+}
+
+function startClanQuestProgressSubscription(api, clanId, { force = false } = {}) {
+  const id = String(clanId || "").trim();
+  const period = getCurrentClanQuestPeriod();
+  const subscriptionKey = `${id}:${period.questPeriodId}`;
+  activeClanQuestPeriod = period;
+  if (!id || !api?.subscribeClanQuestProgress) return false;
+  if (
+    !force
+    && activeClanQuestSubscriptionKey === subscriptionKey
+    && typeof clanQuestProgressUnsubscribe === "function"
+  ) return true;
+  if (typeof clanQuestProgressUnsubscribe === "function") clanQuestProgressUnsubscribe();
+  clanQuestProgressUnsubscribe = null;
+  activeClanQuestSubscriptionKey = subscriptionKey;
+  clanQuestProgress = null;
+  clanQuestProgressUnsubscribe = api.subscribeClanQuestProgress(id, period.questPeriodId, {
+    onQuestProgress: progress => {
+      if (activeClanQuestSubscriptionKey !== subscriptionKey) return;
+      clanQuestProgress = String(progress?.questPeriodId || "") === period.questPeriodId ? progress : null;
+      if (activeProfileTab === "clan") renderClanView();
+    },
+    onError: error => console.warn("Clan weekly quest subscription failed", error),
+  });
+  return true;
+}
+
+function updateClanQuestCountdown() {
+  const nextPeriod = getCurrentClanQuestPeriod();
+  const previousPeriodId = String(activeClanQuestPeriod?.questPeriodId || "");
+  if (nextPeriod.questPeriodId !== previousPeriodId) {
+    activeClanQuestPeriod = nextPeriod;
+    const clanId = String(state?.clanId || "").trim();
+    if (clanId) startClanQuestProgressSubscription(getOnlineApi(), clanId, { force: true });
+    if (activeProfileTab === "clan") renderClanView();
+  }
+  const remainingMs = Math.max(0, Number(nextPeriod.weekEndAtMs) - getClanQuestServerNowMs());
+  const countdown = clanContent?.querySelector("[data-clan-quest-countdown]");
+  if (countdown) countdown.textContent = `Resets in ${formatClanQuestResetCountdown(remainingMs)}`;
+  const warning = clanContent?.querySelector("[data-clan-quest-warning]");
+  if (warning) warning.hidden = remainingMs > CLAN_QUEST_EXPIRATION_WARNING_MS;
+}
+
 function stopClanRealtimeSubscriptions({ clear = true } = {}) {
   if (typeof clanStateUnsubscribe === "function") clanStateUnsubscribe();
   clanStateUnsubscribe = null;
@@ -17569,6 +17685,10 @@ function stopClanRealtimeSubscriptions({ clear = true } = {}) {
   if (typeof clanSocialStateUnsubscribe === "function") clanSocialStateUnsubscribe();
   clanSocialStateUnsubscribe = null;
   activeClanSocialSubscriptionId = "";
+  if (typeof clanQuestProgressUnsubscribe === "function") clanQuestProgressUnsubscribe();
+  clanQuestProgressUnsubscribe = null;
+  activeClanQuestSubscriptionKey = "";
+  activeClanQuestPeriod = null;
   if (clanGiftCountdownTimer) clearInterval(clanGiftCountdownTimer);
   clanGiftCountdownTimer = 0;
   if (typeof clanApplicationsUnsubscribe === "function") clanApplicationsUnsubscribe();
@@ -17726,14 +17846,9 @@ function startClanSocialStateSubscription(api, clanId) {
   if (activeClanSocialSubscriptionId === id && typeof clanSocialStateUnsubscribe === "function") return true;
   if (typeof clanSocialStateUnsubscribe === "function") clanSocialStateUnsubscribe();
   activeClanSocialSubscriptionId = id;
-  clanQuestProgress = null;
   clanMemberRewards = null;
   clanWorldBenefits = null;
   clanSocialStateUnsubscribe = api.subscribeClanSocialState(id, {
-    onQuestProgress: progress => {
-      clanQuestProgress = progress;
-      if (activeProfileTab === "clan") renderClanView();
-    },
     onMemberRewards: rewards => {
       clanMemberRewards = rewards;
       if (activeProfileTab === "clan") renderClanView();
@@ -17748,10 +17863,12 @@ function startClanSocialStateSubscription(api, clanId) {
     },
     onError: (error, source) => console.warn(`Clan ${source || "social"} subscription failed`, error),
   });
+  startClanQuestProgressSubscription(api, id);
   if (clanGiftCountdownTimer) clearInterval(clanGiftCountdownTimer);
   clanGiftCountdownTimer = setInterval(() => {
     updateClanGiftCountdown();
     updateClanNameChangeCountdown();
+    updateClanQuestCountdown();
   }, 1000);
   return true;
 }
@@ -18086,13 +18203,12 @@ function renderClanSectionNavigation(canManageApplications = false) {
   const selfUid = getCurrentOnlineUid();
   const selfMember = clanMembers.find(member => String(member?.uid || member?.id || "") === selfUid);
   const joinedAtMs = normalizeTimestampMs(selfMember?.joinedAtMs);
-  const captureCount = Math.max(0, Math.floor(Number(clanQuestProgress?.captureCount) || 0));
-  const unlocks = clanQuestProgress?.milestoneUnlocks && typeof clanQuestProgress.milestoneUnlocks === "object"
-    ? clanQuestProgress.milestoneUnlocks
+  const currentQuestProgress = getCurrentClanQuestProgress();
+  const captureCount = Math.max(0, Math.floor(Number(currentQuestProgress?.captureCount) || 0));
+  const unlocks = currentQuestProgress?.milestoneUnlocks && typeof currentQuestProgress.milestoneUnlocks === "object"
+    ? currentQuestProgress.milestoneUnlocks
     : {};
-  const claims = clanMemberRewards?.questClaims && typeof clanMemberRewards.questClaims === "object"
-    ? clanMemberRewards.questClaims
-    : {};
+  const claims = getCurrentClanQuestClaims();
   const readyQuestCount = CLAN_QUEST_REWARDS.filter(reward => {
     const unlockedAtMs = normalizeTimestampMs(unlocks[reward.id]);
     return Boolean(
@@ -18316,22 +18432,29 @@ function renderClanGiftPanel() {
 }
 
 function renderClanQuestPanel() {
-  const captureCount = Math.max(0, Math.floor(Number(clanQuestProgress?.captureCount) || 0));
-  const unlocks = clanQuestProgress?.milestoneUnlocks && typeof clanQuestProgress.milestoneUnlocks === "object"
-    ? clanQuestProgress.milestoneUnlocks
+  const period = activeClanQuestPeriod || getCurrentClanQuestPeriod();
+  const currentQuestProgress = getCurrentClanQuestProgress();
+  const captureCount = Math.max(0, Math.floor(Number(currentQuestProgress?.captureCount) || 0));
+  const unlocks = currentQuestProgress?.milestoneUnlocks && typeof currentQuestProgress.milestoneUnlocks === "object"
+    ? currentQuestProgress.milestoneUnlocks
     : {};
-  const claims = clanMemberRewards?.questClaims && typeof clanMemberRewards.questClaims === "object"
-    ? clanMemberRewards.questClaims
-    : {};
+  const claims = getCurrentClanQuestClaims();
   const selfUid = getCurrentOnlineUid();
   const selfMember = clanMembers.find(member => String(member?.uid || member?.id || "") === selfUid);
   const joinedAtMs = normalizeTimestampMs(selfMember?.joinedAtMs);
-  const progressPercent = Math.min(100, captureCount);
+  const progressPercent = Math.min(100, (captureCount / CLAN_QUEST_MAX_CAPTURES) * 100);
+  const remainingMs = Math.max(0, Number(period.weekEndAtMs) - getClanQuestServerNowMs());
+  const expirationWarningHidden = remainingMs > CLAN_QUEST_EXPIRATION_WARNING_MS ? "hidden" : "";
   return `
     <section class="clan-quest-panel">
-      <div class="profile-section-heading"><span>World campaign</span><h3>Conquest Quests</h3></div>
+      <div class="profile-section-heading clan-quest-heading">
+        <span>${escapeHtml(formatClanQuestPeriod(period))}</span>
+        <h3>Weekly Conquest</h3>
+        <b data-clan-quest-countdown>Resets in ${escapeHtml(formatClanQuestResetCountdown(remainingMs))}</b>
+      </div>
+      <p class="clan-quest-expiration" data-clan-quest-warning ${expirationWarningHidden}>Unclaimed rewards expire at Monday 00:00 UTC.</p>
       <div class="clan-quest-progress">
-        <div><strong>${formatNumber(captureCount)} / 100</strong><span>player-owned territories conquered</span></div>
+        <div><strong>${formatNumber(captureCount)} / ${formatNumber(CLAN_QUEST_MAX_CAPTURES)}</strong><span>enemy holdings conquered this week</span></div>
         <span class="clan-quest-progress-track"><i style="width:${progressPercent}%"></i></span>
       </div>
       <div class="clan-quest-grid">${CLAN_QUEST_REWARDS.map(reward => {
@@ -18346,7 +18469,7 @@ function renderClanQuestPanel() {
           <article class="clan-quest-card ${claimed ? "claimed" : unlocked ? "unlocked" : "locked"}">
             <div><span>Conquer ${formatNumber(reward.captures)}</span><strong>${rewardHours}h ${reward.rewardType === "troops" ? "Troops" : "Gold"}</strong></div>
             <small>${status}</small>
-            <button type="button" data-clan-action="claim-quest" data-reward-id="${escapeHtml(reward.id)}" ${claimed || joinedTooLate || !unlocked || inFlight ? "disabled" : ""}>${inFlight ? "Collecting…" : claimed ? "Collected" : joinedTooLate ? "Ineligible" : unlocked ? "Collect" : "Locked"}</button>
+            <button type="button" data-clan-action="claim-quest" data-reward-id="${escapeHtml(reward.id)}" data-quest-period-id="${escapeHtml(period.questPeriodId)}" ${claimed || joinedTooLate || !unlocked || inFlight ? "disabled" : ""}>${inFlight ? "Collecting…" : claimed ? "Collected" : joinedTooLate ? "Joined too late" : unlocked ? "Collect" : "Locked"}</button>
           </article>`;
       }).join("")}</div>
     </section>`;
@@ -18354,7 +18477,7 @@ function renderClanQuestPanel() {
 
 function renderClanOverviewPanel(canLead = false) {
   const pendingMinutes = Math.max(0, Math.floor(Number(clanMemberRewards?.pendingGiftGoldMinutes) || 0));
-  const captureCount = Math.max(0, Math.floor(Number(clanQuestProgress?.captureCount) || 0));
+  const captureCount = Math.max(0, Math.floor(Number(getCurrentClanQuestProgress()?.captureCount) || 0));
   const lastGiftSentAtMs = normalizeTimestampMs(clanMemberRewards?.lastGiftSentAtMs);
   const giftCooldownMs = Math.max(0, lastGiftSentAtMs + CLAN_GIFT_COOLDOWN_MS - Date.now());
   const giftValue = pendingMinutes
@@ -18391,8 +18514,8 @@ function renderClanOverviewPanel(canLead = false) {
         <button type="button" data-clan-action="section" data-clan-section="rewards" aria-label="Open Rewards, gold gifts ${escapeHtml(giftValue)}">
           <span>Gold gifts</span><strong>${escapeHtml(giftValue)}</strong><small>Send or collect</small>
         </button>
-        <button type="button" data-clan-action="section" data-clan-section="rewards" aria-label="Open Rewards, conquest progress ${formatNumber(captureCount)} of 100">
-          <span>Conquest</span><strong>${formatNumber(captureCount)} / 100</strong><small>Quest progress</small>
+        <button type="button" data-clan-action="section" data-clan-section="rewards" aria-label="Open Rewards, weekly conquest progress ${formatNumber(captureCount)} of ${formatNumber(CLAN_QUEST_MAX_CAPTURES)}">
+          <span>Weekly conquest</span><strong>${formatNumber(captureCount)} / ${formatNumber(CLAN_QUEST_MAX_CAPTURES)}</strong><small>Resets Monday UTC</small>
         </button>
         <button type="button" data-clan-action="section" data-clan-section="members" aria-label="Open Members, ${formatNumber(clanMembers.length)} in the roster">
           <span>Roster</span><strong>${formatNumber(clanMembers.length)} / 30</strong><small>View household</small>
@@ -18772,7 +18895,10 @@ async function runClanSocialAction(action, rewardId = "") {
     let result;
     if (action === "send-gift") result = await api.sendClanGift();
     else if (action === "collect-gifts") result = await api.claimClanGiftPool();
-    else if (action === "claim-quest") result = await api.claimClanQuestReward({ rewardId });
+    else if (action === "claim-quest") {
+      const questPeriodId = (activeClanQuestPeriod || getCurrentClanQuestPeriod()).questPeriodId;
+      result = await api.claimClanQuestReward({ rewardId, questPeriodId });
+    }
     if (!result) return;
     if (result.memberRewards) clanMemberRewards = { ...(clanMemberRewards || {}), ...result.memberRewards };
     applyServerEconomyResult(result);
