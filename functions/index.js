@@ -368,7 +368,7 @@ const SHOP_ITEMS = {
   [SWIFT_MARCH_ORDER_ITEM_ID]: { id: SWIFT_MARCH_ORDER_ITEM_ID, label: "Swift March Order", cost: economyNumber("shopItems.swift_march_order.cost", 300_000) },
   [RECALL_HORN_ITEM_ID]: { id: RECALL_HORN_ITEM_ID, label: "Recall Horn", cost: economyNumber("shopItems.recall_horn.cost", 500_000) },
 };
-const DAILY_LOGIN_REWARD_SCHEMA_VERSION = 1;
+const DAILY_LOGIN_REWARD_SCHEMA_VERSION = 2;
 const DAILY_LOGIN_REWARD_DAYS = Object.freeze(
   (Array.isArray(ECONOMY_CONFIG?.dailyLoginRewards?.days) ? ECONOMY_CONFIG.dailyLoginRewards.days : [])
     .map((entry, index) => Object.freeze({
@@ -386,8 +386,19 @@ const DAILY_LOGIN_REWARD_CYCLE_DAYS = Math.max(
   1,
   Math.floor(Number(ECONOMY_CONFIG?.dailyLoginRewards?.cycleLengthDays) || DAILY_LOGIN_REWARD_DAYS.length)
 );
+const DAILY_LOGIN_REWARD_MAX_PENDING = Math.max(
+  1,
+  Math.floor(Number(ECONOMY_CONFIG?.dailyLoginRewards?.maxPendingRewards) || 2)
+);
 if (DAILY_LOGIN_REWARD_DAYS.length !== DAILY_LOGIN_REWARD_CYCLE_DAYS) {
   throw new Error("Daily login reward configuration must define every day in the cycle.");
+}
+if (DAILY_LOGIN_REWARD_DAYS.some(reward => (
+  [reward.goldHours > 0, reward.troopHours > 0, Object.keys(reward.items).length > 0]
+    .filter(Boolean)
+    .length !== 1
+))) {
+  throw new Error("Every daily login reward must contain exactly one reward type.");
 }
 const LEGACY_SHOP_ITEM_IDS = ["troop_boost_1h", "anti_scout_1h"];
 const CITY_LEVEL_STATS = {
@@ -518,6 +529,8 @@ function operationResultMetrics(result = null) {
     metrics.cycle = Math.max(1, Math.floor(Number(receipt?.cycle || dailyStatus.cycle) || 1));
     metrics.day = Math.max(1, Math.floor(Number(receipt?.day || dailyStatus.nextDay) || 1));
     metrics.eligible = Boolean(dailyStatus.eligible);
+    metrics.pendingRewards = Math.max(0, Math.floor(Number(dailyStatus.pendingCount) || 0));
+    metrics.attendanceDeferred = Boolean(dailyStatus.attendanceDeferred);
   }
   if (receipt && typeof receipt === "object") {
     metrics.rewardTypes = [
@@ -5107,6 +5120,8 @@ function normalizeDailyLoginRewardReceipt(raw = {}) {
   return {
     cycle,
     day,
+    ordinal: Math.max(1, Math.floor(safeNumber(raw.ordinal, ((cycle - 1) * DAILY_LOGIN_REWARD_CYCLE_DAYS) + day))),
+    claimId: safeString(raw.claimId, 96),
     dayKey,
     claimedAtMs: Math.max(0, timestampToMs(raw.claimedAtMs || raw.claimedAt)),
     goldHours: Math.max(0, safeNumber(raw.goldHours, 0)),
@@ -5118,17 +5133,59 @@ function normalizeDailyLoginRewardReceipt(raw = {}) {
   };
 }
 
+function getDailyLoginRewardOrdinal(cycle = 1, day = 1) {
+  const safeCycle = Math.max(1, Math.floor(safeNumber(cycle, 1)));
+  const safeDay = clampInt(day, 1, DAILY_LOGIN_REWARD_CYCLE_DAYS);
+  return ((safeCycle - 1) * DAILY_LOGIN_REWARD_CYCLE_DAYS) + safeDay;
+}
+
+function getDailyLoginRewardPosition(ordinal = 1) {
+  const safeOrdinal = Math.max(1, Math.floor(safeNumber(ordinal, 1)));
+  return {
+    ordinal: safeOrdinal,
+    cycle: Math.floor((safeOrdinal - 1) / DAILY_LOGIN_REWARD_CYCLE_DAYS) + 1,
+    day: ((safeOrdinal - 1) % DAILY_LOGIN_REWARD_CYCLE_DAYS) + 1,
+  };
+}
+
+function getDailyLoginRewardPendingCount(rawState = {}) {
+  const state = normalizeDailyLoginRewardState(rawState);
+  return Math.max(0, state.earnedThroughOrdinal - state.nextClaimOrdinal + 1);
+}
+
 function normalizeDailyLoginRewardState(raw = {}) {
-  const cycle = Math.max(1, Math.floor(safeNumber(raw?.cycle, 1)));
-  const nextDay = clampInt(raw?.nextDay, 1, DAILY_LOGIN_REWARD_CYCLE_DAYS);
+  const legacyCycle = Math.max(1, Math.floor(safeNumber(raw?.cycle, 1)));
+  const legacyNextDay = clampInt(raw?.nextDay, 1, DAILY_LOGIN_REWARD_CYCLE_DAYS);
+  const legacyNextOrdinal = getDailyLoginRewardOrdinal(legacyCycle, legacyNextDay);
+  const nextClaimOrdinal = Math.max(1, Math.floor(safeNumber(raw?.nextClaimOrdinal, legacyNextOrdinal)));
+  const rawEarnedThroughOrdinal = Object.prototype.hasOwnProperty.call(raw || {}, "earnedThroughOrdinal")
+    ? safeNumber(raw?.earnedThroughOrdinal, nextClaimOrdinal - 1)
+    : nextClaimOrdinal - 1;
+  const earnedThroughOrdinal = Math.min(
+    nextClaimOrdinal + DAILY_LOGIN_REWARD_MAX_PENDING - 1,
+    Math.max(nextClaimOrdinal - 1, Math.floor(rawEarnedThroughOrdinal))
+  );
+  const nextPosition = getDailyLoginRewardPosition(nextClaimOrdinal);
   const lastClaimDayKey = safeString(raw?.lastClaimDayKey, 10);
+  const lastAttendanceDayKey = safeString(
+    raw?.lastAttendanceDayKey || (Number(raw?.schemaVersion) < DAILY_LOGIN_REWARD_SCHEMA_VERSION ? lastClaimDayKey : ""),
+    10
+  );
+  const deferredAttendanceDayKey = safeString(raw?.deferredAttendanceDayKey, 10);
   return {
     schemaVersion: DAILY_LOGIN_REWARD_SCHEMA_VERSION,
-    cycle,
-    nextDay,
+    cycle: nextPosition.cycle,
+    nextDay: nextPosition.day,
+    nextClaimOrdinal,
+    earnedThroughOrdinal,
     totalClaims: Math.max(0, Math.floor(safeNumber(raw?.totalClaims, 0))),
+    lastAttendanceDayKey: /^\d{4}-\d{2}-\d{2}$/.test(lastAttendanceDayKey) ? lastAttendanceDayKey : "",
+    deferredAttendanceDayKey: /^\d{4}-\d{2}-\d{2}$/.test(deferredAttendanceDayKey)
+      ? deferredAttendanceDayKey
+      : "",
     lastClaimDayKey: /^\d{4}-\d{2}-\d{2}$/.test(lastClaimDayKey) ? lastClaimDayKey : "",
     lastClaimedAtMs: Math.max(0, timestampToMs(raw?.lastClaimedAtMs || raw?.lastClaimedAt)),
+    lastClaimRequestId: safeString(raw?.lastClaimRequestId, 96),
     lastReceipt: normalizeDailyLoginRewardReceipt(raw?.lastReceipt),
   };
 }
@@ -5137,18 +5194,71 @@ function createDefaultDailyLoginRewardState() {
   return normalizeDailyLoginRewardState({});
 }
 
+function syncDailyLoginRewardAttendance(rawState = {}, nowMs = Date.now()) {
+  const sourceVersion = Math.max(0, Math.floor(safeNumber(rawState?.schemaVersion, 0)));
+  const serverTimeMs = Math.max(0, Math.floor(safeNumber(nowMs, Date.now())));
+  const dayKey = getCurrentDateKey(new Date(serverTimeMs));
+  const state = normalizeDailyLoginRewardState(rawState);
+  let changed = sourceVersion !== DAILY_LOGIN_REWARD_SCHEMA_VERSION;
+
+  if (state.deferredAttendanceDayKey && state.deferredAttendanceDayKey !== dayKey) {
+    state.deferredAttendanceDayKey = "";
+    changed = true;
+  }
+
+  let pendingCount = getDailyLoginRewardPendingCount(state);
+  if (state.lastAttendanceDayKey !== dayKey) {
+    state.lastAttendanceDayKey = dayKey;
+    changed = true;
+    if (pendingCount < DAILY_LOGIN_REWARD_MAX_PENDING) {
+      state.earnedThroughOrdinal += 1;
+      pendingCount += 1;
+    } else {
+      state.deferredAttendanceDayKey = dayKey;
+    }
+  }
+
+  if (
+    state.deferredAttendanceDayKey === dayKey
+    && pendingCount < DAILY_LOGIN_REWARD_MAX_PENDING
+  ) {
+    state.earnedThroughOrdinal += 1;
+    state.deferredAttendanceDayKey = "";
+    changed = true;
+  }
+
+  return {
+    state: normalizeDailyLoginRewardState(state),
+    changed,
+    dayKey,
+    serverTimeMs,
+  };
+}
+
 function createDailyLoginRewardStatus(rawState = {}, nowMs = Date.now()) {
   const state = normalizeDailyLoginRewardState(rawState);
   const serverTimeMs = Math.max(0, Math.floor(safeNumber(nowMs, Date.now())));
   const dayKey = getCurrentDateKey(new Date(serverTimeMs));
+  const pendingCount = getDailyLoginRewardPendingCount(state);
+  const attendedToday = state.lastAttendanceDayKey === dayKey;
   const claimedToday = state.lastClaimDayKey === dayKey;
+  const earnedPosition = state.earnedThroughOrdinal >= state.nextClaimOrdinal
+    ? getDailyLoginRewardPosition(state.earnedThroughOrdinal)
+    : null;
   return {
     ...state,
-    eligible: !claimedToday,
+    eligible: pendingCount > 0,
+    pendingCount,
+    queuedCount: Math.max(0, pendingCount - 1),
+    maxPendingRewards: DAILY_LOGIN_REWARD_MAX_PENDING,
+    attendedToday,
+    attendanceDeferred: state.deferredAttendanceDayKey === dayKey,
     claimedToday,
+    earnedThroughCycle: earnedPosition?.cycle || state.cycle,
+    earnedThroughDay: earnedPosition?.day || Math.max(0, state.nextDay - 1),
     dayKey,
     serverTimeMs,
-    nextUtcUnlockAtMs: claimedToday ? getNextUtcDayStartMs(serverTimeMs) : 0,
+    nextUtcUnlockAtMs: attendedToday ? getNextUtcDayStartMs(serverTimeMs) : 0,
     cycleLengthDays: DAILY_LOGIN_REWARD_CYCLE_DAYS,
   };
 }
@@ -7230,16 +7340,24 @@ exports.getDailyLoginRewardStatus = timedCallable(
   async request => {
     const uid = requireAuth(request);
     const nowMs = Date.now();
-    const profileSnap = await db.doc(`players/${uid}`).get();
-    if (!profileSnap.exists) {
-      throw new HttpsError("failed-precondition", "Claim a starting city before opening daily rewards.");
-    }
-    const profile = profileSnap.data() || {};
-    assertCurrentPlayerProfile(profile);
-    return {
-      ok: true,
-      dailyLoginRewardStatus: createDailyLoginRewardStatus(profile.dailyLoginReward, nowMs),
-    };
+    return db.runTransaction(async transaction => {
+      const profileRef = db.doc(`players/${uid}`);
+      const profileSnap = await transaction.get(profileRef);
+      if (!profileSnap.exists) {
+        throw new HttpsError("failed-precondition", "Claim a starting city before opening daily rewards.");
+      }
+      const profile = profileSnap.data() || {};
+      assertCurrentPlayerProfile(profile);
+      const attendance = syncDailyLoginRewardAttendance(profile.dailyLoginReward, nowMs);
+      if (attendance.changed) {
+        transaction.set(profileRef, { dailyLoginReward: attendance.state }, { merge: true });
+      }
+      return {
+        ok: true,
+        attendanceRecorded: attendance.changed,
+        dailyLoginRewardStatus: createDailyLoginRewardStatus(attendance.state, nowMs),
+      };
+    });
   }
 );
 
@@ -7249,6 +7367,8 @@ exports.claimDailyLoginReward = timedCallable(
   async request => {
     const uid = requireAuth(request);
     const nowMs = Date.now();
+    const claimId = safeString(request.data?.claimId, 96);
+    const expectedOrdinal = Math.max(0, Math.floor(safeNumber(request.data?.expectedOrdinal, 0)));
     return db.runTransaction(async transaction => {
       const profileRef = db.doc(`players/${uid}`);
       const profileSnap = await transaction.get(profileRef);
@@ -7257,19 +7377,47 @@ exports.claimDailyLoginReward = timedCallable(
       }
       const profile = profileSnap.data() || {};
       assertCurrentPlayerProfile(profile);
-      const statusBefore = createDailyLoginRewardStatus(profile.dailyLoginReward, nowMs);
-      if (!statusBefore.eligible) {
+      const attendance = syncDailyLoginRewardAttendance(profile.dailyLoginReward, nowMs);
+      const statusBefore = createDailyLoginRewardStatus(attendance.state, nowMs);
+      if (
+        claimId
+        && attendance.state.lastClaimRequestId === claimId
+        && attendance.state.lastReceipt
+      ) {
+        if (attendance.changed) {
+          transaction.set(profileRef, { dailyLoginReward: attendance.state }, { merge: true });
+        }
         return {
           ok: true,
           claimed: true,
           replayed: true,
-          receipt: statusBefore.lastReceipt,
+          receipt: attendance.state.lastReceipt,
           dailyLoginRewardStatus: statusBefore,
         };
       }
+      if (!statusBefore.eligible) {
+        if (attendance.changed) {
+          transaction.set(profileRef, { dailyLoginReward: attendance.state }, { merge: true });
+        }
+        return {
+          ok: true,
+          claimed: false,
+          replayed: false,
+          receipt: null,
+          dailyLoginRewardStatus: statusBefore,
+        };
+      }
+      if (expectedOrdinal > 0 && expectedOrdinal !== statusBefore.nextClaimOrdinal) {
+        throw new HttpsError(
+          "aborted",
+          "Daily rewards changed. Refresh and try again.",
+          { dailyLoginRewardStatus: statusBefore }
+        );
+      }
 
-      const reward = DAILY_LOGIN_REWARD_DAYS[statusBefore.nextDay - 1];
-      if (!reward || reward.day !== statusBefore.nextDay) {
+      const claimedPosition = getDailyLoginRewardPosition(statusBefore.nextClaimOrdinal);
+      const reward = DAILY_LOGIN_REWARD_DAYS[claimedPosition.day - 1];
+      if (!reward || reward.day !== claimedPosition.day) {
         throw new HttpsError("internal", "The daily reward schedule is unavailable.");
       }
       const economy = await prepareEconomyCollection(transaction, uid, nowMs, { profileRef, profileSnap });
@@ -7290,7 +7438,7 @@ exports.claimDailyLoginReward = timedCallable(
       const goldFloat = Math.max(0, safeNumber(economy.goldFloat, economy.gold)) + goldReward;
       const gold = Math.max(0, Math.floor(goldFloat));
       const shopItems = { ...economy.shopItems };
-      Object.entries(reward.items).forEach(([itemId, quantity]) => {
+      Object.entries(reward.items || {}).forEach(([itemId, quantity]) => {
         shopItems[itemId] = Math.max(0, Math.floor(safeNumber(shopItems[itemId], 0)))
           + Math.max(1, Math.floor(safeNumber(quantity, 1)));
       });
@@ -7302,13 +7450,11 @@ exports.claimDailyLoginReward = timedCallable(
         throw new HttpsError("failed-precondition", "Verify your main city before receiving the troop reward.");
       }
 
-      const claimedCycle = statusBefore.cycle;
-      const claimedDay = statusBefore.nextDay;
-      const nextCycle = claimedDay >= DAILY_LOGIN_REWARD_CYCLE_DAYS ? claimedCycle + 1 : claimedCycle;
-      const nextDay = claimedDay >= DAILY_LOGIN_REWARD_CYCLE_DAYS ? 1 : claimedDay + 1;
       const receipt = {
-        cycle: claimedCycle,
-        day: claimedDay,
+        cycle: claimedPosition.cycle,
+        day: claimedPosition.day,
+        ordinal: claimedPosition.ordinal,
+        claimId,
         dayKey: statusBefore.dayKey,
         claimedAtMs: nowMs,
         goldHours: reward.goldHours,
@@ -7318,15 +7464,16 @@ exports.claimDailyLoginReward = timedCallable(
         items: { ...reward.items },
         targetCityId: troopCredit?.cityId || "",
       };
-      const nextState = {
-        schemaVersion: DAILY_LOGIN_REWARD_SCHEMA_VERSION,
-        cycle: nextCycle,
-        nextDay,
-        totalClaims: statusBefore.totalClaims + 1,
+      const claimedState = normalizeDailyLoginRewardState({
+        ...attendance.state,
+        nextClaimOrdinal: claimedPosition.ordinal + 1,
+        totalClaims: attendance.state.totalClaims + 1,
         lastClaimDayKey: statusBefore.dayKey,
         lastClaimedAtMs: nowMs,
+        lastClaimRequestId: claimId,
         lastReceipt: receipt,
-      };
+      });
+      const nextState = syncDailyLoginRewardAttendance(claimedState, nowMs).state;
 
       writePreparedEconomy(transaction, economy, {
         gold,
@@ -13165,9 +13312,9 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
           : defenderUid === attackerUid
             ? "transfer"
             : "attack";
-    if (launchedAsClanReinforcement && !isReinforcementReturn && effectiveKind !== "reinforce") {
-      releaseClanReinforcementTarget(transaction, attackerUid, reinforcementTargetKey);
-    }
+    const shouldReleaseClanReinforcementTarget = launchedAsClanReinforcement
+      && !isReinforcementReturn
+      && effectiveKind !== "reinforce";
     const defenderBonuses = defenderEconomy?.bonuses || {};
     const alliedTroopsAtStart = targetReinforcements.reduce((total, entry) => total + entry.troops, 0);
     const combatTarget = createReinforcedCombatTarget({
@@ -13299,6 +13446,11 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
     const protectedDefenseClaimData = protectedDefenseClaimSnap?.exists
       ? protectedDefenseClaimSnap.data() || {}
       : {};
+    // Firestore transactions require every combat read to finish before this
+    // slot-release write; doing it above left converted support permanently active.
+    if (shouldReleaseClanReinforcementTarget) {
+      releaseClanReinforcementTarget(transaction, attackerUid, reinforcementTargetKey);
+    }
     const firstProtectedDefenseBonus = Boolean(
       protectedDefenseClaimRef
       && !isCurrentProtectedDefenseXpClaim(protectedDefenseClaimData)

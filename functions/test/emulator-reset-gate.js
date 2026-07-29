@@ -340,13 +340,19 @@ async function main() {
   assert(
     dailyStatus?.dailyLoginRewardStatus?.eligible === true
       && dailyStatus.dailyLoginRewardStatus.nextDay === 1
-      && dailyStatus.dailyLoginRewardStatus.cycle === 1,
+      && dailyStatus.dailyLoginRewardStatus.cycle === 1
+      && dailyStatus.dailyLoginRewardStatus.pendingCount === 1
+      && dailyStatus.dailyLoginRewardStatus.attendedToday === true,
     "A fresh reset profile did not begin on daily reward cycle 1, day 1."
   );
   const dailyGoldBefore = Number((await db.doc(`players/${users[0].uid}`).get()).data()?.gold || 0);
+  const dayOneClaimRequest = {
+    claimId: "emulator-day-1",
+    expectedOrdinal: 1,
+  };
   const concurrentDailyClaims = await Promise.all([
-    callFunction("claimDailyLoginReward", users[0].token),
-    callFunction("claimDailyLoginReward", users[0].token),
+    callFunction("claimDailyLoginReward", users[0].token, dayOneClaimRequest),
+    callFunction("claimDailyLoginReward", users[0].token, dayOneClaimRequest),
   ]);
   assert(
     concurrentDailyClaims.filter(result => result?.replayed === false).length === 1
@@ -357,7 +363,9 @@ async function main() {
   const dayOneReplay = concurrentDailyClaims.find(result => result?.replayed === true);
   assert(
     dayOneClaim?.receipt?.day === 1
-      && dayOneClaim.receipt.goldHours === 0.5
+      && dayOneClaim.receipt.ordinal === 1
+      && dayOneClaim.receipt.claimId === dayOneClaimRequest.claimId
+      && dayOneClaim.receipt.goldHours === 1
       && dayOneClaim.receipt.gold > 0
       && JSON.stringify(dayOneClaim.receipt) === JSON.stringify(dayOneReplay?.receipt),
     "The day-1 daily reward receipt was not deterministic."
@@ -368,9 +376,10 @@ async function main() {
     Number(dayOneProfile.gold || 0) >= dailyGoldBefore + Number(dayOneClaim.receipt.gold || 0),
     "The day-1 gold reward was not credited."
   );
-  const sameDayReplay = await callFunction("claimDailyLoginReward", users[0].token);
+  const sameDayReplay = await callFunction("claimDailyLoginReward", users[0].token, dayOneClaimRequest);
   assert(sameDayReplay?.replayed === true, "A repeated same-day daily reward claim was not idempotent.");
 
+  const currentUtcDayKey = new Date().toISOString().slice(0, 10);
   const previousUtcDayKey = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
   await db.doc(`players/${users[0].uid}`).set({
     upgrades: { taxStewardship: 25, royalGranaries: 25 },
@@ -379,84 +388,112 @@ async function main() {
       royalTaxDecreeExpiresAtMs: Date.now() + 60 * 60 * 1000,
     },
     dailyLoginReward: {
-      schemaVersion: 1,
-      cycle: 1,
-      nextDay: 5,
+      schemaVersion: 2,
+      nextClaimOrdinal: 5,
+      earnedThroughOrdinal: 5,
       totalClaims: 4,
+      lastAttendanceDayKey: currentUtcDayKey,
       lastClaimDayKey: previousUtcDayKey,
       lastClaimedAtMs: Date.now() - 24 * 60 * 60 * 1000,
     },
   }, { merge: true });
   const dayFiveProfileBefore = (await db.doc(`players/${users[0].uid}`).get()).data() || {};
   const dayFiveCityRef = db.doc(`islands/${claims[0].islandId}/cities/${claims[0].cityId}`);
-  const dayFiveCityBefore = (await dayFiveCityRef.get()).data() || {};
-  const dayFiveClaim = await callFunction("claimDailyLoginReward", users[0].token);
+  const dayFiveClaim = await callFunction("claimDailyLoginReward", users[0].token, {
+    claimId: "emulator-day-5",
+    expectedOrdinal: 5,
+  });
   assert(
     dayFiveClaim?.receipt?.day === 5
-      && dayFiveClaim.receipt.goldHours === 1.5
-      && dayFiveClaim.receipt.troopHours === 1.5
+      && dayFiveClaim.receipt.goldHours === 0
+      && dayFiveClaim.receipt.troopHours === 0
       && dayFiveClaim.receipt.items?.war_drums_30m === 1,
-    "The day-5 mixed daily reward did not match the fixed schedule."
-  );
-  assert(
-    dayFiveClaim.receipt.gold === Math.floor(Number(firstStats.baseGoldPerHour || 0) * 1.5)
-      && dayFiveClaim.receipt.troops === Math.floor(Number(firstStats.baseTroopPerHour || 0) * 1.5),
-    "Daily rewards included skill, Stronghold, or temporary production bonuses."
+    "The day-5 item reward did not match the fixed schedule."
   );
   const dayFiveProfileAfter = (await db.doc(`players/${users[0].uid}`).get()).data() || {};
-  const dayFiveCityAfter = (await dayFiveCityRef.get()).data() || {};
   assert(
     Number(dayFiveProfileAfter.shopItems?.war_drums_30m || 0)
       === Number(dayFiveProfileBefore.shopItems?.war_drums_30m || 0) + 1,
     "The day-5 item was not added to the bag."
   );
+
+  await db.doc(`players/${users[0].uid}`).set({
+    dailyLoginReward: {
+      schemaVersion: 2,
+      nextClaimOrdinal: 6,
+      earnedThroughOrdinal: 6,
+      totalClaims: 5,
+      lastAttendanceDayKey: currentUtcDayKey,
+    },
+  }, { merge: true });
+  const daySixClaim = await callFunction("claimDailyLoginReward", users[0].token, {
+    claimId: "emulator-day-6",
+    expectedOrdinal: 6,
+  });
   assert(
-    Number(dayFiveCityAfter.troops || 0) >= Number(dayFiveCityBefore.troops || 0) + Number(dayFiveClaim.receipt.troops || 0),
-    "The day-5 troop reward was not credited to the main city."
-  );
-  const dayFiveStatsAfter = (await db.doc(`players/${users[0].uid}/stats/global`).get()).data() || {};
-  assert(
-    Number(dayFiveStatsAfter.totalTroops || 0)
-      >= Number(firstStats.totalTroops || 0) + Number(dayFiveClaim.receipt.troops || 0),
-    "The day-5 troop reward did not update global player statistics."
+    daySixClaim?.receipt?.day === 6
+      && daySixClaim.receipt.goldHours === 3
+      && daySixClaim.receipt.gold === Math.floor(Number(firstStats.baseGoldPerHour || 0) * 3),
+    "Daily gold hours included skill, Stronghold, or temporary production bonuses."
   );
 
   await db.doc(`players/${users[0].uid}`).set({
     dailyLoginReward: {
-      schemaVersion: 1,
-      cycle: 1,
-      nextDay: 30,
+      schemaVersion: 2,
+      nextClaimOrdinal: 7,
+      earnedThroughOrdinal: 7,
+      totalClaims: 6,
+      lastAttendanceDayKey: currentUtcDayKey,
+    },
+  }, { merge: true });
+  const daySevenCityBefore = (await dayFiveCityRef.get()).data() || {};
+  const daySevenClaim = await callFunction("claimDailyLoginReward", users[0].token, {
+    claimId: "emulator-day-7",
+    expectedOrdinal: 7,
+  });
+  const daySevenCityAfter = (await dayFiveCityRef.get()).data() || {};
+  assert(
+    daySevenClaim?.receipt?.day === 7
+      && daySevenClaim.receipt.troopHours === 3
+      && daySevenClaim.receipt.troops === Math.floor(Number(firstStats.baseTroopPerHour || 0) * 3),
+    "Daily troop hours included skill, Stronghold, or temporary production bonuses."
+  );
+  assert(
+    Number(daySevenCityAfter.troops || 0)
+      >= Number(daySevenCityBefore.troops || 0) + Number(daySevenClaim.receipt.troops || 0),
+    "The day-7 troop reward was not credited to the main city."
+  );
+
+  await db.doc(`players/${users[0].uid}`).set({
+    dailyLoginReward: {
+      schemaVersion: 2,
+      nextClaimOrdinal: 30,
+      earnedThroughOrdinal: 30,
       totalClaims: 29,
+      lastAttendanceDayKey: currentUtcDayKey,
       lastClaimDayKey: previousUtcDayKey,
       lastClaimedAtMs: Date.now() - 24 * 60 * 60 * 1000,
     },
   }, { merge: true });
   const dayThirtyItemsBefore = (await db.doc(`players/${users[0].uid}`).get()).data()?.shopItems || {};
-  const dayThirtyClaim = await callFunction("claimDailyLoginReward", users[0].token);
-  const expectedDayThirtyItems = [
-    "shield_12h",
-    "war_drums_30m",
-    "royal_tax_decree_30m",
-    "veil_of_silence_30m",
-    "swift_march_order",
-    "recall_horn",
-  ];
+  const dayThirtyClaim = await callFunction("claimDailyLoginReward", users[0].token, {
+    claimId: "emulator-day-30",
+    expectedOrdinal: 30,
+  });
   assert(
     dayThirtyClaim?.receipt?.day === 30
-      && dayThirtyClaim.receipt.goldHours === 12
-      && dayThirtyClaim.receipt.troopHours === 12
+      && dayThirtyClaim.receipt.goldHours === 0
+      && dayThirtyClaim.receipt.troopHours === 0
+      && dayThirtyClaim.receipt.items?.shield_12h === 1
       && dayThirtyClaim.dailyLoginRewardStatus?.cycle === 2
       && dayThirtyClaim.dailyLoginRewardStatus?.nextDay === 1,
     "Day 30 did not complete the cycle and restart at cycle 2, day 1."
   );
   const dayThirtyItemsAfter = (await db.doc(`players/${users[0].uid}`).get()).data()?.shopItems || {};
-  expectedDayThirtyItems.forEach(itemId => {
-    assert(dayThirtyClaim.receipt.items?.[itemId] === 1, `Day 30 did not include ${itemId}.`);
-    assert(
-      Number(dayThirtyItemsAfter[itemId] || 0) === Number(dayThirtyItemsBefore[itemId] || 0) + 1,
-      `Day 30 did not credit ${itemId}.`
-    );
-  });
+  assert(
+    Number(dayThirtyItemsAfter.shield_12h || 0) === Number(dayThirtyItemsBefore.shield_12h || 0) + 1,
+    "Day 30 did not credit the Royal Peace Shield."
+  );
 
   await db.doc(`players/${users[1].uid}`).set({
     dailyLoginReward: {
@@ -1538,6 +1575,56 @@ async function main() {
     (leaderAfterReturns.data()?.activeClanReinforcementTargets || []).length === 0
       && (otherSenderAfterReturns.data()?.activeClanReinforcementTargets || []).length === 0,
     "Completed reinforcement returns did not release sender slots."
+  );
+
+  const capturedReinforcementArmyId = `clan_reinforce_captured_${crypto.randomBytes(8).toString("hex")}`;
+  const capturedReinforcement = await callFunction("sendArmyOrder", clanLeader.token, {
+    army: {
+      ...firstClanReinforcement.movement,
+      id: capturedReinforcementArmyId,
+      kind: "reinforce",
+      launchKind: "reinforce",
+      troops: 200,
+      requestedTroops: 200,
+    },
+    sourceRegionId: clanReinforcementSourceClaim.mainRegionId,
+    targetRegionId: clanReinforcementSourceClaim.mainRegionId,
+  });
+  assert(
+    capturedReinforcement?.movement?.kind === "reinforce",
+    "Captured-destination gate did not launch as allied support."
+  );
+  await clanReinforcementTargetDoc.ref.set({
+    ownerKind: "player",
+    ownerUid: users[1].uid,
+    ownerName: "Ruler 2",
+    ownerFlag: null,
+    ownerShieldExpiresAtMs: 0,
+    isMainCity: false,
+    level: 1,
+    defense: 1,
+    troops: 100_000,
+    troopFloat: 100_000,
+    alliedReinforcementTroops: 0,
+  }, { merge: true });
+  const capturedReinforcementResolution = await forceResolveMovement(
+    capturedReinforcement.movement,
+    clanLeader.token
+  );
+  const [capturedReinforcementArmy, leaderAfterCapturedReinforcement] = await Promise.all([
+    db.doc(`armies/${capturedReinforcementArmyId}`).get(),
+    clanLeaderRef.get(),
+  ]);
+  assert(
+    capturedReinforcementResolution?.status === "resolved"
+      && capturedReinforcementResolution?.kind === "attack"
+      && capturedReinforcementResolution?.outcome === "defeat",
+    "Support whose allied destination was captured did not fight the new owner."
+  );
+  assert(
+    capturedReinforcementArmy.data()?.status === "resolved"
+      && (leaderAfterCapturedReinforcement.data()?.activeClanReinforcementTargets || []).length === 0,
+    "Converted support remained active or retained its reinforcement slot after combat."
   );
 
   const attacker = users[0];

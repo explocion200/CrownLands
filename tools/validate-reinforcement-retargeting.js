@@ -99,6 +99,16 @@ assert.match(
   /calculateCombatResult\(troopCount[\s\S]*?convertedReinforcement,/,
   "Arrival combat must pass the server-derived converted-reinforcement state."
 );
+assert.match(
+  resolveSource,
+  /const shouldReleaseClanReinforcementTarget[\s\S]*?protectedDefenseClaimSnap[\s\S]*?if \(shouldReleaseClanReinforcementTarget\)[\s\S]*?releaseClanReinforcementTarget/,
+  "Converted clan reinforcements must release their sender slot after all combat reads."
+);
+assert.doesNotMatch(
+  resolveSource,
+  /const shouldReleaseClanReinforcementTarget[\s\S]*?releaseClanReinforcementTarget[\s\S]*?protectedDefenseClaimSnap/,
+  "Converted clan reinforcements must not write before the combat transaction finishes reading."
+);
 
 const combatSource = extractFunction("calculateCombatResult");
 assert.match(

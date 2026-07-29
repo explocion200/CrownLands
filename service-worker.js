@@ -1,17 +1,17 @@
-const CACHE_VERSION = "20260728-daily-reward-cutout";
+const CACHE_VERSION = "20260728-daily-attendance-v2";
 const CACHE_NAME = `crownlands-cache-${CACHE_VERSION}`;
 const STATIC_CACHE_URLS = [
   "/",
   "/index.html",
   "/manifest.webmanifest",
-  "/styles.css?v=20260727-city-names-v1",
+  "/styles.css?v=20260728-daily-attendance-v2",
   "/release-config.js",
   "/world-config.js",
-  "/economy-config.js?v=20260728-level-rewards-v1",
+  "/economy-config.js?v=20260728-daily-attendance-v2",
   "/ads-config.js?v=20260726-rewarded-ads",
   "/firebase-config.js?v=20260726-protected-ads-reset",
   "/firebaseClient.js?v=20260727-city-names-v1",
-  "/game.js?v=20260728-daily-reward-cutout",
+  "/game.js?v=20260728-daily-attendance-v2",
   "/route-worker.js?v=20260721-structure-route-clearance",
   "/assets/map-editor-data.js?v=20260723-utc-responsive-v1",
   "/assets/game-menu-background.jpg?v=20260702-login-page",

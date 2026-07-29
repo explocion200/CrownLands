@@ -162,7 +162,7 @@ const SWIFT_MARCH_ORDER_ITEM_ID = "swift_march_order";
 const SWIFT_MARCH_REMAINING_TIME_MULTIPLIER = 0.5;
 const SWIFT_MARCH_MINIMUM_REMAINING_SECONDS = 1;
 const RECALL_HORN_ITEM_ID = "recall_horn";
-const DAILY_LOGIN_REWARD_SCHEMA_VERSION = 1;
+const DAILY_LOGIN_REWARD_SCHEMA_VERSION = 2;
 const DAILY_LOGIN_REWARD_DAYS = Object.freeze(
   (Array.isArray(ECONOMY_CONFIG?.dailyLoginRewards?.days) ? ECONOMY_CONFIG.dailyLoginRewards.days : [])
     .map((entry, index) => Object.freeze({
@@ -179,6 +179,10 @@ const DAILY_LOGIN_REWARD_DAYS = Object.freeze(
 const DAILY_LOGIN_REWARD_CYCLE_DAYS = Math.max(
   1,
   Math.floor(Number(ECONOMY_CONFIG?.dailyLoginRewards?.cycleLengthDays) || DAILY_LOGIN_REWARD_DAYS.length)
+);
+const DAILY_LOGIN_REWARD_MAX_PENDING = Math.max(
+  1,
+  Math.floor(Number(ECONOMY_CONFIG?.dailyLoginRewards?.maxPendingRewards) || 2)
 );
 const DAILY_LOGIN_REWARD_AUTO_OPEN_PREFIX = `crownlands-daily-reward-opened-${RESET_GENERATION}`;
 const ITEM_DAILY_PURCHASE_LIMITS = Object.freeze({
@@ -2653,6 +2657,7 @@ let dailyLoginRewardClaimInFlight = false;
 let dailyLoginRewardUtcTimer = 0;
 let dailyLoginRewardCountdownTimer = 0;
 let dailyLoginRewardError = "";
+let dailyLoginRewardPendingClaim = null;
 let rewardedAdStatus = null;
 let rewardedAdStatusLoading = false;
 let rewardedAdInFlight = false;
@@ -2710,6 +2715,11 @@ let clanShieldEditorTab = "field";
 let clanRenameEditorOpen = false;
 let clanRenameSaving = false;
 let selectedClanMemberUid = "";
+const CLAN_MOBILE_SECTIONS = Object.freeze(["overview", "rallies", "rewards", "members"]);
+const CLAN_BROWSER_SECTIONS = Object.freeze(["discover", "create"]);
+let activeClanMobileSection = "overview";
+let activeClanBrowserSection = "discover";
+let clanNavigationClanId = "";
 let clanGiftActionInFlight = false;
 let clanQuestClaimInFlightId = "";
 let clanGiftCountdownTimer = 0;
@@ -17216,6 +17226,11 @@ function handleOnlinePlayerClanSnapshot(event) {
   const subscriptionChanged = previousClanId !== state.clanId
     || activeClanSubscriptionId !== state.clanId;
   const permissionsChanged = previousRole !== state.clanRole;
+  if (previousClanId !== state.clanId) {
+    activeClanMobileSection = "overview";
+    activeClanBrowserSection = "discover";
+    clanNavigationClanId = String(state.clanId || "");
+  }
   if (subscriptionChanged || permissionsChanged) {
     refreshClanState({ silent: true, skipProfileLoad: true });
   } else {
@@ -17773,6 +17788,12 @@ async function refreshClanState(options = {}) {
 
 function showProfileClan() {
   if (!state || !profileView || !skillsView || !settingsView || !clanView || !flagEditorView) return;
+  const enteringClan = activeProfileTab !== "clan";
+  if (enteringClan) {
+    activeClanMobileSection = "overview";
+    activeClanBrowserSection = "discover";
+    clanView.scrollTop = 0;
+  }
   activeProfileTab = "clan";
   profileScreen.classList.remove("skills-active", "settings-active", "clan-active", "flag-editor-active");
   profileScreen.classList.add("clan-active");
@@ -17788,6 +17809,9 @@ function showProfileClan() {
 
 function showClanHub() {
   if (!state || !profileScreen) return;
+  activeClanMobileSection = "overview";
+  activeClanBrowserSection = "discover";
+  if (clanView) clanView.scrollTop = 0;
   profileScreen.classList.add("open");
   profileScreen.setAttribute("aria-hidden", "false");
   showProfileClan();
@@ -17967,6 +17991,7 @@ async function saveClanShieldEditor() {
     clanShieldEditorOpen = false;
     clanShieldDraft = null;
     clanShieldEditorTab = "field";
+    activeClanMobileSection = "overview";
     showToast("Clan shield published.");
     renderCities(true);
   } catch (error) {
@@ -17980,6 +18005,162 @@ async function saveClanShieldEditor() {
 function formatClanProductionHours(minutes = 0) {
   const hours = Math.max(0, Number(minutes) || 0) / 60;
   return Number.isInteger(hours) ? String(hours) : hours.toFixed(1).replace(/\.0$/, "");
+}
+
+function syncClanNavigationState() {
+  const currentClanId = String(state?.clanId || "");
+  if (currentClanId === clanNavigationClanId) return;
+  clanNavigationClanId = currentClanId;
+  activeClanMobileSection = "overview";
+  activeClanBrowserSection = "discover";
+}
+
+function isClanSectionActive(section) {
+  return activeClanMobileSection === section;
+}
+
+function renderClanSectionNavigation(canManageApplications = false) {
+  const pendingMinutes = Math.max(0, Math.floor(Number(clanMemberRewards?.pendingGiftGoldMinutes) || 0));
+  const selfUid = getCurrentOnlineUid();
+  const selfMember = clanMembers.find(member => String(member?.uid || member?.id || "") === selfUid);
+  const joinedAtMs = normalizeTimestampMs(selfMember?.joinedAtMs);
+  const captureCount = Math.max(0, Math.floor(Number(clanQuestProgress?.captureCount) || 0));
+  const unlocks = clanQuestProgress?.milestoneUnlocks && typeof clanQuestProgress.milestoneUnlocks === "object"
+    ? clanQuestProgress.milestoneUnlocks
+    : {};
+  const claims = clanMemberRewards?.questClaims && typeof clanMemberRewards.questClaims === "object"
+    ? clanMemberRewards.questClaims
+    : {};
+  const readyQuestCount = CLAN_QUEST_REWARDS.filter(reward => {
+    const unlockedAtMs = normalizeTimestampMs(unlocks[reward.id]);
+    return Boolean(
+      unlockedAtMs
+      && captureCount >= reward.captures
+      && joinedAtMs
+      && joinedAtMs < unlockedAtMs
+      && !claims[reward.id]
+    );
+  }).length;
+  const rewardReadyCount = readyQuestCount + (pendingMinutes > 0 ? 1 : 0);
+  const definitions = [
+    { key: "overview", label: "Overview", mark: "◆", count: 0, countLabel: "" },
+    {
+      key: "rallies",
+      label: "Rallies",
+      mark: "⚔",
+      count: onlineClanRallies.length,
+      countLabel: `${onlineClanRallies.length} active ${onlineClanRallies.length === 1 ? "rally" : "rallies"}`,
+    },
+    {
+      key: "rewards",
+      label: "Rewards",
+      mark: "✦",
+      count: rewardReadyCount,
+      countLabel: `${rewardReadyCount} ready ${rewardReadyCount === 1 ? "reward" : "rewards"}`,
+      alert: rewardReadyCount > 0,
+    },
+    {
+      key: "members",
+      label: "Members",
+      mark: "♟",
+      count: canManageApplications && clanApplications.length ? clanApplications.length : clanMembers.length,
+      countLabel: canManageApplications && clanApplications.length
+        ? `${clanApplications.length} pending ${clanApplications.length === 1 ? "application" : "applications"}`
+        : `${clanMembers.length} clan ${clanMembers.length === 1 ? "member" : "members"}`,
+      alert: canManageApplications && clanApplications.length > 0,
+    },
+  ];
+  return `
+    <nav class="clan-section-nav" role="tablist" aria-label="Clan sections">
+      ${definitions.map(section => {
+        const active = isClanSectionActive(section.key);
+        const description = section.countLabel ? `${section.label}, ${section.countLabel}` : section.label;
+        return `
+          <button id="clanSectionTab${section.key[0].toUpperCase()}${section.key.slice(1)}" type="button" role="tab"
+            data-clan-action="section" data-clan-section="${section.key}"
+            aria-selected="${active}" aria-controls="clan${section.key[0].toUpperCase()}${section.key.slice(1)}Panel"
+            aria-label="${escapeHtml(description)}" tabindex="${active ? "0" : "-1"}" class="${active ? "active" : ""}">
+            <span class="clan-section-nav-mark" aria-hidden="true">${section.mark}</span>
+            <span>${section.label}</span>
+            ${section.count ? `<b class="${section.alert ? "alert" : ""}" aria-hidden="true">${formatNumber(section.count)}</b>` : ""}
+          </button>`;
+      }).join("")}
+    </nav>`;
+}
+
+function renderClanBrowserNavigation() {
+  const definitions = [
+    { key: "discover", label: "Find Clan", mark: "⌕" },
+    { key: "create", label: "Create Clan", mark: "+" },
+  ];
+  return `
+    <nav class="clan-browser-nav" role="tablist" aria-label="Find or create a clan">
+      ${definitions.map(section => {
+        const active = activeClanBrowserSection === section.key;
+        return `
+          <button id="clanBrowserTab${section.key[0].toUpperCase()}${section.key.slice(1)}" type="button" role="tab"
+            data-clan-action="browser-section" data-clan-browser-section="${section.key}"
+            aria-selected="${active}" aria-controls="clanBrowser${section.key[0].toUpperCase()}${section.key.slice(1)}Panel"
+            tabindex="${active ? "0" : "-1"}" class="${active ? "active" : ""}">
+            <span aria-hidden="true">${section.mark}</span>${section.label}
+          </button>`;
+      }).join("")}
+    </nav>`;
+}
+
+function focusClanNavigationButton(attribute, value) {
+  requestAnimationFrame(() => {
+    clanContent?.querySelector(`[${attribute}="${value}"]`)?.focus();
+  });
+}
+
+function revealClanSection(section) {
+  requestAnimationFrame(() => {
+    if (window.matchMedia?.("(max-width: 900px)")?.matches) {
+      if (clanView) clanView.scrollTop = 0;
+      return;
+    }
+    const panelId = `clan${section[0].toUpperCase()}${section.slice(1)}Panel`;
+    document.getElementById(panelId)?.scrollIntoView?.({ block: "nearest" });
+  });
+}
+
+function setClanMobileSection(section, options = {}) {
+  const value = String(section || "");
+  if (!CLAN_MOBILE_SECTIONS.includes(value)) return;
+  activeClanMobileSection = value;
+  if (value !== "overview") clanRenameEditorOpen = false;
+  renderClanView();
+  revealClanSection(value);
+  if (options.focus) focusClanNavigationButton("data-clan-section", value);
+}
+
+function setClanBrowserSection(section, options = {}) {
+  const value = String(section || "");
+  if (!CLAN_BROWSER_SECTIONS.includes(value)) return;
+  activeClanBrowserSection = value;
+  renderClanView();
+  requestAnimationFrame(() => {
+    if (clanView) clanView.scrollTop = 0;
+  });
+  if (options.focus) focusClanNavigationButton("data-clan-browser-section", value);
+}
+
+function handleClanNavigationKeydown(event) {
+  const sectionTab = event.target.closest?.('[role="tab"][data-clan-section]');
+  const browserTab = event.target.closest?.('[role="tab"][data-clan-browser-section]');
+  const tab = sectionTab || browserTab;
+  if (!tab || !["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+  const values = sectionTab ? CLAN_MOBILE_SECTIONS : CLAN_BROWSER_SECTIONS;
+  const currentValue = sectionTab ? tab.dataset.clanSection : tab.dataset.clanBrowserSection;
+  let index = Math.max(0, values.indexOf(currentValue));
+  if (event.key === "Home") index = 0;
+  else if (event.key === "End") index = values.length - 1;
+  else if (event.key === "ArrowRight") index = (index + 1) % values.length;
+  else index = (index - 1 + values.length) % values.length;
+  event.preventDefault();
+  if (sectionTab) setClanMobileSection(values[index], { focus: true });
+  else setClanBrowserSection(values[index], { focus: true });
 }
 
 function renderClanMemberFlag(index, className = "") {
@@ -18109,6 +18290,87 @@ function renderClanQuestPanel() {
     </section>`;
 }
 
+function renderClanOverviewPanel(canLead = false) {
+  const pendingMinutes = Math.max(0, Math.floor(Number(clanMemberRewards?.pendingGiftGoldMinutes) || 0));
+  const captureCount = Math.max(0, Math.floor(Number(clanQuestProgress?.captureCount) || 0));
+  const lastGiftSentAtMs = normalizeTimestampMs(clanMemberRewards?.lastGiftSentAtMs);
+  const giftCooldownMs = Math.max(0, lastGiftSentAtMs + CLAN_GIFT_COOLDOWN_MS - Date.now());
+  const giftValue = pendingMinutes
+    ? `${formatClanProductionHours(pendingMinutes)}h ready`
+    : giftCooldownMs
+      ? `Ready in ${formatDuration(Math.ceil(giftCooldownMs / 1000))}`
+      : "Send now";
+  const activeClass = isClanSectionActive("overview") ? "active" : "";
+  return `
+    <section id="clanOverviewPanel" class="clan-section-panel clan-overview-panel ${activeClass}" role="tabpanel" aria-labelledby="clanSectionTabOverview">
+      <section class="clan-hero">
+        <div class="clan-hero-shield">
+          ${renderClanShield(clanSnapshot.shield || clanSnapshot.banner, { size: "large", label: `${clanSnapshot.name || "Clan"} shield` })}
+        </div>
+        <div class="clan-hero-copy">
+          <span>Your clan · ${clanRoleLabel(state.clanRole)}</span>
+          <h3>[${escapeHtml(clanSnapshot.tag || "")}] ${escapeHtml(clanSnapshot.name || "Clan")}</h3>
+          <p>${escapeHtml(clanSnapshot.description || "No description yet.")}</p>
+          ${canLead ? `<div class="clan-hero-actions" aria-label="Leader clan management">
+            <button type="button" data-clan-action="edit-shield">${clanShieldEditorOpen ? "Editing Shield" : "Edit Shield"}</button>
+            <button type="button" data-clan-action="rename-clan">${clanRenameEditorOpen ? "Renaming Clan" : "Rename Clan"}</button>
+          </div>` : ""}
+        </div>
+        <div class="clan-power">
+          <span>Clan Power</span>
+          <strong>${formatNumber(clanSnapshot.totalKingPower || 0)}</strong>
+          <small>${clanSnapshot.memberCount || 0}/30 members</small>
+        </div>
+      </section>
+      <div class="clan-overview-grid" aria-label="Clan activity summary">
+        <button type="button" data-clan-action="section" data-clan-section="rallies" aria-label="Open Rallies, ${formatNumber(onlineClanRallies.length)} active">
+          <span>Active rallies</span><strong>${formatNumber(onlineClanRallies.length)}</strong><small>Coordinate attacks</small>
+        </button>
+        <button type="button" data-clan-action="section" data-clan-section="rewards" aria-label="Open Rewards, gold gifts ${escapeHtml(giftValue)}">
+          <span>Gold gifts</span><strong>${escapeHtml(giftValue)}</strong><small>Send or collect</small>
+        </button>
+        <button type="button" data-clan-action="section" data-clan-section="rewards" aria-label="Open Rewards, conquest progress ${formatNumber(captureCount)} of 100">
+          <span>Conquest</span><strong>${formatNumber(captureCount)} / 100</strong><small>Quest progress</small>
+        </button>
+        <button type="button" data-clan-action="section" data-clan-section="members" aria-label="Open Members, ${formatNumber(clanMembers.length)} in the roster">
+          <span>Roster</span><strong>${formatNumber(clanMembers.length)} / 30</strong><small>View household</small>
+        </button>
+      </div>
+      ${canLead && clanRenameEditorOpen ? renderClanRenameEditor() : ""}
+    </section>`;
+}
+
+function renderClanMembersPanel(canLead = false, canManageApplications = false) {
+  const activeClass = isClanSectionActive("members") ? "active" : "";
+  return `
+    <section id="clanMembersPanel" class="clan-section-panel clan-roster-panel ${activeClass}" role="tabpanel" aria-labelledby="clanSectionTabMembers">
+      <div class="profile-section-heading clan-panel-heading">
+        <span>Household</span>
+        <h3>Members</h3>
+        <b>${formatNumber(clanMembers.length)} / 30</b>
+      </div>
+      <div class="clan-roster">${clanMembers.map((member, index) => renderClanRosterMember(member, index, canLead)).join("")}</div>
+      ${canManageApplications ? `<div class="clan-applications">
+        <div class="clan-subsection-heading"><h4>Applications</h4>${clanApplications.length ? `<b>${formatNumber(clanApplications.length)}</b>` : ""}</div>
+        ${clanApplicationsError
+          ? `<p class="clan-warning">${escapeHtml(clanApplicationsError)}</p>`
+          : clanApplications.length
+            ? clanApplications.map((application, index) => `<article>${renderClanApplicantFlag(index)}<span>${renderPlayerNameLink(application.uid, application.displayName || "Ruler")}<small>${formatNumber(application.kingPower || 0)} power</small></span><div><button data-clan-action="accept" data-member-id="${escapeHtml(application.uid)}">Accept</button><button data-clan-action="reject" data-member-id="${escapeHtml(application.uid)}">Reject</button></div></article>`).join("")
+            : `<p class="clan-muted">No pending applications.</p>`}
+      </div>` : ""}
+      <button class="profile-secondary-btn clan-leave" data-clan-action="leave">${canLead && clanMembers.length === 1 ? "Disband Clan" : "Leave Clan"}</button>
+    </section>`;
+}
+
+function renderClanRewardsPanel() {
+  const activeClass = isClanSectionActive("rewards") ? "active" : "";
+  return `
+    <section id="clanRewardsPanel" class="clan-section-panel clan-rewards-panel ${activeClass}" role="tabpanel" aria-labelledby="clanSectionTabRewards">
+      ${renderClanGiftPanel()}
+      ${renderClanQuestPanel()}
+    </section>`;
+}
+
 function getRallyParticipantForCurrentPlayer(rally) {
   const uid = getCurrentOnlineUid();
   return (Array.isArray(rally?.participants) ? rally.participants : [])
@@ -18181,8 +18443,9 @@ function renderClanRallyCard(rally) {
 }
 
 function renderClanRallyPanel() {
+  const activeClass = isClanSectionActive("rallies") ? "active" : "";
   return `
-    <section class="clan-social-card clan-rallies-panel">
+    <section id="clanRalliesPanel" class="clan-section-panel clan-social-card clan-rallies-panel ${activeClass}" role="tabpanel" aria-labelledby="clanSectionTabRallies">
       <div class="clan-social-heading">
         <span><small>Coordinated assaults</small><strong>Rallies</strong></span>
         <b>${formatNumber(onlineClanRallies.length)}</b>
@@ -18334,6 +18597,7 @@ function bindClanRallyControls(root = document) {
 
 function renderClanView() {
   if (!clanContent || activeProfileTab !== "clan") return;
+  syncClanNavigationState();
   if (state?.clanRole !== "leader") {
     clanRenameEditorOpen = false;
     clanRenameSaving = false;
@@ -18353,8 +18617,9 @@ function renderClanView() {
   if (!state?.clanId || !clanSnapshot) {
     const cooldownMs = Math.max(0, Number(state?.clanJoinCooldownUntilMs || 0) - Date.now());
     clanContent.innerHTML = `
+      ${renderClanBrowserNavigation()}
       <div class="clan-browser">
-        <section class="clan-create-card">
+        <section id="clanBrowserCreatePanel" class="clan-browser-panel clan-create-card ${activeClanBrowserSection === "create" ? "active" : ""}" role="tabpanel" aria-labelledby="clanBrowserTabCreate">
           <div class="profile-section-heading"><span>Found a house</span><h3>Create Clan</h3></div>
           <form data-clan-form="create" class="clan-form">
             <input name="name" minlength="3" maxlength="24" required placeholder="Clan name" aria-label="Clan name" />
@@ -18365,7 +18630,7 @@ function renderClanView() {
           </form>
           ${cooldownMs ? `<p class="clan-warning">You can join or create again in ${formatDuration(Math.ceil(cooldownMs / 1000))}.</p>` : ""}
         </section>
-        <section class="clan-discovery">
+        <section id="clanBrowserDiscoverPanel" class="clan-browser-panel clan-discovery ${activeClanBrowserSection === "discover" ? "active" : ""}" role="tabpanel" aria-labelledby="clanBrowserTabDiscover">
           <div class="profile-section-heading"><span>Find allies</span><h3>Discover Clans</h3></div>
           <form data-clan-form="search" class="clan-search"><input name="search" maxlength="24" placeholder="Search by clan name" aria-label="Search clans" /><button type="submit">Search</button></form>
           <div class="clan-list">${clanSearchResults.length ? clanSearchResults.map(clan => `
@@ -18380,36 +18645,20 @@ function renderClanView() {
   }
   const canManageApplications = ["leader", "officer"].includes(state.clanRole);
   const canLead = state.clanRole === "leader";
+  if (canLead && clanShieldEditorOpen) {
+    clanContent.innerHTML = renderClanShieldEditor(clanShieldDraft);
+    return;
+  }
   clanContent.innerHTML = `
-    <section class="clan-hero">
-      <div class="clan-hero-shield">
-        ${renderClanShield(clanSnapshot.shield || clanSnapshot.banner, { size: "large", label: `${clanSnapshot.name || "Clan"} shield` })}
-        ${canLead ? `<div class="clan-hero-actions">
-          <button type="button" data-clan-action="edit-shield">${clanShieldEditorOpen ? "Editing Shield" : "Edit Shield"}</button>
-          <button type="button" data-clan-action="rename-clan">${clanRenameEditorOpen ? "Renaming Clan" : "Rename Clan"}</button>
-        </div>` : ""}
-      </div>
-      <div><span>Your clan · ${clanRoleLabel(state.clanRole)}</span><h3>[${escapeHtml(clanSnapshot.tag || "")}] ${escapeHtml(clanSnapshot.name || "Clan")}</h3><p>${escapeHtml(clanSnapshot.description || "No description yet.")}</p></div>
-      <div class="clan-power"><span>Clan Power</span><strong>${formatNumber(clanSnapshot.totalKingPower || 0)}</strong><small>${clanSnapshot.memberCount || 0}/30 members</small></div>
-    </section>
-    ${canLead && clanRenameEditorOpen ? renderClanRenameEditor() : ""}
-    ${canLead && clanShieldEditorOpen ? renderClanShieldEditor(clanShieldDraft) : `<div class="clan-columns clan-social-layout">
-      <section class="clan-roster-panel">
-        <div class="profile-section-heading"><span>Household</span><h3>Roster</h3></div>
-        <div class="clan-roster">${clanMembers.map((member, index) => renderClanRosterMember(member, index, canLead)).join("")}</div>
-        ${canManageApplications ? `<div class="clan-applications"><h4>Applications</h4>${clanApplicationsError
-          ? `<p class="clan-warning">${escapeHtml(clanApplicationsError)}</p>`
-          : clanApplications.length
-            ? clanApplications.map((application, index) => `<article>${renderClanApplicantFlag(index)}<span>${renderPlayerNameLink(application.uid, application.displayName || "Ruler")}<small>${formatNumber(application.kingPower || 0)} power</small></span><div><button data-clan-action="accept" data-member-id="${escapeHtml(application.uid)}">Accept</button><button data-clan-action="reject" data-member-id="${escapeHtml(application.uid)}">Reject</button></div></article>`).join("")
-            : `<p class="clan-muted">No pending applications.</p>`}</div>` : ""}
-        <button class="profile-secondary-btn clan-leave" data-clan-action="leave">${canLead && clanMembers.length === 1 ? "Disband Clan" : "Leave Clan"}</button>
-      </section>
+    ${renderClanSectionNavigation(canManageApplications)}
+    ${renderClanOverviewPanel(canLead)}
+    <div class="clan-columns clan-social-layout">
+      ${renderClanMembersPanel(canLead, canManageApplications)}
       <div class="clan-social-panels">
         ${renderClanRallyPanel()}
-        ${renderClanGiftPanel()}
-        ${renderClanQuestPanel()}
+        ${renderClanRewardsPanel()}
       </div>
-    </div>`}`;
+    </div>`;
   applyClanRosterFlags();
   bindClanRallyControls(clanContent);
   updateClanGiftCountdown();
@@ -18539,8 +18788,17 @@ function handleClanClick(event) {
   const button = event.target.closest("[data-clan-action]");
   if (!button) return;
   const action = button.dataset.clanAction;
+  if (action === "section") {
+    setClanMobileSection(button.dataset.clanSection);
+    return;
+  }
+  if (action === "browser-section") {
+    setClanBrowserSection(button.dataset.clanBrowserSection);
+    return;
+  }
   if (action === "edit-shield") {
     if (state?.clanRole !== "leader") return;
+    activeClanMobileSection = "overview";
     clanRenameEditorOpen = false;
     clanShieldDraft = normalizeClanShield(clanSnapshot?.shield, clanSnapshot?.banner);
     clanShieldEditorTab = "field";
@@ -18550,6 +18808,7 @@ function handleClanClick(event) {
   }
   if (action === "rename-clan") {
     if (state?.clanRole !== "leader") return;
+    activeClanMobileSection = "overview";
     clanShieldEditorOpen = false;
     clanShieldDraft = null;
     clanShieldEditorTab = "field";
@@ -18566,6 +18825,7 @@ function handleClanClick(event) {
     clanShieldEditorOpen = false;
     clanShieldDraft = null;
     clanShieldEditorTab = "field";
+    activeClanMobileSection = "overview";
     renderClanView();
     return;
   }
@@ -23112,9 +23372,16 @@ function normalizeDailyLoginRewardReceipt(raw = null) {
   if (!raw || typeof raw !== "object") return null;
   const dayKey = String(raw.dayKey || "").slice(0, 10);
   if (!/^\d{4}-\d{2}-\d{2}$/.test(dayKey)) return null;
+  const cycle = Math.max(1, Math.floor(Number(raw.cycle) || 1));
+  const day = clamp(Math.floor(Number(raw.day) || 1), 1, DAILY_LOGIN_REWARD_CYCLE_DAYS);
   return {
-    cycle: Math.max(1, Math.floor(Number(raw.cycle) || 1)),
-    day: clamp(Math.floor(Number(raw.day) || 1), 1, DAILY_LOGIN_REWARD_CYCLE_DAYS),
+    cycle,
+    day,
+    ordinal: Math.max(
+      1,
+      Math.floor(Number(raw.ordinal) || ((cycle - 1) * DAILY_LOGIN_REWARD_CYCLE_DAYS) + day)
+    ),
+    claimId: String(raw.claimId || "").slice(0, 96),
     dayKey,
     claimedAtMs: normalizeTimestampMs(raw.claimedAtMs || raw.claimedAt),
     goldHours: Math.max(0, Number(raw.goldHours) || 0),
@@ -23130,6 +23397,21 @@ function normalizeDailyLoginRewardReceipt(raw = null) {
   };
 }
 
+function getDailyLoginRewardOrdinal(cycle = 1, day = 1) {
+  const safeCycle = Math.max(1, Math.floor(Number(cycle) || 1));
+  const safeDay = clamp(Math.floor(Number(day) || 1), 1, DAILY_LOGIN_REWARD_CYCLE_DAYS);
+  return ((safeCycle - 1) * DAILY_LOGIN_REWARD_CYCLE_DAYS) + safeDay;
+}
+
+function getDailyLoginRewardPosition(ordinal = 1) {
+  const safeOrdinal = Math.max(1, Math.floor(Number(ordinal) || 1));
+  return {
+    ordinal: safeOrdinal,
+    cycle: Math.floor((safeOrdinal - 1) / DAILY_LOGIN_REWARD_CYCLE_DAYS) + 1,
+    day: ((safeOrdinal - 1) % DAILY_LOGIN_REWARD_CYCLE_DAYS) + 1,
+  };
+}
+
 function normalizeDailyLoginRewardStatus(raw = null, nowMs = Date.now()) {
   const source = raw && typeof raw === "object" ? raw : {};
   const serverTimeMs = normalizeTimestampMs(source.serverTimeMs) || Math.max(0, Number(nowMs) || Date.now());
@@ -23139,23 +23421,69 @@ function normalizeDailyLoginRewardStatus(raw = null, nowMs = Date.now()) {
   const lastClaimDayKey = /^\d{4}-\d{2}-\d{2}$/.test(String(source.lastClaimDayKey || ""))
     ? String(source.lastClaimDayKey)
     : "";
+  const lastAttendanceDayKey = /^\d{4}-\d{2}-\d{2}$/.test(String(source.lastAttendanceDayKey || ""))
+    ? String(source.lastAttendanceDayKey)
+    : Number(source.schemaVersion) < DAILY_LOGIN_REWARD_SCHEMA_VERSION
+      ? lastClaimDayKey
+      : "";
+  const deferredAttendanceDayKey = /^\d{4}-\d{2}-\d{2}$/.test(String(source.deferredAttendanceDayKey || ""))
+    ? String(source.deferredAttendanceDayKey)
+    : "";
+  const legacyCycle = Math.max(1, Math.floor(Number(source.cycle) || 1));
+  const legacyNextDay = clamp(Math.floor(Number(source.nextDay) || 1), 1, DAILY_LOGIN_REWARD_CYCLE_DAYS);
+  const nextClaimOrdinal = Math.max(
+    1,
+    Math.floor(Number(source.nextClaimOrdinal) || getDailyLoginRewardOrdinal(legacyCycle, legacyNextDay))
+  );
+  const earnedThroughOrdinal = Math.min(
+    nextClaimOrdinal + DAILY_LOGIN_REWARD_MAX_PENDING - 1,
+    Math.max(
+      nextClaimOrdinal - 1,
+      Math.floor(Number(source.earnedThroughOrdinal) || (nextClaimOrdinal - 1))
+    )
+  );
+  const nextPosition = getDailyLoginRewardPosition(nextClaimOrdinal);
+  const earnedPosition = earnedThroughOrdinal >= nextClaimOrdinal
+    ? getDailyLoginRewardPosition(earnedThroughOrdinal)
+    : null;
+  const pendingCount = Math.max(0, earnedThroughOrdinal - nextClaimOrdinal + 1);
+  const attendedToday = typeof source.attendedToday === "boolean"
+    ? source.attendedToday
+    : lastAttendanceDayKey === dayKey;
   const claimedToday = typeof source.claimedToday === "boolean"
     ? source.claimedToday
     : lastClaimDayKey === dayKey;
   return {
     schemaVersion: DAILY_LOGIN_REWARD_SCHEMA_VERSION,
-    cycle: Math.max(1, Math.floor(Number(source.cycle) || 1)),
-    nextDay: clamp(Math.floor(Number(source.nextDay) || 1), 1, DAILY_LOGIN_REWARD_CYCLE_DAYS),
+    cycle: nextPosition.cycle,
+    nextDay: nextPosition.day,
+    nextClaimOrdinal,
+    earnedThroughOrdinal,
+    pendingCount,
+    queuedCount: Math.max(0, pendingCount - 1),
+    maxPendingRewards: Math.max(
+      1,
+      Math.floor(Number(source.maxPendingRewards) || DAILY_LOGIN_REWARD_MAX_PENDING)
+    ),
     totalClaims: Math.max(0, Math.floor(Number(source.totalClaims) || 0)),
+    lastAttendanceDayKey,
+    deferredAttendanceDayKey,
     lastClaimDayKey,
     lastClaimedAtMs: normalizeTimestampMs(source.lastClaimedAtMs || source.lastClaimedAt),
+    lastClaimRequestId: String(source.lastClaimRequestId || "").slice(0, 96),
     lastReceipt: normalizeDailyLoginRewardReceipt(source.lastReceipt),
-    eligible: typeof source.eligible === "boolean" ? source.eligible : !claimedToday,
+    eligible: pendingCount > 0,
+    attendedToday,
+    attendanceDeferred: typeof source.attendanceDeferred === "boolean"
+      ? source.attendanceDeferred
+      : deferredAttendanceDayKey === dayKey,
     claimedToday,
+    earnedThroughCycle: earnedPosition?.cycle || nextPosition.cycle,
+    earnedThroughDay: earnedPosition?.day || Math.max(0, nextPosition.day - 1),
     dayKey,
     serverTimeMs,
     nextUtcUnlockAtMs: normalizeTimestampMs(source.nextUtcUnlockAtMs)
-      || (claimedToday ? getNextUtcDayStartMs(serverTimeMs) : 0),
+      || (attendedToday ? getNextUtcDayStartMs(serverTimeMs) : 0),
     cycleLengthDays: DAILY_LOGIN_REWARD_CYCLE_DAYS,
   };
 }
@@ -23170,6 +23498,12 @@ function applyDailyLoginRewardProfileState(rawState = null, options = {}) {
   }, nowMs);
   const previousSignature = JSON.stringify(dailyLoginRewardStatus || null);
   dailyLoginRewardStatus = nextStatus;
+  if (
+    dailyLoginRewardPendingClaim
+    && dailyLoginRewardPendingClaim.expectedOrdinal !== nextStatus.nextClaimOrdinal
+  ) {
+    dailyLoginRewardPendingClaim = null;
+  }
   dailyLoginRewardError = "";
   scheduleDailyLoginRewardUtcRefresh();
   renderDailyLoginRewardButton();
@@ -23194,8 +23528,8 @@ function renderDailyLoginRewardButton() {
       ? "Loading daily rewards"
       : status
         ? eligible
-          ? `Claim daily reward, cycle ${status.cycle} day ${status.nextDay}`
-          : `Daily reward claimed, next is cycle ${status.cycle} day ${status.nextDay}`
+          ? `Claim ${status.pendingCount} daily reward${status.pendingCount === 1 ? "" : "s"}, next is cycle ${status.cycle} day ${status.nextDay}`
+          : `Daily attendance recorded, next reward is cycle ${status.cycle} day ${status.nextDay}`
         : "Open daily rewards";
   dailyLoginRewardBtn.setAttribute("aria-label", label);
 }
@@ -23219,6 +23553,7 @@ async function refreshDailyLoginRewardStatus(options = {}) {
   const api = getOnlineApi();
   if (!state || !isOnlineWorldActive() || !api?.isSignedIn?.() || !api?.getDailyLoginRewardStatus) {
     dailyLoginRewardStatus = null;
+    dailyLoginRewardPendingClaim = null;
     dailyLoginRewardError = "";
     renderDailyLoginRewardButton();
     return null;
@@ -23229,6 +23564,12 @@ async function refreshDailyLoginRewardStatus(options = {}) {
   try {
     const result = await api.getDailyLoginRewardStatus();
     dailyLoginRewardStatus = normalizeDailyLoginRewardStatus(result?.dailyLoginRewardStatus);
+    if (
+      dailyLoginRewardPendingClaim
+      && dailyLoginRewardPendingClaim.expectedOrdinal !== dailyLoginRewardStatus.nextClaimOrdinal
+    ) {
+      dailyLoginRewardPendingClaim = null;
+    }
     dailyLoginRewardError = "";
     scheduleDailyLoginRewardUtcRefresh();
     if (options.autoOpen) maybeAutoOpenDailyLoginRewards();
@@ -23279,8 +23620,11 @@ function maybeAutoOpenDailyLoginRewards() {
 
 function getDailyLoginRewardCardState(day, status = dailyLoginRewardStatus) {
   if (!status) return "locked";
-  if (day < status.nextDay) return "claimed";
-  if (day === status.nextDay) return status.eligible ? "available" : "waiting";
+  const ordinal = getDailyLoginRewardOrdinal(status.cycle, day);
+  if (ordinal < status.nextClaimOrdinal) return "claimed";
+  if (ordinal === status.nextClaimOrdinal && ordinal <= status.earnedThroughOrdinal) return "available";
+  if (ordinal > status.nextClaimOrdinal && ordinal <= status.earnedThroughOrdinal) return "queued";
+  if (ordinal === status.nextClaimOrdinal) return "next";
   return "locked";
 }
 
@@ -23289,30 +23633,40 @@ function formatDailyLoginRewardHours(value = 0) {
   return Number.isInteger(hours) ? String(hours) : hours.toFixed(1).replace(/\.0$/, "");
 }
 
-function renderDailyLoginRewardItems(items = {}) {
-  const entries = Object.entries(items).filter(([, quantity]) => Number(quantity) > 0);
-  if (!entries.length) return "";
-  return `<div class="daily-reward-item-list">${entries.map(([itemId, quantity]) => {
-    const item = getShopItemById(itemId);
-    if (!item) return "";
-    return `
-      <span class="daily-reward-item" title="${escapeHtml(item.label)} ×${formatNumber(quantity)}">
-        <img src="${escapeHtml(item.icon)}" alt="" draggable="false" />
-        <strong>×${formatNumber(quantity)}</strong>
-      </span>
-    `;
-  }).join("")}</div>`;
-}
-
-function renderDailyLoginRewardResources(reward = {}) {
-  const resources = [];
+function getDailyLoginRewardPresentation(reward = {}) {
   if (reward.goldHours > 0) {
-    resources.push(`<span class="daily-reward-resource gold"><img src="assets/gold-pickup.png" alt="" /><strong>${formatDailyLoginRewardHours(reward.goldHours)}h</strong></span>`);
+    return {
+      kind: "gold",
+      icon: "assets/gold-pickup.png",
+      label: `${formatDailyLoginRewardHours(reward.goldHours)}h Gold`,
+      title: `${formatDailyLoginRewardHours(reward.goldHours)} hours of city gold production`,
+    };
   }
   if (reward.troopHours > 0) {
-    resources.push(`<span class="daily-reward-resource troops"><img src="assets/troop-pickup.png" alt="" /><strong>${formatDailyLoginRewardHours(reward.troopHours)}h</strong></span>`);
+    return {
+      kind: "troops",
+      icon: "assets/troop-pickup.png",
+      label: `${formatDailyLoginRewardHours(reward.troopHours)}h Troops`,
+      title: `${formatDailyLoginRewardHours(reward.troopHours)} hours of city troop production`,
+    };
   }
-  return `<div class="daily-reward-resource-list">${resources.join("")}</div>`;
+  const [itemEntry] = Object.entries(reward.items || {}).filter(([, quantity]) => Number(quantity) > 0);
+  const item = itemEntry ? getShopItemById(itemEntry[0]) : null;
+  const quantity = itemEntry ? Math.max(1, Math.floor(Number(itemEntry[1]) || 1)) : 0;
+  if (item) {
+    return {
+      kind: "item",
+      icon: item.icon,
+      label: `${quantity > 1 ? `${formatNumber(quantity)}× ` : ""}${item.label}`,
+      title: item.label,
+    };
+  }
+  return {
+    kind: "unknown",
+    icon: "assets/daily-reward-icon-cutout.webp?v=20260728-daily-reward-cutout",
+    label: "Royal Reward",
+    title: "Royal Reward",
+  };
 }
 
 function renderDailyLoginRewardReceipt(receipt = null) {
@@ -23332,9 +23686,11 @@ function renderDailyLoginRewardReceipt(receipt = null) {
 }
 
 function getDailyLoginRewardCountdownText(status = dailyLoginRewardStatus) {
-  if (!status?.claimedToday || !status.nextUtcUnlockAtMs) return "";
+  if (!status?.attendedToday || !status.nextUtcUnlockAtMs) return "Recording today’s attendance…";
   const remainingSeconds = Math.max(0, Math.ceil((status.nextUtcUnlockAtMs - Date.now()) / 1000));
-  return remainingSeconds > 0 ? `Next claim in ${formatDuration(remainingSeconds)} (UTC)` : "Refreshing daily reward…";
+  return remainingSeconds > 0
+    ? `Next attendance in ${formatDuration(remainingSeconds)} (UTC)`
+    : "Refreshing attendance…";
 }
 
 function updateDailyLoginRewardCountdown() {
@@ -23363,33 +23719,42 @@ function renderDailyLoginRewardModal() {
     return;
   }
 
+  const pendingLabel = `${formatNumber(status.pendingCount)} reward${status.pendingCount === 1 ? "" : "s"} ready`;
   const claimLabel = dailyLoginRewardClaimInFlight
     ? "Collecting…"
-    : `Claim Cycle ${formatNumber(status.cycle)} · Day ${formatNumber(status.nextDay)}`;
+    : `Collect Day ${formatNumber(status.nextDay)}`;
+  const attendanceMessage = status.attendanceDeferred
+    ? "Today’s attendance is saved. Collect one reward to add it to the queue."
+    : status.pendingCount >= status.maxPendingRewards
+      ? `Reward queue full (${status.pendingCount}/${status.maxPendingRewards}).`
+      : "Today’s attendance has been recorded.";
   modalBody.innerHTML = `
     <section class="daily-reward-panel">
       <header class="daily-reward-hero">
         <img src="assets/daily-reward-icon-cutout.webp?v=20260728-daily-reward-cutout" alt="" />
         <div>
-          <span>Cycle ${formatNumber(status.cycle)}</span>
-          <h3>Day ${formatNumber(status.nextDay)} of ${formatNumber(DAILY_LOGIN_REWARD_CYCLE_DAYS)}</h3>
-          <p>Missing a day never resets your progress. Rewards scale from your permanent base city production.</p>
+          <span>Royal Attendance · Cycle ${formatNumber(status.cycle)}</span>
+          <h3>${escapeHtml(pendingLabel)}</h3>
+          <p>${escapeHtml(attendanceMessage)}</p>
         </div>
       </header>
       ${status.claimedToday ? renderDailyLoginRewardReceipt(status.lastReceipt) : ""}
       <div class="daily-reward-status-row">
-        <strong>${status.eligible ? "Today’s reward is ready" : "Today’s reward is collected"}</strong>
+        <strong>${status.eligible ? `Next: Day ${formatNumber(status.nextDay)}` : "Next reward is not earned yet"}</strong>
         <span data-daily-reward-countdown>${escapeHtml(getDailyLoginRewardCountdownText(status))}</span>
       </div>
       <div class="daily-reward-grid" aria-label="30-day daily reward track">
         ${DAILY_LOGIN_REWARD_DAYS.map(reward => {
           const cardState = getDailyLoginRewardCardState(reward.day, status);
+          const presentation = getDailyLoginRewardPresentation(reward);
           const stateLabel = cardState === "claimed"
             ? "Claimed"
             : cardState === "available"
               ? "Ready"
-              : cardState === "waiting"
-                ? "Tomorrow"
+              : cardState === "queued"
+                ? "Queued"
+                : cardState === "next"
+                  ? "Next"
                 : "Locked";
           const isClaimableCard = cardState === "available";
           const cardTag = isClaimableCard ? "button" : "article";
@@ -23397,20 +23762,21 @@ function renderDailyLoginRewardModal() {
             ? `type="button" data-daily-reward-claim-card ${dailyLoginRewardClaimInFlight ? "disabled" : ""}`
             : "";
           return `
-            <${cardTag} class="daily-reward-card ${cardState}" ${cardAttributes} aria-label="Day ${reward.day}, ${isClaimableCard ? "claim this reward" : stateLabel}">
+            <${cardTag} class="daily-reward-card ${cardState} ${presentation.kind}" ${cardAttributes} aria-label="Day ${reward.day}, ${escapeHtml(presentation.title)}, ${isClaimableCard ? "claim this reward" : stateLabel}">
               <div class="daily-reward-card-head">
                 <strong>Day ${formatNumber(reward.day)}</strong>
                 <span>${stateLabel}</span>
               </div>
-              ${renderDailyLoginRewardResources(reward)}
-              ${renderDailyLoginRewardItems(reward.items)}
+              <img class="daily-reward-card-icon" src="${escapeHtml(presentation.icon)}" alt="" draggable="false" />
+              <strong class="daily-reward-card-label">${escapeHtml(presentation.label)}</strong>
+              ${cardState === "claimed" ? `<span class="daily-reward-check" aria-hidden="true">✓</span>` : ""}
             </${cardTag}>
           `;
         }).join("")}
       </div>
       <footer class="daily-reward-actions">
         <button class="primary daily-reward-claim-btn" type="button" data-daily-reward-claim ${!status.eligible || dailyLoginRewardClaimInFlight ? "disabled" : ""}>${escapeHtml(claimLabel)}</button>
-        <small>One claim per UTC day. Day 30 restarts the track at day 1 on the following UTC day.</small>
+        <small>Log in once per UTC day to earn the next reward. Up to ${formatNumber(status.maxPendingRewards)} earned rewards can wait for collection. Missing a day pauses the track.</small>
       </footer>
     </section>
   `;
@@ -23432,23 +23798,41 @@ async function showDailyLoginRewardsModal(options = {}) {
   }
 }
 
+function createDailyLoginRewardClaimId() {
+  if (window.crypto?.randomUUID) return window.crypto.randomUUID();
+  const random = Math.random().toString(36).slice(2, 12);
+  return `daily-${Date.now().toString(36)}-${random}`;
+}
+
 async function claimDailyLoginReward() {
   const api = getOnlineApi();
   if (!api?.claimDailyLoginReward || dailyLoginRewardClaimInFlight || !dailyLoginRewardStatus?.eligible) return;
+  if (
+    !dailyLoginRewardPendingClaim
+    || dailyLoginRewardPendingClaim.expectedOrdinal !== dailyLoginRewardStatus.nextClaimOrdinal
+  ) {
+    dailyLoginRewardPendingClaim = {
+      claimId: createDailyLoginRewardClaimId(),
+      expectedOrdinal: dailyLoginRewardStatus.nextClaimOrdinal,
+    };
+  }
   dailyLoginRewardClaimInFlight = true;
   dailyLoginRewardError = "";
   renderDailyLoginRewardModal();
   try {
-    const result = await api.claimDailyLoginReward();
+    const result = await api.claimDailyLoginReward(dailyLoginRewardPendingClaim);
     if (result?.currentUser || result?.cityUpdates) {
       applyServerEconomyResult(result, { renderCities: true });
     }
     dailyLoginRewardStatus = normalizeDailyLoginRewardStatus(result?.dailyLoginRewardStatus);
+    dailyLoginRewardPendingClaim = null;
     scheduleDailyLoginRewardUtcRefresh();
     renderDailyLoginRewardButton();
     const receipt = normalizeDailyLoginRewardReceipt(result?.receipt);
     if (result?.replayed) {
-      showToast("Today’s daily reward was already collected.");
+      showToast("That daily reward was already collected.");
+    } else if (result?.claimed === false) {
+      showToast("No earned daily reward is waiting.");
     } else if (receipt) {
       const parts = [];
       if (receipt.gold > 0) parts.push(`${formatNumber(receipt.gold)} gold`);
@@ -23462,6 +23846,11 @@ async function claimDailyLoginReward() {
     saveGame();
     queueOnlineSave();
   } catch (error) {
+    const errorCode = String(error?.code || "").toLowerCase().replace(/^functions\//, "");
+    if (errorCode === "aborted" || errorCode === "failed-precondition") {
+      dailyLoginRewardPendingClaim = null;
+      await refreshDailyLoginRewardStatus({ silent: true });
+    }
     dailyLoginRewardError = error?.message || "The daily reward could not be collected.";
     console.warn("Daily login reward claim failed", error);
     showToast(dailyLoginRewardError);
@@ -25340,8 +25729,8 @@ function renderOutgoingAttacksModalContent(operations = getActiveOperationsSnaps
       renderOutgoingAttacksModalContent();
     });
   });
-  modalBody.querySelectorAll("[data-outgoing-city]").forEach(button => {
-    button.addEventListener("click", () => focusOutgoingAttackCity(button.dataset.outgoingCity));
+  modalBody.querySelectorAll("[data-outgoing-march]").forEach(button => {
+    button.addEventListener("click", () => focusOutgoingMarchLocation(button.dataset.outgoingMarch));
   });
   modalBody.querySelectorAll("[data-operation-location]").forEach(button => {
     button.addEventListener("click", () => focusActiveOperationLocation({
@@ -25709,11 +26098,11 @@ function renderOutgoingAttackCard(mission) {
     : city
     ? `${escapeHtml(ownerName)} - ${formatNumber(city.troops)} troops`
     : "Target details are loading";
-  const locateCity = isReturning ? sourceCity : city;
-  const locateButton = locateCity
-    ? `<button class="incoming-attack-locate" data-outgoing-city="${escapeHtml(locateCity.id)}" type="button" aria-label="Go to ${escapeHtml(locateCity.name)}">&#8982;</button>`
-    : `<button class="incoming-attack-locate" type="button" aria-label="Target unavailable" disabled>&#8982;</button>`;
   const onlineId = getOnlineArmyResolutionId(mission);
+  const marchId = String(mission.key || onlineId || "").trim();
+  const locateButton = marchId
+    ? `<button class="incoming-attack-locate" data-outgoing-march="${escapeHtml(marchId)}" type="button" title="Go to current march location" aria-label="Go to current march location">&#8982;</button>`
+    : `<button class="incoming-attack-locate" type="button" aria-label="March location unavailable" disabled>&#8982;</button>`;
   const itemActionBusy = swiftMarchOrderRequests.has(onlineId) || recallHornRequests.has(onlineId);
   const swiftItemCount = Math.max(0, Math.floor(Number(ensureShopItems()[SWIFT_MARCH_ORDER_ITEM_ID]) || 0));
   const swiftOrderButton = isSwiftMarchOrderEligible(mission) && swiftItemCount > 0
@@ -25753,20 +26142,43 @@ function renderOutgoingAttackCard(mission) {
   `;
 }
 
-async function focusOutgoingAttackCity(cityId) {
-  const city = getArmyTargetById(cityId);
-  if (!city) {
-    showToast("That target is no longer available.");
+async function focusOutgoingMarchLocation(marchId) {
+  const normalizedMarchId = String(marchId || "").trim();
+  const mission = getOutgoingAttacks().find(entry => (
+    entry.key === normalizedMarchId
+    || getOnlineArmyResolutionId(entry) === normalizedMarchId
+  ));
+  if (!mission) {
+    showToast("That march is no longer active.");
     return;
   }
-  const regionId = getCityRegionId(city);
+  const progress = getArmyTravelProgress(mission, Date.now());
+  const location = getMissionPointAtProgress(mission, progress);
+  const rawRegionId = String(location?.regionId || "").trim();
+  const point = {
+    x: Number(location?.point?.x),
+    y: Number(location?.point?.y),
+  };
+  if (!rawRegionId || !Number.isFinite(point.x) || !Number.isFinite(point.y)) {
+    showToast("That march location is still syncing.");
+    return;
+  }
+  const regionId = normalizeRegionId(rawRegionId);
   if (modal.open) modal.close();
   if (regionId !== getActiveMapRegionId()) {
-    await switchOnlineIsland(regionId);
+    const switched = await switchOnlineIsland(regionId);
+    if (!switched) {
+      showToast(`Could not open ${getRegionLabel(regionId)}.`);
+      return;
+    }
   }
   requestAnimationFrame(() => {
-    centerOnCity(city.id);
-    showToast(`Viewing ${city.name}`);
+    if (!centerOnWorldPoint(point, regionId)) {
+      showToast("That march location is still syncing.");
+      return;
+    }
+    renderArmies(true);
+    showToast("Viewing current march location");
   });
 }
 
@@ -26800,6 +27212,27 @@ function centerOnMap() {
   updateCameraTransform();
 }
 
+function centerOnWorldPoint(point, regionId = getActiveMapRegionId()) {
+  const targetRegionId = normalizeRegionId(regionId);
+  const x = Number(point?.x);
+  const y = Number(point?.y);
+  if (
+    !mapFrame
+    || targetRegionId !== getActiveMapRegionId()
+    || !Number.isFinite(x)
+    || !Number.isFinite(y)
+  ) return false;
+  const rect = mapFrame.getBoundingClientRect();
+  const mapPoint = worldToMapPoint({ x, y });
+  const dimensions = getActiveMapDimensions();
+  zoom = clampZoomForViewport(zoom, rect, dimensions);
+  const offset = getMapViewportOffset(rect, dimensions);
+  camera.x = mapPoint.x - (rect.width / 2 - offset.x) / zoom;
+  camera.y = mapPoint.y - (rect.height / 2 - offset.y) / zoom;
+  updateCameraTransform();
+  return true;
+}
+
 function centerOnCity(cityId) {
   const city = getArmyTargetById(cityId);
   if (!city || !mapFrame) return;
@@ -26807,14 +27240,7 @@ function centerOnCity(cityId) {
     centerOnMap();
     return;
   }
-  const rect = mapFrame.getBoundingClientRect();
-  const mapPoint = worldToMapPoint(city);
-  const dimensions = getActiveMapDimensions();
-  zoom = clampZoomForViewport(zoom, rect, dimensions);
-  const offset = getMapViewportOffset(rect, dimensions);
-  camera.x = mapPoint.x - (rect.width / 2 - offset.x) / zoom;
-  camera.y = mapPoint.y - (rect.height / 2 - offset.y) / zoom;
-  updateCameraTransform();
+  centerOnWorldPoint(city, getCityRegionId(city));
 }
 
 function getElementAvoidRect(element, viewRect, padding = 12) {
@@ -27539,6 +27965,7 @@ window.addEventListener("crownlands:auth", async () => {
   } else {
     stopGameServerMembershipWatcher({ clear: true });
     dailyLoginRewardStatus = null;
+    dailyLoginRewardPendingClaim = null;
     dailyLoginRewardError = "";
     if (dailyLoginRewardUtcTimer) window.clearTimeout(dailyLoginRewardUtcTimer);
     dailyLoginRewardUtcTimer = 0;
@@ -27580,6 +28007,7 @@ if (settingsTabBtn) settingsTabBtn.addEventListener("click", showProfileSettings
 if (clanContent) {
   clanContent.addEventListener("submit", handleClanSubmit);
   clanContent.addEventListener("click", handleClanClick);
+  clanContent.addEventListener("keydown", handleClanNavigationKeydown);
 }
 if (pushAlertsOffBtn) pushAlertsOffBtn.addEventListener("click", disablePushNotificationsFromSettings);
 if (pushAlertsOnBtn) pushAlertsOnBtn.addEventListener("click", enablePushNotificationsFromSettings);

@@ -117,6 +117,26 @@ requires(client, /function renderPaths[\s\S]*?getArmyRouteRelationshipClass\(att
 requires(client, /function refreshClanRelationshipPresentation[\s\S]*?pathRenderSignature\s*=\s*""[\s\S]*?renderPaths\(\)/, "Clan membership events do not immediately invalidate and redraw march paths.");
 assert.doesNotMatch(updateArmyTokenElementSource, /clan-support-route|clan-hostile-route|isCurrentClanmateArmy/, "Clan path colors must not recolor moving army markers.");
 requires(client, /function showClanHub[\s\S]*?showProfileClan\(\)/, "The Clan HUD button does not open the Clan area directly.");
+requires(client, /CLAN_MOBILE_SECTIONS\s*=\s*Object\.freeze\(\["overview",\s*"rallies",\s*"rewards",\s*"members"\]\)[\s\S]*?activeClanMobileSection\s*=\s*"overview"/, "The mobile clan hub is missing its four-section state.");
+requires(client, /function showProfileClan\(\)[\s\S]*?enteringClan[\s\S]*?activeClanMobileSection\s*=\s*"overview"/, "Opening the Clan area does not reset mobile navigation to Overview.");
+requires(client, /function handleOnlinePlayerClanSnapshot[\s\S]*?previousClanId\s*!==\s*state\.clanId[\s\S]*?activeClanMobileSection\s*=\s*"overview"/, "Changing clans does not reset mobile navigation to Overview.");
+requires(
+  client,
+  /function renderClanSectionNavigation[\s\S]*?key:\s*"overview"[\s\S]*?key:\s*"rallies"[\s\S]*?key:\s*"rewards"[\s\S]*?key:\s*"members"[\s\S]*?role="tablist"[\s\S]*?data-clan-section="\$\{section\.key\}"[\s\S]*?aria-selected[\s\S]*?aria-controls/,
+  "The mobile clan section bar is incomplete or missing accessible tab state."
+);
+requires(
+  client,
+  /id="clanOverviewPanel"[\s\S]*?role="tabpanel"[\s\S]*?id="clanMembersPanel"[\s\S]*?role="tabpanel"[\s\S]*?id="clanRewardsPanel"[\s\S]*?role="tabpanel"[\s\S]*?id="clanRalliesPanel"[\s\S]*?role="tabpanel"/,
+  "The clan Overview, Members, Rewards, and Rallies panels are not exposed as tab panels."
+);
+requires(client, /function renderClanOverviewPanel[\s\S]*?Active rallies[\s\S]*?Gold gifts[\s\S]*?Conquest[\s\S]*?Roster/, "The clan Overview is missing its four activity summaries.");
+requires(
+  client,
+  /CLAN_BROWSER_SECTIONS\s*=\s*Object\.freeze\(\["discover",\s*"create"\]\)[\s\S]*?function renderClanBrowserNavigation[\s\S]*?key:\s*"discover"[\s\S]*?key:\s*"create"[\s\S]*?data-clan-browser-section="\$\{section\.key\}"[\s\S]*?id="clanBrowserCreatePanel"[\s\S]*?id="clanBrowserDiscoverPanel"/,
+  "The no-clan mobile flow is missing its Find Clan and Create Clan views."
+);
+requires(client, /function handleClanNavigationKeydown[\s\S]*?ArrowLeft[\s\S]*?ArrowRight[\s\S]*?Home[\s\S]*?End[\s\S]*?clanContent\.addEventListener\("keydown",\s*handleClanNavigationKeydown\)/, "Clan section tabs are missing keyboard navigation.");
 requires(client, /function startClanApplicationSubscription[\s\S]*?onApplications[\s\S]*?clanApplications\s*=[\s\S]*?renderClanView/, "Clan applications do not appear live for leaders and officers.");
 requires(client, /data-clan-action="cancel-application"[\s\S]*?"cancel-application":\s*"cancelClanApplication"/, "Applicants cannot cancel a pending clan application.");
 requires(showProfileSkillsSource, /clanView\.hidden\s*=\s*true;/, "Switching from Clan to Skills does not hide the Clan panel.");
@@ -162,6 +182,17 @@ requires(styles, /\.clan-hud-btn[\s\S]*?\.profile-clan-affiliation/, "Clan HUD a
 requires(styles, /\.public-clan-roster[\s\S]*?\.public-clan-member[\s\S]*?\.public-clan-member-power[\s\S]*?\.clan-name-link/, "Public clan roster and discovery profile links are not styled.");
 requires(styles, /\.clan-shield-size-editor[\s\S]*?\.clan-shield-editor-controls[\s\S]*?\.clan-shield-swatch-grid/, "Clan shield editor styling is missing.");
 requires(styles, /\.clan-rename-card[\s\S]*?\.clan-rename-form[\s\S]*?\.clan-rename-actions/, "Clan rename management UI is not styled.");
+requires(
+  styles,
+  /@media \(max-width:\s*900px\)[\s\S]*?\.clan-section-nav[\s\S]*?position:\s*sticky[\s\S]*?grid-template-columns:\s*repeat\(4,[\s\S]*?min-height:\s*44px[\s\S]*?\.clan-section-panel[\s\S]*?display:\s*none[\s\S]*?\.clan-section-panel\.active[\s\S]*?display:\s*block/,
+  "The clan hub is missing its sticky four-tab mobile layout and touch targets."
+);
+requires(
+  styles,
+  /\.clan-content:not\(\.shield-editor-open\) \.clan-columns,[\s\S]*?\.clan-social-panels,[\s\S]*?\.clan-browser[\s\S]*?display:\s*contents[\s\S]*?\.clan-roster[\s\S]*?max-height:\s*none[\s\S]*?overflow:\s*visible/,
+  "Mobile clan sections do not collapse to a single scroll container."
+);
+requires(styles, /\.clan-overview-grid[\s\S]*?repeat\(4,[\s\S]*?\.clan-rewards-panel\.active[\s\S]*?grid-template-columns/, "The clan Overview summaries or responsive Rewards layout are missing.");
 requires(styles, /\.clan-content\.shield-editor-open[\s\S]*?\.clan-shield-editor-preview[\s\S]*?\.clan-shield-editor-workspace[\s\S]*?\.clan-shield-editor-controls[\s\S]*?overflow-y:\s*auto/, "Mobile shield editor does not keep a fixed preview beside scrollable controls.");
 requires(styles, /\.clan-member-row[\s\S]*?\.clan-member-selection[\s\S]*?\.clan-gift-panel[\s\S]*?\.clan-quest-grid[\s\S]*?\.clan-quest-card/, "Compact roster, gift, and conquest quest styling is missing.");
 
