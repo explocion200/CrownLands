@@ -193,6 +193,11 @@ requires(
   "Mobile clan sections do not collapse to a single scroll container."
 );
 requires(styles, /\.clan-overview-grid[\s\S]*?repeat\(4,[\s\S]*?\.clan-rewards-panel\.active[\s\S]*?grid-template-columns/, "The clan Overview summaries or responsive Rewards layout are missing.");
+requires(
+  styles,
+  /\.clan-gift-actions[\s\S]*?repeat\(2,\s*minmax\(0,\s*1fr\)\)[\s\S]*?\.clan-gift-actions button[\s\S]*?min-width:\s*0[\s\S]*?@media \(max-width:\s*900px\)[\s\S]*?\.clan-gift-actions\s*\{[\s\S]*?grid-template-columns:\s*minmax\(0,\s*1fr\)/,
+  "Clan gift actions can overflow into Conquest Quests at compact Rewards widths."
+);
 requires(styles, /\.clan-content\.shield-editor-open[\s\S]*?\.clan-shield-editor-preview[\s\S]*?\.clan-shield-editor-workspace[\s\S]*?\.clan-shield-editor-controls[\s\S]*?overflow-y:\s*auto/, "Mobile shield editor does not keep a fixed preview beside scrollable controls.");
 requires(styles, /\.clan-member-row[\s\S]*?\.clan-member-selection[\s\S]*?\.clan-gift-panel[\s\S]*?\.clan-quest-grid[\s\S]*?\.clan-quest-card/, "Compact roster, gift, and conquest quest styling is missing.");
 
