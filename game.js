@@ -2632,6 +2632,7 @@ let gameServerHeartbeatInFlight = false;
 let gameServerJoinInFlight = false;
 let gameServerLaunchInFlight = false;
 let gameServerAutoEnter = false;
+let pendingGameServerInactivityNotice = null;
 let serverEconomySyncTimer = 0;
 let serverEconomyRefreshInFlight = false;
 let serverEconomyRefreshQueued = false;
@@ -11230,6 +11231,20 @@ function normalizeGameServerMembership(raw = null) {
   const serverId = String(raw.serverId || "").trim();
   const status = String(raw.status || "").trim().toLowerCase();
   if (serverId !== GAME_SERVER_ID || !["active", "waiting", "left", "expired", "session-replaced"].includes(status)) return null;
+  const rawNotice = raw.inactivityNotice && typeof raw.inactivityNotice === "object"
+    ? raw.inactivityNotice
+    : null;
+  const noticeType = String(rawNotice?.type || "").trim();
+  const inactivityNotice = ["territory-surrendered", "world-slot-reset"].includes(noticeType)
+    ? {
+        policyVersion: Math.max(0, Math.floor(Number(rawNotice.policyVersion) || 0)),
+        type: noticeType,
+        occurredAtMs: Math.max(0, Number(rawNotice.occurredAtMs) || 0),
+        releasedCities: Math.max(0, Math.floor(Number(rawNotice.releasedCities) || 0)),
+        releasedCamps: Math.max(0, Math.floor(Number(rawNotice.releasedCamps) || 0)),
+        consolidatedTroops: Math.max(0, Math.floor(Number(rawNotice.consolidatedTroops) || 0)),
+      }
+    : null;
   return {
     serverId,
     serverName: String(raw.serverName || GAME_SERVER_NAME).trim() || GAME_SERVER_NAME,
@@ -11238,7 +11253,47 @@ function normalizeGameServerMembership(raw = null) {
     admittedAtMs: Math.max(0, Number(raw.admittedAtMs) || 0),
     lastSeenAtMs: Math.max(0, Number(raw.lastSeenAtMs) || 0),
     updatedAtMs: Math.max(0, Number(raw.updatedAtMs) || 0),
+    inactivityNotice,
   };
+}
+
+function showGameServerInactivityNotice(notice = null) {
+  if (!notice || !modal || !modalBody || !modalTitle) return false;
+  modal.classList.add("offline-reward-modal");
+  modalTitle.textContent = notice.type === "world-slot-reset"
+    ? "Realm slot reset"
+    : "Inactive holdings surrendered";
+  modalBody.innerHTML = `
+    <div class="offline-reward-panel">
+      ${getGameServerInactivityNoticeMarkup(notice)}
+      <button id="inactivityNoticeCloseBtn" class="offline-collect-btn" type="button">Continue</button>
+    </div>
+  `;
+  modalBody.querySelector("#inactivityNoticeCloseBtn")?.addEventListener("click", () => modal.close());
+  if (!modal.open) modal.showModal();
+  if (pendingGameServerInactivityNotice === notice) pendingGameServerInactivityNotice = null;
+  return true;
+}
+
+function getGameServerInactivityNoticeMarkup(notice = null) {
+  if (!notice) return "";
+  if (notice.type === "world-slot-reset") {
+    return `
+      <section class="offline-lost-cities">
+        <span>20-day inactivity limit reached</span>
+        <strong>World slot reset</strong>
+        <p>Your previous home base and current-world progress were released. Your sign-in account and ruler identity remain, and this visit begins a fresh kingdom.</p>
+      </section>
+    `;
+  }
+  const holdings = notice.releasedCities + notice.releasedCamps;
+  return `
+    <section class="offline-lost-cities">
+      <span>15-day inactivity limit reached</span>
+      <strong>${formatNumber(holdings)} holdings surrendered</strong>
+      <p>${formatNumber(notice.consolidatedTroops)} owned troops were secured at your protected main city. Surrendered territory is not restored.</p>
+    </section>
+  `;
 }
 
 function hasActiveGameServerSlot() {
@@ -11331,6 +11386,7 @@ async function joinSelectedGameServer() {
   try {
     const result = await api.joinGameServer(GAME_SERVER_ID);
     applyGameServerMembership(result);
+    pendingGameServerInactivityNotice = gameServerMembership?.inactivityNotice || null;
     if (result?.status === "waiting") {
       gameServerAutoEnter = true;
       return false;
@@ -14048,6 +14104,9 @@ async function startFromInput(forceFresh = false) {
     showToast("Online kingdom loaded.");
     refreshDailyLoginRewardStatus({ autoOpen: true, silent: true });
     retryPendingRewardedAdClaim();
+    if (pendingGameServerInactivityNotice) {
+      window.setTimeout(() => showGameServerInactivityNotice(pendingGameServerInactivityNotice), 0);
+    }
   } catch (error) {
     onlineLastError = error?.message || String(error);
     statusOverride = shouldConnectOnline ? `Online setup failed: ${onlineLastError}` : onlineLastError;
@@ -16023,6 +16082,8 @@ function applyPendingOfflineProgress() {
 
 function showOfflineRewardsModal({ goldGained = 0, troopsGained = 0, elapsed = 0, lostCities = [] } = {}) {
   const lostList = Array.isArray(lostCities) ? lostCities : [];
+  const inactivityNotice = pendingGameServerInactivityNotice;
+  if (inactivityNotice) pendingGameServerInactivityNotice = null;
   const lostSummary = lostList.length
     ? `<section class="offline-lost-cities"><span>Cities lost while away</span><strong>${formatNumber(lostList.length)}</strong><ul>${lostList.slice(0, 8).map(city => `<li>${escapeHtml(city.name || city.id)} <small>${escapeHtml(getRegionLabel(city.regionId || getCityRegionId(city.id)))}</small></li>`).join("")}</ul>${lostList.length > 8 ? `<small>+${formatNumber(lostList.length - 8)} more</small>` : ""}</section>`
     : `<section class="offline-lost-cities safe"><span>Cities lost while away</span><strong>0</strong><small>No cities were lost.</small></section>`;
@@ -16035,6 +16096,7 @@ function showOfflineRewardsModal({ goldGained = 0, troopsGained = 0, elapsed = 0
         <div><span>Gold collected</span><strong>${formatNumber(goldGained)}</strong></div>
         <div><span>Troops produced</span><strong>${formatNumber(troopsGained)}</strong><small>Added to cities still owned</small></div>
       </div>
+      ${getGameServerInactivityNoticeMarkup(inactivityNotice)}
       ${lostSummary}
       <button id="offlineCollectBtn" class="offline-collect-btn" type="button">Collect</button>
     </div>

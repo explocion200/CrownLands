@@ -209,6 +209,15 @@ const GAME_SERVER_CAPACITY = 50;
 const GAME_SERVER_ACTIVE_STALE_MS = 3 * 60 * 1000;
 const GAME_SERVER_WAITING_STALE_MS = 5 * 60 * 1000;
 const GAME_SERVER_MAX_WAITING = 500;
+const INACTIVITY_POLICY_VERSION = 1;
+const INACTIVITY_SURRENDER_MS = 15 * 24 * 60 * 60 * 1000;
+const INACTIVITY_REMOVAL_MS = 20 * 24 * 60 * 60 * 1000;
+const INACTIVITY_JOB_LEASE_MS = 20 * 60 * 1000;
+const INACTIVITY_CANDIDATE_LIMIT = 100;
+const INACTIVITY_PROCESS_CONCURRENCY = 2;
+const INACTIVITY_POLICY_MODE = safeString(REALM_CONFIG.inactivityPolicyMode, 16) === "audit"
+  ? "audit"
+  : "enforce";
 const GAME_SERVER_HEARTBEAT_MODEL_VERSION = 2;
 const GAME_SERVER_ADMISSION_LEASE_MS = 15 * 1000;
 const GAME_SERVER_ADMISSION_WAIT_MS = 55 * 1000;
@@ -716,6 +725,42 @@ function promoteGameServerWaiters(state, nowMs = Date.now()) {
   return promoted;
 }
 
+function inactivityMaintenanceRef(uid = "") {
+  const playerUid = safeString(uid, 128);
+  return playerUid
+    ? db.doc(`realmMaintenance/${RESET_GENERATION}/inactivePlayers/${playerUid}`)
+    : null;
+}
+
+function getInactivityNotice(membership = {}) {
+  const stage = safeString(membership.inactivityStage, 24);
+  if (stage !== "surrendered" && stage !== "removed") return null;
+  return {
+    policyVersion: INACTIVITY_POLICY_VERSION,
+    type: stage === "removed" ? "world-slot-reset" : "territory-surrendered",
+    occurredAtMs: Math.max(0, Math.floor(safeNumber(
+      stage === "removed" ? membership.removedAtMs : membership.surrenderedAtMs,
+      0
+    ))),
+    releasedCities: Math.max(0, Math.floor(safeNumber(membership.releasedCities, 0))),
+    releasedCamps: Math.max(0, Math.floor(safeNumber(membership.releasedCamps, 0))),
+    consolidatedTroops: Math.max(0, Math.floor(safeNumber(membership.consolidatedTroops, 0))),
+  };
+}
+
+function isInactivityJobLocked(receipt = {}, nowMs = Date.now()) {
+  return receipt.status === "processing"
+    && safeString(receipt.worldId, 120) === ONLINE_WORLD_ID
+    && safeString(receipt.resetGeneration, 120) === RESET_GENERATION
+    && Math.max(0, Math.floor(safeNumber(receipt.leaseUntilMs, 0))) > nowMs;
+}
+
+function isInactivityLifecycleBlockingPlayer(receipt = {}) {
+  return ["processing", "failed"].includes(receipt.status)
+    && safeString(receipt.worldId, 120) === ONLINE_WORLD_ID
+    && safeString(receipt.resetGeneration, 120) === RESET_GENERATION;
+}
+
 function writeGameServerMembership(transaction, entry, status, nowMs = Date.now()) {
   if (!entry?.uid) return;
   transaction.set(db.doc(`players/${entry.uid}/serverMembership/current`), {
@@ -730,6 +775,9 @@ function writeGameServerMembership(transaction, entry, status, nowMs = Date.now(
     queuedAtMs: status === "waiting" ? entry.queuedAtMs || nowMs : 0,
     admittedAtMs: status === "active" ? entry.admittedAtMs || nowMs : 0,
     lastSeenAtMs: nowMs,
+    inactivityPolicyVersion: INACTIVITY_POLICY_VERSION,
+    inactivityStage: status === "expired" ? "removed" : "active",
+    basisLastSeenAtMs: 0,
     updatedAtMs: nowMs,
     updatedAt: FieldValue.serverTimestamp(),
   }, { merge: true });
@@ -862,8 +910,20 @@ async function withGameServerAdmissionLease(operation) {
 
 async function joinGameServerForPlayer({ uid, sessionId, displayName, nowMs = Date.now() }) {
   const serverRef = db.doc(`gameServers/${GAME_SERVER_DOCUMENT_ID}`);
+  const membershipRef = db.doc(`players/${uid}/serverMembership/current`);
+  const maintenanceRef = inactivityMaintenanceRef(uid);
   return serializeGameServerAdmission(() => withGameServerAdmissionLease(() => db.runTransaction(async transaction => {
-    const serverSnap = await transaction.get(serverRef);
+    const [serverSnap, membershipSnap, maintenanceSnap] = await Promise.all([
+      transaction.get(serverRef),
+      transaction.get(membershipRef),
+      transaction.get(maintenanceRef),
+    ]);
+    const priorMembership = membershipSnap.exists ? membershipSnap.data() || {} : {};
+    const maintenance = maintenanceSnap.exists ? maintenanceSnap.data() || {} : {};
+    if (isInactivityLifecycleBlockingPlayer(maintenance)) {
+      throw new HttpsError("unavailable", "Your kingdom is completing scheduled realm maintenance. Try again in a moment.");
+    }
+    const inactivityNotice = getInactivityNotice(priorMembership);
     const state = createGameServerState(serverSnap.exists ? serverSnap.data() : {}, nowMs, { pruneStale: false });
     const promoted = promoteGameServerWaiters(state, nowMs);
     let activeEntry = state.activeSlots[uid] || null;
@@ -932,14 +992,26 @@ async function joinGameServerForPlayer({ uid, sessionId, displayName, nowMs = Da
       status: activeEntry ? "active" : "waiting",
       admittedAtMs: activeEntry?.admittedAtMs || 0,
       queuedAtMs: waitingEntry?.queuedAtMs || 0,
+      inactivityNotice,
     };
   })));
 }
 
 async function heartbeatGameServerForPlayer({ uid, sessionId, displayName, nowMs = Date.now() }) {
   const serverRef = db.doc(`gameServers/${GAME_SERVER_DOCUMENT_ID}`);
+  const membershipRef = db.doc(`players/${uid}/serverMembership/current`);
+  const maintenanceRef = inactivityMaintenanceRef(uid);
   const result = await db.runTransaction(async transaction => {
-    const serverSnap = await transaction.get(serverRef);
+    const [serverSnap, membershipSnap, maintenanceSnap] = await Promise.all([
+      transaction.get(serverRef),
+      transaction.get(membershipRef),
+      transaction.get(maintenanceRef),
+    ]);
+    const maintenance = maintenanceSnap.exists ? maintenanceSnap.data() || {} : {};
+    if (isInactivityLifecycleBlockingPlayer(maintenance)) {
+      throw new HttpsError("unavailable", "Your kingdom is completing scheduled realm maintenance. Try again in a moment.");
+    }
+    const inactivityNotice = getInactivityNotice(membershipSnap.exists ? membershipSnap.data() || {} : {});
     const state = createGameServerState(
       serverSnap.exists ? serverSnap.data() : {},
       nowMs,
@@ -964,6 +1036,7 @@ async function heartbeatGameServerForPlayer({ uid, sessionId, displayName, nowMs
       status,
       admittedAtMs: status === "active" ? entry.admittedAtMs || 0 : 0,
       queuedAtMs: status === "waiting" ? entry.queuedAtMs || 0 : 0,
+      inactivityNotice,
     };
   });
   if (result.status !== "missing") return result;
@@ -1033,6 +1106,981 @@ async function maintainGameServer(nowMs = Date.now()) {
       staleMembersDeleted: staleMemberSnap.size,
     };
   })));
+}
+
+function getInactivePlayerUidFromMembershipDoc(membershipDoc = null) {
+  const uid = safeString(membershipDoc?.ref?.parent?.parent?.id, 128);
+  return uid && !uid.includes("/") ? uid : "";
+}
+
+function getInactivityTargetStage(lastSeenAtMs = 0, nowMs = Date.now()) {
+  const elapsedMs = Math.max(0, nowMs - Math.max(0, Math.floor(safeNumber(lastSeenAtMs, 0))));
+  if (elapsedMs >= INACTIVITY_REMOVAL_MS) return "removing";
+  if (elapsedMs >= INACTIVITY_SURRENDER_MS) return "surrendering";
+  return "";
+}
+
+function isCurrentInactivityMembership(membership = {}) {
+  return safeString(membership.worldId, 120) === ONLINE_WORLD_ID
+    && safeString(membership.resetGeneration, 120) === RESET_GENERATION;
+}
+
+async function loadInactiveMembershipCandidates(nowMs = Date.now()) {
+  const baseQuery = db.collectionGroup("serverMembership")
+    .where("resetGeneration", "==", RESET_GENERATION)
+    .where("worldId", "==", ONLINE_WORLD_ID);
+  const [newlyInactiveSnap, surrenderedSnap] = await Promise.all([
+    baseQuery
+      .where("status", "in", ["active", "left", "waiting"])
+      .where("lastSeenAtMs", "<=", nowMs - INACTIVITY_SURRENDER_MS)
+      .orderBy("lastSeenAtMs", "asc")
+      .limit(INACTIVITY_CANDIDATE_LIMIT)
+      .get(),
+    baseQuery
+      .where("status", "==", "inactive")
+      .where("lastSeenAtMs", "<=", nowMs - INACTIVITY_REMOVAL_MS)
+      .orderBy("lastSeenAtMs", "asc")
+      .limit(INACTIVITY_CANDIDATE_LIMIT)
+      .get(),
+  ]);
+  return [...new Map(
+    [...newlyInactiveSnap.docs, ...surrenderedSnap.docs].map(doc => [doc.ref.path, doc])
+  ).values()]
+    .filter(doc => doc.id === "current")
+    .map(doc => ({
+      uid: getInactivePlayerUidFromMembershipDoc(doc),
+      ref: doc.ref,
+      membership: doc.data() || {},
+    }))
+    .filter(entry => entry.uid && isCurrentInactivityMembership(entry.membership))
+    .sort((a, b) => safeNumber(a.membership.lastSeenAtMs, 0) - safeNumber(b.membership.lastSeenAtMs, 0))
+    .slice(0, INACTIVITY_CANDIDATE_LIMIT);
+}
+
+async function beginInactivePlayerMaintenance(uid = "", targetStage = "", nowMs = Date.now()) {
+  const playerUid = safeString(uid, 128);
+  const membershipRef = db.doc(`players/${playerUid}/serverMembership/current`);
+  const receiptRef = inactivityMaintenanceRef(playerUid);
+  if (!playerUid || !receiptRef || !["surrendering", "removing"].includes(targetStage)) {
+    return { acquired: false, reason: "invalid" };
+  }
+  return db.runTransaction(async transaction => {
+    const [membershipSnap, receiptSnap] = await Promise.all([
+      transaction.get(membershipRef),
+      transaction.get(receiptRef),
+    ]);
+    const membership = membershipSnap.exists ? membershipSnap.data() || {} : {};
+    const receipt = receiptSnap.exists ? receiptSnap.data() || {} : {};
+    if (!isCurrentInactivityMembership(membership)) {
+      return { acquired: false, reason: "realm-changed" };
+    }
+    const basisLastSeenAtMs = Math.max(0, Math.floor(safeNumber(membership.lastSeenAtMs, 0)));
+    const currentTargetStage = getInactivityTargetStage(basisLastSeenAtMs, nowMs);
+    if (!currentTargetStage || (targetStage === "removing" && currentTargetStage !== "removing")) {
+      return { acquired: false, reason: "activity-renewed" };
+    }
+    const completedStage = targetStage === "removing" ? "removed" : "surrendered";
+    if (
+      receipt.status === "completed"
+      && receipt.stage === completedStage
+      && Math.floor(safeNumber(receipt.basisLastSeenAtMs, 0)) === basisLastSeenAtMs
+    ) {
+      return { acquired: false, reason: "already-completed" };
+    }
+    if (isInactivityJobLocked(receipt, nowMs)) {
+      return { acquired: false, reason: "locked" };
+    }
+    const continuing = ["processing", "failed"].includes(receipt.status)
+      && receipt.stage === targetStage
+      && Math.floor(safeNumber(receipt.basisLastSeenAtMs, 0)) === basisLastSeenAtMs;
+    const resetCounters = continuing ? {} : {
+      releasedCities: 0,
+      releasedCamps: 0,
+      consolidatedTroops: 0,
+      canceledArmies: 0,
+      returnedReinforcements: 0,
+    };
+    transaction.set(receiptRef, {
+      uid: playerUid,
+      worldId: ONLINE_WORLD_ID,
+      resetGeneration: RESET_GENERATION,
+      policyVersion: INACTIVITY_POLICY_VERSION,
+      status: "processing",
+      stage: targetStage,
+      basisLastSeenAtMs,
+      startedAtMs: continuing ? Math.max(0, Math.floor(safeNumber(receipt.startedAtMs, nowMs))) : nowMs,
+      leaseUntilMs: nowMs + INACTIVITY_JOB_LEASE_MS,
+      attempts: FieldValue.increment(1),
+      lastError: FieldValue.delete(),
+      ...resetCounters,
+      updatedAtMs: nowMs,
+      updatedAt: FieldValue.serverTimestamp(),
+      ...(receiptSnap.exists ? {} : {
+        createdAtMs: nowMs,
+        createdAt: FieldValue.serverTimestamp(),
+      }),
+    }, { merge: true });
+    transaction.set(membershipRef, {
+      inactivityPolicyVersion: INACTIVITY_POLICY_VERSION,
+      inactivityStage: targetStage,
+      basisLastSeenAtMs,
+      updatedAtMs: nowMs,
+      updatedAt: FieldValue.serverTimestamp(),
+    }, { merge: true });
+    return { acquired: true, basisLastSeenAtMs, receiptRef, membershipRef };
+  });
+}
+
+async function assertInactiveMaintenanceRun(transaction, receiptRef, {
+  uid = "",
+  stage = "",
+  basisLastSeenAtMs = 0,
+} = {}) {
+  const receiptSnap = await transaction.get(receiptRef);
+  const receipt = receiptSnap.exists ? receiptSnap.data() || {} : {};
+  if (
+    receipt.status !== "processing"
+    || receipt.stage !== stage
+    || safeString(receipt.uid, 128) !== safeString(uid, 128)
+    || Math.floor(safeNumber(receipt.basisLastSeenAtMs, 0)) !== Math.floor(safeNumber(basisLastSeenAtMs, 0))
+  ) {
+    throw new HttpsError("aborted", "Inactive-player maintenance was superseded by newer activity.");
+  }
+  return receipt;
+}
+
+async function settleInactivePlayerProduction(uid = "", run = {}, nowMs = Date.now()) {
+  return db.runTransaction(async transaction => {
+    await assertInactiveMaintenanceRun(transaction, run.receiptRef, {
+      uid,
+      stage: "surrendering",
+      basisLastSeenAtMs: run.basisLastSeenAtMs,
+    });
+    const economy = await prepareEconomyCollection(transaction, uid, nowMs, {
+      allowInactivityMaintenance: true,
+    });
+    writePreparedEconomy(transaction, economy, {}, [], { nowMs });
+    return true;
+  });
+}
+
+async function loadInactivePlayerHoldings(uid = "") {
+  const playerUid = safeString(uid, 128);
+  const [profileSnap, citySnap, campSnap, armySnap, reinforcementSnap] = await Promise.all([
+    db.doc(`players/${playerUid}`).get(),
+    db.collectionGroup("cities")
+      .where("ownerUid", "==", playerUid)
+      .where("resetGeneration", "==", RESET_GENERATION)
+      .where("worldId", "==", ONLINE_WORLD_ID)
+      .get(),
+    heldRewardCampsQueryForPlayer(playerUid).get(),
+    activeArmiesQueryForPlayer(playerUid).get(),
+    db.collection("reinforcements")
+      .where("ownerUid", "==", playerUid)
+      .where("resetGeneration", "==", RESET_GENERATION)
+      .where("worldId", "==", ONLINE_WORLD_ID)
+      .where("status", "==", REINFORCEMENT_STATUS_STATIONED)
+      .get(),
+  ]);
+  const profile = profileSnap.exists ? profileSnap.data() || {} : {};
+  const cityEntries = createOwnedCityEntriesFromSnapshot(playerUid, citySnap);
+  const mainEntry = getCanonicalMainCityEntry(profile, cityEntries);
+  return {
+    profileSnap,
+    profile,
+    cityEntries,
+    mainEntry,
+    campDocs: campSnap.docs,
+    armyDocs: armySnap.docs.filter(doc => doc.ref.parent?.parent === null),
+    reinforcementDocs: reinforcementSnap.docs,
+  };
+}
+
+function getInactiveCityNeutralPatch(city = {}, nowMs = Date.now()) {
+  return {
+    ownerKind: "neutral",
+    ownerUid: null,
+    ownerName: "",
+    ownerFlag: null,
+    ownerKingPower: 0,
+    ownerShieldExpiresAtMs: 0,
+    level: isStronghold(city) ? getStrongholdDefenseLevel(city) : clampCityLevel(city.level),
+    troops: 0,
+    troopFloat: 0,
+    investedGold: 0,
+    isMainCity: false,
+    productionUpdatedAtMs: nowMs,
+    relinquishedAtMs: nowMs,
+    relocatedAtMs: 0,
+  };
+}
+
+function isCurrentInactivityAsset(asset = {}) {
+  return safeString(asset.worldId, 120) === ONLINE_WORLD_ID
+    && safeString(asset.resetGeneration, 120) === RESET_GENERATION;
+}
+
+function getInactiveCampNeutralPatch(camp = {}, nowMs = Date.now()) {
+  const config = getRewardCampConfig(camp);
+  const baseDefenders = Math.max(1, Math.floor(safeNumber(camp.baseDefenders, config?.baseDefenders || 1)));
+  const activeArmyIds = normalizeActiveArmyIds(camp.activeArmyIds);
+  return {
+    holderUid: "",
+    holderName: "",
+    holderFlag: null,
+    heldSinceMs: 0,
+    payoutAtMs: 0,
+    payoutPending: false,
+    currentGarrison: baseDefenders,
+    returnSourceCityId: "",
+    returnSourceRegionId: "",
+    returnSourceCityName: "",
+    returnPathSegments: [],
+    returnRouteRegionIds: [],
+    returnPathLength: 0,
+    state: getRewardCampState(activeArmyIds, ""),
+    lastInactiveReleaseAtMs: nowMs,
+    updatedAt: FieldValue.serverTimestamp(),
+  };
+}
+
+function getInactiveHomeTroopPatch(home = {}, addedTroops = 0, nowMs = Date.now()) {
+  const currentTroops = Math.max(0, safeNumber(home.troopFloat, home.troops || 0));
+  const nextTroops = Math.min(Number.MAX_SAFE_INTEGER, currentTroops + Math.max(0, Math.floor(safeNumber(addedTroops, 0))));
+  return {
+    troops: Math.floor(nextTroops),
+    troopFloat: nextTroops,
+    productionUpdatedAtMs: nowMs,
+  };
+}
+
+async function releaseInactiveCity(uid = "", cityDoc = null, homeRef = null, run = {}, nowMs = Date.now()) {
+  if (!cityDoc?.ref) return { released: false, troops: 0 };
+  return db.runTransaction(async transaction => {
+    const refs = [run.receiptRef, cityDoc.ref];
+    if (homeRef) refs.push(homeRef);
+    const snapshots = await Promise.all(refs.map(ref => transaction.get(ref)));
+    const receiptSnap = snapshots[0];
+    const citySnap = snapshots[1];
+    const homeSnap = homeRef ? snapshots[2] : null;
+    const receipt = receiptSnap.exists ? receiptSnap.data() || {} : {};
+    if (
+      receipt.status !== "processing"
+      || receipt.stage !== run.stage
+      || Math.floor(safeNumber(receipt.basisLastSeenAtMs, 0)) !== run.basisLastSeenAtMs
+    ) {
+      throw new HttpsError("aborted", "Inactive-player city cleanup was superseded.");
+    }
+    if (!citySnap.exists) return { released: false, troops: 0 };
+    const city = { id: citySnap.id, ...citySnap.data() };
+    if (
+      getOwnerUid(city) !== uid
+      || !isCurrentInactivityAsset(city)
+      || (homeRef && cityDoc.ref.path === homeRef.path)
+    ) {
+      return { released: false, troops: 0 };
+    }
+    const troops = homeRef ? getTargetOwnerTroops(city, "city") : 0;
+    if (homeRef) {
+      if (!homeSnap?.exists || getOwnerUid(homeSnap.data() || {}) !== uid) {
+        throw new HttpsError("failed-precondition", "The inactive player's home base is no longer available.");
+      }
+      transaction.set(homeRef, cleanCityUpdate(homeSnap.data() || {}, getInactiveHomeTroopPatch(
+        homeSnap.data() || {},
+        troops,
+        nowMs
+      )), { merge: true });
+    }
+    const regionId = getRegionIdFromCityDoc(citySnap, city);
+    if (isCrownCitadel(city)) {
+      await recordCrownCitadelControlChange(transaction, {
+        citadel: city,
+        previousOwnerUid: uid,
+        previousOwnerName: normalizePlayerName(city.ownerName, "Ruler"),
+        nextOwnerUid: "",
+        nowMs,
+      });
+    }
+    transaction.set(cityDoc.ref, cleanCityUpdate(city, getInactiveCityNeutralPatch(city, nowMs)), { merge: true });
+    writeOwnershipChangeEvent(transaction, {
+      eventId: `inactive_${run.stage}_${uid}_${city.id}_${run.basisLastSeenAtMs}`,
+      targetType: "city",
+      targetId: city.id,
+      regionId,
+      beforeOwnerUid: uid,
+      afterOwnerUid: "",
+      reason: run.stage === "removing" ? "inactive_player_removed" : "inactive_city_surrendered",
+      nowMs,
+    });
+    transaction.set(run.receiptRef, {
+      releasedCities: FieldValue.increment(1),
+      consolidatedTroops: FieldValue.increment(troops),
+      updatedAtMs: nowMs,
+      updatedAt: FieldValue.serverTimestamp(),
+    }, { merge: true });
+    return { released: true, troops };
+  });
+}
+
+async function releaseInactiveCamp(uid = "", campDoc = null, homeRef = null, run = {}, nowMs = Date.now()) {
+  if (!campDoc?.ref) return { released: false, troops: 0 };
+  return db.runTransaction(async transaction => {
+    const refs = [run.receiptRef, campDoc.ref];
+    if (homeRef) refs.push(homeRef);
+    const snapshots = await Promise.all(refs.map(ref => transaction.get(ref)));
+    const receipt = snapshots[0].exists ? snapshots[0].data() || {} : {};
+    const campSnap = snapshots[1];
+    const homeSnap = homeRef ? snapshots[2] : null;
+    if (
+      receipt.status !== "processing"
+      || receipt.stage !== run.stage
+      || Math.floor(safeNumber(receipt.basisLastSeenAtMs, 0)) !== run.basisLastSeenAtMs
+    ) {
+      throw new HttpsError("aborted", "Inactive-player camp cleanup was superseded.");
+    }
+    if (!campSnap.exists) return { released: false, troops: 0 };
+    const rawCamp = { id: campSnap.id, ...campSnap.data() };
+    const camp = getRewardCampCombatTarget(rawCamp);
+    if (!camp || getOwnerUid(camp) !== uid || !isCurrentInactivityAsset(rawCamp)) {
+      return { released: false, troops: 0 };
+    }
+    const troops = homeRef ? getTargetOwnerTroops(camp, "camp") : 0;
+    if (homeRef) {
+      if (!homeSnap?.exists || getOwnerUid(homeSnap.data() || {}) !== uid) {
+        throw new HttpsError("failed-precondition", "The inactive player's home base is no longer available.");
+      }
+      transaction.set(homeRef, cleanCityUpdate(homeSnap.data() || {}, getInactiveHomeTroopPatch(
+        homeSnap.data() || {},
+        troops,
+        nowMs
+      )), { merge: true });
+    }
+    const regionId = normalizeRegionId(rawCamp.regionId || getRegionIdFromOnlineIslandId(campDoc.ref.parent?.parent?.id));
+    transaction.set(campDoc.ref, getInactiveCampNeutralPatch(rawCamp, nowMs), { merge: true });
+    writeOwnershipChangeEvent(transaction, {
+      eventId: `inactive_${run.stage}_${uid}_${camp.id}_${run.basisLastSeenAtMs}`,
+      targetType: "camp",
+      targetId: camp.id,
+      regionId,
+      beforeOwnerUid: uid,
+      afterOwnerUid: "",
+      reason: run.stage === "removing" ? "inactive_player_removed" : "inactive_camp_surrendered",
+      nowMs,
+    });
+    transaction.set(run.receiptRef, {
+      releasedCamps: FieldValue.increment(1),
+      consolidatedTroops: FieldValue.increment(troops),
+      updatedAtMs: nowMs,
+      updatedAt: FieldValue.serverTimestamp(),
+    }, { merge: true });
+    return { released: true, troops };
+  });
+}
+
+async function cancelInactiveArmy(uid = "", armyDoc = null, homeRef = null, run = {}, nowMs = Date.now()) {
+  if (!armyDoc?.ref) return { canceled: false, troops: 0 };
+  const queuedArmy = { id: armyDoc.id, ...armyDoc.data() };
+  const targetCampRef = queuedArmy.targetType === "camp"
+    ? campRefForRegion(queuedArmy.targetRegionId, queuedArmy.toId)
+    : null;
+  return db.runTransaction(async transaction => {
+    const refs = [run.receiptRef, armyDoc.ref];
+    if (homeRef) refs.push(homeRef);
+    if (targetCampRef) refs.push(targetCampRef);
+    const snapshots = await Promise.all(refs.map(ref => transaction.get(ref)));
+    const receipt = snapshots[0].exists ? snapshots[0].data() || {} : {};
+    const armySnap = snapshots[1];
+    let snapshotIndex = 2;
+    const homeSnap = homeRef ? snapshots[snapshotIndex++] : null;
+    const campSnap = targetCampRef ? snapshots[snapshotIndex] : null;
+    if (
+      receipt.status !== "processing"
+      || receipt.stage !== run.stage
+      || Math.floor(safeNumber(receipt.basisLastSeenAtMs, 0)) !== run.basisLastSeenAtMs
+    ) {
+      throw new HttpsError("aborted", "Inactive-player army cleanup was superseded.");
+    }
+    if (!armySnap.exists) return { canceled: false, troops: 0 };
+    const army = { id: armySnap.id, ...armySnap.data() };
+    if (army.status !== "active" || getOwnerUid(army) !== uid || !isCurrentWorldArmy(army)) {
+      return { canceled: false, troops: 0 };
+    }
+    const troops = homeRef ? Math.max(0, Math.floor(safeNumber(army.troops, 0))) : 0;
+    if (homeRef) {
+      if (!homeSnap?.exists || getOwnerUid(homeSnap.data() || {}) !== uid) {
+        throw new HttpsError("failed-precondition", "The inactive player's home base is no longer available.");
+      }
+      transaction.set(homeRef, cleanCityUpdate(homeSnap.data() || {}, getInactiveHomeTroopPatch(
+        homeSnap.data() || {},
+        troops,
+        nowMs
+      )), { merge: true });
+    }
+    const armyPatch = {
+      status: "canceled",
+      troops: 0,
+      canceledAtMs: nowMs,
+      canceledReason: run.stage === "removing" ? "inactive_player_removed" : "inactive_troops_consolidated",
+      inactivityPolicyVersion: INACTIVITY_POLICY_VERSION,
+      updatedAt: FieldValue.serverTimestamp(),
+    };
+    armyRefsForRegions(army.viewRegionIds || army.routeRegionIds || [], army.id)
+      .forEach(ref => transaction.set(ref, armyPatch, { merge: true }));
+    if (targetCampRef && campSnap?.exists) {
+      const camp = campSnap.data() || {};
+      const activeArmyIds = removeActiveCampArmyId(camp, army.id);
+      transaction.set(targetCampRef, {
+        activeArmyIds,
+        state: getRewardCampState(activeArmyIds, safeString(camp.holderUid, 128)),
+        updatedAt: FieldValue.serverTimestamp(),
+      }, { merge: true });
+    }
+    transaction.set(run.receiptRef, {
+      canceledArmies: FieldValue.increment(1),
+      consolidatedTroops: FieldValue.increment(troops),
+      updatedAtMs: nowMs,
+      updatedAt: FieldValue.serverTimestamp(),
+    }, { merge: true });
+    return { canceled: true, troops };
+  });
+}
+
+async function returnInactiveReinforcement(uid = "", reinforcementDoc = null, homeRef = null, run = {}, nowMs = Date.now()) {
+  if (!reinforcementDoc?.ref) return { returned: false, troops: 0 };
+  const queued = reinforcementDoc.data() || {};
+  const targetRef = getReinforcementTargetRef(queued);
+  return db.runTransaction(async transaction => {
+    const refs = [run.receiptRef, reinforcementDoc.ref];
+    if (homeRef) refs.push(homeRef);
+    if (targetRef) refs.push(targetRef);
+    const snapshots = await Promise.all(refs.map(ref => transaction.get(ref)));
+    const receipt = snapshots[0].exists ? snapshots[0].data() || {} : {};
+    const reinforcementSnap = snapshots[1];
+    let snapshotIndex = 2;
+    const homeSnap = homeRef ? snapshots[snapshotIndex++] : null;
+    const targetSnap = targetRef ? snapshots[snapshotIndex] : null;
+    if (
+      receipt.status !== "processing"
+      || receipt.stage !== run.stage
+      || Math.floor(safeNumber(receipt.basisLastSeenAtMs, 0)) !== run.basisLastSeenAtMs
+    ) {
+      throw new HttpsError("aborted", "Inactive-player reinforcement cleanup was superseded.");
+    }
+    if (!reinforcementSnap.exists) return { returned: false, troops: 0 };
+    const reinforcement = reinforcementSnap.data() || {};
+    if (
+      reinforcement.status !== REINFORCEMENT_STATUS_STATIONED
+      || safeString(reinforcement.ownerUid, 128) !== uid
+      || safeString(reinforcement.worldId, 120) !== ONLINE_WORLD_ID
+      || safeString(reinforcement.resetGeneration, 120) !== RESET_GENERATION
+    ) {
+      return { returned: false, troops: 0 };
+    }
+    const troops = homeRef ? Math.max(0, Math.floor(safeNumber(reinforcement.troops, 0))) : 0;
+    if (homeRef) {
+      if (!homeSnap?.exists || getOwnerUid(homeSnap.data() || {}) !== uid) {
+        throw new HttpsError("failed-precondition", "The inactive player's home base is no longer available.");
+      }
+      transaction.set(homeRef, cleanCityUpdate(homeSnap.data() || {}, getInactiveHomeTroopPatch(
+        homeSnap.data() || {},
+        troops,
+        nowMs
+      )), { merge: true });
+    }
+    if (targetRef && targetSnap?.exists) {
+      const target = targetSnap.data() || {};
+      transaction.set(targetRef, {
+        alliedReinforcementTroops: Math.max(
+          0,
+          getAlliedReinforcementTroops(target) - Math.max(0, Math.floor(safeNumber(reinforcement.troops, 0)))
+        ),
+        updatedAt: FieldValue.serverTimestamp(),
+      }, { merge: true });
+    }
+    transaction.set(reinforcementDoc.ref, {
+      troops: 0,
+      status: REINFORCEMENT_STATUS_RETURNED,
+      returnReason: run.stage === "removing" ? "inactive_player_removed" : "inactive_troops_consolidated",
+      returnedAtMs: nowMs,
+      updatedAt: FieldValue.serverTimestamp(),
+    }, { merge: true });
+    transaction.set(run.receiptRef, {
+      returnedReinforcements: FieldValue.increment(1),
+      consolidatedTroops: FieldValue.increment(troops),
+      updatedAtMs: nowMs,
+      updatedAt: FieldValue.serverTimestamp(),
+    }, { merge: true });
+    return { returned: true, troops };
+  });
+}
+
+async function processInactivePlayerAssets(uid = "", run = {}, {
+  consolidate = false,
+  nowMs = Date.now(),
+} = {}) {
+  if (consolidate) await settleInactivePlayerProduction(uid, run, nowMs);
+  const holdings = await loadInactivePlayerHoldings(uid);
+  const homeRef = consolidate ? holdings.mainEntry?.ref || null : null;
+  if (consolidate && !homeRef) {
+    throw new HttpsError("failed-precondition", "The inactive player has no home base for troop consolidation.");
+  }
+  for (const reinforcementDoc of holdings.reinforcementDocs) {
+    await returnInactiveReinforcement(uid, reinforcementDoc, homeRef, run, nowMs);
+  }
+  for (const armyDoc of holdings.armyDocs) {
+    await cancelInactiveArmy(uid, armyDoc, homeRef, run, nowMs);
+  }
+  for (const campDoc of holdings.campDocs) {
+    await releaseInactiveCamp(uid, campDoc, homeRef, run, nowMs);
+  }
+  for (const entry of holdings.cityEntries) {
+    await releaseInactiveCity(uid, { ref: entry.ref, id: entry.city.id, data: () => entry.city }, homeRef, run, nowMs);
+  }
+  return { homeRef, holdings };
+}
+
+async function completeInactivePlayerSurrender(uid = "", run = {}, homeRef = null, nowMs = Date.now()) {
+  const playerUid = safeString(uid, 128);
+  await db.doc(`players/${playerUid}`).set({
+    stationedReinforcementTroops: 0,
+    activeClanReinforcementTargets: [],
+    clanReinforcementLimitResetGeneration: RESET_GENERATION,
+    updatedAt: FieldValue.serverTimestamp(),
+  }, { merge: true });
+  await rebuildGlobalStatsForPlayer(playerUid);
+  return db.runTransaction(async transaction => {
+    const membershipRef = db.doc(`players/${playerUid}/serverMembership/current`);
+    const profileRef = db.doc(`players/${playerUid}`);
+    const refs = [run.receiptRef, membershipRef, profileRef];
+    if (homeRef) refs.push(homeRef);
+    const snapshots = await Promise.all(refs.map(ref => transaction.get(ref)));
+    const receipt = snapshots[0].exists ? snapshots[0].data() || {} : {};
+    const membership = snapshots[1].exists ? snapshots[1].data() || {} : {};
+    const profileSnap = snapshots[2];
+    const homeSnap = homeRef ? snapshots[3] : null;
+    if (
+      receipt.status !== "processing"
+      || receipt.stage !== "surrendering"
+      || Math.floor(safeNumber(receipt.basisLastSeenAtMs, 0)) !== run.basisLastSeenAtMs
+    ) {
+      throw new HttpsError("aborted", "Inactive-player surrender was superseded.");
+    }
+    if (
+      !isCurrentInactivityMembership(membership)
+      || Math.floor(safeNumber(membership.lastSeenAtMs, 0)) !== run.basisLastSeenAtMs
+    ) {
+      throw new HttpsError("aborted", "The player returned before inactive-player surrender completed.");
+    }
+    const releasedCities = Math.max(0, Math.floor(safeNumber(receipt.releasedCities, 0)));
+    const releasedCamps = Math.max(0, Math.floor(safeNumber(receipt.releasedCamps, 0)));
+    const consolidatedTroops = Math.max(0, Math.floor(safeNumber(receipt.consolidatedTroops, 0)));
+    const home = homeSnap?.exists ? { id: homeSnap.id, ...homeSnap.data() } : {
+      id: safeString(profileSnap.data()?.mainCityId, 96),
+      name: "Main City",
+      level: 1,
+    };
+    const report = makeReport({
+      id: `inactive_surrender_${run.basisLastSeenAtMs}_${playerUid}`,
+      uid: playerUid,
+      type: "defense",
+      outcome: "held",
+      city: home,
+      opponentName: "Realm inactivity policy",
+      troopCount: consolidatedTroops,
+      result: { survivors: consolidatedTroops, defendersLeft: consolidatedTroops },
+      summary: `${releasedCities} cities and ${releasedCamps} camps were surrendered after 15 inactive days. ${consolidatedTroops.toLocaleString()} troops were secured at the main city.`,
+      nowMs,
+    });
+    writeReport(transaction, playerUid, report, profileSnap, {
+      inactivityNotice: {
+        policyVersion: INACTIVITY_POLICY_VERSION,
+        type: "territory-surrendered",
+        occurredAtMs: nowMs,
+        releasedCities,
+        releasedCamps,
+        consolidatedTroops,
+      },
+    });
+    transaction.set(membershipRef, {
+      status: "inactive",
+      inactivityPolicyVersion: INACTIVITY_POLICY_VERSION,
+      inactivityStage: "surrendered",
+      basisLastSeenAtMs: run.basisLastSeenAtMs,
+      surrenderedAtMs: nowMs,
+      releasedCities,
+      releasedCamps,
+      consolidatedTroops,
+      updatedAtMs: nowMs,
+      updatedAt: FieldValue.serverTimestamp(),
+    }, { merge: true });
+    transaction.set(run.receiptRef, {
+      status: "completed",
+      stage: "surrendered",
+      leaseUntilMs: 0,
+      completedAtMs: nowMs,
+      updatedAtMs: nowMs,
+      updatedAt: FieldValue.serverTimestamp(),
+    }, { merge: true });
+    return { releasedCities, releasedCamps, consolidatedTroops };
+  });
+}
+
+function compareInactiveClanSuccessors(a = {}, b = {}) {
+  const aOfficer = a.role === "officer" ? 0 : 1;
+  const bOfficer = b.role === "officer" ? 0 : 1;
+  return aOfficer - bOfficer
+    || Math.max(0, timestampToMs(a.joinedAtMs || a.joinedAt)) - Math.max(0, timestampToMs(b.joinedAtMs || b.joinedAt))
+    || safeString(a.uid, 128).localeCompare(safeString(b.uid, 128));
+}
+
+async function getInactiveClanSuccessor(clanId = "", departingUid = "", nowMs = Date.now()) {
+  const membersSnap = await db.collection(`clans/${safeString(clanId, 128)}/members`)
+    .orderBy("joinedAtMs", "asc")
+    .get();
+  const candidates = membersSnap.docs
+    .map(doc => ({ uid: doc.id, ...doc.data() }))
+    .filter(member => member.uid !== departingUid);
+  if (!candidates.length) return { successor: null, members: [] };
+  const membershipSnaps = await db.getAll(...candidates.map(member => (
+    db.doc(`players/${member.uid}/serverMembership/current`)
+  )));
+  const activeCandidates = candidates.filter((member, index) => {
+    const membership = membershipSnaps[index]?.data() || {};
+    const lastSeenAtMs = Math.max(0, Math.floor(safeNumber(membership.lastSeenAtMs, 0)));
+    return isCurrentInactivityMembership(membership)
+      && nowMs - lastSeenAtMs < INACTIVITY_SURRENDER_MS;
+  }).sort(compareInactiveClanSuccessors);
+  return { successor: activeCandidates[0] || null, members: candidates };
+}
+
+async function transferInactiveClanLeadership(clanId = "", departingUid = "", successorUid = "", nowMs = Date.now()) {
+  const safeClanId = safeString(clanId, 128);
+  const nextLeaderUid = safeString(successorUid, 128);
+  if (!safeClanId || !nextLeaderUid) return false;
+  return db.runTransaction(async transaction => {
+    const clanRef = db.doc(`clans/${safeClanId}`);
+    const departingRef = db.doc(`clans/${safeClanId}/members/${departingUid}`);
+    const successorRef = db.doc(`clans/${safeClanId}/members/${nextLeaderUid}`);
+    const [clanSnap, departingSnap, successorSnap] = await Promise.all([
+      transaction.get(clanRef),
+      transaction.get(departingRef),
+      transaction.get(successorRef),
+    ]);
+    if (
+      !clanSnap.exists
+      || !departingSnap.exists
+      || !successorSnap.exists
+      || safeString(clanSnap.data()?.leaderUid, 128) !== departingUid
+    ) {
+      return false;
+    }
+    transaction.set(clanRef, {
+      leaderUid: nextLeaderUid,
+      updatedAtMs: nowMs,
+      updatedAt: FieldValue.serverTimestamp(),
+    }, { merge: true });
+    transaction.set(departingRef, {
+      role: "officer",
+      roleChangedAtMs: nowMs,
+      updatedAt: FieldValue.serverTimestamp(),
+    }, { merge: true });
+    transaction.set(successorRef, {
+      role: "leader",
+      roleChangedAtMs: nowMs,
+      updatedAt: FieldValue.serverTimestamp(),
+    }, { merge: true });
+    transaction.set(db.doc(`players/${departingUid}`), { clanRole: "officer" }, { merge: true });
+    transaction.set(db.doc(`players/${nextLeaderUid}`), { clanRole: "leader" }, { merge: true });
+    transaction.set(leaderboardEntryRef(departingUid), { clanRole: "officer" }, { merge: true });
+    transaction.set(leaderboardEntryRef(nextLeaderUid), { clanRole: "leader" }, { merge: true });
+    writeClanAudit(transaction, safeClanId, departingUid, "inactive_leadership_transferred", {
+      targetUid: nextLeaderUid,
+    }, nowMs);
+    return true;
+  });
+}
+
+async function removeInactivePlayerFromClan(uid = "", nowMs = Date.now()) {
+  const playerUid = safeString(uid, 128);
+  const profileSnap = await db.doc(`players/${playerUid}`).get();
+  const profile = profileSnap.exists ? profileSnap.data() || {} : {};
+  const clanId = safeString(profile.clanId, 128);
+  if (!clanId) return { removed: false, disbanded: false, successorUid: "" };
+  const [clanSnap, targetMemberSnap] = await Promise.all([
+    db.doc(`clans/${clanId}`).get(),
+    db.doc(`clans/${clanId}/members/${playerUid}`).get(),
+  ]);
+  if (!clanSnap.exists || !targetMemberSnap.exists) {
+    await db.doc(`players/${playerUid}`).set({
+      ...clanIdentityPatch(),
+      pendingClanApplicationId: FieldValue.delete(),
+      updatedAt: FieldValue.serverTimestamp(),
+    }, { merge: true });
+    return { removed: false, disbanded: false, successorUid: "" };
+  }
+  const clan = clanSnap.data() || {};
+  const target = targetMemberSnap.data() || {};
+  let successorUid = "";
+  if (target.role === "leader" || safeString(clan.leaderUid, 128) === playerUid) {
+    const { successor, members } = await getInactiveClanSuccessor(clanId, playerUid, nowMs);
+    if (successor) {
+      const transferred = await transferInactiveClanLeadership(clanId, playerUid, successor.uid, nowMs);
+      if (transferred) successorUid = successor.uid;
+    } else {
+      for (const member of members) {
+        await removeClanMember({
+          actorUid: playerUid,
+          targetUid: member.uid,
+          clanId,
+          reason: "inactive_clan_disbanded",
+        });
+      }
+    }
+  }
+  const result = await removeClanMember({
+    actorUid: playerUid,
+    targetUid: playerUid,
+    clanId,
+    reason: "inactive_member_removed",
+  });
+  return {
+    removed: true,
+    disbanded: Boolean(result?.disbanded),
+    successorUid,
+  };
+}
+
+async function deleteDocumentsInBatches(docRefs = []) {
+  const uniqueRefs = [...new Map(
+    docRefs.filter(Boolean).map(ref => [ref.path, ref])
+  ).values()];
+  for (let index = 0; index < uniqueRefs.length; index += 400) {
+    const batch = db.batch();
+    uniqueRefs.slice(index, index + 400).forEach(ref => batch.delete(ref));
+    await batch.commit();
+  }
+  return uniqueRefs.length;
+}
+
+async function purgeInactivePlayerArmyRecords(uid = "") {
+  const playerUid = safeString(uid, 128);
+  const [armySnap, reinforcementSnap] = await Promise.all([
+    db.collection("armies").where("ownerUid", "==", playerUid).get(),
+    db.collection("reinforcements").where("ownerUid", "==", playerUid).get(),
+  ]);
+  const deletions = [];
+  armySnap.docs.forEach(doc => {
+    const army = { id: doc.id, ...doc.data() };
+    if (!isCurrentInactivityAsset(army)) return;
+    armyRefsForRegions(army.viewRegionIds || army.routeRegionIds || [], doc.id)
+      .forEach(ref => deletions.push(ref));
+  });
+  reinforcementSnap.docs.forEach(doc => {
+    if (isCurrentInactivityAsset(doc.data() || {})) deletions.push(doc.ref);
+  });
+  return deleteDocumentsInBatches(deletions);
+}
+
+async function clearInactivePlayerWorldDocuments(uid = "") {
+  const playerUid = safeString(uid, 128);
+  const profileRef = db.doc(`players/${playerUid}`);
+  const collections = await profileRef.listCollections();
+  const deletions = [];
+  for (const collectionRef of collections) {
+    if (collectionRef.id === "serverMembership") continue;
+    const snapshot = await collectionRef.get();
+    snapshot.docs.forEach(doc => {
+      const data = doc.data() || {};
+      const currentWorldDocument = isCurrentInactivityAsset(data)
+        || collectionRef.id === "notificationTokens"
+        || (collectionRef.id === "saves" && doc.id === `default-${RESET_GENERATION}`)
+        || ["stats", "objectiveStats", "rewardedAds", "rewardedAdIntents", "protectedDefenseXpClaims", "serverReports"]
+          .includes(collectionRef.id);
+      if (currentWorldDocument) deletions.push(doc.ref);
+    });
+  }
+  const presenceSnap = await db.collectionGroup("presence")
+    .where("uid", "==", playerUid)
+    .get();
+  presenceSnap.docs.forEach(doc => {
+    if (isCurrentInactivityAsset(doc.data() || {})) deletions.push(doc.ref);
+  });
+  deletions.push(leaderboardEntryRef(playerUid));
+  return deleteDocumentsInBatches(deletions);
+}
+
+async function replaceInactivePlayerProfile(uid = "", nowMs = Date.now()) {
+  const playerUid = safeString(uid, 128);
+  const profileRef = db.doc(`players/${playerUid}`);
+  const profileSnap = await profileRef.get();
+  const profile = profileSnap.exists ? profileSnap.data() || {} : {};
+  const identity = {
+    uid: playerUid,
+    displayName: safeString(profile.displayName, 120),
+    email: safeString(profile.email, 240),
+    photoURL: safeString(profile.photoURL, 500),
+    playerName: normalizePlayerName(profile.playerName || profile.displayName || "Ruler"),
+    flag: profile.flag || null,
+    inactivityNotice: {
+      policyVersion: INACTIVITY_POLICY_VERSION,
+      type: "world-slot-reset",
+      occurredAtMs: nowMs,
+    },
+    worldSlotResetAtMs: nowMs,
+    updatedAt: FieldValue.serverTimestamp(),
+    ...(profile.createdAt ? { createdAt: profile.createdAt } : {}),
+  };
+  await profileRef.set(identity, { merge: false });
+  return identity;
+}
+
+async function completeInactivePlayerRemoval(uid = "", run = {}, nowMs = Date.now()) {
+  const playerUid = safeString(uid, 128);
+  await removeInactivePlayerFromClan(playerUid, nowMs);
+  await purgeInactivePlayerArmyRecords(playerUid);
+  await clearInactivePlayerWorldDocuments(playerUid);
+  await replaceInactivePlayerProfile(playerUid, nowMs);
+  const serverRef = db.doc(`gameServers/${GAME_SERVER_DOCUMENT_ID}`);
+  const membershipRef = db.doc(`players/${playerUid}/serverMembership/current`);
+  return db.runTransaction(async transaction => {
+    const [receiptSnap, membershipSnap, serverSnap] = await Promise.all([
+      transaction.get(run.receiptRef),
+      transaction.get(membershipRef),
+      transaction.get(serverRef),
+    ]);
+    const receipt = receiptSnap.exists ? receiptSnap.data() || {} : {};
+    const membership = membershipSnap.exists ? membershipSnap.data() || {} : {};
+    if (
+      receipt.status !== "processing"
+      || receipt.stage !== "removing"
+      || Math.floor(safeNumber(receipt.basisLastSeenAtMs, 0)) !== run.basisLastSeenAtMs
+    ) {
+      throw new HttpsError("aborted", "Inactive-player removal was superseded.");
+    }
+    if (
+      !isCurrentInactivityMembership(membership)
+      || Math.floor(safeNumber(membership.lastSeenAtMs, 0)) !== run.basisLastSeenAtMs
+    ) {
+      throw new HttpsError("aborted", "The player returned before inactive-player removal completed.");
+    }
+    const state = createGameServerState(serverSnap.exists ? serverSnap.data() : {}, nowMs);
+    delete state.activeSlots[playerUid];
+    delete state.waitingQueue[playerUid];
+    const promoted = promoteGameServerWaiters(state, nowMs);
+    writeGameServerState(transaction, serverRef, state, nowMs);
+    promoted.forEach(entry => writeGameServerMembership(transaction, entry, "active", nowMs));
+    const releasedCities = Math.max(0, Math.floor(safeNumber(receipt.releasedCities, 0)));
+    const releasedCamps = Math.max(0, Math.floor(safeNumber(receipt.releasedCamps, 0)));
+    transaction.set(membershipRef, {
+      serverId: GAME_SERVER_ID,
+      serverName: GAME_SERVER_NAME,
+      worldId: ONLINE_WORLD_ID,
+      resetGeneration: RESET_GENERATION,
+      releaseId: REALM_RELEASE_ID,
+      status: "expired",
+      sessionId: "",
+      inactivityPolicyVersion: INACTIVITY_POLICY_VERSION,
+      inactivityStage: "removed",
+      basisLastSeenAtMs: run.basisLastSeenAtMs,
+      removedAtMs: nowMs,
+      releasedCities,
+      releasedCamps,
+      consolidatedTroops: 0,
+      lastSeenAtMs: run.basisLastSeenAtMs,
+      updatedAtMs: nowMs,
+      updatedAt: FieldValue.serverTimestamp(),
+    }, { merge: false });
+    transaction.set(run.receiptRef, {
+      status: "completed",
+      stage: "removed",
+      leaseUntilMs: 0,
+      completedAtMs: nowMs,
+      updatedAtMs: nowMs,
+      updatedAt: FieldValue.serverTimestamp(),
+    }, { merge: true });
+    return { releasedCities, releasedCamps, promoted: promoted.length };
+  });
+}
+
+async function failInactivePlayerMaintenance(uid = "", run = {}, error = null, nowMs = Date.now()) {
+  if (!run?.receiptRef) return;
+  await Promise.all([
+    run.receiptRef.set({
+      status: "failed",
+      leaseUntilMs: 0,
+      lastError: safeString(error?.message || error || "Unknown inactivity maintenance failure", 300),
+      failedAtMs: nowMs,
+      updatedAtMs: nowMs,
+      updatedAt: FieldValue.serverTimestamp(),
+    }, { merge: true }),
+    db.doc(`players/${safeString(uid, 128)}/serverMembership/current`).set({
+      inactivityStage: run.stage === "removing" ? "removal-failed" : "surrender-failed",
+      updatedAtMs: nowMs,
+      updatedAt: FieldValue.serverTimestamp(),
+    }, { merge: true }),
+  ]);
+}
+
+async function processInactivePlayerCandidate(candidate = {}, nowMs = Date.now()) {
+  const uid = safeString(candidate.uid, 128);
+  const lastSeenAtMs = Math.max(0, Math.floor(safeNumber(candidate.membership?.lastSeenAtMs, 0)));
+  const targetStage = getInactivityTargetStage(lastSeenAtMs, nowMs);
+  if (!uid || !targetStage) return { uid, status: "skipped", reason: "recent" };
+  if (INACTIVITY_POLICY_MODE === "audit") {
+    return {
+      uid,
+      status: "audit",
+      targetStage,
+      lastSeenAtMs,
+      inactiveMs: Math.max(0, nowMs - lastSeenAtMs),
+    };
+  }
+  const acquired = await beginInactivePlayerMaintenance(uid, targetStage, nowMs);
+  if (!acquired.acquired) return { uid, status: "skipped", reason: acquired.reason };
+  const run = {
+    ...acquired,
+    uid,
+    stage: targetStage,
+  };
+  try {
+    const assets = await processInactivePlayerAssets(uid, run, {
+      consolidate: targetStage === "surrendering",
+      nowMs,
+    });
+    const result = targetStage === "surrendering"
+      ? await completeInactivePlayerSurrender(uid, run, assets.homeRef, nowMs)
+      : await completeInactivePlayerRemoval(uid, run, nowMs);
+    return { uid, status: "completed", stage: targetStage, ...result };
+  } catch (error) {
+    await failInactivePlayerMaintenance(uid, run, error, Date.now());
+    throw error;
+  }
+}
+
+async function maintainInactivePlayers(nowMs = Date.now()) {
+  const candidates = await loadInactiveMembershipCandidates(nowMs);
+  const results = [];
+  await processWithConcurrency(candidates, INACTIVITY_PROCESS_CONCURRENCY, async candidate => {
+    try {
+      results.push(await processInactivePlayerCandidate(candidate, nowMs));
+    } catch (error) {
+      console.error("Inactive-player maintenance failed", {
+        uid: candidate.uid,
+        error: error?.message || String(error),
+      });
+      results.push({ uid: candidate.uid, status: "failed", error: error?.message || String(error) });
+    }
+  });
+  return {
+    policyVersion: INACTIVITY_POLICY_VERSION,
+    mode: INACTIVITY_POLICY_MODE,
+    scanned: candidates.length,
+    completed: results.filter(result => result.status === "completed").length,
+    audited: results.filter(result => result.status === "audit").length,
+    skipped: results.filter(result => result.status === "skipped").length,
+    failed: results.filter(result => result.status === "failed").length,
+    results,
+  };
 }
 
 function normalizePlayerName(value, fallback = "Ruler") {
@@ -6504,6 +7552,17 @@ function writeExtraCityPatches(transaction, patches = []) {
 }
 
 async function prepareEconomyCollection(transaction, uid, nowMs = Date.now(), options = {}) {
+  if (!options.allowInactivityMaintenance) {
+    const maintenanceRef = inactivityMaintenanceRef(uid);
+    const maintenanceSnap = maintenanceRef ? await transaction.get(maintenanceRef) : null;
+    const maintenance = maintenanceSnap?.exists ? maintenanceSnap.data() || {} : {};
+    if (isInactivityLifecycleBlockingPlayer(maintenance)) {
+      throw new HttpsError(
+        "unavailable",
+        "Your kingdom is completing scheduled realm maintenance. Try again in a moment."
+      );
+    }
+  }
   const profileRef = options.profileRef || db.doc(`players/${uid}`);
   const profileSnap = options.profileSnap || await transaction.get(profileRef);
   const rawProfile = profileSnap.exists ? profileSnap.data() || {} : {};
@@ -17170,6 +18229,18 @@ exports.maintainGameServer = onSchedule({
     backfillActiveArmyVisibilityViews(),
   ]);
   console.log("Crownlands realm capacity maintained", { ...result, armyVisibilityBackfill });
+});
+
+exports.maintainInactivePlayers = onSchedule({
+  region: "us-central1",
+  schedule: "every 1 hours",
+  timeZone: "Etc/UTC",
+  maxInstances: 1,
+  timeoutSeconds: 540,
+  memory: "1GiB",
+}, async () => {
+  const result = await maintainInactivePlayers(Date.now());
+  console.log("Crownlands inactive-player lifecycle maintained", result);
 });
 
 exports.resolveDueArmyOrders = onSchedule({
