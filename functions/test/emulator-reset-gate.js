@@ -495,7 +495,7 @@ async function main() {
     "Day 30 did not credit the Royal Peace Shield."
   );
 
-  await db.doc(`players/${users[1].uid}`).set({
+  await db.doc(`players/${users[1].uid}`).update({
     dailyLoginReward: {
       schemaVersion: 1,
       cycle: 3,
@@ -504,7 +504,7 @@ async function main() {
       lastClaimDayKey: "2020-01-01",
       lastClaimedAtMs: Date.UTC(2020, 0, 1),
     },
-  }, { merge: true });
+  });
   const pausedDailyStatus = await callFunction("getDailyLoginRewardStatus", users[1].token);
   assert(
     pausedDailyStatus?.dailyLoginRewardStatus?.eligible === true
@@ -703,13 +703,22 @@ async function main() {
     db.doc(`clanNameReservations/${realm.resetGeneration}_application-gate`).get(),
   ]);
   const renamedClanData = renamedClanSnap.data() || {};
+  const renamedClanState = {
+    name: renamedClanData.name,
+    normalizedName: renamedClanData.normalizedName,
+    lastNameChangedAtMs: Number(renamedClanData.lastNameChangedAtMs || 0),
+    nextNameChangeAtMs: Number(renamedClanData.nextNameChangeAtMs || 0),
+    renameStartedAtMs,
+    renameFinishedAtMs,
+  };
   assert(
-    renamedClanData.name === "Renamed Gate"
-      && renamedClanData.normalizedName === "renamed-gate"
-      && Number(renamedClanData.lastNameChangedAtMs || 0) >= renameStartedAtMs
-      && Number(renamedClanData.nextNameChangeAtMs || 0) >= renameStartedAtMs + (7 * 24 * 60 * 60 * 1000)
-      && Number(renamedClanData.nextNameChangeAtMs || 0) <= renameFinishedAtMs + (7 * 24 * 60 * 60 * 1000),
-    "The clan rename did not persist its canonical name and seven-day cooldown."
+    renamedClanState.name === "Renamed Gate"
+      && renamedClanState.normalizedName === "renamed-gate"
+      && renamedClanState.lastNameChangedAtMs >= renameStartedAtMs - 1_000
+      && renamedClanState.lastNameChangedAtMs <= renameFinishedAtMs + 1_000
+      && renamedClanState.nextNameChangeAtMs - renamedClanState.lastNameChangedAtMs
+        === 7 * 24 * 60 * 60 * 1000,
+    `The clan rename did not persist its canonical name and seven-day cooldown: ${JSON.stringify(renamedClanState)}`
   );
   assert(
     renamedLeaderSnap.data()?.clanName === "Renamed Gate"
@@ -725,7 +734,8 @@ async function main() {
   );
   assert(
     oldNameReservationSnap.data()?.clanId === applicationClanId
-      && Number(oldNameReservationSnap.data()?.reusableAtMs || 0) >= renameStartedAtMs + (7 * 24 * 60 * 60 * 1000),
+      && Number(oldNameReservationSnap.data()?.reusableAtMs || 0)
+        === renamedClanState.lastNameChangedAtMs + (7 * 24 * 60 * 60 * 1000),
     "The previous clan name was not held for its seven-day release period."
   );
   const goldAfterRename = Number(renamedLeaderSnap.data()?.gold || 0);
@@ -1626,6 +1636,10 @@ async function main() {
       && (leaderAfterCapturedReinforcement.data()?.activeClanReinforcementTargets || []).length === 0,
     "Converted support remained active or retained its reinforcement slot after combat."
   );
+  await clanReinforcementTargetDoc.ref.set({
+    troops: 0,
+    troopFloat: 0,
+  }, { merge: true });
 
   const attacker = users[0];
   const sourceClaim = claims[0];
@@ -1807,7 +1821,9 @@ async function main() {
   assert(
     retargetedAttackReport?.attackProtection?.mode === "raid"
       && retargetedAttackReport.attackProtection.captureAllowed === false,
-    "The converted reinforcement gate did not exercise recalculated protected-raid rules."
+    `The converted reinforcement gate did not exercise recalculated protected-raid rules: ${
+      JSON.stringify(retargetedAttackReport?.attackProtection || null)
+    }`
   );
   assert(
     retargetedAttackReport.survivors > 0
