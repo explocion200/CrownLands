@@ -255,10 +255,18 @@ service cloud.firestore {
         allow create, update, delete: if false;
       }
 
-      match /questProgress/{resetId} {
-        allow read: if clanMember(clanId)
-          && resetId == currentResetGeneration()
-          && isCurrentGeneration(resource.data);
+      match /questProgress/{periodId} {
+        allow get: if clanMember(clanId)
+          && (
+            !exists(/databases/$(database)/documents/clans/$(clanId)/questProgress/$(periodId))
+            || (
+              resource.data.questPeriodId == periodId
+              && isCurrentGeneration(resource.data)
+              && request.time >= resource.data.weekStartAt
+              && request.time < resource.data.weekEndAt
+            )
+          );
+        allow list: if false;
         allow create, update, delete: if false;
       }
 
@@ -274,6 +282,10 @@ service cloud.firestore {
           && request.auth.uid == uid
           && isCurrentGeneration(resource.data);
         allow create, update, delete: if false;
+      }
+
+      match /memberRewardHistory/{historyId} {
+        allow read, create, update, delete: if false;
       }
 
       match /questCaptureReceipts/{eventId} {

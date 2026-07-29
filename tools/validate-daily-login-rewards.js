@@ -203,8 +203,8 @@ requireMatch(game, /visibilitychange[\s\S]*refreshDailyLoginRewardStatus/, "Visi
 requireMatch(styles, /\.daily-login-reward-btn[\s\S]*dailyRewardHudGlow/, "Daily reward HUD styles are incomplete.");
 requireMatch(styles, /\.daily-reward-grid[\s\S]*repeat\(6,[\s\S]*@media \(max-width: 700px\)[\s\S]*repeat\(5,[\s\S]*@media \(max-width: 520px\)[\s\S]*repeat\(3,/, "Daily reward grid must use 6, 5, and 3 responsive columns.");
 requireMatch(styles, /\.daily-reward-card\.queued[\s\S]*\.daily-reward-check/, "Queued and claimed reward visuals are missing.");
-requireMatch(html, /name="crownlands-build"\s+content="20260728-daily-attendance-v2"/, "The frontend build marker was not bumped for attendance rewards.");
-requireMatch(serviceWorker, /CACHE_VERSION = "20260728-daily-attendance-v2"/, "The PWA cache was not bumped for attendance rewards.");
+requireMatch(html, /name="crownlands-build"\s+content="20260729-weekly-clan-quests-v2"/, "The frontend build marker no longer includes the attendance reward release.");
+requireMatch(serviceWorker, /CACHE_VERSION = "20260729-weekly-clan-quests-v2"/, "The PWA cache no longer includes the attendance reward release.");
 requireMatch(rules, /'dailyLoginReward'/, "Firestore rules do not protect daily reward state.");
 requireMatch(
   read("tools/validate-clan-callable-access.js"),
