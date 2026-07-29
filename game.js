@@ -27337,6 +27337,7 @@ function finishCameraInteraction() {
 
 function markCameraInteraction({ zooming = false, settleMs = PAN_RENDER_SETTLE_MS } = {}) {
   if (!mapFrame) return;
+  queueDeferredMapRender();
   interactionRenderLockUntil = performance.now() + settleMs;
   mapFrame.classList.add("camera-moving");
   if (zooming) mapFrame.classList.add("zooming");
@@ -28121,7 +28122,8 @@ function registerCrownlandsServiceWorker() {
 
   window.addEventListener("load", async () => {
     try {
-      const registration = await navigator.serviceWorker.register("/service-worker.js");
+      const workerUrl = new URL("./service-worker.js", document.baseURI);
+      const registration = await navigator.serviceWorker.register(workerUrl.href);
       console.info("[Crownlands] Service worker registered.", registration.scope);
 
       if (registration.waiting) {

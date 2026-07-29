@@ -3,6 +3,7 @@ const path = require("path");
 
 const root = path.resolve(__dirname, "..");
 const game = fs.readFileSync(path.join(root, "game.js"), "utf8");
+const firebaseClient = fs.readFileSync(path.join(root, "firebaseClient.js"), "utf8");
 const html = fs.readFileSync(path.join(root, "index.html"), "utf8");
 const worker = fs.readFileSync(path.join(root, "service-worker.js"), "utf8");
 const layout = JSON.parse(fs.readFileSync(path.join(root, "functions", "world-layout.json"), "utf8"));
@@ -41,6 +42,21 @@ assert(decodeIndex >= 0 && readyIndex > decodeIndex, "Map art must decode before
 assert(
   worker.includes('if (request.destination === "image")') && worker.includes("cacheFirst(request)"),
   "Map images should continue using cache-first service-worker delivery."
+);
+assert(
+  game.includes('new URL("./service-worker.js", document.baseURI)')
+    && firebaseClient.includes('new URL("./service-worker.js", document.baseURI)'),
+  "Service-worker registration must resolve from the deployed game folder so itch subdirectory builds can cache art."
+);
+assert(
+  worker.includes('const APP_BASE_URL = new URL("./", self.location.href)')
+    && worker.includes("new Request(resolveAppUrl(url)"),
+  "Service-worker precaching must resolve files relative to its own deployment folder."
+);
+assert(
+  !game.includes('serviceWorker.register("/service-worker.js")')
+    && !firebaseClient.includes('new URL("/service-worker.js", window.location.origin)'),
+  "Service-worker registration must not fall back to the host root."
 );
 
 let fullMapBytes = 0;

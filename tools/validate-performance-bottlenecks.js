@@ -32,6 +32,10 @@ const routeCacheLimit = readNumberConstant("ROUTE_CACHE_LIMIT");
 const routeEdgeCacheLimit = readNumberConstant("ROUTE_EDGE_PASSABLE_CACHE_LIMIT");
 const frameSource = extractFunction("frame");
 const renderableArmiesSource = extractFunction("getRenderableArmies");
+const cameraInteractionStart = source.indexOf("function markCameraInteraction(");
+const cameraInteractionEnd = source.indexOf("function markZoomInteraction(", cameraInteractionStart);
+assert.ok(cameraInteractionStart >= 0 && cameraInteractionEnd > cameraInteractionStart, "Camera interaction renderer is missing.");
+const cameraInteractionSource = source.slice(cameraInteractionStart, cameraInteractionEnd);
 
 assert.ok(
   simulationIntervalMs >= 100 && simulationIntervalMs <= 250,
@@ -93,6 +97,11 @@ assert.match(
   renderableArmiesSource,
   /if \(renderableArmiesFrameCacheActive\) renderableArmiesFrameCache = renderableArmies;/,
   "The merged army snapshot should be cached only while a display frame is active."
+);
+assert.match(
+  cameraInteractionSource,
+  /queueDeferredMapRender\(\)/,
+  "Every pan and zoom must schedule a fresh city render as soon as the camera settles."
 );
 
 const testSeconds = 30;

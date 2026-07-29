@@ -1,5 +1,13 @@
 const CACHE_VERSION = "20260729-weekly-clan-quests-v2";
 const CACHE_NAME = `crownlands-cache-${CACHE_VERSION}`;
+const APP_BASE_URL = new URL("./", self.location.href);
+
+function resolveAppUrl(path = "") {
+  const value = String(path || "").trim();
+  if (/^https?:\/\//i.test(value)) return value;
+  return new URL(value.replace(/^\/+/, ""), APP_BASE_URL).href;
+}
+
 const STATIC_CACHE_URLS = [
   "/",
   "/index.html",
@@ -38,7 +46,7 @@ const IMAGE_FALLBACK_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="64" h
 
 try {
   self.window = self;
-  importScripts("/firebase-config.js");
+  importScripts(resolveAppUrl("firebase-config.js"));
   importScripts("https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js");
   importScripts("https://www.gstatic.com/firebasejs/10.12.5/firebase-messaging-compat.js");
 
@@ -63,11 +71,11 @@ try {
         tag,
         renotify: true,
         requireInteraction: data.kind === "attack",
-        icon: "/assets/report-icon.png",
-        badge: "/assets/report-icon.png",
+        icon: resolveAppUrl("assets/report-icon.png"),
+        badge: resolveAppUrl("assets/report-icon.png"),
         data: {
-          url: data.url || "/",
           ...data,
+          url: resolveAppUrl(data.url || ""),
         },
       });
     });
@@ -142,7 +150,7 @@ async function networkFirst(request, fallbackUrl = "/index.html") {
 
 async function precacheStaticAssets() {
   const cache = await caches.open(CACHE_NAME);
-  const requests = STATIC_CACHE_URLS.map(url => new Request(url, { cache: "reload" }));
+  const requests = STATIC_CACHE_URLS.map(url => new Request(resolveAppUrl(url), { cache: "reload" }));
   await Promise.allSettled(requests.map(async request => {
     const response = await fetch(request);
     if (isCacheableResponse(response)) await cache.put(request, response);
@@ -174,7 +182,7 @@ self.addEventListener("fetch", event => {
   if (isApiOrServerRequest(url)) return;
 
   if (request.mode === "navigate") {
-    event.respondWith(networkFirst(request, "/index.html"));
+    event.respondWith(networkFirst(request, resolveAppUrl("index.html")));
     return;
   }
 
@@ -203,7 +211,7 @@ self.addEventListener("message", event => {
 
 self.addEventListener("notificationclick", event => {
   event.notification.close();
-  const url = event.notification?.data?.url || "/";
+  const url = resolveAppUrl(event.notification?.data?.url || "");
   event.waitUntil((async () => {
     const windowClients = await clients.matchAll({ type: "window", includeUncontrolled: true });
     const sameOriginClient = windowClients.find(client => {

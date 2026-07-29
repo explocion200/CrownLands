@@ -163,5 +163,7 @@ Deploying to Netlify still works through GitHub push. `netlify.toml` keeps `inde
 - Army tokens are reused and moved with `translate3d` transforms instead of being rebuilt each movement tick.
 - Region, camp, route, and city lookups use bounded/indexed caches. Remote and pending army view objects are reused between movement ticks, and repeated owned-city queries share one result inside each display frame to reduce garbage-collection spikes.
 - Pan and pinch movement schedule camera transforms through `requestAnimationFrame` to reduce mobile pointer-event work.
+- Every completed pan or zoom schedules an immediate visibility refresh, so newly exposed city markers do not wait for the periodic map-render interval.
+- Service-worker registration and cached asset URLs resolve from the deployed game folder, including itch.io's nested HTML upload paths.
 - Press `F8` or open the game with `?perf=1` to show the developer performance panel with FPS, active region, visible marker counts, active army tokens, loaded image count, neighbor preload status, and service-worker state.
 - Map art remains lazy-loaded and cache-first. The service worker should cache app shell and core art, while live Firebase/Auth/Functions/server requests remain uncached.
