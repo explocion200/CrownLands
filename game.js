@@ -296,6 +296,7 @@ function getMergedLandBridges(config = {}, editorData = {}) {
 }
 
 const MAIN_CITY_CHANGE_CITY_LIMIT = 30;
+const CITY_RELINQUISH_DAILY_LIMIT = 1;
 const MAIN_CITY_CHANGE_SMALL_KINGDOM_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000;
 const MAIN_CITY_CHANGE_LARGE_KINGDOM_COOLDOWN_MS = 14 * 24 * 60 * 60 * 1000;
 const MAX_OFFLINE_PROGRESS_SECONDS = 7 * 24 * 60 * 60;
@@ -2671,6 +2672,7 @@ let googlePublisherTagLoadPromise = null;
 let skillActionInFlight = false;
 let serverCityUpgradeInFlightIds = new Set();
 let serverCityRelinquishInFlightIds = new Set();
+let cityRelinquishCountdownTimer = 0;
 let pendingHarvestBonusIds = new Set();
 let selectedInventoryItemId = "";
 let updateCheckTimer = 0;
@@ -5180,6 +5182,7 @@ function newGame(playerName) {
     marchPercent: DEFAULT_MARCH_PERCENT,
     mainCityId: island.startIds.player,
     mainCityChangedAtMs: 0,
+    lastCityRelinquishedAtMs: 0,
     islandSlots: island.startIds,
     cities: island.cities,
     attacks: [],
@@ -5242,6 +5245,27 @@ function getNextUtcDayStartMs(value = Date.now()) {
   const parsed = Number(value);
   const date = new Date(Number.isFinite(parsed) ? parsed : Date.now());
   return Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate() + 1);
+}
+
+function getCityRelinquishPolicy(lastCityRelinquishedAtMs = state?.lastCityRelinquishedAtMs, nowMs = Date.now()) {
+  const parsedNow = Number(nowMs);
+  const currentTime = Math.max(0, Number.isFinite(parsedNow) ? parsedNow : Date.now());
+  const lastRelinquishedAtMs = normalizeTimestampMs(lastCityRelinquishedAtMs);
+  const utcDate = getUtcDateKeyAtMs(currentTime);
+  const used = lastRelinquishedAtMs > 0 && getUtcDateKeyAtMs(lastRelinquishedAtMs) === utcDate;
+  return {
+    limit: CITY_RELINQUISH_DAILY_LIMIT,
+    utcDate,
+    used,
+    lastCityRelinquishedAtMs: lastRelinquishedAtMs,
+    availableAtMs: used ? getNextUtcDayStartMs(currentTime) : 0,
+  };
+}
+
+function getCityRelinquishCooldownText(nowMs = Date.now()) {
+  const policy = getCityRelinquishPolicy(state?.lastCityRelinquishedAtMs, nowMs);
+  const remainingMs = policy.used ? Math.max(0, policy.availableAtMs - nowMs) : 0;
+  return remainingMs > 0 ? formatDuration(Math.ceil(remainingMs / 1000)) : "";
 }
 
 function normalizeItemPurchaseTimestamps(value = {}) {
@@ -8799,6 +8823,10 @@ function applyServerProfilePatch(patch = null, options = {}) {
     state.mainCityChangedAtMs = normalizeTimestampMs(patch.mainCityChangedAtMs);
     changed = true;
   }
+  if (Number.isFinite(Number(patch.lastCityRelinquishedAtMs))) {
+    state.lastCityRelinquishedAtMs = normalizeTimestampMs(patch.lastCityRelinquishedAtMs);
+    changed = true;
+  }
   const mainCityRepair = normalizeSingleMainCityAssignment(nextMainCityId || state.mainCityId);
   changed = mainCityRepair.changed || changed;
   if (changed) {
@@ -9080,6 +9108,7 @@ function stripServerEconomyProfileFields(profile = {}) {
   delete clean.mainIslandId;
   delete clean.mainRegionId;
   delete clean.mainCityChangedAtMs;
+  delete clean.lastCityRelinquishedAtMs;
   delete clean.globalStats;
   delete clean.kingPower;
   delete clean.cityCount;
@@ -9099,6 +9128,7 @@ function getPlayerProfileSnapshot() {
     version: WORLD_SCHEMA_VERSION,
     mainCityId: state?.mainCityId || "",
     mainCityChangedAtMs: state ? normalizeTimestampMs(state.mainCityChangedAtMs) : 0,
+    lastCityRelinquishedAtMs: state ? normalizeTimestampMs(state.lastCityRelinquishedAtMs) : 0,
     mainIslandId: state?.online?.mainIslandId || getOnlineIslandId(mainRegionId),
     activeIslandId,
     mainRegionId,
@@ -9157,6 +9187,7 @@ function mergeOnlineProfileSources(profile = null, cloudSnapshot = null) {
       "mainIslandId",
       "mainRegionId",
       "mainCityChangedAtMs",
+      "lastCityRelinquishedAtMs",
       "globalStats",
       "kingPower",
       "cityCount",
@@ -9203,6 +9234,7 @@ function applyOnlineProfileSnapshot(profile = null, fallbackPlayerName = "Ricky"
   selectedMarchPercent = state.marchPercent;
   lastSelectedOwnedCityId = getKnownCityId(profile.lastSelectedOwnedCityId) || lastSelectedOwnedCityId;
   state.mainCityChangedAtMs = normalizeTimestampMs(profile.mainCityChangedAtMs);
+  state.lastCityRelinquishedAtMs = normalizeTimestampMs(profile.lastCityRelinquishedAtMs);
   state.gameSeconds = Math.max(0, Number(profile.localGameSeconds) || Number(profile.gameSeconds) || Number(state.gameSeconds) || 0);
   state.lastRealTimeMs = normalizeTimestampMs(profile.lastRealTimeMs) || state.lastRealTimeMs;
   lastAuthoritativeProfileRevisionMs = Math.max(
@@ -22583,6 +22615,22 @@ function canRelinquishCity(city) {
   return isStronghold(city) || !isMainCityForList(city);
 }
 
+function getCityRelinquishUnavailableMessage(nowMs = Date.now()) {
+  const cooldownText = getCityRelinquishCooldownText(nowMs);
+  return cooldownText
+    ? `You can only relinquish one holding per UTC day. Available again in ${cooldownText}.`
+    : "";
+}
+
+function applyCityRelinquishPolicy(policy = null) {
+  if (!state || !policy || typeof policy !== "object") return false;
+  const lastRelinquishedAtMs = normalizeTimestampMs(policy.lastCityRelinquishedAtMs);
+  if (!lastRelinquishedAtMs || lastRelinquishedAtMs === state.lastCityRelinquishedAtMs) return false;
+  state.lastCityRelinquishedAtMs = lastRelinquishedAtMs;
+  saveGame();
+  return true;
+}
+
 function getRelinquishDestinationPreview(city, { loadedOnly = false } = {}) {
   if (!state || !city) return null;
   const sourceRegionId = getCityRegionId(city);
@@ -22605,19 +22653,61 @@ function getRelinquishDestinationPreview(city, { loadedOnly = false } = {}) {
 
 function renderRelinquishCityAction(city) {
   if (!canRelinquishCity(city)) return "";
+  const policy = getCityRelinquishPolicy();
+  const cooldownText = getCityRelinquishCooldownText();
   return `
     <div class="relinquish-city-action-panel">
       <div class="relinquish-city-action-copy">
         <strong>Relinquish Castle</strong>
         <small>March stationed troops to your nearest friendly city and make this city neutral.</small>
+        <small class="relinquish-city-reset" data-relinquish-city-reset>${policy.used
+          ? `Daily allowance used. Resets in ${escapeHtml(cooldownText)} at 00:00 UTC.`
+          : "Available now. One holding may be relinquished per UTC day."}</small>
       </div>
-      <button id="relinquishCityBtn" class="relinquish-city-btn" type="button">Relinquish Castle</button>
+      <button id="relinquishCityBtn" class="relinquish-city-btn" type="button"${policy.used ? ' disabled aria-disabled="true"' : ""}>${policy.used
+        ? `Available in ${escapeHtml(cooldownText)}`
+        : "Relinquish Castle"}</button>
     </div>
   `;
 }
 
+function stopCityRelinquishCountdown() {
+  if (!cityRelinquishCountdownTimer) return;
+  window.clearInterval(cityRelinquishCountdownTimer);
+  cityRelinquishCountdownTimer = 0;
+}
+
+function updateCityRelinquishCountdown() {
+  const button = modalBody.querySelector("#relinquishCityBtn");
+  const resetCopy = modalBody.querySelector("[data-relinquish-city-reset]");
+  if (!button || !resetCopy) {
+    stopCityRelinquishCountdown();
+    return;
+  }
+  const policy = getCityRelinquishPolicy();
+  const cooldownText = getCityRelinquishCooldownText();
+  button.disabled = policy.used;
+  button.setAttribute("aria-disabled", policy.used ? "true" : "false");
+  button.textContent = policy.used ? `Available in ${cooldownText}` : "Relinquish Castle";
+  resetCopy.textContent = policy.used
+    ? `Daily allowance used. Resets in ${cooldownText} at 00:00 UTC.`
+    : "Available now. One holding may be relinquished per UTC day.";
+}
+
+function startCityRelinquishCountdown() {
+  stopCityRelinquishCountdown();
+  updateCityRelinquishCountdown();
+  cityRelinquishCountdownTimer = window.setInterval(updateCityRelinquishCountdown, 1000);
+}
+
 function bindRelinquishCityButton(city) {
-  modalBody.querySelector("#relinquishCityBtn")?.addEventListener("click", () => showRelinquishCityConfirm(city.id));
+  const button = modalBody.querySelector("#relinquishCityBtn");
+  if (!button) {
+    stopCityRelinquishCountdown();
+    return;
+  }
+  button.addEventListener("click", () => showRelinquishCityConfirm(city.id));
+  startCityRelinquishCountdown();
 }
 
 function showRelinquishCityConfirm(cityId) {
@@ -22628,6 +22718,12 @@ function showRelinquishCityConfirm(cityId) {
   }
   if (!canRelinquishCity(city)) {
     showToast(isMainCityForList(city) ? "You cannot relinquish your main city." : "You can only relinquish your own cities.");
+    return;
+  }
+  const unavailableMessage = getCityRelinquishUnavailableMessage();
+  if (unavailableMessage) {
+    showToast(unavailableMessage);
+    updateCityRelinquishCountdown();
     return;
   }
 
@@ -22687,6 +22783,7 @@ function applyLocalRelinquishCity(city, destination, mission = null) {
   const transferredTroops = Math.max(0, Math.floor(Number(city.troops) || 0));
   if (transferredTroops > 0 && !mission) return false;
   if (mission) state.attacks.push(mission);
+  const nowMs = Date.now();
 
   city.owner = "neutral";
   city.ownerKind = "neutral";
@@ -22699,8 +22796,9 @@ function applyLocalRelinquishCity(city, destination, mission = null) {
   city.troops = 0;
   city.troopFloat = 0;
   city.investedGold = 0;
-  city.relinquishedAtMs = Date.now();
+  city.relinquishedAtMs = nowMs;
   city.relocatedAtMs = 0;
+  state.lastCityRelinquishedAtMs = nowMs;
   localDirtyCityIds.delete(city.id);
   syncCityStateToOnline(city);
   syncOwnedCitiesToOnline(true);
@@ -22715,6 +22813,11 @@ async function relinquishCity(cityId) {
   }
   if (!canRelinquishCity(city)) {
     showToast(isMainCityForList(city) ? "You cannot relinquish your main city." : "You can only relinquish your own cities.");
+    return false;
+  }
+  const unavailableMessage = getCityRelinquishUnavailableMessage();
+  if (unavailableMessage) {
+    showToast(unavailableMessage);
     return false;
   }
 
@@ -22774,6 +22877,7 @@ async function relinquishCity(cityId) {
         routeRegionIds: movement?.routeRegionIds || [],
       });
       applyServerEconomyResult(result);
+      applyCityRelinquishPolicy(result?.cityRelinquishPolicy);
       if (mission && result?.movement) {
         applyServerMovementToMission(mission, result.movement);
         addServerAcceptedMission(mission);
@@ -22807,6 +22911,10 @@ async function relinquishCity(cityId) {
     renderAll();
     return true;
   } catch (error) {
+    const errorDetails = error?.details || error?.customData?.details || error?.data || {};
+    if (applyCityRelinquishPolicy(errorDetails?.cityRelinquishPolicy)) {
+      renderAll();
+    }
     onlineLastError = error?.message || String(error);
     showToast(error?.message || "Could not relinquish city.");
     console.warn("City relinquish failed", error);
@@ -28401,6 +28509,7 @@ document.addEventListener("pointerdown", event => {
 modal.addEventListener("close", () => {
   publicPlayerProfileRequestId += 1;
   publicClanProfileRequestId += 1;
+  stopCityRelinquishCountdown();
   if (rewardedAdShopCountdownTimer) {
     window.clearInterval(rewardedAdShopCountdownTimer);
     rewardedAdShopCountdownTimer = 0;

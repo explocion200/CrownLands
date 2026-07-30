@@ -76,6 +76,7 @@ service cloud.firestore {
            'mainIslandId',
            'mainRegionId',
            'mainCityChangedAtMs',
+           'lastCityRelinquishedAtMs',
            'mainCityAssignmentVersion',
            'clanId',
            'clanName',
@@ -132,6 +133,7 @@ service cloud.firestore {
         && profileFieldUnchanged('mainIslandId')
         && profileFieldUnchanged('mainRegionId')
         && profileFieldUnchanged('mainCityChangedAtMs')
+        && profileFieldUnchanged('lastCityRelinquishedAtMs')
         && profileFieldUnchanged('mainCityAssignmentVersion')
         && profileFieldUnchanged('clanId')
         && profileFieldUnchanged('clanName')
