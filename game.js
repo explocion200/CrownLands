@@ -5826,12 +5826,18 @@ function createRandomFlag() {
   const primaryOptions = FLAG_COLORS.filter(color => color !== "#d9e2e8");
   const primary = randomFrom(primaryOptions) || createDefaultFlag().primary;
   const secondaryOptions = FLAG_COLORS.filter(color => color !== primary);
-  return {
+  const flag = {
     primary,
     secondary: randomFrom(secondaryOptions) || createDefaultFlag().secondary,
     pattern: randomFrom(FLAG_PATTERNS)?.key || createDefaultFlag().pattern,
     symbol: randomFrom(FLAG_SYMBOLS)?.key || createDefaultFlag().symbol,
   };
+  const defaults = createDefaultFlag();
+  const matchesDefault = Object.keys(defaults).every(key => flag[key] === defaults[key]);
+  if (matchesDefault) {
+    flag.symbol = FLAG_SYMBOLS.find(option => option.key !== defaults.symbol)?.key || defaults.symbol;
+  }
+  return flag;
 }
 
 function normalizeFlag(flag) {
@@ -12102,7 +12108,9 @@ async function setupOnlineWorld({ requireOnlineProfile = false } = {}) {
   const archivedProfileIdentity = profile && !isCurrentResetProfile(profile)
     ? {
         playerName: cleanName(profile.playerName || profile.displayName),
-        flag: normalizeFlag(profile.flag),
+        flag: profile.flag && typeof profile.flag === "object"
+          ? normalizeFlag(profile.flag)
+          : null,
       }
     : null;
   if (snapshotResult.status === "fulfilled") cloudSnapshot = snapshotResult.value;
@@ -12116,7 +12124,7 @@ async function setupOnlineWorld({ requireOnlineProfile = false } = {}) {
   if (hasCurrentProfile) applyOnlineProfileSnapshot(profile, state.playerName);
   else if (archivedProfileIdentity) {
     state.playerName = archivedProfileIdentity.playerName || state.playerName;
-    state.flag = archivedProfileIdentity.flag;
+    if (archivedProfileIdentity.flag) state.flag = archivedProfileIdentity.flag;
   }
   if (statsResult.status === "fulfilled" && statsResult.value) {
     applyGlobalStatsSnapshot(statsResult.value, { render: false });
