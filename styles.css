@@ -9923,3 +9923,56 @@ select:focus {
     transition: none;
   }
 }
+.audio-settings-section {
+  display: grid;
+  gap: 14px;
+}
+
+.audio-volume-control,
+.audio-toggle-control {
+  display: grid;
+  gap: 8px;
+  color: #f7e7b7;
+}
+
+.audio-volume-control > span,
+.audio-toggle-control {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+}
+
+.audio-volume-control > span {
+  display: grid;
+}
+
+.audio-volume-control output {
+  color: #f4cd6b;
+  font-variant-numeric: tabular-nums;
+}
+
+.audio-volume-control input[type="range"] {
+  width: 100%;
+  accent-color: #d8a93f;
+  cursor: pointer;
+}
+
+.audio-toggle-control {
+  padding: 10px 0;
+  border-top: 1px solid rgba(244, 205, 107, 0.18);
+}
+
+.audio-toggle-control span {
+  display: grid;
+  gap: 2px;
+}
+
+.audio-toggle-control small {
+  color: rgba(247, 231, 183, 0.72);
+}
+
+.audio-toggle-control input[type="checkbox"] {
+  width: 42px;
+  height: 22px;
+  accent-color: #d8a93f;
+  cursor: pointer;
+}

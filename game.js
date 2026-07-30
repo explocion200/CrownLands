@@ -2891,6 +2891,29 @@ const incomingAttackBtn = document.getElementById("incomingAttackBtn");
 const incomingAttackCount = document.getElementById("incomingAttackCount");
 const incomingAttackTime = document.getElementById("incomingAttackTime");
 const helpBtn = document.getElementById("helpBtn");
+const crownlandsAudio = window.CrownlandsAudio;
+let lastAudioIncomingAttackCount = 0;
+
+function playGameSound(id, options = {}) {
+  return crownlandsAudio?.playEffect(id, options) || false;
+}
+
+function playRewardSound(rewardType = "") {
+  const type = String(rewardType || "").toLowerCase();
+  if (type === "troops" || type === "troop") return playGameSound("troop_reward");
+  if (type === "item" || type === "items" || type === "relic") return playGameSound("relic_reward");
+  if (type === "city" || type === "deed") return playGameSound("deed_camp_complete");
+  return playGameSound("gold_pickup");
+}
+
+function syncWorldMusicState() {
+  if (setupScreen?.classList.contains("visible") || !state) {
+    crownlandsAudio?.setMusicState("main_menu");
+    return;
+  }
+  const hasContestedCamp = [...onlineCampStates.values()].some(camp => camp?.state === "contested");
+  crownlandsAudio?.setMusicState(getIncomingAttacks().length || hasContestedCamp ? "danger" : "world_map");
+}
 
 function getRegionById(regionId) {
   return WORLD_REGIONS_BY_ID.get(String(regionId || "")) || WORLD_REGIONS[0] || null;
@@ -6235,6 +6258,7 @@ function showNextLevelUpReward() {
 function queueLevelUpReward(fromLevel, toLevel, options = {}) {
   const reward = getLevelUpRewardBundle(fromLevel, toLevel, options);
   if (reward.levelsGained <= 0) return;
+  playGameSound("level_up");
 
   if (activeLevelUpReward && activeLevelUpReward.toLevel === reward.fromLevel) {
     activeLevelUpReward = mergeLevelUpRewardBundles(activeLevelUpReward, reward);
@@ -8937,6 +8961,30 @@ function applyServerArmyResult(result = null) {
   if (result.globalStats) changed = applyGlobalStatsSnapshot(result.globalStats, { render: false }) || changed;
   if (Array.isArray(result.reports)) changed = mergeServerReports(result.reports) || changed;
   if (Array.isArray(result.cityUpdates)) changed = applyServerCityUpdates(result.cityUpdates) || changed;
+  const newestPlayerReport = Array.isArray(result.reports)
+    ? [...result.reports].reverse().find(report => report?.type === "attack" || report?.type === "defense")
+    : null;
+  if (result.kind && result.kind !== "scout") {
+    playGameSound("army_arrival", { cooldownMs: 80 });
+    if (result.kind === "attack") {
+      crownlandsAudio?.pulseMusic("battle", 3500, getIncomingAttacks().length ? "danger" : "world_map");
+      crownlandsAudio?.playSwordClash();
+    }
+  }
+  if (newestPlayerReport?.type === "attack" && newestPlayerReport.outcome === "victory") {
+    const capturedCity = cityById(newestPlayerReport.cityId);
+    if (isStronghold(capturedCity)) {
+      playGameSound("stronghold_captured");
+      crownlandsAudio?.setMusicState("victory");
+    } else {
+      playGameSound("city_captured");
+    }
+  } else if (
+    (newestPlayerReport?.type === "attack" && newestPlayerReport.outcome === "defeat")
+    || (newestPlayerReport?.type === "defense" && newestPlayerReport.outcome === "lost")
+  ) {
+    playGameSound("battle_defeat");
+  }
   if (result.campUpdate?.id) {
     const normalized = normalizeOnlineCampState({ ...(onlineCampStates.get(result.campUpdate.id) || {}), ...result.campUpdate });
     if (normalized) {
@@ -8947,6 +8995,7 @@ function applyServerArmyResult(result = null) {
       changed = true;
       if (result.targetType === "camp" && result.kind === "attack" && result.outcome === "victory" && normalized.holderUid === getCurrentOnlineUid()) {
         const config = getRewardCampConfig(normalized);
+        playGameSound("camp_captured");
         showToast(`${config?.name || normalized.name} captured. Hold for ${Math.floor((config?.holdSeconds || 0) / 60)} minutes to claim ${formatNumber(config?.baseReward || 0)} ${config?.rewardLabel || "reward"}.`);
       }
     }
@@ -11592,6 +11641,7 @@ function handleOnlineSessionReplaced() {
   setSetupLoading(false);
   state = null;
   if (setupScreen) setupScreen.classList.add("visible");
+  crownlandsAudio?.setMusicState("main_menu");
   updateOnlineUi();
   showToast("Signed out. This account opened on another device.");
 }
@@ -12477,6 +12527,7 @@ function applyOnlineCamps(rawCamps, regionId = getActiveOnlineRegionId()) {
   cityRenderSignature = "";
   renderCities(true);
   updateOutgoingAttackUi();
+  syncWorldMusicState();
 }
 
 function applyOnlineHeldCamps(rawCamps = []) {
@@ -12486,6 +12537,7 @@ function applyOnlineHeldCamps(rawCamps = []) {
     .filter(camp => camp && currentUid && camp.holderUid === currentUid)
     .map(camp => [camp.id, camp]));
   updateOutgoingAttackUi();
+  syncWorldMusicState();
 }
 
 function getCampTargetById(campId) {
@@ -12574,6 +12626,10 @@ async function requestDueRewardCampPayout(camp) {
     if (result?.movement) adoptServerArmyMovement(result.movement);
     const config = getRewardCampConfig(result?.campType || camp);
     if (["paid", "no-eligible-city", "daily-limit"].includes(result?.status)) {
+      playGameSound("timer_tick_complete");
+      if (result?.status === "paid") {
+        playRewardSound(config?.type || result?.rewardType || config?.rewardType);
+      }
       if (config?.type === "deed") {
         deedCampHistoryCache.delete(getDeedCampHistoryCacheKey(camp));
       } else if (config && result.holderUid === getCurrentOnlineUid()) {
@@ -14111,6 +14167,7 @@ async function startFromInput(forceFresh = false) {
     const connected = await setupOnlineWorld();
     if (!connected) throw new Error(onlineLastError || "Online city setup did not finish.");
     setupScreen.classList.remove("visible");
+    crownlandsAudio?.setMusicState("world_map");
     clearSelection(false);
     rememberOwnedAttackSource(state.mainCityId || playerCities()[0]?.id);
     saveGame();
@@ -15923,6 +15980,7 @@ async function collectHarvestBonus(bonusId) {
       } else {
         showToast(`Harvested +${formatNumber(reward)} gold (${formatNumber(serverDaily.harvestedGoldBonuses)}/${HARVEST_BONUS_DAILY_GOLD_LIMIT})`);
       }
+      playRewardSound(type);
     } catch (error) {
       state.harvestBonuses = normalizeHarvestBonuses(state.harvestBonuses);
       if (!state.harvestBonuses.some(item => item.id === bonus.id)) {
@@ -15958,6 +16016,7 @@ async function collectHarvestBonus(bonusId) {
     renderPanel();
     renderHarvestBonuses();
     showToast(`Harvested +${formatNumber(troopReward)} troops (${formatNumber(daily.harvestedTroopBonuses)}/${HARVEST_BONUS_DAILY_TROOP_LIMIT})`);
+    playRewardSound("troops");
     return;
   }
 
@@ -15969,6 +16028,7 @@ async function collectHarvestBonus(bonusId) {
   renderHud();
   renderHarvestBonuses();
   showToast(`Harvested +${formatNumber(goldReward)} gold (${formatNumber(daily.harvestedGoldBonuses)}/${HARVEST_BONUS_DAILY_GOLD_LIMIT})`);
+  playRewardSound("gold");
 }
 
 function getOfflineProgressSeconds(snapshot = state) {
@@ -16327,6 +16387,7 @@ function launchAttack(sourceId, targetId, percent, owner, exactTroops = null, op
     publishOnlineArmyMovement(mission, { addLocalMissionOnAccept: true, optimistic: false })
       .then(accepted => {
         if (!accepted) return;
+        playGameSound("troop_dispatch", { cooldownMs: 80 });
         const acceptedKind = mission.kind || kind;
         const acceptedTroops = Math.max(0, Math.floor(Number(mission.troops) || send));
         const acceptedProtection = normalizeAttackProtectionSnapshot(mission.attackProtection) || attackProtection;
@@ -16374,6 +16435,7 @@ function launchAttack(sourceId, targetId, percent, owner, exactTroops = null, op
     syncCityStateToOnline(source);
   }
   state.attacks.push(mission);
+  if (owner === "player") playGameSound("troop_dispatch", { cooldownMs: 80 });
   publishOnlineArmyMovement(mission);
   if (isOnlineWorldActive() && owner === "player" && options.syncOwnedCities !== false && !usesServerArmyAuthority()) syncOwnedCitiesToOnline(true);
 
@@ -16444,6 +16506,7 @@ function resolveAttack(attack) {
     return;
   }
 
+  playGameSound("army_arrival", { cooldownMs: 80 });
   if (attack.kind === "transfer" && target.owner === attack.owner) {
     target.troopFloat += attack.troops;
     target.troops = Math.floor(target.troopFloat);
@@ -16456,6 +16519,8 @@ function resolveAttack(attack) {
     return;
   }
 
+  crownlandsAudio?.pulseMusic("battle", 3500, getIncomingAttacks().length ? "danger" : "world_map");
+  crownlandsAudio?.playSwordClash();
   const attackOwnerIdentity = attack.ownerUid ? resolvePlayerIdentityForUid(attack.ownerUid, attack) : null;
   const attackerName = attack.owner === "player" ? "You" : attackOwnerIdentity?.displayName || attack.ownerName || "Enemy";
   const oldOwner = target.owner;
@@ -16763,6 +16828,12 @@ function resolveAttack(attack) {
       });
       addLog(`Victory: you captured ${target.name} with ${formatNumber(result.survivors)} survivors. ${formatNumber(savedAttackers)} troops recovered. ${formatCapturedCityLevelDrop(levelDrop)} XP efficiency ${Math.round(xpEfficiency * 100)}%.`);
       showToast(`Captured ${target.name}: +${formatNumber(xpAward)} XP`);
+      if (isStronghold(target)) {
+        playGameSound("stronghold_captured");
+        crownlandsAudio?.setMusicState("victory");
+      } else {
+        playGameSound("city_captured");
+      }
       addCharacterXp(xpAward, `${target.name} capture`);
     } else if (oldOwner === "player") {
       const savedDefenders = returnSavedTroops("fieldMedics", result.defenderLosses, `${target.name} defense`, target.id);
@@ -16794,6 +16865,7 @@ function resolveAttack(attack) {
       });
       addLog(`Lost: the enemy captured ${target.name}. ${formatCapturedCityLevelDrop(levelDrop)} ${formatNumber(savedDefenders)} troops recovered, and you gained ${formatNumber(defenseLossXp)} XP.`);
       showToast(`You lost ${target.name}: +${formatNumber(defenseLossXp)} XP`);
+      playGameSound("battle_defeat");
       addCharacterXp(defenseLossXp, `${target.name} lost defense`);
     }
   } else {
@@ -16830,6 +16902,7 @@ function resolveAttack(attack) {
       });
       addLog(`Defeat: your attack on ${target.name} failed. ${formatNumber(result.defendersLeft)} defenders remain. ${formatNumber(savedAttackers)} troops recovered, and you gained ${formatNumber(failedAttackXp)} XP.`);
       showToast(`Attack failed at ${target.name}: +${formatNumber(failedAttackXp)} XP`);
+      playGameSound("battle_defeat");
       addCharacterXp(failedAttackXp, `${target.name} failed attack`);
     } else if (oldOwner === "player") {
       const savedDefenders = returnSavedTroops("fieldMedics", result.defenderLosses, `${target.name} defense`);
@@ -21785,6 +21858,7 @@ function selectCity(id) {
   if (!state || isGamePausedByOutcome()) return;
   const clicked = cityById(id);
   if (!clicked) return;
+  playGameSound("city_select", { cooldownMs: 60 });
   if (scoutNearbySourceId && scoutNearbySourceId !== clicked.id) scoutNearbySourceId = null;
   if (regroupSourceId && regroupSourceId !== clicked.id) regroupSourceId = null;
   const source = selectedSourceId ? cityById(selectedSourceId) : null;
@@ -24027,10 +24101,12 @@ async function claimDailyLoginReward() {
     } else if (result?.claimed === false) {
       showToast("No earned daily reward is waiting.");
     } else if (receipt) {
+      const receiptItemCount = Object.values(receipt.items).reduce((sum, quantity) => sum + quantity, 0);
+      playRewardSound(receiptItemCount > 0 ? "item" : receipt.troops > 0 ? "troops" : "gold");
       const parts = [];
       if (receipt.gold > 0) parts.push(`${formatNumber(receipt.gold)} gold`);
       if (receipt.troops > 0) parts.push(`${formatNumber(receipt.troops)} troops`);
-      const itemCount = Object.values(receipt.items).reduce((sum, quantity) => sum + quantity, 0);
+      const itemCount = receiptItemCount;
       if (itemCount > 0) parts.push(`${formatNumber(itemCount)} item${itemCount === 1 ? "" : "s"}`);
       const summary = parts.join(", ");
       addLog(`Daily reward cycle ${receipt.cycle}, day ${receipt.day}: ${summary}.`);
@@ -24847,6 +24923,7 @@ async function useServerInventoryItem(item) {
   const expiresAtMs = normalizeTimestampMs(result?.expiresAtMs);
   if (item.id === ROYAL_PEACE_SHIELD_ITEM_ID) {
     addLog(`${item.label} activated. Your kingdom is protected for ${formatDuration(getPeaceShieldRemainingSeconds(expiresAtMs))}.`);
+    playGameSound("royal_shield_activate");
     updateShieldStatusBadge();
     renderCities(true);
     showToast(`${item.label} active: ${formatDuration(getPeaceShieldRemainingSeconds(expiresAtMs))}`);
@@ -24890,6 +24967,7 @@ async function useRoyalPeaceShield(item) {
   renderCities(true);
   if (modal?.open && modal.classList.contains("inventory-modal")) modal.close();
   showToast(`${item.label} active: ${formatDuration(getPeaceShieldRemainingSeconds(expiresAtMs))}`);
+  playGameSound("royal_shield_activate");
   const [shieldSynced, cloudSaved] = await Promise.all([
     syncPeaceShieldToAllOwnedCities(expiresAtMs),
     flushOnlineSave(true),
@@ -25579,12 +25657,19 @@ function updateIncomingAttackUi() {
   incomingAttackBtn.hidden = incoming.length === 0;
   incomingAttackBtn.classList.toggle("active", incoming.length > 0);
   if (!incoming.length) {
+    if (lastAudioIncomingAttackCount > 0) crownlandsAudio?.setMusicState("world_map");
+    lastAudioIncomingAttackCount = 0;
     if (incomingAttackCount) incomingAttackCount.textContent = "0";
     if (incomingAttackTime) incomingAttackTime.textContent = "Incoming";
     if (modal.open && modal.classList.contains("incoming-attack-modal")) modal.close();
     return;
   }
 
+  if (incoming.length > lastAudioIncomingAttackCount) {
+    playGameSound("city_under_attack", { cooldownMs: 1000 });
+    crownlandsAudio?.setMusicState("danger");
+  }
+  lastAudioIncomingAttackCount = incoming.length;
   if (incomingAttackCount) incomingAttackCount.textContent = formatNumber(incoming.length);
   if (incomingAttackTime) incomingAttackTime.textContent = formatDuration(incoming[0].remaining);
   incomingAttackBtn.title = `${formatIncomingThreatSummary(incoming)} - soonest ${formatDuration(incoming[0].remaining)}`;

@@ -1,0 +1,278 @@
+{
+  "pack": "Crownlands Starter Sound Pack",
+  "version": "1.0.0",
+  "sample_rate_hz": 44100,
+  "license": "Original procedural audio generated specifically for the Crownlands project. The Crownlands project owner may use and modify these files in the game and its marketing.",
+  "assets": [
+    {
+      "id": "main_menu_loop",
+      "category": "music",
+      "wav": "music/main_menu_loop.wav",
+      "ogg": "music/main_menu_loop.ogg",
+      "loop": true,
+      "recommended_volume": 0.42,
+      "description": "Regal Crownlands title and main-menu loop with lute, flute, strings, horns and war drums."
+    },
+    {
+      "id": "world_map_loop",
+      "category": "music",
+      "wav": "music/world_map_loop.wav",
+      "ogg": "music/world_map_loop.ogg",
+      "loop": true,
+      "recommended_volume": 0.36,
+      "description": "Calm exploration loop for the strategic world map."
+    },
+    {
+      "id": "battle_loop",
+      "category": "music",
+      "wav": "music/battle_loop.wav",
+      "ogg": "music/battle_loop.ogg",
+      "loop": true,
+      "recommended_volume": 0.47,
+      "description": "Driving medieval battle loop with war drums, low strings, lute ostinato and horns."
+    },
+    {
+      "id": "danger_contested_loop",
+      "category": "music",
+      "wav": "music/danger_contested_loop.wav",
+      "ogg": "music/danger_contested_loop.ogg",
+      "loop": true,
+      "recommended_volume": 0.4,
+      "description": "Dark restrained loop for contested camps, incoming attacks or dangerous objectives."
+    },
+    {
+      "id": "victory_fanfare",
+      "category": "music",
+      "wav": "music/victory_fanfare.wav",
+      "ogg": "music/victory_fanfare.ogg",
+      "loop": false,
+      "recommended_volume": 0.58,
+      "description": "Royal short fanfare for major victories or seasonal accomplishments."
+    },
+    {
+      "id": "button_click",
+      "category": "ui",
+      "wav": "ui/button_click.wav",
+      "ogg": "ui/button_click.ogg",
+      "loop": false,
+      "recommended_volume": 0.42,
+      "description": "Dry carved-wood button click for common UI actions."
+    },
+    {
+      "id": "menu_open",
+      "category": "ui",
+      "wav": "ui/menu_open.wav",
+      "ogg": "ui/menu_open.ogg",
+      "loop": false,
+      "recommended_volume": 0.48,
+      "description": "Parchment and soft air movement for opening panels."
+    },
+    {
+      "id": "menu_close",
+      "category": "ui",
+      "wav": "ui/menu_close.wav",
+      "ogg": "ui/menu_close.ogg",
+      "loop": false,
+      "recommended_volume": 0.42,
+      "description": "Short parchment fold for closing panels."
+    },
+    {
+      "id": "parchment_open",
+      "category": "ui",
+      "wav": "ui/parchment_open.wav",
+      "ogg": "ui/parchment_open.ogg",
+      "loop": false,
+      "recommended_volume": 0.5,
+      "description": "Longer scroll or report-opening sound."
+    },
+    {
+      "id": "invalid_action",
+      "category": "ui",
+      "wav": "ui/invalid_action.wav",
+      "ogg": "ui/invalid_action.ogg",
+      "loop": false,
+      "recommended_volume": 0.42,
+      "description": "Muted wooden refusal cue for blocked actions."
+    },
+    {
+      "id": "notification",
+      "category": "ui",
+      "wav": "ui/notification.wav",
+      "ogg": "ui/notification.ogg",
+      "loop": false,
+      "recommended_volume": 0.45,
+      "description": "Small bronze chime for general notifications."
+    },
+    {
+      "id": "city_select",
+      "category": "ui",
+      "wav": "ui/city_select.wav",
+      "ogg": "ui/city_select.ogg",
+      "loop": false,
+      "recommended_volume": 0.38,
+      "description": "Stone-and-bronze cue when selecting a city."
+    },
+    {
+      "id": "troop_dispatch",
+      "category": "combat",
+      "wav": "combat/troop_dispatch.wav",
+      "ogg": "combat/troop_dispatch.ogg",
+      "loop": false,
+      "recommended_volume": 0.58,
+      "description": "Order whoosh, drum and marching start when sending troops."
+    },
+    {
+      "id": "army_arrival",
+      "category": "combat",
+      "wav": "combat/army_arrival.wav",
+      "ogg": "combat/army_arrival.ogg",
+      "loop": false,
+      "recommended_volume": 0.52,
+      "description": "Marching halt and drum cue for army arrival."
+    },
+    {
+      "id": "sword_clash_01",
+      "category": "combat",
+      "wav": "combat/sword_clash_01.wav",
+      "ogg": "combat/sword_clash_01.ogg",
+      "loop": false,
+      "recommended_volume": 0.52,
+      "description": "Metal sword impact variation 1."
+    },
+    {
+      "id": "sword_clash_02",
+      "category": "combat",
+      "wav": "combat/sword_clash_02.wav",
+      "ogg": "combat/sword_clash_02.ogg",
+      "loop": false,
+      "recommended_volume": 0.52,
+      "description": "Metal sword impact variation 2."
+    },
+    {
+      "id": "sword_clash_03",
+      "category": "combat",
+      "wav": "combat/sword_clash_03.wav",
+      "ogg": "combat/sword_clash_03.ogg",
+      "loop": false,
+      "recommended_volume": 0.52,
+      "description": "Metal sword impact variation 3."
+    },
+    {
+      "id": "siege_impact",
+      "category": "combat",
+      "wav": "combat/siege_impact.wav",
+      "ogg": "combat/siege_impact.ogg",
+      "loop": false,
+      "recommended_volume": 0.65,
+      "description": "Heavy timber-and-stone impact for siege attacks."
+    },
+    {
+      "id": "battle_defeat",
+      "category": "combat",
+      "wav": "combat/battle_defeat.wav",
+      "ogg": "combat/battle_defeat.ogg",
+      "loop": false,
+      "recommended_volume": 0.62,
+      "description": "Low descending war horn for a battle defeat."
+    },
+    {
+      "id": "city_captured",
+      "category": "combat",
+      "wav": "combat/city_captured.wav",
+      "ogg": "combat/city_captured.ogg",
+      "loop": false,
+      "recommended_volume": 0.65,
+      "description": "Compact war-horn victory cue for capturing a city."
+    },
+    {
+      "id": "gold_pickup",
+      "category": "rewards",
+      "wav": "rewards/gold_pickup.wav",
+      "ogg": "rewards/gold_pickup.ogg",
+      "loop": false,
+      "recommended_volume": 0.48,
+      "description": "Bright bronze coin cascade for collecting gold."
+    },
+    {
+      "id": "troop_reward",
+      "category": "rewards",
+      "wav": "rewards/troop_reward.wav",
+      "ogg": "rewards/troop_reward.ogg",
+      "loop": false,
+      "recommended_volume": 0.52,
+      "description": "Drum, short horn and marching cue for troop rewards."
+    },
+    {
+      "id": "level_up",
+      "category": "rewards",
+      "wav": "rewards/level_up.wav",
+      "ogg": "rewards/level_up.ogg",
+      "loop": false,
+      "recommended_volume": 0.6,
+      "description": "Ascending harp and royal horn for player or city level-up."
+    },
+    {
+      "id": "camp_captured",
+      "category": "rewards",
+      "wav": "rewards/camp_captured.wav",
+      "ogg": "rewards/camp_captured.ogg",
+      "loop": false,
+      "recommended_volume": 0.62,
+      "description": "Short martial claim cue for any captured camp."
+    },
+    {
+      "id": "deed_camp_complete",
+      "category": "rewards",
+      "wav": "rewards/deed_camp_complete.wav",
+      "ogg": "rewards/deed_camp_complete.ogg",
+      "loop": false,
+      "recommended_volume": 0.62,
+      "description": "Parchment, bell and horn for the Deed Camp city award."
+    },
+    {
+      "id": "relic_reward",
+      "category": "rewards",
+      "wav": "rewards/relic_reward.wav",
+      "ogg": "rewards/relic_reward.ogg",
+      "loop": false,
+      "recommended_volume": 0.58,
+      "description": "Ancient metallic chimes and choir for a Relic Camp payout."
+    },
+    {
+      "id": "stronghold_captured",
+      "category": "rewards",
+      "wav": "rewards/stronghold_captured.wav",
+      "ogg": "rewards/stronghold_captured.ogg",
+      "loop": false,
+      "recommended_volume": 0.72,
+      "description": "Large drums and layered horns for taking a stronghold."
+    },
+    {
+      "id": "royal_shield_activate",
+      "category": "rewards",
+      "wav": "rewards/royal_shield_activate.wav",
+      "ogg": "rewards/royal_shield_activate.ogg",
+      "loop": false,
+      "recommended_volume": 0.52,
+      "description": "Rising air and bronze resonance for activating the Royal Shield."
+    },
+    {
+      "id": "city_under_attack",
+      "category": "world",
+      "wav": "world/city_under_attack.wav",
+      "ogg": "world/city_under_attack.ogg",
+      "loop": false,
+      "recommended_volume": 0.65,
+      "description": "Urgent low horn warning for an attacked city."
+    },
+    {
+      "id": "timer_tick_complete",
+      "category": "world",
+      "wav": "world/timer_tick_complete.wav",
+      "ogg": "world/timer_tick_complete.ogg",
+      "loop": false,
+      "recommended_volume": 0.4,
+      "description": "Wooden timer ticks ending with a small bell."
+    }
+  ]
+}
