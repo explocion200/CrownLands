@@ -81,21 +81,35 @@
     }
 
     installUnlockListeners() {
-      const unlock = () => {
-        this.unlock();
+      let unlocking = false;
+      const removeUnlockListeners = () => {
         document.removeEventListener("pointerdown", unlock, true);
+        document.removeEventListener("touchend", unlock, true);
         document.removeEventListener("keydown", unlock, true);
       };
+      const unlock = () => {
+        if (unlocking) return;
+        unlocking = true;
+        this.unlock()
+          .then(success => {
+            if (success) removeUnlockListeners();
+          })
+          .finally(() => {
+            unlocking = false;
+          });
+      };
       document.addEventListener("pointerdown", unlock, { capture: true, passive: true });
+      document.addEventListener("touchend", unlock, { capture: true, passive: true });
       document.addEventListener("keydown", unlock, true);
     }
 
     async unlock() {
       if (this.unlocked) return true;
+      if (!this.ready) return false;
       this.unlocked = true;
-      await this.manifestPromise;
-      if (this.ready) this.setMusicState(this.requestedMusicState, { immediate: true });
-      return this.ready;
+      const started = await this.setMusicState(this.requestedMusicState, { immediate: true });
+      if (!started) this.unlocked = false;
+      return started;
     }
 
     savePreferences() {
