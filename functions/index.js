@@ -54,6 +54,7 @@ const BASE_TROOP_ATTACK_POWER = 2;
 const DEFAULT_MARCH_PERCENT = 0.5;
 const DAILY_NEUTRAL_CAPTURE_LIMIT = 30;
 const NEUTRAL_CITY_COUNT_LIMIT = 30;
+const CITY_RELINQUISH_DAILY_LIMIT = 1;
 const ANTI_FARM_POLICY_VERSION = 1;
 const ANTI_FARM_INSTALLATION_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
 const ANTI_FARM_FRESH_NEUTRAL_WINDOW_MS = 24 * 60 * 60 * 1000;
@@ -6561,6 +6562,20 @@ function getNextUtcDayStartMs(nowMs = Date.now()) {
   return Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate() + 1);
 }
 
+function getCityRelinquishPolicy(lastCityRelinquishedAtMs = 0, nowMs = Date.now()) {
+  const currentTime = Math.max(0, Math.floor(safeNumber(nowMs, Date.now())));
+  const lastRelinquishedAtMs = timestampToMs(lastCityRelinquishedAtMs);
+  const utcDate = getUtcDateKey(currentTime);
+  const used = lastRelinquishedAtMs > 0 && getUtcDateKey(lastRelinquishedAtMs) === utcDate;
+  return {
+    limit: CITY_RELINQUISH_DAILY_LIMIT,
+    utcDate,
+    used,
+    lastCityRelinquishedAtMs: lastRelinquishedAtMs,
+    availableAtMs: used ? getNextUtcDayStartMs(currentTime) : 0,
+  };
+}
+
 function normalizeDailyLoginRewardReceipt(raw = {}) {
   if (!raw || typeof raw !== "object") return null;
   const day = clampInt(raw.day, 1, DAILY_LOGIN_REWARD_CYCLE_DAYS);
@@ -8502,6 +8517,7 @@ function createEconomyResponse(economy = null, overrides = {}) {
     mainIslandId: safeString(economy.profileAfter.mainIslandId, 160),
     mainRegionId: normalizeRegionId(economy.profileAfter.mainRegionId || getRegionIdFromOnlineIslandId(economy.profileAfter.mainIslandId)),
     mainCityChangedAtMs: timestampToMs(economy.profileAfter.mainCityChangedAtMs),
+    lastCityRelinquishedAtMs: timestampToMs(economy.profileAfter.lastCityRelinquishedAtMs),
   };
   if (globalStats) currentUser.globalStats = globalStats;
   if (daily !== undefined) currentUser.daily = normalizeDaily(daily);
@@ -11026,6 +11042,19 @@ exports.relinquishCity = onCall({ region: "us-central1", maxInstances: 20, invok
       throw new HttpsError("failed-precondition", "You cannot relinquish your main city.");
     }
 
+    const cityRelinquishPolicy = getCityRelinquishPolicy(
+      economy.profileAfter.lastCityRelinquishedAtMs || economy.profileBefore.lastCityRelinquishedAtMs,
+      nowMs
+    );
+    if (cityRelinquishPolicy.used) {
+      const remainingMs = Math.max(0, cityRelinquishPolicy.availableAtMs - nowMs);
+      throw new HttpsError(
+        "failed-precondition",
+        `You can only relinquish one holding per UTC day. Available again in ${formatCooldownMs(remainingMs)}.`,
+        { cityRelinquishPolicy }
+      );
+    }
+
     const destinationEntry = findNearestRelinquishDestination(economy, sourceEntry);
     if (!destinationEntry?.city) {
       throw new HttpsError("failed-precondition", "You need another friendly city to receive the troops.");
@@ -11151,16 +11180,25 @@ exports.relinquishCity = onCall({ region: "us-central1", maxInstances: 20, invok
       nowMs,
     });
 
-    writePreparedEconomy(transaction, economy, {}, [
+    const lastCityRelinquishedAtMs = nowMs;
+    const nextCityRelinquishPolicy = getCityRelinquishPolicy(lastCityRelinquishedAtMs, nowMs);
+    writePreparedEconomy(transaction, economy, {
+      lastCityRelinquishedAtMs,
+    }, [
       { ref: sourceEntry.ref, city: source, patch: sourcePatch },
     ], {
       addActiveArmies: movement ? [movement] : [],
       nowMs,
     });
 
-    writeArmyMovementCopies(transaction, movement, { includeCreatedAt: true });
+    if (movement) writeArmyMovementCopies(transaction, movement, { includeCreatedAt: true });
 
     return createEconomyResponse(economy, {
+      currentUser: {
+        ...createEconomyResponse(economy).currentUser,
+        lastCityRelinquishedAtMs,
+      },
+      cityRelinquishPolicy: nextCityRelinquishPolicy,
       cityUpdates: [...economy.cityUpdates, sourceUpdate],
       relinquishedCity: {
         id: source.id,

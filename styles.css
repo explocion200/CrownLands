@@ -6237,6 +6237,10 @@ button.daily-reward-card.available:disabled {
   font-weight: 800;
   line-height: 1.25;
 }
+.relinquish-city-action-copy .relinquish-city-reset {
+  margin-top: .28rem;
+  color: #fff1a8;
+}
 .relinquish-city-btn {
   min-height: 42px;
   min-width: 138px;
@@ -6246,6 +6250,12 @@ button.daily-reward-card.available:disabled {
   background: linear-gradient(#ff665e, #bd302a);
   font-weight: 950;
   white-space: nowrap;
+}
+.relinquish-city-btn:disabled {
+  cursor: not-allowed;
+  color: rgba(255, 255, 255, .78);
+  background: rgba(255, 255, 255, .12);
+  border-color: rgba(255, 255, 255, .18);
 }
 .relinquish-warning {
   display: grid;

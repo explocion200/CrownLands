@@ -1120,6 +1120,7 @@
     delete cleanProfile.mainIslandId;
     delete cleanProfile.mainRegionId;
     delete cleanProfile.mainCityChangedAtMs;
+    delete cleanProfile.lastCityRelinquishedAtMs;
     delete cleanProfile.dailyLoginReward;
     delete cleanProfile.inactivityNotice;
     delete cleanProfile.worldSlotResetAtMs;
