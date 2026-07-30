@@ -116,7 +116,7 @@ powershell -ExecutionPolicy Bypass -File .\tools\validate-world-routes.ps1
 
 ## Deploy on Netlify
 
-Upload the full folder or zip to Netlify Drop. Keep `index.html`, `styles.css`, `world-config.js`, `game.js`, `manifest.webmanifest`, and the `assets` folder together.
+Upload the full folder or zip to Netlify Drop. Keep `index.html`, `styles.css`, `world-config.js`, `game.js`, `audio-manager.js`, `service-worker.js`, `manifest.webmanifest`, and the complete `assets/` and `audio/` folders together.
 
 For GitHub + Netlify, push this full folder to GitHub, then create a Netlify site from that repo. Netlify can publish the folder directly with the included `netlify.toml`.
 
@@ -134,7 +134,18 @@ Crownlands can now be installed as a Progressive Web App from the Netlify site. 
 
 The service worker caches the app shell, core scripts, manifest, loading art, HUD icons, castle images, stronghold images, camp images, item images, thumbnails, and the current starter-region map assets. It does not cache Firebase Auth, Firestore, Cloud Functions, Netlify Functions, API calls, POST requests, or future live multiplayer server state.
 
+The audio manifest is loaded network-first. MP3, OGG, and WAV media files stream directly from the host so browser byte-range requests receive native `206 Partial Content` responses; audio media is intentionally excluded from service-worker Cache Storage.
+
 Netlify runs `tools/stamp-deploy-build.js` for every deployment. It stamps the deployed commit into the HTML build marker, local JavaScript/CSS URLs, and service-worker cache version. Signed-in clients detect that new build within 60 seconds, save current state, activate the new service worker, and restart on the new version. Add new static art paths to `STATIC_CACHE_URLS` only when they are safe to cache as files. Do not add server data endpoints, player data, army orders, reports, or auth URLs to the cache list.
+
+Audio delivery and browser validation:
+
+```powershell
+node .\tools\audio-browser-test-server.js --self-test
+node .\tools\validate-audio-browser.js
+```
+
+The second command requires Playwright to be available to Node. It automatically uses installed Chrome and Edge (or `CROWNLANDS_CHROME_PATH` / `CROWNLANDS_EDGE_PATH`) and checks fresh playback, blocked-autoplay recovery, the first-gesture race, mobile touch recovery, mute persistence, effects while music is muted, background resume, login control placement, and a service-worker-controlled reload with native ranged media responses.
 
 Local PWA test:
 

@@ -44,6 +44,9 @@
   <main class="phone-shell" aria-label="Crownlands real-time medieval conquest prototype">
     <section id="setupScreen" class="setup-screen visible">
       <button id="setupFullscreenBtn" class="hud-btn fullscreen-btn setup-fullscreen-btn" type="button" aria-label="Enter fullscreen" data-fullscreen-toggle><span class="fullscreen-glyph" aria-hidden="true">&#x26F6;</span></button>
+      <button id="loginMusicMuteBtn" class="login-music-mute-btn" type="button" aria-label="Mute music" aria-pressed="false" title="Mute music" data-audio-control>
+        <span data-music-icon aria-hidden="true">&#128266;</span>
+      </button>
       <aside class="login-game-info" aria-label="About Crownlands">
         <span class="login-game-info-eyebrow">Free browser strategy game</span>
         <h2>Build a kingdom across living islands</h2>
@@ -195,7 +198,7 @@
       </section>
 
       <nav class="bottom-nav" aria-label="Game menu">
-        <button id="logBtn" class="nav-btn report-nav-btn" type="button"><img class="nav-icon report-icon" src="assets/report-icon.png?v=20260702-report-icon" alt="" draggable="false" decoding="async" />Reports</button>
+        <button id="logBtn" class="nav-btn report-nav-btn" type="button" data-audio-effect="none"><img class="nav-icon report-icon" src="assets/report-icon.png?v=20260702-report-icon" alt="" draggable="false" decoding="async" />Reports</button>
         <button id="outgoingAttackBtn" class="nav-btn outgoing-attack-btn" type="button" aria-label="Active marches" hidden>
           <span aria-hidden="true">&#10148;</span>
           <strong id="outgoingAttackCount">0</strong>

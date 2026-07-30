@@ -162,6 +162,8 @@ html:fullscreen::backdrop {
 }
 
 .setup-screen {
+  --login-art-width: min(100vw, calc(100dvh * 4 / 3));
+  --login-art-height: min(100dvh, calc(100vw * 3 / 4));
   position: absolute;
   inset: 0;
   z-index: 100;
@@ -187,6 +189,36 @@ html:fullscreen::backdrop {
   border: 1px solid rgba(255, 226, 147, .56);
   box-shadow: 0 10px 24px rgba(0,0,0,.38), inset 0 0 0 1px rgba(255,255,255,.08);
   backdrop-filter: blur(7px);
+}
+.login-music-mute-btn {
+  position: absolute;
+  z-index: 3;
+  left: calc((100vw - var(--login-art-width)) / 2 + max(.75rem, env(safe-area-inset-left)));
+  bottom: calc((100dvh - var(--login-art-height)) / 2 + max(.75rem, env(safe-area-inset-bottom)));
+  display: grid;
+  width: 46px;
+  min-width: 46px;
+  height: 46px;
+  min-height: 46px;
+  place-items: center;
+  padding: 0;
+  color: #fff6d0;
+  border: 1px solid rgba(255, 226, 147, .56);
+  border-radius: 13px;
+  background: linear-gradient(180deg, rgba(13, 35, 59, .84), rgba(5, 12, 23, .9));
+  box-shadow: 0 10px 24px rgba(0,0,0,.38), inset 0 0 0 1px rgba(255,255,255,.08);
+  backdrop-filter: blur(7px);
+  font-size: 1.2rem;
+  line-height: 1;
+}
+.login-music-mute-btn:hover {
+  border-color: rgba(255, 226, 147, .82);
+  filter: brightness(1.08);
+}
+.login-music-mute-btn[aria-pressed="true"] {
+  color: #d9e7ef;
+  border-color: rgba(185, 205, 221, .5);
+  background: linear-gradient(180deg, rgba(31, 42, 55, .88), rgba(8, 13, 21, .92));
 }
 .setup-card {
   width: min(390px, calc(100vw - 2rem));
