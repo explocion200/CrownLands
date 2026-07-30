@@ -3,6 +3,7 @@
 
   const STORAGE_KEY = "crownlands.audio.preferences.v1";
   const MANIFEST_URL = "audio/manifest.json";
+  const BUILD_ID = document.querySelector?.('meta[name="crownlands-build"]')?.content || "audio";
   const MUSIC_BY_STATE = Object.freeze({
     main_menu: "main_menu_loop",
     world_map: "world_map_loop",
@@ -77,7 +78,7 @@
             asset.wav,
           ]
             .filter(Boolean)
-            .map(relativePath => `audio/${String(relativePath).replace(/^\/+/, "")}`)
+            .map(relativePath => `audio/${String(relativePath).replace(/^\/+/, "")}?v=${encodeURIComponent(BUILD_ID)}`)
             .filter((url, index, entries) => entries.indexOf(url) === index);
           this.assets.set(asset.id, {
             ...asset,
