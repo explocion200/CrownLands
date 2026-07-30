@@ -8930,6 +8930,10 @@ function applyServerCityUpdates(cityUpdates = []) {
 function applyServerArmyResult(result = null) {
   if (!result || typeof result !== "object") return false;
   let changed = false;
+  if (result.antiFarmPolicy?.blocked && result.message) {
+    addLog(result.message);
+    showToast(result.message);
+  }
   if (result.globalStats) changed = applyGlobalStatsSnapshot(result.globalStats, { render: false }) || changed;
   if (Array.isArray(result.reports)) changed = mergeServerReports(result.reports) || changed;
   if (Array.isArray(result.cityUpdates)) changed = applyServerCityUpdates(result.cityUpdates) || changed;

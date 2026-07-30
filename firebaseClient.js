@@ -2,6 +2,8 @@
   const FIREBASE_VERSION = "10.12.5";
   const REQUIRED_CONFIG_KEYS = ["apiKey", "authDomain", "projectId", "appId"];
   const ACTIVE_SESSION_STORAGE_KEY = "crownlands-active-session-id";
+  const GAME_INSTALLATION_STORAGE_KEY = "crownlands-game-installation-id-v1";
+  const GAME_INSTALLATION_REFRESH_MS = 6 * 60 * 60 * 1000;
   const PLAYER_NAME_MAX_LENGTH = 18;
   const DEFAULT_GAME_SERVER_ID = "crown-marches";
   const REALM_CONFIG = window.CROWNLANDS_REALM_CONFIG || {};
@@ -32,6 +34,8 @@
     activeSessionId: "",
     activeSessionUnsubscribe: null,
     sessionReplacementInFlight: false,
+    installationRegisteredAtMs: 0,
+    installationRegistrationPromise: null,
   };
 
   function hasRealFirebaseConfig(config) {
@@ -71,6 +75,27 @@
       ? Array.from(window.crypto.getRandomValues(new Uint32Array(4))).map(value => value.toString(16)).join("")
       : Math.random().toString(36).slice(2);
     return `session-${Date.now().toString(36)}-${random}`;
+  }
+
+  function createGameInstallationId() {
+    if (window.crypto?.randomUUID) return `installation-${window.crypto.randomUUID()}`;
+    const random = window.crypto?.getRandomValues
+      ? Array.from(window.crypto.getRandomValues(new Uint32Array(6))).map(value => value.toString(16).padStart(8, "0")).join("")
+      : `${Math.random().toString(36).slice(2)}${Math.random().toString(36).slice(2)}`;
+    return `installation-${Date.now().toString(36)}-${random}`;
+  }
+
+  function getGameInstallationId() {
+    try {
+      let installationId = String(window.localStorage?.getItem(GAME_INSTALLATION_STORAGE_KEY) || "");
+      if (!/^[a-zA-Z0-9_-]{20,160}$/.test(installationId)) {
+        installationId = createGameInstallationId();
+        window.localStorage?.setItem(GAME_INSTALLATION_STORAGE_KEY, installationId);
+      }
+      return installationId;
+    } catch (_) {
+      return createGameInstallationId();
+    }
   }
 
   function getActiveSessionId() {
@@ -239,8 +264,12 @@
             activateCurrentSession("auth-state").catch(error => {
               console.warn("Could not activate current session", error);
             });
+            registerGameInstallation({ force: true }).catch(error => {
+              console.warn("Could not register this Crownlands installation", error);
+            });
           } else if (!client.user?.uid) {
             stopActiveSessionWatcher();
+            client.installationRegisteredAtMs = 0;
           }
           dispatch("auth", { user: client.user });
         });
@@ -311,12 +340,44 @@
     };
   }
 
+  async function registerGameInstallation({ force = false } = {}) {
+    const nowMs = Date.now();
+    if (
+      !force
+      && client.installationRegisteredAtMs
+      && nowMs - client.installationRegisteredAtMs < GAME_INSTALLATION_REFRESH_MS
+    ) {
+      return {
+        ok: true,
+        cached: true,
+        registeredAtMs: client.installationRegisteredAtMs,
+      };
+    }
+    if (client.installationRegistrationPromise) return client.installationRegistrationPromise;
+    client.installationRegistrationPromise = callServerFunction("registerGameInstallation", {
+      installationId: getGameInstallationId(),
+    }).then(result => {
+      client.installationRegisteredAtMs = Math.max(
+        nowMs,
+        Number(result?.registeredAtMs) || 0
+      );
+      return result;
+    }).finally(() => {
+      client.installationRegistrationPromise = null;
+    });
+    return client.installationRegistrationPromise;
+  }
+
   async function joinGameServer(serverId = DEFAULT_GAME_SERVER_ID) {
     return callServerFunction("joinGameServer", createGameServerPayload(serverId));
   }
 
   async function heartbeatGameServer(serverId = DEFAULT_GAME_SERVER_ID) {
-    return callServerFunction("heartbeatGameServer", createGameServerPayload(serverId));
+    const result = await callServerFunction("heartbeatGameServer", createGameServerPayload(serverId));
+    registerGameInstallation().catch(error => {
+      console.warn("Could not refresh this Crownlands installation", error);
+    });
+    return result;
   }
 
   async function leaveGameServer(serverId = DEFAULT_GAME_SERVER_ID) {
@@ -345,7 +406,14 @@
   }
 
   async function sendArmyOrder(payload = {}) {
-    return callServerFunction("sendArmyOrder", payload);
+    const result = await callServerFunction("sendArmyOrder", payload);
+    if (result?.antiFarmPolicy?.blocked) {
+      const error = new Error(result.message || "These kingdoms cannot attack each other right now.");
+      error.code = "functions/failed-precondition";
+      error.details = { antiFarmPolicy: result.antiFarmPolicy };
+      throw error;
+    }
+    return result;
   }
 
   async function createClanRally(payload = {}) {
@@ -361,7 +429,14 @@
   }
 
   async function launchClanRally(payload = {}) {
-    return callServerFunction("launchClanRally", payload);
+    const result = await callServerFunction("launchClanRally", payload);
+    if (result?.antiFarmPolicy?.blocked) {
+      const error = new Error(result.message || "These kingdoms cannot attack each other right now.");
+      error.code = "functions/failed-precondition";
+      error.details = { antiFarmPolicy: result.antiFarmPolicy };
+      throw error;
+    }
+    return result;
   }
 
   async function cancelClanRally(payload = {}) {
@@ -1995,6 +2070,7 @@
     init,
     signInWithGoogle,
     signOut,
+    registerGameInstallation,
     joinGameServer,
     heartbeatGameServer,
     leaveGameServer,
