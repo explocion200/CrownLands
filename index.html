@@ -79,6 +79,8 @@
             </div>
           </section>
           <div class="online-login-actions">
+            <button id="setupAudioBtn" class="ghost-btn audio-enable-btn" type="button" data-audio-enable disabled>Loading Sound...</button>
+            <small id="setupAudioStatus" class="audio-playback-status" role="status">Loading audio files...</small>
             <button id="googleSignInBtn" class="ghost-btn" type="button">Sign in with Google</button>
             <button id="enterKingdomBtn" class="primary-btn" type="button" hidden>Enter Kingdom</button>
             <button id="googleSignOutBtn" class="ghost-btn" type="button" hidden>Sign out</button>
@@ -294,6 +296,8 @@
               <span><strong>Effects Mute</strong><small>Silence interface and battle cues</small></span>
               <input id="effectsMute" type="checkbox" role="switch" />
             </label>
+            <button id="testAudioBtn" class="ghost-btn audio-enable-btn" type="button" data-audio-enable disabled>Loading Sound...</button>
+            <small id="audioStatusText" class="audio-playback-status" role="status">Loading audio files...</small>
           </section>
           <section class="profile-settings-section">
             <div class="profile-section-heading"><span>Settings</span><h3>Notifications</h3></div>
