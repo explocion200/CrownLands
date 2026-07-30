@@ -114,6 +114,9 @@ vm.runInNewContext(source, {
     setItem() {},
   },
   Math,
+  navigator: {
+    userAgent: "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) Mobile/15E148 Safari/604.1",
+  },
   performance: { now: () => 0 },
   requestAnimationFrame: callback => callback(1000),
   window,
@@ -185,7 +188,7 @@ async function run() {
   assert.equal(window.CrownlandsAudio.unlocked, true, "Audio must unlock only after playback succeeds.");
   assert.equal(window.CrownlandsAudio.currentMusic.loop, true, "A single-track playlist must loop continuously.");
   assert.match(
-    window.CrownlandsAudio.currentMusic.url,
+    window.CrownlandsAudio.currentMusic.src || window.CrownlandsAudio.currentMusic.url,
     /\.mp3\?v=test-build$/,
     "Playback must use a versioned MP3 URL that itch serves as audio.",
   );
@@ -203,7 +206,13 @@ async function run() {
     "A late rejection from an earlier mobile event must not relock successful audio.",
   );
 
+  const persistentMobileMusic = window.CrownlandsAudio.currentMusic;
   await window.CrownlandsAudio.setMusicState("world_map", { immediate: true });
+  assert.equal(
+    window.CrownlandsAudio.currentMusic,
+    persistentMobileMusic,
+    "Mobile music transitions must reuse the element authorized by the first player gesture.",
+  );
   const firstMapTrackId = window.CrownlandsAudio.currentMusic.dataset.audioId;
   assert.equal(window.CrownlandsAudio.currentMusic.loop, false, "Tracks in a multi-track playlist must rotate.");
   const firstRotation = scheduledTimeouts.find(entry => !entry.cleared && entry.delay === 9000);
