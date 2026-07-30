@@ -348,6 +348,10 @@ service cloud.firestore {
       allow read, create, update, delete: if false;
     }
 
+    match /realmSecurity/{resetId}/{document=**} {
+      allow read, create, update, delete: if false;
+    }
+
     match /serverConfig/{configId} {
       allow read, create, update, delete: if false;
     }
