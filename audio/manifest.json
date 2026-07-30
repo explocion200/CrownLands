@@ -7,6 +7,7 @@
     {
       "id": "main_menu_loop",
       "category": "music",
+      "music_state": "main_menu",
       "wav": "music/main_menu_loop.wav",
       "ogg": "music/main_menu_loop.ogg",
       "loop": true,
@@ -16,6 +17,7 @@
     {
       "id": "world_map_loop",
       "category": "music",
+      "music_state": "world_map",
       "wav": "music/world_map_loop.wav",
       "ogg": "music/world_map_loop.ogg",
       "loop": true,
@@ -25,6 +27,7 @@
     {
       "id": "battle_loop",
       "category": "music",
+      "music_state": "battle",
       "wav": "music/battle_loop.wav",
       "ogg": "music/battle_loop.ogg",
       "loop": true,
@@ -34,6 +37,7 @@
     {
       "id": "danger_contested_loop",
       "category": "music",
+      "music_state": "danger",
       "wav": "music/danger_contested_loop.wav",
       "ogg": "music/danger_contested_loop.ogg",
       "loop": true,
@@ -43,6 +47,7 @@
     {
       "id": "victory_fanfare",
       "category": "music",
+      "music_state": "victory",
       "wav": "music/victory_fanfare.wav",
       "ogg": "music/victory_fanfare.ogg",
       "loop": false,
