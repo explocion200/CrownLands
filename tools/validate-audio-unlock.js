@@ -112,7 +112,7 @@ async function run() {
 
   assert.equal(playCalls, 1, "The next player gesture must start the requested music.");
   assert.equal(window.CrownlandsAudio.unlocked, true, "Audio must be marked unlocked only after play succeeds.");
-  assert.match(window.CrownlandsAudio.currentMusic.url, /\.wav$/, "Browser playback must use the compatible WAV source.");
+  assert.match(window.CrownlandsAudio.currentMusic.url, /\.mp3$/, "Browser playback must use the broadly compatible MP3 source.");
   assert.equal(listeners.has("pointerdown"), false, "Unlock listeners should be removed after successful playback.");
   assert.equal(listeners.has("touchend"), false, "Touch unlock listeners should be removed after successful playback.");
   assert.equal(listeners.has("keydown"), false, "Keyboard unlock listeners should be removed after successful playback.");

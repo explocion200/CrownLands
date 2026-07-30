@@ -48,6 +48,8 @@
       this.requestedMusicState = "main_menu";
       this.currentMusicState = "";
       this.currentMusic = null;
+      this.lastPlaybackError = "";
+      this.preferredAudioExtension = "mp3";
       this.musicTransitionId = 0;
       this.temporaryMusicId = 0;
       this.lastEffectAt = new Map();
@@ -67,10 +69,20 @@
         const manifest = await response.json();
         for (const asset of Array.isArray(manifest.assets) ? manifest.assets : []) {
           if (!asset?.id || !asset?.ogg) continue;
-          const browserAudioPath = asset.wav || asset.ogg;
+          const browserAudioPath = asset.mp3
+            || (asset.wav ? String(asset.wav).replace(/\.wav$/i, ".mp3") : asset.ogg);
+          const urls = [
+            browserAudioPath,
+            asset.ogg,
+            asset.wav,
+          ]
+            .filter(Boolean)
+            .map(relativePath => `audio/${String(relativePath).replace(/^\/+/, "")}`)
+            .filter((url, index, entries) => entries.indexOf(url) === index);
           this.assets.set(asset.id, {
             ...asset,
-            url: `audio/${String(browserAudioPath).replace(/^\/+/, "")}`,
+            url: urls[0],
+            urls,
           });
         }
         this.ready = this.assets.size > 0;
@@ -135,7 +147,7 @@
       if (!this.currentMusic || this.currentMusic.paused) this.unlocked = false;
       const started = await this.unlock();
       if (!started) {
-        this.updateSoundControls("blocked");
+        this.updateSoundControls(this.lastPlaybackError === "NotAllowedError" ? "blocked" : "incompatible");
         return false;
       }
       this.playEffect("button_click", { cooldownMs: 0 });
@@ -185,6 +197,11 @@
         blocked: {
           label: "Try Sound Again",
           message: "Your browser blocked playback. Tap again to retry.",
+          disabled: false,
+        },
+        incompatible: {
+          label: "Sound Unavailable",
+          message: "This browser could not play the audio format. Refresh after the next game update.",
           disabled: false,
         },
         unavailable: {
@@ -271,24 +288,38 @@
 
       const transitionId = ++this.musicTransitionId;
       const previous = this.currentMusic;
-      const next = new Audio(asset.url);
-      next.dataset.audioId = asset.id;
-      next.preload = "auto";
-      next.loop = asset.loop === true;
-      next.volume = options.immediate ? this.getMusicVolumeFor(asset) : 0;
-      next.addEventListener("ended", () => {
-        if (asset.loop === true || this.currentMusic !== next) return;
-        this.setMusicState("world_map");
-      });
-
-      try {
-        await next.play();
-      } catch (error) {
+      let next = null;
+      let playbackError = null;
+      for (const sourceUrl of asset.urls || [asset.url]) {
+        const candidate = new Audio(sourceUrl);
+        candidate.dataset.audioId = asset.id;
+        candidate.preload = "auto";
+        candidate.loop = asset.loop === true;
+        candidate.volume = options.immediate ? this.getMusicVolumeFor(asset) : 0;
+        candidate.addEventListener("ended", () => {
+          if (asset.loop === true || this.currentMusic !== candidate) return;
+          this.setMusicState("world_map");
+        });
+        try {
+          await candidate.play();
+          next = candidate;
+          asset.url = sourceUrl;
+          this.preferredAudioExtension = sourceUrl.split(".").pop()?.toLowerCase() || "mp3";
+          break;
+        } catch (error) {
+          playbackError = error;
+        }
+      }
+      if (!next) {
+        const error = playbackError;
+        this.lastPlaybackError = "";
+        this.lastPlaybackError = String(error?.name || "PlaybackError");
         if (error?.name !== "NotAllowedError" && error?.name !== "AbortError") {
           console.warn(`Could not play music: ${asset.id}`, error);
         }
         return false;
       }
+      this.lastPlaybackError = "";
 
       this.currentMusic = next;
       this.currentMusicState = normalizedState;
@@ -345,7 +376,8 @@
       if (this.activeEffects.size >= maxActive || sameEffectCount >= maxSameEffect) return false;
 
       this.lastEffectAt.set(id, now);
-      const audio = new Audio(asset.url);
+      const preferredUrl = asset.urls?.find(url => url.toLowerCase().endsWith(`.${this.preferredAudioExtension}`));
+      const audio = new Audio(preferredUrl || asset.url);
       audio.dataset.audioId = id;
       audio.preload = "auto";
       audio.loop = asset.loop === true;
