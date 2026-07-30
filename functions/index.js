@@ -38,6 +38,48 @@ const ONLINE_WORLD_ID = safeConfigString(REALM_CONFIG.worldId, `main-${RESET_GEN
 const TEST_STARTING_GOLD = 100;
 const PLAYER_STARTING_TROOPS = 200;
 const PLAYER_NAME_MAX_LENGTH = 18;
+const PLAYER_FLAG_COLORS = [
+  "#1f5f91",
+  "#b23a35",
+  "#2f7a4a",
+  "#6d4aa2",
+  "#d3a62e",
+  "#202a38",
+  "#d9e2e8",
+  "#8d5a2f",
+];
+const PLAYER_FLAG_PATTERNS = [
+  "split",
+  "diagonal",
+  "band",
+  "cross",
+  "saltire",
+  "chevron",
+  "quartered",
+  "pale",
+  "chief",
+  "bend",
+];
+const PLAYER_FLAG_SYMBOLS = [
+  "crown",
+  "castle",
+  "star",
+  "swords",
+  "fleur",
+  "cross",
+  "sun",
+  "moon",
+  "knight",
+  "tower",
+  "diamond",
+  "spire",
+];
+const DEFAULT_PLAYER_FLAG = Object.freeze({
+  primary: "#1f5f91",
+  secondary: "#d3a62e",
+  pattern: "diagonal",
+  symbol: "crown",
+});
 const MILLION_LORDS_CITY_PRODUCTION_VP_BASE = economyNumber("cityEconomy.productionVpBase", 20);
 const MILLION_LORDS_CITY_PRODUCTION_VP_GROWTH = economyNumber("cityEconomy.productionVpGrowth", 1.115);
 const MILLION_LORDS_PASSIVE_GOLD_PER_CITY_VP = economyNumber("cityEconomy.goldPerProductionVp", 15);
@@ -10531,6 +10573,25 @@ function shuffleStartingCityIds(regionId = "") {
   return values;
 }
 
+function createRandomPlayerFlag() {
+  const primaryOptions = PLAYER_FLAG_COLORS.filter(color => color !== "#d9e2e8");
+  const primary = primaryOptions[crypto.randomInt(0, primaryOptions.length)];
+  const secondaryOptions = PLAYER_FLAG_COLORS.filter(color => color !== primary);
+  const flag = {
+    primary,
+    secondary: secondaryOptions[crypto.randomInt(0, secondaryOptions.length)],
+    pattern: PLAYER_FLAG_PATTERNS[crypto.randomInt(0, PLAYER_FLAG_PATTERNS.length)],
+    symbol: PLAYER_FLAG_SYMBOLS[crypto.randomInt(0, PLAYER_FLAG_SYMBOLS.length)],
+  };
+  const matchesDefault = Object.keys(DEFAULT_PLAYER_FLAG)
+    .every(key => flag[key] === DEFAULT_PLAYER_FLAG[key]);
+  if (matchesDefault) {
+    flag.symbol = PLAYER_FLAG_SYMBOLS.find(symbol => symbol !== DEFAULT_PLAYER_FLAG.symbol)
+      || DEFAULT_PLAYER_FLAG.symbol;
+  }
+  return flag;
+}
+
 function createFreshResetPlayerProfile({
   uid = "",
   previous = {},
@@ -10543,7 +10604,7 @@ function createFreshResetPlayerProfile({
 } = {}) {
   const displayName = safeString(requestData.displayName || authToken.name || previous.displayName, 80);
   const playerName = normalizePlayerName(previous.playerName || requestData.playerName || displayName);
-  const flag = sanitizeJsonValue(previous.flag || requestData.flag || null);
+  const flag = sanitizeJsonValue(previous.flag || createRandomPlayerFlag());
   const profile = {
     uid,
     displayName,

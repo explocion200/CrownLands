@@ -54,6 +54,58 @@ function assert(condition, message) {
   if (!condition) throw new Error(message);
 }
 
+const starterFlagColors = [
+  "#1f5f91",
+  "#b23a35",
+  "#2f7a4a",
+  "#6d4aa2",
+  "#d3a62e",
+  "#202a38",
+  "#d9e2e8",
+  "#8d5a2f",
+];
+const starterFlagPatterns = [
+  "split",
+  "diagonal",
+  "band",
+  "cross",
+  "saltire",
+  "chevron",
+  "quartered",
+  "pale",
+  "chief",
+  "bend",
+];
+const starterFlagSymbols = [
+  "crown",
+  "castle",
+  "star",
+  "swords",
+  "fleur",
+  "cross",
+  "sun",
+  "moon",
+  "knight",
+  "tower",
+  "diamond",
+  "spire",
+];
+const sharedDefaultFlag = {
+  primary: "#1f5f91",
+  secondary: "#d3a62e",
+  pattern: "diagonal",
+  symbol: "crown",
+};
+
+function assertRandomStarterFlag(flag, label) {
+  assert(starterFlagColors.includes(flag?.primary), `${label} has an invalid primary flag color.`);
+  assert(starterFlagColors.includes(flag?.secondary), `${label} has an invalid secondary flag color.`);
+  assert(flag.primary !== flag.secondary, `${label} received matching flag colors.`);
+  assert(starterFlagPatterns.includes(flag?.pattern), `${label} has an invalid flag pattern.`);
+  assert(starterFlagSymbols.includes(flag?.symbol), `${label} has an invalid flag symbol.`);
+  assert(JSON.stringify(flag) !== JSON.stringify(sharedDefaultFlag), `${label} received the shared default flag.`);
+}
+
 async function createAuthUser(index) {
   const email = `reset-player-${index}@example.test`;
   const response = await fetch(`http://${authHost}/identitytoolkit.googleapis.com/v1/accounts:signUp?key=fake-api-key`, {
@@ -302,6 +354,17 @@ async function main() {
   assert(!profile.clanId && !profile.battleReports?.length, "Clan or report progression survived the reset.");
   assert(Object.values(profile.shopItems || {}).every(count => count === 0), "Items survived the reset.");
   assert(profile.activeSession?.id === "preserved-session", "Technical session state was not preserved.");
+  const newPlayerProfiles = await Promise.all(users.slice(1).map(async user => (
+    (await db.doc(`players/${user.uid}`).get()).data() || {}
+  )));
+  const newPlayerFlags = newPlayerProfiles.map((newProfile, index) => {
+    assertRandomStarterFlag(newProfile.flag, `New player ${index + 2}`);
+    return JSON.stringify(newProfile.flag);
+  });
+  assert(
+    new Set(newPlayerFlags).size > 1,
+    "Concurrent new players all received the same generated flag."
+  );
 
   const starterRegions = ["region_11", "region_12", "region_13", "region_14", "region_15"];
   const islandSnapshots = await Promise.all(starterRegions.map(regionId => (
