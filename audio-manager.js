@@ -25,6 +25,11 @@
     return Number.isFinite(number) ? Math.min(1, Math.max(0, number)) : fallback;
   }
 
+  function needsPersistentMusicElement() {
+    const userAgent = typeof navigator === "undefined" ? "" : String(navigator.userAgent || "");
+    return /Android|iPad|iPhone|iPod|Mobile/i.test(userAgent);
+  }
+
   function loadPreferences() {
     try {
       const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
@@ -51,6 +56,7 @@
       this.requestedMusicState = "main_menu";
       this.currentMusicState = "";
       this.currentMusic = null;
+      this.persistentMusic = needsPersistentMusicElement() ? this.createPersistentMusicElement() : null;
       this.lastPlaybackError = "";
       this.preferredAudioExtension = "mp3";
       this.musicTransitionId = 0;
@@ -63,6 +69,17 @@
       this.installUnlockListeners();
       this.installUiSounds();
       this.bindSettingsUi();
+    }
+
+    createPersistentMusicElement() {
+      const audio = new Audio();
+      audio.preload = "metadata";
+      audio.playsInline = true;
+      audio.hidden = true;
+      audio.setAttribute?.("aria-hidden", "true");
+      audio.setAttribute?.("playsinline", "");
+      document.body?.appendChild?.(audio);
+      return audio;
     }
 
     async loadManifest() {
@@ -246,12 +263,17 @@
       let next = null;
       let playbackError = null;
       for (const sourceUrl of asset.urls || [asset.url]) {
-        const candidate = new Audio(sourceUrl);
+        const candidate = this.persistentMusic || new Audio(sourceUrl);
+        if (this.persistentMusic) {
+          candidate.pause();
+          candidate.src = sourceUrl;
+          candidate.load?.();
+        }
         candidate.dataset.audioId = asset.id;
         candidate.preload = "auto";
         candidate.loop = playlist.length === 1 && asset.loop === true;
         candidate.volume = options.immediate ? this.getMusicVolumeFor(asset) : 0;
-        candidate.addEventListener("ended", () => {
+        const handleEnded = () => {
           if (candidate.loop || this.currentMusic !== candidate) return;
           if (normalizedState === "victory") {
             this.setMusicState("world_map");
@@ -262,9 +284,11 @@
             forceNext: true,
             fadeMs,
           });
-        });
+        };
+        if (this.persistentMusic) candidate.onended = handleEnded;
+        else candidate.addEventListener("ended", handleEnded);
         try {
-          await candidate.play();
+          await Promise.resolve(candidate.play());
           next = candidate;
           asset.url = sourceUrl;
           this.preferredAudioExtension = sourceUrl.split(".").pop()?.toLowerCase() || "mp3";
@@ -285,8 +309,10 @@
         return false;
       }
       if (transitionId !== this.musicTransitionId) {
-        next.pause();
-        next.currentTime = 0;
+        if (next !== this.persistentMusic) {
+          next.pause();
+          next.currentTime = 0;
+        }
         return false;
       }
       this.lastPlaybackError = "";
@@ -295,8 +321,9 @@
       this.currentMusicState = normalizedState;
       this.lastMusicAssetByState.set(normalizedState, asset.id);
       this.schedulePlaylistTransition(next, normalizedState, playlist.length, fadeMs);
-      if (options.immediate) {
-        if (previous) {
+      if (options.immediate || previous === next) {
+        next.volume = this.getMusicVolumeFor(asset);
+        if (previous && previous !== next) {
           previous.pause();
           previous.currentTime = 0;
         }
