@@ -38,6 +38,7 @@ const ROOT_STATIC_FILES = new Set([
   "/sitemap.xml",
   "/site-info.css",
   "/support.html",
+  "/audio-manager.js",
   "/firebaseClient.js",
   "/game.js",
   "/index.html",
@@ -53,6 +54,9 @@ const MIME_TYPES = new Map([
   [".css", "text/css; charset=utf-8"],
   [".js", "text/javascript; charset=utf-8"],
   [".json", "application/json; charset=utf-8"],
+  [".mp3", "audio/mpeg"],
+  [".ogg", "audio/ogg"],
+  [".wav", "audio/wav"],
   [".png", "image/png"],
   [".jpg", "image/jpeg"],
   [".jpeg", "image/jpeg"],
@@ -1206,7 +1210,7 @@ function createServer() {
         return;
       }
 
-      if (pathname.startsWith("/assets/") || ROOT_STATIC_FILES.has(pathname)) {
+      if (pathname.startsWith("/assets/") || pathname.startsWith("/audio/") || ROOT_STATIC_FILES.has(pathname)) {
         const filePath = safeJoin(ROOT_DIR, pathname);
         if (!filePath) {
           sendText(response, 403, "Forbidden");

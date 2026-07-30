@@ -2591,6 +2591,7 @@ let onlineCrownCitadelUnsubscribe = null;
 let onlineCrownCitadelSnapshot = null;
 let onlineCrownCitadelLoaded = false;
 let appliedServerReportIds = new Set();
+let audioServerReportsHydrated = false;
 let resolvingOnlineArmyIds = new Set();
 let resolvedOnlineArmyIds = new Set();
 let onlinePresence = [];
@@ -2918,13 +2919,20 @@ function playRewardSound(rewardType = "", options = {}) {
   return playGameSound("gold_pickup", options);
 }
 
-function syncWorldMusicState() {
-  if (setupScreen?.classList.contains("visible") || !state) {
-    crownlandsAudio?.setMusicState("main_menu");
-    return;
-  }
+function rejectGameAction(message, options = {}) {
+  playGameSound("invalid_action", { cooldownMs: 140, ...options });
+  if (message) showToast(message);
+  return false;
+}
+
+function getAmbientMusicState() {
+  if (setupScreen?.classList.contains("visible") || !state) return "main_menu";
   const hasContestedCamp = [...onlineCampStates.values()].some(camp => camp?.state === "contested");
-  crownlandsAudio?.setMusicState(getIncomingAttacks().length || hasContestedCamp ? "danger" : "world_map");
+  return getIncomingAttacks().length || hasContestedCamp ? "danger" : "world_map";
+}
+
+function syncWorldMusicState() {
+  crownlandsAudio?.setMusicState(getAmbientMusicState());
 }
 
 function getRegionById(regionId) {
@@ -8158,16 +8166,16 @@ function scoutTarget(target) {
   const campTarget = isRewardCampTarget(target);
   const mainCityBlockReason = campTarget ? "" : getMainCityScoutBlockReason(target, "player");
   if (mainCityBlockReason) {
-    showToast(mainCityBlockReason);
+    rejectGameAction(mainCityBlockReason);
     return;
   }
   if (getPendingScoutMission(target.id)) {
-    showToast(`A scout is already traveling to ${target.name}`);
+    rejectGameAction(`A scout is already traveling to ${target.name}`);
     return;
   }
   const sourceOption = findNearestScoutSource(target);
   if (!sourceOption) {
-    showToast("No owned city with a troop can reach this target.");
+    rejectGameAction("No owned city with a troop can reach this target.");
     return;
   }
 
@@ -8186,7 +8194,7 @@ function launchScoutMission(source, target, route) {
   const campTarget = isRewardCampTarget(target);
   const mainCityBlockReason = campTarget ? "" : getMainCityScoutBlockReason(target, "player");
   if (mainCityBlockReason) {
-    showToast(mainCityBlockReason);
+    rejectGameAction(mainCityBlockReason);
     return null;
   }
   if (!canUseOnlineArmyOrders()) return null;
@@ -8212,7 +8220,7 @@ function launchScoutMission(source, target, route) {
   if (usesServerArmyAuthority()) {
     const launchKey = getServerArmyLaunchKey(source.id, target.id, "scout");
     if (pendingServerArmyLaunchKeys.has(launchKey)) {
-      showToast(`A scout order from ${source.name} to ${target.name} is already being sent.`);
+      rejectGameAction(`A scout order from ${source.name} to ${target.name} is already being sent.`);
       return null;
     }
     pendingServerArmyLaunchKeys.add(launchKey);
@@ -8272,7 +8280,7 @@ function toggleScoutNearby(cityId) {
   if (source.troops < 1) {
     scoutNearbySourceId = null;
     renderAll();
-    showToast(`${source.name} needs at least 1 soldier to send scouts.`);
+    rejectGameAction(`${source.name} needs at least 1 soldier to send scouts.`);
     return;
   }
 
@@ -8291,15 +8299,15 @@ function toggleScoutNearby(cityId) {
   if (!options.length) {
     scoutNearbySourceId = null;
     renderAll();
-    showToast("No reachable cities remain inside this scout radius.");
+    rejectGameAction("No reachable cities remain inside this scout radius.");
     return;
   }
   if (state.gold < SCOUT_NEARBY_COST) {
-    showToast(`Scout Nearby costs ${formatNumber(SCOUT_NEARBY_COST)} gold.`);
+    rejectGameAction(`Scout Nearby costs ${formatNumber(SCOUT_NEARBY_COST)} gold.`);
     return;
   }
   if (source.troops < options.length) {
-    showToast(`${source.name} needs ${formatNumber(options.length)} troops to scout every highlighted city.`);
+    rejectGameAction(`${source.name} needs ${formatNumber(options.length)} troops to scout every highlighted city.`);
     return;
   }
 
@@ -8362,11 +8370,11 @@ function toggleRegroup(cityId) {
   if (!options.length) {
     regroupSourceId = null;
     renderAll();
-    showToast("No nearby owned cities with troops can regroup here.");
+    rejectGameAction("No nearby owned cities with troops can regroup here.");
     return;
   }
   if (state.gold < REGROUP_COST) {
-    showToast(`Regroup costs ${formatNumber(REGROUP_COST)} gold.`);
+    rejectGameAction(`Regroup costs ${formatNumber(REGROUP_COST)} gold.`);
     return;
   }
 
@@ -8386,7 +8394,7 @@ function toggleRegroup(cityId) {
   if (!launched) {
     state.gold += REGROUP_COST;
     renderAll();
-    showToast("No troops could regroup right now.");
+    rejectGameAction("No troops could regroup right now.");
     return;
   }
 
@@ -8496,6 +8504,7 @@ function completeScoutMission(attack, target) {
       summary: `Scout reached ${target.name}, now under your control. ${formatNumber(joined)} scout joined the garrison.`,
     });
     addLog(`The scout joined your garrison at ${target.name}.`);
+    playGameSound("notification", { cooldownMs: 500, regionId: getCityRegionId(target) });
     showToast(`Scout arrived at ${target.name}`);
     return;
   }
@@ -8519,6 +8528,7 @@ function completeScoutMission(attack, target) {
     summary: `Scout revealed ${formatNumber(report.troops)} troops at ${target.name}.`,
   });
   addLog(`Scouts reported ${formatNumber(target.troops)} troops stationed at ${target.name}.`);
+  playGameSound("notification", { cooldownMs: 500, regionId: getCityRegionId(target) });
   showToast(`Scout report received from ${target.name}`);
 }
 
@@ -8621,6 +8631,7 @@ function getNeutralCaptureBlockReason(target, owner = "player", excludeAttackId 
 }
 
 function showNeutralCaptureLimitModal(message) {
+  playGameSound("invalid_action", { cooldownMs: 140 });
   const status = neutralCaptureStatus();
   modalTitle.textContent = "Neutral expansion blocked";
   modalBody.innerHTML = `
@@ -8691,7 +8702,7 @@ function canUseOnlineArmyOrders() {
   if (!isOnlineWorldActive()) return true;
   if (usesServerArmyAuthority()) return true;
   onlineLastError = "Online army orders require the Crownlands server.";
-  showToast("Online army orders need the server connection. Try again after reconnecting.");
+  rejectGameAction("Online army orders need the server connection. Try again after reconnecting.");
   return false;
 }
 
@@ -8748,28 +8759,35 @@ function mergeServerScoutReport(rawReport = null) {
   return true;
 }
 
-function mergeServerReports(reports = []) {
-  if (!state || !Array.isArray(reports) || !reports.length) return false;
+function mergeServerReports(reports = [], options = {}) {
+  if (!state || !Array.isArray(reports)) return false;
+  const shouldNotify = options.notify === true;
+  if (!reports.length) return false;
   let changed = false;
+  let addedReport = false;
   state.battleReports = normalizeBattleReports(state.battleReports);
   state.scoutReports = normalizeScoutReports(state.scoutReports);
   const existingIds = new Set(state.battleReports.map(report => report.id));
   for (const rawReport of reports) {
-    changed = mergeServerScoutReport(rawReport) || changed;
+    const scoutChanged = mergeServerScoutReport(rawReport);
+    changed = scoutChanged || changed;
+    addedReport = scoutChanged || addedReport;
     const normalized = normalizeServerBattleReport(rawReport);
     if (!normalized || existingIds.has(normalized.id) || appliedServerReportIds.has(normalized.id)) continue;
     state.battleReports.push(normalized);
     existingIds.add(normalized.id);
     appliedServerReportIds.add(normalized.id);
     changed = true;
+    addedReport = true;
   }
   if (changed) {
     state.battleReports = normalizeBattleReports(state.battleReports);
     if (state.battleReports.length > 120) state.battleReports = state.battleReports.slice(-120);
     saveGame();
-    if (modal.open && modal.classList.contains("battle-report-modal")) showLogModal();
+    if (modal.open && modal.classList.contains("battle-report-modal")) showLogModal({ silentAudio: true });
     renderHud();
   }
+  if (shouldNotify && addedReport) playGameSound("notification", { cooldownMs: 500, allowCrossMap: true });
   return changed;
 }
 
@@ -9000,10 +9018,10 @@ function applyServerArmyResult(result = null) {
   let changed = false;
   if (result.antiFarmPolicy?.blocked && result.message) {
     addLog(result.message);
-    showToast(result.message);
+    rejectGameAction(result.message);
   }
   if (result.globalStats) changed = applyGlobalStatsSnapshot(result.globalStats, { render: false }) || changed;
-  if (Array.isArray(result.reports)) changed = mergeServerReports(result.reports) || changed;
+  if (Array.isArray(result.reports)) changed = mergeServerReports(result.reports, { notify: false }) || changed;
   if (Array.isArray(result.cityUpdates)) changed = applyServerCityUpdates(result.cityUpdates) || changed;
   const newestPlayerReport = Array.isArray(result.reports)
     ? [...result.reports].reverse().find(report => report?.type === "attack" || report?.type === "defense")
@@ -9020,18 +9038,43 @@ function applyServerArmyResult(result = null) {
     || audioTarget?.startPool
     || "";
   const audioOnActiveMap = !audioRegionId || normalizeRegionId(audioRegionId) === getActiveMapRegionId();
+  const normalizedCampUpdate = result.campUpdate?.id
+    ? normalizeOnlineCampState({
+        ...(onlineCampStates.get(result.campUpdate.id) || {}),
+        ...result.campUpdate,
+      })
+    : null;
+  if (normalizedCampUpdate) {
+    onlineCampStates.set(normalizedCampUpdate.id, normalizedCampUpdate);
+    if (normalizedCampUpdate.holderUid === getCurrentOnlineUid()) {
+      onlineHeldCampStates.set(normalizedCampUpdate.id, normalizedCampUpdate);
+    } else {
+      onlineHeldCampStates.delete(normalizedCampUpdate.id);
+    }
+    cityRenderSignature = "";
+    changed = true;
+  }
+  if (result.kind === "scout" && result.reports?.some(report => report?.type === "scout")) {
+    playGameSound("notification", { cooldownMs: 500, regionId: audioRegionId });
+  }
   if (result.kind && result.kind !== "scout") {
     playGameSound("army_arrival", { cooldownMs: 80, regionId: audioRegionId });
     if (result.kind === "attack" && audioOnActiveMap) {
-      crownlandsAudio?.pulseMusic("battle", 3500, getIncomingAttacks().length ? "danger" : "world_map");
-      crownlandsAudio?.playSwordClash();
+      crownlandsAudio?.pulseMusic("battle", 3500, getAmbientMusicState());
+      if (isStronghold(audioTarget)) {
+        playGameSound("siege_impact", { regionId: audioRegionId });
+      } else {
+        crownlandsAudio?.playSwordClash();
+      }
     }
   }
   if (newestPlayerReport?.type === "attack" && newestPlayerReport.outcome === "victory") {
     const capturedCity = cityById(newestPlayerReport.cityId);
     if (isStronghold(capturedCity)) {
       playGameSound("stronghold_captured", { regionId: audioRegionId });
-      if (audioOnActiveMap) crownlandsAudio?.setMusicState("victory");
+      if (audioOnActiveMap) {
+        crownlandsAudio?.setMusicState("victory", { returnState: getAmbientMusicState() });
+      }
     } else {
       playGameSound("city_captured", { regionId: audioRegionId });
     }
@@ -9041,20 +9084,16 @@ function applyServerArmyResult(result = null) {
   ) {
     playGameSound("battle_defeat", { regionId: audioRegionId });
   }
-  if (result.campUpdate?.id) {
-    const normalized = normalizeOnlineCampState({ ...(onlineCampStates.get(result.campUpdate.id) || {}), ...result.campUpdate });
-    if (normalized) {
-      onlineCampStates.set(normalized.id, normalized);
-      if (normalized.holderUid === getCurrentOnlineUid()) onlineHeldCampStates.set(normalized.id, normalized);
-      else onlineHeldCampStates.delete(normalized.id);
-      cityRenderSignature = "";
-      changed = true;
-      if (result.targetType === "camp" && result.kind === "attack" && result.outcome === "victory" && normalized.holderUid === getCurrentOnlineUid()) {
-        const config = getRewardCampConfig(normalized);
-        playGameSound("camp_captured", { regionId: normalized.regionId || audioRegionId });
-        showToast(`${config?.name || normalized.name} captured. Hold for ${Math.floor((config?.holdSeconds || 0) / 60)} minutes to claim ${formatNumber(config?.baseReward || 0)} ${config?.rewardLabel || "reward"}.`);
-      }
-    }
+  if (
+    normalizedCampUpdate
+    && result.targetType === "camp"
+    && result.kind === "attack"
+    && result.outcome === "victory"
+    && normalizedCampUpdate.holderUid === getCurrentOnlineUid()
+  ) {
+    const config = getRewardCampConfig(normalizedCampUpdate);
+    playGameSound("camp_captured", { regionId: normalizedCampUpdate.regionId || audioRegionId });
+    showToast(`${config?.name || normalizedCampUpdate.name} captured. Hold for ${Math.floor((config?.holdSeconds || 0) / 60)} minutes to claim ${formatNumber(config?.baseReward || 0)} ${config?.rewardLabel || "reward"}.`);
   }
   if (result.currentUser) {
     const nextLevel = Math.max(1, Math.floor(Number(result.currentUser?.character?.level) || 1));
@@ -11752,6 +11791,7 @@ function disconnectOnlineWorld() {
   clearOnlineGlobalStatsWatcher();
   clearOnlineCrownCitadelWatcher();
   appliedServerReportIds = new Set();
+  audioServerReportsHydrated = false;
   lastAuthoritativeProfileRevisionMs = 0;
   lastReportDrivenEconomyRefreshAtMs = 0;
   onlinePresence = [];
@@ -13656,7 +13696,7 @@ async function loadServerReportsOnce() {
   if (!state || !api?.loadServerReports || !api?.isSignedIn?.()) return false;
   try {
     const reports = await withTimeout(api.loadServerReports(120), 5000, "Server reports are taking too long.");
-    return mergeServerReports(reports);
+    return mergeServerReports(reports, { notify: audioServerReportsHydrated });
   } catch (error) {
     onlineLastError = error?.message || String(error);
     console.warn("Could not load server reports", error);
@@ -13670,7 +13710,8 @@ function subscribeOnlineServerReports() {
   if (!state || !api?.subscribeServerReports || !api?.isSignedIn?.()) return;
   onlineServerReportsUnsubscribe = api.subscribeServerReports({
     onReports: reports => {
-      const changed = mergeServerReports(reports);
+      const changed = mergeServerReports(reports, { notify: audioServerReportsHydrated });
+      audioServerReportsHydrated = true;
       if (!changed || !usesServerEconomyAuthority()) return;
       const newestReportAtMs = (Array.isArray(reports) ? reports : []).reduce((latest, report) => (
         Math.max(latest, normalizeTimestampMs(report?.createdAtMs) || timestampToMs(report?.createdAt))
@@ -14229,7 +14270,7 @@ async function startFromInput(forceFresh = false) {
     const connected = await setupOnlineWorld();
     if (!connected) throw new Error(onlineLastError || "Online city setup did not finish.");
     setupScreen.classList.remove("visible");
-    crownlandsAudio?.setMusicState("world_map");
+    syncWorldMusicState();
     clearSelection(false);
     rememberOwnedAttackSource(state.mainCityId || playerCities()[0]?.id);
     saveGame();
@@ -16341,10 +16382,23 @@ function getMainCityScoutBlockReason(target, scoutOwner = "player", scoutOwnerUi
 function launchAttack(sourceId, targetId, percent, owner, exactTroops = null, options = {}) {
   const source = cityById(sourceId);
   const target = getArmyTargetById(targetId);
-  if (!source || !target || isGamePausedByOutcome()) return false;
-  if (source.owner !== owner) return false;
-  if (source.id === target.id) return false;
-  if (source.troops < 1) return false;
+  if (isGamePausedByOutcome()) return false;
+  if (!source || !target) {
+    if (owner === "player") rejectGameAction("Order canceled. The selected route is no longer available.");
+    return false;
+  }
+  if (source.owner !== owner) {
+    if (owner === "player") rejectGameAction("Orders can only leave from one of your holdings.");
+    return false;
+  }
+  if (source.id === target.id) {
+    if (owner === "player") rejectGameAction("Choose a different destination.");
+    return false;
+  }
+  if (source.troops < 1) {
+    if (owner === "player") rejectGameAction("No troops available to send.");
+    return false;
+  }
   if (owner === "player" && !canUseOnlineArmyOrders()) return false;
 
   const requestedKind = options.kind === "reinforce" ? "reinforce" : "";
@@ -16356,24 +16410,24 @@ function launchAttack(sourceId, targetId, percent, owner, exactTroops = null, op
   const campTarget = isRewardCampTarget(target);
   if (kind === "reinforce") {
     if (!usesServerArmyAuthority() || !isClanAllyCity(target)) {
-      if (owner === "player") showToast("Clan reinforcements require a current allied holding.");
+      if (owner === "player") rejectGameAction("Clan reinforcements require a current allied holding.");
       return false;
     }
     const reinforcementBlockReason = getClanReinforcementBlockReason(target);
     if (reinforcementBlockReason) {
-      if (owner === "player") showToast(reinforcementBlockReason);
+      if (owner === "player") rejectGameAction(reinforcementBlockReason);
       return false;
     }
   }
   const mainCityBlockReason = kind === "attack" && !campTarget ? getMainCityAttackBlockReason(target, owner) : "";
   if (mainCityBlockReason) {
-    if (owner === "player") showToast(mainCityBlockReason);
+    if (owner === "player") rejectGameAction(mainCityBlockReason);
     return false;
   }
 
   const shieldBlockReason = kind === "attack" && !campTarget ? getPeaceShieldAttackBlockReason(target, owner) : "";
   if (shieldBlockReason) {
-    if (owner === "player") showToast(shieldBlockReason);
+    if (owner === "player") rejectGameAction(shieldBlockReason);
     return false;
   }
 
@@ -16385,7 +16439,7 @@ function launchAttack(sourceId, targetId, percent, owner, exactTroops = null, op
 
   const route = options.route?.points?.length ? cloneRoute(options.route) : findRoute(source, target);
   if (!route || !route.points.length) {
-    if (owner === "player") showToast("No land route found around the terrain.");
+    if (owner === "player") rejectGameAction("No land route found around the terrain.");
     return false;
   }
 
@@ -16442,7 +16496,7 @@ function launchAttack(sourceId, targetId, percent, owner, exactTroops = null, op
   if (owner === "player" && usesServerArmyAuthority()) {
     const launchKey = getServerArmyLaunchKey(source.id, target.id, kind);
     if (pendingServerArmyLaunchKeys.has(launchKey)) {
-      showToast(`An order from ${source.name} to ${target.name} is already being sent.`);
+      rejectGameAction(`An order from ${source.name} to ${target.name} is already being sent.`);
       return false;
     }
     pendingServerArmyLaunchKeys.add(launchKey);
@@ -16587,8 +16641,12 @@ function resolveAttack(attack) {
   }
 
   if (attackOnActiveMap) {
-    crownlandsAudio?.pulseMusic("battle", 3500, getIncomingAttacks().length ? "danger" : "world_map");
-    crownlandsAudio?.playSwordClash();
+    crownlandsAudio?.pulseMusic("battle", 3500, getAmbientMusicState());
+    if (isStronghold(target)) {
+      playGameSound("siege_impact", { regionId: attackRegionId });
+    } else {
+      crownlandsAudio?.playSwordClash();
+    }
   }
   const attackOwnerIdentity = attack.ownerUid ? resolvePlayerIdentityForUid(attack.ownerUid, attack) : null;
   const attackerName = attack.owner === "player" ? "You" : attackOwnerIdentity?.displayName || attack.ownerName || "Enemy";
@@ -16899,7 +16957,9 @@ function resolveAttack(attack) {
       showToast(`Captured ${target.name}: +${formatNumber(xpAward)} XP`);
       if (isStronghold(target)) {
         playGameSound("stronghold_captured", { regionId: attackRegionId });
-        if (attackOnActiveMap) crownlandsAudio?.setMusicState("victory");
+        if (attackOnActiveMap) {
+          crownlandsAudio?.setMusicState("victory", { returnState: getAmbientMusicState() });
+        }
       } else {
         playGameSound("city_captured", { regionId: attackRegionId });
       }
@@ -20231,7 +20291,7 @@ function renderSelectedForeignWheel(city) {
       <span class="wheel-icon" aria-hidden="true">i</span>
     </button>
     ${report ? `
-      <button class="city-wheel-action wheel-report" type="button" aria-label="Open scout report for ${escapeHtml(city.name)}">
+      <button class="city-wheel-action wheel-report" type="button" aria-label="Open scout report for ${escapeHtml(city.name)}" data-audio-effect="none">
         <span class="wheel-icon" aria-hidden="true">&#128221;</span>
         <span class="wheel-action-name">Report</span>
       </button>
@@ -20300,7 +20360,7 @@ function renderSelectedStrongholdWheel(stronghold) {
       </button>
     ` : ""}
     ${report ? `
-      <button class="gold-camp-wheel-action camp-report-action" type="button" aria-label="Open scout report for ${escapeHtml(stronghold.name)}">
+      <button class="gold-camp-wheel-action camp-report-action" type="button" aria-label="Open scout report for ${escapeHtml(stronghold.name)}" data-audio-effect="none">
         <span aria-hidden="true">&#128221;</span>
         <strong>Report</strong>
       </button>
@@ -20389,7 +20449,7 @@ function renderSelectedRewardCampWheel(camp) {
       </button>
     ` : ""}
     ${report ? `
-      <button class="gold-camp-wheel-action camp-report-action" type="button" aria-label="Open scout report for ${escapeHtml(camp.name)}">
+      <button class="gold-camp-wheel-action camp-report-action" type="button" aria-label="Open scout report for ${escapeHtml(camp.name)}" data-audio-effect="none">
         <span aria-hidden="true">&#128221;</span>
         <strong>Report</strong>
       </button>
@@ -21001,10 +21061,11 @@ function showScoutReportModal(cityId) {
   const city = getArmyTargetById(cityId);
   const report = getScoutReport(cityId);
   if (!city || !report) {
-    showToast("That scout report is no longer available.");
+    rejectGameAction("That scout report is no longer available.");
     if (state) renderAll();
     return;
   }
+  playGameSound("parchment_open", { cooldownMs: 120, regionId: getCityRegionId(city) });
   const remaining = Math.max(0, Math.ceil(report.expiresAt - state.gameSeconds));
   const age = Math.max(0, Math.floor(state.gameSeconds - report.scoutedAt));
   const reportedOwner = OWNER[report.owner] ? report.owner : city.owner;
@@ -21263,12 +21324,12 @@ function attackForeignCity(cityId) {
   }
   const mainCityBlockReason = getMainCityAttackBlockReason(target, "player");
   if (mainCityBlockReason) {
-    showToast(mainCityBlockReason);
+    rejectGameAction(mainCityBlockReason);
     return;
   }
   const shieldBlockReason = getPeaceShieldAttackBlockReason(target, "player");
   if (shieldBlockReason) {
-    showToast(shieldBlockReason);
+    rejectGameAction(shieldBlockReason);
     return;
   }
   const neutralBlockReason = getNeutralCaptureBlockReason(target, "player");
@@ -21279,7 +21340,7 @@ function attackForeignCity(cityId) {
   const sourceOption = findPreferredAttackSource(target);
   if (!sourceOption) {
     const rememberedSource = getLastSelectedOwnedAttackCity();
-    showToast(rememberedSource
+    rejectGameAction(rememberedSource
       ? `${rememberedSource.name} needs troops and a portal connection to attack this target.`
       : "No owned city with troops has a portal connection to this target.");
     return;
@@ -21786,6 +21847,26 @@ function updatePerformancePanel(now = performance.now()) {
   const activeRegionId = getActiveMapRegionId();
   const visibleCityMarkers = cityLayer?.querySelectorAll(".city-node").length || 0;
   const visibleCampMarkers = cityLayer?.querySelectorAll(".camp-node").length || 0;
+  const audioDebug = crownlandsAudio?.getDebugState?.() || null;
+  const audioStateText = audioDebug
+    ? `${audioDebug.requestedMusicState || "none"} → ${audioDebug.currentMusicState || "none"} · ${audioDebug.paused ? "paused" : "playing"}`
+    : "unavailable";
+  const audioUnlockText = audioDebug
+    ? `music ${audioDebug.musicUnlocked ? "yes" : "no"}, effects ${audioDebug.effectsUnlocked ? "yes" : "no"} (${audioDebug.effectsEngine || "unknown"}:${audioDebug.effectsContextState || "unknown"}), pending ${audioDebug.unlockInFlight || audioDebug.effectsUnlockInFlight ? "yes" : "no"}`
+    : "unavailable";
+  const audioSourceText = audioDebug
+    ? `${audioDebug.currentAssetId || "none"} · source ${Number(audioDebug.currentSourceIndex) >= 0 ? Number(audioDebug.currentSourceIndex) + 1 : "none"} · ${audioDebug.readyState ?? "?"}/${audioDebug.networkState ?? "?"}`
+    : "unavailable";
+  const musicAudioError = audioDebug?.lastPlaybackError
+    ? String(audioDebug.lastPlaybackError?.message || audioDebug.lastPlaybackError)
+    : "";
+  const effectsAudioError = audioDebug?.lastEffectsError
+    ? String(audioDebug.lastEffectsError?.message || audioDebug.lastEffectsError)
+    : "";
+  const audioErrorText = [
+    musicAudioError ? `music ${musicAudioError}` : "",
+    effectsAudioError ? `effects ${effectsAudioError}` : "",
+  ].filter(Boolean).join(" · ") || "none";
   panel.hidden = false;
   panel.innerHTML = `
     <strong>Crownlands Perf</strong>
@@ -21797,6 +21878,10 @@ function updatePerformancePanel(now = performance.now()) {
     <span>Loaded images: ${formatNumber(loadedImageAssets.size)}</span>
     <span>Neighbors: ${escapeHtml(getNeighborPreloadDebugText(activeRegionId))}</span>
     <span>SW: ${escapeHtml(getServiceWorkerDebugStatus())}</span>
+    <span>Audio: ${escapeHtml(audioStateText)}</span>
+    <span>Audio unlock: ${escapeHtml(audioUnlockText)}</span>
+    <span>Audio source: ${escapeHtml(audioSourceText)}</span>
+    <span>Audio error: ${escapeHtml(audioErrorText)}</span>
     <small>F8 toggles this panel</small>
   `;
 }
@@ -21934,7 +22019,7 @@ function selectCity(id) {
 
   if (sendMode && source) {
     if (clicked.id === source.id) {
-      showToast("Choose a different destination.");
+      rejectGameAction("Choose a different destination.");
       return;
     }
     if (clicked.owner === "neutral") {
@@ -21952,7 +22037,7 @@ function selectCity(id) {
       sendMode = false;
       selectedTargetId = null;
       renderSelectionChangeNow();
-      showToast(mainCityBlockReason);
+      rejectGameAction(mainCityBlockReason);
       return;
     }
     const shieldBlockReason = getPeaceShieldAttackBlockReason(clicked, "player");
@@ -21960,7 +22045,7 @@ function selectCity(id) {
       sendMode = false;
       selectedTargetId = null;
       renderSelectionChangeNow();
-      showToast(shieldBlockReason);
+      rejectGameAction(shieldBlockReason);
       return;
     }
     selectedTargetId = clicked.id;
@@ -21989,7 +22074,7 @@ function beginSendMode(sourceId) {
   const source = cityById(sourceId);
   if (!source || source.owner !== "player") return;
   if (source.troops < 1) {
-    showToast("No troops available to send.");
+    rejectGameAction("No troops available to send.");
     return;
   }
   selectedSourceId = source.id;
@@ -22042,7 +22127,7 @@ async function loadAttackProtectionPreview(source, target) {
 async function showTroopSliderModalAsync(source, target, options = {}) {
   if (!source || !target || source.owner !== "player" || source.id === target.id) return;
   if (source.troops < 1) {
-    showToast("No troops available to send.");
+    rejectGameAction("No troops available to send.");
     cancelSendMode();
     return;
   }
@@ -22062,14 +22147,14 @@ async function showTroopSliderModalAsync(source, target, options = {}) {
   }
   const reinforcementBlockReason = isReinforcement ? getClanReinforcementBlockReason(target) : "";
   if (reinforcementBlockReason) {
-    showToast(reinforcementBlockReason);
+    rejectGameAction(reinforcementBlockReason);
     cancelSendMode();
     if (modal.open) modal.close();
     return;
   }
   const shieldBlockReason = orderKind !== "attack" || campTarget ? "" : getPeaceShieldAttackBlockReason(target, "player");
   if (shieldBlockReason) {
-    showToast(shieldBlockReason);
+    rejectGameAction(shieldBlockReason);
     cancelSendMode();
     if (modal.open) modal.close();
     return;
@@ -22103,7 +22188,7 @@ async function showTroopSliderModalAsync(source, target, options = {}) {
     ? activeRallyOrderContext.target
     : getArmyTargetById(target.id);
   if (!freshSource || !freshTarget || freshSource.owner !== "player" || freshSource.id === freshTarget.id) {
-    showToast("Order canceled. The map changed.");
+    rejectGameAction("Order canceled. The map changed.");
     cancelSendMode();
     if (modal.open) modal.close();
     renderAll();
@@ -22111,7 +22196,7 @@ async function showTroopSliderModalAsync(source, target, options = {}) {
   }
   if (!modal.open || !modal.classList.contains("troop-slider-modal")) return;
   if (freshSource.troops < 1) {
-    showToast("No troops available to send.");
+    rejectGameAction("No troops available to send.");
     cancelSendMode();
     if (modal.open) modal.close();
     return;
@@ -22135,7 +22220,7 @@ async function showTroopSliderModalAsync(source, target, options = {}) {
     return;
   }
   if (!route || !route.points.length) {
-    showToast("No land route found around the terrain.");
+    rejectGameAction("No land route found around the terrain.");
     selectedTargetId = null;
     cancelSendMode();
     if (modal.open) modal.close();
@@ -22150,6 +22235,7 @@ async function showTroopSliderModalAsync(source, target, options = {}) {
 }
 
 function showMainCityProtectedAttackModal(target) {
+  playGameSound("invalid_action", { cooldownMs: 140, regionId: getCityRegionId(target) });
   troopSliderActive = false;
   activeTroopSliderRoute = null;
   activeAttackProtectionPreview = null;
@@ -22172,6 +22258,7 @@ function showMainCityProtectedAttackModal(target) {
 }
 
 function showTroopPowerVerificationError(source, target) {
+  playGameSound("invalid_action", { cooldownMs: 140, regionId: getCityRegionId(target) });
   modal.classList.add("troop-slider-modal");
   modalTitle.textContent = "Attack troops";
   modalBody.innerHTML = `
@@ -22207,7 +22294,7 @@ function showTroopPowerVerificationError(source, target) {
     const freshSource = cityById(source.id);
     const freshTarget = getArmyTargetById(target.id);
     if (!freshSource || !freshTarget) {
-      showToast("Order canceled. The map changed.");
+      rejectGameAction("Order canceled. The map changed.");
       if (modal.open) modal.close();
       return;
     }
@@ -22315,14 +22402,14 @@ function showTroopSliderModalWithRoute(source, target, route, options = {}) {
   }
   const reinforcementBlockReason = isReinforcement ? getClanReinforcementBlockReason(target) : "";
   if (reinforcementBlockReason) {
-    showToast(reinforcementBlockReason);
+    rejectGameAction(reinforcementBlockReason);
     cancelSendMode();
     if (modal.open) modal.close();
     return;
   }
   const shieldBlockReason = orderKind !== "attack" || campTarget ? "" : getPeaceShieldAttackBlockReason(target, "player");
   if (shieldBlockReason) {
-    showToast(shieldBlockReason);
+    rejectGameAction(shieldBlockReason);
     cancelSendMode();
     if (modal.open) modal.close();
     return;
@@ -24831,13 +24918,13 @@ async function buyShopItem(itemId) {
   if (!item) return;
   const cooldownText = getItemPurchaseCooldownText(item.id);
   if (cooldownText) {
-    showToast(`${item.label} resets at 00:00 UTC, in ${cooldownText}.`);
+    rejectGameAction(`${item.label} resets at 00:00 UTC, in ${cooldownText}.`);
     renderShopModal();
     return;
   }
   const currentGold = Math.floor(Number(state.gold) || 0);
   if (currentGold < item.cost) {
-    showToast(`${item.label} costs ${formatNumber(item.cost)} gold.`);
+    rejectGameAction(`${item.label} costs ${formatNumber(item.cost)} gold.`);
     renderShopModal();
     return;
   }
@@ -25211,19 +25298,19 @@ async function useVeilOfSilence(item) {
 function showAttackPreview(source, target) {
   if (!source || !target || source.owner !== "player" || target.owner === "player") return;
   if (source.troops < 1) {
-    showToast("No troops available to send.");
+    rejectGameAction("No troops available to send.");
     return;
   }
 
   const mainCityBlockReason = getMainCityAttackBlockReason(target, "player");
   if (mainCityBlockReason) {
-    showToast(mainCityBlockReason);
+    rejectGameAction(mainCityBlockReason);
     return;
   }
 
   const shieldBlockReason = getPeaceShieldAttackBlockReason(target, "player");
   if (shieldBlockReason) {
-    showToast(shieldBlockReason);
+    rejectGameAction(shieldBlockReason);
     return;
   }
 
@@ -25235,7 +25322,7 @@ function showAttackPreview(source, target) {
 
   const preview = calculateBattlePreview(source, target, selectedMarchPercent);
   if (!preview.path) {
-    showToast("No land route found around the terrain.");
+    rejectGameAction("No land route found around the terrain.");
     return;
   }
   const protectionNotice = getAttackProtectionNotice(preview.attackProtection);
@@ -25297,7 +25384,7 @@ function showAttackPreview(source, target) {
     const currentSource = cityById(source.id);
     const currentTarget = cityById(target.id);
     if (!currentSource || !currentTarget || currentSource.owner !== "player" || currentTarget.owner === "player") {
-      showToast("Attack canceled. The map changed.");
+      rejectGameAction("Attack canceled. The map changed.");
       renderAll();
       return;
     }
@@ -25332,7 +25419,11 @@ function clearSelection(shouldRender = true) {
 function recruit(cityId) {
   const city = cityById(cityId);
   const cost = getRecruitCost(city);
-  if (!city || state.gold < cost) return;
+  if (!city) return;
+  if (state.gold < cost) {
+    rejectGameAction(`Recruiting at ${city.name} costs ${formatNumber(cost)} gold.`);
+    return;
+  }
   state.gold -= cost;
   const amount = getRecruitAmount(city);
   city.troopFloat += amount;
@@ -25349,18 +25440,18 @@ async function upgradeCity(cityId, levels = 1) {
   if (!city) return;
   const requestedLevels = Math.max(1, Math.floor(Number(levels) || 1));
   if (city.owner !== "player") {
-    showToast("You do not own that city.");
+    rejectGameAction("You do not own that city.");
     renderAll();
     return;
   }
   if (isStronghold(city)) {
-    showToast("Strongholds cannot be upgraded.");
+    rejectGameAction("Strongholds cannot be upgraded.");
     renderAll();
     return;
   }
   const incomingBlockers = getIncomingUpgradeBlockers(city.id);
   if (incomingBlockers.length) {
-    showToast(`${city.name} cannot be upgraded while an attack is incoming. Arrival: ${formatDuration(incomingBlockers[0].remaining)}.`);
+    rejectGameAction(`${city.name} cannot be upgraded while an attack is incoming. Arrival: ${formatDuration(incomingBlockers[0].remaining)}.`);
     renderAll();
     return;
   }
@@ -25422,7 +25513,7 @@ async function upgradeCity(cityId, levels = 1) {
   }
 
   if (!upgraded) {
-    showToast(Number.isFinite(getLevelCost(city)) ? "Not enough gold" : "That upgrade is outside the supported number range");
+    rejectGameAction(Number.isFinite(getLevelCost(city)) ? "Not enough gold" : "That upgrade is outside the supported number range");
     renderAll();
     return;
   }
@@ -25708,11 +25799,11 @@ async function buySkill(skill) {
   state.upgrades = normalizeUpgrades(state.upgrades, state.version);
   reconcileSkillPoints(state.character, state.upgrades);
   if (isSkillAtCap(skill)) {
-    showToast(`${config.label} is capped at ${config.maxPercent}%.`);
+    rejectGameAction(`${config.label} is capped at ${config.maxPercent}%.`);
     return;
   }
   if (state.character.skillPoints < 1) {
-    showToast("Earn a hero level for another skill point.");
+    rejectGameAction("Earn a hero level for another skill point.");
     return;
   }
   if (usesServerEconomyAuthority() && getOnlineApi()?.spendSkillPoint) {
@@ -25779,7 +25870,7 @@ async function resetSkills() {
   const resetCost = spentPoints > 0 ? SKILL_RESET_COST : 0;
   const currentGold = Math.floor(Number(state.gold) || 0);
   if (currentGold < resetCost) {
-    showToast(`Skill reset costs ${formatNumber(SKILL_RESET_COST)} gold.`);
+    rejectGameAction(`Skill reset costs ${formatNumber(SKILL_RESET_COST)} gold.`);
     renderProfileSkills();
     return;
   }
@@ -25802,7 +25893,7 @@ function updateIncomingAttackUi() {
   incomingAttackBtn.hidden = incoming.length === 0;
   incomingAttackBtn.classList.toggle("active", incoming.length > 0);
   if (!incoming.length) {
-    if (lastAudioIncomingAttackCount > 0) crownlandsAudio?.setMusicState("world_map");
+    if (lastAudioIncomingAttackCount > 0) syncWorldMusicState();
     lastAudioIncomingAttackCount = 0;
     if (incomingAttackCount) incomingAttackCount.textContent = "0";
     if (incomingAttackTime) incomingAttackTime.textContent = "Incoming";
@@ -26809,8 +26900,11 @@ function showLeaderboardModal() {
   refreshClanLeaderboardRows();
 }
 
-function showLogModal() {
+function showLogModal(options = {}) {
   if (!state) return;
+  if (!options.silentAudio) {
+    playGameSound("parchment_open", { cooldownMs: 120, allowCrossMap: true });
+  }
   state.battleReports = normalizeBattleReports(state.battleReports);
   modal.classList.add("battle-report-modal");
   modalTitle.textContent = "Battle Reports";
@@ -26847,7 +26941,7 @@ function showLogModal() {
   modalBody.querySelectorAll("[data-report-filter]").forEach(button => {
     button.addEventListener("click", () => {
       battleReportFilter = button.dataset.reportFilter || "all";
-      showLogModal();
+      showLogModal({ silentAudio: true });
     });
   });
   modalBody.querySelectorAll("[data-report-detail]").forEach(button => {
@@ -26890,7 +26984,7 @@ function renderBattleReportCard(report, index = 0) {
       </div>
       <div class="battle-report-actions">
         ${locateButton}
-        <button class="battle-report-detail-btn" data-report-detail="${escapeHtml(report.id)}" type="button" aria-label="Open report details">&#128203;</button>
+        <button class="battle-report-detail-btn" data-report-detail="${escapeHtml(report.id)}" data-audio-effect="none" type="button" aria-label="Open report details">&#128203;</button>
       </div>
     </article>
   `;
@@ -27148,7 +27242,7 @@ function renderBattleReinforcementRow(participant, index) {
 function renderLegacyBattleReportDetail(report, badge, message = "") {
   return `
     <div class="battle-report-detail ${badge.tone}">
-      <button id="battleReportBackBtn" class="battle-report-back" type="button">Back to reports</button>
+      <button id="battleReportBackBtn" class="battle-report-back" type="button" data-audio-effect="none">Back to reports</button>
       <div class="battle-report-detail-head">
         <span>${badge.label}</span>
         <strong>${escapeHtml(report.cityName)}</strong>
@@ -27184,7 +27278,7 @@ function renderDetailedBattleReport(report, snapshot, badge) {
   ].filter(Boolean).join("");
   return `
     <div class="battle-report-detail detailed-battle-report ${badge.tone}">
-      <button id="battleReportBackBtn" class="battle-report-back" type="button">Back to reports</button>
+      <button id="battleReportBackBtn" class="battle-report-back" type="button" data-audio-effect="none">Back to reports</button>
       <div class="battle-report-detail-head">
         <span>${badge.label}</span>
         <strong>${escapeHtml(snapshot.target.name || report.cityName)}</strong>
@@ -27229,10 +27323,11 @@ function applyDetailedBattleFlags(snapshot) {
 async function showBattleReportDetail(reportId) {
   const report = normalizeBattleReports(state?.battleReports || []).find(item => item.id === reportId);
   if (!report) {
-    showToast("That report is no longer available.");
-    showLogModal();
+    rejectGameAction("That report is no longer available.");
+    showLogModal({ silentAudio: true });
     return;
   }
+  playGameSound("parchment_open", { cooldownMs: 120, allowCrossMap: true });
   const badge = getBattleReportBadge(report);
   modal.dataset.battleReportDetailId = report.id;
   modal.classList.add("battle-report-modal");
@@ -27241,7 +27336,7 @@ async function showBattleReportDetail(reportId) {
     ? renderLegacyBattleReportDetail(report, badge)
     : `
       <div class="battle-report-detail ${badge.tone}">
-        <button id="battleReportBackBtn" class="battle-report-back" type="button">Back to reports</button>
+        <button id="battleReportBackBtn" class="battle-report-back" type="button" data-audio-effect="none">Back to reports</button>
         <div class="battle-report-detail-head"><span>${badge.label}</span><strong>${escapeHtml(report.cityName)}</strong><small>Loading participant battle statistics…</small></div>
         <div class="battle-report-detail-loading" role="status">Loading the authoritative battle snapshot…</div>
       </div>`;

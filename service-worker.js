@@ -87,7 +87,11 @@ try {
 }
 
 function isCacheableResponse(response) {
-  return Boolean(response && response.ok && (response.type === "basic" || response.type === "default"));
+  return Boolean(
+    response
+    && response.status === 200
+    && (response.type === "basic" || response.type === "default")
+  );
 }
 
 function isApiOrServerRequest(url) {
@@ -112,6 +116,14 @@ function isStaticAssetRequest(url) {
   );
 }
 
+function isAudioMediaRequest(url) {
+  return (
+    url.origin === self.location.origin
+    && url.pathname.startsWith("/audio/")
+    && /\.(?:mp3|ogg|wav)$/i.test(url.pathname)
+  );
+}
+
 function isNetworkFirstAsset(url) {
   return (
     url.pathname === "/"
@@ -124,9 +136,15 @@ function isNetworkFirstAsset(url) {
 }
 
 async function putInCache(request, response) {
-  if (!isCacheableResponse(response)) return;
-  const cache = await caches.open(CACHE_NAME);
-  await cache.put(request, response.clone());
+  if (!isCacheableResponse(response)) return false;
+  try {
+    const cache = await caches.open(CACHE_NAME);
+    await cache.put(request, response.clone());
+    return true;
+  } catch (error) {
+    console.warn("[Crownlands] Static cache write skipped.", error);
+    return false;
+  }
 }
 
 async function cacheFirst(request) {
@@ -180,9 +198,11 @@ self.addEventListener("activate", event => {
 self.addEventListener("fetch", event => {
   const { request } = event;
   if (request.method !== "GET") return;
+  if (request.headers.has("range")) return;
   const url = new URL(request.url);
 
   if (isApiOrServerRequest(url)) return;
+  if (isAudioMediaRequest(url)) return;
 
   if (request.mode === "navigate") {
     event.respondWith(networkFirst(request, resolveAppUrl("index.html")));
