@@ -25,6 +25,9 @@ const document = {
   getElementById() {
     return null;
   },
+  querySelector(selector) {
+    return selector === 'meta[name="crownlands-build"]' ? { content: "test-build" } : null;
+  },
 };
 
 class FakeAudio {
@@ -112,7 +115,11 @@ async function run() {
 
   assert.equal(playCalls, 1, "The next player gesture must start the requested music.");
   assert.equal(window.CrownlandsAudio.unlocked, true, "Audio must be marked unlocked only after play succeeds.");
-  assert.match(window.CrownlandsAudio.currentMusic.url, /\.mp3$/, "Browser playback must use the broadly compatible MP3 source.");
+  assert.match(
+    window.CrownlandsAudio.currentMusic.url,
+    /\.mp3\?v=test-build$/,
+    "Browser playback must use a versioned MP3 URL that itch serves as audio.",
+  );
   assert.equal(listeners.has("pointerdown"), false, "Unlock listeners should be removed after successful playback.");
   assert.equal(listeners.has("touchend"), false, "Touch unlock listeners should be removed after successful playback.");
   assert.equal(listeners.has("keydown"), false, "Keyboard unlock listeners should be removed after successful playback.");
