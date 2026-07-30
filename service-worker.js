@@ -107,7 +107,7 @@ function isStaticAssetRequest(url) {
     && (
       url.pathname.startsWith("/assets/")
       || url.pathname.startsWith("/audio/")
-      || /\.(?:css|js|json|webmanifest|ogg|png|jpe?g|webp|svg|ico|woff2?)$/i.test(url.pathname)
+      || /\.(?:css|js|json|webmanifest|ogg|wav|png|jpe?g|webp|svg|ico|woff2?)$/i.test(url.pathname)
     )
   );
 }

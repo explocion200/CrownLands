@@ -56,6 +56,7 @@
       this.manifestPromise = this.loadManifest();
       this.installUnlockListeners();
       this.installUiSounds();
+      this.bindSoundButtons();
       this.bindSettingsUi();
     }
 
@@ -66,16 +67,19 @@
         const manifest = await response.json();
         for (const asset of Array.isArray(manifest.assets) ? manifest.assets : []) {
           if (!asset?.id || !asset?.ogg) continue;
+          const browserAudioPath = asset.wav || asset.ogg;
           this.assets.set(asset.id, {
             ...asset,
-            url: `audio/${String(asset.ogg).replace(/^\/+/, "")}`,
+            url: `audio/${String(browserAudioPath).replace(/^\/+/, "")}`,
           });
         }
         this.ready = this.assets.size > 0;
+        this.updateSoundControls(this.ready ? "ready" : "unavailable");
         this.syncSettingsUi();
         return this.ready;
       } catch (error) {
         console.warn("Crownlands audio is unavailable", error);
+        this.updateSoundControls("unavailable");
         return false;
       }
     }
@@ -87,12 +91,16 @@
         document.removeEventListener("touchend", unlock, true);
         document.removeEventListener("keydown", unlock, true);
       };
-      const unlock = () => {
+      const unlock = event => {
+        if (event?.target?.closest?.("[data-audio-enable]")) return;
         if (unlocking) return;
         unlocking = true;
         this.unlock()
           .then(success => {
-            if (success) removeUnlockListeners();
+            if (success) {
+              removeUnlockListeners();
+              this.updateSoundControls("playing");
+            }
           })
           .finally(() => {
             unlocking = false;
@@ -110,6 +118,93 @@
       const started = await this.setMusicState(this.requestedMusicState, { immediate: true });
       if (!started) this.unlocked = false;
       return started;
+    }
+
+    async enableSound() {
+      if (!this.ready) {
+        this.updateSoundControls("loading");
+        this.manifestPromise = this.loadManifest();
+        return false;
+      }
+      if (this.preferences.musicMuted) this.preferences.musicMuted = false;
+      if (this.preferences.effectsMuted) this.preferences.effectsMuted = false;
+      if (this.preferences.musicVolume <= 0) this.preferences.musicVolume = DEFAULT_PREFERENCES.musicVolume;
+      if (this.preferences.effectsVolume <= 0) this.preferences.effectsVolume = DEFAULT_PREFERENCES.effectsVolume;
+      this.savePreferences();
+
+      if (!this.currentMusic || this.currentMusic.paused) this.unlocked = false;
+      const started = await this.unlock();
+      if (!started) {
+        this.updateSoundControls("blocked");
+        return false;
+      }
+      this.playEffect("button_click", { cooldownMs: 0 });
+      this.updateSoundControls("playing");
+      return true;
+    }
+
+    bindSoundButtons() {
+      const bind = () => {
+        for (const id of ["setupAudioBtn", "testAudioBtn"]) {
+          const button = document.getElementById(id);
+          if (!button || button.dataset.audioBound) continue;
+          button.dataset.audioBound = "true";
+          button.addEventListener("click", async () => {
+            this.updateSoundControls("starting");
+            await this.enableSound();
+          });
+        }
+        this.updateSoundControls(this.ready ? (this.unlocked ? "playing" : "ready") : "loading");
+      };
+      if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", bind, { once: true });
+      else bind();
+    }
+
+    updateSoundControls(state) {
+      const states = {
+        loading: {
+          label: "Loading Sound...",
+          message: "Loading audio files...",
+          disabled: true,
+        },
+        ready: {
+          label: "Enable Sound",
+          message: "Tap once to start music and effects.",
+          disabled: false,
+        },
+        starting: {
+          label: "Starting Sound...",
+          message: "Requesting browser audio permission...",
+          disabled: true,
+        },
+        playing: {
+          label: "Sound On \u2713",
+          message: "Music and effects are enabled.",
+          disabled: false,
+        },
+        blocked: {
+          label: "Try Sound Again",
+          message: "Your browser blocked playback. Tap again to retry.",
+          disabled: false,
+        },
+        unavailable: {
+          label: "Retry Sound",
+          message: "Audio files did not load. Check the connection and retry.",
+          disabled: false,
+        },
+      };
+      const status = states[state] || states.ready;
+      for (const id of ["setupAudioBtn", "testAudioBtn"]) {
+        const button = document.getElementById(id);
+        if (!button) continue;
+        button.textContent = status.label;
+        button.disabled = status.disabled;
+        button.dataset.audioState = state;
+      }
+      for (const id of ["setupAudioStatus", "audioStatusText"]) {
+        const output = document.getElementById(id);
+        if (output) output.textContent = status.message;
+      }
     }
 
     savePreferences() {
@@ -288,6 +383,7 @@
       document.addEventListener("click", event => {
         const button = event.target.closest?.("button, [role='button']");
         if (!button || button.disabled || button.getAttribute("aria-disabled") === "true") return;
+        if (button.matches?.("[data-audio-enable]")) return;
         const id = String(button.id || "");
         const label = String(button.getAttribute("aria-label") || button.textContent || "").toLowerCase();
         if (id === "profileCloseBtn" || id === "closeModalBtn" || label.includes("close") || label === "cancel") {

@@ -4,6 +4,7 @@ const path = require("node:path");
 const vm = require("node:vm");
 
 const source = fs.readFileSync(path.join(__dirname, "..", "audio-manager.js"), "utf8");
+const indexHtml = fs.readFileSync(path.join(__dirname, "..", "index.html"), "utf8");
 const listeners = new Map();
 let resolveManifest;
 let playCalls = 0;
@@ -90,8 +91,16 @@ async function run() {
       assets: [{
         id: "main_menu_loop",
         category: "music",
+        wav: "music/main_menu_loop.wav",
         ogg: "music/main_menu_loop.ogg",
         loop: true,
+        recommended_volume: 0.42,
+      }, {
+        id: "button_click",
+        category: "ui",
+        wav: "ui/button_click.wav",
+        ogg: "ui/button_click.ogg",
+        loop: false,
         recommended_volume: 0.42,
       }],
     }),
@@ -103,11 +112,27 @@ async function run() {
 
   assert.equal(playCalls, 1, "The next player gesture must start the requested music.");
   assert.equal(window.CrownlandsAudio.unlocked, true, "Audio must be marked unlocked only after play succeeds.");
+  assert.match(window.CrownlandsAudio.currentMusic.url, /\.wav$/, "Browser playback must use the compatible WAV source.");
   assert.equal(listeners.has("pointerdown"), false, "Unlock listeners should be removed after successful playback.");
   assert.equal(listeners.has("touchend"), false, "Touch unlock listeners should be removed after successful playback.");
   assert.equal(listeners.has("keydown"), false, "Keyboard unlock listeners should be removed after successful playback.");
 
-  console.log("Validated retryable audio unlock before and after manifest readiness.");
+  window.CrownlandsAudio.preferences.musicMuted = true;
+  window.CrownlandsAudio.preferences.effectsMuted = true;
+  window.CrownlandsAudio.preferences.musicVolume = 0;
+  window.CrownlandsAudio.preferences.effectsVolume = 0;
+  const enabled = await window.CrownlandsAudio.enableSound();
+
+  assert.equal(enabled, true, "The explicit sound control must confirm successful playback.");
+  assert.equal(playCalls, 2, "The explicit sound control must play a confirmation effect.");
+  assert.equal(window.CrownlandsAudio.preferences.musicMuted, false, "Enable Sound must clear music mute.");
+  assert.equal(window.CrownlandsAudio.preferences.effectsMuted, false, "Enable Sound must clear effects mute.");
+  assert.ok(window.CrownlandsAudio.preferences.musicVolume > 0, "Enable Sound must restore an audible music volume.");
+  assert.ok(window.CrownlandsAudio.preferences.effectsVolume > 0, "Enable Sound must restore an audible effects volume.");
+  assert.match(indexHtml, /id="setupAudioBtn"[^>]*data-audio-enable/, "The login screen must expose Enable Sound.");
+  assert.match(indexHtml, /id="testAudioBtn"[^>]*data-audio-enable/, "Audio settings must expose a sound test.");
+
+  console.log("Validated retryable audio unlock and explicit sound activation.");
 }
 
 run().catch(error => {

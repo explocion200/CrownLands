@@ -9938,6 +9938,29 @@ select:focus {
   gap: 14px;
 }
 
+.audio-enable-btn {
+  min-height: 44px;
+  margin-top: 0;
+  color: #211508;
+  border-color: rgba(255, 222, 137, .72);
+  background: linear-gradient(#ffd77c, #e99a26);
+  box-shadow: 0 8px 18px rgba(0, 0, 0, .26);
+}
+
+.audio-enable-btn:disabled {
+  cursor: wait;
+  opacity: .72;
+}
+
+.audio-playback-status {
+  display: block;
+  margin: .28rem 0 0;
+  color: #d7e6ef;
+  font-size: .72rem;
+  line-height: 1.35;
+  text-align: center;
+}
+
 .audio-volume-control,
 .audio-toggle-control {
   display: grid;
