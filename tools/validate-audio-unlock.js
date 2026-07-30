@@ -14,6 +14,8 @@ const scheduledTimeouts = [];
 let resolveManifest;
 let playCalls = 0;
 let rejectNextPlay = true;
+let deferNextPlay = false;
+let rejectDeferredPlay;
 
 const manifestPromise = new Promise(resolve => {
   resolveManifest = resolve;
@@ -62,6 +64,12 @@ class FakeAudio {
       const error = new Error("Player interaction required.");
       error.name = "NotAllowedError";
       return Promise.reject(error);
+    }
+    if (deferNextPlay) {
+      deferNextPlay = false;
+      return new Promise((resolve, reject) => {
+        rejectDeferredPlay = reject;
+      });
     }
     this.paused = false;
     return Promise.resolve();
@@ -168,10 +176,12 @@ async function run() {
   assert.equal(window.CrownlandsAudio.unlocked, false, "A browser autoplay block must leave automatic unlock armed.");
   assert.equal(typeof listeners.get("pointerdown"), "function", "The first normal gesture must remain available after an autoplay block.");
 
+  deferNextPlay = true;
   listeners.get("pointerdown")();
+  listeners.get("touchend")();
   await flushPromises();
 
-  assert.equal(playCalls, 2, "The first normal gesture must start the requested music.");
+  assert.equal(playCalls, 3, "A later event from the same mobile gesture must retry a pending unlock.");
   assert.equal(window.CrownlandsAudio.unlocked, true, "Audio must unlock only after playback succeeds.");
   assert.equal(window.CrownlandsAudio.currentMusic.loop, true, "A single-track playlist must loop continuously.");
   assert.match(
@@ -182,6 +192,16 @@ async function run() {
   assert.equal(listeners.has("pointerdown"), false, "Unlock listeners should be removed after successful playback.");
   assert.equal(listeners.has("touchend"), false, "Touch unlock listeners should be removed after successful playback.");
   assert.equal(listeners.has("keydown"), false, "Keyboard unlock listeners should be removed after successful playback.");
+
+  const delayedMobileError = new Error("The pointer event was not accepted as activation.");
+  delayedMobileError.name = "NotAllowedError";
+  rejectDeferredPlay(delayedMobileError);
+  await flushPromises();
+  assert.equal(
+    window.CrownlandsAudio.unlocked,
+    true,
+    "A late rejection from an earlier mobile event must not relock successful audio.",
+  );
 
   await window.CrownlandsAudio.setMusicState("world_map", { immediate: true });
   const firstMapTrackId = window.CrownlandsAudio.currentMusic.dataset.audioId;
