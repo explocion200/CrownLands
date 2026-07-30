@@ -4,14 +4,14 @@
   const STORAGE_KEY = "crownlands.audio.preferences.v1";
   const MANIFEST_URL = "audio/manifest.json";
   const BUILD_ID = document.querySelector?.('meta[name="crownlands-build"]')?.content || "audio";
-  const MUSIC_BY_STATE = Object.freeze({
-    main_menu: "main_menu_loop",
-    world_map: "world_map_loop",
-    battle: "battle_loop",
-    danger: "danger_contested_loop",
-    contested: "danger_contested_loop",
-    victory: "victory_fanfare",
+  const DEFAULT_MUSIC_STATE_BY_ID = Object.freeze({
+    main_menu_loop: "main_menu",
+    world_map_loop: "world_map",
+    battle_loop: "battle",
+    danger_contested_loop: "danger",
+    victory_fanfare: "victory",
   });
+  const MUSIC_STATES = Object.freeze(["main_menu", "world_map", "battle", "danger", "victory"]);
   const SWORD_CLASHES = Object.freeze(["sword_clash_01", "sword_clash_02", "sword_clash_03"]);
   const DEFAULT_PREFERENCES = Object.freeze({
     musicVolume: 0.7,
@@ -44,6 +44,8 @@
     constructor() {
       this.preferences = loadPreferences();
       this.assets = new Map();
+      this.musicPlaylists = new Map(MUSIC_STATES.map(state => [state, []]));
+      this.lastMusicAssetByState = new Map();
       this.unlocked = false;
       this.ready = false;
       this.requestedMusicState = "main_menu";
@@ -52,6 +54,7 @@
       this.lastPlaybackError = "";
       this.preferredAudioExtension = "mp3";
       this.musicTransitionId = 0;
+      this.playlistTransitionTimer = 0;
       this.temporaryMusicId = 0;
       this.lastEffectAt = new Map();
       this.activeEffects = new Set();
@@ -59,7 +62,6 @@
       this.manifestPromise = this.loadManifest();
       this.installUnlockListeners();
       this.installUiSounds();
-      this.bindSoundButtons();
       this.bindSettingsUi();
     }
 
@@ -80,19 +82,23 @@
             .filter(Boolean)
             .map(relativePath => `audio/${String(relativePath).replace(/^\/+/, "")}?v=${encodeURIComponent(BUILD_ID)}`)
             .filter((url, index, entries) => entries.indexOf(url) === index);
-          this.assets.set(asset.id, {
+          const normalizedAsset = {
             ...asset,
             url: urls[0],
             urls,
-          });
+          };
+          this.assets.set(asset.id, normalizedAsset);
+          if (asset.category === "music") {
+            const musicState = String(asset.music_state || DEFAULT_MUSIC_STATE_BY_ID[asset.id] || "").trim();
+            if (this.musicPlaylists.has(musicState)) this.musicPlaylists.get(musicState).push(normalizedAsset);
+          }
         }
-        this.ready = this.assets.size > 0;
-        this.updateSoundControls(this.ready ? "ready" : "unavailable");
+        this.ready = this.assets.size > 0 && [...this.musicPlaylists.values()].some(playlist => playlist.length);
         this.syncSettingsUi();
+        if (this.ready) this.unlock();
         return this.ready;
       } catch (error) {
         console.warn("Crownlands audio is unavailable", error);
-        this.updateSoundControls("unavailable");
         return false;
       }
     }
@@ -104,16 +110,12 @@
         document.removeEventListener("touchend", unlock, true);
         document.removeEventListener("keydown", unlock, true);
       };
-      const unlock = event => {
-        if (event?.target?.closest?.("[data-audio-enable]")) return;
+      const unlock = () => {
         if (unlocking) return;
         unlocking = true;
         this.unlock()
           .then(success => {
-            if (success) {
-              removeUnlockListeners();
-              this.updateSoundControls("playing");
-            }
+            if (success) removeUnlockListeners();
           })
           .finally(() => {
             unlocking = false;
@@ -131,98 +133,6 @@
       const started = await this.setMusicState(this.requestedMusicState, { immediate: true });
       if (!started) this.unlocked = false;
       return started;
-    }
-
-    async enableSound() {
-      if (!this.ready) {
-        this.updateSoundControls("loading");
-        this.manifestPromise = this.loadManifest();
-        return false;
-      }
-      if (this.preferences.musicMuted) this.preferences.musicMuted = false;
-      if (this.preferences.effectsMuted) this.preferences.effectsMuted = false;
-      if (this.preferences.musicVolume <= 0) this.preferences.musicVolume = DEFAULT_PREFERENCES.musicVolume;
-      if (this.preferences.effectsVolume <= 0) this.preferences.effectsVolume = DEFAULT_PREFERENCES.effectsVolume;
-      this.savePreferences();
-
-      if (!this.currentMusic || this.currentMusic.paused) this.unlocked = false;
-      const started = await this.unlock();
-      if (!started) {
-        this.updateSoundControls(this.lastPlaybackError === "NotAllowedError" ? "blocked" : "incompatible");
-        return false;
-      }
-      this.playEffect("button_click", { cooldownMs: 0 });
-      this.updateSoundControls("playing");
-      return true;
-    }
-
-    bindSoundButtons() {
-      const bind = () => {
-        for (const id of ["setupAudioBtn", "testAudioBtn"]) {
-          const button = document.getElementById(id);
-          if (!button || button.dataset.audioBound) continue;
-          button.dataset.audioBound = "true";
-          button.addEventListener("click", async () => {
-            this.updateSoundControls("starting");
-            await this.enableSound();
-          });
-        }
-        this.updateSoundControls(this.ready ? (this.unlocked ? "playing" : "ready") : "loading");
-      };
-      if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", bind, { once: true });
-      else bind();
-    }
-
-    updateSoundControls(state) {
-      const states = {
-        loading: {
-          label: "Loading Sound...",
-          message: "Loading audio files...",
-          disabled: true,
-        },
-        ready: {
-          label: "Enable Sound",
-          message: "Tap once to start music and effects.",
-          disabled: false,
-        },
-        starting: {
-          label: "Starting Sound...",
-          message: "Requesting browser audio permission...",
-          disabled: true,
-        },
-        playing: {
-          label: "Sound On \u2713",
-          message: "Music and effects are enabled.",
-          disabled: false,
-        },
-        blocked: {
-          label: "Try Sound Again",
-          message: "Your browser blocked playback. Tap again to retry.",
-          disabled: false,
-        },
-        incompatible: {
-          label: "Sound Unavailable",
-          message: "This browser could not play the audio format. Refresh after the next game update.",
-          disabled: false,
-        },
-        unavailable: {
-          label: "Retry Sound",
-          message: "Audio files did not load. Check the connection and retry.",
-          disabled: false,
-        },
-      };
-      const status = states[state] || states.ready;
-      for (const id of ["setupAudioBtn", "testAudioBtn"]) {
-        const button = document.getElementById(id);
-        if (!button) continue;
-        button.textContent = status.label;
-        button.disabled = status.disabled;
-        button.dataset.audioState = state;
-      }
-      for (const id of ["setupAudioStatus", "audioStatusText"]) {
-        const output = document.getElementById(id);
-        if (output) output.textContent = status.message;
-      }
     }
 
     savePreferences() {
@@ -274,32 +184,86 @@
       this.currentMusic.volume = this.getMusicVolumeFor(asset);
     }
 
+    chooseMusicAsset(state) {
+      const playlist = this.musicPlaylists.get(state) || [];
+      if (!playlist.length) return null;
+      const lastId = this.lastMusicAssetByState.get(state);
+      const candidates = playlist.length > 1
+        ? playlist.filter(asset => asset.id !== lastId)
+        : playlist;
+      return candidates[Math.floor(Math.random() * candidates.length)] || playlist[0];
+    }
+
+    clearPlaylistTransition() {
+      if (!this.playlistTransitionTimer) return;
+      window.clearTimeout(this.playlistTransitionTimer);
+      this.playlistTransitionTimer = 0;
+    }
+
+    schedulePlaylistTransition(audio, state, playlistSize, fadeMs) {
+      this.clearPlaylistTransition();
+      if (state === "victory" || playlistSize <= 1) return;
+      const schedule = () => {
+        if (this.currentMusic !== audio || !Number.isFinite(audio.duration)) return;
+        const delayMs = Math.floor(audio.duration * 1000 - fadeMs);
+        if (delayMs <= 0) return;
+        this.playlistTransitionTimer = window.setTimeout(() => {
+          this.playlistTransitionTimer = 0;
+          if (this.currentMusic !== audio || this.currentMusicState !== state) return;
+          this.setMusicState(state, {
+            preserveTemporary: true,
+            forceNext: true,
+            fadeMs,
+          });
+        }, delayMs);
+      };
+      if (audio.readyState >= 1) schedule();
+      else audio.addEventListener("loadedmetadata", schedule, { once: true });
+    }
+
     async setMusicState(state, options = {}) {
       if (!options.preserveTemporary) this.temporaryMusicId += 1;
-      const normalizedState = MUSIC_BY_STATE[state] ? state : "world_map";
+      const requestedState = state === "contested" ? "danger" : state;
+      const normalizedState = this.musicPlaylists.get(requestedState)?.length ? requestedState : "world_map";
       this.requestedMusicState = normalizedState;
       if (!this.unlocked || !this.ready) return false;
-      const assetId = MUSIC_BY_STATE[normalizedState];
-      const asset = this.assets.get(assetId);
-      if (!asset || asset.category !== "music") return false;
-      if (this.currentMusicState === normalizedState && this.currentMusic && !this.currentMusic.ended) {
+      const playlist = this.musicPlaylists.get(normalizedState) || [];
+      if (!playlist.length) return false;
+      if (
+        !options.forceNext
+        && this.currentMusicState === normalizedState
+        && this.currentMusic
+        && !this.currentMusic.ended
+      ) {
         this.applyMusicVolume();
         return true;
       }
+      const asset = this.chooseMusicAsset(normalizedState);
+      if (!asset) return false;
 
+      this.clearPlaylistTransition();
       const transitionId = ++this.musicTransitionId;
       const previous = this.currentMusic;
+      const fadeMs = Math.max(800, Number(options.fadeMs) || 1000);
       let next = null;
       let playbackError = null;
       for (const sourceUrl of asset.urls || [asset.url]) {
         const candidate = new Audio(sourceUrl);
         candidate.dataset.audioId = asset.id;
         candidate.preload = "auto";
-        candidate.loop = asset.loop === true;
+        candidate.loop = playlist.length === 1 && asset.loop === true;
         candidate.volume = options.immediate ? this.getMusicVolumeFor(asset) : 0;
         candidate.addEventListener("ended", () => {
-          if (asset.loop === true || this.currentMusic !== candidate) return;
-          this.setMusicState("world_map");
+          if (candidate.loop || this.currentMusic !== candidate) return;
+          if (normalizedState === "victory") {
+            this.setMusicState("world_map");
+            return;
+          }
+          this.setMusicState(normalizedState, {
+            preserveTemporary: true,
+            forceNext: true,
+            fadeMs,
+          });
         });
         try {
           await candidate.play();
@@ -309,6 +273,7 @@
           break;
         } catch (error) {
           playbackError = error;
+          if (error?.name === "NotAllowedError" || error?.name === "AbortError") break;
         }
       }
       if (!next) {
@@ -324,6 +289,8 @@
 
       this.currentMusic = next;
       this.currentMusicState = normalizedState;
+      this.lastMusicAssetByState.set(normalizedState, asset.id);
+      this.schedulePlaylistTransition(next, normalizedState, playlist.length, fadeMs);
       if (options.immediate) {
         if (previous) {
           previous.pause();
@@ -332,12 +299,11 @@
         return true;
       }
 
-      const duration = Math.max(800, Number(options.fadeMs) || 1000);
       const startedAt = performance.now();
       const previousAsset = previous ? this.assets.get(previous.dataset.audioId) : null;
       const fade = now => {
         if (transitionId !== this.musicTransitionId) return;
-        const progress = Math.min(1, (now - startedAt) / duration);
+        const progress = Math.min(1, (now - startedAt) / fadeMs);
         next.volume = this.getMusicVolumeFor(asset) * progress;
         if (previous) previous.volume = this.getMusicVolumeFor(previousAsset) * (1 - progress);
         if (progress < 1) {
@@ -416,7 +382,6 @@
       document.addEventListener("click", event => {
         const button = event.target.closest?.("button, [role='button']");
         if (!button || button.disabled || button.getAttribute("aria-disabled") === "true") return;
-        if (button.matches?.("[data-audio-enable]")) return;
         const id = String(button.id || "");
         const label = String(button.getAttribute("aria-label") || button.textContent || "").toLowerCase();
         if (id === "profileCloseBtn" || id === "closeModalBtn" || label.includes("close") || label === "cancel") {
