@@ -524,6 +524,7 @@ function validateCodecAndTemporaryMusicContracts(audioManagerSource) {
   const loadManifest = extractMethod(audioManagerSource, "loadManifest");
   const setMusicState = extractMethod(audioManagerSource, "setMusicState");
   const playEffectSource = extractMethod(audioManagerSource, "playEffectSource");
+  const prepareEffect = extractMethod(audioManagerSource, "prepareEffect");
   const loadEffectBuffer = extractMethod(audioManagerSource, "loadEffectBuffer");
   const playWebAudioEffect = extractMethod(audioManagerSource, "playWebAudioEffect");
   const pulseMusic = extractMethod(audioManagerSource, "pulseMusic");
@@ -569,6 +570,35 @@ function validateCodecAndTemporaryMusicContracts(audioManagerSource) {
       && playWebAudioEffect.includes("createGain()")
       && playWebAudioEffect.includes("this.activeEffects.add(record)"),
     "Web Audio effects do not support independent overlapping sources and gain control"
+  );
+  check(
+    /function\s+clampScale\s*\([^)]*\)\s*\{[\s\S]*?Math\.min\(\s*2\s*,\s*Math\.max\(\s*0\s*,\s*number\s*\)\s*\)/.test(audioManagerSource),
+    "effect volume multipliers must support an audible boost above 1 with a safe upper bound"
+  );
+  check(
+    playWebAudioEffect.includes("clampScale(options.volumeScale, 1)")
+      && playEffectSource.includes("clampScale(options.volumeScale, 1)")
+      && !playWebAudioEffect.includes("clampVolume(options.volumeScale, 1)")
+      && !playEffectSource.includes("clampVolume(options.volumeScale, 1)"),
+    "effect playback must apply volumeScale as a multiplier instead of capping it at 1"
+  );
+  check(
+    prepareEffect.includes('this.effectsEngine === "htmlaudio"')
+      && prepareEffect.includes("audio.play()")
+      && prepareEffect.includes("this.preparedHtmlEffects.set(id, record)")
+      && prepareEffect.includes("prepareSource(nextSourceIndex)"),
+    "HTMLAudio fallback must authorize and retain a reusable effect element during the user gesture"
+  );
+  check(
+    audioManagerSource.includes("this.preparedHtmlEffects.get(id)")
+      && audioManagerSource.includes("this.playEffectSource(asset, options, prepared.sourceIndex, prepared.audio)"),
+    "delayed HTMLAudio fallback playback must reuse the gesture-authorized effect element"
+  );
+  check(
+    prepareEffect.includes('error?.name === "NotAllowedError"')
+      && prepareEffect.includes('error?.name === "AbortError"')
+      && /if\s*\(\s*policyError\s*\)\s*\{[\s\S]*?this\.effectsUnlocked\s*=\s*false/.test(prepareEffect),
+    "HTMLAudio codec failures must preserve effects authorization while policy failures revoke it"
   );
 
   check(setMusicState.includes("options.returnState"), "setMusicState() has no explicit temporary return state");
@@ -643,7 +673,60 @@ function validateRuntimeCueAndContextContracts(gameSource) {
 }
 
 function validateCityUpgradeCueContract(gameSource) {
+  const primeCityUpgradeAudio = extractFunction(gameSource, "primeCityUpgradeAudio");
+  check(
+    countGameCueCalls(primeCityUpgradeAudio, "button_click") === 1,
+    "a city-upgrade gesture must play one immediate button_click cue"
+  );
+  check(
+    /unlockEffects\?\.\s*\(\s*\{\s*userGesture\s*:\s*true\s*\}\s*\)/.test(primeCityUpgradeAudio),
+    "a city-upgrade gesture must explicitly authorize the independent effects channel"
+  );
+  check(
+    /prepareEffect\?\.\s*\(\s*["']level_up["']\s*\)/.test(primeCityUpgradeAudio),
+    "a city-upgrade gesture must preload the delayed level_up success cue"
+  );
+
+  const cityWheel = extractFunction(gameSource, "renderSelectedCityWheel");
+  const wheelUpgradeHandler = cityWheel.match(
+    /querySelector\s*\(\s*["']\.wheel-level["']\s*\)[\s\S]*?addEventListener\s*\(\s*["']click["'][\s\S]*?\n\s*\}\s*\);/
+  )?.[0] || "";
+  check(
+    /wheel-level[\s\S]*?data-audio-effect=["']none["']/.test(cityWheel),
+    "the map-wheel upgrade control must suppress duplicate delegated UI audio"
+  );
+  check(
+    wheelUpgradeHandler.indexOf("primeCityUpgradeAudio()") >= 0
+      && wheelUpgradeHandler.indexOf("primeCityUpgradeAudio()") < wheelUpgradeHandler.indexOf("upgradeCity("),
+    "the map-wheel upgrade control must prime audio before starting the upgrade"
+  );
+
+  const renderCityLevelUpButton = extractFunction(gameSource, "renderCityLevelUpButton");
+  check(
+    /data-audio-effect=["']none["']/.test(renderCityLevelUpButton),
+    "modal city-upgrade controls must suppress duplicate delegated UI audio"
+  );
+  const bindCityLevelUpButtons = extractFunction(gameSource, "bindCityLevelUpButtons");
+  check(
+    bindCityLevelUpButtons.indexOf("primeCityUpgradeAudio()") >= 0
+      && bindCityLevelUpButtons.indexOf("primeCityUpgradeAudio()") < bindCityLevelUpButtons.indexOf("button.disabled = true"),
+    "modal city-upgrade controls must prime audio before disabling the clicked button"
+  );
+
   const upgradeCity = extractFunction(gameSource, "upgradeCity");
+  check(
+    !/Number\s*\(\s*result\?\.upgraded\s*\)\s*\|\|\s*chunkLevels/.test(upgradeCity),
+    "city-upgrade responses must not treat a missing or zero upgraded count as success"
+  );
+  check(
+    /Number\.isFinite\s*\(\s*reportedUpgraded\s*\)/.test(upgradeCity)
+      && /if\s*\(\s*upgraded\s*<\s*1\s*\)\s*throw\b/.test(upgradeCity),
+    "city-upgrade responses must require a finite positive server-confirmed level count"
+  );
+  check(
+    /serverCityUpgradeInFlightIds\.has[\s\S]*?rejectGameAction\s*\(/.test(upgradeCity),
+    "duplicate in-flight city upgrades must play invalid_action"
+  );
   const serverBranch = extractConditional(
     upgradeCity,
     /\busesServerEconomyAuthority\s*\(\s*\)/,
@@ -758,6 +841,18 @@ function validateCityUpgradeCueContract(gameSource) {
   check(
     countGameCueCalls(upgradeCity, "level_up") === 3,
     "upgradeCity() must contain exactly three level_up calls: server success, partial server success, and local success"
+  );
+  check(
+    tryBody.indexOf("if (upgraded < 1)") >= 0
+      && tryBody.indexOf("applyServerEconomyResult(result)") > tryBody.indexOf("if (upgraded < 1)"),
+    "server economy state must only be applied after a city upgrade is positively confirmed"
+  );
+  const audibleLevelUpCalls = upgradeCity.match(
+    /playGameSound\s*\(\s*["']level_up["']\s*,\s*\{[^}]*volumeScale\s*:\s*1\.35[^}]*\}\s*\)/g
+  ) || [];
+  check(
+    audibleLevelUpCalls.length === 3,
+    "every confirmed city-upgrade success must play the raised-volume level_up cue"
   );
 }
 

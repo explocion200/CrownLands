@@ -2911,6 +2911,16 @@ function playGameSound(id, options = {}) {
   return crownlandsAudio?.playEffect(id, audioOptions) || false;
 }
 
+function primeCityUpgradeAudio() {
+  crownlandsAudio?.unlockEffects?.({ userGesture: true });
+  crownlandsAudio?.prepareEffect?.("level_up");
+  return playGameSound("button_click", {
+    cooldownMs: 25,
+    maxSameEffect: 4,
+    volumeScale: 1.2,
+  });
+}
+
 function playRewardSound(rewardType = "", options = {}) {
   const type = String(rewardType || "").toLowerCase();
   if (type === "troops" || type === "troop") return playGameSound("troop_reward", options);
@@ -20232,7 +20242,7 @@ function renderSelectedCityWheel(city) {
   wheel.style.top = `${mapPoint.y}px`;
   wheel.innerHTML = `
     <span class="city-wheel-ring" aria-hidden="true"></span>
-    <button class="city-wheel-action wheel-level" type="button" aria-label="${escapeHtml(levelButtonLabel)}" title="${escapeHtml(levelButtonLabel)}" ${levelDisabled ? "disabled" : ""}>
+    <button class="city-wheel-action wheel-level" type="button" aria-label="${escapeHtml(levelButtonLabel)}" title="${escapeHtml(levelButtonLabel)}" data-audio-effect="none" ${levelDisabled ? "disabled" : ""}>
       <span class="wheel-icon" aria-hidden="true">\u265C\u2191</span>
       <span class="wheel-action-name">Level</span>
       <span class="wheel-cost">${levelCostLabel}</span>
@@ -20257,6 +20267,7 @@ function renderSelectedCityWheel(city) {
   `;
   wheel.querySelector(".wheel-level").addEventListener("click", event => {
     event.stopPropagation();
+    primeCityUpgradeAudio();
     upgradeCity(city.id, 1);
   });
   wheel.querySelector(".wheel-send").addEventListener("click", event => {
@@ -21877,6 +21888,9 @@ function updatePerformancePanel(now = performance.now()) {
   const audioSourceText = audioDebug
     ? `${audioDebug.currentAssetId || "none"} · source ${Number(audioDebug.currentSourceIndex) >= 0 ? Number(audioDebug.currentSourceIndex) + 1 : "none"} · ${audioDebug.readyState ?? "?"}/${audioDebug.networkState ?? "?"}`
     : "unavailable";
+  const audioEffectText = audioDebug
+    ? `${audioDebug.lastEffectId || "none"} · ${audioDebug.effectsMuted ? "muted" : `${Math.round(clamp(Number(audioDebug.effectsVolume) || 0, 0, 1) * 100)}%`}`
+    : "unavailable";
   const musicAudioError = audioDebug?.lastPlaybackError
     ? String(audioDebug.lastPlaybackError?.message || audioDebug.lastPlaybackError)
     : "";
@@ -21901,6 +21915,7 @@ function updatePerformancePanel(now = performance.now()) {
     <span>Audio: ${escapeHtml(audioStateText)}</span>
     <span>Audio unlock: ${escapeHtml(audioUnlockText)}</span>
     <span>Audio source: ${escapeHtml(audioSourceText)}</span>
+    <span>Last effect: ${escapeHtml(audioEffectText)}</span>
     <span>Audio error: ${escapeHtml(audioErrorText)}</span>
     <small>F8 toggles this panel</small>
   `;
@@ -25480,7 +25495,7 @@ async function upgradeCity(cityId, levels = 1) {
   if (usesServerEconomyAuthority()) {
     const inFlightKey = city.id;
     if (serverCityUpgradeInFlightIds.has(inFlightKey)) {
-      showToast(`${city.name} upgrade is already processing.`);
+      rejectGameAction(`${city.name} upgrade is already processing.`);
       return;
     }
     serverCityUpgradeInFlightIds.add(inFlightKey);
@@ -25495,8 +25510,12 @@ async function upgradeCity(cityId, levels = 1) {
           regionId: getCityRegionId(city),
           levels: chunkLevels,
         });
+        const reportedUpgraded = Number(result?.upgraded);
+        const upgraded = Number.isFinite(reportedUpgraded)
+          ? Math.min(chunkLevels, Math.max(0, Math.floor(reportedUpgraded)))
+          : 0;
+        if (upgraded < 1) throw new Error("The city upgrade was not confirmed by the server.");
         applyServerEconomyResult(result);
-        const upgraded = Math.max(0, Math.floor(Number(result?.upgraded) || chunkLevels));
         totalUpgraded += upgraded;
         totalSpent += Math.max(0, Math.floor(Number(result?.spentGold) || 0));
         remainingLevels -= upgraded;
@@ -25507,7 +25526,7 @@ async function upgradeCity(cityId, levels = 1) {
         const levelText = totalUpgraded > 1 ? `${formatNumber(totalUpgraded)} levels` : "1 level";
         addLog(`${updatedCity.name} upgraded ${levelText} to level ${formatNumber(updatedCity.level)}${totalSpent ? ` for ${formatNumber(totalSpent)} gold` : ""}.`);
         showToast(`${updatedCity.name} upgraded ${levelText}`);
-        playGameSound("level_up", { cooldownMs: 180, allowCrossMap: true });
+        playGameSound("level_up", { cooldownMs: 180, allowCrossMap: true, volumeScale: 1.35 });
       } else {
         rejectGameAction("Could not upgrade city.", { allowCrossMap: true });
       }
@@ -25517,7 +25536,7 @@ async function upgradeCity(cityId, levels = 1) {
       if (totalUpgraded > 0) {
         const updatedCity = cityById(city.id) || city;
         showToast(`${updatedCity.name} upgraded ${formatNumber(totalUpgraded)} level${totalUpgraded === 1 ? "" : "s"}`);
-        playGameSound("level_up", { cooldownMs: 180, allowCrossMap: true });
+        playGameSound("level_up", { cooldownMs: 180, allowCrossMap: true, volumeScale: 1.35 });
       } else {
         rejectGameAction(error?.message || "Could not upgrade city.", { allowCrossMap: true });
       }
@@ -25548,7 +25567,7 @@ async function upgradeCity(cityId, levels = 1) {
 
   addLog(`${city.name} upgraded to level ${city.level}.`);
   showToast(`${city.name} upgraded`);
-  playGameSound("level_up", { cooldownMs: 180, allowCrossMap: true });
+  playGameSound("level_up", { cooldownMs: 180, allowCrossMap: true, volumeScale: 1.35 });
   markOwnedCityChanged(city);
   saveGame();
   renderAll();
@@ -25654,7 +25673,7 @@ function renderCityLevelUpButton({ label, levels, cost, disabled, reason }) {
   const safeLevels = Math.max(0, Math.floor(Number(levels) || 0));
   const costLabel = Number.isFinite(cost) && cost > 0 ? `${formatNumber(cost)}g` : (reason || "Unavailable");
   return `
-    <button class="city-level-up-btn" data-city-upgrade-levels="${safeLevels}" type="button" ${disabled ? "disabled" : ""}>
+    <button class="city-level-up-btn" data-city-upgrade-levels="${safeLevels}" data-audio-effect="none" type="button" ${disabled ? "disabled" : ""}>
       <span>${escapeHtml(label)}</span>
       <small>${escapeHtml(reason || costLabel)}</small>
     </button>`;
@@ -25715,6 +25734,7 @@ function bindCityLevelUpButtons(city) {
     button.addEventListener("click", async () => {
       const levels = Math.max(0, Math.floor(Number(button.dataset.cityUpgradeLevels) || 0));
       if (levels < 1) return;
+      primeCityUpgradeAudio();
       button.disabled = true;
       await upgradeCity(city.id, levels);
       const refreshedCity = cityById(city.id);

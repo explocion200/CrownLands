@@ -512,6 +512,13 @@ const testManifest = {
     ogg: "ui/notification.ogg",
     loop: false,
     recommended_volume: 0.45,
+  }, {
+    id: "level_up",
+    category: "rewards",
+    wav: "rewards/level_up.wav",
+    ogg: "rewards/level_up.ogg",
+    loop: false,
+    recommended_volume: 0.6,
   }],
 };
 
@@ -852,6 +859,30 @@ async function run() {
     "An authorized Web Audio context must play later asynchronous effects without another gesture.",
   );
 
+  now += 100;
+  const levelUpFetchStart = effectFetchRecords.length;
+  assert.equal(await manager.prepareEffect("level_up"), true);
+  assert.equal(
+    effectFetchRecords.length,
+    levelUpFetchStart + 1,
+    "A city-upgrade gesture must preload the eventual success cue.",
+  );
+  assert.match(effectFetchRecords[levelUpFetchStart], /level_up\.mp3\?v=test-build$/);
+  const levelUpStart = effectSourceStarts.length;
+  assert.equal(manager.playEffect("level_up", { volumeScale: 1.35 }), true);
+  await flushPromises();
+  assert.equal(
+    effectSourceStarts.length,
+    levelUpStart + 1,
+    "A delayed city-upgrade success must start the preloaded level_up cue.",
+  );
+  assert.ok(
+    Math.abs(effectSourceStarts.at(-1).connections[0].gain.value - 0.81) < 0.000001,
+    "The level_up gain must apply its 1.35 volume multiplier instead of capping it at 1.",
+  );
+  assert.equal(manager.getDebugState().lastEffectId, "level_up");
+  assert.ok(manager.getDebugState().lastEffectStartedAt > 0);
+
   manager.setEffectsVolume(0.5);
   assert.equal(manager.effectMasterGain.gain.value, 0.5, "The effects preference must drive a Web Audio GainNode.");
   manager.setEffectsVolume(0.8);
@@ -928,6 +959,35 @@ async function run() {
     /playGameSound\("city_under_attack",\s*\{\s*cooldownMs:\s*1000,\s*allowCrossMap:\s*true\s*\}\)/,
     "Incoming attack warnings must remain the explicit cross-map exception.",
   );
+
+  manager.effectsEngine = "htmlaudio";
+  manager.effectContext = null;
+  manager.effectMasterGain = null;
+  manager.effectsUnlocked = true;
+  now += 500;
+  const audioCountBeforeHtmlPreparation = audioInstances.length;
+  queuePlayRejection("NotSupportedError");
+  queuePlaySuccess();
+  assert.equal(await manager.prepareEffect("level_up"), true);
+  const preparedHtmlRecord = manager.preparedHtmlEffects.get("level_up");
+  const preparedHtmlLevelUp = preparedHtmlRecord?.audio;
+  assert.ok(preparedHtmlLevelUp, "HTMLAudio fallback must retain the gesture-authorized effect element.");
+  assert.equal(preparedHtmlRecord.sourceIndex, 1, "HTMLAudio preparation must fall back from MP3 to OGG.");
+  assert.match(preparedHtmlLevelUp.src, /level_up\.ogg\?v=test-build$/);
+  assert.equal(audioInstances.length, audioCountBeforeHtmlPreparation + 2);
+  assert.equal(manager.effectsUnlocked, true, "A codec failure must not revoke effects authorization.");
+  assert.equal(preparedHtmlLevelUp.paused, true);
+  queuePlaySuccess();
+  assert.equal(manager.playEffect("level_up", { volumeScale: 1.35 }), true);
+  await flushPromises();
+  assert.equal(
+    audioInstances.length,
+    audioCountBeforeHtmlPreparation + 2,
+    "Delayed HTMLAudio fallback playback must reuse the element prepared by the upgrade gesture.",
+  );
+  assert.equal(preparedHtmlLevelUp.paused, false);
+  assert.ok(Math.abs(preparedHtmlLevelUp.volume - 0.648) < 0.000001);
+  assert.equal(manager.getDebugState().lastEffectId, "level_up");
 
   console.log(
     "Validated persistent autoplay recovery, unlock dedupe, independent mute states, codec fallbacks, resumes, and login control sync.",
