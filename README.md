@@ -145,7 +145,7 @@ node .\tools\audio-browser-test-server.js --self-test
 node .\tools\validate-audio-browser.js
 ```
 
-The second command requires Playwright to be available to Node. It automatically uses installed Chrome and Edge (or `CROWNLANDS_CHROME_PATH` / `CROWNLANDS_EDGE_PATH`) and checks fresh playback, blocked-autoplay recovery, the first-gesture race, mobile touch recovery, mute persistence, effects while music is muted, background resume, login control placement, and a service-worker-controlled reload with native ranged media responses.
+The second command requires Playwright to be available to Node. It automatically uses installed Chrome and Edge (or `CROWNLANDS_CHROME_PATH` / `CROWNLANDS_EDGE_PATH`) and checks fresh playback, blocked-autoplay recovery, the first-gesture race, mobile touch recovery, mute persistence, effects while music is muted, background pause/resume with transient-effect cancellation, login control placement, and a service-worker-controlled reload with native ranged media responses.
 
 Local PWA test:
 

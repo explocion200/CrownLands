@@ -436,6 +436,10 @@ function validateMuteAndUnlockContracts(audioManagerSource, indexSource) {
   const unlockEffects = extractMethod(audioManagerSource, "unlockEffects");
   const unlockListeners = extractMethod(audioManagerSource, "installUnlockListeners");
   const resumeListeners = extractMethod(audioManagerSource, "installResumeListeners");
+  const pauseForLifecycle = extractMethod(audioManagerSource, "pauseForLifecycle");
+  const resumeFromLifecycle = extractMethod(audioManagerSource, "resumeFromLifecycle");
+  const clearPendingEffectTimers = extractMethod(audioManagerSource, "clearPendingEffectTimers");
+  const getDebugState = extractMethod(audioManagerSource, "getDebugState");
   const loadManifest = extractMethod(audioManagerSource, "loadManifest");
 
   check(bindSettingsUi.includes('getElementById("musicMute")'), "profile Music Mute switch is not bound");
@@ -473,7 +477,7 @@ function validateMuteAndUnlockContracts(audioManagerSource, indexSource) {
   check(!setMusicMuted.includes("activeEffects"), "muting music must not stop active effects");
 
   check(setEffectsMuted.includes("this.preferences.effectsMuted"), "setEffectsMuted() does not persist effects state");
-  check(setEffectsMuted.includes("this.activeEffects"), "muting effects does not stop active effects");
+  check(setEffectsMuted.includes("this.stopActiveEffects()"), "muting effects does not stop active effects");
   check(!setEffectsMuted.includes("musicMuted"), "setEffectsMuted() must not change musicMuted");
   check(!setEffectsMuted.includes("persistentMusic"), "muting effects must not pause persistent music");
   check(!setEffectsMuted.includes("setMusicMuted"), "setEffectsMuted() must not call setMusicMuted()");
@@ -530,9 +534,42 @@ function validateMuteAndUnlockContracts(audioManagerSource, indexSource) {
       && unlockEffects.includes("context.resume()"),
     "effects are not authorized through a gesture-resumed Web Audio context"
   );
+  for (const eventName of ["pagehide", "blur", "pageshow", "focus", "visibilitychange", "freeze", "resume"]) {
+    check(
+      resumeListeners.includes(`("${eventName}"`),
+      `audio lifecycle listener is missing for ${eventName}`
+    );
+  }
   check(
-    resumeListeners.includes("this.resumeMusic()") && resumeListeners.includes("this.resumeEffects()"),
-    "foreground lifecycle does not independently resume music and effects"
+    resumeListeners.includes("this.pauseForLifecycle(")
+      && resumeListeners.includes("this.resumeFromLifecycle("),
+    "background and foreground events are not routed through the lifecycle state machine"
+  );
+  check(
+    pauseForLifecycle.includes("this.persistentMusic.pause()")
+      && pauseForLifecycle.includes("this.clearPendingEffectTimers()")
+      && pauseForLifecycle.includes("this.stopActiveEffects()")
+      && pauseForLifecycle.includes("this.suspendEffectsForLifecycle()"),
+    "background lifecycle does not pause music and discard transient effects"
+  );
+  check(
+    resumeFromLifecycle.includes("this.resumeMusic(")
+      && resumeFromLifecycle.includes("this.resumeEffects()")
+      && resumeFromLifecycle.includes("this.preferences.musicMuted")
+      && resumeFromLifecycle.includes("this.preferences.effectsMuted"),
+    "foreground lifecycle does not independently resume eligible music and effects"
+  );
+  check(
+    playEffect.includes("this.lifecyclePaused")
+      && clearPendingEffectTimers.includes("window.clearTimeout")
+      && clearPendingEffectTimers.includes("releasePending"),
+    "background lifecycle does not block and release scheduled effects"
+  );
+  check(
+    getDebugState.includes("lifecyclePaused")
+      && getDebugState.includes("lifecyclePauseReason")
+      && getDebugState.includes("resumeMusicAfterLifecycle"),
+    "audio diagnostics do not expose lifecycle pause and resume intent"
   );
   check(
     audioManagerSource.includes('"NotAllowedError"'),
@@ -622,7 +659,8 @@ function validateCodecAndTemporaryMusicContracts(audioManagerSource) {
   check(
     playEffect.includes("options.delayMs")
       && playEffect.includes("this.prepareEffect(id)")
-      && playEffect.includes("window.setTimeout(launch, delayMs)"),
+      && playEffect.includes("window.setTimeout(() =>")
+      && playEffect.includes("this.pendingEffectTimers.add(timerRecord)"),
     "delayed effects must predecode and start through the shared scheduler"
   );
   check(
@@ -645,7 +683,7 @@ function validateCodecAndTemporaryMusicContracts(audioManagerSource) {
   );
   check(
     audioManagerSource.includes("this.preparedHtmlEffects.get(id)")
-      && audioManagerSource.includes("this.playEffectSource(asset, options, prepared.sourceIndex, prepared.audio)"),
+      && audioManagerSource.includes("this.playEffectSource(asset, playbackOptions, prepared.sourceIndex, prepared.audio)"),
     "delayed HTMLAudio fallback playback must reuse the gesture-authorized effect element"
   );
   check(
@@ -1254,6 +1292,13 @@ function validateAudibleMixAndSequencingContracts(gameSource) {
     updatePerformancePanel.includes("lastEffectEffectiveGain")
       && updatePerformancePanel.includes("lastEffectVolumeScale"),
     "F8 diagnostics must expose the effective effect gain and runtime scale"
+  );
+  check(
+    updatePerformancePanel.includes("lifecyclePaused")
+      && updatePerformancePanel.includes("lifecyclePauseReason")
+      && updatePerformancePanel.includes("resumeMusicAfterLifecycle")
+      && updatePerformancePanel.includes("Audio lifecycle:"),
+    "F8 diagnostics must expose background pause and resume intent"
   );
 }
 

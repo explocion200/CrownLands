@@ -22050,6 +22050,11 @@ function updatePerformancePanel(now = performance.now()) {
   const audioUnlockText = audioDebug
     ? `music ${audioDebug.musicUnlocked ? "yes" : "no"}, effects ${audioDebug.effectsUnlocked ? "yes" : "no"} (${audioDebug.effectsEngine || "unknown"}:${audioDebug.effectsContextState || "unknown"}), pending ${audioDebug.unlockInFlight || audioDebug.effectsUnlockInFlight ? "yes" : "no"}`
     : "unavailable";
+  const audioLifecycleText = audioDebug
+    ? audioDebug.lifecyclePaused
+      ? `paused (${audioDebug.lifecyclePauseReason || "background"}) · resume music ${audioDebug.resumeMusicAfterLifecycle ? "yes" : "no"}, effects ${audioDebug.resumeEffectsAfterLifecycle ? "yes" : "no"}`
+      : `foreground${audioDebug.lifecycleResumeInFlight ? " · resuming" : ""}`
+    : "unavailable";
   const audioSourceText = audioDebug
     ? `${audioDebug.currentAssetId || "none"} · source ${Number(audioDebug.currentSourceIndex) >= 0 ? Number(audioDebug.currentSourceIndex) + 1 : "none"} · ${audioDebug.readyState ?? "?"}/${audioDebug.networkState ?? "?"}`
     : "unavailable";
@@ -22093,9 +22098,13 @@ function updatePerformancePanel(now = performance.now()) {
   const effectsAudioError = audioDebug?.lastEffectsError
     ? String(audioDebug.lastEffectsError?.message || audioDebug.lastEffectsError)
     : "";
+  const lifecycleAudioError = audioDebug?.lastLifecycleError
+    ? String(audioDebug.lastLifecycleError?.message || audioDebug.lastLifecycleError)
+    : "";
   const audioErrorText = [
     musicAudioError ? `music ${musicAudioError}` : "",
     effectsAudioError ? `effects ${effectsAudioError}` : "",
+    lifecycleAudioError ? `lifecycle ${lifecycleAudioError}` : "",
   ].filter(Boolean).join(" · ") || "none";
   panel.hidden = false;
   panel.innerHTML = `
@@ -22110,6 +22119,7 @@ function updatePerformancePanel(now = performance.now()) {
     <span>SW: ${escapeHtml(getServiceWorkerDebugStatus())}</span>
     <span>Audio: ${escapeHtml(audioStateText)}</span>
     <span>Audio unlock: ${escapeHtml(audioUnlockText)}</span>
+    <span>Audio lifecycle: ${escapeHtml(audioLifecycleText)}</span>
     <span>Audio source: ${escapeHtml(audioSourceText)}</span>
     <span>Last effect: ${escapeHtml(audioEffectText)}</span>
     <span>Audio error: ${escapeHtml(audioErrorText)}</span>

@@ -19,6 +19,9 @@ const scheduledTimeouts = [];
 const storedValues = new Map();
 const audioContextInstances = [];
 const contextResumeBehaviors = [];
+const contextSuspendBehaviors = [];
+const contextResumeRecords = [];
+const contextSuspendRecords = [];
 const effectDecodeFailureExtensions = new Set();
 const effectFetchRecords = [];
 const effectSourceStarts = [];
@@ -213,6 +216,10 @@ function queueContextResumeSuccess() {
   contextResumeBehaviors.push({ type: "resolve" });
 }
 
+function queueContextSuspendRejection(name) {
+  contextSuspendBehaviors.push({ error: makePlaybackError(name), type: "reject" });
+}
+
 class FakeAudio {
   constructor(url = "") {
     this.src = url;
@@ -375,6 +382,7 @@ class FakeAudioContext {
   }
 
   resume() {
+    contextResumeRecords.push(this);
     const behavior = contextResumeBehaviors.shift() || { type: "resolve" };
     if (behavior.type === "reject") return Promise.reject(behavior.error);
     if (behavior.type === "defer") {
@@ -392,6 +400,15 @@ class FakeAudioContext {
       });
     }
     this.state = "running";
+    this.onstatechange?.();
+    return Promise.resolve();
+  }
+
+  suspend() {
+    contextSuspendRecords.push(this);
+    const behavior = contextSuspendBehaviors.shift() || { type: "resolve" };
+    if (behavior.type === "reject") return Promise.reject(behavior.error);
+    this.state = "suspended";
     this.onstatechange?.();
     return Promise.resolve();
   }
@@ -532,6 +549,10 @@ async function run() {
   assert.equal(typeof (documentListeners.get("pointerdown") || [])[0]?.handler, "function");
   assert.equal(typeof (windowListeners.get("pageshow") || [])[0]?.handler, "function");
   assert.equal(typeof (windowListeners.get("focus") || [])[0]?.handler, "function");
+  assert.equal(typeof (windowListeners.get("pagehide") || [])[0]?.handler, "function");
+  assert.equal(typeof (windowListeners.get("blur") || [])[0]?.handler, "function");
+  assert.equal(typeof (documentListeners.get("freeze") || [])[0]?.handler, "function");
+  assert.equal(typeof (documentListeners.get("resume") || [])[0]?.handler, "function");
   assert.ok(
     (documentListeners.get("click") || []).filter(entry => entry.capture).length >= 2,
     "Unlocking and delegated UI audio must both observe clicks during capture.",
@@ -796,17 +817,137 @@ async function run() {
   await flushPromises();
   assert.equal(manager.currentMusic.paused, false, "Window focus must resume authorized unmuted music.");
 
-  manager.currentMusic.pause();
+  now += 1000;
+  manager.currentMusic.currentTime = 4.25;
+  manager.stopActiveEffects();
+  const lifecycleEffectStart = effectSourceStarts.length;
+  assert.equal(manager.playEffect("button_click"), true);
+  await flushPromises();
+  const lifecycleEffectSource = effectSourceStarts.at(-1);
+  assert.equal(effectSourceStarts.length, lifecycleEffectStart + 1);
+  now += 100;
+  const lifecycleTimerStart = scheduledTimeouts.length;
+  assert.equal(manager.playEffect("button_click", { delayMs: 500 }), true);
+  const lifecycleDelayedTimer = scheduledTimeouts.slice(lifecycleTimerStart).find(entry => entry.delay === 500);
+  assert.ok(lifecycleDelayedTimer, "The lifecycle fixture must include a pending delayed effect.");
+  now += 100;
+  const lifecycleInFlightEffectStart = effectSourceStarts.length;
+  assert.equal(manager.playEffect("gold_pickup"), true);
+  const lifecyclePausePlayStart = playRecords.length;
+  const lifecycleSuspendStart = contextSuspendRecords.length;
+  dispatchWindowEvent("blur");
+  await flushPromises();
+  const pausedLifecycleState = manager.getDebugState();
+  assert.equal(pausedLifecycleState.lifecyclePaused, true);
+  assert.equal(pausedLifecycleState.lifecyclePauseReason, "blur");
+  assert.equal(pausedLifecycleState.resumeMusicAfterLifecycle, true);
+  assert.equal(pausedLifecycleState.resumeEffectsAfterLifecycle, true);
+  assert.equal(pausedLifecycleState.paused, true, "Desktop focus loss must pause music.");
+  assert.equal(pausedLifecycleState.currentTime, 4.25, "Lifecycle pause must preserve music position.");
+  assert.equal(pausedLifecycleState.currentMusicState, "danger");
+  assert.equal(manager.preferences.musicMuted, false, "Lifecycle pause must not change Music Mute.");
+  assert.equal(manager.preferences.effectsMuted, false, "Lifecycle pause must not change Effects Mute.");
+  assert.equal(lifecycleEffectSource.stopped, true, "Backgrounding must discard active transient effects.");
+  assert.equal(manager.activeEffects.size, 0);
+  assert.equal(
+    effectSourceStarts.length,
+    lifecycleInFlightEffectStart,
+    "An effect still decoding when the page backgrounds must be discarded.",
+  );
+  assert.equal(manager.pendingEffectCounts.has("gold_pickup"), false);
+  assert.equal(lifecycleDelayedTimer.cleared, true, "Backgrounding must cancel delayed effects.");
+  assert.equal(manager.pendingEffectCounts.has("button_click"), false);
+  assert.equal(pausedLifecycleState.pendingEffectTimerCount, 0);
+  assert.equal(contextSuspendRecords.length, lifecycleSuspendStart + 1);
+  assert.equal(manager.effectContext.state, "suspended");
+  assert.equal(manager.playEffect("button_click"), false, "Effects must not start while lifecycle-paused.");
+  assert.equal(playRecords.length, lifecyclePausePlayStart, "Backgrounding must not attempt music playback.");
+
+  dispatchWindowEvent("pagehide", { persisted: true });
+  await flushPromises();
+  assert.equal(manager.getDebugState().lifecyclePauseReason, "blur", "Duplicate background events must be idempotent.");
+  assert.equal(contextSuspendRecords.length, lifecycleSuspendStart + 1);
+
+  const lifecycleResumePlayStart = playRecords.length;
+  const lifecycleContextResumeStart = contextResumeRecords.length;
+  queuePlaySuccess();
+  dispatchWindowEvent("focus");
+  dispatchWindowEvent("pageshow", { persisted: true });
+  await flushPromises();
+  const resumedLifecycleState = manager.getDebugState();
+  assert.equal(playRecords.length, lifecycleResumePlayStart + 1, "A foreground event burst must resume music once.");
+  assert.equal(contextResumeRecords.length, lifecycleContextResumeStart + 1, "Effects must resume once after focus returns.");
+  assert.equal(resumedLifecycleState.lifecyclePaused, false);
+  assert.equal(resumedLifecycleState.paused, false);
+  assert.equal(resumedLifecycleState.currentTime, 4.25, "Music must resume from its preserved position.");
+  assert.equal(resumedLifecycleState.currentMusicState, "danger");
+  assert.equal(resumedLifecycleState.effectsContextState, "running");
+  assert.equal(resumedLifecycleState.lastLifecycleError, "");
+
   document.visibilityState = "hidden";
-  const hiddenStart = playRecords.length;
   dispatchDocumentEvent("visibilitychange", document);
   await flushPromises();
-  assert.equal(playRecords.length, hiddenStart, "A hidden document must not attempt playback.");
+  assert.equal(manager.getDebugState().lifecyclePauseReason, "hidden");
+  const hiddenStateChangePlayStart = playRecords.length;
+  assert.equal(
+    await manager.setMusicState("battle", { immediate: true }),
+    false,
+    "A background music-state change must remain pending without playback.",
+  );
+  assert.equal(manager.getDebugState().requestedMusicState, "battle");
+  assert.equal(manager.getDebugState().currentMusicState, "danger");
+  assert.equal(playRecords.length, hiddenStateChangePlayStart);
   document.visibilityState = "visible";
   queuePlaySuccess();
   dispatchDocumentEvent("visibilitychange", document);
   await flushPromises();
-  assert.equal(manager.currentMusic.paused, false, "Foreground visibility must resume music.");
+  assert.equal(manager.currentMusicState, "battle", "Foregrounding must use the latest requested contextual music.");
+  assert.equal(manager.currentMusic.paused, false);
+
+  document.visibilityState = "hidden";
+  dispatchDocumentEvent("visibilitychange", document);
+  await flushPromises();
+  manager.setMusicMuted(true);
+  const mutedForegroundPlayStart = playRecords.length;
+  document.visibilityState = "visible";
+  dispatchDocumentEvent("visibilitychange", document);
+  await flushPromises();
+  assert.equal(playRecords.length, mutedForegroundPlayStart, "Music muted while away must remain paused on return.");
+  assert.equal(manager.currentMusic.paused, true);
+  assert.equal(manager.preferences.effectsMuted, false);
+  queuePlaySuccess();
+  await manager.setMusicMuted(false);
+  assert.equal(manager.currentMusic.paused, false, "Foreground unmute must still resume within the user action.");
+
+  dispatchWindowEvent("blur");
+  await flushPromises();
+  queuePlayRejection("NotAllowedError");
+  dispatchWindowEvent("focus");
+  await flushPromises();
+  assert.equal(manager.currentMusic.paused, true);
+  assert.equal(manager.musicUnlocked, false);
+  assert.equal(manager.getDebugState().lastPlaybackError, "NotAllowedError");
+  queuePlaySuccess();
+  dispatchDocumentEvent("pointerdown", ordinaryTarget);
+  await flushPromises();
+  assert.equal(manager.currentMusic.paused, false, "A first interaction must recover a policy-blocked lifecycle resume.");
+  assert.equal(manager.musicUnlocked, true);
+  assert.equal(manager.getDebugState().lastPlaybackError, "");
+
+  queueContextSuspendRejection("InvalidStateError");
+  dispatchDocumentEvent("freeze", document);
+  await flushPromises();
+  assert.equal(manager.getDebugState().lifecyclePaused, true);
+  assert.equal(manager.getDebugState().lifecyclePauseReason, "freeze");
+  assert.equal(manager.getDebugState().lastLifecycleError, "InvalidStateError");
+  queuePlaySuccess();
+  dispatchDocumentEvent("resume", document);
+  await flushPromises();
+  assert.equal(manager.getDebugState().lifecyclePaused, false);
+  assert.equal(manager.currentMusic.paused, false, "A resume event must recover music after a frozen page.");
+  assert.equal(manager.getDebugState().lastLifecycleError, "", "A later successful resume must clear lifecycle errors.");
+  queuePlaySuccess();
+  await manager.setMusicState("danger", { immediate: true });
 
   now += 100;
   const effectFallbackStart = effectFetchRecords.length;
@@ -1122,6 +1263,27 @@ async function run() {
   assert.equal(manager.getDebugState().lastEffectBaseGain, 1);
   assert.equal(manager.getDebugState().lastEffectEffectiveGain, 0.8);
 
+  now += 500;
+  const htmlLifecycleTimerStart = scheduledTimeouts.length;
+  assert.equal(manager.playEffect("button_click", { delayMs: 425 }), true);
+  const htmlLifecycleTimer = scheduledTimeouts.slice(htmlLifecycleTimerStart).find(entry => entry.delay === 425);
+  assert.ok(htmlLifecycleTimer, "HTMLAudio must register delayed effects with the lifecycle timer set.");
+  const htmlSuspendStart = contextSuspendRecords.length;
+  dispatchWindowEvent("blur");
+  await flushPromises();
+  assert.equal(manager.getDebugState().lifecyclePaused, true);
+  assert.equal(htmlOverdrive.paused, true, "Backgrounding must stop an active HTMLAudio effect.");
+  assert.equal(htmlOverdrive.currentTime, 0, "Discarded HTMLAudio effects must reset instead of resuming stale audio.");
+  assert.equal(htmlLifecycleTimer.cleared, true);
+  assert.equal(manager.pendingEffectCounts.has("button_click"), false);
+  assert.equal(contextSuspendRecords.length, htmlSuspendStart, "HTMLAudio fallback must not require AudioContext suspension.");
+  queuePlaySuccess();
+  dispatchWindowEvent("focus");
+  await flushPromises();
+  assert.equal(manager.getDebugState().lifecyclePaused, false);
+  assert.equal(manager.currentMusic.paused, false);
+  assert.equal(htmlOverdrive.paused, true, "Discarded HTMLAudio effects must not replay after foregrounding.");
+
   compressorCreationFails = true;
   manager.effectsEngine = "webaudio";
   manager.effectContext = null;
@@ -1134,7 +1296,7 @@ async function run() {
   assert.equal(manager.getDebugState().effectsLimiterActive, false);
 
   console.log(
-    "Validated persistent audio, all production effects, balanced gain, limiting, delayed cues, codec fallback, and UI capture.",
+    "Validated persistent audio, background lifecycle, all production effects, balanced gain, limiting, delayed cues, codec fallback, and UI capture.",
   );
 }
 
