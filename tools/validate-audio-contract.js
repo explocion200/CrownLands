@@ -159,6 +159,113 @@ function extractFunction(source, name) {
   );
 }
 
+function extractConditional(source, conditionPattern, label, startIndex = 0, required = true) {
+  const ifPattern = /\bif\s*\(/g;
+  ifPattern.lastIndex = Math.max(0, startIndex);
+  let match;
+
+  while ((match = ifPattern.exec(source))) {
+    const parameterOpen = source.indexOf("(", match.index);
+    const parameterClose = findClosingParenthesis(source, parameterOpen, label);
+    if (parameterClose < 0) return null;
+    const condition = source.slice(parameterOpen + 1, parameterClose);
+    conditionPattern.lastIndex = 0;
+    if (!conditionPattern.test(condition)) {
+      ifPattern.lastIndex = parameterClose + 1;
+      continue;
+    }
+
+    const bodyOpen = source.indexOf("{", parameterClose);
+    check(bodyOpen >= 0, `${label} has no conditional body`);
+    if (bodyOpen < 0) return null;
+    const body = extractBlockFromOpenBrace(source, bodyOpen, label);
+    const bodyClose = bodyOpen + body.length + 1;
+    let end = bodyClose + 1;
+    let elseBody = "";
+    let cursor = end;
+    while (/\s/.test(source[cursor] || "")) cursor += 1;
+    if (source.slice(cursor, cursor + 4) === "else") {
+      cursor += 4;
+      while (/\s/.test(source[cursor] || "")) cursor += 1;
+      if (source[cursor] === "{") {
+        elseBody = extractBlockFromOpenBrace(source, cursor, `${label} else branch`);
+        end = cursor + elseBody.length + 2;
+      }
+    }
+
+    return {
+      body,
+      condition,
+      elseBody,
+      end,
+      start: match.index,
+    };
+  }
+
+  if (required) check(false, `${label} is missing`);
+  return null;
+}
+
+function extractTryCatch(source, label) {
+  const tryMatch = /\btry\s*\{/.exec(source);
+  check(Boolean(tryMatch), `${label} try block is missing`);
+  if (!tryMatch) return { catchBody: "", tryBody: "" };
+
+  const tryOpen = source.indexOf("{", tryMatch.index);
+  const tryBody = extractBlockFromOpenBrace(source, tryOpen, `${label} try block`);
+  const tryClose = tryOpen + tryBody.length + 1;
+  const catchMatch = /\bcatch\s*\(/g;
+  catchMatch.lastIndex = tryClose + 1;
+  const catchResult = catchMatch.exec(source);
+  check(Boolean(catchResult), `${label} catch block is missing`);
+  if (!catchResult) return { catchBody: "", tryBody };
+
+  const catchParameterOpen = source.indexOf("(", catchResult.index);
+  const catchParameterClose = findClosingParenthesis(
+    source,
+    catchParameterOpen,
+    `${label} catch parameters`
+  );
+  if (catchParameterClose < 0) return { catchBody: "", tryBody };
+  const catchOpen = source.indexOf("{", catchParameterClose);
+  check(catchOpen >= 0, `${label} catch block has no body`);
+  if (catchOpen < 0) return { catchBody: "", tryBody };
+
+  return {
+    catchBody: extractBlockFromOpenBrace(source, catchOpen, `${label} catch block`),
+    tryBody,
+  };
+}
+
+function countGameCueCalls(source, cue) {
+  const pattern = new RegExp(
+    `playGameSound\\s*\\(\\s*["'\`]${escapeRegex(cue)}["'\`]`,
+    "g"
+  );
+  return (source.match(pattern) || []).length;
+}
+
+function countRewardSoundCalls(source) {
+  return (source.match(/\bplayRewardSound\s*\(/g) || []).length;
+}
+
+function extractArrowCallback(source, pattern, label) {
+  pattern.lastIndex = 0;
+  const match = pattern.exec(source);
+  check(Boolean(match), `${label} is missing`);
+  if (!match) return null;
+
+  const bodyOpen = source.indexOf("{", match.index);
+  check(bodyOpen >= 0, `${label} has no callback body`);
+  if (bodyOpen < 0) return null;
+  const body = extractBlockFromOpenBrace(source, bodyOpen, label);
+  return {
+    body,
+    end: bodyOpen + body.length + 2,
+    start: match.index,
+  };
+}
+
 function walkMediaFiles(directory, prefix = "") {
   const results = [];
   for (const entry of fs.readdirSync(directory, { withFileTypes: true })) {
@@ -535,6 +642,354 @@ function validateRuntimeCueAndContextContracts(gameSource) {
   );
 }
 
+function validateCityUpgradeCueContract(gameSource) {
+  const upgradeCity = extractFunction(gameSource, "upgradeCity");
+  const serverBranch = extractConditional(
+    upgradeCity,
+    /\busesServerEconomyAuthority\s*\(\s*\)/,
+    "upgradeCity() server-authority branch"
+  );
+  if (!serverBranch) return;
+
+  const { catchBody, tryBody } = extractTryCatch(
+    serverBranch.body,
+    "upgradeCity() server-authority branch"
+  );
+  const confirmedServerUpgrade = extractConditional(
+    tryBody,
+    /\btotalUpgraded\s*>\s*0\b/,
+    "upgradeCity() confirmed-server-success branch",
+    0,
+    false
+  );
+  const zeroServerUpgrade = confirmedServerUpgrade ? null : extractConditional(
+    tryBody,
+    /(?:!\s*totalUpgraded\b|\btotalUpgraded\s*(?:===?|<=)\s*0\b|\btotalUpgraded\s*<\s*1\b|\b0\s*(?:===?|>=)\s*totalUpgraded\b)/,
+    "upgradeCity() zero-upgrade server guard",
+    0,
+    false
+  );
+  if (confirmedServerUpgrade) {
+    check(
+      countGameCueCalls(confirmedServerUpgrade.body, "level_up") === 1,
+      "a confirmed server city upgrade must play level_up exactly once"
+    );
+    check(
+      countGameCueCalls(tryBody, "level_up") === 1,
+      "server city-upgrade success audio must stay inside the confirmed-upgrade guard"
+    );
+  } else if (zeroServerUpgrade) {
+    check(
+      zeroServerUpgrade.body.includes("rejectGameAction("),
+      "a zero-upgrade server result must use rejectGameAction()"
+    );
+    check(
+      /\breturn\b/.test(zeroServerUpgrade.body),
+      "a zero-upgrade server result must return before success audio"
+    );
+    check(
+      countGameCueCalls(zeroServerUpgrade.body, "level_up") === 0,
+      "a zero-upgrade server result must not play level_up"
+    );
+    const confirmedServerSuccess = tryBody.slice(zeroServerUpgrade.end);
+    check(
+      countGameCueCalls(confirmedServerSuccess, "level_up") === 1,
+      "a confirmed server city upgrade must play level_up exactly once"
+    );
+  } else {
+    check(
+      false,
+      "upgradeCity() must distinguish confirmed server upgrades from zero-upgrade results before playing level_up"
+    );
+  }
+
+  const partialServerUpgrade = extractConditional(
+    catchBody,
+    /\btotalUpgraded\s*>\s*0\b/,
+    "upgradeCity() partial-server-success branch"
+  );
+  if (partialServerUpgrade) {
+    check(
+      countGameCueCalls(partialServerUpgrade.body, "level_up") === 1,
+      "a partial server city upgrade must play level_up exactly once"
+    );
+    check(
+      Boolean(partialServerUpgrade.elseBody),
+      "upgradeCity() server failure must have a distinct zero-upgrade branch"
+    );
+    if (partialServerUpgrade.elseBody) {
+      check(
+        partialServerUpgrade.elseBody.includes("rejectGameAction("),
+        "a server city-upgrade failure with no completed levels must use rejectGameAction()"
+      );
+      check(
+        countGameCueCalls(partialServerUpgrade.elseBody, "level_up") === 0,
+        "a server city-upgrade failure with no completed levels must not play level_up"
+      );
+    }
+  }
+
+  const localNoUpgrade = extractConditional(
+    upgradeCity,
+    /(?:!\s*upgraded\b|\bupgraded\s*(?:===?|<=)\s*0\b|\bupgraded\s*<\s*1\b|\b0\s*(?:===?|>=)\s*upgraded\b)/,
+    "upgradeCity() local no-upgrade branch",
+    serverBranch.end
+  );
+  if (localNoUpgrade) {
+    check(
+      localNoUpgrade.body.includes("rejectGameAction("),
+      "a local city upgrade with no completed levels must use rejectGameAction()"
+    );
+    check(
+      /\breturn\b/.test(localNoUpgrade.body),
+      "a local city upgrade with no completed levels must return before success audio"
+    );
+    check(
+      countGameCueCalls(localNoUpgrade.body, "level_up") === 0,
+      "a local city upgrade with no completed levels must not play level_up"
+    );
+    const confirmedLocalSuccess = upgradeCity.slice(localNoUpgrade.end);
+    check(
+      countGameCueCalls(confirmedLocalSuccess, "level_up") === 1,
+      "a confirmed local city upgrade must play level_up exactly once"
+    );
+  }
+
+  check(
+    countGameCueCalls(upgradeCity, "level_up") === 3,
+    "upgradeCity() must contain exactly three level_up calls: server success, partial server success, and local success"
+  );
+}
+
+function validateScoutDispatchCueContract(gameSource) {
+  const launchScoutMission = extractFunction(gameSource, "launchScoutMission");
+  const serverBranch = extractConditional(
+    launchScoutMission,
+    /\busesServerArmyAuthority\s*\(\s*\)/,
+    "launchScoutMission() server-authority branch"
+  );
+  if (!serverBranch) return;
+
+  const acceptedCallback = extractArrowCallback(
+    serverBranch.body,
+    /\.then\s*\(\s*(?:async\s+)?accepted\s*=>\s*\{/,
+    "launchScoutMission() accepted-server callback"
+  );
+  if (acceptedCallback) {
+    const acceptedGuardIndex = acceptedCallback.body.search(
+      /\bif\s*\(\s*!\s*accepted\s*\)\s*(?:\{\s*)?return\b/
+    );
+    const dispatchIndex = acceptedCallback.body.search(
+      /playGameSound\s*\(\s*["']troop_dispatch["']/
+    );
+    check(
+      acceptedGuardIndex >= 0,
+      "server scout dispatch must guard against a rejected server order"
+    );
+    check(
+      countGameCueCalls(acceptedCallback.body, "troop_dispatch") === 1,
+      "an accepted server scout order must play troop_dispatch exactly once"
+    );
+    check(
+      acceptedGuardIndex >= 0 && dispatchIndex > acceptedGuardIndex,
+      "server scout troop_dispatch must run only after the accepted-order guard"
+    );
+  }
+  check(
+    countGameCueCalls(serverBranch.body, "troop_dispatch") === 1,
+    "the server scout path must not play troop_dispatch outside its accepted callback"
+  );
+
+  const localSuccess = launchScoutMission.slice(serverBranch.end);
+  const localEnqueueIndex = localSuccess.search(
+    /\bstate\.attacks\.push\s*\(\s*mission\s*\)/
+  );
+  const localPublishIndex = localSuccess.search(
+    /\bpublishOnlineArmyMovement\s*\(\s*mission\s*\)/
+  );
+  const localDispatchIndex = localSuccess.search(
+    /playGameSound\s*\(\s*["']troop_dispatch["']/
+  );
+  check(localEnqueueIndex >= 0, "local scout success must enqueue its mission");
+  check(localPublishIndex >= 0, "local scout success must publish its mission");
+  check(
+    countGameCueCalls(localSuccess, "troop_dispatch") === 1,
+    "a successful local scout order must play troop_dispatch exactly once"
+  );
+  check(
+    localDispatchIndex > localEnqueueIndex && localDispatchIndex > localPublishIndex,
+    "local scout troop_dispatch must run only after the mission is accepted locally"
+  );
+  check(
+    countGameCueCalls(launchScoutMission, "troop_dispatch") === 2,
+    "launchScoutMission() must contain exactly two troop_dispatch calls: accepted server and successful local"
+  );
+}
+
+function validateClanRallyDispatchCueContract(gameSource) {
+  const submitRallyOrder = extractFunction(gameSource, "submitClanRallyTroopOrder");
+  check(
+    /\bactiveTroopOrderKind\s*===\s*["']rally_create["'][\s\S]{0,200}["']createClanRally["'][\s\S]{0,200}["']joinClanRally["']/.test(submitRallyOrder),
+    "submitClanRallyTroopOrder() must route both rally creation and rally joining through its shared success path"
+  );
+  const submitBlocks = extractTryCatch(
+    submitRallyOrder,
+    "submitClanRallyTroopOrder()"
+  );
+  const submitRequestIndex = submitBlocks.tryBody.search(
+    /\bawait\s+api\s*\[\s*method\s*\]\s*\(/
+  );
+  const submitDispatchIndex = submitBlocks.tryBody.search(
+    /playGameSound\s*\(\s*["']troop_dispatch["']/
+  );
+  const submitSuccessIndex = submitBlocks.tryBody.search(/\breturn\s+true\s*;/);
+  check(
+    countGameCueCalls(submitBlocks.tryBody, "troop_dispatch") === 1,
+    "successful clan rally creation/join must play troop_dispatch exactly once"
+  );
+  check(
+    submitRequestIndex >= 0
+      && submitDispatchIndex > submitRequestIndex
+      && submitSuccessIndex > submitDispatchIndex,
+    "clan rally creation/join must play troop_dispatch after server acceptance and before returning success"
+  );
+  check(
+    countGameCueCalls(submitBlocks.catchBody, "troop_dispatch") === 0,
+    "a failed clan rally creation/join must not play troop_dispatch"
+  );
+  check(
+    countGameCueCalls(submitRallyOrder, "troop_dispatch") === 1,
+    "submitClanRallyTroopOrder() must keep its dispatch cue on the shared success path"
+  );
+
+  const runRallyAction = extractFunction(gameSource, "runClanRallyAction");
+  check(
+    /\baction\s*===\s*["']launch["'][\s\S]{0,200}["']launchClanRally["']/.test(runRallyAction),
+    "runClanRallyAction() must map the launch action to launchClanRally"
+  );
+  const runBlocks = extractTryCatch(runRallyAction, "runClanRallyAction()");
+  const runRequestIndex = runBlocks.tryBody.search(
+    /\bawait\s+api\s*\[\s*method\s*\]\s*\(/
+  );
+  check(runRequestIndex >= 0, "runClanRallyAction() must await its server action");
+  const launchBranch = extractConditional(
+    runBlocks.tryBody,
+    /\baction\s*===\s*["']launch["']/,
+    "runClanRallyAction() successful launch branch",
+    Math.max(0, runRequestIndex)
+  );
+  if (launchBranch) {
+    check(
+      countGameCueCalls(launchBranch.body, "troop_dispatch") === 1,
+      "a successful assembled clan rally launch must play troop_dispatch exactly once"
+    );
+  }
+  check(
+    countGameCueCalls(runRallyAction, "troop_dispatch") === 1,
+    "runClanRallyAction() must restrict troop_dispatch to the successful launch branch"
+  );
+  check(
+    countGameCueCalls(runBlocks.catchBody, "troop_dispatch") === 0,
+    "a failed clan rally launch must not play troop_dispatch"
+  );
+}
+
+function validateRewardedAdCueContract(gameSource) {
+  const claimPreparedRewardedAd = extractFunction(gameSource, "claimPreparedRewardedAd");
+  const guardedRewardCue = /\bif\s*\(\s*(?=[^)]*(?:!\s*result\??\.replayed|result\??\.replayed\s*===?\s*false))(?=[^)]*(?:\breward\s*>\s*0\b|\breward\s*>=\s*1\b|\b0\s*<\s*reward\b))[^)]*\)\s*(?:\{\s*)?playRewardSound\s*\(\s*rewardType\s*(?:[,)]|$)/;
+  check(
+    guardedRewardCue.test(claimPreparedRewardedAd),
+    "a non-replayed positive rewarded-ad claim must play the matching reward sound exactly once"
+  );
+  check(
+    countRewardSoundCalls(claimPreparedRewardedAd) === 1,
+    "claimPreparedRewardedAd() must not play reward audio for replayed or zero-value claims"
+  );
+}
+
+function validateCampCaptureCueContract(gameSource) {
+  const applyServerArmyResult = extractFunction(gameSource, "applyServerArmyResult");
+  const assignmentPattern = /\bconst\s+([A-Za-z_$][\w$]*)\s*=\s*([^;]+);/g;
+  let classifier = null;
+  let assignment;
+  while ((assignment = assignmentPattern.exec(applyServerArmyResult))) {
+    const expression = assignment[2];
+    if (
+      /\bresult\.targetType\s*===\s*["']camp["']/.test(expression)
+      && /\bnormalizedCampUpdate\b/.test(expression)
+      && /\bisRewardCampTarget\s*\(/.test(expression)
+    ) {
+      classifier = {
+        end: assignmentPattern.lastIndex,
+        expression,
+        name: assignment[1],
+        start: assignment.index,
+      };
+      break;
+    }
+  }
+  check(
+    Boolean(classifier),
+    "applyServerArmyResult() must classify camp targets before capture reward audio"
+  );
+  if (!classifier) return;
+
+  const ordinaryCaptureBranch = extractConditional(
+    applyServerArmyResult,
+    new RegExp(
+      `(?=[\\s\\S]*\\bnewestPlayerReport\\??\\.type\\s*===\\s*["']attack["'])`
+        + `(?=[\\s\\S]*\\bnewestPlayerReport\\??\\.outcome\\s*===\\s*["']victory["'])`
+        + `(?=[\\s\\S]*!\\s*${escapeRegex(classifier.name)}\\b)`
+    ),
+    "applyServerArmyResult() non-camp victory branch"
+  );
+  if (!ordinaryCaptureBranch) return;
+  check(
+    classifier.end <= ordinaryCaptureBranch.start,
+    "camp target classification must happen before city/Stronghold capture cues"
+  );
+  check(
+    countGameCueCalls(ordinaryCaptureBranch.body, "city_captured") === 1,
+    "the non-camp victory branch must retain one city_captured cue"
+  );
+  check(
+    countGameCueCalls(ordinaryCaptureBranch.body, "stronghold_captured") === 1,
+    "the non-camp victory branch must retain one stronghold_captured cue"
+  );
+  check(
+    countGameCueCalls(ordinaryCaptureBranch.body, "camp_captured") === 0,
+    "the non-camp victory branch must not play camp_captured"
+  );
+
+  const campVictoryBranch = extractConditional(
+    applyServerArmyResult,
+    /(?=[\s\S]*\bnormalizedCampUpdate\b)(?=[\s\S]*\bresult\.targetType\s*===\s*["']camp["'])(?=[\s\S]*\bresult\.kind\s*===\s*["']attack["'])(?=[\s\S]*\bresult\.outcome\s*===\s*["']victory["'])/,
+    "applyServerArmyResult() camp-victory branch",
+    ordinaryCaptureBranch.end
+  );
+  if (campVictoryBranch) {
+    check(
+      campVictoryBranch.start > ordinaryCaptureBranch.end,
+      "camp_captured must be evaluated after camp victories are excluded from ordinary capture cues"
+    );
+    check(
+      countGameCueCalls(campVictoryBranch.body, "camp_captured") === 1,
+      "a successful camp capture must play camp_captured exactly once"
+    );
+    check(
+      countGameCueCalls(campVictoryBranch.body, "city_captured") === 0
+        && countGameCueCalls(campVictoryBranch.body, "stronghold_captured") === 0,
+      "a camp victory must not also play city_captured or stronghold_captured"
+    );
+  }
+  check(
+    countGameCueCalls(applyServerArmyResult, "camp_captured") === 1
+      && countGameCueCalls(applyServerArmyResult, "city_captured") === 1
+      && countGameCueCalls(applyServerArmyResult, "stronghold_captured") === 1,
+    "applyServerArmyResult() must keep distinct single cues for camp, city, and Stronghold captures"
+  );
+}
+
 function validateServiceWorkerContract(serviceWorkerSource) {
   const fetchHandler = extractBalancedBlock(
     serviceWorkerSource,
@@ -586,6 +1041,11 @@ function main() {
   validateMuteAndUnlockContracts(audioManagerSource, indexSource);
   validateCodecAndTemporaryMusicContracts(audioManagerSource);
   validateRuntimeCueAndContextContracts(gameSource);
+  validateCityUpgradeCueContract(gameSource);
+  validateScoutDispatchCueContract(gameSource);
+  validateClanRallyDispatchCueContract(gameSource);
+  validateRewardedAdCueContract(gameSource);
+  validateCampCaptureCueContract(gameSource);
   validateServiceWorkerContract(serviceWorkerSource);
 
   if (failures.length) {
