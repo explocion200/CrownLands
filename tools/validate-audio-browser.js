@@ -186,6 +186,95 @@ async function waitForServiceWorkerControl(page) {
   );
 }
 
+async function assertBackgroundLifecycle(page, label) {
+  await clickOrdinarySurface(page);
+  await waitForEffectsAuthorization(page);
+  const effectBaseline = await page.evaluate(() => window.CrownlandsAudio.getDebugState().lastEffectStartedAt);
+  assert.equal(
+    await page.evaluate(() => window.CrownlandsAudio.playEffect("stronghold_captured")),
+    true,
+    `${label}: the lifecycle fixture must start a long transient effect.`,
+  );
+  await page.waitForFunction(
+    baseline => {
+      const state = window.CrownlandsAudio?.getDebugState?.();
+      return state?.lastEffectId === "stronghold_captured"
+        && state.lastEffectStartedAt > baseline
+        && state.activeEffectCount > 0;
+    },
+    effectBaseline,
+    { timeout: PLAYBACK_TIMEOUT_MS },
+  );
+  assert.equal(
+    await page.evaluate(() => window.CrownlandsAudio.playEffect("timer_tick_complete", { delayMs: 5000 })),
+    true,
+    `${label}: the lifecycle fixture must queue a delayed effect.`,
+  );
+  await page.waitForFunction(
+    () => window.CrownlandsAudio?.getDebugState?.().pendingEffectTimerCount === 1,
+    null,
+    { timeout: PLAYBACK_TIMEOUT_MS },
+  );
+
+  const before = await getAudioState(page);
+  await page.evaluate(() => window.dispatchEvent(new Event("blur")));
+  await page.waitForFunction(
+    () => {
+      const state = window.CrownlandsAudio?.getDebugState?.();
+      return Boolean(
+        state?.lifecyclePaused
+        && state.lifecyclePauseReason === "blur"
+        && state.paused
+        && state.activeEffectCount === 0
+        && state.pendingEffectTimerCount === 0
+        && state.effectsContextState === "suspended"
+      );
+    },
+    null,
+    { timeout: PLAYBACK_TIMEOUT_MS },
+  );
+  const paused = await getAudioState(page);
+  assert.equal(paused.musicMuted, false, `${label}: lifecycle pause must not set Music Mute.`);
+  assert.equal(paused.effectsMuted, false, `${label}: lifecycle pause must not set Effects Mute.`);
+  assert.equal(paused.currentMusicState, before.currentMusicState);
+  assert.equal(paused.resumeMusicAfterLifecycle, true);
+  assert.equal(paused.resumeEffectsAfterLifecycle, true);
+  assert.equal(
+    await page.evaluate(() => window.CrownlandsAudio.playEffect("button_click")),
+    false,
+    `${label}: new effects must be blocked while backgrounded.`,
+  );
+  await page.waitForTimeout(350);
+  const stillPaused = await getAudioState(page);
+  assert.ok(
+    Math.abs(stillPaused.currentTime - paused.currentTime) < 0.05,
+    `${label}: music time advanced while backgrounded.`,
+  );
+
+  await page.evaluate(() => window.dispatchEvent(new Event("focus")));
+  await page.waitForFunction(
+    pausedAt => {
+      const state = window.CrownlandsAudio?.getDebugState?.();
+      return Boolean(
+        state
+        && !state.lifecyclePaused
+        && !state.paused
+        && state.currentTime > pausedAt + 0.08
+        && state.effectsContextState === "running"
+        && !state.lastLifecycleError
+        && !state.lastPlaybackError
+        && !state.lastEffectsError
+      );
+    },
+    paused.currentTime,
+    { timeout: PLAYBACK_TIMEOUT_MS },
+  );
+  const resumed = await getAudioState(page);
+  assert.equal(resumed.currentMusicState, before.currentMusicState);
+  assert.equal(resumed.activeEffectCount, 0, `${label}: discarded effects must not replay on return.`);
+  assert.equal(resumed.pendingEffectTimerCount, 0, `${label}: delayed effects must remain cancelled.`);
+}
+
 async function assertAllEffectCodecsDecode(page, browserName) {
   const result = await page.evaluate(async () => {
     const manifestResponse = await fetch("/audio/manifest.json", { cache: "no-store" });
@@ -316,6 +405,7 @@ async function runAllowedPlaybackSuite(browser, browserName, baseUrl, fixture) {
     assert.equal(transition.started, true, `${browserName}: world-map transition must start.`);
     assert.equal(transition.sameElement, true, `${browserName}: world-map transition must reuse the media element.`);
     assertHealthyPlayback(await waitForPlayback(page), "world_map");
+    await assertBackgroundLifecycle(page, `${browserName} background lifecycle`);
 
     await page.evaluate(() => {
       window.CrownlandsAudio.currentMusic.pause();
@@ -546,6 +636,7 @@ async function runBlockedPlaybackSuite(browser, baseUrl, mobile = false) {
     }
     assertHealthyPlayback(await waitForPlayback(page), "main_menu");
     await waitForEffectsAuthorization(page);
+    if (mobile) await assertBackgroundLifecycle(page, `${label} background lifecycle`);
 
     await page.evaluate(() => {
       window.CrownlandsAudio.currentMusic.pause();
