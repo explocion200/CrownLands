@@ -288,6 +288,28 @@ async function runAllowedPlaybackSuite(browser, browserName, baseUrl, fixture) {
 
     await clickOrdinarySurface(page);
     await waitForEffectsAuthorization(page);
+    const cityUpgradeAudio = await page.evaluate(async () => {
+      const manager = window.CrownlandsAudio;
+      const prepared = await manager.prepareEffect("level_up");
+      const queued = manager.playEffect("level_up", {
+        cooldownMs: 180,
+        volumeScale: 1.35,
+      });
+      return { prepared, queued };
+    });
+    assert.deepEqual(
+      cityUpgradeAudio,
+      { prepared: true, queued: true },
+      `${browserName}: the city-upgrade success cue must preload and queue.`,
+    );
+    await page.waitForFunction(
+      () => {
+        const state = window.CrownlandsAudio?.getDebugState?.();
+        return state?.lastEffectId === "level_up" && !state.lastEffectsError;
+      },
+      null,
+      { timeout: PLAYBACK_TIMEOUT_MS },
+    );
     await page.locator("#loginMusicMuteBtn").click();
     const muted = await getAudioState(page);
     assert.equal(muted.musicMuted, true, `${browserName}: login mute must mute music.`);
@@ -306,14 +328,17 @@ async function runAllowedPlaybackSuite(browser, browserName, baseUrl, fixture) {
       },
     );
 
+    const effectBaseline = await page.evaluate(() => window.CrownlandsAudio.getDebugState().lastEffectStartedAt);
     const effectQueued = await page.evaluate(() => window.CrownlandsAudio.playEffect("notification"));
     assert.equal(effectQueued, true, `${browserName}: effects must queue while music is muted.`);
     await page.waitForFunction(
-      () => {
+      baseline => {
         const state = window.CrownlandsAudio?.getDebugState?.();
-        return state?.bufferedEffectCount >= 1 && !state.lastEffectsError;
+        return state?.lastEffectId === "notification"
+          && state.lastEffectStartedAt > baseline
+          && !state.lastEffectsError;
       },
-      null,
+      effectBaseline,
       { timeout: PLAYBACK_TIMEOUT_MS },
     );
 
@@ -396,6 +421,25 @@ async function runBlockedPlaybackSuite(browser, baseUrl, mobile = false) {
     serviceWorkers: "allow",
     viewport: { height: 900, width: 1440 },
   });
+  await context.addInitScript(() => {
+    let crownlandsTestGestureReceived = false;
+    const nativePlay = HTMLMediaElement.prototype.play;
+    HTMLMediaElement.prototype.play = function crownlandsPolicyBlockedPlay() {
+      if (!crownlandsTestGestureReceived) {
+        return Promise.reject(new DOMException(
+          "Autoplay blocked by the Crownlands browser test",
+          "NotAllowedError",
+        ));
+      }
+      return nativePlay.call(this);
+    };
+    const authorize = () => {
+      crownlandsTestGestureReceived = true;
+    };
+    document.addEventListener("pointerdown", authorize, { capture: true, once: true });
+    document.addEventListener("touchend", authorize, { capture: true, once: true });
+    document.addEventListener("keydown", authorize, { capture: true, once: true });
+  });
   await addDocumentStartDiagnostics(context);
   const page = await context.newPage();
   const issues = installAudioDiagnostics(page);
@@ -438,6 +482,129 @@ async function runBlockedPlaybackSuite(browser, baseUrl, mobile = false) {
       assertHealthyPlayback(await waitForPlayback(page), "main_menu");
     }
 
+    assert.deepEqual(issues, [], `${label}: audio-related browser errors were observed.`);
+    return label;
+  } finally {
+    await context.close();
+  }
+}
+
+async function runPreparedHtmlEffectSuite(browser, baseUrl) {
+  const context = await browser.newContext({
+    serviceWorkers: "block",
+    viewport: { height: 900, width: 1440 },
+  });
+  await context.addInitScript(() => {
+    for (const name of ["AudioContext", "webkitAudioContext"]) {
+      try {
+        Object.defineProperty(window, name, { configurable: true, value: undefined });
+      } catch (error) {
+        window[name] = undefined;
+      }
+    }
+    let gestureActive = false;
+    const authorizedElements = new WeakSet();
+    const nativePlay = HTMLMediaElement.prototype.play;
+    window.__crownlandsHtmlGestureActive = false;
+    window.__crownlandsHtmlEffectPlayAttempts = [];
+    HTMLMediaElement.prototype.play = function crownlandsPerElementPolicyPlay() {
+      const wasAuthorized = authorizedElements.has(this);
+      window.__crownlandsHtmlEffectPlayAttempts.push({
+        audioId: this.dataset?.audioId || "",
+        gestureActive,
+        marker: this.__crownlandsPreparedMarker || "",
+        wasAuthorized,
+      });
+      if (!gestureActive && !wasAuthorized) {
+        return Promise.reject(new DOMException(
+          "This media element was not authorized by a user gesture",
+          "NotAllowedError",
+        ));
+      }
+      authorizedElements.add(this);
+      return nativePlay.call(this);
+    };
+    const beginGesture = () => {
+      gestureActive = true;
+      window.__crownlandsHtmlGestureActive = true;
+      setTimeout(() => {
+        gestureActive = false;
+        window.__crownlandsHtmlGestureActive = false;
+      }, 0);
+    };
+    document.addEventListener("pointerdown", beginGesture, { capture: true });
+    document.addEventListener("touchend", beginGesture, { capture: true });
+    document.addEventListener("click", beginGesture, { capture: true });
+    document.addEventListener("keydown", beginGesture, { capture: true });
+  });
+  await addDocumentStartDiagnostics(context);
+  const page = await context.newPage();
+  const issues = installAudioDiagnostics(page);
+  const label = "Chrome prepared HTMLAudio fallback";
+  try {
+    await openApp(page, baseUrl);
+    await page.waitForTimeout(250);
+    const blocked = await getAudioState(page);
+    assert.equal(blocked.effectsEngine, "htmlaudio", `${label}: Web Audio must be disabled for this fixture.`);
+    assert.equal(blocked.musicUnlocked, false, `${label}: autoplay must initially be blocked.`);
+    assert.equal(blocked.lastPlaybackError, "NotAllowedError");
+
+    await page.evaluate(() => {
+      document.addEventListener("click", () => {
+        if (typeof window.primeCityUpgradeAudio !== "function") {
+          throw new Error("primeCityUpgradeAudio() is unavailable");
+        }
+        window.primeCityUpgradeAudio();
+        const record = window.CrownlandsAudio.preparedHtmlEffects.get("level_up");
+        if (record?.audio) record.audio.__crownlandsPreparedMarker = "castle-level-up";
+        window.__crownlandsPreparedLevelUpAudio = record?.audio || null;
+        window.__crownlandsPreparedLevelUpPromise = record?.promise || Promise.resolve(false);
+      }, { capture: true, once: true });
+    });
+
+    await clickOrdinarySurface(page);
+    assertHealthyPlayback(await waitForPlayback(page), "main_menu");
+    assert.equal(
+      await page.evaluate(() => window.__crownlandsPreparedLevelUpPromise),
+      true,
+      `${label}: the real upgrade helper must prepare level_up during its click.`,
+    );
+    await page.waitForTimeout(50);
+    assert.equal(await page.evaluate(() => window.__crownlandsHtmlGestureActive), false);
+
+    const queued = await page.evaluate(() => window.CrownlandsAudio.playEffect("level_up", {
+      cooldownMs: 180,
+      volumeScale: 1.35,
+    }));
+    assert.equal(queued, true, `${label}: delayed level_up playback must queue outside the gesture.`);
+    await page.waitForFunction(
+      () => {
+        const state = window.CrownlandsAudio?.getDebugState?.();
+        return state?.lastEffectId === "level_up"
+          && state.lastEffectStartedAt > 0
+          && !state.lastEffectsError;
+      },
+      null,
+      { timeout: PLAYBACK_TIMEOUT_MS },
+    );
+
+    const reuse = await page.evaluate(() => {
+      const levelUpAttempts = window.__crownlandsHtmlEffectPlayAttempts
+        .filter(attempt => attempt.audioId === "level_up");
+      return {
+        attempts: levelUpAttempts,
+        paused: window.__crownlandsPreparedLevelUpAudio?.paused,
+        preparedStillQueued: window.CrownlandsAudio.preparedHtmlEffects.has("level_up"),
+      };
+    });
+    assert.ok(reuse.attempts.length >= 2, `${label}: prepared and delayed playback attempts are both required.`);
+    assert.equal(reuse.attempts[0].gestureActive, true);
+    assert.equal(reuse.attempts[0].wasAuthorized, false);
+    assert.equal(reuse.attempts.at(-1).gestureActive, false);
+    assert.equal(reuse.attempts.at(-1).wasAuthorized, true);
+    assert.equal(reuse.attempts.at(-1).marker, "castle-level-up");
+    assert.equal(reuse.paused, false, `${label}: the prepared level_up element must be playing.`);
+    assert.equal(reuse.preparedStillQueued, false);
     assert.deepEqual(issues, [], `${label}: audio-related browser errors were observed.`);
     return label;
   } finally {
@@ -530,6 +697,7 @@ async function run() {
       const blockedBrowser = await launchBrowser(chrome.executablePath, false);
       try {
         results.push({ browser: await runBlockedPlaybackSuite(blockedBrowser, address.url) });
+        results.push({ browser: await runPreparedHtmlEffectSuite(blockedBrowser, address.url) });
         results.push({ browser: await runPreManifestGestureSuite(blockedBrowser, address.url) });
         results.push({ browser: await runBlockedPlaybackSuite(blockedBrowser, address.url, true) });
       } finally {

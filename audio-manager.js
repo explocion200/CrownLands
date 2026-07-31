@@ -35,6 +35,11 @@
     return Number.isFinite(number) ? Math.min(1, Math.max(0, number)) : fallback;
   }
 
+  function clampScale(value, fallback = 1) {
+    const number = Number(value);
+    return Number.isFinite(number) ? Math.min(2, Math.max(0, number)) : fallback;
+  }
+
   function getAudioExtension(url = "") {
     return String(url).match(/\.([a-z0-9]+)(?:[?#]|$)/i)?.[1]?.toLowerCase() || "";
   }
@@ -83,12 +88,15 @@
       this.activeEffects = new Set();
       this.pendingEffectCounts = new Map();
       this.effectBufferPromises = new Map();
+      this.preparedHtmlEffects = new Map();
       this.effectContext = null;
       this.effectMasterGain = null;
       this.effectUnlockPromise = null;
       this.effectsAuthorized = false;
       this.effectsEngine = (window.AudioContext || window.webkitAudioContext) ? "webaudio" : "htmlaudio";
       this.lastEffectsError = "";
+      this.lastEffectId = "";
+      this.lastEffectStartedAt = 0;
       this.lastSwordIndex = -1;
       this.suppressDelegatedUiSound = false;
       this.manifestPromise = this.loadManifest();
@@ -313,7 +321,7 @@
         if (effect.kind !== "html" || !effect.audio) continue;
         effect.audio.volume = this.preferences.effectsMuted
           ? 0
-          : effect.baseVolume * this.preferences.effectsVolume;
+          : clampVolume(effect.baseVolume * this.preferences.effectsVolume, 1);
       }
     }
 
@@ -705,6 +713,71 @@
       return loadPromise;
     }
 
+    prepareEffect(id) {
+      if (!this.ready || this.preferences.effectsMuted) return Promise.resolve(false);
+      const asset = this.assets.get(id);
+      if (!asset || asset.category === "music") return Promise.resolve(false);
+      if (this.effectsEngine === "htmlaudio") {
+        const existing = this.preparedHtmlEffects.get(id);
+        if (existing) return existing.promise;
+        const sourceUrls = asset.urls || [asset.url];
+        const record = { audio: null, sourceIndex: -1, promise: null };
+        const prepareSource = sourceIndex => {
+          const sourceUrl = sourceUrls[sourceIndex];
+          if (!sourceUrl || this.preferences.effectsMuted) return Promise.resolve(false);
+          const audio = new Audio(sourceUrl);
+          audio.dataset.audioId = asset.id;
+          audio.preload = "auto";
+          audio.playsInline = true;
+          audio.muted = true;
+          audio.volume = 0;
+          record.audio = audio;
+          record.sourceIndex = sourceIndex;
+          let playResult;
+          try {
+            playResult = audio.play();
+          } catch (error) {
+            playResult = Promise.reject(error);
+          }
+          return Promise.resolve(playResult)
+            .then(() => {
+              audio.pause();
+              audio.currentTime = 0;
+              audio.muted = false;
+              this.effectsUnlocked = true;
+              this.effectsAuthorized = true;
+              this.lastEffectsError = "";
+              return true;
+            })
+            .catch(error => {
+              audio.pause();
+              const policyError = error?.name === "NotAllowedError" || error?.name === "AbortError";
+              const nextSourceIndex = sourceIndex + 1;
+              if (!policyError && nextSourceIndex < sourceUrls.length && !this.preferences.effectsMuted) {
+                return prepareSource(nextSourceIndex);
+              }
+              if (this.preparedHtmlEffects.get(id) === record) this.preparedHtmlEffects.delete(id);
+              if (policyError) {
+                this.effectsUnlocked = false;
+                this.effectsAuthorized = false;
+              }
+              this.lastEffectsError = String(error?.name || error?.message || "EffectPreloadError");
+              return false;
+            });
+        };
+        this.preparedHtmlEffects.set(id, record);
+        record.promise = prepareSource(0);
+        return record.promise;
+      }
+      if (!this.effectContext) return Promise.resolve(false);
+      return this.loadEffectBuffer(asset)
+        .then(() => true)
+        .catch(error => {
+          this.lastEffectsError = String(error?.name || error?.message || "EffectPreloadError");
+          return false;
+        });
+    }
+
     async playWebAudioEffect(asset, options) {
       try {
         if (!await this.getEffectsReadyPromise()) return false;
@@ -715,7 +788,7 @@
         const source = this.effectContext.createBufferSource();
         const gainNode = this.effectContext.createGain();
         const baseVolume = clampVolume(asset.recommended_volume, 1)
-          * clampVolume(options.volumeScale, 1);
+          * clampScale(options.volumeScale, 1);
         source.buffer = decoded.buffer;
         source.loop = asset.loop === true;
         gainNode.gain.value = baseVolume;
@@ -747,6 +820,8 @@
         this.activeEffects.add(record);
         try {
           source.start(0);
+          this.lastEffectId = asset.id;
+          this.lastEffectStartedAt = Date.now();
         } catch (error) {
           release();
           throw error;
@@ -802,23 +877,33 @@
           else this.pendingEffectCounts.delete(id);
         });
       } else {
-        this.playEffectSource(asset, options, 0);
+        const prepared = this.preparedHtmlEffects.get(id);
+        if (prepared) {
+          this.preparedHtmlEffects.delete(id);
+          prepared.promise.then(isPrepared => {
+            if (!isPrepared || this.preferences.effectsMuted) return;
+            this.playEffectSource(asset, options, prepared.sourceIndex, prepared.audio);
+          });
+        } else {
+          this.playEffectSource(asset, options, 0);
+        }
       }
       return true;
     }
 
-    playEffectSource(asset, options, sourceIndex) {
+    playEffectSource(asset, options, sourceIndex, preparedAudio = null) {
       const sourceUrls = asset.urls || [asset.url];
       const sourceUrl = sourceUrls[sourceIndex];
       if (!sourceUrl || this.preferences.effectsMuted) return;
 
-      const audio = new Audio(sourceUrl);
+      const audio = preparedAudio || new Audio(sourceUrl);
       audio.dataset.audioId = asset.id;
       audio.preload = "auto";
+      audio.muted = false;
       audio.loop = asset.loop === true;
       const baseVolume = clampVolume(asset.recommended_volume, 1)
-        * clampVolume(options.volumeScale, 1);
-      audio.volume = baseVolume * this.preferences.effectsVolume;
+        * clampScale(options.volumeScale, 1);
+      audio.volume = clampVolume(baseVolume * this.preferences.effectsVolume, 1);
       let released = false;
       let fallbackStarted = false;
       const record = {
@@ -879,6 +964,8 @@
           this.preferredAudioExtension = getAudioExtension(sourceUrl) || this.preferredAudioExtension;
           this.effectsUnlocked = true;
           this.effectsAuthorized = true;
+          this.lastEffectId = asset.id;
+          this.lastEffectStartedAt = Date.now();
           this.lastEffectsError = "";
         })
         .catch(fallback);
@@ -1011,6 +1098,8 @@
         bufferedEffectCount: this.effectBufferPromises.size,
         musicMuted: this.preferences.musicMuted,
         effectsMuted: this.preferences.effectsMuted,
+        musicVolume: this.preferences.musicVolume,
+        effectsVolume: this.preferences.effectsVolume,
         requestedMusicState: this.requestedMusicState,
         requestedReturnState: this.requestedMusicReturnState,
         currentMusicState: this.currentMusicState,
@@ -1023,6 +1112,8 @@
         readyState: Number(music?.readyState) || 0,
         networkState: Number(music?.networkState) || 0,
         preferredAudioExtension: this.preferredAudioExtension,
+        lastEffectId: this.lastEffectId,
+        lastEffectStartedAt: this.lastEffectStartedAt,
         lastPlaybackError: this.lastPlaybackError,
         lastEffectsError: this.lastEffectsError,
       };
