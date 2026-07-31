@@ -84,9 +84,18 @@
       this.musicTransitionId = 0;
       this.playlistTransitionTimer = 0;
       this.temporaryMusicId = 0;
+      this.lifecyclePaused = false;
+      this.lifecyclePauseReason = "";
+      this.lifecycleTransitionId = 0;
+      this.lifecycleResumePromise = null;
+      this.lifecycleEffectSuspendPromise = null;
+      this.resumeMusicAfterLifecycle = false;
+      this.resumeEffectsAfterLifecycle = false;
+      this.lastLifecycleError = "";
       this.lastEffectAt = new Map();
       this.activeEffects = new Set();
       this.pendingEffectCounts = new Map();
+      this.pendingEffectTimers = new Set();
       this.effectBufferPromises = new Map();
       this.preparedHtmlEffects = new Map();
       this.effectContext = null;
@@ -185,14 +194,164 @@
     }
 
     installResumeListeners() {
-      const resume = () => {
+      const pause = event => this.pauseForLifecycle(
+        event?.type === "visibilitychange"
+          ? document.visibilityState || event.type
+          : event?.type || "background"
+      );
+      const resume = event => {
         if (document.visibilityState && document.visibilityState !== "visible") return;
-        this.resumeMusic();
-        this.resumeEffects();
+        this.resumeFromLifecycle(event?.type || "foreground");
       };
+      window.addEventListener?.("pagehide", pause);
+      window.addEventListener?.("blur", pause);
       window.addEventListener?.("pageshow", resume);
       window.addEventListener?.("focus", resume);
-      document.addEventListener("visibilitychange", resume);
+      document.addEventListener("freeze", pause);
+      document.addEventListener("resume", resume);
+      document.addEventListener("visibilitychange", event => {
+        if (document.visibilityState === "visible") resume(event);
+        else pause(event);
+      });
+    }
+
+    clearPendingEffectTimers() {
+      for (const record of [...this.pendingEffectTimers]) {
+        window.clearTimeout(record.timerId);
+        record.releasePending?.();
+      }
+      this.pendingEffectTimers.clear();
+    }
+
+    stopActiveEffects() {
+      for (const effect of [...this.activeEffects]) effect.stop?.();
+      this.activeEffects.clear();
+    }
+
+    suspendEffectsForLifecycle() {
+      const context = this.effectContext;
+      if (!context || this.effectsEngine === "htmlaudio" || typeof context.suspend !== "function") {
+        return Promise.resolve(true);
+      }
+      const pendingResume = this.effectUnlockPromise
+        ? Promise.resolve(this.effectUnlockPromise).catch(() => false)
+        : Promise.resolve(true);
+      const attempt = pendingResume
+        .then(() => {
+          if (!this.lifecyclePaused || context.state !== "running") return true;
+          return Promise.resolve(context.suspend()).then(() => true);
+        })
+        .catch(error => {
+          this.lastLifecycleError = String(error?.name || error?.message || "AudioContextSuspendError");
+          return false;
+        })
+        .finally(() => {
+          if (this.lifecycleEffectSuspendPromise === attempt) {
+            this.lifecycleEffectSuspendPromise = null;
+          }
+        });
+      this.lifecycleEffectSuspendPromise = attempt;
+      return attempt;
+    }
+
+    pauseForLifecycle(reason = "background") {
+      if (this.lifecyclePaused) return false;
+      this.lifecycleTransitionId += 1;
+      this.lifecycleResumePromise = null;
+      this.lifecyclePaused = true;
+      this.lifecyclePauseReason = String(reason || "background");
+      this.lastLifecycleError = "";
+      this.resumeMusicAfterLifecycle = Boolean(
+        this.ready
+        && this.musicUnlocked
+        && !this.preferences.musicMuted
+        && this.currentMusic
+        && !this.currentMusic.ended
+      );
+      this.resumeEffectsAfterLifecycle = Boolean(
+        this.effectsAuthorized
+        && !this.preferences.effectsMuted
+      );
+      this.clearPlaylistTransition();
+      this.clearPendingEffectTimers();
+      this.stopActiveEffects();
+      this.musicTransitionId += 1;
+      this.persistentMusic.pause();
+      this.suspendEffectsForLifecycle();
+      return true;
+    }
+
+    resumeFromLifecycle(reason = "foreground") {
+      if (document.visibilityState && document.visibilityState !== "visible") {
+        return Promise.resolve(false);
+      }
+      if (this.lifecycleResumePromise) return this.lifecycleResumePromise;
+
+      const wasLifecyclePaused = this.lifecyclePaused;
+      const shouldResumeMusic = Boolean(
+        this.resumeMusicAfterLifecycle
+        && !this.preferences.musicMuted
+      );
+      const shouldResumeEffects = Boolean(
+        this.resumeEffectsAfterLifecycle
+        && !this.preferences.effectsMuted
+      );
+      const transitionId = wasLifecyclePaused
+        ? ++this.lifecycleTransitionId
+        : this.lifecycleTransitionId;
+      const pendingEffectSuspend = this.lifecycleEffectSuspendPromise || Promise.resolve(true);
+      this.lifecyclePaused = false;
+      this.lifecyclePauseReason = "";
+      this.resumeMusicAfterLifecycle = false;
+      this.resumeEffectsAfterLifecycle = false;
+
+      const resumeRequestedMusic = () => {
+        if (!shouldResumeMusic) return Promise.resolve(false);
+        if (
+          this.requestedMusicState !== this.currentMusicState
+          || this.requestedMusicReturnState !== this.currentMusicReturnState
+        ) {
+          return this.setMusicState(this.requestedMusicState, {
+            allowLocked: true,
+            immediate: true,
+            preserveTemporary: true,
+            returnState: this.requestedMusicReturnState,
+          });
+        }
+        return this.resumeMusic({ lifecycleResume: true });
+      };
+
+      const attempt = Promise.all([
+        wasLifecyclePaused ? resumeRequestedMusic() : this.resumeMusic(),
+        shouldResumeEffects || !wasLifecyclePaused
+          ? Promise.resolve(pendingEffectSuspend).then(() => {
+            if (this.lifecyclePaused || transitionId !== this.lifecycleTransitionId) return false;
+            return this.resumeEffects();
+          })
+          : Promise.resolve(false),
+      ])
+        .then(results => {
+          if (this.lifecyclePaused || transitionId !== this.lifecycleTransitionId) {
+            this.persistentMusic.pause();
+            this.suspendEffectsForLifecycle();
+            return false;
+          }
+          if (results.some(Boolean)) this.lastLifecycleError = "";
+          if (results[0] && this.currentMusic && this.currentMusicState !== "victory") {
+            const playlist = this.musicPlaylists.get(this.currentMusicState) || [];
+            this.schedulePlaylistTransition(this.currentMusic, this.currentMusicState, playlist.length, 1000);
+          }
+          return results.some(Boolean);
+        })
+        .catch(error => {
+          this.lastLifecycleError = String(error?.name || error?.message || "AudioLifecycleResumeError");
+          return false;
+        })
+        .finally(() => {
+          if (this.lifecycleResumePromise === attempt) this.lifecycleResumePromise = null;
+        });
+      this.lifecycleResumePromise = attempt;
+      return attempt;
     }
 
     isAudioControlEvent(event) {
@@ -200,6 +359,7 @@
     }
 
     unlock(options = {}) {
+      if (this.lifecyclePaused) return Promise.resolve(false);
       const isMusicGesture = Boolean(options.userGesture || options.musicGesture);
       if (isMusicGesture) this.pendingMusicGesture = true;
       if (options.userGesture) this.unlockEffects({ userGesture: true });
@@ -265,7 +425,7 @@
     }
 
     resumeMusic(options = {}) {
-      if (!this.ready || this.preferences.musicMuted) return Promise.resolve(false);
+      if (!this.ready || this.preferences.musicMuted || this.lifecyclePaused) return Promise.resolve(false);
       return this.unlock({ resume: true, ...options });
     }
 
@@ -296,6 +456,7 @@
       this.preferences.musicMuted = nextMuted;
       this.savePreferences();
       if (nextMuted) {
+        this.resumeMusicAfterLifecycle = false;
         this.pendingMusicGesture = false;
         this.clearPlaylistTransition();
         this.musicTransitionId += 1;
@@ -310,9 +471,9 @@
       this.preferences.effectsMuted = Boolean(muted);
       this.savePreferences();
       if (this.preferences.effectsMuted) {
-        for (const effect of [...this.activeEffects]) effect.stop?.();
-        this.activeEffects.clear();
-      } else {
+        this.resumeEffectsAfterLifecycle = false;
+        this.stopActiveEffects();
+      } else if (!this.lifecyclePaused) {
         this.resumeEffects();
       }
       this.applyEffectsVolume();
@@ -389,10 +550,11 @@
 
     schedulePlaylistTransition(audio, state, playlistSize, fadeMs) {
       this.clearPlaylistTransition();
-      if (state === "victory" || playlistSize <= 1) return;
+      if (this.lifecyclePaused || state === "victory" || playlistSize <= 1) return;
       const schedule = () => {
-        if (this.currentMusic !== audio || !Number.isFinite(audio.duration)) return;
-        const delayMs = Math.floor(audio.duration * 1000 - fadeMs);
+        if (this.lifecyclePaused || this.currentMusic !== audio || !Number.isFinite(audio.duration)) return;
+        const remainingSeconds = Math.max(0, audio.duration - (Number(audio.currentTime) || 0));
+        const delayMs = Math.floor(remainingSeconds * 1000 - fadeMs);
         if (delayMs <= 0) return;
         this.playlistTransitionTimer = window.setTimeout(() => {
           this.playlistTransitionTimer = 0;
@@ -418,7 +580,8 @@
       this.requestedMusicState = normalizedState;
       this.requestedMusicReturnState = returnState;
       if (
-        (!this.musicUnlocked && !options.allowLocked)
+        this.lifecyclePaused
+        || (!this.musicUnlocked && !options.allowLocked)
         || !this.ready
         || this.preferences.musicMuted
       ) return false;
@@ -437,7 +600,10 @@
         if (this.currentMusic.paused) {
           try {
             await Promise.resolve(this.currentMusic.play());
-            if (resumeTransitionId !== this.musicTransitionId) return false;
+            if (resumeTransitionId !== this.musicTransitionId) {
+              if (this.lifecyclePaused) this.currentMusic.pause();
+              return false;
+            }
             this.lastPlaybackError = "";
             this.musicUnlocked = true;
             this.unlocked = true;
@@ -492,6 +658,10 @@
         candidate.volume = this.getMusicVolumeFor(asset);
         try {
           await Promise.resolve(candidate.play());
+          if (transitionId !== this.musicTransitionId) {
+            if (this.lifecyclePaused) candidate.pause();
+            return false;
+          }
           next = candidate;
           selectedSourceIndex = sourceIndex;
           asset.url = sourceUrl;
@@ -514,7 +684,7 @@
         return false;
       }
       if (transitionId !== this.musicTransitionId) {
-        if (this.preferences.musicMuted) {
+        if (this.preferences.musicMuted || this.lifecyclePaused) {
           next.pause();
         }
         return false;
@@ -695,10 +865,12 @@
     }
 
     resumeEffects() {
+      if (this.lifecyclePaused) return Promise.resolve(false);
       return this.unlockEffects({ userGesture: false });
     }
 
     getEffectsReadyPromise() {
+      if (this.lifecyclePaused) return Promise.resolve(false);
       if (this.effectsEngine === "htmlaudio") return Promise.resolve(this.effectsUnlocked);
       if (this.effectContext?.state === "running") return Promise.resolve(true);
       if (this.effectUnlockPromise) return this.effectUnlockPromise;
@@ -759,7 +931,7 @@
     }
 
     prepareEffect(id) {
-      if (!this.ready || this.preferences.effectsMuted) return Promise.resolve(false);
+      if (!this.ready || this.preferences.effectsMuted || this.lifecyclePaused) return Promise.resolve(false);
       const asset = this.assets.get(id);
       if (!asset || asset.category === "music") return Promise.resolve(false);
       if (this.effectsEngine === "htmlaudio") {
@@ -789,6 +961,7 @@
               audio.pause();
               audio.currentTime = 0;
               audio.muted = false;
+              if (this.lifecyclePaused) return false;
               this.effectsUnlocked = true;
               this.effectsAuthorized = true;
               this.lastEffectsError = "";
@@ -825,10 +998,21 @@
 
     async playWebAudioEffect(asset, options) {
       try {
+        const lifecycleToken = options.lifecycleToken;
         if (!await this.getEffectsReadyPromise()) return false;
-        if (this.preferences.effectsMuted || this.effectContext?.state !== "running") return false;
+        if (
+          this.lifecyclePaused
+          || lifecycleToken !== this.lifecycleTransitionId
+          || this.preferences.effectsMuted
+          || this.effectContext?.state !== "running"
+        ) return false;
         const decoded = await this.loadEffectBuffer(asset);
-        if (this.preferences.effectsMuted || this.effectContext?.state !== "running") return false;
+        if (
+          this.lifecyclePaused
+          || lifecycleToken !== this.lifecycleTransitionId
+          || this.preferences.effectsMuted
+          || this.effectContext?.state !== "running"
+        ) return false;
 
         const source = this.effectContext.createBufferSource();
         const gainNode = this.effectContext.createGain();
@@ -882,9 +1066,13 @@
     }
 
     playEffect(id, options = {}) {
-      if (!this.ready || this.preferences.effectsMuted) return false;
+      if (!this.ready || this.preferences.effectsMuted || this.lifecyclePaused) return false;
       const asset = this.assets.get(id);
       if (!asset || asset.category === "music") return false;
+      const playbackOptions = {
+        ...options,
+        lifecycleToken: this.lifecycleTransitionId,
+      };
       const canQueue = this.effectsEngine === "htmlaudio"
         ? this.effectsUnlocked
         : Boolean(
@@ -924,12 +1112,12 @@
         else this.pendingEffectCounts.delete(id);
       };
       const launch = () => {
-        if (this.preferences.effectsMuted) {
+        if (this.lifecyclePaused || this.preferences.effectsMuted) {
           releasePending();
           return;
         }
         if (this.effectsEngine === "webaudio") {
-          this.playWebAudioEffect(asset, options).finally(releasePending);
+          this.playWebAudioEffect(asset, playbackOptions).finally(releasePending);
           return;
         }
         const prepared = this.preparedHtmlEffects.get(id);
@@ -937,24 +1125,40 @@
           this.preparedHtmlEffects.delete(id);
           prepared.promise
             .then(isPrepared => {
-              if (!isPrepared || this.preferences.effectsMuted) return;
-              this.playEffectSource(asset, options, prepared.sourceIndex, prepared.audio);
+              if (
+                !isPrepared
+                || this.lifecyclePaused
+                || playbackOptions.lifecycleToken !== this.lifecycleTransitionId
+                || this.preferences.effectsMuted
+              ) return;
+              this.playEffectSource(asset, playbackOptions, prepared.sourceIndex, prepared.audio);
             })
             .finally(releasePending);
           return;
         }
-        this.playEffectSource(asset, options, 0);
+        this.playEffectSource(asset, playbackOptions, 0);
         releasePending();
       };
-      if (delayMs > 0) window.setTimeout(launch, delayMs);
-      else launch();
+      if (delayMs > 0) {
+        const timerRecord = { timerId: 0, releasePending };
+        timerRecord.timerId = window.setTimeout(() => {
+          this.pendingEffectTimers.delete(timerRecord);
+          launch();
+        }, delayMs);
+        this.pendingEffectTimers.add(timerRecord);
+      } else launch();
       return true;
     }
 
     playEffectSource(asset, options, sourceIndex, preparedAudio = null) {
       const sourceUrls = asset.urls || [asset.url];
       const sourceUrl = sourceUrls[sourceIndex];
-      if (!sourceUrl || this.preferences.effectsMuted) return;
+      if (
+        !sourceUrl
+        || options.lifecycleToken !== this.lifecycleTransitionId
+        || this.preferences.effectsMuted
+        || this.lifecyclePaused
+      ) return;
 
       const audio = preparedAudio || new Audio(sourceUrl);
       audio.dataset.audioId = asset.id;
@@ -993,6 +1197,8 @@
           && error?.name !== "AbortError"
           && nextSourceIndex < sourceUrls.length
           && !this.preferences.effectsMuted
+          && !this.lifecyclePaused
+          && options.lifecycleToken === this.lifecycleTransitionId
         ) {
           this.playEffectSource(asset, options, nextSourceIndex);
           return;
@@ -1021,6 +1227,15 @@
       }
       Promise.resolve(playResult)
         .then(() => {
+          if (
+            this.lifecyclePaused
+            || options.lifecycleToken !== this.lifecycleTransitionId
+            || !this.activeEffects.has(record)
+          ) {
+            audio.pause();
+            release();
+            return;
+          }
           this.preferredAudioExtension = getAudioExtension(sourceUrl) || this.preferredAudioExtension;
           this.effectsUnlocked = true;
           this.effectsAuthorized = true;
@@ -1159,6 +1374,12 @@
         effectsLimiterActive: Boolean(this.effectLimiter),
         activeEffectCount: this.activeEffects.size,
         bufferedEffectCount: this.effectBufferPromises.size,
+        pendingEffectTimerCount: this.pendingEffectTimers.size,
+        lifecyclePaused: this.lifecyclePaused,
+        lifecyclePauseReason: this.lifecyclePauseReason,
+        lifecycleResumeInFlight: Boolean(this.lifecycleResumePromise),
+        resumeMusicAfterLifecycle: this.resumeMusicAfterLifecycle,
+        resumeEffectsAfterLifecycle: this.resumeEffectsAfterLifecycle,
         musicMuted: this.preferences.musicMuted,
         effectsMuted: this.preferences.effectsMuted,
         musicVolume: this.preferences.musicVolume,
@@ -1185,6 +1406,7 @@
           : clampVolume(this.lastEffectBaseGain * this.preferences.effectsVolume, 1),
         lastPlaybackError: this.lastPlaybackError,
         lastEffectsError: this.lastEffectsError,
+        lastLifecycleError: this.lastLifecycleError,
       };
     }
   }
