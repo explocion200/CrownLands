@@ -2647,6 +2647,7 @@ let lastAuthoritativeProfileRevisionMs = 0;
 let lastReportDrivenEconomyRefreshAtMs = 0;
 let activeLevelUpReward = null;
 const levelUpRewardQueue = [];
+let levelUpRewardAudioTimer = 0;
 let leaderboardSaveTimer = 0;
 let leaderboardSaveInFlight = false;
 let leaderboardLastSignature = "";
@@ -2895,7 +2896,11 @@ const incomingAttackCount = document.getElementById("incomingAttackCount");
 const incomingAttackTime = document.getElementById("incomingAttackTime");
 const helpBtn = document.getElementById("helpBtn");
 const crownlandsAudio = window.CrownlandsAudio;
-let lastAudioIncomingAttackCount = 0;
+const BATTLE_IMPACT_AUDIO_DELAY_MS = 150;
+const BATTLE_OUTCOME_AUDIO_DELAY_MS = 450;
+const REWARD_FOLLOWUP_AUDIO_DELAY_MS = 900;
+const VICTORY_MUSIC_AUDIO_DELAY_MS = 2000;
+let lastAudioIncomingAttackIds = new Set();
 
 function playGameSound(id, options = {}) {
   const {
@@ -2909,6 +2914,29 @@ function playGameSound(id, options = {}) {
     && normalizeRegionId(regionId) !== getActiveMapRegionId()
   ) return false;
   return crownlandsAudio?.playEffect(id, audioOptions) || false;
+}
+
+function playGameSoundAfter(id, delayMs, options = {}) {
+  return playGameSound(id, {
+    ...options,
+    delayMs: Math.max(0, Number(delayMs) || 0),
+  });
+}
+
+function playBattleImpactAfter(target, regionId, delayMs = BATTLE_IMPACT_AUDIO_DELAY_MS) {
+  if (regionId && normalizeRegionId(regionId) !== getActiveMapRegionId()) return false;
+  const normalizedDelayMs = Math.max(0, Number(delayMs) || 0);
+  if (isStronghold(target)) {
+    return playGameSound("siege_impact", { regionId, delayMs: normalizedDelayMs });
+  }
+  return crownlandsAudio?.playSwordClash({ delayMs: normalizedDelayMs }) || false;
+}
+
+function playVictoryMusicAfter(regionId, delayMs = VICTORY_MUSIC_AUDIO_DELAY_MS) {
+  return window.setTimeout(() => {
+    if (regionId && normalizeRegionId(regionId) !== getActiveMapRegionId()) return;
+    crownlandsAudio?.setMusicState("victory", { returnState: getAmbientMusicState() });
+  }, Math.max(0, Number(delayMs) || 0));
 }
 
 function primeCityUpgradeAudio() {
@@ -2927,6 +2955,13 @@ function playRewardSound(rewardType = "", options = {}) {
   if (type === "item" || type === "items" || type === "relic") return playGameSound("relic_reward", options);
   if (type === "city" || type === "deed") return playGameSound("deed_camp_complete", options);
   return playGameSound("gold_pickup", options);
+}
+
+function playRewardSoundAfter(rewardType, delayMs, options = {}) {
+  return playRewardSound(rewardType, {
+    ...options,
+    delayMs: Math.max(0, Number(delayMs) || 0),
+  });
 }
 
 function rejectGameAction(message, options = {}) {
@@ -6229,6 +6264,8 @@ function getLevelUpRewardBundle(fromLevel, toLevel, options = {}) {
     gold: Math.max(0, Math.floor(hasGoldOverride ? Number(options.gold) : calculatedGold)),
     troops: Math.max(0, Math.floor(hasTroopOverride ? Number(options.troops) : calculatedTroops)),
     cityName: String(options.cityName || getMainRewardCity()?.name || "your main city").trim() || "your main city",
+    audioNotBeforeMs: Date.now() + Math.max(0, Number(options.audioDelayMs) || 0),
+    audioPlayed: false,
   };
 }
 
@@ -6241,6 +6278,11 @@ function mergeLevelUpRewardBundles(first, second) {
     gold: first.gold + second.gold,
     troops: first.troops + second.troops,
     cityName: second.cityName || first.cityName,
+    audioNotBeforeMs: Math.max(
+      Number(first.audioNotBeforeMs) || 0,
+      Number(second.audioNotBeforeMs) || 0
+    ),
+    audioPlayed: Boolean(first.audioPlayed || second.audioPlayed),
   };
 }
 
@@ -6310,17 +6352,39 @@ function showNextLevelUpReward() {
   activeLevelUpReward = nextReward;
   renderLevelUpReward(nextReward);
   levelUpRewardModal.showModal();
+  scheduleLevelUpRewardAudio(nextReward);
   requestAnimationFrame(() => levelUpRewardModal.classList.add("revealed"));
+}
+
+function scheduleLevelUpRewardAudio(reward) {
+  if (levelUpRewardAudioTimer) {
+    window.clearTimeout(levelUpRewardAudioTimer);
+    levelUpRewardAudioTimer = 0;
+  }
+  if (!reward || reward.audioPlayed) return;
+  const play = () => {
+    levelUpRewardAudioTimer = 0;
+    if (
+      activeLevelUpReward !== reward
+      || !levelUpRewardModal?.open
+      || reward.audioPlayed
+    ) return;
+    reward.audioPlayed = true;
+    playGameSound("level_up", { cooldownMs: 180, allowCrossMap: true });
+  };
+  const remainingMs = Math.max(0, (Number(reward.audioNotBeforeMs) || 0) - Date.now());
+  if (remainingMs > 0) levelUpRewardAudioTimer = window.setTimeout(play, remainingMs);
+  else play();
 }
 
 function queueLevelUpReward(fromLevel, toLevel, options = {}) {
   const reward = getLevelUpRewardBundle(fromLevel, toLevel, options);
   if (reward.levelsGained <= 0) return;
-  playGameSound("level_up");
 
   if (activeLevelUpReward && activeLevelUpReward.toLevel === reward.fromLevel) {
     activeLevelUpReward = mergeLevelUpRewardBundles(activeLevelUpReward, reward);
     renderLevelUpReward(activeLevelUpReward);
+    scheduleLevelUpRewardAudio(activeLevelUpReward);
     return;
   }
 
@@ -6602,7 +6666,7 @@ async function changeMainCity(cityId) {
   return true;
 }
 
-function addCharacterXp(amount, reason = "progress") {
+function addCharacterXp(amount, reason = "progress", options = {}) {
   if (!state) return;
   state.character = normalizeCharacterProgress(state.character);
   state.upgrades = normalizeUpgrades(state.upgrades, state.version);
@@ -6645,6 +6709,7 @@ function addCharacterXp(amount, reason = "progress") {
       gold: totalGoldReward,
       troops: totalTroopReward,
       cityName: mainCity?.name || "your main city",
+      audioDelayMs: options.audioDelayMs,
     });
   }
   reconcileSkillPoints(state.character, state.upgrades);
@@ -8238,7 +8303,11 @@ function launchScoutMission(source, target, route) {
       .then(accepted => {
         if (!accepted) return;
         addLog(`One scout left ${source.name} for ${target.name}.`);
-        playGameSound("troop_dispatch", { cooldownMs: 80, regionId: getCityRegionId(source) });
+        playGameSound("troop_dispatch", {
+          cooldownMs: 80,
+          regionId: getCityRegionId(source),
+          allowCrossMap: true,
+        });
         showToast(`Scout moving from ${source.name} to ${target.name}`);
       })
       .finally(() => pendingServerArmyLaunchKeys.delete(launchKey));
@@ -8516,7 +8585,11 @@ function completeScoutMission(attack, target) {
       summary: `Scout reached ${target.name}, now under your control. ${formatNumber(joined)} scout joined the garrison.`,
     });
     addLog(`The scout joined your garrison at ${target.name}.`);
-    playGameSound("notification", { cooldownMs: 500, regionId: getCityRegionId(target) });
+    playGameSound("notification", {
+      cooldownMs: 500,
+      regionId: getCityRegionId(target),
+      allowCrossMap: true,
+    });
     showToast(`Scout arrived at ${target.name}`);
     return;
   }
@@ -8540,7 +8613,11 @@ function completeScoutMission(attack, target) {
     summary: `Scout revealed ${formatNumber(report.troops)} troops at ${target.name}.`,
   });
   addLog(`Scouts reported ${formatNumber(target.troops)} troops stationed at ${target.name}.`);
-  playGameSound("notification", { cooldownMs: 500, regionId: getCityRegionId(target) });
+  playGameSound("notification", {
+    cooldownMs: 500,
+    regionId: getCityRegionId(target),
+    allowCrossMap: true,
+  });
   showToast(`Scout report received from ${target.name}`);
 }
 
@@ -8910,6 +8987,7 @@ function applyServerProfilePatch(patch = null, options = {}) {
       gold: options.levelUpGold,
       troops: options.levelUpTroops,
       cityName: options.levelUpCityName || getMainRewardCity()?.name || "your main city",
+      audioDelayMs: options.levelUpAudioDelayMs,
     });
   }
   return changed;
@@ -9067,17 +9145,13 @@ function applyServerArmyResult(result = null) {
     changed = true;
   }
   if (result.kind === "scout" && result.reports?.some(report => report?.type === "scout")) {
-    playGameSound("notification", { cooldownMs: 500, regionId: audioRegionId });
+    playGameSound("notification", { cooldownMs: 500, regionId: audioRegionId, allowCrossMap: true });
   }
   if (result.kind && result.kind !== "scout") {
     playGameSound("army_arrival", { cooldownMs: 80, regionId: audioRegionId });
     if (result.kind === "attack" && audioOnActiveMap) {
       crownlandsAudio?.pulseMusic("battle", 3500, getAmbientMusicState());
-      if (isStronghold(audioTarget)) {
-        playGameSound("siege_impact", { regionId: audioRegionId });
-      } else {
-        crownlandsAudio?.playSwordClash();
-      }
+      playBattleImpactAfter(audioTarget, audioRegionId);
     }
   }
   const resultTargetIsCamp = result.targetType === "camp"
@@ -9090,18 +9164,20 @@ function applyServerArmyResult(result = null) {
   ) {
     const capturedCity = cityById(newestPlayerReport.cityId);
     if (isStronghold(capturedCity)) {
-      playGameSound("stronghold_captured", { regionId: audioRegionId });
       if (audioOnActiveMap) {
-        crownlandsAudio?.setMusicState("victory", { returnState: getAmbientMusicState() });
+        playGameSoundAfter("stronghold_captured", BATTLE_OUTCOME_AUDIO_DELAY_MS, { regionId: audioRegionId });
+        playVictoryMusicAfter(audioRegionId);
       }
-    } else {
-      playGameSound("city_captured", { regionId: audioRegionId });
+    } else if (audioOnActiveMap) {
+      playGameSoundAfter("city_captured", BATTLE_OUTCOME_AUDIO_DELAY_MS, { regionId: audioRegionId });
     }
   } else if (
     (newestPlayerReport?.type === "attack" && newestPlayerReport.outcome === "defeat")
     || (newestPlayerReport?.type === "defense" && newestPlayerReport.outcome === "lost")
   ) {
-    playGameSound("battle_defeat", { regionId: audioRegionId });
+    if (audioOnActiveMap) {
+      playGameSoundAfter("battle_defeat", BATTLE_OUTCOME_AUDIO_DELAY_MS, { regionId: audioRegionId });
+    }
   }
   if (
     normalizedCampUpdate
@@ -9111,7 +9187,11 @@ function applyServerArmyResult(result = null) {
     && normalizedCampUpdate.holderUid === getCurrentOnlineUid()
   ) {
     const config = getRewardCampConfig(normalizedCampUpdate);
-    playGameSound("camp_captured", { regionId: normalizedCampUpdate.regionId || audioRegionId });
+    if (audioOnActiveMap) {
+      playGameSoundAfter("camp_captured", BATTLE_OUTCOME_AUDIO_DELAY_MS, {
+        regionId: normalizedCampUpdate.regionId || audioRegionId,
+      });
+    }
     showToast(`${config?.name || normalizedCampUpdate.name} captured. Hold for ${Math.floor((config?.holdSeconds || 0) / 60)} minutes to claim ${formatNumber(config?.baseReward || 0)} ${config?.rewardLabel || "reward"}.`);
   }
   if (result.currentUser) {
@@ -9126,6 +9206,9 @@ function applyServerArmyResult(result = null) {
       levelUpGold: levelRewardReport?.goldAwarded,
       levelUpTroops: levelRewardReport?.troopsAwarded,
       levelUpCityName: result.troopRewardCityName,
+      levelUpAudioDelayMs: newestPlayerReport || (result.kind && result.kind !== "scout")
+        ? REWARD_FOLLOWUP_AUDIO_DELAY_MS
+        : 0,
     }) || changed;
   }
   return changed;
@@ -12749,7 +12832,11 @@ async function requestDueRewardCampPayout(camp) {
     if (["paid", "no-eligible-city", "daily-limit"].includes(result?.status)) {
       playGameSound("timer_tick_complete", { regionId: camp.regionId });
       if (result?.status === "paid") {
-        playRewardSound(config?.type || result?.rewardType || config?.rewardType, { regionId: camp.regionId });
+        playRewardSoundAfter(
+          config?.type || result?.rewardType || config?.rewardType,
+          REWARD_FOLLOWUP_AUDIO_DELAY_MS,
+          { regionId: camp.regionId }
+        );
       }
       if (config?.type === "deed") {
         deedCampHistoryCache.delete(getDeedCampHistoryCacheKey(camp));
@@ -16522,7 +16609,11 @@ function launchAttack(sourceId, targetId, percent, owner, exactTroops = null, op
     publishOnlineArmyMovement(mission, { addLocalMissionOnAccept: true, optimistic: false })
       .then(accepted => {
         if (!accepted) return;
-        playGameSound("troop_dispatch", { cooldownMs: 80, regionId: getCityRegionId(source) });
+        playGameSound("troop_dispatch", {
+          cooldownMs: 80,
+          regionId: getCityRegionId(source),
+          allowCrossMap: true,
+        });
         const acceptedKind = mission.kind || kind;
         const acceptedTroops = Math.max(0, Math.floor(Number(mission.troops) || send));
         const acceptedProtection = normalizeAttackProtectionSnapshot(mission.attackProtection) || attackProtection;
@@ -16661,11 +16752,7 @@ function resolveAttack(attack) {
 
   if (attackOnActiveMap) {
     crownlandsAudio?.pulseMusic("battle", 3500, getAmbientMusicState());
-    if (isStronghold(target)) {
-      playGameSound("siege_impact", { regionId: attackRegionId });
-    } else {
-      crownlandsAudio?.playSwordClash();
-    }
+    playBattleImpactAfter(target, attackRegionId);
   }
   const attackOwnerIdentity = attack.ownerUid ? resolvePlayerIdentityForUid(attack.ownerUid, attack) : null;
   const attackerName = attack.owner === "player" ? "You" : attackOwnerIdentity?.displayName || attack.ownerName || "Enemy";
@@ -16914,7 +17001,9 @@ function resolveAttack(attack) {
         summary: `${attackerReportName} breached ${target.name}, but did not capture it. A follow-up protected assault can capture the city. +${formatNumber(defenseHeldXp)} XP.${protectionReportSuffix}`,
       });
       if (savedDefenders > 0) addLog(`Field Medics recovered ${formatNumber(savedDefenders)} defenders.`);
-      addCharacterXp(defenseHeldXp, `${target.name} breached defense`);
+      addCharacterXp(defenseHeldXp, `${target.name} breached defense`, {
+        audioDelayMs: REWARD_FOLLOWUP_AUDIO_DELAY_MS,
+      });
       showToast(`Walls breached at ${target.name}`);
     }
   } else if (result.success) {
@@ -16975,14 +17064,16 @@ function resolveAttack(attack) {
       addLog(`Victory: you captured ${target.name} with ${formatNumber(result.survivors)} survivors. ${formatNumber(savedAttackers)} troops recovered. ${formatCapturedCityLevelDrop(levelDrop)} XP efficiency ${Math.round(xpEfficiency * 100)}%.`);
       showToast(`Captured ${target.name}: +${formatNumber(xpAward)} XP`);
       if (isStronghold(target)) {
-        playGameSound("stronghold_captured", { regionId: attackRegionId });
         if (attackOnActiveMap) {
-          crownlandsAudio?.setMusicState("victory", { returnState: getAmbientMusicState() });
+          playGameSoundAfter("stronghold_captured", BATTLE_OUTCOME_AUDIO_DELAY_MS, { regionId: attackRegionId });
+          playVictoryMusicAfter(attackRegionId);
         }
-      } else {
-        playGameSound("city_captured", { regionId: attackRegionId });
+      } else if (attackOnActiveMap) {
+        playGameSoundAfter("city_captured", BATTLE_OUTCOME_AUDIO_DELAY_MS, { regionId: attackRegionId });
       }
-      addCharacterXp(xpAward, `${target.name} capture`);
+      addCharacterXp(xpAward, `${target.name} capture`, {
+        audioDelayMs: REWARD_FOLLOWUP_AUDIO_DELAY_MS,
+      });
     } else if (oldOwner === "player") {
       const savedDefenders = returnSavedTroops("fieldMedics", result.defenderLosses, `${target.name} defense`, target.id);
       const cappedDefenseHeldXp = applyDefenseOpponentXpMultiplier(
@@ -17013,8 +17104,12 @@ function resolveAttack(attack) {
       });
       addLog(`Lost: the enemy captured ${target.name}. ${formatCapturedCityLevelDrop(levelDrop)} ${formatNumber(savedDefenders)} troops recovered, and you gained ${formatNumber(defenseLossXp)} XP.`);
       showToast(`You lost ${target.name}: +${formatNumber(defenseLossXp)} XP`);
-      playGameSound("battle_defeat", { regionId: attackRegionId });
-      addCharacterXp(defenseLossXp, `${target.name} lost defense`);
+      if (attackOnActiveMap) {
+        playGameSoundAfter("battle_defeat", BATTLE_OUTCOME_AUDIO_DELAY_MS, { regionId: attackRegionId });
+      }
+      addCharacterXp(defenseLossXp, `${target.name} lost defense`, {
+        audioDelayMs: REWARD_FOLLOWUP_AUDIO_DELAY_MS,
+      });
     }
   } else {
     target.troopFloat = result.defendersLeft;
@@ -17050,8 +17145,12 @@ function resolveAttack(attack) {
       });
       addLog(`Defeat: your attack on ${target.name} failed. ${formatNumber(result.defendersLeft)} defenders remain. ${formatNumber(savedAttackers)} troops recovered, and you gained ${formatNumber(failedAttackXp)} XP.`);
       showToast(`Attack failed at ${target.name}: +${formatNumber(failedAttackXp)} XP`);
-      playGameSound("battle_defeat", { regionId: attackRegionId });
-      addCharacterXp(failedAttackXp, `${target.name} failed attack`);
+      if (attackOnActiveMap) {
+        playGameSoundAfter("battle_defeat", BATTLE_OUTCOME_AUDIO_DELAY_MS, { regionId: attackRegionId });
+      }
+      addCharacterXp(failedAttackXp, `${target.name} failed attack`, {
+        audioDelayMs: REWARD_FOLLOWUP_AUDIO_DELAY_MS,
+      });
     } else if (oldOwner === "player") {
       const savedDefenders = returnSavedTroops("fieldMedics", result.defenderLosses, `${target.name} defense`);
       const defenseHeldXp = applyDefenseOpponentXpMultiplier(
@@ -17084,7 +17183,9 @@ function resolveAttack(attack) {
         addLog(`Field Medics recovered ${formatNumber(savedDefenders)} defenders to your main city.`);
       }
       showToast(`Defense held at ${target.name}`);
-      addCharacterXp(defenseHeldXp, `${target.name} defense`);
+      addCharacterXp(defenseHeldXp, `${target.name} defense`, {
+        audioDelayMs: REWARD_FOLLOWUP_AUDIO_DELAY_MS,
+      });
     }
   }
 
@@ -18976,6 +19077,7 @@ async function runClanRallyAction(action, rally) {
       playGameSound("troop_dispatch", {
         cooldownMs: 80,
         regionId: result?.movement?.sourceRegionId || rally.sourceRegionId || rally.targetRegionId,
+        allowCrossMap: true,
       });
       const returned = Array.isArray(result?.returnedInbound) ? result.returnedInbound.length : 0;
       showToast(returned
@@ -20564,7 +20666,11 @@ async function recallRewardCampGarrison(campId) {
     const troops = Math.max(0, Math.floor(Number(result?.returningTroops) || 0));
     const destination = result?.returnDestinationName || "your city";
     addLog(`${formatNumber(troops)} troops withdrew from ${camp.name} and began marching to ${destination}.`);
-    playGameSound("troop_dispatch", { cooldownMs: 80, regionId: camp.regionId });
+    playGameSound("troop_dispatch", {
+      cooldownMs: 80,
+      regionId: camp.regionId,
+      allowCrossMap: true,
+    });
     showToast(`${formatNumber(troops)} troops recalled from ${camp.name}.`);
     if (modal.open) modal.close();
     clearSelection(false);
@@ -20605,6 +20711,7 @@ function selectRewardCamp(campId) {
   if (!state || isGamePausedByOutcome()) return;
   const camp = getCampTargetById(campId);
   if (!camp) return;
+  playGameSound("city_select", { cooldownMs: 60, regionId: getCityRegionId(camp) });
   const source = selectedSourceId ? cityById(selectedSourceId) : null;
   if (sendMode && source?.owner === "player") {
     selectedTargetId = camp.id;
@@ -21888,8 +21995,39 @@ function updatePerformancePanel(now = performance.now()) {
   const audioSourceText = audioDebug
     ? `${audioDebug.currentAssetId || "none"} · source ${Number(audioDebug.currentSourceIndex) >= 0 ? Number(audioDebug.currentSourceIndex) + 1 : "none"} · ${audioDebug.readyState ?? "?"}/${audioDebug.networkState ?? "?"}`
     : "unavailable";
+  const lastEffectId = String(audioDebug?.lastEffectId || "");
+  const lastEffectAsset = lastEffectId ? crownlandsAudio?.assets?.get?.(lastEffectId) : null;
+  const recommendedEffectGain = Number(
+    audioDebug?.lastEffectRecommendedVolume
+    ?? lastEffectAsset?.recommended_volume
+  );
+  const reportedEffectScale = Number(audioDebug?.lastEffectVolumeScale);
+  const effectScale = Number.isFinite(reportedEffectScale)
+    ? reportedEffectScale
+    : 1;
+  const reportedBaseGain = Number(audioDebug?.lastEffectBaseGain);
+  const baseEffectGain = Number.isFinite(reportedBaseGain)
+    ? reportedBaseGain
+    : Number.isFinite(recommendedEffectGain)
+      ? clamp(recommendedEffectGain * effectScale, 0, 1)
+      : NaN;
+  const effectsMasterGain = audioDebug?.effectsMuted
+    ? 0
+    : clamp(Number(audioDebug?.effectsVolume) || 0, 0, 1);
+  const reportedEffectiveGain = Number(audioDebug?.lastEffectEffectiveGain);
+  const effectiveEffectGain = Number.isFinite(reportedEffectiveGain)
+    ? reportedEffectiveGain
+    : Number.isFinite(recommendedEffectGain)
+      ? recommendedEffectGain * effectScale * effectsMasterGain
+      : NaN;
+  const effectGainDetails = lastEffectId
+    && Number.isFinite(recommendedEffectGain)
+    && Number.isFinite(baseEffectGain)
+    && Number.isFinite(effectiveEffectGain)
+    ? ` · ${recommendedEffectGain.toFixed(2)}×${effectScale.toFixed(2)}→${baseEffectGain.toFixed(2)}×${Math.round(effectsMasterGain * 100)}%=${effectiveEffectGain.toFixed(3)} (${effectiveEffectGain > 0 ? `${(20 * Math.log10(effectiveEffectGain)).toFixed(1)} dB` : "−∞ dB"})`
+    : "";
   const audioEffectText = audioDebug
-    ? `${audioDebug.lastEffectId || "none"} · ${audioDebug.effectsMuted ? "muted" : `${Math.round(clamp(Number(audioDebug.effectsVolume) || 0, 0, 1) * 100)}%`}`
+    ? `${lastEffectId || "none"} · ${audioDebug.effectsMuted ? "muted" : `${Math.round(effectsMasterGain * 100)}%`}${effectGainDetails}`
     : "unavailable";
   const musicAudioError = audioDebug?.lastPlaybackError
     ? String(audioDebug.lastPlaybackError?.message || audioDebug.lastPlaybackError)
@@ -22047,7 +22185,6 @@ function selectCity(id) {
   if (!state || isGamePausedByOutcome()) return;
   const clicked = cityById(id);
   if (!clicked) return;
-  playGameSound("city_select", { cooldownMs: 60, regionId: getCityRegionId(clicked) });
   if (scoutNearbySourceId && scoutNearbySourceId !== clicked.id) scoutNearbySourceId = null;
   if (regroupSourceId && regroupSourceId !== clicked.id) regroupSourceId = null;
   const source = selectedSourceId ? cityById(selectedSourceId) : null;
@@ -22083,6 +22220,7 @@ function selectCity(id) {
       rejectGameAction(shieldBlockReason);
       return;
     }
+    playGameSound("city_select", { cooldownMs: 60, regionId: getCityRegionId(clicked) });
     selectedTargetId = clicked.id;
     renderSelectionChangeNow();
     showTroopSliderModal(source, clicked);
@@ -22090,6 +22228,7 @@ function selectCity(id) {
   }
 
   if (clicked.owner === "player") {
+    playGameSound("city_select", { cooldownMs: 60, regionId: getCityRegionId(clicked) });
     selectedSourceId = clicked.id;
     rememberOwnedAttackSource(clicked);
     selectedTargetId = null;
@@ -22099,6 +22238,7 @@ function selectCity(id) {
     return;
   }
 
+  playGameSound("city_select", { cooldownMs: 60, regionId: getCityRegionId(clicked) });
   selectedTargetId = clicked.id;
   sendMode = false;
   renderSelectionChangeNow();
@@ -22752,7 +22892,11 @@ async function submitClanRallyTroopOrder(source, target, route) {
     showToast(activeTroopOrderKind === "rally_create"
       ? `Rally formed against ${target.name}.`
       : `Contribution marching to ${target.name}.`);
-    playGameSound("troop_dispatch", { cooldownMs: 80, regionId: getCityRegionId(source) });
+    playGameSound("troop_dispatch", {
+      cooldownMs: 80,
+      regionId: getCityRegionId(source),
+      allowCrossMap: true,
+    });
     renderClanHudAccess();
     renderClanView();
     updateOutgoingAttackUi();
@@ -23122,6 +23266,13 @@ async function relinquishCity(cityId) {
       addLog(acceptedTroops > 0
         ? `Relinquished ${city.name}. ${formatNumber(acceptedTroops)} troops are marching to ${destinationName}${travelText}.`
         : `Relinquished ${city.name}. No stationed troops needed to march.`);
+      if (acceptedTroops > 0) {
+        playGameSound("troop_dispatch", {
+          cooldownMs: 80,
+          regionId,
+          allowCrossMap: true,
+        });
+      }
       showToast(`${city.name} relinquished`);
       saveGame();
       if (modal.open) modal.close();
@@ -23138,6 +23289,13 @@ async function relinquishCity(cityId) {
     addLog(transferredTroops > 0
       ? `Relinquished ${city.name}. ${formatNumber(transferredTroops)} troops are marching to ${destination.name} (${formatDuration(mission.total)}).`
       : `Relinquished ${city.name}. No stationed troops needed to march.`);
+    if (transferredTroops > 0) {
+      playGameSound("troop_dispatch", {
+        cooldownMs: 80,
+        regionId,
+        allowCrossMap: true,
+      });
+    }
     showToast(`${city.name} relinquished`);
     saveGame();
     if (modal.open) modal.close();
@@ -25939,22 +26097,23 @@ async function resetSkills() {
 function updateIncomingAttackUi() {
   if (!incomingAttackBtn) return;
   const incoming = getIncomingAttacks();
+  const incomingIds = new Set(incoming.map(attack => String(attack.key || getArmyTokenId(attack))));
   incomingAttackBtn.hidden = incoming.length === 0;
   incomingAttackBtn.classList.toggle("active", incoming.length > 0);
   if (!incoming.length) {
-    if (lastAudioIncomingAttackCount > 0) syncWorldMusicState();
-    lastAudioIncomingAttackCount = 0;
+    if (lastAudioIncomingAttackIds.size > 0) syncWorldMusicState();
+    lastAudioIncomingAttackIds = incomingIds;
     if (incomingAttackCount) incomingAttackCount.textContent = "0";
     if (incomingAttackTime) incomingAttackTime.textContent = "Incoming";
     if (modal.open && modal.classList.contains("incoming-attack-modal")) modal.close();
     return;
   }
 
-  if (incoming.length > lastAudioIncomingAttackCount) {
+  if ([...incomingIds].some(id => !lastAudioIncomingAttackIds.has(id))) {
     playGameSound("city_under_attack", { cooldownMs: 1000, allowCrossMap: true });
     crownlandsAudio?.setMusicState("danger");
   }
-  lastAudioIncomingAttackCount = incoming.length;
+  lastAudioIncomingAttackIds = incomingIds;
   if (incomingAttackCount) incomingAttackCount.textContent = formatNumber(incoming.length);
   if (incomingAttackTime) incomingAttackTime.textContent = formatDuration(incoming[0].remaining);
   incomingAttackBtn.title = `${formatIncomingThreatSummary(incoming)} - soonest ${formatDuration(incoming[0].remaining)}`;
@@ -26617,6 +26776,7 @@ async function useRecallHornOnMission(armyId = "") {
     playGameSound("troop_dispatch", {
       cooldownMs: 80,
       regionId: mission.sourceRegionId || getCityRegionId(mission.fromId),
+      allowCrossMap: true,
     });
     showToast(`Army recalled. Returning to ${sourceName} in ${formatDuration(result?.returnSeconds || mission.remaining)}.`);
     saveGame();
@@ -28822,6 +28982,10 @@ if (levelUpRewardModal) {
     event.stopPropagation();
   });
   levelUpRewardModal.addEventListener("close", () => {
+    if (levelUpRewardAudioTimer) {
+      window.clearTimeout(levelUpRewardAudioTimer);
+      levelUpRewardAudioTimer = 0;
+    }
     levelUpRewardModal.classList.remove("revealed");
     activeLevelUpReward = null;
     setTimeout(showNextLevelUpReward, 0);

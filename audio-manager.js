@@ -91,12 +91,16 @@
       this.preparedHtmlEffects = new Map();
       this.effectContext = null;
       this.effectMasterGain = null;
+      this.effectLimiter = null;
       this.effectUnlockPromise = null;
       this.effectsAuthorized = false;
       this.effectsEngine = (window.AudioContext || window.webkitAudioContext) ? "webaudio" : "htmlaudio";
       this.lastEffectsError = "";
       this.lastEffectId = "";
       this.lastEffectStartedAt = 0;
+      this.lastEffectRecommendedVolume = 0;
+      this.lastEffectVolumeScale = 1;
+      this.lastEffectBaseGain = 0;
       this.lastSwordIndex = -1;
       this.suppressDelegatedUiSound = false;
       this.manifestPromise = this.loadManifest();
@@ -323,6 +327,29 @@
           ? 0
           : clampVolume(effect.baseVolume * this.preferences.effectsVolume, 1);
       }
+    }
+
+    getEffectGainState(asset, options = {}) {
+      const recommendedVolume = clampVolume(asset?.recommended_volume, 1);
+      const volumeScale = clampScale(options?.volumeScale, 1);
+      const baseGain = clampVolume(recommendedVolume * volumeScale, 1);
+      const effectiveGain = this.preferences.effectsMuted
+        ? 0
+        : clampVolume(baseGain * this.preferences.effectsVolume, 1);
+      return {
+        baseGain,
+        effectiveGain,
+        recommendedVolume,
+        volumeScale,
+      };
+    }
+
+    recordEffectStart(asset, gainState) {
+      this.lastEffectId = asset.id;
+      this.lastEffectStartedAt = Date.now();
+      this.lastEffectRecommendedVolume = gainState.recommendedVolume;
+      this.lastEffectVolumeScale = gainState.volumeScale;
+      this.lastEffectBaseGain = gainState.baseGain;
     }
 
     getMusicVolumeFor(asset) {
@@ -574,7 +601,24 @@
       try {
         const context = new EffectAudioContext();
         const masterGain = context.createGain();
-        masterGain.connect(context.destination);
+        let limiter = null;
+        if (typeof context.createDynamicsCompressor === "function") {
+          try {
+            limiter = context.createDynamicsCompressor();
+            limiter.threshold.value = -3;
+            limiter.knee.value = 0;
+            limiter.ratio.value = 20;
+            limiter.attack.value = 0.003;
+            limiter.release.value = 0.12;
+            masterGain.connect(limiter);
+            limiter.connect(context.destination);
+          } catch (_error) {
+            masterGain.disconnect?.();
+            limiter?.disconnect?.();
+            limiter = null;
+          }
+        }
+        if (!limiter) masterGain.connect(context.destination);
         context.onstatechange = () => {
           this.effectsUnlocked = context.state === "running";
           if (this.effectsUnlocked) {
@@ -584,6 +628,7 @@
         };
         this.effectContext = context;
         this.effectMasterGain = masterGain;
+        this.effectLimiter = limiter;
         this.applyEffectsVolume();
         if (context.state === "running") {
           this.effectsUnlocked = true;
@@ -787,11 +832,10 @@
 
         const source = this.effectContext.createBufferSource();
         const gainNode = this.effectContext.createGain();
-        const baseVolume = clampVolume(asset.recommended_volume, 1)
-          * clampScale(options.volumeScale, 1);
+        const gainState = this.getEffectGainState(asset, options);
         source.buffer = decoded.buffer;
         source.loop = asset.loop === true;
-        gainNode.gain.value = baseVolume;
+        gainNode.gain.value = gainState.baseGain;
         source.connect(gainNode);
         gainNode.connect(this.effectMasterGain);
         let released = false;
@@ -820,8 +864,7 @@
         this.activeEffects.add(record);
         try {
           source.start(0);
-          this.lastEffectId = asset.id;
-          this.lastEffectStartedAt = Date.now();
+          this.recordEffectStart(asset, gainState);
         } catch (error) {
           release();
           throw error;
@@ -869,25 +912,42 @@
       if (this.activeEffects.size + pendingEffectCount >= maxActive || sameEffectCount >= maxSameEffect) return false;
 
       this.lastEffectAt.set(id, now);
-      if (this.effectsEngine === "webaudio") {
-        this.pendingEffectCounts.set(id, (this.pendingEffectCounts.get(id) || 0) + 1);
-        this.playWebAudioEffect(asset, options).finally(() => {
-          const remaining = Math.max(0, (this.pendingEffectCounts.get(id) || 1) - 1);
-          if (remaining) this.pendingEffectCounts.set(id, remaining);
-          else this.pendingEffectCounts.delete(id);
-        });
-      } else {
+      const delayMs = Math.min(60000, Math.max(0, Number(options.delayMs) || 0));
+      if (delayMs > 0 && this.effectsEngine === "webaudio") this.prepareEffect(id);
+      this.pendingEffectCounts.set(id, (this.pendingEffectCounts.get(id) || 0) + 1);
+      let pendingReleased = false;
+      const releasePending = () => {
+        if (pendingReleased) return;
+        pendingReleased = true;
+        const remaining = Math.max(0, (this.pendingEffectCounts.get(id) || 1) - 1);
+        if (remaining) this.pendingEffectCounts.set(id, remaining);
+        else this.pendingEffectCounts.delete(id);
+      };
+      const launch = () => {
+        if (this.preferences.effectsMuted) {
+          releasePending();
+          return;
+        }
+        if (this.effectsEngine === "webaudio") {
+          this.playWebAudioEffect(asset, options).finally(releasePending);
+          return;
+        }
         const prepared = this.preparedHtmlEffects.get(id);
         if (prepared) {
           this.preparedHtmlEffects.delete(id);
-          prepared.promise.then(isPrepared => {
-            if (!isPrepared || this.preferences.effectsMuted) return;
-            this.playEffectSource(asset, options, prepared.sourceIndex, prepared.audio);
-          });
-        } else {
-          this.playEffectSource(asset, options, 0);
+          prepared.promise
+            .then(isPrepared => {
+              if (!isPrepared || this.preferences.effectsMuted) return;
+              this.playEffectSource(asset, options, prepared.sourceIndex, prepared.audio);
+            })
+            .finally(releasePending);
+          return;
         }
-      }
+        this.playEffectSource(asset, options, 0);
+        releasePending();
+      };
+      if (delayMs > 0) window.setTimeout(launch, delayMs);
+      else launch();
       return true;
     }
 
@@ -901,9 +961,9 @@
       audio.preload = "auto";
       audio.muted = false;
       audio.loop = asset.loop === true;
-      const baseVolume = clampVolume(asset.recommended_volume, 1)
-        * clampScale(options.volumeScale, 1);
-      audio.volume = clampVolume(baseVolume * this.preferences.effectsVolume, 1);
+      const gainState = this.getEffectGainState(asset, options);
+      const baseVolume = gainState.baseGain;
+      audio.volume = gainState.effectiveGain;
       let released = false;
       let fallbackStarted = false;
       const record = {
@@ -964,14 +1024,13 @@
           this.preferredAudioExtension = getAudioExtension(sourceUrl) || this.preferredAudioExtension;
           this.effectsUnlocked = true;
           this.effectsAuthorized = true;
-          this.lastEffectId = asset.id;
-          this.lastEffectStartedAt = Date.now();
+          this.recordEffectStart(asset, gainState);
           this.lastEffectsError = "";
         })
         .catch(fallback);
     }
 
-    playSwordClash() {
+    playSwordClash(options = {}) {
       if (!SWORD_CLASHES.length) return false;
       let index = Math.floor(Math.random() * SWORD_CLASHES.length);
       if (SWORD_CLASHES.length > 1 && index === this.lastSwordIndex) {
@@ -982,6 +1041,7 @@
         cooldownMs: 80,
         maxActive: 10,
         maxSameEffect: 2,
+        ...options,
       });
     }
 
@@ -990,30 +1050,32 @@
         if (this.isAudioControlEvent(event)) return;
         const button = event.target.closest?.("button, [role='button']");
         if (!button || button.disabled || button.getAttribute("aria-disabled") === "true") return;
-        if (this.suppressDelegatedUiSound) return;
         const explicitEffect = String(button.getAttribute("data-audio-effect") || "").trim();
-        if (explicitEffect) {
-          if (explicitEffect.toLowerCase() !== "none") {
-            this.playEffect(explicitEffect, { cooldownMs: 25, delegated: true });
-          }
-          return;
-        }
+        if (explicitEffect.toLowerCase() === "none") return;
         const id = String(button.id || "");
         const label = String(button.getAttribute("aria-label") || button.textContent || "").toLowerCase();
-        if (id === "profileCloseBtn" || id === "closeModalBtn" || label.includes("close") || label === "cancel") {
-          this.playEffect("menu_close", { cooldownMs: 40, delegated: true });
-        } else if (
+        let effectId = explicitEffect;
+        if (!effectId) {
+          if (id === "profileCloseBtn" || id === "closeModalBtn" || label.includes("close") || label === "cancel") {
+            effectId = "menu_close";
+          } else if (
           id === "profileBtn"
           || id.endsWith("TabBtn")
           || id.endsWith("ListBtn")
           || id.endsWith("RewardBtn")
           || label.includes("open ")
-        ) {
-          this.playEffect("menu_open", { cooldownMs: 40, delegated: true });
-        } else {
-          this.playEffect("button_click", { cooldownMs: 25, delegated: true });
+          ) {
+            effectId = "menu_open";
+          } else {
+            effectId = "button_click";
+          }
         }
-      });
+        const cooldownMs = effectId === "button_click" ? 25 : 40;
+        Promise.resolve().then(() => {
+          if (this.suppressDelegatedUiSound) return;
+          this.playEffect(effectId, { cooldownMs, delegated: true });
+        });
+      }, { capture: true });
     }
 
     bindSettingsUi() {
@@ -1094,6 +1156,7 @@
         effectsAuthorized: this.effectsAuthorized,
         effectsEngine: this.effectsEngine,
         effectsContextState: this.effectContext?.state || (this.effectsEngine === "htmlaudio" ? "unavailable" : "not-created"),
+        effectsLimiterActive: Boolean(this.effectLimiter),
         activeEffectCount: this.activeEffects.size,
         bufferedEffectCount: this.effectBufferPromises.size,
         musicMuted: this.preferences.musicMuted,
@@ -1114,6 +1177,12 @@
         preferredAudioExtension: this.preferredAudioExtension,
         lastEffectId: this.lastEffectId,
         lastEffectStartedAt: this.lastEffectStartedAt,
+        lastEffectRecommendedVolume: this.lastEffectRecommendedVolume,
+        lastEffectVolumeScale: this.lastEffectVolumeScale,
+        lastEffectBaseGain: this.lastEffectBaseGain,
+        lastEffectEffectiveGain: this.preferences.effectsMuted
+          ? 0
+          : clampVolume(this.lastEffectBaseGain * this.preferences.effectsVolume, 1),
         lastPlaybackError: this.lastPlaybackError,
         lastEffectsError: this.lastEffectsError,
       };

@@ -186,6 +186,90 @@ async function waitForServiceWorkerControl(page) {
   );
 }
 
+async function assertAllEffectCodecsDecode(page, browserName) {
+  const result = await page.evaluate(async () => {
+    const manifestResponse = await fetch("/audio/manifest.json", { cache: "no-store" });
+    if (!manifestResponse.ok) {
+      throw new Error(`Audio manifest returned ${manifestResponse.status}.`);
+    }
+    const manifest = await manifestResponse.json();
+    const effects = manifest.assets.filter(asset => asset.category !== "music");
+    const AudioContextConstructor = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContextConstructor) throw new Error("Web Audio is unavailable for codec validation.");
+
+    const context = new AudioContextConstructor();
+    const decoded = [];
+    try {
+      for (const asset of effects) {
+        const wav = String(asset.wav || "");
+        const sources = [
+          ["mp3", asset.mp3 || wav.replace(/\.wav$/i, ".mp3")],
+          ["ogg", asset.ogg],
+          ["wav", wav],
+        ];
+        for (const [codec, relativePath] of sources) {
+          const response = await fetch(`/audio/${relativePath}`, { cache: "no-store" });
+          if (!response.ok) {
+            throw new Error(`${asset.id} ${codec.toUpperCase()} returned ${response.status}.`);
+          }
+          const audioBuffer = await context.decodeAudioData(await response.arrayBuffer());
+          let sumSquares = 0;
+          let sampleCount = 0;
+          let peak = 0;
+          for (let channel = 0; channel < audioBuffer.numberOfChannels; channel += 1) {
+            const samples = audioBuffer.getChannelData(channel);
+            for (let index = 0; index < samples.length; index += 1) {
+              const magnitude = Math.abs(samples[index]);
+              peak = Math.max(peak, magnitude);
+              sumSquares += samples[index] * samples[index];
+            }
+            sampleCount += samples.length;
+          }
+          decoded.push({
+            channelCount: audioBuffer.numberOfChannels,
+            codec,
+            duration: audioBuffer.duration,
+            id: asset.id,
+            peak,
+            rms: Math.sqrt(sumSquares / Math.max(1, sampleCount)),
+            sampleRate: audioBuffer.sampleRate,
+          });
+        }
+      }
+    } finally {
+      await context.close();
+    }
+    return { decoded, effectCount: effects.length };
+  });
+
+  assert.equal(result.effectCount, 25, `${browserName}: expected all 25 production effects.`);
+  assert.equal(
+    result.decoded.length,
+    result.effectCount * 3,
+    `${browserName}: MP3, OGG, and WAV must decode for every effect.`,
+  );
+  const byEffect = new Map();
+  for (const item of result.decoded) {
+    assert.equal(item.channelCount, 2, `${browserName}: ${item.id} ${item.codec} must remain stereo.`);
+    assert.ok(
+      item.sampleRate === 44100 || item.sampleRate === 48000,
+      `${browserName}: ${item.id} ${item.codec} decoded at an unexpected rate.`,
+    );
+    assert.ok(item.duration >= 0.08, `${browserName}: ${item.id} ${item.codec} is too short.`);
+    assert.ok(item.peak > 0.01, `${browserName}: ${item.id} ${item.codec} is effectively silent.`);
+    assert.ok(item.rms > 0.001, `${browserName}: ${item.id} ${item.codec} has no usable signal.`);
+    if (!byEffect.has(item.id)) byEffect.set(item.id, []);
+    byEffect.get(item.id).push(item);
+  }
+  for (const [id, variants] of byEffect) {
+    const durations = variants.map(variant => variant.duration);
+    assert.ok(
+      Math.max(...durations) - Math.min(...durations) <= 0.015,
+      `${browserName}: ${id} codec durations do not match.`,
+    );
+  }
+}
+
 async function runAllowedPlaybackSuite(browser, browserName, baseUrl, fixture) {
   const context = await browser.newContext({
     serviceWorkers: "allow",
@@ -202,6 +286,7 @@ async function runAllowedPlaybackSuite(browser, browserName, baseUrl, fixture) {
       `${browserName}: the first load must begin outside service-worker control.`,
     );
     assertHealthyPlayback(await waitForPlayback(page), "main_menu");
+    await assertAllEffectCodecsDecode(page, browserName);
     assert.equal(
       await page.evaluate(() => document.querySelectorAll("audio").length),
       1,
