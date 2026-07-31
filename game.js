@@ -8156,7 +8156,7 @@ function scoutRewardCamp(campId) {
   const target = getCampTargetById(campId);
   if (!target) return;
   if (target.owner === "player") {
-    showToast(`You already control ${target.name}.`);
+    rejectGameAction(`You already control ${target.name}.`);
     return;
   }
   scoutTarget(target);
@@ -8228,6 +8228,7 @@ function launchScoutMission(source, target, route) {
       .then(accepted => {
         if (!accepted) return;
         addLog(`One scout left ${source.name} for ${target.name}.`);
+        playGameSound("troop_dispatch", { cooldownMs: 80, regionId: getCityRegionId(source) });
         showToast(`Scout moving from ${source.name} to ${target.name}`);
       })
       .finally(() => pendingServerArmyLaunchKeys.delete(launchKey));
@@ -8241,6 +8242,7 @@ function launchScoutMission(source, target, route) {
   syncCityStateToOnline(source);
   state.attacks.push(mission);
   publishOnlineArmyMovement(mission);
+  playGameSound("troop_dispatch", { cooldownMs: 80, regionId: getCityRegionId(source) });
   return mission;
 }
 
@@ -9068,7 +9070,14 @@ function applyServerArmyResult(result = null) {
       }
     }
   }
-  if (newestPlayerReport?.type === "attack" && newestPlayerReport.outcome === "victory") {
+  const resultTargetIsCamp = result.targetType === "camp"
+    || Boolean(normalizedCampUpdate)
+    || isRewardCampTarget(audioTarget);
+  if (
+    newestPlayerReport?.type === "attack"
+    && newestPlayerReport.outcome === "victory"
+    && !resultTargetIsCamp
+  ) {
     const capturedCity = cityById(newestPlayerReport.cityId);
     if (isStronghold(capturedCity)) {
       playGameSound("stronghold_captured", { regionId: audioRegionId });
@@ -18931,7 +18940,7 @@ async function runClanRallyAction(action, rally) {
         ? "cancelClanRally"
         : "";
   if (!method || !api?.[method] || !api.isSignedIn?.()) {
-    showToast("That clan rally action requires the online Crownlands server.");
+    rejectGameAction("That clan rally action requires the online Crownlands server.");
     return;
   }
   if (["launch", "cancel"].includes(action)) {
@@ -18954,6 +18963,10 @@ async function runClanRallyAction(action, rally) {
     if (action === "withdraw") {
       showToast("Your rally contribution is returning home.");
     } else if (action === "launch") {
+      playGameSound("troop_dispatch", {
+        cooldownMs: 80,
+        regionId: result?.movement?.sourceRegionId || rally.sourceRegionId || rally.targetRegionId,
+      });
       const returned = Array.isArray(result?.returnedInbound) ? result.returnedInbound.length : 0;
       showToast(returned
         ? `Rally launched. ${formatNumber(returned)} inbound contribution${returned === 1 ? " is" : "s are"} returning.`
@@ -18963,7 +18976,7 @@ async function runClanRallyAction(action, rally) {
     }
   } catch (error) {
     console.warn(`Clan rally ${action} failed`, error);
-    showToast(error?.message || `Could not ${action} the rally.`);
+    rejectGameAction(error?.message || `Could not ${action} the rally.`);
   } finally {
     rallyActionRequests.delete(rally.id);
     renderClanHudAccess();
@@ -18979,7 +18992,7 @@ function bindClanRallyControls(root = document) {
     button.addEventListener("click", () => {
       const rally = onlineClanRallies.find(entry => entry.id === button.dataset.rallyId);
       if (!rally) {
-        showToast("That clan rally is no longer active.");
+        rejectGameAction("That clan rally is no longer active.");
         return;
       }
       void runClanRallyAction(button.dataset.rallyAction, rally);
@@ -19112,16 +19125,22 @@ async function runClanSocialAction(action, rewardId = "") {
     if (action === "send-gift") {
       showToast(`Gift sent to ${formatNumber(result.recipientCount || 0)} clan members.`);
     } else if (action === "collect-gifts") {
-      showToast(result.claimed
-        ? `Collected ${formatClanProductionHours(result.productionMinutes)}h gold: +${formatNumber(result.reward || 0)}.`
-        : "No clan gifts are waiting.");
+      if (result.claimed) {
+        showToast(`Collected ${formatClanProductionHours(result.productionMinutes)}h gold: +${formatNumber(result.reward || 0)}.`);
+        if (Math.max(0, Number(result.reward) || 0) > 0) playRewardSound("gold");
+      } else {
+        rejectGameAction("No clan gifts are waiting.");
+      }
     } else {
-      showToast(result.replayed
-        ? "That clan quest reward was already collected."
-        : `Quest reward: +${formatNumber(result.reward || 0)} ${result.rewardType === "troops" ? "troops" : "gold"}.`);
+      if (result.replayed) {
+        rejectGameAction("That clan quest reward was already collected.");
+      } else {
+        showToast(`Quest reward: +${formatNumber(result.reward || 0)} ${result.rewardType === "troops" ? "troops" : "gold"}.`);
+        if (Math.max(0, Number(result.reward) || 0) > 0) playRewardSound(result.rewardType);
+      }
     }
   } catch (error) {
-    showToast(error?.message || "Clan reward action failed.");
+    rejectGameAction(error?.message || "Clan reward action failed.");
   } finally {
     clanGiftActionInFlight = false;
     clanQuestClaimInFlightId = "";
@@ -20397,7 +20416,7 @@ function beginStrongholdReinforcement(strongholdId) {
   if (!stronghold || !isStronghold(stronghold) || stronghold.owner !== "player") return;
   const sourceOption = findNearestOwnedSourceCandidate(stronghold, 1);
   if (!sourceOption) {
-    showToast(`No other owned city with troops can reach ${stronghold.name}.`);
+    rejectGameAction(`No other owned city with troops can reach ${stronghold.name}.`);
     return;
   }
   selectedSourceId = sourceOption.city.id;
@@ -20485,7 +20504,7 @@ function renderSelectedRewardCampWheel(camp) {
 function showRecallRewardCampConfirm(campId) {
   const camp = getCampTargetById(campId);
   if (!camp || camp.owner !== "player" || !camp.payoutPending) {
-    showToast("You no longer control that camp.");
+    rejectGameAction("You no longer control that camp.");
     return;
   }
   const troops = Math.max(0, Math.floor(Number(camp.currentGarrison) || 0));
@@ -20515,11 +20534,11 @@ async function recallRewardCampGarrison(campId) {
   const camp = getCampTargetById(campId);
   const api = getOnlineApi();
   if (!camp || camp.owner !== "player" || !camp.payoutPending) {
-    showToast("You no longer control that camp.");
+    rejectGameAction("You no longer control that camp.");
     return false;
   }
   if (!api?.recallRewardCampGarrison || !api?.isSignedIn?.()) {
-    showToast("Camp recalls require the online Crownlands server.");
+    rejectGameAction("Camp recalls require the online Crownlands server.");
     return false;
   }
 
@@ -20534,6 +20553,7 @@ async function recallRewardCampGarrison(campId) {
     const troops = Math.max(0, Math.floor(Number(result?.returningTroops) || 0));
     const destination = result?.returnDestinationName || "your city";
     addLog(`${formatNumber(troops)} troops withdrew from ${camp.name} and began marching to ${destination}.`);
+    playGameSound("troop_dispatch", { cooldownMs: 80, regionId: camp.regionId });
     showToast(`${formatNumber(troops)} troops recalled from ${camp.name}.`);
     if (modal.open) modal.close();
     clearSelection(false);
@@ -20544,7 +20564,7 @@ async function recallRewardCampGarrison(campId) {
   } catch (error) {
     onlineLastError = error?.message || String(error);
     console.warn("Could not recall reward camp garrison", error);
-    showToast(error?.message || "Could not recall troops from that camp.");
+    rejectGameAction(error?.message || "Could not recall troops from that camp.");
     return false;
   } finally {
     rewardCampRecallRequests.delete(campId);
@@ -20556,7 +20576,7 @@ function beginRewardCampOrder(campId) {
   if (!camp) return;
   const sourceOption = findPreferredAttackSource(camp);
   if (!sourceOption) {
-    showToast(`No owned city with troops can reach this ${camp.name}.`);
+    rejectGameAction(`No owned city with troops can reach this ${camp.name}.`);
     return;
   }
   selectedSourceId = sourceOption.city.id;
@@ -21211,17 +21231,17 @@ function beginClanReinforcement(targetOrId) {
     ? targetOrId
     : getArmyTargetById(targetOrId);
   if (!target || !isClanAllyCity(target)) {
-    showToast("That holding is no longer controlled by a clan ally.");
+    rejectGameAction("That holding is no longer controlled by a clan ally.");
     return;
   }
   const reinforcementBlockReason = getClanReinforcementBlockReason(target);
   if (reinforcementBlockReason) {
-    showToast(reinforcementBlockReason);
+    rejectGameAction(reinforcementBlockReason);
     return;
   }
   const sourceOption = findPreferredAttackSource(target);
   if (!sourceOption) {
-    showToast("No owned holding with troops can reach this clan ally.");
+    rejectGameAction("No owned holding with troops can reach this clan ally.");
     return;
   }
   selectedSourceId = sourceOption.city.id;
@@ -21240,17 +21260,17 @@ function beginCreateClanRally(targetOrId) {
   const target = typeof targetOrId === "object" ? targetOrId : getArmyTargetById(targetOrId);
   const eligibleObjective = target && (isStronghold(target) || isRewardCampTarget(target));
   if (!state?.clanId || !eligibleObjective || target.owner === "player" || isClanAllyCity(target)) {
-    showToast(!state?.clanId ? "Join a clan before forming a rally." : "That objective is not eligible for a clan rally.");
+    rejectGameAction(!state?.clanId ? "Join a clan before forming a rally." : "That objective is not eligible for a clan rally.");
     return;
   }
   const api = getOnlineApi();
   if (!usesServerArmyAuthority() || !api?.createClanRally || !api?.isSignedIn?.()) {
-    showToast("Clan rallies require the online Crownlands server.");
+    rejectGameAction("Clan rallies require the online Crownlands server.");
     return;
   }
   const sourceOption = findPreferredAttackSource(target);
   if (!sourceOption) {
-    showToast("No owned city or Stronghold with troops can reach that objective.");
+    rejectGameAction("No owned city or Stronghold with troops can reach that objective.");
     return;
   }
   activeRallyOrderContext = {
@@ -21271,12 +21291,12 @@ function beginCreateClanRally(targetOrId) {
 
 function beginJoinClanRallyContribution(rally) {
   if (!rally || rally.status !== "forming" || !state?.clanId) {
-    showToast("That rally is no longer accepting contributions.");
+    rejectGameAction("That rally is no longer accepting contributions.");
     return;
   }
   const api = getOnlineApi();
   if (!usesServerArmyAuthority() || !api?.joinClanRally || !api?.isSignedIn?.()) {
-    showToast("Clan rallies require the online Crownlands server.");
+    rejectGameAction("Clan rallies require the online Crownlands server.");
     return;
   }
   const knownAssembly = getArmyTargetById(rally.assemblyCityId);
@@ -21294,7 +21314,7 @@ function beginJoinClanRallyContribution(rally) {
   };
   const sourceOption = findPreferredAttackSource(assembly);
   if (!sourceOption) {
-    showToast("No owned city or Stronghold with troops can reach the rally assembly.");
+    rejectGameAction("No owned city or Stronghold with troops can reach the rally assembly.");
     return;
   }
   activeRallyOrderContext = {
@@ -22650,7 +22670,7 @@ async function submitClanRallyTroopOrder(source, target, route) {
   if (!api || !context || !isRallyTroopOrderKind() || !state?.clanId) return false;
   const method = activeTroopOrderKind === "rally_create" ? "createClanRally" : "joinClanRally";
   if (!api[method] || !api.isSignedIn?.()) {
-    showToast("Clan rallies require the online Crownlands server.");
+    rejectGameAction("Clan rallies require the online Crownlands server.");
     return false;
   }
   const requestKey = activeTroopOrderKind === "rally_create"
@@ -22717,13 +22737,14 @@ async function submitClanRallyTroopOrder(source, target, route) {
     showToast(activeTroopOrderKind === "rally_create"
       ? `Rally formed against ${target.name}.`
       : `Contribution marching to ${target.name}.`);
+    playGameSound("troop_dispatch", { cooldownMs: 80, regionId: getCityRegionId(source) });
     renderClanHudAccess();
     renderClanView();
     updateOutgoingAttackUi();
     return true;
   } catch (error) {
     console.warn("Clan rally order failed", error);
-    showToast(error?.message || "Could not submit the rally order.");
+    rejectGameAction(error?.message || "Could not submit the rally order.");
     if (confirmButton) {
       confirmButton.disabled = false;
       confirmButton.textContent = activeTroopOrderKind === "rally_create" ? "Create Rally" : "Join Rally";
@@ -22748,7 +22769,7 @@ async function confirmTroopSliderOrder() {
     if (modal.open) modal.close();
     clearSelection(false);
     renderAll();
-    showToast("Order canceled. The map changed.");
+    rejectGameAction("Order canceled. The map changed.");
     return;
   }
 
@@ -22757,7 +22778,7 @@ async function confirmTroopSliderOrder() {
     ? activeTroopSliderRoute.route
     : null;
   if (!cachedRoute?.points?.length) {
-    showToast("Route is still calculating.");
+    rejectGameAction("Route is still calculating.");
     return;
   }
   if (isRallyTroopOrderKind()) {
@@ -24752,6 +24773,7 @@ async function claimPreparedRewardedAd(intent = {}, options = {}) {
     addLog(`Rewarded ad: +${formatNumber(reward)} gold.`);
     showToast(`Reward received: +${formatNumber(reward)} gold.`);
   }
+  if (!result.replayed && reward > 0) playRewardSound(rewardType);
   if (!options.skipStatusRefresh && !result.rewardedAdStatus) await refreshRewardedAdStatus({ render: false });
   return result;
 }
@@ -24785,12 +24807,12 @@ async function startRewardedAdBoost(rewardType = "gold") {
   const normalizedType = rewardType === "troops" ? "troops" : "gold";
   const availability = getRewardedAdAvailability();
   if (!availability.canWatch) {
-    showToast(availability.text);
+    rejectGameAction(availability.text);
     return;
   }
   const api = getOnlineApi();
   if (!api?.prepareRewardedAd || !api?.claimRewardedAd) {
-    showToast("The rewarded-ad server is unavailable.");
+    rejectGameAction("The rewarded-ad server is unavailable.");
     return;
   }
 
@@ -24959,7 +24981,7 @@ async function buyShopItem(itemId) {
       showToast(`${item.label} added to Bag. Cloud save will retry.`);
     }
   } catch (error) {
-    showToast(error?.message || `Could not buy ${item.label}.`);
+    rejectGameAction(error?.message || `Could not buy ${item.label}.`);
     console.warn("Shop purchase failed", error);
   } finally {
     shopPurchaseInFlight = false;
@@ -25074,14 +25096,14 @@ function useInventoryItem(itemId) {
   if (!item) return;
   const activeRemainingSeconds = getInventoryItemActiveRemainingSeconds(item);
   if (activeRemainingSeconds > 0) {
-    showToast(`${item.label} is already active for ${formatDuration(activeRemainingSeconds)}.`);
+    rejectGameAction(`${item.label} is already active for ${formatDuration(activeRemainingSeconds)}.`);
     if (modal?.open && modal.classList.contains("inventory-modal")) showInventoryModal();
     return;
   }
   if (item.id === ROYAL_PEACE_SHIELD_ITEM_ID) {
     useRoyalPeaceShield(item).catch(error => {
       console.warn("Royal Peace Shield activation failed", error);
-      showToast(error?.message || "Could not activate Royal Peace Shield.");
+      rejectGameAction(error?.message || "Could not activate Royal Peace Shield.");
       renderHud();
     });
     return;
@@ -25089,7 +25111,7 @@ function useInventoryItem(itemId) {
   if (item.id === WAR_DRUMS_ITEM_ID) {
     useWarDrums(item).catch(error => {
       console.warn("War Drums activation failed", error);
-      showToast(error?.message || "Could not activate War Drums.");
+      rejectGameAction(error?.message || "Could not activate War Drums.");
       renderHud();
     });
     return;
@@ -25097,7 +25119,7 @@ function useInventoryItem(itemId) {
   if (item.id === ROYAL_TAX_DECREE_ITEM_ID) {
     useRoyalTaxDecree(item).catch(error => {
       console.warn("Royal Tax Decree activation failed", error);
-      showToast(error?.message || "Could not activate Royal Tax Decree.");
+      rejectGameAction(error?.message || "Could not activate Royal Tax Decree.");
       renderHud();
     });
     return;
@@ -25105,7 +25127,7 @@ function useInventoryItem(itemId) {
   if (item.id === VEIL_OF_SILENCE_ITEM_ID) {
     useVeilOfSilence(item).catch(error => {
       console.warn("Veil of Silence activation failed", error);
-      showToast(error?.message || "Could not activate Veil of Silence.");
+      rejectGameAction(error?.message || "Could not activate Veil of Silence.");
       renderHud();
     });
     return;
@@ -25114,7 +25136,7 @@ function useInventoryItem(itemId) {
     const eligibleMarches = getOutgoingAttacks().filter(isSwiftMarchOrderEligible);
     if (modal?.open && modal.classList.contains("inventory-modal")) modal.close();
     if (!eligibleMarches.length) {
-      showToast("No eligible troop transfers or Stronghold reinforcements are active.");
+      rejectGameAction("No eligible troop transfers or Stronghold reinforcements are active.");
       return;
     }
     showOutgoingAttacksModal();
@@ -25124,20 +25146,20 @@ function useInventoryItem(itemId) {
     const eligibleMarches = getOutgoingAttacks().filter(isRecallHornEligible);
     if (modal?.open && modal.classList.contains("inventory-modal")) modal.close();
     if (!eligibleMarches.length) {
-      showToast("No eligible troop marches are active.");
+      rejectGameAction("No eligible troop marches are active.");
       return;
     }
     showOutgoingAttacksModal();
     return;
   }
-  showToast(`${item.label} mechanics are coming next.`);
+  rejectGameAction(`${item.label} mechanics are coming next.`);
 }
 
 function consumeInventoryItem(item) {
   const inventory = ensureShopItems();
   const owned = Math.max(0, Math.floor(Number(inventory[item.id]) || 0));
   if (owned <= 0) {
-    showToast(`You do not have ${item.label}.`);
+    rejectGameAction(`You do not have ${item.label}.`);
     showInventoryModal();
     return null;
   }
@@ -25480,18 +25502,24 @@ async function upgradeCity(cityId, levels = 1) {
         remainingLevels -= upgraded;
         if (upgraded < chunkLevels) break;
       }
-      const updatedCity = cityById(city.id) || city;
-      const levelText = totalUpgraded > 1 ? `${formatNumber(totalUpgraded)} levels` : "1 level";
-      addLog(`${updatedCity.name} upgraded ${levelText} to level ${formatNumber(updatedCity.level)}${totalSpent ? ` for ${formatNumber(totalSpent)} gold` : ""}.`);
-      showToast(`${updatedCity.name} upgraded ${levelText}`);
+      if (totalUpgraded > 0) {
+        const updatedCity = cityById(city.id) || city;
+        const levelText = totalUpgraded > 1 ? `${formatNumber(totalUpgraded)} levels` : "1 level";
+        addLog(`${updatedCity.name} upgraded ${levelText} to level ${formatNumber(updatedCity.level)}${totalSpent ? ` for ${formatNumber(totalSpent)} gold` : ""}.`);
+        showToast(`${updatedCity.name} upgraded ${levelText}`);
+        playGameSound("level_up", { cooldownMs: 180, allowCrossMap: true });
+      } else {
+        rejectGameAction("Could not upgrade city.", { allowCrossMap: true });
+      }
       renderAll();
     } catch (error) {
       onlineLastError = error?.message || String(error);
       if (totalUpgraded > 0) {
         const updatedCity = cityById(city.id) || city;
         showToast(`${updatedCity.name} upgraded ${formatNumber(totalUpgraded)} level${totalUpgraded === 1 ? "" : "s"}`);
+        playGameSound("level_up", { cooldownMs: 180, allowCrossMap: true });
       } else {
-        showToast(error?.message || "Could not upgrade city.");
+        rejectGameAction(error?.message || "Could not upgrade city.", { allowCrossMap: true });
       }
       console.warn("Server city upgrade failed", error);
       renderAll();
@@ -25520,6 +25548,7 @@ async function upgradeCity(cityId, levels = 1) {
 
   addLog(`${city.name} upgraded to level ${city.level}.`);
   showToast(`${city.name} upgraded`);
+  playGameSound("level_up", { cooldownMs: 180, allowCrossMap: true });
   markOwnedCityChanged(city);
   saveGame();
   renderAll();
@@ -26481,19 +26510,19 @@ async function useSwiftMarchOrderOnMission(armyId = "") {
   if (!normalizedArmyId || swiftMarchOrderRequests.has(normalizedArmyId)) return;
   const mission = getOutgoingAttacks().find(entry => getOnlineArmyResolutionId(entry) === normalizedArmyId);
   if (!mission || !isSwiftMarchOrderEligible(mission)) {
-    showToast("That troop transfer or Stronghold reinforcement is no longer eligible for a Swift March Order.");
+    rejectGameAction("That troop transfer or Stronghold reinforcement is no longer eligible for a Swift March Order.");
     renderOutgoingAttacksModalContent();
     return;
   }
   const inventory = ensureShopItems();
   if (Math.max(0, Math.floor(Number(inventory[SWIFT_MARCH_ORDER_ITEM_ID]) || 0)) <= 0) {
-    showToast("You do not have a Swift March Order.");
+    rejectGameAction("You do not have a Swift March Order.");
     renderOutgoingAttacksModalContent();
     return;
   }
   const api = getOnlineApi();
   if (!usesServerArmyAuthority() || !api?.useSwiftMarchOrder) {
-    showToast("Swift March Orders require the online Crownlands server.");
+    rejectGameAction("Swift March Orders require the online Crownlands server.");
     return;
   }
 
@@ -26520,7 +26549,7 @@ async function useSwiftMarchOrderOnMission(armyId = "") {
     updateOutgoingAttackUi();
   } catch (error) {
     console.warn("Swift March Order activation failed", error);
-    showToast(error?.message || "Could not use Swift March Order.");
+    rejectGameAction(error?.message || "Could not use Swift March Order.");
   } finally {
     swiftMarchOrderRequests.delete(normalizedArmyId);
     if (modal?.open && modal.classList.contains("outgoing-attack-modal")) {
@@ -26534,19 +26563,19 @@ async function useRecallHornOnMission(armyId = "") {
   if (!normalizedArmyId || recallHornRequests.has(normalizedArmyId)) return;
   const mission = getOutgoingAttacks().find(entry => getOnlineArmyResolutionId(entry) === normalizedArmyId);
   if (!mission || !isRecallHornEligible(mission)) {
-    showToast("That troop march is no longer eligible for a Recall Horn.");
+    rejectGameAction("That troop march is no longer eligible for a Recall Horn.");
     renderOutgoingAttacksModalContent();
     return;
   }
   const inventory = ensureShopItems();
   if (Math.max(0, Math.floor(Number(inventory[RECALL_HORN_ITEM_ID]) || 0)) <= 0) {
-    showToast("You do not have a Recall Horn.");
+    rejectGameAction("You do not have a Recall Horn.");
     renderOutgoingAttacksModalContent();
     return;
   }
   const api = getOnlineApi();
   if (!usesServerArmyAuthority() || !api?.useRecallHorn) {
-    showToast("Recall Horns require the online Crownlands server.");
+    rejectGameAction("Recall Horns require the online Crownlands server.");
     return;
   }
 
@@ -26565,6 +26594,10 @@ async function useRecallHornOnMission(armyId = "") {
     rebuildOnlineArmies();
     const sourceName = mission.fromName || mission.source?.name || "its origin city";
     addLog(`Recall Horn used. ${formatNumber(mission.troops)} troops are returning to ${sourceName}.`);
+    playGameSound("troop_dispatch", {
+      cooldownMs: 80,
+      regionId: mission.sourceRegionId || getCityRegionId(mission.fromId),
+    });
     showToast(`Army recalled. Returning to ${sourceName} in ${formatDuration(result?.returnSeconds || mission.remaining)}.`);
     saveGame();
     renderArmies(true);
@@ -26572,7 +26605,7 @@ async function useRecallHornOnMission(armyId = "") {
     updateOutgoingAttackUi();
   } catch (error) {
     console.warn("Recall Horn activation failed", error);
-    showToast(error?.message || "Could not use Recall Horn.");
+    rejectGameAction(error?.message || "Could not use Recall Horn.");
   } finally {
     recallHornRequests.delete(normalizedArmyId);
     if (modal?.open && modal.classList.contains("outgoing-attack-modal")) {

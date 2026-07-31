@@ -109,7 +109,7 @@
             <button id="leaderboardBtn" class="profile-rank-btn" type="button" aria-label="Open King Power ranks">
               <img class="profile-rank-icon" src="assets/leaderboard-icon.png?v=20260623-leaderboard-icon-new" alt="" draggable="false" decoding="async" />
             </button>
-            <button id="clanHudBtn" class="profile-rank-btn clan-hud-btn is-search" type="button" aria-label="Find a clan">
+            <button id="clanHudBtn" class="profile-rank-btn clan-hud-btn is-search" type="button" aria-label="Find a clan" data-audio-effect="menu_open">
               <span id="clanHudIcon" class="clan-hud-icon" aria-hidden="true"></span>
             </button>
             <button id="dailyLoginRewardBtn" class="profile-rank-btn daily-login-reward-btn" type="button" aria-label="Open daily rewards">
@@ -158,7 +158,7 @@
         <img class="city-list-icon" src="assets/city-list-icon.png?v=20260623-city-icon-hud" alt="" draggable="false" decoding="async" />
         <span id="cityText" class="sr-only">0 cities</span>
       </button>
-      <button id="islandSwitchBtn" class="resource-pill island-switch-btn" type="button" aria-label="Switch island" hidden>
+      <button id="islandSwitchBtn" class="resource-pill island-switch-btn" type="button" aria-label="Switch island" data-audio-effect="menu_open" hidden>
         <img class="island-switch-icon" src="assets/map-icon.png?v=20260623-map-icon-framed" alt="" draggable="false" decoding="async" />
         <span id="islandSwitchLabel" class="sr-only">Map</span>
       </button>
@@ -199,12 +199,12 @@
 
       <nav class="bottom-nav" aria-label="Game menu">
         <button id="logBtn" class="nav-btn report-nav-btn" type="button" data-audio-effect="none"><img class="nav-icon report-icon" src="assets/report-icon.png?v=20260702-report-icon" alt="" draggable="false" decoding="async" />Reports</button>
-        <button id="outgoingAttackBtn" class="nav-btn outgoing-attack-btn" type="button" aria-label="Active marches" hidden>
+        <button id="outgoingAttackBtn" class="nav-btn outgoing-attack-btn" type="button" aria-label="Active marches" data-audio-effect="menu_open" hidden>
           <span aria-hidden="true">&#10148;</span>
           <strong id="outgoingAttackCount">0</strong>
           <small id="outgoingAttackTime">Marches</small>
         </button>
-        <button id="incomingAttackBtn" class="nav-btn incoming-attack-btn" type="button" aria-label="Incoming threats" hidden>
+        <button id="incomingAttackBtn" class="nav-btn incoming-attack-btn" type="button" aria-label="Incoming threats" data-audio-effect="menu_open" hidden>
           <span aria-hidden="true">&#9876;</span>
           <strong id="incomingAttackCount">0</strong>
           <small id="incomingAttackTime">Incoming</small>
