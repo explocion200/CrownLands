@@ -97,15 +97,18 @@ const DEFAULT_MARCH_PERCENT = 0.5;
 const DAILY_NEUTRAL_CAPTURE_LIMIT = 30;
 const NEUTRAL_CITY_COUNT_LIMIT = 30;
 const CITY_RELINQUISH_DAILY_LIMIT = 1;
-const ANTI_FARM_POLICY_VERSION = 1;
+const ANTI_FARM_POLICY_VERSION = 3;
 const ANTI_FARM_INSTALLATION_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
-const ANTI_FARM_FRESH_NEUTRAL_WINDOW_MS = 24 * 60 * 60 * 1000;
-const ANTI_FARM_HANDOFF_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
-const ANTI_FARM_ALLOWED_FRESH_HANDOFFS = 2;
+const ANTI_FARM_DIRECTION_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
+const ANTI_FARM_ALLOWED_EASY_CAPTURES = 2;
 const ANTI_FARM_PAIR_BLOCK_MS = 7 * 24 * 60 * 60 * 1000;
+const ANTI_FARM_LOW_CITY_LIMIT = 3;
+const ANTI_FARM_CONTESTED_DEFENSE_RATIO = 0.25;
+const ANTI_FARM_MEANINGFUL_LOSS_RATIO = 0.2;
+const ANTI_FARM_MIN_MEANINGFUL_TROOPS = 2;
 const ANTI_FARM_MAX_ACCOUNT_INSTALLATIONS = 8;
 const ANTI_FARM_MAX_INSTALLATION_ACCOUNTS = 12;
-const ANTI_FARM_MAX_HANDOFF_HISTORY = 24;
+const ANTI_FARM_MAX_EVENT_HISTORY = 24;
 const HARVEST_BONUS_DAILY_LIMIT = economyNumber("pickups.dailyTotalCap", 12);
 const HARVEST_BONUS_DAILY_GOLD_LIMIT = economyNumber("pickups.dailyGoldCap", 6);
 const HARVEST_BONUS_DAILY_TROOP_LIMIT = economyNumber("pickups.dailyTroopCap", 6);
@@ -170,7 +173,6 @@ const CAPTURE_XP_BASE = 120;
 const CAPTURE_XP_PER_CITY_LEVEL = 45;
 const CAPTURE_XP_PER_DEFENDER = 1.5;
 const ENEMY_CAPTURE_XP_BONUS = 300;
-const CAPTURE_XP_COOLDOWN_MS = 60 * 60 * 1000;
 const DEFENSE_HELD_XP_BASE = 80;
 const DEFENSE_HELD_XP_PER_ATTACKER = 0.45;
 const FAILED_BATTLE_XP_RATE = 1 / 3;
@@ -1366,7 +1368,7 @@ function getInactiveCityNeutralPatch(city = {}, nowMs = Date.now()) {
     productionUpdatedAtMs: nowMs,
     relinquishedAtMs: nowMs,
     relocatedAtMs: 0,
-    ...getNeutralClaimClearedPatch(nowMs),
+    ...getNeutralOriginClearedPatch(),
   };
 }
 
@@ -3848,12 +3850,6 @@ function getOpponentPowerXpMultiplier(opponentRatio) {
   return 0;
 }
 
-function getCaptureXpCooldownRemainingMs(city = {}, nowMs = Date.now()) {
-  const capturedAtMs = Math.max(0, timestampToMs(city.lastCapturedAtMs || city.lastCapturedAt));
-  if (!capturedAtMs) return 0;
-  return Math.max(0, CAPTURE_XP_COOLDOWN_MS - Math.max(0, nowMs - capturedAtMs));
-}
-
 function getCityXpScore(target = {}, oldOwnerUid = "", defenderProfile = null) {
   const stats = getCityStats(target, defenderProfile);
   const ownerBonus = oldOwnerUid ? 45 : 10;
@@ -3893,9 +3889,9 @@ function getCaptureXpAward(
   const troopXp = Math.floor(
     getBattleXpTroopCredit(target, defenderLosses, defenderProfile) * CAPTURE_XP_PER_DEFENDER
   );
-  const cityXp = getCaptureXpCooldownRemainingMs(target, options.nowMs) > 0
-    ? 0
-    : CAPTURE_XP_BASE + level * CAPTURE_XP_PER_CITY_LEVEL + (oldOwnerUid ? ENEMY_CAPTURE_XP_BONUS : 0);
+  const cityXp = CAPTURE_XP_BASE
+    + level * CAPTURE_XP_PER_CITY_LEVEL
+    + (oldOwnerUid ? ENEMY_CAPTURE_XP_BONUS : 0);
   const efficiency = getCaptureXpEfficiency(target, oldOwnerUid, {
     ...options,
     defenderProfile,
@@ -5725,120 +5721,232 @@ function normalizeAntiFarmInstallationAccounts(accounts = [], nowMs = Date.now()
     .slice(0, ANTI_FARM_MAX_INSTALLATION_ACCOUNTS);
 }
 
-function normalizeFreshHandoffHistory(entries = [], nowMs = Date.now()) {
+function normalizeAntiFarmBattleEvents(entries = [], nowMs = Date.now()) {
   return (Array.isArray(entries) ? entries : [])
     .map(entry => ({
       eventId: safeString(entry?.eventId, 160),
       atMs: Math.max(0, timestampToMs(entry?.atMs)),
+      type: safeString(entry?.type, 40),
       attackerUid: safeString(entry?.attackerUid, 128),
       defenderUid: safeString(entry?.defenderUid, 128),
       targetKey: safeString(entry?.targetKey, 220),
-      neutralClaimedAtMs: Math.max(0, timestampToMs(entry?.neutralClaimedAtMs)),
+      defenderCityCount: Math.max(0, Math.floor(safeNumber(entry?.defenderCityCount, 0))),
+      attackPower: Math.max(0, Math.floor(safeNumber(entry?.attackPower, 0))),
+      defensePower: Math.max(0, Math.floor(safeNumber(entry?.defensePower, 0))),
+      committedTroops: Math.max(0, Math.floor(safeNumber(entry?.committedTroops, 0))),
+      attackerLosses: Math.max(0, Math.floor(safeNumber(entry?.attackerLosses, 0))),
+      defenderLosses: Math.max(0, Math.floor(safeNumber(entry?.defenderLosses, 0))),
+      outcome: safeString(entry?.outcome, 32),
+      neutralOriginCapturedAtMs: Math.max(0, timestampToMs(entry?.neutralOriginCapturedAtMs)),
+      neutralOriginSource: safeString(entry?.neutralOriginSource, 32),
     }))
     .filter(entry => (
       entry.eventId
-      && entry.atMs > nowMs - ANTI_FARM_HANDOFF_WINDOW_MS
+      && entry.atMs > nowMs - ANTI_FARM_DIRECTION_WINDOW_MS
       && entry.attackerUid
       && entry.defenderUid
       && entry.attackerUid !== entry.defenderUid
     ))
     .sort((left, right) => left.atMs - right.atMs)
     .filter((entry, index, all) => all.findIndex(candidate => candidate.eventId === entry.eventId) === index)
-    .slice(-ANTI_FARM_MAX_HANDOFF_HISTORY);
+    .slice(-ANTI_FARM_MAX_EVENT_HISTORY);
 }
 
-function isFreshNeutralClaimTarget(target = {}, defenderUid = "", nowMs = Date.now()) {
-  const ownerUid = getOwnerUid(target);
-  const claimedByUid = safeString(target.neutralClaimedByUid, 128);
-  const claimedAtMs = Math.max(0, timestampToMs(target.neutralClaimedAtMs));
+function normalizeAntiFarmDirectionState(data = {}, nowMs = Date.now()) {
+  return {
+    strikes: normalizeAntiFarmBattleEvents(data.strikes, nowMs)
+      .filter(entry => entry.type === "easy-neutral-city-handoff"),
+    blockedUntilMs: Math.max(0, timestampToMs(data.blockedUntilMs)),
+    blockReason: safeString(data.blockReason, 64),
+  };
+}
+
+function normalizeAntiFarmPairState(data = {}, nowMs = Date.now()) {
+  const directions = data?.version === ANTI_FARM_POLICY_VERSION && data.directions
+    ? data.directions
+    : {};
+  return {
+    version: ANTI_FARM_POLICY_VERSION,
+    pairUids: Array.isArray(data.pairUids)
+      ? data.pairUids.map(uid => safeString(uid, 128)).filter(Boolean).sort().slice(0, 2)
+      : [],
+    sharedInstallationLastSeenAtMs: Math.max(0, timestampToMs(data.sharedInstallationLastSeenAtMs)),
+    directions: {
+      leftToRight: normalizeAntiFarmDirectionState(directions.leftToRight, nowMs),
+      rightToLeft: normalizeAntiFarmDirectionState(directions.rightToLeft, nowMs),
+    },
+    recentEvents: normalizeAntiFarmBattleEvents(
+      data?.version === ANTI_FARM_POLICY_VERSION ? data.recentEvents : [],
+      nowMs
+    ),
+  };
+}
+
+function getAntiFarmDirectionKey(pairUids = [], attackerUid = "", defenderUid = "") {
+  const normalizedPair = (Array.isArray(pairUids) ? pairUids : [])
+    .map(uid => safeString(uid, 128))
+    .filter(Boolean)
+    .sort();
+  const attacker = safeString(attackerUid, 128);
+  const defender = safeString(defenderUid, 128);
+  if (normalizedPair.length !== 2 || attacker === defender) return "";
+  if (attacker === normalizedPair[0] && defender === normalizedPair[1]) return "leftToRight";
+  if (attacker === normalizedPair[1] && defender === normalizedPair[0]) return "rightToLeft";
+  return "";
+}
+
+function getOppositeAntiFarmDirectionKey(directionKey = "") {
+  if (directionKey === "leftToRight") return "rightToLeft";
+  if (directionKey === "rightToLeft") return "leftToRight";
+  return "";
+}
+
+function isAntiFarmRegularCityTarget(target = {}, targetType = "city") {
   return Boolean(
-    defenderUid
-    && ownerUid === defenderUid
-    && target.neutralClaimOpen === true
-    && claimedByUid === defenderUid
-    && claimedAtMs > nowMs - ANTI_FARM_FRESH_NEUTRAL_WINDOW_MS
-    && claimedAtMs <= nowMs
+    targetType !== "camp"
     && !isStronghold(target)
+    && !isCrownCitadel(target)
     && !target.isMainCity
     && !target.targetType
     && !target.campType
   );
 }
 
-function getNeutralClaimCapturePatch(target = {}, attackerUid = "", nowMs = Date.now(), source = "attack") {
-  if (isStronghold(target) || target.isMainCity || target.targetType || target.campType) return {};
-  if (!getOwnerUid(target)) {
+function isDirectionalAntiFarmTarget(target = {}, targetType = "city", defenderUid = "") {
+  return Boolean(
+    isAntiFarmRegularCityTarget(target, targetType)
+    && defenderUid
+    && getOwnerUid(target) === defenderUid
+  );
+}
+
+function getNeutralOriginProvenance(target = {}, targetType = "city") {
+  const ownerUid = getOwnerUid(target);
+  if (!ownerUid || !isAntiFarmRegularCityTarget(target, targetType)) return null;
+
+  const markerOwnerUid = safeString(target.neutralOriginOwnerUid, 128);
+  const markerCapturedAtMs = Math.max(0, timestampToMs(target.neutralOriginCapturedAtMs));
+  const markerSource = safeString(target.neutralOriginSource, 32);
+  if (markerOwnerUid === ownerUid && markerCapturedAtMs > 0 && markerSource === "combat") {
     return {
-      neutralClaimOpen: true,
-      neutralClaimedByUid: safeString(attackerUid, 128),
-      neutralClaimedAtMs: nowMs,
-      neutralClaimSource: safeString(source, 32) || "attack",
-      neutralClaimClosedAtMs: 0,
+      ownerUid: markerOwnerUid,
+      capturedAtMs: markerCapturedAtMs,
+      source: markerSource,
+      legacy: false,
     };
   }
+
+  const legacyOwnerUid = safeString(target.neutralClaimedByUid, 128);
+  const legacyCapturedAtMs = Math.max(0, timestampToMs(target.neutralClaimedAtMs));
+  const legacySource = safeString(target.neutralClaimSource, 32);
+  if (
+    target.neutralClaimOpen === true
+    && legacyOwnerUid === ownerUid
+    && legacyCapturedAtMs > 0
+    && (legacySource === "attack" || legacySource === "rally_attack")
+  ) {
+    return {
+      ownerUid: legacyOwnerUid,
+      capturedAtMs: legacyCapturedAtMs,
+      source: "combat",
+      legacy: true,
+    };
+  }
+  return null;
+}
+
+function isNeutralOriginHandoffTarget(target = {}, targetType = "city", defenderUid = "") {
+  const provenance = getNeutralOriginProvenance(target, targetType);
+  return Boolean(
+    provenance
+    && defenderUid
+    && provenance.ownerUid === safeString(defenderUid, 128)
+    && isDirectionalAntiFarmTarget(target, targetType, defenderUid)
+  );
+}
+
+function getNeutralOriginClearedPatch() {
   return {
+    neutralOriginOwnerUid: "",
+    neutralOriginCapturedAtMs: 0,
+    neutralOriginSource: "",
     neutralClaimOpen: false,
     neutralClaimedByUid: "",
     neutralClaimedAtMs: 0,
     neutralClaimSource: "",
-    neutralClaimClosedAtMs: nowMs,
+    neutralClaimClosedAtMs: 0,
   };
 }
 
-function getNeutralClaimClearedPatch(nowMs = Date.now()) {
-  return {
-    neutralClaimOpen: false,
-    neutralClaimedByUid: "",
-    neutralClaimedAtMs: 0,
-    neutralClaimSource: "",
-    neutralClaimClosedAtMs: nowMs,
-  };
+function getNeutralOriginOwnershipPatch(target = {}, attackerUid = "", nowMs = Date.now(), targetType = "city") {
+  if (
+    !getOwnerUid(target)
+    && !isGivenUpNeutralCity(target)
+    && isAntiFarmRegularCityTarget(target, targetType)
+    && safeString(attackerUid, 128)
+  ) {
+    return {
+      ...getNeutralOriginClearedPatch(),
+      neutralOriginOwnerUid: safeString(attackerUid, 128),
+      neutralOriginCapturedAtMs: Math.max(0, Math.floor(safeNumber(nowMs, 0))),
+      neutralOriginSource: "combat",
+    };
+  }
+  return getNeutralOriginClearedPatch();
 }
 
-function normalizeAntiFarmPairState(data = {}, nowMs = Date.now()) {
-  return {
-    sharedInstallationLastSeenAtMs: Math.max(0, timestampToMs(data.sharedInstallationLastSeenAtMs)),
-    blockedUntilMs: Math.max(0, timestampToMs(data.blockedUntilMs)),
-    blockReason: safeString(data.blockReason, 48),
-    freshHandoffs: normalizeFreshHandoffHistory(data.freshHandoffs, nowMs),
-  };
+function countAntiFarmNonMainRegularCities(economy = null, ownerUid = "", ownerProfile = {}) {
+  const normalizedOwnerUid = safeString(ownerUid, 128);
+  const mainCityId = safeString(ownerProfile?.mainCityId, 96);
+  return (Array.isArray(economy?.cityEntries) ? economy.cityEntries : []).reduce((total, entry) => {
+    const city = entry?.city;
+    if (
+      !city
+      || getOwnerUid(city) !== normalizedOwnerUid
+      || isStronghold(city)
+      || isCrownCitadel(city)
+      || city.targetType
+      || city.campType
+      || city.isMainCity
+      || (mainCityId && city.id === mainCityId)
+    ) {
+      return total;
+    }
+    return total + 1;
+  }, 0);
 }
 
-function createAntiFarmPolicy(blocked = false, reason = "", blockedUntilMs = 0) {
+function createAntiFarmPolicy(blocked = false, reason = "", blockedUntilMs = 0, direction = "") {
   return {
     blocked: Boolean(blocked),
     reason: safeString(reason, 48),
     blockedUntilMs: Math.max(0, Math.floor(safeNumber(blockedUntilMs, 0))),
+    direction: safeString(direction, 20),
   };
 }
 
 function evaluateAntiFarmPairData({
   pairData = {},
   target = {},
+  targetType = "city",
   attackerUid = "",
   defenderUid = "",
+  normalPowerRange = true,
   nowMs = Date.now(),
-  checkFreshHandoff = true,
 } = {}) {
-  const pairState = normalizeAntiFarmPairState(pairData, nowMs);
-  const freshNeutralHandoff = Boolean(
-    checkFreshHandoff && isFreshNeutralClaimTarget(target, defenderUid, nowMs)
-  );
-  if (!attackerUid || !defenderUid || attackerUid === defenderUid) {
+  const pairUids = getAntiFarmPairUids(attackerUid, defenderUid);
+  const pairState = normalizeAntiFarmPairState({
+    ...pairData,
+    pairUids: pairData.pairUids || pairUids,
+  }, nowMs);
+  const directionKey = getAntiFarmDirectionKey(pairUids, attackerUid, defenderUid);
+  const targetEligible = isNeutralOriginHandoffTarget(target, targetType, defenderUid);
+  if (!attackerUid || !defenderUid || attackerUid === defenderUid || !directionKey) {
     return {
       policy: createAntiFarmPolicy(),
       internalReason: "",
-      activatesPairBlock: false,
-      freshNeutralHandoff: false,
-      pairState,
-    };
-  }
-  if (pairState.blockedUntilMs > nowMs) {
-    return {
-      policy: createAntiFarmPolicy(true, "linked-account-activity", pairState.blockedUntilMs),
-      internalReason: pairState.blockReason || "repeated-fresh-neutral-handoffs",
-      activatesPairBlock: false,
-      freshNeutralHandoff,
+      directionKey: "",
+      targetEligible: false,
       pairState,
     };
   }
@@ -5849,25 +5957,31 @@ function evaluateAntiFarmPairData({
     return {
       policy: createAntiFarmPolicy(true, "linked-account-activity", sharedInstallationUntilMs),
       internalReason: "shared-installation",
-      activatesPairBlock: false,
-      freshNeutralHandoff,
+      directionKey,
+      targetEligible,
       pairState,
     };
   }
-  if (freshNeutralHandoff && pairState.freshHandoffs.length >= ANTI_FARM_ALLOWED_FRESH_HANDOFFS) {
+  const direction = pairState.directions[directionKey];
+  if (normalPowerRange && targetEligible && direction.blockedUntilMs > nowMs) {
     return {
-      policy: createAntiFarmPolicy(true, "linked-account-activity", nowMs + ANTI_FARM_PAIR_BLOCK_MS),
-      internalReason: "repeated-fresh-neutral-handoffs",
-      activatesPairBlock: true,
-      freshNeutralHandoff,
+      policy: createAntiFarmPolicy(
+        true,
+        "one-way-neutral-city-farming",
+        direction.blockedUntilMs,
+        directionKey
+      ),
+      internalReason: direction.blockReason || "repeated-one-way-neutral-city-handoffs",
+      directionKey,
+      targetEligible,
       pairState,
     };
   }
   return {
     policy: createAntiFarmPolicy(),
     internalReason: "",
-    activatesPairBlock: false,
-    freshNeutralHandoff,
+    directionKey,
+    targetEligible,
     pairState,
   };
 }
@@ -5887,6 +6001,9 @@ function getAntiFarmBlockedMessage(policy = {}, nowMs = Date.now()) {
   const suffix = blockedUntilMs > nowMs
     ? ` Available again in ${formatAntiFarmDuration(blockedUntilMs - nowMs)}.`
     : "";
+  if (policy.reason === "one-way-neutral-city-farming") {
+    return `Your kingdom cannot attack this gray-origin city because repeated one-way handoffs from this ruler were detected.${suffix}`;
+  }
   return `These kingdoms cannot attack each other because repeated linked-account activity was detected.${suffix}`;
 }
 
@@ -5908,7 +6025,17 @@ function writeAntiFarmAudit(transaction, pairRef, {
   policy = {},
   phase = "launch",
   nowMs = Date.now(),
-  neutralClaimedAtMs = 0,
+  directionKey = "",
+  eventType = "",
+  defenderCityCount = 0,
+  attackPower = 0,
+  defensePower = 0,
+  committedTroops = 0,
+  attackerLosses = 0,
+  defenderLosses = 0,
+  outcome = "",
+  neutralOriginCapturedAtMs = 0,
+  neutralOriginSource = "",
 } = {}) {
   if (!pairRef) return;
   const normalizedEventId = safeString(
@@ -5927,13 +6054,19 @@ function writeAntiFarmAudit(transaction, pairRef, {
     targetId: safeString(target.id, 96),
     targetKey: getAntiFarmTargetKey(target, targetType, targetRegionId),
     targetRegionId: normalizeRegionId(targetRegionId || target.regionId),
-    neutralClaimedByUid: safeString(target.neutralClaimedByUid, 128),
-    neutralClaimedAtMs: Math.max(
-      0,
-      Math.floor(safeNumber(neutralClaimedAtMs, timestampToMs(target.neutralClaimedAtMs)))
-    ),
     phase: safeString(phase, 32),
     reason: safeString(internalReason, 64),
+    directionKey: safeString(directionKey, 20),
+    eventType: safeString(eventType, 40),
+    defenderCityCount: Math.max(0, Math.floor(safeNumber(defenderCityCount, 0))),
+    attackPower: Math.max(0, Math.floor(safeNumber(attackPower, 0))),
+    defensePower: Math.max(0, Math.floor(safeNumber(defensePower, 0))),
+    committedTroops: Math.max(0, Math.floor(safeNumber(committedTroops, 0))),
+    attackerLosses: Math.max(0, Math.floor(safeNumber(attackerLosses, 0))),
+    defenderLosses: Math.max(0, Math.floor(safeNumber(defenderLosses, 0))),
+    outcome: safeString(outcome, 32),
+    neutralOriginCapturedAtMs: Math.max(0, Math.floor(safeNumber(neutralOriginCapturedAtMs, 0))),
+    neutralOriginSource: safeString(neutralOriginSource, 32),
     blockedUntilMs: Math.max(0, Math.floor(safeNumber(policy.blockedUntilMs, 0))),
     occurredAtMs: nowMs,
     createdAt: FieldValue.serverTimestamp(),
@@ -5946,7 +6079,7 @@ async function evaluateHostileAntiFarmPolicy(transaction, {
   target = {},
   targetType = "city",
   targetRegionId = "",
-  checkFreshHandoff = true,
+  normalPowerRange = true,
   attemptId = "",
   phase = "launch",
   nowMs = Date.now(),
@@ -5960,8 +6093,9 @@ async function evaluateHostileAntiFarmPolicy(transaction, {
         attackerUid,
         defenderUid,
         target,
+        targetType,
+        normalPowerRange,
         nowMs,
-        checkFreshHandoff,
       }),
     };
   }
@@ -5970,26 +6104,14 @@ async function evaluateHostileAntiFarmPolicy(transaction, {
   const decision = evaluateAntiFarmPairData({
     pairData,
     target,
+    targetType,
     attackerUid,
     defenderUid,
+    normalPowerRange,
     nowMs,
-    checkFreshHandoff,
   });
   if (decision.policy.blocked) {
-    if (decision.activatesPairBlock) {
-      transaction.set(pairRef, {
-        version: ANTI_FARM_POLICY_VERSION,
-        worldId: ONLINE_WORLD_ID,
-        resetGeneration: RESET_GENERATION,
-        pairUids: getAntiFarmPairUids(attackerUid, defenderUid),
-        freshHandoffs: decision.pairState.freshHandoffs,
-        blockedUntilMs: decision.policy.blockedUntilMs,
-        blockReason: decision.internalReason,
-        blockedAtMs: nowMs,
-        blockedAt: FieldValue.serverTimestamp(),
-        updatedAt: FieldValue.serverTimestamp(),
-      }, { merge: true });
-    }
+    const neutralOrigin = getNeutralOriginProvenance(target, targetType);
     writeAntiFarmAudit(transaction, pairRef, {
       eventId: `blocked_${phase}_${attemptId || target.id}_${nowMs}`,
       attackerUid,
@@ -6001,55 +6123,194 @@ async function evaluateHostileAntiFarmPolicy(transaction, {
       policy: decision.policy,
       phase,
       nowMs,
+      directionKey: decision.directionKey,
+      neutralOriginCapturedAtMs: neutralOrigin?.capturedAtMs || 0,
+      neutralOriginSource: neutralOrigin?.source || "",
     });
   }
   return { pairRef, pairData, ...decision };
 }
 
-function recordSuccessfulFreshNeutralHandoff(transaction, context = {}, {
+function recordDirectionalAntiFarmBattle(transaction, context = {}, {
   eventId = "",
   attackerUid = "",
   defenderUid = "",
   target = {},
   targetType = "city",
   targetRegionId = "",
+  defenderCityCount = 0,
+  attackerKingPower = 0,
+  defenderKingPower = 0,
+  committedTroops = 0,
+  defendersAtStart = 0,
+  result = {},
   nowMs = Date.now(),
 } = {}) {
-  if (!context.pairRef || !context.freshNeutralHandoff || targetType === "camp") return false;
   const normalizedEventId = safeString(eventId, 160);
-  if (!normalizedEventId) return false;
-  const prior = normalizeFreshHandoffHistory(context.pairState?.freshHandoffs, nowMs);
-  if (prior.some(entry => entry.eventId === normalizedEventId)) return false;
-  const handoff = {
+  const pairUids = getAntiFarmPairUids(attackerUid, defenderUid);
+  const directionKey = getAntiFarmDirectionKey(pairUids, attackerUid, defenderUid);
+  const oppositeDirectionKey = getOppositeAntiFarmDirectionKey(directionKey);
+  if (
+    !transaction
+    || !context.pairRef
+    || !normalizedEventId
+    || !directionKey
+    || !oppositeDirectionKey
+    || !isDirectionalAntiFarmTarget(target, targetType, defenderUid)
+  ) {
+    return false;
+  }
+  const pairState = normalizeAntiFarmPairState({
+    ...context.pairState,
+    pairUids,
+  }, nowMs);
+  if (pairState.recentEvents.some(entry => entry.eventId === normalizedEventId)) return false;
+
+  const attackPower = Math.max(0, Math.floor(safeNumber(result.attackPower, 0)));
+  const defensePower = Math.max(0, Math.floor(safeNumber(result.defensePower, 0)));
+  const committed = Math.max(0, Math.floor(safeNumber(committedTroops, 0)));
+  const attackerLosses = Math.max(0, Math.floor(safeNumber(result.attackerLosses, 0)));
+  const defenderLosses = Math.max(0, Math.floor(safeNumber(result.defenderLosses, 0)));
+  const startingDefenders = Math.max(0, Math.floor(safeNumber(defendersAtStart, 0)));
+  const attackerLossRatio = committed > 0 ? attackerLosses / committed : 0;
+  const defenderLossRatio = startingDefenders > 0 ? defenderLosses / startingDefenders : 0;
+  const powerRatio = Math.max(0, safeNumber(attackerKingPower, 0))
+    / Math.max(1, safeNumber(defenderKingPower, 1));
+  const normalPowerRange = powerRatio < ATTACK_PROTECTION_ASSAULT_MIN_RATIO;
+  const contestedDefense = Boolean(
+    committed >= ANTI_FARM_MIN_MEANINGFUL_TROOPS
+    && (
+      defensePower >= attackPower * ANTI_FARM_CONTESTED_DEFENSE_RATIO
+      || attackerLossRatio >= ANTI_FARM_MEANINGFUL_LOSS_RATIO
+    )
+  );
+  const meaningfulAttack = Boolean(
+    committed >= ANTI_FARM_MIN_MEANINGFUL_TROOPS
+    && (
+      attackPower >= defensePower * ANTI_FARM_CONTESTED_DEFENSE_RATIO
+      || defenderLossRatio >= ANTI_FARM_MEANINGFUL_LOSS_RATIO
+    )
+  );
+  const lowCityDefender = Math.max(0, Math.floor(safeNumber(defenderCityCount, 0)))
+    <= ANTI_FARM_LOW_CITY_LIMIT;
+  const successfulCapture = result.success === true;
+  const neutralOrigin = getNeutralOriginProvenance(target, targetType);
+  const neutralOriginHandoff = Boolean(
+    neutralOrigin
+    && neutralOrigin.ownerUid === safeString(defenderUid, 128)
+  );
+  const easyLowCityCapture = Boolean(
+    successfulCapture
+    && normalPowerRange
+    && lowCityDefender
+    && neutralOriginHandoff
+    && !contestedDefense
+  );
+  const eventType = easyLowCityCapture
+    ? "easy-neutral-city-handoff"
+    : successfulCapture
+      ? "contested-city-capture"
+      : contestedDefense || meaningfulAttack
+        ? "meaningful-combat"
+        : "ordinary-combat";
+  const event = {
     eventId: normalizedEventId,
     atMs: nowMs,
+    type: eventType,
     attackerUid: safeString(attackerUid, 128),
     defenderUid: safeString(defenderUid, 128),
     targetKey: getAntiFarmTargetKey(target, targetType, targetRegionId),
-    neutralClaimedAtMs: Math.max(0, timestampToMs(target.neutralClaimedAtMs)),
+    defenderCityCount: Math.max(0, Math.floor(safeNumber(defenderCityCount, 0))),
+    attackPower,
+    defensePower,
+    committedTroops: committed,
+    attackerLosses,
+    defenderLosses,
+    outcome: successfulCapture
+      ? "captured"
+      : result.breachCompleted
+        ? "breached"
+        : "held",
+    neutralOriginCapturedAtMs: neutralOrigin?.capturedAtMs || 0,
+    neutralOriginSource: neutralOrigin?.source || "",
   };
-  const freshHandoffs = [...prior, handoff].slice(-ANTI_FARM_MAX_HANDOFF_HISTORY);
+
+  const directions = {
+    leftToRight: normalizeAntiFarmDirectionState(pairState.directions.leftToRight, nowMs),
+    rightToLeft: normalizeAntiFarmDirectionState(pairState.directions.rightToLeft, nowMs),
+  };
+  const direction = { ...directions[directionKey], strikes: [...directions[directionKey].strikes] };
+  const oppositeDirection = {
+    ...directions[oppositeDirectionKey],
+    strikes: [...directions[oppositeDirectionKey].strikes],
+  };
+  let eventReason = "ordinary-combat-recorded";
+
+  if (successfulCapture) {
+    oppositeDirection.strikes = [];
+    oppositeDirection.blockedUntilMs = 0;
+    oppositeDirection.blockReason = "";
+    eventReason = "reverse-capture-cleared-direction";
+  } else if (normalPowerRange && meaningfulAttack && oppositeDirection.strikes.length) {
+    oppositeDirection.strikes = oppositeDirection.strikes.slice(0, -1);
+    eventReason = "meaningful-counterattack-reduced-strike";
+  }
+
+  if (easyLowCityCapture) {
+    direction.strikes = [...direction.strikes, event].slice(-ANTI_FARM_ALLOWED_EASY_CAPTURES);
+    eventReason = "easy-neutral-city-handoff-recorded";
+    if (direction.strikes.length >= ANTI_FARM_ALLOWED_EASY_CAPTURES) {
+      direction.blockedUntilMs = nowMs + ANTI_FARM_PAIR_BLOCK_MS;
+      direction.blockReason = "repeated-one-way-neutral-city-handoffs";
+      eventReason = "directional-neutral-city-farming-block-activated";
+    }
+  } else if (normalPowerRange && contestedDefense && direction.strikes.length) {
+    direction.strikes = direction.strikes.slice(0, -1);
+    eventReason = "contested-defense-reduced-strike";
+  }
+
+  directions[directionKey] = direction;
+  directions[oppositeDirectionKey] = oppositeDirection;
+  const recentEvents = [...pairState.recentEvents, event].slice(-ANTI_FARM_MAX_EVENT_HISTORY);
   transaction.set(context.pairRef, {
     version: ANTI_FARM_POLICY_VERSION,
     worldId: ONLINE_WORLD_ID,
     resetGeneration: RESET_GENERATION,
-    pairUids: getAntiFarmPairUids(attackerUid, defenderUid),
-    freshHandoffs,
-    lastFreshHandoffAtMs: nowMs,
+    pairUids,
+    directions,
+    recentEvents,
+    freshHandoffs: FieldValue.delete(),
+    blockedUntilMs: FieldValue.delete(),
+    blockReason: FieldValue.delete(),
     updatedAt: FieldValue.serverTimestamp(),
   }, { merge: true });
   writeAntiFarmAudit(transaction, context.pairRef, {
-    eventId: `handoff_${normalizedEventId}`,
+    eventId: `battle_${normalizedEventId}`,
     attackerUid,
     defenderUid,
     target,
     targetType,
     targetRegionId,
-    internalReason: "fresh-neutral-handoff-recorded",
-    policy: createAntiFarmPolicy(),
-    phase: "capture",
+    internalReason: eventReason,
+    policy: createAntiFarmPolicy(
+      direction.blockedUntilMs > nowMs,
+      direction.blockedUntilMs > nowMs ? "one-way-neutral-city-farming" : "",
+      direction.blockedUntilMs,
+      directionKey
+    ),
+    phase: "battle",
     nowMs,
-    neutralClaimedAtMs: handoff.neutralClaimedAtMs,
+    directionKey,
+    eventType,
+    defenderCityCount,
+    attackPower,
+    defensePower,
+    committedTroops: committed,
+    attackerLosses,
+    defenderLosses,
+    outcome: event.outcome,
+    neutralOriginCapturedAtMs: event.neutralOriginCapturedAtMs,
+    neutralOriginSource: event.neutralOriginSource,
   });
   return true;
 }
@@ -8877,6 +9138,7 @@ exports.registerGameInstallation = timedCallable(
 
       pairEntries.forEach(({ linkedUid, pairRef, pairData }) => {
         const priorSharedAtMs = Math.max(0, timestampToMs(pairData.sharedInstallationLastSeenAtMs));
+        const migratedPairState = normalizeAntiFarmPairState(pairData, nowMs);
         transaction.set(pairRef, {
           version: ANTI_FARM_POLICY_VERSION,
           worldId: ONLINE_WORLD_ID,
@@ -8884,6 +9146,11 @@ exports.registerGameInstallation = timedCallable(
           pairUids: getAntiFarmPairUids(uid, linkedUid),
           sharedInstallationLastSeenAtMs: nowMs,
           sharedInstallationExpiresAtMs: nowMs + ANTI_FARM_INSTALLATION_RETENTION_MS,
+          directions: migratedPairState.directions,
+          recentEvents: migratedPairState.recentEvents,
+          freshHandoffs: FieldValue.delete(),
+          blockedUntilMs: FieldValue.delete(),
+          blockReason: FieldValue.delete(),
           updatedAt: FieldValue.serverTimestamp(),
         }, { merge: true });
         writeAntiFarmAudit(transaction, pairRef, {
@@ -10285,11 +10552,6 @@ async function ensureMainIslandForPlayer(uid, data = {}) {
         lastCapturedAt: null,
         relinquishedAtMs: 0,
         relocatedAtMs: 0,
-        neutralClaimOpen: false,
-        neutralClaimedByUid: "",
-        neutralClaimedAtMs: 0,
-        neutralClaimSource: "",
-        neutralClaimClosedAtMs: 0,
       }),
       ...(alreadyExists ? {} : { createdAt: FieldValue.serverTimestamp() }),
       updatedAt: FieldValue.serverTimestamp(),
@@ -10433,7 +10695,6 @@ const legacyClaimStartingCity = onCall({ region: "us-central1", maxInstances: 20
         isMainCity: true,
         relinquishedAtMs: 0,
         relocatedAtMs: 0,
-        ...getNeutralClaimClearedPatch(nowMs),
         claimedAt: cityData.claimedAt || FieldValue.serverTimestamp(),
         productionUpdatedAtMs: Math.max(0, timestampToMs(cityData.productionUpdatedAtMs) || nowMs),
         updatedAt: FieldValue.serverTimestamp(),
@@ -10776,7 +11037,7 @@ async function claimFreshStartingCity(request) {
       productionUpdatedAtMs: nowMs,
       relinquishedAtMs: 0,
       relocatedAtMs: 0,
-      ...getNeutralClaimClearedPatch(nowMs),
+      ...getNeutralOriginClearedPatch(),
       updatedAt: FieldValue.serverTimestamp(),
     };
     const stats = createGlobalStatsSnapshot({
@@ -11212,7 +11473,7 @@ exports.relinquishCity = onCall({ region: "us-central1", maxInstances: 20, invok
       productionUpdatedAtMs: nowMs,
       relinquishedAtMs: nowMs,
       relocatedAtMs: 0,
-      ...getNeutralClaimClearedPatch(nowMs),
+      ...getNeutralOriginClearedPatch(),
     };
 
     const sourceUpdate = {
@@ -13845,14 +14106,12 @@ exports.launchClanRally = timedCallable("launchClanRally", { region: "us-central
         target,
         targetType: rally.targetType,
         targetRegionId: rally.targetRegionId,
-        checkFreshHandoff: rally.targetType !== "camp",
         attemptId: request.data?.armyId || `rally_attack_${rally.id}`,
         phase: "rally-launch",
         nowMs,
       })
       : {
         policy: createAntiFarmPolicy(),
-        freshNeutralHandoff: false,
         pairState: normalizeAntiFarmPairState({}, nowMs),
       };
     if (antiFarmContext.policy.blocked) {
@@ -14377,31 +14636,6 @@ exports.sendArmyOrder = timedCallable("sendArmyOrder", { region: "us-central1", 
       }, nowMs);
       throw new HttpsError("failed-precondition", "You cannot scout or attack a clan ally.");
     }
-    const antiFarmContext = resolvedKind === "attack" && targetOwnerUid && targetOwnerUid !== uid
-      ? await evaluateHostileAntiFarmPolicy(transaction, {
-        attackerUid: uid,
-        defenderUid: targetOwnerUid,
-        target,
-        targetType: order.targetType,
-        targetRegionId: order.targetRegionId,
-        checkFreshHandoff: order.targetType !== "camp",
-        attemptId: order.id,
-        phase: "launch",
-        nowMs,
-      })
-      : {
-        policy: createAntiFarmPolicy(),
-        freshNeutralHandoff: false,
-        pairState: normalizeAntiFarmPairState({}, nowMs),
-      };
-    if (antiFarmContext.policy.blocked) {
-      return {
-        ok: false,
-        status: "blocked",
-        message: getAntiFarmBlockedMessage(antiFarmContext.policy, nowMs),
-        antiFarmPolicy: antiFarmContext.policy,
-      };
-    }
     const neutralCaptureBlockReason = resolvedKind === "attack" && order.targetType !== "camp"
       ? getServerNeutralCaptureBlockReason(attackerEconomy, attackerProfile, target)
       : "";
@@ -14485,6 +14719,31 @@ exports.sendArmyOrder = timedCallable("sendArmyOrder", { region: "us-central1", 
           );
         }
       }
+    }
+
+    const antiFarmContext = resolvedKind === "attack" && targetOwnerUid && targetOwnerUid !== uid
+      ? await evaluateHostileAntiFarmPolicy(transaction, {
+        attackerUid: uid,
+        defenderUid: targetOwnerUid,
+        target,
+        targetType: order.targetType,
+        targetRegionId: order.targetRegionId,
+        normalPowerRange: !attackProtection,
+        attemptId: order.id,
+        phase: "launch",
+        nowMs,
+      })
+      : {
+        policy: createAntiFarmPolicy(),
+        pairState: normalizeAntiFarmPairState({}, nowMs),
+      };
+    if (antiFarmContext.policy.blocked) {
+      return {
+        ok: false,
+        status: "blocked",
+        message: getAntiFarmBlockedMessage(antiFarmContext.policy, nowMs),
+        antiFarmPolicy: antiFarmContext.policy,
+      };
     }
 
     const useSwiftMarchOrder = Boolean(order.useSwiftMarchOrder);
@@ -14907,6 +15166,9 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
     if (producedTargetEntry?.city) target = producedTargetEntry.city;
     const attackerProfile = attackerEconomy?.profileAfter || attackerProfileEntry.data || {};
     const defenderProfile = defenderUid ? defenderEconomy?.profileAfter || defenderProfileEntry?.data || {} : null;
+    const defenderNonMainCityCountBefore = defenderUid
+      ? countAntiFarmNonMainRegularCities(defenderEconomy, defenderUid, defenderProfile || {})
+      : 0;
     const reinforcementProfiles = new Map(targetReinforcements.map(entry => [
       entry.ownerUid,
       participantProfiles.get(entry.ownerUid)?.data || {},
@@ -15286,14 +15548,13 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
         target,
         targetType,
         targetRegionId,
-        checkFreshHandoff: targetType !== "camp",
+        normalPowerRange: !attackProtection,
         attemptId: armyId,
         phase: rallyAttack ? "rally-arrival" : "arrival",
         nowMs,
       })
       : {
         policy: createAntiFarmPolicy(),
-        freshNeutralHandoff: false,
         pairState: normalizeAntiFarmPairState({}, nowMs),
       };
     // Firestore transactions require every combat read to finish before this
@@ -15968,6 +16229,21 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
         outcome: battleOutcome,
         nowMs,
       }));
+      recordDirectionalAntiFarmBattle(transaction, antiFarmContext, {
+        eventId: `army_${armyId}_${targetType}_${target.id}`,
+        attackerUid,
+        defenderUid: oldOwnerUid,
+        target,
+        targetType,
+        targetRegionId,
+        defenderCityCount: defenderNonMainCityCountBefore,
+        attackerKingPower: attackerKingPowerForXp,
+        defenderKingPower: defenderKingPowerForXp,
+        committedTroops: troopCount,
+        defendersAtStart,
+        result,
+        nowMs,
+      });
       const rawAttackWinXp = getCaptureXpAward(target, oldOwnerUid, result.defenderLosses, defenderProfile, {
         nowMs,
         attackerProfile,
@@ -16094,7 +16370,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
           alliedReinforcementTroops: 0,
           relinquishedAtMs: 0,
           relocatedAtMs: 0,
-          ...getNeutralClaimCapturePatch(target, attackerUid, nowMs, "rally_attack"),
+          ...getNeutralOriginOwnershipPatch(target, attackerUid, nowMs, "city"),
         };
         targetUpdate = { id: target.id, regionId: targetRegionId, ...targetPatch };
       } else {
@@ -16235,15 +16511,6 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
         ? cleanCityUpdate(target, targetPatch)
         : targetPatch, { merge: true });
       if (result.success) {
-        recordSuccessfulFreshNeutralHandoff(transaction, antiFarmContext, {
-          eventId: `army_${armyId}_${targetType}_${target.id}`,
-          attackerUid,
-          defenderUid: oldOwnerUid,
-          target,
-          targetType,
-          targetRegionId,
-          nowMs,
-        });
         writeOwnershipChangeEvent(transaction, {
           eventId: `army_${armyId}_${targetType}_${target.id}`,
           targetType,
@@ -16899,6 +17166,21 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
       outcome: result.success ? "victory" : result.breachCompleted ? "breach" : "held",
       nowMs,
     }));
+    recordDirectionalAntiFarmBattle(transaction, antiFarmContext, {
+      eventId: `army_${armyId}_city_${target.id}`,
+      attackerUid,
+      defenderUid: oldOwnerUid,
+      target,
+      targetType: "city",
+      targetRegionId,
+      defenderCityCount: defenderNonMainCityCountBefore,
+      attackerKingPower: attackerKingPowerForXp,
+      defenderKingPower: defenderKingPowerForXp,
+      committedTroops: troopCount,
+      defendersAtStart,
+      result,
+      nowMs,
+    });
     const givenUpNeutralTarget = isGivenUpNeutralCity(target);
     const attackWinXp = attackProtection || givenUpNeutralTarget
       ? 0
@@ -17151,18 +17433,9 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
         alliedReinforcementTroops: 0,
         relinquishedAtMs: 0,
         relocatedAtMs: 0,
-        ...getNeutralClaimCapturePatch(target, attackerUid, nowMs, "attack"),
+        ...getNeutralOriginOwnershipPatch(target, attackerUid, nowMs, "city"),
       };
       transaction.set(targetRef, cleanCityUpdate(target, targetPatch), { merge: true });
-      recordSuccessfulFreshNeutralHandoff(transaction, antiFarmContext, {
-        eventId: `army_${armyId}_city_${target.id}`,
-        attackerUid,
-        defenderUid: oldOwnerUid,
-        target,
-        targetType: "city",
-        targetRegionId,
-        nowMs,
-      });
       writeOwnershipChangeEvent(transaction, {
         eventId: `army_${armyId}_city_${target.id}`,
         targetType: "city",
@@ -18650,7 +18923,7 @@ async function resolveRewardCampPayoutByRef(campRef, nowMs = Date.now(), callerU
         relocatedAtMs: 0,
         deedAwardedAtMs: nowMs,
         deedCampId: camp.id,
-        ...getNeutralClaimCapturePatch(deedCityAward.city, holderUid, nowMs, "deed_camp"),
+        ...getNeutralOriginClearedPatch(),
       };
       transaction.set(
         deedCityAward.ref,

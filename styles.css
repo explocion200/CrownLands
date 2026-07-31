@@ -3873,6 +3873,23 @@ button.inventory-slot {
   font-size: 1.08rem;
   line-height: 1;
 }
+.city-list-toolbar .city-list-sort-heading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: .42rem;
+}
+.city-list-toolbar .city-list-sort-arrow {
+  min-width: 1rem;
+  color: #fff0a7;
+  font-size: 1.35rem;
+  line-height: .78;
+  text-align: center;
+  text-shadow: 0 2px 0 rgba(0,0,0,.72);
+}
+.city-list-toolbar button:not(.active) .city-list-sort-arrow {
+  opacity: .62;
+}
 .city-list-toolbar small {
   color: #cfe9ff;
   font-size: .68rem;
