@@ -22,9 +22,11 @@ const contextResumeBehaviors = [];
 const effectDecodeFailureExtensions = new Set();
 const effectFetchRecords = [];
 const effectSourceStarts = [];
+const effectCompressorNodes = [];
 let resolveManifest;
 let now = 1000;
 let nextTimeoutId = 1;
+let compressorCreationFails = false;
 
 function addListener(registry, type, handler, options = {}) {
   const entries = registry.get(type) || [];
@@ -146,17 +148,28 @@ const document = {
 };
 
 function dispatchDocumentEvent(type, target, properties = {}) {
+  let propagationStopped = false;
   const event = {
     key: "",
     repeat: false,
+    stopPropagation() {
+      propagationStopped = true;
+    },
     target,
     type,
     ...properties,
   };
   const entries = documentListeners.get(type) || [];
   for (const entry of entries.filter(item => item.capture)) entry.handler(event);
-  for (const handler of target?.listeners?.get(type) || []) handler(event);
-  for (const entry of entries.filter(item => !item.capture)) entry.handler(event);
+  if (!propagationStopped) {
+    for (const handler of target?.listeners?.get(type) || []) {
+      handler(event);
+      if (propagationStopped) break;
+    }
+  }
+  if (!propagationStopped) {
+    for (const entry of entries.filter(item => !item.capture)) entry.handler(event);
+  }
   return event;
 }
 
@@ -295,6 +308,18 @@ class FakeGainNode extends FakeAudioNode {
   }
 }
 
+class FakeDynamicsCompressorNode extends FakeAudioNode {
+  constructor() {
+    super();
+    this.threshold = { value: -24 };
+    this.knee = { value: 30 };
+    this.ratio = { value: 12 };
+    this.attack = { value: 0.003 };
+    this.release = { value: 0.25 };
+    effectCompressorNodes.push(this);
+  }
+}
+
 class FakeBufferSourceNode extends FakeAudioNode {
   constructor(context) {
     super();
@@ -333,6 +358,11 @@ class FakeAudioContext {
 
   createGain() {
     return new FakeGainNode();
+  }
+
+  createDynamicsCompressor() {
+    if (compressorCreationFails) throw makePlaybackError("NotSupportedError");
+    return new FakeDynamicsCompressorNode();
   }
 
   decodeAudioData(arrayBuffer, success, failure) {
@@ -442,6 +472,7 @@ async function flushPromises(rounds = 4) {
   }
 }
 
+const productionEffectAssets = manifestSource.assets.filter(asset => asset.category !== "music");
 const testManifest = {
   assets: [{
     id: "main_menu_loop",
@@ -491,35 +522,7 @@ const testManifest = {
     ogg: "music/victory_fanfare.ogg",
     loop: false,
     recommended_volume: 0.58,
-  }, {
-    id: "button_click",
-    category: "ui",
-    wav: "ui/button_click.wav",
-    ogg: "ui/button_click.ogg",
-    loop: false,
-    recommended_volume: 0.42,
-  }, {
-    id: "invalid_action",
-    category: "ui",
-    wav: "ui/invalid_action.wav",
-    ogg: "ui/invalid_action.ogg",
-    loop: false,
-    recommended_volume: 0.42,
-  }, {
-    id: "notification",
-    category: "ui",
-    wav: "ui/notification.wav",
-    ogg: "ui/notification.ogg",
-    loop: false,
-    recommended_volume: 0.45,
-  }, {
-    id: "level_up",
-    category: "rewards",
-    wav: "rewards/level_up.wav",
-    ogg: "rewards/level_up.ogg",
-    loop: false,
-    recommended_volume: 0.6,
-  }],
+  }, ...productionEffectAssets],
 };
 
 async function run() {
@@ -529,6 +532,10 @@ async function run() {
   assert.equal(typeof (documentListeners.get("pointerdown") || [])[0]?.handler, "function");
   assert.equal(typeof (windowListeners.get("pageshow") || [])[0]?.handler, "function");
   assert.equal(typeof (windowListeners.get("focus") || [])[0]?.handler, "function");
+  assert.ok(
+    (documentListeners.get("click") || []).filter(entry => entry.capture).length >= 2,
+    "Unlocking and delegated UI audio must both observe clicks during capture.",
+  );
 
   dispatchDocumentEvent("pointerdown", loginMusicMute);
   assert.equal(playRecords.length, 0, "The login mute control must not trigger generic unlocking.");
@@ -573,6 +580,16 @@ async function run() {
   assert.equal(manager.getDebugState().unlockInFlight, true);
   assert.equal(manager.getDebugState().unlockMode, "gesture");
   assert.equal(audioContextInstances.length, 1, "The first ordinary gesture must create one persistent effects context.");
+  assert.equal(effectCompressorNodes.length, 1, "The effects context must create one shared limiter.");
+  assert.equal(manager.effectLimiter, effectCompressorNodes[0]);
+  assert.equal(manager.effectMasterGain.connections[0], manager.effectLimiter);
+  assert.equal(manager.effectLimiter.connections[0], audioContextInstances[0].destination);
+  assert.equal(manager.effectLimiter.threshold.value, -3);
+  assert.equal(manager.effectLimiter.knee.value, 0);
+  assert.equal(manager.effectLimiter.ratio.value, 20);
+  assert.equal(manager.effectLimiter.attack.value, 0.003);
+  assert.equal(manager.effectLimiter.release.value, 0.12);
+  assert.equal(manager.getDebugState().effectsLimiterActive, true);
   assert.equal(manager.effectsUnlocked, true);
   assert.equal(manager.getDebugState().effectsUnlockInFlight, false);
   assert.equal(effectSourceStarts.length, 0, "The first-click button effect must wait for the context resume.");
@@ -814,9 +831,11 @@ async function run() {
   assert.match(effectSourceStarts.at(-1).buffer.url, /invalid_action\.wav\?v=test-build$/);
 
   const contextualButton = new FakeElement("contextualButton", "button");
+  contextualButton.addEventListener("click", () => {
+    manager.playEffect("invalid_action");
+  });
   now += 100;
   const contextualStart = effectSourceStarts.length;
-  assert.equal(manager.playEffect("invalid_action"), true);
   dispatchDocumentEvent("click", contextualButton);
   await flushPromises();
   assert.equal(
@@ -824,6 +843,20 @@ async function run() {
     contextualStart + 1,
     "A contextual cue from a button handler must suppress the delegated generic button sound.",
   );
+  assert.match(effectSourceStarts.at(-1).buffer.url, /invalid_action\.wav\?v=test-build$/);
+
+  const stoppedPropagationButton = new FakeElement("stoppedPropagationButton", "button");
+  stoppedPropagationButton.addEventListener("click", event => event.stopPropagation());
+  now += 100;
+  const stoppedPropagationStart = effectSourceStarts.length;
+  dispatchDocumentEvent("click", stoppedPropagationButton);
+  await flushPromises();
+  assert.equal(
+    effectSourceStarts.length,
+    stoppedPropagationStart + 1,
+    "Capture-phase UI audio must survive a target handler that stops propagation.",
+  );
+  assert.match(effectSourceStarts.at(-1).buffer.url, /button_click\.mp3\?v=test-build$/);
 
   const explicitCueButton = new FakeElement("explicitCueButton", "button");
   explicitCueButton.dataset.audioEffect = "invalid_action";
@@ -860,6 +893,41 @@ async function run() {
   );
 
   now += 100;
+  const delayedEffectStart = effectSourceStarts.length;
+  const delayedTimerStart = scheduledTimeouts.length;
+  const delayedEffectFetchStart = effectFetchRecords.length;
+  assert.equal(manager.playEffect("timer_tick_complete", { delayMs: 150 }), true);
+  assert.equal(effectSourceStarts.length, delayedEffectStart, "A delayed effect must not start immediately.");
+  assert.equal(manager.pendingEffectCounts.get("timer_tick_complete"), 1);
+  assert.equal(
+    effectFetchRecords.length,
+    delayedEffectFetchStart + 1,
+    "A delayed Web Audio effect must begin loading before its timer fires.",
+  );
+  assert.match(effectFetchRecords[delayedEffectFetchStart], /timer_tick_complete\.mp3\?v=test-build$/);
+  const delayedTimer = scheduledTimeouts.slice(delayedTimerStart).find(entry => entry.delay === 150);
+  assert.ok(delayedTimer, "playEffect() must schedule the requested delay.");
+  await flushPromises();
+  assert.equal(effectSourceStarts.length, delayedEffectStart, "Preloading must not start a delayed effect early.");
+  delayedTimer.callback();
+  await flushPromises();
+  assert.equal(effectSourceStarts.length, delayedEffectStart + 1);
+  assert.match(effectSourceStarts.at(-1).buffer.url, /timer_tick_complete\.mp3\?v=test-build$/);
+  assert.equal(manager.pendingEffectCounts.has("timer_tick_complete"), false);
+
+  now += 100;
+  const delayedSwordStart = effectSourceStarts.length;
+  const delayedSwordTimerStart = scheduledTimeouts.length;
+  assert.equal(manager.playSwordClash({ delayMs: 175 }), true);
+  assert.equal(effectSourceStarts.length, delayedSwordStart, "A delayed sword clash must not start immediately.");
+  const delayedSwordTimer = scheduledTimeouts.slice(delayedSwordTimerStart).find(entry => entry.delay === 175);
+  assert.ok(delayedSwordTimer, "playSwordClash() must preserve delayMs.");
+  delayedSwordTimer.callback();
+  await flushPromises();
+  assert.equal(effectSourceStarts.length, delayedSwordStart + 1);
+  assert.match(effectSourceStarts.at(-1).buffer.url, /sword_clash_0[1-3]\.mp3\?v=test-build$/);
+
+  now += 100;
   const levelUpFetchStart = effectFetchRecords.length;
   assert.equal(await manager.prepareEffect("level_up"), true);
   assert.equal(
@@ -869,6 +937,9 @@ async function run() {
   );
   assert.match(effectFetchRecords[levelUpFetchStart], /level_up\.mp3\?v=test-build$/);
   const levelUpStart = effectSourceStarts.length;
+  const levelUpAsset = productionEffectAssets.find(asset => asset.id === "level_up");
+  const expectedLevelUpBaseGain = Math.min(1, levelUpAsset.recommended_volume * 1.35);
+  const expectedLevelUpEffectiveGain = Math.min(1, expectedLevelUpBaseGain * manager.preferences.effectsVolume);
   assert.equal(manager.playEffect("level_up", { volumeScale: 1.35 }), true);
   await flushPromises();
   assert.equal(
@@ -877,11 +948,27 @@ async function run() {
     "A delayed city-upgrade success must start the preloaded level_up cue.",
   );
   assert.ok(
-    Math.abs(effectSourceStarts.at(-1).connections[0].gain.value - 0.81) < 0.000001,
+    Math.abs(effectSourceStarts.at(-1).connections[0].gain.value - expectedLevelUpBaseGain) < 0.000001,
     "The level_up gain must apply its 1.35 volume multiplier instead of capping it at 1.",
   );
   assert.equal(manager.getDebugState().lastEffectId, "level_up");
   assert.ok(manager.getDebugState().lastEffectStartedAt > 0);
+  assert.equal(manager.getDebugState().lastEffectRecommendedVolume, levelUpAsset.recommended_volume);
+  assert.equal(manager.getDebugState().lastEffectVolumeScale, 1.35);
+  assert.equal(manager.getDebugState().lastEffectBaseGain, expectedLevelUpBaseGain);
+  assert.equal(manager.getDebugState().lastEffectEffectiveGain, expectedLevelUpEffectiveGain);
+
+  const overdriveAsset = productionEffectAssets.find(asset => asset.id === "stronghold_captured");
+  now += 100;
+  const overdriveStart = effectSourceStarts.length;
+  assert.equal(manager.playEffect(overdriveAsset.id, { volumeScale: 2 }), true);
+  await flushPromises();
+  assert.equal(effectSourceStarts.length, overdriveStart + 1);
+  assert.equal(effectSourceStarts.at(-1).connections[0].gain.value, 1);
+  assert.equal(manager.getDebugState().lastEffectRecommendedVolume, overdriveAsset.recommended_volume);
+  assert.equal(manager.getDebugState().lastEffectVolumeScale, 2);
+  assert.equal(manager.getDebugState().lastEffectBaseGain, 1);
+  assert.equal(manager.getDebugState().lastEffectEffectiveGain, 0.8);
 
   manager.setEffectsVolume(0.5);
   assert.equal(manager.effectMasterGain.gain.value, 0.5, "The effects preference must drive a Web Audio GainNode.");
@@ -913,6 +1000,39 @@ async function run() {
   await flushPromises();
   assert.equal(manager.effectsUnlocked, true, "The next ordinary gesture must recover a suspended effects context.");
   assert.equal(manager.getDebugState().lastEffectsError, "");
+
+  assert.equal(productionEffectAssets.length, 25, "The runtime fixture must exercise all production effects.");
+  for (const asset of productionEffectAssets) {
+    now += 100;
+    const productionEffectStart = effectSourceStarts.length;
+    assert.equal(manager.playEffect(asset.id), true, `${asset.id} must queue through the production effect engine.`);
+    await flushPromises();
+    assert.equal(
+      effectSourceStarts.length,
+      productionEffectStart + 1,
+      `${asset.id} must start one Web Audio source.`,
+    );
+    const source = effectSourceStarts.at(-1);
+    assert.ok(
+      source.buffer.url.includes(`/${asset.id}.`),
+      `${asset.id} must decode its own production media source.`,
+    );
+    const expectedBaseGain = Math.min(1, Math.max(0, Number(asset.recommended_volume)));
+    assert.ok(
+      Math.abs(source.connections[0].gain.value - expectedBaseGain) < 0.000001,
+      `${asset.id} must apply its production recommended_volume.`,
+    );
+    const productionDebug = manager.getDebugState();
+    assert.equal(productionDebug.lastEffectId, asset.id);
+    assert.equal(productionDebug.lastEffectRecommendedVolume, asset.recommended_volume);
+    assert.equal(productionDebug.lastEffectVolumeScale, 1);
+    assert.equal(productionDebug.lastEffectBaseGain, expectedBaseGain);
+    assert.ok(
+      Math.abs(productionDebug.lastEffectEffectiveGain - expectedBaseGain * 0.8) < 0.000001,
+      `${asset.id} must expose its effective default gain.`,
+    );
+    source.stop();
+  }
 
   const debugState = manager.getDebugState();
   assert.equal(debugState.ready, true);
@@ -963,6 +1083,7 @@ async function run() {
   manager.effectsEngine = "htmlaudio";
   manager.effectContext = null;
   manager.effectMasterGain = null;
+  manager.effectLimiter = null;
   manager.effectsUnlocked = true;
   now += 500;
   const audioCountBeforeHtmlPreparation = audioInstances.length;
@@ -986,11 +1107,34 @@ async function run() {
     "Delayed HTMLAudio fallback playback must reuse the element prepared by the upgrade gesture.",
   );
   assert.equal(preparedHtmlLevelUp.paused, false);
-  assert.ok(Math.abs(preparedHtmlLevelUp.volume - 0.648) < 0.000001);
+  assert.ok(Math.abs(preparedHtmlLevelUp.volume - expectedLevelUpEffectiveGain) < 0.000001);
   assert.equal(manager.getDebugState().lastEffectId, "level_up");
 
+  now += 500;
+  queuePlaySuccess();
+  assert.equal(manager.playEffect(overdriveAsset.id, { volumeScale: 2 }), true);
+  await flushPromises();
+  const htmlOverdrive = audioInstances.at(-1);
+  assert.equal(htmlOverdrive.dataset.audioId, overdriveAsset.id);
+  assert.equal(htmlOverdrive.volume, 0.8, "HTMLAudio must use the same capped base gain as Web Audio.");
+  assert.equal(manager.getDebugState().lastEffectRecommendedVolume, overdriveAsset.recommended_volume);
+  assert.equal(manager.getDebugState().lastEffectVolumeScale, 2);
+  assert.equal(manager.getDebugState().lastEffectBaseGain, 1);
+  assert.equal(manager.getDebugState().lastEffectEffectiveGain, 0.8);
+
+  compressorCreationFails = true;
+  manager.effectsEngine = "webaudio";
+  manager.effectContext = null;
+  manager.effectMasterGain = null;
+  manager.effectLimiter = null;
+  const directOutputContext = manager.ensureEffectContext();
+  assert.ok(directOutputContext, "Effects must retain Web Audio when the optional limiter is unavailable.");
+  assert.equal(manager.effectLimiter, null);
+  assert.equal(manager.effectMasterGain.connections[0], directOutputContext.destination);
+  assert.equal(manager.getDebugState().effectsLimiterActive, false);
+
   console.log(
-    "Validated persistent autoplay recovery, unlock dedupe, independent mute states, codec fallbacks, resumes, and login control sync.",
+    "Validated persistent audio, all production effects, balanced gain, limiting, delayed cues, codec fallback, and UI capture.",
   );
 }
 

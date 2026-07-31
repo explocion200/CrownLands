@@ -239,7 +239,7 @@ function extractTryCatch(source, label) {
 
 function countGameCueCalls(source, cue) {
   const pattern = new RegExp(
-    `playGameSound\\s*\\(\\s*["'\`]${escapeRegex(cue)}["'\`]`,
+    `(?:playGameSound|playGameSoundAfter)\\s*\\(\\s*["'\`]${escapeRegex(cue)}["'\`]`,
     "g"
   );
   return (source.match(pattern) || []).length;
@@ -364,16 +364,36 @@ function validateManifestAndFiles(manifest, runtimeSource) {
     } else {
       effectCount += 1;
       const cuePattern = new RegExp(
-        `(?:playGameSound|playEffect)\\s*\\(\\s*["'\`]${escapeRegex(id)}["'\`]`
+        `(?:playGameSound|playGameSoundAfter|playEffect)\\s*\\(\\s*["'\`]${escapeRegex(id)}["'\`]`
       );
       const swordListPattern = new RegExp(
         `SWORD_CLASHES[\\s\\S]{0,240}["'\`]${escapeRegex(id)}["'\`]`
       );
+      const delegatedUiPattern = new RegExp(
+        `effectId\\s*=\\s*["'\`]${escapeRegex(id)}["'\`]`
+      );
       check(
-        cuePattern.test(runtimeSource) || swordListPattern.test(runtimeSource),
+        cuePattern.test(runtimeSource)
+          || swordListPattern.test(runtimeSource)
+          || (
+            delegatedUiPattern.test(runtimeSource)
+            && /this\.playEffect\(effectId\s*,/.test(runtimeSource)
+          ),
         `effect cue "${id}" is loaded but never invoked`
       );
     }
+  }
+
+  const manifestEffectIds = new Set(
+    assets.filter(asset => asset?.category !== "music").map(asset => String(asset.id || ""))
+  );
+  const invokedCuePattern = /(?:playGameSound|playGameSoundAfter|playEffect)\s*\(\s*["'`]([a-z0-9]+(?:_[a-z0-9]+)*)["'`]/g;
+  let invokedCue;
+  while ((invokedCue = invokedCuePattern.exec(runtimeSource))) {
+    check(
+      manifestEffectIds.has(invokedCue[1]),
+      `runtime invokes effect cue "${invokedCue[1]}" but the manifest does not define it`
+    );
   }
 
   const uploadedMedia = walkMediaFiles(AUDIO_ROOT);
@@ -523,10 +543,15 @@ function validateMuteAndUnlockContracts(audioManagerSource, indexSource) {
 function validateCodecAndTemporaryMusicContracts(audioManagerSource) {
   const loadManifest = extractMethod(audioManagerSource, "loadManifest");
   const setMusicState = extractMethod(audioManagerSource, "setMusicState");
+  const ensureEffectContext = extractMethod(audioManagerSource, "ensureEffectContext");
+  const getEffectGainState = extractMethod(audioManagerSource, "getEffectGainState");
+  const playEffect = extractMethod(audioManagerSource, "playEffect");
   const playEffectSource = extractMethod(audioManagerSource, "playEffectSource");
   const prepareEffect = extractMethod(audioManagerSource, "prepareEffect");
   const loadEffectBuffer = extractMethod(audioManagerSource, "loadEffectBuffer");
   const playWebAudioEffect = extractMethod(audioManagerSource, "playWebAudioEffect");
+  const playSwordClash = extractMethod(audioManagerSource, "playSwordClash");
+  const installUiSounds = extractMethod(audioManagerSource, "installUiSounds");
   const pulseMusic = extractMethod(audioManagerSource, "pulseMusic");
   const getDebugState = extractMethod(audioManagerSource, "getDebugState");
 
@@ -576,11 +601,40 @@ function validateCodecAndTemporaryMusicContracts(audioManagerSource) {
     "effect volume multipliers must support an audible boost above 1 with a safe upper bound"
   );
   check(
-    playWebAudioEffect.includes("clampScale(options.volumeScale, 1)")
-      && playEffectSource.includes("clampScale(options.volumeScale, 1)")
-      && !playWebAudioEffect.includes("clampVolume(options.volumeScale, 1)")
-      && !playEffectSource.includes("clampVolume(options.volumeScale, 1)"),
-    "effect playback must apply volumeScale as a multiplier instead of capping it at 1"
+    getEffectGainState.includes("clampScale(options?.volumeScale, 1)")
+      && /clampVolume\(\s*recommendedVolume\s*\*\s*volumeScale\s*,\s*1\s*\)/.test(getEffectGainState)
+      && playWebAudioEffect.includes("this.getEffectGainState(asset, options)")
+      && playEffectSource.includes("this.getEffectGainState(asset, options)"),
+    "Web Audio and HTMLAudio must share the same multiplied, capped effect gain calculation"
+  );
+  check(
+    ensureEffectContext.includes("createDynamicsCompressor()")
+      && ensureEffectContext.includes("limiter.threshold.value = -3")
+      && ensureEffectContext.includes("limiter.knee.value = 0")
+      && ensureEffectContext.includes("limiter.ratio.value = 20")
+      && ensureEffectContext.includes("limiter.attack.value = 0.003")
+      && ensureEffectContext.includes("limiter.release.value = 0.12")
+      && ensureEffectContext.includes("masterGain.connect(limiter)")
+      && ensureEffectContext.includes("limiter.connect(context.destination)")
+      && ensureEffectContext.includes("masterGain.connect(context.destination)"),
+    "the effects bus must use the configured limiter with a direct-output fallback"
+  );
+  check(
+    playEffect.includes("options.delayMs")
+      && playEffect.includes("this.prepareEffect(id)")
+      && playEffect.includes("window.setTimeout(launch, delayMs)"),
+    "delayed effects must predecode and start through the shared scheduler"
+  );
+  check(
+    /playSwordClash\s*\(\s*options\s*=\s*\{\}\s*\)/.test(audioManagerSource)
+      && playSwordClash.includes("...options"),
+    "playSwordClash() must preserve delayed-play options"
+  );
+  check(
+    /addEventListener\(\s*["']click["']\s*,[\s\S]*?\{\s*capture\s*:\s*true\s*\}\s*\)/.test(installUiSounds)
+      && installUiSounds.includes("Promise.resolve().then(")
+      && installUiSounds.includes("this.suppressDelegatedUiSound"),
+    "delegated UI effects must use deferred capture-phase handling without double cues"
   );
   check(
     prepareEffect.includes('this.effectsEngine === "htmlaudio"')
@@ -624,6 +678,11 @@ function validateCodecAndTemporaryMusicContracts(audioManagerSource) {
       && getDebugState.includes("lastPlaybackError")
       && getDebugState.includes("effectsEngine")
       && getDebugState.includes("effectsContextState")
+      && getDebugState.includes("effectsLimiterActive")
+      && getDebugState.includes("lastEffectRecommendedVolume")
+      && getDebugState.includes("lastEffectVolumeScale")
+      && getDebugState.includes("lastEffectBaseGain")
+      && getDebugState.includes("lastEffectEffectiveGain")
       && getDebugState.includes("lastEffectsError"),
     "getDebugState() omits required playback diagnostics"
   );
@@ -1085,6 +1144,119 @@ function validateCampCaptureCueContract(gameSource) {
   );
 }
 
+function validateAudibleMixAndSequencingContracts(gameSource) {
+  check(
+    /const\s+BATTLE_IMPACT_AUDIO_DELAY_MS\s*=\s*150\s*;/.test(gameSource)
+      && /const\s+BATTLE_OUTCOME_AUDIO_DELAY_MS\s*=\s*450\s*;/.test(gameSource)
+      && /const\s+REWARD_FOLLOWUP_AUDIO_DELAY_MS\s*=\s*900\s*;/.test(gameSource)
+      && /const\s+VICTORY_MUSIC_AUDIO_DELAY_MS\s*=\s*2000\s*;/.test(gameSource),
+    "the measured battle, outcome, reward, and victory timing constants are missing"
+  );
+
+  const playGameSoundAfter = extractFunction(gameSource, "playGameSoundAfter");
+  const playBattleImpactAfter = extractFunction(gameSource, "playBattleImpactAfter");
+  const playRewardSoundAfter = extractFunction(gameSource, "playRewardSoundAfter");
+  check(
+    playGameSoundAfter.includes("playGameSound(id")
+      && playGameSoundAfter.includes("delayMs:"),
+    "delayed game cues must queue through AudioManager so their media predecodes"
+  );
+  check(
+    countGameCueCalls(playBattleImpactAfter, "siege_impact") === 1
+      && playBattleImpactAfter.includes("playSwordClash({ delayMs: normalizedDelayMs })"),
+    "battle impacts must queue siege or sword audio through the +150ms scheduler"
+  );
+  check(
+    playRewardSoundAfter.includes("playRewardSound(rewardType")
+      && playRewardSoundAfter.includes("delayMs:"),
+    "reward follow-up cues must queue through AudioManager instead of masking the timer"
+  );
+
+  const applyServerArmyResult = extractFunction(gameSource, "applyServerArmyResult");
+  check(
+    (applyServerArmyResult.match(/playBattleImpactAfter\s*\(/g) || []).length === 1,
+    "server-authoritative battles must schedule one impact cue"
+  );
+  for (const cue of ["stronghold_captured", "city_captured", "battle_defeat", "camp_captured"]) {
+    check(
+      new RegExp(
+        `playGameSoundAfter\\s*\\(\\s*["']${escapeRegex(cue)}["']\\s*,\\s*BATTLE_OUTCOME_AUDIO_DELAY_MS`
+      ).test(applyServerArmyResult),
+      `server-authoritative ${cue} must use the +450ms outcome slot`
+    );
+  }
+  check(
+    /levelUpAudioDelayMs\s*:[\s\S]{0,180}REWARD_FOLLOWUP_AUDIO_DELAY_MS[\s\S]{0,40}:\s*0/.test(applyServerArmyResult),
+    "server combat level-up audio must follow the battle mix"
+  );
+
+  const resolveAttack = extractFunction(gameSource, "resolveAttack");
+  check(
+    (resolveAttack.match(/playBattleImpactAfter\s*\(/g) || []).length === 1,
+    "local battles must schedule one impact cue"
+  );
+  for (const cue of ["stronghold_captured", "city_captured", "battle_defeat"]) {
+    check(
+      new RegExp(
+        `playGameSoundAfter\\s*\\(\\s*["']${escapeRegex(cue)}["']\\s*,\\s*BATTLE_OUTCOME_AUDIO_DELAY_MS`
+      ).test(resolveAttack),
+      `local ${cue} must use the +450ms outcome slot`
+    );
+  }
+  check(
+    (resolveAttack.match(/audioDelayMs\s*:\s*REWARD_FOLLOWUP_AUDIO_DELAY_MS/g) || []).length >= 5,
+    "every local combat XP path must keep level-up audio out of the impact/outcome mix"
+  );
+
+  const requestDueRewardCampPayout = extractFunction(gameSource, "requestDueRewardCampPayout");
+  const timerCueIndex = requestDueRewardCampPayout.indexOf('playGameSound("timer_tick_complete"');
+  const rewardCueIndex = requestDueRewardCampPayout.indexOf("playRewardSoundAfter(");
+  check(
+    timerCueIndex >= 0
+      && rewardCueIndex > timerCueIndex
+      && requestDueRewardCampPayout.includes("REWARD_FOLLOWUP_AUDIO_DELAY_MS"),
+    "camp completion must play its timer first and its reward in the follow-up slot"
+  );
+
+  const queueLevelUpReward = extractFunction(gameSource, "queueLevelUpReward");
+  const showNextLevelUpReward = extractFunction(gameSource, "showNextLevelUpReward");
+  const scheduleLevelUpRewardAudio = extractFunction(gameSource, "scheduleLevelUpRewardAudio");
+  check(
+    countGameCueCalls(queueLevelUpReward, "level_up") === 0
+      && showNextLevelUpReward.includes("scheduleLevelUpRewardAudio(nextReward)")
+      && countGameCueCalls(scheduleLevelUpRewardAudio, "level_up") === 1,
+    "hero level-up audio must play when its reward modal is actually presented"
+  );
+
+  const selectCity = extractFunction(gameSource, "selectCity");
+  const firstCitySelectIndex = selectCity.indexOf('playGameSound("city_select"');
+  check(
+    firstCitySelectIndex > selectCity.indexOf("neutralBlockReason")
+      && firstCitySelectIndex > selectCity.indexOf("shieldBlockReason"),
+    "city selection audio must not mask rejected-order invalid_action cues"
+  );
+  const selectRewardCamp = extractFunction(gameSource, "selectRewardCamp");
+  check(
+    countGameCueCalls(selectRewardCamp, "city_select") === 1,
+    "selecting a reward camp must play one city-selection cue"
+  );
+
+  const updateIncomingAttackUi = extractFunction(gameSource, "updateIncomingAttackUi");
+  check(
+    updateIncomingAttackUi.includes("lastAudioIncomingAttackIds")
+      && updateIncomingAttackUi.includes("getArmyTokenId(attack)")
+      && updateIncomingAttackUi.includes("!lastAudioIncomingAttackIds.has(id)"),
+    "incoming attack audio must detect replacement armies, not only count changes"
+  );
+
+  const updatePerformancePanel = extractFunction(gameSource, "updatePerformancePanel");
+  check(
+    updatePerformancePanel.includes("lastEffectEffectiveGain")
+      && updatePerformancePanel.includes("lastEffectVolumeScale"),
+    "F8 diagnostics must expose the effective effect gain and runtime scale"
+  );
+}
+
 function validateServiceWorkerContract(serviceWorkerSource) {
   const fetchHandler = extractBalancedBlock(
     serviceWorkerSource,
@@ -1141,6 +1313,7 @@ function main() {
   validateClanRallyDispatchCueContract(gameSource);
   validateRewardedAdCueContract(gameSource);
   validateCampCaptureCueContract(gameSource);
+  validateAudibleMixAndSequencingContracts(gameSource);
   validateServiceWorkerContract(serviceWorkerSource);
 
   if (failures.length) {
