@@ -2638,9 +2638,11 @@ let gameServerJoinInFlight = false;
 let gameServerLaunchInFlight = false;
 let gameServerAutoEnter = false;
 let pendingGameServerInactivityNotice = null;
+let pendingWelcomeBackSession = null;
 let serverEconomySyncTimer = 0;
 let serverEconomyRefreshInFlight = false;
 let serverEconomyRefreshQueued = false;
+let serverEconomyRefreshQueuedOptions = null;
 let serverEconomyLastSyncAt = 0;
 let serverEconomyLastToastAt = 0;
 let lastAuthoritativeProfileRevisionMs = 0;
@@ -9226,17 +9228,27 @@ function applyServerEconomyResult(result = null, options = {}) {
     }) || changed;
   }
   if (Array.isArray(result.cityUpdates)) changed = applyServerCityUpdates(result.cityUpdates) || changed;
-  const production = result.production || {};
-  const goldGained = Math.max(0, Math.floor(Number(production.goldGained) || 0));
-  const troopsGained = Math.max(0, Math.floor(Number(production.troopsGained) || 0));
-  const elapsed = Math.max(0, Math.floor(Number(production.elapsedSeconds) || 0));
-  if (options.showOfflineRewards && elapsed >= 60 && (goldGained > 0 || troopsGained > 0)) {
-    addLog(`Server production: +${formatNumber(goldGained)} gold and +${formatNumber(troopsGained)} troops while away.`);
+  const awaySummary = result.awaySummary && typeof result.awaySummary === "object"
+    ? result.awaySummary
+    : null;
+  const awayGoldGained = Math.max(0, Math.floor(Number(awaySummary?.goldGained) || 0));
+  const awayTroopsGained = Math.max(0, Math.floor(Number(awaySummary?.troopsGained) || 0));
+  const awayElapsed = Math.max(0, Math.floor(Number(awaySummary?.elapsedSeconds) || 0));
+  const awayLostCities = Array.isArray(awaySummary?.lostCities) ? awaySummary.lostCities : [];
+  const awayLostCityCount = Math.max(awayLostCities.length, Math.floor(Number(awaySummary?.lostCityCount) || 0));
+  if (
+    options.showOfflineRewards
+    && awaySummary
+    && awayElapsed >= 60
+    && (awayGoldGained > 0 || awayTroopsGained > 0 || awayLostCityCount > 0)
+  ) {
+    addLog(`Server production: +${formatNumber(awayGoldGained)} gold and +${formatNumber(awayTroopsGained)} troops while away.`);
     showOfflineRewardsModal({
-      goldGained,
-      troopsGained,
-      elapsed,
-      lostCities: [],
+      goldGained: awayGoldGained,
+      troopsGained: awayTroopsGained,
+      elapsed: awayElapsed,
+      lostCities: awayLostCities,
+      lostCityCount: awayLostCityCount,
     });
   }
   if (changed) {
@@ -9257,7 +9269,12 @@ async function refreshServerEconomy(force = false, options = {}) {
   const api = getOnlineApi();
   if (!api?.collectEconomy) return false;
   if (serverEconomyRefreshInFlight) {
-    if (force) serverEconomyRefreshQueued = true;
+    if (force) {
+      serverEconomyRefreshQueued = true;
+      if (options.requestWelcomeBack === true) {
+        serverEconomyRefreshQueuedOptions = { ...options };
+      }
+    }
     return false;
   }
   serverEconomyRefreshInFlight = true;
@@ -9265,8 +9282,10 @@ async function refreshServerEconomy(force = false, options = {}) {
     const result = await api.collectEconomy({
       worldId: ONLINE_WORLD_ID,
       resetGeneration: RESET_GENERATION,
+      includeWelcomeBack: options.requestWelcomeBack === true,
     });
     applyServerEconomyResult(result, options);
+    if (options.requestWelcomeBack === true) pendingWelcomeBackSession = null;
     serverEconomyLastSyncAt = Date.now();
     onlineLastError = "";
     updateOnlineUi();
@@ -9285,7 +9304,9 @@ async function refreshServerEconomy(force = false, options = {}) {
     serverEconomyRefreshInFlight = false;
     if (serverEconomyRefreshQueued) {
       serverEconomyRefreshQueued = false;
-      refreshServerEconomy(true);
+      const queuedOptions = serverEconomyRefreshQueuedOptions || {};
+      serverEconomyRefreshQueuedOptions = null;
+      refreshServerEconomy(true, queuedOptions);
     }
   }
 }
@@ -11506,6 +11527,20 @@ function normalizeGameServerMembership(raw = null) {
         consolidatedTroops: Math.max(0, Math.floor(Number(rawNotice.consolidatedTroops) || 0)),
       }
     : null;
+  const rawWelcomeBack = raw.welcomeBack && typeof raw.welcomeBack === "object"
+    ? raw.welcomeBack
+    : null;
+  const welcomeBackSessionId = String(rawWelcomeBack?.sessionId || "").trim();
+  const welcomeBack = welcomeBackSessionId
+    ? {
+        version: Math.max(0, Math.floor(Number(rawWelcomeBack.version) || 0)),
+        sessionId: welcomeBackSessionId,
+        sessionStartedAtMs: Math.max(0, Number(rawWelcomeBack.sessionStartedAtMs) || 0),
+        awayStartedAtMs: Math.max(0, Number(rawWelcomeBack.awayStartedAtMs) || 0),
+        eligible: Boolean(rawWelcomeBack.eligible && !Number(rawWelcomeBack.claimedAtMs)),
+        claimedAtMs: Math.max(0, Number(rawWelcomeBack.claimedAtMs) || 0),
+      }
+    : null;
   return {
     serverId,
     serverName: String(raw.serverName || GAME_SERVER_NAME).trim() || GAME_SERVER_NAME,
@@ -11515,6 +11550,7 @@ function normalizeGameServerMembership(raw = null) {
     lastSeenAtMs: Math.max(0, Number(raw.lastSeenAtMs) || 0),
     updatedAtMs: Math.max(0, Number(raw.updatedAtMs) || 0),
     inactivityNotice,
+    welcomeBack,
   };
 }
 
@@ -11648,6 +11684,9 @@ async function joinSelectedGameServer() {
     const result = await api.joinGameServer(GAME_SERVER_ID);
     applyGameServerMembership(result);
     pendingGameServerInactivityNotice = gameServerMembership?.inactivityNotice || null;
+    pendingWelcomeBackSession = gameServerMembership?.welcomeBack?.eligible
+      ? { ...gameServerMembership.welcomeBack }
+      : null;
     if (result?.status === "waiting") {
       gameServerAutoEnter = true;
       return false;
@@ -12333,6 +12372,7 @@ async function setupOnlineWorld({ requireOnlineProfile = false } = {}) {
     claimHome: activeRegionId === homeRegionId && needsMainCityClaim,
     homeRegionId,
     profile,
+    allowWelcomeBack: true,
   });
 }
 
@@ -12380,7 +12420,13 @@ function startOnlineSetupInBackground() {
     });
 }
 
-async function connectOnlineIsland(regionId, { claimHome = false, homeRegionId = null, profile = null, activateOnFirstSnapshot = false } = {}) {
+async function connectOnlineIsland(regionId, {
+  claimHome = false,
+  homeRegionId = null,
+  profile = null,
+  activateOnFirstSnapshot = false,
+  allowWelcomeBack = false,
+} = {}) {
   const api = getOnlineApi();
   if (!state || !api?.isConfigured?.() || !api?.isSignedIn?.()) return false;
   if (onlineWorldLoading) return false;
@@ -12470,6 +12516,7 @@ async function connectOnlineIsland(regionId, { claimHome = false, homeRegionId =
         return connectOnlineIsland(redirectedRegionId, {
           claimHome: true,
           homeRegionId: redirectedRegionId,
+          allowWelcomeBack,
           profile: {
             ...(profile || {}),
             mainIslandId: claim.islandId,
@@ -12511,9 +12558,17 @@ async function connectOnlineIsland(regionId, { claimHome = false, homeRegionId =
       if (firstCitiesSnapshot && getActivePeaceShieldExpiresAtMs()) refreshOwnedCityItemEffectMetadata(true);
       const economyIsStale = !serverEconomyLastSyncAt
         || Date.now() - serverEconomyLastSyncAt >= SERVER_ECONOMY_SYNC_SECONDS * 1000;
-      if (firstCitiesSnapshot && usesServerEconomyAuthority() && economyIsStale) {
+      const shouldRequestWelcomeBack = Boolean(
+        firstCitiesSnapshot
+        && allowWelcomeBack
+        && pendingWelcomeBackSession?.eligible
+      );
+      if (firstCitiesSnapshot && usesServerEconomyAuthority() && (economyIsStale || shouldRequestWelcomeBack)) {
         serverEconomySyncTimer = 0;
-        refreshServerEconomy(true, { showOfflineRewards: true });
+        refreshServerEconomy(true, {
+          requestWelcomeBack: shouldRequestWelcomeBack,
+          showOfflineRewards: shouldRequestWelcomeBack,
+        });
       } else if (pendingOfflineProgressSeconds > 0) {
         applyPendingOfflineProgress();
       }
@@ -14340,6 +14395,7 @@ async function startFromInput(forceFresh = false) {
   let statusOverride = "";
   try {
     onlineSessionReplaced = false;
+    pendingWelcomeBackSession = null;
     if (launchBtn) {
       launchBtn.disabled = true;
       launchBtn.textContent = forceFresh ? "Creating..." : "Entering...";
@@ -16367,12 +16423,14 @@ function applyPendingOfflineProgress() {
   }
 }
 
-function showOfflineRewardsModal({ goldGained = 0, troopsGained = 0, elapsed = 0, lostCities = [] } = {}) {
+function showOfflineRewardsModal({ goldGained = 0, troopsGained = 0, elapsed = 0, lostCities = [], lostCityCount = 0 } = {}) {
   const lostList = Array.isArray(lostCities) ? lostCities : [];
+  const totalLostCities = Math.max(lostList.length, Math.floor(Number(lostCityCount) || 0));
   const inactivityNotice = pendingGameServerInactivityNotice;
   if (inactivityNotice) pendingGameServerInactivityNotice = null;
-  const lostSummary = lostList.length
-    ? `<section class="offline-lost-cities"><span>Cities lost while away</span><strong>${formatNumber(lostList.length)}</strong><ul>${lostList.slice(0, 8).map(city => `<li>${escapeHtml(city.name || city.id)} <small>${escapeHtml(getRegionLabel(city.regionId || getCityRegionId(city.id)))}</small></li>`).join("")}</ul>${lostList.length > 8 ? `<small>+${formatNumber(lostList.length - 8)} more</small>` : ""}</section>`
+  const visibleLostCities = lostList.slice(0, 8);
+  const lostSummary = totalLostCities > 0
+    ? `<section class="offline-lost-cities"><span>Cities lost while away</span><strong>${formatNumber(totalLostCities)}</strong><ul>${visibleLostCities.map(city => `<li>${escapeHtml(city.name || city.id)} <small>${escapeHtml(getRegionLabel(city.regionId || getCityRegionId(city.id)))}</small></li>`).join("")}</ul>${totalLostCities > visibleLostCities.length ? `<small>+${formatNumber(totalLostCities - visibleLostCities.length)} more</small>` : ""}</section>`
     : `<section class="offline-lost-cities safe"><span>Cities lost while away</span><strong>0</strong><small>No cities were lost.</small></section>`;
   modal.classList.add("offline-reward-modal");
   modalTitle.textContent = "Welcome back";
@@ -16381,7 +16439,7 @@ function showOfflineRewardsModal({ goldGained = 0, troopsGained = 0, elapsed = 0
       <p>Your kingdom kept producing while you were away for ${formatDuration(elapsed)}.</p>
       <div class="offline-reward-grid">
         <div><span>Gold collected</span><strong>${formatNumber(goldGained)}</strong></div>
-        <div><span>Troops produced</span><strong>${formatNumber(troopsGained)}</strong><small>Added to cities still owned</small></div>
+        <div><span>Troops produced</span><strong>${formatNumber(troopsGained)}</strong><small>Remaining in cities you still own</small></div>
       </div>
       ${getGameServerInactivityNoticeMarkup(inactivityNotice)}
       ${lostSummary}

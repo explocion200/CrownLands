@@ -11,7 +11,7 @@ Landscape / horizontal medieval island-conquest game inspired by the core loop o
 - The current map reset is `fresh-2026-07-26-server-reset`, with world ID `main-fresh-2026-07-26-server-reset`.
 - New online players claim starting cities from the available starter regions first; the center Crownlands region is intended as the main battleground.
 - Cities produce troops and gold in real time while the game is active.
-- Offline production catches up when the player returns: troops stay in the cities that produced them, while troops from cities lost offline rally to the main city.
+- Reopening Crownlands after at least one minute starts a one-use Welcome back summary. Server-authoritative gold is collected across every owned map, troop production is reported only when it remains in cities still owned, and captured cities, Strongholds, and the Crown Citadel are listed from ownership history. Switching maps never opens the summary.
 - City level creates victory points.
 - Victory points drive troop production, gold production, and capture XP value.
 - The city counter opens a city list with the main city pinned first and level/troop sorting.

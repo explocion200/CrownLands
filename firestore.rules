@@ -56,6 +56,7 @@ service cloud.firestore {
           'inactivityNotice',
           'worldSlotResetAtMs',
           'economyUpdatedAtMs',
+          'pendingAwayProduction',
           'offlineProductionCities',
           'kingPower',
           'kingPowerVersion',
@@ -106,6 +107,7 @@ service cloud.firestore {
         && profileFieldUnchanged('itemPurchaseCooldowns')
         && profileFieldUnchanged('dailyLoginReward')
         && profileFieldUnchanged('economyUpdatedAtMs')
+        && profileFieldUnchanged('pendingAwayProduction')
         && profileFieldUnchanged('offlineProductionCities')
         && profileFieldUnchanged('kingPower')
         && profileFieldUnchanged('kingPowerVersion')

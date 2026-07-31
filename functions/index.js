@@ -262,6 +262,9 @@ const GAME_SERVER_CAPACITY = 50;
 const GAME_SERVER_ACTIVE_STALE_MS = 3 * 60 * 1000;
 const GAME_SERVER_WAITING_STALE_MS = 5 * 60 * 1000;
 const GAME_SERVER_MAX_WAITING = 500;
+const WELCOME_BACK_SUMMARY_VERSION = 1;
+const WELCOME_BACK_MIN_AWAY_MS = 60 * 1000;
+const PENDING_AWAY_PRODUCTION_CITY_LIMIT = 320;
 const INACTIVITY_POLICY_VERSION = 1;
 const INACTIVITY_SURRENDER_MS = 15 * 24 * 60 * 60 * 1000;
 const INACTIVITY_REMOVAL_MS = 20 * 24 * 60 * 60 * 1000;
@@ -694,6 +697,56 @@ function cleanGameServerEntry(raw = {}, fallback = {}) {
   };
 }
 
+function normalizeWelcomeBackSession(raw = null) {
+  const source = raw?.welcomeBack && typeof raw.welcomeBack === "object"
+    ? raw.welcomeBack
+    : raw && typeof raw === "object" ? raw : {};
+  const sessionId = safeString(source.sessionId, 128);
+  const sessionStartedAtMs = Math.max(0, Math.floor(safeNumber(source.sessionStartedAtMs, 0)));
+  const awayStartedAtMs = Math.max(0, Math.floor(safeNumber(source.awayStartedAtMs, 0)));
+  const claimedAtMs = Math.max(0, Math.floor(safeNumber(source.claimedAtMs, 0)));
+  const summary = source.summary && typeof source.summary === "object"
+    ? source.summary
+    : null;
+  return {
+    version: WELCOME_BACK_SUMMARY_VERSION,
+    sessionId,
+    sessionStartedAtMs,
+    awayStartedAtMs,
+    eligible: Boolean(source.eligible && sessionId && sessionStartedAtMs && awayStartedAtMs && !claimedAtMs),
+    claimedAtMs,
+    summary,
+  };
+}
+
+function createWelcomeBackSession(priorMembership = {}, sessionId = "", nowMs = Date.now()) {
+  const normalizedSessionId = safeString(sessionId, 128);
+  const existing = normalizeWelcomeBackSession(priorMembership);
+  if (existing.sessionId === normalizedSessionId && existing.sessionStartedAtMs) {
+    return existing;
+  }
+
+  const priorSessionId = safeString(priorMembership.sessionId, 128);
+  const priorLastSeenAtMs = Math.max(0, Math.floor(safeNumber(priorMembership.lastSeenAtMs, 0)));
+  const awayElapsedMs = priorLastSeenAtMs > 0 ? Math.max(0, nowMs - priorLastSeenAtMs) : 0;
+  const eligible = Boolean(
+    normalizedSessionId
+    && priorSessionId
+    && priorSessionId !== normalizedSessionId
+    && priorLastSeenAtMs
+    && awayElapsedMs >= WELCOME_BACK_MIN_AWAY_MS
+  );
+  return {
+    version: WELCOME_BACK_SUMMARY_VERSION,
+    sessionId: normalizedSessionId,
+    sessionStartedAtMs: nowMs,
+    awayStartedAtMs: eligible ? priorLastSeenAtMs : 0,
+    eligible,
+    claimedAtMs: 0,
+    summary: null,
+  };
+}
+
 function normalizeGameServerEntries(raw = {}, nowMs = Date.now(), staleMs = 0) {
   const entries = {};
   Object.entries(raw && typeof raw === "object" ? raw : {}).forEach(([rawUid, value]) => {
@@ -978,6 +1031,7 @@ async function joinGameServerForPlayer({ uid, sessionId, displayName, nowMs = Da
       throw new HttpsError("unavailable", "Your kingdom is completing scheduled realm maintenance. Try again in a moment.");
     }
     const inactivityNotice = getInactivityNotice(priorMembership);
+    const welcomeBack = createWelcomeBackSession(priorMembership, sessionId, nowMs);
     const state = createGameServerState(serverSnap.exists ? serverSnap.data() : {}, nowMs, { pruneStale: false });
     const promoted = promoteGameServerWaiters(state, nowMs);
     let activeEntry = state.activeSlots[uid] || null;
@@ -1039,6 +1093,7 @@ async function joinGameServerForPlayer({ uid, sessionId, displayName, nowMs = Da
       writeGameServerMember(transaction, entry, status, nowMs);
       writeGameServerMembership(transaction, entry, status, nowMs);
     });
+    transaction.set(membershipRef, { welcomeBack }, { merge: true });
 
     return {
       serverId: GAME_SERVER_ID,
@@ -1047,6 +1102,7 @@ async function joinGameServerForPlayer({ uid, sessionId, displayName, nowMs = Da
       admittedAtMs: activeEntry?.admittedAtMs || 0,
       queuedAtMs: waitingEntry?.queuedAtMs || 0,
       inactivityNotice,
+      welcomeBack,
     };
   })));
 }
@@ -1054,6 +1110,7 @@ async function joinGameServerForPlayer({ uid, sessionId, displayName, nowMs = Da
 async function heartbeatGameServerForPlayer({ uid, sessionId, displayName, nowMs = Date.now() }) {
   const serverRef = db.doc(`gameServers/${GAME_SERVER_DOCUMENT_ID}`);
   const membershipRef = db.doc(`players/${uid}/serverMembership/current`);
+  const profileRef = db.doc(`players/${uid}`);
   const maintenanceRef = inactivityMaintenanceRef(uid);
   const result = await db.runTransaction(async transaction => {
     const [serverSnap, membershipSnap, maintenanceSnap] = await Promise.all([
@@ -1065,7 +1122,9 @@ async function heartbeatGameServerForPlayer({ uid, sessionId, displayName, nowMs
     if (isInactivityLifecycleBlockingPlayer(maintenance)) {
       throw new HttpsError("unavailable", "Your kingdom is completing scheduled realm maintenance. Try again in a moment.");
     }
-    const inactivityNotice = getInactivityNotice(membershipSnap.exists ? membershipSnap.data() || {} : {});
+    const currentMembership = membershipSnap.exists ? membershipSnap.data() || {} : {};
+    const inactivityNotice = getInactivityNotice(currentMembership);
+    const welcomeBack = normalizeWelcomeBackSession(currentMembership);
     const state = createGameServerState(
       serverSnap.exists ? serverSnap.data() : {},
       nowMs,
@@ -1084,6 +1143,11 @@ async function heartbeatGameServerForPlayer({ uid, sessionId, displayName, nowMs
     entry.lastSeenAtMs = nowMs;
     writeGameServerMember(transaction, entry, status, nowMs);
     writeGameServerMembership(transaction, entry, status, nowMs);
+    if (status === "active" && !welcomeBack.eligible) {
+      transaction.set(profileRef, {
+        pendingAwayProduction: createEmptyPendingAwayProduction(nowMs),
+      }, { merge: true });
+    }
     return {
       serverId: GAME_SERVER_ID,
       serverName: GAME_SERVER_NAME,
@@ -1091,6 +1155,7 @@ async function heartbeatGameServerForPlayer({ uid, sessionId, displayName, nowMs
       admittedAtMs: status === "active" ? entry.admittedAtMs || 0 : 0,
       queuedAtMs: status === "waiting" ? entry.queuedAtMs || 0 : 0,
       inactivityNotice,
+      welcomeBack,
     };
   });
   if (result.status !== "missing") return result;
@@ -8015,6 +8080,82 @@ function writeExtraCityPatches(transaction, patches = []) {
   });
 }
 
+function createEmptyPendingAwayProduction(observedAtMs = 0) {
+  return {
+    version: WELCOME_BACK_SUMMARY_VERSION,
+    goldGained: 0,
+    troopsByCity: {},
+    startedAtMs: 0,
+    updatedAtMs: 0,
+    observedAtMs: Math.max(0, Math.floor(safeNumber(observedAtMs, 0))),
+  };
+}
+
+function getIntegerProductionGain(currentFloat = 0, gainFloat = 0) {
+  const before = Math.max(0, safeNumber(currentFloat, 0));
+  const gain = Math.max(0, safeNumber(gainFloat, 0));
+  return Math.max(0, Math.floor(before + gain) - Math.floor(before));
+}
+
+function normalizePendingAwayProduction(raw = null) {
+  const source = raw && typeof raw === "object" ? raw : {};
+  const troopsByCity = {};
+  Object.entries(source.troopsByCity && typeof source.troopsByCity === "object" ? source.troopsByCity : {})
+    .slice(0, PENDING_AWAY_PRODUCTION_CITY_LIMIT)
+    .forEach(([rawKey, rawTroops]) => {
+      const key = safeString(rawKey, 220);
+      const troops = Math.max(0, Math.floor(safeNumber(rawTroops, 0)));
+      if (key.startsWith("city:") && troops > 0) troopsByCity[key] = troops;
+    });
+  return {
+    version: WELCOME_BACK_SUMMARY_VERSION,
+    goldGained: Math.max(0, Math.floor(safeNumber(source.goldGained, 0))),
+    troopsByCity,
+    startedAtMs: Math.max(0, Math.floor(safeNumber(source.startedAtMs, 0))),
+    updatedAtMs: Math.max(0, Math.floor(safeNumber(source.updatedAtMs, 0))),
+    observedAtMs: Math.max(0, Math.floor(safeNumber(source.observedAtMs, 0))),
+  };
+}
+
+function addPendingAwayProduction(rawPending = null, production = {}, nowMs = Date.now()) {
+  const pending = normalizePendingAwayProduction(rawPending);
+  const goldGained = Math.max(0, Math.floor(safeNumber(production.goldGained, 0)));
+  const entries = Object.entries(
+    production.troopsByCity && typeof production.troopsByCity === "object"
+      ? production.troopsByCity
+      : {}
+  );
+  pending.goldGained += goldGained;
+  entries.forEach(([rawKey, rawTroops]) => {
+    const key = safeString(rawKey, 220);
+    const troops = Math.max(0, Math.floor(safeNumber(rawTroops, 0)));
+    if (!key.startsWith("city:") || troops <= 0) return;
+    if (!Object.prototype.hasOwnProperty.call(pending.troopsByCity, key)
+      && Object.keys(pending.troopsByCity).length >= PENDING_AWAY_PRODUCTION_CITY_LIMIT) return;
+    pending.troopsByCity[key] = Math.max(0, Math.floor(safeNumber(pending.troopsByCity[key], 0))) + troops;
+  });
+  if ((goldGained > 0 || entries.length > 0) && !pending.startedAtMs) {
+    pending.startedAtMs = Math.max(0, Math.floor(safeNumber(production.startedAtMs, nowMs)));
+  }
+  if (goldGained > 0 || entries.length > 0) pending.updatedAtMs = nowMs;
+  return pending;
+}
+
+function consumePendingAwayCityTroops(economy = null, city = null, losses = 0, { captured = false } = {}) {
+  if (!economy || !city?.id) return;
+  const pending = normalizePendingAwayProduction(economy.profilePatch?.pendingAwayProduction);
+  const key = getReinforcementTargetKey("city", city.regionId || getRegionIdFromCityDoc(null, city), city.id);
+  if (captured) {
+    delete pending.troopsByCity[key];
+  } else {
+    const remaining = Math.max(0, Math.floor(safeNumber(pending.troopsByCity[key], 0)) - Math.max(0, Math.floor(safeNumber(losses, 0))));
+    if (remaining > 0) pending.troopsByCity[key] = remaining;
+    else delete pending.troopsByCity[key];
+  }
+  economy.profilePatch.pendingAwayProduction = pending;
+  economy.profileAfter.pendingAwayProduction = pending;
+}
+
 async function prepareEconomyCollection(transaction, uid, nowMs = Date.now(), options = {}) {
   if (!options.allowInactivityMaintenance) {
     const maintenanceRef = inactivityMaintenanceRef(uid);
@@ -8036,6 +8177,11 @@ async function prepareEconomyCollection(transaction, uid, nowMs = Date.now(), op
   const shopItems = normalizeShopItems(rawProfile.shopItems);
   const itemPurchaseCooldowns = normalizeItemPurchaseCooldowns(rawProfile.itemPurchaseCooldowns);
   const baseGold = Math.max(0, safeNumber(rawProfile.goldFloat, safeNumber(rawProfile.gold, TEST_STARTING_GOLD)));
+  const pendingAwayProductionBefore = normalizePendingAwayProduction(rawProfile.pendingAwayProduction);
+  const productionObservedAtMs = Math.min(
+    nowMs,
+    Math.max(0, pendingAwayProductionBefore.observedAtMs)
+  );
   const fallbackProductionAtMs = Math.min(nowMs, getProfileLastSeenMs(rawProfile) || nowMs);
   const economyRevisionMs = Math.max(nowMs, timestampToMs(rawProfile.economyUpdatedAtMs) + 1);
 
@@ -8060,6 +8206,12 @@ async function prepareEconomyCollection(transaction, uid, nowMs = Date.now(), op
     timestampToMs(rawProfile.economyUpdatedAtMs) || fallbackProductionAtMs
   );
   const goldElapsedSeconds = clamp((nowMs - lastEconomyAtMs) / 1000, 0, MAX_SERVER_PRODUCTION_SECONDS);
+  const pendingGoldStartedAtMs = Math.max(lastEconomyAtMs, productionObservedAtMs);
+  const pendingGoldElapsedSeconds = clamp(
+    (nowMs - pendingGoldStartedAtMs) / 1000,
+    0,
+    MAX_SERVER_PRODUCTION_SECONDS
+  );
   const objectiveBenefits = await resolvePlayerObjectiveBenefits(
     transaction,
     uid,
@@ -8071,7 +8223,9 @@ async function prepareEconomyCollection(transaction, uid, nowMs = Date.now(), op
   const bonuses = objectiveBenefits.currentBonuses;
   const productionBonuses = objectiveBenefits.productionBonuses;
   let goldGainFloat = 0;
+  let pendingGoldGainFloat = 0;
   let troopsGained = 0;
+  const troopsByCity = {};
   let maxElapsedSeconds = goldElapsedSeconds;
 
   cityEntries.forEach(entry => {
@@ -8082,7 +8236,15 @@ async function prepareEconomyCollection(transaction, uid, nowMs = Date.now(), op
       timestampToMs(city.productionUpdatedAtMs || city.economyUpdatedAtMs) || fallbackProductionAtMs
     );
     const elapsedSeconds = clamp((nowMs - lastProductionAtMs) / 1000, 0, MAX_SERVER_PRODUCTION_SECONDS);
-    maxElapsedSeconds = Math.max(maxElapsedSeconds, elapsedSeconds);
+    const collectionStartedAtMs = Math.max(lastProductionAtMs, lastEconomyAtMs);
+    const collectionElapsedSeconds = clamp((nowMs - collectionStartedAtMs) / 1000, 0, MAX_SERVER_PRODUCTION_SECONDS);
+    const pendingCollectionStartedAtMs = Math.max(collectionStartedAtMs, productionObservedAtMs);
+    const pendingCollectionElapsedSeconds = clamp(
+      (nowMs - pendingCollectionStartedAtMs) / 1000,
+      0,
+      MAX_SERVER_PRODUCTION_SECONDS
+    );
+    maxElapsedSeconds = Math.max(maxElapsedSeconds, collectionElapsedSeconds);
     const stats = getCityProductionStats(city, { ...rawProfile, character, upgrades, itemEffects }, productionBonuses, {
       nowMs,
       includeWarDrums: false,
@@ -8107,10 +8269,52 @@ async function prepareEconomyCollection(transaction, uid, nowMs = Date.now(), op
     );
     const nextTroopFloat = currentTroopFloat + troopGainFloat;
     const nextTroops = Math.max(0, Math.floor(nextTroopFloat));
+    const collectionWarDrumsOverlapSeconds = getTimedProductionBoostOverlapSeconds(
+      collectionStartedAtMs,
+      nowMs,
+      itemEffects.warDrumsExpiresAtMs,
+      WAR_DRUMS_DURATION_MS
+    );
+    const collectionTroopGainFloat = stats.troopProductionPerSecond * (
+      collectionElapsedSeconds
+      + collectionWarDrumsOverlapSeconds * WAR_DRUMS_TROOP_PRODUCTION_BONUS_PERCENT / 100
+    );
+    const cityTroopsGained = getIntegerProductionGain(
+      nextTroopFloat - collectionTroopGainFloat,
+      collectionTroopGainFloat
+    );
+    const pendingWarDrumsOverlapSeconds = getTimedProductionBoostOverlapSeconds(
+      pendingCollectionStartedAtMs,
+      nowMs,
+      itemEffects.warDrumsExpiresAtMs,
+      WAR_DRUMS_DURATION_MS
+    );
+    const pendingTroopGainFloat = stats.troopProductionPerSecond * (
+      pendingCollectionElapsedSeconds
+      + pendingWarDrumsOverlapSeconds * WAR_DRUMS_TROOP_PRODUCTION_BONUS_PERCENT / 100
+    );
+    const pendingCityTroopsGained = getIntegerProductionGain(
+      nextTroopFloat - pendingTroopGainFloat,
+      pendingTroopGainFloat
+    );
     goldGainFloat += stats.goldProductionPerSecond * (
       goldElapsedSeconds + taxDecreeOverlapSeconds * ROYAL_TAX_DECREE_GOLD_PRODUCTION_BONUS_PERCENT / 100
     );
-    troopsGained += Math.max(0, nextTroops - Math.max(0, Math.floor(safeNumber(city.troops, 0))));
+    const pendingTaxDecreeOverlapSeconds = getTimedProductionBoostOverlapSeconds(
+      pendingGoldStartedAtMs,
+      nowMs,
+      itemEffects.royalTaxDecreeExpiresAtMs,
+      ROYAL_TAX_DECREE_DURATION_MS
+    );
+    pendingGoldGainFloat += stats.goldProductionPerSecond * (
+      pendingGoldElapsedSeconds
+      + pendingTaxDecreeOverlapSeconds * ROYAL_TAX_DECREE_GOLD_PRODUCTION_BONUS_PERCENT / 100
+    );
+    troopsGained += cityTroopsGained;
+    if (pendingCityTroopsGained > 0) {
+      const cityKey = getReinforcementTargetKey("city", city.regionId, city.id);
+      troopsByCity[cityKey] = pendingCityTroopsGained;
+    }
     const patch = {
       troops: nextTroops,
       troopFloat: nextTroopFloat,
@@ -8137,6 +8341,16 @@ async function prepareEconomyCollection(transaction, uid, nowMs = Date.now(), op
 
   const goldFloat = baseGold + goldGainFloat;
   const gold = Math.max(0, Math.floor(goldFloat));
+  const goldGained = getIntegerProductionGain(baseGold, goldGainFloat);
+  const pendingGoldGained = getIntegerProductionGain(
+    goldFloat - pendingGoldGainFloat,
+    pendingGoldGainFloat
+  );
+  const pendingAwayProduction = addPendingAwayProduction(pendingAwayProductionBefore, {
+    goldGained: pendingGoldGained,
+    troopsByCity,
+    startedAtMs: Math.max(lastEconomyAtMs, productionObservedAtMs),
+  }, nowMs);
   const profileAfter = {
     ...rawProfile,
     character,
@@ -8146,6 +8360,7 @@ async function prepareEconomyCollection(transaction, uid, nowMs = Date.now(), op
     shopItems,
     itemEffects,
     itemPurchaseCooldowns,
+    pendingAwayProduction,
     ...mainCityRepair.profileFields,
     economyUpdatedAtMs: economyRevisionMs,
   };
@@ -8170,6 +8385,7 @@ async function prepareEconomyCollection(transaction, uid, nowMs = Date.now(), op
     shopItems,
     itemEffects,
     itemPurchaseCooldowns,
+    pendingAwayProduction,
     ...mainCityRepair.profileFields,
     ...objectiveBenefits.profilePatch,
     economyUpdatedAtMs: economyRevisionMs,
@@ -8196,11 +8412,13 @@ async function prepareEconomyCollection(transaction, uid, nowMs = Date.now(), op
     itemEffects,
     itemPurchaseCooldowns,
     production: {
-      goldGained: Math.max(0, Math.floor(goldGainFloat)),
+      goldGained,
       troopsGained,
       elapsedSeconds: Math.floor(maxElapsedSeconds),
       cityCount: cityEntries.filter(entry => !isStronghold(entry.city)).length,
     },
+    productionByCity: troopsByCity,
+    pendingAwayProduction,
   };
 }
 
@@ -8591,6 +8809,93 @@ function createEconomyResponse(economy = null, overrides = {}) {
   };
 }
 
+function normalizeWelcomeBackSummary(raw = null) {
+  if (!raw || typeof raw !== "object") return null;
+  const lostCities = (Array.isArray(raw.lostCities) ? raw.lostCities : [])
+    .slice(0, 50)
+    .map(city => ({
+      id: safeString(city?.id, 96),
+      name: safeString(city?.name, 80),
+      regionId: normalizeRegionId(city?.regionId),
+      kind: safeString(city?.kind, 40),
+      lostAtMs: Math.max(0, Math.floor(safeNumber(city?.lostAtMs, 0))),
+    }))
+    .filter(city => city.id && city.regionId);
+  return {
+    version: WELCOME_BACK_SUMMARY_VERSION,
+    elapsedSeconds: Math.max(0, Math.floor(safeNumber(raw.elapsedSeconds, 0))),
+    goldGained: Math.max(0, Math.floor(safeNumber(raw.goldGained, 0))),
+    troopsGained: Math.max(0, Math.floor(safeNumber(raw.troopsGained, 0))),
+    lostCityCount: Math.max(lostCities.length, Math.floor(safeNumber(raw.lostCityCount, lostCities.length))),
+    lostCities,
+  };
+}
+
+function getServerWorldCityNode(regionId = "", cityId = "") {
+  const map = getServerWorldMap(regionId);
+  const targets = [
+    ...(Array.isArray(map?.cities) ? map.cities : []),
+    ...(Array.isArray(map?.objectives) ? map.objectives : []),
+  ];
+  return targets.find(target => safeString(target?.id, 96) === safeString(cityId, 96)) || null;
+}
+
+function createWelcomeBackLostCityList(lossSnapshot = null, economy = null) {
+  const currentlyOwnedKeys = new Set((economy?.cityEntries || []).map(entry => (
+    getReinforcementTargetKey("city", entry?.city?.regionId, entry?.city?.id)
+  )));
+  const lostByTargetKey = new Map();
+  (lossSnapshot?.docs || []).forEach(doc => {
+    const event = doc.data() || {};
+    if (safeString(event.reason, 64) !== "city_captured" || event.targetType !== "city") return;
+    const id = safeString(event.targetId, 96);
+    const regionId = normalizeRegionId(event.regionId);
+    const targetKey = getReinforcementTargetKey("city", regionId, id);
+    if (!id || currentlyOwnedKeys.has(targetKey)) return;
+    const configured = getServerWorldCityNode(regionId, id) || { id, regionId };
+    const kind = safeString(
+      configured.kind || configured.strongholdType || configured.type || (isStronghold(configured) ? "stronghold" : "city"),
+      40
+    );
+    lostByTargetKey.set(targetKey, {
+      id,
+      name: getServerCanonicalCityName({ ...configured, id }, regionId),
+      regionId,
+      kind,
+      lostAtMs: Math.max(0, timestampToMs(event.createdAtMs || event.createdAt)),
+    });
+  });
+  return [...lostByTargetKey.values()].sort((left, right) => (
+    left.lostAtMs - right.lostAtMs || left.id.localeCompare(right.id)
+  ));
+}
+
+function createWelcomeBackSummary(economy = null, welcomeBack = null, lossSnapshot = null) {
+  const session = normalizeWelcomeBackSession(welcomeBack);
+  if (!economy || !session.sessionStartedAtMs || !session.awayStartedAtMs) return null;
+  const pending = normalizePendingAwayProduction(economy.pendingAwayProduction);
+  const ownedCitiesByKey = new Map((economy.cityEntries || []).map(entry => [
+    getReinforcementTargetKey("city", entry?.city?.regionId, entry?.city?.id),
+    entry?.city || {},
+  ]));
+  const troopsGained = Object.entries(pending.troopsByCity).reduce((total, [key, rawTroops]) => {
+    const city = ownedCitiesByKey.get(key);
+    if (!city) return total;
+    return total + Math.min(
+      Math.max(0, Math.floor(safeNumber(rawTroops, 0))),
+      Math.max(0, Math.floor(safeNumber(city.troops, 0)))
+    );
+  }, 0);
+  const lostCities = createWelcomeBackLostCityList(lossSnapshot, economy);
+  return normalizeWelcomeBackSummary({
+    elapsedSeconds: Math.floor(Math.max(0, session.sessionStartedAtMs - session.awayStartedAtMs) / 1000),
+    goldGained: pending.goldGained,
+    troopsGained,
+    lostCityCount: lostCities.length,
+    lostCities,
+  });
+}
+
 function getHarvestEconomyRates(economy = null) {
   if (!economy) return { goldPerSecond: 0, troopProductionPerSecond: 0 };
   return economy.cityEntries.reduce((totals, entry) => {
@@ -8973,11 +9278,50 @@ exports.leaveGameServer = onCall({ region: "us-central1", maxInstances: 20, invo
 
 exports.collectEconomy = timedCallable("collectEconomy", { region: "us-central1", maxInstances: 30, invoker: "public" }, async request => {
   const uid = requireAuth(request);
+  const data = request.data || {};
+  const includeWelcomeBack = data.includeWelcomeBack === true;
+  const requestedSessionId = includeWelcomeBack ? requireGameServerSessionId(data.sessionId) : "";
   const nowMs = Date.now();
   return db.runTransaction(async transaction => {
+    const membershipRef = db.doc(`players/${uid}/serverMembership/current`);
+    const membershipSnap = includeWelcomeBack ? await transaction.get(membershipRef) : null;
+    const welcomeBack = normalizeWelcomeBackSession(membershipSnap?.exists ? membershipSnap.data() || {} : null);
+    const validWelcomeSession = Boolean(
+      includeWelcomeBack
+      && welcomeBack.sessionId === requestedSessionId
+      && welcomeBack.sessionStartedAtMs
+      && welcomeBack.awayStartedAtMs
+      && (welcomeBack.eligible || welcomeBack.summary)
+    );
+    let lossSnapshot = null;
+    if (validWelcomeSession && !welcomeBack.summary) {
+      lossSnapshot = await transaction.get(
+        db.collection(`realmEvents/${RESET_GENERATION}/ownershipChanges`)
+          .where("beforeOwnerUid", "==", uid)
+          .where("createdAtMs", ">", welcomeBack.awayStartedAtMs)
+          .where("createdAtMs", "<=", welcomeBack.sessionStartedAtMs)
+          .orderBy("createdAtMs", "asc")
+      );
+    }
     const economy = await prepareEconomyCollection(transaction, uid, nowMs);
-    writePreparedEconomy(transaction, economy);
-    return createEconomyResponse(economy);
+    const awaySummary = validWelcomeSession
+      ? normalizeWelcomeBackSummary(welcomeBack.summary)
+        || createWelcomeBackSummary(economy, welcomeBack, lossSnapshot)
+      : null;
+    writePreparedEconomy(transaction, economy, {
+      pendingAwayProduction: createEmptyPendingAwayProduction(nowMs),
+    });
+    if (validWelcomeSession && awaySummary && !welcomeBack.summary) {
+      transaction.set(membershipRef, {
+        welcomeBack: {
+          ...welcomeBack,
+          eligible: false,
+          claimedAtMs: nowMs,
+          summary: awaySummary,
+        },
+      }, { merge: true });
+    }
+    return createEconomyResponse(economy, awaySummary ? { awaySummary } : {});
   });
 });
 
@@ -10639,6 +10983,7 @@ function createFreshResetPlayerProfile({
     gameSeconds: 0,
     localGameSeconds: 0,
     economyUpdatedAtMs: nowMs,
+    pendingAwayProduction: createEmptyPendingAwayProduction(nowMs),
     lastRealTimeMs: nowMs,
     lastSeenAtMs: nowMs,
     createdAt: previous.createdAt || FieldValue.serverTimestamp(),
@@ -15935,6 +16280,11 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
         targetReinforcements,
         result.defenderLosses
       );
+      if (targetType === "city") {
+        consumePendingAwayCityTroops(defenderEconomy, { ...target, regionId: targetRegionId }, defenseAllocation.ownerLosses, {
+          captured: result.success,
+        });
+      }
       const oldOwnerUid = defenderUid;
       const defendersAtStart = Math.max(0, Math.floor(safeNumber(combatTarget.troops, 0)));
       const battleOutcome = result.success ? "victory" : "defeat";
@@ -16882,6 +17232,9 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
       targetReinforcements,
       result.defenderLosses
     );
+    consumePendingAwayCityTroops(defenderEconomy, { ...target, regionId: targetRegionId }, defenseAllocation.ownerLosses, {
+      captured: result.success,
+    });
     currentBattleId = safeString(armyId, 160);
     writeDetailedBattleSnapshot(transaction, createDetailedBattleSnapshot({
       battleId: currentBattleId,
