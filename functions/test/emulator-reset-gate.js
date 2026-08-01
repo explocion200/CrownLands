@@ -712,6 +712,19 @@ async function main() {
     JSON.stringify(publicApplicantProfile?.clanShield) === JSON.stringify(createdClan?.clan?.shield),
     "The public player profile did not return the shield belonging to the player's clan."
   );
+  assert(
+    Number(publicApplicantProfile?.troopEstimate?.min) > 0
+      && Number(publicApplicantProfile?.troopEstimate?.max) >= Number(publicApplicantProfile?.troopEstimate?.min)
+      && typeof publicApplicantProfile?.troopEstimate?.label === "string"
+      && Number(publicApplicantProfile?.troopEstimate?.updatedAtMs) > 0,
+    "The public player profile did not return a valid on-demand troop estimate."
+  );
+  assert(
+    !("totalTroops" in publicApplicantProfile)
+      && !("totalMilitaryTroops" in publicApplicantProfile)
+      && !("troopStats" in publicApplicantProfile),
+    "The public player profile exposed an exact troop total."
+  );
   let memberRenameError = null;
   try {
     await callFunction("updateClanProfile", clanApplicant.token, { name: "Member Renamed Clan" });

@@ -53,6 +53,7 @@ vm.runInContext(readFunction(clientSource, "isPrivateTransferMovement"), clientS
 vm.runInContext(readFunction(clientSource, "canViewArmyTroopAmount"), clientSandbox);
 
 const boundaryCases = [
+  [0, "1\u201310"],
   [1, "1\u201310"],
   [10, "1\u201310"],
   [11, "10\u2013100"],
