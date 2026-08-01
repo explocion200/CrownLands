@@ -145,7 +145,7 @@ const REINFORCEMENT_STATUS_STATIONED = "stationed";
 const REINFORCEMENT_STATUS_RETURNING = "returning";
 const REINFORCEMENT_STATUS_DEPLETED = "depleted";
 const REINFORCEMENT_STATUS_RETURNED = "returned";
-const REINFORCEMENT_MODEL_VERSION = 2;
+const REINFORCEMENT_MODEL_VERSION = 3;
 const CLAN_REINFORCEMENT_PER_RECIPIENT_LIMIT = 2;
 const ORDINARY_CITY_REINFORCEMENT_CAPACITY = 5;
 const REINFORCEMENT_CAPACITY_RECONCILE_PAGE_SIZE = 25;
@@ -4430,10 +4430,9 @@ async function getActiveClanReinforcementAssignmentsForLaunch(transaction, uid =
     .where("resetGeneration", "==", RESET_GENERATION)
     .where("worldId", "==", ONLINE_WORLD_ID)
     .where("status", "==", status);
-  const [activeArmiesSnap, stationedSnap, returningSnap] = await Promise.all([
+  const [activeArmiesSnap, stationedSnap] = await Promise.all([
     transaction.get(activeArmiesQueryForPlayer(playerUid)),
     transaction.get(contributionQuery(REINFORCEMENT_STATUS_STATIONED)),
-    transaction.get(contributionQuery(REINFORCEMENT_STATUS_RETURNING)),
   ]);
   const assignments = new Map(storedAssignments.map(entry => [entry.token, entry]));
   activeArmiesSnap.docs.forEach(doc => {
@@ -4457,7 +4456,7 @@ async function getActiveClanReinforcementAssignmentsForLaunch(transaction, uid =
     const token = getClanReinforcementAssignmentToken(recipientUid, targetKey);
     if (token) assignments.set(token, { token, recipientUid, targetKey });
   });
-  [...stationedSnap.docs, ...returningSnap.docs].forEach(doc => {
+  stationedSnap.docs.forEach(doc => {
     const contribution = doc.data() || {};
     const targetKey = safeString(contribution.targetKey, 220);
     const recipientUid = safeString(
@@ -8311,6 +8310,14 @@ async function beginReinforcementReturn({
       ownerUid,
       nowMs,
     });
+    releaseClanReinforcementAssignment(
+      transaction,
+      ownerUid,
+      contribution.reinforcementRecipientUid
+        || contribution.originalTargetOwnerUid
+        || contribution.targetOwnerUid,
+      contribution.targetKey
+    );
 
     let targetUpdate = null;
     if (targetSnap.exists && target) {

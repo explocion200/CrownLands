@@ -70,6 +70,16 @@ requires(
   /targetUpdate = contribution\.targetType === "camp"[\s\S]*?cityUpdates:\s*\[\{\s*id:\s*target\.id,\s*regionId:\s*contribution\.targetRegionId,\s*\.\.\.patch\s*\}\]/,
   "City reinforcement returns do not provide an immediate client-compatible garrison update."
 );
+requires(
+  server,
+  /function beginReinforcementReturn[\s\S]*?releaseOrdinaryCityReinforcementSlot\([\s\S]*?releaseClanReinforcementAssignment\([\s\S]*?status:\s*REINFORCEMENT_STATUS_RETURNING/,
+  "A stationed reinforcement does not release its city and sender slots when the return march departs."
+);
+assert.doesNotMatch(
+  server,
+  /getActiveClanReinforcementAssignmentsForLaunch[\s\S]*?contributionQuery\(REINFORCEMENT_STATUS_RETURNING\)/,
+  "Returning reinforcement marches still consume sender assignment capacity."
+);
 requires(server, /exports\.returnClanReinforcement\s*=\s*timedCallable/, "Return reinforcement callable is missing.");
 requires(
   server,
@@ -145,6 +155,11 @@ requires(
   client,
   /CLAN_REINFORCEMENT_PER_RECIPIENT_LIMIT\s*=\s*2[\s\S]*?getClanReinforcementBlockReason[\s\S]*?already have one active reinforcement[\s\S]*?active reinforcement assignments with this clanmate/,
   "The client does not explain the per-clanmate and one-per-holding reinforcement limits."
+);
+requires(
+  client,
+  /function getActiveClanReinforcementAssignments\(\)[\s\S]*?mission\.returning \|\| mission\.reinforcementReturn/,
+  "The client still counts a reinforcement after its return march leaves the allied holding."
 );
 requires(client, /assignments with \$\{escapeHtml\(reinforcementRecipientName\)\}[\s\S]*?reinforcement slots/, "The reinforcement slider does not show recipient and city usage.");
 requires(client, /renderHoldingReinforcementPanel[\s\S]*?Send Home[\s\S]*?Recall/, "Private Recall and Send Home controls are missing.");
