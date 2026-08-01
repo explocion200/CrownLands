@@ -13518,6 +13518,8 @@ function prepareOnlineArmyMission(mission) {
   mission.onlineId = mission.onlineId || createOnlineArmyId(mission.kind);
   mission.ownerKind = "player";
   mission.ownerUid = getCurrentOnlineUid();
+  mission.viewerAccess = "owner";
+  mission.troopVisibility = "exact";
   mission.ownerName = state.playerName;
   mission.ownerFlag = state.flag;
   mission.ownerKingPower = getKingPower();
@@ -13675,8 +13677,27 @@ function applyServerMovementToMission(mission, movement = null) {
   if (["attack", "transfer", "reinforce", "scout"].includes(movement.retargetedFromKind) || movement.retargetedFromKind === "rally_join") {
     mission.retargetedFromKind = movement.retargetedFromKind;
   }
-  mission.troops = Math.max(0, Math.floor(Number(movement.troops) || mission.troops || 0));
+  const movementTroops = Number(movement.troops);
+  const movementViewerAccess = ["owner", "target", "public"].includes(movement.viewerAccess)
+    ? movement.viewerAccess
+    : Number.isFinite(movementTroops) && movementTroops > 0 && isPersonalArmy(mission)
+      ? "owner"
+      : "";
+  const mayApplyTroopVisibility = getArmyViewerAccessPriority(movementViewerAccess)
+    >= getArmyViewerAccessPriority(mission.viewerAccess);
+  mission.troops = Math.max(0, Math.floor((Number.isFinite(movementTroops) && movementTroops > 0 ? movementTroops : mission.troops) || 0));
   mission.requestedTroops = Math.max(0, Math.floor(Number(movement.requestedTroops) || mission.requestedTroops || mission.troops || 0));
+  if (mayApplyTroopVisibility) {
+    mission.viewerAccess = movementViewerAccess || mission.viewerAccess || "public";
+    mission.troopVisibility = movementViewerAccess === "owner"
+      ? "exact"
+      : ["exact", "estimate", "hidden"].includes(movement.troopVisibility)
+        ? movement.troopVisibility
+        : mission.troopVisibility || "exact";
+    mission.troopEstimateMin = Math.max(0, Math.floor(Number(movement.troopEstimateMin) || 0));
+    mission.troopEstimateMax = Math.max(0, Math.floor(Number(movement.troopEstimateMax) || 0));
+    mission.troopEstimateLabel = String(movement.troopEstimateLabel || "");
+  }
   mission.total = Math.max(0.1, Number(movement.total) || mission.total || 0.1);
   if (arrivesAtMs > 0) {
     mission.remaining = Math.max(0, (arrivesAtMs - Date.now()) / 1000);
@@ -13899,7 +13920,6 @@ function normalizeOnlineArmyMovement(raw) {
     || Boolean(raw.rallyAttack);
   const exactEventTroops = raw.eventKind === CITADEL_ASSAULT_EVENT_KIND && raw.troopVisibility === "exact";
   const estimateForViewer = !exactEventTroops && isAttackMovement
-    && ownerUid !== getCurrentOnlineUid()
     && viewerAccess !== "owner";
   const hiddenForViewer = raw.troopVisibility === "hidden"
     && viewerAccess !== "owner";
@@ -13984,17 +14004,20 @@ function normalizeOnlineArmyMovement(raw) {
   };
 }
 
+function getArmyViewerAccessPriority(viewerAccess = "") {
+  return ({ public: 0, target: 1, owner: 2 })[viewerAccess] ?? 0;
+}
+
 function rebuildOnlineArmies() {
   const armiesById = new Map();
-  const accessPriority = { public: 0, target: 1, owner: 2 };
   Array.from(onlineArmiesByIsland.values())
     .flat()
     .forEach(army => {
       const key = String(army?.id || army?.onlineId || "");
       if (!key) return;
       const current = armiesById.get(key);
-      const currentPriority = accessPriority[current?.viewerAccess] ?? 0;
-      const nextPriority = accessPriority[army?.viewerAccess] ?? 0;
+      const currentPriority = getArmyViewerAccessPriority(current?.viewerAccess);
+      const nextPriority = getArmyViewerAccessPriority(army?.viewerAccess);
       if (!current || nextPriority > currentPriority) armiesById.set(key, army);
     });
   onlineArmies = [...armiesById.values()];
@@ -14313,6 +14336,11 @@ function createLocalAttackFromOnlineArmy(army, remaining = getOnlineArmyRemainin
     fromName: army.fromName || "",
     toName: army.toName || "",
     troops: army.troops,
+    viewerAccess: army.viewerAccess || "public",
+    troopVisibility: army.troopVisibility || "exact",
+    troopEstimateMin: Math.max(0, Math.floor(Number(army.troopEstimateMin) || 0)),
+    troopEstimateMax: Math.max(0, Math.floor(Number(army.troopEstimateMax) || 0)),
+    troopEstimateLabel: String(army.troopEstimateLabel || ""),
     total: army.total,
     remaining: clamp(remaining, 0, army.total),
     path: army.path,
@@ -22426,7 +22454,9 @@ function getArmyTroopDisplayText(attack) {
   if (isArmyTroopEstimate(attack)) {
     return normalizeArmyTroopEstimate(attack, attack.troops).label;
   }
-  return formatNumber(attack?.troops);
+  const troops = Number(attack?.troops);
+  if (Number.isFinite(troops) && troops > 0) return formatNumber(troops);
+  return isPersonalArmy(attack) ? "Syncing" : "";
 }
 
 function getArmyTokenId(attack) {
@@ -27650,9 +27680,12 @@ function renderOutgoingAttackCard(mission) {
   const isCampReturn = isTransfer && Boolean(mission.campReturn);
   const isReinforcement = isTransfer && Boolean(city && (isStronghold(city) || isRewardCampTarget(city)));
   const missionLabel = isReturning ? "Returning" : isScout ? "Scout" : isRallyJoin ? "Rally Assembly" : isCampReturn ? "Camp Recall" : isReinforcement ? "Reinforce" : isTransfer ? "Transfer" : "Attack";
+  const troopDisplay = getArmyTroopDisplayText(mission);
   const forceDetails = isScout
     ? `1 scout from ${escapeHtml(sourceName)}`
-    : `${formatNumber(mission.troops)} troops from ${escapeHtml(sourceName)}`;
+    : troopDisplay
+      ? `${escapeHtml(troopDisplay)}${troopDisplay === "Syncing" ? " troop count" : " troops"} from ${escapeHtml(sourceName)}`
+      : `Troop count syncing from ${escapeHtml(sourceName)}`;
   const targetDetails = isReturning
     ? `Recalled before reaching ${escapeHtml(originalTargetName)}`
     : isCampReturn

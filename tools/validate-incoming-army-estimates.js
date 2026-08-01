@@ -153,6 +153,32 @@ assert.equal(clientSandbox.canViewArmyTroopAmount({
 }), false, "A public hidden projection must not render a fake zero before the private owner view arrives.");
 
 assert.match(
+  clientSource,
+  /const estimateForViewer = !exactEventTroops && isAttackMovement\s*&& viewerAccess !== "owner";/,
+  "A sanitized public copy of the current player's attack must remain estimated until the private owner copy arrives."
+);
+assert.match(
+  clientSource,
+  /function createLocalAttackFromOnlineArmy[\s\S]*?viewerAccess:\s*army\.viewerAccess[\s\S]*?troopVisibility:\s*army\.troopVisibility[\s\S]*?troopEstimateLabel:/,
+  "Adopted attacks must preserve troop visibility and estimate metadata."
+);
+assert.match(
+  clientSource,
+  /function applyServerMovementToMission[\s\S]*?getArmyViewerAccessPriority\(movementViewerAccess\)[\s\S]*?>= getArmyViewerAccessPriority\(mission\.viewerAccess\)/,
+  "Public army snapshots can overwrite a private owner troop view."
+);
+assert.match(
+  clientSource,
+  /function getArmyTroopDisplayText[\s\S]*?Number\.isFinite\(troops\) && troops > 0[\s\S]*?isPersonalArmy\(attack\) \? "Syncing" : ""/,
+  "Unknown personal army troop counts must not format as zero."
+);
+assert.match(
+  clientSource,
+  /function renderOutgoingAttackCard[\s\S]*?getArmyTroopDisplayText\(mission\)[\s\S]*?Troop count syncing/,
+  "Outgoing attack cards must not display a fake zero while the owner snapshot is syncing."
+);
+
+assert.match(
   firebaseClientSource,
   /collection\(client\.db, "players", uid, "incomingArmies"\)/,
   "Defenders must subscribe to their private incoming-army projections."
