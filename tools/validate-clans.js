@@ -145,7 +145,7 @@ requires(client, /function renderProfileClanAffiliation[\s\S]*?renderClanShield/
 requires(client, /clanSearchResults\.map\(clan =>[\s\S]*?renderClanShield\(clan\.shield \|\| clan\.banner/, "Clan discovery results do not show each clan's public shield.");
 requires(server, /exports\.getCombatPlayerIdentity[\s\S]*?clanPublicSnapshot\(profileClanId,\s*clanData\)[\s\S]*?clanShield:\s*clan\?\.shield[\s\S]*?\bclan,/, "Public player identities do not include the shield from the player's canonical clan.");
 requires(client, /function normalizePublicPlayerProfile[\s\S]*?const clan = raw\.clan[\s\S]*?clanShield:\s*clan\?\.shield[\s\S]*?function renderPublicPlayerProfile[\s\S]*?renderClanShield\(clan\.shield \|\| clan\.banner \|\| profile\.clanShield/, "Public player profiles do not display the shield returned for that player's clan.");
-requires(client, /clanSearchResults\.map\(clan =>[\s\S]*?class="clan-name-link"[\s\S]*?data-public-clan-id="\$\{escapeHtml\(clan\.id\)\}"/, "Clan names in discovery do not open their public clan profile.");
+requires(client, /clanSearchResults\.map\(clan =>[\s\S]*?renderClanIdentityLink\(\{\s*clanId:\s*clan\.id,\s*clanName:\s*clan\.name,\s*clanTag:\s*clan\.tag/, "Clan names in discovery do not open their public clan profile.");
 requires(client, /function showPublicClanDetails[\s\S]*?Promise\.all\(\[api\.loadClan\(id\), api\.loadClanMembers\(id\)\]\)[\s\S]*?class="public-clan-roster"[\s\S]*?renderPlayerNameLink[\s\S]*?member\.kingPower/, "Public clan profiles do not list clickable member names with King Power.");
 requires(client, /btn\.classList\.add\("clan-ally"\)/, "Allied cities do not receive their map class.");
 requires(client, /You cannot scout or attack a clan ally/, "Clan-friendly action explanation is missing.");

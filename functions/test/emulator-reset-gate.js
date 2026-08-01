@@ -1886,6 +1886,22 @@ async function main() {
   const retargetedAttackReport = (retargetedResolution.reports || [])
     .find(report => report.type === "attack" && report.outcome === "victory");
   assert(
+    retargetedAttackReport?.opponentUid === users[1].uid,
+    "The authoritative attacker report did not preserve the defender UID for public-profile navigation."
+  );
+  const [persistedAttackerReport, persistedDefenderReport] = await Promise.all([
+    db.doc(`players/${attacker.uid}/serverReports/${reinforcementArmyId}_attack_${attacker.uid}`).get(),
+    db.doc(`players/${users[1].uid}/serverReports/${reinforcementArmyId}_defense_${users[1].uid}`).get(),
+  ]);
+  assert(
+    persistedAttackerReport.data()?.opponentUid === users[1].uid,
+    "The persisted attacker report lost the defender UID."
+  );
+  assert(
+    persistedDefenderReport.data()?.opponentUid === attacker.uid,
+    "The persisted defender report lost the attacker UID."
+  );
+  assert(
     retargetedAttackReport?.attackProtection?.mode === "raid"
       && retargetedAttackReport.attackProtection.captureAllowed === false,
     `The converted reinforcement gate did not exercise recalculated protected-raid rules: ${
