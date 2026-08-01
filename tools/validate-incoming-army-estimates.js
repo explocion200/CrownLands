@@ -35,13 +35,22 @@ vm.createContext(serverSandbox);
 vm.runInContext(readFunction(serverSource, "formatTroopEstimateBound"), serverSandbox);
 vm.runInContext(readFunction(serverSource, "getIncomingTroopEstimate"), serverSandbox);
 vm.runInContext(readFunction(serverSource, "isEstimatedAttackMovement"), serverSandbox);
-serverSandbox.ARMY_TROOP_VISIBILITY_VERSION = 1;
+vm.runInContext(readFunction(serverSource, "isPrivateTransferMovement"), serverSandbox);
+serverSandbox.ARMY_TROOP_VISIBILITY_VERSION = 2;
 vm.runInContext(readFunction(serverSource, "createArmyPublicProjection"), serverSandbox);
 
-const clientSandbox = {};
+const clientSandbox = {
+  currentUid: "viewer-1",
+  getCurrentOnlineUid() {
+    return this.currentUid;
+  },
+};
 vm.createContext(clientSandbox);
 vm.runInContext(readFunction(clientSource, "formatTroopEstimateBound"), clientSandbox);
 vm.runInContext(readFunction(clientSource, "getIncomingTroopEstimate"), clientSandbox);
+vm.runInContext(readFunction(clientSource, "isPersonalArmy"), clientSandbox);
+vm.runInContext(readFunction(clientSource, "isPrivateTransferMovement"), clientSandbox);
+vm.runInContext(readFunction(clientSource, "canViewArmyTroopAmount"), clientSandbox);
 
 const boundaryCases = [
   [1, "1\u201310"],
@@ -110,8 +119,37 @@ const transferProjection = serverSandbox.createArmyPublicProjection({
   kind: "transfer",
   troops: 250,
 });
-assert.equal(transferProjection.troopVisibility, "exact");
-assert.equal(transferProjection.troops, 250, "Non-hostile movements preserve their existing exact troop behavior.");
+assert.equal(transferProjection.troopVisibility, "hidden");
+assert.equal(transferProjection.troops, DELETE_FIELD, "Public owned-city transfers must delete the exact troop count.");
+assert.equal(transferProjection.requestedTroops, DELETE_FIELD, "Public owned-city transfers must delete the requested troop count.");
+
+const reinforcementProjection = serverSandbox.createArmyPublicProjection({
+  id: "army-3",
+  kind: "reinforce",
+  troops: 400,
+});
+assert.equal(reinforcementProjection.troopVisibility, "exact");
+assert.equal(reinforcementProjection.troops, 400, "Clan reinforcements preserve their existing exact troop behavior.");
+
+assert.equal(clientSandbox.canViewArmyTroopAmount({
+  kind: "transfer",
+  owner: "enemy",
+  ownerUid: "viewer-2",
+  troops: 250,
+}), false, "Another player must not see a transfer count even from a legacy exact projection.");
+assert.equal(clientSandbox.canViewArmyTroopAmount({
+  kind: "transfer",
+  owner: "player",
+  ownerUid: "viewer-1",
+  troops: 250,
+}), true, "The transfer owner must still see their own troop count.");
+assert.equal(clientSandbox.canViewArmyTroopAmount({
+  kind: "transfer",
+  owner: "player",
+  ownerUid: "viewer-1",
+  troopVisibility: "hidden",
+  troops: null,
+}), false, "A public hidden projection must not render a fake zero before the private owner view arrives.");
 
 assert.match(
   firebaseClientSource,
@@ -132,6 +170,11 @@ assert.match(
   clientSource,
   /function updateArmyTokenElement\([\s\S]*?getArmyTroopDisplayText\(attack\)/,
   "Map tokens must share the estimate display helper."
+);
+assert.match(
+  clientSource,
+  /else if \(countElement\.textContent\) \{\s*countElement\.textContent = "";/,
+  "Hidden transfer tokens must clear any previously rendered troop count from the DOM."
 );
 assert.match(
   rulesSource,
@@ -159,4 +202,4 @@ assert.match(
   "Active armies must be backfilled into sanitized public and private projections."
 );
 
-console.log("Validated secure incoming-army troop estimates and all 1-2-5 boundaries.");
+console.log("Validated private transfer counts, secure incoming-army estimates, and all 1-2-5 boundaries.");
