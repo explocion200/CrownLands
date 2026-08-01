@@ -1220,9 +1220,11 @@ input {
 .paths .army-route-ribbon.player-route { fill: rgba(45, 151, 255, .9); }
 .paths .army-route-ribbon.enemy-route { fill: rgba(239, 62, 57, .88); }
 .paths .army-route-ribbon.clan-support-route { fill: rgba(43, 139, 70, .9); }
+.paths .army-route-ribbon.clan-hostile-route { fill: rgba(239, 62, 57, .88); }
 .paths .army-route-flow.player-route { stroke: rgba(125, 207, 255, .98); }
 .paths .army-route-flow.enemy-route { stroke: rgba(255, 139, 126, .98); }
 .paths .army-route-flow.clan-support-route { stroke: rgba(143, 226, 165, .98); }
+.paths .army-route-flow.clan-hostile-route { stroke: rgba(143, 226, 165, .98); }
 .paths .army-route-flow.scout-route { stroke-dasharray: 8 15; }
 @keyframes dash { to { stroke-dashoffset: -12; } }
 .harvest-layer,

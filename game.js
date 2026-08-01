@@ -20636,10 +20636,28 @@ function isCurrentClanmateArmy(mission) {
   return String(identity?.clanId || "") === currentClanId;
 }
 
+function isHostileClanMarch(mission) {
+  if (!mission) return false;
+  const isSafeReturn = Boolean(
+    mission.returning
+    || mission.reinforcementReturn
+    || mission.campReturn
+    || mission.campRecall
+    || mission.relinquishTransfer
+    || mission.rallyReturn
+    || ["returning", "recalling"].includes(mission.status)
+  );
+  if (isSafeReturn) return false;
+  return mission.kind === "attack"
+    || mission.kind === "scout"
+    || mission.launchKind === "scout"
+    || Boolean(mission.rallyAttack);
+}
+
 function getArmyRouteRelationshipClass(mission) {
   if (isPersonalArmy(mission)) return "player-route";
   if (!isCurrentClanmateArmy(mission)) return "enemy-route";
-  return "clan-support-route";
+  return isHostileClanMarch(mission) ? "clan-hostile-route" : "clan-support-route";
 }
 
 function getMissionPointAtProgress(mission, progress) {
