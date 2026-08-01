@@ -19510,7 +19510,7 @@ function renderProfileScreen() {
   if (profileGoldProductionStat) {
     renderProfileProductionStat(
       profileGoldProductionStat,
-      summary.untimedGoldProductionPerHour,
+      summary.baseGoldProductionPerHour,
       summary.goldProductionPerHour,
       "/h"
     );
@@ -19518,7 +19518,7 @@ function renderProfileScreen() {
   if (profileTroopProductionStat) {
     renderProfileProductionStat(
       profileTroopProductionStat,
-      summary.untimedTroopProductionPerHour,
+      summary.baseTroopProductionPerHour,
       summary.troopProductionPerHour,
       "/h"
     );
@@ -27741,18 +27741,18 @@ function formatBaseAndBonusStat(baseValue, totalValue, suffix = "") {
   return `${formatNumber(base)}${suffix} (+${formatNumber(bonus)}${suffix})`;
 }
 
-function renderProfileProductionStat(element, normalValue, totalValue, suffix = "") {
+function renderProfileProductionStat(element, baseValue, totalValue, suffix = "") {
   if (!element) return;
-  const normal = Math.max(0, Math.floor(Number(normalValue) || 0));
-  const total = Math.max(normal, Math.floor(Number(totalValue) || 0));
-  const bonus = Math.max(0, total - normal);
-  const normalText = document.createElement("span");
+  const base = Math.max(0, Math.floor(Number(baseValue) || 0));
+  const total = Math.max(base, Math.floor(Number(totalValue) || 0));
+  const bonus = Math.max(0, total - base);
+  const totalText = document.createElement("span");
   const bonusText = document.createElement("span");
-  normalText.className = "profile-production-normal";
-  normalText.textContent = `${formatNumber(normal)}${suffix}`;
+  totalText.className = "profile-production-total";
+  totalText.textContent = `${formatNumber(total)}${suffix}`;
   bonusText.className = "profile-production-bonus";
   bonusText.textContent = `(+${formatNumber(bonus)}${suffix})`;
-  element.replaceChildren(normalText, bonusText);
+  element.replaceChildren(totalText, bonusText);
 }
 
 function getCityStatBonusSources(stats = {}, statType = "") {

@@ -8300,12 +8300,12 @@ button.daily-reward-card.available:disabled {
   flex-wrap: wrap;
   gap: .28em;
 }
-.kingdom-stat .profile-production-normal,
+.kingdom-stat .profile-production-total,
 .kingdom-stat .profile-production-bonus {
   font-size: inherit;
   font-weight: inherit;
 }
-.kingdom-stat .profile-production-normal { color: inherit; }
+.kingdom-stat .profile-production-total { color: inherit; }
 .kingdom-stat .profile-production-bonus {
   color: var(--ui-gold-bright);
 }
