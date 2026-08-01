@@ -27,7 +27,7 @@ Landscape / horizontal medieval island-conquest game inspired by the core loop o
 - The skill tree includes Swordmastery, Stoneworks, Tax Stewardship, Royal Granaries, Guild Charters, March Orders, and Field Medics.
 - Field Medics returns a percentage of battle losses to the main city.
 - Failed player attacks and lost defenses still award one-third of the matching victory XP.
-- The Citadel Legion selects up to 20 random regular non-main cities in the Crown Citadel region at 03:45 and 14:45 UTC, then attacks each with 100,000 NPC troops at 04:00 and 15:00 UTC. Peace Shields do not block the event. Held defenses preserve city level and award no XP; failed defenses remove five levels, with Level 5-or-lower cities returning to neutral at Level 1 with 10 troops.
+- The Citadel Legion selects up to 20 random regular non-main cities in the Crown Citadel region at 9:45 AM and 6:15 PM Eastern Time, then attacks each with 100,000 NPC troops at 10:00 AM and 6:30 PM Eastern. The `America/New_York` schedule follows daylight-saving changes. Peace Shields do not block the event. Held defenses preserve city level and award no XP; failed defenses remove five levels, with Level 5-or-lower cities returning to neutral at Level 1 with 10 troops.
 - Captured cities lose 1 level on takeover, but never drop below Level 1.
 - Combat preview shows attack power, defense power, estimated losses/survivors, capture or defeat XP, and XP efficiency.
 - The bottom `Reports` button opens battle reports filtered by attack, defense, and scout results.

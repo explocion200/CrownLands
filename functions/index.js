@@ -508,6 +508,7 @@ const CITADEL_ASSAULT_NPC_NAME = "Citadel Legion";
 const CITADEL_ASSAULT_TROOPS = 100_000;
 const CITADEL_ASSAULT_TARGET_LIMIT = 20;
 const CITADEL_ASSAULT_WARNING_MINUTES = 15;
+const CITADEL_ASSAULT_TIME_ZONE = "America/New_York";
 const CITADEL_ASSAULT_NEUTRAL_TROOPS = 10;
 const CITADEL_ASSAULT_LEVEL_LOSS = 5;
 const GOLD_STRONGHOLD_BONUS_PERCENT = 8;
@@ -19547,16 +19548,18 @@ async function processWithConcurrency(items = [], concurrency = 1, worker) {
 function getCitadelAssaultWaveAtMs(value = Date.now(), selectionPhase = false) {
   const baseMs = Math.max(0, timestampToMs(value) || safeNumber(value, Date.now()));
   const waveMs = baseMs + (selectionPhase ? CITADEL_ASSAULT_WARNING_MINUTES * 60 * 1000 : 0);
-  const date = new Date(waveMs);
+  const scheduledAtMs = Math.floor(waveMs / 60_000) * 60_000;
+  const date = new Date(scheduledAtMs);
   const hour = date.getUTCHours();
-  if (![4, 15].includes(hour)) throw new Error(`Invalid Citadel assault wave hour: ${hour}`);
+  const minute = date.getUTCMinutes();
   const year = date.getUTCFullYear();
   const month = String(date.getUTCMonth() + 1).padStart(2, "0");
   const day = String(date.getUTCDate()).padStart(2, "0");
   const hourLabel = String(hour).padStart(2, "0");
+  const minuteLabel = String(minute).padStart(2, "0");
   return {
-    id: `${year}${month}${day}-${hourLabel}00`,
-    scheduledAtMs: Date.UTC(year, date.getUTCMonth(), date.getUTCDate(), hour, 0, 0, 0),
+    id: `${year}${month}${day}-${hourLabel}${minuteLabel}`,
+    scheduledAtMs,
   };
 }
 
@@ -20108,34 +20111,56 @@ exports.resolveDueArmyOrders = onSchedule({
   });
 });
 
-exports.selectCitadelAssaultTargets = onSchedule({
-  region: "us-central1",
-  schedule: "45 3,14 * * *",
-  timeZone: "Etc/UTC",
-  maxInstances: 1,
-  timeoutSeconds: 120,
-  memory: "256MiB",
-}, async event => {
+async function handleCitadelAssaultSelection(event) {
   const scheduledMs = Date.parse(event.scheduleTime || "") || Date.now();
   const wave = getCitadelAssaultWaveAtMs(scheduledMs, true);
   const result = await selectCitadelAssaultTargets(wave, Date.now());
   console.log("Citadel assault targets selected", result);
-});
+}
 
-exports.resolveCitadelAssaultWave = onSchedule({
-  region: "us-central1",
-  schedule: "0 4,15 * * *",
-  timeZone: "Etc/UTC",
-  maxInstances: 1,
-  timeoutSeconds: 300,
-  memory: "512MiB",
-}, async event => {
+async function handleCitadelAssaultResolution(event) {
   const scheduledMs = Date.parse(event.scheduleTime || "") || Date.now();
   const wave = getCitadelAssaultWaveAtMs(scheduledMs, false);
   const result = await resolveCitadelAssaultWave(wave, Date.now());
   console.log("Citadel assault wave resolved", result);
   if (result.status === "partial") throw new Error(`Citadel assault wave ${wave.id} has ${result.failed} unresolved targets.`);
-});
+}
+
+exports.selectCitadelAssaultTargets = onSchedule({
+  region: "us-central1",
+  schedule: "45 9 * * *",
+  timeZone: CITADEL_ASSAULT_TIME_ZONE,
+  maxInstances: 1,
+  timeoutSeconds: 120,
+  memory: "256MiB",
+}, handleCitadelAssaultSelection);
+
+exports.selectCitadelAssaultTargetsEvening = onSchedule({
+  region: "us-central1",
+  schedule: "15 18 * * *",
+  timeZone: CITADEL_ASSAULT_TIME_ZONE,
+  maxInstances: 1,
+  timeoutSeconds: 120,
+  memory: "256MiB",
+}, handleCitadelAssaultSelection);
+
+exports.resolveCitadelAssaultWave = onSchedule({
+  region: "us-central1",
+  schedule: "0 10 * * *",
+  timeZone: CITADEL_ASSAULT_TIME_ZONE,
+  maxInstances: 1,
+  timeoutSeconds: 300,
+  memory: "512MiB",
+}, handleCitadelAssaultResolution);
+
+exports.resolveCitadelAssaultWaveEvening = onSchedule({
+  region: "us-central1",
+  schedule: "30 18 * * *",
+  timeZone: CITADEL_ASSAULT_TIME_ZONE,
+  maxInstances: 1,
+  timeoutSeconds: 300,
+  memory: "512MiB",
+}, handleCitadelAssaultResolution);
 
 exports.resolveDueRewardCampPayouts = onSchedule({
   region: "us-central1",
