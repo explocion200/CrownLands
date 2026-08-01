@@ -113,10 +113,11 @@ requires(client, /function isClanAllyCity[\s\S]*?function getClanFriendlyBlockRe
 requires(client, /clanRosterReady[\s\S]*?clanMemberUidSet\.has/, "Allied-city rendering does not use the event-maintained clan member UID set.");
 requires(client, /function applyClanMembersSnapshot[\s\S]*?\["added", "removed"\][\s\S]*?refreshClanRelationshipPresentation/, "Roster events do not refresh allied cities only when membership changes.");
 requires(client, /function isCurrentClanmateArmy[\s\S]*?clanMemberUidSet\.has\(ownerUid\)[\s\S]*?identity\?\.clanId/, "Allied march paths do not use current event-driven clan membership with an identity fallback.");
-requires(client, /function getArmyRouteRelationshipClass[\s\S]*?player-route[\s\S]*?enemy-route[\s\S]*?mission\?\.returning[\s\S]*?mission\?\.reinforcementReturn[\s\S]*?mission\?\.campReturn[\s\S]*?mission\?\.kind === "transfer"[\s\S]*?mission\?\.kind === "reinforce"[\s\S]*?clan-support-route[\s\S]*?clan-hostile-route/, "March relationship classification does not distinguish personal, enemy, allied support/returns, and allied hostile routes.");
+requires(client, /function getArmyRouteRelationshipClass[\s\S]*?player-route[\s\S]*?enemy-route[\s\S]*?clan-support-route/, "March relationship classification does not distinguish personal, enemy, and current clanmate routes.");
+assert.doesNotMatch(client, /clan-hostile-route/, "Clanmate attacks or scouts can still fall back to hostile route styling.");
 requires(client, /function renderPaths[\s\S]*?getArmyRouteRelationshipClass\(attack\)[\s\S]*?classList\.add\("army-route-ribbon", ownerClass, kindClass\)[\s\S]*?classList\.add\("army-route-flow", ownerClass, kindClass\)/, "Rendered route ribbons and flows do not use the current clan relationship class.");
 requires(client, /function refreshClanRelationshipPresentation[\s\S]*?pathRenderSignature\s*=\s*""[\s\S]*?renderPaths\(\)/, "Clan membership events do not immediately invalidate and redraw march paths.");
-assert.doesNotMatch(updateArmyTokenElementSource, /clan-support-route|clan-hostile-route|isCurrentClanmateArmy/, "Clan path colors must not recolor moving army markers.");
+assert.doesNotMatch(updateArmyTokenElementSource, /clan-support-route|isCurrentClanmateArmy/, "Clan path colors must not recolor moving army markers.");
 requires(client, /function showClanHub[\s\S]*?showProfileClan\(\)/, "The Clan HUD button does not open the Clan area directly.");
 requires(client, /CLAN_MOBILE_SECTIONS\s*=\s*Object\.freeze\(\["overview",\s*"warroom",\s*"rewards",\s*"members"\]\)[\s\S]*?activeClanMobileSection\s*=\s*"overview"/, "The mobile clan hub is missing its four-section state.");
 requires(client, /function showProfileClan\(\)[\s\S]*?enteringClan[\s\S]*?activeClanMobileSection\s*=\s*"overview"/, "Opening the Clan area does not reset mobile navigation to Overview.");
@@ -168,8 +169,7 @@ assert.doesNotMatch(styles, /\.city-node\.clan-ally \.foreign-city-shield\s*\{[^
 assert.doesNotMatch(styles, /\.city-node\.clan-ally \.foreign-selected-banner\s*\{[^}]*\boutline(?:-offset)?\s*:/, "Selected clan-allied city information must not draw an extra outline box.");
 requires(styles, /\.army-route-ribbon\.clan-support-route\s*\{\s*fill:\s*rgba\(43,\s*139,\s*70,/, "Allied support route ribbons do not use the city UI's dark green.");
 requires(styles, /\.army-route-flow\.clan-support-route\s*\{\s*stroke:\s*rgba\(143,\s*226,\s*165,/, "Allied support route flows do not use the city UI's light green.");
-requires(styles, /\.army-route-ribbon\.clan-hostile-route\s*\{\s*fill:\s*rgba\(239,\s*62,\s*57,/, "Allied hostile route ribbons do not retain the hostile red.");
-requires(styles, /\.army-route-flow\.clan-hostile-route\s*\{\s*stroke:\s*rgba\(121,\s*216,\s*149,/, "Allied hostile route flows do not identify the clanmate in green.");
+assert.doesNotMatch(styles, /\.clan-hostile-route/, "Legacy red-and-green clan attack path styling remains in CSS.");
 requires(styles, /\.army-route-flow\.scout-route\s*\{\s*stroke-dasharray:\s*8\s+15/, "Allied scouts cannot retain the scout dash pattern.");
 requires(
   styles,
