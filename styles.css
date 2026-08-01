@@ -828,49 +828,63 @@ input {
 .map-frame.dragging { cursor: grabbing; }
 .citadel-assault-countdown {
   position: absolute;
-  top: max(12px, env(safe-area-inset-top));
+  top: calc(max(.65rem, env(safe-area-inset-top)) + 120px);
   left: 50%;
   z-index: 70;
-  display: grid;
-  grid-template-columns: auto auto;
+  display: flex;
   align-items: center;
-  gap: 1px 10px;
-  min-width: min(390px, calc(100% - 190px));
-  padding: 8px 14px;
+  gap: 6px;
+  width: max-content;
+  max-width: calc(100% - 1rem);
+  min-height: 30px;
+  padding: 4px 9px 4px 7px;
   border: 1px solid rgba(255, 213, 111, .72);
-  border-radius: 12px;
+  border-radius: 999px;
   color: #fff3ca;
   background: linear-gradient(180deg, rgba(55, 34, 14, .96), rgba(25, 15, 8, .94));
-  box-shadow: 0 8px 24px rgba(0,0,0,.42), inset 0 0 18px rgba(255, 194, 72, .08);
+  box-shadow: 0 5px 14px rgba(0,0,0,.4), inset 0 0 12px rgba(255, 194, 72, .08);
   transform: translateX(-50%);
   pointer-events: none;
-  text-align: left;
+  white-space: nowrap;
 }
 .citadel-assault-countdown[hidden] { display: none; }
 .citadel-assault-countdown span {
+  display: inline-flex;
+  align-items: center;
   color: #ffd66e;
-  font-size: .72rem;
+  font-size: .58rem;
   font-weight: 950;
-  letter-spacing: .06em;
+  letter-spacing: .05em;
+  line-height: 1;
   text-transform: uppercase;
 }
+.citadel-assault-countdown span::before {
+  content: "\2694";
+  margin-right: 4px;
+  color: #fff0b0;
+  font-size: .7rem;
+}
 .citadel-assault-countdown strong {
-  grid-row: 1 / span 2;
-  grid-column: 2;
   color: #fff;
-  font-size: 1.16rem;
+  font-size: .82rem;
+  line-height: 1;
   font-variant-numeric: tabular-nums;
-  text-align: right;
 }
 .citadel-assault-countdown small {
+  max-width: 104px;
+  overflow: hidden;
+  padding-left: 6px;
+  border-left: 1px solid rgba(255, 213, 111, .28);
   color: #d8c69d;
-  font-size: .68rem;
+  font-size: .56rem;
   font-weight: 800;
+  line-height: 1;
+  text-overflow: ellipsis;
 }
 .citadel-assault-countdown.imminent {
   border-color: rgba(255, 91, 75, .92);
   background: linear-gradient(180deg, rgba(105, 25, 20, .97), rgba(43, 11, 9, .96));
-  box-shadow: 0 8px 28px rgba(0,0,0,.46), 0 0 20px rgba(255, 69, 53, .32);
+  box-shadow: 0 5px 16px rgba(0,0,0,.44), 0 0 14px rgba(255, 69, 53, .3);
   animation: citadelAssaultWarningPulse 1.2s ease-in-out infinite alternate;
 }
 .citadel-assault-countdown.imminent span,
@@ -883,16 +897,18 @@ input {
   cursor: wait;
 }
 
-@media (max-width: 620px), (max-height: 430px) {
+@media (max-width: 360px) {
   .citadel-assault-countdown {
-    top: 6px;
-    min-width: min(320px, calc(100% - 126px));
-    padding: 6px 9px;
-    gap: 0 7px;
+    gap: 5px;
+    padding-inline: 6px 8px;
   }
-  .citadel-assault-countdown span { font-size: .62rem; }
-  .citadel-assault-countdown strong { font-size: .94rem; }
-  .citadel-assault-countdown small { font-size: .58rem; }
+  .citadel-assault-countdown small { max-width: 82px; }
+}
+@media (max-height: 430px) and (orientation: landscape) {
+  .citadel-assault-countdown {
+    min-height: 27px;
+    padding-block: 3px;
+  }
 }
 .map-loading-overlay {
   position: absolute;

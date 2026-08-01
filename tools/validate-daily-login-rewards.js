@@ -204,8 +204,8 @@ requireMatch(game, /function synchronizeForegroundGame[\s\S]*refreshDailyLoginRe
 requireMatch(styles, /\.daily-login-reward-btn[\s\S]*dailyRewardHudGlow/, "Daily reward HUD styles are incomplete.");
 requireMatch(styles, /\.daily-reward-grid[\s\S]*repeat\(6,[\s\S]*@media \(max-width: 700px\)[\s\S]*repeat\(5,[\s\S]*@media \(max-width: 520px\)[\s\S]*repeat\(3,/, "Daily reward grid must use 6, 5, and 3 responsive columns.");
 requireMatch(styles, /\.daily-reward-card\.queued[\s\S]*\.daily-reward-check/, "Queued and claimed reward visuals are missing.");
-requireMatch(html, /name="crownlands-build"\s+content="20260729-starter-sound-pack-v1"/, "The frontend build marker no longer includes the attendance reward release.");
-requireMatch(serviceWorker, /CACHE_VERSION = "20260729-starter-sound-pack-v1"/, "The PWA cache no longer includes the attendance reward release.");
+requireMatch(html, /economy-config\.js\?v=20260728-daily-attendance-v2/, "The frontend no longer loads the attendance reward economy release.");
+requireMatch(serviceWorker, /economy-config\.js\?v=20260728-daily-attendance-v2[\s\S]*daily-reward-icon-cutout\.webp\?v=20260728-daily-reward-cutout/, "The PWA cache no longer includes the attendance reward release assets.");
 requireMatch(rules, /'dailyLoginReward'/, "Firestore rules do not protect daily reward state.");
 requireMatch(
   read("tools/validate-clan-callable-access.js"),

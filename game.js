@@ -17883,8 +17883,8 @@ function updateCitadelAssaultCountdown() {
   if (citadelAssaultCountdownTime) citadelAssaultCountdownTime.textContent = formatCitadelAssaultCountdown(remainingMs);
   if (citadelAssaultCountdownDetail) {
     citadelAssaultCountdownDetail.textContent = imminent
-      ? "Targets selected — reinforce your cities"
-      : `Next wave at ${CITADEL_ASSAULT_EASTERN_TIME_FORMATTER.format(new Date(nextAtMs))}`;
+      ? "Reinforce now"
+      : CITADEL_ASSAULT_EASTERN_TIME_FORMATTER.format(new Date(nextAtMs));
   }
   citadelAssaultCountdown.setAttribute(
     "aria-label",

@@ -51,6 +51,14 @@ requireMatch(client, /eventKind !== CITADEL_ASSAULT_EVENT_KIND[\s\S]*?troopVisib
 requireMatch(client, /getActiveMapRegionId\(\) === CITADEL_ASSAULT_REGION_ID/, "Countdown must only appear on the Citadel map.");
 requireMatch(html, /id="citadelAssaultCountdown"[\s\S]*?role="timer"/, "Citadel assault countdown markup is missing.");
 requireMatch(styles, /\.citadel-assault-countdown\.imminent/, "Imminent countdown styling is missing.");
+const countdownStyles = sourceBetween(
+  styles,
+  ".citadel-assault-countdown {",
+  ".citadel-assault-countdown[hidden]"
+);
+requireMatch(countdownStyles, /top:\s*calc\(max\(\.65rem, env\(safe-area-inset-top\)\) \+ 120px\)/, "Countdown must remain below the top HUD.");
+requireMatch(countdownStyles, /width:\s*max-content[\s\S]*?max-width:\s*calc\(100% - 1rem\)[\s\S]*?min-height:\s*30px/, "Countdown must remain a compact, viewport-bounded badge.");
+assert.doesNotMatch(countdownStyles, /min-width:/, "Countdown must not reserve a wide HUD-obscuring footprint.");
 requireMatch(rules, /10:00 AM and 6:30 PM Eastern Time[\s\S]*?9:45 AM and 6:15 PM Eastern[\s\S]*?no defense experience is awarded/i, "Public Citadel assault rules are incomplete.");
 
 const clientScheduleSource = sourceBetween(
