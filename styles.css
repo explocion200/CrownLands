@@ -3295,13 +3295,16 @@ input {
 .public-profile-strongholds > div {
   display: flex;
   align-items: baseline;
+  flex-wrap: wrap;
   gap: .4rem;
 }
 .public-profile-stat strong,
 .public-profile-strongholds > div strong {
   color: #f1d47d;
   font-size: 1.45rem;
+  overflow-wrap: anywhere;
 }
+.public-profile-troop-estimate { margin-top: .65rem; }
 .public-profile-strongholds { margin-top: .8rem; }
 .public-profile-strongholds ul { margin-top: .45rem; }
 .public-profile-strongholds p,

@@ -9980,6 +9980,19 @@ function normalizePublicPlayerProfile(raw = {}, uid = "") {
   const identity = normalizePlayerIdentity(raw, uid);
   if (!identity) return null;
   const clan = raw.clan && typeof raw.clan === "object" ? raw.clan : null;
+  const rawTroopEstimate = raw.troopEstimate && typeof raw.troopEstimate === "object"
+    ? raw.troopEstimate
+    : null;
+  const troopEstimateMin = Math.max(0, Math.floor(Number(rawTroopEstimate?.min) || 0));
+  const troopEstimateMax = Math.max(0, Math.floor(Number(rawTroopEstimate?.max) || 0));
+  const troopEstimate = troopEstimateMin > 0 && troopEstimateMax >= troopEstimateMin
+    ? {
+        min: troopEstimateMin,
+        max: troopEstimateMax,
+        label: `${formatTroopEstimateBound(troopEstimateMin)}\u2013${formatTroopEstimateBound(troopEstimateMax)}`,
+        updatedAtMs: normalizeTimestampMs(rawTroopEstimate.updatedAtMs),
+      }
+    : null;
   return {
     ...identity,
     displayName: identity.displayName || "Ruler",
@@ -9988,6 +10001,7 @@ function normalizePublicPlayerProfile(raw = {}, uid = "") {
     strongholdCount: identity.strongholds.length || identity.strongholdCount,
     clan,
     clanShield: clan?.shield || clan?.banner || raw.clanShield || null,
+    troopEstimate,
   };
 }
 
@@ -10014,6 +10028,7 @@ function renderPublicPlayerProfile(profile) {
       <section class="public-profile-section">
         <div class="public-profile-heading"><span>Kingdom</span></div>
         <div class="public-profile-stat"><strong>${formatNumber(profile.cityCount)}</strong><span>${profile.cityCount === 1 ? "City" : "Cities"} owned</span></div>
+        <div class="public-profile-stat public-profile-troop-estimate"><strong>${profile.troopEstimate ? escapeHtml(profile.troopEstimate.label) : "Unavailable"}</strong><span>Estimated troops</span></div>
         <div class="public-profile-strongholds">
           <div><strong>${formatNumber(profile.strongholdCount)}</strong><span>${profile.strongholdCount === 1 ? "Stronghold" : "Strongholds"} held</span></div>
           ${strongholds.length ? `<ul>${strongholds.map(stronghold => `<li>${escapeHtml(stronghold.name)}</li>`).join("")}</ul>` : `<p>No strongholds held.</p>`}
@@ -10048,7 +10063,7 @@ async function showPublicPlayerProfile(uid = "") {
   if (!modal.open) modal.showModal();
   try {
     const raw = await withTimeout(
-      api.loadPublicPlayerProfile?.(playerUid) || api.getCombatPlayerIdentity?.({ uid: playerUid }),
+      api.loadPublicPlayerProfile?.(playerUid) || api.getCombatPlayerIdentity?.({ uid: playerUid, includePublicProfile: true }),
       15000,
       "Player profile is taking too long to load."
     );

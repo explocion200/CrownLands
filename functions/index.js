@@ -3330,7 +3330,12 @@ function createGlobalStatsSnapshot({
   const totalMarchingTroops = [...marchingById.values()]
     .reduce((total, army) => total + Math.max(0, Math.floor(safeNumber(army.troops, 0))), 0);
   const totalTroops = totalCityTroops + totalCampTroops;
-  const totalMilitaryTroops = totalTroops + totalMarchingTroops + stationedReinforcementTroops + committedRallyTroops;
+  const totalMilitaryTroops = getTotalMilitaryTroopsFromGlobalStats({
+    totalTroops,
+    totalMarchingTroops,
+    totalReinforcementTroops: stationedReinforcementTroops,
+    totalRallyTroops: committedRallyTroops,
+  });
   const armyPower = getTroopKingPower(totalMilitaryTroops);
   const cityTroopPower = getTroopKingPower(totalCityTroops);
   const campTroopPower = getTroopKingPower(totalCampTroops);
@@ -3426,6 +3431,18 @@ function createGlobalStatsSnapshot({
     updatedAtMs: nowMs,
     updatedAt: FieldValue.serverTimestamp(),
   };
+}
+
+function getTotalMilitaryTroopsFromGlobalStats(stats = {}) {
+  return [
+    stats.totalTroops,
+    stats.totalMarchingTroops,
+    stats.totalReinforcementTroops,
+    stats.totalRallyTroops,
+  ].reduce((total, value) => Math.min(
+    Number.MAX_SAFE_INTEGER,
+    total + Math.max(0, Math.floor(safeNumber(value, 0)))
+  ), 0);
 }
 
 function getTimedProductionBoostOverlapSeconds(intervalStartMs, intervalEndMs, expiresAtMs, durationMs) {
@@ -10556,13 +10573,27 @@ exports.getCombatPlayerIdentity = onCall({
   const profileSnap = await db.doc(`players/${targetUid}`).get();
   const profile = profileSnap.exists ? profileSnap.data() || {} : {};
   const profileClanId = safeString(profile.clanId || leaderboard.clanId, 128);
-  const [ownedCitiesSnap, clanSnap] = await Promise.all([
+  const [ownedCitiesSnap, clanSnap, activeArmiesSnap, heldCampsSnap] = await Promise.all([
     db.collectionGroup("cities")
       .where("ownerUid", "==", targetUid)
       .where("resetGeneration", "==", RESET_GENERATION)
       .where("worldId", "==", ONLINE_WORLD_ID)
       .get(),
     profileClanId ? db.doc(`clans/${profileClanId}`).get() : Promise.resolve(null),
+    activeArmiesQueryForPlayer(targetUid).get().catch(error => {
+      console.warn("Could not load armies for a public troop estimate", {
+        targetUid,
+        message: safeString(error?.message, 240),
+      });
+      return null;
+    }),
+    heldRewardCampsQueryForPlayer(targetUid).get().catch(error => {
+      console.warn("Could not load camps for a public troop estimate", {
+        targetUid,
+        message: safeString(error?.message, 240),
+      });
+      return null;
+    }),
   ]);
   const clanData = clanSnap?.exists ? clanSnap.data() || {} : null;
   const clan = clanData
@@ -10571,10 +10602,34 @@ exports.getCombatPlayerIdentity = onCall({
     && safeString(clanData.worldId, 120) === ONLINE_WORLD_ID
     ? clanPublicSnapshot(profileClanId, clanData)
     : null;
-  const strongholds = createOwnedCityEntriesFromSnapshot(targetUid, ownedCitiesSnap)
+  const ownedCityEntries = createOwnedCityEntriesFromSnapshot(targetUid, ownedCitiesSnap);
+  const strongholds = ownedCityEntries
     .map(entry => getPublicStrongholdSnapshot(entry.city))
     .filter(Boolean)
     .sort((first, second) => first.name.localeCompare(second.name));
+  let troopEstimate = null;
+  if (activeArmiesSnap && heldCampsSnap) {
+    try {
+      const estimatedAtMs = Date.now();
+      const troopStats = createGlobalStatsSnapshot({
+        uid: targetUid,
+        profile,
+        cityEntries: ownedCityEntries,
+        heldCamps: createHeldCampEntriesFromSnapshot(targetUid, heldCampsSnap),
+        activeArmies: createActiveArmiesFromSnapshot(targetUid, activeArmiesSnap),
+        nowMs: estimatedAtMs,
+      });
+      troopEstimate = {
+        ...getIncomingTroopEstimate(getTotalMilitaryTroopsFromGlobalStats(troopStats)),
+        updatedAtMs: estimatedAtMs,
+      };
+    } catch (error) {
+      console.warn("Could not calculate a public troop estimate", {
+        targetUid,
+        message: safeString(error?.message, 240),
+      });
+    }
+  }
   return {
     ...identity,
     strongholdCount: strongholds.length,
@@ -10584,6 +10639,7 @@ exports.getCombatPlayerIdentity = onCall({
     clanTag: clan?.tag || safeString(profile.clanTag || leaderboard.clanTag, 5),
     clanShield: clan?.shield || null,
     clan,
+    troopEstimate,
   };
 });
 
