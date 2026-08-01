@@ -2621,7 +2621,7 @@ input {
   max-width: 170px;
   overflow: hidden;
   color: #fff0c7;
-  font-size: .76rem;
+  font-size: .8rem;
   line-height: 1;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -2666,7 +2666,7 @@ input {
 .player-city-data .city-name {
   padding: .16rem .28rem 0;
   color: #fff0c7;
-  font-size: .72rem;
+  font-size: .64rem;
   text-shadow: -1px -1px 0 #080808, 1px -1px 0 #080808, -1px 1px 0 #080808, 1px 1px 0 #080808;
 }
 .foreign-city-label {
@@ -2679,7 +2679,7 @@ input {
   max-width: 150px;
   overflow: hidden;
   color: #fff;
-  font-size: .76rem;
+  font-size: .64rem;
   line-height: 1;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -2748,7 +2748,7 @@ input {
   color: #ffe8e5;
   background: rgba(96, 18, 22, .72);
   border: 1px solid rgba(255, 178, 170, .42);
-  font-size: .58rem;
+  font-size: .8rem;
   line-height: 1;
 }
 .city-node.enemy .foreign-ruler-name-inline {
@@ -2794,7 +2794,7 @@ input {
   background: var(--enemy-city-ui-dark);
   border-color: var(--enemy-city-ui-border);
 }
-.foreign-selected-data .city-name { max-width: 142px; overflow: hidden; font-size: .74rem; text-overflow: ellipsis; }
+.foreign-selected-data .city-name { max-width: 142px; overflow: hidden; font-size: .64rem; text-overflow: ellipsis; }
 .foreign-garrison { color: #fff; font-size: .72rem; font-weight: 1000; white-space: nowrap; }
 .foreign-garrison.unknown { color: #ffe2dc; }
 .city-node.player2 .foreign-selected-level,
@@ -2810,7 +2810,7 @@ input {
 .city-node.player3 .owner-flag { color: #052813; background: #56d486; }
 .city-node.enemy .owner-flag { color: white; background: var(--red); }
 .city-node.neutral .owner-flag { color: #1e1914; background: var(--neutral); }
-.city-name { display: block; color: #fff6d3; font-size: .66rem; line-height: 1.1; white-space: nowrap; }
+.city-name { display: block; color: #fff6d3; font-size: .64rem; line-height: 1.1; white-space: nowrap; }
 
 .city-node.player.main-city-node .city-owner-column,
 .city-node.player.main-city-node .city-army-count {
@@ -7140,17 +7140,6 @@ button.daily-reward-card.available:disabled {
   .reinforcement-operation-card { align-items: flex-start; flex-wrap: wrap; }
 }
 .city-clan-tag { color: #91e6aa; }
-.clan-ally-label {
-  padding: .12rem .4rem;
-  color: #eaffef;
-  border: 1px solid #86d99c;
-  border-radius: 999px;
-  background: #236c3b;
-  font-size: .58rem;
-  font-weight: 950;
-  letter-spacing: .04em;
-  text-transform: uppercase;
-}
 .clan-content { max-width: 1180px; margin: 0 auto; }
 .clan-empty { display: grid; min-height: 360px; place-content: center; gap: .65rem; text-align: center; }
 .clan-empty h3, .clan-empty p { margin: 0; }

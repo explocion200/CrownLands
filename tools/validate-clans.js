@@ -163,7 +163,7 @@ requires(client, /kind === "rename"[\s\S]*?updateClanProfile\(\{\s*name:\s*reque
 requires(client, /function saveClanShieldEditor[\s\S]*?updateClanProfile\(\{\s*shield\s*\}\)[\s\S]*?result\?\.clan\?\.shield[\s\S]*?clanSnapshot\s*=\s*\{[\s\S]*?savedShield/, "Clan shield editor does not retain the server-confirmed saved shield.");
 requires(client, /data-clan-action="shield-tab"[\s\S]*?data-shield-panel="field"[\s\S]*?data-shield-panel="colors"[\s\S]*?data-shield-panel="charges"[\s\S]*?data-shield-panel="details"/, "Mobile clan shield editor tabs are incomplete.");
 requires(client, /CLAN_SHIELD_SHAPES[\s\S]*?CLAN_SHIELD_DIVISIONS[\s\S]*?CLAN_SHIELD_CHARGES[\s\S]*?CLAN_SHIELD_FINISHES/, "Clan shield editor options are incomplete.");
-requires(styles, /\.city-node\.clan-ally \.city-ring[\s\S]*?\.clan-ally-label/, "Green accessible allied-city styling is missing.");
+requires(styles, /\.city-node\.clan-ally \.city-ring[\s\S]*?\.city-node\.clan-ally \.foreign-city-shield/, "Green accessible allied-city styling is missing.");
 requires(styles, /\.army-route-ribbon\.clan-support-route\s*\{\s*fill:\s*rgba\(43,\s*139,\s*70,/, "Allied support route ribbons do not use the city UI's dark green.");
 requires(styles, /\.army-route-flow\.clan-support-route\s*\{\s*stroke:\s*rgba\(143,\s*226,\s*165,/, "Allied support route flows do not use the city UI's light green.");
 requires(styles, /\.army-route-ribbon\.clan-hostile-route\s*\{\s*fill:\s*rgba\(239,\s*62,\s*57,/, "Allied hostile route ribbons do not retain the hostile red.");
@@ -179,7 +179,14 @@ requires(
   /wheel\.className = "city-action-wheel foreign-city-action-wheel";\s*if \(clanAlly\) wheel\.classList\.add\("clan-ally-action-wheel"\)[\s\S]*?wheel\.className = "gold-camp-action-wheel stronghold-objective-action-wheel";\s*if \(clanAlly\) wheel\.classList\.add\("clan-ally-action-wheel"\)[\s\S]*?wheel\.className = "gold-camp-action-wheel";\s*if \(clanAlly\) wheel\.classList\.add\("clan-ally-action-wheel"\)/,
   "Selected allied cities, Strongholds, and camps do not retain the green action treatment."
 );
-requires(client, /const clanAllyStatus = clanAlly[\s\S]*?<span class="clan-ally-label">Clan Ally<\/span>[\s\S]*?const rivalOwnerRow[\s\S]*?city-ruler-row[\s\S]*?crownBadge[\s\S]*?\$\{clanAllyStatus\}[\s\S]*?<strong class="city-name">/, "City labels do not show ruler, optional Clan Ally status, Citadel crown, and city name in the required order.");
+assert.doesNotMatch(client, /clanAllyStatus|clan-ally-label/, "Floating allied-city labels must rely on the green relationship styling instead of a redundant Clan Ally badge.");
+assert.doesNotMatch(styles, /\.clan-ally-label\b/, "Unused Clan Ally badge styling must be removed.");
+requires(styles, /\.city-ruler-name\s*\{[^}]*font-size:\s*\.8rem;[^}]*\}/, "Owned-city ruler names must use the prominent city-label type size.");
+requires(styles, /\.foreign-ruler-name\s*\{[^}]*font-size:\s*\.8rem;[^}]*\}/, "Foreign-city ruler names must use the prominent city-label type size.");
+requires(styles, /\.foreign-ruler-name-inline\s*\{[^}]*font-size:\s*\.8rem;[^}]*\}/, "Compact foreign-city ruler names must remain more prominent than city names.");
+requires(styles, /\.player-city-data \.city-name\s*\{[^}]*font-size:\s*\.64rem;[^}]*\}/, "Owned-city names must use the compact city-label type size.");
+requires(styles, /\.foreign-city-label > \.city-name\s*\{[^}]*font-size:\s*\.64rem;[^}]*\}/, "Foreign-city names must use the compact city-label type size.");
+requires(styles, /\.foreign-selected-data \.city-name\s*\{[^}]*font-size:\s*\.64rem;[^}]*\}/, "Selected foreign-city names must use the compact city-label type size.");
 assert.doesNotMatch(client, /foreign-ruler-name foreign-ruler-name-inline"\)\}\$\{clanIdentity\.clanTag/, "Floating city labels must not insert clan tags between the ruler name and Clan Ally status.");
 requires(styles, /\.clan-hud-btn[\s\S]*?\.profile-clan-affiliation/, "Clan HUD and profile shield styling is missing.");
 requires(styles, /\.public-clan-roster[\s\S]*?\.public-clan-member[\s\S]*?\.public-clan-member-power[\s\S]*?\.clan-name-link/, "Public clan roster and discovery profile links are not styled.");
