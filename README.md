@@ -1,6 +1,6 @@
 # Crownlands - Medieval Browser Strategy Prototype
 
-Landscape / horizontal medieval island-conquest game inspired by the core loop of Million Lords. The current online-first build includes XP, troops, city levels, attack, defense, economy, skills, items, camps, clans, rallies, scouting, and battle reports.
+Landscape / horizontal medieval island-conquest game inspired by the core loop of Million Lords. The current online-first build includes XP, troops, city levels, attack, defense, economy, skills, items, camps, clans, a rally-focused Clan War Room, scouting, and battle reports.
 
 ## Current Mechanics Pass
 
@@ -11,7 +11,7 @@ Landscape / horizontal medieval island-conquest game inspired by the core loop o
 - The current map reset is `fresh-2026-07-26-server-reset`, with world ID `main-fresh-2026-07-26-server-reset`.
 - New online players claim starting cities from the available starter regions first; the center Crownlands region is intended as the main battleground.
 - Cities produce troops and gold in real time while the game is active.
-- Offline production catches up when the player returns: troops stay in the cities that produced them, while troops from cities lost offline rally to the main city.
+- Reopening Crownlands after at least one minute starts a one-use Welcome back summary. Server-authoritative gold is collected across every owned map, troop production is reported only when it remains in cities still owned, and captured cities, Strongholds, and the Crown Citadel are listed from ownership history. Switching maps never opens the summary.
 - City level creates victory points.
 - Victory points drive troop production, gold production, and capture XP value.
 - The city counter opens a city list with the main city pinned first and level/troop sorting.
@@ -73,6 +73,7 @@ The live game is online-first and uses Firebase Auth, Firestore, and callable Fu
 - The Crown Marches admits exactly 50 active players and queues overflow in ticket order. Join, leave, promotion, and stale cleanup share a short server-only admission lease; routine player heartbeats write separate member documents so 50 connected players never hammer one shared capacity document.
 - Online troop orders now call Firebase Functions: `sendArmyOrder` creates and validates marches server-side, and `resolveArmyOrder` resolves scouts, transfers, attacks, defenses, city capture, level drops, XP, gold rewards, and battle reports in Firestore transactions.
 - Clan rallies are server-authoritative three-player attacks against Strongholds, the Crown Citadel, and reward camps. Forming targets live in clan-private Firestore documents; public `rally_join` marches reveal only the contribution route to the assembly city. The leader controls launch, cancellation, and the combined army's Recall Horn, while ally casualties, XP, Field Medics recovery, and survivor returns settle separately through idempotent receipts.
+- The Clan War Room is the clan home for rallies. Members can form, join, inspect, withdraw from, launch, and cancel the same server-authoritative rallies available under Kingdom Activity, without a separate operation-planning system.
 - Server-written reports are stored under `players/{uid}/serverReports/{reportId}` and merged into the in-game Reports UI.
 - Kingdom-wide totals are server-derived in `players/{uid}/stats/global`. King Power, total city count, marching troops, gold/hour, troop/hour, per-island owned counts, and leaderboard rows should read this aggregate instead of scanning every island during normal login.
 - King Power v8 is a server-authoritative military-readiness score made from controlled troops, 12 hours of sustainable troop replacement, and 25% of defensive advantage above the base troop count. City, Stronghold, camp, active-march, stationed reinforcement, and committed rally troops count exactly once. Combined rally armies are excluded from the leader's personal marching count so committed troops are never double-counted. Training, Defense, and Crown Citadel bonuses affect their matching military components; gold, raw city count, skills, and temporary items do not change King Power.
@@ -83,7 +84,8 @@ See `FIREBASE_SETUP.md` for the Firebase project steps and the planned shared-wo
 Deploy Firebase rules and Functions after changing server multiplayer code:
 
 ```powershell
-firebase deploy --only functions,firestore:rules,firestore:indexes
+firebase deploy --only firestore:rules,firestore:indexes
+firebase deploy --only functions
 ```
 
 ## Local Game Editor

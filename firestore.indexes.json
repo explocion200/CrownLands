@@ -723,6 +723,20 @@
           "order": "ASCENDING"
         }
       ]
+    },
+    {
+      "collectionGroup": "ownershipChanges",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "beforeOwnerUid",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "createdAtMs",
+          "order": "ASCENDING"
+        }
+      ]
     }
   ],
   "fieldOverrides": [

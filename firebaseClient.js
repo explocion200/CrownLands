@@ -468,7 +468,10 @@
   }
 
   async function collectEconomy(payload = {}) {
-    return callServerFunction("collectEconomy", payload);
+    return callServerFunction("collectEconomy", {
+      ...payload,
+      sessionId: getActiveSessionId(),
+    });
   }
 
   async function getDailyLoginRewardStatus(payload = {}) {

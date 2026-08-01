@@ -118,20 +118,20 @@ requires(client, /function renderPaths[\s\S]*?getArmyRouteRelationshipClass\(att
 requires(client, /function refreshClanRelationshipPresentation[\s\S]*?pathRenderSignature\s*=\s*""[\s\S]*?renderPaths\(\)/, "Clan membership events do not immediately invalidate and redraw march paths.");
 assert.doesNotMatch(updateArmyTokenElementSource, /clan-support-route|clan-hostile-route|isCurrentClanmateArmy/, "Clan path colors must not recolor moving army markers.");
 requires(client, /function showClanHub[\s\S]*?showProfileClan\(\)/, "The Clan HUD button does not open the Clan area directly.");
-requires(client, /CLAN_MOBILE_SECTIONS\s*=\s*Object\.freeze\(\["overview",\s*"rallies",\s*"rewards",\s*"members"\]\)[\s\S]*?activeClanMobileSection\s*=\s*"overview"/, "The mobile clan hub is missing its four-section state.");
+requires(client, /CLAN_MOBILE_SECTIONS\s*=\s*Object\.freeze\(\["overview",\s*"warroom",\s*"rewards",\s*"members"\]\)[\s\S]*?activeClanMobileSection\s*=\s*"overview"/, "The mobile clan hub is missing its four-section state.");
 requires(client, /function showProfileClan\(\)[\s\S]*?enteringClan[\s\S]*?activeClanMobileSection\s*=\s*"overview"/, "Opening the Clan area does not reset mobile navigation to Overview.");
 requires(client, /function handleOnlinePlayerClanSnapshot[\s\S]*?previousClanId\s*!==\s*state\.clanId[\s\S]*?activeClanMobileSection\s*=\s*"overview"/, "Changing clans does not reset mobile navigation to Overview.");
 requires(
   client,
-  /function renderClanSectionNavigation[\s\S]*?key:\s*"overview"[\s\S]*?key:\s*"rallies"[\s\S]*?key:\s*"rewards"[\s\S]*?key:\s*"members"[\s\S]*?role="tablist"[\s\S]*?data-clan-section="\$\{section\.key\}"[\s\S]*?aria-selected[\s\S]*?aria-controls/,
+  /function renderClanSectionNavigation[\s\S]*?key:\s*"overview"[\s\S]*?key:\s*"warroom"[\s\S]*?key:\s*"rewards"[\s\S]*?key:\s*"members"[\s\S]*?role="tablist"[\s\S]*?data-clan-section="\$\{section\.key\}"[\s\S]*?aria-selected[\s\S]*?aria-controls/,
   "The mobile clan section bar is incomplete or missing accessible tab state."
 );
 requires(
   client,
-  /id="clanOverviewPanel"[\s\S]*?role="tabpanel"[\s\S]*?id="clanMembersPanel"[\s\S]*?role="tabpanel"[\s\S]*?id="clanRewardsPanel"[\s\S]*?role="tabpanel"[\s\S]*?id="clanRalliesPanel"[\s\S]*?role="tabpanel"/,
-  "The clan Overview, Members, Rewards, and Rallies panels are not exposed as tab panels."
+  /id="clanOverviewPanel"[\s\S]*?role="tabpanel"[\s\S]*?id="clanMembersPanel"[\s\S]*?role="tabpanel"[\s\S]*?id="clanRewardsPanel"[\s\S]*?role="tabpanel"[\s\S]*?id="clanWarroomPanel"[\s\S]*?role="tabpanel"/,
+  "The clan Overview, Members, War Room, and Rewards panels are not exposed as tab panels."
 );
-requires(client, /function renderClanOverviewPanel[\s\S]*?Active rallies[\s\S]*?Gold gifts[\s\S]*?Weekly conquest[\s\S]*?Roster/, "The clan Overview is missing its four activity summaries.");
+requires(client, /function renderClanOverviewPanel[\s\S]*?<span>War Room<\/span>[\s\S]*?Gold gifts[\s\S]*?Weekly conquest[\s\S]*?Roster/, "The clan Overview is missing its four activity summaries.");
 requires(
   client,
   /CLAN_BROWSER_SECTIONS\s*=\s*Object\.freeze\(\["discover",\s*"create"\]\)[\s\S]*?function renderClanBrowserNavigation[\s\S]*?key:\s*"discover"[\s\S]*?key:\s*"create"[\s\S]*?data-clan-browser-section="\$\{section\.key\}"[\s\S]*?id="clanBrowserCreatePanel"[\s\S]*?id="clanBrowserDiscoverPanel"/,

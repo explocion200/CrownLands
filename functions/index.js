@@ -262,6 +262,9 @@ const GAME_SERVER_CAPACITY = 50;
 const GAME_SERVER_ACTIVE_STALE_MS = 3 * 60 * 1000;
 const GAME_SERVER_WAITING_STALE_MS = 5 * 60 * 1000;
 const GAME_SERVER_MAX_WAITING = 500;
+const WELCOME_BACK_SUMMARY_VERSION = 1;
+const WELCOME_BACK_MIN_AWAY_MS = 60 * 1000;
+const PENDING_AWAY_PRODUCTION_CITY_LIMIT = 320;
 const INACTIVITY_POLICY_VERSION = 1;
 const INACTIVITY_SURRENDER_MS = 15 * 24 * 60 * 60 * 1000;
 const INACTIVITY_REMOVAL_MS = 20 * 24 * 60 * 60 * 1000;
@@ -694,6 +697,56 @@ function cleanGameServerEntry(raw = {}, fallback = {}) {
   };
 }
 
+function normalizeWelcomeBackSession(raw = null) {
+  const source = raw?.welcomeBack && typeof raw.welcomeBack === "object"
+    ? raw.welcomeBack
+    : raw && typeof raw === "object" ? raw : {};
+  const sessionId = safeString(source.sessionId, 128);
+  const sessionStartedAtMs = Math.max(0, Math.floor(safeNumber(source.sessionStartedAtMs, 0)));
+  const awayStartedAtMs = Math.max(0, Math.floor(safeNumber(source.awayStartedAtMs, 0)));
+  const claimedAtMs = Math.max(0, Math.floor(safeNumber(source.claimedAtMs, 0)));
+  const summary = source.summary && typeof source.summary === "object"
+    ? source.summary
+    : null;
+  return {
+    version: WELCOME_BACK_SUMMARY_VERSION,
+    sessionId,
+    sessionStartedAtMs,
+    awayStartedAtMs,
+    eligible: Boolean(source.eligible && sessionId && sessionStartedAtMs && awayStartedAtMs && !claimedAtMs),
+    claimedAtMs,
+    summary,
+  };
+}
+
+function createWelcomeBackSession(priorMembership = {}, sessionId = "", nowMs = Date.now()) {
+  const normalizedSessionId = safeString(sessionId, 128);
+  const existing = normalizeWelcomeBackSession(priorMembership);
+  if (existing.sessionId === normalizedSessionId && existing.sessionStartedAtMs) {
+    return existing;
+  }
+
+  const priorSessionId = safeString(priorMembership.sessionId, 128);
+  const priorLastSeenAtMs = Math.max(0, Math.floor(safeNumber(priorMembership.lastSeenAtMs, 0)));
+  const awayElapsedMs = priorLastSeenAtMs > 0 ? Math.max(0, nowMs - priorLastSeenAtMs) : 0;
+  const eligible = Boolean(
+    normalizedSessionId
+    && priorSessionId
+    && priorSessionId !== normalizedSessionId
+    && priorLastSeenAtMs
+    && awayElapsedMs >= WELCOME_BACK_MIN_AWAY_MS
+  );
+  return {
+    version: WELCOME_BACK_SUMMARY_VERSION,
+    sessionId: normalizedSessionId,
+    sessionStartedAtMs: nowMs,
+    awayStartedAtMs: eligible ? priorLastSeenAtMs : 0,
+    eligible,
+    claimedAtMs: 0,
+    summary: null,
+  };
+}
+
 function normalizeGameServerEntries(raw = {}, nowMs = Date.now(), staleMs = 0) {
   const entries = {};
   Object.entries(raw && typeof raw === "object" ? raw : {}).forEach(([rawUid, value]) => {
@@ -966,7 +1019,7 @@ async function joinGameServerForPlayer({ uid, sessionId, displayName, nowMs = Da
   const serverRef = db.doc(`gameServers/${GAME_SERVER_DOCUMENT_ID}`);
   const membershipRef = db.doc(`players/${uid}/serverMembership/current`);
   const maintenanceRef = inactivityMaintenanceRef(uid);
-  return serializeGameServerAdmission(() => withGameServerAdmissionLease(() => db.runTransaction(async transaction => {
+  return serializeGameServerAdmission(() => withGameServerAdmissionLease(() => runTransactionWithInfrastructureRetry(async transaction => {
     const [serverSnap, membershipSnap, maintenanceSnap] = await Promise.all([
       transaction.get(serverRef),
       transaction.get(membershipRef),
@@ -978,6 +1031,7 @@ async function joinGameServerForPlayer({ uid, sessionId, displayName, nowMs = Da
       throw new HttpsError("unavailable", "Your kingdom is completing scheduled realm maintenance. Try again in a moment.");
     }
     const inactivityNotice = getInactivityNotice(priorMembership);
+    const welcomeBack = createWelcomeBackSession(priorMembership, sessionId, nowMs);
     const state = createGameServerState(serverSnap.exists ? serverSnap.data() : {}, nowMs, { pruneStale: false });
     const promoted = promoteGameServerWaiters(state, nowMs);
     let activeEntry = state.activeSlots[uid] || null;
@@ -1039,6 +1093,7 @@ async function joinGameServerForPlayer({ uid, sessionId, displayName, nowMs = Da
       writeGameServerMember(transaction, entry, status, nowMs);
       writeGameServerMembership(transaction, entry, status, nowMs);
     });
+    transaction.set(membershipRef, { welcomeBack }, { merge: true });
 
     return {
       serverId: GAME_SERVER_ID,
@@ -1047,6 +1102,7 @@ async function joinGameServerForPlayer({ uid, sessionId, displayName, nowMs = Da
       admittedAtMs: activeEntry?.admittedAtMs || 0,
       queuedAtMs: waitingEntry?.queuedAtMs || 0,
       inactivityNotice,
+      welcomeBack,
     };
   })));
 }
@@ -1054,8 +1110,9 @@ async function joinGameServerForPlayer({ uid, sessionId, displayName, nowMs = Da
 async function heartbeatGameServerForPlayer({ uid, sessionId, displayName, nowMs = Date.now() }) {
   const serverRef = db.doc(`gameServers/${GAME_SERVER_DOCUMENT_ID}`);
   const membershipRef = db.doc(`players/${uid}/serverMembership/current`);
+  const profileRef = db.doc(`players/${uid}`);
   const maintenanceRef = inactivityMaintenanceRef(uid);
-  const result = await db.runTransaction(async transaction => {
+  const result = await runTransactionWithInfrastructureRetry(async transaction => {
     const [serverSnap, membershipSnap, maintenanceSnap] = await Promise.all([
       transaction.get(serverRef),
       transaction.get(membershipRef),
@@ -1065,7 +1122,9 @@ async function heartbeatGameServerForPlayer({ uid, sessionId, displayName, nowMs
     if (isInactivityLifecycleBlockingPlayer(maintenance)) {
       throw new HttpsError("unavailable", "Your kingdom is completing scheduled realm maintenance. Try again in a moment.");
     }
-    const inactivityNotice = getInactivityNotice(membershipSnap.exists ? membershipSnap.data() || {} : {});
+    const currentMembership = membershipSnap.exists ? membershipSnap.data() || {} : {};
+    const inactivityNotice = getInactivityNotice(currentMembership);
+    const welcomeBack = normalizeWelcomeBackSession(currentMembership);
     const state = createGameServerState(
       serverSnap.exists ? serverSnap.data() : {},
       nowMs,
@@ -1084,6 +1143,11 @@ async function heartbeatGameServerForPlayer({ uid, sessionId, displayName, nowMs
     entry.lastSeenAtMs = nowMs;
     writeGameServerMember(transaction, entry, status, nowMs);
     writeGameServerMembership(transaction, entry, status, nowMs);
+    if (status === "active" && !welcomeBack.eligible) {
+      transaction.set(profileRef, {
+        pendingAwayProduction: createEmptyPendingAwayProduction(nowMs),
+      }, { merge: true });
+    }
     return {
       serverId: GAME_SERVER_ID,
       serverName: GAME_SERVER_NAME,
@@ -1091,6 +1155,7 @@ async function heartbeatGameServerForPlayer({ uid, sessionId, displayName, nowMs
       admittedAtMs: status === "active" ? entry.admittedAtMs || 0 : 0,
       queuedAtMs: status === "waiting" ? entry.queuedAtMs || 0 : 0,
       inactivityNotice,
+      welcomeBack,
     };
   });
   if (result.status !== "missing") return result;
@@ -1099,7 +1164,7 @@ async function heartbeatGameServerForPlayer({ uid, sessionId, displayName, nowMs
 
 async function leaveGameServerForPlayer({ uid, sessionId, nowMs = Date.now() }) {
   const serverRef = db.doc(`gameServers/${GAME_SERVER_DOCUMENT_ID}`);
-  return serializeGameServerAdmission(() => withGameServerAdmissionLease(() => db.runTransaction(async transaction => {
+  return serializeGameServerAdmission(() => withGameServerAdmissionLease(() => runTransactionWithInfrastructureRetry(async transaction => {
     const serverSnap = await transaction.get(serverRef);
     const state = createGameServerState(serverSnap.exists ? serverSnap.data() : {}, nowMs, { pruneStale: false });
     const activeEntry = state.activeSlots[uid] || null;
@@ -1129,7 +1194,7 @@ async function leaveGameServerForPlayer({ uid, sessionId, nowMs = Date.now() }) 
 
 async function maintainGameServer(nowMs = Date.now()) {
   const serverRef = db.doc(`gameServers/${GAME_SERVER_DOCUMENT_ID}`);
-  return serializeGameServerAdmission(() => withGameServerAdmissionLease(() => db.runTransaction(async transaction => {
+  return serializeGameServerAdmission(() => withGameServerAdmissionLease(() => runTransactionWithInfrastructureRetry(async transaction => {
     const staleBeforeMs = nowMs - GAME_SERVER_WAITING_STALE_MS;
     const memberQuery = serverRef.collection("members")
       .where("lastSeenAtMs", ">=", staleBeforeMs);
@@ -1218,7 +1283,7 @@ async function beginInactivePlayerMaintenance(uid = "", targetStage = "", nowMs 
   if (!playerUid || !receiptRef || !["surrendering", "removing"].includes(targetStage)) {
     return { acquired: false, reason: "invalid" };
   }
-  return db.runTransaction(async transaction => {
+  return runTransactionWithInfrastructureRetry(async transaction => {
     const [membershipSnap, receiptSnap] = await Promise.all([
       transaction.get(membershipRef),
       transaction.get(receiptRef),
@@ -1304,7 +1369,7 @@ async function assertInactiveMaintenanceRun(transaction, receiptRef, {
 }
 
 async function settleInactivePlayerProduction(uid = "", run = {}, nowMs = Date.now()) {
-  return db.runTransaction(async transaction => {
+  return runTransactionWithInfrastructureRetry(async transaction => {
     await assertInactiveMaintenanceRun(transaction, run.receiptRef, {
       uid,
       stage: "surrendering",
@@ -1411,7 +1476,7 @@ function getInactiveHomeTroopPatch(home = {}, addedTroops = 0, nowMs = Date.now(
 
 async function releaseInactiveCity(uid = "", cityDoc = null, homeRef = null, run = {}, nowMs = Date.now()) {
   if (!cityDoc?.ref) return { released: false, troops: 0 };
-  return db.runTransaction(async transaction => {
+  return runTransactionWithInfrastructureRetry(async transaction => {
     const refs = [run.receiptRef, cityDoc.ref];
     if (homeRef) refs.push(homeRef);
     const snapshots = await Promise.all(refs.map(ref => transaction.get(ref)));
@@ -1479,7 +1544,7 @@ async function releaseInactiveCity(uid = "", cityDoc = null, homeRef = null, run
 
 async function releaseInactiveCamp(uid = "", campDoc = null, homeRef = null, run = {}, nowMs = Date.now()) {
   if (!campDoc?.ref) return { released: false, troops: 0 };
-  return db.runTransaction(async transaction => {
+  return runTransactionWithInfrastructureRetry(async transaction => {
     const refs = [run.receiptRef, campDoc.ref];
     if (homeRef) refs.push(homeRef);
     const snapshots = await Promise.all(refs.map(ref => transaction.get(ref)));
@@ -1538,7 +1603,7 @@ async function cancelInactiveArmy(uid = "", armyDoc = null, homeRef = null, run 
   const targetCampRef = queuedArmy.targetType === "camp"
     ? campRefForRegion(queuedArmy.targetRegionId, queuedArmy.toId)
     : null;
-  return db.runTransaction(async transaction => {
+  return runTransactionWithInfrastructureRetry(async transaction => {
     const refs = [run.receiptRef, armyDoc.ref];
     if (homeRef) refs.push(homeRef);
     if (targetCampRef) refs.push(targetCampRef);
@@ -1604,7 +1669,7 @@ async function returnInactiveReinforcement(uid = "", reinforcementDoc = null, ho
   if (!reinforcementDoc?.ref) return { returned: false, troops: 0 };
   const queued = reinforcementDoc.data() || {};
   const targetRef = getReinforcementTargetRef(queued);
-  return db.runTransaction(async transaction => {
+  return runTransactionWithInfrastructureRetry(async transaction => {
     const refs = [run.receiptRef, reinforcementDoc.ref];
     if (homeRef) refs.push(homeRef);
     if (targetRef) refs.push(targetRef);
@@ -1703,7 +1768,7 @@ async function completeInactivePlayerSurrender(uid = "", run = {}, homeRef = nul
     updatedAt: FieldValue.serverTimestamp(),
   }, { merge: true });
   await rebuildGlobalStatsForPlayer(playerUid);
-  return db.runTransaction(async transaction => {
+  return runTransactionWithInfrastructureRetry(async transaction => {
     const membershipRef = db.doc(`players/${playerUid}/serverMembership/current`);
     const profileRef = db.doc(`players/${playerUid}`);
     const refs = [run.receiptRef, membershipRef, profileRef];
@@ -1812,7 +1877,7 @@ async function transferInactiveClanLeadership(clanId = "", departingUid = "", su
   const safeClanId = safeString(clanId, 128);
   const nextLeaderUid = safeString(successorUid, 128);
   if (!safeClanId || !nextLeaderUid) return false;
-  return db.runTransaction(async transaction => {
+  return runTransactionWithInfrastructureRetry(async transaction => {
     const clanRef = db.doc(`clans/${safeClanId}`);
     const departingRef = db.doc(`clans/${safeClanId}/members/${departingUid}`);
     const successorRef = db.doc(`clans/${safeClanId}/members/${nextLeaderUid}`);
@@ -1997,7 +2062,7 @@ async function completeInactivePlayerRemoval(uid = "", run = {}, nowMs = Date.no
   await replaceInactivePlayerProfile(playerUid, nowMs);
   const serverRef = db.doc(`gameServers/${GAME_SERVER_DOCUMENT_ID}`);
   const membershipRef = db.doc(`players/${playerUid}/serverMembership/current`);
-  return db.runTransaction(async transaction => {
+  return runTransactionWithInfrastructureRetry(async transaction => {
     const [receiptSnap, membershipSnap, serverSnap] = await Promise.all([
       transaction.get(run.receiptRef),
       transaction.get(membershipRef),
@@ -7355,7 +7420,7 @@ async function rebuildClanWorldBenefits(clanId = "", effectiveAtMs = Date.now())
   const next = buildClanSharedObjectiveBonuses(controlledObjectives);
   const normalizedEffectiveAtMs = Math.max(0, Math.floor(safeNumber(effectiveAtMs, Date.now())));
 
-  return db.runTransaction(async transaction => {
+  return runTransactionWithInfrastructureRetry(async transaction => {
     const priorSnap = await transaction.get(benefitsRef);
     const prior = priorSnap.exists ? priorSnap.data() || {} : {};
     const priorLastAtMs = Math.max(0, timestampToMs(prior.lastIntegratedAtMs));
@@ -7827,7 +7892,7 @@ async function beginReinforcementReturn({
   const id = safeString(reinforcementId, 96).replace(/[^a-zA-Z0-9_-]/g, "_");
   if (!id) throw new HttpsError("invalid-argument", "Choose reinforcements to return.");
   const contributionRef = db.doc(`reinforcements/${id}`);
-  return db.runTransaction(async transaction => {
+  return runTransactionWithInfrastructureRetry(async transaction => {
     const contributionSnap = await transaction.get(contributionRef);
     if (!contributionSnap.exists) throw new HttpsError("not-found", "Those reinforcements were not found.");
     const contribution = { id: contributionSnap.id, ...contributionSnap.data() };
@@ -8083,6 +8148,82 @@ function writeExtraCityPatches(transaction, patches = []) {
   });
 }
 
+function createEmptyPendingAwayProduction(observedAtMs = 0) {
+  return {
+    version: WELCOME_BACK_SUMMARY_VERSION,
+    goldGained: 0,
+    troopsByCity: {},
+    startedAtMs: 0,
+    updatedAtMs: 0,
+    observedAtMs: Math.max(0, Math.floor(safeNumber(observedAtMs, 0))),
+  };
+}
+
+function getIntegerProductionGain(currentFloat = 0, gainFloat = 0) {
+  const before = Math.max(0, safeNumber(currentFloat, 0));
+  const gain = Math.max(0, safeNumber(gainFloat, 0));
+  return Math.max(0, Math.floor(before + gain) - Math.floor(before));
+}
+
+function normalizePendingAwayProduction(raw = null) {
+  const source = raw && typeof raw === "object" ? raw : {};
+  const troopsByCity = {};
+  Object.entries(source.troopsByCity && typeof source.troopsByCity === "object" ? source.troopsByCity : {})
+    .slice(0, PENDING_AWAY_PRODUCTION_CITY_LIMIT)
+    .forEach(([rawKey, rawTroops]) => {
+      const key = safeString(rawKey, 220);
+      const troops = Math.max(0, Math.floor(safeNumber(rawTroops, 0)));
+      if (key.startsWith("city:") && troops > 0) troopsByCity[key] = troops;
+    });
+  return {
+    version: WELCOME_BACK_SUMMARY_VERSION,
+    goldGained: Math.max(0, Math.floor(safeNumber(source.goldGained, 0))),
+    troopsByCity,
+    startedAtMs: Math.max(0, Math.floor(safeNumber(source.startedAtMs, 0))),
+    updatedAtMs: Math.max(0, Math.floor(safeNumber(source.updatedAtMs, 0))),
+    observedAtMs: Math.max(0, Math.floor(safeNumber(source.observedAtMs, 0))),
+  };
+}
+
+function addPendingAwayProduction(rawPending = null, production = {}, nowMs = Date.now()) {
+  const pending = normalizePendingAwayProduction(rawPending);
+  const goldGained = Math.max(0, Math.floor(safeNumber(production.goldGained, 0)));
+  const entries = Object.entries(
+    production.troopsByCity && typeof production.troopsByCity === "object"
+      ? production.troopsByCity
+      : {}
+  );
+  pending.goldGained += goldGained;
+  entries.forEach(([rawKey, rawTroops]) => {
+    const key = safeString(rawKey, 220);
+    const troops = Math.max(0, Math.floor(safeNumber(rawTroops, 0)));
+    if (!key.startsWith("city:") || troops <= 0) return;
+    if (!Object.prototype.hasOwnProperty.call(pending.troopsByCity, key)
+      && Object.keys(pending.troopsByCity).length >= PENDING_AWAY_PRODUCTION_CITY_LIMIT) return;
+    pending.troopsByCity[key] = Math.max(0, Math.floor(safeNumber(pending.troopsByCity[key], 0))) + troops;
+  });
+  if ((goldGained > 0 || entries.length > 0) && !pending.startedAtMs) {
+    pending.startedAtMs = Math.max(0, Math.floor(safeNumber(production.startedAtMs, nowMs)));
+  }
+  if (goldGained > 0 || entries.length > 0) pending.updatedAtMs = nowMs;
+  return pending;
+}
+
+function consumePendingAwayCityTroops(economy = null, city = null, losses = 0, { captured = false } = {}) {
+  if (!economy || !city?.id) return;
+  const pending = normalizePendingAwayProduction(economy.profilePatch?.pendingAwayProduction);
+  const key = getReinforcementTargetKey("city", city.regionId || getRegionIdFromCityDoc(null, city), city.id);
+  if (captured) {
+    delete pending.troopsByCity[key];
+  } else {
+    const remaining = Math.max(0, Math.floor(safeNumber(pending.troopsByCity[key], 0)) - Math.max(0, Math.floor(safeNumber(losses, 0))));
+    if (remaining > 0) pending.troopsByCity[key] = remaining;
+    else delete pending.troopsByCity[key];
+  }
+  economy.profilePatch.pendingAwayProduction = pending;
+  economy.profileAfter.pendingAwayProduction = pending;
+}
+
 async function prepareEconomyCollection(transaction, uid, nowMs = Date.now(), options = {}) {
   if (!options.allowInactivityMaintenance) {
     const maintenanceRef = inactivityMaintenanceRef(uid);
@@ -8104,6 +8245,11 @@ async function prepareEconomyCollection(transaction, uid, nowMs = Date.now(), op
   const shopItems = normalizeShopItems(rawProfile.shopItems);
   const itemPurchaseCooldowns = normalizeItemPurchaseCooldowns(rawProfile.itemPurchaseCooldowns);
   const baseGold = Math.max(0, safeNumber(rawProfile.goldFloat, safeNumber(rawProfile.gold, TEST_STARTING_GOLD)));
+  const pendingAwayProductionBefore = normalizePendingAwayProduction(rawProfile.pendingAwayProduction);
+  const productionObservedAtMs = Math.min(
+    nowMs,
+    Math.max(0, pendingAwayProductionBefore.observedAtMs)
+  );
   const fallbackProductionAtMs = Math.min(nowMs, getProfileLastSeenMs(rawProfile) || nowMs);
   const economyRevisionMs = Math.max(nowMs, timestampToMs(rawProfile.economyUpdatedAtMs) + 1);
 
@@ -8128,6 +8274,12 @@ async function prepareEconomyCollection(transaction, uid, nowMs = Date.now(), op
     timestampToMs(rawProfile.economyUpdatedAtMs) || fallbackProductionAtMs
   );
   const goldElapsedSeconds = clamp((nowMs - lastEconomyAtMs) / 1000, 0, MAX_SERVER_PRODUCTION_SECONDS);
+  const pendingGoldStartedAtMs = Math.max(lastEconomyAtMs, productionObservedAtMs);
+  const pendingGoldElapsedSeconds = clamp(
+    (nowMs - pendingGoldStartedAtMs) / 1000,
+    0,
+    MAX_SERVER_PRODUCTION_SECONDS
+  );
   const objectiveBenefits = await resolvePlayerObjectiveBenefits(
     transaction,
     uid,
@@ -8139,7 +8291,9 @@ async function prepareEconomyCollection(transaction, uid, nowMs = Date.now(), op
   const bonuses = objectiveBenefits.currentBonuses;
   const productionBonuses = objectiveBenefits.productionBonuses;
   let goldGainFloat = 0;
+  let pendingGoldGainFloat = 0;
   let troopsGained = 0;
+  const troopsByCity = {};
   let maxElapsedSeconds = goldElapsedSeconds;
 
   cityEntries.forEach(entry => {
@@ -8150,7 +8304,15 @@ async function prepareEconomyCollection(transaction, uid, nowMs = Date.now(), op
       timestampToMs(city.productionUpdatedAtMs || city.economyUpdatedAtMs) || fallbackProductionAtMs
     );
     const elapsedSeconds = clamp((nowMs - lastProductionAtMs) / 1000, 0, MAX_SERVER_PRODUCTION_SECONDS);
-    maxElapsedSeconds = Math.max(maxElapsedSeconds, elapsedSeconds);
+    const collectionStartedAtMs = Math.max(lastProductionAtMs, lastEconomyAtMs);
+    const collectionElapsedSeconds = clamp((nowMs - collectionStartedAtMs) / 1000, 0, MAX_SERVER_PRODUCTION_SECONDS);
+    const pendingCollectionStartedAtMs = Math.max(collectionStartedAtMs, productionObservedAtMs);
+    const pendingCollectionElapsedSeconds = clamp(
+      (nowMs - pendingCollectionStartedAtMs) / 1000,
+      0,
+      MAX_SERVER_PRODUCTION_SECONDS
+    );
+    maxElapsedSeconds = Math.max(maxElapsedSeconds, collectionElapsedSeconds);
     const stats = getCityProductionStats(city, { ...rawProfile, character, upgrades, itemEffects }, productionBonuses, {
       nowMs,
       includeWarDrums: false,
@@ -8176,11 +8338,53 @@ async function prepareEconomyCollection(transaction, uid, nowMs = Date.now(), op
         * WAR_DRUMS_TROOP_PRODUCTION_BONUS_PERCENT / 100;
     const nextTroopFloat = currentTroopFloat + troopGainFloat;
     const nextTroops = Math.max(0, Math.floor(nextTroopFloat));
+    const collectionWarDrumsOverlapSeconds = getTimedProductionBoostOverlapSeconds(
+      collectionStartedAtMs,
+      nowMs,
+      itemEffects.warDrumsExpiresAtMs,
+      WAR_DRUMS_DURATION_MS
+    );
+    const collectionTroopGainFloat = stats.troopProductionPerSecond * collectionElapsedSeconds
+      + stats.baseTroopProductionPerHour / 3600
+        * collectionWarDrumsOverlapSeconds
+        * WAR_DRUMS_TROOP_PRODUCTION_BONUS_PERCENT / 100;
+    const cityTroopsGained = getIntegerProductionGain(
+      nextTroopFloat - collectionTroopGainFloat,
+      collectionTroopGainFloat
+    );
+    const pendingWarDrumsOverlapSeconds = getTimedProductionBoostOverlapSeconds(
+      pendingCollectionStartedAtMs,
+      nowMs,
+      itemEffects.warDrumsExpiresAtMs,
+      WAR_DRUMS_DURATION_MS
+    );
+    const pendingTroopGainFloat = stats.troopProductionPerSecond * pendingCollectionElapsedSeconds
+      + stats.baseTroopProductionPerHour / 3600
+        * pendingWarDrumsOverlapSeconds
+        * WAR_DRUMS_TROOP_PRODUCTION_BONUS_PERCENT / 100;
+    const pendingCityTroopsGained = getIntegerProductionGain(
+      nextTroopFloat - pendingTroopGainFloat,
+      pendingTroopGainFloat
+    );
     goldGainFloat += stats.goldProductionPerSecond * goldElapsedSeconds
       + stats.baseGoldProductionPerHour / 3600
         * taxDecreeOverlapSeconds
         * ROYAL_TAX_DECREE_GOLD_PRODUCTION_BONUS_PERCENT / 100;
-    troopsGained += Math.max(0, nextTroops - Math.max(0, Math.floor(safeNumber(city.troops, 0))));
+    const pendingTaxDecreeOverlapSeconds = getTimedProductionBoostOverlapSeconds(
+      pendingGoldStartedAtMs,
+      nowMs,
+      itemEffects.royalTaxDecreeExpiresAtMs,
+      ROYAL_TAX_DECREE_DURATION_MS
+    );
+    pendingGoldGainFloat += stats.goldProductionPerSecond * pendingGoldElapsedSeconds
+      + stats.baseGoldProductionPerHour / 3600
+        * pendingTaxDecreeOverlapSeconds
+        * ROYAL_TAX_DECREE_GOLD_PRODUCTION_BONUS_PERCENT / 100;
+    troopsGained += cityTroopsGained;
+    if (pendingCityTroopsGained > 0) {
+      const cityKey = getReinforcementTargetKey("city", city.regionId, city.id);
+      troopsByCity[cityKey] = pendingCityTroopsGained;
+    }
     const patch = {
       troops: nextTroops,
       troopFloat: nextTroopFloat,
@@ -8207,6 +8411,16 @@ async function prepareEconomyCollection(transaction, uid, nowMs = Date.now(), op
 
   const goldFloat = baseGold + goldGainFloat;
   const gold = Math.max(0, Math.floor(goldFloat));
+  const goldGained = getIntegerProductionGain(baseGold, goldGainFloat);
+  const pendingGoldGained = getIntegerProductionGain(
+    goldFloat - pendingGoldGainFloat,
+    pendingGoldGainFloat
+  );
+  const pendingAwayProduction = addPendingAwayProduction(pendingAwayProductionBefore, {
+    goldGained: pendingGoldGained,
+    troopsByCity,
+    startedAtMs: Math.max(lastEconomyAtMs, productionObservedAtMs),
+  }, nowMs);
   const profileAfter = {
     ...rawProfile,
     character,
@@ -8216,6 +8430,7 @@ async function prepareEconomyCollection(transaction, uid, nowMs = Date.now(), op
     shopItems,
     itemEffects,
     itemPurchaseCooldowns,
+    pendingAwayProduction,
     ...mainCityRepair.profileFields,
     economyUpdatedAtMs: economyRevisionMs,
   };
@@ -8240,6 +8455,7 @@ async function prepareEconomyCollection(transaction, uid, nowMs = Date.now(), op
     shopItems,
     itemEffects,
     itemPurchaseCooldowns,
+    pendingAwayProduction,
     ...mainCityRepair.profileFields,
     ...objectiveBenefits.profilePatch,
     economyUpdatedAtMs: economyRevisionMs,
@@ -8266,11 +8482,13 @@ async function prepareEconomyCollection(transaction, uid, nowMs = Date.now(), op
     itemEffects,
     itemPurchaseCooldowns,
     production: {
-      goldGained: Math.max(0, Math.floor(goldGainFloat)),
+      goldGained,
       troopsGained,
       elapsedSeconds: Math.floor(maxElapsedSeconds),
       cityCount: cityEntries.filter(entry => !isStronghold(entry.city)).length,
     },
+    productionByCity: troopsByCity,
+    pendingAwayProduction,
   };
 }
 
@@ -8661,6 +8879,93 @@ function createEconomyResponse(economy = null, overrides = {}) {
   };
 }
 
+function normalizeWelcomeBackSummary(raw = null) {
+  if (!raw || typeof raw !== "object") return null;
+  const lostCities = (Array.isArray(raw.lostCities) ? raw.lostCities : [])
+    .slice(0, 50)
+    .map(city => ({
+      id: safeString(city?.id, 96),
+      name: safeString(city?.name, 80),
+      regionId: normalizeRegionId(city?.regionId),
+      kind: safeString(city?.kind, 40),
+      lostAtMs: Math.max(0, Math.floor(safeNumber(city?.lostAtMs, 0))),
+    }))
+    .filter(city => city.id && city.regionId);
+  return {
+    version: WELCOME_BACK_SUMMARY_VERSION,
+    elapsedSeconds: Math.max(0, Math.floor(safeNumber(raw.elapsedSeconds, 0))),
+    goldGained: Math.max(0, Math.floor(safeNumber(raw.goldGained, 0))),
+    troopsGained: Math.max(0, Math.floor(safeNumber(raw.troopsGained, 0))),
+    lostCityCount: Math.max(lostCities.length, Math.floor(safeNumber(raw.lostCityCount, lostCities.length))),
+    lostCities,
+  };
+}
+
+function getServerWorldCityNode(regionId = "", cityId = "") {
+  const map = getServerWorldMap(regionId);
+  const targets = [
+    ...(Array.isArray(map?.cities) ? map.cities : []),
+    ...(Array.isArray(map?.objectives) ? map.objectives : []),
+  ];
+  return targets.find(target => safeString(target?.id, 96) === safeString(cityId, 96)) || null;
+}
+
+function createWelcomeBackLostCityList(lossSnapshot = null, economy = null) {
+  const currentlyOwnedKeys = new Set((economy?.cityEntries || []).map(entry => (
+    getReinforcementTargetKey("city", entry?.city?.regionId, entry?.city?.id)
+  )));
+  const lostByTargetKey = new Map();
+  (lossSnapshot?.docs || []).forEach(doc => {
+    const event = doc.data() || {};
+    if (safeString(event.reason, 64) !== "city_captured" || event.targetType !== "city") return;
+    const id = safeString(event.targetId, 96);
+    const regionId = normalizeRegionId(event.regionId);
+    const targetKey = getReinforcementTargetKey("city", regionId, id);
+    if (!id || currentlyOwnedKeys.has(targetKey)) return;
+    const configured = getServerWorldCityNode(regionId, id) || { id, regionId };
+    const kind = safeString(
+      configured.kind || configured.strongholdType || configured.type || (isStronghold(configured) ? "stronghold" : "city"),
+      40
+    );
+    lostByTargetKey.set(targetKey, {
+      id,
+      name: getServerCanonicalCityName({ ...configured, id }, regionId),
+      regionId,
+      kind,
+      lostAtMs: Math.max(0, timestampToMs(event.createdAtMs || event.createdAt)),
+    });
+  });
+  return [...lostByTargetKey.values()].sort((left, right) => (
+    left.lostAtMs - right.lostAtMs || left.id.localeCompare(right.id)
+  ));
+}
+
+function createWelcomeBackSummary(economy = null, welcomeBack = null, lossSnapshot = null) {
+  const session = normalizeWelcomeBackSession(welcomeBack);
+  if (!economy || !session.sessionStartedAtMs || !session.awayStartedAtMs) return null;
+  const pending = normalizePendingAwayProduction(economy.pendingAwayProduction);
+  const ownedCitiesByKey = new Map((economy.cityEntries || []).map(entry => [
+    getReinforcementTargetKey("city", entry?.city?.regionId, entry?.city?.id),
+    entry?.city || {},
+  ]));
+  const troopsGained = Object.entries(pending.troopsByCity).reduce((total, [key, rawTroops]) => {
+    const city = ownedCitiesByKey.get(key);
+    if (!city) return total;
+    return total + Math.min(
+      Math.max(0, Math.floor(safeNumber(rawTroops, 0))),
+      Math.max(0, Math.floor(safeNumber(city.troops, 0)))
+    );
+  }, 0);
+  const lostCities = createWelcomeBackLostCityList(lossSnapshot, economy);
+  return normalizeWelcomeBackSummary({
+    elapsedSeconds: Math.floor(Math.max(0, session.sessionStartedAtMs - session.awayStartedAtMs) / 1000),
+    goldGained: pending.goldGained,
+    troopsGained,
+    lostCityCount: lostCities.length,
+    lostCities,
+  });
+}
+
 function getHarvestEconomyRates(economy = null) {
   if (!economy) return { goldPerSecond: 0, troopProductionPerSecond: 0 };
   return economy.cityEntries.reduce((totals, entry) => {
@@ -8894,7 +9199,7 @@ exports.registerGameInstallation = timedCallable(
     const installationHash = antiFarmHash(installationId);
     const installationRef = antiFarmInstallationRef(installationHash);
     const accountRef = antiFarmAccountRef(uid);
-    await db.runTransaction(async transaction => {
+    await runTransactionWithInfrastructureRetry(async transaction => {
       const [installationSnap, accountSnap] = await Promise.all([
         transaction.get(installationRef),
         transaction.get(accountRef),
@@ -9043,11 +9348,50 @@ exports.leaveGameServer = onCall({ region: "us-central1", maxInstances: 20, invo
 
 exports.collectEconomy = timedCallable("collectEconomy", { region: "us-central1", maxInstances: 30, invoker: "public" }, async request => {
   const uid = requireAuth(request);
+  const data = request.data || {};
+  const includeWelcomeBack = data.includeWelcomeBack === true;
+  const requestedSessionId = includeWelcomeBack ? requireGameServerSessionId(data.sessionId) : "";
   const nowMs = Date.now();
-  return db.runTransaction(async transaction => {
+  return runTransactionWithInfrastructureRetry(async transaction => {
+    const membershipRef = db.doc(`players/${uid}/serverMembership/current`);
+    const membershipSnap = includeWelcomeBack ? await transaction.get(membershipRef) : null;
+    const welcomeBack = normalizeWelcomeBackSession(membershipSnap?.exists ? membershipSnap.data() || {} : null);
+    const validWelcomeSession = Boolean(
+      includeWelcomeBack
+      && welcomeBack.sessionId === requestedSessionId
+      && welcomeBack.sessionStartedAtMs
+      && welcomeBack.awayStartedAtMs
+      && (welcomeBack.eligible || welcomeBack.summary)
+    );
+    let lossSnapshot = null;
+    if (validWelcomeSession && !welcomeBack.summary) {
+      lossSnapshot = await transaction.get(
+        db.collection(`realmEvents/${RESET_GENERATION}/ownershipChanges`)
+          .where("beforeOwnerUid", "==", uid)
+          .where("createdAtMs", ">", welcomeBack.awayStartedAtMs)
+          .where("createdAtMs", "<=", welcomeBack.sessionStartedAtMs)
+          .orderBy("createdAtMs", "asc")
+      );
+    }
     const economy = await prepareEconomyCollection(transaction, uid, nowMs);
-    writePreparedEconomy(transaction, economy);
-    return createEconomyResponse(economy);
+    const awaySummary = validWelcomeSession
+      ? normalizeWelcomeBackSummary(welcomeBack.summary)
+        || createWelcomeBackSummary(economy, welcomeBack, lossSnapshot)
+      : null;
+    writePreparedEconomy(transaction, economy, {
+      pendingAwayProduction: createEmptyPendingAwayProduction(nowMs),
+    });
+    if (validWelcomeSession && awaySummary && !welcomeBack.summary) {
+      transaction.set(membershipRef, {
+        welcomeBack: {
+          ...welcomeBack,
+          eligible: false,
+          claimedAtMs: nowMs,
+          summary: awaySummary,
+        },
+      }, { merge: true });
+    }
+    return createEconomyResponse(economy, awaySummary ? { awaySummary } : {});
   });
 });
 
@@ -9057,7 +9401,7 @@ exports.getDailyLoginRewardStatus = timedCallable(
   async request => {
     const uid = requireAuth(request);
     const nowMs = Date.now();
-    return db.runTransaction(async transaction => {
+    return runTransactionWithInfrastructureRetry(async transaction => {
       const profileRef = db.doc(`players/${uid}`);
       const profileSnap = await transaction.get(profileRef);
       if (!profileSnap.exists) {
@@ -9086,7 +9430,7 @@ exports.claimDailyLoginReward = timedCallable(
     const nowMs = Date.now();
     const claimId = safeString(request.data?.claimId, 96);
     const expectedOrdinal = Math.max(0, Math.floor(safeNumber(request.data?.expectedOrdinal, 0)));
-    return db.runTransaction(async transaction => {
+    return runTransactionWithInfrastructureRetry(async transaction => {
       const profileRef = db.doc(`players/${uid}`);
       const profileSnap = await transaction.get(profileRef);
       if (!profileSnap.exists) {
@@ -9247,7 +9591,7 @@ exports.prepareRewardedAd = onCall(REWARDED_AD_MUTATION_CALLABLE_OPTIONS, async 
   }
   const nowMs = Date.now();
 
-  return db.runTransaction(async transaction => {
+  return runTransactionWithInfrastructureRetry(async transaction => {
     const stateRef = rewardedAdStateRef(uid);
     const configRef = rewardedAdServerConfigRef();
     const [stateSnap, configSnap] = await Promise.all([
@@ -9372,7 +9716,7 @@ exports.claimRewardedAd = onCall(REWARDED_AD_MUTATION_CALLABLE_OPTIONS, async re
   if (!intentId) throw new HttpsError("invalid-argument", "A rewarded-ad intent is required.");
   const nowMs = Date.now();
 
-  return db.runTransaction(async transaction => {
+  return runTransactionWithInfrastructureRetry(async transaction => {
     const stateRef = rewardedAdStateRef(uid);
     const intentRef = rewardedAdIntentRef(uid, intentId);
     const configRef = rewardedAdServerConfigRef();
@@ -9515,7 +9859,7 @@ exports.reserveHarvestBonusSpawn = onCall({ region: "us-central1", maxInstances:
   const requestedType = normalizeHarvestBonusType(data.type);
   const nowMs = Date.now();
 
-  return db.runTransaction(async transaction => {
+  return runTransactionWithInfrastructureRetry(async transaction => {
     const profileRef = db.doc(`players/${uid}`);
     const profileSnap = await transaction.get(profileRef);
     const profile = profileSnap.exists ? profileSnap.data() || {} : {};
@@ -9614,7 +9958,7 @@ exports.reserveHarvestBonusSpawn = onCall({ region: "us-central1", maxInstances:
 exports.repairMainCityAssignment = onCall({ region: "us-central1", maxInstances: 20, invoker: "public" }, async request => {
   const uid = requireAuth(request);
   const nowMs = Date.now();
-  return db.runTransaction(async transaction => {
+  return runTransactionWithInfrastructureRetry(async transaction => {
     const economy = await prepareEconomyCollection(transaction, uid, nowMs);
     writePreparedEconomy(transaction, economy, {
       mainCityRepairUpdatedAtMs: nowMs,
@@ -9632,7 +9976,7 @@ exports.changeMainCity = onCall({ region: "us-central1", maxInstances: 20, invok
   const regionId = normalizeRegionId(data.regionId || data.mainRegionId || data.islandId || "");
   if (!cityId) throw new HttpsError("invalid-argument", "Choose a city to make your main city.");
 
-  return db.runTransaction(async transaction => {
+  return runTransactionWithInfrastructureRetry(async transaction => {
     const nowMs = Date.now();
     const economy = await prepareEconomyCollection(transaction, uid, nowMs);
     const targetRef = regionId ? cityRefForRegion(regionId, cityId) : null;
@@ -9733,7 +10077,7 @@ exports.collectHarvestBonus = onCall({ region: "us-central1", maxInstances: 30, 
   const bonusId = safeString(data.bonusId || data.id, 96);
   const nowMs = Date.now();
 
-  return db.runTransaction(async transaction => {
+  return runTransactionWithInfrastructureRetry(async transaction => {
     const economy = await prepareEconomyCollection(transaction, uid, nowMs);
     let daily = mergeHarvestDailyTrackers(economy.profileAfter.daily, data.daily, new Date(nowMs));
     const activeHarvestBonuses = enforceHarvestBonusActiveLimit(economy.profileAfter.harvestBonuses, nowMs);
@@ -9811,7 +10155,7 @@ exports.spendSkillPoint = onCall({ region: "us-central1", maxInstances: 20, invo
   if (!config) throw new HttpsError("invalid-argument", "Choose a valid skill.");
 
   const nowMs = Date.now();
-  return db.runTransaction(async transaction => {
+  return runTransactionWithInfrastructureRetry(async transaction => {
     const economy = await prepareEconomyCollection(transaction, uid, nowMs);
     if (!economy.profileSnap.exists) throw new HttpsError("not-found", "Player profile was not found.");
     const upgrades = normalizeSkillUpgrades(economy.profileAfter.upgrades);
@@ -9840,7 +10184,7 @@ exports.spendSkillPoint = onCall({ region: "us-central1", maxInstances: 20, invo
 exports.resetSkills = onCall({ region: "us-central1", maxInstances: 20, invoker: "public" }, async request => {
   const uid = requireAuth(request);
   const nowMs = Date.now();
-  return db.runTransaction(async transaction => {
+  return runTransactionWithInfrastructureRetry(async transaction => {
     const economy = await prepareEconomyCollection(transaction, uid, nowMs);
     const spentPoints = getSpentSkillPoints(economy.profileAfter.upgrades);
     const currentUpgrades = normalizeSkillUpgrades(economy.profileAfter.upgrades);
@@ -10252,7 +10596,7 @@ async function ensureMainIslandForPlayer(uid, data = {}) {
   const seedLockRef = db.doc(`realmSeeds/${RESET_GENERATION}/islands/${seed.regionId}`);
   const seedOwnerToken = crypto.randomBytes(12).toString("hex");
   const seedLeaseMs = 60 * 1000;
-  const acquiredSeedLease = await db.runTransaction(async transaction => {
+  const acquiredSeedLease = await runTransactionWithInfrastructureRetry(async transaction => {
     const lockSnap = await transaction.get(seedLockRef);
     const lock = lockSnap.exists ? lockSnap.data() || {} : {};
     const nowMs = Date.now();
@@ -10442,7 +10786,7 @@ const legacyClaimStartingCity = onCall({ region: "us-central1", maxInstances: 20
   const islandRef = db.doc(`islands/${islandId}`);
   const cityRefForIsland = cityId => db.doc(`islands/${islandId}/cities/${cityId}`);
 
-  return db.runTransaction(async transaction => {
+  return runTransactionWithInfrastructureRetry(async transaction => {
     const nowMs = Date.now();
     const playerSnap = await transaction.get(playerRef);
     const playerData = playerSnap.exists ? playerSnap.data() || {} : {};
@@ -10709,6 +11053,7 @@ function createFreshResetPlayerProfile({
     gameSeconds: 0,
     localGameSeconds: 0,
     economyUpdatedAtMs: nowMs,
+    pendingAwayProduction: createEmptyPendingAwayProduction(nowMs),
     lastRealTimeMs: nowMs,
     lastSeenAtMs: nowMs,
     createdAt: previous.createdAt || FieldValue.serverTimestamp(),
@@ -10981,7 +11326,7 @@ async function claimFreshStartingCity(request) {
       if (!alreadyExists) throw error;
     }
 
-    return db.runTransaction(async transaction => {
+    return runTransactionWithInfrastructureRetry(async transaction => {
       const snapshot = await transaction.get(placement.slotRef);
       const existing = snapshot.exists ? snapshot.data() || {} : {};
       const expired = safeString(existing.status, 24) === "reserved"
@@ -11072,7 +11417,7 @@ exports.upgradeCity = onCall({ region: "us-central1", maxInstances: 20, invoker:
   const requestedLevels = clampInt(data.levels || 1, 1, 25);
   if (!cityId) throw new HttpsError("invalid-argument", "Choose a city to upgrade.");
 
-  return db.runTransaction(async transaction => {
+  return runTransactionWithInfrastructureRetry(async transaction => {
     const nowMs = Date.now();
     const cityRef = cityRefForRegion(regionId, cityId);
     const economy = await prepareEconomyCollection(transaction, uid, nowMs);
@@ -11158,7 +11503,7 @@ exports.relinquishCity = onCall({ region: "us-central1", maxInstances: 20, invok
   const order = normalizeArmyPayload(data, uid);
   if (!cityId) throw new HttpsError("invalid-argument", "Choose a city to relinquish.");
 
-  return db.runTransaction(async transaction => {
+  return runTransactionWithInfrastructureRetry(async transaction => {
     const nowMs = Date.now();
     const cityRef = cityRefForRegion(regionId, cityId);
     const economy = await prepareEconomyCollection(transaction, uid, nowMs);
@@ -11366,7 +11711,7 @@ exports.purchaseShopItem = onCall({ region: "us-central1", maxInstances: 20, inv
     throw new HttpsError("failed-precondition", "Shop item price changed. Reload Crownlands and try again.");
   }
 
-  return db.runTransaction(async transaction => {
+  return runTransactionWithInfrastructureRetry(async transaction => {
     const nowMs = Date.now();
     const economy = await prepareEconomyCollection(transaction, uid, nowMs);
     let goldFloat = Math.max(0, safeNumber(economy.goldFloat, economy.gold));
@@ -11425,7 +11770,7 @@ exports.activateInventoryItem = onCall({ region: "us-central1", maxInstances: 20
     throw new HttpsError("failed-precondition", "That item effect is not active yet.");
   }
 
-  return db.runTransaction(async transaction => {
+  return runTransactionWithInfrastructureRetry(async transaction => {
     const nowMs = Date.now();
     const economy = await prepareEconomyCollection(transaction, uid, nowMs);
     const shopItems = { ...economy.shopItems };
@@ -11499,7 +11844,7 @@ exports.useSwiftMarchOrder = onCall({ region: "us-central1", maxInstances: 20, i
 
   const armyRef = canonicalArmyRef(armyId);
   const profileRef = db.doc(`players/${uid}`);
-  return db.runTransaction(async transaction => {
+  return runTransactionWithInfrastructureRetry(async transaction => {
     const nowMs = Date.now();
     const [armySnap, profileSnap] = await Promise.all([
       transaction.get(armyRef),
@@ -11605,7 +11950,7 @@ exports.useRecallHorn = onCall({ region: "us-central1", maxInstances: 20, invoke
 
   const armyRef = canonicalArmyRef(armyId);
   const profileRef = db.doc(`players/${uid}`);
-  return db.runTransaction(async transaction => {
+  return runTransactionWithInfrastructureRetry(async transaction => {
     const nowMs = Date.now();
     const [armySnap, profileSnap] = await Promise.all([
       transaction.get(armyRef),
@@ -12105,7 +12450,7 @@ exports.createClan = onCall({ region: "us-central1", maxInstances: 20, invoker: 
   const nameRef = clanNameReservationRef(name.normalized);
   const tagRef = clanTagReservationRef(tag.normalized);
   const profileRef = db.doc(`players/${uid}`);
-  return db.runTransaction(async transaction => {
+  return runTransactionWithInfrastructureRetry(async transaction => {
     const [profileSnap, nameSnap, tagSnap] = await Promise.all([
       transaction.get(profileRef),
       transaction.get(nameRef),
@@ -12212,7 +12557,7 @@ exports.updateClanProfile = onCall({ region: "us-central1", maxInstances: 20, in
   const profileSnap = await profileRef.get();
   const clanId = safeString(profileSnap.data()?.clanId, 128);
   if (!clanId) throw new HttpsError("failed-precondition", "You are not in a clan.");
-  return db.runTransaction(async transaction => {
+  return runTransactionWithInfrastructureRetry(async transaction => {
     const clanRef = db.doc(`clans/${clanId}`);
     const [currentProfileSnap, clanSnap, memberSnap] = await Promise.all([
       transaction.get(profileRef),
@@ -12391,7 +12736,7 @@ exports.joinOpenClan = onCall({ region: "us-central1", maxInstances: 30, invoker
   const uid = requireAuth(request);
   const clanId = safeString(request.data?.clanId, 128);
   if (!clanId) throw new HttpsError("invalid-argument", "Choose a clan.");
-  return db.runTransaction(async transaction => {
+  return runTransactionWithInfrastructureRetry(async transaction => {
     const [profileSnap, clanSnap] = await Promise.all([
       transaction.get(db.doc(`players/${uid}`)),
       transaction.get(db.doc(`clans/${clanId}`)),
@@ -12407,7 +12752,7 @@ exports.applyToClan = onCall({ region: "us-central1", maxInstances: 30, invoker:
   const clanId = safeString(request.data?.clanId, 128);
   if (!clanId) throw new HttpsError("invalid-argument", "Choose a clan before applying.");
   const nowMs = Date.now();
-  return db.runTransaction(async transaction => {
+  return runTransactionWithInfrastructureRetry(async transaction => {
     const [profileSnap, clanSnap, applicationSnap, statsSnap] = await Promise.all([
       transaction.get(db.doc(`players/${uid}`)),
       transaction.get(db.doc(`clans/${clanId}`)),
@@ -12457,7 +12802,7 @@ exports.cancelClanApplication = onCall({ region: "us-central1", maxInstances: 20
   const uid = requireAuth(request);
   const clanId = safeString(request.data?.clanId, 128);
   if (!clanId) throw new HttpsError("invalid-argument", "Choose an application to cancel.");
-  return db.runTransaction(async transaction => {
+  return runTransactionWithInfrastructureRetry(async transaction => {
     const profileRef = db.doc(`players/${uid}`);
     const applicationRef = db.doc(`clans/${clanId}/applications/${uid}`);
     const [profileSnap, applicationSnap] = await Promise.all([
@@ -12488,7 +12833,7 @@ exports.reviewClanApplication = onCall({ region: "us-central1", maxInstances: 30
   const applicantUid = safeString(request.data?.applicantUid, 128);
   if (!clanId || !applicantUid) throw new HttpsError("invalid-argument", "Choose a clan application to review.");
   const accept = request.data?.accept === true;
-  return db.runTransaction(async transaction => {
+  return runTransactionWithInfrastructureRetry(async transaction => {
     const [clanSnap, reviewerSnap, applicantSnap, applicationSnap] = await Promise.all([
       transaction.get(db.doc(`clans/${clanId}`)),
       transaction.get(db.doc(`clans/${clanId}/members/${uid}`)),
@@ -12567,7 +12912,7 @@ async function removeClanMember({ actorUid, targetUid, clanId, reason = "left" }
     throw new HttpsError("failed-precondition", "Transfer leadership before leaving.");
   }
   await reconcileClanRalliesBeforeDeparture(targetUid, clanId);
-  return db.runTransaction(async transaction => {
+  const result = await runTransactionWithInfrastructureRetry(async transaction => {
     const [clanSnap, actorMemberSnap, targetMemberSnap, targetProfileSnap, benefitsSnap] = await Promise.all([
       transaction.get(db.doc(`clans/${clanId}`)),
       transaction.get(db.doc(`clans/${clanId}/members/${actorUid}`)),
@@ -12638,6 +12983,7 @@ async function removeClanMember({ actorUid, targetUid, clanId, reason = "left" }
     writeClanAudit(transaction, clanId, actorUid, reason, { targetUid });
     return { ok: true, disbanded: nextCount === 0, cooldownUntilMs: nowMs + CLAN_JOIN_COOLDOWN_MS };
   });
+  return result;
 }
 
 exports.leaveClan = onCall({ region: "us-central1", maxInstances: 20, invoker: "public" }, async request => {
@@ -12664,7 +13010,7 @@ async function changeClanRole(request, nextRole) {
   const targetUid = safeString(request.data?.targetUid, 128);
   const profile = (await db.doc(`players/${uid}`).get()).data() || {};
   const clanId = safeString(profile.clanId, 128);
-  return db.runTransaction(async transaction => {
+  return runTransactionWithInfrastructureRetry(async transaction => {
     const [actorSnap, targetSnap] = await Promise.all([
       transaction.get(db.doc(`clans/${clanId}/members/${uid}`)),
       transaction.get(db.doc(`clans/${clanId}/members/${targetUid}`)),
@@ -12687,7 +13033,7 @@ exports.transferClanLeadership = onCall({ region: "us-central1", maxInstances: 2
   const targetUid = safeString(request.data?.targetUid, 128);
   const profile = (await db.doc(`players/${uid}`).get()).data() || {};
   const clanId = safeString(profile.clanId, 128);
-  return db.runTransaction(async transaction => {
+  return runTransactionWithInfrastructureRetry(async transaction => {
     const [clanSnap, actorSnap, targetSnap] = await Promise.all([
       transaction.get(db.doc(`clans/${clanId}`)),
       transaction.get(db.doc(`clans/${clanId}/members/${uid}`)),
@@ -12709,7 +13055,7 @@ exports.claimInactiveClanLeadership = onCall({ region: "us-central1", maxInstanc
   const uid = requireAuth(request);
   const profile = (await db.doc(`players/${uid}`).get()).data() || {};
   const clanId = safeString(profile.clanId, 128);
-  return db.runTransaction(async transaction => {
+  return runTransactionWithInfrastructureRetry(async transaction => {
     const clanSnap = await transaction.get(db.doc(`clans/${clanId}`));
     if (!clanSnap.exists) throw new HttpsError("not-found", "Clan was not found.");
     const clan = clanSnap.data() || {};
@@ -12746,7 +13092,7 @@ exports.disbandClan = onCall({ region: "us-central1", maxInstances: 10, invoker:
 exports.sendClanGift = onCall({ region: "us-central1", maxInstances: 20, invoker: "public" }, async request => {
   const uid = requireAuth(request);
   const nowMs = Date.now();
-  return db.runTransaction(async transaction => {
+  return runTransactionWithInfrastructureRetry(async transaction => {
     const profileSnap = await transaction.get(db.doc(`players/${uid}`));
     const profile = profileSnap.data() || {};
     const clanId = safeString(profile.clanId, 128);
@@ -12821,7 +13167,7 @@ exports.sendClanGift = onCall({ region: "us-central1", maxInstances: 20, invoker
 exports.claimClanGiftPool = onCall({ region: "us-central1", maxInstances: 20, invoker: "public" }, async request => {
   const uid = requireAuth(request);
   const nowMs = Date.now();
-  return db.runTransaction(async transaction => {
+  return runTransactionWithInfrastructureRetry(async transaction => {
     const profileSnap = await transaction.get(db.doc(`players/${uid}`));
     const profile = profileSnap.data() || {};
     const clanId = safeString(profile.clanId, 128);
@@ -12898,7 +13244,7 @@ exports.claimClanQuestReward = onCall({ region: "us-central1", maxInstances: 20,
       weekEndAtMs: questPeriod.weekEndAtMs,
     });
   }
-  return db.runTransaction(async transaction => {
+  return runTransactionWithInfrastructureRetry(async transaction => {
     const profileSnap = await transaction.get(db.doc(`players/${uid}`));
     const profile = profileSnap.data() || {};
     const clanId = safeString(profile.clanId, 128);
@@ -13076,7 +13422,7 @@ function hasClanIdentitySnapshot(data = {}, identity = {}, revision = 0, target 
 }
 
 async function writeClanIdentitySnapshot(ref, identity = {}, revision = 0, target = "asset") {
-  await db.runTransaction(async transaction => {
+  await runTransactionWithInfrastructureRetry(async transaction => {
     const snapshot = await transaction.get(ref);
     if (!snapshot.exists) return;
     const data = snapshot.data() || {};
@@ -13170,7 +13516,7 @@ exports.rebuildClanPowerOnPlayerStats = onDocumentWritten({
   if (safeString(profile.resetGeneration, 120) !== RESET_GENERATION) return;
   const clanId = safeString(profile.clanId, 128);
   if (!clanId) return;
-  await db.runTransaction(async transaction => {
+  await runTransactionWithInfrastructureRetry(async transaction => {
     const [clanSnap, memberSnap] = await Promise.all([
       transaction.get(db.doc(`clans/${clanId}`)),
       transaction.get(db.doc(`clans/${clanId}/members/${uid}`)),
@@ -13216,7 +13562,7 @@ exports.createClanRally = timedCallable("createClanRally", { region: "us-central
     : cityRefForRegion(order.targetRegionId, order.toId);
   const playerRef = db.doc(`players/${uid}`);
 
-  return db.runTransaction(async transaction => {
+  return runTransactionWithInfrastructureRetry(async transaction => {
     const [sourceSnap, targetSnap, playerSnap] = await Promise.all([
       transaction.get(sourceRef),
       transaction.get(targetRef),
@@ -13427,7 +13773,7 @@ exports.joinClanRally = timedCallable("joinClanRally", { region: "us-central1", 
   );
   const canonicalJoinRef = canonicalArmyRef(joinArmyId);
 
-  return db.runTransaction(async transaction => {
+  return runTransactionWithInfrastructureRetry(async transaction => {
     const [rallySnap, playerSnap, sourceSnap, clanSnap, memberSnap, joinArmySnap] = await Promise.all([
       transaction.get(rallyRef),
       transaction.get(playerRef),
@@ -13580,7 +13926,7 @@ async function withdrawClanRallyContributionRequest(request) {
   if (!clanId || !rallyId) throw new HttpsError("invalid-argument", "Choose a rally contribution to withdraw.");
   const rallyRef = clanRallyRef(clanId, rallyId);
 
-  return db.runTransaction(async transaction => {
+  return runTransactionWithInfrastructureRetry(async transaction => {
     const [rallySnap, profileSnap, memberSnap] = await Promise.all([
       transaction.get(rallyRef),
       transaction.get(db.doc(`players/${uid}`)),
@@ -13692,7 +14038,7 @@ async function cancelClanRallyRequest(request) {
   const rallyRef = clanRallyRef(clanId, rallyId);
   const stateRef = clanRallyStateRef(clanId);
 
-  return db.runTransaction(async transaction => {
+  return runTransactionWithInfrastructureRetry(async transaction => {
     const [rallySnap, stateSnap] = await Promise.all([
       transaction.get(rallyRef),
       transaction.get(stateRef),
@@ -13850,7 +14196,7 @@ exports.launchClanRally = timedCallable("launchClanRally", { region: "us-central
   const rallyRef = clanRallyRef(clanId, rallyId);
   const stateRef = clanRallyStateRef(clanId);
 
-  const result = await db.runTransaction(async transaction => {
+  const result = await runTransactionWithInfrastructureRetry(async transaction => {
     const [rallySnap, stateSnap, leaderProfileSnap, clanSnap, leaderMemberSnap] = await Promise.all([
       transaction.get(rallyRef),
       transaction.get(stateRef),
@@ -14181,7 +14527,7 @@ exports.previewArmyProtection = onCall({ region: "us-central1", maxInstances: 20
   const attackerLeaderboardRef = leaderboardEntryRef(uid);
   const nowMs = Date.now();
 
-  return db.runTransaction(async transaction => {
+  return runTransactionWithInfrastructureRetry(async transaction => {
     const [sourceSnap, targetSnap, playerSnap, attackerLeaderboardSnap] = await Promise.all([
       transaction.get(sourceRef),
       transaction.get(targetRef),
@@ -14767,7 +15113,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
   if (!armyId) throw new HttpsError("invalid-argument", "Missing army id.");
   const candidateRefs = [canonicalArmyRef(armyId), ...armyViewRefsForRegions(requestedRegions, armyId)];
 
-  const resolution = await db.runTransaction(async transaction => {
+  const resolution = await runTransactionWithInfrastructureRetry(async transaction => {
     const candidateSnaps = await Promise.all(candidateRefs.map(ref => transaction.get(ref)));
     const firstArmySnap = candidateSnaps.find(snapshot => snapshot.exists);
     if (!firstArmySnap) return { ok: true, status: "missing" };
@@ -16005,6 +16351,11 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
         targetReinforcements,
         result.defenderLosses
       );
+      if (targetType === "city") {
+        consumePendingAwayCityTroops(defenderEconomy, { ...target, regionId: targetRegionId }, defenseAllocation.ownerLosses, {
+          captured: result.success,
+        });
+      }
       const oldOwnerUid = defenderUid;
       const defendersAtStart = Math.max(0, Math.floor(safeNumber(combatTarget.troops, 0)));
       const battleOutcome = result.success ? "victory" : "defeat";
@@ -16952,6 +17303,9 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
       targetReinforcements,
       result.defenderLosses
     );
+    consumePendingAwayCityTroops(defenderEconomy, { ...target, regionId: targetRegionId }, defenseAllocation.ownerLosses, {
+      captured: result.success,
+    });
     currentBattleId = safeString(armyId, 160);
     writeDetailedBattleSnapshot(transaction, createDetailedBattleSnapshot({
       battleId: currentBattleId,
@@ -17872,7 +18226,7 @@ async function recordClanConquest(change = {}, eventId = "") {
   );
   const questPeriod = getClanQuestPeriod(captureEventAtMs, RESET_GENERATION);
   const progressRef = clanQuestProgressRef(clanId, questPeriod);
-  return db.runTransaction(async transaction => {
+  return runTransactionWithInfrastructureRetry(async transaction => {
     const [latestProfileSnap, clanSnap, memberSnap, progressSnap, receiptSnap] = await Promise.all([
       transaction.get(db.doc(`players/${afterOwnerUid}`)),
       transaction.get(db.doc(`clans/${clanId}`)),
@@ -18088,7 +18442,7 @@ async function settleReinforcementBattleReceipt(event) {
   const contributorUid = safeString(snapshot.data()?.contributorUid, 128);
   if (!contributorUid) return null;
   const nowMs = Date.now();
-  return db.runTransaction(async transaction => {
+  return runTransactionWithInfrastructureRetry(async transaction => {
     const receiptSnap = await transaction.get(snapshot.ref);
     if (!receiptSnap.exists) return null;
     const receipt = receiptSnap.data() || {};
@@ -18205,7 +18559,7 @@ async function settleRallyBattleReceipt(event) {
   const contributorUid = safeString(snapshot.data()?.contributorUid, 128);
   if (!contributorUid) return null;
   const nowMs = Date.now();
-  return db.runTransaction(async transaction => {
+  return runTransactionWithInfrastructureRetry(async transaction => {
     const receiptSnap = await transaction.get(snapshot.ref);
     if (!receiptSnap.exists) return null;
     const receipt = receiptSnap.data() || {};
@@ -18523,7 +18877,7 @@ async function findEligibleDeedCampCity(transaction, camp = {}, holderUid = "", 
 }
 
 async function resolveRewardCampPayoutByRef(campRef, nowMs = Date.now(), callerUid = "") {
-  return db.runTransaction(async transaction => {
+  return runTransactionWithInfrastructureRetry(async transaction => {
     const campSnap = await transaction.get(campRef);
     if (!campSnap.exists) return { ok: true, status: "missing" };
     const camp = getRewardCampCombatTarget({ id: campSnap.id, ...campSnap.data() });
@@ -18975,7 +19329,7 @@ exports.recallRewardCampGarrison = onCall({ region: "us-central1", maxInstances:
 
   const campRef = campRefForRegion(regionId, campId);
   const playerRef = db.doc(`players/${uid}`);
-  return db.runTransaction(async transaction => {
+  return runTransactionWithInfrastructureRetry(async transaction => {
     const nowMs = Date.now();
     const [campSnap, playerSnap] = await Promise.all([
       transaction.get(campRef),
@@ -19203,7 +19557,7 @@ async function backfillActiveArmyVisibilityViews() {
   const snapshot = await query.get();
 
   await processWithConcurrency(snapshot.docs, 8, async armyDoc => {
-    await db.runTransaction(async transaction => {
+    await runTransactionWithInfrastructureRetry(async transaction => {
       const currentSnap = await transaction.get(armyDoc.ref);
       if (!currentSnap.exists) return;
       const army = { id: currentSnap.id, ...currentSnap.data() };
