@@ -2648,8 +2648,8 @@ let onlineOwnedCitiesCacheComplete = false;
 let onlineOwnedCitiesRefreshInFlight = false;
 let activeOperationsTab = "marches";
 const islandMapPickerViewState = {
-  scrollLeft: 0,
-  scrollTop: 0,
+  x: 0,
+  y: 0,
   zoom: 1,
   hasView: false,
 };
@@ -10844,8 +10844,9 @@ const ISLAND_PICKER_STAGE_PADDING = 260;
 const ISLAND_PICKER_GRID_CELL_WORLD_SIZE = 2300;
 const ISLAND_PICKER_MIN_ZOOM = 0.18;
 const ISLAND_PICKER_MAX_ZOOM = 1;
-const ISLAND_PICKER_ZOOM_EASE_MS = 96;
+const ISLAND_PICKER_CAMERA_EASE_MS = 120;
 const ISLAND_PICKER_ZOOM_EPSILON = 0.00035;
+const ISLAND_PICKER_CAMERA_EPSILON = 0.12;
 
 function getIslandMapGridCoordinate(region) {
   const regionId = normalizeRegionId(region?.id);
@@ -10929,6 +10930,8 @@ function getIslandMapPickerStyle() {
     `--island-grid-base-h:${Math.round(layout.stageHeight)}px`,
     `--island-grid-cell-w:${ISLAND_PICKER_TILE_WIDTH + ISLAND_PICKER_TILE_GAP}px`,
     `--island-grid-cell-h:${ISLAND_PICKER_TILE_HEIGHT + ISLAND_PICKER_TILE_GAP}px`,
+    `--island-camera-x:${formatPathNumber(islandMapPickerViewState.x)}px`,
+    `--island-camera-y:${formatPathNumber(islandMapPickerViewState.y)}px`,
     `--island-map-zoom:${formatPathNumber(zoom)}`,
   ].join(";");
 }
@@ -11014,9 +11017,7 @@ function renderIslandSwitcherModalContent() {
   const picker = modalBody.querySelector(".island-map-picker");
   attachIslandMapPickerPan(picker);
   attachIslandMapPickerZoom(picker);
-  if (!restoreIslandMapPickerView(picker)) {
-    centerIslandMapPickerOnRegion(picker, activeRegionId || homeRegionId);
-  }
+  setIslandMapPickerOpeningView(picker, activeRegionId || homeRegionId);
   modalBody.querySelectorAll("[data-island-region]").forEach(button => {
     button.addEventListener("click", () => {
       if (picker?.dataset.justDragged === "true" || picker?.dataset.justActivated === "true") return;
@@ -11044,14 +11045,46 @@ function clampIslandMapPickerZoom(value, minimumZoom = ISLAND_PICKER_MIN_ZOOM) {
 
 function getIslandMapPickerFitZoom(picker) {
   if (!picker?.clientWidth || !picker?.clientHeight) return ISLAND_PICKER_MIN_ZOOM;
-  const layout = getIslandMapGridLayout();
-  const horizontalPadding = Math.min(28, picker.clientWidth * 0.08);
-  const verticalPadding = Math.min(28, picker.clientHeight * 0.08);
+  const bounds = getIslandMapContentBounds();
+  const margin = getIslandMapPickerViewportMargin(picker);
   return clampIslandMapPickerZoom(Math.min(
     ISLAND_PICKER_MAX_ZOOM,
-    (picker.clientWidth - horizontalPadding) / layout.stageWidth,
-    (picker.clientHeight - verticalPadding) / layout.stageHeight
+    Math.max(1, picker.clientWidth - margin * 2) / Math.max(1, bounds.width),
+    Math.max(1, picker.clientHeight - margin * 2) / Math.max(1, bounds.height)
   ));
+}
+
+function getIslandMapContentBounds(regions = WORLD_REGIONS) {
+  const positions = (Array.isArray(regions) ? regions : [])
+    .map(region => getIslandMapPosition(region))
+    .filter(position => Number.isFinite(position?.x) && Number.isFinite(position?.y));
+  if (!positions.length) {
+    const layout = getIslandMapGridLayout();
+    return { left: 0, top: 0, right: layout.stageWidth, bottom: layout.stageHeight, width: layout.stageWidth, height: layout.stageHeight };
+  }
+  const left = Math.min(...positions.map(position => position.x - ISLAND_PICKER_TILE_WIDTH / 2));
+  const right = Math.max(...positions.map(position => position.x + ISLAND_PICKER_TILE_WIDTH / 2));
+  const top = Math.min(...positions.map(position => position.y - ISLAND_PICKER_TILE_HEIGHT / 2));
+  const bottom = Math.max(...positions.map(position => position.y + ISLAND_PICKER_TILE_HEIGHT / 2));
+  return { left, top, right, bottom, width: right - left, height: bottom - top };
+}
+
+function getIslandMapPickerViewportMargin(picker) {
+  const shortestSide = Math.max(0, Math.min(picker?.clientWidth || 0, picker?.clientHeight || 0));
+  return clamp(shortestSide * 0.045, 12, 28);
+}
+
+function getIslandMapPickerOpeningZoom(picker) {
+  if (!picker?.clientWidth || !picker?.clientHeight) return getIslandMapPickerMinimumZoom(picker);
+  const layout = getIslandMapGridLayout();
+  const margin = getIslandMapPickerViewportMargin(picker);
+  const neighborhoodWidth = ISLAND_PICKER_TILE_WIDTH + layout.stepX * 2;
+  const neighborhoodHeight = ISLAND_PICKER_TILE_HEIGHT + layout.stepY * 2;
+  return clampIslandMapPickerZoom(Math.min(
+    ISLAND_PICKER_MAX_ZOOM,
+    Math.max(1, picker.clientWidth - margin * 2) / neighborhoodWidth,
+    Math.max(1, picker.clientHeight - margin * 2) / neighborhoodHeight
+  ), getIslandMapPickerMinimumZoom(picker));
 }
 
 function getIslandMapPickerMinimumZoom(picker) {
@@ -11065,218 +11098,169 @@ function getIslandMapPickerZoom(picker = getIslandMapPickerElement()) {
   );
 }
 
-function getIslandMapPickerViewportMetrics(picker, zoom = getIslandMapPickerZoom(picker)) {
-  const layout = getIslandMapGridLayout();
-  const viewportWidth = Math.max(0, picker?.clientWidth || 0);
-  const viewportHeight = Math.max(0, picker?.clientHeight || 0);
-  const stageWidth = Math.max(viewportWidth, layout.stageWidth);
-  const stageHeight = Math.max(viewportHeight, layout.stageHeight);
-  const scaledWidth = layout.stageWidth * zoom;
-  const scaledHeight = layout.stageHeight * zoom;
-  const visualLeft = (stageWidth - scaledWidth) / 2;
-  const visualTop = (stageHeight - scaledHeight) / 2;
-  const scrollExtentX = Math.max(0, stageWidth - viewportWidth);
-  const scrollExtentY = Math.max(0, stageHeight - viewportHeight);
-  const centeredLeft = scrollExtentX / 2;
-  const centeredTop = scrollExtentY / 2;
-  const minLeft = scaledWidth <= viewportWidth ? centeredLeft : visualLeft;
-  const maxLeft = scaledWidth <= viewportWidth ? centeredLeft : visualLeft + scaledWidth - viewportWidth;
-  const minTop = scaledHeight <= viewportHeight ? centeredTop : visualTop;
-  const maxTop = scaledHeight <= viewportHeight ? centeredTop : visualTop + scaledHeight - viewportHeight;
+function clampIslandMapPickerCamera(camera, viewport, bounds, margin = 0) {
+  const zoom = Math.max(0.001, Number(camera?.zoom) || 1);
+  const viewportWidth = Math.max(0, Number(viewport?.width) || 0);
+  const viewportHeight = Math.max(0, Number(viewport?.height) || 0);
+  const horizontalMargin = Math.min(Math.max(0, Number(margin) || 0), viewportWidth / 2);
+  const verticalMargin = Math.min(Math.max(0, Number(margin) || 0), viewportHeight / 2);
+  const scaledWidth = Math.max(0, Number(bounds?.width) || 0) * zoom;
+  const scaledHeight = Math.max(0, Number(bounds?.height) || 0) * zoom;
+  const left = Number(bounds?.left) || 0;
+  const right = Number(bounds?.right) || left;
+  const top = Number(bounds?.top) || 0;
+  const bottom = Number(bounds?.bottom) || top;
+  const centerX = viewportWidth / 2 - (left + right) / 2 * zoom;
+  const centerY = viewportHeight / 2 - (top + bottom) / 2 * zoom;
+  const minimumX = horizontalMargin - right * zoom;
+  const maximumX = viewportWidth - horizontalMargin - left * zoom;
+  const minimumY = verticalMargin - bottom * zoom;
+  const maximumY = viewportHeight - verticalMargin - top * zoom;
   return {
-    layout,
-    viewportWidth,
-    viewportHeight,
-    visualLeft,
-    visualTop,
-    minLeft: clamp(minLeft, 0, scrollExtentX),
-    maxLeft: clamp(maxLeft, 0, scrollExtentX),
-    minTop: clamp(minTop, 0, scrollExtentY),
-    maxTop: clamp(maxTop, 0, scrollExtentY),
+    x: scaledWidth <= viewportWidth - horizontalMargin * 2
+      ? centerX
+      : clamp(Number(camera?.x) || 0, minimumX, maximumX),
+    y: scaledHeight <= viewportHeight - verticalMargin * 2
+      ? centerY
+      : clamp(Number(camera?.y) || 0, minimumY, maximumY),
+    zoom,
   };
 }
 
-function setIslandMapPickerZoom(picker, value, {
-  preserveCenter = true,
-  remember = true,
-  settleNextFrame = true,
-  anchorClientX = null,
-  anchorClientY = null,
-  targetClientX = null,
-  targetClientY = null,
-  anchorViewportX: providedAnchorViewportX = null,
-  anchorViewportY: providedAnchorViewportY = null,
-  targetViewportX: providedTargetViewportX = null,
-  targetViewportY: providedTargetViewportY = null,
-} = {}) {
-  if (!picker) return false;
-  const previousZoom = getIslandMapPickerZoom(picker);
-  const zoom = clampIslandMapPickerZoom(value, getIslandMapPickerMinimumZoom(picker));
-  picker.dataset.islandMapZoom = String(zoom);
-  picker.style.setProperty("--island-map-zoom", formatPathNumber(zoom));
-  islandMapPickerViewState.zoom = zoom;
-
-  let nextScrollLeft = picker.scrollLeft;
-  let nextScrollTop = picker.scrollTop;
-  if (preserveCenter) {
-    const hasAnchorViewportX = Number.isFinite(Number(providedAnchorViewportX));
-    const hasAnchorViewportY = Number.isFinite(Number(providedAnchorViewportY));
-    const hasTargetViewportX = Number.isFinite(Number(providedTargetViewportX));
-    const hasTargetViewportY = Number.isFinite(Number(providedTargetViewportY));
-    const needsPickerBounds = (!hasAnchorViewportX && Number.isFinite(Number(anchorClientX)))
-      || (!hasAnchorViewportY && Number.isFinite(Number(anchorClientY)))
-      || (!hasTargetViewportX && Number.isFinite(Number(targetClientX)))
-      || (!hasTargetViewportY && Number.isFinite(Number(targetClientY)));
-    const pickerBounds = needsPickerBounds ? picker.getBoundingClientRect() : null;
-    const anchorViewportX = hasAnchorViewportX
-      ? Number(providedAnchorViewportX)
-      : Number.isFinite(Number(anchorClientX))
-        ? Number(anchorClientX) - pickerBounds.left - picker.clientLeft
-        : picker.clientWidth / 2;
-    const anchorViewportY = hasAnchorViewportY
-      ? Number(providedAnchorViewportY)
-      : Number.isFinite(Number(anchorClientY))
-        ? Number(anchorClientY) - pickerBounds.top - picker.clientTop
-        : picker.clientHeight / 2;
-    const targetViewportX = hasTargetViewportX
-      ? Number(providedTargetViewportX)
-      : Number.isFinite(Number(targetClientX))
-        ? Number(targetClientX) - pickerBounds.left - picker.clientLeft
-        : anchorViewportX;
-    const targetViewportY = hasTargetViewportY
-      ? Number(providedTargetViewportY)
-      : Number.isFinite(Number(targetClientY))
-        ? Number(targetClientY) - pickerBounds.top - picker.clientTop
-        : anchorViewportY;
-    const previousMetrics = getIslandMapPickerViewportMetrics(picker, previousZoom);
-    const anchorWorldX = clamp(
-      (picker.scrollLeft + anchorViewportX - previousMetrics.visualLeft) / Math.max(previousZoom, 0.001),
-      0,
-      previousMetrics.layout.stageWidth
-    );
-    const anchorWorldY = clamp(
-      (picker.scrollTop + anchorViewportY - previousMetrics.visualTop) / Math.max(previousZoom, 0.001),
-      0,
-      previousMetrics.layout.stageHeight
-    );
-    const nextMetrics = getIslandMapPickerViewportMetrics(picker, zoom);
-    nextScrollLeft = nextMetrics.visualLeft + anchorWorldX * zoom - targetViewportX;
-    nextScrollTop = nextMetrics.visualTop + anchorWorldY * zoom - targetViewportY;
-  }
-
-  const applyView = () => {
-    if (preserveCenter) {
-      const next = clampIslandMapPickerScroll(picker, nextScrollLeft, nextScrollTop, zoom);
-      picker.scrollLeft = next.left;
-      picker.scrollTop = next.top;
-    }
-    if (remember) rememberIslandMapPickerView(picker);
+function getIslandMapPickerZoomedCamera(camera, nextZoom, anchorViewportX, anchorViewportY, targetViewportX = anchorViewportX, targetViewportY = anchorViewportY) {
+  const previousZoom = Math.max(0.001, Number(camera?.zoom) || 1);
+  const zoom = Math.max(0.001, Number(nextZoom) || previousZoom);
+  const worldX = (Number(anchorViewportX) - (Number(camera?.x) || 0)) / previousZoom;
+  const worldY = (Number(anchorViewportY) - (Number(camera?.y) || 0)) / previousZoom;
+  return {
+    x: Number(targetViewportX) - worldX * zoom,
+    y: Number(targetViewportY) - worldY * zoom,
+    zoom,
   };
-  applyView();
-  if (settleNextFrame) requestAnimationFrame(applyView);
-  return true;
+}
+
+function createIslandMapPickerCameraController(picker) {
+  const frame = picker?.querySelector?.(".island-map-canvas-frame");
+  const bounds = getIslandMapContentBounds();
+  let current = { x: islandMapPickerViewState.x, y: islandMapPickerViewState.y, zoom: getIslandMapPickerZoom(picker) };
+  let target = { ...current };
+  let animationFrame = 0;
+  let lastFrameAt = 0;
+  let immediate = true;
+
+  const clampCamera = camera => clampIslandMapPickerCamera(
+    camera,
+    { width: picker?.clientWidth, height: picker?.clientHeight },
+    bounds,
+    getIslandMapPickerViewportMargin(picker)
+  );
+
+  const render = camera => {
+    current = clampCamera(camera);
+    islandMapPickerViewState.x = current.x;
+    islandMapPickerViewState.y = current.y;
+    islandMapPickerViewState.zoom = current.zoom;
+    islandMapPickerViewState.hasView = true;
+    picker.dataset.islandMapZoom = String(current.zoom);
+    picker.style.setProperty("--island-camera-x", `${formatPathNumber(current.x)}px`);
+    picker.style.setProperty("--island-camera-y", `${formatPathNumber(current.y)}px`);
+    picker.style.setProperty("--island-map-zoom", formatPathNumber(current.zoom));
+    if (frame) frame.style.transform = `translate3d(${formatPathNumber(current.x)}px, ${formatPathNumber(current.y)}px, 0) scale(${formatPathNumber(current.zoom)})`;
+  };
+
+  const tick = timestamp => {
+    animationFrame = 0;
+    if (!picker?.isConnected) return;
+    const elapsed = lastFrameAt ? Math.min(40, Math.max(8, timestamp - lastFrameAt)) : 16;
+    lastFrameAt = timestamp;
+    const easing = immediate ? 1 : 1 - Math.exp(-elapsed / ISLAND_PICKER_CAMERA_EASE_MS);
+    const next = {
+      x: current.x + (target.x - current.x) * easing,
+      y: current.y + (target.y - current.y) * easing,
+      zoom: current.zoom + (target.zoom - current.zoom) * easing,
+    };
+    const finished = immediate
+      || (Math.abs(target.x - next.x) < ISLAND_PICKER_CAMERA_EPSILON
+        && Math.abs(target.y - next.y) < ISLAND_PICKER_CAMERA_EPSILON
+        && Math.abs(target.zoom - next.zoom) < ISLAND_PICKER_ZOOM_EPSILON);
+    render(finished ? target : next);
+    if (!finished) {
+      animationFrame = requestAnimationFrame(tick);
+    } else {
+      lastFrameAt = 0;
+      picker.classList.remove("zooming");
+    }
+  };
+
+  const schedule = () => {
+    if (!animationFrame) animationFrame = requestAnimationFrame(tick);
+  };
+
+  const moveTo = (camera, options = {}) => {
+    target = clampCamera({ ...target, ...camera });
+    immediate = options.immediate === true;
+    schedule();
+    return { ...target };
+  };
+
+  const zoomTo = (value, focalX, focalY, options = {}) => {
+    const zoom = clampIslandMapPickerZoom(value, getIslandMapPickerMinimumZoom(picker));
+    target = clampCamera(getIslandMapPickerZoomedCamera(target, zoom, focalX, focalY));
+    immediate = options.immediate === true;
+    picker.classList.add("zooming");
+    schedule();
+    return { ...target };
+  };
+
+  const flush = () => {
+    if (animationFrame) cancelAnimationFrame(animationFrame);
+    animationFrame = 0;
+    lastFrameAt = 0;
+    render(target);
+  };
+
+  const cancel = () => {
+    if (animationFrame) cancelAnimationFrame(animationFrame);
+    animationFrame = 0;
+    lastFrameAt = 0;
+    target = { ...current };
+    picker.classList.remove("zooming");
+  };
+
+  render(current);
+  return { moveTo, zoomTo, flush, cancel, getCamera: () => ({ ...target }) };
+}
+
+function getIslandMapPickerCameraController(picker) {
+  if (!picker) return null;
+  if (!picker._islandMapCameraController) picker._islandMapCameraController = createIslandMapPickerCameraController(picker);
+  return picker._islandMapCameraController;
 }
 
 function attachIslandMapPickerZoom(picker) {
   if (!picker || picker.dataset.zoomReady === "true") return;
   picker.dataset.zoomReady = "true";
-  let wheelZoomFrame = 0;
-  let wheelTargetZoom = getIslandMapPickerZoom(picker);
-  let wheelAnchorViewportX = null;
-  let wheelAnchorViewportY = null;
-  let wheelZoomFrameAt = 0;
-
-  const animateWheelZoom = timestamp => {
-    wheelZoomFrame = 0;
-    if (!picker.isConnected) return;
-    const currentZoom = getIslandMapPickerZoom(picker);
-    const elapsed = wheelZoomFrameAt ? Math.min(40, Math.max(8, timestamp - wheelZoomFrameAt)) : 16;
-    const easing = 1 - Math.exp(-elapsed / ISLAND_PICKER_ZOOM_EASE_MS);
-    const difference = wheelTargetZoom - currentZoom;
-    const finished = Math.abs(difference) < ISLAND_PICKER_ZOOM_EPSILON;
-    const nextZoom = finished ? wheelTargetZoom : currentZoom + difference * easing;
-    setIslandMapPickerZoom(picker, nextZoom, {
-      anchorViewportX: wheelAnchorViewportX,
-      anchorViewportY: wheelAnchorViewportY,
-      remember: false,
-      settleNextFrame: false,
-    });
-    wheelZoomFrameAt = timestamp;
-    if (!finished) {
-      wheelZoomFrame = requestAnimationFrame(animateWheelZoom);
-      return;
-    }
-    wheelTargetZoom = getIslandMapPickerZoom(picker);
-    wheelZoomFrameAt = 0;
-    picker.classList.remove("zooming");
-    rememberIslandMapPickerView(picker);
-  };
-
-  const queueWheelZoom = (value, anchorViewportX = null, anchorViewportY = null) => {
-    wheelTargetZoom = clampIslandMapPickerZoom(value, getIslandMapPickerMinimumZoom(picker));
-    wheelAnchorViewportX = anchorViewportX !== null && Number.isFinite(Number(anchorViewportX)) ? Number(anchorViewportX) : null;
-    wheelAnchorViewportY = anchorViewportY !== null && Number.isFinite(Number(anchorViewportY)) ? Number(anchorViewportY) : null;
-    picker.classList.add("zooming");
-    if (!wheelZoomFrame) wheelZoomFrame = requestAnimationFrame(animateWheelZoom);
-  };
-
+  const controller = getIslandMapPickerCameraController(picker);
   picker.addEventListener("wheel", event => {
     event.preventDefault();
-    if (!wheelZoomFrame) wheelTargetZoom = getIslandMapPickerZoom(picker);
+    const current = controller.getCamera();
     const boundedDelta = clamp(Number(event.deltaY) || 0, -120, 120);
-    const nextTargetZoom = clampIslandMapPickerZoom(
-      wheelTargetZoom * Math.exp(-boundedDelta * 0.0016),
-      getIslandMapPickerMinimumZoom(picker)
-    );
+    const nextZoom = current.zoom * Math.exp(-boundedDelta * 0.0016);
     const pickerBounds = picker.getBoundingClientRect();
-    queueWheelZoom(
-      nextTargetZoom,
+    controller.zoomTo(
+      nextZoom,
       event.clientX - pickerBounds.left - picker.clientLeft,
-      event.clientY - pickerBounds.top - picker.clientTop
+      event.clientY - pickerBounds.top - picker.clientTop,
+      { immediate: false }
     );
   }, { passive: false });
-  setIslandMapPickerZoom(picker, getIslandMapPickerZoom(picker), {
-    preserveCenter: false,
-    remember: false,
-  });
-}
-
-function clampIslandMapPickerScroll(picker, scrollLeft, scrollTop, zoom = getIslandMapPickerZoom(picker)) {
-  const metrics = getIslandMapPickerViewportMetrics(picker, zoom);
-  return {
-    left: clamp(Number(scrollLeft) || 0, metrics.minLeft, metrics.maxLeft),
-    top: clamp(Number(scrollTop) || 0, metrics.minTop, metrics.maxTop),
-  };
 }
 
 function rememberIslandMapPickerView(picker = getIslandMapPickerElement()) {
   if (!picker) return false;
-  const clamped = clampIslandMapPickerScroll(picker, picker.scrollLeft, picker.scrollTop);
-  islandMapPickerViewState.scrollLeft = clamped.left;
-  islandMapPickerViewState.scrollTop = clamped.top;
-  islandMapPickerViewState.zoom = getIslandMapPickerZoom(picker);
+  const camera = getIslandMapPickerCameraController(picker)?.getCamera();
+  if (camera) Object.assign(islandMapPickerViewState, camera);
   islandMapPickerViewState.hasView = true;
-  return true;
-}
-
-function restoreIslandMapPickerView(picker) {
-  if (!picker || !islandMapPickerViewState.hasView) return false;
-  setIslandMapPickerZoom(picker, islandMapPickerViewState.zoom, {
-    preserveCenter: false,
-    remember: false,
-  });
-  const apply = () => {
-    const clamped = clampIslandMapPickerScroll(
-      picker,
-      islandMapPickerViewState.scrollLeft,
-      islandMapPickerViewState.scrollTop
-    );
-    picker.scrollLeft = clamped.left;
-    picker.scrollTop = clamped.top;
-    rememberIslandMapPickerView(picker);
-  };
-  apply();
-  requestAnimationFrame(apply);
   return true;
 }
 
@@ -11339,25 +11323,28 @@ async function refreshIslandMapHomeRegionOnceForOpen() {
   }
 }
 
-function centerIslandMapPickerOnRegion(picker, regionId) {
-  if (!picker || !regionId) return;
+function setIslandMapPickerOpeningView(picker, regionId) {
+  if (!picker) return false;
+  const region = WORLD_REGIONS.find(entry => normalizeRegionId(entry.id) === normalizeRegionId(regionId)) || WORLD_REGIONS[0];
+  const bounds = getIslandMapContentBounds();
+  const position = region
+    ? getIslandMapPosition(region)
+    : { x: (bounds.left + bounds.right) / 2, y: (bounds.top + bounds.bottom) / 2 };
   const apply = () => {
-    const target = [...picker.querySelectorAll("[data-island-region]")]
-      .find(button => button.dataset.islandRegion === regionId);
-    if (!target || !picker.clientWidth || !picker.clientHeight) return false;
-    const pickerBounds = picker.getBoundingClientRect();
-    const targetBounds = target.getBoundingClientRect();
-    const centered = clampIslandMapPickerScroll(
-      picker,
-      picker.scrollLeft + targetBounds.left + targetBounds.width / 2 - pickerBounds.left - picker.clientWidth / 2,
-      picker.scrollTop + targetBounds.top + targetBounds.height / 2 - pickerBounds.top - picker.clientHeight / 2
-    );
-    picker.scrollLeft = centered.left;
-    picker.scrollTop = centered.top;
+    if (!picker.clientWidth || !picker.clientHeight) return false;
+    const zoom = getIslandMapPickerOpeningZoom(picker);
+    const controller = getIslandMapPickerCameraController(picker);
+    controller.moveTo({
+      x: picker.clientWidth / 2 - position.x * zoom,
+      y: picker.clientHeight / 2 - position.y * zoom,
+      zoom,
+    }, { immediate: true });
+    controller.flush();
     rememberIslandMapPickerView(picker);
     return true;
   };
   if (!apply()) requestAnimationFrame(apply);
+  return true;
 }
 
 function getIslandMapPinchGeometry(pointers) {
@@ -11374,32 +11361,24 @@ function getIslandMapPinchGeometry(pointers) {
 function attachIslandMapPickerPan(picker) {
   if (!picker || picker.dataset.panReady === "true") return;
   picker.dataset.panReady = "true";
+  const controller = getIslandMapPickerCameraController(picker);
   const touchPointers = new Map();
   let pointerId = null;
   let startX = 0;
   let startY = 0;
-  let startScrollLeft = 0;
-  let startScrollTop = 0;
+  let startCamera = controller.getCamera();
   let moved = false;
   let tapRegionId = "";
   let pinchGeometry = null;
-  let pendingPinchGeometry = null;
-  let pinchZoomFrame = 0;
-  let panFrame = 0;
-  let pendingPan = null;
   let pickerViewportOriginX = 0;
   let pickerViewportOriginY = 0;
 
-  picker.addEventListener("scroll", () => {
-    rememberIslandMapPickerView(picker);
-  }, { passive: true });
-
   const beginPan = (id, x, y, regionId = "") => {
+    controller.cancel();
     pointerId = id;
     startX = x;
     startY = y;
-    startScrollLeft = picker.scrollLeft;
-    startScrollTop = picker.scrollTop;
+    startCamera = controller.getCamera();
     moved = false;
     tapRegionId = regionId;
     picker.classList.add("panning");
@@ -11410,37 +11389,6 @@ function attachIslandMapPickerPan(picker) {
     window.setTimeout(() => {
       if (picker) delete picker.dataset.justDragged;
     }, 180);
-  };
-
-  const applyPendingPan = () => {
-    panFrame = 0;
-    if (!pendingPan) return;
-    const next = pendingPan;
-    pendingPan = null;
-    picker.scrollLeft = next.left;
-    picker.scrollTop = next.top;
-  };
-
-  const queuePan = (left, top) => {
-    pendingPan = clampIslandMapPickerScroll(picker, left, top);
-    if (!panFrame) panFrame = requestAnimationFrame(applyPendingPan);
-  };
-
-  const applyPendingPinchZoom = () => {
-    pinchZoomFrame = 0;
-    const nextGeometry = pendingPinchGeometry;
-    pendingPinchGeometry = null;
-    if (!pinchGeometry || !nextGeometry) return;
-    const nextZoom = getIslandMapPickerZoom(picker) * (nextGeometry.distance / pinchGeometry.distance);
-    setIslandMapPickerZoom(picker, nextZoom, {
-      anchorViewportX: pinchGeometry.centerX - pickerViewportOriginX,
-      anchorViewportY: pinchGeometry.centerY - pickerViewportOriginY,
-      targetViewportX: nextGeometry.centerX - pickerViewportOriginX,
-      targetViewportY: nextGeometry.centerY - pickerViewportOriginY,
-      remember: false,
-      settleNextFrame: false,
-    });
-    pinchGeometry = nextGeometry;
   };
 
   picker.addEventListener("pointerdown", event => {
@@ -11455,9 +11403,7 @@ function attachIslandMapPickerPan(picker) {
       }
       touchPointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
       if (touchPointers.size >= 2) {
-        if (panFrame) cancelAnimationFrame(panFrame);
-        panFrame = 0;
-        pendingPan = null;
+        controller.flush();
         pointerId = null;
         moved = true;
         tapRegionId = "";
@@ -11476,8 +11422,22 @@ function attachIslandMapPickerPan(picker) {
       touchPointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
       if (touchPointers.size >= 2) {
         const nextGeometry = getIslandMapPinchGeometry(touchPointers);
-        pendingPinchGeometry = nextGeometry;
-        if (!pinchZoomFrame) pinchZoomFrame = requestAnimationFrame(applyPendingPinchZoom);
+        if (pinchGeometry && nextGeometry) {
+          const camera = controller.getCamera();
+          const nextZoom = clampIslandMapPickerZoom(
+            camera.zoom * (nextGeometry.distance / pinchGeometry.distance),
+            getIslandMapPickerMinimumZoom(picker)
+          );
+          controller.moveTo(getIslandMapPickerZoomedCamera(
+            camera,
+            nextZoom,
+            pinchGeometry.centerX - pickerViewportOriginX,
+            pinchGeometry.centerY - pickerViewportOriginY,
+            nextGeometry.centerX - pickerViewportOriginX,
+            nextGeometry.centerY - pickerViewportOriginY
+          ), { immediate: true });
+          pinchGeometry = nextGeometry;
+        }
         moved = true;
         tapRegionId = "";
         event.preventDefault();
@@ -11489,19 +11449,16 @@ function attachIslandMapPickerPan(picker) {
     const dy = event.clientY - startY;
     if (Math.abs(dx) > 4 || Math.abs(dy) > 4) moved = true;
     if (moved) event.preventDefault();
-    queuePan(startScrollLeft - dx, startScrollTop - dy);
+    controller.moveTo({
+      x: startCamera.x + dx,
+      y: startCamera.y + dy,
+      zoom: startCamera.zoom,
+    }, { immediate: true });
   });
 
   const stopPan = event => {
-    if (panFrame) {
-      cancelAnimationFrame(panFrame);
-      applyPendingPan();
-    }
+    controller.flush();
     const wasPinching = picker.classList.contains("pinching");
-    if (wasPinching && pinchZoomFrame) {
-      cancelAnimationFrame(pinchZoomFrame);
-      applyPendingPinchZoom();
-    }
     if (event.pointerType === "touch") touchPointers.delete(event.pointerId);
     picker.releasePointerCapture?.(event.pointerId);
     if (wasPinching) {
