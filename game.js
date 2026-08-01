@@ -11180,13 +11180,25 @@ function clampIslandMapPickerCamera(camera, viewport, bounds, margin = 0) {
 }
 
 function getIslandMapPickerZoomedCamera(camera, nextZoom, anchorViewportX, anchorViewportY, targetViewportX = anchorViewportX, targetViewportY = anchorViewportY) {
-  const previousZoom = Math.max(0.001, Number(camera?.zoom) || 1);
-  const zoom = Math.max(0.001, Number(nextZoom) || previousZoom);
-  const worldX = (Number(anchorViewportX) - (Number(camera?.x) || 0)) / previousZoom;
-  const worldY = (Number(anchorViewportY) - (Number(camera?.y) || 0)) / previousZoom;
+  const anchor = getIslandMapPickerZoomAnchor(camera, anchorViewportX, anchorViewportY);
+  return getIslandMapPickerAnchoredCamera(anchor, nextZoom, targetViewportX, targetViewportY);
+}
+
+function getIslandMapPickerZoomAnchor(camera, viewportX, viewportY) {
+  const zoom = Math.max(0.001, Number(camera?.zoom) || 1);
   return {
-    x: Number(targetViewportX) - worldX * zoom,
-    y: Number(targetViewportY) - worldY * zoom,
+    viewportX: Number(viewportX) || 0,
+    viewportY: Number(viewportY) || 0,
+    worldX: ((Number(viewportX) || 0) - (Number(camera?.x) || 0)) / zoom,
+    worldY: ((Number(viewportY) || 0) - (Number(camera?.y) || 0)) / zoom,
+  };
+}
+
+function getIslandMapPickerAnchoredCamera(anchor, nextZoom, targetViewportX = anchor?.viewportX, targetViewportY = anchor?.viewportY) {
+  const zoom = Math.max(0.001, Number(nextZoom) || 1);
+  return {
+    x: (Number(targetViewportX) || 0) - (Number(anchor?.worldX) || 0) * zoom,
+    y: (Number(targetViewportY) || 0) - (Number(anchor?.worldY) || 0) * zoom,
     zoom,
   };
 }
@@ -11199,6 +11211,7 @@ function createIslandMapPickerCameraController(picker) {
   let animationFrame = 0;
   let lastFrameAt = 0;
   let immediate = true;
+  let zoomAnchor = null;
 
   const clampCamera = camera => clampIslandMapPickerCamera(
     camera,
@@ -11214,10 +11227,7 @@ function createIslandMapPickerCameraController(picker) {
     islandMapPickerViewState.zoom = current.zoom;
     islandMapPickerViewState.hasView = true;
     picker.dataset.islandMapZoom = String(current.zoom);
-    picker.style.setProperty("--island-camera-x", `${formatPathNumber(current.x)}px`);
-    picker.style.setProperty("--island-camera-y", `${formatPathNumber(current.y)}px`);
-    picker.style.setProperty("--island-map-zoom", formatPathNumber(current.zoom));
-    if (frame) frame.style.transform = `translate3d(${formatPathNumber(current.x)}px, ${formatPathNumber(current.y)}px, 0) scale(${formatPathNumber(current.zoom)})`;
+    if (frame) frame.style.transform = `translate3d(${formatIslandCameraNumber(current.x)}px, ${formatIslandCameraNumber(current.y)}px, 0) scale(${formatIslandCameraNumber(current.zoom)})`;
   };
 
   const tick = timestamp => {
@@ -11226,20 +11236,25 @@ function createIslandMapPickerCameraController(picker) {
     const elapsed = lastFrameAt ? Math.min(40, Math.max(8, timestamp - lastFrameAt)) : 16;
     lastFrameAt = timestamp;
     const easing = immediate ? 1 : 1 - Math.exp(-elapsed / ISLAND_PICKER_CAMERA_EASE_MS);
-    const next = {
-      x: current.x + (target.x - current.x) * easing,
-      y: current.y + (target.y - current.y) * easing,
-      zoom: current.zoom + (target.zoom - current.zoom) * easing,
-    };
-    const finished = immediate
-      || (Math.abs(target.x - next.x) < ISLAND_PICKER_CAMERA_EPSILON
+    const nextZoom = current.zoom + (target.zoom - current.zoom) * easing;
+    const next = zoomAnchor
+      ? getIslandMapPickerAnchoredCamera(zoomAnchor, nextZoom)
+      : {
+          x: current.x + (target.x - current.x) * easing,
+          y: current.y + (target.y - current.y) * easing,
+          zoom: nextZoom,
+        };
+    const finished = immediate || (zoomAnchor
+      ? Math.abs(target.zoom - nextZoom) < ISLAND_PICKER_ZOOM_EPSILON
+      : (Math.abs(target.x - next.x) < ISLAND_PICKER_CAMERA_EPSILON
         && Math.abs(target.y - next.y) < ISLAND_PICKER_CAMERA_EPSILON
-        && Math.abs(target.zoom - next.zoom) < ISLAND_PICKER_ZOOM_EPSILON);
+        && Math.abs(target.zoom - next.zoom) < ISLAND_PICKER_ZOOM_EPSILON));
     render(finished ? target : next);
     if (!finished) {
       animationFrame = requestAnimationFrame(tick);
     } else {
       lastFrameAt = 0;
+      zoomAnchor = null;
       picker.classList.remove("zooming");
     }
   };
@@ -11249,6 +11264,7 @@ function createIslandMapPickerCameraController(picker) {
   };
 
   const moveTo = (camera, options = {}) => {
+    zoomAnchor = null;
     target = clampCamera({ ...target, ...camera });
     immediate = options.immediate === true;
     schedule();
@@ -11257,7 +11273,8 @@ function createIslandMapPickerCameraController(picker) {
 
   const zoomTo = (value, focalX, focalY, options = {}) => {
     const zoom = clampIslandMapPickerZoom(value, getIslandMapPickerMinimumZoom(picker));
-    target = clampCamera(getIslandMapPickerZoomedCamera(target, zoom, focalX, focalY));
+    zoomAnchor = getIslandMapPickerZoomAnchor(current, focalX, focalY);
+    target = clampCamera(getIslandMapPickerAnchoredCamera(zoomAnchor, zoom));
     immediate = options.immediate === true;
     picker.classList.add("zooming");
     schedule();
@@ -11269,6 +11286,8 @@ function createIslandMapPickerCameraController(picker) {
     animationFrame = 0;
     lastFrameAt = 0;
     render(target);
+    zoomAnchor = null;
+    picker.classList.remove("zooming");
   };
 
   const cancel = () => {
@@ -11276,11 +11295,31 @@ function createIslandMapPickerCameraController(picker) {
     animationFrame = 0;
     lastFrameAt = 0;
     target = { ...current };
+    zoomAnchor = null;
     picker.classList.remove("zooming");
   };
 
+  const renderNow = camera => {
+    if (animationFrame) cancelAnimationFrame(animationFrame);
+    animationFrame = 0;
+    lastFrameAt = 0;
+    zoomAnchor = null;
+    target = clampCamera({ ...current, ...camera });
+    render(target);
+    picker.classList.remove("zooming");
+    return { ...current };
+  };
+
   render(current);
-  return { moveTo, zoomTo, flush, cancel, getCamera: () => ({ ...target }) };
+  return {
+    moveTo,
+    zoomTo,
+    flush,
+    cancel,
+    renderNow,
+    getCamera: () => ({ ...current }),
+    getTargetCamera: () => ({ ...target }),
+  };
 }
 
 function getIslandMapPickerCameraController(picker) {
@@ -11295,9 +11334,9 @@ function attachIslandMapPickerZoom(picker) {
   const controller = getIslandMapPickerCameraController(picker);
   picker.addEventListener("wheel", event => {
     event.preventDefault();
-    const current = controller.getCamera();
+    const target = controller.getTargetCamera();
     const boundedDelta = clamp(Number(event.deltaY) || 0, -120, 120);
-    const nextZoom = current.zoom * Math.exp(-boundedDelta * 0.0016);
+    const nextZoom = target.zoom * Math.exp(-boundedDelta * 0.0016);
     const pickerBounds = picker.getBoundingClientRect();
     controller.zoomTo(
       nextZoom,
@@ -11422,8 +11461,41 @@ function attachIslandMapPickerPan(picker) {
   let moved = false;
   let tapRegionId = "";
   let pinchGeometry = null;
+  let pinchAnimationFrame = 0;
   let pickerViewportOriginX = 0;
   let pickerViewportOriginY = 0;
+
+  const applyPendingPinch = () => {
+    pinchAnimationFrame = 0;
+    const nextGeometry = getIslandMapPinchGeometry(touchPointers);
+    if (!pinchGeometry || !nextGeometry) return false;
+    const camera = controller.getCamera();
+    const nextZoom = clampIslandMapPickerZoom(
+      camera.zoom * (nextGeometry.distance / pinchGeometry.distance),
+      getIslandMapPickerMinimumZoom(picker)
+    );
+    controller.renderNow(getIslandMapPickerZoomedCamera(
+      camera,
+      nextZoom,
+      pinchGeometry.centerX - pickerViewportOriginX,
+      pinchGeometry.centerY - pickerViewportOriginY,
+      nextGeometry.centerX - pickerViewportOriginX,
+      nextGeometry.centerY - pickerViewportOriginY
+    ));
+    pinchGeometry = nextGeometry;
+    return true;
+  };
+
+  const schedulePinch = () => {
+    if (!pinchAnimationFrame) pinchAnimationFrame = requestAnimationFrame(applyPendingPinch);
+  };
+
+  const flushPendingPinch = () => {
+    if (!pinchAnimationFrame) return false;
+    cancelAnimationFrame(pinchAnimationFrame);
+    pinchAnimationFrame = 0;
+    return applyPendingPinch();
+  };
 
   const beginPan = (id, x, y, regionId = "") => {
     controller.cancel();
@@ -11473,23 +11545,7 @@ function attachIslandMapPickerPan(picker) {
     if (event.pointerType === "touch" && touchPointers.has(event.pointerId)) {
       touchPointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
       if (touchPointers.size >= 2) {
-        const nextGeometry = getIslandMapPinchGeometry(touchPointers);
-        if (pinchGeometry && nextGeometry) {
-          const camera = controller.getCamera();
-          const nextZoom = clampIslandMapPickerZoom(
-            camera.zoom * (nextGeometry.distance / pinchGeometry.distance),
-            getIslandMapPickerMinimumZoom(picker)
-          );
-          controller.moveTo(getIslandMapPickerZoomedCamera(
-            camera,
-            nextZoom,
-            pinchGeometry.centerX - pickerViewportOriginX,
-            pinchGeometry.centerY - pickerViewportOriginY,
-            nextGeometry.centerX - pickerViewportOriginX,
-            nextGeometry.centerY - pickerViewportOriginY
-          ), { immediate: true });
-          pinchGeometry = nextGeometry;
-        }
+        schedulePinch();
         moved = true;
         tapRegionId = "";
         event.preventDefault();
@@ -11509,6 +11565,7 @@ function attachIslandMapPickerPan(picker) {
   });
 
   const stopPan = event => {
+    if (event.pointerType === "touch") flushPendingPinch();
     controller.flush();
     const wasPinching = picker.classList.contains("pinching");
     if (event.pointerType === "touch") touchPointers.delete(event.pointerId);
@@ -20444,6 +20501,10 @@ async function saveFlagEditor() {
 
 function formatPathNumber(value) {
   return Number(value).toFixed(1);
+}
+
+function formatIslandCameraNumber(value) {
+  return Number(value).toFixed(3);
 }
 
 function getMissionSegmentsForRegion(mission, regionId = getActiveMapRegionId()) {

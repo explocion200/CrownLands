@@ -94,6 +94,8 @@ vm.runInContext([
   extractFunction("isMarchInsideEndpointInteractionClearance"),
   extractFunction("clampIslandMapPickerZoom"),
   extractFunction("clampIslandMapPickerCamera"),
+  extractFunction("getIslandMapPickerZoomAnchor"),
+  extractFunction("getIslandMapPickerAnchoredCamera"),
   extractFunction("getIslandMapPickerZoomedCamera"),
   extractFunction("getIslandMapPinchGeometry"),
   extractFunction("getMissionPointAtProgress"),
@@ -301,6 +303,30 @@ const focalCamera = context.getIslandMapPickerZoomedCamera(
 assert.equal(focalCamera.x, -500);
 assert.equal(focalCamera.y, -300);
 assert.equal((300 - focalCamera.x) / focalCamera.zoom, (300 - (-100)) / 0.5, "Zooming must preserve the world point under the cursor.");
+const renderedZoomAnchor = context.getIslandMapPickerZoomAnchor(
+  { x: -100, y: -50, zoom: 0.5 },
+  300,
+  200
+);
+for (const intermediateZoom of [0.56, 0.67, 0.81, 0.94, 1]) {
+  const intermediateCamera = context.getIslandMapPickerAnchoredCamera(renderedZoomAnchor, intermediateZoom);
+  assert.ok(
+    Math.abs((300 - intermediateCamera.x) / intermediateCamera.zoom - renderedZoomAnchor.worldX) < 1e-9,
+    `The cursor world anchor must remain fixed at zoom ${intermediateZoom}.`,
+  );
+  assert.ok(
+    Math.abs((200 - intermediateCamera.y) / intermediateCamera.zoom - renderedZoomAnchor.worldY) < 1e-9,
+    `The cursor world anchor must remain fixed vertically at zoom ${intermediateZoom}.`,
+  );
+}
+const rebasedZoomAnchor = context.getIslandMapPickerZoomAnchor(
+  context.getIslandMapPickerAnchoredCamera(renderedZoomAnchor, 0.7),
+  420,
+  260
+);
+const rebasedCamera = context.getIslandMapPickerAnchoredCamera(rebasedZoomAnchor, 0.9);
+assert.ok(Math.abs((420 - rebasedCamera.x) / rebasedCamera.zoom - rebasedZoomAnchor.worldX) < 1e-9, "Moving the cursor during an active zoom must rebase the world anchor.");
+assert.ok(Math.abs((260 - rebasedCamera.y) / rebasedCamera.zoom - rebasedZoomAnchor.worldY) < 1e-9, "A rebased zoom anchor must remain fixed vertically.");
 const pinchGeometry = context.getIslandMapPinchGeometry(new Map([
   [1, { x: 20, y: 30 }],
   [2, { x: 80, y: 110 }],
@@ -317,7 +343,10 @@ assert.match(source, /ISLAND_PICKER_CAMERA_EASE_MS\s*=\s*\d+[\s\S]*?function cre
 assert.match(source, /function createIslandMapPickerCameraController[\s\S]*?if \(!animationFrame\) animationFrame = requestAnimationFrame\(tick\)/, "Map camera updates should share one animation frame loop.");
 assert.match(source, /function attachIslandMapPickerPan[\s\S]*?controller\.moveTo\(\{[\s\S]*?x: startCamera\.x \+ dx[\s\S]*?immediate: true/, "The map picker should batch drag panning through the transform camera.");
 assert.match(source, /function getIslandMapPinchGeometry[\s\S]*?Math\.hypot/, "The map picker should calculate a two-pointer pinch gesture.");
-assert.match(source, /touchPointers\.size >= 2[\s\S]*?getIslandMapPickerZoomedCamera[\s\S]*?nextGeometry\.centerX[\s\S]*?immediate: true/, "Mobile pinch gestures should track the moving finger midpoint through the shared display frame.");
+assert.match(source, /const schedulePinch = \(\) => \{[\s\S]*?requestAnimationFrame\(applyPendingPinch\)/, "Mobile pinch input should coalesce pointer events into one update per display frame.");
+assert.match(source, /const applyPendingPinch = \(\) => \{[\s\S]*?controller\.renderNow\(getIslandMapPickerZoomedCamera[\s\S]*?nextGeometry\.centerX/, "Mobile pinch gestures should directly track the moving finger midpoint.");
+assert.match(source, /function createIslandMapPickerCameraController[\s\S]*?getIslandMapPickerAnchoredCamera\(zoomAnchor, nextZoom\)/, "Desktop zoom animation must derive every frame from the cursor anchor.");
+assert.match(source, /const zoomTo = [\s\S]*?zoomAnchor = getIslandMapPickerZoomAnchor\(current, focalX, focalY\)/, "Desktop zoom input must anchor from the currently rendered camera.");
 assert.match(source, /function setIslandMapPickerOpeningView[\s\S]*?getIslandMapPickerOpeningZoom[\s\S]*?position\.x \* zoom/, "Opening the map picker should center its camera on the active region.");
 assert.match(source, /renderIslandSwitcherModalContent[\s\S]*?setIslandMapPickerOpeningView\(picker, activeRegionId \|\| homeRegionId\)/, "Every map picker open should reset to the active region.");
 assert.doesNotMatch(source, /restoreIslandMapPickerView/, "The map picker must not restore a stale camera on reopen.");
