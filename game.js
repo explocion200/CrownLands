@@ -20920,7 +20920,7 @@ function renderCities(force = false) {
       ? `<span class="clan-ally-label">Clan Ally</span>`
       : "";
     const rivalOwnerRow = city.owner === "enemy" && ownerName && ownerName !== OWNER.enemy.label
-      ? `<span class="city-ruler-row">${renderPlayerNameLink(city.ownerUid, ownerName, "foreign-ruler-name foreign-ruler-name-inline")}${crownBadge}</span>`
+      ? `<span class="city-ruler-row"><strong class="foreign-ruler-name foreign-ruler-name-inline">${escapeHtml(ownerName)}</strong>${crownBadge}</span>`
       : "";
     const cityLabel = city.owner === "player"
       ? `
@@ -20931,7 +20931,7 @@ function renderCities(force = false) {
               <span class="city-label-level">${formatNumber(city.level)}</span>
             </span>
             <span class="player-city-data">
-              <span class="city-ruler-row">${renderPlayerNameLink(getCurrentOnlineUid(), state.playerName, "city-ruler-name")}${crownBadge}</span>
+              <span class="city-ruler-row"><strong class="city-ruler-name">${escapeHtml(state.playerName)}</strong>${crownBadge}</span>
               <strong class="city-name">${escapeHtml(city.name)}</strong>
               <span class="city-army-count">${formatNumber(city.troops)} troops</span>
             </span>
@@ -20940,7 +20940,7 @@ function renderCities(force = false) {
       : isSelectedForeign
         ? `
         <span class="city-label foreign-city-label selected-foreign-label">
-          ${rivalOwnerRow || `<span class="city-ruler-row">${renderPlayerNameLink(city.ownerUid, ownerName, "foreign-ruler-name")}${crownBadge}</span>`}
+          ${rivalOwnerRow || `<span class="city-ruler-row"><strong class="foreign-ruler-name">${escapeHtml(ownerName)}</strong>${crownBadge}</span>`}
           ${clanAllyStatus}
           <span class="foreign-selected-banner">
             <span class="foreign-selected-level">${formatNumber(city.level)}</span>

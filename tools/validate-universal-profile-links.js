@@ -49,6 +49,18 @@ const roster = between(client, "function renderClanRosterMember", "function rend
 requires(roster, /class="clan-member-select"[\s\S]*?data-clan-action="select-member"/, "Leader roster names no longer open inline management.");
 requires(roster, /class="clan-member-profile-link"[\s\S]*?data-player-profile-uid/, "Leader roster management lacks View Profile.");
 
+const floatingCityLabels = between(client, "function renderCities", "function renderScoutNearbyRadius");
+assert.doesNotMatch(
+  floatingCityLabels,
+  /renderPlayerNameLink|data-player-profile-uid|player-name-link/,
+  "Floating player names above cities must remain plain, non-interactive text."
+);
+requires(
+  floatingCityLabels,
+  /city-ruler-row[\s\S]*?escapeHtml\(ownerName\)[\s\S]*?escapeHtml\(state\.playerName\)/,
+  "Floating city labels no longer render escaped ruler names."
+);
+
 [
   ["function showPublicClanDetails", "function getPlayerIdentitySignature", /renderPlayerNameLink\(member\.uid \|\| member\.id/, "Public clan roster names are not linked."],
   ["function renderClanRallyCard", "function confirmClanRallyAction", /renderPlayerNameLink\(participant\.uid \|\| participant\.ownerUid[\s\S]*?renderPlayerNameLink\(rally\.leaderUid/, "Rally participants or leader are not linked."],
