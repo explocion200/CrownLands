@@ -47,6 +47,9 @@ const ONLINE_INITIAL_CITY_LIST_FALLBACK_TIMEOUT_MS = 35 * 1000;
 const ONLINE_REGION_CITY_RESOLUTION_TIMEOUT_MS = 20 * 1000;
 const ONLINE_ARMY_EXPIRY_GRACE_SECONDS = 8;
 const ONLINE_ARMY_RESOLVE_RETRY_SECONDS = 5;
+const FOREGROUND_LONG_RESUME_MS = 60 * 1000;
+const FOREGROUND_RESUME_COALESCE_MS = 150;
+const FOREGROUND_RESUME_RETRY_DELAYS_MS = Object.freeze([2000, 8000]);
 const PENDING_ARMY_MAX_AGE_MS = 3 * 24 * 60 * 60 * 1000;
 const UPDATE_CHECK_INTERVAL_SECONDS = 60;
 const UPDATE_RELOAD_SAVE_TIMEOUT_MS = 3000;
@@ -2642,6 +2645,8 @@ let pendingWelcomeBackSession = null;
 let serverEconomySyncTimer = 0;
 let serverEconomyRefreshInFlight = false;
 let serverEconomyRefreshQueued = false;
+let serverEconomyRefreshPromise = null;
+let serverEconomyRefreshActiveOptions = null;
 let serverEconomyRefreshQueuedOptions = null;
 let serverEconomyLastSyncAt = 0;
 let serverEconomyLastToastAt = 0;
@@ -2693,6 +2698,17 @@ const preloadedMapRegions = new Set();
 let pendingOfflineProgressSeconds = 0;
 let pendingOfflineProductionCities = [];
 let pendingOfflineOwnedCityIds = null;
+let pendingOfflineRewardsSummary = null;
+let gameBackgroundedAtMs = 0;
+let gameBackgroundProductionCities = [];
+let foregroundResumeAwayMs = 0;
+let foregroundResumeLongRefresh = false;
+let foregroundResumeRequested = false;
+let foregroundResumeInFlight = null;
+let foregroundResumeCoalesceTimer = 0;
+let foregroundResumeRetryTimer = 0;
+let foregroundResumeRetryIndex = 0;
+let onlineRealtimeRecoveryNeeded = false;
 let localDirtyCityIds = new Set();
 let toastTimer = null;
 let attackIdCounter = 1;
@@ -9299,19 +9315,23 @@ function applyServerEconomyResult(result = null, options = {}) {
   const awaySummary = result.awaySummary && typeof result.awaySummary === "object"
     ? result.awaySummary
     : null;
-  const awayGoldGained = Math.max(0, Math.floor(Number(awaySummary?.goldGained) || 0));
-  const awayTroopsGained = Math.max(0, Math.floor(Number(awaySummary?.troopsGained) || 0));
-  const awayElapsed = Math.max(0, Math.floor(Number(awaySummary?.elapsedSeconds) || 0));
+  const resumeProduction = options.resumeCatchUp && result.production && typeof result.production === "object"
+    ? result.production
+    : null;
+  const summary = awaySummary || resumeProduction;
+  const awayGoldGained = Math.max(0, Math.floor(Number(summary?.goldGained) || 0));
+  const awayTroopsGained = Math.max(0, Math.floor(Number(summary?.troopsGained) || 0));
+  const awayElapsed = Math.max(0, Math.floor(Number(summary?.elapsedSeconds) || 0));
   const awayLostCities = Array.isArray(awaySummary?.lostCities) ? awaySummary.lostCities : [];
   const awayLostCityCount = Math.max(awayLostCities.length, Math.floor(Number(awaySummary?.lostCityCount) || 0));
   if (
     options.showOfflineRewards
-    && awaySummary
+    && summary
     && awayElapsed >= 60
     && (awayGoldGained > 0 || awayTroopsGained > 0 || awayLostCityCount > 0)
   ) {
     addLog(`Server production: +${formatNumber(awayGoldGained)} gold and +${formatNumber(awayTroopsGained)} troops while away.`);
-    showOfflineRewardsModal({
+    queueOfflineRewardsSummary({
       goldGained: awayGoldGained,
       troopsGained: awayTroopsGained,
       elapsed: awayElapsed,
@@ -9332,27 +9352,32 @@ function applyServerEconomyResult(result = null, options = {}) {
   return changed;
 }
 
-async function refreshServerEconomy(force = false, options = {}) {
-  if (!state || !usesServerEconomyAuthority()) return false;
+function mergeServerEconomyRefreshOptions(current = null, next = null) {
+  const currentOptions = current && typeof current === "object" ? current : {};
+  const nextOptions = next && typeof next === "object" ? next : {};
+  const optionRequests = [current, next].filter(value => value && typeof value === "object");
+  const merged = {
+    ...currentOptions,
+    ...nextOptions,
+    showOfflineRewards: Boolean(currentOptions.showOfflineRewards || nextOptions.showOfflineRewards),
+    requestWelcomeBack: Boolean(currentOptions.requestWelcomeBack || nextOptions.requestWelcomeBack),
+    resumeCatchUp: Boolean(currentOptions.resumeCatchUp || nextOptions.resumeCatchUp),
+  };
+  if (optionRequests.length && optionRequests.every(value => value.renderCities === false)) merged.renderCities = false;
+  else delete merged.renderCities;
+  return merged;
+}
+
+async function performServerEconomyRefresh(options = {}) {
   const api = getOnlineApi();
   if (!api?.collectEconomy) return false;
-  if (serverEconomyRefreshInFlight) {
-    if (force) {
-      serverEconomyRefreshQueued = true;
-      if (options.requestWelcomeBack === true) {
-        serverEconomyRefreshQueuedOptions = { ...options };
-      }
-    }
-    return false;
-  }
-  serverEconomyRefreshInFlight = true;
   try {
     const result = await api.collectEconomy({
       worldId: ONLINE_WORLD_ID,
       resetGeneration: RESET_GENERATION,
       includeWelcomeBack: options.requestWelcomeBack === true,
     });
-    applyServerEconomyResult(result, options);
+    applyServerEconomyResult(result, mergeServerEconomyRefreshOptions(options, serverEconomyRefreshActiveOptions));
     if (options.requestWelcomeBack === true) pendingWelcomeBackSession = null;
     serverEconomyLastSyncAt = Date.now();
     onlineLastError = "";
@@ -9363,20 +9388,57 @@ async function refreshServerEconomy(force = false, options = {}) {
     const nowMs = Date.now();
     if (nowMs - serverEconomyLastToastAt > 30000) {
       serverEconomyLastToastAt = nowMs;
-      showToast("Server economy sync failed. Deploy Functions/firestore or reconnect.");
+      showToast("Server economy sync failed. Reconnecting to Crownlands...");
     }
     updateOnlineUi();
     console.warn("Could not refresh server economy", error);
     return false;
-  } finally {
-    serverEconomyRefreshInFlight = false;
-    if (serverEconomyRefreshQueued) {
-      serverEconomyRefreshQueued = false;
-      const queuedOptions = serverEconomyRefreshQueuedOptions || {};
+  }
+}
+
+function refreshServerEconomy(force = false, options = {}) {
+  if (!state || !usesServerEconomyAuthority()) return false;
+  const api = getOnlineApi();
+  if (!api?.collectEconomy) return false;
+  if (serverEconomyRefreshInFlight) {
+    if (force) {
+      serverEconomyRefreshQueued = true;
+      serverEconomyRefreshActiveOptions = mergeServerEconomyRefreshOptions(
+        serverEconomyRefreshActiveOptions,
+        options
+      );
+      serverEconomyRefreshQueuedOptions = mergeServerEconomyRefreshOptions(
+        serverEconomyRefreshQueuedOptions,
+        options
+      );
+    }
+    return serverEconomyRefreshPromise || Promise.resolve(false);
+  }
+  serverEconomyRefreshInFlight = true;
+  serverEconomyRefreshActiveOptions = mergeServerEconomyRefreshOptions(null, options);
+  serverEconomyRefreshPromise = (async () => {
+    let nextOptions = serverEconomyRefreshActiveOptions;
+    let refreshed = false;
+    do {
+      refreshed = await performServerEconomyRefresh(nextOptions) || refreshed;
+      nextOptions = serverEconomyRefreshQueuedOptions;
       serverEconomyRefreshQueuedOptions = null;
+      serverEconomyRefreshQueued = false;
+      serverEconomyRefreshActiveOptions = nextOptions;
+    } while (nextOptions);
+    return refreshed;
+  })().finally(() => {
+    serverEconomyRefreshInFlight = false;
+    serverEconomyRefreshPromise = null;
+    serverEconomyRefreshActiveOptions = null;
+    if (serverEconomyRefreshQueuedOptions) {
+      const queuedOptions = serverEconomyRefreshQueuedOptions;
+      serverEconomyRefreshQueuedOptions = null;
+      serverEconomyRefreshQueued = false;
       refreshServerEconomy(true, queuedOptions);
     }
-  }
+  });
+  return serverEconomyRefreshPromise;
 }
 
 function getSerializableGameState() {
@@ -11726,8 +11788,8 @@ function applyGameServerMembership(raw = null) {
   }
 }
 
-function watchGameServerMembership() {
-  stopGameServerMembershipWatcher({ clear: true });
+function watchGameServerMembership({ preserve = false } = {}) {
+  stopGameServerMembershipWatcher({ clear: !preserve });
   const api = getOnlineApi();
   if (!api?.isSignedIn?.() || !api?.subscribeGameServerMembership) {
     updateOnlineUi();
@@ -11737,6 +11799,7 @@ function watchGameServerMembership() {
     onMembership: membership => applyGameServerMembership(membership),
     onError: error => {
       console.warn("Could not watch Crownlands realm membership", error);
+      markOnlineRealtimeRecoveryNeeded(error);
       onlineLastError = error?.message || String(error);
       updateOnlineUi();
     },
@@ -12295,6 +12358,100 @@ async function subscribeOnlineIslandWithInitialCities(api, islandId, handlers = 
   }
 }
 
+function markOnlineRealtimeRecoveryNeeded(error = null) {
+  onlineRealtimeRecoveryNeeded = true;
+  if (error) onlineLastError = error?.message || String(error);
+}
+
+function applyActiveOnlineCityPayload(onlineCities, {
+  targetRegionId = getActiveOnlineRegionId(),
+  activateOnFirstSnapshot = false,
+  nextOnlineState = null,
+  allowWelcomeBack = false,
+  render = true,
+} = {}) {
+  const firstCitiesSnapshot = !onlineCitiesLoaded;
+  if (activateOnFirstSnapshot && firstCitiesSnapshot && nextOnlineState) {
+    onlineActiveRegionId = targetRegionId;
+    state.activeRegionId = targetRegionId;
+    state.online = { ...(state.online || {}), ...nextOnlineState };
+    delete state.online.pendingIslandId;
+    delete state.online.pendingRegionId;
+  }
+  applyOnlineCities(onlineCities, targetRegionId);
+  onlineCitiesLoaded = true;
+  if (firstCitiesSnapshot && getActivePeaceShieldExpiresAtMs()) refreshOwnedCityItemEffectMetadata(true);
+  const economyIsStale = !serverEconomyLastSyncAt
+    || Date.now() - serverEconomyLastSyncAt >= SERVER_ECONOMY_SYNC_SECONDS * 1000;
+  const shouldRequestWelcomeBack = Boolean(
+    firstCitiesSnapshot
+    && allowWelcomeBack
+    && pendingWelcomeBackSession?.eligible
+  );
+  if (firstCitiesSnapshot && usesServerEconomyAuthority() && (economyIsStale || shouldRequestWelcomeBack)) {
+    serverEconomySyncTimer = 0;
+    refreshServerEconomy(true, {
+      requestWelcomeBack: shouldRequestWelcomeBack,
+      showOfflineRewards: shouldRequestWelcomeBack,
+    });
+  } else if (pendingOfflineProgressSeconds > 0) {
+    applyPendingOfflineProgress();
+  }
+  if (state?.mainCityId && getCityRegionId(state.mainCityId) === targetRegionId && cityById(state.mainCityId)?.owner !== "player") {
+    const nextOwned = playerCities()[0];
+    state.mainCityId = nextOwned?.id || state.mainCityId;
+  }
+  if (firstCitiesSnapshot) {
+    onlineCitySyncTimer = 0;
+    onlinePresenceTimer = 0;
+  }
+  if (render) {
+    if (firstCitiesSnapshot) {
+      renderAll();
+    } else {
+      renderHud();
+      renderCities();
+      renderPanel();
+    }
+  }
+  onlineFreshClaimCityId = "";
+}
+
+async function startActiveOnlineIslandSubscription(api, islandId, targetRegionId, options = {}) {
+  const force = options.force === true;
+  if (!force && typeof onlineIslandUnsubscribe === "function") return true;
+  if (typeof onlineIslandUnsubscribe === "function") onlineIslandUnsubscribe();
+  onlineIslandUnsubscribe = null;
+  const unsubscribe = await subscribeOnlineIslandWithInitialCities(api, islandId, {
+    onCities: onlineCities => {
+      applyActiveOnlineCityPayload(onlineCities, {
+        targetRegionId,
+        activateOnFirstSnapshot: options.activateOnFirstSnapshot === true,
+        nextOnlineState: options.nextOnlineState || null,
+        allowWelcomeBack: options.allowWelcomeBack === true,
+      });
+    },
+    onCamps: camps => {
+      applyOnlineCamps(camps, targetRegionId);
+    },
+    onArmies: armies => {
+      applyOnlineArmies(armies, islandId);
+      renderArmies();
+      updateIncomingAttackUi();
+      updateOutgoingAttackUi();
+    },
+    onPresence: presence => {
+      applyOnlinePresence(presence);
+    },
+    onError: error => {
+      markOnlineRealtimeRecoveryNeeded(error);
+      handleOnlineSnapshotError(error, null);
+    },
+  }, options.timeoutMs || ONLINE_INITIAL_CITY_LIST_TIMEOUT_MS, options.timeoutMessage || `${getRegionLabel(targetRegionId)} city list is taking too long.`);
+  onlineIslandUnsubscribe = unsubscribe;
+  return true;
+}
+
 async function verifyRealmCompatibility(api, { force = false } = {}) {
   if (!api?.getRealmInfo) {
     throw new Error("The Crownlands server is still updating. Refresh in a moment.");
@@ -12612,75 +12769,14 @@ async function connectOnlineIsland(regionId, {
     onlinePresence = [];
     state.attacks = state.attacks.filter(attack => String(attack?.fromId || "") && String(attack?.toId || ""));
 
-    const applyOnlineCityPayload = (onlineCities, { render = true } = {}) => {
-      const firstCitiesSnapshot = !onlineCitiesLoaded;
-      if (activateOnFirstSnapshot && firstCitiesSnapshot) {
-        onlineActiveRegionId = targetRegionId;
-        state.activeRegionId = targetRegionId;
-        state.online = { ...(state.online || {}), ...nextOnlineState };
-        delete state.online.pendingIslandId;
-        delete state.online.pendingRegionId;
-      }
-      applyOnlineCities(onlineCities, targetRegionId);
-      onlineCitiesLoaded = true;
-      if (firstCitiesSnapshot && getActivePeaceShieldExpiresAtMs()) refreshOwnedCityItemEffectMetadata(true);
-      const economyIsStale = !serverEconomyLastSyncAt
-        || Date.now() - serverEconomyLastSyncAt >= SERVER_ECONOMY_SYNC_SECONDS * 1000;
-      const shouldRequestWelcomeBack = Boolean(
-        firstCitiesSnapshot
-        && allowWelcomeBack
-        && pendingWelcomeBackSession?.eligible
-      );
-      if (firstCitiesSnapshot && usesServerEconomyAuthority() && (economyIsStale || shouldRequestWelcomeBack)) {
-        serverEconomySyncTimer = 0;
-        refreshServerEconomy(true, {
-          requestWelcomeBack: shouldRequestWelcomeBack,
-          showOfflineRewards: shouldRequestWelcomeBack,
-        });
-      } else if (pendingOfflineProgressSeconds > 0) {
-        applyPendingOfflineProgress();
-      }
-      if (state?.mainCityId && getCityRegionId(state.mainCityId) === targetRegionId && cityById(state.mainCityId)?.owner !== "player") {
-        const nextOwned = playerCities()[0];
-        state.mainCityId = nextOwned?.id || state.mainCityId;
-      }
-      if (firstCitiesSnapshot) {
-        onlineCitySyncTimer = 0;
-        onlinePresenceTimer = 0;
-      }
-      if (render) {
-        if (firstCitiesSnapshot) {
-          renderAll();
-        } else {
-          renderHud();
-          renderCities();
-          renderPanel();
-        }
-      }
-      onlineFreshClaimCityId = "";
-    };
-
     onlineStatusDetail.textContent = `Opening ${getRegionLabel(targetRegionId)}...`;
-    onlineIslandUnsubscribe = await subscribeOnlineIslandWithInitialCities(api, islandId, {
-      onCities: onlineCities => {
-        applyOnlineCityPayload(onlineCities);
-      },
-      onCamps: camps => {
-        applyOnlineCamps(camps, targetRegionId);
-      },
-      onArmies: armies => {
-        applyOnlineArmies(armies, islandId);
-        renderArmies();
-        updateIncomingAttackUi();
-        updateOutgoingAttackUi();
-      },
-      onPresence: presence => {
-        applyOnlinePresence(presence);
-      },
-      onError: (error, source) => {
-        handleOnlineSnapshotError(error, null);
-      },
-    }, ONLINE_INITIAL_CITY_LIST_TIMEOUT_MS, `${getRegionLabel(targetRegionId)} city list is taking too long.`);
+    await startActiveOnlineIslandSubscription(api, islandId, targetRegionId, {
+      activateOnFirstSnapshot,
+      nextOnlineState,
+      allowWelcomeBack,
+      timeoutMs: ONLINE_INITIAL_CITY_LIST_TIMEOUT_MS,
+      timeoutMessage: `${getRegionLabel(targetRegionId)} city list is taking too long.`,
+    });
 
     onlineWorldConnected = true;
     onlineLastError = "";
@@ -13831,27 +13927,31 @@ function rebuildOnlineArmies() {
   onlineArmies = [...armiesById.values()];
 }
 
-function clearOnlineArmyWatchers() {
+function clearOnlineArmyWatchers({ clear = true } = {}) {
   onlineArmyUnsubscribes.forEach(unsubscribe => {
     if (typeof unsubscribe === "function") unsubscribe();
   });
   onlineArmyUnsubscribes = [];
-  onlineArmiesByIsland = new Map();
-  onlineArmies = [];
-  pendingOutgoingMissions = new Map();
+  if (clear) {
+    onlineArmiesByIsland = new Map();
+    onlineArmies = [];
+    pendingOutgoingMissions = new Map();
+  }
 }
 
-function clearOnlineReinforcementWatcher() {
+function clearOnlineReinforcementWatcher({ clear = true } = {}) {
   if (typeof onlineReinforcementsUnsubscribe === "function") onlineReinforcementsUnsubscribe();
   onlineReinforcementsUnsubscribe = null;
-  onlineReinforcements = [];
-  reinforcementReturnRequests.clear();
+  if (clear) {
+    onlineReinforcements = [];
+    reinforcementReturnRequests.clear();
+  }
 }
 
-function clearOnlineHeldCampWatcher() {
+function clearOnlineHeldCampWatcher({ clear = true } = {}) {
   if (typeof onlineHeldCampsUnsubscribe === "function") onlineHeldCampsUnsubscribe();
   onlineHeldCampsUnsubscribe = null;
-  onlineHeldCampStates = new Map();
+  if (clear) onlineHeldCampStates = new Map();
 }
 
 function purgeResolvedOnlineArmy(onlineId, { removeLocal = true } = {}) {
@@ -13913,11 +14013,13 @@ function clearOnlineGlobalStatsWatcher() {
   onlineGlobalStatsUnsubscribe = null;
 }
 
-function clearOnlineCrownCitadelWatcher() {
+function clearOnlineCrownCitadelWatcher({ clear = true } = {}) {
   if (typeof onlineCrownCitadelUnsubscribe === "function") onlineCrownCitadelUnsubscribe();
   onlineCrownCitadelUnsubscribe = null;
-  onlineCrownCitadelSnapshot = null;
-  onlineCrownCitadelLoaded = false;
+  if (clear) {
+    onlineCrownCitadelSnapshot = null;
+    onlineCrownCitadelLoaded = false;
+  }
 }
 
 async function loadServerReportsOnce() {
@@ -13955,6 +14057,7 @@ function subscribeOnlineServerReports() {
     },
     onError: error => {
       onlineLastError = error?.message || String(error);
+      markOnlineRealtimeRecoveryNeeded(error);
       clearOnlineServerReportWatcher();
       console.warn("Could not subscribe to server reports", error);
     },
@@ -13970,6 +14073,7 @@ function subscribeOnlineGlobalStats() {
       if (stats) applyGlobalStatsSnapshot(stats);
     },
     onError: error => {
+      markOnlineRealtimeRecoveryNeeded(error);
       clearOnlineGlobalStatsWatcher();
       console.warn("Could not subscribe to global kingdom stats", error);
     },
@@ -13998,7 +14102,8 @@ function subscribeOnlineCrownCitadel() {
         }
       },
       onError: error => {
-        clearOnlineCrownCitadelWatcher();
+        markOnlineRealtimeRecoveryNeeded(error);
+        clearOnlineCrownCitadelWatcher({ clear: false });
         console.warn("Could not subscribe to Crown Citadel control", error);
       },
     }
@@ -14012,7 +14117,8 @@ function subscribeOnlineHeldCamps() {
   onlineHeldCampsUnsubscribe = api.subscribePlayerCamps({
     onCamps: camps => applyOnlineHeldCamps(camps),
     onError: error => {
-      clearOnlineHeldCampWatcher();
+      markOnlineRealtimeRecoveryNeeded(error);
+      clearOnlineHeldCampWatcher({ clear: false });
       console.warn("Could not subscribe to held camps", error);
     },
   });
@@ -14030,6 +14136,8 @@ function subscribeOnlineArmyWatchers() {
       updateOutgoingAttackUi();
     },
     onError: error => {
+      markOnlineRealtimeRecoveryNeeded(error);
+      clearOnlineArmyWatchers({ clear: false });
       console.warn("Could not subscribe to player-relevant armies", error);
     },
   });
@@ -14049,10 +14157,57 @@ function subscribeOnlineReinforcements() {
       }
     },
     onError: error => {
-      clearOnlineReinforcementWatcher();
+      markOnlineRealtimeRecoveryNeeded(error);
+      clearOnlineReinforcementWatcher({ clear: false });
       console.warn("Could not subscribe to clan reinforcements", error);
     },
   });
+}
+
+async function restartOnlineRealtimeSubscriptionsForResume() {
+  const api = getOnlineApi();
+  if (!state || !isOnlineWorldActive() || !api?.isSignedIn?.()) return false;
+  if (onlineWorldLoading || mapSwitchLoading) {
+    onlineRealtimeRecoveryNeeded = true;
+    return false;
+  }
+
+  onlineRealtimeRecoveryNeeded = false;
+  const targetRegionId = getActiveOnlineRegionId();
+  const islandId = getOnlineIslandId(targetRegionId);
+  const islandRestart = startActiveOnlineIslandSubscription(api, islandId, targetRegionId, {
+    force: true,
+    timeoutMs: Math.min(ONLINE_INITIAL_CITY_LIST_TIMEOUT_MS, 10000),
+    timeoutMessage: `${getRegionLabel(targetRegionId)} resume sync is taking too long.`,
+  });
+
+  clearOnlineArmyWatchers({ clear: false });
+  clearOnlineReinforcementWatcher({ clear: false });
+  clearOnlineHeldCampWatcher({ clear: false });
+  clearOnlineServerReportWatcher();
+  clearOnlineGlobalStatsWatcher();
+  clearOnlineCrownCitadelWatcher({ clear: false });
+  subscribeOnlineArmyWatchers(islandId);
+  subscribeOnlineReinforcements();
+  subscribeOnlineHeldCamps();
+  subscribeOnlineServerReports();
+  subscribeOnlineGlobalStats();
+  subscribeOnlineCrownCitadel();
+  watchGameServerMembership({ preserve: true });
+
+  if (state.clanId) {
+    stopClanRealtimeSubscriptions({ clear: false });
+    void refreshClanState({ silent: true });
+  }
+
+  try {
+    await islandRestart;
+    return true;
+  } catch (error) {
+    markOnlineRealtimeRecoveryNeeded(error);
+    console.warn("Could not restart foreground realtime subscriptions", error);
+    return false;
+  }
 }
 
 function isOnlineArmyVisible(army) {
@@ -16421,7 +16576,7 @@ function restoreOfflineCityOwnership(offlineCity) {
   return currentCity;
 }
 
-function applyPendingOfflineProgress() {
+function applyPendingOfflineProgress({ showSummary = true } = {}) {
   if (!state || pendingOfflineProgressSeconds <= 0) return;
   const elapsed = pendingOfflineProgressSeconds;
   pendingOfflineProgressSeconds = 0;
@@ -16480,16 +16635,66 @@ function applyPendingOfflineProgress() {
   if (goldGained > 0 || troopsGained > 0 || lostCities.length > 0) {
     const lostText = lostCities.length ? ` Lost cities: ${lostCities.map(city => city.name).join(", ")}.` : "";
     addLog(`Offline production: +${formatNumber(goldGained)} gold and +${formatNumber(troopsGained)} troops.${lostText}`);
-    showOfflineRewardsModal({
-      goldGained,
-      troopsGained,
-      elapsed,
-      lostCities,
-    });
+    if (showSummary) {
+      queueOfflineRewardsSummary({
+        goldGained,
+        troopsGained,
+        elapsed,
+        lostCities,
+      });
+    }
     syncOwnedCitiesToOnline(true);
     saveGame();
     flushOnlineSave(true);
   }
+}
+
+function mergeOfflineRewardsSummaries(current = null, next = null) {
+  if (!current) {
+    return next ? {
+      ...next,
+      lostCities: [...(next.lostCities || [])],
+      lostCityCount: Math.max(
+        (next.lostCities || []).length,
+        Math.max(0, Math.floor(Number(next.lostCityCount) || 0))
+      ),
+    } : null;
+  }
+  if (!next) return current;
+  const lostCitiesById = new Map();
+  [...(current.lostCities || []), ...(next.lostCities || [])].forEach(city => {
+    const key = String(city?.id || city?.name || "").trim();
+    if (key) lostCitiesById.set(key, city);
+  });
+  return {
+    goldGained: Math.max(0, Number(current.goldGained) || 0) + Math.max(0, Number(next.goldGained) || 0),
+    troopsGained: Math.max(0, Number(current.troopsGained) || 0) + Math.max(0, Number(next.troopsGained) || 0),
+    elapsed: Math.max(0, Number(current.elapsed) || 0) + Math.max(0, Number(next.elapsed) || 0),
+    lostCities: [...lostCitiesById.values()],
+    lostCityCount: Math.max(
+      lostCitiesById.size,
+      Math.max((current.lostCities || []).length, Math.floor(Number(current.lostCityCount) || 0))
+        + Math.max((next.lostCities || []).length, Math.floor(Number(next.lostCityCount) || 0))
+    ),
+  };
+}
+
+function queueOfflineRewardsSummary(summary = null) {
+  if (!summary) return false;
+  if (modal.open) {
+    pendingOfflineRewardsSummary = mergeOfflineRewardsSummaries(pendingOfflineRewardsSummary, summary);
+    return true;
+  }
+  showOfflineRewardsModal(summary);
+  return true;
+}
+
+function showPendingOfflineRewardsSummary() {
+  if (!pendingOfflineRewardsSummary || modal.open) return false;
+  const summary = pendingOfflineRewardsSummary;
+  pendingOfflineRewardsSummary = null;
+  showOfflineRewardsModal(summary);
+  return true;
 }
 
 function showOfflineRewardsModal({ goldGained = 0, troopsGained = 0, elapsed = 0, lostCities = [], lostCityCount = 0 } = {}) {
@@ -16517,6 +16722,182 @@ function showOfflineRewardsModal({ goldGained = 0, troopsGained = 0, elapsed = 0
   `;
   modalBody.querySelector("#offlineCollectBtn")?.addEventListener("click", () => modal.close());
   if (!modal.open) modal.showModal();
+}
+
+function resetForegroundSimulationTimers() {
+  lastFrameTime = performance.now();
+  simulationUpdateAccumulatorMs = 0;
+  serverEconomySyncTimer = 0;
+  onlineCitySyncTimer = 0;
+  onlinePresenceTimer = 0;
+  overdueArmyResolveTimer = 0;
+}
+
+function markGameBackgrounded() {
+  if (!gameBackgroundedAtMs) {
+    gameBackgroundedAtMs = Date.now();
+    const api = getOnlineApi();
+    const expectsServerAuthority = isOnlineWorldActive() && api?.isSignedIn?.();
+    gameBackgroundProductionCities = state && !expectsServerAuthority
+      ? createOfflineProductionSnapshot(state)
+      : [];
+  }
+  if (state) saveGame();
+}
+
+function applyLocalForegroundCatchUp(awayMs = 0) {
+  if (!state) return true;
+  const elapsed = clamp(Math.floor(Math.max(0, awayMs) / 1000), 0, MAX_OFFLINE_PROGRESS_SECONDS);
+  if (elapsed < 10) {
+    gameBackgroundProductionCities = [];
+    return true;
+  }
+  const productionCities = gameBackgroundProductionCities.length
+    ? gameBackgroundProductionCities
+    : createOfflineProductionSnapshot(state);
+  gameBackgroundProductionCities = [];
+  pendingOfflineProgressSeconds = Math.max(pendingOfflineProgressSeconds, elapsed);
+  pendingOfflineProductionCities = productionCities;
+  pendingOfflineOwnedCityIds = new Set(productionCities.map(city => getKnownCityId(city.id)).filter(Boolean));
+  applyPendingOfflineProgress({ showSummary: awayMs >= FOREGROUND_LONG_RESUME_MS });
+  return true;
+}
+
+function refreshOpenServerDrivenPanels() {
+  if (modal.open && modal.classList.contains("incoming-attack-modal")) renderIncomingAttacksModalContent();
+  if (modal.open && modal.classList.contains("outgoing-attack-modal")) renderOutgoingAttacksModalContent();
+  if (modal.open && modal.classList.contains("city-list-modal")) renderCityListModal();
+  if (modal.open && modal.classList.contains("island-switcher-modal")) rerenderIslandSwitcherModalIfOpen();
+  if (profileScreen?.classList.contains("open")) renderProfileScreen();
+}
+
+async function synchronizeForegroundGame(awayMs = 0, { longRefresh = false } = {}) {
+  const api = getOnlineApi();
+  const expectsServerAuthority = isOnlineWorldActive() && api?.isSignedIn?.();
+  if (!expectsServerAuthority) return applyLocalForegroundCatchUp(awayMs);
+  if (!usesServerEconomyAuthority() || navigator.onLine === false) return false;
+
+  const targetRegionId = getActiveOnlineRegionId();
+  const shouldRestartRealtime = longRefresh || onlineRealtimeRecoveryNeeded;
+  const shouldShowWelcomeBack = awayMs >= FOREGROUND_LONG_RESUME_MS;
+  const economyPromise = Promise.resolve(refreshServerEconomy(true, {
+    requestWelcomeBack: shouldShowWelcomeBack,
+    showOfflineRewards: shouldShowWelcomeBack,
+    resumeCatchUp: true,
+  }));
+  const refreshTasks = [
+    Promise.resolve(refreshAllOwnedCities(true)),
+    Promise.resolve(loadOnlineRegionCitiesForResolution(targetRegionId)),
+    Promise.resolve(loadServerReportsOnce()),
+    Promise.resolve(heartbeatGameServerMembership()),
+    Promise.resolve(publishOnlinePresence(true)),
+  ];
+  if (shouldRestartRealtime) refreshTasks.push(Promise.resolve(restartOnlineRealtimeSubscriptionsForResume()));
+
+  const [economySynced, refreshResults] = await Promise.all([
+    economyPromise,
+    Promise.allSettled(refreshTasks),
+  ]);
+  refreshDailyLoginRewardStatus({ autoOpen: true, silent: true });
+  retryPendingRewardedAdClaim();
+  recoverPendingOnlineArmyMovements();
+  retryOverdueOnlineArmyResolutions();
+  renderAll();
+  updateIncomingAttackUi();
+  updateOutgoingAttackUi();
+  refreshOpenServerDrivenPanels();
+  if (economySynced) gameBackgroundProductionCities = [];
+  const realtimeResult = shouldRestartRealtime ? refreshResults[refreshResults.length - 1] : null;
+  const realtimeSynced = !shouldRestartRealtime
+    || (realtimeResult?.status === "fulfilled" && realtimeResult.value === true);
+  return Boolean(economySynced && realtimeSynced);
+}
+
+function scheduleForegroundResumeRetry() {
+  if (foregroundResumeRetryTimer || document.visibilityState === "hidden") return;
+  const delayMs = FOREGROUND_RESUME_RETRY_DELAYS_MS[foregroundResumeRetryIndex];
+  if (!Number.isFinite(delayMs)) return;
+  foregroundResumeRetryIndex += 1;
+  foregroundResumeRetryTimer = window.setTimeout(() => {
+    foregroundResumeRetryTimer = 0;
+    scheduleGameForegroundResume("retry", { force: true });
+  }, delayMs);
+}
+
+async function performGameForegroundResume() {
+  if (foregroundResumeInFlight) {
+    foregroundResumeRequested = true;
+    return foregroundResumeInFlight;
+  }
+  const awayMs = foregroundResumeAwayMs;
+  const longRefresh = foregroundResumeLongRefresh;
+  foregroundResumeAwayMs = 0;
+  foregroundResumeLongRefresh = false;
+  foregroundResumeRequested = false;
+  resetForegroundSimulationTimers();
+
+  foregroundResumeInFlight = synchronizeForegroundGame(awayMs, { longRefresh })
+    .then(synced => {
+      if (synced) {
+        foregroundResumeRetryIndex = 0;
+        onlineLastError = "";
+        updateOnlineUi();
+        return true;
+      }
+      foregroundResumeAwayMs = Math.max(foregroundResumeAwayMs, awayMs);
+      foregroundResumeLongRefresh = foregroundResumeLongRefresh || longRefresh;
+      scheduleForegroundResumeRetry();
+      return false;
+    })
+    .catch(error => {
+      onlineLastError = error?.message || String(error);
+      foregroundResumeAwayMs = Math.max(foregroundResumeAwayMs, awayMs);
+      foregroundResumeLongRefresh = foregroundResumeLongRefresh || longRefresh;
+      updateOnlineUi();
+      console.warn("Could not synchronize Crownlands after returning to the foreground", error);
+      scheduleForegroundResumeRetry();
+      return false;
+    })
+    .finally(() => {
+      foregroundResumeInFlight = null;
+      if (foregroundResumeRequested && document.visibilityState !== "hidden") {
+        scheduleGameForegroundResume("queued", { force: true });
+      }
+    });
+  return foregroundResumeInFlight;
+}
+
+function scheduleGameForegroundResume(reason = "foreground", { force = false } = {}) {
+  if (document.visibilityState === "hidden") return false;
+  const nowMs = Date.now();
+  const hadBackgroundPeriod = gameBackgroundedAtMs > 0;
+  if (hadBackgroundPeriod) {
+    const awayMs = Math.max(0, nowMs - gameBackgroundedAtMs);
+    gameBackgroundedAtMs = 0;
+    foregroundResumeAwayMs = Math.max(foregroundResumeAwayMs, awayMs);
+    foregroundResumeLongRefresh = foregroundResumeLongRefresh || awayMs >= FOREGROUND_LONG_RESUME_MS;
+  }
+  if (!hadBackgroundPeriod && !force && !foregroundResumeAwayMs && !onlineRealtimeRecoveryNeeded) return false;
+  if (reason !== "retry") foregroundResumeRetryIndex = 0;
+  if (foregroundResumeRetryTimer) {
+    window.clearTimeout(foregroundResumeRetryTimer);
+    foregroundResumeRetryTimer = 0;
+  }
+  if (foregroundResumeInFlight) {
+    foregroundResumeRequested = true;
+    return true;
+  }
+  if (foregroundResumeCoalesceTimer) window.clearTimeout(foregroundResumeCoalesceTimer);
+  foregroundResumeCoalesceTimer = window.setTimeout(() => {
+    foregroundResumeCoalesceTimer = 0;
+    performGameForegroundResume();
+  }, FOREGROUND_RESUME_COALESCE_MS);
+  return true;
+}
+
+function handleGameForegroundSignal(reason = "foreground", options = {}) {
+  checkForDeployedUpdate(true);
+  scheduleGameForegroundResume(reason, options);
 }
 
 function updateAttacks(dt) {
@@ -18110,7 +18491,10 @@ function startClanQuestProgressSubscription(api, clanId, { force = false } = {})
       clanQuestProgress = String(progress?.questPeriodId || "") === period.questPeriodId ? progress : null;
       if (activeProfileTab === "clan") renderClanView();
     },
-    onError: error => console.warn("Clan weekly quest subscription failed", error),
+    onError: error => {
+      markOnlineRealtimeRecoveryNeeded(error);
+      console.warn("Clan weekly quest subscription failed", error);
+    },
   });
   return true;
 }
@@ -18136,24 +18520,24 @@ function stopClanRealtimeSubscriptions({ clear = true } = {}) {
   clanStateUnsubscribe = null;
   if (typeof clanRalliesUnsubscribe === "function") clanRalliesUnsubscribe();
   clanRalliesUnsubscribe = null;
-  onlineClanRallies = [];
   activeClanSubscriptionId = "";
-  clanRosterReady = false;
-  clanMemberUidSet = new Set();
   if (typeof clanSocialStateUnsubscribe === "function") clanSocialStateUnsubscribe();
   clanSocialStateUnsubscribe = null;
   activeClanSocialSubscriptionId = "";
   if (typeof clanQuestProgressUnsubscribe === "function") clanQuestProgressUnsubscribe();
   clanQuestProgressUnsubscribe = null;
   activeClanQuestSubscriptionKey = "";
-  activeClanQuestPeriod = null;
   if (clanGiftCountdownTimer) clearInterval(clanGiftCountdownTimer);
   clanGiftCountdownTimer = 0;
   if (typeof clanApplicationsUnsubscribe === "function") clanApplicationsUnsubscribe();
   clanApplicationsUnsubscribe = null;
   activeClanApplicationsSubscriptionId = "";
-  clanApplicationsError = "";
   if (clear) {
+    onlineClanRallies = [];
+    clanRosterReady = false;
+    clanMemberUidSet = new Set();
+    activeClanQuestPeriod = null;
+    clanApplicationsError = "";
     clanSnapshot = null;
     clanMembers = [];
     clanApplications = [];
@@ -18238,6 +18622,7 @@ function startClanRealtimeSubscriptions(api, clanId) {
     },
     onMembers: (members, changes) => applyClanMembersSnapshot(members, changes),
     onError: (error, source) => {
+      markOnlineRealtimeRecoveryNeeded(error);
       console.warn(`Clan ${source || "state"} subscription failed`, error);
       if (source === "members") clanRosterReady = false;
     },
@@ -18258,6 +18643,7 @@ function startClanRallySubscription(api, clanId) {
       updateOutgoingAttackUi();
     },
     onError: error => {
+      markOnlineRealtimeRecoveryNeeded(error);
       console.warn("Clan rally subscription failed", error);
     },
   });
@@ -18319,7 +18705,10 @@ function startClanSocialStateSubscription(api, clanId) {
         if (modal?.open && modal.dataset.cityInfoId) showCityInfoModal(modal.dataset.cityInfoId);
       }
     },
-    onError: (error, source) => console.warn(`Clan ${source || "social"} subscription failed`, error),
+    onError: (error, source) => {
+      markOnlineRealtimeRecoveryNeeded(error);
+      console.warn(`Clan ${source || "social"} subscription failed`, error);
+    },
   });
   startClanQuestProgressSubscription(api, id);
   if (clanGiftCountdownTimer) clearInterval(clanGiftCountdownTimer);
@@ -18352,6 +18741,7 @@ function startClanApplicationSubscription(api, clanId) {
       if (activeProfileTab === "clan") renderClanView();
     },
     onError: error => {
+      markOnlineRealtimeRecoveryNeeded(error);
       console.warn("Clan application subscription failed", error);
       clanApplicationsError = "Applications could not be loaded. Reopen the Clan screen to retry.";
       if (activeProfileTab === "clan") renderClanView();
@@ -29023,18 +29413,16 @@ mapFrame.addEventListener("gestureend", preventNativeMapTouch, { passive: false 
 window.addEventListener("resize", updateCameraTransform);
 document.addEventListener("fullscreenchange", updateFullscreenButton);
 document.addEventListener("visibilitychange", () => {
-  if (document.visibilityState === "visible") {
-    checkForDeployedUpdate(true);
-    heartbeatGameServerMembership();
-    refreshDailyLoginRewardStatus({ autoOpen: true, silent: true });
-    retryPendingRewardedAdClaim();
-  }
+  if (document.visibilityState === "hidden") markGameBackgrounded();
+  else handleGameForegroundSignal("visibilitychange");
 });
+window.addEventListener("pagehide", markGameBackgrounded);
+window.addEventListener("pageshow", () => handleGameForegroundSignal("pageshow"));
+window.addEventListener("focus", () => handleGameForegroundSignal("focus"));
+document.addEventListener("freeze", markGameBackgrounded);
+document.addEventListener("resume", () => handleGameForegroundSignal("resume"));
 window.addEventListener("online", () => {
-  checkForDeployedUpdate(true);
-  heartbeatGameServerMembership();
-  refreshDailyLoginRewardStatus({ autoOpen: true, silent: true });
-  retryPendingRewardedAdClaim();
+  handleGameForegroundSignal("online", { force: true });
 });
 document.addEventListener("keydown", event => {
   if (event.key === "F8") {
@@ -29135,6 +29523,7 @@ modal.addEventListener("close", () => {
   modal.classList.remove("daily-login-reward-modal");
   window.setTimeout(maybeAutoOpenDailyLoginRewards, 0);
   setTimeout(showNextLevelUpReward, 0);
+  window.setTimeout(showPendingOfflineRewardsSummary, 0);
   if (!troopSliderActive) return;
   troopSliderActive = false;
   cancelSendMode();
