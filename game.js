@@ -6119,22 +6119,24 @@ function renderClanShield(value = null, options = {}) {
     ? [[21,16],[39,11],[61,11],[79,16],[83,40],[76,69],[50,89],[24,69],[17,40]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="2.1" fill="${escapeHtml(shield.borderColor)}" stroke="#1b1711" stroke-width=".7"/>`).join("")
     : "";
   return `<span class="clan-shield clan-shield-size-${size} clan-shield-${escapeHtml(shield.finish)}">
-    <svg viewBox="0 0 100 106" role="img" aria-label="${label}" focusable="false">
+    <svg viewBox="0 0 100 106" role="img" aria-label="${label}" focusable="false" overflow="hidden">
       <defs>
-        <clipPath id="${clipId}"><path d="${path}"/></clipPath>
+        <clipPath id="${clipId}" clipPathUnits="userSpaceOnUse"><path d="${path}"/></clipPath>
         <pattern id="${textureId}" width="17" height="19" patternUnits="userSpaceOnUse">
           <path d="M2 3l5-1M11 9l4 2M4 15l3-4M15 17l1-4" stroke="#f7e6bd" stroke-width=".8" opacity=".8"/>
           <path d="M8 5l2 5M1 10l4 1M12 2l3 4" stroke="#15110d" stroke-width=".65" opacity=".8"/>
         </pattern>
       </defs>
-      <path d="${path}" fill="#111712" stroke="#19140f" stroke-width="7" stroke-linejoin="round"/>
-      ${renderClanShieldField(shield, clipId)}
-      ${renderClanShieldCharges(shield, clipId)}
-      <rect width="100" height="106" clip-path="url(#${clipId})" fill="url(#${textureId})" opacity="${textureOpacity}"/>
-      ${shield.finish === "battleworn" ? `<g clip-path="url(#${clipId})" fill="none" stroke="#efe2c4" stroke-width="1.2" opacity=".24"><path d="M18 24l24 17M66 15L43 68M71 55L52 90M20 71l15-10"/></g>` : ""}
-      <path d="${path}" fill="none" stroke="${escapeHtml(shield.borderColor)}" stroke-width="4.5" stroke-linejoin="round"/>
-      ${doubleTrim}${rivets}
-      <path d="${path}" fill="none" stroke="#fff4d0" stroke-width=".9" opacity=".28"/>
+      <g class="clan-shield-boundary" clip-path="url(#${clipId})">
+        <path d="${path}" fill="#111712" stroke="#19140f" stroke-width="7" stroke-linejoin="round"/>
+        ${renderClanShieldField(shield, clipId)}
+        ${renderClanShieldCharges(shield, clipId)}
+        <rect width="100" height="106" fill="url(#${textureId})" opacity="${textureOpacity}"/>
+        ${shield.finish === "battleworn" ? `<g fill="none" stroke="#efe2c4" stroke-width="1.2" opacity=".24"><path d="M18 24l24 17M66 15L43 68M71 55L52 90M20 71l15-10"/></g>` : ""}
+        <path d="${path}" fill="none" stroke="${escapeHtml(shield.borderColor)}" stroke-width="4.5" stroke-linejoin="round"/>
+        ${doubleTrim}${rivets}
+        <path d="${path}" fill="none" stroke="#fff4d0" stroke-width=".9" opacity=".28"/>
+      </g>
     </svg>
   </span>`;
 }

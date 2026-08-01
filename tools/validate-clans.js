@@ -150,6 +150,8 @@ requires(client, /function showPublicClanDetails[\s\S]*?Promise\.all\(\[api\.loa
 requires(client, /btn\.classList\.add\("clan-ally"\)/, "Allied cities do not receive their map class.");
 requires(client, /You cannot scout or attack a clan ally/, "Clan-friendly action explanation is missing.");
 requires(client, /function renderClanShield[\s\S]*?renderClanShieldField[\s\S]*?renderClanShieldCharges/, "Client is missing the vector clan shield renderer.");
+requires(client, /function renderClanShield[\s\S]*?overflow="hidden"[\s\S]*?clipPathUnits="userSpaceOnUse"[\s\S]*?class="clan-shield-boundary"\s+clip-path="url\(#\$\{clipId\}\)"/, "Clan shield paint is not clipped to the shield silhouette.");
+requires(styles, /\.clan-shield svg\s*\{[^}]*overflow:\s*hidden;/, "Clan shield SVG overflow can bleed beyond its viewport.");
 requires(client, /function renderClanRosterMember[\s\S]*?data-clan-action="select-member"[\s\S]*?Demote[\s\S]*?Promote[\s\S]*?Remove[\s\S]*?renderClanMemberFlag/, "Clan roster is missing flags or leader-selected member controls.");
 requires(client, /function renderClanGiftPanel[\s\S]*?Send \.5h Gold Gift[\s\S]*?Collect \$\{hours\}h Gold[\s\S]*?function renderClanQuestPanel[\s\S]*?Weekly Conquest[\s\S]*?Joined too late/, "Clan gift and weekly conquest quest panels are incomplete.");
 assert.doesNotMatch(client, /Clan Chat|sendClanMessage|reportClanMessage|data-clan-action="mute"/, "Retired clan chat or mute UI remains in the client.");
