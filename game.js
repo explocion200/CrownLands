@@ -454,7 +454,27 @@ const CROWN_CITADEL_NAME = "Crown Citadel";
 const CITADEL_ASSAULT_REGION_ID = "center";
 const CITADEL_ASSAULT_EVENT_KIND = "citadel_npc_assault";
 const CITADEL_ASSAULT_WARNING_MS = 15 * 60 * 1000;
-const CITADEL_ASSAULT_UTC_HOURS = [4, 15];
+const CITADEL_ASSAULT_TIME_ZONE = "America/New_York";
+const CITADEL_ASSAULT_EASTERN_TIMES = Object.freeze([
+  Object.freeze({ hour: 10, minute: 0 }),
+  Object.freeze({ hour: 18, minute: 30 }),
+]);
+const CITADEL_ASSAULT_EASTERN_PARTS_FORMATTER = new Intl.DateTimeFormat("en-US", {
+  timeZone: CITADEL_ASSAULT_TIME_ZONE,
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+  hour: "2-digit",
+  minute: "2-digit",
+  second: "2-digit",
+  hourCycle: "h23",
+});
+const CITADEL_ASSAULT_EASTERN_TIME_FORMATTER = new Intl.DateTimeFormat("en-US", {
+  timeZone: CITADEL_ASSAULT_TIME_ZONE,
+  hour: "numeric",
+  minute: "2-digit",
+  timeZoneName: "short",
+});
 const CROWN_CITADEL_ART_SRC = "assets/crown-citadel.png?v=20260703-crown-citadel-art";
 const CROWN_CITADEL_GOLD_BONUS_PERCENT = 10;
 const CROWN_CITADEL_TROOP_BONUS_PERCENT = 10;
@@ -17775,13 +17795,58 @@ function renderHud() {
   }
 }
 
-function getNextCitadelAssaultAtMs(nowMs = Date.now()) {
-  const now = new Date(nowMs);
-  for (const hour of CITADEL_ASSAULT_UTC_HOURS) {
-    const candidate = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), hour, 0, 0, 0);
-    if (candidate > nowMs) return candidate;
+function getCitadelAssaultEasternParts(value = Date.now()) {
+  const values = {};
+  CITADEL_ASSAULT_EASTERN_PARTS_FORMATTER.formatToParts(new Date(value)).forEach(part => {
+    if (part.type !== "literal") values[part.type] = Number(part.value);
+  });
+  return values;
+}
+
+function getCitadelAssaultEasternOffsetMs(value = Date.now()) {
+  const date = new Date(value);
+  const parts = getCitadelAssaultEasternParts(date);
+  const representedAsUtc = Date.UTC(
+    parts.year,
+    parts.month - 1,
+    parts.day,
+    parts.hour,
+    parts.minute,
+    parts.second
+  );
+  return representedAsUtc - Math.floor(date.getTime() / 1000) * 1000;
+}
+
+function getCitadelAssaultEasternWallTimeMs(year, month, day, hour, minute) {
+  const wallClockMs = Date.UTC(year, month - 1, day, hour, minute, 0, 0);
+  let candidateMs = wallClockMs;
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    candidateMs = wallClockMs - getCitadelAssaultEasternOffsetMs(candidateMs);
   }
-  return Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1, CITADEL_ASSAULT_UTC_HOURS[0], 0, 0, 0);
+  return candidateMs;
+}
+
+function getNextCitadelAssaultAtMs(nowMs = Date.now()) {
+  const easternToday = getCitadelAssaultEasternParts(nowMs);
+  for (const time of CITADEL_ASSAULT_EASTERN_TIMES) {
+    const candidateMs = getCitadelAssaultEasternWallTimeMs(
+      easternToday.year,
+      easternToday.month,
+      easternToday.day,
+      time.hour,
+      time.minute
+    );
+    if (candidateMs > nowMs) return candidateMs;
+  }
+  const tomorrow = new Date(Date.UTC(easternToday.year, easternToday.month - 1, easternToday.day + 1));
+  const firstTime = CITADEL_ASSAULT_EASTERN_TIMES[0];
+  return getCitadelAssaultEasternWallTimeMs(
+    tomorrow.getUTCFullYear(),
+    tomorrow.getUTCMonth() + 1,
+    tomorrow.getUTCDate(),
+    firstTime.hour,
+    firstTime.minute
+  );
 }
 
 function formatCitadelAssaultCountdown(remainingMs = 0) {
@@ -17801,13 +17866,12 @@ function updateCitadelAssaultCountdown() {
   const nextAtMs = getNextCitadelAssaultAtMs(nowMs);
   const remainingMs = Math.max(0, nextAtMs - nowMs);
   const imminent = remainingMs <= CITADEL_ASSAULT_WARNING_MS;
-  const hour = new Date(nextAtMs).getUTCHours();
   citadelAssaultCountdown.classList.toggle("imminent", imminent);
   if (citadelAssaultCountdownTime) citadelAssaultCountdownTime.textContent = formatCitadelAssaultCountdown(remainingMs);
   if (citadelAssaultCountdownDetail) {
     citadelAssaultCountdownDetail.textContent = imminent
       ? "Targets selected — reinforce your cities"
-      : `Next wave at ${String(hour).padStart(2, "0")}:00 UTC`;
+      : `Next wave at ${CITADEL_ASSAULT_EASTERN_TIME_FORMATTER.format(new Date(nextAtMs))}`;
   }
   citadelAssaultCountdown.setAttribute(
     "aria-label",
@@ -28248,7 +28312,7 @@ function showHelpModal() {
       <li>Swordmastery boosts outgoing attack, Guild Charters reduces city upgrade cost, and Field Medics returns part of battle losses to your main city.</li>
       <li>Captured cities enter a one-hour city-XP cooldown. Attacks still earn troop-loss XP, but the fixed city/wall XP component is unavailable until the cooldown ends.</li>
       <li>Main cities cannot be attacked. Use your main city as a protected home base while expanding from other cities.</li>
-      <li>The Citadel Legion attacks up to 20 random regular non-main cities in the Crown Citadel map at 04:00 and 15:00 UTC. Targets receive 15 minutes of warning. A lost defense removes five city levels; Level 5-or-lower cities become Level 1 neutral cities with 10 troops. Peace Shields do not block these attacks, and defenders receive no XP.</li>
+      <li>The Citadel Legion attacks up to 20 random regular non-main cities in the Crown Citadel map at 10:00 AM and 6:30 PM Eastern Time. Targets receive 15 minutes of warning beginning at 9:45 AM and 6:15 PM Eastern. A lost defense removes five city levels; Level 5-or-lower cities become Level 1 neutral cities with 10 troops. Peace Shields do not block these attacks, and defenders receive no XP.</li>
       <li>Demo Attacks protect weaker kingdoms: much stronger attackers send fewer effective troops, march slower, earn 0 XP, and defenders earn bonus XP.</li>
       <li>Shop items have UTC daily purchase limits. Reward Camp items are earned separately through contested objectives.</li>
     </ul>
