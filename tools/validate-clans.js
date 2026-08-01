@@ -164,6 +164,8 @@ requires(client, /function saveClanShieldEditor[\s\S]*?updateClanProfile\(\{\s*s
 requires(client, /data-clan-action="shield-tab"[\s\S]*?data-shield-panel="field"[\s\S]*?data-shield-panel="colors"[\s\S]*?data-shield-panel="charges"[\s\S]*?data-shield-panel="details"/, "Mobile clan shield editor tabs are incomplete.");
 requires(client, /CLAN_SHIELD_SHAPES[\s\S]*?CLAN_SHIELD_DIVISIONS[\s\S]*?CLAN_SHIELD_CHARGES[\s\S]*?CLAN_SHIELD_FINISHES/, "Clan shield editor options are incomplete.");
 requires(styles, /\.city-node\.clan-ally \.city-ring[\s\S]*?\.city-node\.clan-ally \.foreign-city-shield/, "Green accessible allied-city styling is missing.");
+assert.doesNotMatch(styles, /\.city-node\.clan-ally \.foreign-city-shield\s*\{[^}]*\boutline\s*:/, "Clan-allied city shields must not draw an extra box around their map information.");
+assert.doesNotMatch(styles, /\.city-node\.clan-ally \.foreign-selected-banner\s*\{[^}]*\boutline(?:-offset)?\s*:/, "Selected clan-allied city information must not draw an extra outline box.");
 requires(styles, /\.army-route-ribbon\.clan-support-route\s*\{\s*fill:\s*rgba\(43,\s*139,\s*70,/, "Allied support route ribbons do not use the city UI's dark green.");
 requires(styles, /\.army-route-flow\.clan-support-route\s*\{\s*stroke:\s*rgba\(143,\s*226,\s*165,/, "Allied support route flows do not use the city UI's light green.");
 requires(styles, /\.army-route-ribbon\.clan-hostile-route\s*\{\s*fill:\s*rgba\(239,\s*62,\s*57,/, "Allied hostile route ribbons do not retain the hostile red.");
