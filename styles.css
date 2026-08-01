@@ -4008,7 +4008,7 @@ button.inventory-slot {
   height: min(64vh, 560px);
   min-height: 330px;
   margin: 0;
-  overflow: auto;
+  overflow: hidden;
   overscroll-behavior: contain;
   cursor: grab;
   user-select: none;
@@ -4037,20 +4037,20 @@ button.inventory-slot {
 }
 .island-map-stage {
   position: relative;
-  width: max(100%, var(--island-grid-base-w, 1100px));
-  height: max(100%, var(--island-grid-base-h, 840px));
+  width: 100%;
+  height: 100%;
   min-width: 100%;
   min-height: 100%;
   contain: layout style;
 }
 .island-map-canvas-frame {
   position: absolute;
-  left: 50%;
-  top: 50%;
+  left: 0;
+  top: 0;
   width: var(--island-grid-base-w, 1100px);
   height: var(--island-grid-base-h, 840px);
-  transform: translate(-50%, -50%) scale(var(--island-map-zoom, 1));
-  transform-origin: center;
+  transform: translate3d(var(--island-camera-x, 0px), var(--island-camera-y, 0px), 0) scale(var(--island-map-zoom, 1));
+  transform-origin: left top;
   backface-visibility: hidden;
   will-change: transform;
   contain: layout style;

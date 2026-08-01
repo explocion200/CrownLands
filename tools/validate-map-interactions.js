@@ -93,6 +93,8 @@ vm.runInContext([
   extractFunction("getMarchEndpointInteractionClearance"),
   extractFunction("isMarchInsideEndpointInteractionClearance"),
   extractFunction("clampIslandMapPickerZoom"),
+  extractFunction("clampIslandMapPickerCamera"),
+  extractFunction("getIslandMapPickerZoomedCamera"),
   extractFunction("getIslandMapPinchGeometry"),
   extractFunction("getMissionPointAtProgress"),
   extractFunction("getArmyTravelProgress"),
@@ -266,6 +268,39 @@ assert.equal(context.clampIslandMapPickerZoom(0), context.ISLAND_PICKER_MIN_ZOOM
 assert.equal(context.clampIslandMapPickerZoom(0.2, 0.45), 0.45);
 assert.equal(context.clampIslandMapPickerZoom(0.5), 0.5);
 assert.equal(context.clampIslandMapPickerZoom(2), context.ISLAND_PICKER_MAX_ZOOM);
+const centeredCamera = context.clampIslandMapPickerCamera(
+  { x: -500, y: -500, zoom: 1 },
+  { width: 1000, height: 700 },
+  { left: 100, top: 50, right: 500, bottom: 350, width: 400, height: 300 },
+  20
+);
+assert.equal(centeredCamera.x, 200, "A world smaller than the viewport should stay centered horizontally.");
+assert.equal(centeredCamera.y, 150, "A world smaller than the viewport should stay centered vertically.");
+const boundedCamera = context.clampIslandMapPickerCamera(
+  { x: 1000, y: -1000, zoom: 1 },
+  { width: 600, height: 400 },
+  { left: 100, top: 50, right: 1100, bottom: 850, width: 1000, height: 800 },
+  20
+);
+assert.equal(boundedCamera.x, 480, "Panning should stop before the world is lost past the right edge.");
+assert.equal(boundedCamera.y, -830, "Panning should stop before the world is lost past the top edge.");
+const outerRegionOpeningCamera = context.clampIslandMapPickerCamera(
+  { x: 300, y: 150, zoom: 1 },
+  { width: 800, height: 500 },
+  { left: 100, top: 50, right: 1400, bottom: 850, width: 1300, height: 800 },
+  20
+);
+assert.equal(outerRegionOpeningCamera.x, 300, "An outer active region must remain centered when the map opens.");
+assert.equal(outerRegionOpeningCamera.y, 150, "Opening centering must not be displaced by camera clamping.");
+const focalCamera = context.getIslandMapPickerZoomedCamera(
+  { x: -100, y: -50, zoom: 0.5 },
+  1,
+  300,
+  200
+);
+assert.equal(focalCamera.x, -500);
+assert.equal(focalCamera.y, -300);
+assert.equal((300 - focalCamera.x) / focalCamera.zoom, (300 - (-100)) / 0.5, "Zooming must preserve the world point under the cursor.");
 const pinchGeometry = context.getIslandMapPinchGeometry(new Map([
   [1, { x: 20, y: 30 }],
   [2, { x: 80, y: 110 }],
@@ -276,15 +311,20 @@ assert.equal(pinchGeometry.distance, 100);
 assert.doesNotMatch(source, /data-island-map-zoom-(?:out|in|fit|value)/, "The map picker should not render visible zoom controls.");
 assert.doesNotMatch(source, /data-island-map-zoom-slider/, "The map picker should not render a zoom range slider.");
 assert.match(source, /function getIslandMapPickerMinimumZoom[\s\S]*?getIslandMapPickerFitZoom/, "The map picker minimum zoom should stop at the all-maps view.");
-assert.match(source, /picker\.addEventListener\("wheel"[\s\S]*?event\.preventDefault\(\)[\s\S]*?queueWheelZoom[\s\S]*?event\.clientX/, "The mouse wheel should zoom the map around the pointer.");
-assert.match(source, /ISLAND_PICKER_ZOOM_EASE_MS\s*=\s*\d+[\s\S]*?function attachIslandMapPickerZoom[\s\S]*?animateWheelZoom[\s\S]*?Math\.exp\(-elapsed \/ ISLAND_PICKER_ZOOM_EASE_MS\)/, "Wheel zoom should ease across animation frames.");
-assert.match(source, /function attachIslandMapPickerPan[\s\S]*?const queuePan[\s\S]*?queuePan\(startScrollLeft - dx, startScrollTop - dy\)/, "The map picker should batch drag panning into animation frames.");
+assert.match(source, /function getIslandMapPickerFitZoom[\s\S]*?getIslandMapContentBounds/, "The all-maps zoom should use actual region bounds instead of padded stage bounds.");
+assert.match(source, /picker\.addEventListener\("wheel"[\s\S]*?event\.preventDefault\(\)[\s\S]*?controller\.zoomTo[\s\S]*?event\.clientX/, "The mouse wheel should zoom the map around the pointer.");
+assert.match(source, /ISLAND_PICKER_CAMERA_EASE_MS\s*=\s*\d+[\s\S]*?function createIslandMapPickerCameraController[\s\S]*?Math\.exp\(-elapsed \/ ISLAND_PICKER_CAMERA_EASE_MS\)/, "Desktop camera input should ease across animation frames.");
+assert.match(source, /function createIslandMapPickerCameraController[\s\S]*?if \(!animationFrame\) animationFrame = requestAnimationFrame\(tick\)/, "Map camera updates should share one animation frame loop.");
+assert.match(source, /function attachIslandMapPickerPan[\s\S]*?controller\.moveTo\(\{[\s\S]*?x: startCamera\.x \+ dx[\s\S]*?immediate: true/, "The map picker should batch drag panning through the transform camera.");
 assert.match(source, /function getIslandMapPinchGeometry[\s\S]*?Math\.hypot/, "The map picker should calculate a two-pointer pinch gesture.");
-assert.match(source, /touchPointers\.size >= 2[\s\S]*?requestAnimationFrame\(applyPendingPinchZoom\)/, "Mobile pinch updates should be coalesced to the display frame.");
-assert.match(source, /function attachIslandMapPickerPan[\s\S]*?applyPendingPinchZoom[\s\S]*?targetViewportX/, "Mobile pinch gestures should zoom around the moving finger midpoint.");
-assert.match(stylesSource, /\.island-map-canvas-frame[\s\S]*?--island-grid-base-w[\s\S]*?scale\(var\(--island-map-zoom/, "The map picker should zoom through a fixed-size transform layer.");
+assert.match(source, /touchPointers\.size >= 2[\s\S]*?getIslandMapPickerZoomedCamera[\s\S]*?nextGeometry\.centerX[\s\S]*?immediate: true/, "Mobile pinch gestures should track the moving finger midpoint through the shared display frame.");
+assert.match(source, /function setIslandMapPickerOpeningView[\s\S]*?getIslandMapPickerOpeningZoom[\s\S]*?position\.x \* zoom/, "Opening the map picker should center its camera on the active region.");
+assert.match(source, /renderIslandSwitcherModalContent[\s\S]*?setIslandMapPickerOpeningView\(picker, activeRegionId \|\| homeRegionId\)/, "Every map picker open should reset to the active region.");
+assert.doesNotMatch(source, /restoreIslandMapPickerView/, "The map picker must not restore a stale camera on reopen.");
+assert.doesNotMatch(source, /picker\.scroll(?:Left|Top)/, "The map overview camera must not use native scroll offsets.");
+assert.match(stylesSource, /\.island-map-canvas-frame[\s\S]*?translate3d\(var\(--island-camera-x[\s\S]*?scale\(var\(--island-map-zoom/, "The map picker should pan and zoom through one transform layer.");
 assert.doesNotMatch(source, /setProperty\("--island-grid-scaled-(?:w|h)"/, "Zoom frames must not resize the map layout.");
-assert.match(stylesSource, /\.island-map-picker\s*\{[\s\S]*?scrollbar-width:\s*none;/, "The map picker should hide native scrollbars while remaining scrollable.");
+assert.match(stylesSource, /\.island-map-picker\s*\{[\s\S]*?overflow:\s*hidden;/, "The transform camera viewport should clip the world without native scrolling.");
 
 const city = { id: "city", kind: "city", x: 0, y: 0 };
 const target = { id: "target", kind: "city", x: 1000, y: 0 };
