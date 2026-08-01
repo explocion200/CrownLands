@@ -58,7 +58,26 @@ for (const [source, label] of [[clientSource, "Client"], [serverSource, "Server"
     /baseGoldProductionPerHour/,
     `${label} does not expose base gold production.`
   );
+
+  const goldProductionContext = {};
+  vm.createContext(goldProductionContext);
+  vm.runInContext(
+    extractFunction(source, "calculateGoldProductionRates"),
+    goldProductionContext,
+    { filename: label === "Client" ? path.join(root, "game.js") : path.join(root, "functions", "index.js") }
+  );
+  const rates = goldProductionContext.calculateGoldProductionRates(100, 75, 10, 50);
+  assert.equal(rates.baseGoldProductionPerHour, 100, `${label} changed the raw gold baseline.`);
+  assert.equal(rates.untimedGoldProductionPerHour, 185, `${label} compounds permanent gold bonuses.`);
+  assert.equal(rates.goldProductionPerHour, 235, `${label} compounds Royal Tax with other gold bonuses.`);
+  assert.equal(rates.goldProductionBonusPerHour, 135, `${label} reports an incorrect total gold bonus.`);
 }
+
+requireMatch(
+  serverSource,
+  /stats\.goldProductionPerSecond \* goldElapsedSeconds\s*\+ stats\.baseGoldProductionPerHour \/ 3600\s*\* taxDecreeOverlapSeconds\s*\* ROYAL_TAX_DECREE_GOLD_PRODUCTION_BONUS_PERCENT \/ 100/,
+  "Authoritative Royal Tax credit is not based solely on raw city gold production."
+);
 
 requireMatch(
   serverSource,

@@ -2822,6 +2822,34 @@ function getMillionLordsPassiveGoldPerHour(level) {
   return Math.min(Number.MAX_SAFE_INTEGER, Math.max(0, Math.floor(rawGold)));
 }
 
+function calculateGoldProductionRates(
+  baseGoldProductionPerHour = 0,
+  taxStewardshipPercent = 0,
+  strongholdGoldBonusPercent = 0,
+  royalTaxDecreeGoldBonusPercent = 0
+) {
+  const base = Number.isFinite(Number(baseGoldProductionPerHour))
+    ? Math.max(0, Number(baseGoldProductionPerHour))
+    : 0;
+  const taxPercent = Number.isFinite(Number(taxStewardshipPercent))
+    ? Math.max(0, Number(taxStewardshipPercent))
+    : 0;
+  const strongholdPercent = Number.isFinite(Number(strongholdGoldBonusPercent))
+    ? Math.max(0, Number(strongholdGoldBonusPercent))
+    : 0;
+  const royalTaxPercent = Number.isFinite(Number(royalTaxDecreeGoldBonusPercent))
+    ? Math.max(0, Number(royalTaxDecreeGoldBonusPercent))
+    : 0;
+  const untimedGoldProductionPerHour = base * (1 + (taxPercent + strongholdPercent) / 100);
+  const goldProductionPerHour = untimedGoldProductionPerHour + base * royalTaxPercent / 100;
+  return {
+    baseGoldProductionPerHour: base,
+    untimedGoldProductionPerHour,
+    goldProductionPerHour,
+    goldProductionBonusPerHour: Math.max(0, goldProductionPerHour - base),
+  };
+}
+
 function getCityProductionStats(city = {}, profile = {}, bonuses = {}, options = {}) {
   const stronghold = isStronghold(city);
   const level = stronghold ? getStrongholdDefenseLevel(city) : clampCityLevel(city.level);
@@ -2856,11 +2884,17 @@ function getCityProductionStats(city = {}, profile = {}, bonuses = {}, options =
   const troopProductionPerHour = untimedTroopProductionPerHour
     * (1 + warDrumsTroopBonusPercent / 100);
   const rawGoldProductionPerHour = stronghold ? 0 : getMillionLordsPassiveGoldPerHour(level);
-  const untimedGoldProductionPerHour = rawGoldProductionPerHour
-    * (1 + taxStewardshipPercent / 100)
-    * (1 + strongholdGoldBonusPercent / 100);
-  const goldProductionPerHour = untimedGoldProductionPerHour
-    * (1 + royalTaxDecreeGoldBonusPercent / 100);
+  const {
+    baseGoldProductionPerHour,
+    untimedGoldProductionPerHour,
+    goldProductionPerHour,
+    goldProductionBonusPerHour,
+  } = calculateGoldProductionRates(
+    rawGoldProductionPerHour,
+    taxStewardshipPercent,
+    strongholdGoldBonusPercent,
+    royalTaxDecreeGoldBonusPercent
+  );
 
   return {
     level,
@@ -2869,10 +2903,10 @@ function getCityProductionStats(city = {}, profile = {}, bonuses = {}, options =
     untimedTroopProductionPerHour,
     troopProductionPerHour,
     troopProductionBonusPerHour: Math.max(0, troopProductionPerHour - baseTroopProductionPerHour),
-    baseGoldProductionPerHour: rawGoldProductionPerHour,
+    baseGoldProductionPerHour,
     untimedGoldProductionPerHour,
     goldProductionPerHour,
-    goldProductionBonusPerHour: Math.max(0, goldProductionPerHour - rawGoldProductionPerHour),
+    goldProductionBonusPerHour,
     royalGranariesPercent,
     taxStewardshipPercent,
     strongholdTroopBonusPercent,
@@ -8107,9 +8141,10 @@ async function prepareEconomyCollection(transaction, uid, nowMs = Date.now(), op
     );
     const nextTroopFloat = currentTroopFloat + troopGainFloat;
     const nextTroops = Math.max(0, Math.floor(nextTroopFloat));
-    goldGainFloat += stats.goldProductionPerSecond * (
-      goldElapsedSeconds + taxDecreeOverlapSeconds * ROYAL_TAX_DECREE_GOLD_PRODUCTION_BONUS_PERCENT / 100
-    );
+    goldGainFloat += stats.goldProductionPerSecond * goldElapsedSeconds
+      + stats.baseGoldProductionPerHour / 3600
+        * taxDecreeOverlapSeconds
+        * ROYAL_TAX_DECREE_GOLD_PRODUCTION_BONUS_PERCENT / 100;
     troopsGained += Math.max(0, nextTroops - Math.max(0, Math.floor(safeNumber(city.troops, 0))));
     const patch = {
       troops: nextTroops,
