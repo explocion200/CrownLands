@@ -17,7 +17,7 @@ function requires(source, pattern, message) {
 requires(server, /ARMY_ORDER_KINDS\s*=\s*Object\.freeze\(\[[^\]]*"reinforce"/, "Server army orders do not include reinforce.");
 requires(
   server,
-  /resolvedKind === "reinforce"[\s\S]*?sameActiveClan[\s\S]*?status !== "active"[\s\S]*?getActiveClanReinforcementTargetsForLaunch/,
+  /resolvedKind === "reinforce"[\s\S]*?sameActiveClan[\s\S]*?status !== "active"[\s\S]*?getActiveClanReinforcementAssignmentsForLaunch/,
   "Reinforcement launch does not validate canonical clan status."
 );
 assert.doesNotMatch(
@@ -32,13 +32,18 @@ assert.doesNotMatch(
 );
 requires(
   server,
-  /CLAN_REINFORCEMENT_ACTIVE_LIMIT\s*=\s*2[\s\S]*?getActiveClanReinforcementTargetsForLaunch[\s\S]*?activeClanReinforcementTargets\.includes\(reinforcementTargetKey\)[\s\S]*?activeClanReinforcementTargets\.length >= CLAN_REINFORCEMENT_ACTIVE_LIMIT/,
-  "Reinforcement launch does not enforce two active targets per sender and one contribution per holding."
+  /CLAN_REINFORCEMENT_PER_RECIPIENT_LIMIT\s*=\s*2[\s\S]*?getActiveClanReinforcementAssignmentsForLaunch[\s\S]*?entry\.targetKey === reinforcementTargetKey[\s\S]*?entry\.recipientUid === targetOwnerUid[\s\S]*?recipientAssignmentCount >= CLAN_REINFORCEMENT_PER_RECIPIENT_LIMIT/,
+  "Reinforcement launch does not enforce two assignments per clanmate and one contribution per holding."
 );
 requires(
   server,
-  /activeClanReinforcementTargets:\s*\[\.\.\.activeClanReinforcementTargets, reinforcementTargetKey\][\s\S]*?clanReinforcementLimitResetGeneration:\s*RESET_GENERATION/,
+  /activeClanReinforcementAssignments:[\s\S]*?assignmentToken[\s\S]*?clanReinforcementLimitResetGeneration:\s*RESET_GENERATION[\s\S]*?clanReinforcementLimitVersion:\s*REINFORCEMENT_MODEL_VERSION/,
   "Accepted reinforcement launches do not reserve a concurrency-safe sender slot."
+);
+requires(
+  server,
+  /ORDINARY_CITY_REINFORCEMENT_CAPACITY\s*=\s*5[\s\S]*?reserveOrdinaryCityReinforcementSlot[\s\S]*?resource-exhausted[\s\S]*?reinforcement-city-capacity/,
+  "Ordinary-city launch capacity is not reserved transactionally at five contributors."
 );
 requires(
   server,
@@ -52,8 +57,8 @@ requires(
 );
 requires(
   server,
-  /function beginReinforcementReturn[\s\S]*?getOwnedMainCityDestination[\s\S]*?createReinforcementReturnMovement/,
-  "Safe full-contribution return marches are missing."
+  /function beginReinforcementReturn[\s\S]*?getReinforcementReturnDestination[\s\S]*?createReinforcementReturnMovement/,
+  "Original-source reinforcement return marches are missing."
 );
 requires(
   server,
@@ -103,8 +108,18 @@ requires(
 );
 requires(
   server,
-  /finalizeReinforcementReturn[\s\S]*?releaseClanReinforcementTarget[\s\S]*?entry\.remaining <= 0[\s\S]*?releaseClanReinforcementTarget/,
+  /finalizeReinforcementReturn[\s\S]*?releaseClanReinforcementAssignment[\s\S]*?entry\.remaining <= 0[\s\S]*?releaseClanReinforcementAssignment/,
   "Returned or depleted support does not release the sender's reinforcement slot."
+);
+requires(
+  server,
+  /reconcileReinforcementTargetCapacity[\s\S]*?slice\(0, ORDINARY_CITY_REINFORCEMENT_CAPACITY\)[\s\S]*?slice\(ORDINARY_CITY_REINFORCEMENT_CAPACITY\)\.reverse\(\)[\s\S]*?beginOutboundReinforcementReturn/,
+  "Capacity repair does not retain the oldest five assignments and return newer overflow."
+);
+requires(
+  server,
+  /reinforcementSourceId[\s\S]*?reinforcementSourceRegionId[\s\S]*?reinforcementSourceCityName[\s\S]*?lastArrivalArmyId/,
+  "Reinforcement source snapshots and legacy arrival recovery are missing."
 );
 
 requires(firebaseClient, /returnClanReinforcement[\s\S]*?subscribePlayerReinforcements/, "Firebase reinforcement callable or subscription is missing.");
@@ -122,10 +137,10 @@ assert.doesNotMatch(
 );
 requires(
   client,
-  /CLAN_REINFORCEMENT_ACTIVE_LIMIT\s*=\s*2[\s\S]*?getClanReinforcementBlockReason[\s\S]*?already have one active reinforcement[\s\S]*?at most \$\{CLAN_REINFORCEMENT_ACTIVE_LIMIT\}/,
-  "The client does not explain the two-active and one-per-holding reinforcement limits."
+  /CLAN_REINFORCEMENT_PER_RECIPIENT_LIMIT\s*=\s*2[\s\S]*?getClanReinforcementBlockReason[\s\S]*?already have one active reinforcement[\s\S]*?active reinforcement assignments with this clanmate/,
+  "The client does not explain the per-clanmate and one-per-holding reinforcement limits."
 );
-requires(client, /two holdings at once, with one reinforcement per holding/, "The reinforcement slider does not show the active support limit.");
+requires(client, /assignments with \$\{escapeHtml\(reinforcementRecipientName\)\}[\s\S]*?reinforcement slots/, "The reinforcement slider does not show recipient and city usage.");
 requires(client, /renderHoldingReinforcementPanel[\s\S]*?Send Home[\s\S]*?Recall/, "Private Recall and Send Home controls are missing.");
 requires(client, /label:\s*"Reinforcements"/, "Marches UI does not expose a Reinforcements section.");
 requires(
@@ -151,8 +166,13 @@ requires(
 );
 requires(
   rules,
-  /profileFieldUnchanged\('activeClanReinforcementTargets'\)[\s\S]*?profileFieldUnchanged\('clanReinforcementLimitResetGeneration'\)/,
+  /profileFieldUnchanged\('activeClanReinforcementTargets'\)[\s\S]*?profileFieldUnchanged\('activeClanReinforcementAssignments'\)[\s\S]*?profileFieldUnchanged\('clanReinforcementLimitVersion'\)/,
   "Clients can mutate the server-authoritative reinforcement slot state."
+);
+requires(
+  rules,
+  /match \/reinforcementCapacity\/\{resetId\}\/cities\/\{capacityId\}[\s\S]*?allow read, create, update, delete: if false/,
+  "Reinforcement capacity identities are not server-only."
 );
 
 const reinforcementIndexes = indexes.indexes.filter(index => index.collectionGroup === "reinforcements");
@@ -160,5 +180,10 @@ const firstFields = new Set(reinforcementIndexes.map(index => index.fields?.[0]?
 ["ownerUid", "targetOwnerUid", "targetKey"].forEach(field => {
   assert(firstFields.has(field), `Missing reinforcement index beginning with ${field}.`);
 });
+const armyIndexes = indexes.indexes.filter(index => index.collectionGroup === "armies");
+assert(
+  armyIndexes.some(index => index.fields?.[0]?.fieldPath === "reinforcementTargetKey"),
+  "Missing active reinforcement movement index by target key."
+);
 
-console.log("Validated clan reinforcement launch, lifecycle, combat settlement, privacy, and client controls.");
+console.log("Validated per-clanmate reinforcement capacity, source returns, repair, privacy, and client controls.");

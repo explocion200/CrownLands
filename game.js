@@ -778,7 +778,8 @@ const ARMY_TRAVEL_MIN_SECONDS = 30;
 const ARMY_TRAVEL_SCOUT_MIN_SECONDS = 10;
 const ARMY_TRAVEL_MAX_SECONDS = 1800;
 const ARMY_TRAVEL_KIND_MULTIPLIERS = { scout: 0.35, transfer: 0.95, reinforce: 0.95, rally_join: 0.95, attack: 1 };
-const CLAN_REINFORCEMENT_ACTIVE_LIMIT = 2;
+const CLAN_REINFORCEMENT_PER_RECIPIENT_LIMIT = 2;
+const ORDINARY_CITY_REINFORCEMENT_CAPACITY = 5;
 const ARMY_TRAVEL_TROOP_BAND_LIMITS = [10, 100, 1000, 10000, 100000, 1000000, 10000000, 100000000];
 const ARMY_TRAVEL_TROOP_BAND_MULTIPLIERS = [1, 1.18, 1.38, 1.62, 1.9, 2.24, 2.62, 3.06, 3.5];
 const ROUTE_CITY_CLEARANCE = 46;
@@ -13700,6 +13701,12 @@ function applyServerMovementToMission(mission, movement = null) {
   mission.campRecall = Boolean(movement.campRecall || mission.campRecall);
   mission.reinforcementReturn = Boolean(movement.reinforcementReturn || mission.reinforcementReturn);
   mission.reinforcementId = String(movement.reinforcementId || mission.reinforcementId || "");
+  mission.reinforcementTargetKey = String(movement.reinforcementTargetKey || mission.reinforcementTargetKey || "");
+  mission.reinforcementRecipientUid = String(movement.reinforcementRecipientUid || mission.reinforcementRecipientUid || "");
+  mission.reinforcementSourceId = String(movement.reinforcementSourceId || mission.reinforcementSourceId || "");
+  mission.reinforcementSourceRegionId = normalizeRegionId(movement.reinforcementSourceRegionId || mission.reinforcementSourceRegionId);
+  mission.reinforcementSourceCityName = String(movement.reinforcementSourceCityName || mission.reinforcementSourceCityName || "");
+  mission.originalTargetOwnerUid = String(movement.originalTargetOwnerUid || mission.originalTargetOwnerUid || "");
   mission.rallyJoin = Boolean(movement.rallyJoin || mission.rallyJoin);
   mission.rallyAttack = Boolean(movement.rallyAttack || mission.rallyAttack);
   mission.rallyId = String(movement.rallyId || mission.rallyId || "");
@@ -13961,6 +13968,11 @@ function normalizeOnlineArmyMovement(raw) {
     reinforcementReturn: Boolean(raw.reinforcementReturn),
     reinforcementId: String(raw.reinforcementId || ""),
     reinforcementTargetKey: String(raw.reinforcementTargetKey || ""),
+    reinforcementRecipientUid: String(raw.reinforcementRecipientUid || ""),
+    reinforcementSourceId: String(raw.reinforcementSourceId || ""),
+    reinforcementSourceRegionId: normalizeRegionId(raw.reinforcementSourceRegionId),
+    reinforcementSourceCityName: String(raw.reinforcementSourceCityName || ""),
+    originalTargetOwnerUid: String(raw.originalTargetOwnerUid || ""),
     rallyJoin: Boolean(raw.rallyJoin || rawKind === "rally_join"),
     rallyAttack: Boolean(raw.rallyAttack),
     rallyId: String(raw.rallyId || ""),
@@ -14330,6 +14342,12 @@ function createLocalAttackFromOnlineArmy(army, remaining = getOnlineArmyRemainin
     campRecall: Boolean(army.campRecall),
     reinforcementReturn: Boolean(army.reinforcementReturn),
     reinforcementId: String(army.reinforcementId || ""),
+    reinforcementTargetKey: String(army.reinforcementTargetKey || ""),
+    reinforcementRecipientUid: String(army.reinforcementRecipientUid || ""),
+    reinforcementSourceId: String(army.reinforcementSourceId || ""),
+    reinforcementSourceRegionId: normalizeRegionId(army.reinforcementSourceRegionId),
+    reinforcementSourceCityName: String(army.reinforcementSourceCityName || ""),
+    originalTargetOwnerUid: String(army.originalTargetOwnerUid || ""),
     rallyJoin: Boolean(army.rallyJoin || army.kind === "rally_join"),
     rallyAttack: Boolean(army.rallyAttack),
     rallyId: String(army.rallyId || ""),
@@ -21984,19 +22002,27 @@ function getClanReinforcementTargetKey(target = null) {
   return `${targetType}:${normalizeRegionId(getCityRegionId(target))}:${String(target.id)}`;
 }
 
-function getActiveClanReinforcementTargetKeys() {
+function getActiveClanReinforcementAssignments() {
   const currentUid = getCurrentOnlineUid();
-  const targets = new Set();
+  const assignments = new Map();
   getOutgoingAttacks().forEach(mission => {
     const launchedAsReinforcement = mission.kind === "reinforce"
       || mission.launchKind === "reinforce"
       || mission.retargetedFromKind === "reinforce";
-    if (!launchedAsReinforcement || (mission.returning && !mission.reinforcementReturn)) return;
+    if (!launchedAsReinforcement) return;
     const targetKey = String(
       mission.reinforcementTargetKey
         || `${mission.targetType === "camp" ? "camp" : "city"}:${normalizeRegionId(mission.targetRegionId)}:${String(mission.toId || "")}`
     );
-    if (targetKey) targets.add(targetKey);
+    const recipientUid = String(
+      mission.reinforcementRecipientUid
+        || mission.originalTargetOwnerUid
+        || mission.targetOwnerUid
+        || ""
+    );
+    if (targetKey && recipientUid) {
+      assignments.set(`${recipientUid}|${targetKey}`, { recipientUid, targetKey });
+    }
   });
   onlineReinforcements.forEach(entry => {
     if (entry?.status !== "stationed" || String(entry.ownerUid || "") !== currentUid) return;
@@ -22004,9 +22030,38 @@ function getActiveClanReinforcementTargetKeys() {
       entry.targetKey
         || `${entry.targetType === "camp" ? "camp" : "city"}:${normalizeRegionId(entry.targetRegionId)}:${String(entry.targetId || "")}`
     );
-    if (targetKey) targets.add(targetKey);
+    const recipientUid = String(
+      entry.reinforcementRecipientUid
+        || entry.originalTargetOwnerUid
+        || entry.targetOwnerUid
+        || ""
+    );
+    if (targetKey && recipientUid) {
+      assignments.set(`${recipientUid}|${targetKey}`, { recipientUid, targetKey });
+    }
   });
-  return targets;
+  return [...assignments.values()];
+}
+
+function getActiveClanReinforcementTargetKeys() {
+  return new Set(getActiveClanReinforcementAssignments().map(entry => entry.targetKey));
+}
+
+function getClanReinforcementRecipientUsage(target = null) {
+  const recipientUid = String(target?.ownerUid || "");
+  if (!recipientUid) return 0;
+  return getActiveClanReinforcementAssignments()
+    .filter(entry => entry.recipientUid === recipientUid)
+    .length;
+}
+
+function getOrdinaryCityReinforcementUsage(target = null) {
+  if (!target || isRewardCampTarget(target) || isStronghold(target)) return 0;
+  return clamp(
+    Math.floor(Number(target.clanReinforcementSlotCount) || 0),
+    0,
+    ORDINARY_CITY_REINFORCEMENT_CAPACITY
+  );
 }
 
 function getClanReinforcementBlockReason(target = null) {
@@ -22016,8 +22071,17 @@ function getClanReinforcementBlockReason(target = null) {
   if (activeTargets.has(targetKey)) {
     return "You already have one active reinforcement assigned to this holding.";
   }
-  if (activeTargets.size >= CLAN_REINFORCEMENT_ACTIVE_LIMIT) {
-    return `You can have at most ${CLAN_REINFORCEMENT_ACTIVE_LIMIT} active clan reinforcements at one time.`;
+  const recipientUsage = getClanReinforcementRecipientUsage(target);
+  if (recipientUsage >= CLAN_REINFORCEMENT_PER_RECIPIENT_LIMIT) {
+    return `You already have ${CLAN_REINFORCEMENT_PER_RECIPIENT_LIMIT} active reinforcement assignments with this clanmate.`;
+  }
+  const cityUsage = getOrdinaryCityReinforcementUsage(target);
+  if (
+    !isRewardCampTarget(target)
+    && !isStronghold(target)
+    && cityUsage >= ORDINARY_CITY_REINFORCEMENT_CAPACITY
+  ) {
+    return `This city already has all ${ORDINARY_CITY_REINFORCEMENT_CAPACITY} reinforcement slots reserved.`;
   }
   return "";
 }
@@ -23308,7 +23372,11 @@ function showTroopSliderModalWithRoute(source, target, route, options = {}) {
       ? "Launching clan reinforcements immediately removes your Royal Peace Shield. Your ally's shield is not affected."
       : ""
     : isTransfer ? "" : getPeaceShieldAttackWarning(target);
-  const reinforcementUsage = isReinforcement ? getActiveClanReinforcementTargetKeys().size : 0;
+  const reinforcementUsage = isReinforcement ? getClanReinforcementRecipientUsage(target) : 0;
+  const reinforcementRecipientName = cleanName(target.ownerName || "") || "this clanmate";
+  const ordinaryCityReinforcementUsage = isReinforcement
+    ? getOrdinaryCityReinforcementUsage(target)
+    : 0;
   const legalSendLimit = getTroopSliderSendLimit(source, target);
   const sliderSendLimit = legalSendLimit;
   const sliderMinimum = 1;
@@ -23334,7 +23402,8 @@ function showTroopSliderModalWithRoute(source, target, route, options = {}) {
       </div>
 
       ${shieldDropWarning ? `<div class="shield-drop-warning" role="alert"><strong>Shield warning</strong><span>${escapeHtml(shieldDropWarning)}</span></div>` : ""}
-      ${isReinforcement ? `<div class="reinforcement-limit-note"><strong>${formatNumber(reinforcementUsage)} / ${formatNumber(CLAN_REINFORCEMENT_ACTIVE_LIMIT)} active</strong><span>You may support two holdings at once, with one reinforcement per holding.</span></div>` : ""}
+      ${isReinforcement ? `<div class="reinforcement-limit-note"><strong>${formatNumber(reinforcementUsage)} / ${formatNumber(CLAN_REINFORCEMENT_PER_RECIPIENT_LIMIT)} assignments with ${escapeHtml(reinforcementRecipientName)}</strong><span>Each assignment must support a different holding owned by this clanmate.</span></div>` : ""}
+      ${isReinforcement && !campTarget && !isStronghold(target) ? `<div class="reinforcement-limit-note"><strong>${formatNumber(ordinaryCityReinforcementUsage)} / ${formatNumber(ORDINARY_CITY_REINFORCEMENT_CAPACITY)} reinforcement slots</strong><span>Ordinary cities reserve one slot per contributing clanmate when a march launches.</span></div>` : ""}
       ${rallyOrder ? `<div class="reinforcement-limit-note rally-limit-note"><strong>3 participant limit</strong><span>${orderKind === "rally_create" ? "You will lead this rally and choose when to launch." : "Your troops march visibly to the assembly city; the objective remains clan-private."}</span></div>` : ""}
 
       <div class="troop-slider-control">
@@ -24190,6 +24259,44 @@ function getStationedReinforcementsForTarget(target) {
     .sort((a, b) => String(a.ownerName || "").localeCompare(String(b.ownerName || "")));
 }
 
+function getReinforcementReturnDestinationPreview(entry = {}) {
+  const sourceId = String(entry.reinforcementSourceId || entry.sourceId || "");
+  const sourceRegionId = normalizeRegionId(
+    entry.reinforcementSourceRegionId || entry.sourceRegionId
+  );
+  const sourceName = cleanName(
+    entry.reinforcementSourceCityName || entry.sourceName || entry.fromName || ""
+  );
+  const cachedOwnedSource = sourceId
+    ? onlineOwnedCitiesCache.find(city => (
+      String(city?.id || "") === sourceId
+      && (!sourceRegionId || getCityRegionId(city) === sourceRegionId)
+    ))
+    : null;
+  const source = cachedOwnedSource || (sourceId ? getArmyTargetById(sourceId) : null);
+  const sourceStillOwned = Boolean(
+    source
+    && String(source.ownerUid || "") === String(entry.ownerUid || getCurrentOnlineUid())
+    && (!sourceRegionId || getCityRegionId(source) === sourceRegionId)
+  );
+  if (sourceId && sourceStillOwned) {
+    return {
+      id: sourceId,
+      regionId: sourceRegionId,
+      name: sourceName || source.name || "original holding",
+      usedMainCityFallback: false,
+    };
+  }
+  const ownerIsCurrentPlayer = String(entry.ownerUid || "") === getCurrentOnlineUid();
+  const mainCity = ownerIsCurrentPlayer ? cityById(state?.mainCityId) : null;
+  return {
+    id: mainCity?.id || "",
+    regionId: mainCity ? getCityRegionId(mainCity) : "",
+    name: mainCity?.name || (ownerIsCurrentPlayer ? "your Main City" : "the sender's Main City"),
+    usedMainCityFallback: true,
+  };
+}
+
 function renderHoldingReinforcementPanel(target) {
   if (!target?.ownerUid) return "";
   const currentUid = getCurrentOnlineUid();
@@ -24218,6 +24325,7 @@ function renderHoldingReinforcementPanel(target) {
         <span>Clan reinforcements</span>
         <strong>${formatNumber(visible.reduce((total, entry) => total + Math.max(0, Math.floor(Number(entry.troops) || 0)), 0))} troops</strong>
       </div>
+      ${!isRewardCampTarget(target) && !isStronghold(target) ? `<small><strong>${formatNumber(getOrdinaryCityReinforcementUsage(target))} / ${formatNumber(ORDINARY_CITY_REINFORCEMENT_CAPACITY)}</strong> reinforcement slots reserved</small>` : ""}
       ${rows}
       <small>${isHolder
         ? "These troops stay at this holding until their sender recalls them, you send them home, or they are lost in battle."
@@ -24239,6 +24347,16 @@ async function returnClanReinforcement(reinforcementId) {
     showToast("Reinforcement returns require the Crownlands server.");
     return false;
   }
+  const contribution = onlineReinforcements.find(entry => String(entry?.id || "") === id) || {};
+  const destination = getReinforcementReturnDestinationPreview(contribution);
+  const currentUid = getCurrentOnlineUid();
+  const holderSendHome = contribution.targetOwnerUid === currentUid && contribution.ownerUid !== currentUid;
+  const fallbackCopy = destination.usedMainCityFallback
+    ? " The original source is no longer owned, so the troops will use the current Main City fallback."
+    : " If that holding is captured before arrival, the troops will redirect to the current Main City.";
+  if (!window.confirm(
+    `${holderSendHome ? "Send these allied troops home" : "Recall these reinforcement troops"} to ${destination.name}?${fallbackCopy}`
+  )) return false;
   reinforcementReturnRequests.add(id);
   refreshOpenHoldingReinforcementPanel();
   if (modal.open && modal.classList.contains("outgoing-attack-modal")) {
@@ -24251,9 +24369,11 @@ async function returnClanReinforcement(reinforcementId) {
       adoptServerArmyMovement(result.movement);
     }
     onlineReinforcements = onlineReinforcements.filter(entry => entry?.id !== id);
+    const returnDestinationName = cleanName(result?.returnDestination?.name || result?.movement?.toName || "")
+      || destination.name;
     showToast(result?.returnInitiatorRole === "holder"
-      ? `${formatNumber(result?.troops || 0)} allied troops were sent home.`
-      : `${formatNumber(result?.troops || 0)} reinforcement troops are returning home.`);
+      ? `${formatNumber(result?.troops || 0)} allied troops are returning to ${returnDestinationName}.`
+      : `${formatNumber(result?.troops || 0)} reinforcement troops are returning to ${returnDestinationName}.`);
     updateOutgoingAttackUi();
     return true;
   } catch (error) {
@@ -27236,14 +27356,17 @@ function renderReinforcementOperationPanel(entries = []) {
 function renderReinforcementOperationCard(entry) {
   const currentUid = getCurrentOnlineUid();
   if (!entry.stationed) {
-    const returning = entry.reinforcementReturn;
+    const returning = Boolean(entry.returning || entry.reinforcementReturn);
     const incoming = entry.incomingClanReinforcement || (
       entry.targetOwnerUid === currentUid && entry.ownerUid !== currentUid
     );
     const label = returning ? "Returning home" : incoming ? "Incoming support" : "Support en route";
+    const returnDestination = returning ? getReinforcementReturnDestinationPreview(entry) : null;
     const detail = incoming && !returning
       ? `${renderPlayerNameLink(entry.ownerUid, entry.ownerName || "Clan member", "reinforcement-inline-link")} is reinforcing ${escapeHtml(entry.toName || "your holding")}`
-      : `${escapeHtml(entry.fromName || "Holding")} &rarr; ${escapeHtml(entry.toName || "Holding")}`;
+      : returning
+        ? `${escapeHtml(entry.fromName || "Allied holding")} &rarr; ${escapeHtml(entry.toName || returnDestination?.name || "Main City")}${returnDestination?.usedMainCityFallback ? " · Main City fallback" : ""}`
+        : `${escapeHtml(entry.fromName || "Holding")} &rarr; ${escapeHtml(entry.toName || "Holding")}`;
     return `
       <article class="reinforcement-operation-card traveling">
         <span><strong>${label}</strong><small>${detail}</small></span>
@@ -27253,6 +27376,7 @@ function renderReinforcementOperationCard(entry) {
   }
   const holderView = entry.targetOwnerUid === currentUid;
   const returning = reinforcementReturnRequests.has(entry.id);
+  const returnDestination = getReinforcementReturnDestinationPreview(entry);
   const detail = holderView
     ? `${renderPlayerNameLink(entry.ownerUid, entry.ownerName || "Clan member", "reinforcement-inline-link")}'s troops are defending your holding`
     : `Your troops are stationed with ${renderPlayerNameLink(entry.targetOwnerUid, entry.targetOwnerName || "a clan ally", "reinforcement-inline-link")}`;
@@ -27260,6 +27384,7 @@ function renderReinforcementOperationCard(entry) {
     <article class="reinforcement-operation-card stationed">
       <span><strong>${escapeHtml(entry.targetName || entry.targetId || "Allied holding")}</strong><small>${detail}</small></span>
       <strong>${formatNumber(entry.troops)} troops</strong>
+      <small>Returns to ${escapeHtml(returnDestination.name)}${returnDestination.usedMainCityFallback ? " via Main City fallback" : "; redirects to Main City if captured"}</small>
       <button data-return-clan-reinforcement="${escapeHtml(entry.id)}" type="button" ${returning ? "disabled" : ""}>${returning ? "Returning..." : holderView && entry.ownerUid !== currentUid ? "Send Home" : "Recall"}</button>
     </article>`;
 }

@@ -101,12 +101,12 @@ assert.match(
 );
 assert.match(
   resolveSource,
-  /const shouldReleaseClanReinforcementTarget[\s\S]*?protectedDefenseClaimSnap[\s\S]*?if \(shouldReleaseClanReinforcementTarget\)[\s\S]*?releaseClanReinforcementTarget/,
+  /const shouldReleaseClanReinforcementTarget[\s\S]*?protectedDefenseClaimSnap[\s\S]*?if \(shouldReleaseClanReinforcementTarget\)[\s\S]*?releaseClanReinforcementAssignment/,
   "Converted clan reinforcements must release their sender slot after all combat reads."
 );
 assert.doesNotMatch(
   resolveSource,
-  /const shouldReleaseClanReinforcementTarget[\s\S]*?releaseClanReinforcementTarget[\s\S]*?protectedDefenseClaimSnap/,
+  /const shouldReleaseClanReinforcementTarget[\s\S]*?releaseClanReinforcementAssignment[\s\S]*?protectedDefenseClaimSnap/,
   "Converted clan reinforcements must not write before the combat transaction finishes reading."
 );
 
