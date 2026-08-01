@@ -19635,7 +19635,7 @@ function createCitadelAssaultIncomingView({ wave, city, ownerUid, selectedAtMs }
 async function selectCitadelAssaultTargets(wave, nowMs = Date.now()) {
   const waveRef = citadelAssaultWaveRef(wave.id);
   const citiesRef = db.collection(`islands/${getOnlineIslandId(CITADEL_ASSAULT_REGION_ID)}/cities`);
-  return db.runTransaction(async transaction => {
+  return runTransactionWithInfrastructureRetry(async transaction => {
     const waveSnap = await transaction.get(waveRef);
     if (waveSnap.exists) {
       return { status: "duplicate", waveId: wave.id, selected: Math.max(0, safeNumber(waveSnap.data()?.selectedCount, 0)) };
@@ -19718,7 +19718,7 @@ async function resolveCitadelAssaultTarget(wave, targetDoc, nowMs = Date.now()) 
   const selectedOwnerUid = safeString(initialReceipt.selectedOwnerUid, 128);
   const incomingId = safeString(initialReceipt.incomingId || citadelAssaultIncomingId(wave.id, cityId), 96);
   const targetRef = cityRefForRegion(CITADEL_ASSAULT_REGION_ID, cityId);
-  return db.runTransaction(async transaction => {
+  return runTransactionWithInfrastructureRetry(async transaction => {
     const [receiptSnap, targetSnap] = await Promise.all([
       transaction.get(targetReceiptRef),
       transaction.get(targetRef),
