@@ -34,4 +34,4 @@ jobs:
       - name: Install pinned Firebase CLI
         run: npm install --global firebase-tools@15.22.4
       - name: Run multiplayer emulator gates
-        run: firebase emulators:exec --project crown-land-b15e0 --only auth,firestore,functions "node functions/test/emulator-reset-gate.js && node functions/test/emulator-rally-rules.js && node functions/test/emulator-city-relinquishment-limit.js"
+        run: firebase emulators:exec --project crown-land-b15e0 --only auth,firestore,functions "node functions/test/emulator-reset-gate.js && node functions/test/emulator-rally-rules.js && node functions/test/emulator-clan-war-room-retirement-rules.js && node functions/test/emulator-city-relinquishment-limit.js && node functions/test/emulator-economy-concurrency.js"

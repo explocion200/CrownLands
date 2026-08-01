@@ -56,6 +56,7 @@ service cloud.firestore {
           'inactivityNotice',
           'worldSlotResetAtMs',
           'economyUpdatedAtMs',
+          'pendingAwayProduction',
           'offlineProductionCities',
           'kingPower',
           'kingPowerVersion',
@@ -106,6 +107,7 @@ service cloud.firestore {
         && profileFieldUnchanged('itemPurchaseCooldowns')
         && profileFieldUnchanged('dailyLoginReward')
         && profileFieldUnchanged('economyUpdatedAtMs')
+        && profileFieldUnchanged('pendingAwayProduction')
         && profileFieldUnchanged('offlineProductionCities')
         && profileFieldUnchanged('kingPower')
         && profileFieldUnchanged('kingPowerVersion')
@@ -303,6 +305,18 @@ service cloud.firestore {
         allow read, create, update, delete: if false;
       }
 
+      match /operations/{operationId} {
+        allow read, create, update, delete: if false;
+
+        match /{legacyDocument=**} {
+          allow read, create, update, delete: if false;
+        }
+      }
+
+      match /operationState/{resetId} {
+        allow read, create, update, delete: if false;
+      }
+
       match /messages/{messageId} {
         allow read, create, update, delete: if false;
       }
@@ -326,6 +340,10 @@ service cloud.firestore {
     }
 
     match /clanTagReservations/{reservationId} {
+      allow read, create, update, delete: if false;
+    }
+
+    match /clanOperationReminders/{reminderId} {
       allow read, create, update, delete: if false;
     }
 

@@ -54,6 +54,7 @@ The game currently writes private account data here:
 - `players/{uid}/notificationTokens/{tokenId}`: browser push tokens for incoming scout/attack alerts.
 - `players/{uid}/saves/default-fresh-2026-07-26-server-reset`: the current full game state snapshot for the fresh reset.
 - `players/{uid}/serverReports/{reportId}`: server-written attack, defense, and scout reports that survive stale browser saves.
+- `clans/{clanId}/rallies/{rallyId}`: clan-private rally state, including the forming target, participant commitments, assembly progress, and lifecycle status shown in the Clan War Room and Kingdom Activity.
 
 After Google sign-in, the game tries the current reset slot in Firebase first and then falls back to the current local browser storage key.
 
@@ -79,21 +80,21 @@ Troop orders and online economy updates now go through Firebase callable functio
 - `sendArmyOrder`: validates source ownership, troop count, target protection, travel timing, deducts troops, and creates visible army docs for every route region.
 - `createClanRally`, `joinClanRally`, `withdrawClanRallyContribution`, `launchClanRally`, and `cancelClanRally`: manage clan-private three-player rally assembly and launch. The public island stream receives only redacted assembly marches until the leader launches the combined attack.
 - `resolveArmyOrder`: can be triggered by any signed-in player who sees an overdue army. It resolves scouts, transfers, attacks, defenses, city capture, level drops, XP, gold rewards, and server reports in one Firestore transaction.
-- `collectEconomy`: collects passive/offline gold and troop production for every owned city across all region maps.
+- `collectEconomy`: collects passive/offline gold and troop production for every owned city across all region maps. A session-bound request can also consume the idempotent Welcome back summary, including remaining troop production and city nodes captured since the previous browser session.
 - `upgradeCity`: collects production, spends server gold, upgrades the city, and records invested gold in one transaction. City upgrades do not award hero XP.
 - `purchaseShopItem` and `activateInventoryItem`: spend gold, update inventory, apply Peace Shield/War Drums timers, and sync shield expiry to owned city docs from the server.
 - `resolveDueArmyOrders`: runs from Cloud Scheduler once per minute, finds overdue active attack/scout/transfer armies, and resolves them on the server even when every player is offline.
 
 Browsers can read army/report streams, but Firestore rules block direct browser writes to `armies`, `reports`, `serverReports`, player economy fields, and city troop/level/production fields after the initial starting-city claim.
 
-Deploy rally changes in this order so private targets and server-owned state are protected before clients can use them:
+Deploy clan coordination changes in this order so private targets and server-owned state are protected before clients can use them:
 
 ```bash
 firebase deploy --only firestore:rules,firestore:indexes
 firebase deploy --only functions
 ```
 
-After both Firebase deployments succeed, publish the Netlify frontend so the rally controls and cache version become active. If Functions are not deployed, online troop orders will be rejected instead of falling back to client-side combat. If the Firestore indexes are not deployed, the scheduled resolver may not be able to find overdue armies or forming rallies. Scheduled functions use Cloud Scheduler, so the Firebase project must have Cloud Scheduler enabled and a billing plan that supports scheduled functions.
+After both Firebase deployments succeed, publish the Netlify frontend so the rally-focused War Room, rally controls, and cache version become active. If Functions are not deployed, online troop orders will be rejected instead of falling back to client-side combat. If the Firestore indexes are not deployed, scheduled resolvers may not be able to find overdue armies or forming rallies. Scheduled functions use Cloud Scheduler, so the Firebase project must have Cloud Scheduler enabled and a billing plan that supports scheduled functions.
 
 ## Netlify
 

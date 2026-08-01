@@ -10144,6 +10144,43 @@ select:focus {
   cursor: pointer;
 }
 
+/* Clan War Room */
+.clan-war-room-panel {
+  display: none;
+  gap: 14px;
+  min-width: 0;
+}
+
+.clan-war-room-panel.active {
+  display: grid;
+}
+
+.clan-war-room-feature {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid rgba(220, 193, 119, 0.24);
+  border-radius: 12px;
+  background: rgba(18, 28, 23, 0.58);
+}
+
+.clan-war-room-feature-heading span {
+  display: grid;
+  gap: 2px;
+}
+
+.clan-war-room-feature-heading small {
+  color: rgba(242, 226, 185, 0.62);
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.clan-war-room-feature-heading strong {
+  color: #e6c76d;
+  font-size: 1.05rem;
+}
 .audio-volume-control input[type="range"]::-webkit-slider-runnable-track {
   height: 8px;
   border: 1px solid rgba(211, 161, 63, .28);

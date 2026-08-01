@@ -122,7 +122,7 @@ const heartbeatSource = extractFunction(serverSource, "heartbeatGameServerForPla
 assert.match(heartbeatSource, /writeGameServerMember\(transaction,\s*entry,\s*status,\s*nowMs\)/, "Heartbeats do not update per-player member documents.");
 assert.doesNotMatch(heartbeatSource, /writeGameServerState/, "Heartbeats still rewrite the shared realm-capacity document.");
 const joinSource = extractFunction(serverSource, "joinGameServerForPlayer");
-assert.match(joinSource, /serializeGameServerAdmission\(\(\)\s*=>\s*withGameServerAdmissionLease\(\(\)\s*=>\s*db\.runTransaction/, "Concurrent realm joins bypass the cross-worker admission serializer.");
+assert.match(joinSource, /serializeGameServerAdmission\(\(\)\s*=>\s*withGameServerAdmissionLease\(\(\)\s*=>\s*runTransactionWithInfrastructureRetry/, "Concurrent realm joins bypass the cross-worker admission serializer or retry-safe transaction path.");
 const maintainSource = extractFunction(serverSource, "maintainGameServer");
 assert.match(maintainSource, /serverRef\.collection\("members"\)[\s\S]*?applyGameServerMemberHeartbeats/, "Scheduled cleanup does not consume sharded heartbeats.");
 assert.match(maintainSource, /where\("lastSeenAtMs",\s*"<",\s*staleBeforeMs\)[\s\S]*?limit\(100\)[\s\S]*?staleMemberSnap\.docs\.forEach\(doc => transaction\.delete\(doc\.ref\)\)/, "Scheduled cleanup does not remove bounded batches of stale heartbeat shards.");

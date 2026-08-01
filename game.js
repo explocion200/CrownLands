@@ -2641,6 +2641,7 @@ let gameServerJoinInFlight = false;
 let gameServerLaunchInFlight = false;
 let gameServerAutoEnter = false;
 let pendingGameServerInactivityNotice = null;
+let pendingWelcomeBackSession = null;
 let serverEconomySyncTimer = 0;
 let serverEconomyRefreshInFlight = false;
 let serverEconomyRefreshQueued = false;
@@ -2744,7 +2745,7 @@ let clanShieldEditorTab = "field";
 let clanRenameEditorOpen = false;
 let clanRenameSaving = false;
 let selectedClanMemberUid = "";
-const CLAN_MOBILE_SECTIONS = Object.freeze(["overview", "rallies", "rewards", "members"]);
+const CLAN_MOBILE_SECTIONS = Object.freeze(["overview", "warroom", "rewards", "members"]);
 const CLAN_BROWSER_SECTIONS = Object.freeze(["discover", "create"]);
 let activeClanMobileSection = "overview";
 let activeClanBrowserSection = "discover";
@@ -8349,7 +8350,7 @@ function scoutTarget(target) {
   showToast(`Scout moving from ${source.name} to ${target.name}`);
 }
 
-function launchScoutMission(source, target, route) {
+function launchScoutMission(source, target, route, options = {}) {
   if (!source || !target || source.owner !== "player" || source.troops < 1 || !route?.points?.length) return null;
   const campTarget = isRewardCampTarget(target);
   const mainCityBlockReason = campTarget ? "" : getMainCityScoutBlockReason(target, "player");
@@ -9311,17 +9312,31 @@ function applyServerEconomyResult(result = null, options = {}) {
     }) || changed;
   }
   if (Array.isArray(result.cityUpdates)) changed = applyServerCityUpdates(result.cityUpdates) || changed;
-  const production = result.production || {};
-  const goldGained = Math.max(0, Math.floor(Number(production.goldGained) || 0));
-  const troopsGained = Math.max(0, Math.floor(Number(production.troopsGained) || 0));
-  const elapsed = Math.max(0, Math.floor(Number(production.elapsedSeconds) || 0));
-  if (options.showOfflineRewards && elapsed >= 60 && (goldGained > 0 || troopsGained > 0)) {
-    addLog(`Server production: +${formatNumber(goldGained)} gold and +${formatNumber(troopsGained)} troops while away.`);
+  const awaySummary = result.awaySummary && typeof result.awaySummary === "object"
+    ? result.awaySummary
+    : null;
+  const resumeProduction = options.resumeCatchUp && result.production && typeof result.production === "object"
+    ? result.production
+    : null;
+  const summary = awaySummary || resumeProduction;
+  const awayGoldGained = Math.max(0, Math.floor(Number(summary?.goldGained) || 0));
+  const awayTroopsGained = Math.max(0, Math.floor(Number(summary?.troopsGained) || 0));
+  const awayElapsed = Math.max(0, Math.floor(Number(summary?.elapsedSeconds) || 0));
+  const awayLostCities = Array.isArray(awaySummary?.lostCities) ? awaySummary.lostCities : [];
+  const awayLostCityCount = Math.max(awayLostCities.length, Math.floor(Number(awaySummary?.lostCityCount) || 0));
+  if (
+    options.showOfflineRewards
+    && summary
+    && awayElapsed >= 60
+    && (awayGoldGained > 0 || awayTroopsGained > 0 || awayLostCityCount > 0)
+  ) {
+    addLog(`Server production: +${formatNumber(awayGoldGained)} gold and +${formatNumber(awayTroopsGained)} troops while away.`);
     queueOfflineRewardsSummary({
-      goldGained,
-      troopsGained,
-      elapsed,
-      lostCities: [],
+      goldGained: awayGoldGained,
+      troopsGained: awayTroopsGained,
+      elapsed: awayElapsed,
+      lostCities: awayLostCities,
+      lostCityCount: awayLostCityCount,
     });
   }
   if (changed) {
@@ -9345,6 +9360,8 @@ function mergeServerEconomyRefreshOptions(current = null, next = null) {
     ...currentOptions,
     ...nextOptions,
     showOfflineRewards: Boolean(currentOptions.showOfflineRewards || nextOptions.showOfflineRewards),
+    requestWelcomeBack: Boolean(currentOptions.requestWelcomeBack || nextOptions.requestWelcomeBack),
+    resumeCatchUp: Boolean(currentOptions.resumeCatchUp || nextOptions.resumeCatchUp),
   };
   if (optionRequests.length && optionRequests.every(value => value.renderCities === false)) merged.renderCities = false;
   else delete merged.renderCities;
@@ -9353,12 +9370,15 @@ function mergeServerEconomyRefreshOptions(current = null, next = null) {
 
 async function performServerEconomyRefresh(options = {}) {
   const api = getOnlineApi();
+  if (!api?.collectEconomy) return false;
   try {
     const result = await api.collectEconomy({
       worldId: ONLINE_WORLD_ID,
       resetGeneration: RESET_GENERATION,
+      includeWelcomeBack: options.requestWelcomeBack === true,
     });
     applyServerEconomyResult(result, mergeServerEconomyRefreshOptions(options, serverEconomyRefreshActiveOptions));
+    if (options.requestWelcomeBack === true) pendingWelcomeBackSession = null;
     serverEconomyLastSyncAt = Date.now();
     onlineLastError = "";
     updateOnlineUi();
@@ -11637,6 +11657,20 @@ function normalizeGameServerMembership(raw = null) {
         consolidatedTroops: Math.max(0, Math.floor(Number(rawNotice.consolidatedTroops) || 0)),
       }
     : null;
+  const rawWelcomeBack = raw.welcomeBack && typeof raw.welcomeBack === "object"
+    ? raw.welcomeBack
+    : null;
+  const welcomeBackSessionId = String(rawWelcomeBack?.sessionId || "").trim();
+  const welcomeBack = welcomeBackSessionId
+    ? {
+        version: Math.max(0, Math.floor(Number(rawWelcomeBack.version) || 0)),
+        sessionId: welcomeBackSessionId,
+        sessionStartedAtMs: Math.max(0, Number(rawWelcomeBack.sessionStartedAtMs) || 0),
+        awayStartedAtMs: Math.max(0, Number(rawWelcomeBack.awayStartedAtMs) || 0),
+        eligible: Boolean(rawWelcomeBack.eligible && !Number(rawWelcomeBack.claimedAtMs)),
+        claimedAtMs: Math.max(0, Number(rawWelcomeBack.claimedAtMs) || 0),
+      }
+    : null;
   return {
     serverId,
     serverName: String(raw.serverName || GAME_SERVER_NAME).trim() || GAME_SERVER_NAME,
@@ -11646,6 +11680,7 @@ function normalizeGameServerMembership(raw = null) {
     lastSeenAtMs: Math.max(0, Number(raw.lastSeenAtMs) || 0),
     updatedAtMs: Math.max(0, Number(raw.updatedAtMs) || 0),
     inactivityNotice,
+    welcomeBack,
   };
 }
 
@@ -11780,6 +11815,9 @@ async function joinSelectedGameServer() {
     const result = await api.joinGameServer(GAME_SERVER_ID);
     applyGameServerMembership(result);
     pendingGameServerInactivityNotice = gameServerMembership?.inactivityNotice || null;
+    pendingWelcomeBackSession = gameServerMembership?.welcomeBack?.eligible
+      ? { ...gameServerMembership.welcomeBack }
+      : null;
     if (result?.status === "waiting") {
       gameServerAutoEnter = true;
       return false;
@@ -12329,6 +12367,7 @@ function applyActiveOnlineCityPayload(onlineCities, {
   targetRegionId = getActiveOnlineRegionId(),
   activateOnFirstSnapshot = false,
   nextOnlineState = null,
+  allowWelcomeBack = false,
   render = true,
 } = {}) {
   const firstCitiesSnapshot = !onlineCitiesLoaded;
@@ -12344,9 +12383,17 @@ function applyActiveOnlineCityPayload(onlineCities, {
   if (firstCitiesSnapshot && getActivePeaceShieldExpiresAtMs()) refreshOwnedCityItemEffectMetadata(true);
   const economyIsStale = !serverEconomyLastSyncAt
     || Date.now() - serverEconomyLastSyncAt >= SERVER_ECONOMY_SYNC_SECONDS * 1000;
-  if (firstCitiesSnapshot && usesServerEconomyAuthority() && economyIsStale) {
+  const shouldRequestWelcomeBack = Boolean(
+    firstCitiesSnapshot
+    && allowWelcomeBack
+    && pendingWelcomeBackSession?.eligible
+  );
+  if (firstCitiesSnapshot && usesServerEconomyAuthority() && (economyIsStale || shouldRequestWelcomeBack)) {
     serverEconomySyncTimer = 0;
-    refreshServerEconomy(true, { showOfflineRewards: true });
+    refreshServerEconomy(true, {
+      requestWelcomeBack: shouldRequestWelcomeBack,
+      showOfflineRewards: shouldRequestWelcomeBack,
+    });
   } else if (pendingOfflineProgressSeconds > 0) {
     applyPendingOfflineProgress();
   }
@@ -12381,6 +12428,7 @@ async function startActiveOnlineIslandSubscription(api, islandId, targetRegionId
         targetRegionId,
         activateOnFirstSnapshot: options.activateOnFirstSnapshot === true,
         nextOnlineState: options.nextOnlineState || null,
+        allowWelcomeBack: options.allowWelcomeBack === true,
       });
     },
     onCamps: camps => {
@@ -12549,6 +12597,7 @@ async function setupOnlineWorld({ requireOnlineProfile = false } = {}) {
     claimHome: activeRegionId === homeRegionId && needsMainCityClaim,
     homeRegionId,
     profile,
+    allowWelcomeBack: true,
   });
 }
 
@@ -12596,7 +12645,13 @@ function startOnlineSetupInBackground() {
     });
 }
 
-async function connectOnlineIsland(regionId, { claimHome = false, homeRegionId = null, profile = null, activateOnFirstSnapshot = false } = {}) {
+async function connectOnlineIsland(regionId, {
+  claimHome = false,
+  homeRegionId = null,
+  profile = null,
+  activateOnFirstSnapshot = false,
+  allowWelcomeBack = false,
+} = {}) {
   const api = getOnlineApi();
   if (!state || !api?.isConfigured?.() || !api?.isSignedIn?.()) return false;
   if (onlineWorldLoading) return false;
@@ -12686,6 +12741,7 @@ async function connectOnlineIsland(regionId, { claimHome = false, homeRegionId =
         return connectOnlineIsland(redirectedRegionId, {
           claimHome: true,
           homeRegionId: redirectedRegionId,
+          allowWelcomeBack,
           profile: {
             ...(profile || {}),
             mainIslandId: claim.islandId,
@@ -12717,6 +12773,7 @@ async function connectOnlineIsland(regionId, { claimHome = false, homeRegionId =
     await startActiveOnlineIslandSubscription(api, islandId, targetRegionId, {
       activateOnFirstSnapshot,
       nextOnlineState,
+      allowWelcomeBack,
       timeoutMs: ONLINE_INITIAL_CITY_LIST_TIMEOUT_MS,
       timeoutMessage: `${getRegionLabel(targetRegionId)} city list is taking too long.`,
     });
@@ -14561,6 +14618,7 @@ async function startFromInput(forceFresh = false) {
   let statusOverride = "";
   try {
     onlineSessionReplaced = false;
+    pendingWelcomeBackSession = null;
     if (launchBtn) {
       launchBtn.disabled = true;
       launchBtn.textContent = forceFresh ? "Creating..." : "Entering...";
@@ -15334,7 +15392,7 @@ function getRouteWorker() {
     return routeWorker;
   } catch (error) {
     routeWorkerUnavailable = true;
-    console.warn("Route worker unavailable; falling back to main-thread routing.", error);
+    console.warn("Route worker unavailable; route calculation will remain off the main thread.", error);
     return null;
   }
 }
@@ -15384,7 +15442,13 @@ async function findRouteAsync(source, target) {
     return route;
   }
   const job = buildRouteWorkerJob(source, target);
-  if (!job) return findRoute(source, target);
+  if (!job) {
+    console.warn("Route worker job could not be built.", {
+      sourceId: source?.id || "",
+      targetId: target?.id || "",
+    });
+    return null;
+  }
   try {
     const workerRoute = await requestRouteFromWorker(job);
     if (!workerRoute?.points?.length) return null;
@@ -15401,17 +15465,12 @@ async function findRouteAsync(source, target) {
         return cloneRoute(retryRoute);
       } catch (retryError) {
         if (retryError?.routeCanceled) return null;
-        console.warn("Route calculation retry failed.", retryError);
-        if (isBitmapRouteWorkerJob(job)) return null;
-        return findRoute(source, target);
+        console.warn("Route calculation retry failed; route canceled to keep the map responsive.", retryError);
+        return null;
       }
     }
-    if (isBitmapRouteWorkerJob(job)) {
-      console.warn("Route worker failed; route calculation canceled to keep the map responsive.", error);
-      return null;
-    }
-    console.warn("Route worker failed; falling back to main-thread routing.", error);
-    return findRoute(source, target);
+    console.warn("Route worker failed; route calculation canceled to keep the map responsive.", error);
+    return null;
   }
 }
 
@@ -16591,7 +16650,16 @@ function applyPendingOfflineProgress({ showSummary = true } = {}) {
 }
 
 function mergeOfflineRewardsSummaries(current = null, next = null) {
-  if (!current) return next ? { ...next, lostCities: [...(next.lostCities || [])] } : null;
+  if (!current) {
+    return next ? {
+      ...next,
+      lostCities: [...(next.lostCities || [])],
+      lostCityCount: Math.max(
+        (next.lostCities || []).length,
+        Math.max(0, Math.floor(Number(next.lostCityCount) || 0))
+      ),
+    } : null;
+  }
   if (!next) return current;
   const lostCitiesById = new Map();
   [...(current.lostCities || []), ...(next.lostCities || [])].forEach(city => {
@@ -16603,6 +16671,11 @@ function mergeOfflineRewardsSummaries(current = null, next = null) {
     troopsGained: Math.max(0, Number(current.troopsGained) || 0) + Math.max(0, Number(next.troopsGained) || 0),
     elapsed: Math.max(0, Number(current.elapsed) || 0) + Math.max(0, Number(next.elapsed) || 0),
     lostCities: [...lostCitiesById.values()],
+    lostCityCount: Math.max(
+      lostCitiesById.size,
+      Math.max((current.lostCities || []).length, Math.floor(Number(current.lostCityCount) || 0))
+        + Math.max((next.lostCities || []).length, Math.floor(Number(next.lostCityCount) || 0))
+    ),
   };
 }
 
@@ -16624,12 +16697,14 @@ function showPendingOfflineRewardsSummary() {
   return true;
 }
 
-function showOfflineRewardsModal({ goldGained = 0, troopsGained = 0, elapsed = 0, lostCities = [] } = {}) {
+function showOfflineRewardsModal({ goldGained = 0, troopsGained = 0, elapsed = 0, lostCities = [], lostCityCount = 0 } = {}) {
   const lostList = Array.isArray(lostCities) ? lostCities : [];
+  const totalLostCities = Math.max(lostList.length, Math.floor(Number(lostCityCount) || 0));
   const inactivityNotice = pendingGameServerInactivityNotice;
   if (inactivityNotice) pendingGameServerInactivityNotice = null;
-  const lostSummary = lostList.length
-    ? `<section class="offline-lost-cities"><span>Cities lost while away</span><strong>${formatNumber(lostList.length)}</strong><ul>${lostList.slice(0, 8).map(city => `<li>${escapeHtml(city.name || city.id)} <small>${escapeHtml(getRegionLabel(city.regionId || getCityRegionId(city.id)))}</small></li>`).join("")}</ul>${lostList.length > 8 ? `<small>+${formatNumber(lostList.length - 8)} more</small>` : ""}</section>`
+  const visibleLostCities = lostList.slice(0, 8);
+  const lostSummary = totalLostCities > 0
+    ? `<section class="offline-lost-cities"><span>Cities lost while away</span><strong>${formatNumber(totalLostCities)}</strong><ul>${visibleLostCities.map(city => `<li>${escapeHtml(city.name || city.id)} <small>${escapeHtml(getRegionLabel(city.regionId || getCityRegionId(city.id)))}</small></li>`).join("")}</ul>${totalLostCities > visibleLostCities.length ? `<small>+${formatNumber(totalLostCities - visibleLostCities.length)} more</small>` : ""}</section>`
     : `<section class="offline-lost-cities safe"><span>Cities lost while away</span><strong>0</strong><small>No cities were lost.</small></section>`;
   modal.classList.add("offline-reward-modal");
   modalTitle.textContent = "Welcome back";
@@ -16638,7 +16713,7 @@ function showOfflineRewardsModal({ goldGained = 0, troopsGained = 0, elapsed = 0
       <p>Your kingdom kept producing while you were away for ${formatDuration(elapsed)}.</p>
       <div class="offline-reward-grid">
         <div><span>Gold collected</span><strong>${formatNumber(goldGained)}</strong></div>
-        <div><span>Troops produced</span><strong>${formatNumber(troopsGained)}</strong><small>Added to cities still owned</small></div>
+        <div><span>Troops produced</span><strong>${formatNumber(troopsGained)}</strong><small>Remaining in cities you still own</small></div>
       </div>
       ${getGameServerInactivityNoticeMarkup(inactivityNotice)}
       ${lostSummary}
@@ -16704,8 +16779,11 @@ async function synchronizeForegroundGame(awayMs = 0, { longRefresh = false } = {
 
   const targetRegionId = getActiveOnlineRegionId();
   const shouldRestartRealtime = longRefresh || onlineRealtimeRecoveryNeeded;
+  const shouldShowWelcomeBack = awayMs >= FOREGROUND_LONG_RESUME_MS;
   const economyPromise = Promise.resolve(refreshServerEconomy(true, {
-    showOfflineRewards: awayMs >= FOREGROUND_LONG_RESUME_MS,
+    requestWelcomeBack: shouldShowWelcomeBack,
+    showOfflineRewards: shouldShowWelcomeBack,
+    resumeCatchUp: true,
   }));
   const refreshTasks = [
     Promise.resolve(refreshAllOwnedCities(true)),
@@ -18993,8 +19071,8 @@ function renderClanSectionNavigation(canManageApplications = false) {
   const definitions = [
     { key: "overview", label: "Overview", mark: "◆", count: 0, countLabel: "" },
     {
-      key: "rallies",
-      label: "Rallies",
+      key: "warroom",
+      label: "War Room",
       mark: "⚔",
       count: onlineClanRallies.length,
       countLabel: `${onlineClanRallies.length} active ${onlineClanRallies.length === 1 ? "rally" : "rallies"}`,
@@ -19278,8 +19356,8 @@ function renderClanOverviewPanel(canLead = false) {
         </div>
       </section>
       <div class="clan-overview-grid" aria-label="Clan activity summary">
-        <button type="button" data-clan-action="section" data-clan-section="rallies" aria-label="Open Rallies, ${formatNumber(onlineClanRallies.length)} active">
-          <span>Active rallies</span><strong>${formatNumber(onlineClanRallies.length)}</strong><small>Coordinate attacks</small>
+        <button type="button" data-clan-action="section" data-clan-section="warroom" aria-label="Open War Room, ${formatNumber(onlineClanRallies.length)} active rallies">
+          <span>War Room</span><strong>${formatNumber(onlineClanRallies.length)}</strong><small>Coordinate clan rallies</small>
         </button>
         <button type="button" data-clan-action="section" data-clan-section="rewards" aria-label="Open Rewards, gold gifts ${escapeHtml(giftValue)}">
           <span>Gold gifts</span><strong>${escapeHtml(giftValue)}</strong><small>Send or collect</small>
@@ -19398,18 +19476,21 @@ function renderClanRallyCard(rally) {
 }
 
 function renderClanRallyPanel() {
-  const activeClass = isClanSectionActive("rallies") ? "active" : "";
+  const activeClass = isClanSectionActive("warroom") ? "active" : "";
   return `
-    <section id="clanRalliesPanel" class="clan-section-panel clan-social-card clan-rallies-panel ${activeClass}" role="tabpanel" aria-labelledby="clanSectionTabRallies">
+    <section id="clanWarroomPanel" class="clan-section-panel clan-social-card clan-war-room-panel clan-rallies-panel ${activeClass}" role="tabpanel" aria-labelledby="clanSectionTabWarroom">
       <div class="clan-social-heading">
-        <span><small>Coordinated assaults</small><strong>Rallies</strong></span>
+        <span><small>Clan campaign coordination</small><strong>War Room</strong></span>
         <b>${formatNumber(onlineClanRallies.length)}</b>
       </div>
-      <p class="clan-rally-note">Targets stay private to the clan until the leader launches. Joining immediately removes your Peace Shield.</p>
-      <div class="clan-rally-list">
-        ${onlineClanRallies.length
-          ? onlineClanRallies.map(renderClanRallyCard).join("")
-          : `<p class="clan-muted">No rally requests are active.</p>`}
+      <div class="clan-war-room-feature">
+        <div class="clan-war-room-feature-heading"><span><small>Current feature</small><strong>Rallies</strong></span></div>
+        <p class="clan-rally-note">Targets stay private to the clan until the leader launches. Joining immediately removes your Peace Shield.</p>
+        <div class="clan-rally-list">
+          ${onlineClanRallies.length
+            ? onlineClanRallies.map(renderClanRallyCard).join("")
+            : `<p class="clan-muted">No rally requests are active.</p>`}
+        </div>
       </div>
     </section>`;
 }
@@ -23056,9 +23137,11 @@ function showTroopSliderModalWithRoute(source, target, route, options = {}) {
       : ""
     : isTransfer ? "" : getPeaceShieldAttackWarning(target);
   const reinforcementUsage = isReinforcement ? getActiveClanReinforcementTargetKeys().size : 0;
-  const sliderSendLimit = getTroopSliderSendLimit(source, target);
+  const legalSendLimit = getTroopSliderSendLimit(source, target);
+  const sliderSendLimit = legalSendLimit;
+  const sliderMinimum = 1;
   const demoLimited = sliderSendLimit < source.troops;
-  selectedTroopAmount = clamp(selectedTroopAmount, 1, sliderSendLimit);
+  selectedTroopAmount = clamp(selectedTroopAmount, sliderMinimum, sliderSendLimit);
   troopSliderActive = true;
   modal.classList.add("troop-slider-modal");
   modalTitle.textContent = `${commandLabel} troops`;
@@ -23087,8 +23170,8 @@ function showTroopSliderModalWithRoute(source, target, route, options = {}) {
           <span>Troops to ${rallyOrder ? "commit" : isTransfer || isReinforcement ? "send" : "attack with"}</span>
           <strong id="troopSliderAmount">${formatNumber(selectedTroopAmount)}</strong>
         </div>
-        <input id="troopAmountSlider" class="troop-amount-slider" type="range" min="1" max="${sliderSendLimit}" value="${selectedTroopAmount}" aria-label="Troops to ${rallyOrder ? "commit" : isReinforcement ? "reinforce with" : isTransfer ? "transfer" : "attack with"}" />
-        <div class="troop-slider-limits"><span>1</span><span id="troopSliderMaxLabel">${demoLimited ? "Protected max" : "Max"} ${formatNumber(sliderSendLimit)}</span></div>
+        <input id="troopAmountSlider" class="troop-amount-slider" type="range" min="${sliderMinimum}" max="${sliderSendLimit}" value="${selectedTroopAmount}" aria-label="Troops to ${rallyOrder ? "commit" : isReinforcement ? "reinforce with" : isTransfer ? "transfer" : "attack with"}" />
+        <div class="troop-slider-limits"><span>${formatNumber(sliderMinimum)}</span><span id="troopSliderMaxLabel">${demoLimited ? "Protected max" : "Max"} ${formatNumber(sliderSendLimit)}</span></div>
       </div>
 
       ${swiftMarchEligible ? `
@@ -23145,9 +23228,12 @@ function updateTroopSliderModal(source, target, route) {
   const slider = modalBody.querySelector("#troopAmountSlider");
   if (!slider || !source || !target) return;
   const routeSummary = getArmyRouteSummary(route, source, target);
-  const sliderSendLimit = getTroopSliderSendLimit(source, target);
+  const legalSendLimit = getTroopSliderSendLimit(source, target);
+  const sliderSendLimit = legalSendLimit;
+  const sliderMinimum = 1;
   const demoLimited = sliderSendLimit < source.troops;
-  selectedTroopAmount = clamp(selectedTroopAmount, 1, sliderSendLimit);
+  selectedTroopAmount = clamp(selectedTroopAmount, sliderMinimum, sliderSendLimit);
+  slider.min = String(sliderMinimum);
   slider.max = String(sliderSendLimit);
   slider.value = selectedTroopAmount;
   const progress = sliderSendLimit <= 1 ? 100 : ((selectedTroopAmount - 1) / (sliderSendLimit - 1)) * 100;

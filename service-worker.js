@@ -66,7 +66,9 @@ try {
       const notification = payload?.notification || {};
       const title = notification.title || data.title || "Crownlands alert";
       const body = notification.body || data.body || "A new army is marching.";
-      const tag = data.armyId ? `crownlands-${data.armyId}` : "crownlands-incoming-army";
+      const tag = data.armyId
+        ? `crownlands-${data.armyId}`
+        : "crownlands-incoming-army";
 
       self.registration.showNotification(title, {
         body,
