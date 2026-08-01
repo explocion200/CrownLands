@@ -2718,19 +2718,6 @@ let clanStateUnsubscribe = null;
 let activeClanSubscriptionId = "";
 let clanRalliesUnsubscribe = null;
 let onlineClanRallies = [];
-let clanOperationsUnsubscribe = null;
-let activeClanOperationsSubscriptionRole = "";
-let clanOperationDetailsUnsubscribe = null;
-let clanOperationDetailsReady = false;
-let onlineClanOperations = [];
-let selectedClanOperationId = "";
-let selectedClanOperationOrderId = "";
-let clanOperationOrders = [];
-let clanOperationAssignments = [];
-let clanOperationSharedReports = [];
-let clanOperationTargetStates = {};
-const clanWarRoomActionRequests = new Set();
-let activeWarRoomLaunchContext = null;
 const rallyActionRequests = new Set();
 let clanMemberUidSet = new Set();
 let clanRosterReady = false;
@@ -2742,7 +2729,7 @@ let clanShieldEditorTab = "field";
 let clanRenameEditorOpen = false;
 let clanRenameSaving = false;
 let selectedClanMemberUid = "";
-const CLAN_MOBILE_SECTIONS = Object.freeze(["overview", "warroom", "rallies", "rewards", "members"]);
+const CLAN_MOBILE_SECTIONS = Object.freeze(["overview", "warroom", "rewards", "members"]);
 const CLAN_BROWSER_SECTIONS = Object.freeze(["discover", "create"]);
 let activeClanMobileSection = "overview";
 let activeClanBrowserSection = "discover";
@@ -8305,7 +8292,6 @@ function launchScoutMission(source, target, route, options = {}) {
     sourceRegionId: getCityRegionId(source),
     targetRegionId: getCityRegionId(target),
     targetOwnerAtLaunch: target.owner,
-    operationContext: options.operationContext || null,
   };
   prepareOnlineArmyMission(mission);
   if (usesServerArmyAuthority()) {
@@ -13374,9 +13360,6 @@ function toOnlineArmyMovement(mission) {
     rallyClanId: String(mission.rallyClanId || ""),
     rallyParticipantCount: Math.max(0, Math.floor(Number(mission.rallyParticipantCount) || 0)),
     participantUids: Array.isArray(mission.participantUids) ? mission.participantUids.map(String).filter(Boolean).slice(0, 8) : [],
-    operationContext: mission.operationContext && typeof mission.operationContext === "object"
-      ? { ...mission.operationContext }
-      : null,
     launchedAtMs: Math.max(0, Number(mission.launchedAtMs) || Date.now()),
     arrivesAtMs: Math.max(0, Number(mission.arrivesAtMs) || Date.now()),
     status: "active",
@@ -13506,9 +13489,6 @@ function applyServerMovementToMission(mission, movement = null) {
   mission.participantUids = Array.isArray(movement.participantUids)
     ? movement.participantUids.map(String).filter(Boolean).slice(0, 8)
     : mission.participantUids || [];
-  if (movement.operationContext && typeof movement.operationContext === "object") {
-    mission.operationContext = { ...movement.operationContext };
-  }
   mission.attackerKingPower = normalizePowerValue(movement.attackerKingPower || mission.attackerKingPower);
   mission.defenderKingPower = normalizePowerValue(movement.defenderKingPower || mission.defenderKingPower);
   if (movement.attackProtection !== undefined) {
@@ -16675,7 +16655,6 @@ function launchAttack(sourceId, targetId, percent, owner, exactTroops = null, op
     acceptedAttackProtection,
     demoAttack: null,
     useSwiftMarchOrder,
-    operationContext: options.operationContext || null,
   };
   prepareOnlineArmyMission(mission);
 
@@ -17676,10 +17655,6 @@ async function disablePushNotificationsFromSettings() {
 
 function handlePushMessage(event) {
   const detail = event?.detail || {};
-  if (detail.type === "clan_war_room") {
-    showToast(detail.body || "A clan operation needs your attention.");
-    return;
-  }
   if (detail.type !== "incoming_army") return;
   const message = detail.body || (detail.kind === "scout" ? "Scout incoming." : "Attack incoming.");
   showToast(message);
@@ -17915,7 +17890,6 @@ function renderClanHudAccess() {
     clanName,
     clanTag,
     onlineClanRallies.length,
-    onlineClanOperations.filter(operation => operation.status === "active").length,
     getClanShieldRenderId(normalizeClanShield(shield)),
   ].join("|");
   if (signature === lastClanHudSignature) return;
@@ -17923,7 +17897,6 @@ function renderClanHudAccess() {
   clanHudBtn.classList.toggle("is-search", !hasClan);
   clanHudBtn.classList.toggle("has-clan", hasClan);
   clanHudBtn.classList.toggle("has-rallies", hasClan && onlineClanRallies.length > 0);
-  clanHudBtn.classList.toggle("has-war-room", hasClan && onlineClanOperations.some(operation => operation.status === "active"));
   clanHudBtn.dataset.rallyCount = hasClan && onlineClanRallies.length
     ? String(onlineClanRallies.length)
     : "";
@@ -18092,19 +18065,6 @@ function stopClanRealtimeSubscriptions({ clear = true } = {}) {
   if (typeof clanRalliesUnsubscribe === "function") clanRalliesUnsubscribe();
   clanRalliesUnsubscribe = null;
   onlineClanRallies = [];
-  if (typeof clanOperationsUnsubscribe === "function") clanOperationsUnsubscribe();
-  clanOperationsUnsubscribe = null;
-  activeClanOperationsSubscriptionRole = "";
-  if (typeof clanOperationDetailsUnsubscribe === "function") clanOperationDetailsUnsubscribe();
-  clanOperationDetailsUnsubscribe = null;
-  clanOperationDetailsReady = false;
-  onlineClanOperations = [];
-  selectedClanOperationId = "";
-  selectedClanOperationOrderId = "";
-  clanOperationOrders = [];
-  clanOperationAssignments = [];
-  clanOperationSharedReports = [];
-  clanOperationTargetStates = {};
   activeClanSubscriptionId = "";
   clanRosterReady = false;
   clanMemberUidSet = new Set();
@@ -18181,13 +18141,6 @@ function startClanRealtimeSubscriptions(api, clanId) {
     if (!clanRalliesUnsubscribe && api?.subscribeClanRallies) {
       startClanRallySubscription(api, id);
     }
-    if (
-      api?.subscribeClanOperations
-      && isClanWarRoomSupported()
-      && (!clanOperationsUnsubscribe || activeClanOperationsSubscriptionRole !== String(state?.clanRole || "member"))
-    ) {
-      startClanOperationsSubscription(api, id);
-    }
     return true;
   }
   stopClanRealtimeSubscriptions({ clear: true });
@@ -18218,7 +18171,6 @@ function startClanRealtimeSubscriptions(api, clanId) {
     },
   });
   startClanRallySubscription(api, id);
-  if (isClanWarRoomSupported()) startClanOperationsSubscription(api, id);
   return true;
 }
 
@@ -18238,74 +18190,6 @@ function startClanRallySubscription(api, clanId) {
     },
   });
   return true;
-}
-
-function isClanWarRoomSupported() {
-  return Math.max(
-    0,
-    Number(verifiedRealmInfo?.clanWarRoomVersion) || 0,
-    Number(verifiedRealmInfo?.capabilities?.clanWarRoomVersion) || 0
-  ) >= 1;
-}
-
-function startClanOperationsSubscription(api, clanId) {
-  const id = String(clanId || "").trim();
-  if (!id || !api?.subscribeClanOperations || !isClanWarRoomSupported()) return false;
-  if (typeof clanOperationsUnsubscribe === "function") clanOperationsUnsubscribe();
-  activeClanOperationsSubscriptionRole = String(state?.clanRole || "member");
-  clanOperationsUnsubscribe = api.subscribeClanOperations(id, {
-    manager: ["leader", "officer"].includes(state?.clanRole),
-  }, {
-    onOperations: operations => {
-      onlineClanOperations = Array.isArray(operations) ? operations : [];
-      if (selectedClanOperationId && !onlineClanOperations.some(operation => operation.id === selectedClanOperationId)) {
-        selectedClanOperationId = "";
-        stopClanOperationDetailsSubscription();
-      }
-      renderClanHudAccess();
-      renderWarRoomPins();
-      if (activeProfileTab === "clan") renderClanView();
-    },
-    onError: error => console.warn("Clan War Room subscription failed", error),
-  });
-  return true;
-}
-
-function stopClanOperationDetailsSubscription() {
-  if (typeof clanOperationDetailsUnsubscribe === "function") clanOperationDetailsUnsubscribe();
-  clanOperationDetailsUnsubscribe = null;
-  clanOperationDetailsReady = false;
-  clanOperationOrders = [];
-  clanOperationAssignments = [];
-  clanOperationSharedReports = [];
-  clanOperationTargetStates = {};
-}
-
-function selectClanOperation(operationId = "") {
-  const id = String(operationId || "").trim();
-  selectedClanOperationId = id;
-  selectedClanOperationOrderId = "";
-  stopClanOperationDetailsSubscription();
-  const api = getOnlineApi();
-  if (!id || !state?.clanId || !api?.subscribeClanOperationDetails) {
-    renderClanView();
-    return;
-  }
-  clanOperationDetailsUnsubscribe = api.subscribeClanOperationDetails(state.clanId, id, {
-    onDetails: details => {
-      clanOperationDetailsReady = true;
-      clanOperationOrders = Array.isArray(details?.orders) ? details.orders : [];
-      clanOperationAssignments = Array.isArray(details?.assignments) ? details.assignments : [];
-      clanOperationSharedReports = Array.isArray(details?.sharedReports) ? details.sharedReports : [];
-      clanOperationTargetStates = details?.targetStates && typeof details.targetStates === "object" ? details.targetStates : {};
-      if (selectedClanOperationOrderId && !clanOperationOrders.some(order => order.id === selectedClanOperationOrderId)) {
-        selectedClanOperationOrderId = "";
-      }
-      if (activeProfileTab === "clan") renderClanView();
-    },
-    onError: (error, source) => console.warn(`Clan War Room ${source || "details"} subscription failed`, error),
-  });
-  renderClanView();
 }
 
 function updateClanGiftCountdown() {
@@ -18722,27 +18606,11 @@ function renderClanSectionNavigation(canManageApplications = false) {
     );
   }).length;
   const rewardReadyCount = readyQuestCount + (pendingMinutes > 0 ? 1 : 0);
-  const currentUid = getCurrentOnlineUid();
-  const warRoomAttentionCount = onlineClanOperations.filter(operation => (
-    operation.status === "active"
-    && Array.isArray(operation.attentionUids)
-    && operation.attentionUids.includes(currentUid)
-  )).length;
   const definitions = [
     { key: "overview", label: "Overview", mark: "◆", count: 0, countLabel: "" },
-    ...(isClanWarRoomSupported() ? [{
+    {
       key: "warroom",
       label: "War Room",
-      mark: "⌖",
-      count: warRoomAttentionCount || onlineClanOperations.filter(operation => operation.status === "active").length,
-      countLabel: warRoomAttentionCount
-        ? `${warRoomAttentionCount} ${warRoomAttentionCount === 1 ? "operation needs" : "operations need"} attention`
-        : `${onlineClanOperations.filter(operation => operation.status === "active").length} active operations`,
-      alert: warRoomAttentionCount > 0,
-    }] : []),
-    {
-      key: "rallies",
-      label: "Rallies",
       mark: "⚔",
       count: onlineClanRallies.length,
       countLabel: `${onlineClanRallies.length} active ${onlineClanRallies.length === 1 ? "rally" : "rallies"}`,
@@ -18824,7 +18692,6 @@ function revealClanSection(section) {
 function setClanMobileSection(section, options = {}) {
   const value = String(section || "");
   if (!CLAN_MOBILE_SECTIONS.includes(value)) return;
-  if (value === "warroom" && !isClanWarRoomSupported()) return;
   activeClanMobileSection = value;
   if (value !== "overview") clanRenameEditorOpen = false;
   renderClanView();
@@ -19027,11 +18894,8 @@ function renderClanOverviewPanel(canLead = false) {
         </div>
       </section>
       <div class="clan-overview-grid" aria-label="Clan activity summary">
-        ${isClanWarRoomSupported() ? `<button type="button" data-clan-action="section" data-clan-section="warroom" aria-label="Open War Room, ${formatNumber(onlineClanOperations.filter(operation => operation.status === "active").length)} active operations">
-          <span>War Room</span><strong>${formatNumber(onlineClanOperations.filter(operation => operation.status === "active").length)}</strong><small>Plan timed campaigns</small>
-        </button>` : ""}
-        <button type="button" data-clan-action="section" data-clan-section="rallies" aria-label="Open Rallies, ${formatNumber(onlineClanRallies.length)} active">
-          <span>Active rallies</span><strong>${formatNumber(onlineClanRallies.length)}</strong><small>Coordinate attacks</small>
+        <button type="button" data-clan-action="section" data-clan-section="warroom" aria-label="Open War Room, ${formatNumber(onlineClanRallies.length)} active rallies">
+          <span>War Room</span><strong>${formatNumber(onlineClanRallies.length)}</strong><small>Coordinate clan rallies</small>
         </button>
         <button type="button" data-clan-action="section" data-clan-section="rewards" aria-label="Open Rewards, gold gifts ${escapeHtml(giftValue)}">
           <span>Gold gifts</span><strong>${escapeHtml(giftValue)}</strong><small>Send or collect</small>
@@ -19150,150 +19014,22 @@ function renderClanRallyCard(rally) {
 }
 
 function renderClanRallyPanel() {
-  const activeClass = isClanSectionActive("rallies") ? "active" : "";
+  const activeClass = isClanSectionActive("warroom") ? "active" : "";
   return `
-    <section id="clanRalliesPanel" class="clan-section-panel clan-social-card clan-rallies-panel ${activeClass}" role="tabpanel" aria-labelledby="clanSectionTabRallies">
+    <section id="clanWarroomPanel" class="clan-section-panel clan-social-card clan-war-room-panel clan-rallies-panel ${activeClass}" role="tabpanel" aria-labelledby="clanSectionTabWarroom">
       <div class="clan-social-heading">
-        <span><small>Coordinated assaults</small><strong>Rallies</strong></span>
+        <span><small>Clan campaign coordination</small><strong>War Room</strong></span>
         <b>${formatNumber(onlineClanRallies.length)}</b>
       </div>
-      <p class="clan-rally-note">Targets stay private to the clan until the leader launches. Joining immediately removes your Peace Shield.</p>
-      <div class="clan-rally-list">
-        ${onlineClanRallies.length
-          ? onlineClanRallies.map(renderClanRallyCard).join("")
-          : `<p class="clan-muted">No rally requests are active.</p>`}
+      <div class="clan-war-room-feature">
+        <div class="clan-war-room-feature-heading"><span><small>Current feature</small><strong>Rallies</strong></span></div>
+        <p class="clan-rally-note">Targets stay private to the clan until the leader launches. Joining immediately removes your Peace Shield.</p>
+        <div class="clan-rally-list">
+          ${onlineClanRallies.length
+            ? onlineClanRallies.map(renderClanRallyCard).join("")
+            : `<p class="clan-muted">No rally requests are active.</p>`}
+        </div>
       </div>
-    </section>`;
-}
-
-function formatWarRoomDateTime(value = 0) {
-  const timestamp = normalizeTimestampMs(value);
-  if (!timestamp) return "Not scheduled";
-  return new Date(timestamp).toLocaleString([], {
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  });
-}
-
-function getWarRoomActionLabel(action = "attack") {
-  if (action === "scout") return "Scout";
-  if (action === "reinforce") return "Reinforce";
-  return "Attack";
-}
-
-function getSelectedClanOperation() {
-  return onlineClanOperations.find(operation => operation.id === selectedClanOperationId) || null;
-}
-
-function getWarRoomOrderAssignments(orderId = "") {
-  return clanOperationAssignments.filter(assignment => String(assignment.orderId || "") === String(orderId || ""));
-}
-
-function renderWarRoomAssignment(assignment, order, canManage) {
-  const self = String(assignment.uid || "") === getCurrentOnlineUid();
-  const busy = clanWarRoomActionRequests.has(assignment.id);
-  const statusLabel = String(assignment.status || "requested").replace(/_/g, " ");
-  let controls = "";
-  if (self && assignment.status === "requested") {
-    controls = `<button data-war-room-action="accept-assignment" data-assignment-id="${escapeHtml(assignment.id)}" data-order-id="${escapeHtml(order.id)}" type="button" ${busy ? "disabled" : ""}>Accept</button><button data-war-room-action="decline-assignment" data-assignment-id="${escapeHtml(assignment.id)}" data-order-id="${escapeHtml(order.id)}" type="button" ${busy ? "disabled" : ""}>Decline</button>`;
-  } else if (self && assignment.status === "needs_reconfirm") {
-    controls = `<button data-war-room-action="reconfirm-assignment" data-assignment-id="${escapeHtml(assignment.id)}" data-order-id="${escapeHtml(order.id)}" type="button" ${busy ? "disabled" : ""}>Reconfirm</button><button data-war-room-action="withdraw-assignment" data-assignment-id="${escapeHtml(assignment.id)}" data-order-id="${escapeHtml(order.id)}" type="button" ${busy ? "disabled" : ""}>Withdraw</button>`;
-  } else if (self && assignment.status === "accepted") {
-    controls = `<button class="war-room-launch" data-war-room-action="launch-assignment" data-assignment-id="${escapeHtml(assignment.id)}" data-order-id="${escapeHtml(order.id)}" type="button" ${busy ? "disabled" : ""}>Prepare March</button><button data-war-room-action="edit-assignment" data-assignment-id="${escapeHtml(assignment.id)}" data-order-id="${escapeHtml(order.id)}" type="button" ${busy ? "disabled" : ""}>Source / Troops</button><button data-war-room-action="withdraw-assignment" data-assignment-id="${escapeHtml(assignment.id)}" data-order-id="${escapeHtml(order.id)}" type="button" ${busy ? "disabled" : ""}>Withdraw</button>`;
-  }
-  const launchWindow = assignment.recommendedLaunchAtMs
-    ? `${formatWarRoomDateTime(assignment.recommendedLaunchAtMs)} – ${formatWarRoomDateTime(assignment.latestLaunchAtMs)}`
-    : "Choose a source to calculate";
-  return `
-    <li class="war-room-assignment ${escapeHtml(assignment.status || "requested")}">
-      <div><strong>${escapeHtml(assignment.memberName || "Clan member")}</strong><small>${escapeHtml(statusLabel)}</small></div>
-      <div><span>${assignment.sourceName ? `${escapeHtml(assignment.sourceName)} · ${formatNumber(assignment.troops || 0)} troop${Number(assignment.troops) === 1 ? "" : "s"}` : "Awaiting source and troops"}</span><small>Recommended send: ${escapeHtml(launchWindow)}</small></div>
-      ${controls ? `<footer>${controls}</footer>` : ""}
-    </li>`;
-}
-
-function renderWarRoomOrder(order, operation, canManage) {
-  const assignments = getWarRoomOrderAssignments(order.id);
-  const activeAssignments = assignments.filter(assignment => ["requested", "accepted", "needs_reconfirm", "launched"].includes(assignment.status));
-  const ownAssignment = assignments.find(assignment => String(assignment.uid || "") === getCurrentOnlineUid() && !["declined", "withdrawn", "resolved", "missed"].includes(assignment.status));
-  const availableSlots = Math.max(0, Number(order.participantSlots || 1) - activeAssignments.length);
-  const targetStateKey = `${order.targetType === "camp" ? "camp" : "city"}:${normalizeRegionId(order.targetRegionId)}:${order.targetId}`;
-  const watchedTarget = clanOperationTargetStates[targetStateKey];
-  const currentTarget = watchedTarget?.unavailable ? getArmyTargetById(order.targetId) : watchedTarget || getArmyTargetById(order.targetId);
-  const currentOwnerUid = String(currentTarget?.ownerUid || currentTarget?.holderUid || "");
-  const currentOwnerClanId = String(currentTarget?.ownerClanId || currentTarget?.holderClanId || "");
-  const plannedOwnerUid = String(order.targetOwnerUid || "");
-  const plannedOwnerClanId = String(order.targetOwnerClanId || "");
-  const ownershipChanged = Boolean(currentTarget && currentOwnerUid !== plannedOwnerUid);
-  const diplomacyChanged = Boolean(
-    currentTarget
-    && currentOwnerUid === plannedOwnerUid
-    && currentOwnerClanId !== plannedOwnerClanId
-  );
-  const actionNoLongerFriendly = order.action === "reinforce" && currentOwnerClanId !== String(state?.clanId || "");
-  const actionNowFriendly = ["attack", "scout"].includes(order.action) && currentOwnerClanId === String(state?.clanId || "") && currentOwnerClanId;
-  const stale = ownershipChanged || diplomacyChanged || actionNoLongerFriendly || actionNowFriendly;
-  const linkedRally = onlineClanRallies.find(rally => rally.id === order.linkedRallyId) || null;
-  const sharedReports = clanOperationSharedReports.filter(report => report.orderId === order.id);
-  return `
-    <article class="war-room-order action-${escapeHtml(order.action || "attack")}${selectedClanOperationOrderId === order.id ? " selected" : ""}" data-war-room-order-id="${escapeHtml(order.id)}">
-      <header>
-        <span class="war-room-order-number">${formatNumber(Number(order.index || 0) + 1)}</span>
-        <div><small>${escapeHtml(getWarRoomActionLabel(order.action))} · ${escapeHtml(getRegionLabel(order.targetRegionId))}</small><strong>${escapeHtml(order.targetName || order.targetId)}</strong></div>
-        <b>${activeAssignments.length}/${formatNumber(order.participantSlots || 1)}</b>
-      </header>
-      <div class="war-room-order-window"><span>Arrival window</span><strong>${escapeHtml(formatWarRoomDateTime(order.windowStartAtMs))}</strong><small>through ${escapeHtml(formatWarRoomDateTime(order.windowEndAtMs))}</small></div>
-      ${order.note ? `<p>${escapeHtml(order.note)}</p>` : ""}
-      ${order.requestedTroops ? `<p class="war-room-requested-total">Requested force: <strong>${formatNumber(order.requestedTroops)}</strong> troops total</p>` : ""}
-      ${stale ? `<p class="war-room-stale">Ownership changed since this order was planned. The current server rules apply when each member launches.</p>` : ""}
-      ${linkedRally ? `<div class="war-room-linked-rally"><span>Linked rally</span><strong>${escapeHtml(linkedRally.status || "active")}</strong><small>${formatNumber(linkedRally.assembledTroops || 0)} assembled · managed in Rallies</small></div>` : order.linkedRallyId ? `<p class="war-room-stale">The linked rally is no longer active.</p>` : ""}
-      <ul class="war-room-assignments">${assignments.length ? assignments.map(assignment => renderWarRoomAssignment(assignment, order, canManage)).join("") : `<li class="war-room-empty-slot">No participants yet.</li>`}</ul>
-      <footer class="war-room-order-actions">
-        ${!ownAssignment && availableSlots > 0 && operation.status === "active" ? `<button data-war-room-action="volunteer" data-order-id="${escapeHtml(order.id)}" type="button">Volunteer</button>` : ""}
-        ${canManage && operation.status === "active" && availableSlots > 0 ? `<button data-war-room-action="request-member" data-order-id="${escapeHtml(order.id)}" type="button">Request Member</button>` : ""}
-        ${canManage ? `<button data-war-room-action="link-rally" data-order-id="${escapeHtml(order.id)}" type="button">${order.linkedRallyId ? "Change Rally" : "Link Rally"}</button>` : ""}
-        <button data-war-room-action="view-target" data-order-id="${escapeHtml(order.id)}" type="button">View Map</button>
-      </footer>
-      ${sharedReports.length ? `<details class="war-room-reports"><summary>${formatNumber(sharedReports.length)} shared report${sharedReports.length === 1 ? "" : "s"}</summary>${sharedReports.map(report => `<button type="button" data-war-room-action="open-shared-report" data-shared-report-id="${escapeHtml(report.id)}"><strong>${escapeHtml(report.ownerName || "Clan member")}</strong><span>${escapeHtml(report.summary || `${report.type || "Battle"} report`)}</span></button>`).join("")}</details>` : ""}
-    </article>`;
-}
-
-function renderClanWarRoomPanel(canManage = false) {
-  const activeClass = isClanSectionActive("warroom") ? "active" : "";
-  if (!isClanWarRoomSupported()) return "";
-  const selected = getSelectedClanOperation();
-  const activeCount = onlineClanOperations.filter(operation => operation.status === "active").length;
-  return `
-    <section id="clanWarroomPanel" class="clan-section-panel clan-war-room-panel ${activeClass}" role="tabpanel" aria-labelledby="clanSectionTabWarroom">
-      <div class="clan-social-heading war-room-heading">
-        <span><small>Clan-private campaign planning</small><strong>War Room</strong></span>
-        <b>${formatNumber(activeCount)}/5</b>
-      </div>
-      <p class="clan-rally-note">Coordinate attacks, scouts, reinforcements, and objective rallies. Every player still reviews and launches their own march; no troops are reserved.</p>
-      <div class="war-room-toolbar">
-        ${canManage ? `<button class="profile-primary-btn" data-war-room-action="new-operation" type="button">New Operation</button>` : ""}
-        ${selected ? `<button data-war-room-action="back-operations" type="button">All Operations</button>` : ""}
-      </div>
-      ${selected ? `
-        <article class="war-room-operation-detail status-${escapeHtml(selected.status || "draft")}">
-          <header><div><small>${escapeHtml(String(selected.status || "draft").toUpperCase())} · Revision ${formatNumber(selected.revision || 1)}</small><h3>${escapeHtml(selected.title || "Clan operation")}</h3></div><strong>${formatNumber(selected.orderCount || clanOperationOrders.length)} orders</strong></header>
-          ${selected.note ? `<p>${escapeHtml(selected.note)}</p>` : ""}
-          <div class="war-room-operation-actions">
-            ${canManage && ["draft", "active"].includes(selected.status) ? `<button data-war-room-action="edit-operation" type="button" ${clanOperationDetailsReady ? "" : "disabled"}>${clanOperationDetailsReady ? "Edit" : "Loading…"}</button>` : ""}
-            ${canManage && selected.status === "draft" ? `<button data-war-room-action="activate-operation" type="button">Activate</button>` : ""}
-            ${canManage && selected.status === "active" ? `<button data-war-room-action="complete-operation" type="button">Complete</button><button class="danger-action" data-war-room-action="cancel-operation" type="button">Cancel</button>` : ""}
-          </div>
-          <div class="war-room-orders">${clanOperationOrders.length ? clanOperationOrders.map(order => renderWarRoomOrder(order, selected, canManage)).join("") : `<p class="clan-muted">Loading operation orders…</p>`}</div>
-        </article>` : `
-        <div class="war-room-operation-list">
-          ${onlineClanOperations.length ? onlineClanOperations.map(operation => `
-            <button class="war-room-operation-card status-${escapeHtml(operation.status || "draft")}" data-war-room-action="open-operation" data-operation-id="${escapeHtml(operation.id)}" type="button">
-              <span><small>${escapeHtml(String(operation.status || "draft").toUpperCase())}</small><strong>${escapeHtml(operation.title || "Clan operation")}</strong><em>${escapeHtml(formatWarRoomDateTime(operation.lastArrivalWindowEndMs))}</em></span>
-              <b>${formatNumber(operation.orderCount || 0)}<small>orders</small></b>
-            </button>`).join("") : `<p class="clan-muted">No operations have been planned.</p>`}
-        </div>`}
     </section>`;
 }
 
@@ -19438,502 +19174,6 @@ function bindClanRallyControls(root = document) {
   });
 }
 
-function toWarRoomLocalDateTime(value = 0) {
-  const date = new Date(normalizeTimestampMs(value) || Date.now());
-  const offset = date.getTimezoneOffset() * 60000;
-  return new Date(date.getTime() - offset).toISOString().slice(0, 16);
-}
-
-function getWarRoomTargetsForRegion(regionId = "") {
-  const normalizedRegion = normalizeRegionId(regionId);
-  const cities = getPlayableBaseCitiesByRegion(normalizedRegion).map(city => ({
-    ...city,
-    targetType: "city",
-    name: city.name || city.id,
-  }));
-  const camps = WORLD_CAMPS
-    .filter(camp => normalizeRegionId(camp.regionId || camp.mapId) === normalizedRegion && getRewardCampConfig(camp))
-    .map(camp => ({ ...camp, targetType: "camp", name: camp.name || camp.id }));
-  return [...cities, ...camps].sort((left, right) => String(left.name).localeCompare(String(right.name)));
-}
-
-function createWarRoomEditorOrder(order = {}, index = 0) {
-  const startAtMs = normalizeTimestampMs(order.windowStartAtMs) || Date.now() + (30 + index * 10) * 60000;
-  const endAtMs = normalizeTimestampMs(order.windowEndAtMs) || startAtMs + 10 * 60000;
-  return {
-    id: String(order.id || `order_${Date.now().toString(36)}_${index + 1}`),
-    action: ["attack", "scout", "reinforce"].includes(order.action) ? order.action : "attack",
-    targetType: order.targetType === "camp" ? "camp" : "city",
-    targetId: String(order.targetId || ""),
-    targetRegionId: normalizeRegionId(order.targetRegionId || getActiveMapRegionId()),
-    note: String(order.note || ""),
-    requestedTroops: Math.max(0, Math.floor(Number(order.requestedTroops) || 0)),
-    participantSlots: clamp(Math.floor(Number(order.participantSlots) || 1), 1, 30),
-    windowStartAtMs: startAtMs,
-    windowMinutes: clamp(Math.round((endAtMs - startAtMs) / 60000) || 10, 5, 60),
-    linkedRallyId: String(order.linkedRallyId || ""),
-  };
-}
-
-function renderWarRoomEditorOrderRow(order, index) {
-  const regions = getRegionIds();
-  const targets = getWarRoomTargetsForRegion(order.targetRegionId)
-    .filter(target => order.action !== "reinforce" || target.targetType === "city");
-  const selectedTarget = targets.find(target => target.id === order.targetId && target.targetType === order.targetType) || targets[0];
-  if (selectedTarget && !order.targetId) {
-    order.targetId = selectedTarget.id;
-    order.targetType = selectedTarget.targetType;
-  }
-  return `
-    <fieldset class="war-room-editor-order" data-war-room-editor-order="${index}" data-order-id="${escapeHtml(order.id)}">
-      <legend>Order ${formatNumber(index + 1)}</legend>
-      <button class="war-room-remove-order" data-war-room-editor-remove="${index}" type="button" aria-label="Remove order ${index + 1}" ${index === 0 ? "disabled" : ""}>×</button>
-      <label>Action<select name="action"><option value="attack" ${order.action === "attack" ? "selected" : ""}>Attack</option><option value="scout" ${order.action === "scout" ? "selected" : ""}>Scout</option><option value="reinforce" ${order.action === "reinforce" ? "selected" : ""}>Reinforce</option></select></label>
-      <label>Region<select name="targetRegionId">${regions.map(regionId => `<option value="${escapeHtml(regionId)}" ${regionId === order.targetRegionId ? "selected" : ""}>${escapeHtml(getRegionLabel(regionId))}</option>`).join("")}</select></label>
-      <label>Target<select name="target">${targets.map(target => `<option value="${escapeHtml(`${target.targetType}:${target.id}`)}" ${target.id === order.targetId && target.targetType === order.targetType ? "selected" : ""}>${escapeHtml(target.name)}${target.targetType === "camp" ? " · Camp" : ""}</option>`).join("")}</select></label>
-      <label>Arrival starts<input name="windowStart" type="datetime-local" value="${escapeHtml(toWarRoomLocalDateTime(order.windowStartAtMs))}" required /></label>
-      <label>Window<select name="windowMinutes">${[5, 10, 15, 20, 30, 45, 60].map(minutes => `<option value="${minutes}" ${minutes === order.windowMinutes ? "selected" : ""}>${minutes} minutes</option>`).join("")}</select></label>
-      <label>Participant slots<input name="participantSlots" type="number" min="1" max="30" value="${formatNumber(order.participantSlots)}" required /></label>
-      <label>Requested troop total <small>Optional guidance; each member chooses their assigned amount.</small><input name="requestedTroops" type="number" min="0" step="1" value="${formatNumber(order.requestedTroops)}" /></label>
-      <label class="war-room-editor-note">Order note<textarea name="note" maxlength="240" placeholder="Breach first, wait for scout report, reinforce after capture…">${escapeHtml(order.note)}</textarea></label>
-    </fieldset>`;
-}
-
-function showClanOperationEditor(operation = null) {
-  if (!["leader", "officer"].includes(state?.clanRole) || !isClanWarRoomSupported()) return;
-  const editing = Boolean(operation?.id);
-  let draftOrders = (editing ? clanOperationOrders : []).map(createWarRoomEditorOrder);
-  if (!draftOrders.length) draftOrders = [createWarRoomEditorOrder()];
-  let draftTitle = String(operation?.title || "");
-  let draftNote = String(operation?.note || "");
-  let draftActivate = true;
-  modal.className = "modal war-room-editor-modal";
-  modalTitle.textContent = editing ? "Edit Clan Operation" : "New Clan Operation";
-  const render = () => {
-    modalBody.innerHTML = `
-      <form id="warRoomOperationForm" class="war-room-operation-form">
-        <label>Operation name<input name="title" maxlength="64" required value="${escapeHtml(draftTitle)}" placeholder="Northern Crownfall" /></label>
-        <label>Operation note<textarea name="note" maxlength="500" placeholder="Campaign intent and shared instructions…">${escapeHtml(draftNote)}</textarea></label>
-        <div class="war-room-editor-orders">${draftOrders.map(renderWarRoomEditorOrderRow).join("")}</div>
-        <button data-war-room-editor-add type="button" ${draftOrders.length >= 12 ? "disabled" : ""}>Add Order (${draftOrders.length}/12)</button>
-        ${editing ? "" : `<label class="war-room-activate-toggle"><input name="activate" type="checkbox" ${draftActivate ? "checked" : ""} /> Activate immediately</label>`}
-        <p class="war-room-editor-help">Arrival windows must begin and end within 72 hours. Changing a target, action, or window later makes accepted assignments reconfirm.</p>
-        <footer><button class="profile-secondary-btn" data-war-room-editor-cancel type="button">Cancel</button><button class="profile-primary-btn" type="submit">${editing ? "Save Changes" : "Create Operation"}</button></footer>
-      </form>`;
-    const collectRows = () => {
-      draftTitle = String(modalBody.querySelector('[name="title"]')?.value || draftTitle);
-      draftNote = String(modalBody.querySelector('[name="note"]')?.value || "");
-      if (!editing) draftActivate = Boolean(modalBody.querySelector('[name="activate"]')?.checked);
-      draftOrders = [...modalBody.querySelectorAll("[data-war-room-editor-order]")].map((row, index) => {
-        const targetValue = String(row.querySelector('[name="target"]')?.value || "city:");
-        const separator = targetValue.indexOf(":");
-        const startAtMs = Date.parse(row.querySelector('[name="windowStart"]')?.value || "");
-        return createWarRoomEditorOrder({
-          id: row.dataset.orderId,
-          action: row.querySelector('[name="action"]')?.value,
-          targetRegionId: row.querySelector('[name="targetRegionId"]')?.value,
-          targetType: targetValue.slice(0, separator),
-          targetId: targetValue.slice(separator + 1),
-          windowStartAtMs: startAtMs,
-          windowEndAtMs: startAtMs + Number(row.querySelector('[name="windowMinutes"]')?.value || 10) * 60000,
-          participantSlots: row.querySelector('[name="participantSlots"]')?.value,
-          requestedTroops: row.querySelector('[name="requestedTroops"]')?.value,
-          note: row.querySelector('[name="note"]')?.value,
-          linkedRallyId: draftOrders[index]?.linkedRallyId || "",
-        }, index);
-      });
-    };
-    modalBody.querySelectorAll('[name="targetRegionId"], [name="action"]').forEach(select => select.addEventListener("change", () => {
-      collectRows();
-      render();
-    }));
-    modalBody.querySelector("[data-war-room-editor-add]")?.addEventListener("click", () => {
-      collectRows();
-      if (draftOrders.length < 12) draftOrders.push(createWarRoomEditorOrder({}, draftOrders.length));
-      render();
-    });
-    modalBody.querySelectorAll("[data-war-room-editor-remove]").forEach(button => button.addEventListener("click", () => {
-      collectRows();
-      draftOrders.splice(Number(button.dataset.warRoomEditorRemove), 1);
-      render();
-    }));
-    modalBody.querySelector("[data-war-room-editor-cancel]")?.addEventListener("click", () => modal.close());
-    modalBody.querySelector("#warRoomOperationForm")?.addEventListener("submit", async event => {
-      event.preventDefault();
-      collectRows();
-      const form = event.currentTarget;
-      const formData = new FormData(form);
-      const orders = draftOrders.map(order => ({
-        id: order.id,
-        action: order.action,
-        targetType: order.targetType,
-        targetId: order.targetId,
-        targetRegionId: order.targetRegionId,
-        note: order.note,
-        requestedTroops: order.requestedTroops,
-        participantSlots: order.participantSlots,
-        windowStartAtMs: order.windowStartAtMs,
-        windowEndAtMs: order.windowStartAtMs + order.windowMinutes * 60000,
-        linkedRallyId: order.linkedRallyId,
-      }));
-      const api = getOnlineApi();
-      const method = editing ? "updateClanOperation" : "createClanOperation";
-      if (!api?.[method]) return rejectGameAction("The War Room server is unavailable.");
-      const submit = form.querySelector('[type="submit"]');
-      submit.disabled = true;
-      submit.textContent = editing ? "Saving…" : "Creating…";
-      try {
-        const result = await api[method]({
-          clanId: state.clanId,
-          operationId: operation?.id,
-          expectedRevision: operation?.revision,
-          title: formData.get("title"),
-          note: formData.get("note"),
-          status: !editing && formData.get("activate") ? "active" : "draft",
-          orders,
-        });
-        if (result?.operation) {
-          onlineClanOperations = [result.operation, ...onlineClanOperations.filter(item => item.id !== result.operation.id)];
-          selectedClanOperationId = result.operation.id;
-        }
-        if (Array.isArray(result?.orders)) clanOperationOrders = result.orders;
-        showToast(editing ? "Operation updated." : "Operation created.");
-        modal.close();
-        selectClanOperation(result?.operation?.id || operation?.id);
-      } catch (error) {
-        rejectGameAction(error?.message || "Could not save the operation.");
-        submit.disabled = false;
-        submit.textContent = editing ? "Save Changes" : "Create Operation";
-      }
-    });
-  };
-  render();
-  if (!modal.open) modal.showModal();
-}
-
-function showWarRoomAssignmentModal(order, assignment = null, action = "volunteer") {
-  const owned = getAllOwnedCitiesForDisplay().filter(city => Math.floor(Number(city.troops) || 0) > 0);
-  if (!owned.length) return rejectGameAction("No owned city has troops available.");
-  const selectedSource = owned.find(city => city.id === assignment?.sourceId) || owned[0];
-  const scout = order.action === "scout";
-  modal.className = "modal war-room-assignment-modal";
-  modalTitle.textContent = assignment ? assignment.status === "needs_reconfirm" ? "Reconfirm Assignment" : "Update Assignment" : "Volunteer for Order";
-  modalBody.innerHTML = `
-    <form id="warRoomAssignmentForm" class="war-room-assignment-form">
-      <div><small>${escapeHtml(getWarRoomActionLabel(order.action))} · ${escapeHtml(getRegionLabel(order.targetRegionId))}</small><h3>${escapeHtml(order.targetName || order.targetId)}</h3></div>
-      <label>Source city<select name="sourceId">${owned.map(city => `<option value="${escapeHtml(city.id)}" ${city.id === selectedSource.id ? "selected" : ""}>${escapeHtml(city.name)} · ${formatNumber(city.troops)} troops · ${escapeHtml(getRegionLabel(getCityRegionId(city)))}</option>`).join("")}</select></label>
-      <label>Troops<input name="troops" type="number" min="1" max="${formatNumber(selectedSource.troops)}" value="${scout ? "1" : formatNumber(assignment?.troops || Math.max(1, Math.floor(selectedSource.troops / 2)))}" ${scout ? "readonly" : ""} /><small>${scout ? "Scouts always use exactly one troop." : "Troops are not reserved; availability is checked again at launch."}</small></label>
-      <footer><button class="profile-secondary-btn" type="button" data-war-room-assignment-cancel>Cancel</button><button class="profile-primary-btn" type="submit">${assignment ? "Confirm" : "Volunteer"}</button></footer>
-    </form>`;
-  const sourceSelect = modalBody.querySelector('[name="sourceId"]');
-  const troopInput = modalBody.querySelector('[name="troops"]');
-  sourceSelect?.addEventListener("change", () => {
-    const city = owned.find(item => item.id === sourceSelect.value) || owned[0];
-    troopInput.max = String(city.troops);
-    if (!scout) troopInput.value = String(clamp(Number(troopInput.value) || 1, 1, city.troops));
-  });
-  modalBody.querySelector("[data-war-room-assignment-cancel]")?.addEventListener("click", () => modal.close());
-  modalBody.querySelector("#warRoomAssignmentForm")?.addEventListener("submit", async event => {
-    event.preventDefault();
-    const source = owned.find(city => city.id === sourceSelect.value);
-    if (!source) return;
-    const serverAction = action === "accept" ? "accept" : action === "reconfirm" ? "reconfirm" : action === "update" ? "update" : "volunteer";
-    const result = await runWarRoomAssignmentAction(serverAction, order, assignment, {
-      sourceId: source.id,
-      sourceRegionId: getCityRegionId(source),
-      troops: scout ? 1 : Math.floor(Number(troopInput.value) || 1),
-    });
-    if (result) modal.close();
-  });
-  if (!modal.open) modal.showModal();
-}
-
-async function runWarRoomAssignmentAction(action, order, assignment = null, extra = {}) {
-  const api = getOnlineApi();
-  if (!api?.setClanOperationAssignment || !state?.clanId || !selectedClanOperationId) return false;
-  const requestId = assignment?.id || `${order.id}_${getCurrentOnlineUid()}`;
-  if (clanWarRoomActionRequests.has(requestId)) return false;
-  clanWarRoomActionRequests.add(requestId);
-  renderClanView();
-  try {
-    const result = await api.setClanOperationAssignment({
-      clanId: state.clanId,
-      operationId: selectedClanOperationId,
-      orderId: order.id,
-      assignmentId: assignment?.id,
-      action,
-      ...extra,
-    });
-    if (result?.assignment) {
-      clanOperationAssignments = [
-        result.assignment,
-        ...clanOperationAssignments.filter(item => item.id !== result.assignment.id),
-      ];
-    }
-    showToast(action === "decline" ? "Assignment declined." : action === "withdraw" ? "Assignment withdrawn." : "Assignment updated with authoritative travel timing.");
-    return result;
-  } catch (error) {
-    rejectGameAction(error?.message || "Could not update that assignment.");
-    return false;
-  } finally {
-    clanWarRoomActionRequests.delete(requestId);
-    renderClanView();
-  }
-}
-
-function showWarRoomMemberRequestModal(order) {
-  const activeUids = new Set(getWarRoomOrderAssignments(order.id)
-    .filter(assignment => ["requested", "accepted", "needs_reconfirm", "launched"].includes(assignment.status))
-    .map(assignment => String(assignment.uid || "")));
-  const candidates = clanMembers.filter(member => !activeUids.has(String(member.uid || member.id || "")));
-  if (!candidates.length) return rejectGameAction("Every clan member is already assigned to this order.");
-  modal.className = "modal war-room-request-modal";
-  modalTitle.textContent = "Request Clan Member";
-  modalBody.innerHTML = `<form id="warRoomRequestForm" class="war-room-request-form"><p>Request a specific member for <strong>${escapeHtml(order.targetName || order.targetId)}</strong>. They will receive one assignment notification.</p><label>Member<select name="targetUid">${candidates.map(member => `<option value="${escapeHtml(member.uid || member.id)}">${escapeHtml(member.displayName || "Ruler")} · ${formatNumber(member.kingPower || 0)} power</option>`).join("")}</select></label><footer><button type="button" data-war-room-request-cancel>Cancel</button><button class="profile-primary-btn" type="submit">Send Request</button></footer></form>`;
-  modalBody.querySelector("[data-war-room-request-cancel]")?.addEventListener("click", () => modal.close());
-  modalBody.querySelector("#warRoomRequestForm")?.addEventListener("submit", async event => {
-    event.preventDefault();
-    const targetUid = new FormData(event.currentTarget).get("targetUid");
-    const result = await runWarRoomAssignmentAction("request", order, null, { targetUid });
-    if (result) modal.close();
-  });
-  if (!modal.open) modal.showModal();
-}
-
-function showWarRoomRallyLinkModal(order) {
-  const matching = order.action === "attack"
-    ? onlineClanRallies.filter(rally => rally.targetId === order.targetId && normalizeRegionId(rally.targetRegionId) === normalizeRegionId(order.targetRegionId))
-    : [];
-  modal.className = "modal war-room-rally-link-modal";
-  modalTitle.textContent = "Link Objective Rally";
-  modalBody.innerHTML = `<form id="warRoomRallyLinkForm" class="war-room-rally-link-form"><p>War Room only displays rally progress. Join, launch, recall, and settlement stay in the existing Rally controls.</p><label>Rally<select name="rallyId"><option value="">No linked rally</option>${matching.map(rally => `<option value="${escapeHtml(rally.id)}" ${rally.id === order.linkedRallyId ? "selected" : ""}>${escapeHtml(rally.targetName || rally.targetId)} · ${escapeHtml(rally.status)}</option>`).join("")}</select></label>${matching.length ? "" : `<p class="clan-muted">${order.action === "attack" ? "No active rally currently matches this target." : "Only attack orders can link objective rallies."}</p>`}<footer><button type="button" data-war-room-rally-cancel>Cancel</button><button class="profile-primary-btn" type="submit">Save Link</button></footer></form>`;
-  modalBody.querySelector("[data-war-room-rally-cancel]")?.addEventListener("click", () => modal.close());
-  modalBody.querySelector("#warRoomRallyLinkForm")?.addEventListener("submit", async event => {
-    event.preventDefault();
-    try {
-      await getOnlineApi()?.linkClanOperationRally?.({
-        clanId: state.clanId,
-        operationId: selectedClanOperationId,
-        orderId: order.id,
-        rallyId: new FormData(event.currentTarget).get("rallyId"),
-      });
-      showToast("Rally link updated.");
-      modal.close();
-    } catch (error) {
-      rejectGameAction(error?.message || "Could not link that rally.");
-    }
-  });
-  if (!modal.open) modal.showModal();
-}
-
-async function focusWarRoomOrderTarget(order) {
-  if (!order) return;
-  if (profileScreen?.classList.contains("open")) closeProfileScreen();
-  if (normalizeRegionId(order.targetRegionId) !== getActiveMapRegionId()) {
-    const switched = await switchOnlineIsland(order.targetRegionId);
-    if (!switched) return rejectGameAction(`Could not open ${getRegionLabel(order.targetRegionId)}.`);
-  }
-  requestAnimationFrame(() => {
-    centerOnCity(order.targetId);
-    selectedTargetId = order.targetId;
-    renderCities(true);
-    showToast(`Viewing War Room order ${Number(order.index || 0) + 1}: ${order.targetName}`);
-  });
-}
-
-function createWarRoomTarget(order = {}) {
-  const known = getArmyTargetById(order.targetId);
-  if (known) return known;
-  const base = order.targetType === "camp"
-    ? WORLD_CAMPS.find(camp => camp.id === order.targetId)
-    : getPlayableBaseCityById(order.targetId);
-  const ownerUid = String(order.targetOwnerUid || "");
-  return {
-    ...(base || {}),
-    id: order.targetId,
-    name: order.targetName || base?.name || order.targetId,
-    regionId: normalizeRegionId(order.targetRegionId),
-    startPool: normalizeRegionId(order.targetRegionId),
-    x: Number(order.targetX ?? base?.x) || 0,
-    y: Number(order.targetY ?? base?.y) || 0,
-    ownerUid,
-    ownerKind: ownerUid ? "player" : "neutral",
-    owner: ownerUid === getCurrentOnlineUid() ? "player" : ownerUid ? "enemy" : "neutral",
-    ownerName: order.targetOwnerName || "",
-    ownerFlag: order.targetOwnerFlag || null,
-    targetType: order.targetType,
-  };
-}
-
-function confirmWarRoomScoutLaunch(order, assignment, source, target) {
-  const nowMs = Date.now();
-  const recommendedAtMs = normalizeTimestampMs(assignment?.recommendedLaunchAtMs);
-  const latestAtMs = normalizeTimestampMs(assignment?.latestLaunchAtMs);
-  const early = recommendedAtMs > 0 && nowMs < recommendedAtMs;
-  const late = latestAtMs > 0 && nowMs > latestAtMs;
-  const timingLabel = early ? "Early launch" : late ? "Late launch" : "Inside launch window";
-  const timingCopy = early
-    ? `The recommended launch window begins ${formatWarRoomDateTime(recommendedAtMs)}.`
-    : late
-      ? `The recommended launch window ended ${formatWarRoomDateTime(latestAtMs)}.`
-      : `The recommended launch window ends ${formatWarRoomDateTime(latestAtMs)}.`;
-  modal.className = "modal war-room-launch-confirm-modal";
-  modalTitle.textContent = "Confirm Scout March";
-  modalBody.innerHTML = `
-    <section class="war-room-launch-confirmation">
-      <div class="war-room-launch-route">
-        <span><small>From</small><strong>${escapeHtml(source.name || source.id)}</strong></span>
-        <b aria-hidden="true">&#8594;</b>
-        <span><small>To</small><strong>${escapeHtml(target.name || target.id)}</strong></span>
-      </div>
-      <div class="war-room-launch-warning ${early ? "early" : late ? "late" : "on-time"}">
-        <strong>${escapeHtml(timingLabel)}</strong>
-        <small>${escapeHtml(timingCopy)} You may still launch after this warning.</small>
-      </div>
-      <p>One troop will leave as a scout. Crownlands will run every normal route, protection, diplomacy, and target check when you confirm.</p>
-      <footer>
-        <button type="button" data-war-room-scout-confirm="cancel">Cancel</button>
-        <button class="profile-primary-btn" type="button" data-war-room-scout-confirm="launch">Launch Scout</button>
-      </footer>
-    </section>`;
-  if (!modal.open) modal.showModal();
-  return new Promise(resolve => {
-    let settled = false;
-    const finish = accepted => {
-      if (settled) return;
-      settled = true;
-      resolve(accepted);
-    };
-    modalBody.querySelector("[data-war-room-scout-confirm='cancel']")?.addEventListener("click", () => {
-      finish(false);
-      if (modal.open) modal.close();
-    });
-    modalBody.querySelector("[data-war-room-scout-confirm='launch']")?.addEventListener("click", () => {
-      finish(true);
-      if (modal.open) modal.close();
-    });
-    modal.addEventListener("close", () => finish(false), { once: true });
-  });
-}
-
-async function beginWarRoomAssignmentLaunch(order, assignment) {
-  if (!order || !assignment || assignment.status !== "accepted") return;
-  if (normalizeRegionId(assignment.sourceRegionId) !== getActiveMapRegionId()) {
-    if (profileScreen?.classList.contains("open")) closeProfileScreen();
-    const switched = await switchOnlineIsland(assignment.sourceRegionId);
-    if (!switched) return rejectGameAction(`Could not open ${getRegionLabel(assignment.sourceRegionId)}.`);
-  } else if (profileScreen?.classList.contains("open")) closeProfileScreen();
-  const source = cityById(assignment.sourceId);
-  if (!source || source.owner !== "player") return rejectGameAction("The assigned source city is no longer available.");
-  const target = createWarRoomTarget(order);
-  activeWarRoomLaunchContext = {
-    clanId: state.clanId,
-    operationId: selectedClanOperationId,
-    orderId: order.id,
-    assignmentId: assignment.id,
-    troops: Math.max(1, Math.floor(Number(assignment.troops) || 1)),
-    recommendedLaunchAtMs: normalizeTimestampMs(assignment.recommendedLaunchAtMs),
-    latestLaunchAtMs: normalizeTimestampMs(assignment.latestLaunchAtMs),
-  };
-  activeRallyOrderContext = { mode: "war_room", target };
-  selectedSourceId = source.id;
-  selectedTargetId = target.id;
-  sendMode = true;
-  selectedTroopAmount = activeWarRoomLaunchContext.troops;
-  if (order.action === "scout") {
-    const route = await findRouteAsync(source, target);
-    if (!route?.points?.length) {
-      cancelSendMode();
-      return rejectGameAction("No route is available for this scout assignment.");
-    }
-    const confirmed = await confirmWarRoomScoutLaunch(order, assignment, source, target);
-    if (!confirmed) {
-      cancelSendMode();
-      clearSelection(false);
-      renderAll();
-      return;
-    }
-    launchScoutMission(source, target, route, { operationContext: activeWarRoomLaunchContext });
-    activeWarRoomLaunchContext = null;
-    activeRallyOrderContext = null;
-    clearSelection(false);
-    renderAll();
-    return;
-  }
-  activeTroopOrderKind = order.action === "reinforce" ? "reinforce" : "attack";
-  renderSelectionChangeNow();
-  void showTroopSliderModalAsync(source, target, { orderKind: activeTroopOrderKind });
-}
-
-async function setSelectedClanOperationStatus(status) {
-  const operation = getSelectedClanOperation();
-  if (!operation) return;
-  if (["completed", "cancelled"].includes(status) && !window.confirm(`${status === "cancelled" ? "Cancel" : "Complete"} ${operation.title}? Launched armies will not be recalled.`)) return;
-  try {
-    const result = await getOnlineApi()?.setClanOperationStatus?.({ clanId: state.clanId, operationId: operation.id, status });
-    if (result?.operation) onlineClanOperations = [result.operation, ...onlineClanOperations.filter(item => item.id !== operation.id)];
-    showToast(`Operation ${status}.`);
-    renderClanView();
-    renderWarRoomPins();
-  } catch (error) {
-    rejectGameAction(error?.message || "Could not change the operation status.");
-  }
-}
-
-function showWarRoomSharedReport(report) {
-  if (!report) return rejectGameAction("That shared report is no longer available.");
-  const reportType = getBattleReportTypeLabel(report.type);
-  const sharedAtMs = normalizeTimestampMs(report.sharedAtMs);
-  const battleAtMs = normalizeTimestampMs(report.reportCreatedAtMs);
-  modal.className = "modal war-room-shared-report-modal";
-  modalTitle.textContent = "Shared War Room Report";
-  modalBody.innerHTML = `
-    <section class="war-room-shared-report">
-      <header>
-        <span id="warRoomSharedReportFlag" class="kingdom-flag kingdom-flag-small" role="img" aria-label="${escapeHtml(report.ownerName || "Clan member")} flag"><span class="flag-symbol"></span></span>
-        <div><small>${escapeHtml(reportType)}</small><strong>${escapeHtml(report.cityName || "Battle report")}</strong><span>Shared by ${escapeHtml(report.ownerName || "Clan member")}</span></div>
-      </header>
-      ${report.summary ? `<p>${escapeHtml(report.summary)}</p>` : ""}
-      <dl>
-        <div><dt>Troops sent</dt><dd>${formatNumber(report.sentTroops || report.troopCount || 0)}</dd></div>
-        <div><dt>Survivors</dt><dd>${formatNumber(report.survivors || 0)}</dd></div>
-        <div><dt>Attacker losses</dt><dd>${formatNumber(report.attackerLosses || 0)}</dd></div>
-        <div><dt>Defender losses</dt><dd>${formatNumber(report.defenderLosses || 0)}</dd></div>
-      </dl>
-      <small>${battleAtMs ? `Battle: ${escapeHtml(formatWarRoomDateTime(battleAtMs))}` : "Battle time unavailable"}${sharedAtMs ? ` · Shared: ${escapeHtml(formatWarRoomDateTime(sharedAtMs))}` : ""}</small>
-      <footer><button class="profile-primary-btn" type="button" data-war-room-shared-report-close>Close</button></footer>
-    </section>`;
-  applyFlagToElement(modalBody.querySelector("#warRoomSharedReportFlag"), report.ownerFlag);
-  modalBody.querySelector("[data-war-room-shared-report-close]")?.addEventListener("click", () => modal.close());
-  if (!modal.open) modal.showModal();
-}
-
-function bindClanWarRoomControls(root = document) {
-  root?.querySelectorAll?.("[data-war-room-action]").forEach(button => button.addEventListener("click", () => {
-    const action = button.dataset.warRoomAction;
-    const order = clanOperationOrders.find(item => item.id === button.dataset.orderId) || null;
-    const assignment = clanOperationAssignments.find(item => item.id === button.dataset.assignmentId) || null;
-    if (action === "new-operation") showClanOperationEditor();
-    else if (action === "open-operation") selectClanOperation(button.dataset.operationId);
-    else if (action === "back-operations") selectClanOperation("");
-    else if (action === "edit-operation") showClanOperationEditor(getSelectedClanOperation());
-    else if (action === "activate-operation") void setSelectedClanOperationStatus("active");
-    else if (action === "complete-operation") void setSelectedClanOperationStatus("completed");
-    else if (action === "cancel-operation") void setSelectedClanOperationStatus("cancelled");
-    else if (action === "volunteer") showWarRoomAssignmentModal(order, null, "volunteer");
-    else if (action === "accept-assignment") showWarRoomAssignmentModal(order, assignment, "accept");
-    else if (action === "edit-assignment") showWarRoomAssignmentModal(order, assignment, "update");
-    else if (action === "reconfirm-assignment") showWarRoomAssignmentModal(order, assignment, "reconfirm");
-    else if (action === "decline-assignment") void runWarRoomAssignmentAction("decline", order, assignment);
-    else if (action === "withdraw-assignment") void runWarRoomAssignmentAction("withdraw", order, assignment);
-    else if (action === "request-member") showWarRoomMemberRequestModal(order);
-    else if (action === "link-rally") showWarRoomRallyLinkModal(order);
-    else if (action === "view-target") void focusWarRoomOrderTarget(order);
-    else if (action === "launch-assignment") void beginWarRoomAssignmentLaunch(order, assignment);
-    else if (action === "open-shared-report") showWarRoomSharedReport(clanOperationSharedReports.find(report => report.id === button.dataset.sharedReportId));
-  }));
-}
-
 function renderClanView() {
   if (!clanContent || activeProfileTab !== "clan") return;
   syncClanNavigationState();
@@ -19994,14 +19234,12 @@ function renderClanView() {
     <div class="clan-columns clan-social-layout">
       ${renderClanMembersPanel(canLead, canManageApplications)}
       <div class="clan-social-panels">
-        ${renderClanWarRoomPanel(canManageApplications)}
         ${renderClanRallyPanel()}
         ${renderClanRewardsPanel()}
       </div>
     </div>`;
   applyClanRosterFlags();
   bindClanRallyControls(clanContent);
-  bindClanWarRoomControls(clanContent);
   updateClanGiftCountdown();
   updateClanNameChangeCountdown();
 }
@@ -20932,7 +20170,6 @@ function renderCities(force = false) {
   const signature = getCityRenderSignature(visibleCities, visibleCamps);
   if (!force && signature === cityRenderSignature) {
     updateVisibleCityDynamicText();
-    renderWarRoomPins();
     return;
   }
   cityRenderSignature = signature;
@@ -21110,7 +20347,6 @@ function renderCities(force = false) {
   existingCampNodes.forEach(node => node.remove());
   existingCityNodes.forEach(node => node.remove());
   cityLayer.appendChild(cityFragment);
-  renderWarRoomPins();
 
   updateVisibleCityDynamicText();
   layoutCityLabels();
@@ -21121,49 +20357,6 @@ function renderCities(force = false) {
   else if (selectedForeign && selectedForeign.owner !== "player" && !sendMode) renderSelectedForeignWheel(selectedForeign);
   else if (source?.owner === "player" && isStronghold(source) && !sendMode) renderSelectedStrongholdWheel(source);
   else if (source?.owner === "player" && !sendMode) renderSelectedCityWheel(source);
-}
-
-function getActiveWarRoomMapTargets() {
-  if (!state?.clanId || !isClanWarRoomSupported()) return [];
-  const currentRegionId = getActiveMapRegionId();
-  return onlineClanOperations
-    .filter(operation => operation.status === "active")
-    .flatMap((operation, operationIndex) => (Array.isArray(operation.mapTargets) ? operation.mapTargets : [])
-      .filter(target => normalizeRegionId(target.targetRegionId) === currentRegionId)
-      .map(target => ({ operation, operationIndex, target })));
-}
-
-function renderWarRoomPins() {
-  if (!cityLayer) return;
-  cityLayer.querySelectorAll(".war-room-map-pin").forEach(pin => pin.remove());
-  const targets = getActiveWarRoomMapTargets();
-  if (!targets.length) return;
-  const fragment = document.createDocumentFragment();
-  targets.forEach(({ operation, operationIndex, target }) => {
-    const x = Number(target.x);
-    const y = Number(target.y);
-    if (!Number.isFinite(x) || !Number.isFinite(y)) return;
-    const point = worldToMapPoint({ x, y });
-    const pin = document.createElement("button");
-    pin.type = "button";
-    pin.className = `war-room-map-pin action-${target.action || "attack"}`;
-    pin.dataset.warRoomPin = operation.id;
-    pin.dataset.warRoomOrderId = target.orderId;
-    pin.style.left = `${point.x}px`;
-    pin.style.top = `${point.y}px`;
-    pin.innerHTML = `<span>${formatNumber(operationIndex + 1)}.${formatNumber(Number(target.index || 0) + 1)}</span>`;
-    pin.title = `${operation.title}: ${getWarRoomActionLabel(target.action)} ${target.targetName}`;
-    pin.setAttribute("aria-label", `${operation.title}, order ${Number(target.index || 0) + 1}: ${getWarRoomActionLabel(target.action)} ${target.targetName}`);
-    fragment.appendChild(pin);
-  });
-  cityLayer.appendChild(fragment);
-}
-
-function openWarRoomMapPin(operationId = "", orderId = "") {
-  showProfileClan();
-  activeClanMobileSection = "warroom";
-  selectClanOperation(operationId);
-  selectedClanOperationOrderId = String(orderId || "");
 }
 
 function renderScoutNearbyRadius(source) {
@@ -23481,13 +22674,10 @@ function showTroopSliderModalWithRoute(source, target, route, options = {}) {
     : isTransfer ? "" : getPeaceShieldAttackWarning(target);
   const reinforcementUsage = isReinforcement ? getActiveClanReinforcementTargetKeys().size : 0;
   const legalSendLimit = getTroopSliderSendLimit(source, target);
-  const assignedTroops = activeWarRoomLaunchContext
-    ? clamp(Math.floor(Number(activeWarRoomLaunchContext.troops) || 1), 1, legalSendLimit)
-    : 0;
-  const sliderSendLimit = assignedTroops || legalSendLimit;
-  const sliderMinimum = assignedTroops || 1;
+  const sliderSendLimit = legalSendLimit;
+  const sliderMinimum = 1;
   const demoLimited = sliderSendLimit < source.troops;
-  selectedTroopAmount = assignedTroops || clamp(selectedTroopAmount, 1, sliderSendLimit);
+  selectedTroopAmount = clamp(selectedTroopAmount, sliderMinimum, sliderSendLimit);
   troopSliderActive = true;
   modal.classList.add("troop-slider-modal");
   modalTitle.textContent = `${commandLabel} troops`;
@@ -23575,13 +22765,10 @@ function updateTroopSliderModal(source, target, route) {
   if (!slider || !source || !target) return;
   const routeSummary = getArmyRouteSummary(route, source, target);
   const legalSendLimit = getTroopSliderSendLimit(source, target);
-  const assignedTroops = activeWarRoomLaunchContext
-    ? clamp(Math.floor(Number(activeWarRoomLaunchContext.troops) || 1), 1, legalSendLimit)
-    : 0;
-  const sliderSendLimit = assignedTroops || legalSendLimit;
-  const sliderMinimum = assignedTroops || 1;
+  const sliderSendLimit = legalSendLimit;
+  const sliderMinimum = 1;
   const demoLimited = sliderSendLimit < source.troops;
-  selectedTroopAmount = assignedTroops || clamp(selectedTroopAmount, sliderMinimum, sliderSendLimit);
+  selectedTroopAmount = clamp(selectedTroopAmount, sliderMinimum, sliderSendLimit);
   slider.min = String(sliderMinimum);
   slider.max = String(sliderSendLimit);
   slider.value = selectedTroopAmount;
@@ -23626,26 +22813,6 @@ function updateTroopSliderModal(source, target, route) {
       )
     : baseTravel;
   const previewEl = modalBody.querySelector("#troopSliderPreview");
-  const warRoomTimingNotice = activeWarRoomLaunchContext
-    ? (() => {
-        const nowMs = Date.now();
-        const early = nowMs < activeWarRoomLaunchContext.recommendedLaunchAtMs;
-        const late = nowMs > activeWarRoomLaunchContext.latestLaunchAtMs;
-        const timing = early
-          ? `Early: recommended launch begins ${formatWarRoomDateTime(activeWarRoomLaunchContext.recommendedLaunchAtMs)}.`
-          : late
-            ? `Late: the recommended launch window ended ${formatWarRoomDateTime(activeWarRoomLaunchContext.latestLaunchAtMs)}.`
-            : `On time: recommended launch window ends ${formatWarRoomDateTime(activeWarRoomLaunchContext.latestLaunchAtMs)}.`;
-        return `<div class="war-room-launch-warning ${early ? "early" : late ? "late" : "on-time"}"><strong>War Room assignment · ${formatNumber(assignedTroops)} troops</strong><small>${escapeHtml(timing)} You may still launch after this warning.</small></div>`;
-      })()
-    : "";
-  let warRoomTimingHolder = modalBody.querySelector(".war-room-launch-warning-holder");
-  if (warRoomTimingNotice && !warRoomTimingHolder) {
-    warRoomTimingHolder = document.createElement("div");
-    warRoomTimingHolder.className = "war-room-launch-warning-holder";
-    previewEl.before(warRoomTimingHolder);
-  }
-  if (warRoomTimingHolder) warRoomTimingHolder.innerHTML = warRoomTimingNotice;
   if (isRallyTroopOrderKind(orderKind)) {
     const isJoin = orderKind === "rally_join";
     previewEl.className = "troop-slider-preview transfer reinforce rally";
@@ -23842,9 +23009,6 @@ async function confirmTroopSliderOrder() {
     return;
   }
 
-  if (activeWarRoomLaunchContext) {
-    selectedTroopAmount = Math.max(1, Math.floor(Number(activeWarRoomLaunchContext.troops) || 1));
-  }
   selectedTroopAmount = clamp(selectedTroopAmount, 1, getTroopSliderSendLimit(source, target));
   const cachedRoute = activeTroopSliderRoute?.sourceId === source.id && activeTroopSliderRoute?.targetId === target.id
     ? activeTroopSliderRoute.route
@@ -23873,12 +23037,6 @@ async function confirmTroopSliderOrder() {
     attackProtection: activeAttackProtectionPreview,
     kind: activeTroopOrderKind,
     useSwiftMarchOrder: activeSwiftMarchOrderSelected && canUseSwiftMarchOrderOnLaunch(source, target),
-    operationContext: activeWarRoomLaunchContext ? {
-      clanId: activeWarRoomLaunchContext.clanId,
-      operationId: activeWarRoomLaunchContext.operationId,
-      orderId: activeWarRoomLaunchContext.orderId,
-      assignmentId: activeWarRoomLaunchContext.assignmentId,
-    } : null,
   });
   if (!launched) return;
   troopSliderActive = false;
@@ -23886,7 +23044,6 @@ async function confirmTroopSliderOrder() {
   activeAttackProtectionPreview = null;
   activeTroopOrderKind = "";
   activeRallyOrderContext = null;
-  activeWarRoomLaunchContext = null;
   activeSwiftMarchOrderSelected = false;
   modal.classList.remove("troop-slider-modal");
   if (modal.open) modal.close();
@@ -23904,7 +23061,6 @@ function cancelSendMode() {
   activeAttackProtectionPreview = null;
   activeTroopOrderKind = "";
   activeRallyOrderContext = null;
-  activeWarRoomLaunchContext = null;
   activeSwiftMarchOrderSelected = false;
   renderAll();
 }
@@ -28476,7 +27632,6 @@ async function showBattleReportDetail(reportId) {
       </div>`;
   modalBody.querySelector("#battleReportBackBtn")?.addEventListener("click", showLogModal);
   bindBattleReportJumpButtons();
-  bindBattleReportWarRoomShareButton(report);
   if (!modal.open) modal.showModal();
   if (report.type === "scout" || !report.battleId) return;
 
@@ -28498,81 +27653,6 @@ async function showBattleReportDetail(reportId) {
   }
   modalBody.querySelector("#battleReportBackBtn")?.addEventListener("click", showLogModal);
   bindBattleReportJumpButtons();
-  bindBattleReportWarRoomShareButton(report);
-}
-
-function bindBattleReportWarRoomShareButton(report) {
-  const activeOperations = onlineClanOperations.filter(operation => operation.status === "active");
-  if (!report?.id || !state?.clanId || !isClanWarRoomSupported() || !activeOperations.length) return;
-  const detail = modalBody.querySelector(".battle-report-detail");
-  if (!detail || detail.querySelector("[data-share-report-war-room]")) return;
-  const button = document.createElement("button");
-  button.type = "button";
-  button.className = "battle-report-war-room-share";
-  button.dataset.shareReportWarRoom = report.id;
-  button.textContent = "Share to Clan War Room";
-  button.addEventListener("click", () => showWarRoomReportShareModal(report, activeOperations));
-  detail.appendChild(button);
-}
-
-async function showWarRoomReportShareModal(report, operations = []) {
-  const activeOperations = operations.filter(operation => operation.status === "active");
-  if (!activeOperations.length) return rejectGameAction("No active clan operation can receive this report.");
-  modal.className = "modal war-room-report-share-modal";
-  modalTitle.textContent = "Share Report to War Room";
-  modalBody.innerHTML = `
-    <form id="warRoomReportShareForm" class="war-room-report-share-form">
-      <p>A sanitized clan copy will be shared. Only this report's owner can share it.</p>
-      <label>Operation<select name="operationId">${activeOperations.map(operation => `<option value="${escapeHtml(operation.id)}">${escapeHtml(operation.title || "Clan operation")}</option>`).join("")}</select></label>
-      <label>Order<select name="orderId" disabled><option>Loading orders…</option></select></label>
-      <footer><button type="button" data-war-room-report-cancel>Cancel</button><button class="profile-primary-btn" type="submit" disabled>Share Report</button></footer>
-    </form>`;
-  const form = modalBody.querySelector("#warRoomReportShareForm");
-  const operationSelect = form.querySelector('[name="operationId"]');
-  const orderSelect = form.querySelector('[name="orderId"]');
-  const submit = form.querySelector('[type="submit"]');
-  const loadOrders = async () => {
-    orderSelect.disabled = true;
-    submit.disabled = true;
-    orderSelect.innerHTML = `<option>Loading orders…</option>`;
-    try {
-      const details = await getOnlineApi()?.loadClanOperationDetails?.(state.clanId, operationSelect.value);
-      const orders = Array.isArray(details?.orders) ? details.orders : [];
-      orderSelect.innerHTML = orders.length
-        ? orders.map(order => `<option value="${escapeHtml(order.id)}">${formatNumber(Number(order.index || 0) + 1)}. ${escapeHtml(getWarRoomActionLabel(order.action))} ${escapeHtml(order.targetName || order.targetId)}</option>`).join("")
-        : `<option value="">No orders available</option>`;
-      orderSelect.disabled = !orders.length;
-      submit.disabled = !orders.length;
-    } catch (error) {
-      orderSelect.innerHTML = `<option value="">Could not load orders</option>`;
-      rejectGameAction(error?.message || "Could not load operation orders.");
-    }
-  };
-  operationSelect.addEventListener("change", loadOrders);
-  form.querySelector("[data-war-room-report-cancel]")?.addEventListener("click", () => modal.close());
-  form.addEventListener("submit", async event => {
-    event.preventDefault();
-    submit.disabled = true;
-    submit.textContent = "Sharing…";
-    try {
-      const result = await getOnlineApi()?.shareClanOperationReport?.({
-        clanId: state.clanId,
-        operationId: operationSelect.value,
-        orderId: orderSelect.value,
-        reportId: report.id,
-      });
-      if (result?.report && operationSelect.value === selectedClanOperationId) {
-        clanOperationSharedReports = [result.report, ...clanOperationSharedReports.filter(item => item.id !== result.report.id)];
-      }
-      showToast("Report shared to the Clan War Room.");
-      modal.close();
-    } catch (error) {
-      rejectGameAction(error?.message || "Could not share that report.");
-      submit.disabled = false;
-      submit.textContent = "Share Report";
-    }
-  });
-  await loadOrders();
 }
 
 function getBattleReportBadge(report) {
@@ -29279,11 +28359,11 @@ function updatePinch() {
 }
 
 function isMapNodeInteractionTarget(target) {
-  return Boolean(target?.closest(".city-node, .city-action-wheel, .camp-node, .gold-camp-action-wheel, .teleport-node, .harvest-bonus-node, .army-token, .war-room-map-pin"));
+  return Boolean(target?.closest(".city-node, .city-action-wheel, .camp-node, .gold-camp-action-wheel, .teleport-node, .harvest-bonus-node, .army-token"));
 }
 
 function isMapCommandInteractionTarget(target) {
-  return Boolean(target?.closest(".city-wheel-action, .gold-camp-wheel-action, .teleport-node, .harvest-bonus-node, .army-token-nav button, .war-room-map-pin"));
+  return Boolean(target?.closest(".city-wheel-action, .gold-camp-wheel-action, .teleport-node, .harvest-bonus-node, .army-token-nav button"));
 }
 
 function findNearestCityTapNode(candidateNodes, distanceToNode, excludedCityId = "") {
@@ -29819,12 +28899,6 @@ if (portalLayer) {
 cityLayer.addEventListener("click", event => {
   if (isMapInteractionBlocked()) return;
   if (suppressMapClick) return;
-  const warRoomPin = event.target.closest(".war-room-map-pin");
-  if (warRoomPin && cityLayer.contains(warRoomPin)) {
-    event.stopPropagation();
-    openWarRoomMapPin(warRoomPin.dataset.warRoomPin, warRoomPin.dataset.warRoomOrderId);
-    return;
-  }
   if (event.target.closest(".city-wheel-action, .gold-camp-wheel-action")) return;
   const campButton = event.target.closest(".camp-node[data-camp-id]");
   if (campButton && cityLayer.contains(campButton)) {

@@ -243,14 +243,6 @@ service cloud.firestore {
         && get(/databases/$(database)/documents/clans/$(clanId)/members/$(request.auth.uid)).data.role in ['leader', 'officer'];
     }
 
-    function clanOperationReadable(clanId, operationId) {
-      return clanManager(clanId)
-        || (
-          clanMember(clanId)
-          && get(/databases/$(database)/documents/clans/$(clanId)/operations/$(operationId)).data.visibility == 'clan'
-        );
-    }
-
     match /clans/{clanId} {
       allow read: if signedIn() && isCurrentGeneration(resource.data);
       allow create, update, delete: if false;
@@ -314,29 +306,10 @@ service cloud.firestore {
       }
 
       match /operations/{operationId} {
-        allow read: if isCurrentGeneration(resource.data)
-          && (
-            clanManager(clanId)
-            || (clanMember(clanId) && resource.data.visibility == 'clan')
-          );
-        allow create, update, delete: if false;
+        allow read, create, update, delete: if false;
 
-        match /orders/{orderId} {
-          allow read: if isCurrentGeneration(resource.data)
-            && clanOperationReadable(clanId, operationId);
-          allow create, update, delete: if false;
-        }
-
-        match /assignments/{assignmentId} {
-          allow read: if isCurrentGeneration(resource.data)
-            && clanOperationReadable(clanId, operationId);
-          allow create, update, delete: if false;
-        }
-
-        match /sharedReports/{reportId} {
-          allow read: if isCurrentGeneration(resource.data)
-            && clanOperationReadable(clanId, operationId);
-          allow create, update, delete: if false;
+        match /{legacyDocument=**} {
+          allow read, create, update, delete: if false;
         }
       }
 

@@ -150,30 +150,6 @@ const CLAN_REINFORCEMENT_ACTIVE_LIMIT = 2;
 const RALLY_MODEL_VERSION = 1;
 const RALLY_MAX_PARTICIPANTS = 3;
 const CLAN_FORMING_RALLY_LIMIT = 3;
-const CLAN_WAR_ROOM_VERSION = 1;
-const CLAN_WAR_ROOM_MAX_ACTIVE_OPERATIONS = 5;
-const CLAN_WAR_ROOM_MAX_ORDERS = 12;
-const CLAN_WAR_ROOM_MAX_ASSIGNMENTS = 60;
-const CLAN_WAR_ROOM_MAX_ACCEPTED_PER_MEMBER = 6;
-const CLAN_WAR_ROOM_MAX_SHARED_REPORTS = 50;
-const CLAN_WAR_ROOM_MIN_OPERATION_MS = 15 * 60 * 1000;
-const CLAN_WAR_ROOM_MAX_OPERATION_MS = 72 * 60 * 60 * 1000;
-const CLAN_WAR_ROOM_MIN_WINDOW_MS = 5 * 60 * 1000;
-const CLAN_WAR_ROOM_MAX_WINDOW_MS = 60 * 60 * 1000;
-const CLAN_WAR_ROOM_REMINDER_LEAD_MS = 5 * 60 * 1000;
-const CLAN_WAR_ROOM_EXPIRY_DELAY_MS = 6 * 60 * 60 * 1000;
-const CLAN_WAR_ROOM_HISTORY_RETENTION_MS = 7 * 24 * 60 * 60 * 1000;
-const CLAN_WAR_ROOM_ACTIONS = Object.freeze(["attack", "scout", "reinforce"]);
-const CLAN_WAR_ROOM_ASSIGNMENT_STATES = Object.freeze([
-  "requested",
-  "accepted",
-  "needs_reconfirm",
-  "launched",
-  "resolved",
-  "declined",
-  "missed",
-  "withdrawn",
-]);
 const RALLY_STATUS_FORMING = "forming";
 const RALLY_STATUS_LAUNCHED = "launched";
 const RALLY_STATUS_RECALLING = "recalling";
@@ -4151,12 +4127,6 @@ function normalizeArmyPayload(data = {}, uid = "") {
     attackProtection: raw.attackProtection && typeof raw.attackProtection === "object" ? raw.attackProtection : null,
     demoAttack: raw.demoAttack && typeof raw.demoAttack === "object" ? raw.demoAttack : null,
     useSwiftMarchOrder: raw.useSwiftMarchOrder === true || data.useSwiftMarchOrder === true,
-    operationContext: normalizeClanWarRoomContext(raw.operationContext || data.operationContext || {
-      clanId: raw.clanId || data.clanId,
-      operationId: raw.operationId || data.operationId,
-      orderId: raw.orderId || data.orderId,
-      assignmentId: raw.assignmentId || data.assignmentId,
-    }),
   };
 }
 
@@ -4383,342 +4353,6 @@ function clanRallyRef(clanId = "", rallyId = "") {
 
 function clanRallyStateRef(clanId = "") {
   return db.doc(`clans/${safeString(clanId, 128)}/rallyState/${RESET_GENERATION}`);
-}
-
-function normalizeClanWarRoomId(value = "", fallback = "") {
-  return safeString(value || fallback, 96).replace(/[^a-zA-Z0-9_-]/g, "_");
-}
-
-function normalizeClanWarRoomContext(value = {}) {
-  const source = value && typeof value === "object" ? value : {};
-  const clanId = safeString(source.clanId, 128);
-  const operationId = normalizeClanWarRoomId(source.operationId);
-  const orderId = normalizeClanWarRoomId(source.orderId);
-  const assignmentId = normalizeClanWarRoomId(source.assignmentId);
-  return clanId && operationId && orderId && assignmentId
-    ? { clanId, operationId, orderId, assignmentId, version: CLAN_WAR_ROOM_VERSION }
-    : null;
-}
-
-function clanOperationRef(clanId = "", operationId = "") {
-  return db.doc(`clans/${safeString(clanId, 128)}/operations/${normalizeClanWarRoomId(operationId)}`);
-}
-
-function clanOperationOrderRef(clanId = "", operationId = "", orderId = "") {
-  return clanOperationRef(clanId, operationId).collection("orders").doc(normalizeClanWarRoomId(orderId));
-}
-
-function clanOperationAssignmentRef(clanId = "", operationId = "", assignmentId = "") {
-  return clanOperationRef(clanId, operationId).collection("assignments").doc(normalizeClanWarRoomId(assignmentId));
-}
-
-function clanOperationSharedReportRef(clanId = "", operationId = "", reportId = "") {
-  return clanOperationRef(clanId, operationId).collection("sharedReports").doc(normalizeClanWarRoomId(reportId));
-}
-
-function clanOperationStateRef(clanId = "") {
-  return db.doc(`clans/${safeString(clanId, 128)}/operationState/${RESET_GENERATION}`);
-}
-
-function clanOperationReminderRef(clanId = "", operationId = "", assignmentId = "") {
-  const digest = crypto.createHash("sha256")
-    .update(`${RESET_GENERATION}|${clanId}|${operationId}|${assignmentId}`)
-    .digest("hex")
-    .slice(0, 48);
-  return db.doc(`clanOperationReminders/${digest}`);
-}
-
-function normalizeClanOperationState(value = {}) {
-  if (
-    safeString(value.worldId, 120) !== ONLINE_WORLD_ID
-    || safeString(value.resetGeneration, 120) !== RESET_GENERATION
-  ) return { activeOperationIds: [] };
-  return {
-    activeOperationIds: [...new Set((Array.isArray(value.activeOperationIds) ? value.activeOperationIds : [])
-      .map(normalizeClanWarRoomId)
-      .filter(Boolean))].slice(0, CLAN_WAR_ROOM_MAX_ACTIVE_OPERATIONS),
-  };
-}
-
-function getServerWorldTargetSeed(regionId = "", targetId = "", targetType = "city") {
-  if (targetType === "camp") return getAuthoritativeRewardCampSeed(regionId, targetId);
-  const map = getServerWorldMap(regionId);
-  const rows = [
-    ...(Array.isArray(map?.cities) ? map.cities : []),
-    ...(Array.isArray(map?.objectives) ? map.objectives : []),
-  ];
-  const seed = rows.find(row => safeString(row?.id, 96) === safeString(targetId, 96));
-  return seed ? { ...seed, regionId: normalizeRegionId(regionId) } : null;
-}
-
-function normalizeClanWarRoomOrderInput(raw = {}, index = 0, nowMs = Date.now()) {
-  const action = CLAN_WAR_ROOM_ACTIONS.includes(raw.action) ? raw.action : "attack";
-  const targetType = raw.targetType === "camp" ? "camp" : "city";
-  if (action === "reinforce" && targetType !== "city") {
-    throw new HttpsError("invalid-argument", `Order ${index + 1} reinforcements must target a city.`);
-  }
-  const targetRegionId = requireKnownWorldRegionId(raw.targetRegionId || raw.regionId);
-  const targetId = safeString(raw.targetId, 96).replace(/[^a-zA-Z0-9_-]/g, "_");
-  const allowedIds = targetType === "camp"
-    ? getServerWorldCampIds(targetRegionId)
-    : getServerWorldTargetIds(targetRegionId);
-  if (!targetId || !allowedIds.has(targetId)) {
-    throw new HttpsError("invalid-argument", `Order ${index + 1} has an invalid target.`);
-  }
-  const windowStartAtMs = Math.max(0, Math.floor(safeNumber(raw.windowStartAtMs || raw.arrivalWindowStartAtMs, 0)));
-  const windowEndAtMs = Math.max(0, Math.floor(safeNumber(raw.windowEndAtMs || raw.arrivalWindowEndAtMs, 0)));
-  const windowDurationMs = windowEndAtMs - windowStartAtMs;
-  if (
-    !windowStartAtMs
-    || windowDurationMs < CLAN_WAR_ROOM_MIN_WINDOW_MS
-    || windowDurationMs > CLAN_WAR_ROOM_MAX_WINDOW_MS
-  ) {
-    throw new HttpsError("invalid-argument", `Order ${index + 1} needs a 5-60 minute arrival window.`);
-  }
-  if (windowEndAtMs > nowMs + CLAN_WAR_ROOM_MAX_OPERATION_MS) {
-    throw new HttpsError("invalid-argument", "Operations cannot schedule arrivals more than 72 hours ahead.");
-  }
-  const orderId = normalizeClanWarRoomId(raw.id || raw.orderId, `order_${index + 1}`);
-  return {
-    id: orderId,
-    index,
-    action,
-    targetType,
-    targetId,
-    targetRegionId,
-    note: safeString(raw.note, 240).replace(/[\u0000-\u001f\u007f]/g, "").trim(),
-    requestedTroops: Math.max(0, Math.floor(safeNumber(raw.requestedTroops, 0))),
-    participantSlots: clampInt(raw.participantSlots, 1, 30),
-    windowStartAtMs,
-    windowEndAtMs,
-    linkedRallyId: normalizeRallyId(raw.linkedRallyId),
-  };
-}
-
-function normalizeClanWarRoomOrders(value = [], nowMs = Date.now()) {
-  if (!Array.isArray(value) || !value.length || value.length > CLAN_WAR_ROOM_MAX_ORDERS) {
-    throw new HttpsError("invalid-argument", `An operation needs 1-${CLAN_WAR_ROOM_MAX_ORDERS} orders.`);
-  }
-  const orders = value.map((order, index) => normalizeClanWarRoomOrderInput(order, index, nowMs));
-  if (new Set(orders.map(order => order.id)).size !== orders.length) {
-    throw new HttpsError("invalid-argument", "Operation order ids must be unique.");
-  }
-  if (orders.reduce((total, order) => total + order.participantSlots, 0) > CLAN_WAR_ROOM_MAX_ASSIGNMENTS) {
-    throw new HttpsError("invalid-argument", `An operation may offer at most ${CLAN_WAR_ROOM_MAX_ASSIGNMENTS} participant slots.`);
-  }
-  return orders;
-}
-
-function getClanWarRoomTimeline(orders = [], nowMs = Date.now()) {
-  const firstArrivalWindowStartMs = Math.min(...orders.map(order => order.windowStartAtMs));
-  const lastArrivalWindowEndMs = Math.max(...orders.map(order => order.windowEndAtMs));
-  return {
-    firstArrivalWindowStartMs,
-    lastArrivalWindowEndMs,
-    expiresAtMs: lastArrivalWindowEndMs + CLAN_WAR_ROOM_EXPIRY_DELAY_MS,
-    earliestAllowedAtMs: nowMs + CLAN_WAR_ROOM_MIN_OPERATION_MS,
-  };
-}
-
-function assertClanWarRoomTimeline(orders = [], nowMs = Date.now()) {
-  const timeline = getClanWarRoomTimeline(orders, nowMs);
-  if (timeline.lastArrivalWindowEndMs < timeline.earliestAllowedAtMs) {
-    throw new HttpsError("invalid-argument", "An operation must remain open for at least 15 minutes.");
-  }
-  if (timeline.lastArrivalWindowEndMs > nowMs + CLAN_WAR_ROOM_MAX_OPERATION_MS) {
-    throw new HttpsError("invalid-argument", "An operation may run for at most 72 hours.");
-  }
-  return timeline;
-}
-
-function clanWarRoomOrderMaterialKey(order = {}) {
-  return [
-    safeString(order.action, 16),
-    order.targetType === "camp" ? "camp" : "city",
-    normalizeRegionId(order.targetRegionId),
-    safeString(order.targetId, 96),
-    Math.floor(safeNumber(order.windowStartAtMs, 0)),
-    Math.floor(safeNumber(order.windowEndAtMs, 0)),
-  ].join("|");
-}
-
-function clanWarRoomTargetSnapshot(order = {}, value = {}) {
-  const target = order.targetType === "camp"
-    ? getRewardCampCombatTarget(value)
-    : value;
-  return {
-    targetId: order.targetId,
-    targetType: order.targetType,
-    targetRegionId: order.targetRegionId,
-    targetName: safeString(target?.name || order.targetId, 80),
-    targetX: safeNumber(target?.x, 0),
-    targetY: safeNumber(target?.y, 0),
-    targetOwnerUid: getOwnerUid(target || {}),
-    targetOwnerName: normalizePlayerName(target?.ownerName || target?.holderName, ""),
-    targetOwnerFlag: normalizeServerFlag(target?.ownerFlag || target?.holderFlag),
-    targetOwnerClanId: safeString(target?.ownerClanId || target?.holderClanId, 128),
-  };
-}
-
-function clanWarRoomMapTarget(order = {}) {
-  return {
-    orderId: order.id,
-    index: order.index,
-    action: order.action,
-    targetId: order.targetId,
-    targetType: order.targetType,
-    targetRegionId: order.targetRegionId,
-    targetName: order.targetName,
-    x: safeNumber(order.targetX, 0),
-    y: safeNumber(order.targetY, 0),
-    windowStartAtMs: order.windowStartAtMs,
-    windowEndAtMs: order.windowEndAtMs,
-  };
-}
-
-async function getClanWarRoomActor(transaction, uid = "", clanId = "") {
-  const profileRef = db.doc(`players/${uid}`);
-  const clanRef = db.doc(`clans/${clanId}`);
-  const memberRef = db.doc(`clans/${clanId}/members/${uid}`);
-  const [profileSnap, clanSnap, memberSnap] = await Promise.all([
-    transaction.get(profileRef),
-    transaction.get(clanRef),
-    transaction.get(memberRef),
-  ]);
-  const profile = profileSnap.exists ? profileSnap.data() || {} : {};
-  const clan = clanSnap.exists ? clanSnap.data() || {} : {};
-  const member = memberSnap.exists ? memberSnap.data() || {} : {};
-  if (
-    !profileSnap.exists
-    || !clanSnap.exists
-    || !memberSnap.exists
-    || safeString(profile.clanId, 128) !== clanId
-    || clan.status !== "active"
-  ) throw new HttpsError("permission-denied", "You are not a current member of that clan.");
-  assertCurrentClan(clan);
-  return { profileRef, profileSnap, profile, clanRef, clanSnap, clan, memberRef, member };
-}
-
-function assertClanWarRoomManager(actor = {}) {
-  assertClanRole(actor.member, ["leader", "officer"]);
-}
-
-function createClanWarRoomOperationDocument({
-  clanId,
-  operationId,
-  uid,
-  title,
-  note,
-  status,
-  orders,
-  timeline,
-  nowMs,
-  revision = 1,
-  assignmentCount = 0,
-  sharedReportCount = 0,
-}) {
-  return {
-    id: operationId,
-    clanId,
-    modelVersion: CLAN_WAR_ROOM_VERSION,
-    worldId: ONLINE_WORLD_ID,
-    resetGeneration: RESET_GENERATION,
-    status,
-    visibility: status === "draft" ? "managers" : "clan",
-    revision,
-    title: safeString(title, 64).replace(/[\u0000-\u001f\u007f]/g, "").trim() || "Clan operation",
-    note: safeString(note, 500).replace(/[\u0000-\u001f\u007f]/g, "").trim(),
-    creatorUid: uid,
-    orderCount: orders.length,
-    assignmentCount: Math.max(0, Math.floor(safeNumber(assignmentCount, 0))),
-    sharedReportCount: Math.max(0, Math.floor(safeNumber(sharedReportCount, 0))),
-    attentionUids: [],
-    mapTargets: orders.map(clanWarRoomMapTarget),
-    firstArrivalWindowStartMs: timeline.firstArrivalWindowStartMs,
-    lastArrivalWindowEndMs: timeline.lastArrivalWindowEndMs,
-    expiresAtMs: timeline.expiresAtMs,
-    archiveAtMs: 0,
-    createdAtMs: nowMs,
-    updatedAtMs: nowMs,
-    createdAt: FieldValue.serverTimestamp(),
-    updatedAt: FieldValue.serverTimestamp(),
-  };
-}
-
-function clanWarRoomOperationForClient(operation = {}) {
-  const copy = { ...operation };
-  delete copy.createdAt;
-  delete copy.updatedAt;
-  return copy;
-}
-
-function clanWarRoomAssignmentForClient(assignment = {}) {
-  const copy = { ...assignment };
-  delete copy.createdAt;
-  delete copy.updatedAt;
-  return copy;
-}
-
-function clanWarRoomOrderForClient(order = {}) {
-  const copy = { ...order };
-  delete copy.createdAt;
-  delete copy.updatedAt;
-  return copy;
-}
-
-function clanWarRoomSharedReportForClient(report = {}) {
-  const copy = { ...report };
-  delete copy.createdAt;
-  return copy;
-}
-
-function getClanWarRoomAttentionUids(assignments = []) {
-  return [...new Set(assignments
-    .filter(assignment => ["requested", "needs_reconfirm"].includes(assignment?.status))
-    .map(assignment => safeString(assignment?.uid, 128))
-    .filter(Boolean))]
-    .slice(0, CLAN_MEMBER_LIMIT);
-}
-
-function createClanWarRoomReminderPatch(assignment = {}, status = "pending", nowMs = Date.now()) {
-  return {
-    modelVersion: CLAN_WAR_ROOM_VERSION,
-    worldId: ONLINE_WORLD_ID,
-    resetGeneration: RESET_GENERATION,
-    clanId: assignment.clanId,
-    operationId: assignment.operationId,
-    orderId: assignment.orderId,
-    assignmentId: assignment.id,
-    uid: assignment.uid,
-    orderRevision: assignment.orderRevision,
-    dueAtMs: Math.max(nowMs, Math.floor(safeNumber(assignment.reminderAtMs, nowMs))),
-    status,
-    updatedAtMs: nowMs,
-    updatedAt: FieldValue.serverTimestamp(),
-    ...(status === "pending" ? { attempts: 0, createdAtMs: nowMs, createdAt: FieldValue.serverTimestamp() } : {}),
-  };
-}
-
-function writeClanWarRoomAssignmentResolution(transaction, army = {}, result = {}, nowMs = Date.now()) {
-  const context = normalizeClanWarRoomContext(army.operationContext);
-  if (!transaction || !context) return false;
-  const assignmentRef = clanOperationAssignmentRef(context.clanId, context.operationId, context.assignmentId);
-  transaction.set(assignmentRef, {
-    status: "resolved",
-    outcome: safeString(result.outcome || result.kind || "resolved", 48),
-    reportId: safeString(result.reportId, 160),
-    reportAvailable: Boolean(result.reportId || result.reportAvailable),
-    resolvedAtMs: nowMs,
-    updatedAtMs: nowMs,
-    updatedAt: FieldValue.serverTimestamp(),
-  }, { merge: true });
-  transaction.set(clanOperationReminderRef(context.clanId, context.operationId, context.assignmentId), {
-    status: "cancelled",
-    cancelledReason: "army_resolved",
-    updatedAtMs: nowMs,
-    updatedAt: FieldValue.serverTimestamp(),
-  }, { merge: true });
-  return true;
 }
 
 function rallyBattleReceiptRef(armyId = "", contributorUid = "") {
@@ -5494,7 +5128,6 @@ function createArmyPublicProjection(movement = {}) {
     armyTroopVisibilityVersion: ARMY_TROOP_VISIBILITY_VERSION,
   };
   delete projection.id;
-  delete projection.operationContext;
   if (isEstimatedAttackMovement(movement)) {
     const estimate = getIncomingTroopEstimate(movement.troops);
     projection.troopVisibility = "estimate";
@@ -9458,48 +9091,6 @@ async function sendIncomingArmyNotification(notification = {}) {
   return result.successCount > 0;
 }
 
-async function sendClanWarRoomNotification(notification = {}) {
-  const uid = safeString(notification.uid, 128);
-  if (!uid) return false;
-  const tokenSnap = await db.collection(`players/${uid}/notificationTokens`)
-    .where("enabled", "==", true)
-    .limit(100)
-    .get();
-  const tokenDocs = tokenSnap.docs
-    .map(doc => ({ id: doc.id, token: safeString(doc.data()?.token, 512) }))
-    .filter(entry => entry.token);
-  if (!tokenDocs.length) return false;
-  const data = {
-    type: "clan_war_room",
-    kind: safeString(notification.kind || "reminder", 24),
-    title: safeString(notification.title || "Clan War Room", 80),
-    body: safeString(notification.body, 180),
-    clanId: safeString(notification.clanId, 128),
-    operationId: normalizeClanWarRoomId(notification.operationId),
-    orderId: normalizeClanWarRoomId(notification.orderId),
-    assignmentId: normalizeClanWarRoomId(notification.assignmentId),
-    url: safeString(notification.url || "/", 160),
-  };
-  const result = await admin.messaging().sendEach(tokenDocs.map(entry => ({
-    token: entry.token,
-    data,
-    webpush: {
-      headers: { TTL: "1800", Urgency: data.kind === "reminder" ? "high" : "normal" },
-      fcmOptions: { link: data.url },
-    },
-  })));
-  const invalidTokenDocIds = [];
-  result.responses.forEach((response, index) => {
-    if (!response.success && isInvalidMessagingTokenError(response.error)) invalidTokenDocIds.push(tokenDocs[index]?.id);
-  });
-  if (invalidTokenDocIds.length) {
-    await removeNotificationTokenDocs(uid, invalidTokenDocIds).catch(error => {
-      console.warn("Could not remove invalid clan notification tokens", error);
-    });
-  }
-  return result.successCount > 0;
-}
-
 exports.getRealmInfo = timedCallable(
   "getRealmInfo",
   { region: "us-central1", maxInstances: 20, invoker: "public" },
@@ -9519,9 +9110,7 @@ exports.getRealmInfo = timedCallable(
       heartbeatModelVersion: GAME_SERVER_HEARTBEAT_MODEL_VERSION,
       capabilities: {
         shardedGameServerHeartbeats: true,
-        clanWarRoomVersion: CLAN_WAR_ROOM_VERSION,
       },
-      clanWarRoomVersion: CLAN_WAR_ROOM_VERSION,
       appCheckEnforced: false,
     };
   }
@@ -13229,119 +12818,6 @@ async function reconcileClanRalliesBeforeDeparture(uid = "", clanId = "") {
   }
 }
 
-async function reconcileClanWarRoomBeforeDeparture(uid = "", clanId = "") {
-  const playerUid = safeString(uid, 128);
-  const currentClanId = safeString(clanId, 128);
-  if (!playerUid || !currentClanId) return { withdrawn: 0 };
-  const assignmentSnap = await db.collectionGroup("assignments")
-    .where("clanId", "==", currentClanId)
-    .where("uid", "==", playerUid)
-    .where("status", "in", ["requested", "accepted", "needs_reconfirm"])
-    .get();
-  const operationIds = [...new Set(assignmentSnap.docs
-    .map(doc => normalizeClanWarRoomId(doc.data()?.operationId || doc.ref.parent.parent?.id))
-    .filter(Boolean))];
-  let withdrawn = 0;
-  for (const operationId of operationIds) {
-    withdrawn += await runTransactionWithInfrastructureRetry(async transaction => {
-      const operationRef = clanOperationRef(currentClanId, operationId);
-      const [operationSnap, assignmentsSnap] = await Promise.all([
-        transaction.get(operationRef),
-        transaction.get(operationRef.collection("assignments")),
-      ]);
-      if (!operationSnap.exists) return 0;
-      let changed = 0;
-      const nextAssignments = assignmentsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      nextAssignments.forEach(assignment => {
-        if (assignment.uid !== playerUid || !["requested", "accepted", "needs_reconfirm"].includes(assignment.status)) return;
-        assignment.status = "withdrawn";
-        changed += 1;
-        transaction.set(clanOperationAssignmentRef(currentClanId, operationId, assignment.id), {
-          status: "withdrawn",
-          withdrawnReason: "clan_departure",
-          respondedAtMs: Date.now(),
-          updatedAtMs: Date.now(),
-          updatedAt: FieldValue.serverTimestamp(),
-        }, { merge: true });
-        transaction.set(clanOperationReminderRef(currentClanId, operationId, assignment.id), {
-          status: "cancelled",
-          cancelledReason: "clan_departure",
-          updatedAtMs: Date.now(),
-          updatedAt: FieldValue.serverTimestamp(),
-        }, { merge: true });
-      });
-      if (changed) {
-        transaction.set(operationRef, {
-          attentionUids: getClanWarRoomAttentionUids(nextAssignments),
-          updatedAtMs: Date.now(),
-          updatedAt: FieldValue.serverTimestamp(),
-        }, { merge: true });
-      }
-      return changed;
-    });
-  }
-  return { withdrawn };
-}
-
-async function cancelClanWarRoomForDisband(clanId = "") {
-  const currentClanId = safeString(clanId, 128);
-  if (!currentClanId) return { cancelled: 0 };
-  let cancelled = 0;
-  for (let page = 0; page < 20; page += 1) {
-    const operationSnap = await db.collection(`clans/${currentClanId}/operations`)
-      .where("resetGeneration", "==", RESET_GENERATION)
-      .where("worldId", "==", ONLINE_WORLD_ID)
-      .where("status", "in", ["draft", "active"])
-      .limit(25)
-      .get();
-    if (!operationSnap.size) break;
-    for (const operationDoc of operationSnap.docs) {
-      const changed = await runTransactionWithInfrastructureRetry(async transaction => {
-        const [currentSnap, assignmentsSnap] = await Promise.all([
-          transaction.get(operationDoc.ref),
-          transaction.get(operationDoc.ref.collection("assignments")),
-        ]);
-        if (!currentSnap.exists || !["draft", "active"].includes(currentSnap.data()?.status)) return false;
-        const nowMs = Date.now();
-        assignmentsSnap.docs.forEach(doc => {
-          const assignment = doc.data() || {};
-          if (!["requested", "accepted", "needs_reconfirm"].includes(assignment.status)) return;
-          transaction.set(doc.ref, {
-            status: "withdrawn",
-            withdrawnReason: "clan_disbanded",
-            respondedAtMs: nowMs,
-            updatedAtMs: nowMs,
-            updatedAt: FieldValue.serverTimestamp(),
-          }, { merge: true });
-          transaction.set(clanOperationReminderRef(currentClanId, operationDoc.id, doc.id), {
-            status: "cancelled",
-            cancelledReason: "clan_disbanded",
-            updatedAtMs: nowMs,
-            updatedAt: FieldValue.serverTimestamp(),
-          }, { merge: true });
-        });
-        transaction.set(operationDoc.ref, {
-          status: "cancelled",
-          visibility: "clan",
-          attentionUids: [],
-          closedAtMs: nowMs,
-          archiveAtMs: nowMs + CLAN_WAR_ROOM_HISTORY_RETENTION_MS,
-          updatedAtMs: nowMs,
-          updatedAt: FieldValue.serverTimestamp(),
-        }, { merge: true });
-        return true;
-      });
-      if (changed) cancelled += 1;
-    }
-  }
-  await clanOperationStateRef(currentClanId).set({
-    activeOperationIds: [],
-    updatedAtMs: Date.now(),
-    updatedAt: FieldValue.serverTimestamp(),
-  }, { merge: true });
-  return { cancelled };
-}
-
 async function removeClanMember({ actorUid, targetUid, clanId, reason = "left" }) {
   const nowMs = Date.now();
   const [preflightClanSnap, preflightActorSnap, preflightTargetSnap] = await Promise.all([
@@ -13366,9 +12842,6 @@ async function removeClanMember({ actorUid, targetUid, clanId, reason = "left" }
     throw new HttpsError("failed-precondition", "Transfer leadership before leaving.");
   }
   await reconcileClanRalliesBeforeDeparture(targetUid, clanId);
-  if (Math.max(0, Math.floor(safeNumber(preflightClan.memberCount, 0))) > 1) {
-    await reconcileClanWarRoomBeforeDeparture(targetUid, clanId);
-  }
   const result = await runTransactionWithInfrastructureRetry(async transaction => {
     const [clanSnap, actorMemberSnap, targetMemberSnap, targetProfileSnap, benefitsSnap] = await Promise.all([
       transaction.get(db.doc(`clans/${clanId}`)),
@@ -13440,7 +12913,6 @@ async function removeClanMember({ actorUid, targetUid, clanId, reason = "left" }
     writeClanAudit(transaction, clanId, actorUid, reason, { targetUid });
     return { ok: true, disbanded: nextCount === 0, cooldownUntilMs: nowMs + CLAN_JOIN_COOLDOWN_MS };
   });
-  if (result.disbanded) await cancelClanWarRoomForDisband(clanId);
   return result;
 }
 
@@ -14956,709 +14428,6 @@ exports.launchClanRally = timedCallable("launchClanRally", { region: "us-central
   return result;
 });
 
-exports.createClanOperation = timedCallable("createClanOperation", { region: "us-central1", maxInstances: 20, invoker: "public" }, async request => {
-  const uid = requireAuth(request);
-  const data = request.data || {};
-  const clanId = safeString(data.clanId, 128);
-  const nowMs = Date.now();
-  const operationId = normalizeClanWarRoomId(data.operationId, db.collection("clanOperations").doc().id);
-  const orders = normalizeClanWarRoomOrders(data.orders, nowMs);
-  const timeline = assertClanWarRoomTimeline(orders, nowMs);
-  const requestedStatus = data.status === "active" ? "active" : "draft";
-  const operationRef = clanOperationRef(clanId, operationId);
-  const stateRef = clanOperationStateRef(clanId);
-
-  const result = await runTransactionWithInfrastructureRetry(async transaction => {
-    const targetRefs = orders.map(order => order.targetType === "camp"
-      ? campRefForRegion(order.targetRegionId, order.targetId)
-      : cityRefForRegion(order.targetRegionId, order.targetId));
-    const [actor, operationSnap, stateSnap, ...targetSnaps] = await Promise.all([
-      getClanWarRoomActor(transaction, uid, clanId),
-      transaction.get(operationRef),
-      transaction.get(stateRef),
-      ...targetRefs.map(ref => transaction.get(ref)),
-    ]);
-    assertClanWarRoomManager(actor);
-    if (operationSnap.exists) throw new HttpsError("already-exists", "That operation already exists.");
-    const state = normalizeClanOperationState(stateSnap.exists ? stateSnap.data() || {} : {});
-    if (requestedStatus === "active" && state.activeOperationIds.length >= CLAN_WAR_ROOM_MAX_ACTIVE_OPERATIONS) {
-      throw new HttpsError("resource-exhausted", `A clan may have at most ${CLAN_WAR_ROOM_MAX_ACTIVE_OPERATIONS} active operations.`);
-    }
-    const resolvedOrders = orders.map((order, index) => {
-      const seed = getServerWorldTargetSeed(order.targetRegionId, order.targetId, order.targetType);
-      const rawTarget = targetSnaps[index].exists
-        ? { id: targetSnaps[index].id, ...targetSnaps[index].data() }
-        : seed ? { ...seed, id: order.targetId, ownerKind: "neutral", ownerUid: "" } : null;
-      if (!rawTarget) throw new HttpsError("not-found", `Order ${index + 1} target was not found.`);
-      return {
-        ...order,
-        linkedRallyId: "",
-        ...clanWarRoomTargetSnapshot(order, rawTarget),
-        clanId,
-        operationId,
-        modelVersion: CLAN_WAR_ROOM_VERSION,
-        revision: 1,
-        materialKey: clanWarRoomOrderMaterialKey(order),
-        status: "open",
-        assignmentCount: 0,
-        acceptedCount: 0,
-        createdAtMs: nowMs,
-        updatedAtMs: nowMs,
-        createdAt: FieldValue.serverTimestamp(),
-        updatedAt: FieldValue.serverTimestamp(),
-      };
-    });
-    const operation = createClanWarRoomOperationDocument({
-      clanId,
-      operationId,
-      uid,
-      title: data.title,
-      note: data.note,
-      status: requestedStatus,
-      orders: resolvedOrders,
-      timeline,
-      nowMs,
-    });
-    transaction.create(operationRef, operation);
-    resolvedOrders.forEach(order => transaction.create(clanOperationOrderRef(clanId, operationId, order.id), order));
-    transaction.set(stateRef, {
-      modelVersion: CLAN_WAR_ROOM_VERSION,
-      clanId,
-      worldId: ONLINE_WORLD_ID,
-      resetGeneration: RESET_GENERATION,
-      activeOperationIds: requestedStatus === "active"
-        ? [...state.activeOperationIds, operationId]
-        : state.activeOperationIds,
-      updatedAtMs: nowMs,
-      updatedAt: FieldValue.serverTimestamp(),
-    }, { merge: true });
-    writeClanAudit(transaction, clanId, uid, "war_room_operation_created", {
-      operationId,
-      status: requestedStatus,
-      orderCount: resolvedOrders.length,
-    }, nowMs);
-    return {
-      operation: clanWarRoomOperationForClient(operation),
-      orders: resolvedOrders.map(clanWarRoomOrderForClient),
-    };
-  });
-  return { ok: true, ...result };
-});
-
-exports.updateClanOperation = timedCallable("updateClanOperation", { region: "us-central1", maxInstances: 20, invoker: "public" }, async request => {
-  const uid = requireAuth(request);
-  const data = request.data || {};
-  const clanId = safeString(data.clanId, 128);
-  const operationId = normalizeClanWarRoomId(data.operationId);
-  const nowMs = Date.now();
-  const orders = normalizeClanWarRoomOrders(data.orders, nowMs);
-  const timeline = getClanWarRoomTimeline(orders, nowMs);
-  if (timeline.lastArrivalWindowEndMs > nowMs + CLAN_WAR_ROOM_MAX_OPERATION_MS) {
-    throw new HttpsError("invalid-argument", "An operation may run for at most 72 hours.");
-  }
-  const operationRef = clanOperationRef(clanId, operationId);
-
-  const result = await runTransactionWithInfrastructureRetry(async transaction => {
-    const existingOrdersQuery = operationRef.collection("orders");
-    const assignmentsQuery = operationRef.collection("assignments");
-    const targetRefs = orders.map(order => order.targetType === "camp"
-      ? campRefForRegion(order.targetRegionId, order.targetId)
-      : cityRefForRegion(order.targetRegionId, order.targetId));
-    const [actor, operationSnap, existingOrdersSnap, assignmentsSnap, ...targetSnaps] = await Promise.all([
-      getClanWarRoomActor(transaction, uid, clanId),
-      transaction.get(operationRef),
-      transaction.get(existingOrdersQuery),
-      transaction.get(assignmentsQuery),
-      ...targetRefs.map(ref => transaction.get(ref)),
-    ]);
-    assertClanWarRoomManager(actor);
-    if (!operationSnap.exists) throw new HttpsError("not-found", "That operation no longer exists.");
-    const operation = operationSnap.data() || {};
-    if (!["draft", "active"].includes(operation.status)) {
-      throw new HttpsError("failed-precondition", "Completed operations cannot be edited.");
-    }
-    const expectedRevision = Math.max(0, Math.floor(safeNumber(data.expectedRevision, 0)));
-    if (expectedRevision && expectedRevision !== Math.floor(safeNumber(operation.revision, 0))) {
-      throw new HttpsError("aborted", "The operation changed. Reopen it before saving again.");
-    }
-    const previousById = new Map(existingOrdersSnap.docs.map(doc => [doc.id, { id: doc.id, ...doc.data() }]));
-    const nextIds = new Set(orders.map(order => order.id));
-    const changedOrderIds = new Set();
-    const resolvedOrders = orders.map((order, index) => {
-      const previous = previousById.get(order.id) || null;
-      const seed = getServerWorldTargetSeed(order.targetRegionId, order.targetId, order.targetType);
-      const rawTarget = targetSnaps[index].exists
-        ? { id: targetSnaps[index].id, ...targetSnaps[index].data() }
-        : seed ? { ...seed, id: order.targetId, ownerKind: "neutral", ownerUid: "" } : null;
-      if (!rawTarget) throw new HttpsError("not-found", `Order ${index + 1} target was not found.`);
-      const materialKey = clanWarRoomOrderMaterialKey(order);
-      const materialChanged = Boolean(previous && previous.materialKey !== materialKey);
-      const rallyStillMatches = Boolean(
-        previous
-        && order.action === "attack"
-        && previous.action === order.action
-        && previous.targetType === order.targetType
-        && previous.targetId === order.targetId
-        && normalizeRegionId(previous.targetRegionId) === order.targetRegionId
-      );
-      if (materialChanged) changedOrderIds.add(order.id);
-      return {
-        ...order,
-        linkedRallyId: rallyStillMatches ? normalizeRallyId(previous.linkedRallyId) : "",
-        ...clanWarRoomTargetSnapshot(order, rawTarget),
-        clanId,
-        operationId,
-        modelVersion: CLAN_WAR_ROOM_VERSION,
-        revision: previous ? Math.max(1, Math.floor(safeNumber(previous.revision, 1))) + (materialChanged ? 1 : 0) : 1,
-        materialKey,
-        status: previous?.status || "open",
-        assignmentCount: Math.max(0, Math.floor(safeNumber(previous?.assignmentCount, 0))),
-        acceptedCount: Math.max(0, Math.floor(safeNumber(previous?.acceptedCount, 0))),
-        createdAtMs: previous?.createdAtMs || nowMs,
-        updatedAtMs: nowMs,
-        ...(previous ? {} : { createdAt: FieldValue.serverTimestamp() }),
-        updatedAt: FieldValue.serverTimestamp(),
-      };
-    });
-    previousById.forEach((order, orderId) => {
-      if (!nextIds.has(orderId)) changedOrderIds.add(orderId);
-    });
-    const nextAssignments = assignmentsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-    nextAssignments.forEach(assignment => {
-      if (!changedOrderIds.has(safeString(assignment.orderId, 96))) return;
-      if (!["requested", "accepted", "needs_reconfirm"].includes(assignment.status)) return;
-      const orderRemoved = !nextIds.has(safeString(assignment.orderId, 96));
-      const wasAccepted = ["accepted", "needs_reconfirm"].includes(assignment.status);
-      const nextStatus = orderRemoved ? "withdrawn" : wasAccepted ? "needs_reconfirm" : "requested";
-      assignment.status = nextStatus;
-      transaction.set(clanOperationAssignmentRef(clanId, operationId, assignment.id), {
-        status: nextStatus,
-        invalidatedAtMs: nowMs,
-        invalidatedByRevision: Math.max(1, Math.floor(safeNumber(operation.revision, 1))) + 1,
-        updatedAtMs: nowMs,
-        updatedAt: FieldValue.serverTimestamp(),
-      }, { merge: true });
-      if (wasAccepted || orderRemoved) {
-        transaction.set(clanOperationReminderRef(clanId, operationId, assignment.id), {
-          status: "cancelled",
-          cancelledReason: orderRemoved ? "order_removed" : "order_changed",
-          updatedAtMs: nowMs,
-          updatedAt: FieldValue.serverTimestamp(),
-        }, { merge: true });
-      }
-    });
-    previousById.forEach((order, orderId) => {
-      if (!nextIds.has(orderId)) transaction.delete(clanOperationOrderRef(clanId, operationId, orderId));
-    });
-    resolvedOrders.forEach(order => transaction.set(clanOperationOrderRef(clanId, operationId, order.id), order, { merge: true }));
-    const nextRevision = Math.max(1, Math.floor(safeNumber(operation.revision, 1))) + 1;
-    const operationPatch = {
-      title: safeString(data.title, 64).replace(/[\u0000-\u001f\u007f]/g, "").trim() || operation.title || "Clan operation",
-      note: safeString(data.note, 500).replace(/[\u0000-\u001f\u007f]/g, "").trim(),
-      revision: nextRevision,
-      orderCount: resolvedOrders.length,
-      mapTargets: resolvedOrders.map(clanWarRoomMapTarget),
-      firstArrivalWindowStartMs: timeline.firstArrivalWindowStartMs,
-      lastArrivalWindowEndMs: timeline.lastArrivalWindowEndMs,
-      expiresAtMs: timeline.expiresAtMs,
-      attentionUids: getClanWarRoomAttentionUids(nextAssignments),
-      updatedAtMs: nowMs,
-      updatedAt: FieldValue.serverTimestamp(),
-    };
-    transaction.set(operationRef, operationPatch, { merge: true });
-    writeClanAudit(transaction, clanId, uid, "war_room_operation_updated", {
-      operationId,
-      revision: nextRevision,
-      changedOrderIds: [...changedOrderIds].slice(0, CLAN_WAR_ROOM_MAX_ORDERS),
-    }, nowMs);
-    return {
-      operation: clanWarRoomOperationForClient({ ...operation, ...operationPatch }),
-      orders: resolvedOrders.map(clanWarRoomOrderForClient),
-      invalidatedOrderIds: [...changedOrderIds],
-    };
-  });
-  return { ok: true, ...result };
-});
-
-exports.setClanOperationStatus = timedCallable("setClanOperationStatus", { region: "us-central1", maxInstances: 20, invoker: "public" }, async request => {
-  const uid = requireAuth(request);
-  const data = request.data || {};
-  const clanId = safeString(data.clanId, 128);
-  const operationId = normalizeClanWarRoomId(data.operationId);
-  const requestedStatus = safeString(data.status, 24);
-  if (!["active", "completed", "cancelled"].includes(requestedStatus)) {
-    throw new HttpsError("invalid-argument", "Choose active, completed, or cancelled.");
-  }
-  const nowMs = Date.now();
-  const operationRef = clanOperationRef(clanId, operationId);
-  const stateRef = clanOperationStateRef(clanId);
-  const result = await runTransactionWithInfrastructureRetry(async transaction => {
-    const [actor, operationSnap, stateSnap, assignmentsSnap] = await Promise.all([
-      getClanWarRoomActor(transaction, uid, clanId),
-      transaction.get(operationRef),
-      transaction.get(stateRef),
-      transaction.get(operationRef.collection("assignments")),
-    ]);
-    assertClanWarRoomManager(actor);
-    if (!operationSnap.exists) throw new HttpsError("not-found", "That operation no longer exists.");
-    const operation = operationSnap.data() || {};
-    if (["completed", "cancelled", "expired"].includes(operation.status)) {
-      return { operation: clanWarRoomOperationForClient(operation), duplicate: true };
-    }
-    const state = normalizeClanOperationState(stateSnap.exists ? stateSnap.data() || {} : {});
-    let activeIds = state.activeOperationIds.filter(id => id !== operationId);
-    if (requestedStatus === "active") {
-      if (operation.status !== "draft") throw new HttpsError("failed-precondition", "Only a draft can be activated.");
-      if (Math.floor(safeNumber(operation.lastArrivalWindowEndMs, 0)) < nowMs + CLAN_WAR_ROOM_MIN_OPERATION_MS) {
-        throw new HttpsError("failed-precondition", "Move the arrival window at least 15 minutes into the future before activating.");
-      }
-      if (activeIds.length >= CLAN_WAR_ROOM_MAX_ACTIVE_OPERATIONS) {
-        throw new HttpsError("resource-exhausted", `A clan may have at most ${CLAN_WAR_ROOM_MAX_ACTIVE_OPERATIONS} active operations.`);
-      }
-      activeIds.push(operationId);
-    } else {
-      assignmentsSnap.docs.forEach(doc => {
-        const assignment = doc.data() || {};
-        if (!["requested", "accepted", "needs_reconfirm"].includes(assignment.status)) return;
-        transaction.set(doc.ref, {
-          status: requestedStatus === "completed" ? "missed" : "withdrawn",
-          updatedAtMs: nowMs,
-          updatedAt: FieldValue.serverTimestamp(),
-        }, { merge: true });
-        transaction.set(clanOperationReminderRef(clanId, operationId, doc.id), {
-          status: "cancelled",
-          cancelledReason: `operation_${requestedStatus}`,
-          updatedAtMs: nowMs,
-          updatedAt: FieldValue.serverTimestamp(),
-        }, { merge: true });
-      });
-    }
-    const patch = {
-      status: requestedStatus,
-      visibility: "clan",
-      activatedAtMs: requestedStatus === "active" ? nowMs : Math.max(0, safeNumber(operation.activatedAtMs, 0)),
-      closedAtMs: requestedStatus === "active" ? 0 : nowMs,
-      archiveAtMs: requestedStatus === "active" ? 0 : nowMs + CLAN_WAR_ROOM_HISTORY_RETENTION_MS,
-      attentionUids: requestedStatus === "active"
-        ? getClanWarRoomAttentionUids(assignmentsSnap.docs.map(doc => doc.data() || {}))
-        : [],
-      updatedAtMs: nowMs,
-      updatedAt: FieldValue.serverTimestamp(),
-    };
-    transaction.set(operationRef, patch, { merge: true });
-    transaction.set(stateRef, {
-      modelVersion: CLAN_WAR_ROOM_VERSION,
-      clanId,
-      worldId: ONLINE_WORLD_ID,
-      resetGeneration: RESET_GENERATION,
-      activeOperationIds: activeIds,
-      updatedAtMs: nowMs,
-      updatedAt: FieldValue.serverTimestamp(),
-    }, { merge: true });
-    writeClanAudit(transaction, clanId, uid, `war_room_operation_${requestedStatus}`, { operationId }, nowMs);
-    return { operation: clanWarRoomOperationForClient({ ...operation, ...patch }) };
-  });
-  return { ok: true, ...result };
-});
-
-exports.linkClanOperationRally = timedCallable("linkClanOperationRally", { region: "us-central1", maxInstances: 20, invoker: "public" }, async request => {
-  const uid = requireAuth(request);
-  const data = request.data || {};
-  const clanId = safeString(data.clanId, 128);
-  const operationId = normalizeClanWarRoomId(data.operationId);
-  const orderId = normalizeClanWarRoomId(data.orderId);
-  const rallyId = normalizeRallyId(data.rallyId);
-  const nowMs = Date.now();
-  const orderRef = clanOperationOrderRef(clanId, operationId, orderId);
-  const result = await runTransactionWithInfrastructureRetry(async transaction => {
-    const [actor, operationSnap, orderSnap, rallySnap] = await Promise.all([
-      getClanWarRoomActor(transaction, uid, clanId),
-      transaction.get(clanOperationRef(clanId, operationId)),
-      transaction.get(orderRef),
-      rallyId ? transaction.get(clanRallyRef(clanId, rallyId)) : Promise.resolve(null),
-    ]);
-    assertClanWarRoomManager(actor);
-    if (!operationSnap.exists || !orderSnap.exists) throw new HttpsError("not-found", "That operation order no longer exists.");
-    if (!["draft", "active"].includes(operationSnap.data()?.status)) throw new HttpsError("failed-precondition", "That operation is closed.");
-    if (rallyId) {
-      const rally = normalizeClanRally(rallySnap);
-      const order = orderSnap.data() || {};
-      if (order.action !== "attack") {
-        throw new HttpsError("invalid-argument", "Objective rallies may only be linked to attack orders.");
-      }
-      if (!rally || ![RALLY_STATUS_FORMING, RALLY_STATUS_LAUNCHED, RALLY_STATUS_RECALLING].includes(rally.status)) {
-        throw new HttpsError("failed-precondition", "That rally is no longer active.");
-      }
-      if (rally.targetId !== order.targetId || rally.targetRegionId !== order.targetRegionId) {
-        throw new HttpsError("invalid-argument", "The rally target must match the operation order.");
-      }
-    }
-    transaction.set(orderRef, {
-      linkedRallyId: rallyId || "",
-      updatedAtMs: nowMs,
-      updatedAt: FieldValue.serverTimestamp(),
-    }, { merge: true });
-    writeClanAudit(transaction, clanId, uid, rallyId ? "war_room_rally_linked" : "war_room_rally_unlinked", {
-      operationId,
-      orderId,
-      rallyId,
-    }, nowMs);
-    return { linkedRallyId: rallyId || "" };
-  });
-  return { ok: true, ...result };
-});
-
-function sanitizeClanWarRoomReport(report = {}, ownerUid = "", ownerProfile = {}) {
-  return {
-    originalReportId: safeString(report.id, 160),
-    ownerUid,
-    ownerName: normalizePlayerName(ownerProfile.playerName || ownerProfile.displayName, "Ruler"),
-    ownerFlag: normalizeServerFlag(ownerProfile.flag),
-    type: safeString(report.type, 24),
-    outcome: safeString(report.outcome, 24),
-    cityId: safeString(report.cityId, 96),
-    cityName: safeString(report.cityName, 80),
-    regionId: normalizeRegionId(report.regionId),
-    opponentName: normalizePlayerName(report.opponentName, "Unknown ruler"),
-    opponentFlag: normalizeServerFlag(report.opponentFlag),
-    summary: safeString(report.summary, 220),
-    sentTroops: Math.max(0, Math.floor(safeNumber(report.sentTroops, 0))),
-    troopCount: Math.max(0, Math.floor(safeNumber(report.troopCount, 0))),
-    survivors: Math.max(0, Math.floor(safeNumber(report.survivors, 0))),
-    defendersLeft: Math.max(0, Math.floor(safeNumber(report.defendersLeft, 0))),
-    attackerLosses: Math.max(0, Math.floor(safeNumber(report.attackerLosses, 0))),
-    defenderLosses: Math.max(0, Math.floor(safeNumber(report.defenderLosses, 0))),
-    battleId: safeString(report.battleId, 160),
-    reportCreatedAtMs: Math.max(0, Math.floor(safeNumber(report.createdAtMs, 0))),
-  };
-}
-
-exports.shareClanOperationReport = timedCallable("shareClanOperationReport", { region: "us-central1", maxInstances: 20, invoker: "public" }, async request => {
-  const uid = requireAuth(request);
-  const data = request.data || {};
-  const clanId = safeString(data.clanId, 128);
-  const operationId = normalizeClanWarRoomId(data.operationId);
-  const orderId = normalizeClanWarRoomId(data.orderId);
-  const originalReportId = normalizeClanWarRoomId(data.reportId);
-  const sharedReportId = normalizeClanWarRoomId(`${uid}_${originalReportId}`);
-  const operationRef = clanOperationRef(clanId, operationId);
-  const sharedRef = clanOperationSharedReportRef(clanId, operationId, sharedReportId);
-  const nowMs = Date.now();
-  const result = await runTransactionWithInfrastructureRetry(async transaction => {
-    const [actor, operationSnap, orderSnap, reportSnap, existingSnap] = await Promise.all([
-      getClanWarRoomActor(transaction, uid, clanId),
-      transaction.get(operationRef),
-      transaction.get(clanOperationOrderRef(clanId, operationId, orderId)),
-      transaction.get(reportRef(uid, originalReportId)),
-      transaction.get(sharedRef),
-    ]);
-    if (!operationSnap.exists || !orderSnap.exists) throw new HttpsError("not-found", "That operation order no longer exists.");
-    const operation = operationSnap.data() || {};
-    if (operation.status !== "active" || safeNumber(operation.expiresAtMs, 0) <= nowMs) {
-      throw new HttpsError("failed-precondition", "Reports may only be shared to an active operation.");
-    }
-    if (!reportSnap.exists || safeString(reportSnap.data()?.uid, 128) !== uid) {
-      throw new HttpsError("permission-denied", "You may only share your own battle reports.");
-    }
-    if (existingSnap.exists) {
-      return { report: clanWarRoomSharedReportForClient({ id: existingSnap.id, ...existingSnap.data() }), duplicate: true };
-    }
-    if (Math.floor(safeNumber(operation.sharedReportCount, 0)) >= CLAN_WAR_ROOM_MAX_SHARED_REPORTS) {
-      throw new HttpsError("resource-exhausted", `An operation may contain at most ${CLAN_WAR_ROOM_MAX_SHARED_REPORTS} shared reports.`);
-    }
-    const shared = {
-      id: sharedReportId,
-      clanId,
-      operationId,
-      orderId,
-      modelVersion: CLAN_WAR_ROOM_VERSION,
-      worldId: ONLINE_WORLD_ID,
-      resetGeneration: RESET_GENERATION,
-      ...sanitizeClanWarRoomReport({ id: reportSnap.id, ...reportSnap.data() }, uid, actor.profile),
-      sharedAtMs: nowMs,
-      createdAt: FieldValue.serverTimestamp(),
-    };
-    transaction.create(sharedRef, shared);
-    transaction.set(operationRef, {
-      sharedReportCount: FieldValue.increment(1),
-      updatedAtMs: nowMs,
-      updatedAt: FieldValue.serverTimestamp(),
-    }, { merge: true });
-    writeClanAudit(transaction, clanId, uid, "war_room_report_shared", { operationId, orderId, reportId: originalReportId }, nowMs);
-    return { report: clanWarRoomSharedReportForClient(shared) };
-  });
-  return { ok: true, ...result };
-});
-
-exports.setClanOperationAssignment = timedCallable("setClanOperationAssignment", { region: "us-central1", maxInstances: 30, invoker: "public" }, async request => {
-  const uid = requireAuth(request);
-  const data = request.data || {};
-  const clanId = safeString(data.clanId, 128);
-  const operationId = normalizeClanWarRoomId(data.operationId);
-  const orderId = normalizeClanWarRoomId(data.orderId);
-  const action = safeString(data.action, 24);
-  if (!["request", "accept", "volunteer", "update", "reconfirm", "decline", "withdraw"].includes(action)) {
-    throw new HttpsError("invalid-argument", "Choose a valid assignment action.");
-  }
-  const targetUid = action === "request" ? safeString(data.targetUid, 128) : uid;
-  if (!targetUid) throw new HttpsError("invalid-argument", "Choose a clan member.");
-  const assignmentId = normalizeClanWarRoomId(data.assignmentId, `${orderId}_${targetUid}`);
-  const operationRef = clanOperationRef(clanId, operationId);
-  const orderRef = clanOperationOrderRef(clanId, operationId, orderId);
-  const assignmentRef = clanOperationAssignmentRef(clanId, operationId, assignmentId);
-  const sourceRegionId = ["accept", "volunteer", "update", "reconfirm"].includes(action)
-    ? requireKnownWorldRegionId(data.sourceRegionId)
-    : "";
-  const sourceId = sourceRegionId ? safeString(data.sourceId, 96).replace(/[^a-zA-Z0-9_-]/g, "_") : "";
-  const sourceRef = sourceId ? cityRefForRegion(sourceRegionId, sourceId) : null;
-  const nowMs = Date.now();
-
-  const result = await runTransactionWithInfrastructureRetry(async transaction => {
-    const targetMemberRef = db.doc(`clans/${clanId}/members/${targetUid}`);
-    const targetProfileRef = db.doc(`players/${targetUid}`);
-    const acceptedQuery = db.collectionGroup("assignments")
-      .where("clanId", "==", clanId)
-      .where("uid", "==", targetUid)
-      .where("status", "in", ["accepted", "needs_reconfirm", "launched"]);
-    const [actor, operationSnap, orderSnap, assignmentSnap, assignmentsSnap, targetMemberSnap, targetProfileSnap, sourceSnap, acceptedSnap] = await Promise.all([
-      getClanWarRoomActor(transaction, uid, clanId),
-      transaction.get(operationRef),
-      transaction.get(orderRef),
-      transaction.get(assignmentRef),
-      transaction.get(operationRef.collection("assignments")),
-      transaction.get(targetMemberRef),
-      transaction.get(targetProfileRef),
-      sourceRef ? transaction.get(sourceRef) : Promise.resolve(null),
-      ["accept", "volunteer", "update", "reconfirm"].includes(action)
-        ? transaction.get(acceptedQuery)
-        : Promise.resolve(null),
-    ]);
-    if (!operationSnap.exists || !orderSnap.exists) throw new HttpsError("not-found", "That operation order no longer exists.");
-    const operation = operationSnap.data() || {};
-    const order = { id: orderSnap.id, ...orderSnap.data() };
-    if (operation.status !== "active") throw new HttpsError("failed-precondition", "Assignments are available only while an operation is active.");
-    if (safeNumber(operation.expiresAtMs, 0) <= nowMs) throw new HttpsError("failed-precondition", "That operation has expired.");
-    const existing = assignmentSnap.exists ? { id: assignmentSnap.id, ...assignmentSnap.data() } : null;
-    const assignmentRows = assignmentsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-    const attentionAfter = replacement => getClanWarRoomAttentionUids([
-      ...assignmentRows.filter(assignment => assignment.id !== assignmentId),
-      ...(replacement ? [replacement] : []),
-    ]);
-    const activeSlotStates = new Set(["requested", "accepted", "needs_reconfirm", "launched"]);
-    const occupiedSlots = assignmentsSnap.docs.filter(doc => (
-      safeString(doc.data()?.orderId, 96) === orderId
-      && activeSlotStates.has(doc.data()?.status)
-      && doc.id !== assignmentId
-    )).length;
-
-    if (action === "request") {
-      assertClanWarRoomManager(actor);
-      if (!targetMemberSnap.exists || !targetProfileSnap.exists) throw new HttpsError("not-found", "That clan member is unavailable.");
-      if (assignmentsSnap.size >= CLAN_WAR_ROOM_MAX_ASSIGNMENTS && !existing) {
-        throw new HttpsError("resource-exhausted", `An operation may contain at most ${CLAN_WAR_ROOM_MAX_ASSIGNMENTS} assignments.`);
-      }
-      if (occupiedSlots >= Math.max(1, Math.floor(safeNumber(order.participantSlots, 1)))) {
-        throw new HttpsError("resource-exhausted", "Every participant slot on that order is filled.");
-      }
-      if (existing && activeSlotStates.has(existing.status)) {
-        return { assignment: clanWarRoomAssignmentForClient(existing), duplicate: true };
-      }
-      const targetProfile = targetProfileSnap.data() || {};
-      const assignment = {
-        id: assignmentId,
-        clanId,
-        operationId,
-        orderId,
-        modelVersion: CLAN_WAR_ROOM_VERSION,
-        worldId: ONLINE_WORLD_ID,
-        resetGeneration: RESET_GENERATION,
-        uid: targetUid,
-        memberName: normalizePlayerName(targetProfile.playerName || targetProfile.displayName, "Ruler"),
-        memberFlag: normalizeServerFlag(targetProfile.flag),
-        status: "requested",
-        requestedByUid: uid,
-        requestedAtMs: nowMs,
-        orderRevision: Math.max(1, Math.floor(safeNumber(order.revision, 1))),
-        sourceId: "",
-        sourceRegionId: "",
-        troops: order.action === "scout" ? 1 : 0,
-        estimatedTravelSeconds: 0,
-        recommendedLaunchAtMs: 0,
-        latestLaunchAtMs: 0,
-        reminderAtMs: 0,
-        createdAtMs: existing?.createdAtMs || nowMs,
-        updatedAtMs: nowMs,
-        ...(existing ? {} : { createdAt: FieldValue.serverTimestamp() }),
-        updatedAt: FieldValue.serverTimestamp(),
-      };
-      transaction.set(assignmentRef, assignment, { merge: true });
-      transaction.set(operationRef, {
-        attentionUids: attentionAfter(assignment),
-        ...(!existing ? { assignmentCount: FieldValue.increment(1) } : {}),
-      }, { merge: true });
-      if (!existing) {
-        transaction.set(orderRef, { assignmentCount: FieldValue.increment(1) }, { merge: true });
-      }
-      writeClanAudit(transaction, clanId, uid, "war_room_member_requested", { operationId, orderId, assignmentId, targetUid }, nowMs);
-      return {
-        assignment: clanWarRoomAssignmentForClient(assignment),
-        notification: {
-          uid: targetUid,
-          clanId,
-          title: "Clan operation assignment",
-          body: `${normalizePlayerName(actor.profile.playerName || actor.profile.displayName, "An officer")} requested you for ${safeString(operation.title, 64)}: ${safeString(order.targetName, 80)}.`,
-          operationId,
-          orderId,
-          assignmentId,
-          kind: "assignment",
-        },
-      };
-    }
-
-    if (!existing && !["volunteer"].includes(action)) throw new HttpsError("not-found", "That assignment no longer exists.");
-    if (existing && existing.uid !== uid) throw new HttpsError("permission-denied", "That assignment belongs to another clan member.");
-
-    if (["decline", "withdraw"].includes(action)) {
-      if (existing.status === "launched" || existing.status === "resolved") {
-        throw new HttpsError("failed-precondition", "Launched armies must be managed through the normal march controls.");
-      }
-      const nextStatus = action === "decline" ? "declined" : "withdrawn";
-      transaction.set(assignmentRef, {
-        status: nextStatus,
-        respondedAtMs: nowMs,
-        updatedAtMs: nowMs,
-        updatedAt: FieldValue.serverTimestamp(),
-      }, { merge: true });
-      transaction.set(operationRef, {
-        attentionUids: attentionAfter({ ...existing, status: nextStatus }),
-      }, { merge: true });
-      transaction.set(clanOperationReminderRef(clanId, operationId, assignmentId), {
-        status: "cancelled",
-        cancelledReason: nextStatus,
-        updatedAtMs: nowMs,
-        updatedAt: FieldValue.serverTimestamp(),
-      }, { merge: true });
-      return { assignment: clanWarRoomAssignmentForClient({ ...existing, status: nextStatus, updatedAtMs: nowMs }) };
-    }
-
-    if (!sourceRef || !sourceSnap?.exists) throw new HttpsError("not-found", "Choose one of your current source cities.");
-    let source = { id: sourceSnap.id, ...sourceSnap.data() };
-    if (getOwnerUid(source) !== uid) throw new HttpsError("permission-denied", "You can only plan troops from your own city.");
-    if (!getServerWorldTargetIds(sourceRegionId).has(sourceId)) throw new HttpsError("invalid-argument", "That source city is not part of the current map.");
-    if (action === "volunteer") {
-      if (assignmentsSnap.size >= CLAN_WAR_ROOM_MAX_ASSIGNMENTS && !existing) {
-        throw new HttpsError("resource-exhausted", `An operation may contain at most ${CLAN_WAR_ROOM_MAX_ASSIGNMENTS} assignments.`);
-      }
-      if (occupiedSlots >= Math.max(1, Math.floor(safeNumber(order.participantSlots, 1)))) {
-        throw new HttpsError("resource-exhausted", "Another member filled the last participant slot.");
-      }
-    } else if (action === "accept" && existing.status !== "requested") {
-      throw new HttpsError("failed-precondition", "That request is no longer waiting for acceptance.");
-    } else if (action === "reconfirm" && existing.status !== "needs_reconfirm") {
-      throw new HttpsError("failed-precondition", "That assignment does not need reconfirmation.");
-    } else if (action === "update" && existing.status !== "accepted") {
-      throw new HttpsError("failed-precondition", "Only an accepted assignment can be updated.");
-    }
-    const alreadyCounted = acceptedSnap?.docs?.some(doc => doc.id === assignmentId && doc.ref.path === assignmentRef.path);
-    const acceptedCount = Math.max(0, acceptedSnap?.size || 0) - (alreadyCounted ? 1 : 0);
-    if (acceptedCount >= CLAN_WAR_ROOM_MAX_ACCEPTED_PER_MEMBER) {
-      throw new HttpsError("resource-exhausted", `You may accept at most ${CLAN_WAR_ROOM_MAX_ACCEPTED_PER_MEMBER} operation assignments at once.`);
-    }
-    const targetRef = order.targetType === "camp"
-      ? campRefForRegion(order.targetRegionId, order.targetId)
-      : cityRefForRegion(order.targetRegionId, order.targetId);
-    const targetSnap = await transaction.get(targetRef);
-    const targetSeed = getServerWorldTargetSeed(order.targetRegionId, order.targetId, order.targetType);
-    const target = targetSnap.exists
-      ? order.targetType === "camp"
-        ? getRewardCampCombatTarget({ id: targetSnap.id, ...targetSnap.data() })
-        : { id: targetSnap.id, ...targetSnap.data() }
-      : targetSeed ? { ...targetSeed, id: order.targetId, ownerKind: "neutral", ownerUid: "", troops: 0 } : null;
-    if (!target) throw new HttpsError("not-found", "That order target is no longer on the map.");
-    const economy = await prepareEconomyCollection(transaction, uid, nowMs, {
-      profileRef: actor.profileRef,
-      profileSnap: actor.profileSnap,
-    });
-    const producedSource = getEconomyCityByRef(economy, sourceRef);
-    if (producedSource?.city) source = producedSource.city;
-    const sourceTroops = Math.max(0, Math.floor(safeNumber(source.troops, 0)));
-    const troops = order.action === "scout"
-      ? 1
-      : clampInt(data.troops, 1, Math.max(1, sourceTroops));
-    if (sourceTroops < troops) throw new HttpsError("failed-precondition", "That source city does not have enough troops.");
-    const route = buildServerGeneratedArmyRoute(source, target);
-    const estimatedTravelSeconds = Math.ceil(calculateTravelTime({
-      pathLength: route.pathLength,
-      troopCount: troops,
-      kind: order.action,
-      speedMultiplier: skillMultiplier(economy.profileAfter || actor.profile, "marchOrders")
-        * (1 + Math.max(0, safeNumber(economy.bonuses?.marchSpeedBonusPercent, 0)) / 100),
-    }));
-    const travelMs = estimatedTravelSeconds * 1000;
-    const recommendedLaunchAtMs = Math.floor(safeNumber(order.windowStartAtMs, 0)) - travelMs;
-    const latestLaunchAtMs = Math.floor(safeNumber(order.windowEndAtMs, 0)) - travelMs;
-    const reminderAtMs = recommendedLaunchAtMs - CLAN_WAR_ROOM_REMINDER_LEAD_MS;
-    const assignment = {
-      id: assignmentId,
-      clanId,
-      operationId,
-      orderId,
-      modelVersion: CLAN_WAR_ROOM_VERSION,
-      worldId: ONLINE_WORLD_ID,
-      resetGeneration: RESET_GENERATION,
-      uid,
-      memberName: normalizePlayerName(actor.profile.playerName || actor.profile.displayName, "Ruler"),
-      memberFlag: normalizeServerFlag(actor.profile.flag),
-      status: "accepted",
-      requestedByUid: existing?.requestedByUid || uid,
-      acceptedAtMs: nowMs,
-      orderRevision: Math.max(1, Math.floor(safeNumber(order.revision, 1))),
-      sourceId,
-      sourceRegionId,
-      sourceName: safeString(source.name || sourceId, 80),
-      troops,
-      estimatedTravelSeconds,
-      recommendedLaunchAtMs,
-      latestLaunchAtMs,
-      reminderAtMs,
-      timingState: nowMs < recommendedLaunchAtMs ? "early" : nowMs > latestLaunchAtMs ? "late" : "on_time",
-      createdAtMs: existing?.createdAtMs || nowMs,
-      updatedAtMs: nowMs,
-      ...(existing ? {} : { createdAt: FieldValue.serverTimestamp() }),
-      updatedAt: FieldValue.serverTimestamp(),
-    };
-    transaction.set(assignmentRef, assignment, { merge: true });
-    transaction.set(operationRef, {
-      attentionUids: attentionAfter(assignment),
-      ...(!existing ? { assignmentCount: FieldValue.increment(1) } : {}),
-    }, { merge: true });
-    transaction.set(clanOperationReminderRef(clanId, operationId, assignmentId), createClanWarRoomReminderPatch(assignment, "pending", nowMs), { merge: true });
-    if (!existing) {
-      transaction.set(orderRef, { assignmentCount: FieldValue.increment(1) }, { merge: true });
-    }
-    if (!existing || !["accepted", "needs_reconfirm"].includes(existing.status)) {
-      transaction.set(orderRef, { acceptedCount: FieldValue.increment(1) }, { merge: true });
-    }
-    writeClanAudit(transaction, clanId, uid, `war_room_assignment_${action}`, {
-      operationId,
-      orderId,
-      assignmentId,
-      sourceId,
-      troops,
-    }, nowMs);
-    return { assignment: clanWarRoomAssignmentForClient(assignment) };
-  });
-
-  const notification = result.notification || null;
-  delete result.notification;
-  if (notification) {
-    await sendClanWarRoomNotification(notification).catch(error => {
-      console.warn("Could not send clan operation assignment notification", error);
-    });
-  }
-  return { ok: true, ...result };
-});
-
 exports.previewArmyProtection = onCall({ region: "us-central1", maxInstances: 20, invoker: "public" }, async request => {
   const uid = requireAuth(request);
   const data = request.data || {};
@@ -15804,28 +14573,15 @@ exports.sendArmyOrder = timedCallable("sendArmyOrder", { region: "us-central1", 
   const legacyArmyRef = db.doc(`islands/${getOnlineIslandId(order.sourceRegionId)}/armies/${order.id}`);
   const playerRef = db.doc(`players/${uid}`);
   const attackerLeaderboardRef = leaderboardEntryRef(uid);
-  const operationContext = normalizeClanWarRoomContext(order.operationContext);
-  const operationRef = operationContext
-    ? clanOperationRef(operationContext.clanId, operationContext.operationId)
-    : null;
-  const operationOrderRef = operationContext
-    ? clanOperationOrderRef(operationContext.clanId, operationContext.operationId, operationContext.orderId)
-    : null;
-  const operationAssignmentRef = operationContext
-    ? clanOperationAssignmentRef(operationContext.clanId, operationContext.operationId, operationContext.assignmentId)
-    : null;
 
   const result = await runTransactionWithInfrastructureRetry(async transaction => {
-    const [sourceSnap, targetSnap, canonicalArmySnap, legacyArmySnap, playerSnap, attackerLeaderboardSnap, operationSnap, operationOrderSnap, operationAssignmentSnap] = await Promise.all([
+    const [sourceSnap, targetSnap, canonicalArmySnap, legacyArmySnap, playerSnap, attackerLeaderboardSnap] = await Promise.all([
       transaction.get(sourceRef),
       transaction.get(targetRef),
       transaction.get(armyRefs[0]),
       transaction.get(legacyArmyRef),
       transaction.get(playerRef),
       transaction.get(attackerLeaderboardRef),
-      operationRef ? transaction.get(operationRef) : Promise.resolve(null),
-      operationOrderRef ? transaction.get(operationOrderRef) : Promise.resolve(null),
-      operationAssignmentRef ? transaction.get(operationAssignmentRef) : Promise.resolve(null),
     ]);
 
     if (!sourceSnap.exists) throw new HttpsError("not-found", "Source city was not found.");
@@ -16001,41 +14757,6 @@ exports.sendArmyOrder = timedCallable("sendArmyOrder", { region: "us-central1", 
     const requestedTroops = resolvedKind === "scout"
       ? 1
       : clampInt(order.requestedTroops || order.troops || Math.floor(sourceTroops * DEFAULT_MARCH_PERCENT), 1, Math.max(1, sourceTroops));
-    let acceptedOperationAssignment = null;
-    if (operationContext) {
-      const operation = operationSnap?.exists ? operationSnap.data() || {} : null;
-      const plannedOrder = operationOrderSnap?.exists ? { id: operationOrderSnap.id, ...operationOrderSnap.data() } : null;
-      const assignment = operationAssignmentSnap?.exists
-        ? { id: operationAssignmentSnap.id, ...operationAssignmentSnap.data() }
-        : null;
-      const assignmentActionMatches = plannedOrder?.action === resolvedKind;
-      if (
-        !operation
-        || !plannedOrder
-        || !assignment
-        || operation.status !== "active"
-        || safeNumber(operation.expiresAtMs, 0) <= nowMs
-        || safeString(attackerProfile.clanId, 128) !== operationContext.clanId
-        || assignment.uid !== uid
-        || assignment.status !== "accepted"
-        || assignment.orderId !== operationContext.orderId
-        || Math.floor(safeNumber(assignment.orderRevision, 0)) !== Math.floor(safeNumber(plannedOrder.revision, 0))
-        || assignment.sourceId !== order.fromId
-        || normalizeRegionId(assignment.sourceRegionId) !== order.sourceRegionId
-        || plannedOrder.targetId !== order.toId
-        || normalizeRegionId(plannedOrder.targetRegionId) !== order.targetRegionId
-        || plannedOrder.targetType !== order.targetType
-        || !assignmentActionMatches
-        || Math.floor(safeNumber(assignment.troops, 0)) !== requestedTroops
-      ) {
-        throw new HttpsError(
-          "failed-precondition",
-          "This War Room assignment is stale. Reconfirm its source, troops, target, action, and timing before launching.",
-          { reason: "war-room-assignment-stale", operationId: operationContext.operationId, orderId: operationContext.orderId }
-        );
-      }
-      acceptedOperationAssignment = assignment;
-    }
     const attackerStatsBeforeLaunch = createPreparedEconomyStatsSnapshot(attackerEconomy, {}, { nowMs });
     const attackerKingPower = Math.max(
       0,
@@ -16201,15 +14922,6 @@ exports.sendArmyOrder = timedCallable("sendArmyOrder", { region: "us-central1", 
       createdByServer: true,
       reinforcementModelVersion: resolvedKind === "reinforce" ? REINFORCEMENT_MODEL_VERSION : 0,
       serverAuthorityVersion: 3,
-      ...(operationContext ? {
-        operationContext,
-        operationTiming: {
-          recommendedLaunchAtMs: Math.max(0, Math.floor(safeNumber(acceptedOperationAssignment?.recommendedLaunchAtMs, 0))),
-          latestLaunchAtMs: Math.max(0, Math.floor(safeNumber(acceptedOperationAssignment?.latestLaunchAtMs, 0))),
-          launchedEarly: nowMs < safeNumber(acceptedOperationAssignment?.recommendedLaunchAtMs, 0),
-          launchedLate: nowMs > safeNumber(acceptedOperationAssignment?.latestLaunchAtMs, 0),
-        },
-      } : {}),
     };
 
     let profileOverrides = resolvedKind === "reinforce"
@@ -16271,29 +14983,6 @@ exports.sendArmyOrder = timedCallable("sendArmyOrder", { region: "us-central1", 
     });
 
     writeArmyMovementCopies(transaction, movement, { includeCreatedAt: true });
-
-    if (operationContext) {
-      transaction.set(operationAssignmentRef, {
-        status: "launched",
-        armyId: movement.id,
-        launchedAtMs: nowMs,
-        actualArrivalAtMs: arrivesAtMs,
-        launchedEarly: nowMs < safeNumber(acceptedOperationAssignment?.recommendedLaunchAtMs, 0),
-        launchedLate: nowMs > safeNumber(acceptedOperationAssignment?.latestLaunchAtMs, 0),
-        updatedAtMs: nowMs,
-        updatedAt: FieldValue.serverTimestamp(),
-      }, { merge: true });
-      transaction.set(clanOperationReminderRef(
-        operationContext.clanId,
-        operationContext.operationId,
-        operationContext.assignmentId
-      ), {
-        status: "cancelled",
-        cancelledReason: "army_launched",
-        updatedAtMs: nowMs,
-        updatedAt: FieldValue.serverTimestamp(),
-      }, { merge: true });
-    }
 
     if (order.targetType === "camp" && resolvedKind === "attack") {
       const activeArmyIds = normalizeActiveArmyIds([...(target.activeArmyIds || []), order.id]);
@@ -16634,12 +15323,6 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
       writeArmyMovementCopies(transaction, { ...army, ...patch, id: armyId }, {
         previousTargetOwnerUid: army.targetOwnerUid,
       });
-      const ownerReport = reports.find(report => safeString(report?.uid, 128) === attackerUid) || null;
-      writeClanWarRoomAssignmentResolution(transaction, army, {
-        ...(resultPatch || {}),
-        reportId: ownerReport?.id || "",
-        reportAvailable: Boolean(ownerReport),
-      }, nowMs);
     };
     const finalizeReinforcementReturn = (returnedTroops = troopCount) => {
       if (!isReinforcementReturn || !army.reinforcementId) return;
@@ -20834,162 +19517,83 @@ async function backfillActiveArmyVisibilityViews() {
   return { complete, processed: snapshot.size, cursor: nextCursor };
 }
 
-async function sendDueClanWarRoomReminders(nowMs = Date.now()) {
-  const dueSnap = await db.collection("clanOperationReminders")
-    .where("status", "==", "pending")
-    .where("resetGeneration", "==", RESET_GENERATION)
-    .where("worldId", "==", ONLINE_WORLD_ID)
-    .where("dueAtMs", "<=", nowMs)
-    .orderBy("dueAtMs", "asc")
-    .limit(100)
-    .get();
-  let claimed = 0;
-  let sent = 0;
-  let skipped = 0;
-  for (const dueDoc of dueSnap.docs) {
-    const notification = await runTransactionWithInfrastructureRetry(async transaction => {
-      const reminderSnap = await transaction.get(dueDoc.ref);
-      if (!reminderSnap.exists) return null;
-      const reminder = reminderSnap.data() || {};
-      if (reminder.status !== "pending" || safeNumber(reminder.dueAtMs, 0) > nowMs) return null;
-      const assignmentRef = clanOperationAssignmentRef(reminder.clanId, reminder.operationId, reminder.assignmentId);
-      const operationRef = clanOperationRef(reminder.clanId, reminder.operationId);
-      const orderRef = clanOperationOrderRef(reminder.clanId, reminder.operationId, reminder.orderId);
-      const [assignmentSnap, operationSnap, orderSnap] = await Promise.all([
-        transaction.get(assignmentRef),
-        transaction.get(operationRef),
-        transaction.get(orderRef),
-      ]);
-      const assignment = assignmentSnap.exists ? assignmentSnap.data() || {} : {};
-      const operation = operationSnap.exists ? operationSnap.data() || {} : {};
-      const order = orderSnap.exists ? orderSnap.data() || {} : {};
-      const valid = assignment.status === "accepted"
-        && operation.status === "active"
-        && safeNumber(operation.expiresAtMs, 0) > nowMs
-        && Math.floor(safeNumber(assignment.orderRevision, 0)) === Math.floor(safeNumber(order.revision, 0))
-        && safeString(assignment.uid, 128) === safeString(reminder.uid, 128);
-      transaction.set(dueDoc.ref, {
-        status: valid ? "sent" : "cancelled",
-        sentAtMs: valid ? nowMs : 0,
-        cancelledReason: valid ? "" : "assignment_inactive",
-        updatedAtMs: nowMs,
-        updatedAt: FieldValue.serverTimestamp(),
-      }, { merge: true });
-      if (!valid) return null;
-      return {
-        uid: assignment.uid,
-        clanId: reminder.clanId,
-        operationId: reminder.operationId,
-        orderId: reminder.orderId,
-        assignmentId: reminder.assignmentId,
-        kind: "reminder",
-        title: "War Room launch reminder",
-        body: `${safeString(operation.title, 64)}: send ${safeString(order.action, 16)} to ${safeString(order.targetName, 80)} in about five minutes.`,
-      };
-    });
-    if (!notification) {
-      skipped += 1;
-      continue;
-    }
-    claimed += 1;
-    if (await sendClanWarRoomNotification(notification).catch(() => false)) sent += 1;
-  }
-  return { scanned: dueSnap.size, claimed, sent, skipped };
+const RETIRED_CLAN_WAR_ROOM_BATCH_SIZE = 200;
+
+function isRetiredClanOperationChild(doc = null) {
+  return /^clans\/[^/]+\/operations\/[^/]+\/(orders|assignments|sharedReports)\/[^/]+$/.test(doc?.ref?.path || "");
 }
 
-async function expireClanWarRoomOperations(nowMs = Date.now()) {
-  const dueSnap = await db.collectionGroup("operations")
-    .where("status", "==", "active")
-    .where("resetGeneration", "==", RESET_GENERATION)
-    .where("worldId", "==", ONLINE_WORLD_ID)
-    .where("expiresAtMs", "<=", nowMs)
-    .limit(30)
-    .get();
-  let expired = 0;
-  for (const operationDoc of dueSnap.docs) {
-    const result = await runTransactionWithInfrastructureRetry(async transaction => {
-      const [operationSnap, assignmentsSnap] = await Promise.all([
-        transaction.get(operationDoc.ref),
-        transaction.get(operationDoc.ref.collection("assignments")),
-      ]);
-      if (!operationSnap.exists) return false;
-      const operation = operationSnap.data() || {};
-      if (operation.status !== "active" || safeNumber(operation.expiresAtMs, 0) > nowMs) return false;
-      const clanId = safeString(operation.clanId || operationDoc.ref.parent.parent?.id, 128);
-      const stateRef = clanOperationStateRef(clanId);
-      const stateSnap = await transaction.get(stateRef);
-      const state = normalizeClanOperationState(stateSnap.exists ? stateSnap.data() || {} : {});
-      assignmentsSnap.docs.forEach(doc => {
-        const assignment = doc.data() || {};
-        if (!["requested", "accepted", "needs_reconfirm"].includes(assignment.status)) return;
-        transaction.set(doc.ref, {
-          status: "missed",
-          missedAtMs: nowMs,
-          updatedAtMs: nowMs,
-          updatedAt: FieldValue.serverTimestamp(),
-        }, { merge: true });
-        transaction.set(clanOperationReminderRef(clanId, operationDoc.id, doc.id), {
-          status: "cancelled",
-          cancelledReason: "operation_expired",
-          updatedAtMs: nowMs,
-          updatedAt: FieldValue.serverTimestamp(),
-        }, { merge: true });
-      });
-      transaction.set(operationDoc.ref, {
-        status: "expired",
-        visibility: "clan",
-        closedAtMs: nowMs,
-        archiveAtMs: nowMs + CLAN_WAR_ROOM_HISTORY_RETENTION_MS,
-        attentionUids: [],
-        updatedAtMs: nowMs,
-        updatedAt: FieldValue.serverTimestamp(),
-      }, { merge: true });
-      transaction.set(stateRef, {
-        activeOperationIds: state.activeOperationIds.filter(id => id !== operationDoc.id),
-        updatedAtMs: nowMs,
-        updatedAt: FieldValue.serverTimestamp(),
-      }, { merge: true });
-      return true;
-    });
-    if (result) expired += 1;
-  }
-  return { scanned: dueSnap.size, expired };
+async function deleteRetiredClanWarRoomDocs(docs = []) {
+  const rows = Array.isArray(docs) ? docs.filter(Boolean).slice(0, 400) : [];
+  if (!rows.length) return 0;
+  const batch = db.batch();
+  rows.forEach(doc => batch.delete(doc.ref));
+  await batch.commit();
+  return rows.length;
 }
 
-async function deleteClanWarRoomOperationHistory(nowMs = Date.now()) {
-  const archivedSnap = await db.collectionGroup("operations")
-    .where("status", "in", ["completed", "cancelled", "expired"])
-    .where("resetGeneration", "==", RESET_GENERATION)
-    .where("worldId", "==", ONLINE_WORLD_ID)
-    .where("archiveAtMs", "<=", nowMs)
-    .limit(10)
-    .get();
-  let deleted = 0;
-  for (const operationDoc of archivedSnap.docs) {
-    const [ordersSnap, assignmentsSnap, reportsSnap] = await Promise.all([
-      operationDoc.ref.collection("orders").get(),
-      operationDoc.ref.collection("assignments").get(),
-      operationDoc.ref.collection("sharedReports").get(),
-    ]);
-    const refs = [
-      ...ordersSnap.docs.map(doc => doc.ref),
-      ...assignmentsSnap.docs.map(doc => doc.ref),
-      ...reportsSnap.docs.map(doc => doc.ref),
-      ...assignmentsSnap.docs.map(doc => clanOperationReminderRef(
-        safeString(operationDoc.data()?.clanId, 128),
-        operationDoc.id,
-        doc.id
-      )),
-      operationDoc.ref,
-    ];
-    for (let index = 0; index < refs.length; index += 400) {
-      const batch = db.batch();
-      refs.slice(index, index + 400).forEach(ref => batch.delete(ref));
-      await batch.commit();
-    }
-    deleted += 1;
+async function purgeRetiredClanWarRoomBatch(nowMs = Date.now()) {
+  const [operationsSnap, ordersSnap, assignmentsSnap, reportsSnap, stateSnap, remindersSnap, auditsSnap, armiesSnap] = await Promise.all([
+    db.collectionGroup("operations").limit(25).get(),
+    db.collectionGroup("orders").limit(RETIRED_CLAN_WAR_ROOM_BATCH_SIZE).get(),
+    db.collectionGroup("assignments").limit(RETIRED_CLAN_WAR_ROOM_BATCH_SIZE).get(),
+    db.collectionGroup("sharedReports").limit(RETIRED_CLAN_WAR_ROOM_BATCH_SIZE).get(),
+    db.collectionGroup("operationState").limit(RETIRED_CLAN_WAR_ROOM_BATCH_SIZE).get(),
+    db.collection("clanOperationReminders").limit(RETIRED_CLAN_WAR_ROOM_BATCH_SIZE).get(),
+    db.collectionGroup("audit")
+      .where("action", ">=", "war_room_")
+      .where("action", "<", "war_room_\uf8ff")
+      .limit(RETIRED_CLAN_WAR_ROOM_BATCH_SIZE)
+      .get(),
+    db.collection("armies")
+      .where("operationContext.operationId", ">", "")
+      .limit(RETIRED_CLAN_WAR_ROOM_BATCH_SIZE)
+      .get(),
+  ]);
+
+  const operationRoots = operationsSnap.docs
+    .filter(doc => /^clans\/[^/]+\/operations\/[^/]+$/.test(doc.ref.path));
+  await processWithConcurrency(operationRoots, 4, operationDoc => db.recursiveDelete(operationDoc.ref));
+  const orphanedChildren = [ordersSnap, assignmentsSnap, reportsSnap]
+    .flatMap(snapshot => snapshot.docs)
+    .filter(isRetiredClanOperationChild);
+  const operationStates = stateSnap.docs.filter(doc => /^clans\/[^/]+\/operationState\/[^/]+$/.test(doc.ref.path));
+  const deletedChildren = await deleteRetiredClanWarRoomDocs(orphanedChildren);
+  const deletedStates = await deleteRetiredClanWarRoomDocs(operationStates);
+  const deletedReminders = await deleteRetiredClanWarRoomDocs(remindersSnap.docs);
+  const deletedAudits = await deleteRetiredClanWarRoomDocs(auditsSnap.docs);
+
+  if (armiesSnap.size) {
+    const batch = db.batch();
+    armiesSnap.docs.forEach(doc => batch.set(doc.ref, {
+      operationContext: FieldValue.delete(),
+      operationTiming: FieldValue.delete(),
+      updatedAtMs: nowMs,
+      updatedAt: FieldValue.serverTimestamp(),
+    }, { merge: true }));
+    await batch.commit();
   }
-  return { scanned: archivedSnap.size, deleted };
+
+  const deleted = {
+    operations: operationRoots.length,
+    children: deletedChildren,
+    operationStates: deletedStates,
+    reminders: deletedReminders,
+    audits: deletedAudits,
+    armyContexts: armiesSnap.size,
+  };
+  const complete = Object.values(deleted).every(value => value === 0);
+  await db.doc(`realmMaintenance/${RESET_GENERATION}/retirements/clanWarRoomV1`).set({
+    worldId: ONLINE_WORLD_ID,
+    resetGeneration: RESET_GENERATION,
+    status: complete ? "complete" : "running",
+    complete,
+    lastBatch: deleted,
+    updatedAtMs: nowMs,
+    updatedAt: FieldValue.serverTimestamp(),
+    ...(complete ? { completedAtMs: nowMs, completedAt: FieldValue.serverTimestamp() } : {}),
+  }, { merge: true });
+  return { complete, deleted };
 }
 
 exports.maintainClanWarRoom = onSchedule({
@@ -20997,16 +19601,11 @@ exports.maintainClanWarRoom = onSchedule({
   schedule: "every 1 minutes",
   timeZone: "Etc/UTC",
   maxInstances: 1,
-  timeoutSeconds: 180,
-  memory: "256MiB",
+  timeoutSeconds: 300,
+  memory: "512MiB",
 }, async () => {
-  const nowMs = Date.now();
-  const [reminders, expiry, cleanup] = await Promise.all([
-    sendDueClanWarRoomReminders(nowMs),
-    expireClanWarRoomOperations(nowMs),
-    deleteClanWarRoomOperationHistory(nowMs),
-  ]);
-  console.log("Clan War Room maintained", { reminders, expiry, cleanup });
+  const result = await purgeRetiredClanWarRoomBatch(Date.now());
+  console.log("Retired Clan War Room data purge", result);
 });
 
 exports.maintainGameServer = onSchedule({
