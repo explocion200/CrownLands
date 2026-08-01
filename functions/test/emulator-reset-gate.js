@@ -1556,19 +1556,11 @@ async function main() {
   const cappedTargetCapacityRef = db.doc(
     `reinforcementCapacity/${realm.resetGeneration}/cities/${cappedTargetCapacityId}`
   );
-  const [capacityBeforeSixth, cappedTargetBeforeSixth, sixthSenderSourceSnap] = await Promise.all([
+  const [capacityBeforeSixth, cappedTargetBeforeSixth] = await Promise.all([
     cappedTargetCapacityRef.get(),
     secondClanReinforcementTargetDoc.ref.get(),
-    db.doc(
-      `islands/${clanReinforcementSourceClaim.islandId}/cities/${otherSenderReinforcement.movement.fromId}`
-    ).get(),
   ]);
   const cappedTarget = cappedTargetBeforeSixth.data() || {};
-  const sixthSenderSource = sixthSenderSourceSnap.data() || {};
-  const sixthDistance = Math.hypot(
-    Number(cappedTarget.x) - Number(sixthSenderSource.x),
-    Number(cappedTarget.y) - Number(sixthSenderSource.y)
-  );
   await Promise.all([
     cappedTargetCapacityRef.set({
       worldId: realm.worldId,
@@ -1586,40 +1578,70 @@ async function main() {
     secondClanReinforcementTargetDoc.ref.set({ clanReinforcementSlotCount: 5 }, { merge: true }),
   ]);
   let sixthCapacityError = null;
-  try {
-    await callFunction("sendArmyOrder", clanSecondSender.token, {
-      army: {
-        id: `clan_reinforce_sixth_${crypto.randomBytes(8).toString("hex")}`,
-        kind: "reinforce",
-        fromId: otherSenderReinforcement.movement.fromId,
-        toId: secondClanReinforcementTargetDoc.id,
-        fromName: sixthSenderSource.name || otherSenderReinforcement.movement.fromId,
-        toName: cappedTarget.name || secondClanReinforcementTargetDoc.id,
-        troops: 100,
-        requestedTroops: 100,
-        sourceRegionId: clanReinforcementSourceClaim.mainRegionId,
-        targetRegionId: clanReinforcementSourceClaim.mainRegionId,
-        routeRegionIds: [clanReinforcementSourceClaim.mainRegionId],
-        viewRegionIds: [clanReinforcementSourceClaim.mainRegionId],
-        path: [
-          { x: Number(sixthSenderSource.x), y: Number(sixthSenderSource.y) },
-          { x: Number(cappedTarget.x), y: Number(cappedTarget.y) },
-        ],
-        pathSegments: [{
-          regionId: clanReinforcementSourceClaim.mainRegionId,
-          points: [
+  for (const candidate of otherSenderSourceCandidates) {
+    const currentSource = (await candidate.ref.get()).data() || {};
+    const alreadyOwnedBySender = currentSource.ownerUid === clanSecondSender.uid;
+    if (currentSource.ownerUid && !alreadyOwnedBySender) continue;
+    if (!alreadyOwnedBySender) {
+      await candidate.ref.set({
+        ownerKind: "player",
+        ownerUid: clanSecondSender.uid,
+        ownerName: "Ruler 47",
+        ownerFlag: null,
+        isMainCity: false,
+        level: 1,
+        defense: 1,
+        troops: 10_000,
+        troopFloat: 10_000,
+      }, { merge: true });
+    }
+    const sixthSenderSource = (await candidate.ref.get()).data() || {};
+    const sixthDistance = Math.hypot(
+      Number(cappedTarget.x) - Number(sixthSenderSource.x),
+      Number(cappedTarget.y) - Number(sixthSenderSource.y)
+    );
+    try {
+      await callFunction("sendArmyOrder", clanSecondSender.token, {
+        army: {
+          id: `clan_reinforce_sixth_${crypto.randomBytes(8).toString("hex")}`,
+          kind: "reinforce",
+          fromId: candidate.id,
+          toId: secondClanReinforcementTargetDoc.id,
+          fromName: sixthSenderSource.name || candidate.id,
+          toName: cappedTarget.name || secondClanReinforcementTargetDoc.id,
+          troops: 100,
+          requestedTroops: 100,
+          sourceRegionId: clanReinforcementSourceClaim.mainRegionId,
+          targetRegionId: clanReinforcementSourceClaim.mainRegionId,
+          routeRegionIds: [clanReinforcementSourceClaim.mainRegionId],
+          viewRegionIds: [clanReinforcementSourceClaim.mainRegionId],
+          path: [
             { x: Number(sixthSenderSource.x), y: Number(sixthSenderSource.y) },
             { x: Number(cappedTarget.x), y: Number(cappedTarget.y) },
           ],
-          length: sixthDistance,
-        }],
-        pathLength: sixthDistance,
-      },
-      sourceRegionId: clanReinforcementSourceClaim.mainRegionId,
-      targetRegionId: clanReinforcementSourceClaim.mainRegionId,
-    });
-  } catch (error) {
-    sixthCapacityError = error;
+          pathSegments: [{
+            regionId: clanReinforcementSourceClaim.mainRegionId,
+            points: [
+              { x: Number(sixthSenderSource.x), y: Number(sixthSenderSource.y) },
+              { x: Number(cappedTarget.x), y: Number(cappedTarget.y) },
+            ],
+            length: sixthDistance,
+          }],
+          pathLength: sixthDistance,
+        },
+        sourceRegionId: clanReinforcementSourceClaim.mainRegionId,
+        targetRegionId: clanReinforcementSourceClaim.mainRegionId,
+      });
+    } catch (error) {
+      if (/all 5 reinforcement slots reserved/.test(String(error?.message || ""))) {
+        sixthCapacityError = error;
+      } else if (!String(error?.message || "").includes("route crosses")) {
+        if (!alreadyOwnedBySender) await candidate.ref.set(currentSource);
+        throw error;
+      }
+    }
+    if (!alreadyOwnedBySender) await candidate.ref.set(currentSource);
+    if (sixthCapacityError) break;
   }
   assert(
     /all 5 reinforcement slots reserved/.test(String(sixthCapacityError?.message || "")),
