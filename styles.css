@@ -3093,6 +3093,10 @@ input {
 .modal-card ul { margin: .5rem 0 0; padding-left: 1.15rem; }
 .modal-card li { margin: .35rem 0; }
 .player-name-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  border-radius: 5px;
   cursor: pointer;
   text-decoration: underline;
   text-decoration-color: transparent;
@@ -3103,7 +3107,10 @@ input {
 .player-name-link:focus-visible {
   color: #f3d88b;
   text-decoration-color: currentColor;
-  outline: none;
+}
+.player-name-link:focus-visible {
+  outline: 2px solid #f3d88b;
+  outline-offset: 2px;
 }
 .public-player-profile-modal.modal {
   width: min(720px, calc(100vw - 1.3rem));
@@ -7301,7 +7308,10 @@ button.daily-reward-card.available:disabled {
 .clan-list-row div { display: grid; gap: .12rem; min-width: 0; }
 .clan-list-row span, .clan-list-row small, .clan-member-row span, .clan-muted { color: #a9c0b2; }
 .clan-name-link {
+  display: inline-flex;
+  align-items: center;
   justify-self: start;
+  min-height: 28px;
   min-width: 0;
   padding: 0;
   overflow-wrap: anywhere;
@@ -7318,8 +7328,30 @@ button.daily-reward-card.available:disabled {
   color: #8fe0a5;
   text-decoration: underline;
   text-underline-offset: .16em;
-  outline: none;
 }
+.clan-name-link:focus-visible {
+  outline: 2px solid #8fe0a5;
+  outline-offset: 2px;
+  border-radius: 5px;
+}
+.clan-shield-link {
+  display: inline-grid;
+  place-items: center;
+  margin: 0;
+  padding: 0;
+  color: inherit;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  cursor: pointer;
+}
+.clan-shield-link:hover { filter: brightness(1.16); }
+.clan-shield-link:focus-visible {
+  outline: 2px solid #8fe0a5;
+  outline-offset: 3px;
+}
+.clan-hero-name { color: inherit; font-size: inherit; }
+.clan-hero-shield-link { min-width: 78px; min-height: 86px; }
 .clan-hero {
   display: grid;
   grid-template-columns: auto 1fr auto;

@@ -8247,6 +8247,7 @@ function normalizeBattleReports(reports) {
           Math.max(0, Math.floor(Number(report.baseTotalDefense ?? report.totalDefense) || 0))
         ),
         totalDefenseBonus: Math.max(0, Math.floor(Number(report.totalDefenseBonus) || 0)),
+        opponentUid: String(report.opponentUid || "").slice(0, 128),
         opponentName: String(report.opponentName || "").slice(0, 40),
         opponentFlag: report.opponentFlag && typeof report.opponentFlag === "object"
           ? normalizeFlag(report.opponentFlag)
@@ -8710,6 +8711,7 @@ function createScoutReportSnapshot(target) {
     baseTotalDefense: Math.floor(stats.baseTotalDefense),
     totalDefenseBonus: Math.floor(stats.totalDefenseBonus),
     owner: target.owner,
+    ownerUid: String(target.ownerUid || (target.owner === "player" ? getCurrentOnlineUid() : "")).slice(0, 128),
     ownerName: getCityOwnerDisplayName(target),
     cityLevel: stats.level,
     defensePercent: stats.defensePercent,
@@ -9736,6 +9738,9 @@ function getKingPowerLeaderboardSnapshot() {
     mainCityId: stats?.mainCityId || state?.mainCityId || "",
     mainRegionId: stats?.mainRegionId || mainRegionId,
     mainIslandId: stats?.mainIslandId || state?.online?.mainIslandId || getOnlineIslandId(mainRegionId),
+    clanId: String(state?.clanId || ""),
+    clanName: String(state?.clanName || ""),
+    clanTag: String(state?.clanTag || ""),
     updatedAtMs: Date.now(),
   };
 }
@@ -9747,6 +9752,9 @@ function getLeaderboardEntrySignature(entry) {
     entry.cityCount,
     entry.mainCityId,
     entry.mainRegionId,
+    entry.clanId,
+    entry.clanName,
+    entry.clanTag,
     JSON.stringify(normalizeFlag(entry.flag)),
   ].join("|");
 }
@@ -9831,6 +9839,52 @@ function renderPlayerNameLink(uid = "", name = "Ruler", className = "") {
   const safeName = escapeHtml(cleanName(name) || "Ruler");
   if (!playerUid) return `<strong class="${escapeHtml(className)}">${safeName}</strong>`;
   return `<strong class="player-name-link ${escapeHtml(className)}" role="button" tabindex="0" data-player-profile-uid="${escapeHtml(playerUid)}" aria-label="View ${safeName}'s profile">${safeName}</strong>`;
+}
+
+function renderClanIdentityLink({
+  clanId = "",
+  clanName = "Clan",
+  clanTag = "",
+  className = "",
+  display = "full",
+} = {}) {
+  const id = String(clanId || "").trim();
+  const name = String(clanName || "Clan").trim() || "Clan";
+  const tag = String(clanTag || "").trim();
+  const label = display === "tag"
+    ? tag ? `[${tag}]` : name
+    : display === "name"
+      ? name
+      : `${tag ? `[${tag}] ` : ""}${name}`;
+  const safeLabel = escapeHtml(label);
+  if (!id) return `<strong class="${escapeHtml(className)}">${safeLabel}</strong>`;
+  return `<button class="clan-name-link clan-identity-link ${escapeHtml(className)}" type="button" data-public-clan-id="${escapeHtml(id)}" aria-label="View ${escapeHtml(name)} public clan profile">${safeLabel}</button>`;
+}
+
+function renderPlayerLinkedText(text = "", uid = "", playerName = "") {
+  const value = String(text || "");
+  const name = cleanName(playerName);
+  const playerUid = String(uid || "").trim();
+  if (!value || !name || !playerUid || !value.includes(name)) return escapeHtml(value);
+  const segments = [];
+  const identityCharacter = character => Boolean(character && /[\p{L}\p{N}_]/u.test(character));
+  let cursor = 0;
+  while (cursor < value.length) {
+    const matchIndex = value.indexOf(name, cursor);
+    if (matchIndex < 0) break;
+    const before = value[matchIndex - 1] || "";
+    const after = value[matchIndex + name.length] || "";
+    if (identityCharacter(before) || identityCharacter(after)) {
+      segments.push(escapeHtml(value.slice(cursor, matchIndex + name.length)));
+      cursor = matchIndex + name.length;
+      continue;
+    }
+    segments.push(escapeHtml(value.slice(cursor, matchIndex)));
+    segments.push(renderPlayerNameLink(playerUid, name, "player-name-link-inline"));
+    cursor = matchIndex + name.length;
+  }
+  segments.push(escapeHtml(value.slice(cursor)));
+  return segments.join("");
 }
 
 function normalizePublicPlayerProfile(raw = {}, uid = "") {
@@ -18000,6 +18054,7 @@ function renderProfileClanAffiliation() {
     profileClanShield.innerHTML = "";
     profileClanName.textContent = "";
     delete profileClanAffiliation.dataset.clanSignature;
+    delete profileClanAffiliation.dataset.publicClanId;
     return;
   }
   const activeClan = clanSnapshot?.id === state.clanId ? clanSnapshot : null;
@@ -18014,7 +18069,8 @@ function renderProfileClanAffiliation() {
     { size: "mini", instance: "own-profile", label: `${clanName} clan shield` }
   );
   profileClanName.textContent = `${clanTag ? `[${clanTag}] ` : ""}${clanName}`;
-  profileClanAffiliation.setAttribute("aria-label", `Open ${clanTag ? `[${clanTag}] ` : ""}${clanName}`);
+  profileClanAffiliation.dataset.publicClanId = state.clanId;
+  profileClanAffiliation.setAttribute("aria-label", `View ${clanTag ? `[${clanTag}] ` : ""}${clanName} public clan profile`);
 }
 
 function refreshClanRelationshipPresentation() {
@@ -18948,11 +19004,13 @@ function renderClanOverviewPanel(canLead = false) {
     <section id="clanOverviewPanel" class="clan-section-panel clan-overview-panel ${activeClass}" role="tabpanel" aria-labelledby="clanSectionTabOverview">
       <section class="clan-hero">
         <div class="clan-hero-shield">
-          ${renderClanShield(clanSnapshot.shield || clanSnapshot.banner, { size: "large", label: `${clanSnapshot.name || "Clan"} shield` })}
+          <button type="button" class="clan-shield-link clan-hero-shield-link" data-public-clan-id="${escapeHtml(clanSnapshot.id || state.clanId)}" aria-label="View ${escapeHtml(clanSnapshot.name || "Clan")} public clan profile">
+            ${renderClanShield(clanSnapshot.shield || clanSnapshot.banner, { size: "large", label: `${clanSnapshot.name || "Clan"} shield` })}
+          </button>
         </div>
         <div class="clan-hero-copy">
           <span>Your clan · ${clanRoleLabel(state.clanRole)}</span>
-          <h3>[${escapeHtml(clanSnapshot.tag || "")}] ${escapeHtml(clanSnapshot.name || "Clan")}</h3>
+          <h3>${renderClanIdentityLink({ clanId: clanSnapshot.id || state.clanId, clanName: clanSnapshot.name, clanTag: clanSnapshot.tag, className: "clan-hero-name" })}</h3>
           <p>${escapeHtml(clanSnapshot.description || "No description yet.")}</p>
           ${canLead ? `<div class="clan-hero-actions" aria-label="Leader clan management">
             <button type="button" data-clan-action="edit-shield">${clanShieldEditorOpen ? "Editing Shield" : "Edit Shield"}</button>
@@ -19052,7 +19110,7 @@ function renderClanRallyCard(rally) {
           : "Settled";
     return `
       <li class="${escapeHtml(participant.status || "")}">
-        <span><strong>${escapeHtml(participant.ownerName || "Ruler")}</strong><small>${participant.role === "leader" ? "Leader" : "Ally"} · ${escapeHtml(eta)}</small></span>
+        <span>${renderPlayerNameLink(participant.uid || participant.ownerUid, participant.ownerName || "Ruler")}<small>${participant.role === "leader" ? "Leader" : "Ally"} · ${escapeHtml(eta)}</small></span>
         <b>${formatNumber(participant.troops || 0)}</b>
       </li>`;
   }).join("");
@@ -19075,7 +19133,7 @@ function renderClanRallyCard(rally) {
         <b>${activeParticipants.length || participants.length}/3</b>
       </header>
       <div class="clan-rally-summary">
-        <span>Leader <strong>${escapeHtml(rally.leaderName || "Ruler")}</strong></span>
+        <span>Leader ${renderPlayerNameLink(rally.leaderUid, rally.leaderName || "Ruler")}</span>
         <span><strong>${formatNumber(assembledTroops)}</strong> assembled</span>
         <span><strong>${formatNumber(inboundTroops)}</strong> inbound</span>
         <span class="clan-rally-status">${recalling ? "Returning" : launched ? "Launched" : "Forming"}</span>
@@ -19125,7 +19183,7 @@ function confirmClanRallyAction(rally, action) {
   const launching = action === "launch";
   const inboundList = inbound.length
     ? `<ul>${inbound.map(participant => `
-        <li><span>${escapeHtml(participant.ownerName || "Clan ally")}</span><strong>${formatNumber(participant.troops || 0)} troops</strong></li>`).join("")}</ul>`
+        <li><span>${renderPlayerNameLink(participant.uid || participant.ownerUid, participant.ownerName || "Clan ally")}</span><strong>${formatNumber(participant.troops || 0)} troops</strong></li>`).join("")}</ul>`
     : `<p class="clan-muted">No contributions are still inbound.</p>`;
   modal.classList.remove("incoming-attack-modal", "outgoing-attack-modal");
   modal.classList.add("clan-rally-confirmation-modal");
@@ -19286,8 +19344,8 @@ function renderClanView() {
           <form data-clan-form="search" class="clan-search"><input name="search" maxlength="24" placeholder="Search by clan name" aria-label="Search clans" /><button type="submit">Search</button></form>
           <div class="clan-list">${clanSearchResults.length ? clanSearchResults.map(clan => `
             <article class="clan-list-row">
-              ${renderClanShield(clan.shield || clan.banner, { size: "mini", label: `${clan.name || "Clan"} shield` })}
-              <div class="clan-list-copy"><button class="clan-name-link" type="button" data-public-clan-id="${escapeHtml(clan.id)}" aria-label="View ${escapeHtml(clan.name || "Clan")} public clan profile">[${escapeHtml(clan.tag || "")}] ${escapeHtml(clan.name || "Clan")}</button><span>${formatNumber(clan.totalKingPower || 0)} power · ${clan.memberCount || 0}/30 members</span><small>${escapeHtml(clan.description || "No description yet.")}</small></div>
+              <button class="clan-shield-link" type="button" data-public-clan-id="${escapeHtml(clan.id)}" aria-label="View ${escapeHtml(clan.name || "Clan")} public clan profile">${renderClanShield(clan.shield || clan.banner, { size: "mini", label: `${clan.name || "Clan"} shield` })}</button>
+              <div class="clan-list-copy">${renderClanIdentityLink({ clanId: clan.id, clanName: clan.name, clanTag: clan.tag })}<span>${formatNumber(clan.totalKingPower || 0)} power · ${clan.memberCount || 0}/30 members</span><small>${escapeHtml(clan.description || "No description yet.")}</small></div>
               ${renderClanDiscoveryAction(clan, cooldownMs)}
             </article>`).join("") : `<p class="clan-muted">No clans matched your search.</p>`}</div>
         </section>
@@ -21095,7 +21153,7 @@ function deedCampHistoryMarkup(history = [], status = "ready") {
             <span class="deed-history-copy">
               <strong>${escapeHtml(cityName)}</strong>
               <span>${escapeHtml(entry.regionName || getRegionLabel(entry.regionId))}</span>
-              <small>Awarded to ${escapeHtml(entry.awardedToDisplayName || "Ruler")} &middot; ${escapeHtml(awardedAt)}</small>
+              <small>Awarded to ${renderPlayerNameLink(entry.awardedToPlayerId, entry.awardedToDisplayName || "Ruler", "deed-history-player-link")} &middot; ${escapeHtml(awardedAt)}</small>
             </span>
             <button class="battle-report-locate-btn deed-history-locate" type="button" data-deed-history-jump="${escapeHtml(entry.cityId)}" data-deed-history-region="${escapeHtml(entry.regionId)}" aria-label="Go to ${escapeHtml(cityName)}">&#8982;</button>
           </li>`;
@@ -21226,7 +21284,11 @@ function showRewardCampInfoModal(campId) {
       })()
     : null;
   const countdown = getRewardCampCountdownSeconds(camp);
-  const controller = camp.owner === "player" ? "You" : camp.ownerUid ? camp.ownerName || "Rival ruler" : "Neutral";
+  const controllerUid = String(camp.ownerUid || (camp.owner === "player" ? getCurrentOnlineUid() : ""));
+  const controller = camp.owner === "player" ? state?.playerName || "Ruler" : camp.ownerUid ? camp.ownerName || "Rival ruler" : "Neutral";
+  const controllerMarkup = controllerUid
+    ? renderPlayerNameLink(controllerUid, controller, "camp-controller-link")
+    : `<strong>${escapeHtml(controller)}</strong>`;
   const statsSourceLabel = holderHasAccess ? "Live holder stats" : report ? "Scout report snapshot" : "Scouting required";
   const reportRemaining = report ? Math.max(0, Math.ceil(report.expiresAt - state.gameSeconds)) : 0;
   const statsMarkup = visibleStats
@@ -21295,7 +21357,7 @@ function showRewardCampInfoModal(campId) {
 
       <section id="campStatsPanel" class="camp-info-tab-panel" role="tabpanel" aria-labelledby="campStatsTab" data-camp-info-panel="stats">
         <div class="camp-public-status">
-          <div><span>Controller</span><strong>${escapeHtml(controller)}</strong></div>
+          <div><span>Controller</span>${controllerMarkup}</div>
           <div><span>Status</span><strong data-camp-info-countdown="${escapeHtml(camp.id)}">${camp.payoutPending ? countdown > 0 ? formatDuration(countdown) : "Payout ready" : "Neutral"}</strong></div>
           <small class="camp-stats-source">${escapeHtml(statsSourceLabel)}</small>
         </div>
@@ -21344,6 +21406,8 @@ function showScoutReportModal(cityId) {
   const age = Math.max(0, Math.floor(state.gameSeconds - report.scoutedAt));
   const reportedOwner = OWNER[report.owner] ? report.owner : city.owner;
   const reportedOwnerName = report.ownerName || getCityOwnerDisplayName(city);
+  const reportedOwnerUid = String(report.ownerUid || city.ownerUid || "").slice(0, 128);
+  const currentPlayerUid = getCurrentOnlineUid();
   const cityLevel = clampCityLevel(report.cityLevel || city.level);
   const defensePercent = Math.max(0, Number(report.defensePercent) || cityLevel * CITY_LEVEL_STATS.defensePercentPerLevel);
   const cityWalls = Math.max(0, Math.floor(Number(report.cityWalls) || getCityStats({ ...city, level: cityLevel, troops: report.troops }).cityWalls));
@@ -21361,11 +21425,11 @@ function showScoutReportModal(cityId) {
       <div class="scout-report-identities">
         <div class="scout-report-ruler player">
           <span id="scoutReportPlayerFlag" class="kingdom-flag scout-report-flag" aria-hidden="true"><span class="flag-symbol"></span></span>
-          <div><strong>${escapeHtml(state.playerName)}</strong><small>Hero Lv ${formatNumber(state.character.level)}</small></div>
+          <div>${renderPlayerNameLink(currentPlayerUid, state.playerName, "scout-report-player-link")}<small>Hero Lv ${formatNumber(state.character.level)}</small></div>
         </div>
         <div class="scout-report-mark" aria-label="Scout mission"><span aria-hidden="true">&#128301;</span><strong>Scout</strong><small>1 troop</small></div>
         <div class="scout-report-ruler enemy">
-          <div><strong>${escapeHtml(reportedOwnerName)}</strong><small>City Lv ${formatNumber(cityLevel)}</small></div>
+          <div>${renderPlayerNameLink(reportedOwnerUid, reportedOwnerName, "scout-report-owner-link")}<small>City Lv ${formatNumber(cityLevel)}</small></div>
           <span class="scout-report-enemy-flag" aria-hidden="true">${OWNER[reportedOwner].flag}</span>
         </div>
       </div>
@@ -23574,7 +23638,7 @@ function crownCitadelReignLeaderboardMarkup(entries = [], status = "ready") {
         <article class="citadel-reign-row ${entry.isCurrentHolder ? "current" : ""}">
           <strong class="citadel-reign-rank">#${formatNumber(index + 1)}</strong>
           <span class="citadel-reign-ruler">
-            <strong>${escapeHtml(entry.playerName)}</strong>
+            ${renderPlayerNameLink(entry.playerId, entry.playerName, "citadel-reign-player-link")}
             ${entry.isCurrentHolder ? `<small>Current Citadel ruler</small>` : ""}
           </span>
           <strong class="citadel-reign-time" data-citadel-reign-score data-total-held-ms="${entry.totalHeldMs}" data-current-held-since-ms="${entry.currentHeldSinceMs}">${formatDuration(Math.floor(getCrownCitadelReignScoreMs(entry) / 1000))}</strong>
@@ -23643,7 +23707,9 @@ function renderHoldingReinforcementPanel(target) {
       const actionLabel = isHolder && entry.ownerUid !== currentUid ? "Send Home" : "Recall";
       return `
         <article class="holding-reinforcement-row">
-          <span><strong>${escapeHtml(entry.ownerUid === currentUid ? "Your troops" : entry.ownerName || "Clan member")}</strong><small>${formatNumber(entry.troops)} stationed</small></span>
+          <span>${entry.ownerUid === currentUid
+            ? `<strong>Your troops</strong>`
+            : renderPlayerNameLink(entry.ownerUid, entry.ownerName || "Clan member", "reinforcement-holder-link")}<small>${formatNumber(entry.troops)} stationed</small></span>
           <button data-return-clan-reinforcement="${escapeHtml(entry.id)}" type="button" ${returning ? "disabled" : ""}>${returning ? "Returning..." : actionLabel}</button>
         </article>`;
     }).join("")
@@ -23810,7 +23876,11 @@ function showCityInfoModal(cityId) {
     modalTitle.textContent = stronghold ? `${city.name} - Stronghold` : `${city.name} - Level ${city.level}`;
     modalBody.innerHTML = `
       <div class="city-stat-panel modal-city-stats">
-        ${clanAlly ? `<div class="stat-wide clan-ally-status"><span>Relationship</span><strong>Clan Ally [${escapeHtml(clanIdentity.clanTag)}]</strong><small>Scout and Attack are disabled. You may send clan reinforcements.</small><button id="openCityClanBtn" class="profile-secondary-btn" type="button">Open Clan</button></div>` : clanIdentity.clanTag ? `<div class="stat-wide"><span>Clan</span><strong>[${escapeHtml(clanIdentity.clanTag)}] ${escapeHtml(clanIdentity.clanName)}</strong></div>` : ""}
+        ${clanAlly
+          ? `<div class="stat-wide clan-ally-status"><span>Relationship</span><strong>Clan Ally</strong>${renderClanIdentityLink({ clanId: clanIdentity.clanId, clanName: clanIdentity.clanName, clanTag: clanIdentity.clanTag, className: "city-clan-profile-link" })}<small>Scout and Attack are disabled. You may send clan reinforcements.</small></div>`
+          : clanIdentity.clanId
+            ? `<div class="stat-wide"><span>Clan</span>${renderClanIdentityLink({ clanId: clanIdentity.clanId, clanName: clanIdentity.clanName, clanTag: clanIdentity.clanTag, className: "city-clan-profile-link" })}</div>`
+            : ""}
         ${stronghold ? renderObjectiveClanAffiliation(city) : ""}
         ${stronghold ? `<div class="stat-wide"><span>Stronghold bonus</span><strong>${strongholdBonusLabel}</strong><small>The controller receives 8%; current clanmates receive 4%, subject to Citadel precedence.</small></div>` : ""}
         <div class="stat-wide"><span>Owner</span>${renderPlayerNameLink(city.ownerUid || getCurrentOnlineUid(), getCityOwnerDisplayName(city))}</div>
@@ -23826,12 +23896,6 @@ function showCityInfoModal(cityId) {
         ${renderHoldingReinforcementPanel(city)}
       </div>
     `;
-    const openCityClanBtn = document.getElementById("openCityClanBtn");
-    if (openCityClanBtn) openCityClanBtn.addEventListener("click", () => {
-      modal.close();
-      showProfileScreen();
-      showProfileClan();
-    });
     bindHoldingReinforcementButtons();
     if (!modal.open) modal.showModal();
     if (stronghold) void hydrateObjectiveClanAffiliation(city);
@@ -26508,7 +26572,7 @@ function renderIncomingAttackCard(attack) {
       </div>
       <div class="incoming-attack-force">
         <span>${forceLabel}</span>
-        <strong>${escapeHtml(attack.attackerName || "Enemy")}</strong>
+        ${renderPlayerNameLink(attack.ownerUid, attack.attackerName || "Enemy", "incoming-attacker-link")}
         <small>${forceDetails}</small>
       </div>
       <button class="incoming-attack-locate" data-incoming-city="${escapeHtml(city.id)}" type="button" aria-label="Go to ${escapeHtml(city.name)}">&#8982;</button>
@@ -26679,7 +26743,7 @@ function renderReinforcementOperationCard(entry) {
     );
     const label = returning ? "Returning home" : incoming ? "Incoming support" : "Support en route";
     const detail = incoming && !returning
-      ? `${escapeHtml(entry.ownerName || "Clan member")} is reinforcing ${escapeHtml(entry.toName || "your holding")}`
+      ? `${renderPlayerNameLink(entry.ownerUid, entry.ownerName || "Clan member", "reinforcement-inline-link")} is reinforcing ${escapeHtml(entry.toName || "your holding")}`
       : `${escapeHtml(entry.fromName || "Holding")} &rarr; ${escapeHtml(entry.toName || "Holding")}`;
     return `
       <article class="reinforcement-operation-card traveling">
@@ -26691,8 +26755,8 @@ function renderReinforcementOperationCard(entry) {
   const holderView = entry.targetOwnerUid === currentUid;
   const returning = reinforcementReturnRequests.has(entry.id);
   const detail = holderView
-    ? `${escapeHtml(entry.ownerName || "Clan member")}'s troops are defending your holding`
-    : `Your troops are stationed with ${escapeHtml(entry.targetOwnerName || "a clan ally")}`;
+    ? `${renderPlayerNameLink(entry.ownerUid, entry.ownerName || "Clan member", "reinforcement-inline-link")}'s troops are defending your holding`
+    : `Your troops are stationed with ${renderPlayerNameLink(entry.targetOwnerUid, entry.targetOwnerName || "a clan ally", "reinforcement-inline-link")}`;
   return `
     <article class="reinforcement-operation-card stationed">
       <span><strong>${escapeHtml(entry.targetName || entry.targetId || "Allied holding")}</strong><small>${detail}</small></span>
@@ -26974,7 +27038,7 @@ function renderOutgoingAttackCard(mission) {
     : isTransfer
     ? `${isReinforcement ? "Reinforcing" : "Moving troops to"} ${escapeHtml(targetName)}`
     : city
-    ? `${escapeHtml(ownerName)} - ${formatNumber(city.troops)} troops`
+    ? `${renderPlayerNameLink(city.ownerUid, ownerName, "outgoing-target-owner-link")} - ${formatNumber(city.troops)} troops`
     : "Target details are loading";
   const onlineId = getOnlineArmyResolutionId(mission);
   const marchId = String(mission.key || onlineId || "").trim();
@@ -27084,6 +27148,9 @@ function normalizeLeaderboardEntry(raw) {
     troopPerHour: Math.max(0, Math.floor(Number(raw.troopPerHour) || 0)),
     mainCityId,
     mainRegionId,
+    clanId: String(raw.clanId || ""),
+    clanName: String(raw.clanName || ""),
+    clanTag: String(raw.clanTag || ""),
     updatedAtMs: normalizeTimestampMs(raw.updatedAtMs) || timestampToMs(raw.updatedAt),
   };
 }
@@ -27135,7 +27202,7 @@ function renderLeaderboardRow(entry, index, currentUid) {
       <span class="leaderboard-rank">#${formatNumber(index + 1)}</span>
       <span class="kingdom-flag kingdom-flag-small leaderboard-flag" data-leaderboard-flag="${index}" aria-hidden="true"><span class="flag-symbol"></span></span>
       <div class="leaderboard-ruler">
-        <div>${entry.clanTag ? `<span class="city-clan-tag">[${escapeHtml(entry.clanTag)}]</span> ` : ""}${renderPlayerNameLink(entry.uid, entry.displayName)}</div>
+        <div>${entry.clanId && entry.clanTag ? `${renderClanIdentityLink({ clanId: entry.clanId, clanName: entry.clanName, clanTag: entry.clanTag, className: "city-clan-tag leaderboard-clan-link", display: "tag" })} ` : ""}${renderPlayerNameLink(entry.uid, entry.displayName)}</div>
         <small>${escapeHtml(getRegionLabel(entry.mainRegionId))} - ${formatNumber(entry.cityCount)} ${entry.cityCount === 1 ? "city" : "cities"}${isCurrent ? " - You" : ""}</small>
       </div>
       <div class="leaderboard-power">
@@ -27225,9 +27292,9 @@ async function refreshClanLeaderboardRows() {
     list.innerHTML = rows.length ? rows.map((entry, index) => `
       <article class="leaderboard-row clan-leaderboard-row ${entry.id === state?.clanId ? "current" : ""}">
         <span class="leaderboard-rank">#${formatNumber(index + 1)}</span>
-        ${renderClanShield(entry.shield || entry.banner, { size: "mini", label: `${entry.name || "Clan"} shield` })}
-        <span class="clan-leaderboard-tag">[${escapeHtml(entry.tag || "")}]</span>
-        <div class="leaderboard-ruler"><strong>${escapeHtml(entry.name || "Clan")}</strong><small>${formatNumber(entry.memberCount || 0)} members</small></div>
+        <button class="clan-shield-link clan-leaderboard-shield-link" type="button" data-public-clan-id="${escapeHtml(entry.id)}" aria-label="View ${escapeHtml(entry.name || "Clan")} public clan profile">${renderClanShield(entry.shield || entry.banner, { size: "mini", label: `${entry.name || "Clan"} shield` })}</button>
+        ${renderClanIdentityLink({ clanId: entry.id, clanName: entry.name, clanTag: entry.tag, className: "clan-leaderboard-tag", display: "tag" })}
+        <div class="leaderboard-ruler">${renderClanIdentityLink({ clanId: entry.id, clanName: entry.name, clanTag: entry.tag, className: "clan-leaderboard-name", display: "name" })}<small>${formatNumber(entry.memberCount || 0)} members</small></div>
         <div class="leaderboard-power"><strong>${formatNumber(entry.totalKingPower || 0)}</strong><small>Clan Power</small></div>
       </article>`).join("") : `<div class="leaderboard-empty">No clan scores have been published yet.</div>`;
   } catch (error) {
@@ -27344,7 +27411,7 @@ function renderBattleReportCard(report, index = 0) {
       </div>
       <div class="battle-report-opponent">
         ${opponentFlag}
-        <strong>${escapeHtml(opponent)}</strong>
+        ${renderPlayerNameLink(report.opponentUid, opponent, "battle-report-opponent-link")}
       </div>
       <div class="battle-report-actions">
         ${locateButton}
@@ -27570,7 +27637,7 @@ function renderBattlePrimaryParticipant(participant, {
       <h3>${escapeHtml(title)}</h3>
       <div class="battle-participant-identity">
         ${renderBattleKingdomFlag(key, participant.ownerName)}
-        <div><strong>${renderPlayerNameLink(participant.ownerUid, participant.ownerName)}</strong><small>${attacker ? "Army commander" : "Holding owner"}</small></div>
+        <div>${renderPlayerNameLink(participant.ownerUid, participant.ownerName)}<small>${attacker ? "Army commander" : "Holding owner"}</small></div>
       </div>
       ${renderBattleClanIdentity(participant, key)}
       <div class="battle-participant-metrics">
@@ -27591,7 +27658,7 @@ function renderBattleReinforcementRow(participant, index) {
     <article class="battle-reinforcement-row">
       <div class="battle-participant-identity">
         ${renderBattleKingdomFlag(key, participant.ownerName)}
-        <div><strong>${renderPlayerNameLink(participant.ownerUid, participant.ownerName)}</strong><small>Clan reinforcement</small></div>
+        <div>${renderPlayerNameLink(participant.ownerUid, participant.ownerName)}<small>Clan reinforcement</small></div>
       </div>
       <div class="battle-reinforcement-stats">
         <span><small>Troops</small><strong>${formatNumber(participant.startingTroops)}</strong></span>
@@ -27616,7 +27683,7 @@ function renderLegacyBattleReportDetail(report, badge, message = "") {
       ${message ? `<p class="battle-report-detail-notice">${escapeHtml(message)}</p>` : ""}
       <div class="battle-report-detail-grid">
         <div><span>Type</span><strong>${escapeHtml(getBattleReportTypeLabel(report.type))}</strong></div>
-        <div><span>Opponent</span><strong>${escapeHtml(report.opponentName || report.ownerName || "Unknown")}</strong></div>
+        <div><span>Opponent</span>${renderPlayerNameLink(report.opponentUid, report.opponentName || report.ownerName || "Unknown", "battle-report-opponent-link")}</div>
         <div><span>${report.type === "scout" ? "Scouted troops" : "Troops sent"}</span><strong>${formatNumber(report.type === "scout" ? report.troopCount : report.sentTroops)}</strong></div>
         <div><span>Total defense</span><strong>${formatBaseAndBonusStat(report.baseTotalDefense, report.totalDefense)}</strong></div>
         <div><span>Survivors</span><strong>${formatNumber(report.survivors)}</strong></div>
@@ -27628,12 +27695,16 @@ function renderLegacyBattleReportDetail(report, badge, message = "") {
         ${report.troopsAwarded > 0 ? `<div><span>Level-up troops</span><strong>+${formatNumber(report.troopsAwarded)}</strong></div>` : ""}
         ${report.fieldMedicsRecovered > 0 ? `<div><span>Field Medics recovered</span><strong>+${formatNumber(report.fieldMedicsRecovered)}</strong></div>` : ""}
       </div>
-      <p>${escapeHtml(report.summary || getBattleReportSummary(report))}</p>
+      <p>${renderPlayerLinkedText(report.summary || getBattleReportSummary(report), report.opponentUid, report.opponentName || report.ownerName)}</p>
     </div>`;
 }
 
 function renderDetailedBattleReport(report, snapshot, badge) {
   const ratioText = snapshot.formula.powerRatio > 0 ? `${snapshot.formula.powerRatio.toFixed(2)}×` : "0×";
+  const currentUid = getCurrentOnlineUid();
+  const snapshotOpponent = snapshot.attacker?.ownerUid === currentUid ? snapshot.defender : snapshot.attacker;
+  const opponentUid = report.opponentUid || snapshotOpponent?.ownerUid || "";
+  const opponentName = report.opponentName || snapshotOpponent?.ownerName || report.ownerName || "";
   const rewardMetrics = [
     report.xpAwarded > 0 ? renderBattleMetric("Your XP", `+${formatNumber(report.xpAwarded)}`) : "",
     report.fieldMedicsRecovered > 0 ? renderBattleMetric("Field Medics recovered", `+${formatNumber(report.fieldMedicsRecovered)}`) : "",
@@ -27668,7 +27739,7 @@ function renderDetailedBattleReport(report, snapshot, badge) {
           ${renderBattleMetric("Capture threshold", formatNumber(snapshot.formula.captureThresholdPower), "Attack power must exceed this defense threshold")}
         </div>
         ${rewardMetrics ? `<div class="battle-viewer-rewards">${rewardMetrics}</div>` : ""}
-        <p>${escapeHtml(report.summary || getBattleReportSummary(report))}</p>
+        <p>${renderPlayerLinkedText(report.summary || getBattleReportSummary(report), opponentUid, opponentName)}</p>
       </section>
     </div>`;
 }
@@ -28910,7 +28981,6 @@ if (islandSwitchBtn) islandSwitchBtn.addEventListener("click", showIslandSwitche
 if (profileBtn) profileBtn.addEventListener("click", showProfileScreen);
 if (clanHudBtn) clanHudBtn.addEventListener("click", showClanHub);
 if (dailyLoginRewardBtn) dailyLoginRewardBtn.addEventListener("click", () => showDailyLoginRewardsModal());
-if (profileClanAffiliation) profileClanAffiliation.addEventListener("click", showProfileClan);
 if (profileCloseBtn) profileCloseBtn.addEventListener("click", closeProfileScreen);
 if (profileTabBtn) profileTabBtn.addEventListener("click", showProfileView);
 if (clanTabBtn) clanTabBtn.addEventListener("click", showProfileClan);
