@@ -114,7 +114,7 @@ const SHOP_ITEMS = [
     id: "war_drums_30m",
     legacyIds: ["troop_boost_1h"],
     label: "War Drums",
-    description: `Increases troop production from owned cities by ${economyNumber("shopItems.war_drums_30m.bonusPercent", 5)}% for ${economyNumber("shopItems.war_drums_30m.effectDurationMinutes", 30)} minutes.`,
+    description: `Adds ${economyNumber("shopItems.war_drums_30m.bonusPercent", 5)}% of base troop production from owned cities for ${economyNumber("shopItems.war_drums_30m.effectDurationMinutes", 30)} minutes.`,
     cost: economyNumber("shopItems.war_drums_30m.cost", 75_000),
     icon: "assets/war-drums-icon.webp?v=20260703-shop-icons",
   },
@@ -1079,15 +1079,15 @@ function getStrongholdProductionLabel(city) {
   if (city?.bonus === "crownDominion" || isCrownCitadel(city)) return "Crown Land bonuses";
   if (city?.bonus === "cityDefense") return "city defense";
   if (city?.bonus === "marchSpeed") return "march speed";
-  if (city?.bonus === "troopProduction") return "troop production";
+  if (city?.bonus === "troopProduction") return "base troop production";
   if (city?.bonus === "goldProduction") return "base gold production";
   if (isDefenseStronghold(city)) return "city defense";
   if (isSpeedStronghold(city)) return "march speed";
-  return isTrainingStronghold(city) ? "troop production" : "base gold production";
+  return isTrainingStronghold(city) ? "base troop production" : "base gold production";
 }
 
 function getCrownCitadelBonusLabel() {
-  return `+${CROWN_CITADEL_GOLD_BONUS_PERCENT}% base gold, +${CROWN_CITADEL_TROOP_BONUS_PERCENT}% troops, +${CROWN_CITADEL_MARCH_SPEED_BONUS_PERCENT}% speed, +${CROWN_CITADEL_DEFENSE_BONUS_PERCENT}% defense, -${CROWN_CITADEL_UPGRADE_COST_REDUCTION_PERCENT}% upgrade cost`;
+  return `+${CROWN_CITADEL_GOLD_BONUS_PERCENT}% base gold, +${CROWN_CITADEL_TROOP_BONUS_PERCENT}% base troops, +${CROWN_CITADEL_MARCH_SPEED_BONUS_PERCENT}% speed, +${CROWN_CITADEL_DEFENSE_BONUS_PERCENT}% defense, -${CROWN_CITADEL_UPGRADE_COST_REDUCTION_PERCENT}% upgrade cost`;
 }
 
 function getStrongholdBonusLabel(city) {
@@ -7838,6 +7838,34 @@ function calculateGoldProductionRates(
   };
 }
 
+function calculateTroopProductionRates(
+  baseTroopProductionPerHour = 0,
+  royalGranariesPercent = 0,
+  strongholdTroopBonusPercent = 0,
+  warDrumsTroopBonusPercent = 0
+) {
+  const base = Number.isFinite(Number(baseTroopProductionPerHour))
+    ? Math.max(0, Number(baseTroopProductionPerHour))
+    : 0;
+  const granariesPercent = Number.isFinite(Number(royalGranariesPercent))
+    ? Math.max(0, Number(royalGranariesPercent))
+    : 0;
+  const strongholdPercent = Number.isFinite(Number(strongholdTroopBonusPercent))
+    ? Math.max(0, Number(strongholdTroopBonusPercent))
+    : 0;
+  const warDrumsPercent = Number.isFinite(Number(warDrumsTroopBonusPercent))
+    ? Math.max(0, Number(warDrumsTroopBonusPercent))
+    : 0;
+  const untimedTroopProductionPerHour = base * (1 + (granariesPercent + strongholdPercent) / 100);
+  const troopProductionPerHour = untimedTroopProductionPerHour + base * warDrumsPercent / 100;
+  return {
+    baseTroopProductionPerHour: base,
+    untimedTroopProductionPerHour,
+    troopProductionPerHour,
+    troopProductionBonusPerHour: Math.max(0, troopProductionPerHour - base),
+  };
+}
+
 function getCityStats(city, options = {}) {
   const stronghold = isStronghold(city);
   const level = stronghold ? getStrongholdDefenseLevel(city) : clampCityLevel(city?.level);
@@ -7868,13 +7896,19 @@ function getCityStats(city, options = {}) {
   const royalTaxDecreeGoldBonusPercent = includeTimedItemBoosts && !stronghold && city?.owner === "player" && getActiveRoyalTaxDecreeExpiresAtMs() > Date.now()
     ? ROYAL_TAX_DECREE_GOLD_PRODUCTION_BONUS_PERCENT
     : 0;
-  const baseTroopProductionPerHour = stronghold ? 0 : victoryPoints * CITY_LEVEL_STATS.troopProductionPerVictoryPoint;
-  const royalGranariesBonusPerHour = stronghold ? 0 : baseTroopProductionPerHour * royalGranariesPercent / 100;
-  const untimedTroopProductionPerHour = baseTroopProductionPerHour
-    * (1 + royalGranariesPercent / 100)
-    * (1 + strongholdTroopBonusPercent / 100);
-  const troopProductionPerHour = untimedTroopProductionPerHour
-    * (1 + warDrumsTroopBonusPercent / 100);
+  const rawTroopProductionPerHour = stronghold ? 0 : victoryPoints * CITY_LEVEL_STATS.troopProductionPerVictoryPoint;
+  const {
+    baseTroopProductionPerHour,
+    untimedTroopProductionPerHour,
+    troopProductionPerHour,
+    troopProductionBonusPerHour,
+  } = calculateTroopProductionRates(
+    rawTroopProductionPerHour,
+    royalGranariesPercent,
+    strongholdTroopBonusPercent,
+    warDrumsTroopBonusPercent
+  );
+  const royalGranariesBonusPerHour = baseTroopProductionPerHour * royalGranariesPercent / 100;
   const millionLordsProductionVp = getMillionLordsCityProductionVp(level);
   const rawGoldProductionPerHour = stronghold ? 0 : getMillionLordsPassiveGoldPerHour(level);
   const {
@@ -7897,7 +7931,6 @@ function getCityStats(city, options = {}) {
   const strongholdDefenseBonus = Math.floor(preStrongholdTotalDefense * strongholdDefenseBonusPercent / 100);
   const totalDefense = preStrongholdTotalDefense + strongholdDefenseBonus;
   const totalDefenseBonus = Math.max(0, totalDefense - baseTotalDefense);
-  const troopProductionBonusPerHour = Math.max(0, troopProductionPerHour - baseTroopProductionPerHour);
   return {
     level,
     victoryPoints,
@@ -23747,7 +23780,7 @@ function showCityInfoModal(cityId) {
       : isSpeedStronghold(city)
       ? "March time"
       : isTrainingStronghold(city)
-        ? "Troop production"
+        ? "Base troop production"
         : "Base gold production";
     const effectHelp = isCrownCitadel(city)
       ? "replaces other stronghold bonuses while active"
@@ -25406,8 +25439,8 @@ async function useServerInventoryItem(item) {
     renderCities(true);
     showToast(`${item.label} active: ${formatDuration(getPeaceShieldRemainingSeconds(expiresAtMs))}`);
   } else if (item.id === WAR_DRUMS_ITEM_ID) {
-    addLog(`${item.label} activated. Troop production increased by ${formatNumber(WAR_DRUMS_TROOP_PRODUCTION_BONUS_PERCENT)}% for ${formatDuration(getPeaceShieldRemainingSeconds(expiresAtMs))}.`);
-    showToast(`${item.label} active: +${formatNumber(WAR_DRUMS_TROOP_PRODUCTION_BONUS_PERCENT)}% troops for ${formatDuration(getPeaceShieldRemainingSeconds(expiresAtMs))}`);
+    addLog(`${item.label} activated. Added ${formatNumber(WAR_DRUMS_TROOP_PRODUCTION_BONUS_PERCENT)}% of base city troop production for ${formatDuration(getPeaceShieldRemainingSeconds(expiresAtMs))}.`);
+    showToast(`${item.label} active: +${formatNumber(WAR_DRUMS_TROOP_PRODUCTION_BONUS_PERCENT)}% of base city troops for ${formatDuration(getPeaceShieldRemainingSeconds(expiresAtMs))}`);
   } else if (item.id === ROYAL_TAX_DECREE_ITEM_ID) {
     addLog(`${item.label} activated. Added ${formatNumber(ROYAL_TAX_DECREE_GOLD_PRODUCTION_BONUS_PERCENT)}% of base city gold production for ${formatDuration(getPeaceShieldRemainingSeconds(expiresAtMs))}.`);
     showToast(`${item.label} active: +${formatNumber(ROYAL_TAX_DECREE_GOLD_PRODUCTION_BONUS_PERCENT)}% of base city gold for ${formatDuration(getPeaceShieldRemainingSeconds(expiresAtMs))}`);
@@ -25472,13 +25505,13 @@ async function useWarDrums(item) {
   const effects = ensureItemEffects();
   effects.warDrumsExpiresAtMs = expiresAtMs;
 
-  addLog(`${item.label} activated. Troop production increased by ${formatNumber(WAR_DRUMS_TROOP_PRODUCTION_BONUS_PERCENT)}% for ${formatDuration(getPeaceShieldRemainingSeconds(expiresAtMs))}.`);
+  addLog(`${item.label} activated. Added ${formatNumber(WAR_DRUMS_TROOP_PRODUCTION_BONUS_PERCENT)}% of base city troop production for ${formatDuration(getPeaceShieldRemainingSeconds(expiresAtMs))}.`);
   saveGame();
   renderHud();
   renderPanel();
   if (profileScreen?.classList.contains("open")) renderProfileScreen();
   if (modal?.open && modal.classList.contains("inventory-modal")) modal.close();
-  showToast(`${item.label} active: +${formatNumber(WAR_DRUMS_TROOP_PRODUCTION_BONUS_PERCENT)}% troops for ${formatDuration(getPeaceShieldRemainingSeconds(expiresAtMs))}`);
+  showToast(`${item.label} active: +${formatNumber(WAR_DRUMS_TROOP_PRODUCTION_BONUS_PERCENT)}% of base city troops for ${formatDuration(getPeaceShieldRemainingSeconds(expiresAtMs))}`);
   const cloudSaved = await flushOnlineSave(true);
   if (!cloudSaved && getOnlineApi()?.isSignedIn?.()) {
     showToast(`${item.label} active. Cloud save will retry.`);
@@ -27692,6 +27725,7 @@ function showHelpModal() {
       <li>City level creates victory points for combat value, while passive gold follows the Million Lords city production curve.</li>
       <li>City defense adds ${formatNumber(CITY_LEVEL_STATS.defensePercentPerLevel)}% soldier defense per city level, plus separate wall strength. Stoneworks increases the wall part of defense.</li>
         <li>Troop production is VP x 3, improved by Royal Granaries. Passive gold uses ML city production VP x ${formatNumber(MILLION_LORDS_PASSIVE_GOLD_PER_CITY_VP)}, improved by Tax Stewardship and stronghold bonuses.</li>
+        <li>Troop production bonuses do not compound: Royal Granaries, Stronghold or Citadel benefits, and War Drums each add their listed percentage of raw base city troops.</li>
         <li>Gold production bonuses do not compound: Tax Stewardship, Stronghold or Citadel benefits, and Royal Tax each add their listed percentage of raw base city gold.</li>
       <li>Army travel uses route distance plus troop-size bands. Larger armies march slower, scouts move as one troop, and March Orders reduces travel time.</li>
       <li>Glowing pickups appear near your owned cities on the current island during active play every three minutes, alternating between ten minutes of gold and troop production. Daily pickup limits are ${formatNumber(HARVEST_BONUS_DAILY_GOLD_LIMIT)} gold and ${formatNumber(HARVEST_BONUS_DAILY_TROOP_LIMIT)} troop pickups.</li>

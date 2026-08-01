@@ -71,12 +71,30 @@ for (const [source, label] of [[clientSource, "Client"], [serverSource, "Server"
   assert.equal(rates.untimedGoldProductionPerHour, 185, `${label} compounds permanent gold bonuses.`);
   assert.equal(rates.goldProductionPerHour, 235, `${label} compounds Royal Tax with other gold bonuses.`);
   assert.equal(rates.goldProductionBonusPerHour, 135, `${label} reports an incorrect total gold bonus.`);
+
+  const troopProductionContext = {};
+  vm.createContext(troopProductionContext);
+  vm.runInContext(
+    extractFunction(source, "calculateTroopProductionRates"),
+    troopProductionContext,
+    { filename: label === "Client" ? path.join(root, "game.js") : path.join(root, "functions", "index.js") }
+  );
+  const troopRates = troopProductionContext.calculateTroopProductionRates(100, 75, 10, 30);
+  assert.equal(troopRates.baseTroopProductionPerHour, 100, `${label} changed the raw troop baseline.`);
+  assert.equal(troopRates.untimedTroopProductionPerHour, 185, `${label} compounds permanent troop bonuses.`);
+  assert.equal(troopRates.troopProductionPerHour, 215, `${label} compounds War Drums with other troop bonuses.`);
+  assert.equal(troopRates.troopProductionBonusPerHour, 115, `${label} reports an incorrect total troop bonus.`);
 }
 
 requireMatch(
   serverSource,
   /stats\.goldProductionPerSecond \* goldElapsedSeconds\s*\+ stats\.baseGoldProductionPerHour \/ 3600\s*\* taxDecreeOverlapSeconds\s*\* ROYAL_TAX_DECREE_GOLD_PRODUCTION_BONUS_PERCENT \/ 100/,
   "Authoritative Royal Tax credit is not based solely on raw city gold production."
+);
+requireMatch(
+  serverSource,
+  /stats\.troopProductionPerSecond \* elapsedSeconds\s*\+ stats\.baseTroopProductionPerHour \/ 3600\s*\* warDrumsOverlapSeconds\s*\* WAR_DRUMS_TROOP_PRODUCTION_BONUS_PERCENT \/ 100/,
+  "Authoritative War Drums credit is not based solely on raw city troop production."
 );
 
 requireMatch(
