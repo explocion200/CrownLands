@@ -8221,6 +8221,8 @@ function normalizeScoutReports(reports) {
   const currentGameSeconds = Math.max(0, Math.floor(Number(state?.gameSeconds) || 0));
   for (const [cityId, report] of Object.entries(reports)) {
     const troops = Math.max(0, Math.floor(Number(report?.troops) || 0));
+    const reinforcements = normalizeScoutReportReinforcements(report?.reinforcements);
+    const reinforcementTroops = reinforcements.reduce((total, row) => total + row.troops, 0);
     const totalDefense = Math.max(0, Math.floor(Number(report?.totalDefense) || 0));
     const baseTotalDefense = Math.min(
       totalDefense,
@@ -8245,6 +8247,12 @@ function normalizeScoutReports(reports) {
     normalized[cityId] = {
       ...report,
       troops,
+      ownerTroops: Math.max(0, Math.floor(Number(report?.ownerTroops ?? Math.max(0, troops - reinforcementTroops)) || 0)),
+      reinforcementTroops,
+      reinforcements,
+      ownerFlag: report?.ownerFlag && typeof report.ownerFlag === "object"
+        ? normalizeFlag(report.ownerFlag)
+        : null,
       totalDefense,
       baseTotalDefense,
       totalDefenseBonus: Math.max(0, totalDefense - baseTotalDefense),
@@ -8255,6 +8263,17 @@ function normalizeScoutReports(reports) {
     };
   }
   return normalized;
+}
+
+function normalizeScoutReportReinforcements(rows) {
+  return (Array.isArray(rows) ? rows : [])
+    .map(row => ({
+      ownerUid: String(row?.ownerUid || "").slice(0, 128),
+      ownerName: cleanName(row?.ownerName || "Ruler") || "Ruler",
+      troops: Math.max(0, Math.floor(Number(row?.troops) || 0)),
+    }))
+    .filter(row => row.ownerUid && row.troops > 0)
+    .slice(0, 50);
 }
 
 function normalizeBattleReports(reports) {
@@ -8759,6 +8778,7 @@ function createScoutReportSnapshot(target) {
     owner: target.owner,
     ownerUid: String(target.ownerUid || (target.owner === "player" ? getCurrentOnlineUid() : "")).slice(0, 128),
     ownerName: getCityOwnerDisplayName(target),
+    ownerFlag: getCityOwnerFlag(target),
     cityLevel: stats.level,
     defensePercent: stats.defensePercent,
     baseCityWalls: stats.baseCityWalls,
@@ -8928,9 +8948,18 @@ function normalizeServerScoutReport(report = null) {
   const createdAgeSeconds = Math.max(0, Math.floor((nowMs - scoutedAtMs) / 1000));
   const remainingSeconds = Math.max(0, Math.ceil((expiresAtMs - nowMs) / 1000));
   const scoutedAt = Math.max(0, Math.floor(Number(state.gameSeconds) || 0) - createdAgeSeconds);
+  const troops = Math.max(0, Math.floor(Number(report.troops) || 0));
+  const reinforcements = normalizeScoutReportReinforcements(report.reinforcements);
+  const reinforcementTroops = reinforcements.reduce((total, row) => total + row.troops, 0);
   return {
     ...report,
-    troops: Math.max(0, Math.floor(Number(report.troops) || 0)),
+    troops,
+    ownerTroops: Math.max(0, Math.floor(Number(report.ownerTroops ?? Math.max(0, troops - reinforcementTroops)) || 0)),
+    reinforcementTroops,
+    reinforcements,
+    ownerFlag: report.ownerFlag && typeof report.ownerFlag === "object"
+      ? normalizeFlag(report.ownerFlag)
+      : null,
     totalDefense: Math.max(0, Math.floor(Number(report.totalDefense) || 0)),
     baseTotalDefense: Math.min(
       Math.max(0, Math.floor(Number(report.totalDefense) || 0)),
@@ -8956,7 +8985,12 @@ function normalizeServerBattleReport(report = null) {
 function mergeServerScoutReport(rawReport = null) {
   if (!state || rawReport?.type !== "scout" || !rawReport.cityId || !rawReport.scoutReport) return false;
   state.scoutReports = normalizeScoutReports(state.scoutReports);
-  const scoutReport = normalizeServerScoutReport(rawReport.scoutReport);
+  const scoutReport = normalizeServerScoutReport({
+    ...rawReport.scoutReport,
+    ownerUid: rawReport.scoutReport.ownerUid || rawReport.opponentUid,
+    ownerName: rawReport.scoutReport.ownerName || rawReport.opponentName,
+    ownerFlag: rawReport.scoutReport.ownerFlag || rawReport.opponentFlag,
+  });
   if (!scoutReport) return false;
   const existing = state.scoutReports[rawReport.cityId];
   const existingTime = normalizeTimestampMs(existing?.scoutedAtMs) || Math.max(0, Number(existing?.scoutedAt) || 0);
@@ -13918,9 +13952,13 @@ function normalizeOnlineArmyMovement(raw) {
   const isAttackMovement = effectiveKind === "attack"
     || raw.launchKind === "attack"
     || Boolean(raw.rallyAttack);
+  const isClanReinforcementMovement = effectiveKind === "reinforce"
+    && !raw.returning
+    && !raw.reinforcementReturn;
   const exactEventTroops = raw.eventKind === CITADEL_ASSAULT_EVENT_KIND && raw.troopVisibility === "exact";
-  const estimateForViewer = !exactEventTroops && isAttackMovement
-    && viewerAccess !== "owner";
+  const estimateForViewer = !exactEventTroops
+    && viewerAccess !== "owner"
+    && (raw.troopVisibility === "estimate" || isAttackMovement || isClanReinforcementMovement);
   const hiddenForViewer = raw.troopVisibility === "hidden"
     && viewerAccess !== "owner";
   const troopEstimate = estimateForViewer
@@ -21951,9 +21989,9 @@ function showScoutReportModal(cityId) {
   playGameSound("parchment_open", { cooldownMs: 120, regionId: getCityRegionId(city) });
   const remaining = Math.max(0, Math.ceil(report.expiresAt - state.gameSeconds));
   const age = Math.max(0, Math.floor(state.gameSeconds - report.scoutedAt));
-  const reportedOwner = OWNER[report.owner] ? report.owner : city.owner;
   const reportedOwnerName = report.ownerName || getCityOwnerDisplayName(city);
   const reportedOwnerUid = String(report.ownerUid || city.ownerUid || "").slice(0, 128);
+  const reportedOwnerFlag = report.ownerFlag || getCityOwnerFlag(city) || createDefaultFlag();
   const currentPlayerUid = getCurrentOnlineUid();
   const cityLevel = clampCityLevel(report.cityLevel || city.level);
   const defensePercent = Math.max(0, Number(report.defensePercent) || cityLevel * CITY_LEVEL_STATS.defensePercentPerLevel);
@@ -21965,6 +22003,9 @@ function showScoutReportModal(cityId) {
     0,
     Math.floor(Number(report.baseTotalDefense) || report.troops + cityDefenseBonus + baseCityWalls)
   );
+  const reinforcements = normalizeScoutReportReinforcements(report.reinforcements);
+  const reinforcementTroops = reinforcements.reduce((total, row) => total + row.troops, 0);
+  const ownerTroops = Math.max(0, Math.floor(Number(report.ownerTroops ?? Math.max(0, report.troops - reinforcementTroops)) || 0));
   modal.classList.add("scout-report-modal");
   modalTitle.textContent = "Detailed scout report";
   modalBody.innerHTML = `
@@ -21977,7 +22018,7 @@ function showScoutReportModal(cityId) {
         <div class="scout-report-mark" aria-label="Scout mission"><span aria-hidden="true">&#128301;</span><strong>Scout</strong><small>1 troop</small></div>
         <div class="scout-report-ruler enemy">
           <div>${renderPlayerNameLink(reportedOwnerUid, reportedOwnerName, "scout-report-owner-link")}<small>City Lv ${formatNumber(cityLevel)}</small></div>
-          <span class="scout-report-enemy-flag" aria-hidden="true">${OWNER[reportedOwner].flag}</span>
+          <span id="scoutReportDefenderFlag" class="kingdom-flag scout-report-enemy-flag" aria-hidden="true"><span class="flag-symbol"></span></span>
         </div>
       </div>
 
@@ -21991,7 +22032,8 @@ function showScoutReportModal(cityId) {
       <section class="scout-report-section">
         <h3>Enemy defense</h3>
         <div class="scout-defense-breakdown">
-          ${scoutBreakdownRow("&#9817;", "Troops", "Reported garrison", report.troops)}
+          ${scoutDefenderRow("&#9817;", reportedOwnerUid, reportedOwnerName, isRewardCampTarget(city) ? "Holding owner" : "City owner", ownerTroops)}
+          ${reinforcements.map(row => scoutDefenderRow("&#8649;", row.ownerUid, row.ownerName, "Clan reinforcement", row.troops)).join("")}
           ${scoutBreakdownRow("&#128737;", "City defense", `Lv ${cityLevel} - +${formatNumber(defensePercent)}%`, cityDefenseBonus)}
           ${scoutBreakdownRow("&#9819;", "City walls", `Lv ${cityLevel} base ${formatNumber(baseCityWalls)} (+${formatNumber(Math.max(0, cityWalls - baseCityWalls))})`, cityWalls)}
           <div class="scout-breakdown-total"><span>Total</span><strong>${formatBaseAndBonusStat(baseTotalDefense, report.totalDefense)}</strong></div>
@@ -22023,11 +22065,16 @@ function showScoutReportModal(cityId) {
     </div>
   `;
   applyFlagToElement(modalBody.querySelector("#scoutReportPlayerFlag"), state.flag);
+  applyFlagToElement(modalBody.querySelector("#scoutReportDefenderFlag"), reportedOwnerFlag);
   if (!modal.open) modal.showModal();
 }
 
 function scoutBreakdownRow(icon, label, levelText, value) {
   return `<div class="scout-breakdown-row"><span class="scout-stat-icon" aria-hidden="true">${icon}</span><span><strong>${label}</strong><small>${levelText}</small></span><b>${formatNumber(value)}</b></div>`;
+}
+
+function scoutDefenderRow(icon, ownerUid, ownerName, role, troops) {
+  return `<div class="scout-breakdown-row"><span class="scout-stat-icon" aria-hidden="true">${icon}</span><span>${renderPlayerNameLink(ownerUid, ownerName, "scout-defender-link")}<small>${escapeHtml(role)}</small></span><b>${formatNumber(troops)}</b></div>`;
 }
 
 function scoutSkillRow(label, level = 0, percent = 0) {
@@ -27426,10 +27473,14 @@ function renderReinforcementOperationCard(entry) {
       : returning
         ? `${escapeHtml(entry.fromName || "Allied holding")} &rarr; ${escapeHtml(entry.toName || returnDestination?.name || "Main City")}${returnDestination?.usedMainCityFallback ? " · Main City fallback" : ""}`
         : `${escapeHtml(entry.fromName || "Holding")} &rarr; ${escapeHtml(entry.toName || "Holding")}`;
+    const troopDisplay = getArmyTroopDisplayText(entry);
+    const troopLabel = isArmyTroopEstimate(entry)
+      ? `Estimated ${escapeHtml(troopDisplay)} troops`
+      : `${escapeHtml(troopDisplay || "Syncing")} troops`;
     return `
       <article class="reinforcement-operation-card traveling">
         <span><strong>${label}</strong><small>${detail}</small></span>
-        <strong>${formatNumber(entry.troops)} troops</strong>
+        <strong>${troopLabel}</strong>
         <small>${entry.isResolving ? "Arriving" : formatDuration(entry.remaining)}</small>
       </article>`;
   }

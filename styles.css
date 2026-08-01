@@ -5841,17 +5841,8 @@ button.daily-reward-card.available:disabled {
 .scout-report-ruler small { color: var(--muted); font-size: .68rem; }
 .scout-report-flag,
 .scout-report-enemy-flag { flex: 0 0 auto; width: 48px; height: 42px; }
-.scout-report-flag .flag-symbol { font-size: 1.15rem; }
-.scout-report-enemy-flag {
-  display: grid;
-  place-items: center;
-  border-radius: 6px;
-  color: #fff;
-  background: #8e2927;
-  border: 2px solid #d16258;
-  font-size: 1.2rem;
-  font-weight: 1000;
-}
+.scout-report-flag .flag-symbol,
+.scout-report-enemy-flag .flag-symbol { font-size: 1.15rem; }
 .scout-report-mark { display: grid; justify-items: center; color: #9ed5ff; text-align: center; }
 .scout-report-mark > span { font-size: 1.55rem; line-height: 1; }
 .scout-report-mark strong { color: #fff4c8; font-size: .7rem; text-transform: uppercase; }

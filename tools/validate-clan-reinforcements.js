@@ -125,6 +125,12 @@ requires(
 requires(firebaseClient, /returnClanReinforcement[\s\S]*?subscribePlayerReinforcements/, "Firebase reinforcement callable or subscription is missing.");
 requires(client, /beginClanReinforcement[\s\S]*?orderKind:\s*"reinforce"/, "Clan ally Reinforce client action is missing.");
 requires(client, /Launching clan reinforcements immediately removes your Royal Peace Shield/, "Reinforcement shield warning is missing.");
+requires(server, /function createScoutReportSnapshot[\s\S]*?ownerTroops[\s\S]*?reinforcementTroops[\s\S]*?reinforcements/, "Scout reports do not separate holding-owner troops from clan reinforcements.");
+requires(server, /function createScoutReportSnapshot[\s\S]*?ownerFlag:\s*normalizeServerFlag\(defenderProfile\?\.flag \|\| target\.ownerFlag\)/, "Scout reports do not snapshot the defending ruler's kingdom flag.");
+requires(server, /createScoutReportSnapshot\(combatTarget,[\s\S]*?targetStats, defensePackages\)/, "City scout reports do not receive the exact reinforcement defender packages.");
+requires(server, /function createIslandReportProjection[\s\S]*?troopCount:\s*0[\s\S]*?scoutReport:\s*null/, "Exact scout reinforcement intelligence can leak into public island reports.");
+requires(client, /function showScoutReportModal[\s\S]*?City owner[\s\S]*?Clan reinforcement[\s\S]*?scoutDefenderRow/, "Detailed scout reports do not list the city owner and each reinforcing player separately.");
+requires(client, /function showScoutReportModal[\s\S]*?scoutReportPlayerFlag[\s\S]*?scoutReportDefenderFlag[\s\S]*?applyFlagToElement\(modalBody\.querySelector\("#scoutReportPlayerFlag"\), state\.flag\)[\s\S]*?applyFlagToElement\(modalBody\.querySelector\("#scoutReportDefenderFlag"\), reportedOwnerFlag\)/, "Detailed scout reports do not hydrate both kingdom flags.");
 requires(
   client,
   /const attackBlockLabel = clanAlly \? "Reinforce"[\s\S]*?aria-label="\$\{clanAlly \? `Reinforce/,

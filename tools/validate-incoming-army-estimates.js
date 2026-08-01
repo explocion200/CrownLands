@@ -9,6 +9,8 @@ const clientSource = fs.readFileSync(path.join(root, "game.js"), "utf8");
 const firebaseClientSource = fs.readFileSync(path.join(root, "firebaseClient.js"), "utf8");
 const rulesSource = fs.readFileSync(path.join(root, "firestore.rules"), "utf8");
 
+assert.match(serverSource, /ARMY_TROOP_VISIBILITY_VERSION\s*=\s*3/, "Reinforcement privacy rollout must trigger a new active-army backfill.");
+
 function readFunction(source, name) {
   const start = source.indexOf(`function ${name}(`);
   if (start < 0) throw new Error(`Missing ${name}.`);
@@ -35,8 +37,9 @@ vm.createContext(serverSandbox);
 vm.runInContext(readFunction(serverSource, "formatTroopEstimateBound"), serverSandbox);
 vm.runInContext(readFunction(serverSource, "getIncomingTroopEstimate"), serverSandbox);
 vm.runInContext(readFunction(serverSource, "isEstimatedAttackMovement"), serverSandbox);
+vm.runInContext(readFunction(serverSource, "isEstimatedClanReinforcementMovement"), serverSandbox);
 vm.runInContext(readFunction(serverSource, "isPrivateTransferMovement"), serverSandbox);
-serverSandbox.ARMY_TROOP_VISIBILITY_VERSION = 2;
+serverSandbox.ARMY_TROOP_VISIBILITY_VERSION = 3;
 vm.runInContext(readFunction(serverSource, "createArmyPublicProjection"), serverSandbox);
 
 const clientSandbox = {
@@ -129,8 +132,10 @@ const reinforcementProjection = serverSandbox.createArmyPublicProjection({
   kind: "reinforce",
   troops: 400,
 });
-assert.equal(reinforcementProjection.troopVisibility, "exact");
-assert.equal(reinforcementProjection.troops, 400, "Clan reinforcements preserve their existing exact troop behavior.");
+assert.equal(reinforcementProjection.troopVisibility, "estimate");
+assert.equal(reinforcementProjection.troopEstimateLabel, "100\u20131K");
+assert.equal(reinforcementProjection.troops, DELETE_FIELD, "Clan reinforcement projections must delete the exact troop count.");
+assert.equal(reinforcementProjection.requestedTroops, DELETE_FIELD, "Clan reinforcement projections must delete the requested troop count.");
 
 assert.equal(clientSandbox.canViewArmyTroopAmount({
   kind: "transfer",
@@ -154,8 +159,8 @@ assert.equal(clientSandbox.canViewArmyTroopAmount({
 
 assert.match(
   clientSource,
-  /const estimateForViewer = !exactEventTroops && isAttackMovement\s*&& viewerAccess !== "owner";/,
-  "A sanitized public copy of the current player's attack must remain estimated until the private owner copy arrives."
+  /const estimateForViewer = !exactEventTroops[\s\S]*?viewerAccess !== "owner"[\s\S]*?raw\.troopVisibility === "estimate"[\s\S]*?isClanReinforcementMovement/,
+  "Sanitized attacks and clan reinforcements must remain estimated until a private owner copy arrives."
 );
 assert.match(
   clientSource,
@@ -225,8 +230,23 @@ assert.match(
 );
 assert.match(
   serverSource,
+  /is reinforcing \$\{targetName\} with an estimated \$\{troopEstimate\.label\} troops/,
+  "Clan reinforcement push notifications must use the same estimate."
+);
+assert.doesNotMatch(
+  readFunction(serverSource, "createIncomingArmyNotification"),
+  /notification\.troops\s*=/,
+  "Clan reinforcement notifications must not include an exact troop-count data field."
+);
+assert.match(
+  clientSource,
+  /function renderReinforcementOperationCard[\s\S]*?isArmyTroopEstimate\(entry\)[\s\S]*?Estimated \$\{escapeHtml\(troopDisplay\)\} troops/,
+  "Incoming clan reinforcement cards must label their troop range as estimated."
+);
+assert.match(
+  serverSource,
   /async function backfillActiveArmyVisibilityViews[\s\S]*?writeArmyMovementCopies\(transaction, army,/,
   "Active armies must be backfilled into sanitized public and private projections."
 );
 
-console.log("Validated private transfer counts, secure incoming-army estimates, and all 1-2-5 boundaries.");
+console.log("Validated private transfer counts, secure attack and reinforcement estimates, and all 1-2-5 boundaries.");

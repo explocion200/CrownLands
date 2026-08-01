@@ -165,7 +165,7 @@ const RALLY_RETURN_REASON = "rally_recall";
 const RALLY_FRIENDLY_RETURN_REASON = "rally_target_became_friendly";
 const ARMY_TRAVEL_TROOP_BAND_LIMITS = [10, 100, 1000, 10000, 100000, 1000000, 10000000, 100000000];
 const ARMY_TRAVEL_TROOP_BAND_MULTIPLIERS = [1, 1.18, 1.38, 1.62, 1.9, 2.24, 2.62, 3.06, 3.5];
-const ARMY_TROOP_VISIBILITY_VERSION = 2;
+const ARMY_TROOP_VISIBILITY_VERSION = 3;
 const ARMY_TROOP_ESTIMATE_DECADE_MAX = 1_000_000;
 const ARMY_TROOP_ESTIMATE_BACKFILL_PAGE_SIZE = 50;
 const CAPTURE_XP_BASE = 120;
@@ -5398,6 +5398,15 @@ function isEstimatedAttackMovement(movement = {}) {
   );
 }
 
+function isEstimatedClanReinforcementMovement(movement = {}) {
+  return Boolean(
+    movement
+    && movement.kind === "reinforce"
+    && !movement.returning
+    && !movement.reinforcementReturn
+  );
+}
+
 function isPrivateTransferMovement(movement = {}) {
   return Boolean(
     movement
@@ -5419,7 +5428,7 @@ function createArmyPublicProjection(movement = {}) {
     armyTroopVisibilityVersion: ARMY_TROOP_VISIBILITY_VERSION,
   };
   delete projection.id;
-  if (isEstimatedAttackMovement(movement)) {
+  if (isEstimatedAttackMovement(movement) || isEstimatedClanReinforcementMovement(movement)) {
     const estimate = getIncomingTroopEstimate(movement.troops);
     projection.troopVisibility = "estimate";
     projection.troopEstimateMin = estimate.min;
@@ -6495,10 +6504,23 @@ function getPlayerIdentitySyncSignature(identity = {}) {
   ]);
 }
 
-function createScoutReportSnapshot(target = {}, defenderProfile = null, nowMs = Date.now(), bonuses = {}, statsOverride = null) {
+function createScoutReportSnapshot(target = {}, defenderProfile = null, nowMs = Date.now(), bonuses = {}, statsOverride = null, defensePackages = null) {
   const stats = statsOverride || getCityStats(target, defenderProfile, bonuses);
   const baseTroopDefense = Math.max(0, Math.floor(safeNumber(target.troops, 0)));
   const troopDefense = Math.floor(baseTroopDefense * (1 + stats.defensePercent / 100));
+  const reinforcements = (Array.isArray(defensePackages?.reinforcements) ? defensePackages.reinforcements : [])
+    .map(row => ({
+      ownerUid: safeString(row?.ownerUid, 128),
+      ownerName: normalizePlayerName(row?.ownerName, "Ruler"),
+      troops: Math.max(0, Math.floor(safeNumber(row?.troops, 0))),
+    }))
+    .filter(row => row.ownerUid && row.troops > 0)
+    .slice(0, 50);
+  const reinforcementTroops = reinforcements.reduce((total, row) => total + row.troops, 0);
+  const ownerTroops = Math.max(0, Math.floor(safeNumber(
+    defensePackages?.owner?.troops,
+    Math.max(0, baseTroopDefense - reinforcementTroops)
+  )));
   const skillSnapshot = {};
   for (const skill of SKILL_ORDER) {
     skillSnapshot[`${skill}Level`] = defenderProfile ? getSkillLevel(defenderProfile, skill) : 0;
@@ -6506,12 +6528,16 @@ function createScoutReportSnapshot(target = {}, defenderProfile = null, nowMs = 
   }
   return {
     troops: baseTroopDefense,
+    ownerTroops,
+    reinforcementTroops,
+    reinforcements,
     totalDefense: Math.floor(stats.totalDefense),
     baseTotalDefense: Math.floor(stats.baseTotalDefense),
     totalDefenseBonus: Math.floor(stats.totalDefenseBonus),
     owner: getOwnerUid(target) ? "enemy" : "neutral",
     ownerUid: safeString(getOwnerUid(target), 128),
     ownerName: getOwnerName(target),
+    ownerFlag: normalizeServerFlag(defenderProfile?.flag || target.ownerFlag),
     cityLevel: stats.level,
     defensePercent: stats.defensePercent,
     baseCityWalls: stats.baseCityWalls,
@@ -6601,6 +6627,19 @@ function makeReport({
     battleId: safeString(battleId, 160),
     battleSnapshotVersion: battleId ? BATTLE_SNAPSHOT_MODEL_VERSION : 0,
     fieldMedicsRecovered: Math.max(0, Math.floor(safeNumber(fieldMedicsRecovered, 0))),
+  };
+}
+
+function createIslandReportProjection(report = {}) {
+  if (report?.type !== "scout") return report;
+  return {
+    ...report,
+    troopCount: 0,
+    totalDefense: 0,
+    baseTotalDefense: 0,
+    totalDefenseBonus: 0,
+    scoutReport: null,
+    summary: `${safeString(report.cityName || "A holding", 40)} was scouted.`,
   };
 }
 
@@ -9440,10 +9479,6 @@ function removeHarvestBonusFromProfile(profile = {}, bonusId = "") {
   return profile.harvestBonuses.filter(bonus => safeString(bonus?.id, 96) !== id);
 }
 
-function formatNotificationNumber(value) {
-  return Math.max(0, Math.floor(safeNumber(value, 0))).toLocaleString();
-}
-
 function createIncomingArmyNotification({ defenderUid = "", attackerUid = "", movement = {}, source = {}, target = {} } = {}) {
   const kind = movement.kind === "scout"
     ? "scout"
@@ -9457,11 +9492,13 @@ function createIncomingArmyNotification({ defenderUid = "", attackerUid = "", mo
   const sourceName = safeString(movement.fromName || source.name || movement.fromId || "Unknown city", 40);
   const targetName = safeString(movement.toName || target.name || movement.toId || "your city", 40);
   const title = kind === "scout" ? "Scout incoming" : kind === "reinforce" ? "Clan reinforcement incoming" : "Attack incoming";
-  const troopEstimate = kind === "attack" ? getIncomingTroopEstimate(movement.troops) : null;
+  const troopEstimate = ["attack", "reinforce"].includes(kind)
+    ? getIncomingTroopEstimate(movement.troops)
+    : null;
   const body = kind === "scout"
     ? `${attackerName} is scouting ${targetName} from ${sourceName}.`
     : kind === "reinforce"
-      ? `${attackerName} is reinforcing ${targetName} with ${formatNotificationNumber(movement.troops)} troops.`
+      ? `${attackerName} is reinforcing ${targetName} with an estimated ${troopEstimate.label} troops.`
       : `${attackerName} is attacking ${targetName} with an estimated ${troopEstimate.label} troops.`;
   const notification = {
     defenderUid,
@@ -9475,16 +9512,13 @@ function createIncomingArmyNotification({ defenderUid = "", attackerUid = "", mo
     targetName,
     sourceName,
     attackerName,
-    troopVisibility: kind === "attack" ? "estimate" : "exact",
+    troopVisibility: ["attack", "reinforce"].includes(kind) ? "estimate" : "exact",
     troopEstimateMin: troopEstimate ? String(troopEstimate.min) : "",
     troopEstimateMax: troopEstimate ? String(troopEstimate.max) : "",
     troopEstimateLabel: troopEstimate?.label || "",
     arrivesAtMs: String(Math.max(0, Math.floor(safeNumber(movement.arrivesAtMs, 0)))),
     url: "/",
   };
-  if (kind === "reinforce") {
-    notification.troops = String(Math.max(0, Math.floor(safeNumber(movement.troops, 0))));
-  }
   return notification;
 }
 
@@ -17334,7 +17368,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
     if (targetType === "camp") {
       if (army.kind === "scout") {
         const campTarget = createReinforcedCombatTarget(getRewardCampCombatTarget(target), "camp");
-        const scoutReport = createScoutReportSnapshot(campTarget, defenderProfile, nowMs, defenderBonuses, targetStats);
+        const scoutReport = createScoutReportSnapshot(campTarget, defenderProfile, nowMs, defenderBonuses, targetStats, defensePackages);
         const report = makeReport({
           id: `${armyId}_${campTarget.campType}_camp_scout_${attackerUid}`,
           uid: attackerUid,
@@ -17356,7 +17390,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
         writeReport(transaction, attackerUid, report, attackerProfileSnap);
         writeScoutReport(transaction, attackerUid, campTarget.id, scoutReport, attackerProfileSnap);
         transaction.set(islandReportRef(targetRegionId, report.id), {
-          ...report,
+          ...createIslandReportProjection(report),
           createdAt: FieldValue.serverTimestamp(),
         }, { merge: true });
         reports.push(report);
@@ -17590,7 +17624,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
         });
         writeReport(transaction, attackerUid, report, attackerProfileSnap);
         transaction.set(islandReportRef(targetRegionId, report.id), {
-          ...report,
+          ...createIslandReportProjection(report),
           createdAt: FieldValue.serverTimestamp(),
         }, { merge: true });
         reports.push(report);
@@ -17628,7 +17662,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
         });
         writeReport(transaction, attackerUid, report, attackerProfileSnap);
         transaction.set(islandReportRef(targetRegionId, report.id), {
-          ...report,
+          ...createIslandReportProjection(report),
           createdAt: FieldValue.serverTimestamp(),
         }, { merge: true });
         reports.push(report);
@@ -17675,7 +17709,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
         });
         writeReport(transaction, attackerUid, report, attackerProfileSnap);
         transaction.set(islandReportRef(targetRegionId, report.id), {
-          ...report,
+          ...createIslandReportProjection(report),
           createdAt: FieldValue.serverTimestamp(),
         }, { merge: true });
         reports.push(report);
@@ -17690,7 +17724,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
       }
 
       writeParticipantEconomies();
-      const scoutReport = createScoutReportSnapshot(combatTarget, defenderProfile, nowMs, defenderBonuses, targetStats);
+      const scoutReport = createScoutReportSnapshot(combatTarget, defenderProfile, nowMs, defenderBonuses, targetStats, defensePackages);
       const report = makeReport({
         id: `${armyId}_scout_${attackerUid}`,
         uid: attackerUid,
@@ -17711,7 +17745,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
       writeReport(transaction, attackerUid, report, attackerProfileSnap);
       writeScoutReport(transaction, attackerUid, target.id, scoutReport, attackerProfileSnap);
       transaction.set(islandReportRef(targetRegionId, report.id), {
-        ...report,
+        ...createIslandReportProjection(report),
         createdAt: FieldValue.serverTimestamp(),
       }, { merge: true });
       reports.push(report);
