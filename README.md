@@ -21,7 +21,6 @@ Landscape / horizontal medieval island-conquest game inspired by the core loop o
 - City defense gives stationed soldiers `city level x 2%`, then adds city walls; Stoneworks strengthens the wall portion.
 - Neutral captures are limited to 30 per local day.
 - Neutral captures are also blocked once the player owns 30 cities; after that, expansion must come from player-owned cities.
-- Captured cities enter a 1-hour city-XP cooldown. Attacking still works and troop-loss XP remains available, but the fixed city/wall XP component is unavailable during cooldown.
 - Hero XP keeps the early progression curve through level 25, then each level requires 10% more XP. A single battle can award up to 100% of a level through level 50, declining smoothly to 50% at level 100 and 35% at level 150.
 - Hero levels award skill points.
 - The skill tree includes Swordmastery, Stoneworks, Tax Stewardship, Royal Granaries, Guild Charters, March Orders, and Field Medics.
