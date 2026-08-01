@@ -92,13 +92,13 @@ requireMatch(
 );
 requireMatch(
   clientSource,
-  /renderProfileProductionStat\(\s*profileGoldProductionStat,\s*summary\.untimedGoldProductionPerHour,\s*summary\.goldProductionPerHour/,
-  "Profile gold production does not isolate the timed-item bonus from normal production."
+  /renderProfileProductionStat\(\s*profileGoldProductionStat,\s*summary\.baseGoldProductionPerHour,\s*summary\.goldProductionPerHour/,
+  "Profile gold production does not show final production with the full bonus contribution."
 );
 requireMatch(
   clientSource,
-  /renderProfileProductionStat\(\s*profileTroopProductionStat,\s*summary\.untimedTroopProductionPerHour,\s*summary\.troopProductionPerHour/,
-  "Profile troop production does not isolate the timed-item bonus from normal production."
+  /renderProfileProductionStat\(\s*profileTroopProductionStat,\s*summary\.baseTroopProductionPerHour,\s*summary\.troopProductionPerHour/,
+  "Profile troop production does not show final production with the full bonus contribution."
 );
 requireMatch(
   clientSource,
@@ -162,10 +162,10 @@ const productionStatElement = {
     this.children = children;
   },
 };
-productionStatContext.renderProfileProductionStat(productionStatElement, 60_000_000, 90_000_000, "/h");
-assert.equal(productionStatElement.children[0].textContent, "60M/h");
-assert.equal(productionStatElement.children[0].className, "profile-production-normal");
-assert.equal(productionStatElement.children[1].textContent, "(+30M/h)");
+productionStatContext.renderProfileProductionStat(productionStatElement, 33_000_000, 91_000_000, "/h");
+assert.equal(productionStatElement.children[0].textContent, "91M/h");
+assert.equal(productionStatElement.children[0].className, "profile-production-total");
+assert.equal(productionStatElement.children[1].textContent, "(+58M/h)");
 assert.equal(productionStatElement.children[1].className, "profile-production-bonus");
 
 const globalStatsContext = {
