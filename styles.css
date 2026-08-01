@@ -6967,11 +6967,8 @@ button.daily-reward-card.available:disabled {
 }
 .city-node.clan-ally .foreign-city-shield {
   background: #267a43;
-  outline: 2px solid #8fe2a5;
 }
 .city-node.clan-ally .foreign-selected-banner {
-  outline: 2px solid #79d895;
-  outline-offset: 1px;
   box-shadow: 0 0 18px rgba(67,205,103,.7);
 }
 .city-node.clan-ally.targeted:not(.stronghold-node)::before {
