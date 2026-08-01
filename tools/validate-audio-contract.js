@@ -423,8 +423,12 @@ function validateMuteAndUnlockContracts(audioManagerSource, indexSource) {
     "loginMusicMuteBtn must be an accessible button with aria-pressed"
   );
   check(
-    /<input\b[^>]*\bid=["']musicMute["'][^>]*>/i.test(indexSource),
-    "profile Music Mute switch (#musicMute) is missing"
+    /<button\b[^>]*\bid=["']musicMute["'][^>]*\baria-pressed=["']false["'][^>]*>/i.test(indexSource),
+    "profile Music Mute button (#musicMute) is missing or inaccessible"
+  );
+  check(
+    /<button\b[^>]*\bid=["']effectsMute["'][^>]*\baria-pressed=["']false["'][^>]*>/i.test(indexSource),
+    "profile Effects Mute button (#effectsMute) is missing or inaccessible"
   );
 
   const bindSettingsUi = extractMethod(audioManagerSource, "bindSettingsUi");
@@ -443,18 +447,27 @@ function validateMuteAndUnlockContracts(audioManagerSource, indexSource) {
   const loadManifest = extractMethod(audioManagerSource, "loadManifest");
 
   check(bindSettingsUi.includes('getElementById("musicMute")'), "profile Music Mute switch is not bound");
+  check(bindSettingsUi.includes('getElementById("effectsMute")'), "profile Effects Mute button is not bound");
   check(bindSettingsUi.includes('getElementById("loginMusicMuteBtn")'), "login Music Mute button is not bound");
   check(
-    /musicMute\.addEventListener\(\s*"change"[\s\S]*?setMusicMuted\(musicMute\.checked\)/.test(bindSettingsUi),
-    "profile Music Mute switch does not call setMusicMuted()"
+    /musicMute\.addEventListener\(\s*"click"[\s\S]*?setMusicMuted\(\s*!this\.preferences\.musicMuted\s*\)/.test(bindSettingsUi),
+    "profile Music Mute button does not toggle setMusicMuted()"
+  );
+  check(
+    /effectsMute\.addEventListener\(\s*"click"[\s\S]*?setEffectsMuted\(\s*!this\.preferences\.effectsMuted\s*\)/.test(bindSettingsUi),
+    "profile Effects Mute button does not toggle setEffectsMuted()"
   );
   check(
     /loginMusicMute\.addEventListener\(\s*"click"[\s\S]*?setMusicMuted\(\s*!this\.preferences\.musicMuted\s*\)/.test(bindSettingsUi),
     "login Music Mute button does not toggle setMusicMuted() in its click"
   );
   check(
-    /musicMute\.checked\s*=\s*this\.preferences\.musicMuted/.test(syncSettingsUi),
-    "persisted music mute preference is not reflected in the profile switch"
+    /syncProfileMuteButton\(\s*musicMute\s*,\s*this\.preferences\.musicMuted\s*,\s*"music"\s*\)/.test(syncSettingsUi),
+    "persisted music mute preference is not reflected in the profile button"
+  );
+  check(
+    /syncProfileMuteButton\(\s*effectsMute\s*,\s*this\.preferences\.effectsMuted\s*,\s*"effects"\s*\)/.test(syncSettingsUi),
+    "persisted effects mute preference is not reflected in the profile button"
   );
   check(
     /loginMusicMute\.setAttribute\(\s*"aria-pressed"\s*,\s*String\(this\.preferences\.musicMuted\)\s*\)/.test(syncSettingsUi),
@@ -463,6 +476,10 @@ function validateMuteAndUnlockContracts(audioManagerSource, indexSource) {
   check(
     syncSettingsUi.includes('"Unmute music"') && syncSettingsUi.includes('"Mute music"'),
     "login Music Mute button labels are not synchronized"
+  );
+  check(
+    syncSettingsUi.includes('"--audio-level"') && syncSettingsUi.includes('"aria-valuetext"'),
+    "volume sliders do not synchronize their visual fill and accessible percentage"
   );
 
   check(setMusicMuted.includes("this.preferences.musicMuted = nextMuted"), "setMusicMuted() does not persist music state");
@@ -574,6 +591,33 @@ function validateMuteAndUnlockContracts(audioManagerSource, indexSource) {
   check(
     audioManagerSource.includes('"NotAllowedError"'),
     "autoplay-policy rejection handling is missing"
+  );
+}
+
+function validateSettingsLayoutContracts(indexSource, stylesSource) {
+  check(
+    (indexSource.match(/class=["'][^"']*audio-channel-card[^"']*["']/g) || []).length === 2,
+    "the audio mixer must contain exactly two compact channel cards"
+  );
+  check(indexSource.includes('class="audio-channel-grid"'), "the audio mixer grid is missing");
+  check(indexSource.includes('class="settings-secondary-grid"'), "the Notifications and Privacy grid is missing");
+  check(
+    /\.audio-channel-grid\s*\{[\s\S]*?grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\)/.test(stylesSource),
+    "the audio mixer is not a two-column desktop layout"
+  );
+  check(
+    /@media\s*\(max-width:\s*640px\)[\s\S]*?\.audio-channel-grid,[\s\S]*?grid-template-columns:\s*minmax\(0,\s*1fr\)/.test(stylesSource),
+    "the audio mixer does not stack at the mobile breakpoint"
+  );
+  check(
+    /\.audio-mute-button\s*\{[\s\S]*?width:\s*44px;[\s\S]*?height:\s*44px;/.test(stylesSource),
+    "audio mute buttons must retain 44px touch targets"
+  );
+  check(
+    stylesSource.includes("env(safe-area-inset-right)")
+      && stylesSource.includes("env(safe-area-inset-bottom)")
+      && stylesSource.includes("env(safe-area-inset-left)"),
+    "settings layout does not account for mobile safe areas"
   );
 }
 
@@ -1346,11 +1390,13 @@ function main() {
   const audioManagerSource = readSource("audio-manager.js");
   const gameSource = readSource("game.js");
   const indexSource = readSource("index.html");
+  const stylesSource = readSource("styles.css");
   const serviceWorkerSource = readSource("service-worker.js");
   const runtimeSource = `${audioManagerSource}\n${gameSource}\n${indexSource}`;
 
   const counts = validateManifestAndFiles(manifest, runtimeSource);
   validateMuteAndUnlockContracts(audioManagerSource, indexSource);
+  validateSettingsLayoutContracts(indexSource, stylesSource);
   validateCodecAndTemporaryMusicContracts(audioManagerSource);
   validateRuntimeCueAndContextContracts(gameSource);
   validateCityUpgradeCueContract(gameSource);

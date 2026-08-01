@@ -494,12 +494,12 @@ async function runAllowedPlaybackSuite(browser, browserName, baseUrl, fixture) {
       await page.evaluate(() => ({
         ariaPressed: document.getElementById("loginMusicMuteBtn")?.getAttribute("aria-pressed"),
         label: document.getElementById("loginMusicMuteBtn")?.getAttribute("aria-label"),
-        profileMusicMuted: document.getElementById("musicMute")?.checked,
+        profileMusicMuted: document.getElementById("musicMute")?.getAttribute("aria-pressed"),
       })),
       {
         ariaPressed: "true",
         label: "Unmute music",
-        profileMusicMuted: true,
+        profileMusicMuted: "true",
       },
     );
 
@@ -531,12 +531,32 @@ async function runAllowedPlaybackSuite(browser, browserName, baseUrl, fixture) {
       await page.locator("#loginMusicMuteBtn").getAttribute("aria-pressed"),
       "true",
     );
-    assert.equal(await page.locator("#musicMute").isChecked(), true);
+    assert.equal(await page.locator("#musicMute").getAttribute("aria-pressed"), "true");
 
     await page.locator("#loginMusicMuteBtn").click();
     assertHealthyPlayback(await waitForPlayback(page), "main_menu");
     assert.equal((await getAudioState(page)).effectsMuted, false);
-    assert.equal(await page.locator("#musicMute").isChecked(), false);
+    assert.equal(await page.locator("#musicMute").getAttribute("aria-pressed"), "false");
+
+    await page.evaluate(() => {
+      document.getElementById("profileScreen")?.classList.add("open", "settings-active");
+      const settings = document.getElementById("settingsView");
+      if (settings) settings.hidden = false;
+    });
+    await page.locator("#musicMute").press("Space");
+    assert.equal((await getAudioState(page)).musicMuted, true);
+    assert.equal(await page.locator("#loginMusicMuteBtn").getAttribute("aria-pressed"), "true");
+    await page.locator("#musicMute").press("Space");
+    assertHealthyPlayback(await waitForPlayback(page), "main_menu");
+
+    await page.locator("#effectsMute").press("Enter");
+    assert.equal((await getAudioState(page)).effectsMuted, true);
+    assert.equal((await getAudioState(page)).musicMuted, false);
+    assert.equal(await page.locator("#effectsMute").getAttribute("aria-pressed"), "true");
+    assert.equal(await page.evaluate(() => window.CrownlandsAudio.playEffect("button_click")), false);
+    await page.locator("#effectsMute").press("Enter");
+    assert.equal((await getAudioState(page)).effectsMuted, false);
+    assert.equal(await page.locator("#effectsMute").getAttribute("aria-pressed"), "false");
 
     assert.deepEqual(issues, [], `${browserName}: audio-related browser errors were observed.`);
     return {
