@@ -110,6 +110,7 @@ requires(html, /id="clanTabBtn"[\s\S]*?id="clanView"/, "Profile UI is missing it
 requires(html, /id="leaderboardBtn"[\s\S]*?id="clanHudBtn"/, "The Clan HUD button is not beside the leaderboard.");
 requires(html, /id="profileKingdomFlag"[\s\S]*?id="profileClanAffiliation"/, "Player profiles do not keep clan shields separate from kingdom flags.");
 requires(client, /function isClanAllyCity[\s\S]*?function getClanFriendlyBlockReason/, "Client is missing clan-allied city detection.");
+requires(client, /function getVisibleCityGarrisonTroops[\s\S]*?city\.owner === "player" \|\| isClanAllyCity\(city\)[\s\S]*?scoutReport\?\.troops/, "Clanmates cannot see exact city garrisons while enemies remain scout-gated.");
 requires(client, /clanRosterReady[\s\S]*?clanMemberUidSet\.has/, "Allied-city rendering does not use the event-maintained clan member UID set.");
 requires(client, /function applyClanMembersSnapshot[\s\S]*?\["added", "removed"\][\s\S]*?refreshClanRelationshipPresentation/, "Roster events do not refresh allied cities only when membership changes.");
 requires(client, /function isCurrentClanmateArmy[\s\S]*?clanMemberUidSet\.has\(ownerUid\)[\s\S]*?identity\?\.clanId/, "Allied march paths do not use current event-driven clan membership with an identity fallback.");
@@ -171,6 +172,9 @@ requires(styles, /\.army-route-ribbon\.clan-support-route\s*\{\s*fill:\s*rgba\(4
 requires(styles, /\.army-route-flow\.clan-support-route\s*\{\s*stroke:\s*rgba\(143,\s*226,\s*165,/, "Allied support route flows do not use the city UI's light green.");
 assert.doesNotMatch(styles, /\.clan-hostile-route/, "Legacy red-and-green clan attack path styling remains in CSS.");
 requires(styles, /\.army-route-flow\.scout-route\s*\{\s*stroke-dasharray:\s*8\s+15/, "Allied scouts cannot retain the scout dash pattern.");
+requires(client, /const clanAlly = isClanAllyCity\(city\)[\s\S]*?clanAlly \? Math\.max\(0, Math\.floor\(Number\(city\.troops\)[\s\S]*?getVisibleCityGarrisonTroops\(city, scoutReport\)[\s\S]*?foreign-garrison \$\{garrisonVisibilityClass\}[\s\S]*?clanAlly \? `<span class="foreign-garrison \$\{garrisonVisibilityClass\}"/, "Allied garrisons do not update or render on selected and ordinary map city labels.");
+requires(client, /function showCrownCitadelInfoModal[\s\S]*?getVisibleCityGarrisonTroops\(city, report\)[\s\S]*?Shared by clan[\s\S]*?function showCityInfoModal[\s\S]*?getVisibleCityGarrisonTroops\(city, report\)[\s\S]*?Shared by clan/, "City, Stronghold, and Citadel information panels do not expose live allied garrisons.");
+requires(styles, /\.foreign-garrison\.clan-visible\s*\{[\s\S]*?color:\s*#eaffef/, "Live allied troop counts lack an explicit green-readable treatment.");
 requires(
   styles,
   /\.city-node\.clan-ally\.targeted:not\(\.stronghold-node\)::before[\s\S]*?stroke='%2379d895'[\s\S]*?\.city-node\.clan-ally \.foreign-selected-level[\s\S]*?\.city-node\.clan-ally \.foreign-selected-crest[\s\S]*?\.clan-ally-action-wheel \.city-wheel-ring/,
