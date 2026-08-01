@@ -58,7 +58,44 @@ for (const [source, label] of [[clientSource, "Client"], [serverSource, "Server"
     /baseGoldProductionPerHour/,
     `${label} does not expose base gold production.`
   );
+
+  const goldProductionContext = {};
+  vm.createContext(goldProductionContext);
+  vm.runInContext(
+    extractFunction(source, "calculateGoldProductionRates"),
+    goldProductionContext,
+    { filename: label === "Client" ? path.join(root, "game.js") : path.join(root, "functions", "index.js") }
+  );
+  const rates = goldProductionContext.calculateGoldProductionRates(100, 75, 10, 50);
+  assert.equal(rates.baseGoldProductionPerHour, 100, `${label} changed the raw gold baseline.`);
+  assert.equal(rates.untimedGoldProductionPerHour, 185, `${label} compounds permanent gold bonuses.`);
+  assert.equal(rates.goldProductionPerHour, 235, `${label} compounds Royal Tax with other gold bonuses.`);
+  assert.equal(rates.goldProductionBonusPerHour, 135, `${label} reports an incorrect total gold bonus.`);
+
+  const troopProductionContext = {};
+  vm.createContext(troopProductionContext);
+  vm.runInContext(
+    extractFunction(source, "calculateTroopProductionRates"),
+    troopProductionContext,
+    { filename: label === "Client" ? path.join(root, "game.js") : path.join(root, "functions", "index.js") }
+  );
+  const troopRates = troopProductionContext.calculateTroopProductionRates(100, 75, 10, 30);
+  assert.equal(troopRates.baseTroopProductionPerHour, 100, `${label} changed the raw troop baseline.`);
+  assert.equal(troopRates.untimedTroopProductionPerHour, 185, `${label} compounds permanent troop bonuses.`);
+  assert.equal(troopRates.troopProductionPerHour, 215, `${label} compounds War Drums with other troop bonuses.`);
+  assert.equal(troopRates.troopProductionBonusPerHour, 115, `${label} reports an incorrect total troop bonus.`);
 }
+
+requireMatch(
+  serverSource,
+  /stats\.goldProductionPerSecond \* goldElapsedSeconds\s*\+ stats\.baseGoldProductionPerHour \/ 3600\s*\* taxDecreeOverlapSeconds\s*\* ROYAL_TAX_DECREE_GOLD_PRODUCTION_BONUS_PERCENT \/ 100/,
+  "Authoritative Royal Tax credit is not based solely on raw city gold production."
+);
+requireMatch(
+  serverSource,
+  /stats\.troopProductionPerSecond \* elapsedSeconds\s*\+ stats\.baseTroopProductionPerHour \/ 3600\s*\* warDrumsOverlapSeconds\s*\* WAR_DRUMS_TROOP_PRODUCTION_BONUS_PERCENT \/ 100/,
+  "Authoritative War Drums credit is not based solely on raw city troop production."
+);
 
 requireMatch(
   serverSource,
@@ -92,13 +129,18 @@ requireMatch(
 );
 requireMatch(
   clientSource,
-  /profileGoldProductionStat\.textContent = formatBaseAndBonusStat/,
-  "Profile gold production does not use the shared base-plus-bonus display."
+  /renderProfileProductionStat\(\s*profileGoldProductionStat,\s*summary\.baseGoldProductionPerHour,\s*summary\.goldProductionPerHour/,
+  "Profile gold production does not show final production with the full bonus contribution."
 );
 requireMatch(
   clientSource,
-  /profileTroopProductionStat\.textContent = formatBaseAndBonusStat/,
-  "Profile troop production does not use the shared base-plus-bonus display."
+  /renderProfileProductionStat\(\s*profileTroopProductionStat,\s*summary\.baseTroopProductionPerHour,\s*summary\.troopProductionPerHour/,
+  "Profile troop production does not show final production with the full bonus contribution."
+);
+requireMatch(
+  clientSource,
+  /untimedGoldProductionPerHour[\s\S]*?untimedTroopProductionPerHour/,
+  "Client production summaries do not preserve normal untimed rates."
 );
 requireMatch(
   clientSource,
@@ -139,6 +181,29 @@ vm.runInContext(
 assert.equal(formatterContext.formatBaseAndBonusStat(1_000, 1_250), "1.0K (+250)");
 assert.equal(formatterContext.formatBaseAndBonusStat(900, 900, "/h"), "900/h (+0/h)");
 assert.equal(formatterContext.formatBaseAndBonusStat(30, 38, "%"), "30% (+8%)");
+
+const productionStatContext = {
+  document: {
+    createElement: () => ({ className: "", textContent: "" }),
+  },
+};
+vm.createContext(productionStatContext);
+vm.runInContext(
+  `${extractFunction(clientSource, "formatNumber")}\n${extractFunction(clientSource, "renderProfileProductionStat")}`,
+  productionStatContext,
+  { filename: path.join(root, "game.js") }
+);
+const productionStatElement = {
+  children: [],
+  replaceChildren(...children) {
+    this.children = children;
+  },
+};
+productionStatContext.renderProfileProductionStat(productionStatElement, 33_000_000, 91_000_000, "/h");
+assert.equal(productionStatElement.children[0].textContent, "91M/h");
+assert.equal(productionStatElement.children[0].className, "profile-production-total");
+assert.equal(productionStatElement.children[1].textContent, "(+58M/h)");
+assert.equal(productionStatElement.children[1].className, "profile-production-bonus");
 
 const globalStatsContext = {
   client: { user: { uid: "player-1" } },

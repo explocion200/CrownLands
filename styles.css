@@ -8294,6 +8294,21 @@ button.daily-reward-card.available:disabled {
 .kingdom-stat-wide { grid-column: auto; width: auto; justify-self: stretch; }
 .kingdom-stat span { color: #9ed5ff; font-size: .72rem; font-weight: 900; }
 .kingdom-stat strong { color: #fff; font-size: 1.12rem; }
+.kingdom-stat strong:has(.profile-production-bonus) {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: .28em;
+}
+.kingdom-stat .profile-production-total,
+.kingdom-stat .profile-production-bonus {
+  font-size: inherit;
+  font-weight: inherit;
+}
+.kingdom-stat .profile-production-total { color: inherit; }
+.kingdom-stat .profile-production-bonus {
+  color: var(--ui-gold-bright);
+}
 .kingdom-stat-power { min-height: 82px; }
 .kingdom-stat-power small {
   display: block;
