@@ -20888,9 +20888,6 @@ function renderCities(force = false) {
     const crownBadge = cityOwnerHoldsCrownCitadel(city)
       ? `<span class="citadel-city-crown" title="Crown Citadel ruler" aria-label="Crown Citadel ruler">&#9819;</span>`
       : "";
-    const clanAllyStatus = clanAlly
-      ? `<span class="clan-ally-label">Clan Ally</span>`
-      : "";
     const rivalOwnerRow = city.owner === "enemy" && ownerName && ownerName !== OWNER.enemy.label
       ? `<span class="city-ruler-row"><strong class="foreign-ruler-name foreign-ruler-name-inline">${escapeHtml(ownerName)}</strong>${crownBadge}</span>`
       : "";
@@ -20913,7 +20910,6 @@ function renderCities(force = false) {
         ? `
         <span class="city-label foreign-city-label selected-foreign-label">
           ${rivalOwnerRow || `<span class="city-ruler-row"><strong class="foreign-ruler-name">${escapeHtml(ownerName)}</strong>${crownBadge}</span>`}
-          ${clanAllyStatus}
           <span class="foreign-selected-banner">
             <span class="foreign-selected-level">${formatNumber(city.level)}</span>
             <span class="foreign-selected-crest">${ownerFlag}</span>
@@ -20926,7 +20922,6 @@ function renderCities(force = false) {
       : `
         <span class="city-label foreign-city-label">
           ${rivalOwnerRow}
-          ${clanAllyStatus}
           <strong class="city-name">${escapeHtml(city.name)}</strong>
           <span class="foreign-city-shield">
             ${ownerFlag}
