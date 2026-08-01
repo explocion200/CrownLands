@@ -1825,6 +1825,28 @@ async function main() {
     targetRegionId: sourceClaim.mainRegionId,
   });
   assert(reinforcement?.movement?.kind === "transfer", "Owned-city reinforcement did not launch as a transfer.");
+  const transferPublicPath = `islands/${sourceClaim.islandId}/armies/${reinforcementArmyId}`;
+  const [transferCanonicalSnapshot, transferPublicSnapshot, observerTransferRead] = await Promise.all([
+    db.doc(`armies/${reinforcementArmyId}`).get(),
+    db.doc(transferPublicPath).get(),
+    attemptClientDocumentRead(users[1], transferPublicPath),
+  ]);
+  const transferCanonical = transferCanonicalSnapshot.data() || {};
+  const transferPublic = transferPublicSnapshot.data() || {};
+  assert(
+    Number(transferCanonical.troops || 0) === 20_000
+      && Number(transferCanonical.requestedTroops || 0) === 20_000,
+    "The transfer owner lost the exact canonical troop count."
+  );
+  assert(observerTransferRead.status === 200, "Another signed-in player could not see the traveling transfer icon.");
+  assert(
+    transferPublicSnapshot.exists
+      && transferPublic.troopVisibility === "hidden"
+      && Number(transferPublic.armyTroopVisibilityVersion || 0) === 2
+      && transferPublic.troops === undefined
+      && transferPublic.requestedTroops === undefined,
+    "The public owned-city transfer projection exposed its exact troop amount."
+  );
 
   const retargetEventId = `retarget_gate_${crypto.randomBytes(8).toString("hex")}`;
   const retargetBatch = db.batch();

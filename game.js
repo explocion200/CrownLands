@@ -13837,6 +13837,8 @@ function normalizeOnlineArmyMovement(raw) {
   const estimateForViewer = isAttackMovement
     && ownerUid !== getCurrentOnlineUid()
     && viewerAccess !== "owner";
+  const hiddenForViewer = raw.troopVisibility === "hidden"
+    && viewerAccess !== "owner";
   const troopEstimate = estimateForViewer
     ? normalizeArmyTroopEstimate(raw, rawTroops)
     : null;
@@ -13861,8 +13863,8 @@ function normalizeOnlineArmyMovement(raw) {
     toName: raw.toName || "",
     sourceRegionId: normalizeRegionId(raw.sourceRegionId),
     targetRegionId: normalizeRegionId(raw.targetRegionId),
-    troops: estimateForViewer ? null : rawTroops,
-    troopVisibility: estimateForViewer ? "estimate" : "exact",
+    troops: estimateForViewer || hiddenForViewer ? null : rawTroops,
+    troopVisibility: estimateForViewer ? "estimate" : hiddenForViewer ? "hidden" : "exact",
     troopEstimateMin: troopEstimate?.min || 0,
     troopEstimateMax: troopEstimate?.max || 0,
     troopEstimateLabel: troopEstimate?.label || "",
@@ -13874,7 +13876,7 @@ function normalizeOnlineArmyMovement(raw) {
     pathLength: Math.max(0, Number(raw.pathLength) || pathSegments.reduce((total, segment) => total + segment.length, 0) || routeLength(path)),
     targetOwnerAtLaunch: raw.targetOwnerAtLaunch || "neutral",
     targetOwnerUid,
-    requestedTroops: estimateForViewer
+    requestedTroops: estimateForViewer || hiddenForViewer
       ? null
       : Math.max(0, Math.floor(Number(raw.requestedTroops) || 0)),
     attackerKingPower: normalizePowerValue(raw.attackerKingPower || raw.ownerKingPower),
@@ -22171,9 +22173,26 @@ function normalizeArmyTroopEstimate(army = {}, legacyExactTroops = null) {
   return getIncomingTroopEstimate(legacyExactTroops);
 }
 
+function isPrivateTransferMovement(attack) {
+  return Boolean(
+    attack
+    && (
+      attack.troopVisibility === "hidden"
+      || attack.kind === "transfer"
+      || (attack.kind !== "attack" && attack.launchKind === "transfer")
+      || attack.retargetedFromKind === "transfer"
+      || attack.relinquishTransfer
+      || attack.reinforcementReturn
+      || attack.campReturn
+      || attack.rallyReturn
+    )
+  );
+}
+
 function canViewArmyTroopAmount(attack) {
   if (!attack) return false;
-  if (attack.kind !== "transfer") return true;
+  if (attack.troopVisibility === "hidden" && attack.troops == null) return false;
+  if (!isPrivateTransferMovement(attack)) return true;
   return isPersonalArmy(attack);
 }
 
@@ -22361,6 +22380,8 @@ function updateArmyTokenElement(token, attack, mapPoint, targetCity, endpointInt
     if (showTroops) {
       const troopText = getArmyTroopDisplayText(attack);
       if (countElement.textContent !== troopText) countElement.textContent = troopText;
+    } else if (countElement.textContent) {
+      countElement.textContent = "";
     }
   }
   if (timeElement) {

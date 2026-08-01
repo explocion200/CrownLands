@@ -163,7 +163,7 @@ const RALLY_RETURN_REASON = "rally_recall";
 const RALLY_FRIENDLY_RETURN_REASON = "rally_target_became_friendly";
 const ARMY_TRAVEL_TROOP_BAND_LIMITS = [10, 100, 1000, 10000, 100000, 1000000, 10000000, 100000000];
 const ARMY_TRAVEL_TROOP_BAND_MULTIPLIERS = [1, 1.18, 1.38, 1.62, 1.9, 2.24, 2.62, 3.06, 3.5];
-const ARMY_TROOP_VISIBILITY_VERSION = 1;
+const ARMY_TROOP_VISIBILITY_VERSION = 2;
 const ARMY_TROOP_ESTIMATE_DECADE_MAX = 1_000_000;
 const ARMY_TROOP_ESTIMATE_BACKFILL_PAGE_SIZE = 50;
 const CAPTURE_XP_BASE = 120;
@@ -5190,6 +5190,21 @@ function isEstimatedAttackMovement(movement = {}) {
   );
 }
 
+function isPrivateTransferMovement(movement = {}) {
+  return Boolean(
+    movement
+    && (
+      movement.kind === "transfer"
+      || (movement.kind !== "attack" && movement.launchKind === "transfer")
+      || movement.retargetedFromKind === "transfer"
+      || movement.relinquishTransfer
+      || movement.reinforcementReturn
+      || movement.campReturn
+      || movement.rallyReturn
+    )
+  );
+}
+
 function createArmyPublicProjection(movement = {}) {
   const projection = {
     ...movement,
@@ -5202,6 +5217,15 @@ function createArmyPublicProjection(movement = {}) {
     projection.troopEstimateMin = estimate.min;
     projection.troopEstimateMax = estimate.max;
     projection.troopEstimateLabel = estimate.label;
+    projection.troops = FieldValue.delete();
+    projection.requestedTroops = FieldValue.delete();
+    projection.attackProtection = FieldValue.delete();
+    projection.demoAttack = FieldValue.delete();
+  } else if (isPrivateTransferMovement(movement)) {
+    projection.troopVisibility = "hidden";
+    projection.troopEstimateMin = FieldValue.delete();
+    projection.troopEstimateMax = FieldValue.delete();
+    projection.troopEstimateLabel = FieldValue.delete();
     projection.troops = FieldValue.delete();
     projection.requestedTroops = FieldValue.delete();
     projection.attackProtection = FieldValue.delete();
