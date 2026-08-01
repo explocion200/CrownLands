@@ -82,7 +82,7 @@ requires(client, /beginCreateClanRally[\s\S]*?beginJoinClanRallyContribution/, "
 requires(client, /inbound contributions will automatically turn around:[\s\S]*?Launch Assembled Troops/, "Launch confirmation does not disclose inbound returns.");
 requires(client, /bindClanRallyControls[\s\S]*?data-rally-action/, "Role-appropriate rally controls are not bound.");
 requires(client, /camp-rally-action[\s\S]*?beginCreateClanRally/, "Eligible objective action wheels do not expose Rally.");
-requires(client, /mission\?\.kind === "rally_join"[\s\S]*?clan-support-route/, "Assembly routes do not use clan support styling.");
+requires(client, /function getArmyRouteRelationshipClass[\s\S]*?isCurrentClanmateArmy\(mission\)[\s\S]*?clan-support-route/, "Clan rally assemblies do not inherit the unified green clanmate route styling.");
 requires(styles, /\.clan-rally-card[\s\S]*?\.clan-rally-confirmation/, "Rally card or confirmation styling is missing.");
 requires(styles, /\.camp-rally-action/, "Rally map action styling is missing.");
 

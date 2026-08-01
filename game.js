@@ -20529,16 +20529,7 @@ function isCurrentClanmateArmy(mission) {
 function getArmyRouteRelationshipClass(mission) {
   if (isPersonalArmy(mission)) return "player-route";
   if (!isCurrentClanmateArmy(mission)) return "enemy-route";
-  const isSupportMovement = Boolean(
-    mission?.returning
-    || mission?.reinforcementReturn
-    || mission?.campReturn
-    || mission?.relinquishTransfer
-    || mission?.kind === "transfer"
-    || mission?.kind === "reinforce"
-    || mission?.kind === "rally_join"
-  );
-  return isSupportMovement ? "clan-support-route" : "clan-hostile-route";
+  return "clan-support-route";
 }
 
 function getMissionPointAtProgress(mission, progress) {
