@@ -207,6 +207,11 @@ requires(
 );
 requires(
   styles,
+  /\.clan-browser-nav\s*\{\s*display:\s*none;\s*\}[\s\S]*?\.clan-section-nav\s*\{[\s\S]*?display:\s*grid;[\s\S]*?grid-template-columns:\s*repeat\(4,[\s\S]*?\.clan-section-nav button\.active[\s\S]*?\.clan-section-panel:not\(\.active\)\s*\{\s*display:\s*none;\s*\}[\s\S]*?\.clan-section-panel\.active\s*\{\s*display:\s*block;/,
+  "The desktop clan hub does not expose its four navigation tabs as a single-panel experience."
+);
+requires(
+  styles,
   /\.clan-content:not\(\.shield-editor-open\) \.clan-columns,[\s\S]*?\.clan-social-panels,[\s\S]*?\.clan-browser[\s\S]*?display:\s*contents[\s\S]*?\.clan-roster[\s\S]*?max-height:\s*none[\s\S]*?overflow:\s*visible/,
   "Mobile clan sections do not collapse to a single scroll container."
 );
