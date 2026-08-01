@@ -107,7 +107,8 @@
             <div>
               <h2>Send armies and protect holdings</h2>
               <p>Choose a source city, target, and troop amount to create a march. The server validates ownership, available troops, route, protection rules, and other requirements before accepting the order. When the march arrives, the server resolves the outcome and records a report.</p>
-              <p>Successful captures transfer the city and reduce its level by one, never below Level 1. Failed attacks can still award reduced experience. A captured city may have a temporary experience cooldown, which lowers repeated capture rewards without preventing future attacks.</p>
+              <p>Successful captures transfer the city and reduce its level by one, never below Level 1. Failed attacks can still award reduced experience, and newly captured cities remain immediately attackable with their normal battle and capture experience.</p>
+              <p>To prevent feeder kingdoms, the server tracks only cities a ruler captured through combat from gray NPC ownership. If that ruler has three or fewer non-main cities, two easy handoffs to the same opponent in seven days are allowed; further attacks by that opponent are temporarily blocked only against the ruler's other gray-origin cities. Established cities remain attackable. The gray-origin marker has no timer or cooldown, meaningful resistance reduces the pattern, and a successful reverse capture immediately restores gray-city fighting.</p>
               <h3>Defense is preparation</h3>
               <p>City defenders benefit from stationed troop strength and city walls. Upgrades and defensive skills improve the cost of taking an important holding. If an attack is already marching, decide whether to reinforce the target, move vulnerable troops, or accept the battle and preserve resources elsewhere.</p>
             </div>
