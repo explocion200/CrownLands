@@ -279,42 +279,64 @@
         </div>
 
         <div id="settingsView" class="profile-settings-view" role="tabpanel" aria-labelledby="settingsTabBtn" hidden>
-          <section class="profile-settings-section audio-settings-section">
-            <div class="profile-section-heading"><span>Audio</span><h3>Sound</h3></div>
-            <label class="audio-volume-control" for="musicVolume">
-              <span><strong>Music Volume</strong><output id="musicVolumeValue" for="musicVolume">70%</output></span>
-              <input id="musicVolume" type="range" min="0" max="100" step="1" value="70" />
-            </label>
-            <label class="audio-toggle-control" for="musicMute">
-              <span><strong>Music Mute</strong><small>Silence the soundtrack</small></span>
-              <input id="musicMute" type="checkbox" role="switch" />
-            </label>
-            <label class="audio-volume-control" for="effectsVolume">
-              <span><strong>Effects Volume</strong><output id="effectsVolumeValue" for="effectsVolume">80%</output></span>
-              <input id="effectsVolume" type="range" min="0" max="100" step="1" value="80" />
-            </label>
-            <label class="audio-toggle-control" for="effectsMute">
-              <span><strong>Effects Mute</strong><small>Silence interface and battle cues</small></span>
-              <input id="effectsMute" type="checkbox" role="switch" />
-            </label>
-          </section>
-          <section class="profile-settings-section">
-            <div class="profile-section-heading"><span>Settings</span><h3>Notifications</h3></div>
-            <div class="profile-notification-row">
-              <div>
-                <strong>Notifications</strong>
-              </div>
-              <div class="push-alerts-toggle" role="group" aria-label="Notifications">
-                <button id="pushAlertsOnBtn" class="push-alerts-option" type="button" aria-pressed="false">On</button>
-                <button id="pushAlertsOffBtn" class="push-alerts-option active" type="button" aria-pressed="true">Off</button>
-              </div>
+          <section class="profile-settings-section audio-settings-section" aria-labelledby="audioSettingsTitle">
+            <div class="settings-section-header">
+              <div class="profile-section-heading"><span>Settings</span><h3 id="audioSettingsTitle">Audio</h3></div>
+              <p>Balance the realm's soundtrack and action cues.</p>
             </div>
-            <span id="pushAlertsStatus" class="push-alerts-status" aria-live="polite" hidden>Notifications Off</span>
+            <div class="audio-channel-grid">
+              <article class="audio-channel-card" data-audio-channel="music">
+                <div class="audio-channel-header">
+                  <span class="audio-channel-glyph" aria-hidden="true">&#9835;</span>
+                  <span class="audio-channel-copy"><strong>Music</strong><small>Soundtrack and ambient themes</small></span>
+                  <output id="musicVolumeValue" for="musicVolume">70%</output>
+                  <button id="musicMute" class="audio-mute-button" type="button" aria-label="Mute music" aria-pressed="false" title="Mute music" data-audio-control>
+                    <span data-audio-mute-icon aria-hidden="true">&#128266;</span>
+                  </button>
+                </div>
+                <label class="audio-volume-control" for="musicVolume">
+                  <span class="sr-only">Music volume</span>
+                  <input id="musicVolume" type="range" min="0" max="100" step="1" value="70" aria-label="Music volume" />
+                </label>
+              </article>
+              <article class="audio-channel-card" data-audio-channel="effects">
+                <div class="audio-channel-header">
+                  <span class="audio-channel-glyph" aria-hidden="true">&#9876;</span>
+                  <span class="audio-channel-copy"><strong>Effects</strong><small>Interface, battle, and reward cues</small></span>
+                  <output id="effectsVolumeValue" for="effectsVolume">80%</output>
+                  <button id="effectsMute" class="audio-mute-button" type="button" aria-label="Mute effects" aria-pressed="false" title="Mute effects" data-audio-control>
+                    <span data-audio-mute-icon aria-hidden="true">&#128266;</span>
+                  </button>
+                </div>
+                <label class="audio-volume-control" for="effectsVolume">
+                  <span class="sr-only">Effects volume</span>
+                  <input id="effectsVolume" type="range" min="0" max="100" step="1" value="80" aria-label="Effects volume" />
+                </label>
+              </article>
+            </div>
           </section>
-          <section class="profile-settings-section">
-            <div class="profile-section-heading"><span>Legal</span><h3>Privacy</h3></div>
-            <a class="profile-secondary-btn privacy-settings-link" href="/privacy.html" target="_blank" rel="noopener">View Privacy Policy</a>
-          </section>
+          <div class="settings-secondary-grid">
+            <section class="profile-settings-section settings-compact-section notification-settings-section">
+              <div class="profile-section-heading"><span>Alerts</span><h3>Notifications</h3></div>
+              <p class="settings-card-description">Choose whether Crownlands can send browser alerts.</p>
+              <div class="profile-notification-row">
+                <div>
+                  <strong>Browser alerts</strong>
+                  <small>Marches, reports, and kingdom events</small>
+                </div>
+                <div class="push-alerts-toggle" role="group" aria-label="Notifications">
+                  <button id="pushAlertsOnBtn" class="push-alerts-option" type="button" aria-pressed="false">On</button>
+                  <button id="pushAlertsOffBtn" class="push-alerts-option active" type="button" aria-pressed="true">Off</button>
+                </div>
+              </div>
+              <span id="pushAlertsStatus" class="push-alerts-status" aria-live="polite" hidden>Notifications Off</span>
+            </section>
+            <section class="profile-settings-section settings-compact-section privacy-settings-section">
+              <div class="profile-section-heading"><span>Legal</span><h3>Privacy</h3></div>
+              <p class="settings-card-description">Review how account and gameplay information is handled.</p>
+              <a class="profile-secondary-btn privacy-settings-link" href="/privacy.html" target="_blank" rel="noopener">View Privacy Policy</a>
+            </section>
+          </div>
         </div>
 
         <div id="flagEditorView" class="flag-editor-view" hidden>

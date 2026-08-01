@@ -87,6 +87,7 @@ class FakeElement {
   querySelector(selector) {
     if (selector === "[data-music-icon]") return this.icon;
     if (selector === "[data-music-label]") return this.visibleLabel;
+    if (selector === "[data-audio-mute-icon]") return this.icon;
     return null;
   }
 
@@ -111,8 +112,10 @@ loginMusicMute.icon = new FakeElement("loginMusicIcon", "span", loginMusicMute);
 loginMusicMute.visibleLabel = new FakeElement("loginMusicLabel", "span", loginMusicMute);
 const musicVolume = new FakeElement("musicVolume", "input");
 const effectsVolume = new FakeElement("effectsVolume", "input");
-const musicMute = new FakeElement("musicMute", "input");
-const effectsMute = new FakeElement("effectsMute", "input");
+const musicMute = new FakeElement("musicMute", "button");
+musicMute.icon = new FakeElement("musicMuteIcon", "span", musicMute);
+const effectsMute = new FakeElement("effectsMute", "button");
+effectsMute.icon = new FakeElement("effectsMuteIcon", "span", effectsMute);
 const musicVolumeValue = new FakeElement("musicVolumeValue", "output");
 const effectsVolumeValue = new FakeElement("effectsVolumeValue", "output");
 const ordinaryTarget = new FakeElement("ordinaryButton", "button");
@@ -682,7 +685,9 @@ async function run() {
   assert.equal(manager.preferences.musicMuted, true);
   assert.equal(manager.currentMusic.paused, true, "Muting music must pause rather than silently continue decoding.");
   assert.equal(manager.preferences.effectsMuted, false, "Music mute must not alter the effects preference.");
-  assert.equal(musicMute.checked, true, "The profile setting must mirror login mute.");
+  assert.equal(musicMute.getAttribute("aria-pressed"), "true", "The profile setting must mirror login mute.");
+  assert.equal(musicMute.getAttribute("aria-label"), "Unmute music");
+  assert.equal(musicMute.icon.textContent, "\u{1F507}");
   assert.equal(loginMusicMute.getAttribute("aria-pressed"), "true");
   assert.equal(loginMusicMute.getAttribute("aria-label"), "Unmute music");
   assert.equal(loginMusicMute.icon.textContent, "\u{1F507}");
@@ -707,14 +712,12 @@ async function run() {
   assert.equal(loginMusicMute.getAttribute("aria-label"), "Mute music");
   assert.equal(loginMusicMute.icon.textContent, "\u{1F50A}");
 
-  musicMute.checked = true;
-  dispatchDocumentEvent("change", musicMute);
+  dispatchDocumentEvent("click", musicMute);
   assert.equal(manager.preferences.musicMuted, true);
   assert.equal(loginMusicMute.getAttribute("aria-pressed"), "true", "Profile mute must update the login control.");
   assert.equal(manager.preferences.effectsMuted, false);
-  musicMute.checked = false;
   queuePlaySuccess();
-  dispatchDocumentEvent("change", musicMute);
+  dispatchDocumentEvent("click", musicMute);
   await flushPromises();
   assert.equal(manager.preferences.musicMuted, false);
   const savedPreferences = JSON.parse(storedValues.get("crownlands.audio.preferences.v1"));
@@ -1115,17 +1118,19 @@ async function run() {
   assert.equal(manager.effectMasterGain.gain.value, 0.5, "The effects preference must drive a Web Audio GainNode.");
   manager.setEffectsVolume(0.8);
 
-  effectsMute.checked = true;
   const sourcesBeforeMute = [...effectSourceStarts];
-  dispatchDocumentEvent("change", effectsMute);
+  dispatchDocumentEvent("click", effectsMute);
   assert.equal(manager.preferences.effectsMuted, true);
   assert.equal(manager.preferences.musicMuted, false);
   assert.equal(manager.currentMusic.paused, false, "Effects mute must not pause music.");
   assert.ok(sourcesBeforeMute.every(source => source.stopped), "Effects mute must stop active Web Audio sources.");
   assert.equal(manager.effectMasterGain.gain.value, 0);
-  effectsMute.checked = false;
-  dispatchDocumentEvent("change", effectsMute);
+  assert.equal(effectsMute.getAttribute("aria-pressed"), "true");
+  assert.equal(effectsMute.getAttribute("aria-label"), "Unmute effects");
+  assert.equal(effectsMute.icon.textContent, "\u{1F507}");
+  dispatchDocumentEvent("click", effectsMute);
   assert.equal(manager.effectMasterGain.gain.value, 0.8);
+  assert.equal(effectsMute.getAttribute("aria-pressed"), "false");
 
   const effectContext = audioContextInstances[0];
   effectContext.suspendForTest();
@@ -1190,6 +1195,13 @@ async function run() {
   assert.match(loginMuteTag, /\btype=["']button["']/i);
   assert.match(loginMuteTag, /\baria-pressed=["']false["']/i);
   assert.match(loginMuteTag, /\baria-label=["']Mute music["']/i);
+  for (const [id, label] of [["musicMute", "Mute music"], ["effectsMute", "Mute effects"]]) {
+    const profileMuteTag = indexHtml.match(new RegExp(`<button\\b[^>]*\\bid=["']${id}["'][^>]*>`, "i"))?.[0] || "";
+    assert.ok(profileMuteTag, `The settings mixer must include #${id}.`);
+    assert.match(profileMuteTag, /\btype=["']button["']/i);
+    assert.match(profileMuteTag, /\baria-pressed=["']false["']/i);
+    assert.match(profileMuteTag, new RegExp(`\\baria-label=["']${label}["']`, "i"));
+  }
   assert.doesNotMatch(indexHtml, /setupAudioBtn|testAudioBtn|data-audio-enable/, "Dedicated sound buttons must stay removed.");
 
   const musicAssets = manifestSource.assets.filter(asset => asset.category === "music");
