@@ -75,6 +75,7 @@ service cloud.firestore {
           'globalStats',
           'character',
           'upgrades',
+          'skillPresets',
           'mainCityId',
            'mainIslandId',
            'mainRegionId',
@@ -135,6 +136,7 @@ service cloud.firestore {
         && (profileFieldUnchanged('playerName') || validPlayerNameValue(request.resource.data.playerName))
         && profileFieldUnchanged('character')
         && profileFieldUnchanged('upgrades')
+        && profileFieldUnchanged('skillPresets')
         && profileFieldUnchanged('mainCityId')
         && profileFieldUnchanged('mainIslandId')
         && profileFieldUnchanged('mainRegionId')

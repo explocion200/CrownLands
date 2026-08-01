@@ -520,6 +520,18 @@
     return callServerFunction("resetSkills", payload);
   }
 
+  async function saveSkillPreset(payload = {}) {
+    return callServerFunction("saveSkillPreset", payload);
+  }
+
+  async function renameSkillPreset(payload = {}) {
+    return callServerFunction("renameSkillPreset", payload);
+  }
+
+  async function applySkillPreset(payload = {}) {
+    return callServerFunction("applySkillPreset", payload);
+  }
+
   async function repairMainCityAssignment(payload = {}) {
     return callServerFunction("repairMainCityAssignment", payload);
   }
@@ -1127,6 +1139,7 @@
     delete cleanProfile.dailyLoginReward;
     delete cleanProfile.inactivityNotice;
     delete cleanProfile.worldSlotResetAtMs;
+    delete cleanProfile.skillPresets;
     if (cleanProfile.shopItems && typeof cleanProfile.shopItems === "object" && deleteField) {
       cleanProfile.shopItems = {
         ...cleanProfile.shopItems,
@@ -2095,6 +2108,9 @@
     upgradeCity,
     spendSkillPoint,
     resetSkills,
+    saveSkillPreset,
+    renameSkillPreset,
+    applySkillPreset,
     repairMainCityAssignment,
     changeMainCity,
     syncPlayerIdentity,

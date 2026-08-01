@@ -128,12 +128,14 @@ assert.equal(citadelClanmate.upgradeCostReductionPercent, 5);
 
 const defenseContext = {
   Map,
+  REINFORCEMENT_CITY_WALL_SHARE: 0.25,
   safeNumber: (value, fallback = 0) => Number.isFinite(Number(value)) ? Number(value) : fallback,
   safeString: (value, maxLength = 256) => String(value || "").slice(0, maxLength),
   normalizePlayerName: value => String(value || "Ruler").slice(0, 18),
   getOwnerUid: target => String(target?.ownerUid || ""),
   getOwnerName: target => String(target?.ownerName || ""),
   getTargetOwnerTroops: target => Math.max(0, Math.floor(Number(target?.troops) || 0)),
+  getSkillPercent: (profile, skill) => skill === "stoneworks" ? Math.max(0, Number(profile?.stoneworksPercent) || 0) : 0,
   getCityStats(target, profile, bonuses) {
     assert.equal(target.alliedReinforcementTroops, 0, "The holder package included allied troops.");
     assert.equal(target.troops, 500);
@@ -151,6 +153,9 @@ const defenseContext = {
   },
 };
 vm.createContext(defenseContext);
+vm.runInContext(extractFunction(server, "calculateReinforcementFortificationDefense"), defenseContext, {
+  filename: "functions/index.js",
+});
 vm.runInContext(extractFunction(server, "calculateDefenderArmyPackages"), defenseContext, {
   filename: "functions/index.js",
 });
@@ -159,7 +164,7 @@ const packages = defenseContext.calculateDefenderArmyPackages({
   ownerProfile: { playerName: "Holder", flag: { symbol: "lion" } },
   ownerBonuses: { cityDefenseBonusPercent: 10 },
   contributions: [{ id: "r1", ownerUid: "ally", ownerName: "Ally", troops: 100 }],
-  contributorProfiles: new Map([["ally", { playerName: "Ally", flag: { symbol: "castle" } }]]),
+  contributorProfiles: new Map([["ally", { playerName: "Ally", flag: { symbol: "castle" }, stoneworksPercent: 25 }]]),
   contributorStats: new Map([["ally", {
     strongholdDefenseBonusPercent: 5,
     personalStrongholdDefenseBonusPercent: 0,
@@ -167,10 +172,13 @@ const packages = defenseContext.calculateDefenderArmyPackages({
   }]]),
 });
 assert.equal(packages.owner.effectivePower, 1_100);
-assert.equal(packages.reinforcements[0].basePower, 100, "Reinforcements must have one base defense per troop.");
-assert.equal(packages.reinforcements[0].effectivePower, 105, "A reinforcement did not use its owner's 5% defense bonus.");
+assert.equal(packages.reinforcements[0].cityWallDefense, 75, "Reinforcements must receive one quarter of the destination's 300 base walls.");
+assert.equal(packages.reinforcements[0].stoneworksBonus, 75, "A contributor's full 25% Stoneworks bonus must use all 300 base walls.");
+assert.equal(packages.reinforcements[0].fortificationPower, 150);
+assert.equal(packages.reinforcements[0].basePower, 250, "Reinforcement base power must include troops, quarter walls, and full Stoneworks.");
+assert.equal(packages.reinforcements[0].effectivePower, 262, "A reinforcement's 5% objective bonus must apply to its complete defense package.");
 assert.equal(packages.reinforcements[0].sharedBonusPercent, 5);
-assert.equal(packages.totalDefense, 1_205);
+assert.equal(packages.totalDefense, 1_362);
 
 requires(
   server,
@@ -189,8 +197,18 @@ requires(
 );
 requires(
   server,
-  /function calculateDefenderArmyPackages[\s\S]*?getCityStats\(ownerTarget[\s\S]*?basePower:\s*troops[\s\S]*?contributorStats/,
+  /function calculateDefenderArmyPackages[\s\S]*?getCityStats\(ownerTarget[\s\S]*?calculateReinforcementFortificationDefense[\s\S]*?contributorStats/,
   "Defensive reinforcement packages are not calculated independently per troop owner."
+);
+requires(
+  server,
+  /function calculateReinforcementFortificationDefense[\s\S]*?REINFORCEMENT_CITY_WALL_SHARE[\s\S]*?getSkillPercent\(profile, "stoneworks"\)[\s\S]*?cityWallDefense \+ stoneworksBonus/,
+  "Reinforcements do not receive one quarter of destination base walls plus their contributor's full Stoneworks bonus."
+);
+requires(
+  server,
+  /const REINFORCEMENT_CITY_WALL_SHARE\s*=\s*0\.25;/,
+  "The reinforcement destination-wall share is not fixed at one quarter."
 );
 requires(
   server,
@@ -236,6 +254,11 @@ requires(
   client,
   /function renderBattleKingdomFlag[\s\S]*?kingdom-flag[\s\S]*?function renderBattleReinforcementRow[\s\S]*?renderBattleKingdomFlag[\s\S]*?Clan reinforcement/,
   "Reinforcement rows do not show the contributor kingdom identity."
+);
+requires(
+  client,
+  /function renderBattleReinforcementRow[\s\S]*?Fortifications[\s\S]*?Quarter walls[\s\S]*?Stoneworks/,
+  "Detailed battle reports do not explain a reinforcement's wall and Stoneworks defense."
 );
 assert.doesNotMatch(
   extractFunction(client, "renderBattleReinforcementRow"),

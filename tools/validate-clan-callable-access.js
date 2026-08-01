@@ -6,6 +6,9 @@ const MAX_PARALLEL_PROBES = 4;
 const publicCallables = [
   "getDailyLoginRewardStatus",
   "claimDailyLoginReward",
+  "saveSkillPreset",
+  "renameSkillPreset",
+  "applySkillPreset",
   "createClan",
   "updateClanProfile",
   "joinOpenClan",
