@@ -7479,7 +7479,7 @@ button.daily-reward-card.available:disabled {
   vertical-align: middle;
   filter: drop-shadow(0 8px 9px rgba(0,0,0,.4));
 }
-.clan-shield svg { display: block; width: 100%; height: 100%; overflow: visible; }
+.clan-shield svg { display: block; width: 100%; height: 100%; overflow: hidden; }
 .clan-shield-size-mini { width: 38px; height: 42px; filter: drop-shadow(0 4px 4px rgba(0,0,0,.38)); }
 .clan-shield-size-small { width: 54px; height: 60px; }
 .clan-shield-size-large { width: 78px; height: 86px; }
