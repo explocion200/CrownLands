@@ -1310,11 +1310,11 @@
         }
         if (musicMute && !musicMute.dataset.audioBound) {
           musicMute.dataset.audioBound = "true";
-          musicMute.addEventListener("change", () => this.setMusicMuted(musicMute.checked));
+          musicMute.addEventListener("click", () => this.setMusicMuted(!this.preferences.musicMuted));
         }
         if (effectsMute && !effectsMute.dataset.audioBound) {
           effectsMute.dataset.audioBound = "true";
-          effectsMute.addEventListener("change", () => this.setEffectsMuted(effectsMute.checked));
+          effectsMute.addEventListener("click", () => this.setEffectsMuted(!this.preferences.effectsMuted));
         }
         if (loginMusicMute && !loginMusicMute.dataset.audioBound) {
           loginMusicMute.dataset.audioBound = "true";
@@ -1337,12 +1337,24 @@
         const input = document.getElementById(id);
         const output = document.getElementById(`${id}Value`);
         if (input && document.activeElement !== input) input.value = String(value);
+        input?.style?.setProperty?.("--audio-level", `${value}%`);
+        input?.setAttribute?.("aria-valuetext", `${value}%`);
         if (output) output.textContent = `${value}%`;
       }
       const musicMute = document.getElementById("musicMute");
       const effectsMute = document.getElementById("effectsMute");
-      if (musicMute) musicMute.checked = this.preferences.musicMuted;
-      if (effectsMute) effectsMute.checked = this.preferences.effectsMuted;
+      const syncProfileMuteButton = (button, muted, channel) => {
+        if (!button) return;
+        const label = muted ? `Unmute ${channel}` : `Mute ${channel}`;
+        button.setAttribute("aria-pressed", String(muted));
+        button.setAttribute("aria-label", label);
+        button.setAttribute("title", label);
+        button.dataset.audioMuted = String(muted);
+        const icon = button.querySelector?.("[data-audio-mute-icon]");
+        if (icon) icon.textContent = muted ? "\u{1F507}" : "\u{1F50A}";
+      };
+      syncProfileMuteButton(musicMute, this.preferences.musicMuted, "music");
+      syncProfileMuteButton(effectsMute, this.preferences.effectsMuted, "effects");
       const loginMusicMute = document.getElementById("loginMusicMuteBtn");
       if (loginMusicMute) {
         const label = this.preferences.musicMuted ? "Unmute music" : "Mute music";
