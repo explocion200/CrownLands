@@ -19532,19 +19532,29 @@ async function deleteRetiredClanWarRoomDocs(docs = []) {
   return rows.length;
 }
 
+async function getRetiredClanWarRoomAuditDocs() {
+  const clanRefs = await db.collection("clans").listDocuments();
+  const auditDocs = [];
+  await processWithConcurrency(clanRefs, 8, async clanRef => {
+    const snapshot = await clanRef.collection("audit")
+      .where("action", ">=", "war_room_")
+      .where("action", "<", "war_room_\uf8ff")
+      .limit(RETIRED_CLAN_WAR_ROOM_BATCH_SIZE)
+      .get();
+    auditDocs.push(...snapshot.docs);
+  });
+  return auditDocs.slice(0, RETIRED_CLAN_WAR_ROOM_BATCH_SIZE);
+}
+
 async function purgeRetiredClanWarRoomBatch(nowMs = Date.now()) {
-  const [operationsSnap, ordersSnap, assignmentsSnap, reportsSnap, stateSnap, remindersSnap, auditsSnap, armiesSnap] = await Promise.all([
+  const [operationsSnap, ordersSnap, assignmentsSnap, reportsSnap, stateSnap, remindersSnap, auditDocs, armiesSnap] = await Promise.all([
     db.collectionGroup("operations").limit(25).get(),
     db.collectionGroup("orders").limit(RETIRED_CLAN_WAR_ROOM_BATCH_SIZE).get(),
     db.collectionGroup("assignments").limit(RETIRED_CLAN_WAR_ROOM_BATCH_SIZE).get(),
     db.collectionGroup("sharedReports").limit(RETIRED_CLAN_WAR_ROOM_BATCH_SIZE).get(),
     db.collectionGroup("operationState").limit(RETIRED_CLAN_WAR_ROOM_BATCH_SIZE).get(),
     db.collection("clanOperationReminders").limit(RETIRED_CLAN_WAR_ROOM_BATCH_SIZE).get(),
-    db.collectionGroup("audit")
-      .where("action", ">=", "war_room_")
-      .where("action", "<", "war_room_\uf8ff")
-      .limit(RETIRED_CLAN_WAR_ROOM_BATCH_SIZE)
-      .get(),
+    getRetiredClanWarRoomAuditDocs(),
     db.collection("armies")
       .where("operationContext.operationId", ">", "")
       .limit(RETIRED_CLAN_WAR_ROOM_BATCH_SIZE)
@@ -19561,7 +19571,7 @@ async function purgeRetiredClanWarRoomBatch(nowMs = Date.now()) {
   const deletedChildren = await deleteRetiredClanWarRoomDocs(orphanedChildren);
   const deletedStates = await deleteRetiredClanWarRoomDocs(operationStates);
   const deletedReminders = await deleteRetiredClanWarRoomDocs(remindersSnap.docs);
-  const deletedAudits = await deleteRetiredClanWarRoomDocs(auditsSnap.docs);
+  const deletedAudits = await deleteRetiredClanWarRoomDocs(auditDocs);
 
   if (armiesSnap.size) {
     const batch = db.batch();
