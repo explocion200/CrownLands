@@ -66,7 +66,9 @@ service cloud.firestore {
           'committedRallyTroops',
           'rallyResetGeneration',
           'activeClanReinforcementTargets',
+          'activeClanReinforcementAssignments',
           'clanReinforcementLimitResetGeneration',
+          'clanReinforcementLimitVersion',
           'clanObjectiveAccrual',
           'pendingClanObjectiveAccrual',
           'cityCount',
@@ -117,7 +119,9 @@ service cloud.firestore {
         && profileFieldUnchanged('committedRallyTroops')
         && profileFieldUnchanged('rallyResetGeneration')
         && profileFieldUnchanged('activeClanReinforcementTargets')
+        && profileFieldUnchanged('activeClanReinforcementAssignments')
         && profileFieldUnchanged('clanReinforcementLimitResetGeneration')
+        && profileFieldUnchanged('clanReinforcementLimitVersion')
         && profileFieldUnchanged('clanObjectiveAccrual')
         && profileFieldUnchanged('pendingClanObjectiveAccrual')
         && profileFieldUnchanged('cityCount')
@@ -159,6 +163,7 @@ service cloud.firestore {
 
     function cityIdentityOnlyUpdate() {
       return ownsCityOwnerIdentity()
+        && profileFieldUnchanged('clanReinforcementSlotCount')
         && (profileFieldUnchanged('ownerName') || validPlayerNameValue(request.resource.data.ownerName))
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
           'ownerName',
@@ -394,6 +399,10 @@ service cloud.firestore {
         && (resource.data.ownerUid == request.auth.uid
           || resource.data.targetOwnerUid == request.auth.uid);
       allow create, update, delete: if false;
+    }
+
+    match /reinforcementCapacity/{resetId}/cities/{capacityId} {
+      allow read, create, update, delete: if false;
     }
 
     match /reinforcementBattleReceipts/{resetId}/entries/{receiptId} {

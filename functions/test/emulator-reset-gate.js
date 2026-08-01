@@ -1229,6 +1229,10 @@ async function main() {
       && Number(alliedTargetAfterLaunch.data()?.ownerShieldExpiresAtMs || 0) === shieldExpiresAtMs,
     "The allied holding owner's Royal Peace Shield changed when support launched."
   );
+  assert(
+    Number(alliedTargetAfterLaunch.data()?.clanReinforcementSlotCount || 0) === 1,
+    "The outbound reinforcement did not reserve an ordinary-city slot at launch."
+  );
 
   async function forceResolveMovement(movement, token) {
     const routeRegionIds = movement.routeRegionIds || [movement.sourceRegionId, movement.targetRegionId].filter(Boolean);
@@ -1429,8 +1433,8 @@ async function main() {
     }
   }
   assert(
-    /at most 2 active clan reinforcements/.test(String(maxReinforcementLimitError?.message || "")),
-    "A sender was not capped at two active clan reinforcements."
+    /2 active reinforcement assignments with this clanmate/.test(String(maxReinforcementLimitError?.message || "")),
+    "A sender was not capped at two assignments with one clanmate."
   );
 
   const secondClanReinforcementArrival = await forceResolveMovement(
@@ -1449,7 +1453,8 @@ async function main() {
     Number(firstContribution.data()?.troops || 0) === 600
       && Number(secondContribution.data()?.troops || 0) === 400
       && Number(leaderAtLimit.data()?.stationedReinforcementTroops || 0) === 1_000
-      && leaderAtLimit.data()?.activeClanReinforcementTargets?.length === 2,
+      && leaderAtLimit.data()?.activeClanReinforcementTargets?.length === 2
+      && leaderAtLimit.data()?.activeClanReinforcementAssignments?.length === 2,
     "Two allowed sender reinforcement slots were not tracked independently."
   );
 
@@ -1538,9 +1543,102 @@ async function main() {
     .get();
   assert(
     otherSenderReinforcementId
-      && sharedTargetContributions.docs.filter(doc => Number(doc.data()?.troops || 0) > 0).length === 2,
+      && sharedTargetContributions.docs.filter(doc => Number(doc.data()?.troops || 0) > 0).length === 2
+      && Number((await clanReinforcementTargetDoc.ref.get()).data()?.clanReinforcementSlotCount || 0) === 2,
     "The holding owner could not receive independent reinforcements from multiple clan allies."
   );
+
+  const cappedTargetKey = `city:${clanReinforcementSourceClaim.mainRegionId}:${secondClanReinforcementTargetDoc.id}`;
+  const cappedTargetCapacityId = crypto.createHash("sha256")
+    .update(`${realm.resetGeneration}|${cappedTargetKey}`)
+    .digest("hex")
+    .slice(0, 40);
+  const cappedTargetCapacityRef = db.doc(
+    `reinforcementCapacity/${realm.resetGeneration}/cities/${cappedTargetCapacityId}`
+  );
+  const [capacityBeforeSixth, cappedTargetBeforeSixth, sixthSenderSourceSnap] = await Promise.all([
+    cappedTargetCapacityRef.get(),
+    secondClanReinforcementTargetDoc.ref.get(),
+    db.doc(
+      `islands/${clanReinforcementSourceClaim.islandId}/cities/${otherSenderReinforcement.movement.fromId}`
+    ).get(),
+  ]);
+  const cappedTarget = cappedTargetBeforeSixth.data() || {};
+  const sixthSenderSource = sixthSenderSourceSnap.data() || {};
+  const sixthDistance = Math.hypot(
+    Number(cappedTarget.x) - Number(sixthSenderSource.x),
+    Number(cappedTarget.y) - Number(sixthSenderSource.y)
+  );
+  await Promise.all([
+    cappedTargetCapacityRef.set({
+      worldId: realm.worldId,
+      resetGeneration: realm.resetGeneration,
+      targetKey: cappedTargetKey,
+      reservations: Array.from({ length: 5 }, (_, index) => ({
+        ownerUid: `capacity-sender-${index}`,
+        recipientUid: clanApplicant.uid,
+        armyId: `capacity-army-${index}`,
+        reservedAtMs: Date.now() - 10_000 + index,
+      })),
+      reservedSlotCount: 5,
+      modelVersion: 2,
+    }, { merge: true }),
+    secondClanReinforcementTargetDoc.ref.set({ clanReinforcementSlotCount: 5 }, { merge: true }),
+  ]);
+  let sixthCapacityError = null;
+  try {
+    await callFunction("sendArmyOrder", clanSecondSender.token, {
+      army: {
+        id: `clan_reinforce_sixth_${crypto.randomBytes(8).toString("hex")}`,
+        kind: "reinforce",
+        fromId: otherSenderReinforcement.movement.fromId,
+        toId: secondClanReinforcementTargetDoc.id,
+        fromName: sixthSenderSource.name || otherSenderReinforcement.movement.fromId,
+        toName: cappedTarget.name || secondClanReinforcementTargetDoc.id,
+        troops: 100,
+        requestedTroops: 100,
+        sourceRegionId: clanReinforcementSourceClaim.mainRegionId,
+        targetRegionId: clanReinforcementSourceClaim.mainRegionId,
+        routeRegionIds: [clanReinforcementSourceClaim.mainRegionId],
+        viewRegionIds: [clanReinforcementSourceClaim.mainRegionId],
+        path: [
+          { x: Number(sixthSenderSource.x), y: Number(sixthSenderSource.y) },
+          { x: Number(cappedTarget.x), y: Number(cappedTarget.y) },
+        ],
+        pathSegments: [{
+          regionId: clanReinforcementSourceClaim.mainRegionId,
+          points: [
+            { x: Number(sixthSenderSource.x), y: Number(sixthSenderSource.y) },
+            { x: Number(cappedTarget.x), y: Number(cappedTarget.y) },
+          ],
+          length: sixthDistance,
+        }],
+        pathLength: sixthDistance,
+      },
+      sourceRegionId: clanReinforcementSourceClaim.mainRegionId,
+      targetRegionId: clanReinforcementSourceClaim.mainRegionId,
+    });
+  } catch (error) {
+    sixthCapacityError = error;
+  }
+  assert(
+    /all 5 reinforcement slots reserved/.test(String(sixthCapacityError?.message || "")),
+    "The sixth ordinary-city reinforcement reservation was not rejected transactionally."
+  );
+  const deniedCapacityRead = await attemptClientDocumentRead(
+    clanApplicant,
+    `reinforcementCapacity/${realm.resetGeneration}/cities/${cappedTargetCapacityId}`
+  );
+  assert(
+    deniedCapacityRead.status === 403,
+    "A client could read private ordinary-city reinforcement contributor reservations."
+  );
+  await Promise.all([
+    capacityBeforeSixth.exists
+      ? cappedTargetCapacityRef.set(capacityBeforeSixth.data())
+      : cappedTargetCapacityRef.delete(),
+    secondClanReinforcementTargetDoc.ref.set({ clanReinforcementSlotCount: 1 }, { merge: true }),
+  ]);
 
   const [sharedTargetBeforeEconomy, leaderContributionBeforeEconomy, otherContributionBeforeEconomy] = await Promise.all([
     clanReinforcementTargetDoc.ref.get(),
@@ -1605,14 +1703,16 @@ async function main() {
       && holderDismissal?.returnInitiatorRole === "holder"
       && !holderDismissal?.currentUser
       && Array.isArray(holderDismissal?.cityUpdates)
-      && Number(holderDismissal.cityUpdates[0]?.alliedReinforcementTroops || 0) === 200,
+      && Number(holderDismissal.cityUpdates[0]?.alliedReinforcementTroops || 0) === 200
+      && Number((await clanReinforcementTargetDoc.ref.get()).data()?.clanReinforcementSlotCount || 0) === 1,
     "The holding owner could not send allied troops home with an immediate, private-safe city update."
   );
   const holderDismissalArrival = await forceResolveMovement(holderDismissal.movement, clanLeader.token);
   assert(
     holderDismissalArrival?.kind === "transfer"
+      && holderDismissal?.returnDestination?.id === clanReinforcementSourceClaim.cityId
       && (await db.doc(`reinforcements/${reinforcementId}`).get()).data()?.status === "returned",
-    "Dismissed clan reinforcements did not return safely to the sender's main city."
+    "Dismissed clan reinforcements did not return safely to their original source holding."
   );
 
   const thirdClanReinforcementArmyId = `clan_reinforce_c_${crypto.randomBytes(8).toString("hex")}`;
@@ -1663,6 +1763,7 @@ async function main() {
   ]);
   assert(
     (leaderAfterReturns.data()?.activeClanReinforcementTargets || []).length === 0
+      && (leaderAfterReturns.data()?.activeClanReinforcementAssignments || []).length === 0
       && (otherSenderAfterReturns.data()?.activeClanReinforcementTargets || []).length === 0,
     "Completed reinforcement returns did not release sender slots."
   );
@@ -1713,7 +1814,8 @@ async function main() {
   );
   assert(
     capturedReinforcementArmy.data()?.status === "resolved"
-      && (leaderAfterCapturedReinforcement.data()?.activeClanReinforcementTargets || []).length === 0,
+      && (leaderAfterCapturedReinforcement.data()?.activeClanReinforcementTargets || []).length === 0
+      && (leaderAfterCapturedReinforcement.data()?.activeClanReinforcementAssignments || []).length === 0,
     "Converted support remained active or retained its reinforcement slot after combat."
   );
   await clanReinforcementTargetDoc.ref.set({
