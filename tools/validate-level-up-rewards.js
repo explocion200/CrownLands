@@ -104,14 +104,16 @@ requireMatch(
 );
 requireMatch(
   serverSource,
-  /function getCaptureXpAward[\s\S]*?const troopXp[\s\S]*?const cityXp\s*=\s*getCaptureXpCooldownRemainingMs[\s\S]*?\?\s*0[\s\S]*?return Math\.floor\(\(cityXp \+ troopXp\) \* efficiency\)/,
-  "Server capture cooldown must remove only fixed city XP while preserving troop-loss XP."
+  /function getCaptureXpAward[\s\S]*?const troopXp[\s\S]*?const cityXp\s*=\s*CAPTURE_XP_BASE[\s\S]*?CAPTURE_XP_PER_CITY_LEVEL[\s\S]*?ENEMY_CAPTURE_XP_BONUS[\s\S]*?return Math\.floor\(\(cityXp \+ troopXp\) \* efficiency\)/,
+  "Server captures must always include fixed city XP alongside troop-loss XP."
 );
 requireMatch(
   clientSource,
-  /function getCaptureXpAward[\s\S]*?const troopXp[\s\S]*?const cityXp\s*=\s*getCaptureCooldownRemaining[\s\S]*?\?\s*0[\s\S]*?return capBattleXpForCurrentLevel\(Math\.floor\(\(cityXp \+ troopXp\) \* efficiency\)\)/,
-  "Client capture preview must remove only fixed city XP while preserving troop-loss XP."
+  /function getCaptureXpAward[\s\S]*?const troopXp[\s\S]*?const cityXp\s*=\s*CAPTURE_XP_BASE[\s\S]*?CAPTURE_XP_PER_CITY_LEVEL[\s\S]*?ownerBonus[\s\S]*?return capBattleXpForCurrentLevel\(Math\.floor\(\(cityXp \+ troopXp\) \* efficiency\)\)/,
+  "Client capture preview must always include fixed city XP alongside troop-loss XP."
 );
+assert.doesNotMatch(serverSource, /CAPTURE_XP_COOLDOWN|getCaptureXpCooldownRemainingMs/, "Server still contains the capture-XP cooldown.");
+assert.doesNotMatch(clientSource, /CAPTURE_XP_COOLDOWN|getCaptureCooldownRemaining|City XP cooldown|Recent capture cooldown/, "Client still contains the capture-XP cooldown.");
 assert.doesNotMatch(
   clientSource,
   /RECENT_CAPTURE_XP_MULTIPLIER/,

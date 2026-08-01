@@ -811,7 +811,6 @@ const CAPTURE_XP_BASE = 120;
 const CAPTURE_XP_PER_CITY_LEVEL = 45;
 const CAPTURE_XP_PER_DEFENDER = 1.5;
 const ENEMY_CAPTURE_XP_BONUS = 300;
-const CAPTURE_XP_COOLDOWN_SECONDS = 3600;
 const DEFENSE_HELD_XP_BASE = 80;
 const DEFENSE_HELD_XP_PER_ATTACKER = 0.45;
 const FAILED_BATTLE_XP_RATE = 1 / 3;
@@ -6768,9 +6767,7 @@ function getCaptureXpAward(target, oldOwner, defenderLosses, attackerOwner = "pl
   const level = clampCityLevel(target?.level);
   const troopXp = Math.floor(getBattleXpTroopCredit(target, defenderLosses) * CAPTURE_XP_PER_DEFENDER);
   const ownerBonus = oldOwner === "enemy" ? ENEMY_CAPTURE_XP_BONUS : 0;
-  const cityXp = getCaptureCooldownRemaining(target) > 0
-    ? 0
-    : CAPTURE_XP_BASE + level * CAPTURE_XP_PER_CITY_LEVEL + ownerBonus;
+  const cityXp = CAPTURE_XP_BASE + level * CAPTURE_XP_PER_CITY_LEVEL + ownerBonus;
   const efficiency = attackerOwner === "player" ? getCaptureXpEfficiency(target, oldOwner) : 1;
   return capBattleXpForCurrentLevel(Math.floor((cityXp + troopXp) * efficiency));
 }
@@ -6871,26 +6868,6 @@ function capBattleXpForCurrentLevel(xp) {
   const heroLevel = Math.max(1, Math.floor(Number(state.character.level) || 1));
   const cap = Math.max(250, Math.floor(getXpRequiredForLevel(heroLevel) * getBattleXpLevelCapRate(heroLevel)));
   return Math.min(base, cap);
-}
-
-function getCaptureCooldownRemaining(city) {
-  if (!state || !city) return 0;
-  const capturedAtMs = Math.max(0, normalizeTimestampMs(city.lastCapturedAtMs));
-  if (capturedAtMs > 0) {
-    const elapsedSeconds = Math.max(0, (Date.now() - capturedAtMs) / 1000);
-    return Math.max(0, CAPTURE_XP_COOLDOWN_SECONDS - elapsedSeconds);
-  }
-  if (city.lastCapturedAt && typeof city.lastCapturedAt === "object") {
-    const legacyCapturedAtMs = Math.max(0, normalizeTimestampMs(city.lastCapturedAt));
-    if (legacyCapturedAtMs > 0) {
-      const elapsedSeconds = Math.max(0, (Date.now() - legacyCapturedAtMs) / 1000);
-      return Math.max(0, CAPTURE_XP_COOLDOWN_SECONDS - elapsedSeconds);
-    }
-  }
-  const capturedAtSeconds = Number(city.lastCapturedAt);
-  if (!Number.isFinite(capturedAtSeconds)) return 0;
-  const elapsedSeconds = Math.max(0, state.gameSeconds - capturedAtSeconds);
-  return Math.max(0, CAPTURE_XP_COOLDOWN_SECONDS - elapsedSeconds);
 }
 
 function normalizePowerValue(value) {
@@ -24753,7 +24730,6 @@ function showCityInfoModal(cityId) {
     void hydrateObjectiveClanAffiliation(city);
     return;
   }
-  const cooldownRemaining = getCaptureCooldownRemaining(city);
   const mainCityStatus = getMainCityChangeStatus(city);
   const mainCityBlock = mainCityStatus.isMain
     ? `
@@ -24788,7 +24764,6 @@ function showCityInfoModal(cityId) {
       <div class="stat-chip"><span>Troops production</span><strong>${formatBaseAndBonusStat(stats.baseTroopProductionPerHour, stats.troopProductionPerHour, "/h")}</strong><small>${getCityStatBonusSources(stats, "troops")}</small></div>
       <div class="stat-chip"><span>Gold production</span><strong>${formatBaseAndBonusStat(stats.baseGoldProductionPerHour, stats.goldProductionPerHour, "/h")}</strong><small>${getCityStatBonusSources(stats, "gold")}</small></div>
       <div class="stat-chip"><span>Invested gold</span><strong>${formatNumber(city.investedGold || 0)}</strong><small>Clears when captured</small></div>
-      ${cooldownRemaining > 0 ? `<div class="stat-wide"><span>City XP cooldown</span><strong>${formatDuration(cooldownRemaining)}</strong></div>` : ""}
       ${renderRelinquishCityAction(city)}
       ${renderHoldingReinforcementPanel(city)}
     </div>
@@ -26590,7 +26565,6 @@ function showAttackPreview(source, target) {
         : `Expected failure with about <strong>${formatNumber(preview.defendersLeft)}</strong> defenders left.`}</p>
       ${protectionNotice ? `<p class="tiny-warning">${escapeHtml(protectionNotice)}</p>` : ""}
       ${shieldDropWarning ? `<p class="shield-drop-warning"><strong>Shield warning</strong><span>${escapeHtml(shieldDropWarning)}</span></p>` : ""}
-      ${preview.cooldownRemaining > 0 ? `<p class="tiny-warning">Recent capture cooldown: city/wall XP is unavailable for ${formatDuration(preview.cooldownRemaining)}; troop-loss XP still applies.</p>` : ""}
       <p class="tiny-warning">This is an estimate based on current numbers. Confirm launches using the current troop count.</p>
       <div class="modal-actions">
         <button id="confirmAttackBtn" class="danger-action" type="button">Attack</button>
@@ -26951,7 +26925,6 @@ function calculateBattlePreviewForTroops(source, target, amount, knownRoute = nu
       ? getCaptureXpAward(target, target.owner, result.defenderLosses, "player")
       : getFailedAttackXpAward(target, target.owner, result.defenderLosses, "player");
   const xpLabel = attackProtection ? "attacker XP" : result.success ? "capture XP" : "defeat XP";
-  const cooldownRemaining = getCaptureCooldownRemaining(target);
   let label = "Weak odds";
   if (result.ratio >= 1.35) label = "Overwhelming advantage";
   else if (result.ratio >= 1.12) label = "Good advantage";
@@ -26984,7 +26957,6 @@ function calculateBattlePreviewForTroops(source, target, amount, knownRoute = nu
     xpEfficiency,
     captureXp,
     xpLabel,
-    cooldownRemaining,
     label,
     attackProtection,
     demoAttack: null,
@@ -28695,7 +28667,6 @@ function showHelpModal() {
       <li>Army travel uses route distance plus troop-size bands. Larger armies march slower, scouts move as one troop, and March Orders reduces travel time.</li>
       <li>Glowing pickups appear near your owned cities on the current island during active play every three minutes, alternating between ten minutes of gold and troop production. Daily pickup limits are ${formatNumber(HARVEST_BONUS_DAILY_GOLD_LIMIT)} gold and ${formatNumber(HARVEST_BONUS_DAILY_TROOP_LIMIT)} troop pickups.</li>
       <li>Swordmastery boosts outgoing attack, Guild Charters reduces city upgrade cost, and Field Medics returns part of battle losses to your main city.</li>
-      <li>Captured cities enter a one-hour city-XP cooldown. Attacks still earn troop-loss XP, but the fixed city/wall XP component is unavailable until the cooldown ends.</li>
       <li>Main cities cannot be attacked. Use your main city as a protected home base while expanding from other cities.</li>
       <li>The Citadel Legion attacks up to 20 random regular non-main cities in the Crown Citadel map at 10:00 AM and 6:30 PM Eastern Time. Targets receive 15 minutes of warning beginning at 9:45 AM and 6:15 PM Eastern. A lost defense removes five city levels; Level 5-or-lower cities become Level 1 neutral cities with 10 troops. Peace Shields do not block these attacks, and defenders receive no XP.</li>
       <li>Demo Attacks protect weaker kingdoms: much stronger attackers send fewer effective troops, march slower, earn 0 XP, and defenders earn bonus XP.</li>

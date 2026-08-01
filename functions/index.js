@@ -172,7 +172,6 @@ const CAPTURE_XP_BASE = 120;
 const CAPTURE_XP_PER_CITY_LEVEL = 45;
 const CAPTURE_XP_PER_DEFENDER = 1.5;
 const ENEMY_CAPTURE_XP_BONUS = 300;
-const CAPTURE_XP_COOLDOWN_MS = 60 * 60 * 1000;
 const DEFENSE_HELD_XP_BASE = 80;
 const DEFENSE_HELD_XP_PER_ATTACKER = 0.45;
 const FAILED_BATTLE_XP_RATE = 1 / 3;
@@ -4009,12 +4008,6 @@ function getOpponentPowerXpMultiplier(opponentRatio) {
   return 0;
 }
 
-function getCaptureXpCooldownRemainingMs(city = {}, nowMs = Date.now()) {
-  const capturedAtMs = Math.max(0, timestampToMs(city.lastCapturedAtMs || city.lastCapturedAt));
-  if (!capturedAtMs) return 0;
-  return Math.max(0, CAPTURE_XP_COOLDOWN_MS - Math.max(0, nowMs - capturedAtMs));
-}
-
 function getCityXpScore(target = {}, oldOwnerUid = "", defenderProfile = null) {
   const stats = getCityStats(target, defenderProfile);
   const ownerBonus = oldOwnerUid ? 45 : 10;
@@ -4054,9 +4047,9 @@ function getCaptureXpAward(
   const troopXp = Math.floor(
     getBattleXpTroopCredit(target, defenderLosses, defenderProfile) * CAPTURE_XP_PER_DEFENDER
   );
-  const cityXp = getCaptureXpCooldownRemainingMs(target, options.nowMs) > 0
-    ? 0
-    : CAPTURE_XP_BASE + level * CAPTURE_XP_PER_CITY_LEVEL + (oldOwnerUid ? ENEMY_CAPTURE_XP_BONUS : 0);
+  const cityXp = CAPTURE_XP_BASE
+    + level * CAPTURE_XP_PER_CITY_LEVEL
+    + (oldOwnerUid ? ENEMY_CAPTURE_XP_BONUS : 0);
   const efficiency = getCaptureXpEfficiency(target, oldOwnerUid, {
     ...options,
     defenderProfile,
