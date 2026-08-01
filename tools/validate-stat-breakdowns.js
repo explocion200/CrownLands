@@ -92,13 +92,18 @@ requireMatch(
 );
 requireMatch(
   clientSource,
-  /profileGoldProductionStat\.textContent = formatBaseAndBonusStat/,
-  "Profile gold production does not use the shared base-plus-bonus display."
+  /renderProfileProductionStat\(\s*profileGoldProductionStat,\s*summary\.untimedGoldProductionPerHour,\s*summary\.goldProductionPerHour/,
+  "Profile gold production does not isolate the timed-item bonus from normal production."
 );
 requireMatch(
   clientSource,
-  /profileTroopProductionStat\.textContent = formatBaseAndBonusStat/,
-  "Profile troop production does not use the shared base-plus-bonus display."
+  /renderProfileProductionStat\(\s*profileTroopProductionStat,\s*summary\.untimedTroopProductionPerHour,\s*summary\.troopProductionPerHour/,
+  "Profile troop production does not isolate the timed-item bonus from normal production."
+);
+requireMatch(
+  clientSource,
+  /untimedGoldProductionPerHour[\s\S]*?untimedTroopProductionPerHour/,
+  "Client production summaries do not preserve normal untimed rates."
 );
 requireMatch(
   clientSource,
@@ -139,6 +144,29 @@ vm.runInContext(
 assert.equal(formatterContext.formatBaseAndBonusStat(1_000, 1_250), "1.0K (+250)");
 assert.equal(formatterContext.formatBaseAndBonusStat(900, 900, "/h"), "900/h (+0/h)");
 assert.equal(formatterContext.formatBaseAndBonusStat(30, 38, "%"), "30% (+8%)");
+
+const productionStatContext = {
+  document: {
+    createElement: () => ({ className: "", textContent: "" }),
+  },
+};
+vm.createContext(productionStatContext);
+vm.runInContext(
+  `${extractFunction(clientSource, "formatNumber")}\n${extractFunction(clientSource, "renderProfileProductionStat")}`,
+  productionStatContext,
+  { filename: path.join(root, "game.js") }
+);
+const productionStatElement = {
+  children: [],
+  replaceChildren(...children) {
+    this.children = children;
+  },
+};
+productionStatContext.renderProfileProductionStat(productionStatElement, 60_000_000, 90_000_000, "/h");
+assert.equal(productionStatElement.children[0].textContent, "60M/h");
+assert.equal(productionStatElement.children[0].className, "profile-production-normal");
+assert.equal(productionStatElement.children[1].textContent, "(+30M/h)");
+assert.equal(productionStatElement.children[1].className, "profile-production-bonus");
 
 const globalStatsContext = {
   client: { user: { uid: "player-1" } },

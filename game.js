@@ -7842,16 +7842,18 @@ function getCityStats(city, options = {}) {
     : 0;
   const baseTroopProductionPerHour = stronghold ? 0 : victoryPoints * CITY_LEVEL_STATS.troopProductionPerVictoryPoint;
   const royalGranariesBonusPerHour = stronghold ? 0 : baseTroopProductionPerHour * royalGranariesPercent / 100;
-  const troopProductionPerHour = baseTroopProductionPerHour
+  const untimedTroopProductionPerHour = baseTroopProductionPerHour
     * (1 + royalGranariesPercent / 100)
-    * (1 + strongholdTroopBonusPercent / 100)
+    * (1 + strongholdTroopBonusPercent / 100);
+  const troopProductionPerHour = untimedTroopProductionPerHour
     * (1 + warDrumsTroopBonusPercent / 100);
   const millionLordsProductionVp = getMillionLordsCityProductionVp(level);
   const rawGoldProductionPerHour = stronghold ? 0 : getMillionLordsPassiveGoldPerHour(level);
   const baseGoldProductionPerHour = rawGoldProductionPerHour;
-  const goldProductionPerHour = baseGoldProductionPerHour
+  const untimedGoldProductionPerHour = baseGoldProductionPerHour
     * (1 + taxStewardshipPercent / 100)
-    * (1 + strongholdGoldBonusPercent / 100)
+    * (1 + strongholdGoldBonusPercent / 100);
+  const goldProductionPerHour = untimedGoldProductionPerHour
     * (1 + royalTaxDecreeGoldBonusPercent / 100);
   const defendingTroops = Math.max(0, Number(city?.troops) || 0)
     + (city?.owner === "player" ? Math.max(0, Number(city?.alliedReinforcementTroops) || 0) : 0);
@@ -7883,12 +7885,14 @@ function getCityStats(city, options = {}) {
     warDrumsTroopBonusPercent,
     royalTaxDecreeGoldBonusPercent,
     baseTroopProductionPerHour,
+    untimedTroopProductionPerHour,
     royalGranariesBonusPerHour,
     troopProductionPerHour,
     troopProductionBonusPerHour,
     millionLordsProductionVp,
     rawGoldProductionPerHour,
     baseGoldProductionPerHour,
+    untimedGoldProductionPerHour,
     goldProductionPerHour,
     goldProductionBonusPerHour,
     troopProductionPerSecond: troopProductionPerHour / 3600,
@@ -17412,8 +17416,10 @@ function getKingdomSummary() {
         + Math.max(0, Math.floor(Number(globalStats.totalMarchingTroops) || 0)),
       gold: Math.floor(Number(state.gold) || 0),
       baseGoldProductionPerHour: Math.max(0, Math.floor(Number(globalStats.baseGoldPerHour) || 0)),
+      untimedGoldProductionPerHour: Math.max(0, Math.floor(Number(globalStats.untimedGoldPerHour ?? globalStats.baseGoldPerHour) || 0)),
       goldProductionPerHour: Math.max(0, Math.floor(Number(globalStats.goldPerHour) || 0)),
       baseTroopProductionPerHour: Math.max(0, Math.floor(Number(globalStats.baseTroopPerHour) || 0)),
+      untimedTroopProductionPerHour: Math.max(0, Math.floor(Number(globalStats.untimedTroopPerHour ?? globalStats.baseTroopPerHour) || 0)),
       troopProductionPerHour: Math.max(0, Math.floor(Number(globalStats.troopPerHour) || 0)),
     };
   }
@@ -17435,8 +17441,10 @@ function getKingdomSummary() {
     troops: cities.reduce((total, city) => total + Math.max(0, Number(city.troops) || 0), marchingTroops),
     gold: Math.floor(state.gold),
     baseGoldProductionPerHour: cityStats.reduce((total, stats) => total + stats.baseGoldProductionPerHour, 0),
+    untimedGoldProductionPerHour: cityStats.reduce((total, stats) => total + stats.untimedGoldProductionPerHour, 0),
     goldProductionPerHour: cityStats.reduce((total, stats) => total + stats.goldProductionPerHour, 0),
     baseTroopProductionPerHour: cityStats.reduce((total, stats) => total + stats.baseTroopProductionPerHour, 0),
+    untimedTroopProductionPerHour: cityStats.reduce((total, stats) => total + stats.untimedTroopProductionPerHour, 0),
     troopProductionPerHour: cityStats.reduce((total, stats) => total + stats.troopProductionPerHour, 0),
   };
 }
@@ -19500,15 +19508,17 @@ function renderProfileScreen() {
   if (profileGoldStat) profileGoldStat.textContent = formatNumber(summary.gold);
   if (profileTroopsStat) profileTroopsStat.textContent = formatNumber(summary.troops);
   if (profileGoldProductionStat) {
-    profileGoldProductionStat.textContent = formatBaseAndBonusStat(
-      summary.baseGoldProductionPerHour,
+    renderProfileProductionStat(
+      profileGoldProductionStat,
+      summary.untimedGoldProductionPerHour,
       summary.goldProductionPerHour,
       "/h"
     );
   }
   if (profileTroopProductionStat) {
-    profileTroopProductionStat.textContent = formatBaseAndBonusStat(
-      summary.baseTroopProductionPerHour,
+    renderProfileProductionStat(
+      profileTroopProductionStat,
+      summary.untimedTroopProductionPerHour,
       summary.troopProductionPerHour,
       "/h"
     );
@@ -27729,6 +27739,20 @@ function formatBaseAndBonusStat(baseValue, totalValue, suffix = "") {
   const total = Math.max(base, Math.floor(Number(totalValue) || 0));
   const bonus = Math.max(0, total - base);
   return `${formatNumber(base)}${suffix} (+${formatNumber(bonus)}${suffix})`;
+}
+
+function renderProfileProductionStat(element, normalValue, totalValue, suffix = "") {
+  if (!element) return;
+  const normal = Math.max(0, Math.floor(Number(normalValue) || 0));
+  const total = Math.max(normal, Math.floor(Number(totalValue) || 0));
+  const bonus = Math.max(0, total - normal);
+  const normalText = document.createElement("span");
+  const bonusText = document.createElement("span");
+  normalText.className = "profile-production-normal";
+  normalText.textContent = `${formatNumber(normal)}${suffix}`;
+  bonusText.className = "profile-production-bonus";
+  bonusText.textContent = `(+${formatNumber(bonus)}${suffix})`;
+  element.replaceChildren(normalText, bonusText);
 }
 
 function getCityStatBonusSources(stats = {}, statType = "") {
