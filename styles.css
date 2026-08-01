@@ -2914,6 +2914,12 @@ input {
 .army-token.player { background: linear-gradient(#4fb2ff, #175ea9); }
 .army-token.player2 { background: linear-gradient(#bd9bff, #5d35a8); }
 .army-token.player3 { background: linear-gradient(#73e49a, #237d4b); }
+.army-token.clan-ally {
+  color: #effff3;
+  border-color: #8fe2a5;
+  background: linear-gradient(#58c978, #267a43);
+  box-shadow: 0 0 0 2px rgba(18, 61, 39, .82), 0 0 15px rgba(89, 229, 128, .72), 0 10px 22px rgba(0,0,0,.36);
+}
 .army-token.enemy { background: linear-gradient(#ff766d, #9c2b26); }
 .army-token.neutral { background: linear-gradient(#d2c6aa, #6c6254); color: #211b15; }
 .army-token small { opacity: .86; font-size: .62rem; }
