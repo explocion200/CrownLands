@@ -18647,6 +18647,7 @@ function refreshClanRelationshipPresentation() {
   renderHud();
   renderCities(true);
   renderPaths();
+  renderArmies(true);
   renderPanel();
   if (modal?.open && modal.dataset.cityInfoId) showCityInfoModal(modal.dataset.cityInfoId);
   if (profileScreen?.classList.contains("open")) renderProfileScreen();
@@ -22667,7 +22668,12 @@ function createArmyTokenElement(attack) {
 }
 
 function updateArmyTokenElement(token, attack, mapPoint, targetCity, endpointInteractionDisabled = false) {
-  const ownerClass = isPersonalArmy(attack) ? OWNER.player.css : OWNER.enemy.css;
+  const clanAlly = isCurrentClanmateArmy(attack);
+  const ownerClass = isPersonalArmy(attack)
+    ? OWNER.player.css
+    : clanAlly
+      ? "clan-ally"
+      : OWNER.enemy.css;
   const showTroops = canViewArmyTroopAmount(attack);
   const selected = !endpointInteractionDisabled && getArmyTokenId(attack) === selectedArmyTokenId;
   const className = `army-token ${ownerClass}${showTroops ? "" : " hidden-transfer"}${selected ? " selected" : ""}${endpointInteractionDisabled ? " endpoint-clearance" : ""}`;
@@ -22726,9 +22732,10 @@ function updateArmyTokenElement(token, attack, mapPoint, targetCity, endpointInt
     : troopDisplay
       ? `${troopDisplay} troops`
       : "";
+  const relationshipLabel = clanAlly ? "Clan ally " : "";
   const tokenLabel = endpointInteractionDisabled
-    ? `${attack.kind || "Army"} march near an endpoint. Select the location beneath it.`
-    : `${attack.kind || "Army"} march${troopDescription ? ` with ${troopDescription}` : ""} to ${targetCity?.name || attack.toName || "destination"}. Show route locations.`;
+    ? `${relationshipLabel}${attack.kind || "Army"} march near an endpoint. Select the location beneath it.`
+    : `${relationshipLabel}${attack.kind || "Army"} march${troopDescription ? ` with ${troopDescription}` : ""} to ${targetCity?.name || attack.toName || "destination"}. Show route locations.`;
   if (token.getAttribute("aria-label") !== tokenLabel) token.setAttribute("aria-label", tokenLabel);
   if (attack.ownerName) {
     const titlePrefix = `${attack.ownerName}: ${attack.kind} to ${targetCity?.name || "target"}`;
