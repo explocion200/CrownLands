@@ -2795,6 +2795,10 @@ input {
 .foreign-selected-data .city-name { max-width: 142px; overflow: hidden; font-size: .64rem; text-overflow: ellipsis; }
 .foreign-garrison { color: #fff; font-size: .72rem; font-weight: 1000; white-space: nowrap; }
 .foreign-garrison.unknown { color: #ffe2dc; }
+.foreign-garrison.clan-visible {
+  color: #eaffef;
+  text-shadow: 0 1px 1px rgba(4, 45, 18, .95), 0 0 7px rgba(91, 229, 126, .7);
+}
 .city-node.player2 .foreign-selected-level,
 .city-node.player2 .foreign-selected-data { background: #604092; }
 .city-node.player2 .foreign-selected-crest { background: #31204f; border-color: #8a69c3; }

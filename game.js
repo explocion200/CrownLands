@@ -18518,6 +18518,16 @@ function isClanAllyCity(city) {
   return getCityClanIdentity(city).clanId === state.clanId;
 }
 
+function getVisibleCityGarrisonTroops(city, scoutReport = null) {
+  if (!city) return undefined;
+  const exactTroops = Number(city.troops);
+  if ((city.owner === "player" || isClanAllyCity(city)) && Number.isFinite(exactTroops)) {
+    return Math.max(0, Math.floor(exactTroops));
+  }
+  const reportedTroops = Number(scoutReport?.troops);
+  return Number.isFinite(reportedTroops) ? Math.max(0, Math.floor(reportedTroops)) : undefined;
+}
+
 function getClanFriendlyBlockReason(target) {
   return isClanAllyCity(target) ? "You cannot scout or attack a clan ally." : "";
 }
@@ -20684,6 +20694,7 @@ function getCityRenderSignature(visibleCities, visibleCamps = []) {
     .filter(Boolean));
   const cityTokens = visibleCities.map(city => {
     const report = city.owner === "player" ? null : getScoutReport(city.id);
+    const clanAlly = isClanAllyCity(city);
     return [
       city.id,
       city.owner,
@@ -20692,7 +20703,7 @@ function getCityRenderSignature(visibleCities, visibleCamps = []) {
       city.ownerName || "",
       getCityClanIdentity(city).clanId,
       getCityClanIdentity(city).clanTag,
-      isClanAllyCity(city) ? 1 : 0,
+      clanAlly ? 1 : 0,
       getFlagSignature(city.ownerFlag),
       getStableEnemyCityPowerBand(city),
       city.kind || "",
@@ -20701,6 +20712,7 @@ function getCityRenderSignature(visibleCities, visibleCamps = []) {
       isCityProtectedByPeaceShield(city) ? getCityPeaceShieldExpiresAtMs(city) : 0,
       city.level,
       city.owner === "player" && Math.floor(Number(city.troops) || 0) > 0 ? 1 : 0,
+      clanAlly ? Math.max(0, Math.floor(Number(city.troops) || 0)) : "",
       city.isMainCity ? 1 : 0,
       upgradeBlockedTargets.has(getKnownCityId(city.id)) ? 1 : 0,
       report ? `${Math.floor(Number(report.troops) || 0)}:${report.expiresAt > state.gameSeconds ? 1 : 0}` : "",
@@ -20788,11 +20800,26 @@ function updateVisibleCityDynamicText() {
     const playerCount = node.querySelector(".city-army-count");
     if (playerCount) playerCount.textContent = `${formatNumber(troops)} troops`;
     const scoutReport = city.owner === "player" ? null : getScoutReport(city.id);
-    const knownTroops = city.owner === "player" ? troops : scoutReport?.troops;
+    const knownTroops = getVisibleCityGarrisonTroops(city, scoutReport);
+    const foreignCount = node.querySelector(".foreign-garrison");
+    if (foreignCount) {
+      const clanAlly = isClanAllyCity(city);
+      foreignCount.textContent = `${knownTroops === undefined ? "?" : formatNumber(knownTroops)} troops`;
+      foreignCount.classList.toggle("unknown", knownTroops === undefined);
+      foreignCount.classList.toggle("revealed", knownTroops !== undefined && !clanAlly);
+      foreignCount.classList.toggle("clan-visible", knownTroops !== undefined && clanAlly);
+    }
     const ownerName = getCityOwnerDisplayName(city);
     const locationType = isStronghold(city) ? "Stronghold" : `Level ${city.level}`;
     const powerBandLabel = getEnemyCityPowerBandLabel(getStableEnemyCityPowerBand(city), city);
     node.setAttribute("aria-label", `${city.name}. ${ownerName}. ${locationType}. ${knownTroops === undefined ? "Unknown troops" : `${formatNumber(knownTroops)} troops`}.${powerBandLabel ? ` ${powerBandLabel}.` : ""}`);
+  });
+  modalBody?.querySelectorAll("[data-live-city-garrison]").forEach(value => {
+    const city = cityById(value.dataset.liveCityGarrison);
+    if (!city) return;
+    const scoutReport = city.owner === "player" ? null : getScoutReport(city.id);
+    const visibleTroops = getVisibleCityGarrisonTroops(city, scoutReport);
+    value.textContent = visibleTroops === undefined ? "Unknown" : formatNumber(visibleTroops);
   });
 }
 
@@ -20930,6 +20957,10 @@ function renderCities(force = false) {
     const rivalOwnerRow = city.owner === "enemy" && ownerName && ownerName !== OWNER.enemy.label
       ? `<span class="city-ruler-row"><strong class="foreign-ruler-name foreign-ruler-name-inline">${escapeHtml(ownerName)}</strong>${crownBadge}</span>`
       : "";
+    const visibleGarrison = getVisibleCityGarrisonTroops(city, scoutReport);
+    const garrisonVisibilityClass = visibleGarrison === undefined
+      ? "unknown"
+      : clanAlly ? "clan-visible" : "revealed";
     const cityLabel = city.owner === "player"
       ? `
         <span class="city-label player-city-label">
@@ -20954,7 +20985,7 @@ function renderCities(force = false) {
             <span class="foreign-selected-crest">${ownerFlag}</span>
             <span class="foreign-selected-data">
               <strong class="city-name">${escapeHtml(city.name)}</strong>
-              <span class="foreign-garrison ${scoutReport ? "revealed" : "unknown"}">${scoutReport ? formatNumber(scoutReport.troops) : "?"} troops</span>
+              <span class="foreign-garrison ${garrisonVisibilityClass}">${visibleGarrison === undefined ? "?" : formatNumber(visibleGarrison)} troops</span>
             </span>
           </span>
         </span>`
@@ -20962,12 +20993,13 @@ function renderCities(force = false) {
         <span class="city-label foreign-city-label">
           ${rivalOwnerRow}
           <strong class="city-name">${escapeHtml(city.name)}</strong>
+          ${clanAlly ? `<span class="foreign-garrison ${garrisonVisibilityClass}">${visibleGarrison === undefined ? "?" : formatNumber(visibleGarrison)} troops</span>` : ""}
           <span class="foreign-city-shield">
             ${ownerFlag}
             <span class="city-label-level">${formatNumber(city.level)}</span>
           </span>
         </span>`;
-    const knownTroops = city.owner === "player" ? city.troops : scoutReport?.troops;
+    const knownTroops = visibleGarrison;
     const locationType = stronghold ? "Stronghold" : `Level ${city.level}`;
     const powerBandLabel = getEnemyCityPowerBandLabel(enemyPowerBand, city);
     const structureHtml = stronghold
@@ -24432,10 +24464,11 @@ function showCrownCitadelInfoModal(city) {
   modal.dataset.cityInfoId = city.id;
   const owned = city.owner === "player";
   const report = owned ? null : getScoutReport(city.id);
+  const clanAlly = isClanAllyCity(city);
   const stats = getCityStats(city);
   const heldSinceMs = getCrownCitadelHeldSinceMs();
   const controller = city.owner === "neutral" ? "Neutral defenders" : getCityOwnerDisplayName(city);
-  const visibleTroops = owned ? city.troops : report?.troops;
+  const visibleTroops = getVisibleCityGarrisonTroops(city, report);
   const visibleDefense = owned ? stats.totalDefense : report?.totalDefense;
   const cachedLedgerMarkup = crownCitadelReignCache.length
     ? crownCitadelReignLeaderboardMarkup(crownCitadelReignCache)
@@ -24455,7 +24488,7 @@ function showCrownCitadelInfoModal(city) {
           ${owned ? `<div class="stat-wide"><span>Your active objective benefit</span><strong>${escapeHtml(getControlledObjectiveBenefitBreakdown(city))}</strong><small>Personal and shared clan benefits are calculated separately by the server.</small></div>` : ""}
           <div class="stat-chip"><span>Controller</span><strong>${escapeHtml(controller)}</strong></div>
           <div class="stat-chip"><span>Current reign</span><strong ${heldSinceMs ? `data-citadel-reign-score data-total-held-ms="0" data-current-held-since-ms="${heldSinceMs}"` : ""}>${heldSinceMs ? formatDuration(Math.floor((Date.now() - heldSinceMs) / 1000)) : "Unclaimed"}</strong></div>
-          <div class="stat-chip"><span>Troops stationed</span><strong>${visibleTroops === undefined ? "Unknown" : formatNumber(visibleTroops)}</strong></div>
+          <div class="stat-chip"><span>Troops stationed</span><strong data-live-city-garrison="${escapeHtml(city.id)}">${visibleTroops === undefined ? "Unknown" : formatNumber(visibleTroops)}</strong></div>
           <div class="stat-chip"><span>Total defense</span><strong>${visibleDefense === undefined
             ? "Unknown"
             : owned
@@ -24463,7 +24496,9 @@ function showCrownCitadelInfoModal(city) {
               : formatBaseAndBonusStat(report?.baseTotalDefense ?? visibleDefense, visibleDefense)}</strong></div>
           <div class="stat-chip"><span>Defense level</span><strong>${formatNumber(stats.level)}</strong><small>matches a level ${formatNumber(stats.level)} city</small></div>
           <div class="stat-chip"><span>Garrison limit</span><strong>Unlimited</strong></div>
-          ${!owned && !report ? `<div class="stat-wide scout-required"><span>Defense report</span><strong>Scout to reveal</strong></div>` : ""}
+          ${!owned && clanAlly
+            ? `<div class="stat-wide clan-garrison-access"><span>Garrison visibility</span><strong>Shared by clan</strong><small>Exact owner troops are live. Defense bonuses and reinforcement details remain private.</small></div>`
+            : !owned && !report ? `<div class="stat-wide scout-required"><span>Defense report</span><strong>Scout to reveal</strong></div>` : ""}
           ${owned ? renderRelinquishCityAction(city) : ""}
           ${renderHoldingReinforcementPanel(city)}
         </div>
@@ -24507,6 +24542,7 @@ function showCityInfoModal(cityId) {
     const stats = getCityStats(city);
     const clanIdentity = getCityClanIdentity(city);
     const clanAlly = isClanAllyCity(city);
+    const visibleTroops = getVisibleCityGarrisonTroops(city, report);
     const remaining = report ? Math.max(0, Math.ceil(report.expiresAt - state.gameSeconds)) : 0;
     const strongholdBonusLabel = stronghold ? getStrongholdBonusLabel(city) : "";
     const neutralStrongholdBase = stronghold && city.owner === "neutral"
@@ -24524,12 +24560,14 @@ function showCityInfoModal(cityId) {
         ${stronghold ? `<div class="stat-wide"><span>Stronghold bonus</span><strong>${strongholdBonusLabel}</strong><small>The controller receives 8%; current clanmates receive 4%, subject to Citadel precedence.</small></div>` : ""}
         <div class="stat-wide"><span>Owner</span>${renderPlayerNameLink(city.ownerUid || getCurrentOnlineUid(), getCityOwnerDisplayName(city))}</div>
         <div class="stat-chip"><span>${stronghold ? "Defense level" : "City level"}</span><strong>${formatNumber(stats.level)}</strong></div>
-        <div class="stat-chip"><span>Troops</span><strong>${report ? formatNumber(report.troops) : "Unknown"}</strong></div>
+        <div class="stat-chip"><span>Troops</span><strong data-live-city-garrison="${escapeHtml(city.id)}">${visibleTroops === undefined ? "Unknown" : formatNumber(visibleTroops)}</strong></div>
         <div class="stat-chip"><span>Total defense</span><strong>${report
           ? formatBaseAndBonusStat(report.baseTotalDefense ?? report.totalDefense, report.totalDefense)
           : "Unknown"}</strong></div>
         ${neutralStrongholdBase}
-        ${report
+        ${clanAlly
+          ? `<div class="stat-wide clan-garrison-access"><span>Garrison visibility</span><strong>Shared by clan</strong><small>Exact owner troops are live. Defense bonuses and reinforcement details remain private.</small></div>`
+          : report
           ? `<div class="stat-wide"><span>Scout report expires</span><strong>${formatDuration(remaining)}</strong></div>`
           : `<div class="stat-wide scout-required"><span>Scout report</span><strong>Not available</strong></div>`}
         ${renderHoldingReinforcementPanel(city)}
