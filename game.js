@@ -17222,9 +17222,9 @@ function launchAttack(sourceId, targetId, percent, owner, exactTroops = null, op
       return false;
     }
     pendingServerArmyLaunchKeys.add(launchKey);
-    const serverLaunchPromise = publishOnlineArmyMovement(mission, { addLocalMissionOnAccept: true, optimistic: false })
+    publishOnlineArmyMovement(mission, { addLocalMissionOnAccept: true, optimistic: false })
       .then(accepted => {
-        if (!accepted) return false;
+        if (!accepted) return;
         playGameSound("troop_dispatch", {
           cooldownMs: 80,
           regionId: getCityRegionId(source),
@@ -17260,11 +17260,10 @@ function launchAttack(sourceId, targetId, percent, owner, exactTroops = null, op
               ? `${acceptedProtection.label} moving: ${formatNumber(acceptedTroops)} troops`
               : `Attack moving: ${source.name} \u2192 ${target.name}`);
         }
-        return true;
       })
       .finally(() => pendingServerArmyLaunchKeys.delete(launchKey));
     showToast("Sending army order to the server...");
-    return options.awaitServerAcceptance ? serverLaunchPromise : true;
+    return true;
   }
 
   const peaceShieldDeactivated = owner === "player" && (kind === "attack" || kind === "reinforce")
@@ -23759,44 +23758,13 @@ async function confirmTroopSliderOrder() {
     renderAll();
     return;
   }
-  const awaitServerAcceptance = usesServerArmyAuthority();
-  const confirmButton = modalBody.querySelector("#troopSliderConfirm");
-  const cancelButton = modalBody.querySelector("#troopSliderCancel");
-  const amountSlider = modalBody.querySelector("#troopAmountSlider");
-  const swiftMarchToggle = modalBody.querySelector("#swiftMarchLaunchToggle");
-  const originalConfirmMarkup = confirmButton?.innerHTML || "Attack";
-  if (awaitServerAcceptance && confirmButton) {
-    confirmButton.disabled = true;
-    confirmButton.textContent = "Sending...";
-    if (cancelButton) cancelButton.disabled = true;
-    if (amountSlider) amountSlider.disabled = true;
-    if (swiftMarchToggle) swiftMarchToggle.disabled = true;
-  }
-  const launchResult = launchAttack(source.id, target.id, 1, "player", selectedTroopAmount, {
+  const launched = launchAttack(source.id, target.id, 1, "player", selectedTroopAmount, {
     route: cachedRoute,
     attackProtection: activeAttackProtectionPreview,
     kind: activeTroopOrderKind,
     useSwiftMarchOrder: activeSwiftMarchOrderSelected && canUseSwiftMarchOrderOnLaunch(source, target),
-    awaitServerAcceptance,
   });
-  const launched = await launchResult;
-  if (!launched) {
-    if (
-      troopSliderActive
-      && modal.open
-      && selectedSourceId === source.id
-      && selectedTargetId === target.id
-    ) {
-      if (confirmButton) {
-        confirmButton.disabled = false;
-        confirmButton.innerHTML = originalConfirmMarkup;
-      }
-      if (cancelButton) cancelButton.disabled = false;
-      if (amountSlider) amountSlider.disabled = false;
-      updateTroopSliderModal(source, target, cachedRoute);
-    }
-    return;
-  }
+  if (!launched) return;
   troopSliderActive = false;
   activeTroopSliderRoute = null;
   activeAttackProtectionPreview = null;

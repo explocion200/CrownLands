@@ -1,4 +1,4 @@
-const CACHE_VERSION = "20260801-attack-confirm-city-label-v1";
+const CACHE_VERSION = "20260801-attack-modal-close-v1";
 const CACHE_NAME = `crownlands-cache-${CACHE_VERSION}`;
 const APP_BASE_URL = new URL("./", self.location.href);
 
@@ -12,7 +12,7 @@ const STATIC_CACHE_URLS = [
   "/",
   "/index.html",
   "/manifest.webmanifest",
-  "/styles.css?v=20260801-attack-confirm-city-label-v1",
+  "/styles.css?v=20260801-attack-modal-close-v1",
   "/release-config.js",
   "/world-config.js",
   "/economy-config.js?v=20260728-daily-attendance-v2",
@@ -22,7 +22,7 @@ const STATIC_CACHE_URLS = [
   "/firebaseClient.js?v=20260801-reinforcement-capacity-v1",
   "/audio-manager.js?v=20260729-starter-sound-pack-v1",
   "/audio/manifest.json",
-  "/game.js?v=20260801-attack-confirm-city-label-v1",
+  "/game.js?v=20260801-attack-modal-close-v1",
   "/route-worker.js?v=20260721-structure-route-clearance",
   "/assets/map-editor-data.js?v=20260723-utc-responsive-v1",
   "/assets/game-menu-background.jpg?v=20260702-login-page",
