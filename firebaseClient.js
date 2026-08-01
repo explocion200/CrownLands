@@ -443,6 +443,30 @@
     return callServerFunction("cancelClanRally", payload);
   }
 
+  async function createClanOperation(payload = {}) {
+    return callServerFunction("createClanOperation", payload);
+  }
+
+  async function updateClanOperation(payload = {}) {
+    return callServerFunction("updateClanOperation", payload);
+  }
+
+  async function setClanOperationStatus(payload = {}) {
+    return callServerFunction("setClanOperationStatus", payload);
+  }
+
+  async function setClanOperationAssignment(payload = {}) {
+    return callServerFunction("setClanOperationAssignment", payload);
+  }
+
+  async function linkClanOperationRally(payload = {}) {
+    return callServerFunction("linkClanOperationRally", payload);
+  }
+
+  async function shareClanOperationReport(payload = {}) {
+    return callServerFunction("shareClanOperationReport", payload);
+  }
+
   async function previewArmyProtection(payload = {}) {
     return callServerFunction("previewArmyProtection", payload);
   }
@@ -765,6 +789,164 @@
         if (typeof handlers.onError === "function") handlers.onError(error, "rallies");
       }
     );
+  }
+
+  function subscribeClanOperations(clanId = "", options = {}, handlers = {}) {
+    if (!client.db || !client.modules?.firestore?.onSnapshot || !client.user?.uid || !clanId) return () => {};
+    const { collection, onSnapshot, query, where, orderBy, limit } = client.modules.firestore;
+    const safeClanId = String(clanId).slice(0, 128);
+    const operationsRef = collection(client.db, "clans", safeClanId, "operations");
+    const manager = options?.manager === true;
+    const rowsByScope = { active: [], history: [], drafts: [] };
+    const expectedScopes = new Set(manager ? ["active", "history", "drafts"] : ["active", "history"]);
+    const readyScopes = new Set();
+    const emit = () => {
+      if ([...expectedScopes].some(scope => !readyScopes.has(scope))) return;
+      if (typeof handlers.onOperations !== "function") return;
+      const operations = [...new Map(
+        [...rowsByScope.active, ...rowsByScope.drafts, ...rowsByScope.history]
+          .map(operation => [operation.id, operation])
+      ).values()]
+        .filter(operation => operation.resetGeneration === RESET_GENERATION && operation.worldId === ONLINE_WORLD_ID)
+        .sort((left, right) => Number(right.updatedAtMs || 0) - Number(left.updatedAtMs || 0));
+      handlers.onOperations(operations);
+    };
+    const subscribe = (scope, sourceQuery) => onSnapshot(
+      sourceQuery,
+      snapshot => {
+        rowsByScope[scope] = snapshot.docs.map(item => ({ id: item.id, ...item.data() }));
+        readyScopes.add(scope);
+        emit();
+      },
+      error => {
+        readyScopes.add(scope);
+        emit();
+        if (typeof handlers.onError === "function") handlers.onError(error, `operations:${scope}`);
+      }
+    );
+    const subscriptions = [
+      subscribe("active", query(
+        operationsRef,
+        where("resetGeneration", "==", RESET_GENERATION),
+        where("worldId", "==", ONLINE_WORLD_ID),
+        where("visibility", "==", "clan"),
+        where("status", "==", "active"),
+        limit(5)
+      )),
+      subscribe("history", query(
+        operationsRef,
+        where("resetGeneration", "==", RESET_GENERATION),
+        where("worldId", "==", ONLINE_WORLD_ID),
+        where("visibility", "==", "clan"),
+        where("status", "in", ["completed", "cancelled", "expired"]),
+        orderBy("updatedAtMs", "desc"),
+        limit(20)
+      )),
+    ];
+    if (manager) {
+      subscriptions.push(subscribe("drafts", query(
+        operationsRef,
+        where("resetGeneration", "==", RESET_GENERATION),
+        where("worldId", "==", ONLINE_WORLD_ID),
+        where("status", "==", "draft"),
+        orderBy("updatedAtMs", "desc"),
+        limit(20)
+      )));
+    }
+    return () => subscriptions.forEach(unsubscribe => unsubscribe());
+  }
+
+  function subscribeClanOperationDetails(clanId = "", operationId = "", handlers = {}) {
+    if (!client.db || !client.modules?.firestore?.onSnapshot || !client.user?.uid || !clanId || !operationId) return () => {};
+    const { collection, doc, onSnapshot } = client.modules.firestore;
+    const safeClanId = String(clanId).slice(0, 128);
+    const safeOperationId = String(operationId).replace(/[^a-zA-Z0-9_-]/g, "_").slice(0, 96);
+    const rows = { orders: [], assignments: [], sharedReports: [], targetStates: {} };
+    const ready = new Set();
+    let targetSubscriptions = [];
+    const emit = () => {
+      if (ready.size < 3) return;
+      if (typeof handlers.onDetails === "function") {
+        handlers.onDetails({
+          orders: rows.orders.slice().sort((a, b) => Number(a.index || 0) - Number(b.index || 0)),
+          assignments: rows.assignments.slice().sort((a, b) => Number(a.createdAtMs || 0) - Number(b.createdAtMs || 0)),
+          sharedReports: rows.sharedReports.slice().sort((a, b) => Number(b.sharedAtMs || 0) - Number(a.sharedAtMs || 0)),
+          targetStates: { ...rows.targetStates },
+        });
+      }
+    };
+    const watchTargets = orders => {
+      targetSubscriptions.forEach(unsubscribe => unsubscribe());
+      targetSubscriptions = [];
+      rows.targetStates = {};
+      (Array.isArray(orders) ? orders : []).slice(0, 12).forEach(order => {
+        const regionId = String(order.targetRegionId || "").trim().toLowerCase().replace(/[^a-z0-9_-]+/g, "-");
+        const targetId = String(order.targetId || "").replace(/[^a-zA-Z0-9_-]/g, "_").slice(0, 96);
+        if (!regionId || !targetId) return;
+        const targetType = order.targetType === "camp" ? "camp" : "city";
+        const key = `${targetType}:${regionId}:${targetId}`;
+        const targetRef = doc(client.db, "islands", `${ONLINE_WORLD_ID}-${regionId}`, targetType === "camp" ? "camps" : "cities", targetId);
+        targetSubscriptions.push(onSnapshot(
+          targetRef,
+          snapshot => {
+            rows.targetStates[key] = snapshot.exists()
+              ? { id: snapshot.id, ...snapshot.data() }
+              : { id: targetId, regionId, ownerKind: "neutral", ownerUid: "", ownerClanId: "" };
+            emit();
+          },
+          error => {
+            rows.targetStates[key] = { id: targetId, regionId, unavailable: true };
+            emit();
+            if (typeof handlers.onError === "function") handlers.onError(error, `target:${targetId}`);
+          }
+        ));
+      });
+    };
+    const operationPath = ["clans", safeClanId, "operations", safeOperationId];
+    const subscriptions = ["orders", "assignments", "sharedReports"].map(key => onSnapshot(
+      collection(client.db, ...operationPath, key),
+      snapshot => {
+        rows[key] = snapshot.docs
+          .map(item => ({ id: item.id, ...item.data() }))
+          .filter(item => item.resetGeneration === RESET_GENERATION && item.worldId === ONLINE_WORLD_ID);
+        if (key === "orders") watchTargets(rows.orders);
+        ready.add(key);
+        emit();
+      },
+      error => {
+        ready.add(key);
+        emit();
+        if (typeof handlers.onError === "function") handlers.onError(error, key);
+      }
+    ));
+    return () => {
+      subscriptions.forEach(unsubscribe => unsubscribe());
+      targetSubscriptions.forEach(unsubscribe => unsubscribe());
+      targetSubscriptions = [];
+    };
+  }
+
+  async function loadClanOperationDetails(clanId = "", operationId = "") {
+    await init();
+    requireSignedIn();
+    const safeClanId = String(clanId).slice(0, 128);
+    const safeOperationId = String(operationId).replace(/[^a-zA-Z0-9_-]/g, "_").slice(0, 96);
+    if (!safeClanId || !safeOperationId) throw new Error("Choose a clan operation.");
+    const { collection, getDocs } = client.modules.firestore;
+    const operationPath = ["clans", safeClanId, "operations", safeOperationId];
+    const [ordersSnap, assignmentsSnap, reportsSnap] = await Promise.all([
+      getDocs(collection(client.db, ...operationPath, "orders")),
+      getDocs(collection(client.db, ...operationPath, "assignments")),
+      getDocs(collection(client.db, ...operationPath, "sharedReports")),
+    ]);
+    const currentRows = snapshot => snapshot.docs
+      .map(item => ({ id: item.id, ...item.data() }))
+      .filter(item => item.resetGeneration === RESET_GENERATION && item.worldId === ONLINE_WORLD_ID);
+    return {
+      orders: currentRows(ordersSnap).sort((a, b) => Number(a.index || 0) - Number(b.index || 0)),
+      assignments: currentRows(assignmentsSnap),
+      sharedReports: currentRows(reportsSnap),
+    };
   }
 
   function subscribeClanState(clanId = "", handlers = {}) {
@@ -2121,6 +2303,9 @@
     subscribeClanSocialState,
     subscribeClanQuestProgress,
     subscribeClanRallies,
+    subscribeClanOperations,
+    subscribeClanOperationDetails,
+    loadClanOperationDetails,
     recalculatePlayerGlobalStats,
     recalculateAllPlayerGlobalStats,
     getCombatPlayerIdentity,
@@ -2144,6 +2329,12 @@
     withdrawClanRallyContribution,
     launchClanRally,
     cancelClanRally,
+    createClanOperation,
+    updateClanOperation,
+    setClanOperationStatus,
+    setClanOperationAssignment,
+    linkClanOperationRally,
+    shareClanOperationReport,
     previewArmyProtection,
     resolveArmyOrder,
     returnClanReinforcement,

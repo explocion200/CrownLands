@@ -10018,3 +10018,325 @@ select:focus {
   accent-color: #d8a93f;
   cursor: pointer;
 }
+
+/* Clan War Room */
+.clan-war-room-panel {
+  display: none;
+  gap: 14px;
+  min-width: 0;
+}
+
+.clan-war-room-panel.active {
+  display: grid;
+}
+
+.war-room-heading b {
+  color: #e6c76d;
+}
+
+.war-room-toolbar,
+.war-room-operation-actions,
+.war-room-order-actions,
+.war-room-assignment footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.war-room-operation-list,
+.war-room-orders,
+.war-room-assignments {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.war-room-operation-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 14px;
+  border: 1px solid rgba(220, 193, 119, 0.25);
+  border-left: 4px solid #a64c42;
+  border-radius: 10px;
+  background: rgba(24, 30, 27, 0.78);
+  color: #f6e7bd;
+  text-align: left;
+}
+
+.war-room-operation-card.status-draft { border-left-color: #858d91; }
+.war-room-operation-card.status-completed { border-left-color: #668d68; }
+.war-room-operation-card.status-cancelled,
+.war-room-operation-card.status-expired { opacity: 0.72; border-left-color: #665d59; }
+
+.war-room-operation-card span,
+.war-room-operation-card b,
+.war-room-operation-detail > header > div {
+  display: grid;
+  gap: 3px;
+}
+
+.war-room-operation-card small,
+.war-room-operation-card em,
+.war-room-operation-detail small,
+.war-room-assignment small {
+  color: rgba(242, 226, 185, 0.66);
+  font-style: normal;
+}
+
+.war-room-operation-card b {
+  justify-items: center;
+  color: #e4c56f;
+  font-size: 1.25rem;
+}
+
+.war-room-operation-detail {
+  display: grid;
+  gap: 14px;
+}
+
+.war-room-operation-detail > header,
+.war-room-order > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.war-room-operation-detail h3 {
+  margin: 0;
+  font-size: 1.35rem;
+}
+
+.war-room-order {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid rgba(220, 193, 119, 0.22);
+  border-top: 3px solid #a64c42;
+  border-radius: 10px;
+  background: rgba(31, 37, 33, 0.82);
+}
+
+.war-room-order.action-scout { border-top-color: #d0a43e; }
+.war-room-order.action-reinforce { border-top-color: #4b78a5; }
+
+.war-room-order > header > div {
+  display: grid;
+  flex: 1;
+}
+
+.war-room-order-number {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: #7f302d;
+  color: #fff4d1;
+  font-weight: 800;
+}
+
+.action-scout .war-room-order-number { background: #9b7626; }
+.action-reinforce .war-room-order-number { background: #315e89; }
+
+.war-room-order-window,
+.war-room-linked-rally {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 2px 10px;
+  padding: 9px 10px;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.war-room-order-window small,
+.war-room-linked-rally small { grid-column: 2; }
+
+.war-room-stale,
+.war-room-launch-warning {
+  margin: 0;
+  padding: 9px 10px;
+  border: 1px solid rgba(218, 164, 64, 0.48);
+  border-radius: 8px;
+  background: rgba(132, 86, 27, 0.22);
+  color: #f1d38b;
+}
+
+.war-room-assignment {
+  display: grid;
+  grid-template-columns: minmax(120px, .65fr) minmax(180px, 1.35fr);
+  gap: 8px 12px;
+  padding: 10px;
+  border-radius: 8px;
+  background: rgba(13, 17, 15, 0.38);
+}
+
+.war-room-assignment > div { display: grid; gap: 2px; }
+.war-room-assignment footer { grid-column: 1 / -1; }
+.war-room-assignment.needs_reconfirm { outline: 1px solid rgba(218, 164, 64, 0.6); }
+.war-room-assignment.launched { outline: 1px solid rgba(75, 120, 165, 0.55); }
+.war-room-assignment.resolved { opacity: 0.78; }
+.war-room-launch { background: #8c3631; color: #fff0cf; }
+
+.war-room-empty-slot {
+  padding: 12px;
+  border: 1px dashed rgba(220, 193, 119, 0.2);
+  border-radius: 8px;
+  color: rgba(242, 226, 185, 0.62);
+}
+
+.war-room-reports summary { cursor: pointer; color: #e0c273; }
+.war-room-reports button {
+  display: grid;
+  width: 100%;
+  margin-top: 6px;
+  padding: 8px;
+  text-align: left;
+}
+
+.war-room-launch-confirmation,
+.war-room-shared-report {
+  display: grid;
+  gap: 14px;
+}
+
+.war-room-launch-route,
+.war-room-shared-report > header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid rgba(220, 193, 119, 0.24);
+  border-radius: 10px;
+  background: rgba(12, 17, 14, 0.38);
+}
+
+.war-room-launch-route > span,
+.war-room-shared-report > header > div {
+  display: grid;
+  flex: 1;
+  gap: 3px;
+}
+
+.war-room-launch-route > span:last-child { text-align: right; }
+.war-room-launch-warning strong,
+.war-room-launch-warning small { display: block; }
+.war-room-launch-warning.early { border-color: rgba(212, 164, 61, 0.58); }
+.war-room-launch-warning.late { border-color: rgba(190, 77, 65, 0.66); background: rgba(120, 36, 31, 0.3); }
+.war-room-launch-warning.on-time { border-color: rgba(80, 153, 105, 0.58); background: rgba(35, 103, 59, 0.25); color: #c9efcf; }
+
+.war-room-launch-confirmation footer,
+.war-room-shared-report footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.war-room-shared-report dl {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+}
+
+.war-room-shared-report dl div {
+  display: grid;
+  gap: 2px;
+  padding: 10px;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.war-room-shared-report dt { color: rgba(242, 226, 185, 0.68); }
+.war-room-shared-report dd { margin: 0; color: #f0d483; font-weight: 800; }
+
+.war-room-map-pin {
+  --war-room-pin-color: #a43d36;
+  position: absolute;
+  z-index: 38;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 42px;
+  padding: 0 0 8px;
+  transform: translate(-50%, -100%);
+  border: 2px solid #f5dfaa;
+  border-radius: 50% 50% 50% 4px;
+  background: var(--war-room-pin-color);
+  box-shadow: 0 4px 13px rgba(0, 0, 0, 0.55);
+  color: #fff8df;
+  font-weight: 900;
+  pointer-events: auto;
+}
+
+.war-room-map-pin.action-scout { --war-room-pin-color: #b38727; }
+.war-room-map-pin.action-reinforce { --war-room-pin-color: #356f9f; }
+.war-room-map-pin:hover,
+.war-room-map-pin:focus-visible { transform: translate(-50%, -100%) scale(1.1); z-index: 45; }
+
+.war-room-operation-form,
+.war-room-assignment-form,
+.war-room-request-form,
+.war-room-rally-link-form,
+.war-room-report-share-form {
+  display: grid;
+  gap: 14px;
+}
+
+.war-room-operation-form label,
+.war-room-assignment-form label,
+.war-room-request-form label,
+.war-room-rally-link-form label,
+.war-room-report-share-form label,
+.war-room-editor-order label {
+  display: grid;
+  gap: 5px;
+}
+
+.war-room-operation-form input,
+.war-room-operation-form select,
+.war-room-operation-form textarea,
+.war-room-assignment-form input,
+.war-room-assignment-form select,
+.war-room-request-form select,
+.war-room-rally-link-form select,
+.war-room-report-share-form select {
+  width: 100%;
+}
+
+.war-room-editor-orders { display: grid; gap: 12px; }
+.war-room-editor-order {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid rgba(220, 193, 119, 0.28);
+  border-radius: 10px;
+}
+
+.war-room-editor-order legend { color: #e3c36f; font-weight: 800; }
+.war-room-editor-note { grid-column: 1 / -1; }
+.war-room-remove-order { position: absolute; top: 6px; right: 6px; }
+.war-room-operation-form footer,
+.war-room-assignment-form footer,
+.war-room-request-form footer,
+.war-room-rally-link-form footer,
+.war-room-report-share-form footer { display: flex; justify-content: flex-end; gap: 8px; }
+.war-room-editor-help { color: rgba(242, 226, 185, 0.65); }
+.battle-report-war-room-share { margin: 14px auto 0; }
+
+@media (max-width: 720px) {
+  .war-room-editor-order { grid-template-columns: 1fr; }
+  .war-room-editor-note { grid-column: auto; }
+  .war-room-assignment { grid-template-columns: 1fr; }
+  .war-room-assignment footer { grid-column: auto; }
+  .war-room-operation-detail > header,
+  .war-room-order > header { align-items: flex-start; }
+}

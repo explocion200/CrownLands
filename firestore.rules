@@ -243,6 +243,14 @@ service cloud.firestore {
         && get(/databases/$(database)/documents/clans/$(clanId)/members/$(request.auth.uid)).data.role in ['leader', 'officer'];
     }
 
+    function clanOperationReadable(clanId, operationId) {
+      return clanManager(clanId)
+        || (
+          clanMember(clanId)
+          && get(/databases/$(database)/documents/clans/$(clanId)/operations/$(operationId)).data.visibility == 'clan'
+        );
+    }
+
     match /clans/{clanId} {
       allow read: if signedIn() && isCurrentGeneration(resource.data);
       allow create, update, delete: if false;
@@ -305,6 +313,37 @@ service cloud.firestore {
         allow read, create, update, delete: if false;
       }
 
+      match /operations/{operationId} {
+        allow read: if isCurrentGeneration(resource.data)
+          && (
+            clanManager(clanId)
+            || (clanMember(clanId) && resource.data.visibility == 'clan')
+          );
+        allow create, update, delete: if false;
+
+        match /orders/{orderId} {
+          allow read: if isCurrentGeneration(resource.data)
+            && clanOperationReadable(clanId, operationId);
+          allow create, update, delete: if false;
+        }
+
+        match /assignments/{assignmentId} {
+          allow read: if isCurrentGeneration(resource.data)
+            && clanOperationReadable(clanId, operationId);
+          allow create, update, delete: if false;
+        }
+
+        match /sharedReports/{reportId} {
+          allow read: if isCurrentGeneration(resource.data)
+            && clanOperationReadable(clanId, operationId);
+          allow create, update, delete: if false;
+        }
+      }
+
+      match /operationState/{resetId} {
+        allow read, create, update, delete: if false;
+      }
+
       match /messages/{messageId} {
         allow read, create, update, delete: if false;
       }
@@ -328,6 +367,10 @@ service cloud.firestore {
     }
 
     match /clanTagReservations/{reservationId} {
+      allow read, create, update, delete: if false;
+    }
+
+    match /clanOperationReminders/{reminderId} {
       allow read, create, update, delete: if false;
     }
 

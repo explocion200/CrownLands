@@ -66,13 +66,17 @@ try {
       const notification = payload?.notification || {};
       const title = notification.title || data.title || "Crownlands alert";
       const body = notification.body || data.body || "A new army is marching.";
-      const tag = data.armyId ? `crownlands-${data.armyId}` : "crownlands-incoming-army";
+      const tag = data.armyId
+        ? `crownlands-${data.armyId}`
+        : data.assignmentId
+          ? `crownlands-war-room-${data.assignmentId}`
+          : "crownlands-alert";
 
       self.registration.showNotification(title, {
         body,
         tag,
         renotify: true,
-        requireInteraction: data.kind === "attack",
+        requireInteraction: data.kind === "attack" || data.kind === "reminder",
         icon: resolveAppUrl("assets/report-icon.png"),
         badge: resolveAppUrl("assets/report-icon.png"),
         data: {
