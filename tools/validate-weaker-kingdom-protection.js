@@ -524,23 +524,17 @@ if (!clientSource.includes("slider.max = String(sliderSendLimit)")
 const reopenProtectionSource = readFunction(clientSource, "reopenAttackProtectionConfirmation");
 const showTroopSliderSource = readFunction(clientSource, "showTroopSliderModalAsync");
 const confirmTroopSliderSource = readFunction(clientSource, "confirmTroopSliderOrder");
-const launchAttackSource = readFunction(clientSource, "launchAttack");
 if (!reopenProtectionSource.includes("window.setTimeout")
   || !reopenProtectionSource.includes("attackProtection: refreshedProtectionSnapshot")
   || !showTroopSliderSource.includes("options.attackProtection")
   || !showTroopSliderSource.includes("Promise.resolve({ attackProtection: providedAttackProtection })")) {
   throw new Error("A changed protection quote can close the attack screen instead of reopening with the refreshed limit.");
 }
-if (!confirmTroopSliderSource.includes("awaitServerAcceptance")
-  || !confirmTroopSliderSource.includes('confirmButton.textContent = "Sending..."')
-  || !confirmTroopSliderSource.includes("await launchResult")
-  || !confirmTroopSliderSource.includes("if (!launched)")
-  || !confirmTroopSliderSource.includes("confirmButton.disabled = false")) {
-  throw new Error("The troop screen must remain pending until the server accepts the attack and recover after rejection.");
-}
-if (!launchAttackSource.includes("const serverLaunchPromise = publishOnlineArmyMovement")
-  || !launchAttackSource.includes("return options.awaitServerAcceptance ? serverLaunchPromise : true")) {
-  throw new Error("Player attacks do not expose authoritative server acceptance to the troop confirmation screen.");
+if (!confirmTroopSliderSource.includes("const launched = launchAttack")
+  || !confirmTroopSliderSource.includes("if (!launched) return")
+  || !confirmTroopSliderSource.includes('modal.classList.remove("troop-slider-modal")')
+  || !confirmTroopSliderSource.includes("if (modal.open) modal.close()")) {
+  throw new Error("Confirmed troop orders must close the attack screen immediately after dispatch.");
 }
 
 console.log("Validated weaker-player protection v2 boundaries, two-stage breaches, caps, raids, XP claims, previews, and stable colors.");
