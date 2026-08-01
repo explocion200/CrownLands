@@ -22107,7 +22107,7 @@ function getActiveClanReinforcementAssignments() {
     const launchedAsReinforcement = mission.kind === "reinforce"
       || mission.launchKind === "reinforce"
       || mission.retargetedFromKind === "reinforce";
-    if (!launchedAsReinforcement) return;
+    if (!launchedAsReinforcement || mission.returning || mission.reinforcementReturn) return;
     const targetKey = String(
       mission.reinforcementTargetKey
         || `${mission.targetType === "camp" ? "camp" : "city"}:${normalizeRegionId(mission.targetRegionId)}:${String(mission.toId || "")}`
