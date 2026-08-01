@@ -50,15 +50,16 @@ requireMatch(client, /getNextCitadelAssaultAtMs[\s\S]*?getCitadelAssaultEasternW
 requireMatch(client, /eventKind !== CITADEL_ASSAULT_EVENT_KIND[\s\S]*?troopVisibility === "estimate"/, "NPC troop visibility must remain exact.");
 requireMatch(client, /getActiveMapRegionId\(\) === CITADEL_ASSAULT_REGION_ID/, "Countdown must only appear on the Citadel map.");
 requireMatch(html, /id="citadelAssaultCountdown"[\s\S]*?role="timer"/, "Citadel assault countdown markup is missing.");
+requireMatch(html, /id="dailyLoginRewardBtn"[\s\S]*?id="citadelAssaultCountdown"[\s\S]*?<div class="resource-bar">/, "Countdown must remain between Daily Login and the Home-button resource group.");
 requireMatch(styles, /\.citadel-assault-countdown\.imminent/, "Imminent countdown styling is missing.");
 const countdownStyles = sourceBetween(
   styles,
   ".citadel-assault-countdown {",
   ".citadel-assault-countdown[hidden]"
 );
-requireMatch(countdownStyles, /top:\s*calc\(max\(\.65rem, env\(safe-area-inset-top\)\) \+ 120px\)/, "Countdown must remain below the top HUD.");
-requireMatch(countdownStyles, /width:\s*max-content[\s\S]*?max-width:\s*calc\(100% - 1rem\)[\s\S]*?min-height:\s*30px/, "Countdown must remain a compact, viewport-bounded badge.");
-assert.doesNotMatch(countdownStyles, /min-width:/, "Countdown must not reserve a wide HUD-obscuring footprint.");
+requireMatch(countdownStyles, /position:\s*static[\s\S]*?flex:\s*0 1 clamp\(84px, 15vw, 126px\)/, "Countdown must participate in the top HUD layout between adjacent controls.");
+requireMatch(countdownStyles, /width:\s*clamp\(84px, 15vw, 126px\)[\s\S]*?max-width:\s*126px[\s\S]*?min-height:\s*44px/, "Countdown must remain a compact, bounded HUD badge.");
+assert.doesNotMatch(countdownStyles, /(?:top|left|right|bottom|transform|z-index):/, "Countdown must not float over other HUD controls.");
 requireMatch(rules, /10:00 AM and 6:30 PM Eastern Time[\s\S]*?9:45 AM and 6:15 PM Eastern[\s\S]*?no defense experience is awarded/i, "Public Citadel assault rules are incomplete.");
 
 const clientScheduleSource = sourceBetween(
