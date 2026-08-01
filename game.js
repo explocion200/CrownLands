@@ -451,6 +451,10 @@ const DEFENSE_STRONGHOLD_LEVEL = 50;
 const DEFENSE_STRONGHOLD_START_TROOPS = 50000000;
 const CROWN_CITADEL_ID = "center_crown_citadel";
 const CROWN_CITADEL_NAME = "Crown Citadel";
+const CITADEL_ASSAULT_REGION_ID = "center";
+const CITADEL_ASSAULT_EVENT_KIND = "citadel_npc_assault";
+const CITADEL_ASSAULT_WARNING_MS = 15 * 60 * 1000;
+const CITADEL_ASSAULT_UTC_HOURS = [4, 15];
 const CROWN_CITADEL_ART_SRC = "assets/crown-citadel.png?v=20260703-crown-citadel-art";
 const CROWN_CITADEL_GOLD_BONUS_PERCENT = 10;
 const CROWN_CITADEL_TROOP_BONUS_PERCENT = 10;
@@ -2876,6 +2880,9 @@ const flagSaveBtn = document.getElementById("flagSaveBtn");
 const flagBackBtn = document.getElementById("flagBackBtn");
 const flagExitBtn = document.getElementById("flagExitBtn");
 const mapFrame = document.getElementById("mapFrame");
+const citadelAssaultCountdown = document.getElementById("citadelAssaultCountdown");
+const citadelAssaultCountdownTime = document.getElementById("citadelAssaultCountdownTime");
+const citadelAssaultCountdownDetail = document.getElementById("citadelAssaultCountdownDetail");
 const mapLoadingLabel = document.getElementById("mapLoadingLabel");
 const mapWorld = document.getElementById("mapWorld");
 const mapBg = document.getElementById("mapBg");
@@ -13793,6 +13800,7 @@ function deferServerArmyResolutionRetry(mission) {
 
 function resolveOnlineArmyOwner(army) {
   if (army?.ownerUid && army.ownerUid === getCurrentOnlineUid()) return "player";
+  if (army?.eventKind === CITADEL_ASSAULT_EVENT_KIND || army?.ownerKind === "npc") return "enemy";
   if (!army?.ownerUid) return "neutral";
   if (army?.ownerKind === "neutral") return "neutral";
   return "enemy";
@@ -13804,7 +13812,7 @@ function normalizeOnlineArmyMovement(raw) {
   if (!id) return null;
   const ownerUid = String(raw.ownerUid || "").trim();
   const rawOwnerKind = raw.ownerKind || raw.owner || "player";
-  if (rawOwnerKind !== "neutral" && !ownerUid) return null;
+  if (!["neutral", "npc"].includes(rawOwnerKind) && !ownerUid) return null;
   const targetOwnerUid = String(raw.targetOwnerUid || "").trim();
   const rawKind = ["attack", "transfer", "reinforce", "scout"].includes(raw.kind) || raw.kind === "rally_join" ? raw.kind : "attack";
   const effectiveKind = rawKind === "transfer"
@@ -13834,7 +13842,8 @@ function normalizeOnlineArmyMovement(raw) {
   const isAttackMovement = effectiveKind === "attack"
     || raw.launchKind === "attack"
     || Boolean(raw.rallyAttack);
-  const estimateForViewer = isAttackMovement
+  const exactEventTroops = raw.eventKind === CITADEL_ASSAULT_EVENT_KIND && raw.troopVisibility === "exact";
+  const estimateForViewer = !exactEventTroops && isAttackMovement
     && ownerUid !== getCurrentOnlineUid()
     && viewerAccess !== "owner";
   const troopEstimate = estimateForViewer
@@ -13844,11 +13853,13 @@ function normalizeOnlineArmyMovement(raw) {
     id,
     onlineId: id,
     owner: resolveOnlineArmyOwner(raw),
-    ownerKind: ownerUid ? "player" : "neutral",
+    ownerKind: rawOwnerKind === "npc" ? "npc" : ownerUid ? "player" : "neutral",
     ownerUid,
     ownerName: ownerIdentity?.displayName || raw.ownerName || "",
     ownerFlag: ownerIdentity?.flag || raw.ownerFlag || null,
     ownerKingPower: normalizePowerValue(ownerIdentity?.kingPower) || normalizePowerValue(raw.ownerKingPower),
+    eventKind: String(raw.eventKind || ""),
+    waveId: String(raw.waveId || ""),
     kind: effectiveKind,
     launchKind: ["attack", "transfer", "reinforce", "scout"].includes(raw.launchKind) ? raw.launchKind : raw.launchKind === "rally_join" ? "rally_join" : rawKind,
     retargetedFromKind: ["attack", "transfer", "reinforce", "scout"].includes(raw.retargetedFromKind) || raw.retargetedFromKind === "rally_join"
@@ -14426,6 +14437,7 @@ function retryOverdueOnlineArmyResolutions() {
   const uid = getCurrentOnlineUid();
   if (!uid) return;
   onlineArmies
+    .filter(army => army.eventKind !== CITADEL_ASSAULT_EVENT_KIND)
     .filter(army => !isOnlineArmyResolutionBlocked(army))
     .filter(army => getOnlineArmyRemainingSeconds(army) <= 0)
     .forEach(resolveOverdueOnlineArmy);
@@ -17763,9 +17775,50 @@ function renderHud() {
   }
 }
 
+function getNextCitadelAssaultAtMs(nowMs = Date.now()) {
+  const now = new Date(nowMs);
+  for (const hour of CITADEL_ASSAULT_UTC_HOURS) {
+    const candidate = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), hour, 0, 0, 0);
+    if (candidate > nowMs) return candidate;
+  }
+  return Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1, CITADEL_ASSAULT_UTC_HOURS[0], 0, 0, 0);
+}
+
+function formatCitadelAssaultCountdown(remainingMs = 0) {
+  const totalSeconds = Math.max(0, Math.ceil(remainingMs / 1000));
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+}
+
+function updateCitadelAssaultCountdown() {
+  if (!citadelAssaultCountdown) return;
+  const visible = Boolean(state && getActiveMapRegionId() === CITADEL_ASSAULT_REGION_ID);
+  citadelAssaultCountdown.hidden = !visible;
+  if (!visible) return;
+  const nowMs = Date.now();
+  const nextAtMs = getNextCitadelAssaultAtMs(nowMs);
+  const remainingMs = Math.max(0, nextAtMs - nowMs);
+  const imminent = remainingMs <= CITADEL_ASSAULT_WARNING_MS;
+  const hour = new Date(nextAtMs).getUTCHours();
+  citadelAssaultCountdown.classList.toggle("imminent", imminent);
+  if (citadelAssaultCountdownTime) citadelAssaultCountdownTime.textContent = formatCitadelAssaultCountdown(remainingMs);
+  if (citadelAssaultCountdownDetail) {
+    citadelAssaultCountdownDetail.textContent = imminent
+      ? "Targets selected — reinforce your cities"
+      : `Next wave at ${String(hour).padStart(2, "0")}:00 UTC`;
+  }
+  citadelAssaultCountdown.setAttribute(
+    "aria-label",
+    `${imminent ? "Citadel Legion assault imminent" : "Next Citadel Legion assault"} in ${formatCitadelAssaultCountdown(remainingMs)}`
+  );
+}
+
 function renderHudStatusPanels() {
   updateShieldStatusBadge();
   updateIslandSwitcherUi();
+  updateCitadelAssaultCountdown();
   updateIncomingAttackUi();
   updateOutgoingAttackUi();
   if (profileScreen?.classList.contains("open")) renderProfileScreen();
@@ -22180,6 +22233,7 @@ function canViewArmyTroopAmount(attack) {
 function isArmyTroopEstimate(attack) {
   return Boolean(
     attack
+    && attack.eventKind !== CITADEL_ASSAULT_EVENT_KIND
     && (
       attack.troopVisibility === "estimate"
       || (attack.kind === "attack" && !isPersonalArmy(attack))
@@ -26875,18 +26929,19 @@ function renderIncomingAttacksModalContent(incoming = getIncomingAttacks()) {
 
 function renderIncomingAttackCard(attack) {
   const city = attack.target;
-  const sourceName = attack.source?.name || "Unknown city";
+  const isCitadelAssault = attack.eventKind === CITADEL_ASSAULT_EVENT_KIND;
+  const sourceName = isCitadelAssault ? CROWN_CITADEL_NAME : attack.source?.name || "Unknown city";
   const regionName = getRegionLabel(getCityRegionId(city));
   const defense = getCityStats(city).totalDefense;
   const isScout = attack.kind === "scout";
-  const threatLabel = isScout ? "Scout" : "Attack";
+  const threatLabel = isScout ? "Scout" : isCitadelAssault ? "Legion" : "Attack";
   const forceLabel = isScout ? "Scout" : "Attacker";
   const estimatedTroops = getArmyTroopDisplayText(attack);
   const forceDetails = isScout
     ? `1 scout from ${escapeHtml(sourceName)}`
     : `Estimated troops: ${escapeHtml(estimatedTroops)} from ${escapeHtml(sourceName)}`;
   return `
-    <article class="incoming-attack-card ${isScout ? "incoming-scout-card" : ""}">
+    <article class="incoming-attack-card ${isScout ? "incoming-scout-card" : ""} ${isCitadelAssault ? "citadel-assault-card" : ""}">
       <div class="incoming-attack-badge">
         <strong>${formatDuration(attack.remaining)}</strong>
         <small>${threatLabel}</small>
@@ -28121,6 +28176,8 @@ async function showBattleReportDetail(reportId) {
 
 function getBattleReportBadge(report) {
   if (report.type === "scout") return { label: "SCOUT", tone: "scout" };
+  if (report.eventKind === CITADEL_ASSAULT_EVENT_KIND && report.outcome === "damaged") return { label: "DAMAGED", tone: "defeat" };
+  if (report.eventKind === CITADEL_ASSAULT_EVENT_KIND && report.outcome === "lost") return { label: "CITY LOST", tone: "defeat" };
   if (report.outcome === "breach") return { label: "BREACH", tone: "victory" };
   if (report.outcome === "breached") return { label: "BREACHED", tone: "defeat" };
   if (report.outcome === "victory") return { label: "VICTORY", tone: "victory" };
@@ -28137,6 +28194,8 @@ function getBattleReportTypeLabel(type) {
 
 function getBattleReportSummary(report) {
   if (report.type === "scout") return `${formatNumber(report.troopCount)} troops reported.`;
+  if (report.eventKind === CITADEL_ASSAULT_EVENT_KIND && report.outcome === "damaged") return "The Citadel Legion removed five city levels.";
+  if (report.eventKind === CITADEL_ASSAULT_EVENT_KIND && report.outcome === "lost") return "The Citadel Legion returned the city to neutral control.";
   if (report.outcome === "breach") return `Walls breached with ${formatNumber(report.survivors)} survivors returned.`;
   if (report.outcome === "breached") return `The walls were breached; the city was not captured.`;
   if (report.outcome === "victory") return `Captured with ${formatNumber(report.survivors)} survivors.`;
@@ -28189,6 +28248,7 @@ function showHelpModal() {
       <li>Swordmastery boosts outgoing attack, Guild Charters reduces city upgrade cost, and Field Medics returns part of battle losses to your main city.</li>
       <li>Captured cities enter a one-hour city-XP cooldown. Attacks still earn troop-loss XP, but the fixed city/wall XP component is unavailable until the cooldown ends.</li>
       <li>Main cities cannot be attacked. Use your main city as a protected home base while expanding from other cities.</li>
+      <li>The Citadel Legion attacks up to 20 random regular non-main cities in the Crown Citadel map at 04:00 and 15:00 UTC. Targets receive 15 minutes of warning. A lost defense removes five city levels; Level 5-or-lower cities become Level 1 neutral cities with 10 troops. Peace Shields do not block these attacks, and defenders receive no XP.</li>
       <li>Demo Attacks protect weaker kingdoms: much stronger attackers send fewer effective troops, march slower, earn 0 XP, and defenders earn bonus XP.</li>
       <li>Shop items have UTC daily purchase limits. Reward Camp items are earned separately through contested objectives.</li>
     </ul>
