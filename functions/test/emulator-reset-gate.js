@@ -1215,6 +1215,29 @@ async function main() {
   );
   assert(firstClanReinforcement?.movement?.kind === "reinforce", "Clan support did not launch as a reinforcement.");
   assert(firstClanReinforcement?.peaceShieldDeactivated === true, "Launching clan support did not drop the sender's shield.");
+  const firstReinforcementPublicPath = `islands/${clanReinforcementSourceClaim.islandId}/armies/${firstClanReinforcementArmyId}`;
+  const firstReinforcementIncomingPath = `players/${clanApplicant.uid}/incomingArmies/${firstClanReinforcementArmyId}`;
+  const [firstReinforcementPublic, firstReinforcementIncoming] = await Promise.all([
+    db.doc(firstReinforcementPublicPath).get(),
+    db.doc(firstReinforcementIncomingPath).get(),
+  ]);
+  for (const [label, snapshot] of [
+    ["public", firstReinforcementPublic],
+    ["recipient incoming", firstReinforcementIncoming],
+  ]) {
+    const projection = snapshot.data() || {};
+    assert(
+      snapshot.exists
+        && projection.troopVisibility === "estimate"
+        && Number(projection.armyTroopVisibilityVersion || 0) === 3
+        && projection.troops === undefined
+        && projection.requestedTroops === undefined
+        && Number(projection.troopEstimateMin || 0) < 600
+        && Number(projection.troopEstimateMax || 0) >= 600
+        && Boolean(projection.troopEstimateLabel),
+      `The ${label} clan reinforcement projection exposed its exact troop amount or omitted its estimate.`
+    );
+  }
   const [leaderAfterReinforcementLaunch, holderAfterReinforcementLaunch, alliedTargetAfterLaunch] = await Promise.all([
     clanLeaderRef.get(),
     clanApplicantRef.get(),
@@ -1979,7 +2002,7 @@ async function main() {
   assert(
     transferPublicSnapshot.exists
       && transferPublic.troopVisibility === "hidden"
-      && Number(transferPublic.armyTroopVisibilityVersion || 0) === 2
+      && Number(transferPublic.armyTroopVisibilityVersion || 0) === 3
       && transferPublic.troops === undefined
       && transferPublic.requestedTroops === undefined,
     "The public owned-city transfer projection exposed its exact troop amount."
