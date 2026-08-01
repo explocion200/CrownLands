@@ -60,7 +60,9 @@ const subscribeServerReports = extractFunction(clientSource, "subscribeServerRep
 assert.match(subscribeServerReports, /limit\(120\)/, "The live report feed must remain bounded.");
 
 const connectOnlineIsland = extractFunction(gameSource, "connectOnlineIsland");
-assert.match(connectOnlineIsland, /if \(onlineIslandUnsubscribe\) onlineIslandUnsubscribe\(\);[\s\S]*?onlineIslandUnsubscribe = await subscribeOnlineIslandWithInitialCities/, "Map switching must dispose the previous island listener before installing the next one.");
+assert.match(connectOnlineIsland, /if \(onlineIslandUnsubscribe\) onlineIslandUnsubscribe\(\);[\s\S]*?startActiveOnlineIslandSubscription/, "Map switching must dispose the previous island listener before installing the next one.");
+const startActiveOnlineIslandSubscription = extractFunction(gameSource, "startActiveOnlineIslandSubscription");
+assert.match(startActiveOnlineIslandSubscription, /if \(typeof onlineIslandUnsubscribe === "function"\) onlineIslandUnsubscribe\(\);[\s\S]*?subscribeOnlineIslandWithInitialCities/, "The reusable active-island subscription must replace an existing listener before reconnecting.");
 
 const findRouteAsync = extractFunction(gameSource, "findRouteAsync");
 assert.match(findRouteAsync, /requestRouteFromWorker\(job\)/, "Interactive pathfinding must use the route worker.");

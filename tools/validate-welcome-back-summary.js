@@ -170,7 +170,12 @@ requireMatch(
 );
 requireMatch(
   clientSource,
-  /async function connectOnlineIsland[\s\S]*?allowWelcomeBack = false[\s\S]*?shouldRequestWelcomeBack[\s\S]*?requestWelcomeBack:\s*shouldRequestWelcomeBack/,
+  /async function connectOnlineIsland[\s\S]*?allowWelcomeBack = false[\s\S]*?startActiveOnlineIslandSubscription[\s\S]*?allowWelcomeBack,/,
+  "Map connections do not default-deny and forward the Welcome back permission."
+);
+requireMatch(
+  clientSource,
+  /function applyActiveOnlineCityPayload[\s\S]*?allowWelcomeBack = false[\s\S]*?shouldRequestWelcomeBack[\s\S]*?requestWelcomeBack:\s*shouldRequestWelcomeBack/,
   "Map connections are not default-denied from opening Welcome back."
 );
 assert.doesNotMatch(

@@ -502,6 +502,14 @@ const TRAINING_STRONGHOLD_ID = "north_training_stronghold";
 const SPEED_STRONGHOLD_ID = "east_speed_stronghold";
 const DEFENSE_STRONGHOLD_ID = "south_defense_stronghold";
 const CROWN_CITADEL_ID = "center_crown_citadel";
+const CITADEL_ASSAULT_REGION_ID = "center";
+const CITADEL_ASSAULT_EVENT_KIND = "citadel_npc_assault";
+const CITADEL_ASSAULT_NPC_NAME = "Citadel Legion";
+const CITADEL_ASSAULT_TROOPS = 100_000;
+const CITADEL_ASSAULT_TARGET_LIMIT = 20;
+const CITADEL_ASSAULT_WARNING_MINUTES = 15;
+const CITADEL_ASSAULT_NEUTRAL_TROOPS = 10;
+const CITADEL_ASSAULT_LEVEL_LOSS = 5;
 const GOLD_STRONGHOLD_BONUS_PERCENT = 8;
 const TRAINING_STRONGHOLD_BONUS_PERCENT = 8;
 const SPEED_STRONGHOLD_BONUS_PERCENT = 8;
@@ -6300,6 +6308,7 @@ function makeReport({
   uid,
   type,
   outcome,
+  eventKind = "",
   city,
   opponentUid = "",
   opponentName = "",
@@ -6334,6 +6343,7 @@ function makeReport({
     uid,
     type,
     outcome,
+    eventKind: safeString(eventKind, 48),
     cityId: safeString(city?.id, 96),
     regionId: safeString(city?.regionId || city?.startPool || "", 80),
     cityName: safeString(city?.name || city?.id || "Unknown city", 40),
@@ -19561,6 +19571,428 @@ async function processWithConcurrency(items = [], concurrency = 1, worker) {
   await Promise.all(workers);
 }
 
+function getCitadelAssaultWaveAtMs(value = Date.now(), selectionPhase = false) {
+  const baseMs = Math.max(0, timestampToMs(value) || safeNumber(value, Date.now()));
+  const waveMs = baseMs + (selectionPhase ? CITADEL_ASSAULT_WARNING_MINUTES * 60 * 1000 : 0);
+  const date = new Date(waveMs);
+  const hour = date.getUTCHours();
+  if (![4, 15].includes(hour)) throw new Error(`Invalid Citadel assault wave hour: ${hour}`);
+  const year = date.getUTCFullYear();
+  const month = String(date.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(date.getUTCDate()).padStart(2, "0");
+  const hourLabel = String(hour).padStart(2, "0");
+  return {
+    id: `${year}${month}${day}-${hourLabel}00`,
+    scheduledAtMs: Date.UTC(year, date.getUTCMonth(), date.getUTCDate(), hour, 0, 0, 0),
+  };
+}
+
+function citadelAssaultWaveRef(waveId = "") {
+  const id = safeString(waveId, 40).replace(/[^a-zA-Z0-9_-]/g, "_");
+  return db.doc(`realmEvents/${RESET_GENERATION}/citadelAssaults/${id}`);
+}
+
+function citadelAssaultTargetRef(waveId = "", cityId = "") {
+  const id = safeString(cityId, 96).replace(/[^a-zA-Z0-9_-]/g, "_");
+  return citadelAssaultWaveRef(waveId).collection("targets").doc(id);
+}
+
+function citadelAssaultIncomingId(waveId = "", cityId = "") {
+  return safeString(`citadel_${waveId}_${cityId}`, 96).replace(/[^a-zA-Z0-9_-]/g, "_");
+}
+
+function shuffleCitadelAssaultCandidates(candidates = []) {
+  const shuffled = candidates.slice();
+  for (let index = shuffled.length - 1; index > 0; index -= 1) {
+    const swapIndex = crypto.randomInt(index + 1);
+    [shuffled[index], shuffled[swapIndex]] = [shuffled[swapIndex], shuffled[index]];
+  }
+  return shuffled;
+}
+
+function isCitadelAssaultEligibleCity(city = {}, selectedOwnerUid = "") {
+  const ownerUid = getOwnerUid(city);
+  return Boolean(
+    ownerUid
+    && (!selectedOwnerUid || ownerUid === selectedOwnerUid)
+    && normalizeRegionId(city.regionId || city.startPool) === CITADEL_ASSAULT_REGION_ID
+    && !isStronghold(city)
+    && city.isMainCity !== true
+  );
+}
+
+function createCitadelAssaultIncomingView({ wave, city, ownerUid, selectedAtMs }) {
+  const id = citadelAssaultIncomingId(wave.id, city.id);
+  return {
+    id,
+    worldId: ONLINE_WORLD_ID,
+    resetGeneration: RESET_GENERATION,
+    releaseId: REALM_RELEASE_ID,
+    eventKind: CITADEL_ASSAULT_EVENT_KIND,
+    waveId: wave.id,
+    ownerKind: "npc",
+    ownerUid: "",
+    ownerName: CITADEL_ASSAULT_NPC_NAME,
+    kind: "attack",
+    launchKind: "attack",
+    targetType: "city",
+    fromId: CROWN_CITADEL_ID,
+    fromName: CITADEL_ASSAULT_NPC_NAME,
+    toId: safeString(city.id, 96),
+    toName: safeString(city.name || city.id, 40),
+    sourceRegionId: CITADEL_ASSAULT_REGION_ID,
+    targetRegionId: CITADEL_ASSAULT_REGION_ID,
+    targetKey: `${CITADEL_ASSAULT_REGION_ID}:${safeString(city.id, 96)}`,
+    targetOwnerAtLaunch: "player",
+    targetOwnerUid: ownerUid,
+    troops: CITADEL_ASSAULT_TROOPS,
+    requestedTroops: CITADEL_ASSAULT_TROOPS,
+    troopVisibility: "exact",
+    total: Math.max(1, Math.ceil((wave.scheduledAtMs - selectedAtMs) / 1000)),
+    launchedAtMs: selectedAtMs,
+    arrivesAtMs: wave.scheduledAtMs,
+    status: "active",
+    createdByServer: true,
+    serverAuthorityVersion: 1,
+    createdAt: FieldValue.serverTimestamp(),
+    updatedAt: FieldValue.serverTimestamp(),
+  };
+}
+
+async function selectCitadelAssaultTargets(wave, nowMs = Date.now()) {
+  const waveRef = citadelAssaultWaveRef(wave.id);
+  const citiesRef = db.collection(`islands/${getOnlineIslandId(CITADEL_ASSAULT_REGION_ID)}/cities`);
+  return runTransactionWithInfrastructureRetry(async transaction => {
+    const waveSnap = await transaction.get(waveRef);
+    if (waveSnap.exists) {
+      return { status: "duplicate", waveId: wave.id, selected: Math.max(0, safeNumber(waveSnap.data()?.selectedCount, 0)) };
+    }
+    const citySnaps = await transaction.get(citiesRef.where("ownerKind", "==", "player"));
+    const eligible = citySnaps.docs
+      .map(doc => ({ ref: doc.ref, city: { id: doc.id, ...doc.data() } }))
+      .filter(entry => isCitadelAssaultEligibleCity(entry.city));
+    const selected = shuffleCitadelAssaultCandidates(eligible).slice(0, CITADEL_ASSAULT_TARGET_LIMIT);
+    transaction.create(waveRef, {
+      id: wave.id,
+      eventKind: CITADEL_ASSAULT_EVENT_KIND,
+      worldId: ONLINE_WORLD_ID,
+      resetGeneration: RESET_GENERATION,
+      releaseId: REALM_RELEASE_ID,
+      regionId: CITADEL_ASSAULT_REGION_ID,
+      scheduledAtMs: wave.scheduledAtMs,
+      warningStartedAtMs: nowMs,
+      eligibleCount: eligible.length,
+      selectedCount: selected.length,
+      resolvedCount: 0,
+      cancelledCount: 0,
+      status: "pending",
+      createdAtMs: nowMs,
+      createdAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
+    });
+    selected.forEach(({ city }) => {
+      const ownerUid = getOwnerUid(city);
+      const incomingId = citadelAssaultIncomingId(wave.id, city.id);
+      transaction.create(citadelAssaultTargetRef(wave.id, city.id), {
+        id: safeString(city.id, 96),
+        waveId: wave.id,
+        eventKind: CITADEL_ASSAULT_EVENT_KIND,
+        worldId: ONLINE_WORLD_ID,
+        resetGeneration: RESET_GENERATION,
+        releaseId: REALM_RELEASE_ID,
+        regionId: CITADEL_ASSAULT_REGION_ID,
+        cityId: safeString(city.id, 96),
+        cityName: safeString(city.name || city.id, 80),
+        selectedOwnerUid: ownerUid,
+        incomingId,
+        troops: CITADEL_ASSAULT_TROOPS,
+        selectedLevel: clampCityLevel(city.level),
+        selectedAtMs: nowMs,
+        scheduledAtMs: wave.scheduledAtMs,
+        status: "pending",
+        createdAt: FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp(),
+      });
+      transaction.set(
+        incomingArmyViewRef(ownerUid, incomingId),
+        createCitadelAssaultIncomingView({ wave, city, ownerUid, selectedAtMs: nowMs }),
+        { merge: false }
+      );
+    });
+    return { status: "selected", waveId: wave.id, eligible: eligible.length, selected: selected.length };
+  });
+}
+
+function recoverCitadelAssaultLosses(economy, profile, losses, nowMs) {
+  const recovered = Math.floor(Math.max(0, safeNumber(losses, 0)) * getSkillPercent(profile, "fieldMedics") / 100);
+  if (!economy?.uid || recovered <= 0) return 0;
+  const mainEntry = getCanonicalMainCityEntry(profile, economy.cityEntries);
+  const city = mainEntry?.city;
+  if (!mainEntry?.ref || !city || getOwnerUid(city) !== economy.uid) return 0;
+  const troopFloat = Math.max(0, safeNumber(city.troopFloat, city.troops || 0)) + recovered;
+  appendEconomyCityPatch(economy, mainEntry.ref, city, {
+    troops: Math.max(0, Math.floor(troopFloat)),
+    troopFloat,
+    productionUpdatedAtMs: nowMs,
+  });
+  return recovered;
+}
+
+async function resolveCitadelAssaultTarget(wave, targetDoc, nowMs = Date.now()) {
+  const targetReceiptRef = targetDoc.ref;
+  const initialReceipt = targetDoc.data() || {};
+  const cityId = safeString(initialReceipt.cityId || targetDoc.id, 96);
+  const selectedOwnerUid = safeString(initialReceipt.selectedOwnerUid, 128);
+  const incomingId = safeString(initialReceipt.incomingId || citadelAssaultIncomingId(wave.id, cityId), 96);
+  const targetRef = cityRefForRegion(CITADEL_ASSAULT_REGION_ID, cityId);
+  return runTransactionWithInfrastructureRetry(async transaction => {
+    const [receiptSnap, targetSnap] = await Promise.all([
+      transaction.get(targetReceiptRef),
+      transaction.get(targetRef),
+    ]);
+    const receipt = receiptSnap.data() || {};
+    if (!receiptSnap.exists || receipt.status !== "pending") {
+      const status = receipt.status === "resolved"
+        ? "already_resolved"
+        : receipt.status === "cancelled"
+          ? "already_cancelled"
+          : "duplicate";
+      return { status, cityId };
+    }
+    const city = targetSnap.exists ? { id: targetSnap.id, ...targetSnap.data() } : null;
+    if (!city || !isCitadelAssaultEligibleCity(city, selectedOwnerUid)) {
+      transaction.set(targetReceiptRef, {
+        status: "cancelled",
+        cancelReason: !city ? "city_missing" : "eligibility_changed",
+        resolvedAtMs: nowMs,
+        updatedAt: FieldValue.serverTimestamp(),
+      }, { merge: true });
+      if (selectedOwnerUid) transaction.delete(incomingArmyViewRef(selectedOwnerUid, incomingId));
+      return { status: "cancelled", cityId };
+    }
+
+    const defenderUid = getOwnerUid(city);
+    const reinforcementTargetKey = getReinforcementTargetKey("city", CITADEL_ASSAULT_REGION_ID, cityId);
+    const reinforcementSnap = await transaction.get(stationedReinforcementsForTargetQuery(reinforcementTargetKey));
+    const reinforcements = reinforcementSnap.docs.map(normalizeReinforcementContribution).filter(Boolean);
+    const participantUids = [defenderUid, ...reinforcements.map(entry => entry.ownerUid)];
+    const participantProfiles = await getProfileSnapshots(transaction, participantUids);
+    const participantStats = await getGlobalStatsSnapshots(transaction, participantUids);
+    const defenderEntry = participantProfiles.get(defenderUid) || {};
+    const defenderEconomy = await prepareEconomyCollection(transaction, defenderUid, nowMs, {
+      profileRef: defenderEntry.ref,
+      profileSnap: defenderEntry.snap,
+    });
+    const producedTarget = getEconomyCityByRef(defenderEconomy, targetRef)?.city || city;
+    if (!isCitadelAssaultEligibleCity(producedTarget, selectedOwnerUid)) {
+      transaction.set(targetReceiptRef, {
+        status: "cancelled",
+        cancelReason: "eligibility_changed",
+        resolvedAtMs: nowMs,
+        updatedAt: FieldValue.serverTimestamp(),
+      }, { merge: true });
+      transaction.delete(incomingArmyViewRef(selectedOwnerUid, incomingId));
+      return { status: "cancelled", cityId };
+    }
+
+    const defenderProfile = defenderEconomy.profileAfter || defenderEntry.data || {};
+    const reinforcementProfiles = new Map(reinforcements.map(entry => [entry.ownerUid, participantProfiles.get(entry.ownerUid)?.data || {}]));
+    const reinforcementStats = new Map(reinforcements.map(entry => [entry.ownerUid, participantStats.get(entry.ownerUid) || {}]));
+    const defensePackages = calculateDefenderArmyPackages({
+      target: producedTarget,
+      targetType: "city",
+      ownerProfile: defenderProfile,
+      ownerBonuses: defenderEconomy.bonuses || {},
+      contributions: reinforcements,
+      contributorProfiles: reinforcementProfiles,
+      contributorStats: reinforcementStats,
+    });
+    const alliedTroops = reinforcements.reduce((total, entry) => total + entry.troops, 0);
+    const combatTarget = createReinforcedCombatTarget({ ...producedTarget, alliedReinforcementTroops: alliedTroops }, "city");
+    const result = calculateCombatResult(CITADEL_ASSAULT_TROOPS, combatTarget, null, defenderProfile, {
+      defenderBonuses: defenderEconomy.bonuses || {},
+      defensePower: defensePackages.totalDefense,
+    });
+    const allocation = allocateDefenderLosses(getTargetOwnerTroops(producedTarget, "city"), reinforcements, result.defenderLosses);
+    const previousLevel = clampCityLevel(producedTarget.level);
+    const neutralized = result.success && previousLevel <= CITADEL_ASSAULT_LEVEL_LOSS;
+    const outcome = result.success ? (neutralized ? "lost" : "damaged") : "held";
+    const nextLevel = result.success ? Math.max(1, previousLevel - CITADEL_ASSAULT_LEVEL_LOSS) : previousLevel;
+    const targetPatch = neutralized ? {
+      ownerKind: "neutral",
+      ownerUid: null,
+      ownerName: "",
+      ownerFlag: null,
+      ownerKingPower: 0,
+      ownerClanId: "",
+      ownerClanName: "",
+      ownerClanTag: "",
+      ownerShieldExpiresAtMs: 0,
+      isMainCity: false,
+      level: 1,
+      troops: CITADEL_ASSAULT_NEUTRAL_TROOPS,
+      troopFloat: CITADEL_ASSAULT_NEUTRAL_TROOPS,
+      alliedReinforcementTroops: 0,
+      investedGold: 0,
+      productionUpdatedAtMs: nowMs,
+      relinquishedAtMs: nowMs,
+      relocatedAtMs: 0,
+      ...getNeutralClaimClearedPatch(nowMs),
+    } : {
+      level: nextLevel,
+      troops: allocation.ownerRemaining,
+      troopFloat: allocation.ownerRemaining,
+      alliedReinforcementTroops: allocation.alliedRemaining,
+      productionUpdatedAtMs: nowMs,
+    };
+
+    const fieldMedicsRecovered = recoverCitadelAssaultLosses(defenderEconomy, defenderProfile, allocation.ownerLosses, nowMs);
+    allocation.contributions.forEach(entry => {
+      const profileEntry = participantProfiles.get(entry.ownerUid) || {};
+      const profile = profileEntry.data || {};
+      const currentStationed = getProfileStationedReinforcementTroops(profile);
+      transaction.set(entry.ref, {
+        troops: entry.remaining,
+        status: entry.remaining > 0 ? REINFORCEMENT_STATUS_STATIONED : REINFORCEMENT_STATUS_DEPLETED,
+        lastBattleArmyId: incomingId,
+        lastBattleAtMs: nowMs,
+        lastBattleLosses: entry.losses,
+        updatedAtMs: nowMs,
+        updatedAt: FieldValue.serverTimestamp(),
+      }, { merge: true });
+      if (entry.remaining <= 0) releaseClanReinforcementTarget(transaction, entry.ownerUid, entry.targetKey);
+      if (profileEntry.ref && entry.losses > 0) {
+        transaction.set(profileEntry.ref, {
+          stationedReinforcementTroops: Math.max(0, currentStationed - entry.losses),
+          reinforcementResetGeneration: RESET_GENERATION,
+          updatedAt: FieldValue.serverTimestamp(),
+        }, { merge: true });
+      }
+      const reinforcementReceiptRef = db.doc(`reinforcementBattleReceipts/${RESET_GENERATION}/entries/${safeString(`${incomingId}_${entry.ownerUid}`, 180).replace(/[^a-zA-Z0-9_-]/g, "_")}`);
+      transaction.set(reinforcementReceiptRef, {
+        id: reinforcementReceiptRef.id,
+        status: "pending",
+        worldId: ONLINE_WORLD_ID,
+        resetGeneration: RESET_GENERATION,
+        armyId: incomingId,
+        battleId: "",
+        reinforcementId: entry.id,
+        contributorUid: entry.ownerUid,
+        contributorName: normalizePlayerName(profile.playerName || entry.ownerName, "Ruler"),
+        targetOwnerUid: defenderUid,
+        targetId: cityId,
+        targetName: safeString(producedTarget.name || cityId, 40),
+        targetRegionId: CITADEL_ASSAULT_REGION_ID,
+        targetType: "city",
+        opponentName: CITADEL_ASSAULT_NPC_NAME,
+        opponentFlag: null,
+        outcome,
+        committedTroops: entry.troops,
+        losses: entry.losses,
+        survivors: entry.remaining,
+        xpAwarded: 0,
+        fieldMedicsPercent: getSkillPercent(profile, "fieldMedics"),
+        createdAtMs: nowMs,
+        createdAt: FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp(),
+      }, { merge: false });
+    });
+
+    appendEconomyCityPatch(defenderEconomy, targetRef, producedTarget, targetPatch);
+    writePreparedEconomy(transaction, defenderEconomy, {}, [], {
+      statsCityPatches: [{ ref: targetRef, city: producedTarget, patch: targetPatch }],
+      nowMs,
+    });
+    const reportSummary = outcome === "held"
+      ? `${producedTarget.name || cityId} held against 100,000 Citadel Legion troops with ${result.defendersLeft.toLocaleString()} defenders remaining. No XP was awarded.`
+      : outcome === "damaged"
+        ? `${producedTarget.name || cityId} was overrun by the Citadel Legion but remains yours. Level ${previousLevel} fell to Level ${nextLevel}. No XP was awarded.`
+        : `${producedTarget.name || cityId} was overrun by the Citadel Legion at Level ${previousLevel} and became neutral. No XP was awarded.`;
+    const report = makeReport({
+      id: `${incomingId}_defense_${defenderUid}`,
+      uid: defenderUid,
+      type: "defense",
+      outcome,
+      eventKind: CITADEL_ASSAULT_EVENT_KIND,
+      city: producedTarget,
+      opponentName: CITADEL_ASSAULT_NPC_NAME,
+      sentTroops: CITADEL_ASSAULT_TROOPS,
+      troopCount: allocation.ownerStart + allocation.alliedStart,
+      result,
+      totalDefense: defensePackages.totalDefense,
+      defenseStats: { ...getCityStats(producedTarget, defenderProfile, defenderEconomy.bonuses || {}), totalDefense: defensePackages.totalDefense },
+      summary: `${reportSummary}${fieldMedicsRecovered > 0 ? ` Field Medics returned ${fieldMedicsRecovered.toLocaleString()} troops to your main city.` : ""}`,
+      xpAwarded: 0,
+      goldAwarded: 0,
+      troopsAwarded: 0,
+      fieldMedicsRecovered,
+      nowMs,
+    });
+    writeReport(transaction, defenderUid, report, defenderEntry.snap);
+    if (neutralized) {
+      writeOwnershipChangeEvent(transaction, {
+        eventId: `${incomingId}_neutralized`,
+        targetType: "city",
+        targetId: cityId,
+        regionId: CITADEL_ASSAULT_REGION_ID,
+        beforeOwnerUid: defenderUid,
+        afterOwnerUid: "",
+        reason: CITADEL_ASSAULT_EVENT_KIND,
+        nowMs,
+      });
+    }
+    transaction.set(targetReceiptRef, {
+      status: "resolved",
+      outcome,
+      previousLevel,
+      nextLevel: neutralized ? 1 : nextLevel,
+      neutralized,
+      attackPower: result.attackPower,
+      defensePower: result.defensePower,
+      attackerLosses: result.attackerLosses,
+      defenderLosses: result.defenderLosses,
+      defendersLeft: result.defendersLeft,
+      fieldMedicsRecovered,
+      xpAwarded: 0,
+      resolvedAtMs: nowMs,
+      updatedAt: FieldValue.serverTimestamp(),
+    }, { merge: true });
+    transaction.delete(incomingArmyViewRef(defenderUid, incomingId));
+    return { status: "resolved", cityId, outcome, neutralized };
+  });
+}
+
+async function resolveCitadelAssaultWave(wave, nowMs = Date.now()) {
+  const waveRef = citadelAssaultWaveRef(wave.id);
+  const waveSnap = await waveRef.get();
+  if (!waveSnap.exists) return { status: "missing", waveId: wave.id, resolved: 0, cancelled: 0 };
+  if (waveSnap.data()?.status === "resolved") {
+    return { status: "duplicate", waveId: wave.id, resolved: safeNumber(waveSnap.data()?.resolvedCount, 0), cancelled: safeNumber(waveSnap.data()?.cancelledCount, 0) };
+  }
+  const targetSnap = await waveRef.collection("targets").get();
+  const results = [];
+  await processWithConcurrency(targetSnap.docs, 4, async targetDoc => {
+    try {
+      results.push(await resolveCitadelAssaultTarget(wave, targetDoc, nowMs));
+    } catch (error) {
+      results.push({ status: "failed", cityId: targetDoc.id, error: error?.message || String(error) });
+      console.error("Citadel assault target resolution failed", { waveId: wave.id, cityId: targetDoc.id, error: error?.message || String(error) });
+    }
+  });
+  const resolved = results.filter(result => ["resolved", "already_resolved"].includes(result.status)).length;
+  const cancelled = results.filter(result => ["cancelled", "already_cancelled"].includes(result.status)).length;
+  const failed = results.filter(result => result.status === "failed").length;
+  await waveRef.set({
+    status: failed ? "partial" : "resolved",
+    resolvedCount: resolved,
+    cancelledCount: cancelled,
+    failedCount: failed,
+    resolvedAtMs: nowMs,
+    updatedAt: FieldValue.serverTimestamp(),
+  }, { merge: true });
+  return { status: failed ? "partial" : "resolved", waveId: wave.id, resolved, cancelled, failed };
+}
+
 async function backfillActiveArmyVisibilityViews() {
   const markerRef = db.doc(`serverConfig/armyTroopVisibilityV${ARMY_TROOP_VISIBILITY_VERSION}-${RESET_GENERATION}`);
   const markerSnap = await markerRef.get();
@@ -19701,6 +20133,35 @@ exports.resolveDueArmyOrders = onSchedule({
     skipped,
     failed,
   });
+});
+
+exports.selectCitadelAssaultTargets = onSchedule({
+  region: "us-central1",
+  schedule: "45 3,14 * * *",
+  timeZone: "Etc/UTC",
+  maxInstances: 1,
+  timeoutSeconds: 120,
+  memory: "256MiB",
+}, async event => {
+  const scheduledMs = Date.parse(event.scheduleTime || "") || Date.now();
+  const wave = getCitadelAssaultWaveAtMs(scheduledMs, true);
+  const result = await selectCitadelAssaultTargets(wave, Date.now());
+  console.log("Citadel assault targets selected", result);
+});
+
+exports.resolveCitadelAssaultWave = onSchedule({
+  region: "us-central1",
+  schedule: "0 4,15 * * *",
+  timeZone: "Etc/UTC",
+  maxInstances: 1,
+  timeoutSeconds: 300,
+  memory: "512MiB",
+}, async event => {
+  const scheduledMs = Date.parse(event.scheduleTime || "") || Date.now();
+  const wave = getCitadelAssaultWaveAtMs(scheduledMs, false);
+  const result = await resolveCitadelAssaultWave(wave, Date.now());
+  console.log("Citadel assault wave resolved", result);
+  if (result.status === "partial") throw new Error(`Citadel assault wave ${wave.id} has ${result.failed} unresolved targets.`);
 });
 
 exports.resolveDueRewardCampPayouts = onSchedule({

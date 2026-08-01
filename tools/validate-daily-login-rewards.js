@@ -199,7 +199,8 @@ requireMatch(game, /DAILY_LOGIN_REWARD_AUTO_OPEN_PREFIX[\s\S]*localStorage[\s\S]
 requireMatch(game, /getDailyLoginRewardCardState[\s\S]*"queued"[\s\S]*getDailyLoginRewardPresentation/, "The reward track does not render claimed, ready, and queued single-reward states.");
 requireMatch(game, /createDailyLoginRewardClaimId[\s\S]*expectedOrdinal[\s\S]*api\.claimDailyLoginReward\(dailyLoginRewardPendingClaim\)/, "Client claims are not guarded against retry and multi-device races.");
 requireMatch(game, /refreshDailyLoginRewardStatus\(\{\s*autoOpen:\s*true,\s*silent:\s*true\s*\}\)/, "Gameplay startup does not record attendance and auto-open rewards.");
-requireMatch(game, /visibilitychange[\s\S]*refreshDailyLoginRewardStatus/, "Visible sessions do not refresh daily reward eligibility.");
+requireMatch(game, /visibilitychange[\s\S]*handleGameForegroundSignal/, "Visible sessions do not enter the foreground synchronization path.");
+requireMatch(game, /function synchronizeForegroundGame[\s\S]*refreshDailyLoginRewardStatus/, "Foreground synchronization does not refresh daily reward eligibility.");
 requireMatch(styles, /\.daily-login-reward-btn[\s\S]*dailyRewardHudGlow/, "Daily reward HUD styles are incomplete.");
 requireMatch(styles, /\.daily-reward-grid[\s\S]*repeat\(6,[\s\S]*@media \(max-width: 700px\)[\s\S]*repeat\(5,[\s\S]*@media \(max-width: 520px\)[\s\S]*repeat\(3,/, "Daily reward grid must use 6, 5, and 3 responsive columns.");
 requireMatch(styles, /\.daily-reward-card\.queued[\s\S]*\.daily-reward-check/, "Queued and claimed reward visuals are missing.");
