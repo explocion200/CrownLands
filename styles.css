@@ -827,23 +827,23 @@ input {
 .map-frame { position: absolute; inset: 0 0 164px 0; overflow: hidden; touch-action: none; -webkit-user-select: none; user-select: none; cursor: grab; background: var(--ocean-bg); }
 .map-frame.dragging { cursor: grabbing; }
 .citadel-assault-countdown {
-  position: absolute;
-  top: calc(max(.65rem, env(safe-area-inset-top)) + 120px);
-  left: 50%;
-  z-index: 70;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  width: max-content;
-  max-width: calc(100% - 1rem);
-  min-height: 30px;
-  padding: 4px 9px 4px 7px;
+  position: static;
+  flex: 0 1 clamp(84px, 15vw, 126px);
+  width: clamp(84px, 15vw, 126px);
+  min-width: 84px;
+  max-width: 126px;
+  height: 44px;
+  min-height: 44px;
+  padding: 3px 6px;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 2px;
   border: 1px solid rgba(255, 213, 111, .72);
-  border-radius: 999px;
+  border-radius: 10px;
   color: #fff3ca;
   background: linear-gradient(180deg, rgba(55, 34, 14, .96), rgba(25, 15, 8, .94));
   box-shadow: 0 5px 14px rgba(0,0,0,.4), inset 0 0 12px rgba(255, 194, 72, .08);
-  transform: translateX(-50%);
   pointer-events: none;
   white-space: nowrap;
 }
@@ -852,7 +852,7 @@ input {
   display: inline-flex;
   align-items: center;
   color: #ffd66e;
-  font-size: .58rem;
+  font-size: .48rem;
   font-weight: 950;
   letter-spacing: .05em;
   line-height: 1;
@@ -860,26 +860,18 @@ input {
 }
 .citadel-assault-countdown span::before {
   content: "\2694";
-  margin-right: 4px;
+  margin-right: 3px;
   color: #fff0b0;
-  font-size: .7rem;
+  font-size: .58rem;
 }
 .citadel-assault-countdown strong {
   color: #fff;
-  font-size: .82rem;
+  font-size: .68rem;
   line-height: 1;
   font-variant-numeric: tabular-nums;
 }
 .citadel-assault-countdown small {
-  max-width: 104px;
-  overflow: hidden;
-  padding-left: 6px;
-  border-left: 1px solid rgba(255, 213, 111, .28);
-  color: #d8c69d;
-  font-size: .56rem;
-  font-weight: 800;
-  line-height: 1;
-  text-overflow: ellipsis;
+  display: none;
 }
 .citadel-assault-countdown.imminent {
   border-color: rgba(255, 91, 75, .92);
@@ -899,15 +891,15 @@ input {
 
 @media (max-width: 360px) {
   .citadel-assault-countdown {
-    gap: 5px;
-    padding-inline: 6px 8px;
+    min-width: 78px;
+    width: 78px;
+    padding-inline: 4px;
   }
-  .citadel-assault-countdown small { max-width: 82px; }
 }
 @media (max-height: 430px) and (orientation: landscape) {
   .citadel-assault-countdown {
-    min-height: 27px;
-    padding-block: 3px;
+    height: 40px;
+    min-height: 40px;
   }
 }
 .map-loading-overlay {

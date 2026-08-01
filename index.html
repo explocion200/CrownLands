@@ -121,6 +121,11 @@
           <span id="lordNameText" class="sr-only">Ruler</span>
           <span id="statusText" class="sr-only">Live conquest</span>
         </div>
+        <div id="citadelAssaultCountdown" class="citadel-assault-countdown" role="timer" aria-live="polite" hidden>
+          <span>Citadel</span>
+          <strong id="citadelAssaultCountdownTime">00:00:00</strong>
+          <small id="citadelAssaultCountdownDetail">10:00 AM Eastern</small>
+        </div>
         <div class="resource-bar">
           <button id="fullscreenBtn" class="hud-btn fullscreen-btn" type="button" aria-label="Enter fullscreen" data-fullscreen-toggle><span class="fullscreen-glyph" aria-hidden="true">&#x26F6;</span></button>
         </div>
@@ -164,11 +169,6 @@
       </button>
 
       <section id="mapFrame" class="map-frame" aria-label="Drag to move around the map">
-        <div id="citadelAssaultCountdown" class="citadel-assault-countdown" role="timer" aria-live="polite" hidden>
-          <span>Citadel</span>
-          <strong id="citadelAssaultCountdownTime">00:00:00</strong>
-          <small id="citadelAssaultCountdownDetail">10:00 AM Eastern</small>
-        </div>
         <div id="mapWorld" class="map-world">
           <div id="mapBg" class="map-bg" aria-hidden="true"></div>
           <svg id="pathsSvg" class="paths" viewBox="0 0 10000 7600" preserveAspectRatio="none" aria-hidden="true"></svg>
