@@ -195,6 +195,56 @@ async function main() {
     "Shield activation did not propagate the authoritative timer to the main city."
   );
 
+  const stackableTimedItems = [
+    {
+      itemId: "war_drums_30m",
+      effectField: "warDrumsExpiresAtMs",
+    },
+    {
+      itemId: "royal_tax_decree_30m",
+      effectField: "royalTaxDecreeExpiresAtMs",
+    },
+  ];
+  for (const stackable of stackableTimedItems) {
+    const durationMs = Number(economyConfig.shopItems?.[stackable.itemId]?.effectDurationMinutes || 30) * 60 * 1000;
+    await profileRef.set({
+      shopItems: { [stackable.itemId]: 2 },
+      itemEffects: { [stackable.effectField]: 0 },
+      economyUpdatedAtMs: Date.now(),
+    }, { merge: true });
+    const stackingStartedAtMs = Date.now();
+    const stackedActivations = await Promise.all([
+      invokeFunction("activateInventoryItem", user.token, { itemId: stackable.itemId }),
+      invokeFunction("activateInventoryItem", user.token, { itemId: stackable.itemId }),
+    ]);
+    assert(
+      stackedActivations.every(result => result.ok),
+      `Concurrent ${stackable.itemId} uses did not both stack: ${JSON.stringify(stackedActivations)}`
+    );
+    assert(
+      stackedActivations.every(result => Number(result.result?.effectDurationAddedMs || 0) === durationMs),
+      `${stackable.itemId} did not report the duration added by each use.`
+    );
+    const stackedProfile = (await profileRef.get()).data() || {};
+    const stackedExpiresAtMs = Number(stackedProfile.itemEffects?.[stackable.effectField] || 0);
+    assert(
+      Number(stackedProfile.shopItems?.[stackable.itemId] || 0) === 0,
+      `${stackable.itemId} did not consume both stacked items.`
+    );
+    assert(
+      stackedExpiresAtMs >= stackingStartedAtMs + durationMs * 2
+        && stackedExpiresAtMs <= Date.now() + durationMs * 2 + 5000,
+      `${stackable.itemId} did not preserve both 30-minute durations (${stackedExpiresAtMs - stackingStartedAtMs}ms).`
+    );
+    const responseExpiries = stackedActivations
+      .map(result => Number(result.result?.expiresAtMs || 0))
+      .sort((left, right) => left - right);
+    assert(
+      responseExpiries[1] - responseExpiries[0] === durationMs,
+      `${stackable.itemId} concurrent responses did not serialize into one stacked timer.`
+    );
+  }
+
   const [statsSnap, leaderboardSnap] = await Promise.all([
     db.doc(`players/${user.uid}/stats/global`).get(),
     db.doc(`leaderboards/${realm.resetGeneration}/entries/${user.uid}`).get(),
@@ -207,7 +257,7 @@ async function main() {
     "The leaderboard did not receive the authoritative King Power snapshot."
   );
 
-  console.log("Emulator economy concurrency passed: production, shield purchase, inventory use, city propagation, and King Power.");
+  console.log("Emulator economy concurrency passed: production, shield use, stackable timed items, city propagation, and King Power.");
 }
 
 main()
