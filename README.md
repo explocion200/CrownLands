@@ -32,7 +32,7 @@ Landscape / horizontal medieval island-conquest game inspired by the core loop o
 - The bottom `Reports` button opens battle reports filtered by attack, defense, and scout results.
 - Attack reports show victory or defeat based on the final combat result.
 - Defense reports show held defenses or lost cities.
-- Scout reports show the latest revealed troop and defense totals.
+- Scout reports show the latest revealed troop and defense totals for ten minutes after arrival. A newer successful scout replaces the snapshot for that target and restarts its timer.
 
 ## Map Rules
 
@@ -47,7 +47,7 @@ Landscape / horizontal medieval island-conquest game inspired by the core loop o
 - Troops can walk through forests and swamp at normal speed.
 - Active army route markers appear only after troops are sent.
 - Selecting a non-owned city opens Scout, Attack, and Info actions around that city.
-- Scouting dispatches one troop from the nearest reachable owned city; its report reveals a troop and defense snapshot for two minutes after arrival.
+- Scouting dispatches one troop from the nearest reachable owned city; its report reveals a troop and defense snapshot for ten minutes after arrival.
 - Owned cities have a Scout Nearby action. The first click previews the nearby radius and highlights targets; pressing Send All costs 10,000 gold and dispatches one troop from that city to every reachable highlighted non-owned city.
 - A completed scout report adds a Report action to the selected city and shows the reported troop count in its banner.
 - Detailed reports include city level, troop and wall defense contributions, total defense, and level/percentage rows for relevant defense and attack skills.
