@@ -145,7 +145,7 @@ const REINFORCEMENT_STATUS_STATIONED = "stationed";
 const REINFORCEMENT_STATUS_RETURNING = "returning";
 const REINFORCEMENT_STATUS_DEPLETED = "depleted";
 const REINFORCEMENT_STATUS_RETURNED = "returned";
-const REINFORCEMENT_MODEL_VERSION = 2;
+const REINFORCEMENT_MODEL_VERSION = 3;
 const CLAN_REINFORCEMENT_PER_RECIPIENT_LIMIT = 2;
 const ORDINARY_CITY_REINFORCEMENT_CAPACITY = 5;
 const REINFORCEMENT_CAPACITY_RECONCILE_PAGE_SIZE = 25;
@@ -172,7 +172,6 @@ const CAPTURE_XP_BASE = 120;
 const CAPTURE_XP_PER_CITY_LEVEL = 45;
 const CAPTURE_XP_PER_DEFENDER = 1.5;
 const ENEMY_CAPTURE_XP_BONUS = 300;
-const CAPTURE_XP_COOLDOWN_MS = 60 * 60 * 1000;
 const DEFENSE_HELD_XP_BASE = 80;
 const DEFENSE_HELD_XP_PER_ATTACKER = 0.45;
 const FAILED_BATTLE_XP_RATE = 1 / 3;
@@ -4116,12 +4115,6 @@ function getOpponentPowerXpMultiplier(opponentRatio) {
   return 0;
 }
 
-function getCaptureXpCooldownRemainingMs(city = {}, nowMs = Date.now()) {
-  const capturedAtMs = Math.max(0, timestampToMs(city.lastCapturedAtMs || city.lastCapturedAt));
-  if (!capturedAtMs) return 0;
-  return Math.max(0, CAPTURE_XP_COOLDOWN_MS - Math.max(0, nowMs - capturedAtMs));
-}
-
 function getCityXpScore(target = {}, oldOwnerUid = "", defenderProfile = null) {
   const stats = getCityStats(target, defenderProfile);
   const ownerBonus = oldOwnerUid ? 45 : 10;
@@ -4161,9 +4154,9 @@ function getCaptureXpAward(
   const troopXp = Math.floor(
     getBattleXpTroopCredit(target, defenderLosses, defenderProfile) * CAPTURE_XP_PER_DEFENDER
   );
-  const cityXp = getCaptureXpCooldownRemainingMs(target, options.nowMs) > 0
-    ? 0
-    : CAPTURE_XP_BASE + level * CAPTURE_XP_PER_CITY_LEVEL + (oldOwnerUid ? ENEMY_CAPTURE_XP_BONUS : 0);
+  const cityXp = CAPTURE_XP_BASE
+    + level * CAPTURE_XP_PER_CITY_LEVEL
+    + (oldOwnerUid ? ENEMY_CAPTURE_XP_BONUS : 0);
   const efficiency = getCaptureXpEfficiency(target, oldOwnerUid, {
     ...options,
     defenderProfile,
@@ -4537,10 +4530,9 @@ async function getActiveClanReinforcementAssignmentsForLaunch(transaction, uid =
     .where("resetGeneration", "==", RESET_GENERATION)
     .where("worldId", "==", ONLINE_WORLD_ID)
     .where("status", "==", status);
-  const [activeArmiesSnap, stationedSnap, returningSnap] = await Promise.all([
+  const [activeArmiesSnap, stationedSnap] = await Promise.all([
     transaction.get(activeArmiesQueryForPlayer(playerUid)),
     transaction.get(contributionQuery(REINFORCEMENT_STATUS_STATIONED)),
-    transaction.get(contributionQuery(REINFORCEMENT_STATUS_RETURNING)),
   ]);
   const assignments = new Map(storedAssignments.map(entry => [entry.token, entry]));
   activeArmiesSnap.docs.forEach(doc => {
@@ -4564,7 +4556,7 @@ async function getActiveClanReinforcementAssignmentsForLaunch(transaction, uid =
     const token = getClanReinforcementAssignmentToken(recipientUid, targetKey);
     if (token) assignments.set(token, { token, recipientUid, targetKey });
   });
-  [...stationedSnap.docs, ...returningSnap.docs].forEach(doc => {
+  stationedSnap.docs.forEach(doc => {
     const contribution = doc.data() || {};
     const targetKey = safeString(contribution.targetKey, 220);
     const recipientUid = safeString(
@@ -8450,6 +8442,14 @@ async function beginReinforcementReturn({
       ownerUid,
       nowMs,
     });
+    releaseClanReinforcementAssignment(
+      transaction,
+      ownerUid,
+      contribution.reinforcementRecipientUid
+        || contribution.originalTargetOwnerUid
+        || contribution.targetOwnerUid,
+      contribution.targetKey
+    );
 
     let targetUpdate = null;
     if (targetSnap.exists && target) {

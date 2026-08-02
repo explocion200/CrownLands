@@ -1742,6 +1742,11 @@ async function main() {
   const holderDismissal = await callFunction("returnClanReinforcement", clanApplicant.token, {
     reinforcementId,
   });
+  const [holderDismissalTargetState, holderDismissalSenderState] = await Promise.all([
+    clanReinforcementTargetDoc.ref.get(),
+    clanLeaderRef.get(),
+  ]);
+  const dismissedAssignmentToken = `${clanApplicant.uid}|city:${clanReinforcementSourceClaim.mainRegionId}:${clanReinforcementTargetDoc.id}`;
   assert(
     holderDismissal?.status === "returning"
       && Number(holderDismissal?.troops || 0) === 600
@@ -1749,8 +1754,12 @@ async function main() {
       && !holderDismissal?.currentUser
       && Array.isArray(holderDismissal?.cityUpdates)
       && Number(holderDismissal.cityUpdates[0]?.alliedReinforcementTroops || 0) === 200
-      && Number((await clanReinforcementTargetDoc.ref.get()).data()?.clanReinforcementSlotCount || 0) === 1,
-    "The holding owner could not send allied troops home with an immediate, private-safe city update."
+      && Number(holderDismissalTargetState.data()?.clanReinforcementSlotCount || 0) === 1
+      && !(holderDismissalSenderState.data()?.activeClanReinforcementAssignments || [])
+        .includes(dismissedAssignmentToken)
+      && !(holderDismissalSenderState.data()?.activeClanReinforcementTargets || [])
+        .includes(`city:${clanReinforcementSourceClaim.mainRegionId}:${clanReinforcementTargetDoc.id}`),
+    "A dismissed reinforcement did not stop defending and consuming capacity as soon as its return march departed."
   );
   const holderDismissalArrival = await forceResolveMovement(holderDismissal.movement, clanLeader.token);
   assert(

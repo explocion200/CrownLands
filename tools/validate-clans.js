@@ -114,11 +114,11 @@ requires(client, /function getVisibleCityGarrisonTroops[\s\S]*?city\.owner === "
 requires(client, /clanRosterReady[\s\S]*?clanMemberUidSet\.has/, "Allied-city rendering does not use the event-maintained clan member UID set.");
 requires(client, /function applyClanMembersSnapshot[\s\S]*?\["added", "removed"\][\s\S]*?refreshClanRelationshipPresentation/, "Roster events do not refresh allied cities only when membership changes.");
 requires(client, /function isCurrentClanmateArmy[\s\S]*?clanMemberUidSet\.has\(ownerUid\)[\s\S]*?identity\?\.clanId/, "Allied march paths do not use current event-driven clan membership with an identity fallback.");
-requires(client, /function getArmyRouteRelationshipClass[\s\S]*?player-route[\s\S]*?enemy-route[\s\S]*?clan-support-route/, "March relationship classification does not distinguish personal, enemy, and current clanmate routes.");
-assert.doesNotMatch(client, /clan-hostile-route/, "Clanmate attacks or scouts can still fall back to hostile route styling.");
+requires(client, /function isHostileClanMarch[\s\S]*?mission\.returning[\s\S]*?mission\.reinforcementReturn[\s\S]*?mission\.campReturn[\s\S]*?mission\.relinquishTransfer[\s\S]*?mission\.kind === "attack"[\s\S]*?mission\.kind === "scout"/, "Active clan attacks and scouts are not distinguished from safe allied support and return marches.");
+requires(client, /function getArmyRouteRelationshipClass[\s\S]*?player-route[\s\S]*?enemy-route[\s\S]*?isHostileClanMarch\(mission\)[\s\S]*?clan-hostile-route[\s\S]*?clan-support-route/, "March relationship classification does not distinguish personal, enemy, allied-hostile, and allied-support routes.");
 requires(client, /function renderPaths[\s\S]*?getArmyRouteRelationshipClass\(attack\)[\s\S]*?classList\.add\("army-route-ribbon", ownerClass, kindClass\)[\s\S]*?classList\.add\("army-route-flow", ownerClass, kindClass\)/, "Rendered route ribbons and flows do not use the current clan relationship class.");
-requires(client, /function refreshClanRelationshipPresentation[\s\S]*?pathRenderSignature\s*=\s*""[\s\S]*?renderPaths\(\)/, "Clan membership events do not immediately invalidate and redraw march paths.");
-assert.doesNotMatch(updateArmyTokenElementSource, /clan-support-route|isCurrentClanmateArmy/, "Clan path colors must not recolor moving army markers.");
+requires(client, /function refreshClanRelationshipPresentation[\s\S]*?pathRenderSignature\s*=\s*""[\s\S]*?renderPaths\(\)[\s\S]*?renderArmies\(true\)/, "Clan membership events do not immediately redraw allied paths and moving army markers.");
+requires(updateArmyTokenElementSource, /const clanAlly = isCurrentClanmateArmy\(attack\)[\s\S]*?clanAlly[\s\S]*?"clan-ally"[\s\S]*?relationshipLabel = clanAlly \? "Clan ally "/, "Moving clanmate army markers do not use the current green allied relationship with an accessible label.");
 requires(client, /function showClanHub[\s\S]*?showProfileClan\(\)/, "The Clan HUD button does not open the Clan area directly.");
 requires(client, /CLAN_MOBILE_SECTIONS\s*=\s*Object\.freeze\(\["overview",\s*"warroom",\s*"rewards",\s*"members"\]\)[\s\S]*?activeClanMobileSection\s*=\s*"overview"/, "The mobile clan hub is missing its four-section state.");
 requires(client, /function showProfileClan\(\)[\s\S]*?enteringClan[\s\S]*?activeClanMobileSection\s*=\s*"overview"/, "Opening the Clan area does not reset mobile navigation to Overview.");
@@ -170,8 +170,10 @@ assert.doesNotMatch(styles, /\.city-node\.clan-ally \.foreign-city-shield\s*\{[^
 assert.doesNotMatch(styles, /\.city-node\.clan-ally \.foreign-selected-banner\s*\{[^}]*\boutline(?:-offset)?\s*:/, "Selected clan-allied city information must not draw an extra outline box.");
 requires(styles, /\.army-route-ribbon\.clan-support-route\s*\{\s*fill:\s*rgba\(43,\s*139,\s*70,/, "Allied support route ribbons do not use the city UI's dark green.");
 requires(styles, /\.army-route-flow\.clan-support-route\s*\{\s*stroke:\s*rgba\(143,\s*226,\s*165,/, "Allied support route flows do not use the city UI's light green.");
-assert.doesNotMatch(styles, /\.clan-hostile-route/, "Legacy red-and-green clan attack path styling remains in CSS.");
+requires(styles, /\.army-route-ribbon\.clan-hostile-route\s*\{\s*fill:\s*rgba\(239,\s*62,\s*57,/, "Allied attack route ribbons do not retain the hostile red warning.");
+requires(styles, /\.army-route-flow\.clan-hostile-route\s*\{\s*stroke:\s*rgba\(143,\s*226,\s*165,/, "Allied attack route flows do not identify the moving army as a clanmate.");
 requires(styles, /\.army-route-flow\.scout-route\s*\{\s*stroke-dasharray:\s*8\s+15/, "Allied scouts cannot retain the scout dash pattern.");
+requires(styles, /\.army-token\.clan-ally\s*\{[\s\S]*?border-color:\s*#8fe2a5[\s\S]*?background:\s*linear-gradient\(#58c978,\s*#267a43\)/, "Moving clanmate army markers do not use the allied-city green palette.");
 requires(client, /const clanAlly = isClanAllyCity\(city\)[\s\S]*?clanAlly \? Math\.max\(0, Math\.floor\(Number\(city\.troops\)[\s\S]*?getVisibleCityGarrisonTroops\(city, scoutReport\)[\s\S]*?foreign-garrison \$\{garrisonVisibilityClass\}[\s\S]*?clanAlly \? `<span class="foreign-garrison \$\{garrisonVisibilityClass\}"/, "Allied garrisons do not update or render on selected and ordinary map city labels.");
 requires(client, /function showCrownCitadelInfoModal[\s\S]*?getVisibleCityGarrisonTroops\(city, report\)[\s\S]*?Shared by clan[\s\S]*?function showCityInfoModal[\s\S]*?getVisibleCityGarrisonTroops\(city, report\)[\s\S]*?Shared by clan/, "City, Stronghold, and Citadel information panels do not expose live allied garrisons.");
 requires(styles, /\.foreign-garrison\.clan-visible\s*\{[\s\S]*?color:\s*#eaffef/, "Live allied troop counts lack an explicit green-readable treatment.");
@@ -202,6 +204,11 @@ requires(
   styles,
   /@media \(max-width:\s*900px\)[\s\S]*?\.clan-section-nav[\s\S]*?position:\s*sticky[\s\S]*?grid-template-columns:\s*repeat\(4,[\s\S]*?min-height:\s*44px[\s\S]*?\.clan-section-panel[\s\S]*?display:\s*none[\s\S]*?\.clan-section-panel\.active[\s\S]*?display:\s*block/,
   "The clan hub is missing its sticky four-tab mobile layout and touch targets."
+);
+requires(
+  styles,
+  /\.clan-browser-nav\s*\{\s*display:\s*none;\s*\}[\s\S]*?\.clan-section-nav\s*\{[\s\S]*?display:\s*grid;[\s\S]*?grid-template-columns:\s*repeat\(4,[\s\S]*?\.clan-section-nav button\.active[\s\S]*?\.clan-section-panel:not\(\.active\)\s*\{\s*display:\s*none;\s*\}[\s\S]*?\.clan-section-panel\.active\s*\{\s*display:\s*block;/,
+  "The desktop clan hub does not expose its four navigation tabs as a single-panel experience."
 );
 requires(
   styles,
