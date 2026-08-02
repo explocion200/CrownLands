@@ -19061,6 +19061,28 @@ function updateClanNameChangeCountdown() {
   if (renameButton) renameButton.disabled = clanRenameSaving || cooldownMs > 0 || !hasEnoughGold;
 }
 
+function formatClanMemberLastLogin(lastLoginAtMs = 0, nowMs = Date.now()) {
+  const loginAtMs = normalizeTimestampMs(lastLoginAtMs);
+  if (!loginAtMs) return "Last logged in: unknown";
+  const elapsedSeconds = Math.max(0, Math.floor((nowMs - loginAtMs) / 1000));
+  if (elapsedSeconds < 60) return "Last logged in just now";
+  if (elapsedSeconds < 3600) return `Last logged in ${Math.floor(elapsedSeconds / 60)}m ago`;
+  if (elapsedSeconds < 86400) {
+    const hours = Math.floor(elapsedSeconds / 3600);
+    const minutes = Math.floor((elapsedSeconds % 3600) / 60);
+    return `Last logged in ${hours}h${minutes ? ` ${minutes}m` : ""} ago`;
+  }
+  const days = Math.floor(elapsedSeconds / 86400);
+  const hours = Math.floor((elapsedSeconds % 86400) / 3600);
+  return `Last logged in ${days}d${hours ? ` ${hours}h` : ""} ago`;
+}
+
+function updateClanMemberLastLoginTimers() {
+  clanContent?.querySelectorAll("[data-clan-last-login-at-ms]").forEach(label => {
+    label.textContent = formatClanMemberLastLogin(label.dataset.clanLastLoginAtMs);
+  });
+}
+
 function startClanSocialStateSubscription(api, clanId) {
   const id = String(clanId || "").trim();
   if (!id || !api?.subscribeClanSocialState) return false;
@@ -19093,6 +19115,7 @@ function startClanSocialStateSubscription(api, clanId) {
     updateClanGiftCountdown();
     updateClanNameChangeCountdown();
     updateClanQuestCountdown();
+    updateClanMemberLastLoginTimers();
   }, 1000);
   return true;
 }
@@ -19588,6 +19611,7 @@ function renderClanRosterMember(member, index, canLead) {
   const self = uid === getCurrentOnlineUid();
   const selected = canLead && !self && selectedClanMemberUid === uid;
   const memberName = escapeHtml(cleanName(member?.displayName) || "Ruler");
+  const lastLoginAtMs = normalizeTimestampMs(member?.lastLoginAtMs || member?.lastActiveAtMs || member?.joinedAtMs);
   const nameControl = canLead && !self
     ? `<button type="button" class="clan-member-select" data-clan-action="select-member" data-member-id="${escapeHtml(uid)}" aria-expanded="${selected}">${memberName}</button>`
     : renderPlayerNameLink(uid, member?.displayName || "Ruler");
@@ -19602,7 +19626,7 @@ function renderClanRosterMember(member, index, canLead) {
   return `
     <article class="clan-member-row ${selected ? "selected" : ""}">
       ${renderClanMemberFlag(index)}
-      <div class="clan-member-copy">${nameControl}<span>${clanRoleLabel(member.role)} · ${formatNumber(member.kingPower || 0)} power</span></div>
+      <div class="clan-member-copy">${nameControl}<span>${clanRoleLabel(member.role)} · ${formatNumber(member.kingPower || 0)} power</span><small class="clan-member-last-login" data-clan-last-login-at-ms="${lastLoginAtMs}">${escapeHtml(formatClanMemberLastLogin(lastLoginAtMs))}</small></div>
       ${actionPanel}
     </article>`;
 }

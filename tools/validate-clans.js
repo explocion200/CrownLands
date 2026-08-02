@@ -69,6 +69,8 @@ requires(server, /const becameClanAllies[\s\S]*?createAlliedTargetReturnMovement
 requires(server, /rebuildClanPowerOnPlayerStats\s*=\s*onDocumentWritten/, "Clan King Power is not updated from authoritative player stats.");
 requires(server, /function clanIdentitySnapshotFields[\s\S]*?ownerClanIdentityRevision/, "Clan asset snapshots do not store a monotonic clan identity revision.");
 requires(server, /syncClanIdentityOnMembershipChange\s*=\s*onDocumentWritten[\s\S]*?latestProfile\.clanIdentityRevision/, "Clan membership changes do not trigger durable identity propagation.");
+requires(server, /function getPlayerLastLoginAtMs[\s\S]*?authenticatedLoginAtMs[\s\S]*?profile\.lastLoginAt[\s\S]*?profile\.activeSession\?\.loginAtMs[\s\S]*?return authenticatedLoginAtMs \|\|[\s\S]*?function clanMemberSnapshot[\s\S]*?lastLoginAtMs:\s*getPlayerLastLoginAtMs\(profile,\s*nowMs\)/, "Clan member snapshots do not preserve the authoritative authenticated login time before falling back to the join time.");
+requires(server, /syncClanIdentityOnMembershipChange\s*=\s*onDocumentWritten[\s\S]*?loginChanged[\s\S]*?loginClanId[\s\S]*?memberSnap\.exists[\s\S]*?lastLoginAtMs:\s*afterLoginAtMs/, "New player logins do not update the current clan roster member transactionally.");
 requires(server, /clanIdentityRevisionPatch\(nowMs\)/, "Clan membership transactions do not advance the clan identity revision.");
 requires(server, /CLAN_GIFT_COOLDOWN_MS\s*=\s*5\s*\*\s*60\s*\*\s*60\s*\*\s*1000[\s\S]*?CLAN_GIFT_PRODUCTION_MINUTES\s*=\s*30/, "Clan gift cadence must be 30 production minutes every five hours.");
 requires(server, /CLAN_QUEST_REWARDS\s*=\s*Object\.freeze\(\[[\s\S]*?captures:\s*25[\s\S]*?productionMinutes:\s*30[\s\S]*?captures:\s*2000[\s\S]*?rewardType:\s*"troops"[\s\S]*?productionMinutes:\s*360/, "Clan conquest rewards do not contain the approved 10-tier weekly track.");
@@ -155,6 +157,8 @@ requires(client, /function renderClanShield[\s\S]*?renderClanShieldField[\s\S]*?
 requires(client, /function renderClanShield[\s\S]*?overflow="hidden"[\s\S]*?clipPathUnits="userSpaceOnUse"[\s\S]*?class="clan-shield-boundary"\s+clip-path="url\(#\$\{clipId\}\)"/, "Clan shield paint is not clipped to the shield silhouette.");
 requires(styles, /\.clan-shield svg\s*\{[^}]*overflow:\s*hidden;/, "Clan shield SVG overflow can bleed beyond its viewport.");
 requires(client, /function renderClanRosterMember[\s\S]*?data-clan-action="select-member"[\s\S]*?Demote[\s\S]*?Promote[\s\S]*?Remove[\s\S]*?renderClanMemberFlag/, "Clan roster is missing flags or leader-selected member controls.");
+requires(client, /function formatClanMemberLastLogin[\s\S]*?Last logged in just now[\s\S]*?Last logged in \$\{days\}d[\s\S]*?function updateClanMemberLastLoginTimers[\s\S]*?data-clan-last-login-at-ms[\s\S]*?function renderClanRosterMember[\s\S]*?member\?\.lastLoginAtMs[\s\S]*?clan-member-last-login/, "Clan roster rows do not show locally refreshed last-login timers.");
+requires(client, /clanGiftCountdownTimer\s*=\s*setInterval\([\s\S]*?updateClanMemberLastLoginTimers\(\)/, "Clan last-login labels do not refresh from the existing local countdown timer.");
 requires(client, /function renderClanGiftPanel[\s\S]*?Send \.5h Gold Gift[\s\S]*?Collect \$\{hours\}h Gold[\s\S]*?function renderClanQuestPanel[\s\S]*?Weekly Conquest[\s\S]*?Joined too late/, "Clan gift and weekly conquest quest panels are incomplete.");
 assert.doesNotMatch(client, /Clan Chat|sendClanMessage|reportClanMessage|data-clan-action="mute"/, "Retired clan chat or mute UI remains in the client.");
 requires(client, /data-clan-action="edit-shield"/, "Leader clan shield editor entry point is missing.");
@@ -223,5 +227,6 @@ requires(
 );
 requires(styles, /\.clan-content\.shield-editor-open[\s\S]*?\.clan-shield-editor-preview[\s\S]*?\.clan-shield-editor-workspace[\s\S]*?\.clan-shield-editor-controls[\s\S]*?overflow-y:\s*auto/, "Mobile shield editor does not keep a fixed preview beside scrollable controls.");
 requires(styles, /\.clan-member-row[\s\S]*?\.clan-member-selection[\s\S]*?\.clan-gift-panel[\s\S]*?\.clan-quest-grid[\s\S]*?\.clan-quest-card/, "Compact roster, gift, and conquest quest styling is missing.");
+requires(styles, /\.clan-member-last-login\s*\{[\s\S]*?color:\s*#88b99a[\s\S]*?font-size:\s*\.64rem/, "Clan last-login timers do not have compact readable roster styling.");
 
 console.log("Validated clan gates, weekly paid renaming, event-driven roster and allied route updates, gifts, weekly conquest quests, HUD access, profiles, friendly combat, rankings, allied-city UI, and leader-owned heraldic shields.");
