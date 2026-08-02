@@ -289,6 +289,7 @@ const CLAN_LEADER_INACTIVE_MS = 14 * 24 * 60 * 60 * 1000;
 const CLAN_RESERVATION_RELEASE_MS = 7 * 24 * 60 * 60 * 1000;
 const CLAN_GIFT_COOLDOWN_MS = 5 * 60 * 60 * 1000;
 const CLAN_GIFT_PRODUCTION_MINUTES = 30;
+const CLAN_GIFT_RECENT_DONATION_LIMIT = 10;
 const CLAN_QUEST_REWARDS = Object.freeze([
   { id: "capture_25", captures: 25, rewardType: "gold", productionMinutes: 30 },
   { id: "capture_75", captures: 75, rewardType: "troops", productionMinutes: 30 },
@@ -13118,6 +13119,10 @@ function clanMemberRewardsRef(clanId = "", uid = "") {
   return db.doc(`clans/${clanId}/memberRewards/${uid}`);
 }
 
+function clanGiftActivityRef(clanId = "") {
+  return db.doc(`clans/${clanId}/giftActivity/${RESET_GENERATION}`);
+}
+
 function clanQuestClaimHistoryRef(clanId = "", uid = "", questPeriodId = "") {
   const safeUid = safeString(uid, 128).replace(/[^a-zA-Z0-9_-]/g, "_");
   const safePeriodId = safeString(questPeriodId, 160).replace(/[^a-zA-Z0-9_-]/g, "_");
@@ -13167,6 +13172,28 @@ function clanMemberRewardsForClient(value = {}, nowMs = Date.now()) {
     canSendGift: !lastGiftSentAtMs || nowMs - lastGiftSentAtMs >= CLAN_GIFT_COOLDOWN_MS,
     questPeriodId: questPeriod.questPeriodId,
     questClaims: claimsMatchCurrentPeriod ? normalizeClanQuestClaims(value.questClaims) : {},
+  };
+}
+
+function normalizeRecentClanGiftDonations(value = []) {
+  return (Array.isArray(value) ? value : [])
+    .map(donation => ({
+      donorUid: safeString(donation?.donorUid, 128),
+      donorName: normalizePlayerName(donation?.donorName || donation?.displayName || "Ruler"),
+      sentAtMs: Math.max(0, timestampToMs(donation?.sentAtMs)),
+      productionMinutes: Math.max(0, Math.floor(safeNumber(donation?.productionMinutes, 0))),
+    }))
+    .filter(donation => donation.donorUid && donation.sentAtMs)
+    .sort((left, right) => right.sentAtMs - left.sentAtMs)
+    .slice(0, CLAN_GIFT_RECENT_DONATION_LIMIT);
+}
+
+function clanGiftActivityForClient(value = {}) {
+  return {
+    worldId: safeString(value.worldId, 128) || ONLINE_WORLD_ID,
+    resetGeneration: safeString(value.resetGeneration, 128) || RESET_GENERATION,
+    recentDonations: normalizeRecentClanGiftDonations(value.recentDonations),
+    updatedAtMs: Math.max(0, timestampToMs(value.updatedAtMs)),
   };
 }
 
@@ -13910,11 +13937,13 @@ exports.sendClanGift = onCall({ region: "us-central1", maxInstances: 20, invoker
     const clanId = safeString(profile.clanId, 128);
     if (!clanId) throw new HttpsError("failed-precondition", "You are not in a clan.");
     const senderRewardsRef = clanMemberRewardsRef(clanId, uid);
-    const [clanSnap, senderMemberSnap, senderRewardsSnap, membersSnap] = await Promise.all([
+    const giftActivityRef = clanGiftActivityRef(clanId);
+    const [clanSnap, senderMemberSnap, senderRewardsSnap, membersSnap, giftActivitySnap] = await Promise.all([
       transaction.get(db.doc(`clans/${clanId}`)),
       transaction.get(db.doc(`clans/${clanId}/members/${uid}`)),
       transaction.get(senderRewardsRef),
       transaction.get(db.collection(`clans/${clanId}/members`)),
+      transaction.get(giftActivityRef),
     ]);
     if (!clanSnap.exists || !senderMemberSnap.exists) {
       throw new HttpsError("permission-denied", "Clan membership could not be verified.");
@@ -13930,6 +13959,18 @@ exports.sendClanGift = onCall({ region: "us-central1", maxInstances: 20, invoker
     }
     const recipients = membersSnap.docs.filter(memberDoc => memberDoc.id !== uid && memberDoc.data()?.status !== "removed");
     const nextSentCount = Math.max(0, Math.floor(safeNumber(senderRewards.giftCountSent, 0))) + 1;
+    const donorName = normalizePlayerName(
+      senderMemberSnap.data()?.displayName || profile.playerName || profile.displayName || "Ruler"
+    );
+    const recentDonations = normalizeRecentClanGiftDonations([
+      {
+        donorUid: uid,
+        donorName,
+        sentAtMs: nowMs,
+        productionMinutes: CLAN_GIFT_PRODUCTION_MINUTES,
+      },
+      ...normalizeRecentClanGiftDonations(giftActivitySnap.data()?.recentDonations),
+    ]);
     transaction.set(senderRewardsRef, {
       uid,
       worldId: ONLINE_WORLD_ID,
@@ -13959,6 +14000,17 @@ exports.sendClanGift = onCall({ region: "us-central1", maxInstances: 20, invoker
         updatedAt: FieldValue.serverTimestamp(),
       }, { merge: true });
     });
+    transaction.set(giftActivityRef, {
+      worldId: ONLINE_WORLD_ID,
+      resetGeneration: RESET_GENERATION,
+      recentDonations,
+      updatedAtMs: nowMs,
+      updatedAt: FieldValue.serverTimestamp(),
+      ...(giftActivitySnap.exists ? {} : {
+        createdAtMs: nowMs,
+        createdAt: FieldValue.serverTimestamp(),
+      }),
+    }, { merge: true });
     writeClanAudit(transaction, clanId, uid, "clan_gift_sent", {
       recipientCount: recipients.length,
       productionMinutes: CLAN_GIFT_PRODUCTION_MINUTES,
@@ -13972,6 +14024,12 @@ exports.sendClanGift = onCall({ region: "us-central1", maxInstances: 20, invoker
         giftCountSent: nextSentCount,
         lastGiftSentAtMs: nowMs,
       }, nowMs),
+      giftActivity: clanGiftActivityForClient({
+        worldId: ONLINE_WORLD_ID,
+        resetGeneration: RESET_GENERATION,
+        recentDonations,
+        updatedAtMs: nowMs,
+      }),
     };
   });
 });

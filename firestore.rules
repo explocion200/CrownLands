@@ -295,6 +295,17 @@ service cloud.firestore {
         allow create, update, delete: if false;
       }
 
+      match /giftActivity/{resetId} {
+        allow get: if clanMember(clanId)
+          && resetId == currentResetGeneration()
+          && (
+            !exists(/databases/$(database)/documents/clans/$(clanId)/giftActivity/$(resetId))
+            || isCurrentGeneration(resource.data)
+          );
+        allow list: if false;
+        allow create, update, delete: if false;
+      }
+
       match /memberRewardHistory/{historyId} {
         allow read, create, update, delete: if false;
       }

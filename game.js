@@ -955,6 +955,7 @@ const CLAN_SHIELD_FINISHES = [
   { key: "battleworn", label: "Battle-worn" },
 ];
 const CLAN_GIFT_COOLDOWN_MS = 5 * 60 * 60 * 1000;
+const CLAN_GIFT_RECENT_DONATION_LIMIT = 10;
 const CLAN_NAME_CHANGE_GOLD_COST = 500_000;
 const CLAN_NAME_CHANGE_COOLDOWN_MS = 7 * 24 * 60 * 60 * 1000;
 const CLAN_QUEST_REWARDS = Object.freeze([
@@ -2752,6 +2753,7 @@ let clanApplications = [];
 let clanSearchResults = [];
 let clanQuestProgress = null;
 let clanMemberRewards = null;
+let clanGiftActivity = null;
 let clanWorldBenefits = null;
 let clanSocialStateUnsubscribe = null;
 let activeClanSocialSubscriptionId = "";
@@ -18920,6 +18922,7 @@ function stopClanRealtimeSubscriptions({ clear = true } = {}) {
     clanApplications = [];
     clanQuestProgress = null;
     clanMemberRewards = null;
+    clanGiftActivity = null;
     clanWorldBenefits = null;
     selectedClanMemberUid = "";
     clanRenameEditorOpen = false;
@@ -19037,6 +19040,22 @@ function updateClanGiftCountdown() {
   if (sendButton) sendButton.disabled = clanGiftActionInFlight || cooldownMs > 0;
 }
 
+function formatClanGiftDonationAge(sentAtMs = 0, nowMs = Date.now()) {
+  const donationAtMs = normalizeTimestampMs(sentAtMs);
+  if (!donationAtMs) return "recently";
+  const elapsedSeconds = Math.max(0, Math.floor((nowMs - donationAtMs) / 1000));
+  if (elapsedSeconds < 60) return "just now";
+  if (elapsedSeconds < 3600) return `${Math.floor(elapsedSeconds / 60)}m ago`;
+  if (elapsedSeconds < 86400) return `${Math.floor(elapsedSeconds / 3600)}h ago`;
+  return `${Math.floor(elapsedSeconds / 86400)}d ago`;
+}
+
+function updateClanGiftDonationTimers() {
+  clanContent?.querySelectorAll("[data-clan-gift-donation-at-ms]").forEach(label => {
+    label.textContent = formatClanGiftDonationAge(label.dataset.clanGiftDonationAtMs);
+  });
+}
+
 function getClanNameChangeCooldownMs() {
   const lastChangedAtMs = normalizeTimestampMs(clanSnapshot?.lastNameChangedAtMs);
   const explicitCooldownUntilMs = normalizeTimestampMs(clanSnapshot?.nextNameChangeAtMs);
@@ -19090,10 +19109,15 @@ function startClanSocialStateSubscription(api, clanId) {
   if (typeof clanSocialStateUnsubscribe === "function") clanSocialStateUnsubscribe();
   activeClanSocialSubscriptionId = id;
   clanMemberRewards = null;
+  clanGiftActivity = null;
   clanWorldBenefits = null;
   clanSocialStateUnsubscribe = api.subscribeClanSocialState(id, {
     onMemberRewards: rewards => {
       clanMemberRewards = rewards;
+      if (activeProfileTab === "clan") renderClanView();
+    },
+    onGiftActivity: activity => {
+      clanGiftActivity = activity;
       if (activeProfileTab === "clan") renderClanView();
     },
     onWorldBenefits: benefits => {
@@ -19116,6 +19140,7 @@ function startClanSocialStateSubscription(api, clanId) {
     updateClanNameChangeCountdown();
     updateClanQuestCountdown();
     updateClanMemberLastLoginTimers();
+    updateClanGiftDonationTimers();
   }, 1000);
   return true;
 }
@@ -19663,6 +19688,15 @@ function renderClanGiftPanel() {
   const lastGiftSentAtMs = normalizeTimestampMs(clanMemberRewards?.lastGiftSentAtMs);
   const cooldownMs = Math.max(0, lastGiftSentAtMs + CLAN_GIFT_COOLDOWN_MS - Date.now());
   const hours = formatClanProductionHours(pendingMinutes);
+  const recentDonations = (Array.isArray(clanGiftActivity?.recentDonations) ? clanGiftActivity.recentDonations : [])
+    .map(donation => ({
+      donorUid: String(donation?.donorUid || "").trim(),
+      donorName: String(donation?.donorName || "Ruler").trim() || "Ruler",
+      sentAtMs: normalizeTimestampMs(donation?.sentAtMs),
+    }))
+    .filter(donation => donation.donorUid && donation.sentAtMs)
+    .sort((left, right) => right.sentAtMs - left.sentAtMs)
+    .slice(0, CLAN_GIFT_RECENT_DONATION_LIMIT);
   return `
     <section class="clan-gift-panel">
       <div class="profile-section-heading"><span>Clan generosity</span><h3>Gold Gifts</h3></div>
@@ -19676,6 +19710,14 @@ function renderClanGiftPanel() {
         <span>Sent <strong>${formatNumber(clanMemberRewards?.giftCountSent || 0)}</strong></span>
         <span>Received <strong>${formatNumber(clanMemberRewards?.giftCountReceived || 0)}</strong></span>
         <span>Collected <strong>${formatClanProductionHours(clanMemberRewards?.giftGoldMinutesClaimed || 0)}h</strong></span>
+      </div>
+      <div class="clan-gift-donations" aria-label="Recent clan generosity">
+        <strong>Recent generosity</strong>
+        ${recentDonations.length ? `<ol>${recentDonations.map(donation => `
+          <li>
+            <span>${renderPlayerNameLink(donation.donorUid, donation.donorName)} donated</span>
+            <small data-clan-gift-donation-at-ms="${donation.sentAtMs}">${formatClanGiftDonationAge(donation.sentAtMs)}</small>
+          </li>`).join("")}</ol>` : `<small>No donations yet.</small>`}
       </div>
     </section>`;
 }
@@ -20160,6 +20202,7 @@ async function runClanSocialAction(action, rewardId = "") {
     }
     if (!result) return;
     if (result.memberRewards) clanMemberRewards = { ...(clanMemberRewards || {}), ...result.memberRewards };
+    if (result.giftActivity) clanGiftActivity = result.giftActivity;
     applyServerEconomyResult(result);
     if (action === "send-gift") {
       showToast(`Gift sent to ${formatNumber(result.recipientCount || 0)} clan members.`);

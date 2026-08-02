@@ -885,6 +885,17 @@ async function main() {
   assert(leaderRewardsBeforeGift.exists && applicantRewardsBeforeGift.exists, "Clan member reward state was not created with membership.");
   const sentGift = await callFunction("sendClanGift", clanLeader.token);
   assert(sentGift?.recipientCount === 1 && sentGift?.productionMinutes === 30, "Clan gift did not reach every other current member.");
+  const giftActivityAfterGift = await db.doc(`clans/${applicationClanId}/giftActivity/${realm.resetGeneration}`).get();
+  const recentDonationsAfterGift = giftActivityAfterGift.data()?.recentDonations || [];
+  assert(
+    giftActivityAfterGift.exists
+      && recentDonationsAfterGift.length === 1
+      && recentDonationsAfterGift[0]?.donorUid === clanLeader.uid
+      && recentDonationsAfterGift[0]?.donorName
+      && Number(recentDonationsAfterGift[0]?.sentAtMs || 0) > 0
+      && sentGift?.giftActivity?.recentDonations?.[0]?.donorUid === clanLeader.uid,
+    "Clan gift activity did not publish the latest donor snapshot."
+  );
   const [leaderRewardsAfterGift, applicantRewardsAfterGift] = await Promise.all([
     db.doc(`clans/${applicationClanId}/memberRewards/${clanLeader.uid}`).get(),
     db.doc(`clans/${applicationClanId}/memberRewards/${clanApplicant.uid}`).get(),

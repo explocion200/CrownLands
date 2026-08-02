@@ -7682,6 +7682,23 @@ button.daily-reward-card.available:disabled {
 .clan-gift-stats { display: flex; flex-wrap: wrap; gap: .45rem; margin-top: .55rem; }
 .clan-gift-stats span { padding: .25rem .45rem; color: #a9c0b2; border-radius: 999px; background: rgba(255,255,255,.055); font-size: .72rem; }
 .clan-gift-stats strong { color: #8fe0a5; }
+.clan-gift-donations {
+  min-width: 0;
+  display: grid;
+  gap: .3rem;
+  margin-top: .58rem;
+  padding-top: .5rem;
+  color: #9fb4aa;
+  border-top: 1px solid rgba(143,221,164,.14);
+  font-size: .65rem;
+}
+.clan-gift-donations > strong { color: #c9d8cf; font-size: .68rem; }
+.clan-gift-donations > small { color: #80958b; }
+.clan-gift-donations ol { display: grid; gap: .2rem; margin: 0; padding: 0; list-style: none; }
+.clan-gift-donations li { min-width: 0; display: flex; align-items: baseline; justify-content: space-between; gap: .45rem; }
+.clan-gift-donations li > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.clan-gift-donations li > small { flex: 0 0 auto; color: #789487; font-size: .61rem; white-space: nowrap; }
+.clan-gift-donations .player-name-link { color: #b9d9c3; font-size: inherit; }
 .clan-quest-heading {
   min-width: 0;
   display: grid;

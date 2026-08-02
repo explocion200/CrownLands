@@ -698,6 +698,17 @@
           if (typeof handlers.onError === "function") handlers.onError(error, "worldBenefits");
         }
       ),
+      onSnapshot(
+        doc(client.db, "clans", safeClanId, "giftActivity", RESET_GENERATION),
+        snapshot => {
+          if (typeof handlers.onGiftActivity === "function") {
+            handlers.onGiftActivity(snapshot.exists() ? { id: snapshot.id, ...snapshot.data() } : null);
+          }
+        },
+        error => {
+          if (typeof handlers.onError === "function") handlers.onError(error, "giftActivity");
+        }
+      ),
     ];
     return () => unsubscribers.forEach(unsubscribe => unsubscribe());
   }
