@@ -1,6 +1,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 const { execFileSync } = require("node:child_process");
+const { createDailyPatchNoteReleases, getUtcDateKey } = require("./patch-note-history");
 
 const projectRoot = path.resolve(__dirname, "..");
 const checkOnly = process.argv.includes("--check");
@@ -88,25 +89,35 @@ function getCommitPatchNotes(commit) {
 }
 
 function getPatchNoteReleases(currentBuildId) {
-  const releaseRows = runGit(["log", "--first-parent", "-6", "--format=%H%x09%cI", "HEAD"])
+  const releaseRows = runGit(["log", "--first-parent", "--format=%H%x09%cI", "HEAD"])
     .split(/\r?\n/)
     .map(line => line.trim())
-    .filter(Boolean);
+    .filter(Boolean)
+    .map(row => {
+      const [commit, publishedAt] = row.split("\t");
+      return { commit, publishedAt };
+    });
   if (!releaseRows.length) {
+    const publishedAt = new Date().toISOString();
     return [{
       buildId: currentBuildId,
-      publishedAt: new Date().toISOString(),
+      dateKey: getUtcDateKey(publishedAt),
+      publishedAt,
       notes: ["Performance, stability, and gameplay improvements."],
     }];
   }
-  return releaseRows.map((row, index) => {
-    const [commit, publishedAt] = row.split("\t");
-    return {
-      buildId: index === 0 ? currentBuildId : String(commit || "").slice(0, 12),
-      publishedAt: publishedAt || new Date().toISOString(),
-      notes: getCommitPatchNotes(commit),
-    };
+  const releases = createDailyPatchNoteReleases(releaseRows, {
+    currentBuildId,
+    getNotes: getCommitPatchNotes,
   });
+  if (releases.length) return releases;
+  const publishedAt = new Date().toISOString();
+  return [{
+    buildId: currentBuildId,
+    dateKey: getUtcDateKey(publishedAt),
+    publishedAt,
+    notes: ["Performance, stability, and gameplay improvements."],
+  }];
 }
 
 function createPatchNotesSource(currentBuildId) {

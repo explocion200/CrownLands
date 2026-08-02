@@ -29333,6 +29333,9 @@ function getPatchNoteReleases() {
   return releases
     .map(release => ({
       buildId: String(release?.buildId || "").trim(),
+      dateKey: /^\d{4}-\d{2}-\d{2}$/.test(String(release?.dateKey || "").trim())
+        ? String(release.dateKey).trim()
+        : "",
       publishedAt: String(release?.publishedAt || "").trim(),
       notes: (Array.isArray(release?.notes) ? release.notes : [])
         .map(note => String(note || "").trim())
@@ -29342,13 +29345,16 @@ function getPatchNoteReleases() {
     .slice(0, 6);
 }
 
-function formatPatchNotesDate(value) {
-  const date = new Date(value);
+function formatPatchNotesDate(release) {
+  const dateKey = String(release?.dateKey || "").trim();
+  const hasUtcDateKey = /^\d{4}-\d{2}-\d{2}$/.test(dateKey);
+  const date = new Date(hasUtcDateKey ? `${dateKey}T00:00:00.000Z` : release?.publishedAt);
   if (Number.isNaN(date.getTime())) return "Recent update";
   return date.toLocaleDateString(undefined, {
     year: "numeric",
     month: "long",
     day: "numeric",
+    ...(hasUtcDateKey ? { timeZone: "UTC" } : {}),
   });
 }
 
@@ -29387,6 +29393,7 @@ function showPatchNotesModal() {
   const releases = getPatchNoteReleases();
   const fallbackRelease = {
     buildId: getPatchNotesBuildId(),
+    dateKey: String(PATCH_NOTES_CONFIG.generatedAt || "").slice(0, 10),
     publishedAt: PATCH_NOTES_CONFIG.generatedAt,
     notes: ["Gameplay improvements and fixes are included in this update."],
   };
@@ -29404,8 +29411,8 @@ function showPatchNotesModal() {
         <article class="patch-notes-release${index === 0 ? " is-latest" : ""}">
           <header>
             <div>
-              <span>${index === 0 ? "Latest update" : "Previous update"}</span>
-              <strong>${escapeHtml(formatPatchNotesDate(release.publishedAt))}</strong>
+              <span>${index === 0 ? "Latest updates" : "Previous updates"}</span>
+              <strong>${escapeHtml(formatPatchNotesDate(release))}</strong>
             </div>
             ${index === 0 ? '<em>Current</em>' : ""}
           </header>
