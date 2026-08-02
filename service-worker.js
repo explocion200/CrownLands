@@ -26,23 +26,11 @@ const STATIC_CACHE_URLS = [
   "/game.js?v=20260802-single-active-skill-preset-v1",
   "/route-worker.js?v=20260721-structure-route-clearance",
   "/assets/map-editor-data.js?v=20260723-utc-responsive-v1",
-  "/assets/game-menu-background.jpg?v=20260702-login-page",
-  "/assets/loading-ring.png",
-  "/assets/loading-crown.png",
-  "/assets/gold-pickup.png",
-  "/assets/troop-pickup.png",
-  "/assets/daily-reward-icon-cutout.webp?v=20260728-daily-reward-cutout",
-  "/site-info.css?v=20260727-adsense-policy",
-  "/about.html",
-  "/how-to-play.html",
-  "/game-rules.html",
-  "/support.html",
-  "/privacy.html",
-  "/assets/royal-tax-decree-icon.webp?v=20260721-tax-decree",
+  "/assets/optimized/login-background-1448x1086-cec197d384ba.webp",
+  "/assets/optimized/loading-ring-256x256-d14e6c09f495.webp",
+  "/assets/optimized/loading-crown-256x256-9eab5c3ca27d.webp",
   "/assets/icons/crownlands-icon-192.png",
-  "/assets/icons/crownlands-icon-512.png",
-  "/assets/icons/crownlands-maskable-192.png",
-  "/assets/icons/crownlands-maskable-512.png"
+  "/assets/icons/crownlands-maskable-192.png"
 ];
 
 const IMAGE_FALLBACK_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64"><rect width="64" height="64" fill="#0b111d"/></svg>`;
@@ -76,8 +64,8 @@ try {
         tag,
         renotify: true,
         requireInteraction: data.kind === "attack",
-        icon: resolveAppUrl("assets/report-icon.png"),
-        badge: resolveAppUrl("assets/report-icon.png"),
+        icon: resolveAppUrl("assets/optimized/hud-report-192x192-c712b2f6c417.webp"),
+        badge: resolveAppUrl("assets/optimized/hud-report-192x192-c712b2f6c417.webp"),
         data: {
           ...data,
           url: resolveAppUrl(data.url || ""),
@@ -124,6 +112,17 @@ function isAudioMediaRequest(url) {
     url.origin === self.location.origin
     && url.pathname.startsWith("/audio/")
     && /\.(?:mp3|ogg|wav)$/i.test(url.pathname)
+  );
+}
+
+function isWorldMapImageRequest(url) {
+  return (
+    url.origin === self.location.origin
+    && (
+      url.pathname.includes("/assets/worlds/")
+      || /\/assets\/(?:center|north|south|east|west)-island\.webp$/i.test(url.pathname)
+    )
+    && !url.pathname.includes("/thumbnails/")
   );
 }
 
@@ -222,6 +221,10 @@ self.addEventListener("fetch", event => {
   event.respondWith(
     cacheFirst(request).catch(() => {
       if (request.destination === "image") {
+        // A decoded 64x64 placeholder looks like a successfully loaded world map
+        // to the client. Surface map failures so the previous island stays visible
+        // and the normal retry state can take over.
+        if (isWorldMapImageRequest(url)) return Response.error();
         return new Response(IMAGE_FALLBACK_SVG, {
           headers: { "Content-Type": "image/svg+xml", "Cache-Control": "no-store" },
         });

@@ -210,26 +210,38 @@ function createMapModels(worldConfig, editorData, terrainBlockers) {
       camps: [],
       portals: [],
     };
-    model.cities = (Array.isArray(map.cities) ? map.cities : []).map((city, index) => ({
-      id: String(city?.id || `${map.id}_${index + 1}`),
-      name: String(city?.name || `City ${index + 1}`),
-      regionId: map.id,
-      ...imagePointToWorld(model, getPoint(city)),
-    }));
-    model.objectives = (Array.isArray(map.objectives) ? map.objectives : []).map((objective, index) => ({
-      id: String(objective?.id || `${map.id}_objective_${index + 1}`),
-      name: String(objective?.name || `Objective ${index + 1}`),
-      regionId: map.id,
-      size: imageSizeToWorld(model, objective?.size, DEFAULT_STRONGHOLD_SIZE),
-      ...imagePointToWorld(model, getPoint(objective)),
-    }));
-    model.camps = (Array.isArray(map.camps) ? map.camps : []).map((camp, index) => ({
-      id: String(camp?.id || `${map.id}_camp_${index + 1}`),
-      name: String(camp?.name || `Camp ${index + 1}`),
-      regionId: map.id,
-      size: imageSizeToWorld(model, camp?.size, DEFAULT_CAMP_SIZE),
-      ...imagePointToWorld(model, getPoint(camp)),
-    }));
+    model.cities = (Array.isArray(map.cities) ? map.cities : []).map((city, index) => {
+      const point = imagePointToWorld(model, getPoint(city));
+      return {
+        id: String(city?.id || `${map.id}_${index + 1}`),
+        name: String(city?.name || `City ${index + 1}`),
+        regionId: map.id,
+        x: Math.round(point.x),
+        y: Math.round(point.y),
+      };
+    });
+    model.objectives = (Array.isArray(map.objectives) ? map.objectives : []).map((objective, index) => {
+      const point = imagePointToWorld(model, getPoint(objective));
+      return {
+        id: String(objective?.id || `${map.id}_objective_${index + 1}`),
+        name: String(objective?.name || `Objective ${index + 1}`),
+        regionId: map.id,
+        size: imageSizeToWorld(model, objective?.size, DEFAULT_STRONGHOLD_SIZE),
+        x: Math.round(point.x),
+        y: Math.round(point.y),
+      };
+    });
+    model.camps = (Array.isArray(map.camps) ? map.camps : []).map((camp, index) => {
+      const point = imagePointToWorld(model, getPoint(camp));
+      return {
+        id: String(camp?.id || `${map.id}_camp_${index + 1}`),
+        name: String(camp?.name || `Camp ${index + 1}`),
+        regionId: map.id,
+        size: imageSizeToWorld(model, camp?.size, DEFAULT_CAMP_SIZE),
+        x: Math.round(point.x),
+        y: Math.round(point.y),
+      };
+    });
     for (const side of SIDES) {
       for (const zone of Array.isArray(map.edgeConnections?.[side]) ? map.edgeConnections[side] : []) {
         const targetRegionId = getTargetRegionId(zone);
@@ -589,9 +601,23 @@ function validateRegionCityPairs(regionId) {
   console.log(`Every city pair in ${model.label} is reachable in both directions through the live route worker.`);
 }
 
-const pairwiseRegionArgument = process.argv.find(argument => argument.startsWith("--pairwise-region="));
-if (pairwiseRegionArgument) {
-  validateRegionCityPairs(pairwiseRegionArgument.slice("--pairwise-region=".length));
-} else {
-  validateAllCityRoutes();
+if (require.main === module) {
+  const pairwiseRegionArgument = process.argv.find(argument => argument.startsWith("--pairwise-region="));
+  if (pairwiseRegionArgument) {
+    validateRegionCityPairs(pairwiseRegionArgument.slice("--pairwise-region=".length));
+  } else {
+    validateAllCityRoutes();
+  }
 }
+
+module.exports = Object.freeze({
+  readWindowData,
+  getTerrainBlockers,
+  createMapModels,
+  createWorker,
+  createJob,
+  buildLegs,
+  validateRouteResult,
+  validateAllCityRoutes,
+  validateRegionCityPairs,
+});

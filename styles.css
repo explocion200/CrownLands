@@ -173,7 +173,7 @@ html:fullscreen::backdrop {
   background:
     linear-gradient(180deg, rgba(3, 8, 16, .02) 0%, rgba(3, 8, 16, .18) 42%, rgba(3, 8, 16, .72) 100%),
     radial-gradient(circle at 50% 82%, rgba(10, 32, 54, .2), transparent 38%),
-    url("assets/game-menu-background.jpg?v=20260702-login-page") center / contain no-repeat,
+    url("assets/optimized/login-background-1448x1086-cec197d384ba.webp") center / contain no-repeat,
     #17110d;
 }
 .setup-screen.visible { display: grid; }
@@ -285,7 +285,7 @@ html:fullscreen::backdrop {
 }
 .login-game-info > a {
   display: inline-flex;
-  min-height: 36px;
+  min-height: 44px;
   align-items: center;
   justify-content: center;
   padding: .5rem .72rem;
@@ -489,6 +489,12 @@ input {
   margin-top: .62rem;
 }
 .public-site-links a {
+  display: inline-flex;
+  min-width: 44px;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  padding: 0 .25rem;
   color: #cfe9ff;
   font-size: .66rem;
   font-weight: 850;
@@ -1434,6 +1440,26 @@ input {
   z-index: 4;
   filter: drop-shadow(0 10px 8px rgba(0, 0, 0, .42));
 }
+.camp-node:not(.decorative)::before,
+.city-node::after,
+.army-token::before,
+.city-wheel-action::before,
+.gold-camp-wheel-action::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: var(--map-hit-size, 44px);
+  height: var(--map-hit-size, 44px);
+  min-width: 100%;
+  min-height: 100%;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: transparent;
+  pointer-events: auto;
+}
+.camp-node.decorative::before,
+.army-token.endpoint-clearance::before { pointer-events: none; }
 .map-world,
 .map-bg,
 .harvest-layer,
@@ -2885,8 +2911,15 @@ input {
 .wheel-regroup { left: var(--wheel-extra-left, -50px); top: var(--wheel-extra-top, 10px); width: 58px; min-height: 58px; background: #bd3f48; }
 .wheel-regroup.armed { background: #d25050; animation: regroupReadyPulse .75s infinite alternate; }
 .wheel-regroup .wheel-icon { font-size: 1.35rem; }
+.city-wheel-action.busy {
+  cursor: progress;
+  animation: none;
+  filter: drop-shadow(0 0 9px rgba(159, 221, 255, .9)) drop-shadow(0 5px 3px rgba(0,0,0,.52));
+}
+.city-wheel-action.busy .wheel-icon { animation: bulkOrderBusySpin .85s linear infinite; }
 @keyframes scoutReadyPulse { from { filter: drop-shadow(0 5px 3px rgba(0,0,0,.52)); } to { filter: drop-shadow(0 0 9px rgba(111,255,169,.92)) drop-shadow(0 5px 3px rgba(0,0,0,.52)); } }
 @keyframes regroupReadyPulse { from { filter: drop-shadow(0 5px 3px rgba(0,0,0,.52)); } to { filter: drop-shadow(0 0 9px rgba(255,132,132,.92)) drop-shadow(0 5px 3px rgba(0,0,0,.52)); } }
+@keyframes bulkOrderBusySpin { to { transform: rotate(1turn); } }
 .foreign-city-action-wheel .city-wheel-ring { border-color: rgba(22, 83, 123, .95); border-top-color: transparent; }
 .wheel-info { left: var(--wheel-info-left, 76px); bottom: var(--wheel-info-bottom, 0); width: 58px; min-height: 58px; background: #24547d; }
 .wheel-info .wheel-icon { font-family: Georgia, serif; font-size: 1.45rem; font-weight: 1000; }
@@ -3003,6 +3036,23 @@ input {
 }
 .army-token-nav button > span { font-size: 1rem; line-height: 1; }
 .army-token-nav button > small { font-size: .68rem; font-weight: 950; opacity: 1; }
+.army-sync-status {
+  position: absolute;
+  left: 50%;
+  top: max(72px, calc(env(safe-area-inset-top, 0px) + 54px));
+  z-index: 95;
+  transform: translateX(-50%);
+  padding: .38rem .7rem;
+  border: 1px solid rgba(255, 212, 111, .66);
+  border-radius: 999px;
+  color: #fff3c7;
+  background: rgba(35, 24, 10, .92);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, .38);
+  font-size: .7rem;
+  font-weight: 950;
+  pointer-events: none;
+}
+.army-sync-status[hidden] { display: none; }
 .map-frame.camera-moving .army-token,
 .map-frame.crowded-map .army-token,
 .map-frame.low-zoom .army-token {
@@ -3936,6 +3986,22 @@ button.inventory-slot {
   color: #cfe9ff;
   font-size: .72rem;
   font-weight: 850;
+}
+.city-list-sync-error {
+  flex: 1 1 auto;
+  color: #ffc5ad;
+  font-size: .72rem;
+  font-weight: 850;
+}
+.city-list-sync-retry {
+  min-height: 36px;
+  padding: .25rem .72rem;
+  border: 1px solid rgba(255, 225, 151, .62);
+  border-radius: 8px;
+  color: #251806;
+  background: linear-gradient(#ffe18a, #d99a2f);
+  font-weight: 950;
+  cursor: pointer;
 }
 .city-list-toolbar {
   display: flex;
@@ -6662,7 +6728,7 @@ button.daily-reward-card.available:disabled {
   inset: 0;
   z-index: 2;
   pointer-events: none;
-  background: url("assets/profile-hud-frame.png?v=20260702-profile-frame") center / 100% 100% no-repeat;
+  background: url("assets/optimized/hud-profile-frame-256x200-acfdfef9af26.webp") center / 100% 100% no-repeat;
   filter: drop-shadow(0 8px 16px rgba(0,0,0,.34));
 }
 .profile-button > * {
@@ -8984,7 +9050,7 @@ button.daily-reward-card.available:disabled {
 
   .online-login .ghost-btn,
   .online-login .primary-btn {
-    min-height: 38px;
+    min-height: 44px;
     margin-top: .32rem;
   }
 

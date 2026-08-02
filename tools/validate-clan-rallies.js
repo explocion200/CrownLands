@@ -37,9 +37,9 @@ requires(server, /isRallyObjectiveTarget[\s\S]*?getRewardCampConfig\(target\)[\s
 requires(server, /state\.leaderUids\.includes\(uid\)[\s\S]*?state\.leaderUids\.length >= CLAN_FORMING_RALLY_LIMIT/, "Leader and clan rally limits are not transactionally enforced.");
 requires(server, /activeRallyParticipants\(rally\)\.length >= RALLY_MAX_PARTICIPANTS/, "The three-player participant limit is missing.");
 requires(server, /getRallyParticipant\(rally,\s*uid\)[\s\S]*?duplicate:\s*true/, "Duplicate contributions are not idempotent.");
-requires(server, /validateArmyRoute\(order,\s*source,\s*target\)[\s\S]*?validateArmyRoute\(joinOrder,\s*source,\s*assembly\)/, "Leader and ally rally routes are not server validated.");
+requires(server, /exports\.createClanRally[\s\S]*?buildServerGeneratedArmyRoute\(source,\s*target\)[\s\S]*?exports\.joinClanRally[\s\S]*?buildServerGeneratedArmyRoute\(source,\s*assembly\)/, "Leader and ally rally routes are not rebuilt by the canonical server planner.");
 requires(server, /getRallyShieldDeactivation[\s\S]*?shieldExpiresAtMs\s*=\s*0/, "Committing rally troops does not remove the Peace Shield.");
-requires(server, /status:\s*RALLY_STATUS_FORMING[\s\S]*?validatedRouteVersion:\s*1[\s\S]*?participants/, "Private forming rally state is incomplete.");
+requires(server, /status:\s*RALLY_STATUS_FORMING[\s\S]*?validatedRouteVersion:\s*AUTHORITATIVE_ROUTES_VERSION[\s\S]*?participants/, "Private forming rally state is incomplete.");
 requires(server, /inboundParticipants[\s\S]*?createAlliedTargetReturnMovement[\s\S]*?returnedInbound/, "Launching does not turn inbound contributions around.");
 requires(server, /Only the rally leader may launch it[\s\S]*?Only the rally leader may cancel it|Only the rally leader may cancel it[\s\S]*?Only the rally leader may launch it/, "Leader-only launch and cancel controls are missing.");
 requires(server, /army\.rallyAttack[\s\S]*?rally\.leaderUid !== uid[\s\S]*?rally\.armyId !== armyId/, "Recall Horn use is not restricted to the rally leader.");

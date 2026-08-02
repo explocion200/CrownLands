@@ -20,7 +20,7 @@
       "type": "crownlands_main",
       "cityCapacity": 100,
       "imageSrc": "assets/worlds/world_01/maps/center-crownlands-heart-1783019616021.webp",
-      "thumbnailSrc": "assets/worlds/world_01/thumbnails/center-thumb.webp",
+      "thumbnailSrc": "assets/worlds/world_01/thumbnails/versioned/center-thumb-992816545016.webp",
       "imageWidth": 1448,
       "imageHeight": 1086,
       "region": {
@@ -1351,7 +1351,7 @@
       "type": "endgame",
       "cityCapacity": 50,
       "imageSrc": "assets/worlds/world_01/maps/west-west-2-1783019399438.webp",
-      "thumbnailSrc": "assets/worlds/world_01/thumbnails/west-thumb.webp",
+      "thumbnailSrc": "assets/worlds/world_01/thumbnails/versioned/west-thumb-f65a83930d4e.webp",
       "imageWidth": 1448,
       "imageHeight": 1086,
       "region": {
@@ -2151,7 +2151,7 @@
       "type": "endgame",
       "cityCapacity": 50,
       "imageSrc": "assets/worlds/world_01/maps/east-east-4-1783020191215.webp",
-      "thumbnailSrc": "assets/worlds/world_01/thumbnails/east-thumb.webp",
+      "thumbnailSrc": "assets/worlds/world_01/thumbnails/versioned/east-thumb-cffef8c803d4.webp",
       "imageWidth": 1448,
       "imageHeight": 1086,
       "region": {
@@ -2999,7 +2999,7 @@
       "type": "endgame",
       "cityCapacity": 50,
       "imageSrc": "assets/worlds/world_01/maps/north-north-1-1783019201680.webp",
-      "thumbnailSrc": "assets/worlds/world_01/thumbnails/north-thumb.webp",
+      "thumbnailSrc": "assets/worlds/world_01/thumbnails/versioned/north-thumb-900c9fea1c35.webp",
       "imageWidth": 1448,
       "imageHeight": 1086,
       "region": {
@@ -3907,7 +3907,7 @@
       "type": "endgame",
       "cityCapacity": 50,
       "imageSrc": "assets/worlds/world_01/maps/south-south-5-1783020401484.webp",
-      "thumbnailSrc": "assets/worlds/world_01/thumbnails/south-thumb.webp",
+      "thumbnailSrc": "assets/worlds/world_01/thumbnails/versioned/south-thumb-bc848808fb75.webp",
       "imageWidth": 1448,
       "imageHeight": 1086,
       "region": {
@@ -4672,7 +4672,7 @@
       "type": "midgame",
       "cityCapacity": 100,
       "imageSrc": "assets/worlds/world_01/maps/region_6-6-1783021585258.webp",
-      "thumbnailSrc": "assets/worlds/world_01/thumbnails/region_6-thumb.webp",
+      "thumbnailSrc": "assets/worlds/world_01/thumbnails/versioned/region_6-thumb-57d0504e3a17.webp",
       "imageWidth": 1448,
       "imageHeight": 1086,
       "region": {
@@ -5354,7 +5354,7 @@
       "type": "midgame",
       "cityCapacity": 50,
       "imageSrc": "assets/worlds/world_01/maps/region_7-7-1783022207943.webp",
-      "thumbnailSrc": "assets/worlds/world_01/thumbnails/region_7-thumb.webp",
+      "thumbnailSrc": "assets/worlds/world_01/thumbnails/versioned/region_7-thumb-d609f5032e3b.webp",
       "imageWidth": 1448,
       "imageHeight": 1086,
       "region": {
@@ -6296,7 +6296,7 @@
       "type": "midgame",
       "cityCapacity": 50,
       "imageSrc": "assets/worlds/world_01/maps/region_8-8-1783022783978.webp",
-      "thumbnailSrc": "assets/worlds/world_01/thumbnails/region_8-thumb.webp",
+      "thumbnailSrc": "assets/worlds/world_01/thumbnails/versioned/region_8-thumb-f2862b9c6883.webp",
       "imageWidth": 1448,
       "imageHeight": 1086,
       "region": {
@@ -7500,7 +7500,7 @@
       "type": "midgame",
       "cityCapacity": 50,
       "imageSrc": "assets/worlds/world_01/maps/region_9-9-1783023202200.webp",
-      "thumbnailSrc": "assets/worlds/world_01/thumbnails/region_9-thumb.webp",
+      "thumbnailSrc": "assets/worlds/world_01/thumbnails/versioned/region_9-thumb-99c5af2bc6ef.webp",
       "imageWidth": 1448,
       "imageHeight": 1086,
       "region": {
@@ -8549,7 +8549,7 @@
       "type": "midgame",
       "cityCapacity": 50,
       "imageSrc": "assets/worlds/world_01/maps/region_10-10-1783023599661.webp",
-      "thumbnailSrc": "assets/worlds/world_01/thumbnails/region_10-thumb.webp",
+      "thumbnailSrc": "assets/worlds/world_01/thumbnails/versioned/region_10-thumb-997a419e8640.webp",
       "imageWidth": 1448,
       "imageHeight": 1086,
       "region": {
@@ -9111,7 +9111,7 @@
       "type": "starter",
       "cityCapacity": 50,
       "imageSrc": "assets/worlds/world_01/maps/region_11-11-1783024323781.webp",
-      "thumbnailSrc": "assets/worlds/world_01/thumbnails/region_11-thumb.webp",
+      "thumbnailSrc": "assets/worlds/world_01/thumbnails/versioned/region_11-thumb-eefb297beab7.webp",
       "imageWidth": 1448,
       "imageHeight": 1086,
       "region": {
@@ -10121,7 +10121,7 @@
       "type": "starter",
       "cityCapacity": 50,
       "imageSrc": "assets/worlds/world_01/maps/region_12-12-1783024478267.webp",
-      "thumbnailSrc": "assets/worlds/world_01/thumbnails/region_12-thumb.webp",
+      "thumbnailSrc": "assets/worlds/world_01/thumbnails/versioned/region_12-thumb-1ab8f25b5b0e.webp",
       "imageWidth": 1448,
       "imageHeight": 1086,
       "region": {
@@ -11084,7 +11084,7 @@
       "type": "starter",
       "cityCapacity": 50,
       "imageSrc": "assets/worlds/world_01/maps/region_13-13-1783024786859.webp",
-      "thumbnailSrc": "assets/worlds/world_01/thumbnails/region_13-thumb.webp",
+      "thumbnailSrc": "assets/worlds/world_01/thumbnails/versioned/region_13-thumb-67d54b202eb2.webp",
       "imageWidth": 1448,
       "imageHeight": 1086,
       "region": {
@@ -12071,7 +12071,7 @@
       "type": "starter",
       "cityCapacity": 50,
       "imageSrc": "assets/worlds/world_01/maps/region_14-14-1783024960400.webp",
-      "thumbnailSrc": "assets/worlds/world_01/thumbnails/region_14-thumb.webp",
+      "thumbnailSrc": "assets/worlds/world_01/thumbnails/versioned/region_14-thumb-d8d4feafc66c.webp",
       "imageWidth": 1448,
       "imageHeight": 1086,
       "region": {
@@ -12878,7 +12878,7 @@
       "type": "starter",
       "cityCapacity": 50,
       "imageSrc": "assets/worlds/world_01/maps/region_15-15-1783025218871.webp",
-      "thumbnailSrc": "assets/worlds/world_01/thumbnails/region_15-thumb.webp",
+      "thumbnailSrc": "assets/worlds/world_01/thumbnails/versioned/region_15-thumb-8a2499737d59.webp",
       "imageWidth": 1448,
       "imageHeight": 1086,
       "region": {

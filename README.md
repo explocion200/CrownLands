@@ -48,7 +48,8 @@ Landscape / horizontal medieval island-conquest game inspired by the core loop o
 - Active army route markers appear only after troops are sent.
 - Selecting a non-owned city opens Scout, Attack, and Info actions around that city.
 - Scouting dispatches one troop from the nearest reachable owned city; its report reveals a troop and defense snapshot for ten minutes after arrival.
-- Owned cities have a Scout Nearby action. The first click previews the nearby radius and highlights targets; pressing Send All costs 10,000 gold and dispatches one troop from that city to every reachable highlighted non-owned city.
+- Owned cities have a Scout Nearby action. The first click previews the nearby radius and highlights targets; pressing Send All atomically charges the current Economy-configured cost and dispatches one troop from that city to every reachable highlighted non-owned city. Online batches are validated and charged by Firebase Functions, so a failed or retried request cannot partially charge or duplicate scouts.
+- Regroup follows the same server-authoritative batch policy: it charges the configured cost once and either launches every confirmed nearby transfer or launches none.
 - A completed scout report adds a Report action to the selected city and shows the reported troop count in its banner.
 - Detailed reports include city level, troop and wall defense contributions, total defense, and level/percentage rows for relevant defense and attack skills.
 
@@ -72,6 +73,8 @@ The live game is online-first and uses Firebase Auth, Firestore, and callable Fu
 - While online, the browser subscribes to server-owned city state; gameplay mutations go through callable Functions.
 - The Crown Marches admits exactly 50 active players and queues overflow in ticket order. Join, leave, promotion, and stale cleanup share a short server-only admission lease; routine player heartbeats write separate member documents so 50 connected players never hammer one shared capacity document.
 - Online troop orders now call Firebase Functions: `sendArmyOrder` creates and validates marches server-side, and `resolveArmyOrder` resolves scouts, transfers, attacks, defenses, city capture, level drops, XP, gold rewards, and battle reports in Firestore transactions.
+- Online route previews and launches use the same authoritative route policy. The server validates region transitions, endpoints, distance, troop-speed bands, and arrival time instead of trusting client-supplied travel geometry.
+- Incoming and outgoing army listeners are realm-scoped and recover independently with bounded backoff; a failure in one stream no longer removes the other stream's last known marches.
 - Clan rallies are server-authoritative three-player attacks against Strongholds, the Crown Citadel, and reward camps. Forming targets live in clan-private Firestore documents; public `rally_join` marches reveal only the contribution route to the assembly city. The leader controls launch, cancellation, and the combined army's Recall Horn, while ally casualties, XP, Field Medics recovery, and survivor returns settle separately through idempotent receipts.
 - Clan reinforcements are capped per relationship rather than globally: a ruler may maintain two assignments with each clanmate, with only one assignment per supported holding. Ordinary cities reserve at most five contributor slots transactionally when marches launch; Strongholds and reward camps remain uncapped. Returning troops go back to their snapshotted source holding while it remains owned, otherwise they redirect to the sender's current Main City.
 - The Clan War Room is the clan home for rallies. Members can form, join, inspect, withdraw from, launch, and cancel the same server-authoritative rallies available under Kingdom Activity, without a separate operation-planning system.
@@ -135,7 +138,7 @@ Crownlands can now be installed as a Progressive Web App from the Netlify site. 
 - Mobile metadata in `index.html` for Android Chrome, desktop Chrome, and iPhone Safari Add to Home Screen.
 - An optional `Install Crownlands` button when the browser exposes the install prompt.
 
-The service worker caches the app shell, core scripts, manifest, loading art, HUD icons, castle images, stronghold images, camp images, item images, thumbnails, and the current starter-region map assets. It does not cache Firebase Auth, Firestore, Cloud Functions, Netlify Functions, API calls, POST requests, or future live multiplayer server state.
+The service worker installs only the minimal app shell. Optional HUD, castle, objective, pickup, thumbnail, and map art is cached on first use instead of competing with login and the first map interaction. It does not cache Firebase Auth, Firestore, Cloud Functions, Netlify Functions, API calls, POST requests, or future live multiplayer server state.
 
 The audio manifest is loaded network-first. MP3, OGG, and WAV media files stream directly from the host so browser byte-range requests receive native `206 Partial Content` responses; audio media is intentionally excluded from service-worker Cache Storage.
 
@@ -181,3 +184,29 @@ Deploying to Netlify still works through GitHub push. `netlify.toml` keeps `inde
 - Service-worker registration and cached asset URLs resolve from the deployed game folder, including itch.io's nested HTML upload paths.
 - Press `F8` or open the game with `?perf=1` to show the developer performance panel with FPS, active region, visible marker counts, active army tokens, loaded image count, neighbor preload status, and service-worker state.
 - Map art remains lazy-loaded and cache-first. The service worker should cache app shell and core art, while live Firebase/Auth/Functions/server requests remain uncached.
+- Published HUD, city, camp, Stronghold, and inner-castle artwork uses content-hashed browser-sized WebP derivatives; the original full-resolution files remain the editable masters.
+- Speculative neighbor-map loading is disabled for Save-Data, slow connections, and background tabs.
+
+## Health Check
+
+Use Node 22 for release-equivalent local checks. Firebase emulator gates additionally require Java 21.
+
+```powershell
+.\tools\run-health-check.ps1
+
+# Include Auth, Firestore, and Functions emulator gates:
+.\tools\run-health-check.ps1 -IncludeEmulators
+```
+
+The equivalent individual commands are:
+
+```powershell
+Set-Location .\functions
+pnpm test
+pnpm audit --prod --audit-level high
+Set-Location ..
+node .\tools\validate-all-city-routes.js
+node .\tools\validate-world-routes.js
+```
+
+The release workflow repeats the static suite under Node 22 and runs Auth, Firestore, Functions, economy-concurrency, army-listener, travel, scouting, rules, and multiplayer-reset emulator gates under Java 21. Performance budgets cover cold-login preloads, service-worker installation size, map and thumbnail size, and browser-sized gameplay artwork.

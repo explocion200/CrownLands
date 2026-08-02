@@ -21,6 +21,21 @@ self.onmessage = event => {
     self.postMessage({ type: "warmup", ok: true });
     return;
   }
+  if (message.type === "routeBatch") {
+    try {
+      const jobs = Array.isArray(message.jobs) ? message.jobs : [];
+      const routes = jobs.map(job => calculateRoute(job || {}));
+      self.postMessage({ type: "routeBatch", id: message.id, ok: true, routes });
+    } catch (error) {
+      self.postMessage({
+        type: "routeBatch",
+        id: message.id,
+        ok: false,
+        error: error?.message || String(error),
+      });
+    }
+    return;
+  }
   if (message.type !== "route") return;
   try {
     const route = calculateRoute(message.job || {});

@@ -3,7 +3,11 @@
   const REQUIRED_CONFIG_KEYS = ["apiKey", "authDomain", "projectId", "appId"];
   const ACTIVE_SESSION_STORAGE_KEY = "crownlands-active-session-id";
   const GAME_INSTALLATION_STORAGE_KEY = "crownlands-game-installation-id-v1";
+  const ACTIVE_PRESENCE_ISLAND_STORAGE_KEY = "crownlands-active-presence-island-v1";
   const GAME_INSTALLATION_REFRESH_MS = 6 * 60 * 60 * 1000;
+  const PRESENCE_ACTIVE_WINDOW_MS = 2 * 60 * 1000;
+  const PRESENCE_QUERY_REFRESH_MS = 60 * 1000;
+  const PRESENCE_QUERY_LIMIT = 200;
   const PLAYER_NAME_MAX_LENGTH = 18;
   const DEFAULT_GAME_SERVER_ID = "crown-marches";
   const REALM_CONFIG = window.CROWNLANDS_REALM_CONFIG || {};
@@ -36,6 +40,9 @@
     sessionReplacementInFlight: false,
     installationRegisteredAtMs: 0,
     installationRegistrationPromise: null,
+    activePresenceIslandId: "",
+    presenceWritePromise: Promise.resolve(false),
+    presenceWriteGeneration: 0,
   };
 
   function hasRealFirebaseConfig(config) {
@@ -133,6 +140,9 @@
     stopActiveSessionWatcher();
     dispatch("session-replaced", { user: replacedUser, activeSession: remoteSession });
     try {
+      await clearActivePresence().catch(error => {
+        console.warn("Could not clear presence after session replacement", error);
+      });
       await disablePushNotifications().catch(error => {
         console.warn("Could not disable notifications after session replacement", error);
       });
@@ -414,6 +424,18 @@
       throw error;
     }
     return result;
+  }
+
+  async function previewArmyRoute(payload = {}) {
+    return callServerFunction("previewArmyRoute", payload);
+  }
+
+  async function sendNearbyScouts(payload = {}) {
+    return callServerFunction("sendNearbyScouts", payload);
+  }
+
+  async function sendRegroupOrders(payload = {}) {
+    return callServerFunction("sendRegroupOrders", payload);
   }
 
   async function createClanRally(payload = {}) {
@@ -1126,6 +1148,9 @@
   async function signOut() {
     await init();
     if (!client.auth) return;
+    await clearActivePresence().catch(error => {
+      console.warn("Could not clear online presence during sign-out", error);
+    });
     await disablePushNotifications().catch(error => {
       console.warn("Could not disable notifications during sign-out", error);
     });
@@ -1601,19 +1626,82 @@
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
   }
 
+  function getRememberedPresenceIslandId() {
+    if (client.activePresenceIslandId) return client.activePresenceIslandId;
+    try {
+      client.activePresenceIslandId = String(
+        window.sessionStorage?.getItem(ACTIVE_PRESENCE_ISLAND_STORAGE_KEY) || ""
+      ).slice(0, 160);
+    } catch (_) {
+      client.activePresenceIslandId = "";
+    }
+    return client.activePresenceIslandId;
+  }
+
+  function rememberPresenceIslandId(islandId = "") {
+    client.activePresenceIslandId = String(islandId || "").slice(0, 160);
+    try {
+      if (client.activePresenceIslandId) {
+        window.sessionStorage?.setItem(ACTIVE_PRESENCE_ISLAND_STORAGE_KEY, client.activePresenceIslandId);
+      } else {
+        window.sessionStorage?.removeItem(ACTIVE_PRESENCE_ISLAND_STORAGE_KEY);
+      }
+    } catch (_) {
+      // Presence cleanup remains best-effort when storage is unavailable.
+    }
+  }
+
+  function enqueuePresenceMutation(generation, mutation) {
+    const queued = client.presenceWritePromise
+      .catch(() => false)
+      .then(() => generation === client.presenceWriteGeneration ? mutation() : false);
+    client.presenceWritePromise = queued.catch(() => false);
+    return queued;
+  }
+
+  async function clearActivePresence() {
+    const uid = client.user?.uid;
+    const generation = ++client.presenceWriteGeneration;
+    return enqueuePresenceMutation(generation, async () => {
+      const islandId = getRememberedPresenceIslandId();
+      if (!uid || !islandId || !client.db || !client.modules?.firestore?.deleteDoc) {
+        rememberPresenceIslandId("");
+        return false;
+      }
+      const { doc, deleteDoc } = client.modules.firestore;
+      await deleteDoc(doc(client.db, "islands", islandId, "presence", uid));
+      rememberPresenceIslandId("");
+      return true;
+    });
+  }
+
   async function savePresence(islandId = "main", presence = {}) {
     await init();
     const uid = requireSignedIn();
     if (!uid) return false;
-    const { doc, setDoc, serverTimestamp } = client.modules.firestore;
-    await setDoc(doc(client.db, "islands", islandId, "presence", uid), {
-      ...cleanPresence({ ...presence, islandId, updatedAtMs: Date.now() }),
-      uid,
-      worldId: ONLINE_WORLD_ID,
-      resetGeneration: RESET_GENERATION,
-      updatedAt: serverTimestamp(),
-    }, { merge: true });
-    return true;
+    const safeIslandId = String(islandId || "").slice(0, 160);
+    if (!safeIslandId) return false;
+    const generation = ++client.presenceWriteGeneration;
+    const cleanedPresence = cleanPresence({ ...presence, islandId: safeIslandId, updatedAtMs: Date.now() });
+    return enqueuePresenceMutation(generation, async () => {
+      if (client.user?.uid !== uid) return false;
+      const previousIslandId = getRememberedPresenceIslandId();
+      const { doc, setDoc, deleteDoc, serverTimestamp } = client.modules.firestore;
+      await setDoc(doc(client.db, "islands", safeIslandId, "presence", uid), {
+        ...cleanedPresence,
+        uid,
+        worldId: ONLINE_WORLD_ID,
+        resetGeneration: RESET_GENERATION,
+        updatedAt: serverTimestamp(),
+      }, { merge: true });
+      rememberPresenceIslandId(safeIslandId);
+      if (previousIslandId && previousIslandId !== safeIslandId && deleteDoc) {
+        await deleteDoc(doc(client.db, "islands", previousIslandId, "presence", uid)).catch(error => {
+          console.warn("Could not remove stale previous-island presence", error);
+        });
+      }
+      return true;
+    });
   }
 
   function cleanLeaderboardEntry(entry = {}) {
@@ -1889,9 +1977,15 @@
     if (!collection || !onSnapshot || !firestoreQuery || !where) return () => {};
 
     const uid = client.user.uid;
+    const retryDelaysMs = [1000, 2000, 5000, 10000, 30000];
+    let stopped = false;
     const rowsBySource = new Map([
       ["outgoing", new Map()],
       ["incoming", new Map()],
+    ]);
+    const sourceState = new Map([
+      ["outgoing", { unsubscribe: null, retryTimer: 0, attempt: 0 }],
+      ["incoming", { unsubscribe: null, retryTimer: 0, attempt: 0 }],
     ]);
     const emit = () => {
       if (typeof handlers.onArmies !== "function") return;
@@ -1899,15 +1993,32 @@
       rowsBySource.forEach(rows => rows.forEach((army, armyId) => merged.set(armyId, army)));
       handlers.onArmies([...merged.values()]);
     };
-    const subscribeOutgoing = () => onSnapshot(
-      firestoreQuery(
-        collection(client.db, "armies"),
-        where("ownerUid", "==", uid),
-        where("resetGeneration", "==", RESET_GENERATION),
-        where("worldId", "==", ONLINE_WORLD_ID),
-        where("status", "==", "active")
-      ),
-      snapshot => {
+    const emitStatus = (source, status, extra = {}) => {
+      dispatch("army-sync-status", { source, status, ...extra });
+      if (typeof handlers.onStatus === "function") {
+        handlers.onStatus({ source, status, ...extra });
+      }
+    };
+    const buildQuery = source => source === "outgoing"
+      ? firestoreQuery(
+          collection(client.db, "armies"),
+          where("ownerUid", "==", uid),
+          where("resetGeneration", "==", RESET_GENERATION),
+          where("worldId", "==", ONLINE_WORLD_ID),
+          where("status", "==", "active")
+        )
+      : firestoreQuery(
+          collection(client.db, "players", uid, "incomingArmies"),
+          where("resetGeneration", "==", RESET_GENERATION),
+          where("worldId", "==", ONLINE_WORLD_ID),
+          where("status", "==", "active")
+        );
+    const applySnapshot = (source, snapshot) => {
+      const state = sourceState.get(source);
+      if (!state || stopped) return;
+      state.attempt = 0;
+      emitStatus(source, "connected");
+      if (source === "outgoing") {
         rowsBySource.set("outgoing", new Map(snapshot.docs.map(doc => [
           doc.id,
           {
@@ -1917,16 +2028,7 @@
             viewerAccess: "owner",
           },
         ])));
-        emit();
-      },
-      error => {
-        if (typeof handlers.onError === "function") handlers.onError(error, "outgoing");
-      }
-    );
-
-    const subscribeIncoming = () => onSnapshot(
-      collection(client.db, "players", uid, "incomingArmies"),
-      snapshot => {
+      } else {
         rowsBySource.set("incoming", new Map(snapshot.docs
           .map(doc => ({
             id: doc.id,
@@ -1940,18 +2042,50 @@
             && army.status === "active"
           ))
           .map(army => [army.id, army])));
-        emit();
-      },
-      error => {
-        if (typeof handlers.onError === "function") handlers.onError(error, "incoming");
       }
-    );
+      emit();
+    };
+    const subscribeSource = source => {
+      const state = sourceState.get(source);
+      if (!state || stopped) return;
+      if (state.retryTimer) {
+        window.clearTimeout(state.retryTimer);
+        state.retryTimer = 0;
+      }
+      if (typeof state.unsubscribe === "function") state.unsubscribe();
+      state.unsubscribe = null;
+      emitStatus(source, state.attempt ? "reconnecting" : "connecting", { attempt: state.attempt });
+      state.unsubscribe = onSnapshot(
+        buildQuery(source),
+        snapshot => applySnapshot(source, snapshot),
+        error => {
+          if (stopped) return;
+          state.unsubscribe = null;
+          state.attempt += 1;
+          const retryInMs = retryDelaysMs[Math.min(state.attempt - 1, retryDelaysMs.length - 1)];
+          emitStatus(source, "reconnecting", { attempt: state.attempt, retryInMs });
+          if (typeof handlers.onError === "function") {
+            handlers.onError(error, source, { attempt: state.attempt, retryInMs });
+          }
+          state.retryTimer = window.setTimeout(() => {
+            state.retryTimer = 0;
+            subscribeSource(source);
+          }, retryInMs);
+        }
+      );
+    };
 
-    const unsubscribers = [
-      subscribeOutgoing(),
-      subscribeIncoming(),
-    ];
-    return () => unsubscribers.forEach(unsubscribe => unsubscribe());
+    subscribeSource("outgoing");
+    subscribeSource("incoming");
+    return () => {
+      stopped = true;
+      sourceState.forEach(state => {
+        if (state.retryTimer) window.clearTimeout(state.retryTimer);
+        if (typeof state.unsubscribe === "function") state.unsubscribe();
+        state.retryTimer = 0;
+        state.unsubscribe = null;
+      });
+    };
   }
 
   function subscribePlayerReinforcements(handlers = {}) {
@@ -2044,7 +2178,15 @@
 
   function subscribeIsland(islandId, handlers = {}) {
     if (!client.configured || !client.db || !islandId) return () => {};
-    const { collection, doc, onSnapshot, query: firestoreQuery, where } = client.modules.firestore;
+    const {
+      collection,
+      doc,
+      onSnapshot,
+      query: firestoreQuery,
+      where,
+      orderBy,
+      limit,
+    } = client.modules.firestore;
     const unsubscribers = [];
     const onError = source => error => {
       if (typeof handlers.onError === "function") handlers.onError(error, source);
@@ -2087,11 +2229,41 @@
     }
 
     if (typeof handlers.onPresence === "function") {
-      unsubscribers.push(onSnapshot(
-        collection(client.db, "islands", islandId, "presence"),
-        snapshot => handlers.onPresence(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))),
-        onError("presence")
-      ));
+      let presenceUnsubscribe = null;
+      let presenceRefreshTimer = 0;
+      let presenceStopped = false;
+      const subscribeActivePresence = () => {
+        if (presenceStopped) return;
+        if (typeof presenceUnsubscribe === "function") presenceUnsubscribe();
+        const presenceRef = collection(client.db, "islands", islandId, "presence");
+        const activePresenceRef = firestoreQuery && where && orderBy && limit
+          ? firestoreQuery(
+              presenceRef,
+              where("resetGeneration", "==", RESET_GENERATION),
+              where("worldId", "==", ONLINE_WORLD_ID),
+              where("updatedAtMs", ">=", Date.now() - PRESENCE_ACTIVE_WINDOW_MS),
+              orderBy("updatedAtMs", "desc"),
+              limit(PRESENCE_QUERY_LIMIT)
+            )
+          : presenceRef;
+        presenceUnsubscribe = onSnapshot(
+          activePresenceRef,
+          snapshot => handlers.onPresence(
+            snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })),
+            typeof snapshot.docChanges === "function" ? snapshot.docChanges() : []
+          ),
+          onError("presence")
+        );
+        presenceRefreshTimer = window.setTimeout(subscribeActivePresence, PRESENCE_QUERY_REFRESH_MS);
+      };
+      subscribeActivePresence();
+      unsubscribers.push(() => {
+        presenceStopped = true;
+        if (presenceRefreshTimer) window.clearTimeout(presenceRefreshTimer);
+        if (typeof presenceUnsubscribe === "function") presenceUnsubscribe();
+        presenceRefreshTimer = 0;
+        presenceUnsubscribe = null;
+      });
     }
 
     return () => unsubscribers.forEach(unsubscribe => unsubscribe());
@@ -2169,6 +2341,9 @@
     loadCrownCitadelReignLeaderboard,
     subscribePlayerGlobalStats,
     sendArmyOrder,
+    previewArmyRoute,
+    sendNearbyScouts,
+    sendRegroupOrders,
     createClanRally,
     joinClanRally,
     withdrawClanRallyContribution,

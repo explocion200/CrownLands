@@ -68,9 +68,15 @@ assert.match(robotsSource, /Sitemap:\s*https:\/\/crownland\.netlify\.app\/sitema
 for (const page of ["/", ...publicPages.map(page => `/${page}`)]) {
   assert.match(sitemapSource, new RegExp(`<loc>https://crownland\\.netlify\\.app${page.replaceAll(".", "\\.")}</loc>`));
 }
-assert.match(serviceWorkerSource, /\/site-info\.css\?v=20260727-adsense-policy/);
+const staticCacheSource = serviceWorkerSource.slice(
+  serviceWorkerSource.indexOf("const STATIC_CACHE_URLS"),
+  serviceWorkerSource.indexOf("];", serviceWorkerSource.indexOf("const STATIC_CACHE_URLS")),
+);
+assert.doesNotMatch(staticCacheSource, /site-info\.css/, "Public-page CSS should load through the runtime cache.");
 for (const page of publicPages) {
-  assert.match(serviceWorkerSource, new RegExp(`/${page.replaceAll(".", "\\.")}`), `${page} is missing from the static cache.`);
+  assert.doesNotMatch(staticCacheSource, new RegExp(`/${page.replaceAll(".", "\\.")}`), `${page} should not inflate the install cache.`);
 }
+assert.match(serviceWorkerSource, /request\.mode === "navigate"[\s\S]*networkFirst\(request/);
+assert.match(serviceWorkerSource, /url\.pathname\.endsWith\("\.css"\)[\s\S]*networkFirst\(request, null\)/);
 
 console.log("Validated ad-free login, non-serving AdSense verification, crawlable public content, robots, and sitemap.");

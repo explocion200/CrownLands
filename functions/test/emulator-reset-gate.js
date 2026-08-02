@@ -1,6 +1,6 @@
-const admin = require("firebase-admin");
+const { initializeApp } = require("firebase-admin/app");
 const crypto = require("node:crypto");
-const { Timestamp } = require("firebase-admin/firestore");
+const { FieldValue, Timestamp, getFirestore } = require("firebase-admin/firestore");
 const realm = require("../release-config.json");
 const { getClanQuestPeriod } = require("../clanQuestPeriod.js");
 
@@ -10,8 +10,8 @@ const configuredFunctionsHost = process.env.CROWNLANDS_FUNCTIONS_EMULATOR_HOST
   || process.env.FUNCTIONS_EMULATOR_HOST;
 if (!process.env.FIRESTORE_EMULATOR_HOST) throw new Error("FIRESTORE_EMULATOR_HOST is required.");
 
-admin.initializeApp({ projectId });
-const db = admin.firestore();
+initializeApp({ projectId });
+const db = getFirestore();
 db.settings({ ignoreUndefinedProperties: true });
 
 let functionsHostPromise = null;
@@ -2077,7 +2077,7 @@ async function main() {
     isMainCity: false,
     troops: 1_000,
     troopFloat: 1_000,
-    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    updatedAt: FieldValue.serverTimestamp(),
   }, { merge: true });
   retargetBatch.set(
     db.doc(`realmEvents/${realm.resetGeneration}/ownershipChanges/${retargetEventId}`),
@@ -2096,8 +2096,8 @@ async function main() {
       status: "pending",
       attempts: 0,
       createdAtMs: Date.now(),
-      createdAt: admin.firestore.FieldValue.serverTimestamp(),
-      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      createdAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
     }
   );
   await retargetBatch.commit();
@@ -2180,8 +2180,8 @@ async function main() {
         status: "pending",
         attempts: 0,
         createdAtMs: Date.now() + index,
-        createdAt: admin.firestore.FieldValue.serverTimestamp(),
-        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        createdAt: FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp(),
       }
     );
   });
@@ -2246,8 +2246,8 @@ async function main() {
       status: "pending",
       attempts: 0,
       createdAtMs: Date.now(),
-      createdAt: admin.firestore.FieldValue.serverTimestamp(),
-      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      createdAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
     }
   );
   excludedQuestBatch.set(
@@ -2267,8 +2267,8 @@ async function main() {
       status: "pending",
       attempts: 0,
       createdAtMs: Date.now(),
-      createdAt: admin.firestore.FieldValue.serverTimestamp(),
-      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      createdAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
     }
   );
   await excludedQuestBatch.commit();
@@ -2296,7 +2296,7 @@ async function main() {
     attempts: 0,
     createdAtMs: clanQuestPeriod.weekStartAtMs - 1,
     createdAt: Timestamp.fromMillis(clanQuestPeriod.weekStartAtMs - 1),
-    updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    updatedAt: FieldValue.serverTimestamp(),
   });
   await waitForOwnershipEventIds([delayedQuestEventId]);
   const priorQuestProgress = (

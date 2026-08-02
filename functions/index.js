@@ -8,6 +8,28 @@ const SERVER_WORLD_LAYOUT = require("./world-layout.json");
 const ECONOMY_CONFIG = require("./economy-config.json");
 const REALM_CONFIG = require("./release-config.json");
 const { getClanQuestPeriod } = require("./clanQuestPeriod.js");
+const { createAuthoritativeRoutePlanner } = require("./authoritative-route-planner.js");
+const {
+  AUTHORITATIVE_ROUTES_VERSION,
+  BULK_ORDERS_VERSION,
+  BULK_ORDER_IDEMPOTENCY_MS,
+  NEARBY_SCOUT_RADIUS,
+  REGROUP_RADIUS,
+  MAX_NEARBY_SCOUT_TARGETS,
+  MAX_REGROUP_SOURCES,
+  normalizeMarchKind,
+  normalizeBulkCityIds,
+  requireBulkRequestId,
+  createBulkRequestSignature,
+  createBulkRequestDocumentId,
+  createBulkMovementId,
+  isWithinRadius,
+  getAuthoritativeTerrainBlockers,
+} = require("./authoritative-route-policy.js");
+
+const AUTHORITATIVE_ROUTE_PLANNER = createAuthoritativeRoutePlanner(SERVER_WORLD_LAYOUT, {
+  getTerrainBlockers: getAuthoritativeTerrainBlockers,
+});
 
 function safeConfigString(value, fallback = "") {
   const cleaned = String(value || "").trim().replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 120);
@@ -135,6 +157,7 @@ const REWARDED_AD_MUTATION_CALLABLE_OPTIONS = Object.freeze({
   ...REWARDED_AD_STATUS_CALLABLE_OPTIONS,
 });
 const SCOUT_REPORT_SECONDS = 600;
+const LEGACY_PROFILE_SCOUT_REPORT_LIMIT = 120;
 const ARMY_TRAVEL_SECONDS_PER_MAP_UNIT = 0.13;
 const ARMY_TRAVEL_MIN_SECONDS = 30;
 const ARMY_TRAVEL_SCOUT_MIN_SECONDS = 10;
@@ -320,9 +343,20 @@ const ECONOMY_MAX_CITY_CHECKPOINT_WRITES = 300;
 const SCHEDULED_ARMY_RESOLVE_SCAN_LIMIT = 250;
 const SCHEDULED_ARMY_RESOLVE_MAX_PER_RUN = 120;
 const SCHEDULED_ARMY_RESOLVE_CONCURRENCY = 8;
+const SCHEDULED_ARMY_RESOLVE_MAX_PAGES = 4;
+const SCHEDULED_ARMY_RESOLVE_RUNTIME_BUDGET_MS = 150 * 1000;
 const MAX_ROUTE_REGION_COUNT = 20;
 const MAX_ROUTE_SEGMENT_COUNT = 20;
 const MAX_ROUTE_POINTS_PER_SEGMENT = 160;
+const ARMY_LAUNCH_RATE_CALL_LIMIT = 20;
+const ARMY_LAUNCH_RATE_WEIGHT_LIMIT = 80;
+const ARMY_LAUNCH_RATE_WINDOW_MS = 10 * 1000;
+const BULK_ECONOMY_CHECKPOINT_WRITE_BUDGET = 180;
+const ARMY_SETTLEMENT_ECONOMY_CHECKPOINT_WRITE_BUDGET = 96;
+const RALLY_CANCEL_PARTICIPANT_CHECKPOINT_WRITE_BUDGET = 80;
+const BULK_ORDER_CLEANUP_LIMIT = 400;
+const BULK_ORDER_CLEANUP_MAX_PAGES = 4;
+const BULK_ORDER_CLEANUP_RUNTIME_BUDGET_MS = 90 * 1000;
 const ROUTE_ENDPOINT_TOLERANCE = 180;
 const SERVER_ROUTE_CITY_CLEARANCE = 46;
 const SERVER_ROUTE_STRUCTURE_CLEARANCE = 88;
@@ -500,6 +534,8 @@ const SKILL_ORDER = [
   "fieldMedics",
 ];
 const SKILL_RESET_COST = economyNumber("playerCosts.skillResetGold", 750_000);
+const NEARBY_SCOUT_GOLD_COST = economyNumber("playerCosts.nearbyScoutGold", 75_000);
+const REGROUP_GOLD_COST = economyNumber("playerCosts.regroupGold", 150_000);
 const SKILL_PRESET_MODEL_VERSION = 2;
 const SKILL_PRESET_NAME_MAX_LENGTH = 24;
 const SKILL_PRESET_SLOTS = Object.freeze([
@@ -2458,6 +2494,21 @@ function getServerRouteObstacles(regionId = "") {
       )
     );
   });
+  getAuthoritativeTerrainBlockers(normalizedRegionId).forEach((shape, index) => {
+    const point = serverImagePointToWorld(normalizedRegionId, shape);
+    const mapDimensions = getServerMapImageDimensions(map);
+    const bounds = getServerMapBounds(normalizedRegionId);
+    if (!point) return;
+    obstacles.push({
+      id: `terrain_${normalizedRegionId}_${index}`,
+      x: point.x,
+      y: point.y,
+      rx: Math.max(1, safeNumber(shape.rx, 1) * bounds.width / mapDimensions.width),
+      ry: Math.max(1, safeNumber(shape.ry, 1) * bounds.height / mapDimensions.height),
+      rot: safeNumber(shape.rot, 0),
+      terrain: true,
+    });
+  });
   SERVER_ROUTE_OBSTACLES_BY_REGION.set(normalizedRegionId, obstacles);
   return obstacles;
 }
@@ -2483,16 +2534,16 @@ function pointToSegmentDistanceSquared(point = {}, start = {}, end = {}) {
   return pointDx * pointDx + pointDy * pointDy;
 }
 
-function assertRouteAvoidsWorldStructures(pathSegments = [], ignoredIds = new Set()) {
+function assertRouteAvoidsWorldStructures(pathSegments = [], ignoredIds = new Set(), options = {}) {
+  const includeTerrain = Boolean(options.includeTerrain);
   for (const segment of pathSegments) {
     const obstacles = getServerRouteObstacles(segment.regionId)
-      .filter(obstacle => !ignoredIds.has(obstacle.id));
+      .filter(obstacle => !ignoredIds.has(obstacle.id) && (includeTerrain || !obstacle.terrain));
     for (let index = 1; index < segment.points.length; index += 1) {
       const start = segment.points[index - 1];
       const end = segment.points[index];
       for (const obstacle of obstacles) {
-        const enforcedRadius = Math.max(1, obstacle.radius - 2);
-        if (pointToSegmentDistanceSquared(obstacle, start, end) < enforcedRadius * enforcedRadius) {
+        if (segmentRequiresServerObstacleDetour(start, end, obstacle, -2)) {
           throw new HttpsError("invalid-argument", "The march route crosses a city, camp, or stronghold.");
         }
       }
@@ -5841,13 +5892,58 @@ function reverseArmyRoute(pathSegments = []) {
 }
 
 function segmentCrossesServerObstacle(start = {}, end = {}, obstacle = {}, clearance = 0) {
+  if (obstacle.terrain) {
+    const rotation = safeNumber(obstacle.rot, 0);
+    const cos = Math.cos(-rotation);
+    const sin = Math.sin(-rotation);
+    const rx = Math.max(1, safeNumber(obstacle.rx, 1) + clearance);
+    const ry = Math.max(1, safeNumber(obstacle.ry, 1) + clearance);
+    const normalizePoint = point => {
+      const dx = safeNumber(point.x, 0) - safeNumber(obstacle.x, 0);
+      const dy = safeNumber(point.y, 0) - safeNumber(obstacle.y, 0);
+      return {
+        x: (dx * cos - dy * sin) / rx,
+        y: (dx * sin + dy * cos) / ry,
+      };
+    };
+    return pointToSegmentDistanceSquared(
+      { x: 0, y: 0 },
+      normalizePoint(start),
+      normalizePoint(end)
+    ) < 1;
+  }
   const radius = Math.max(1, safeNumber(obstacle.radius, 1) + clearance);
   return pointToSegmentDistanceSquared(obstacle, start, end) < radius * radius;
 }
 
+function pointIsInsideServerObstacle(point = {}, obstacle = {}, clearance = 0) {
+  return segmentCrossesServerObstacle(point, point, obstacle, clearance);
+}
+
+function isServerTerrainEndpointEscapeSegment(start = {}, end = {}, obstacle = {}, clearance = 0) {
+  if (!obstacle.terrain) return false;
+  const startInside = pointIsInsideServerObstacle(start, obstacle, Math.max(0, clearance));
+  const endInside = pointIsInsideServerObstacle(end, obstacle, Math.max(0, clearance));
+  if (startInside === endInside) return false;
+  const segmentLength = Math.hypot(
+    safeNumber(end.x, 0) - safeNumber(start.x, 0),
+    safeNumber(end.y, 0) - safeNumber(start.y, 0)
+  );
+  const maximumTerrainRadius = Math.max(
+    safeNumber(obstacle.rx, 1),
+    safeNumber(obstacle.ry, 1)
+  );
+  return segmentLength <= maximumTerrainRadius * 1.6 + 24;
+}
+
+function segmentRequiresServerObstacleDetour(start = {}, end = {}, obstacle = {}, clearance = 0) {
+  return segmentCrossesServerObstacle(start, end, obstacle, clearance)
+    && !isServerTerrainEndpointEscapeSegment(start, end, obstacle, clearance);
+}
+
 function getServerRouteCollisionCount(regionId = "", start = {}, end = {}, ignoredIds = new Set()) {
   return getServerRouteObstacles(regionId).reduce((count, obstacle) => (
-    ignoredIds.has(obstacle.id) || !segmentCrossesServerObstacle(start, end, obstacle, 2)
+    ignoredIds.has(obstacle.id) || !segmentRequiresServerObstacleDetour(start, end, obstacle, 2)
       ? count
       : count + 1
   ), 0);
@@ -5859,7 +5955,7 @@ function findFirstServerRouteCollision(regionId = "", points = [], ignoredIds = 
     const start = points[pointIndex - 1];
     const end = points[pointIndex];
     for (const obstacle of obstacles) {
-      if (segmentCrossesServerObstacle(start, end, obstacle, 2)) {
+      if (segmentRequiresServerObstacleDetour(start, end, obstacle, 2)) {
         return { pointIndex, start, end, obstacle };
       }
     }
@@ -5874,16 +5970,32 @@ function findServerObstacleDetour(regionId = "", collision = {}, ignoredIds = ne
   const candidates = [];
   const paddingScales = [1.18, 1.4, 1.75, 2.2];
   for (const scale of paddingScales) {
-    const radius = Math.max(obstacle.radius + 12, obstacle.radius * scale);
     for (let step = 0; step < 32; step += 1) {
       const angle = step / 32 * Math.PI * 2;
-      const point = {
-        x: obstacle.x + Math.cos(angle) * radius,
-        y: obstacle.y + Math.sin(angle) * radius,
-      };
+      let point;
+      if (obstacle.terrain) {
+        const rotation = safeNumber(obstacle.rot, 0);
+        const cos = Math.cos(rotation);
+        const sin = Math.sin(rotation);
+        const localX = Math.cos(angle) * Math.max(safeNumber(obstacle.rx, 1) + 12, safeNumber(obstacle.rx, 1) * scale);
+        const localY = Math.sin(angle) * Math.max(safeNumber(obstacle.ry, 1) + 12, safeNumber(obstacle.ry, 1) * scale);
+        point = {
+          x: safeNumber(obstacle.x, 0) + localX * cos - localY * sin,
+          y: safeNumber(obstacle.y, 0) + localX * sin + localY * cos,
+        };
+      } else {
+        const radius = Math.max(
+          safeNumber(obstacle.radius, 1) + 12,
+          safeNumber(obstacle.radius, 1) * scale
+        );
+        point = {
+          x: safeNumber(obstacle.x, 0) + Math.cos(angle) * radius,
+          y: safeNumber(obstacle.y, 0) + Math.sin(angle) * radius,
+        };
+      }
       if (point.x < bounds.left || point.x > bounds.right || point.y < bounds.top || point.y > bounds.bottom) continue;
-      if (segmentCrossesServerObstacle(start, point, obstacle, 2)
-        || segmentCrossesServerObstacle(point, end, obstacle, 2)) continue;
+      if (segmentRequiresServerObstacleDetour(start, point, obstacle, 2)
+        || segmentRequiresServerObstacleDetour(point, end, obstacle, 2)) continue;
       const collisionCount = getServerRouteCollisionCount(regionId, start, point, ignoredIds)
         + getServerRouteCollisionCount(regionId, point, end, ignoredIds);
       const distance = Math.hypot(point.x - start.x, point.y - start.y)
@@ -5920,19 +6032,21 @@ function buildServerStructureSafeLeg(regionId = "", start = {}, end = {}, ignore
 function buildServerGeneratedArmyRoute(source = {}, target = {}) {
   const sourceRegionId = requireKnownWorldRegionId(source.regionId || source.startPool);
   const targetRegionId = requireKnownWorldRegionId(target.regionId || target.startPool);
-  const routeRegionIds = findServerPortalRouteRegionChain(sourceRegionId, targetRegionId);
-  const ignoredIds = new Set([safeString(source.id, 96), safeString(target.id, 96)].filter(Boolean));
-  const pathSegments = getExpectedServerRouteLegs(source, target, routeRegionIds).map(leg => {
-    const points = buildServerStructureSafeLeg(leg.regionId, leg.start, leg.end, ignoredIds);
-    return { regionId: leg.regionId, points, length: routeLength(points) };
-  });
-  assertRouteAvoidsWorldStructures(pathSegments, ignoredIds);
-  return {
-    routeRegionIds,
-    pathSegments,
-    path: pathSegments.flatMap((segment, index) => index ? segment.points.slice(1) : segment.points).slice(0, MAX_ROUTE_POINTS_PER_SEGMENT),
-    pathLength: pathSegments.reduce((total, segment) => total + segment.length, 0),
-  };
+  const route = AUTHORITATIVE_ROUTE_PLANNER.calculate(
+    { ...source, regionId: sourceRegionId },
+    { ...target, regionId: targetRegionId }
+  );
+  if (!route?.pathSegments?.length || !(route.pathLength > 0)) {
+    throw new HttpsError("failed-precondition", "No safe route through the Crownlands terrain could be found.");
+  }
+  if (
+    route.routeRegionIds.length > MAX_ROUTE_REGION_COUNT
+    || route.pathSegments.length > MAX_ROUTE_SEGMENT_COUNT
+    || route.pathSegments.some(segment => segment.points.length > MAX_ROUTE_POINTS_PER_SEGMENT)
+  ) {
+    throw new HttpsError("failed-precondition", "The authoritative march route is too complex.");
+  }
+  return route;
 }
 
 function getCampReturnRoute(camp = {}, destination = {}) {
@@ -6772,15 +6886,21 @@ function getScoutIntelExpiresAtMs(report = null) {
 function pruneExpiredScoutReportMap(reports = {}, nowMs = Date.now()) {
   const source = reports && typeof reports === "object" && !Array.isArray(reports) ? reports : {};
   let changed = source !== reports;
-  const active = {};
+  const activeEntries = [];
   Object.entries(source).forEach(([cityId, report]) => {
     const expiresAtMs = timestampToMs(report?.expiresAtMs);
     if (!expiresAtMs || expiresAtMs <= nowMs) {
       changed = true;
       return;
     }
-    active[cityId] = report;
+    activeEntries.push([cityId, report]);
   });
+  activeEntries.sort((a, b) => (
+    timestampToMs(b[1]?.createdAtMs || b[1]?.scoutedAtMs || b[1]?.updatedAtMs)
+      - timestampToMs(a[1]?.createdAtMs || a[1]?.scoutedAtMs || a[1]?.updatedAtMs)
+  ) || a[0].localeCompare(b[0]));
+  if (activeEntries.length > LEGACY_PROFILE_SCOUT_REPORT_LIMIT) changed = true;
+  const active = Object.fromEntries(activeEntries.slice(0, LEGACY_PROFILE_SCOUT_REPORT_LIMIT));
   return changed ? active : source;
 }
 
@@ -9205,7 +9325,83 @@ async function prepareEconomyCollection(transaction, uid, nowMs = Date.now(), op
       productionCityPatches.push({ ref: entry.ref, city, patch });
     }
   });
-  cityPatches.push(...productionCityPatches.slice(0, ECONOMY_MAX_CITY_CHECKPOINT_WRITES));
+  const sharedCheckpointWriteBudget = options.sharedCheckpointWriteBudget;
+  const perCollectionCheckpointWriteBudget = clampInt(
+    options.checkpointWriteBudget ?? ECONOMY_MAX_CITY_CHECKPOINT_WRITES,
+    0,
+    ECONOMY_MAX_CITY_CHECKPOINT_WRITES
+  );
+  const checkpointWriteBudget = clampInt(
+    sharedCheckpointWriteBudget && typeof sharedCheckpointWriteBudget === "object"
+      ? Math.min(sharedCheckpointWriteBudget.remaining, perCollectionCheckpointWriteBudget)
+      : perCollectionCheckpointWriteBudget,
+    0,
+    ECONOMY_MAX_CITY_CHECKPOINT_WRITES
+  );
+  const priorityCheckpointPaths = new Set((Array.isArray(options.checkpointPriorityRefs)
+    ? options.checkpointPriorityRefs
+    : [])
+    .map(ref => safeString(ref?.path || ref, 240))
+    .filter(Boolean));
+  const mandatoryCheckpointByPath = new Map();
+  cityPatches.forEach(entry => {
+    if (!entry?.ref || !entry.patch) return;
+    const path = safeString(entry.ref.path, 240);
+    if (!path) return;
+    const previous = mandatoryCheckpointByPath.get(path);
+    mandatoryCheckpointByPath.set(path, previous
+      ? {
+        ref: entry.ref,
+        city: { ...(previous.city || {}), ...(entry.city || {}) },
+        patch: { ...(previous.patch || {}), ...entry.patch },
+      }
+      : entry);
+  });
+  const optionalCheckpointByPath = new Map();
+  productionCityPatches.forEach(entry => {
+    if (!entry?.ref || !entry.patch) return;
+    const path = safeString(entry.ref.path, 240);
+    if (!path) return;
+    const mandatory = mandatoryCheckpointByPath.get(path);
+    if (mandatory) {
+      mandatoryCheckpointByPath.set(path, {
+        ref: entry.ref,
+        city: { ...(mandatory.city || {}), ...(entry.city || {}) },
+        patch: { ...(mandatory.patch || {}), ...entry.patch },
+      });
+      return;
+    }
+    const previous = optionalCheckpointByPath.get(path);
+    optionalCheckpointByPath.set(path, previous
+      ? {
+        ref: entry.ref,
+        city: { ...(previous.city || {}), ...(entry.city || {}) },
+        patch: { ...(previous.patch || {}), ...entry.patch },
+      }
+      : entry);
+  });
+  const mandatoryCheckpoints = [...mandatoryCheckpointByPath.values()];
+  const optionalCheckpoints = [...optionalCheckpointByPath.entries()]
+    .sort(([leftPath], [rightPath]) => (
+      Number(priorityCheckpointPaths.has(rightPath)) - Number(priorityCheckpointPaths.has(leftPath))
+    ))
+    .map(([, entry]) => entry);
+  const optionalCheckpointWriteBudget = Math.max(
+    0,
+    checkpointWriteBudget - mandatoryCheckpoints.length
+  );
+  cityPatches.length = 0;
+  cityPatches.push(
+    ...mandatoryCheckpoints,
+    ...optionalCheckpoints.slice(0, optionalCheckpointWriteBudget)
+  );
+  if (sharedCheckpointWriteBudget && typeof sharedCheckpointWriteBudget === "object") {
+    sharedCheckpointWriteBudget.remaining = Math.max(
+      0,
+      clampInt(sharedCheckpointWriteBudget.remaining, 0, ECONOMY_MAX_CITY_CHECKPOINT_WRITES)
+        - cityPatches.length
+    );
+  }
 
   const goldFloat = baseGold + goldGainFloat;
   const gold = Math.max(0, Math.floor(goldFloat));
@@ -9989,8 +10185,12 @@ exports.getRealmInfo = timedCallable(
       serverName: GAME_SERVER_NAME,
       capacity: GAME_SERVER_CAPACITY,
       heartbeatModelVersion: GAME_SERVER_HEARTBEAT_MODEL_VERSION,
+      authoritativeRoutesVersion: AUTHORITATIVE_ROUTES_VERSION,
+      bulkOrdersVersion: BULK_ORDERS_VERSION,
       capabilities: {
         shardedGameServerHeartbeats: true,
+        authoritativeRoutesVersion: AUTHORITATIVE_ROUTES_VERSION,
+        bulkOrdersVersion: BULK_ORDERS_VERSION,
       },
       appCheckEnforced: false,
     };
@@ -10472,7 +10672,7 @@ exports.prepareRewardedAd = onCall(REWARDED_AD_MUTATION_CALLABLE_OPTIONS, async 
       preparedAtMs,
       showByMs,
       claimByMs,
-      deleteAfter: admin.firestore.Timestamp.fromMillis(nowMs + REWARDED_AD_AUDIT_RETENTION_MS),
+      deleteAfter: Timestamp.fromMillis(nowMs + REWARDED_AD_AUDIT_RETENTION_MS),
       createdAt: FieldValue.serverTimestamp(),
       updatedAt: FieldValue.serverTimestamp(),
     };
@@ -12566,7 +12766,9 @@ exports.relinquishCity = onCall({ region: "us-central1", maxInstances: 20, invok
       ) {
         throw new HttpsError("invalid-argument", "The relinquish march does not match the nearest friendly city.");
       }
-      const validatedRoute = validateArmyRoute(order, source, destination);
+      // The client still supplies route fields for payload compatibility, but relinquishment
+      // always persists geometry rebuilt from the authoritative world layout.
+      const validatedRoute = buildServerGeneratedArmyRoute(source, destination);
       armyRefs = armyRefsForRegions(validatedRoute.routeRegionIds, order.id);
       if (!armyRefs.length) {
         throw new HttpsError("invalid-argument", "The relinquish march has no valid island route.");
@@ -14744,7 +14946,8 @@ exports.createClanRally = timedCallable("createClanRally", { region: "us-central
     )) {
       throw new HttpsError("failed-precondition", "You cannot form a rally against your own or a current clan ally's objective.");
     }
-    const validatedRoute = validateArmyRoute(order, source, target);
+    // Persist only server-generated rally geometry; client route fields are compatibility-only.
+    const validatedRoute = buildServerGeneratedArmyRoute(source, target);
     const economy = await prepareEconomyCollection(transaction, uid, nowMs, {
       profileRef: playerRef,
       profileSnap: playerSnap,
@@ -14800,7 +15003,7 @@ exports.createClanRally = timedCallable("createClanRally", { region: "us-central
       targetRegionId: order.targetRegionId,
       targetX: safeNumber(target.x, 0),
       targetY: safeNumber(target.y, 0),
-      validatedRouteVersion: 1,
+      validatedRouteVersion: AUTHORITATIVE_ROUTES_VERSION,
       path: validatedRoute.path,
       pathSegments: validatedRoute.pathSegments,
       routeRegionIds: validatedRoute.routeRegionIds,
@@ -14949,7 +15152,8 @@ exports.joinClanRally = timedCallable("joinClanRally", { region: "us-central1", 
       targetType: "city",
       targetRegionId: rally.assemblyRegionId,
     };
-    const validatedRoute = validateArmyRoute(joinOrder, source, assembly);
+    // Rally contributions use the same canonical terrain and portal planner as direct marches.
+    const validatedRoute = buildServerGeneratedArmyRoute(source, assembly);
     const economy = await prepareEconomyCollection(transaction, uid, nowMs, {
       profileRef: playerRef,
       profileSnap: playerSnap,
@@ -15180,7 +15384,13 @@ async function cancelClanRallyRequest(request) {
     const assemblySnap = assemblyRef ? await transaction.get(assemblyRef) : null;
     const economies = new Map();
     for (const participant of assembledParticipants) {
-      const economy = await prepareEconomyCollection(transaction, participant.uid, nowMs);
+      const participantSourceRef = participant.sourceRegionId && participant.sourceId
+        ? cityRefForRegion(normalizeRegionId(participant.sourceRegionId), safeString(participant.sourceId, 96))
+        : null;
+      const economy = await prepareEconomyCollection(transaction, participant.uid, nowMs, {
+        checkpointWriteBudget: RALLY_CANCEL_PARTICIPANT_CHECKPOINT_WRITE_BUDGET,
+        checkpointPriorityRefs: [participantSourceRef, assemblyRef].filter(Boolean),
+      });
       economies.set(participant.uid, economy);
     }
     const movements = [];
@@ -15406,7 +15616,8 @@ exports.launchClanRally = timedCallable("launchClanRally", { region: "us-central
       path: rally.path,
       pathLength: rally.pathLength,
     };
-    const validatedRoute = validateArmyRoute(launchOrder, assembly, target);
+    // Rebuild at launch so a stored forming-rally route can never become trusted geometry.
+    const validatedRoute = buildServerGeneratedArmyRoute(assembly, target);
     const inboundParticipants = activeRallyParticipants(rally)
       .filter(participant => participant.status === RALLY_PARTICIPANT_INBOUND);
     const assembledParticipants = assembledRallyParticipants(rally);
@@ -15562,6 +15773,11 @@ exports.launchClanRally = timedCallable("launchClanRally", { region: "us-central
     transaction.set(rallyRef, {
       status: RALLY_STATUS_LAUNCHED,
       armyId: movement.id,
+      validatedRouteVersion: AUTHORITATIVE_ROUTES_VERSION,
+      path: validatedRoute.path,
+      pathSegments: validatedRoute.pathSegments,
+      routeRegionIds: validatedRoute.routeRegionIds,
+      pathLength: validatedRoute.pathLength,
       participants: snapshottedParticipants,
       ...totals,
       inboundTroops: 0,
@@ -15727,6 +15943,822 @@ exports.previewArmyProtection = onCall({ region: "us-central1", maxInstances: 20
   });
 });
 
+function normalizeAuthoritativeRouteRequest(data = {}) {
+  const sourceRegionId = requireKnownWorldRegionId(data.sourceRegionId || data.fromRegionId);
+  const targetRegionId = requireKnownWorldRegionId(data.targetRegionId || data.toRegionId);
+  const fromId = safeString(data.fromId || data.sourceCityId, 96).replace(/[^a-zA-Z0-9_-]/g, "_");
+  const toId = safeString(data.toId || data.targetCityId, 96).replace(/[^a-zA-Z0-9_-]/g, "_");
+  const targetType = data.targetType === "camp" ? "camp" : "city";
+  if (!fromId || !toId || fromId === toId) {
+    throw new HttpsError("invalid-argument", "Choose a valid source and destination city.");
+  }
+  if (!getServerWorldTargetIds(sourceRegionId).has(fromId)) {
+    throw new HttpsError("invalid-argument", "The source city is not part of the current Crownlands map.");
+  }
+  const allowedTargets = targetType === "camp"
+    ? getServerWorldCampIds(targetRegionId)
+    : getServerWorldTargetIds(targetRegionId);
+  if (!allowedTargets.has(toId)) {
+    throw new HttpsError("invalid-argument", "The destination is not part of the current Crownlands map.");
+  }
+  return {
+    sourceRegionId,
+    targetRegionId,
+    fromId,
+    toId,
+    targetType,
+    kind: normalizeMarchKind(data.kind, "attack"),
+    requestedTroops: Math.max(1, Math.floor(safeNumber(data.requestedTroops || data.troops, 1))),
+  };
+}
+
+exports.previewArmyRoute = timedCallable(
+  "previewArmyRoute",
+  { region: "us-central1", maxInstances: 30, invoker: "public" },
+  async request => {
+    const uid = requireAuth(request);
+    const nowMs = Date.now();
+    const order = normalizeAuthoritativeRouteRequest(request.data || {});
+    const sourceRef = cityRefForRegion(order.sourceRegionId, order.fromId);
+    const targetRef = order.targetType === "camp"
+      ? campRefForRegion(order.targetRegionId, order.toId)
+      : cityRefForRegion(order.targetRegionId, order.toId);
+    const playerRef = db.doc(`players/${uid}`);
+    const globalStatsRef = playerGlobalStatsRef(uid);
+
+    return runTransactionWithInfrastructureRetry(async transaction => {
+      const [sourceSnap, targetSnap, playerSnap, globalStatsSnap] = await Promise.all([
+        transaction.get(sourceRef),
+        transaction.get(targetRef),
+        transaction.get(playerRef),
+        transaction.get(globalStatsRef),
+      ]);
+      if (!sourceSnap.exists) throw new HttpsError("not-found", "Source city was not found.");
+      const missingTargetCamp = order.targetType === "camp" && !targetSnap.exists
+        ? createNeutralRewardCampState(getAuthoritativeRewardCampSeed(order.targetRegionId, order.toId))
+        : null;
+      if (!targetSnap.exists && !missingTargetCamp) {
+        throw new HttpsError("not-found", "Destination was not found.");
+      }
+      let source = { id: sourceSnap.id, ...sourceSnap.data() };
+      const target = order.targetType === "camp"
+        ? getRewardCampCombatTarget(targetSnap.exists
+          ? { id: targetSnap.id, ...targetSnap.data() }
+          : missingTargetCamp)
+        : { id: targetSnap.id, ...targetSnap.data() };
+      if (!target) throw new HttpsError("failed-precondition", "That camp is not an active reward objective.");
+      if (getOwnerUid(source) !== uid) {
+        throw new HttpsError("permission-denied", "You can only preview marches from your own city.");
+      }
+
+      const sourceTroops = Math.max(0, Math.floor(safeNumber(source.troops, 0)));
+
+      const targetOwnerUid = getOwnerUid(target);
+      const kind = order.kind === "scout"
+        ? "scout"
+        : targetOwnerUid === uid
+          ? "transfer"
+          : order.kind;
+      // This preview intentionally avoids mutating/checkpointing production. Use
+      // the validated client-visible request for its travel band; the launch
+      // transaction remains authoritative for actual troop availability.
+      const troops = kind === "scout" ? 1 : order.requestedTroops;
+      const route = buildServerGeneratedArmyRoute(source, target);
+      const profile = playerSnap.exists ? playerSnap.data() || {} : {};
+      const globalStats = globalStatsSnap.exists ? globalStatsSnap.data() || {} : {};
+      const marchSpeedBonusPercent = Math.max(
+        0,
+        safeNumber(
+          globalStats.strongholdMarchSpeedBonusPercent,
+          globalStats.personalStrongholdMarchSpeedBonusPercent
+        )
+      );
+      const durationSeconds = calculateTravelTime({
+        pathLength: route.pathLength,
+        troopCount: troops,
+        kind,
+        speedMultiplier: skillMultiplier(profile, "marchOrders")
+          * (1 + marchSpeedBonusPercent / 100),
+      });
+      const durationMs = Math.ceil(durationSeconds * 1000);
+      return {
+        ok: true,
+        authoritativeRoutesVersion: AUTHORITATIVE_ROUTES_VERSION,
+        kind,
+        requestedTroops: troops,
+        points: route.path,
+        segments: route.pathSegments,
+        routeRegionIds: route.routeRegionIds,
+        length: route.pathLength,
+        distance: route.pathLength,
+        durationMs,
+        arrivesAtMs: nowMs + durationMs,
+        sourceCity: {
+          id: source.id,
+          regionId: order.sourceRegionId,
+          name: safeString(source.name, 40),
+          troops: sourceTroops,
+          troopFloat: Math.max(0, safeNumber(source.troopFloat, sourceTroops)),
+        },
+        targetCity: {
+          id: target.id,
+          regionId: order.targetRegionId,
+          name: safeString(target.name, 40),
+          ownerUid: targetOwnerUid,
+          targetType: order.targetType,
+        },
+      };
+    }, "previewArmyRoute");
+  }
+);
+
+function normalizeBulkOrderRequestId(value) {
+  try {
+    return requireBulkRequestId(value);
+  } catch (error) {
+    throw new HttpsError("invalid-argument", error?.message || "A valid request id is required.");
+  }
+}
+
+function bulkOrderRequestRef(uid = "", operation = "", requestId = "") {
+  return db.doc(
+    `players/${safeString(uid, 128)}/bulkOrderRequests/${createBulkRequestDocumentId(operation, requestId)}`
+  );
+}
+
+function armyLaunchRateLimitRef(uid = "") {
+  return db.doc(`serverRateLimits/armyLaunch_${safeString(uid, 128)}`);
+}
+
+function reserveArmyLaunchRateLimit(transaction, rateLimitSnap, uid, nowMs = Date.now(), requestedWeight = 1) {
+  const data = rateLimitSnap?.exists ? rateLimitSnap.data() || {} : {};
+  const windowStartedAtMs = nowMs - ARMY_LAUNCH_RATE_WINDOW_MS;
+  const legacyEvents = (Array.isArray(data.acceptedAtMs) ? data.acceptedAtMs : [])
+    .map(value => ({ atMs: timestampToMs(value), weight: 1 }));
+  const storedEvents = (Array.isArray(data.acceptedEvents) ? data.acceptedEvents : [])
+    .map(event => ({
+      atMs: timestampToMs(event?.atMs),
+      weight: clampInt(event?.weight, 1, ARMY_LAUNCH_RATE_WEIGHT_LIMIT),
+    }));
+  const acceptedEvents = (storedEvents.length ? storedEvents : legacyEvents)
+    // A Firestore transaction may retry after a newer invocation has committed.
+    // Keep those later events: dropping atMs > this invocation's fixed nowMs would
+    // let an older retry erase a launch that already consumed the shared budget.
+    .filter(event => event.atMs > windowStartedAtMs)
+    .sort((a, b) => a.atMs - b.atMs)
+    .slice(-ARMY_LAUNCH_RATE_CALL_LIMIT);
+  const weight = clampInt(requestedWeight, 1, ARMY_LAUNCH_RATE_WEIGHT_LIMIT);
+  const acceptedWeight = acceptedEvents.reduce((total, event) => total + event.weight, 0);
+  if (
+    acceptedEvents.length >= ARMY_LAUNCH_RATE_CALL_LIMIT
+    || acceptedWeight + weight > ARMY_LAUNCH_RATE_WEIGHT_LIMIT
+  ) {
+    const oldestEventMs = Math.min(nowMs, Math.max(0, acceptedEvents[0]?.atMs || nowMs));
+    const retryAfterMs = Math.max(250, oldestEventMs + ARMY_LAUNCH_RATE_WINDOW_MS - nowMs || 250);
+    throw new HttpsError(
+      "resource-exhausted",
+      "Too many army orders were sent at once. Wait a moment and try again.",
+      {
+        reason: "army-launch-rate-limit",
+        retryAfterMs,
+        requestedWeight: weight,
+        acceptedWeight,
+        weightLimit: ARMY_LAUNCH_RATE_WEIGHT_LIMIT,
+      }
+    );
+  }
+  transaction.set(armyLaunchRateLimitRef(uid), {
+    uid: safeString(uid, 128),
+    worldId: ONLINE_WORLD_ID,
+    resetGeneration: RESET_GENERATION,
+    acceptedEvents: [...acceptedEvents, { atMs: nowMs, weight }],
+    acceptedAtMs: FieldValue.delete(),
+    windowMs: ARMY_LAUNCH_RATE_WINDOW_MS,
+    callLimit: ARMY_LAUNCH_RATE_CALL_LIMIT,
+    weightLimit: ARMY_LAUNCH_RATE_WEIGHT_LIMIT,
+    updatedAtMs: Math.max(timestampToMs(data.updatedAtMs), nowMs),
+    updatedAt: FieldValue.serverTimestamp(),
+  }, { merge: true });
+}
+
+function assertBulkRequestRecord(record = {}, signature = "", nowMs = Date.now()) {
+  if (safeString(record.requestSignature, 80) !== signature) {
+    throw new HttpsError("already-exists", "That request id was already used for a different bulk order.");
+  }
+  if (Math.max(0, timestampToMs(record.expiresAtMs)) <= nowMs) {
+    throw new HttpsError("failed-precondition", "That bulk-order request id expired. Submit again with a new request id.");
+  }
+}
+
+async function createDuplicateBulkOrderResult(transaction, requestSnap, signature, playerRef, nowMs) {
+  const record = requestSnap.data() || {};
+  assertBulkRequestRecord(record, signature, nowMs);
+  const movementIds = normalizeActiveArmyIds(record.movementIds || []);
+  const [playerSnap, ...movementSnaps] = await Promise.all([
+    transaction.get(playerRef),
+    ...movementIds.map(id => transaction.get(canonicalArmyRef(id))),
+  ]);
+  const profile = playerSnap.exists ? playerSnap.data() || {} : {};
+  const armies = movementSnaps
+    .filter(snapshot => snapshot.exists)
+    .map(snapshot => {
+      const movement = { id: snapshot.id, ...snapshot.data() };
+      delete movement.createdAt;
+      delete movement.updatedAt;
+      return movement;
+    });
+  return {
+    ok: true,
+    ...(record.response && typeof record.response === "object" ? record.response : {}),
+    requestId: safeString(record.requestId, 96),
+    duplicate: true,
+    armies,
+    movements: armies,
+    gold: Math.max(0, Math.floor(safeNumber(profile.gold, record.response?.gold))),
+    goldFloat: Math.max(0, safeNumber(profile.goldFloat, profile.gold)),
+    currentUser: {
+      ...(record.response?.currentUser || {}),
+      gold: Math.max(0, Math.floor(safeNumber(profile.gold, record.response?.gold))),
+      goldFloat: Math.max(0, safeNumber(profile.goldFloat, profile.gold)),
+      economyUpdatedAtMs: timestampToMs(profile.economyUpdatedAtMs),
+    },
+  };
+}
+
+async function cleanupExpiredBulkOrderRequests(nowMs = Date.now()) {
+  const startedAtMs = Date.now();
+  let deleted = 0;
+  let pages = 0;
+  let oldestExpiredByMs = 0;
+  while (
+    pages < BULK_ORDER_CLEANUP_MAX_PAGES
+    && Date.now() - startedAtMs < BULK_ORDER_CLEANUP_RUNTIME_BUDGET_MS
+  ) {
+    const snapshot = await db.collectionGroup("bulkOrderRequests")
+      .where("expiresAtMs", "<=", nowMs)
+      .orderBy("expiresAtMs", "asc")
+      .limit(BULK_ORDER_CLEANUP_LIMIT)
+      .get();
+    if (!snapshot.size) break;
+    pages += 1;
+    oldestExpiredByMs = Math.max(
+      oldestExpiredByMs,
+      Math.max(0, nowMs - timestampToMs(snapshot.docs[0]?.data()?.expiresAtMs))
+    );
+    const batch = db.batch();
+    snapshot.docs.forEach(doc => batch.delete(doc.ref));
+    await batch.commit();
+    deleted += snapshot.size;
+    if (snapshot.size < BULK_ORDER_CLEANUP_LIMIT) break;
+  }
+  const backlogSnapshot = await db.collectionGroup("bulkOrderRequests")
+    .where("expiresAtMs", "<=", nowMs)
+    .orderBy("expiresAtMs", "asc")
+    .limit(1)
+    .get();
+  const backlogOldestExpiresAtMs = timestampToMs(backlogSnapshot.docs[0]?.data()?.expiresAtMs);
+  return {
+    deleted,
+    pages,
+    remainingPossible: !backlogSnapshot.empty,
+    backlogOldestExpiredByMs: backlogOldestExpiresAtMs
+      ? Math.max(0, nowMs - backlogOldestExpiresAtMs)
+      : 0,
+    oldestExpiredByMs,
+    elapsedMs: Date.now() - startedAtMs,
+  };
+}
+
+function chargeBulkOrderCost(economy, cost, label) {
+  const required = Math.max(0, Math.floor(safeNumber(cost, 0)));
+  const available = Math.max(0, safeNumber(economy?.goldFloat, economy?.gold));
+  if (!economy || available + 1e-6 < required) {
+    throw new HttpsError("failed-precondition", `${label} costs ${required.toLocaleString("en-US")} gold.`);
+  }
+  const goldFloat = Math.max(0, available - required);
+  const gold = Math.max(0, Math.floor(goldFloat));
+  economy.gold = gold;
+  economy.goldFloat = goldFloat;
+  return { gold, goldFloat };
+}
+
+function bulkOrderCurrentUser(economy, profile = {}, goldPatch = {}) {
+  return {
+    gold: Math.max(0, Math.floor(safeNumber(goldPatch.gold, economy?.gold))),
+    goldFloat: Math.max(0, safeNumber(goldPatch.goldFloat, economy?.goldFloat)),
+    economyUpdatedAtMs: timestampToMs(economy?.profilePatch?.economyUpdatedAtMs),
+    shopItems: economy?.shopItems || {},
+    itemEffects: economy?.itemEffects || {},
+    itemPurchaseCooldowns: economy?.itemPurchaseCooldowns || {},
+    character: profile?.character || null,
+    upgrades: normalizeSkillUpgrades(profile?.upgrades),
+    globalStats: globalStatsForClient(economy?.lastGlobalStats || economy?.globalStats),
+  };
+}
+
+function compactBulkOrderResponse(result = {}) {
+  return {
+    requestId: safeString(result.requestId, 96),
+    bulkOrdersVersion: BULK_ORDERS_VERSION,
+    cost: Math.max(0, Math.floor(safeNumber(result.cost, 0))),
+    gold: Math.max(0, Math.floor(safeNumber(result.gold, 0))),
+    goldFloat: Math.max(0, safeNumber(result.goldFloat, result.gold)),
+    scoutCount: Math.max(0, Math.floor(safeNumber(result.scoutCount, 0))),
+    sourceCount: Math.max(0, Math.floor(safeNumber(result.sourceCount, 0))),
+    totalTroops: Math.max(0, Math.floor(safeNumber(result.totalTroops, 0))),
+    sourceCity: result.sourceCity || null,
+    sourceCities: Array.isArray(result.sourceCities) ? result.sourceCities.slice(0, MAX_REGROUP_SOURCES) : [],
+    targetCity: result.targetCity || null,
+    cityUpdates: Array.isArray(result.cityUpdates) ? result.cityUpdates.slice(0, MAX_REGROUP_SOURCES) : [],
+    currentUser: result.currentUser || null,
+  };
+}
+
+exports.sendNearbyScouts = timedCallable(
+  "sendNearbyScouts",
+  { region: "us-central1", maxInstances: 20, invoker: "public" },
+  async request => {
+    const uid = requireAuth(request);
+    const data = request.data || {};
+    const nowMs = Date.now();
+    const requestId = normalizeBulkOrderRequestId(data.requestId);
+    const sourceRegionId = requireKnownWorldRegionId(data.sourceRegionId || data.regionId);
+    const sourceCityId = safeString(data.sourceCityId || data.fromId, 96).replace(/[^a-zA-Z0-9_-]/g, "_");
+    const targetCityIds = normalizeBulkCityIds(data.targetCityIds || data.targetIds, MAX_NEARBY_SCOUT_TARGETS)
+      .sort();
+    if (!sourceCityId || !getServerWorldTargetIds(sourceRegionId).has(sourceCityId)) {
+      throw new HttpsError("invalid-argument", "Choose an owned source city on the current map.");
+    }
+    if (!targetCityIds.length) throw new HttpsError("invalid-argument", "Choose at least one nearby city to scout.");
+    if (targetCityIds.length > MAX_NEARBY_SCOUT_TARGETS) {
+      throw new HttpsError("invalid-argument", `Scout Nearby supports at most ${MAX_NEARBY_SCOUT_TARGETS} targets.`);
+    }
+    const allowedTargets = getServerWorldTargetIds(sourceRegionId);
+    if (targetCityIds.some(id => id === sourceCityId || !allowedTargets.has(id))) {
+      throw new HttpsError("invalid-argument", "One of the selected scout targets is not on this map.");
+    }
+
+    const signaturePayload = { sourceRegionId, sourceCityId, targetCityIds };
+    const signature = createBulkRequestSignature("nearby_scout", signaturePayload);
+    const requestRef = bulkOrderRequestRef(uid, "nearby_scout", requestId);
+    const playerRef = db.doc(`players/${uid}`);
+    const sourceRef = cityRefForRegion(sourceRegionId, sourceCityId);
+    const targetRefs = targetCityIds.map(id => cityRefForRegion(sourceRegionId, id));
+    const leaderboardRef = leaderboardEntryRef(uid);
+    const launchRateRef = armyLaunchRateLimitRef(uid);
+
+    const result = await runTransactionWithInfrastructureRetry(async transaction => {
+      const requestSnap = await transaction.get(requestRef);
+      if (requestSnap.exists) {
+        return createDuplicateBulkOrderResult(transaction, requestSnap, signature, playerRef, nowMs);
+      }
+      const [sourceSnap, playerSnap, attackerLeaderboardSnap, launchRateSnap, ...targetSnaps] = await Promise.all([
+        transaction.get(sourceRef),
+        transaction.get(playerRef),
+        transaction.get(leaderboardRef),
+        transaction.get(launchRateRef),
+        ...targetRefs.map(ref => transaction.get(ref)),
+      ]);
+      if (!sourceSnap.exists) throw new HttpsError("not-found", "Source city was not found.");
+      if (targetSnaps.some(snapshot => !snapshot.exists)) {
+        throw new HttpsError("not-found", "One of the nearby scout targets was not found.");
+      }
+      let source = { id: sourceSnap.id, ...sourceSnap.data() };
+      if (getOwnerUid(source) !== uid) {
+        throw new HttpsError("permission-denied", "You can only send scouts from your own city.");
+      }
+      const targets = targetSnaps.map(snapshot => ({ id: snapshot.id, ...snapshot.data() }));
+      const targetOwnerUids = [...new Set(targets.map(getOwnerUid).filter(ownerUid => ownerUid && ownerUid !== uid))];
+      const defenderSnapshots = new Map();
+      const defenderSnapshotEntries = await Promise.all(targetOwnerUids.map(async defenderUid => {
+        const [profileSnap, defenderLeaderboardSnap, globalStatsSnap] = await Promise.all([
+          transaction.get(db.doc(`players/${defenderUid}`)),
+          transaction.get(leaderboardEntryRef(defenderUid)),
+          transaction.get(playerGlobalStatsRef(defenderUid)),
+        ]);
+        return [defenderUid, {
+          profile: profileSnap.exists ? profileSnap.data() || {} : {},
+          leaderboard: defenderLeaderboardSnap.exists ? defenderLeaderboardSnap.data() || {} : {},
+          globalStats: globalStatsSnap.exists ? globalStatsSnap.data() || {} : {},
+        }];
+      }));
+      defenderSnapshotEntries.forEach(([defenderUid, snapshots]) => {
+        defenderSnapshots.set(defenderUid, snapshots);
+      });
+
+      const economy = await prepareEconomyCollection(transaction, uid, nowMs, {
+        profileRef: playerRef,
+        profileSnap: playerSnap,
+        checkpointWriteBudget: BULK_ECONOMY_CHECKPOINT_WRITE_BUDGET,
+      });
+      const producedSourceEntry = getEconomyCityByRef(economy, sourceRef);
+      if (producedSourceEntry?.city) source = producedSourceEntry.city;
+      const profile = economy.profileAfter || playerSnap.data() || {};
+      const sourceTroops = Math.max(0, Math.floor(safeNumber(source.troops, 0)));
+      if (sourceTroops < targets.length) {
+        throw new HttpsError(
+          "failed-precondition",
+          `${safeString(source.name, 40) || "The source city"} needs ${targets.length.toLocaleString("en-US")} troops to scout every selected city.`
+        );
+      }
+      const pendingScoutTargets = new Set((economy.activeArmies || [])
+        .filter(army => army?.status === "active" && army.kind === "scout" && !army.returning)
+        .map(army => `${normalizeRegionId(army.targetRegionId)}:${safeString(army.toId, 96)}`));
+      const attackerClanId = safeString(profile.clanId, 128);
+      for (const target of targets) {
+        const targetOwnerUid = getOwnerUid(target);
+        if (targetOwnerUid === uid) {
+          throw new HttpsError("failed-precondition", "Scout Nearby only targets cities you do not own.");
+        }
+        if (!isWithinRadius(source, target, NEARBY_SCOUT_RADIUS)) {
+          throw new HttpsError("failed-precondition", `${safeString(target.name, 40) || "A target"} is outside the Scout Nearby radius.`);
+        }
+        if (pendingScoutTargets.has(`${sourceRegionId}:${target.id}`)) {
+          throw new HttpsError("failed-precondition", `A scout is already traveling to ${safeString(target.name, 40) || "that city"}.`);
+        }
+        const defender = defenderSnapshots.get(targetOwnerUid) || { profile: {}, leaderboard: {}, globalStats: {} };
+        if (targetOwnerUid && attackerClanId && attackerClanId === safeString(defender.profile.clanId, 128)) {
+          throw new HttpsError("failed-precondition", "You cannot scout a current clan ally.");
+        }
+        if (targetOwnerUid && isVeilOfSilenceActive(defender.profile, nowMs)) {
+          throw new HttpsError("failed-precondition", "A selected city is hidden by Veil of Silence.");
+        }
+        if (isProtectedMainCity(target, uid, getMainCityProtectionProfile(
+          defender.profile,
+          defender.globalStats,
+          defender.leaderboard
+        ))) {
+          throw new HttpsError("failed-precondition", "Main cities cannot be scouted.");
+        }
+      }
+
+      const routes = targets.map(target => buildServerGeneratedArmyRoute(source, target));
+      const stats = createPreparedEconomyStatsSnapshot(economy, {}, { nowMs });
+      const attackerKingPower = Math.max(0, Math.floor(safeNumber(stats?.kingPower, 0)))
+        || getPlayerPowerSnapshot({
+          profile,
+          leaderboard: attackerLeaderboardSnap.exists ? attackerLeaderboardSnap.data() || {} : {},
+          globalStats: economy.globalStats,
+          city: source,
+        });
+      const speedMultiplier = skillMultiplier(profile, "marchOrders")
+        * (1 + Math.max(0, safeNumber(economy.bonuses?.marchSpeedBonusPercent, 0)) / 100);
+      const armies = targets.map((target, index) => {
+        const route = routes[index];
+        const targetOwnerUid = getOwnerUid(target);
+        const defender = defenderSnapshots.get(targetOwnerUid) || { profile: {}, leaderboard: {}, globalStats: {} };
+        const duration = calculateTravelTime({
+          pathLength: route.pathLength,
+          troopCount: 1,
+          kind: "scout",
+          speedMultiplier,
+        });
+        return {
+          id: createBulkMovementId(uid, "nearby_scout", requestId, target.id, index),
+          worldId: ONLINE_WORLD_ID,
+          resetGeneration: RESET_GENERATION,
+          ownerKind: "player",
+          ownerUid: uid,
+          ownerName: normalizePlayerName(profile.playerName || source.ownerName || request.auth.token?.name),
+          ownerFlag: profile.flag || source.ownerFlag || null,
+          ownerKingPower: attackerKingPower,
+          kingPowerVersion: GLOBAL_PLAYER_STATS_VERSION,
+          kind: "scout",
+          launchKind: "scout",
+          targetType: "city",
+          fromId: sourceCityId,
+          toId: target.id,
+          sourceRegionId,
+          targetRegionId: sourceRegionId,
+          fromName: safeString(source.name, 40),
+          toName: safeString(target.name, 40),
+          troops: 1,
+          requestedTroops: 1,
+          total: duration,
+          path: route.path,
+          pathSegments: route.pathSegments,
+          routeRegionIds: route.routeRegionIds,
+          viewRegionIds: route.routeRegionIds,
+          pathLength: route.pathLength,
+          targetKey: `${sourceRegionId}:${target.id}`,
+          targetOwnerAtLaunch: targetOwnerUid ? "player" : "neutral",
+          originalTargetOwnerUid: targetOwnerUid || "",
+          targetOwnerUid: targetOwnerUid || "",
+          lastIncomingNotificationOwnerUid: targetOwnerUid || "",
+          attackerKingPower,
+          defenderKingPower: Math.max(1, getPlayerPowerSnapshot({
+            profile: defender.profile,
+            leaderboard: defender.leaderboard,
+            globalStats: defender.globalStats,
+            city: target,
+          })),
+          launchedAtMs: nowMs,
+          arrivesAtMs: nowMs + Math.ceil(duration * 1000),
+          status: "active",
+          createdByServer: true,
+          bulkOrderVersion: BULK_ORDERS_VERSION,
+          bulkRequestId: requestId,
+          serverAuthorityVersion: 3,
+        };
+      });
+
+      const existingMovementSnaps = await Promise.all(
+        armies.map(army => transaction.get(canonicalArmyRef(army.id)))
+      );
+      if (existingMovementSnaps.some(snapshot => snapshot.exists)) {
+        throw new HttpsError(
+          "already-exists",
+          "That Scout Nearby request id was already used. Submit again with a new request id."
+        );
+      }
+
+      const goldPatch = chargeBulkOrderCost(economy, NEARBY_SCOUT_GOLD_COST, "Scout Nearby");
+      const sourceTroopFloat = Math.max(0, safeNumber(source.troopFloat, sourceTroops) - armies.length);
+      const sourceCity = {
+        id: source.id,
+        regionId: sourceRegionId,
+        troops: Math.max(0, sourceTroops - armies.length),
+        troopFloat: sourceTroopFloat,
+      };
+      const sourcePatch = { ref: sourceRef, city: source, patch: {
+        troops: sourceCity.troops,
+        troopFloat: sourceCity.troopFloat,
+      } };
+      writePreparedEconomy(transaction, economy, goldPatch, [sourcePatch], {
+        addActiveArmies: armies,
+        nowMs,
+      });
+      armies.forEach(movement => writeArmyMovementCopies(transaction, movement, { includeCreatedAt: true }));
+      reserveArmyLaunchRateLimit(transaction, launchRateSnap, uid, nowMs, armies.length);
+
+      const currentUser = bulkOrderCurrentUser(economy, profile, goldPatch);
+      const response = {
+        ok: true,
+        requestId,
+        bulkOrdersVersion: BULK_ORDERS_VERSION,
+        cost: NEARBY_SCOUT_GOLD_COST,
+        gold: goldPatch.gold,
+        goldFloat: goldPatch.goldFloat,
+        scoutCount: armies.length,
+        totalTroops: armies.length,
+        armies,
+        movements: armies,
+        sourceCity,
+        cityUpdates: [sourceCity],
+        currentUser,
+        notifications: targets.map((target, index) => createIncomingArmyNotification({
+          defenderUid: getOwnerUid(target),
+          attackerUid: uid,
+          movement: armies[index],
+          source,
+          target,
+        })).filter(Boolean),
+      };
+      transaction.set(requestRef, {
+        version: BULK_ORDERS_VERSION,
+        operation: "nearby_scout",
+        uid,
+        worldId: ONLINE_WORLD_ID,
+        resetGeneration: RESET_GENERATION,
+        requestId,
+        requestSignature: signature,
+        movementIds: armies.map(army => army.id),
+        response: compactBulkOrderResponse(response),
+        createdAtMs: nowMs,
+        expiresAtMs: nowMs + BULK_ORDER_IDEMPOTENCY_MS,
+        expiresAt: Timestamp.fromMillis(nowMs + BULK_ORDER_IDEMPOTENCY_MS),
+        createdAt: FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp(),
+      }, { merge: false });
+      return response;
+    }, "sendNearbyScouts");
+
+    const notifications = Array.isArray(result.notifications) ? result.notifications : [];
+    delete result.notifications;
+    await Promise.all(notifications.map(notification => sendIncomingArmyNotification(notification).catch(error => {
+      console.warn("Could not send bulk scout notification", error);
+      return false;
+    })));
+    return result;
+  }
+);
+
+exports.sendRegroupOrders = timedCallable(
+  "sendRegroupOrders",
+  { region: "us-central1", maxInstances: 20, invoker: "public" },
+  async request => {
+    const uid = requireAuth(request);
+    const data = request.data || {};
+    const nowMs = Date.now();
+    const requestId = normalizeBulkOrderRequestId(data.requestId);
+    const targetRegionId = requireKnownWorldRegionId(data.targetRegionId || data.regionId);
+    const targetCityId = safeString(data.targetCityId || data.toId, 96).replace(/[^a-zA-Z0-9_-]/g, "_");
+    const sourceCityIds = normalizeBulkCityIds(data.sourceCityIds || data.sourceIds, MAX_REGROUP_SOURCES)
+      .sort();
+    const allowedCities = getServerWorldTargetIds(targetRegionId);
+    if (!targetCityId || !allowedCities.has(targetCityId)) {
+      throw new HttpsError("invalid-argument", "Choose an owned regroup destination on the current map.");
+    }
+    if (!sourceCityIds.length) throw new HttpsError("invalid-argument", "Choose at least one nearby source city.");
+    if (sourceCityIds.length > MAX_REGROUP_SOURCES) {
+      throw new HttpsError("invalid-argument", `Regroup supports at most ${MAX_REGROUP_SOURCES} source cities.`);
+    }
+    if (sourceCityIds.some(id => id === targetCityId || !allowedCities.has(id))) {
+      throw new HttpsError("invalid-argument", "One of the selected regroup sources is invalid.");
+    }
+
+    const signaturePayload = { targetRegionId, targetCityId, sourceCityIds };
+    const signature = createBulkRequestSignature("regroup", signaturePayload);
+    const requestRef = bulkOrderRequestRef(uid, "regroup", requestId);
+    const playerRef = db.doc(`players/${uid}`);
+    const targetRef = cityRefForRegion(targetRegionId, targetCityId);
+    const sourceRefs = sourceCityIds.map(id => cityRefForRegion(targetRegionId, id));
+    const leaderboardRef = leaderboardEntryRef(uid);
+    const launchRateRef = armyLaunchRateLimitRef(uid);
+
+    return runTransactionWithInfrastructureRetry(async transaction => {
+      const requestSnap = await transaction.get(requestRef);
+      if (requestSnap.exists) {
+        return createDuplicateBulkOrderResult(transaction, requestSnap, signature, playerRef, nowMs);
+      }
+      const [targetSnap, playerSnap, leaderboardSnap, launchRateSnap, ...sourceSnaps] = await Promise.all([
+        transaction.get(targetRef),
+        transaction.get(playerRef),
+        transaction.get(leaderboardRef),
+        transaction.get(launchRateRef),
+        ...sourceRefs.map(ref => transaction.get(ref)),
+      ]);
+      if (!targetSnap.exists) throw new HttpsError("not-found", "Regroup destination was not found.");
+      if (sourceSnaps.some(snapshot => !snapshot.exists)) {
+        throw new HttpsError("not-found", "One of the regroup source cities was not found.");
+      }
+      let target = { id: targetSnap.id, ...targetSnap.data() };
+      if (getOwnerUid(target) !== uid) {
+        throw new HttpsError("permission-denied", "You can only regroup into your own city.");
+      }
+
+      const economy = await prepareEconomyCollection(transaction, uid, nowMs, {
+        profileRef: playerRef,
+        profileSnap: playerSnap,
+        checkpointWriteBudget: BULK_ECONOMY_CHECKPOINT_WRITE_BUDGET,
+      });
+      const producedTargetEntry = getEconomyCityByRef(economy, targetRef);
+      if (producedTargetEntry?.city) target = producedTargetEntry.city;
+      const sources = sourceRefs.map((ref, index) => {
+        const produced = getEconomyCityByRef(economy, ref)?.city;
+        return produced || { id: sourceSnaps[index].id, ...sourceSnaps[index].data() };
+      });
+      for (const source of sources) {
+        if (getOwnerUid(source) !== uid) {
+          throw new HttpsError("permission-denied", "Every regroup source must still be owned by you.");
+        }
+        if (!isWithinRadius(source, target, REGROUP_RADIUS)) {
+          throw new HttpsError("failed-precondition", `${safeString(source.name, 40) || "A source city"} is outside the Regroup radius.`);
+        }
+        if (Math.max(0, Math.floor(safeNumber(source.troops, 0))) < 1) {
+          throw new HttpsError("failed-precondition", `${safeString(source.name, 40) || "A source city"} has no troops available to regroup.`);
+        }
+      }
+
+      const profile = economy.profileAfter || playerSnap.data() || {};
+      const routes = sources.map(source => buildServerGeneratedArmyRoute(source, target));
+      const stats = createPreparedEconomyStatsSnapshot(economy, {}, { nowMs });
+      const ownerKingPower = Math.max(0, Math.floor(safeNumber(stats?.kingPower, 0)))
+        || getPlayerPowerSnapshot({
+          profile,
+          leaderboard: leaderboardSnap.exists ? leaderboardSnap.data() || {} : {},
+          globalStats: economy.globalStats,
+          city: target,
+        });
+      const speedMultiplier = skillMultiplier(profile, "marchOrders")
+        * (1 + Math.max(0, safeNumber(economy.bonuses?.marchSpeedBonusPercent, 0)) / 100);
+      const armies = sources.map((source, index) => {
+        const troops = Math.max(1, Math.floor(safeNumber(source.troops, 0)));
+        const route = routes[index];
+        const duration = calculateTravelTime({
+          pathLength: route.pathLength,
+          troopCount: troops,
+          kind: "transfer",
+          speedMultiplier,
+        });
+        return {
+          id: createBulkMovementId(uid, "regroup", requestId, source.id, index),
+          worldId: ONLINE_WORLD_ID,
+          resetGeneration: RESET_GENERATION,
+          ownerKind: "player",
+          ownerUid: uid,
+          ownerName: normalizePlayerName(profile.playerName || source.ownerName || request.auth.token?.name),
+          ownerFlag: profile.flag || source.ownerFlag || null,
+          ownerKingPower,
+          kingPowerVersion: GLOBAL_PLAYER_STATS_VERSION,
+          kind: "transfer",
+          launchKind: "transfer",
+          targetType: "city",
+          fromId: source.id,
+          toId: target.id,
+          sourceRegionId: targetRegionId,
+          targetRegionId,
+          fromName: safeString(source.name, 40),
+          toName: safeString(target.name, 40),
+          troops,
+          requestedTroops: troops,
+          total: duration,
+          path: route.path,
+          pathSegments: route.pathSegments,
+          routeRegionIds: route.routeRegionIds,
+          viewRegionIds: route.routeRegionIds,
+          pathLength: route.pathLength,
+          targetKey: `${targetRegionId}:${target.id}`,
+          targetOwnerAtLaunch: "player",
+          originalTargetOwnerUid: uid,
+          targetOwnerUid: uid,
+          attackerKingPower: ownerKingPower,
+          defenderKingPower: ownerKingPower,
+          launchedAtMs: nowMs,
+          arrivesAtMs: nowMs + Math.ceil(duration * 1000),
+          status: "active",
+          createdByServer: true,
+          bulkOrderVersion: BULK_ORDERS_VERSION,
+          bulkRequestId: requestId,
+          serverAuthorityVersion: 3,
+        };
+      });
+
+      const existingMovementSnaps = await Promise.all(
+        armies.map(army => transaction.get(canonicalArmyRef(army.id)))
+      );
+      if (existingMovementSnaps.some(snapshot => snapshot.exists)) {
+        throw new HttpsError(
+          "already-exists",
+          "That Regroup request id was already used. Submit again with a new request id."
+        );
+      }
+
+      const goldPatch = chargeBulkOrderCost(economy, REGROUP_GOLD_COST, "Regroup");
+      const sourceCityPatches = sources.map((source, index) => ({
+        ref: sourceRefs[index],
+        city: source,
+        patch: { troops: 0, troopFloat: Math.max(0, safeNumber(source.troopFloat, source.troops) - armies[index].troops) },
+      }));
+      const sourceCities = sourceCityPatches.map(entry => ({
+        id: entry.city.id,
+        regionId: targetRegionId,
+        troops: entry.patch.troops,
+        troopFloat: entry.patch.troopFloat,
+      }));
+      writePreparedEconomy(transaction, economy, goldPatch, sourceCityPatches, {
+        addActiveArmies: armies,
+        nowMs,
+      });
+      armies.forEach(movement => writeArmyMovementCopies(transaction, movement, { includeCreatedAt: true }));
+      reserveArmyLaunchRateLimit(transaction, launchRateSnap, uid, nowMs, armies.length);
+
+      const targetCity = {
+        id: target.id,
+        regionId: targetRegionId,
+        name: safeString(target.name, 40),
+        troops: Math.max(0, Math.floor(safeNumber(target.troops, 0))),
+        troopFloat: Math.max(0, safeNumber(target.troopFloat, target.troops || 0)),
+      };
+      const currentUser = bulkOrderCurrentUser(economy, profile, goldPatch);
+      const totalTroops = armies.reduce((total, army) => total + army.troops, 0);
+      const response = {
+        ok: true,
+        requestId,
+        bulkOrdersVersion: BULK_ORDERS_VERSION,
+        cost: REGROUP_GOLD_COST,
+        gold: goldPatch.gold,
+        goldFloat: goldPatch.goldFloat,
+        sourceCount: armies.length,
+        totalTroops,
+        armies,
+        movements: armies,
+        sourceCities,
+        targetCity,
+        cityUpdates: sourceCities,
+        currentUser,
+      };
+      transaction.set(requestRef, {
+        version: BULK_ORDERS_VERSION,
+        operation: "regroup",
+        uid,
+        worldId: ONLINE_WORLD_ID,
+        resetGeneration: RESET_GENERATION,
+        requestId,
+        requestSignature: signature,
+        movementIds: armies.map(army => army.id),
+        response: compactBulkOrderResponse(response),
+        createdAtMs: nowMs,
+        expiresAtMs: nowMs + BULK_ORDER_IDEMPOTENCY_MS,
+        expiresAt: Timestamp.fromMillis(nowMs + BULK_ORDER_IDEMPOTENCY_MS),
+        createdAt: FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp(),
+      }, { merge: false });
+      return response;
+    }, "sendRegroupOrders");
+  }
+);
+
 exports.sendArmyOrder = timedCallable("sendArmyOrder", { region: "us-central1", maxInstances: 20, invoker: "public" }, async request => {
   const uid = requireAuth(request);
   const nowMs = Date.now();
@@ -15758,15 +16790,17 @@ exports.sendArmyOrder = timedCallable("sendArmyOrder", { region: "us-central1", 
   const legacyArmyRef = db.doc(`islands/${getOnlineIslandId(order.sourceRegionId)}/armies/${order.id}`);
   const playerRef = db.doc(`players/${uid}`);
   const attackerLeaderboardRef = leaderboardEntryRef(uid);
+  const launchRateRef = armyLaunchRateLimitRef(uid);
 
   const result = await runTransactionWithInfrastructureRetry(async transaction => {
-    const [sourceSnap, targetSnap, canonicalArmySnap, legacyArmySnap, playerSnap, attackerLeaderboardSnap] = await Promise.all([
+    const [sourceSnap, targetSnap, canonicalArmySnap, legacyArmySnap, playerSnap, attackerLeaderboardSnap, launchRateSnap] = await Promise.all([
       transaction.get(sourceRef),
       transaction.get(targetRef),
       transaction.get(armyRefs[0]),
       transaction.get(legacyArmyRef),
       transaction.get(playerRef),
       transaction.get(attackerLeaderboardRef),
+      transaction.get(launchRateRef),
     ]);
 
     if (!sourceSnap.exists) throw new HttpsError("not-found", "Source city was not found.");
@@ -15824,7 +16858,9 @@ exports.sendArmyOrder = timedCallable("sendArmyOrder", { region: "us-central1", 
     if (sourceOwnerUid !== uid) {
       throw new HttpsError("permission-denied", "You can only send troops from your own city.");
     }
-    const validatedRoute = validateArmyRoute(order, source, target);
+    // Client geometry remains accepted for payload compatibility, but the server always rebuilds
+    // the authoritative route from trusted city coordinates and the current portal graph.
+    const validatedRoute = buildServerGeneratedArmyRoute(source, target);
     armyRefs = armyRefsForRegions(validatedRoute.routeRegionIds, order.id);
     const attackerEconomy = await prepareEconomyCollection(transaction, uid, nowMs, {
       profileRef: playerRef,
@@ -16205,6 +17241,7 @@ exports.sendArmyOrder = timedCallable("sendArmyOrder", { region: "us-central1", 
     });
 
     writeArmyMovementCopies(transaction, movement, { includeCreatedAt: true });
+    reserveArmyLaunchRateLimit(transaction, launchRateSnap, uid, nowMs);
 
     if (order.targetType === "camp" && resolvedKind === "attack") {
       const activeArmyIds = normalizeActiveArmyIds([...(target.activeArmyIds || []), order.id]);
@@ -16376,6 +17413,8 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
       const economy = await prepareEconomyCollection(transaction, attackerUid, nowMs, {
         profileRef: db.doc(`players/${attackerUid}`),
         profileSnap: attackerProfileSnap,
+        checkpointWriteBudget: ARMY_SETTLEMENT_ECONOMY_CHECKPOINT_WRITE_BUDGET,
+        checkpointPriorityRefs: [sourceRef, targetRef],
       });
       const currentProfile = economy.profileAfter || attackerProfile;
       const committedRallyTroops = getProfileCommittedRallyTroops(currentProfile) + participant.troops;
@@ -16465,10 +17504,22 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
     const defenderProfileEntry = defenderUid ? participantProfiles.get(defenderUid) || {} : null;
     const attackerProfileSnap = participantProfiles.get(attackerUid)?.snap || null;
     const defenderProfileSnap = defenderUid ? participantProfiles.get(defenderUid)?.snap || null : null;
+    const settlementCheckpointWriteBudget = {
+      remaining: ARMY_SETTLEMENT_ECONOMY_CHECKPOINT_WRITE_BUDGET,
+    };
+    const hasDistinctDefenderEconomy = Boolean(defenderUid && defenderUid !== attackerUid);
+    const settlementParticipantCheckpointWriteBudget = hasDistinctDefenderEconomy
+      ? Math.floor(ARMY_SETTLEMENT_ECONOMY_CHECKPOINT_WRITE_BUDGET / 2)
+      : ARMY_SETTLEMENT_ECONOMY_CHECKPOINT_WRITE_BUDGET;
     const attackerEconomy = attackerUid
       ? await prepareEconomyCollection(transaction, attackerUid, nowMs, {
         profileRef: attackerProfileEntry.ref,
         profileSnap: attackerProfileEntry.snap,
+        checkpointWriteBudget: settlementParticipantCheckpointWriteBudget,
+        sharedCheckpointWriteBudget: settlementCheckpointWriteBudget,
+        checkpointPriorityRefs: defenderUid === attackerUid
+          ? [sourceRef, targetRef]
+          : [sourceRef],
       })
       : null;
     const defenderEconomy = defenderUid
@@ -16477,6 +17528,9 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
         : await prepareEconomyCollection(transaction, defenderUid, nowMs, {
           profileRef: defenderProfileEntry.ref,
           profileSnap: defenderProfileEntry.snap,
+          checkpointWriteBudget: settlementParticipantCheckpointWriteBudget,
+          sharedCheckpointWriteBudget: settlementCheckpointWriteBudget,
+          checkpointPriorityRefs: [targetRef],
         })
       : null;
     const producedSourceEntry = getEconomyCityByRef(attackerEconomy, sourceRef);
@@ -20740,23 +21794,58 @@ function getScheduledArmyTarget(doc = null) {
   };
 }
 
-async function loadDueArmyTargets(nowMs = Date.now()) {
+async function loadDueArmyTargets(nowMs = Date.now(), {
+  excludedArmyIds = new Set(),
+  cursor = null,
+} = {}) {
   // Canonical army documents predate the current fresh reset, so current-world
   // marches always have a root entry. Island army documents are projections and
   // must not be scanned again by the scheduler.
-  const canonicalSnap = await db.collection("armies")
+  let query = db.collection("armies")
     .where("status", "==", "active")
     .where("resetGeneration", "==", RESET_GENERATION)
     .where("worldId", "==", ONLINE_WORLD_ID)
     .where("arrivesAtMs", "<=", nowMs)
     .orderBy("arrivesAtMs", "asc")
-    .limit(SCHEDULED_ARMY_RESOLVE_SCAN_LIMIT)
+    .limit(SCHEDULED_ARMY_RESOLVE_SCAN_LIMIT);
+  if (cursor) query = query.startAfter(cursor);
+  const canonicalSnap = await query.get();
+  const targets = [];
+  let nextCursor = null;
+  for (const doc of canonicalSnap.docs) {
+    nextCursor = doc;
+    const target = getScheduledArmyTarget(doc);
+    if (!target || excludedArmyIds.has(target.armyId)) continue;
+    targets.push(target);
+    if (targets.length >= SCHEDULED_ARMY_RESOLVE_MAX_PER_RUN) break;
+  }
+  const consumedWholeSnapshot = Boolean(
+    !canonicalSnap.docs.length
+    || nextCursor?.ref?.path === canonicalSnap.docs.at(-1)?.ref?.path
+  );
+  return {
+    targets,
+    cursor: nextCursor,
+    exhausted: canonicalSnap.empty
+      || (consumedWholeSnapshot && canonicalSnap.size < SCHEDULED_ARMY_RESOLVE_SCAN_LIMIT),
+  };
+}
+
+async function loadDueArmyBacklogSnapshot(nowMs = Date.now()) {
+  const snapshot = await db.collection("armies")
+    .where("status", "==", "active")
+    .where("resetGeneration", "==", RESET_GENERATION)
+    .where("worldId", "==", ONLINE_WORLD_ID)
+    .where("arrivesAtMs", "<=", nowMs)
+    .orderBy("arrivesAtMs", "asc")
+    .limit(1)
     .get();
-  return canonicalSnap.docs
-    .map(getScheduledArmyTarget)
-    .filter(Boolean)
-    .sort((a, b) => a.arrivesAtMs - b.arrivesAtMs)
-    .slice(0, SCHEDULED_ARMY_RESOLVE_MAX_PER_RUN);
+  const oldest = snapshot.docs[0] ? getScheduledArmyTarget(snapshot.docs[0]) : null;
+  return {
+    pending: snapshot.size > 0,
+    oldestArmyId: oldest?.armyId || "",
+    oldestLateByMs: oldest ? Math.max(0, nowMs - oldest.arrivesAtMs) : 0,
+  };
 }
 
 function isExpectedScheduledResolveError(error = {}) {
@@ -21509,6 +22598,18 @@ exports.cleanupAntiFarmInstallations = onSchedule({
   console.log("Expired Crownlands installation links cleaned", result);
 });
 
+exports.cleanupExpiredBulkOrderRequests = onSchedule({
+  region: "us-central1",
+  schedule: "every 6 hours",
+  timeZone: "Etc/UTC",
+  maxInstances: 1,
+  timeoutSeconds: 120,
+  memory: "256MiB",
+}, async () => {
+  const result = await cleanupExpiredBulkOrderRequests(Date.now());
+  console.log("Expired Crownlands bulk-order idempotency records cleaned", result);
+});
+
 exports.resolveDueArmyOrders = onSchedule({
   region: "us-central1",
   schedule: "every 1 minutes",
@@ -21518,44 +22619,76 @@ exports.resolveDueArmyOrders = onSchedule({
   memory: "256MiB",
 }, async () => {
   const nowMs = Date.now();
-  const targets = await loadDueArmyTargets(nowMs);
+  const startedAtMs = Date.now();
+  const attemptedArmyIds = new Set();
   let resolved = 0;
   let skipped = 0;
   let failed = 0;
+  let pages = 0;
+  let oldestLateByMs = 0;
+  let scanCursor = null;
 
-  await processWithConcurrency(targets, SCHEDULED_ARMY_RESOLVE_CONCURRENCY, async target => {
-    try {
-      const result = await resolveArmyOrderById({
-        armyId: target.armyId,
-        requestedRegions: target.requestedRegions,
-        callerUid: "",
-        nowMs,
-      });
-      if (result?.status === "resolved") resolved += 1;
-      else skipped += 1;
-    } catch (error) {
-      if (isExpectedScheduledResolveError(error)) {
-        skipped += 1;
-        return;
+  while (
+    pages < SCHEDULED_ARMY_RESOLVE_MAX_PAGES
+    && Date.now() - startedAtMs < SCHEDULED_ARMY_RESOLVE_RUNTIME_BUDGET_MS
+  ) {
+    const page = await loadDueArmyTargets(nowMs, {
+      excludedArmyIds: attemptedArmyIds,
+      cursor: scanCursor,
+    });
+    pages += 1;
+    const targets = page.targets;
+    scanCursor = page.cursor;
+    targets.forEach(target => {
+      attemptedArmyIds.add(target.armyId);
+      oldestLateByMs = Math.max(oldestLateByMs, Math.max(0, nowMs - target.arrivesAtMs));
+    });
+
+    await processWithConcurrency(targets, SCHEDULED_ARMY_RESOLVE_CONCURRENCY, async target => {
+      try {
+        const result = await resolveArmyOrderById({
+          armyId: target.armyId,
+          requestedRegions: target.requestedRegions,
+          callerUid: "",
+          nowMs,
+        });
+        if (result?.status === "resolved") resolved += 1;
+        else skipped += 1;
+      } catch (error) {
+        if (isExpectedScheduledResolveError(error)) {
+          skipped += 1;
+          return;
+        }
+        failed += 1;
+        console.error("Scheduled army resolution failed", {
+          armyId: target.armyId,
+          ownerUid: target.ownerUid,
+          requestedRegions: target.requestedRegions,
+          lateByMs: Math.max(0, nowMs - target.arrivesAtMs),
+          message: error?.message || String(error),
+          code: error?.code || "",
+        });
       }
-      failed += 1;
-      console.error("Scheduled army resolution failed", {
-        armyId: target.armyId,
-        ownerUid: target.ownerUid,
-        requestedRegions: target.requestedRegions,
-        message: error?.message || String(error),
-        code: error?.code || "",
-      });
-    }
-  });
+    });
+
+    if (page.exhausted || !scanCursor) break;
+  }
+
+  const backlog = await loadDueArmyBacklogSnapshot(nowMs);
 
   console.log("Scheduled army resolution finished", {
     releaseId: REALM_RELEASE_ID,
     resetGeneration: RESET_GENERATION,
-    scanned: targets.length,
+    pages,
+    scanned: attemptedArmyIds.size,
     resolved,
     skipped,
     failed,
+    oldestLateByMs,
+    backlogPending: backlog.pending,
+    backlogOldestArmyId: backlog.oldestArmyId,
+    backlogOldestLateByMs: backlog.oldestLateByMs,
+    runtimeMs: Date.now() - startedAtMs,
   });
 });
 

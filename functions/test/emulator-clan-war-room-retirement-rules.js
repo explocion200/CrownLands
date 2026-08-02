@@ -1,4 +1,5 @@
-const admin = require("firebase-admin");
+const { getApps, initializeApp } = require("firebase-admin/app");
+const { getFirestore } = require("firebase-admin/firestore");
 const crypto = require("node:crypto");
 
 const projectId = process.env.GCLOUD_PROJECT || process.env.GOOGLE_CLOUD_PROJECT || "crown-land-b15e0";
@@ -6,8 +7,8 @@ const authHost = process.env.FIREBASE_AUTH_EMULATOR_HOST || "127.0.0.1:9099";
 const firestoreHost = process.env.FIRESTORE_EMULATOR_HOST;
 if (!firestoreHost) throw new Error("FIRESTORE_EMULATOR_HOST is required.");
 
-if (!admin.apps.length) admin.initializeApp({ projectId });
-const db = admin.firestore();
+if (!getApps().length) initializeApp({ projectId });
+const db = getFirestore();
 db.settings({ ignoreUndefinedProperties: true });
 
 function assert(condition, message) {

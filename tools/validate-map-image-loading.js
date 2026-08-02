@@ -1,5 +1,6 @@
 const fs = require("fs");
 const path = require("path");
+const vm = require("vm");
 
 const root = path.resolve(__dirname, "..");
 const game = fs.readFileSync(path.join(root, "game.js"), "utf8");
@@ -12,6 +13,19 @@ function assert(condition, message) {
   if (!condition) throw new Error(message);
 }
 
+function extractFunction(source, name) {
+  const start = source.indexOf(`function ${name}(`);
+  assert(start >= 0, `Missing ${name}().`);
+  const bodyStart = source.indexOf("{", start);
+  let depth = 0;
+  for (let index = bodyStart; index < source.length; index += 1) {
+    if (source[index] === "{") depth += 1;
+    if (source[index] === "}") depth -= 1;
+    if (depth === 0) return source.slice(start, index + 1);
+  }
+  throw new Error(`Could not extract ${name}().`);
+}
+
 assert(
   !/<link[^>]+rel="preload"[^>]+worlds\/world_01\/maps\//i.test(html),
   "The login page should not preload an arbitrary island before the player profile is known."
@@ -21,12 +35,20 @@ assert(
   "The active island art should load at high priority during online setup."
 );
 assert(
-  game.includes('window.requestIdleCallback(callback, { timeout: 2500 })'),
-  "Neighboring island preloads should wait for browser idle time."
+  game.includes('window.requestIdleCallback(callback, { timeout: 1000 })')
+    && /window\.setTimeout\(\(\) => \{[\s\S]*?\}, 3000\);/.test(game),
+  "Neighboring island preloads should wait three seconds and then use browser idle time."
 );
 assert(
   game.includes('preloadIslandMap(connectedRegionIds[index], { fetchPriority: "low" })'),
   "Neighboring islands should preload sequentially at low priority."
+);
+assert(
+  game.includes('.slice(0, 2)')
+    && game.includes('!connection?.saveData')
+    && game.includes('["slow-2g", "2g"].includes(effectiveType)')
+    && game.includes('document.visibilityState !== "hidden"'),
+  "Speculative map loading must be limited to two neighbors and disabled on constrained or hidden pages."
 );
 assert(
   game.includes('if (pendingImage) pendingImage.fetchPriority = "high"'),
@@ -42,6 +64,31 @@ assert(decodeIndex >= 0 && readyIndex > decodeIndex, "Map art must decode before
 assert(
   worker.includes('if (request.destination === "image")') && worker.includes("cacheFirst(request)"),
   "Map images should continue using cache-first service-worker delivery."
+);
+assert(
+  worker.includes("function isWorldMapImageRequest(url)")
+    && worker.includes("if (isWorldMapImageRequest(url)) return Response.error();"),
+  "A failed world map must not masquerade as a successfully decoded generic image fallback."
+);
+const isWorldMapImageRequest = vm.runInNewContext(
+  `(${extractFunction(worker, "isWorldMapImageRequest")})`,
+  { self: { location: { origin: "https://crownlands.test" } } },
+);
+assert(
+  isWorldMapImageRequest(new URL("https://crownlands.test/game/assets/worlds/world_01/maps/center.webp")),
+  "World-map failure detection must work from a subdirectory deployment."
+);
+assert(
+  isWorldMapImageRequest(new URL("https://crownlands.test/game/assets/west-island.webp")),
+  "Legacy full-map art must also reject the generic fallback."
+);
+assert(
+  !isWorldMapImageRequest(new URL("https://crownlands.test/game/assets/worlds/world_01/thumbnails/versioned/center.webp")),
+  "Map-picker thumbnails may continue to use the generic optional-image fallback."
+);
+assert(
+  !isWorldMapImageRequest(new URL("https://crownlands.test/game/assets/optimized/hud-map.webp")),
+  "Ordinary interface artwork must not be classified as a full world map."
 );
 assert(
   game.includes('new URL("./service-worker.js", document.baseURI)')
@@ -65,6 +112,10 @@ for (const map of layout.maps || []) {
   const fullMapPath = path.join(root, String(map.imageSrc || ""));
   const thumbnailPath = path.join(root, String(map.thumbnailSrc || ""));
   assert(map.thumbnailSrc, `${map.id} should use an optimized map-picker thumbnail.`);
+  assert(
+    /^assets\/worlds\/world_01\/thumbnails\/versioned\/[\w-]+-[0-9a-f]{12}\.webp$/.test(map.thumbnailSrc),
+    `${map.id} should use a content-hashed immutable thumbnail.`
+  );
   assert(fs.existsSync(fullMapPath), `${map.id} full map art is missing.`);
   assert(fs.existsSync(thumbnailPath), `${map.id} map-picker thumbnail is missing.`);
   assert(map.thumbnailSrc !== map.imageSrc, `${map.id} should not load full map art in the map picker.`);

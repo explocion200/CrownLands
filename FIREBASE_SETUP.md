@@ -77,7 +77,10 @@ Admission mutations use a short server-owned coordination lease so simultaneous 
 
 Troop orders and online economy updates now go through Firebase callable functions:
 
-- `sendArmyOrder`: validates source ownership, troop count, target protection, travel timing, deducts troops, and creates visible army docs for every route region.
+- `previewArmyRoute`: calculates the authoritative route, distance, travel duration, and arrival estimate used by online troop-order previews.
+- `sendArmyOrder`: validates source ownership, troop count, target protection, and current map state, regenerates travel geometry server-side, deducts troops, and creates visible army docs for every route region.
+- `sendNearbyScouts`: atomically charges the configured Scout Nearby cost and launches one server-routed scout per confirmed eligible target. A request ID makes retries idempotent.
+- `sendRegroupOrders`: atomically charges the configured Regroup cost and launches every confirmed nearby transfer, or rolls the whole request back. A request ID makes retries idempotent.
 - `createClanRally`, `joinClanRally`, `withdrawClanRallyContribution`, `launchClanRally`, and `cancelClanRally`: manage clan-private three-player rally assembly and launch. The public island stream receives only redacted assembly marches until the leader launches the combined attack.
 - `resolveArmyOrder`: can be triggered by any signed-in player who sees an overdue army. It resolves scouts, transfers, attacks, defenses, city capture, level drops, XP, gold rewards, and server reports in one Firestore transaction.
 - `collectEconomy`: collects passive/offline gold and troop production for every owned city across all region maps. A session-bound request can also consume the idempotent Welcome back summary, including remaining troop production and city nodes captured since the previous browser session.

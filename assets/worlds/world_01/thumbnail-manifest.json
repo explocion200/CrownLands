@@ -1,0 +1,111 @@
+{
+  "schemaVersion": 1,
+  "description": "Immutable map-picker thumbnails generated from the editable source thumbnails.",
+  "thumbnails": [
+    {
+      "id": "center",
+      "source": "assets/worlds/world_01/thumbnails/center-thumb.webp",
+      "output": "assets/worlds/world_01/thumbnails/versioned/center-thumb-992816545016.webp",
+      "bytes": 31514,
+      "sha256": "9928165450166fc6e6b24d9e9cf2fe5739545ab27d5e59476452dd2e0cc3c8c7"
+    },
+    {
+      "id": "east",
+      "source": "assets/worlds/world_01/thumbnails/east-thumb.webp",
+      "output": "assets/worlds/world_01/thumbnails/versioned/east-thumb-cffef8c803d4.webp",
+      "bytes": 29672,
+      "sha256": "cffef8c803d4188a57e00f11ca091ac9355fa586c058216fe104fd32e112bc86"
+    },
+    {
+      "id": "north",
+      "source": "assets/worlds/world_01/thumbnails/north-thumb.webp",
+      "output": "assets/worlds/world_01/thumbnails/versioned/north-thumb-900c9fea1c35.webp",
+      "bytes": 32486,
+      "sha256": "900c9fea1c355219e26461cf2b16feac7e0f39322320f1c00f8f11fedb01af53"
+    },
+    {
+      "id": "region_10",
+      "source": "assets/worlds/world_01/thumbnails/region_10-thumb.webp",
+      "output": "assets/worlds/world_01/thumbnails/versioned/region_10-thumb-997a419e8640.webp",
+      "bytes": 24986,
+      "sha256": "997a419e864060a838f7392fe76c9839c6bedc83b8b8d598eb328aeb901e262d"
+    },
+    {
+      "id": "region_11",
+      "source": "assets/worlds/world_01/thumbnails/region_11-thumb.webp",
+      "output": "assets/worlds/world_01/thumbnails/versioned/region_11-thumb-eefb297beab7.webp",
+      "bytes": 29314,
+      "sha256": "eefb297beab7d36ff745ae54121d8354e4120fbaa3e73c50a43a6093a8732e34"
+    },
+    {
+      "id": "region_12",
+      "source": "assets/worlds/world_01/thumbnails/region_12-thumb.webp",
+      "output": "assets/worlds/world_01/thumbnails/versioned/region_12-thumb-1ab8f25b5b0e.webp",
+      "bytes": 22762,
+      "sha256": "1ab8f25b5b0e3b8c60dbff4bdafe4c1a745334a38faec44803aac01223149e50"
+    },
+    {
+      "id": "region_13",
+      "source": "assets/worlds/world_01/thumbnails/region_13-thumb.webp",
+      "output": "assets/worlds/world_01/thumbnails/versioned/region_13-thumb-67d54b202eb2.webp",
+      "bytes": 23628,
+      "sha256": "67d54b202eb25a0e1834b632d1cae375c5c76a914308b71a01fd2ebf676f1868"
+    },
+    {
+      "id": "region_14",
+      "source": "assets/worlds/world_01/thumbnails/region_14-thumb.webp",
+      "output": "assets/worlds/world_01/thumbnails/versioned/region_14-thumb-d8d4feafc66c.webp",
+      "bytes": 18142,
+      "sha256": "d8d4feafc66ce09fda499599b5b590fe64e4fdd445ec4f58c0ad1f672331d325"
+    },
+    {
+      "id": "region_15",
+      "source": "assets/worlds/world_01/thumbnails/region_15-thumb.webp",
+      "output": "assets/worlds/world_01/thumbnails/versioned/region_15-thumb-8a2499737d59.webp",
+      "bytes": 29528,
+      "sha256": "8a2499737d59ccc586661ad0ca11b19a159bc63e78bff1df2213ba8371ae3197"
+    },
+    {
+      "id": "region_6",
+      "source": "assets/worlds/world_01/thumbnails/region_6-thumb.webp",
+      "output": "assets/worlds/world_01/thumbnails/versioned/region_6-thumb-57d0504e3a17.webp",
+      "bytes": 21958,
+      "sha256": "57d0504e3a17b5ae4f2f3de97162a66e57a3859d257e2bd1061d5467d0650703"
+    },
+    {
+      "id": "region_7",
+      "source": "assets/worlds/world_01/thumbnails/region_7-thumb.webp",
+      "output": "assets/worlds/world_01/thumbnails/versioned/region_7-thumb-d609f5032e3b.webp",
+      "bytes": 18132,
+      "sha256": "d609f5032e3b8dbb2587a0f73c75bf09c0b23a3e076b1b1403e6733648d7aa1f"
+    },
+    {
+      "id": "region_8",
+      "source": "assets/worlds/world_01/thumbnails/region_8-thumb.webp",
+      "output": "assets/worlds/world_01/thumbnails/versioned/region_8-thumb-f2862b9c6883.webp",
+      "bytes": 25784,
+      "sha256": "f2862b9c68835f2850170788f31406d79b4206c56aad25bbcc0f5d5920baec14"
+    },
+    {
+      "id": "region_9",
+      "source": "assets/worlds/world_01/thumbnails/region_9-thumb.webp",
+      "output": "assets/worlds/world_01/thumbnails/versioned/region_9-thumb-99c5af2bc6ef.webp",
+      "bytes": 28456,
+      "sha256": "99c5af2bc6ef095ad58978165cadb6024ed2ff5c6ed695571838da64ecad4484"
+    },
+    {
+      "id": "south",
+      "source": "assets/worlds/world_01/thumbnails/south-thumb.webp",
+      "output": "assets/worlds/world_01/thumbnails/versioned/south-thumb-bc848808fb75.webp",
+      "bytes": 26316,
+      "sha256": "bc848808fb75704a88fac0ffacad0c72a149976d37c9bc9f465c17c495644519"
+    },
+    {
+      "id": "west",
+      "source": "assets/worlds/world_01/thumbnails/west-thumb.webp",
+      "output": "assets/worlds/world_01/thumbnails/versioned/west-thumb-f65a83930d4e.webp",
+      "bytes": 28558,
+      "sha256": "f65a83930d4ee4e2f093fb470de374a7d8a380e26cbfafa46b81b4b3bf92987d"
+    }
+  ]
+}

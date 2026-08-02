@@ -1,4 +1,5 @@
-const admin = require("firebase-admin");
+const { initializeApp } = require("firebase-admin/app");
+const { getFirestore } = require("firebase-admin/firestore");
 const crypto = require("node:crypto");
 const realm = require("../release-config.json");
 
@@ -9,8 +10,8 @@ const configuredFunctionsHost = process.env.CROWNLANDS_FUNCTIONS_EMULATOR_HOST
   || process.env.FUNCTIONS_EMULATOR_HOST;
 if (!firestoreHost) throw new Error("FIRESTORE_EMULATOR_HOST is required.");
 
-admin.initializeApp({ projectId });
-const db = admin.firestore();
+initializeApp({ projectId });
+const db = getFirestore();
 db.settings({ ignoreUndefinedProperties: true });
 let functionsHostPromise = null;
 

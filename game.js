@@ -83,57 +83,57 @@ const REWARDED_AD_ITEMS = Object.freeze([
     id: "gold",
     label: "Gold .5h Boost",
     rewardLabel: "gold",
-    icon: "assets/gold-pickup.png",
+    icon: "assets/optimized/pickup-gold-192x192-13064480d6c7.webp",
   },
   {
     id: "troops",
     label: "Troop .5h Boost",
     rewardLabel: "troops",
-    icon: "assets/troop-pickup.png",
+    icon: "assets/optimized/pickup-troops-192x192-866b66c49b83.webp",
   },
 ]);
-const INNER_CASTLE_HUB_ART_SRC = "assets/inner-castle/inner-castle-hub.png";
+const INNER_CASTLE_HUB_ART_SRC = "assets/optimized/inner-castle-hub-1280x960-d8f2d46c803c.webp";
 const INNER_CASTLE_BUILDINGS = Object.freeze([
   Object.freeze({
     key: "treasury",
     label: "Treasury",
     role: "Gold storage / gold production",
-    artSrc: "assets/inner-castle/treasury.png",
+    artSrc: "assets/optimized/inner-castle-treasury-512x512-026b41509470.webp",
     hotspot: Object.freeze({ left: 19, top: 24 }),
   }),
   Object.freeze({
     key: "great-hall",
     label: "Great Hall",
     role: "Ruler power / kingdom upgrades",
-    artSrc: "assets/inner-castle/great-hall.png",
+    artSrc: "assets/optimized/inner-castle-great-hall-512x512-4f969e8204ca.webp",
     hotspot: Object.freeze({ left: 50, top: 20 }),
   }),
   Object.freeze({
     key: "barracks",
     label: "Barracks",
     role: "Troop production / military strength",
-    artSrc: "assets/inner-castle/barracks.png",
+    artSrc: "assets/optimized/inner-castle-barracks-512x512-bb5086409f06.webp",
     hotspot: Object.freeze({ left: 81, top: 25 }),
   }),
   Object.freeze({
     key: "alehouse",
     label: "Alehouse",
     role: "Morale / recovery / small boosts",
-    artSrc: "assets/inner-castle/alehouse.png",
+    artSrc: "assets/optimized/inner-castle-alehouse-512x512-ffa1b0a7a9e3.webp",
     hotspot: Object.freeze({ left: 19, top: 57 }),
   }),
   Object.freeze({
     key: "gatehouse",
     label: "Gatehouse",
     role: "City defense / wall strength",
-    artSrc: "assets/inner-castle/gatehouse.png",
+    artSrc: "assets/optimized/inner-castle-gatehouse-512x512-fdc7494d2d4f.webp",
     hotspot: Object.freeze({ left: 50, top: 75 }),
   }),
   Object.freeze({
     key: "royal-stables",
     label: "Royal Stables",
     role: "Movement / march speed",
-    artSrc: "assets/inner-castle/royal-stables.png",
+    artSrc: "assets/optimized/inner-castle-royal-stables-512x512-79a51faecd7c.webp",
     hotspot: Object.freeze({ left: 81, top: 58 }),
   }),
 ]);
@@ -158,7 +158,7 @@ const SHOP_ITEMS = [
     label: "Royal Peace Shield",
     description: "Protects your regular cities for 12 hours and turns back active rival attacks traveling to or from them. Attacking another player cancels it. Strongholds are excluded.",
     cost: economyNumber("shopItems.shield_12h.cost", 1_250_000),
-    icon: "assets/royal-peace-shield-icon.webp?v=20260703-shop-icons",
+    icon: "assets/optimized/item-peace-shield-160x160-dcb8dddc35ea.webp",
   },
   {
     id: "war_drums_30m",
@@ -166,14 +166,14 @@ const SHOP_ITEMS = [
     label: "War Drums",
     description: `Adds ${economyNumber("shopItems.war_drums_30m.bonusPercent", 5)}% of base troop production from owned cities for ${economyNumber("shopItems.war_drums_30m.effectDurationMinutes", 30)} minutes. Using more adds their duration to the active timer.`,
     cost: economyNumber("shopItems.war_drums_30m.cost", 75_000),
-    icon: "assets/war-drums-icon.webp?v=20260703-shop-icons",
+    icon: "assets/optimized/item-war-drums-160x160-48ecb3c2150b.webp",
   },
   {
     id: "royal_tax_decree_30m",
     label: "Royal Tax Decree",
     description: `Adds ${economyNumber("shopItems.royal_tax_decree_30m.bonusPercent", 50)}% of base gold production from owned cities for ${economyNumber("shopItems.royal_tax_decree_30m.effectDurationMinutes", 30)} minutes. Using more adds their duration to the active timer.`,
     cost: economyNumber("shopItems.royal_tax_decree_30m.cost", 150_000),
-    icon: "assets/royal-tax-decree-icon.webp?v=20260721-tax-decree",
+    icon: "assets/optimized/item-royal-tax-decree-160x160-eaa5b941fe82.webp",
   },
   {
     id: "veil_of_silence_30m",
@@ -181,21 +181,21 @@ const SHOP_ITEMS = [
     label: "Veil of Silence",
     description: `Blocks enemy scouting for ${economyNumber("shopItems.veil_of_silence_30m.effectDurationMinutes", 5)} minutes.`,
     cost: economyNumber("shopItems.veil_of_silence_30m.cost", 125_000),
-    icon: "assets/veil-of-silence-icon.webp?v=20260703-shop-icons",
+    icon: "assets/optimized/item-veil-of-silence-160x160-5d50be41ce93.webp",
   },
   {
     id: "swift_march_order",
     label: "Swift March Order",
     description: "Speeds up one owned-city transfer or reinforcement to an owned Stronghold.",
     cost: economyNumber("shopItems.swift_march_order.cost", 300_000),
-    icon: "assets/swift-march-order-icon.webp?v=20260703-shop-icons",
+    icon: "assets/optimized/item-swift-march-160x160-f1cb9c8471ca.webp",
   },
   {
     id: "recall_horn",
     label: "Recall Horn",
     description: "Cancels one active march before it reaches the target.",
     cost: economyNumber("shopItems.recall_horn.cost", 500_000),
-    icon: "assets/recall-horn-icon.webp?v=20260703-shop-icons",
+    icon: "assets/optimized/item-recall-horn-160x160-eb20879b085e.webp",
   },
 ];
 const ROYAL_PEACE_SHIELD_ITEM_ID = "shield_12h";
@@ -365,6 +365,7 @@ const MAP_TOUCH_PAN_THRESHOLD = 12;
 const MAP_TOUCH_TAP_TOLERANCE = 16;
 const MAP_LOW_ZOOM_TAP_TOLERANCE_BONUS = 4;
 const MAP_CITY_TAP_RADIUS_PX = 44;
+const MAP_MIN_INTERACTION_TARGET_PX = 44;
 const ZOOM_RENDER_SETTLE_MS = 260;
 const PAN_RENDER_SETTLE_MS = 180;
 const MAIN_CITY_RETURN_CAMERA_THROTTLE_MS = 180;
@@ -373,9 +374,9 @@ const LOW_ZOOM_PERFORMANCE_EXIT_THRESHOLD = 0.78;
 const MARCH_ENDPOINT_INTERACTION_MIN_CLEARANCE = 72;
 const MARCH_ENDPOINT_INTERACTION_SIZE_RATIO = 0.62;
 const ISLAND_MAP_PADDING = 560;
-const TROOP_PICKUP_ICON_SRC = "assets/troop-pickup.png?v=20260704-troop-pickup-red";
-const GOLD_PICKUP_ICON_SRC = "assets/gold-pickup.png?v=20260704-gold-pickup-art";
-const MAP_SWITCH_ARROW_ICON_SRC = "assets/map-switch-arrow.png?v=20260703-map-arrow-live";
+const TROOP_PICKUP_ICON_SRC = "assets/optimized/pickup-troops-192x192-866b66c49b83.webp";
+const GOLD_PICKUP_ICON_SRC = "assets/optimized/pickup-gold-192x192-13064480d6c7.webp";
+const MAP_SWITCH_ARROW_ICON_SRC = "assets/optimized/hud-map-switch-arrow-192x211-2f1bad4c5121.webp";
 const DEFAULT_PORTAL_VISUAL_SIZE = 92;
 const MIN_PORTAL_VISUAL_SIZE = 60;
 const EDGE_TRANSITION_ROUTE_INSET_MIN = 24;
@@ -476,25 +477,25 @@ const REWARD_CAMP_CONFIG = {
 const REWARD_CAMP_PROGRESS_CACHE_MS = 30 * 1000;
 const GOLD_STRONGHOLD_ID = "west_gold_stronghold";
 const GOLD_STRONGHOLD_NAME = "Aurum Keep";
-const GOLD_STRONGHOLD_ART_SRC = "assets/gold-stronghold.png?v=20260704-gold-stronghold-updated";
+const GOLD_STRONGHOLD_ART_SRC = "assets/optimized/stronghold-gold-384x384-6f50e7c0121f.webp";
 const GOLD_STRONGHOLD_BONUS_PERCENT = 8;
 const GOLD_STRONGHOLD_LEVEL = 50;
 const GOLD_STRONGHOLD_START_TROOPS = 50000000;
 const TRAINING_STRONGHOLD_ID = "north_training_stronghold";
 const TRAINING_STRONGHOLD_NAME = "Greybanner Hold";
-const TRAINING_STRONGHOLD_ART_SRC = "assets/training-stronghold.png?v=20260703-training-stronghold-art";
+const TRAINING_STRONGHOLD_ART_SRC = "assets/optimized/stronghold-training-384x384-9b1a1f45402d.webp";
 const TRAINING_STRONGHOLD_BONUS_PERCENT = 8;
 const TRAINING_STRONGHOLD_LEVEL = 50;
 const TRAINING_STRONGHOLD_START_TROOPS = 50000000;
 const SPEED_STRONGHOLD_ID = "east_speed_stronghold";
 const SPEED_STRONGHOLD_NAME = "Swiftgate";
-const SPEED_STRONGHOLD_ART_SRC = "assets/speed-stronghold.png?v=20260704-speed-stronghold-updated";
+const SPEED_STRONGHOLD_ART_SRC = "assets/optimized/stronghold-speed-384x384-3965edb84f9c.webp";
 const SPEED_STRONGHOLD_BONUS_PERCENT = 8;
 const SPEED_STRONGHOLD_LEVEL = 50;
 const SPEED_STRONGHOLD_START_TROOPS = 50000000;
 const DEFENSE_STRONGHOLD_ID = "south_defense_stronghold";
 const DEFENSE_STRONGHOLD_NAME = "Ironwatch";
-const DEFENSE_STRONGHOLD_ART_SRC = "assets/defense-stronghold.png?v=20260704-defense-stronghold-update";
+const DEFENSE_STRONGHOLD_ART_SRC = "assets/optimized/stronghold-defense-384x384-d0a669653957.webp";
 const DEFENSE_STRONGHOLD_BONUS_PERCENT = 8;
 const DEFENSE_STRONGHOLD_LEVEL = 50;
 const DEFENSE_STRONGHOLD_START_TROOPS = 50000000;
@@ -524,7 +525,7 @@ const CITADEL_ASSAULT_EASTERN_TIME_FORMATTER = new Intl.DateTimeFormat("en-US", 
   minute: "2-digit",
   timeZoneName: "short",
 });
-const CROWN_CITADEL_ART_SRC = "assets/crown-citadel.png?v=20260703-crown-citadel-art";
+const CROWN_CITADEL_ART_SRC = "assets/optimized/crown-citadel-384x384-d4605eb1c094.webp";
 const CROWN_CITADEL_GOLD_BONUS_PERCENT = 10;
 const CROWN_CITADEL_TROOP_BONUS_PERCENT = 10;
 const CROWN_CITADEL_MARCH_SPEED_BONUS_PERCENT = 10;
@@ -832,6 +833,7 @@ const CLAN_REINFORCEMENT_PER_RECIPIENT_LIMIT = 2;
 const ORDINARY_CITY_REINFORCEMENT_CAPACITY = 5;
 const ARMY_TRAVEL_TROOP_BAND_LIMITS = [10, 100, 1000, 10000, 100000, 1000000, 10000000, 100000000];
 const ARMY_TRAVEL_TROOP_BAND_MULTIPLIERS = [1, 1.18, 1.38, 1.62, 1.9, 2.24, 2.62, 3.06, 3.5];
+const AUTHORITATIVE_ROUTE_PREVIEW_DEBOUNCE_MS = 180;
 const ROUTE_CITY_CLEARANCE = 46;
 const ROUTE_STRONGHOLD_CLEARANCE = 88;
 const CHARACTER_START_LEVEL = 1;
@@ -1034,13 +1036,12 @@ function getCastleStage(level) {
 }
 
 function getCastleAsset(stage) {
-  const version = "v=20260704-firebase-castles";
   const assets = {
-    1: `assets/castles/shack.png?${version}`,
-    2: `assets/castles/fort.png?${version}`,
-    3: `assets/castles/keep.png?${version}`,
-    4: `assets/castles/castle.png?${version}`,
-    5: `assets/castles/city.png?${version}`,
+    1: "assets/optimized/castle-shack-256x212-4e1e1629aa98.webp",
+    2: "assets/optimized/castle-fort-256x239-da740533080d.webp",
+    3: "assets/optimized/castle-keep-256x249-426604b045ca.webp",
+    4: "assets/optimized/castle-castle-256x242-706cbf23f837.webp",
+    5: "assets/optimized/castle-city-256x244-2c9a66fb7153.webp",
   };
   return assets[stage] || assets[1];
 }
@@ -2599,8 +2600,14 @@ let activeTroopOrderKind = "";
 let activeRallyOrderContext = null;
 let activeSwiftMarchOrderSelected = false;
 let activeTroopRouteRequestId = 0;
+let authoritativeRoutePreviewTimer = 0;
+let authoritativeRoutePreviewRequestId = 0;
 let scoutNearbySourceId = null;
 let regroupSourceId = null;
+let bulkOrderActionRequestId = 0;
+let pendingBulkOrderAction = null;
+const bulkOrderRequestIds = new Map();
+const pendingDirectScoutTargets = new Set();
 let camera = { x: 0, y: 0 };
 let zoom = 1;
 let mapViewportWidth = 0;
@@ -2608,6 +2615,7 @@ let mapViewportHeight = 0;
 let panState = null;
 let activePointers = new Map();
 let pinchState = null;
+let mainMapPinchAnimationFrame = 0;
 let suppressMapClick = false;
 let lastFrameTime = performance.now();
 let simulationUpdateAccumulatorMs = 0;
@@ -2704,6 +2712,7 @@ let onlineOwnedCitiesCache = [];
 let onlineOwnedCitiesCacheAt = 0;
 let onlineOwnedCitiesCacheComplete = false;
 let onlineOwnedCitiesRefreshInFlight = false;
+let onlineOwnedCitiesRefreshError = "";
 let activeOperationsTab = "marches";
 const islandMapPickerViewState = {
   x: 0,
@@ -2714,6 +2723,7 @@ const islandMapPickerViewState = {
 let islandMapHomeRefreshInFlight = false;
 let onlinePresenceTimer = 0;
 let onlinePresenceInFlight = false;
+let onlinePresenceRequestGeneration = 0;
 let onlineSessionReplaced = false;
 let gameServerMembership = null;
 let gameServerMembershipUnsubscribe = null;
@@ -2776,6 +2786,7 @@ let selectedArmyTokenId = "";
 const islandImageLoadPromises = new Map();
 const islandImagePreloadElements = new Map();
 const loadedImageAssets = new Set();
+const loadedImageAssetDimensions = new Map();
 const nearbyIslandPreloadRegions = new Set();
 const preloadedMapRegions = new Set();
 let pendingOfflineProgressSeconds = 0;
@@ -2792,6 +2803,7 @@ let foregroundResumeCoalesceTimer = 0;
 let foregroundResumeRetryTimer = 0;
 let foregroundResumeRetryIndex = 0;
 let onlineRealtimeRecoveryNeeded = false;
+const onlineArmySyncFailures = new Map();
 let localDirtyCityIds = new Set();
 let toastTimer = null;
 let attackIdCounter = 1;
@@ -3834,15 +3846,15 @@ function getEditorCampDefinitions(regionId) {
 function getCampConfigForType(type) {
   const campType = String(type || "gold").trim().toLowerCase();
   if (campType === "troops" || campType === "troop") {
-    return { type: "troops", name: "Warband Camp", artSrc: "assets/camps/troops.png" };
+    return { type: "troops", name: "Warband Camp", artSrc: "assets/optimized/camp-troops-384x384-7f8c0ed10be8.webp" };
   }
   if (campType === "items" || campType === "item" || campType === "relic") {
-    return { type: "items", name: "Relic Camp", artSrc: "assets/camps/items.png" };
+    return { type: "items", name: "Relic Camp", artSrc: "assets/optimized/camp-items-384x384-b8bc026d8a29.webp" };
   }
   if (campType === "deed" || campType === "city_deed") {
-    return { type: "deed", name: "Deed Camp", artSrc: "assets/camps/deed.png" };
+    return { type: "deed", name: "Deed Camp", artSrc: "assets/optimized/camp-deed-384x384-0cd9568f52ca.webp" };
   }
-  return { type: "gold", name: "Gold Camp", artSrc: "assets/camps/gold.png" };
+  return { type: "gold", name: "Gold Camp", artSrc: "assets/optimized/camp-gold-384x384-a8c4d3199d86.webp" };
 }
 
 function getRewardCampConfig(campOrType = {}) {
@@ -4448,16 +4460,28 @@ function getIslandPreviewArtSrc(regionId) {
   return CENTER_ISLAND_THUMB_SRC;
 }
 
-function preloadImage(src, { fetchPriority = "auto" } = {}) {
+function preloadImage(src, { fetchPriority = "auto", expectedWidth = 0, expectedHeight = 0 } = {}) {
   const imageSrc = String(src || "");
   if (!imageSrc) return Promise.resolve(false);
-  if (loadedImageAssets.has(imageSrc)) return Promise.resolve(true);
+  const declaredWidth = Math.max(0, Math.floor(Number(expectedWidth) || 0));
+  const declaredHeight = Math.max(0, Math.floor(Number(expectedHeight) || 0));
+  if (loadedImageAssets.has(imageSrc)) {
+    const loadedDimensions = loadedImageAssetDimensions.get(imageSrc);
+    const dimensionsMatch = !declaredWidth || !declaredHeight || (
+      loadedDimensions?.width === declaredWidth && loadedDimensions?.height === declaredHeight
+    );
+    return Promise.resolve(dimensionsMatch);
+  }
   if (islandImageLoadPromises.has(imageSrc)) {
     if (fetchPriority === "high") {
       const pendingImage = islandImagePreloadElements.get(imageSrc);
       if (pendingImage) pendingImage.fetchPriority = "high";
     }
-    return islandImageLoadPromises.get(imageSrc);
+    return islandImageLoadPromises.get(imageSrc).then(success => {
+      if (!success || !declaredWidth || !declaredHeight) return success;
+      const loadedDimensions = loadedImageAssetDimensions.get(imageSrc);
+      return loadedDimensions?.width === declaredWidth && loadedDimensions?.height === declaredHeight;
+    });
   }
 
   const promise = new Promise(resolve => {
@@ -4477,6 +4501,18 @@ function preloadImage(src, { fetchPriority = "auto" } = {}) {
     image.fetchPriority = fetchPriority;
     islandImagePreloadElements.set(imageSrc, image);
     image.onload = () => {
+      const naturalWidth = Math.max(0, Math.floor(Number(image.naturalWidth) || 0));
+      const naturalHeight = Math.max(0, Math.floor(Number(image.naturalHeight) || 0));
+      loadedImageAssetDimensions.set(imageSrc, { width: naturalWidth, height: naturalHeight });
+      if (declaredWidth && declaredHeight && (naturalWidth !== declaredWidth || naturalHeight !== declaredHeight)) {
+        console.warn("Rejected map art with unexpected dimensions.", {
+          imageSrc,
+          expected: `${declaredWidth}x${declaredHeight}`,
+          received: `${naturalWidth}x${naturalHeight}`,
+        });
+        finish(false);
+        return;
+      }
       const decodePromise = typeof image.decode === "function" ? image.decode().catch(() => {}) : Promise.resolve();
       decodePromise.finally(() => {
         loadedImageAssets.add(imageSrc);
@@ -4492,7 +4528,12 @@ function preloadImage(src, { fetchPriority = "auto" } = {}) {
 
 function preloadIslandMap(regionId, options = {}) {
   const targetRegionId = normalizeRegionId(regionId);
-  return preloadImage(getIslandMapArtSrc(targetRegionId), options).then(success => {
+  const dimensions = getIslandImageDimensions(targetRegionId);
+  return preloadImage(getIslandMapArtSrc(targetRegionId), {
+    ...options,
+    expectedWidth: dimensions.width,
+    expectedHeight: dimensions.height,
+  }).then(success => {
     if (success) preloadedMapRegions.add(targetRegionId);
     return success;
   });
@@ -4510,23 +4551,42 @@ function getConnectedIslandRegionIds(regionId) {
 
 function preloadNearbyIslandMaps(regionId) {
   const normalizedRegionId = normalizeRegionId(regionId);
+  const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+  const effectiveType = String(connection?.effectiveType || "").toLowerCase();
+  const canPreload = () => (
+    document.visibilityState !== "hidden"
+    && !connection?.saveData
+    && !["slow-2g", "2g"].includes(effectiveType)
+    && !mapSwitchLoading
+    && normalizeRegionId(getActiveMapRegionId()) === normalizedRegionId
+  );
+  if (!canPreload()) return;
   if (nearbyIslandPreloadRegions.has(normalizedRegionId)) return;
   nearbyIslandPreloadRegions.add(normalizedRegionId);
-  const connectedRegionIds = getConnectedIslandRegionIds(normalizedRegionId).slice(0, 4);
+  const connectedRegionIds = getConnectedIslandRegionIds(normalizedRegionId)
+    .filter(connectedRegionId => !preloadedMapRegions.has(connectedRegionId))
+    .slice(0, 2);
   const scheduleIdle = callback => {
     if (typeof window.requestIdleCallback === "function") {
-      window.requestIdleCallback(callback, { timeout: 2500 });
+      window.requestIdleCallback(callback, { timeout: 1000 });
     } else {
-      window.setTimeout(callback, 1200);
+      window.setTimeout(callback, 250);
     }
   };
   const preloadNext = index => {
     if (index >= connectedRegionIds.length) return;
+    if (!canPreload()) {
+      nearbyIslandPreloadRegions.delete(normalizedRegionId);
+      return;
+    }
     preloadIslandMap(connectedRegionIds[index], { fetchPriority: "low" })
       .catch(() => false)
       .finally(() => scheduleIdle(() => preloadNext(index + 1)));
   };
-  scheduleIdle(() => preloadNext(0));
+  window.setTimeout(() => {
+    if (canPreload()) scheduleIdle(() => preloadNext(0));
+    else nearbyIslandPreloadRegions.delete(normalizedRegionId);
+  }, 3000);
 }
 
 function setSetupLoading(active, detail = "") {
@@ -4618,7 +4678,12 @@ function setImageMapBackground(regionId, imageSrc) {
   mapBg.dataset.imageRegion = targetRegionId;
   mapBg.dataset.imageSrc = imageSrc;
 
-  preloadImage(imageSrc, { fetchPriority: "high" }).then(async success => {
+  const dimensions = getIslandImageDimensions(targetRegionId);
+  preloadImage(imageSrc, {
+    fetchPriority: "high",
+    expectedWidth: dimensions.width,
+    expectedHeight: dimensions.height,
+  }).then(async success => {
     if (!mapBg || swapToken !== mapImageSwapToken || !success) {
       return;
     }
@@ -4642,7 +4707,15 @@ function setImageMapBackground(regionId, imageSrc) {
         });
       }
     }
-    if (!mapBg || swapToken !== mapImageSwapToken) return;
+    if (
+      !mapBg
+      || swapToken !== mapImageSwapToken
+      || image.naturalWidth !== dimensions.width
+      || image.naturalHeight !== dimensions.height
+    ) {
+      if (swapToken === mapImageSwapToken) showToast(`Could not verify ${getRegionLabel(targetRegionId)} map art. Try loading the map again.`);
+      return;
+    }
     requestAnimationFrame(() => {
       if (!mapBg || swapToken !== mapImageSwapToken) return;
       mapBg.replaceChildren(image);
@@ -6527,7 +6600,7 @@ function renderLevelUpReward(reward) {
       </article>
       <article class="level-up-reward-item gold">
         <span class="level-up-reward-icon" aria-hidden="true">
-          <img src="assets/gold-pickup.png" alt="" />
+          <img src="${GOLD_PICKUP_ICON_SRC}" alt="" decoding="async" />
         </span>
         <div>
           <small>Gold</small>
@@ -6537,7 +6610,7 @@ function renderLevelUpReward(reward) {
       </article>
       <article class="level-up-reward-item troops">
         <span class="level-up-reward-icon" aria-hidden="true">
-          <img src="assets/troop-pickup.png" alt="" />
+          <img src="${TROOP_PICKUP_ICON_SRC}" alt="" decoding="async" />
         </span>
         <div>
           <small>Troops</small>
@@ -6547,7 +6620,7 @@ function renderLevelUpReward(reward) {
       </article>
     </section>
     <div class="level-up-troop-destination">
-      <img src="assets/troop-pickup.png" alt="" aria-hidden="true" />
+          <img src="${TROOP_PICKUP_ICON_SRC}" alt="" decoding="async" aria-hidden="true" />
       <span>
         <small>Troop destination</small>
         <strong>${escapeHtml(reward.cityName)}</strong>
@@ -8609,7 +8682,7 @@ function updateScoutReportLifecycle(nowMs = Date.now()) {
 function scoutCity(cityId) {
   const target = cityById(cityId);
   if (!target || target.owner === "player") return;
-  scoutTarget(target);
+  void scoutTarget(target);
 }
 
 function scoutRewardCamp(campId) {
@@ -8619,10 +8692,10 @@ function scoutRewardCamp(campId) {
     rejectGameAction(`You already control ${target.name}.`);
     return;
   }
-  scoutTarget(target);
+  void scoutTarget(target);
 }
 
-function scoutTarget(target) {
+async function scoutTarget(target) {
   const campTarget = isRewardCampTarget(target);
   const mainCityBlockReason = campTarget ? "" : getMainCityScoutBlockReason(target, "player");
   if (mainCityBlockReason) {
@@ -8633,20 +8706,33 @@ function scoutTarget(target) {
     rejectGameAction(`A scout is already traveling to ${target.name}`);
     return;
   }
-  const sourceOption = findNearestScoutSource(target);
-  if (!sourceOption) {
-    rejectGameAction("No owned city with a troop can reach this target.");
+  if (pendingDirectScoutTargets.has(target.id)) {
+    showToast(`A scout route to ${target.name} is already being calculated.`);
     return;
   }
+  pendingDirectScoutTargets.add(target.id);
+  showToast(`Finding the nearest scout route to ${target.name}...`);
+  await waitForSetupLoadingPaint(0);
+  try {
+    const sourceOption = await findNearestScoutSourceAsync(target);
+    const freshTarget = getArmyTargetById(target.id);
+    if (!freshTarget || getPendingScoutMission(target.id)) return;
+    if (!sourceOption?.city || sourceOption.city.owner !== "player" || sourceOption.city.troops < 1) {
+      rejectGameAction("No owned city with a troop can reach this target.");
+      return;
+    }
 
-  const source = sourceOption.city;
-  const mission = launchScoutMission(source, target, sourceOption.route);
-  if (!mission || usesServerArmyAuthority()) return;
-  if (isOnlineWorldActive() && !usesServerArmyAuthority()) syncOwnedCitiesToOnline(true);
-  addLog(`One scout left ${source.name} for ${target.name}.`);
-  saveGame();
-  renderAll();
-  showToast(`Scout moving from ${source.name} to ${target.name}`);
+    const source = sourceOption.city;
+    const mission = launchScoutMission(source, freshTarget, sourceOption.route);
+    if (!mission || usesServerArmyAuthority()) return;
+    if (isOnlineWorldActive() && !usesServerArmyAuthority()) syncOwnedCitiesToOnline(true);
+    addLog(`One scout left ${source.name} for ${freshTarget.name}.`);
+    saveGame();
+    renderAll();
+    showToast(`Scout moving from ${source.name} to ${freshTarget.name}`);
+  } finally {
+    pendingDirectScoutTargets.delete(target.id);
+  }
 }
 
 function launchScoutMission(source, target, route, options = {}) {
@@ -8727,23 +8813,106 @@ function getNearbyScoutCandidates(source) {
   return state.cities.filter(city => isNearbyScoutCandidate(source, city));
 }
 
-function getNearbyScoutOptions(source) {
-  const sourceRegionId = getCityRegionId(source);
-  return getNearbyScoutCandidates(source)
-    .map(city => ({ city, route: findLandRoute(source, city, sourceRegionId) }))
+function getBulkOrderKey(kind, cityId) {
+  return `${String(kind || "bulk")}:${String(cityId || "")}`;
+}
+
+function getBulkOrderRequestId(kind, cityId) {
+  const key = getBulkOrderKey(kind, cityId);
+  let requestId = bulkOrderRequestIds.get(key);
+  if (!requestId) {
+    requestId = createOnlineArmyId(kind === "scout" ? "nearby_scout" : "regroup");
+    bulkOrderRequestIds.set(key, requestId);
+  }
+  return requestId;
+}
+
+function beginBulkOrderAction(kind, cityId) {
+  if (pendingBulkOrderAction?.kind === kind && pendingBulkOrderAction?.cityId === cityId) return null;
+  const action = {
+    id: ++bulkOrderActionRequestId,
+    kind,
+    cityId,
+    requestId: getBulkOrderRequestId(kind, cityId),
+    phase: "routing",
+  };
+  pendingBulkOrderAction = action;
+  return action;
+}
+
+function isBulkOrderActionCurrent(action) {
+  if (!action || pendingBulkOrderAction?.id !== action.id) return false;
+  if (action.kind === "scout") return scoutNearbySourceId === action.cityId;
+  return regroupSourceId === action.cityId;
+}
+
+function finishBulkOrderAction(action, { completed = false } = {}) {
+  if (pendingBulkOrderAction?.id === action?.id) pendingBulkOrderAction = null;
+  if (completed) bulkOrderRequestIds.delete(getBulkOrderKey(action?.kind, action?.cityId));
+}
+
+function cancelBulkOrderPreview(kind = "", cityId = "") {
+  bulkOrderActionRequestId += 1;
+  pendingBulkOrderAction = null;
+  if (kind && cityId) bulkOrderRequestIds.delete(getBulkOrderKey(kind, cityId));
+}
+
+async function getNearbyScoutOptionsAsync(source) {
+  const candidates = getNearbyScoutCandidates(source);
+  const routes = await findRoutesAsync(candidates.map(city => ({ source, target: city })));
+  return candidates
+    .map((city, index) => ({ city, route: routes[index] }))
     .filter(option => option.route?.points?.length)
     .sort((a, b) => a.route.length - b.route.length);
 }
 
-function toggleScoutNearby(cityId) {
+function getBulkResultCityUpdates(result = {}) {
+  const rows = [
+    ...(Array.isArray(result.cities) ? result.cities : []),
+    ...(Array.isArray(result.cityUpdates) ? result.cityUpdates : []),
+    result.sourceCity,
+    result.targetCity,
+  ].filter(city => city?.id);
+  return [...new Map(rows.map(city => [`${normalizeRegionId(city.regionId || city.islandId)}:${city.id}`, city])).values()];
+}
+
+function applyServerBulkOrderResult(result = {}) {
+  const cityUpdates = getBulkResultCityUpdates(result);
+  applyServerArmyResult({
+    currentUser: result.currentUser,
+    globalStats: result.globalStats,
+    cityUpdates,
+  });
+  if (Number.isFinite(Number(result.gold))) state.gold = Math.max(0, Math.floor(Number(result.gold)));
+  const armies = Array.isArray(result.armies)
+    ? result.armies
+    : Array.isArray(result.movements) ? result.movements : result.movement ? [result.movement] : [];
+  armies.forEach(adoptServerArmyMovement);
+  onlineLastError = "";
+  saveGame();
+  renderAll();
+  return armies;
+}
+
+async function toggleScoutNearby(cityId) {
+  if (!canUseBulkArmyOrders()) {
+    cancelBulkOrderPreview("scout", cityId);
+    scoutNearbySourceId = null;
+    regroupSourceId = null;
+    renderAll();
+    rejectGameAction("Scout Nearby needs the latest Crownlands server. Reconnect and try again.");
+    return;
+  }
   const source = cityById(cityId);
   if (!source || source.owner !== "player") {
+    cancelBulkOrderPreview("scout", cityId);
     scoutNearbySourceId = null;
     regroupSourceId = null;
     renderAll();
     return;
   }
   if (source.troops < 1) {
+    cancelBulkOrderPreview("scout", source.id);
     scoutNearbySourceId = null;
     renderAll();
     rejectGameAction(`${source.name} needs at least 1 soldier to send scouts.`);
@@ -8751,8 +8920,10 @@ function toggleScoutNearby(cityId) {
   }
 
   if (scoutNearbySourceId !== source.id) {
+    cancelBulkOrderPreview();
     scoutNearbySourceId = source.id;
     regroupSourceId = null;
+    getBulkOrderRequestId("scout", source.id);
     const targets = getNearbyScoutCandidates(source);
     renderAll();
     showToast(targets.length
@@ -8761,30 +8932,92 @@ function toggleScoutNearby(cityId) {
     return;
   }
 
-  const options = getNearbyScoutOptions(source);
+  const action = beginBulkOrderAction("scout", source.id);
+  if (!action) {
+    showToast(pendingBulkOrderAction?.phase === "sending" ? "Scout orders are being sent..." : "Finding reachable scout targets...");
+    return;
+  }
+  renderAll();
+  showToast("Finding reachable scout targets...");
+  await waitForSetupLoadingPaint(0);
+  const options = await getNearbyScoutOptionsAsync(source);
+  if (!isBulkOrderActionCurrent(action)) return;
   if (!options.length) {
+    finishBulkOrderAction(action, { completed: true });
     scoutNearbySourceId = null;
     renderAll();
     rejectGameAction("No reachable cities remain inside this scout radius.");
     return;
   }
   if (state.gold < SCOUT_NEARBY_COST) {
+    finishBulkOrderAction(action);
+    renderAll();
     rejectGameAction(`Scout Nearby costs ${formatNumber(SCOUT_NEARBY_COST)} gold.`);
     return;
   }
   if (source.troops < options.length) {
+    finishBulkOrderAction(action);
+    renderAll();
     rejectGameAction(`${source.name} needs ${formatNumber(options.length)} troops to scout every highlighted city.`);
     return;
   }
 
+  if (supportsBulkArmyOrders()) {
+    const api = getOnlineApi();
+    if (!api?.sendNearbyScouts) {
+      finishBulkOrderAction(action);
+      renderAll();
+      rejectGameAction("Scout Nearby needs the latest Crownlands server. Reconnect and try again.");
+      return;
+    }
+    action.phase = "sending";
+    renderAll();
+    try {
+      const result = await api.sendNearbyScouts({
+        worldId: ONLINE_WORLD_ID,
+        resetGeneration: RESET_GENERATION,
+        sourceCityId: source.id,
+        sourceRegionId: getCityRegionId(source),
+        targetCityIds: options.map(option => option.city.id),
+        requestId: action.requestId,
+      });
+      const armies = applyServerBulkOrderResult(result);
+      finishBulkOrderAction(action, { completed: true });
+      scoutNearbySourceId = null;
+      addLog(`${source.name} dispatched ${formatNumber(armies.length || options.length)} nearby scouts for ${formatNumber(SCOUT_NEARBY_COST)} gold.`);
+      renderAll();
+      showToast(`${formatNumber(armies.length || options.length)} scouts dispatched from ${source.name}`);
+    } catch (error) {
+      onlineLastError = error?.message || String(error);
+      finishBulkOrderAction(action);
+      renderAll();
+      rejectGameAction(onlineLastError || "Scout Nearby could not be sent.");
+    }
+    return;
+  }
+
+  if (isOnlineWorldActive()) {
+    finishBulkOrderAction(action);
+    scoutNearbySourceId = null;
+    renderAll();
+    rejectGameAction("Scout Nearby lost its server connection. Reconnect and try again.");
+    return;
+  }
+
   state.gold -= SCOUT_NEARBY_COST;
-  for (const option of options) launchScoutMission(source, option.city, option.route);
+  let launched = 0;
+  for (const option of options) {
+    if (launchScoutMission(source, option.city, option.route)) launched += 1;
+  }
+  if (!launched) state.gold += SCOUT_NEARBY_COST;
+  finishBulkOrderAction(action, { completed: launched > 0 });
   scoutNearbySourceId = null;
   if (isOnlineWorldActive() && !usesServerArmyAuthority()) syncOwnedCitiesToOnline(true);
-  addLog(`${source.name} dispatched ${formatNumber(options.length)} nearby scouts for ${formatNumber(SCOUT_NEARBY_COST)} gold.`);
+  if (launched) addLog(`${source.name} dispatched ${formatNumber(launched)} nearby scouts for ${formatNumber(SCOUT_NEARBY_COST)} gold.`);
   saveGame();
   renderAll();
-  showToast(`${formatNumber(options.length)} scouts dispatched from ${source.name}`);
+  if (launched) showToast(`${formatNumber(launched)} scouts dispatched from ${source.name}`);
+  else rejectGameAction("No nearby scouts could be sent right now.");
 }
 
 function isNearbyRegroupCandidate(target, city) {
@@ -8804,25 +9037,37 @@ function getNearbyRegroupCandidates(target) {
   return state.cities.filter(city => isNearbyRegroupCandidate(target, city));
 }
 
-function getNearbyRegroupOptions(target) {
-  const targetRegionId = getCityRegionId(target);
-  return getNearbyRegroupCandidates(target)
-    .map(city => ({ city, route: findLandRoute(city, target, targetRegionId) }))
+async function getNearbyRegroupOptionsAsync(target) {
+  const candidates = getNearbyRegroupCandidates(target);
+  const routes = await findRoutesAsync(candidates.map(city => ({ source: city, target })));
+  return candidates
+    .map((city, index) => ({ city, route: routes[index] }))
     .filter(option => option.route?.points?.length)
     .sort((a, b) => a.route.length - b.route.length);
 }
 
-function toggleRegroup(cityId) {
+async function toggleRegroup(cityId) {
+  if (!canUseBulkArmyOrders()) {
+    cancelBulkOrderPreview("regroup", cityId);
+    scoutNearbySourceId = null;
+    regroupSourceId = null;
+    renderAll();
+    rejectGameAction("Regroup needs the latest Crownlands server. Reconnect and try again.");
+    return;
+  }
   const target = cityById(cityId);
   if (!target || target.owner !== "player") {
+    cancelBulkOrderPreview("regroup", cityId);
     regroupSourceId = null;
     renderAll();
     return;
   }
 
   if (regroupSourceId !== target.id) {
+    cancelBulkOrderPreview();
     regroupSourceId = target.id;
     scoutNearbySourceId = null;
+    getBulkOrderRequestId("regroup", target.id);
     const targets = getNearbyRegroupCandidates(target);
     const troops = targets.reduce((total, city) => total + Math.floor(Number(city.troops) || 0), 0);
     renderAll();
@@ -8832,15 +9077,70 @@ function toggleRegroup(cityId) {
     return;
   }
 
-  const options = getNearbyRegroupOptions(target);
+  const action = beginBulkOrderAction("regroup", target.id);
+  if (!action) {
+    showToast(pendingBulkOrderAction?.phase === "sending" ? "Regroup orders are being sent..." : "Finding reachable regroup routes...");
+    return;
+  }
+  renderAll();
+  showToast("Finding reachable regroup routes...");
+  await waitForSetupLoadingPaint(0);
+  const options = await getNearbyRegroupOptionsAsync(target);
+  if (!isBulkOrderActionCurrent(action)) return;
   if (!options.length) {
+    finishBulkOrderAction(action, { completed: true });
     regroupSourceId = null;
     renderAll();
     rejectGameAction("No nearby owned cities with troops can regroup here.");
     return;
   }
   if (state.gold < REGROUP_COST) {
+    finishBulkOrderAction(action);
+    renderAll();
     rejectGameAction(`Regroup costs ${formatNumber(REGROUP_COST)} gold.`);
+    return;
+  }
+
+  if (supportsBulkArmyOrders()) {
+    const api = getOnlineApi();
+    if (!api?.sendRegroupOrders) {
+      finishBulkOrderAction(action);
+      renderAll();
+      rejectGameAction("Regroup needs the latest Crownlands server. Reconnect and try again.");
+      return;
+    }
+    action.phase = "sending";
+    renderAll();
+    try {
+      const result = await api.sendRegroupOrders({
+        worldId: ONLINE_WORLD_ID,
+        resetGeneration: RESET_GENERATION,
+        targetCityId: target.id,
+        targetRegionId: getCityRegionId(target),
+        sourceCityIds: options.map(option => option.city.id),
+        requestId: action.requestId,
+      });
+      const armies = applyServerBulkOrderResult(result);
+      const troopsSent = armies.reduce((total, army) => total + Math.max(0, Math.floor(Number(army?.troops) || 0)), 0);
+      finishBulkOrderAction(action, { completed: true });
+      regroupSourceId = null;
+      addLog(`${target.name} called a regroup for ${formatNumber(REGROUP_COST)} gold: ${formatNumber(troopsSent)} troops moving in from ${formatNumber(armies.length || options.length)} cities.`);
+      renderAll();
+      showToast(`Regroup moving: ${formatNumber(troopsSent)} troops to ${target.name}`);
+    } catch (error) {
+      onlineLastError = error?.message || String(error);
+      finishBulkOrderAction(action);
+      renderAll();
+      rejectGameAction(onlineLastError || "Regroup could not be sent.");
+    }
+    return;
+  }
+
+  if (isOnlineWorldActive()) {
+    finishBulkOrderAction(action);
+    regroupSourceId = null;
+    renderAll();
+    rejectGameAction("Regroup lost its server connection. Reconnect and try again.");
     return;
   }
 
@@ -8850,12 +9150,13 @@ function toggleRegroup(cityId) {
   for (const option of options) {
     const troops = Math.floor(Number(option.city.troops) || 0);
     if (troops < 1) continue;
-    if (launchAttack(option.city.id, target.id, 1, "player", troops, { silent: true, syncOwnedCities: false })) {
+    if (launchAttack(option.city.id, target.id, 1, "player", troops, { silent: true, syncOwnedCities: false, route: option.route })) {
       launched += 1;
       troopsSent += troops;
     }
   }
 
+  finishBulkOrderAction(action, { completed: launched > 0 });
   regroupSourceId = null;
   if (!launched) {
     state.gold += REGROUP_COST;
@@ -8932,8 +9233,11 @@ function findNearestOwnedSourceCandidate(target, minimumTroops = 1) {
   return getOwnedSourceCandidates(target, minimumTroops)[0] || null;
 }
 
-function findNearestScoutSource(target) {
-  return findNearestOwnedSource(target, 1, { maxRouteChecks: SCOUT_SOURCE_ROUTE_CHECK_LIMIT });
+async function findNearestScoutSourceAsync(target) {
+  const candidates = getOwnedSourceCandidates(target, 1).slice(0, SCOUT_SOURCE_ROUTE_CHECK_LIMIT);
+  const routes = await findRoutesAsync(candidates.map(option => ({ source: option.city, target })));
+  const index = routes.findIndex(route => route?.points?.length);
+  return index >= 0 ? { city: candidates[index].city, route: routes[index] } : null;
 }
 
 function rememberOwnedAttackSource(cityOrId) {
@@ -9159,6 +9463,25 @@ function usesServerArmyAuthority() {
     ? api.usesServerArmyAuthority()
     : true;
   return Boolean(isOnlineWorldActive() && api?.isSignedIn?.() && api?.sendArmyOrder && api?.resolveArmyOrder && apiReady);
+}
+
+function getRealmCapabilityVersion(name = "") {
+  return Math.max(
+    0,
+    Math.floor(Number(verifiedRealmInfo?.[name] ?? verifiedRealmInfo?.features?.[name]) || 0)
+  );
+}
+
+function supportsAuthoritativeArmyRoutes() {
+  return usesServerArmyAuthority() && getRealmCapabilityVersion("authoritativeRoutesVersion") >= 1;
+}
+
+function supportsBulkArmyOrders() {
+  return usesServerArmyAuthority() && getRealmCapabilityVersion("bulkOrdersVersion") >= 1;
+}
+
+function canUseBulkArmyOrders() {
+  return !isOnlineWorldActive() || supportsBulkArmyOrders();
 }
 
 function hasServerEconomyApi() {
@@ -11149,6 +11472,7 @@ async function refreshAllOwnedCities(force = false) {
   if (!force && onlineOwnedCitiesCacheComplete && onlineOwnedCitiesCache.length && now - onlineOwnedCitiesCacheAt < ONLINE_OWNED_CITIES_REFRESH_MS) return true;
 
   onlineOwnedCitiesRefreshInFlight = true;
+  onlineOwnedCitiesRefreshError = "";
   try {
     const islandIds = getRegionIds().map(getOnlineIslandId);
     const owned = await withTimeout(
@@ -11160,6 +11484,7 @@ async function refreshAllOwnedCities(force = false) {
       ...city,
       islandId: city.islandId || getOnlineIslandId(getCityRegionId(city)),
     })), { complete: true });
+    onlineOwnedCitiesRefreshError = "";
     renderHud();
     if (profileScreen?.classList.contains("open")) renderProfileScreen();
     if (modal.open && modal.classList.contains("city-list-modal")) renderCityListModal();
@@ -11167,10 +11492,12 @@ async function refreshAllOwnedCities(force = false) {
     return true;
   } catch (error) {
     onlineLastError = error?.message || String(error);
+    onlineOwnedCitiesRefreshError = onlineLastError;
     console.warn("Could not load owned cities across islands", error);
     return false;
   } finally {
     onlineOwnedCitiesRefreshInFlight = false;
+    if (modal.open && modal.classList.contains("city-list-modal")) renderCityListModal();
   }
 }
 
@@ -12039,25 +12366,27 @@ function applyOnlinePresence(rawPresence) {
 }
 
 async function publishOnlinePresence(force = false) {
-  if (onlinePresenceInFlight) return false;
   if (!isOnlineWorldActive()) return false;
   const api = getOnlineApi();
   if (!api?.savePresence) return false;
   const islandId = getActiveOnlineIslandId();
+  const requestGeneration = ++onlinePresenceRequestGeneration;
   onlinePresenceInFlight = true;
   try {
-    await api.savePresence(islandId, getOnlinePresenceSnapshot());
+    const saved = await api.savePresence(islandId, getOnlinePresenceSnapshot());
+    if (requestGeneration !== onlinePresenceRequestGeneration) return Boolean(saved);
     rememberCurrentPlayerIdentity();
     onlineLastError = "";
     updateOnlinePlayersUi();
-    return true;
+    return Boolean(saved);
   } catch (error) {
+    if (requestGeneration !== onlinePresenceRequestGeneration) return false;
     onlineLastError = error?.message || String(error);
     updateOnlineUi();
     console.warn("Could not sync online presence", error);
     return false;
   } finally {
-    onlinePresenceInFlight = false;
+    if (requestGeneration === onlinePresenceRequestGeneration) onlinePresenceInFlight = false;
   }
 }
 
@@ -12515,6 +12844,7 @@ function disconnectOnlineWorld() {
   onlineOwnedCitiesCacheComplete = false;
   onlineOwnedCitiesRefreshInFlight = false;
   onlinePresenceTimer = 0;
+  onlinePresenceRequestGeneration += 1;
   onlinePresenceInFlight = false;
   harvestRelocationRetryAtMs = 0;
   overdueArmyResolveTimer = 0;
@@ -12793,6 +13123,39 @@ async function subscribeOnlineIslandWithInitialCities(api, islandId, handlers = 
 function markOnlineRealtimeRecoveryNeeded(error = null) {
   onlineRealtimeRecoveryNeeded = true;
   if (error) onlineLastError = error?.message || String(error);
+}
+
+function updateOnlineArmySyncBadge() {
+  if (!mapFrame) return;
+  let badge = mapFrame.querySelector(".army-sync-status");
+  if (!badge) {
+    badge = document.createElement("div");
+    badge.className = "army-sync-status";
+    badge.setAttribute("role", "status");
+    badge.setAttribute("aria-live", "polite");
+    badge.hidden = true;
+    mapFrame.appendChild(badge);
+  }
+  const degraded = [...onlineArmySyncFailures.entries()]
+    .filter(([, failures]) => Math.max(0, Number(failures) || 0) >= 2)
+    .map(([source]) => source);
+  badge.hidden = degraded.length === 0;
+  badge.textContent = degraded.length
+    ? `March sync reconnecting${degraded.length === 1 ? ` (${degraded[0]})` : ""}...`
+    : "";
+}
+
+function handleOnlineArmySyncStatus(status, explicitSource = "") {
+  const detail = status && typeof status === "object" ? status : { state: status };
+  const source = String(explicitSource || detail.source || "armies");
+  const stateLabel = String(detail.state || detail.status || "").toLowerCase();
+  if (["ready", "connected", "listening", "recovered"].includes(stateLabel)) {
+    onlineArmySyncFailures.delete(source);
+  } else if (["retrying", "reconnecting", "error", "failed"].includes(stateLabel)) {
+    const attempts = Math.max(1, Math.floor(Number(detail.attempt || detail.failures) || 1));
+    onlineArmySyncFailures.set(source, Math.max(attempts, onlineArmySyncFailures.get(source) || 0));
+  }
+  updateOnlineArmySyncBadge();
 }
 
 function applyActiveOnlineCityPayload(onlineCities, {
@@ -13148,7 +13511,7 @@ async function connectOnlineIsland(regionId, {
 
     const [, mapArtReady] = await Promise.all([islandSetupPromise, mapArtReadyPromise]);
     if (!mapArtReady) {
-      console.warn(`Map art preload did not finish for ${targetRegionId}; rendering will retry it.`);
+      throw new Error(`${getRegionLabel(targetRegionId)} map art could not be verified. Retry opening the map.`);
     }
 
     if (claimHome) {
@@ -14408,6 +14771,8 @@ function clearOnlineArmyWatchers({ clear = true } = {}) {
     if (typeof unsubscribe === "function") unsubscribe();
   });
   onlineArmyUnsubscribes = [];
+  onlineArmySyncFailures.clear();
+  updateOnlineArmySyncBadge();
   if (clear) {
     onlineArmiesByIsland = new Map();
     onlineArmies = [];
@@ -14605,17 +14970,22 @@ function subscribeOnlineArmyWatchers() {
   if (!api?.subscribePlayerArmies || !isOnlineWorldActive()) return;
   if (onlineArmyUnsubscribes.length) return;
   const unsubscribe = api.subscribePlayerArmies({
-    onArmies: armies => {
+    onArmies: (armies, source = "") => {
       applyOnlineArmies(armies, PLAYER_RELEVANT_ARMIES_CACHE_KEY);
+      if (source) handleOnlineArmySyncStatus({ source, state: "recovered" });
       renderArmies();
       updateIncomingAttackUi();
       updateOutgoingAttackUi();
     },
-    onError: error => {
+    onError: (error, source = "armies", detail = {}) => {
       markOnlineRealtimeRecoveryNeeded(error);
-      clearOnlineArmyWatchers({ clear: false });
-      console.warn("Could not subscribe to player-relevant armies", error);
+      const reportedAttempt = Math.max(0, Math.floor(Number(detail?.attempt) || 0));
+      const failures = reportedAttempt || (onlineArmySyncFailures.get(source) || 0) + 1;
+      onlineArmySyncFailures.set(source, failures);
+      updateOnlineArmySyncBadge();
+      console.warn(`Could not subscribe to ${source} player armies`, error);
     },
+    onStatus: (status, source = "") => handleOnlineArmySyncStatus(status, source),
   });
   if (typeof unsubscribe === "function") onlineArmyUnsubscribes.push(unsubscribe);
 }
@@ -15862,12 +16232,12 @@ function getRouteWorker() {
     routeWorker = new Worker(workerUrl, { name: "crownlands-route-worker" });
     routeWorker.addEventListener("message", event => {
       const message = event.data || {};
-      if (message.type !== "route") return;
+      if (message.type !== "route" && message.type !== "routeBatch") return;
       const request = routeWorkerRequests.get(message.id);
       if (!request) return;
       window.clearTimeout(request.timeoutId);
       routeWorkerRequests.delete(message.id);
-      if (message.ok) request.resolve(message.route || null);
+      if (message.ok) request.resolve(message.type === "routeBatch" ? message.routes || [] : message.route || null);
       else request.reject(new Error(message.error || "Route worker failed."));
     });
     routeWorker.addEventListener("error", event => {
@@ -15918,17 +16288,39 @@ function requestRouteFromWorker(job, timeoutMs = ROUTE_WORKER_TIMEOUT_MS) {
   });
 }
 
-async function findRouteAsync(source, target) {
+function requestRoutesFromWorker(jobs, timeoutMs = ROUTE_WORKER_RETRY_TIMEOUT_MS) {
+  const worker = getRouteWorker();
+  if (!worker) return Promise.reject(new Error("Route worker unavailable."));
+  const id = ++routeWorkerRequestId;
+  return new Promise((resolve, reject) => {
+    const timeoutId = window.setTimeout(() => {
+      const timeoutError = new Error("Bulk route calculation timed out.");
+      timeoutError.routeTimedOut = true;
+      rejectPendingRouteWorkerRequests(timeoutError);
+      routeWorker?.terminate?.();
+      routeWorker = null;
+    }, Math.max(1000, Number(timeoutMs) || ROUTE_WORKER_RETRY_TIMEOUT_MS));
+    routeWorkerRequests.set(id, { resolve, reject, timeoutId });
+    worker.postMessage({ type: "routeBatch", id, jobs });
+  });
+}
+
+function getCachedAsyncRoute(source, target) {
   const cacheKey = getAsyncRouteCacheKey(source, target);
   const cachedRoute = cacheKey ? asyncRouteCache.get(cacheKey) : null;
   if (cachedRoute?.points?.length) return cloneRoute(cachedRoute);
   const reverseKey = getAsyncRouteCacheKey(target, source);
   const cachedReverseRoute = reverseKey ? asyncRouteCache.get(reverseKey) : null;
-  if (cachedReverseRoute?.points?.length) {
-    const route = reverseRoute(cachedReverseRoute);
-    cacheAsyncRoute(cacheKey, route);
-    return route;
-  }
+  if (!cachedReverseRoute?.points?.length) return null;
+  const route = reverseRoute(cachedReverseRoute);
+  cacheAsyncRoute(cacheKey, route);
+  return route;
+}
+
+async function findRouteAsync(source, target) {
+  const cacheKey = getAsyncRouteCacheKey(source, target);
+  const cachedRoute = getCachedAsyncRoute(source, target);
+  if (cachedRoute?.points?.length) return cachedRoute;
   const job = buildRouteWorkerJob(source, target);
   if (!job) {
     console.warn("Route worker job could not be built.", {
@@ -15960,6 +16352,39 @@ async function findRouteAsync(source, target) {
     console.warn("Route worker failed; route calculation canceled to keep the map responsive.", error);
     return null;
   }
+}
+
+async function findRoutesAsync(pairs = []) {
+  const routes = new Array(pairs.length).fill(null);
+  const pending = [];
+  pairs.forEach((pair, index) => {
+    const source = pair?.source;
+    const target = pair?.target;
+    const cached = getCachedAsyncRoute(source, target);
+    if (cached?.points?.length) {
+      routes[index] = cached;
+      return;
+    }
+    const job = buildRouteWorkerJob(source, target);
+    if (!job) return;
+    pending.push({ index, source, target, job });
+  });
+  if (!pending.length) return routes;
+
+  try {
+    const workerRoutes = await requestRoutesFromWorker(pending.map(entry => entry.job));
+    pending.forEach((entry, workerIndex) => {
+      const route = workerRoutes[workerIndex];
+      if (!route?.points?.length) return;
+      cacheAsyncRoute(getAsyncRouteCacheKey(entry.source, entry.target), route);
+      routes[entry.index] = cloneRoute(route);
+    });
+  } catch (error) {
+    if (!error?.routeCanceled) {
+      console.warn("Bulk route calculation failed; the action was canceled to keep the map responsive.", error);
+    }
+  }
+  return routes;
 }
 
 function getAsyncRouteCacheKey(source, target) {
@@ -21332,6 +21757,7 @@ function getCityRenderSignature(visibleCities, visibleCamps = []) {
     sendMode ? 1 : 0,
     scoutNearbySourceId || "",
     regroupSourceId || "",
+    pendingBulkOrderAction ? `${pendingBulkOrderAction.kind}:${pendingBulkOrderAction.cityId}:${pendingBulkOrderAction.phase}` : "",
     state.mainCityId || "",
     state.playerName || "",
     playerFlag,
@@ -21416,12 +21842,13 @@ function renderCities(force = false) {
     return;
   }
   const source = selectedSourceId ? cityById(selectedSourceId) : null;
-  let scoutNearbySource = scoutNearbySourceId ? cityById(scoutNearbySourceId) : null;
+  const bulkOrdersSupported = canUseBulkArmyOrders();
+  let scoutNearbySource = bulkOrdersSupported && scoutNearbySourceId ? cityById(scoutNearbySourceId) : null;
   if (scoutNearbySourceId && scoutNearbySource?.owner !== "player") {
     scoutNearbySourceId = null;
     scoutNearbySource = null;
   }
-  let regroupSource = regroupSourceId ? cityById(regroupSourceId) : null;
+  let regroupSource = bulkOrdersSupported && regroupSourceId ? cityById(regroupSourceId) : null;
   if (regroupSourceId && regroupSource?.owner !== "player") {
     regroupSourceId = null;
     regroupSource = null;
@@ -21472,7 +21899,7 @@ function renderCities(force = false) {
       campNode.setAttribute("aria-label", `${camp.name}. ${getRewardCampStatusText(camp)}. ${formatNumber(camp.baseReward)} ${getRewardCampConfig(camp)?.rewardLabel || "reward"} reward.`);
       const countdown = getRewardCampCountdownSeconds(camp);
       const campHtml = `
-        <img class="camp-art" src="${escapeHtml(camp.artSrc)}" alt="" draggable="false" />
+        <img class="camp-art" src="${escapeHtml(camp.artSrc)}" alt="" draggable="false" decoding="async" />
         <span class="gold-camp-active-timer" ${camp.ownerUid ? "" : "hidden"}>
           <small>${camp.state === "contested" ? "Contested" : "Active"}</small>
           <strong>${camp.payoutPending ? countdown > 0 ? formatDuration(countdown) : "Payout ready" : "Securing"}</strong>
@@ -21487,7 +21914,7 @@ function renderCities(force = false) {
     } else {
       campNode.tabIndex = -1;
       campNode.setAttribute("aria-hidden", "true");
-      const campHtml = `<img class="camp-art" src="${escapeHtml(camp.artSrc)}" alt="" draggable="false" />`;
+      const campHtml = `<img class="camp-art" src="${escapeHtml(camp.artSrc)}" alt="" draggable="false" decoding="async" />`;
       if (campNode._renderContent !== campHtml) {
         campNode.innerHTML = campHtml;
         campNode._renderContent = campHtml;
@@ -21592,11 +22019,11 @@ function renderCities(force = false) {
     const structureHtml = stronghold
       ? `
       <span class="stronghold-glow" aria-hidden="true"></span>
-      <span class="stronghold-building" aria-hidden="true"><img class="stronghold-art" src="${getStrongholdArtSrc(city)}" alt="" draggable="false" /></span>`
+      <span class="stronghold-building" aria-hidden="true"><img class="stronghold-art" src="${getStrongholdArtSrc(city)}" alt="" draggable="false" decoding="async" /></span>`
       : `
       <span class="city-ring"></span>
-      ${shielded ? `<span class="city-shield-field" aria-hidden="true"><img src="assets/royal-peace-shield-field.png?v=20260704-shield-badge" alt="" draggable="false" /></span>` : ""}
-      <span class="city-castle stage-${castleStage}" aria-hidden="true"><img class="city-art" src="${getCastleAsset(castleStage)}" alt="" draggable="false" /></span>`;
+        ${shielded ? `<span class="city-shield-field" aria-hidden="true"><img src="assets/optimized/status-peace-shield-field-192x192-5b5b95051830.webp" alt="" draggable="false" decoding="async" /></span>` : ""}
+      <span class="city-castle stage-${castleStage}" aria-hidden="true"><img class="city-art" src="${getCastleAsset(castleStage)}" alt="" draggable="false" decoding="async" /></span>`;
     btn.setAttribute("aria-label", `${city.name}. ${ownerName}. ${clanAlly ? "Clan Ally. " : ""}${locationType}. ${knownTroops === undefined ? "Unknown troops" : `${formatNumber(knownTroops)} troops`}.${powerBandLabel ? ` ${powerBandLabel}.` : ""}`);
     btn.title = powerBandLabel ? `${city.name} - ${powerBandLabel}` : city.name;
     const cityHtml = `
@@ -21656,6 +22083,7 @@ function renderSelectedCityWheel(city) {
   if (isStronghold(city)) return renderSelectedStrongholdWheel(city);
   const mapPoint = worldToMapPoint(city);
   const wheel = document.createElement("div");
+  const bulkOrdersSupported = canUseBulkArmyOrders();
   const levelCost = getLevelCost(city);
   const incomingUpgradeLocked = cityHasIncomingUpgradeBlocker(city);
   const levelDisabled = incomingUpgradeLocked || isStronghold(city) || !Number.isFinite(levelCost) || state.gold < levelCost;
@@ -21665,8 +22093,11 @@ function renderSelectedCityWheel(city) {
   const levelCostLabel = incomingUpgradeLocked
     ? "Incoming"
     : isStronghold(city) ? "Fixed" : Number.isFinite(levelCost) ? `${formatNumber(levelCost)}g` : "Unavailable";
-  const scoutNearbyActive = scoutNearbySourceId === city.id;
-  const regroupActive = regroupSourceId === city.id;
+  const scoutNearbyActive = bulkOrdersSupported && scoutNearbySourceId === city.id;
+  const regroupActive = bulkOrdersSupported && regroupSourceId === city.id;
+  const scoutNearbyBusy = pendingBulkOrderAction?.kind === "scout" && pendingBulkOrderAction.cityId === city.id;
+  const regroupBusy = pendingBulkOrderAction?.kind === "regroup" && pendingBulkOrderAction.cityId === city.id;
+  const bulkOrderBusy = Boolean(pendingBulkOrderAction);
   wheel.className = "city-action-wheel";
   wheel.style.left = `${mapPoint.x}px`;
   wheel.style.top = `${mapPoint.y}px`;
@@ -21684,16 +22115,18 @@ function renderSelectedCityWheel(city) {
     <button class="city-wheel-action wheel-info" type="button" aria-label="View ${escapeHtml(city.name)} information">
       <span class="wheel-icon" aria-hidden="true">i</span>
     </button>
-    <button class="city-wheel-action wheel-scout-nearby ${scoutNearbyActive ? "armed" : ""}" type="button" aria-label="${scoutNearbyActive ? "Confirm scout nearby" : "Preview scout nearby"} from ${escapeHtml(city.name)}" ${city.troops < 1 ? "disabled" : ""}>
-      <span class="wheel-icon" aria-hidden="true">&#8857;</span>
-      <span class="wheel-action-name">${scoutNearbyActive ? "Send All" : "Nearby"}</span>
-      <span class="wheel-cost">${formatNumber(SCOUT_NEARBY_COST)}</span>
-    </button>
-    <button class="city-wheel-action wheel-regroup ${regroupActive ? "armed" : ""}" type="button" aria-label="${regroupActive ? "Confirm regroup" : "Preview regroup"} to ${escapeHtml(city.name)}">
-      <span class="wheel-icon" aria-hidden="true">&#8649;</span>
-      <span class="wheel-action-name">${regroupActive ? "Confirm" : "Regroup"}</span>
-      <span class="wheel-cost">${formatNumber(REGROUP_COST)}</span>
-    </button>
+    ${bulkOrdersSupported ? `
+      <button class="city-wheel-action wheel-scout-nearby ${scoutNearbyActive ? "armed" : ""} ${scoutNearbyBusy ? "busy" : ""}" type="button" aria-label="${scoutNearbyBusy ? "Preparing scout nearby" : scoutNearbyActive ? "Confirm scout nearby" : "Preview scout nearby"} from ${escapeHtml(city.name)}" aria-busy="${scoutNearbyBusy}" ${city.troops < 1 || (bulkOrderBusy && !scoutNearbyBusy) ? "disabled" : ""}>
+        <span class="wheel-icon" aria-hidden="true">&#8857;</span>
+        <span class="wheel-action-name">${scoutNearbyBusy ? pendingBulkOrderAction.phase === "sending" ? "Sending" : "Routing" : scoutNearbyActive ? "Send All" : "Nearby"}</span>
+        <span class="wheel-cost">${formatNumber(SCOUT_NEARBY_COST)}</span>
+      </button>
+      <button class="city-wheel-action wheel-regroup ${regroupActive ? "armed" : ""} ${regroupBusy ? "busy" : ""}" type="button" aria-label="${regroupBusy ? "Preparing regroup" : regroupActive ? "Confirm regroup" : "Preview regroup"} to ${escapeHtml(city.name)}" aria-busy="${regroupBusy}" ${bulkOrderBusy && !regroupBusy ? "disabled" : ""}>
+        <span class="wheel-icon" aria-hidden="true">&#8649;</span>
+        <span class="wheel-action-name">${regroupBusy ? pendingBulkOrderAction.phase === "sending" ? "Sending" : "Routing" : regroupActive ? "Confirm" : "Regroup"}</span>
+        <span class="wheel-cost">${formatNumber(REGROUP_COST)}</span>
+      </button>
+    ` : ""}
   `;
   wheel.querySelector(".wheel-level").addEventListener("click", event => {
     event.stopPropagation();
@@ -21708,13 +22141,13 @@ function renderSelectedCityWheel(city) {
     event.stopPropagation();
     showCityInfoModal(city.id);
   });
-  wheel.querySelector(".wheel-scout-nearby").addEventListener("click", event => {
+  wheel.querySelector(".wheel-scout-nearby")?.addEventListener("click", event => {
     event.stopPropagation();
-    toggleScoutNearby(city.id);
+    void toggleScoutNearby(city.id);
   });
-  wheel.querySelector(".wheel-regroup").addEventListener("click", event => {
+  wheel.querySelector(".wheel-regroup")?.addEventListener("click", event => {
     event.stopPropagation();
-    toggleRegroup(city.id);
+    void toggleRegroup(city.id);
   });
   cityLayer.appendChild(wheel);
 }
@@ -22892,6 +23325,19 @@ function layoutCityLabels() {
       if (ownerPriority) return ownerPriority;
       return (Number.parseFloat(b.style.top) || 0) - (Number.parseFloat(a.style.top) || 0);
     });
+  // Read every label metric before mutating any slot class. Mixing these reads
+  // with class writes forces a synchronous layout for every visible city.
+  const labelMetrics = nodes.map(node => {
+    const label = node.querySelector(".city-label");
+    if (!label) return null;
+    return {
+      label,
+      cityX: Number.parseFloat(node.style.left) || 0,
+      cityY: Number.parseFloat(node.style.top) || 0,
+      labelWidth: Math.max(1, label.offsetWidth || 150),
+      labelHeight: Math.max(1, label.offsetHeight || 54),
+    };
+  }).filter(Boolean);
   const slots = ["top", "top-high", "top-higher", "top-highest", "top-tier-5", "top-tier-6"];
   const slotBottom = { top: 58, "top-high": 74, "top-higher": 90, "top-highest": 106, "top-tier-5": 122, "top-tier-6": 138 };
   const slotPenalty = { top: 0, "top-high": 8, "top-higher": 18, "top-highest": 32, "top-tier-5": 50, "top-tier-6": 72 };
@@ -22926,13 +23372,8 @@ function layoutCityLabels() {
     }
   };
 
-  for (const node of nodes) {
-    const label = node.querySelector(".city-label");
-    if (!label) continue;
-    const cityX = Number.parseFloat(node.style.left) || 0;
-    const cityY = Number.parseFloat(node.style.top) || 0;
-    const labelWidth = Math.max(1, label.offsetWidth || 150);
-    const labelHeight = Math.max(1, label.offsetHeight || 54);
+  const placements = [];
+  for (const { label, cityX, cityY, labelWidth, labelHeight } of labelMetrics) {
     const availableSlots = cityY < 210 ? slots.slice(0, 2) : slots;
     let bestSlot = "top";
     let bestRect = null;
@@ -22960,10 +23401,13 @@ function layoutCityLabels() {
       if (penalty === 0) break;
     }
 
-    for (const option of slots) label.classList.remove(`label-slot-${option}`);
-    label.classList.add(`label-slot-${bestSlot}`);
+    placements.push({ label, bestSlot });
     if (bestRect) storeRect(bestRect);
   }
+  placements.forEach(({ label, bestSlot }) => {
+    for (const option of slots) label.classList.remove(`label-slot-${option}`);
+    label.classList.add(`label-slot-${bestSlot}`);
+  });
 }
 
 function formatTroopEstimateBound(value = 0) {
@@ -23727,6 +24171,105 @@ async function loadAttackProtectionPreview(source, target) {
   return createAttackProtectionSnapshot(source, target, source.troops, "player");
 }
 
+function normalizeAuthoritativeRoutePreview(result, sourceRegionId = "", requestedTroops = selectedTroopAmount) {
+  const raw = result?.route && typeof result.route === "object" ? result.route : result;
+  if (!raw || typeof raw !== "object") return null;
+  const segments = normalizeArmyPathSegments(raw.segments || raw.pathSegments);
+  let points = normalizeArmyPath(raw.points || raw.path);
+  if (!points.length && segments.length) {
+    points = segments.flatMap((segment, index) => index ? segment.points.slice(1) : segment.points);
+  }
+  if (!points.length) return null;
+  const measuredLength = segments.reduce((total, segment) => total + Math.max(0, Number(segment.length) || routeLength(segment.points)), 0)
+    || routeLength(points);
+  return {
+    points,
+    segments: segments.length ? segments : [{
+      regionId: normalizeRegionId(sourceRegionId),
+      points,
+      length: measuredLength,
+    }],
+    length: Math.max(0, Number(raw.length ?? raw.distance) || measuredLength),
+    authoritativeDurationSeconds: Math.max(0, Number(raw.durationMs) || 0) / 1000,
+    authoritativeArrivesAtMs: normalizeTimestampMs(raw.arrivesAtMs),
+    authoritativeRequestedTroops: Math.max(1, Math.floor(Number(raw.requestedTroops) || requestedTroops || 1)),
+  };
+}
+
+async function requestAuthoritativeOrderRoute(source, target, orderKind = "attack", requestedTroops = selectedTroopAmount) {
+  const api = getOnlineApi();
+  if (!supportsAuthoritativeArmyRoutes() || !api?.previewArmyRoute) return null;
+  const safeRequestedTroops = Math.max(1, Math.floor(Number(requestedTroops) || 1));
+  try {
+    const result = await api.previewArmyRoute({
+      worldId: ONLINE_WORLD_ID,
+      resetGeneration: RESET_GENERATION,
+      fromId: source.id,
+      toId: target.id,
+      sourceRegionId: getCityRegionId(source),
+      targetRegionId: getCityRegionId(target),
+      targetType: isRewardCampTarget(target) ? "camp" : "city",
+      kind: orderKind === "rally_join" ? "transfer" : orderKind === "rally_create" ? "attack" : orderKind,
+      requestedTroops: safeRequestedTroops,
+    });
+    const route = normalizeAuthoritativeRoutePreview(result, getCityRegionId(source), safeRequestedTroops);
+    if (route?.points?.length) return route;
+    console.warn("The server returned an unusable route preview; using the route worker preview.");
+  } catch (error) {
+    console.warn("Could not load the authoritative route preview; the server will still verify launch timing.", error);
+  }
+  return null;
+}
+
+async function findOrderRouteAsync(source, target, orderKind = "attack") {
+  const route = await requestAuthoritativeOrderRoute(source, target, orderKind, selectedTroopAmount);
+  if (route?.points?.length) return route;
+  return findRouteAsync(source, target);
+}
+
+function cancelAuthoritativeRoutePreviewRefresh() {
+  if (authoritativeRoutePreviewTimer) {
+    window.clearTimeout(authoritativeRoutePreviewTimer);
+    authoritativeRoutePreviewTimer = 0;
+  }
+  authoritativeRoutePreviewRequestId += 1;
+}
+
+function scheduleAuthoritativeRoutePreviewRefresh(source, target, route, orderKind = activeTroopOrderKind) {
+  if (!supportsAuthoritativeArmyRoutes() || !source || !target || !route?.points?.length) {
+    cancelAuthoritativeRoutePreviewRefresh();
+    return;
+  }
+  const selectedBand = getTroopTravelBandIndex(selectedTroopAmount);
+  const previewBand = route.authoritativeDurationSeconds > 0
+    ? getTroopTravelBandIndex(route.authoritativeRequestedTroops)
+    : -1;
+  if (selectedBand === previewBand) {
+    cancelAuthoritativeRoutePreviewRefresh();
+    return;
+  }
+  if (authoritativeRoutePreviewTimer) window.clearTimeout(authoritativeRoutePreviewTimer);
+  const requestId = ++authoritativeRoutePreviewRequestId;
+  const requestedTroops = selectedTroopAmount;
+  authoritativeRoutePreviewTimer = window.setTimeout(async () => {
+    authoritativeRoutePreviewTimer = 0;
+    const refreshedRoute = await requestAuthoritativeOrderRoute(source, target, orderKind, requestedTroops);
+    if (
+      requestId !== authoritativeRoutePreviewRequestId
+      || !refreshedRoute?.points?.length
+      || !troopSliderActive
+      || !modal.open
+      || !modal.classList.contains("troop-slider-modal")
+      || activeTroopSliderRoute?.sourceId !== source.id
+      || activeTroopSliderRoute?.targetId !== target.id
+      || getTroopTravelBandIndex(selectedTroopAmount) !== getTroopTravelBandIndex(requestedTroops)
+    ) return;
+    Object.assign(route, refreshedRoute);
+    activeTroopSliderRoute.route = cloneRoute(route);
+    updateTroopSliderModal(source, target, route);
+  }, AUTHORITATIVE_ROUTE_PREVIEW_DEBOUNCE_MS);
+}
+
 async function showTroopSliderModalAsync(source, target, options = {}) {
   if (!source || !target || source.owner !== "player" || source.id === target.id) return;
   if (source.troops < 1) {
@@ -23764,6 +24307,7 @@ async function showTroopSliderModalAsync(source, target, options = {}) {
   }
 
   cancelPendingRouteWorkerRequests("A newer route was selected.");
+  cancelAuthoritativeRoutePreviewRefresh();
   const requestId = ++activeTroopRouteRequestId;
   const providedAttackProtection = normalizeAttackProtectionSnapshot(options.attackProtection);
   troopSliderActive = true;
@@ -23774,7 +24318,7 @@ async function showTroopSliderModalAsync(source, target, options = {}) {
 
   await waitForSetupLoadingPaint(0);
   const [route, defenderPower, protectionResult] = await Promise.all([
-    findRouteAsync(source, target),
+    findOrderRouteAsync(source, target, orderKind),
     needsDefenderPower ? ensureAuthoritativeCityOwnerKingPower(target) : Promise.resolve(0),
     needsDefenderPower
       ? providedAttackProtection
@@ -24159,7 +24703,7 @@ function updateTroopSliderModal(source, target, route) {
     if (stateLabel) stateLabel.textContent = activeSwiftMarchOrderSelected ? "On" : "Off";
   }
 
-  const baseTravel = travelTime(
+  const locallyEstimatedTravel = travelTime(
     source,
     target,
     "player",
@@ -24167,6 +24711,12 @@ function updateTroopSliderModal(source, target, route) {
     selectedTroopAmount,
     orderKind === "rally_join" ? "transfer" : orderKind === "rally_create" ? "attack" : orderKind
   );
+  const authoritativePreviewMatches = route.authoritativeDurationSeconds > 0
+    && getTroopTravelBandIndex(route.authoritativeRequestedTroops) === getTroopTravelBandIndex(selectedTroopAmount);
+  const baseTravel = authoritativePreviewMatches
+    ? route.authoritativeDurationSeconds
+    : locallyEstimatedTravel;
+  scheduleAuthoritativeRoutePreviewRefresh(source, target, route, orderKind);
   const travel = activeSwiftMarchOrderSelected
     ? Math.max(
         SWIFT_MARCH_MINIMUM_REMAINING_SECONDS,
@@ -24415,6 +24965,7 @@ async function confirmTroopSliderOrder() {
 function cancelSendMode() {
   activeTroopRouteRequestId += 1;
   cancelPendingRouteWorkerRequests();
+  cancelAuthoritativeRoutePreviewRefresh();
   sendMode = false;
   selectedTargetId = null;
   selectedTroopAmount = 1;
@@ -25414,10 +25965,15 @@ function renderCityListModal() {
   const regularCityCount = cities.filter(city => !isStronghold(city)).length;
   const globalStats = getGlobalStatsSnapshot();
   const displayCityCount = hasUsableGlobalStats(globalStats) ? globalStats.totalCities : regularCityCount;
-  const rosterIsSyncing = onlineOwnedCitiesRefreshInFlight
-    || (!onlineOwnedCitiesCacheComplete && displayCityCount > regularCityCount);
+  const rosterIsSyncing = onlineOwnedCitiesRefreshInFlight;
+  const rosterNeedsRetry = !rosterIsSyncing
+    && isOnlineWorldActive()
+    && !onlineOwnedCitiesCacheComplete
+    && (Boolean(onlineOwnedCitiesRefreshError) || displayCityCount > regularCityCount);
   const rosterCountLabel = rosterIsSyncing && displayCityCount > regularCityCount
     ? `${formatNumber(regularCityCount)} / ${formatNumber(displayCityCount)}`
+    : rosterNeedsRetry && displayCityCount > regularCityCount
+      ? `${formatNumber(regularCityCount)} / ${formatNumber(displayCityCount)}`
     : formatNumber(displayCityCount);
   const pageCount = Math.max(1, Math.ceil(cities.length / CITY_LIST_PAGE_SIZE));
   cityListPage = clamp(cityListPage, 0, pageCount - 1);
@@ -25430,6 +25986,7 @@ function renderCityListModal() {
         <span>Owned across maps</span>
         <strong>${rosterCountLabel}</strong>
         ${rosterIsSyncing ? `<small class="city-list-syncing" role="status">Syncing full city roster...</small>` : ""}
+        ${rosterNeedsRetry ? `<small class="city-list-sync-error" role="alert">Full roster unavailable. Showing saved cities.</small><button class="city-list-sync-retry" data-city-list-sync-retry type="button">Retry sync</button>` : ""}
       </div>
       <div class="city-list-toolbar" aria-label="City list filters">
         <button class="${cityListSortKey === "level" ? "active" : ""}" data-city-list-sort="level" type="button" aria-pressed="${cityListSortKey === "level"}">
@@ -25466,6 +26023,12 @@ function renderCityListModal() {
       cityListPage = 0;
       renderCityListModal();
     });
+  });
+
+  modalBody.querySelector("[data-city-list-sync-retry]")?.addEventListener("click", event => {
+    event.currentTarget.disabled = true;
+    void refreshAllOwnedCities(true);
+    renderCityListModal();
   });
 
   modalBody.querySelectorAll("[data-city-list-page]").forEach(button => {
@@ -25953,7 +26516,7 @@ function getDailyLoginRewardPresentation(reward = {}) {
   if (reward.goldHours > 0) {
     return {
       kind: "gold",
-      icon: "assets/gold-pickup.png",
+      icon: GOLD_PICKUP_ICON_SRC,
       label: `${formatDailyLoginRewardHours(reward.goldHours)}h Gold`,
       title: `${formatDailyLoginRewardHours(reward.goldHours)} hours of city gold production`,
     };
@@ -25961,7 +26524,7 @@ function getDailyLoginRewardPresentation(reward = {}) {
   if (reward.troopHours > 0) {
     return {
       kind: "troops",
-      icon: "assets/troop-pickup.png",
+      icon: TROOP_PICKUP_ICON_SRC,
       label: `${formatDailyLoginRewardHours(reward.troopHours)}h Troops`,
       title: `${formatDailyLoginRewardHours(reward.troopHours)} hours of city troop production`,
     };
@@ -25979,7 +26542,7 @@ function getDailyLoginRewardPresentation(reward = {}) {
   }
   return {
     kind: "unknown",
-    icon: "assets/daily-reward-icon-cutout.webp?v=20260728-daily-reward-cutout",
+      icon: "assets/optimized/daily-reward-160x151-f4cebc4a7ccb.webp",
     label: "Royal Reward",
     title: "Royal Reward",
   };
@@ -26047,7 +26610,7 @@ function renderDailyLoginRewardModal() {
   modalBody.innerHTML = `
     <section class="daily-reward-panel">
       <header class="daily-reward-hero">
-        <img src="assets/daily-reward-icon-cutout.webp?v=20260728-daily-reward-cutout" alt="" />
+        <img src="assets/optimized/daily-reward-160x151-f4cebc4a7ccb.webp" alt="" decoding="async" />
         <div>
           <span>Royal Attendance · Cycle ${formatNumber(status.cycle)}</span>
           <h3>${escapeHtml(pendingLabel)}</h3>
@@ -26402,7 +26965,7 @@ function showRewardedAdDisclosure(intent = {}, readyEvent = null) {
     modalTitle.textContent = "Watch Ad for Reward";
     modalBody.innerHTML = `
       <section class="rewarded-ad-disclosure">
-        <img src="${rewardType === "troops" ? "assets/troop-pickup.png" : "assets/gold-pickup.png"}" alt="" />
+          <img src="${rewardType === "troops" ? TROOP_PICKUP_ICON_SRC : GOLD_PICKUP_ICON_SRC}" alt="" decoding="async" />
         <strong>Receive ${formatNumber(rewardAmount)} ${rewardType}</strong>
         <p>Watch the rewarded advertisement to receive exactly 30 minutes of base ${rewardType === "troops" ? "troop" : "gold"} production.</p>
         <small>Closing or skipping before Google grants the reward gives no boost.</small>
@@ -30028,6 +30591,7 @@ function applyCameraTransform() {
   camera.x = clamp(camera.x, 0, maxX);
   camera.y = clamp(camera.y, 0, maxY);
   const offset = getMapViewportOffset(rect, dimensions);
+  mapWorld.style.setProperty("--map-hit-size", `${Math.max(MAP_MIN_INTERACTION_TARGET_PX, MAP_MIN_INTERACTION_TARGET_PX / Math.max(0.1, zoom))}px`);
   mapWorld.style.transform = `translate3d(${offset.x - camera.x * zoom}px, ${offset.y - camera.y * zoom}px, 0) scale(${zoom})`;
   updateMainCityReturnButtonForCamera(rect);
 }
@@ -30396,6 +30960,21 @@ function updatePinch() {
   markZoomInteraction();
 }
 
+function scheduleMainMapPinchUpdate() {
+  if (mainMapPinchAnimationFrame) return;
+  mainMapPinchAnimationFrame = requestAnimationFrame(() => {
+    mainMapPinchAnimationFrame = 0;
+    updatePinch();
+  });
+}
+
+function flushMainMapPinchUpdate() {
+  if (!mainMapPinchAnimationFrame) return;
+  cancelAnimationFrame(mainMapPinchAnimationFrame);
+  mainMapPinchAnimationFrame = 0;
+  updatePinch();
+}
+
 function isMapNodeInteractionTarget(target) {
   return Boolean(target?.closest(".city-node, .city-action-wheel, .camp-node, .gold-camp-action-wheel, .teleport-node, .harvest-bonus-node, .army-token"));
 }
@@ -30596,7 +31175,7 @@ function movePan(event) {
   }
 
   if (pinchState && activePointers.size >= 2) {
-    updatePinch();
+    scheduleMainMapPinchUpdate();
     return;
   }
 
@@ -30622,6 +31201,7 @@ function movePan(event) {
 
 function finishTrackedMapPointer(event, { renderPanelAfter = true } = {}) {
   const wasPinching = Boolean(pinchState);
+  if (wasPinching) flushMainMapPinchUpdate();
   activePointers.delete(event.pointerId);
 
   if (panState && panState.pointerId === event.pointerId) {
@@ -30972,7 +31552,10 @@ window.addEventListener("resize", updateCameraTransform);
 document.addEventListener("fullscreenchange", updateFullscreenButton);
 document.addEventListener("visibilitychange", () => {
   if (document.visibilityState === "hidden") markGameBackgrounded();
-  else handleGameForegroundSignal("visibilitychange");
+  else {
+    handleGameForegroundSignal("visibilitychange");
+    preloadNearbyIslandMaps(getActiveMapRegionId());
+  }
 });
 window.addEventListener("pagehide", markGameBackgrounded);
 window.addEventListener("pageshow", () => handleGameForegroundSignal("pageshow"));
@@ -31052,6 +31635,7 @@ document.addEventListener("pointerdown", event => {
 modal.addEventListener("close", () => {
   publicPlayerProfileRequestId += 1;
   publicClanProfileRequestId += 1;
+  cancelAuthoritativeRoutePreviewRefresh();
   stopCityRelinquishCountdown();
   if (rewardedAdShopCountdownTimer) {
     window.clearInterval(rewardedAdShopCountdownTimer);

@@ -108,7 +108,7 @@ a:focus-visible {
   background:
     linear-gradient(90deg, rgba(3, 10, 18, .96) 0%, rgba(4, 14, 24, .84) 50%, rgba(4, 14, 24, .35)),
     linear-gradient(180deg, rgba(5, 12, 20, .08), rgba(5, 12, 20, .9)),
-    url("/assets/game-menu-background.jpg?v=20260702-login-page") center / cover no-repeat;
+    url("/assets/optimized/login-background-1448x1086-cec197d384ba.webp") center / cover no-repeat;
   box-shadow: 0 24px 64px rgba(0, 0, 0, .42);
 }
 

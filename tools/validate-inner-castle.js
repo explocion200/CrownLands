@@ -13,45 +13,52 @@ const firebaseSource = read("firebaseClient.js");
 const browserEconomySource = read("economy-config.js");
 const serverEconomySource = read("functions/economy-config.json");
 const functionsPackage = JSON.parse(read("functions/package.json"));
+const optimizedArtManifest = JSON.parse(read("assets/optimized/manifest.json"));
+
+function optimizedAsset(id) {
+  const output = optimizedArtManifest.assets.find(asset => asset.id === id)?.output;
+  assert.ok(output, `Missing optimized artwork manifest entry: ${id}.`);
+  return output;
+}
 
 const BUILD_ID = "20260802-single-active-skill-preset-v1";
-const HUB_ART_SRC = "assets/inner-castle/inner-castle-hub.png";
+const HUB_ART_SRC = optimizedAsset("inner-castle-hub");
 const BUILDINGS = [
   {
     key: "royal-stables",
     label: "Royal Stables",
     role: "Movement / march speed",
-    artSrc: "assets/inner-castle/royal-stables.png",
+    artSrc: optimizedAsset("inner-castle-royal-stables"),
   },
   {
     key: "alehouse",
     label: "Alehouse",
     role: "Morale / recovery / small boosts",
-    artSrc: "assets/inner-castle/alehouse.png",
+    artSrc: optimizedAsset("inner-castle-alehouse"),
   },
   {
     key: "treasury",
     label: "Treasury",
     role: "Gold storage / gold production",
-    artSrc: "assets/inner-castle/treasury.png",
+    artSrc: optimizedAsset("inner-castle-treasury"),
   },
   {
     key: "great-hall",
     label: "Great Hall",
     role: "Ruler power / kingdom upgrades",
-    artSrc: "assets/inner-castle/great-hall.png",
+    artSrc: optimizedAsset("inner-castle-great-hall"),
   },
   {
     key: "barracks",
     label: "Barracks",
     role: "Troop production / military strength",
-    artSrc: "assets/inner-castle/barracks.png",
+    artSrc: optimizedAsset("inner-castle-barracks"),
   },
   {
     key: "gatehouse",
     label: "Gatehouse",
     role: "City defense / wall strength",
-    artSrc: "assets/inner-castle/gatehouse.png",
+    artSrc: optimizedAsset("inner-castle-gatehouse"),
   },
 ];
 

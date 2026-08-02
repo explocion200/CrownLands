@@ -94,7 +94,7 @@
             <span class="step-number">4</span>
             <div>
               <h2>Scout before attacking</h2>
-              <p>A scout is a small march that reveals a snapshot of a target after arrival. The report shows the holding owner's garrison separately from each clan member's stationed reinforcements, along with city level, wall contribution, total defense, and relevant bonuses. Successful intelligence lasts for ten minutes from arrival. A newer successful scout replaces that target's report and restarts the timer; failed or blocked scouts do not refresh it.</p>
+              <p>A scout is a small march that reveals a snapshot of a target after arrival. The report shows the holding owner's garrison separately from each clan member's stationed reinforcements, along with city level, wall contribution, total defense, and relevant bonuses. Successful intelligence lasts for ten minutes from arrival. A newer successful scout replaces that target's report and restarts the timer; failed or blocked scouts do not refresh it. Scout Nearby charges its displayed kingdom cost once and either launches every confirmed one-troop scout or launches none.</p>
               <p>Use the combat preview together with the latest report. The preview explains estimated attack and defense power, likely losses, survivors, and the expected capture or defeat result. Estimates are planning tools rather than a reason to ignore travel time or changing ownership.</p>
               <div class="notice"><strong>Do not send based only on the number printed over a city.</strong> Walls, skills, Stronghold effects, allied reinforcements, and recent troop movement can change the actual defense.</div>
             </div>
@@ -106,8 +106,8 @@
             <span class="step-number">5</span>
             <div>
               <h2>Send armies and protect holdings</h2>
-              <p>Choose a source city, target, and troop amount to create a march. The server validates ownership, available troops, route, protection rules, and other requirements before accepting the order. When the march arrives, the server resolves the outcome and records a report.</p>
-              <p>Successful captures transfer the city and reduce its level by one, never below Level 1. Failed attacks can still award reduced experience. A captured city may have a temporary experience cooldown, which lowers repeated capture rewards without preventing future attacks.</p>
+              <p>Choose a source city, target, and troop amount to create a march. The server calculates and validates the authoritative route and arrival time together with ownership, available troops, protection rules, and other requirements before accepting the order. Regroup also runs as one server-validated batch: its displayed cost is charged only if every confirmed nearby transfer is created. When a march arrives, the server resolves the outcome and records a report.</p>
+              <p>Successful captures transfer the city and reduce its level by one, never below Level 1. Failed attacks can still award reduced experience. Newly acquired cities remain immediately attackable and award their normal battle and capture experience.</p>
               <h3>Defense is preparation</h3>
               <p>City defenders benefit from stationed troop strength and city walls. Upgrades and defensive skills improve the cost of taking an important holding. If an attack is already marching, decide whether to reinforce the target, move vulnerable troops, or accept the battle and preserve resources elsewhere.</p>
             </div>

@@ -18,24 +18,9 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700;800;900&family=Cinzel+Decorative:wght@700;900&family=IM+Fell+English:ital@0;1&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="styles.css?v=20260802-single-active-skill-preset-v1" />
-  <link rel="preload" as="image" href="assets/game-menu-background.jpg?v=20260702-login-page" />
-  <link rel="preload" as="image" href="assets/loading-ring.png" />
-  <link rel="preload" as="image" href="assets/loading-crown.png" />
-  <link rel="preload" as="image" href="assets/leaderboard-icon.png?v=20260623-leaderboard-icon-new" />
-  <link rel="preload" as="image" type="image/webp" href="assets/daily-reward-icon-cutout.webp?v=20260728-daily-reward-cutout" />
-  <link rel="preload" as="image" href="assets/profile-hud-frame.png?v=20260702-profile-frame" />
-  <link rel="preload" as="image" href="assets/city-list-icon.png?v=20260623-city-icon-hud" />
-  <link rel="preload" as="image" href="assets/map-icon.png?v=20260623-map-icon-framed" />
-  <link rel="preload" as="image" href="assets/map-switch-arrow.png?v=20260702-map-arrow-bigger" />
-  <link rel="preload" as="image" href="assets/shop-icon.png?v=20260623-shop-ui" />
-  <link rel="preload" as="image" href="assets/bag-icon.png?v=20260623-bag-inventory" />
-  <link rel="preload" as="image" href="assets/report-icon.png?v=20260702-report-icon" />
-  <link rel="preload" as="image" type="image/webp" href="assets/royal-peace-shield-icon.webp?v=20260703-shop-icons" />
-  <link rel="preload" as="image" type="image/webp" href="assets/war-drums-icon.webp?v=20260703-shop-icons" />
-  <link rel="preload" as="image" href="assets/royal-peace-shield-field.png?v=20260704-shield-badge" />
-  <link rel="preload" as="image" type="image/webp" href="assets/veil-of-silence-icon.webp?v=20260703-shop-icons" />
-  <link rel="preload" as="image" type="image/webp" href="assets/swift-march-order-icon.webp?v=20260703-shop-icons" />
-  <link rel="preload" as="image" type="image/webp" href="assets/recall-horn-icon.webp?v=20260703-shop-icons" />
+  <link rel="preload" as="image" type="image/webp" href="assets/optimized/login-background-1448x1086-cec197d384ba.webp" fetchpriority="high" />
+  <link rel="preload" as="image" type="image/webp" href="assets/optimized/loading-ring-256x256-d14e6c09f495.webp" fetchpriority="high" />
+  <link rel="preload" as="image" type="image/webp" href="assets/optimized/loading-crown-256x256-9eab5c3ca27d.webp" fetchpriority="high" />
   <link rel="icon" type="image/png" sizes="192x192" href="/assets/icons/crownlands-icon-192.png" />
   <link rel="apple-touch-icon" href="/assets/icons/crownlands-icon-192.png" />
   <link rel="manifest" href="/manifest.webmanifest" />
@@ -62,8 +47,8 @@
         <h1 class="sr-only">Crownlands</h1>
         <p class="sr-only">Sign in with Google, then enter your kingdom.</p>
         <div id="menuLoadingWheel" class="loading-wheel menu-loading-wheel" hidden aria-hidden="true">
-          <img class="loading-wheel-ring" src="assets/loading-ring.png" alt="" draggable="false" />
-          <img class="loading-wheel-crown" src="assets/loading-crown.png" alt="" draggable="false" />
+          <img class="loading-wheel-ring" src="assets/optimized/loading-ring-256x256-d14e6c09f495.webp" width="256" height="256" alt="" draggable="false" />
+          <img class="loading-wheel-crown" src="assets/optimized/loading-crown-256x256-9eab5c3ca27d.webp" width="256" height="256" alt="" draggable="false" />
         </div>
         <div class="online-login" aria-label="Online account status">
           <div>
@@ -112,13 +97,13 @@
               <span id="characterLevelBadge" class="character-level-badge">Lv 1</span>
             </button>
             <button id="leaderboardBtn" class="profile-rank-btn" type="button" aria-label="Open King Power ranks">
-              <img class="profile-rank-icon" src="assets/leaderboard-icon.png?v=20260623-leaderboard-icon-new" alt="" draggable="false" decoding="async" />
+              <img class="profile-rank-icon" src="assets/optimized/hud-leaderboard-192x192-fcd05104c9d8.webp" width="192" height="192" alt="" draggable="false" decoding="async" />
             </button>
             <button id="clanHudBtn" class="profile-rank-btn clan-hud-btn is-search" type="button" aria-label="Find a clan" data-audio-effect="menu_open">
               <span id="clanHudIcon" class="clan-hud-icon" aria-hidden="true"></span>
             </button>
             <button id="dailyLoginRewardBtn" class="profile-rank-btn daily-login-reward-btn" type="button" aria-label="Open daily rewards">
-              <img class="daily-login-reward-icon" src="assets/daily-reward-icon-cutout.webp?v=20260728-daily-reward-cutout" alt="" draggable="false" decoding="async" />
+              <img class="daily-login-reward-icon" src="assets/optimized/daily-reward-160x151-f4cebc4a7ccb.webp" width="160" height="151" alt="" draggable="false" decoding="async" />
               <span id="dailyLoginRewardBadge" class="daily-login-reward-badge" aria-hidden="true" hidden>!</span>
             </button>
           </div>
@@ -141,35 +126,35 @@
         <span class="main-city-return-house" aria-hidden="true">&#8962;</span>
       </button>
       <button id="inventoryBtn" class="resource-pill bag-btn" type="button" aria-label="Open bag">
-        <img class="bag-icon" src="assets/bag-icon.png?v=20260623-bag-inventory" alt="" draggable="false" decoding="async" />
+        <img class="bag-icon" src="assets/optimized/hud-bag-192x192-d9689d3e5371.webp" width="192" height="192" alt="" draggable="false" decoding="async" />
       </button>
       <button id="shopBtn" class="resource-pill shop-btn" type="button" aria-label="Open shop">
-        <img class="shop-icon" src="assets/shop-icon.png?v=20260623-shop-ui" alt="" draggable="false" decoding="async" />
+        <img class="shop-icon" src="assets/optimized/hud-shop-192x192-9b436f6a888e.webp" width="192" height="192" alt="" draggable="false" decoding="async" />
       </button>
       <div id="activeItemEffectsStack" class="active-item-effects-stack" aria-live="polite">
         <div id="shieldStatusBadge" class="effect-status-badge shield-status-badge" hidden role="status">
-          <img class="effect-status-icon shield-status-icon" src="assets/royal-peace-shield-icon.webp?v=20260703-shop-icons" alt="" draggable="false" decoding="async" />
+          <img class="effect-status-icon shield-status-icon" src="assets/optimized/item-peace-shield-160x160-dcb8dddc35ea.webp" width="160" height="160" alt="" draggable="false" decoding="async" />
           <strong id="shieldStatusTime">0:00</strong>
         </div>
         <div id="warDrumsStatusBadge" class="effect-status-badge war-drums-status-badge" hidden role="status">
-          <img class="effect-status-icon war-drums-status-icon" src="assets/war-drums-icon.webp?v=20260703-shop-icons" alt="" draggable="false" decoding="async" />
+          <img class="effect-status-icon war-drums-status-icon" src="assets/optimized/item-war-drums-160x160-48ecb3c2150b.webp" width="160" height="160" alt="" draggable="false" decoding="async" />
           <strong id="warDrumsStatusTime">0:00</strong>
         </div>
         <div id="taxDecreeStatusBadge" class="effect-status-badge tax-decree-status-badge" hidden role="status">
-          <img class="effect-status-icon tax-decree-status-icon" src="assets/royal-tax-decree-icon.webp?v=20260721-tax-decree" alt="" draggable="false" decoding="async" />
+          <img class="effect-status-icon tax-decree-status-icon" src="assets/optimized/item-royal-tax-decree-160x160-eaa5b941fe82.webp" width="160" height="160" alt="" draggable="false" decoding="async" />
           <strong id="taxDecreeStatusTime">0:00</strong>
         </div>
         <div id="veilStatusBadge" class="effect-status-badge veil-status-badge" hidden role="status">
-          <img class="effect-status-icon veil-status-icon" src="assets/veil-of-silence-icon.webp?v=20260703-shop-icons" alt="" draggable="false" decoding="async" />
+          <img class="effect-status-icon veil-status-icon" src="assets/optimized/item-veil-of-silence-160x160-5d50be41ce93.webp" width="160" height="160" alt="" draggable="false" decoding="async" />
           <strong id="veilStatusTime">0:00</strong>
         </div>
       </div>
       <button id="cityListBtn" class="resource-pill city-list-btn" type="button" aria-label="Open city list">
-        <img class="city-list-icon" src="assets/city-list-icon.png?v=20260623-city-icon-hud" alt="" draggable="false" decoding="async" />
+        <img class="city-list-icon" src="assets/optimized/hud-city-list-192x192-b7d360548c26.webp" width="192" height="192" alt="" draggable="false" decoding="async" />
         <span id="cityText" class="sr-only">0 cities</span>
       </button>
       <button id="islandSwitchBtn" class="resource-pill island-switch-btn" type="button" aria-label="Switch island" data-audio-effect="menu_open" hidden>
-        <img class="island-switch-icon" src="assets/map-icon.png?v=20260623-map-icon-framed" alt="" draggable="false" decoding="async" />
+        <img class="island-switch-icon" src="assets/optimized/hud-map-192x192-e08b9f3cdf6d.webp" width="192" height="192" alt="" draggable="false" decoding="async" />
         <span id="islandSwitchLabel" class="sr-only">Map</span>
       </button>
 
@@ -185,8 +170,8 @@
         <div id="mapLoadingOverlay" class="map-loading-overlay" aria-hidden="true">
           <div class="map-loading-panel">
             <div class="loading-wheel map-loading-wheel">
-              <img class="loading-wheel-ring" src="assets/loading-ring.png" alt="" draggable="false" />
-              <img class="loading-wheel-crown" src="assets/loading-crown.png" alt="" draggable="false" />
+              <img class="loading-wheel-ring" src="assets/optimized/loading-ring-256x256-d14e6c09f495.webp" width="256" height="256" alt="" draggable="false" />
+              <img class="loading-wheel-crown" src="assets/optimized/loading-crown-256x256-9eab5c3ca27d.webp" width="256" height="256" alt="" draggable="false" />
             </div>
             <span id="mapLoadingLabel" class="map-loading-label">Loading island...</span>
           </div>
@@ -208,7 +193,7 @@
       </section>
 
       <nav class="bottom-nav" aria-label="Game menu">
-        <button id="logBtn" class="nav-btn report-nav-btn" type="button" data-audio-effect="none"><img class="nav-icon report-icon" src="assets/report-icon.png?v=20260702-report-icon" alt="" draggable="false" decoding="async" />Reports</button>
+        <button id="logBtn" class="nav-btn report-nav-btn" type="button" data-audio-effect="none"><img class="nav-icon report-icon" src="assets/optimized/hud-report-192x192-c712b2f6c417.webp" width="192" height="192" alt="" draggable="false" decoding="async" />Reports</button>
         <button id="outgoingAttackBtn" class="nav-btn outgoing-attack-btn" type="button" aria-label="Active marches" data-audio-effect="menu_open" hidden>
           <span aria-hidden="true">&#10148;</span>
           <strong id="outgoingAttackCount">0</strong>
@@ -394,7 +379,7 @@
       <header class="level-up-reward-header">
         <div class="level-up-crown-wrap" aria-hidden="true">
           <span class="level-up-crown-glow"></span>
-          <img src="assets/loading-crown.png" alt="" />
+          <img src="assets/optimized/loading-crown-256x256-9eab5c3ca27d.webp" width="256" height="256" alt="" decoding="async" />
         </div>
         <div>
           <span class="level-up-eyebrow">Hero Level Up</span>
