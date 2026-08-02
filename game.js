@@ -913,7 +913,7 @@ const SKILL_CONFIG = {
 };
 
 const SKILL_ORDER = ["swordmastery", "stoneworks", "taxStewardship", "royalGranaries", "guildCharters", "marchOrders", "fieldMedics"];
-const SKILL_PRESET_MODEL_VERSION = 1;
+const SKILL_PRESET_MODEL_VERSION = 2;
 const SKILL_PRESET_NAME_MAX_LENGTH = 24;
 const SKILL_PRESET_SLOTS = Object.freeze([
   Object.freeze({ slot: 1, unlockLevel: 50 }),
@@ -5980,6 +5980,7 @@ function normalizeSkillPresetAllocation(upgrades = {}) {
 function createDefaultSkillPresets() {
   return {
     modelVersion: SKILL_PRESET_MODEL_VERSION,
+    activeSlot: 0,
     slots: SKILL_PRESET_SLOTS.map(definition => ({
       slot: definition.slot,
       unlockLevel: definition.unlockLevel,
@@ -5995,22 +5996,25 @@ function createDefaultSkillPresets() {
 function normalizeSkillPresets(value = {}) {
   const source = value && typeof value === "object" ? value : {};
   const rawSlots = Array.isArray(source.slots) ? source.slots : [];
+  const slots = SKILL_PRESET_SLOTS.map(definition => {
+    const raw = rawSlots.find(entry => Math.floor(Number(entry?.slot) || 0) === definition.slot) || {};
+    const saved = raw.saved === true && raw.upgrades && typeof raw.upgrades === "object";
+    const upgrades = saved ? normalizeSkillPresetAllocation(raw.upgrades) : null;
+    return {
+      slot: definition.slot,
+      unlockLevel: definition.unlockLevel,
+      name: normalizeSkillPresetName(raw.name, definition.slot),
+      saved,
+      upgrades,
+      spentPoints: saved ? SKILL_ORDER.reduce((total, skill) => total + upgrades[skill], 0) : 0,
+      savedAtMs: saved ? normalizeTimestampMs(raw.savedAtMs) : 0,
+    };
+  });
+  const requestedActiveSlot = Math.floor(Number(source.activeSlot) || 0);
   return {
     modelVersion: SKILL_PRESET_MODEL_VERSION,
-    slots: SKILL_PRESET_SLOTS.map(definition => {
-      const raw = rawSlots.find(entry => Math.floor(Number(entry?.slot) || 0) === definition.slot) || {};
-      const saved = raw.saved === true && raw.upgrades && typeof raw.upgrades === "object";
-      const upgrades = saved ? normalizeSkillPresetAllocation(raw.upgrades) : null;
-      return {
-        slot: definition.slot,
-        unlockLevel: definition.unlockLevel,
-        name: normalizeSkillPresetName(raw.name, definition.slot),
-        saved,
-        upgrades,
-        spentPoints: saved ? SKILL_ORDER.reduce((total, skill) => total + upgrades[skill], 0) : 0,
-        savedAtMs: saved ? normalizeTimestampMs(raw.savedAtMs) : 0,
-      };
-    }),
+    activeSlot: slots.some(slot => slot.slot === requestedActiveSlot && slot.saved) ? requestedActiveSlot : 0,
+    slots,
   };
 }
 
@@ -6018,7 +6022,16 @@ function replaceLocalSkillPresetSlot(presets = {}, nextSlot = {}) {
   const normalized = normalizeSkillPresets(presets);
   return normalizeSkillPresets({
     modelVersion: SKILL_PRESET_MODEL_VERSION,
+    activeSlot: normalized.activeSlot,
     slots: normalized.slots.map(slot => slot.slot === nextSlot.slot ? { ...slot, ...nextSlot } : slot),
+  });
+}
+
+function setActiveSkillPresetSlot(presets = {}, slotNumber = 0) {
+  const normalized = normalizeSkillPresets(presets);
+  return normalizeSkillPresets({
+    ...normalized,
+    activeSlot: Math.floor(Number(slotNumber) || 0),
   });
 }
 
@@ -20706,7 +20719,9 @@ function renderSkillPresetPanel() {
   selectedSkillPresetSlot = selected.slot;
   const unlocked = isSkillPresetUnlocked(selected, state.character);
   const valid = selected.saved && isValidLocalSkillPresetAllocation(selected.upgrades, state.character);
-  const active = valid && skillPresetAllocationsMatch(state.upgrades, selected.upgrades);
+  const active = valid
+    && presets.activeSlot === selected.slot
+    && skillPresetAllocationsMatch(state.upgrades, selected.upgrades);
   const remainingAfterApply = valid ? getAvailableSkillPoints(state.character, selected.upgrades) : 0;
   const status = !unlocked
     ? `Unlocks at Level ${selected.unlockLevel}`
@@ -20723,6 +20738,7 @@ function renderSkillPresetPanel() {
         ${presets.slots.map(slot => {
           const slotUnlocked = level >= slot.unlockLevel;
           const slotActive = slot.saved
+            && presets.activeSlot === slot.slot
             && isValidLocalSkillPresetAllocation(slot.upgrades, state.character)
             && skillPresetAllocationsMatch(state.upgrades, slot.upgrades);
           return `<button type="button" role="tab" data-skill-preset-slot="${slot.slot}" class="${slot.slot === selected.slot ? "selected" : ""} ${slotActive ? "active" : ""}" aria-selected="${slot.slot === selected.slot}" title="${slotUnlocked ? escapeHtml(slot.name) : `Unlocks at Hero Level ${slot.unlockLevel}`}">
@@ -27596,6 +27612,7 @@ function confirmSkillPresetAction(slotNumber = 0, action = "apply") {
   const slot = getSkillPresetSlot(slotNumber);
   if (!slot) return Promise.resolve(false);
   const applying = action === "apply";
+  const allocationChanges = applying && !skillPresetAllocationsMatch(state.upgrades, slot.upgrades);
   modal.classList.add("skill-preset-confirmation-modal");
   modalTitle.textContent = applying ? `Apply ${slot.name}?` : `Overwrite ${slot.name}?`;
   modalBody.innerHTML = `
@@ -27605,7 +27622,9 @@ function confirmSkillPresetAction(slotNumber = 0, action = "apply") {
         <h3>${escapeHtml(slot.name)}</h3>
       </div>
       ${applying
-        ? `<p>This replaces your current skill allocation and costs <strong>${formatNumber(SKILL_RESET_COST)} gold</strong>. Any additional earned points remain unspent.</p>${renderSkillPresetAllocation(slot.upgrades)}`
+        ? `${allocationChanges
+            ? `<p>This replaces your current skill allocation and costs <strong>${formatNumber(SKILL_RESET_COST)} gold</strong>. Any additional earned points remain unspent.</p>`
+            : `<p>Your current allocation already matches this build. Activating this preset is free and moves the active marker to this tab.</p>`}${renderSkillPresetAllocation(slot.upgrades)}`
         : `<p>This replaces the saved allocation in this tab with your current build. Your active skills and gold will not change.</p>${renderSkillPresetAllocation(state.upgrades)}`}
       <footer>
         <button type="button" class="profile-secondary-btn" data-skill-preset-confirm="cancel">Cancel</button>
@@ -27706,6 +27725,7 @@ async function saveCurrentSkillPreset(slotNumber = 0) {
         upgrades,
         savedAtMs: Date.now(),
       });
+      state.skillPresets = setActiveSkillPresetSlot(state.skillPresets, slot.slot);
       saveGame();
     }
     addLog(`Current skill build saved to ${slot.name}.`);
@@ -27736,12 +27756,14 @@ async function applySavedSkillPreset(slotNumber = 0) {
     showToast("This preset is no longer valid. Save the current build again.");
     return false;
   }
-  if (skillPresetAllocationsMatch(state.upgrades, slot.upgrades)) {
+  const allocationChanges = !skillPresetAllocationsMatch(state.upgrades, slot.upgrades);
+  const activeSlot = normalizeSkillPresets(state.skillPresets).activeSlot;
+  if (!allocationChanges && activeSlot === slot.slot) {
     showToast(`${slot.name} is already active.`);
     renderProfileSkills();
     return true;
   }
-  if (!usesServerEconomyAuthority() && Math.floor(Number(state.gold) || 0) < SKILL_RESET_COST) {
+  if (allocationChanges && !usesServerEconomyAuthority() && Math.floor(Number(state.gold) || 0) < SKILL_RESET_COST) {
     showToast(`Applying this preset costs ${formatNumber(SKILL_RESET_COST)} gold.`);
     return false;
   }
@@ -27750,17 +27772,18 @@ async function applySavedSkillPreset(slotNumber = 0) {
   skillActionInFlight = true;
   renderProfileSkills();
   try {
-    let goldCharged = SKILL_RESET_COST;
+    let goldCharged = allocationChanges ? SKILL_RESET_COST : 0;
     if (usesServerEconomyAuthority()) {
       if (!api?.applySkillPreset) throw new Error("Applying skill presets requires the Crownlands server.");
       const result = await api.applySkillPreset({ slot: slot.slot });
       applyServerEconomyResult(result);
       goldCharged = Math.max(0, Math.floor(Number(result?.skillPreset?.goldCharged) || 0));
     } else {
-      state.gold = Math.max(0, Math.floor(Number(state.gold) || 0) - SKILL_RESET_COST);
+      state.gold = Math.max(0, Math.floor(Number(state.gold) || 0) - goldCharged);
       state.upgrades = normalizeUpgrades(slot.upgrades, state.version);
       state.character = normalizeCharacterProgress(state.character);
       reconcileSkillPoints(state.character, state.upgrades);
+      state.skillPresets = setActiveSkillPresetSlot(state.skillPresets, slot.slot);
       saveGame();
     }
     const remaining = Math.max(0, Math.floor(Number(state.character?.skillPoints) || 0));
@@ -27811,6 +27834,7 @@ async function buySkill(skill) {
   }
   state.character.skillPoints -= 1;
   state.upgrades[skill] = getSkillLevel(skill) + 1;
+  state.skillPresets = setActiveSkillPresetSlot(state.skillPresets, 0);
   addLog(`${SKILL_CONFIG[skill].label} improved to level ${state.upgrades[skill]}.`);
   saveGame();
   renderAll();
@@ -27862,6 +27886,7 @@ async function resetSkills() {
   state.gold = currentGold - resetCost;
   state.character.skillPoints = getEarnedSkillPoints(state.character);
   state.upgrades = createDefaultSkills();
+  if (spentPoints > 0) state.skillPresets = setActiveSkillPresetSlot(state.skillPresets, 0);
   if (spentPoints > 0) {
     addLog(`Skills reset for ${formatNumber(SKILL_RESET_COST)} gold. Refunded ${formatNumber(spentPoints)} skill ${spentPoints === 1 ? "point" : "points"}.`);
   } else {

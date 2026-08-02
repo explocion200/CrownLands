@@ -14,7 +14,7 @@ const browserEconomySource = read("economy-config.js");
 const serverEconomySource = read("functions/economy-config.json");
 const functionsPackage = JSON.parse(read("functions/package.json"));
 
-const BUILD_ID = "20260802-scout-report-lifecycle-v1";
+const BUILD_ID = "20260802-single-active-skill-preset-v1";
 const HUB_ART_SRC = "assets/inner-castle/inner-castle-hub.png";
 const BUILDINGS = [
   {

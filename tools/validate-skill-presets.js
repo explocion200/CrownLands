@@ -69,7 +69,7 @@ const context = {
   Number,
   String,
   SKILL_ORDER,
-  SKILL_PRESET_MODEL_VERSION: 1,
+  SKILL_PRESET_MODEL_VERSION: 2,
   SKILL_PRESET_NAME_MAX_LENGTH: 24,
   SKILL_PRESET_SLOTS,
   normalizeTimestampMs: value => Math.max(0, Math.floor(Number(value) || 0)),
@@ -84,6 +84,7 @@ vm.runInContext([
   extractFunction(gameSource, "createDefaultSkillPresets"),
   extractFunction(gameSource, "normalizeSkillPresets"),
   extractFunction(gameSource, "replaceLocalSkillPresetSlot"),
+  extractFunction(gameSource, "setActiveSkillPresetSlot"),
   extractFunction(gameSource, "skillPresetAllocationsMatch"),
   extractFunction(gameSource, "isValidLocalSkillPresetAllocation"),
 ].join("\n"), context, { filename: gamePath });
@@ -92,6 +93,7 @@ const defaults = context.createDefaultSkillPresets();
 assert.deepEqual(Array.from(defaults.slots, slot => slot.unlockLevel), [50, 75, 100]);
 assert.deepEqual(Array.from(defaults.slots, slot => slot.name), ["Preset 1", "Preset 2", "Preset 3"]);
 assert.ok(defaults.slots.every(slot => !slot.saved && slot.upgrades === null));
+assert.equal(defaults.activeSlot, 0);
 assert.equal(context.normalizeSkillPresetName("  War   Build  ", 1), "War Build");
 assert.equal([...context.normalizeSkillPresetName("1234567890123456789012345", 1)].length, 24);
 
@@ -112,6 +114,19 @@ const saved = context.replaceLocalSkillPresetSlot(defaults, {
 });
 assert.equal(saved.slots[0].spentPoints, 19);
 assert.equal(context.getEarnedSkillPoints({ level: 60 }) - saved.slots[0].spentPoints, 40, "Later-earned points were not left unspent.");
+const duplicateSaved = context.replaceLocalSkillPresetSlot(saved, {
+  slot: 2,
+  name: "Duplicate Build",
+  saved: true,
+  upgrades: partial,
+  savedAtMs: 2345,
+});
+const firstActive = context.setActiveSkillPresetSlot(duplicateSaved, 1);
+const secondActive = context.setActiveSkillPresetSlot(firstActive, 2);
+assert.equal(firstActive.activeSlot, 1);
+assert.equal(secondActive.activeSlot, 2);
+assert.equal(secondActive.slots.filter(slot => slot.slot === secondActive.activeSlot).length, 1, "More than one preset can be active.");
+assert.equal(context.setActiveSkillPresetSlot(secondActive, 0).activeSlot, 0, "Manual skill changes cannot clear the active preset.");
 
 const focusedPresetInput = {};
 const focusContext = {
@@ -138,15 +153,19 @@ const saveCallable = serverSource.slice(saveStart, renameStart);
 const renameCallable = serverSource.slice(renameStart, applyStart);
 const applyCallable = serverSource.slice(applyStart, applyEnd);
 assert.match(saveCallable, /requireUnlockedSkillPresetSlot[\s\S]*?normalizeSkillUpgrades\(profile\.upgrades\)[\s\S]*?goldCharged: 0/, "Saving is not a free authoritative snapshot.");
+assert.match(saveCallable, /setActiveSkillPresetSlot\(replaceSkillPresetSlot[\s\S]*?definition\.slot\)/, "Saving does not make the saved tab the sole active preset.");
 assert.match(renameCallable, /requireSkillPresetName[\s\S]*?goldCharged: 0/, "Renaming is not validated and free.");
 assert.match(applyCallable, /prepareEconomyCollection[\s\S]*?isValidSkillPresetAllocation[\s\S]*?const resetCost = changed \? SKILL_RESET_COST : 0/, "Applying does not settle first, validate, and waive the active-build charge.");
 assert.match(applyCallable, /if \(economy\.gold < resetCost\)[\s\S]*?writePreparedEconomy\([\s\S]*?upgrades,[\s\S]*?skillPresets,[\s\S]*?gold/, "Applying is not an atomic gold/allocation write.");
+assert.match(applyCallable, /setActiveSkillPresetSlot\(currentPresets, definition\.slot\)/, "Applying does not record one authoritative active preset.");
 assert.match(applyCallable, /remainingSkillPoints: character\.skillPoints/, "Apply metadata omits remaining points.");
 
 const spendStart = serverSource.indexOf("exports.spendSkillPoint");
 const resetStart = serverSource.indexOf("exports.resetSkills", spendStart);
-assert.doesNotMatch(serverSource.slice(spendStart, resetStart), /replaceSkillPresetSlot|skillPresets\s*:/, "Spending a point overwrites presets.");
-assert.doesNotMatch(serverSource.slice(resetStart, saveStart), /replaceSkillPresetSlot|skillPresets\s*:/, "Reset Skills overwrites presets.");
+assert.match(serverSource.slice(spendStart, resetStart), /setActiveSkillPresetSlot\(economy\.profileAfter\.skillPresets, 0\)/, "Spending a point does not clear the active preset.");
+assert.doesNotMatch(serverSource.slice(spendStart, resetStart), /replaceSkillPresetSlot/, "Spending a point overwrites a saved preset.");
+assert.match(serverSource.slice(resetStart, saveStart), /spentPoints > 0[\s\S]*?setActiveSkillPresetSlot\(economy\.profileAfter\.skillPresets, 0\)/, "Reset Skills does not clear the active preset.");
+assert.doesNotMatch(serverSource.slice(resetStart, saveStart), /replaceSkillPresetSlot/, "Reset Skills overwrites a saved preset.");
 
 for (const endpoint of ["saveSkillPreset", "renameSkillPreset", "applySkillPreset"]) {
   assert.match(firebaseSource, new RegExp(`async function ${endpoint}\\([\\s\\S]*?callServerFunction\\("${endpoint}"`), `Missing ${endpoint} client wrapper.`);
@@ -157,6 +176,7 @@ assert.match(rulesSource, /validPlayerProfileCreate[\s\S]*?'skillPresets'/, "Cre
 assert.match(rulesSource, /validPlayerProfileUpdate[\s\S]*?profileFieldUnchanged\('skillPresets'\)/, "Update rules do not protect presets.");
 
 assert.match(gameSource, /renderSkillPresetPanel[\s\S]*?skill-preset-tabs[\s\S]*?Save Current Build[\s\S]*?data-apply-skill-preset/, "Skills UI does not include all preset controls.");
+assert.match(extractFunction(gameSource, "renderSkillPresetPanel"), /presets\.activeSlot === selected\.slot[\s\S]*?presets\.activeSlot === slot\.slot/, "The UI does not limit the active marker to one explicit preset slot.");
 assert.match(extractFunction(gameSource, "renderProfileSkills"), /isSkillPresetNameEditorActive\(\)[\s\S]*?return;/, "Periodic profile refreshes can replace the focused preset name input and dismiss the mobile keyboard.");
 assert.match(extractFunction(gameSource, "bindSkillPresetControls"), /event\.currentTarget\.blur\(\)[\s\S]*?renameSkillPreset/, "Submitting a preset rename with Enter does not intentionally release the keyboard before refreshing.");
 assert.match(gameSource, /confirmSkillPresetAction[\s\S]*?Overwrite[\s\S]*?costs <strong>/, "Preset overwrite/apply confirmations are incomplete.");
@@ -165,10 +185,10 @@ assert.match(stylesSource, /\.skill-preset-tabs[\s\S]*?grid-template-columns: re
 
 assert.match(howToSource, /preset tabs unlock at Hero Levels 50, 75, and 100[\s\S]*?1,000,000 gold/i);
 assert.match(gameRulesSource, /Private preset slots unlock at Hero Levels 50, 75, and 100[\s\S]*?never overwrites a preset automatically/i);
-const expectedBuild = "20260801-skill-preset-keyboard-v1";
-const expectedRelease = "crownlands-2026-08-01-skill-presets-v1";
+const expectedBuild = "20260802-single-active-skill-preset-v1";
+const expectedRelease = "crownlands-2026-08-02-single-active-skill-preset-v1";
 assert.ok(indexSource.includes(expectedBuild) && workerSource.includes(expectedBuild), "Frontend and service-worker builds do not match.");
 assert.ok(releaseSource.includes(expectedRelease) && functionsRelease.releaseId === expectedRelease, "Frontend and Functions realm releases do not match.");
 assert.equal(Number(economyConfig.playerCosts.skillResetGold), 1_000_000, "Preset switching is not using the configured 1,000,000-gold reset cost.");
 
-console.log("Validated three private skill presets, unlocks, exact allocations, atomic charging, mobile UI, rules, and release IDs.");
+console.log("Validated three private skill presets, one authoritative active slot, exact allocations, atomic charging, mobile UI, rules, and release IDs.");
