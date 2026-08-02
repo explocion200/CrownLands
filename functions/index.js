@@ -242,6 +242,7 @@ const SWIFT_MARCH_MINIMUM_REMAINING_MS = 1000;
 const RECALL_HORN_ITEM_ID = "recall_horn";
 const RECALL_HORN_MINIMUM_REMAINING_MS = 1000;
 const RECALL_HORN_MINIMUM_RETURN_MS = 1000;
+const PEACE_SHIELD_RETURN_REASON = "peace_shield";
 const ALLIED_TARGET_RETURN_REASON = "target_became_clan_ally";
 const ITEM_DAILY_PURCHASE_LIMITS = Object.freeze({
   [ROYAL_PEACE_SHIELD_ITEM_ID]: economyNumber("shopItems.shield_12h.dailyPurchaseLimit", 1),
@@ -3312,6 +3313,14 @@ function activeArmiesQueryForPlayer(uid = "") {
     .where("status", "==", "active");
 }
 
+function activeArmiesTargetingPlayerQuery(uid = "") {
+  return db.collection("armies")
+    .where("targetOwnerUid", "==", safeString(uid, 128))
+    .where("resetGeneration", "==", RESET_GENERATION)
+    .where("worldId", "==", ONLINE_WORLD_ID)
+    .where("status", "==", "active");
+}
+
 function heldRewardCampsQueryForPlayer(uid = "") {
   return db.collectionGroup("camps")
     .where("holderUid", "==", safeString(uid, 128))
@@ -5692,6 +5701,82 @@ function getArmyRouteProgressAtMs(army = {}, nowMs = Date.now()) {
   }
   const totalMs = Math.max(100, safeNumber(army.total, 0.1) * 1000);
   return clamp(1 - Math.max(0, arrivesAtMs - nowMs) / totalMs, 0, 1);
+}
+
+function createMidRouteReturnMovement(army = {}, nowMs = Date.now(), returnReason = "") {
+  const sourceRegionId = normalizeRegionId(army.sourceRegionId);
+  const targetRegionId = normalizeRegionId(army.targetRegionId);
+  if (!sourceRegionId || !targetRegionId || !army.fromId || !army.toId) {
+    throw new HttpsError("failed-precondition", "That troop march is missing its return route.");
+  }
+  const oldArrivesAtMs = Math.max(0, Math.floor(safeNumber(army.arrivesAtMs, 0)));
+  const fallbackTotalMs = Math.max(100, safeNumber(army.total, 0.1) * 1000);
+  const launchedAtMs = Math.max(0, Math.floor(safeNumber(
+    army.launchedAtMs,
+    oldArrivesAtMs - fallbackTotalMs
+  )));
+  const originalArrivesAtMs = Math.max(
+    oldArrivesAtMs,
+    Math.floor(safeNumber(army.swiftMarchOriginalArrivesAtMs, oldArrivesAtMs))
+  );
+  const originalTotalMs = Math.max(100, originalArrivesAtMs - launchedAtMs);
+  const returnStartProgress = clamp(getArmyRouteProgressAtMs(army, nowMs), 0.000001, 0.999999);
+  const returnDurationMs = Math.max(
+    RECALL_HORN_MINIMUM_RETURN_MS,
+    Math.ceil(originalTotalMs * returnStartProgress)
+  );
+  return {
+    ...army,
+    returning: true,
+    returnReason: safeString(returnReason, 40),
+    recalledAtMs: nowMs,
+    recallOriginalArrivesAtMs: oldArrivesAtMs,
+    returnStartProgress,
+    returnDestinationId: army.fromId,
+    returnDestinationRegionId: sourceRegionId,
+    arrivesAtMs: nowMs + returnDurationMs,
+    total: Math.max(0.1, returnDurationMs / 1000),
+    targetOwnerUid: "",
+    routeRegionIds: normalizeRegionIds([
+      ...(army.routeRegionIds || []),
+      sourceRegionId,
+      targetRegionId,
+    ]),
+    status: "active",
+  };
+}
+
+function getPeaceShieldReturnDirection(army = {}, shieldOwnerUid = "", nowMs = Date.now()) {
+  const uid = safeString(shieldOwnerUid, 128);
+  const ownerUid = safeString(army.ownerUid, 128);
+  const targetOwnerUid = safeString(army.targetOwnerUid, 128);
+  const arrivesAtMs = Math.max(0, Math.floor(safeNumber(army.arrivesAtMs, 0)));
+  if (
+    !uid
+    || !ownerUid
+    || !targetOwnerUid
+    || ownerUid === targetOwnerUid
+    || army.ownerKind !== "player"
+    || army.status !== "active"
+    || !isCurrentWorldArmy(army)
+    || army.kind !== "attack"
+    || army.targetType !== "city"
+    || army.returning
+    || timestampToMs(army.recalledAtMs) > 0
+    || arrivesAtMs <= nowMs
+    || army.rallyAttack
+    || army.rallyJoin
+    || army.rallyReturn
+    || army.campReturn
+    || army.reinforcementReturn
+    || army.relinquishTransfer
+    || army.eventKind === CITADEL_ASSAULT_EVENT_KIND
+    || isStronghold({ id: army.fromId })
+    || isStronghold({ id: army.toId })
+  ) return "";
+  if (ownerUid === uid) return "outgoing";
+  if (targetOwnerUid === uid) return "incoming";
+  return "";
 }
 
 function createAlliedTargetReturnMovement(army = {}, nowMs = Date.now()) {
@@ -12702,6 +12787,9 @@ exports.activateInventoryItem = onCall({ region: "us-central1", maxInstances: 20
   return runTransactionWithInfrastructureRetry(async transaction => {
     const nowMs = Date.now();
     const economy = await prepareEconomyCollection(transaction, uid, nowMs);
+    const incomingArmiesSnap = itemId === ROYAL_PEACE_SHIELD_ITEM_ID
+      ? await transaction.get(activeArmiesTargetingPlayerQuery(uid))
+      : null;
     const shopItems = { ...economy.shopItems };
     const owned = Math.max(0, Math.floor(safeNumber(shopItems[itemId], 0)));
     if (owned <= 0) throw new HttpsError("failed-precondition", `You do not have ${item.label}.`);
@@ -12710,6 +12798,7 @@ exports.activateInventoryItem = onCall({ region: "us-central1", maxInstances: 20
     let expiresAtMs = 0;
     const extraCityPatches = [];
     const extraCityUpdates = [];
+    const shieldReturnSummary = { outgoing: 0, incoming: 0, total: 0 };
     if (itemId === ROYAL_PEACE_SHIELD_ITEM_ID) {
       const currentExpiresAtMs = timestampToMs(itemEffects.shieldExpiresAtMs);
       if (currentExpiresAtMs > nowMs) {
@@ -12727,19 +12816,32 @@ exports.activateInventoryItem = onCall({ region: "us-central1", maxInstances: 20
           ...patch,
         });
       });
+      const armiesById = new Map();
+      economy.activeArmies.forEach(army => {
+        const armyId = safeString(army?.id, 96);
+        if (armyId) armiesById.set(armyId, army);
+      });
+      incomingArmiesSnap?.docs?.forEach(doc => {
+        const army = { ...doc.data(), id: safeString(doc.id, 96) };
+        if (army.id) armiesById.set(army.id, army);
+      });
+      armiesById.forEach(army => {
+        const direction = getPeaceShieldReturnDirection(army, uid, nowMs);
+        if (!direction) return;
+        const movement = createMidRouteReturnMovement(army, nowMs, PEACE_SHIELD_RETURN_REASON);
+        writeArmyMovementCopies(transaction, movement, {
+          previousTargetOwnerUid: army.targetOwnerUid,
+        });
+        shieldReturnSummary[direction] += 1;
+        shieldReturnSummary.total += 1;
+      });
     } else if (itemId === WAR_DRUMS_ITEM_ID) {
       const currentExpiresAtMs = timestampToMs(itemEffects.warDrumsExpiresAtMs);
-      if (currentExpiresAtMs > nowMs) {
-        throw new HttpsError("failed-precondition", `${item.label} is already active.`);
-      }
-      expiresAtMs = nowMs + WAR_DRUMS_DURATION_MS;
+      expiresAtMs = Math.max(nowMs, currentExpiresAtMs) + WAR_DRUMS_DURATION_MS;
       itemEffects.warDrumsExpiresAtMs = expiresAtMs;
     } else if (itemId === ROYAL_TAX_DECREE_ITEM_ID) {
       const currentExpiresAtMs = timestampToMs(itemEffects.royalTaxDecreeExpiresAtMs);
-      if (currentExpiresAtMs > nowMs) {
-        throw new HttpsError("failed-precondition", `${item.label} is already active.`);
-      }
-      expiresAtMs = nowMs + ROYAL_TAX_DECREE_DURATION_MS;
+      expiresAtMs = Math.max(nowMs, currentExpiresAtMs) + ROYAL_TAX_DECREE_DURATION_MS;
       itemEffects.royalTaxDecreeExpiresAtMs = expiresAtMs;
     } else if (itemId === VEIL_OF_SILENCE_ITEM_ID) {
       const currentExpiresAtMs = timestampToMs(itemEffects.veilOfSilenceExpiresAtMs);
@@ -12762,6 +12864,10 @@ exports.activateInventoryItem = onCall({ region: "us-central1", maxInstances: 20
       cityUpdates: [...economy.cityUpdates, ...extraCityUpdates],
       activatedItemId: itemId,
       expiresAtMs,
+      ...([WAR_DRUMS_ITEM_ID, ROYAL_TAX_DECREE_ITEM_ID].includes(itemId)
+        ? { effectDurationAddedMs: itemId === WAR_DRUMS_ITEM_ID ? WAR_DRUMS_DURATION_MS : ROYAL_TAX_DECREE_DURATION_MS }
+        : {}),
+      ...(itemId === ROYAL_PEACE_SHIELD_ITEM_ID ? { shieldReturnSummary } : {}),
     });
   });
 });
@@ -12954,39 +13060,8 @@ exports.useRecallHorn = onCall({ region: "us-central1", maxInstances: 20, invoke
     const owned = Math.max(0, Math.floor(safeNumber(shopItems[RECALL_HORN_ITEM_ID], 0)));
     if (owned <= 0) throw new HttpsError("failed-precondition", "You do not have a Recall Horn.");
 
-    const launchedAtMs = Math.max(0, Math.floor(safeNumber(
-      army.launchedAtMs,
-      oldArrivesAtMs - Math.max(100, safeNumber(army.total, 0.1) * 1000)
-    )));
-    const originalArrivesAtMs = Math.max(
-      oldArrivesAtMs,
-      Math.floor(safeNumber(army.swiftMarchOriginalArrivesAtMs, oldArrivesAtMs))
-    );
-    const originalTotalMs = Math.max(100, originalArrivesAtMs - launchedAtMs);
-    const returnStartProgress = clamp(getArmyRouteProgressAtMs(army, nowMs), 0.000001, 0.999999);
-    const returnDurationMs = Math.max(
-      RECALL_HORN_MINIMUM_RETURN_MS,
-      Math.ceil(originalTotalMs * returnStartProgress)
-    );
-    const arrivesAtMs = nowMs + returnDurationMs;
-    const routeRegionIds = normalizeRegionIds([
-      ...(army.routeRegionIds || []),
-      sourceRegionId,
-      targetRegionId,
-    ]);
-    const movementPatch = {
-      returning: true,
-      returnReason: RECALL_HORN_ITEM_ID,
-      recalledAtMs: nowMs,
-      recallOriginalArrivesAtMs: oldArrivesAtMs,
-      returnStartProgress,
-      returnDestinationId: army.fromId,
-      returnDestinationRegionId: sourceRegionId,
-      arrivesAtMs,
-      total: Math.max(0.1, returnDurationMs / 1000),
-      targetOwnerUid: "",
-      updatedAt: FieldValue.serverTimestamp(),
-    };
+    const movement = createMidRouteReturnMovement(army, nowMs, RECALL_HORN_ITEM_ID);
+    const returnDurationMs = movement.arrivesAtMs - nowMs;
     let campUpdate = null;
     if (targetCampRef && targetCampSnap?.exists) {
       const camp = { id: targetCampSnap.id, ...targetCampSnap.data() };
@@ -12999,7 +13074,7 @@ exports.useRecallHorn = onCall({ region: "us-central1", maxInstances: 20, invoke
       transaction.set(targetCampRef, campPatch, { merge: true });
       campUpdate = campUpdateForClient(camp.id, targetRegionId, campPatch);
     }
-    writeArmyMovementCopies(transaction, { ...army, ...movementPatch, id: armyId }, {
+    writeArmyMovementCopies(transaction, movement, {
       previousTargetOwnerUid: army.targetOwnerUid,
     });
     if (rallyRef && rally) {
@@ -13031,8 +13106,6 @@ exports.useRecallHorn = onCall({ region: "us-central1", maxInstances: 20, invoke
       updatedAt: FieldValue.serverTimestamp(),
     }, { merge: true });
 
-    const movement = { ...army, ...movementPatch };
-    delete movement.updatedAt;
     return {
       ok: true,
       movement,

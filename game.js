@@ -156,7 +156,7 @@ const SHOP_ITEMS = [
   {
     id: "shield_12h",
     label: "Royal Peace Shield",
-    description: "Protects your cities for 12 hours. Attacking another player cancels it. Strongholds are excluded.",
+    description: "Protects your regular cities for 12 hours and turns back active rival attacks traveling to or from them. Attacking another player cancels it. Strongholds are excluded.",
     cost: economyNumber("shopItems.shield_12h.cost", 1_250_000),
     icon: "assets/royal-peace-shield-icon.webp?v=20260703-shop-icons",
   },
@@ -164,14 +164,14 @@ const SHOP_ITEMS = [
     id: "war_drums_30m",
     legacyIds: ["troop_boost_1h"],
     label: "War Drums",
-    description: `Adds ${economyNumber("shopItems.war_drums_30m.bonusPercent", 5)}% of base troop production from owned cities for ${economyNumber("shopItems.war_drums_30m.effectDurationMinutes", 30)} minutes.`,
+    description: `Adds ${economyNumber("shopItems.war_drums_30m.bonusPercent", 5)}% of base troop production from owned cities for ${economyNumber("shopItems.war_drums_30m.effectDurationMinutes", 30)} minutes. Using more adds their duration to the active timer.`,
     cost: economyNumber("shopItems.war_drums_30m.cost", 75_000),
     icon: "assets/war-drums-icon.webp?v=20260703-shop-icons",
   },
   {
     id: "royal_tax_decree_30m",
     label: "Royal Tax Decree",
-    description: `Adds ${economyNumber("shopItems.royal_tax_decree_30m.bonusPercent", 50)}% of base gold production from owned cities for ${economyNumber("shopItems.royal_tax_decree_30m.effectDurationMinutes", 30)} minutes.`,
+    description: `Adds ${economyNumber("shopItems.royal_tax_decree_30m.bonusPercent", 50)}% of base gold production from owned cities for ${economyNumber("shopItems.royal_tax_decree_30m.effectDurationMinutes", 30)} minutes. Using more adds their duration to the active timer.`,
     cost: economyNumber("shopItems.royal_tax_decree_30m.cost", 150_000),
     icon: "assets/royal-tax-decree-icon.webp?v=20260721-tax-decree",
   },
@@ -212,6 +212,8 @@ const SWIFT_MARCH_ORDER_ITEM_ID = "swift_march_order";
 const SWIFT_MARCH_REMAINING_TIME_MULTIPLIER = 0.5;
 const SWIFT_MARCH_MINIMUM_REMAINING_SECONDS = 1;
 const RECALL_HORN_ITEM_ID = "recall_horn";
+const PEACE_SHIELD_RETURN_REASON = "peace_shield";
+const PEACE_SHIELD_MINIMUM_RETURN_SECONDS = 1;
 const DAILY_LOGIN_REWARD_SCHEMA_VERSION = 2;
 const DAILY_LOGIN_REWARD_DAYS = Object.freeze(
   (Array.isArray(ECONOMY_CONFIG?.dailyLoginRewards?.days) ? ECONOMY_CONFIG.dailyLoginRewards.days : [])
@@ -5629,6 +5631,11 @@ function getInventoryItemActiveExpiresAtMs(item) {
 
 function getInventoryItemActiveRemainingSeconds(item) {
   return getPeaceShieldRemainingSeconds(getInventoryItemActiveExpiresAtMs(item));
+}
+
+function isStackableTimedInventoryItem(itemOrId) {
+  const itemId = typeof itemOrId === "object" ? itemOrId?.id : itemOrId;
+  return itemId === WAR_DRUMS_ITEM_ID || itemId === ROYAL_TAX_DECREE_ITEM_ID;
 }
 
 function getWarDrumsTroopProductionBonusPercent() {
@@ -17707,6 +17714,10 @@ function travelTime(source, target, owner, pathLength = null, troopCount = 1, ki
 }
 
 function resolveAttack(attack) {
+  if (attack?.returning) {
+    resolveLocalReturningArmy(attack);
+    return;
+  }
   const target = cityById(attack.toId);
   if (!target) return;
 
@@ -26828,9 +26839,12 @@ function showInventoryModal() {
   const selectedEntryActiveRemaining = selectedEntry ? getInventoryItemActiveRemainingSeconds(selectedEntry) : 0;
   const selectedEntryIsSwiftMarch = selectedEntry?.id === SWIFT_MARCH_ORDER_ITEM_ID;
   const selectedEntryIsRecallHorn = selectedEntry?.id === RECALL_HORN_ITEM_ID;
+  const selectedEntryIsStackable = isStackableTimedInventoryItem(selectedEntry);
   const selectedEntryActionLabel = selectedEntryIsSwiftMarch || selectedEntryIsRecallHorn
     ? "View Marches"
-    : selectedEntryActiveRemaining > 0 ? "Active" : "Use";
+    : selectedEntryActiveRemaining > 0
+      ? selectedEntryIsStackable ? `Add ${formatDuration(selectedEntry.id === WAR_DRUMS_ITEM_ID ? WAR_DRUMS_DURATION_MS / 1000 : ROYAL_TAX_DECREE_DURATION_MS / 1000)}` : "Active"
+      : "Use";
   const activeItemStatus = getActiveItemEffectSummaryHtml();
   modal.classList.remove("battle-report-modal", "city-list-modal", "island-switcher-modal", "leaderboard-modal", "shop-modal", "incoming-attack-modal", "outgoing-attack-modal");
   modal.classList.add("inventory-modal");
@@ -26853,7 +26867,7 @@ function showInventoryModal() {
             ${selectedEntryActiveRemaining > 0 ? `<small>Active: ${formatDuration(selectedEntryActiveRemaining)}</small>` : ""}
             <span>Owned: ${formatNumber(selectedEntry.count)}</span>
           </div>
-          <button class="inventory-use-btn" data-inventory-use="${escapeHtml(selectedEntry.id)}" type="button" ${selectedEntryActiveRemaining > 0 ? "disabled" : ""}>${selectedEntryActionLabel}</button>
+          <button class="inventory-use-btn" data-inventory-use="${escapeHtml(selectedEntry.id)}" type="button" ${selectedEntryActiveRemaining > 0 && !selectedEntryIsStackable ? "disabled" : ""}>${selectedEntryActionLabel}</button>
         ` : `
           <div class="inventory-selection-empty">
             <strong>Select an item</strong>
@@ -26880,7 +26894,7 @@ function useInventoryItem(itemId) {
   const item = getShopItemById(itemId);
   if (!item) return;
   const activeRemainingSeconds = getInventoryItemActiveRemainingSeconds(item);
-  if (activeRemainingSeconds > 0) {
+  if (activeRemainingSeconds > 0 && !isStackableTimedInventoryItem(item)) {
     rejectGameAction(`${item.label} is already active for ${formatDuration(activeRemainingSeconds)}.`);
     if (modal?.open && modal.classList.contains("inventory-modal")) showInventoryModal();
     return;
@@ -26955,23 +26969,167 @@ function consumeInventoryItem(item) {
   return inventory;
 }
 
+function getPeaceShieldRivalMarchDirection(march, nowMs = Date.now()) {
+  if (!march || march.kind !== "attack" || march.targetType === "camp") return "";
+  if (
+    march.status && march.status !== "active"
+    || march.returning
+    || normalizeTimestampMs(march.recalledAtMs) > 0
+    || march.rallyAttack
+    || march.rallyJoin
+    || march.rallyReturn
+    || march.campReturn
+    || march.reinforcementReturn
+    || march.relinquishTransfer
+    || march.eventKind === CITADEL_ASSAULT_EVENT_KIND
+    || march.ownerKind === "npc"
+    || isStronghold({ id: march.fromId })
+    || isStronghold({ id: march.toId })
+  ) return "";
+  const arrivesAtMs = normalizeTimestampMs(march.arrivesAtMs);
+  if (arrivesAtMs > 0 ? arrivesAtMs <= nowMs : Math.max(0, Number(march.remaining) || 0) <= 0) return "";
+
+  const target = getArmyTargetById(march.toId);
+  if (!target || isRewardCampTarget(target) || isStronghold(target) || target.owner === "neutral") return "";
+  const currentUid = getCurrentOnlineUid();
+  const ownerUid = String(march.ownerUid || "").trim();
+  const targetOwnerUid = String(march.targetOwnerUid || target.ownerUid || "").trim();
+  if (ownerUid && targetOwnerUid && ownerUid === targetOwnerUid) return "";
+  const outgoing = march.owner === "player" || Boolean(currentUid && ownerUid === currentUid);
+  const incoming = target.owner === "player" || Boolean(currentUid && targetOwnerUid === currentUid);
+  if (outgoing && !incoming && !isSameAttackOwner(target, march.owner, ownerUid)) return "outgoing";
+  if (incoming && !outgoing && march.owner !== "neutral") return "incoming";
+  return "";
+}
+
+function createLocalMidRouteReturn(march, nowMs = Date.now(), returnReason = "") {
+  const oldArrivesAtMs = normalizeTimestampMs(march.arrivesAtMs)
+    || nowMs + Math.max(0.1, Number(march.remaining) || Number(march.total) || 0.1) * 1000;
+  const fallbackTotalMs = Math.max(100, (Number(march.total) || 0.1) * 1000);
+  const launchedAtMs = normalizeTimestampMs(march.launchedAtMs)
+    || Math.max(0, oldArrivesAtMs - fallbackTotalMs);
+  const originalArrivesAtMs = Math.max(
+    oldArrivesAtMs,
+    normalizeTimestampMs(march.swiftMarchOriginalArrivesAtMs) || oldArrivesAtMs
+  );
+  const originalTotalMs = Math.max(100, originalArrivesAtMs - launchedAtMs);
+  const returnStartProgress = clamp(getArmyTravelProgress(march, nowMs), 0.000001, 0.999999);
+  const returnDurationMs = Math.max(
+    PEACE_SHIELD_MINIMUM_RETURN_SECONDS * 1000,
+    Math.ceil(originalTotalMs * returnStartProgress)
+  );
+  Object.assign(march, {
+    returning: true,
+    returnReason,
+    recalledAtMs: nowMs,
+    recallOriginalArrivesAtMs: oldArrivesAtMs,
+    returnStartProgress,
+    returnDestinationId: march.fromId,
+    returnDestinationRegionId: normalizeRegionId(march.sourceRegionId),
+    arrivesAtMs: nowMs + returnDurationMs,
+    total: Math.max(0.1, returnDurationMs / 1000),
+    remaining: Math.max(0.1, returnDurationMs / 1000),
+    targetOwnerUid: "",
+    status: "active",
+  });
+  return march;
+}
+
+function reverseLocalPeaceShieldMarches(nowMs = Date.now()) {
+  const summary = { outgoing: 0, incoming: 0, total: 0 };
+  if (!state || !Array.isArray(state.attacks)) return summary;
+  const seen = new Set();
+  state.attacks.forEach(march => {
+    const id = String(march?.onlineId || march?.id || "").trim();
+    if (id && seen.has(id)) return;
+    const direction = getPeaceShieldRivalMarchDirection(march, nowMs);
+    if (!direction) return;
+    if (id) seen.add(id);
+    createLocalMidRouteReturn(march, nowMs, PEACE_SHIELD_RETURN_REASON);
+    summary[direction] += 1;
+    summary.total += 1;
+  });
+  if (summary.total > 0) {
+    renderArmies(true);
+    refreshOpenServerDrivenPanels();
+  }
+  return summary;
+}
+
+function cityBelongsToMarchOwner(city, march) {
+  if (!city || isStronghold(city)) return false;
+  const ownerUid = String(march?.ownerUid || "").trim();
+  const cityOwnerUid = String(city.ownerUid || "").trim();
+  if (ownerUid && cityOwnerUid) return ownerUid === cityOwnerUid;
+  return city.owner === march?.owner;
+}
+
+function getLocalMarchReturnDestination(march) {
+  const source = cityById(march?.returnDestinationId || march?.fromId);
+  if (cityBelongsToMarchOwner(source, march)) return source;
+  if (march?.owner === "player") return getMainRewardCity();
+  const ownerUid = String(march?.ownerUid || "").trim();
+  return state?.cities?.find(city => (
+    !isStronghold(city)
+    && (ownerUid ? String(city.ownerUid || "").trim() === ownerUid : city.owner === march?.owner)
+  )) || null;
+}
+
+function resolveLocalReturningArmy(march) {
+  const returned = Math.max(0, Math.floor(Number(march?.troops) || 0));
+  const destination = getLocalMarchReturnDestination(march);
+  if (!destination || returned <= 0) return 0;
+  destination.troopFloat = Math.max(0, Number(destination.troopFloat) || Number(destination.troops) || 0) + returned;
+  destination.troops = Math.floor(destination.troopFloat);
+  if (destination.owner === "player") {
+    markOwnedCityChanged(destination, false);
+    syncCityStateToOnline(destination);
+    syncOwnedCitiesToOnline(true);
+  } else if (destination.ownerKind === "player" && destination.ownerUid) {
+    syncSharedCityState(destination);
+  }
+  if (march.owner === "player") {
+    addLog(`${formatNumber(returned)} troops returned to ${destination.name}.`);
+    showToast(`${formatNumber(returned)} troops returned to ${destination.name}`);
+  }
+  return returned;
+}
+
+function normalizeShieldReturnSummary(raw = null) {
+  const outgoing = Math.max(0, Math.floor(Number(raw?.outgoing) || 0));
+  const incoming = Math.max(0, Math.floor(Number(raw?.incoming) || 0));
+  return { outgoing, incoming, total: outgoing + incoming };
+}
+
+function formatShieldReturnSummary(summary = null) {
+  const normalized = normalizeShieldReturnSummary(summary);
+  if (!normalized.total) return "";
+  const noun = normalized.total === 1 ? "march" : "marches";
+  return `${formatNumber(normalized.outgoing)} outgoing and ${formatNumber(normalized.incoming)} incoming rival ${noun} turned back.`;
+}
+
 async function useServerInventoryItem(item) {
   if (!item || !usesServerEconomyAuthority()) return false;
   const result = await getOnlineApi().activateInventoryItem({ itemId: item.id });
   applyServerEconomyResult(result);
   const expiresAtMs = normalizeTimestampMs(result?.expiresAtMs);
+  const effectDurationAddedSeconds = Math.max(0, normalizeTimestampMs(result?.effectDurationAddedMs) / 1000);
   if (item.id === ROYAL_PEACE_SHIELD_ITEM_ID) {
-    addLog(`${item.label} activated. Your kingdom is protected for ${formatDuration(getPeaceShieldRemainingSeconds(expiresAtMs))}.`);
+    const returnSummary = normalizeShieldReturnSummary(result?.shieldReturnSummary);
+    const returnText = formatShieldReturnSummary(returnSummary);
+    addLog(`${item.label} activated. Your kingdom is protected for ${formatDuration(getPeaceShieldRemainingSeconds(expiresAtMs))}.${returnText ? ` ${returnText}` : ""}`);
     playGameSound("royal_shield_activate");
     updateShieldStatusBadge();
     renderCities(true);
-    showToast(`${item.label} active: ${formatDuration(getPeaceShieldRemainingSeconds(expiresAtMs))}`);
+    showToast(`${item.label} active: ${formatDuration(getPeaceShieldRemainingSeconds(expiresAtMs))}${returnSummary.total ? ` · ${formatNumber(returnSummary.total)} rival ${returnSummary.total === 1 ? "march" : "marches"} turned back` : ""}`);
   } else if (item.id === WAR_DRUMS_ITEM_ID) {
-    addLog(`${item.label} activated. Added ${formatNumber(WAR_DRUMS_TROOP_PRODUCTION_BONUS_PERCENT)}% of base city troop production for ${formatDuration(getPeaceShieldRemainingSeconds(expiresAtMs))}.`);
-    showToast(`${item.label} active: +${formatNumber(WAR_DRUMS_TROOP_PRODUCTION_BONUS_PERCENT)}% of base city troops for ${formatDuration(getPeaceShieldRemainingSeconds(expiresAtMs))}`);
+    const addedSeconds = effectDurationAddedSeconds || WAR_DRUMS_DURATION_MS / 1000;
+    addLog(`${item.label} used. Added ${formatDuration(addedSeconds)} to the +${formatNumber(WAR_DRUMS_TROOP_PRODUCTION_BONUS_PERCENT)}% base city troop-production timer. ${formatDuration(getPeaceShieldRemainingSeconds(expiresAtMs))} remaining.`);
+    showToast(`${item.label}: +${formatDuration(addedSeconds)} · ${formatDuration(getPeaceShieldRemainingSeconds(expiresAtMs))} remaining`);
   } else if (item.id === ROYAL_TAX_DECREE_ITEM_ID) {
-    addLog(`${item.label} activated. Added ${formatNumber(ROYAL_TAX_DECREE_GOLD_PRODUCTION_BONUS_PERCENT)}% of base city gold production for ${formatDuration(getPeaceShieldRemainingSeconds(expiresAtMs))}.`);
-    showToast(`${item.label} active: +${formatNumber(ROYAL_TAX_DECREE_GOLD_PRODUCTION_BONUS_PERCENT)}% of base city gold for ${formatDuration(getPeaceShieldRemainingSeconds(expiresAtMs))}`);
+    const addedSeconds = effectDurationAddedSeconds || ROYAL_TAX_DECREE_DURATION_MS / 1000;
+    addLog(`${item.label} used. Added ${formatDuration(addedSeconds)} to the +${formatNumber(ROYAL_TAX_DECREE_GOLD_PRODUCTION_BONUS_PERCENT)}% base city gold-production timer. ${formatDuration(getPeaceShieldRemainingSeconds(expiresAtMs))} remaining.`);
+    showToast(`${item.label}: +${formatDuration(addedSeconds)} · ${formatDuration(getPeaceShieldRemainingSeconds(expiresAtMs))} remaining`);
   } else if (item.id === VEIL_OF_SILENCE_ITEM_ID) {
     addLog(`${item.label} activated. Enemy scouts are blocked for ${formatDuration(getPeaceShieldRemainingSeconds(expiresAtMs))}.`);
     showToast(`${item.label} active: scouts blocked for ${formatDuration(getPeaceShieldRemainingSeconds(expiresAtMs))}`);
@@ -26980,7 +27138,10 @@ async function useServerInventoryItem(item) {
   renderHud();
   renderPanel();
   if (profileScreen?.classList.contains("open")) renderProfileScreen();
-  if (modal?.open && modal.classList.contains("inventory-modal")) modal.close();
+  if (modal?.open && modal.classList.contains("inventory-modal")) {
+    if (isStackableTimedInventoryItem(item)) showInventoryModal();
+    else modal.close();
+  }
   return true;
 }
 
@@ -26995,17 +27156,20 @@ async function useRoyalPeaceShield(item) {
     return;
   }
   if (!consumeInventoryItem(item)) return;
-  const expiresAtMs = Date.now() + ROYAL_PEACE_SHIELD_DURATION_MS;
+  const nowMs = Date.now();
+  const expiresAtMs = nowMs + ROYAL_PEACE_SHIELD_DURATION_MS;
   const effects = ensureItemEffects();
   effects.shieldExpiresAtMs = expiresAtMs;
   refreshOwnedCityItemEffectMetadata(true);
-  addLog(`${item.label} activated. Your kingdom is protected for ${formatDuration(getPeaceShieldRemainingSeconds(expiresAtMs))}.`);
+  const returnSummary = reverseLocalPeaceShieldMarches(nowMs);
+  const returnText = formatShieldReturnSummary(returnSummary);
+  addLog(`${item.label} activated. Your kingdom is protected for ${formatDuration(getPeaceShieldRemainingSeconds(expiresAtMs))}.${returnText ? ` ${returnText}` : ""}`);
   saveGame();
   renderHud();
   updateShieldStatusBadge();
   renderCities(true);
   if (modal?.open && modal.classList.contains("inventory-modal")) modal.close();
-  showToast(`${item.label} active: ${formatDuration(getPeaceShieldRemainingSeconds(expiresAtMs))}`);
+  showToast(`${item.label} active: ${formatDuration(getPeaceShieldRemainingSeconds(expiresAtMs))}${returnSummary.total ? ` · ${formatNumber(returnSummary.total)} rival ${returnSummary.total === 1 ? "march" : "marches"} turned back` : ""}`);
   playGameSound("royal_shield_activate");
   const [shieldSynced, cloudSaved] = await Promise.all([
     syncPeaceShieldToAllOwnedCities(expiresAtMs),
@@ -27020,26 +27184,23 @@ async function useRoyalPeaceShield(item) {
 
 async function useWarDrums(item) {
   const currentExpiresAtMs = getActiveWarDrumsExpiresAtMs();
-  if (currentExpiresAtMs > Date.now()) {
-    showToast(`${item.label} is already active for ${formatDuration(getPeaceShieldRemainingSeconds(currentExpiresAtMs))}.`);
-    return;
-  }
   if (usesServerEconomyAuthority()) {
     await useServerInventoryItem(item);
     return;
   }
   if (!consumeInventoryItem(item)) return;
-  const expiresAtMs = Date.now() + WAR_DRUMS_DURATION_MS;
+  const nowMs = Date.now();
+  const expiresAtMs = Math.max(nowMs, currentExpiresAtMs) + WAR_DRUMS_DURATION_MS;
   const effects = ensureItemEffects();
   effects.warDrumsExpiresAtMs = expiresAtMs;
 
-  addLog(`${item.label} activated. Added ${formatNumber(WAR_DRUMS_TROOP_PRODUCTION_BONUS_PERCENT)}% of base city troop production for ${formatDuration(getPeaceShieldRemainingSeconds(expiresAtMs))}.`);
+  addLog(`${item.label} used. Added ${formatDuration(WAR_DRUMS_DURATION_MS / 1000)} to the +${formatNumber(WAR_DRUMS_TROOP_PRODUCTION_BONUS_PERCENT)}% base city troop-production timer. ${formatDuration(getPeaceShieldRemainingSeconds(expiresAtMs))} remaining.`);
   saveGame();
   renderHud();
   renderPanel();
   if (profileScreen?.classList.contains("open")) renderProfileScreen();
-  if (modal?.open && modal.classList.contains("inventory-modal")) modal.close();
-  showToast(`${item.label} active: +${formatNumber(WAR_DRUMS_TROOP_PRODUCTION_BONUS_PERCENT)}% of base city troops for ${formatDuration(getPeaceShieldRemainingSeconds(expiresAtMs))}`);
+  if (modal?.open && modal.classList.contains("inventory-modal")) showInventoryModal();
+  showToast(`${item.label}: +${formatDuration(WAR_DRUMS_DURATION_MS / 1000)} · ${formatDuration(getPeaceShieldRemainingSeconds(expiresAtMs))} remaining`);
   const cloudSaved = await flushOnlineSave(true);
   if (!cloudSaved && getOnlineApi()?.isSignedIn?.()) {
     showToast(`${item.label} active. Cloud save will retry.`);
@@ -27048,26 +27209,23 @@ async function useWarDrums(item) {
 
 async function useRoyalTaxDecree(item) {
   const currentExpiresAtMs = getActiveRoyalTaxDecreeExpiresAtMs();
-  if (currentExpiresAtMs > Date.now()) {
-    showToast(`${item.label} is already active for ${formatDuration(getPeaceShieldRemainingSeconds(currentExpiresAtMs))}.`);
-    return;
-  }
   if (usesServerEconomyAuthority()) {
     await useServerInventoryItem(item);
     return;
   }
   if (!consumeInventoryItem(item)) return;
-  const expiresAtMs = Date.now() + ROYAL_TAX_DECREE_DURATION_MS;
+  const nowMs = Date.now();
+  const expiresAtMs = Math.max(nowMs, currentExpiresAtMs) + ROYAL_TAX_DECREE_DURATION_MS;
   const effects = ensureItemEffects();
   effects.royalTaxDecreeExpiresAtMs = expiresAtMs;
 
-  addLog(`${item.label} activated. Added ${formatNumber(ROYAL_TAX_DECREE_GOLD_PRODUCTION_BONUS_PERCENT)}% of base city gold production for ${formatDuration(getPeaceShieldRemainingSeconds(expiresAtMs))}.`);
+  addLog(`${item.label} used. Added ${formatDuration(ROYAL_TAX_DECREE_DURATION_MS / 1000)} to the +${formatNumber(ROYAL_TAX_DECREE_GOLD_PRODUCTION_BONUS_PERCENT)}% base city gold-production timer. ${formatDuration(getPeaceShieldRemainingSeconds(expiresAtMs))} remaining.`);
   saveGame();
   renderHud();
   renderPanel();
   if (profileScreen?.classList.contains("open")) renderProfileScreen();
-  if (modal?.open && modal.classList.contains("inventory-modal")) modal.close();
-  showToast(`${item.label} active: +${formatNumber(ROYAL_TAX_DECREE_GOLD_PRODUCTION_BONUS_PERCENT)}% of base city gold for ${formatDuration(getPeaceShieldRemainingSeconds(expiresAtMs))}`);
+  if (modal?.open && modal.classList.contains("inventory-modal")) showInventoryModal();
+  showToast(`${item.label}: +${formatDuration(ROYAL_TAX_DECREE_DURATION_MS / 1000)} · ${formatDuration(getPeaceShieldRemainingSeconds(expiresAtMs))} remaining`);
   const cloudSaved = await flushOnlineSave(true);
   if (!cloudSaved && getOnlineApi()?.isSignedIn?.()) {
     showToast(`${item.label} active. Cloud save will retry.`);
