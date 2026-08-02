@@ -20587,12 +20587,21 @@ function bindSkillPresetControls() {
     if (event.key !== "Enter") return;
     event.preventDefault();
     const slot = getSkillPresetSlot()?.slot || 0;
+    event.currentTarget.blur();
     renameSkillPreset(slot, event.currentTarget.value);
   });
 }
 
+function isSkillPresetNameEditorActive() {
+  const input = skillsView?.querySelector("#skillPresetNameInput");
+  return Boolean(input && document.activeElement === input);
+}
+
 function renderProfileSkills() {
   if (!state || !skillsView || skillsView.hidden) return;
+  // The HUD refreshes the open profile every second. Replacing this input while
+  // it is focused dismisses mobile keyboards and discards the in-progress name.
+  if (isSkillPresetNameEditorActive()) return;
   state.character = normalizeCharacterProgress(state.character);
   state.upgrades = normalizeUpgrades(state.upgrades, state.version);
   reconcileSkillPoints(state.character, state.upgrades);

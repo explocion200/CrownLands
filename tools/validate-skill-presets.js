@@ -113,6 +113,18 @@ const saved = context.replaceLocalSkillPresetSlot(defaults, {
 assert.equal(saved.slots[0].spentPoints, 19);
 assert.equal(context.getEarnedSkillPoints({ level: 60 }) - saved.slots[0].spentPoints, 40, "Later-earned points were not left unspent.");
 
+const focusedPresetInput = {};
+const focusContext = {
+  Boolean,
+  skillsView: { querySelector: selector => selector === "#skillPresetNameInput" ? focusedPresetInput : null },
+  document: { activeElement: focusedPresetInput },
+};
+vm.createContext(focusContext);
+vm.runInContext(extractFunction(gameSource, "isSkillPresetNameEditorActive"), focusContext, { filename: gamePath });
+assert.equal(focusContext.isSkillPresetNameEditorActive(), true, "A focused preset name editor was not detected.");
+focusContext.document.activeElement = {};
+assert.equal(focusContext.isSkillPresetNameEditorActive(), false, "Preset rendering stayed blocked after the editor lost focus.");
+
 assert.match(serverSource, /const SKILL_PRESET_SLOTS = Object\.freeze\(\[[\s\S]*?slot: 1, unlockLevel: 50[\s\S]*?slot: 2, unlockLevel: 75[\s\S]*?slot: 3, unlockLevel: 100[\s\S]*?\]\);/);
 assert.match(serverSource, /createFreshResetPlayerProfile[\s\S]*?skillPresets: normalizeSkillPresets\(\)/, "New profiles do not receive default preset slots.");
 assert.match(extractFunction(serverSource, "createEconomyResponse"), /skillPresets: normalizeSkillPresets\(/, "Economy snapshots omit presets.");
@@ -145,13 +157,15 @@ assert.match(rulesSource, /validPlayerProfileCreate[\s\S]*?'skillPresets'/, "Cre
 assert.match(rulesSource, /validPlayerProfileUpdate[\s\S]*?profileFieldUnchanged\('skillPresets'\)/, "Update rules do not protect presets.");
 
 assert.match(gameSource, /renderSkillPresetPanel[\s\S]*?skill-preset-tabs[\s\S]*?Save Current Build[\s\S]*?data-apply-skill-preset/, "Skills UI does not include all preset controls.");
+assert.match(extractFunction(gameSource, "renderProfileSkills"), /isSkillPresetNameEditorActive\(\)[\s\S]*?return;/, "Periodic profile refreshes can replace the focused preset name input and dismiss the mobile keyboard.");
+assert.match(extractFunction(gameSource, "bindSkillPresetControls"), /event\.currentTarget\.blur\(\)[\s\S]*?renameSkillPreset/, "Submitting a preset rename with Enter does not intentionally release the keyboard before refreshing.");
 assert.match(gameSource, /confirmSkillPresetAction[\s\S]*?Overwrite[\s\S]*?costs <strong>/, "Preset overwrite/apply confirmations are incomplete.");
 assert.match(gameSource, /applySavedSkillPreset[\s\S]*?usesServerEconomyAuthority[\s\S]*?api\.applySkillPreset[\s\S]*?state\.gold =/, "Local and server-authoritative application paths are not both present.");
 assert.match(stylesSource, /\.skill-preset-tabs[\s\S]*?grid-template-columns: repeat\(3,[\s\S]*?@media \(max-width: 640px\)[\s\S]*?\.skill-preset-allocation[\s\S]*?repeat\(2,/, "Preset tabs are not responsive on mobile.");
 
 assert.match(howToSource, /preset tabs unlock at Hero Levels 50, 75, and 100[\s\S]*?1,000,000 gold/i);
 assert.match(gameRulesSource, /Private preset slots unlock at Hero Levels 50, 75, and 100[\s\S]*?never overwrites a preset automatically/i);
-const expectedBuild = "20260801-skill-presets-v1";
+const expectedBuild = "20260801-skill-preset-keyboard-v1";
 const expectedRelease = "crownlands-2026-08-01-skill-presets-v1";
 assert.ok(indexSource.includes(expectedBuild) && workerSource.includes(expectedBuild), "Frontend and service-worker builds do not match.");
 assert.ok(releaseSource.includes(expectedRelease) && functionsRelease.releaseId === expectedRelease, "Frontend and Functions realm releases do not match.");
