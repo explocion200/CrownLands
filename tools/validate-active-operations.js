@@ -13,6 +13,7 @@ assert.match(gameSource, /function getActiveOperationsSnapshot[\s\S]*?marches:[\
 assert.match(gameSource, /data-active-operations-tab="\$\{tab\.id\}"/, "Kingdom activity should render category tabs.");
 assert.match(gameSource, /function renderHeldCampOperationCard[\s\S]*?timerLabel[\s\S]*?renderActiveOperationLocationButton/, "Held camp cards should include their timer and location control.");
 assert.match(gameSource, /function renderHeldStrongholdOperationCard[\s\S]*?Held[\s\S]*?renderActiveOperationLocationButton/, "Held stronghold cards should include a location control without a timer.");
+assert.match(gameSource, /function getHeldStrongholdsForActiveOperations[\s\S]*?getCrownCitadelHolderUid\(\) === currentUid[\s\S]*?onlineOwnedCitiesCache = onlineOwnedCitiesCache\.filter\(city => !isCrownCitadel\(city\)\)/, "Kingdom Activity should evict a stale Citadel after authoritative control changes.");
 assert.match(stylesSource, /\.active-operations-tabs\s*\{[\s\S]*?grid-template-columns:\s*repeat\(3, minmax\(0, 1fr\)\)/, "The three activity categories should use a stable segmented layout.");
 
 const campHolderIndex = (indexes.fieldOverrides || []).find(index => (

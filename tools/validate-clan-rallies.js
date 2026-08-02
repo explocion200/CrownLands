@@ -81,10 +81,24 @@ requires(firebaseClient, /function subscribeClanRallies[\s\S]*?where\("status",\
 requires(client, /beginCreateClanRally[\s\S]*?beginJoinClanRallyContribution/, "Map rally creation or ally joining is missing.");
 requires(client, /inbound contributions will automatically turn around:[\s\S]*?Launch Assembled Troops/, "Launch confirmation does not disclose inbound returns.");
 requires(client, /bindClanRallyControls[\s\S]*?data-rally-action/, "Role-appropriate rally controls are not bound.");
+requires(client, /function getClanRallyParticipantStatusLabel[\s\S]*?rallyStatus === "recalling"[\s\S]*?participantStatus === "assembled"\) return "Marching"/, "Launched and returning rally participants do not receive truthful client status labels.");
+requires(client, /renderClanRallyCard[\s\S]*?recalling \? "returning" : launched \? "marching" : "assembled"/, "Rally troop totals remain labeled assembled after launch or recall.");
 requires(client, /camp-rally-action[\s\S]*?beginCreateClanRally/, "Eligible objective action wheels do not expose Rally.");
 requires(client, /function isHostileClanMarch[\s\S]*?mission\.kind === "attack"[\s\S]*?mission\.kind === "scout"[\s\S]*?mission\.rallyAttack[\s\S]*?function getArmyRouteRelationshipClass[\s\S]*?clan-hostile-route[\s\S]*?clan-support-route/, "Clan rally attacks do not use mixed hostile styling while rally assembly and return paths stay green.");
 requires(styles, /\.clan-rally-card[\s\S]*?\.clan-rally-confirmation/, "Rally card or confirmation styling is missing.");
 requires(styles, /\.camp-rally-action/, "Rally map action styling is missing.");
+
+const participantStatusSource = extractFunction(client, "getClanRallyParticipantStatusLabel", "renderClanRallyCard");
+const getParticipantStatus = new Function(
+  "normalizeTimestampMs",
+  "formatDuration",
+  `${participantStatusSource}; return getClanRallyParticipantStatusLabel;`
+)(value => Math.max(0, Number(value) || 0), seconds => `${seconds}s`);
+assert.equal(getParticipantStatus({ status: "forming" }, { status: "assembled" }, 1_000), "Ready");
+assert.equal(getParticipantStatus({ status: "launched" }, { status: "assembled" }, 1_000), "Marching");
+assert.equal(getParticipantStatus({ status: "launched" }, { status: "inbound" }, 1_000), "Returning");
+assert.equal(getParticipantStatus({ status: "recalling" }, { status: "assembled" }, 1_000), "Returning");
+assert.equal(getParticipantStatus({ status: "forming" }, { status: "inbound", arrivesAtMs: 31_000 }, 1_000), "30s");
 
 requires(
   rules,

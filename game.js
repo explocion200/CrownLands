@@ -13692,6 +13692,11 @@ function applyOnlineCities(onlineCities, regionId = getActiveOnlineRegionId()) {
       ...city,
       islandId: getOnlineIslandId(activeRegionId),
     })));
+  if (onlineCrownCitadelLoaded) {
+    if (reconcileOnlineCrownCitadelSnapshot(onlineCrownCitadelSnapshot)) {
+      updateOutgoingAttackUi();
+    }
+  }
   normalizeSingleMainCityAssignment(state.mainCityId);
   ensureLoadedMainCityForRegion(activeRegionId);
 }
@@ -14921,6 +14926,109 @@ function subscribeOnlineGlobalStats() {
   });
 }
 
+function getCrownCitadelSnapshotSignature(citadel = null) {
+  const currentUid = getCurrentOnlineUid();
+  const ownership = getCityRecordOwnership(citadel || {}, currentUid);
+  return [
+    ownership.ownerKind,
+    ownership.ownerUid || "",
+    ownership.ownerName || "",
+    JSON.stringify(ownership.ownerFlag || null),
+    Math.max(0, Math.floor(Number(citadel?.troops) || 0)),
+    Math.max(0, Number(citadel?.troopFloat) || Number(citadel?.troops) || 0),
+    Math.max(0, Math.floor(Number(citadel?.alliedReinforcementTroops) || 0)),
+    Math.max(0, Math.floor(Number(citadel?.level) || 0)),
+    normalizeTimestampMs(citadel?.lastCapturedAtMs ?? citadel?.lastCapturedAt),
+  ].join("|");
+}
+
+function reconcileOnlineCrownCitadelSnapshot(citadel = null) {
+  if (!state) return false;
+  const base = getPlayableBaseCityById(CROWN_CITADEL_ID);
+  const current = cityById(CROWN_CITADEL_ID);
+  if (!base && !current) return false;
+
+  const raw = citadel && typeof citadel === "object" ? citadel : {};
+  const currentUid = getCurrentOnlineUid();
+  const ownership = getCityRecordOwnership(raw, currentUid);
+  const authoritativeBase = base || current;
+  const troopFallback = getCityTroopFallback(authoritativeBase, ownership);
+  const next = {
+    ...(authoritativeBase || {}),
+    ...(current || {}),
+    ...raw,
+    id: CROWN_CITADEL_ID,
+    name: getCanonicalCityName(authoritativeBase, raw),
+    owner: ownership.owner,
+    ownerKind: ownership.ownerKind,
+    ownerUid: ownership.ownerUid,
+    ownerName: ownership.ownerName,
+    ownerFlag: ownership.ownerFlag,
+    ownerKingPower: ownership.ownerKingPower,
+    ownerShieldExpiresAtMs: 0,
+    ownerClanId: ownership.hasPlayerOwner ? String(raw.ownerClanId || "") : "",
+    ownerClanName: ownership.hasPlayerOwner ? String(raw.ownerClanName || "") : "",
+    ownerClanTag: ownership.hasPlayerOwner ? String(raw.ownerClanTag || "") : "",
+    troops: readCityTroops(raw.troops ?? authoritativeBase?.troops, troopFallback),
+    troopFloat: readCityTroopFloat(raw.troopFloat ?? raw.troops ?? authoritativeBase?.troopFloat ?? authoritativeBase?.troops, troopFallback),
+    alliedReinforcementTroops: Math.max(0, Math.floor(Number(raw.alliedReinforcementTroops) || 0)),
+    level: getStrongholdDefenseLevel({ ...(authoritativeBase || {}), ...raw }),
+    defense: 1,
+    investedGold: 0,
+    lastCapturedAt: Object.prototype.hasOwnProperty.call(raw, "lastCapturedAt") ? raw.lastCapturedAt : null,
+    lastCapturedAtMs: normalizeTimestampMs(raw.lastCapturedAtMs ?? raw.lastCapturedAt),
+    isMainCity: false,
+    regionId: normalizeRegionId(raw.regionId || authoritativeBase?.regionId || "center"),
+    startPool: raw.startPool || authoritativeBase?.startPool || "center",
+    islandId: raw.islandId || getOnlineIslandId("center"),
+    kind: raw.kind || authoritativeBase?.kind || "stronghold",
+    strongholdType: raw.strongholdType || authoritativeBase?.strongholdType || "crown_citadel",
+    relinquishedAtMs: 0,
+    relocatedAtMs: 0,
+  };
+  const previousSignature = getCrownCitadelSnapshotSignature(current);
+  if (current) Object.assign(current, next);
+  else if (getCityRegionId(next) === getActiveMapRegionId()) state.cities.push(next);
+  localDirtyCityIds.delete(CROWN_CITADEL_ID);
+
+  const existingCacheIndex = onlineOwnedCitiesCache.findIndex(city => city.id === CROWN_CITADEL_ID);
+  const existingCache = existingCacheIndex >= 0 ? onlineOwnedCitiesCache[existingCacheIndex] : null;
+  let cacheChanged = false;
+  if (ownership.ownerUid && ownership.ownerUid === currentUid) {
+    const normalized = normalizeOwnedCitySnapshot(next);
+    if (normalized) {
+      cacheChanged = !existingCache
+        || getCrownCitadelSnapshotSignature(existingCache) !== getCrownCitadelSnapshotSignature(normalized);
+      if (existingCacheIndex >= 0) onlineOwnedCitiesCache[existingCacheIndex] = normalized;
+      else onlineOwnedCitiesCache.push(normalized);
+    }
+  } else if (existingCacheIndex >= 0) {
+    onlineOwnedCitiesCache.splice(existingCacheIndex, 1);
+    cacheChanged = true;
+  }
+  return cacheChanged || previousSignature !== getCrownCitadelSnapshotSignature(next);
+}
+
+function refreshOpenCrownCitadelInfoModal({ forceLedger = false } = {}) {
+  if (!modal?.open || !modalBody?.querySelector(".crown-citadel-info-panel")) return false;
+  const city = cityById(CROWN_CITADEL_ID);
+  if (!city) return false;
+  const selectedTab = modalBody.querySelector("[data-citadel-info-tab].active")?.dataset.citadelInfoTab || "overview";
+  showCrownCitadelInfoModal(city);
+  if (selectedTab === "reigns") {
+    modalBody.querySelectorAll("[data-citadel-info-tab]").forEach(tab => {
+      const selected = tab.dataset.citadelInfoTab === "reigns";
+      tab.classList.toggle("active", selected);
+      tab.setAttribute("aria-selected", selected ? "true" : "false");
+    });
+    modalBody.querySelectorAll("[data-citadel-info-panel]").forEach(panel => {
+      panel.hidden = panel.dataset.citadelInfoPanel !== "reigns";
+    });
+    void refreshCrownCitadelReignPanel({ force: forceLedger });
+  }
+  return true;
+}
+
 function subscribeOnlineCrownCitadel() {
   const api = getOnlineApi();
   if (typeof onlineCrownCitadelUnsubscribe === "function") return;
@@ -14931,16 +15039,21 @@ function subscribeOnlineCrownCitadel() {
     {
       onCitadel: citadel => {
         const previousHolderUid = getCrownCitadelHolderUid();
+        const previousSignature = getCrownCitadelSnapshotSignature(getCrownCitadelControlSnapshot());
         onlineCrownCitadelSnapshot = citadel;
         onlineCrownCitadelLoaded = true;
-        if (previousHolderUid !== getCrownCitadelHolderUid()) {
+        queuePlayerIdentityLookupForRecords(citadel ? [citadel] : []);
+        const cityChanged = reconcileOnlineCrownCitadelSnapshot(citadel);
+        const holderChanged = previousHolderUid !== getCrownCitadelHolderUid();
+        const snapshotChanged = previousSignature !== getCrownCitadelSnapshotSignature(citadel);
+        if (holderChanged) {
           crownCitadelReignCache = [];
-          cityRenderSignature = "";
-          renderCities(true);
-          if (modalBody?.querySelector("[data-citadel-reign-panel]")) {
-            void refreshCrownCitadelReignPanel({ force: true });
-          }
         }
+        if (!cityChanged && !snapshotChanged) return;
+        cityRenderSignature = "";
+        renderCities(true);
+        updateOutgoingAttackUi();
+        refreshOpenCrownCitadelInfoModal({ forceLedger: holderChanged });
       },
       onError: error => {
         markOnlineRealtimeRecoveryNeeded(error);
@@ -20492,6 +20605,25 @@ function getRallyParticipantForCurrentPlayer(rally) {
     .find(participant => String(participant?.uid || participant?.ownerUid || "") === uid) || null;
 }
 
+function getClanRallyParticipantStatusLabel(rally, participant, nowMs = Date.now()) {
+  const rallyStatus = String(rally?.status || "");
+  const participantStatus = String(participant?.status || "");
+  if (rallyStatus === "recalling" || participantStatus === "returning") return "Returning";
+  if (rallyStatus === "launched") {
+    if (participantStatus === "assembled") return "Marching";
+    if (participantStatus === "inbound") return "Returning";
+    return "Settled";
+  }
+  if (participantStatus === "inbound") {
+    const etaMs = normalizeTimestampMs(participant?.arrivesAtMs);
+    return etaMs > nowMs
+      ? formatDuration(Math.max(0, Math.ceil((etaMs - nowMs) / 1000)))
+      : "Arriving";
+  }
+  if (participantStatus === "assembled") return "Ready";
+  return "Settled";
+}
+
 function renderClanRallyCard(rally) {
   const currentUid = getCurrentOnlineUid();
   const participants = Array.isArray(rally?.participants) ? rally.participants : [];
@@ -20501,6 +20633,9 @@ function renderClanRallyCard(rally) {
     .reduce((total, participant) => total + Math.max(0, Number(participant.troops) || 0), 0);
   const inboundTroops = activeParticipants
     .filter(participant => participant.status === "inbound")
+    .reduce((total, participant) => total + Math.max(0, Number(participant.troops) || 0), 0);
+  const returningTroops = participants
+    .filter(participant => participant.status === "returning")
     .reduce((total, participant) => total + Math.max(0, Number(participant.troops) || 0), 0);
   const ownParticipant = getRallyParticipantForCurrentPlayer(rally);
   const leader = String(rally.leaderUid || "") === currentUid;
@@ -20513,15 +20648,7 @@ function renderClanRallyCard(rally) {
     : null;
   const canRecall = leader && launchArmy && isRecallHornEligible(launchArmy);
   const participantRows = participants.map(participant => {
-    const inbound = participant.status === "inbound";
-    const etaMs = normalizeTimestampMs(participant.arrivesAtMs);
-    const eta = inbound && etaMs > Date.now()
-      ? formatDuration(Math.max(0, Math.ceil((etaMs - Date.now()) / 1000)))
-      : participant.status === "assembled"
-        ? "Ready"
-        : participant.status === "returning"
-          ? "Returning"
-          : "Settled";
+    const eta = getClanRallyParticipantStatusLabel(rally, participant);
     return `
       <li class="${escapeHtml(participant.status || "")}">
         <span>${renderPlayerNameLink(participant.uid || participant.ownerUid, participant.ownerName || "Ruler")}<small>${participant.role === "leader" ? "Leader" : "Ally"} · ${escapeHtml(eta)}</small></span>
@@ -20548,7 +20675,7 @@ function renderClanRallyCard(rally) {
       </header>
       <div class="clan-rally-summary">
         <span>Leader ${renderPlayerNameLink(rally.leaderUid, rally.leaderName || "Ruler")}</span>
-        <span><strong>${formatNumber(assembledTroops)}</strong> assembled</span>
+        <span><strong>${formatNumber(recalling ? returningTroops || assembledTroops : assembledTroops)}</strong> ${recalling ? "returning" : launched ? "marching" : "assembled"}</span>
         <span><strong>${formatNumber(inboundTroops)}</strong> inbound</span>
         <span class="clan-rally-status">${recalling ? "Returning" : launched ? "Launched" : "Forming"}</span>
       </div>
@@ -28707,11 +28834,23 @@ function getHeldCampsForActiveOperations() {
 
 function getHeldStrongholdsForActiveOperations() {
   const held = new Map();
+  const currentUid = getCurrentOnlineUid();
+  const citadelHeldByCurrentPlayer = Boolean(
+    currentUid
+    && getCrownCitadelHolderUid() === currentUid
+  );
+  if (onlineCrownCitadelLoaded && !citadelHeldByCurrentPlayer) {
+    onlineOwnedCitiesCache = onlineOwnedCitiesCache.filter(city => !isCrownCitadel(city));
+  }
   onlineOwnedCitiesCache.forEach(city => {
-    if (isStronghold(city)) held.set(city.id, city);
+    if (!isStronghold(city)) return;
+    if (isCrownCitadel(city) && onlineCrownCitadelLoaded && !citadelHeldByCurrentPlayer) return;
+    held.set(city.id, city);
   });
   (state?.cities || []).forEach(city => {
-    if (city.owner === "player" && isStronghold(city)) held.set(city.id, city);
+    if (city.owner !== "player" || !isStronghold(city)) return;
+    if (isCrownCitadel(city) && onlineCrownCitadelLoaded && !citadelHeldByCurrentPlayer) return;
+    held.set(city.id, city);
   });
   return [...held.values()]
     .sort((a, b) => getRegionLabel(getCityRegionId(a)).localeCompare(getRegionLabel(getCityRegionId(b)))

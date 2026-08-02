@@ -4,6 +4,11 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+overrides:
+  fast-uri: 3.1.4
+  fast-xml-parser: 5.10.1
+  protobufjs: 7.6.5
+
 importers:
 
   .:
