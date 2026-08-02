@@ -498,6 +498,13 @@ const SKILL_ORDER = [
   "fieldMedics",
 ];
 const SKILL_RESET_COST = economyNumber("playerCosts.skillResetGold", 750_000);
+const SKILL_PRESET_MODEL_VERSION = 1;
+const SKILL_PRESET_NAME_MAX_LENGTH = 24;
+const SKILL_PRESET_SLOTS = Object.freeze([
+  Object.freeze({ slot: 1, unlockLevel: 50 }),
+  Object.freeze({ slot: 2, unlockLevel: 75 }),
+  Object.freeze({ slot: 3, unlockLevel: 100 }),
+]);
 const GOLD_STRONGHOLD_ID = "west_gold_stronghold";
 const TRAINING_STRONGHOLD_ID = "north_training_stronghold";
 const SPEED_STRONGHOLD_ID = "east_speed_stronghold";
@@ -523,7 +530,8 @@ const CROWN_CITADEL_MARCH_SPEED_BONUS_PERCENT = 10;
 const CROWN_CITADEL_UPGRADE_COST_REDUCTION_PERCENT = 10;
 const CLAN_OBJECTIVE_BENEFIT_MODEL_VERSION = 1;
 const CLAN_SHARED_OBJECTIVE_MULTIPLIER = 0.5;
-const BATTLE_SNAPSHOT_MODEL_VERSION = 1;
+const REINFORCEMENT_CITY_WALL_SHARE = 0.25;
+const BATTLE_SNAPSHOT_MODEL_VERSION = 2;
 const STRONGHOLD_IDS = new Set([
   GOLD_STRONGHOLD_ID,
   TRAINING_STRONGHOLD_ID,
@@ -2859,6 +2867,105 @@ function reconcileSkillPoints(character = {}, upgrades = {}) {
   const next = normalizeCharacterProgress(character);
   next.skillPoints = getAvailableSkillPoints(next, upgrades);
   return next;
+}
+
+function getSkillPresetSlotDefinition(slot = 0) {
+  const normalizedSlot = Math.floor(safeNumber(slot, 0));
+  return SKILL_PRESET_SLOTS.find(entry => entry.slot === normalizedSlot) || null;
+}
+
+function normalizeSkillPresetName(value = "", slot = 1) {
+  const fallback = `Preset ${Math.max(1, Math.floor(safeNumber(slot, 1)))}`;
+  const cleaned = String(value || "")
+    .replace(/[\u0000-\u001f\u007f]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  return safeString(cleaned || fallback, SKILL_PRESET_NAME_MAX_LENGTH) || fallback;
+}
+
+function requireSkillPresetName(value = "", slot = 1) {
+  const raw = String(value || "")
+    .replace(/[\u0000-\u001f\u007f]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (!raw) throw new HttpsError("invalid-argument", "Enter a preset name.");
+  if ([...raw].length > SKILL_PRESET_NAME_MAX_LENGTH) {
+    throw new HttpsError(
+      "invalid-argument",
+      `Preset names can contain at most ${SKILL_PRESET_NAME_MAX_LENGTH} characters.`
+    );
+  }
+  return normalizeSkillPresetName(raw, slot);
+}
+
+function normalizeSkillPresetAllocation(upgrades = {}) {
+  const source = upgrades && typeof upgrades === "object" ? upgrades : {};
+  return SKILL_ORDER.reduce((allocation, skill) => {
+    allocation[skill] = normalizeSkillLevel(source[skill]);
+    return allocation;
+  }, {});
+}
+
+function normalizeSkillPresets(value = {}) {
+  const source = value && typeof value === "object" ? value : {};
+  const rawSlots = Array.isArray(source.slots) ? source.slots : [];
+  return {
+    modelVersion: SKILL_PRESET_MODEL_VERSION,
+    slots: SKILL_PRESET_SLOTS.map(definition => {
+      const raw = rawSlots.find(entry => Math.floor(safeNumber(entry?.slot, 0)) === definition.slot) || {};
+      const saved = raw.saved === true && raw.upgrades && typeof raw.upgrades === "object";
+      const upgrades = saved ? normalizeSkillPresetAllocation(raw.upgrades) : null;
+      return {
+        slot: definition.slot,
+        unlockLevel: definition.unlockLevel,
+        name: normalizeSkillPresetName(raw.name, definition.slot),
+        saved,
+        upgrades,
+        spentPoints: saved ? getSpentSkillPoints(upgrades) : 0,
+        savedAtMs: saved ? Math.max(0, timestampToMs(raw.savedAtMs)) : 0,
+      };
+    }),
+  };
+}
+
+function replaceSkillPresetSlot(presets = {}, nextSlot = {}) {
+  const normalized = normalizeSkillPresets(presets);
+  return normalizeSkillPresets({
+    modelVersion: SKILL_PRESET_MODEL_VERSION,
+    slots: normalized.slots.map(slot => slot.slot === nextSlot.slot ? { ...slot, ...nextSlot } : slot),
+  });
+}
+
+function skillPresetAllocationsMatch(left = {}, right = {}) {
+  const first = normalizeSkillPresetAllocation(left);
+  const second = normalizeSkillPresetAllocation(right);
+  return SKILL_ORDER.every(skill => first[skill] === second[skill]);
+}
+
+function isValidSkillPresetAllocation(upgrades = null, character = {}) {
+  if (!upgrades || typeof upgrades !== "object") return false;
+  const allocation = normalizeSkillPresetAllocation(upgrades);
+  const hasInvalidLevel = SKILL_ORDER.some(skill => {
+    const rawLevel = Number(upgrades[skill]);
+    return !Number.isFinite(rawLevel)
+      || rawLevel < 0
+      || Math.floor(rawLevel) !== rawLevel
+      || allocation[skill] > getSkillMaxLevel(skill);
+  });
+  return !hasInvalidLevel && getSpentSkillPoints(allocation) <= getEarnedSkillPoints(character);
+}
+
+function requireUnlockedSkillPresetSlot(slot = 0, character = {}) {
+  const definition = getSkillPresetSlotDefinition(slot);
+  if (!definition) throw new HttpsError("invalid-argument", "Choose a valid skill preset tab.");
+  const level = Math.max(1, Math.floor(safeNumber(character?.level, CHARACTER_START_LEVEL)));
+  if (level < definition.unlockLevel) {
+    throw new HttpsError(
+      "failed-precondition",
+      `Preset ${definition.slot} unlocks at Hero Level ${definition.unlockLevel}.`
+    );
+  }
+  return definition;
 }
 
 function getSkillLevel(profile = {}, skill = "") {
@@ -6675,6 +6782,14 @@ function createDetailedBattleSnapshot({
       reinforcementId: row.reinforcementId,
       startingTroops: row.troops,
       basePower: row.basePower,
+      fortifications: {
+        baseCityWalls: row.baseCityWalls,
+        cityWallSharePercent: row.cityWallSharePercent,
+        cityWallDefense: row.cityWallDefense,
+        stoneworksPercent: row.stoneworksPercent,
+        stoneworksBonus: row.stoneworksBonus,
+        totalDefense: row.fortificationPower,
+      },
       personalDefenseBonusPercent: row.personalBonusPercent,
       sharedDefenseBonusPercent: row.sharedBonusPercent,
       totalDefenseBonusPercent: row.bonusPercent,
@@ -6714,7 +6829,7 @@ function createDetailedBattleSnapshot({
     battleId,
     armyId: safeString(armyId, 96),
     modelVersion: BATTLE_SNAPSHOT_MODEL_VERSION,
-    combatModel: "per_owner_reinforcement_stats",
+    combatModel: "reinforcement_quarter_walls_full_stoneworks",
     worldId: ONLINE_WORLD_ID,
     resetGeneration: RESET_GENERATION,
     participantUids: participants,
@@ -7267,6 +7382,22 @@ function emptyObjectiveBonuses() {
   };
 }
 
+function calculateReinforcementFortificationDefense(baseCityWalls = 0, profile = {}) {
+  const normalizedBaseCityWalls = Math.max(0, Math.floor(safeNumber(baseCityWalls, 0)));
+  const cityWallSharePercent = REINFORCEMENT_CITY_WALL_SHARE * 100;
+  const cityWallDefense = Math.floor(normalizedBaseCityWalls * REINFORCEMENT_CITY_WALL_SHARE);
+  const stoneworksPercent = Math.max(0, getSkillPercent(profile, "stoneworks"));
+  const stoneworksBonus = Math.floor(normalizedBaseCityWalls * stoneworksPercent / 100);
+  return {
+    baseCityWalls: normalizedBaseCityWalls,
+    cityWallSharePercent,
+    cityWallDefense,
+    stoneworksPercent,
+    stoneworksBonus,
+    totalDefense: cityWallDefense + stoneworksBonus,
+  };
+}
+
 function calculateDefenderArmyPackages({
   target = {},
   targetType = "city",
@@ -7302,17 +7433,25 @@ function calculateDefenderArmyPackages({
     const stats = contributorStats.get(contribution.ownerUid) || {};
     const troops = Math.max(0, Math.floor(safeNumber(contribution.troops, 0)));
     const bonusPercent = Math.max(0, safeNumber(stats.strongholdDefenseBonusPercent, 0));
+    const fortifications = calculateReinforcementFortificationDefense(ownerStats.baseCityWalls, profile);
+    const basePower = troops + fortifications.totalDefense;
     return {
       reinforcementId: contribution.id,
       ownerUid: safeString(contribution.ownerUid, 128),
       ownerName: normalizePlayerName(profile.playerName || contribution.ownerName, "Ruler"),
       ownerFlag: profile.flag || contribution.ownerFlag || null,
       troops,
-      basePower: troops,
+      basePower,
       bonusPercent,
       personalBonusPercent: Math.max(0, safeNumber(stats.personalStrongholdDefenseBonusPercent, bonusPercent)),
       sharedBonusPercent: Math.max(0, safeNumber(stats.sharedClanDefenseBonusPercent, 0)),
-      effectivePower: Math.max(0, Math.floor(troops * (1 + bonusPercent / 100))),
+      baseCityWalls: fortifications.baseCityWalls,
+      cityWallSharePercent: fortifications.cityWallSharePercent,
+      cityWallDefense: fortifications.cityWallDefense,
+      stoneworksPercent: fortifications.stoneworksPercent,
+      stoneworksBonus: fortifications.stoneworksBonus,
+      fortificationPower: fortifications.totalDefense,
+      effectivePower: Math.max(0, Math.floor(basePower * (1 + bonusPercent / 100))),
     };
   }).filter(row => row.ownerUid && row.troops > 0);
   return {
@@ -9266,6 +9405,7 @@ function createEconomyResponse(economy = null, overrides = {}) {
     itemPurchaseCooldowns,
     character,
     upgrades,
+    skillPresets,
     daily,
     dailyLoginReward,
     harvestBonuses,
@@ -9291,6 +9431,9 @@ function createEconomyResponse(economy = null, overrides = {}) {
     itemPurchaseCooldowns: itemPurchaseCooldowns || economy.itemPurchaseCooldowns,
     character: character || economy.profileAfter.character || null,
     upgrades: upgrades || normalizeSkillUpgrades(economy.profileAfter.upgrades),
+    skillPresets: normalizeSkillPresets(
+      skillPresets !== undefined ? skillPresets : economy.profileAfter.skillPresets
+    ),
     mainCityId: safeString(economy.profileAfter.mainCityId, 96),
     mainIslandId: safeString(economy.profileAfter.mainIslandId, 160),
     mainRegionId: normalizeRegionId(economy.profileAfter.mainRegionId || getRegionIdFromOnlineIslandId(economy.profileAfter.mainIslandId)),
@@ -10661,6 +10804,157 @@ exports.resetSkills = onCall({ region: "us-central1", maxInstances: 20, invoker:
   });
 });
 
+exports.saveSkillPreset = timedCallable(
+  "saveSkillPreset",
+  { region: "us-central1", maxInstances: 20, invoker: "public" },
+  async request => {
+    const uid = requireAuth(request);
+    const requestedSlot = Math.floor(safeNumber(request.data?.slot, 0));
+    const nowMs = Date.now();
+    return runTransactionWithInfrastructureRetry(async transaction => {
+      const profileRef = db.doc(`players/${uid}`);
+      const profileSnap = await transaction.get(profileRef);
+      if (!profileSnap.exists) throw new HttpsError("not-found", "Player profile was not found.");
+      const profile = profileSnap.data() || {};
+      const character = reconcileSkillPoints(profile.character, profile.upgrades);
+      const definition = requireUnlockedSkillPresetSlot(requestedSlot, character);
+      const upgrades = normalizeSkillUpgrades(profile.upgrades);
+      const currentPresets = normalizeSkillPresets(profile.skillPresets);
+      const currentSlot = currentPresets.slots.find(slot => slot.slot === definition.slot);
+      const skillPresets = replaceSkillPresetSlot(currentPresets, {
+        slot: definition.slot,
+        name: currentSlot?.name,
+        saved: true,
+        upgrades,
+        savedAtMs: nowMs,
+      });
+      transaction.set(profileRef, {
+        skillPresets,
+        updatedAt: FieldValue.serverTimestamp(),
+      }, { merge: true });
+      const savedSlot = skillPresets.slots.find(slot => slot.slot === definition.slot);
+      return {
+        ok: true,
+        currentUser: { skillPresets },
+        skillPreset: {
+          action: "save",
+          slot: definition.slot,
+          name: savedSlot?.name || `Preset ${definition.slot}`,
+          changed: true,
+          goldCharged: 0,
+          allocation: upgrades,
+          remainingSkillPoints: character.skillPoints,
+          savedAtMs: nowMs,
+        },
+      };
+    });
+  }
+);
+
+exports.renameSkillPreset = timedCallable(
+  "renameSkillPreset",
+  { region: "us-central1", maxInstances: 20, invoker: "public" },
+  async request => {
+    const uid = requireAuth(request);
+    const requestedSlot = Math.floor(safeNumber(request.data?.slot, 0));
+    const nowMs = Date.now();
+    return runTransactionWithInfrastructureRetry(async transaction => {
+      const profileRef = db.doc(`players/${uid}`);
+      const profileSnap = await transaction.get(profileRef);
+      if (!profileSnap.exists) throw new HttpsError("not-found", "Player profile was not found.");
+      const profile = profileSnap.data() || {};
+      const character = reconcileSkillPoints(profile.character, profile.upgrades);
+      const definition = requireUnlockedSkillPresetSlot(requestedSlot, character);
+      const name = requireSkillPresetName(request.data?.name, definition.slot);
+      const currentPresets = normalizeSkillPresets(profile.skillPresets);
+      const currentSlot = currentPresets.slots.find(slot => slot.slot === definition.slot);
+      const changed = currentSlot?.name !== name;
+      const skillPresets = replaceSkillPresetSlot(currentPresets, {
+        ...currentSlot,
+        slot: definition.slot,
+        name,
+      });
+      if (changed) {
+        transaction.set(profileRef, {
+          skillPresets,
+          updatedAt: FieldValue.serverTimestamp(),
+        }, { merge: true });
+      }
+      return {
+        ok: true,
+        currentUser: { skillPresets },
+        skillPreset: {
+          action: "rename",
+          slot: definition.slot,
+          name,
+          changed,
+          goldCharged: 0,
+          allocation: currentSlot?.saved ? currentSlot.upgrades : null,
+          remainingSkillPoints: character.skillPoints,
+          savedAtMs: currentSlot?.savedAtMs || 0,
+        },
+      };
+    });
+  }
+);
+
+exports.applySkillPreset = timedCallable(
+  "applySkillPreset",
+  { region: "us-central1", maxInstances: 20, invoker: "public" },
+  async request => {
+    const uid = requireAuth(request);
+    const requestedSlot = Math.floor(safeNumber(request.data?.slot, 0));
+    const nowMs = Date.now();
+    return runTransactionWithInfrastructureRetry(async transaction => {
+      const economy = await prepareEconomyCollection(transaction, uid, nowMs);
+      if (!economy.profileSnap.exists) throw new HttpsError("not-found", "Player profile was not found.");
+      const currentUpgrades = normalizeSkillUpgrades(economy.profileAfter.upgrades);
+      const currentCharacter = reconcileSkillPoints(economy.profileAfter.character, currentUpgrades);
+      const definition = requireUnlockedSkillPresetSlot(requestedSlot, currentCharacter);
+      const skillPresets = normalizeSkillPresets(economy.profileAfter.skillPresets);
+      const selected = skillPresets.slots.find(slot => slot.slot === definition.slot);
+      if (!selected?.saved || !selected.upgrades) {
+        throw new HttpsError("failed-precondition", "Save a skill build in this preset before applying it.");
+      }
+      if (!isValidSkillPresetAllocation(selected.upgrades, currentCharacter)) {
+        throw new HttpsError("failed-precondition", "This saved preset is no longer valid. Save the current build again.");
+      }
+      const upgrades = normalizeSkillPresetAllocation(selected.upgrades);
+      const changed = !skillPresetAllocationsMatch(currentUpgrades, upgrades);
+      const resetCost = changed ? SKILL_RESET_COST : 0;
+      if (economy.gold < resetCost) {
+        throw new HttpsError("failed-precondition", `Applying this preset costs ${SKILL_RESET_COST.toLocaleString()} gold.`);
+      }
+      const character = reconcileSkillPoints(currentCharacter, upgrades);
+      const gold = Math.max(0, economy.gold - resetCost);
+      writePreparedEconomy(transaction, economy, {
+        character,
+        upgrades,
+        skillPresets,
+        gold,
+        goldFloat: gold,
+      });
+      return createEconomyResponse(economy, {
+        character,
+        upgrades,
+        skillPresets,
+        gold,
+        goldFloat: gold,
+        skillPreset: {
+          action: "apply",
+          slot: definition.slot,
+          name: selected.name,
+          changed,
+          goldCharged: resetCost,
+          allocation: upgrades,
+          remainingSkillPoints: character.skillPoints,
+          savedAtMs: selected.savedAtMs,
+        },
+      });
+    });
+  }
+);
+
 exports.syncPlayerIdentity = onCall({ region: "us-central1", maxInstances: 20, invoker: "public" }, async request => {
   const uid = requireAuth(request);
   const data = request.data || {};
@@ -11520,6 +11814,7 @@ function createFreshResetPlayerProfile({
     goldFloat: TEST_STARTING_GOLD,
     character: normalizeCharacterProgress({ level: CHARACTER_START_LEVEL, xp: CHARACTER_START_XP, skillPoints: 0 }),
     upgrades: normalizeSkillUpgrades({}),
+    skillPresets: normalizeSkillPresets(),
     shopItems: createDefaultShopItems(),
     itemEffects: normalizeItemEffects({}),
     itemPurchaseCooldowns: normalizeItemPurchaseCooldowns({}),
@@ -11594,6 +11889,8 @@ async function claimFreshStartingCity(request) {
             flag: previous.flag || null,
             gold: Math.max(0, Math.floor(safeNumber(previous.gold, TEST_STARTING_GOLD))),
             character: normalizeCharacterProgress(previous.character),
+            upgrades: normalizeSkillUpgrades(previous.upgrades),
+            skillPresets: normalizeSkillPresets(previous.skillPresets),
             mainCityId: existingMainCityId,
             mainIslandId: existingMainIslandId,
             mainRegionId: existingRegionId,
@@ -11750,6 +12047,7 @@ async function claimFreshStartingCity(request) {
         gold: TEST_STARTING_GOLD,
         character: freshProfile.character,
         upgrades: freshProfile.upgrades,
+        skillPresets: freshProfile.skillPresets,
         shopItems: freshProfile.shopItems,
         itemEffects: freshProfile.itemEffects,
         itemPurchaseCooldowns: freshProfile.itemPurchaseCooldowns,

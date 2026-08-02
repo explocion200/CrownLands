@@ -1,0 +1,229 @@
+const admin = require("firebase-admin");
+const crypto = require("node:crypto");
+const realm = require("../release-config.json");
+const economyConfig = require("../economy-config.json");
+
+const projectId = process.env.GCLOUD_PROJECT || process.env.GOOGLE_CLOUD_PROJECT || "crown-land-b15e0";
+const authHost = process.env.FIREBASE_AUTH_EMULATOR_HOST || "127.0.0.1:9099";
+const firestoreHost = process.env.FIRESTORE_EMULATOR_HOST;
+const configuredFunctionsHost = process.env.CROWNLANDS_FUNCTIONS_EMULATOR_HOST
+  || process.env.FUNCTIONS_EMULATOR_HOST;
+if (!firestoreHost) throw new Error("FIRESTORE_EMULATOR_HOST is required.");
+
+admin.initializeApp({ projectId });
+const db = admin.firestore();
+db.settings({ ignoreUndefinedProperties: true });
+
+const SKILL_ORDER = [
+  "swordmastery",
+  "stoneworks",
+  "taxStewardship",
+  "royalGranaries",
+  "guildCharters",
+  "marchOrders",
+  "fieldMedics",
+];
+const zeroBuild = () => Object.fromEntries(SKILL_ORDER.map(skill => [skill, 0]));
+const savedBuild = { ...zeroBuild(), swordmastery: 12, stoneworks: 7 };
+const alternateBuild = { ...zeroBuild(), taxStewardship: 8, royalGranaries: 6 };
+let functionsHostPromise = null;
+
+function assert(condition, message) {
+  if (!condition) throw new Error(message);
+}
+
+function formatEmulatorHost(host, port) {
+  const normalizedHost = String(host || "127.0.0.1").trim();
+  const formattedHost = normalizedHost.includes(":") && !normalizedHost.startsWith("[")
+    ? `[${normalizedHost}]`
+    : normalizedHost;
+  return `${formattedHost}:${port}`;
+}
+
+async function resolveFunctionsHost() {
+  if (configuredFunctionsHost) return configuredFunctionsHost;
+  if (!functionsHostPromise) {
+    functionsHostPromise = (async () => {
+      const hubHost = String(process.env.FIREBASE_EMULATOR_HUB || "").trim();
+      if (!hubHost) return "127.0.0.1:5001";
+      const response = await fetch(`http://${hubHost}/emulators`);
+      if (!response.ok) throw new Error(`Firebase Emulator Hub discovery failed with HTTP ${response.status}.`);
+      const emulators = await response.json();
+      const functions = emulators?.functions || {};
+      const listen = Array.isArray(functions.listen) ? functions.listen[0] : functions.listen;
+      const host = functions.host || listen?.address;
+      const port = Number(functions.port || listen?.port);
+      if (!host || !Number.isInteger(port) || port < 1) {
+        throw new Error("Firebase Emulator Hub did not report a running Functions emulator.");
+      }
+      return formatEmulatorHost(host, port);
+    })();
+  }
+  return functionsHostPromise;
+}
+
+async function createAuthUser() {
+  const nonce = crypto.randomBytes(6).toString("hex");
+  const response = await fetch(`http://${authHost}/identitytoolkit.googleapis.com/v1/accounts:signUp?key=fake-api-key`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      email: `skill-presets-${nonce}@example.test`,
+      password: `Skill-Presets-${nonce}-Pass!`,
+      returnSecureToken: true,
+    }),
+  });
+  const body = await response.json();
+  if (!response.ok) throw new Error(`Auth emulator signup failed: ${JSON.stringify(body)}`);
+  return { uid: body.localId, token: body.idToken };
+}
+
+async function invokeFunction(name, token, data = {}) {
+  const functionsHost = await resolveFunctionsHost();
+  const response = await fetch(`http://${functionsHost}/${projectId}/us-central1/${name}`, {
+    method: "POST",
+    headers: {
+      authorization: `Bearer ${token}`,
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({
+      data: {
+        ...data,
+        clientReleaseId: realm.releaseId,
+        clientResetGeneration: realm.resetGeneration,
+        clientWorldId: realm.worldId,
+      },
+    }),
+  });
+  const body = await response.json();
+  return {
+    ok: response.ok && !body.error,
+    result: body.result || null,
+    error: body.error || null,
+  };
+}
+
+async function callFunction(name, token, data = {}) {
+  const response = await invokeFunction(name, token, data);
+  if (!response.ok) throw new Error(`${name} failed: ${JSON.stringify(response.error)}`);
+  return response.result;
+}
+
+async function setBuild(profileRef, cityRef, { level, upgrades, gold }) {
+  const nowMs = Date.now();
+  const earned = Math.max(0, level - 1);
+  const spent = SKILL_ORDER.reduce((total, skill) => total + Number(upgrades[skill] || 0), 0);
+  await Promise.all([
+    profileRef.set({
+      character: { level, xp: 0, skillPoints: Math.max(0, earned - spent) },
+      upgrades,
+      gold,
+      goldFloat: gold,
+      economyUpdatedAtMs: nowMs,
+    }, { merge: true }),
+    cityRef.set({ productionUpdatedAtMs: nowMs }, { merge: true }),
+  ]);
+}
+
+function presetMapValue() {
+  return {
+    mapValue: {
+      fields: {
+        modelVersion: { integerValue: "1" },
+        slots: { arrayValue: { values: [] } },
+      },
+    },
+  };
+}
+
+async function attemptClientPresetMutation(user) {
+  const url = `http://${firestoreHost}/v1/projects/${projectId}/databases/(default)/documents/players/${user.uid}?updateMask.fieldPaths=skillPresets`;
+  return fetch(url, {
+    method: "PATCH",
+    headers: {
+      authorization: `Bearer ${user.token}`,
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({ fields: { skillPresets: presetMapValue() } }),
+  });
+}
+
+function assertRejected(response, status, message) {
+  assert(!response.ok && response.error?.status === status, `${message}: ${JSON.stringify(response)}`);
+}
+
+async function main() {
+  const user = await createAuthUser();
+  const claim = await callFunction("claimStartingCity", user.token, { playerName: "Preset Sentinel" });
+  const profileRef = db.doc(`players/${user.uid}`);
+  const cityRef = db.doc(`islands/${claim.islandId}/cities/${claim.cityId}`);
+  let profile = (await profileRef.get()).data() || {};
+  assert(profile.skillPresets?.slots?.length === 3, "A new profile did not receive all three default preset slots.");
+  assert(profile.skillPresets.slots.every(slot => slot.saved === false), "A new profile began with a populated preset.");
+
+  const clientMutation = await attemptClientPresetMutation(user);
+  assert(clientMutation.status === 403, `A client directly changed skillPresets (HTTP ${clientMutation.status}).`);
+
+  await setBuild(profileRef, cityRef, { level: 49, upgrades: savedBuild, gold: 2_000_000 });
+  assertRejected(await invokeFunction("renameSkillPreset", user.token, { slot: 1, name: "War Build" }), "FAILED_PRECONDITION", "Preset 1 unlocked before Level 50");
+  await setBuild(profileRef, cityRef, { level: 50, upgrades: savedBuild, gold: 2_000_000 });
+  const renamed = await callFunction("renameSkillPreset", user.token, { slot: 1, name: "  War   Build  " });
+  assert(renamed.skillPreset?.name === "War Build" && renamed.skillPreset?.goldCharged === 0, "Preset rename was not normalized and free.");
+  assertRejected(await invokeFunction("renameSkillPreset", user.token, { slot: 1, name: "1234567890123456789012345" }), "INVALID_ARGUMENT", "A 25-character preset name was accepted");
+  const firstSave = await callFunction("saveSkillPreset", user.token, { slot: 1 });
+  assert(firstSave.skillPreset?.goldCharged === 0, "Saving a preset charged gold.");
+  assert(SKILL_ORDER.every(skill => firstSave.skillPreset?.allocation?.[skill] === savedBuild[skill]), "Save did not snapshot all seven authoritative skills.");
+
+  await setBuild(profileRef, cityRef, { level: 74, upgrades: savedBuild, gold: 2_000_000 });
+  assertRejected(await invokeFunction("renameSkillPreset", user.token, { slot: 2, name: "Economy" }), "FAILED_PRECONDITION", "Preset 2 unlocked before Level 75");
+  await setBuild(profileRef, cityRef, { level: 75, upgrades: savedBuild, gold: 2_000_000 });
+  await callFunction("renameSkillPreset", user.token, { slot: 2, name: "Economy" });
+  await setBuild(profileRef, cityRef, { level: 99, upgrades: savedBuild, gold: 2_000_000 });
+  assertRejected(await invokeFunction("renameSkillPreset", user.token, { slot: 3, name: "Marching" }), "FAILED_PRECONDITION", "Preset 3 unlocked before Level 100");
+  await setBuild(profileRef, cityRef, { level: 100, upgrades: alternateBuild, gold: 2_000_000 });
+  await callFunction("renameSkillPreset", user.token, { slot: 3, name: "Marching" });
+
+  const duplicateApplies = await Promise.all([
+    invokeFunction("applySkillPreset", user.token, { slot: 1 }),
+    invokeFunction("applySkillPreset", user.token, { slot: 1 }),
+  ]);
+  assert(duplicateApplies.every(response => response.ok), `Duplicate apply requests failed: ${JSON.stringify(duplicateApplies)}`);
+  const totalCharged = duplicateApplies.reduce((total, response) => total + Number(response.result?.skillPreset?.goldCharged || 0), 0);
+  assert(totalCharged === Number(economyConfig.playerCosts.skillResetGold), `Duplicate application charged ${totalCharged} gold.`);
+  assert(duplicateApplies.filter(response => response.result?.skillPreset?.changed === true).length === 1, "Duplicate application changed the allocation more than once.");
+  profile = (await profileRef.get()).data() || {};
+  assert(SKILL_ORDER.every(skill => Number(profile.upgrades?.[skill] || 0) === savedBuild[skill]), "Applying did not restore the exact saved allocation.");
+  assert(Number(profile.character?.skillPoints || 0) === 80, "Points earned after the Level-50 save were not left unspent at Level 100.");
+  assert(Number(profile.gold || 0) >= 1_000_000 && Number(profile.gold || 0) < 1_000_020, `Application charged the wrong gold amount (${profile.gold}).`);
+  const activeApply = await callFunction("applySkillPreset", user.token, { slot: 1 });
+  assert(activeApply.skillPreset?.changed === false && activeApply.skillPreset?.goldCharged === 0, "An already-active preset was not a free success.");
+  const globalStats = (await db.doc(`players/${user.uid}/stats/global`).get()).data() || {};
+  assert(Number(globalStats.updatedAtMs || 0) > 0, "Applying did not atomically refresh global statistics.");
+
+  await setBuild(profileRef, cityRef, { level: 100, upgrades: alternateBuild, gold: 999_999 });
+  const beforeInsufficient = (await profileRef.get()).data() || {};
+  assertRejected(await invokeFunction("applySkillPreset", user.token, { slot: 1 }), "FAILED_PRECONDITION", "An unaffordable preset applied");
+  const afterInsufficient = (await profileRef.get()).data() || {};
+  assert(Number(afterInsufficient.gold || 0) === Number(beforeInsufficient.gold || 0), "A rejected application consumed gold.");
+  assert(SKILL_ORDER.every(skill => Number(afterInsufficient.upgrades?.[skill] || 0) === alternateBuild[skill]), "A rejected application changed skills.");
+
+  const currentPresets = afterInsufficient.skillPresets;
+  const makeStale = upgrades => ({
+    ...currentPresets,
+    slots: currentPresets.slots.map(slot => slot.slot === 1 ? { ...slot, saved: true, upgrades } : slot),
+  });
+  await profileRef.set({ skillPresets: makeStale({ ...zeroBuild(), swordmastery: 31 }), gold: 2_000_000, goldFloat: 2_000_000 }, { merge: true });
+  assertRejected(await invokeFunction("applySkillPreset", user.token, { slot: 1 }), "FAILED_PRECONDITION", "An over-cap preset applied");
+  await profileRef.set({ skillPresets: makeStale(Object.fromEntries(SKILL_ORDER.map(skill => [skill, 20]))) }, { merge: true });
+  assertRejected(await invokeFunction("applySkillPreset", user.token, { slot: 1 }), "FAILED_PRECONDITION", "An over-budget preset applied");
+  profile = (await profileRef.get()).data() || {};
+  assert(Number(profile.gold || 0) >= 2_000_000, "A stale preset consumed gold.");
+  assert(SKILL_ORDER.every(skill => Number(profile.upgrades?.[skill] || 0) === alternateBuild[skill]), "A stale preset changed the current allocation.");
+
+  console.log("Emulator skill presets passed: unlocks, private rules, save/rename, atomic apply, no-op, concurrency, and rejection safety.");
+}
+
+main().then(() => process.exit(0)).catch(error => {
+  console.error(error);
+  process.exit(1);
+});
