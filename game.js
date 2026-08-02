@@ -90,6 +90,51 @@ const REWARDED_AD_ITEMS = Object.freeze([
     icon: "assets/troop-pickup.png",
   },
 ]);
+const INNER_CASTLE_HUB_ART_SRC = "assets/inner-castle/inner-castle-hub.png";
+const INNER_CASTLE_BUILDINGS = Object.freeze([
+  Object.freeze({
+    key: "treasury",
+    label: "Treasury",
+    role: "Gold storage / gold production",
+    artSrc: "assets/inner-castle/treasury.png",
+    hotspot: Object.freeze({ left: 19, top: 24 }),
+  }),
+  Object.freeze({
+    key: "great-hall",
+    label: "Great Hall",
+    role: "Ruler power / kingdom upgrades",
+    artSrc: "assets/inner-castle/great-hall.png",
+    hotspot: Object.freeze({ left: 50, top: 20 }),
+  }),
+  Object.freeze({
+    key: "barracks",
+    label: "Barracks",
+    role: "Troop production / military strength",
+    artSrc: "assets/inner-castle/barracks.png",
+    hotspot: Object.freeze({ left: 81, top: 25 }),
+  }),
+  Object.freeze({
+    key: "alehouse",
+    label: "Alehouse",
+    role: "Morale / recovery / small boosts",
+    artSrc: "assets/inner-castle/alehouse.png",
+    hotspot: Object.freeze({ left: 19, top: 57 }),
+  }),
+  Object.freeze({
+    key: "gatehouse",
+    label: "Gatehouse",
+    role: "City defense / wall strength",
+    artSrc: "assets/inner-castle/gatehouse.png",
+    hotspot: Object.freeze({ left: 50, top: 75 }),
+  }),
+  Object.freeze({
+    key: "royal-stables",
+    label: "Royal Stables",
+    role: "Movement / march speed",
+    artSrc: "assets/inner-castle/royal-stables.png",
+    hotspot: Object.freeze({ left: 81, top: 58 }),
+  }),
+]);
 
 function economyNumber(path, fallback) {
   const value = String(path || "").split(".").filter(Boolean).reduce((current, key) => current?.[key], ECONOMY_CONFIG);
@@ -2793,6 +2838,7 @@ const clanPublicSnapshotCache = new Map();
 let cityListSortKey = "level";
 let cityListSortDirection = "desc";
 let cityListPage = 0;
+let innerCastleSelectedBuildingKey = "";
 let playableBaseCitiesCache = null;
 let playableBaseCitiesByIdCache = null;
 let playableBaseCitiesByRegionCache = null;
@@ -24915,9 +24961,131 @@ function showCrownCitadelInfoModal(city) {
   void hydrateObjectiveClanAffiliation(city);
 }
 
+function canEnterInnerCastle(city) {
+  return Boolean(
+    city
+    && city.owner === "player"
+    && !isStronghold(city)
+    && isMainCityForList(city)
+  );
+}
+
+function getInnerCastleBuilding(buildingKey) {
+  return INNER_CASTLE_BUILDINGS.find(building => building.key === buildingKey) || null;
+}
+
+function renderInnerCastlePreview(building) {
+  if (!building) return "";
+  return `
+    <img class="inner-castle-preview-art" src="${building.artSrc}" alt="${escapeHtml(building.label)} placeholder artwork" loading="lazy" decoding="async" draggable="false" />
+    <div class="inner-castle-preview-copy">
+      <strong>${escapeHtml(building.label)}</strong>
+      <span>${escapeHtml(building.role)}</span>
+      <small>Details coming soon</small>
+    </div>`;
+}
+
+function clearInnerCastleModalState() {
+  innerCastleSelectedBuildingKey = "";
+  delete modal.dataset.innerCastleCityId;
+  modal.classList.remove("inner-castle-modal");
+}
+
+function selectInnerCastleBuilding(buildingKey) {
+  if (!modal.classList.contains("inner-castle-modal")) return;
+  const building = getInnerCastleBuilding(buildingKey);
+  if (!building) return;
+  innerCastleSelectedBuildingKey = building.key;
+  modalBody.querySelectorAll("[data-inner-castle-building]").forEach(button => {
+    const selected = button.dataset.innerCastleBuilding === building.key;
+    button.classList.toggle("selected", selected);
+    button.setAttribute("aria-pressed", selected ? "true" : "false");
+  });
+  const preview = modalBody.querySelector("#innerCastlePreview");
+  if (preview) preview.innerHTML = renderInnerCastlePreview(building);
+}
+
+function renderInnerCastle(cityId) {
+  const city = cityById(cityId);
+  if (!canEnterInnerCastle(city)) return false;
+  const selectedBuilding = getInnerCastleBuilding(innerCastleSelectedBuildingKey)
+    || getInnerCastleBuilding("great-hall")
+    || INNER_CASTLE_BUILDINGS[0];
+  innerCastleSelectedBuildingKey = selectedBuilding.key;
+  modalTitle.textContent = `${city.name} — Inner Castle`;
+  modalBody.innerHTML = `
+    <section class="inner-castle-shell" aria-label="${escapeHtml(city.name)} Inner Castle">
+      <p class="inner-castle-intro">Explore the Royal Bailey. Building functions and upgrades will arrive in a future update.</p>
+      <div class="inner-castle-layout">
+        <div class="inner-castle-stage">
+          <div class="inner-castle-scene">
+            <img class="inner-castle-hub-art" src="${INNER_CASTLE_HUB_ART_SRC}" alt="The Royal Bailey inside ${escapeHtml(city.name)}" loading="lazy" decoding="async" draggable="false" />
+            <div class="inner-castle-hotspots" aria-label="Inner Castle buildings">
+              ${INNER_CASTLE_BUILDINGS.map(building => `
+                <button
+                  class="inner-castle-hotspot${building.key === selectedBuilding.key ? " selected" : ""}"
+                  type="button"
+                  data-inner-castle-building="${building.key}"
+                  aria-controls="innerCastlePreview"
+                  aria-pressed="${building.key === selectedBuilding.key ? "true" : "false"}"
+                  aria-label="Preview ${escapeHtml(building.label)}"
+                  style="--hotspot-left:${building.hotspot.left}%;--hotspot-top:${building.hotspot.top}%;"
+                ><span>${escapeHtml(building.label)}</span></button>`).join("")}
+            </div>
+          </div>
+        </div>
+        <aside class="inner-castle-preview-tray" aria-label="Selected building preview">
+          <div id="innerCastlePreview" class="inner-castle-preview" role="status" aria-live="polite" aria-atomic="true">
+            ${renderInnerCastlePreview(selectedBuilding)}
+          </div>
+          <button class="inner-castle-back-btn" type="button" data-inner-castle-back>
+            <span aria-hidden="true">&#10094;</span>
+            Back to City Details
+          </button>
+        </aside>
+      </div>
+    </section>`;
+
+  modalBody.querySelectorAll("[data-inner-castle-building]").forEach(button => {
+    button.addEventListener("click", () => selectInnerCastleBuilding(button.dataset.innerCastleBuilding));
+  });
+  modalBody.querySelector("[data-inner-castle-back]")?.addEventListener("click", () => {
+    const originCityId = modal.dataset.innerCastleCityId;
+    clearInnerCastleModalState();
+    if (originCityId && cityById(originCityId)) {
+      showCityInfoModal(originCityId);
+      modalBody.querySelector("#enterInnerCastleBtn")?.focus();
+    }
+    else if (modal.open) modal.close();
+  });
+  return true;
+}
+
+function openInnerCastle(cityId) {
+  const city = cityById(cityId);
+  if (!canEnterInnerCastle(city)) {
+    showToast("The Inner Castle is available only in your main city.");
+    return;
+  }
+  clearInnerCastleModalState();
+  delete modal.dataset.cityInfoId;
+  modal.dataset.innerCastleCityId = city.id;
+  modal.classList.add("inner-castle-modal");
+  innerCastleSelectedBuildingKey = "great-hall";
+  if (!renderInnerCastle(city.id)) {
+    clearInnerCastleModalState();
+    return;
+  }
+  if (!modal.open) modal.showModal();
+  modalBody
+    .querySelector('[data-inner-castle-building][aria-pressed="true"]')
+    ?.focus();
+}
+
 function showCityInfoModal(cityId) {
   const city = cityById(cityId);
   if (!city) return;
+  clearInnerCastleModalState();
   const stronghold = isStronghold(city);
   if (isCrownCitadel(city)) {
     showCrownCitadelInfoModal(city);
@@ -25011,8 +25179,13 @@ function showCityInfoModal(cityId) {
   const mainCityBlock = mainCityStatus.isMain
     ? `
       <div class="stat-wide main-city-status">
-        <span>Home status</span>
-        <strong>Main city</strong>
+        <div class="main-city-status-copy">
+          <span>Home status</span>
+          <strong>Main city</strong>
+        </div>
+        ${canEnterInnerCastle(city)
+          ? `<button id="enterInnerCastleBtn" class="inner-castle-entry-btn" type="button" data-enter-inner-castle="${escapeHtml(city.id)}">Enter Inner Castle</button>`
+          : ""}
       </div>`
     : `
       <div class="main-city-action-panel">
@@ -25047,6 +25220,9 @@ function showCityInfoModal(cityId) {
   `;
   modalBody.querySelector("#changeMainCityBtn")?.addEventListener("click", () => {
     void changeMainCity(city.id);
+  });
+  modalBody.querySelector("#enterInnerCastleBtn")?.addEventListener("click", event => {
+    openInnerCastle(event.currentTarget.dataset.enterInnerCastle);
   });
   bindCityLevelUpButtons(city);
   bindRelinquishCityButton(city);
@@ -30452,6 +30628,7 @@ modal.addEventListener("close", () => {
   }
   delete modal.dataset.cityInfoId;
   delete modal.dataset.campInfoId;
+  clearInnerCastleModalState();
   if (!troopSliderActive) activeTroopOrderKind = "";
   modal.classList.remove("troop-slider-modal");
   modal.classList.remove("scout-report-modal");
