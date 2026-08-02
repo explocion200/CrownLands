@@ -14,7 +14,7 @@ const browserEconomySource = read("economy-config.js");
 const serverEconomySource = read("functions/economy-config.json");
 const functionsPackage = JSON.parse(read("functions/package.json"));
 
-const BUILD_ID = "20260801-inner-castle-v1";
+const BUILD_ID = "20260801-inner-castle-polish-v2";
 const HUB_ART_SRC = "assets/inner-castle/inner-castle-hub.png";
 const BUILDINGS = [
   {
@@ -229,6 +229,21 @@ for (const [label, source] of [
 }
 
 assert.match(stylesSource, /\.inner-castle-modal\b/, "The expanded Inner Castle modal styles are missing.");
+assert.match(
+  stylesSource,
+  /\.inner-castle-hotspot\s*\{(?=[^}]*\bmin-width\s*:\s*44px\s*;)(?=[^}]*\bmin-height\s*:\s*44px\s*;)[^}]*\}/s,
+  "Inner Castle hotspots must retain a minimum 44px by 44px interaction target."
+);
+assert.match(
+  stylesSource,
+  /\.inner-castle-hotspot\s*>\s*span\s*\{(?=[^}]*(?:\bwidth\s*:\s*(?:min|clamp)\(|\bmax-width\s*:))(?=[^}]*\bborder\s*:)(?=[^}]*\bbackground\s*:)[^}]*\}/s,
+  "Inner Castle hotspot labels must use a compact, width-constrained plaque span."
+);
+assert.match(
+  stylesSource,
+  /\.inner-castle-hotspot(?:\.selected|\[aria-pressed=["']true["']\])\s*>\s*span\s*\{(?=[^}]*\bcolor\s*:)(?=[^}]*\bbackground\s*:)[^}]*\}/s,
+  "The selected Inner Castle hotspot must style its plaque span."
+);
 assert.match(indexSource, /<dialog id="modal" class="modal" aria-labelledby="modalTitle">/, "The shared modal must be labelled by its title.");
 assert.match(indexSource, new RegExp(`name="crownlands-build" content="${BUILD_ID}"`), "The document build ID is stale.");
 assert.match(indexSource, new RegExp(`styles\\.css\\?v=${BUILD_ID}`), "The Inner Castle stylesheet cache tag is stale.");
