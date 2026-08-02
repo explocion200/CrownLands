@@ -814,7 +814,8 @@ const PLAYER_SLOT_START_TROOPS = 200;
 const NEUTRAL_START_TROOPS = 10;
 const TEST_STARTING_GOLD = 100;
 const ISLAND_CITY_COUNT = WORLD_REGIONS.reduce((total, region) => total + (region.id === "center" ? CENTER_REGION_CITY_COUNT : REGION_CITY_COUNT), 0);
-const SCOUT_REPORT_SECONDS = 120;
+const SCOUT_REPORT_SECONDS = 600;
+const LEGACY_SCOUT_REPORT_SECONDS = 120;
 const SCOUT_NEARBY_COST = economyNumber("playerCosts.nearbyScoutGold", 75000);
 const SCOUT_NEARBY_RADIUS = 420;
 const REGROUP_COST = economyNumber("playerCosts.regroupGold", 150000);
@@ -2672,7 +2673,7 @@ let onlineGlobalStats = null;
 let onlineCrownCitadelUnsubscribe = null;
 let onlineCrownCitadelSnapshot = null;
 let onlineCrownCitadelLoaded = false;
-let appliedServerReportIds = new Set();
+let appliedServerReportRevisions = new Map();
 let audioServerReportsHydrated = false;
 let resolvingOnlineArmyIds = new Set();
 let resolvedOnlineArmyIds = new Set();
@@ -8396,9 +8397,30 @@ function normalizeScoutReportReinforcements(rows) {
     .slice(0, 50);
 }
 
+function isSuccessfulScoutIntelBattleReport(report = null) {
+  if (report?.type !== "scout") return false;
+  if (report.scoutReport && typeof report.scoutReport === "object") return true;
+  return /^Scout revealed\b/i.test(String(report.summary || ""));
+}
+
+function getScoutBattleReportExpiresAtMs(report = null) {
+  if (!isSuccessfulScoutIntelBattleReport(report)) return 0;
+  const explicitExpiry = normalizeTimestampMs(report?.expiresAtMs)
+    || normalizeTimestampMs(report?.scoutReport?.expiresAtMs);
+  if (explicitExpiry) return explicitExpiry;
+  const createdAtMs = normalizeTimestampMs(report?.createdAtMs);
+  return createdAtMs ? createdAtMs + LEGACY_SCOUT_REPORT_SECONDS * 1000 : 0;
+}
+
+function getBattleReportRevisionMs(report = null) {
+  return normalizeTimestampMs(report?.createdAtMs)
+    || Math.max(0, Math.floor(Number(report?.createdAt) || 0) * 1000);
+}
+
 function normalizeBattleReports(reports) {
   if (!Array.isArray(reports)) return [];
-  return reports
+  const nowMs = Date.now();
+  const normalized = reports
     .map(report => {
       if (!report || typeof report !== "object") return null;
       const type = ["attack", "defense", "scout"].includes(report.type) ? report.type : "";
@@ -8446,10 +8468,32 @@ function normalizeBattleReports(reports) {
         battleId: String(report.battleId || "").replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 160),
         battleSnapshotVersion: Math.max(0, Math.floor(Number(report.battleSnapshotVersion) || 0)),
         scoutReport: report.scoutReport || null,
+        expiresAtMs: normalizeTimestampMs(report.expiresAtMs || report.scoutReport?.expiresAtMs),
       };
     })
-    .filter(Boolean)
-    .slice(-120);
+    .filter(Boolean);
+  const active = [];
+  const successfulScoutIndexByCity = new Map();
+  normalized.forEach(report => {
+    if (!isSuccessfulScoutIntelBattleReport(report)) {
+      active.push(report);
+      return;
+    }
+    const expiresAtMs = getScoutBattleReportExpiresAtMs(report);
+    if (!expiresAtMs || expiresAtMs <= nowMs) return;
+    report.expiresAtMs = expiresAtMs;
+    const cityId = String(report.cityId || "");
+    const existingIndex = successfulScoutIndexByCity.get(cityId);
+    if (existingIndex === undefined) {
+      successfulScoutIndexByCity.set(cityId, active.length);
+      active.push(report);
+      return;
+    }
+    if (getBattleReportRevisionMs(report) > getBattleReportRevisionMs(active[existingIndex])) {
+      active[existingIndex] = report;
+    }
+  });
+  return active.slice(-120);
 }
 
 function compareBattleReportsNewestFirst(a = {}, b = {}) {
@@ -8475,6 +8519,71 @@ function getScoutReport(cityId) {
     return null;
   }
   return report;
+}
+
+function getScoutReportRemainingSeconds(report = null, nowMs = Date.now()) {
+  const expiresAtMs = normalizeTimestampMs(report?.expiresAtMs);
+  if (expiresAtMs) return Math.max(0, Math.ceil((expiresAtMs - nowMs) / 1000));
+  return Math.max(0, Math.ceil((Number(report?.expiresAt) || 0) - (Number(state?.gameSeconds) || 0)));
+}
+
+function getScoutReportAgeSeconds(report = null, nowMs = Date.now()) {
+  const scoutedAtMs = normalizeTimestampMs(report?.scoutedAtMs);
+  if (scoutedAtMs) return Math.max(0, Math.floor((nowMs - scoutedAtMs) / 1000));
+  return Math.max(0, Math.floor((Number(state?.gameSeconds) || 0) - (Number(report?.scoutedAt) || 0)));
+}
+
+function updateScoutReportLifecycle(nowMs = Date.now()) {
+  if (!state) return false;
+  const beforeScoutIds = Object.keys(state.scoutReports || {}).sort().join("|");
+  const beforeBattleIds = (state.battleReports || []).map(report => report?.id || "").join("|");
+  state.scoutReports = normalizeScoutReports(state.scoutReports);
+  state.battleReports = normalizeBattleReports(state.battleReports);
+  const afterScoutIds = Object.keys(state.scoutReports).sort().join("|");
+  const afterBattleIds = state.battleReports.map(report => report.id).join("|");
+  const changed = beforeScoutIds !== afterScoutIds || beforeBattleIds !== afterBattleIds;
+
+  const activeScoutCityId = String(modal?.dataset?.scoutReportCityId || "");
+  if (modal?.open && modal.classList.contains("scout-report-modal")) {
+    const report = activeScoutCityId ? getScoutReport(activeScoutCityId) : null;
+    if (!report) {
+      delete modal.dataset.scoutReportCityId;
+      modal.close();
+      showToast("That scout report expired. Send a new scout for updated intelligence.");
+    } else {
+      const age = getScoutReportAgeSeconds(report, nowMs);
+      const remaining = getScoutReportRemainingSeconds(report, nowMs);
+      modalBody.querySelectorAll("[data-scout-report-age]").forEach(label => {
+        label.textContent = formatDuration(age);
+      });
+      modalBody.querySelectorAll("[data-scout-report-expires]").forEach(label => {
+        label.textContent = formatDuration(remaining);
+      });
+    }
+  }
+
+  if (modal?.open && modal.classList.contains("battle-report-modal")) {
+    const activeIds = new Set(state.battleReports.map(report => report.id));
+    const detailId = String(modal.dataset.battleReportDetailId || "");
+    const renderedExpiredCard = [...modalBody.querySelectorAll("[data-report-card-id]")]
+      .some(card => !activeIds.has(card.dataset.reportCardId));
+    if ((detailId && !activeIds.has(detailId)) || renderedExpiredCard) {
+      showLogModal({ silentAudio: true });
+    } else {
+      modalBody.querySelectorAll("[data-scout-report-expires-at-ms]").forEach(label => {
+        const expiresAtMs = normalizeTimestampMs(label.dataset.scoutReportExpiresAtMs);
+        label.textContent = `Expires in ${formatDuration(Math.max(0, Math.ceil((expiresAtMs - nowMs) / 1000)))}`;
+      });
+    }
+  }
+
+  if (changed) {
+    saveGame();
+    cityRenderSignature = "";
+    renderCities(true);
+    renderPanel();
+  }
+  return changed;
 }
 
 function scoutCity(cityId) {
@@ -8853,6 +8962,7 @@ function completeScoutMission(attack, target) {
   const report = createScoutReportSnapshot(target);
   state.scoutReports[target.id] = report;
   addBattleReport({
+    id: getLocalScoutReportId(target.id),
     type: "scout",
     outcome: "scout",
     cityId: target.id,
@@ -8866,6 +8976,8 @@ function completeScoutMission(attack, target) {
     ownerName: report.ownerName,
     opponentName: report.ownerName,
     opponentFlag: getCityOwnerFlag(target),
+    scoutReport: report,
+    expiresAtMs: report.expiresAtMs,
     summary: `Scout revealed ${formatNumber(report.troops)} troops at ${target.name}.`,
   });
   addLog(`Scouts reported ${formatNumber(target.troops)} troops stationed at ${target.name}.`);
@@ -8890,6 +9002,7 @@ function createScoutReportSnapshot(target) {
     skillSnapshot[`${skill}Level`] = level;
     skillSnapshot[`${skill}Percent`] = Number.isFinite(config.maxPercent) ? Math.min(rawPercent, config.maxPercent) : rawPercent;
   }
+  const scoutedAtMs = Date.now();
   return {
     troops: baseTroopDefense,
     totalDefense: Math.floor(stats.totalDefense),
@@ -8910,6 +9023,8 @@ function createScoutReportSnapshot(target) {
     ...skillSnapshot,
     scoutedAt: state.gameSeconds,
     expiresAt: state.gameSeconds + SCOUT_REPORT_SECONDS,
+    scoutedAtMs,
+    expiresAtMs: scoutedAtMs + SCOUT_REPORT_SECONDS * 1000,
   };
 }
 
@@ -8932,8 +9047,15 @@ function addBattleReport(report) {
     ...report,
   }])[0];
   if (!entry) return;
-  state.battleReports.push(entry);
+  const existingIndex = state.battleReports.findIndex(existing => existing.id === entry.id);
+  if (existingIndex >= 0) state.battleReports[existingIndex] = entry;
+  else state.battleReports.push(entry);
   if (state.battleReports.length > 120) state.battleReports = state.battleReports.slice(-120);
+}
+
+function getLocalScoutReportId(cityId = "") {
+  const target = String(cityId || "").replace(/[^a-zA-Z0-9_-]/g, "_").slice(0, 96);
+  return `scout_current_local_${target}`;
 }
 
 function pendingNeutralCaptureCount(owner = "player", excludeAttackId = null) {
@@ -9064,9 +9186,10 @@ function normalizeServerScoutReport(report = null) {
   if (!report || typeof report !== "object" || !state) return null;
   const nowMs = Date.now();
   const scoutedAtMs = normalizeTimestampMs(report.scoutedAtMs) || nowMs;
-  const expiresAtMs = normalizeTimestampMs(report.expiresAtMs) || (scoutedAtMs + SCOUT_REPORT_SECONDS * 1000);
+  const expiresAtMs = normalizeTimestampMs(report.expiresAtMs) || (scoutedAtMs + LEGACY_SCOUT_REPORT_SECONDS * 1000);
   const createdAgeSeconds = Math.max(0, Math.floor((nowMs - scoutedAtMs) / 1000));
   const remainingSeconds = Math.max(0, Math.ceil((expiresAtMs - nowMs) / 1000));
+  if (remainingSeconds <= 0) return null;
   const scoutedAt = Math.max(0, Math.floor(Number(state.gameSeconds) || 0) - createdAgeSeconds);
   const troops = Math.max(0, Math.floor(Number(report.troops) || 0));
   const reinforcements = normalizeScoutReportReinforcements(report.reinforcements);
@@ -9126,18 +9249,26 @@ function mergeServerReports(reports = [], options = {}) {
   if (!reports.length) return false;
   let changed = false;
   let addedReport = false;
+  const refreshedScoutCityIds = new Set();
   state.battleReports = normalizeBattleReports(state.battleReports);
   state.scoutReports = normalizeScoutReports(state.scoutReports);
-  const existingIds = new Set(state.battleReports.map(report => report.id));
   for (const rawReport of reports) {
     const scoutChanged = mergeServerScoutReport(rawReport);
+    if (scoutChanged) refreshedScoutCityIds.add(String(rawReport.cityId || ""));
     changed = scoutChanged || changed;
     addedReport = scoutChanged || addedReport;
     const normalized = normalizeServerBattleReport(rawReport);
-    if (!normalized || existingIds.has(normalized.id) || appliedServerReportIds.has(normalized.id)) continue;
-    state.battleReports.push(normalized);
-    existingIds.add(normalized.id);
-    appliedServerReportIds.add(normalized.id);
+    if (!normalized) continue;
+    const revisionMs = getBattleReportRevisionMs(normalized);
+    const existingIndex = state.battleReports.findIndex(report => report.id === normalized.id);
+    const existingRevisionMs = existingIndex >= 0
+      ? getBattleReportRevisionMs(state.battleReports[existingIndex])
+      : 0;
+    const appliedRevisionMs = Math.max(0, Number(appliedServerReportRevisions.get(normalized.id)) || 0);
+    if (revisionMs <= Math.max(existingRevisionMs, appliedRevisionMs)) continue;
+    if (existingIndex >= 0) state.battleReports[existingIndex] = normalized;
+    else state.battleReports.push(normalized);
+    appliedServerReportRevisions.set(normalized.id, revisionMs);
     changed = true;
     addedReport = true;
   }
@@ -9145,7 +9276,13 @@ function mergeServerReports(reports = [], options = {}) {
     state.battleReports = normalizeBattleReports(state.battleReports);
     if (state.battleReports.length > 120) state.battleReports = state.battleReports.slice(-120);
     saveGame();
+    cityRenderSignature = "";
+    renderCities(true);
     if (modal.open && modal.classList.contains("battle-report-modal")) showLogModal({ silentAudio: true });
+    const openScoutCityId = String(modal.dataset.scoutReportCityId || "");
+    if (modal.open && openScoutCityId && refreshedScoutCityIds.has(openScoutCityId)) {
+      showScoutReportModal(openScoutCityId);
+    }
     renderHud();
   }
   if (shouldNotify && addedReport) playGameSound("notification", { cooldownMs: 500, allowCrossMap: true });
@@ -12337,7 +12474,7 @@ function disconnectOnlineWorld() {
   clearOnlineServerReportWatcher();
   clearOnlineGlobalStatsWatcher();
   clearOnlineCrownCitadelWatcher();
-  appliedServerReportIds = new Set();
+  appliedServerReportRevisions = new Map();
   audioServerReportsHydrated = false;
   lastAuthoritativeProfileRevisionMs = 0;
   lastReportDrivenEconomyRefreshAtMs = 0;
@@ -18179,6 +18316,7 @@ function updateCitadelAssaultCountdown() {
 }
 
 function renderHudStatusPanels() {
+  updateScoutReportLifecycle();
   updateShieldStatusBadge();
   updateIslandSwitcherUi();
   updateCitadelAssaultCountdown();
@@ -22371,8 +22509,8 @@ function showScoutReportModal(cityId) {
     return;
   }
   playGameSound("parchment_open", { cooldownMs: 120, regionId: getCityRegionId(city) });
-  const remaining = Math.max(0, Math.ceil(report.expiresAt - state.gameSeconds));
-  const age = Math.max(0, Math.floor(state.gameSeconds - report.scoutedAt));
+  const remaining = getScoutReportRemainingSeconds(report);
+  const age = getScoutReportAgeSeconds(report);
   const reportedOwnerName = report.ownerName || getCityOwnerDisplayName(city);
   const reportedOwnerUid = String(report.ownerUid || city.ownerUid || "").slice(0, 128);
   const reportedOwnerFlag = report.ownerFlag || getCityOwnerFlag(city) || createDefaultFlag();
@@ -22391,6 +22529,7 @@ function showScoutReportModal(cityId) {
   const reinforcementTroops = reinforcements.reduce((total, row) => total + row.troops, 0);
   const ownerTroops = Math.max(0, Math.floor(Number(report.ownerTroops ?? Math.max(0, report.troops - reinforcementTroops)) || 0));
   modal.classList.add("scout-report-modal");
+  modal.dataset.scoutReportCityId = cityId;
   modalTitle.textContent = "Detailed scout report";
   modalBody.innerHTML = `
     <div class="detailed-scout-report">
@@ -22445,7 +22584,7 @@ function showScoutReportModal(cityId) {
         </section>
       </div>
 
-      <div class="scout-report-timing"><span>Report age: ${formatDuration(age)}</span><span>Expires in: ${formatDuration(remaining)}</span></div>
+      <div class="scout-report-timing"><span>Report age: <b data-scout-report-age>${formatDuration(age)}</b></span><span>Expires in: <b data-scout-report-expires>${formatDuration(remaining)}</b></span></div>
     </div>
   `;
   applyFlagToElement(modalBody.querySelector("#scoutReportPlayerFlag"), state.flag);
@@ -28774,6 +28913,8 @@ function showLogModal(options = {}) {
     playGameSound("parchment_open", { cooldownMs: 120, allowCrossMap: true });
   }
   state.battleReports = normalizeBattleReports(state.battleReports);
+  delete modal.dataset.scoutReportCityId;
+  delete modal.dataset.battleReportDetailId;
   modal.classList.add("battle-report-modal");
   modalTitle.textContent = "Battle Reports";
   const filters = [
@@ -28830,12 +28971,16 @@ function renderBattleReportCard(report, index = 0) {
     ? `<span class="kingdom-flag kingdom-flag-small battle-report-target-flag" data-battle-report-target-flag="${index}" role="img" aria-label="${escapeHtml(opponent)} kingdom flag"><span class="flag-symbol"></span></span>`
     : "";
   const troopLabel = report.type === "scout" ? "reported" : "sent";
+  const scoutExpiresAtMs = getScoutBattleReportExpiresAtMs(report);
+  const timingLabel = scoutExpiresAtMs
+    ? `<small data-scout-report-expires-at-ms="${scoutExpiresAtMs}">Expires in ${formatDuration(Math.max(0, Math.ceil((scoutExpiresAtMs - Date.now()) / 1000)))}</small>`
+    : `<small>${age} ago</small>`;
   const locateButton = renderBattleReportLocateButton(report);
   return `
-    <article class="battle-report-card ${badge.tone}">
+    <article class="battle-report-card ${badge.tone}" data-report-card-id="${escapeHtml(report.id)}">
       <div class="battle-report-result">
         <strong>${badge.label}</strong>
-        <small>${age} ago</small>
+        ${timingLabel}
       </div>
       <div class="battle-report-city">
         <span>Lv ${formatNumber(report.cityLevel)}</span>
@@ -29114,6 +29259,7 @@ function renderBattleReinforcementRow(participant, index) {
 }
 
 function renderLegacyBattleReportDetail(report, badge, message = "") {
+  const scoutExpiresAtMs = getScoutBattleReportExpiresAtMs(report);
   return `
     <div class="battle-report-detail ${badge.tone}">
       <button id="battleReportBackBtn" class="battle-report-back" type="button" data-audio-effect="none">Back to reports</button>
@@ -29121,6 +29267,7 @@ function renderLegacyBattleReportDetail(report, badge, message = "") {
         <span>${badge.label}</span>
         <strong>${escapeHtml(report.cityName)}</strong>
         <small>Level ${formatNumber(report.cityLevel)} - ${formatDuration(Math.max(0, state.gameSeconds - report.createdAt))} ago</small>
+        ${scoutExpiresAtMs ? `<small data-scout-report-expires-at-ms="${scoutExpiresAtMs}">Expires in ${formatDuration(Math.max(0, Math.ceil((scoutExpiresAtMs - Date.now()) / 1000)))}</small>` : ""}
         ${renderBattleReportLocateButton(report, "battle-report-locate-detail")}
       </div>
       ${message ? `<p class="battle-report-detail-notice">${escapeHtml(message)}</p>` : ""}
@@ -30726,6 +30873,8 @@ modal.addEventListener("close", () => {
   }
   delete modal.dataset.cityInfoId;
   delete modal.dataset.campInfoId;
+  delete modal.dataset.scoutReportCityId;
+  delete modal.dataset.battleReportDetailId;
   clearInnerCastleModalState();
   if (!troopSliderActive) activeTroopOrderKind = "";
   modal.classList.remove("troop-slider-modal");

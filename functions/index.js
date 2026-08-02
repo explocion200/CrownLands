@@ -134,7 +134,7 @@ const REWARDED_AD_STATUS_CALLABLE_OPTIONS = Object.freeze({
 const REWARDED_AD_MUTATION_CALLABLE_OPTIONS = Object.freeze({
   ...REWARDED_AD_STATUS_CALLABLE_OPTIONS,
 });
-const SCOUT_REPORT_SECONDS = 120;
+const SCOUT_REPORT_SECONDS = 600;
 const ARMY_TRAVEL_SECONDS_PER_MAP_UNIT = 0.13;
 const ARMY_TRAVEL_MIN_SECONDS = 30;
 const ARMY_TRAVEL_SCOUT_MIN_SECONDS = 10;
@@ -6653,6 +6653,80 @@ function createScoutReportSnapshot(target = {}, defenderProfile = null, nowMs = 
   };
 }
 
+function getCurrentScoutReportId(uid = "", cityId = "") {
+  const key = `${safeString(uid, 128)}:${safeString(cityId, 96)}`;
+  const digest = crypto.createHash("sha256").update(key, "utf8").digest("hex").slice(0, 32);
+  return `scout_current_${digest}`;
+}
+
+function isSuccessfulScoutIntelReport(report = null) {
+  return Boolean(report?.type === "scout" && report.scoutReport && typeof report.scoutReport === "object");
+}
+
+function getScoutIntelExpiresAtMs(report = null) {
+  if (!isSuccessfulScoutIntelReport(report)) return 0;
+  return Math.max(
+    0,
+    timestampToMs(report.expiresAtMs),
+    timestampToMs(report.scoutReport?.expiresAtMs)
+  );
+}
+
+function pruneExpiredScoutReportMap(reports = {}, nowMs = Date.now()) {
+  const source = reports && typeof reports === "object" && !Array.isArray(reports) ? reports : {};
+  let changed = source !== reports;
+  const active = {};
+  Object.entries(source).forEach(([cityId, report]) => {
+    const expiresAtMs = timestampToMs(report?.expiresAtMs);
+    if (!expiresAtMs || expiresAtMs <= nowMs) {
+      changed = true;
+      return;
+    }
+    active[cityId] = report;
+  });
+  return changed ? active : source;
+}
+
+function deleteRemovedScoutReportEntries(transaction, profileRef, before = {}, after = {}) {
+  if (!transaction || !profileRef || !before || typeof before !== "object") return;
+  Object.keys(before).forEach(cityId => {
+    if (!Object.prototype.hasOwnProperty.call(after, cityId)) {
+      transaction.update(profileRef, new FieldPath("scoutReports", cityId), FieldValue.delete());
+    }
+  });
+}
+
+function pruneExpiredBattleScoutReports(reports = [], nowMs = Date.now()) {
+  const source = Array.isArray(reports) ? reports : [];
+  const active = [];
+  const successfulScoutIndexByCity = new Map();
+  let changed = source !== reports;
+  source.forEach(report => {
+    if (!isSuccessfulScoutIntelReport(report)) {
+      active.push(report);
+      return;
+    }
+    const expiresAtMs = getScoutIntelExpiresAtMs(report);
+    if (!expiresAtMs || expiresAtMs <= nowMs) {
+      changed = true;
+      return;
+    }
+    const cityId = safeString(report.cityId, 96);
+    const existingIndex = successfulScoutIndexByCity.get(cityId);
+    if (existingIndex === undefined) {
+      successfulScoutIndexByCity.set(cityId, active.length);
+      active.push(report);
+      return;
+    }
+    changed = true;
+    const existing = active[existingIndex];
+    if (timestampToMs(report.createdAtMs) > timestampToMs(existing?.createdAtMs)) {
+      active[existingIndex] = report;
+    }
+  });
+  return changed ? active : source;
+}
+
 function makeReport({
   id,
   uid,
@@ -6688,6 +6762,7 @@ function makeReport({
     normalizedTotalDefense,
     Math.max(0, Math.floor(safeNumber(defenseBreakdown?.baseTotalDefense, normalizedTotalDefense)))
   );
+  const scoutIntelExpiresAtMs = timestampToMs(scoutReport?.expiresAtMs);
   return {
     id,
     uid,
@@ -6716,6 +6791,7 @@ function makeReport({
     resetGeneration: RESET_GENERATION,
     worldId: ONLINE_WORLD_ID,
     scoutReport,
+    ...(scoutIntelExpiresAtMs ? { expiresAtMs: scoutIntelExpiresAtMs } : {}),
     xpAwarded: Math.max(0, Math.floor(safeNumber(xpAwarded, 0))),
     goldAwarded: Math.max(0, Math.floor(safeNumber(goldAwarded, 0))),
     troopsAwarded: Math.max(0, Math.floor(safeNumber(troopsAwarded, 0))),
@@ -6920,14 +6996,8 @@ function writeDetailedBattleSnapshot(transaction, snapshot = null) {
   return ref;
 }
 
-function setNestedScoutReportPatch(cityId, report) {
-  return {
-    [`scoutReports.${cityId}`]: report,
-  };
-}
-
-function getBattleReportsArray(profile = {}) {
-  return Array.isArray(profile.battleReports) ? profile.battleReports.slice(-119) : [];
+function getBattleReportsArray(profile = {}, nowMs = Date.now()) {
+  return pruneExpiredBattleScoutReports(profile.battleReports, nowMs).slice(-119);
 }
 
 function buildPlayerProgressPatch(profile = {}, { xp = 0, gold = 0 } = {}) {
@@ -6950,11 +7020,21 @@ function writeReport(transaction, uid, report, profileSnap = null, extraProfileP
   if (!uid || !report?.id) return;
   const profileRef = db.doc(`players/${uid}`);
   const profile = profileSnap?.exists ? profileSnap.data() || {} : {};
-  const nextReports = [...getBattleReportsArray(profile), report].slice(-120);
-  transaction.set(reportRef(uid, report.id), {
+  const successfulScout = isSuccessfulScoutIntelReport(report);
+  const currentReports = getBattleReportsArray(profile, timestampToMs(report.createdAtMs) || Date.now());
+  const retainedReports = successfulScout
+    ? currentReports.filter(existing => !(
+      isSuccessfulScoutIntelReport(existing)
+      && safeString(existing.cityId, 96) === safeString(report.cityId, 96)
+    ))
+    : currentReports;
+  const nextReports = [...retainedReports, report].slice(-120);
+  const reportDocument = {
     ...report,
     createdAt: FieldValue.serverTimestamp(),
-  }, { merge: true });
+  };
+  if (successfulScout) transaction.set(reportRef(uid, report.id), reportDocument, { merge: false });
+  else transaction.set(reportRef(uid, report.id), reportDocument, { merge: true });
   transaction.set(profileRef, {
     battleReports: nextReports,
     updatedAt: FieldValue.serverTimestamp(),
@@ -6964,11 +7044,44 @@ function writeReport(transaction, uid, report, profileSnap = null, extraProfileP
 
 function writeScoutReport(transaction, uid, cityId, report, profileSnap = null, extraProfilePatch = {}) {
   const profileRef = db.doc(`players/${uid}`);
+  const profile = profileSnap?.exists ? profileSnap.data() || {} : {};
+  const scoutReports = {
+    ...pruneExpiredScoutReportMap(profile.scoutReports, timestampToMs(report.scoutedAtMs) || Date.now()),
+    [cityId]: report,
+  };
   transaction.set(profileRef, {
-    ...setNestedScoutReportPatch(cityId, report),
+    scoutReports,
     updatedAt: FieldValue.serverTimestamp(),
     ...extraProfilePatch,
   }, { merge: true });
+  if (profileSnap?.exists) {
+    deleteRemovedScoutReportEntries(transaction, profileRef, profile.scoutReports, scoutReports);
+  }
+}
+
+async function cleanupExpiredScoutReportDocuments(nowMs = Date.now()) {
+  const snapshot = await db.collectionGroup("serverReports")
+    .where("scoutReport.expiresAtMs", "<=", nowMs)
+    .limit(400)
+    .get();
+  const expired = snapshot.docs.filter(doc => {
+    const report = doc.data() || {};
+    return isSuccessfulScoutIntelReport(report)
+      && safeString(report.worldId, 120) === ONLINE_WORLD_ID
+      && safeString(report.resetGeneration, 120) === RESET_GENERATION
+      && getScoutIntelExpiresAtMs(report) <= nowMs;
+  });
+  if (!expired.length) return { deleted: 0, scanned: snapshot.size };
+  const writer = db.bulkWriter();
+  const deletions = expired.map(doc => writer
+    .delete(doc.ref, { lastUpdateTime: doc.updateTime })
+    .then(() => true, () => false));
+  await writer.close();
+  const outcomes = await Promise.all(deletions);
+  return {
+    deleted: outcomes.filter(Boolean).length,
+    scanned: snapshot.size,
+  };
 }
 
 function dropCapturedCityLevel(city = {}) {
@@ -9009,6 +9122,8 @@ async function prepareEconomyCollection(transaction, uid, nowMs = Date.now(), op
     troopsByCity,
     startedAtMs: Math.max(lastEconomyAtMs, productionObservedAtMs),
   }, nowMs);
+  const scoutReports = pruneExpiredScoutReportMap(rawProfile.scoutReports, nowMs);
+  const battleReports = pruneExpiredBattleScoutReports(rawProfile.battleReports, nowMs);
   const profileAfter = {
     ...rawProfile,
     character,
@@ -9019,6 +9134,8 @@ async function prepareEconomyCollection(transaction, uid, nowMs = Date.now(), op
     itemEffects,
     itemPurchaseCooldowns,
     pendingAwayProduction,
+    scoutReports,
+    battleReports,
     ...mainCityRepair.profileFields,
     economyUpdatedAtMs: economyRevisionMs,
   };
@@ -9044,6 +9161,8 @@ async function prepareEconomyCollection(transaction, uid, nowMs = Date.now(), op
     itemEffects,
     itemPurchaseCooldowns,
     pendingAwayProduction,
+    ...(scoutReports !== rawProfile.scoutReports ? { scoutReports } : {}),
+    ...(battleReports !== rawProfile.battleReports ? { battleReports } : {}),
     ...mainCityRepair.profileFields,
     ...objectiveBenefits.profilePatch,
     economyUpdatedAtMs: economyRevisionMs,
@@ -9219,6 +9338,14 @@ function writePreparedEconomy(transaction, economy, profileOverrides = {}, extra
     updatedAt: FieldValue.serverTimestamp(),
   }, { merge: true });
   if (economy.profileSnap?.exists) {
+    if (economy.profilePatch.scoutReports !== undefined) {
+      deleteRemovedScoutReportEntries(
+        transaction,
+        economy.profileRef,
+        economy.profileBefore?.scoutReports,
+        economy.profilePatch.scoutReports
+      );
+    }
     transaction.update(economy.profileRef, addLegacyShopItemDeletes());
   }
   return stats;
@@ -17760,7 +17887,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
         const campTarget = createReinforcedCombatTarget(getRewardCampCombatTarget(target), "camp");
         const scoutReport = createScoutReportSnapshot(campTarget, defenderProfile, nowMs, defenderBonuses, targetStats, defensePackages);
         const report = makeReport({
-          id: `${armyId}_${campTarget.campType}_camp_scout_${attackerUid}`,
+          id: getCurrentScoutReportId(attackerUid, campTarget.id),
           uid: attackerUid,
           type: "scout",
           outcome: "scout",
@@ -18006,9 +18133,8 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
           opponentName: defenderName,
           opponentFlag: defenderFlag,
           sentTroops: troopCount,
-          troopCount: Math.max(0, Math.floor(safeNumber(target.troops, 0))),
-          totalDefense: targetStats.totalDefense,
-          defenseStats: targetStats,
+          troopCount: 0,
+          totalDefense: 0,
           summary: `Main cities cannot be scouted. ${returned.toLocaleString()} scout returned.`,
           nowMs,
         });
@@ -18116,7 +18242,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
       writeParticipantEconomies();
       const scoutReport = createScoutReportSnapshot(combatTarget, defenderProfile, nowMs, defenderBonuses, targetStats, defensePackages);
       const report = makeReport({
-        id: `${armyId}_scout_${attackerUid}`,
+        id: getCurrentScoutReportId(attackerUid, target.id),
         uid: attackerUid,
         type: "scout",
         outcome: "scout",
@@ -21251,15 +21377,17 @@ exports.maintainGameServer = onSchedule({
   timeoutSeconds: 120,
   memory: "256MiB",
 }, async () => {
-  const [result, armyVisibilityBackfill, reinforcementCapacity] = await Promise.all([
+  const [result, armyVisibilityBackfill, reinforcementCapacity, scoutReportCleanup] = await Promise.all([
     maintainGameServer(Date.now()),
     backfillActiveArmyVisibilityViews(),
     reconcileReinforcementCapacity(Date.now()),
+    cleanupExpiredScoutReportDocuments(Date.now()),
   ]);
   console.log("Crownlands realm capacity maintained", {
     ...result,
     armyVisibilityBackfill,
     reinforcementCapacity,
+    scoutReportCleanup,
   });
 });
 
