@@ -499,7 +499,7 @@ const SKILL_ORDER = [
   "fieldMedics",
 ];
 const SKILL_RESET_COST = economyNumber("playerCosts.skillResetGold", 750_000);
-const SKILL_PRESET_MODEL_VERSION = 1;
+const SKILL_PRESET_MODEL_VERSION = 2;
 const SKILL_PRESET_NAME_MAX_LENGTH = 24;
 const SKILL_PRESET_SLOTS = Object.freeze([
   Object.freeze({ slot: 1, unlockLevel: 50 }),
@@ -2910,22 +2910,25 @@ function normalizeSkillPresetAllocation(upgrades = {}) {
 function normalizeSkillPresets(value = {}) {
   const source = value && typeof value === "object" ? value : {};
   const rawSlots = Array.isArray(source.slots) ? source.slots : [];
+  const slots = SKILL_PRESET_SLOTS.map(definition => {
+    const raw = rawSlots.find(entry => Math.floor(safeNumber(entry?.slot, 0)) === definition.slot) || {};
+    const saved = raw.saved === true && raw.upgrades && typeof raw.upgrades === "object";
+    const upgrades = saved ? normalizeSkillPresetAllocation(raw.upgrades) : null;
+    return {
+      slot: definition.slot,
+      unlockLevel: definition.unlockLevel,
+      name: normalizeSkillPresetName(raw.name, definition.slot),
+      saved,
+      upgrades,
+      spentPoints: saved ? getSpentSkillPoints(upgrades) : 0,
+      savedAtMs: saved ? Math.max(0, timestampToMs(raw.savedAtMs)) : 0,
+    };
+  });
+  const requestedActiveSlot = Math.floor(safeNumber(source.activeSlot, 0));
   return {
     modelVersion: SKILL_PRESET_MODEL_VERSION,
-    slots: SKILL_PRESET_SLOTS.map(definition => {
-      const raw = rawSlots.find(entry => Math.floor(safeNumber(entry?.slot, 0)) === definition.slot) || {};
-      const saved = raw.saved === true && raw.upgrades && typeof raw.upgrades === "object";
-      const upgrades = saved ? normalizeSkillPresetAllocation(raw.upgrades) : null;
-      return {
-        slot: definition.slot,
-        unlockLevel: definition.unlockLevel,
-        name: normalizeSkillPresetName(raw.name, definition.slot),
-        saved,
-        upgrades,
-        spentPoints: saved ? getSpentSkillPoints(upgrades) : 0,
-        savedAtMs: saved ? Math.max(0, timestampToMs(raw.savedAtMs)) : 0,
-      };
-    }),
+    activeSlot: slots.some(slot => slot.slot === requestedActiveSlot && slot.saved) ? requestedActiveSlot : 0,
+    slots,
   };
 }
 
@@ -2933,7 +2936,16 @@ function replaceSkillPresetSlot(presets = {}, nextSlot = {}) {
   const normalized = normalizeSkillPresets(presets);
   return normalizeSkillPresets({
     modelVersion: SKILL_PRESET_MODEL_VERSION,
+    activeSlot: normalized.activeSlot,
     slots: normalized.slots.map(slot => slot.slot === nextSlot.slot ? { ...slot, ...nextSlot } : slot),
+  });
+}
+
+function setActiveSkillPresetSlot(presets = {}, slotNumber = 0) {
+  const normalized = normalizeSkillPresets(presets);
+  return normalizeSkillPresets({
+    ...normalized,
+    activeSlot: Math.floor(safeNumber(slotNumber, 0)),
   });
 }
 
@@ -10883,14 +10895,17 @@ exports.spendSkillPoint = onCall({ region: "us-central1", maxInstances: 20, invo
     }
     upgrades[skillId] = currentLevel + 1;
     character.skillPoints = getAvailableSkillPoints(character, upgrades);
+    const skillPresets = setActiveSkillPresetSlot(economy.profileAfter.skillPresets, 0);
     writePreparedEconomy(transaction, economy, {
       character,
       upgrades,
+      skillPresets,
     });
     return createEconomyResponse(economy, {
       skillId,
       character,
       upgrades,
+      skillPresets,
     });
   });
 });
@@ -10914,15 +10929,20 @@ exports.resetSkills = onCall({ region: "us-central1", maxInstances: 20, invoker:
     const upgrades = spentPoints > 0 ? normalizeSkillUpgrades({}) : currentUpgrades;
     const character = reconcileSkillPoints(currentCharacter, upgrades);
     const gold = Math.max(0, economy.gold - resetCost);
+    const skillPresets = spentPoints > 0
+      ? setActiveSkillPresetSlot(economy.profileAfter.skillPresets, 0)
+      : normalizeSkillPresets(economy.profileAfter.skillPresets);
     writePreparedEconomy(transaction, economy, {
       character,
       upgrades,
+      skillPresets,
       gold,
       goldFloat: gold,
     });
     return createEconomyResponse(economy, {
       character,
       upgrades,
+      skillPresets,
       gold,
       goldFloat: gold,
       spentPoints,
@@ -10949,13 +10969,13 @@ exports.saveSkillPreset = timedCallable(
       const upgrades = normalizeSkillUpgrades(profile.upgrades);
       const currentPresets = normalizeSkillPresets(profile.skillPresets);
       const currentSlot = currentPresets.slots.find(slot => slot.slot === definition.slot);
-      const skillPresets = replaceSkillPresetSlot(currentPresets, {
+      const skillPresets = setActiveSkillPresetSlot(replaceSkillPresetSlot(currentPresets, {
         slot: definition.slot,
         name: currentSlot?.name,
         saved: true,
         upgrades,
         savedAtMs: nowMs,
-      });
+      }), definition.slot);
       transaction.set(profileRef, {
         skillPresets,
         updatedAt: FieldValue.serverTimestamp(),
@@ -11039,8 +11059,8 @@ exports.applySkillPreset = timedCallable(
       const currentUpgrades = normalizeSkillUpgrades(economy.profileAfter.upgrades);
       const currentCharacter = reconcileSkillPoints(economy.profileAfter.character, currentUpgrades);
       const definition = requireUnlockedSkillPresetSlot(requestedSlot, currentCharacter);
-      const skillPresets = normalizeSkillPresets(economy.profileAfter.skillPresets);
-      const selected = skillPresets.slots.find(slot => slot.slot === definition.slot);
+      const currentPresets = normalizeSkillPresets(economy.profileAfter.skillPresets);
+      const selected = currentPresets.slots.find(slot => slot.slot === definition.slot);
       if (!selected?.saved || !selected.upgrades) {
         throw new HttpsError("failed-precondition", "Save a skill build in this preset before applying it.");
       }
@@ -11055,6 +11075,7 @@ exports.applySkillPreset = timedCallable(
       }
       const character = reconcileSkillPoints(currentCharacter, upgrades);
       const gold = Math.max(0, economy.gold - resetCost);
+      const skillPresets = setActiveSkillPresetSlot(currentPresets, definition.slot);
       writePreparedEconomy(transaction, economy, {
         character,
         upgrades,
