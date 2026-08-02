@@ -208,6 +208,16 @@ async function waitForOwnershipEventIds(eventIds, timeoutMs = 30000) {
   throw new Error(`Ownership events did not settle: ${ids.join(", ")}.`);
 }
 
+async function waitForDocumentValue(ref, predicate, timeoutMs = 30000) {
+  const startedAt = Date.now();
+  while (Date.now() - startedAt < timeoutMs) {
+    const snapshot = await ref.get();
+    if (snapshot.exists && predicate(snapshot.data() || {})) return snapshot;
+    await new Promise(resolve => setTimeout(resolve, 250));
+  }
+  throw new Error(`Document did not reach the expected state: ${ref.path}.`);
+}
+
 async function mapWithConcurrency(items, concurrency, mapper) {
   const results = new Array(items.length);
   let nextIndex = 0;
@@ -624,15 +634,21 @@ async function main() {
   const clanApplicant = users[49];
   const clanLeaderRef = db.doc(`players/${clanLeader.uid}`);
   const clanApplicantRef = db.doc(`players/${clanApplicant.uid}`);
+  const clanLeaderLoginAtMs = Date.now() - 90_000;
+  const clanApplicantLoginAtMs = Date.now() - 45_000;
   await Promise.all([
     clanLeaderRef.set({
       character: { level: 9, xp: 0, skillPoints: 8 },
       gold: 100_000,
       goldFloat: 100_000,
       economyUpdatedAtMs: Date.now(),
+      lastLoginAt: clanLeaderLoginAtMs,
+      activeSession: { loginAtMs: clanLeaderLoginAtMs },
     }, { merge: true }),
     clanApplicantRef.set({
       character: { level: 10, xp: 0, skillPoints: 9 },
+      lastLoginAt: clanApplicantLoginAtMs,
+      activeSession: { loginAtMs: clanApplicantLoginAtMs },
     }, { merge: true }),
   ]);
   let lockedClanError = null;
@@ -661,6 +677,11 @@ async function main() {
   });
   const applicationClanId = createdClan?.clan?.id;
   assert(applicationClanId, "The clan application gate could not create its approval clan.");
+  const clanLeaderMemberSnapshot = await db.doc(`clans/${applicationClanId}/members/${clanLeader.uid}`).get();
+  assert(
+    clanLeaderMemberSnapshot.data()?.lastLoginAtMs === clanLeaderLoginAtMs,
+    "Creating a clan did not preserve the leader's authenticated login time."
+  );
 
   const firstApplication = await callFunction("applyToClan", clanApplicant.token, {
     clanId: applicationClanId,
@@ -702,6 +723,23 @@ async function main() {
   assert(
     acceptedMemberSnapshot.data()?.kingPower === acceptedApplicantStats.kingPower,
     "The public clan roster did not store the member's authoritative King Power."
+  );
+  assert(
+    acceptedMemberSnapshot.data()?.lastLoginAtMs === clanApplicantLoginAtMs,
+    "Joining a clan did not preserve the member's authenticated login time."
+  );
+  const refreshedClanApplicantLoginAtMs = Date.now();
+  await clanApplicantRef.set({
+    lastLoginAt: refreshedClanApplicantLoginAtMs,
+    activeSession: { loginAtMs: refreshedClanApplicantLoginAtMs },
+  }, { merge: true });
+  const refreshedClanMemberSnapshot = await waitForDocumentValue(
+    db.doc(`clans/${applicationClanId}/members/${clanApplicant.uid}`),
+    member => member.lastLoginAtMs === refreshedClanApplicantLoginAtMs
+  );
+  assert(
+    refreshedClanMemberSnapshot.data()?.lastLoginAtMs === refreshedClanApplicantLoginAtMs,
+    "A new authenticated login did not refresh the clan roster timer."
   );
   const publicApplicantProfile = await callFunction("getCombatPlayerIdentity", clanLeader.token, {
     uid: clanApplicant.uid,

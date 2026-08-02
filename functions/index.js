@@ -12746,6 +12746,15 @@ function clanIdentityRevisionPatch(nowMs = Date.now()) {
   };
 }
 
+function getPlayerLastLoginAtMs(profile = {}, fallbackMs = 0) {
+  const authenticatedLoginAtMs = Math.max(
+    0,
+    timestampToMs(profile.lastLoginAt),
+    timestampToMs(profile.activeSession?.loginAtMs)
+  );
+  return authenticatedLoginAtMs || Math.max(0, Math.floor(safeNumber(fallbackMs, 0)));
+}
+
 function clanMemberSnapshot(uid = "", profile = {}, role = "member", nowMs = Date.now()) {
   return {
     uid,
@@ -12757,6 +12766,7 @@ function clanMemberSnapshot(uid = "", profile = {}, role = "member", nowMs = Dat
     kingPower: Math.max(0, Math.floor(safeNumber(profile.kingPower || profile.globalStats?.kingPower, 0))),
     joinedAtMs: nowMs,
     roleChangedAtMs: nowMs,
+    lastLoginAtMs: getPlayerLastLoginAtMs(profile, nowMs),
     lastActiveAtMs: Math.max(nowMs, timestampToMs(profile.lastSeenAtMs || profile.updatedAt)),
     status: "active",
     updatedAtMs: nowMs,
@@ -13950,11 +13960,35 @@ exports.syncClanIdentityOnMembershipChange = onDocumentWritten({
   const after = event.data?.after?.exists ? event.data.after.data() || {} : {};
   const beforeRevision = Math.max(0, Math.floor(safeNumber(before.clanIdentityRevision, 0)));
   const afterRevision = Math.max(0, Math.floor(safeNumber(after.clanIdentityRevision, 0)));
+  const beforeLoginAtMs = getPlayerLastLoginAtMs(before);
+  const afterLoginAtMs = getPlayerLastLoginAtMs(after);
+  const loginChanged = afterLoginAtMs > 0 && afterLoginAtMs > beforeLoginAtMs;
   const membershipChanged = beforeRevision !== afterRevision
     || safeString(before.clanId, 128) !== safeString(after.clanId, 128)
     || safeString(before.clanName, 24) !== safeString(after.clanName, 24)
     || safeString(before.clanTag, 5) !== safeString(after.clanTag, 5);
-  if (!uid || !event.data?.after?.exists || !membershipChanged) return;
+  if (!uid || !event.data?.after?.exists) return;
+
+  const loginClanId = safeString(after.clanId, 128);
+  if (loginChanged && loginClanId) {
+    await runTransactionWithInfrastructureRetry(async transaction => {
+      const memberRef = db.doc(`clans/${loginClanId}/members/${uid}`);
+      const memberSnap = await transaction.get(memberRef);
+      if (!memberSnap.exists) return;
+      const member = memberSnap.data() || {};
+      if (
+        safeString(member.worldId, 120) !== ONLINE_WORLD_ID
+        || safeString(member.resetGeneration, 120) !== RESET_GENERATION
+        || member.status === "removed"
+      ) return;
+      transaction.set(memberRef, {
+        lastLoginAtMs: afterLoginAtMs,
+        updatedAtMs: afterLoginAtMs,
+        updatedAt: FieldValue.serverTimestamp(),
+      }, { merge: true });
+    });
+  }
+  if (!membershipChanged) return;
 
   const latestProfileSnap = await db.doc(`players/${uid}`).get();
   if (!latestProfileSnap.exists) return;
