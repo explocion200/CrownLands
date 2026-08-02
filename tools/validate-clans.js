@@ -228,5 +228,6 @@ requires(
 requires(styles, /\.clan-content\.shield-editor-open[\s\S]*?\.clan-shield-editor-preview[\s\S]*?\.clan-shield-editor-workspace[\s\S]*?\.clan-shield-editor-controls[\s\S]*?overflow-y:\s*auto/, "Mobile shield editor does not keep a fixed preview beside scrollable controls.");
 requires(styles, /\.clan-member-row[\s\S]*?\.clan-member-selection[\s\S]*?\.clan-gift-panel[\s\S]*?\.clan-quest-grid[\s\S]*?\.clan-quest-card/, "Compact roster, gift, and conquest quest styling is missing.");
 requires(styles, /\.clan-member-last-login\s*\{[\s\S]*?color:\s*#88b99a[\s\S]*?font-size:\s*\.64rem/, "Clan last-login timers do not have compact readable roster styling.");
+requires(styles, /\.clan-quest-heading\s*\{[\s\S]*?display:\s*grid[\s\S]*?margin-bottom:\s*\.62rem[\s\S]*?\.clan-quest-progress\s*>\s*div\s*\{[\s\S]*?flex-wrap:\s*wrap/, "The Weekly Conquest reset timer can overlap the capture summary at compact widths.");
 
 console.log("Validated clan gates, weekly paid renaming, event-driven roster and allied route updates, gifts, weekly conquest quests, HUD access, profiles, friendly combat, rankings, allied-city UI, and leader-owned heraldic shields.");
