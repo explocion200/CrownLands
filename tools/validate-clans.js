@@ -75,6 +75,7 @@ requires(server, /clanIdentityRevisionPatch\(nowMs\)/, "Clan membership transact
 requires(server, /CLAN_GIFT_COOLDOWN_MS\s*=\s*5\s*\*\s*60\s*\*\s*60\s*\*\s*1000[\s\S]*?CLAN_GIFT_PRODUCTION_MINUTES\s*=\s*30/, "Clan gift cadence must be 30 production minutes every five hours.");
 requires(server, /CLAN_QUEST_REWARDS\s*=\s*Object\.freeze\(\[[\s\S]*?captures:\s*25[\s\S]*?productionMinutes:\s*30[\s\S]*?captures:\s*2000[\s\S]*?rewardType:\s*"troops"[\s\S]*?productionMinutes:\s*360/, "Clan conquest rewards do not contain the approved 10-tier weekly track.");
 requires(server, /exports\.sendClanGift[\s\S]*?memberDoc\.id\s*!==\s*uid[\s\S]*?FieldValue\.increment\(CLAN_GIFT_PRODUCTION_MINUTES\)/, "Clan gifts do not exclude the sender and fan out 30 production minutes.");
+requires(server, /CLAN_GIFT_RECENT_DONATION_LIMIT\s*=\s*10[\s\S]*?function normalizeRecentClanGiftDonations[\s\S]*?\.slice\(0,\s*CLAN_GIFT_RECENT_DONATION_LIMIT\)[\s\S]*?exports\.sendClanGift[\s\S]*?giftActivityRef[\s\S]*?recentDonations/, "Clan gifts do not transactionally retain only the 10 most recent donor snapshots.");
 requires(server, /exports\.claimClanGiftPool[\s\S]*?getRewardedAdBaseRates\(economy\)\.goldPerHour[\s\S]*?pendingGiftGoldMinutes:\s*0/, "Clan gift collection does not use current permanent base gold production and clear the pool.");
 requires(server, /exports\.claimClanQuestReward[\s\S]*?joinedAtMs\s*>=\s*unlockedAtMs[\s\S]*?getRewardedAdBaseRates\(economy\)[\s\S]*?creditLevelUpTroopsToMainCity/, "Clan quest claims do not enforce unlock eligibility and current base production rewards.");
 requires(server, /function recordClanConquest[\s\S]*?targetType\s*!==\s*"city"[\s\S]*?safeString\(change\.reason,\s*64\)\s*!==\s*"city_captured"[\s\S]*?!beforeOwnerUid[\s\S]*?clanQuestCaptureReceiptRef[\s\S]*?receiptSnap\.exists/, "Clan conquest capture processing is not filtered and receipt-idempotent.");
@@ -92,6 +93,7 @@ requires(rules, /match \/clans\/\{clanId\}[\s\S]*?allow create, update, delete: 
 requires(rules, /match \/clans\/\{clanId\}[\s\S]*?allow read: if signedIn\(\)(?:\s*&&\s*isCurrentGeneration\(resource\.data\))?;/, "Signed-in nonmembers cannot view public clan identities and shields.");
 requires(rules, /match \/questProgress\/\{periodId\}[\s\S]*?allow get: if clanMember\(clanId\)[\s\S]*?resource\.data\.questPeriodId == periodId[\s\S]*?request\.time\s*<\s*resource\.data\.weekEndAt[\s\S]*?allow list: if false[\s\S]*?allow create, update, delete: if false;/, "Current clan members cannot safely read only the active weekly quest progress.");
 requires(rules, /match \/memberRewards\/\{uid\}[\s\S]*?request\.auth\.uid == uid[\s\S]*?allow create, update, delete: if false;/, "Clan reward state is not restricted to its member.");
+requires(rules, /match \/giftActivity\/\{resetId\}[\s\S]*?allow get: if clanMember\(clanId\)[\s\S]*?resetId == currentResetGeneration\(\)[\s\S]*?allow list: if false[\s\S]*?allow create, update, delete: if false;/, "Clan gift donor history is not restricted to current clan members and the active world.");
 requires(rules, /match \/questCaptureReceipts\/\{eventId\}[\s\S]*?allow read, create, update, delete: if false;/, "Clan capture receipts are not server-only.");
 requires(rules, /match \/messages\/\{messageId\}[\s\S]*?allow read, create, update, delete: if false;/, "Legacy clan messages are still accessible.");
 requires(rules, /profileFieldUnchanged\('clanId'\)/, "Players can mutate canonical clan membership directly.");
@@ -99,6 +101,7 @@ requires(rules, /profileFieldUnchanged\('clanIdentityRevision'\)/, "Players can 
 
 requires(firebaseClient, /createClan[\s\S]*?joinOpenClan[\s\S]*?reviewClanApplication[\s\S]*?sendClanGift[\s\S]*?claimClanGiftPool[\s\S]*?claimClanQuestReward/, "Firebase client does not expose clan membership, gift, and quest callables.");
 requires(firebaseClient, /function subscribeClanSocialState[\s\S]*?memberRewards[\s\S]*?worldBenefits[\s\S]*?function subscribeClanQuestProgress/, "Firebase client is missing realtime clan gift and benefit state.");
+requires(firebaseClient, /function subscribeClanSocialState[\s\S]*?giftActivity[\s\S]*?handlers\.onGiftActivity/, "Firebase client does not subscribe once to the private clan donation history.");
 requires(firebaseClient, /function subscribeClanQuestProgress[\s\S]*?questPeriodId[\s\S]*?questProgress[\s\S]*?onSnapshot/, "Firebase client is missing separate realtime weekly quest state.");
 assert.doesNotMatch(firebaseClient, /sendClanMessage|reportClanMessage|subscribeClanMessages/, "Firebase client still exposes retired clan chat APIs.");
 requires(firebaseClient, /function subscribeClanApplications[\s\S]*?where\("resetGeneration",\s*"==",\s*RESET_GENERATION\)[\s\S]*?where\("worldId",\s*"==",\s*ONLINE_WORLD_ID\)[\s\S]*?where\("status",\s*"==",\s*"pending"\)[\s\S]*?onSnapshot/, "Clan managers do not have a rule-compatible realtime application inbox.");
@@ -160,6 +163,7 @@ requires(client, /function renderClanRosterMember[\s\S]*?data-clan-action="selec
 requires(client, /function formatClanMemberLastLogin[\s\S]*?Last logged in just now[\s\S]*?Last logged in \$\{days\}d[\s\S]*?function updateClanMemberLastLoginTimers[\s\S]*?data-clan-last-login-at-ms[\s\S]*?function renderClanRosterMember[\s\S]*?member\?\.lastLoginAtMs[\s\S]*?clan-member-last-login/, "Clan roster rows do not show locally refreshed last-login timers.");
 requires(client, /clanGiftCountdownTimer\s*=\s*setInterval\([\s\S]*?updateClanMemberLastLoginTimers\(\)/, "Clan last-login labels do not refresh from the existing local countdown timer.");
 requires(client, /function renderClanGiftPanel[\s\S]*?Send \.5h Gold Gift[\s\S]*?Collect \$\{hours\}h Gold[\s\S]*?function renderClanQuestPanel[\s\S]*?Weekly Conquest[\s\S]*?Joined too late/, "Clan gift and weekly conquest quest panels are incomplete.");
+requires(client, /function formatClanGiftDonationAge[\s\S]*?function updateClanGiftDonationTimers[\s\S]*?data-clan-gift-donation-at-ms[\s\S]*?function renderClanGiftPanel[\s\S]*?Recent generosity[\s\S]*?renderPlayerNameLink\(donation\.donorUid,\s*donation\.donorName\)/, "Clan generosity does not show the live, profile-linked recent donor list.");
 assert.doesNotMatch(client, /Clan Chat|sendClanMessage|reportClanMessage|data-clan-action="mute"/, "Retired clan chat or mute UI remains in the client.");
 requires(client, /data-clan-action="edit-shield"/, "Leader clan shield editor entry point is missing.");
 requires(client, /function renderClanRenameEditor[\s\S]*?500,000 gold[\s\S]*?data-clan-form="rename"/, "Leader clan rename form is missing.");
@@ -228,6 +232,7 @@ requires(
 requires(styles, /\.clan-content\.shield-editor-open[\s\S]*?\.clan-shield-editor-preview[\s\S]*?\.clan-shield-editor-workspace[\s\S]*?\.clan-shield-editor-controls[\s\S]*?overflow-y:\s*auto/, "Mobile shield editor does not keep a fixed preview beside scrollable controls.");
 requires(styles, /\.clan-member-row[\s\S]*?\.clan-member-selection[\s\S]*?\.clan-gift-panel[\s\S]*?\.clan-quest-grid[\s\S]*?\.clan-quest-card/, "Compact roster, gift, and conquest quest styling is missing.");
 requires(styles, /\.clan-member-last-login\s*\{[\s\S]*?color:\s*#88b99a[\s\S]*?font-size:\s*\.64rem/, "Clan last-login timers do not have compact readable roster styling.");
+requires(styles, /\.clan-gift-donations\s*\{[\s\S]*?font-size:\s*\.65rem[\s\S]*?\.clan-gift-donations li[\s\S]*?text-overflow:\s*ellipsis/, "Recent clan generosity is not compact or overflow-safe.");
 requires(styles, /\.clan-quest-heading\s*\{[\s\S]*?display:\s*grid[\s\S]*?margin-bottom:\s*\.62rem[\s\S]*?\.clan-quest-progress\s*>\s*div\s*\{[\s\S]*?flex-wrap:\s*wrap/, "The Weekly Conquest reset timer can overlap the capture summary at compact widths.");
 
 console.log("Validated clan gates, weekly paid renaming, event-driven roster and allied route updates, gifts, weekly conquest quests, HUD access, profiles, friendly combat, rankings, allied-city UI, and leader-owned heraldic shields.");
