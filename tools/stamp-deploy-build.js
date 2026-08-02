@@ -32,8 +32,98 @@ function writeProjectFile(relativePath, contents) {
   fs.writeFileSync(path.join(projectRoot, relativePath), contents, "utf8");
 }
 
+function runGit(args) {
+  try {
+    return execFileSync("git", args, {
+      cwd: projectRoot,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"],
+    }).trim();
+  } catch (_) {
+    return "";
+  }
+}
+
+function normalizePatchNote(value) {
+  let note = String(value || "")
+    .replace(/^\s*(?:feat|fix|perf|refactor)(?:\([^)]*\))?!?:\s*/i, "")
+    .replace(/\s*\(#\d+\)\s*$/i, "")
+    .replace(/\s*\[(?:skip ci|ci skip)\]\s*$/i, "")
+    .trim();
+  if (!note || /^merge\b/i.test(note)) return "";
+  if (/\b(?:tests?|testing|validator|validation|emulator gate|release gate)\b/i.test(note)) return "";
+  if (/^(?:chore|ci|docs)(?:\([^)]*\))?:/i.test(note)) return "";
+  note = `${note.charAt(0).toUpperCase()}${note.slice(1)}`;
+  return /[.!?]$/.test(note) ? note : `${note}.`;
+}
+
+function getCommitBodyNote(commit) {
+  const lines = runGit(["show", "-s", "--format=%B", commit])
+    .split(/\r?\n/)
+    .map(line => line.trim())
+    .filter(line => line && !/^merge pull request\b/i.test(line) && !/^(?:co-authored-by|signed-off-by):/i.test(line));
+  for (const line of lines) {
+    const note = normalizePatchNote(line);
+    if (note) return note;
+  }
+  return "";
+}
+
+function getCommitPatchNotes(commit) {
+  const revisionParts = runGit(["rev-list", "--parents", "-n", "1", commit]).split(/\s+/).filter(Boolean);
+  const firstParent = revisionParts[1] || "";
+  const isMergeCommit = revisionParts.length > 2;
+  const subjectOutput = isMergeCommit && firstParent
+    ? runGit(["log", "--reverse", "--no-merges", "--format=%s", `${firstParent}..${commit}`])
+    : runGit(["show", "-s", "--format=%s", commit]);
+  const notes = subjectOutput
+    .split(/\r?\n/)
+    .map(normalizePatchNote)
+    .filter(Boolean)
+    .filter((note, index, values) => values.indexOf(note) === index)
+    .slice(0, 6);
+  if (notes.length) return notes;
+  const bodyNote = getCommitBodyNote(commit);
+  return [bodyNote || "Performance, stability, and maintenance improvements."];
+}
+
+function getPatchNoteReleases(currentBuildId) {
+  const releaseRows = runGit(["log", "--first-parent", "-6", "--format=%H%x09%cI", "HEAD"])
+    .split(/\r?\n/)
+    .map(line => line.trim())
+    .filter(Boolean);
+  if (!releaseRows.length) {
+    return [{
+      buildId: currentBuildId,
+      publishedAt: new Date().toISOString(),
+      notes: ["Performance, stability, and gameplay improvements."],
+    }];
+  }
+  return releaseRows.map((row, index) => {
+    const [commit, publishedAt] = row.split("\t");
+    return {
+      buildId: index === 0 ? currentBuildId : String(commit || "").slice(0, 12),
+      publishedAt: publishedAt || new Date().toISOString(),
+      notes: getCommitPatchNotes(commit),
+    };
+  });
+}
+
+function createPatchNotesSource(currentBuildId) {
+  const payload = {
+    buildId: currentBuildId,
+    generatedAt: new Date().toISOString(),
+    releases: getPatchNoteReleases(currentBuildId),
+  };
+  return `(function () {\n  const patchNotes = ${JSON.stringify(payload, null, 2)};\n  patchNotes.releases.forEach(release => {\n    release.notes = Object.freeze(release.notes);\n    Object.freeze(release);\n  });\n  patchNotes.releases = Object.freeze(patchNotes.releases);\n  window.CROWNLANDS_PATCH_NOTES = Object.freeze(patchNotes);\n})();\n`;
+}
+
 const buildId = getBuildId();
 if (!buildId) throw new Error("Could not determine a Crownlands deployment build ID.");
+
+readProjectFile("patch-notes.js");
+const patchNotesSource = createPatchNotesSource(buildId);
+writeProjectFile("patch-notes.js", patchNotesSource);
 
 const indexHtml = readProjectFile("index.html")
   .replace(
@@ -68,5 +158,9 @@ if (localScriptAndStyleUrls.some(url => !url.includes(`v=${buildId}`))) {
 if (!serviceWorker.includes(`const CACHE_VERSION = "${buildId}";`)) {
   throw new Error("The service-worker cache version was not stamped.");
 }
+if (!patchNotesSource.includes(`"buildId": "${buildId}"`) || !patchNotesSource.includes('window.CROWNLANDS_PATCH_NOTES')) {
+  throw new Error("The generated patch notes were not stamped with the deployment build.");
+}
+new Function(patchNotesSource);
 
 console.log(`${checkOnly ? "Validated" : "Stamped"} Crownlands deployment build ${buildId}.`);

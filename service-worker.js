@@ -14,6 +14,7 @@ const STATIC_CACHE_URLS = [
   "/manifest.webmanifest",
   "/styles.css?v=20260801-inner-castle-polish-v2",
   "/release-config.js",
+  "/patch-notes.js?v=20260801-patch-notes-menu-v1",
   "/world-config.js",
   "/economy-config.js?v=20260728-daily-attendance-v2",
   "/ads-config.js?v=20260726-rewarded-ads",

@@ -1,6 +1,7 @@
 ﻿const WORLD_CONFIG = window.CROWNLANDS_WORLD_CONFIG || {};
 const MAP_EDITOR_DATA = window.CROWNLANDS_MAP_EDITOR_DATA || {};
 const REALM_CONFIG = window.CROWNLANDS_REALM_CONFIG || {};
+const PATCH_NOTES_CONFIG = window.CROWNLANDS_PATCH_NOTES || {};
 const WORLD_SCHEMA_VERSION = Math.max(Number(WORLD_CONFIG.version) || 23, Number(MAP_EDITOR_DATA.version) || 0);
 const APP_BUILD_ID = getCurrentDocumentBuildId();
 const APP_RELEASE_ID = String(REALM_CONFIG.releaseId || "");
@@ -16,6 +17,7 @@ const RESET_GENERATION = String(REALM_CONFIG.resetGeneration || "fresh-2026-07-2
 const STORAGE_KEY = `crownlands-realtime-${RESET_GENERATION}`;
 const PENDING_ARMY_STORAGE_KEY = `crownlands-pending-armies-${RESET_GENERATION}`;
 const PUSH_NOTIFICATIONS_PREF_KEY = "crownlands-push-notifications";
+const PATCH_NOTES_SEEN_STORAGE_KEY = "crownlands-patch-notes-seen-build";
 const LEGACY_STORAGE_KEYS = [];
 const SAVE_EVERY_SECONDS = 30;
 const ONLINE_SAVE_SECONDS = 20;
@@ -2880,6 +2882,8 @@ const googleSignInBtn = document.getElementById("googleSignInBtn");
 const enterKingdomBtn = document.getElementById("enterKingdomBtn");
 const googleSignOutBtn = document.getElementById("googleSignOutBtn");
 const installAppBtn = document.getElementById("installAppBtn");
+const patchNotesBtn = document.getElementById("patchNotesBtn");
+const patchNotesBadge = document.getElementById("patchNotesBadge");
 const serverRealmList = document.getElementById("serverRealmList");
 const serverRealmBtn = document.getElementById("serverRealmBtn");
 const serverQueueStatus = document.getElementById("serverQueueStatus");
@@ -29320,6 +29324,99 @@ function showHelpModal() {
   modal.showModal();
 }
 
+function getPatchNotesBuildId() {
+  return String(PATCH_NOTES_CONFIG.buildId || APP_BUILD_ID || "dev").trim();
+}
+
+function getPatchNoteReleases() {
+  const releases = Array.isArray(PATCH_NOTES_CONFIG.releases) ? PATCH_NOTES_CONFIG.releases : [];
+  return releases
+    .map(release => ({
+      buildId: String(release?.buildId || "").trim(),
+      publishedAt: String(release?.publishedAt || "").trim(),
+      notes: (Array.isArray(release?.notes) ? release.notes : [])
+        .map(note => String(note || "").trim())
+        .filter(Boolean),
+    }))
+    .filter(release => release.notes.length)
+    .slice(0, 6);
+}
+
+function formatPatchNotesDate(value) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Recent update";
+  return date.toLocaleDateString(undefined, {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+}
+
+function getShortPatchNotesBuildId(value) {
+  const buildId = String(value || "").trim();
+  return buildId.length > 12 ? buildId.slice(0, 12) : buildId || "dev";
+}
+
+function hasUnseenPatchNotes() {
+  const buildId = getPatchNotesBuildId();
+  try {
+    return localStorage.getItem(PATCH_NOTES_SEEN_STORAGE_KEY) !== buildId;
+  } catch (_) {
+    return true;
+  }
+}
+
+function updatePatchNotesButton() {
+  if (!patchNotesBtn) return;
+  const unseen = hasUnseenPatchNotes();
+  if (patchNotesBadge) patchNotesBadge.hidden = !unseen;
+  patchNotesBtn.classList.toggle("has-new-patch-notes", unseen);
+  patchNotesBtn.setAttribute("aria-label", unseen ? "Open patch notes, new update available" : "Open patch notes");
+}
+
+function markPatchNotesSeen() {
+  try {
+    localStorage.setItem(PATCH_NOTES_SEEN_STORAGE_KEY, getPatchNotesBuildId());
+  } catch (_) {
+    // The notes remain usable when private browsing blocks persistent storage.
+  }
+  updatePatchNotesButton();
+}
+
+function showPatchNotesModal() {
+  const releases = getPatchNoteReleases();
+  const fallbackRelease = {
+    buildId: getPatchNotesBuildId(),
+    publishedAt: PATCH_NOTES_CONFIG.generatedAt,
+    notes: ["Gameplay improvements and fixes are included in this update."],
+  };
+  const visibleReleases = releases.length ? releases : [fallbackRelease];
+  modal.classList.add("patch-notes-modal");
+  modalTitle.textContent = "Patch Notes";
+  modalBody.innerHTML = `
+    <section class="patch-notes-intro">
+      <span>Royal Dispatch</span>
+      <strong>What changed in Crownlands</strong>
+      <p>New deployments are added here automatically whenever an update is pushed.</p>
+    </section>
+    <div class="patch-notes-release-list">
+      ${visibleReleases.map((release, index) => `
+        <article class="patch-notes-release${index === 0 ? " is-latest" : ""}">
+          <header>
+            <div>
+              <span>${index === 0 ? "Latest update" : "Previous update"}</span>
+              <strong>${escapeHtml(formatPatchNotesDate(release.publishedAt))}</strong>
+            </div>
+            ${index === 0 ? '<em>Current</em>' : ""}
+          </header>
+          <ul>${release.notes.map(note => `<li>${escapeHtml(note)}</li>`).join("")}</ul>
+          <small>Build ${escapeHtml(getShortPatchNotesBuildId(release.buildId))}</small>
+        </article>`).join("")}
+    </div>`;
+  markPatchNotesSeen();
+  if (!modal.open) modal.showModal();
+}
+
 async function toggleFullscreen() {
   const fullscreenTarget = document.documentElement;
   try {
@@ -30380,6 +30477,7 @@ if (enterKingdomBtn) enterKingdomBtn.addEventListener("click", () => startFromIn
 if (serverRealmBtn) serverRealmBtn.addEventListener("click", () => startFromInput(false));
 if (googleSignOutBtn) googleSignOutBtn.addEventListener("click", handleGoogleSignOut);
 if (installAppBtn) installAppBtn.addEventListener("click", handleInstallAppClick);
+if (patchNotesBtn) patchNotesBtn.addEventListener("click", showPatchNotesModal);
 window.addEventListener("crownlands:online-ready", () => {
   updateOnlineUi();
   updatePushAlertsUi();
@@ -30646,6 +30744,7 @@ modal.addEventListener("close", () => {
   modal.classList.remove("rewarded-ad-confirmation-modal");
   modal.classList.remove("daily-login-reward-modal");
   modal.classList.remove("skill-preset-confirmation-modal");
+  modal.classList.remove("patch-notes-modal");
   window.setTimeout(maybeAutoOpenDailyLoginRewards, 0);
   setTimeout(showNextLevelUpReward, 0);
   window.setTimeout(showPendingOfflineRewardsSummary, 0);
@@ -30689,6 +30788,7 @@ renderWorldMap();
 renderIslandTeleporters();
 updateFullscreenButton();
 updateOnlineUi();
+updatePatchNotesButton();
 registerPwaInstallPrompt();
 registerCrownlandsServiceWorker();
 if (new URLSearchParams(window.location.search).has("perf")) togglePerformancePanel(true);

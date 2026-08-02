@@ -8808,6 +8808,200 @@ button.daily-reward-card.available:disabled {
   .profile-notification-row { min-height: 46px; padding: .45rem .55rem; }
 }
 
+/* Main-menu patch notes ---------------------------------------------------- */
+
+.patch-notes-btn {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: .58rem;
+  padding: 0 .78rem;
+  text-align: left;
+}
+
+.patch-notes-btn-icon {
+  font-size: 1.12rem;
+  filter: drop-shadow(0 2px 2px rgba(0, 0, 0, .45));
+}
+
+.patch-notes-btn.has-new-patch-notes {
+  border-color: rgba(255, 220, 123, .66);
+  background: linear-gradient(180deg, rgba(116, 79, 20, .4), rgba(37, 29, 18, .5));
+  box-shadow: inset 0 0 0 1px rgba(255, 239, 183, .08), 0 0 18px rgba(232, 172, 53, .08);
+}
+
+.patch-notes-badge {
+  padding: .22rem .46rem;
+  color: #251600;
+  border: 1px solid #ffe59c;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #ffe89d, #e9a62d);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, .3);
+  font-size: .59rem;
+  font-weight: 1000;
+  letter-spacing: .08em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.patch-notes-badge[hidden] {
+  display: none;
+}
+
+.modal.patch-notes-modal {
+  width: min(620px, calc(100% - 1.3rem));
+}
+
+.patch-notes-modal .modal-card {
+  max-height: min(88dvh, 760px);
+}
+
+.patch-notes-modal #modalBody {
+  display: grid;
+  gap: .72rem;
+}
+
+.patch-notes-intro {
+  display: grid;
+  gap: .22rem;
+  padding: .78rem .84rem;
+  border: 1px solid rgba(242, 202, 114, .28);
+  border-radius: 14px;
+  background:
+    radial-gradient(circle at 100% 0, rgba(242, 202, 114, .14), transparent 44%),
+    rgba(4, 18, 31, .66);
+}
+
+.patch-notes-intro > span,
+.patch-notes-release header span {
+  color: #efc96f;
+  font-size: .63rem;
+  font-weight: 950;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+
+.patch-notes-intro > strong {
+  color: #fff0b4;
+  font-family: var(--font-display);
+  font-size: 1rem;
+}
+
+.patch-notes-intro p {
+  margin: .1rem 0 0;
+  font-size: .78rem;
+}
+
+.patch-notes-release-list {
+  display: grid;
+  gap: .62rem;
+}
+
+.patch-notes-release {
+  display: grid;
+  gap: .52rem;
+  padding: .75rem .82rem;
+  border: 1px solid rgba(180, 204, 222, .18);
+  border-radius: 14px;
+  background: rgba(3, 14, 25, .58);
+}
+
+.patch-notes-release.is-latest {
+  border-color: rgba(242, 202, 114, .42);
+  background: linear-gradient(180deg, rgba(45, 38, 24, .72), rgba(3, 14, 25, .68));
+}
+
+.patch-notes-release header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: .8rem;
+}
+
+.patch-notes-release header > div {
+  display: grid;
+  gap: .12rem;
+}
+
+.patch-notes-release header strong {
+  color: #f6e7c4;
+  font-size: .88rem;
+}
+
+.patch-notes-release header em {
+  padding: .2rem .46rem;
+  color: #241600;
+  border-radius: 999px;
+  background: #efc96f;
+  font-size: .58rem;
+  font-style: normal;
+  font-weight: 1000;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+.patch-notes-release ul {
+  margin: 0;
+  padding-left: 1.1rem;
+}
+
+.patch-notes-release li {
+  margin: .28rem 0;
+  color: #dbe8f0;
+  font-size: .8rem;
+}
+
+.patch-notes-release > small {
+  color: #8399a9;
+  font-family: var(--font-system);
+  font-size: .6rem;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+}
+
+@media (max-height: 560px) and (orientation: landscape) {
+  .setup-card {
+    max-height: calc(100dvh - 1rem);
+    margin-bottom: .5rem;
+    padding: .58rem;
+    overflow-y: auto;
+    scrollbar-width: thin;
+  }
+
+  .online-login {
+    padding: .55rem;
+  }
+
+  .server-realm-list {
+    gap: .3rem;
+    margin-top: .45rem;
+    padding-top: .4rem;
+  }
+
+  .server-realm-card {
+    min-height: 50px;
+  }
+
+  .online-login .ghost-btn,
+  .online-login .primary-btn {
+    min-height: 38px;
+    margin-top: .32rem;
+  }
+
+  .public-site-links {
+    margin-top: .42rem;
+  }
+
+  .patch-notes-modal .modal-card {
+    max-height: calc(100dvh - 1rem);
+    padding: .72rem;
+  }
+
+  .patch-notes-intro {
+    padding: .58rem .68rem;
+  }
+}
+
 .profile-gold {
   min-width: 86px;
   height: 31px;
