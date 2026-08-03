@@ -2649,6 +2649,7 @@ let crownCitadelReignRequest = null;
 let onlineCityStateSavePromises = new Set();
 let pendingServerArmyLaunchKeys = new Set();
 let onlineIslandUnsubscribe = null;
+let onlineIslandSubscriptionGeneration = 0;
 let onlineWorldLoading = false;
 let onlineWorldConnected = false;
 let onlineCitiesLoaded = false;
@@ -12315,8 +12316,7 @@ async function switchOnlineIsland(regionId, { fromMapPicker = false } = {}) {
     }
     queueOnlineSave();
     saveGame();
-    if (typeof onlineIslandUnsubscribe === "function") onlineIslandUnsubscribe();
-    onlineIslandUnsubscribe = null;
+    retireActiveOnlineIslandSubscription();
     clearOnlineIslandArmySnapshots();
     leftPreviousIsland = true;
     onlinePresence = [];
@@ -12813,9 +12813,16 @@ function queueOnlineIdentityRepair() {
   }, 0);
 }
 
-function disconnectOnlineWorld() {
-  if (typeof onlineIslandUnsubscribe === "function") onlineIslandUnsubscribe();
+function retireActiveOnlineIslandSubscription() {
+  const unsubscribe = onlineIslandUnsubscribe;
   onlineIslandUnsubscribe = null;
+  onlineIslandSubscriptionGeneration += 1;
+  if (typeof unsubscribe === "function") unsubscribe();
+  return onlineIslandSubscriptionGeneration;
+}
+
+function disconnectOnlineWorld() {
+  retireActiveOnlineIslandSubscription();
   stopClanRealtimeSubscriptions({ clear: true });
   clearOnlineArmyWatchers();
   clearOnlineReinforcementWatcher();
@@ -13215,34 +13222,49 @@ function applyActiveOnlineCityPayload(onlineCities, {
 async function startActiveOnlineIslandSubscription(api, islandId, targetRegionId, options = {}) {
   const force = options.force === true;
   if (!force && typeof onlineIslandUnsubscribe === "function") return true;
-  if (typeof onlineIslandUnsubscribe === "function") onlineIslandUnsubscribe();
-  onlineIslandUnsubscribe = null;
-  const unsubscribe = await subscribeOnlineIslandWithInitialCities(api, islandId, {
-    onCities: onlineCities => {
-      applyActiveOnlineCityPayload(onlineCities, {
-        targetRegionId,
-        activateOnFirstSnapshot: options.activateOnFirstSnapshot === true,
-        nextOnlineState: options.nextOnlineState || null,
-        allowWelcomeBack: options.allowWelcomeBack === true,
-      });
-    },
-    onCamps: camps => {
-      applyOnlineCamps(camps, targetRegionId);
-    },
-    onArmies: armies => {
-      applyOnlineArmies(armies, islandId);
-      renderArmies();
-      updateIncomingAttackUi();
-      updateOutgoingAttackUi();
-    },
-    onPresence: presence => {
-      applyOnlinePresence(presence);
-    },
-    onError: error => {
-      markOnlineRealtimeRecoveryNeeded(error);
-      handleOnlineSnapshotError(error, null);
-    },
-  }, options.timeoutMs || ONLINE_INITIAL_CITY_LIST_TIMEOUT_MS, options.timeoutMessage || `${getRegionLabel(targetRegionId)} city list is taking too long.`);
+  const subscriptionGeneration = retireActiveOnlineIslandSubscription();
+  const isCurrentSubscription = () => subscriptionGeneration === onlineIslandSubscriptionGeneration;
+  let unsubscribe = null;
+  try {
+    unsubscribe = await subscribeOnlineIslandWithInitialCities(api, islandId, {
+      onCities: onlineCities => {
+        if (!isCurrentSubscription()) return;
+        applyActiveOnlineCityPayload(onlineCities, {
+          targetRegionId,
+          activateOnFirstSnapshot: options.activateOnFirstSnapshot === true,
+          nextOnlineState: options.nextOnlineState || null,
+          allowWelcomeBack: options.allowWelcomeBack === true,
+        });
+      },
+      onCamps: camps => {
+        if (!isCurrentSubscription()) return;
+        applyOnlineCamps(camps, targetRegionId);
+      },
+      onArmies: armies => {
+        if (!isCurrentSubscription()) return;
+        applyOnlineArmies(armies, islandId);
+        renderArmies();
+        updateIncomingAttackUi();
+        updateOutgoingAttackUi();
+      },
+      onPresence: presence => {
+        if (!isCurrentSubscription()) return;
+        applyOnlinePresence(presence);
+      },
+      onError: error => {
+        if (!isCurrentSubscription()) return;
+        markOnlineRealtimeRecoveryNeeded(error);
+        handleOnlineSnapshotError(error, null);
+      },
+    }, options.timeoutMs || ONLINE_INITIAL_CITY_LIST_TIMEOUT_MS, options.timeoutMessage || `${getRegionLabel(targetRegionId)} city list is taking too long.`);
+  } catch (error) {
+    if (!isCurrentSubscription()) return false;
+    throw error;
+  }
+  if (!isCurrentSubscription()) {
+    if (typeof unsubscribe === "function") unsubscribe();
+    return false;
+  }
   onlineIslandUnsubscribe = unsubscribe;
   return true;
 }
@@ -13558,20 +13580,20 @@ async function connectOnlineIsland(regionId, {
       else if (claim?.cityId) addLog(`Online ${getRegionLabel(targetRegionId)} connected. ${cityById(claim.cityId)?.name || "A city"} joined your kingdom.`);
     }
 
-    if (onlineIslandUnsubscribe) onlineIslandUnsubscribe();
-    onlineIslandUnsubscribe = null;
+    retireActiveOnlineIslandSubscription();
     clearOnlineIslandArmySnapshots();
     onlinePresence = [];
     state.attacks = state.attacks.filter(attack => String(attack?.fromId || "") && String(attack?.toId || ""));
 
     onlineStatusDetail.textContent = `Opening ${getRegionLabel(targetRegionId)}...`;
-    await startActiveOnlineIslandSubscription(api, islandId, targetRegionId, {
+    const subscriptionStarted = await startActiveOnlineIslandSubscription(api, islandId, targetRegionId, {
       activateOnFirstSnapshot,
       nextOnlineState,
       allowWelcomeBack,
       timeoutMs: ONLINE_INITIAL_CITY_LIST_TIMEOUT_MS,
       timeoutMessage: `${getRegionLabel(targetRegionId)} city list is taking too long.`,
     });
+    if (!subscriptionStarted) return false;
 
     onlineWorldConnected = true;
     onlineLastError = "";
@@ -13609,7 +13631,7 @@ async function connectOnlineIsland(regionId, {
   }
 }
 
-function applyOnlineCities(onlineCities, regionId = getActiveOnlineRegionId()) {
+function applyOnlineCities(onlineCities, regionId = getActiveOnlineRegionId(), { activateRegion = true } = {}) {
   if (!state || !Array.isArray(onlineCities)) return;
   const byId = new Map(onlineCities.map(city => [city.id, city]));
   const currentUid = getCurrentOnlineUid();
@@ -13678,10 +13700,13 @@ function applyOnlineCities(onlineCities, regionId = getActiveOnlineRegionId()) {
   } finally {
     currentPlayerIdentityKingPowerOverride = previousKingPowerOverride;
   }
-  state.activeRegionId = activeRegionId;
-  if (state.online) {
-    state.online.activeRegionId = activeRegionId;
-    state.online.islandId = getOnlineIslandId(activeRegionId);
+  if (activateRegion) {
+    onlineActiveRegionId = activeRegionId;
+    state.activeRegionId = activeRegionId;
+    if (state.online) {
+      state.online.activeRegionId = activeRegionId;
+      state.online.islandId = getOnlineIslandId(activeRegionId);
+    }
   }
   cacheIslandOccupancySummary(activeRegionId);
   canonicalizeVisiblePlayerIdentities();
@@ -13698,7 +13723,7 @@ function applyOnlineCities(onlineCities, regionId = getActiveOnlineRegionId()) {
     }
   }
   normalizeSingleMainCityAssignment(state.mainCityId);
-  ensureLoadedMainCityForRegion(activeRegionId);
+  ensureLoadedMainCityForRegion(activateRegion ? activeRegionId : getActiveOnlineRegionId());
 }
 
 function normalizeOnlineCampState(raw = {}) {
@@ -15160,8 +15185,7 @@ async function restartOnlineRealtimeSubscriptionsForResume() {
   }
 
   try {
-    await islandRestart;
-    return true;
+    return await islandRestart;
   } catch (error) {
     markOnlineRealtimeRecoveryNeeded(error);
     console.warn("Could not restart foreground realtime subscriptions", error);
@@ -15251,28 +15275,10 @@ function createLocalAttackFromOnlineArmy(army, remaining = getOnlineArmyRemainin
   };
 }
 
-function restoreOnlineActiveRegionSnapshot(snapshot) {
-  if (!state || !snapshot) return;
-  onlineActiveRegionId = snapshot.onlineActiveRegionId;
-  state.activeRegionId = snapshot.activeRegionId;
-  if (state.online) {
-    state.online.activeRegionId = snapshot.onlineState?.activeRegionId || snapshot.activeRegionId;
-    state.online.islandId = snapshot.onlineState?.islandId || getOnlineIslandId(snapshot.activeRegionId);
-  }
-}
-
 async function loadOnlineRegionCitiesForResolution(regionId) {
   const api = getOnlineApi();
   if (!state || !api?.loadIslandCities || !api?.isSignedIn?.()) return false;
   const targetRegionId = normalizeRegionId(regionId);
-  const activeSnapshot = {
-    activeRegionId: getActiveOnlineRegionId(),
-    onlineActiveRegionId,
-    onlineState: state.online ? {
-      activeRegionId: state.online.activeRegionId,
-      islandId: state.online.islandId,
-    } : null,
-  };
 
   const onlineCities = await withTimeout(
     api.loadIslandCities(getOnlineIslandId(targetRegionId)),
@@ -15280,8 +15286,7 @@ async function loadOnlineRegionCitiesForResolution(regionId) {
     `${getRegionLabel(targetRegionId)} city list is taking too long.`
   );
   if (!Array.isArray(onlineCities)) return false;
-  applyOnlineCities(onlineCities, targetRegionId);
-  restoreOnlineActiveRegionSnapshot(activeSnapshot);
+  applyOnlineCities(onlineCities, targetRegionId, { activateRegion: false });
   return true;
 }
 

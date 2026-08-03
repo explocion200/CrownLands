@@ -73,6 +73,31 @@ assert(
     && publishPresence.includes("requestGeneration !== onlinePresenceRequestGeneration"),
   "Rapid map switches must queue their latest presence snapshot without stale completion state winning."
 );
+const activeIslandSubscription = functionBody(game, "startActiveOnlineIslandSubscription", "verifyRealmCompatibility");
+assert(
+  activeIslandSubscription.includes("subscriptionGeneration = retireActiveOnlineIslandSubscription()")
+    && activeIslandSubscription.includes("subscriptionGeneration === onlineIslandSubscriptionGeneration")
+    && activeIslandSubscription.includes("if (!isCurrentSubscription()) return")
+    && activeIslandSubscription.includes('if (typeof unsubscribe === "function") unsubscribe()'),
+  "Superseded island listeners must ignore late snapshots and unsubscribe instead of changing the active map."
+);
+const realtimeRestart = functionBody(game, "restartOnlineRealtimeSubscriptionsForResume", "isOnlineArmyVisible");
+assert(
+  realtimeRestart.includes("return await islandRestart"),
+  "Foreground recovery must report when its island listener was superseded by a newer map switch."
+);
+const resolutionCityLoad = functionBody(game, "loadOnlineRegionCitiesForResolution", "resolveOverdueOnlineArmy");
+assert(
+  resolutionCityLoad.includes("applyOnlineCities(onlineCities, targetRegionId, { activateRegion: false })")
+    && !resolutionCityLoad.includes("restoreOnlineActiveRegionSnapshot"),
+  "Background city resolution loads must not restore an obsolete active-map snapshot."
+);
+const applyCities = functionBody(game, "applyOnlineCities", "normalizeOnlineCampState");
+assert(
+  applyCities.includes("{ activateRegion = true } = {}")
+    && /if \(activateRegion\) \{[\s\S]*?state\.activeRegionId = activeRegionId/.test(applyCities),
+  "Only active island subscriptions may update active-region state."
+);
 const islandSubscriptionStart = firebaseClient.indexOf("function subscribeIsland");
 const islandSubscriptionEnd = firebaseClient.indexOf("window.CrownlandsOnline", islandSubscriptionStart);
 assert(islandSubscriptionStart >= 0 && islandSubscriptionEnd > islandSubscriptionStart, "Could not inspect subscribeIsland.");
