@@ -2348,7 +2348,86 @@ async function main() {
   );
   await callFunction("demoteClanOfficer", clanLeader.token, { targetUid: clanApplicant.uid });
 
-  console.log(`Emulator reset gate passed for 50 players with daily rewards, clan gifts, and conquest quests: ${counts.join("/")} across starter islands.`);
+  const pendingDisbandApplicant = queuedUser;
+  await db.doc(`players/${pendingDisbandApplicant.uid}`).set({
+    character: { level: 10, xp: 0, skillPoints: 9 },
+    resetGeneration: realm.resetGeneration,
+    worldId: realm.worldId,
+  }, { merge: true });
+  await callFunction("applyToClan", pendingDisbandApplicant.token, {
+    clanId: applicationClanId,
+    message: "Disband cleanup applicant",
+  });
+  let memberDisbandError = null;
+  try {
+    await callFunction("disbandClan", lateClanMember.token);
+  } catch (error) {
+    memberDisbandError = error;
+  }
+  assert(
+    /clan role does not allow that action|only the clan leader/i.test(String(memberDisbandError?.message || "")),
+    "A regular member was allowed to disband the clan."
+  );
+  assert(
+    (await db.doc(`clans/${applicationClanId}`).get()).data()?.status === "active",
+    "A rejected member disband request changed the clan state."
+  );
+
+  const rosterBeforeDisbandSnapshot = await db.collection(`clans/${applicationClanId}/members`).get();
+  const expectedDisbandMemberCount = rosterBeforeDisbandSnapshot.size;
+  const disbandedClan = await callFunction("disbandClan", clanLeader.token);
+  assert(disbandedClan?.disbanded === true, "The leader's multi-member clan disband was not confirmed.");
+  assert(
+    disbandedClan.memberCount === expectedDisbandMemberCount && expectedDisbandMemberCount > 1,
+    "The disband result did not count the full clan roster."
+  );
+  assert(disbandedClan.applicationCount === 1, "The disband result did not count the pending applicant.");
+  const [
+    disbandedClanSnapshot,
+    disbandedMembersSnapshot,
+    disbandedLeaderProfile,
+    disbandedApplicantProfile,
+    disbandedSecondSenderProfile,
+    disbandedLateMemberProfile,
+    releasedApplicantProfile,
+    releasedApplicationSnapshot,
+    disbandedBenefitsSnapshot,
+    disbandedLeaderboardSnapshot,
+  ] = await Promise.all([
+    db.doc(`clans/${applicationClanId}`).get(),
+    db.collection(`clans/${applicationClanId}/members`).get(),
+    clanLeaderRef.get(),
+    clanApplicantRef.get(),
+    clanSecondSenderRef.get(),
+    db.doc(`players/${lateClanMember.uid}`).get(),
+    db.doc(`players/${pendingDisbandApplicant.uid}`).get(),
+    db.doc(`clans/${applicationClanId}/applications/${pendingDisbandApplicant.uid}`).get(),
+    db.doc(`clans/${applicationClanId}/worldBenefits/${realm.resetGeneration}`).get(),
+    db.doc(`clanLeaderboards/${realm.resetGeneration}/entries/${applicationClanId}`).get(),
+  ]);
+  const retiredClan = disbandedClanSnapshot.data() || {};
+  assert(retiredClan.status === "disbanded" && retiredClan.memberCount === 0, "The clan document was not retired.");
+  assert(!retiredClan.leaderUid, "The disbanded clan retained an active leader.");
+  assert(disbandedMembersSnapshot.empty, "Disbanding did not remove the full clan roster.");
+  [disbandedLeaderProfile, disbandedApplicantProfile, disbandedSecondSenderProfile, disbandedLateMemberProfile].forEach(profileSnapshot => {
+    assert(!profileSnapshot.data()?.clanId, `Disbanding did not clear clan identity for ${profileSnapshot.id}.`);
+  });
+  assert(
+    Number(disbandedLeaderProfile.data()?.clanJoinCooldownUntilMs || 0) > Date.now(),
+    "The disbanding leader did not receive the normal clan cooldown."
+  );
+  assert(
+    Number(disbandedApplicantProfile.data()?.clanJoinCooldownUntilMs || 0) <= Date.now()
+      && Number(disbandedSecondSenderProfile.data()?.clanJoinCooldownUntilMs || 0) <= Date.now()
+      && Number(disbandedLateMemberProfile.data()?.clanJoinCooldownUntilMs || 0) <= Date.now(),
+    "Members removed by a disband were incorrectly placed on a clan cooldown."
+  );
+  assert(!releasedApplicationSnapshot.exists, "Disbanding did not delete the pending clan application.");
+  assert(!releasedApplicantProfile.data()?.pendingClanApplicationId, "Disbanding did not release the pending applicant.");
+  assert(disbandedBenefitsSnapshot.data()?.status === "inactive", "Disbanding did not end shared clan benefits.");
+  assert(!disbandedLeaderboardSnapshot.exists, "Disbanding did not remove the clan leaderboard entry.");
+
+  console.log(`Emulator reset gate passed for 50 players with daily rewards, clan gifts, conquest quests, and leader clan disbanding: ${counts.join("/")} across starter islands.`);
 }
 
 main().catch(error => {

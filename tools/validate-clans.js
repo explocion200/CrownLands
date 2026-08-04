@@ -20,6 +20,10 @@ const updateArmyTokenElementSource = client.slice(
   client.indexOf("function updateArmyTokenElement("),
   client.indexOf("function hasRenderableArmyWork()")
 );
+const disbandClanSource = server.slice(
+  server.indexOf("exports.disbandClan = onCall"),
+  server.indexOf("exports.sendClanGift = onCall")
+);
 
 function requires(source, pattern, message) {
   assert.match(source, pattern, message);
@@ -80,6 +84,12 @@ requires(server, /exports\.claimClanGiftPool[\s\S]*?getRewardedAdBaseRates\(econ
 requires(server, /exports\.claimClanQuestReward[\s\S]*?joinedAtMs\s*>=\s*unlockedAtMs[\s\S]*?getRewardedAdBaseRates\(economy\)[\s\S]*?creditLevelUpTroopsToMainCity/, "Clan quest claims do not enforce unlock eligibility and current base production rewards.");
 requires(server, /function recordClanConquest[\s\S]*?targetType\s*!==\s*"city"[\s\S]*?safeString\(change\.reason,\s*64\)\s*!==\s*"city_captured"[\s\S]*?!beforeOwnerUid[\s\S]*?clanQuestCaptureReceiptRef[\s\S]*?receiptSnap\.exists/, "Clan conquest capture processing is not filtered and receipt-idempotent.");
 requires(server, /async function removeClanMember[\s\S]*?assertClanRole\(actor,\s*\["leader"\]\)[\s\S]*?transaction\.delete\(clanMemberRewardsRef\(clanId,\s*targetUid\)\)/, "Clan removal must be leader-only and forfeit the departing member's rewards.");
+requires(disbandClanSource, /assertClanRole\(preflightActorSnap\.data\(\),\s*\["leader"\]\)[\s\S]*?safeString\(preflightClan\.leaderUid,\s*128\)\s*!==\s*uid[\s\S]*?assertClanRole\(actorSnap\.data\(\),\s*\["leader"\]\)/, "Clan disbanding must be leader-only at preflight and transaction commit.");
+requires(disbandClanSource, /transaction\.get\(memberQuery\)[\s\S]*?membersSnap\.docs\.forEach[\s\S]*?transaction\.delete\(memberSnap\.ref\)[\s\S]*?clanIdentityPatch\(\)[\s\S]*?buildClanBenefitExitPatch[\s\S]*?memberUid === uid[\s\S]*?CLAN_JOIN_COOLDOWN_MS[\s\S]*?leaderboardEntryRef\(memberUid\)/, "Clan disbanding does not transactionally detach the full roster while limiting the cooldown to the leader.");
+requires(disbandClanSource, /transaction\.get\(applicationQuery\)[\s\S]*?applicationsSnap\.docs\.forEach[\s\S]*?transaction\.delete\(applicationSnap\.ref\)[\s\S]*?pendingClanApplicationId:\s*FieldValue\.delete\(\)/, "Clan disbanding does not release pending applicants.");
+requires(disbandClanSource, /status:\s*"disbanded"[\s\S]*?memberCount:\s*0[\s\S]*?status:\s*"inactive"[\s\S]*?sharedBonuses:\s*emptyObjectiveBonuses\(\)[\s\S]*?transaction\.delete\(db\.doc\(`clanLeaderboards/, "Clan disbanding does not retire the clan, shared benefits, and leaderboard entry.");
+requires(server, /async function reconcileClanRalliesBeforeDisband[\s\S]*?where\("status",\s*"==",\s*RALLY_STATUS_FORMING\)[\s\S]*?cancelClanRallyRequest[\s\S]*?await reconcileClanRalliesBeforeDisband\(clanId\)[\s\S]*?runTransactionWithInfrastructureRetry[\s\S]*?await reconcileClanRalliesBeforeDisband\(clanId\)/, "Clan disbanding must safely cancel forming rallies before and after membership removal.");
+assert.doesNotMatch(disbandClanSource, /Remove all other members before disbanding/, "Leaders are still forced to remove every member manually before disbanding.");
 assert.doesNotMatch(server, /exports\.(?:sendClanMessage|reportClanMessage|cleanupClanMessages)\s*=/, "Retired clan chat Functions are still exported.");
 requires(server, /function normalizeClanShield[\s\S]*?CLAN_SHIELD_SHAPES[\s\S]*?CLAN_SHIELD_DIVISIONS[\s\S]*?CLAN_SHIELD_CHARGES/, "Clan shield schema is not validated server-side.");
 requires(server, /exports\.updateClanProfile[\s\S]*?assertClanRole\(memberSnap\.data\(\), \["leader"\]\)[\s\S]*?const shield = normalizeClanShield/, "Clan shield edits are not leader-only.");
@@ -160,6 +170,10 @@ requires(client, /function renderClanShield[\s\S]*?renderClanShieldField[\s\S]*?
 requires(client, /function renderClanShield[\s\S]*?overflow="hidden"[\s\S]*?clipPathUnits="userSpaceOnUse"[\s\S]*?class="clan-shield-boundary"\s+clip-path="url\(#\$\{clipId\}\)"/, "Clan shield paint is not clipped to the shield silhouette.");
 requires(styles, /\.clan-shield svg\s*\{[^}]*overflow:\s*hidden;/, "Clan shield SVG overflow can bleed beyond its viewport.");
 requires(client, /function renderClanRosterMember[\s\S]*?data-clan-action="select-member"[\s\S]*?Demote[\s\S]*?Promote[\s\S]*?Remove[\s\S]*?renderClanMemberFlag/, "Clan roster is missing flags or leader-selected member controls.");
+requires(client, /function renderClanMembersPanel[\s\S]*?canLead[\s\S]*?data-clan-action="disband"[\s\S]*?>Disband Clan[\s\S]*?data-clan-action="leave"[\s\S]*?>Leave Clan/, "Clan leaders do not receive a dedicated disband action while members retain Leave Clan.");
+requires(client, /function confirmClanDisband[\s\S]*?This cannot be undone[\s\S]*?data-clan-disband-confirm="cancel"[\s\S]*?data-clan-disband-confirm="accept"[\s\S]*?function runClanDisbandAction[\s\S]*?runClanAction\("disband"/, "Clan disbanding is missing its destructive-action confirmation.");
+requires(client, /function handleClanClick[\s\S]*?action === "disband"[\s\S]*?runClanDisbandAction\(\)/, "The clan disband button is not connected to the confirmed server action.");
+requires(styles, /\.clan-leave\.danger-action\s*\{[\s\S]*?background:\s*linear-gradient\(#9b3e42,\s*#5c1f2a\)/, "The permanent clan disband control is missing its danger styling.");
 requires(client, /function formatClanMemberLastLogin[\s\S]*?Last logged in just now[\s\S]*?Last logged in \$\{days\}d[\s\S]*?function updateClanMemberLastLoginTimers[\s\S]*?data-clan-last-login-at-ms[\s\S]*?function renderClanRosterMember[\s\S]*?member\?\.lastLoginAtMs[\s\S]*?clan-member-last-login/, "Clan roster rows do not show locally refreshed last-login timers.");
 requires(client, /clanGiftCountdownTimer\s*=\s*setInterval\([\s\S]*?updateClanMemberLastLoginTimers\(\)/, "Clan last-login labels do not refresh from the existing local countdown timer.");
 requires(client, /function renderClanGiftPanel[\s\S]*?Send \.5h Gold Gift[\s\S]*?Collect \$\{hours\}h Gold[\s\S]*?function renderClanQuestPanel[\s\S]*?Weekly Conquest[\s\S]*?Joined too late/, "Clan gift and weekly conquest quest panels are incomplete.");

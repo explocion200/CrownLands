@@ -20591,7 +20591,9 @@ function renderClanMembersPanel(canLead = false, canManageApplications = false) 
             ? clanApplications.map((application, index) => `<article>${renderClanApplicantFlag(index)}<span>${renderPlayerNameLink(application.uid, application.displayName || "Ruler")}<small>${formatNumber(application.kingPower || 0)} power</small></span><div><button data-clan-action="accept" data-member-id="${escapeHtml(application.uid)}">Accept</button><button data-clan-action="reject" data-member-id="${escapeHtml(application.uid)}">Reject</button></div></article>`).join("")
             : `<p class="clan-muted">No pending applications.</p>`}
       </div>` : ""}
-      <button class="profile-secondary-btn clan-leave" data-clan-action="leave">${canLead && clanMembers.length === 1 ? "Disband Clan" : "Leave Clan"}</button>
+      ${canLead
+        ? `<button type="button" class="profile-secondary-btn clan-leave danger-action" data-clan-action="disband" ${clanUiLoading ? "disabled" : ""}>Disband Clan</button>`
+        : `<button type="button" class="profile-secondary-btn clan-leave" data-clan-action="leave" ${clanUiLoading ? "disabled" : ""}>Leave Clan</button>`}
     </section>`;
 }
 
@@ -20920,6 +20922,57 @@ function renderClanView() {
   updateClanNameChangeCountdown();
 }
 
+function confirmClanDisband() {
+  if (state?.clanRole !== "leader" || !state?.clanId) return Promise.resolve(false);
+  const memberCount = Math.max(1, clanMembers.length || Number(clanSnapshot?.memberCount) || 1);
+  const formingRallyCount = onlineClanRallies.filter(rally => rally?.status === "forming").length;
+  modal.classList.remove("incoming-attack-modal", "outgoing-attack-modal", "clan-rally-confirmation-modal");
+  modal.classList.add("clan-disband-confirmation-modal");
+  modalTitle.textContent = `Disband ${clanSnapshot?.name || "Clan"}?`;
+  modalBody.innerHTML = `
+    <section class="clan-rally-confirmation clan-disband-confirmation">
+      <div>
+        <small>Permanent clan action</small>
+        <h3>This cannot be undone.</h3>
+      </div>
+      <p>All ${formatNumber(memberCount)} members will be removed, shared clan bonuses will end, and pending applications will be cleared.</p>
+      <p>${formingRallyCount
+        ? `${formatNumber(formingRallyCount)} forming ${formingRallyCount === 1 ? "rally" : "rallies"} will be cancelled and committed troops will return.`
+        : "Any forming rallies will be cancelled and committed troops will return."} Clan armies already marching will continue normally.</p>
+      <p>Other members can join another clan immediately. Your 24-hour clan cooldown begins when the clan is disbanded.</p>
+      <footer>
+        <button type="button" class="profile-secondary-btn" data-clan-disband-confirm="cancel">Keep Clan</button>
+        <button type="button" class="danger-action" data-clan-disband-confirm="accept">Disband Clan Permanently</button>
+      </footer>
+    </section>`;
+  if (!modal.open) modal.showModal();
+  return new Promise(resolve => {
+    let settled = false;
+    const finish = accepted => {
+      if (settled) return;
+      settled = true;
+      modal.classList.remove("clan-disband-confirmation-modal");
+      resolve(accepted);
+    };
+    modalBody.querySelector("[data-clan-disband-confirm='cancel']")?.addEventListener("click", () => {
+      finish(false);
+      if (modal.open) modal.close();
+    });
+    modalBody.querySelector("[data-clan-disband-confirm='accept']")?.addEventListener("click", () => {
+      finish(true);
+      if (modal.open) modal.close();
+    });
+    modal.addEventListener("close", () => finish(false), { once: true });
+  });
+}
+
+async function runClanDisbandAction() {
+  if (clanUiLoading || state?.clanRole !== "leader" || !state?.clanId) return;
+  const confirmed = await confirmClanDisband();
+  if (!confirmed) return;
+  await runClanAction("disband", { clanId: state.clanId });
+}
+
 async function runClanAction(action, payload = {}) {
   const api = getOnlineApi();
   if (!api) return;
@@ -20935,7 +20988,8 @@ async function runClanAction(action, payload = {}) {
       promote: "promoteClanMember",
       demote: "demoteClanOfficer",
       kick: "kickClanMember",
-      leave: clanMembers.length === 1 && state.clanRole === "leader" ? "disbandClan" : "leaveClan",
+      leave: "leaveClan",
+      disband: "disbandClan",
     }[action];
     if (!method || !api[method]) return;
     const result = await api[method](payload);
@@ -20944,7 +20998,9 @@ async function runClanAction(action, payload = {}) {
       ? "Application sent."
       : action === "cancel-application"
         ? "Application canceled."
-        : "Clan updated.");
+        : action === "disband"
+          ? `Clan disbanded. ${formatNumber(result?.memberCount || 0)} members released.`
+          : "Clan updated.");
     if (action === "kick") selectedClanMemberUid = "";
     await refreshClanState({ silent: true });
   } catch (error) {
@@ -21125,6 +21181,10 @@ function handleClanClick(event) {
     if (!uid || uid === getCurrentOnlineUid()) return;
     selectedClanMemberUid = selectedClanMemberUid === uid ? "" : uid;
     renderClanView();
+    return;
+  }
+  if (action === "disband") {
+    void runClanDisbandAction();
     return;
   }
   if (action === "send-gift" || action === "collect-gifts" || action === "claim-quest") {

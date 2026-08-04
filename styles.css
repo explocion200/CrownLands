@@ -7455,6 +7455,9 @@ button.daily-reward-card.available:disabled {
 .clan-rally-confirmation-modal.modal {
   width: min(620px, calc(100vw - 1.4rem));
 }
+.clan-disband-confirmation-modal.modal {
+  width: min(620px, calc(100vw - 1.4rem));
+}
 .clan-rally-confirmation {
   display: grid;
   gap: .7rem;
@@ -7724,6 +7727,11 @@ button.daily-reward-card.available:disabled {
 .clan-applications article > div { display: flex; gap: .25rem; }
 .clan-warning { color: #f0c070; }
 .clan-leave { margin-top: .7rem; }
+.clan-leave.danger-action {
+  color: #fff;
+  border-color: rgba(234, 119, 102, .65);
+  background: linear-gradient(#9b3e42, #5c1f2a);
+}
 .clan-gift-panel > p { margin: 0 0 .65rem; color: #b9c9be; line-height: 1.4; }
 .clan-gift-actions {
   display: grid;

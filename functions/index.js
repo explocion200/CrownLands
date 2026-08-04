@@ -14189,6 +14189,28 @@ async function reconcileClanRalliesBeforeDeparture(uid = "", clanId = "") {
   }
 }
 
+async function reconcileClanRalliesBeforeDisband(clanId = "") {
+  const currentClanId = safeString(clanId, 128);
+  if (!currentClanId) return;
+  const snapshot = await db.collection(`clans/${currentClanId}/rallies`)
+    .where("resetGeneration", "==", RESET_GENERATION)
+    .where("worldId", "==", ONLINE_WORLD_ID)
+    .where("status", "==", RALLY_STATUS_FORMING)
+    .get();
+  const formingRallies = snapshot.docs
+    .map(normalizeClanRally)
+    .filter(rally => rally?.leaderUid);
+  for (const rally of formingRallies) {
+    try {
+      await cancelClanRallyRequest(internalRallyCallableRequest(rally.leaderUid, currentClanId, rally.id));
+    } catch (error) {
+      const latestSnap = await clanRallyRef(currentClanId, rally.id).get();
+      if (!latestSnap.exists || latestSnap.data()?.status !== RALLY_STATUS_FORMING) continue;
+      throw error;
+    }
+  }
+}
+
 async function removeClanMember({ actorUid, targetUid, clanId, reason = "left" }) {
   const nowMs = Date.now();
   const [preflightClanSnap, preflightActorSnap, preflightTargetSnap] = await Promise.all([
@@ -14385,9 +14407,142 @@ exports.disbandClan = onCall({ region: "us-central1", maxInstances: 10, invoker:
   const uid = requireAuth(request);
   const profile = (await db.doc(`players/${uid}`).get()).data() || {};
   const clanId = safeString(profile.clanId, 128);
-  const membersSnap = await db.collection(`clans/${clanId}/members`).get();
-  if (membersSnap.size > 1) throw new HttpsError("failed-precondition", "Remove all other members before disbanding the clan.");
-  return removeClanMember({ actorUid: uid, targetUid: uid, clanId, reason: "clan_disbanded" });
+  if (!clanId) throw new HttpsError("failed-precondition", "You are not in a clan.");
+  const [preflightClanSnap, preflightActorSnap] = await Promise.all([
+    db.doc(`clans/${clanId}`).get(),
+    db.doc(`clans/${clanId}/members/${uid}`).get(),
+  ]);
+  if (!preflightClanSnap.exists) throw new HttpsError("not-found", "Clan was not found.");
+  const preflightClan = preflightClanSnap.data() || {};
+  assertCurrentClan(preflightClan);
+  assertClanRole(preflightActorSnap.data(), ["leader"]);
+  if (safeString(preflightClan.leaderUid, 128) !== uid) {
+    throw new HttpsError("permission-denied", "Only the clan leader may disband the clan.");
+  }
+  if (preflightClan.status !== "active") {
+    throw new HttpsError("failed-precondition", "That clan is no longer active.");
+  }
+
+  await reconcileClanRalliesBeforeDisband(clanId);
+  const nowMs = Date.now();
+  const result = await runTransactionWithInfrastructureRetry(async transaction => {
+    const clanRef = db.doc(`clans/${clanId}`);
+    const actorRef = db.doc(`clans/${clanId}/members/${uid}`);
+    const memberQuery = db.collection(`clans/${clanId}/members`);
+    const applicationQuery = db.collection(`clans/${clanId}/applications`)
+      .where("resetGeneration", "==", RESET_GENERATION)
+      .where("worldId", "==", ONLINE_WORLD_ID)
+      .where("status", "==", "pending");
+    const [clanSnap, actorSnap, membersSnap, applicationsSnap, benefitsSnap] = await Promise.all([
+      transaction.get(clanRef),
+      transaction.get(actorRef),
+      transaction.get(memberQuery),
+      transaction.get(applicationQuery),
+      transaction.get(clanWorldBenefitsRef(clanId)),
+    ]);
+    if (!clanSnap.exists) throw new HttpsError("not-found", "Clan was not found.");
+    const clan = clanSnap.data() || {};
+    assertCurrentClan(clan);
+    assertClanRole(actorSnap.data(), ["leader"]);
+    if (safeString(clan.leaderUid, 128) !== uid) {
+      throw new HttpsError("permission-denied", "Only the clan leader may disband the clan.");
+    }
+    if (clan.status !== "active") {
+      throw new HttpsError("failed-precondition", "That clan is no longer active.");
+    }
+
+    const memberUids = membersSnap.docs.map(memberSnap => memberSnap.id);
+    const applicantUids = applicationsSnap.docs.map(applicationSnap => applicationSnap.id);
+    const memberProfileSnaps = await Promise.all(memberUids.map(memberUid => (
+      transaction.get(db.doc(`players/${memberUid}`))
+    )));
+    const applicantProfileSnaps = await Promise.all(applicantUids.map(applicantUid => (
+      transaction.get(db.doc(`players/${applicantUid}`))
+    )));
+    const priorBenefits = benefitsSnap.exists ? benefitsSnap.data() || {} : {};
+
+    membersSnap.docs.forEach((memberSnap, index) => {
+      const memberUid = memberSnap.id;
+      const memberProfileSnap = memberProfileSnaps[index];
+      transaction.delete(memberSnap.ref);
+      transaction.delete(clanMemberRewardsRef(clanId, memberUid));
+      if (memberProfileSnap.exists) {
+        const memberProfile = memberProfileSnap.data() || {};
+        transaction.set(memberProfileSnap.ref, {
+          ...clanIdentityPatch(),
+          ...clanIdentityRevisionPatch(nowMs),
+          ...buildClanBenefitExitPatch(memberProfile, priorBenefits, clanId, nowMs),
+          pendingClanApplicationId: FieldValue.delete(),
+          clanJoinCooldownUntilMs: memberUid === uid
+            ? nowMs + CLAN_JOIN_COOLDOWN_MS
+            : FieldValue.delete(),
+          updatedAt: FieldValue.serverTimestamp(),
+        }, { merge: true });
+      }
+      transaction.set(leaderboardEntryRef(memberUid), clanIdentityPatch(), { merge: true });
+    });
+
+    applicationsSnap.docs.forEach((applicationSnap, index) => {
+      const applicantProfileSnap = applicantProfileSnaps[index];
+      transaction.delete(applicationSnap.ref);
+      if (applicantProfileSnap.exists
+        && safeString(applicantProfileSnap.data()?.pendingClanApplicationId, 128) === clanId) {
+        transaction.set(applicantProfileSnap.ref, {
+          pendingClanApplicationId: FieldValue.delete(),
+          updatedAt: FieldValue.serverTimestamp(),
+        }, { merge: true });
+      }
+    });
+
+    const liveIntegrals = getLiveClanBenefitIntegrals(priorBenefits, nowMs);
+    transaction.set(clanRef, {
+      status: "disbanded",
+      leaderUid: FieldValue.delete(),
+      memberCount: 0,
+      totalKingPower: 0,
+      disbandedAtMs: nowMs,
+      disbandedByUid: uid,
+      updatedAtMs: nowMs,
+      updatedAt: FieldValue.serverTimestamp(),
+    }, { merge: true });
+    transaction.set(clanWorldBenefitsRef(clanId), {
+      status: "inactive",
+      objectives: [],
+      sharedBonuses: emptyObjectiveBonuses(),
+      citadelControllerUid: "",
+      cumulativeGoldPercentMs: liveIntegrals.goldPercentMs,
+      cumulativeTroopPercentMs: liveIntegrals.troopPercentMs,
+      lastIntegratedAtMs: nowMs,
+      effectiveAtMs: nowMs,
+      revision: Math.max(0, Math.floor(safeNumber(priorBenefits.revision, 0))) + 1,
+      updatedAtMs: nowMs,
+      updatedAt: FieldValue.serverTimestamp(),
+    }, { merge: true });
+    transaction.set(clanNameReservationRef(clan.normalizedName), {
+      clanId,
+      reusableAtMs: nowMs + CLAN_RESERVATION_RELEASE_MS,
+      updatedAt: FieldValue.serverTimestamp(),
+    }, { merge: true });
+    transaction.set(clanTagReservationRef(clan.normalizedTag), {
+      clanId,
+      reusableAtMs: nowMs + CLAN_RESERVATION_RELEASE_MS,
+      updatedAt: FieldValue.serverTimestamp(),
+    }, { merge: true });
+    transaction.delete(db.doc(`clanLeaderboards/${RESET_GENERATION}/entries/${clanId}`));
+    writeClanAudit(transaction, clanId, uid, "clan_disbanded", {
+      memberCount: membersSnap.size,
+      applicationCount: applicationsSnap.size,
+    }, nowMs);
+    return {
+      ok: true,
+      disbanded: true,
+      memberCount: membersSnap.size,
+      applicationCount: applicationsSnap.size,
+      cooldownUntilMs: nowMs + CLAN_JOIN_COOLDOWN_MS,
+    };
+  });
+  await reconcileClanRalliesBeforeDisband(clanId);
+  return result;
 });
 
 exports.sendClanGift = onCall({ region: "us-central1", maxInstances: 20, invoker: "public" }, async request => {
