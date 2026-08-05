@@ -1,0 +1,23 @@
+#!/bin/sh
+set -eu
+
+repo_root="$(git rev-parse --show-toplevel)"
+cd "$repo_root/functions"
+
+local_pnpm="node_modules/pnpm/bin/pnpm.cjs"
+if [ -f "$local_pnpm" ] && command -v node >/dev/null 2>&1; then
+  package_manager="node"
+  package_manager_cli="$local_pnpm"
+elif command -v pnpm >/dev/null 2>&1; then
+  package_manager="pnpm"
+  package_manager_cli=""
+elif command -v pnpm.cmd >/dev/null 2>&1; then
+  package_manager="pnpm.cmd"
+  package_manager_cli=""
+else
+  echo "[Crownlands] pnpm 11.9.0 is required. Run pnpm install in functions before pushing." >&2
+  exit 1
+fi
+
+echo "[Crownlands] Running the complete release gate before push..."
+"$package_manager" ${package_manager_cli:+"$package_manager_cli"} run gate:release

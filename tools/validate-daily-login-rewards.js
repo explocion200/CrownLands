@@ -14,6 +14,7 @@ const html = read("index.html");
 const styles = read("styles.css");
 const rules = read("firestore.rules");
 const serviceWorker = read("service-worker.js");
+const emulatorResetGate = read("functions/test/emulator-reset-gate.js");
 const serverConfig = JSON.parse(read("functions/economy-config.json"));
 const browserContext = { window: {} };
 vm.runInNewContext(read("economy-config.js"), browserContext);
@@ -203,6 +204,13 @@ requireMatch(server, /expectedOrdinal !== statusBefore\.nextClaimOrdinal[\s\S]*D
 requireMatch(server, /nextDay:\s*claimedPosition\.day \+ 1[\s\S]*syncDailyLoginRewardAttendance\(claimedState,\s*nowMs\)/, "Claims do not consume the oldest reward and fill deferred attendance.");
 requireMatch(server, /getRewardedAdBaseRates\(economy\)[\s\S]*reward\.goldHours[\s\S]*reward\.troopHours/, "Daily claims do not use permanent base production rates.");
 requireMatch(server, /creditLevelUpTroopsToMainCity\(economy,[\s\S]*dailyLoginReward:\s*nextState/, "Daily troops are not credited atomically.");
+requireMatch(emulatorResetGate, /buildDailyRewardClaimRequest[\s\S]*expectedMonthKey/, "Emulator claims do not use the authoritative UTC month guard.");
+requireMatch(emulatorResetGate, /prepareDailyRewardClaim[\s\S]*getDailyLoginRewardStatus/, "Emulator claims do not refresh authoritative reward status.");
+assert.doesNotMatch(
+  emulatorResetGate,
+  /callFunction\("claimDailyLoginReward",\s*[^,\n)]+\)/,
+  "An emulator daily-reward claim omits its guarded payload."
+);
 
 requireMatch(client, /getDailyLoginRewardStatus[\s\S]*callServerFunction\("getDailyLoginRewardStatus"/, "Firebase client does not expose daily status.");
 requireMatch(client, /claimDailyLoginReward[\s\S]*callServerFunction\("claimDailyLoginReward",\s*payload\)/, "Firebase client does not forward guarded claims.");

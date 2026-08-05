@@ -5,13 +5,14 @@ param(
 
 $ErrorActionPreference = "Stop"
 $healthRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
-$nodeMajor = [int]((& node -p "process.versions.node.split('.')[0]").Trim())
+$functionsRoot = Join-Path $healthRoot "functions"
+$nodeMajor = [int]((& pnpm --dir $functionsRoot exec node -p "process.versions.node.split('.')[0]").Trim())
 
 if ($nodeMajor -ne 22 -and -not $AllowNodeMismatch) {
   throw "Crownlands release checks require Node 22. This shell is using Node $nodeMajor. Re-run with Node 22 or pass -AllowNodeMismatch for a non-release diagnostic run."
 }
 
-Push-Location (Join-Path $healthRoot "functions")
+Push-Location $functionsRoot
 try {
   pnpm test
   if ($LASTEXITCODE -ne 0) { throw "The Crownlands static validator suite failed." }
@@ -41,12 +42,9 @@ if ($IncludeEmulators) {
   if (-not (Get-Command java -ErrorAction SilentlyContinue)) {
     throw "Java 21 is required for Firebase emulator gates."
   }
-  if (-not (Get-Command firebase -ErrorAction SilentlyContinue)) {
-    throw "Firebase CLI is required for emulator gates."
-  }
-  Push-Location $healthRoot
+  Push-Location $functionsRoot
   try {
-    firebase emulators:exec --project crown-land-b15e0 --only auth,firestore,functions "node functions/test/emulator-reset-gate.js && node functions/test/emulator-rally-rules.js && node functions/test/emulator-army-listener-rules.js && node functions/test/emulator-clan-war-room-retirement-rules.js && node functions/test/emulator-city-relinquishment-limit.js && node functions/test/emulator-economy-concurrency.js && node functions/test/emulator-bulk-army-orders.js && node functions/test/emulator-peace-shield-returns.js && node functions/test/emulator-skill-presets.js && node functions/test/emulator-scout-report-lifecycle.js"
+    pnpm run test:emulators
     if ($LASTEXITCODE -ne 0) { throw "The Firebase emulator gates failed." }
   } finally {
     Pop-Location

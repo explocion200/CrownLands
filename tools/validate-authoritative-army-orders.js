@@ -185,6 +185,8 @@ assert.equal(
 
 const emulatorTestPath = path.join(root, "functions", "test", "emulator-bulk-army-orders.js");
 const workflow = fs.readFileSync(path.join(root, ".github", "workflows", "crownlands-release-gate.yml"), "utf8");
+const packageJson = JSON.parse(fs.readFileSync(path.join(root, "functions", "package.json"), "utf8"));
+const emulatorRunner = fs.readFileSync(path.join(root, "functions", "test", "run-emulator-gates.js"), "utf8");
 assert.equal(fs.existsSync(emulatorTestPath), true, "Bulk-order emulator coverage is missing.");
 const emulatorTest = fs.readFileSync(emulatorTestPath, "utf8");
 [
@@ -196,9 +198,13 @@ const emulatorTest = fs.readFileSync(emulatorTestPath, "utf8");
   "canonical movement guard",
   "Weighted launch throttling",
 ].forEach(marker => assert.match(emulatorTest, new RegExp(marker, "i")));
-assert.match(workflow, /emulator-bulk-army-orders\.js/,
-  "The release gate must execute bulk-order emulator coverage.");
-assert.match(workflow, /validate-server-route-parity\.js/,
+assert.match(emulatorRunner, /readdirSync\(testDirectory\)/,
+  "The release gate must automatically discover bulk-order emulator coverage.");
+assert.match(packageJson.scripts?.["test:emulators"] || "", /run-emulator-gates\.js/,
+  "The release gate must execute the discovered emulator coverage.");
+assert.match(packageJson.scripts?.["gate:static"] || "", /test:route-parity/,
   "The release gate must execute exhaustive server/client route parity coverage.");
+assert.match(workflow, /pnpm run gate:static/,
+  "GitHub Actions must execute the shared static release gate.");
 
 console.log("Validated authoritative route previews and launches, atomic paid bulk orders, bounded idempotency, launch throttling, and army backlog health guards.");

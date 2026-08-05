@@ -5,38 +5,67 @@ on:
     branches: ["main"]
   pull_request:
 
+permissions:
+  contents: read
+
 jobs:
-  validate:
+  static:
+    name: Static validation
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
+      - uses: actions/checkout@v6
+      - uses: pnpm/setup@v2
         with:
           version: "11.9.0"
-      - uses: actions/setup-node@v4
-        with:
-          node-version: "22"
-          cache: "pnpm"
+          runtime: "node@22"
+          cache: true
           cache-dependency-path: functions/pnpm-lock.yaml
-      - uses: actions/setup-java@v4
+          package-json-file: functions/package.json
+          install: false
+      - name: Install locked dependencies
+        working-directory: functions
+        run: pnpm install --frozen-lockfile
+      - name: Run static release gate
+        working-directory: functions
+        run: pnpm run gate:static
+
+  emulator:
+    name: Multiplayer emulator validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v6
+      - uses: pnpm/setup@v2
+        with:
+          version: "11.9.0"
+          runtime: "node@22"
+          cache: true
+          cache-dependency-path: functions/pnpm-lock.yaml
+          package-json-file: functions/package.json
+          install: false
+      - uses: actions/setup-java@v5
         with:
           distribution: "temurin"
           java-version: "21"
       - name: Install locked dependencies
         working-directory: functions
         run: pnpm install --frozen-lockfile
-      - name: Audit production dependencies
+      - name: Run multiplayer emulator gate
         working-directory: functions
-        run: pnpm audit --prod --audit-level high
-      - name: Run static and gameplay validators
-        working-directory: functions
-        run: pnpm test
-      - name: Validate canonical server route parity
-        run: node tools/validate-server-route-parity.js
-      - name: Validate deploy stamping
-        run: node tools/stamp-deploy-build.js --check
-      - name: Install pinned Firebase CLI
-        run: npm install --global firebase-tools@15.22.4
-      - name: Run multiplayer emulator gates
-        run: firebase emulators:exec --project crown-land-b15e0 --only auth,firestore,functions "node functions/test/emulator-reset-gate.js && node functions/test/emulator-rally-rules.js && node functions/test/emulator-army-listener-rules.js && node functions/test/emulator-citadel-reign-leaderboard.js && node functions/test/emulator-clan-war-room-retirement-rules.js && node functions/test/emulator-city-relinquishment-limit.js && node functions/test/emulator-economy-concurrency.js && node functions/test/emulator-bulk-army-orders.js && node functions/test/emulator-peace-shield-returns.js && node functions/test/emulator-skill-presets.js && node functions/test/emulator-scout-report-lifecycle.js"
+        run: pnpm run test:emulators
+
+  validate:
+    name: Validate
+    if: ${{ always() }}
+    needs: [static, emulator]
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Confirm release gates passed
+        env:
+          STATIC_RESULT: ${{ needs.static.result }}
+          EMULATOR_RESULT: ${{ needs.emulator.result }}
+        run: |
+          test "$STATIC_RESULT" = "success"
+          test "$EMULATOR_RESULT" = "success"

@@ -6,7 +6,8 @@ const firebaseClient = fs.readFileSync(path.join(root, "firebaseClient.js"), "ut
 const game = fs.readFileSync(path.join(root, "game.js"), "utf8");
 const rules = fs.readFileSync(path.join(root, "firestore.rules"), "utf8");
 const indexes = JSON.parse(fs.readFileSync(path.join(root, "firestore.indexes.json"), "utf8"));
-const workflow = fs.readFileSync(path.join(root, ".github", "workflows", "crownlands-release-gate.yml"), "utf8");
+const packageJson = JSON.parse(fs.readFileSync(path.join(root, "functions", "package.json"), "utf8"));
+const emulatorRunner = fs.readFileSync(path.join(root, "functions", "test", "run-emulator-gates.js"), "utf8");
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
@@ -118,7 +119,9 @@ const requiredIndexGroups = new Set(indexes.indexes.map(index => `${index.collec
 assert(requiredIndexGroups.has("incomingArmies:COLLECTION"), "The active incoming-army query index is missing.");
 assert(requiredIndexGroups.has("presence:COLLECTION"), "The active presence query index is missing.");
 assert(
-  workflow.includes("functions/test/emulator-army-listener-rules.js"),
+  fs.existsSync(path.join(root, "functions", "test", "emulator-army-listener-rules.js"))
+    && /readdirSync\(testDirectory\)/.test(emulatorRunner)
+    && /run-emulator-gates\.js/.test(packageJson.scripts?.["test:emulators"] || ""),
   "The exact client army queries must run against Firestore rules in the release gate."
 );
 
