@@ -1,0 +1,326 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Crownlands Battle and Economy Guide | Interactive Charts</title>
+  <meta name="description" content="Explore interactive Crownlands charts explaining cities, victory points, gold, troops, skills, walls, battle outcomes, defenses, and wall-repair timers." />
+  <meta name="google-adsense-account" content="ca-pub-6031755025291372" />
+  <link rel="canonical" href="https://crownland.netlify.app/battle-economy-guide.html" />
+  <link rel="icon" type="image/png" sizes="192x192" href="/assets/icons/crownlands-icon-192.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800;900&family=IM+Fell+English:ital@0;1&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/site-info.css?v=20260727-adsense-policy" />
+  <link rel="stylesheet" href="/battle-economy-guide.css?v=20260805-battle-guide-v1" />
+</head>
+<body>
+  <header class="site-header">
+    <nav class="site-nav" aria-label="Primary">
+      <a class="site-brand" href="/">Crownlands</a>
+      <div class="site-nav-links">
+        <a href="/about.html">About</a>
+        <a href="/how-to-play.html">How to Play</a>
+        <a href="/battle-economy-guide.html" aria-current="page">Battle Guide</a>
+        <a href="/game-rules.html">Rules</a>
+        <a href="/support.html">Support</a>
+        <a href="/privacy.html">Privacy</a>
+      </div>
+    </nav>
+  </header>
+
+  <main class="site-main guide-main" id="guideTop">
+    <header class="article-heading guide-heading">
+      <span class="site-eyebrow">Interactive field manual</span>
+      <h1>See what every city and soldier actually changes</h1>
+      <p>Crownlands has one connected system: city levels create value and production, skills specialize that value, and battles spend attack power against one wall and then one garrison. Change the examples below to see the same calculations used by the game.</p>
+      <p class="guide-live-warning"><strong>Forecasts are snapshots.</strong> A live defender can produce troops, receive reinforcements, change bonuses, or finish a wall repair before your army arrives.</p>
+    </header>
+
+    <nav class="guide-index" aria-label="Guide sections">
+      <a href="#system-map">System map</a>
+      <a href="#city-explorer">City explorer</a>
+      <a href="#economy-map">Economy</a>
+      <a href="#skills-guide">Skills</a>
+      <a href="#battle-explorer">Battle explorer</a>
+      <a href="#wall-timers">Wall timers</a>
+      <a href="#special-rules">Special rules</a>
+    </nav>
+
+    <section id="system-map" class="content-section guide-section" aria-labelledby="systemMapTitle">
+      <span class="site-eyebrow">The whole system</span>
+      <h2 id="systemMapTitle">A city level branches into five different kinds of strength</h2>
+      <div class="system-flow" role="img" aria-label="City level increases victory points, gold production, troop production, garrison defense, walls, repair duration, upgrade cost, and capture value">
+        <div class="flow-node flow-origin"><small>Your investment</small><strong>City level</strong></div>
+        <span class="flow-arrow" aria-hidden="true">&#8594;</span>
+        <div class="flow-branches">
+          <article class="flow-node"><small>City value</small><strong>Victory points</strong><span>Troop production, capture value, and kingdom strength</span></article>
+          <article class="flow-node"><small>Economy</small><strong>Gold curve</strong><span>A separate production curve; VP is not used here</span></article>
+          <article class="flow-node"><small>Defense</small><strong>Wall + garrison</strong><span>Two layers that attackers must defeat in order</span></article>
+          <article class="flow-node"><small>Time</small><strong>Repair window</strong><span>Higher levels take longer to rebuild after meaningful damage</span></article>
+          <article class="flow-node"><small>Growth</small><strong>Upgrade cost</strong><span>Priced from the city&rsquo;s gold output and progression target</span></article>
+        </div>
+      </div>
+      <div class="guide-callout">
+        <strong>What VP means:</strong> victory points measure a city&rsquo;s value. They determine its base troop production at 10 troops per VP each hour and contribute to capture value and King Power. They do not directly strengthen one attacking troop; attack strength comes from troop count and Swordmastery.
+      </div>
+    </section>
+
+    <section id="city-explorer" class="content-section guide-section" aria-labelledby="cityExplorerTitle">
+      <span class="site-eyebrow">City explorer</span>
+      <h2 id="cityExplorerTitle">Change a level and watch the kingdom grow</h2>
+      <p>The slider covers the normal Level 1&ndash;150 seasonal range. The number field accepts higher levels because regular cities have no gameplay level cap.</p>
+
+      <form id="cityExplorerControls" class="guide-control-grid">
+        <label class="guide-control guide-control-wide" for="cityLevelRange">
+          <span>City level <output id="cityLevelOutput" for="cityLevelRange cityLevelNumber">75</output></span>
+          <input id="cityLevelRange" type="range" min="1" max="150" step="1" value="75" />
+          <input id="cityLevelNumber" type="number" min="1" step="1" value="75" inputmode="numeric" aria-label="City level number" />
+        </label>
+        <label class="guide-control" for="taxSkillLevel"><span>Tax Stewardship <output id="taxSkillOutput" for="taxSkillLevel">Lv 0</output></span><input id="taxSkillLevel" type="range" min="0" max="25" step="1" value="0" /></label>
+        <label class="guide-control" for="granarySkillLevel"><span>Royal Granaries <output id="granarySkillOutput" for="granarySkillLevel">Lv 0</output></span><input id="granarySkillLevel" type="range" min="0" max="25" step="1" value="0" /></label>
+        <label class="guide-control" for="cityStoneworksLevel"><span>Stoneworks <output id="cityStoneworksOutput" for="cityStoneworksLevel">Lv 0</output></span><input id="cityStoneworksLevel" type="range" min="0" max="25" step="1" value="0" /></label>
+        <label class="guide-control" for="guildSkillLevel"><span>Guild Charters <output id="guildSkillOutput" for="guildSkillLevel">Lv 0</output></span><input id="guildSkillLevel" type="range" min="0" max="25" step="1" value="0" /></label>
+        <label class="guide-control" for="cityCitadelPackage"><span>Realm-wide package</span><select id="cityCitadelPackage"><option value="0:0">None</option><option value="5:5">Clan Citadel package +5%</option><option value="10:10">Controlled Citadel package +10%</option></select></label>
+        <label class="guide-control" for="cityDefenderTroops"><span>Example stationed troops</span><input id="cityDefenderTroops" type="number" min="0" step="1000" value="1000000" inputmode="numeric" /></label>
+      </form>
+
+      <div class="guide-stat-grid" aria-live="polite">
+        <article><span>Victory points</span><strong id="cityVictoryPoints">0</strong><small id="cityVictoryHelp">City value</small></article>
+        <article><span>Gold production</span><strong id="cityGoldProduction">0/h</strong><small id="cityGoldHelp">Base 0/h</small></article>
+        <article><span>Troop production</span><strong id="cityTroopProduction">0/h</strong><small id="cityTroopHelp">Base 0/h</small></article>
+        <article><span>Full wall power</span><strong id="cityWallPower">0</strong><small id="cityWallHelp">Base 0</small></article>
+        <article><span>Garrison defense</span><strong id="cityGarrisonDefense">0</strong><small id="cityGarrisonHelp">From 1M troops</small></article>
+        <article><span>Next upgrade</span><strong id="cityUpgradeCost">0 gold</strong><small id="cityUpgradeHelp">No reduction</small></article>
+        <article><span>Wall repair</span><strong id="cityRepairTime">0m</strong><small>After meaningful wall damage</small></article>
+      </div>
+
+      <div class="guide-chart-grid">
+        <figure><figcaption>Gold production by level <small>logarithmic value scale</small></figcaption><svg id="goldLevelChart" class="guide-chart" role="img" aria-label="Gold production by city level"></svg></figure>
+        <figure><figcaption>Troop production by level</figcaption><svg id="troopLevelChart" class="guide-chart" role="img" aria-label="Troop production by city level"></svg></figure>
+        <figure><figcaption>Wall power by level <small>logarithmic value scale</small></figcaption><svg id="wallLevelChart" class="guide-chart" role="img" aria-label="Wall power by city level"></svg></figure>
+        <figure><figcaption>Wall-repair minutes by level</figcaption><svg id="repairLevelChart" class="guide-chart" role="img" aria-label="Wall repair minutes by city level"></svg></figure>
+      </div>
+
+      <div class="table-responsive guide-table-wrap">
+        <table class="guide-table">
+          <caption>City milestones using the selected skills and Citadel package</caption>
+          <thead><tr><th>Level</th><th>VP</th><th>Gold/hour</th><th>Troops/hour</th><th>Wall power</th><th>Repair</th></tr></thead>
+          <tbody id="cityMilestoneRows"></tbody>
+        </table>
+      </div>
+
+      <details class="guide-math">
+        <summary>Show the city math</summary>
+        <div class="formula-list">
+          <p><strong>Victory points:</strong> floor(6 + 4L + 2L<sup>1.35</sup>).</p>
+          <p><strong>Troops/hour:</strong> victory points &times; 10, then Royal Granaries and the applicable objective package add percentages of that base.</p>
+          <p><strong>Gold/hour:</strong> floor(20 &times; 1.115<sup>L&minus;1</sup>) &times; 15 through Level 100. Above 100, the Level 100 value grows 8% per additional level.</p>
+          <p><strong>Owner garrison:</strong> stationed troops &times; (1 + 2% &times; city level), then the applicable objective-defense percentage.</p>
+          <p><strong>Wall:</strong> one smooth level curve, then Stoneworks strengthens it, then an applicable objective-defense percentage strengthens that one wall.</p>
+        </div>
+      </details>
+    </section>
+
+    <section id="economy-map" class="content-section guide-section" aria-labelledby="economyMapTitle">
+      <span class="site-eyebrow">Complete economy</span>
+      <h2 id="economyMapTitle">Base production is the engine; bonuses and rewards change its pace</h2>
+      <div class="economy-flow" role="img" aria-label="Economy sources flow through permanent and timed modifiers into kingdom resources and spending">
+        <div class="economy-column">
+          <h3>Produces resources</h3>
+          <article><strong>Cities</strong><span>Gold and troops every second</span></article>
+          <article><strong>Map pickups</strong><span id="pickupEconomyText">Stored production during active play</span></article>
+          <article><strong>Rewarded ads</strong><span>30 minutes of base production, up to 20 per day</span></article>
+          <article><strong>Camps</strong><span>Gold, troops, deeds, and items after their hold rules</span></article>
+          <article><strong>Calendar rewards</strong><span>111 gold-hours, 111 troop-hours, and six items per UTC month</span></article>
+          <article><strong>Hero and clan rewards</strong><span>Level rewards, gifts, and weekly conquest quests</span></article>
+        </div>
+        <span class="economy-arrow" aria-hidden="true">&#8594;</span>
+        <div class="economy-column economy-modifiers">
+          <h3>Changes the rate</h3>
+          <article><strong>Permanent skills</strong><span>Tax Stewardship and Royal Granaries</span></article>
+          <article><strong>Objectives</strong><span>Strongholds specialize; the Citadel grants a complete package</span></article>
+          <article><strong>Timed items</strong><span>Royal Tax and War Drums add to raw base output</span></article>
+          <p><strong>Production percentages are additive.</strong> Two +10% sources make 120% of base, not 121%.</p>
+        </div>
+        <span class="economy-arrow" aria-hidden="true">&#8594;</span>
+        <div class="economy-column economy-sinks">
+          <h3>Spends resources</h3>
+          <article><strong>City upgrades</strong><span>Long-term production, defense, walls, and city value</span></article>
+          <article><strong>Recruiting</strong><span>Immediate troops instead of waiting for production</span></article>
+          <article><strong>Orders</strong><span>Scout Nearby, Regroup, and other paid actions</span></article>
+          <article><strong>Shop and skills</strong><span>Items, resets, and preset changes</span></article>
+          <article><strong>Clan administration</strong><span>Applicable creation or renaming costs</span></article>
+        </div>
+      </div>
+      <div class="guide-explanation-grid">
+        <article><h3>Invest in safer cities</h3><p>Upgrading raises future income and defense, but concentrated levels also concentrate value. A border city can become a rich target before its troops and wall are ready.</p></article>
+        <article><h3>Stored-production rewards scale</h3><p>Many rewards are expressed as hours of production. Their value therefore rises with the eligible cities you own when the server calculates the reward.</p></article>
+        <article><h3>Gold and troops solve different problems</h3><p>Gold accelerates development and buys actions. Troops defend holdings and become attack power only when committed to a march.</p></article>
+      </div>
+    </section>
+
+    <section id="skills-guide" class="content-section guide-section" aria-labelledby="skillsGuideTitle">
+      <span class="site-eyebrow">Seven skills</span>
+      <h2 id="skillsGuideTitle">Each skill changes one understandable part of the system</h2>
+      <div class="table-responsive guide-table-wrap">
+        <table class="guide-table skill-guide-table">
+          <thead><tr><th>Skill</th><th>Role</th><th>Per level</th><th>Maximum</th><th>Changes</th><th>Does not change</th></tr></thead>
+          <tbody id="skillGuideRows"></tbody>
+        </table>
+      </div>
+      <div class="guide-callout"><strong>One skill point per hero level.</strong> Presets change how earned points are allocated; they do not create extra points. Production skills add percentages of raw city output, Stoneworks affects the wall rather than soldiers, and Swordmastery is locked into an army&rsquo;s attack power when it launches.</div>
+    </section>
+
+    <section id="battle-explorer" class="content-section guide-section battle-guide-section" aria-labelledby="battleExplorerTitle">
+      <span class="site-eyebrow">Battle explorer</span>
+      <h2 id="battleExplorerTitle">Every city siege is decided in two layers</h2>
+      <div class="battle-presets" aria-label="Battle examples">
+        <button type="button" data-battle-preset="wall">Wall holds</button>
+        <button type="button" data-battle-preset="garrison">Wall breached, garrison holds</button>
+        <button type="button" data-battle-preset="capture">Capture</button>
+        <button type="button" data-battle-preset="damaged">Attack a damaged wall</button>
+      </div>
+
+      <form id="battleExplorerControls" class="battle-control-grid">
+        <fieldset>
+          <legend>Offensive force</legend>
+          <label for="battleAttackerTroops"><span>Troops committed</span><input id="battleAttackerTroops" type="number" min="1" step="1000" value="1000000" inputmode="numeric" /></label>
+          <label for="battleSwordLevel"><span>Swordmastery <output id="battleSwordOutput" for="battleSwordLevel">Lv 0</output></span><input id="battleSwordLevel" type="range" min="0" max="30" step="1" value="0" /></label>
+        </fieldset>
+        <fieldset>
+          <legend>Defending holding</legend>
+          <label for="battleCityLevel"><span>City level</span><input id="battleCityLevel" type="number" min="1" step="1" value="50" inputmode="numeric" /></label>
+          <label for="battleDefenderTroops"><span>Owner troops</span><input id="battleDefenderTroops" type="number" min="0" step="1000" value="1000000" inputmode="numeric" /></label>
+          <label for="battleReinforcementTroops"><span>Clan reinforcement troops</span><input id="battleReinforcementTroops" type="number" min="0" step="1000" value="0" inputmode="numeric" /></label>
+          <label for="battleReinforcementBonus"><span>Reinforcement defense bonus</span><input id="battleReinforcementBonus" type="number" min="0" max="100" step="1" value="0" inputmode="numeric" /><small>Uses that contributor&rsquo;s applicable objective bonuses; it does not add city-level defense or another wall.</small></label>
+          <label for="battleStoneLevel"><span>Stoneworks <output id="battleStoneOutput" for="battleStoneLevel">Lv 0</output></span><input id="battleStoneLevel" type="range" min="0" max="25" step="1" value="0" /></label>
+          <label for="battleObjectiveDefense"><span>Objective defense</span><select id="battleObjectiveDefense"><option value="0">None</option><option value="4">Clan-shared Defense Stronghold +4%</option><option value="5">Clan-shared Citadel +5%</option><option value="8">Controlled Defense Stronghold +8%</option><option value="10">Controlled Citadel +10%</option><option value="14">Citadel plus half Stronghold +14%</option></select></label>
+          <label for="battleWallIntegrity"><span>Current wall integrity <output id="battleWallOutput" for="battleWallIntegrity">100%</output></span><input id="battleWallIntegrity" type="range" min="0" max="100" step="1" value="100" /></label>
+        </fieldset>
+      </form>
+
+      <div id="battleOutcomeBanner" class="battle-outcome-banner" data-outcome="wall_hold" aria-live="polite">
+        <span id="battleOutcomeKicker">Likely outcome</span>
+        <strong id="battleOutcomeTitle">Wall holds</strong>
+        <small id="battleOutcomeTier">Defeat expected</small>
+      </div>
+
+      <div class="battle-pipeline" role="img" aria-label="Attack power strikes the wall, then penetrating attack power is compared with garrison defense">
+        <article><span>Committed attack</span><strong id="battleAttackPower">0</strong><small id="battleAttackFormula">0 troops</small></article>
+        <span class="pipeline-arrow" aria-hidden="true">&#8594;</span>
+        <article><span>Wall absorbs</span><strong id="battleWallAbsorbed">0</strong><small id="battleWallStart">0 starting power</small></article>
+        <span class="pipeline-arrow" aria-hidden="true">&#8594;</span>
+        <article><span>Reaches garrison</span><strong id="battlePenetratingPower">0</strong><small id="battleGarrisonComparison">vs 0 defense</small></article>
+        <span class="pipeline-arrow" aria-hidden="true">&#8594;</span>
+        <article class="pipeline-result"><span>Result</span><strong id="battlePipelineResult">Wall holds</strong><small id="battleCaptureRule">Capture requires strictly more power</small></article>
+      </div>
+
+      <div class="battle-power-bars" aria-label="Battle power comparison">
+        <div><span>Attack power</span><div><i id="attackPowerBar"></i></div><strong id="attackPowerBarValue">0</strong></div>
+        <div><span>Current wall</span><div><i id="wallPowerBar"></i></div><strong id="wallPowerBarValue">0</strong></div>
+        <div><span>Garrison defense</span><div><i id="garrisonPowerBar"></i></div><strong id="garrisonPowerBarValue">0</strong></div>
+      </div>
+
+      <div class="battle-result-grid">
+        <article><span>Minimum capture force</span><strong id="battleMinimumForce">0</strong><small id="battleShortfall">Short by 0</small></article>
+        <article><span>Attacker losses</span><strong id="battleAttackerLosses">0</strong><small id="battleAttackerSurvivors">0 return</small></article>
+        <article><span>Defender losses</span><strong id="battleDefenderLosses">0</strong><small id="battleDefenderSurvivors">0 remain</small></article>
+        <article><span>Wall after battle</span><strong id="battleEndingWall">100%</strong><small id="battleRepairResult">No persistent damage</small></article>
+      </div>
+
+      <div class="battle-perspective-controls" role="tablist" aria-label="Battle perspective">
+        <button id="attackerPerspectiveBtn" type="button" role="tab" aria-selected="true" aria-controls="battlePerspectiveText">Attacker view</button>
+        <button id="defenderPerspectiveBtn" type="button" role="tab" aria-selected="false" aria-controls="battlePerspectiveText">Defender view</button>
+      </div>
+      <p id="battlePerspectiveText" class="battle-perspective-text">Your committed troops become launch-locked attack power. You must erase the current wall and still have strictly more power than the live garrison at arrival.</p>
+
+      <details class="guide-math">
+        <summary>Show the battle math</summary>
+        <div class="formula-list">
+          <p><strong>Attack power:</strong> floor(committed troops &times; 2 &times; (1 + Swordmastery%)).</p>
+          <p><strong>Wall phase:</strong> the current wall absorbs attack power first. Penetrating power is max(0, attack power &minus; current wall).</p>
+          <p><strong>Garrison phase:</strong> penetrating power must be strictly greater than the combined owner and reinforcement defense. Equality is a defensive hold.</p>
+          <p><strong>Winning survivors:</strong> troops represented by attack power remaining after 100% of wall and garrison defense is resolved.</p>
+          <p><strong>Wall hold losses:</strong> defenders lose at most 10%. After a breach where the garrison still holds, defender losses scale with pressure and stop at 82%.</p>
+        </div>
+      </details>
+    </section>
+
+    <section id="wall-timers" class="content-section guide-section" aria-labelledby="wallTimersTitle">
+      <span class="site-eyebrow">Wall rebuilding</span>
+      <h2 id="wallTimersTitle">The repair deadline belongs to the damaged wall, not its owner</h2>
+      <div class="repair-timeline" role="img" aria-label="Wall damage below five percent is temporary; meaningful damage starts a level-based timer; another meaningful hit resets it; capture preserves it; expiry restores the wall">
+        <article><span>1</span><strong>Attack lands</strong><small>Measure damage against the wall&rsquo;s full power</small></article>
+        <b aria-hidden="true">&#8594;</b>
+        <article><span>2</span><strong>At least 5%?</strong><small>Below 5% creates no persistent damage</small></article>
+        <b aria-hidden="true">&#8594;</b>
+        <article><span>3</span><strong>Deadline starts</strong><small>round(15 + 0.3 &times; current city level) minutes</small></article>
+        <b aria-hidden="true">&#8594;</b>
+        <article><span>4</span><strong>Damage persists</strong><small>A later meaningful hit before breach restarts the timer</small></article>
+        <b aria-hidden="true">&#8594;</b>
+        <article><span>5</span><strong>Full repair</strong><small>At expiry, restore the wall using the current level and owner bonuses</small></article>
+      </div>
+      <div class="repair-rules-grid">
+        <article><strong>Capture does not reset it</strong><p>The damaged integrity, damage time, and absolute repair deadline transfer to the new owner.</p></article>
+        <article><strong>Upgrades do not recalculate it</strong><p>Level or ownership changes during an active repair do not lengthen or shorten that deadline.</p></article>
+        <article><strong>A breached wall stays at zero</strong><p>Further attacks against an already breached wall do not restart its timer.</p></article>
+        <article><strong>Protected raids do not persist damage</strong><p>The raid may remove defenders, but its wall damage is not written to the city.</p></article>
+      </div>
+      <div class="table-responsive guide-table-wrap">
+        <table class="guide-table">
+          <caption>Level-based wall-repair examples</caption>
+          <thead><tr><th>Holding</th><th>Effective level</th><th>Full repair window</th></tr></thead>
+          <tbody id="repairExampleRows"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="special-rules" class="content-section guide-section" aria-labelledby="specialRulesTitle">
+      <span class="site-eyebrow">Important exceptions</span>
+      <h2 id="specialRulesTitle">The server still checks the target and both kingdoms</h2>
+      <div class="special-rule-grid">
+        <article><h3>Regular city</h3><p>Uses the two-stage wall and garrison siege. Main cities cannot be attacked. A successful capture reduces the city by one level but carries any active wall deadline forward.</p></article>
+        <article><h3>Stronghold and Citadel</h3><p>Use the same single-wall siege. Strongholds use effective Level 50 fortification timing and the Citadel uses Level 100. Weaker-kingdom attack protection does not apply to these objectives.</p></article>
+        <article><h3>Reward camp</h3><p>Camps keep their existing objective combat and reinforcement model instead of the city siege model. They cannot be shielded, do not count as cities, and may require a hold timer before rewards settle.</p></article>
+        <article><h3>Clan reinforcement</h3><p>Each contributor adds troops with that contributor&rsquo;s applicable objective-defense package. Reinforcements never copy the city&rsquo;s level defense, wall, or Stoneworks.</p></article>
+        <article><h3>Clan rally</h3><p>Each participant keeps snapshotted attack strength. The combined force attacks under the rally lifecycle and still passes every ownership, protection, route, and anti-farming check.</p></article>
+        <article><h3>Weaker-kingdom protection</h3><p>At 2&times; King Power, attacks become capped protected assaults: first breach, then a possible capture assault. At 2.5&times; and above, they become capped, non-capturing raids with defender losses limited to 10% and no persistent wall damage.</p></article>
+        <article><h3>Scouting</h3><p>A successful scout is an exact ten-minute snapshot. Attack strength is locked at launch, but defense remains live until arrival, so a forecast is evidence rather than a guarantee.</p></article>
+        <article><h3>Directional farming prevention</h3><p>Normal fighting remains available, but repeated low-city handoffs of freshly claimed neutral cities can create a directional restriction between the involved players.</p></article>
+      </div>
+    </section>
+
+    <section class="content-section guide-finish">
+      <h2>Use the guide as a decision checklist</h2>
+      <ol>
+        <li>Scout the target and check how old the report is.</li>
+        <li>Compare your launch-locked attack power with the current wall and garrison separately.</li>
+        <li>Check protection rules, reinforcements, travel time, and the wall-repair deadline.</li>
+        <li>Send enough to cross the capture threshold with room for live defensive changes.</li>
+      </ol>
+      <div class="site-actions"><a class="site-button" href="/">Play Crownlands</a><a class="site-button secondary" href="/how-to-play.html">Read How to Play</a></div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="site-footer-inner">
+      <span>&copy; 2026 Crownlands. Build carefully. Scout first.</span>
+      <nav aria-label="Footer">
+        <a href="/">Play</a>
+        <a href="/about.html">About</a>
+        <a href="/how-to-play.html">How to Play</a>
+        <a href="/battle-economy-guide.html">Battle Guide</a>
+        <a href="/game-rules.html">Rules</a>
+        <a href="/support.html">Support</a>
+        <a href="/privacy.html">Privacy</a>
+      </nav>
+    </div>
+  </footer>
+
+  <noscript><p class="guide-noscript">The diagrams require JavaScript, but the formulas, economy map, skills, battle sequence, wall timer, and special rules remain readable above.</p></noscript>
+  <script src="/economy-config.js?v=20260805-monthly-rewards-v3"></script>
+  <script src="/battle-guide-calculations.js?v=20260805-battle-guide-v1"></script>
+  <script src="/battle-economy-guide.js?v=20260805-battle-guide-v1"></script>
+</body>
+</html>

@@ -113,7 +113,7 @@ assert.doesNotMatch(
 const combatSource = extractFunction("calculateCombatResult");
 assert.match(
   combatSource,
-  /convertedReinforcementCanCapture[\s\S]*?attackPower > defensePower[\s\S]*?const raid = protectedRaid && !success/,
+  /convertedReinforcementCanCapture[\s\S]*?const siegePowerWon[\s\S]*?const raid = protectedRaid && !success/,
   "Only a winning converted reinforcement may bypass the protected-raid capture block."
 );
 assert.match(

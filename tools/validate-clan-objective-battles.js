@@ -128,6 +128,8 @@ assert.equal(citadelClanmate.upgradeCostReductionPercent, 5);
 
 const defenseContext = {
   Map,
+  Date,
+  SIEGE_COMBAT_VERSION: 1,
   REINFORCEMENT_CITY_WALL_SHARE: 0.25,
   safeNumber: (value, fallback = 0) => Number.isFinite(Number(value)) ? Number(value) : fallback,
   safeString: (value, maxLength = 256) => String(value || "").slice(0, maxLength),
@@ -136,6 +138,16 @@ const defenseContext = {
   getOwnerName: target => String(target?.ownerName || ""),
   getTargetOwnerTroops: target => Math.max(0, Math.floor(Number(target?.troops) || 0)),
   getSkillPercent: (profile, skill) => skill === "stoneworks" ? Math.max(0, Number(profile?.stoneworksPercent) || 0) : 0,
+  usesSiegeCombat: (version, targetType) => targetType !== "camp" && Number(version) >= 1,
+  getFortificationSnapshot(target, stats) {
+    return {
+      modelVersion: 1,
+      fullWallPower: 363,
+      currentWallPower: 363,
+      integrityBps: 10_000,
+      repairAtMs: 0,
+    };
+  },
   getCityStats(target, profile, bonuses) {
     assert.equal(target.alliedReinforcementTroops, 0, "The holder package included allied troops.");
     assert.equal(target.troops, 500);
@@ -149,6 +161,7 @@ const defenseContext = {
       baseCityWalls: 300,
       cityWalls: 330,
       stoneworksPercent: 10,
+      troopDefense: 670,
     };
   },
 };
@@ -180,6 +193,26 @@ assert.equal(packages.reinforcements[0].effectivePower, 262, "A reinforcement's 
 assert.equal(packages.reinforcements[0].sharedBonusPercent, 5);
 assert.equal(packages.totalDefense, 1_362);
 
+const siegePackages = defenseContext.calculateDefenderArmyPackages({
+  target: { ownerUid: "holder", ownerName: "Holder", troops: 500 },
+  ownerProfile: { playerName: "Holder", flag: { symbol: "lion" } },
+  ownerBonuses: { cityDefenseBonusPercent: 10 },
+  contributions: [{ id: "r1", ownerUid: "ally", ownerName: "Ally", troops: 100 }],
+  contributorProfiles: new Map([["ally", { playerName: "Ally", flag: { symbol: "castle" }, stoneworksPercent: 25 }]]),
+  contributorStats: new Map([["ally", {
+    strongholdDefenseBonusPercent: 5,
+    personalStrongholdDefenseBonusPercent: 0,
+    sharedClanDefenseBonusPercent: 5,
+  }]]),
+  siegeCombatVersion: 1,
+});
+assert.equal(siegePackages.owner.effectivePower, 737, "Objective defense must strengthen the owner's garrison troops.");
+assert.equal(siegePackages.reinforcements[0].basePower, 100, "Siege reinforcements must contribute troops without duplicate walls.");
+assert.equal(siegePackages.reinforcements[0].cityWallDefense, 0, "Siege reinforcements cannot add a second wall layer.");
+assert.equal(siegePackages.reinforcements[0].stoneworksBonus, 0, "A reinforcement sender's Stoneworks cannot duplicate the holding wall.");
+assert.equal(siegePackages.totalGarrisonDefense, 842);
+assert.equal(siegePackages.totalDefense, 1_205, "Siege defense must be one wall plus the combined garrison.");
+
 requires(
   server,
   /function rebuildClanWorldBenefits[\s\S]*?cumulativeGoldPercentMs[\s\S]*?cumulativeTroopPercentMs[\s\S]*?lastIntegratedAtMs[\s\S]*?revision:/,
@@ -197,8 +230,8 @@ requires(
 );
 requires(
   server,
-  /function calculateDefenderArmyPackages[\s\S]*?getCityStats\(ownerTarget[\s\S]*?calculateReinforcementFortificationDefense[\s\S]*?contributorStats/,
-  "Defensive reinforcement packages are not calculated independently per troop owner."
+  /function calculateDefenderArmyPackages[\s\S]*?usesSiegeCombat[\s\S]*?totalGarrisonDefense[\s\S]*?fortification\?\.currentWallPower/,
+  "The current defense model does not combine one wall with independently calculated garrison packages."
 );
 requires(
   server,
@@ -257,8 +290,8 @@ requires(
 );
 requires(
   client,
-  /function renderBattleReinforcementRow[\s\S]*?Fortifications[\s\S]*?Quarter walls[\s\S]*?Stoneworks/,
-  "Detailed battle reports do not explain a reinforcement's wall and Stoneworks defense."
+  /function renderBattleReinforcementRow[\s\S]*?Legacy fortifications[\s\S]*?Quarter walls[\s\S]*?Uses the holding's single wall/i,
+  "Detailed battle reports do not distinguish legacy reinforcement walls from the single-wall siege model."
 );
 assert.doesNotMatch(
   extractFunction(client, "renderBattleReinforcementRow"),
@@ -301,4 +334,4 @@ assert.ok(
   "The clan objective battle validator is not part of the Functions validation suite."
 );
 
-console.log("Validated clan objective precedence, benefit authority, per-owner defense, private snapshots, and compact/detailed report presentation.");
+console.log("Validated clan objective precedence, legacy and single-wall siege defense packages, private snapshots, and compact/detailed report presentation.");

@@ -90,6 +90,9 @@ Object.assign(sandbox, {
   isStronghold(target = {}) {
     return target.kind === "stronghold" || Boolean(target.strongholdType);
   },
+  usesSiegeCombat() {
+    return false;
+  },
   getCityStats(target = {}) {
     const totalDefense = Math.max(1, Number(target.totalDefense) || 1000);
     return { totalDefense, cityWalls: totalDefense };

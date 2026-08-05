@@ -6,6 +6,7 @@ const root = path.resolve(__dirname, "..");
 const publicPages = [
   "about.html",
   "how-to-play.html",
+  "battle-economy-guide.html",
   "game-rules.html",
   "support.html",
   "privacy.html",
@@ -13,6 +14,7 @@ const publicPages = [
 const requiredNavigation = [
   "/about.html",
   "/how-to-play.html",
+  "/battle-economy-guide.html",
   "/game-rules.html",
   "/support.html",
   "/privacy.html",

@@ -1,8 +1,23 @@
 (function () {
   window.CROWNLANDS_PATCH_NOTES = Object.freeze({
-    buildId: "20260804-combat-forecast-v1",
-    generatedAt: "2026-08-04T12:00:00.000Z",
+    buildId: "20260805-season-balance-v1",
+    generatedAt: "2026-08-05T12:00:00.000Z",
     releases: Object.freeze([
+      Object.freeze({
+        buildId: "20260805-season-balance-v1",
+        dateKey: "2026-08-05",
+        publishedAt: "2026-08-05T12:00:00.000Z",
+        notes: Object.freeze([
+          "City and objective battles now resolve through one physical wall before remaining attack power reaches the garrison.",
+          "Wall strength now follows one smooth formula at every level, while repairs take 15 minutes plus 0.3 minutes per city level with no gameplay cap.",
+          "Damaged-wall timers now follow the city through captures and ownership changes instead of resetting for the new owner.",
+          "Forecasts, scout reports, and battle reports now explain wall absorption, garrison power, and why a holding was or was not captured.",
+          "Attack forecasts now reserve Overwhelming for at least three times the resolved defense and show projected losses, capture thresholds, shortfalls, and meaningful wall-damage requirements.",
+          "Daily login rewards now follow the UTC calendar month, with equal total value in 28-, 29-, 30-, and 31-day months and up to two earned rewards waiting for collection.",
+          "A season economy audit now protects the intended Level 150 siege and 30-city production benchmarks whenever economy values change.",
+          "A new public Battle & Economy Guide explains city growth, production, skills, siege phases, capture thresholds, wall repairs, and special combat rules with interactive calculators.",
+        ]),
+      }),
       Object.freeze({
         buildId: "20260804-combat-forecast-v1",
         dateKey: "2026-08-04",

@@ -21,7 +21,7 @@ function readFunction(text, name) {
 }
 
 const requiredServerSnippets = [
-  "const COMBAT_FORECAST_VERSION = 1",
+  "const COMBAT_FORECAST_VERSION = 3",
   "const ATTACK_COMBAT_SNAPSHOT_VERSION = 1",
   "defensePower: defenseContext.packages.totalDefense",
   "attackCombatSnapshot: createAttackCombatSnapshot(troops, profile)",
@@ -39,12 +39,16 @@ requiredServerSnippets.forEach(snippet => {
 
 const requiredClientSnippets = [
   "getScoutReportForTarget(target)",
-  "Scouted total defense",
+  "Scouted siege defense",
   "Forecast at scout time",
+  "Weaker-kingdom protection disables capture for this raid.",
+  "Minimum capture force at scout time",
+  "Too small to advance this siege",
+  "attacker losses",
+  "ownership, and bonuses may change before arrival.",
   "Protected raid — cannot capture",
-  "Defense can change before arrival",
+  "Capture requires breaching the wall and then exceeding garrison defense.",
   "Launch forecast compared with arrival",
-  "Production, reinforcements, and bonuses remain live while troops travel",
   "launchCombatForecast: normalizeCombatForecast(report.launchCombatForecast)",
   "targetType: isRewardCampTarget(target) ? \"camp\" : \"city\"",
 ];
@@ -64,6 +68,9 @@ if (!previewSource.includes("scoutReport?.totalDefense")
 
 const sandbox = {
   BASE_TROOP_ATTACK_POWER: 2,
+  SIEGE_COMBAT_VERSION: 1,
+  SIEGE_MEANINGFUL_WALL_DAMAGE_PERCENT: 5,
+  SIEGE_INTACT_WALL_DEFENDER_LOSS_CAP_PERCENT: 10,
   Number,
   Math,
   normalizeAttackProtectionSnapshot(value) {
@@ -75,6 +82,12 @@ const sandbox = {
   getBattleDefensePower(target) {
     return Number(target?.localDefense) || 0;
   },
+  isRewardCampTarget() {
+    return false;
+  },
+  normalizeTimestampMs(value) {
+    return Math.max(0, Math.floor(Number(value) || 0));
+  },
   skillMultiplier() {
     return 1;
   },
@@ -84,6 +97,27 @@ const sandbox = {
 };
 vm.createContext(sandbox);
 vm.runInContext(`${calculateSource}; this.calculateCombatResult = calculateCombatResult;`, sandbox);
+
+const advantageSource = readFunction(clientSource, "getCombatAdvantageTier");
+const minimumSource = readFunction(clientSource, "getMinimumTroopsForPower");
+vm.runInContext(
+  `${advantageSource}; ${minimumSource}; this.getCombatAdvantageTier = getCombatAdvantageTier; this.getMinimumTroopsForPower = getMinimumTroopsForPower;`,
+  sandbox
+);
+[
+  [0.99, "defeat_expected"],
+  [1, "defeat_expected"],
+  [1.0001, "costly_victory"],
+  [1.5, "advantage"],
+  [2, "strong_advantage"],
+  [3, "overwhelming_advantage"],
+].forEach(([ratio, expected]) => {
+  const actual = sandbox.getCombatAdvantageTier(ratio).key;
+  if (actual !== expected) throw new Error(`Power ratio ${ratio} was labeled ${actual}, expected ${expected}.`);
+});
+if (sandbox.getMinimumTroopsForPower(500, 2) !== 251) {
+  throw new Error("Minimum capture troops must exceed, not merely equal, authoritative defense power.");
+}
 
 const target = { troops: 100, localDefense: 100 };
 const launchForecast = sandbox.calculateCombatResult(300, "player", target, {

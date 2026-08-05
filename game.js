@@ -214,28 +214,62 @@ const SWIFT_MARCH_MINIMUM_REMAINING_SECONDS = 1;
 const RECALL_HORN_ITEM_ID = "recall_horn";
 const PEACE_SHIELD_RETURN_REASON = "peace_shield";
 const PEACE_SHIELD_MINIMUM_RETURN_SECONDS = 1;
-const DAILY_LOGIN_REWARD_SCHEMA_VERSION = 2;
-const DAILY_LOGIN_REWARD_DAYS = Object.freeze(
-  (Array.isArray(ECONOMY_CONFIG?.dailyLoginRewards?.days) ? ECONOMY_CONFIG.dailyLoginRewards.days : [])
-    .map((entry, index) => Object.freeze({
-      day: Math.max(1, Math.floor(Number(entry?.day) || index + 1)),
-      goldHours: Math.max(0, Number(entry?.goldHours) || 0),
-      troopHours: Math.max(0, Number(entry?.troopHours) || 0),
-      items: Object.freeze(Object.fromEntries(
-        Object.entries(entry?.items || {})
-          .filter(([itemId, quantity]) => SHOP_ITEMS.some(item => item.id === itemId) && Number(quantity) > 0)
-          .map(([itemId, quantity]) => [itemId, Math.max(1, Math.floor(Number(quantity) || 1))])
-      )),
-    }))
-);
-const DAILY_LOGIN_REWARD_CYCLE_DAYS = Math.max(
-  1,
-  Math.floor(Number(ECONOMY_CONFIG?.dailyLoginRewards?.cycleLengthDays) || DAILY_LOGIN_REWARD_DAYS.length)
-);
+const DAILY_LOGIN_REWARD_SCHEMA_VERSION = 3;
+const LEGACY_DAILY_LOGIN_REWARD_CYCLE_DAYS = 30;
+const DAILY_LOGIN_REWARD_MONTH_LENGTHS = Object.freeze([28, 29, 30, 31]);
 const DAILY_LOGIN_REWARD_MAX_PENDING = Math.max(
   1,
   Math.floor(Number(ECONOMY_CONFIG?.dailyLoginRewards?.maxPendingRewards) || 2)
 );
+const DAILY_LOGIN_REWARD_ITEM_ORDER = Object.freeze(
+  (Array.isArray(ECONOMY_CONFIG?.dailyLoginRewards?.itemOrder)
+    ? ECONOMY_CONFIG.dailyLoginRewards.itemOrder
+    : [])
+    .map(itemId => String(itemId || "").slice(0, 64))
+    .filter(itemId => SHOP_ITEMS.some(item => item.id === itemId))
+);
+
+function buildDailyLoginRewardTrack(monthLength) {
+  const length = Math.floor(Number(monthLength) || 0);
+  const configured = ECONOMY_CONFIG?.dailyLoginRewards?.tracksByMonthLength?.[String(length)] || {};
+  const itemDays = (Array.isArray(configured.itemDays) ? configured.itemDays : [])
+    .map(day => Math.floor(Number(day) || 0));
+  const goldHours = (Array.isArray(configured.goldHours) ? configured.goldHours : [])
+    .map(hours => Math.max(0, Number(hours) || 0));
+  const troopHours = (Array.isArray(configured.troopHours) ? configured.troopHours : [])
+    .map(hours => Math.max(0, Number(hours) || 0));
+  if (
+    itemDays.length !== DAILY_LOGIN_REWARD_ITEM_ORDER.length
+    || new Set(itemDays).size !== itemDays.length
+    || itemDays.some(day => day < 1 || day > length)
+  ) {
+    throw new Error(`Daily login reward track ${length} has invalid item milestones.`);
+  }
+  const itemDayToId = new Map(itemDays.map((day, index) => [day, DAILY_LOGIN_REWARD_ITEM_ORDER[index]]));
+  let goldIndex = 0;
+  let troopIndex = 0;
+  let nextResource = "gold";
+  const days = Array.from({ length }, (_, index) => {
+    const day = index + 1;
+    const itemId = itemDayToId.get(day);
+    if (itemId) {
+      return Object.freeze({ day, goldHours: 0, troopHours: 0, items: Object.freeze({ [itemId]: 1 }) });
+    }
+    const reward = nextResource === "gold"
+      ? { day, goldHours: goldHours[goldIndex++], troopHours: 0, items: Object.freeze({}) }
+      : { day, goldHours: 0, troopHours: troopHours[troopIndex++], items: Object.freeze({}) };
+    nextResource = nextResource === "gold" ? "troops" : "gold";
+    return Object.freeze(reward);
+  });
+  if (goldIndex !== goldHours.length || troopIndex !== troopHours.length) {
+    throw new Error(`Daily login reward track ${length} does not match its calendar slots.`);
+  }
+  return Object.freeze(days);
+}
+
+const DAILY_LOGIN_REWARD_TRACKS = Object.freeze(Object.fromEntries(
+  DAILY_LOGIN_REWARD_MONTH_LENGTHS.map(length => [String(length), buildDailyLoginRewardTrack(length)])
+));
 const DAILY_LOGIN_REWARD_AUTO_OPEN_PREFIX = `crownlands-daily-reward-opened-${RESET_GENERATION}`;
 const ITEM_DAILY_PURCHASE_LIMITS = Object.freeze({
   [ROYAL_PEACE_SHIELD_ITEM_ID]: economyNumber("shopItems.shield_12h.dailyPurchaseLimit", 1),
@@ -876,8 +910,14 @@ const BATTLE_XP_END_START_LEVEL_CAP_RATE = 0.5;
 const BATTLE_XP_END_FLOOR_LEVEL_CAP_RATE = 0.35;
 const BATTLE_XP_END_CAP_RAMP_LEVELS = 50;
 const ATTACK_PROTECTION_VERSION = 2;
-const COMBAT_FORECAST_VERSION = 1;
+const COMBAT_FORECAST_VERSION = 3;
 const ATTACK_COMBAT_SNAPSHOT_VERSION = 1;
+const SIEGE_COMBAT_VERSION = Math.max(1, Math.floor(economyNumber("siegeCombat.modelVersion", 1)));
+const FORTIFICATION_STATE_VERSION = 1;
+const SIEGE_REPAIR_BASE_MINUTES = Math.max(1, economyNumber("siegeCombat.repairBaseMinutes", 15));
+const SIEGE_REPAIR_MINUTES_PER_LEVEL = Math.max(0, economyNumber("siegeCombat.repairMinutesPerLevel", 0.3));
+const SIEGE_MEANINGFUL_WALL_DAMAGE_PERCENT = Math.min(100, Math.max(0, economyNumber("siegeCombat.meaningfulWallDamagePercent", 5)));
+const SIEGE_INTACT_WALL_DEFENDER_LOSS_CAP_PERCENT = Math.min(100, Math.max(0, economyNumber("siegeCombat.intactWallDefenderLossCapPercent", 10)));
 const ATTACK_PROTECTION_ASSAULT_MIN_RATIO = 2;
 const ATTACK_PROTECTION_RAID_MIN_RATIO = 2.5;
 const ATTACK_PROTECTION_RAID_MAX_SCALE_RATIO = 5;
@@ -899,6 +939,8 @@ const CITY_LEVEL_STATS = {
   cityWallsBase: economyNumber("cityEconomy.wallDefenseBase", 200),
   cityWallsExponent: economyNumber("cityEconomy.wallDefenseExponent", 3),
   cityWallsExponentScale: economyNumber("cityEconomy.wallDefenseScale", 3),
+  cityWallsTransitionLevel: Math.max(1, economyNumber("cityEconomy.wallDefenseTransitionLevel", 140)),
+  cityWallsTransitionPower: Math.max(1, economyNumber("cityEconomy.wallDefenseTransitionPower", 8)),
   troopProductionPerVictoryPoint: economyNumber("cityEconomy.troopsPerVictoryPoint", 3),
   goldProductionPerMillionLordsVp: MILLION_LORDS_PASSIVE_GOLD_PER_CITY_VP,
 };
@@ -7715,6 +7757,34 @@ function normalizeAttackProtectionSnapshot(raw = null, legacyDemoAttack = null) 
   };
 }
 
+function normalizeCombatFortificationSnapshot(raw = null) {
+  if (!raw || typeof raw !== "object") return null;
+  return {
+    modelVersion: SIEGE_COMBAT_VERSION,
+    baseCityWalls: Math.max(0, Math.floor(Number(raw.baseCityWalls) || 0)),
+    reinforcedCityWalls: Math.max(0, Math.floor(Number(raw.reinforcedCityWalls) || 0)),
+    stoneworksPercent: Math.max(0, Number(raw.stoneworksPercent) || 0),
+    cityLevelDefensePercent: Math.max(0, Number(raw.cityLevelDefensePercent) || 0),
+    objectiveDefenseBonusPercent: Math.max(0, Number(raw.objectiveDefenseBonusPercent) || 0),
+    fullWallPower: Math.max(0, Math.floor(Number(raw.fullWallPower) || 0)),
+    currentWallPower: Math.max(0, Math.floor(Number(raw.currentWallPower ?? raw.startingWallPower) || 0)),
+    startingWallPower: Math.max(0, Math.floor(Number(raw.startingWallPower ?? raw.currentWallPower) || 0)),
+    wallDamagePower: Math.max(0, Math.floor(Number(raw.wallDamagePower) || 0)),
+    penetratingAttackPower: Math.max(0, Math.floor(Number(raw.penetratingAttackPower) || 0)),
+    garrisonDefensePower: Math.max(0, Math.floor(Number(raw.garrisonDefensePower) || 0)),
+    ownerGarrisonDefensePower: Math.max(0, Math.floor(Number(raw.ownerGarrisonDefensePower) || 0)),
+    reinforcementGarrisonDefensePower: Math.max(0, Math.floor(Number(raw.reinforcementGarrisonDefensePower) || 0)),
+    startingIntegrityBps: clamp(Math.floor(Number(raw.startingIntegrityBps ?? raw.integrityBps) || 0), 0, 10_000),
+    endingIntegrityBps: clamp(Math.floor(Number(raw.endingIntegrityBps ?? raw.integrityBps) || 0), 0, 10_000),
+    repairAtMs: normalizeTimestampMs(raw.repairAtMs),
+    repairWindowMinutes: Math.max(0, Math.floor(Number(raw.repairWindowMinutes) || 0)),
+    repairReductionPercent: clamp(Number(raw.repairReductionPercent) || 0, 0, 100),
+    breached: raw.breached === true,
+    meaningfulWallDamage: raw.meaningfulWallDamage === true,
+    persistentDamageApplied: raw.persistentDamageApplied === true,
+  };
+}
+
 function normalizeCombatForecast(raw = null) {
   if (!raw || typeof raw !== "object" || Number(raw.version) !== COMBAT_FORECAST_VERSION) return null;
   const status = ["scouted", "unavailable", "expired", "owner_changed"].includes(raw.status)
@@ -7742,13 +7812,29 @@ function normalizeCombatForecast(raw = null) {
     effectiveTroops: Math.max(1, Math.floor(Number(raw.effectiveTroops) || 1)),
     attackPower: Math.max(0, Math.floor(Number(raw.attackPower) || 0)),
     powerRatio: Math.max(0, Number(raw.powerRatio) || 0),
-    expectedOutcome: ["capture", "breach", "raid", "defeat"].includes(raw.expectedOutcome)
+    expectedOutcome: ["capture", "breach", "raid", "defeat", "wall_hold", "garrison_hold"].includes(raw.expectedOutcome)
       ? raw.expectedOutcome
       : "defeat",
     estimatedSurvivors: Math.max(0, Math.floor(Number(raw.estimatedSurvivors) || 0)),
     estimatedDefendersLeft: Math.max(0, Math.floor(Number(raw.estimatedDefendersLeft) || 0)),
     estimatedAttackerLosses: Math.max(0, Math.floor(Number(raw.estimatedAttackerLosses) || 0)),
     estimatedDefenderLosses: Math.max(0, Math.floor(Number(raw.estimatedDefenderLosses) || 0)),
+    estimatedAttackerLossPercent: clamp(Number(raw.estimatedAttackerLossPercent) || 0, 0, 100),
+    estimatedDefenderLossPercent: clamp(Number(raw.estimatedDefenderLossPercent) || 0, 0, 100),
+    minimumCaptureTroops: Math.max(1, Math.floor(Number(raw.minimumCaptureTroops) || 1)),
+    minimumMeaningfulWallDamageTroops: Math.max(
+      0,
+      Math.floor(Number(raw.minimumMeaningfulWallDamageTroops) || 0)
+    ),
+    advantageTier: [
+      "defeat_expected",
+      "costly_victory",
+      "advantage",
+      "strong_advantage",
+      "overwhelming_advantage",
+    ].includes(raw.advantageTier) ? raw.advantageTier : getCombatAdvantageTier(raw.powerRatio).key,
+    siegeCombatVersion: Math.max(0, Math.floor(Number(raw.siegeCombatVersion) || 0)),
+    fortification: normalizeCombatFortificationSnapshot(raw.fortification),
   };
 }
 
@@ -8105,12 +8191,61 @@ function formatCapturedCityLevelDrop(levelDrop) {
 
 function getBaseCityWalls(level) {
   const normalizedLevel = clampCityLevel(level);
-  const growth = (
+  const rawGrowth = (
     Math.pow(normalizedLevel, CITY_LEVEL_STATS.cityWallsExponent) - 1
   ) * CITY_LEVEL_STATS.cityWallsExponentScale;
+  const smoothingExponent = Math.max(0, CITY_LEVEL_STATS.cityWallsExponent - 1)
+    / CITY_LEVEL_STATS.cityWallsTransitionPower;
+  const smoothingDivisor = Math.pow(
+    1 + Math.pow(
+      normalizedLevel / CITY_LEVEL_STATS.cityWallsTransitionLevel,
+      CITY_LEVEL_STATS.cityWallsTransitionPower
+    ),
+    smoothingExponent
+  );
+  const growth = smoothingDivisor > 0 ? rawGrowth / smoothingDivisor : rawGrowth;
   const walls = CITY_LEVEL_STATS.cityWallsBase + Math.max(0, growth);
   if (!Number.isFinite(walls)) return Number.MAX_SAFE_INTEGER;
   return Math.min(Number.MAX_SAFE_INTEGER, Math.max(0, Math.floor(walls)));
+}
+
+function getSiegeRepairWindowMinutes(level) {
+  const normalizedLevel = clampCityLevel(level);
+  const minutes = Math.round(
+    SIEGE_REPAIR_BASE_MINUTES + normalizedLevel * SIEGE_REPAIR_MINUTES_PER_LEVEL
+  );
+  if (!Number.isFinite(minutes)) return Number.MAX_SAFE_INTEGER;
+  return Math.min(Number.MAX_SAFE_INTEGER, Math.max(1, minutes));
+}
+
+function getSiegeRepairTiming(level, nowMs = Date.now(), reductionPercent = 0) {
+  const repairWindowMinutes = getSiegeRepairWindowMinutes(level);
+  const reduction = clamp(Number(reductionPercent) || 0, 0, 100);
+  const durationMs = Math.max(
+    60_000,
+    Math.floor(repairWindowMinutes * 60_000 * (1 - reduction / 100))
+  );
+  const startedAtMs = Math.max(0, Math.floor(Number(nowMs) || Date.now()));
+  return {
+    repairWindowMinutes,
+    repairReductionPercent: reduction,
+    repairAtMs: Math.min(Number.MAX_SAFE_INTEGER, startedAtMs + durationMs),
+  };
+}
+
+function reduceFortificationRepairDeadline(repairAtMs, reductionPercent, nowMs = Date.now()) {
+  const currentDeadline = normalizeTimestampMs(repairAtMs);
+  const currentTime = Math.max(0, Math.floor(Number(nowMs) || Date.now()));
+  const remainingMs = Math.max(0, currentDeadline - currentTime);
+  const reduction = clamp(Number(reductionPercent) || 0, 0, 100);
+  return Math.min(
+    Number.MAX_SAFE_INTEGER,
+    currentTime + Math.max(0, Math.floor(remainingMs * (1 - reduction / 100)))
+  );
+}
+
+function getSiegeRepairLevel(target = {}) {
+  return isStronghold(target) ? getStrongholdDefenseLevel(target) : clampCityLevel(target.level);
 }
 
 function calculateGoldProductionRates(
@@ -8271,6 +8406,65 @@ function getCityStats(city, options = {}) {
   };
 }
 
+function normalizeFortificationState(city = {}, nowMs = Date.now()) {
+  const raw = city?.fortificationState && typeof city.fortificationState === "object"
+    ? city.fortificationState
+    : {};
+  const repairAtMs = normalizeTimestampMs(raw.repairAtMs);
+  const integrityBps = Math.floor(Number(raw.integrityBps));
+  const lastDamagedAtMs = normalizeTimestampMs(raw.lastDamagedAtMs);
+  const inferredRepairWindowMinutes = repairAtMs > lastDamagedAtMs
+    ? Math.max(1, Math.round((repairAtMs - lastDamagedAtMs) / 60_000))
+    : 0;
+  const repairWindowMinutes = Math.max(
+    0,
+    Math.floor(Number(raw.repairWindowMinutes) || inferredRepairWindowMinutes)
+  );
+  const active = Math.floor(Number(raw.version) || 0) === FORTIFICATION_STATE_VERSION
+    && repairAtMs > nowMs
+    && Number.isFinite(integrityBps)
+    && integrityBps < 10_000;
+  return {
+    version: FORTIFICATION_STATE_VERSION,
+    integrityBps: active ? clamp(integrityBps, 0, 10_000) : 10_000,
+    lastDamagedAtMs: active ? lastDamagedAtMs : 0,
+    repairAtMs: active ? repairAtMs : 0,
+    repairWindowMinutes: active ? repairWindowMinutes : 0,
+    repairReductionPercent: active ? clamp(Number(raw.repairReductionPercent) || 0, 0, 100) : 0,
+    lastArmyId: active ? String(raw.lastArmyId || "").slice(0, 96) : "",
+  };
+}
+
+function getCityFortificationSnapshot(city = {}, statsOverride = null, nowMs = Date.now()) {
+  const stats = statsOverride || getCityStats(city);
+  const state = normalizeFortificationState(city, nowMs);
+  const objectiveDefenseBonusPercent = Math.max(0, Number(stats.strongholdDefenseBonusPercent) || 0);
+  const fullWallPower = Math.max(0, Math.floor(
+    Math.max(0, Number(stats.cityWalls) || 0) * (1 + objectiveDefenseBonusPercent / 100)
+  ));
+  const ownerGarrisonDefensePower = Math.max(0, Math.floor(
+    Math.max(0, Number(stats.troopDefense) || 0) * (1 + objectiveDefenseBonusPercent / 100)
+  ));
+  return {
+    modelVersion: SIEGE_COMBAT_VERSION,
+    baseCityWalls: Math.max(0, Math.floor(Number(stats.baseCityWalls) || 0)),
+    reinforcedCityWalls: Math.max(0, Math.floor(Number(stats.cityWalls) || 0)),
+    stoneworksPercent: Math.max(0, Number(stats.stoneworksPercent) || 0),
+    cityLevelDefensePercent: Math.max(0, Number(stats.defensePercent) || 0),
+    objectiveDefenseBonusPercent,
+    fullWallPower,
+    currentWallPower: Math.max(0, Math.floor(fullWallPower * state.integrityBps / 10_000)),
+    integrityBps: state.integrityBps,
+    repairAtMs: state.repairAtMs,
+    repairWindowMinutes: state.repairWindowMinutes,
+    repairReductionPercent: state.repairReductionPercent,
+    lastDamagedAtMs: state.lastDamagedAtMs,
+    garrisonDefensePower: ownerGarrisonDefensePower,
+    ownerGarrisonDefensePower,
+    reinforcementGarrisonDefensePower: 0,
+  };
+}
+
 function getBattleDefensePower(city) {
   const stats = getCityStats(city);
   return stats.totalDefense;
@@ -8279,6 +8473,21 @@ function getBattleDefensePower(city) {
 function getAttackPower(troops, owner) {
   const ownerBoost = owner === "player" ? skillMultiplier("swordmastery") : 1.04;
   return troops * BASE_TROOP_ATTACK_POWER * ownerBoost;
+}
+
+function getCombatAdvantageTier(powerRatio = 0) {
+  const ratio = Math.max(0, Number(powerRatio) || 0);
+  if (ratio <= 1) return { key: "defeat_expected", label: "Defeat expected" };
+  if (ratio < 1.5) return { key: "costly_victory", label: "Costly victory" };
+  if (ratio < 2) return { key: "advantage", label: "Advantage" };
+  if (ratio < 3) return { key: "strong_advantage", label: "Strong advantage" };
+  return { key: "overwhelming_advantage", label: "Overwhelming advantage" };
+}
+
+function getMinimumTroopsForPower(requiredPower = 0, attackPowerPerTroop = BASE_TROOP_ATTACK_POWER) {
+  const power = Math.max(0, Math.floor(Number(requiredPower) || 0));
+  const perTroop = Math.max(Number.EPSILON, Number(attackPowerPerTroop) || BASE_TROOP_ATTACK_POWER);
+  return Math.max(1, Math.floor(power / perTroop) + 1);
 }
 
 function calculateCombatResult(attackTroops, attackOwner, target, options = {}) {
@@ -8290,9 +8499,30 @@ function calculateCombatResult(attackTroops, attackOwner, target, options = {}) 
   const attackPower = hasAttackPowerOverride
     ? Math.max(0, Math.floor(Number(options.attackPower)))
     : getAttackPower(troops, attackOwner);
+  const siegeEnabled = Math.floor(Number(options.siegeCombatVersion) || 0) >= SIEGE_COMBAT_VERSION
+    && !isRewardCampTarget(target)
+    && options.fortification && typeof options.fortification === "object";
+  const fullWallPower = siegeEnabled
+    ? Math.max(0, Math.floor(Number(options.fortification.fullWallPower) || 0))
+    : 0;
+  const startingIntegrityBps = siegeEnabled
+    ? clamp(Math.floor(Number(options.fortification.integrityBps ?? options.fortification.startingIntegrityBps) || 0), 0, 10_000)
+    : 10_000;
+  const startingWallPower = siegeEnabled
+    ? Math.max(0, Math.floor(Number(options.fortification.currentWallPower ?? options.fortification.startingWallPower) || 0))
+    : 0;
+  const garrisonDefensePower = siegeEnabled
+    ? Math.max(0, Math.floor(Number(
+      options.garrisonDefensePower
+        ?? options.fortification.garrisonDefensePower
+        ?? Math.max(0, (Number(options.defensePower) || 0) - startingWallPower)
+    ) || 0))
+    : 0;
   const defensePower = Number.isFinite(Number(options.defensePower))
     ? Math.max(0, Math.floor(Number(options.defensePower)))
-    : getBattleDefensePower(target);
+    : siegeEnabled
+      ? startingWallPower + garrisonDefensePower
+      : getBattleDefensePower(target);
   const ratio = attackPower / Math.max(1, defensePower);
   const protectedRaid = protectedAttack?.mode === "raid";
   const convertedReinforcement = options.convertedReinforcement === true;
@@ -8300,9 +8530,36 @@ function calculateCombatResult(attackTroops, attackOwner, target, options = {}) 
   const breachOnly = protectedAttack?.mode === "assault"
     && protectedAttack.captureAllowed !== true
     && !convertedReinforcement;
-  const battleWon = (!protectedRaid || convertedReinforcementCanCapture) && attackPower > defensePower;
+  const wallDamagePower = siegeEnabled ? Math.min(attackPower, startingWallPower) : 0;
+  const penetratingAttackPower = siegeEnabled ? Math.max(0, attackPower - startingWallPower) : attackPower;
+  const wallBreached = siegeEnabled && startingWallPower <= attackPower;
+  const rawEndingIntegrityBps = siegeEnabled && fullWallPower > 0
+    ? Math.max(0, startingIntegrityBps - Math.ceil(wallDamagePower * 10_000 / fullWallPower))
+    : startingIntegrityBps;
+  const meaningfulWallDamage = siegeEnabled && startingWallPower > 0 && (
+    wallDamagePower * 100 >= fullWallPower * SIEGE_MEANINGFUL_WALL_DAMAGE_PERCENT
+    || rawEndingIntegrityBps <= 0
+  );
+  const siegePowerWon = siegeEnabled
+    ? penetratingAttackPower > garrisonDefensePower
+    : attackPower > defensePower;
+  const battleWon = (!protectedRaid || convertedReinforcementCanCapture) && siegePowerWon;
   const success = battleWon && !breachOnly;
   const raid = protectedRaid && !success;
+  const persistentDamageApplied = meaningfulWallDamage && !raid;
+  const endingIntegrityBps = persistentDamageApplied ? rawEndingIntegrityBps : startingIntegrityBps;
+  const repairTiming = persistentDamageApplied
+    ? getSiegeRepairTiming(
+      getSiegeRepairLevel(target),
+      Math.max(0, Math.floor(Number(options.nowMs) || Date.now())),
+      options.repairReductionPercent
+    )
+    : null;
+  const repairAtMs = repairTiming?.repairAtMs || normalizeTimestampMs(options.fortification?.repairAtMs);
+  const repairWindowMinutes = repairTiming?.repairWindowMinutes
+    || Math.max(0, Math.floor(Number(options.fortification?.repairWindowMinutes) || 0));
+  const repairReductionPercent = repairTiming?.repairReductionPercent
+    ?? clamp(Number(options.fortification?.repairReductionPercent) || 0, 0, 100);
   const attackerBoost = attackOwner === "player" ? skillMultiplier("swordmastery") : 1.04;
   let survivors = 0;
   let defendersLeft = defendersAtStart;
@@ -8319,13 +8576,28 @@ function calculateCombatResult(attackTroops, attackOwner, target, options = {}) 
       defendersLeft = Math.max(1, defendersAtStart - defenderLosses);
     }
   } else if (battleWon) {
-    const leftoverPower = attackPower - defensePower * 0.68;
+    const leftoverPower = Math.max(0, attackPower - defensePower * (siegeEnabled ? 1 : 0.68));
     survivors = hasAttackPowerOverride
       ? clamp(Math.floor(troops * leftoverPower / Math.max(attackPower, 1)), 1, troops)
       : clamp(Math.floor(leftoverPower / Math.max(BASE_TROOP_ATTACK_POWER * attackerBoost, 1)), 1, troops);
     attackerLosses = troops - survivors;
     defenderLosses = breachOnly ? Math.max(0, defendersAtStart - 1) : defendersAtStart;
     defendersLeft = breachOnly && defendersAtStart > 0 ? 1 : 0;
+  } else if (siegeEnabled && !wallBreached) {
+    const pressure = clamp(attackPower / Math.max(1, startingWallPower), 0, 1);
+    const maximumRate = SIEGE_INTACT_WALL_DEFENDER_LOSS_CAP_PERCENT / 100;
+    defenderLosses = Math.min(
+      defendersAtStart,
+      Math.floor(defendersAtStart * Math.min(maximumRate, pressure * maximumRate))
+    );
+    defendersLeft = Math.max(defendersAtStart > 0 ? 1 : 0, defendersAtStart - defenderLosses);
+  } else if (siegeEnabled) {
+    const pressure = clamp(penetratingAttackPower / Math.max(1, garrisonDefensePower), 0, 1);
+    defenderLosses = Math.min(
+      defendersAtStart,
+      Math.floor(defendersAtStart * Math.min(0.82, pressure * 0.82))
+    );
+    defendersLeft = Math.max(defendersAtStart > 0 ? 1 : 0, defendersAtStart - defenderLosses);
   } else {
     const pressure = clamp(ratio, 0, 1);
     defenderLosses = Math.min(defendersAtStart, Math.floor(defendersAtStart * Math.min(0.82, pressure * 0.82)));
@@ -8348,6 +8620,37 @@ function calculateCombatResult(attackTroops, attackOwner, target, options = {}) 
     demoAttack: protectedAttack?.legacyDemoAttack ? normalizeDemoAttackSnapshot(options.demoAttack) : null,
     raidCompleted: raid,
     breachCompleted: breachOnly && battleWon,
+    fortificationBreached: wallBreached,
+    fortification: siegeEnabled ? {
+      modelVersion: SIEGE_COMBAT_VERSION,
+      baseCityWalls: Math.max(0, Math.floor(Number(options.fortification.baseCityWalls) || 0)),
+      reinforcedCityWalls: Math.max(0, Math.floor(Number(options.fortification.reinforcedCityWalls) || 0)),
+      stoneworksPercent: Math.max(0, Number(options.fortification.stoneworksPercent) || 0),
+      cityLevelDefensePercent: Math.max(0, Number(options.fortification.cityLevelDefensePercent) || 0),
+      objectiveDefenseBonusPercent: Math.max(0, Number(options.fortification.objectiveDefenseBonusPercent) || 0),
+      fullWallPower,
+      currentWallPower: startingWallPower,
+      startingWallPower,
+      wallDamagePower,
+      penetratingAttackPower,
+      garrisonDefensePower,
+      ownerGarrisonDefensePower: Math.max(
+        0,
+        Math.floor(Number(options.fortification.ownerGarrisonDefensePower ?? garrisonDefensePower) || 0)
+      ),
+      reinforcementGarrisonDefensePower: Math.max(
+        0,
+        Math.floor(Number(options.fortification.reinforcementGarrisonDefensePower) || 0)
+      ),
+      startingIntegrityBps,
+      endingIntegrityBps,
+      meaningfulWallDamage,
+      persistentDamageApplied,
+      repairAtMs,
+      repairWindowMinutes,
+      repairReductionPercent,
+      breached: wallBreached,
+    } : null,
     convertedReinforcement,
     convertedReinforcementCapture: convertedReinforcementCanCapture && success,
   };
@@ -8518,6 +8821,8 @@ function normalizeScoutReports(reports) {
       totalDefense,
       baseTotalDefense,
       totalDefenseBonus: Math.max(0, totalDefense - baseTotalDefense),
+      siegeCombatVersion: Math.max(0, Math.floor(Number(report?.siegeCombatVersion) || 0)),
+      fortification: normalizeCombatFortificationSnapshot(report?.fortification),
       scoutedAt,
       expiresAt,
       scoutedAtMs,
@@ -8608,6 +8913,8 @@ function normalizeBattleReports(reports) {
         fieldMedicsRecovered: Math.max(0, Math.floor(Number(report.fieldMedicsRecovered) || 0)),
         battleId: String(report.battleId || "").replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 160),
         battleSnapshotVersion: Math.max(0, Math.floor(Number(report.battleSnapshotVersion) || 0)),
+        siegeCombatVersion: Math.max(0, Math.floor(Number(report.siegeCombatVersion) || 0)),
+        fortification: normalizeCombatFortificationSnapshot(report.fortification),
         attackProtection: normalizeAttackProtectionSnapshot(report.attackProtection, report.demoAttack),
         launchCombatForecast: normalizeCombatForecast(report.launchCombatForecast),
         scoutReport: report.scoutReport || null,
@@ -8697,6 +9004,28 @@ function updateScoutReportLifecycle(nowMs = Date.now()) {
   const afterScoutIds = Object.keys(state.scoutReports).sort().join("|");
   const afterBattleIds = state.battleReports.map(report => report.id).join("|");
   const changed = beforeScoutIds !== afterScoutIds || beforeBattleIds !== afterBattleIds;
+
+  modalBody?.querySelectorAll?.("[data-fortification-repair-at-ms]").forEach(label => {
+    const repairAtMs = normalizeTimestampMs(label.dataset.fortificationRepairAtMs);
+    const remaining = Math.max(0, Math.ceil((repairAtMs - nowMs) / 1000));
+    label.textContent = remaining > 0
+      ? `Full repair in ${formatDuration(remaining)}`
+      : "Fully repaired — wall integrity restored";
+    if (remaining <= 0) {
+      const status = label.closest(".fortification-status");
+      if (status) {
+        status.classList.remove("damaged", "breached");
+        status.classList.add("intact");
+        const integrity = status.querySelector("[data-fortification-integrity]");
+        if (integrity) integrity.textContent = "100% · Intact";
+        const fullWallPower = Math.max(0, Math.floor(Number(status.dataset.fortificationFullWallPower) || 0));
+        const power = status.querySelector("[data-fortification-power]");
+        if (power && fullWallPower > 0) {
+          power.textContent = `${formatNumber(fullWallPower)} / ${formatNumber(fullWallPower)} wall power. Walls absorb attack power before the garrison fights.`;
+        }
+      }
+    }
+  });
 
   const activeScoutCityId = String(modal?.dataset?.scoutReportCityId || "");
   if (modal?.open && modal.classList.contains("scout-report-modal")) {
@@ -9553,6 +9882,10 @@ function supportsBulkArmyOrders() {
   return usesServerArmyAuthority() && getRealmCapabilityVersion("bulkOrdersVersion") >= 1;
 }
 
+function supportsSiegeCombat() {
+  return !isOnlineWorldActive() || getRealmCapabilityVersion("siegeCombatVersion") >= SIEGE_COMBAT_VERSION;
+}
+
 function canUseBulkArmyOrders() {
   return !isOnlineWorldActive() || supportsBulkArmyOrders();
 }
@@ -9896,6 +10229,12 @@ function applyServerCityUpdates(cityUpdates = []) {
     }
     if (update.relocatedAtMs !== undefined) {
       city.relocatedAtMs = timestampToMs(update.relocatedAtMs);
+      changed = true;
+    }
+    if (Object.prototype.hasOwnProperty.call(update, "fortificationState")) {
+      city.fortificationState = update.fortificationState && typeof update.fortificationState === "object"
+        ? { ...update.fortificationState }
+        : null;
       changed = true;
     }
     if (update.ownerUid !== undefined) {
@@ -13764,6 +14103,9 @@ function applyOnlineCities(onlineCities, regionId = getActiveOnlineRegionId(), {
       isMainCity: !isStronghold(base) && (localOwner === "player" ? base.id === state.mainCityId : foreignMainCityFlag),
       relinquishedAtMs: keepLocalPlayerCity || normalizedOwnerKind === "player" ? 0 : timestampToMs(online.relinquishedAtMs ?? current.relinquishedAtMs),
       relocatedAtMs: keepLocalPlayerCity || normalizedOwnerKind === "player" ? 0 : timestampToMs(online.relocatedAtMs ?? current.relocatedAtMs),
+      fortificationState: Object.prototype.hasOwnProperty.call(online, "fortificationState")
+        ? online.fortificationState
+        : current.fortificationState ?? null,
       startPool: base.startPool,
       regionId: base.regionId,
     };
@@ -15036,6 +15378,8 @@ function getCrownCitadelSnapshotSignature(citadel = null) {
     Math.max(0, Math.floor(Number(citadel?.alliedReinforcementTroops) || 0)),
     Math.max(0, Math.floor(Number(citadel?.level) || 0)),
     normalizeTimestampMs(citadel?.lastCapturedAtMs ?? citadel?.lastCapturedAt),
+    Math.max(0, Math.floor(Number(citadel?.fortificationState?.integrityBps) || 0)),
+    normalizeTimestampMs(citadel?.fortificationState?.repairAtMs),
   ].join("|");
 }
 
@@ -18385,7 +18729,17 @@ function resolveAttack(attack) {
   const targetLevel = clampCityLevel(target.level);
   const defendersAtStart = Math.max(0, Math.floor(Number(target.troops) || 0));
   const targetStatsAtStart = getCityStats(target);
-  const targetDefenseAtStart = targetStatsAtStart.totalDefense;
+  const targetFortificationAtStart = isRewardCampTarget(target)
+    ? null
+    : getCityFortificationSnapshot(target, targetStatsAtStart);
+  const targetGarrisonDefenseAtStart = targetFortificationAtStart
+    ? Math.max(0, Math.floor(
+      targetStatsAtStart.troopDefense * (1 + targetStatsAtStart.strongholdDefenseBonusPercent / 100)
+    ))
+    : 0;
+  const targetDefenseAtStart = targetFortificationAtStart
+    ? targetFortificationAtStart.currentWallPower + targetGarrisonDefenseAtStart
+    : targetStatsAtStart.totalDefense;
   const mainCityBlockReason = getMainCityAttackBlockReason(target, attack.owner, attack.ownerUid);
   if (mainCityBlockReason) {
     const returned = returnSurvivingAttackersToSource(attack, attack.troops, `${target.name} protected main city`);
@@ -18554,7 +18908,26 @@ function resolveAttack(attack) {
     attackProtection,
     demoAttack: attack.demoAttack,
     convertedReinforcement,
+    siegeCombatVersion: targetFortificationAtStart ? SIEGE_COMBAT_VERSION : 0,
+    fortification: targetFortificationAtStart,
+    garrisonDefensePower: targetGarrisonDefenseAtStart,
+    defensePower: targetDefenseAtStart,
+    nowMs: Date.now(),
   });
+  if (result.fortification?.persistentDamageApplied) {
+    target.fortificationState = {
+      version: FORTIFICATION_STATE_VERSION,
+      integrityBps: result.fortification.endingIntegrityBps,
+      lastDamagedAtMs: Date.now(),
+      repairAtMs: result.fortification.repairAtMs,
+      repairWindowMinutes: result.fortification.repairWindowMinutes,
+      repairReductionPercent: result.fortification.repairReductionPercent,
+      lastArmyId: String(attack.id || "").slice(0, 96),
+    };
+  }
+  const siegeReportFields = result.fortification
+    ? { siegeCombatVersion: SIEGE_COMBAT_VERSION, fortification: result.fortification }
+    : {};
 
   if (result.breachCompleted) {
     target.troopFloat = result.defendersLeft;
@@ -18573,6 +18946,7 @@ function resolveAttack(attack) {
       const savedAttackers = returnSavedTroops("fieldMedics", result.attackerLosses, `${target.name} breach assault`);
       addBattleReport({
         type: "attack",
+        ...siegeReportFields,
         outcome: "breach",
         cityId: target.id,
         cityName: target.name,
@@ -18602,6 +18976,7 @@ function resolveAttack(attack) {
       );
       addBattleReport({
         type: "defense",
+        ...siegeReportFields,
         outcome: "breached",
         cityId: target.id,
         cityName: target.name,
@@ -18663,6 +19038,7 @@ function resolveAttack(attack) {
       const savedAttackers = returnSavedTroops("fieldMedics", result.attackerLosses, `${target.name} attack`);
       addBattleReport({
         type: "attack",
+        ...siegeReportFields,
         outcome: "victory",
         cityId: target.id,
         cityName: target.name,
@@ -18704,6 +19080,7 @@ function resolveAttack(attack) {
       const defenseLossXp = getPartialBattleXpAward(cappedDefenseHeldXp);
       addBattleReport({
         type: "defense",
+        ...siegeReportFields,
         outcome: "lost",
         cityId: target.id,
         cityName: target.name,
@@ -18743,6 +19120,7 @@ function resolveAttack(attack) {
         : getFailedAttackXpAward(target, oldOwner, result.defenderLosses, attack.owner);
       addBattleReport({
         type: "attack",
+        ...siegeReportFields,
         outcome: result.raidCompleted ? "raid" : "defeat",
         cityId: target.id,
         cityName: target.name,
@@ -18780,6 +19158,7 @@ function resolveAttack(attack) {
       );
       addBattleReport({
         type: "defense",
+        ...siegeReportFields,
         outcome: "held",
         cityId: target.id,
         cityName: target.name,
@@ -23256,6 +23635,10 @@ function showScoutReportModal(cityId) {
   const reinforcements = normalizeScoutReportReinforcements(report.reinforcements);
   const reinforcementTroops = reinforcements.reduce((total, row) => total + row.troops, 0);
   const ownerTroops = Math.max(0, Math.floor(Number(report.ownerTroops ?? Math.max(0, report.troops - reinforcementTroops)) || 0));
+  const siege = normalizeCombatFortificationSnapshot(report.fortification);
+  const siegeRepair = siege?.repairAtMs > Date.now()
+    ? `<small data-fortification-repair-at-ms="${siege.repairAtMs}">Full repair in ${formatDuration(Math.max(0, Math.ceil((siege.repairAtMs - Date.now()) / 1000)))}</small>`
+    : `<small>Fully repaired now</small>`;
   modal.classList.add("scout-report-modal");
   modal.dataset.scoutReportCityId = cityId;
   modalTitle.textContent = "Detailed scout report";
@@ -23278,6 +23661,7 @@ function showScoutReportModal(cityId) {
       <div class="scout-report-overview">
         <div><span>Scouted troops</span><strong>${formatNumber(report.troops)}</strong></div>
         <div><span>Total defense</span><strong>${formatBaseAndBonusStat(baseTotalDefense, report.totalDefense)}</strong></div>
+        ${siege ? `<div><span>Wall integrity at scout time</span><strong>${formatWallIntegrity(siege.startingIntegrityBps)}</strong>${siegeRepair}${siege.repairWindowMinutes > 0 ? `<small>${formatNumber(siege.repairWindowMinutes)}-minute level-based window; capture does not reset it</small>` : ""}</div>` : ""}
       </div>
 
       <section class="scout-report-section">
@@ -23285,8 +23669,9 @@ function showScoutReportModal(cityId) {
         <div class="scout-defense-breakdown">
           ${scoutDefenderRow("&#9817;", reportedOwnerUid, reportedOwnerName, isRewardCampTarget(city) ? "Holding owner" : "City owner", ownerTroops)}
           ${reinforcements.map(row => scoutDefenderRow("&#8649;", row.ownerUid, row.ownerName, "Clan reinforcement", row.troops)).join("")}
-          ${scoutBreakdownRow("&#128737;", "City defense", `Lv ${cityLevel} - +${formatNumber(defensePercent)}%`, cityDefenseBonus)}
-          ${scoutBreakdownRow("&#9819;", "City walls", `Lv ${cityLevel} base ${formatNumber(baseCityWalls)} (+${formatNumber(Math.max(0, cityWalls - baseCityWalls))})`, cityWalls)}
+          ${siege
+            ? `${scoutBreakdownRow("&#9819;", "Current wall layer", `${formatWallIntegrity(siege.startingIntegrityBps)} of ${formatNumber(siege.fullWallPower)} full power`, siege.startingWallPower)}${scoutBreakdownRow("&#128737;", "Garrison layer", "Owner and reinforcement troop defense", siege.garrisonDefensePower)}`
+            : `${scoutBreakdownRow("&#128737;", "City defense", `Lv ${cityLevel} - +${formatNumber(defensePercent)}%`, cityDefenseBonus)}${scoutBreakdownRow("&#9819;", "City walls", `Lv ${cityLevel} base ${formatNumber(baseCityWalls)} (+${formatNumber(Math.max(0, cityWalls - baseCityWalls))})`, cityWalls)}`}
           <div class="scout-breakdown-total"><span>Total</span><strong>${formatBaseAndBonusStat(baseTotalDefense, report.totalDefense)}</strong></div>
         </div>
       </section>
@@ -25055,7 +25440,7 @@ function updateTroopSliderModal(source, target, route) {
     previewEl.className = `troop-slider-preview ${preview.success ? "win" : "lose"}`;
     previewEl.innerHTML = `
       <div><span>Scouted total defense</span><strong>${formatNumber(preview.defensePower)} power</strong><small>${formatNumber(report.troops)} defenders &middot; report age ${formatDuration(scoutAge)}</small><small>Includes known walls, bonuses, and reinforcements</small></div>
-      <div><span>Forecast at scout time</span><strong>${preview.success ? "Likely capture" : "Likely defeat"}</strong><small>${formatNumber(preview.attackPower)} attack vs ${formatNumber(preview.defensePower)} defense &middot; ${escapeHtml(preview.label)}</small><small>${preview.success ? `${formatNumber(preview.survivors)} estimated survivors` : `${formatNumber(preview.defendersLeft)} defenders estimated`} &middot; about ${formatDuration(preview.travel)}</small><small>Defense can change before arrival &middot; ${escapeHtml(routeSummary)}</small></div>
+      <div><span>Forecast at scout time</span><strong>${preview.success ? "Likely capture" : "Likely defeat"}</strong><small>${formatNumber(preview.attackPower)} attack vs ${formatNumber(preview.defensePower)} defense &middot; ${escapeHtml(preview.label)}</small><small>${formatNumber(preview.attackerLosses)} attacker losses (${formatNumber(Math.round(preview.attackerLossPercent))}%) &middot; ${formatNumber(preview.defenderLosses)} defender losses (${formatNumber(Math.round(preview.defenderLossPercent))}%)</small><small>${preview.success ? `${formatNumber(preview.survivors)} estimated survivors` : `${formatNumber(preview.defendersLeft)} defenders estimated`} &middot; minimum capture force ${formatNumber(preview.minimumCaptureTroops)} troops</small><small>Defense can change before arrival &middot; ${escapeHtml(routeSummary)}</small></div>
     `;
     return;
   }
@@ -25069,6 +25454,18 @@ function updateTroopSliderModal(source, target, route) {
     previewEl.innerHTML = `
       <div><span>Battle forecast</span><strong>Garrison unknown</strong><small>Scout report required</small></div>
       <div><span>Travel time</span><strong>About ${formatDuration(travel)}</strong><small>${escapeHtml(routeSummary)}</small><small>Attack is still available</small>${protectionNotice ? `<small>${escapeHtml(protectionNotice)}</small>` : ""}</div>
+    `;
+    return;
+  }
+  if (
+    usesServerArmyAuthority()
+    && supportsSiegeCombat()
+    && Math.floor(Number(report.siegeCombatVersion) || 0) < SIEGE_COMBAT_VERSION
+  ) {
+    previewEl.className = "troop-slider-preview unknown";
+    previewEl.innerHTML = `
+      <div><span>Battle forecast</span><strong>New scout required</strong><small>This report predates the current wall-and-garrison combat model.</small></div>
+      <div><span>Travel time</span><strong>About ${formatDuration(travel)}</strong><small>${escapeHtml(routeSummary)}</small><small>Attack remains available, but this older report cannot provide a reliable forecast.</small></div>
     `;
     return;
   }
@@ -25088,21 +25485,46 @@ function updateTroopSliderModal(source, target, route) {
   const breach = preview.attackProtection?.mode === "assault"
     && preview.attackProtection?.assaultStage === "breach";
   const favorableOutcome = preview.success || preview.breachCompleted;
+  const siege = preview.fortification;
   const forecastOutcome = raid
     ? "Protected raid — cannot capture"
     : preview.breachCompleted
       ? "Likely wall breach"
       : preview.success
         ? "Likely capture"
+        : siege?.breached
+          ? "Walls breached — garrison likely holds"
+          : siege
+            ? "Walls likely hold"
         : "Likely defeat";
   const scoutAge = getScoutReportAgeSeconds(report);
   const reinforcementText = report.reinforcementTroops > 0
     ? `${formatNumber(report.reinforcementTroops)} allied reinforcement troops included`
     : "No allied reinforcement troops were seen";
+  const stoneworksWallBonus = siege
+    ? Math.max(0, siege.reinforcedCityWalls - siege.baseCityWalls)
+    : 0;
+  const objectiveWallBonus = siege
+    ? Math.max(0, siege.fullWallPower - siege.reinforcedCityWalls)
+    : 0;
+  const wallBreakdown = siege
+    ? `Base wall ${formatNumber(siege.baseCityWalls)} + Stoneworks ${formatNumber(stoneworksWallBonus)} (+${formatNumber(siege.stoneworksPercent)}%)${siege.objectiveDefenseBonusPercent > 0 ? ` + objective ${formatNumber(objectiveWallBonus)} (+${formatNumber(siege.objectiveDefenseBonusPercent)}%)` : ""}`
+    : "";
+  const garrisonBreakdown = siege
+    ? `Owner garrison ${formatNumber(siege.ownerGarrisonDefensePower)} power${siege.reinforcementGarrisonDefensePower > 0 ? ` + reinforcements ${formatNumber(siege.reinforcementGarrisonDefensePower)} power` : ""} · city level defense +${formatNumber(siege.cityLevelDefensePercent)}%${siege.objectiveDefenseBonusPercent > 0 ? ` · objective +${formatNumber(siege.objectiveDefenseBonusPercent)}%` : ""}`
+    : "";
+  const meaningfulWallWarning = preview.belowMeaningfulWallDamage
+    ? `<small class="tiny-warning">Too small to advance this siege: send at least ${formatNumber(preview.minimumMeaningfulWallDamageTroops)} troops to persist ${formatNumber(SIEGE_MEANINGFUL_WALL_DAMAGE_PERCENT)}% wall damage.</small>`
+    : "";
+  const captureThresholdText = raid
+    ? "Weaker-kingdom protection disables capture for this raid."
+    : breach
+      ? "This protected assault can breach the wall but cannot capture on this march."
+      : `Minimum capture force at scout time: ${formatNumber(preview.minimumCaptureTroops)} troops${preview.captureTroopShortfall > 0 ? ` · short by ${formatNumber(preview.captureTroopShortfall)}` : " · threshold met"}.`;
   previewEl.className = `troop-slider-preview ${favorableOutcome ? "win" : "lose"}`;
   previewEl.innerHTML = `
-    <div><span>Scouted total defense</span><strong>${formatNumber(preview.defensePower)} power</strong><small>${formatNumber(report.troops)} defenders &middot; ${escapeHtml(reinforcementText)}</small><small>Report age ${formatDuration(scoutAge)} &middot; includes known walls and defense bonuses</small></div>
-    <div><span>Forecast at scout time</span><strong>${forecastOutcome}</strong><small>${formatNumber(preview.attackPower)} attack vs ${formatNumber(preview.defensePower)} defense &middot; ${escapeHtml(preview.label)}</small><small>${favorableOutcome ? breach ? `About ${formatNumber(preview.survivors)} troops return after breaching` : `About ${formatNumber(preview.survivors)} survivors` : `About ${formatNumber(preview.defendersLeft)} defenders remain`} &middot; ${formatDuration(preview.travel)} travel</small><small>Capture requires more than ${formatNumber(preview.defensePower)} live defense at arrival. Production, reinforcements, and bonuses may change it.</small><small>${escapeHtml(routeSummary)}</small>${protectionNotice ? `<small>${escapeHtml(protectionNotice)}</small>` : ""}</div>
+    <div><span>${siege ? "Scouted siege defense" : "Scouted total defense"}</span><strong>${formatNumber(preview.defensePower)} power</strong><small>${formatNumber(report.troops)} defenders &middot; ${escapeHtml(reinforcementText)}</small>${siege ? `<small>${wallBreakdown}</small><small>Current wall ${formatNumber(siege.startingWallPower)} &rarr; absorbs ${formatNumber(siege.wallDamagePower)} attack · integrity ${formatWallIntegrity(siege.startingIntegrityBps)} &rarr; ${formatWallIntegrity(siege.endingIntegrityBps)}</small><small>${garrisonBreakdown}</small>` : `<small>Report age ${formatDuration(scoutAge)} &middot; includes known walls and defense bonuses</small>`}</div>
+    <div><span>Forecast at scout time</span><strong>${forecastOutcome} · ${escapeHtml(preview.label)}</strong><small>${formatNumber(preview.attackPower)} attack &middot; ${siege ? `${formatNumber(siege.penetratingAttackPower)} reaches ${formatNumber(siege.garrisonDefensePower)} garrison defense` : `${formatNumber(preview.defensePower)} defense`}</small><small>${formatNumber(preview.attackerLosses)} attacker losses (${formatNumber(Math.round(preview.attackerLossPercent))}%) &middot; ${formatNumber(preview.defenderLosses)} defender losses (${formatNumber(Math.round(preview.defenderLossPercent))}%)</small><small>${favorableOutcome ? breach ? `About ${formatNumber(preview.survivors)} troops return after breaching` : `About ${formatNumber(preview.survivors)} survivors` : `About ${formatNumber(preview.defendersLeft)} defenders remain`} &middot; ${formatDuration(preview.travel)} travel</small><small>${captureThresholdText}</small>${meaningfulWallWarning}<small>${siege ? "Capture requires breaching the wall and then exceeding garrison defense." : `Capture requires more than ${formatNumber(preview.defensePower)} live defense at arrival.`} Production, reinforcements, wall repairs, ownership, and bonuses may change before arrival.</small><small>Scout age ${formatDuration(scoutAge)} &middot; ${escapeHtml(routeSummary)}</small>${protectionNotice ? `<small>${escapeHtml(protectionNotice)}</small>` : ""}</div>
   `;
 }
 
@@ -25942,7 +26364,11 @@ function showCrownCitadelInfoModal(city) {
   const heldSinceMs = getCrownCitadelHeldSinceMs();
   const controller = city.owner === "neutral" ? "Neutral defenders" : getCityOwnerDisplayName(city);
   const visibleTroops = getVisibleCityGarrisonTroops(city, report);
-  const visibleDefense = owned ? stats.totalDefense : report?.totalDefense;
+  const visibleDefense = owned
+    ? supportsSiegeCombat()
+      ? getCityFortificationDisplay(city, stats).totalDefensePower
+      : stats.totalDefense
+    : report?.totalDefense;
   const cachedLedgerMarkup = crownCitadelReignCache.length
     ? crownCitadelReignLeaderboardMarkup(crownCitadelReignCache)
     : crownCitadelReignLeaderboardMarkup([], "loading");
@@ -25962,11 +26388,10 @@ function showCrownCitadelInfoModal(city) {
           <div class="stat-chip"><span>Controller</span><strong>${escapeHtml(controller)}</strong></div>
           <div class="stat-chip"><span>Current reign</span><strong ${heldSinceMs ? `data-citadel-reign-score data-total-held-ms="0" data-current-held-since-ms="${heldSinceMs}"` : ""}>${heldSinceMs ? formatDuration(Math.floor((Date.now() - heldSinceMs) / 1000)) : "Unclaimed"}</strong></div>
           <div class="stat-chip"><span>Troops stationed</span><strong data-live-city-garrison="${escapeHtml(city.id)}">${visibleTroops === undefined ? "Unknown" : formatNumber(visibleTroops)}</strong></div>
-          <div class="stat-chip"><span>Total defense</span><strong>${visibleDefense === undefined
+          <div class="stat-chip"><span>${owned ? "Estimated live defense" : report ? "Scouted defense" : "Defense"}</span><strong>${visibleDefense === undefined
             ? "Unknown"
-            : owned
-              ? formatBaseAndBonusStat(stats.baseTotalDefense, stats.totalDefense)
-              : formatBaseAndBonusStat(report?.baseTotalDefense ?? visibleDefense, visibleDefense)}</strong></div>
+            : formatNumber(visibleDefense)}</strong><small>${owned ? "Current wall plus locally estimated garrison defense" : report ? "Wall plus garrison at scout time" : "Scout to reveal"}</small></div>
+          ${renderCityFortificationStatus(city, stats, report)}
           <div class="stat-chip"><span>Defense level</span><strong>${formatNumber(stats.level)}</strong><small>matches a level ${formatNumber(stats.level)} city</small></div>
           <div class="stat-chip"><span>Garrison limit</span><strong>Unlimited</strong></div>
           ${!owned && clanAlly
@@ -26122,6 +26547,63 @@ function openInnerCastle(cityId) {
     ?.focus();
 }
 
+function formatWallIntegrity(integrityBps = 10_000) {
+  const percent = clamp(Math.floor(Number(integrityBps) || 0), 0, 10_000) / 100;
+  return `${Number.isInteger(percent) ? formatNumber(percent) : percent.toFixed(1)}%`;
+}
+
+function getCityFortificationDisplay(city, stats = null, report = null, nowMs = Date.now()) {
+  const local = getCityFortificationSnapshot(city, stats || getCityStats(city), nowMs);
+  const scouted = normalizeCombatFortificationSnapshot(report?.fortification);
+  const integrityBps = scouted?.endingIntegrityBps ?? local.integrityBps;
+  const repairAtMs = scouted?.repairAtMs || local.repairAtMs;
+  const repairWindowMinutes = scouted?.repairWindowMinutes
+    || local.repairWindowMinutes
+    || getSiegeRepairWindowMinutes(getSiegeRepairLevel(city));
+  const fullWallPower = scouted?.fullWallPower || local.fullWallPower;
+  const currentWallPower = scouted
+    ? Math.max(0, Math.floor(scouted.currentWallPower || scouted.startingWallPower || 0))
+    : local.currentWallPower;
+  const objectiveBonusPercent = Math.max(0, Number(stats?.strongholdDefenseBonusPercent) || 0);
+  const garrisonDefensePower = scouted?.garrisonDefensePower || Math.max(
+    0,
+    Math.floor((Number(stats?.troopDefense) || 0) * (1 + objectiveBonusPercent / 100))
+  );
+  const powerVisible = city.owner === "player" || Boolean(scouted) || !getOwnerUid(city);
+  return {
+    integrityBps,
+    repairAtMs,
+    repairWindowMinutes,
+    fullWallPower,
+    currentWallPower,
+    garrisonDefensePower,
+    totalDefensePower: currentWallPower + garrisonDefensePower,
+    powerVisible,
+  };
+}
+
+function renderCityFortificationStatus(city, stats = null, report = null) {
+  if (!supportsSiegeCombat()) return "";
+  const fortification = getCityFortificationDisplay(city, stats, report);
+  const breached = fortification.integrityBps <= 0;
+  const damaged = fortification.integrityBps < 10_000;
+  const status = breached ? "Breached" : damaged ? "Damaged" : "Intact";
+  const powerText = fortification.powerVisible
+    ? `${formatNumber(fortification.currentWallPower)} / ${formatNumber(fortification.fullWallPower)} wall power`
+    : "Wall power requires a scout report";
+  const repairText = damaged && fortification.repairAtMs > Date.now()
+    ? `<small data-fortification-repair-at-ms="${fortification.repairAtMs}">Full repair in ${formatDuration(Math.max(0, Math.ceil((fortification.repairAtMs - Date.now()) / 1000)))}</small>`
+    : `<small>Fully repaired · Level-based repair window ${formatDuration(fortification.repairWindowMinutes * 60)}</small>`;
+  return `
+    <div class="stat-wide fortification-status ${breached ? "breached" : damaged ? "damaged" : "intact"}"${fortification.powerVisible ? ` data-fortification-full-wall-power="${fortification.fullWallPower}"` : ""}>
+      <span>Wall integrity</span>
+      <strong data-fortification-integrity>${formatWallIntegrity(fortification.integrityBps)} · ${status}</strong>
+      <small data-fortification-power>${powerText}. Walls absorb attack power before the garrison fights.</small>
+      ${repairText}
+      ${damaged ? `<small>${formatDuration(fortification.repairWindowMinutes * 60)} level-based window when damaged · Captures do not reset it</small>` : ""}
+    </div>`;
+}
+
 function showCityInfoModal(cityId) {
   const city = cityById(cityId);
   if (!city) return;
@@ -26159,6 +26641,7 @@ function showCityInfoModal(cityId) {
         <div class="stat-chip"><span>Total defense</span><strong>${report
           ? formatBaseAndBonusStat(report.baseTotalDefense ?? report.totalDefense, report.totalDefense)
           : "Unknown"}</strong></div>
+        ${renderCityFortificationStatus(city, stats, report)}
         ${neutralStrongholdBase}
         ${clanAlly
           ? `<div class="stat-wide clan-garrison-access"><span>Garrison visibility</span><strong>Shared by clan</strong><small>Exact owner troops are live. Defense bonuses and reinforcement details remain private.</small></div>`
@@ -26198,7 +26681,8 @@ function showCityInfoModal(cityId) {
         <div class="stat-wide stronghold-status"><span>Controlled bonus</span><strong>${strongholdBonusLabel}</strong><small>Your clanmates receive half of this benefit while your clan controls it.</small></div>
         ${renderObjectiveClanAffiliation(city)}
         <div class="stat-wide"><span>Your active objective benefit</span><strong>${escapeHtml(getControlledObjectiveBenefitBreakdown(city))}</strong><small>Citadel precedence is applied by the server.</small></div>
-        <div class="stat-wide"><span>Total defense</span><strong>${formatBaseAndBonusStat(stats.baseTotalDefense, stats.totalDefense)}</strong><small>${getCityStatBonusSources(stats, "defense")}</small></div>
+        <div class="stat-wide"><span>Estimated live defense</span><strong>${formatNumber(supportsSiegeCombat() ? getCityFortificationDisplay(city, stats).totalDefensePower : stats.totalDefense)}</strong><small>${supportsSiegeCombat() ? "Current wall power plus locally estimated garrison defense" : getCityStatBonusSources(stats, "defense")}</small></div>
+        ${renderCityFortificationStatus(city, stats)}
         <div class="stat-chip"><span>Owner</span>${renderPlayerNameLink(city.ownerUid || getCurrentOnlineUid(), getCityOwnerDisplayName(city))}</div>
         <div class="stat-chip"><span>Troops stationed</span><strong>${formatNumber(city.troops)}</strong></div>
         <div class="stat-chip"><span>Defense level</span><strong>${formatNumber(stats.level)}</strong><small>matches a level ${formatNumber(stats.level)} city</small></div>
@@ -26246,7 +26730,8 @@ function showCityInfoModal(cityId) {
     <div class="city-stat-panel modal-city-stats">
       ${mainCityBlock}
       ${renderCityLevelUpAction(city)}
-      <div class="stat-wide"><span>Total defense</span><strong>${formatBaseAndBonusStat(stats.baseTotalDefense, stats.totalDefense)}</strong><small>${getCityStatBonusSources(stats, "defense")}</small></div>
+      <div class="stat-wide"><span>Estimated live defense</span><strong>${formatNumber(supportsSiegeCombat() ? getCityFortificationDisplay(city, stats).totalDefensePower : stats.totalDefense)}</strong><small>${supportsSiegeCombat() ? "Current wall power plus locally estimated garrison defense" : getCityStatBonusSources(stats, "defense")}</small></div>
+      ${renderCityFortificationStatus(city, stats)}
       <div class="stat-chip"><span>Owner</span>${renderPlayerNameLink(city.ownerUid || getCurrentOnlineUid(), getCityOwnerDisplayName(city))}</div>
       <div class="stat-chip"><span>Troops</span><strong>${formatNumber(city.troops)}</strong></div>
       <div class="stat-chip"><span>City defense</span><strong>${formatBaseAndBonusStat(stats.defensePercent, stats.defensePercent + stats.strongholdDefenseBonusPercent, "%")}</strong><small>${CITY_LEVEL_STATS.defensePercentPerLevel}% per level${stats.strongholdDefenseBonusPercent ? ` | Stronghold +${formatNumber(stats.strongholdDefenseBonusPercent)}%` : ""}</small></div>
@@ -26571,14 +27056,20 @@ function normalizeDailyLoginRewardReceipt(raw = null) {
   const dayKey = String(raw.dayKey || "").slice(0, 10);
   if (!/^\d{4}-\d{2}-\d{2}$/.test(dayKey)) return null;
   const cycle = Math.max(1, Math.floor(Number(raw.cycle) || 1));
-  const day = clamp(Math.floor(Number(raw.day) || 1), 1, DAILY_LOGIN_REWARD_CYCLE_DAYS);
+  const monthLengthDays = clamp(
+    Math.floor(Number(raw.monthLengthDays) || LEGACY_DAILY_LOGIN_REWARD_CYCLE_DAYS),
+    28,
+    31
+  );
+  const day = clamp(Math.floor(Number(raw.day) || 1), 1, monthLengthDays);
   return {
     cycle,
     day,
-    ordinal: Math.max(
-      1,
-      Math.floor(Number(raw.ordinal) || ((cycle - 1) * DAILY_LOGIN_REWARD_CYCLE_DAYS) + day)
-    ),
+    ordinal: Math.max(1, Math.floor(Number(raw.ordinal) || day)),
+    monthKey: /^\d{4}-\d{2}$/.test(String(raw.monthKey || ""))
+      ? String(raw.monthKey)
+      : dayKey.slice(0, 7),
+    monthLengthDays,
     claimId: String(raw.claimId || "").slice(0, 96),
     dayKey,
     claimedAtMs: normalizeTimestampMs(raw.claimedAtMs || raw.claimedAt),
@@ -26595,24 +27086,30 @@ function normalizeDailyLoginRewardReceipt(raw = null) {
   };
 }
 
-function getDailyLoginRewardOrdinal(cycle = 1, day = 1) {
-  const safeCycle = Math.max(1, Math.floor(Number(cycle) || 1));
-  const safeDay = clamp(Math.floor(Number(day) || 1), 1, DAILY_LOGIN_REWARD_CYCLE_DAYS);
-  return ((safeCycle - 1) * DAILY_LOGIN_REWARD_CYCLE_DAYS) + safeDay;
-}
-
-function getDailyLoginRewardPosition(ordinal = 1) {
-  const safeOrdinal = Math.max(1, Math.floor(Number(ordinal) || 1));
+function getDailyLoginRewardMonthInfo(nowMs = Date.now()) {
+  const serverTimeMs = Math.max(0, Number(nowMs) || Date.now());
+  const date = new Date(serverTimeMs);
+  const year = date.getUTCFullYear();
+  const monthIndex = date.getUTCMonth();
+  const monthLengthDays = new Date(Date.UTC(year, monthIndex + 1, 0)).getUTCDate();
   return {
-    ordinal: safeOrdinal,
-    cycle: Math.floor((safeOrdinal - 1) / DAILY_LOGIN_REWARD_CYCLE_DAYS) + 1,
-    day: ((safeOrdinal - 1) % DAILY_LOGIN_REWARD_CYCLE_DAYS) + 1,
+    monthKey: `${year}-${String(monthIndex + 1).padStart(2, "0")}`,
+    monthLengthDays,
+    monthStartsAtMs: Date.UTC(year, monthIndex, 1),
+    monthEndsAtMs: Date.UTC(year, monthIndex + 1, 1),
   };
 }
 
 function normalizeDailyLoginRewardStatus(raw = null, nowMs = Date.now()) {
   const source = raw && typeof raw === "object" ? raw : {};
   const serverTimeMs = normalizeTimestampMs(source.serverTimeMs) || Math.max(0, Number(nowMs) || Date.now());
+  const currentMonth = getDailyLoginRewardMonthInfo(serverTimeMs);
+  const monthKey = /^\d{4}-\d{2}$/.test(String(source.monthKey || ""))
+    ? String(source.monthKey)
+    : currentMonth.monthKey;
+  const monthLengthDays = DAILY_LOGIN_REWARD_MONTH_LENGTHS.includes(Math.floor(Number(source.monthLengthDays)))
+    ? Math.floor(Number(source.monthLengthDays))
+    : currentMonth.monthLengthDays;
   const dayKey = /^\d{4}-\d{2}-\d{2}$/.test(String(source.dayKey || ""))
     ? String(source.dayKey)
     : getUtcDateKeyAtMs(serverTimeMs);
@@ -26627,24 +27124,34 @@ function normalizeDailyLoginRewardStatus(raw = null, nowMs = Date.now()) {
   const deferredAttendanceDayKey = /^\d{4}-\d{2}-\d{2}$/.test(String(source.deferredAttendanceDayKey || ""))
     ? String(source.deferredAttendanceDayKey)
     : "";
-  const legacyCycle = Math.max(1, Math.floor(Number(source.cycle) || 1));
-  const legacyNextDay = clamp(Math.floor(Number(source.nextDay) || 1), 1, DAILY_LOGIN_REWARD_CYCLE_DAYS);
+  const legacyOrdinal = Math.max(1, Math.floor(Number(source.nextClaimOrdinal) || 1));
+  const fallbackLegacyDay = ((legacyOrdinal - 1) % LEGACY_DAILY_LOGIN_REWARD_CYCLE_DAYS) + 1;
+  const nextDay = clamp(
+    Math.floor(Number(source.nextDay) || fallbackLegacyDay),
+    1,
+    monthLengthDays + 1
+  );
   const nextClaimOrdinal = Math.max(
     1,
-    Math.floor(Number(source.nextClaimOrdinal) || getDailyLoginRewardOrdinal(legacyCycle, legacyNextDay))
+    Math.floor(Number(source.nextClaimOrdinal) || nextDay)
   );
-  const earnedThroughOrdinal = Math.min(
-    nextClaimOrdinal + DAILY_LOGIN_REWARD_MAX_PENDING - 1,
-    Math.max(
-      nextClaimOrdinal - 1,
-      Math.floor(Number(source.earnedThroughOrdinal) || (nextClaimOrdinal - 1))
-    )
+  const legacyPendingCount = Math.min(
+    DAILY_LOGIN_REWARD_MAX_PENDING,
+    Math.max(0, Math.floor(Number(source.earnedThroughOrdinal) || (nextClaimOrdinal - 1)) - nextClaimOrdinal + 1)
   );
-  const nextPosition = getDailyLoginRewardPosition(nextClaimOrdinal);
-  const earnedPosition = earnedThroughOrdinal >= nextClaimOrdinal
-    ? getDailyLoginRewardPosition(earnedThroughOrdinal)
-    : null;
-  const pendingCount = Math.max(0, earnedThroughOrdinal - nextClaimOrdinal + 1);
+  const earnedThroughDay = nextDay <= monthLengthDays
+    ? clamp(
+        Math.floor(Number(source.earnedThroughDay) || (nextDay + legacyPendingCount - 1)),
+        nextDay - 1,
+        Math.min(monthLengthDays, nextDay + DAILY_LOGIN_REWARD_MAX_PENDING - 1)
+      )
+    : monthLengthDays;
+  const pendingCount = nextDay <= monthLengthDays
+    ? Math.max(0, earnedThroughDay - nextDay + 1)
+    : 0;
+  const earnedThroughOrdinal = pendingCount > 0
+    ? nextClaimOrdinal + pendingCount - 1
+    : nextClaimOrdinal - 1;
   const attendedToday = typeof source.attendedToday === "boolean"
     ? source.attendedToday
     : lastAttendanceDayKey === dayKey;
@@ -26653,8 +27160,10 @@ function normalizeDailyLoginRewardStatus(raw = null, nowMs = Date.now()) {
     : lastClaimDayKey === dayKey;
   return {
     schemaVersion: DAILY_LOGIN_REWARD_SCHEMA_VERSION,
-    cycle: nextPosition.cycle,
-    nextDay: nextPosition.day,
+    monthKey,
+    monthLengthDays,
+    cycle: 1,
+    nextDay,
     nextClaimOrdinal,
     earnedThroughOrdinal,
     pendingCount,
@@ -26676,13 +27185,19 @@ function normalizeDailyLoginRewardStatus(raw = null, nowMs = Date.now()) {
       ? source.attendanceDeferred
       : deferredAttendanceDayKey === dayKey,
     claimedToday,
-    earnedThroughCycle: earnedPosition?.cycle || nextPosition.cycle,
-    earnedThroughDay: earnedPosition?.day || Math.max(0, nextPosition.day - 1),
+    earnedThroughCycle: 1,
+    earnedThroughDay,
     dayKey,
     serverTimeMs,
     nextUtcUnlockAtMs: normalizeTimestampMs(source.nextUtcUnlockAtMs)
       || (attendedToday ? getNextUtcDayStartMs(serverTimeMs) : 0),
-    cycleLengthDays: DAILY_LOGIN_REWARD_CYCLE_DAYS,
+    cycleLengthDays: monthLengthDays,
+    monthStartsAtMs: normalizeTimestampMs(source.monthStartsAtMs) || currentMonth.monthStartsAtMs,
+    monthEndsAtMs: normalizeTimestampMs(source.monthEndsAtMs) || currentMonth.monthEndsAtMs,
+    daysRemaining: Math.max(
+      0,
+      Math.floor(Number(source.daysRemaining) || Math.ceil((currentMonth.monthEndsAtMs - serverTimeMs) / 86_400_000))
+    ),
   };
 }
 
@@ -26698,7 +27213,10 @@ function applyDailyLoginRewardProfileState(rawState = null, options = {}) {
   dailyLoginRewardStatus = nextStatus;
   if (
     dailyLoginRewardPendingClaim
-    && dailyLoginRewardPendingClaim.expectedOrdinal !== nextStatus.nextClaimOrdinal
+    && (
+      dailyLoginRewardPendingClaim.expectedOrdinal !== nextStatus.nextClaimOrdinal
+      || dailyLoginRewardPendingClaim.expectedMonthKey !== nextStatus.monthKey
+    )
   ) {
     dailyLoginRewardPendingClaim = null;
   }
@@ -26726,8 +27244,10 @@ function renderDailyLoginRewardButton() {
       ? "Loading daily rewards"
       : status
         ? eligible
-          ? `Claim ${status.pendingCount} daily reward${status.pendingCount === 1 ? "" : "s"}, next is cycle ${status.cycle} day ${status.nextDay}`
-          : `Daily attendance recorded, next reward is cycle ${status.cycle} day ${status.nextDay}`
+          ? `Claim ${status.pendingCount} daily reward${status.pendingCount === 1 ? "" : "s"}, next is ${status.monthKey} day ${status.nextDay}`
+          : status.nextDay > status.monthLengthDays
+            ? `${status.monthKey} daily reward track complete`
+            : `Daily attendance recorded, next reward is ${status.monthKey} day ${status.nextDay}`
         : "Open daily rewards";
   dailyLoginRewardBtn.setAttribute("aria-label", label);
 }
@@ -26764,7 +27284,10 @@ async function refreshDailyLoginRewardStatus(options = {}) {
     dailyLoginRewardStatus = normalizeDailyLoginRewardStatus(result?.dailyLoginRewardStatus);
     if (
       dailyLoginRewardPendingClaim
-      && dailyLoginRewardPendingClaim.expectedOrdinal !== dailyLoginRewardStatus.nextClaimOrdinal
+      && (
+        dailyLoginRewardPendingClaim.expectedOrdinal !== dailyLoginRewardStatus.nextClaimOrdinal
+        || dailyLoginRewardPendingClaim.expectedMonthKey !== dailyLoginRewardStatus.monthKey
+      )
     ) {
       dailyLoginRewardPendingClaim = null;
     }
@@ -26818,11 +27341,11 @@ function maybeAutoOpenDailyLoginRewards() {
 
 function getDailyLoginRewardCardState(day, status = dailyLoginRewardStatus) {
   if (!status) return "locked";
-  const ordinal = getDailyLoginRewardOrdinal(status.cycle, day);
-  if (ordinal < status.nextClaimOrdinal) return "claimed";
-  if (ordinal === status.nextClaimOrdinal && ordinal <= status.earnedThroughOrdinal) return "available";
-  if (ordinal > status.nextClaimOrdinal && ordinal <= status.earnedThroughOrdinal) return "queued";
-  if (ordinal === status.nextClaimOrdinal) return "next";
+  const rewardDay = Math.max(1, Math.floor(Number(day) || 1));
+  if (rewardDay < status.nextDay) return "claimed";
+  if (rewardDay === status.nextDay && rewardDay <= status.earnedThroughDay) return "available";
+  if (rewardDay > status.nextDay && rewardDay <= status.earnedThroughDay) return "queued";
+  if (rewardDay === status.nextDay) return "next";
   return "locked";
 }
 
@@ -26877,10 +27400,21 @@ function renderDailyLoginRewardReceipt(receipt = null) {
   if (!parts.length) return "";
   return `
     <div class="daily-reward-receipt" role="status">
-      <span>Cycle ${formatNumber(receipt.cycle)} · Day ${formatNumber(receipt.day)} collected</span>
+      <span>${escapeHtml(getDailyLoginRewardMonthLabel(receipt.monthKey))} · Day ${formatNumber(receipt.day)} collected</span>
       <strong>${escapeHtml(parts.join(" · "))}</strong>
     </div>
   `;
+}
+
+function getDailyLoginRewardMonthLabel(monthKey = "") {
+  const match = /^(\d{4})-(\d{2})$/.exec(String(monthKey || ""));
+  if (!match) return "Monthly rewards";
+  const date = new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, 1));
+  return new Intl.DateTimeFormat(undefined, {
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC",
+  }).format(date);
 }
 
 function getDailyLoginRewardCountdownText(status = dailyLoginRewardStatus) {
@@ -26925,24 +27459,33 @@ function renderDailyLoginRewardModal() {
     ? "Today’s attendance is saved. Collect one reward to add it to the queue."
     : status.pendingCount >= status.maxPendingRewards
       ? `Reward queue full (${status.pendingCount}/${status.maxPendingRewards}).`
-      : "Today’s attendance has been recorded.";
+      : status.nextDay > status.monthLengthDays
+        ? "This month’s reward track is complete. A new track begins next UTC month."
+        : "Today’s attendance has been recorded.";
+  const rewardTrack = DAILY_LOGIN_REWARD_TRACKS[String(status.monthLengthDays)]
+    || DAILY_LOGIN_REWARD_TRACKS["30"];
+  const monthLabel = getDailyLoginRewardMonthLabel(status.monthKey);
   modalBody.innerHTML = `
     <section class="daily-reward-panel">
       <header class="daily-reward-hero">
         <img src="assets/optimized/daily-reward-160x151-f4cebc4a7ccb.webp" alt="" decoding="async" />
         <div>
-          <span>Royal Attendance · Cycle ${formatNumber(status.cycle)}</span>
+          <span>Royal Attendance · ${escapeHtml(monthLabel)}</span>
           <h3>${escapeHtml(pendingLabel)}</h3>
           <p>${escapeHtml(attendanceMessage)}</p>
         </div>
       </header>
       ${status.claimedToday ? renderDailyLoginRewardReceipt(status.lastReceipt) : ""}
       <div class="daily-reward-status-row">
-        <strong>${status.eligible ? `Next: Day ${formatNumber(status.nextDay)}` : "Next reward is not earned yet"}</strong>
+        <strong>${status.eligible
+          ? `Next: Day ${formatNumber(status.nextDay)}`
+          : status.nextDay > status.monthLengthDays
+            ? `${escapeHtml(monthLabel)} complete`
+            : "Next reward is not earned yet"}</strong>
         <span data-daily-reward-countdown>${escapeHtml(getDailyLoginRewardCountdownText(status))}</span>
       </div>
-      <div class="daily-reward-grid" aria-label="30-day daily reward track">
-        ${DAILY_LOGIN_REWARD_DAYS.map(reward => {
+      <div class="daily-reward-grid" aria-label="${status.monthLengthDays}-day daily reward track">
+        ${rewardTrack.map(reward => {
           const cardState = getDailyLoginRewardCardState(reward.day, status);
           const presentation = getDailyLoginRewardPresentation(reward);
           const stateLabel = cardState === "claimed"
@@ -26974,7 +27517,7 @@ function renderDailyLoginRewardModal() {
       </div>
       <footer class="daily-reward-actions">
         <button class="primary daily-reward-claim-btn" type="button" data-daily-reward-claim ${!status.eligible || dailyLoginRewardClaimInFlight ? "disabled" : ""}>${escapeHtml(claimLabel)}</button>
-        <small>Log in once per UTC day to earn the next reward. Up to ${formatNumber(status.maxPendingRewards)} earned rewards can wait for collection. Missing a day pauses the track.</small>
+        <small>Log in once per UTC day to earn the next reward. Up to ${formatNumber(status.maxPendingRewards)} earned rewards can wait. Missing a day pauses progress; unclaimed rewards expire when ${escapeHtml(monthLabel)} ends at the UTC month boundary.</small>
       </footer>
     </section>
   `;
@@ -27008,10 +27551,12 @@ async function claimDailyLoginReward() {
   if (
     !dailyLoginRewardPendingClaim
     || dailyLoginRewardPendingClaim.expectedOrdinal !== dailyLoginRewardStatus.nextClaimOrdinal
+    || dailyLoginRewardPendingClaim.expectedMonthKey !== dailyLoginRewardStatus.monthKey
   ) {
     dailyLoginRewardPendingClaim = {
       claimId: createDailyLoginRewardClaimId(),
       expectedOrdinal: dailyLoginRewardStatus.nextClaimOrdinal,
+      expectedMonthKey: dailyLoginRewardStatus.monthKey,
     };
   }
   dailyLoginRewardClaimInFlight = true;
@@ -27040,7 +27585,7 @@ async function claimDailyLoginReward() {
       const itemCount = receiptItemCount;
       if (itemCount > 0) parts.push(`${formatNumber(itemCount)} item${itemCount === 1 ? "" : "s"}`);
       const summary = parts.join(", ");
-      addLog(`Daily reward cycle ${receipt.cycle}, day ${receipt.day}: ${summary}.`);
+      addLog(`Daily reward ${receipt.monthKey}, day ${receipt.day}: ${summary}.`);
       showToast(`Daily reward collected: ${summary}`);
     }
     saveGame();
@@ -28208,13 +28753,16 @@ function showAttackPreview(source, target) {
         <div class="stat-card"><strong>${formatNumber(preview.attackPower)}</strong><small>attack power</small></div>
         <div class="stat-card"><strong>${formatNumber(preview.defensePower)}</strong><small>defense power</small></div>
         <div class="stat-card"><strong>${formatNumber(preview.captureXp)}</strong><small>${preview.xpLabel}</small></div>
-        <div class="stat-card"><strong>${formatNumber(preview.attackerLosses)}</strong><small>est. attacker losses</small></div>
+        <div class="stat-card"><strong>${formatNumber(preview.attackerLosses)} (${formatNumber(Math.round(preview.attackerLossPercent))}%)</strong><small>est. attacker losses</small></div>
+        <div class="stat-card"><strong>${formatNumber(preview.defenderLosses)} (${formatNumber(Math.round(preview.defenderLossPercent))}%)</strong><small>est. defender losses</small></div>
       </div>
       <p><strong>${escapeHtml(source.name)}</strong> to <strong>${escapeHtml(target.name)}</strong> - ${formatPercent(selectedMarchPercent)} march - about ${formatDuration(preview.travel)} travel.</p>
       <p>Route distance: <strong>${formatNumber(preview.pathLength)}</strong> map units. Troops avoid water, lakes, mountains, cities, and strongholds.</p>
       <p>${preview.success
         ? `Expected capture with about <strong>${formatNumber(preview.survivors)}</strong> surviving troops.`
         : `Expected failure with about <strong>${formatNumber(preview.defendersLeft)}</strong> defenders left.`}</p>
+      <p>Minimum capture force at current defense: <strong>${formatNumber(preview.minimumCaptureTroops)} troops</strong>${preview.captureTroopShortfall > 0 ? ` · short by <strong>${formatNumber(preview.captureTroopShortfall)}</strong>` : " · threshold met"}.</p>
+      ${preview.belowMeaningfulWallDamage ? `<p class="tiny-warning">This march is too small to persist wall damage. Send at least ${formatNumber(preview.minimumMeaningfulWallDamageTroops)} troops.</p>` : ""}
       ${protectionNotice ? `<p class="tiny-warning">${escapeHtml(protectionNotice)}</p>` : ""}
       ${shieldDropWarning ? `<p class="shield-drop-warning"><strong>Shield warning</strong><span>${escapeHtml(shieldDropWarning)}</span></p>` : ""}
       <p class="tiny-warning">This is an estimate based on current numbers. Confirm launches using the current troop count.</p>
@@ -28577,6 +29125,19 @@ function calculateBattlePreviewForTroops(
     : createAttackProtectionSnapshot(source, target, requestedSend, "player");
   const send = attackProtection ? Math.min(requestedSend, attackProtection.maxTroops) : requestedSend;
   const combatForecast = normalizeCombatForecast(combatForecastOverride);
+  const scoutFortification = normalizeCombatFortificationSnapshot(
+    combatForecast?.fortification || scoutReport?.fortification
+  );
+  const localFortification = supportsSiegeCombat() && !isRewardCampTarget(target)
+    ? getCityFortificationSnapshot(target)
+    : null;
+  const fortification = scoutFortification || localFortification;
+  const siegeCombatVersion = fortification
+    ? Math.max(
+      SIEGE_COMBAT_VERSION,
+      Math.floor(Number(combatForecast?.siegeCombatVersion || scoutReport?.siegeCombatVersion) || 0)
+    )
+    : 0;
   const scoutedDefensePower = combatForecast?.status === "scouted"
     ? combatForecast.defensePower
     : Math.max(0, Math.floor(Number(scoutReport?.totalDefense) || 0));
@@ -28588,6 +29149,10 @@ function calculateBattlePreviewForTroops(
     attackProtection,
     attackPower: Math.floor(send * attackPowerPerTroop),
     ...(scoutedDefensePower > 0 ? { defensePower: scoutedDefensePower } : {}),
+    siegeCombatVersion,
+    fortification,
+    garrisonDefensePower: fortification?.garrisonDefensePower,
+    nowMs: Date.now(),
   });
   const givenUpNeutralTarget = isGivenUpNeutralCity(target);
   const xpEfficiency = attackProtection || givenUpNeutralTarget ? 0 : getCaptureXpEfficiency(target, target.owner);
@@ -28597,11 +29162,8 @@ function calculateBattlePreviewForTroops(
       ? getCaptureXpAward(target, target.owner, result.defenderLosses, "player")
       : getFailedAttackXpAward(target, target.owner, result.defenderLosses, "player");
   const xpLabel = attackProtection ? "attacker XP" : result.success ? "capture XP" : "defeat XP";
-  let label = "Weak odds";
-  if (result.ratio >= 1.35) label = "Overwhelming advantage";
-  else if (result.ratio >= 1.12) label = "Good advantage";
-  else if (result.ratio > 1) label = "Close win";
-  else if (result.ratio >= .82) label = "Risky attack";
+  const advantageTier = getCombatAdvantageTier(result.ratio);
+  let label = advantageTier.label;
   if (attackProtection) {
     label = `${attackProtection.label}: ${
       attackProtection.mode === "raid"
@@ -28613,6 +29175,18 @@ function calculateBattlePreviewForTroops(
   }
   const route = knownRoute || findRoute(source, target);
   const travel = route ? travelTime(source, target, "player", route.length, send, "attack") : Infinity;
+  const minimumCaptureTroops = getMinimumTroopsForPower(result.defensePower, attackPowerPerTroop);
+  const minimumMeaningfulWallDamageTroops = result.fortification?.startingWallPower > 0
+    ? Math.max(1, Math.ceil(
+        result.fortification.fullWallPower
+          * SIEGE_MEANINGFUL_WALL_DAMAGE_PERCENT
+          / 100
+          / Math.max(Number.EPSILON, attackPowerPerTroop)
+      ))
+    : 0;
+  const attackerLossPercent = send > 0 ? result.attackerLosses * 100 / send : 0;
+  const defendersAtStart = Math.max(0, Math.floor(Number(target?.troops) || 0));
+  const defenderLossPercent = defendersAtStart > 0 ? result.defenderLosses * 100 / defendersAtStart : 0;
   return {
     requestedSend,
     send,
@@ -28622,10 +29196,20 @@ function calculateBattlePreviewForTroops(
     battleWon: result.battleWon,
     success: result.success,
     breachCompleted: result.breachCompleted,
+    fortificationBreached: result.fortificationBreached,
+    fortification: result.fortification,
     survivors: result.survivors,
     defendersLeft: result.defendersLeft,
     attackerLosses: result.attackerLosses,
     defenderLosses: result.defenderLosses,
+    attackerLossPercent,
+    defenderLossPercent,
+    advantageTier: advantageTier.key,
+    minimumCaptureTroops,
+    minimumMeaningfulWallDamageTroops,
+    captureTroopShortfall: Math.max(0, minimumCaptureTroops - send),
+    belowMeaningfulWallDamage: minimumMeaningfulWallDamageTroops > 0
+      && send < minimumMeaningfulWallDamageTroops,
     xpEfficiency,
     captureXp,
     xpLabel,
@@ -30224,6 +30808,21 @@ function normalizeDetailedBattleSnapshot(value = null) {
       targetType: target.targetType === "camp" ? "camp" : "city",
       strongholdType: String(target.strongholdType || "").slice(0, 32),
       level: clampCityLevel(target.level || 1),
+      fortifications: target.fortifications && typeof target.fortifications === "object"
+        ? {
+            cityLevelDefensePercent: Math.max(0, Number(target.fortifications.cityLevelDefensePercent) || 0),
+            baseCityWalls: Math.max(0, Math.floor(Number(target.fortifications.baseCityWalls) || 0)),
+            cityWalls: Math.max(0, Math.floor(Number(target.fortifications.cityWalls) || 0)),
+            stoneworksPercent: Math.max(0, Number(target.fortifications.stoneworksPercent) || 0),
+            fullWallPower: Math.max(0, Math.floor(Number(target.fortifications.fullWallPower) || 0)),
+            startingWallPower: Math.max(0, Math.floor(Number(target.fortifications.startingWallPower) || 0)),
+            startingIntegrityBps: clamp(Math.floor(Number(target.fortifications.startingIntegrityBps) || 0), 0, 10_000),
+            endingIntegrityBps: clamp(Math.floor(Number(target.fortifications.endingIntegrityBps) || 0), 0, 10_000),
+            repairAtMs: normalizeTimestampMs(target.fortifications.repairAtMs),
+            repairWindowMinutes: Math.max(0, Math.floor(Number(target.fortifications.repairWindowMinutes) || 0)),
+            repairReductionPercent: clamp(Number(target.fortifications.repairReductionPercent) || 0, 0, 100),
+          }
+        : null,
     },
     attacker: normalizeBattleParticipant(value.attacker),
     defender: normalizeBattleParticipant(value.defender),
@@ -30251,6 +30850,8 @@ function normalizeDetailedBattleSnapshot(value = null) {
       breachRequired: rawCombatRule.breachRequired === true,
       maxDefenderLossPercent: Math.max(0, Number(rawCombatRule.maxDefenderLossPercent) || 0),
     },
+    siegeCombatVersion: Math.max(0, Math.floor(Number(value.siegeCombatVersion) || 0)),
+    siege: normalizeCombatFortificationSnapshot(value.siege),
     attackProtection: normalizeAttackProtectionSnapshot(value.attackProtection),
   };
 }
@@ -30352,6 +30953,11 @@ function renderBattlePrimaryParticipant(participant, {
 function renderBattleReinforcementRow(participant, index) {
   const key = `reinforcement-${index}`;
   const fortifications = participant.fortifications;
+  const legacyFortificationPower = Math.max(
+    0,
+    Math.floor(Number(fortifications?.cityWallDefense) || 0)
+      + Math.floor(Number(fortifications?.stoneworksBonus) || 0)
+  );
   return `
     <article class="battle-reinforcement-row">
       <div class="battle-participant-identity">
@@ -30360,7 +30966,7 @@ function renderBattleReinforcementRow(participant, index) {
       </div>
       <div class="battle-reinforcement-stats">
         <span><small>Troops</small><strong>${formatNumber(participant.startingTroops)}</strong></span>
-        ${fortifications ? `<span><small>Fortifications</small><strong>Quarter walls +${formatNumber(fortifications.cityWallDefense)} · Stoneworks +${formatNumber(fortifications.stoneworksBonus)}</strong></span>` : ""}
+        ${legacyFortificationPower > 0 ? `<span><small>Legacy fortifications</small><strong>Quarter walls +${formatNumber(fortifications.cityWallDefense)} · Stoneworks +${formatNumber(fortifications.stoneworksBonus)}</strong></span>` : `<span><small>Wall contribution</small><strong>Uses the holding's single wall</strong></span>`}
         <span><small>Bonuses</small><strong>Personal +${formatBattlePercent(participant.personalDefenseBonusPercent)} · Shared +${formatBattlePercent(participant.sharedDefenseBonusPercent)}</strong></span>
         <span><small>Defense</small><strong>${formatNumber(participant.effectivePower)}</strong></span>
         <span><small>Lost</small><strong>${formatNumber(participant.losses)}</strong></span>
@@ -30371,6 +30977,7 @@ function renderBattleReinforcementRow(participant, index) {
 
 function renderLegacyBattleReportDetail(report, badge, message = "") {
   const scoutExpiresAtMs = getScoutBattleReportExpiresAtMs(report);
+  const siege = normalizeCombatFortificationSnapshot(report.fortification);
   return `
     <div class="battle-report-detail ${badge.tone}">
       <button id="battleReportBackBtn" class="battle-report-back" type="button" data-audio-effect="none">Back to reports</button>
@@ -30391,6 +30998,7 @@ function renderLegacyBattleReportDetail(report, badge, message = "") {
         <div><span>Defenders left</span><strong>${formatNumber(report.defendersLeft)}</strong></div>
         <div><span>Attackers lost</span><strong>${formatNumber(report.attackerLosses)}</strong></div>
         <div><span>Defenders lost</span><strong>${formatNumber(report.defenderLosses)}</strong></div>
+        ${siege ? `<div><span>Wall integrity</span><strong>${formatWallIntegrity(siege.startingIntegrityBps)} → ${formatWallIntegrity(siege.endingIntegrityBps)}</strong></div><div><span>Wall damage</span><strong>${formatNumber(siege.wallDamagePower)}</strong></div>` : ""}
         ${report.xpAwarded > 0 ? `<div><span>XP earned</span><strong>+${formatNumber(report.xpAwarded)}</strong></div>` : ""}
         ${report.goldAwarded > 0 ? `<div><span>Gold earned</span><strong>+${formatNumber(report.goldAwarded)}</strong></div>` : ""}
         ${report.troopsAwarded > 0 ? `<div><span>Level-up troops</span><strong>+${formatNumber(report.troopsAwarded)}</strong></div>` : ""}
@@ -30398,6 +31006,34 @@ function renderLegacyBattleReportDetail(report, badge, message = "") {
       </div>
       <p>${renderPlayerLinkedText(report.summary || getBattleReportSummary(report), report.opponentUid, report.opponentName || report.ownerName)}</p>
     </div>`;
+}
+
+function renderSiegeBattleSection(siege = null) {
+  if (!siege) return "";
+  const wallOutcome = siege.breached
+    ? "Wall breached"
+    : siege.wallDamagePower > 0
+      ? "Wall held"
+      : "Wall untouched";
+  const repairText = siege.persistentDamageApplied
+    ? siege.repairAtMs > Date.now()
+      ? `Full repair in ${formatDuration(Math.max(0, Math.ceil((siege.repairAtMs - Date.now()) / 1000)))}`
+      : siege.repairWindowMinutes > 0
+        ? `The ${formatNumber(siege.repairWindowMinutes)}-minute repair window has completed`
+        : "The repair window has completed"
+    : siege.wallDamagePower > 0
+      ? "Protected-raid wall damage was not persisted"
+      : "No wall repair was needed";
+  return `
+    <section class="battle-siege-breakdown">
+      <h3>Siege phases</h3>
+      <p class="battle-report-detail-notice">The holding has one physical wall. Reinforcements add garrison defense, but never duplicate its wall or Stoneworks bonus.</p>
+      <div class="battle-formula-grid">
+        ${renderBattleMetric("1. Wall layer", wallOutcome, `${formatNumber(siege.startingWallPower)} starting wall power absorbed ${formatNumber(siege.wallDamagePower)} attack power`)}
+        ${renderBattleMetric("Wall integrity", `${formatWallIntegrity(siege.startingIntegrityBps)} → ${formatWallIntegrity(siege.endingIntegrityBps)}`, repairText)}
+        ${renderBattleMetric("2. Garrison layer", `${formatNumber(siege.penetratingAttackPower)} attack reached troops`, `${formatNumber(siege.garrisonDefensePower)} garrison defense`)}
+      </div>
+    </section>`;
 }
 
 function renderDetailedBattleReport(report, snapshot, badge) {
@@ -30413,12 +31049,14 @@ function renderDetailedBattleReport(report, snapshot, badge) {
     report.troopsAwarded > 0 ? renderBattleMetric("Level-up troops", `+${formatNumber(report.troopsAwarded)}`) : "",
   ].filter(Boolean).join("");
   const combatRuleCopy = snapshot.combatRule.id === "protected_raid"
-    ? "Protected raid: capture was disabled and defender losses were capped at 10%."
+    ? "Protected raid: capture was disabled, defender losses were capped at 10%, and wall damage was not persisted."
     : snapshot.combatRule.id === "protected_breach"
       ? "Protected breach: this first assault could breach the walls, but could not capture the city."
       : snapshot.combatRule.id === "protected_capture"
         ? "Protected capture: a prior breach allowed this follow-up assault to capture the city."
-        : "Normal capture: attack power had to exceed live defense power at arrival.";
+        : snapshot.siege
+          ? "Normal siege: attack power first breached the current wall, then the remaining power had to exceed garrison defense."
+          : "Legacy capture: attack power had to exceed live defense power at arrival.";
   const forecast = report.launchCombatForecast?.status === "scouted" ? report.launchCombatForecast : null;
   const forecastDefenseDelta = forecast ? snapshot.totals.defensePower - forecast.defensePower : 0;
   const forecastOutcomeLabel = forecast?.expectedOutcome === "capture"
@@ -30427,7 +31065,11 @@ function renderDetailedBattleReport(report, snapshot, badge) {
       ? "Likely wall breach"
       : forecast?.expectedOutcome === "raid"
         ? "Protected raid — no capture"
-        : "Likely defeat";
+        : forecast?.expectedOutcome === "wall_hold"
+          ? "Walls likely hold"
+          : forecast?.expectedOutcome === "garrison_hold"
+            ? "Walls breach; garrison holds"
+            : "Likely defeat";
   return `
     <div class="battle-report-detail detailed-battle-report ${badge.tone}">
       <button id="battleReportBackBtn" class="battle-report-back" type="button" data-audio-effect="none">Back to reports</button>
@@ -30451,6 +31093,7 @@ function renderDetailedBattleReport(report, snapshot, badge) {
       <section class="battle-formula-explanation">
         <h3>Combat result</h3>
         <p class="battle-report-detail-notice">${escapeHtml(combatRuleCopy)}</p>
+        ${renderSiegeBattleSection(snapshot.siege)}
         <div class="battle-formula-grid">
           ${renderBattleMetric("Power ratio", ratioText, `${formatNumber(snapshot.totals.attackPower)} attack vs ${formatNumber(snapshot.totals.defensePower)} defense`)}
           ${renderBattleMetric("Defender casualties", formatBattlePercent(snapshot.formula.defenderCasualtyPercent), `${formatNumber(snapshot.totals.defenderLosses)} troops lost`)}
@@ -30591,12 +31234,17 @@ function showHelpModal() {
       <li>Regroup costs ${formatNumber(REGROUP_COST)} gold, previews a larger red radius, then sends all troops from nearby owned cities into the selected city.</li>
       <li>The top-right fullscreen button expands the game surface and the game disables page text selection while playing.</li>
       <li>City level creates victory points for combat value, while passive gold follows the Million Lords city production curve.</li>
-      <li>City defense adds ${formatNumber(CITY_LEVEL_STATS.defensePercentPerLevel)}% soldier defense per city level, plus separate wall strength. Stoneworks increases the wall part of defense.</li>
-        <li>Troop production is VP x 3, improved by Royal Granaries. Passive gold uses ML city production VP x ${formatNumber(MILLION_LORDS_PASSIVE_GOLD_PER_CITY_VP)}, improved by Tax Stewardship and stronghold bonuses.</li>
+      <li>City combat resolves in two phases: attack power damages the city wall first, then only power left after the breach fights the garrison. Capturing requires both breaching the wall and exceeding the garrison defense.</li>
+      <li>City defense adds ${formatNumber(CITY_LEVEL_STATS.defensePercentPerLevel)}% soldier defense per city level. Stoneworks strengthens the holding's one physical wall; clan reinforcements add troops and their applicable troop-defense bonuses, but never duplicate the wall.</li>
+      <li>Every city level uses the same smooth wall formula. Meaningful wall damage of at least ${formatNumber(SIEGE_MEANINGFUL_WALL_DAMAGE_PERCENT)}% persists for round(${formatNumber(SIEGE_REPAIR_BASE_MINUTES)} + city level × ${formatNumber(SIEGE_REPAIR_MINUTES_PER_LEVEL)}) minutes with no gameplay cap.</li>
+      <li>Another meaningful hit before breach resets the level-based repair deadline. Captures, ownership changes, and capture level loss keep the existing deadline; a breached wall contributes zero defense until it repairs.</li>
+      <li>When an intact wall holds, defender troop losses are capped at ${formatNumber(SIEGE_INTACT_WALL_DEFENDER_LOSS_CAP_PERCENT)}%. Protected raids never persist wall damage.</li>
+        <li>Troop production is VP x ${formatNumber(CITY_LEVEL_STATS.troopProductionPerVictoryPoint)}, improved by Royal Granaries. Passive gold uses ML city production VP x ${formatNumber(MILLION_LORDS_PASSIVE_GOLD_PER_CITY_VP)}, improved by Tax Stewardship and stronghold bonuses.</li>
         <li>Troop production bonuses do not compound: Royal Granaries, Stronghold or Citadel benefits, and War Drums each add their listed percentage of raw base city troops.</li>
         <li>Gold production bonuses do not compound: Tax Stewardship, Stronghold or Citadel benefits, and Royal Tax each add their listed percentage of raw base city gold.</li>
       <li>Army travel uses route distance plus troop-size bands. Larger armies march slower, scouts move as one troop, and March Orders reduces travel time.</li>
-      <li>Glowing pickups appear near your owned cities on the current island during active play every three minutes, alternating between ten minutes of gold and troop production. Daily pickup limits are ${formatNumber(HARVEST_BONUS_DAILY_GOLD_LIMIT)} gold and ${formatNumber(HARVEST_BONUS_DAILY_TROOP_LIMIT)} troop pickups.</li>
+      <li>Glowing pickups appear near your owned cities on the current island during active play every ${formatNumber(HARVEST_BONUS_SPAWN_INTERVAL_SECONDS / 60)} minutes, alternating between ${formatNumber(HARVEST_BONUS_GOLD_SECONDS / 60)} minutes of gold production and ${formatNumber(HARVEST_BONUS_TROOP_SECONDS / 60)} minutes of troop production. Daily pickup limits are ${formatNumber(HARVEST_BONUS_DAILY_GOLD_LIMIT)} gold and ${formatNumber(HARVEST_BONUS_DAILY_TROOP_LIMIT)} troop pickups.</li>
+      <li>Daily login rewards follow the current UTC calendar month. Missing a day pauses progress instead of skipping a reward, up to two earned rewards may wait for collection, and unclaimed rewards expire when the next UTC month begins.</li>
       <li>Swordmastery boosts outgoing attack, Guild Charters reduces city upgrade cost, and Field Medics returns part of battle losses to your main city.</li>
       <li>Main cities cannot be attacked. Use your main city as a protected home base while expanding from other cities.</li>
       <li>The Citadel Legion attacks up to 20 random regular non-main cities in the Crown Citadel map at 10:00 AM and 6:30 PM Eastern Time. Targets receive 15 minutes of warning beginning at 9:45 AM and 6:15 PM Eastern. A lost defense removes five city levels; Level 5-or-lower cities become Level 1 neutral cities with 10 troops. Peace Shields do not block these attacks, and defenders receive no XP.</li>

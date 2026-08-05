@@ -13,12 +13,15 @@ Landscape / horizontal medieval island-conquest game inspired by the core loop o
 - Cities produce troops and gold in real time while the game is active.
 - Reopening Crownlands after at least one minute starts a one-use Welcome back summary. Server-authoritative gold is collected across every owned map, troop production is reported only when it remains in cities still owned, and captured cities, Strongholds, and the Crown Citadel are listed from ownership history. Switching maps never opens the summary.
 - City level creates victory points.
-- Victory points drive troop production, gold production, and capture XP value.
+- Victory points drive troop production, capture XP value, and city-value components of King Power. Gold production follows its separate configured city curve.
 - The city counter opens a city list with the main city pinned first and level/troop sorting.
 - A small floating home indicator appears when the main city is off-screen and recenters the map on click.
-- Troop production uses configured production VP multiplied by 10, plus Royal Granaries and objective bonuses.
+- Troop production uses the city's victory points multiplied by 10, plus Royal Granaries and objective bonuses.
 - Gold production uses configured production VP multiplied by 15, the level-100+ growth curve, Tax Stewardship, item effects, and objective bonuses.
-- City defense gives stationed soldiers `city level x 2%`, then adds city walls; Stoneworks strengthens the wall portion.
+- City combat uses a two-phase siege model. Attack power first damages the holding's single physical wall; only power left after breaching it fights the garrison. Capturing requires the remaining attack power to exceed garrison defense.
+- City defense gives stationed soldiers `city level x 2%`; Stoneworks strengthens the wall layer. Reinforcements add troop defense but do not duplicate the destination wall or Stoneworks.
+- Every city level uses the same smooth wall curve: early walls keep cubic growth while high-level growth gradually approaches linear without a level breakpoint. Wall damage of at least 5% persists for `round(15 + city level x 0.3)` minutes with no gameplay cap. Another meaningful hit before breach resets the deadline; captures and ownership changes carry the existing deadline unchanged. Breached walls provide zero defense until repaired. If an intact wall holds, defender troop losses are capped at 10%; protected raids never persist wall damage.
+- Realm information advertises `siegeCombatVersion: 1`. Newly launched city and objective armies use it, while unversioned armies already in flight settle with the legacy formula; reward camps remain legacy combat.
 - Neutral captures are limited to 30 per local day.
 - Neutral captures are also blocked once the player owns 30 cities; after that, expansion must come from player-owned cities.
 - Hero XP keeps the early progression curve through level 25, then each level requires 10% more XP. A single battle can award up to 100% of a level through level 50, declining smoothly to 50% at level 100 and 35% at level 150.
@@ -28,7 +31,10 @@ Landscape / horizontal medieval island-conquest game inspired by the core loop o
 - Failed player attacks and lost defenses still award one-third of the matching victory XP.
 - The Citadel Legion selects up to 20 random regular non-main cities in the Crown Citadel region at 9:45 AM and 6:15 PM Eastern Time, then attacks each with 100,000 NPC troops at 10:00 AM and 6:30 PM Eastern. The `America/New_York` schedule follows daylight-saving changes. Peace Shields do not block the event. Held defenses preserve city level and award no XP; failed defenses remove five levels, with Level 5-or-lower cities returning to neutral at Level 1 with 10 troops.
 - Captured cities lose 1 level on takeover, but never drop below Level 1.
-- Combat forecasts use the scout report's full authoritative defense total, including walls, objective bonuses, and allied reinforcement packages. They show attack versus scouted defense, report age, likely capture/breach/raid/defeat, and estimated survivors. The attacker's per-troop power is locked when the march launches; defender production, reinforcements, bonuses, and ownership remain live until arrival.
+- Combat forecasts use the scout report's authoritative current wall integrity, wall power, garrison power, objective bonuses, and allied reinforcement troops. They show whether the wall or garrison is expected to hold, how much attack reaches the garrison, and likely survivors. The attacker's per-troop power is locked when the march launches; defender production, reinforcements, wall repairs, bonuses, and ownership remain live until arrival.
+- Forecast strength labels use the same resolved power values as combat: defeat at or below the capture threshold, costly victory below 1.5x defense, advantage below 2x, strong advantage below 3x, and overwhelming only at 3x defense or higher. The send panel also shows projected losses, the minimum force needed to capture, any shortfall, and the minimum force needed to cause persistent wall damage.
+- Daily login rewards use the current UTC calendar month rather than a fixed 30-day loop. February and 29-, 30-, and 31-day months each distribute the same monthly budget: 111 hours of gold production, 111 hours of troop production, and six rotating items. Missed days pause progress, at most two earned rewards wait for collection, and unclaimed rewards expire at month rollover.
+- The public Battle and Economy Guide provides config-backed city charts, a two-stage siege explorer, skill references, economy flows, and wall-repair timelines without affecting live game state.
 - The bottom `Reports` button opens battle reports filtered by attack, defense, and scout results.
 - Attack reports distinguish captures, protected wall breaches, protected raids, and defeats. Detailed reports explain the applicable capture rule and compare the launch forecast with live arrival power when scout intelligence was available.
 - Defense reports show held defenses or lost cities.
@@ -51,11 +57,13 @@ Landscape / horizontal medieval island-conquest game inspired by the core loop o
 - Owned cities have a Scout Nearby action. The first click previews the nearby radius and highlights targets; pressing Send All atomically charges the current Economy-configured cost and dispatches one troop from that city to every reachable highlighted non-owned city. Online batches are validated and charged by Firebase Functions, so a failed or retried request cannot partially charge or duplicate scouts.
 - Regroup follows the same server-authoritative batch policy: it charges the configured cost once and either launches every confirmed nearby transfer or launches none.
 - A completed scout report adds a Report action to the selected city and shows the reported troop count in its banner.
-- Detailed reports include city level, troop and wall defense contributions, total defense, and level/percentage rows for relevant defense and attack skills.
+- Detailed reports show the wall and garrison phases, starting and ending wall integrity, absorbed and penetrating power, repair status, troop losses, and relevant defense and attack skills.
 
 ## Testing Locally
 
 Open the Netlify site, sign in with Google, then use the live map to scout, attack, defend, and confirm reports in the bottom `Reports` menu.
+
+Run `node tools/audit-season-balance.js --check` after changing production, reward, skill, pickup, camp, item, wall, or repair values. Its 30-day modeling horizon uses a 30-city apex portfolio (1 Level 150, 4 Level 100, 10 Level 75, and 15 Level 50 cities) and guards the Level 150 siege benchmark. The horizon is a balance model only; it does not schedule or imply an automatic world reset.
 
 ## Online Multiplayer Foundation
 

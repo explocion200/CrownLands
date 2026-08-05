@@ -63,6 +63,7 @@
   const HERO_REWARD_EARLY_END_LEVEL = 50;
   const HERO_REWARD_MID_END_LEVEL = 100;
   const ECONOMY_CITY_PREVIEW_LEVELS = [1, 25, 50, 75, 100, 125, 150];
+  const ECONOMY_FORTIFICATION_PREVIEW_LEVELS = [1, 25, 50, 75, 100, 150, 200, 500];
   const ECONOMY_REWARD_PREVIEW_LEVELS = [2, 10, 25, 50, 51, 75, 100, 101, 125, 150, 200];
   const CAMP_UI_FOOTPRINT_PAD = { x: 34, top: 30, bottom: 18 };
   const STRONGHOLD_UI_FOOTPRINT_PAD = { x: 58, top: 78, bottom: 42 };
@@ -1048,6 +1049,34 @@
     return Math.max(10, Math.floor(rawCost + 0.000001));
   }
 
+  function getEconomyPreviewBaseWall(level, economy = state.economy) {
+    const config = economy?.cityEconomy || {};
+    const normalizedLevel = normalizeEconomyPreviewLevel(level);
+    const base = Math.max(0, readEconomyNumber(config.wallDefenseBase, 200));
+    const exponent = Math.max(0, readEconomyNumber(config.wallDefenseExponent, 3));
+    const scale = Math.max(0, readEconomyNumber(config.wallDefenseScale, 3));
+    const transitionLevel = Math.max(1, readEconomyNumber(config.wallDefenseTransitionLevel, 140));
+    const transitionPower = Math.max(1, readEconomyNumber(config.wallDefenseTransitionPower, 8));
+    const rawGrowth = (Math.pow(normalizedLevel, exponent) - 1) * scale;
+    const smoothingExponent = Math.max(0, exponent - 1) / transitionPower;
+    const smoothingDivisor = Math.pow(
+      1 + Math.pow(normalizedLevel / transitionLevel, transitionPower),
+      smoothingExponent
+    );
+    const walls = base + Math.max(0, smoothingDivisor > 0 ? rawGrowth / smoothingDivisor : rawGrowth);
+    if (!Number.isFinite(walls)) return Number.MAX_SAFE_INTEGER;
+    return Math.min(Number.MAX_SAFE_INTEGER, Math.max(0, Math.floor(walls)));
+  }
+
+  function getEconomyPreviewRepairMinutes(level, economy = state.economy) {
+    const config = economy?.siegeCombat || {};
+    return Math.max(1, Math.round(
+      Math.max(1, readEconomyNumber(config.repairBaseMinutes, 15))
+        + normalizeEconomyPreviewLevel(level)
+          * Math.max(0, readEconomyNumber(config.repairMinutesPerLevel, 0.3))
+    ));
+  }
+
   function getEconomyPreviewHeroGoldUpgradeShare(level, economy = state.economy) {
     const config = economy?.levelRewards || {};
     const normalizedLevel = normalizeEconomyPreviewLevel(level);
@@ -1168,11 +1197,29 @@
     }).join("");
   }
 
+  function buildFortificationPreviewRows(economy = state.economy) {
+    const stoneworksMaximum = Math.max(0, readEconomyNumber(economy?.skills?.stoneworks?.maxPercent, 0));
+    return ECONOMY_FORTIFICATION_PREVIEW_LEVELS.map(level => {
+      const baseWall = getEconomyPreviewBaseWall(level, economy);
+      const maximumWall = Math.floor(baseWall * (1 + stoneworksMaximum / 100));
+      return `
+        <tr>
+          <td>${level}</td>
+          <td>${formatEconomyPreviewNumber(baseWall)}</td>
+          <td>${formatEconomyPreviewNumber(maximumWall)}</td>
+          <td>${formatEconomyPreviewNumber(getEconomyPreviewRepairMinutes(level, economy))} min</td>
+        </tr>
+      `;
+    }).join("");
+  }
+
   function updateEconomyBreakdownPreviews() {
     if (!state.economy) return;
     const cityPreview = elements.economySections.querySelector('[data-economy-preview="cities"]');
+    const fortificationPreview = elements.economySections.querySelector('[data-economy-preview="fortifications"]');
     const rewardPreview = elements.economySections.querySelector('[data-economy-preview="level-rewards"]');
     if (cityPreview) cityPreview.innerHTML = buildCityEconomyPreviewRows(state.economy);
+    if (fortificationPreview) fortificationPreview.innerHTML = buildFortificationPreviewRows(state.economy);
     if (rewardPreview) rewardPreview.innerHTML = buildLevelRewardPreviewRows(state.economy);
   }
 
@@ -1427,6 +1474,97 @@
                   description: "Hard ceiling on the production-hour part of any one-city upgrade cost, even above level 150.",
                 }
               )}
+            </div>
+          </article>
+          <article class="economy-breakdown-card full">
+            <div class="economy-breakdown-heading">
+              <span>City defense</span>
+              <strong>Universal walls and level-based repair</strong>
+              <p>Every city level uses the same smooth formula. The transition settings gradually change wall growth from cubic toward linear without a Level 100 breakpoint. Repair time is set when meaningful damage occurs and follows the city through captures.</p>
+            </div>
+            <div class="economy-fixed-formula">
+              <span>Wall formula</span>
+              <code>base + scale × (level^exponent − 1) ÷ (1 + (level ÷ transition)^power)^((exponent − 1) ÷ power)</code>
+              <small>Stoneworks and objective bonuses multiply the resulting wall afterward. Reinforcements add garrison troops, not additional walls.</small>
+            </div>
+            <div class="economy-fixed-formula">
+              <span>Repair formula</span>
+              <code>round(base repair minutes + city level × minutes per level)</code>
+              <small>There is no gameplay cap. Ownership changes and the one-level capture drop do not reset an active deadline.</small>
+            </div>
+            <div class="economy-explained-grid three">
+              ${economyNumberInput(
+                "cityEconomy.defensePercentPerLevel",
+                "Garrison defense per city level (%)",
+                economy.cityEconomy.defensePercentPerLevel,
+                { step: 0.1, description: "Multiplies stationed and reinforced troop defense. It does not increase wall power." }
+              )}
+              ${economyNumberInput(
+                "cityEconomy.wallDefenseBase",
+                "Level 1 base wall power",
+                economy.cityEconomy.wallDefenseBase,
+                { description: "Flat wall power before level growth, Stoneworks, or objective bonuses." }
+              )}
+              ${economyNumberInput(
+                "cityEconomy.wallDefenseScale",
+                "Wall growth scale",
+                economy.cityEconomy.wallDefenseScale,
+                { step: 0.1, description: "Multiplies the level-growth part of the universal wall formula." }
+              )}
+              ${economyNumberInput(
+                "cityEconomy.wallDefenseExponent",
+                "Early wall growth exponent",
+                economy.cityEconomy.wallDefenseExponent,
+                { step: 0.1, description: "Controls early growth before the transition gradually softens the curve." }
+              )}
+              ${economyNumberInput(
+                "cityEconomy.wallDefenseTransitionLevel",
+                "Wall transition level",
+                economy.cityEconomy.wallDefenseTransitionLevel,
+                { description: "Sets the center of the smooth transition toward linear high-level wall growth; it is not a breakpoint." }
+              )}
+              ${economyNumberInput(
+                "cityEconomy.wallDefenseTransitionPower",
+                "Wall transition smoothness power",
+                economy.cityEconomy.wallDefenseTransitionPower,
+                { step: 0.1, description: "Higher values make the transition more concentrated around its level while remaining one continuous formula." }
+              )}
+              ${economyNumberInput(
+                "siegeCombat.repairBaseMinutes",
+                "Base wall repair minutes",
+                economy.siegeCombat.repairBaseMinutes,
+                { step: 0.1, description: "Flat minutes included in every new wall-repair deadline." }
+              )}
+              ${economyNumberInput(
+                "siegeCombat.repairMinutesPerLevel",
+                "Repair minutes per city level",
+                economy.siegeCombat.repairMinutesPerLevel,
+                { step: 0.01, description: "Adds this many minutes for every city level. The result has no gameplay cap." }
+              )}
+              ${economyNumberInput(
+                "siegeCombat.meaningfulWallDamagePercent",
+                "Damage required to persist (%)",
+                economy.siegeCombat.meaningfulWallDamagePercent,
+                { step: 0.1, description: "Hits below this share of the full wall do not change integrity or reset the timer unless they finish the breach." }
+              )}
+              ${economyNumberInput(
+                "siegeCombat.intactWallDefenderLossCapPercent",
+                "Defender loss cap while wall holds (%)",
+                economy.siegeCombat.intactWallDefenderLossCapPercent,
+                { step: 0.1, description: "Maximum garrison losses from an attack that fails to breach the wall." }
+              )}
+            </div>
+            <div class="economy-preview-panel">
+              <div class="economy-preview-heading">
+                <div><span>Live preview</span><strong>Wall strength and full repair window</strong></div>
+                <p>Maximum wall includes the current Stoneworks cap. Objective defense bonuses are not included.</p>
+              </div>
+              <div class="economy-preview-scroll">
+                <table class="economy-preview-table">
+                  <thead><tr><th>City level</th><th>Base wall</th><th>Max Stoneworks wall</th><th>Repair window</th></tr></thead>
+                  <tbody data-economy-preview="fortifications">${buildFortificationPreviewRows(economy)}</tbody>
+                </table>
+              </div>
             </div>
           </article>
         </div>

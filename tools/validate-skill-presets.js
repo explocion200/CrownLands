@@ -185,7 +185,7 @@ assert.match(stylesSource, /\.skill-preset-tabs[\s\S]*?grid-template-columns: re
 
 assert.match(howToSource, /preset tabs unlock at Hero Levels 50, 75, and 100[\s\S]*?1,000,000 gold/i);
 assert.match(gameRulesSource, /Private preset slots unlock at Hero Levels 50, 75, and 100[\s\S]*?never overwrites a preset automatically/i);
-const expectedBuild = "20260804-combat-forecast-v1";
+const expectedBuild = "20260805-season-balance-v1";
 const expectedRelease = "crownlands-2026-08-02-single-active-skill-preset-v1";
 assert.ok(indexSource.includes(expectedBuild) && workerSource.includes(expectedBuild), "Frontend and service-worker builds do not match.");
 assert.ok(releaseSource.includes(expectedRelease) && functionsRelease.releaseId === expectedRelease, "Frontend and Functions realm releases do not match.");

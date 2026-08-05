@@ -20,6 +20,7 @@
       <div class="site-nav-links">
         <a href="/about.html">About</a>
         <a href="/how-to-play.html" aria-current="page">How to Play</a>
+        <a href="/battle-economy-guide.html">Battle Guide</a>
         <a href="/game-rules.html">Rules</a>
         <a href="/support.html">Support</a>
         <a href="/privacy.html">Privacy</a>
@@ -66,6 +67,9 @@
             <div>
               <h2>Build production deliberately</h2>
               <p>Regular cities produce gold and troops in real time. Higher city levels create more victory points, which increase production and make the city more valuable. Upgrading costs gold, so each upgrade is a choice between stronger future income and keeping resources available for immediate actions.</p>
+              <p>Each city produces 10 troops per victory point per hour before bonuses. Gold uses its separate city-production curve. Royal Granaries and Tax Stewardship improve those base rates, while Stronghold, Citadel, and timed-item percentages are shown separately so the Economy and city detail panels explain exactly where each total comes from.</p>
+              <p>Victory points measure city value and drive base troop production; they do not directly strengthen one attacking soldier, and passive gold does not use VP. Open the <a href="/battle-economy-guide.html">interactive Battle and Economy Guide</a> to compare city levels, production, walls, skills, and battle thresholds.</p>
+              <p>Active-map pickups appear every three minutes and alternate between one hour of stored gold production and one hour of stored troop production. The daily limits are 25 of each type, 50 total. Daily login rewards use the current UTC calendar month; missing a day pauses progress, up to two earned rewards can wait, and unclaimed rewards expire at the next month rollover.</p>
               <p>Troops remain in the city that produced them until they march. That means a productive city can become a useful defensive reserve, but only if its troops are not repeatedly drained. Gold is held at the kingdom level and can be used across the realm.</p>
               <h3>Useful habits</h3>
               <ul>
@@ -94,9 +98,9 @@
             <span class="step-number">4</span>
             <div>
               <h2>Scout before attacking</h2>
-              <p>A scout is a small march that reveals a snapshot of a target after arrival. The report shows the holding owner's garrison separately from each clan member's stationed reinforcements, along with city level, wall contribution, total defense, and relevant bonuses. Successful intelligence lasts for ten minutes from arrival. A newer successful scout replaces that target's report and restarts the timer; failed or blocked scouts do not refresh it. Scout Nearby charges its displayed kingdom cost once and either launches every confirmed one-troop scout or launches none.</p>
-              <p>Use the combat forecast together with the latest report. It compares your launch attack power with the scout&rsquo;s complete defense total, including known walls, bonuses, and allied reinforcement packages. It separately labels a likely capture, protected wall breach, protected raid, or defeat, and shows the report age and estimated survivors.</p>
-              <p>Your army&rsquo;s per-troop attack power is fixed when it launches. Defense stays live until arrival: troop production continues, reinforcements may arrive or leave, objective bonuses can change, and ownership may change. The detailed battle report compares the launch forecast with the live arrival result so a changed outcome can be explained.</p>
+              <p>A scout is a small march that reveals a snapshot of a target after arrival. The report shows the holding owner's garrison separately from each clan member's stationed reinforcements, plus exact current wall integrity, wall power, garrison power, and relevant bonuses. Successful intelligence lasts for ten minutes from arrival. A newer successful scout replaces that target's report and restarts the timer; failed or blocked scouts do not refresh it. Scout Nearby charges its displayed kingdom cost once and either launches every confirmed one-troop scout or launches none.</p>
+              <p>Use the combat forecast together with the latest report. It shows how much attack power the wall is expected to absorb and how much should reach the garrison. It separately labels a likely wall hold, garrison hold, capture, protected breach, or protected raid, and shows projected losses, the report age, estimated survivors, the minimum force needed to capture, and any shortfall. Advantage labels are intentionally conservative: overwhelming requires at least three times the live resolved defense.</p>
+              <p>Your army&rsquo;s per-troop attack power is fixed when it launches. Defense stays live until arrival: troop production continues, reinforcements may arrive or leave, damaged walls may repair, objective bonuses can change, and ownership may change. The detailed battle report compares the launch forecast with the live arrival result so a changed outcome can be explained.</p>
               <div class="notice"><strong>Do not send based only on the number printed over a city.</strong> Walls, skills, Stronghold effects, allied reinforcements, and recent troop movement can change the actual defense.</div>
             </div>
           </div>
@@ -109,8 +113,9 @@
               <h2>Send armies and protect holdings</h2>
               <p>Choose a source city, target, and troop amount to create a march. The server calculates and validates the authoritative route and arrival time together with ownership, available troops, protection rules, and other requirements before accepting the order. Regroup also runs as one server-validated batch: its displayed cost is charged only if every confirmed nearby transfer is created. When a march arrives, the server resolves the outcome and records a report.</p>
               <p>Successful captures transfer the city and reduce its level by one, never below Level 1. Failed attacks can still award reduced experience. Newly acquired cities remain immediately attackable and award their normal battle and capture experience.</p>
-              <h3>Defense is preparation</h3>
-              <p>City defenders benefit from stationed troop strength and city walls. Upgrades and defensive skills improve the cost of taking an important holding. If an attack is already marching, decide whether to reinforce the target, move vulnerable troops, or accept the battle and preserve resources elsewhere.</p>
+              <h3>Defense happens in two layers</h3>
+              <p>Attack power strikes the holding&rsquo;s one physical wall first. If the wall is not breached, it absorbs the assault and defender troop losses are capped at 10%. If it is breached, only the remaining attack power fights the garrison; the city is captured only when that remaining power exceeds garrison defense. Stoneworks strengthens the wall, while city level and applicable bonuses strengthen troops.</p>
+              <p>A hit that removes at least 5% of full wall power persists for a level-based repair window: 15 minutes plus 0.3 minutes per city level, rounded to the nearest minute with no cap. Another meaningful hit before breach restarts that timer. Capturing the city, changing its owner, or applying the capture level drop does not reset its existing deadline. A breached wall gives zero wall defense until it repairs. Reinforcements help the garrison but do not add duplicate walls. Protected raids never persist wall damage. If an attack is already marching, decide whether to reinforce, counterattack while a wall is damaged, move vulnerable troops, or preserve resources elsewhere.</p>
             </div>
           </div>
         </section>
@@ -144,7 +149,7 @@
             <div>
               <h2>Coordinate through a clan</h2>
               <p>Clans provide a shared identity, membership roles, applications, allied map information, shared rewards, and coordinated attacks. Clan members cannot treat allied cities as ordinary enemy targets. Instead, they can send reinforcements to eligible allied holdings.</p>
-              <p>Reinforcement troops continue to belong to their sender. In battle, each reinforcement package combines its troops with 25% of the destination&rsquo;s base wall defense and that sender&rsquo;s full Stoneworks bonus calculated from the base walls. The sender&rsquo;s applicable objective defense bonuses then affect that complete package. You may maintain up to two assignments with each clanmate, but each assignment must support a different holding. Ordinary cities reserve up to five reinforcement contributors as soon as their marches launch; allied Strongholds and reward camps do not use this city limit.</p>
+              <p>Reinforcement troops continue to belong to their sender. In city and objective sieges they join the garrison with their applicable troop-defense bonuses behind the holding&rsquo;s one physical wall. They do not create extra wall layers or duplicate Stoneworks. Reward camps retain their existing reinforcement combat calculation. You may maintain up to two assignments with each clanmate, but each assignment must support a different holding. Ordinary cities reserve up to five reinforcement contributors as soon as their marches launch; allied Strongholds and reward camps do not use this city limit.</p>
               <p>The sender may recall stationed troops, the holding owner may send them home, and battle losses are applied when the position is attacked. Troops return to the city or Stronghold they originally left while it remains owned by the sender. If that holding has been captured before the return begins or while the troops are marching, the server redirects survivors to the sender&rsquo;s current Main City.</p>
               <h3>Coordinate rallies in the War Room</h3>
               <p>Open <strong>Clan &rarr; War Room</strong> to form, join, inspect, launch, cancel, or withdraw from clan rallies. The War Room is focused entirely on rallies and shows the same authoritative rally state available under Kingdom Activity.</p>
@@ -170,6 +175,7 @@
           </ul>
           <div class="site-actions">
             <a class="site-button" href="/">Enter Crownlands</a>
+            <a class="site-button secondary" href="/battle-economy-guide.html">Open the Battle Guide</a>
             <a class="site-button secondary" href="/game-rules.html">Read the rules</a>
           </div>
         </section>
@@ -183,6 +189,7 @@
       <nav aria-label="Footer">
         <a href="/">Play</a>
         <a href="/about.html">About</a>
+        <a href="/battle-economy-guide.html">Battle Guide</a>
         <a href="/game-rules.html">Rules</a>
         <a href="/support.html">Support</a>
         <a href="/privacy.html">Privacy</a>

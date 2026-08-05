@@ -20,7 +20,7 @@ The Game Editor is developer-only. It manages the world files in `assets/worlds/
 - Empty grid squares: click an empty square to select it, then click `Add Region` to place the new region there.
 - Region tiles: drag a region in World Layout to move it to a different grid cell. Occupied cells are blocked so two regions do not overlap.
 - Region Edit: open one region map, pan/zoom, place cities, place strongholds, place camps, and define north/south/east/west edge connection zones.
-- Economy: edit shop prices and daily purchase caps, percentage item bonuses, pickup spawn timing and rewards, pickup daily caps, action costs, city production, upgrade pacing, skills, level-up rewards, and default camp rewards.
+- Economy: edit shop prices and daily purchase caps, percentage item bonuses, pickup spawn timing and rewards, pickup daily caps, action costs, city production, upgrade pacing, universal wall growth, level-based wall repair, skills, level-up rewards, and default camp rewards.
 - Region map images: in Region Edit, click `Upload Map` to copy a 4:3 JPG, PNG, or WebP into `assets/worlds/world_01/maps/` and update that region's image path. Uploading another map replaces the previous editor-uploaded map image for that region while keeping shared placeholder art safe.
 - Map aspect ratio: region maps are locked to 4:3, with `2048 x 1536` as the default stage size.
 - Upload troubleshooting: a successful upload changes the editor preview immediately. Click `Save to Game` after that to update the game JSON, then refresh the game page. If you see `Unknown API route`, restart the local editor with `.\tools\start-editor.ps1` and use `http://127.0.0.1:8791/editor/`; map uploads cannot work from a plain static server or the live Netlify site.
