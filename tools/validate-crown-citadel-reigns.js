@@ -6,6 +6,7 @@ const serverSource = fs.readFileSync(path.join(root, "functions", "index.js"), "
 const clientSource = fs.readFileSync(path.join(root, "game.js"), "utf8");
 const firebaseClientSource = fs.readFileSync(path.join(root, "firebaseClient.js"), "utf8");
 const rulesSource = fs.readFileSync(path.join(root, "firestore.rules"), "utf8");
+const indexesSource = fs.readFileSync(path.join(root, "firestore.indexes.json"), "utf8");
 const stylesSource = fs.readFileSync(path.join(root, "styles.css"), "utf8");
 
 function requireMatch(source, pattern, message) {
@@ -55,7 +56,17 @@ if (resolverCitadelWrites.length !== 2 || resolverCitadelWrites.some(match => !/
   throw new Error("Every direct and rally Citadel capture must use the prefetched reign snapshots.");
 }
 requireMatch(rulesSource, /match \/crownCitadelReigns\/(?:\{uid\}|\{resetId\}\/entries\/\{uid\})[\s\S]*?allow read: if signedIn\(\)(?:\s*&&[\s\S]*?)?;[\s\S]*?allow create, update, delete: if false;/, "Citadel reign scores must be public to signed-in players and server-owned.");
-requireMatch(firebaseClientSource, /loadCrownCitadelReignLeaderboard[\s\S]*?crownCitadelReigns/, "Missing public Reign Ledger loader.");
+const reignLoaderSource = sourceBetween(
+  firebaseClientSource,
+  "async function loadCrownCitadelReignLeaderboard",
+  "function subscribePlayerGlobalStats",
+  "Could not isolate the public Reign Ledger loader."
+);
+requireMatch(reignLoaderSource, /crownCitadelReigns/, "Missing public Reign Ledger loader.");
+requireMatch(reignLoaderSource, /where\("resetGeneration",\s*"==",\s*RESET_GENERATION\)/, "The Reign Ledger query does not prove the reset-generation read rule.");
+requireMatch(reignLoaderSource, /where\("worldId",\s*"==",\s*ONLINE_WORLD_ID\)/, "The Reign Ledger query does not prove the world read rule.");
+requireMatch(reignLoaderSource, /orderBy\("totalHeldMs",\s*"desc"\)/, "The Reign Ledger query is not ranked by completed hold time.");
+requireMatch(indexesSource, /"collectionGroup":\s*"entries"[\s\S]*?"fieldPath":\s*"resetGeneration"[\s\S]*?"fieldPath":\s*"worldId"[\s\S]*?"fieldPath":\s*"totalHeldMs"[\s\S]*?"order":\s*"DESCENDING"/, "Missing the ranked Reign Ledger composite index.");
 requireMatch(firebaseClientSource, /subscribeCrownCitadel[\s\S]*?onCitadel/, "Missing lightweight Crown Citadel control listener.");
 requireMatch(clientSource, /Reign Ledger/, "Crown Citadel info is missing the Reign Ledger tab.");
 requireMatch(clientSource, /data-citadel-reign-score/, "Citadel reign scores do not update while the current reign is active.");

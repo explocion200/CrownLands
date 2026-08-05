@@ -783,6 +783,24 @@
       ]
     },
     {
+      "collectionGroup": "entries",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "resetGeneration",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "worldId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "totalHeldMs",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
       "collectionGroup": "presence",
       "queryScope": "COLLECTION",
       "fields": [

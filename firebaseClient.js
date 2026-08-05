@@ -1374,10 +1374,16 @@
     const uid = requireSignedIn();
     if (!uid) return [];
     const safeLimit = Math.max(1, Math.min(100, Math.floor(Number(limitCount) || 100)));
-    const { collection, getDocs, query: firestoreQuery, orderBy, limit } = client.modules.firestore;
+    const { collection, getDocs, query: firestoreQuery, where, orderBy, limit } = client.modules.firestore;
     const reignsRef = collection(client.db, "crownCitadelReigns", RESET_GENERATION, "entries");
-    const reignsQuery = firestoreQuery && orderBy && limit
-      ? firestoreQuery(reignsRef, orderBy("totalHeldMs", "desc"), limit(safeLimit))
+    const reignsQuery = firestoreQuery && where && orderBy && limit
+      ? firestoreQuery(
+          reignsRef,
+          where("resetGeneration", "==", RESET_GENERATION),
+          where("worldId", "==", ONLINE_WORLD_ID),
+          orderBy("totalHeldMs", "desc"),
+          limit(safeLimit)
+        )
       : reignsRef;
     const snapshot = await getDocs(reignsQuery);
     return snapshot.docs.slice(0, safeLimit).map(reignDoc => {
