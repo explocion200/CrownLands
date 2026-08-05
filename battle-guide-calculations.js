@@ -224,6 +224,11 @@
         wallDamagePower * 100 >= city.fullWallPower * meaningfulPercent
           || rawEndingIntegrityBps <= 0
       );
+      const repairAddedMs = meaningfulWallDamage && city.fullWallPower > 0
+        ? Math.max(0, Math.round(
+          city.repairMinutes * 60_000 * clamp(wallDamagePower / city.fullWallPower, 0, 1)
+        ))
+        : 0;
       const totalDefenderTroops = Math.max(0, Math.floor(finite(inputs.defenderTroops, 0)))
         + reinforcementTroops;
       let attackerSurvivors = 0;
@@ -278,6 +283,7 @@
         ratio,
         advantageTier: getAdvantageTier(ratio),
         meaningfulWallDamage,
+        repairAddedMs,
         endingIntegrityBps: meaningfulWallDamage ? rawEndingIntegrityBps : startingIntegrityBps,
         attackerLosses: attackerTroops - attackerSurvivors,
         attackerSurvivors,

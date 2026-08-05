@@ -504,6 +504,10 @@
     return callServerFunction("claimDailyLoginReward", payload);
   }
 
+  async function markReportsViewed(payload = {}) {
+    return callServerFunction("markReportsViewed", payload);
+  }
+
   async function getRewardedAdStatus(payload = {}) {
     return callSensitiveServerFunction("getRewardedAdStatus", payload);
   }
@@ -1173,6 +1177,7 @@
     delete cleanProfile.mainCityChangedAtMs;
     delete cleanProfile.lastCityRelinquishedAtMs;
     delete cleanProfile.dailyLoginReward;
+    delete cleanProfile.reportsViewedAtMs;
     delete cleanProfile.inactivityNotice;
     delete cleanProfile.worldSlotResetAtMs;
     delete cleanProfile.skillPresets;
@@ -2289,6 +2294,7 @@
     collectEconomy,
     getDailyLoginRewardStatus,
     claimDailyLoginReward,
+    markReportsViewed,
     getRewardedAdStatus,
     prepareRewardedAd,
     claimRewardedAd,

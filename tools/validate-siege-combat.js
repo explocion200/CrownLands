@@ -76,13 +76,16 @@ const context = {
   getSiegeRepairLevel(target) {
     return Math.max(1, Math.floor(Number(target?.level) || 1));
   },
-  getSiegeRepairTiming(level, nowMs, reductionPercent = 0) {
+  getSiegeRepairTiming(level, wallDamagePower, fullWallPower, currentRepairAtMs, nowMs, reductionPercent = 0) {
     const repairWindowMinutes = Math.max(1, Math.round(15 + Math.max(1, Math.floor(Number(level) || 1)) * 0.3));
     const reduction = Math.max(0, Math.min(100, Number(reductionPercent) || 0));
+    const damageShare = Math.max(0, Math.min(1, (Number(wallDamagePower) || 0) / Math.max(1, Number(fullWallPower) || 0)));
+    const repairAddedMs = Math.max(0, Math.round(repairWindowMinutes * 60_000 * damageShare * (1 - reduction / 100)));
     return {
       repairWindowMinutes,
       repairReductionPercent: reduction,
-      repairAtMs: nowMs + Math.max(60_000, Math.floor(repairWindowMinutes * 60_000 * (1 - reduction / 100))),
+      repairAddedMs,
+      repairAtMs: Math.max(Number(currentRepairAtMs) || 0, nowMs) + repairAddedMs,
     };
   },
   usesSiegeCombat(version, targetType) {
@@ -127,12 +130,24 @@ const repairContexts = [server, client].map((source, index) => {
     SIEGE_REPAIR_MINUTES_PER_LEVEL: 0.3,
     Number,
     Math,
+    clamp(value, minimum, maximum) {
+      return Math.max(minimum, Math.min(maximum, Number(value) || 0));
+    },
+    safeNumber(value, fallback = 0) {
+      return Number.isFinite(Number(value)) ? Number(value) : fallback;
+    },
+    timestampToMs(value) {
+      return Math.max(0, Math.floor(Number(value) || 0));
+    },
+    normalizeTimestampMs(value) {
+      return Math.max(0, Math.floor(Number(value) || 0));
+    },
     clampCityLevel(value) {
       return Math.max(1, Math.floor(Number(value) || 1));
     },
   };
   vm.createContext(repairContext);
-  vm.runInContext(`${extractFunction(source, "getSiegeRepairWindowMinutes")}; this.getSiegeRepairWindowMinutes = getSiegeRepairWindowMinutes;`, repairContext, {
+  vm.runInContext(`${extractFunction(source, "getSiegeRepairWindowMinutes")}; ${extractFunction(source, "getSiegeRepairTiming")}; this.getSiegeRepairWindowMinutes = getSiegeRepairWindowMinutes; this.getSiegeRepairTiming = getSiegeRepairTiming;`, repairContext, {
     filename: index === 0 ? "functions/index.js" : "game.js",
   });
   return repairContext;
@@ -157,6 +172,18 @@ assert.ok(
   repairContexts[0].getSiegeRepairWindowMinutes(2_000) > repairContexts[0].getSiegeRepairWindowMinutes(1_000),
   "The repair formula was capped at high levels."
 );
+repairContexts.forEach(repairContext => {
+  const first = repairContext.getSiegeRepairTiming(100, 200, 1_000, 0, 1_800_000);
+  assert.equal(first.repairWindowMinutes, 45);
+  assert.equal(first.repairAddedMs, 540_000);
+  assert.equal(first.repairAtMs, 2_340_000);
+  const later = repairContext.getSiegeRepairTiming(100, 100, 1_000, first.repairAtMs, 2_100_000);
+  assert.equal(later.repairAddedMs, 270_000);
+  assert.equal(later.repairAtMs, 2_610_000);
+  const reduced = repairContext.getSiegeRepairTiming(100, 100, 1_000, first.repairAtMs, 2_100_000, 50);
+  assert.equal(reduced.repairAddedMs, 135_000, "Repair reduction must affect only the latest damage increment.");
+  assert.equal(reduced.repairAtMs, 2_475_000);
+});
 
 assert.equal(
   context.getFortificationStatePatch({ persistentDamageApplied: false }, "capture", 50_000),
@@ -179,6 +206,7 @@ function siegeResult({
   wall,
   integrityBps = 10_000,
   garrison,
+  repairAtMs = 0,
   targetType = "city",
   level = 50,
   attackProtection = null,
@@ -194,6 +222,7 @@ function siegeResult({
       fullWallPower: wall * 10_000 / integrityBps,
       currentWallPower: wall,
       integrityBps,
+      repairAtMs,
     },
     garrisonDefensePower: garrison,
     attackProtection,
@@ -218,14 +247,39 @@ assert.equal(level100.defenderLosses, 61_955);
 assert.ok(level100.defenderLosses <= 100_000, "An intact wall allowed more than 10% defender losses.");
 assert.equal(level100.fortification.endingIntegrityBps, 3_804);
 assert.equal(level100.fortification.repairWindowMinutes, 45);
-assert.equal(level100.fortification.repairAtMs, 4_500_000);
+assert.equal(level100.fortification.repairAddedMs, 1_672_800);
+assert.equal(level100.fortification.repairAtMs, 3_472_800);
 
 const exactThreshold = siegeResult({ attackPower: 50, troops: 50, defenders: 100, wall: 1_000, garrison: 200 });
 assert.equal(exactThreshold.fortification.meaningfulWallDamage, true, "Exactly 5% wall damage must reset repair.");
 assert.equal(exactThreshold.fortification.persistentDamageApplied, true);
+assert.equal(exactThreshold.fortification.repairAddedMs, 90_000, "A 5% hit must add exactly 5% of Level 50's 30-minute window.");
+assert.equal(exactThreshold.fortification.repairAtMs, 1_890_000);
 const belowThreshold = siegeResult({ attackPower: 49, troops: 49, defenders: 100, wall: 1_000, garrison: 200 });
 assert.equal(belowThreshold.fortification.meaningfulWallDamage, false);
 assert.equal(belowThreshold.fortification.endingIntegrityBps, 10_000, "Sub-threshold wall damage must not persist.");
+assert.equal(belowThreshold.fortification.repairAddedMs, 0);
+
+const firstProgressiveHit = siegeResult({
+  level: 100,
+  attackPower: 200,
+  wall: 1_000,
+  garrison: 10_000,
+  nowMs: 1_800_000,
+});
+assert.equal(firstProgressiveHit.fortification.repairAddedMs, 540_000, "A 20% Level 100 hit must add 9 minutes.");
+assert.equal(firstProgressiveHit.fortification.repairAtMs, 2_340_000);
+const secondProgressiveHit = siegeResult({
+  level: 100,
+  attackPower: 100,
+  wall: 800,
+  integrityBps: 8_000,
+  garrison: 10_000,
+  repairAtMs: firstProgressiveHit.fortification.repairAtMs,
+  nowMs: 2_100_000,
+});
+assert.equal(secondProgressiveHit.fortification.repairAddedMs, 270_000, "A later 10% hit must add 4 minutes 30 seconds.");
+assert.equal(secondProgressiveHit.fortification.repairAtMs, 2_610_000, "A later hit must extend the existing deadline without discarding elapsed progress.");
 
 const strictCapture = siegeResult({ attackPower: 1_200, troops: 1_200, defenders: 100, wall: 1_000, garrison: 200 });
 assert.equal(strictCapture.success, false, "Attack power equal to wall plus garrison must not capture.");
@@ -260,6 +314,8 @@ assert.match(server, /function writeFortificationSettlement[\s\S]*?fortification
 assert.match(server, /const carriedFortificationState = settledFortificationState \|\| \([\s\S]*?getNeutralClaimCapturePatch[\s\S]*?fortificationState: carriedFortificationState/);
 assert.match(server, /function getFortificationStatePatch[\s\S]*?repairAtMs: Math\.max\(nowMs, timestampToMs\(fortification\.repairAtMs\)\)/);
 assert.match(server, /function resolveCitadelAssaultTarget[\s\S]*?carriedFortificationState[\s\S]*?getNeutralClaimClearedPatch[\s\S]*?fortificationState: carriedFortificationState/);
+assert.doesNotMatch(extractFunction(server, "getNeutralClaimClearedPatch"), /fortificationState/, "Neutral ownership metadata must not clear active wall damage.");
+assert.doesNotMatch(server, /fortificationState:\s*null/, "Ownership and neutral handoffs must not erase fortification state.");
 assert.match(server, /capabilities:[\s\S]*?siegeCombatVersion: SIEGE_COMBAT_VERSION/);
 assert.match(client, /function renderCityFortificationStatus[\s\S]*?Wall integrity[\s\S]*?Walls absorb attack power before the garrison fights/);
 assert.match(client, /function supportsSiegeCombat[\s\S]*?getRealmCapabilityVersion\("siegeCombatVersion"\)/);
@@ -269,11 +325,11 @@ assert.match(client, /function applyOnlineCities[\s\S]*?hasOwnProperty\.call\(on
 assert.match(client, /function applyServerCityUpdates[\s\S]*?hasOwnProperty\.call\(update, "fortificationState"\)/);
 assert.ok(client.includes("Walls likely hold"));
 assert.ok(client.includes("Walls breached — garrison likely holds"));
-assert.match(rules, /two phases[\s\S]*?same smooth wall formula[\s\S]*?0\.3 minutes per city level[\s\S]*?ownership change[\s\S]*?Protected raids do not persist wall damage/);
+assert.match(rules, /two phases[\s\S]*?full-breach repair window[\s\S]*?same damage share[\s\S]*?neutral claims[\s\S]*?Protected raids do not persist wall damage/);
 assert.match(guide, /Defense happens in two layers[\s\S]*?defender troop losses are capped at 10%/);
-assert.match(guide, /level-based repair window[\s\S]*?no cap[\s\S]*?does not reset its existing deadline/);
-assert.match(readme, /two-phase siege model[\s\S]*?same smooth wall curve[\s\S]*?round\(15 \+ city level x 0\.3\)/);
-assert.match(editor, /Universal walls and level-based repair[\s\S]*?siegeCombat\.repairBaseMinutes[\s\S]*?siegeCombat\.repairMinutesPerLevel[\s\S]*?data-economy-preview="fortifications"/);
+assert.match(guide, /full-breach repair window[\s\S]*?exact damage share[\s\S]*?neutral handoff/);
+assert.match(readme, /two-phase siege model[\s\S]*?same smooth wall curve[\s\S]*?full-breach repair window[\s\S]*?later meaningful hits preserve elapsed progress/);
+assert.match(editor, /Universal walls and damage-based repair[\s\S]*?added time = full window[\s\S]*?siegeCombat\.repairBaseMinutes[\s\S]*?siegeCombat\.repairMinutesPerLevel[\s\S]*?data-economy-preview="fortifications"/);
 assert.match(editorServer, /siegeCombat: Object\.fromEntries\(Object\.keys\(fallback\.siegeCombat/);
 assert.ok(packageJson.scripts.test.includes("validate-siege-combat.js"), "Siege combat validation is not in the Functions test suite.");
 

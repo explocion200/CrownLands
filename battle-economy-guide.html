@@ -57,7 +57,7 @@
           <article class="flow-node"><small>City value</small><strong>Victory points</strong><span>Troop production, capture value, and kingdom strength</span></article>
           <article class="flow-node"><small>Economy</small><strong>Gold curve</strong><span>A separate production curve; VP is not used here</span></article>
           <article class="flow-node"><small>Defense</small><strong>Wall + garrison</strong><span>Two layers that attackers must defeat in order</span></article>
-          <article class="flow-node"><small>Time</small><strong>Repair window</strong><span>Higher levels take longer to rebuild after meaningful damage</span></article>
+          <article class="flow-node"><small>Time</small><strong>Full-breach window</strong><span>Each hit adds its damage share of the level&rsquo;s full repair time</span></article>
           <article class="flow-node"><small>Growth</small><strong>Upgrade cost</strong><span>Priced from the city&rsquo;s gold output and progression target</span></article>
         </div>
       </div>
@@ -92,20 +92,20 @@
         <article><span>Full wall power</span><strong id="cityWallPower">0</strong><small id="cityWallHelp">Base 0</small></article>
         <article><span>Garrison defense</span><strong id="cityGarrisonDefense">0</strong><small id="cityGarrisonHelp">From 1M troops</small></article>
         <article><span>Next upgrade</span><strong id="cityUpgradeCost">0 gold</strong><small id="cityUpgradeHelp">No reduction</small></article>
-        <article><span>Wall repair</span><strong id="cityRepairTime">0m</strong><small>After meaningful wall damage</small></article>
+        <article><span>Full-breach repair</span><strong id="cityRepairTime">0m</strong><small>Partial hits add a proportional share</small></article>
       </div>
 
       <div class="guide-chart-grid">
         <figure><figcaption>Gold production by level <small>logarithmic value scale</small></figcaption><svg id="goldLevelChart" class="guide-chart" role="img" aria-label="Gold production by city level"></svg></figure>
         <figure><figcaption>Troop production by level</figcaption><svg id="troopLevelChart" class="guide-chart" role="img" aria-label="Troop production by city level"></svg></figure>
         <figure><figcaption>Wall power by level <small>logarithmic value scale</small></figcaption><svg id="wallLevelChart" class="guide-chart" role="img" aria-label="Wall power by city level"></svg></figure>
-        <figure><figcaption>Wall-repair minutes by level</figcaption><svg id="repairLevelChart" class="guide-chart" role="img" aria-label="Wall repair minutes by city level"></svg></figure>
+        <figure><figcaption>Full-breach repair minutes by level</figcaption><svg id="repairLevelChart" class="guide-chart" role="img" aria-label="Full-breach wall repair minutes by city level"></svg></figure>
       </div>
 
       <div class="table-responsive guide-table-wrap">
         <table class="guide-table">
           <caption>City milestones using the selected skills and Citadel package</caption>
-          <thead><tr><th>Level</th><th>VP</th><th>Gold/hour</th><th>Troops/hour</th><th>Wall power</th><th>Repair</th></tr></thead>
+          <thead><tr><th>Level</th><th>VP</th><th>Gold/hour</th><th>Troops/hour</th><th>Wall power</th><th>Full-breach repair</th></tr></thead>
           <tbody id="cityMilestoneRows"></tbody>
         </table>
       </div>
@@ -118,6 +118,7 @@
           <p><strong>Gold/hour:</strong> floor(20 &times; 1.115<sup>L&minus;1</sup>) &times; 15 through Level 100. Above 100, the Level 100 value grows 8% per additional level.</p>
           <p><strong>Owner garrison:</strong> stationed troops &times; (1 + 2% &times; city level), then the applicable objective-defense percentage.</p>
           <p><strong>Wall:</strong> one smooth level curve, then Stoneworks strengthens it, then an applicable objective-defense percentage strengthens that one wall.</p>
+          <p><strong>Repair added by a hit:</strong> full-breach repair window &times; wall damage &divide; full wall power.</p>
         </div>
       </details>
     </section>
@@ -250,27 +251,27 @@
     <section id="wall-timers" class="content-section guide-section" aria-labelledby="wallTimersTitle">
       <span class="site-eyebrow">Wall rebuilding</span>
       <h2 id="wallTimersTitle">The repair deadline belongs to the damaged wall, not its owner</h2>
-      <div class="repair-timeline" role="img" aria-label="Wall damage below five percent is temporary; meaningful damage starts a level-based timer; another meaningful hit resets it; capture preserves it; expiry restores the wall">
+      <div class="repair-timeline" role="img" aria-label="Wall damage below five percent is temporary; meaningful damage adds proportional repair time; another meaningful hit extends the running deadline; every ownership handoff preserves it; expiry restores the wall">
         <article><span>1</span><strong>Attack lands</strong><small>Measure damage against the wall&rsquo;s full power</small></article>
         <b aria-hidden="true">&#8594;</b>
         <article><span>2</span><strong>At least 5%?</strong><small>Below 5% creates no persistent damage</small></article>
         <b aria-hidden="true">&#8594;</b>
-        <article><span>3</span><strong>Deadline starts</strong><small>round(15 + 0.3 &times; current city level) minutes</small></article>
+        <article><span>3</span><strong>Damage adds time</strong><small>Full level window &times; this hit&rsquo;s share of full wall power</small></article>
         <b aria-hidden="true">&#8594;</b>
-        <article><span>4</span><strong>Damage persists</strong><small>A later meaningful hit before breach restarts the timer</small></article>
+        <article><span>4</span><strong>Progress persists</strong><small>A later meaningful hit adds only its own repair time</small></article>
         <b aria-hidden="true">&#8594;</b>
         <article><span>5</span><strong>Full repair</strong><small>At expiry, restore the wall using the current level and owner bonuses</small></article>
       </div>
       <div class="repair-rules-grid">
-        <article><strong>Capture does not reset it</strong><p>The damaged integrity, damage time, and absolute repair deadline transfer to the new owner.</p></article>
+        <article><strong>Every handoff preserves it</strong><p>Combat captures, relinquishment, inactivity, neutralization, and neutral claims carry the integrity and absolute deadline.</p></article>
         <article><strong>Upgrades do not recalculate it</strong><p>Level or ownership changes during an active repair do not lengthen or shorten that deadline.</p></article>
         <article><strong>A breached wall stays at zero</strong><p>Further attacks against an already breached wall do not restart its timer.</p></article>
         <article><strong>Protected raids do not persist damage</strong><p>The raid may remove defenders, but its wall damage is not written to the city.</p></article>
       </div>
       <div class="table-responsive guide-table-wrap">
         <table class="guide-table">
-          <caption>Level-based wall-repair examples</caption>
-          <thead><tr><th>Holding</th><th>Effective level</th><th>Full repair window</th></tr></thead>
+          <caption>Damage-proportional wall-repair examples</caption>
+          <thead><tr><th>Holding</th><th>Effective level</th><th>5% hit adds</th><th>20% hit adds</th><th>50% hit adds</th><th>Full breach adds</th></tr></thead>
           <tbody id="repairExampleRows"></tbody>
         </table>
       </div>
@@ -320,7 +321,7 @@
 
   <noscript><p class="guide-noscript">The diagrams require JavaScript, but the formulas, economy map, skills, battle sequence, wall timer, and special rules remain readable above.</p></noscript>
   <script src="/economy-config.js?v=20260805-monthly-rewards-v3"></script>
-  <script src="/battle-guide-calculations.js?v=20260805-battle-guide-v1"></script>
-  <script src="/battle-economy-guide.js?v=20260805-battle-guide-v1"></script>
+  <script src="/battle-guide-calculations.js?v=20260805-wall-repair-v1"></script>
+  <script src="/battle-economy-guide.js?v=20260805-wall-repair-v1"></script>
 </body>
 </html>

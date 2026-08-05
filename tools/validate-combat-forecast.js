@@ -48,7 +48,7 @@ const requiredClientSnippets = [
   "ownership, and bonuses may change before arrival.",
   "Protected raid — cannot capture",
   "Capture requires breaching the wall and then exceeding garrison defense.",
-  "Launch forecast compared with arrival",
+  "Launch intelligence compared with arrival",
   "launchCombatForecast: normalizeCombatForecast(report.launchCombatForecast)",
   "targetType: isRewardCampTarget(target) ? \"camp\" : \"city\"",
 ];

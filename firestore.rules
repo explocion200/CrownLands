@@ -53,6 +53,7 @@ service cloud.firestore {
           'itemEffects',
           'itemPurchaseCooldowns',
           'dailyLoginReward',
+          'reportsViewedAtMs',
           'inactivityNotice',
           'worldSlotResetAtMs',
           'economyUpdatedAtMs',
@@ -131,6 +132,7 @@ service cloud.firestore {
 
     function validPlayerProfileUpdate() {
       return playerEconomyUnchanged()
+        && profileFieldUnchanged('reportsViewedAtMs')
         && profileFieldUnchanged('inactivityNotice')
         && profileFieldUnchanged('worldSlotResetAtMs')
         && (profileFieldUnchanged('playerName') || validPlayerNameValue(request.resource.data.playerName))

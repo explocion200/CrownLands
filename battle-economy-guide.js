@@ -21,6 +21,13 @@
     return format(amount);
   };
   const percent = value => `${Math.max(0, number(value, 0)).toFixed(0)}%`;
+  const formatRepairDuration = milliseconds => {
+    const totalSeconds = Math.max(0, Math.round(number(milliseconds, 0) / 1000));
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    if (!minutes) return `${seconds}s`;
+    return seconds ? `${format(minutes)}m ${seconds}s` : `${format(minutes)}m`;
+  };
   const svgNode = (name, attributes = {}, text = "") => {
     const node = document.createElementNS("http://www.w3.org/2000/svg", name);
     Object.entries(attributes).forEach(([key, value]) => node.setAttribute(key, String(value)));
@@ -155,7 +162,7 @@
     drawLineChart($("goldLevelChart"), series.map(row => ({ level: row.current, value: row.snapshot.goldPerHour })), selectedChartLevel, { title: "Gold production by city level", unit: "/h", logarithmic: true });
     drawLineChart($("troopLevelChart"), series.map(row => ({ level: row.current, value: row.snapshot.troopsPerHour })), selectedChartLevel, { title: "Troop production by city level", unit: "/h" });
     drawLineChart($("wallLevelChart"), series.map(row => ({ level: row.current, value: row.snapshot.fullWallPower })), selectedChartLevel, { title: "Full wall power by city level", logarithmic: true });
-    drawLineChart($("repairLevelChart"), series.map(row => ({ level: row.current, value: row.snapshot.repairMinutes })), selectedChartLevel, { title: "Wall repair minutes by city level", unit: "m" });
+    drawLineChart($("repairLevelChart"), series.map(row => ({ level: row.current, value: row.snapshot.repairMinutes })), selectedChartLevel, { title: "Full-breach wall repair minutes by city level", unit: "m" });
 
     const milestones = [...new Set([1, 25, 50, 75, 100, 150, level])].sort((a, b) => a - b);
     $("cityMilestoneRows").innerHTML = milestones.map(milestone => {
@@ -271,7 +278,7 @@
     $("battleDefenderSurvivors").textContent = `${format(result.defenderSurvivors)} remain`;
     $("battleEndingWall").textContent = `${(result.endingIntegrityBps / 100).toFixed(result.endingIntegrityBps % 100 ? 1 : 0)}%`;
     $("battleRepairResult").textContent = result.meaningfulWallDamage
-      ? `${result.endingIntegrityBps <= 0 ? "Breached" : "Persistent damage"} · ${format(result.repairMinutes)}m repair window`
+      ? `${result.endingIntegrityBps <= 0 ? "Breached" : "Persistent damage"} · adds ${formatRepairDuration(result.repairAddedMs)}`
       : result.startingWallPower <= 0
         ? "Already breached · active deadline unchanged"
         : `Below ${format(config.siegeCombat.meaningfulWallDamagePercent)}% · no persistent timer`;
@@ -311,7 +318,10 @@
       { label: "Level 200 city", level: 200 },
       { label: "Level 500 city", level: 500 },
     ];
-    $("repairExampleRows").innerHTML = repairExamples.map(row => `<tr><th scope="row">${row.label}</th><td>${format(row.level)}</td><td>${format(calculator.getRepairMinutes(row.level))} minutes</td></tr>`).join("");
+    $("repairExampleRows").innerHTML = repairExamples.map(row => {
+      const fullRepairMs = calculator.getRepairMinutes(row.level) * 60_000;
+      return `<tr><th scope="row">${row.label}</th><td>${format(row.level)}</td><td>${formatRepairDuration(fullRepairMs * 0.05)}</td><td>${formatRepairDuration(fullRepairMs * 0.2)}</td><td>${formatRepairDuration(fullRepairMs * 0.5)}</td><td>${formatRepairDuration(fullRepairMs)}</td></tr>`;
+    }).join("");
   }
 
   cityInputs.levelRange?.addEventListener("input", () => {

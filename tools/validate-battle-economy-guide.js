@@ -162,6 +162,7 @@ const exactFive = calculator.simulateSiege({
 assert.equal(exactFive.wallDamagePower, 10);
 assert.equal(exactFive.meaningfulWallDamage, true, "Exactly 5% wall damage must persist.");
 assert.equal(exactFive.endingIntegrityBps, 9_500);
+assert.equal(exactFive.repairAddedMs, 45_000, "A 5% Level 1 hit must add exactly 45 seconds.");
 const breachedWall = calculator.simulateSiege({
   attackerTroops: 1,
   cityLevel: 100,
@@ -169,6 +170,7 @@ const breachedWall = calculator.simulateSiege({
   wallIntegrityPercent: 0,
 });
 assert.equal(breachedWall.meaningfulWallDamage, false, "Attacking an already breached wall must not start a new repair window.");
+assert.equal(breachedWall.repairAddedMs, 0);
 
 assert.match(page, /id="system-map"/);
 assert.match(page, /id="city-explorer"/);
@@ -176,6 +178,8 @@ assert.match(page, /id="economy-map"/);
 assert.match(page, /id="skills-guide"/);
 assert.match(page, /id="battle-explorer"/);
 assert.match(page, /id="wall-timers"/);
+assert.match(page, /Damage-proportional wall-repair examples/);
+assert.match(runtime, /formatRepairDuration[\s\S]*?repairAddedMs/);
 assert.match(page, /id="special-rules"/);
 assert.match(page, /<details class="guide-math">/);
 assert.match(page, /<noscript>/);

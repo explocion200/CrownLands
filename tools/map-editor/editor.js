@@ -1207,6 +1207,7 @@
           <td>${level}</td>
           <td>${formatEconomyPreviewNumber(baseWall)}</td>
           <td>${formatEconomyPreviewNumber(maximumWall)}</td>
+          <td>${formatEconomyPreviewNumber(getEconomyPreviewRepairMinutes(level, economy) * 0.2, 1)} min</td>
           <td>${formatEconomyPreviewNumber(getEconomyPreviewRepairMinutes(level, economy))} min</td>
         </tr>
       `;
@@ -1479,8 +1480,8 @@
           <article class="economy-breakdown-card full">
             <div class="economy-breakdown-heading">
               <span>City defense</span>
-              <strong>Universal walls and level-based repair</strong>
-              <p>Every city level uses the same smooth formula. The transition settings gradually change wall growth from cubic toward linear without a Level 100 breakpoint. Repair time is set when meaningful damage occurs and follows the city through captures.</p>
+              <strong>Universal walls and damage-based repair</strong>
+              <p>Every city level uses the same smooth formula. The transition settings gradually change wall growth from cubic toward linear without a Level 100 breakpoint. Each meaningful hit adds its damage share of the level's full-breach repair window.</p>
             </div>
             <div class="economy-fixed-formula">
               <span>Wall formula</span>
@@ -1489,8 +1490,8 @@
             </div>
             <div class="economy-fixed-formula">
               <span>Repair formula</span>
-              <code>round(base repair minutes + city level × minutes per level)</code>
-              <small>There is no gameplay cap. Ownership changes and the one-level capture drop do not reset an active deadline.</small>
+              <code>full window = round(base + level × minutes per level); added time = full window × hit damage ÷ full wall power</code>
+              <small>Later hits extend the running deadline only by their own damage. Every ownership or neutral handoff preserves active repair progress.</small>
             </div>
             <div class="economy-explained-grid three">
               ${economyNumberInput(
@@ -1533,13 +1534,13 @@
                 "siegeCombat.repairBaseMinutes",
                 "Base wall repair minutes",
                 economy.siegeCombat.repairBaseMinutes,
-                { step: 0.1, description: "Flat minutes included in every new wall-repair deadline." }
+                { step: 0.1, description: "Flat minutes included in the full-breach repair window before damage scaling." }
               )}
               ${economyNumberInput(
                 "siegeCombat.repairMinutesPerLevel",
                 "Repair minutes per city level",
                 economy.siegeCombat.repairMinutesPerLevel,
-                { step: 0.01, description: "Adds this many minutes for every city level. The result has no gameplay cap." }
+                { step: 0.01, description: "Adds this many minutes per level to the full-breach window. Partial hits add the matching damage share." }
               )}
               ${economyNumberInput(
                 "siegeCombat.meaningfulWallDamagePercent",
@@ -1556,12 +1557,12 @@
             </div>
             <div class="economy-preview-panel">
               <div class="economy-preview-heading">
-                <div><span>Live preview</span><strong>Wall strength and full repair window</strong></div>
+                <div><span>Live preview</span><strong>Wall strength and damage-scaled repair</strong></div>
                 <p>Maximum wall includes the current Stoneworks cap. Objective defense bonuses are not included.</p>
               </div>
               <div class="economy-preview-scroll">
                 <table class="economy-preview-table">
-                  <thead><tr><th>City level</th><th>Base wall</th><th>Max Stoneworks wall</th><th>Repair window</th></tr></thead>
+                  <thead><tr><th>City level</th><th>Base wall</th><th>Max Stoneworks wall</th><th>20% hit adds</th><th>Full breach</th></tr></thead>
                   <tbody data-economy-preview="fortifications">${buildFortificationPreviewRows(economy)}</tbody>
                 </table>
               </div>

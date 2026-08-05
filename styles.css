@@ -3987,6 +3987,27 @@ button.inventory-slot {
   font-size: .72rem;
   font-weight: 850;
 }
+.report-nav-btn { position: relative; }
+.report-unread-badge {
+  position: absolute;
+  top: 2px;
+  right: 3px;
+  z-index: 2;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  border: 2px solid #f7df9d;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  background: #a91f25;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, .48);
+  font: 900 11px/1 Arial, sans-serif;
+  pointer-events: none;
+}
+.report-unread-badge[hidden] { display: none; }
 .city-list-sync-error {
   flex: 1 1 auto;
   color: #ffc5ad;
@@ -4705,6 +4726,7 @@ button.inventory-slot {
   align-items: start;
 }
 .battle-participant-card,
+.battle-attacker-column,
 .battle-defender-column,
 .battle-formula-explanation {
   min-width: 0;
@@ -4729,11 +4751,13 @@ button.inventory-slot {
 .battle-primary-participant.defender {
   border-top: 3px solid #72b6df;
 }
+.battle-attacker-column,
 .battle-defender-column {
   display: grid;
   gap: .58rem;
   padding: .58rem;
 }
+.battle-attacker-column > .battle-participant-card,
 .battle-defender-column > .battle-participant-card {
   border: 0;
   padding: .2rem;
@@ -4901,6 +4925,154 @@ button.inventory-slot {
   margin: 0;
   color: rgba(246,239,228,.75);
   font-size: .76rem;
+}
+
+.battle-outcome-explanation,
+.battle-explanation-breakdown,
+.battle-protection-explanation,
+.scout-attempt-explanation,
+.scout-report-snapshot-note {
+  border: 1px solid rgba(211, 161, 63, .26);
+  border-radius: 12px;
+  background: rgba(4, 15, 27, .72);
+}
+
+.battle-outcome-explanation,
+.battle-explanation-breakdown,
+.battle-protection-explanation,
+.scout-attempt-explanation {
+  display: grid;
+  gap: .48rem;
+  padding: .72rem;
+}
+
+.battle-outcome-explanation > h3,
+.battle-outcome-explanation > p,
+.battle-outcome-explanation > ul,
+.battle-explanation-breakdown > h3,
+.battle-protection-explanation > h3,
+.battle-protection-explanation > p,
+.scout-attempt-explanation > h3,
+.scout-attempt-explanation > p {
+  margin: 0;
+}
+
+.battle-outcome-explanation > h3,
+.battle-explanation-breakdown > h3,
+.battle-protection-explanation > h3,
+.scout-attempt-explanation > h3 {
+  color: #ffe29a;
+}
+
+.battle-outcome-explanation > strong {
+  color: #f8e8bd;
+}
+
+.battle-outcome-explanation > p,
+.battle-outcome-explanation > ul,
+.battle-protection-explanation > p,
+.scout-attempt-explanation > p,
+.scout-attempt-explanation > small {
+  color: rgba(246, 239, 228, .76);
+  font-size: .75rem;
+}
+
+.battle-outcome-explanation > ul {
+  display: grid;
+  gap: .24rem;
+  padding-left: 1.05rem;
+}
+
+.battle-paired-head,
+.battle-paired-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 126px minmax(0, 1fr);
+  gap: .38rem;
+  align-items: stretch;
+}
+
+.battle-paired-head {
+  align-items: end;
+  color: #9dcce4;
+  font-size: .7rem;
+  text-align: center;
+}
+
+.battle-paired-head strong:first-child {
+  text-align: right;
+}
+
+.battle-paired-head strong:last-child {
+  text-align: left;
+}
+
+.battle-paired-breakdown {
+  display: grid;
+  gap: .34rem;
+}
+
+.battle-paired-value,
+.battle-paired-label {
+  display: grid;
+  align-content: center;
+  min-width: 0;
+  padding: .45rem .5rem;
+  border: 1px solid rgba(255, 255, 255, .08);
+  background: rgba(255, 255, 255, .045);
+}
+
+.battle-paired-value {
+  border-radius: 9px;
+}
+
+.battle-paired-value.attacker {
+  border-color: rgba(212, 106, 77, .22);
+  text-align: right;
+}
+
+.battle-paired-value.defender {
+  border-color: rgba(114, 182, 223, .22);
+}
+
+.battle-paired-value > strong,
+.battle-paired-value > small,
+.battle-paired-label > strong {
+  overflow-wrap: anywhere;
+}
+
+.battle-paired-value > strong {
+  color: #f6efe4;
+  font-size: .76rem;
+}
+
+.battle-paired-value > small {
+  margin-top: .08rem;
+  color: rgba(246, 239, 228, .62);
+  font-size: .59rem;
+}
+
+.battle-paired-label {
+  place-items: center;
+  border-color: rgba(211, 161, 63, .2);
+  border-radius: 7px;
+  color: #ffe29a;
+  font-size: .66rem;
+  text-align: center;
+}
+
+.battle-protection-grid,
+.battle-forecast-comparison {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: .38rem;
+}
+
+.scout-report-snapshot-note {
+  margin: 0;
+  padding: .62rem .7rem;
+  color: #cde7f4;
+  font-size: .72rem;
+  line-height: 1.35;
 }
 
 .objective-clan-link {
@@ -5397,11 +5569,13 @@ button.inventory-slot {
     gap: .38rem;
   }
   .battle-participant-card,
+  .battle-attacker-column,
   .battle-defender-column,
   .battle-formula-explanation {
     border-radius: 10px;
   }
   .battle-participant-card,
+  .battle-attacker-column,
   .battle-defender-column {
     padding: .42rem;
   }
@@ -5428,8 +5602,31 @@ button.inventory-slot {
   }
   .battle-participant-metrics,
   .battle-formula-grid,
-  .battle-viewer-rewards {
+  .battle-viewer-rewards,
+  .battle-protection-grid,
+  .battle-forecast-comparison {
     grid-template-columns: 1fr;
+  }
+
+  .battle-paired-head,
+  .battle-paired-row {
+    grid-template-columns: minmax(0, 1fr) 72px minmax(0, 1fr);
+    gap: .2rem;
+  }
+
+  .battle-paired-value,
+  .battle-paired-label {
+    padding: .34rem .28rem;
+  }
+
+  .battle-paired-value > strong {
+    font-size: .65rem;
+  }
+
+  .battle-paired-value > small,
+  .battle-paired-label,
+  .battle-paired-head {
+    font-size: .52rem;
   }
   .battle-participant-metric {
     padding: .35rem;

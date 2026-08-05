@@ -12,7 +12,6 @@ if (!firestoreHost) throw new Error("FIRESTORE_EMULATOR_HOST is required.");
 
 initializeApp({ projectId });
 const db = getFirestore();
-db.settings({ ignoreUndefinedProperties: true });
 let functionsHostPromise = null;
 
 function assert(condition, message) {
@@ -33,8 +32,7 @@ async function resolveFunctionsHost() {
       if (!hubHost) return "127.0.0.1:5001";
       const response = await fetch(`http://${hubHost}/emulators`);
       if (!response.ok) throw new Error(`Firebase Emulator Hub discovery failed with HTTP ${response.status}.`);
-      const emulators = await response.json();
-      const functions = emulators?.functions || {};
+      const functions = (await response.json())?.functions || {};
       const listen = Array.isArray(functions.listen) ? functions.listen[0] : functions.listen;
       const host = functions.host || listen?.address;
       const port = Number(functions.port || listen?.port);
@@ -51,8 +49,8 @@ async function createAuthUser() {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify({
-      email: `scout-lifecycle-${nonce}@example.test`,
-      password: `Scout-${nonce}-Pass!`,
+      email: `report-read-${nonce}@example.test`,
+      password: `Reports-${nonce}-Pass!`,
       returnSecureToken: true,
     }),
   });
@@ -80,69 +78,30 @@ async function invokeCallable(name, token, data = {}) {
   return body.result;
 }
 
-function successfulScout(id, cityId, createdAtMs, expiresAtMs, troops) {
-  return {
-    id,
-    uid: "filled-after-claim",
-    type: "scout",
-    outcome: "scout",
-    cityId,
-    cityName: cityId,
-    createdAtMs,
-    expiresAtMs,
-    troopCount: troops,
-    totalDefense: troops,
-    summary: `Scout revealed ${troops} troops at ${cityId}.`,
-    scoutReport: { troops, totalDefense: troops, scoutedAtMs: createdAtMs, expiresAtMs },
-  };
-}
-
 async function main() {
   const user = await createAuthUser();
-  await invokeCallable("claimStartingCity", user.token, { playerName: "Scout Sentinel" });
   const profileRef = db.doc(`players/${user.uid}`);
-  const nowMs = Date.now();
-  const activeUntilMs = nowMs + 9 * 60 * 1000;
-  const old = successfulScout("legacy-a", "target-a", nowMs - 90_000, activeUntilMs, 100);
-  const newest = successfulScout("current-a", "target-a", nowMs - 30_000, activeUntilMs, 250);
-  const other = successfulScout("current-b", "target-b", nowMs - 20_000, activeUntilMs, 300);
-  const expired = successfulScout("expired", "target-expired", nowMs - 600_000, nowMs, 999999);
-  [old, newest, other, expired].forEach(report => { report.uid = user.uid; });
-  const blockedNotice = {
-    id: "blocked-notice",
-    uid: user.uid,
-    type: "scout",
-    outcome: "scout",
-    cityId: "target-a",
-    createdAtMs: nowMs - 10_000,
-    troopCount: 0,
-    totalDefense: 0,
-    summary: "Scouts were turned away.",
-  };
+  await profileRef.set({ playerName: "Report Reader", reportsViewedAtMs: 0 });
 
-  await profileRef.set({
-    scoutReports: {
-      "target-a": newest.scoutReport,
-      "target-expired": expired.scoutReport,
-    },
-    battleReports: [old, newest, other, expired, blockedNotice],
-    economyUpdatedAtMs: nowMs,
-  }, { merge: true });
+  const baseMs = Date.now() - 30_000;
+  const [firstDevice, secondDevice] = await Promise.all([
+    invokeCallable("markReportsViewed", user.token, { viewedThroughMs: baseMs + 1_000 }),
+    invokeCallable("markReportsViewed", user.token, { viewedThroughMs: baseMs + 2_000 }),
+  ]);
+  const expected = Math.max(firstDevice.reportsViewedAtMs, secondDevice.reportsViewedAtMs);
+  let profile = (await profileRef.get()).data() || {};
+  assert(profile.reportsViewedAtMs === expected, "Concurrent devices did not preserve the newest read position.");
 
-  await invokeCallable("collectEconomy", user.token);
-  const profile = (await profileRef.get()).data() || {};
-  assert(profile.scoutReports?.["target-a"]?.troops === 250, "Active scout intelligence was removed or changed.");
-  assert(!profile.scoutReports?.["target-expired"], "Scout intelligence remained valid at expiresAtMs.");
-  const reports = Array.isArray(profile.battleReports) ? profile.battleReports : [];
-  const targetAIntel = reports.filter(report => report.cityId === "target-a" && report.scoutReport);
-  assert(targetAIntel.length === 1 && targetAIntel[0].id === "current-a", "The newest successful target report did not replace the older snapshot.");
-  assert(reports.some(report => report.id === "current-b"), "An independent target report was incorrectly pruned.");
-  assert(reports.some(report => report.id === "blocked-notice"), "A blocked non-intelligence notice was incorrectly removed.");
-  const expiredHistory = reports.find(report => report.id === "expired");
-  assert(expiredHistory && !expiredHistory.scoutReport, "Expired scout history was removed instead of redacting its intelligence.");
-  assert(/expired/i.test(expiredHistory.summary || ""), "Expired scout history lacks a safe explanation.");
+  await invokeCallable("markReportsViewed", user.token, { viewedThroughMs: baseMs });
+  profile = (await profileRef.get()).data() || {};
+  assert(profile.reportsViewedAtMs === expected, "An older device moved the read position backward.");
 
-  console.log("Emulator scout lifecycle passed: exact expiry, redacted history, replacement, independent targets, and notice preservation.");
+  const beforeFutureAttemptMs = Date.now();
+  const future = await invokeCallable("markReportsViewed", user.token, { viewedThroughMs: beforeFutureAttemptMs + 86_400_000 });
+  assert(future.reportsViewedAtMs >= expected, "The read position regressed during server-time clamping.");
+  assert(future.reportsViewedAtMs <= Date.now() + 2_000, "A client supplied a future report read time.");
+
+  console.log("Emulator report read state passed: two-device monotonicity and server-time clamping.");
 }
 
 main()

@@ -1,4 +1,4 @@
-const CACHE_VERSION = "20260805-season-balance-v1";
+const CACHE_VERSION = "20260805-wall-repair-v1";
 const CACHE_NAME = `crownlands-cache-${CACHE_VERSION}`;
 const APP_BASE_URL = new URL("./", self.location.href);
 
@@ -12,7 +12,7 @@ const STATIC_CACHE_URLS = [
   "/",
   "/index.html",
   "/manifest.webmanifest",
-  "/styles.css?v=20260805-season-balance-v1",
+  "/styles.css?v=20260805-wall-repair-v1",
   "/release-config.js",
   "/patch-notes.js?v=20260805-season-balance-v1",
   "/world-config.js",
@@ -23,7 +23,7 @@ const STATIC_CACHE_URLS = [
   "/firebaseClient.js?v=20260805-season-balance-v1",
   "/audio-manager.js?v=20260729-starter-sound-pack-v1",
   "/audio/manifest.json",
-  "/game.js?v=20260805-season-balance-v1",
+  "/game.js?v=20260805-wall-repair-v1",
   "/route-worker.js?v=20260721-structure-route-clearance",
   "/assets/map-editor-data.js?v=20260723-utc-responsive-v1",
   "/assets/optimized/login-background-1448x1086-cec197d384ba.webp",
