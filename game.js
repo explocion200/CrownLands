@@ -876,6 +876,8 @@ const BATTLE_XP_END_START_LEVEL_CAP_RATE = 0.5;
 const BATTLE_XP_END_FLOOR_LEVEL_CAP_RATE = 0.35;
 const BATTLE_XP_END_CAP_RAMP_LEVELS = 50;
 const ATTACK_PROTECTION_VERSION = 2;
+const COMBAT_FORECAST_VERSION = 1;
+const ATTACK_COMBAT_SNAPSHOT_VERSION = 1;
 const ATTACK_PROTECTION_ASSAULT_MIN_RATIO = 2;
 const ATTACK_PROTECTION_RAID_MIN_RATIO = 2.5;
 const ATTACK_PROTECTION_RAID_MAX_SCALE_RATIO = 5;
@@ -2596,6 +2598,7 @@ let selectedTroopAmount = 1;
 let troopSliderActive = false;
 let activeTroopSliderRoute = null;
 let activeAttackProtectionPreview = null;
+let activeCombatForecastPreview = null;
 let activeTroopOrderKind = "";
 let activeRallyOrderContext = null;
 let activeSwiftMarchOrderSelected = false;
@@ -7712,6 +7715,43 @@ function normalizeAttackProtectionSnapshot(raw = null, legacyDemoAttack = null) 
   };
 }
 
+function normalizeCombatForecast(raw = null) {
+  if (!raw || typeof raw !== "object" || Number(raw.version) !== COMBAT_FORECAST_VERSION) return null;
+  const status = ["scouted", "unavailable", "expired", "owner_changed"].includes(raw.status)
+    ? raw.status
+    : "unavailable";
+  const normalized = {
+    version: COMBAT_FORECAST_VERSION,
+    status,
+    attackPowerPerTroop: Math.max(0, Number(raw.attackPowerPerTroop) || BASE_TROOP_ATTACK_POWER),
+    swordmasteryLevel: Math.max(0, Math.floor(Number(raw.swordmasteryLevel) || 0)),
+    swordmasteryPercent: Math.max(0, Number(raw.swordmasteryPercent) || 0),
+  };
+  if (status !== "scouted") return normalized;
+  return {
+    ...normalized,
+    scoutedAtMs: normalizeTimestampMs(raw.scoutedAtMs),
+    expiresAtMs: normalizeTimestampMs(raw.expiresAtMs),
+    targetOwnerUid: String(raw.targetOwnerUid || "").slice(0, 128),
+    targetLevel: clampCityLevel(raw.targetLevel || 1),
+    targetTroops: Math.max(0, Math.floor(Number(raw.targetTroops) || 0)),
+    ownerTroops: Math.max(0, Math.floor(Number(raw.ownerTroops ?? raw.targetTroops) || 0)),
+    reinforcementTroops: Math.max(0, Math.floor(Number(raw.reinforcementTroops) || 0)),
+    baseDefensePower: Math.max(0, Math.floor(Number(raw.baseDefensePower ?? raw.defensePower) || 0)),
+    defensePower: Math.max(0, Math.floor(Number(raw.defensePower) || 0)),
+    effectiveTroops: Math.max(1, Math.floor(Number(raw.effectiveTroops) || 1)),
+    attackPower: Math.max(0, Math.floor(Number(raw.attackPower) || 0)),
+    powerRatio: Math.max(0, Number(raw.powerRatio) || 0),
+    expectedOutcome: ["capture", "breach", "raid", "defeat"].includes(raw.expectedOutcome)
+      ? raw.expectedOutcome
+      : "defeat",
+    estimatedSurvivors: Math.max(0, Math.floor(Number(raw.estimatedSurvivors) || 0)),
+    estimatedDefendersLeft: Math.max(0, Math.floor(Number(raw.estimatedDefendersLeft) || 0)),
+    estimatedAttackerLosses: Math.max(0, Math.floor(Number(raw.estimatedAttackerLosses) || 0)),
+    estimatedDefenderLosses: Math.max(0, Math.floor(Number(raw.estimatedDefenderLosses) || 0)),
+  };
+}
+
 function createAttackProtectionSnapshot(source, target, requestedTroops, owner = "player", overrides = {}) {
   if (!source || !target || owner !== "player" || target.owner === owner || isStronghold(target) || isRewardCampTarget(target)) {
     return null;
@@ -8246,8 +8286,13 @@ function calculateCombatResult(attackTroops, attackOwner, target, options = {}) 
   const defendersAtStart = Math.max(0, Math.floor(Number(target?.troops) || 0));
   const attackProtection = normalizeAttackProtectionSnapshot(options.attackProtection, options.demoAttack);
   const protectedAttack = attackProtection?.mode !== "normal" ? attackProtection : null;
-  const attackPower = getAttackPower(troops, attackOwner);
-  const defensePower = getBattleDefensePower(target);
+  const hasAttackPowerOverride = Number.isFinite(Number(options.attackPower));
+  const attackPower = hasAttackPowerOverride
+    ? Math.max(0, Math.floor(Number(options.attackPower)))
+    : getAttackPower(troops, attackOwner);
+  const defensePower = Number.isFinite(Number(options.defensePower))
+    ? Math.max(0, Math.floor(Number(options.defensePower)))
+    : getBattleDefensePower(target);
   const ratio = attackPower / Math.max(1, defensePower);
   const protectedRaid = protectedAttack?.mode === "raid";
   const convertedReinforcement = options.convertedReinforcement === true;
@@ -8275,7 +8320,9 @@ function calculateCombatResult(attackTroops, attackOwner, target, options = {}) 
     }
   } else if (battleWon) {
     const leftoverPower = attackPower - defensePower * 0.68;
-    survivors = clamp(Math.floor(leftoverPower / Math.max(BASE_TROOP_ATTACK_POWER * attackerBoost, 1)), 1, troops);
+    survivors = hasAttackPowerOverride
+      ? clamp(Math.floor(troops * leftoverPower / Math.max(attackPower, 1)), 1, troops)
+      : clamp(Math.floor(leftoverPower / Math.max(BASE_TROOP_ATTACK_POWER * attackerBoost, 1)), 1, troops);
     attackerLosses = troops - survivors;
     defenderLosses = breachOnly ? Math.max(0, defendersAtStart - 1) : defendersAtStart;
     defendersLeft = breachOnly && defendersAtStart > 0 ? 1 : 0;
@@ -8561,6 +8608,8 @@ function normalizeBattleReports(reports) {
         fieldMedicsRecovered: Math.max(0, Math.floor(Number(report.fieldMedicsRecovered) || 0)),
         battleId: String(report.battleId || "").replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 160),
         battleSnapshotVersion: Math.max(0, Math.floor(Number(report.battleSnapshotVersion) || 0)),
+        attackProtection: normalizeAttackProtectionSnapshot(report.attackProtection, report.demoAttack),
+        launchCombatForecast: normalizeCombatForecast(report.launchCombatForecast),
         scoutReport: report.scoutReport || null,
         expiresAtMs: normalizeTimestampMs(report.expiresAtMs || report.scoutReport?.expiresAtMs),
       };
@@ -8613,6 +8662,18 @@ function getScoutReport(cityId) {
     return null;
   }
   return report;
+}
+
+function getScoutReportForTarget(target = null) {
+  if (!target?.id) return null;
+  const report = getScoutReport(target.id);
+  if (!report) return null;
+  const currentUid = getCurrentOnlineUid();
+  const targetOwnerUid = String(
+    target.ownerUid || (target.owner === "player" ? currentUid : "") || ""
+  ).trim();
+  const reportOwnerUid = String(report.ownerUid || "").trim();
+  return targetOwnerUid === reportOwnerUid ? report : null;
 }
 
 function getScoutReportRemainingSeconds(report = null, nowMs = Date.now()) {
@@ -8669,6 +8730,17 @@ function updateScoutReportLifecycle(nowMs = Date.now()) {
         label.textContent = `Expires in ${formatDuration(Math.max(0, Math.ceil((expiresAtMs - nowMs) / 1000)))}`;
       });
     }
+  }
+
+  if (
+    modal?.open
+    && modal.classList.contains("troop-slider-modal")
+    && activeTroopOrderKind === "attack"
+    && activeTroopSliderRoute?.route?.points?.length
+  ) {
+    const source = cityById(activeTroopSliderRoute.sourceId);
+    const target = getArmyTargetById(activeTroopSliderRoute.targetId);
+    if (source && target) updateTroopSliderModal(source, target, activeTroopSliderRoute.route);
   }
 
   if (changed) {
@@ -18131,6 +18203,7 @@ function launchAttack(sourceId, targetId, percent, owner, exactTroops = null, op
     requestedTroops: requestedSend,
     attackerKingPower: owner === "player" ? getKingPower() : 0,
     defenderKingPower: getCityOwnerKingPowerSnapshot(target),
+    attackPowerPerTroop: kind === "scout" ? 0 : getAttackPower(1, owner),
     attackProtection,
     acceptedAttackProtection,
     demoAttack: null,
@@ -18475,6 +18548,9 @@ function resolveAttack(attack) {
   const protectionReportSuffix = getAttackProtectionReportSuffix(attackProtection);
   const givenUpNeutralTarget = isGivenUpNeutralCity(target);
   const result = calculateCombatResult(attack.troops, attack.owner, target, {
+    ...(Number(attack.attackPowerPerTroop) > 0
+      ? { attackPower: Math.floor(attack.troops * Number(attack.attackPowerPerTroop)) }
+      : {}),
     attackProtection,
     demoAttack: attack.demoAttack,
     convertedReinforcement,
@@ -24343,9 +24419,7 @@ function isRallyTroopOrderKind(orderKind = activeTroopOrderKind) {
 }
 
 async function loadAttackProtectionPreview(source, target) {
-  if (!source || !target || target.owner !== "enemy" || isRewardCampTarget(target) || isStronghold(target)) {
-    return null;
-  }
+  if (!source || !target) return { attackProtection: null, combatForecast: null };
   const api = getOnlineApi();
   if (usesServerArmyAuthority() && api?.previewArmyProtection) {
     const result = await api.previewArmyProtection({
@@ -24355,12 +24429,18 @@ async function loadAttackProtectionPreview(source, target) {
       toId: target.id,
       sourceRegionId: getCityRegionId(source),
       targetRegionId: getCityRegionId(target),
-      targetType: "city",
+      targetType: isRewardCampTarget(target) ? "camp" : "city",
       requestedTroops: Math.max(1, Math.floor(Number(source.troops) || 1)),
     });
-    return normalizeAttackProtectionSnapshot(result?.attackProtection);
+    return {
+      attackProtection: normalizeAttackProtectionSnapshot(result?.attackProtection),
+      combatForecast: normalizeCombatForecast(result?.combatForecast),
+    };
   }
-  return createAttackProtectionSnapshot(source, target, source.troops, "player");
+  return {
+    attackProtection: createAttackProtectionSnapshot(source, target, source.troops, "player"),
+    combatForecast: null,
+  };
 }
 
 function normalizeAuthoritativeRoutePreview(result, sourceRegionId = "", requestedTroops = selectedTroopAmount) {
@@ -24476,6 +24556,7 @@ async function showTroopSliderModalAsync(source, target, options = {}) {
   const isReinforcement = orderKind === "reinforce";
   const campTarget = isRewardCampTarget(target);
   const needsDefenderPower = orderKind === "attack" && target.owner === "enemy" && !campTarget && !isStronghold(target);
+  const needsCombatForecast = orderKind === "attack";
   const mainCityBlockReason = rallyOrder || isTransfer || isReinforcement || campTarget
     ? ""
     : getMainCityAttackBlockReason(target, "player");
@@ -24502,9 +24583,11 @@ async function showTroopSliderModalAsync(source, target, options = {}) {
   cancelAuthoritativeRoutePreviewRefresh();
   const requestId = ++activeTroopRouteRequestId;
   const providedAttackProtection = normalizeAttackProtectionSnapshot(options.attackProtection);
+  const providedCombatForecast = normalizeCombatForecast(options.combatForecast);
   troopSliderActive = true;
   activeTroopSliderRoute = null;
   activeAttackProtectionPreview = providedAttackProtection;
+  activeCombatForecastPreview = providedCombatForecast;
   activeTroopOrderKind = orderKind;
   showTroopRouteLoadingModal(source, target, orderKind);
 
@@ -24512,13 +24595,12 @@ async function showTroopSliderModalAsync(source, target, options = {}) {
   const [route, defenderPower, protectionResult] = await Promise.all([
     findOrderRouteAsync(source, target, orderKind),
     needsDefenderPower ? ensureAuthoritativeCityOwnerKingPower(target) : Promise.resolve(0),
-    needsDefenderPower
-      ? providedAttackProtection
-        ? Promise.resolve({ attackProtection: providedAttackProtection })
+    needsCombatForecast
+      ? providedAttackProtection && providedCombatForecast
+        ? Promise.resolve({ attackProtection: providedAttackProtection, combatForecast: providedCombatForecast })
         : loadAttackProtectionPreview(source, target)
-          .then(attackProtection => ({ attackProtection }))
           .catch(error => ({ error }))
-      : Promise.resolve({ attackProtection: null }),
+      : Promise.resolve({ attackProtection: null, combatForecast: null }),
   ]);
   if (requestId !== activeTroopRouteRequestId) return;
 
@@ -24569,6 +24651,7 @@ async function showTroopSliderModalAsync(source, target, options = {}) {
 
   showTroopSliderModalWithRoute(freshSource, freshTarget, route, {
     attackProtection: protectionResult?.attackProtection || null,
+    combatForecast: protectionResult?.combatForecast || null,
     orderKind,
   });
 }
@@ -24578,6 +24661,7 @@ function showMainCityProtectedAttackModal(target) {
   troopSliderActive = false;
   activeTroopSliderRoute = null;
   activeAttackProtectionPreview = null;
+  activeCombatForecastPreview = null;
   modal.classList.remove("troop-slider-modal");
   cancelSendMode();
   modalTitle.textContent = "Protected home base";
@@ -24719,6 +24803,7 @@ function showTroopSliderModalWithRoute(source, target, route, options = {}) {
     route: cloneRoute(route),
   };
   activeAttackProtectionPreview = normalizeAttackProtectionSnapshot(options.attackProtection);
+  activeCombatForecastPreview = normalizeCombatForecast(options.combatForecast);
   activeSwiftMarchOrderSelected = false;
   const orderKind = getTroopOrderKind(target, options.orderKind || activeTroopOrderKind);
   activeTroopOrderKind = orderKind;
@@ -24947,7 +25032,7 @@ function updateTroopSliderModal(source, target, route) {
   }
 
   if (isRewardCampTarget(target)) {
-    const report = getScoutReport(target.id);
+    const report = getScoutReportForTarget(target);
     if (!report) {
       previewEl.className = "troop-slider-preview unknown";
       previewEl.innerHTML = `
@@ -24957,16 +25042,25 @@ function updateTroopSliderModal(source, target, route) {
       return;
     }
     const scoutedTarget = { ...target, troops: report.troops, troopFloat: report.troops };
-    const preview = calculateBattlePreviewForTroops(source, scoutedTarget, selectedTroopAmount, route);
+    const preview = calculateBattlePreviewForTroops(
+      source,
+      scoutedTarget,
+      selectedTroopAmount,
+      route,
+      null,
+      activeCombatForecastPreview,
+      report
+    );
+    const scoutAge = getScoutReportAgeSeconds(report);
     previewEl.className = `troop-slider-preview ${preview.success ? "win" : "lose"}`;
     previewEl.innerHTML = `
-      <div><span>Scouted garrison</span><strong>${formatNumber(report.troops)} defenders</strong><small>Level ${formatNumber(report.cityLevel || target.defenseLevel)} defense</small></div>
-      <div><span>Scouted forecast</span><strong>${preview.success ? "Likely capture" : "Likely defeat"}</strong><small>${preview.success ? `${formatNumber(preview.survivors)} estimated survivors` : `${formatNumber(preview.defendersLeft)} defenders estimated`} &middot; ${formatDuration(preview.travel)} travel</small><small>${escapeHtml(routeSummary)}</small></div>
+      <div><span>Scouted total defense</span><strong>${formatNumber(preview.defensePower)} power</strong><small>${formatNumber(report.troops)} defenders &middot; report age ${formatDuration(scoutAge)}</small><small>Includes known walls, bonuses, and reinforcements</small></div>
+      <div><span>Forecast at scout time</span><strong>${preview.success ? "Likely capture" : "Likely defeat"}</strong><small>${formatNumber(preview.attackPower)} attack vs ${formatNumber(preview.defensePower)} defense &middot; ${escapeHtml(preview.label)}</small><small>${preview.success ? `${formatNumber(preview.survivors)} estimated survivors` : `${formatNumber(preview.defendersLeft)} defenders estimated`} &middot; about ${formatDuration(preview.travel)}</small><small>Defense can change before arrival &middot; ${escapeHtml(routeSummary)}</small></div>
     `;
     return;
   }
 
-  const report = getScoutReport(target.id);
+  const report = getScoutReportForTarget(target);
   if (!report) {
     const attackProtection = normalizeAttackProtectionSnapshot(activeAttackProtectionPreview)
       || createAttackProtectionSnapshot(source, target, selectedTroopAmount, "player");
@@ -24985,17 +25079,30 @@ function updateTroopSliderModal(source, target, route) {
     scoutedTarget,
     selectedTroopAmount,
     route,
-    activeAttackProtectionPreview
+    activeAttackProtectionPreview,
+    activeCombatForecastPreview,
+    report
   );
   const protectionNotice = getAttackProtectionNotice(preview.attackProtection);
   const raid = preview.attackProtection?.mode === "raid";
   const breach = preview.attackProtection?.mode === "assault"
     && preview.attackProtection?.assaultStage === "breach";
   const favorableOutcome = preview.success || preview.breachCompleted;
+  const forecastOutcome = raid
+    ? "Protected raid — cannot capture"
+    : preview.breachCompleted
+      ? "Likely wall breach"
+      : preview.success
+        ? "Likely capture"
+        : "Likely defeat";
+  const scoutAge = getScoutReportAgeSeconds(report);
+  const reinforcementText = report.reinforcementTroops > 0
+    ? `${formatNumber(report.reinforcementTroops)} allied reinforcement troops included`
+    : "No allied reinforcement troops were seen";
   previewEl.className = `troop-slider-preview ${favorableOutcome ? "win" : "lose"}`;
   previewEl.innerHTML = `
-    <div><span>Scouted forecast</span><strong>${raid ? "Protected raid" : preview.breachCompleted ? "Likely wall breach" : preview.success ? "Likely capture" : "Likely defeat"}</strong><small>${preview.label}</small></div>
-    <div><span>${favorableOutcome ? breach ? "Estimated return" : "Estimated survivors" : "Defenders left"}</span><strong>${formatNumber(favorableOutcome ? preview.survivors : preview.defendersLeft)}</strong><small>About ${formatDuration(preview.travel)} travel</small><small>${escapeHtml(routeSummary)}</small>${protectionNotice ? `<small>${escapeHtml(protectionNotice)}</small>` : ""}</div>
+    <div><span>Scouted total defense</span><strong>${formatNumber(preview.defensePower)} power</strong><small>${formatNumber(report.troops)} defenders &middot; ${escapeHtml(reinforcementText)}</small><small>Report age ${formatDuration(scoutAge)} &middot; includes known walls and defense bonuses</small></div>
+    <div><span>Forecast at scout time</span><strong>${forecastOutcome}</strong><small>${formatNumber(preview.attackPower)} attack vs ${formatNumber(preview.defensePower)} defense &middot; ${escapeHtml(preview.label)}</small><small>${favorableOutcome ? breach ? `About ${formatNumber(preview.survivors)} troops return after breaching` : `About ${formatNumber(preview.survivors)} survivors` : `About ${formatNumber(preview.defendersLeft)} defenders remain`} &middot; ${formatDuration(preview.travel)} travel</small><small>Capture requires more than ${formatNumber(preview.defensePower)} live defense at arrival. Production, reinforcements, and bonuses may change it.</small><small>${escapeHtml(routeSummary)}</small>${protectionNotice ? `<small>${escapeHtml(protectionNotice)}</small>` : ""}</div>
   `;
 }
 
@@ -25103,6 +25210,7 @@ async function confirmTroopSliderOrder() {
     troopSliderActive = false;
     activeTroopSliderRoute = null;
     activeAttackProtectionPreview = null;
+    activeCombatForecastPreview = null;
     activeSwiftMarchOrderSelected = false;
     modal.classList.remove("troop-slider-modal");
     if (modal.open) modal.close();
@@ -25120,12 +25228,29 @@ async function confirmTroopSliderOrder() {
     rejectGameAction("Route is still calculating.");
     return;
   }
+  if (
+    activeTroopOrderKind === "attack"
+    && activeCombatForecastPreview?.status === "scouted"
+    && !getScoutReportForTarget(target)
+  ) {
+    activeCombatForecastPreview = normalizeCombatForecast({
+      version: COMBAT_FORECAST_VERSION,
+      status: "expired",
+      attackPowerPerTroop: activeCombatForecastPreview.attackPowerPerTroop,
+      swordmasteryLevel: activeCombatForecastPreview.swordmasteryLevel,
+      swordmasteryPercent: activeCombatForecastPreview.swordmasteryPercent,
+    });
+    updateTroopSliderModal(source, target, cachedRoute);
+    showToast("Scout intelligence expired or the owner changed. Review the unknown-defense warning before attacking.");
+    return;
+  }
   if (isRallyTroopOrderKind()) {
     const accepted = await submitClanRallyTroopOrder(source, target, cachedRoute);
     if (!accepted) return;
     troopSliderActive = false;
     activeTroopSliderRoute = null;
     activeAttackProtectionPreview = null;
+    activeCombatForecastPreview = null;
     activeTroopOrderKind = "";
     activeRallyOrderContext = null;
     activeSwiftMarchOrderSelected = false;
@@ -25145,6 +25270,7 @@ async function confirmTroopSliderOrder() {
   troopSliderActive = false;
   activeTroopSliderRoute = null;
   activeAttackProtectionPreview = null;
+  activeCombatForecastPreview = null;
   activeTroopOrderKind = "";
   activeRallyOrderContext = null;
   activeSwiftMarchOrderSelected = false;
@@ -25163,6 +25289,7 @@ function cancelSendMode() {
   selectedTroopAmount = 1;
   activeTroopSliderRoute = null;
   activeAttackProtectionPreview = null;
+  activeCombatForecastPreview = null;
   activeTroopOrderKind = "";
   activeRallyOrderContext = null;
   activeSwiftMarchOrderSelected = false;
@@ -28434,14 +28561,34 @@ function calculateBattlePreview(source, target, percent) {
   return calculateBattlePreviewForTroops(source, target, requestedSend);
 }
 
-function calculateBattlePreviewForTroops(source, target, amount, knownRoute = null, protectionOverride = null) {
+function calculateBattlePreviewForTroops(
+  source,
+  target,
+  amount,
+  knownRoute = null,
+  protectionOverride = null,
+  combatForecastOverride = null,
+  scoutReport = null
+) {
   const requestedSend = clamp(Math.floor(amount), 1, source.troops);
   const normalizedOverride = normalizeAttackProtectionSnapshot(protectionOverride);
   const attackProtection = normalizedOverride
     ? normalizedOverride.mode === "normal" ? null : normalizedOverride
     : createAttackProtectionSnapshot(source, target, requestedSend, "player");
   const send = attackProtection ? Math.min(requestedSend, attackProtection.maxTroops) : requestedSend;
-  const result = calculateCombatResult(send, "player", target, { attackProtection });
+  const combatForecast = normalizeCombatForecast(combatForecastOverride);
+  const scoutedDefensePower = combatForecast?.status === "scouted"
+    ? combatForecast.defensePower
+    : Math.max(0, Math.floor(Number(scoutReport?.totalDefense) || 0));
+  const attackPowerPerTroop = Math.max(
+    0,
+    Number(combatForecast?.attackPowerPerTroop) || getAttackPower(1, "player")
+  );
+  const result = calculateCombatResult(send, "player", target, {
+    attackProtection,
+    attackPower: Math.floor(send * attackPowerPerTroop),
+    ...(scoutedDefensePower > 0 ? { defensePower: scoutedDefensePower } : {}),
+  });
   const givenUpNeutralTarget = isGivenUpNeutralCity(target);
   const xpEfficiency = attackProtection || givenUpNeutralTarget ? 0 : getCaptureXpEfficiency(target, target.owner);
   const captureXp = attackProtection || givenUpNeutralTarget
@@ -28484,6 +28631,8 @@ function calculateBattlePreviewForTroops(source, target, amount, knownRoute = nu
     xpLabel,
     label,
     attackProtection,
+    combatForecast,
+    scoutedDefensePower,
     demoAttack: null,
     travel,
     path: route?.points || null,
@@ -30057,6 +30206,11 @@ function normalizeDetailedBattleSnapshot(value = null) {
   const target = value.target && typeof value.target === "object" ? value.target : {};
   const totals = value.totals && typeof value.totals === "object" ? value.totals : {};
   const formula = value.formula && typeof value.formula === "object" ? value.formula : {};
+  const rawCombatRule = value.combatRule && typeof value.combatRule === "object" ? value.combatRule : {};
+  const combatRuleId = ["normal_capture", "protected_breach", "protected_capture", "protected_raid"]
+    .includes(rawCombatRule.id)
+    ? rawCombatRule.id
+    : "normal_capture";
   return {
     battleId: String(value.battleId || value.id || "").slice(0, 160),
     modelVersion,
@@ -30091,6 +30245,13 @@ function normalizeDetailedBattleSnapshot(value = null) {
       defenderCasualtyPercent: Math.max(0, Number(formula.defenderCasualtyPercent) || 0),
       captureThresholdPower: Math.max(0, Math.floor(Number(formula.captureThresholdPower) || 0)),
     },
+    combatRule: {
+      id: combatRuleId,
+      captureAllowed: rawCombatRule.captureAllowed !== false,
+      breachRequired: rawCombatRule.breachRequired === true,
+      maxDefenderLossPercent: Math.max(0, Number(rawCombatRule.maxDefenderLossPercent) || 0),
+    },
+    attackProtection: normalizeAttackProtectionSnapshot(value.attackProtection),
   };
 }
 
@@ -30251,6 +30412,22 @@ function renderDetailedBattleReport(report, snapshot, badge) {
     report.goldAwarded > 0 ? renderBattleMetric("Gold earned", `+${formatNumber(report.goldAwarded)}`) : "",
     report.troopsAwarded > 0 ? renderBattleMetric("Level-up troops", `+${formatNumber(report.troopsAwarded)}`) : "",
   ].filter(Boolean).join("");
+  const combatRuleCopy = snapshot.combatRule.id === "protected_raid"
+    ? "Protected raid: capture was disabled and defender losses were capped at 10%."
+    : snapshot.combatRule.id === "protected_breach"
+      ? "Protected breach: this first assault could breach the walls, but could not capture the city."
+      : snapshot.combatRule.id === "protected_capture"
+        ? "Protected capture: a prior breach allowed this follow-up assault to capture the city."
+        : "Normal capture: attack power had to exceed live defense power at arrival.";
+  const forecast = report.launchCombatForecast?.status === "scouted" ? report.launchCombatForecast : null;
+  const forecastDefenseDelta = forecast ? snapshot.totals.defensePower - forecast.defensePower : 0;
+  const forecastOutcomeLabel = forecast?.expectedOutcome === "capture"
+    ? "Likely capture"
+    : forecast?.expectedOutcome === "breach"
+      ? "Likely wall breach"
+      : forecast?.expectedOutcome === "raid"
+        ? "Protected raid — no capture"
+        : "Likely defeat";
   return `
     <div class="battle-report-detail detailed-battle-report ${badge.tone}">
       <button id="battleReportBackBtn" class="battle-report-back" type="button" data-audio-effect="none">Back to reports</button>
@@ -30273,11 +30450,19 @@ function renderDetailedBattleReport(report, snapshot, badge) {
       </div>
       <section class="battle-formula-explanation">
         <h3>Combat result</h3>
+        <p class="battle-report-detail-notice">${escapeHtml(combatRuleCopy)}</p>
         <div class="battle-formula-grid">
           ${renderBattleMetric("Power ratio", ratioText, `${formatNumber(snapshot.totals.attackPower)} attack vs ${formatNumber(snapshot.totals.defensePower)} defense`)}
           ${renderBattleMetric("Defender casualties", formatBattlePercent(snapshot.formula.defenderCasualtyPercent), `${formatNumber(snapshot.totals.defenderLosses)} troops lost`)}
           ${renderBattleMetric("Capture threshold", formatNumber(snapshot.formula.captureThresholdPower), "Attack power must exceed this defense threshold")}
         </div>
+        ${forecast ? `
+          <h3>Launch forecast compared with arrival</h3>
+          <div class="battle-formula-grid battle-forecast-comparison">
+            ${renderBattleMetric("At launch", forecastOutcomeLabel, `${formatNumber(forecast.attackPower)} attack vs ${formatNumber(forecast.defensePower)} scouted defense`)}
+            ${renderBattleMetric("At arrival", badge.label, `${formatNumber(snapshot.totals.attackPower)} attack vs ${formatNumber(snapshot.totals.defensePower)} live defense`)}
+            ${renderBattleMetric("Defense change", `${forecastDefenseDelta >= 0 ? "+" : "−"}${formatNumber(Math.abs(forecastDefenseDelta))}`, "Production, reinforcements, and bonuses remain live while troops travel")}
+          </div>` : ""}
         ${rewardMetrics ? `<div class="battle-viewer-rewards">${rewardMetrics}</div>` : ""}
         <p>${renderPlayerLinkedText(report.summary || getBattleReportSummary(report), opponentUid, opponentName)}</p>
       </section>
@@ -30346,6 +30531,7 @@ function getBattleReportBadge(report) {
   if (report.eventKind === CITADEL_ASSAULT_EVENT_KIND && report.outcome === "lost") return { label: "CITY LOST", tone: "defeat" };
   if (report.outcome === "breach") return { label: "BREACH", tone: "victory" };
   if (report.outcome === "breached") return { label: "BREACHED", tone: "defeat" };
+  if (report.outcome === "raid") return { label: "RAID", tone: "defeat" };
   if (report.outcome === "victory") return { label: "VICTORY", tone: "victory" };
   if (report.outcome === "held") return { label: "VICTORY", tone: "victory" };
   return { label: "DEFEAT", tone: "defeat" };

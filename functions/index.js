@@ -216,6 +216,8 @@ const ATTACK_PROTECTION_DEFENDER_FIRST_XP_MULTIPLIER = 2;
 const ATTACK_PROTECTION_DEFENDER_REPEAT_XP_MULTIPLIER = 1;
 const ATTACK_PROTECTION_DEFENDER_XP_POLICY = "first-protected-battle-per-attacker-world";
 const PROTECTED_ASSAULT_BREACH_VERSION = 1;
+const COMBAT_FORECAST_VERSION = 1;
+const ATTACK_COMBAT_SNAPSHOT_VERSION = 1;
 const DEMO_ATTACK_MIN_POWER_RATIO = 3;
 const DEMO_ATTACK_DEFENDER_XP_MULTIPLIER = 2;
 const DEMO_ATTACK_TIERS = [
@@ -569,7 +571,7 @@ const CROWN_CITADEL_UPGRADE_COST_REDUCTION_PERCENT = 10;
 const CLAN_OBJECTIVE_BENEFIT_MODEL_VERSION = 1;
 const CLAN_SHARED_OBJECTIVE_MULTIPLIER = 0.5;
 const REINFORCEMENT_CITY_WALL_SHARE = 0.25;
-const BATTLE_SNAPSHOT_MODEL_VERSION = 2;
+const BATTLE_SNAPSHOT_MODEL_VERSION = 3;
 const STRONGHOLD_IDS = new Set([
   GOLD_STRONGHOLD_ID,
   TRAINING_STRONGHOLD_ID,
@@ -5658,6 +5660,11 @@ function createArmyPublicProjection(movement = {}) {
     projection.troopEstimateMax = FieldValue.delete();
     projection.troopEstimateLabel = FieldValue.delete();
   }
+  // Forecasts and launch combat snapshots contain attacker-only troop power and
+  // scout-derived defense intelligence. Never expose them through incoming views.
+  projection.attackCombatSnapshot = FieldValue.delete();
+  projection.launchCombatForecast = FieldValue.delete();
+  projection.combatForecastVersion = FieldValue.delete();
   return projection;
 }
 
@@ -7000,13 +7007,18 @@ function makeReport({
   characterAfter = null,
   goldAfter = null,
   attackProtection = null,
+  launchCombatForecast = null,
   defenderXpMultiplierApplied = 1,
   firstProtectedDefenseBonus = false,
   battleId = "",
   fieldMedicsRecovered = 0,
   nowMs = Date.now(),
 }) {
-  const normalizedTotalDefense = Math.max(0, Math.floor(safeNumber(totalDefense, result.defensePower || 0)));
+  const normalizedTotalDefense = Math.max(
+    0,
+    Math.floor(safeNumber(totalDefense, 0)),
+    Math.floor(safeNumber(result.defensePower, 0))
+  );
   const defenseBreakdown = defenseStats || scoutReport;
   const normalizedBaseDefense = Math.min(
     normalizedTotalDefense,
@@ -7048,6 +7060,7 @@ function makeReport({
     characterAfter,
     goldAfter,
     attackProtection: normalizeAttackProtectionSnapshot(attackProtection),
+    launchCombatForecast: normalizeCombatForecast(launchCombatForecast),
     defenderXpMultiplierApplied: Math.max(0, safeNumber(defenderXpMultiplierApplied, 1)),
     firstProtectedDefenseBonus: firstProtectedDefenseBonus === true,
     battleId: safeString(battleId, 160),
@@ -7094,6 +7107,8 @@ function createDetailedBattleSnapshot({
   attackerAllocation = [],
   result = {},
   outcome = "",
+  attackProtection = null,
+  attackCombatSnapshot = null,
   nowMs = Date.now(),
 } = {}) {
   if (!battleId || !defensePackages) return null;
@@ -7152,6 +7167,32 @@ function createDetailedBattleSnapshot({
   ].filter(Boolean))];
   const defendersAtStart = ownerTroops + reinforcementRows.reduce((total, row) => total + row.startingTroops, 0);
   const defenderLosses = Math.max(0, Math.floor(safeNumber(result.defenderLosses, 0)));
+  const combatSnapshot = normalizeAttackCombatSnapshot(attackCombatSnapshot);
+  const normalizedProtection = normalizeAttackProtectionSnapshot(attackProtection);
+  const protectedRaid = normalizedProtection?.mode === "raid" && result.convertedReinforcementCapture !== true;
+  const protectedBreach = normalizedProtection?.mode === "assault"
+    && normalizedProtection.captureAllowed !== true
+    && result.convertedReinforcementCapture !== true;
+  const combatRule = protectedRaid
+    ? {
+      id: "protected_raid",
+      captureAllowed: false,
+      breachRequired: false,
+      maxDefenderLossPercent: 10,
+    }
+    : protectedBreach
+      ? {
+        id: "protected_breach",
+        captureAllowed: false,
+        breachRequired: true,
+        maxDefenderLossPercent: 100,
+      }
+      : {
+        id: normalizedProtection?.mode === "assault" ? "protected_capture" : "normal_capture",
+        captureAllowed: true,
+        breachRequired: false,
+        maxDefenderLossPercent: 100,
+      };
   return {
     battleId,
     armyId: safeString(armyId, 96),
@@ -7185,8 +7226,8 @@ function createDetailedBattleSnapshot({
         (Math.max(0, safeNumber(result.attackerLosses, 0)) + Math.max(0, safeNumber(result.survivors, 0)))
         * BASE_TROOP_ATTACK_POWER
       )),
-      swordmasteryLevel: getSkillLevel(attackerProfile, "swordmastery"),
-      swordmasteryPercent: getSkillPercent(attackerProfile, "swordmastery"),
+      swordmasteryLevel: combatSnapshot?.swordmasteryLevel ?? getSkillLevel(attackerProfile, "swordmastery"),
+      swordmasteryPercent: combatSnapshot?.swordmasteryPercent ?? getSkillPercent(attackerProfile, "swordmastery"),
       effectivePower: Math.max(0, Math.floor(safeNumber(result.attackPower, 0))),
       losses: Math.max(0, Math.floor(safeNumber(result.attackerLosses, 0))),
       survivors: Math.max(0, Math.floor(safeNumber(result.survivors, 0))),
@@ -7230,9 +7271,11 @@ function createDetailedBattleSnapshot({
     formula: {
       powerRatio: Math.max(0, safeNumber(result.ratio, 0)),
       defenderCasualtyPercent: defendersAtStart > 0 ? defenderLosses * 100 / defendersAtStart : 0,
-      captureRequiresAttackPowerAboveDefense: true,
+      captureRequiresAttackPowerAboveDefense: combatRule.captureAllowed,
       captureThresholdPower: Math.max(0, Math.floor(safeNumber(result.defensePower, defensePackages.totalDefense))) + 1,
     },
+    combatRule,
+    attackProtection: normalizedProtection,
     outcome: safeString(outcome, 24),
     createdAtMs: nowMs,
     createdAt: FieldValue.serverTimestamp(),
@@ -7375,6 +7418,54 @@ async function getGlobalStatsSnapshots(transaction, uids) {
     entries.push([uid, snap.exists ? snap.data() || {} : {}]);
   }
   return new Map(entries);
+}
+
+async function getAuthoritativeDefensePackages(transaction, {
+  target = {},
+  targetType = "city",
+  targetRegionId = "",
+  ownerProfile = {},
+  ownerGlobalStats = {},
+} = {}) {
+  const targetOwnerUid = safeString(getOwnerUid(target), 128);
+  const targetKey = getReinforcementTargetKey(targetType, targetRegionId || target.regionId, target.id);
+  const reinforcementSnap = targetOwnerUid
+    ? await transaction.get(stationedReinforcementsForTargetQuery(targetKey))
+    : null;
+  const contributions = reinforcementSnap
+    ? reinforcementSnap.docs.map(normalizeReinforcementContribution).filter(Boolean)
+    : [];
+  const contributorUids = contributions.map(entry => entry.ownerUid);
+  const [profileEntries, contributorStats] = await Promise.all([
+    getProfileSnapshots(transaction, contributorUids),
+    getGlobalStatsSnapshots(transaction, contributorUids),
+  ]);
+  const contributorProfiles = new Map(
+    [...profileEntries.entries()].map(([uid, entry]) => [uid, entry.data || {}])
+  );
+  const ownerBonuses = {
+    cityDefenseBonusPercent: Math.max(0, safeNumber(ownerGlobalStats.strongholdDefenseBonusPercent, 0)),
+    personalDefenseBonusPercent: Math.max(0, safeNumber(
+      ownerGlobalStats.personalStrongholdDefenseBonusPercent,
+      ownerGlobalStats.strongholdDefenseBonusPercent
+    )),
+    sharedDefenseBonusPercent: Math.max(0, safeNumber(ownerGlobalStats.sharedClanDefenseBonusPercent, 0)),
+  };
+  return {
+    contributions,
+    contributorProfiles,
+    contributorStats,
+    ownerBonuses,
+    packages: calculateDefenderArmyPackages({
+      target,
+      targetType,
+      ownerProfile,
+      ownerBonuses,
+      contributions,
+      contributorProfiles,
+      contributorStats,
+    }),
+  };
 }
 
 function timestampToMs(value) {
@@ -10220,10 +10311,12 @@ exports.getRealmInfo = timedCallable(
       heartbeatModelVersion: GAME_SERVER_HEARTBEAT_MODEL_VERSION,
       authoritativeRoutesVersion: AUTHORITATIVE_ROUTES_VERSION,
       bulkOrdersVersion: BULK_ORDERS_VERSION,
+      combatForecastVersion: COMBAT_FORECAST_VERSION,
       capabilities: {
         shardedGameServerHeartbeats: true,
         authoritativeRoutesVersion: AUTHORITATIVE_ROUTES_VERSION,
         bulkOrdersVersion: BULK_ORDERS_VERSION,
+        combatForecastVersion: COMBAT_FORECAST_VERSION,
       },
       appCheckEnforced: false,
     };
@@ -16064,8 +16157,8 @@ exports.previewArmyProtection = onCall({ region: "us-central1", maxInstances: 20
     }
     let source = { id: sourceSnap.id, ...sourceSnap.data() };
     const target = targetType === "camp"
-      ? getRewardCampCombatTarget({ id: targetSnap.id, ...targetSnap.data() })
-      : { id: targetSnap.id, ...targetSnap.data() };
+      ? getRewardCampCombatTarget({ id: targetSnap.id, regionId: targetRegionId, ...targetSnap.data() })
+      : { id: targetSnap.id, regionId: targetRegionId, ...targetSnap.data() };
     if (!target) throw new HttpsError("failed-precondition", "That camp is not an active reward objective.");
     if (getOwnerUid(source) !== uid) {
       throw new HttpsError("permission-denied", "You can only preview attacks from your own city.");
@@ -16089,6 +16182,13 @@ exports.previewArmyProtection = onCall({ region: "us-central1", maxInstances: 20
     const defenderProfile = defenderProfileSnap?.exists ? defenderProfileSnap.data() || {} : {};
     const defenderLeaderboard = defenderLeaderboardSnap?.exists ? defenderLeaderboardSnap.data() || {} : {};
     const defenderGlobalStats = defenderGlobalStatsSnap?.exists ? defenderGlobalStatsSnap.data() || {} : {};
+    const defenseContext = await getAuthoritativeDefensePackages(transaction, {
+      target,
+      targetType,
+      targetRegionId,
+      ownerProfile: defenderProfile,
+      ownerGlobalStats: defenderGlobalStats,
+    });
     const protectedAssaultBreachSnap = targetType === "city" && targetOwnerUid && targetOwnerUid !== uid
       ? await transaction.get(protectedAssaultBreachRef(targetRef, uid))
       : null;
@@ -16125,14 +16225,25 @@ exports.previewArmyProtection = onCall({ region: "us-central1", maxInstances: 20
       attackerUid: uid,
       attackerProfile,
       defenderProfile,
-      defenderBonuses: {
-        cityDefenseBonusPercent: Math.max(0, safeNumber(defenderGlobalStats.strongholdDefenseBonusPercent, 0)),
-      },
+      defenderBonuses: defenseContext.ownerBonuses,
+      defensePower: defenseContext.packages.totalDefense,
       assaultStage,
     });
+    const protectionPreview = createAttackProtectionPreview(attackProtection, sourceTroops, requestedTroops);
+    const effectiveTroops = Math.max(1, Math.floor(safeNumber(protectionPreview.effectiveTroops, requestedTroops)));
+    const attackCombatSnapshot = createAttackCombatSnapshot(effectiveTroops, attackerProfile);
     return {
       ok: true,
-      attackProtection: createAttackProtectionPreview(attackProtection, sourceTroops, requestedTroops),
+      combatForecastVersion: COMBAT_FORECAST_VERSION,
+      attackProtection: protectionPreview,
+      combatForecast: createCombatForecast({
+        attackerProfile,
+        target,
+        troops: effectiveTroops,
+        attackProtection: protectionPreview,
+        attackCombatSnapshot,
+        nowMs,
+      }),
     };
   });
 });
@@ -16164,6 +16275,167 @@ function normalizeAuthoritativeRouteRequest(data = {}) {
     kind: normalizeMarchKind(data.kind, "attack"),
     requestedTroops: Math.max(1, Math.floor(safeNumber(data.requestedTroops || data.troops, 1))),
   };
+}
+
+function normalizeAttackCombatSnapshot(raw = null) {
+  if (!raw || typeof raw !== "object" || Number(raw.version) !== ATTACK_COMBAT_SNAPSHOT_VERSION) return null;
+  const attackPowerPerTroop = Math.max(0, safeNumber(raw.attackPowerPerTroop, 0));
+  if (!attackPowerPerTroop) return null;
+  const launchTroops = Math.max(1, Math.floor(safeNumber(raw.launchTroops, 1)));
+  return {
+    version: ATTACK_COMBAT_SNAPSHOT_VERSION,
+    swordmasteryLevel: Math.max(0, Math.floor(safeNumber(raw.swordmasteryLevel, 0))),
+    swordmasteryPercent: Math.max(0, safeNumber(raw.swordmasteryPercent, 0)),
+    attackPowerPerTroop,
+    launchTroops,
+    launchAttackPower: Math.max(0, Math.floor(safeNumber(
+      raw.launchAttackPower,
+      attackPowerPerTroop * launchTroops
+    ))),
+  };
+}
+
+function createAttackCombatSnapshot(troops = 1, attackerProfile = {}) {
+  const launchTroops = Math.max(1, Math.floor(safeNumber(troops, 1)));
+  const swordmasteryPercent = Math.max(0, getSkillPercent(attackerProfile, "swordmastery"));
+  const attackPowerPerTroop = BASE_TROOP_ATTACK_POWER * skillMultiplier(attackerProfile, "swordmastery");
+  return normalizeAttackCombatSnapshot({
+    version: ATTACK_COMBAT_SNAPSHOT_VERSION,
+    swordmasteryLevel: getSkillLevel(attackerProfile, "swordmastery"),
+    swordmasteryPercent,
+    attackPowerPerTroop,
+    launchTroops,
+    launchAttackPower: Math.floor(launchTroops * attackPowerPerTroop),
+  });
+}
+
+function getSnapshottedAttackPower(snapshot = null, troops = 0) {
+  const normalized = normalizeAttackCombatSnapshot(snapshot);
+  if (!normalized) return null;
+  return Math.max(0, Math.floor(Math.max(0, Math.floor(safeNumber(troops, 0))) * normalized.attackPowerPerTroop));
+}
+
+function getScoutCombatIntel(profile = {}, target = {}, nowMs = Date.now()) {
+  const cityId = safeString(target?.id, 96);
+  const report = cityId && profile?.scoutReports && typeof profile.scoutReports === "object"
+    ? profile.scoutReports[cityId]
+    : null;
+  if (!report || typeof report !== "object") return { status: "unavailable", report: null };
+  const expiresAtMs = timestampToMs(report.expiresAtMs);
+  if (!expiresAtMs || expiresAtMs <= nowMs) return { status: "expired", report: null };
+  const targetOwnerUid = safeString(getOwnerUid(target), 128);
+  const reportOwnerUid = safeString(report.ownerUid, 128);
+  if (targetOwnerUid !== reportOwnerUid) return { status: "owner_changed", report: null };
+  const totalDefense = Math.max(0, Math.floor(safeNumber(report.totalDefense, 0)));
+  const targetTroops = Math.max(0, Math.floor(safeNumber(report.troops, 0)));
+  if (!totalDefense) return { status: "unavailable", report: null };
+  return {
+    status: "scouted",
+    report: {
+      scoutedAtMs: Math.max(0, timestampToMs(report.scoutedAtMs)),
+      expiresAtMs,
+      targetOwnerUid,
+      targetLevel: clampCityLevel(report.cityLevel || target.level || 1),
+      targetTroops,
+      ownerTroops: Math.max(0, Math.floor(safeNumber(report.ownerTroops, targetTroops))),
+      reinforcementTroops: Math.max(0, Math.floor(safeNumber(report.reinforcementTroops, 0))),
+      baseDefensePower: Math.min(
+        totalDefense,
+        Math.max(0, Math.floor(safeNumber(report.baseTotalDefense, totalDefense)))
+      ),
+      defensePower: totalDefense,
+    },
+  };
+}
+
+function getCombatForecastOutcome(result = {}) {
+  if (result.success) return "capture";
+  if (result.breachCompleted) return "breach";
+  if (result.raidCompleted) return "raid";
+  return "defeat";
+}
+
+function normalizeCombatForecast(raw = null) {
+  if (!raw || typeof raw !== "object" || Number(raw.version) !== COMBAT_FORECAST_VERSION) return null;
+  const status = ["scouted", "unavailable", "expired", "owner_changed"].includes(raw.status)
+    ? raw.status
+    : "unavailable";
+  const normalized = {
+    version: COMBAT_FORECAST_VERSION,
+    status,
+    attackPowerPerTroop: Math.max(0, safeNumber(raw.attackPowerPerTroop, BASE_TROOP_ATTACK_POWER)),
+    swordmasteryLevel: Math.max(0, Math.floor(safeNumber(raw.swordmasteryLevel, 0))),
+    swordmasteryPercent: Math.max(0, safeNumber(raw.swordmasteryPercent, 0)),
+  };
+  if (status !== "scouted") return normalized;
+  return {
+    ...normalized,
+    scoutedAtMs: Math.max(0, timestampToMs(raw.scoutedAtMs)),
+    expiresAtMs: Math.max(0, timestampToMs(raw.expiresAtMs)),
+    targetOwnerUid: safeString(raw.targetOwnerUid, 128),
+    targetLevel: clampCityLevel(raw.targetLevel || 1),
+    targetTroops: Math.max(0, Math.floor(safeNumber(raw.targetTroops, 0))),
+    ownerTroops: Math.max(0, Math.floor(safeNumber(raw.ownerTroops, raw.targetTroops))),
+    reinforcementTroops: Math.max(0, Math.floor(safeNumber(raw.reinforcementTroops, 0))),
+    baseDefensePower: Math.max(0, Math.floor(safeNumber(raw.baseDefensePower, raw.defensePower))),
+    defensePower: Math.max(0, Math.floor(safeNumber(raw.defensePower, 0))),
+    effectiveTroops: Math.max(1, Math.floor(safeNumber(raw.effectiveTroops, 1))),
+    attackPower: Math.max(0, Math.floor(safeNumber(raw.attackPower, 0))),
+    powerRatio: Math.max(0, safeNumber(raw.powerRatio, 0)),
+    expectedOutcome: ["capture", "breach", "raid", "defeat"].includes(raw.expectedOutcome)
+      ? raw.expectedOutcome
+      : "defeat",
+    estimatedSurvivors: Math.max(0, Math.floor(safeNumber(raw.estimatedSurvivors, 0))),
+    estimatedDefendersLeft: Math.max(0, Math.floor(safeNumber(raw.estimatedDefendersLeft, 0))),
+    estimatedAttackerLosses: Math.max(0, Math.floor(safeNumber(raw.estimatedAttackerLosses, 0))),
+    estimatedDefenderLosses: Math.max(0, Math.floor(safeNumber(raw.estimatedDefenderLosses, 0))),
+  };
+}
+
+function createCombatForecast({
+  attackerProfile = {},
+  target = {},
+  troops = 1,
+  attackProtection = null,
+  attackCombatSnapshot = null,
+  nowMs = Date.now(),
+} = {}) {
+  const intel = getScoutCombatIntel(attackerProfile, target, nowMs);
+  const snapshot = normalizeAttackCombatSnapshot(attackCombatSnapshot)
+    || createAttackCombatSnapshot(troops, attackerProfile);
+  const base = {
+    version: COMBAT_FORECAST_VERSION,
+    status: intel.status,
+    attackPowerPerTroop: snapshot?.attackPowerPerTroop || BASE_TROOP_ATTACK_POWER,
+    swordmasteryLevel: snapshot?.swordmasteryLevel || 0,
+    swordmasteryPercent: snapshot?.swordmasteryPercent || 0,
+  };
+  if (!intel.report) return normalizeCombatForecast(base);
+  const effectiveTroops = Math.max(1, Math.floor(safeNumber(troops, 1)));
+  const attackPower = getSnapshottedAttackPower(snapshot, effectiveTroops);
+  const result = calculateCombatResult(
+    effectiveTroops,
+    { ...target, troops: intel.report.targetTroops, troopFloat: intel.report.targetTroops },
+    attackerProfile,
+    null,
+    {
+      attackProtection,
+      attackPower,
+      defensePower: intel.report.defensePower,
+    }
+  );
+  return normalizeCombatForecast({
+    ...base,
+    ...intel.report,
+    effectiveTroops,
+    attackPower: result.attackPower,
+    powerRatio: result.ratio,
+    expectedOutcome: getCombatForecastOutcome(result),
+    estimatedSurvivors: result.survivors,
+    estimatedDefendersLeft: result.defendersLeft,
+    estimatedAttackerLosses: result.attackerLosses,
+    estimatedDefenderLosses: result.defenderLosses,
+  });
 }
 
 exports.previewArmyRoute = timedCallable(
@@ -16868,6 +17140,8 @@ exports.sendRegroupOrders = timedCallable(
           targetOwnerUid: uid,
           attackerKingPower: ownerKingPower,
           defenderKingPower: ownerKingPower,
+          attackCombatSnapshot: createAttackCombatSnapshot(troops, profile),
+          combatForecastVersion: COMBAT_FORECAST_VERSION,
           launchedAtMs: nowMs,
           arrivesAtMs: nowMs + Math.ceil(duration * 1000),
           status: "active",
@@ -17010,9 +17284,9 @@ exports.sendArmyOrder = timedCallable("sendArmyOrder", { region: "us-central1", 
     let source = { id: sourceSnap.id, ...sourceSnap.data() };
     const target = order.targetType === "camp"
       ? getRewardCampCombatTarget(targetSnap.exists
-        ? { id: targetSnap.id, ...targetSnap.data() }
-        : missingTargetCamp)
-      : { id: targetSnap.id, ...targetSnap.data() };
+        ? { id: targetSnap.id, regionId: order.targetRegionId, ...targetSnap.data() }
+        : { ...missingTargetCamp, regionId: order.targetRegionId })
+      : { id: targetSnap.id, regionId: order.targetRegionId, ...targetSnap.data() };
     if (order.targetType === "camp" && !target) {
       throw new HttpsError("failed-precondition", "That camp is not an active reward objective.");
     }
@@ -17199,9 +17473,15 @@ exports.sendArmyOrder = timedCallable("sendArmyOrder", { region: "us-central1", 
       city: target,
       fallback: order.defenderKingPower,
     }));
-    const defenderProtectionBonuses = {
-      cityDefenseBonusPercent: Math.max(0, safeNumber(defenderGlobalStatsData.strongholdDefenseBonusPercent, 0)),
-    };
+    const defenseContext = resolvedKind === "attack"
+      ? await getAuthoritativeDefensePackages(transaction, {
+        target,
+        targetType: order.targetType,
+        targetRegionId: order.targetRegionId,
+        ownerProfile: defenderPowerData,
+        ownerGlobalStats: defenderGlobalStatsData,
+      })
+      : null;
     const attackProtection = resolvedKind === "attack"
       ? createServerAttackProtectionSnapshot({
         sourceTroops,
@@ -17213,11 +17493,25 @@ exports.sendArmyOrder = timedCallable("sendArmyOrder", { region: "us-central1", 
         attackerUid: uid,
         attackerProfile,
         defenderProfile: defenderPowerData,
-        defenderBonuses: defenderProtectionBonuses,
+        defenderBonuses: defenseContext.ownerBonuses,
+        defensePower: defenseContext.packages.totalDefense,
         assaultStage,
       })
       : null;
     const troops = resolvedKind === "scout" ? 1 : (attackProtection?.effectiveTroops || requestedTroops);
+    const attackCombatSnapshot = resolvedKind === "scout"
+      ? null
+      : createAttackCombatSnapshot(troops, attackerProfile);
+    const launchCombatForecast = resolvedKind === "attack"
+      ? createCombatForecast({
+        attackerProfile,
+        target,
+        troops,
+        attackProtection,
+        attackCombatSnapshot,
+        nowMs,
+      })
+      : null;
 
     if (sourceTroops < troops) throw new HttpsError("failed-precondition", "Not enough troops in the source city.");
     if (order.targetType !== "camp" && resolvedKind === "scout" && isProtectedMainCity(target, uid, defenderMainCityProfile)) {
@@ -17340,6 +17634,9 @@ exports.sendArmyOrder = timedCallable("sendArmyOrder", { region: "us-central1", 
       attackerKingPower: attackerKingPower || order.attackerKingPower || order.ownerKingPower,
       defenderKingPower,
       attackProtection,
+      attackCombatSnapshot,
+      launchCombatForecast,
+      combatForecastVersion: COMBAT_FORECAST_VERSION,
       launchedAtMs: nowMs,
       arrivesAtMs,
       ...(useSwiftMarchOrder ? {
@@ -19300,7 +19597,9 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
       const campTarget = createReinforcedCombatTarget(getRewardCampCombatTarget(target), "camp");
       const campConfig = getRewardCampConfig(campTarget);
       const defendersAtStart = Math.max(0, Math.floor(safeNumber(campTarget.troops, 0)));
+      const snapshottedAttackPower = getSnapshottedAttackPower(army.attackCombatSnapshot, troopCount);
       const battle = calculateCombatResult(troopCount, campTarget, attackerProfile, defenderProfile, {
+        ...(snapshottedAttackPower !== null ? { attackPower: snapshottedAttackPower } : {}),
         defenderBonuses,
         defensePower: defensePackages.totalDefense,
       });
@@ -19324,6 +19623,8 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
         allocation: defenseAllocation,
         result: battle,
         outcome: battle.success ? "victory" : "held",
+        attackProtection: army.attackProtection,
+        attackCombatSnapshot: army.attackCombatSnapshot,
         nowMs,
       }));
       applyReinforcementDefenseSettlement({
@@ -19363,6 +19664,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
           ? `Captured ${campTarget.name || campConfig.name} with ${battle.survivors.toLocaleString()} troops. Hold it for ${Math.floor(campConfig.holdDurationMs / 60000)} minutes to earn ${campConfig.rewardType}.`
           : `${battle.defendersLeft.toLocaleString()} defenders remained at ${campTarget.name || campConfig.name}.`}${attackerRecoveredTroops > 0 ? ` Field Medics returned ${attackerRecoveredTroops.toLocaleString()} troops to your main city.` : ""}`,
         battleId: currentBattleId,
+        launchCombatForecast: army.launchCombatForecast,
         fieldMedicsRecovered: attackerRecoveredTroops,
         nowMs,
       });
@@ -19778,7 +20080,9 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
 
     const oldOwnerUid = defenderUid;
     const defendersAtStart = Math.max(0, Math.floor(safeNumber(combatTarget.troops, 0)));
+    const snapshottedAttackPower = getSnapshottedAttackPower(army.attackCombatSnapshot, troopCount);
     const result = calculateCombatResult(troopCount, combatTarget, attackerProfile, defenderProfile, {
+      ...(snapshottedAttackPower !== null ? { attackPower: snapshottedAttackPower } : {}),
       attackProtection,
       demoAttack: army.demoAttack,
       defenderBonuses,
@@ -19809,6 +20113,8 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
       allocation: defenseAllocation,
       result,
       outcome: result.success ? "victory" : result.breachCompleted ? "breach" : "held",
+      attackProtection,
+      attackCombatSnapshot: army.attackCombatSnapshot,
       nowMs,
     }));
     const givenUpNeutralTarget = isGivenUpNeutralCity(target);
@@ -19951,6 +20257,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
         characterAfter: attackerProgress.character,
         goldAfter: attackerProgress.gold,
         attackProtection,
+        launchCombatForecast: army.launchCombatForecast,
         defenderXpMultiplierApplied,
         firstProtectedDefenseBonus,
         battleId: currentBattleId,
@@ -20112,6 +20419,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
         characterAfter: attackerProgress.character,
         goldAfter: attackerProgress.gold,
         attackProtection,
+        launchCombatForecast: army.launchCombatForecast,
         defenderXpMultiplierApplied,
         firstProtectedDefenseBonus,
         battleId: currentBattleId,
@@ -20252,6 +20560,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
       characterAfter: attackerProgress.character,
       goldAfter: attackerProgress.gold,
       attackProtection,
+      launchCombatForecast: army.launchCombatForecast,
       defenderXpMultiplierApplied,
       firstProtectedDefenseBonus,
       battleId: currentBattleId,

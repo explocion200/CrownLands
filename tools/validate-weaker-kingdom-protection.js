@@ -527,7 +527,7 @@ const confirmTroopSliderSource = readFunction(clientSource, "confirmTroopSliderO
 if (!reopenProtectionSource.includes("window.setTimeout")
   || !reopenProtectionSource.includes("attackProtection: refreshedProtectionSnapshot")
   || !showTroopSliderSource.includes("options.attackProtection")
-  || !showTroopSliderSource.includes("Promise.resolve({ attackProtection: providedAttackProtection })")) {
+  || !showTroopSliderSource.includes("attackProtection: providedAttackProtection, combatForecast: providedCombatForecast")) {
   throw new Error("A changed protection quote can close the attack screen instead of reopening with the refreshed limit.");
 }
 if (!confirmTroopSliderSource.includes("const launched = launchAttack")

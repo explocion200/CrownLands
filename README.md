@@ -28,9 +28,9 @@ Landscape / horizontal medieval island-conquest game inspired by the core loop o
 - Failed player attacks and lost defenses still award one-third of the matching victory XP.
 - The Citadel Legion selects up to 20 random regular non-main cities in the Crown Citadel region at 9:45 AM and 6:15 PM Eastern Time, then attacks each with 100,000 NPC troops at 10:00 AM and 6:30 PM Eastern. The `America/New_York` schedule follows daylight-saving changes. Peace Shields do not block the event. Held defenses preserve city level and award no XP; failed defenses remove five levels, with Level 5-or-lower cities returning to neutral at Level 1 with 10 troops.
 - Captured cities lose 1 level on takeover, but never drop below Level 1.
-- Combat preview shows attack power, defense power, estimated losses/survivors, capture or defeat XP, and XP efficiency.
+- Combat forecasts use the scout report's full authoritative defense total, including walls, objective bonuses, and allied reinforcement packages. They show attack versus scouted defense, report age, likely capture/breach/raid/defeat, and estimated survivors. The attacker's per-troop power is locked when the march launches; defender production, reinforcements, bonuses, and ownership remain live until arrival.
 - The bottom `Reports` button opens battle reports filtered by attack, defense, and scout results.
-- Attack reports show victory or defeat based on the final combat result.
+- Attack reports distinguish captures, protected wall breaches, protected raids, and defeats. Detailed reports explain the applicable capture rule and compare the launch forecast with live arrival power when scout intelligence was available.
 - Defense reports show held defenses or lost cities.
 - Scout reports show the latest revealed troop and defense totals for ten minutes after arrival. A newer successful scout replaces the snapshot for that target and restarts its timer.
 

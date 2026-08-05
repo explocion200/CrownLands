@@ -1,4 +1,4 @@
-const CACHE_VERSION = "20260802-single-active-skill-preset-v1";
+const CACHE_VERSION = "20260804-combat-forecast-v1";
 const CACHE_NAME = `crownlands-cache-${CACHE_VERSION}`;
 const APP_BASE_URL = new URL("./", self.location.href);
 
@@ -12,18 +12,18 @@ const STATIC_CACHE_URLS = [
   "/",
   "/index.html",
   "/manifest.webmanifest",
-  "/styles.css?v=20260802-single-active-skill-preset-v1",
+  "/styles.css?v=20260804-combat-forecast-v1",
   "/release-config.js",
-  "/patch-notes.js?v=20260801-patch-notes-menu-v1",
+  "/patch-notes.js?v=20260804-combat-forecast-v1",
   "/world-config.js",
   "/economy-config.js?v=20260728-daily-attendance-v2",
   "/ads-config.js?v=20260726-rewarded-ads",
   "/firebase-config.js?v=20260726-protected-ads-reset",
   "/functions/clanQuestPeriod.js?v=20260729-weekly-clan-quests-v2",
-  "/firebaseClient.js?v=20260802-single-active-skill-preset-v1",
+  "/firebaseClient.js?v=20260804-combat-forecast-v1",
   "/audio-manager.js?v=20260729-starter-sound-pack-v1",
   "/audio/manifest.json",
-  "/game.js?v=20260802-single-active-skill-preset-v1",
+  "/game.js?v=20260804-combat-forecast-v1",
   "/route-worker.js?v=20260721-structure-route-clearance",
   "/assets/map-editor-data.js?v=20260723-utc-responsive-v1",
   "/assets/optimized/login-background-1448x1086-cec197d384ba.webp",
