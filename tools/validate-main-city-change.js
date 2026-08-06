@@ -18,7 +18,7 @@ function sourceBetween(source, startMarker, endMarker) {
 const singleMainSource = sourceBetween(
   serverSource,
   "function createSingleMainCityPatches",
-  "function writeExtraCityPatches"
+  "function createEmptyPendingAwayProduction"
 );
 const sandbox = {
   safeString(value) {

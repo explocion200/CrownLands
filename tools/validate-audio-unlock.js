@@ -733,16 +733,8 @@ async function run() {
   assert.equal(manager.currentMusicSourceIndex, 1, "A rejected MP3 play must fall back to OGG.");
   assert.equal(manager.getDebugState().preferredAudioExtension, "ogg");
 
-  const wavFallbackStart = playRecords.length;
-  queuePlayRejection("NotSupportedError");
-  queuePlayRejection("NotSupportedError");
-  queuePlaySuccess();
-  await manager.setMusicState("battle", { forceNext: true, immediate: true });
-  assert.match(playRecords[wavFallbackStart].src, /\.mp3\?v=test-build$/);
-  assert.match(playRecords[wavFallbackStart + 1].src, /\.ogg\?v=test-build$/);
-  assert.match(playRecords[wavFallbackStart + 2].src, /\.wav\?v=test-build$/);
-  assert.equal(manager.currentMusicSourceIndex, 2, "Playback must reach WAV when MP3 and OGG both fail.");
-
+  manager.preferredAudioExtension = "mp3";
+  manager.currentMusicSourceIndex = 0;
   queuePlaySuccess();
   await manager.setMusicState("danger", { immediate: true });
   assert.equal(manager.currentMusicSourceIndex, 0);
@@ -751,7 +743,6 @@ async function run() {
   manager.currentMusic.dispatchMediaEvent("error");
   await flushPromises();
   assert.match(manager.currentMusic.src, /\.ogg\?v=test-build$/);
-  assert.equal(manager.currentMusicSourceIndex, 1, "A later media error must continue with the next codec.");
   assert.equal(manager.musicUnlocked, true);
 
   queuePlaySuccess();
@@ -963,16 +954,22 @@ async function run() {
   assert.match(effectSourceStarts.at(-1).buffer.url, /notification\.ogg\?v=test-build$/);
 
   now += 100;
-  const effectWavFallbackStart = effectFetchRecords.length;
+  const exhaustedEffectCodecStart = effectFetchRecords.length;
+  const exhaustedEffectSourceStart = effectSourceStarts.length;
   effectDecodeFailureExtensions.add("mp3");
   effectDecodeFailureExtensions.add("ogg");
   assert.equal(manager.playEffect("invalid_action"), true);
   await flushPromises();
   effectDecodeFailureExtensions.clear();
-  assert.match(effectFetchRecords[effectWavFallbackStart], /invalid_action\.mp3\?v=test-build$/);
-  assert.match(effectFetchRecords[effectWavFallbackStart + 1], /invalid_action\.ogg\?v=test-build$/);
-  assert.match(effectFetchRecords[effectWavFallbackStart + 2], /invalid_action\.wav\?v=test-build$/);
-  assert.match(effectSourceStarts.at(-1).buffer.url, /invalid_action\.wav\?v=test-build$/);
+  assert.match(effectFetchRecords[exhaustedEffectCodecStart], /invalid_action\.mp3\?v=test-build$/);
+  assert.match(effectFetchRecords[exhaustedEffectCodecStart + 1], /invalid_action\.ogg\?v=test-build$/);
+  assert.equal(effectFetchRecords.length, exhaustedEffectCodecStart + 2);
+  assert.equal(effectSourceStarts.length, exhaustedEffectSourceStart, "Effects must not request WAV after browser codecs fail.");
+
+  now += 100;
+  assert.equal(manager.playEffect("invalid_action"), true);
+  await flushPromises();
+  assert.match(effectSourceStarts.at(-1).buffer.url, /invalid_action\.mp3\?v=test-build$/);
 
   const contextualButton = new FakeElement("contextualButton", "button");
   contextualButton.addEventListener("click", () => {
@@ -987,7 +984,7 @@ async function run() {
     contextualStart + 1,
     "A contextual cue from a button handler must suppress the delegated generic button sound.",
   );
-  assert.match(effectSourceStarts.at(-1).buffer.url, /invalid_action\.wav\?v=test-build$/);
+  assert.match(effectSourceStarts.at(-1).buffer.url, /invalid_action\.mp3\?v=test-build$/);
 
   const stoppedPropagationButton = new FakeElement("stoppedPropagationButton", "button");
   stoppedPropagationButton.addEventListener("click", event => event.stopPropagation());
@@ -1009,7 +1006,7 @@ async function run() {
   dispatchDocumentEvent("click", explicitCueButton);
   await flushPromises();
   assert.equal(effectSourceStarts.length, explicitStart + 1);
-  assert.match(effectSourceStarts.at(-1).buffer.url, /invalid_action\.wav\?v=test-build$/);
+  assert.match(effectSourceStarts.at(-1).buffer.url, /invalid_action\.mp3\?v=test-build$/);
 
   const silentButton = new FakeElement("silentButton", "button");
   silentButton.dataset.audioEffect = "none";

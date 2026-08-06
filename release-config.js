@@ -1,7 +1,8 @@
 (function () {
   window.CROWNLANDS_REALM_CONFIG = Object.freeze({
-    releaseId: "crownlands-2026-08-02-single-active-skill-preset-v1",
-    resetGeneration: "fresh-2026-07-26-server-reset",
-    worldId: "main-fresh-2026-07-26-server-reset",
-  });
+  "releaseId": "crownlands-2026-08-02-single-active-skill-preset-v1",
+  "resetGeneration": "fresh-2026-07-26-server-reset",
+  "worldId": "main-fresh-2026-07-26-server-reset",
+  "inactivityPolicyMode": "enforce"
+});
 })();

@@ -14,7 +14,6 @@
   const RESET_GENERATION = String(REALM_CONFIG.resetGeneration || "fresh-2026-07-26-server-reset");
   const ONLINE_WORLD_ID = String(REALM_CONFIG.worldId || `main-${RESET_GENERATION}`);
   const APP_RELEASE_ID = String(REALM_CONFIG.releaseId || "");
-  const ROYAL_PEACE_SHIELD_ITEM_ID = "shield_12h";
 
   const client = {
     configured: false,
@@ -1087,16 +1086,6 @@
     return true;
   }
 
-  function normalizeShopItemsForPurchase(items = {}) {
-    const normalized = items && typeof items === "object" ? { ...items } : {};
-    normalized[ROYAL_PEACE_SHIELD_ITEM_ID] = Math.max(0, Math.floor(Number(normalized[ROYAL_PEACE_SHIELD_ITEM_ID]) || 0));
-    return normalized;
-  }
-
-  function normalizeItemPurchaseCooldowns(cooldowns = {}) {
-    return cooldowns && typeof cooldowns === "object" ? { ...cooldowns } : {};
-  }
-
   function sanitizeForFirestore(value) {
     if (value === undefined) return undefined;
     if (value === null || typeof value !== "object") return value;
@@ -1504,26 +1493,6 @@
       isMainCity: Boolean(city.isMainCity),
       relinquishedAtMs: Math.max(0, Math.floor(Number(city.relinquishedAtMs) || 0)),
       relocatedAtMs: Math.max(0, Math.floor(Number(city.relocatedAtMs) || 0)),
-    };
-  }
-
-  function cleanCityLayoutSeed(city) {
-    const isStronghold = city.kind === "stronghold" || Boolean(city.strongholdType);
-    return {
-      id: city.id,
-      name: city.name || city.id,
-      x: Number(city.x) || 0,
-      y: Number(city.y) || 0,
-      startPool: city.startPool || "",
-      regionId: city.regionId || city.startPool || "",
-      kind: isStronghold ? "stronghold" : "",
-      strongholdType: isStronghold ? String(city.strongholdType || "").slice(0, 32) : "",
-      bonus: isStronghold ? String(city.bonus || "").slice(0, 32) : "",
-      bonusPercent: isStronghold ? Math.max(0, Math.floor(Number(city.bonusPercent) || 0)) : 0,
-      size: isStronghold ? Math.max(0, Math.floor(Number(city.size) || 0)) : 0,
-      artSrc: isStronghold ? String(city.artSrc || "").slice(0, 160) : "",
-      startTroops: isStronghold ? Math.max(0, Math.floor(Number(city.startTroops) || Number(city.troops) || 0)) : 0,
-      defense: 1,
     };
   }
 

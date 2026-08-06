@@ -637,8 +637,8 @@ function validateCodecAndTemporaryMusicContracts(audioManagerSource) {
   const getDebugState = extractMethod(audioManagerSource, "getDebugState");
 
   check(
-    /const\s+urls\s*=\s*\[\s*browserAudioPath\s*,\s*asset\.ogg\s*,\s*asset\.wav\s*,?\s*\]/.test(loadManifest),
-    "codec preference must be MP3, then OGG, then WAV"
+    /const\s+urls\s*=\s*\[\s*browserAudioPath\s*,\s*asset\.ogg\s*,?\s*\]/.test(loadManifest),
+    "production codec preference must be MP3, then OGG without WAV masters"
   );
   check(
     /replace\(\s*\/\\?\\\.wav\$\/i\s*,\s*["']\.mp3["']\s*\)/.test(loadManifest)

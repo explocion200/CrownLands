@@ -10,6 +10,10 @@ const stylesPath = path.join(root, "styles.css");
 const source = fs.readFileSync(gamePath, "utf8");
 const serverSource = fs.readFileSync(serverPath, "utf8");
 const stylesSource = fs.readFileSync(stylesPath, "utf8");
+const economyConfig = JSON.parse(fs.readFileSync(path.join(root, "functions", "economy-config.json"), "utf8"));
+const itemDailyPurchaseLimits = Object.fromEntries(Object.entries(economyConfig.shopItems || {}).map(
+  ([itemId, item]) => [itemId, Math.max(0, Math.floor(Number(item?.dailyPurchaseLimit) || 0))]
+));
 
 function extractFunction(fileSource, name) {
   const start = fileSource.indexOf(`function ${name}(`);
@@ -40,15 +44,8 @@ function extractFunction(fileSource, name) {
 const context = {
   Date,
   Math,
-  ITEM_DAILY_PURCHASE_LIMITS: {
-    shield_12h: 1,
-    war_drums_30m: 4,
-    royal_tax_decree_30m: 2,
-    veil_of_silence_30m: 4,
-    swift_march_order: 2,
-    recall_horn: 2,
-  },
-  MAX_ITEM_DAILY_PURCHASE_LIMIT: 4,
+  ITEM_DAILY_PURCHASE_LIMITS: itemDailyPurchaseLimits,
+  MAX_ITEM_DAILY_PURCHASE_LIMIT: Math.max(...Object.values(itemDailyPurchaseLimits)),
   timestampToMs: value => {
     if (typeof value === "number") return Number.isFinite(value) ? value : 0;
     if (value instanceof Date) return value.getTime();

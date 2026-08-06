@@ -1,6 +1,6 @@
 [build]
-  publish = "."
-  command = "node tools/stamp-deploy-build.js"
+  publish = "dist"
+  command = "node tools/sync-runtime-data.js --check && node tools/generate-release-manifest.js && node tools/build-production-client.js && node tools/validate-production-artifact.js"
 
 [[redirects]]
   from = "/Crownlands-current-build"

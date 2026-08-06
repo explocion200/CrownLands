@@ -146,7 +146,6 @@
           const urls = [
             browserAudioPath,
             asset.ogg,
-            asset.wav,
           ]
             .filter(Boolean)
             .map(relativePath => `audio/${String(relativePath).replace(/^\/+/, "")}?v=${encodeURIComponent(BUILD_ID)}`)
@@ -281,7 +280,7 @@
       return true;
     }
 
-    resumeFromLifecycle(reason = "foreground") {
+    resumeFromLifecycle(_reason = "foreground") {
       if (document.visibilityState && document.visibilityState !== "visible") {
         return Promise.resolve(false);
       }
@@ -1032,7 +1031,7 @@
             if (released) return;
             try {
               source.stop();
-            } catch (error) {
+            } catch (_error) {
               release();
             }
           },

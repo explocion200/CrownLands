@@ -576,10 +576,10 @@ const STRONGHOLD_IDS = new Set([
   DEFENSE_STRONGHOLD_ID,
   CROWN_CITADEL_ID,
 ]);
-const WEST_ISLAND_ART_SRC = "assets/west-island.webp";
-const WEST_ISLAND_THUMB_SRC = "assets/thumbnails/west-island-thumb.jpg";
-const WEST_ISLAND_IMAGE_WIDTH = 1024;
-const WEST_ISLAND_IMAGE_HEIGHT = 1536;
+const WEST_ISLAND_ART_SRC = "assets/worlds/world_01/maps/west-west-2-1783019399438.webp";
+const WEST_ISLAND_THUMB_SRC = "assets/worlds/world_01/thumbnails/versioned/west-thumb-f65a83930d4e.webp";
+const WEST_ISLAND_IMAGE_WIDTH = 1448;
+const WEST_ISLAND_IMAGE_HEIGHT = 1086;
 const WEST_CENTER_TELEPORT_IMAGE_POINT = { x: 802, y: 795 };
 const WEST_GOLD_STRONGHOLD_IMAGE_POINT = { x: 520, y: 760 };
 const WEST_ISLAND_LAND_POLYGON = [
@@ -606,8 +606,8 @@ const WEST_ISLAND_CITY_POINTS = [
   { x: 720, y: 860 }, { x: 390, y: 680 }, { x: 420, y: 950 }, { x: 400, y: 1000 },
   { x: 810, y: 620 }, { x: 810, y: 940 },
 ];
-const NORTH_ISLAND_ART_SRC = "assets/north-island.webp";
-const NORTH_ISLAND_THUMB_SRC = "assets/thumbnails/north-island-thumb.jpg";
+const NORTH_ISLAND_ART_SRC = "assets/worlds/world_01/maps/north-north-1-1783019201680.webp";
+const NORTH_ISLAND_THUMB_SRC = "assets/worlds/world_01/thumbnails/versioned/north-thumb-900c9fea1c35.webp";
 const NORTH_ISLAND_IMAGE_WIDTH = 1448;
 const NORTH_ISLAND_IMAGE_HEIGHT = 1086;
 const NORTH_TRAINING_STRONGHOLD_IMAGE_POINT = { x: 724, y: 560 };
@@ -639,10 +639,10 @@ const NORTH_ISLAND_CITY_POINTS = [
   { x: 720, y: 810 }, { x: 860, y: 810 }, { x: 980, y: 810 }, { x: 1100, y: 810 },
   { x: 490, y: 480 }, { x: 760, y: 770 },
 ];
-const EAST_ISLAND_ART_SRC = "assets/east-island.webp";
-const EAST_ISLAND_THUMB_SRC = "assets/thumbnails/east-island-thumb.jpg";
-const EAST_ISLAND_IMAGE_WIDTH = 1086;
-const EAST_ISLAND_IMAGE_HEIGHT = 1448;
+const EAST_ISLAND_ART_SRC = "assets/worlds/world_01/maps/east-east-4-1783020191215.webp";
+const EAST_ISLAND_THUMB_SRC = "assets/worlds/world_01/thumbnails/versioned/east-thumb-cffef8c803d4.webp";
+const EAST_ISLAND_IMAGE_WIDTH = 1448;
+const EAST_ISLAND_IMAGE_HEIGHT = 1086;
 const EAST_SPEED_STRONGHOLD_IMAGE_POINT = { x: 540, y: 605 };
 const EAST_CENTER_TELEPORT_IMAGE_POINT = { x: 305, y: 760 };
 const EAST_ISLAND_RESERVED_CIRCLES = [
@@ -671,10 +671,10 @@ const EAST_ISLAND_CITY_POINTS = [
   { x: 580, y: 1160 }, { x: 640, y: 1070 }, { x: 360, y: 690 }, { x: 420, y: 660 },
   { x: 660, y: 800 }, { x: 720, y: 790 },
 ];
-const SOUTH_ISLAND_ART_SRC = "assets/south-island.webp";
-const SOUTH_ISLAND_THUMB_SRC = "assets/thumbnails/south-island-thumb.jpg";
-const SOUTH_ISLAND_IMAGE_WIDTH = 1446;
-const SOUTH_ISLAND_IMAGE_HEIGHT = 1087;
+const SOUTH_ISLAND_ART_SRC = "assets/worlds/world_01/maps/south-south-5-1783020401484.webp";
+const SOUTH_ISLAND_THUMB_SRC = "assets/worlds/world_01/thumbnails/versioned/south-thumb-bc848808fb75.webp";
+const SOUTH_ISLAND_IMAGE_WIDTH = 1448;
+const SOUTH_ISLAND_IMAGE_HEIGHT = 1086;
 const SOUTH_CENTER_TELEPORT_IMAGE_POINT = { x: 724, y: 205 };
 const SOUTH_DEFENSE_STRONGHOLD_IMAGE_POINT = { x: 724, y: 550 };
 const SOUTH_ISLAND_RESERVED_CIRCLES = [
@@ -706,10 +706,10 @@ const SOUTH_ISLAND_CITY_POINTS = [
   { x: 1020, y: 360 }, { x: 640, y: 800 },
 ];
 const CENTER_REGION_CITY_COUNT = 70;
-const CENTER_ISLAND_ART_SRC = "assets/center-island.webp";
-const CENTER_ISLAND_THUMB_SRC = "assets/thumbnails/center-island-thumb.jpg";
-const CENTER_ISLAND_IMAGE_WIDTH = 1254;
-const CENTER_ISLAND_IMAGE_HEIGHT = 1254;
+const CENTER_ISLAND_ART_SRC = "assets/worlds/world_01/maps/center-crownlands-heart-1783019616021.webp";
+const CENTER_ISLAND_THUMB_SRC = "assets/worlds/world_01/thumbnails/versioned/center-thumb-992816545016.webp";
+const CENTER_ISLAND_IMAGE_WIDTH = 1448;
+const CENTER_ISLAND_IMAGE_HEIGHT = 1086;
 const CENTER_ISLAND_TELEPORTS = [
   { id: "center-west", label: "West", targetRegionId: "west", point: { x: 210, y: 610 } },
   { id: "center-north", label: "North", targetRegionId: "north", point: { x: 625, y: 156 } },
@@ -4021,7 +4021,7 @@ function generateEditorStrongholdSlots() {
         bonusPercent: Math.max(0, Math.floor(Number(objective?.bonusPercent) || config.bonusPercent)),
         level: Math.max(1, Math.floor(Number(objective?.level) || config.level)),
         troops: Math.max(0, Math.floor(Number(objective?.troops || objective?.startTroops) || config.troops)),
-        artSrc: String(objective?.artSrc || config.artSrc || ""),
+        artSrc: String(config.artSrc || objective?.artSrc || ""),
         size: islandImageVisualSizeToWorld(region.id, objective?.size, DEFAULT_STRONGHOLD_VISUAL_SIZE),
       }));
     });
@@ -4043,7 +4043,7 @@ function generateWorldCampSlots() {
         x: Math.round(point.x),
         y: Math.round(point.y),
         campType: config.type,
-        artSrc: String(camp?.artSrc || config.artSrc),
+        artSrc: String(config.artSrc || camp?.artSrc || ""),
         size: islandImageVisualSizeToWorld(region.id, camp?.size, DEFAULT_CAMP_VISUAL_SIZE),
         rewardSchedule: Array.isArray(camp?.rewardSchedule)
           ? camp.rewardSchedule.map(entry => ({
@@ -5147,7 +5147,7 @@ function renderWorldDefs() {
 }
 
 function renderSeaRipples() {
-  return LAND_BRIDGES.map((bridge, index) => {
+  return LAND_BRIDGES.map((bridge, _index) => {
     const midX = (bridge.from.x + bridge.to.x) / 2;
     const midY = (bridge.from.y + bridge.to.y) / 2;
     const dx = bridge.to.x - bridge.from.x;
@@ -5287,7 +5287,7 @@ function getPlayableBaseCitiesByRegion(regionId = getActiveOnlineRegionId()) {
   return playableBaseCitiesByRegionCache.get(normalizedRegionId) || [];
 }
 
-function createIslandStartLayout(playerName) {
+function createIslandStartLayout(_playerName) {
   const cities = getPlayableBaseCities().map(createNeutralCityFromBase);
 
   const startIds = pickStartCities(cities);
@@ -8255,17 +8255,6 @@ function getSiegeRepairTiming(
   };
 }
 
-function reduceFortificationRepairDeadline(repairAtMs, reductionPercent, nowMs = Date.now()) {
-  const currentDeadline = normalizeTimestampMs(repairAtMs);
-  const currentTime = Math.max(0, Math.floor(Number(nowMs) || Date.now()));
-  const remainingMs = Math.max(0, currentDeadline - currentTime);
-  const reduction = clamp(Number(reductionPercent) || 0, 0, 100);
-  return Math.min(
-    Number.MAX_SAFE_INTEGER,
-    currentTime + Math.max(0, Math.floor(remainingMs * (1 - reduction / 100)))
-  );
-}
-
 function getSiegeRepairLevel(target = {}) {
   return isStronghold(target) ? getStrongholdDefenseLevel(target) : clampCityLevel(target.level);
 }
@@ -9284,7 +9273,7 @@ async function scoutTarget(target) {
   }
 }
 
-function launchScoutMission(source, target, route, options = {}) {
+function launchScoutMission(source, target, route, _options = {}) {
   if (!source || !target || source.owner !== "player" || source.troops < 1 || !route?.points?.length) return null;
   const campTarget = isRewardCampTarget(target);
   const mainCityBlockReason = campTarget ? "" : getMainCityScoutBlockReason(target, "player");
@@ -12936,7 +12925,7 @@ function applyOnlinePresence(rawPresence) {
   updateOnlinePlayersUi();
 }
 
-async function publishOnlinePresence(force = false) {
+async function publishOnlinePresence(_force = false) {
   if (!isOnlineWorldActive()) return false;
   const api = getOnlineApi();
   if (!api?.savePresence) return false;
@@ -13860,8 +13849,22 @@ async function verifyRealmCompatibility(api, { force = false } = {}) {
   const releaseMatches = String(realm?.releaseId || "") === APP_RELEASE_ID;
   const generationMatches = String(realm?.resetGeneration || "") === RESET_GENERATION;
   const worldMatches = String(realm?.worldId || "") === ONLINE_WORLD_ID;
-  if (!releaseMatches || !generationMatches || !worldMatches) {
+  const clientManifest = window.CROWNLANDS_RELEASE_MANIFEST || {};
+  const expectedContractHash = String(clientManifest.contractHash || "");
+  const serverContractHash = String(realm?.contractHash || "");
+  const contractMatches = Boolean(expectedContractHash)
+    && Boolean(serverContractHash)
+    && serverContractHash === expectedContractHash;
+  if (!releaseMatches || !generationMatches || !worldMatches || !contractMatches) {
     throw new Error("A Crownlands update is still deploying. Refresh before entering the kingdom.");
+  }
+  const clientBuildId = String(clientManifest.buildId || "");
+  const serverBuildId = String(realm?.serverBuildId || "");
+  if (clientBuildId && serverBuildId && clientBuildId !== serverBuildId) {
+    console.info("Crownlands client/server builds differ but share the same gameplay contract.", {
+      clientBuildId,
+      serverBuildId,
+    });
   }
   const responseReceivedAtMs = Date.now();
   const serverTimeMs = Number(realm?.serverTimeMs);
@@ -24663,7 +24666,7 @@ function getNeighborPreloadDebugText(regionId = getActiveMapRegionId()) {
     .join(", ");
 }
 
-function updatePerformancePanel(now = performance.now()) {
+function updatePerformancePanel(_now = performance.now()) {
   if (!performancePanelVisible) return;
   const panel = ensurePerformancePanel();
   const activeRegionId = getActiveMapRegionId();
@@ -24825,7 +24828,6 @@ function renderSendConfirmPanel(source, target) {
   }
 
   const isTransfer = target.owner === "player";
-  const neutralBlockReason = getNeutralCaptureBlockReason(target, "player");
   const icon = isTransfer ? "\u265E" : "\u2694";
   const label = isTransfer ? "Move" : "Attack";
   const route = findRoute(source, target);
@@ -29269,7 +29271,7 @@ function bindCityLevelUpButtons(city) {
   });
 }
 
-function getFortifyCost(city) {
+function getFortifyCost(_city) {
   return Infinity;
 }
 
@@ -30659,7 +30661,7 @@ function setLeaderboardStatus(message) {
   if (status) status.textContent = message;
 }
 
-async function refreshLeaderboardRows({ forcePublish = false } = {}) {
+async function refreshLeaderboardRows({ forcePublish: _forcePublish = false } = {}) {
   const api = getOnlineApi();
   const list = modalBody?.querySelector("#leaderboardRows");
   const refreshBtn = modalBody?.querySelector("#leaderboardRefreshBtn");
@@ -30725,7 +30727,7 @@ async function refreshClanLeaderboardRows() {
         <div class="leaderboard-ruler">${renderClanIdentityLink({ clanId: entry.id, clanName: entry.name, clanTag: entry.tag, className: "clan-leaderboard-name", display: "name" })}<small>${formatNumber(entry.memberCount || 0)} members</small></div>
         <div class="leaderboard-power"><strong>${formatNumber(entry.totalKingPower || 0)}</strong><small>Clan Power</small></div>
       </article>`).join("") : `<div class="leaderboard-empty">No clan scores have been published yet.</div>`;
-  } catch (error) {
+  } catch (_error) {
     list.innerHTML = `<div class="leaderboard-empty">Could not load clan ranks right now.</div>`;
   }
 }

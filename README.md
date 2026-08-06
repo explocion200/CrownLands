@@ -110,13 +110,15 @@ Run the local editor from PowerShell:
 
 Then open `http://127.0.0.1:8791/editor/`. The Game Editor runs only on this computer. Use World Layout mode to arrange regional maps, Region Edit mode to place cities, strongholds, camps, and edge connections, and Economy mode to configure shop items, pickups, city production, skills, level rewards, action costs, and camp rewards.
 
-`Save to Game` writes:
+`Save to Game` writes the canonical sources first, then regenerates their browser/server compatibility files:
 
 - `assets/worlds/world_01/world-layout.json`
 - `assets/worlds/world_01/regions/*.json`
-- `assets/map-editor-data.js` for current game compatibility
-- `economy-config.js` for the Netlify/browser game
-- `functions/economy-config.json` for server-authoritative Firebase Functions
+- `assets/map-editor-data.js` and `functions/world-layout.json` from the canonical world JSON
+- `functions/economy-config.json` as the canonical economy source
+- `economy-config.js` generated for the browser
+
+`functions/release-config.json` is the canonical realm source; `release-config.js` is generated from it. Run `node tools/sync-runtime-data.js --check` to reject drift, or omit `--check` to regenerate all compatibility files.
 
 Gold and Warband Camps can override their default daily reward schedules per placed camp. Relic Camps can override their daily item reward count. Economy changes take effect on Netlify after pushing, and server-side values take effect after deploying Firebase Functions.
 
@@ -130,9 +132,9 @@ powershell -ExecutionPolicy Bypass -File .\tools\validate-world-routes.ps1
 
 ## Deploy on Netlify
 
-Upload the full folder or zip to Netlify Drop. Keep `index.html`, `styles.css`, `world-config.js`, `game.js`, `audio-manager.js`, `service-worker.js`, `manifest.webmanifest`, and the complete `assets/` and `audio/` folders together.
+Build the production client with `node tools/build-production-client.js`, then upload only `dist/` to Netlify Drop. The generated artifact contains runtime pages, optimized images, world maps, versioned thumbnails, and MP3/OGG audio. It excludes editor tools, Functions source, canonical mutable world JSON, full-resolution art masters, WAV masters, tests, screenshots, logs, and notebooks.
 
-For GitHub + Netlify, push this full folder to GitHub, then create a Netlify site from that repo. Netlify can publish the folder directly with the included `netlify.toml`.
+For GitHub + Netlify, push the repository normally. The included `netlify.toml` validates canonical data, generates the release manifest, builds `dist/`, validates its size/references, and publishes only that directory.
 
 Netlify is the only public game frontend. Firebase Hosting is configured as a redirect-only shell that sends Firebase-hosting URLs back to `https://crownland.netlify.app/`; Firebase is still used for Auth, Firestore, and Cloud Functions.
 
@@ -148,9 +150,9 @@ Crownlands can now be installed as a Progressive Web App from the Netlify site. 
 
 The service worker installs only the minimal app shell. Optional HUD, castle, objective, pickup, thumbnail, and map art is cached on first use instead of competing with login and the first map interaction. It does not cache Firebase Auth, Firestore, Cloud Functions, Netlify Functions, API calls, POST requests, or future live multiplayer server state.
 
-The audio manifest is loaded network-first. MP3, OGG, and WAV media files stream directly from the host so browser byte-range requests receive native `206 Partial Content` responses; audio media is intentionally excluded from service-worker Cache Storage.
+The audio manifest is loaded network-first. Production MP3 and OGG media stream directly from the host so browser byte-range requests receive native `206 Partial Content` responses; audio media is intentionally excluded from service-worker Cache Storage. WAV files stay in the repository as editable/validation masters but are not deployed.
 
-Netlify runs `tools/stamp-deploy-build.js` for every deployment. It stamps the deployed commit into the HTML build marker, local JavaScript/CSS URLs, and service-worker cache version. Signed-in clients detect that new build within 60 seconds, save current state, activate the new service worker, and restart on the new version. Add new static art paths to `STATIC_CACHE_URLS` only when they are safe to cache as files. Do not add server data endpoints, player data, army orders, reports, or auth URLs to the cache list.
+Netlify generates a release manifest and runs `tools/stamp-deploy-build.js` for every deployment. The manifest carries the build, realm, callable count, and client/server contract hashes. `getRealmInfo` returns the server build and contract; gameplay blocks on realm/reset/world/contract drift while a source-only build-label difference remains diagnostic. The stamp writes the deployed commit into the HTML build marker, local JavaScript/CSS URLs, and service-worker cache version. Signed-in clients detect a new client build within 60 seconds, save current state, activate the service worker, and restart. Add new static art paths to `STATIC_CACHE_URLS` only when they are safe to cache as files.
 
 Audio delivery and browser validation:
 
@@ -211,7 +213,7 @@ The equivalent individual commands are:
 ```powershell
 Set-Location .\functions
 pnpm test
-pnpm audit --prod --audit-level high
+pnpm audit --prod --audit-level moderate
 Set-Location ..
 node .\tools\validate-all-city-routes.js
 node .\tools\validate-world-routes.js

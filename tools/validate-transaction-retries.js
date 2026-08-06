@@ -29,8 +29,8 @@ assert.match(
 );
 
 const starterClaim = sourceRange(
-  "const legacyClaimStartingCity",
-  "exports.upgradeCity"
+  "async function claimFreshStartingCity",
+  "exports.claimStartingCity"
 );
 assert.match(
   starterClaim.source,

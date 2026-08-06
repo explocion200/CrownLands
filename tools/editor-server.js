@@ -4,6 +4,9 @@ const http = require("http");
 const path = require("path");
 const vm = require("vm");
 const { getCanonicalLayoutCityName } = require("./city-name-utils");
+const OPTIMIZED_ASSET_PATHS = new Map(
+  require("../assets/optimized/manifest.json").assets.map(asset => [asset.source, asset.output]),
+);
 
 const ROOT_DIR = path.resolve(__dirname, "..");
 const EDITOR_DIR = path.join(__dirname, "map-editor");
@@ -324,10 +327,10 @@ async function readEconomyConfig() {
 async function writeEconomyConfig(config) {
   const safe = sanitizeEconomyConfig(config);
   const browserBody = `window.CROWNLANDS_ECONOMY_CONFIG = ${JSON.stringify(safe, null, 2)};\n`;
-  await fsp.writeFile(`${ECONOMY_CONFIG_PATH}.tmp`, browserBody, "utf8");
-  await fsp.rename(`${ECONOMY_CONFIG_PATH}.tmp`, ECONOMY_CONFIG_PATH);
   await fsp.writeFile(`${SERVER_ECONOMY_CONFIG_PATH}.tmp`, `${JSON.stringify(safe, null, 2)}\n`, "utf8");
   await fsp.rename(`${SERVER_ECONOMY_CONFIG_PATH}.tmp`, SERVER_ECONOMY_CONFIG_PATH);
+  await fsp.writeFile(`${ECONOMY_CONFIG_PATH}.tmp`, browserBody, "utf8");
+  await fsp.rename(`${ECONOMY_CONFIG_PATH}.tmp`, ECONOMY_CONFIG_PATH);
   return safe;
 }
 
@@ -420,6 +423,11 @@ async function fileExists(filePath) {
 
 function normalizePathForJson(value) {
   return String(value || "").replace(/\\/g, "/").replace(/^\/+/, "");
+}
+
+function browserAssetPath(value) {
+  const normalized = normalizePathForJson(value);
+  return OPTIMIZED_ASSET_PATHS.get(normalized.split("?")[0]) || normalized;
 }
 
 function regionFilePath(regionId) {
@@ -767,7 +775,10 @@ function normalizeWorldBundle(payload = {}) {
     worldId: cleanId(rawLayout.worldId, "world_01"),
     worldName: cleanString(rawLayout.worldName, "Crownlands World 01"),
     schemaVersion: Math.max(1, Math.floor(number(rawLayout.schemaVersion, 1, 1, 1000))),
-    updatedAt: new Date().toISOString(),
+    updatedAt: (() => {
+      const parsed = Date.parse(String(rawLayout.updatedAt || ""));
+      return Number.isFinite(parsed) ? new Date(parsed).toISOString() : new Date().toISOString();
+    })(),
     globalSettings: {
       defaultMapWidth: cleanMapDimensions(rawLayout.globalSettings?.defaultMapWidth, rawLayout.globalSettings?.defaultMapHeight).width,
       defaultMapHeight: cleanMapDimensions(rawLayout.globalSettings?.defaultMapWidth, rawLayout.globalSettings?.defaultMapHeight).height,
@@ -951,9 +962,13 @@ function buildCompatibilityRegion(layout, region) {
 }
 
 function buildCompatibilityMapData(layout, regions) {
+  const updatedAt = (() => {
+    const parsed = Date.parse(String(layout.updatedAt || ""));
+    return Number.isFinite(parsed) ? new Date(parsed).toISOString() : "1970-01-01T00:00:00.000Z";
+  })();
   return {
-    version: Number(new Date().toISOString().replace(/\D/g, "").slice(0, 12)),
-    updatedAt: new Date().toISOString(),
+    version: Number(updatedAt.replace(/\D/g, "").slice(0, 12)),
+    updatedAt,
     worldId: layout.worldId,
     worldName: layout.worldName,
     globalSettings: layout.globalSettings || {},
@@ -998,7 +1013,7 @@ function buildCompatibilityMapData(layout, regions) {
           level: stronghold.level,
           troops: stronghold.troops,
           startTroops: stronghold.troops,
-          artSrc: stronghold.artSrc,
+          artSrc: browserAssetPath(stronghold.artSrc),
           size: stronghold.size,
         };
       }),
@@ -1011,7 +1026,7 @@ function buildCompatibilityMapData(layout, regions) {
         yNorm: camp.yNorm,
         type: camp.campType,
         campType: camp.campType,
-        artSrc: camp.artSrc,
+        artSrc: browserAssetPath(camp.artSrc),
         size: camp.size,
         notes: camp.notes,
         rewardSchedule: camp.rewardSchedule,
@@ -1262,4 +1277,11 @@ function listenWithFallback(server, port) {
   });
 }
 
-listenWithFallback(createServer(), START_PORT);
+if (require.main === module) {
+  listenWithFallback(createServer(), START_PORT);
+}
+
+module.exports = {
+  buildCompatibilityMapData,
+  readWorldData,
+};

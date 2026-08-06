@@ -5,5 +5,8 @@ node_modules/
 .env
 .env.*
 *.log
+dist/
+release-manifest.js
+functions/release-manifest.json
 .codex-remote-attachments/
 .codex_tmp_*

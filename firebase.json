@@ -8,6 +8,10 @@
       "source": "functions",
       "codebase": "default",
       "runtime": "nodejs22",
+      "predeploy": [
+        "node tools/sync-runtime-data.js --check",
+        "node tools/generate-release-manifest.js"
+      ],
       "postdeploy": [
         "node tools/validate-clan-callable-access.js"
       ]

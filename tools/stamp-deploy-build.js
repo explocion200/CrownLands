@@ -5,6 +5,10 @@ const { createDailyPatchNoteReleases, getUtcDateKey } = require("./patch-note-hi
 const { fingerprintWorldThumbnails } = require("./fingerprint-world-thumbnails");
 
 const projectRoot = path.resolve(__dirname, "..");
+const rootArgumentIndex = process.argv.indexOf("--root");
+const artifactRoot = rootArgumentIndex >= 0
+  ? path.resolve(projectRoot, process.argv[rootArgumentIndex + 1] || "")
+  : projectRoot;
 const checkOnly = process.argv.includes("--check");
 
 function getBuildId() {
@@ -26,12 +30,12 @@ function getBuildId() {
 }
 
 function readProjectFile(relativePath) {
-  return fs.readFileSync(path.join(projectRoot, relativePath), "utf8");
+  return fs.readFileSync(path.join(artifactRoot, relativePath), "utf8");
 }
 
 function writeProjectFile(relativePath, contents) {
   if (checkOnly) return;
-  fs.writeFileSync(path.join(projectRoot, relativePath), contents, "utf8");
+  fs.writeFileSync(path.join(artifactRoot, relativePath), contents, "utf8");
 }
 
 function runGit(args) {
@@ -133,7 +137,7 @@ function createPatchNotesSource(currentBuildId) {
 const buildId = getBuildId();
 if (!buildId) throw new Error("Could not determine a Crownlands deployment build ID.");
 
-fingerprintWorldThumbnails({ checkOnly });
+if (artifactRoot === projectRoot) fingerprintWorldThumbnails({ checkOnly });
 
 readProjectFile("patch-notes.js");
 const patchNotesSource = createPatchNotesSource(buildId);

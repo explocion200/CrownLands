@@ -30,8 +30,9 @@ if (/exports\.syncCityArmyTargetOwner|exports\.syncCampArmyTargetOwner/.test(ser
 }
 requireMatch(server, /rebuildClanPowerOnPlayerStats[\s\S]*previousStatsPower === nextPower[\s\S]*return/, "Clan power work does not stop before reads when power is unchanged.");
 requireMatch(server, /exports\.getRealmInfo[\s\S]*REALM_RELEASE_ID/, "The realm-info release handshake is missing.");
+requireMatch(server, /serverBuildId:[\s\S]*contractHash:[\s\S]*releaseManifestVersion:/, "The server build-contract handshake is missing.");
 requireMatch(client, /clientReleaseId: APP_RELEASE_ID[\s\S]*clientResetGeneration: RESET_GENERATION/, "Callable requests do not carry release identity.");
-requireMatch(game, /verifyRealmCompatibility[\s\S]*releaseMatches[\s\S]*generationMatches[\s\S]*worldMatches/, "Gameplay does not fail closed on release drift.");
+requireMatch(game, /verifyRealmCompatibility[\s\S]*releaseMatches[\s\S]*generationMatches[\s\S]*worldMatches[\s\S]*contractMatches/, "Gameplay does not fail closed on release or contract drift.");
 requireMatch(rules, new RegExp(serverRealm.resetGeneration.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")), "Firestore rules do not identify the active generation.");
 requireMatch(
   client,

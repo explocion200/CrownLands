@@ -1,6 +1,6 @@
 {
-  "version": 202607270001,
-  "updatedAt": "2026-07-27T00:01:00.000Z",
+  "version": 202607251952,
+  "updatedAt": "2026-07-25T19:52:40.368Z",
   "worldId": "world_01",
   "worldName": "Crownlands World 01",
   "globalSettings": {
@@ -1279,7 +1279,7 @@
           "level": 100,
           "troops": 50000000,
           "startTroops": 50000000,
-          "artSrc": "assets/crown-citadel.png?v=20260703-crown-citadel-art",
+          "artSrc": "assets/optimized/crown-citadel-384x384-d4605eb1c094.webp",
           "size": 200
         }
       ],
@@ -2118,7 +2118,7 @@
           "level": 50,
           "troops": 50000000,
           "startTroops": 50000000,
-          "artSrc": "assets/gold-stronghold.png",
+          "artSrc": "assets/optimized/stronghold-gold-384x384-6f50e7c0121f.webp",
           "size": 200
         }
       ],
@@ -2966,7 +2966,7 @@
           "level": 50,
           "troops": 50000000,
           "startTroops": 50000000,
-          "artSrc": "assets/speed-stronghold.png",
+          "artSrc": "assets/optimized/stronghold-speed-384x384-3965edb84f9c.webp",
           "size": 215
         }
       ],
@@ -3874,7 +3874,7 @@
           "level": 50,
           "troops": 50000000,
           "startTroops": 50000000,
-          "artSrc": "assets/training-stronghold.png",
+          "artSrc": "assets/optimized/stronghold-training-384x384-9b1a1f45402d.webp",
           "size": 120
         }
       ],
@@ -4626,7 +4626,7 @@
           "level": 50,
           "troops": 50000000,
           "startTroops": 50000000,
-          "artSrc": "assets/defense-stronghold.png",
+          "artSrc": "assets/optimized/stronghold-defense-384x384-d0a669653957.webp",
           "size": 215
         }
       ],
@@ -5290,7 +5290,7 @@
           "yNorm": 0.533,
           "type": "gold",
           "campType": "gold",
-          "artSrc": "assets/camps/gold.png",
+          "artSrc": "assets/optimized/camp-gold-384x384-a8c4d3199d86.webp",
           "size": 132,
           "notes": "",
           "rewardSchedule": [
@@ -6236,7 +6236,7 @@
           "yNorm": 0.484,
           "type": "items",
           "campType": "items",
-          "artSrc": "assets/camps/items.png",
+          "artSrc": "assets/optimized/camp-items-384x384-b8bc026d8a29.webp",
           "size": 132,
           "notes": "",
           "maxDailyRewards": 2
@@ -8490,7 +8490,7 @@
           "yNorm": 0.468,
           "type": "deed",
           "campType": "deed",
-          "artSrc": "assets/camps/deed.png",
+          "artSrc": "assets/optimized/camp-deed-384x384-0cd9568f52ca.webp",
           "size": 132,
           "notes": ""
         }
@@ -9047,7 +9047,7 @@
           "yNorm": 0.46,
           "type": "troops",
           "campType": "troops",
-          "artSrc": "assets/camps/troops.png",
+          "artSrc": "assets/optimized/camp-troops-384x384-7f8c0ed10be8.webp",
           "size": 132,
           "notes": "",
           "rewardSchedule": [

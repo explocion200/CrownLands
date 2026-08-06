@@ -38,7 +38,10 @@ for (const fileName of orderedGates) {
     gateCommand,
   ], {
     cwd: functionsDirectory,
-    env: process.env,
+    env: {
+      ...process.env,
+      METADATA_SERVER_DETECTION: "none",
+    },
     stdio: "inherit",
   });
 
