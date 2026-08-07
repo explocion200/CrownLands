@@ -30,7 +30,9 @@ function hashFiles(files) {
     const relativePath = path.relative(root, absolutePath).replace(/\\/g, "/");
     hash.update(relativePath);
     hash.update("\0");
-    hash.update(fs.readFileSync(absolutePath));
+    // Git may check out text as CRLF on Windows while CI uses LF. Source hashes
+    // are diagnostics, so make them stable across deployment environments.
+    hash.update(fs.readFileSync(absolutePath, "utf8").replace(/\r\n/g, "\n"));
     hash.update("\0");
   }
   return hash.digest("hex");
@@ -51,6 +53,10 @@ function validateOrWrite(filePath, expected) {
 
 function createManifest() {
   const release = JSON.parse(fs.readFileSync(path.join(root, "functions", "release-config.json"), "utf8"));
+  const contractHash = String(release.apiContractHash || "").trim().toLowerCase();
+  if (!/^[a-f0-9]{64}$/.test(contractHash)) {
+    throw new Error("functions/release-config.json must define a 64-character apiContractHash.");
+  }
   const functionsRoot = path.join(root, "functions");
   const serverFiles = listFiles(functionsRoot, absolutePath => {
     const relativePath = path.relative(functionsRoot, absolutePath).replace(/\\/g, "/");
@@ -74,11 +80,6 @@ function createManifest() {
     .sort();
   const serverSourceHash = hashFiles(serverFiles);
   const clientSourceHash = hashFiles(clientFiles);
-  const contractHash = crypto.createHash("sha256")
-    .update(serverSourceHash)
-    .update("\0")
-    .update(JSON.stringify(callableNames))
-    .digest("hex");
 
   return {
     schemaVersion: 1,

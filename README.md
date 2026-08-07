@@ -137,6 +137,8 @@ Build the production client with `node tools/build-production-client.js`, then u
 
 For GitHub + Netlify, push the repository normally. The included `netlify.toml` validates canonical data, generates the release manifest, builds `dist/`, validates its size/references, and publishes only that directory.
 
+Client/server entry compatibility uses the explicit `apiContractHash` in `functions/release-config.json`. Rotate that value only when a client-incompatible callable API change is intentionally released; ordinary implementation, validation, dependency, or line-ending changes must leave it unchanged. Full server and client source hashes remain in the generated manifest for deployment diagnostics.
+
 Netlify is the only public game frontend. Firebase Hosting is configured as a redirect-only shell that sends Firebase-hosting URLs back to `https://crownland.netlify.app/`; Firebase is still used for Auth, Firestore, and Cloud Functions.
 
 ## Progressive Web App

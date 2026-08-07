@@ -3,6 +3,7 @@
   "releaseId": "crownlands-2026-08-02-single-active-skill-preset-v1",
   "resetGeneration": "fresh-2026-07-26-server-reset",
   "worldId": "main-fresh-2026-07-26-server-reset",
+  "apiContractHash": "e6029faf76eb863612cebf975f69bbd2e5116571153a916993825a7a7f674020",
   "inactivityPolicyMode": "enforce"
 });
 })();

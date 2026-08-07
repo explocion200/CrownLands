@@ -14,11 +14,23 @@ const rules = read("firestore.rules");
 const indexes = JSON.parse(read("firestore.indexes.json"));
 const browserRealm = read("release-config.js");
 const serverRealm = JSON.parse(read("functions/release-config.json"));
+const manifestGenerator = read("tools/generate-release-manifest.js");
 
-for (const value of [serverRealm.releaseId, serverRealm.resetGeneration, serverRealm.worldId]) {
+for (const value of [serverRealm.releaseId, serverRealm.resetGeneration, serverRealm.worldId, serverRealm.apiContractHash]) {
   if (!value || !browserRealm.includes(JSON.stringify(value))) {
     throw new Error(`Browser/server realm configuration drifted for ${value || "an empty value"}.`);
   }
+}
+if (!/^[a-f0-9]{64}$/.test(serverRealm.apiContractHash)) {
+  throw new Error("The API contract hash must be an explicit 64-character lowercase hex value.");
+}
+requireMatch(
+  manifestGenerator,
+  /const contractHash = String\(release\.apiContractHash[\s\S]*contractHash,\n\s+serverSourceHash/,
+  "Release compatibility must use the explicit API contract instead of the environment-dependent source hash.",
+);
+if (/\.update\(serverSourceHash\)[\s\S]*JSON\.stringify\(callableNames\)/.test(manifestGenerator)) {
+  throw new Error("Build implementation files must not silently redefine the public API contract.");
 }
 
 requireMatch(server, /STARTER_REGION_IDS[\s\S]*type[\s\S]*starter/, "Starter islands are not derived from authoritative map metadata.");
