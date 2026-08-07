@@ -2770,6 +2770,9 @@ let onlinePresenceTimer = 0;
 let onlinePresenceInFlight = false;
 let onlinePresenceRequestGeneration = 0;
 let onlineSessionReplaced = false;
+const GOOGLE_SIGN_IN_POPUP_GRACE_MS = 12_000;
+let googleSignInFallbackTimer = 0;
+let googleSignInRedirectReady = false;
 let gameServerMembership = null;
 let gameServerMembershipUnsubscribe = null;
 let gameServerHeartbeatIntervalId = 0;
@@ -13211,6 +13214,9 @@ function updateOnlineUi() {
   }
 
   if (signedIn) {
+    if (googleSignInFallbackTimer) window.clearTimeout(googleSignInFallbackTimer);
+    googleSignInFallbackTimer = 0;
+    googleSignInRedirectReady = false;
     const waitingForRealm = isWaitingForGameServerSlot();
     const realmIsActive = hasActiveGameServerSlot();
     setRealmMenuState(true, waitingForRealm);
@@ -13228,7 +13234,10 @@ function updateOnlineUi() {
     } else {
       onlineStatusDetail.textContent = `${GAME_SERVER_NAME} is selected. Press Enter Kingdom.`;
     }
-    if (googleSignInBtn) googleSignInBtn.hidden = true;
+    if (googleSignInBtn) {
+      googleSignInBtn.hidden = true;
+      googleSignInBtn.textContent = "Sign in with Google";
+    }
     if (enterKingdomBtn) {
       enterKingdomBtn.hidden = waitingForRealm;
       enterKingdomBtn.disabled = waitingForRealm || gameServerJoinInFlight || gameServerLaunchInFlight;
@@ -13246,9 +13255,51 @@ function updateOnlineUi() {
   if (googleSignInBtn) {
     googleSignInBtn.hidden = false;
     googleSignInBtn.disabled = false;
+    googleSignInBtn.textContent = googleSignInRedirectReady
+      ? "Continue sign-in in this tab"
+      : "Sign in with Google";
   }
   if (enterKingdomBtn) enterKingdomBtn.hidden = true;
   if (googleSignOutBtn) googleSignOutBtn.hidden = true;
+}
+
+function clearGoogleSignInFallbackTimer() {
+  if (googleSignInFallbackTimer) window.clearTimeout(googleSignInFallbackTimer);
+  googleSignInFallbackTimer = 0;
+}
+
+function getGoogleSignInErrorDetail(error) {
+  const code = String(error?.code || "");
+  if (code === "auth/popup-closed-by-user") {
+    return "The Google window was closed before sign-in finished. Try again or continue in this tab.";
+  }
+  if (code === "auth/popup-blocked" || code === "auth/operation-not-supported-in-this-environment") {
+    return "This browser blocked the Google window. Continue sign-in in this tab.";
+  }
+  if (code === "auth/unauthorized-domain") {
+    return "Google sign-in is not approved for this game address. Open the official Crownlands site.";
+  }
+  if (code === "auth/network-request-failed") {
+    return "Google sign-in could not reach the network. Check your connection and try again.";
+  }
+  if (code === "auth/web-storage-unsupported") {
+    return "This browser is blocking the storage Google needs to sign in. Allow site storage and try again.";
+  }
+  return "Google sign-in did not finish. Try again or continue in this tab.";
+}
+
+function armGoogleSignInRedirectFallback(api) {
+  clearGoogleSignInFallbackTimer();
+  googleSignInFallbackTimer = window.setTimeout(() => {
+    googleSignInFallbackTimer = 0;
+    if (api?.isSignedIn?.() || !googleSignInBtn || !api?.signInWithGoogleRedirect) return;
+    googleSignInRedirectReady = true;
+    googleSignInBtn.disabled = false;
+    googleSignInBtn.textContent = "Continue sign-in in this tab";
+    if (onlineStatusDetail) {
+      onlineStatusDetail.textContent = "No Google window? Continue sign-in in this tab.";
+    }
+  }, GOOGLE_SIGN_IN_POPUP_GRACE_MS);
 }
 
 async function handleGoogleSignIn() {
@@ -13258,10 +13309,27 @@ async function handleGoogleSignIn() {
     return;
   }
 
+  const useRedirect = googleSignInRedirectReady && Boolean(api.signInWithGoogleRedirect);
   try {
     onlineSessionReplaced = false;
-    if (googleSignInBtn) googleSignInBtn.disabled = true;
-    await api.signInWithGoogle();
+    googleSignInRedirectReady = false;
+    if (googleSignInBtn) {
+      googleSignInBtn.disabled = true;
+      googleSignInBtn.textContent = useRedirect ? "Opening Google sign-in..." : "Waiting for Google...";
+    }
+    if (onlineStatusDetail) {
+      onlineStatusDetail.textContent = useRedirect
+        ? "Opening Google sign-in in this tab..."
+        : "Complete sign-in in the Google window.";
+    }
+    if (useRedirect) {
+      clearGoogleSignInFallbackTimer();
+      await api.signInWithGoogleRedirect();
+    } else {
+      armGoogleSignInRedirectFallback(api);
+      await api.signInWithGoogle();
+    }
+    clearGoogleSignInFallbackTimer();
     onlineLastError = "";
     updateOnlineUi();
     if (state) {
@@ -13270,12 +13338,23 @@ async function handleGoogleSignIn() {
     }
     showToast(`Google connected. ${GAME_SERVER_NAME} is ready to join.`);
   } catch (error) {
-    onlineLastError = error?.message || String(error);
+    clearGoogleSignInFallbackTimer();
+    onlineLastError = getGoogleSignInErrorDetail(error);
+    const errorCode = String(error?.code || "");
+    googleSignInRedirectReady = Boolean(api.signInWithGoogleRedirect)
+      && errorCode !== "auth/unauthorized-domain"
+      && errorCode !== "auth/network-request-failed";
     updateOnlineUi();
-    showToast("Google sign-in failed.");
+    if (onlineStatusDetail) onlineStatusDetail.textContent = onlineLastError;
+    showToast(onlineLastError);
     console.warn("Google sign-in failed", error);
   } finally {
-    if (googleSignInBtn && !api.isSignedIn?.()) googleSignInBtn.disabled = false;
+    if (googleSignInBtn && !api.isSignedIn?.()) {
+      googleSignInBtn.disabled = false;
+      googleSignInBtn.textContent = googleSignInRedirectReady
+        ? "Continue sign-in in this tab"
+        : "Sign in with Google";
+    }
   }
 }
 

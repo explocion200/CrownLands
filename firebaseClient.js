@@ -29,6 +29,8 @@
     provider: null,
     modules: null,
     initPromise: null,
+    redirectResultPromise: null,
+    redirectError: null,
     pushPromise: null,
     serviceWorkerRegistration: null,
     notificationToken: "",
@@ -282,6 +284,30 @@
           }
           dispatch("auth", { user: client.user });
         });
+
+        if (client.modules.auth.getRedirectResult) {
+          client.redirectResultPromise = client.modules.auth.getRedirectResult(client.auth)
+            .then(result => {
+              if (!result?.user) return null;
+              client.user = serializeUser(result.user);
+              client.redirectError = null;
+              dispatch("auth", { user: client.user, source: "google-redirect" });
+              window.setTimeout(() => {
+                rememberLogin("google-redirect").catch(error => {
+                  console.warn("Could not finish redirected login session", error);
+                });
+              }, 0);
+              return client.user;
+            })
+            .catch(error => {
+              client.redirectError = error;
+              dispatch("auth-error", {
+                code: String(error?.code || ""),
+                message: error?.message || String(error),
+              });
+              return null;
+            });
+        }
 
         client.ready = true;
         dispatch("online-ready", { configured: true });
@@ -1131,11 +1157,25 @@
       return client.user;
     } catch (error) {
       if (shouldUseRedirectFallback(error) && client.modules.auth.signInWithRedirect) {
-        await client.modules.auth.signInWithRedirect(client.auth, client.provider);
+        await signInWithGoogleRedirect();
         return client.user;
       }
       throw error;
     }
+  }
+
+  async function signInWithGoogleRedirect() {
+    await init();
+    if (!client.configured) {
+      throw new Error("Firebase config is still using placeholder values.");
+    }
+    if (client.error) throw client.error;
+    if (!client.modules.auth.signInWithRedirect) {
+      throw new Error("Redirect sign-in is not supported in this browser.");
+    }
+    client.redirectError = null;
+    await client.modules.auth.signInWithRedirect(client.auth, client.provider);
+    return null;
   }
 
   async function signOut() {
@@ -2252,6 +2292,7 @@
   window.CrownlandsOnline = {
     init,
     signInWithGoogle,
+    signInWithGoogleRedirect,
     signOut,
     registerGameInstallation,
     joinGameServer,
@@ -2371,7 +2412,7 @@
     isReady: () => client.ready,
     isSignedIn: () => Boolean(client.user?.uid),
     getUser: () => client.user,
-    getLastError: () => client.error,
+    getLastError: () => client.redirectError || client.error,
   };
 
   init();

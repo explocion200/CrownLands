@@ -21,7 +21,7 @@ function optimizedAsset(id) {
   return output;
 }
 
-const BUILD_ID = "20260805-linear-walls-v1";
+const BUILD_ID = "20260807-login-resilience-v1";
 const HUB_ART_SRC = optimizedAsset("inner-castle-hub");
 const BUILDINGS = [
   {

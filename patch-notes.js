@@ -1,8 +1,17 @@
 (function () {
   window.CROWNLANDS_PATCH_NOTES = Object.freeze({
-    buildId: "20260805-linear-walls-v1",
-    generatedAt: "2026-08-05T12:00:00.000Z",
+    buildId: "20260807-login-resilience-v1",
+    generatedAt: "2026-08-07T18:15:00.000Z",
     releases: Object.freeze([
+      Object.freeze({
+        buildId: "20260807-login-resilience-v1",
+        dateKey: "2026-08-07",
+        publishedAt: "2026-08-07T18:15:00.000Z",
+        notes: Object.freeze([
+          "Google login now recovers when a browser hides or blocks the sign-in window, with a visible option to continue securely in the current tab.",
+          "Redirected Google sessions are now completed explicitly after returning to Crownlands, and login errors explain the recovery needed instead of leaving the button disabled.",
+        ]),
+      }),
       Object.freeze({
         buildId: "20260805-linear-walls-v1",
         dateKey: "2026-08-05",
