@@ -16,7 +16,8 @@ function assert(condition, message) {
 function extractFunction(source, name) {
   const start = source.indexOf(`function ${name}(`);
   assert(start >= 0, `Missing ${name}().`);
-  const bodyStart = source.indexOf("{", start);
+  const signatureEnd = source.indexOf(")", start);
+  const bodyStart = source.indexOf("{", signatureEnd);
   let depth = 0;
   for (let index = bodyStart; index < source.length; index += 1) {
     if (source[index] === "{") depth += 1;
@@ -90,6 +91,63 @@ assert(
   !isWorldMapImageRequest(new URL("https://crownlands.test/game/assets/optimized/hud-map.webp")),
   "Ordinary interface artwork must not be classified as a full world map."
 );
+
+const campArtByType = new Map();
+for (const map of layout.maps || []) {
+  for (const camp of map.camps || []) {
+    const campType = String(camp.campType || camp.type || "gold").toLowerCase();
+    const artSrc = String(camp.artSrc || "");
+    assert(
+      /^assets\/optimized\/camp-[\w-]+-[0-9a-f]{12}\.webp$/.test(artSrc),
+      `${camp.id} should use content-hashed optimized camp artwork.`
+    );
+    assert(fs.existsSync(path.join(root, artSrc)), `${camp.id} camp artwork is missing.`);
+    campArtByType.set(campType, artSrc);
+  }
+}
+assert(campArtByType.size === 4, "All four reward-camp artwork types must be present in the world layout.");
+
+const staleCampBases = new Map([...campArtByType].map(([campType, artSrc]) => {
+  const id = `stale_${campType}_camp`;
+  return [id, { id, regionId: "region_6", campType, artSrc }];
+}));
+const normalizeOnlineCampState = vm.runInNewContext(
+  `(${extractFunction(game, "normalizeOnlineCampState")})`,
+  {
+    WORLD_CAMPS_BY_ID: staleCampBases,
+    getRewardCampConfig(camp) {
+      return {
+        kind: `${camp.campType}Camp`,
+        type: camp.campType,
+        rewardType: camp.campType,
+        holdSeconds: 600,
+        baseDefenders: 10000,
+        baseReward: 20000,
+        defenseLevel: 30,
+        rewardSchedule: [],
+        maxDailyRewards: 0,
+      };
+    },
+    getCampConfigForType(campType) {
+      return { artSrc: campArtByType.get(campType) };
+    },
+    normalizeRegionId: value => String(value || ""),
+    getRegionIdFromOnlineIslandId: value => String(value || "").replace(/^crownlands-/, ""),
+    normalizeTimestampMs: value => Math.max(0, Number(value) || 0),
+  }
+);
+for (const [campType, artSrc] of campArtByType) {
+  const normalizedCamp = normalizeOnlineCampState({
+    id: `stale_${campType}_camp`,
+    regionId: "region_6",
+    campType,
+    artSrc: `assets/camps/${campType}.png`,
+  });
+  assert(
+    normalizedCamp.artSrc === artSrc,
+    `A stale ${campType} camp snapshot must not override optimized world-layout artwork.`
+  );
+}
 assert(
   game.includes('new URL("./service-worker.js", document.baseURI)')
     && firebaseClient.includes('new URL("./service-worker.js", document.baseURI)'),

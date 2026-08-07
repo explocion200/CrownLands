@@ -161,7 +161,7 @@
     const series = levels.map(current => ({ current, snapshot: calculator.getCitySnapshot(getCityControlValues(current)) }));
     drawLineChart($("goldLevelChart"), series.map(row => ({ level: row.current, value: row.snapshot.goldPerHour })), selectedChartLevel, { title: "Gold production by city level", unit: "/h", logarithmic: true });
     drawLineChart($("troopLevelChart"), series.map(row => ({ level: row.current, value: row.snapshot.troopsPerHour })), selectedChartLevel, { title: "Troop production by city level", unit: "/h" });
-    drawLineChart($("wallLevelChart"), series.map(row => ({ level: row.current, value: row.snapshot.fullWallPower })), selectedChartLevel, { title: "Full wall power by city level", logarithmic: true });
+    drawLineChart($("wallLevelChart"), series.map(row => ({ level: row.current, value: row.snapshot.fullWallPower })), selectedChartLevel, { title: "Full wall power by city level" });
     drawLineChart($("repairLevelChart"), series.map(row => ({ level: row.current, value: row.snapshot.repairMinutes })), selectedChartLevel, { title: "Full-breach wall repair minutes by city level", unit: "m" });
 
     const milestones = [...new Set([1, 25, 50, 75, 100, 150, level])].sort((a, b) => a - b);
@@ -206,7 +206,7 @@
   const battlePresets = {
     wall: { attackers: 300000, sword: 0, cityLevel: 50, defenders: 1000000, reinforcements: 0, reinforcementBonus: 0, stoneworks: 25, objective: 0, wall: 100 },
     garrison: { attackers: 1000000, sword: 0, cityLevel: 50, defenders: 1000000, reinforcements: 0, reinforcementBonus: 0, stoneworks: 0, objective: 0, wall: 100 },
-    capture: { attackers: 1300000, sword: 0, cityLevel: 50, defenders: 1000000, reinforcements: 0, reinforcementBonus: 0, stoneworks: 0, objective: 0, wall: 100 },
+    capture: { attackers: 2800000, sword: 0, cityLevel: 50, defenders: 1000000, reinforcements: 0, reinforcementBonus: 0, stoneworks: 0, objective: 0, wall: 100 },
     damaged: { attackers: 1000000, sword: 30, cityLevel: 100, defenders: 1000000, reinforcements: 0, reinforcementBonus: 0, stoneworks: 25, objective: 0, wall: 0 },
   };
 

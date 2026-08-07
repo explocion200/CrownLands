@@ -1,13 +1,15 @@
 (function () {
   window.CROWNLANDS_PATCH_NOTES = Object.freeze({
-    buildId: "20260805-season-balance-v1",
+    buildId: "20260805-linear-walls-v1",
     generatedAt: "2026-08-05T12:00:00.000Z",
     releases: Object.freeze([
       Object.freeze({
-        buildId: "20260805-season-balance-v1",
+        buildId: "20260805-linear-walls-v1",
         dateKey: "2026-08-05",
         publishedAt: "2026-08-05T12:00:00.000Z",
         notes: Object.freeze([
+          "Base troop attack power is now 1.25, with maximum Swordmastery raising it to 2 power per troop.",
+          "City walls now rise in a steady straight line at every level, reaching about 5 million power at Level 100 with maximum Stoneworks.",
           "City and objective battles now resolve through one physical wall before remaining attack power reaches the garrison.",
           "Wall strength now follows one smooth formula at every level, while repairs take 15 minutes plus 0.3 minutes per city level with no gameplay cap.",
           "Damaged-wall timers now follow the city through captures and ownership changes instead of resetting for the new owner.",

@@ -857,7 +857,7 @@ const SCOUT_NEARBY_COST = economyNumber("playerCosts.nearbyScoutGold", 75000);
 const SCOUT_NEARBY_RADIUS = 420;
 const REGROUP_COST = economyNumber("playerCosts.regroupGold", 150000);
 const REGROUP_RADIUS = 680;
-const BASE_TROOP_ATTACK_POWER = 2;
+const BASE_TROOP_ATTACK_POWER = 1.25;
 const ARMY_TRAVEL_SECONDS_PER_MAP_UNIT = 0.13;
 const ARMY_TRAVEL_MIN_SECONDS = 30;
 const ARMY_TRAVEL_SCOUT_MIN_SECONDS = 10;
@@ -937,17 +937,14 @@ const CITY_LEVEL_STATS = {
   victoryPointsExponentScale: 2,
   defensePercentPerLevel: economyNumber("cityEconomy.defensePercentPerLevel", 2),
   cityWallsBase: economyNumber("cityEconomy.wallDefenseBase", 200),
-  cityWallsExponent: economyNumber("cityEconomy.wallDefenseExponent", 3),
-  cityWallsExponentScale: economyNumber("cityEconomy.wallDefenseScale", 3),
-  cityWallsTransitionLevel: Math.max(1, economyNumber("cityEconomy.wallDefenseTransitionLevel", 140)),
-  cityWallsTransitionPower: Math.max(1, economyNumber("cityEconomy.wallDefenseTransitionPower", 8)),
+  cityWallsPerLevel: economyNumber("cityEconomy.wallDefensePerLevel", 28858),
   troopProductionPerVictoryPoint: economyNumber("cityEconomy.troopsPerVictoryPoint", 3),
   goldProductionPerMillionLordsVp: MILLION_LORDS_PASSIVE_GOLD_PER_CITY_VP,
 };
 const KING_POWER_ARMY_TROOP_VALUE = 2;
 const KING_POWER_REPLACEMENT_HOURS = 12;
 const KING_POWER_DEFENSIVE_ADVANTAGE_WEIGHT = 0.25;
-const KING_POWER_AUTHORITY_VERSION = 8;
+const KING_POWER_AUTHORITY_VERSION = 10;
 const SKILL_RESET_COST = economyNumber("playerCosts.skillResetGold", 750_000);
 
 const SKILL_CONFIG = {
@@ -8196,20 +8193,9 @@ function formatCapturedCityLevelDrop(levelDrop) {
 
 function getBaseCityWalls(level) {
   const normalizedLevel = clampCityLevel(level);
-  const rawGrowth = (
-    Math.pow(normalizedLevel, CITY_LEVEL_STATS.cityWallsExponent) - 1
-  ) * CITY_LEVEL_STATS.cityWallsExponentScale;
-  const smoothingExponent = Math.max(0, CITY_LEVEL_STATS.cityWallsExponent - 1)
-    / CITY_LEVEL_STATS.cityWallsTransitionPower;
-  const smoothingDivisor = Math.pow(
-    1 + Math.pow(
-      normalizedLevel / CITY_LEVEL_STATS.cityWallsTransitionLevel,
-      CITY_LEVEL_STATS.cityWallsTransitionPower
-    ),
-    smoothingExponent
-  );
-  const growth = smoothingDivisor > 0 ? rawGrowth / smoothingDivisor : rawGrowth;
-  const walls = CITY_LEVEL_STATS.cityWallsBase + Math.max(0, growth);
+  const levelOffset = normalizedLevel - 1;
+  const walls = CITY_LEVEL_STATS.cityWallsBase
+    + CITY_LEVEL_STATS.cityWallsPerLevel * levelOffset;
   if (!Number.isFinite(walls)) return Number.MAX_SAFE_INTEGER;
   return Math.min(Number.MAX_SAFE_INTEGER, Math.max(0, Math.floor(walls)));
 }
@@ -14311,6 +14297,7 @@ function normalizeOnlineCampState(raw = {}) {
   const base = WORLD_CAMPS_BY_ID.get(id) || {};
   const config = getRewardCampConfig({ ...raw, ...base, campType });
   if (!config) return null;
+  const artSrc = String(base.artSrc || getCampConfigForType(campType).artSrc || "").trim();
   return {
     ...raw,
     id,
@@ -14333,6 +14320,7 @@ function normalizeOnlineCampState(raw = {}) {
     defenseLevel: Math.max(1, Math.floor(Number(raw.defenseLevel) || config.defenseLevel)),
     rewardSchedule: config.rewardSchedule,
     maxDailyRewards: config.maxDailyRewards,
+    artSrc,
     activeArmyIds: Array.isArray(raw.activeArmyIds) ? raw.activeArmyIds.map(String) : [],
     state: ["neutral", "held", "contested"].includes(raw.state) ? raw.state : raw.holderUid ? "held" : "neutral",
   };
@@ -31695,7 +31683,8 @@ function showHelpModal() {
       <li>City level creates victory points for combat value, while passive gold follows the Million Lords city production curve.</li>
       <li>City combat resolves in two phases: attack power damages the city wall first, then only power left after the breach fights the garrison. Capturing requires both breaching the wall and exceeding the garrison defense.</li>
       <li>City defense adds ${formatNumber(CITY_LEVEL_STATS.defensePercentPerLevel)}% soldier defense per city level. Stoneworks strengthens the holding's one physical wall; clan reinforcements add troops and their applicable troop-defense bonuses, but never duplicate the wall.</li>
-      <li>Every city level uses the same smooth wall formula. A full breach takes round(${formatNumber(SIEGE_REPAIR_BASE_MINUTES)} + city level × ${formatNumber(SIEGE_REPAIR_MINUTES_PER_LEVEL)}) minutes to repair; meaningful damage of at least ${formatNumber(SIEGE_MEANINGFUL_WALL_DAMAGE_PERCENT)}% adds its exact share of that window.</li>
+      <li>Each troop starts at ${formatNumber(BASE_TROOP_ATTACK_POWER)} attack power; maximum Swordmastery raises that to ${formatNumber(BASE_TROOP_ATTACK_POWER * 1.6)}. The value is locked when the army launches.</li>
+      <li>Every city level uses the same linear wall formula: ${formatNumber(CITY_LEVEL_STATS.cityWallsBase)} + ${formatNumber(CITY_LEVEL_STATS.cityWallsPerLevel)} × (level − 1). Each level adds the same base wall power. A full breach takes round(${formatNumber(SIEGE_REPAIR_BASE_MINUTES)} + city level × ${formatNumber(SIEGE_REPAIR_MINUTES_PER_LEVEL)}) minutes to repair; meaningful damage of at least ${formatNumber(SIEGE_MEANINGFUL_WALL_DAMAGE_PERCENT)}% adds its exact share of that window.</li>
       <li>Later meaningful hits preserve elapsed repair progress and add only their own damage time. Combat captures and every player or neutral handoff keep the existing integrity and deadline; a breached wall contributes zero defense until it repairs.</li>
       <li>When an intact wall holds, defender troop losses are capped at ${formatNumber(SIEGE_INTACT_WALL_DEFENDER_LOSS_CAP_PERCENT)}%. Protected raids never persist wall damage.</li>
         <li>Troop production is VP x ${formatNumber(CITY_LEVEL_STATS.troopProductionPerVictoryPoint)}, improved by Royal Granaries. Passive gold uses ML city production VP x ${formatNumber(MILLION_LORDS_PASSIVE_GOLD_PER_CITY_VP)}, improved by Tax Stewardship and stronghold bonuses.</li>

@@ -62,13 +62,11 @@ function getTroopsPerHour(level) {
 
 function getBaseWall(level) {
   const economy = config.cityEconomy;
-  const rawGrowth = (Math.pow(level, economy.wallDefenseExponent) - 1) * economy.wallDefenseScale;
-  const smoothingExponent = Math.max(0, economy.wallDefenseExponent - 1) / economy.wallDefenseTransitionPower;
-  const smoothingDivisor = Math.pow(
-    1 + Math.pow(level / economy.wallDefenseTransitionLevel, economy.wallDefenseTransitionPower),
-    smoothingExponent
+  const levelOffset = Math.max(1, Math.floor(Number(level) || 1)) - 1;
+  return Math.floor(
+    economy.wallDefenseBase
+      + economy.wallDefensePerLevel * levelOffset
   );
-  return Math.floor(economy.wallDefenseBase + rawGrowth / smoothingDivisor);
 }
 
 function getRepairMinutes(level) {

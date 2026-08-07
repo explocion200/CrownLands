@@ -48,7 +48,7 @@ assert.deepEqual(economy.siegeCombat, {
 });
 
 const context = {
-  BASE_TROOP_ATTACK_POWER: 2,
+  BASE_TROOP_ATTACK_POWER: 1.25,
   SIEGE_COMBAT_VERSION: 1,
   FORTIFICATION_STATE_VERSION: 1,
   SIEGE_REPAIR_BASE_MINUTES: 15,
@@ -230,25 +230,26 @@ function siegeResult({
   });
 }
 
-const level50 = siegeResult({ level: 50, attackPower: 3_200_000, wall: 656_551, garrison: 2_000_000 });
-assert.equal(level50.success, true, "One million max-Sword troops should capture the Level 50 benchmark.");
-assert.equal(level50.survivors, 169_827, "Siege survivors must consume the complete resolved defense power.");
+const level50 = siegeResult({ level: 50, attackPower: 2_000_000, wall: 2_474_923, garrison: 2_000_000 });
+assert.equal(level50.success, false, "One million max-Sword troops should not capture the Level 50 benchmark.");
+assert.equal(level50.fortificationBreached, false);
+assert.equal(level50.fortification.penetratingAttackPower, 0);
+assert.equal(level50.defenderLosses, 80_810);
 
-const level75 = siegeResult({ level: 75, attackPower: 3_200_000, wall: 2_211_447, garrison: 2_500_000 });
-assert.equal(level75.success, false, "The Level 75 benchmark garrison should hold after its wall breaches.");
-assert.equal(level75.fortificationBreached, true);
-assert.equal(level75.fortification.penetratingAttackPower, 988_553);
-assert.equal(level75.defenderLosses, 324_245);
+const level75 = siegeResult({ level: 75, attackPower: 2_000_000, wall: 3_737_461, garrison: 2_500_000 });
+assert.equal(level75.success, false, "The Level 75 benchmark wall should hold.");
+assert.equal(level75.fortificationBreached, false);
+assert.equal(level75.defenderLosses, 53_512);
 
-const level100 = siegeResult({ level: 100, attackPower: 3_200_000, wall: 5_164_993, garrison: 3_000_000 });
+const level100 = siegeResult({ level: 100, attackPower: 2_000_000, wall: 4_999_998, garrison: 3_000_000 });
 assert.equal(level100.success, false, "Max Stoneworks on a Level 100 city should stop the benchmark army at the wall.");
 assert.equal(level100.fortificationBreached, false);
-assert.equal(level100.defenderLosses, 61_955);
+assert.equal(level100.defenderLosses, 40_000);
 assert.ok(level100.defenderLosses <= 100_000, "An intact wall allowed more than 10% defender losses.");
-assert.equal(level100.fortification.endingIntegrityBps, 3_804);
+assert.equal(level100.fortification.endingIntegrityBps, 5_999);
 assert.equal(level100.fortification.repairWindowMinutes, 45);
-assert.equal(level100.fortification.repairAddedMs, 1_672_800);
-assert.equal(level100.fortification.repairAtMs, 3_472_800);
+assert.equal(level100.fortification.repairAddedMs, 1_080_000);
+assert.equal(level100.fortification.repairAtMs, 2_880_000);
 
 const exactThreshold = siegeResult({ attackPower: 50, troops: 50, defenders: 100, wall: 1_000, garrison: 200 });
 assert.equal(exactThreshold.fortification.meaningfulWallDamage, true, "Exactly 5% wall damage must reset repair.");
@@ -328,7 +329,7 @@ assert.ok(client.includes("Walls breached — garrison likely holds"));
 assert.match(rules, /two phases[\s\S]*?full-breach repair window[\s\S]*?same damage share[\s\S]*?neutral claims[\s\S]*?Protected raids do not persist wall damage/);
 assert.match(guide, /Defense happens in two layers[\s\S]*?defender troop losses are capped at 10%/);
 assert.match(guide, /full-breach repair window[\s\S]*?exact damage share[\s\S]*?neutral handoff/);
-assert.match(readme, /two-phase siege model[\s\S]*?same smooth wall curve[\s\S]*?full-breach repair window[\s\S]*?later meaningful hits preserve elapsed progress/);
+assert.match(readme, /two-phase siege model[\s\S]*?same linear wall curve[\s\S]*?full-breach repair window[\s\S]*?later meaningful hits preserve elapsed progress/);
 assert.match(editor, /Universal walls and damage-based repair[\s\S]*?added time = full window[\s\S]*?siegeCombat\.repairBaseMinutes[\s\S]*?siegeCombat\.repairMinutesPerLevel[\s\S]*?data-economy-preview="fortifications"/);
 assert.match(editorServer, /siegeCombat: Object\.fromEntries\(Object\.keys\(fallback\.siegeCombat/);
 assert.ok(packageJson.scripts.test.includes("validate-siege-combat.js"), "Siege combat validation is not in the Functions test suite.");

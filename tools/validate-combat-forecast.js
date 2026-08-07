@@ -67,7 +67,7 @@ if (!previewSource.includes("scoutReport?.totalDefense")
 }
 
 const sandbox = {
-  BASE_TROOP_ATTACK_POWER: 2,
+  BASE_TROOP_ATTACK_POWER: 1.25,
   SIEGE_COMBAT_VERSION: 1,
   SIEGE_MEANINGFUL_WALL_DAMAGE_PERCENT: 5,
   SIEGE_INTACT_WALL_DEFENDER_LOSS_CAP_PERCENT: 10,
@@ -77,7 +77,7 @@ const sandbox = {
     return value && value.mode && value.mode !== "normal" ? value : null;
   },
   getAttackPower(troops) {
-    return troops * 2;
+    return troops * 1.25;
   },
   getBattleDefensePower(target) {
     return Number(target?.localDefense) || 0;
@@ -104,6 +104,48 @@ vm.runInContext(
   `${advantageSource}; ${minimumSource}; this.getCombatAdvantageTier = getCombatAdvantageTier; this.getMinimumTroopsForPower = getMinimumTroopsForPower;`,
   sandbox
 );
+
+const attackSnapshotSandbox = {
+  ATTACK_COMBAT_SNAPSHOT_VERSION: 1,
+  BASE_TROOP_ATTACK_POWER: 1.25,
+  Math,
+  Number,
+  safeNumber(value, fallback = 0) {
+    return Number.isFinite(Number(value)) ? Number(value) : fallback;
+  },
+  getSkillLevel() {
+    return 30;
+  },
+  getSkillPercent() {
+    return 60;
+  },
+  skillMultiplier() {
+    return 1.6;
+  },
+};
+vm.createContext(attackSnapshotSandbox);
+vm.runInContext(
+  `${readFunction(serverSource, "normalizeAttackCombatSnapshot")};`
+    + `${readFunction(serverSource, "createAttackCombatSnapshot")};`
+    + `${readFunction(serverSource, "getSnapshottedAttackPower")};`
+    + "this.createAttackCombatSnapshot = createAttackCombatSnapshot; this.getSnapshottedAttackPower = getSnapshottedAttackPower;",
+  attackSnapshotSandbox
+);
+const newAttackSnapshot = attackSnapshotSandbox.createAttackCombatSnapshot(100, {});
+if (newAttackSnapshot.attackPowerPerTroop !== 2 || newAttackSnapshot.launchAttackPower !== 200) {
+  throw new Error("New max-Sword armies are not snapshotted at exactly 2 power per troop.");
+}
+const legacyAttackPower = attackSnapshotSandbox.getSnapshottedAttackPower({
+  version: 1,
+  attackPowerPerTroop: 3.2,
+  swordmasteryLevel: 30,
+  swordmasteryPercent: 60,
+  launchTroops: 100,
+  launchAttackPower: 320,
+}, 100);
+if (legacyAttackPower !== 320) {
+  throw new Error("An in-flight army lost its pre-rebalance launch power snapshot.");
+}
 [
   [0.99, "defeat_expected"],
   [1, "defeat_expected"],

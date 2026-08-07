@@ -120,7 +120,7 @@ const CITY_UPGRADE_EARLY_END_HOURS = economyNumber("cityEconomy.upgradeEarlyEndH
 const CITY_UPGRADE_MID_END_HOURS = economyNumber("cityEconomy.upgradeMidEndHours", 36);
 const CITY_UPGRADE_END_LEVEL_150_HOURS = economyNumber("cityEconomy.upgradeLevel150Hours", 240);
 const CITY_UPGRADE_MAX_TARGET_HOURS = economyNumber("cityEconomy.upgradeMaximumHours", 720);
-const BASE_TROOP_ATTACK_POWER = 2;
+const BASE_TROOP_ATTACK_POWER = 1.25;
 const DEFAULT_MARCH_PERCENT = 0.5;
 const DAILY_NEUTRAL_CAPTURE_LIMIT = 30;
 const NEUTRAL_CITY_COUNT_LIMIT = 30;
@@ -354,7 +354,7 @@ const CLAN_SHIELD_CHARGES = new Set(["none", "castle", "lion", "eagle", "crown",
 const CLAN_SHIELD_CHARGE_LAYOUTS = new Set(["center", "paired", "quartered", "chief"]);
 const CLAN_SHIELD_TRIMS = new Set(["plain", "double", "riveted"]);
 const CLAN_SHIELD_FINISHES = new Set(["polished", "weathered", "battleworn"]);
-const GLOBAL_PLAYER_STATS_VERSION = 8;
+const GLOBAL_PLAYER_STATS_VERSION = 10;
 const PLAYER_IDENTITY_SYNC_VERSION = 1;
 const MAIN_CITY_ASSIGNMENT_VERSION = 2;
 const ECONOMY_CITY_CHECKPOINT_MS = 5 * 60 * 1000;
@@ -556,10 +556,7 @@ const CITY_LEVEL_STATS = {
   victoryPointsExponentScale: 2,
   defensePercentPerLevel: economyNumber("cityEconomy.defensePercentPerLevel", 2),
   cityWallsBase: economyNumber("cityEconomy.wallDefenseBase", 200),
-  cityWallsExponent: economyNumber("cityEconomy.wallDefenseExponent", 3),
-  cityWallsExponentScale: economyNumber("cityEconomy.wallDefenseScale", 3),
-  cityWallsTransitionLevel: Math.max(1, economyNumber("cityEconomy.wallDefenseTransitionLevel", 140)),
-  cityWallsTransitionPower: Math.max(1, economyNumber("cityEconomy.wallDefenseTransitionPower", 8)),
+  cityWallsPerLevel: economyNumber("cityEconomy.wallDefensePerLevel", 28858),
   troopProductionPerVictoryPoint: economyNumber("cityEconomy.troopsPerVictoryPoint", 3),
 };
 const SKILL_CONFIG = {
@@ -3127,20 +3124,9 @@ function getCityProductionStats(city = {}, profile = {}, bonuses = {}, options =
 
 function getBaseCityWalls(level) {
   const normalizedLevel = clampCityLevel(level);
-  const rawGrowth = (
-    Math.pow(normalizedLevel, CITY_LEVEL_STATS.cityWallsExponent) - 1
-  ) * CITY_LEVEL_STATS.cityWallsExponentScale;
-  const smoothingExponent = Math.max(0, CITY_LEVEL_STATS.cityWallsExponent - 1)
-    / CITY_LEVEL_STATS.cityWallsTransitionPower;
-  const smoothingDivisor = Math.pow(
-    1 + Math.pow(
-      normalizedLevel / CITY_LEVEL_STATS.cityWallsTransitionLevel,
-      CITY_LEVEL_STATS.cityWallsTransitionPower
-    ),
-    smoothingExponent
-  );
-  const growth = smoothingDivisor > 0 ? rawGrowth / smoothingDivisor : rawGrowth;
-  const walls = CITY_LEVEL_STATS.cityWallsBase + Math.max(0, growth);
+  const levelOffset = normalizedLevel - 1;
+  const walls = CITY_LEVEL_STATS.cityWallsBase
+    + CITY_LEVEL_STATS.cityWallsPerLevel * levelOffset;
   if (!Number.isFinite(walls)) return Number.MAX_SAFE_INTEGER;
   return Math.min(Number.MAX_SAFE_INTEGER, Math.max(0, Math.floor(walls)));
 }
@@ -4965,6 +4951,7 @@ function normalizeRallyParticipant(raw = {}) {
     returnArmyId: normalizeRallyId(raw.returnArmyId),
     attackSkillLevel: Math.max(0, Math.floor(safeNumber(raw.attackSkillLevel, 0))),
     attackBonusPercent: Math.max(0, safeNumber(raw.attackBonusPercent, 0)),
+    attackPowerPerTroop: Math.max(0, safeNumber(raw.attackPowerPerTroop, 0)),
     fieldMedicsPercent: Math.max(0, safeNumber(raw.fieldMedicsPercent, 0)),
     ownerKingPower: Math.max(0, Math.floor(safeNumber(raw.ownerKingPower, 0))),
     losses: Math.max(0, Math.floor(safeNumber(raw.losses, 0))),
@@ -5077,14 +5064,28 @@ function releaseFormingRallySlot(transaction, stateRef, state = {}, leaderUid = 
 function getRallyParticipantAttackPower(participant = {}) {
   const troops = Math.max(0, Math.floor(safeNumber(participant.troops, 0)));
   const bonusPercent = Math.max(0, safeNumber(participant.attackBonusPercent, 0));
-  return Math.max(0, Math.floor(troops * BASE_TROOP_ATTACK_POWER * (1 + bonusPercent / 100)));
+  const snapshottedPowerPerTroop = Math.max(0, safeNumber(participant.attackPowerPerTroop, 0));
+  const attackPowerPerTroop = snapshottedPowerPerTroop
+    || BASE_TROOP_ATTACK_POWER * (1 + bonusPercent / 100);
+  return Math.max(0, Math.floor(troops * attackPowerPerTroop));
 }
 
 function getRallyAttackPackages(rally = {}) {
-  return assembledRallyParticipants(rally).map(participant => ({
+  const packages = assembledRallyParticipants(rally).map(participant => ({
     ...participant,
     effectivePower: getRallyParticipantAttackPower(participant),
   }));
+  const storedAttackPower = Math.max(0, Math.floor(safeNumber(rally.attackPower, 0)));
+  const calculatedAttackPower = packages.reduce((total, participant) => total + participant.effectivePower, 0);
+  if (!storedAttackPower || !calculatedAttackPower || storedAttackPower === calculatedAttackPower) return packages;
+  let assignedPower = 0;
+  return packages.map((participant, index) => {
+    const effectivePower = index === packages.length - 1
+      ? Math.max(0, storedAttackPower - assignedPower)
+      : Math.max(0, Math.floor(storedAttackPower * participant.effectivePower / calculatedAttackPower));
+    assignedPower += effectivePower;
+    return { ...participant, effectivePower };
+  });
 }
 
 function allocateRallyAttackerLosses(packages = [], totalLosses = 0) {
@@ -5187,6 +5188,7 @@ function createRallyParticipantSnapshot({
     assembledAtMs,
     attackSkillLevel: getSkillLevel(profile, "swordmastery"),
     attackBonusPercent: getSkillPercent(profile, "swordmastery"),
+    attackPowerPerTroop: BASE_TROOP_ATTACK_POWER * skillMultiplier(profile, "swordmastery"),
     fieldMedicsPercent: getSkillPercent(profile, "fieldMedics"),
     ownerKingPower,
   });
@@ -7044,6 +7046,21 @@ function createBattleAttackPowerBreakdown(basePower = 0, effectivePower = 0) {
   };
 }
 
+function getBattleAttackerBasePower({
+  troops = 0,
+  effectivePower = 0,
+  bonusPercent = 0,
+  attackPowerPerTroop = 0,
+} = {}) {
+  const normalizedTroops = Math.max(0, Math.floor(safeNumber(troops, 0)));
+  const multiplier = 1 + Math.max(0, safeNumber(bonusPercent, 0)) / 100;
+  const snapshottedPowerPerTroop = Math.max(0, safeNumber(attackPowerPerTroop, 0));
+  if (snapshottedPowerPerTroop > 0) {
+    return Math.max(0, Math.floor(normalizedTroops * snapshottedPowerPerTroop / multiplier));
+  }
+  return Math.max(0, Math.floor(safeNumber(effectivePower, 0) / multiplier));
+}
+
 function createBattleDefensePowerBreakdown(row = {}, { siege = false } = {}) {
   const startingTroops = Math.max(0, Math.floor(safeNumber(row.startingTroops ?? row.troops, 0)));
   const basePower = Math.max(startingTroops, Math.floor(safeNumber(row.basePower, startingTroops)));
@@ -7163,6 +7180,15 @@ function createDetailedBattleSnapshot({
   const rallyAttackers = (Array.isArray(attackerPackages) ? attackerPackages : []).map(row => {
     const settled = (Array.isArray(attackerAllocation) ? attackerAllocation : [])
       .find(entry => entry.uid === row.uid) || {};
+    const startingTroops = Math.max(0, Math.floor(safeNumber(row.troops, 0)));
+    const swordmasteryPercent = Math.max(0, safeNumber(row.attackBonusPercent, 0));
+    const effectivePower = Math.max(0, Math.floor(safeNumber(row.effectivePower, 0)));
+    const basePower = getBattleAttackerBasePower({
+      troops: startingTroops,
+      effectivePower,
+      bonusPercent: swordmasteryPercent,
+      attackPowerPerTroop: row.attackPowerPerTroop,
+    });
     return {
       ownerUid: safeString(row.uid, 128),
       ownerName: normalizePlayerName(row.ownerName, "Ruler"),
@@ -7170,15 +7196,12 @@ function createDetailedBattleSnapshot({
       role: row.role === "leader" ? "leader" : "ally",
       sourceId: safeString(row.sourceId, 96),
       sourceRegionId: normalizeRegionId(row.sourceRegionId),
-      startingTroops: Math.max(0, Math.floor(safeNumber(row.troops, 0))),
-      basePower: Math.max(0, Math.floor(safeNumber(row.troops, 0) * BASE_TROOP_ATTACK_POWER)),
+      startingTroops,
+      basePower,
       swordmasteryLevel: Math.max(0, Math.floor(safeNumber(row.attackSkillLevel, 0))),
-      swordmasteryPercent: Math.max(0, safeNumber(row.attackBonusPercent, 0)),
-      effectivePower: Math.max(0, Math.floor(safeNumber(row.effectivePower, 0))),
-      powerBreakdown: createBattleAttackPowerBreakdown(
-        Math.max(0, Math.floor(safeNumber(row.troops, 0) * BASE_TROOP_ATTACK_POWER)),
-        row.effectivePower
-      ),
+      swordmasteryPercent,
+      effectivePower,
+      powerBreakdown: createBattleAttackPowerBreakdown(basePower, effectivePower),
       losses: Math.max(0, Math.floor(safeNumber(settled.losses, 0))),
       survivors: Math.max(0, Math.floor(safeNumber(settled.survivors, row.troops))),
     };
@@ -7192,6 +7215,16 @@ function createDetailedBattleSnapshot({
   const defendersAtStart = ownerTroops + reinforcementRows.reduce((total, row) => total + row.startingTroops, 0);
   const defenderLosses = Math.max(0, Math.floor(safeNumber(result.defenderLosses, 0)));
   const combatSnapshot = normalizeAttackCombatSnapshot(attackCombatSnapshot);
+  const attackerStartingTroops = Math.max(0, Math.floor(safeNumber(result.attackerLosses, 0)))
+    + Math.max(0, Math.floor(safeNumber(result.survivors, 0)));
+  const attackerSwordmasteryPercent = combatSnapshot?.swordmasteryPercent
+    ?? getSkillPercent(attackerProfile, "swordmastery");
+  const attackerBasePower = getBattleAttackerBasePower({
+    troops: attackerStartingTroops,
+    effectivePower: result.attackPower,
+    bonusPercent: attackerSwordmasteryPercent,
+    attackPowerPerTroop: combatSnapshot?.attackPowerPerTroop,
+  });
   const normalizedProtection = normalizeAttackProtectionSnapshot(attackProtection);
   const defenderSnapshot = {
     ownerUid: safeString(defenderUid, 128),
@@ -7310,22 +7343,12 @@ function createDetailedBattleSnapshot({
       ownerName: normalizePlayerName(attackerProfile.playerName || attackerProfile.displayName, "Rival ruler"),
       ownerFlag: attackerProfile.flag || null,
       clan: battleClanIdentity(attackerProfile),
-      startingTroops: Math.max(0, Math.floor(safeNumber(result.attackerLosses, 0)))
-        + Math.max(0, Math.floor(safeNumber(result.survivors, 0))),
-      basePower: Math.max(0, Math.floor(
-        (Math.max(0, safeNumber(result.attackerLosses, 0)) + Math.max(0, safeNumber(result.survivors, 0)))
-        * BASE_TROOP_ATTACK_POWER
-      )),
+      startingTroops: attackerStartingTroops,
+      basePower: attackerBasePower,
       swordmasteryLevel: combatSnapshot?.swordmasteryLevel ?? getSkillLevel(attackerProfile, "swordmastery"),
-      swordmasteryPercent: combatSnapshot?.swordmasteryPercent ?? getSkillPercent(attackerProfile, "swordmastery"),
+      swordmasteryPercent: attackerSwordmasteryPercent,
       effectivePower: Math.max(0, Math.floor(safeNumber(result.attackPower, 0))),
-      powerBreakdown: createBattleAttackPowerBreakdown(
-        Math.max(0, Math.floor(
-          (Math.max(0, safeNumber(result.attackerLosses, 0)) + Math.max(0, safeNumber(result.survivors, 0)))
-            * BASE_TROOP_ATTACK_POWER
-        )),
-        result.attackPower
-      ),
+      powerBreakdown: createBattleAttackPowerBreakdown(attackerBasePower, result.attackPower),
       losses: Math.max(0, Math.floor(safeNumber(result.attackerLosses, 0))),
       survivors: Math.max(0, Math.floor(safeNumber(result.survivors, 0))),
     },
@@ -7334,8 +7357,7 @@ function createDetailedBattleSnapshot({
     reinforcements: reinforcementRows,
     siege,
     totals: {
-      attackers: Math.max(0, Math.floor(safeNumber(result.attackerLosses, 0)))
-        + Math.max(0, Math.floor(safeNumber(result.survivors, 0))),
+      attackers: attackerStartingTroops,
       defenders: defendersAtStart,
       attackPower: Math.max(0, Math.floor(safeNumber(result.attackPower, 0))),
       defensePower: Math.max(0, Math.floor(safeNumber(result.defensePower, defensePackages.totalDefense))),
@@ -7343,13 +7365,7 @@ function createDetailedBattleSnapshot({
       defenderLosses,
       attackerSurvivors: Math.max(0, Math.floor(safeNumber(result.survivors, 0))),
       defenderSurvivors: Math.max(0, defendersAtStart - defenderLosses),
-      attackPowerBreakdown: createBattleAttackPowerBreakdown(
-        Math.max(0, Math.floor(
-          (Math.max(0, safeNumber(result.attackerLosses, 0)) + Math.max(0, safeNumber(result.survivors, 0)))
-            * BASE_TROOP_ATTACK_POWER
-        )),
-        result.attackPower
-      ),
+      attackPowerBreakdown: createBattleAttackPowerBreakdown(attackerBasePower, result.attackPower),
       defensePowerBreakdown,
     },
     formula: {

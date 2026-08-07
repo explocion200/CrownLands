@@ -47,6 +47,20 @@ assert.match(battleDetail, /battle-attacker-column[\s\S]*?battle-defender-column
 assert.match(battleDetail, /Starting forces[\s\S]*?Base power[\s\S]*?Training[\s\S]*?Attack and walls[\s\S]*?Objectives[\s\S]*?Final power[\s\S]*?Losses[\s\S]*?Result/, "The battle comparison omits required battle-time factors.");
 assert.doesNotMatch(battleDetail, /Power ratio|Capture threshold|coefficient|formula/i, "The battle report exposes combat formula details.");
 assert.match(server, /attackPowerBreakdown/, "Battle snapshots do not preserve named attack-power components.");
+const getBattleAttackerBasePower = new Function(
+  "safeNumber",
+  `${functionBody(server, "getBattleAttackerBasePower")}; return getBattleAttackerBasePower;`
+)((value, fallback = 0) => Number.isFinite(Number(value)) ? Number(value) : fallback);
+assert.equal(
+  getBattleAttackerBasePower({ troops: 100, effectivePower: 200, bonusPercent: 60, attackPowerPerTroop: 2 }),
+  125,
+  "New battle reports do not preserve the 1.25 base-power component."
+);
+assert.equal(
+  getBattleAttackerBasePower({ troops: 100, effectivePower: 320, bonusPercent: 60, attackPowerPerTroop: 3.2 }),
+  200,
+  "Pre-rebalance battle reports rewrite the army's launch-time base power."
+);
 assert.match(server, /defensePowerBreakdown[\s\S]*?otherDefensePower/, "Battle snapshots do not preserve named defense-power components.");
 assert.match(server, /reinforcements:\s*reinforcementRows[\s\S]*?occurredAtMs:\s*nowMs/, "Battle snapshots do not preserve reinforcements and occurrence time.");
 assert.match(client, /historicalWallDetailsAvailable:\s*hasHistoricalWallSnapshot/, "Older battle snapshots do not safely normalize wall details.");

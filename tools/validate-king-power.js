@@ -43,7 +43,7 @@ const config = Object.fromEntries(constantNames.map(name => {
 
 const serverVersion = readConstant(serverSource, "GLOBAL_PLAYER_STATS_VERSION");
 const clientVersion = readConstant(clientSource, "KING_POWER_AUTHORITY_VERSION");
-if (serverVersion !== clientVersion || serverVersion !== 8) {
+if (serverVersion !== clientVersion || serverVersion !== 10) {
   throw new Error(`King Power authority versions differ or are stale (server ${serverVersion}, client ${clientVersion}).`);
 }
 
@@ -155,7 +155,8 @@ function cityMilitaryComponents(level, troops, bonuses = {}) {
   const victoryPoints = Math.floor(6 + level * 4 + Math.pow(level, 1.35) * 2);
   const sustainableTroopPerHour = victoryPoints * 3 * (1 + (bonuses.troop || 0) / 100);
   const replacementPower = Math.floor(sustainableTroopPerHour * config.KING_POWER_REPLACEMENT_HOURS);
-  const walls = 200 + 3 * (Math.pow(level, 3) - 1);
+  const levelOffset = level - 1;
+  const walls = 200 + 28858 * levelOffset;
   const totalDefense = Math.floor(
     (walls + Math.floor(troops * (1 + level * 2 / 100))) * (1 + (bonuses.defense || 0) / 100)
   );

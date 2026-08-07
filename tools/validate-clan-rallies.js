@@ -60,6 +60,32 @@ assert.doesNotMatch(
 const casualtySource = extractFunction(server, "allocateRallyAttackerLosses", "allocateRallyAttackXp");
 const xpSource = extractFunction(server, "allocateRallyAttackXp", "createRallyParticipantSnapshot");
 const safeNumber = value => Number.isFinite(Number(value)) ? Number(value) : 0;
+const rallyPowerSource = extractFunction(server, "getRallyParticipantAttackPower", "allocateRallyAttackerLosses");
+const getRallyAttackPackages = new Function(
+  "safeNumber",
+  "BASE_TROOP_ATTACK_POWER",
+  "assembledRallyParticipants",
+  `${rallyPowerSource}; return getRallyAttackPackages;`
+)(safeNumber, 1.25, rally => rally.participants || []);
+const snapshottedRallyPackages = getRallyAttackPackages({
+  attackPower: 320,
+  participants: [
+    { uid: "leader", role: "leader", troops: 60, status: "assembled", attackBonusPercent: 60 },
+    { uid: "ally", role: "ally", troops: 40, status: "assembled", attackBonusPercent: 60 },
+  ],
+});
+assert.equal(
+  snapshottedRallyPackages.reduce((total, row) => total + row.effectivePower, 0),
+  320,
+  "A launched pre-rebalance rally lost its stored total attack power."
+);
+assert.equal(
+  getRallyAttackPackages({
+    participants: [{ uid: "leader", troops: 100, status: "assembled", attackBonusPercent: 60, attackPowerPerTroop: 2 }],
+  })[0].effectivePower,
+  200,
+  "A new max-Sword rally participant is not locked at 2 power per troop."
+);
 const allocateLosses = new Function("safeNumber", `${casualtySource}; return allocateRallyAttackerLosses;`)(safeNumber);
 const allocateXp = new Function("safeNumber", `${xpSource}; return allocateRallyAttackXp;`)(safeNumber);
 const packages = [

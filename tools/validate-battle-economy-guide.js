@@ -28,11 +28,11 @@ assert.equal(guide.RULES.citadelEffectiveLevel, 100);
 
 const expectedMilestones = {
   1: { vp: 12, gold: 300, troops: 120, wall: 200, repair: 15 },
-  25: { vp: 260, gold: 4080, troops: 2600, wall: 47071, repair: 23 },
-  50: { vp: 599, gold: 62160, troops: 5990, wall: 375172, repair: 30 },
-  75: { vp: 985, gold: 945060, troops: 9850, wall: 1263684, repair: 38 },
-  100: { vp: 1408, gold: 14365905, troops: 14080, wall: 2951425, repair: 45 },
-  150: { vp: 2338, gold: 673784109, troops: 23380, wall: 7872309, repair: 60 },
+  25: { vp: 260, gold: 4080, troops: 2600, wall: 692792, repair: 23 },
+  50: { vp: 599, gold: 62160, troops: 5990, wall: 1414242, repair: 30 },
+  75: { vp: 985, gold: 945060, troops: 9850, wall: 2135692, repair: 38 },
+  100: { vp: 1408, gold: 14365905, troops: 14080, wall: 2857142, repair: 45 },
+  150: { vp: 2338, gold: 673784109, troops: 23380, wall: 4300042, repair: 60 },
 };
 
 for (const [levelText, expected] of Object.entries(expectedMilestones)) {
@@ -83,7 +83,7 @@ assert.equal(boosted.ownerGarrisonPower, 2_200_000, "Level and objective garriso
 assert.ok(boosted.upgradeCost < unboosted.upgradeCost, "Upgrade reductions must lower the next upgrade price.");
 
 const equality = calculator.simulateSiege({
-  attackerTroops: 100,
+  attackerTroops: 160,
   cityLevel: 1,
   defenderTroops: 0,
   wallIntegrityPercent: 100,
@@ -94,13 +94,13 @@ assert.equal(equality.captured, false, "Equal attack and defense must not captur
 assert.equal(equality.outcome, "garrison_hold");
 
 const onePowerWin = calculator.simulateSiege({
-  attackerTroops: 101,
+  attackerTroops: 161,
   cityLevel: 1,
   defenderTroops: 0,
   wallIntegrityPercent: 100,
 });
 assert.equal(onePowerWin.captured, true, "More power than total defense must capture.");
-assert.equal(onePowerWin.minimumCaptureTroops, 101);
+assert.equal(onePowerWin.minimumCaptureTroops, 161);
 assert.equal(onePowerWin.attackerSurvivors, 1, "Winning survivors must use fully resolved wall and garrison power.");
 
 const wallHold = calculator.simulateSiege({
@@ -114,7 +114,7 @@ assert.equal(wallHold.outcome, "wall_hold");
 assert.ok(wallHold.defenderLosses <= wallHold.totalDefenderTroops * 0.1, "An intact wall exceeded the defender-loss cap.");
 
 const garrisonHold = calculator.simulateSiege({
-  attackerTroops: 1_000_000,
+  attackerTroops: 1_200_000,
   cityLevel: 50,
   defenderTroops: 1_000_000,
   wallIntegrityPercent: 100,
@@ -125,7 +125,7 @@ assert.equal(garrisonHold.outcome, "garrison_hold");
 assert.ok(garrisonHold.defenderLosses <= garrisonHold.totalDefenderTroops * 0.82, "A garrison hold exceeded the loss cap.");
 
 const capture = calculator.simulateSiege({
-  attackerTroops: 1_300_000,
+  attackerTroops: 2_800_000,
   cityLevel: 50,
   defenderTroops: 1_000_000,
   wallIntegrityPercent: 100,
@@ -135,7 +135,7 @@ assert.equal(capture.defenderSurvivors, 0);
 assert.ok(capture.attackerSurvivors > 0);
 
 const reinforcement = calculator.simulateSiege({
-  attackerTroops: 1_300_000,
+  attackerTroops: 2_800_000,
   cityLevel: 50,
   defenderTroops: 1_000_000,
   reinforcementTroops: 500_000,
@@ -154,7 +154,7 @@ const belowFive = calculator.simulateSiege({
 assert.equal(belowFive.meaningfulWallDamage, false);
 assert.equal(belowFive.endingIntegrityBps, 10_000, "Insignificant wall damage must not persist.");
 const exactFive = calculator.simulateSiege({
-  attackerTroops: 5,
+  attackerTroops: 8,
   cityLevel: 1,
   defenderTroops: 100,
   wallIntegrityPercent: 100,
@@ -174,12 +174,16 @@ assert.equal(breachedWall.repairAddedMs, 0);
 
 assert.match(page, /id="system-map"/);
 assert.match(page, /id="city-explorer"/);
+assert.match(page, /Wall power by level <small>linear value scale<\/small>/);
+assert.doesNotMatch(page, /Wall power by level <small>logarithmic value scale<\/small>/);
 assert.match(page, /id="economy-map"/);
 assert.match(page, /id="skills-guide"/);
 assert.match(page, /id="battle-explorer"/);
 assert.match(page, /id="wall-timers"/);
 assert.match(page, /Damage-proportional wall-repair examples/);
 assert.match(runtime, /formatRepairDuration[\s\S]*?repairAddedMs/);
+assert.match(runtime, /drawLineChart\(\$\("wallLevelChart"\)[^\n]+title: "Full wall power by city level" \}\);/, "The wall chart must use the linear display scale.");
+assert.doesNotMatch(runtime, /wallLevelChart[^\n]+logarithmic/, "The wall chart must not use a logarithmic display scale.");
 assert.match(page, /id="special-rules"/);
 assert.match(page, /<details class="guide-math">/);
 assert.match(page, /<noscript>/);

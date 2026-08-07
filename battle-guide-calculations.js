@@ -10,7 +10,7 @@
     victoryPointsPerLevel: 4,
     victoryPointsExponent: 1.35,
     victoryPointsExponentScale: 2,
-    baseAttackPowerPerTroop: 2,
+    baseAttackPowerPerTroop: 1.25,
     strongerKingdomAssaultRatio: 2,
     strongerKingdomRaidRatio: 2.5,
     scoutIntelMinutes: 10,
@@ -87,20 +87,9 @@
 
     function getBaseWall(level) {
       const normalized = levelOf(level);
-      const exponent = read(economy, "cityEconomy.wallDefenseExponent", 3);
-      const transitionPower = Math.max(1, read(economy, "cityEconomy.wallDefenseTransitionPower", 8));
-      const rawGrowth = (Math.pow(normalized, exponent) - 1)
-        * read(economy, "cityEconomy.wallDefenseScale", 3);
-      const smoothingExponent = Math.max(0, exponent - 1) / transitionPower;
-      const smoothingDivisor = Math.pow(
-        1 + Math.pow(
-          normalized / Math.max(1, read(economy, "cityEconomy.wallDefenseTransitionLevel", 140)),
-          transitionPower
-        ),
-        smoothingExponent
-      );
+      const levelOffset = normalized - 1;
       const raw = read(economy, "cityEconomy.wallDefenseBase", 200)
-        + Math.max(0, smoothingDivisor > 0 ? rawGrowth / smoothingDivisor : rawGrowth);
+        + read(economy, "cityEconomy.wallDefensePerLevel", 28858) * levelOffset;
       return Number.isFinite(raw) ? Math.min(Number.MAX_SAFE_INTEGER, Math.floor(raw)) : Number.MAX_SAFE_INTEGER;
     }
 

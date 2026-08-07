@@ -123,8 +123,8 @@ vm.runInContext([
   readFunction(source, "calculateCombatResult"),
 ].join("\n\n"), sandbox);
 
-if (sandbox.GLOBAL_PLAYER_STATS_VERSION !== 8 || sandbox.ATTACK_PROTECTION_VERSION !== 2) {
-  throw new Error("Protection is not using King Power v8 and attack-protection schema v2.");
+if (sandbox.GLOBAL_PLAYER_STATS_VERSION !== 10 || sandbox.ATTACK_PROTECTION_VERSION !== 2) {
+  throw new Error("Protection is not using King Power v10 and attack-protection schema v2.");
 }
 if (sandbox.ATTACK_PROTECTION_ASSAULT_MIN_RATIO !== 2
   || sandbox.ATTACK_PROTECTION_RAID_MIN_RATIO !== 2.5
@@ -134,11 +134,11 @@ if (sandbox.ATTACK_PROTECTION_ASSAULT_MIN_RATIO !== 2
 
 const validGlobalPower = sandbox.getPlayerPowerSnapshot({
   profile: { kingPowerVersion: 6, kingPower: 4_000_000, kingPowerUpdatedAtMs: 5000 },
-  globalStats: { version: 8, kingPower: 900_000, updatedAtMs: 4000 },
+  globalStats: { version: 10, kingPower: 900_000, updatedAtMs: 4000 },
   city: { powerFloor: 300_000 },
 });
 if (validGlobalPower !== 900_000) {
-  throw new Error("A legacy profile snapshot overrides canonical v8 global stats.");
+  throw new Error("A legacy profile snapshot overrides canonical v10 global stats.");
 }
 
 const target = { ownerUid: "defender", totalDefense: 1000, troops: 1000 };
@@ -157,33 +157,33 @@ function protectionAt(ratio, overrides = {}) {
 if (protectionAt(1.99)) throw new Error("A 1.99× attack is incorrectly protected.");
 const atTwo = protectionAt(2);
 if (atTwo?.mode !== "assault" || atTwo.captureAllowed || !atTwo.breachRequired
-  || atTwo.assaultStage !== "breach" || atTwo.maxTroops !== 510) {
+  || atTwo.assaultStage !== "breach" || atTwo.maxTroops !== 810) {
   throw new Error("The first 2× assault is not capped at the rounded capture-safe breach force.");
 }
 const atTwoFortyNine = protectionAt(2.49);
 if (atTwoFortyNine?.mode !== "assault" || atTwoFortyNine.captureAllowed
-  || atTwoFortyNine.assaultStage !== "breach" || atTwoFortyNine.maxTroops !== 510) {
+  || atTwoFortyNine.assaultStage !== "breach" || atTwoFortyNine.maxTroops !== 810) {
   throw new Error("The first 2.49× assault can overcommit troops or capture immediately.");
 }
 const atTwoCapture = protectionAt(2, { assaultStage: "capture" });
 if (atTwoCapture?.mode !== "assault" || !atTwoCapture.captureAllowed
-  || atTwoCapture.breachRequired || atTwoCapture.maxTroops !== 620) {
+  || atTwoCapture.breachRequired || atTwoCapture.maxTroops !== 1000) {
   throw new Error("A breached city does not receive the capture-capable 2× follow-up allowance.");
 }
 const atTwoFortyNineCapture = protectionAt(2.49, { assaultStage: "capture" });
-if (!atTwoFortyNineCapture?.captureAllowed || atTwoFortyNineCapture.maxTroops !== 520) {
+if (!atTwoFortyNineCapture?.captureAllowed || atTwoFortyNineCapture.maxTroops !== 840) {
   throw new Error("The 2.49× follow-up cap is not capture-safe.");
 }
 const atTwoFive = protectionAt(2.5);
 if (atTwoFive?.mode !== "raid" || atTwoFive.captureAllowed
-  || atTwoFive.maxTroops !== 250 || atTwoFive.maxDefenderLossPercent !== 10) {
+  || atTwoFive.maxTroops !== 400 || atTwoFive.maxDefenderLossPercent !== 10) {
   throw new Error("Exactly 2.5× must become a non-capturing raid.");
 }
 const atFive = protectionAt(5);
-if (atFive?.mode !== "raid" || atFive.maxTroops !== 120) {
+if (atFive?.mode !== "raid" || atFive.maxTroops !== 200) {
   throw new Error("The 5× raid cap is not 25% of break-even rounded down to two significant digits.");
 }
-if (protectionAt(8)?.maxTroops !== 120) {
+if (protectionAt(8)?.maxTroops !== 200) {
   throw new Error("Raid caps continue shrinking beyond the 5× floor.");
 }
 
@@ -212,7 +212,7 @@ const pressuredFailure = sandbox.calculateCombatResult(
   null,
   null
 );
-if (pressuredFailure.success || pressuredFailure.defenderLosses !== 820) {
+if (pressuredFailure.success || pressuredFailure.defenderLosses !== 512) {
   throw new Error("Normal failed attacks do not use 82% × pressure capped at 82%.");
 }
 const firstAssaultWin = sandbox.calculateCombatResult(
@@ -227,7 +227,7 @@ if (firstAssaultWin.success || !firstAssaultWin.breachCompleted || !firstAssault
   throw new Error("The first protected assault can capture or cannot complete a wall breach.");
 }
 const followUpAssaultWin = sandbox.calculateCombatResult(
-  600,
+  1000,
   target,
   null,
   null,

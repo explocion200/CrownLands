@@ -226,8 +226,8 @@ requireMatch(game, /refreshDailyLoginRewardStatus\(\{\s*autoOpen:\s*true,\s*sile
 requireMatch(game, /visibilitychange[\s\S]*handleGameForegroundSignal/, "Visible sessions do not refresh attendance.");
 requireMatch(styles, /\.daily-login-reward-btn[\s\S]*dailyRewardHudGlow/, "Daily reward HUD styles are incomplete.");
 requireMatch(styles, /\.daily-reward-grid[\s\S]*repeat\(6,[\s\S]*@media \(max-width: 700px\)[\s\S]*repeat\(5,[\s\S]*@media \(max-width: 520px\)[\s\S]*repeat\(3,/, "Daily reward grid responsiveness changed.");
-requireMatch(html, /economy-config\.js\?v=20260805-monthly-rewards-v3/, "Frontend does not load the monthly reward economy release.");
-requireMatch(serviceWorker, /economy-config\.js\?v=20260805-monthly-rewards-v3/, "Offline shell does not cache the monthly reward economy release.");
+requireMatch(html, /economy-config\.js\?v=20260805-linear-walls-v1/, "Frontend does not load the current economy release.");
+requireMatch(serviceWorker, /economy-config\.js\?v=20260805-linear-walls-v1/, "Offline shell does not cache the current economy release.");
 requireMatch(rules, /'dailyLoginReward'/, "Firestore rules do not protect daily reward state.");
 requireMatch(
   read("tools/validate-clan-callable-access.js"),

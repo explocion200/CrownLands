@@ -1052,18 +1052,10 @@
   function getEconomyPreviewBaseWall(level, economy = state.economy) {
     const config = economy?.cityEconomy || {};
     const normalizedLevel = normalizeEconomyPreviewLevel(level);
+    const levelOffset = normalizedLevel - 1;
     const base = Math.max(0, readEconomyNumber(config.wallDefenseBase, 200));
-    const exponent = Math.max(0, readEconomyNumber(config.wallDefenseExponent, 3));
-    const scale = Math.max(0, readEconomyNumber(config.wallDefenseScale, 3));
-    const transitionLevel = Math.max(1, readEconomyNumber(config.wallDefenseTransitionLevel, 140));
-    const transitionPower = Math.max(1, readEconomyNumber(config.wallDefenseTransitionPower, 8));
-    const rawGrowth = (Math.pow(normalizedLevel, exponent) - 1) * scale;
-    const smoothingExponent = Math.max(0, exponent - 1) / transitionPower;
-    const smoothingDivisor = Math.pow(
-      1 + Math.pow(normalizedLevel / transitionLevel, transitionPower),
-      smoothingExponent
-    );
-    const walls = base + Math.max(0, smoothingDivisor > 0 ? rawGrowth / smoothingDivisor : rawGrowth);
+    const perLevel = Math.max(0, readEconomyNumber(config.wallDefensePerLevel, 28858));
+    const walls = base + perLevel * levelOffset;
     if (!Number.isFinite(walls)) return Number.MAX_SAFE_INTEGER;
     return Math.min(Number.MAX_SAFE_INTEGER, Math.max(0, Math.floor(walls)));
   }
@@ -1481,11 +1473,11 @@
             <div class="economy-breakdown-heading">
               <span>City defense</span>
               <strong>Universal walls and damage-based repair</strong>
-              <p>Every city level uses the same smooth formula. The transition settings gradually change wall growth from cubic toward linear without a Level 100 breakpoint. Each meaningful hit adds its damage share of the level's full-breach repair window.</p>
+              <p>Every city level uses the same linear formula, so each additional level adds the same base wall power. Each meaningful hit adds its damage share of the level's full-breach repair window.</p>
             </div>
             <div class="economy-fixed-formula">
               <span>Wall formula</span>
-              <code>base + scale × (level^exponent − 1) ÷ (1 + (level ÷ transition)^power)^((exponent − 1) ÷ power)</code>
+              <code>base + per-level growth × (level − 1)</code>
               <small>Stoneworks and objective bonuses multiply the resulting wall afterward. Reinforcements add garrison troops, not additional walls.</small>
             </div>
             <div class="economy-fixed-formula">
@@ -1507,28 +1499,10 @@
                 { description: "Flat wall power before level growth, Stoneworks, or objective bonuses." }
               )}
               ${economyNumberInput(
-                "cityEconomy.wallDefenseScale",
-                "Wall growth scale",
-                economy.cityEconomy.wallDefenseScale,
-                { step: 0.1, description: "Multiplies the level-growth part of the universal wall formula." }
-              )}
-              ${economyNumberInput(
-                "cityEconomy.wallDefenseExponent",
-                "Early wall growth exponent",
-                economy.cityEconomy.wallDefenseExponent,
-                { step: 0.1, description: "Controls early growth before the transition gradually softens the curve." }
-              )}
-              ${economyNumberInput(
-                "cityEconomy.wallDefenseTransitionLevel",
-                "Wall transition level",
-                economy.cityEconomy.wallDefenseTransitionLevel,
-                { description: "Sets the center of the smooth transition toward linear high-level wall growth; it is not a breakpoint." }
-              )}
-              ${economyNumberInput(
-                "cityEconomy.wallDefenseTransitionPower",
-                "Wall transition smoothness power",
-                economy.cityEconomy.wallDefenseTransitionPower,
-                { step: 0.1, description: "Higher values make the transition more concentrated around its level while remaining one continuous formula." }
+                "cityEconomy.wallDefensePerLevel",
+                "Wall power per level",
+                economy.cityEconomy.wallDefensePerLevel,
+                { step: 1, description: "Adds this much wall power for every level after Level 1." }
               )}
               ${economyNumberInput(
                 "siegeCombat.repairBaseMinutes",

@@ -62,7 +62,7 @@
         </div>
       </div>
       <div class="guide-callout">
-        <strong>What VP means:</strong> victory points measure a city&rsquo;s value. They determine its base troop production at 10 troops per VP each hour and contribute to capture value and King Power. They do not directly strengthen one attacking troop; attack strength comes from troop count and Swordmastery.
+        <strong>What VP means:</strong> victory points measure a city&rsquo;s value. They determine its base troop production at 10 troops per VP each hour and contribute to capture value and King Power. They do not directly strengthen one attacking troop; each troop starts at 1.25 attack power and Swordmastery can raise that to 2.
       </div>
     </section>
 
@@ -98,7 +98,7 @@
       <div class="guide-chart-grid">
         <figure><figcaption>Gold production by level <small>logarithmic value scale</small></figcaption><svg id="goldLevelChart" class="guide-chart" role="img" aria-label="Gold production by city level"></svg></figure>
         <figure><figcaption>Troop production by level</figcaption><svg id="troopLevelChart" class="guide-chart" role="img" aria-label="Troop production by city level"></svg></figure>
-        <figure><figcaption>Wall power by level <small>logarithmic value scale</small></figcaption><svg id="wallLevelChart" class="guide-chart" role="img" aria-label="Wall power by city level"></svg></figure>
+        <figure><figcaption>Wall power by level <small>linear value scale</small></figcaption><svg id="wallLevelChart" class="guide-chart" role="img" aria-label="Wall power by city level"></svg></figure>
         <figure><figcaption>Full-breach repair minutes by level</figcaption><svg id="repairLevelChart" class="guide-chart" role="img" aria-label="Full-breach wall repair minutes by city level"></svg></figure>
       </div>
 
@@ -117,7 +117,7 @@
           <p><strong>Troops/hour:</strong> victory points &times; 10, then Royal Granaries and the applicable objective package add percentages of that base.</p>
           <p><strong>Gold/hour:</strong> floor(20 &times; 1.115<sup>L&minus;1</sup>) &times; 15 through Level 100. Above 100, the Level 100 value grows 8% per additional level.</p>
           <p><strong>Owner garrison:</strong> stationed troops &times; (1 + 2% &times; city level), then the applicable objective-defense percentage.</p>
-          <p><strong>Wall:</strong> one smooth level curve, then Stoneworks strengthens it, then an applicable objective-defense percentage strengthens that one wall.</p>
+          <p><strong>Wall:</strong> floor(200 + 28,858 &times; (city level &minus; 1)), then Stoneworks and an applicable objective-defense percentage strengthen that one wall. This is a steady linear increase at every level.</p>
           <p><strong>Repair added by a hit:</strong> full-breach repair window &times; wall damage &divide; full wall power.</p>
         </div>
       </details>
@@ -239,7 +239,7 @@
       <details class="guide-math">
         <summary>Show the battle math</summary>
         <div class="formula-list">
-          <p><strong>Attack power:</strong> floor(committed troops &times; 2 &times; (1 + Swordmastery%)).</p>
+          <p><strong>Attack power:</strong> floor(committed troops &times; 1.25 &times; (1 + Swordmastery%)). Maximum Swordmastery raises this to 2 power per troop.</p>
           <p><strong>Wall phase:</strong> the current wall absorbs attack power first. Penetrating power is max(0, attack power &minus; current wall).</p>
           <p><strong>Garrison phase:</strong> penetrating power must be strictly greater than the combined owner and reinforcement defense. Equality is a defensive hold.</p>
           <p><strong>Winning survivors:</strong> troops represented by attack power remaining after 100% of wall and garrison defense is resolved.</p>
@@ -320,8 +320,8 @@
   </footer>
 
   <noscript><p class="guide-noscript">The diagrams require JavaScript, but the formulas, economy map, skills, battle sequence, wall timer, and special rules remain readable above.</p></noscript>
-  <script src="/economy-config.js?v=20260805-monthly-rewards-v3"></script>
-  <script src="/battle-guide-calculations.js?v=20260805-wall-repair-v1"></script>
-  <script src="/battle-economy-guide.js?v=20260805-wall-repair-v1"></script>
+  <script src="/economy-config.js?v=20260805-linear-walls-v1"></script>
+  <script src="/battle-guide-calculations.js?v=20260805-linear-walls-v1"></script>
+  <script src="/battle-economy-guide.js?v=20260805-linear-walls-v1"></script>
 </body>
 </html>
