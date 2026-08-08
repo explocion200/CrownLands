@@ -1264,21 +1264,32 @@
       });
       const element = record.element;
       const stage = this.resolveTransitionStage(event, root);
+      const coverDuration = mode === "reduced"
+        ? 140
+        : Math.round(clamp(
+          Number.isFinite(Number(event.coverDurationMs)) ? event.coverDurationMs : 240,
+          160,
+          600,
+        ));
       record.transitionStage = stage;
+      record.transitionCoverDuration = coverDuration;
+      record.transitionCoverReadyAt = Date.now() + coverDuration;
+      record.transitionRevealScheduled = false;
       element.className = `crownlands-map-transition crownlands-map-transition--${direction} crownlands-map-transition--mode-${mode} is-leaving`;
       element.dataset.transitionToken = String(event.token || record.instanceId);
       element.dataset.direction = direction;
       element.dataset.phase = "leaving";
       element.setAttribute("aria-hidden", "true");
       element.style.pointerEvents = "none";
+      element.style.setProperty("--map-cover-duration", `${coverDuration}ms`);
       this.createMapTransitionPart(element, "outgoing", event.outgoing || event.snapshot, event.cloneSnapshot);
       this.createMapTransitionPart(element, "incoming", null, false);
       this.createMapTransitionPart(element, "haze");
       this.createMapTransitionPart(element, "edge");
       this.createMapTransitionPart(element, "scrim");
       if (stage) {
-        stage.classList.add("is-transitioning", "is-leaving");
-        stage.classList.remove("is-entering");
+        stage.classList.add("is-transitioning");
+        stage.classList.remove("is-leaving", "is-entering");
         stage.dataset.transitionDirection = direction;
       }
       root.appendChild(element);
@@ -1301,7 +1312,11 @@
       this.notify("effectstart", this.publicRecord(record));
       this.notify("transitionphase", { token, direction, phase: "leaving", element });
       window.requestAnimationFrame?.(() => {
-        if (this.mapTransition?.record !== record || record.completed) return;
+        if (
+          this.mapTransition?.record !== record
+          || this.mapTransition.phase !== "leaving"
+          || record.completed
+        ) return;
         element.classList.add("is-loading");
         element.dataset.phase = "loading";
         this.mapTransition.phase = "loading";
@@ -1363,6 +1378,7 @@
       if (token && token !== this.mapTransition.token) return false;
       const { record } = this.mapTransition;
       if (record.completed) return false;
+      if (record.transitionRevealScheduled || this.mapTransition.phase === "entering") return true;
       const element = record.element;
       const incomingPart = element.querySelector?.(".crownlands-map-transition__part--incoming");
       const incoming = options.incoming || options.snapshot;
@@ -1378,27 +1394,45 @@
           // Incoming snapshots are optional.
         }
       }
-      element.classList.remove("is-leaving", "is-loading");
-      element.classList.add("is-entering");
-      element.dataset.phase = "entering";
-      this.mapTransition.phase = "entering";
-      if (record.transitionStage) {
-        record.transitionStage.classList.remove("is-leaving");
-        record.transitionStage.classList.add("is-transitioning", "is-entering");
-      }
       const settleDuration = this.getEffectiveMode() === "reduced"
-        ? 260
-        : (Number.isFinite(Number(options.duration)) ? Math.round(clamp(options.duration, 300, 1200)) : 720);
-      element.style.setProperty("--map-transition-duration", `${settleDuration}ms`);
-      record.transitionStage?.style?.setProperty?.("--map-transition-duration", `${settleDuration}ms`);
-      this.armRecord(record, settleDuration + this.limits.cleanupPaddingMs);
-      this.notify("transitionphase", {
-        token: this.mapTransition.token,
-        direction: element.dataset.direction,
-        phase: "entering",
-        element,
-      });
-      return true;
+        ? 160
+        : (Number.isFinite(Number(options.duration)) ? Math.round(clamp(options.duration, 240, 900)) : 420);
+      const beginReveal = () => {
+        if (this.mapTransition?.record !== record || record.completed) return false;
+        record.transitionRevealScheduled = false;
+        element.classList.remove("is-leaving", "is-loading");
+        element.classList.add("is-entering");
+        element.dataset.phase = "entering";
+        this.mapTransition.phase = "entering";
+        if (record.transitionStage) {
+          record.transitionStage.classList.remove("is-leaving", "is-entering");
+          record.transitionStage.classList.add("is-transitioning");
+        }
+        element.style.setProperty("--map-transition-duration", `${settleDuration}ms`);
+        this.armRecord(record, settleDuration + this.limits.cleanupPaddingMs);
+        this.notify("transitionphase", {
+          token: this.mapTransition.token,
+          direction: element.dataset.direction,
+          phase: "entering",
+          element,
+        });
+        return true;
+      };
+      const remainingCoverMs = Math.max(0, finiteNumber(record.transitionCoverReadyAt, 0) - Date.now());
+      if (remainingCoverMs > 8) {
+        record.transitionRevealScheduled = true;
+        element.classList.add("is-loading");
+        element.dataset.phase = "loading";
+        this.mapTransition.phase = "loading";
+        this.armRecord(record, remainingCoverMs + settleDuration + this.limits.cleanupPaddingMs);
+        const timer = window.setTimeout(() => {
+          record.auxiliaryTimers = record.auxiliaryTimers.filter(timerId => timerId !== timer);
+          beginReveal();
+        }, remainingCoverMs);
+        record.auxiliaryTimers.push(timer);
+        return true;
+      }
+      return beginReveal();
     }
 
     releaseTransitionStage(record) {

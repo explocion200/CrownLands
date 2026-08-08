@@ -117,7 +117,21 @@ requireMatch(
 assert.doesNotMatch(gameSource, /await\s+(?:begin|finish)MapVisualTransition/, "Map state must not wait for transition completion.");
 requireMatch(gameSource, /prefers-reduced-motion:\s*reduce/, "game.js must honor the operating-system reduced-motion preference.");
 requireMatch(gameSource, /eventKind:\s*String\(report\.eventKind\s*\|\|\s*""\)/, "The client drops Deed completion event metadata.");
-requireMatch(gameSource, /destinationCityId/, "Troop reward effects are not routed toward their recipient city.");
+requireMatch(
+  gameSource,
+  /function getVisibleMainCityTroopRewardDestination\(fallbackCityId = ""\)[\s\S]*?state\?\.mainCityId \|\| fallbackCityId[\s\S]*?getActiveMapRegionId\(\)[\s\S]*?getBoundingClientRect\(\)/,
+  "Troop reward effects must target the rendered Main City when it is in the active viewport."
+);
+requireMatch(
+  gameSource,
+  /getVisibleMainCityTroopRewardDestination\(destinationCityId\)[\s\S]*?\|\| getVisibleTroopRewardDestination\(\)/,
+  "Troop reward effects must fall back to the player profile UI when the Main City is not visible."
+);
+assert.doesNotMatch(
+  gameSource,
+  /pendingTroopRewardHighlights|queueTroopRewardDestinationHighlight|flushPendingTroopRewardHighlights/,
+  "Troop reward effects must not queue a later off-map city pulse instead of using the profile fallback."
+);
 requireMatch(gameSource, /const cityBattleId\s*=\s*String\([\s\S]*?\.battleId/, "City attack VFX must require authoritative battle evidence.");
 assert.doesNotMatch(
   gameSource,
@@ -165,11 +179,44 @@ requireMatch(stylesSource, /html\[data-animation-mode="reduced"\]/, "styles.css 
 requireMatch(
   stylesSource,
   /\.map-transition-stage\.is-transitioning\s+\.map-world\s*\{[\s\S]*?pointer-events:\s*none/,
-  "Map hit testing must stay disabled while the live stage is visually translated."
+  "Map hit testing must stay disabled while the fog transition is active."
+);
+requireMatch(
+  stylesSource,
+  /\.map-transition-stage\.is-transitioning\s*\{(?=[^}]*opacity:\s*1)(?=[^}]*transform:\s*translate3d\(0,\s*0,\s*0\))[^}]*\}/,
+  "The live map stage must remain fixed and opaque throughout map transfer."
+);
+assert.doesNotMatch(
+  stylesSource,
+  /crownlandsMapStage(?:Leave|Enter|Reduced)/,
+  "Map transfer must not translate or fade the live map stage."
+);
+requireMatch(
+  stylesSource,
+  /\.crownlands-map-transition__part--scrim\s*\{(?=[^}]*inset:\s*-12px)(?=[^}]*#071218)(?=[^}]*will-change:\s*transform,\s*opacity)[^}]*\}/,
+  "The fog curtain must overscan the map frame with an opaque dark fallback."
+);
+requireMatch(stylesSource, /@keyframes crownlandsMapFogCover/, "The directional fog cover animation is missing.");
+requireMatch(stylesSource, /@keyframes crownlandsMapFogReveal/, "The directional fog reveal animation is missing.");
+requireMatch(
+  managerSource,
+  /transitionCoverReadyAt[\s\S]*?remainingCoverMs[\s\S]*?transitionRevealScheduled/,
+  "An early map load must defer only the visual reveal until the fog cover is ready."
+);
+requireMatch(
+  stylesSource,
+  /\.map-frame\.map-switching\s*\{[\s\S]*?background:[\s\S]*?#071218/,
+  "Map switching needs a dark fallback instead of the normal blue ocean background."
+);
+requireMatch(
+  stylesSource,
+  /\.map-frame\.map-switching\s+\.map-loading-panel\s*\{[\s\S]*?300ms\s+forwards/,
+  "The map loading panel must wait briefly so cached switches do not flash a spinner."
 );
 
 class FakeElement {
   constructor() {
+    this.nodeType = 1;
     this.children = [];
     this.dataset = {};
     this.isConnected = true;
@@ -178,11 +225,18 @@ class FakeElement {
       setProperty() {},
       removeProperty() {},
     };
+    const classNames = new Set();
     this.classList = {
-      add() {},
-      remove() {},
-      toggle() {},
-      contains() { return false; },
+      add(...tokens) { tokens.forEach(token => classNames.add(String(token))); },
+      remove(...tokens) { tokens.forEach(token => classNames.delete(String(token))); },
+      toggle(token, force) {
+        const key = String(token);
+        const enabled = force === undefined ? !classNames.has(key) : Boolean(force);
+        if (enabled) classNames.add(key);
+        else classNames.delete(key);
+        return enabled;
+      },
+      contains(token) { return classNames.has(String(token)); },
     };
   }
 
@@ -303,6 +357,25 @@ animations.setMode("auto", { persist: false });
 assert.equal(animations.getEffectiveMode(), "reduced", "Auto mode did not honor prefers-reduced-motion.");
 mediaQuery.matches = false;
 animations.clearAll("static-validator");
+animations.setMode(initialMode, { persist: false });
+
+const transitionRoot = new FakeElement();
+const transitionStage = new FakeElement();
+animations.init({ transitionRoot, mapStage: transitionStage, mode: "full" });
+const mapTransition = animations.beginMapTransition({
+  root: transitionRoot,
+  stage: transitionStage,
+  direction: "east",
+  coverDurationMs: 240,
+});
+assert(mapTransition, "The fog map transition did not start.");
+assert(transitionStage.classList.contains("is-transitioning"), "Map interaction guard did not activate.");
+assert(!transitionStage.classList.contains("is-leaving"), "The live map stage must not receive a leaving animation.");
+assert(animations.finishMapTransition(mapTransition.token), "An early map transition finish was not accepted.");
+assert.equal(mapTransition.element.dataset.phase, "loading", "Early finish must hold the fog cover before reveal.");
+assert(!transitionStage.classList.contains("is-entering"), "The live map stage must not receive an entering animation.");
+assert(animations.cancelMapTransition("static-validator", mapTransition.token), "Fog transition cleanup failed.");
+assert(!transitionStage.classList.contains("is-transitioning"), "Fog transition cleanup left map input blocked.");
 animations.setMode(initialMode, { persist: false });
 
 const reportStart = serverSource.indexOf("function makeReport({");

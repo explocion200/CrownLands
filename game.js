@@ -1170,12 +1170,15 @@ function getStrongholdDisplayName(city) {
 }
 
 function getStrongholdArtSrc(city) {
-  if (city?.artSrc) return city.artSrc;
+  // Known objectives always use the packaged, content-hashed artwork. Older
+  // Firestore city records may still contain editor-only PNG paths that are
+  // intentionally excluded from production builds.
   if (isCrownCitadel(city)) return CROWN_CITADEL_ART_SRC;
   if (isDefenseStronghold(city)) return DEFENSE_STRONGHOLD_ART_SRC;
   if (isSpeedStronghold(city)) return SPEED_STRONGHOLD_ART_SRC;
   if (isTrainingStronghold(city)) return TRAINING_STRONGHOLD_ART_SRC;
-  return isGoldStronghold(city) ? GOLD_STRONGHOLD_ART_SRC : "";
+  if (isGoldStronghold(city)) return GOLD_STRONGHOLD_ART_SRC;
+  return String(city?.artSrc || "").trim();
 }
 
 function getStrongholdBonusPercent(city) {
@@ -2725,7 +2728,6 @@ let deedRewardReportsVfxHydrated = false;
 const pendingDeedCityHighlights = new Map();
 const seenDeedRewardEventIds = new Map();
 const seenWorldAnimationEventIds = new Map();
-const pendingTroopRewardHighlights = new Map();
 let onlineArmyUnsubscribes = [];
 let onlineReinforcementsUnsubscribe = null;
 const reinforcementReturnRequests = new Set();
@@ -3227,34 +3229,21 @@ function getVisibleTroopRewardDestination() {
   return profileBtn;
 }
 
-function getVisibleTroopRewardCityDestination(cityId = "") {
-  const id = String(cityId || "");
+function getVisibleMainCityTroopRewardDestination(fallbackCityId = "") {
+  if (profileScreen?.classList.contains("open")) return null;
+  const id = String(state?.mainCityId || fallbackCityId || "");
   const city = id ? cityById(id) : null;
   if (!city || getCityRegionId(city) !== getActiveMapRegionId()) return null;
   const node = cityLayer?.querySelector(`[data-city-id="${CSS.escape(id)}"]`);
   if (!node?.getBoundingClientRect || !mapFrame?.getBoundingClientRect) return null;
+  if (!node.getClientRects().length || !mapFrame.getClientRects().length) return null;
   const nodeRect = node.getBoundingClientRect();
   const mapRect = mapFrame.getBoundingClientRect();
-  const visible = nodeRect.right >= mapRect.left
-    && nodeRect.left <= mapRect.right
-    && nodeRect.bottom >= mapRect.top
-    && nodeRect.top <= mapRect.bottom;
+  const visible = nodeRect.right > mapRect.left
+    && nodeRect.left < mapRect.right
+    && nodeRect.bottom > mapRect.top
+    && nodeRect.top < mapRect.bottom;
   return visible ? node : null;
-}
-
-function queueTroopRewardDestinationHighlight(eventId, cityId) {
-  const id = String(cityId || "");
-  const city = id ? cityById(id) : null;
-  if (!city || getCityRegionId(city) === getActiveMapRegionId()) return;
-  pendingTroopRewardHighlights.set(eventId, {
-    eventId,
-    cityId: id,
-    regionId: getCityRegionId(city),
-    expiresAtMs: Date.now() + 30 * 60 * 1000,
-  });
-  while (pendingTroopRewardHighlights.size > 20) {
-    pendingTroopRewardHighlights.delete(pendingTroopRewardHighlights.keys().next().value);
-  }
 }
 
 function rewardVisualTier(sourceKind = "medium") {
@@ -3275,14 +3264,11 @@ function playRewardAnimation(kind, {
   const effectHost = requestedHost || (source?.closest?.("dialog[open]") || null);
   const target = normalizedKind === "gold"
     ? goldText?.closest?.(".profile-gold") || goldText
-    : (!effectHost ? getVisibleTroopRewardCityDestination(destinationCityId) : null)
+    : getVisibleMainCityTroopRewardDestination(destinationCityId)
       || getVisibleTroopRewardDestination();
   const start = sourceAnchor || captureAnimationAnchor(source);
   const end = captureAnimationAnchor(target);
   if (!end) return null;
-  if (normalizedKind === "troops" && destinationCityId) {
-    queueTroopRewardDestinationHighlight(eventId, destinationCityId);
-  }
   return emitCrownlandsAnimation(`reward-${normalizedKind}`, {
     id: eventId,
     intensity: "standard",
@@ -13878,7 +13864,6 @@ function disconnectOnlineWorld() {
   onlineHeldCampStates = new Map();
   resolvingRewardCampPayoutIds = new Set();
   pendingDeedCityHighlights.clear();
-  pendingTroopRewardHighlights.clear();
   crownlandsAnimations?.clearAll?.();
   deedCampHistoryCache.clear();
   deedCampHistoryRequests.clear();
@@ -15199,40 +15184,6 @@ function flushPendingDeedCityHighlights() {
     if (!city || !node) return;
     pendingDeedCityHighlights.delete(eventId);
     emitCompletedDeedCityHighlight(eventId, city, node);
-  });
-}
-
-function flushPendingTroopRewardHighlights() {
-  const activeRegionId = getActiveMapRegionId();
-  const nowMs = Date.now();
-  pendingTroopRewardHighlights.forEach((pending, eventId) => {
-    if (pending.expiresAtMs <= nowMs) {
-      pendingTroopRewardHighlights.delete(eventId);
-      return;
-    }
-    if (pending.regionId !== activeRegionId) return;
-    const city = cityById(pending.cityId);
-    const node = cityLayer?.querySelector(`[data-city-id="${CSS.escape(pending.cityId)}"]`);
-    if (!city || !node) return;
-    pendingTroopRewardHighlights.delete(eventId);
-    requestAnimationFrame(() => {
-      const anchor = getWorldAnimationAnchor(city);
-      emitCrownlandsAnimation("reward-troops", {
-        id: `${eventId}:destination`,
-        intensity: "minor",
-        regionId: activeRegionId,
-        worldSpace: true,
-        anchor,
-        targetAnchor: anchor,
-        target: node,
-        payload: {
-          tier: "small",
-          icon: TROOP_PICKUP_ICON_SRC,
-          degraded: true,
-          destinationOnly: true,
-        },
-      });
-    });
   });
 }
 
@@ -23773,7 +23724,7 @@ function renderCities(force = false) {
     const structureHtml = stronghold
       ? `
       <span class="stronghold-glow" aria-hidden="true"></span>
-      <span class="stronghold-building" aria-hidden="true"><img class="stronghold-art" src="${getStrongholdArtSrc(city)}" alt="" draggable="false" decoding="async" /></span>`
+      <span class="stronghold-building" aria-hidden="true"><img class="stronghold-art" src="${escapeHtml(getStrongholdArtSrc(city))}" alt="" draggable="false" decoding="async" /></span>`
       : `
       <span class="city-ring"></span>
         ${shielded ? `<span class="city-shield-field" aria-hidden="true"><img src="assets/optimized/status-peace-shield-field-192x192-5b5b95051830.webp" alt="" draggable="false" decoding="async" /></span>` : ""}
@@ -23798,7 +23749,6 @@ function renderCities(force = false) {
   updateVisibleCityDynamicText();
   layoutCityLabels();
   flushPendingDeedCityHighlights();
-  flushPendingTroopRewardHighlights();
   const selectedForeign = selectedTargetId ? cityById(selectedTargetId) : null;
   const selectedCamp = selectedTargetId ? getCampTargetById(selectedTargetId) : null;
   if (selectedCamp && !sendMode) renderSelectedRewardCampWheel(selectedCamp);

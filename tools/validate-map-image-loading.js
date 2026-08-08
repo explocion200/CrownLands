@@ -93,7 +93,18 @@ assert(
 );
 
 const campArtByType = new Map();
+const strongholdArtByType = new Map();
 for (const map of layout.maps || []) {
+  for (const objective of map.objectives || []) {
+    const strongholdType = String(objective.strongholdType || objective.type || "").toLowerCase();
+    const artSrc = String(objective.artSrc || "");
+    assert(
+      /^assets\/optimized\/(?:crown-citadel|stronghold-[\w-]+)-384x384-[0-9a-f]{12}\.webp$/.test(artSrc),
+      `${objective.id} should use content-hashed optimized objective artwork.`
+    );
+    assert(fs.existsSync(path.join(root, artSrc)), `${objective.id} objective artwork is missing.`);
+    strongholdArtByType.set(strongholdType, artSrc);
+  }
   for (const camp of map.camps || []) {
     const campType = String(camp.campType || camp.type || "gold").toLowerCase();
     const artSrc = String(camp.artSrc || "");
@@ -106,6 +117,33 @@ for (const map of layout.maps || []) {
   }
 }
 assert(campArtByType.size === 4, "All four reward-camp artwork types must be present in the world layout.");
+assert(strongholdArtByType.size === 5, "All five Stronghold artwork types must be present in the world layout.");
+
+const getStrongholdArtSrc = vm.runInNewContext(
+  `(${extractFunction(game, "getStrongholdArtSrc")})`,
+  {
+    CROWN_CITADEL_ART_SRC: strongholdArtByType.get("crown"),
+    DEFENSE_STRONGHOLD_ART_SRC: strongholdArtByType.get("defense"),
+    SPEED_STRONGHOLD_ART_SRC: strongholdArtByType.get("speed"),
+    TRAINING_STRONGHOLD_ART_SRC: strongholdArtByType.get("training"),
+    GOLD_STRONGHOLD_ART_SRC: strongholdArtByType.get("gold"),
+    isCrownCitadel: city => city?.strongholdType === "crown",
+    isDefenseStronghold: city => city?.strongholdType === "defense",
+    isSpeedStronghold: city => city?.strongholdType === "speed",
+    isTrainingStronghold: city => city?.strongholdType === "training",
+    isGoldStronghold: city => city?.strongholdType === "gold",
+    String,
+  }
+);
+for (const [strongholdType, artSrc] of strongholdArtByType) {
+  assert(
+    getStrongholdArtSrc({
+      strongholdType,
+      artSrc: `assets/${strongholdType === "crown" ? "crown-citadel" : `stronghold-${strongholdType}`}.png?v=legacy-editor`,
+    }) === artSrc,
+    `A stale ${strongholdType} Stronghold snapshot must not override packaged optimized artwork.`
+  );
+}
 
 const staleCampBases = new Map([...campArtByType].map(([campType, artSrc]) => {
   const id = `stale_${campType}_camp`;
