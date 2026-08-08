@@ -190,6 +190,44 @@ html:fullscreen::backdrop {
   box-shadow: 0 10px 24px rgba(0,0,0,.38), inset 0 0 0 1px rgba(255,255,255,.08);
   backdrop-filter: blur(7px);
 }
+.discord-home-link {
+  position: absolute;
+  z-index: 3;
+  left: calc((100vw - var(--login-art-width)) / 2 + max(.75rem, env(safe-area-inset-left)) + 54px);
+  bottom: calc((100dvh - var(--login-art-height)) / 2 + max(.75rem, env(safe-area-inset-bottom)));
+  display: grid;
+  width: 46px;
+  min-width: 46px;
+  height: 46px;
+  min-height: 46px;
+  place-items: center;
+  color: #fff6d0;
+  border: 1px solid rgba(255, 226, 147, .56);
+  border-radius: 13px;
+  background: linear-gradient(180deg, rgba(13, 35, 59, .84), rgba(5, 12, 23, .9));
+  box-shadow: 0 10px 24px rgba(0,0,0,.38), inset 0 0 0 1px rgba(255,255,255,.08);
+  backdrop-filter: blur(7px);
+  transition: border-color .16s ease, color .16s ease, filter .16s ease, transform .16s ease;
+}
+.discord-home-link svg {
+  width: 25px;
+  height: 25px;
+  fill: currentColor;
+  filter: drop-shadow(0 2px 0 rgba(0, 0, 0, .7));
+}
+.discord-home-link:hover {
+  color: #fff;
+  border-color: #ffe7a4;
+  filter: brightness(1.12);
+  transform: translateY(-1px);
+}
+.discord-home-link:focus-visible {
+  outline: 3px solid rgba(130, 197, 255, .9);
+  outline-offset: 3px;
+}
+.discord-home-link:active {
+  transform: translateY(1px);
+}
 .login-music-mute-btn {
   position: absolute;
   z-index: 3;
