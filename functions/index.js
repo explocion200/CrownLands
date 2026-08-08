@@ -6889,6 +6889,9 @@ function makeReport({
   type,
   outcome,
   eventKind = "",
+  rewardEventId = "",
+  rewardSourceId = "",
+  rewardSourceRegionId = "",
   city,
   opponentUid = "",
   opponentName = "",
@@ -6919,6 +6922,9 @@ function makeReport({
     Math.floor(safeNumber(result.defensePower, 0))
   );
   const defenseBreakdown = defenseStats || scoutReport;
+  const normalizedRewardEventId = safeString(rewardEventId, 160);
+  const normalizedRewardSourceId = safeString(rewardSourceId, 96);
+  const normalizedRewardSourceRegionId = safeString(rewardSourceRegionId, 80);
   const normalizedBaseDefense = Math.min(
     normalizedTotalDefense,
     Math.max(0, Math.floor(safeNumber(defenseBreakdown?.baseTotalDefense, normalizedTotalDefense)))
@@ -6930,6 +6936,9 @@ function makeReport({
     type,
     outcome,
     eventKind: safeString(eventKind, 48),
+    ...(normalizedRewardEventId ? { rewardEventId: normalizedRewardEventId } : {}),
+    ...(normalizedRewardSourceId ? { rewardSourceId: normalizedRewardSourceId } : {}),
+    ...(normalizedRewardSourceRegionId ? { rewardSourceRegionId: normalizedRewardSourceRegionId } : {}),
     cityId: safeString(city?.id, 96),
     regionId: safeString(city?.regionId || city?.startPool || "", 80),
     cityName: safeString(city?.name || city?.id || "Unknown city", 40),
@@ -18237,6 +18246,19 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
       }
       return null;
     };
+    const troopRewardDestinationForCaller = (attackerReward = null, defenderReward = null) => {
+      const reward = callerUid === attackerUid
+        ? attackerReward
+        : callerUid === defenderUid
+          ? defenderReward
+          : null;
+      if (!reward?.cityId) return {};
+      return {
+        troopRewardCityId: safeString(reward.cityId, 96),
+        troopRewardCityName: safeString(reward.cityName || reward.cityId, 40),
+        troopRewardRegionId: safeString(normalizeRegionId(reward.regionId), 80),
+      };
+    };
     const markResolved = resultPatch => {
       const patch = {
         status: "resolved",
@@ -19662,6 +19684,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
         rallyAttack: true,
         outcome: battleOutcome,
         reports: reportsForCaller(),
+        ...troopRewardDestinationForCaller(attackerLevelTroopReward, defenderLevelTroopReward),
         ...(targetType === "camp"
           ? { campUpdate: targetUpdate }
           : { cityUpdates: withEconomyCityUpdates([targetUpdate]) }),
@@ -20486,6 +20509,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
         kind: "attack",
         outcome: "breach",
         reports: reportsForCaller(),
+        ...troopRewardDestinationForCaller(attackerLevelTroopReward, defenderLevelTroopReward),
         cityUpdates: withEconomyCityUpdates(cityUpdates),
         currentUser: profilePatchForCaller(attackerProgress, defenderProgress),
       };
@@ -20689,6 +20713,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
         kind: "attack",
         outcome: "victory",
         reports: reportsForCaller(),
+        ...troopRewardDestinationForCaller(attackerLevelTroopReward, defenderLevelTroopReward),
         cityUpdates: withEconomyCityUpdates(cityUpdates),
         currentUser: profilePatchForCaller(attackerProgress, defenderProgress),
       };
@@ -20820,6 +20845,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
       kind: "attack",
       outcome: result.raidCompleted ? "raid" : "defeat",
       reports: reportsForCaller(),
+      ...troopRewardDestinationForCaller(attackerLevelTroopReward, defenderLevelTroopReward),
       cityUpdates: withEconomyCityUpdates(cityUpdates),
       currentUser: profilePatchForCaller(attackerProgress, defenderProgress),
     };
@@ -22182,6 +22208,15 @@ async function resolveRewardCampPayoutByRef(campRef, nowMs = Date.now(), callerU
     const reportCity = deedCityAward
       ? { ...deedCityAward.city, ...deedCityPatch, regionId: deedCityAward.regionId }
       : camp;
+    const deedCompletionMetadata = deedCityPatch ? {
+      eventKind: "deed_camp_completed",
+      rewardEventId: safeString(
+        `deed_camp_completed_${camp.id}_${deedCityPatch.id}_${payoutAtMs}`,
+        160
+      ).replace(/[^a-zA-Z0-9_-]/g, "_"),
+      rewardSourceId: safeString(camp.id, 96),
+      rewardSourceRegionId: safeString(normalizeRegionId(camp.regionId), 80),
+    } : null;
     const reportSummary = isDeedCamp
       ? deedDailyLimitReached
         ? `Held ${camp.name || config.name} for ${holdMinutes} minutes, but you already received a Deed Camp city today. The camp reset to neutral.${returnSummary}`
@@ -22200,6 +22235,7 @@ async function resolveRewardCampPayoutByRef(campRef, nowMs = Date.now(), callerU
       uid: holderUid,
       type: "defense",
       outcome: "held",
+      ...(deedCompletionMetadata || {}),
       city: reportCity,
       opponentName: config.name,
       troopCount: returningTroops,
@@ -22238,6 +22274,7 @@ async function resolveRewardCampPayoutByRef(campRef, nowMs = Date.now(), callerU
       reward,
       rewardType: config.rewardType,
       campType: config.campType,
+      ...(deedCompletionMetadata || {}),
       dailyClaim: nextClaims,
       awardedCity: deedCityPatch ? {
         id: deedCityPatch.id,

@@ -9,7 +9,7 @@ if (output !== path.resolve(root, "dist") || !output.startsWith(`${root}${path.s
 }
 
 const rootFiles = [
-  "about.html", "ads.txt", "ads-config.js", "audio-manager.js",
+  "about.html", "ads.txt", "ads-config.js", "animation-manager.js", "audio-manager.js",
   "battle-economy-guide.css", "battle-economy-guide.html", "battle-economy-guide.js",
   "battle-guide-calculations.js", "economy-config.js", "firebase-config.js",
   "firebase-messaging-sw.js", "firebaseClient.js", "game-rules.html", "game.js",

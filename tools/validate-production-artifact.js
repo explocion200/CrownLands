@@ -4,7 +4,7 @@ const path = require("node:path");
 const root = path.resolve(__dirname, "..");
 const dist = path.join(root, "dist");
 const required = [
-  "index.html", "game.js", "firebaseClient.js", "release-manifest.js",
+  "index.html", "game.js", "firebaseClient.js", "animation-manager.js", "release-manifest.js",
   "assets/map-editor-data.js", "audio/manifest.json", "functions/clanQuestPeriod.js",
   "artifact-manifest.json",
 ];

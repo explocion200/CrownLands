@@ -179,14 +179,17 @@ async function validateAsyncBehavior() {
   const modalContext = {
     modal: { open: true },
     pendingOfflineRewardsSummary: null,
+    screenRewardAnimationBlockUntilMs: 0,
     showOfflineRewardsModal: summary => shownSummaries.push(summary),
+    window: { setTimeout: callback => callback() },
+    Date,
     Map,
     Math,
     Number,
     String,
   };
   vm.createContext(modalContext);
-  for (const name of ["mergeOfflineRewardsSummaries", "queueOfflineRewardsSummary", "showPendingOfflineRewardsSummary"]) {
+  for (const name of ["mergeOfflineRewardsSummaries", "deferWhileScreenRewardAnimationRuns", "queueOfflineRewardsSummary", "showPendingOfflineRewardsSummary"]) {
     vm.runInContext(functionSource(name), modalContext, { filename: "game.js" });
   }
   modalContext.queueOfflineRewardsSummary({ goldGained: 10, troopsGained: 5, elapsed: 60, lostCities: [] });

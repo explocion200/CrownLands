@@ -17,6 +17,9 @@ const RESET_GENERATION = String(REALM_CONFIG.resetGeneration || "fresh-2026-07-2
 const STORAGE_KEY = `crownlands-realtime-${RESET_GENERATION}`;
 const PENDING_ARMY_STORAGE_KEY = `crownlands-pending-armies-${RESET_GENERATION}`;
 const PUSH_NOTIFICATIONS_PREF_KEY = "crownlands-push-notifications";
+const ANIMATION_MODE_STORAGE_KEY = "crownlands.animation.mode.v1";
+const LEGACY_ANIMATION_MODE_STORAGE_KEY = "crownlands-animation-mode";
+const ANIMATION_MODES = Object.freeze(["full", "reduced", "off"]);
 const PATCH_NOTES_SEEN_STORAGE_KEY = "crownlands-patch-notes-seen-build";
 const LEGACY_STORAGE_KEYS = [];
 const SAVE_EVERY_SECONDS = 30;
@@ -2716,6 +2719,13 @@ let pendingOutgoingMissions = new Map();
 let onlineCampStates = new Map();
 let onlineHeldCampStates = new Map();
 let resolvingRewardCampPayoutIds = new Set();
+let onlineCityVfxHydrated = false;
+let onlineCampVfxHydrated = false;
+let deedRewardReportsVfxHydrated = false;
+const pendingDeedCityHighlights = new Map();
+const seenDeedRewardEventIds = new Map();
+const seenWorldAnimationEventIds = new Map();
+const pendingTroopRewardHighlights = new Map();
 let onlineArmyUnsubscribes = [];
 let onlineReinforcementsUnsubscribe = null;
 const reinforcementReturnRequests = new Set();
@@ -2795,6 +2805,7 @@ let lastReportDrivenEconomyRefreshAtMs = 0;
 let activeLevelUpReward = null;
 const levelUpRewardQueue = [];
 let levelUpRewardAudioTimer = 0;
+let screenRewardAnimationBlockUntilMs = 0;
 let leaderboardSaveTimer = 0;
 let leaderboardSaveInFlight = false;
 let leaderboardLastSignature = "";
@@ -3014,6 +3025,8 @@ const profileTroopProductionStat = document.getElementById("profileTroopProducti
 const pushAlertsOffBtn = document.getElementById("pushAlertsOffBtn");
 const pushAlertsOnBtn = document.getElementById("pushAlertsOnBtn");
 const pushAlertsStatus = document.getElementById("pushAlertsStatus");
+const animationModeButtons = Array.from(document.querySelectorAll("[data-animation-mode-option]"));
+const animationModeStatus = document.getElementById("animationModeStatus");
 const flagEditorPreview = document.getElementById("flagEditorPreview");
 const flagPrimaryColors = document.getElementById("flagPrimaryColors");
 const flagSecondaryColors = document.getElementById("flagSecondaryColors");
@@ -3027,13 +3040,16 @@ const citadelAssaultCountdown = document.getElementById("citadelAssaultCountdown
 const citadelAssaultCountdownTime = document.getElementById("citadelAssaultCountdownTime");
 const citadelAssaultCountdownDetail = document.getElementById("citadelAssaultCountdownDetail");
 const mapLoadingLabel = document.getElementById("mapLoadingLabel");
+const mapTransitionStage = document.getElementById("mapTransitionStage");
 const mapWorld = document.getElementById("mapWorld");
 const mapBg = document.getElementById("mapBg");
 const pathsSvg = document.getElementById("pathsSvg");
 const harvestLayer = document.getElementById("harvestLayer");
 const portalLayer = document.getElementById("portalLayer");
 const cityLayer = document.getElementById("cityLayer");
+const mapVfxLayer = document.getElementById("mapVfxLayer");
 const armyLayer = document.getElementById("armyLayer");
+const screenVfxLayer = document.getElementById("screenVfxLayer");
 const toast = document.getElementById("toast");
 const commanderPanel = document.querySelector(".commander-panel");
 const panelTitle = document.getElementById("panelTitle");
@@ -3065,11 +3081,221 @@ const incomingAttackCount = document.getElementById("incomingAttackCount");
 const incomingAttackTime = document.getElementById("incomingAttackTime");
 const helpBtn = document.getElementById("helpBtn");
 const crownlandsAudio = window.CrownlandsAudio;
+const crownlandsAnimations = window.CrownlandsAnimations;
 const BATTLE_IMPACT_AUDIO_DELAY_MS = 150;
 const BATTLE_OUTCOME_AUDIO_DELAY_MS = 450;
 const REWARD_FOLLOWUP_AUDIO_DELAY_MS = 900;
 const VICTORY_MUSIC_AUDIO_DELAY_MS = 2000;
 let lastAudioIncomingAttackIds = new Set();
+let volatileAnimationModePreference = "";
+
+function normalizeAnimationMode(value) {
+  const mode = String(value || "").trim().toLowerCase();
+  return ANIMATION_MODES.includes(mode) ? mode : "";
+}
+
+function getStoredAnimationMode() {
+  if (volatileAnimationModePreference) return volatileAnimationModePreference;
+  try {
+    return normalizeAnimationMode(
+      window.localStorage?.getItem(ANIMATION_MODE_STORAGE_KEY)
+      || window.localStorage?.getItem(LEGACY_ANIMATION_MODE_STORAGE_KEY)
+    );
+  } catch (_error) {
+    return volatileAnimationModePreference;
+  }
+}
+
+function getSystemAnimationMode() {
+  return window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches ? "reduced" : "full";
+}
+
+function getEffectiveAnimationMode() {
+  return getStoredAnimationMode() || getSystemAnimationMode();
+}
+
+function renderAnimationModeSetting() {
+  const storedMode = getStoredAnimationMode();
+  const effectiveMode = storedMode || getSystemAnimationMode();
+  document.documentElement.dataset.animationMode = effectiveMode;
+  crownlandsAnimations?.setMode?.(effectiveMode);
+  animationModeButtons.forEach(button => {
+    const selected = button.dataset.animationModeOption === effectiveMode;
+    button.classList.toggle("active", selected);
+    button.setAttribute("aria-pressed", String(selected));
+  });
+  if (animationModeStatus) {
+    animationModeStatus.textContent = storedMode
+      ? `${effectiveMode.charAt(0).toUpperCase()}${effectiveMode.slice(1)} animations selected.`
+      : `${effectiveMode.charAt(0).toUpperCase()}${effectiveMode.slice(1)} animations selected from your system preference.`;
+  }
+  return effectiveMode;
+}
+
+function setAnimationModePreference(mode) {
+  const normalizedMode = normalizeAnimationMode(mode);
+  if (!normalizedMode) return false;
+  volatileAnimationModePreference = normalizedMode;
+  try {
+    window.localStorage?.setItem(ANIMATION_MODE_STORAGE_KEY, normalizedMode);
+    window.localStorage?.removeItem(LEGACY_ANIMATION_MODE_STORAGE_KEY);
+  } catch (_error) {
+    // The in-memory manager mode still applies when storage is unavailable.
+  }
+  renderAnimationModeSetting();
+  return true;
+}
+
+function captureAnimationAnchor(element) {
+  if (!element) return null;
+  const captured = crownlandsAnimations?.captureAnchor?.(element);
+  if (captured) {
+    const left = Number(captured.viewportLeft ?? captured.left);
+    const top = Number(captured.viewportTop ?? captured.top);
+    const width = Math.max(0, Number(captured.width) || 0);
+    const height = Math.max(0, Number(captured.height) || 0);
+    return {
+      left,
+      top,
+      width,
+      height,
+      x: Number(captured.viewportX ?? captured.x ?? (left + width / 2)),
+      y: Number(captured.viewportY ?? captured.y ?? (top + height / 2)),
+    };
+  }
+  const rect = element.getBoundingClientRect?.();
+  if (!rect || (!rect.width && !rect.height)) return null;
+  return {
+    left: rect.left,
+    top: rect.top,
+    width: rect.width,
+    height: rect.height,
+    x: rect.left + rect.width / 2,
+    y: rect.top + rect.height / 2,
+  };
+}
+
+function getWorldAnimationAnchor(target) {
+  if (!target) return null;
+  const point = worldToMapPoint(target);
+  if (!Number.isFinite(point?.x) || !Number.isFinite(point?.y)) return null;
+  return { x: point.x, y: point.y };
+}
+
+function emitCrownlandsAnimation(type, options = {}) {
+  if (!crownlandsAnimations?.emit || getEffectiveAnimationMode() === "off") return null;
+  const regionId = normalizeRegionId(options.regionId || getActiveMapRegionId());
+  if (options.worldSpace && regionId !== getActiveMapRegionId()) return null;
+  try {
+    return crownlandsAnimations.emit({
+      ...options,
+      type,
+      scope: options.scope || (options.worldSpace ? `map:${regionId}` : "screen"),
+      payload: {
+        ...(options.payload || {}),
+        degraded: Boolean(
+          options.payload?.degraded
+          || mapFrame?.classList.contains("crowded-map")
+          || mapFrame?.classList.contains("low-zoom")
+          || isCameraInteractionActive()
+        ),
+      },
+    });
+  } catch (error) {
+    console.warn("Crownlands animation skipped", error);
+    return null;
+  }
+}
+
+function getAnimationFlagColors(flag = null, owner = "neutral") {
+  const normalized = flag ? normalizeFlag(flag) : null;
+  const fallback = owner === "player"
+    ? { primary: "#2f83d0", secondary: "#bfe8ff" }
+    : owner === "enemy"
+      ? { primary: "#a93434", secondary: "#f2b1a1" }
+      : { primary: "#777b7d", secondary: "#d1d1c8" };
+  return {
+    primary: normalized?.primary || fallback.primary,
+    secondary: normalized?.secondary || fallback.secondary,
+  };
+}
+
+function getVisibleTroopRewardDestination() {
+  if (profileTroopsStat && !profileTroopsStat.hidden && profileTroopsStat.getClientRects().length) {
+    return profileTroopsStat;
+  }
+  return profileBtn;
+}
+
+function getVisibleTroopRewardCityDestination(cityId = "") {
+  const id = String(cityId || "");
+  const city = id ? cityById(id) : null;
+  if (!city || getCityRegionId(city) !== getActiveMapRegionId()) return null;
+  const node = cityLayer?.querySelector(`[data-city-id="${CSS.escape(id)}"]`);
+  if (!node?.getBoundingClientRect || !mapFrame?.getBoundingClientRect) return null;
+  const nodeRect = node.getBoundingClientRect();
+  const mapRect = mapFrame.getBoundingClientRect();
+  const visible = nodeRect.right >= mapRect.left
+    && nodeRect.left <= mapRect.right
+    && nodeRect.bottom >= mapRect.top
+    && nodeRect.top <= mapRect.bottom;
+  return visible ? node : null;
+}
+
+function queueTroopRewardDestinationHighlight(eventId, cityId) {
+  const id = String(cityId || "");
+  const city = id ? cityById(id) : null;
+  if (!city || getCityRegionId(city) === getActiveMapRegionId()) return;
+  pendingTroopRewardHighlights.set(eventId, {
+    eventId,
+    cityId: id,
+    regionId: getCityRegionId(city),
+    expiresAtMs: Date.now() + 30 * 60 * 1000,
+  });
+  while (pendingTroopRewardHighlights.size > 20) {
+    pendingTroopRewardHighlights.delete(pendingTroopRewardHighlights.keys().next().value);
+  }
+}
+
+function rewardVisualTier(sourceKind = "medium") {
+  return ["small", "medium", "large"].includes(sourceKind) ? sourceKind : "medium";
+}
+
+function playRewardAnimation(kind, {
+  id = "",
+  source = null,
+  sourceAnchor = null,
+  tier = "medium",
+  host = null,
+  destinationCityId = "",
+} = {}) {
+  const normalizedKind = kind === "troops" ? "troops" : "gold";
+  const eventId = id || `reward-${normalizedKind}-${Date.now()}`;
+  const requestedHost = host?.isConnected && (!host.matches?.("dialog") || host.open) ? host : null;
+  const effectHost = requestedHost || (source?.closest?.("dialog[open]") || null);
+  const target = normalizedKind === "gold"
+    ? goldText?.closest?.(".profile-gold") || goldText
+    : (!effectHost ? getVisibleTroopRewardCityDestination(destinationCityId) : null)
+      || getVisibleTroopRewardDestination();
+  const start = sourceAnchor || captureAnimationAnchor(source);
+  const end = captureAnimationAnchor(target);
+  if (!end) return null;
+  if (normalizedKind === "troops" && destinationCityId) {
+    queueTroopRewardDestinationHighlight(eventId, destinationCityId);
+  }
+  return emitCrownlandsAnimation(`reward-${normalizedKind}`, {
+    id: eventId,
+    intensity: "standard",
+    source: start,
+    target,
+    targetAnchor: end,
+    payload: {
+      tier: rewardVisualTier(tier),
+      icon: normalizedKind === "gold" ? GOLD_PICKUP_ICON_SRC : TROOP_PICKUP_ICON_SRC,
+      host: effectHost,
+    },
+  });
+}
 
 function playGameSound(id, options = {}) {
   const {
@@ -4456,7 +4682,7 @@ function applyWorldDimensions() {
   const bounds = getActiveMapBounds();
   const width = `${bounds.width}px`;
   const height = `${bounds.height}px`;
-  [mapWorld, harvestLayer, portalLayer, cityLayer, armyLayer].forEach(element => {
+  [mapWorld, harvestLayer, portalLayer, cityLayer, mapVfxLayer, armyLayer].forEach(element => {
     if (!element) return;
     element.style.width = width;
     element.style.height = height;
@@ -4681,7 +4907,11 @@ function clearMapSwitchLoading() {
 }
 
 function isMapInteractionBlocked() {
-  return Boolean(onlineWorldLoading || mapSwitchLoading);
+  return Boolean(
+    onlineWorldLoading
+    || mapSwitchLoading
+    || mapTransitionStage?.classList.contains("is-transitioning")
+  );
 }
 
 function updateMapDensityMode(visibleCityCount = null, visibleArmyCount = null) {
@@ -4829,7 +5059,7 @@ function renderIslandTeleporters() {
     buttonElement.addEventListener("click", event => {
       event.stopPropagation();
       if (isMapInteractionBlocked()) return;
-      switchOnlineIsland(teleport.targetRegionId);
+      switchOnlineIsland(teleport.targetRegionId, { transitionSide: teleport.side || "" });
     });
     portalLayer.appendChild(buttonElement);
   });
@@ -4861,7 +5091,7 @@ function renderHarvestBonuses() {
     buttonElement.innerHTML = `<span aria-hidden="true">${getHarvestBonusIcon(type)}</span>`;
     buttonElement.addEventListener("click", event => {
       event.stopPropagation();
-      collectHarvestBonus(bonus.id);
+      collectHarvestBonus(bonus.id, event.currentTarget);
     });
     harvestLayer.appendChild(buttonElement);
   });
@@ -6590,6 +6820,7 @@ function getLevelUpRewardBundle(fromLevel, toLevel, options = {}) {
   }
   const hasGoldOverride = Number.isFinite(Number(options.gold));
   const hasTroopOverride = Number.isFinite(Number(options.troops));
+  const rewardCity = options.cityId ? cityById(options.cityId) : getMainRewardCity();
   return {
     fromLevel: startLevel,
     toLevel: endLevel,
@@ -6597,13 +6828,15 @@ function getLevelUpRewardBundle(fromLevel, toLevel, options = {}) {
     skillPoints: endLevel - startLevel,
     gold: Math.max(0, Math.floor(hasGoldOverride ? Number(options.gold) : calculatedGold)),
     troops: Math.max(0, Math.floor(hasTroopOverride ? Number(options.troops) : calculatedTroops)),
-    cityName: String(options.cityName || getMainRewardCity()?.name || "your main city").trim() || "your main city",
+    cityId: String(options.cityId || rewardCity?.id || ""),
+    cityName: String(options.cityName || rewardCity?.name || "your main city").trim() || "your main city",
     audioNotBeforeMs: Date.now() + Math.max(0, Number(options.audioDelayMs) || 0),
     audioPlayed: false,
   };
 }
 
 function mergeLevelUpRewardBundles(first, second) {
+  const troopDestination = second.troops > 0 ? second : first;
   return {
     fromLevel: first.fromLevel,
     toLevel: second.toLevel,
@@ -6611,7 +6844,8 @@ function mergeLevelUpRewardBundles(first, second) {
     skillPoints: first.skillPoints + second.skillPoints,
     gold: first.gold + second.gold,
     troops: first.troops + second.troops,
-    cityName: second.cityName || first.cityName,
+    cityId: troopDestination.cityId || "",
+    cityName: troopDestination.cityName || "your main city",
     audioNotBeforeMs: Math.max(
       Number(first.audioNotBeforeMs) || 0,
       Number(second.audioNotBeforeMs) || 0
@@ -6679,8 +6913,16 @@ function renderLevelUpReward(reward) {
   `;
 }
 
+function deferWhileScreenRewardAnimationRuns(callback) {
+  const delayMs = Math.max(0, screenRewardAnimationBlockUntilMs - Date.now());
+  if (!delayMs) return false;
+  window.setTimeout(callback, delayMs);
+  return true;
+}
+
 function showNextLevelUpReward() {
   if (!levelUpRewardModal || levelUpRewardModal.open || activeLevelUpReward || modal?.open) return;
+  if (!levelUpRewardQueue.length || deferWhileScreenRewardAnimationRuns(showNextLevelUpReward)) return;
   const nextReward = levelUpRewardQueue.shift();
   if (!nextReward) return;
   activeLevelUpReward = nextReward;
@@ -6715,7 +6957,13 @@ function queueLevelUpReward(fromLevel, toLevel, options = {}) {
   const reward = getLevelUpRewardBundle(fromLevel, toLevel, options);
   if (reward.levelsGained <= 0) return;
 
-  if (activeLevelUpReward && activeLevelUpReward.toLevel === reward.fromLevel) {
+  const activeDestinationMatches = activeLevelUpReward
+    && (
+      activeLevelUpReward.troops <= 0
+      || reward.troops <= 0
+      || activeLevelUpReward.cityId === reward.cityId
+    );
+  if (activeLevelUpReward && activeLevelUpReward.toLevel === reward.fromLevel && activeDestinationMatches) {
     activeLevelUpReward = mergeLevelUpRewardBundles(activeLevelUpReward, reward);
     renderLevelUpReward(activeLevelUpReward);
     scheduleLevelUpRewardAudio(activeLevelUpReward);
@@ -6723,7 +6971,9 @@ function queueLevelUpReward(fromLevel, toLevel, options = {}) {
   }
 
   const pendingReward = levelUpRewardQueue[levelUpRewardQueue.length - 1];
-  if (pendingReward && pendingReward.toLevel === reward.fromLevel) {
+  const pendingDestinationMatches = pendingReward
+    && (pendingReward.troops <= 0 || reward.troops <= 0 || pendingReward.cityId === reward.cityId);
+  if (pendingReward && pendingReward.toLevel === reward.fromLevel && pendingDestinationMatches) {
     levelUpRewardQueue[levelUpRewardQueue.length - 1] = mergeLevelUpRewardBundles(pendingReward, reward);
   } else {
     levelUpRewardQueue.push(reward);
@@ -7042,6 +7292,7 @@ function addCharacterXp(amount, reason = "progress", options = {}) {
     queueLevelUpReward(startingLevel, state.character.level, {
       gold: totalGoldReward,
       troops: totalTroopReward,
+      cityId: mainCity?.id || "",
       cityName: mainCity?.name || "your main city",
       audioDelayMs: options.audioDelayMs,
     });
@@ -8905,7 +9156,7 @@ function normalizeBattleReports(reports) {
       const inferredRegionId = cityId ? getCityRegionId(cityId) : "";
       const rawRegionId = report.regionId || report.targetRegionId || report.city?.regionId || report.city?.startPool || inferredRegionId;
       const fallbackOutcome = type === "scout" ? "scout" : "defeat";
-      const outcome = ["victory", "defeat", "held", "lost", "scout", "raid", "breach", "breached"].includes(report.outcome)
+      const outcome = ["victory", "defeat", "held", "lost", "scout", "raid", "breach", "breached", "damaged"].includes(report.outcome)
         ? report.outcome
         : fallbackOutcome;
       return {
@@ -8941,6 +9192,10 @@ function normalizeBattleReports(reports) {
         xpAwarded: Math.max(0, Math.floor(Number(report.xpAwarded) || 0)),
         goldAwarded: Math.max(0, Math.floor(Number(report.goldAwarded) || 0)),
         troopsAwarded: Math.max(0, Math.floor(Number(report.troopsAwarded) || 0)),
+        eventKind: String(report.eventKind || "").replace(/[^a-zA-Z0-9_-]/g, "_").slice(0, 48),
+        rewardEventId: String(report.rewardEventId || "").replace(/[^a-zA-Z0-9_-]/g, "_").slice(0, 160),
+        rewardSourceId: String(report.rewardSourceId || "").slice(0, 96),
+        rewardSourceRegionId: report.rewardSourceRegionId ? normalizeRegionId(report.rewardSourceRegionId) : "",
         fieldMedicsRecovered: Math.max(0, Math.floor(Number(report.fieldMedicsRecovered) || 0)),
         battleId: String(report.battleId || "").replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 160),
         battleSnapshotVersion: Math.max(0, Math.floor(Number(report.battleSnapshotVersion) || 0)),
@@ -10114,11 +10369,17 @@ function mergeServerScoutReport(rawReport = null) {
 function mergeServerReports(reports = [], options = {}) {
   if (!state || !Array.isArray(reports)) return false;
   const shouldNotify = options.notify === true;
+  const authoritativeSnapshot = options.authoritative === true;
   const reportsPanelOpen = Boolean(modal?.open && modal.classList.contains("battle-report-modal"));
   const reportListOpen = reportsPanelOpen && !String(modal.dataset.battleReportDetailId || "");
-  if (!reports.length) return false;
+  if (!reports.length) {
+    if (authoritativeSnapshot) deedRewardReportsVfxHydrated = true;
+    return false;
+  }
   let changed = false;
   let addedReport = false;
+  const newDeedCompletionReports = [];
+  const newCityCombatReports = [];
   const refreshedScoutCityIds = new Set();
   state.battleReports = normalizeBattleReports(state.battleReports);
   state.scoutReports = normalizeScoutReports(state.scoutReports);
@@ -10137,7 +10398,19 @@ function mergeServerReports(reports = [], options = {}) {
     const appliedRevisionMs = Math.max(0, Number(appliedServerReportRevisions.get(normalized.id)) || 0);
     if (revisionMs <= Math.max(existingRevisionMs, appliedRevisionMs)) continue;
     if (existingIndex >= 0) state.battleReports[existingIndex] = normalized;
-    else state.battleReports.push(normalized);
+    else {
+      state.battleReports.push(normalized);
+      if (normalized.eventKind === "deed_camp_completed" && normalized.rewardEventId) {
+        newDeedCompletionReports.push(normalized);
+      }
+      if (
+        normalized.battleId
+        && (normalized.type === "attack" || normalized.type === "defense")
+        && normalized.eventKind !== CITADEL_ASSAULT_EVENT_KIND
+      ) {
+        newCityCombatReports.push(normalized);
+      }
+    }
     appliedServerReportRevisions.set(normalized.id, revisionMs);
     changed = true;
     addedReport = true;
@@ -10163,6 +10436,30 @@ function mergeServerReports(reports = [], options = {}) {
   if (shouldNotify && addedReport && !reportsPanelOpen) {
     playGameSound("notification", { cooldownMs: 500, allowCrossMap: true });
   }
+  if (deedRewardReportsVfxHydrated) {
+    newCityCombatReports.forEach(report => {
+      const target = cityById(report.cityId);
+      if (target) playCityAttackAnimation(target, { eventId: `city-attack:${report.battleId}` });
+    });
+    newDeedCompletionReports.forEach(report => {
+      const sourceCamp = getCampTargetById(report.rewardSourceId);
+      const sourceNode = report.rewardSourceId
+        ? cityLayer?.querySelector(`[data-render-camp-id="${CSS.escape(report.rewardSourceId)}"]`)
+        : null;
+      playCompletedDeedRewardAnimation({
+        status: "paid",
+        rewardEventId: report.rewardEventId,
+        rewardSourceId: report.rewardSourceId,
+        rewardSourceRegionId: report.rewardSourceRegionId,
+        awardedCity: {
+          id: report.cityId,
+          name: report.cityName,
+          regionId: report.regionId,
+        },
+      }, sourceCamp, captureAnimationAnchor(sourceNode));
+    });
+  }
+  if (authoritativeSnapshot) deedRewardReportsVfxHydrated = true;
   return changed;
 }
 
@@ -10282,6 +10579,7 @@ function applyServerProfilePatch(patch = null, options = {}) {
     queueLevelUpReward(previousLevel, nextLevel, {
       gold: options.levelUpGold,
       troops: options.levelUpTroops,
+      cityId: options.levelUpCityId || getMainRewardCity()?.id || "",
       cityName: options.levelUpCityName || getMainRewardCity()?.name || "your main city",
       audioDelayMs: options.levelUpAudioDelayMs,
     });
@@ -10365,6 +10663,18 @@ function applyServerCityUpdates(cityUpdates = []) {
       city.relocatedAtMs = timestampToMs(update.relocatedAtMs);
       changed = true;
     }
+    if (update.deedAwardedAtMs !== undefined) {
+      city.deedAwardedAtMs = normalizeTimestampMs(update.deedAwardedAtMs);
+      changed = true;
+    }
+    if (update.deedCampId !== undefined) {
+      city.deedCampId = String(update.deedCampId || "");
+      changed = true;
+    }
+    if (update.neutralClaimSource !== undefined) {
+      city.neutralClaimSource = String(update.neutralClaimSource || "");
+      changed = true;
+    }
     if (Object.prototype.hasOwnProperty.call(update, "fortificationState")) {
       city.fortificationState = update.fortificationState && typeof update.fortificationState === "object"
         ? { ...update.fortificationState }
@@ -10407,6 +10717,12 @@ function applyServerCityUpdates(cityUpdates = []) {
 
 function applyServerArmyResult(result = null) {
   if (!result || typeof result !== "object") return false;
+  const preResultReport = Array.isArray(result.reports)
+    ? [...result.reports].reverse().find(report => report?.type === "attack" || report?.type === "defense")
+    : null;
+  const preResultTargetId = String(result.targetId || preResultReport?.cityId || result.campUpdate?.id || "");
+  const preResultCitySnapshot = getCityVfxSnapshot(cityById(preResultTargetId));
+  const preResultCampSnapshot = getCampVfxSnapshot(getCampTargetById(preResultTargetId));
   let changed = false;
   if (result.antiFarmPolicy?.blocked && result.message) {
     addLog(result.message);
@@ -10459,6 +10775,29 @@ function applyServerArmyResult(result = null) {
   const resultTargetIsCamp = result.targetType === "camp"
     || Boolean(normalizedCampUpdate)
     || isRewardCampTarget(audioTarget);
+  const cityBattleId = String(preResultReport?.battleId || newestPlayerReport?.battleId || "");
+  if (result.kind === "attack" && !resultTargetIsCamp && audioTarget && cityBattleId) {
+    const attackEventId = cityBattleId;
+    playCityAttackAnimation(audioTarget, { eventId: `city-attack:${attackEventId}` });
+    const afterSnapshot = getCityVfxSnapshot(cityById(preResultTargetId) || audioTarget);
+    if (
+      preResultCitySnapshot
+      && afterSnapshot
+      && preResultCitySnapshot.ownerUid !== afterSnapshot.ownerUid
+      && afterSnapshot.ownerUid
+    ) {
+      playCityCaptureAnimation(preResultCitySnapshot, afterSnapshot);
+    }
+  }
+  if (
+    normalizedCampUpdate
+    && result.kind === "attack"
+    && result.outcome === "victory"
+    && normalizedCampUpdate.holderUid
+    && preResultCampSnapshot?.holderUid !== normalizedCampUpdate.holderUid
+  ) {
+    playCampCaptureAnimation(preResultCampSnapshot, getCampVfxSnapshot(getCampTargetById(normalizedCampUpdate.id) || normalizedCampUpdate));
+  }
   if (
     newestPlayerReport?.type === "attack"
     && newestPlayerReport.outcome === "victory"
@@ -10507,6 +10846,7 @@ function applyServerArmyResult(result = null) {
     changed = applyServerProfilePatch(result.currentUser, {
       levelUpGold: levelRewardReport?.goldAwarded,
       levelUpTroops: levelRewardReport?.troopsAwarded,
+      levelUpCityId: result.troopRewardCityId || result.currentUser?.mainCityId || state?.mainCityId || "",
       levelUpCityName: result.troopRewardCityName,
       levelUpAudioDelayMs: newestPlayerReport || (result.kind && result.kind !== "scout")
         ? REWARD_FOLLOWUP_AUDIO_DELAY_MS
@@ -10524,6 +10864,7 @@ function applyServerEconomyResult(result = null, options = {}) {
     changed = applyServerProfilePatch(result.currentUser, {
       levelUpGold: result.levelUpGoldAwarded,
       levelUpTroops: result.troopsAwarded,
+      levelUpCityId: result.troopRewardCityId || result.currentUser?.mainCityId || state?.mainCityId || "",
       levelUpCityName: result.troopRewardCityName,
     }) || changed;
   }
@@ -12798,17 +13139,76 @@ function prepareSelectionForIslandSwitch() {
   clearSelection(false);
 }
 
-async function switchOnlineIsland(regionId, { fromMapPicker = false } = {}) {
+function getMapTransitionDirection(fromRegionId, toRegionId, requestedSide = "", fromMapPicker = false) {
+  if (fromMapPicker) return "none";
+  const explicit = String(requestedSide || "").toLowerCase();
+  if (["north", "south", "east", "west"].includes(explicit)) return explicit;
+  const routeSide = String(getEditorPortalForRoute(fromRegionId, toRegionId)?.side || "").toLowerCase();
+  return ["north", "south", "east", "west"].includes(routeSide) ? routeSide : "none";
+}
+
+function beginMapVisualTransition(fromRegionId, toRegionId, options = {}) {
+  if (!crownlandsAnimations?.beginMapTransition || getEffectiveAnimationMode() === "off") return null;
+  try {
+    return crownlandsAnimations.beginMapTransition({
+      id: `map-transition:${fromRegionId}:${toRegionId}:${Date.now()}`,
+      root: mapFrame,
+      stage: mapTransitionStage,
+      scope: "map-transition",
+      direction: getMapTransitionDirection(fromRegionId, toRegionId, options.transitionSide, options.fromMapPicker),
+      watchdogMs: 45000,
+    });
+  } catch (error) {
+    console.warn("Map transition effect skipped", error);
+    return null;
+  }
+}
+
+function finishMapVisualTransition(transition) {
+  if (!transition) return false;
+  try {
+    return crownlandsAnimations?.finishMapTransition?.(transition.token || "") || false;
+  } catch (error) {
+    console.warn("Map transition settle effect skipped", error);
+    return false;
+  }
+}
+
+function cancelMapVisualTransition(transition, reason = "map-switch-cancelled") {
+  if (!transition) return false;
+  try {
+    return crownlandsAnimations?.cancelMapTransition?.(reason, transition.token || "") || false;
+  } catch (_error) {
+    return false;
+  }
+}
+
+async function switchOnlineIsland(regionId, { fromMapPicker = false, transitionSide = "" } = {}) {
   const targetRegionId = normalizeRegionId(regionId);
   if (isMapInteractionBlocked()) {
     if (fromMapPicker) showToast("Finish loading the current island first.");
     return false;
   }
+  const sourceRegionId = normalizeRegionId(getActiveMapRegionId());
   if (!state) {
-    await preloadIslandMap(targetRegionId);
-    centerOnRegion(targetRegionId);
-    if (modal.open) modal.close();
-    return true;
+    const transition = sourceRegionId === targetRegionId
+      ? null
+      : beginMapVisualTransition(sourceRegionId, targetRegionId, { fromMapPicker, transitionSide });
+    try {
+      const ready = await preloadIslandMap(targetRegionId);
+      if (!ready) {
+        showToast(`Could not load ${getRegionLabel(targetRegionId)} map art.`);
+        cancelMapVisualTransition(transition);
+        return false;
+      }
+      centerOnRegion(targetRegionId);
+      if (modal.open) modal.close();
+      finishMapVisualTransition(transition);
+      return true;
+    } catch (error) {
+      cancelMapVisualTransition(transition);
+      throw error;
+    }
   }
   if (targetRegionId === getActiveOnlineRegionId() && onlineWorldConnected) {
     if (modal.open) modal.close();
@@ -12818,6 +13218,8 @@ async function switchOnlineIsland(regionId, { fromMapPicker = false } = {}) {
   }
 
   if (!getOnlineApi()?.isSignedIn?.()) {
+    const transition = beginMapVisualTransition(sourceRegionId, targetRegionId, { fromMapPicker, transitionSide });
+    let transitionSettled = false;
     setMapSwitchLoading(`Loading ${getRegionLabel(targetRegionId)}...`);
     prepareSelectionForIslandSwitch();
     if (fromMapPicker && modal.open) modal.close();
@@ -12833,8 +13235,10 @@ async function switchOnlineIsland(regionId, { fromMapPicker = false } = {}) {
       if (modal.open) modal.close();
       centerOnRegion(targetRegionId);
       renderAll();
+      transitionSettled = finishMapVisualTransition(transition);
       return true;
     } finally {
+      if (!transitionSettled) cancelMapVisualTransition(transition);
       clearMapSwitchLoading();
     }
   }
@@ -12844,6 +13248,8 @@ async function switchOnlineIsland(regionId, { fromMapPicker = false } = {}) {
   const targetLabel = getRegionLabel(targetRegionId);
   const homeRegionId = state.online?.mainRegionId || previousRegionId;
   let leftPreviousIsland = false;
+  const transition = beginMapVisualTransition(previousRegionId, targetRegionId, { fromMapPicker, transitionSide });
+  let transitionSettled = false;
   setMapSwitchLoading(`Loading ${targetLabel}...`);
   prepareSelectionForIslandSwitch();
   if (fromMapPicker && modal.open) modal.close();
@@ -12880,6 +13286,7 @@ async function switchOnlineIsland(regionId, { fromMapPicker = false } = {}) {
     if (connected) {
       centerOnRegion(targetRegionId);
       renderAll();
+      transitionSettled = finishMapVisualTransition(transition);
       return true;
     } else {
       if (leftPreviousIsland) {
@@ -12894,6 +13301,7 @@ async function switchOnlineIsland(regionId, { fromMapPicker = false } = {}) {
       return false;
     }
   } finally {
+    if (!transitionSettled) cancelMapVisualTransition(transition);
     clearMapSwitchLoading();
   }
 }
@@ -13443,6 +13851,9 @@ function retireActiveOnlineIslandSubscription() {
   onlineIslandUnsubscribe = null;
   onlineIslandSubscriptionGeneration += 1;
   if (typeof unsubscribe === "function") unsubscribe();
+  onlineCityVfxHydrated = false;
+  onlineCampVfxHydrated = false;
+  crownlandsAnimations?.cancelScope?.(`map:${getActiveMapRegionId()}`);
   return onlineIslandSubscriptionGeneration;
 }
 
@@ -13457,6 +13868,7 @@ function disconnectOnlineWorld() {
   clearOnlineCrownCitadelWatcher();
   appliedServerReportRevisions = new Map();
   audioServerReportsHydrated = false;
+  deedRewardReportsVfxHydrated = false;
   reportsViewedPendingAtMs = 0;
   lastAuthoritativeProfileRevisionMs = 0;
   lastReportDrivenEconomyRefreshAtMs = 0;
@@ -13465,6 +13877,9 @@ function disconnectOnlineWorld() {
   onlineCampStates = new Map();
   onlineHeldCampStates = new Map();
   resolvingRewardCampPayoutIds = new Set();
+  pendingDeedCityHighlights.clear();
+  pendingTroopRewardHighlights.clear();
+  crownlandsAnimations?.clearAll?.();
   deedCampHistoryCache.clear();
   deedCampHistoryRequests.clear();
   crownCitadelReignCache = [];
@@ -14271,11 +14686,134 @@ async function connectOnlineIsland(regionId, {
   }
 }
 
+function getCityVfxSnapshot(city = null) {
+  if (!city) return null;
+  return {
+    id: String(city.id || ""),
+    regionId: getCityRegionId(city),
+    x: Number(city.x),
+    y: Number(city.y),
+    level: clampCityLevel(city.level || 1),
+    stage: isStronghold(city) ? 0 : getCastleStage(city.level),
+    owner: city.owner || "neutral",
+    ownerUid: String(city.ownerUid || ""),
+    ownerFlag: city.ownerFlag ? normalizeFlag(city.ownerFlag) : null,
+    lastCapturedAtMs: normalizeTimestampMs(city.lastCapturedAtMs ?? city.lastCapturedAt),
+    deedAwardedAtMs: normalizeTimestampMs(city.deedAwardedAtMs),
+    deedCampId: String(city.deedCampId || ""),
+    neutralClaimSource: String(city.neutralClaimSource || ""),
+    stronghold: isStronghold(city),
+    crownCitadel: isCrownCitadel(city),
+    artSrc: isStronghold(city) ? getStrongholdArtSrc(city) : getCastleAsset(getCastleStage(city.level)),
+  };
+}
+
+function scheduleCityWorldAnimation(type, snapshot, options = {}) {
+  if (!snapshot?.id || snapshot.regionId !== getActiveMapRegionId()) return null;
+  return requestAnimationFrame(() => {
+    const city = cityById(snapshot.id) || snapshot;
+    const anchor = getWorldAnimationAnchor(city);
+    const targetNode = cityLayer?.querySelector(`[data-city-id="${CSS.escape(snapshot.id)}"]`);
+    if (!anchor || !targetNode?.isConnected) return;
+    const eventId = options.id || `${type}:${snapshot.regionId}:${snapshot.id}:${Date.now()}`;
+    const nowMs = Date.now();
+    seenWorldAnimationEventIds.forEach((expiresAtMs, seenEventId) => {
+      if (expiresAtMs <= nowMs) seenWorldAnimationEventIds.delete(seenEventId);
+    });
+    if (seenWorldAnimationEventIds.has(eventId)) return;
+    seenWorldAnimationEventIds.set(eventId, nowMs + 30 * 60 * 1000);
+    while (seenWorldAnimationEventIds.size > 512) {
+      seenWorldAnimationEventIds.delete(seenWorldAnimationEventIds.keys().next().value);
+    }
+    emitCrownlandsAnimation(type, {
+      id: eventId,
+      intensity: options.intensity || "standard",
+      regionId: snapshot.regionId,
+      worldSpace: true,
+      anchor,
+      target: targetNode,
+      payload: {
+        cityId: snapshot.id,
+        stronghold: snapshot.stronghold,
+        crownCitadel: snapshot.crownCitadel,
+        ...(options.payload || {}),
+      },
+    });
+  });
+}
+
+function playCityAttackAnimation(cityOrId, { eventId = "", intensity = "standard" } = {}) {
+  const city = typeof cityOrId === "string" ? cityById(cityOrId) : cityOrId;
+  const snapshot = getCityVfxSnapshot(city);
+  if (!snapshot) return null;
+  return scheduleCityWorldAnimation("city-attack", snapshot, {
+    id: eventId || `city-attack:${snapshot.regionId}:${snapshot.id}:${Date.now()}`,
+    intensity,
+  });
+}
+
+function playCityCaptureAnimation(before, after, { eventId = "" } = {}) {
+  if (!before || !after || after.crownCitadel) return null;
+  if (after.neutralClaimSource === "deed_camp") return null;
+  const oldColors = getAnimationFlagColors(before.ownerFlag, before.owner);
+  const newColors = getAnimationFlagColors(after.ownerFlag, after.owner);
+  return window.setTimeout(() => {
+    scheduleCityWorldAnimation("city-capture", after, {
+      id: eventId || `city-capture:${after.regionId}:${after.id}:${after.lastCapturedAtMs}:${after.ownerUid}`,
+      intensity: "major",
+      payload: {
+        previousOwnerUid: before.ownerUid,
+        nextOwnerUid: after.ownerUid,
+        oldPrimary: oldColors.primary,
+        oldSecondary: oldColors.secondary,
+        newPrimary: newColors.primary,
+        newSecondary: newColors.secondary,
+      },
+    });
+  }, 220);
+}
+
+function playCityUpgradeAnimation(before, after, { eventId = "" } = {}) {
+  if (!before || !after || before.stronghold || after.stronghold || after.stage <= before.stage) return null;
+  return scheduleCityWorldAnimation("city-upgrade", after, {
+    id: eventId || `city-upgrade:${after.regionId}:${after.id}:${after.level}:${after.stage}`,
+    payload: {
+      previousStage: before.stage,
+      nextStage: after.stage,
+      previousAsset: before.artSrc,
+      nextAsset: after.artSrc,
+    },
+  });
+}
+
+function emitOnlineCityStateAnimations(previousById, nextCities, hydrated) {
+  if (!hydrated) return;
+  nextCities.forEach(city => {
+    const before = previousById.get(city.id);
+    const after = getCityVfxSnapshot(city);
+    if (!before || !after) return;
+    const ownerChanged = before.ownerUid !== after.ownerUid;
+    const captureAgeMs = Date.now() - after.lastCapturedAtMs;
+    const freshCombatCapture = after.lastCapturedAtMs > before.lastCapturedAtMs
+      && captureAgeMs >= -10000
+      && captureAgeMs <= 60000
+      && after.neutralClaimSource !== "deed_camp";
+    if (ownerChanged && after.ownerUid && freshCombatCapture) {
+      playCityCaptureAnimation(before, after);
+      return;
+    }
+    if (after.stage > before.stage && !serverCityUpgradeInFlightIds.has(city.id)) {
+      playCityUpgradeAnimation(before, after);
+    }
+  });
+}
+
 function applyOnlineCities(onlineCities, regionId = getActiveOnlineRegionId(), { activateRegion = true } = {}) {
   if (!state || !Array.isArray(onlineCities)) return;
   const byId = new Map(onlineCities.map(city => [city.id, city]));
   const currentUid = getCurrentOnlineUid();
   const localById = new Map(state.cities.map(city => [city.id, city]));
+  const previousVfxById = new Map(state.cities.map(city => [city.id, getCityVfxSnapshot(city)]));
   const activeRegionId = normalizeRegionId(regionId);
   const inactiveCities = state.cities.filter(city => getCityRegionId(city) !== activeRegionId);
   const previousKingPowerOverride = currentPlayerIdentityKingPowerOverride;
@@ -14329,6 +14867,9 @@ function applyOnlineCities(onlineCities, regionId = getActiveOnlineRegionId(), {
       lastCapturedAtMs: normalizeTimestampMs(keepLocalPlayerCity
         ? current.lastCapturedAtMs ?? online.lastCapturedAtMs ?? current.lastCapturedAt ?? online.lastCapturedAt
         : online.lastCapturedAtMs ?? current.lastCapturedAtMs ?? online.lastCapturedAt ?? current.lastCapturedAt),
+      deedAwardedAtMs: normalizeTimestampMs(online.deedAwardedAtMs ?? current.deedAwardedAtMs),
+      deedCampId: String(online.deedCampId ?? current.deedCampId ?? ""),
+      neutralClaimSource: String(online.neutralClaimSource ?? current.neutralClaimSource ?? ""),
       isMainCity: !isStronghold(base) && (localOwner === "player" ? base.id === state.mainCityId : foreignMainCityFlag),
       relinquishedAtMs: keepLocalPlayerCity || normalizedOwnerKind === "player" ? 0 : timestampToMs(online.relinquishedAtMs ?? current.relinquishedAtMs),
       relocatedAtMs: keepLocalPlayerCity || normalizedOwnerKind === "player" ? 0 : timestampToMs(online.relocatedAtMs ?? current.relocatedAtMs),
@@ -14367,6 +14908,9 @@ function applyOnlineCities(onlineCities, regionId = getActiveOnlineRegionId(), {
   }
   normalizeSingleMainCityAssignment(state.mainCityId);
   ensureLoadedMainCityForRegion(activateRegion ? activeRegionId : getActiveOnlineRegionId());
+  const nextActiveCities = state.cities.filter(city => getCityRegionId(city) === activeRegionId);
+  emitOnlineCityStateAnimations(previousVfxById, nextActiveCities, onlineCityVfxHydrated);
+  onlineCityVfxHydrated = true;
 }
 
 function normalizeOnlineCampState(raw = {}) {
@@ -14405,8 +14949,59 @@ function normalizeOnlineCampState(raw = {}) {
   };
 }
 
+function getCampAnimationType(camp = null) {
+  const type = String(camp?.campType || camp?.rewardType || "").toLowerCase();
+  if (type === "troops" || type === "warband") return "camp-warband";
+  if (type === "items" || type === "item" || type === "relic") return "camp-relic";
+  if (type === "deed" || type === "city") return "camp-deed";
+  return "camp-gold";
+}
+
+function getCampVfxSnapshot(camp = null) {
+  if (!camp) return null;
+  const holderUid = String(camp.holderUid || "");
+  const currentUid = getCurrentOnlineUid();
+  return {
+    id: String(camp.id || camp.campId || ""),
+    regionId: normalizeRegionId(camp.regionId),
+    x: Number(camp.x),
+    y: Number(camp.y),
+    campType: String(camp.campType || "gold"),
+    holderUid,
+    holderFlag: camp.holderFlag ? normalizeFlag(camp.holderFlag) : null,
+    owner: holderUid ? holderUid === currentUid ? "player" : "enemy" : "neutral",
+    heldSinceMs: normalizeTimestampMs(camp.heldSinceMs),
+    payoutAtMs: normalizeTimestampMs(camp.payoutAtMs),
+    state: String(camp.state || "neutral"),
+  };
+}
+
+function playCampCaptureAnimation(before, after) {
+  if (!after?.id || !after.holderUid || after.regionId !== getActiveMapRegionId()) return null;
+  const colors = getAnimationFlagColors(after.holderFlag, after.owner);
+  return requestAnimationFrame(() => {
+    const camp = getCampTargetById(after.id) || after;
+    emitCrownlandsAnimation(getCampAnimationType(after), {
+      id: `camp-capture:${after.id}:${after.heldSinceMs}:${after.holderUid}`,
+      intensity: getCampAnimationType(after) === "camp-relic" ? "major" : "standard",
+      regionId: after.regionId,
+      worldSpace: true,
+      anchor: getWorldAnimationAnchor(camp),
+      target: cityLayer?.querySelector(`[data-render-camp-id="${CSS.escape(after.id)}"]`) || null,
+      payload: {
+        campId: after.id,
+        previousHolderUid: before?.holderUid || "",
+        nextHolderUid: after.holderUid,
+        primary: colors.primary,
+        secondary: colors.secondary,
+      },
+    });
+  });
+}
+
 function applyOnlineCamps(rawCamps, regionId = getActiveOnlineRegionId()) {
   const activeRegionId = normalizeRegionId(regionId);
+  const previousCamps = new Map([...onlineCampStates].map(([id, camp]) => [id, getCampVfxSnapshot(getCampTargetById(id) || camp)]));
   const normalizedCamps = (Array.isArray(rawCamps) ? rawCamps : [])
     .map(normalizeOnlineCampState)
     .filter(camp => camp && camp.regionId === activeRegionId);
@@ -14419,6 +15014,14 @@ function applyOnlineCamps(rawCamps, regionId = getActiveOnlineRegionId()) {
   });
   cityRenderSignature = "";
   renderCities(true);
+  if (onlineCampVfxHydrated) {
+    normalizedCamps.forEach(rawCamp => {
+      const after = getCampVfxSnapshot(getCampTargetById(rawCamp.id) || rawCamp);
+      const before = previousCamps.get(rawCamp.id);
+      if (after?.holderUid && before?.holderUid !== after.holderUid) playCampCaptureAnimation(before, after);
+    });
+  }
+  onlineCampVfxHydrated = true;
   updateOutgoingAttackUi();
   syncWorldMusicState();
 }
@@ -14506,6 +15109,133 @@ function adoptServerArmyMovement(rawMovement) {
   return movement;
 }
 
+function registerDeedRewardAnimationEvent(eventId) {
+  const normalizedEventId = String(eventId || "");
+  if (!normalizedEventId) return false;
+  const nowMs = Date.now();
+  seenDeedRewardEventIds.forEach((expiresAtMs, seenEventId) => {
+    if (expiresAtMs <= nowMs) seenDeedRewardEventIds.delete(seenEventId);
+  });
+  if (seenDeedRewardEventIds.has(normalizedEventId)) return false;
+  seenDeedRewardEventIds.set(normalizedEventId, nowMs + 24 * 60 * 60 * 1000);
+  while (seenDeedRewardEventIds.size > 256) {
+    seenDeedRewardEventIds.delete(seenDeedRewardEventIds.keys().next().value);
+  }
+  return true;
+}
+
+function emitCompletedDeedCityHighlight(eventId, city, node) {
+  if (!city || !node?.isConnected) return false;
+  const anchor = getWorldAnimationAnchor(city);
+  emitCrownlandsAnimation("deed-completed", {
+    id: `${eventId}:city-highlight`,
+    intensity: "major",
+    regionId: getActiveMapRegionId(),
+    worldSpace: true,
+    anchor,
+    targetAnchor: anchor,
+    target: node,
+    payload: { cityHighlightOnly: true, awardedCityId: String(city.id || "") },
+  });
+  return true;
+}
+
+function playCompletedDeedRewardAnimation(result, campBefore = null, sourceAnchor = null) {
+  const awarded = result?.awardedCity;
+  if (!awarded?.id || result?.status !== "paid") return false;
+  const eventId = String(result.rewardEventId || `deed:${campBefore?.id || result.rewardSourceId || "camp"}:${awarded.regionId}:${awarded.id}:${result.rewardHistoryEntry?.awardedAtMs || Date.now()}`);
+  if (!registerDeedRewardAnimationEvent(eventId)) return false;
+  const targetRegionId = normalizeRegionId(awarded.regionId);
+  const targetCity = cityById(awarded.id);
+  const targetNode = targetCity && getCityRegionId(targetCity) === getActiveMapRegionId()
+    ? cityLayer?.querySelector(`[data-city-id="${CSS.escape(String(awarded.id))}"]`)
+    : null;
+  const campAnchor = campBefore && normalizeRegionId(campBefore.regionId) === getActiveMapRegionId()
+    ? getWorldAnimationAnchor(campBefore)
+    : null;
+  if (campAnchor || sourceAnchor) {
+    emitCrownlandsAnimation("deed-completed", {
+      id: eventId,
+      intensity: "major",
+      regionId: getActiveMapRegionId(),
+      worldSpace: Boolean(campAnchor),
+      anchor: campAnchor,
+      source: sourceAnchor,
+      payload: {
+        sourceOnly: true,
+        awardedCityId: String(awarded.id),
+        awardedCityName: String(awarded.name || "Awarded city"),
+        awardedRegionId: targetRegionId,
+      },
+    });
+  }
+  if (targetCity && targetNode) {
+    emitCompletedDeedCityHighlight(eventId, targetCity, targetNode);
+  } else {
+    pendingDeedCityHighlights.set(eventId, {
+      eventId,
+      cityId: String(awarded.id),
+      regionId: targetRegionId,
+      cityName: String(awarded.name || "Awarded city"),
+      expiresAtMs: Date.now() + 24 * 60 * 60 * 1000,
+    });
+    while (pendingDeedCityHighlights.size > 20) {
+      pendingDeedCityHighlights.delete(pendingDeedCityHighlights.keys().next().value);
+    }
+  }
+  return true;
+}
+
+function flushPendingDeedCityHighlights() {
+  const activeRegionId = getActiveMapRegionId();
+  pendingDeedCityHighlights.forEach((pending, eventId) => {
+    if (pending.expiresAtMs <= Date.now()) {
+      pendingDeedCityHighlights.delete(eventId);
+      return;
+    }
+    if (pending.regionId !== activeRegionId) return;
+    const city = cityById(pending.cityId);
+    const node = city && cityLayer?.querySelector(`[data-city-id="${CSS.escape(pending.cityId)}"]`);
+    if (!city || !node) return;
+    pendingDeedCityHighlights.delete(eventId);
+    emitCompletedDeedCityHighlight(eventId, city, node);
+  });
+}
+
+function flushPendingTroopRewardHighlights() {
+  const activeRegionId = getActiveMapRegionId();
+  const nowMs = Date.now();
+  pendingTroopRewardHighlights.forEach((pending, eventId) => {
+    if (pending.expiresAtMs <= nowMs) {
+      pendingTroopRewardHighlights.delete(eventId);
+      return;
+    }
+    if (pending.regionId !== activeRegionId) return;
+    const city = cityById(pending.cityId);
+    const node = cityLayer?.querySelector(`[data-city-id="${CSS.escape(pending.cityId)}"]`);
+    if (!city || !node) return;
+    pendingTroopRewardHighlights.delete(eventId);
+    requestAnimationFrame(() => {
+      const anchor = getWorldAnimationAnchor(city);
+      emitCrownlandsAnimation("reward-troops", {
+        id: `${eventId}:destination`,
+        intensity: "minor",
+        regionId: activeRegionId,
+        worldSpace: true,
+        anchor,
+        targetAnchor: anchor,
+        target: node,
+        payload: {
+          tier: "small",
+          icon: TROOP_PICKUP_ICON_SRC,
+          degraded: true,
+          destinationOnly: true,
+        },
+      });
+    });
+  });
+}
+
 async function requestDueRewardCampPayout(camp) {
   if (!camp?.id || camp.owner !== "player" || !camp.payoutPending || camp.payoutAtMs > Date.now()) return false;
   if (resolvingRewardCampPayoutIds.has(camp.id)) return false;
@@ -14513,6 +15243,9 @@ async function requestDueRewardCampPayout(camp) {
   const resolvePayout = api?.resolveRewardCampPayout || api?.resolveGoldCampPayout;
   if (!resolvePayout) return false;
   resolvingRewardCampPayoutIds.add(camp.id);
+  const campNode = cityLayer?.querySelector(`[data-camp-id="${CSS.escape(String(camp.id))}"]`);
+  const rewardSourceAnchor = captureAnimationAnchor(campNode);
+  const campBefore = { ...camp };
   try {
     const result = await resolvePayout({ campId: camp.id, regionId: camp.regionId });
     applyServerArmyResult(result);
@@ -14526,6 +15259,27 @@ async function requestDueRewardCampPayout(camp) {
           REWARD_FOLLOWUP_AUDIO_DELAY_MS,
           { regionId: camp.regionId }
         );
+        if (config?.type === "gold" && Number(result.reward) > 0) {
+          playRewardAnimation("gold", {
+            id: `camp-gold:${camp.id}:${camp.payoutAtMs}`,
+            sourceAnchor: rewardSourceAnchor,
+            tier: "medium",
+          });
+        } else if (config?.type === "troops" && Number(result.rewardedTroops || result.reward) > 0) {
+          playRewardAnimation("troops", {
+            id: `camp-troops:${camp.id}:${camp.payoutAtMs}`,
+            sourceAnchor: rewardSourceAnchor,
+            tier: "medium",
+            destinationCityId: String(
+              result.cityUpdates?.find(update => update?.id)?.id
+              || state?.mainCityId
+              || result.returnDestinationId
+              || ""
+            ),
+          });
+        } else if (config?.type === "deed") {
+          playCompletedDeedRewardAnimation(result, campBefore, rewardSourceAnchor);
+        }
       }
       if (config?.type === "deed") {
         deedCampHistoryCache.delete(getDeedCampHistoryCacheKey(camp));
@@ -15556,9 +16310,10 @@ function subscribeOnlineServerReports() {
   if (typeof onlineServerReportsUnsubscribe === "function") return;
   if (!state || !api?.subscribeServerReports || !api?.isSignedIn?.()) return;
   onlineServerReportsUnsubscribe = api.subscribeServerReports({
-    onReports: reports => {
-      const changed = mergeServerReports(reports, { notify: audioServerReportsHydrated });
-      audioServerReportsHydrated = true;
+    onReports: (reports, metadata = {}) => {
+      const authoritative = metadata.fromCache !== true;
+      const changed = mergeServerReports(reports, { notify: audioServerReportsHydrated, authoritative });
+      if (authoritative) audioServerReportsHydrated = true;
       if (!changed || !usesServerEconomyAuthority()) return;
       const newestReportAtMs = (Array.isArray(reports) ? reports : []).reduce((latest, report) => (
         Math.max(
@@ -16066,10 +16821,11 @@ function applyOnlineArmies(rawArmies, islandId = getActiveOnlineIslandId()) {
     return;
   }
   queuePlayerIdentityLookupForRecords(rawArmies);
-  onlineArmiesByIsland.set(normalizedIslandId, rawArmies
+  const nextArmies = rawArmies
     .map(normalizeOnlineArmyMovement)
     .filter(Boolean)
-    .filter(isOnlineArmyVisible));
+    .filter(isOnlineArmyVisible);
+  onlineArmiesByIsland.set(normalizedIslandId, nextArmies);
   rebuildOnlineArmies();
   adoptOwnOnlineArmies();
   retryOverdueOnlineArmyResolutions();
@@ -18105,7 +18861,7 @@ function resetHarvestSpawnTimer() {
   setHarvestSpawnDelay(HARVEST_BONUS_SPAWN_INTERVAL_SECONDS);
 }
 
-async function collectHarvestBonus(bonusId) {
+async function collectHarvestBonus(bonusId, sourceElement = null) {
   if (!state || isGamePausedByOutcome()) return;
   const pendingId = String(bonusId || "");
   if (pendingHarvestBonusIds.has(pendingId)) return;
@@ -18114,6 +18870,7 @@ async function collectHarvestBonus(bonusId) {
   if (index < 0) return;
   const bonus = state.harvestBonuses[index];
   const type = normalizeHarvestBonusType(bonus.type);
+  const rewardSourceAnchor = captureAnimationAnchor(sourceElement);
   const daily = ensureDailyCaptureTracker();
   if (!canHarvestBonusType(type, daily)) {
     showToast(`Daily ${type === "troops" ? "troop" : "gold"} harvest limit reached.`);
@@ -18152,6 +18909,14 @@ async function collectHarvestBonus(bonusId) {
         showToast(`Harvested +${formatNumber(reward)} gold (${formatNumber(serverDaily.harvestedGoldBonuses)}/${HARVEST_BONUS_DAILY_GOLD_LIMIT})`);
       }
       playRewardSound(type, { regionId: bonus.regionId });
+      if (reward > 0) {
+        playRewardAnimation(type, {
+          id: `harvest:${bonus.id}:${type}`,
+          sourceAnchor: rewardSourceAnchor,
+          tier: "small",
+          destinationCityId: type === "troops" ? String(result?.targetCityId || "") : "",
+        });
+      }
     } catch (error) {
       state.harvestBonuses = normalizeHarvestBonuses(state.harvestBonuses);
       if (!state.harvestBonuses.some(item => item.id === bonus.id)) {
@@ -18188,6 +18953,12 @@ async function collectHarvestBonus(bonusId) {
     renderHarvestBonuses();
     showToast(`Harvested +${formatNumber(troopReward)} troops (${formatNumber(daily.harvestedTroopBonuses)}/${HARVEST_BONUS_DAILY_TROOP_LIMIT})`);
     playRewardSound("troops", { regionId: bonus.regionId });
+    playRewardAnimation("troops", {
+      id: `harvest:${bonus.id}:troops`,
+      sourceAnchor: rewardSourceAnchor,
+      tier: "small",
+      destinationCityId: rewardCity.id,
+    });
     return;
   }
 
@@ -18200,6 +18971,11 @@ async function collectHarvestBonus(bonusId) {
   renderHarvestBonuses();
   showToast(`Harvested +${formatNumber(goldReward)} gold (${formatNumber(daily.harvestedGoldBonuses)}/${HARVEST_BONUS_DAILY_GOLD_LIMIT})`);
   playRewardSound("gold", { regionId: bonus.regionId });
+  playRewardAnimation("gold", {
+    id: `harvest:${bonus.id}:gold`,
+    sourceAnchor: rewardSourceAnchor,
+    tier: "small",
+  });
 }
 
 function getOfflineProgressSeconds(snapshot = state) {
@@ -18363,16 +19139,14 @@ function mergeOfflineRewardsSummaries(current = null, next = null) {
 
 function queueOfflineRewardsSummary(summary = null) {
   if (!summary) return false;
-  if (modal.open) {
-    pendingOfflineRewardsSummary = mergeOfflineRewardsSummaries(pendingOfflineRewardsSummary, summary);
-    return true;
-  }
-  showOfflineRewardsModal(summary);
-  return true;
+  pendingOfflineRewardsSummary = mergeOfflineRewardsSummaries(pendingOfflineRewardsSummary, summary);
+  if (modal.open || deferWhileScreenRewardAnimationRuns(showPendingOfflineRewardsSummary)) return true;
+  return showPendingOfflineRewardsSummary();
 }
 
 function showPendingOfflineRewardsSummary() {
   if (!pendingOfflineRewardsSummary || modal.open) return false;
+  if (deferWhileScreenRewardAnimationRuns(showPendingOfflineRewardsSummary)) return false;
   const summary = pendingOfflineRewardsSummary;
   pendingOfflineRewardsSummary = null;
   showOfflineRewardsModal(summary);
@@ -18402,7 +19176,35 @@ function showOfflineRewardsModal({ goldGained = 0, troopsGained = 0, elapsed = 0
       <button id="offlineCollectBtn" class="offline-collect-btn" type="button">Collect</button>
     </div>
   `;
-  modalBody.querySelector("#offlineCollectBtn")?.addEventListener("click", () => modal.close());
+  modalBody.querySelector("#offlineCollectBtn")?.addEventListener("click", () => {
+    const rewardCards = modalBody.querySelectorAll(".offline-reward-grid > div");
+    const collectedAt = Date.now();
+    const goldSourceAnchor = captureAnimationAnchor(rewardCards[0]);
+    const troopSourceAnchor = captureAnimationAnchor(rewardCards[1]);
+    const animationMode = getEffectiveAnimationMode();
+    const closeSettleMs = animationMode === "off" ? 0 : 190;
+    const presentationMs = animationMode === "full" ? 1050 : animationMode === "reduced" ? 650 : 0;
+    screenRewardAnimationBlockUntilMs = presentationMs
+      ? Date.now() + closeSettleMs + presentationMs
+      : 0;
+    modal.close();
+    window.setTimeout(() => {
+      if (goldGained > 0) {
+        playRewardAnimation("gold", {
+          id: `offline-reward:${collectedAt}:gold`,
+          sourceAnchor: goldSourceAnchor,
+          tier: "large",
+        });
+      }
+      if (troopsGained > 0) {
+        playRewardAnimation("troops", {
+          id: `offline-reward:${collectedAt}:troops`,
+          sourceAnchor: troopSourceAnchor,
+          tier: "large",
+        });
+      }
+    }, closeSettleMs);
+  });
   if (!modal.open) modal.showModal();
 }
 
@@ -19109,6 +19911,13 @@ function resolveAttack(attack) {
     return;
   }
 
+  const targetVfxBefore = getCityVfxSnapshot(target);
+  if (attackOnActiveMap) {
+    playCityAttackAnimation(target, {
+      eventId: `city-attack:${getOnlineArmyResolutionId(attack) || attack.id || `${attack.fromId}:${attack.toId}`}`,
+    });
+  }
+
   let attackProtection = isStronghold(target)
     ? null
     : normalizeAttackProtectionSnapshot(attack.attackProtection, attack.demoAttack)
@@ -19420,6 +20229,20 @@ function resolveAttack(attack) {
         audioDelayMs: REWARD_FOLLOWUP_AUDIO_DELAY_MS,
       });
     }
+  }
+
+  const targetVfxAfter = getCityVfxSnapshot(target);
+  if (
+    result.success
+    && targetVfxBefore
+    && targetVfxAfter
+    && (
+      targetVfxBefore.ownerUid !== targetVfxAfter.ownerUid
+      || targetVfxBefore.owner !== targetVfxAfter.owner
+    )
+    && (targetVfxAfter.ownerUid || targetVfxAfter.owner !== "neutral")
+  ) {
+    playCityCaptureAnimation(targetVfxBefore, targetVfxAfter);
   }
 
   if (selectedSourceId && cityById(selectedSourceId)?.owner !== "player") {
@@ -19991,6 +20814,14 @@ function closeProfileScreen() {
   cancelProfileNameEdit();
 }
 
+function animateUiTabPanel(panel) {
+  if (!panel || getEffectiveAnimationMode() === "off") return;
+  panel.classList.remove("ui-tab-entering");
+  void panel.offsetWidth;
+  panel.classList.add("ui-tab-entering");
+  window.setTimeout(() => panel.classList.remove("ui-tab-entering"), 260);
+}
+
 function showProfileView() {
   if (!profileView || !skillsView || !settingsView || !clanView || !flagEditorView) return;
   activeProfileTab = "profile";
@@ -20004,6 +20835,7 @@ function showProfileView() {
   cancelProfileNameEdit();
   updateProfileTabHeader();
   renderProfileScreen();
+  animateUiTabPanel(profileView);
 }
 
 function showProfileSkills() {
@@ -20020,6 +20852,7 @@ function showProfileSkills() {
   cancelProfileNameEdit();
   updateProfileTabHeader();
   renderProfileSkills();
+  animateUiTabPanel(skillsView);
 }
 
 function showProfileSettings() {
@@ -20036,6 +20869,7 @@ function showProfileSettings() {
   cancelProfileNameEdit();
   updateProfileTabHeader();
   updatePushAlertsUi();
+  animateUiTabPanel(settingsView);
 }
 
 function getCityClanIdentity(city) {
@@ -20702,6 +21536,7 @@ function showProfileClan() {
   flagEditorView.hidden = true;
   updateProfileTabHeader();
   renderClanView();
+  animateUiTabPanel(clanView);
   refreshClanState({ silent: true });
 }
 
@@ -21702,9 +22537,10 @@ async function runClanAction(action, payload = {}) {
   }
 }
 
-async function runClanSocialAction(action, rewardId = "") {
+async function runClanSocialAction(action, rewardId = "", sourceElement = null) {
   const api = getOnlineApi();
   if (!api || clanGiftActionInFlight || clanQuestClaimInFlightId) return;
+  const rewardSourceAnchor = captureAnimationAnchor(sourceElement);
   if (action === "send-gift" || action === "collect-gifts") clanGiftActionInFlight = true;
   if (action === "claim-quest") clanQuestClaimInFlightId = rewardId;
   renderClanView();
@@ -21725,7 +22561,14 @@ async function runClanSocialAction(action, rewardId = "") {
     } else if (action === "collect-gifts") {
       if (result.claimed) {
         showToast(`Collected ${formatClanProductionHours(result.productionMinutes)}h gold: +${formatNumber(result.reward || 0)}.`);
-        if (Math.max(0, Number(result.reward) || 0) > 0) playRewardSound("gold");
+        if (Math.max(0, Number(result.reward) || 0) > 0) {
+          playRewardSound("gold");
+          playRewardAnimation("gold", {
+            id: `clan-gifts:${Date.now()}`,
+            sourceAnchor: rewardSourceAnchor,
+            tier: "medium",
+          });
+        }
       } else {
         rejectGameAction("No clan gifts are waiting.");
       }
@@ -21734,7 +22577,15 @@ async function runClanSocialAction(action, rewardId = "") {
         rejectGameAction("That clan quest reward was already collected.");
       } else {
         showToast(`Quest reward: +${formatNumber(result.reward || 0)} ${result.rewardType === "troops" ? "troops" : "gold"}.`);
-        if (Math.max(0, Number(result.reward) || 0) > 0) playRewardSound(result.rewardType);
+        if (Math.max(0, Number(result.reward) || 0) > 0) {
+          playRewardSound(result.rewardType);
+          playRewardAnimation(result.rewardType, {
+            id: `clan-quest:${result.questPeriodId || "current"}:${result.rewardId || rewardId}`,
+            sourceAnchor: rewardSourceAnchor,
+            tier: "medium",
+            destinationCityId: result.rewardType === "troops" ? String(result.targetCityId || "") : "",
+          });
+        }
       }
     }
   } catch (error) {
@@ -21855,6 +22706,7 @@ function handleClanClick(event) {
     if (!["field", "colors", "charges", "details"].includes(tab)) return;
     clanShieldEditorTab = tab;
     rerenderClanShieldEditor({ preserveScroll: false });
+    animateUiTabPanel(clanContent?.querySelector(".clan-shield-editor-controls"));
     return;
   }
   if (action === "shield-option" || action === "shield-color") {
@@ -21879,7 +22731,7 @@ function handleClanClick(event) {
     return;
   }
   if (action === "send-gift" || action === "collect-gifts" || action === "claim-quest") {
-    runClanSocialAction(action, String(button.dataset.rewardId || ""));
+    runClanSocialAction(action, String(button.dataset.rewardId || ""), button);
     return;
   }
   const clanId = button.dataset.clanId || state?.clanId || "";
@@ -22564,6 +23416,14 @@ function getRewardCampCountdownSeconds(camp) {
   return Math.max(0, Math.ceil((camp.payoutAtMs - Date.now()) / 1000));
 }
 
+function getRewardCampHoldProgress(camp, nowMs = Date.now()) {
+  const startedAtMs = normalizeTimestampMs(camp?.heldSinceMs);
+  const payoutAtMs = normalizeTimestampMs(camp?.payoutAtMs);
+  const durationMs = payoutAtMs - startedAtMs;
+  if (!camp?.holderUid || startedAtMs <= 0 || durationMs <= 0) return 0;
+  return clamp((nowMs - startedAtMs) / durationMs, 0, 1);
+}
+
 function getRewardCampStatusText(camp) {
   if (!camp) return "Unavailable";
   if (!camp.ownerUid) return "Neutral defenders";
@@ -22625,6 +23485,7 @@ function getCityRenderSignature(visibleCities, visibleCamps = []) {
       camp.size,
       camp.ownerUid || "",
       camp.ownerName || "",
+      getFlagSignature(camp.holderFlag),
       isClanAllyCity(camp) ? 1 : 0,
       camp.currentGarrison || 0,
       camp.alliedReinforcementTroops || 0,
@@ -22674,6 +23535,10 @@ function updateVisibleCityDynamicText() {
     if (!camp) return;
     const statusText = getRewardCampStatusText(camp);
     node.setAttribute("aria-label", `${camp.name}. ${statusText}. ${formatNumber(camp.baseReward)} ${getRewardCampConfig(camp)?.rewardLabel || "reward"} reward.`);
+    if (String(camp.campType || "") === "deed") {
+      node.style.setProperty("--deed-hold-progress", `${getRewardCampHoldProgress(camp) * 100}%`);
+      node.classList.toggle("deed-contested", camp.state === "contested");
+    }
     const timer = node.querySelector(".gold-camp-active-timer");
     if (timer) {
       const countdown = getRewardCampCountdownSeconds(camp);
@@ -22781,8 +23646,13 @@ function renderCities(force = false) {
       campNode.title = `${camp.name}. ${getRewardCampStatusText(camp)}.`;
       campNode.setAttribute("aria-label", `${camp.name}. ${getRewardCampStatusText(camp)}. ${formatNumber(camp.baseReward)} ${getRewardCampConfig(camp)?.rewardLabel || "reward"} reward.`);
       const countdown = getRewardCampCountdownSeconds(camp);
+      const deedHold = String(camp.campType || "") === "deed";
+      campNode.classList.toggle("deed-hold-active", Boolean(deedHold && camp.ownerUid));
+      campNode.style.setProperty("--deed-hold-progress", `${getRewardCampHoldProgress(camp) * 100}%`);
       const campHtml = `
         <img class="camp-art" src="${escapeHtml(camp.artSrc)}" alt="" draggable="false" decoding="async" />
+        ${camp.ownerUid ? `<span class="camp-owner-marker" aria-hidden="true">${renderCityOwnerFlag(camp)}</span>` : ""}
+        ${deedHold && camp.ownerUid ? `<span class="deed-hold-ring" aria-hidden="true"><span class="deed-hold-seal">D</span></span>` : ""}
         <span class="gold-camp-active-timer" ${camp.ownerUid ? "" : "hidden"}>
           <small>${camp.state === "contested" ? "Contested" : "Active"}</small>
           <strong>${camp.payoutPending ? countdown > 0 ? formatDuration(countdown) : "Payout ready" : "Securing"}</strong>
@@ -22794,6 +23664,7 @@ function renderCities(force = false) {
         campNode.innerHTML = campHtml;
         campNode._renderContent = campHtml;
       }
+      applyCityOwnerFlags(campNode, camp);
     } else {
       campNode.tabIndex = -1;
       campNode.setAttribute("aria-hidden", "true");
@@ -22926,6 +23797,8 @@ function renderCities(force = false) {
 
   updateVisibleCityDynamicText();
   layoutCityLabels();
+  flushPendingDeedCityHighlights();
+  flushPendingTroopRewardHighlights();
   const selectedForeign = selectedTargetId ? cityById(selectedTargetId) : null;
   const selectedCamp = selectedTargetId ? getCampTargetById(selectedTargetId) : null;
   if (selectedCamp && !sendMode) renderSelectedRewardCampWheel(selectedCamp);
@@ -23836,6 +24709,7 @@ function showRewardCampInfoModal(campId) {
     panels.forEach(panel => {
       panel.hidden = panel.dataset.campInfoPanel !== selectedTab;
     });
+    animateUiTabPanel(panels.find(panel => panel.dataset.campInfoPanel === selectedTab));
     if (isDeedCamp && selectedTab === "reward") refreshDeedCampHistoryPanel(camp, { force: true });
   }));
   bindHoldingReinforcementButtons();
@@ -26656,6 +27530,7 @@ function showCrownCitadelInfoModal(city) {
     panels.forEach(panel => {
       panel.hidden = panel.dataset.citadelInfoPanel !== selectedTab;
     });
+    animateUiTabPanel(panels.find(panel => panel.dataset.citadelInfoPanel === selectedTab));
     if (selectedTab === "reigns") refreshCrownCitadelReignPanel();
   }));
   bindHoldingReinforcementButtons();
@@ -27565,6 +28440,7 @@ function maybeAutoOpenDailyLoginRewards() {
   ) {
     return false;
   }
+  if (deferWhileScreenRewardAnimationRuns(maybeAutoOpenDailyLoginRewards)) return false;
   const key = getDailyLoginRewardAutoOpenKey();
   if (!key) return false;
   try {
@@ -27759,8 +28635,8 @@ function renderDailyLoginRewardModal() {
       </footer>
     </section>
   `;
-  modalBody.querySelector("[data-daily-reward-claim]")?.addEventListener("click", claimDailyLoginReward);
-  modalBody.querySelector("[data-daily-reward-claim-card]")?.addEventListener("click", claimDailyLoginReward);
+  modalBody.querySelector("[data-daily-reward-claim]")?.addEventListener("click", event => claimDailyLoginReward(event.currentTarget));
+  modalBody.querySelector("[data-daily-reward-claim-card]")?.addEventListener("click", event => claimDailyLoginReward(event.currentTarget));
   updateDailyLoginRewardCountdown();
 }
 
@@ -27783,9 +28659,13 @@ function createDailyLoginRewardClaimId() {
   return `daily-${Date.now().toString(36)}-${random}`;
 }
 
-async function claimDailyLoginReward() {
+async function claimDailyLoginReward(sourceElement = null) {
   const api = getOnlineApi();
   if (!api?.claimDailyLoginReward || dailyLoginRewardClaimInFlight || !dailyLoginRewardStatus?.eligible) return;
+  const rewardSource = sourceElement?.closest?.(".daily-reward-card")
+    || modalBody?.querySelector(".daily-reward-card.available .daily-reward-card-icon")
+    || sourceElement;
+  const rewardSourceAnchor = captureAnimationAnchor(rewardSource);
   if (
     !dailyLoginRewardPendingClaim
     || dailyLoginRewardPendingClaim.expectedOrdinal !== dailyLoginRewardStatus.nextClaimOrdinal
@@ -27817,6 +28697,24 @@ async function claimDailyLoginReward() {
     } else if (receipt) {
       const receiptItemCount = Object.values(receipt.items).reduce((sum, quantity) => sum + quantity, 0);
       playRewardSound(receiptItemCount > 0 ? "item" : receipt.troops > 0 ? "troops" : "gold");
+      const rewardEventId = `daily-login:${receipt.monthKey}:${receipt.day}`;
+      if (receipt.gold > 0) {
+        playRewardAnimation("gold", {
+          id: `${rewardEventId}:gold`,
+          sourceAnchor: rewardSourceAnchor,
+          tier: "medium",
+          host: modal,
+        });
+      }
+      if (receipt.troops > 0) {
+        playRewardAnimation("troops", {
+          id: `${rewardEventId}:troops`,
+          sourceAnchor: rewardSourceAnchor,
+          tier: "medium",
+          host: modal,
+          destinationCityId: receipt.targetCityId,
+        });
+      }
       const parts = [];
       if (receipt.gold > 0) parts.push(`${formatNumber(receipt.gold)} gold`);
       if (receipt.troops > 0) parts.push(`${formatNumber(receipt.troops)} troops`);
@@ -28234,7 +29132,17 @@ async function claimPreparedRewardedAd(intent = {}, options = {}) {
     addLog(`Rewarded ad: +${formatNumber(reward)} gold.`);
     showToast(`Reward received: +${formatNumber(reward)} gold.`);
   }
-  if (!result.replayed && reward > 0) playRewardSound(rewardType);
+  if (!result.replayed && reward > 0) {
+    playRewardSound(rewardType);
+    playRewardAnimation(rewardType, {
+      id: `rewarded-ad:${intent.intentId}:${rewardType}`,
+      source: options.sourceAnchor ? null : toast,
+      sourceAnchor: options.sourceAnchor || null,
+      tier: "medium",
+      host: modal,
+      destinationCityId: rewardType === "troops" ? String(result.targetCityId || intent.targetCityId || "") : "",
+    });
+  }
   if (!options.skipStatusRefresh && !result.rewardedAdStatus) await refreshRewardedAdStatus({ render: false });
   return result;
 }
@@ -28263,9 +29171,10 @@ async function retryPendingRewardedAdClaim() {
   }
 }
 
-async function startRewardedAdBoost(rewardType = "gold") {
+async function startRewardedAdBoost(rewardType = "gold", sourceElement = null) {
   if (rewardedAdInFlight || getPendingRewardedAdClaim()) return;
   const normalizedType = rewardType === "troops" ? "troops" : "gold";
+  const rewardSourceAnchor = captureAnimationAnchor(sourceElement);
   const availability = getRewardedAdAvailability();
   if (!availability.canWatch) {
     rejectGameAction(availability.text);
@@ -28290,7 +29199,7 @@ async function startRewardedAdBoost(rewardType = "gold") {
       throw new Error("The server did not create a valid rewarded-ad request.");
     }
     await requestGoogleRewardedAd(intent);
-    await claimPreparedRewardedAd(intent);
+    await claimPreparedRewardedAd(intent, { sourceAnchor: rewardSourceAnchor });
   } catch (error) {
     const pending = getPendingRewardedAdClaim();
     if (pending && !isPermanentRewardedAdClaimError(error)) {
@@ -28376,7 +29285,7 @@ function renderShopModal() {
     </div>
   `;
   modalBody.querySelectorAll("[data-rewarded-ad-watch]").forEach(button => {
-    button.addEventListener("click", () => startRewardedAdBoost(button.dataset.rewardedAdWatch));
+    button.addEventListener("click", event => startRewardedAdBoost(button.dataset.rewardedAdWatch, event.currentTarget));
   });
   modalBody.querySelectorAll("[data-shop-buy]").forEach(button => {
     button.addEventListener("click", () => buyShopItem(button.dataset.shopBuy));
@@ -29087,6 +29996,7 @@ async function upgradeCity(cityId, levels = 1) {
     renderAll();
     return;
   }
+  const upgradeVfxBefore = getCityVfxSnapshot(city);
   if (usesServerEconomyAuthority()) {
     const inFlightKey = city.id;
     if (serverCityUpgradeInFlightIds.has(inFlightKey)) {
@@ -29126,6 +30036,7 @@ async function upgradeCity(cityId, levels = 1) {
         rejectGameAction("Could not upgrade city.", { allowCrossMap: true });
       }
       renderAll();
+      if (totalUpgraded > 0) playCityUpgradeAnimation(upgradeVfxBefore, getCityVfxSnapshot(cityById(city.id) || city));
     } catch (error) {
       onlineLastError = error?.message || String(error);
       if (totalUpgraded > 0) {
@@ -29137,6 +30048,7 @@ async function upgradeCity(cityId, levels = 1) {
       }
       console.warn("Server city upgrade failed", error);
       renderAll();
+      if (totalUpgraded > 0) playCityUpgradeAnimation(upgradeVfxBefore, getCityVfxSnapshot(cityById(city.id) || city));
     } finally {
       serverCityUpgradeInFlightIds.delete(inFlightKey);
     }
@@ -29166,6 +30078,7 @@ async function upgradeCity(cityId, levels = 1) {
   markOwnedCityChanged(city);
   saveGame();
   renderAll();
+  playCityUpgradeAnimation(upgradeVfxBefore, getCityVfxSnapshot(city));
 }
 
 function fortifyCity(cityId) {
@@ -30149,6 +31062,7 @@ function renderOutgoingAttacksModalContent(operations = getActiveOperationsSnaps
     button.addEventListener("click", () => {
       activeOperationsTab = button.dataset.activeOperationsTab || "marches";
       renderOutgoingAttacksModalContent();
+      animateUiTabPanel(modalBody.querySelector(".active-operations-content"));
     });
   });
   modalBody.querySelectorAll("[data-outgoing-march]").forEach(button => {
@@ -33016,6 +33930,18 @@ if (clanContent) {
 }
 if (pushAlertsOffBtn) pushAlertsOffBtn.addEventListener("click", disablePushNotificationsFromSettings);
 if (pushAlertsOnBtn) pushAlertsOnBtn.addEventListener("click", enablePushNotificationsFromSettings);
+animationModeButtons.forEach(button => {
+  button.addEventListener("click", () => setAnimationModePreference(button.dataset.animationModeOption));
+});
+const animationPreferenceMediaQuery = window.matchMedia?.("(prefers-reduced-motion: reduce)");
+const handleSystemAnimationPreferenceChange = () => {
+  if (!getStoredAnimationMode()) renderAnimationModeSetting();
+};
+if (animationPreferenceMediaQuery?.addEventListener) {
+  animationPreferenceMediaQuery.addEventListener("change", handleSystemAnimationPreferenceChange);
+} else {
+  animationPreferenceMediaQuery?.addListener?.(handleSystemAnimationPreferenceChange);
+}
 if (profileFlagBtn) profileFlagBtn.addEventListener("click", showFlagEditor);
 if (profileNameEditBtn) profileNameEditBtn.addEventListener("click", beginProfileNameEdit);
 if (profileNameSaveBtn) profileNameSaveBtn.addEventListener("click", saveProfileName);
@@ -33123,6 +34049,7 @@ document.addEventListener("visibilitychange", () => {
   }
 });
 window.addEventListener("pagehide", markGameBackgrounded);
+window.addEventListener("pagehide", () => crownlandsAnimations?.clearAll?.());
 window.addEventListener("pageshow", () => handleGameForegroundSignal("pageshow"));
 window.addEventListener("focus", () => handleGameForegroundSignal("focus"));
 document.addEventListener("freeze", markGameBackgrounded);
@@ -33233,9 +34160,10 @@ modal.addEventListener("close", () => {
   modal.classList.remove("daily-login-reward-modal");
   modal.classList.remove("skill-preset-confirmation-modal");
   modal.classList.remove("patch-notes-modal");
-  window.setTimeout(maybeAutoOpenDailyLoginRewards, 0);
-  setTimeout(showNextLevelUpReward, 0);
-  window.setTimeout(showPendingOfflineRewardsSummary, 0);
+  const followupDelayMs = Math.max(0, screenRewardAnimationBlockUntilMs - Date.now());
+  window.setTimeout(maybeAutoOpenDailyLoginRewards, followupDelayMs);
+  setTimeout(showNextLevelUpReward, followupDelayMs);
+  window.setTimeout(showPendingOfflineRewardsSummary, followupDelayMs);
   if (!troopSliderActive) return;
   troopSliderActive = false;
   cancelSendMode();
@@ -33256,21 +34184,60 @@ if (levelUpRewardModal) {
     }
     levelUpRewardModal.classList.remove("revealed");
     activeLevelUpReward = null;
-    setTimeout(showNextLevelUpReward, 0);
+    setTimeout(showNextLevelUpReward, Math.max(0, screenRewardAnimationBlockUntilMs - Date.now()));
   });
 }
 if (collectLevelUpRewardsBtn) {
   collectLevelUpRewardsBtn.addEventListener("click", () => {
     if (!levelUpRewardModal?.open) return;
+    const reward = activeLevelUpReward ? { ...activeLevelUpReward } : null;
+    const goldSource = levelUpRewardBody?.querySelector(".level-up-reward-item.gold .level-up-reward-icon");
+    const troopSource = levelUpRewardBody?.querySelector(".level-up-reward-item.troops .level-up-reward-icon");
+    const goldSourceAnchor = captureAnimationAnchor(goldSource);
+    const troopSourceAnchor = captureAnimationAnchor(troopSource);
+    const animationMode = getEffectiveAnimationMode();
+    const closeSettleMs = animationMode === "off" ? 0 : 190;
+    const closeDelayMs = 140;
+    const presentationMs = animationMode === "full" ? 1050 : animationMode === "reduced" ? 650 : 0;
+    screenRewardAnimationBlockUntilMs = presentationMs
+      ? Date.now() + closeDelayMs + closeSettleMs + presentationMs
+      : 0;
     levelUpRewardModal.classList.add("collecting");
     setTimeout(() => {
       levelUpRewardModal.classList.remove("collecting");
       levelUpRewardModal.close();
-    }, 140);
+    }, closeDelayMs);
+    window.setTimeout(() => {
+      if (reward?.gold > 0) {
+        playRewardAnimation("gold", {
+          id: `level-up-gold:${reward.fromLevel}:${reward.toLevel}`,
+          sourceAnchor: goldSourceAnchor,
+          tier: reward.levelsGained > 1 ? "large" : "medium",
+        });
+      }
+      if (reward?.troops > 0) {
+        playRewardAnimation("troops", {
+          id: `level-up-troops:${reward.fromLevel}:${reward.toLevel}`,
+          sourceAnchor: troopSourceAnchor,
+          tier: reward.levelsGained > 1 ? "large" : "medium",
+          destinationCityId: reward.cityId || "",
+        });
+      }
+    }, closeDelayMs + closeSettleMs);
   });
 }
 
 if (playerNameInput) playerNameInput.value = cleanName(getOnlineApi()?.getUser?.()?.displayName) || "Ricky";
+try {
+  crownlandsAnimations?.init?.({
+    worldLayer: mapVfxLayer,
+    screenLayer: screenVfxLayer,
+    mapStage: mapTransitionStage,
+  });
+} catch (error) {
+  console.warn("Crownlands animation manager could not initialize", error);
+}
+renderAnimationModeSetting();
 applyWorldDimensions();
 renderWorldMap();
 renderIslandTeleporters();
