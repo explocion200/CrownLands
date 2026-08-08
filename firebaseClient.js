@@ -1210,6 +1210,8 @@
     delete cleanProfile.inactivityNotice;
     delete cleanProfile.worldSlotResetAtMs;
     delete cleanProfile.skillPresets;
+    delete cleanProfile.freeSkillResetGrantVersion;
+    delete cleanProfile.freeSkillResetCredits;
     if (cleanProfile.shopItems && typeof cleanProfile.shopItems === "object" && deleteField) {
       cleanProfile.shopItems = {
         ...cleanProfile.shopItems,

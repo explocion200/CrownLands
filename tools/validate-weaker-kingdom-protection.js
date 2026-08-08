@@ -11,6 +11,9 @@ const firestoreRulesSource = fs.readFileSync(path.join(root, "firestore.rules"),
 const realmConfig = JSON.parse(
   fs.readFileSync(path.join(root, "functions", "release-config.json"), "utf8")
 );
+const economyConfig = JSON.parse(
+  fs.readFileSync(path.join(root, "functions", "economy-config.json"), "utf8")
+);
 
 function readFunction(text, name) {
   const start = text.indexOf(`function ${name}(`);
@@ -42,13 +45,13 @@ const numericConstants = [
   "PROTECTED_ASSAULT_BREACH_VERSION",
   "DEMO_ATTACK_MIN_POWER_RATIO",
   "DEMO_ATTACK_DEFENDER_XP_MULTIPLIER",
-  "BASE_TROOP_ATTACK_POWER",
   "GLOBAL_PLAYER_STATS_VERSION",
 ];
 const sandbox = { console };
 numericConstants.forEach(name => {
   sandbox[name] = Number(readConstant(source, name));
 });
+sandbox.BASE_TROOP_ATTACK_POWER = Number(economyConfig.troopCombat.baseAttackPowerPerTroop);
 sandbox.ATTACK_PROTECTION_DEFENDER_XP_POLICY = vm.runInNewContext(
   readConstant(source, "ATTACK_PROTECTION_DEFENDER_XP_POLICY")
 );
@@ -123,8 +126,8 @@ vm.runInContext([
   readFunction(source, "calculateCombatResult"),
 ].join("\n\n"), sandbox);
 
-if (sandbox.GLOBAL_PLAYER_STATS_VERSION !== 10 || sandbox.ATTACK_PROTECTION_VERSION !== 2) {
-  throw new Error("Protection is not using King Power v10 and attack-protection schema v2.");
+if (sandbox.GLOBAL_PLAYER_STATS_VERSION !== 11 || sandbox.ATTACK_PROTECTION_VERSION !== 2) {
+  throw new Error("Protection is not using King Power v11 and attack-protection schema v2.");
 }
 if (sandbox.ATTACK_PROTECTION_ASSAULT_MIN_RATIO !== 2
   || sandbox.ATTACK_PROTECTION_RAID_MIN_RATIO !== 2.5
@@ -134,11 +137,11 @@ if (sandbox.ATTACK_PROTECTION_ASSAULT_MIN_RATIO !== 2
 
 const validGlobalPower = sandbox.getPlayerPowerSnapshot({
   profile: { kingPowerVersion: 6, kingPower: 4_000_000, kingPowerUpdatedAtMs: 5000 },
-  globalStats: { version: 10, kingPower: 900_000, updatedAtMs: 4000 },
+  globalStats: { version: 11, kingPower: 900_000, updatedAtMs: 4000 },
   city: { powerFloor: 300_000 },
 });
 if (validGlobalPower !== 900_000) {
-  throw new Error("A legacy profile snapshot overrides canonical v10 global stats.");
+  throw new Error("A legacy profile snapshot overrides canonical v11 global stats.");
 }
 
 const target = { ownerUid: "defender", totalDefense: 1000, troops: 1000 };

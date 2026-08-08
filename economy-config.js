@@ -1,6 +1,11 @@
 window.CROWNLANDS_ECONOMY_CONFIG = {
   "schemaVersion": 1,
-  "updatedAt": "2026-08-05T12:00:00.000Z",
+  "updatedAt": "2026-08-08T12:00:00.000Z",
+  "troopCombat": {
+    "defenseModelVersion": 1,
+    "baseAttackPowerPerTroop": 1.25,
+    "baseDefensePowerPerTroop": 1.3
+  },
   "shopItems": {
     "shield_12h": {
       "cost": 1250000,
@@ -216,7 +221,6 @@ window.CROWNLANDS_ECONOMY_CONFIG = {
     "goldEndgameStartLevel": 100,
     "goldEndgameGrowth": 1.08,
     "troopsPerVictoryPoint": 10,
-    "defensePercentPerLevel": 2,
     "wallDefenseBase": 200,
     "wallDefensePerLevel": 28858,
     "upgradeEarlyEndLevel": 50,
@@ -241,6 +245,10 @@ window.CROWNLANDS_ECONOMY_CONFIG = {
   },
   "skills": {
     "swordmastery": {
+      "percentPerLevel": 2,
+      "maxPercent": 60
+    },
+    "shieldwallDiscipline": {
       "percentPerLevel": 2,
       "maxPercent": 60
     },

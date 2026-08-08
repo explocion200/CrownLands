@@ -77,6 +77,8 @@ service cloud.firestore {
           'character',
           'upgrades',
           'skillPresets',
+          'freeSkillResetGrantVersion',
+          'freeSkillResetCredits',
           'mainCityId',
            'mainIslandId',
            'mainRegionId',
@@ -139,6 +141,8 @@ service cloud.firestore {
         && profileFieldUnchanged('character')
         && profileFieldUnchanged('upgrades')
         && profileFieldUnchanged('skillPresets')
+        && profileFieldUnchanged('freeSkillResetGrantVersion')
+        && profileFieldUnchanged('freeSkillResetCredits')
         && profileFieldUnchanged('mainCityId')
         && profileFieldUnchanged('mainIslandId')
         && profileFieldUnchanged('mainRegionId')

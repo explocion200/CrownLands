@@ -860,7 +860,9 @@ const SCOUT_NEARBY_COST = economyNumber("playerCosts.nearbyScoutGold", 75000);
 const SCOUT_NEARBY_RADIUS = 420;
 const REGROUP_COST = economyNumber("playerCosts.regroupGold", 150000);
 const REGROUP_RADIUS = 680;
-const BASE_TROOP_ATTACK_POWER = 1.25;
+const BASE_TROOP_ATTACK_POWER = economyNumber("troopCombat.baseAttackPowerPerTroop", 1.25);
+const BASE_TROOP_DEFENSE_POWER = economyNumber("troopCombat.baseDefensePowerPerTroop", 1.3);
+const DEFENSE_COMBAT_VERSION = Math.max(1, Math.floor(economyNumber("troopCombat.defenseModelVersion", 1)));
 const ARMY_TRAVEL_SECONDS_PER_MAP_UNIT = 0.13;
 const ARMY_TRAVEL_MIN_SECONDS = 30;
 const ARMY_TRAVEL_SCOUT_MIN_SECONDS = 10;
@@ -913,7 +915,7 @@ const BATTLE_XP_END_START_LEVEL_CAP_RATE = 0.5;
 const BATTLE_XP_END_FLOOR_LEVEL_CAP_RATE = 0.35;
 const BATTLE_XP_END_CAP_RAMP_LEVELS = 50;
 const ATTACK_PROTECTION_VERSION = 2;
-const COMBAT_FORECAST_VERSION = 3;
+const COMBAT_FORECAST_VERSION = 4;
 const ATTACK_COMBAT_SNAPSHOT_VERSION = 1;
 const SIEGE_COMBAT_VERSION = Math.max(1, Math.floor(economyNumber("siegeCombat.modelVersion", 1)));
 const FORTIFICATION_STATE_VERSION = 1;
@@ -938,7 +940,6 @@ const CITY_LEVEL_STATS = {
   victoryPointsPerLevel: 4,
   victoryPointsExponent: 1.35,
   victoryPointsExponentScale: 2,
-  defensePercentPerLevel: economyNumber("cityEconomy.defensePercentPerLevel", 2),
   cityWallsBase: economyNumber("cityEconomy.wallDefenseBase", 200),
   cityWallsPerLevel: economyNumber("cityEconomy.wallDefensePerLevel", 28858),
   troopProductionPerVictoryPoint: economyNumber("cityEconomy.troopsPerVictoryPoint", 3),
@@ -947,11 +948,12 @@ const CITY_LEVEL_STATS = {
 const KING_POWER_ARMY_TROOP_VALUE = 2;
 const KING_POWER_REPLACEMENT_HOURS = 12;
 const KING_POWER_DEFENSIVE_ADVANTAGE_WEIGHT = 0.25;
-const KING_POWER_AUTHORITY_VERSION = 10;
+const KING_POWER_AUTHORITY_VERSION = 11;
 const SKILL_RESET_COST = economyNumber("playerCosts.skillResetGold", 750_000);
 
 const SKILL_CONFIG = {
   swordmastery: { label: "Swordmastery", percentPerLevel: economyNumber("skills.swordmastery.percentPerLevel", 2), maxPercent: economyNumber("skills.swordmastery.maxPercent", 60), description: "Outgoing attack power." },
+  shieldwallDiscipline: { label: "Shieldwall Discipline", percentPerLevel: economyNumber("skills.shieldwallDiscipline.percentPerLevel", 2), maxPercent: economyNumber("skills.shieldwallDiscipline.maxPercent", 60), description: "Defense power for stationed and reinforcing soldiers." },
   stoneworks: { label: "Stoneworks", percentPerLevel: economyNumber("skills.stoneworks.percentPerLevel", 3), maxPercent: economyNumber("skills.stoneworks.maxPercent", 75), description: "City wall strength." },
   taxStewardship: { label: "Tax Stewardship", percentPerLevel: economyNumber("skills.taxStewardship.percentPerLevel", 3), maxPercent: economyNumber("skills.taxStewardship.maxPercent", 75), description: "Normal city gold production." },
   royalGranaries: { label: "Royal Granaries", percentPerLevel: economyNumber("skills.royalGranaries.percentPerLevel", 3), maxPercent: economyNumber("skills.royalGranaries.maxPercent", 75), description: "Normal city troop production." },
@@ -960,8 +962,8 @@ const SKILL_CONFIG = {
   fieldMedics: { label: "Field Medics", percentPerLevel: economyNumber("skills.fieldMedics.percentPerLevel", 2), maxPercent: economyNumber("skills.fieldMedics.maxPercent", 50), description: "Returns a percent of battle losses to your main city." },
 };
 
-const SKILL_ORDER = ["swordmastery", "stoneworks", "taxStewardship", "royalGranaries", "guildCharters", "marchOrders", "fieldMedics"];
-const SKILL_PRESET_MODEL_VERSION = 2;
+const SKILL_ORDER = ["swordmastery", "shieldwallDiscipline", "stoneworks", "taxStewardship", "royalGranaries", "guildCharters", "marchOrders", "fieldMedics"];
+const SKILL_PRESET_MODEL_VERSION = 3;
 const SKILL_PRESET_NAME_MAX_LENGTH = 24;
 const SKILL_PRESET_SLOTS = Object.freeze([
   Object.freeze({ slot: 1, unlockLevel: 50 }),
@@ -5701,6 +5703,8 @@ function newGame(playerName) {
     lastRealTimeMs: Date.now(),
     upgrades: createDefaultSkills(),
     skillPresets: createDefaultSkillPresets(),
+    freeSkillResetGrantVersion: 0,
+    freeSkillResetCredits: 0,
     shopItems: createDefaultShopItems(),
     itemEffects: createDefaultItemEffects(),
     itemPurchaseCooldowns: createDefaultItemPurchaseCooldowns(),
@@ -8006,6 +8010,10 @@ function normalizeCombatFortificationSnapshot(raw = null) {
     reinforcedCityWalls: Math.max(0, Math.floor(Number(raw.reinforcedCityWalls) || 0)),
     stoneworksPercent: Math.max(0, Number(raw.stoneworksPercent) || 0),
     cityLevelDefensePercent: Math.max(0, Number(raw.cityLevelDefensePercent) || 0),
+    defenseCombatVersion: Math.max(0, Math.floor(Number(raw.defenseCombatVersion) || 0)),
+    baseDefensePowerPerTroop: Math.max(1, Number(raw.baseDefensePowerPerTroop) || 1),
+    shieldwallDisciplinePercent: Math.max(0, Number(raw.shieldwallDisciplinePercent) || 0),
+    troopObjectiveDefenseBonusPercent: Math.max(0, Number(raw.troopObjectiveDefenseBonusPercent) || 0),
     objectiveDefenseBonusPercent: Math.max(0, Number(raw.objectiveDefenseBonusPercent) || 0),
     fullWallPower: Math.max(0, Math.floor(Number(raw.fullWallPower) || 0)),
     currentWallPower: Math.max(0, Math.floor(Number(raw.currentWallPower ?? raw.startingWallPower) || 0)),
@@ -8076,6 +8084,7 @@ function normalizeCombatForecast(raw = null) {
       "overwhelming_advantage",
     ].includes(raw.advantageTier) ? raw.advantageTier : getCombatAdvantageTier(raw.powerRatio).key,
     siegeCombatVersion: Math.max(0, Math.floor(Number(raw.siegeCombatVersion) || 0)),
+    defenseCombatVersion: Math.max(0, Math.floor(Number(raw.defenseCombatVersion) || 0)),
     fortification: normalizeCombatFortificationSnapshot(raw.fortification),
   };
 }
@@ -8549,10 +8558,18 @@ function getCityStats(city, options = {}) {
     + level * CITY_LEVEL_STATS.victoryPointsPerLevel
     + Math.pow(level, CITY_LEVEL_STATS.victoryPointsExponent) * CITY_LEVEL_STATS.victoryPointsExponentScale
   );
-  const defensePercent = level * CITY_LEVEL_STATS.defensePercentPerLevel;
+  const defenseCombatVersion = Math.max(0, Math.floor(Number(
+    options.defenseCombatVersion ?? (supportsDefenseCombat() ? DEFENSE_COMBAT_VERSION : 0)
+  ) || 0));
+  const soldierDefenseEnabled = !isRewardCamp(city)
+    && defenseCombatVersion >= DEFENSE_COMBAT_VERSION;
+  const defensePercent = soldierDefenseEnabled ? 0 : level * 2;
   const baseCityWalls = getBaseCityWalls(level);
   const includeSkillBoosts = options.includeSkillBoosts !== false;
   const stoneworksPercent = includeSkillBoosts && city?.owner === "player" ? getSkillPercent("stoneworks") : 0;
+  const shieldwallDisciplinePercent = soldierDefenseEnabled && includeSkillBoosts && city?.owner === "player"
+    ? getSkillPercent("shieldwallDiscipline")
+    : 0;
   const cityWalls = Math.floor(baseCityWalls * (1 + stoneworksPercent / 100));
   const royalGranariesPercent = includeSkillBoosts && city?.owner === "player" ? getSkillPercent("royalGranaries") : 0;
   const taxStewardshipPercent = includeSkillBoosts && city?.owner === "player" ? getSkillPercent("taxStewardship") : 0;
@@ -8563,7 +8580,7 @@ function getCityStats(city, options = {}) {
   const strongholdTroopBonusPercent = includeStrongholdBoosts && !stronghold && city?.owner === "player"
     ? getControlledStrongholdTroopBonusPercent("player")
     : 0;
-  const strongholdDefenseBonusPercent = includeStrongholdBoosts && !stronghold
+  const strongholdDefenseBonusPercent = includeStrongholdBoosts
     ? getControlledStrongholdCityDefenseBonusPercentForCity(city)
     : 0;
   const includeTimedItemBoosts = options.includeTimedItemBoosts !== false;
@@ -8599,22 +8616,42 @@ function getCityStats(city, options = {}) {
   );
   const defendingTroops = Math.max(0, Number(city?.troops) || 0)
     + (city?.owner === "player" ? Math.max(0, Number(city?.alliedReinforcementTroops) || 0) : 0);
-  const troopDefense = Math.floor(defendingTroops * (1 + defensePercent / 100));
+  const baseTroopDefense = soldierDefenseEnabled
+    ? Math.floor(defendingTroops * BASE_TROOP_DEFENSE_POWER)
+    : Math.floor(defendingTroops);
+  const troopDefenseBeforeObjective = soldierDefenseEnabled
+    ? Math.floor(defendingTroops * BASE_TROOP_DEFENSE_POWER * (1 + shieldwallDisciplinePercent / 100))
+    : Math.floor(defendingTroops * (1 + defensePercent / 100));
+  const troopDefense = soldierDefenseEnabled
+    ? Math.floor(defendingTroops * BASE_TROOP_DEFENSE_POWER * (
+      1 + (shieldwallDisciplinePercent + strongholdDefenseBonusPercent) / 100
+    ))
+    : troopDefenseBeforeObjective;
   const cityWallsBonus = Math.max(0, cityWalls - baseCityWalls);
-  const baseTotalDefense = Math.floor(baseCityWalls + troopDefense);
-  const preStrongholdTotalDefense = Math.floor(cityWalls + troopDefense);
-  const strongholdDefenseBonus = Math.floor(preStrongholdTotalDefense * strongholdDefenseBonusPercent / 100);
-  const totalDefense = preStrongholdTotalDefense + strongholdDefenseBonus;
+  const baseTotalDefense = Math.floor(baseCityWalls + baseTroopDefense);
+  const preStrongholdTotalDefense = Math.floor(cityWalls + troopDefenseBeforeObjective);
+  const strongholdDefenseBonus = soldierDefenseEnabled
+    ? Math.max(0, troopDefense - troopDefenseBeforeObjective)
+    : Math.floor(preStrongholdTotalDefense * strongholdDefenseBonusPercent / 100);
+  const totalDefense = soldierDefenseEnabled
+    ? Math.floor(cityWalls + troopDefense)
+    : preStrongholdTotalDefense + strongholdDefenseBonus;
   const totalDefenseBonus = Math.max(0, totalDefense - baseTotalDefense);
   return {
     level,
     victoryPoints,
     cityPower: victoryPoints,
+    defenseCombatVersion: soldierDefenseEnabled ? DEFENSE_COMBAT_VERSION : 0,
+    baseDefensePowerPerTroop: soldierDefenseEnabled ? BASE_TROOP_DEFENSE_POWER : 1,
     defensePercent,
     baseCityWalls,
     cityWalls,
     cityWallsBonus,
     stoneworksPercent,
+    shieldwallDisciplineLevel: soldierDefenseEnabled && includeSkillBoosts && city?.owner === "player"
+      ? getSkillLevel("shieldwallDiscipline")
+      : 0,
+    shieldwallDisciplinePercent,
     royalGranariesPercent,
     taxStewardshipPercent,
     strongholdGoldBonusPercent,
@@ -8636,6 +8673,8 @@ function getCityStats(city, options = {}) {
     goldProductionBonusPerHour,
     troopProductionPerSecond: troopProductionPerHour / 3600,
     goldProductionPerSecond: goldProductionPerHour / 3600,
+    baseTroopDefense,
+    troopDefenseBeforeObjective,
     troopDefense,
     baseTotalDefense,
     totalDefenseBonus,
@@ -8675,12 +8714,18 @@ function normalizeFortificationState(city = {}, nowMs = Date.now()) {
 function getCityFortificationSnapshot(city = {}, statsOverride = null, nowMs = Date.now()) {
   const stats = statsOverride || getCityStats(city);
   const state = normalizeFortificationState(city, nowMs);
-  const objectiveDefenseBonusPercent = Math.max(0, Number(stats.strongholdDefenseBonusPercent) || 0);
+  const troopObjectiveDefenseBonusPercent = Math.max(0, Number(stats.strongholdDefenseBonusPercent) || 0);
+  const objectiveDefenseBonusPercent = Math.floor(Number(stats.defenseCombatVersion) || 0) >= DEFENSE_COMBAT_VERSION
+    ? 0
+    : troopObjectiveDefenseBonusPercent;
   const fullWallPower = Math.max(0, Math.floor(
     Math.max(0, Number(stats.cityWalls) || 0) * (1 + objectiveDefenseBonusPercent / 100)
   ));
   const ownerGarrisonDefensePower = Math.max(0, Math.floor(
-    Math.max(0, Number(stats.troopDefense) || 0) * (1 + objectiveDefenseBonusPercent / 100)
+    Math.max(0, Number(stats.troopDefense) || 0)
+      * (Math.floor(Number(stats.defenseCombatVersion) || 0) >= DEFENSE_COMBAT_VERSION
+        ? 1
+        : 1 + objectiveDefenseBonusPercent / 100)
   ));
   return {
     modelVersion: SIEGE_COMBAT_VERSION,
@@ -8688,7 +8733,11 @@ function getCityFortificationSnapshot(city = {}, statsOverride = null, nowMs = D
     reinforcedCityWalls: Math.max(0, Math.floor(Number(stats.cityWalls) || 0)),
     stoneworksPercent: Math.max(0, Number(stats.stoneworksPercent) || 0),
     cityLevelDefensePercent: Math.max(0, Number(stats.defensePercent) || 0),
+    defenseCombatVersion: Math.max(0, Math.floor(Number(stats.defenseCombatVersion) || 0)),
+    baseDefensePowerPerTroop: Math.max(1, Number(stats.baseDefensePowerPerTroop) || 1),
+    shieldwallDisciplinePercent: Math.max(0, Number(stats.shieldwallDisciplinePercent) || 0),
     objectiveDefenseBonusPercent,
+    troopObjectiveDefenseBonusPercent,
     fullWallPower,
     currentWallPower: Math.max(0, Math.floor(fullWallPower * state.integrityBps / 10_000)),
     integrityBps: state.integrityBps,
@@ -9064,6 +9113,8 @@ function normalizeScoutReports(reports) {
       baseTotalDefense,
       totalDefenseBonus: Math.max(0, totalDefense - baseTotalDefense),
       siegeCombatVersion: Math.max(0, Math.floor(Number(report?.siegeCombatVersion) || 0)),
+      defenseCombatVersion: Math.max(0, Math.floor(Number(report?.defenseCombatVersion) || 0)),
+      baseDefensePowerPerTroop: Math.max(1, Number(report?.baseDefensePowerPerTroop) || 1),
       fortification: normalizeCombatFortificationSnapshot(report?.fortification),
       scoutedAt,
       expiresAt,
@@ -9079,7 +9130,16 @@ function normalizeScoutReportReinforcements(rows) {
     .map(row => ({
       ownerUid: String(row?.ownerUid || "").slice(0, 128),
       ownerName: cleanName(row?.ownerName || "Ruler") || "Ruler",
+      ownerFlag: row?.ownerFlag && typeof row.ownerFlag === "object" ? normalizeFlag(row.ownerFlag) : null,
       troops: Math.max(0, Math.floor(Number(row?.troops) || 0)),
+      defenseCombatVersion: Math.max(0, Math.floor(Number(row?.defenseCombatVersion) || 0)),
+      baseDefensePowerPerTroop: Math.max(1, Number(row?.baseDefensePowerPerTroop) || 1),
+      basePower: Math.max(0, Math.floor(Number(row?.basePower) || 0)),
+      shieldwallDisciplineLevel: Math.max(0, Math.floor(Number(row?.shieldwallDisciplineLevel) || 0)),
+      shieldwallDisciplinePercent: Math.max(0, Number(row?.shieldwallDisciplinePercent) || 0),
+      personalDefenseBonusPercent: Math.max(0, Number(row?.personalDefenseBonusPercent) || 0),
+      sharedDefenseBonusPercent: Math.max(0, Number(row?.sharedDefenseBonusPercent) || 0),
+      effectivePower: Math.max(0, Math.floor(Number(row?.effectivePower) || 0)),
     }))
     .filter(row => row.ownerUid && row.troops > 0)
     .slice(0, 50);
@@ -9186,6 +9246,7 @@ function normalizeBattleReports(reports) {
         battleId: String(report.battleId || "").replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 160),
         battleSnapshotVersion: Math.max(0, Math.floor(Number(report.battleSnapshotVersion) || 0)),
         siegeCombatVersion: Math.max(0, Math.floor(Number(report.siegeCombatVersion) || 0)),
+        defenseCombatVersion: Math.max(0, Math.floor(Number(report.defenseCombatVersion) || 0)),
         fortification: normalizeCombatFortificationSnapshot(report.fortification),
         attackProtection: normalizeAttackProtectionSnapshot(report.attackProtection, report.demoAttack),
         launchCombatForecast: normalizeCombatForecast(report.launchCombatForecast),
@@ -10083,8 +10144,8 @@ function completeScoutMission(attack, target) {
 
 function createScoutReportSnapshot(target) {
   const stats = getCityStats(target);
-  const baseTroopDefense = Math.max(0, Math.floor(Number(target.troops) || 0));
-  const troopDefense = Math.floor(baseTroopDefense * (1 + stats.defensePercent / 100));
+  const troopCount = Math.max(0, Math.floor(Number(target.troops) || 0));
+  const troopDefense = Math.max(0, Math.floor(Number(stats.troopDefense) || troopCount));
   const ownerUsesPlayerSkills = target.owner === "player";
   const skillSnapshot = {};
   for (const skill of SKILL_ORDER) {
@@ -10096,7 +10157,7 @@ function createScoutReportSnapshot(target) {
   }
   const scoutedAtMs = Date.now();
   return {
-    troops: baseTroopDefense,
+    troops: troopCount,
     totalDefense: Math.floor(stats.totalDefense),
     baseTotalDefense: Math.floor(stats.baseTotalDefense),
     totalDefenseBonus: Math.floor(stats.totalDefenseBonus),
@@ -10105,14 +10166,18 @@ function createScoutReportSnapshot(target) {
     ownerName: getCityOwnerDisplayName(target),
     ownerFlag: getCityOwnerFlag(target),
     cityLevel: stats.level,
+    defenseCombatVersion: stats.defenseCombatVersion,
+    baseDefensePowerPerTroop: stats.baseDefensePowerPerTroop,
     defensePercent: stats.defensePercent,
     baseCityWalls: stats.baseCityWalls,
     cityWalls: stats.cityWalls,
     troopDefense,
-    cityDefenseBonus: Math.max(0, troopDefense - baseTroopDefense),
+    cityDefenseBonus: Math.max(0, troopDefense - troopCount),
     stoneworksBonus: Math.max(0, stats.cityWalls - stats.baseCityWalls),
     baseAttackPercent: target.owner === "enemy" ? 4 : 0,
     ...skillSnapshot,
+    siegeCombatVersion: SIEGE_COMBAT_VERSION,
+    fortification: getCityFortificationSnapshot(target, stats),
     scoutedAt: state.gameSeconds,
     expiresAt: state.gameSeconds + SCOUT_REPORT_SECONDS,
     scoutedAtMs,
@@ -10252,6 +10317,10 @@ function supportsBulkArmyOrders() {
 
 function supportsSiegeCombat() {
   return !isOnlineWorldActive() || getRealmCapabilityVersion("siegeCombatVersion") >= SIEGE_COMBAT_VERSION;
+}
+
+function supportsDefenseCombat() {
+  return !isOnlineWorldActive() || getRealmCapabilityVersion("defenseCombatVersion") >= DEFENSE_COMBAT_VERSION;
 }
 
 function canUseBulkArmyOrders() {
@@ -10487,6 +10556,14 @@ function applyServerProfilePatch(patch = null, options = {}) {
   }
   if (patch.skillPresets && typeof patch.skillPresets === "object") {
     state.skillPresets = normalizeSkillPresets(patch.skillPresets);
+    changed = true;
+  }
+  if (Number.isFinite(Number(patch.freeSkillResetGrantVersion))) {
+    state.freeSkillResetGrantVersion = Math.max(0, Math.floor(Number(patch.freeSkillResetGrantVersion) || 0));
+    changed = true;
+  }
+  if (Number.isFinite(Number(patch.freeSkillResetCredits))) {
+    state.freeSkillResetCredits = Math.max(0, Math.floor(Number(patch.freeSkillResetCredits) || 0));
     changed = true;
   }
   if (Number.isFinite(Number(patch.gold))) {
@@ -11052,6 +11129,8 @@ function getPlayerProfileSnapshot() {
     character: state?.character ? normalizeCharacterProgress(state.character) : createCharacterProgress(),
     upgrades: state?.upgrades ? normalizeUpgrades(state.upgrades, state.version || 20) : createDefaultSkills(),
     skillPresets: state ? normalizeSkillPresets(state.skillPresets) : createDefaultSkillPresets(),
+    freeSkillResetGrantVersion: Math.max(0, Math.floor(Number(state?.freeSkillResetGrantVersion) || 0)),
+    freeSkillResetCredits: Math.max(0, Math.floor(Number(state?.freeSkillResetCredits) || 0)),
     shopItems: state ? normalizeShopItems(state.shopItems) : createDefaultShopItems(),
     itemEffects: state ? normalizeItemEffects(state.itemEffects) : createDefaultItemEffects(),
     itemPurchaseCooldowns: state ? normalizeItemPurchaseCooldowns(state.itemPurchaseCooldowns) : createDefaultItemPurchaseCooldowns(),
@@ -11129,6 +11208,8 @@ function applyOnlineProfileSnapshot(profile = null, fallbackPlayerName = "Ricky"
   state.character = normalizeCharacterProgress(profile.character);
   state.upgrades = normalizeUpgrades(profile.upgrades, state.version || WORLD_SCHEMA_VERSION);
   state.skillPresets = normalizeSkillPresets(profile.skillPresets);
+  state.freeSkillResetGrantVersion = Math.max(0, Math.floor(Number(profile.freeSkillResetGrantVersion) || 0));
+  state.freeSkillResetCredits = Math.max(0, Math.floor(Number(profile.freeSkillResetCredits) || 0));
   state.shopItems = normalizeShopItems(profile.shopItems);
   state.itemEffects = normalizeItemEffects(profile.itemEffects);
   state.itemPurchaseCooldowns = normalizeItemPurchaseCooldowns(profile.itemPurchaseCooldowns);
@@ -16092,6 +16173,8 @@ function normalizeOnlineArmyMovement(raw) {
     defenderKingPower: normalizePowerValue(raw.defenderKingPower),
     attackProtection: normalizeAttackProtectionSnapshot(raw.attackProtection, raw.demoAttack),
     demoAttack: normalizeDemoAttackSnapshot(raw.demoAttack),
+    siegeCombatVersion: Math.max(0, Math.floor(Number(raw.siegeCombatVersion) || 0)),
+    defenseCombatVersion: Math.max(0, Math.floor(Number(raw.defenseCombatVersion) || 0)),
     launchedAtMs,
     arrivesAtMs,
     swiftMarchUsedAtMs: normalizeTimestampMs(raw.swiftMarchUsedAtMs),
@@ -22933,6 +23016,10 @@ function renderProfileSkills() {
   reconcileSkillPoints(state.character, state.upgrades);
   const points = Math.max(0, Math.floor(Number(state.character.skillPoints) || 0));
   const spentPoints = getSpentSkillPoints();
+  const freeSkillResetCredits = Math.max(0, Math.floor(Number(state.freeSkillResetCredits) || 0));
+  const resetPriceText = freeSkillResetCredits > 0
+    ? `Your legacy balance reset is free. ${formatNumber(freeSkillResetCredits)} credit remains.`
+    : `Costs ${formatNumber(SKILL_RESET_COST)} gold.`;
   const canResetSkills = !skillActionInFlight
     && spentPoints > 0;
   skillsView.innerHTML = `
@@ -22944,7 +23031,7 @@ function renderProfileSkills() {
     <section class="profile-skill-reset">
       <div>
         <strong>Reset skills</strong>
-        <small>Costs ${formatNumber(SKILL_RESET_COST)} gold and returns ${formatNumber(spentPoints)} spent ${spentPoints === 1 ? "point" : "points"}.</small>
+        <small>${resetPriceText} Returns ${formatNumber(spentPoints)} spent ${spentPoints === 1 ? "point" : "points"}.</small>
       </div>
       <button id="resetSkillsBtn" type="button" ${canResetSkills ? "" : "disabled"}>Reset</button>
     </section>
@@ -24683,7 +24770,8 @@ function showScoutReportModal(cityId) {
   const reportedOwnerFlag = report.ownerFlag || getCityOwnerFlag(city) || createDefaultFlag();
   const currentPlayerUid = getCurrentOnlineUid();
   const cityLevel = clampCityLevel(report.cityLevel || city.level);
-  const defensePercent = Math.max(0, Number(report.defensePercent) || cityLevel * CITY_LEVEL_STATS.defensePercentPerLevel);
+  const soldierDefenseEnabled = Math.floor(Number(report.defenseCombatVersion) || 0) >= DEFENSE_COMBAT_VERSION;
+  const defensePercent = soldierDefenseEnabled ? 0 : Math.max(0, Number(report.defensePercent) || cityLevel * 2);
   const cityWalls = Math.max(0, Math.floor(Number(report.cityWalls) || getCityStats({ ...city, level: cityLevel, troops: report.troops }).cityWalls));
   const cityDefenseBonus = Math.max(0, Math.floor(Number(report.cityDefenseBonus) || report.troops * defensePercent / 100));
   const stoneworksBonus = Math.max(0, Math.floor(Number(report.stoneworksBonus) || 0));
@@ -24730,10 +24818,10 @@ function showScoutReportModal(cityId) {
       <section class="scout-report-section">
         <h3>Enemy defense</h3>
         <div class="scout-defense-breakdown">
-          ${scoutDefenderRow("&#9817;", reportedOwnerUid, reportedOwnerName, isRewardCampTarget(city) ? "Holding owner" : "City owner", ownerTroops)}
-          ${reinforcements.map(row => scoutDefenderRow("&#8649;", row.ownerUid, row.ownerName, "Clan reinforcement", row.troops)).join("")}
+          ${scoutDefenderRow("&#9817;", reportedOwnerUid, reportedOwnerName, isRewardCampTarget(city) ? "Holding owner" : "City owner", ownerTroops, soldierDefenseEnabled ? siege?.ownerGarrisonDefensePower : 0, soldierDefenseEnabled ? `1.30 base · Shieldwall +${formatNumber(report.shieldwallDisciplinePercent || 0)}% · objective +${formatNumber(siege?.troopObjectiveDefenseBonusPercent || 0)}%` : "")}
+          ${reinforcements.map(row => scoutDefenderRow("&#8649;", row.ownerUid, row.ownerName, "Clan reinforcement", row.troops, soldierDefenseEnabled ? row.effectivePower : 0, soldierDefenseEnabled ? `${row.baseDefensePowerPerTroop.toFixed(2)} base · Shieldwall +${formatNumber(row.shieldwallDisciplinePercent)}% · personal +${formatNumber(row.personalDefenseBonusPercent)}% · clan +${formatNumber(row.sharedDefenseBonusPercent)}%` : "")).join("")}
           ${siege
-            ? `${scoutBreakdownRow("&#9819;", "Current wall layer", `${formatWallIntegrity(siege.startingIntegrityBps)} of ${formatNumber(siege.fullWallPower)} full power`, siege.startingWallPower)}${scoutBreakdownRow("&#128737;", "Garrison layer", "Owner and reinforcement troop defense", siege.garrisonDefensePower)}`
+            ? `${scoutBreakdownRow("&#9819;", "Current wall layer", `${formatWallIntegrity(siege.startingIntegrityBps)} of ${formatNumber(siege.fullWallPower)} full power · base wall + Stoneworks`, siege.startingWallPower)}${scoutBreakdownRow("&#128737;", "Garrison layer", soldierDefenseEnabled ? `${Number(report.baseDefensePowerPerTroop || BASE_TROOP_DEFENSE_POWER).toFixed(2)} base per soldier · Shieldwall +${formatNumber(report.shieldwallDisciplinePercent || 0)}% · objective +${formatNumber(siege.troopObjectiveDefenseBonusPercent || report.strongholdDefenseBonusPercent || 0)}%` : "Owner and reinforcement troop defense", siege.garrisonDefensePower)}`
             : `${scoutBreakdownRow("&#128737;", "City defense", `Lv ${cityLevel} - +${formatNumber(defensePercent)}%`, cityDefenseBonus)}${scoutBreakdownRow("&#9819;", "City walls", `Lv ${cityLevel} base ${formatNumber(baseCityWalls)} (+${formatNumber(Math.max(0, cityWalls - baseCityWalls))})`, cityWalls)}`}
           <div class="scout-breakdown-total"><span>Total</span><strong>${formatBaseAndBonusStat(baseTotalDefense, report.totalDefense)}</strong></div>
         </div>
@@ -24743,6 +24831,7 @@ function showScoutReportModal(cityId) {
         <section class="scout-report-section">
           <h3>Enemy defense stats</h3>
           <div class="scout-skill-list">
+            ${scoutSkillRow("Shieldwall Discipline", report.shieldwallDisciplineLevel, report.shieldwallDisciplinePercent)}
             ${scoutSkillRow("Stoneworks", report.stoneworksLevel, report.stoneworksPercent)}
             ${scoutSkillRow("Field Medics", report.fieldMedicsLevel, report.fieldMedicsPercent)}
             ${scoutSkillRow("Guild Charters", report.guildChartersLevel, report.guildChartersPercent)}
@@ -24772,8 +24861,12 @@ function scoutBreakdownRow(icon, label, levelText, value) {
   return `<div class="scout-breakdown-row"><span class="scout-stat-icon" aria-hidden="true">${icon}</span><span><strong>${label}</strong><small>${levelText}</small></span><b>${formatNumber(value)}</b></div>`;
 }
 
-function scoutDefenderRow(icon, ownerUid, ownerName, role, troops) {
-  return `<div class="scout-breakdown-row"><span class="scout-stat-icon" aria-hidden="true">${icon}</span><span>${renderPlayerNameLink(ownerUid, ownerName, "scout-defender-link")}<small>${escapeHtml(role)}</small></span><b>${formatNumber(troops)}</b></div>`;
+function scoutDefenderRow(icon, ownerUid, ownerName, role, troops, defensePower = 0, formula = "") {
+  const power = Math.max(0, Math.floor(Number(defensePower) || 0));
+  const detail = power > 0
+    ? `${role} · ${formatNumber(troops)} troops${formula ? ` · ${formula}` : ""}`
+    : role;
+  return `<div class="scout-breakdown-row"><span class="scout-stat-icon" aria-hidden="true">${icon}</span><span>${renderPlayerNameLink(ownerUid, ownerName, "scout-defender-link")}<small>${escapeHtml(detail)}</small></span><b>${formatNumber(power || troops)}${power > 0 ? " power" : ""}</b></div>`;
 }
 
 function scoutSkillRow(label, level = 0, percent = 0) {
@@ -26570,10 +26663,14 @@ function updateTroopSliderModal(source, target, route) {
     ? Math.max(0, siege.fullWallPower - siege.reinforcedCityWalls)
     : 0;
   const wallBreakdown = siege
-    ? `Base wall ${formatNumber(siege.baseCityWalls)} + Stoneworks ${formatNumber(stoneworksWallBonus)} (+${formatNumber(siege.stoneworksPercent)}%)${siege.objectiveDefenseBonusPercent > 0 ? ` + objective ${formatNumber(objectiveWallBonus)} (+${formatNumber(siege.objectiveDefenseBonusPercent)}%)` : ""}`
+    ? siege.defenseCombatVersion >= DEFENSE_COMBAT_VERSION
+      ? `Base wall ${formatNumber(siege.baseCityWalls)} + Stoneworks ${formatNumber(stoneworksWallBonus)} (+${formatNumber(siege.stoneworksPercent)}%)`
+      : `Base wall ${formatNumber(siege.baseCityWalls)} + Stoneworks ${formatNumber(stoneworksWallBonus)} (+${formatNumber(siege.stoneworksPercent)}%)${siege.objectiveDefenseBonusPercent > 0 ? ` + objective ${formatNumber(objectiveWallBonus)} (+${formatNumber(siege.objectiveDefenseBonusPercent)}%)` : ""}`
     : "";
   const garrisonBreakdown = siege
-    ? `Owner garrison ${formatNumber(siege.ownerGarrisonDefensePower)} power${siege.reinforcementGarrisonDefensePower > 0 ? ` + reinforcements ${formatNumber(siege.reinforcementGarrisonDefensePower)} power` : ""} · city level defense +${formatNumber(siege.cityLevelDefensePercent)}%${siege.objectiveDefenseBonusPercent > 0 ? ` · objective +${formatNumber(siege.objectiveDefenseBonusPercent)}%` : ""}`
+    ? siege.defenseCombatVersion >= DEFENSE_COMBAT_VERSION
+      ? `Owner garrison ${formatNumber(siege.ownerGarrisonDefensePower)} power${siege.reinforcementGarrisonDefensePower > 0 ? ` + reinforcements ${formatNumber(siege.reinforcementGarrisonDefensePower)} power` : ""} · ${Number(siege.baseDefensePowerPerTroop || BASE_TROOP_DEFENSE_POWER).toFixed(2)} base per soldier · Shieldwall +${formatNumber(siege.shieldwallDisciplinePercent)}%${siege.troopObjectiveDefenseBonusPercent > 0 ? ` · objective +${formatNumber(siege.troopObjectiveDefenseBonusPercent)}%` : ""}`
+      : `Owner garrison ${formatNumber(siege.ownerGarrisonDefensePower)} power${siege.reinforcementGarrisonDefensePower > 0 ? ` + reinforcements ${formatNumber(siege.reinforcementGarrisonDefensePower)} power` : ""} · legacy city level defense +${formatNumber(siege.cityLevelDefensePercent)}%${siege.objectiveDefenseBonusPercent > 0 ? ` · objective +${formatNumber(siege.objectiveDefenseBonusPercent)}%` : ""}`
     : "";
   const meaningfulWallWarning = preview.belowMeaningfulWallDamage
     ? `<small class="tiny-warning">Too small to advance this siege: send at least ${formatNumber(preview.minimumMeaningfulWallDamageTroops)} troops to persist ${formatNumber(SIEGE_MEANINGFUL_WALL_DAMAGE_PERCENT)}% wall damage.</small>`
@@ -27627,12 +27724,17 @@ function getCityFortificationDisplay(city, stats = null, report = null, nowMs = 
   const currentWallPower = scouted
     ? Math.max(0, Math.floor(scouted.currentWallPower || scouted.startingWallPower || 0))
     : local.currentWallPower;
+  const defenseCombatVersion = Math.max(0, Math.floor(Number(
+    scouted?.defenseCombatVersion ?? stats?.defenseCombatVersion
+  ) || 0));
   const objectiveBonusPercent = Math.max(0, Number(stats?.strongholdDefenseBonusPercent) || 0);
-  const garrisonDefensePower = scouted?.garrisonDefensePower || Math.max(
-    0,
-    Math.floor((Number(stats?.troopDefense) || 0) * (1 + objectiveBonusPercent / 100))
-  );
-  const powerVisible = city.owner === "player" || Boolean(scouted) || !getOwnerUid(city);
+  const garrisonDefensePower = scouted?.garrisonDefensePower || Math.max(0, Math.floor(
+    defenseCombatVersion >= DEFENSE_COMBAT_VERSION
+      ? Number(stats?.troopDefense) || 0
+      : (Number(stats?.troopDefense) || 0) * (1 + objectiveBonusPercent / 100)
+  ));
+  const hasPlayerOwner = Boolean(String(city?.ownerUid || "").trim());
+  const powerVisible = city.owner === "player" || Boolean(scouted) || !hasPlayerOwner;
   return {
     integrityBps,
     repairAtMs,
@@ -27748,7 +27850,7 @@ function showCityInfoModal(cityId) {
         ${renderCityFortificationStatus(city, stats)}
         <div class="stat-chip"><span>Owner</span>${renderPlayerNameLink(city.ownerUid || getCurrentOnlineUid(), getCityOwnerDisplayName(city))}</div>
         <div class="stat-chip"><span>Troops stationed</span><strong>${formatNumber(city.troops)}</strong></div>
-        <div class="stat-chip"><span>Defense level</span><strong>${formatNumber(stats.level)}</strong><small>matches a level ${formatNumber(stats.level)} city</small></div>
+        <div class="stat-chip"><span>Wall level</span><strong>${formatNumber(stats.level)}</strong><small>sets this objective's base wall and repair time</small></div>
         <div class="stat-chip"><span>City walls</span><strong>${formatBaseAndBonusStat(stats.baseCityWalls, stats.cityWalls)}</strong><small>${getCityStatBonusSources(stats, "walls")}</small></div>
         <div class="stat-chip"><span>Garrison limit</span><strong>Unlimited</strong><small>station as many troops as you can send</small></div>
         <div class="stat-chip"><span>Effect target</span><strong>${effectTargetLabel}</strong><small>${effectHelp}</small></div>
@@ -27797,7 +27899,7 @@ function showCityInfoModal(cityId) {
       ${renderCityFortificationStatus(city, stats)}
       <div class="stat-chip"><span>Owner</span>${renderPlayerNameLink(city.ownerUid || getCurrentOnlineUid(), getCityOwnerDisplayName(city))}</div>
       <div class="stat-chip"><span>Troops</span><strong>${formatNumber(city.troops)}</strong></div>
-      <div class="stat-chip"><span>City defense</span><strong>${formatBaseAndBonusStat(stats.defensePercent, stats.defensePercent + stats.strongholdDefenseBonusPercent, "%")}</strong><small>${CITY_LEVEL_STATS.defensePercentPerLevel}% per level${stats.strongholdDefenseBonusPercent ? ` | Stronghold +${formatNumber(stats.strongholdDefenseBonusPercent)}%` : ""}</small></div>
+      <div class="stat-chip"><span>Soldier defense</span><strong>${formatNumber(stats.troopDefense)}</strong><small>${BASE_TROOP_DEFENSE_POWER.toFixed(2)} base per soldier · Shieldwall +${formatNumber(stats.shieldwallDisciplinePercent)}%${stats.strongholdDefenseBonusPercent ? ` · objective +${formatNumber(stats.strongholdDefenseBonusPercent)}%` : ""}</small></div>
       <div class="stat-chip"><span>City walls</span><strong>${formatBaseAndBonusStat(stats.baseCityWalls, stats.cityWalls)}</strong><small>${getCityStatBonusSources(stats, "walls")}</small></div>
       <div class="stat-chip"><span>Troops production</span><strong>${formatBaseAndBonusStat(stats.baseTroopProductionPerHour, stats.troopProductionPerHour, "/h")}</strong><small>${getCityStatBonusSources(stats, "troops")}</small></div>
       <div class="stat-chip"><span>Gold production</span><strong>${formatBaseAndBonusStat(stats.baseGoldProductionPerHour, stats.goldProductionPerHour, "/h")}</strong><small>${getCityStatBonusSources(stats, "gold")}</small></div>
@@ -30034,7 +30136,7 @@ async function upgradeCity(cityId, levels = 1) {
 function fortifyCity(cityId) {
   const city = cityById(cityId);
   if (!city) return;
-  showToast("City defense now comes from city level. Use Level Up to improve walls and defense.");
+  showToast("City levels strengthen walls. Soldier defense comes from the 1.30 base, Shieldwall Discipline, and objective support.");
 }
 
 function getRecruitAmount(city) {
@@ -30360,6 +30462,10 @@ function confirmSkillPresetAction(slotNumber = 0, action = "apply") {
   if (!slot) return Promise.resolve(false);
   const applying = action === "apply";
   const allocationChanges = applying && !skillPresetAllocationsMatch(state.upgrades, slot.upgrades);
+  const freeResetAvailable = Math.max(0, Math.floor(Number(state.freeSkillResetCredits) || 0)) > 0;
+  const applyCostCopy = freeResetAvailable
+    ? "uses your free legacy balance reset"
+    : `costs <strong>${formatNumber(SKILL_RESET_COST)} gold</strong>`;
   modal.classList.add("skill-preset-confirmation-modal");
   modalTitle.textContent = applying ? `Apply ${slot.name}?` : `Overwrite ${slot.name}?`;
   modalBody.innerHTML = `
@@ -30370,12 +30476,12 @@ function confirmSkillPresetAction(slotNumber = 0, action = "apply") {
       </div>
       ${applying
         ? `${allocationChanges
-            ? `<p>This replaces your current skill allocation and costs <strong>${formatNumber(SKILL_RESET_COST)} gold</strong>. Any additional earned points remain unspent.</p>`
+            ? `<p>This replaces your current skill allocation and ${applyCostCopy}. Any additional earned points remain unspent.</p>`
             : `<p>Your current allocation already matches this build. Activating this preset is free and moves the active marker to this tab.</p>`}${renderSkillPresetAllocation(slot.upgrades)}`
         : `<p>This replaces the saved allocation in this tab with your current build. Your active skills and gold will not change.</p>${renderSkillPresetAllocation(state.upgrades)}`}
       <footer>
         <button type="button" class="profile-secondary-btn" data-skill-preset-confirm="cancel">Cancel</button>
-        <button type="button" class="profile-primary-btn" data-skill-preset-confirm="accept">${applying ? "Apply for Gold" : "Save Current Build"}</button>
+        <button type="button" class="profile-primary-btn" data-skill-preset-confirm="accept">${applying ? allocationChanges && freeResetAvailable ? "Use Free Reset" : allocationChanges ? "Apply for Gold" : "Apply" : "Save Current Build"}</button>
       </footer>
     </section>`;
   if (!modal.open) modal.showModal();
@@ -30504,13 +30610,14 @@ async function applySavedSkillPreset(slotNumber = 0) {
     return false;
   }
   const allocationChanges = !skillPresetAllocationsMatch(state.upgrades, slot.upgrades);
+  const freeResetAvailable = Math.max(0, Math.floor(Number(state.freeSkillResetCredits) || 0)) > 0;
   const activeSlot = normalizeSkillPresets(state.skillPresets).activeSlot;
   if (!allocationChanges && activeSlot === slot.slot) {
     showToast(`${slot.name} is already active.`);
     renderProfileSkills();
     return true;
   }
-  if (allocationChanges && !usesServerEconomyAuthority() && Math.floor(Number(state.gold) || 0) < SKILL_RESET_COST) {
+  if (allocationChanges && !freeResetAvailable && !usesServerEconomyAuthority() && Math.floor(Number(state.gold) || 0) < SKILL_RESET_COST) {
     showToast(`Applying this preset costs ${formatNumber(SKILL_RESET_COST)} gold.`);
     return false;
   }
@@ -30519,7 +30626,7 @@ async function applySavedSkillPreset(slotNumber = 0) {
   skillActionInFlight = true;
   renderProfileSkills();
   try {
-    let goldCharged = allocationChanges ? SKILL_RESET_COST : 0;
+    let goldCharged = allocationChanges && !freeResetAvailable ? SKILL_RESET_COST : 0;
     if (usesServerEconomyAuthority()) {
       if (!api?.applySkillPreset) throw new Error("Applying skill presets requires the Crownlands server.");
       const result = await api.applySkillPreset({ slot: slot.slot });
@@ -30527,6 +30634,7 @@ async function applySavedSkillPreset(slotNumber = 0) {
       goldCharged = Math.max(0, Math.floor(Number(result?.skillPreset?.goldCharged) || 0));
     } else {
       state.gold = Math.max(0, Math.floor(Number(state.gold) || 0) - goldCharged);
+      if (allocationChanges && freeResetAvailable) state.freeSkillResetCredits -= 1;
       state.upgrades = normalizeUpgrades(slot.upgrades, state.version);
       state.character = normalizeCharacterProgress(state.character);
       reconcileSkillPoints(state.character, state.upgrades);
@@ -30534,7 +30642,7 @@ async function applySavedSkillPreset(slotNumber = 0) {
       saveGame();
     }
     const remaining = Math.max(0, Math.floor(Number(state.character?.skillPoints) || 0));
-    addLog(`${slot.name} applied for ${formatNumber(goldCharged)} gold. ${formatNumber(remaining)} skill ${remaining === 1 ? "point remains" : "points remain"}.`);
+    addLog(`${slot.name} applied${goldCharged > 0 ? ` for ${formatNumber(goldCharged)} gold` : freeResetAvailable && allocationChanges ? " using the free legacy reset" : " for free"}. ${formatNumber(remaining)} skill ${remaining === 1 ? "point remains" : "points remain"}.`);
     showToast(`${slot.name} applied`);
     return true;
   } catch (error) {
@@ -30608,7 +30716,7 @@ async function resetSkills() {
       const resetCost = Number.isFinite(Number(result?.resetCost)) ? Math.max(0, Math.floor(Number(result.resetCost))) : SKILL_RESET_COST;
       const refundedPoints = Number.isFinite(Number(result?.spentPoints)) ? Math.max(0, Math.floor(Number(result.spentPoints))) : spentPoints;
       if (refundedPoints > 0) {
-        addLog(`Skills reset for ${formatNumber(resetCost)} gold. Refunded ${formatNumber(refundedPoints)} skill ${refundedPoints === 1 ? "point" : "points"}.`);
+        addLog(`Skills reset${result?.freeResetConsumed ? " using the free legacy reset" : ` for ${formatNumber(resetCost)} gold`}. Refunded ${formatNumber(refundedPoints)} skill ${refundedPoints === 1 ? "point" : "points"}.`);
         showToast(`Skills reset: +${formatNumber(refundedPoints)} points`);
       } else {
         addLog("Skill points repaired to match hero level.");
@@ -30623,7 +30731,8 @@ async function resetSkills() {
     }
     return;
   }
-  const resetCost = spentPoints > 0 ? SKILL_RESET_COST : 0;
+  const freeResetAvailable = Math.max(0, Math.floor(Number(state.freeSkillResetCredits) || 0)) > 0;
+  const resetCost = spentPoints > 0 && !freeResetAvailable ? SKILL_RESET_COST : 0;
   const currentGold = Math.floor(Number(state.gold) || 0);
   if (currentGold < resetCost) {
     rejectGameAction(`Skill reset costs ${formatNumber(SKILL_RESET_COST)} gold.`);
@@ -30631,11 +30740,12 @@ async function resetSkills() {
     return;
   }
   state.gold = currentGold - resetCost;
+  if (spentPoints > 0 && freeResetAvailable) state.freeSkillResetCredits -= 1;
   state.character.skillPoints = getEarnedSkillPoints(state.character);
   state.upgrades = createDefaultSkills();
   if (spentPoints > 0) state.skillPresets = setActiveSkillPresetSlot(state.skillPresets, 0);
   if (spentPoints > 0) {
-    addLog(`Skills reset for ${formatNumber(SKILL_RESET_COST)} gold. Refunded ${formatNumber(spentPoints)} skill ${spentPoints === 1 ? "point" : "points"}.`);
+    addLog(`Skills reset${freeResetAvailable ? " using the free legacy reset" : ` for ${formatNumber(SKILL_RESET_COST)} gold`}. Refunded ${formatNumber(spentPoints)} skill ${spentPoints === 1 ? "point" : "points"}.`);
   } else {
     addLog("Skill points repaired to match hero level.");
   }
@@ -31880,9 +31990,16 @@ function normalizeBattlePowerBreakdown(value = null, participant = {}, side = "a
     participant.personalDefenseBonusPercent,
     participant.sharedDefenseBonusPercent
   );
+  const soldierDefenseEnabled = Math.floor(Number(participant.defenseCombatVersion) || 0) >= DEFENSE_COMBAT_VERSION;
   return {
     baseTroopDefensePower: Math.max(0, Math.floor(Number(raw.baseTroopDefensePower) || startingTroops)),
-    cityLevelDefensePower: Math.max(0, Math.floor(Number(raw.cityLevelDefensePower) || Math.max(0, basePower - startingTroops - legacyFortificationPower))),
+    baseDefenseBonusPower: Math.max(0, Math.floor(Number(raw.baseDefenseBonusPower) || 0)),
+    shieldwallDisciplineBonusPower: Math.max(0, Math.floor(Number(raw.shieldwallDisciplineBonusPower) || 0)),
+    cityLevelDefensePower: Math.max(0, Math.floor(
+      Object.prototype.hasOwnProperty.call(raw, "cityLevelDefensePower")
+        ? Number(raw.cityLevelDefensePower) || 0
+        : soldierDefenseEnabled ? 0 : Math.max(0, basePower - startingTroops - legacyFortificationPower)
+    )),
     legacyFortificationPower,
     personalObjectiveBonusPower: Math.max(0, Math.floor(Number(raw.personalObjectiveBonusPower) || objectiveFallback.personalObjectiveBonusPower)),
     sharedClanBonusPower: Math.max(0, Math.floor(Number(raw.sharedClanBonusPower) || objectiveFallback.sharedClanBonusPower)),
@@ -31902,6 +32019,8 @@ function normalizeBattleParticipant(value = {}, { reinforcement = false } = {}) 
   const fortifications = participant.fortifications && typeof participant.fortifications === "object"
     ? {
         cityLevelDefensePercent: Math.max(0, Number(participant.fortifications.cityLevelDefensePercent) || 0),
+        baseDefensePowerPerTroop: Math.max(1, Number(participant.fortifications.baseDefensePowerPerTroop) || 1),
+        shieldwallDisciplinePercent: Math.max(0, Number(participant.fortifications.shieldwallDisciplinePercent) || 0),
         baseCityWalls: Math.max(0, Math.floor(Number(participant.fortifications.baseCityWalls) || 0)),
         cityWalls: Math.max(0, Math.floor(Number(participant.fortifications.cityWalls) || 0)),
         stoneworksPercent: Math.max(0, Number(participant.fortifications.stoneworksPercent) || 0),
@@ -31923,6 +32042,10 @@ function normalizeBattleParticipant(value = {}, { reinforcement = false } = {}) 
     basePower: Math.max(0, Math.floor(Number(participant.basePower) || 0)),
     swordmasteryLevel: Math.max(0, Math.floor(Number(participant.swordmasteryLevel) || 0)),
     swordmasteryPercent: Math.max(0, Number(participant.swordmasteryPercent) || 0),
+    defenseCombatVersion: Math.max(0, Math.floor(Number(participant.defenseCombatVersion) || 0)),
+    baseDefensePowerPerTroop: Math.max(1, Number(participant.baseDefensePowerPerTroop) || 1),
+    shieldwallDisciplineLevel: Math.max(0, Math.floor(Number(participant.shieldwallDisciplineLevel) || 0)),
+    shieldwallDisciplinePercent: Math.max(0, Number(participant.shieldwallDisciplinePercent) || 0),
     personalDefenseBonusPercent: Math.max(0, Number(participant.personalDefenseBonusPercent) || 0),
     sharedDefenseBonusPercent: Math.max(0, Number(participant.sharedDefenseBonusPercent) || 0),
     totalDefenseBonusPercent: Math.max(0, Number(participant.totalDefenseBonusPercent) || 0),
@@ -32013,6 +32136,8 @@ function normalizeDetailedBattleSnapshot(value = null) {
   ) || 0));
   const defensePowerBreakdown = {
     baseTroopDefensePower: Math.max(0, Math.floor(Number(rawDefenseBreakdown.baseTroopDefensePower) || defender.powerBreakdown.baseTroopDefensePower)),
+    baseDefenseBonusPower: Math.max(0, Math.floor(Number(rawDefenseBreakdown.baseDefenseBonusPower) || defender.powerBreakdown.baseDefenseBonusPower)),
+    shieldwallDisciplineBonusPower: Math.max(0, Math.floor(Number(rawDefenseBreakdown.shieldwallDisciplineBonusPower) || defender.powerBreakdown.shieldwallDisciplineBonusPower)),
     cityLevelDefensePower: Math.max(0, Math.floor(Number(rawDefenseBreakdown.cityLevelDefensePower) || defender.powerBreakdown.cityLevelDefensePower)),
     baseWallPower,
     stoneworksWallBonusPower,
@@ -32041,6 +32166,8 @@ function normalizeDetailedBattleSnapshot(value = null) {
       fortifications: target.fortifications && typeof target.fortifications === "object"
         ? {
             cityLevelDefensePercent: Math.max(0, Number(target.fortifications.cityLevelDefensePercent) || 0),
+            baseDefensePowerPerTroop: Math.max(1, Number(target.fortifications.baseDefensePowerPerTroop) || 1),
+            shieldwallDisciplinePercent: Math.max(0, Number(target.fortifications.shieldwallDisciplinePercent) || 0),
             baseCityWalls: Math.max(0, Math.floor(Number(target.fortifications.baseCityWalls) || 0)),
             cityWalls: Math.max(0, Math.floor(Number(target.fortifications.cityWalls) || 0)),
             stoneworksPercent: Math.max(0, Number(target.fortifications.stoneworksPercent) || 0),
@@ -32083,6 +32210,7 @@ function normalizeDetailedBattleSnapshot(value = null) {
       maxDefenderLossPercent: Math.max(0, Number(rawCombatRule.maxDefenderLossPercent) || 0),
     },
     siegeCombatVersion: Math.max(0, Math.floor(Number(value.siegeCombatVersion) || 0)),
+    defenseCombatVersion: Math.max(0, Math.floor(Number(value.defenseCombatVersion) || 0)),
     siege: normalizeCombatFortificationSnapshot(value.siege),
     attackProtection: normalizeAttackProtectionSnapshot(value.attackProtection),
   };
@@ -32152,15 +32280,22 @@ function renderBattlePrimaryParticipant(participant, {
   const fortifications = participant.fortifications;
   const bonusParts = attacker
     ? [`Swordmastery +${formatBattlePercent(participant.swordmasteryPercent)}`]
-    : [
+    : participant.defenseCombatVersion >= DEFENSE_COMBAT_VERSION
+      ? [
+        `${Number(participant.baseDefensePowerPerTroop || BASE_TROOP_DEFENSE_POWER).toFixed(2)} base per soldier`,
+        `Shieldwall +${formatBattlePercent(participant.shieldwallDisciplinePercent)}`,
+        `Personal +${formatBattlePercent(participant.personalDefenseBonusPercent)}`,
+        `Clan shared +${formatBattlePercent(participant.sharedDefenseBonusPercent)}`,
+      ]
+      : [
         `Personal +${formatBattlePercent(participant.personalDefenseBonusPercent)}`,
         `Clan shared +${formatBattlePercent(participant.sharedDefenseBonusPercent)}`,
       ];
   if (!attacker && fortifications) {
-    bonusParts.unshift(
-      `City level +${formatBattlePercent(fortifications.cityLevelDefensePercent)}`,
-      `Stoneworks +${formatBattlePercent(fortifications.stoneworksPercent)}`
-    );
+    if (participant.defenseCombatVersion < DEFENSE_COMBAT_VERSION) {
+      bonusParts.unshift(`City level +${formatBattlePercent(fortifications.cityLevelDefensePercent)}`);
+    }
+    bonusParts.unshift(`Stoneworks +${formatBattlePercent(fortifications.stoneworksPercent)}`);
   }
   return `
     <section class="battle-participant-card battle-primary-participant ${attacker ? "attacker" : "defender"}">
@@ -32199,7 +32334,7 @@ function renderBattleReinforcementRow(participant, index) {
       <div class="battle-reinforcement-stats">
         <span><small>Troops</small><strong>${formatNumber(participant.startingTroops)}</strong></span>
         ${legacyFortificationPower > 0 ? `<span><small>Legacy fortifications</small><strong>Quarter walls +${formatNumber(fortifications.cityWallDefense)} · Stoneworks +${formatNumber(fortifications.stoneworksBonus)}</strong></span>` : `<span><small>Wall contribution</small><strong>Uses the holding's single wall</strong></span>`}
-        <span><small>Bonuses</small><strong>Personal +${formatBattlePercent(participant.personalDefenseBonusPercent)} · Shared +${formatBattlePercent(participant.sharedDefenseBonusPercent)}</strong></span>
+        <span><small>Bonuses</small><strong>${participant.defenseCombatVersion >= DEFENSE_COMBAT_VERSION ? `Shieldwall +${formatBattlePercent(participant.shieldwallDisciplinePercent)} · ` : ""}Personal +${formatBattlePercent(participant.personalDefenseBonusPercent)} · Shared +${formatBattlePercent(participant.sharedDefenseBonusPercent)}</strong></span>
         <span><small>Defense</small><strong>${formatNumber(participant.effectivePower)}</strong></span>
         <span><small>Lost</small><strong>${formatNumber(participant.losses)}</strong></span>
         <span><small>Survived</small><strong>${formatNumber(participant.survivors)}</strong></span>
@@ -32291,6 +32426,8 @@ function getBattleOutcomeExplanation(snapshot = null) {
   const defenseBreakdown = snapshot?.totals?.defensePowerBreakdown || {};
   const factors = [];
   if (attackBreakdown.swordmasteryBonusPower > 0) factors.push("Swordmastery increased the attacking army's power.");
+  if (defenseBreakdown.baseDefenseBonusPower > 0) factors.push("Each defending soldier started at 1.30 defense power.");
+  if (defenseBreakdown.shieldwallDisciplineBonusPower > 0) factors.push("Shieldwall Discipline increased the soldiers' defense.");
   if (defenseBreakdown.cityLevelDefensePower > 0) factors.push("The holding's level strengthened its garrison.");
   if ((defenseBreakdown.baseWallPower || 0) > 0) factors.push("The walls absorbed attack power before the garrison fought.");
   if ((defenseBreakdown.stoneworksWallBonusPower || 0) > 0) factors.push("Stoneworks strengthened those walls.");
@@ -32391,6 +32528,7 @@ function renderDetailedBattleReport(report, snapshot, badge) {
     snapshot.defender.objectiveSource,
     snapshot.defender.personalDefenseBonusPercent
   );
+  const modernSoldierDefense = snapshot.defenseCombatVersion >= DEFENSE_COMBAT_VERSION;
   const combatRuleCopy = snapshot.combatRule.id === "protected_raid"
     ? "Protected raid: capture was disabled, defender losses were limited, and wall damage was not persisted."
     : snapshot.combatRule.id === "protected_breach"
@@ -32451,8 +32589,8 @@ function renderDetailedBattleReport(report, snapshot, badge) {
         <div class="battle-paired-head"><strong>Attacker</strong><span>Compared at arrival</span><strong>Defender</strong></div>
         <div class="battle-paired-breakdown">
           ${renderBattlePairedRow("Starting forces", formatNumber(snapshot.totals.attackers), `${formatNumber(snapshot.defender.startingTroops)} + ${formatNumber(reinforcementTroops)}`, "Troops sent", "Garrison + reinforcements")}
-          ${renderBattlePairedRow("Base power", formatNumber(attackBreakdown.baseAttackPower), formatNumber(defenseBreakdown.baseTroopDefensePower), "Army before Swordmastery", "Garrison before city-level defense")}
-          ${renderBattlePairedRow("Training", `+${formatNumber(attackBreakdown.swordmasteryBonusPower)}`, `+${formatNumber(defenseBreakdown.cityLevelDefensePower)}`, `Swordmastery +${formatBattlePercent(snapshot.attacker.swordmasteryPercent)}`, `City level +${formatBattlePercent(snapshot.defender.fortifications?.cityLevelDefensePercent)}`)}
+          ${renderBattlePairedRow("Base power", formatNumber(attackBreakdown.baseAttackPower), formatNumber(defenseBreakdown.baseTroopDefensePower + (modernSoldierDefense ? defenseBreakdown.baseDefenseBonusPower : 0)), "1.25 attack per troop", modernSoldierDefense ? "1.30 defense per soldier" : "Legacy garrison base")}
+          ${renderBattlePairedRow("Training", `+${formatNumber(attackBreakdown.swordmasteryBonusPower)}`, `+${formatNumber(modernSoldierDefense ? defenseBreakdown.shieldwallDisciplineBonusPower : defenseBreakdown.cityLevelDefensePower)}`, `Swordmastery +${formatBattlePercent(snapshot.attacker.swordmasteryPercent)}`, modernSoldierDefense ? `Shieldwall Discipline +${formatBattlePercent(snapshot.defender.shieldwallDisciplinePercent)}` : `Legacy city level +${formatBattlePercent(snapshot.defender.fortifications?.cityLevelDefensePercent)}`)}
           ${defenseBreakdown.historicalWallDetailsAvailable ? renderBattlePairedRow("Attack and walls", `+${formatNumber(attackBreakdown.swordmasteryBonusPower)}`, `${formatNumber(defenseBreakdown.baseWallPower)} (+${formatNumber(defenseBreakdown.stoneworksWallBonusPower)})`, "Recorded attack bonus at arrival", `Base walls + Stoneworks ${formatBattlePercent(snapshot.defender.fortifications?.stoneworksPercent)}`) : ""}
           ${renderBattlePairedRow("Objectives", "No objective attack bonus", `${formatNumber(defenseBreakdown.personalObjectiveBonusPower)} (+${formatNumber(defenseBreakdown.sharedClanBonusPower)})`, "Swordmastery is the recorded attack skill", `${objectiveSource} + shared clan defense`)}
           ${defenseBreakdown.otherDefensePower > 0 ? renderBattlePairedRow("Other defense", "No matching attack component", formatNumber(defenseBreakdown.otherDefensePower), "No additional recorded attack power", "Stored battle-time defense adjustment") : ""}
@@ -32625,7 +32763,8 @@ function showHelpModal() {
       <li>The top-right fullscreen button expands the game surface and the game disables page text selection while playing.</li>
       <li>City level creates victory points for combat value, while passive gold follows the Million Lords city production curve.</li>
       <li>City combat resolves in two phases: attack power damages the city wall first, then only power left after the breach fights the garrison. Capturing requires both breaching the wall and exceeding the garrison defense.</li>
-      <li>City defense adds ${formatNumber(CITY_LEVEL_STATS.defensePercentPerLevel)}% soldier defense per city level. Stoneworks strengthens the holding's one physical wall; clan reinforcements add troops and their applicable troop-defense bonuses, but never duplicate the wall.</li>
+      <li>Each defending soldier starts at ${formatNumber(BASE_TROOP_DEFENSE_POWER)} defense power. Shieldwall Discipline adds up to ${formatNumber(SKILL_CONFIG.shieldwallDiscipline.maxPercent)}%, while personal and shared clan objective support add against that same base. City level never increases soldier defense.</li>
+      <li>Stoneworks strengthens the holding's one physical wall. Objective support never strengthens walls, and clan reinforcements contribute their own live Shieldwall and objective bonuses without duplicating the destination wall.</li>
       <li>Each troop starts at ${formatNumber(BASE_TROOP_ATTACK_POWER)} attack power; maximum Swordmastery raises that to ${formatNumber(BASE_TROOP_ATTACK_POWER * 1.6)}. The value is locked when the army launches.</li>
       <li>Every city level uses the same linear wall formula: ${formatNumber(CITY_LEVEL_STATS.cityWallsBase)} + ${formatNumber(CITY_LEVEL_STATS.cityWallsPerLevel)} × (level − 1). Each level adds the same base wall power. A full breach takes round(${formatNumber(SIEGE_REPAIR_BASE_MINUTES)} + city level × ${formatNumber(SIEGE_REPAIR_MINUTES_PER_LEVEL)}) minutes to repair; meaningful damage of at least ${formatNumber(SIEGE_MEANINGFUL_WALL_DAMAGE_PERCENT)}% adds its exact share of that window.</li>
       <li>Later meaningful hits preserve elapsed repair progress and add only their own damage time. Combat captures and every player or neutral handoff keep the existing integrity and deadline; a breached wall contributes zero defense until it repairs.</li>

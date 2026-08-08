@@ -330,8 +330,9 @@ assert.match(rules, /two phases[\s\S]*?full-breach repair window[\s\S]*?same dam
 assert.match(guide, /Defense happens in two layers[\s\S]*?defender troop losses are capped at 10%/);
 assert.match(guide, /full-breach repair window[\s\S]*?exact damage share[\s\S]*?neutral handoff/);
 assert.match(readme, /two-phase siege model[\s\S]*?same linear wall curve[\s\S]*?full-breach repair window[\s\S]*?later meaningful hits preserve elapsed progress/);
-assert.match(editor, /Universal walls and damage-based repair[\s\S]*?added time = full window[\s\S]*?siegeCombat\.repairBaseMinutes[\s\S]*?siegeCombat\.repairMinutesPerLevel[\s\S]*?data-economy-preview="fortifications"/);
+assert.match(editor, /Soldiers and walls[\s\S]*?added time = full window[\s\S]*?siegeCombat\.repairBaseMinutes[\s\S]*?siegeCombat\.repairMinutesPerLevel[\s\S]*?data-economy-preview="fortifications"/);
 assert.match(editorServer, /siegeCombat: Object\.fromEntries\(Object\.keys\(fallback\.siegeCombat/);
+assert.match(editorServer, /troopCombat: Object\.fromEntries\(Object\.keys\(fallback\.troopCombat/);
 assert.ok(packageJson.scripts.test.includes("validate-siege-combat.js"), "Siege combat validation is not in the Functions test suite.");
 
 console.log("Validated two-phase siege benchmarks, wall persistence and repair, casualty caps, protected raids, legacy migration, UI disclosure, and player rules.");

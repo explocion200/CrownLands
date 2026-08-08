@@ -21,6 +21,7 @@ const economyConfig = JSON.parse(fs.readFileSync(path.join(root, "functions", "e
 
 const SKILL_ORDER = [
   "swordmastery",
+  "shieldwallDiscipline",
   "stoneworks",
   "taxStewardship",
   "royalGranaries",
@@ -69,7 +70,7 @@ const context = {
   Number,
   String,
   SKILL_ORDER,
-  SKILL_PRESET_MODEL_VERSION: 2,
+  SKILL_PRESET_MODEL_VERSION: 3,
   SKILL_PRESET_NAME_MAX_LENGTH: 24,
   SKILL_PRESET_SLOTS,
   normalizeTimestampMs: value => Math.max(0, Math.floor(Number(value) || 0)),
@@ -155,7 +156,7 @@ const applyCallable = serverSource.slice(applyStart, applyEnd);
 assert.match(saveCallable, /requireUnlockedSkillPresetSlot[\s\S]*?normalizeSkillUpgrades\(profile\.upgrades\)[\s\S]*?goldCharged: 0/, "Saving is not a free authoritative snapshot.");
 assert.match(saveCallable, /setActiveSkillPresetSlot\(replaceSkillPresetSlot[\s\S]*?definition\.slot\)/, "Saving does not make the saved tab the sole active preset.");
 assert.match(renameCallable, /requireSkillPresetName[\s\S]*?goldCharged: 0/, "Renaming is not validated and free.");
-assert.match(applyCallable, /prepareEconomyCollection[\s\S]*?isValidSkillPresetAllocation[\s\S]*?const resetCost = changed \? SKILL_RESET_COST : 0/, "Applying does not settle first, validate, and waive the active-build charge.");
+assert.match(applyCallable, /prepareEconomyCollection[\s\S]*?isValidSkillPresetAllocation[\s\S]*?freeResetConsumed = changed && freeSkillResetCredits > 0[\s\S]*?const resetCost = changed && !freeResetConsumed \? SKILL_RESET_COST : 0/, "Applying does not settle first, validate, and consume the legacy free reset before charging.");
 assert.match(applyCallable, /if \(economy\.gold < resetCost\)[\s\S]*?writePreparedEconomy\([\s\S]*?upgrades,[\s\S]*?skillPresets,[\s\S]*?gold/, "Applying is not an atomic gold/allocation write.");
 assert.match(applyCallable, /setActiveSkillPresetSlot\(currentPresets, definition\.slot\)/, "Applying does not record one authoritative active preset.");
 assert.match(applyCallable, /remainingSkillPoints: character\.skillPoints/, "Apply metadata omits remaining points.");
@@ -165,6 +166,7 @@ const resetStart = serverSource.indexOf("exports.resetSkills", spendStart);
 assert.match(serverSource.slice(spendStart, resetStart), /setActiveSkillPresetSlot\(economy\.profileAfter\.skillPresets, 0\)/, "Spending a point does not clear the active preset.");
 assert.doesNotMatch(serverSource.slice(spendStart, resetStart), /replaceSkillPresetSlot/, "Spending a point overwrites a saved preset.");
 assert.match(serverSource.slice(resetStart, saveStart), /spentPoints > 0[\s\S]*?setActiveSkillPresetSlot\(economy\.profileAfter\.skillPresets, 0\)/, "Reset Skills does not clear the active preset.");
+assert.match(serverSource.slice(resetStart, saveStart), /freeResetConsumed = spentPoints > 0 && freeSkillResetCredits > 0[\s\S]*?freeSkillResetCreditsAfter/, "Reset Skills does not consume the legacy credit atomically.");
 assert.doesNotMatch(serverSource.slice(resetStart, saveStart), /replaceSkillPresetSlot/, "Reset Skills overwrites a saved preset.");
 
 for (const endpoint of ["saveSkillPreset", "renameSkillPreset", "applySkillPreset"]) {
@@ -172,14 +174,16 @@ for (const endpoint of ["saveSkillPreset", "renameSkillPreset", "applySkillPrese
   assert.match(firebaseSource, new RegExp(`window\\.CrownlandsOnline = \\{[\\s\\S]*?${endpoint},`), `${endpoint} is not exported to the game.`);
 }
 assert.match(firebaseSource, /delete cleanProfile\.skillPresets;/, "Cloud-profile saves can overwrite server presets.");
+assert.match(firebaseSource, /delete cleanProfile\.freeSkillResetGrantVersion;[\s\S]*?delete cleanProfile\.freeSkillResetCredits;/, "Cloud-profile saves can overwrite server reset credits.");
 assert.match(rulesSource, /validPlayerProfileCreate[\s\S]*?'skillPresets'/, "Creation rules do not protect presets.");
 assert.match(rulesSource, /validPlayerProfileUpdate[\s\S]*?profileFieldUnchanged\('skillPresets'\)/, "Update rules do not protect presets.");
+assert.match(rulesSource, /validPlayerProfileUpdate[\s\S]*?profileFieldUnchanged\('freeSkillResetGrantVersion'\)[\s\S]*?profileFieldUnchanged\('freeSkillResetCredits'\)/, "Update rules do not protect legacy reset credits.");
 
 assert.match(gameSource, /renderSkillPresetPanel[\s\S]*?skill-preset-tabs[\s\S]*?Save Current Build[\s\S]*?data-apply-skill-preset/, "Skills UI does not include all preset controls.");
 assert.match(extractFunction(gameSource, "renderSkillPresetPanel"), /presets\.activeSlot === selected\.slot[\s\S]*?presets\.activeSlot === slot\.slot/, "The UI does not limit the active marker to one explicit preset slot.");
 assert.match(extractFunction(gameSource, "renderProfileSkills"), /isSkillPresetNameEditorActive\(\)[\s\S]*?return;/, "Periodic profile refreshes can replace the focused preset name input and dismiss the mobile keyboard.");
 assert.match(extractFunction(gameSource, "bindSkillPresetControls"), /event\.currentTarget\.blur\(\)[\s\S]*?renameSkillPreset/, "Submitting a preset rename with Enter does not intentionally release the keyboard before refreshing.");
-assert.match(gameSource, /confirmSkillPresetAction[\s\S]*?Overwrite[\s\S]*?costs <strong>/, "Preset overwrite/apply confirmations are incomplete.");
+assert.match(gameSource, /confirmSkillPresetAction[\s\S]*?uses your free legacy balance reset[\s\S]*?costs <strong>[\s\S]*?Overwrite/, "Preset overwrite/apply confirmations do not explain the free-reset-first cost.");
 assert.match(gameSource, /applySavedSkillPreset[\s\S]*?usesServerEconomyAuthority[\s\S]*?api\.applySkillPreset[\s\S]*?state\.gold =/, "Local and server-authoritative application paths are not both present.");
 assert.match(stylesSource, /\.skill-preset-tabs[\s\S]*?grid-template-columns: repeat\(3,[\s\S]*?@media \(max-width: 640px\)[\s\S]*?\.skill-preset-allocation[\s\S]*?repeat\(2,/, "Preset tabs are not responsive on mobile.");
 
@@ -191,4 +195,4 @@ assert.ok(indexSource.includes(expectedBuild) && workerSource.includes(expectedB
 assert.ok(releaseSource.includes(expectedRelease) && functionsRelease.releaseId === expectedRelease, "Frontend and Functions realm releases do not match.");
 assert.equal(Number(economyConfig.playerCosts.skillResetGold), 1_000_000, "Preset switching is not using the configured 1,000,000-gold reset cost.");
 
-console.log("Validated three private skill presets, one authoritative active slot, exact allocations, atomic charging, mobile UI, rules, and release IDs.");
+console.log("Validated three private v3 skill presets, Shieldwall normalization, one authoritative active slot, free-reset-first charging, mobile UI, rules, and release IDs.");

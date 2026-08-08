@@ -56,7 +56,7 @@
         <div class="flow-branches">
           <article class="flow-node"><small>City value</small><strong>Victory points</strong><span>Troop production, capture value, and kingdom strength</span></article>
           <article class="flow-node"><small>Economy</small><strong>Gold curve</strong><span>A separate production curve; VP is not used here</span></article>
-          <article class="flow-node"><small>Defense</small><strong>Wall + garrison</strong><span>Two layers that attackers must defeat in order</span></article>
+          <article class="flow-node"><small>Defense</small><strong>Wall only</strong><span>City level strengthens the wall; soldiers use their own defense model</span></article>
           <article class="flow-node"><small>Time</small><strong>Full-breach window</strong><span>Each hit adds its damage share of the level&rsquo;s full repair time</span></article>
           <article class="flow-node"><small>Growth</small><strong>Upgrade cost</strong><span>Priced from the city&rsquo;s gold output and progression target</span></article>
         </div>
@@ -80,6 +80,7 @@
         <label class="guide-control" for="taxSkillLevel"><span>Tax Stewardship <output id="taxSkillOutput" for="taxSkillLevel">Lv 0</output></span><input id="taxSkillLevel" type="range" min="0" max="25" step="1" value="0" /></label>
         <label class="guide-control" for="granarySkillLevel"><span>Royal Granaries <output id="granarySkillOutput" for="granarySkillLevel">Lv 0</output></span><input id="granarySkillLevel" type="range" min="0" max="25" step="1" value="0" /></label>
         <label class="guide-control" for="cityStoneworksLevel"><span>Stoneworks <output id="cityStoneworksOutput" for="cityStoneworksLevel">Lv 0</output></span><input id="cityStoneworksLevel" type="range" min="0" max="25" step="1" value="0" /></label>
+        <label class="guide-control" for="cityShieldwallLevel"><span>Shieldwall Discipline <output id="cityShieldwallOutput" for="cityShieldwallLevel">Lv 0</output></span><input id="cityShieldwallLevel" type="range" min="0" max="30" step="1" value="0" /></label>
         <label class="guide-control" for="guildSkillLevel"><span>Guild Charters <output id="guildSkillOutput" for="guildSkillLevel">Lv 0</output></span><input id="guildSkillLevel" type="range" min="0" max="25" step="1" value="0" /></label>
         <label class="guide-control" for="cityCitadelPackage"><span>Realm-wide package</span><select id="cityCitadelPackage"><option value="0:0">None</option><option value="5:5">Clan Citadel package +5%</option><option value="10:10">Controlled Citadel package +10%</option></select></label>
         <label class="guide-control" for="cityDefenderTroops"><span>Example stationed troops</span><input id="cityDefenderTroops" type="number" min="0" step="1000" value="1000000" inputmode="numeric" /></label>
@@ -116,8 +117,8 @@
           <p><strong>Victory points:</strong> floor(6 + 4L + 2L<sup>1.35</sup>).</p>
           <p><strong>Troops/hour:</strong> victory points &times; 10, then Royal Granaries and the applicable objective package add percentages of that base.</p>
           <p><strong>Gold/hour:</strong> floor(20 &times; 1.115<sup>L&minus;1</sup>) &times; 15 through Level 100. Above 100, the Level 100 value grows 8% per additional level.</p>
-          <p><strong>Owner garrison:</strong> stationed troops &times; (1 + 2% &times; city level), then the applicable objective-defense percentage.</p>
-          <p><strong>Wall:</strong> floor(200 + 28,858 &times; (city level &minus; 1)), then Stoneworks and an applicable objective-defense percentage strengthen that one wall. This is a steady linear increase at every level.</p>
+          <p><strong>Owner garrison:</strong> floor(stationed troops &times; 1.30 &times; (1 + Shieldwall Discipline% + personal objective% + shared clan objective%)). City level is never part of soldier defense.</p>
+          <p><strong>Wall:</strong> floor(200 + 28,858 &times; (city level &minus; 1)), then Stoneworks alone strengthens that one wall. Objective support never changes wall power.</p>
           <p><strong>Repair added by a hit:</strong> full-breach repair window &times; wall damage &divide; full wall power.</p>
         </div>
       </details>
@@ -162,7 +163,7 @@
     </section>
 
     <section id="skills-guide" class="content-section guide-section" aria-labelledby="skillsGuideTitle">
-      <span class="site-eyebrow">Seven skills</span>
+      <span class="site-eyebrow">Eight skills</span>
       <h2 id="skillsGuideTitle">Each skill changes one understandable part of the system</h2>
       <div class="table-responsive guide-table-wrap">
         <table class="guide-table skill-guide-table">
@@ -170,7 +171,7 @@
           <tbody id="skillGuideRows"></tbody>
         </table>
       </div>
-      <div class="guide-callout"><strong>One skill point per hero level.</strong> Presets change how earned points are allocated; they do not create extra points. Production skills add percentages of raw city output, Stoneworks affects the wall rather than soldiers, and Swordmastery is locked into an army&rsquo;s attack power when it launches.</div>
+      <div class="guide-callout"><strong>One skill point per hero level.</strong> Presets change how earned points are allocated; they do not create extra points. Stoneworks affects only the wall, Shieldwall Discipline affects only defending soldiers, and Swordmastery is locked into an army&rsquo;s attack power when it launches.</div>
     </section>
 
     <section id="battle-explorer" class="content-section guide-section battle-guide-section" aria-labelledby="battleExplorerTitle">
@@ -193,8 +194,9 @@
           <legend>Defending holding</legend>
           <label for="battleCityLevel"><span>City level</span><input id="battleCityLevel" type="number" min="1" step="1" value="50" inputmode="numeric" /></label>
           <label for="battleDefenderTroops"><span>Owner troops</span><input id="battleDefenderTroops" type="number" min="0" step="1000" value="1000000" inputmode="numeric" /></label>
+          <label for="battleShieldLevel"><span>Shieldwall Discipline <output id="battleShieldOutput" for="battleShieldLevel">Lv 0</output></span><input id="battleShieldLevel" type="range" min="0" max="30" step="1" value="0" /></label>
           <label for="battleReinforcementTroops"><span>Clan reinforcement troops</span><input id="battleReinforcementTroops" type="number" min="0" step="1000" value="0" inputmode="numeric" /></label>
-          <label for="battleReinforcementBonus"><span>Reinforcement defense bonus</span><input id="battleReinforcementBonus" type="number" min="0" max="100" step="1" value="0" inputmode="numeric" /><small>Uses that contributor&rsquo;s applicable objective bonuses; it does not add city-level defense or another wall.</small></label>
+          <label for="battleReinforcementBonus"><span>Reinforcement Shieldwall + objective bonus</span><input id="battleReinforcementBonus" type="number" min="0" max="100" step="1" value="0" inputmode="numeric" /><small>This combined percentage applies to that contributor&rsquo;s 1.30 soldier base. It never adds another wall.</small></label>
           <label for="battleStoneLevel"><span>Stoneworks <output id="battleStoneOutput" for="battleStoneLevel">Lv 0</output></span><input id="battleStoneLevel" type="range" min="0" max="25" step="1" value="0" /></label>
           <label for="battleObjectiveDefense"><span>Objective defense</span><select id="battleObjectiveDefense"><option value="0">None</option><option value="4">Clan-shared Defense Stronghold +4%</option><option value="5">Clan-shared Citadel +5%</option><option value="8">Controlled Defense Stronghold +8%</option><option value="10">Controlled Citadel +10%</option><option value="14">Citadel plus half Stronghold +14%</option></select></label>
           <label for="battleWallIntegrity"><span>Current wall integrity <output id="battleWallOutput" for="battleWallIntegrity">100%</output></span><input id="battleWallIntegrity" type="range" min="0" max="100" step="1" value="100" /></label>
@@ -205,6 +207,18 @@
         <span id="battleOutcomeKicker">Likely outcome</span>
         <strong id="battleOutcomeTitle">Wall holds</strong>
         <small id="battleOutcomeTier">Defeat expected</small>
+      </div>
+
+      <div class="table-responsive guide-table-wrap">
+        <table class="guide-table">
+          <caption>One million maximum-skill defenders behind a maximum-Stoneworks wall</caption>
+          <thead><tr><th>City</th><th>Wall</th><th>Wall + soldiers</th><th>Max-Sword attackers needed</th><th>With Stronghold</th><th>With Citadel</th></tr></thead>
+          <tbody>
+            <tr><th scope="row">Level 50</th><td>2,474,923</td><td>4,554,923</td><td>2,277,462</td><td>2,329,462</td><td>2,342,462</td></tr>
+            <tr><th scope="row">Level 100</th><td>4,999,998</td><td>7,079,998</td><td>3,540,000</td><td>3,592,000</td><td>3,605,000</td></tr>
+            <tr><th scope="row">Level 150</th><td>7,525,073</td><td>9,605,073</td><td>4,802,537</td><td>4,854,537</td><td>4,867,537</td></tr>
+          </tbody>
+        </table>
       </div>
 
       <div class="battle-pipeline" role="img" aria-label="Attack power strikes the wall, then penetrating attack power is compared with garrison defense">
@@ -240,6 +254,7 @@
         <summary>Show the battle math</summary>
         <div class="formula-list">
           <p><strong>Attack power:</strong> floor(committed troops &times; 1.25 &times; (1 + Swordmastery%)). Maximum Swordmastery raises this to 2 power per troop.</p>
+          <p><strong>Soldier defense:</strong> floor(troops &times; 1.30 &times; (1 + Shieldwall Discipline% + personal objective% + shared clan objective%)). Maximum Shieldwall without objective support is 2.08 power per soldier.</p>
           <p><strong>Wall phase:</strong> the current wall absorbs attack power first. Penetrating power is max(0, attack power &minus; current wall).</p>
           <p><strong>Garrison phase:</strong> penetrating power must be strictly greater than the combined owner and reinforcement defense. Equality is a defensive hold.</p>
           <p><strong>Winning survivors:</strong> troops represented by attack power remaining after 100% of wall and garrison defense is resolved.</p>

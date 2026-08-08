@@ -282,6 +282,10 @@ function sanitizeEconomyConfig(config = {}) {
       key,
       cleanSectionNumber("cityEconomy", key, 0, 1_000_000),
     ])),
+    troopCombat: Object.fromEntries(Object.keys(fallback.troopCombat || {}).map(key => [
+      key,
+      cleanSectionNumber("troopCombat", key, 0, 1_000_000),
+    ])),
     siegeCombat: Object.fromEntries(Object.keys(fallback.siegeCombat || {}).map(key => [
       key,
       cleanSectionNumber("siegeCombat", key, 0, 1_000_000),

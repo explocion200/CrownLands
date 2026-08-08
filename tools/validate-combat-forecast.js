@@ -21,7 +21,7 @@ function readFunction(text, name) {
 }
 
 const requiredServerSnippets = [
-  "const COMBAT_FORECAST_VERSION = 3",
+  "const COMBAT_FORECAST_VERSION = 4",
   "const ATTACK_COMBAT_SNAPSHOT_VERSION = 1",
   "defensePower: defenseContext.packages.totalDefense",
   "attackCombatSnapshot: createAttackCombatSnapshot(troops, profile)",
@@ -30,6 +30,7 @@ const requiredServerSnippets = [
   "projection.launchCombatForecast = FieldValue.delete()",
   "launchCombatForecast: normalizeCombatForecast(launchCombatForecast)",
   "combatForecastVersion: COMBAT_FORECAST_VERSION",
+  "defenseCombatVersion: order.targetType === \"camp\" ? 0 : DEFENSE_COMBAT_VERSION",
   "id: \"protected_raid\"",
   "id: \"protected_breach\"",
 ];
@@ -51,6 +52,7 @@ const requiredClientSnippets = [
   "Launch intelligence compared with arrival",
   "launchCombatForecast: normalizeCombatForecast(report.launchCombatForecast)",
   "targetType: isRewardCampTarget(target) ? \"camp\" : \"city\"",
+  "defenseCombatVersion: Math.max(0, Math.floor(Number(report.defenseCombatVersion) || 0))",
 ];
 requiredClientSnippets.forEach(snippet => {
   if (!clientSource.includes(snippet)) throw new Error(`Missing combat forecast UI behavior: ${snippet}`);

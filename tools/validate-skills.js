@@ -7,6 +7,7 @@ const clientSource = fs.readFileSync(path.join(root, "game.js"), "utf8");
 const economyConfig = JSON.parse(fs.readFileSync(path.join(root, "functions", "economy-config.json"), "utf8"));
 const expectedSkillIds = [
   "swordmastery",
+  "shieldwallDiscipline",
   "stoneworks",
   "taxStewardship",
   "royalGranaries",
@@ -43,6 +44,7 @@ for (const skill of expectedSkillIds) {
 requireMatch(serverSource, /function normalizeSkillUpgrades[\s\S]*?normalizeSkillLevelForSkill/, "Server skill levels are not capped during normalization.");
 requireMatch(clientSource, /function normalizeUpgrades[\s\S]*?normalizeSkillUpgradeLevel/, "Client skill levels are not capped during normalization.");
 requireMatch(serverSource, /function getAttackPower[\s\S]*?skillMultiplier\(attackerProfile, "swordmastery"\)/, "Swordmastery is missing from server attack power.");
+requireMatch(serverSource, /function getCityStats[\s\S]*?getSkillPercent\(defenderProfile, "shieldwallDiscipline"\)[\s\S]*?BASE_TROOP_DEFENSE_POWER/, "Shieldwall Discipline is missing from server soldier defense.");
 requireMatch(serverSource, /function getCityStats[\s\S]*?getSkillPercent\(defenderProfile, "stoneworks"\)/, "Stoneworks is missing from server wall defense.");
 requireMatch(serverSource, /function getCityProductionStats[\s\S]*?getSkillPercent\(profile, "taxStewardship"\)/, "Tax Stewardship is missing from server city production.");
 requireMatch(serverSource, /function getCityProductionStats[\s\S]*?getSkillPercent\(profile, "royalGranaries"\)/, "Royal Granaries is missing from server city production.");
@@ -56,4 +58,4 @@ if (marchOrderUses.length < 5) {
 requireMatch(serverSource, /if \(targetType === "camp"\)[\s\S]*?applyReinforcementDefenseSettlement[\s\S]*?recoverBattleLossesToMainCity\([\s\S]*?losses: battle\.attackerLosses[\s\S]*?losses: defenseAllocation\.ownerLosses/, "Field Medics is missing from camp battles or reinforcement loss allocation.");
 requireMatch(serverSource, /const recoverBattleLossesToMainCity[\s\S]*?getCanonicalMainCityEntry/, "Field Medics does not use the canonical main city.");
 
-console.log("Validated all seven skill configurations and their server-authoritative boost paths.");
+console.log("Validated all eight skill configurations and their server-authoritative boost paths.");

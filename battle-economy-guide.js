@@ -41,6 +41,7 @@
     tax: $("taxSkillLevel"),
     granaries: $("granarySkillLevel"),
     stoneworks: $("cityStoneworksLevel"),
+    shieldwall: $("cityShieldwallLevel"),
     guild: $("guildSkillLevel"),
     package: $("cityCitadelPackage"),
     defenders: $("cityDefenderTroops"),
@@ -60,6 +61,7 @@
       taxStewardshipLevel: whole(cityInputs.tax?.value),
       royalGranariesLevel: whole(cityInputs.granaries?.value),
       stoneworksLevel: whole(cityInputs.stoneworks?.value),
+      shieldwallDisciplineLevel: whole(cityInputs.shieldwall?.value),
       guildChartersLevel: whole(cityInputs.guild?.value),
       citadelPackagePercent: packageValue.statPercent,
       citadelUpgradeReductionPercent: packageValue.upgradePercent,
@@ -137,6 +139,7 @@
     $("taxSkillOutput").textContent = `Lv ${values.taxStewardshipLevel} · +${snapshot.taxPercent}%`;
     $("granarySkillOutput").textContent = `Lv ${values.royalGranariesLevel} · +${snapshot.granariesPercent}%`;
     $("cityStoneworksOutput").textContent = `Lv ${values.stoneworksLevel} · +${snapshot.stoneworksPercent}%`;
+    $("cityShieldwallOutput").textContent = `Lv ${values.shieldwallDisciplineLevel} · +${snapshot.shieldwallPercent}%`;
     $("guildSkillOutput").textContent = `Lv ${values.guildChartersLevel} · −${snapshot.guildPercent}%`;
     $("cityVictoryPoints").textContent = format(snapshot.victoryPoints);
     $("cityVictoryHelp").textContent = `${format(snapshot.victoryPoints * config.cityEconomy.troopsPerVictoryPoint)} base troops/hour`;
@@ -147,7 +150,7 @@
     $("cityWallPower").textContent = format(snapshot.fullWallPower);
     $("cityWallHelp").textContent = `Base ${format(snapshot.baseWall)} · Stoneworks +${snapshot.stoneworksPercent}%`;
     $("cityGarrisonDefense").textContent = format(snapshot.ownerGarrisonPower);
-    $("cityGarrisonHelp").textContent = `${format(values.defenderTroops)} troops · city +${level * config.cityEconomy.defensePercentPerLevel}%`;
+    $("cityGarrisonHelp").textContent = `${format(values.defenderTroops)} troops · ${snapshot.baseDefensePowerPerTroop.toFixed(2)} base · Shieldwall +${snapshot.shieldwallPercent}% · objective +${snapshot.packagePercent}%`;
     $("cityUpgradeCost").textContent = `${format(snapshot.upgradeCost)} gold`;
     $("cityUpgradeHelp").textContent = `${Math.min(85, snapshot.guildPercent + snapshot.upgradePackagePercent)}% total reduction`;
     $("cityRepairTime").textContent = `${format(snapshot.repairMinutes)}m`;
@@ -173,6 +176,7 @@
 
   const skillDefinitions = [
     { id: "swordmastery", name: "Swordmastery", role: "Offense", change: "Outgoing attack power locked at launch", not: "Walls, garrison defense, or troop count" },
+    { id: "shieldwallDiscipline", name: "Shieldwall Discipline", role: "Defense", change: "The owner soldier or reinforcement soldier defense package", not: "Walls, troop count, or attack power" },
     { id: "stoneworks", name: "Stoneworks", role: "Defense", change: "The holding owner’s single wall", not: "Garrison troops or reinforcement walls" },
     { id: "taxStewardship", name: "Tax Stewardship", role: "Economy", change: "Normal city base gold production", not: "Reward minimums or troop production" },
     { id: "royalGranaries", name: "Royal Granaries", role: "Economy", change: "Normal city base troop production", not: "Existing troops or attack power per troop" },
@@ -192,6 +196,7 @@
   const battleInputs = {
     attackers: $("battleAttackerTroops"),
     sword: $("battleSwordLevel"),
+    shieldwall: $("battleShieldLevel"),
     cityLevel: $("battleCityLevel"),
     defenders: $("battleDefenderTroops"),
     reinforcements: $("battleReinforcementTroops"),
@@ -204,16 +209,17 @@
   let latestBattle = null;
 
   const battlePresets = {
-    wall: { attackers: 300000, sword: 0, cityLevel: 50, defenders: 1000000, reinforcements: 0, reinforcementBonus: 0, stoneworks: 25, objective: 0, wall: 100 },
-    garrison: { attackers: 1000000, sword: 0, cityLevel: 50, defenders: 1000000, reinforcements: 0, reinforcementBonus: 0, stoneworks: 0, objective: 0, wall: 100 },
-    capture: { attackers: 2800000, sword: 0, cityLevel: 50, defenders: 1000000, reinforcements: 0, reinforcementBonus: 0, stoneworks: 0, objective: 0, wall: 100 },
-    damaged: { attackers: 1000000, sword: 30, cityLevel: 100, defenders: 1000000, reinforcements: 0, reinforcementBonus: 0, stoneworks: 25, objective: 0, wall: 0 },
+    wall: { attackers: 300000, sword: 0, shieldwall: 30, cityLevel: 50, defenders: 1000000, reinforcements: 0, reinforcementBonus: 0, stoneworks: 25, objective: 0, wall: 100 },
+    garrison: { attackers: 1000000, sword: 0, shieldwall: 30, cityLevel: 50, defenders: 1000000, reinforcements: 0, reinforcementBonus: 0, stoneworks: 0, objective: 0, wall: 0 },
+    capture: { attackers: 1100000, sword: 30, shieldwall: 30, cityLevel: 50, defenders: 1000000, reinforcements: 0, reinforcementBonus: 0, stoneworks: 0, objective: 0, wall: 0 },
+    damaged: { attackers: 1000000, sword: 30, shieldwall: 30, cityLevel: 100, defenders: 1000000, reinforcements: 0, reinforcementBonus: 0, stoneworks: 25, objective: 0, wall: 0 },
   };
 
   function getBattleValues() {
     return {
       attackerTroops: Math.max(1, whole(battleInputs.attackers?.value, 1)),
       swordmasteryLevel: whole(battleInputs.sword?.value),
+      shieldwallDisciplineLevel: whole(battleInputs.shieldwall?.value),
       cityLevel: Math.max(1, whole(battleInputs.cityLevel?.value, 1)),
       defenderTroops: whole(battleInputs.defenders?.value),
       reinforcementTroops: whole(battleInputs.reinforcements?.value),
@@ -251,6 +257,7 @@
     const result = calculator.simulateSiege(values);
     latestBattle = result;
     $("battleSwordOutput").textContent = `Lv ${values.swordmasteryLevel} · +${result.swordmasteryPercent}%`;
+    $("battleShieldOutput").textContent = `Lv ${values.shieldwallDisciplineLevel} · +${result.shieldwallPercent}%`;
     $("battleStoneOutput").textContent = `Lv ${values.stoneworksLevel} · +${result.stoneworksPercent}%`;
     $("battleWallOutput").textContent = `${values.wallIntegrityPercent}%`;
     const title = outcomeTitle(result);

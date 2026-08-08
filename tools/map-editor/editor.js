@@ -228,6 +228,7 @@
   ];
   const SKILL_EDITOR = [
     { id: "swordmastery", label: "Swordmastery" },
+    { id: "shieldwallDiscipline", label: "Shieldwall Discipline" },
     { id: "stoneworks", label: "Stoneworks" },
     { id: "taxStewardship", label: "Tax Stewardship" },
     { id: "royalGranaries", label: "Royal Granaries" },
@@ -1471,14 +1472,19 @@
           </article>
           <article class="economy-breakdown-card full">
             <div class="economy-breakdown-heading">
-              <span>City defense</span>
-              <strong>Universal walls and damage-based repair</strong>
-              <p>Every city level uses the same linear formula, so each additional level adds the same base wall power. Each meaningful hit adds its damage share of the level's full-breach repair window.</p>
+              <span>Soldiers and walls</span>
+              <strong>Separate troop defense and wall layers</strong>
+              <p>Every defending soldier uses the same base power plus Shieldwall and objective support. City level affects only the wall and repair time.</p>
+            </div>
+            <div class="economy-fixed-formula">
+              <span>Soldier formula</span>
+              <code>troops × defense base × (1 + Shieldwall% + personal objective% + shared clan objective%)</code>
+              <small>Objectives and Shieldwall add against the soldier base. They never multiply each other or increase the wall.</small>
             </div>
             <div class="economy-fixed-formula">
               <span>Wall formula</span>
               <code>base + per-level growth × (level − 1)</code>
-              <small>Stoneworks and objective bonuses multiply the resulting wall afterward. Reinforcements add garrison troops, not additional walls.</small>
+              <small>Stoneworks alone multiplies the resulting wall. Reinforcements bring their own soldier-defense package, not additional walls.</small>
             </div>
             <div class="economy-fixed-formula">
               <span>Repair formula</span>
@@ -1487,16 +1493,22 @@
             </div>
             <div class="economy-explained-grid three">
               ${economyNumberInput(
-                "cityEconomy.defensePercentPerLevel",
-                "Garrison defense per city level (%)",
-                economy.cityEconomy.defensePercentPerLevel,
-                { step: 0.1, description: "Multiplies stationed and reinforced troop defense. It does not increase wall power." }
+                "troopCombat.baseAttackPowerPerTroop",
+                "Base attack power per soldier",
+                economy.troopCombat.baseAttackPowerPerTroop,
+                { step: 0.01, description: "Swordmastery adds its percentage against this attack base. Attack power is locked when the march launches." }
+              )}
+              ${economyNumberInput(
+                "troopCombat.baseDefensePowerPerTroop",
+                "Base defense power per soldier",
+                economy.troopCombat.baseDefensePowerPerTroop,
+                { step: 0.01, description: "Shieldwall and objective percentages add against this defense base. City level is not part of troop defense." }
               )}
               ${economyNumberInput(
                 "cityEconomy.wallDefenseBase",
                 "Level 1 base wall power",
                 economy.cityEconomy.wallDefenseBase,
-                { description: "Flat wall power before level growth, Stoneworks, or objective bonuses." }
+                { description: "Flat wall power before level growth and Stoneworks. Objective bonuses never affect it." }
               )}
               ${economyNumberInput(
                 "cityEconomy.wallDefensePerLevel",
@@ -1561,7 +1573,7 @@
       <section class="economy-section wide">
         <div class="economy-section-heading">
           <div><span>Skills</span><strong>Bonus per point and caps</strong></div>
-          <p>These values apply to the seven active Crownlands skills.</p>
+          <p>These values apply to the eight active Crownlands skills. Shieldwall Discipline mirrors Swordmastery for defending soldiers.</p>
         </div>
         <div class="economy-grid">${skillCards}</div>
       </section>

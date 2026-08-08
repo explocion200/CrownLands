@@ -19,8 +19,10 @@ function readNumericConstant(source, name) {
   return Number(match[1].replaceAll("_", ""));
 }
 
-assert.equal(guide.RULES.baseAttackPowerPerTroop, readNumericConstant(server, "BASE_TROOP_ATTACK_POWER"));
-assert.equal(guide.RULES.baseAttackPowerPerTroop, readNumericConstant(client, "BASE_TROOP_ATTACK_POWER"));
+assert.equal(guide.RULES.baseAttackPowerPerTroop, Number(config.troopCombat?.baseAttackPowerPerTroop));
+assert.equal(guide.RULES.baseDefensePowerPerTroop, Number(config.troopCombat?.baseDefensePowerPerTroop));
+assert.match(server, /BASE_TROOP_ATTACK_POWER\s*=\s*economyNumber\("troopCombat\.baseAttackPowerPerTroop", 1\.25\)/);
+assert.match(client, /BASE_TROOP_DEFENSE_POWER\s*=\s*economyNumber\("troopCombat\.baseDefensePowerPerTroop", 1\.3\)/);
 assert.equal(guide.RULES.strongerKingdomAssaultRatio, readNumericConstant(server, "ATTACK_PROTECTION_ASSAULT_MIN_RATIO"));
 assert.equal(guide.RULES.strongerKingdomRaidRatio, readNumericConstant(server, "ATTACK_PROTECTION_RAID_MIN_RATIO"));
 assert.equal(guide.RULES.strongholdEffectiveLevel, 50);
@@ -53,6 +55,7 @@ for (let level = 2; level <= 500; level += 1) {
 
 const skillExpectations = {
   swordmastery: { level: 30, percent: 60 },
+  shieldwallDiscipline: { level: 30, percent: 60 },
   stoneworks: { level: 25, percent: 75 },
   taxStewardship: { level: 25, percent: 75 },
   royalGranaries: { level: 25, percent: 75 },
@@ -72,14 +75,15 @@ const boosted = calculator.getCitySnapshot({
   taxStewardshipLevel: 25,
   royalGranariesLevel: 25,
   stoneworksLevel: 25,
+  shieldwallDisciplineLevel: 30,
   guildChartersLevel: 25,
   citadelPackagePercent: 10,
   citadelUpgradeReductionPercent: 10,
 });
 assert.equal(boosted.goldPerHour, Math.floor(unboosted.baseGoldPerHour * 1.85), "Gold bonuses must add against base.");
 assert.equal(boosted.troopsPerHour, Math.floor(unboosted.baseTroopsPerHour * 1.85), "Troop bonuses must add against base.");
-assert.equal(boosted.fullWallPower, Math.floor(Math.floor(unboosted.baseWall * 1.75) * 1.1), "Stoneworks and objective wall stages drifted.");
-assert.equal(boosted.ownerGarrisonPower, 2_200_000, "Level and objective garrison defense drifted.");
+assert.equal(boosted.fullWallPower, Math.floor(unboosted.baseWall * 1.75), "Only Stoneworks may strengthen the wall.");
+assert.equal(boosted.ownerGarrisonPower, 2_210_000, "Shieldwall and objective soldier defense drifted.");
 assert.ok(boosted.upgradeCost < unboosted.upgradeCost, "Upgrade reductions must lower the next upgrade price.");
 
 const equality = calculator.simulateSiege({
@@ -142,7 +146,7 @@ const reinforcement = calculator.simulateSiege({
   reinforcementDefensePercent: 10,
   wallIntegrityPercent: 100,
 });
-assert.equal(reinforcement.reinforcementGarrisonPower, 550_000, "Reinforcements must use their own bonus without city-level defense.");
+assert.equal(reinforcement.reinforcementGarrisonPower, 715_000, "Reinforcements must use their own 1.30 base and bonus without city-level defense.");
 assert.equal(reinforcement.fullWallPower, capture.fullWallPower, "Reinforcements must not add another wall.");
 
 const belowFive = calculator.simulateSiege({
@@ -178,6 +182,8 @@ assert.match(page, /Wall power by level <small>linear value scale<\/small>/);
 assert.doesNotMatch(page, /Wall power by level <small>logarithmic value scale<\/small>/);
 assert.match(page, /id="economy-map"/);
 assert.match(page, /id="skills-guide"/);
+assert.match(page, /Shieldwall Discipline/);
+assert.match(page, /1\.30/);
 assert.match(page, /id="battle-explorer"/);
 assert.match(page, /id="wall-timers"/);
 assert.match(page, /Damage-proportional wall-repair examples/);
