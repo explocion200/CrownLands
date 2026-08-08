@@ -24,7 +24,8 @@ function cityStatNumber(name) {
 }
 
 const constants = {
-  baseAttackPower: sourceNumber("BASE_TROOP_ATTACK_POWER"),
+  baseAttackPower: Number(config.troopCombat.baseAttackPowerPerTroop),
+  baseDefensePower: Number(config.troopCombat.baseDefensePowerPerTroop),
   rewardedAdMinutes: sourceNumber("REWARDED_AD_REWARD_MINUTES"),
   rewardedAdDailyLimit: sourceNumber("REWARDED_AD_DAILY_LIMIT"),
   clanMemberLimit: sourceNumber("CLAN_MEMBER_LIMIT"),
@@ -215,11 +216,11 @@ const clanGiftGoldPerDay = baseGoldPerHour * clanGiftGoldHoursPerDay;
 const siege = profile.siegeBenchmark;
 const baseWall = getBaseWall(siege.cityLevel);
 const stoneworksWall = Math.floor(baseWall * (1 + config.skills.stoneworks.maxPercent / 100));
-const wallPower = Math.floor(stoneworksWall * (1 + profile.maximumObjectiveBonusPercent / 100));
+const wallPower = stoneworksWall;
 const garrisonPower = Math.floor(
   siege.defenders
-    * (1 + siege.cityLevel * config.cityEconomy.defensePercentPerLevel / 100)
-    * (1 + profile.maximumObjectiveBonusPercent / 100)
+    * constants.baseDefensePower
+    * (1 + (config.skills.shieldwallDiscipline.maxPercent + profile.maximumObjectiveBonusPercent) / 100)
 );
 const attackPowerPerTroop = constants.baseAttackPower
   * (1 + config.skills.swordmastery.maxPercent / 100);

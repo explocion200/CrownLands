@@ -42,6 +42,7 @@ const entrypointBudgets = {
   "styles.css": 400 * 1024,
   "assets/map-editor-data.js": 400 * 1024,
   "firebaseClient.js": 150 * 1024,
+  "animation-manager.js": 80 * 1024,
   "audio-manager.js": 80 * 1024,
   "route-worker.js": 40 * 1024,
 };
@@ -182,6 +183,7 @@ for (const requiredShellFile of [
   "manifest.webmanifest",
   "styles.css",
   "game.js",
+  "animation-manager.js",
   "firebaseClient.js",
   "route-worker.js",
   "assets/map-editor-data.js",

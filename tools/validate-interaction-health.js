@@ -3,6 +3,7 @@
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
+const vm = require("node:vm");
 
 const root = path.resolve(__dirname, "..");
 const game = fs.readFileSync(path.join(root, "game.js"), "utf8");
@@ -59,6 +60,7 @@ const routePreview = extractFunction("findOrderRouteAsync");
 const routeRefresh = extractFunction("scheduleAuthoritativeRoutePreviewRefresh");
 const troopSliderUpdate = extractFunction("updateTroopSliderModal");
 const cityWheel = extractFunction("renderSelectedCityWheel");
+const cityFortificationDisplay = extractFunction("getCityFortificationDisplay");
 assert.match(routeRequest, /supportsAuthoritativeArmyRoutes\(\)/, "Authoritative preview calls must be capability-gated.");
 assert.match(routeRequest, /api\.previewArmyRoute/, "Online order previews must request the authoritative route.");
 assert.match(routePreview, /requestAuthoritativeOrderRoute/, "Order routing must prefer the capability-gated authoritative preview.");
@@ -69,6 +71,49 @@ assert.match(troopSliderUpdate, /getTroopTravelBandIndex\(route\.authoritativeRe
 assert.match(troopSliderUpdate, /scheduleAuthoritativeRoutePreviewRefresh/, "The troop slider must refresh authoritative ETA when its travel band changes.");
 assert.match(cityWheel, /bulkOrdersSupported\s*\?/, "Unsupported realms must hide bulk order controls.");
 assert.match(cityWheel, /wheel-scout-nearby[\s\S]*wheel-regroup/, "Supported realms must expose both bulk order controls.");
+assert.doesNotMatch(cityFortificationDisplay, /\bgetOwnerUid\s*\(/, "City Info must not call the server-only getOwnerUid helper.");
+assert.match(cityFortificationDisplay, /String\(city\?\.ownerUid\s*\|\|\s*""\)\.trim\(\)/, "City Info must classify neutral wall visibility from the client city owner UID.");
+const cityInfoContext = {
+  DEFENSE_COMBAT_VERSION: 1,
+  getCityFortificationSnapshot: () => ({
+    integrityBps: 10_000,
+    repairAtMs: 0,
+    repairWindowMinutes: 15,
+    fullWallPower: 200,
+    currentWallPower: 200,
+  }),
+  getCityStats: () => ({ defenseCombatVersion: 1, troopDefense: 13 }),
+  normalizeCombatFortificationSnapshot: raw => raw || null,
+  getSiegeRepairWindowMinutes: () => 15,
+  getSiegeRepairLevel: () => 1,
+};
+vm.createContext(cityInfoContext);
+vm.runInContext(cityFortificationDisplay, cityInfoContext);
+assert.equal(
+  cityInfoContext.getCityFortificationDisplay(
+    { owner: "neutral", ownerUid: "" },
+    { defenseCombatVersion: 1, troopDefense: 13 }
+  ).powerVisible,
+  true,
+  "Neutral City Info should show its wall power without throwing."
+);
+assert.equal(
+  cityInfoContext.getCityFortificationDisplay(
+    { owner: "enemy", ownerUid: "enemy-uid" },
+    { defenseCombatVersion: 1, troopDefense: 13 }
+  ).powerVisible,
+  false,
+  "Unscouted enemy City Info must keep defense power hidden."
+);
+assert.equal(
+  cityInfoContext.getCityFortificationDisplay(
+    { owner: "enemy", ownerUid: "enemy-uid" },
+    { defenseCombatVersion: 1, troopDefense: 13 },
+    { fortification: { defenseCombatVersion: 1, fullWallPower: 200, currentWallPower: 200, garrisonDefensePower: 13, endingIntegrityBps: 10_000 } }
+  ).powerVisible,
+  true,
+  "Scouted enemy City Info should reveal its recorded wall power."
+);
 assert.match(worker, /message\.type === "routeBatch"/, "The route worker must support bounded batch jobs.");
 
 const refreshRoster = extractFunction("refreshAllOwnedCities");

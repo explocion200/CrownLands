@@ -184,7 +184,7 @@ assert.match(rewardedFlow, /REWARDED_AD_DECISION_TIMEOUT_MS/);
 
 const startFlow = extractFunction(gameSource, "startRewardedAdBoost");
 assert.ok(
-  startFlow.indexOf("await requestGoogleRewardedAd(intent)") < startFlow.indexOf("await claimPreparedRewardedAd(intent)"),
+  startFlow.indexOf("await requestGoogleRewardedAd(intent)") < startFlow.indexOf("await claimPreparedRewardedAd(intent"),
   "The server claim must only run after the Google rewarded flow grants the slot."
 );
 

@@ -13,11 +13,11 @@
   <meta name="apple-mobile-web-app-title" content="Crownlands" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="format-detection" content="telephone=no" />
-  <meta name="crownlands-build" content="20260807-login-resilience-v1" />
+  <meta name="crownlands-build" content="20260807-animation-system-v1" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700;800;900&family=Cinzel+Decorative:wght@700;900&family=IM+Fell+English:ital@0;1&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css?v=20260807-login-resilience-v1" />
+  <link rel="stylesheet" href="styles.css?v=20260807-animation-system-v1" />
   <link rel="preload" as="image" type="image/webp" href="assets/optimized/login-background-1448x1086-cec197d384ba.webp" fetchpriority="high" />
   <link rel="preload" as="image" type="image/webp" href="assets/optimized/loading-ring-256x256-d14e6c09f495.webp" fetchpriority="high" />
   <link rel="preload" as="image" type="image/webp" href="assets/optimized/loading-crown-256x256-9eab5c3ca27d.webp" fetchpriority="high" />
@@ -29,6 +29,11 @@
   <main class="phone-shell" aria-label="Crownlands real-time medieval conquest prototype">
     <section id="setupScreen" class="setup-screen visible">
       <button id="setupFullscreenBtn" class="hud-btn fullscreen-btn setup-fullscreen-btn" type="button" aria-label="Enter fullscreen" data-fullscreen-toggle><span class="fullscreen-glyph" aria-hidden="true">&#x26F6;</span></button>
+      <a class="discord-home-link" href="https://discord.gg/F2EdEGuvEy" target="_blank" rel="noopener noreferrer" aria-label="Join the Crownlands Discord" title="Join the Crownlands Discord">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+          <path d="M20.317 4.37a19.79 19.79 0 0 0-4.885-1.515.08.08 0 0 0-.023.012c-.211.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.618-1.25.1.1 0 0 0-.023-.012A19.74 19.74 0 0 0 3.787 4.37C.533 9.256-.349 14.019.089 18.725c.002.023.013.046.031.06a19.9 19.9 0 0 0 5.993 3.03.08.08 0 0 0 .094-.032c.462-.63.873-1.295 1.226-1.994a.08.08 0 0 0-.042-.106 13.1 13.1 0 0 1-1.872-.892.08.08 0 0 1-.008-.128c.126-.094.252-.192.372-.291a.07.07 0 0 1 .078-.01c3.928 1.793 8.18 1.793 12.061 0a.07.07 0 0 1 .079.009c.12.099.246.198.373.292a.08.08 0 0 1-.007.128 12.3 12.3 0 0 1-1.873.891.08.08 0 0 0-.041.107c.36.698.772 1.363 1.225 1.993a.08.08 0 0 0 .093.031 19.84 19.84 0 0 0 6.002-3.029.08.08 0 0 0 .032-.06c.524-5.439-.877-10.158-3.548-14.357a.06.06 0 0 0-.031-.028ZM8.02 15.331c-1.183 0-2.157-1.086-2.157-2.419s.956-2.419 2.157-2.419c1.211 0 2.176 1.095 2.157 2.419 0 1.333-.956 2.419-2.157 2.419Zm7.975 0c-1.183 0-2.157-1.086-2.157-2.419s.955-2.419 2.157-2.419c1.211 0 2.176 1.095 2.157 2.419 0 1.333-.946 2.419-2.157 2.419Z" />
+        </svg>
+      </a>
       <button id="loginMusicMuteBtn" class="login-music-mute-btn" type="button" aria-label="Mute music" aria-pressed="false" title="Mute music" data-audio-control>
         <span data-music-icon aria-hidden="true">&#128266;</span>
       </button>
@@ -160,13 +165,16 @@
       </button>
 
       <section id="mapFrame" class="map-frame" aria-label="Drag to move around the map">
-        <div id="mapWorld" class="map-world">
-          <div id="mapBg" class="map-bg" aria-hidden="true"></div>
-          <svg id="pathsSvg" class="paths" viewBox="0 0 10000 7600" preserveAspectRatio="none" aria-hidden="true"></svg>
-          <div id="harvestLayer" class="harvest-layer"></div>
-          <div id="portalLayer" class="portal-layer"></div>
-          <div id="cityLayer" class="city-layer"></div>
-          <div id="armyLayer" class="army-layer"></div>
+        <div id="mapTransitionStage" class="map-transition-stage">
+          <div id="mapWorld" class="map-world">
+            <div id="mapBg" class="map-bg" aria-hidden="true"></div>
+            <svg id="pathsSvg" class="paths" viewBox="0 0 10000 7600" preserveAspectRatio="none" aria-hidden="true"></svg>
+            <div id="harvestLayer" class="harvest-layer"></div>
+            <div id="portalLayer" class="portal-layer"></div>
+            <div id="cityLayer" class="city-layer"></div>
+            <div id="mapVfxLayer" class="map-vfx-layer" aria-hidden="true"></div>
+            <div id="armyLayer" class="army-layer"></div>
+          </div>
         </div>
         <div id="mapLoadingOverlay" class="map-loading-overlay" aria-hidden="true">
           <div class="map-loading-panel">
@@ -178,6 +186,7 @@
           </div>
         </div>
       </section>
+      <div id="screenVfxLayer" class="screen-vfx-layer" aria-hidden="true"></div>
 
       <aside id="toast" class="toast" role="status" aria-live="polite"></aside>
 
@@ -219,7 +228,7 @@
           <button id="profileCloseBtn" class="profile-icon-btn profile-screen-close" type="button" aria-label="Close profile">&times;</button>
         </header>
 
-        <div id="profileView" class="profile-view">
+        <div id="profileView" class="profile-view" role="tabpanel" aria-labelledby="profileTabBtn">
           <section class="profile-identity" aria-label="Ruler identity">
             <button id="profileFlagBtn" class="profile-flag-button" type="button" aria-label="Edit kingdom flag">
               <span id="profileKingdomFlag" class="kingdom-flag kingdom-flag-large" aria-hidden="true"><span class="flag-symbol"></span></span>
@@ -310,6 +319,16 @@
                 </label>
               </article>
             </div>
+          </section>
+          <section class="profile-settings-section settings-compact-section animation-settings-section" aria-labelledby="animationSettingsTitle" aria-describedby="animationSettingsDescription animationModeStatus">
+            <div class="profile-section-heading"><span>Display</span><h3 id="animationSettingsTitle">Animations</h3></div>
+            <p id="animationSettingsDescription" class="settings-card-description">Choose the amount of movement and visual effects shown during play.</p>
+            <div class="animation-mode-toggle" role="group" aria-label="Animation intensity">
+              <button class="animation-mode-option active" type="button" data-animation-mode-option="full" aria-pressed="true">Full</button>
+              <button class="animation-mode-option" type="button" data-animation-mode-option="reduced" aria-pressed="false">Reduced</button>
+              <button class="animation-mode-option" type="button" data-animation-mode-option="off" aria-pressed="false">Off</button>
+            </div>
+            <span id="animationModeStatus" class="animation-mode-status" role="status" aria-live="polite">Full animations</span>
           </section>
           <div class="settings-secondary-grid">
             <section class="profile-settings-section settings-compact-section notification-settings-section">
@@ -405,9 +424,10 @@
   <script src="ui-layout-config.js?v=20260726-hud-layout-editor"></script>
   <script src="firebase-config.js?v=20260726-protected-ads-reset"></script>
   <script src="functions/clanQuestPeriod.js?v=20260729-weekly-clan-quests-v2"></script>
-  <script src="firebaseClient.js?v=20260807-login-resilience-v1"></script>
+  <script src="firebaseClient.js?v=20260807-animation-system-v1"></script>
   <script src="audio-manager.js?v=20260729-starter-sound-pack-v1"></script>
-  <script src="game.js?v=20260807-login-resilience-v1"></script>
+  <script src="animation-manager.js?v=20260807-animation-system-v1"></script>
+  <script src="game.js?v=20260807-animation-system-v1"></script>
   <script src="ui-layout-runtime.js?v=20260726-hud-layout-editor"></script>
 </body>
 </html>

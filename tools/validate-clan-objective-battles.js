@@ -130,6 +130,8 @@ const defenseContext = {
   Map,
   Date,
   SIEGE_COMBAT_VERSION: 1,
+  DEFENSE_COMBAT_VERSION: 1,
+  BASE_TROOP_DEFENSE_POWER: 1.3,
   REINFORCEMENT_CITY_WALL_SHARE: 0.25,
   safeNumber: (value, fallback = 0) => Number.isFinite(Number(value)) ? Number(value) : fallback,
   safeString: (value, maxLength = 256) => String(value || "").slice(0, maxLength),
@@ -137,8 +139,14 @@ const defenseContext = {
   getOwnerUid: target => String(target?.ownerUid || ""),
   getOwnerName: target => String(target?.ownerName || ""),
   getTargetOwnerTroops: target => Math.max(0, Math.floor(Number(target?.troops) || 0)),
-  getSkillPercent: (profile, skill) => skill === "stoneworks" ? Math.max(0, Number(profile?.stoneworksPercent) || 0) : 0,
+  getSkillLevel: (profile, skill) => skill === "shieldwallDiscipline" ? Math.max(0, Number(profile?.shieldwallLevel) || 0) : 0,
+  getSkillPercent: (profile, skill) => skill === "stoneworks"
+    ? Math.max(0, Number(profile?.stoneworksPercent) || 0)
+    : skill === "shieldwallDiscipline"
+      ? Math.max(0, Number(profile?.shieldwallPercent) || 0)
+      : 0,
   usesSiegeCombat: (version, targetType) => targetType !== "camp" && Number(version) >= 1,
+  usesSoldierDefenseModel: (version, target) => target?.type !== "camp" && Number(version) >= 1,
   getFortificationSnapshot(target, stats) {
     return {
       modelVersion: 1,
@@ -148,20 +156,24 @@ const defenseContext = {
       repairAtMs: 0,
     };
   },
-  getCityStats(target, profile, bonuses) {
+  getCityStats(target, profile, bonuses, options = {}) {
     assert.equal(target.alliedReinforcementTroops, 0, "The holder package included allied troops.");
     assert.equal(target.troops, 500);
     assert.equal(profile.playerName, "Holder");
     assert.equal(bonuses.cityDefenseBonusPercent, 10);
+    const modern = Number(options.defenseCombatVersion) >= 1;
     return {
-      totalDefense: 1_100,
+      totalDefense: modern ? 1_208 : 1_100,
       strongholdDefenseBonus: 100,
       strongholdDefenseBonusPercent: 10,
-      defensePercent: 40,
+      defensePercent: modern ? 0 : 40,
       baseCityWalls: 300,
       cityWalls: 330,
       stoneworksPercent: 10,
-      troopDefense: 670,
+      baseTroopDefense: modern ? 650 : 500,
+      troopDefense: modern ? 845 : 670,
+      shieldwallDisciplineLevel: modern ? 10 : 0,
+      shieldwallDisciplinePercent: modern ? 20 : 0,
     };
   },
 };
@@ -195,10 +207,10 @@ assert.equal(packages.totalDefense, 1_362);
 
 const siegePackages = defenseContext.calculateDefenderArmyPackages({
   target: { ownerUid: "holder", ownerName: "Holder", troops: 500 },
-  ownerProfile: { playerName: "Holder", flag: { symbol: "lion" } },
+  ownerProfile: { playerName: "Holder", flag: { symbol: "lion" }, shieldwallLevel: 10, shieldwallPercent: 20 },
   ownerBonuses: { cityDefenseBonusPercent: 10 },
   contributions: [{ id: "r1", ownerUid: "ally", ownerName: "Ally", troops: 100 }],
-  contributorProfiles: new Map([["ally", { playerName: "Ally", flag: { symbol: "castle" }, stoneworksPercent: 25 }]]),
+  contributorProfiles: new Map([["ally", { playerName: "Ally", flag: { symbol: "castle" }, stoneworksPercent: 25, shieldwallLevel: 10, shieldwallPercent: 20 }]]),
   contributorStats: new Map([["ally", {
     strongholdDefenseBonusPercent: 5,
     personalStrongholdDefenseBonusPercent: 0,
@@ -206,12 +218,14 @@ const siegePackages = defenseContext.calculateDefenderArmyPackages({
   }]]),
   siegeCombatVersion: 1,
 });
-assert.equal(siegePackages.owner.effectivePower, 737, "Objective defense must strengthen the owner's garrison troops.");
-assert.equal(siegePackages.reinforcements[0].basePower, 100, "Siege reinforcements must contribute troops without duplicate walls.");
+assert.equal(siegePackages.owner.basePower, 650, "The owner's soldiers must use the 1.30 defense base.");
+assert.equal(siegePackages.owner.effectivePower, 845, "Shieldwall and objective defense must add against the owner's 1.30 base.");
+assert.equal(siegePackages.reinforcements[0].basePower, 130, "Siege reinforcements must use the 1.30 soldier base without duplicate walls.");
 assert.equal(siegePackages.reinforcements[0].cityWallDefense, 0, "Siege reinforcements cannot add a second wall layer.");
 assert.equal(siegePackages.reinforcements[0].stoneworksBonus, 0, "A reinforcement sender's Stoneworks cannot duplicate the holding wall.");
-assert.equal(siegePackages.totalGarrisonDefense, 842);
-assert.equal(siegePackages.totalDefense, 1_205, "Siege defense must be one wall plus the combined garrison.");
+assert.equal(siegePackages.reinforcements[0].effectivePower, 162, "Reinforcements must use their own Shieldwall and objective support.");
+assert.equal(siegePackages.totalGarrisonDefense, 1_007);
+assert.equal(siegePackages.totalDefense, 1_370, "Siege defense must be one Stoneworks-only wall plus the combined garrison.");
 
 requires(
   server,

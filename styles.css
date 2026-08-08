@@ -39,6 +39,13 @@
   --font-display: "Cinzel Decorative", "Cinzel", ui-serif, Georgia, "Times New Roman", serif;
   --font-lore: "IM Fell English", ui-serif, Georgia, "Times New Roman", serif;
   --font-system: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --motion-ui-fast: 150ms;
+  --motion-ui-open: 220ms;
+  --motion-ui-close: 180ms;
+  --motion-standard: 680ms;
+  --motion-major: 1100ms;
+  --motion-ease-out: cubic-bezier(.2, .76, .24, 1);
+  --motion-ease-settle: cubic-bezier(.22, 1.18, .36, 1);
 }
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -189,6 +196,44 @@ html:fullscreen::backdrop {
   border: 1px solid rgba(255, 226, 147, .56);
   box-shadow: 0 10px 24px rgba(0,0,0,.38), inset 0 0 0 1px rgba(255,255,255,.08);
   backdrop-filter: blur(7px);
+}
+.discord-home-link {
+  position: absolute;
+  z-index: 3;
+  left: calc((100vw - var(--login-art-width)) / 2 + max(.75rem, env(safe-area-inset-left)) + 54px);
+  bottom: calc((100dvh - var(--login-art-height)) / 2 + max(.75rem, env(safe-area-inset-bottom)));
+  display: grid;
+  width: 46px;
+  min-width: 46px;
+  height: 46px;
+  min-height: 46px;
+  place-items: center;
+  color: #fff6d0;
+  border: 1px solid rgba(255, 226, 147, .56);
+  border-radius: 13px;
+  background: linear-gradient(180deg, rgba(13, 35, 59, .84), rgba(5, 12, 23, .9));
+  box-shadow: 0 10px 24px rgba(0,0,0,.38), inset 0 0 0 1px rgba(255,255,255,.08);
+  backdrop-filter: blur(7px);
+  transition: border-color .16s ease, color .16s ease, filter .16s ease, transform .16s ease;
+}
+.discord-home-link svg {
+  width: 25px;
+  height: 25px;
+  fill: currentColor;
+  filter: drop-shadow(0 2px 0 rgba(0, 0, 0, .7));
+}
+.discord-home-link:hover {
+  color: #fff;
+  border-color: #ffe7a4;
+  filter: brightness(1.12);
+  transform: translateY(-1px);
+}
+.discord-home-link:focus-visible {
+  outline: 3px solid rgba(130, 197, 255, .9);
+  outline-offset: 3px;
+}
+.discord-home-link:active {
+  transform: translateY(1px);
 }
 .login-music-mute-btn {
   position: absolute;
@@ -893,6 +938,9 @@ input {
 }
 .map-frame.map-switching {
   cursor: wait;
+  background:
+    radial-gradient(circle at 50% 45%, rgba(63, 78, 78, .24), transparent 46%),
+    linear-gradient(180deg, #101b20 0%, #071218 100%);
 }
 
 @media (max-width: 360px) {
@@ -919,6 +967,14 @@ input {
 }
 .map-frame.map-switching .map-loading-overlay {
   display: grid;
+}
+.map-frame.map-switching .map-loading-panel {
+  opacity: 0;
+  animation: crownlandsMapLoadingPanelIn 160ms ease 300ms forwards;
+}
+@keyframes crownlandsMapLoadingPanelIn {
+  from { opacity: 0; transform: translate3d(0, 3px, 0); }
+  to { opacity: 1; transform: translate3d(0, 0, 0); }
 }
 .map-loading-panel {
   display: grid;
@@ -11672,5 +11728,1612 @@ select:focus {
   .audio-channel-card {
     gap: .42rem;
     padding: .5rem;
+  }
+}
+
+/* Crownlands animation system --------------------------------------------- */
+
+.map-transition-stage {
+  position: absolute;
+  inset: 0;
+  overflow: visible;
+  transform: translate3d(0, 0, 0);
+  backface-visibility: hidden;
+  pointer-events: none;
+}
+
+.map-transition-stage.is-transitioning {
+  opacity: 1;
+  transform: translate3d(0, 0, 0);
+}
+
+.map-transition-stage .map-world {
+  pointer-events: auto;
+}
+
+.map-transition-stage.is-transitioning .map-world {
+  pointer-events: none;
+}
+
+.map-vfx-layer {
+  position: absolute;
+  z-index: 17;
+  left: 0;
+  top: 0;
+  width: 10000px;
+  height: 7600px;
+  overflow: visible;
+  contain: layout style;
+  pointer-events: none;
+  touch-action: none;
+  user-select: none;
+}
+
+.screen-vfx-layer {
+  position: absolute;
+  z-index: 190;
+  inset: 0;
+  overflow: visible;
+  contain: layout style;
+  pointer-events: none;
+  touch-action: none;
+  user-select: none;
+}
+
+.dialog-vfx-layer,
+.crownlands-dialog-vfx-layer {
+  position: fixed;
+  z-index: 20;
+  inset: 0;
+  overflow: visible;
+  contain: layout style;
+  pointer-events: none;
+  touch-action: none;
+  user-select: none;
+}
+
+.animation-settings-section {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  border-color: rgba(211, 161, 63, .38);
+  background: linear-gradient(180deg, rgba(17, 51, 75, .96), rgba(5, 21, 36, .98));
+}
+
+.animation-settings-section .profile-section-heading,
+.animation-settings-section .settings-card-description {
+  grid-column: 1;
+}
+
+.animation-mode-toggle {
+  min-width: min(100%, 290px);
+  display: grid;
+  grid-column: 2;
+  grid-row: 1 / 3;
+  grid-template-columns: repeat(3, minmax(72px, 1fr));
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid rgba(211, 161, 63, .34);
+  border-radius: var(--ui-radius);
+  background: rgba(2, 13, 23, .78);
+  box-shadow: inset 0 2px 8px rgba(0, 0, 0, .34);
+}
+
+.animation-mode-option {
+  min-height: 40px;
+  padding: .38rem .58rem;
+  border: 1px solid transparent;
+  border-radius: var(--ui-radius-small);
+  color: #a9cadd;
+  background: transparent;
+  font-size: .72rem;
+  font-weight: 950;
+  letter-spacing: .02em;
+  transition: color var(--motion-ui-fast) ease, border-color var(--motion-ui-fast) ease, background-color var(--motion-ui-fast) ease, box-shadow var(--motion-ui-fast) ease;
+}
+
+.animation-mode-option:hover,
+.animation-mode-option:focus-visible {
+  color: #fff1bd;
+  border-color: rgba(243, 212, 135, .56);
+}
+
+.animation-mode-option:focus-visible {
+  outline: 2px solid #9ed8f5;
+  outline-offset: 2px;
+}
+
+.animation-mode-option.active,
+.animation-mode-option[aria-pressed="true"] {
+  color: #241707;
+  border-color: #ffe39a;
+  background: linear-gradient(180deg, #f8d77a, #c98a29);
+  box-shadow: inset 0 1px 0 rgba(255, 250, 213, .52), 0 4px 10px rgba(0, 0, 0, .24);
+}
+
+.animation-mode-status {
+  min-width: 0;
+  grid-column: 1 / -1;
+  color: #8fc9e7;
+  font: 750 .64rem/1.3 var(--font-system);
+}
+
+/* Native dialogs retain their top-layer behavior; unsupported browsers fall
+   back to the existing instant open/close without affecting interaction. */
+.modal {
+  opacity: 0;
+  transition:
+    opacity var(--motion-ui-close) ease,
+    display var(--motion-ui-close) allow-discrete,
+    overlay var(--motion-ui-close) allow-discrete;
+}
+
+.modal[open] {
+  opacity: 1;
+  transition-duration: var(--motion-ui-open);
+}
+
+.modal::backdrop {
+  opacity: 0;
+  transition:
+    opacity var(--motion-ui-close) ease,
+    display var(--motion-ui-close) allow-discrete,
+    overlay var(--motion-ui-close) allow-discrete;
+}
+
+.modal[open]::backdrop {
+  opacity: 1;
+  transition-duration: var(--motion-ui-open);
+}
+
+.modal:not(.level-up-reward-modal) > .modal-card {
+  opacity: 0;
+  transform: translate3d(0, 10px, 0) scale(.97);
+  transform-origin: 50% 48%;
+  transition: opacity var(--motion-ui-close) ease, transform var(--motion-ui-close) ease;
+}
+
+.modal:not(.level-up-reward-modal)[open] > .modal-card {
+  opacity: 1;
+  transform: translate3d(0, 0, 0) scale(1);
+  transition-duration: var(--motion-ui-open);
+  transition-timing-function: ease, var(--motion-ease-settle);
+}
+
+.modal.ui-transition-large:not(.level-up-reward-modal) > .modal-card,
+.modal[data-ui-transition="large"]:not(.level-up-reward-modal) > .modal-card,
+.modal:is(.shop-modal, .inventory-modal, .leaderboard-modal, .island-switcher-modal, .city-list-modal):not(.level-up-reward-modal) > .modal-card {
+  transform: translate3d(0, 18px, 0) scale(.985);
+}
+
+.modal.ui-transition-large:not(.level-up-reward-modal)[open] > .modal-card,
+.modal[data-ui-transition="large"]:not(.level-up-reward-modal)[open] > .modal-card,
+.modal:is(.shop-modal, .inventory-modal, .leaderboard-modal, .island-switcher-modal, .city-list-modal):not(.level-up-reward-modal)[open] > .modal-card {
+  transform: translate3d(0, 0, 0) scale(1);
+}
+
+@starting-style {
+  .modal[open],
+  .modal[open]::backdrop {
+    opacity: 0;
+  }
+
+  .modal:not(.level-up-reward-modal)[open] > .modal-card {
+    opacity: 0;
+    transform: translate3d(0, 10px, 0) scale(.97);
+  }
+
+  .modal.ui-transition-large:not(.level-up-reward-modal)[open] > .modal-card,
+  .modal[data-ui-transition="large"]:not(.level-up-reward-modal)[open] > .modal-card,
+  .modal:is(.shop-modal, .inventory-modal, .leaderboard-modal, .island-switcher-modal, .city-list-modal):not(.level-up-reward-modal)[open] > .modal-card {
+    transform: translate3d(0, 18px, 0) scale(.985);
+  }
+}
+
+.profile-screen {
+  display: grid;
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+  transform: translate3d(-50%, calc(-50% + 12px), 0) scale(.985);
+  transform-origin: 50% 48%;
+  transition:
+    visibility 0s linear var(--motion-ui-close),
+    opacity var(--motion-ui-close) ease,
+    transform var(--motion-ui-close) ease;
+}
+
+.profile-screen.open {
+  display: grid;
+  visibility: visible;
+  opacity: 1;
+  pointer-events: auto;
+  transform: translate3d(-50%, -50%, 0) scale(1);
+  transition-delay: 0s;
+  transition-duration: 0s, var(--motion-ui-open), var(--motion-ui-open);
+  transition-timing-function: linear, ease, var(--motion-ease-settle);
+}
+
+.commander-panel {
+  display: block;
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+  transform: translate3d(12px, 0, 0) scale(.985);
+  transform-origin: 100% 50%;
+  transition:
+    visibility 0s linear var(--motion-ui-close),
+    opacity var(--motion-ui-close) ease,
+    transform var(--motion-ui-close) ease;
+}
+
+.commander-panel.visible {
+  display: block;
+  visibility: visible;
+  opacity: 1;
+  pointer-events: auto;
+  transform: translate3d(0, 0, 0) scale(1);
+  transition-delay: 0s;
+  transition-duration: 0s, var(--motion-ui-open), var(--motion-ui-open);
+  transition-timing-function: linear, ease, var(--motion-ease-out);
+}
+
+.ui-tab-entering,
+.is-tab-entering,
+[data-ui-transition="tab"].is-entering,
+.profile-screen.open > :is(.profile-view, .profile-skills-view, .profile-settings-view, .clan-view, .flag-editor-view):not([hidden]),
+.camp-info-tab-panel.ui-tab-entering:not([hidden]) {
+  animation: crownlandsUiTabIn var(--motion-ui-fast) ease both;
+}
+
+@keyframes crownlandsUiTabIn {
+  from { opacity: 0; transform: translate3d(0, 4px, 0); }
+  to { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+
+@keyframes crownlandsUiTabFade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@media (max-width: 640px) {
+  .animation-settings-section {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .animation-mode-toggle {
+    width: 100%;
+    min-width: 0;
+    grid-column: 1;
+    grid-row: auto;
+  }
+}
+
+/* Shared VFX primitives. All animation nodes are decorative and isolated from
+   map/UI hit testing. */
+.crownlands-vfx {
+  --vfx-size: 170px;
+  --vfx-old-primary: #777b7d;
+  --vfx-old-secondary: #d1d1c8;
+  --vfx-new-primary: #2f83d0;
+  --vfx-new-secondary: #bfe8ff;
+  position: absolute;
+  z-index: 1;
+  left: var(--vfx-x, 0px);
+  top: var(--vfx-y, 0px);
+  width: var(--vfx-size);
+  height: var(--vfx-size);
+  transform: translate3d(-50%, -50%, 0);
+  transform-origin: 50% 50%;
+  overflow: visible;
+  contain: layout style;
+  isolation: isolate;
+  pointer-events: none !important;
+  touch-action: none;
+  user-select: none;
+}
+
+.crownlands-vfx--scope-ui {
+  position: fixed;
+  z-index: 2;
+}
+
+.crownlands-vfx--scope-transition {
+  position: absolute;
+  z-index: 3;
+}
+
+.crownlands-vfx__part,
+.crownlands-vfx__particle {
+  position: absolute;
+  display: block;
+  pointer-events: none;
+  backface-visibility: hidden;
+}
+
+.crownlands-vfx__part {
+  left: 50%;
+  top: 50%;
+  transform: translate3d(-50%, -50%, 0);
+}
+
+.crownlands-vfx__particle {
+  z-index: 6;
+  left: 50%;
+  top: 50%;
+  opacity: 0;
+  animation-delay: var(--vfx-delay, 0ms);
+  animation-fill-mode: both;
+}
+
+.crownlands-vfx__particle > img,
+.crownlands-vfx__particle > svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  pointer-events: none;
+}
+
+.crownlands-vfx__particle--spark,
+.crownlands-vfx__particle--gold-sparkle {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #fff4b5;
+  box-shadow: 0 0 5px #ffd86e, 0 0 10px rgba(236, 139, 31, .72);
+  animation: crownlandsVfxSpark 520ms ease-out both;
+}
+
+.crownlands-vfx__particle--spark::after,
+.crownlands-vfx__particle--gold-sparkle::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 18px;
+  height: 2px;
+  transform: translate(-50%, -50%) rotate(var(--vfx-angle, 0deg));
+  border-radius: 999px;
+  background: linear-gradient(90deg, transparent, rgba(255, 230, 144, .82), transparent);
+}
+
+.crownlands-vfx__particle--ember {
+  width: 5px;
+  height: 8px;
+  border-radius: 60% 40% 55% 45%;
+  background: #ffcb52;
+  box-shadow: 0 0 6px #ef651f, 0 0 11px rgba(207, 43, 15, .55);
+  animation: crownlandsVfxEmber 850ms ease-out both;
+}
+
+.crownlands-vfx__particle--smoke {
+  width: 30px;
+  height: 24px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 42% 48%, rgba(77, 72, 66, .64), rgba(31, 29, 28, .38) 58%, transparent 72%);
+  filter: blur(2px);
+  animation: crownlandsVfxSmoke 1080ms ease-out both;
+}
+
+.crownlands-vfx__particle--magic {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #f5d87e;
+  box-shadow: 0 0 7px #ffdd76, 0 0 15px rgba(152, 92, 231, .88);
+  animation: crownlandsVfxMagicRise 980ms ease-out both;
+}
+
+@keyframes crownlandsVfxSpark {
+  0% { opacity: 0; transform: translate3d(-50%, -50%, 0) scale(.3); }
+  18% { opacity: 1; }
+  100% {
+    opacity: 0;
+    transform: translate3d(var(--vfx-offset-x, 24px), var(--vfx-offset-y, -20px), 0) scale(.08);
+  }
+}
+
+@keyframes crownlandsVfxEmber {
+  0% { opacity: 0; transform: translate3d(-50%, 4px, 0) rotate(0deg) scale(.65); }
+  22% { opacity: .95; }
+  100% { opacity: 0; transform: translate3d(var(--vfx-offset-x, 8px), var(--vfx-offset-y, -58px), 0) rotate(115deg) scale(.25); }
+}
+
+@keyframes crownlandsVfxSmoke {
+  0% { opacity: 0; transform: translate3d(-50%, 8px, 0) scale(.45); }
+  24% { opacity: .7; }
+  100% { opacity: 0; transform: translate3d(var(--vfx-offset-x, 5px), var(--vfx-offset-y, -58px), 0) scale(1.45); }
+}
+
+@keyframes crownlandsVfxMagicRise {
+  0% { opacity: 0; transform: translate3d(-50%, 12px, 0) scale(.3); }
+  24% { opacity: 1; }
+  100% { opacity: 0; transform: translate3d(var(--vfx-offset-x, 8px), var(--vfx-offset-y, -70px), 0) scale(.15); }
+}
+
+.crownlands-vfx-target-pulse {
+  animation: crownlandsVfxTargetPulse 520ms var(--motion-ease-out) both;
+}
+
+.crownlands-vfx-target-pulse--gold {
+  --vfx-pulse-color: rgba(245, 190, 62, .8);
+}
+
+.crownlands-vfx-target-pulse--reward-gold {
+  --vfx-pulse-color: rgba(245, 190, 62, .8);
+  animation-duration: 360ms;
+}
+
+.crownlands-vfx-target-pulse--troops {
+  --vfx-pulse-color: rgba(137, 202, 111, .78);
+}
+
+.crownlands-vfx-target-pulse--reward-troops {
+  --vfx-pulse-color: rgba(137, 202, 111, .78);
+  animation-duration: 360ms;
+}
+
+.crownlands-vfx-target {
+  /* Lifecycle hook only. Individual effects opt into visible target styling. */
+}
+
+.crownlands-vfx-target--deed-completed {
+  --vfx-pulse-color: rgba(247, 198, 72, .86);
+  outline: 2px solid rgba(247, 198, 72, .86);
+  outline-offset: 5px;
+  animation: crownlandsVfxTargetOutline 1100ms ease-out both;
+}
+
+.city-node.crownlands-vfx-target--city-attack {
+  animation: crownlandsVfxCityShake 430ms ease-out both;
+}
+
+@keyframes crownlandsVfxTargetPulse {
+  0% { box-shadow: 0 0 0 0 var(--vfx-pulse-color, rgba(255, 220, 115, .76)); }
+  38% { box-shadow: 0 0 0 8px color-mix(in srgb, var(--vfx-pulse-color, #ffd66b) 34%, transparent), 0 0 22px var(--vfx-pulse-color, rgba(255, 220, 115, .76)); }
+  100% { box-shadow: 0 0 0 14px transparent; }
+}
+
+@keyframes crownlandsVfxTargetOutline {
+  0% { outline-color: transparent; outline-offset: 0; }
+  24%, 58% { outline-color: var(--vfx-new-secondary, #ffe49a); outline-offset: 6px; }
+  100% { outline-color: transparent; outline-offset: 13px; }
+}
+
+@keyframes crownlandsVfxCityShake {
+  0%, 100% { transform: translate3d(-50%, -50%, 0); }
+  24% { transform: translate3d(calc(-50% - 1.5px), calc(-50% + .5px), 0); }
+  46% { transform: translate3d(calc(-50% + 1.25px), calc(-50% - .5px), 0); }
+  68% { transform: translate3d(calc(-50% - .65px), -50%, 0); }
+}
+
+/* City combat and construction. */
+.crownlands-vfx--city-attack,
+.crownlands-vfx--city-capture,
+.crownlands-vfx--city-upgrade {
+  --vfx-size: 184px;
+  z-index: 4;
+}
+
+.crownlands-vfx__part--weapons {
+  z-index: 8;
+  width: 92px;
+  height: 82px;
+  transform-origin: 50% 50%;
+  animation: crownlandsVfxWeaponClash 560ms var(--motion-ease-settle) both;
+}
+
+.crownlands-vfx__part--weapons::before,
+.crownlands-vfx__part--weapons::after {
+  content: "";
+  position: absolute;
+  left: 42px;
+  top: 3px;
+  width: 8px;
+  height: 70px;
+  clip-path: polygon(50% 0, 100% 10%, 82% 76%, 100% 79%, 100% 86%, 62% 86%, 62% 100%, 38% 100%, 38% 86%, 0 86%, 0 79%, 18% 76%, 0 10%);
+  background: linear-gradient(90deg, #67737c, #eef3ef 44%, #8b969a 55%, #455057);
+  box-shadow: 0 0 0 1px rgba(26, 29, 31, .72), 0 0 8px rgba(250, 226, 155, .32);
+  transform-origin: 50% 55%;
+}
+
+.crownlands-vfx__part--weapons::before { transform: rotate(43deg); }
+.crownlands-vfx__part--weapons::after { transform: rotate(-43deg); }
+
+.crownlands-vfx__part--dust,
+.crownlands-vfx__part--foundation {
+  z-index: 3;
+  top: 70%;
+  width: 118px;
+  height: 40px;
+  border-radius: 50%;
+  opacity: 0;
+  background:
+    radial-gradient(ellipse at 22% 58%, rgba(192, 160, 116, .62), transparent 42%),
+    radial-gradient(ellipse at 76% 48%, rgba(151, 122, 84, .56), transparent 44%),
+    radial-gradient(ellipse at 50% 68%, rgba(111, 86, 58, .48), transparent 56%);
+  filter: blur(1px);
+  animation: crownlandsVfxDust 680ms ease-out both;
+}
+
+.crownlands-vfx__part--mist {
+  z-index: 1;
+  width: 154px;
+  height: 112px;
+  border-radius: 50%;
+  opacity: 0;
+  background: radial-gradient(ellipse, rgba(132, 23, 22, .24), rgba(92, 11, 15, .08) 52%, transparent 72%);
+  animation: crownlandsVfxMist 620ms ease-out both;
+}
+
+.crownlands-vfx__part--impact {
+  z-index: 5;
+  width: 34px;
+  height: 34px;
+  border: 3px solid rgba(255, 225, 140, .82);
+  border-radius: 50%;
+  opacity: 0;
+  box-shadow: 0 0 13px rgba(255, 163, 55, .62);
+  animation: crownlandsVfxImpactRing 560ms ease-out both;
+}
+
+@keyframes crownlandsVfxWeaponClash {
+  0% { opacity: 0; transform: translate3d(-50%, -50%, 0) scale(1.5) rotate(-7deg); }
+  32% { opacity: 1; transform: translate3d(-50%, -50%, 0) scale(.9) rotate(2deg); }
+  52% { transform: translate3d(-50%, -50%, 0) scale(1.05) rotate(0deg); }
+  100% { opacity: 0; transform: translate3d(-50%, -52%, 0) scale(.96); }
+}
+
+@keyframes crownlandsVfxDust {
+  0% { opacity: 0; transform: translate3d(-50%, -40%, 0) scale(.42); }
+  22% { opacity: .78; }
+  100% { opacity: 0; transform: translate3d(-50%, -58%, 0) scale(1.32); }
+}
+
+@keyframes crownlandsVfxMist {
+  0%, 100% { opacity: 0; transform: translate3d(-50%, -50%, 0) scale(.7); }
+  32% { opacity: 1; transform: translate3d(-50%, -50%, 0) scale(1); }
+}
+
+@keyframes crownlandsVfxImpactRing {
+  0% { opacity: 0; transform: translate3d(-50%, -50%, 0) scale(.2); }
+  22% { opacity: 1; }
+  100% { opacity: 0; transform: translate3d(-50%, -50%, 0) scale(3.2); }
+}
+
+.crownlands-vfx--city-capture .crownlands-vfx__part--dust {
+  width: 144px;
+  height: 50px;
+  animation-duration: 900ms;
+}
+
+.crownlands-vfx__part--ownership-old,
+.crownlands-vfx__part--ownership-new {
+  z-index: 2;
+  top: 62%;
+  width: 130px;
+  height: 54px;
+  border: 4px solid var(--vfx-old-primary);
+  border-radius: 50%;
+  box-shadow: 0 0 17px color-mix(in srgb, var(--vfx-old-primary) 65%, transparent);
+}
+
+.crownlands-vfx__part--ownership-old {
+  animation: crownlandsVfxOwnershipOld 720ms ease both;
+}
+
+.crownlands-vfx__part--ownership-new {
+  border-color: var(--vfx-new-primary);
+  box-shadow: 0 0 18px color-mix(in srgb, var(--vfx-new-primary) 72%, transparent);
+  opacity: 0;
+  animation: crownlandsVfxOwnershipNew 980ms ease-out 230ms both;
+}
+
+.crownlands-vfx__part--banner {
+  z-index: 9;
+  left: 67%;
+  top: 33%;
+  width: 38px;
+  height: 54px;
+  opacity: 0;
+  transform-origin: 0 100%;
+  animation: crownlandsVfxBanner 720ms var(--motion-ease-settle) 300ms both;
+}
+
+.crownlands-vfx__part--banner::before {
+  content: "";
+  position: absolute;
+  left: 4px;
+  top: 0;
+  width: 3px;
+  height: 54px;
+  border-radius: 3px;
+  background: linear-gradient(90deg, #4a2d14, #bc9356, #4a2d14);
+}
+
+.crownlands-vfx__part--banner::after {
+  content: "";
+  position: absolute;
+  left: 7px;
+  top: 5px;
+  width: 29px;
+  height: 24px;
+  clip-path: polygon(0 0, 100% 8%, 82% 52%, 100% 96%, 0 88%);
+  background: linear-gradient(135deg, var(--vfx-new-secondary) 0 28%, var(--vfx-new-primary) 29% 100%);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, .48);
+}
+
+.crownlands-vfx__part--fire {
+  z-index: 7;
+  left: 43%;
+  top: 58%;
+  width: 36px;
+  height: 50px;
+  border-radius: 50% 50% 45% 45%;
+  opacity: 0;
+  background:
+    radial-gradient(ellipse at 50% 76%, #fff2a0 0 12%, #f0a42d 13% 30%, #b83b1f 31% 48%, transparent 50%),
+    radial-gradient(ellipse at 44% 70%, rgba(230, 79, 26, .72), transparent 62%);
+  filter: blur(.4px) drop-shadow(0 0 7px rgba(239, 89, 24, .72));
+  animation: crownlandsVfxFire 980ms ease-out 90ms both;
+}
+
+@keyframes crownlandsVfxOwnershipOld {
+  0%, 20% { opacity: .72; transform: translate3d(-50%, -50%, 0) scale(1); }
+  100% { opacity: 0; transform: translate3d(-50%, -50%, 0) scale(.74); }
+}
+
+@keyframes crownlandsVfxOwnershipNew {
+  0% { opacity: 0; transform: translate3d(-50%, -50%, 0) scale(.55); }
+  42% { opacity: .92; transform: translate3d(-50%, -50%, 0) scale(1.07); }
+  100% { opacity: 0; transform: translate3d(-50%, -50%, 0) scale(1.2); }
+}
+
+@keyframes crownlandsVfxBanner {
+  0% { opacity: 0; transform: translate3d(-50%, -50%, 0) rotate(-12deg) scaleX(.12); }
+  42% { opacity: 1; transform: translate3d(-50%, -50%, 0) rotate(2deg) scaleX(1.06); }
+  78% { opacity: 1; transform: translate3d(-50%, -50%, 0) rotate(-1deg) scaleX(1); }
+  100% { opacity: 0; transform: translate3d(-50%, -50%, 0) rotate(0deg) scaleX(1); }
+}
+
+@keyframes crownlandsVfxFire {
+  0% { opacity: 0; transform: translate3d(-50%, -38%, 0) scale(.35) rotate(-3deg); }
+  25%, 58% { opacity: .92; transform: translate3d(-50%, -52%, 0) scale(1) rotate(3deg); }
+  100% { opacity: 0; transform: translate3d(-50%, -70%, 0) scale(.58) rotate(-2deg); }
+}
+
+.crownlands-vfx--city-upgrade .crownlands-vfx__part--castle-old,
+.crownlands-vfx--city-upgrade .crownlands-vfx__part--castle-new,
+.crownlands-vfx--city-upgrade img.crownlands-vfx__part--castle-old,
+.crownlands-vfx--city-upgrade img.crownlands-vfx__part--castle-new {
+  z-index: 5;
+  width: 112px;
+  height: 112px;
+  object-fit: contain;
+}
+
+.crownlands-vfx--city-upgrade .crownlands-vfx__part--castle-old {
+  animation: crownlandsVfxCastleOld 600ms ease-in both;
+}
+
+.crownlands-vfx--city-upgrade .crownlands-vfx__part--castle-new {
+  opacity: 0;
+  animation: crownlandsVfxCastleNew 880ms var(--motion-ease-settle) 170ms both;
+}
+
+.crownlands-vfx--city-upgrade .crownlands-vfx__part--shimmer {
+  z-index: 7;
+  width: 122px;
+  height: 128px;
+  opacity: 0;
+  background: linear-gradient(110deg, transparent 34%, rgba(255, 235, 153, .76) 48%, transparent 62%);
+  mix-blend-mode: screen;
+  animation: crownlandsVfxShimmer 700ms ease-in-out 250ms both;
+}
+
+.crownlands-vfx--city-upgrade .crownlands-vfx__part--settle {
+  z-index: 2;
+  top: 68%;
+  width: 118px;
+  height: 34px;
+  border: 2px solid rgba(245, 203, 100, .62);
+  border-radius: 50%;
+  opacity: 0;
+  animation: crownlandsVfxSettle 500ms ease-out 520ms both;
+}
+
+@keyframes crownlandsVfxCastleOld {
+  0%, 20% { opacity: 1; transform: translate3d(-50%, -50%, 0) scale(1); }
+  58% { opacity: .72; transform: translate3d(-50%, -45%, 0) scale(1.04, .84); }
+  100% { opacity: 0; transform: translate3d(-50%, -43%, 0) scale(.94, .78); }
+}
+
+@keyframes crownlandsVfxCastleNew {
+  0% { opacity: 0; transform: translate3d(-50%, -35%, 0) scale(.86, .66); }
+  52% { opacity: 1; transform: translate3d(-50%, -53%, 0) scale(1.03, 1.06); }
+  76% { transform: translate3d(-50%, -49%, 0) scale(.985, .97); }
+  100% { opacity: 1; transform: translate3d(-50%, -50%, 0) scale(1); }
+}
+
+@keyframes crownlandsVfxShimmer {
+  0% { opacity: 0; transform: translate3d(-92%, -50%, 0); }
+  38% { opacity: .72; }
+  100% { opacity: 0; transform: translate3d(-8%, -50%, 0); }
+}
+
+@keyframes crownlandsVfxSettle {
+  0% { opacity: 0; transform: translate3d(-50%, -50%, 0) scale(.55); }
+  36% { opacity: .8; }
+  100% { opacity: 0; transform: translate3d(-50%, -50%, 0) scale(1.15); }
+}
+
+/* Reward flights ----------------------------------------------------------- */
+.crownlands-vfx--reward-gold,
+.crownlands-vfx--reward-troops {
+  --vfx-size: 1px;
+  z-index: 12;
+  contain: style;
+}
+
+.crownlands-vfx--reward-gold .crownlands-vfx__particle--coin,
+.crownlands-vfx--reward-troops .crownlands-vfx__particle--troop {
+  left: 0;
+  top: 0;
+  opacity: 0;
+  animation: crownlandsVfxRewardFly 720ms var(--motion-ease-out) var(--vfx-delay, 0ms) both;
+}
+
+.crownlands-vfx--reward-gold .crownlands-vfx__particle--coin {
+  width: 17px;
+  height: 17px;
+  border: 1px solid #fff1a0;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 36% 28%, #fff3aa 0 8%, transparent 9%),
+    linear-gradient(135deg, #ffdf70, #bf7418 72%);
+  box-shadow: inset 0 0 0 2px rgba(116, 61, 9, .28), 0 2px 5px rgba(0, 0, 0, .42), 0 0 7px rgba(247, 187, 56, .52);
+  object-fit: none;
+  object-position: 9999px 9999px;
+}
+
+.crownlands-vfx--reward-gold .crownlands-vfx__particle--coin::after {
+  content: "";
+  position: absolute;
+  inset: 4px;
+  border: 1px solid rgba(111, 61, 10, .52);
+  border-radius: 50%;
+}
+
+.crownlands-vfx--reward-gold .crownlands-vfx__particle--coin > .crownlands-vfx__asset {
+  display: none;
+}
+
+.crownlands-vfx--reward-troops .crownlands-vfx__particle--troop {
+  width: 25px;
+  height: 25px;
+  border: 1px solid rgba(229, 218, 176, .62);
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(60, 77, 54, .94), rgba(20, 32, 24, .98));
+  box-shadow: 0 2px 5px rgba(0, 0, 0, .46), 0 0 8px rgba(127, 178, 105, .42);
+}
+
+.crownlands-vfx--reward-troops .crownlands-vfx__particle--troop > img {
+  padding: 2px;
+  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, .55));
+}
+
+.crownlands-vfx--reward-gold .crownlands-vfx__part--arrival,
+.crownlands-vfx--reward-troops .crownlands-vfx__part--arrival {
+  left: 0;
+  top: 0;
+  z-index: 3;
+  width: 22px;
+  height: 22px;
+  border: 2px solid rgba(255, 226, 126, .78);
+  border-radius: 50%;
+  opacity: 0;
+  animation: crownlandsVfxRewardArrival 430ms ease-out 580ms both;
+}
+
+.crownlands-vfx--reward-troops .crownlands-vfx__part--arrival {
+  border-color: rgba(157, 210, 130, .78);
+}
+
+@keyframes crownlandsVfxRewardFly {
+  0% {
+    opacity: 0;
+    transform: translate3d(calc(var(--vfx-offset-x, 0px) - 50%), calc(var(--vfx-offset-y, 0px) - 50%), 0) rotate(-18deg) scale(.35);
+  }
+  13% {
+    opacity: 1;
+    transform: translate3d(calc(var(--vfx-offset-x, 0px) - 50%), calc(var(--vfx-offset-y, 0px) - 50% - 14px), 0) rotate(8deg) scale(1);
+  }
+  72% { opacity: 1; }
+  100% {
+    opacity: 0;
+    transform: translate3d(calc(var(--vfx-travel-x, 0px) - 50%), calc(var(--vfx-travel-y, 0px) - 50%), 0) rotate(300deg) scale(.42);
+  }
+}
+
+@keyframes crownlandsVfxRewardArrival {
+  0% {
+    opacity: 0;
+    transform: translate3d(calc(var(--vfx-travel-x, 0px) - 50%), calc(var(--vfx-travel-y, 0px) - 50%), 0) scale(.25);
+  }
+  28% { opacity: .9; }
+  100% {
+    opacity: 0;
+    transform: translate3d(calc(var(--vfx-travel-x, 0px) - 50%), calc(var(--vfx-travel-y, 0px) - 50%), 0) scale(2.25);
+  }
+}
+
+/* Camp ownership effects --------------------------------------------------- */
+.crownlands-vfx--camp-gold,
+.crownlands-vfx--camp-warband,
+.crownlands-vfx--camp-relic,
+.crownlands-vfx--camp-deed,
+.crownlands-vfx--deed-completed {
+  --vfx-size: 196px;
+  z-index: 5;
+}
+
+.crownlands-vfx--camp-gold .crownlands-vfx__part--burst {
+  z-index: 2;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  opacity: 0;
+  background: radial-gradient(circle, rgba(255, 249, 192, .95), rgba(245, 184, 52, .46) 36%, transparent 70%);
+  box-shadow: 0 0 26px rgba(247, 184, 50, .66);
+  animation: crownlandsVfxGoldBurst 720ms ease-out both;
+}
+
+.crownlands-vfx--camp-gold .crownlands-vfx__part--shimmer {
+  z-index: 4;
+  width: 126px;
+  height: 142px;
+  opacity: 0;
+  background: linear-gradient(112deg, transparent 34%, rgba(255, 243, 178, .78) 47%, transparent 60%);
+  mix-blend-mode: screen;
+  animation: crownlandsVfxShimmer 680ms ease-in-out 90ms both;
+}
+
+.crownlands-vfx--camp-gold .crownlands-vfx__particle--coin {
+  width: 14px;
+  height: 14px;
+  border: 1px solid #ffe68b;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #ffe477, #ad6718);
+  box-shadow: 0 0 7px rgba(245, 181, 45, .6);
+  animation: crownlandsVfxCampCoin 820ms ease-out var(--vfx-delay, 0ms) both;
+}
+
+.crownlands-vfx--camp-gold .crownlands-vfx__particle--gold-sparkle {
+  animation-name: crownlandsVfxMagicRise;
+  animation-duration: 780ms;
+}
+
+@keyframes crownlandsVfxGoldBurst {
+  0% { opacity: 0; transform: translate3d(-50%, -50%, 0) scale(.2); }
+  22% { opacity: .95; }
+  100% { opacity: 0; transform: translate3d(-50%, -50%, 0) scale(3.3); }
+}
+
+@keyframes crownlandsVfxCampCoin {
+  0% { opacity: 0; transform: translate3d(-50%, 8px, 0) rotateY(0deg) scale(.4); }
+  22% { opacity: 1; }
+  100% { opacity: 0; transform: translate3d(var(--vfx-offset-x, 8px), var(--vfx-offset-y, -66px), 0) rotateY(540deg) scale(.72); }
+}
+
+.crownlands-vfx--camp-warband .crownlands-vfx__part--weapons {
+  top: 44%;
+  animation-duration: 690ms;
+}
+
+.crownlands-vfx--camp-warband .crownlands-vfx__part--shield {
+  z-index: 9;
+  left: 50%;
+  top: 50%;
+  width: 42px;
+  height: 50px;
+  clip-path: polygon(50% 0, 94% 16%, 88% 68%, 50% 100%, 12% 68%, 6% 16%);
+  opacity: 0;
+  background: linear-gradient(135deg, #8a969b, #39464e 58%, #1d282e);
+  box-shadow: inset 0 0 0 4px rgba(229, 212, 166, .22), 0 4px 8px rgba(0, 0, 0, .55);
+  animation: crownlandsVfxShieldImpact 700ms var(--motion-ease-settle) both;
+}
+
+.crownlands-vfx--camp-warband .crownlands-vfx__part--dust {
+  top: 72%;
+  width: 146px;
+}
+
+.crownlands-vfx--camp-warband .crownlands-vfx__part--banner {
+  left: 70%;
+  animation-delay: 250ms;
+}
+
+@keyframes crownlandsVfxShieldImpact {
+  0% { opacity: 0; transform: translate3d(-50%, -50%, 0) scale(1.5) rotate(-8deg); }
+  34% { opacity: 1; transform: translate3d(-50%, -50%, 0) scale(.9) rotate(2deg); }
+  64% { opacity: 1; transform: translate3d(-50%, -50%, 0) scale(1) rotate(0deg); }
+  100% { opacity: 0; transform: translate3d(-50%, -54%, 0) scale(.96); }
+}
+
+.crownlands-vfx--camp-relic .crownlands-vfx__part--glow {
+  z-index: 1;
+  width: 132px;
+  height: 132px;
+  border-radius: 50%;
+  opacity: 0;
+  background: radial-gradient(circle, rgba(246, 211, 106, .3), rgba(126, 72, 208, .24) 45%, transparent 72%);
+  box-shadow: 0 0 34px rgba(135, 76, 219, .46), inset 0 0 28px rgba(246, 209, 100, .24);
+  animation: crownlandsVfxRelicGlow 1080ms ease-in-out both;
+}
+
+.crownlands-vfx--camp-relic .crownlands-vfx__part--rune,
+.crownlands-vfx--camp-relic .crownlands-vfx__part--ring {
+  z-index: 3;
+  top: 64%;
+  width: 132px;
+  height: 52px;
+  border: 3px solid rgba(227, 191, 94, .86);
+  border-radius: 50%;
+  opacity: 0;
+  box-shadow: 0 0 12px rgba(240, 198, 90, .62), inset 0 0 13px rgba(129, 75, 210, .48);
+  animation: crownlandsVfxRelicRune 1050ms ease-out both;
+}
+
+.crownlands-vfx--camp-relic .crownlands-vfx__part--rune::before {
+  content: "";
+  position: absolute;
+  inset: 7px;
+  border: 2px dashed rgba(190, 132, 244, .84);
+  border-radius: 50%;
+}
+
+.crownlands-vfx--camp-relic .crownlands-vfx__part--ring {
+  width: 94px;
+  height: 38px;
+  border-color: rgba(174, 114, 232, .78);
+  animation-delay: 80ms;
+  animation-direction: reverse;
+}
+
+.crownlands-vfx--camp-relic .crownlands-vfx__part--pulse {
+  z-index: 2;
+  width: 52px;
+  height: 52px;
+  border: 3px solid rgba(191, 129, 239, .72);
+  border-radius: 50%;
+  opacity: 0;
+  animation: crownlandsVfxRelicPulse 920ms ease-out 170ms both;
+}
+
+@keyframes crownlandsVfxRelicGlow {
+  0%, 100% { opacity: 0; transform: translate3d(-50%, -50%, 0) scale(.62); }
+  35%, 64% { opacity: 1; transform: translate3d(-50%, -50%, 0) scale(1); }
+}
+
+@keyframes crownlandsVfxRelicRune {
+  0% { opacity: 0; transform: translate3d(-50%, -50%, 0) rotate(-24deg) scale(.5); }
+  30%, 70% { opacity: .92; }
+  100% { opacity: 0; transform: translate3d(-50%, -50%, 0) rotate(42deg) scale(1.12); }
+}
+
+@keyframes crownlandsVfxRelicPulse {
+  0% { opacity: 0; transform: translate3d(-50%, -50%, 0) scale(.3); }
+  26% { opacity: .8; }
+  100% { opacity: 0; transform: translate3d(-50%, -50%, 0) scale(3); }
+}
+
+.crownlands-vfx--camp-deed .crownlands-vfx__part--parchment,
+.crownlands-vfx--deed-completed .crownlands-vfx__part--parchment {
+  z-index: 5;
+  width: 80px;
+  height: 62px;
+  border: 1px solid #8a5b27;
+  border-radius: 5px 8px 4px 7px;
+  opacity: 0;
+  background:
+    linear-gradient(90deg, rgba(111, 68, 28, .12) 1px, transparent 1px) 12px 17px / 56px 9px repeat-y,
+    linear-gradient(135deg, #f3dda7, #c49a5d);
+  box-shadow: inset 0 0 12px rgba(104, 61, 20, .24), 0 6px 12px rgba(0, 0, 0, .44);
+  animation: crownlandsVfxParchment 900ms var(--motion-ease-settle) both;
+}
+
+.crownlands-vfx--camp-deed.is-active-hold {
+  --vfx-size: 168px;
+  opacity: .72;
+}
+
+.crownlands-vfx--camp-deed.is-active-hold .crownlands-vfx__part--hold-ring {
+  z-index: 2;
+  top: 65%;
+  width: 132px;
+  height: 50px;
+  border-radius: 50%;
+  background: conic-gradient(from -90deg, rgba(232, 187, 84, .82) 0 28%, rgba(91, 73, 50, .24) 28% 100%);
+  background: conic-gradient(from -90deg, rgba(232, 187, 84, .82) 0 calc(var(--vfx-progress, 0) * 1turn), rgba(91, 73, 50, .24) 0);
+  -webkit-mask: radial-gradient(ellipse, transparent 60%, #000 62% 71%, transparent 73%);
+  mask: radial-gradient(ellipse, transparent 60%, #000 62% 71%, transparent 73%);
+  filter: drop-shadow(0 0 4px rgba(226, 173, 61, .38));
+}
+
+.crownlands-vfx--camp-deed.is-active-hold .crownlands-vfx__part--hold-seal {
+  z-index: 4;
+  top: 65%;
+  width: 22px;
+  height: 22px;
+  border: 1px solid rgba(255, 216, 133, .6);
+  border-radius: 50%;
+  background: radial-gradient(circle at 36% 30%, #b95742, #63211e);
+  box-shadow: inset 0 0 0 2px rgba(70, 14, 15, .28), 0 2px 4px rgba(0, 0, 0, .44);
+}
+
+.crownlands-vfx--camp-deed.is-active-hold .crownlands-vfx__part--hold-progress {
+  z-index: 3;
+  top: 83%;
+  width: 76px;
+  height: 4px;
+  overflow: hidden;
+  border: 1px solid rgba(206, 164, 75, .58);
+  border-radius: 999px;
+  background: linear-gradient(90deg, #e2b64f 0 50%, rgba(64, 48, 31, .54) 50% 100%);
+  background: linear-gradient(90deg, #e2b64f 0 calc(var(--vfx-progress, 0) * 100%), rgba(64, 48, 31, .54) 0);
+}
+
+.crownlands-vfx__part--seal,
+.crownlands-vfx__part--stamp {
+  z-index: 7;
+  left: 60%;
+  top: 60%;
+  width: 30px;
+  height: 30px;
+  border: 2px solid rgba(255, 193, 122, .52);
+  border-radius: 50%;
+  opacity: 0;
+  background: radial-gradient(circle at 36% 30%, #d4664c, #75251f 72%);
+  box-shadow: inset 0 0 0 3px rgba(74, 16, 17, .32), 0 3px 6px rgba(0, 0, 0, .48);
+  animation: crownlandsVfxSeal 680ms var(--motion-ease-settle) 180ms both;
+}
+
+.crownlands-vfx__part--seal::after,
+.crownlands-vfx__part--stamp::after {
+  content: "";
+  position: absolute;
+  inset: 7px;
+  border: 1px solid rgba(255, 211, 149, .58);
+  transform: rotate(45deg);
+}
+
+.crownlands-vfx--camp-deed .crownlands-vfx__part--outline,
+.crownlands-vfx--deed-completed .crownlands-vfx__part--gold-pulse,
+.crownlands-vfx--deed-completed .crownlands-vfx__part--city-highlight {
+  z-index: 2;
+  top: 66%;
+  width: 126px;
+  height: 48px;
+  border: 3px solid rgba(243, 194, 77, .8);
+  border-radius: 50%;
+  opacity: 0;
+  box-shadow: 0 0 16px rgba(243, 185, 58, .5);
+  animation: crownlandsVfxDeedOutline 960ms ease-out 160ms both;
+}
+
+.crownlands-vfx--deed-completed .crownlands-vfx__part--parchment {
+  width: 96px;
+  height: 72px;
+  animation-duration: 1180ms;
+}
+
+.crownlands-vfx--deed-completed .crownlands-vfx__part--stamp {
+  width: 38px;
+  height: 38px;
+  animation: crownlandsVfxStamp 740ms var(--motion-ease-settle) 260ms both;
+}
+
+.crownlands-vfx--deed-completed .crownlands-vfx__part--city-highlight {
+  width: 152px;
+  height: 62px;
+  animation-delay: 430ms;
+  animation-duration: 900ms;
+}
+
+@keyframes crownlandsVfxParchment {
+  0% { opacity: 0; transform: translate3d(-50%, -35%, 0) scale(.55) rotate(-4deg); }
+  32%, 72% { opacity: 1; transform: translate3d(-50%, -50%, 0) scale(1) rotate(1deg); }
+  100% { opacity: 0; transform: translate3d(-50%, -54%, 0) scale(.96) rotate(0deg); }
+}
+
+@keyframes crownlandsVfxSeal {
+  0% { opacity: 0; transform: translate3d(-50%, -90%, 0) scale(1.45); }
+  42% { opacity: 1; transform: translate3d(-50%, -50%, 0) scale(.88); }
+  65% { transform: translate3d(-50%, -50%, 0) scale(1); }
+  100% { opacity: 0; transform: translate3d(-50%, -50%, 0) scale(1); }
+}
+
+@keyframes crownlandsVfxStamp {
+  0% { opacity: 0; transform: translate3d(-50%, -130%, 0) scale(1.7); }
+  46% { opacity: 1; transform: translate3d(-50%, -50%, 0) scale(.82); }
+  63% { transform: translate3d(-50%, -50%, 0) scale(1.12); }
+  100% { opacity: 0; transform: translate3d(-50%, -50%, 0) scale(1); }
+}
+
+@keyframes crownlandsVfxDeedOutline {
+  0% { opacity: 0; transform: translate3d(-50%, -50%, 0) scale(.48); }
+  28%, 62% { opacity: .9; }
+  100% { opacity: 0; transform: translate3d(-50%, -50%, 0) scale(1.28); }
+}
+
+.crownlands-vfx--camp-gold .crownlands-vfx__part--ownership-new,
+.crownlands-vfx--camp-warband .crownlands-vfx__part--ownership-new,
+.crownlands-vfx--camp-relic .crownlands-vfx__part--ownership-new,
+.crownlands-vfx--camp-deed .crownlands-vfx__part--ownership-new,
+.crownlands-vfx--deed-completed .crownlands-vfx__part--ownership-new {
+  top: 68%;
+  width: 138px;
+  height: 52px;
+}
+
+/* Persistent Deed hold cue: static except for the inexpensive progress fill. */
+.camp-owner-marker,
+.crownlands-camp-owner-marker {
+  position: absolute;
+  z-index: 6;
+  right: 5%;
+  top: 7%;
+  width: 28px;
+  height: 36px;
+  pointer-events: none;
+}
+
+.camp-owner-marker::before,
+.crownlands-camp-owner-marker::before {
+  content: "";
+  position: absolute;
+  left: 2px;
+  top: 0;
+  width: 2px;
+  height: 36px;
+  background: #a9824e;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, .7);
+}
+
+.camp-owner-marker::after,
+.crownlands-camp-owner-marker::after {
+  content: none;
+}
+
+.camp-owner-marker .city-owner-flag,
+.crownlands-camp-owner-marker .city-owner-flag {
+  position: absolute;
+  left: 4px;
+  top: 3px;
+  width: 25px;
+  height: 19px;
+  border-width: 1px;
+  clip-path: polygon(0 0, 100% 8%, 82% 52%, 100% 96%, 0 88%);
+  box-shadow: 0 2px 3px rgba(0, 0, 0, .52);
+}
+
+.camp-owner-marker .city-owner-flag .flag-symbol,
+.crownlands-camp-owner-marker .city-owner-flag .flag-symbol {
+  font-size: .56rem;
+}
+
+.deed-hold-ring,
+.crownlands-deed-hold-ring {
+  --deed-progress: 0%;
+  position: absolute;
+  z-index: 2;
+  left: 50%;
+  top: 55%;
+  width: calc(var(--camp-size, 132px) * .98);
+  height: calc(var(--camp-size, 132px) * .5);
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  opacity: .68;
+  filter: drop-shadow(0 0 4px rgba(226, 173, 61, .42));
+  pointer-events: none;
+}
+
+.deed-hold-ring::before,
+.crownlands-deed-hold-ring::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: conic-gradient(from -90deg, rgba(226, 180, 76, .84) 0 28%, rgba(88, 71, 49, .25) 28% 100%);
+  background: conic-gradient(from -90deg, rgba(226, 180, 76, .84) 0 var(--deed-hold-progress, 0%), rgba(88, 71, 49, .25) 0);
+  -webkit-mask: radial-gradient(ellipse, transparent 61%, #000 63% 71%, transparent 73%);
+  mask: radial-gradient(ellipse, transparent 61%, #000 63% 71%, transparent 73%);
+}
+
+.camp-node.camp-deed.deed-contested .deed-hold-ring {
+  opacity: .82;
+  filter: drop-shadow(0 0 5px rgba(185, 92, 48, .48));
+}
+
+.camp-node.camp-deed.deed-contested .deed-hold-ring::before {
+  background: conic-gradient(from -90deg, rgba(218, 151, 66, .9) 0 var(--deed-hold-progress, 0%), rgba(111, 57, 42, .34) 0);
+}
+
+.deed-hold-seal {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 18px;
+  height: 18px;
+  transform: translate(-50%, -50%);
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(255, 216, 133, .62);
+  border-radius: 50%;
+  color: #f7ddb0;
+  background: radial-gradient(circle at 36% 30%, #b95742, #63211e);
+  box-shadow: inset 0 0 0 2px rgba(70, 14, 15, .28), 0 2px 4px rgba(0, 0, 0, .44);
+  font: 900 8px/1 var(--font-ui);
+}
+
+/* Directional map transition shell ---------------------------------------- */
+.crownlands-map-transition {
+  --map-fog-start-x: 0%;
+  --map-fog-start-y: 0%;
+  --map-fog-exit-x: 0%;
+  --map-fog-exit-y: 0%;
+  --map-cover-duration: 240ms;
+  --map-transition-duration: 420ms;
+  position: absolute;
+  z-index: 84;
+  inset: 0;
+  overflow: hidden;
+  contain: strict;
+  isolation: isolate;
+  pointer-events: none;
+}
+
+.crownlands-map-transition--north {
+  --map-fog-start-y: -105%;
+  --map-fog-exit-y: 105%;
+}
+
+.crownlands-map-transition--south {
+  --map-fog-start-y: 105%;
+  --map-fog-exit-y: -105%;
+}
+
+.crownlands-map-transition--east {
+  --map-fog-start-x: 105%;
+  --map-fog-exit-x: -105%;
+}
+
+.crownlands-map-transition--west {
+  --map-fog-start-x: -105%;
+  --map-fog-exit-x: 105%;
+}
+
+.crownlands-map-transition__part,
+[class*="crownlands-map-transition__part--"] {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.crownlands-map-transition__part--outgoing,
+.crownlands-map-transition__part--incoming {
+  display: none;
+}
+
+.crownlands-map-transition__part--scrim {
+  z-index: 4;
+  inset: -12px;
+  opacity: 0;
+  background:
+    radial-gradient(circle at 52% 44%, rgba(112, 119, 101, .2), transparent 48%),
+    radial-gradient(circle at 18% 72%, rgba(103, 83, 60, .16), transparent 38%),
+    linear-gradient(155deg, rgba(41, 50, 48, .98), rgba(7, 18, 24, 1) 62%),
+    #071218;
+  box-shadow: 0 0 34px rgba(174, 189, 170, .2);
+  backface-visibility: hidden;
+  transform: translate3d(var(--map-fog-start-x), var(--map-fog-start-y), 0);
+  will-change: transform, opacity;
+}
+
+.crownlands-map-transition:is(.is-leaving, .is-loading) .crownlands-map-transition__part--scrim,
+.crownlands-map-transition:is([data-phase="leaving"], [data-phase="loading"]) .crownlands-map-transition__part--scrim {
+  animation: crownlandsMapFogCover var(--map-cover-duration) var(--motion-ease-out) both;
+}
+
+.crownlands-map-transition.is-entering .crownlands-map-transition__part--scrim,
+.crownlands-map-transition[data-phase="entering"] .crownlands-map-transition__part--scrim {
+  animation: crownlandsMapFogReveal var(--map-transition-duration) var(--motion-ease-out) both;
+}
+
+.crownlands-map-transition__part--haze,
+.crownlands-map-transition__part--edge {
+  z-index: 5;
+  inset: -12px;
+  opacity: 0;
+  mix-blend-mode: screen;
+  backface-visibility: hidden;
+  transform: translate3d(var(--map-fog-start-x), var(--map-fog-start-y), 0);
+  will-change: transform, opacity;
+}
+
+.crownlands-map-transition--north .crownlands-map-transition__part--haze,
+.crownlands-map-transition--north .crownlands-map-transition__part--edge {
+  background: linear-gradient(180deg, rgba(221, 238, 229, .44), rgba(145, 174, 169, .14) 16%, transparent 42%);
+}
+
+.crownlands-map-transition--south .crownlands-map-transition__part--haze,
+.crownlands-map-transition--south .crownlands-map-transition__part--edge {
+  background: linear-gradient(0deg, rgba(221, 238, 229, .44), rgba(145, 174, 169, .14) 16%, transparent 42%);
+}
+
+.crownlands-map-transition--east .crownlands-map-transition__part--haze,
+.crownlands-map-transition--east .crownlands-map-transition__part--edge {
+  background: linear-gradient(270deg, rgba(221, 238, 229, .44), rgba(145, 174, 169, .14) 16%, transparent 42%);
+}
+
+.crownlands-map-transition--west .crownlands-map-transition__part--haze,
+.crownlands-map-transition--west .crownlands-map-transition__part--edge {
+  background: linear-gradient(90deg, rgba(221, 238, 229, .44), rgba(145, 174, 169, .14) 16%, transparent 42%);
+}
+
+.crownlands-map-transition:is(.is-leaving, .is-loading) .crownlands-map-transition__part--haze,
+.crownlands-map-transition:is([data-phase="leaving"], [data-phase="loading"]) .crownlands-map-transition__part--haze {
+  animation: crownlandsMapFogHazeCover var(--map-cover-duration) ease-out both;
+}
+
+.crownlands-map-transition:is(.is-leaving, .is-loading) .crownlands-map-transition__part--edge,
+.crownlands-map-transition:is([data-phase="leaving"], [data-phase="loading"]) .crownlands-map-transition__part--edge {
+  animation: crownlandsMapFogEdgeCover var(--map-cover-duration) ease-out both;
+}
+
+.crownlands-map-transition.is-entering .crownlands-map-transition__part--haze,
+.crownlands-map-transition.is-entering .crownlands-map-transition__part--edge,
+.crownlands-map-transition[data-phase="entering"] .crownlands-map-transition__part--edge {
+  animation: crownlandsMapFogHazeReveal var(--map-transition-duration) ease-in both;
+}
+
+.crownlands-map-transition.is-cancelled {
+  opacity: 0;
+  transition: opacity 100ms linear;
+}
+
+@keyframes crownlandsMapFogCover {
+  from { opacity: .78; transform: translate3d(var(--map-fog-start-x), var(--map-fog-start-y), 0); }
+  to { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+
+@keyframes crownlandsMapFogReveal {
+  from { opacity: 1; transform: translate3d(0, 0, 0); }
+  to { opacity: 0; transform: translate3d(var(--map-fog-exit-x), var(--map-fog-exit-y), 0); }
+}
+
+@keyframes crownlandsMapFogHazeCover {
+  from { opacity: 0; transform: translate3d(var(--map-fog-start-x), var(--map-fog-start-y), 0); }
+  to { opacity: .66; transform: translate3d(0, 0, 0); }
+}
+
+@keyframes crownlandsMapFogEdgeCover {
+  0% { opacity: 0; transform: translate3d(var(--map-fog-start-x), var(--map-fog-start-y), 0); }
+  72% { opacity: .82; }
+  100% { opacity: .16; transform: translate3d(0, 0, 0); }
+}
+
+@keyframes crownlandsMapFogHazeReveal {
+  from { opacity: .58; transform: translate3d(0, 0, 0); }
+  to { opacity: 0; transform: translate3d(var(--map-fog-exit-x), var(--map-fog-exit-y), 0); }
+}
+
+/* Motion preferences ------------------------------------------------------- */
+.crownlands-vfx--mode-reduced :is(.crownlands-vfx__part--mist, .crownlands-vfx__part--fire, .crownlands-vfx__particle--smoke, .crownlands-vfx__particle--ember),
+html[data-animation-mode="reduced"] :is(.crownlands-vfx__part--mist, .crownlands-vfx__part--fire, .crownlands-vfx__particle--smoke, .crownlands-vfx__particle--ember) {
+  display: none;
+}
+
+.crownlands-vfx--mode-reduced.crownlands-vfx--reward-gold .crownlands-vfx__particle--coin,
+.crownlands-vfx--mode-reduced.crownlands-vfx--reward-troops .crownlands-vfx__particle--troop,
+html[data-animation-mode="reduced"] :is(.crownlands-vfx--reward-gold .crownlands-vfx__particle--coin, .crownlands-vfx--reward-troops .crownlands-vfx__particle--troop) {
+  animation-name: crownlandsVfxReducedReward;
+  animation-duration: 300ms;
+}
+
+.crownlands-vfx--mode-reduced :is(.crownlands-vfx__part--weapons, .crownlands-vfx__part--shield, .crownlands-vfx__part--parchment, .crownlands-vfx__part--seal, .crownlands-vfx__part--stamp),
+html[data-animation-mode="reduced"] :is(.crownlands-vfx__part--weapons, .crownlands-vfx__part--shield, .crownlands-vfx__part--parchment, .crownlands-vfx__part--seal, .crownlands-vfx__part--stamp) {
+  animation-duration: 360ms;
+}
+
+.crownlands-map-transition--mode-reduced .crownlands-map-transition__part--scrim,
+html[data-animation-mode="reduced"] .crownlands-map-transition .crownlands-map-transition__part--scrim {
+  transform: none;
+}
+
+.crownlands-map-transition--mode-reduced:is(.is-leaving, .is-loading) .crownlands-map-transition__part--scrim,
+html[data-animation-mode="reduced"] .crownlands-map-transition:is(.is-leaving, .is-loading) .crownlands-map-transition__part--scrim {
+  animation-name: crownlandsMapReducedCover !important;
+  animation-duration: 140ms !important;
+}
+
+.crownlands-map-transition--mode-reduced.is-entering .crownlands-map-transition__part--scrim,
+html[data-animation-mode="reduced"] .crownlands-map-transition.is-entering .crownlands-map-transition__part--scrim {
+  animation-name: crownlandsMapReducedReveal !important;
+  animation-duration: 160ms !important;
+}
+
+.crownlands-map-transition--mode-reduced :is(.crownlands-map-transition__part--haze, .crownlands-map-transition__part--edge),
+html[data-animation-mode="reduced"] .crownlands-map-transition :is(.crownlands-map-transition__part--haze, .crownlands-map-transition__part--edge) {
+  display: none;
+}
+
+@keyframes crownlandsVfxReducedReward {
+  0% { opacity: 0; transform: translate3d(0, 3px, 0) scale(.65); }
+  38% { opacity: .9; transform: translate3d(0, 0, 0) scale(1); }
+  100% { opacity: 0; transform: translate3d(0, -3px, 0) scale(.86); }
+}
+
+@keyframes crownlandsMapReducedCover {
+  from { opacity: 0; transform: none; }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes crownlandsMapReducedReveal {
+  from { opacity: 1; transform: none; }
+  to { opacity: 0; transform: none; }
+}
+
+html[data-animation-mode="reduced"] :is(.modal:not(.level-up-reward-modal) > .modal-card, .commander-panel),
+html[data-animation-mode="reduced"] :is(.modal:not(.level-up-reward-modal)[open] > .modal-card, .commander-panel.visible) {
+  transform: none;
+}
+
+html[data-animation-mode="reduced"] .profile-screen,
+html[data-animation-mode="reduced"] .profile-screen.open {
+  transform: translate3d(-50%, -50%, 0);
+}
+
+html[data-animation-mode="reduced"] .level-up-reward-modal .level-up-reward-card {
+  transform: none;
+  transition: opacity var(--motion-ui-fast) ease;
+}
+
+html[data-animation-mode="reduced"] :is(.crownlands-vfx-target-pulse--reward-gold, .crownlands-vfx-target-pulse--reward-troops) {
+  animation-duration: 260ms;
+}
+
+html[data-animation-mode="reduced"] .profile-screen.open > :is(.profile-view, .profile-skills-view, .profile-settings-view, .clan-view, .flag-editor-view):not([hidden]),
+html[data-animation-mode="reduced"] :is(.ui-tab-entering, .is-tab-entering, [data-ui-transition="tab"].is-entering) {
+  animation-name: crownlandsUiTabFade;
+}
+
+html[data-animation-mode="reduced"] :is(
+  .citadel-assault-countdown.imminent,
+  .paths .army-route-flow,
+  .harvest-bonus-node,
+  .city-node.crownlands-vfx-target--city-attack,
+  .city-node.selected .castle-art,
+  .city-node.targeted .city-ring,
+  .city-node.attackable .city-ring,
+  .city-node.supportable .city-ring,
+  .city-node.scout-nearby-target .city-ring,
+  .city-node.regroup-target .city-ring,
+  .daily-login-reward-btn.attention,
+  .incoming-attack-btn,
+  .outgoing-attack-btn
+) {
+  animation: none !important;
+}
+
+html[data-animation-mode="reduced"] .harvest-bonus-node::after {
+  animation: none !important;
+}
+
+html[data-animation-mode="off"] :is(.crownlands-vfx, .crownlands-map-transition) {
+  display: none !important;
+}
+
+html[data-animation-mode="off"] .map-transition-stage.is-transitioning {
+  opacity: 1;
+  transform: none;
+  animation: none !important;
+  will-change: auto;
+}
+
+html[data-animation-mode="off"] :is(
+  .modal,
+  .modal > .modal-card,
+  .level-up-reward-modal .level-up-reward-card,
+  .profile-screen,
+  .commander-panel,
+  .animation-mode-option
+) {
+  transition: none !important;
+}
+
+html[data-animation-mode="off"] .modal::backdrop {
+  transition: none !important;
+}
+
+html[data-animation-mode="off"] :is(
+  .loading-wheel-ring,
+  .loading-wheel-crown,
+  .server-queue-spinner,
+  .citadel-assault-countdown.imminent,
+  .paths .army-route-flow,
+  .harvest-bonus-node,
+  .camp-reward-spinner,
+  .city-node.crownlands-vfx-target--city-attack,
+  .city-node.selected .castle-art,
+  .city-node.targeted .city-ring,
+  .city-node.attackable .city-ring,
+  .city-node.supportable .city-ring,
+  .city-node.scout-nearby-target .city-ring,
+  .city-node.regroup-target .city-ring,
+  .wheel-scout-nearby.armed,
+  .wheel-regroup.armed,
+  .city-wheel-action.busy .wheel-icon,
+  .daily-login-reward-btn.attention,
+  .incoming-attack-btn,
+  .outgoing-attack-btn,
+  .ui-tab-entering,
+  .is-tab-entering,
+  [data-ui-transition="tab"].is-entering
+) {
+  animation: none !important;
+}
+
+html[data-animation-mode="off"] .harvest-bonus-node::after {
+  animation: none !important;
+}
+
+html[data-animation-mode="off"] .profile-screen.open > :is(.profile-view, .profile-skills-view, .profile-settings-view, .clan-view, .flag-editor-view):not([hidden]) {
+  animation: none !important;
+}
+
+html[data-animation-mode="full"] .level-up-reward-modal .level-up-reward-card {
+  transition: transform var(--motion-ui-open) ease, opacity var(--motion-ui-close) ease !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html:not([data-animation-mode]) :is(.crownlands-vfx__part--mist, .crownlands-vfx__part--fire, .crownlands-vfx__particle--smoke, .crownlands-vfx__particle--ember) {
+    display: none;
+  }
+
+  html:not([data-animation-mode]) :is(.modal:not(.level-up-reward-modal) > .modal-card, .commander-panel) {
+    transform: none;
+  }
+
+  html:not([data-animation-mode]) .profile-screen,
+  html:not([data-animation-mode]) .profile-screen.open {
+    transform: translate3d(-50%, -50%, 0);
+  }
+
+  html:not([data-animation-mode]) .profile-screen.open > :is(.profile-view, .profile-skills-view, .profile-settings-view, .clan-view, .flag-editor-view):not([hidden]),
+  html:not([data-animation-mode]) :is(.ui-tab-entering, .is-tab-entering, [data-ui-transition="tab"].is-entering) {
+    animation-name: crownlandsUiTabFade;
+  }
+
+  html:not([data-animation-mode]) :is(
+    .citadel-assault-countdown.imminent,
+    .paths .army-route-flow,
+    .harvest-bonus-node,
+    .city-node.crownlands-vfx-target--city-attack,
+    .city-node.selected .castle-art,
+    .city-node.targeted .city-ring,
+    .city-node.attackable .city-ring,
+    .city-node.supportable .city-ring,
+    .city-node.scout-nearby-target .city-ring,
+    .city-node.regroup-target .city-ring,
+    .daily-login-reward-btn.attention,
+    .incoming-attack-btn,
+    .outgoing-attack-btn
+  ) {
+    animation: none !important;
+  }
+
+  html:not([data-animation-mode]) .harvest-bonus-node::after {
+    animation: none !important;
   }
 }

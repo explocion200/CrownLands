@@ -11,6 +11,7 @@
     victoryPointsExponent: 1.35,
     victoryPointsExponentScale: 2,
     baseAttackPowerPerTroop: 1.25,
+    baseDefensePowerPerTroop: 1.30,
     strongerKingdomAssaultRatio: 2,
     strongerKingdomRaidRatio: 2.5,
     scoutIntelMinutes: 10,
@@ -136,6 +137,7 @@
       const taxPercent = getSkillPercent("taxStewardship", inputs.taxStewardshipLevel);
       const granariesPercent = getSkillPercent("royalGranaries", inputs.royalGranariesLevel);
       const stoneworksPercent = getSkillPercent("stoneworks", inputs.stoneworksLevel);
+      const shieldwallPercent = getSkillPercent("shieldwallDiscipline", inputs.shieldwallDisciplineLevel);
       const guildPercent = getSkillPercent("guildCharters", inputs.guildChartersLevel);
       const packagePercent = clamp(inputs.citadelPackagePercent, 0, 100);
       const upgradePackagePercent = clamp(inputs.citadelUpgradeReductionPercent, 0, 100);
@@ -144,10 +146,13 @@
       const baseTroopsPerHour = getTroopsPerHour(level);
       const baseWall = getBaseWall(level);
       const stoneworksWall = Math.floor(baseWall * (1 + stoneworksPercent / 100));
-      const fullWallPower = Math.floor(stoneworksWall * (1 + packagePercent / 100));
-      const ownerGarrisonBasePower = Math.floor(
-        defenderTroops * (1 + level * read(economy, "cityEconomy.defensePercentPerLevel", 2) / 100)
+      const fullWallPower = stoneworksWall;
+      const baseDefensePowerPerTroop = read(
+        economy,
+        "troopCombat.baseDefensePowerPerTroop",
+        RULES.baseDefensePowerPerTroop
       );
+      const ownerGarrisonBasePower = Math.floor(defenderTroops * baseDefensePowerPerTroop);
       return {
         level,
         victoryPoints: getVictoryPoints(level),
@@ -159,12 +164,16 @@
         stoneworksWall,
         fullWallPower,
         ownerGarrisonBasePower,
-        ownerGarrisonPower: Math.floor(ownerGarrisonBasePower * (1 + packagePercent / 100)),
+        ownerGarrisonPower: Math.floor(
+          defenderTroops * baseDefensePowerPerTroop * (1 + (shieldwallPercent + packagePercent) / 100)
+        ),
         repairMinutes: getRepairMinutes(level),
         upgradeCost: getUpgradeCost(level, guildPercent + upgradePackagePercent),
         taxPercent,
         granariesPercent,
         stoneworksPercent,
+        shieldwallPercent,
+        baseDefensePowerPerTroop,
         guildPercent,
         packagePercent,
         upgradePackagePercent,
@@ -184,6 +193,7 @@
       const city = getCitySnapshot({
         level: inputs.cityLevel,
         stoneworksLevel: inputs.stoneworksLevel,
+        shieldwallDisciplineLevel: inputs.shieldwallDisciplineLevel,
         defenderTroops: inputs.defenderTroops,
         citadelPackagePercent: inputs.objectiveDefensePercent,
       });
@@ -191,13 +201,20 @@
       const reinforcementTroops = Math.max(0, Math.floor(finite(inputs.reinforcementTroops, 0)));
       const reinforcementDefensePercent = clamp(inputs.reinforcementDefensePercent, 0, 100);
       const swordmasteryPercent = getSkillPercent("swordmastery", inputs.swordmasteryLevel);
-      const attackPowerPerTroop = RULES.baseAttackPowerPerTroop * (1 + swordmasteryPercent / 100);
+      const baseAttackPowerPerTroop = read(
+        economy,
+        "troopCombat.baseAttackPowerPerTroop",
+        RULES.baseAttackPowerPerTroop
+      );
+      const attackPowerPerTroop = baseAttackPowerPerTroop * (1 + swordmasteryPercent / 100);
       const attackPower = Math.floor(attackerTroops * attackPowerPerTroop);
       const wallIntegrityPercent = clamp(inputs.wallIntegrityPercent, 0, 100);
       const startingIntegrityBps = Math.floor(wallIntegrityPercent * 100);
       const startingWallPower = Math.floor(city.fullWallPower * startingIntegrityBps / 10_000);
       const reinforcementGarrisonPower = Math.floor(
-        reinforcementTroops * (1 + reinforcementDefensePercent / 100)
+        reinforcementTroops
+          * city.baseDefensePowerPerTroop
+          * (1 + reinforcementDefensePercent / 100)
       );
       const garrisonDefensePower = city.ownerGarrisonPower + reinforcementGarrisonPower;
       const defensePower = startingWallPower + garrisonDefensePower;

@@ -40,8 +40,8 @@ function extractFunction(source, name) {
 for (const [source, label] of [[clientSource, "Client"], [serverSource, "Server"]]) {
   requireMatch(
     source,
-    /const baseTotalDefense = Math\.floor\(baseCityWalls \+ troopDefense\)/,
-    `${label} defense base still includes skill-enhanced walls.`
+    /const baseTotalDefense = Math\.floor\(baseCityWalls \+ baseTroopDefense\)/,
+    `${label} defense base must contain only the base wall and 1.30 soldier base.`
   );
   requireMatch(
     source,
@@ -57,6 +57,11 @@ for (const [source, label] of [[clientSource, "Client"], [serverSource, "Server"
     source,
     /baseGoldProductionPerHour/,
     `${label} does not expose base gold production.`
+  );
+  requireMatch(
+    source,
+    /shieldwallDisciplinePercent[\s\S]*?baseTroopDefense/,
+    `${label} does not expose Shieldwall separately from base soldier defense.`
   );
 
   const goldProductionContext = {};
@@ -121,6 +126,16 @@ requireMatch(
   serverSource,
   /baseTotalDefense: normalizedBaseDefense[\s\S]*?totalDefenseBonus:/,
   "Server battle reports do not persist defense breakdowns."
+);
+requireMatch(
+  serverSource,
+  /function createBattleDefensePowerBreakdown[\s\S]*?baseDefenseBonusPower[\s\S]*?shieldwallDisciplineBonusPower/,
+  "Detailed battle snapshots do not separate the 1.30 base, Shieldwall, and objective soldier-defense layers."
+);
+requireMatch(
+  serverSource,
+  /function splitBattleObjectiveBonusPower[\s\S]*?personalObjectiveBonusPower[\s\S]*?sharedClanBonusPower/,
+  "Detailed battle snapshots do not separate personal and clan objective support."
 );
 requireMatch(
   clientSource,

@@ -1,5 +1,5 @@
 const { initializeApp } = require("firebase-admin/app");
-const { getFirestore } = require("firebase-admin/firestore");
+const { FieldValue, Timestamp, getFirestore } = require("firebase-admin/firestore");
 const crypto = require("node:crypto");
 const realm = require("../release-config.json");
 const economyConfig = require("../economy-config.json");
@@ -17,6 +17,7 @@ db.settings({ ignoreUndefinedProperties: true });
 
 const SKILL_ORDER = [
   "swordmastery",
+  "shieldwallDiscipline",
   "stoneworks",
   "taxStewardship",
   "royalGranaries",
@@ -130,7 +131,7 @@ function presetMapValue() {
   return {
     mapValue: {
       fields: {
-        modelVersion: { integerValue: "2" },
+        modelVersion: { integerValue: "3" },
         activeSlot: { integerValue: "0" },
         slots: { arrayValue: { values: [] } },
       },
@@ -150,6 +151,18 @@ async function attemptClientPresetMutation(user) {
   });
 }
 
+async function attemptClientResetCreditMutation(user) {
+  const url = `http://${firestoreHost}/v1/projects/${projectId}/databases/(default)/documents/players/${user.uid}?updateMask.fieldPaths=freeSkillResetCredits`;
+  return fetch(url, {
+    method: "PATCH",
+    headers: {
+      authorization: `Bearer ${user.token}`,
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({ fields: { freeSkillResetCredits: { integerValue: "99" } } }),
+  });
+}
+
 function assertRejected(response, status, message) {
   assert(!response.ok && response.error?.status === status, `${message}: ${JSON.stringify(response)}`);
 }
@@ -163,9 +176,13 @@ async function main() {
   assert(profile.skillPresets?.slots?.length === 3, "A new profile did not receive all three default preset slots.");
   assert(profile.skillPresets.slots.every(slot => slot.saved === false), "A new profile began with a populated preset.");
   assert(Number(profile.skillPresets.activeSlot || 0) === 0, "A new profile began with an active preset.");
+  assert(Number(profile.upgrades?.shieldwallDiscipline || 0) === 0, "A new profile did not normalize Shieldwall Discipline to Level 0.");
+  assert(Number(profile.freeSkillResetGrantVersion || 0) === 1 && Number(profile.freeSkillResetCredits || 0) === 0, "A new profile incorrectly received a legacy reset credit.");
 
   const clientMutation = await attemptClientPresetMutation(user);
   assert(clientMutation.status === 403, `A client directly changed skillPresets (HTTP ${clientMutation.status}).`);
+  const resetCreditMutation = await attemptClientResetCreditMutation(user);
+  assert(resetCreditMutation.status === 403, `A client directly changed freeSkillResetCredits (HTTP ${resetCreditMutation.status}).`);
 
   await setBuild(profileRef, cityRef, { level: 49, upgrades: savedBuild, gold: 2_000_000 });
   assertRejected(await invokeFunction("renameSkillPreset", user.token, { slot: 1, name: "War Build" }), "FAILED_PRECONDITION", "Preset 1 unlocked before Level 50");
@@ -175,7 +192,7 @@ async function main() {
   assertRejected(await invokeFunction("renameSkillPreset", user.token, { slot: 1, name: "1234567890123456789012345" }), "INVALID_ARGUMENT", "A 25-character preset name was accepted");
   const firstSave = await callFunction("saveSkillPreset", user.token, { slot: 1 });
   assert(firstSave.skillPreset?.goldCharged === 0, "Saving a preset charged gold.");
-  assert(SKILL_ORDER.every(skill => firstSave.skillPreset?.allocation?.[skill] === savedBuild[skill]), "Save did not snapshot all seven authoritative skills.");
+  assert(SKILL_ORDER.every(skill => firstSave.skillPreset?.allocation?.[skill] === savedBuild[skill]), "Save did not snapshot all eight authoritative skills.");
   assert(Number(firstSave.currentUser?.skillPresets?.activeSlot || 0) === 1, "Saving did not mark the saved build as the sole active preset.");
 
   await setBuild(profileRef, cityRef, { level: 74, upgrades: savedBuild, gold: 2_000_000 });
@@ -228,6 +245,31 @@ async function main() {
   assert(Number(afterInsufficient.gold || 0) === Number(beforeInsufficient.gold || 0), "A rejected application consumed gold.");
   assert(SKILL_ORDER.every(skill => Number(afterInsufficient.upgrades?.[skill] || 0) === alternateBuild[skill]), "A rejected application changed skills.");
 
+  await profileRef.set({
+    createdAt: Timestamp.fromMillis(Date.parse("2026-08-07T23:59:59.000Z")),
+    freeSkillResetGrantVersion: FieldValue.delete(),
+    freeSkillResetCredits: FieldValue.delete(),
+  }, { merge: true });
+  await setBuild(profileRef, cityRef, { level: 100, upgrades: alternateBuild, gold: 0 });
+  const freeApply = await callFunction("applySkillPreset", user.token, { slot: 1 });
+  assert(freeApply.skillPreset?.changed === true && freeApply.skillPreset?.freeResetConsumed === true, "An eligible legacy profile did not use its free credit before preset gold.");
+  assert(Number(freeApply.skillPreset?.goldCharged || 0) === 0 && Number(freeApply.currentUser?.gold || 0) === 0, "The legacy preset reset charged gold.");
+  assert(Number(freeApply.currentUser?.freeSkillResetCredits || 0) === 0, "The preset application did not consume the legacy credit exactly once.");
+
+  await setBuild(profileRef, cityRef, { level: 100, upgrades: savedBuild, gold: 0 });
+  await profileRef.set({ freeSkillResetGrantVersion: 1, freeSkillResetCredits: 1 }, { merge: true });
+  const concurrentResets = await Promise.all([
+    invokeFunction("resetSkills", user.token),
+    invokeFunction("resetSkills", user.token),
+  ]);
+  assert(concurrentResets.filter(response => response.ok).length === 1, `Concurrent free resets did not settle exactly once: ${JSON.stringify(concurrentResets)}`);
+  const successfulReset = concurrentResets.find(response => response.ok)?.result;
+  assert(successfulReset?.freeResetConsumed === true && Number(successfulReset?.resetCost || 0) === 0, "The winning free reset did not consume its credit without gold.");
+  profile = (await profileRef.get()).data() || {};
+  assert(Number(profile.freeSkillResetCredits || 0) === 0 && Number(profile.gold || 0) === 0, "Concurrent reset settlement duplicated a credit or charged gold.");
+  assert(SKILL_ORDER.every(skill => Number(profile.upgrades?.[skill] || 0) === 0), "Concurrent reset settlement left an allocated skill.");
+  await setBuild(profileRef, cityRef, { level: 100, upgrades: alternateBuild, gold: 2_000_000 });
+
   const currentPresets = afterInsufficient.skillPresets;
   const makeStale = upgrades => ({
     ...currentPresets,
@@ -241,7 +283,7 @@ async function main() {
   assert(Number(profile.gold || 0) >= 2_000_000, "A stale preset consumed gold.");
   assert(SKILL_ORDER.every(skill => Number(profile.upgrades?.[skill] || 0) === alternateBuild[skill]), "A stale preset changed the current allocation.");
 
-  console.log("Emulator skill presets passed: unlocks, private rules, one active slot, save/rename, atomic apply, no-op, concurrency, and rejection safety.");
+  console.log("Emulator skill presets passed: eight skills, protected one-time legacy resets, unlocks, one active slot, atomic apply, concurrency, and rejection safety.");
 }
 
 main().then(() => process.exit(0)).catch(error => {

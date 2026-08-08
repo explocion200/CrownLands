@@ -120,7 +120,9 @@ const CITY_UPGRADE_EARLY_END_HOURS = economyNumber("cityEconomy.upgradeEarlyEndH
 const CITY_UPGRADE_MID_END_HOURS = economyNumber("cityEconomy.upgradeMidEndHours", 36);
 const CITY_UPGRADE_END_LEVEL_150_HOURS = economyNumber("cityEconomy.upgradeLevel150Hours", 240);
 const CITY_UPGRADE_MAX_TARGET_HOURS = economyNumber("cityEconomy.upgradeMaximumHours", 720);
-const BASE_TROOP_ATTACK_POWER = 1.25;
+const BASE_TROOP_ATTACK_POWER = economyNumber("troopCombat.baseAttackPowerPerTroop", 1.25);
+const BASE_TROOP_DEFENSE_POWER = economyNumber("troopCombat.baseDefensePowerPerTroop", 1.3);
+const DEFENSE_COMBAT_VERSION = Math.max(1, Math.floor(economyNumber("troopCombat.defenseModelVersion", 1)));
 const DEFAULT_MARCH_PERCENT = 0.5;
 const DAILY_NEUTRAL_CAPTURE_LIMIT = 30;
 const NEUTRAL_CITY_COUNT_LIMIT = 30;
@@ -221,7 +223,7 @@ const ATTACK_PROTECTION_DEFENDER_FIRST_XP_MULTIPLIER = 2;
 const ATTACK_PROTECTION_DEFENDER_REPEAT_XP_MULTIPLIER = 1;
 const ATTACK_PROTECTION_DEFENDER_XP_POLICY = "first-protected-battle-per-attacker-world";
 const PROTECTED_ASSAULT_BREACH_VERSION = 1;
-const COMBAT_FORECAST_VERSION = 3;
+const COMBAT_FORECAST_VERSION = 4;
 const ATTACK_COMBAT_SNAPSHOT_VERSION = 1;
 const SIEGE_COMBAT_VERSION = Math.max(1, Math.floor(economyNumber("siegeCombat.modelVersion", 1)));
 const FORTIFICATION_STATE_VERSION = 1;
@@ -354,7 +356,7 @@ const CLAN_SHIELD_CHARGES = new Set(["none", "castle", "lion", "eagle", "crown",
 const CLAN_SHIELD_CHARGE_LAYOUTS = new Set(["center", "paired", "quartered", "chief"]);
 const CLAN_SHIELD_TRIMS = new Set(["plain", "double", "riveted"]);
 const CLAN_SHIELD_FINISHES = new Set(["polished", "weathered", "battleworn"]);
-const GLOBAL_PLAYER_STATS_VERSION = 10;
+const GLOBAL_PLAYER_STATS_VERSION = 11;
 const PLAYER_IDENTITY_SYNC_VERSION = 1;
 const MAIN_CITY_ASSIGNMENT_VERSION = 2;
 const ECONOMY_CITY_CHECKPOINT_MS = 5 * 60 * 1000;
@@ -554,13 +556,13 @@ const CITY_LEVEL_STATS = {
   victoryPointsPerLevel: 4,
   victoryPointsExponent: 1.35,
   victoryPointsExponentScale: 2,
-  defensePercentPerLevel: economyNumber("cityEconomy.defensePercentPerLevel", 2),
   cityWallsBase: economyNumber("cityEconomy.wallDefenseBase", 200),
   cityWallsPerLevel: economyNumber("cityEconomy.wallDefensePerLevel", 28858),
   troopProductionPerVictoryPoint: economyNumber("cityEconomy.troopsPerVictoryPoint", 3),
 };
 const SKILL_CONFIG = {
   swordmastery: { percentPerLevel: economyNumber("skills.swordmastery.percentPerLevel", 2), maxPercent: economyNumber("skills.swordmastery.maxPercent", 60) },
+  shieldwallDiscipline: { percentPerLevel: economyNumber("skills.shieldwallDiscipline.percentPerLevel", 2), maxPercent: economyNumber("skills.shieldwallDiscipline.maxPercent", 60) },
   stoneworks: { percentPerLevel: economyNumber("skills.stoneworks.percentPerLevel", 3), maxPercent: economyNumber("skills.stoneworks.maxPercent", 75) },
   taxStewardship: { percentPerLevel: economyNumber("skills.taxStewardship.percentPerLevel", 3), maxPercent: economyNumber("skills.taxStewardship.maxPercent", 75) },
   royalGranaries: { percentPerLevel: economyNumber("skills.royalGranaries.percentPerLevel", 3), maxPercent: economyNumber("skills.royalGranaries.maxPercent", 75) },
@@ -570,6 +572,7 @@ const SKILL_CONFIG = {
 };
 const SKILL_ORDER = [
   "swordmastery",
+  "shieldwallDiscipline",
   "stoneworks",
   "taxStewardship",
   "royalGranaries",
@@ -578,9 +581,11 @@ const SKILL_ORDER = [
   "fieldMedics",
 ];
 const SKILL_RESET_COST = economyNumber("playerCosts.skillResetGold", 750_000);
+const DEFENSE_SKILL_FREE_RESET_GRANT_VERSION = 1;
+const DEFENSE_SKILL_FREE_RESET_ROLLOUT_AT_MS = Date.parse("2026-08-08T00:00:00.000Z");
 const NEARBY_SCOUT_GOLD_COST = economyNumber("playerCosts.nearbyScoutGold", 75_000);
 const REGROUP_GOLD_COST = economyNumber("playerCosts.regroupGold", 150_000);
-const SKILL_PRESET_MODEL_VERSION = 2;
+const SKILL_PRESET_MODEL_VERSION = 3;
 const SKILL_PRESET_NAME_MAX_LENGTH = 24;
 const SKILL_PRESET_SLOTS = Object.freeze([
   Object.freeze({ slot: 1, unlockLevel: 50 }),
@@ -613,7 +618,7 @@ const CROWN_CITADEL_UPGRADE_COST_REDUCTION_PERCENT = 10;
 const CLAN_OBJECTIVE_BENEFIT_MODEL_VERSION = 1;
 const CLAN_SHARED_OBJECTIVE_MULTIPLIER = 0.5;
 const REINFORCEMENT_CITY_WALL_SHARE = 0.25;
-const BATTLE_SNAPSHOT_MODEL_VERSION = 5;
+const BATTLE_SNAPSHOT_MODEL_VERSION = 6;
 const STRONGHOLD_IDS = new Set([
   GOLD_STRONGHOLD_ID,
   TRAINING_STRONGHOLD_ID,
@@ -2839,6 +2844,20 @@ function getAvailableSkillPoints(character = {}, upgrades = {}) {
   return Math.max(0, getEarnedSkillPoints(character) - getSpentSkillPoints(upgrades));
 }
 
+function normalizeFreeSkillResetState(profile = {}) {
+  const storedVersion = Math.max(0, Math.floor(safeNumber(profile.freeSkillResetGrantVersion, 0)));
+  const storedCredits = Math.max(0, Math.floor(safeNumber(profile.freeSkillResetCredits, 0)));
+  if (storedVersion >= DEFENSE_SKILL_FREE_RESET_GRANT_VERSION) {
+    return { version: storedVersion, credits: storedCredits };
+  }
+  const createdAtMs = timestampToMs(profile.createdAtMs || profile.createdAt);
+  const eligible = !createdAtMs || createdAtMs < DEFENSE_SKILL_FREE_RESET_ROLLOUT_AT_MS;
+  return {
+    version: DEFENSE_SKILL_FREE_RESET_GRANT_VERSION,
+    credits: storedCredits + (eligible ? 1 : 0),
+  };
+}
+
 function reconcileSkillPoints(character = {}, upgrades = {}) {
   const next = normalizeCharacterProgress(character);
   next.skillPoints = getAvailableSkillPoints(next, upgrades);
@@ -3176,7 +3195,11 @@ function getSiegeRepairLevel(target = {}) {
   return isStronghold(target) ? getStrongholdDefenseLevel(target) : clampCityLevel(target.level);
 }
 
-function getCityStats(city = {}, defenderProfile = null, bonuses = {}) {
+function usesSoldierDefenseModel(version = DEFENSE_COMBAT_VERSION, city = {}) {
+  return !isRewardCamp(city) && Math.floor(safeNumber(version, 0)) >= DEFENSE_COMBAT_VERSION;
+}
+
+function getCityStats(city = {}, defenderProfile = null, bonuses = {}, options = {}) {
   const stronghold = isStronghold(city);
   const level = stronghold ? getStrongholdDefenseLevel(city) : clampCityLevel(city.level);
   const victoryPoints = Math.floor(
@@ -3184,26 +3207,57 @@ function getCityStats(city = {}, defenderProfile = null, bonuses = {}) {
       + level * CITY_LEVEL_STATS.victoryPointsPerLevel
       + Math.pow(level, CITY_LEVEL_STATS.victoryPointsExponent) * CITY_LEVEL_STATS.victoryPointsExponentScale
   );
-  const defensePercent = level * CITY_LEVEL_STATS.defensePercentPerLevel;
+  const defenseCombatVersion = Math.max(0, Math.floor(safeNumber(
+    options.defenseCombatVersion,
+    DEFENSE_COMBAT_VERSION
+  )));
+  const soldierDefenseEnabled = usesSoldierDefenseModel(defenseCombatVersion, city);
+  const defensePercent = soldierDefenseEnabled ? 0 : level * 2;
   const baseCityWalls = getBaseCityWalls(level);
   const stoneworksPercent = defenderProfile ? getSkillPercent(defenderProfile, "stoneworks") : 0;
   const cityWalls = Math.floor(baseCityWalls * (1 + stoneworksPercent / 100));
-  const troopDefense = Math.floor((Math.max(0, Math.floor(safeNumber(city.troops, 0)))) * (1 + defensePercent / 100));
-  const cityWallsBonus = Math.max(0, cityWalls - baseCityWalls);
-  const baseTotalDefense = Math.floor(baseCityWalls + troopDefense);
-  const preStrongholdTotalDefense = Math.floor(cityWalls + troopDefense);
+  const troopCount = Math.max(0, Math.floor(safeNumber(city.troops, 0)));
+  const shieldwallDisciplinePercent = soldierDefenseEnabled && defenderProfile
+    ? getSkillPercent(defenderProfile, "shieldwallDiscipline")
+    : 0;
   const strongholdDefenseBonusPercent = Math.max(0, safeNumber(bonuses.cityDefenseBonusPercent, 0));
-  const strongholdDefenseBonus = Math.floor(preStrongholdTotalDefense * strongholdDefenseBonusPercent / 100);
-  const totalDefense = preStrongholdTotalDefense + strongholdDefenseBonus;
+  const baseTroopDefense = soldierDefenseEnabled
+    ? Math.floor(troopCount * BASE_TROOP_DEFENSE_POWER)
+    : troopCount;
+  const troopDefenseBeforeObjective = soldierDefenseEnabled
+    ? Math.floor(troopCount * BASE_TROOP_DEFENSE_POWER * (1 + shieldwallDisciplinePercent / 100))
+    : Math.floor(troopCount * (1 + defensePercent / 100));
+  const troopDefense = soldierDefenseEnabled
+    ? Math.floor(troopCount * BASE_TROOP_DEFENSE_POWER * (
+      1 + (shieldwallDisciplinePercent + strongholdDefenseBonusPercent) / 100
+    ))
+    : troopDefenseBeforeObjective;
+  const cityWallsBonus = Math.max(0, cityWalls - baseCityWalls);
+  const baseTotalDefense = Math.floor(baseCityWalls + baseTroopDefense);
+  const preStrongholdTotalDefense = Math.floor(cityWalls + troopDefenseBeforeObjective);
+  const strongholdDefenseBonus = soldierDefenseEnabled
+    ? Math.max(0, troopDefense - troopDefenseBeforeObjective)
+    : Math.floor(preStrongholdTotalDefense * strongholdDefenseBonusPercent / 100);
+  const totalDefense = soldierDefenseEnabled
+    ? Math.floor(cityWalls + troopDefense)
+    : preStrongholdTotalDefense + strongholdDefenseBonus;
 
   return {
     level,
     victoryPoints,
+    defenseCombatVersion: soldierDefenseEnabled ? DEFENSE_COMBAT_VERSION : 0,
+    baseDefensePowerPerTroop: soldierDefenseEnabled ? BASE_TROOP_DEFENSE_POWER : 1,
     defensePercent,
     baseCityWalls,
     cityWalls,
     cityWallsBonus,
     stoneworksPercent,
+    shieldwallDisciplineLevel: soldierDefenseEnabled && defenderProfile
+      ? getSkillLevel(defenderProfile, "shieldwallDiscipline")
+      : 0,
+    shieldwallDisciplinePercent,
+    baseTroopDefense,
+    troopDefenseBeforeObjective,
     troopDefense,
     baseTotalDefense,
     strongholdDefenseBonusPercent,
@@ -3249,10 +3303,13 @@ function normalizeFortificationState(city = {}, nowMs = Date.now()) {
 
 function getFortificationSnapshot(city = {}, ownerStats = {}, nowMs = Date.now()) {
   const state = normalizeFortificationState(city, nowMs);
-  const objectiveDefenseBonusPercent = Math.max(
+  const troopObjectiveDefenseBonusPercent = Math.max(
     0,
     safeNumber(ownerStats.strongholdDefenseBonusPercent, 0)
   );
+  const objectiveDefenseBonusPercent = Math.floor(safeNumber(ownerStats.defenseCombatVersion, 0)) >= DEFENSE_COMBAT_VERSION
+    ? 0
+    : troopObjectiveDefenseBonusPercent;
   const fullWallPower = Math.max(0, Math.floor(
     Math.max(0, safeNumber(ownerStats.cityWalls, 0))
       * (1 + objectiveDefenseBonusPercent / 100)
@@ -3264,7 +3321,11 @@ function getFortificationSnapshot(city = {}, ownerStats = {}, nowMs = Date.now()
     baseCityWalls: Math.max(0, Math.floor(safeNumber(ownerStats.baseCityWalls, 0))),
     reinforcedCityWalls: Math.max(0, Math.floor(safeNumber(ownerStats.cityWalls, 0))),
     stoneworksPercent: Math.max(0, safeNumber(ownerStats.stoneworksPercent, 0)),
+    defenseCombatVersion: Math.max(0, Math.floor(safeNumber(ownerStats.defenseCombatVersion, 0))),
+    baseDefensePowerPerTroop: Math.max(1, safeNumber(ownerStats.baseDefensePowerPerTroop, 1)),
+    shieldwallDisciplinePercent: Math.max(0, safeNumber(ownerStats.shieldwallDisciplinePercent, 0)),
     objectiveDefenseBonusPercent,
+    troopObjectiveDefenseBonusPercent,
     fullWallPower,
     integrityBps: state.integrityBps,
     currentWallPower,
@@ -3711,8 +3772,11 @@ function getLegacyGlobalStatsKingPower(stats = {}) {
     safeNumber(stats.totalVictoryPoints, 0) * CITY_LEVEL_STATS.troopProductionPerVictoryPoint
   ));
   const replacementPower = Math.floor(sustainableTroopPerHour * KING_POWER_REPLACEMENT_HOURS);
-  const defensiveAdvantage = baseWalls + stationedTroops
-    * averageLevel * CITY_LEVEL_STATS.defensePercentPerLevel / 100;
+  const objectiveDefensePercent = Math.max(0, safeNumber(stats.strongholdDefenseBonusPercent, 0));
+  const baseTroopDefense = stationedTroops * BASE_TROOP_DEFENSE_POWER;
+  const defensiveAdvantage = baseWalls
+    + Math.max(0, baseTroopDefense - stationedTroops)
+    + baseTroopDefense * objectiveDefensePercent / 100;
   const defensivePower = Math.floor(
     Math.max(0, defensiveAdvantage) * KING_POWER_DEFENSIVE_ADVANTAGE_WEIGHT
   );
@@ -4133,6 +4197,13 @@ function calculateCombatResult(attackTroops, target, attackerProfile = null, def
       reinforcedCityWalls: Math.max(0, Math.floor(safeNumber(options.fortification.reinforcedCityWalls, 0))),
       stoneworksPercent: Math.max(0, safeNumber(options.fortification.stoneworksPercent, 0)),
       cityLevelDefensePercent: Math.max(0, safeNumber(options.fortification.cityLevelDefensePercent, 0)),
+      defenseCombatVersion: Math.max(0, Math.floor(safeNumber(options.fortification.defenseCombatVersion, 0))),
+      baseDefensePowerPerTroop: Math.max(1, safeNumber(options.fortification.baseDefensePowerPerTroop, 1)),
+      shieldwallDisciplinePercent: Math.max(0, safeNumber(options.fortification.shieldwallDisciplinePercent, 0)),
+      troopObjectiveDefenseBonusPercent: Math.max(0, safeNumber(
+        options.fortification.troopObjectiveDefenseBonusPercent,
+        0
+      )),
       objectiveDefenseBonusPercent: Math.max(0, safeNumber(options.fortification.objectiveDefenseBonusPercent, 0)),
       fullWallPower,
       startingIntegrityBps,
@@ -6725,13 +6796,22 @@ function getPlayerIdentitySyncSignature(identity = {}) {
 
 function createScoutReportSnapshot(target = {}, defenderProfile = null, nowMs = Date.now(), bonuses = {}, statsOverride = null, defensePackages = null) {
   const stats = statsOverride || getCityStats(target, defenderProfile, bonuses);
-  const baseTroopDefense = Math.max(0, Math.floor(safeNumber(target.troops, 0)));
-  const troopDefense = Math.floor(baseTroopDefense * (1 + stats.defensePercent / 100));
+  const troopCount = Math.max(0, Math.floor(safeNumber(target.troops, 0)));
+  const troopDefense = Math.max(0, Math.floor(safeNumber(stats.troopDefense, troopCount)));
   const reinforcements = (Array.isArray(defensePackages?.reinforcements) ? defensePackages.reinforcements : [])
     .map(row => ({
       ownerUid: safeString(row?.ownerUid, 128),
       ownerName: normalizePlayerName(row?.ownerName, "Ruler"),
+      ownerFlag: normalizeServerFlag(row?.ownerFlag),
       troops: Math.max(0, Math.floor(safeNumber(row?.troops, 0))),
+      defenseCombatVersion: Math.max(0, Math.floor(safeNumber(row?.defenseCombatVersion, 0))),
+      baseDefensePowerPerTroop: Math.max(1, safeNumber(row?.baseDefensePowerPerTroop, 1)),
+      basePower: Math.max(0, Math.floor(safeNumber(row?.basePower, row?.troops))),
+      shieldwallDisciplineLevel: Math.max(0, Math.floor(safeNumber(row?.shieldwallDisciplineLevel, 0))),
+      shieldwallDisciplinePercent: Math.max(0, safeNumber(row?.shieldwallDisciplinePercent, 0)),
+      personalDefenseBonusPercent: Math.max(0, safeNumber(row?.personalBonusPercent, 0)),
+      sharedDefenseBonusPercent: Math.max(0, safeNumber(row?.sharedBonusPercent, 0)),
+      effectivePower: Math.max(0, Math.floor(safeNumber(row?.effectivePower, row?.basePower))),
     }))
     .filter(row => row.ownerUid && row.troops > 0)
     .slice(0, 50);
@@ -6743,7 +6823,11 @@ function createScoutReportSnapshot(target = {}, defenderProfile = null, nowMs = 
       reinforcedCityWalls: Math.max(0, Math.floor(safeNumber(stats.cityWalls, 0))),
       stoneworksPercent: Math.max(0, safeNumber(stats.stoneworksPercent, 0)),
       cityLevelDefensePercent: Math.max(0, safeNumber(stats.defensePercent, 0)),
-      objectiveDefenseBonusPercent: Math.max(0, safeNumber(stats.strongholdDefenseBonusPercent, 0)),
+      objectiveDefenseBonusPercent: Math.max(0, safeNumber(defensePackages.fortification.objectiveDefenseBonusPercent, 0)),
+      troopObjectiveDefenseBonusPercent: Math.max(0, safeNumber(stats.strongholdDefenseBonusPercent, 0)),
+      defenseCombatVersion: Math.max(0, Math.floor(safeNumber(defensePackages.defenseCombatVersion, 0))),
+      baseDefensePowerPerTroop: Math.max(1, safeNumber(stats.baseDefensePowerPerTroop, 1)),
+      shieldwallDisciplinePercent: Math.max(0, safeNumber(stats.shieldwallDisciplinePercent, 0)),
       fullWallPower: Math.max(0, Math.floor(safeNumber(defensePackages.fortification.fullWallPower, 0))),
       currentWallPower: Math.max(0, Math.floor(safeNumber(defensePackages.fortification.currentWallPower, 0))),
       integrityBps: clampInt(defensePackages.fortification.integrityBps, 0, 10_000),
@@ -6761,7 +6845,7 @@ function createScoutReportSnapshot(target = {}, defenderProfile = null, nowMs = 
     : null;
   const ownerTroops = Math.max(0, Math.floor(safeNumber(
     defensePackages?.owner?.troops,
-    Math.max(0, baseTroopDefense - reinforcementTroops)
+    Math.max(0, troopCount - reinforcementTroops)
   )));
   const skillSnapshot = {};
   for (const skill of SKILL_ORDER) {
@@ -6769,7 +6853,7 @@ function createScoutReportSnapshot(target = {}, defenderProfile = null, nowMs = 
     skillSnapshot[`${skill}Percent`] = defenderProfile ? getSkillPercent(defenderProfile, skill) : 0;
   }
   return {
-    troops: baseTroopDefense,
+    troops: troopCount,
     ownerTroops,
     reinforcementTroops,
     reinforcements,
@@ -6777,6 +6861,8 @@ function createScoutReportSnapshot(target = {}, defenderProfile = null, nowMs = 
     baseTotalDefense: Math.floor(stats.baseTotalDefense),
     totalDefenseBonus: Math.floor(stats.totalDefenseBonus),
     siegeCombatVersion: fortification ? SIEGE_COMBAT_VERSION : 0,
+    defenseCombatVersion: Math.max(0, Math.floor(safeNumber(stats.defenseCombatVersion, 0))),
+    baseDefensePowerPerTroop: Math.max(1, safeNumber(stats.baseDefensePowerPerTroop, 1)),
     fortification,
     owner: getOwnerUid(target) ? "enemy" : "neutral",
     ownerUid: safeString(getOwnerUid(target), 128),
@@ -6787,7 +6873,7 @@ function createScoutReportSnapshot(target = {}, defenderProfile = null, nowMs = 
     baseCityWalls: stats.baseCityWalls,
     cityWalls: stats.cityWalls,
     troopDefense,
-    cityDefenseBonus: Math.max(0, troopDefense - baseTroopDefense),
+    cityDefenseBonus: Math.max(0, troopDefense - troopCount),
     strongholdDefenseBonusPercent: stats.strongholdDefenseBonusPercent,
     strongholdDefenseBonus: stats.strongholdDefenseBonus,
     stoneworksBonus: Math.max(0, stats.cityWalls - stats.baseCityWalls),
@@ -6889,6 +6975,9 @@ function makeReport({
   type,
   outcome,
   eventKind = "",
+  rewardEventId = "",
+  rewardSourceId = "",
+  rewardSourceRegionId = "",
   city,
   opponentUid = "",
   opponentName = "",
@@ -6919,6 +7008,9 @@ function makeReport({
     Math.floor(safeNumber(result.defensePower, 0))
   );
   const defenseBreakdown = defenseStats || scoutReport;
+  const normalizedRewardEventId = safeString(rewardEventId, 160);
+  const normalizedRewardSourceId = safeString(rewardSourceId, 96);
+  const normalizedRewardSourceRegionId = safeString(rewardSourceRegionId, 80);
   const normalizedBaseDefense = Math.min(
     normalizedTotalDefense,
     Math.max(0, Math.floor(safeNumber(defenseBreakdown?.baseTotalDefense, normalizedTotalDefense)))
@@ -6930,6 +7022,9 @@ function makeReport({
     type,
     outcome,
     eventKind: safeString(eventKind, 48),
+    ...(normalizedRewardEventId ? { rewardEventId: normalizedRewardEventId } : {}),
+    ...(normalizedRewardSourceId ? { rewardSourceId: normalizedRewardSourceId } : {}),
+    ...(normalizedRewardSourceRegionId ? { rewardSourceRegionId: normalizedRewardSourceRegionId } : {}),
     cityId: safeString(city?.id, 96),
     regionId: safeString(city?.regionId || city?.startPool || "", 80),
     cityName: safeString(city?.name || city?.id || "Unknown city", 40),
@@ -6962,6 +7057,10 @@ function makeReport({
     attackProtection: normalizeAttackProtectionSnapshot(attackProtection),
     launchCombatForecast: normalizeCombatForecast(launchCombatForecast),
     siegeCombatVersion: result.fortification ? SIEGE_COMBAT_VERSION : 0,
+    defenseCombatVersion: Math.max(0, Math.floor(safeNumber(
+      result.fortification?.defenseCombatVersion,
+      defenseBreakdown?.defenseCombatVersion
+    ))),
     fortification: normalizeCombatFortificationSnapshot(result.fortification),
     defenderXpMultiplierApplied: Math.max(0, safeNumber(defenderXpMultiplierApplied, 1)),
     firstProtectedDefenseBonus: firstProtectedDefenseBonus === true,
@@ -7064,21 +7163,39 @@ function getBattleAttackerBasePower({
 function createBattleDefensePowerBreakdown(row = {}, { siege = false } = {}) {
   const startingTroops = Math.max(0, Math.floor(safeNumber(row.startingTroops ?? row.troops, 0)));
   const basePower = Math.max(startingTroops, Math.floor(safeNumber(row.basePower, startingTroops)));
+  const soldierDefenseEnabled = Math.floor(safeNumber(row.defenseCombatVersion, 0)) >= DEFENSE_COMBAT_VERSION;
   const fortificationPower = siege
     ? 0
     : Math.min(basePower - startingTroops, Math.max(0, Math.floor(safeNumber(
       row.fortifications?.totalDefense,
       row.fortifications?.cityWalls
     ))));
-  const cityLevelDefensePower = Math.max(0, basePower - startingTroops - fortificationPower);
+  const baseDefenseBonusPower = soldierDefenseEnabled
+    ? Math.max(0, basePower - startingTroops)
+    : 0;
+  const cityLevelDefensePower = soldierDefenseEnabled
+    ? 0
+    : Math.max(0, basePower - startingTroops - fortificationPower);
   const effectivePower = Math.max(basePower, Math.floor(safeNumber(row.effectivePower, basePower)));
+  const shieldwallPercent = soldierDefenseEnabled
+    ? Math.max(0, safeNumber(row.shieldwallDisciplinePercent, 0))
+    : 0;
+  const personalPercent = Math.max(0, safeNumber(row.personalDefenseBonusPercent ?? row.personalBonusPercent, 0));
+  const sharedPercent = Math.max(0, safeNumber(row.sharedDefenseBonusPercent ?? row.sharedBonusPercent, 0));
+  const totalBonusPower = Math.max(0, effectivePower - basePower);
+  const combinedPercent = shieldwallPercent + personalPercent + sharedPercent;
+  const shieldwallDisciplineBonusPower = soldierDefenseEnabled && combinedPercent > 0
+    ? Math.floor(totalBonusPower * shieldwallPercent / combinedPercent)
+    : 0;
   const objective = splitBattleObjectiveBonusPower(
-    effectivePower - basePower,
-    row.personalDefenseBonusPercent ?? row.personalBonusPercent,
-    row.sharedDefenseBonusPercent ?? row.sharedBonusPercent
+    totalBonusPower - shieldwallDisciplineBonusPower,
+    personalPercent,
+    sharedPercent
   );
   return {
     baseTroopDefensePower: startingTroops,
+    baseDefenseBonusPower,
+    shieldwallDisciplineBonusPower,
     cityLevelDefensePower,
     legacyFortificationPower: fortificationPower,
     ...objective,
@@ -7169,6 +7286,10 @@ function createDetailedBattleSnapshot({
       personalDefenseBonusPercent: row.personalBonusPercent,
       sharedDefenseBonusPercent: row.sharedBonusPercent,
       totalDefenseBonusPercent: row.bonusPercent,
+      defenseCombatVersion: row.defenseCombatVersion,
+      baseDefensePowerPerTroop: row.baseDefensePowerPerTroop,
+      shieldwallDisciplineLevel: row.shieldwallDisciplineLevel,
+      shieldwallDisciplinePercent: row.shieldwallDisciplinePercent,
       effectivePower: row.effectivePower,
       objectiveSource: safeString(row.objectiveSource, 48),
       losses: Math.max(0, Math.floor(safeNumber(settled.losses, 0))),
@@ -7233,6 +7354,10 @@ function createDetailedBattleSnapshot({
     clan: battleClanIdentity(defenderProfile),
     startingTroops: ownerTroops,
     basePower: defensePackages.owner.basePower,
+    defenseCombatVersion: defensePackages.owner.defenseCombatVersion,
+    baseDefensePowerPerTroop: defensePackages.owner.baseDefensePowerPerTroop,
+    shieldwallDisciplineLevel: defensePackages.owner.shieldwallDisciplineLevel,
+    shieldwallDisciplinePercent: defensePackages.owner.shieldwallDisciplinePercent,
     personalDefenseBonusPercent: Math.max(
       0,
       safeNumber(defenderBonuses.personalDefenseBonusPercent, defenderBonuses.cityDefenseBonusPercent)
@@ -7258,6 +7383,8 @@ function createDetailedBattleSnapshot({
   );
   const defensePowerBreakdown = {
     baseTroopDefensePower: defenderSnapshot.powerBreakdown.baseTroopDefensePower,
+    baseDefenseBonusPower: defenderSnapshot.powerBreakdown.baseDefenseBonusPower,
+    shieldwallDisciplineBonusPower: defenderSnapshot.powerBreakdown.shieldwallDisciplineBonusPower,
     cityLevelDefensePower: defenderSnapshot.powerBreakdown.cityLevelDefensePower,
     baseWallPower: wallPowerBreakdown.baseWallPower,
     stoneworksWallBonusPower: wallPowerBreakdown.stoneworksWallBonusPower,
@@ -7271,6 +7398,8 @@ function createDetailedBattleSnapshot({
   };
   const attributedDefensePower = [
     defensePowerBreakdown.baseTroopDefensePower,
+    defensePowerBreakdown.baseDefenseBonusPower,
+    defensePowerBreakdown.shieldwallDisciplineBonusPower,
     defensePowerBreakdown.cityLevelDefensePower,
     defensePowerBreakdown.baseWallPower,
     defensePowerBreakdown.stoneworksWallBonusPower,
@@ -7313,6 +7442,7 @@ function createDetailedBattleSnapshot({
     modelVersion: BATTLE_SNAPSHOT_MODEL_VERSION,
     combatModel: siege ? "city_wall_then_garrison" : "reinforcement_quarter_walls_full_stoneworks",
     siegeCombatVersion: siege ? SIEGE_COMBAT_VERSION : 0,
+    defenseCombatVersion: Math.max(0, Math.floor(safeNumber(defensePackages.defenseCombatVersion, 0))),
     worldId: ONLINE_WORLD_ID,
     resetGeneration: RESET_GENERATION,
     participantUids: participants,
@@ -7325,6 +7455,8 @@ function createDetailedBattleSnapshot({
       level: clampCityLevel(target.level || 1),
       fortifications: {
         cityLevelDefensePercent: defensePackages.owner.cityLevelDefensePercent,
+        baseDefensePowerPerTroop: defensePackages.owner.baseDefensePowerPerTroop,
+        shieldwallDisciplinePercent: defensePackages.owner.shieldwallDisciplinePercent,
         baseCityWalls: defensePackages.owner.baseCityWalls,
         cityWalls: defensePackages.owner.cityWalls,
         stoneworksPercent: defensePackages.owner.stoneworksPercent,
@@ -7537,6 +7669,7 @@ async function getAuthoritativeDefensePackages(transaction, {
   ownerProfile = {},
   ownerGlobalStats = {},
   siegeCombatVersion = SIEGE_COMBAT_VERSION,
+  defenseCombatVersion = DEFENSE_COMBAT_VERSION,
   nowMs = Date.now(),
 } = {}) {
   const targetOwnerUid = safeString(getOwnerUid(target), 128);
@@ -7579,6 +7712,7 @@ async function getAuthoritativeDefensePackages(transaction, {
       contributorProfiles,
       contributorStats,
       siegeCombatVersion,
+      defenseCombatVersion,
       nowMs,
     }),
   };
@@ -8065,9 +8199,12 @@ function calculateDefenderArmyPackages({
   contributorProfiles = new Map(),
   contributorStats = new Map(),
   siegeCombatVersion = 0,
+  defenseCombatVersion = DEFENSE_COMBAT_VERSION,
   nowMs = Date.now(),
 } = {}) {
   const siegeEnabled = usesSiegeCombat(siegeCombatVersion, targetType);
+  const soldierDefenseEnabled = siegeEnabled
+    && usesSoldierDefenseModel(defenseCombatVersion, target);
   const ownerTroops = getTargetOwnerTroops(target, targetType);
   const ownerTarget = {
     ...target,
@@ -8075,13 +8212,20 @@ function calculateDefenderArmyPackages({
     troopFloat: ownerTroops,
     alliedReinforcementTroops: 0,
   };
-  const ownerStats = getCityStats(ownerTarget, ownerProfile, ownerBonuses);
+  const ownerStats = getCityStats(ownerTarget, ownerProfile, ownerBonuses, {
+    defenseCombatVersion: soldierDefenseEnabled ? DEFENSE_COMBAT_VERSION : 0,
+  });
   const fortification = siegeEnabled ? getFortificationSnapshot(target, ownerStats, nowMs) : null;
   const ownerBasePower = siegeEnabled
-    ? Math.max(0, Math.floor(safeNumber(ownerStats.troopDefense, 0)))
+    ? Math.max(0, Math.floor(safeNumber(
+      soldierDefenseEnabled ? ownerStats.baseTroopDefense : ownerStats.troopDefense,
+      0
+    )))
     : Math.max(0, ownerStats.totalDefense - ownerStats.strongholdDefenseBonus);
   const ownerEffectivePower = siegeEnabled
-    ? Math.max(0, Math.floor(ownerBasePower * (1 + ownerStats.strongholdDefenseBonusPercent / 100)))
+    ? soldierDefenseEnabled
+      ? Math.max(0, Math.floor(safeNumber(ownerStats.troopDefense, 0)))
+      : Math.max(0, Math.floor(ownerBasePower * (1 + ownerStats.strongholdDefenseBonusPercent / 100)))
     : Math.max(0, Math.floor(safeNumber(ownerStats.totalDefense, 0)));
   const ownerPackage = {
     ownerUid: safeString(getOwnerUid(target), 128),
@@ -8091,6 +8235,16 @@ function calculateDefenderArmyPackages({
     basePower: ownerBasePower,
     bonusPercent: Math.max(0, safeNumber(ownerStats.strongholdDefenseBonusPercent, 0)),
     effectivePower: ownerEffectivePower,
+    defenseCombatVersion: soldierDefenseEnabled ? DEFENSE_COMBAT_VERSION : 0,
+    baseDefensePowerPerTroop: soldierDefenseEnabled ? BASE_TROOP_DEFENSE_POWER : 1,
+    shieldwallDisciplineLevel: Math.max(0, Math.floor(safeNumber(ownerStats.shieldwallDisciplineLevel, 0))),
+    shieldwallDisciplinePercent: Math.max(0, safeNumber(ownerStats.shieldwallDisciplinePercent, 0)),
+    personalBonusPercent: Math.max(0, safeNumber(
+      ownerBonuses.personalDefenseBonusPercent,
+      ownerStats.strongholdDefenseBonusPercent
+    )),
+    sharedBonusPercent: Math.max(0, safeNumber(ownerBonuses.sharedDefenseBonusPercent, 0)),
+    objectiveSource: safeString(ownerBonuses.objectiveSource || ownerBonuses.source, 48),
     cityLevelDefensePercent: Math.max(0, safeNumber(ownerStats.defensePercent, 0)),
     baseCityWalls: Math.max(0, Math.floor(safeNumber(ownerStats.baseCityWalls, 0))),
     cityWalls: Math.max(0, Math.floor(safeNumber(ownerStats.cityWalls, 0))),
@@ -8101,6 +8255,12 @@ function calculateDefenderArmyPackages({
     const stats = contributorStats.get(contribution.ownerUid) || {};
     const troops = Math.max(0, Math.floor(safeNumber(contribution.troops, 0)));
     const bonusPercent = Math.max(0, safeNumber(stats.strongholdDefenseBonusPercent, 0));
+    const shieldwallDisciplineLevel = soldierDefenseEnabled
+      ? getSkillLevel(profile, "shieldwallDiscipline")
+      : 0;
+    const shieldwallDisciplinePercent = soldierDefenseEnabled
+      ? getSkillPercent(profile, "shieldwallDiscipline")
+      : 0;
     const fortifications = siegeEnabled
       ? {
         baseCityWalls: Math.max(0, Math.floor(safeNumber(ownerStats.baseCityWalls, 0))),
@@ -8111,7 +8271,14 @@ function calculateDefenderArmyPackages({
         totalDefense: 0,
       }
       : calculateReinforcementFortificationDefense(ownerStats.baseCityWalls, profile);
-    const basePower = troops + fortifications.totalDefense;
+    const basePower = soldierDefenseEnabled
+      ? Math.floor(troops * BASE_TROOP_DEFENSE_POWER)
+      : troops + fortifications.totalDefense;
+    const effectivePower = soldierDefenseEnabled
+      ? Math.floor(troops * BASE_TROOP_DEFENSE_POWER * (
+        1 + (shieldwallDisciplinePercent + bonusPercent) / 100
+      ))
+      : Math.floor(basePower * (1 + bonusPercent / 100));
     return {
       reinforcementId: contribution.id,
       ownerUid: safeString(contribution.ownerUid, 128),
@@ -8120,6 +8287,10 @@ function calculateDefenderArmyPackages({
       troops,
       basePower,
       bonusPercent,
+      defenseCombatVersion: soldierDefenseEnabled ? DEFENSE_COMBAT_VERSION : 0,
+      baseDefensePowerPerTroop: soldierDefenseEnabled ? BASE_TROOP_DEFENSE_POWER : 1,
+      shieldwallDisciplineLevel,
+      shieldwallDisciplinePercent,
       personalBonusPercent: Math.max(0, safeNumber(stats.personalStrongholdDefenseBonusPercent, bonusPercent)),
       sharedBonusPercent: Math.max(0, safeNumber(stats.sharedClanDefenseBonusPercent, 0)),
       objectiveSource: safeString(stats.strongholdBonusSource, 48),
@@ -8129,7 +8300,7 @@ function calculateDefenderArmyPackages({
       stoneworksPercent: fortifications.stoneworksPercent,
       stoneworksBonus: fortifications.stoneworksBonus,
       fortificationPower: fortifications.totalDefense,
-      effectivePower: Math.max(0, Math.floor(basePower * (1 + bonusPercent / 100))),
+      effectivePower: Math.max(0, effectivePower),
     };
   }).filter(row => row.ownerUid && row.troops > 0);
   const totalGarrisonDefense = Math.max(
@@ -8137,15 +8308,29 @@ function calculateDefenderArmyPackages({
     ownerPackage.effectivePower
       + reinforcementPackages.reduce((total, row) => total + row.effectivePower, 0)
   );
+  const resolvedFortification = fortification ? {
+    ...fortification,
+    defenseCombatVersion: soldierDefenseEnabled ? DEFENSE_COMBAT_VERSION : 0,
+    baseDefensePowerPerTroop: soldierDefenseEnabled ? BASE_TROOP_DEFENSE_POWER : 1,
+    shieldwallDisciplinePercent: ownerPackage.shieldwallDisciplinePercent,
+    troopObjectiveDefenseBonusPercent: ownerPackage.bonusPercent,
+    garrisonDefensePower: totalGarrisonDefense,
+    ownerGarrisonDefensePower: ownerPackage.effectivePower,
+    reinforcementGarrisonDefensePower: reinforcementPackages.reduce(
+      (total, row) => total + row.effectivePower,
+      0
+    ),
+  } : null;
   return {
     siegeCombatVersion: siegeEnabled ? SIEGE_COMBAT_VERSION : 0,
+    defenseCombatVersion: soldierDefenseEnabled ? DEFENSE_COMBAT_VERSION : 0,
     owner: ownerPackage,
     reinforcements: reinforcementPackages,
-    fortification,
+    fortification: resolvedFortification,
     totalGarrisonDefense,
     totalDefense: Math.max(
       0,
-      totalGarrisonDefense + (fortification?.currentWallPower || 0)
+      totalGarrisonDefense + (resolvedFortification?.currentWallPower || 0)
     ),
   };
 }
@@ -9506,6 +9691,7 @@ async function prepareEconomyCollection(transaction, uid, nowMs = Date.now(), op
   const rawProfile = profileSnap.exists ? profileSnap.data() || {} : {};
   const upgrades = normalizeSkillUpgrades(rawProfile.upgrades);
   const character = reconcileSkillPoints(rawProfile.character, upgrades);
+  const freeSkillResetState = normalizeFreeSkillResetState(rawProfile);
   const itemEffects = normalizeItemEffects(rawProfile.itemEffects);
   const shopItems = normalizeShopItems(rawProfile.shopItems);
   const itemPurchaseCooldowns = normalizeItemPurchaseCooldowns(rawProfile.itemPurchaseCooldowns);
@@ -9768,6 +9954,8 @@ async function prepareEconomyCollection(transaction, uid, nowMs = Date.now(), op
     ...rawProfile,
     character,
     upgrades,
+    freeSkillResetGrantVersion: freeSkillResetState.version,
+    freeSkillResetCredits: freeSkillResetState.credits,
     gold,
     goldFloat,
     shopItems,
@@ -9797,6 +9985,8 @@ async function prepareEconomyCollection(transaction, uid, nowMs = Date.now(), op
     goldFloat,
     character,
     upgrades,
+    freeSkillResetGrantVersion: freeSkillResetState.version,
+    freeSkillResetCredits: freeSkillResetState.credits,
     shopItems,
     itemEffects,
     itemPurchaseCooldowns,
@@ -10202,6 +10392,14 @@ function createEconomyResponse(economy = null, overrides = {}) {
     skillPresets: normalizeSkillPresets(
       skillPresets !== undefined ? skillPresets : economy.profileAfter.skillPresets
     ),
+    freeSkillResetGrantVersion: Math.max(0, Math.floor(safeNumber(
+      overrides.freeSkillResetGrantVersion,
+      economy.profileAfter.freeSkillResetGrantVersion
+    ))),
+    freeSkillResetCredits: Math.max(0, Math.floor(safeNumber(
+      overrides.freeSkillResetCredits,
+      economy.profileAfter.freeSkillResetCredits
+    ))),
     mainCityId: safeString(economy.profileAfter.mainCityId, 96),
     mainIslandId: safeString(economy.profileAfter.mainIslandId, 160),
     mainRegionId: normalizeRegionId(economy.profileAfter.mainRegionId || getRegionIdFromOnlineIslandId(economy.profileAfter.mainIslandId)),
@@ -10539,6 +10737,7 @@ exports.getRealmInfo = timedCallable(
       bulkOrdersVersion: BULK_ORDERS_VERSION,
       combatForecastVersion: COMBAT_FORECAST_VERSION,
       siegeCombatVersion: SIEGE_COMBAT_VERSION,
+      defenseCombatVersion: DEFENSE_COMBAT_VERSION,
       dailyLoginRewardVersion: DAILY_LOGIN_REWARD_SCHEMA_VERSION,
       capabilities: {
         shardedGameServerHeartbeats: true,
@@ -10546,6 +10745,7 @@ exports.getRealmInfo = timedCallable(
         bulkOrdersVersion: BULK_ORDERS_VERSION,
         combatForecastVersion: COMBAT_FORECAST_VERSION,
         siegeCombatVersion: SIEGE_COMBAT_VERSION,
+        defenseCombatVersion: DEFENSE_COMBAT_VERSION,
         dailyLoginRewardVersion: DAILY_LOGIN_REWARD_SCHEMA_VERSION,
         releaseManifestVersion: Number(RELEASE_MANIFEST.schemaVersion) || 0,
       },
@@ -11580,7 +11780,9 @@ exports.resetSkills = onCall({ region: "us-central1", maxInstances: 20, invoker:
     const storedPoints = normalizeSkillLevel(currentCharacter.skillPoints);
     const needsPointRepair = storedPoints !== expectedPoints;
     if (spentPoints < 1 && !needsPointRepair) throw new HttpsError("failed-precondition", "No spent skill points to reset.");
-    const resetCost = spentPoints > 0 ? SKILL_RESET_COST : 0;
+    const freeSkillResetCredits = Math.max(0, Math.floor(safeNumber(economy.profileAfter.freeSkillResetCredits, 0)));
+    const freeResetConsumed = spentPoints > 0 && freeSkillResetCredits > 0;
+    const resetCost = spentPoints > 0 && !freeResetConsumed ? SKILL_RESET_COST : 0;
     if (economy.gold < resetCost) {
       throw new HttpsError("failed-precondition", `Skill reset costs ${SKILL_RESET_COST.toLocaleString()} gold.`);
     }
@@ -11590,12 +11792,16 @@ exports.resetSkills = onCall({ region: "us-central1", maxInstances: 20, invoker:
     const skillPresets = spentPoints > 0
       ? setActiveSkillPresetSlot(economy.profileAfter.skillPresets, 0)
       : normalizeSkillPresets(economy.profileAfter.skillPresets);
+    const freeSkillResetCreditsAfter = freeResetConsumed
+      ? freeSkillResetCredits - 1
+      : freeSkillResetCredits;
     writePreparedEconomy(transaction, economy, {
       character,
       upgrades,
       skillPresets,
       gold,
       goldFloat: gold,
+      freeSkillResetCredits: freeSkillResetCreditsAfter,
     });
     return createEconomyResponse(economy, {
       character,
@@ -11605,6 +11811,8 @@ exports.resetSkills = onCall({ region: "us-central1", maxInstances: 20, invoker:
       goldFloat: gold,
       spentPoints,
       resetCost,
+      freeResetConsumed,
+      freeSkillResetCredits: freeSkillResetCreditsAfter,
       repairedSkillPoints: needsPointRepair,
     });
   });
@@ -11726,19 +11934,25 @@ exports.applySkillPreset = timedCallable(
       }
       const upgrades = normalizeSkillPresetAllocation(selected.upgrades);
       const changed = !skillPresetAllocationsMatch(currentUpgrades, upgrades);
-      const resetCost = changed ? SKILL_RESET_COST : 0;
+      const freeSkillResetCredits = Math.max(0, Math.floor(safeNumber(economy.profileAfter.freeSkillResetCredits, 0)));
+      const freeResetConsumed = changed && freeSkillResetCredits > 0;
+      const resetCost = changed && !freeResetConsumed ? SKILL_RESET_COST : 0;
       if (economy.gold < resetCost) {
         throw new HttpsError("failed-precondition", `Applying this preset costs ${SKILL_RESET_COST.toLocaleString()} gold.`);
       }
       const character = reconcileSkillPoints(currentCharacter, upgrades);
       const gold = Math.max(0, economy.gold - resetCost);
       const skillPresets = setActiveSkillPresetSlot(currentPresets, definition.slot);
+      const freeSkillResetCreditsAfter = freeResetConsumed
+        ? freeSkillResetCredits - 1
+        : freeSkillResetCredits;
       writePreparedEconomy(transaction, economy, {
         character,
         upgrades,
         skillPresets,
         gold,
         goldFloat: gold,
+        freeSkillResetCredits: freeSkillResetCreditsAfter,
       });
       return createEconomyResponse(economy, {
         character,
@@ -11746,12 +11960,15 @@ exports.applySkillPreset = timedCallable(
         skillPresets,
         gold,
         goldFloat: gold,
+        freeSkillResetCredits: freeSkillResetCreditsAfter,
         skillPreset: {
           action: "apply",
           slot: definition.slot,
           name: selected.name,
           changed,
           goldCharged: resetCost,
+          freeResetConsumed,
+          freeSkillResetCredits: freeSkillResetCreditsAfter,
           allocation: upgrades,
           remainingSkillPoints: character.skillPoints,
           savedAtMs: selected.savedAtMs,
@@ -12399,6 +12616,8 @@ function createFreshResetPlayerProfile({
     character: normalizeCharacterProgress({ level: CHARACTER_START_LEVEL, xp: CHARACTER_START_XP, skillPoints: 0 }),
     upgrades: normalizeSkillUpgrades({}),
     skillPresets: normalizeSkillPresets(),
+    freeSkillResetGrantVersion: DEFENSE_SKILL_FREE_RESET_GRANT_VERSION,
+    freeSkillResetCredits: 0,
     shopItems: createDefaultShopItems(),
     itemEffects: normalizeItemEffects({}),
     itemPurchaseCooldowns: normalizeItemPurchaseCooldowns({}),
@@ -16026,6 +16245,7 @@ exports.launchClanRally = timedCallable("launchClanRally", { region: "us-central
       defenderKingPower,
       attackProtection: null,
       siegeCombatVersion: rally.targetType === "camp" ? 0 : SIEGE_COMBAT_VERSION,
+      defenseCombatVersion: rally.targetType === "camp" ? 0 : DEFENSE_COMBAT_VERSION,
       launchedAtMs: nowMs,
       arrivesAtMs: nowMs + Math.ceil(duration * 1000),
       status: "active",
@@ -16336,6 +16556,9 @@ function getScoutCombatIntel(profile = {}, target = {}, nowMs = Date.now()) {
   if (!isRewardCamp(target) && Math.floor(safeNumber(report.siegeCombatVersion, 0)) < SIEGE_COMBAT_VERSION) {
     return { status: "unavailable", report: null };
   }
+  if (!isRewardCamp(target) && Math.floor(safeNumber(report.defenseCombatVersion, 0)) < DEFENSE_COMBAT_VERSION) {
+    return { status: "unavailable", report: null };
+  }
   const fortification = Math.floor(safeNumber(report.siegeCombatVersion, 0)) >= SIEGE_COMBAT_VERSION
     && report.fortification && typeof report.fortification === "object"
     ? {
@@ -16344,6 +16567,13 @@ function getScoutCombatIntel(profile = {}, target = {}, nowMs = Date.now()) {
       reinforcedCityWalls: Math.max(0, Math.floor(safeNumber(report.fortification.reinforcedCityWalls, report.cityWalls))),
       stoneworksPercent: Math.max(0, safeNumber(report.fortification.stoneworksPercent, report.stoneworksPercent)),
       cityLevelDefensePercent: Math.max(0, safeNumber(report.fortification.cityLevelDefensePercent, report.defensePercent)),
+      defenseCombatVersion: Math.max(0, Math.floor(safeNumber(report.defenseCombatVersion, 0))),
+      baseDefensePowerPerTroop: Math.max(1, safeNumber(report.baseDefensePowerPerTroop, 1)),
+      shieldwallDisciplinePercent: Math.max(0, safeNumber(report.shieldwallDisciplinePercent, 0)),
+      troopObjectiveDefenseBonusPercent: Math.max(0, safeNumber(
+        report.fortification.troopObjectiveDefenseBonusPercent,
+        report.strongholdDefenseBonusPercent
+      )),
       objectiveDefenseBonusPercent: Math.max(0, safeNumber(
         report.fortification.objectiveDefenseBonusPercent,
         report.strongholdDefenseBonusPercent
@@ -16378,6 +16608,9 @@ function getScoutCombatIntel(profile = {}, target = {}, nowMs = Date.now()) {
       ),
       defensePower: totalDefense,
       siegeCombatVersion: fortification ? SIEGE_COMBAT_VERSION : 0,
+      defenseCombatVersion: fortification
+        ? Math.max(0, Math.floor(safeNumber(report.defenseCombatVersion, 0)))
+        : 0,
       fortification,
     },
   };
@@ -16415,6 +16648,10 @@ function normalizeCombatFortificationSnapshot(raw = null) {
     reinforcedCityWalls: Math.max(0, Math.floor(safeNumber(raw.reinforcedCityWalls, 0))),
     stoneworksPercent: Math.max(0, safeNumber(raw.stoneworksPercent, 0)),
     cityLevelDefensePercent: Math.max(0, safeNumber(raw.cityLevelDefensePercent, 0)),
+    defenseCombatVersion: Math.max(0, Math.floor(safeNumber(raw.defenseCombatVersion, 0))),
+    baseDefensePowerPerTroop: Math.max(1, safeNumber(raw.baseDefensePowerPerTroop, 1)),
+    shieldwallDisciplinePercent: Math.max(0, safeNumber(raw.shieldwallDisciplinePercent, 0)),
+    troopObjectiveDefenseBonusPercent: Math.max(0, safeNumber(raw.troopObjectiveDefenseBonusPercent, 0)),
     objectiveDefenseBonusPercent: Math.max(0, safeNumber(raw.objectiveDefenseBonusPercent, 0)),
     fullWallPower: Math.max(0, Math.floor(safeNumber(raw.fullWallPower, 0))),
     currentWallPower: Math.max(0, Math.floor(safeNumber(raw.currentWallPower, raw.startingWallPower))),
@@ -16485,6 +16722,7 @@ function normalizeCombatForecast(raw = null) {
       "overwhelming_advantage",
     ].includes(raw.advantageTier) ? raw.advantageTier : getCombatAdvantageTier(raw.powerRatio),
     siegeCombatVersion: Math.max(0, Math.floor(safeNumber(raw.siegeCombatVersion, 0))),
+    defenseCombatVersion: Math.max(0, Math.floor(safeNumber(raw.defenseCombatVersion, 0))),
     fortification: normalizeCombatFortificationSnapshot(raw.fortification),
   };
 }
@@ -16557,6 +16795,7 @@ function createCombatForecast({
     minimumMeaningfulWallDamageTroops,
     advantageTier: getCombatAdvantageTier(result.ratio),
     siegeCombatVersion: intel.report.siegeCombatVersion,
+    defenseCombatVersion: intel.report.defenseCombatVersion,
     fortification: result.fortification || intel.report.fortification,
   });
 }
@@ -17763,6 +18002,7 @@ exports.sendArmyOrder = timedCallable("sendArmyOrder", { region: "us-central1", 
       launchCombatForecast,
       combatForecastVersion: COMBAT_FORECAST_VERSION,
       siegeCombatVersion: order.targetType === "camp" ? 0 : SIEGE_COMBAT_VERSION,
+      defenseCombatVersion: order.targetType === "camp" ? 0 : DEFENSE_COMBAT_VERSION,
       launchedAtMs: nowMs,
       arrivesAtMs,
       ...(useSwiftMarchOrder ? {
@@ -18237,6 +18477,19 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
       }
       return null;
     };
+    const troopRewardDestinationForCaller = (attackerReward = null, defenderReward = null) => {
+      const reward = callerUid === attackerUid
+        ? attackerReward
+        : callerUid === defenderUid
+          ? defenderReward
+          : null;
+      if (!reward?.cityId) return {};
+      return {
+        troopRewardCityId: safeString(reward.cityId, 96),
+        troopRewardCityName: safeString(reward.cityName || reward.cityId, 40),
+        troopRewardRegionId: safeString(normalizeRegionId(reward.regionId), 80),
+      };
+    };
     const markResolved = resultPatch => {
       const patch = {
         status: "resolved",
@@ -18412,6 +18665,11 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
     const settlementSiegeCombatVersion = targetType === "camp"
       ? 0
       : Math.max(0, Math.floor(safeNumber(army.siegeCombatVersion, 0)));
+    const settlementDefenseCombatVersion = targetType === "camp"
+      ? 0
+      : effectiveKind === "attack" && safeString(army.kind, 24) !== "attack"
+        ? DEFENSE_COMBAT_VERSION
+        : Math.max(0, Math.floor(safeNumber(army.defenseCombatVersion, 0)));
     const defenderBonuses = defenderEconomy?.bonuses || {};
     const alliedTroopsAtStart = targetReinforcements.reduce((total, entry) => total + entry.troops, 0);
     const combatTarget = createReinforcedCombatTarget({
@@ -18427,12 +18685,15 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
       contributorProfiles: reinforcementProfiles,
       contributorStats: reinforcementGlobalStats,
       siegeCombatVersion: settlementSiegeCombatVersion,
+      defenseCombatVersion: settlementDefenseCombatVersion,
       nowMs,
     });
     const holderTargetStats = getCityStats({
       ...target,
       troops: getTargetOwnerTroops(target, targetType),
-    }, defenderProfile, defenderBonuses);
+    }, defenderProfile, defenderBonuses, {
+      defenseCombatVersion: settlementDefenseCombatVersion,
+    });
     const targetStats = {
       ...holderTargetStats,
       baseTotalDefense: defensePackages.owner.basePower
@@ -19662,6 +19923,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
         rallyAttack: true,
         outcome: battleOutcome,
         reports: reportsForCaller(),
+        ...troopRewardDestinationForCaller(attackerLevelTroopReward, defenderLevelTroopReward),
         ...(targetType === "camp"
           ? { campUpdate: targetUpdate }
           : { cityUpdates: withEconomyCityUpdates([targetUpdate]) }),
@@ -20486,6 +20748,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
         kind: "attack",
         outcome: "breach",
         reports: reportsForCaller(),
+        ...troopRewardDestinationForCaller(attackerLevelTroopReward, defenderLevelTroopReward),
         cityUpdates: withEconomyCityUpdates(cityUpdates),
         currentUser: profilePatchForCaller(attackerProgress, defenderProgress),
       };
@@ -20689,6 +20952,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
         kind: "attack",
         outcome: "victory",
         reports: reportsForCaller(),
+        ...troopRewardDestinationForCaller(attackerLevelTroopReward, defenderLevelTroopReward),
         cityUpdates: withEconomyCityUpdates(cityUpdates),
         currentUser: profilePatchForCaller(attackerProgress, defenderProgress),
       };
@@ -20820,6 +21084,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
       kind: "attack",
       outcome: result.raidCompleted ? "raid" : "defeat",
       reports: reportsForCaller(),
+      ...troopRewardDestinationForCaller(attackerLevelTroopReward, defenderLevelTroopReward),
       cityUpdates: withEconomyCityUpdates(cityUpdates),
       currentUser: profilePatchForCaller(attackerProgress, defenderProgress),
     };
@@ -22182,6 +22447,15 @@ async function resolveRewardCampPayoutByRef(campRef, nowMs = Date.now(), callerU
     const reportCity = deedCityAward
       ? { ...deedCityAward.city, ...deedCityPatch, regionId: deedCityAward.regionId }
       : camp;
+    const deedCompletionMetadata = deedCityPatch ? {
+      eventKind: "deed_camp_completed",
+      rewardEventId: safeString(
+        `deed_camp_completed_${camp.id}_${deedCityPatch.id}_${payoutAtMs}`,
+        160
+      ).replace(/[^a-zA-Z0-9_-]/g, "_"),
+      rewardSourceId: safeString(camp.id, 96),
+      rewardSourceRegionId: safeString(normalizeRegionId(camp.regionId), 80),
+    } : null;
     const reportSummary = isDeedCamp
       ? deedDailyLimitReached
         ? `Held ${camp.name || config.name} for ${holdMinutes} minutes, but you already received a Deed Camp city today. The camp reset to neutral.${returnSummary}`
@@ -22200,6 +22474,7 @@ async function resolveRewardCampPayoutByRef(campRef, nowMs = Date.now(), callerU
       uid: holderUid,
       type: "defense",
       outcome: "held",
+      ...(deedCompletionMetadata || {}),
       city: reportCity,
       opponentName: config.name,
       troopCount: returningTroops,
@@ -22238,6 +22513,7 @@ async function resolveRewardCampPayoutByRef(campRef, nowMs = Date.now(), callerU
       reward,
       rewardType: config.rewardType,
       campType: config.campType,
+      ...(deedCompletionMetadata || {}),
       dailyClaim: nextClaims,
       awardedCity: deedCityPatch ? {
         id: deedCityPatch.id,

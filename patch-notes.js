@@ -1,8 +1,21 @@
 (function () {
   window.CROWNLANDS_PATCH_NOTES = Object.freeze({
-    buildId: "20260807-login-resilience-v1",
-    generatedAt: "2026-08-07T18:15:00.000Z",
+    buildId: "20260808-soldier-defense-v1",
+    generatedAt: "2026-08-08T12:00:00.000Z",
     releases: Object.freeze([
+      Object.freeze({
+        buildId: "20260808-soldier-defense-v1",
+        dateKey: "2026-08-08",
+        publishedAt: "2026-08-08T12:00:00.000Z",
+        notes: Object.freeze([
+          "Defending soldiers now use a universal 1.30 base power instead of gaining troop defense from city level.",
+          "The new Shieldwall Discipline skill adds 2% soldier defense per level, up to 60%, while Stoneworks remains exclusive to walls.",
+          "Defense Stronghold and Crown Citadel support now strengthens soldiers only and never increases wall power.",
+          "Existing rulers receive one permanent free skill reset for the new defense build; new rulers begin without the legacy credit.",
+          "Scouting, forecasts, battle reports, the Economy editor, and the Battle & Economy Guide now separate soldier, Shieldwall, objective, wall, and Stoneworks power.",
+          "Armies already marching keep their original defense forecast, while new city and objective attacks use the Version 1 soldier-defense model.",
+        ]),
+      }),
       Object.freeze({
         buildId: "20260807-login-resilience-v1",
         dateKey: "2026-08-07",

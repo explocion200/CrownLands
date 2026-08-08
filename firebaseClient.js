@@ -1210,6 +1210,8 @@
     delete cleanProfile.inactivityNotice;
     delete cleanProfile.worldSlotResetAtMs;
     delete cleanProfile.skillPresets;
+    delete cleanProfile.freeSkillResetGrantVersion;
+    delete cleanProfile.freeSkillResetCredits;
     if (cleanProfile.shopItems && typeof cleanProfile.shopItems === "object" && deleteField) {
       cleanProfile.shopItems = {
         ...cleanProfile.shopItems,
@@ -1979,9 +1981,16 @@
       : reportsRef;
     const unsubscribe = onSnapshot(
       reportsQuery,
+      { includeMetadataChanges: true },
       snapshot => {
         if (typeof handlers.onReports === "function") {
-          handlers.onReports(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+          handlers.onReports(
+            snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })),
+            {
+              fromCache: Boolean(snapshot.metadata?.fromCache),
+              hasPendingWrites: Boolean(snapshot.metadata?.hasPendingWrites),
+            }
+          );
         }
       },
       error => {

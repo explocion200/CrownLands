@@ -11,9 +11,9 @@
   "siegeBenchmark": {
     "cityLevel": 150,
     "defenders": 50000000,
-    "minimumCaptureTroops": 118000000,
-    "maximumCaptureTroops": 123000000,
-    "minimumProductionDays": 3.8,
-    "maximumProductionDays": 4.1
+    "minimumCaptureTroops": 59000000,
+    "maximumCaptureTroops": 62000000,
+    "minimumProductionDays": 1.9,
+    "maximumProductionDays": 2.1
   }
 }

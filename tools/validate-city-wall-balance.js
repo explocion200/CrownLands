@@ -39,7 +39,7 @@ vm.createContext(economyContext);
 vm.runInContext(economySource, economyContext, { filename: path.join(root, "economy-config.js") });
 const cityEconomy = economyContext.window.CROWNLANDS_ECONOMY_CONFIG?.cityEconomy || {};
 const skillConfig = economyContext.window.CROWNLANDS_ECONOMY_CONFIG?.skills || {};
-const defensePercentPerLevel = Number(cityEconomy.defensePercentPerLevel);
+const troopCombat = economyContext.window.CROWNLANDS_ECONOMY_CONFIG?.troopCombat || {};
 const wallStats = {
   cityWallsBase: Number(cityEconomy.wallDefenseBase),
   cityWallsPerLevel: Number(cityEconomy.wallDefensePerLevel),
@@ -49,7 +49,9 @@ assert.deepEqual(wallStats, {
   cityWallsBase: 200,
   cityWallsPerLevel: 28858,
 });
-assert.equal(defensePercentPerLevel, 2, "City soldier defense must be 2% per city level.");
+assert.equal("defensePercentPerLevel" in cityEconomy, false, "City level must never increase soldier defense.");
+assert.equal(Number(troopCombat.baseAttackPowerPerTroop), 1.25, "Base troop attack must be 1.25.");
+assert.equal(Number(troopCombat.baseDefensePowerPerTroop), 1.30, "Base troop defense must be 1.30.");
 
 function createWallContext() {
   const context = {
@@ -102,11 +104,12 @@ assert.doesNotMatch(serverSource, /cityWallsExponent|cityWallsTransition/);
 assert.doesNotMatch(clientSource, /cityWallsAcceleration/);
 assert.doesNotMatch(serverSource, /cityWallsAcceleration/);
 
-const baseAttackPower = Number(/const BASE_TROOP_ATTACK_POWER = ([0-9.]+);/.exec(serverSource)?.[1]);
+const baseAttackPower = Number(troopCombat.baseAttackPowerPerTroop);
+const baseDefensePower = Number(troopCombat.baseDefensePowerPerTroop);
 assert.equal(baseAttackPower, 1.25, "Base troop attack must be 1.25.");
 const levelOneWalls = clientContext.getBaseCityWalls(1);
-const neutralLevelOneDefense = levelOneWalls + Math.floor(10 * 1.02);
-const defendedLevelOneDefense = levelOneWalls + Math.floor(200 * 1.02);
+const neutralLevelOneDefense = levelOneWalls + Math.floor(10 * baseDefensePower);
+const defendedLevelOneDefense = levelOneWalls + Math.floor(200 * baseDefensePower);
 assert.ok(200 * baseAttackPower > neutralLevelOneDefense, "Starting troops cannot capture a neutral level-1 city.");
 assert.ok(200 * baseAttackPower <= defendedLevelOneDefense, "An equally staffed level-1 city cannot hold against 200 attackers.");
 
@@ -117,15 +120,15 @@ const level100MaxStoneworksWalls = Math.floor(level100Walls * (1 + stoneworksMax
 assert.equal(level100MaxStoneworksWalls, 4_999_998, "Level 100 max-Stoneworks wall changed outside the approved balance.");
 
 const siegeBenchmarks = new Map([
-  [50, { wall: 2_474_923, attackers: 2_237_462 }],
-  [100, { wall: 4_999_998, attackers: 4_000_000 }],
-  [150, { wall: 7_525_073, attackers: 5_762_537 }],
-  [200, { wall: 10_050_148, attackers: 7_525_075 }],
-  [500, { wall: 25_200_598, attackers: 18_100_300 }],
+  [50, { wall: 2_474_923, attackers: 2_277_462 }],
+  [100, { wall: 4_999_998, attackers: 3_540_000 }],
+  [150, { wall: 7_525_073, attackers: 4_802_537 }],
 ]);
 for (const [level, expected] of siegeBenchmarks) {
   const maxStoneworksWall = Math.floor(serverContext.getBaseCityWalls(level) * (1 + stoneworksMaximum / 100));
-  const garrisonPower = Math.floor(1_000_000 * (1 + level * defensePercentPerLevel / 100));
+  const shieldwallMaximum = Number(skillConfig.shieldwallDiscipline?.maxPercent);
+  assert.equal(shieldwallMaximum, 60, "Shieldwall maximum changed without rebalancing siege tests.");
+  const garrisonPower = Math.floor(1_000_000 * baseDefensePower * (1 + shieldwallMaximum / 100));
   const maxSwordAttackPower = baseAttackPower * (1 + Number(skillConfig.swordmastery?.maxPercent) / 100);
   assert.equal(maxSwordAttackPower, 2, "Maximum Swordmastery attack power must be 2 per troop.");
   const minimumMaxSwordAttackers = Math.floor((maxStoneworksWall + garrisonPower) / maxSwordAttackPower) + 1;
@@ -145,12 +148,12 @@ assert.doesNotMatch(extractFunction(serverSource, "getBaseCityWalls"), /normaliz
 assert.doesNotMatch(extractFunction(clientSource, "getBaseCityWalls"), /normalizedLevel\s*>\s*100/);
 
 const level30Walls = clientContext.getBaseCityWalls(30);
-const level30ObjectiveDefense = level30Walls + Math.floor(10_000 * 1.6);
+const level30ObjectiveDefense = level30Walls + Math.floor(10_000 * baseDefensePower * 1.1);
 const level30ObjectiveAttackers = Math.floor(level30ObjectiveDefense / baseAttackPower) + 1;
-assert.equal(level30ObjectiveAttackers, 682_466, "Level-30 objective defense benchmark drifted.");
+assert.equal(level30ObjectiveAttackers, 681_106, "Level-30 objective defense benchmark drifted.");
 
 console.log(
-  `Validated 1.25 base attack, 2% soldier defense per level, and one linear wall curve: L1 ${levelOneWalls.toLocaleString()}, `
+  `Validated 1.25 base attack, 1.30 soldier defense, Shieldwall Discipline, and one linear wall curve: L1 ${levelOneWalls.toLocaleString()}, `
     + `L50 ${clientContext.getBaseCityWalls(50).toLocaleString()}, `
     + `L100 ${level100Walls.toLocaleString()} `
     + `(Stoneworks max ${level100MaxStoneworksWalls.toLocaleString()}).`
