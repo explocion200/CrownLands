@@ -13207,11 +13207,22 @@ function prepareSelectionForIslandSwitch() {
 }
 
 function getMapTransitionDirection(fromRegionId, toRegionId, requestedSide = "", fromMapPicker = false) {
-  if (fromMapPicker) return "none";
   const explicit = String(requestedSide || "").toLowerCase();
   if (["north", "south", "east", "west"].includes(explicit)) return explicit;
   const routeSide = String(getEditorPortalForRoute(fromRegionId, toRegionId)?.side || "").toLowerCase();
-  return ["north", "south", "east", "west"].includes(routeSide) ? routeSide : "none";
+  if (["north", "south", "east", "west"].includes(routeSide)) return routeSide;
+  if (!fromMapPicker) return "none";
+
+  const sourceRegion = WORLD_REGIONS.find(region => normalizeRegionId(region?.id) === normalizeRegionId(fromRegionId));
+  const targetRegion = WORLD_REGIONS.find(region => normalizeRegionId(region?.id) === normalizeRegionId(toRegionId));
+  if (!sourceRegion || !targetRegion) return "east";
+  const source = getIslandMapGridCoordinate(sourceRegion);
+  const target = getIslandMapGridCoordinate(targetRegion);
+  const deltaX = Number(target.gridX) - Number(source.gridX);
+  const deltaY = Number(target.gridY) - Number(source.gridY);
+  if (!Number.isFinite(deltaX) || !Number.isFinite(deltaY) || (deltaX === 0 && deltaY === 0)) return "east";
+  if (Math.abs(deltaX) >= Math.abs(deltaY)) return deltaX >= 0 ? "east" : "west";
+  return deltaY >= 0 ? "south" : "north";
 }
 
 function beginMapVisualTransition(fromRegionId, toRegionId, options = {}) {

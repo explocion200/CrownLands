@@ -962,7 +962,7 @@ input {
   z-index: 90;
   display: none;
   place-items: center;
-  background: radial-gradient(circle at center, rgba(3, 15, 27, .58) 0%, rgba(3, 15, 27, .32) 24%, rgba(3, 15, 27, .08) 54%, transparent 72%);
+  background: transparent;
   pointer-events: none;
 }
 .map-frame.map-switching .map-loading-overlay {
@@ -970,7 +970,7 @@ input {
 }
 .map-frame.map-switching .map-loading-panel {
   opacity: 0;
-  animation: crownlandsMapLoadingPanelIn 160ms ease 300ms forwards;
+  animation: crownlandsMapLoadingPanelIn 160ms ease 650ms forwards;
 }
 @keyframes crownlandsMapLoadingPanelIn {
   from { opacity: 0; transform: translate3d(0, 3px, 0); }
@@ -12978,12 +12978,24 @@ select:focus {
 
 /* Directional map transition shell ---------------------------------------- */
 .crownlands-map-transition {
-  --map-fog-start-x: 0%;
-  --map-fog-start-y: 0%;
-  --map-fog-exit-x: 0%;
-  --map-fog-exit-y: 0%;
-  --map-cover-duration: 240ms;
-  --map-transition-duration: 420ms;
+  --map-cloud-start-x: 0%;
+  --map-cloud-start-y: 0%;
+  --map-cloud-back-start-x: 0%;
+  --map-cloud-back-start-y: 0%;
+  --map-cloud-front-start-x: 0%;
+  --map-cloud-front-start-y: 0%;
+  --map-cloud-exit-x: 0%;
+  --map-cloud-exit-y: 0%;
+  --map-cloud-back-exit-x: 0%;
+  --map-cloud-back-exit-y: 0%;
+  --map-cloud-front-exit-x: 0%;
+  --map-cloud-front-exit-y: 0%;
+  --map-cover-duration: 420ms;
+  --map-cloud-back-cover-duration: 400ms;
+  --map-cloud-front-cover-duration: 350ms;
+  --map-transition-duration: 520ms;
+  --map-cloud-back-reveal-duration: 490ms;
+  --map-cloud-front-reveal-duration: 440ms;
   position: absolute;
   z-index: 84;
   inset: 0;
@@ -12994,23 +13006,39 @@ select:focus {
 }
 
 .crownlands-map-transition--north {
-  --map-fog-start-y: -105%;
-  --map-fog-exit-y: 105%;
+  --map-cloud-start-y: -108%;
+  --map-cloud-back-start-y: -94%;
+  --map-cloud-front-start-y: -124%;
+  --map-cloud-exit-y: 108%;
+  --map-cloud-back-exit-y: 94%;
+  --map-cloud-front-exit-y: 124%;
 }
 
 .crownlands-map-transition--south {
-  --map-fog-start-y: 105%;
-  --map-fog-exit-y: -105%;
+  --map-cloud-start-y: 108%;
+  --map-cloud-back-start-y: 94%;
+  --map-cloud-front-start-y: 124%;
+  --map-cloud-exit-y: -108%;
+  --map-cloud-back-exit-y: -94%;
+  --map-cloud-front-exit-y: -124%;
 }
 
 .crownlands-map-transition--east {
-  --map-fog-start-x: 105%;
-  --map-fog-exit-x: -105%;
+  --map-cloud-start-x: 108%;
+  --map-cloud-back-start-x: 94%;
+  --map-cloud-front-start-x: 124%;
+  --map-cloud-exit-x: -108%;
+  --map-cloud-back-exit-x: -94%;
+  --map-cloud-front-exit-x: -124%;
 }
 
 .crownlands-map-transition--west {
-  --map-fog-start-x: -105%;
-  --map-fog-exit-x: 105%;
+  --map-cloud-start-x: -108%;
+  --map-cloud-back-start-x: -94%;
+  --map-cloud-front-start-x: -124%;
+  --map-cloud-exit-x: 108%;
+  --map-cloud-back-exit-x: 94%;
+  --map-cloud-front-exit-x: 124%;
 }
 
 .crownlands-map-transition__part,
@@ -13025,76 +13053,89 @@ select:focus {
   display: none;
 }
 
-.crownlands-map-transition__part--scrim {
+.crownlands-map-transition__part--mist {
   z-index: 4;
-  inset: -12px;
+  inset: -30%;
   opacity: 0;
   background:
-    radial-gradient(circle at 52% 44%, rgba(112, 119, 101, .2), transparent 48%),
-    radial-gradient(circle at 18% 72%, rgba(103, 83, 60, .16), transparent 38%),
-    linear-gradient(155deg, rgba(41, 50, 48, .98), rgba(7, 18, 24, 1) 62%),
-    #071218;
-  box-shadow: 0 0 34px rgba(174, 189, 170, .2);
+    radial-gradient(circle at 50% 40%, rgba(255, 253, 242, 1), rgba(232, 234, 224, .99) 54%, rgba(203, 211, 211, 1) 100%),
+    #e8e9df;
   backface-visibility: hidden;
-  transform: translate3d(var(--map-fog-start-x), var(--map-fog-start-y), 0);
+  transform: translate3d(var(--map-cloud-start-x), var(--map-cloud-start-y), 0);
   will-change: transform, opacity;
 }
 
-.crownlands-map-transition:is(.is-leaving, .is-loading) .crownlands-map-transition__part--scrim,
-.crownlands-map-transition:is([data-phase="leaving"], [data-phase="loading"]) .crownlands-map-transition__part--scrim {
-  animation: crownlandsMapFogCover var(--map-cover-duration) var(--motion-ease-out) both;
+.crownlands-map-transition:is(.crownlands-map-transition--north, .crownlands-map-transition--south) .crownlands-map-transition__part--mist {
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, #000 16%, #000 84%, transparent 100%);
+  mask-image: linear-gradient(to bottom, transparent 0%, #000 16%, #000 84%, transparent 100%);
 }
 
-.crownlands-map-transition.is-entering .crownlands-map-transition__part--scrim,
-.crownlands-map-transition[data-phase="entering"] .crownlands-map-transition__part--scrim {
-  animation: crownlandsMapFogReveal var(--map-transition-duration) var(--motion-ease-out) both;
+.crownlands-map-transition:is(.crownlands-map-transition--east, .crownlands-map-transition--west) .crownlands-map-transition__part--mist {
+  -webkit-mask-image: linear-gradient(to right, transparent 0%, #000 16%, #000 84%, transparent 100%);
+  mask-image: linear-gradient(to right, transparent 0%, #000 16%, #000 84%, transparent 100%);
 }
 
-.crownlands-map-transition__part--haze,
-.crownlands-map-transition__part--edge {
-  z-index: 5;
-  inset: -12px;
+.crownlands-map-transition__part--cloud-back,
+.crownlands-map-transition__part--cloud-front {
+  inset: -20%;
   opacity: 0;
-  mix-blend-mode: screen;
+  background-image: url("assets/optimized/map-transition-clouds-640x640-6c69161ccac6.webp");
+  background-repeat: repeat;
+  background-position: center;
+  background-size: clamp(430px, 58vw, 760px) auto;
   backface-visibility: hidden;
-  transform: translate3d(var(--map-fog-start-x), var(--map-fog-start-y), 0);
   will-change: transform, opacity;
 }
 
-.crownlands-map-transition--north .crownlands-map-transition__part--haze,
-.crownlands-map-transition--north .crownlands-map-transition__part--edge {
-  background: linear-gradient(180deg, rgba(221, 238, 229, .44), rgba(145, 174, 169, .14) 16%, transparent 42%);
+.crownlands-map-transition__part--cloud-back {
+  z-index: 5;
+  --map-cloud-layer-start-x: var(--map-cloud-back-start-x);
+  --map-cloud-layer-start-y: var(--map-cloud-back-start-y);
+  --map-cloud-layer-exit-x: var(--map-cloud-back-exit-x);
+  --map-cloud-layer-exit-y: var(--map-cloud-back-exit-y);
+  --map-cloud-layer-opacity: .76;
+  --map-cloud-layer-scale: 1.08;
 }
 
-.crownlands-map-transition--south .crownlands-map-transition__part--haze,
-.crownlands-map-transition--south .crownlands-map-transition__part--edge {
-  background: linear-gradient(0deg, rgba(221, 238, 229, .44), rgba(145, 174, 169, .14) 16%, transparent 42%);
+.crownlands-map-transition__part--cloud-front {
+  z-index: 6;
+  --map-cloud-layer-start-x: var(--map-cloud-front-start-x);
+  --map-cloud-layer-start-y: var(--map-cloud-front-start-y);
+  --map-cloud-layer-exit-x: var(--map-cloud-front-exit-x);
+  --map-cloud-layer-exit-y: var(--map-cloud-front-exit-y);
+  --map-cloud-layer-opacity: .96;
+  --map-cloud-layer-scale: 1.18;
+  background-position: 31% 57%;
 }
 
-.crownlands-map-transition--east .crownlands-map-transition__part--haze,
-.crownlands-map-transition--east .crownlands-map-transition__part--edge {
-  background: linear-gradient(270deg, rgba(221, 238, 229, .44), rgba(145, 174, 169, .14) 16%, transparent 42%);
+.crownlands-map-transition:is(.is-leaving, .is-loading) .crownlands-map-transition__part--mist,
+.crownlands-map-transition:is([data-phase="leaving"], [data-phase="loading"]) .crownlands-map-transition__part--mist {
+  animation: crownlandsMapMistCover var(--map-cover-duration) var(--motion-ease-out) both;
 }
 
-.crownlands-map-transition--west .crownlands-map-transition__part--haze,
-.crownlands-map-transition--west .crownlands-map-transition__part--edge {
-  background: linear-gradient(90deg, rgba(221, 238, 229, .44), rgba(145, 174, 169, .14) 16%, transparent 42%);
+.crownlands-map-transition:is(.is-leaving, .is-loading) .crownlands-map-transition__part--cloud-back,
+.crownlands-map-transition:is([data-phase="leaving"], [data-phase="loading"]) .crownlands-map-transition__part--cloud-back {
+  animation: crownlandsMapCloudCover var(--map-cloud-back-cover-duration) ease-out both;
 }
 
-.crownlands-map-transition:is(.is-leaving, .is-loading) .crownlands-map-transition__part--haze,
-.crownlands-map-transition:is([data-phase="leaving"], [data-phase="loading"]) .crownlands-map-transition__part--haze {
-  animation: crownlandsMapFogHazeCover var(--map-cover-duration) ease-out both;
+.crownlands-map-transition:is(.is-leaving, .is-loading) .crownlands-map-transition__part--cloud-front,
+.crownlands-map-transition:is([data-phase="leaving"], [data-phase="loading"]) .crownlands-map-transition__part--cloud-front {
+  animation: crownlandsMapCloudCover var(--map-cloud-front-cover-duration) ease-out 30ms both;
 }
 
-.crownlands-map-transition:is(.is-leaving, .is-loading) .crownlands-map-transition__part--edge,
-.crownlands-map-transition:is([data-phase="leaving"], [data-phase="loading"]) .crownlands-map-transition__part--edge {
-  animation: crownlandsMapFogEdgeCover var(--map-cover-duration) ease-out both;
+.crownlands-map-transition.is-entering .crownlands-map-transition__part--mist,
+.crownlands-map-transition[data-phase="entering"] .crownlands-map-transition__part--mist {
+  animation: crownlandsMapMistReveal var(--map-transition-duration) var(--motion-ease-out) both;
 }
 
-.crownlands-map-transition.is-entering .crownlands-map-transition__part--haze,
-.crownlands-map-transition.is-entering .crownlands-map-transition__part--edge,
-.crownlands-map-transition[data-phase="entering"] .crownlands-map-transition__part--edge {
-  animation: crownlandsMapFogHazeReveal var(--map-transition-duration) ease-in both;
+.crownlands-map-transition.is-entering .crownlands-map-transition__part--cloud-back,
+.crownlands-map-transition[data-phase="entering"] .crownlands-map-transition__part--cloud-back {
+  animation: crownlandsMapCloudReveal var(--map-cloud-back-reveal-duration) ease-in both;
+}
+
+.crownlands-map-transition.is-entering .crownlands-map-transition__part--cloud-front,
+.crownlands-map-transition[data-phase="entering"] .crownlands-map-transition__part--cloud-front {
+  animation: crownlandsMapCloudReveal var(--map-cloud-front-reveal-duration) ease-in both;
 }
 
 .crownlands-map-transition.is-cancelled {
@@ -13102,30 +13143,36 @@ select:focus {
   transition: opacity 100ms linear;
 }
 
-@keyframes crownlandsMapFogCover {
-  from { opacity: .78; transform: translate3d(var(--map-fog-start-x), var(--map-fog-start-y), 0); }
+@keyframes crownlandsMapMistCover {
+  from { opacity: .12; transform: translate3d(var(--map-cloud-start-x), var(--map-cloud-start-y), 0); }
   to { opacity: 1; transform: translate3d(0, 0, 0); }
 }
 
-@keyframes crownlandsMapFogReveal {
+@keyframes crownlandsMapMistReveal {
   from { opacity: 1; transform: translate3d(0, 0, 0); }
-  to { opacity: 0; transform: translate3d(var(--map-fog-exit-x), var(--map-fog-exit-y), 0); }
+  to { opacity: 0; transform: translate3d(var(--map-cloud-exit-x), var(--map-cloud-exit-y), 0); }
 }
 
-@keyframes crownlandsMapFogHazeCover {
-  from { opacity: 0; transform: translate3d(var(--map-fog-start-x), var(--map-fog-start-y), 0); }
-  to { opacity: .66; transform: translate3d(0, 0, 0); }
+@keyframes crownlandsMapCloudCover {
+  from {
+    opacity: 0;
+    transform: translate3d(var(--map-cloud-layer-start-x), var(--map-cloud-layer-start-y), 0) scale(var(--map-cloud-layer-scale));
+  }
+  to {
+    opacity: var(--map-cloud-layer-opacity);
+    transform: translate3d(0, 0, 0) scale(var(--map-cloud-layer-scale));
+  }
 }
 
-@keyframes crownlandsMapFogEdgeCover {
-  0% { opacity: 0; transform: translate3d(var(--map-fog-start-x), var(--map-fog-start-y), 0); }
-  72% { opacity: .82; }
-  100% { opacity: .16; transform: translate3d(0, 0, 0); }
-}
-
-@keyframes crownlandsMapFogHazeReveal {
-  from { opacity: .58; transform: translate3d(0, 0, 0); }
-  to { opacity: 0; transform: translate3d(var(--map-fog-exit-x), var(--map-fog-exit-y), 0); }
+@keyframes crownlandsMapCloudReveal {
+  from {
+    opacity: var(--map-cloud-layer-opacity);
+    transform: translate3d(0, 0, 0) scale(var(--map-cloud-layer-scale));
+  }
+  to {
+    opacity: 0;
+    transform: translate3d(var(--map-cloud-layer-exit-x), var(--map-cloud-layer-exit-y), 0) scale(var(--map-cloud-layer-scale));
+  }
 }
 
 /* Motion preferences ------------------------------------------------------- */
@@ -13146,25 +13193,25 @@ html[data-animation-mode="reduced"] :is(.crownlands-vfx__part--weapons, .crownla
   animation-duration: 360ms;
 }
 
-.crownlands-map-transition--mode-reduced .crownlands-map-transition__part--scrim,
-html[data-animation-mode="reduced"] .crownlands-map-transition .crownlands-map-transition__part--scrim {
+.crownlands-map-transition--mode-reduced .crownlands-map-transition__part--mist,
+html[data-animation-mode="reduced"] .crownlands-map-transition .crownlands-map-transition__part--mist {
   transform: none;
 }
 
-.crownlands-map-transition--mode-reduced:is(.is-leaving, .is-loading) .crownlands-map-transition__part--scrim,
-html[data-animation-mode="reduced"] .crownlands-map-transition:is(.is-leaving, .is-loading) .crownlands-map-transition__part--scrim {
+.crownlands-map-transition--mode-reduced:is(.is-leaving, .is-loading) .crownlands-map-transition__part--mist,
+html[data-animation-mode="reduced"] .crownlands-map-transition:is(.is-leaving, .is-loading) .crownlands-map-transition__part--mist {
   animation-name: crownlandsMapReducedCover !important;
   animation-duration: 140ms !important;
 }
 
-.crownlands-map-transition--mode-reduced.is-entering .crownlands-map-transition__part--scrim,
-html[data-animation-mode="reduced"] .crownlands-map-transition.is-entering .crownlands-map-transition__part--scrim {
+.crownlands-map-transition--mode-reduced.is-entering .crownlands-map-transition__part--mist,
+html[data-animation-mode="reduced"] .crownlands-map-transition.is-entering .crownlands-map-transition__part--mist {
   animation-name: crownlandsMapReducedReveal !important;
   animation-duration: 160ms !important;
 }
 
-.crownlands-map-transition--mode-reduced :is(.crownlands-map-transition__part--haze, .crownlands-map-transition__part--edge),
-html[data-animation-mode="reduced"] .crownlands-map-transition :is(.crownlands-map-transition__part--haze, .crownlands-map-transition__part--edge) {
+.crownlands-map-transition--mode-reduced :is(.crownlands-map-transition__part--cloud-back, .crownlands-map-transition__part--cloud-front),
+html[data-animation-mode="reduced"] .crownlands-map-transition :is(.crownlands-map-transition__part--cloud-back, .crownlands-map-transition__part--cloud-front) {
   display: none;
 }
 

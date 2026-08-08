@@ -1267,7 +1267,7 @@
       const coverDuration = mode === "reduced"
         ? 140
         : Math.round(clamp(
-          Number.isFinite(Number(event.coverDurationMs)) ? event.coverDurationMs : 240,
+          Number.isFinite(Number(event.coverDurationMs)) ? event.coverDurationMs : 420,
           160,
           600,
         ));
@@ -1282,11 +1282,13 @@
       element.setAttribute("aria-hidden", "true");
       element.style.pointerEvents = "none";
       element.style.setProperty("--map-cover-duration", `${coverDuration}ms`);
+      element.style.setProperty("--map-cloud-back-cover-duration", `${Math.max(120, coverDuration - 20)}ms`);
+      element.style.setProperty("--map-cloud-front-cover-duration", `${Math.max(120, coverDuration - 70)}ms`);
       this.createMapTransitionPart(element, "outgoing", event.outgoing || event.snapshot, event.cloneSnapshot);
       this.createMapTransitionPart(element, "incoming", null, false);
-      this.createMapTransitionPart(element, "haze");
-      this.createMapTransitionPart(element, "edge");
-      this.createMapTransitionPart(element, "scrim");
+      this.createMapTransitionPart(element, "mist");
+      this.createMapTransitionPart(element, "cloud-back");
+      this.createMapTransitionPart(element, "cloud-front");
       if (stage) {
         stage.classList.add("is-transitioning");
         stage.classList.remove("is-leaving", "is-entering");
@@ -1396,7 +1398,7 @@
       }
       const settleDuration = this.getEffectiveMode() === "reduced"
         ? 160
-        : (Number.isFinite(Number(options.duration)) ? Math.round(clamp(options.duration, 240, 900)) : 420);
+        : (Number.isFinite(Number(options.duration)) ? Math.round(clamp(options.duration, 240, 900)) : 520);
       const beginReveal = () => {
         if (this.mapTransition?.record !== record || record.completed) return false;
         record.transitionRevealScheduled = false;
@@ -1409,6 +1411,8 @@
           record.transitionStage.classList.add("is-transitioning");
         }
         element.style.setProperty("--map-transition-duration", `${settleDuration}ms`);
+        element.style.setProperty("--map-cloud-back-reveal-duration", `${Math.max(160, settleDuration - 30)}ms`);
+        element.style.setProperty("--map-cloud-front-reveal-duration", `${Math.max(160, settleDuration - 80)}ms`);
         this.armRecord(record, settleDuration + this.limits.cleanupPaddingMs);
         this.notify("transitionphase", {
           token: this.mapTransition.token,

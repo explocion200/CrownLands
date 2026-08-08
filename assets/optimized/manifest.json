@@ -36,6 +36,17 @@
       "hasAlpha": true
     },
     {
+      "id": "map-transition-clouds",
+      "category": "transition",
+      "source": "assets/map-transition-clouds.png",
+      "output": "assets/optimized/map-transition-clouds-640x640-6c69161ccac6.webp",
+      "width": 640,
+      "height": 640,
+      "bytes": 97584,
+      "sha256": "6c69161ccac62ca87a627c8e97f13833262570ef673189993c9a1381aba82c76",
+      "hasAlpha": true
+    },
+    {
       "id": "hud-leaderboard",
       "category": "hud",
       "source": "assets/leaderboard-icon.png",

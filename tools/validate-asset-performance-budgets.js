@@ -27,6 +27,7 @@ const MAX_WORLD_THUMBNAIL_TOTAL_BYTES = 500 * 1024;
 const categoryFileBudgets = {
   login: 400 * 1024,
   loading: 32 * 1024,
+  transition: 96 * 1024,
   hud: 32 * 1024,
   pickup: 24 * 1024,
   status: 24 * 1024,
@@ -108,7 +109,7 @@ const preloadTags = Array.from(indexSource.matchAll(/<link\b[^>]*>/gi), match =>
   .filter(tag => extractAttribute(tag, "rel").toLowerCase() === "preload")
   .filter(tag => extractAttribute(tag, "as").toLowerCase() === "image");
 
-assert.equal(preloadTags.length, 3, "Only the login background and two loading-wheel layers should be image-preloaded.");
+assert.equal(preloadTags.length, 4, "Only the login background, loading-wheel layers, and map-transition clouds should be image-preloaded.");
 let loginPreloadBytes = 0;
 const preloadPaths = [];
 for (const tag of preloadTags) {
@@ -121,10 +122,10 @@ for (const tag of preloadTags) {
 }
 assert.deepEqual(
   preloadPaths.sort(),
-  ["loading-crown", "loading-ring", "login-background"]
+  ["loading-crown", "loading-ring", "login-background", "map-transition-clouds"]
     .map(id => manifest.assets.find(asset => asset.id === id)?.output)
     .sort(),
-  "Image preloads must be limited to the three login-critical derivatives."
+  "Image preloads must be limited to the login-critical derivatives and the lightweight map-transition clouds."
 );
 assert(
   loginPreloadBytes <= MAX_LOGIN_PRELOAD_BYTES,
@@ -167,10 +168,10 @@ const precachedOptimizedArt = staticCacheUrls
   .filter(relativePath => relativePath.startsWith("assets/optimized/"));
 assert.deepEqual(
   precachedOptimizedArt.sort(),
-  ["loading-crown", "loading-ring", "login-background"]
+  ["loading-crown", "loading-ring", "login-background", "map-transition-clouds"]
     .map(id => manifest.assets.find(asset => asset.id === id)?.output)
     .sort(),
-  "Only login-critical optimized artwork belongs in the installation cache."
+  "Only login-critical artwork and the lightweight map-transition clouds belong in the installation cache."
 );
 for (const runtimeOnlyPage of ["about.html", "how-to-play.html", "game-rules.html", "support.html", "privacy.html", "site-info.css"]) {
   assert(

@@ -25,6 +25,7 @@ ASSETS = (
     ("login-background", "assets/game-menu-background.jpg", 1448, 1086, 82, "login"),
     ("loading-ring", "assets/loading-ring.png", 256, 256, 88, "loading"),
     ("loading-crown", "assets/loading-crown.png", 256, 256, 88, "loading"),
+    ("map-transition-clouds", "assets/map-transition-clouds.png", 640, 640, 32, "transition"),
     ("hud-leaderboard", "assets/leaderboard-icon.png", 192, 192, 88, "hud"),
     ("hud-city-list", "assets/city-list-icon.png", 192, 192, 88, "hud"),
     ("hud-map", "assets/map-icon.png", 192, 192, 88, "hud"),

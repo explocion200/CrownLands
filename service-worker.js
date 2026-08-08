@@ -30,6 +30,7 @@ const STATIC_CACHE_URLS = [
   "/assets/optimized/login-background-1448x1086-cec197d384ba.webp",
   "/assets/optimized/loading-ring-256x256-d14e6c09f495.webp",
   "/assets/optimized/loading-crown-256x256-9eab5c3ca27d.webp",
+  "/assets/optimized/map-transition-clouds-640x640-6c69161ccac6.webp",
   "/assets/icons/crownlands-icon-192.png",
   "/assets/icons/crownlands-maskable-192.png"
 ];

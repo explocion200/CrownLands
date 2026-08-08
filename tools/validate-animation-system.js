@@ -111,6 +111,16 @@ requireMatch(gameSource, /beginMapTransition\(\{[\s\S]*?root:\s*mapFrame[\s\S]*?
 requireMatch(gameSource, /watchdogMs:\s*45000/, "Map transitions need enough watchdog time for a valid slow island load.");
 requireMatch(
   gameSource,
+  /function getMapTransitionDirection\([\s\S]*?getIslandMapGridCoordinate\(sourceRegion\)[\s\S]*?Math\.abs\(deltaX\)\s*>=\s*Math\.abs\(deltaY\)[\s\S]*?"east"\s*:\s*"west"[\s\S]*?"south"\s*:\s*"north"/,
+  "Map-picker transitions must derive a cardinal cloud direction from map-grid coordinates."
+);
+assert.doesNotMatch(
+  gameSource,
+  /function getMapTransitionDirection\([^)]*fromMapPicker[^)]*\)\s*\{\s*if\s*\(fromMapPicker\)\s*return\s*"none"/,
+  "Map-picker transitions must not fall back to a directionless fade."
+);
+requireMatch(
+  gameSource,
   /function isMapInteractionBlocked\(\)[\s\S]*?mapTransitionStage\?\.classList\.contains\("is-transitioning"\)/,
   "Map input must remain blocked through the visual settle phase."
 );
@@ -193,15 +203,32 @@ assert.doesNotMatch(
 );
 requireMatch(
   stylesSource,
-  /\.crownlands-map-transition__part--scrim\s*\{(?=[^}]*inset:\s*-12px)(?=[^}]*#071218)(?=[^}]*will-change:\s*transform,\s*opacity)[^}]*\}/,
-  "The fog curtain must overscan the map frame with an opaque dark fallback."
+  /\.crownlands-map-transition__part--mist\s*\{(?=[^}]*inset:\s*-30%)(?=[^}]*#e8e9df)(?=[^}]*will-change:\s*transform,\s*opacity)[^}]*\}/,
+  "The cloud transition needs an overscanned opaque pale-mist cover."
 );
-requireMatch(stylesSource, /@keyframes crownlandsMapFogCover/, "The directional fog cover animation is missing.");
-requireMatch(stylesSource, /@keyframes crownlandsMapFogReveal/, "The directional fog reveal animation is missing.");
+requireMatch(
+  stylesSource,
+  /crownlands-map-transition--east[\s\S]*?crownlands-map-transition__part--mist[\s\S]*?mask-image:\s*linear-gradient\(to right,\s*transparent 0%,\s*#000 16%,\s*#000 84%,\s*transparent 100%\)/,
+  "Directional mist needs a feathered edge instead of exposing a rectangular curtain."
+);
+requireMatch(
+  stylesSource,
+  /\.crownlands-map-transition__part--cloud-back,[\s\S]*?map-transition-clouds-640x640-[a-f0-9]{12}\.webp[\s\S]*?will-change:\s*transform,\s*opacity/,
+  "The transition must use the optimized painterly cloud texture on GPU-friendly layers."
+);
+requireMatch(stylesSource, /@keyframes crownlandsMapMistCover/, "The directional pale-mist cover animation is missing.");
+requireMatch(stylesSource, /@keyframes crownlandsMapMistReveal/, "The directional pale-mist reveal animation is missing.");
+requireMatch(stylesSource, /@keyframes crownlandsMapCloudCover/, "The painterly cloud cover animation is missing.");
+requireMatch(stylesSource, /@keyframes crownlandsMapCloudReveal/, "The painterly cloud reveal animation is missing.");
+requireMatch(managerSource, /Number\.isFinite\(Number\(event\.coverDurationMs\)\)\s*\?\s*event\.coverDurationMs\s*:\s*420/, "Full cloud cover must default to 420ms.");
+requireMatch(managerSource, /options\.duration,\s*240,\s*900\)\)\s*:\s*520/, "Full cloud reveal must default to 520ms.");
+for (const part of ["mist", "cloud-back", "cloud-front"]) {
+  requireMatch(managerSource, new RegExp(`createMapTransitionPart\\(element, "${part}"\\)`), `Map transitions are missing their ${part} layer.`);
+}
 requireMatch(
   managerSource,
   /transitionCoverReadyAt[\s\S]*?remainingCoverMs[\s\S]*?transitionRevealScheduled/,
-  "An early map load must defer only the visual reveal until the fog cover is ready."
+  "An early map load must defer only the visual reveal until the clouds fully cover the map."
 );
 requireMatch(
   stylesSource,
@@ -210,7 +237,7 @@ requireMatch(
 );
 requireMatch(
   stylesSource,
-  /\.map-frame\.map-switching\s+\.map-loading-panel\s*\{[\s\S]*?300ms\s+forwards/,
+  /\.map-frame\.map-switching\s+\.map-loading-panel\s*\{[\s\S]*?650ms\s+forwards/,
   "The map loading panel must wait briefly so cached switches do not flash a spinner."
 );
 
@@ -366,16 +393,22 @@ const mapTransition = animations.beginMapTransition({
   root: transitionRoot,
   stage: transitionStage,
   direction: "east",
-  coverDurationMs: 240,
+  coverDurationMs: 420,
 });
-assert(mapTransition, "The fog map transition did not start.");
+assert(mapTransition, "The cloud map transition did not start.");
+for (const part of ["mist", "cloud-back", "cloud-front"]) {
+  assert(
+    mapTransition.element.children.some(child => String(child.className).includes(`crownlands-map-transition__part--${part}`)),
+    `The runtime map transition is missing its ${part} layer.`
+  );
+}
 assert(transitionStage.classList.contains("is-transitioning"), "Map interaction guard did not activate.");
 assert(!transitionStage.classList.contains("is-leaving"), "The live map stage must not receive a leaving animation.");
 assert(animations.finishMapTransition(mapTransition.token), "An early map transition finish was not accepted.");
-assert.equal(mapTransition.element.dataset.phase, "loading", "Early finish must hold the fog cover before reveal.");
+assert.equal(mapTransition.element.dataset.phase, "loading", "Early finish must hold the cloud cover before reveal.");
 assert(!transitionStage.classList.contains("is-entering"), "The live map stage must not receive an entering animation.");
-assert(animations.cancelMapTransition("static-validator", mapTransition.token), "Fog transition cleanup failed.");
-assert(!transitionStage.classList.contains("is-transitioning"), "Fog transition cleanup left map input blocked.");
+assert(animations.cancelMapTransition("static-validator", mapTransition.token), "Cloud transition cleanup failed.");
+assert(!transitionStage.classList.contains("is-transitioning"), "Cloud transition cleanup left map input blocked.");
 animations.setMode(initialMode, { persist: false });
 
 const reportStart = serverSource.indexOf("function makeReport({");
