@@ -8561,7 +8561,7 @@ function getCityStats(city, options = {}) {
   const defenseCombatVersion = Math.max(0, Math.floor(Number(
     options.defenseCombatVersion ?? (supportsDefenseCombat() ? DEFENSE_COMBAT_VERSION : 0)
   ) || 0));
-  const soldierDefenseEnabled = !isRewardCamp(city)
+  const soldierDefenseEnabled = !isRewardCampTarget(city)
     && defenseCombatVersion >= DEFENSE_COMBAT_VERSION;
   const defensePercent = soldierDefenseEnabled ? 0 : level * 2;
   const baseCityWalls = getBaseCityWalls(level);
