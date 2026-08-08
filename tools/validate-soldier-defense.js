@@ -89,6 +89,12 @@ for (const [source, label] of [[server, "Server"], [client, "Client"]]) {
   assert.match(stats, /BASE_TROOP_DEFENSE_POWER \* \([\s\S]*?shieldwallDisciplinePercent \+ strongholdDefenseBonusPercent/, `${label} soldier defense does not add Shieldwall and objective support against 1.30.`);
   assert.match(stats, /totalDefense = soldierDefenseEnabled[\s\S]*?cityWalls \+ troopDefense/, `${label} modern total defense does not keep walls separate from soldiers.`);
 }
+assert.match(
+  extractFunction(client, "getCityStats"),
+  /soldierDefenseEnabled = !isRewardCampTarget\(city\)/,
+  "Client city stats do not use the defined reward-camp helper."
+);
+assert.doesNotMatch(client, /\bisRewardCamp\(/, "Client references the server-only isRewardCamp helper.");
 
 assert.match(server, /const DEFENSE_STRONGHOLD_BONUS_PERCENT = 8;/);
 assert.match(server, /const CROWN_CITADEL_DEFENSE_BONUS_PERCENT = 10;/);
