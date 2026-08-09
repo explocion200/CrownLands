@@ -3,6 +3,7 @@ const { onSchedule } = require("firebase-functions/v2/scheduler");
 const { onDocumentCreated, onDocumentWritten } = require("firebase-functions/v2/firestore");
 const admin = require("firebase-admin");
 const { FieldPath, FieldValue, Timestamp, getFirestore } = require("firebase-admin/firestore");
+const { getMessaging } = require("firebase-admin/messaging");
 const crypto = require("node:crypto");
 const SERVER_WORLD_LAYOUT = require("./world-layout.json");
 const ECONOMY_CONFIG = require("./economy-config.json");
@@ -45,6 +46,7 @@ function safeConfigString(value, fallback = "") {
 admin.initializeApp();
 
 const db = getFirestore();
+const messaging = getMessaging();
 
 function economyNumber(path, fallback) {
   const value = String(path || "").split(".").filter(Boolean).reduce((current, key) => current?.[key], ECONOMY_CONFIG);
@@ -123,6 +125,8 @@ const CITY_UPGRADE_MAX_TARGET_HOURS = economyNumber("cityEconomy.upgradeMaximumH
 const BASE_TROOP_ATTACK_POWER = economyNumber("troopCombat.baseAttackPowerPerTroop", 1.25);
 const BASE_TROOP_DEFENSE_POWER = economyNumber("troopCombat.baseDefensePowerPerTroop", 1.3);
 const DEFENSE_COMBAT_VERSION = Math.max(1, Math.floor(economyNumber("troopCombat.defenseModelVersion", 1)));
+const REALM_ACTIVITY_VERSION = 1;
+const REALM_ACTIVITY_SCHEMA_VERSION = 1;
 const DEFAULT_MARCH_PERCENT = 0.5;
 const DAILY_NEUTRAL_CAPTURE_LIMIT = 30;
 const NEUTRAL_CITY_COUNT_LIMIT = 30;
@@ -392,28 +396,26 @@ const WARBAND_CAMP_REWARD_SCHEDULE = economyRewardSchedule("troops", [
   { minimumReward: 30_000, productionHours: 1.5 },
   { minimumReward: 40_000, productionHours: 2 },
 ]);
+const REWARD_CAMP_COMBAT_VERSION = 1;
+const REWARD_CAMP_TROOP_POWER = 1;
 const GOLD_CAMP_HOLD_DURATION_MS = economyNumber("camps.gold.holdMinutes", 10) * 60 * 1000;
 const GOLD_CAMP_BASE_REWARD = GOLD_CAMP_REWARD_SCHEDULE[0]?.minimumReward || 20_000;
-const GOLD_CAMP_BASE_DEFENDERS = economyNumber("camps.gold.baseDefenders", 10_000);
-const GOLD_CAMP_DEFENSE_LEVEL = economyNumber("camps.gold.defenseLevel", 30);
+const GOLD_CAMP_BASE_DEFENDERS = economyNumber("camps.gold.baseDefenders", 20_000);
 const REWARD_CAMP_PAYOUT_SCAN_LIMIT = 40;
 const GOLD_CAMP_REWARD_BY_DAILY_CLAIM = GOLD_CAMP_REWARD_SCHEDULE.map(entry => entry.minimumReward);
 const GOLD_CAMP_REWARD_HOURS_BY_DAILY_CLAIM = GOLD_CAMP_REWARD_SCHEDULE.map(entry => entry.productionHours);
 const WARBAND_CAMP_HOLD_DURATION_MS = economyNumber("camps.troops.holdMinutes", 15) * 60 * 1000;
 const WARBAND_CAMP_BASE_REWARD = WARBAND_CAMP_REWARD_SCHEDULE[0]?.minimumReward || 10_000;
-const WARBAND_CAMP_BASE_DEFENDERS = economyNumber("camps.troops.baseDefenders", 10_000);
-const WARBAND_CAMP_DEFENSE_LEVEL = economyNumber("camps.troops.defenseLevel", 30);
+const WARBAND_CAMP_BASE_DEFENDERS = economyNumber("camps.troops.baseDefenders", 20_000);
 const WARBAND_CAMP_REWARD_BY_DAILY_CLAIM = WARBAND_CAMP_REWARD_SCHEDULE.map(entry => entry.minimumReward);
 const WARBAND_CAMP_REWARD_HOURS_BY_DAILY_CLAIM = WARBAND_CAMP_REWARD_SCHEDULE.map(entry => entry.productionHours);
 const DEED_CAMP_HOLD_DURATION_MS = economyNumber("camps.deed.holdMinutes", 60) * 60 * 1000;
-const DEED_CAMP_BASE_DEFENDERS = economyNumber("camps.deed.baseDefenders", 10_000);
-const DEED_CAMP_DEFENSE_LEVEL = economyNumber("camps.deed.defenseLevel", 30);
+const DEED_CAMP_BASE_DEFENDERS = economyNumber("camps.deed.baseDefenders", 20_000);
 const DEED_CAMP_HISTORY_LIMIT = 25;
 const DEED_CAMP_CITY_QUERY_LIMIT = 50;
 const DEED_CAMP_FALLBACK_REGION_LIMIT = 6;
 const RELIC_CAMP_HOLD_DURATION_MS = economyNumber("camps.items.holdMinutes", 30) * 60 * 1000;
-const RELIC_CAMP_BASE_DEFENDERS = economyNumber("camps.items.baseDefenders", 10_000);
-const RELIC_CAMP_DEFENSE_LEVEL = economyNumber("camps.items.defenseLevel", 30);
+const RELIC_CAMP_BASE_DEFENDERS = economyNumber("camps.items.baseDefenders", 20_000);
 const RELIC_CAMP_DAILY_REWARD_LIMIT = economyNumber("camps.items.maxDailyRewards", 2);
 const RELIC_CAMP_DROP_TABLE = [
   { itemId: WAR_DRUMS_ITEM_ID, itemName: "War Drums", rarity: "Common", chance: 35 },
@@ -434,7 +436,8 @@ const REWARD_CAMP_CONFIG = {
     holdDurationMs: GOLD_CAMP_HOLD_DURATION_MS,
     baseReward: GOLD_CAMP_BASE_REWARD,
     baseDefenders: GOLD_CAMP_BASE_DEFENDERS,
-    defenseLevel: GOLD_CAMP_DEFENSE_LEVEL,
+    combatVersion: REWARD_CAMP_COMBAT_VERSION,
+    troopPower: REWARD_CAMP_TROOP_POWER,
     dailyRewards: GOLD_CAMP_REWARD_BY_DAILY_CLAIM,
     rewardHours: GOLD_CAMP_REWARD_HOURS_BY_DAILY_CLAIM,
   },
@@ -448,7 +451,8 @@ const REWARD_CAMP_CONFIG = {
     holdDurationMs: WARBAND_CAMP_HOLD_DURATION_MS,
     baseReward: WARBAND_CAMP_BASE_REWARD,
     baseDefenders: WARBAND_CAMP_BASE_DEFENDERS,
-    defenseLevel: WARBAND_CAMP_DEFENSE_LEVEL,
+    combatVersion: REWARD_CAMP_COMBAT_VERSION,
+    troopPower: REWARD_CAMP_TROOP_POWER,
     dailyRewards: WARBAND_CAMP_REWARD_BY_DAILY_CLAIM,
     rewardHours: WARBAND_CAMP_REWARD_HOURS_BY_DAILY_CLAIM,
   },
@@ -462,7 +466,8 @@ const REWARD_CAMP_CONFIG = {
     holdDurationMs: DEED_CAMP_HOLD_DURATION_MS,
     baseReward: 1,
     baseDefenders: DEED_CAMP_BASE_DEFENDERS,
-    defenseLevel: DEED_CAMP_DEFENSE_LEVEL,
+    combatVersion: REWARD_CAMP_COMBAT_VERSION,
+    troopPower: REWARD_CAMP_TROOP_POWER,
   },
   items: {
     campType: "items",
@@ -474,7 +479,8 @@ const REWARD_CAMP_CONFIG = {
     holdDurationMs: RELIC_CAMP_HOLD_DURATION_MS,
     baseReward: 1,
     baseDefenders: RELIC_CAMP_BASE_DEFENDERS,
-    defenseLevel: RELIC_CAMP_DEFENSE_LEVEL,
+    combatVersion: REWARD_CAMP_COMBAT_VERSION,
+    troopPower: REWARD_CAMP_TROOP_POWER,
     maxDailyRewards: RELIC_CAMP_DAILY_REWARD_LIMIT,
     itemDrops: RELIC_CAMP_DROP_TABLE,
   },
@@ -1550,16 +1556,17 @@ function isCurrentInactivityAsset(asset = {}) {
 
 function getInactiveCampNeutralPatch(camp = {}, nowMs = Date.now()) {
   const config = getRewardCampConfig(camp);
-  const baseDefenders = Math.max(1, Math.floor(safeNumber(camp.baseDefenders, config?.baseDefenders || 1)));
+  const combatMetadata = getRewardCampCombatMetadata(config);
   const activeArmyIds = normalizeActiveArmyIds(camp.activeArmyIds);
   return {
+    ...combatMetadata,
     holderUid: "",
     holderName: "",
     holderFlag: null,
     heldSinceMs: 0,
     payoutAtMs: 0,
     payoutPending: false,
-    currentGarrison: baseDefenders,
+    currentGarrison: combatMetadata.baseDefenders,
     returnSourceCityId: "",
     returnSourceRegionId: "",
     returnSourceCityName: "",
@@ -2780,6 +2787,96 @@ function recordCrownCitadelControlChange(transaction, {
   }
 }
 
+function realmActivityEventRef(eventId = "") {
+  const safeEventId = safeString(eventId, 180).replace(/[^a-zA-Z0-9_-]/g, "_");
+  return safeEventId
+    ? db.doc(`realmEvents/${RESET_GENERATION}/activity/${safeEventId}`)
+    : null;
+}
+
+function getRealmActivityClanSnapshot(profile = {}, fallback = {}) {
+  const clanId = safeString(profile.clanId || fallback.ownerClanId, 128);
+  const clanName = safeString(profile.clanName || fallback.ownerClanName, 24);
+  if (!clanId || !clanName) return null;
+  return {
+    clanId,
+    clanName,
+    clanTag: safeString(profile.clanTag || fallback.ownerClanTag, 5),
+  };
+}
+
+function writeRealmActivityCaptureEvent(transaction, {
+  eventId = "",
+  sourceResolutionId = "",
+  target = {},
+  targetRegionId = "",
+  previousOwnerUid = "",
+  previousOwnerName = "",
+  previousOwnerProfile = {},
+  nextOwnerUid = "",
+  nextOwnerName = "",
+  nextOwnerProfile = {},
+  nowMs = Date.now(),
+} = {}) {
+  if (!transaction || !isStronghold(target)) return null;
+  const attackerPlayerId = safeString(nextOwnerUid, 128);
+  const defenderPlayerId = safeString(previousOwnerUid, 128);
+  if (!attackerPlayerId || attackerPlayerId === defenderPlayerId) return null;
+  const ref = realmActivityEventRef(eventId);
+  if (!ref) return null;
+
+  const citadel = isCrownCitadel(target);
+  const objective = getPublicStrongholdSnapshot(target) || {};
+  const regionId = requireKnownWorldRegionId(targetRegionId || target.regionId);
+  const attackerClan = getRealmActivityClanSnapshot(nextOwnerProfile);
+  const defenderClan = defenderPlayerId
+    ? getRealmActivityClanSnapshot(previousOwnerProfile, target)
+    : null;
+  const normalizedAttackerName = normalizePlayerName(
+    nextOwnerName || nextOwnerProfile.playerName || nextOwnerProfile.displayName,
+    "Ruler"
+  );
+  const normalizedDefenderName = defenderPlayerId
+    ? normalizePlayerName(
+      previousOwnerName || previousOwnerProfile.playerName || previousOwnerProfile.displayName || target.ownerName,
+      "Ruler"
+    )
+    : "";
+
+  transaction.set(ref, {
+    schemaVersion: REALM_ACTIVITY_SCHEMA_VERSION,
+    eventId: ref.id,
+    eventType: citadel ? "CITADEL_CAPTURED" : "STRONGHOLD_CAPTURED",
+    sourceResolutionId: safeString(sourceResolutionId, 160),
+    worldId: ONLINE_WORLD_ID,
+    resetGeneration: RESET_GENERATION,
+    releaseId: REALM_RELEASE_ID,
+    occurredAtMs: nowMs,
+    createdAtMs: nowMs,
+    createdAt: FieldValue.serverTimestamp(),
+    objectiveId: safeString(target.id || objective.id, 96),
+    objectiveType: citadel ? "crown_citadel" : "stronghold",
+    objectiveName: safeString(objective.name || target.name || (citadel ? "Crown Citadel" : "Stronghold"), 80),
+    strongholdType: safeString(target.strongholdType || objective.strongholdType, 32),
+    regionId,
+    x: safeNumber(target.x, 0),
+    y: safeNumber(target.y, 0),
+    attackerPlayerId,
+    attackerPlayerName: normalizedAttackerName,
+    attackerClanId: attackerClan?.clanId || "",
+    attackerClanName: attackerClan?.clanName || "",
+    attackerClanTag: attackerClan?.clanTag || "",
+    defenderPlayerId,
+    defenderPlayerName: normalizedDefenderName,
+    defenderClanId: defenderClan?.clanId || "",
+    defenderClanName: defenderClan?.clanName || "",
+    defenderClanTag: defenderClan?.clanTag || "",
+    newKingPlayerId: citadel ? attackerPlayerId : "",
+    previousKingPlayerId: citadel ? defenderPlayerId : "",
+  }, { merge: false });
+  return ref;
+}
+
 function getStrongholdBonusPercent(city = {}) {
   if (isCrownCitadel(city)) return CROWN_CITADEL_GOLD_BONUS_PERCENT;
   if (isDefenseStronghold(city)) return DEFENSE_STRONGHOLD_BONUS_PERCENT;
@@ -3215,8 +3312,9 @@ function getObjectiveTroopDefenseBonusPercent(value = {}) {
 
 function getCityStats(city = {}, defenderProfile = null, bonuses = {}, options = {}) {
   const stronghold = isStronghold(city);
-  const level = stronghold ? getStrongholdDefenseLevel(city) : clampCityLevel(city.level);
-  const victoryPoints = Math.floor(
+  const rewardCamp = isRewardCamp(city);
+  const level = rewardCamp ? 0 : stronghold ? getStrongholdDefenseLevel(city) : clampCityLevel(city.level);
+  const victoryPoints = rewardCamp ? 0 : Math.floor(
     CITY_LEVEL_STATS.victoryPointsBase
       + level * CITY_LEVEL_STATS.victoryPointsPerLevel
       + Math.pow(level, CITY_LEVEL_STATS.victoryPointsExponent) * CITY_LEVEL_STATS.victoryPointsExponentScale
@@ -3226,26 +3324,32 @@ function getCityStats(city = {}, defenderProfile = null, bonuses = {}, options =
     DEFENSE_COMBAT_VERSION
   )));
   const soldierDefenseEnabled = usesSoldierDefenseModel(defenseCombatVersion, city);
-  const defensePercent = soldierDefenseEnabled ? 0 : level * 2;
-  const baseCityWalls = getBaseCityWalls(level);
-  const stoneworksPercent = defenderProfile ? getSkillPercent(defenderProfile, "stoneworks") : 0;
+  const defensePercent = soldierDefenseEnabled || rewardCamp ? 0 : level * 2;
+  const baseCityWalls = rewardCamp ? 0 : getBaseCityWalls(level);
+  const stoneworksPercent = !rewardCamp && defenderProfile ? getSkillPercent(defenderProfile, "stoneworks") : 0;
   const cityWalls = Math.floor(baseCityWalls * (1 + stoneworksPercent / 100));
   const troopCount = Math.max(0, Math.floor(safeNumber(city.troops, 0)));
   const shieldwallDisciplinePercent = soldierDefenseEnabled && defenderProfile
     ? getSkillPercent(defenderProfile, "shieldwallDiscipline")
     : 0;
-  const objectiveTroopDefenseBonusPercent = getObjectiveTroopDefenseBonusPercent(bonuses);
-  const baseTroopDefense = soldierDefenseEnabled
-    ? Math.floor(troopCount * BASE_TROOP_DEFENSE_POWER)
-    : troopCount;
-  const troopDefenseBeforeObjective = soldierDefenseEnabled
-    ? Math.floor(troopCount * BASE_TROOP_DEFENSE_POWER * (1 + shieldwallDisciplinePercent / 100))
-    : Math.floor(troopCount * (1 + defensePercent / 100));
-  const troopDefense = soldierDefenseEnabled
-    ? Math.floor(troopCount * BASE_TROOP_DEFENSE_POWER * (
-      1 + (shieldwallDisciplinePercent + objectiveTroopDefenseBonusPercent) / 100
-    ))
-    : troopDefenseBeforeObjective;
+  const objectiveTroopDefenseBonusPercent = rewardCamp ? 0 : getObjectiveTroopDefenseBonusPercent(bonuses);
+  const baseTroopDefense = rewardCamp
+    ? Math.floor(troopCount * REWARD_CAMP_TROOP_POWER)
+    : soldierDefenseEnabled
+      ? Math.floor(troopCount * BASE_TROOP_DEFENSE_POWER)
+      : troopCount;
+  const troopDefenseBeforeObjective = rewardCamp
+    ? baseTroopDefense
+    : soldierDefenseEnabled
+      ? Math.floor(troopCount * BASE_TROOP_DEFENSE_POWER * (1 + shieldwallDisciplinePercent / 100))
+      : Math.floor(troopCount * (1 + defensePercent / 100));
+  const troopDefense = rewardCamp
+    ? baseTroopDefense
+    : soldierDefenseEnabled
+      ? Math.floor(troopCount * BASE_TROOP_DEFENSE_POWER * (
+        1 + (shieldwallDisciplinePercent + objectiveTroopDefenseBonusPercent) / 100
+      ))
+      : troopDefenseBeforeObjective;
   const cityWallsBonus = Math.max(0, cityWalls - baseCityWalls);
   const baseTotalDefense = Math.floor(baseCityWalls + baseTroopDefense);
   const preStrongholdTotalDefense = Math.floor(cityWalls + troopDefenseBeforeObjective);
@@ -4598,6 +4702,9 @@ function normalizeArmyPayload(data = {}, uid = "") {
         : null,
     attackProtection: raw.attackProtection && typeof raw.attackProtection === "object" ? raw.attackProtection : null,
     demoAttack: raw.demoAttack && typeof raw.demoAttack === "object" ? raw.demoAttack : null,
+    protectionHandling: raw.protectionHandling === "auto_cap" || data.protectionHandling === "auto_cap"
+      ? "auto_cap"
+      : "reconfirm",
     useSwiftMarchOrder: raw.useSwiftMarchOrder === true || data.useSwiftMarchOrder === true,
   };
 }
@@ -5498,6 +5605,15 @@ function getRewardCampConfig(campOrType = {}) {
   };
 }
 
+function getRewardCampCombatMetadata(campOrType = {}) {
+  const config = getRewardCampConfig(campOrType);
+  return {
+    combatVersion: REWARD_CAMP_COMBAT_VERSION,
+    baseDefenders: Math.max(1, Math.floor(safeNumber(config?.baseDefenders, 20_000))),
+    troopPower: REWARD_CAMP_TROOP_POWER,
+  };
+}
+
 function isRewardCamp(target = {}) {
   return Boolean(getRewardCampConfig(target));
 }
@@ -5507,7 +5623,7 @@ function cleanServerCampLayoutSeed(camp = {}) {
   const campId = safeString(camp.id, 96).replace(/[^a-zA-Z0-9_-]/g, "_");
   const config = getRewardCampConfig(camp);
   if (!config) return {};
-  const baseDefenders = Math.max(1, Math.floor(safeNumber(camp.baseDefenders, config.baseDefenders)));
+  const combatMetadata = getRewardCampCombatMetadata(config);
   return {
     id: campId,
     campId,
@@ -5522,12 +5638,11 @@ function cleanServerCampLayoutSeed(camp = {}) {
     artSrc: safeString(camp.artSrc || config.artSrc, 180),
     kind: config.kind,
     targetType: "camp",
+    ...combatMetadata,
     campType: config.campType,
     rewardType: config.rewardType,
     holdDurationMs: config.holdDurationMs,
     baseReward: config.baseReward,
-    baseDefenders,
-    defenseLevel: config.defenseLevel,
     rewardSchedule: config.rewardSchedule,
     maxDailyRewards: config.maxDailyRewards,
   };
@@ -5547,18 +5662,26 @@ function getRewardCampCombatTarget(camp = {}) {
   const resolvedCamp = authoritativeSeed ? { ...camp, ...authoritativeSeed } : camp;
   const config = getRewardCampConfig(resolvedCamp);
   if (!config) return null;
-  const currentGarrison = Math.max(0, Math.floor(safeNumber(resolvedCamp.currentGarrison, resolvedCamp.baseDefenders || config.baseDefenders)));
+  const combatMetadata = getRewardCampCombatMetadata(config);
+  const storedHolderUid = safeString(camp.holderUid || camp.ownerUid, 128);
+  const legacyNeutralCamp = !storedHolderUid
+    && Math.floor(safeNumber(camp.combatVersion, 0)) < REWARD_CAMP_COMBAT_VERSION;
+  const currentGarrison = legacyNeutralCamp
+    ? combatMetadata.baseDefenders
+    : Math.max(0, Math.floor(safeNumber(resolvedCamp.currentGarrison, combatMetadata.baseDefenders)));
+  const cleanResolvedCamp = { ...resolvedCamp };
+  delete cleanResolvedCamp.level;
+  delete cleanResolvedCamp.defenseLevel;
   return {
-    ...resolvedCamp,
+    ...cleanResolvedCamp,
     kind: config.kind,
     targetType: "camp",
+    ...combatMetadata,
     campType: config.campType,
     rewardType: config.rewardType,
     holdDurationMs: config.holdDurationMs,
     baseReward: config.baseReward,
-    baseDefenders: Math.max(1, Math.floor(safeNumber(resolvedCamp.baseDefenders, config.baseDefenders))),
-    defenseLevel: config.defenseLevel,
-    level: config.defenseLevel,
+    level: 0,
     troops: currentGarrison,
     troopFloat: currentGarrison,
     rewardSchedule: config.rewardSchedule,
@@ -6811,6 +6934,7 @@ function getPlayerIdentitySyncSignature(identity = {}) {
 
 function createScoutReportSnapshot(target = {}, defenderProfile = null, nowMs = Date.now(), bonuses = {}, statsOverride = null, defensePackages = null) {
   const stats = statsOverride || getCityStats(target, defenderProfile, bonuses);
+  const targetType = isRewardCamp(target) ? "camp" : "city";
   const troopCount = Math.max(0, Math.floor(safeNumber(target.troops, 0)));
   const troopDefense = Math.max(0, Math.floor(safeNumber(stats.troopDefense, troopCount)));
   const reinforcements = (Array.isArray(defensePackages?.reinforcements) ? defensePackages.reinforcements : [])
@@ -6868,6 +6992,7 @@ function createScoutReportSnapshot(target = {}, defenderProfile = null, nowMs = 
     skillSnapshot[`${skill}Percent`] = defenderProfile ? getSkillPercent(defenderProfile, skill) : 0;
   }
   return {
+    targetType,
     troops: troopCount,
     ownerTroops,
     reinforcementTroops,
@@ -6883,7 +7008,7 @@ function createScoutReportSnapshot(target = {}, defenderProfile = null, nowMs = 
     ownerUid: safeString(getOwnerUid(target), 128),
     ownerName: getOwnerName(target),
     ownerFlag: normalizeServerFlag(defenderProfile?.flag || target.ownerFlag),
-    cityLevel: stats.level,
+    cityLevel: targetType === "camp" ? 0 : stats.level,
     defensePercent: stats.defensePercent,
     baseCityWalls: stats.baseCityWalls,
     cityWalls: stats.cityWalls,
@@ -6998,6 +7123,43 @@ function pruneExpiredBattleScoutReports(reports = [], nowMs = Date.now()) {
   return changed ? active : source;
 }
 
+function normalizeCampReportReward(value = null) {
+  if (!value || typeof value !== "object") return null;
+  const rewardType = ["gold", "troops", "city", "item"].includes(value.rewardType)
+    ? value.rewardType
+    : "";
+  if (!rewardType) return null;
+  const amount = Math.max(0, Math.floor(safeNumber(value.amount, 0)));
+  if ((rewardType === "gold" || rewardType === "troops") && amount <= 0) return null;
+  if (rewardType === "city") {
+    const cityId = safeString(value.cityId, 96);
+    const cityName = safeString(value.cityName, 80);
+    if (!cityId || !cityName) return null;
+    return {
+      rewardType,
+      amount: Math.max(1, amount),
+      cityId,
+      cityName,
+      cityRegionId: safeString(normalizeRegionId(value.cityRegionId), 80),
+      cityRegionName: safeString(value.cityRegionName, 80),
+    };
+  }
+  if (rewardType === "item") {
+    const itemId = safeString(value.itemId, 64);
+    const itemName = safeString(value.itemName, 80);
+    const itemQuantity = Math.max(0, Math.floor(safeNumber(value.itemQuantity, amount)));
+    if (!itemId || !itemName || itemQuantity <= 0) return null;
+    return {
+      rewardType,
+      amount: itemQuantity,
+      itemId,
+      itemName,
+      itemQuantity,
+    };
+  }
+  return { rewardType, amount };
+}
+
 function makeReport({
   id,
   uid,
@@ -7023,14 +7185,21 @@ function makeReport({
   troopsAwarded = 0,
   characterAfter = null,
   goldAfter = null,
+  campReward = null,
   attackProtection = null,
   launchCombatForecast = null,
   defenderXpMultiplierApplied = 1,
   firstProtectedDefenseBonus = false,
   battleId = "",
   fieldMedicsRecovered = 0,
+  bulkOrderKind = "",
+  bulkRequestId = "",
+  bulkArrivalCue = "",
+  bulkArrivalIndex = 0,
+  bulkOrderCount = 0,
   nowMs = Date.now(),
 }) {
+  const targetType = isRewardCamp(city) ? "camp" : "city";
   const normalizedTotalDefense = Math.max(
     0,
     Math.floor(safeNumber(totalDefense, 0)),
@@ -7057,7 +7226,8 @@ function makeReport({
     cityId: safeString(city?.id, 96),
     regionId: safeString(city?.regionId || city?.startPool || "", 80),
     cityName: safeString(city?.name || city?.id || "Unknown city", 40),
-    cityLevel: clampCityLevel(city?.level || 1),
+    targetType,
+    cityLevel: targetType === "camp" ? 0 : clampCityLevel(city?.level || 1),
     troopCount: Math.max(0, Math.floor(safeNumber(troopCount, city?.troops || 0))),
     sentTroops: Math.max(0, Math.floor(safeNumber(sentTroops, 0))),
     survivors: Math.max(0, Math.floor(safeNumber(result.survivors, 0))),
@@ -7083,6 +7253,7 @@ function makeReport({
     troopsAwarded: Math.max(0, Math.floor(safeNumber(troopsAwarded, 0))),
     characterAfter,
     goldAfter,
+    campReward: normalizeCampReportReward(campReward),
     attackProtection: normalizeAttackProtectionSnapshot(attackProtection),
     launchCombatForecast: normalizeCombatForecast(launchCombatForecast),
     siegeCombatVersion: result.fortification ? SIEGE_COMBAT_VERSION : 0,
@@ -7096,6 +7267,13 @@ function makeReport({
     battleId: safeString(battleId, 160),
     battleSnapshotVersion: battleId ? BATTLE_SNAPSHOT_MODEL_VERSION : 0,
     fieldMedicsRecovered: Math.max(0, Math.floor(safeNumber(fieldMedicsRecovered, 0))),
+    ...(bulkRequestId ? {
+      bulkOrderKind: safeString(bulkOrderKind, 32),
+      bulkRequestId: safeString(bulkRequestId, 96),
+      bulkArrivalCue: safeString(bulkArrivalCue, 16),
+      bulkArrivalIndex: Math.max(0, Math.floor(safeNumber(bulkArrivalIndex, 0))),
+      bulkOrderCount: Math.max(1, Math.floor(safeNumber(bulkOrderCount, 1))),
+    } : {}),
   };
 }
 
@@ -7469,7 +7647,11 @@ function createDetailedBattleSnapshot({
     battleId,
     armyId: safeString(armyId, 96),
     modelVersion: BATTLE_SNAPSHOT_MODEL_VERSION,
-    combatModel: siege ? "city_wall_then_garrison" : "reinforcement_quarter_walls_full_stoneworks",
+    combatModel: targetType === "camp"
+      ? "camp_troops_only"
+      : siege
+        ? "city_wall_then_garrison"
+        : "reinforcement_quarter_walls_full_stoneworks",
     siegeCombatVersion: siege ? SIEGE_COMBAT_VERSION : 0,
     defenseCombatVersion: Math.max(0, Math.floor(safeNumber(defensePackages.defenseCombatVersion, 0))),
     worldId: ONLINE_WORLD_ID,
@@ -7481,7 +7663,7 @@ function createDetailedBattleSnapshot({
       regionId: normalizeRegionId(target.regionId),
       targetType: targetType === "camp" ? "camp" : "city",
       strongholdType: safeString(target.strongholdType, 32),
-      level: clampCityLevel(target.level || 1),
+      level: targetType === "camp" ? 0 : clampCityLevel(target.level || 1),
       fortifications: {
         cityLevelDefensePercent: defensePackages.owner.cityLevelDefensePercent,
         baseDefensePowerPerTroop: defensePackages.owner.baseDefensePowerPerTroop,
@@ -8269,6 +8451,7 @@ function calculateDefenderArmyPackages({
   defenseCombatVersion = DEFENSE_COMBAT_VERSION,
   nowMs = Date.now(),
 } = {}) {
+  const rewardCamp = targetType === "camp";
   const siegeEnabled = usesSiegeCombat(siegeCombatVersion, targetType);
   const soldierDefenseEnabled = siegeEnabled
     && usesSoldierDefenseModel(defenseCombatVersion, target);
@@ -8306,12 +8489,12 @@ function calculateDefenderArmyPackages({
     baseDefensePowerPerTroop: soldierDefenseEnabled ? BASE_TROOP_DEFENSE_POWER : 1,
     shieldwallDisciplineLevel: Math.max(0, Math.floor(safeNumber(ownerStats.shieldwallDisciplineLevel, 0))),
     shieldwallDisciplinePercent: Math.max(0, safeNumber(ownerStats.shieldwallDisciplinePercent, 0)),
-    personalBonusPercent: Math.max(0, safeNumber(
+    personalBonusPercent: rewardCamp ? 0 : Math.max(0, safeNumber(
       ownerBonuses.personalDefenseBonusPercent,
       getObjectiveTroopDefenseBonusPercent(ownerStats)
     )),
-    sharedBonusPercent: Math.max(0, safeNumber(ownerBonuses.sharedDefenseBonusPercent, 0)),
-    objectiveSource: safeString(ownerBonuses.objectiveSource || ownerBonuses.source, 48),
+    sharedBonusPercent: rewardCamp ? 0 : Math.max(0, safeNumber(ownerBonuses.sharedDefenseBonusPercent, 0)),
+    objectiveSource: rewardCamp ? "" : safeString(ownerBonuses.objectiveSource || ownerBonuses.source, 48),
     cityLevelDefensePercent: Math.max(0, safeNumber(ownerStats.defensePercent, 0)),
     baseCityWalls: Math.max(0, Math.floor(safeNumber(ownerStats.baseCityWalls, 0))),
     cityWalls: Math.max(0, Math.floor(safeNumber(ownerStats.cityWalls, 0))),
@@ -8321,14 +8504,14 @@ function calculateDefenderArmyPackages({
     const profile = contributorProfiles.get(contribution.ownerUid) || {};
     const stats = contributorStats.get(contribution.ownerUid) || {};
     const troops = Math.max(0, Math.floor(safeNumber(contribution.troops, 0)));
-    const bonusPercent = getObjectiveTroopDefenseBonusPercent(stats);
+    const bonusPercent = rewardCamp ? 0 : getObjectiveTroopDefenseBonusPercent(stats);
     const shieldwallDisciplineLevel = soldierDefenseEnabled
       ? getSkillLevel(profile, "shieldwallDiscipline")
       : 0;
     const shieldwallDisciplinePercent = soldierDefenseEnabled
       ? getSkillPercent(profile, "shieldwallDiscipline")
       : 0;
-    const fortifications = siegeEnabled
+    const fortifications = rewardCamp || siegeEnabled
       ? {
         baseCityWalls: Math.max(0, Math.floor(safeNumber(ownerStats.baseCityWalls, 0))),
         cityWallSharePercent: 0,
@@ -8338,14 +8521,18 @@ function calculateDefenderArmyPackages({
         totalDefense: 0,
       }
       : calculateReinforcementFortificationDefense(ownerStats.baseCityWalls, profile);
-    const basePower = soldierDefenseEnabled
-      ? Math.floor(troops * BASE_TROOP_DEFENSE_POWER)
-      : troops + fortifications.totalDefense;
-    const effectivePower = soldierDefenseEnabled
-      ? Math.floor(troops * BASE_TROOP_DEFENSE_POWER * (
-        1 + (shieldwallDisciplinePercent + bonusPercent) / 100
-      ))
-      : Math.floor(basePower * (1 + bonusPercent / 100));
+    const basePower = rewardCamp
+      ? Math.floor(troops * REWARD_CAMP_TROOP_POWER)
+      : soldierDefenseEnabled
+        ? Math.floor(troops * BASE_TROOP_DEFENSE_POWER)
+        : troops + fortifications.totalDefense;
+    const effectivePower = rewardCamp
+      ? basePower
+      : soldierDefenseEnabled
+        ? Math.floor(troops * BASE_TROOP_DEFENSE_POWER * (
+          1 + (shieldwallDisciplinePercent + bonusPercent) / 100
+        ))
+        : Math.floor(basePower * (1 + bonusPercent / 100));
     return {
       reinforcementId: contribution.id,
       ownerUid: safeString(contribution.ownerUid, 128),
@@ -8358,15 +8545,15 @@ function calculateDefenderArmyPackages({
       baseDefensePowerPerTroop: soldierDefenseEnabled ? BASE_TROOP_DEFENSE_POWER : 1,
       shieldwallDisciplineLevel,
       shieldwallDisciplinePercent,
-      personalBonusPercent: Math.max(0, safeNumber(
+      personalBonusPercent: rewardCamp ? 0 : Math.max(0, safeNumber(
         stats.personalObjectiveTroopDefenseBonusPercent,
         safeNumber(stats.personalStrongholdDefenseBonusPercent, bonusPercent)
       )),
-      sharedBonusPercent: Math.max(0, safeNumber(
+      sharedBonusPercent: rewardCamp ? 0 : Math.max(0, safeNumber(
         stats.sharedClanObjectiveTroopDefenseBonusPercent,
         stats.sharedClanDefenseBonusPercent
       )),
-      objectiveSource: safeString(stats.strongholdBonusSource, 48),
+      objectiveSource: rewardCamp ? "" : safeString(stats.strongholdBonusSource, 48),
       baseCityWalls: fortifications.baseCityWalls,
       cityWallSharePercent: fortifications.cityWallSharePercent,
       cityWallDefense: fortifications.cityWallDefense,
@@ -10771,7 +10958,7 @@ async function sendIncomingArmyNotification(notification = {}) {
     },
   }));
 
-  const result = await admin.messaging().sendEach(messages);
+  const result = await messaging.sendEach(messages);
   const invalidTokenDocIds = [];
   result.responses.forEach((response, index) => {
     if (!response.success && isInvalidMessagingTokenError(response.error)) {
@@ -10785,6 +10972,66 @@ async function sendIncomingArmyNotification(notification = {}) {
   }
   return result.successCount > 0;
 }
+
+function queueIncomingArmyNotification(transaction, armyId = "", notification = null, nowMs = Date.now()) {
+  const notificationId = safeString(`incoming_${armyId}`, 180).replace(/[^a-zA-Z0-9_-]/g, "_");
+  if (!transaction || !notificationId || !notification?.defenderUid) return false;
+  transaction.set(db.doc(`serverNotificationOutbox/${notificationId}`), {
+    type: "incoming_army",
+    armyId: safeString(armyId, 96),
+    notification,
+    status: "pending",
+    attempts: 0,
+    createdAtMs: nowMs,
+    expiresAtMs: nowMs + 7 * 24 * 60 * 60 * 1000,
+    expiresAt: Timestamp.fromMillis(nowMs + 7 * 24 * 60 * 60 * 1000),
+    createdAt: FieldValue.serverTimestamp(),
+    updatedAt: FieldValue.serverTimestamp(),
+  }, { merge: false });
+  return true;
+}
+
+async function cleanupExpiredNotificationOutbox(nowMs = Date.now(), limit = 250) {
+  const snapshot = await db.collection("serverNotificationOutbox")
+    .where("expiresAtMs", "<=", nowMs)
+    .limit(Math.max(1, Math.min(500, Math.floor(limit))))
+    .get();
+  if (snapshot.empty) return { removed: 0 };
+  const batch = db.batch();
+  snapshot.docs.forEach(doc => batch.delete(doc.ref));
+  await batch.commit();
+  return { removed: snapshot.size };
+}
+
+exports.deliverIncomingArmyNotification = onDocumentCreated({
+  document: "serverNotificationOutbox/{notificationId}",
+  region: "us-central1",
+  retry: true,
+}, async event => {
+  const snapshot = event.data;
+  if (!snapshot?.exists) return;
+  const record = snapshot.data() || {};
+  if (record.status === "delivered" || record.status === "skipped") return;
+  const attempts = Math.max(0, Math.floor(safeNumber(record.attempts, 0))) + 1;
+  try {
+    const delivered = await sendIncomingArmyNotification(record.notification || {});
+    await snapshot.ref.set({
+      status: delivered ? "delivered" : "skipped",
+      attempts,
+      deliveredAtMs: Date.now(),
+      lastError: FieldValue.delete(),
+      updatedAt: FieldValue.serverTimestamp(),
+    }, { merge: true });
+  } catch (error) {
+    await snapshot.ref.set({
+      status: "pending",
+      attempts,
+      lastError: safeString(error?.message || error, 240),
+      updatedAt: FieldValue.serverTimestamp(),
+    }, { merge: true });
+    throw error;
+  }
+});
 
 exports.getRealmInfo = timedCallable(
   "getRealmInfo",
@@ -10811,6 +11058,7 @@ exports.getRealmInfo = timedCallable(
       combatForecastVersion: COMBAT_FORECAST_VERSION,
       siegeCombatVersion: SIEGE_COMBAT_VERSION,
       defenseCombatVersion: DEFENSE_COMBAT_VERSION,
+      realmActivityVersion: REALM_ACTIVITY_VERSION,
       dailyLoginRewardVersion: DAILY_LOGIN_REWARD_SCHEMA_VERSION,
       capabilities: {
         shardedGameServerHeartbeats: true,
@@ -10819,6 +11067,7 @@ exports.getRealmInfo = timedCallable(
         combatForecastVersion: COMBAT_FORECAST_VERSION,
         siegeCombatVersion: SIEGE_COMBAT_VERSION,
         defenseCombatVersion: DEFENSE_COMBAT_VERSION,
+        realmActivityVersion: REALM_ACTIVITY_VERSION,
         dailyLoginRewardVersion: DAILY_LOGIN_REWARD_SCHEMA_VERSION,
         releaseManifestVersion: Number(RELEASE_MANIFEST.schemaVersion) || 0,
       },
@@ -16089,7 +16338,7 @@ exports.cancelClanRally = timedCallable(
   cancelClanRallyRequest
 );
 
-exports.launchClanRally = timedCallable("launchClanRally", { region: "us-central1", maxInstances: 20, invoker: "public" }, async request => {
+exports.launchClanRally = timedCallable("launchClanRally", { region: "us-central1", minInstances: 1, maxInstances: 20, invoker: "public" }, async request => {
   const uid = requireAuth(request);
   const nowMs = Date.now();
   const clanId = safeString(request.data?.clanId, 128);
@@ -16374,6 +16623,14 @@ exports.launchClanRally = timedCallable("launchClanRally", { region: "us-central
       assembledTroops: totalTroops,
       returnedInboundParticipants: returnedInbound.length,
     }, nowMs);
+    const incomingNotification = createIncomingArmyNotification({
+      defenderUid: targetOwnerUid,
+      attackerUid: uid,
+      movement,
+      source: assembly,
+      target,
+    });
+    queueIncomingArmyNotification(transaction, movement.id, incomingNotification, nowMs);
     return {
       ok: true,
       antiFarmPolicy: antiFarmContext.policy,
@@ -16389,22 +16646,8 @@ exports.launchClanRally = timedCallable("launchClanRally", { region: "us-central
       }),
       movement,
       returnedInbound,
-      incomingNotification: createIncomingArmyNotification({
-        defenderUid: targetOwnerUid,
-        attackerUid: uid,
-        movement,
-        source: assembly,
-        target,
-      }),
     };
   });
-  const incomingNotification = result.incomingNotification || null;
-  delete result.incomingNotification;
-  if (incomingNotification) {
-    await sendIncomingArmyNotification(incomingNotification).catch(error => {
-      console.warn("Could not send rally incoming army notification", error);
-    });
-  }
   return result;
 });
 
@@ -17170,6 +17413,51 @@ function compactBulkOrderResponse(result = {}) {
   };
 }
 
+function annotateBulkArrivalAudio(armies = [], bulkOrderKind = "", requestId = "") {
+  const normalizedKind = bulkOrderKind === "regroup" ? "regroup" : "nearby_scout";
+  const normalizedRequestId = safeString(requestId, 96);
+  const ordered = (Array.isArray(armies) ? armies : [])
+    .filter(Boolean)
+    .sort((left, right) => (
+      Math.max(0, Math.floor(safeNumber(left.arrivesAtMs, 0)))
+      - Math.max(0, Math.floor(safeNumber(right.arrivesAtMs, 0)))
+      || safeString(left.id, 96).localeCompare(safeString(right.id, 96))
+    ));
+  const count = ordered.length;
+  ordered.forEach((army, arrivalIndex) => {
+    let bulkArrivalCue = "mute";
+    if (normalizedKind === "nearby_scout" && arrivalIndex === 0) bulkArrivalCue = "first";
+    if (normalizedKind === "regroup") {
+      if (count === 1) bulkArrivalCue = "first_last";
+      else if (arrivalIndex === 0) bulkArrivalCue = "first";
+      else if (arrivalIndex === count - 1) bulkArrivalCue = "last";
+    }
+    Object.assign(army, {
+      bulkAudioVersion: 1,
+      bulkOrderKind: normalizedKind,
+      bulkRequestId: normalizedRequestId,
+      bulkArrivalCue,
+      bulkArrivalIndex: arrivalIndex,
+      bulkOrderCount: count,
+    });
+  });
+  return armies;
+}
+
+function getArmyBulkAudioReportContext(army = {}) {
+  const bulkRequestId = safeString(army.bulkRequestId, 96);
+  if (!bulkRequestId) return {};
+  return {
+    bulkOrderKind: army.bulkOrderKind === "regroup" ? "regroup" : "nearby_scout",
+    bulkRequestId,
+    bulkArrivalCue: ["first", "last", "first_last", "mute"].includes(army.bulkArrivalCue)
+      ? army.bulkArrivalCue
+      : "mute",
+    bulkArrivalIndex: Math.max(0, Math.floor(safeNumber(army.bulkArrivalIndex, 0))),
+    bulkOrderCount: Math.max(1, Math.floor(safeNumber(army.bulkOrderCount, 1))),
+  };
+}
+
 exports.sendNearbyScouts = timedCallable(
   "sendNearbyScouts",
   { region: "us-central1", maxInstances: 20, invoker: "public" },
@@ -17358,6 +17646,7 @@ exports.sendNearbyScouts = timedCallable(
           serverAuthorityVersion: 3,
         };
       });
+      annotateBulkArrivalAudio(armies, "nearby_scout", requestId);
 
       const existingMovementSnaps = await Promise.all(
         armies.map(army => transaction.get(canonicalArmyRef(army.id)))
@@ -17583,6 +17872,7 @@ exports.sendRegroupOrders = timedCallable(
           serverAuthorityVersion: 3,
         };
       });
+      annotateBulkArrivalAudio(armies, "regroup", requestId);
 
       const existingMovementSnaps = await Promise.all(
         armies.map(army => transaction.get(canonicalArmyRef(army.id)))
@@ -17659,7 +17949,7 @@ exports.sendRegroupOrders = timedCallable(
   }
 );
 
-exports.sendArmyOrder = timedCallable("sendArmyOrder", { region: "us-central1", maxInstances: 20, invoker: "public" }, async request => {
+exports.sendArmyOrder = timedCallable("sendArmyOrder", { region: "us-central1", minInstances: 1, maxInstances: 20, invoker: "public" }, async request => {
   const uid = requireAuth(request);
   const nowMs = Date.now();
   const order = normalizeArmyPayload(request.data || {}, uid);
@@ -17931,6 +18221,7 @@ exports.sendArmyOrder = timedCallable("sendArmyOrder", { region: "us-central1", 
       })
       : null;
     const troops = resolvedKind === "scout" ? 1 : (attackProtection?.effectiveTroops || requestedTroops);
+    const adjustedByProtection = resolvedKind === "attack" && troops < requestedTroops;
     const attackCombatSnapshot = resolvedKind === "scout"
       ? null
       : createAttackCombatSnapshot(troops, attackerProfile);
@@ -17959,7 +18250,7 @@ exports.sendArmyOrder = timedCallable("sendArmyOrder", { region: "us-central1", 
       if (isCityShielded(target, uid, nowMs)) {
         throw new HttpsError("failed-precondition", "That city is protected by a Royal Peace Shield.");
       }
-      if (order.acceptedAttackProtection) {
+      if (order.acceptedAttackProtection && order.protectionHandling !== "auto_cap") {
         const acceptedSignature = getAttackProtectionQuoteSignature(
           order.acceptedAttackProtection,
           sourceTroops,
@@ -18045,6 +18336,8 @@ exports.sendArmyOrder = timedCallable("sendArmyOrder", { region: "us-central1", 
       toName: safeString(target.name || order.toName, 40),
       troops,
       requestedTroops,
+      protectionHandling: order.protectionHandling,
+      adjustedByProtection,
       total: duration,
       path: validatedRoute.path,
       pathSegments: validatedRoute.pathSegments,
@@ -18176,10 +18469,21 @@ exports.sendArmyOrder = timedCallable("sendArmyOrder", { region: "us-central1", 
         updatedAt: FieldValue.serverTimestamp(),
       }, { merge: true });
     }
+    const incomingNotification = createIncomingArmyNotification({
+      defenderUid: targetOwnerUid,
+      attackerUid: uid,
+      movement,
+      source,
+      target,
+    });
+    queueIncomingArmyNotification(transaction, movement.id, incomingNotification, nowMs);
 
     return {
       ok: true,
       peaceShieldDeactivated,
+      requestedTroops,
+      acceptedTroops: troops,
+      adjustedByProtection,
       ...(resolvedKind === "attack"
         ? { antiFarmPolicy: antiFarmContext.policy }
         : {}),
@@ -18203,23 +18507,8 @@ exports.sendArmyOrder = timedCallable("sendArmyOrder", { region: "us-central1", 
         globalStats: globalStatsForClient(attackerEconomy.lastGlobalStats || attackerEconomy.globalStats),
       },
       globalStats: globalStatsForClient(attackerEconomy.lastGlobalStats || attackerEconomy.globalStats),
-      incomingNotification: createIncomingArmyNotification({
-        defenderUid: targetOwnerUid,
-        attackerUid: uid,
-        movement,
-        source,
-        target,
-      }),
     };
   }, "sendArmyOrder");
-
-  const incomingNotification = result.incomingNotification || null;
-  delete result.incomingNotification;
-  if (incomingNotification) {
-    await sendIncomingArmyNotification(incomingNotification).catch(error => {
-      console.warn("Could not send incoming army notification", error);
-    });
-  }
   return result;
 });
 
@@ -19712,6 +20001,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
         const campConfig = getRewardCampConfig(target);
         targetPatch = result.success
           ? {
+            ...getRewardCampCombatMetadata(campConfig),
             holderUid: attackerUid,
             holderName: attackerName,
             holderFlag: attackerProfile.flag || army.ownerFlag || null,
@@ -19732,6 +20022,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
             updatedAt: FieldValue.serverTimestamp(),
           }
           : {
+            ...getRewardCampCombatMetadata(campConfig),
             currentGarrison: defenseAllocation.ownerRemaining,
             alliedReinforcementTroops: defenseAllocation.alliedRemaining,
             activeArmyIds: remainingActiveArmyIds,
@@ -19908,6 +20199,21 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
         ? cleanCityUpdate(target, targetPatch)
         : targetPatch, { merge: true });
       if (result.success) {
+        if (targetType === "city") {
+          writeRealmActivityCaptureEvent(transaction, {
+            eventId: `army_${armyId}_city_${target.id}`,
+            sourceResolutionId: armyId,
+            target,
+            targetRegionId,
+            previousOwnerUid: oldOwnerUid,
+            previousOwnerName: defenderName,
+            previousOwnerProfile: defenderProfile || {},
+            nextOwnerUid: attackerUid,
+            nextOwnerName: attackerName,
+            nextOwnerProfile: attackerProfile,
+            nowMs,
+          });
+        }
         recordSuccessfulFreshNeutralHandoff(transaction, antiFarmContext, {
           eventId: `army_${armyId}_${targetType}_${target.id}`,
           attackerUid,
@@ -20023,6 +20329,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
           defenseStats: scoutReport,
           summary: `Scout revealed ${scoutReport.troops.toLocaleString()} defenders at ${campTarget.name || campTarget.id}.`,
           scoutReport,
+          ...getArmyBulkAudioReportContext(army),
           nowMs,
         });
         writeParticipantEconomies();
@@ -20053,6 +20360,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
       if (defenderUid === attackerUid) {
         const nextGarrison = Math.max(0, Math.floor(safeNumber(target.currentGarrison, target.troops))) + troopCount;
         const campPatch = {
+          ...getRewardCampCombatMetadata(target),
           currentGarrison: nextGarrison,
           activeArmyIds: remainingActiveArmyIds,
           state: getRewardCampState(remainingActiveArmyIds, attackerUid),
@@ -20149,6 +20457,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
       let campPatch;
       if (battle.success) {
         campPatch = {
+          ...getRewardCampCombatMetadata(campConfig),
           holderUid: attackerUid,
           holderName: attackerName,
           holderFlag: attackerProfile.flag || army.ownerFlag || null,
@@ -20170,6 +20479,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
         };
       } else {
         campPatch = {
+          ...getRewardCampCombatMetadata(campConfig),
           currentGarrison: defenseAllocation.ownerRemaining,
           alliedReinforcementTroops: defenseAllocation.alliedRemaining,
           activeArmyIds: remainingActiveArmyIds,
@@ -20263,6 +20573,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
           troopCount: 0,
           totalDefense: 0,
           summary: `Main cities cannot be scouted. ${returned.toLocaleString()} scout returned.`,
+          ...getArmyBulkAudioReportContext(army),
           nowMs,
         });
         writeReport(transaction, attackerUid, report, attackerProfileSnap);
@@ -20301,6 +20612,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
           troopCount: 0,
           totalDefense: 0,
           summary: `Veil of Silence blocked the scout. ${returned.toLocaleString()} scout returned.`,
+          ...getArmyBulkAudioReportContext(army),
           nowMs,
         });
         writeReport(transaction, attackerUid, report, attackerProfileSnap);
@@ -20348,6 +20660,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
           totalDefense: ownCityStats.totalDefense,
           defenseStats: ownCityStats,
           summary: `Scout reached ${target.name || target.id}, now under your control. ${troopCount.toLocaleString()} scout joined the garrison.`,
+          ...getArmyBulkAudioReportContext(army),
           nowMs,
         });
         writeReport(transaction, attackerUid, report, attackerProfileSnap);
@@ -20383,6 +20696,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
         defenseStats: scoutReport,
         summary: `Scout revealed ${scoutReport.troops.toLocaleString()} troops at ${target.name || target.id}.`,
         scoutReport,
+        ...getArmyBulkAudioReportContext(army),
         nowMs,
       });
       writeReport(transaction, attackerUid, report, attackerProfileSnap);
@@ -20879,6 +21193,19 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
         target,
         targetType: "city",
         targetRegionId,
+        nowMs,
+      });
+      writeRealmActivityCaptureEvent(transaction, {
+        eventId: `army_${armyId}_city_${target.id}`,
+        sourceResolutionId: armyId,
+        target,
+        targetRegionId,
+        previousOwnerUid: oldOwnerUid,
+        previousOwnerName: defenderName,
+        previousOwnerProfile: defenderProfile || {},
+        nextOwnerUid: attackerUid,
+        nextOwnerName: attackerName,
+        nextOwnerProfile: attackerProfile,
         nowMs,
       });
       writeOwnershipChangeEvent(transaction, {
@@ -22436,16 +22763,17 @@ async function resolveRewardCampPayoutByRef(campRef, nowMs = Date.now(), callerU
           .slice(-Math.max(1, Math.floor(safeNumber(config.maxDailyRewards, RELIC_CAMP_DAILY_REWARD_LIMIT))))
       : [];
 
-    const baseDefenders = Math.max(1, Math.floor(safeNumber(camp.baseDefenders, config.baseDefenders)));
+    const combatMetadata = getRewardCampCombatMetadata(config);
     const activeArmyIds = normalizeActiveArmyIds(camp.activeArmyIds);
     const campPatch = {
+      ...combatMetadata,
       holderUid: "",
       holderName: "",
       holderFlag: null,
       heldSinceMs: 0,
       payoutAtMs: 0,
       payoutPending: false,
-      currentGarrison: baseDefenders,
+      currentGarrison: combatMetadata.baseDefenders,
       returnSourceCityId: "",
       returnSourceRegionId: "",
       returnSourceCityName: "",
@@ -22537,6 +22865,28 @@ async function resolveRewardCampPayoutByRef(campRef, nowMs = Date.now(), callerU
       : reward > 0
         ? `Held ${camp.name || config.name} for ${holdMinutes} minutes and earned ${rewardLabel}.${returnSummary}`
         : `Held ${camp.name || config.name} for ${holdMinutes} minutes. Today's ${config.name} reward limit has been reached.${returnSummary}`;
+    const campReportReward = deedCityPatch
+      ? {
+        rewardType: "city",
+        amount: 1,
+        cityId: deedCityPatch.id,
+        cityName: deedHistoryEntry.cityName,
+        cityRegionId: deedHistoryEntry.regionId,
+        cityRegionName: deedHistoryEntry.regionName,
+      }
+      : relicRewardEntry
+        ? {
+          rewardType: "item",
+          amount: 1,
+          itemId: relicRewardEntry.itemId,
+          itemName: relicRewardEntry.itemName,
+          itemQuantity: 1,
+        }
+        : goldReward > 0
+          ? { rewardType: "gold", amount: goldReward }
+          : rewardedTroops > 0
+            ? { rewardType: "troops", amount: rewardedTroops }
+            : null;
     const report = makeReport({
       id: `${camp.id}_hold_${nowMs}_${holderUid}`,
       uid: holderUid,
@@ -22552,6 +22902,7 @@ async function resolveRewardCampPayoutByRef(campRef, nowMs = Date.now(), callerU
       goldAwarded: goldReward,
       troopsAwarded: rewardedTroops,
       goldAfter: nextGold,
+      campReward: campReportReward,
       nowMs,
     });
     writeReport(transaction, holderUid, report, playerSnap, {
@@ -22748,14 +23099,16 @@ exports.recallRewardCampGarrison = onCall({ region: "us-central1", maxInstances:
     }
 
     const activeArmyIds = normalizeActiveArmyIds(rawCamp.activeArmyIds);
+    const combatMetadata = getRewardCampCombatMetadata(config);
     const campPatch = {
+      ...combatMetadata,
       holderUid: "",
       holderName: "",
       holderFlag: null,
       heldSinceMs: 0,
       payoutAtMs: 0,
       payoutPending: false,
-      currentGarrison: Math.max(1, Math.floor(safeNumber(rawCamp.baseDefenders, config.baseDefenders))),
+      currentGarrison: combatMetadata.baseDefenders,
       returnSourceCityId: "",
       returnSourceRegionId: "",
       returnSourceCityName: "",
@@ -23646,8 +23999,14 @@ exports.cleanupExpiredBulkOrderRequests = onSchedule({
   timeoutSeconds: 120,
   memory: "256MiB",
 }, async () => {
-  const result = await cleanupExpiredBulkOrderRequests(Date.now());
-  console.log("Expired Crownlands bulk-order idempotency records cleaned", result);
+  const [result, notificationOutboxCleanup] = await Promise.all([
+    cleanupExpiredBulkOrderRequests(Date.now()),
+    cleanupExpiredNotificationOutbox(Date.now()),
+  ]);
+  console.log("Expired Crownlands idempotency and notification records cleaned", {
+    bulkOrders: result,
+    notificationOutbox: notificationOutboxCleanup,
+  });
 });
 
 exports.resolveDueArmyOrders = onSchedule({

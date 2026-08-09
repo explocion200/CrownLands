@@ -504,6 +504,7 @@ const requiredClientSnippets = [
   "previewArmyProtection,",
   "loadAttackProtectionPreview(source, target)",
   "acceptedAttackProtection",
+  'protectionHandling: "auto_cap"',
   "getChangedAttackProtectionFromError(error)",
   "Protection changed. Confirm the refreshed limit.",
   "no capture; defender damage is capped",
@@ -531,10 +532,15 @@ const reopenProtectionSource = readFunction(clientSource, "reopenAttackProtectio
 const showTroopSliderSource = readFunction(clientSource, "showTroopSliderModalAsync");
 const confirmTroopSliderSource = readFunction(clientSource, "confirmTroopSliderOrder");
 if (!reopenProtectionSource.includes("window.setTimeout")
-  || !reopenProtectionSource.includes("attackProtection: refreshedProtectionSnapshot")
-  || !showTroopSliderSource.includes("options.attackProtection")
-  || !showTroopSliderSource.includes("attackProtection: providedAttackProtection, combatForecast: providedCombatForecast")) {
-  throw new Error("A changed protection quote can close the attack screen instead of reopening with the refreshed limit.");
+   || !reopenProtectionSource.includes("attackProtection: refreshedProtectionSnapshot")
+   || !showTroopSliderSource.includes("options.attackProtection")
+   || !showTroopSliderSource.includes("attackProtection: providedAttackProtection")
+   || !confirmTroopSliderSource.includes('protectionHandling: "auto_cap"')) {
+  throw new Error("New clients must auto-cap instant launches while the legacy refreshed-limit confirmation remains available.");
+}
+if (!source.includes('order.acceptedAttackProtection && order.protectionHandling !== "auto_cap"')
+  || !source.includes("adjustedByProtection")) {
+  throw new Error("The server does not preserve legacy quote checks while authoritatively auto-capping instant launches.");
 }
 if (!confirmTroopSliderSource.includes("const launched = launchAttack")
   || !confirmTroopSliderSource.includes("if (!launched) return")

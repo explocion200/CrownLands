@@ -1981,6 +1981,46 @@
       : null;
   }
 
+  function subscribeRealmActivity(handlers = {}) {
+    if (!client.configured || !client.db || !client.user?.uid) return () => {};
+    const { collection, onSnapshot, query: firestoreQuery, where, orderBy, limit } = client.modules.firestore;
+    if (!collection || !onSnapshot || !firestoreQuery || !where || !orderBy || !limit) return () => {};
+    const activityRef = collection(client.db, "realmEvents", RESET_GENERATION, "activity");
+    const activityQuery = firestoreQuery(
+      activityRef,
+      where("resetGeneration", "==", RESET_GENERATION),
+      where("worldId", "==", ONLINE_WORLD_ID),
+      orderBy("occurredAtMs", "desc"),
+      limit(250)
+    );
+    let deliveredInitialSnapshot = false;
+    return onSnapshot(
+      activityQuery,
+      { includeMetadataChanges: true },
+      snapshot => {
+        const metadata = {
+          initial: !deliveredInitialSnapshot,
+          fromCache: Boolean(snapshot.metadata?.fromCache),
+          hasPendingWrites: Boolean(snapshot.metadata?.hasPendingWrites),
+          changes: snapshot.docChanges().map(change => ({
+            type: change.type,
+            event: { id: change.doc.id, ...change.doc.data() },
+          })),
+        };
+        deliveredInitialSnapshot = true;
+        if (typeof handlers.onEvents === "function") {
+          handlers.onEvents(
+            snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })),
+            metadata
+          );
+        }
+      },
+      error => {
+        if (typeof handlers.onError === "function") handlers.onError(error, "realmActivity");
+      }
+    );
+  }
+
   function subscribeServerReports(handlers = {}) {
     if (!client.configured || !client.db || !client.user?.uid) return () => {};
     const { collection, onSnapshot, query: firestoreQuery, where, orderBy, limit } = client.modules.firestore;
@@ -2418,6 +2458,7 @@
     subscribePlayerReinforcements,
     subscribePlayerCamps,
     subscribeCrownCitadel,
+    subscribeRealmActivity,
     subscribeServerReports,
     isPushSupported,
     getNotificationPermission,

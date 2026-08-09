@@ -43,6 +43,10 @@ assert.match(client, /function normalizeBattleReports[\s\S]*?historyExpiresAtMs 
 assert.match(client, /function mergeServerReports[\s\S]*?appliedServerReportRevisions[\s\S]*?refreshedScoutCityIds[\s\S]*?showScoutReportModal/, "Realtime replacements cannot refresh a currently open report.");
 assert.match(client, /function updateScoutReportLifecycle[\s\S]*?modal\.close\(\)[\s\S]*?showLogModal[\s\S]*?renderCities\(true\)/, "Exact client expiration is not removed from all intelligence views.");
 assert.match(client, /function renderHudStatusPanels[\s\S]*?updateScoutReportLifecycle\(\)/, "Scout expiration is not checked by the one-second UI lifecycle.");
+assert.match(client, /function isArrivedScoutMission[\s\S]*?army\.kind !== "scout"[\s\S]*?arrivesAtMs <= nowMs[\s\S]*?remaining <= 0/, "Arrived scouts do not have a precise client visibility boundary.");
+assert.match(client, /function getRenderableArmies[\s\S]*?state\.attacks\.filter\(army => !isArrivedScoutMission\(army\)\)[\s\S]*?onlineArmies[\s\S]*?filter\(army => !isArrivedScoutMission\(army\)\)[\s\S]*?pendingOutgoingMissions[\s\S]*?filter\(mission => !isArrivedScoutMission\(mission\)\)/, "Arrived scouts can remain visible while their reports settle.");
+assert.match(client, /function getPendingScoutMission[\s\S]*?!isArrivedScoutMission\(attack\)/, "An arrived scout can continue blocking a new scout order while its report settles.");
+assert.match(client, /async function resolveServerArmyMission[\s\S]*?api\.resolveArmyOrder[\s\S]*?applyServerArmyResult\(result,\s*\{\s*movement:\s*mission\s*\}\)[\s\S]*?loadServerReportsOnce/, "Hidden arrived scouts do not continue through authoritative report settlement.");
 assert.match(server, /function createIslandReportProjection[\s\S]*?troopCount:\s*0[\s\S]*?scoutReport:\s*null/, "Public island projections expose exact scout intelligence.");
 
 const nowMs = 2_000_000_000_000;
@@ -63,7 +67,20 @@ assert.equal(lifecycleSandbox.isBattleReportHistoryExpired({ type: "defense", oc
 assert.equal(lifecycleSandbox.isBattleReportHistoryExpired({ type: "scout", scoutReport: { expiresAtMs: nowMs + 1 }, expiresAtMs: nowMs + 1 }, nowMs), false, "A scout report expired before its intelligence.");
 assert.equal(lifecycleSandbox.isBattleReportHistoryExpired({ type: "scout", scoutReport: { expiresAtMs: nowMs }, expiresAtMs: nowMs }, nowMs), true, "A scout report survived the exact intelligence-expiry boundary.");
 
+const arrivalSandbox = {
+  normalizeTimestampMs: value => {
+    const timestamp = Number(value);
+    return Number.isFinite(timestamp) && timestamp > 0 ? Math.floor(timestamp) : 0;
+  },
+};
+vm.createContext(arrivalSandbox);
+vm.runInContext(`${functionBody(client, "isArrivedScoutMission")}; this.isArrivedScoutMission = isArrivedScoutMission;`, arrivalSandbox);
+assert.equal(arrivalSandbox.isArrivedScoutMission({ kind: "scout", arrivesAtMs: nowMs + 1 }, nowMs), false, "A scout vanished before arrival.");
+assert.equal(arrivalSandbox.isArrivedScoutMission({ kind: "scout", arrivesAtMs: nowMs }, nowMs), true, "A scout remained visible at the exact arrival boundary.");
+assert.equal(arrivalSandbox.isArrivedScoutMission({ kind: "scout", remaining: 0 }, nowMs), true, "A legacy scout with a zero timer remained visible.");
+assert.equal(arrivalSandbox.isArrivedScoutMission({ kind: "attack", arrivesAtMs: nowMs }, nowMs), false, "The scout-only cleanup hid a non-scout army.");
+
 assert.match(guide, /Successful intelligence lasts for ten minutes from arrival[\s\S]*?entry is removed from Reports[\s\S]*?Attack and defense reports remain available for 24 hours/i);
 assert.match(rules, /Successful scout intelligence expires ten minutes after the scout arrives[\s\S]*?Reports entry disappears[\s\S]*?Attack and defense reports expire 24 hours/i);
 
-console.log("Validated ten-minute scout reports, 24-hour battle reports, exact expiry, cleanup, and private projections.");
+console.log("Validated immediate scout arrival cleanup, report settlement, ten-minute intelligence, 24-hour battle history, and private projections.");

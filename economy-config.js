@@ -300,8 +300,7 @@ window.CROWNLANDS_ECONOMY_CONFIG = {
   "camps": {
     "gold": {
       "holdMinutes": 10,
-      "baseDefenders": 10000,
-      "defenseLevel": 30,
+      "baseDefenders": 20000,
       "rewardSchedule": [
         {
           "minimumReward": 20000,
@@ -323,8 +322,7 @@ window.CROWNLANDS_ECONOMY_CONFIG = {
     },
     "troops": {
       "holdMinutes": 15,
-      "baseDefenders": 10000,
-      "defenseLevel": 30,
+      "baseDefenders": 20000,
       "rewardSchedule": [
         {
           "minimumReward": 10000,
@@ -346,14 +344,12 @@ window.CROWNLANDS_ECONOMY_CONFIG = {
     },
     "items": {
       "holdMinutes": 30,
-      "baseDefenders": 10000,
-      "defenseLevel": 30,
+      "baseDefenders": 20000,
       "maxDailyRewards": 5
     },
     "deed": {
       "holdMinutes": 60,
-      "baseDefenders": 25000,
-      "defenseLevel": 30,
+      "baseDefenders": 20000,
       "maxDailyRewards": 1
     }
   }

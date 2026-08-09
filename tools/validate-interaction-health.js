@@ -33,6 +33,8 @@ for (const [label, source] of Object.entries({ directScout, nearestScout, nearby
   assert.doesNotMatch(source, /findLandRoute\s*\(|findRoute\s*\(/, `${label} must not run synchronous routing on the interaction thread.`);
 }
 assert.match(directScout, /pendingDirectScoutTargets\.has/, "Direct scout clicks must suppress duplicate calculations.");
+assert.match(directScout, /findNearestOwnedSourceCandidate/, "Online direct scouts must select a source without waiting for route batches.");
+assert.match(directScout, /createInstantOrderRoute/, "Online direct scouts must create an immediate route intent.");
 assert.match(nearestScout, /await findRoutesAsync/, "Nearest scout selection must use the route worker batch.");
 assert.match(nearbyScout, /await findRoutesAsync/, "Scout Nearby must use the route worker batch.");
 assert.match(regroup, /await findRoutesAsync/, "Regroup must use the route worker batch.");
@@ -51,19 +53,32 @@ assert.match(toggleScout, /canUseBulkArmyOrders\(\)/, "Scout Nearby must reject 
 assert.match(toggleRegroup, /canUseBulkArmyOrders\(\)/, "Regroup must reject unsupported online realms.");
 assert.match(toggleScout, /api\.sendNearbyScouts/, "Online Scout Nearby must use the atomic server callable.");
 assert.match(toggleRegroup, /api\.sendRegroupOrders/, "Online Regroup must use the atomic server callable.");
+assert.match(toggleScout, /serverBulkOrder[\s\S]*getNearbyScoutCandidates/, "Online Scout Nearby must not wait for route previews before dispatch.");
+assert.match(toggleRegroup, /serverBulkOrder[\s\S]*getNearbyRegroupCandidates/, "Online Regroup must not wait for route previews before dispatch.");
 assert.match(toggleScout, /requestId:\s*action\.requestId/, "Scout Nearby must send an idempotency key.");
 assert.match(toggleRegroup, /requestId:\s*action\.requestId/, "Regroup must send an idempotency key.");
 assert.match(toggleRegroup, /route:\s*option\.route/, "Offline Regroup must reuse worker routes instead of recalculating synchronously.");
 
 const routeRequest = extractFunction("requestAuthoritativeOrderRoute");
-const routePreview = extractFunction("findOrderRouteAsync");
 const routeRefresh = extractFunction("scheduleAuthoritativeRoutePreviewRefresh");
 const troopSliderUpdate = extractFunction("updateTroopSliderModal");
+const instantRoute = extractFunction("createInstantOrderRoute");
+const troopSliderOpen = extractFunction("showTroopSliderModalAsync");
+const publishOrder = extractFunction("publishOnlineArmyMovement");
 const cityWheel = extractFunction("renderSelectedCityWheel");
 const cityFortificationDisplay = extractFunction("getCityFortificationDisplay");
 assert.match(routeRequest, /supportsAuthoritativeArmyRoutes\(\)/, "Authoritative preview calls must be capability-gated.");
 assert.match(routeRequest, /api\.previewArmyRoute/, "Online order previews must request the authoritative route.");
-assert.match(routePreview, /requestAuthoritativeOrderRoute/, "Order routing must prefer the capability-gated authoritative preview.");
+assert.match(instantRoute, /getCachedAsyncRoute/, "Immediate orders should reuse a cached route when available.");
+assert.match(instantRoute, /previewStatus:\s*"estimated"/, "Uncached orders need a clearly marked provisional route.");
+assert.ok(
+  troopSliderOpen.indexOf("showTroopSliderModalWithRoute") < troopSliderOpen.indexOf("findRouteAsync(source, target).then"),
+  "The interactive troop panel must render before local route hydration begins."
+);
+assert.match(troopSliderOpen, /void loadAttackProtectionPreview/, "Attack protection must hydrate without blocking the troop panel.");
+assert.doesNotMatch(game, /function showTroopRouteLoadingModal/, "The blocking route-loading modal must stay removed.");
+assert.match(publishOrder, /path:\s*\[\][\s\S]*pathSegments:\s*\[\][\s\S]*pathLength:\s*0/, "Online confirmation must support a route-free intent.");
+assert.match(publishOrder, /isRetryableArmySubmissionError[\s\S]*window\.setTimeout[\s\S]*submitOrder/, "Uncertain launches must retry the same idempotent order.");
 assert.match(routeRefresh, /AUTHORITATIVE_ROUTE_PREVIEW_DEBOUNCE_MS/, "Troop-band route refreshes must be debounced.");
 assert.match(routeRefresh, /getTroopTravelBandIndex/, "Authoritative route refreshes must track troop travel bands.");
 assert.match(routeRefresh, /requestAuthoritativeOrderRoute/, "Troop-band changes must request a fresh authoritative ETA.");
@@ -132,6 +147,17 @@ assert.match(game, /scheduleMainMapPinchUpdate\(\)/, "Main-map pinch work must b
 assert.match(styles, /--map-hit-size/, "Map interactions must retain a zoom-aware 44px target.");
 assert.match(styles, /\.city-wheel-action::before[\s\S]*\.gold-camp-wheel-action::before[\s\S]*--map-hit-size/, "City and camp action-wheel buttons must retain zoom-aware 44px targets.");
 assert.match(styles, /\.army-sync-status/, "Realtime march recovery must be visible to players.");
+
+const dialogOpenScrollReset = extractFunction("installDialogOpenScrollReset");
+const dialogScrollReset = extractFunction("resetDialogScrollTop");
+assert.match(dialogOpenScrollReset, /HTMLDialogElement/, "Every dialog must share the open-time scroll reset.");
+assert.match(dialogOpenScrollReset, /requestAnimationFrame/, "Dialog scroll must be confirmed after browser layout and focus handling.");
+assert.match(dialogOpenScrollReset, /addEventListener\("close"/, "Closed dialogs must discard their previous scroll position.");
+assert.match(dialogOpenScrollReset, /addEventListener\("toggle"/, "Dialog opening must reset scroll after native browser state settles.");
+assert.match(dialogScrollReset, /#modalBody/, "The shared modal body must return to its top whenever a dialog opens.");
+for (const view of ["profileView", "skillsView", "settingsView", "clanView", "flagEditorView"]) {
+  assert.match(game, new RegExp(`resetUiScrollTop\\(${view}\\)`), `${view} must open at its top.`);
+}
 
 const nearbyPreload = extractFunction("preloadNearbyIslandMaps");
 assert.match(nearbyPreload, /saveData/, "Speculative map loads must respect Save-Data.");

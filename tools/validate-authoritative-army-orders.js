@@ -49,11 +49,21 @@ assert.match(previewSource, /durationMs[\s\S]*?arrivesAtMs/);
 const sendStart = server.indexOf('exports.sendArmyOrder = timedCallable("sendArmyOrder"');
 const sendEnd = server.indexOf("async function resolveArmyOrderById", sendStart);
 const sendSource = server.slice(sendStart, sendEnd);
+assert.match(sendSource, /minInstances:\s*1/,
+  "Direct competitive march launches must keep one warm server instance.");
 assert.match(sendSource, /buildServerGeneratedArmyRoute\(source, target\)/,
   "Online launches must rebuild their route from trusted server data.");
 assert.doesNotMatch(sendSource, /validateArmyRoute\(order, source, target\)/,
   "Online launch timing must not trust client-supplied geometry.");
 assert.match(sendSource, /reserveArmyLaunchRateLimit\(transaction, launchRateSnap, uid, nowMs\)/);
+assert.match(sendSource, /order\.acceptedAttackProtection && order\.protectionHandling !== "auto_cap"/,
+  "Instant clients must auto-cap while legacy clients retain quote reconfirmation.");
+assert.match(sendSource, /requestedTroops[\s\S]*?acceptedTroops:\s*troops[\s\S]*?adjustedByProtection/,
+  "Launch responses must explain authoritative troop-cap adjustments.");
+assert.match(sendSource, /queueIncomingArmyNotification\(transaction, movement\.id/,
+  "Incoming push delivery must be queued outside the launch response path.");
+assert.doesNotMatch(sendSource, /await sendIncomingArmyNotification/,
+  "Direct march acceptance must not wait for push delivery.");
 
 function callableSource(exportName, nextExportName) {
   const start = server.indexOf(`exports.${exportName}`);
@@ -82,12 +92,21 @@ assert.doesNotMatch(joinRallySource, /validateArmyRoute\(/,
   "Rally contributions must not trust client-supplied geometry.");
 
 const launchRallySource = callableSource("launchClanRally", "previewArmyProtection");
+assert.match(launchRallySource, /minInstances:\s*1/,
+  "Final rally attacks must keep one warm server instance.");
 assert.match(launchRallySource, /buildServerGeneratedArmyRoute\(assembly, target\)/,
   "Rally launch must rebuild its route from current authoritative world data.");
 assert.match(launchRallySource, /transaction\.set\(rallyRef,[\s\S]*?path:\s*validatedRoute\.path[\s\S]*?pathSegments:\s*validatedRoute\.pathSegments[\s\S]*?routeRegionIds:\s*validatedRoute\.routeRegionIds[\s\S]*?pathLength:\s*validatedRoute\.pathLength/,
   "The launched rally record must replace its forming route with canonical launch geometry.");
 assert.doesNotMatch(launchRallySource, /validateArmyRoute\(/,
   "Rally launch must not trust stored or client-supplied geometry.");
+assert.match(launchRallySource, /queueIncomingArmyNotification\(transaction, movement\.id/,
+  "Rally launch responses must not wait for push delivery.");
+
+assert.match(server, /const \{ getMessaging \} = require\("firebase-admin\/messaging"\)/,
+  "Firebase Messaging must use the modular Admin SDK entry point.");
+assert.match(server, /exports\.deliverIncomingArmyNotification = onDocumentCreated/,
+  "The private incoming-army notification outbox trigger is missing.");
 
 const scoutStart = server.indexOf("exports.sendNearbyScouts");
 const scoutEnd = server.indexOf("exports.sendRegroupOrders", scoutStart);

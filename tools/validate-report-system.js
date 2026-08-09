@@ -55,6 +55,8 @@ assert.match(sideModel, /getDetailedBattleSideParticipants[\s\S]*?sumDetailedBat
 assert.match(sideModel, /reinforcementCount[\s\S]*?reinforcementTroops/, "The visual defender summary omits reinforcement counts or troops.");
 assert.match(functionBody(client, "formatBattleWallAfterStatus"), /Intact — 100%[\s\S]*?Breached — 0%[\s\S]*?Damaged —/, "Post-battle wall status labels are incomplete.");
 assert.match(functionBody(client, "renderLegacyBattleReportDetail"), /renderBattleReportNavigation[\s\S]*?renderBattleReportHero[\s\S]*?renderLegacyBattleComparison[\s\S]*?renderBattleRewards/, "Historical battle reports do not use the visual fallback.");
+assert.match(functionBody(client, "renderBattleRewards"), /getBattleReportCampReward[\s\S]*?renderCampReportRewardMetrics[\s\S]*?: \[/, "Camp payout reports do not replace generic battle rewards with their typed reward.");
+assert.match(functionBody(client, "renderCampReportRewardMetrics"), /"Gold"[\s\S]*?"Troops"[\s\S]*?"City"[\s\S]*?"Location"[\s\S]*?"Item"[\s\S]*?"Amount"/, "Camp report rewards do not cover gold, troops, cities with locations, and item quantities.");
 assert.match(functionBody(client, "getLegacyBattleSides"), /Not recorded/, "Historical reports fabricate unavailable power details.");
 assert.match(functionBody(client, "showBattleReportDetail"), /!report\.battleId[\s\S]*?applyLegacyBattleFlags[\s\S]*?catch[\s\S]*?applyLegacyBattleFlags/, "Legacy and unavailable snapshot reports do not hydrate their side flags.");
 assert.match(styles, /\.battle-visual-hero\s*\{[\s\S]*?grid-template-columns:[\s\S]*?\.battle-visual-two-column\s*\{[\s\S]*?grid-template-columns:\s*repeat\(2,/, "Visual battle sides are not presented in aligned columns.");
@@ -185,6 +187,7 @@ assert.match(client, /function showBattleReportDetail[\s\S]*?showScoutReportModa
 assert.doesNotMatch(client, /fixed intelligence snapshot from when the scout arrived/i, "Scout details still show the removed fixed-snapshot warning.");
 assert.doesNotMatch(styles, /\.scout-report-snapshot-note/, "Removed scout snapshot-note styling is still present.");
 assert.match(functionBody(client, "showScoutReportModal"), /data-scout-report-age[\s\S]*?data-scout-report-expires/, "Scout details lost their age or expiration timer.");
+assert.match(functionBody(client, "showScoutReportModal"), /scout-report-city[\s\S]*?renderBattleReportLocateButton\([\s\S]*?cityId[\s\S]*?regionId:[\s\S]*?cityName:[\s\S]*?bindBattleReportJumpButtons\(\)/, "Successful Scout details do not render and bind the shared target-location button beside the city name.");
 assert.match(client, /function renderScoutAttemptReportDetail[\s\S]*?Failed, blocked, replaced, or expired scouts/, "Unavailable scout intelligence is not explained safely.");
 assert.match(client, /function updateScoutReportLifecycle[\s\S]*?delete modal\.dataset\.scoutReportCityId;[\s\S]*?showLogModal\(\{ silentAudio: true \}\)/, "Expired scout details do not return the player to Reports.");
 assert.match(client, /function normalizeBattleReports[\s\S]*?historyExpiresAtMs && historyExpiresAtMs <= nowMs\) return;/, "Expired reports are not removed from the Reports list.");

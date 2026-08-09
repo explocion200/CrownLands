@@ -9,7 +9,6 @@ function resolveAppUrl(path = "") {
 }
 
 const STATIC_CACHE_URLS = [
-  "/",
   "/index.html",
   "/manifest.webmanifest",
   "/styles.css?v=20260807-animation-system-v1",

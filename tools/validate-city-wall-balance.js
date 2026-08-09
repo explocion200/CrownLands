@@ -97,8 +97,8 @@ for (const [level, expected] of expectedWalls) {
   assert.equal(editorContext.getEconomyPreviewBaseWall(level), expected, `Map-editor wall preview is wrong at level ${level}.`);
 }
 
-assert.match(clientSource, /const baseCityWalls = getBaseCityWalls\(level\)/);
-assert.match(serverSource, /const baseCityWalls = getBaseCityWalls\(level\)/);
+assert.match(clientSource, /const baseCityWalls = rewardCamp \? 0 : getBaseCityWalls\(level\)/);
+assert.match(serverSource, /const baseCityWalls = rewardCamp \? 0 : getBaseCityWalls\(level\)/);
 assert.doesNotMatch(clientSource, /cityWallsExponent|cityWallsTransition/);
 assert.doesNotMatch(serverSource, /cityWallsExponent|cityWallsTransition/);
 assert.doesNotMatch(clientSource, /cityWallsAcceleration/);

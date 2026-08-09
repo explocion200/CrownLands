@@ -55,6 +55,7 @@ const payoutEnd = serverSource.indexOf("async function resolveRewardCampPayoutAn
 const payoutSource = serverSource.slice(payoutStart, payoutEnd);
 requireMatch(payoutSource, /relicDailyLimitReached\s*=\s*isRelicCamp\s*&&\s*priorClaims\s*>=\s*config\.maxDailyRewards/, "Relic Camp does not enforce server-authoritative daily rewards.");
 requireMatch(payoutSource, /normalizeShopItems\(player\.shopItems\)[\s\S]*?rewardedShopItems\[relicRewardItem\.itemId\][\s\S]*?\+\s*1/, "Relic Camp payout does not increment the existing bag inventory.");
+requireMatch(payoutSource, /relicRewardEntry[\s\S]*?rewardType: "item"[\s\S]*?itemName: relicRewardEntry\.itemName[\s\S]*?itemQuantity: 1[\s\S]*?campReward: campReportReward/, "Relic Camp reports do not record the awarded item and quantity.");
 requireMatch(payoutSource, /rewards:\s*relicRewardsToday[\s\S]*?maxDailyRewards:\s*config\.maxDailyRewards/, "Relic Camp daily reward history is not persisted with its limit.");
 requireMatch(payoutSource, /isRelicCamp\s*&&\s*relicDailyLimitReached[\s\S]*?"daily-limit"/, "Relic Camp over-limit hold does not complete with a no-reward daily-limit status.");
 requireMatch(payoutSource, /rewardedShopItems\s*\?\s*\{\s*shopItems:\s*rewardedShopItems\s*\}/, "Relic Camp payout does not return updated inventory to the current player.");
@@ -63,6 +64,7 @@ requireMatch(firebaseClientSource, /normalizedType\s*===\s*"items"[\s\S]*?"relic
 requireMatch(rulesSource, /match \/objectiveStats\/\{objectiveId\}[\s\S]*?allow read: if ownsPlayerDoc\(uid\);[\s\S]*?allow create, update, delete: if false;/, "Relic Camp objective stats are not private to their player and server-owned.");
 requireMatch(clientSource, /function relicCampProgressMarkup[\s\S]*?Possible item drops[\s\S]*?Today's rewards/, "Relic Camp Reward tab is missing its drop table or daily history.");
 requireMatch(clientSource, /function relicCampProgressMarkup[\s\S]*?Daily reward limit reached/, "Relic Camp Reward tab is missing its daily-limit message.");
+requireMatch(clientSource, /function renderCampReportRewardMetrics[\s\S]*?renderBattleMetric\("Item"[\s\S]*?renderBattleMetric\("Amount"/, "Relic Camp report rewards do not show the item and amount.");
 requireMatch(clientSource, /Capture and hold the Relic Camp for \$\{formatNumber\(holdMinutes\)\} minutes[\s\S]*?No relic fragments, gold, troops, battle XP, or leaderboard points[\s\S]*?Royal Peace Shield does not protect camp ownership/, "Relic Camp help text is incomplete or not driven by its configured timer.");
 requireMatch(serverSource, /ownerShieldExpiresAtMs:\s*0/, "Reward camps must remain outside Royal Peace Shield protection.");
 

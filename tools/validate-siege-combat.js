@@ -303,7 +303,7 @@ assert.equal(protectedRaid.fortification.endingIntegrityBps, 10_000);
 assert.ok(protectedRaid.defenderLosses <= 10);
 
 const camp = siegeResult({ attackPower: 300, troops: 300, defenders: 100, wall: 1_000, garrison: 200, targetType: "camp" });
-assert.equal(camp.fortification, null, "Reward camps must retain legacy combat.");
+assert.equal(camp.fortification, null, "Reward camps must remain wall-free.");
 const legacy = siegeResult({ attackPower: 1_000, troops: 1_000, defenders: 100, wall: 1_000, garrison: 200, version: 0 });
 assert.equal(legacy.fortification, null, "Unversioned in-flight armies must retain legacy settlement.");
 

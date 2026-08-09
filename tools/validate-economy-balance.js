@@ -21,6 +21,10 @@ function requireMatch(source, pattern, message) {
 assert.deepEqual(browserConfig, serverConfig, "Browser and Firebase economy configurations differ.");
 assert.equal(serverConfig.shopItems.war_drums_30m.bonusPercent, 30);
 assert.equal(serverConfig.camps.items.maxDailyRewards, 5);
+for (const campType of ["gold", "troops", "items", "deed"]) {
+  assert.equal(serverConfig.camps[campType].baseDefenders, 20_000, `${campType} camp must reset with 20,000 neutral troops.`);
+  assert.equal("defenseLevel" in serverConfig.camps[campType], false, `${campType} camp still exposes a defense level.`);
+}
 assert.equal(
   serverConfig.pickups.dailyGoldCap * serverConfig.pickups.goldAwardProductionMinutes,
   1_500,
@@ -142,6 +146,13 @@ requireMatch(serverSource, /require\("\.\/economy-config\.json"\)/, "Firebase Fu
 requireMatch(editorServerSource, /\/api\/economy-data/, "Game Editor economy API is missing.");
 requireMatch(editorSource, /renderEconomySections/, "Game Editor economy interface is missing.");
 requireMatch(editorSource, /data-camp-reward-field="productionHours"/, "Per-camp production-hour editor is missing.");
+requireMatch(editorSource, /fixed 20,000-troop neutral garrison/, "Game Editor does not explain fixed camp combat.");
+assert.doesNotMatch(editorSource, /camps\.\$\{campType\}\.defenseLevel/, "Game Editor still exposes camp defense level.");
+requireMatch(editorServerSource, /baseDefenders: 20_000/, "Game Editor does not enforce the fixed camp garrison.");
+assert.doesNotMatch(editorServerSource, /defenseLevel:/, "Game Editor still persists camp defense level.");
+requireMatch(serverSource, /const REWARD_CAMP_TROOP_POWER = 1;/, "Server camp troop power is not fixed at 1.00.");
+requireMatch(clientSource, /const REWARD_CAMP_TROOP_POWER = 1;/, "Client camp troop power is not fixed at 1.00.");
+requireMatch(serverSource, /legacyNeutralCamp[\s\S]*?combatMetadata\.baseDefenders/, "Legacy neutral camps do not normalize to the new 20,000-troop baseline.");
 assert.doesNotMatch(clientSource, /troopsRalliedToMain|Rallied home/, "Lost-city troop production can still be rallied to the main city.");
 requireMatch(clientSource, /if \(!stillOwned\) continue;[\s\S]*?goldGainedFloat \+= stats\.goldProductionPerSecond/, "Offline production still credits cities that are no longer owned.");
 

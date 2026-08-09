@@ -311,8 +311,7 @@ function sanitizeEconomyConfig(config = {}) {
       const campFallback = fallback.camps[campType];
       const safe = {
         holdMinutes: number(camp.holdMinutes, campFallback.holdMinutes, 0.1, 10080),
-        baseDefenders: Math.max(1, Math.floor(number(camp.baseDefenders, campFallback.baseDefenders, 1, 1_000_000_000))),
-        defenseLevel: Math.max(1, Math.floor(number(camp.defenseLevel, campFallback.defenseLevel, 1, 1000))),
+        baseDefenders: 20_000,
       };
       if (Array.isArray(campFallback.rewardSchedule)) {
         safe.rewardSchedule = cleanRewardSchedule(camp.rewardSchedule, campFallback.rewardSchedule);
