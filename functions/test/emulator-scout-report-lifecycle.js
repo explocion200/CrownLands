@@ -138,11 +138,9 @@ async function main() {
   assert(targetAIntel.length === 1 && targetAIntel[0].id === "current-a", "The newest successful target report did not replace the older snapshot.");
   assert(reports.some(report => report.id === "current-b"), "An independent target report was incorrectly pruned.");
   assert(reports.some(report => report.id === "blocked-notice"), "A blocked non-intelligence notice was incorrectly removed.");
-  const expiredHistory = reports.find(report => report.id === "expired");
-  assert(expiredHistory && !expiredHistory.scoutReport, "Expired scout history was removed instead of redacting its intelligence.");
-  assert(/expired/i.test(expiredHistory.summary || ""), "Expired scout history lacks a safe explanation.");
+  assert(!reports.some(report => report.id === "expired"), "Expired scout history remained in the player's Reports list.");
 
-  console.log("Emulator scout lifecycle passed: exact expiry, redacted history, replacement, independent targets, and notice preservation.");
+  console.log("Emulator scout lifecycle passed: exact expiry, history removal, replacement, independent targets, and notice preservation.");
 }
 
 main()

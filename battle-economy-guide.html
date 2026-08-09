@@ -171,7 +171,7 @@
           <tbody id="skillGuideRows"></tbody>
         </table>
       </div>
-      <div class="guide-callout"><strong>One skill point per hero level.</strong> Presets change how earned points are allocated; they do not create extra points. Stoneworks affects only the wall, Shieldwall Discipline affects only defending soldiers, and Swordmastery is locked into an army&rsquo;s attack power when it launches.</div>
+      <div class="guide-callout"><strong>One skill point per hero level.</strong> Attack skills are Swordmastery, March Orders, and Field Medics; Defense skills are Shieldwall Discipline and Stoneworks; Utility skills are Tax Stewardship, Royal Granaries, and Guild Charters. Four presets unlock at Levels 25, 50, 75, and 100, and every confirmed Apply costs 1,000,000 gold. Presets change how earned points are allocated; they do not create extra points.</div>
     </section>
 
     <section id="battle-explorer" class="content-section guide-section battle-guide-section" aria-labelledby="battleExplorerTitle">
@@ -198,7 +198,7 @@
           <label for="battleReinforcementTroops"><span>Clan reinforcement troops</span><input id="battleReinforcementTroops" type="number" min="0" step="1000" value="0" inputmode="numeric" /></label>
           <label for="battleReinforcementBonus"><span>Reinforcement Shieldwall + objective bonus</span><input id="battleReinforcementBonus" type="number" min="0" max="100" step="1" value="0" inputmode="numeric" /><small>This combined percentage applies to that contributor&rsquo;s 1.30 soldier base. It never adds another wall.</small></label>
           <label for="battleStoneLevel"><span>Stoneworks <output id="battleStoneOutput" for="battleStoneLevel">Lv 0</output></span><input id="battleStoneLevel" type="range" min="0" max="25" step="1" value="0" /></label>
-          <label for="battleObjectiveDefense"><span>Objective defense</span><select id="battleObjectiveDefense"><option value="0">None</option><option value="4">Clan-shared Defense Stronghold +4%</option><option value="5">Clan-shared Citadel +5%</option><option value="8">Controlled Defense Stronghold +8%</option><option value="10">Controlled Citadel +10%</option><option value="14">Citadel plus half Stronghold +14%</option></select></label>
+          <label for="battleObjectiveDefense"><span>Objective soldier defense</span><select id="battleObjectiveDefense"><option value="0">None</option><option value="4">Clan-shared Defense Stronghold +4%</option><option value="5">Clan-shared Citadel +5%</option><option value="8">Controlled Defense Stronghold +8%</option><option value="10">Controlled Citadel +10%</option><option value="14">Citadel plus half Stronghold +14%</option></select></label>
           <label for="battleWallIntegrity"><span>Current wall integrity <output id="battleWallOutput" for="battleWallIntegrity">100%</output></span><input id="battleWallIntegrity" type="range" min="0" max="100" step="1" value="100" /></label>
         </fieldset>
       </form>
@@ -298,7 +298,7 @@
       <div class="special-rule-grid">
         <article><h3>Regular city</h3><p>Uses the two-stage wall and garrison siege. Main cities cannot be attacked. A successful capture reduces the city by one level but carries any active wall deadline forward.</p></article>
         <article><h3>Stronghold and Citadel</h3><p>Use the same single-wall siege. Strongholds use effective Level 50 fortification timing and the Citadel uses Level 100. Weaker-kingdom attack protection does not apply to these objectives.</p></article>
-        <article><h3>Reward camp</h3><p>Camps keep their existing objective combat and reinforcement model instead of the city siege model. They cannot be shielded, do not count as cities, and may require a hold timer before rewards settle.</p></article>
+        <article><h3>Reward camp</h3><p>Every neutral camp starts with 20,000 troops. Camps have no level, wall, Stoneworks, Shieldwall, or objective-defense bonus: each stationed troop and reinforcement contributes exactly 1.00 defense power. Camps cannot be shielded, do not count as cities, and may require a hold timer before rewards settle.</p></article>
         <article><h3>Clan reinforcement</h3><p>Each contributor adds troops with that contributor&rsquo;s applicable objective-defense package. Reinforcements never copy the city&rsquo;s level defense, wall, or Stoneworks.</p></article>
         <article><h3>Clan rally</h3><p>Each participant keeps snapshotted attack strength. The combined force attacks under the rally lifecycle and still passes every ownership, protection, route, and anti-farming check.</p></article>
         <article><h3>Weaker-kingdom protection</h3><p>At 2&times; King Power, attacks become capped protected assaults: first breach, then a possible capture assault. At 2.5&times; and above, they become capped, non-capturing raids with defender losses limited to 10% and no persistent wall damage.</p></article>

@@ -240,6 +240,13 @@ service cloud.firestore {
       }
     }
 
+    match /realmEvents/{resetGeneration}/activity/{eventId} {
+      allow read: if signedIn()
+        && resetGeneration == currentResetGeneration()
+        && isCurrentGeneration(resource.data);
+      allow create, update, delete: if false;
+    }
+
     match /leaderboards/{boardId}/entries/{uid} {
       allow read: if signedIn() && boardId == currentResetGeneration() && isCurrentGeneration(resource.data);
       allow create, update, delete: if false;
@@ -429,6 +436,10 @@ service cloud.firestore {
     }
 
     match /rallyBattleReceipts/{resetId}/entries/{receiptId} {
+      allow read, create, update, delete: if false;
+    }
+
+    match /serverNotificationOutbox/{notificationId} {
       allow read, create, update, delete: if false;
     }
 

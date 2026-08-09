@@ -35,6 +35,7 @@ requires(server, /CLAN_NAME_CHANGE_GOLD_COST\s*=\s*500_000/, "Clan renaming must
 requires(server, /CLAN_NAME_CHANGE_COOLDOWN_MS\s*=\s*7\s*\*\s*24\s*\*\s*60\s*\*\s*60\s*\*\s*1000/, "Clan renaming must have a seven-day cooldown.");
 requires(server, /CLAN_MEMBER_LIMIT\s*=\s*30/, "Clan member capacity must be 30.");
 requires(server, /CLAN_JOIN_COOLDOWN_MS\s*=\s*24\s*\*\s*60\s*\*\s*60\s*\*\s*1000/, "Clan join cooldown must be 24 hours.");
+requires(server, /function assertNoClan[\s\S]*?clanJoinCooldownUntilMs[\s\S]*?cooldownUntilMs\s*>\s*nowMs[\s\S]*?wait before joining another clan/, "Clan joining and applications must enforce the authoritative leave cooldown.");
 requires(server, /CLAN_LEADER_INACTIVE_MS\s*=\s*14\s*\*\s*24\s*\*\s*60\s*\*\s*60\s*\*\s*1000/, "Inactive leadership claims must wait 14 days.");
 
 [
@@ -167,6 +168,9 @@ requires(client, /function showPublicClanDetails[\s\S]*?Promise\.all\(\[api\.loa
 requires(client, /btn\.classList\.add\("clan-ally"\)/, "Allied cities do not receive their map class.");
 requires(client, /You cannot scout or attack a clan ally/, "Clan-friendly action explanation is missing.");
 requires(client, /function renderClanShield[\s\S]*?renderClanShieldField[\s\S]*?renderClanShieldCharges/, "Client is missing the vector clan shield renderer.");
+requires(client, /function formatClanJoinCooldown[\s\S]*?function updateClanJoinCooldownCountdown[\s\S]*?data-clan-join-cooldown[\s\S]*?Joining, applying, and creating unlock when it ends/, "Clan discovery does not show a live leave-cooldown countdown.");
+requires(client, /function renderClanDiscoveryAction[\s\S]*?const disabled = Boolean\(cooldownMs[\s\S]*?data-clan-action="\$\{admissionMode === "open" \? "join" : "apply"\}"[\s\S]*?disabled/, "Clan discovery does not disable joining and applications during the leave cooldown.");
+requires(client, /function startClanJoinCooldownCountdown[\s\S]*?setInterval\(updateClanJoinCooldownCountdown, 1000\)[\s\S]*?if \(cooldownMs > 0\) startClanJoinCooldownCountdown\(\)/, "The clan leave cooldown does not refresh once per second in clan discovery.");
 requires(client, /function renderClanShield[\s\S]*?overflow="hidden"[\s\S]*?clipPathUnits="userSpaceOnUse"[\s\S]*?class="clan-shield-boundary"\s+clip-path="url\(#\$\{clipId\}\)"/, "Clan shield paint is not clipped to the shield silhouette.");
 requires(styles, /\.clan-shield svg\s*\{[^}]*overflow:\s*hidden;/, "Clan shield SVG overflow can bleed beyond its viewport.");
 requires(client, /function renderClanRosterMember[\s\S]*?data-clan-action="select-member"[\s\S]*?Demote[\s\S]*?Promote[\s\S]*?Remove[\s\S]*?renderClanMemberFlag/, "Clan roster is missing flags or leader-selected member controls.");

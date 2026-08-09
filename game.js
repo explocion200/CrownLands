@@ -436,19 +436,17 @@ const WARBAND_CAMP_REWARD_SCHEDULE = economyRewardSchedule("troops", [
   { minimumReward: 30000, productionHours: 1.5 },
   { minimumReward: 40000, productionHours: 2 },
 ]);
+const REWARD_CAMP_COMBAT_VERSION = 1;
+const REWARD_CAMP_TROOP_POWER = 1;
 const GOLD_CAMP_BASE_REWARD = GOLD_CAMP_REWARD_SCHEDULE[0]?.minimumReward || 20000;
-const GOLD_CAMP_BASE_DEFENDERS = economyNumber("camps.gold.baseDefenders", 10000);
-const GOLD_CAMP_DEFENSE_LEVEL = economyNumber("camps.gold.defenseLevel", 30);
+const GOLD_CAMP_BASE_DEFENDERS = economyNumber("camps.gold.baseDefenders", 20000);
 const GOLD_CAMP_HOLD_SECONDS = economyNumber("camps.gold.holdMinutes", 10) * 60;
 const WARBAND_CAMP_BASE_REWARD = WARBAND_CAMP_REWARD_SCHEDULE[0]?.minimumReward || 10000;
-const WARBAND_CAMP_BASE_DEFENDERS = economyNumber("camps.troops.baseDefenders", 10000);
-const WARBAND_CAMP_DEFENSE_LEVEL = economyNumber("camps.troops.defenseLevel", 30);
+const WARBAND_CAMP_BASE_DEFENDERS = economyNumber("camps.troops.baseDefenders", 20000);
 const WARBAND_CAMP_HOLD_SECONDS = economyNumber("camps.troops.holdMinutes", 15) * 60;
-const DEED_CAMP_BASE_DEFENDERS = economyNumber("camps.deed.baseDefenders", 10000);
-const DEED_CAMP_DEFENSE_LEVEL = economyNumber("camps.deed.defenseLevel", 30);
+const DEED_CAMP_BASE_DEFENDERS = economyNumber("camps.deed.baseDefenders", 20000);
 const DEED_CAMP_HOLD_SECONDS = economyNumber("camps.deed.holdMinutes", 60) * 60;
-const RELIC_CAMP_BASE_DEFENDERS = economyNumber("camps.items.baseDefenders", 10000);
-const RELIC_CAMP_DEFENSE_LEVEL = economyNumber("camps.items.defenseLevel", 30);
+const RELIC_CAMP_BASE_DEFENDERS = economyNumber("camps.items.baseDefenders", 20000);
 const RELIC_CAMP_HOLD_SECONDS = economyNumber("camps.items.holdMinutes", 30) * 60;
 const RELIC_CAMP_DAILY_REWARD_LIMIT = economyNumber("camps.items.maxDailyRewards", 2);
 const RELIC_CAMP_DROP_TABLE = [
@@ -468,7 +466,8 @@ const REWARD_CAMP_CONFIG = {
     rewardLabel: "gold",
     baseReward: GOLD_CAMP_BASE_REWARD,
     baseDefenders: GOLD_CAMP_BASE_DEFENDERS,
-    defenseLevel: GOLD_CAMP_DEFENSE_LEVEL,
+    combatVersion: REWARD_CAMP_COMBAT_VERSION,
+    troopPower: REWARD_CAMP_TROOP_POWER,
     holdSeconds: GOLD_CAMP_HOLD_SECONDS,
     dailyRewards: GOLD_CAMP_REWARD_SCHEDULE.map(entry => entry.minimumReward),
     rewardHours: GOLD_CAMP_REWARD_SCHEDULE.map(entry => entry.productionHours),
@@ -481,7 +480,8 @@ const REWARD_CAMP_CONFIG = {
     rewardLabel: "troops",
     baseReward: WARBAND_CAMP_BASE_REWARD,
     baseDefenders: WARBAND_CAMP_BASE_DEFENDERS,
-    defenseLevel: WARBAND_CAMP_DEFENSE_LEVEL,
+    combatVersion: REWARD_CAMP_COMBAT_VERSION,
+    troopPower: REWARD_CAMP_TROOP_POWER,
     holdSeconds: WARBAND_CAMP_HOLD_SECONDS,
     dailyRewards: WARBAND_CAMP_REWARD_SCHEDULE.map(entry => entry.minimumReward),
     rewardHours: WARBAND_CAMP_REWARD_SCHEDULE.map(entry => entry.productionHours),
@@ -494,7 +494,8 @@ const REWARD_CAMP_CONFIG = {
     rewardLabel: "neutral city",
     baseReward: 1,
     baseDefenders: DEED_CAMP_BASE_DEFENDERS,
-    defenseLevel: DEED_CAMP_DEFENSE_LEVEL,
+    combatVersion: REWARD_CAMP_COMBAT_VERSION,
+    troopPower: REWARD_CAMP_TROOP_POWER,
     holdSeconds: DEED_CAMP_HOLD_SECONDS,
   },
   items: {
@@ -505,7 +506,8 @@ const REWARD_CAMP_CONFIG = {
     rewardLabel: "usable item",
     baseReward: 1,
     baseDefenders: RELIC_CAMP_BASE_DEFENDERS,
-    defenseLevel: RELIC_CAMP_DEFENSE_LEVEL,
+    combatVersion: REWARD_CAMP_COMBAT_VERSION,
+    troopPower: REWARD_CAMP_TROOP_POWER,
     holdSeconds: RELIC_CAMP_HOLD_SECONDS,
     maxDailyRewards: RELIC_CAMP_DAILY_REWARD_LIMIT,
     itemDrops: RELIC_CAMP_DROP_TABLE,
@@ -856,6 +858,12 @@ const TEST_STARTING_GOLD = 100;
 const ISLAND_CITY_COUNT = WORLD_REGIONS.reduce((total, region) => total + (region.id === "center" ? CENTER_REGION_CITY_COUNT : REGION_CITY_COUNT), 0);
 const SCOUT_REPORT_SECONDS = 600;
 const LEGACY_SCOUT_REPORT_SECONDS = 120;
+const BATTLE_REPORT_RETENTION_MS = 24 * 60 * 60 * 1000;
+const REALM_ACTIVITY_VERSION = 1;
+const REALM_ACTIVITY_HISTORY_LIMIT = 250;
+const REALM_ANNOUNCEMENT_STRONGHOLD_MS = 3000;
+const REALM_ANNOUNCEMENT_CITADEL_MS = 4000;
+const REALM_ANNOUNCEMENT_TRANSITION_MS = 450;
 const SCOUT_NEARBY_COST = economyNumber("playerCosts.nearbyScoutGold", 75000);
 const SCOUT_NEARBY_RADIUS = 420;
 const REGROUP_COST = economyNumber("playerCosts.regroupGold", 150000);
@@ -950,6 +958,7 @@ const KING_POWER_REPLACEMENT_HOURS = 12;
 const KING_POWER_DEFENSIVE_ADVANTAGE_WEIGHT = 0.25;
 const KING_POWER_AUTHORITY_VERSION = 11;
 const SKILL_RESET_COST = economyNumber("playerCosts.skillResetGold", 750_000);
+const SKILL_PRESET_APPLY_COST = economyNumber("playerCosts.skillPresetApplyGold", 1_000_000);
 
 const SKILL_CONFIG = {
   swordmastery: { label: "Swordmastery", percentPerLevel: economyNumber("skills.swordmastery.percentPerLevel", 2), maxPercent: economyNumber("skills.swordmastery.maxPercent", 60), description: "Outgoing attack power." },
@@ -963,12 +972,18 @@ const SKILL_CONFIG = {
 };
 
 const SKILL_ORDER = ["swordmastery", "shieldwallDiscipline", "stoneworks", "taxStewardship", "royalGranaries", "guildCharters", "marchOrders", "fieldMedics"];
-const SKILL_PRESET_MODEL_VERSION = 3;
+const SKILL_GROUPS = Object.freeze([
+  Object.freeze({ id: "attack", label: "Attack", skills: Object.freeze(["swordmastery", "marchOrders", "fieldMedics"]) }),
+  Object.freeze({ id: "defense", label: "Defense", skills: Object.freeze(["shieldwallDiscipline", "stoneworks"]) }),
+  Object.freeze({ id: "utility", label: "Utility", skills: Object.freeze(["taxStewardship", "royalGranaries", "guildCharters"]) }),
+]);
+const SKILL_PRESET_MODEL_VERSION = 4;
 const SKILL_PRESET_NAME_MAX_LENGTH = 24;
 const SKILL_PRESET_SLOTS = Object.freeze([
-  Object.freeze({ slot: 1, unlockLevel: 50 }),
-  Object.freeze({ slot: 2, unlockLevel: 75 }),
-  Object.freeze({ slot: 3, unlockLevel: 100 }),
+  Object.freeze({ slot: 1, unlockLevel: 25 }),
+  Object.freeze({ slot: 2, unlockLevel: 50 }),
+  Object.freeze({ slot: 3, unlockLevel: 75 }),
+  Object.freeze({ slot: 4, unlockLevel: 100 }),
 ]);
 
 const FLAG_COLORS = ["#1f5f91", "#b23a35", "#2f7a4a", "#6d4aa2", "#d3a62e", "#202a38", "#d9e2e8", "#8d5a2f"];
@@ -1212,17 +1227,17 @@ function getStrongholdStartTroops(city) {
 
 function getStrongholdProductionLabel(city) {
   if (city?.bonus === "crownDominion" || isCrownCitadel(city)) return "Crown Land bonuses";
-  if (city?.bonus === "cityDefense") return "city defense";
+  if (city?.bonus === "cityDefense") return "defending-soldier power";
   if (city?.bonus === "marchSpeed") return "march speed";
   if (city?.bonus === "troopProduction") return "base troop production";
   if (city?.bonus === "goldProduction") return "base gold production";
-  if (isDefenseStronghold(city)) return "city defense";
+  if (isDefenseStronghold(city)) return "defending-soldier power";
   if (isSpeedStronghold(city)) return "march speed";
   return isTrainingStronghold(city) ? "base troop production" : "base gold production";
 }
 
 function getCrownCitadelBonusLabel() {
-  return `+${CROWN_CITADEL_GOLD_BONUS_PERCENT}% base gold, +${CROWN_CITADEL_TROOP_BONUS_PERCENT}% base troops, +${CROWN_CITADEL_MARCH_SPEED_BONUS_PERCENT}% speed, +${CROWN_CITADEL_DEFENSE_BONUS_PERCENT}% defense, -${CROWN_CITADEL_UPGRADE_COST_REDUCTION_PERCENT}% upgrade cost`;
+  return `+${CROWN_CITADEL_GOLD_BONUS_PERCENT}% base gold, +${CROWN_CITADEL_TROOP_BONUS_PERCENT}% base troops, +${CROWN_CITADEL_MARCH_SPEED_BONUS_PERCENT}% speed, +${CROWN_CITADEL_DEFENSE_BONUS_PERCENT}% soldier defense, -${CROWN_CITADEL_UPGRADE_COST_REDUCTION_PERCENT}% upgrade cost`;
 }
 
 function getStrongholdBonusLabel(city) {
@@ -1232,7 +1247,7 @@ function getStrongholdBonusLabel(city) {
 
 function getStrongholdShortBonusLabel(city) {
   if (isCrownCitadel(city)) return "Crown bonuses";
-  if (isDefenseStronghold(city)) return `+${formatNumber(getStrongholdBonusPercent(city))}% defense`;
+  if (isDefenseStronghold(city)) return `+${formatNumber(getStrongholdBonusPercent(city))}% soldier defense`;
   if (isSpeedStronghold(city)) return `+${formatNumber(getStrongholdBonusPercent(city))}% speed`;
   return isTrainingStronghold(city)
     ? `+${formatNumber(getStrongholdBonusPercent(city))}% troops`
@@ -2735,6 +2750,15 @@ let onlineReinforcementsUnsubscribe = null;
 const reinforcementReturnRequests = new Set();
 let onlineHeldCampsUnsubscribe = null;
 let onlineServerReportsUnsubscribe = null;
+let onlineRealmActivityUnsubscribe = null;
+let onlineRealmActivityEvents = [];
+let realmActivityHydrated = false;
+let realmActivityLiveSinceMs = 0;
+let seenRealmActivityEventIds = new Set();
+let realmAnnouncementQueue = [];
+let activeRealmAnnouncement = null;
+let realmAnnouncementTimer = 0;
+let realmAnnouncementExitTimer = 0;
 let onlineGlobalStatsUnsubscribe = null;
 let onlineGlobalStats = null;
 let onlineCrownCitadelUnsubscribe = null;
@@ -2742,6 +2766,7 @@ let onlineCrownCitadelSnapshot = null;
 let onlineCrownCitadelLoaded = false;
 let appliedServerReportRevisions = new Map();
 let audioServerReportsHydrated = false;
+let claimedBulkArrivalAudio = new Map();
 let reportsViewedRequestInFlight = false;
 let reportsViewedPendingAtMs = 0;
 let resolvingOnlineArmyIds = new Set();
@@ -2763,6 +2788,8 @@ let routeWorkerRequestId = 0;
 const routeWorkerRequests = new Map();
 const routeWorkerRegionDataCache = new Map();
 let routeWorkerWarmupScheduled = false;
+let routePrefetchTimer = 0;
+let routePrefetchKey = "";
 let harvestSpawnRequestInFlight = false;
 let harvestRelocationRetryAtMs = 0;
 let onlineIslandSummaries = new Map();
@@ -2912,6 +2939,7 @@ let clanNavigationClanId = "";
 let clanGiftActionInFlight = false;
 let clanQuestClaimInFlightId = "";
 let clanGiftCountdownTimer = 0;
+let clanJoinCountdownTimer = 0;
 let battleReportFilter = "all";
 const battleSnapshotCache = new Map();
 const clanPublicSnapshotCache = new Map();
@@ -3054,6 +3082,10 @@ const cityLayer = document.getElementById("cityLayer");
 const mapVfxLayer = document.getElementById("mapVfxLayer");
 const armyLayer = document.getElementById("armyLayer");
 const screenVfxLayer = document.getElementById("screenVfxLayer");
+const realmAnnouncement = document.getElementById("realmAnnouncement");
+const realmAnnouncementIcon = document.getElementById("realmAnnouncementIcon");
+const realmAnnouncementTitle = document.getElementById("realmAnnouncementTitle");
+const realmAnnouncementMessage = document.getElementById("realmAnnouncementMessage");
 const toast = document.getElementById("toast");
 const commanderPanel = document.querySelector(".commander-panel");
 const panelTitle = document.getElementById("panelTitle");
@@ -3090,6 +3122,61 @@ const BATTLE_IMPACT_AUDIO_DELAY_MS = 150;
 const BATTLE_OUTCOME_AUDIO_DELAY_MS = 450;
 const REWARD_FOLLOWUP_AUDIO_DELAY_MS = 900;
 const VICTORY_MUSIC_AUDIO_DELAY_MS = 2000;
+
+function resetUiScrollTop(...elements) {
+  const visited = new Set();
+  elements.filter(Boolean).forEach(element => {
+    if (visited.has(element)) return;
+    visited.add(element);
+    element.scrollTop = 0;
+  });
+}
+
+function resetDialogScrollTop(dialog) {
+  if (!dialog) return;
+  resetUiScrollTop(
+    dialog,
+    dialog.querySelector(".modal-card"),
+    dialog.querySelector("#modalBody"),
+    dialog.querySelector(".level-up-reward-body")
+  );
+}
+
+function installDialogOpenScrollReset() {
+  const prototype = window.HTMLDialogElement?.prototype;
+  const nativeShowModal = prototype?.showModal;
+  if (!prototype || typeof nativeShowModal !== "function" || nativeShowModal.crownlandsScrollReset) return;
+
+  function settleDialogAtTop(dialog) {
+    resetDialogScrollTop(dialog);
+    window.requestAnimationFrame(() => {
+      if (!dialog.open) return;
+      resetDialogScrollTop(dialog);
+      window.setTimeout(() => {
+        if (dialog.open) resetDialogScrollTop(dialog);
+      }, 0);
+    });
+  }
+
+  function showModalAtTop(...args) {
+    settleDialogAtTop(this);
+    const result = nativeShowModal.apply(this, args);
+    settleDialogAtTop(this);
+    return result;
+  }
+
+  showModalAtTop.crownlandsScrollReset = true;
+  prototype.showModal = showModalAtTop;
+
+  document.querySelectorAll("dialog").forEach(dialog => {
+    dialog.addEventListener("close", () => resetDialogScrollTop(dialog));
+    dialog.addEventListener("toggle", () => {
+      if (dialog.open) settleDialogAtTop(dialog);
+    });
+  });
+}
+
+installDialogOpenScrollReset();
 let lastAudioIncomingAttackIds = new Set();
 let volatileAnimationModePreference = "";
 
@@ -3231,9 +3318,28 @@ function getVisibleTroopRewardDestination() {
   return profileBtn;
 }
 
-function getVisibleMainCityTroopRewardDestination(fallbackCityId = "") {
+function getTroopRewardDestinationRegionId(destinationCityId = "", destinationRegionId = "") {
+  const explicitRegionId = String(destinationRegionId || "").trim();
+  if (explicitRegionId) return normalizeRegionId(explicitRegionId);
+  const id = String(destinationCityId || state?.mainCityId || "");
+  const city = id ? cityById(id) || getOwnedCitySnapshotById(id) : null;
+  if (city) return getCityRegionId(city);
+  if (id && id === String(state?.mainCityId || "")) {
+    const mainRegionId = String(
+      state?.online?.mainRegionId
+      || getGlobalStatsSnapshot()?.mainRegionId
+      || ""
+    ).trim();
+    if (mainRegionId) return normalizeRegionId(mainRegionId);
+  }
+  return "";
+}
+
+function getVisibleMainCityTroopRewardDestination(destinationCityId = "", destinationRegionId = "") {
   if (profileScreen?.classList.contains("open")) return null;
-  const id = String(state?.mainCityId || fallbackCityId || "");
+  const id = String(destinationCityId || state?.mainCityId || "");
+  const regionId = getTroopRewardDestinationRegionId(id, destinationRegionId);
+  if (regionId && regionId !== getActiveMapRegionId()) return null;
   const city = id ? cityById(id) : null;
   if (!city || getCityRegionId(city) !== getActiveMapRegionId()) return null;
   const node = cityLayer?.querySelector(`[data-city-id="${CSS.escape(id)}"]`);
@@ -3259,6 +3365,7 @@ function playRewardAnimation(kind, {
   tier = "medium",
   host = null,
   destinationCityId = "",
+  destinationRegionId = "",
 } = {}) {
   const normalizedKind = kind === "troops" ? "troops" : "gold";
   const eventId = id || `reward-${normalizedKind}-${Date.now()}`;
@@ -3266,7 +3373,7 @@ function playRewardAnimation(kind, {
   const effectHost = requestedHost || (source?.closest?.("dialog[open]") || null);
   const target = normalizedKind === "gold"
     ? goldText?.closest?.(".profile-gold") || goldText
-    : getVisibleMainCityTroopRewardDestination(destinationCityId)
+    : getVisibleMainCityTroopRewardDestination(destinationCityId, destinationRegionId)
       || getVisibleTroopRewardDestination();
   const start = sourceAnchor || captureAnimationAnchor(source);
   const end = captureAnimationAnchor(target);
@@ -5606,7 +5713,8 @@ function createOnlineIslandSeed(regionId = DEFAULT_ONLINE_REGION_ID) {
         holdDurationMs: config.holdSeconds * 1000,
         baseReward: config.baseReward,
         baseDefenders: config.baseDefenders,
-        defenseLevel: config.defenseLevel,
+        combatVersion: config.combatVersion,
+        troopPower: config.troopPower,
       };
     });
 
@@ -7444,16 +7552,25 @@ function normalizeGlobalStatsSnapshot(raw = null) {
     strongholdGoldBonusPercent: Math.max(0, Math.floor(Number(raw.strongholdGoldBonusPercent) || 0)),
     strongholdTroopBonusPercent: Math.max(0, Math.floor(Number(raw.strongholdTroopBonusPercent) || 0)),
     strongholdMarchSpeedBonusPercent: Math.max(0, Math.floor(Number(raw.strongholdMarchSpeedBonusPercent) || 0)),
+    objectiveTroopDefenseBonusPercent: Math.max(0, Number(
+      raw.objectiveTroopDefenseBonusPercent ?? raw.strongholdDefenseBonusPercent
+    ) || 0),
     strongholdDefenseBonusPercent: Math.max(0, Math.floor(Number(raw.strongholdDefenseBonusPercent) || 0)),
     strongholdUpgradeCostReductionPercent: Math.max(0, Math.floor(Number(raw.strongholdUpgradeCostReductionPercent) || 0)),
     personalStrongholdGoldBonusPercent: Math.max(0, Number(raw.personalStrongholdGoldBonusPercent) || 0),
     personalStrongholdTroopBonusPercent: Math.max(0, Number(raw.personalStrongholdTroopBonusPercent) || 0),
     personalStrongholdMarchSpeedBonusPercent: Math.max(0, Number(raw.personalStrongholdMarchSpeedBonusPercent) || 0),
+    personalObjectiveTroopDefenseBonusPercent: Math.max(0, Number(
+      raw.personalObjectiveTroopDefenseBonusPercent ?? raw.personalStrongholdDefenseBonusPercent
+    ) || 0),
     personalStrongholdDefenseBonusPercent: Math.max(0, Number(raw.personalStrongholdDefenseBonusPercent) || 0),
     personalStrongholdUpgradeCostReductionPercent: Math.max(0, Number(raw.personalStrongholdUpgradeCostReductionPercent) || 0),
     sharedClanGoldBonusPercent: Math.max(0, Number(raw.sharedClanGoldBonusPercent) || 0),
     sharedClanTroopBonusPercent: Math.max(0, Number(raw.sharedClanTroopBonusPercent) || 0),
     sharedClanMarchSpeedBonusPercent: Math.max(0, Number(raw.sharedClanMarchSpeedBonusPercent) || 0),
+    sharedClanObjectiveTroopDefenseBonusPercent: Math.max(0, Number(
+      raw.sharedClanObjectiveTroopDefenseBonusPercent ?? raw.sharedClanDefenseBonusPercent
+    ) || 0),
     sharedClanDefenseBonusPercent: Math.max(0, Number(raw.sharedClanDefenseBonusPercent) || 0),
     sharedClanUpgradeCostReductionPercent: Math.max(0, Number(raw.sharedClanUpgradeCostReductionPercent) || 0),
     clanCitadelBonusPercent: Math.max(0, Number(raw.clanCitadelBonusPercent) || 0),
@@ -8292,6 +8409,7 @@ function getAuthoritativePlayerStrongholdBonuses() {
       goldBonusPercent: CROWN_CITADEL_GOLD_BONUS_PERCENT,
       troopBonusPercent: CROWN_CITADEL_TROOP_BONUS_PERCENT,
       marchSpeedBonusPercent: CROWN_CITADEL_MARCH_SPEED_BONUS_PERCENT,
+      objectiveTroopDefenseBonusPercent: CROWN_CITADEL_DEFENSE_BONUS_PERCENT,
       cityDefenseBonusPercent: CROWN_CITADEL_DEFENSE_BONUS_PERCENT,
       upgradeCostReductionPercent: CROWN_CITADEL_UPGRADE_COST_REDUCTION_PERCENT,
     };
@@ -8304,6 +8422,7 @@ function getAuthoritativePlayerStrongholdBonuses() {
     goldBonusPercent: globalStats.strongholdGoldBonusPercent,
     troopBonusPercent: globalStats.strongholdTroopBonusPercent,
     marchSpeedBonusPercent: globalStats.strongholdMarchSpeedBonusPercent,
+    objectiveTroopDefenseBonusPercent: getObjectiveTroopDefenseBonusPercent(globalStats),
     cityDefenseBonusPercent: globalStats.strongholdDefenseBonusPercent,
     upgradeCostReductionPercent: globalStats.strongholdUpgradeCostReductionPercent,
   };
@@ -8375,20 +8494,24 @@ function getControlledCrownCitadelForControllerKey(controllerKey) {
   return citadel && getCityControllerKey(citadel) === controllerKey ? citadel : null;
 }
 
-function getControlledStrongholdCityDefenseBonusPercentForCity(target) {
+function getControlledObjectiveTroopDefenseBonusPercentForCity(target) {
   if (!state || !Array.isArray(state.cities)) return 0;
   const targetControllerKey = getCityControllerKey(target);
   if (!targetControllerKey) return 0;
   const currentUid = getCurrentOnlineUid();
   if (targetControllerKey === "player:local" || (currentUid && targetControllerKey === `player:${currentUid}`)) {
     const authoritative = getAuthoritativePlayerStrongholdBonuses();
-    if (authoritative) return authoritative.cityDefenseBonusPercent;
+    if (authoritative) return getObjectiveTroopDefenseBonusPercent(authoritative);
   }
   if (getControlledCrownCitadelForControllerKey(targetControllerKey)) return CROWN_CITADEL_DEFENSE_BONUS_PERCENT;
   return state.cities.reduce((total, city) => {
     if (!isDefenseStronghold(city) || getCityControllerKey(city) !== targetControllerKey) return total;
     return total + getStrongholdBonusPercent(city);
   }, 0);
+}
+
+function getControlledStrongholdCityDefenseBonusPercentForCity(target) {
+  return getControlledObjectiveTroopDefenseBonusPercentForCity(target);
 }
 
 function getControlledStrongholdUpgradeCostReductionPercent(owner = "player") {
@@ -8447,6 +8570,16 @@ function getBaseCityWalls(level) {
     + CITY_LEVEL_STATS.cityWallsPerLevel * levelOffset;
   if (!Number.isFinite(walls)) return Number.MAX_SAFE_INTEGER;
   return Math.min(Number.MAX_SAFE_INTEGER, Math.max(0, Math.floor(walls)));
+}
+
+function getObjectiveTroopDefenseBonusPercent(value = {}) {
+  if (!value || typeof value !== "object") return 0;
+  return Math.max(0, Number(
+    value.objectiveTroopDefenseBonusPercent
+    ?? value.troopDefenseBonusPercent
+    ?? value.strongholdDefenseBonusPercent
+    ?? value.cityDefenseBonusPercent
+  ) || 0);
 }
 
 function getSiegeRepairWindowMinutes(level) {
@@ -8552,8 +8685,9 @@ function calculateTroopProductionRates(
 
 function getCityStats(city, options = {}) {
   const stronghold = isStronghold(city);
-  const level = stronghold ? getStrongholdDefenseLevel(city) : clampCityLevel(city?.level);
-  const victoryPoints = Math.floor(
+  const rewardCamp = isRewardCampTarget(city);
+  const level = rewardCamp ? 0 : stronghold ? getStrongholdDefenseLevel(city) : clampCityLevel(city?.level);
+  const victoryPoints = rewardCamp ? 0 : Math.floor(
     CITY_LEVEL_STATS.victoryPointsBase
     + level * CITY_LEVEL_STATS.victoryPointsPerLevel
     + Math.pow(level, CITY_LEVEL_STATS.victoryPointsExponent) * CITY_LEVEL_STATS.victoryPointsExponentScale
@@ -8561,12 +8695,12 @@ function getCityStats(city, options = {}) {
   const defenseCombatVersion = Math.max(0, Math.floor(Number(
     options.defenseCombatVersion ?? (supportsDefenseCombat() ? DEFENSE_COMBAT_VERSION : 0)
   ) || 0));
-  const soldierDefenseEnabled = !isRewardCampTarget(city)
+  const soldierDefenseEnabled = !rewardCamp
     && defenseCombatVersion >= DEFENSE_COMBAT_VERSION;
-  const defensePercent = soldierDefenseEnabled ? 0 : level * 2;
-  const baseCityWalls = getBaseCityWalls(level);
+  const defensePercent = soldierDefenseEnabled || rewardCamp ? 0 : level * 2;
+  const baseCityWalls = rewardCamp ? 0 : getBaseCityWalls(level);
   const includeSkillBoosts = options.includeSkillBoosts !== false;
-  const stoneworksPercent = includeSkillBoosts && city?.owner === "player" ? getSkillPercent("stoneworks") : 0;
+  const stoneworksPercent = !rewardCamp && includeSkillBoosts && city?.owner === "player" ? getSkillPercent("stoneworks") : 0;
   const shieldwallDisciplinePercent = soldierDefenseEnabled && includeSkillBoosts && city?.owner === "player"
     ? getSkillPercent("shieldwallDiscipline")
     : 0;
@@ -8574,21 +8708,21 @@ function getCityStats(city, options = {}) {
   const royalGranariesPercent = includeSkillBoosts && city?.owner === "player" ? getSkillPercent("royalGranaries") : 0;
   const taxStewardshipPercent = includeSkillBoosts && city?.owner === "player" ? getSkillPercent("taxStewardship") : 0;
   const includeStrongholdBoosts = options.includeStrongholdBoosts !== false;
-  const strongholdGoldBonusPercent = includeStrongholdBoosts && !stronghold && city?.owner === "player"
+  const strongholdGoldBonusPercent = includeStrongholdBoosts && !stronghold && !rewardCamp && city?.owner === "player"
     ? getControlledStrongholdGoldBonusPercent("player")
     : 0;
-  const strongholdTroopBonusPercent = includeStrongholdBoosts && !stronghold && city?.owner === "player"
+  const strongholdTroopBonusPercent = includeStrongholdBoosts && !stronghold && !rewardCamp && city?.owner === "player"
     ? getControlledStrongholdTroopBonusPercent("player")
     : 0;
-  const strongholdDefenseBonusPercent = includeStrongholdBoosts
-    ? getControlledStrongholdCityDefenseBonusPercentForCity(city)
+  const objectiveTroopDefenseBonusPercent = !rewardCamp && includeStrongholdBoosts
+    ? getControlledObjectiveTroopDefenseBonusPercentForCity(city)
     : 0;
   const includeTimedItemBoosts = options.includeTimedItemBoosts !== false;
-  const warDrumsTroopBonusPercent = includeTimedItemBoosts && !stronghold && city?.owner === "player" ? getWarDrumsTroopProductionBonusPercent() : 0;
-  const royalTaxDecreeGoldBonusPercent = includeTimedItemBoosts && !stronghold && city?.owner === "player" && getActiveRoyalTaxDecreeExpiresAtMs() > Date.now()
+  const warDrumsTroopBonusPercent = includeTimedItemBoosts && !stronghold && !rewardCamp && city?.owner === "player" ? getWarDrumsTroopProductionBonusPercent() : 0;
+  const royalTaxDecreeGoldBonusPercent = includeTimedItemBoosts && !stronghold && !rewardCamp && city?.owner === "player" && getActiveRoyalTaxDecreeExpiresAtMs() > Date.now()
     ? ROYAL_TAX_DECREE_GOLD_PRODUCTION_BONUS_PERCENT
     : 0;
-  const rawTroopProductionPerHour = stronghold ? 0 : victoryPoints * CITY_LEVEL_STATS.troopProductionPerVictoryPoint;
+  const rawTroopProductionPerHour = stronghold || rewardCamp ? 0 : victoryPoints * CITY_LEVEL_STATS.troopProductionPerVictoryPoint;
   const {
     baseTroopProductionPerHour,
     untimedTroopProductionPerHour,
@@ -8601,8 +8735,8 @@ function getCityStats(city, options = {}) {
     warDrumsTroopBonusPercent
   );
   const royalGranariesBonusPerHour = baseTroopProductionPerHour * royalGranariesPercent / 100;
-  const millionLordsProductionVp = getMillionLordsCityProductionVp(level);
-  const rawGoldProductionPerHour = stronghold ? 0 : getMillionLordsPassiveGoldPerHour(level);
+  const millionLordsProductionVp = rewardCamp ? 0 : getMillionLordsCityProductionVp(level);
+  const rawGoldProductionPerHour = stronghold || rewardCamp ? 0 : getMillionLordsPassiveGoldPerHour(level);
   const {
     baseGoldProductionPerHour,
     untimedGoldProductionPerHour,
@@ -8616,23 +8750,29 @@ function getCityStats(city, options = {}) {
   );
   const defendingTroops = Math.max(0, Number(city?.troops) || 0)
     + (city?.owner === "player" ? Math.max(0, Number(city?.alliedReinforcementTroops) || 0) : 0);
-  const baseTroopDefense = soldierDefenseEnabled
-    ? Math.floor(defendingTroops * BASE_TROOP_DEFENSE_POWER)
-    : Math.floor(defendingTroops);
-  const troopDefenseBeforeObjective = soldierDefenseEnabled
-    ? Math.floor(defendingTroops * BASE_TROOP_DEFENSE_POWER * (1 + shieldwallDisciplinePercent / 100))
-    : Math.floor(defendingTroops * (1 + defensePercent / 100));
-  const troopDefense = soldierDefenseEnabled
-    ? Math.floor(defendingTroops * BASE_TROOP_DEFENSE_POWER * (
-      1 + (shieldwallDisciplinePercent + strongholdDefenseBonusPercent) / 100
-    ))
-    : troopDefenseBeforeObjective;
+  const baseTroopDefense = rewardCamp
+    ? Math.floor(defendingTroops * REWARD_CAMP_TROOP_POWER)
+    : soldierDefenseEnabled
+      ? Math.floor(defendingTroops * BASE_TROOP_DEFENSE_POWER)
+      : Math.floor(defendingTroops);
+  const troopDefenseBeforeObjective = rewardCamp
+    ? baseTroopDefense
+    : soldierDefenseEnabled
+      ? Math.floor(defendingTroops * BASE_TROOP_DEFENSE_POWER * (1 + shieldwallDisciplinePercent / 100))
+      : Math.floor(defendingTroops * (1 + defensePercent / 100));
+  const troopDefense = rewardCamp
+    ? baseTroopDefense
+    : soldierDefenseEnabled
+      ? Math.floor(defendingTroops * BASE_TROOP_DEFENSE_POWER * (
+        1 + (shieldwallDisciplinePercent + objectiveTroopDefenseBonusPercent) / 100
+      ))
+      : troopDefenseBeforeObjective;
   const cityWallsBonus = Math.max(0, cityWalls - baseCityWalls);
   const baseTotalDefense = Math.floor(baseCityWalls + baseTroopDefense);
   const preStrongholdTotalDefense = Math.floor(cityWalls + troopDefenseBeforeObjective);
   const strongholdDefenseBonus = soldierDefenseEnabled
     ? Math.max(0, troopDefense - troopDefenseBeforeObjective)
-    : Math.floor(preStrongholdTotalDefense * strongholdDefenseBonusPercent / 100);
+    : Math.floor(preStrongholdTotalDefense * objectiveTroopDefenseBonusPercent / 100);
   const totalDefense = soldierDefenseEnabled
     ? Math.floor(cityWalls + troopDefense)
     : preStrongholdTotalDefense + strongholdDefenseBonus;
@@ -8656,7 +8796,8 @@ function getCityStats(city, options = {}) {
     taxStewardshipPercent,
     strongholdGoldBonusPercent,
     strongholdTroopBonusPercent,
-    strongholdDefenseBonusPercent,
+    objectiveTroopDefenseBonusPercent,
+    strongholdDefenseBonusPercent: objectiveTroopDefenseBonusPercent,
     strongholdDefenseBonus,
     warDrumsTroopBonusPercent,
     royalTaxDecreeGoldBonusPercent,
@@ -8714,7 +8855,7 @@ function normalizeFortificationState(city = {}, nowMs = Date.now()) {
 function getCityFortificationSnapshot(city = {}, statsOverride = null, nowMs = Date.now()) {
   const stats = statsOverride || getCityStats(city);
   const state = normalizeFortificationState(city, nowMs);
-  const troopObjectiveDefenseBonusPercent = Math.max(0, Number(stats.strongholdDefenseBonusPercent) || 0);
+  const troopObjectiveDefenseBonusPercent = getObjectiveTroopDefenseBonusPercent(stats);
   const objectiveDefenseBonusPercent = Math.floor(Number(stats.defenseCombatVersion) || 0) >= DEFENSE_COMBAT_VERSION
     ? 0
     : troopObjectiveDefenseBonusPercent;
@@ -9172,6 +9313,14 @@ function getBattleReportOccurredAtMs(report = null) {
     || normalizeTimestampMs(report?.createdAtMs);
 }
 
+function getBattleReportHistoryExpiresAtMs(report = null) {
+  if (isSuccessfulScoutIntelBattleReport(report)) {
+    return getScoutBattleReportExpiresAtMs(report);
+  }
+  const occurredAtMs = getBattleReportOccurredAtMs(report);
+  return occurredAtMs ? occurredAtMs + BATTLE_REPORT_RETENTION_MS : 0;
+}
+
 function getBattleReportAgeSeconds(report = null, nowMs = Date.now()) {
   const occurredAtMs = getBattleReportOccurredAtMs(report);
   if (occurredAtMs) return Math.max(0, Math.floor((nowMs - occurredAtMs) / 1000));
@@ -9190,6 +9339,213 @@ function renderBattleReportAge(report = null, className = "") {
   return `<span${classAttribute}${timingAttribute} title="${escapeHtml(getBattleReportExactTime(report))}">${formatDuration(getBattleReportAgeSeconds(report))} ago</span>`;
 }
 
+function normalizeRealmActivityEvent(raw = null) {
+  if (!raw || typeof raw !== "object") return null;
+  const eventType = ["STRONGHOLD_CAPTURED", "CITADEL_CAPTURED"].includes(raw.eventType)
+    ? raw.eventType
+    : "";
+  const eventId = String(raw.eventId || raw.id || "").replace(/[^a-zA-Z0-9_-]/g, "_").slice(0, 180);
+  const objectiveId = String(raw.objectiveId || "").slice(0, 96);
+  const attackerPlayerId = String(raw.attackerPlayerId || "").slice(0, 128);
+  const occurredAtMs = normalizeTimestampMs(raw.occurredAtMs || raw.createdAtMs || raw.createdAt);
+  if (!eventType || !eventId || !objectiveId || !attackerPlayerId || !occurredAtMs) return null;
+  const x = Number(raw.x);
+  const y = Number(raw.y);
+  return {
+    schemaVersion: Math.max(0, Math.floor(Number(raw.schemaVersion) || 0)),
+    eventId,
+    eventType,
+    sourceResolutionId: String(raw.sourceResolutionId || "").slice(0, 160),
+    occurredAtMs,
+    createdAtMs: normalizeTimestampMs(raw.createdAtMs || raw.createdAt),
+    objectiveId,
+    objectiveType: eventType === "CITADEL_CAPTURED" ? "crown_citadel" : "stronghold",
+    objectiveName: String(raw.objectiveName || (eventType === "CITADEL_CAPTURED" ? CROWN_CITADEL_NAME : "Stronghold")).slice(0, 80),
+    strongholdType: String(raw.strongholdType || "").trim().toLowerCase().slice(0, 32),
+    regionId: raw.regionId ? normalizeRegionId(raw.regionId) : "",
+    x: Number.isFinite(x) ? x : null,
+    y: Number.isFinite(y) ? y : null,
+    attackerPlayerId,
+    attackerPlayerName: cleanName(raw.attackerPlayerName || "Ruler") || "Ruler",
+    attackerClanId: String(raw.attackerClanId || "").slice(0, 128),
+    attackerClanName: String(raw.attackerClanName || "").slice(0, 24),
+    attackerClanTag: String(raw.attackerClanTag || "").slice(0, 5),
+    defenderPlayerId: String(raw.defenderPlayerId || "").slice(0, 128),
+    defenderPlayerName: raw.defenderPlayerId
+      ? cleanName(raw.defenderPlayerName || "Ruler") || "Ruler"
+      : "",
+    defenderClanId: String(raw.defenderClanId || "").slice(0, 128),
+    defenderClanName: String(raw.defenderClanName || "").slice(0, 24),
+    defenderClanTag: String(raw.defenderClanTag || "").slice(0, 5),
+    newKingPlayerId: String(raw.newKingPlayerId || "").slice(0, 128),
+    previousKingPlayerId: String(raw.previousKingPlayerId || "").slice(0, 128),
+  };
+}
+
+function normalizeRealmActivityEvents(events = []) {
+  const byId = new Map();
+  (Array.isArray(events) ? events : []).forEach(raw => {
+    const event = normalizeRealmActivityEvent(raw);
+    if (!event) return;
+    const existing = byId.get(event.eventId);
+    if (!existing || event.occurredAtMs >= existing.occurredAtMs) byId.set(event.eventId, event);
+  });
+  return [...byId.values()]
+    .sort((a, b) => b.occurredAtMs - a.occurredAtMs || b.eventId.localeCompare(a.eventId))
+    .slice(0, REALM_ACTIVITY_HISTORY_LIMIT);
+}
+
+function getRealmActivityObjectiveLabel(event = {}) {
+  if (event.eventType === "CITADEL_CAPTURED") return CROWN_CITADEL_NAME;
+  const type = String(event.strongholdType || "").toLowerCase();
+  if (type === "defense" || type === "defense_stronghold") return "Defense Stronghold";
+  if (type === "gold" || type === "gold_stronghold") return "Gold Stronghold";
+  if (type === "training" || type === "troop" || type === "troop_stronghold") return "Training Stronghold";
+  if (type === "speed" || type === "march_speed" || type === "march_speed_stronghold") return "Speed Stronghold";
+  if (type) {
+    const label = type
+      .replace(/_stronghold$/, "")
+      .split(/[_-]+/)
+      .filter(Boolean)
+      .map(part => `${part.charAt(0).toUpperCase()}${part.slice(1)}`)
+      .join(" ");
+    if (label) return `${label} Stronghold`;
+  }
+  return String(event.objectiveName || "Stronghold");
+}
+
+function formatRealmActivityParticipant(event = {}, side = "attacker", options = {}) {
+  const attacker = side === "attacker";
+  const playerId = String(event[`${side}PlayerId`] || "");
+  const playerName = String(event[`${side}PlayerName`] || "Ruler");
+  const clanId = String(event[`${side}ClanId`] || "");
+  const clanName = String(event[`${side}ClanName`] || "");
+  const clanTag = String(event[`${side}ClanTag`] || "");
+  const html = options.html === true;
+  const includeClan = options.includeClan !== false && clanId && clanName;
+  const player = html
+    ? renderPlayerNameLink(playerId, playerName, `realm-activity-${attacker ? "attacker" : "defender"}`)
+    : playerName;
+  if (!includeClan) return player;
+  const clan = html
+    ? renderClanIdentityLink({
+      clanId,
+      clanName,
+      clanTag,
+      className: "realm-activity-clan",
+      display: "name",
+    })
+    : clanName;
+  return `${player} of ${clan}`;
+}
+
+function getRealmActivityCopy(event = {}, options = {}) {
+  const html = options.html === true;
+  const objectiveLabel = getRealmActivityObjectiveLabel(event);
+  const attacker = formatRealmActivityParticipant(event, "attacker", { html });
+  const attackerWithoutClan = formatRealmActivityParticipant(event, "attacker", { html, includeClan: false });
+  const defender = event.defenderPlayerId
+    ? formatRealmActivityParticipant(event, "defender", { html })
+    : "";
+  if (event.eventType === "CITADEL_CAPTURED") {
+    return {
+      tone: "citadel",
+      title: "A NEW KING RISES",
+      herald: "Hear ye! Hear ye! Let it be proclaimed throughout Crownlands!",
+      body: defender
+        ? `${attacker} has stormed the Crown Citadel, overthrown King ${defender}, and claimed the throne.`
+        : `${attacker} has stormed the Crown Citadel and claimed the vacant throne.`,
+      closing: `All hail King ${attackerWithoutClan}, ruler of Crownlands!`,
+      liveTitle: "A NEW KING RISES",
+      liveMessage: `All hail King ${event.attackerPlayerName}!`,
+      objectiveLabel,
+    };
+  }
+  return {
+    tone: "stronghold",
+    title: `THE ${objectiveLabel.toUpperCase()} HAS FALLEN`,
+    herald: "Hear ye, Lords of the Realm!",
+    body: defender
+      ? `${attacker} has overthrown ${defender} and seized control of the ${html ? escapeHtml(objectiveLabel) : objectiveLabel}.`
+      : `${attacker} has seized the unclaimed ${html ? escapeHtml(objectiveLabel) : objectiveLabel}.`,
+    closing: "A new banner now flies above its walls.",
+    liveTitle: "STRONGHOLD FALLEN",
+    liveMessage: `${event.attackerPlayerName} seized the ${objectiveLabel}.`,
+    objectiveLabel,
+  };
+}
+
+function getRealmActivityArtSrc(event = {}) {
+  if (event.eventType === "CITADEL_CAPTURED") return CROWN_CITADEL_ART_SRC;
+  const loaded = getArmyTargetById(event.objectiveId);
+  const artSrc = getStrongholdArtSrc(loaded || {
+    id: event.objectiveId,
+    kind: "stronghold",
+    strongholdType: event.strongholdType,
+  });
+  return artSrc || "assets/optimized/hud-report-192x192-c712b2f6c417.webp";
+}
+
+function renderRealmActivityCard(event = {}) {
+  const copy = getRealmActivityCopy(event, { html: true });
+  const properName = String(event.objectiveName || copy.objectiveLabel);
+  const objectiveMeta = properName && properName !== copy.objectiveLabel
+    ? `${properName} · ${copy.objectiveLabel}`
+    : copy.objectiveLabel;
+  return `
+    <article class="realm-activity-card ${copy.tone}" data-realm-activity-id="${escapeHtml(event.eventId)}">
+      <header class="realm-activity-card-head">
+        <img src="${escapeHtml(getRealmActivityArtSrc(event))}" width="96" height="96" alt="" draggable="false" decoding="async" />
+        <div>
+          <strong>${escapeHtml(copy.title)}</strong>
+          ${renderBattleReportAge(event, "realm-activity-age")}
+        </div>
+      </header>
+      <div class="realm-activity-proclamation">
+        <p class="realm-activity-herald">${escapeHtml(copy.herald)}</p>
+        <p>${copy.body}</p>
+        <p class="realm-activity-closing">${copy.closing}</p>
+      </div>
+      <footer class="realm-activity-card-foot">
+        <span><b>Objective</b>${escapeHtml(objectiveMeta)}</span>
+        <span><b>Location</b>${escapeHtml(getRegionLabel(event.regionId))}</span>
+        <button class="realm-activity-location-btn" type="button" data-realm-activity-location="${escapeHtml(event.eventId)}">View Location</button>
+      </footer>
+    </article>
+  `;
+}
+
+function normalizeCampReportReward(value = null) {
+  if (!value || typeof value !== "object") return null;
+  const rewardType = ["gold", "troops", "city", "item"].includes(value.rewardType)
+    ? value.rewardType
+    : "";
+  if (!rewardType) return null;
+  const amount = Math.max(0, Math.floor(Number(value.amount) || 0));
+  if ((rewardType === "gold" || rewardType === "troops") && amount <= 0) return null;
+  if (rewardType === "city") {
+    const cityId = String(value.cityId || "").slice(0, 96);
+    const cityName = String(value.cityName || "").slice(0, 80);
+    if (!cityId || !cityName) return null;
+    return {
+      rewardType,
+      amount: Math.max(1, amount),
+      cityId,
+      cityName,
+      cityRegionId: value.cityRegionId ? normalizeRegionId(value.cityRegionId) : "",
+      cityRegionName: String(value.cityRegionName || "").slice(0, 80),
+    };
+  }
+  if (rewardType === "item") {
+    const itemId = String(value.itemId || "").slice(0, 64);
+    const itemName = String(value.itemName || "").slice(0, 80);
+    const itemQuantity = Math.max(0, Math.floor(Number(value.itemQuantity ?? amount) || 0));
+    if (!itemId || !itemName || itemQuantity <= 0) return null;
+    return { rewardType, amount: itemQuantity, itemId, itemName, itemQuantity };
+  }
+  return { rewardType, amount };
+}
+
 function normalizeBattleReports(reports) {
   if (!Array.isArray(reports)) return [];
   const nowMs = Date.now();
@@ -9199,6 +9555,9 @@ function normalizeBattleReports(reports) {
       const type = ["attack", "defense", "scout"].includes(report.type) ? report.type : "";
       if (!type) return null;
       const cityId = getKnownCityId(report.cityId || report.targetCityId || report.city?.id) || String(report.cityId || report.targetCityId || report.city?.id || "");
+      const targetType = report.targetType === "camp" || report.city?.targetType === "camp" || WORLD_CAMPS_BY_ID.has(cityId)
+        ? "camp"
+        : "city";
       const inferredRegionId = cityId ? getCityRegionId(cityId) : "";
       const rawRegionId = report.regionId || report.targetRegionId || report.city?.regionId || report.city?.startPool || inferredRegionId;
       const fallbackOutcome = type === "scout" ? "scout" : "defeat";
@@ -9213,9 +9572,10 @@ function normalizeBattleReports(reports) {
         occurredAtMs: normalizeTimestampMs(report.occurredAtMs || report.resolvedAtMs || report.createdAtMs),
         createdAtMs: normalizeTimestampMs(report.createdAtMs),
         cityId,
+        targetType,
         regionId: rawRegionId ? normalizeRegionId(rawRegionId) : "",
         cityName: String(report.cityName || "Unknown city").slice(0, 40),
-        cityLevel: clampCityLevel(report.cityLevel || 1),
+        cityLevel: targetType === "camp" ? 0 : clampCityLevel(report.cityLevel || 1),
         troopCount: Math.max(0, Math.floor(Number(report.troopCount) || 0)),
         sentTroops: Math.max(0, Math.floor(Number(report.sentTroops) || 0)),
         survivors: Math.max(0, Math.floor(Number(report.survivors) || 0)),
@@ -9238,6 +9598,7 @@ function normalizeBattleReports(reports) {
         xpAwarded: Math.max(0, Math.floor(Number(report.xpAwarded) || 0)),
         goldAwarded: Math.max(0, Math.floor(Number(report.goldAwarded) || 0)),
         troopsAwarded: Math.max(0, Math.floor(Number(report.troopsAwarded) || 0)),
+        campReward: normalizeCampReportReward(report.campReward),
         eventKind: String(report.eventKind || "").replace(/[^a-zA-Z0-9_-]/g, "_").slice(0, 48),
         rewardEventId: String(report.rewardEventId || "").replace(/[^a-zA-Z0-9_-]/g, "_").slice(0, 160),
         rewardSourceId: String(report.rewardSourceId || "").slice(0, 96),
@@ -9252,26 +9613,25 @@ function normalizeBattleReports(reports) {
         launchCombatForecast: normalizeCombatForecast(report.launchCombatForecast),
         scoutReport: report.scoutReport || null,
         expiresAtMs: normalizeTimestampMs(report.expiresAtMs || report.scoutReport?.expiresAtMs),
+        bulkOrderKind: report.bulkOrderKind === "regroup" ? "regroup" : report.bulkRequestId && type === "scout" ? "nearby_scout" : "",
+        bulkRequestId: String(report.bulkRequestId || "").slice(0, 96),
+        bulkArrivalCue: ["first", "last", "first_last", "mute"].includes(report.bulkArrivalCue) ? report.bulkArrivalCue : "",
+        bulkArrivalIndex: Math.max(0, Math.floor(Number(report.bulkArrivalIndex) || 0)),
+        bulkOrderCount: Math.max(0, Math.floor(Number(report.bulkOrderCount) || 0)),
       };
     })
     .filter(Boolean);
   const active = [];
   const successfulScoutIndexByCity = new Map();
   normalized.forEach(report => {
+    const historyExpiresAtMs = getBattleReportHistoryExpiresAtMs(report);
+    if (historyExpiresAtMs && historyExpiresAtMs <= nowMs) return;
     if (!isSuccessfulScoutIntelBattleReport(report)) {
       active.push(report);
       return;
     }
     const expiresAtMs = getScoutBattleReportExpiresAtMs(report);
-    if (!expiresAtMs || expiresAtMs <= nowMs) {
-      active.push({
-        ...report,
-        scoutReport: null,
-        expiresAtMs: 0,
-        summary: "Scout intelligence expired. Send a new scout for current information.",
-      });
-      return;
-    }
+    if (!expiresAtMs) return;
     report.expiresAtMs = expiresAtMs;
     const cityId = String(report.cityId || "");
     const existingIndex = successfulScoutIndexByCity.get(cityId);
@@ -9296,9 +9656,13 @@ function compareBattleReportsNewestFirst(a = {}, b = {}) {
 }
 
 function getLatestLoadedReportOccurredAtMs() {
-  return normalizeBattleReports(state?.battleReports || []).reduce(
+  const battleLatest = normalizeBattleReports(state?.battleReports || []).reduce(
     (latest, report) => Math.max(latest, getBattleReportOccurredAtMs(report)),
     0
+  );
+  return normalizeRealmActivityEvents(onlineRealmActivityEvents).reduce(
+    (latest, event) => Math.max(latest, event.occurredAtMs),
+    battleLatest
   );
 }
 
@@ -9307,9 +9671,12 @@ function getUnreadReportCount() {
     normalizeTimestampMs(state?.reportsViewedAtMs),
     normalizeTimestampMs(reportsViewedPendingAtMs)
   );
-  return normalizeBattleReports(state?.battleReports || []).reduce((count, report) => (
+  const battleUnread = normalizeBattleReports(state?.battleReports || []).reduce((count, report) => (
     getBattleReportOccurredAtMs(report) > viewedAtMs ? count + 1 : count
   ), 0);
+  return normalizeRealmActivityEvents(onlineRealmActivityEvents).reduce((count, event) => (
+    event.occurredAtMs > viewedAtMs ? count + 1 : count
+  ), battleUnread);
 }
 
 function updateReportUnreadBadge() {
@@ -9540,10 +9907,11 @@ async function scoutTarget(target) {
     return;
   }
   pendingDirectScoutTargets.add(target.id);
-  showToast(`Finding the nearest scout route to ${target.name}...`);
-  await waitForSetupLoadingPaint(0);
   try {
-    const sourceOption = await findNearestScoutSourceAsync(target);
+    const instantSource = findNearestOwnedSourceCandidate(target, 1);
+    const sourceOption = usesServerArmyAuthority() && instantSource?.city
+      ? { city: instantSource.city, route: createInstantOrderRoute(instantSource.city, target) }
+      : await findNearestScoutSourceAsync(target);
     const freshTarget = getArmyTargetById(target.id);
     if (!freshTarget || getPendingScoutMission(target.id)) return;
     if (!sourceOption?.city || sourceOption.city.owner !== "player" || sourceOption.city.troops < 1) {
@@ -9565,6 +9933,7 @@ async function scoutTarget(target) {
 }
 
 function launchScoutMission(source, target, route, _options = {}) {
+  const options = _options && typeof _options === "object" ? _options : {};
   if (!source || !target || source.owner !== "player" || source.troops < 1 || !route?.points?.length) return null;
   const campTarget = isRewardCampTarget(target);
   const mainCityBlockReason = campTarget ? "" : getMainCityScoutBlockReason(target, "player");
@@ -9590,6 +9959,12 @@ function launchScoutMission(source, target, route, _options = {}) {
     sourceRegionId: getCityRegionId(source),
     targetRegionId: getCityRegionId(target),
     targetOwnerAtLaunch: target.owner,
+    bulkAudioVersion: Math.max(0, Math.floor(Number(options.bulkAudioVersion) || 0)),
+    bulkOrderKind: options.bulkOrderKind || "",
+    bulkRequestId: options.bulkRequestId || "",
+    bulkArrivalCue: options.bulkArrivalCue || "",
+    bulkArrivalIndex: Math.max(0, Math.floor(Number(options.bulkArrivalIndex) || 0)),
+    bulkOrderCount: Math.max(0, Math.floor(Number(options.bulkOrderCount) || 0)),
   };
   prepareOnlineArmyMission(mission);
   if (usesServerArmyAuthority()) {
@@ -9603,11 +9978,13 @@ function launchScoutMission(source, target, route, _options = {}) {
       .then(accepted => {
         if (!accepted) return;
         addLog(`One scout left ${source.name} for ${target.name}.`);
-        playGameSound("troop_dispatch", {
-          cooldownMs: 80,
-          regionId: getCityRegionId(source),
-          allowCrossMap: true,
-        });
+        if (!options.silentAudio) {
+          playGameSound("troop_dispatch", {
+            cooldownMs: 80,
+            regionId: getCityRegionId(source),
+            allowCrossMap: true,
+          });
+        }
         showToast(`Scout moving from ${source.name} to ${target.name}`);
       })
       .finally(() => pendingServerArmyLaunchKeys.delete(launchKey));
@@ -9621,7 +9998,9 @@ function launchScoutMission(source, target, route, _options = {}) {
   syncCityStateToOnline(source);
   state.attacks.push(mission);
   publishOnlineArmyMovement(mission);
-  playGameSound("troop_dispatch", { cooldownMs: 80, regionId: getCityRegionId(source) });
+  if (!options.silentAudio) {
+    playGameSound("troop_dispatch", { cooldownMs: 80, regionId: getCityRegionId(source) });
+  }
   return mission;
 }
 
@@ -9705,6 +10084,73 @@ function getBulkResultCityUpdates(result = {}) {
   return [...new Map(rows.map(city => [`${normalizeRegionId(city.regionId || city.islandId)}:${city.id}`, city])).values()];
 }
 
+function getBulkOrderAudioKind(entry = {}) {
+  if (entry.bulkOrderKind === "nearby_scout" || entry.bulkOrderKind === "regroup") {
+    return entry.bulkOrderKind;
+  }
+  if (!entry.bulkRequestId) return "";
+  return entry.kind === "scout" || entry.type === "scout" ? "nearby_scout" : "regroup";
+}
+
+function annotateClientBulkArrivalAudio(armies = []) {
+  const groups = new Map();
+  (Array.isArray(armies) ? armies : []).forEach(army => {
+    const bulkRequestId = String(army?.bulkRequestId || "").trim();
+    const bulkOrderKind = getBulkOrderAudioKind(army);
+    if (!army || !bulkRequestId || !bulkOrderKind) return;
+    const key = `${bulkOrderKind}:${bulkRequestId}`;
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(army);
+  });
+  groups.forEach(group => {
+    const authoritative = group.every(army => (
+      Math.max(0, Math.floor(Number(army.bulkAudioVersion) || 0)) >= 1
+      && ["first", "last", "first_last", "mute"].includes(army.bulkArrivalCue)
+    ));
+    if (authoritative) return;
+    const ordered = [...group].sort((left, right) => (
+      normalizeTimestampMs(left.arrivesAtMs) - normalizeTimestampMs(right.arrivesAtMs)
+      || String(left.id || left.onlineId || "").localeCompare(String(right.id || right.onlineId || ""))
+    ));
+    const count = ordered.length;
+    ordered.forEach((army, arrivalIndex) => {
+      const bulkOrderKind = getBulkOrderAudioKind(army);
+      let bulkArrivalCue = "mute";
+      if (bulkOrderKind === "nearby_scout" && arrivalIndex === 0) bulkArrivalCue = "first";
+      if (bulkOrderKind === "regroup") {
+        if (count === 1) bulkArrivalCue = "first_last";
+        else if (arrivalIndex === 0) bulkArrivalCue = "first";
+        else if (arrivalIndex === count - 1) bulkArrivalCue = "last";
+      }
+      Object.assign(army, {
+        bulkOrderKind,
+        bulkArrivalCue,
+        bulkArrivalIndex: arrivalIndex,
+        bulkOrderCount: count,
+      });
+    });
+  });
+  return armies;
+}
+
+function claimBulkArrivalAudio(entry = {}) {
+  const bulkRequestId = String(entry?.bulkRequestId || "").trim();
+  const bulkOrderKind = getBulkOrderAudioKind(entry);
+  if (!bulkRequestId || !bulkOrderKind) return true;
+  const cue = ["first", "last", "first_last", "mute"].includes(entry.bulkArrivalCue)
+    ? entry.bulkArrivalCue
+    : "mute";
+  if (cue === "mute") return false;
+  const nowMs = Date.now();
+  claimedBulkArrivalAudio.forEach((expiresAtMs, key) => {
+    if (expiresAtMs <= nowMs) claimedBulkArrivalAudio.delete(key);
+  });
+  const key = `${bulkOrderKind}:${bulkRequestId}:${cue}`;
+  if (claimedBulkArrivalAudio.has(key)) return false;
+  claimedBulkArrivalAudio.set(key, nowMs + BATTLE_REPORT_RETENTION_MS);
+  return true;
+}
+
 function applyServerBulkOrderResult(result = {}) {
   const cityUpdates = getBulkResultCityUpdates(result);
   applyServerArmyResult({
@@ -9716,6 +10162,7 @@ function applyServerBulkOrderResult(result = {}) {
   const armies = Array.isArray(result.armies)
     ? result.armies
     : Array.isArray(result.movements) ? result.movements : result.movement ? [result.movement] : [];
+  annotateClientBulkArrivalAudio(armies);
   armies.forEach(adoptServerArmyMovement);
   onlineLastError = "";
   saveGame();
@@ -9767,9 +10214,13 @@ async function toggleScoutNearby(cityId) {
     return;
   }
   renderAll();
-  showToast("Finding reachable scout targets...");
-  await waitForSetupLoadingPaint(0);
-  const options = await getNearbyScoutOptionsAsync(source);
+  const serverBulkOrder = supportsBulkArmyOrders();
+  if (serverBulkOrder) action.phase = "sending";
+  showToast(serverBulkOrder ? "Sending scout orders..." : "Finding reachable scout targets...");
+  if (!serverBulkOrder) await waitForSetupLoadingPaint(0);
+  const options = serverBulkOrder
+    ? getNearbyScoutCandidates(source).map(city => ({ city, route: null }))
+    : await getNearbyScoutOptionsAsync(source);
   if (!isBulkOrderActionCurrent(action)) return;
   if (!options.length) {
     finishBulkOrderAction(action, { completed: true });
@@ -9791,7 +10242,7 @@ async function toggleScoutNearby(cityId) {
     return;
   }
 
-  if (supportsBulkArmyOrders()) {
+  if (serverBulkOrder) {
     const api = getOnlineApi();
     if (!api?.sendNearbyScouts) {
       finishBulkOrderAction(action);
@@ -9813,6 +10264,13 @@ async function toggleScoutNearby(cityId) {
       const armies = applyServerBulkOrderResult(result);
       finishBulkOrderAction(action, { completed: true });
       scoutNearbySourceId = null;
+      if (armies.length) {
+        playGameSound("troop_dispatch", {
+          cooldownMs: 80,
+          regionId: getCityRegionId(source),
+          allowCrossMap: true,
+        });
+      }
       addLog(`${source.name} dispatched ${formatNumber(armies.length || options.length)} nearby scouts for ${formatNumber(SCOUT_NEARBY_COST)} gold.`);
       renderAll();
       showToast(`${formatNumber(armies.length || options.length)} scouts dispatched from ${source.name}`);
@@ -9835,8 +10293,16 @@ async function toggleScoutNearby(cityId) {
 
   state.gold -= SCOUT_NEARBY_COST;
   let launched = 0;
-  for (const option of options) {
-    if (launchScoutMission(source, option.city, option.route)) launched += 1;
+  for (let index = 0; index < options.length; index += 1) {
+    const option = options[index];
+    if (launchScoutMission(source, option.city, option.route, {
+      silentAudio: launched > 0,
+      bulkOrderKind: "nearby_scout",
+      bulkRequestId: action.requestId,
+      bulkArrivalCue: index === 0 ? "first" : "mute",
+      bulkArrivalIndex: index,
+      bulkOrderCount: options.length,
+    })) launched += 1;
   }
   if (!launched) state.gold += SCOUT_NEARBY_COST;
   finishBulkOrderAction(action, { completed: launched > 0 });
@@ -9912,9 +10378,13 @@ async function toggleRegroup(cityId) {
     return;
   }
   renderAll();
-  showToast("Finding reachable regroup routes...");
-  await waitForSetupLoadingPaint(0);
-  const options = await getNearbyRegroupOptionsAsync(target);
+  const serverBulkOrder = supportsBulkArmyOrders();
+  if (serverBulkOrder) action.phase = "sending";
+  showToast(serverBulkOrder ? "Sending regroup orders..." : "Finding reachable regroup routes...");
+  if (!serverBulkOrder) await waitForSetupLoadingPaint(0);
+  const options = serverBulkOrder
+    ? getNearbyRegroupCandidates(target).map(city => ({ city, route: null }))
+    : await getNearbyRegroupOptionsAsync(target);
   if (!isBulkOrderActionCurrent(action)) return;
   if (!options.length) {
     finishBulkOrderAction(action, { completed: true });
@@ -9930,7 +10400,7 @@ async function toggleRegroup(cityId) {
     return;
   }
 
-  if (supportsBulkArmyOrders()) {
+  if (serverBulkOrder) {
     const api = getOnlineApi();
     if (!api?.sendRegroupOrders) {
       finishBulkOrderAction(action);
@@ -9953,6 +10423,13 @@ async function toggleRegroup(cityId) {
       const troopsSent = armies.reduce((total, army) => total + Math.max(0, Math.floor(Number(army?.troops) || 0)), 0);
       finishBulkOrderAction(action, { completed: true });
       regroupSourceId = null;
+      if (armies.length) {
+        playGameSound("troop_dispatch", {
+          cooldownMs: 80,
+          regionId: getCityRegionId(target),
+          allowCrossMap: true,
+        });
+      }
       addLog(`${target.name} called a regroup for ${formatNumber(REGROUP_COST)} gold: ${formatNumber(troopsSent)} troops moving in from ${formatNumber(armies.length || options.length)} cities.`);
       renderAll();
       showToast(`Regroup moving: ${formatNumber(troopsSent)} troops to ${target.name}`);
@@ -9976,10 +10453,41 @@ async function toggleRegroup(cityId) {
   state.gold -= REGROUP_COST;
   let launched = 0;
   let troopsSent = 0;
+  const regroupArrivalOrder = options
+    .map(option => ({
+      option,
+      duration: travelTime(
+        option.city,
+        target,
+        "player",
+        option.route?.length,
+        Math.max(1, Math.floor(Number(option.city?.troops) || 0)),
+        "transfer"
+      ),
+    }))
+    .sort((left, right) => left.duration - right.duration || String(left.option.city.id).localeCompare(String(right.option.city.id)));
+  const regroupArrivalIndex = new Map(regroupArrivalOrder.map((entry, index) => [entry.option.city.id, index]));
   for (const option of options) {
     const troops = Math.floor(Number(option.city.troops) || 0);
     if (troops < 1) continue;
-    if (launchAttack(option.city.id, target.id, 1, "player", troops, { silent: true, syncOwnedCities: false, route: option.route })) {
+    const arrivalIndex = regroupArrivalIndex.get(option.city.id) ?? 0;
+    const arrivalCount = regroupArrivalOrder.length;
+    const bulkArrivalCue = arrivalCount === 1
+      ? "first_last"
+      : arrivalIndex === 0
+        ? "first"
+        : arrivalIndex === arrivalCount - 1 ? "last" : "mute";
+    if (launchAttack(option.city.id, target.id, 1, "player", troops, {
+      silent: true,
+      silentAudio: launched > 0,
+      syncOwnedCities: false,
+      route: option.route,
+      bulkOrderKind: "regroup",
+      bulkRequestId: action.requestId,
+      bulkArrivalCue,
+      bulkArrivalIndex: arrivalIndex,
+      bulkOrderCount: arrivalCount,
+    })) {
       launched += 1;
       troopsSent += troops;
     }
@@ -10002,7 +10510,12 @@ async function toggleRegroup(cityId) {
 }
 
 function getPendingScoutMission(cityId) {
-  return state?.attacks?.find(attack => attack.owner === "player" && attack.kind === "scout" && attack.toId === cityId) || null;
+  return state?.attacks?.find(attack => (
+    attack.owner === "player"
+    && attack.kind === "scout"
+    && attack.toId === cityId
+    && !isArrivedScoutMission(attack)
+  )) || null;
 }
 
 function getRouteHeuristicDistance(source, target) {
@@ -10103,11 +10616,13 @@ function completeScoutMission(attack, target) {
       summary: `Scout reached ${target.name}, now under your control. ${formatNumber(joined)} scout joined the garrison.`,
     });
     addLog(`The scout joined your garrison at ${target.name}.`);
-    playGameSound("notification", {
-      cooldownMs: 500,
-      regionId: getCityRegionId(target),
-      allowCrossMap: true,
-    });
+    if (claimBulkArrivalAudio(attack)) {
+      playGameSound("notification", {
+        cooldownMs: 500,
+        regionId: getCityRegionId(target),
+        allowCrossMap: true,
+      });
+    }
     showToast(`Scout arrived at ${target.name}`);
     return;
   }
@@ -10134,16 +10649,19 @@ function completeScoutMission(attack, target) {
     summary: `Scout revealed ${formatNumber(report.troops)} troops at ${target.name}.`,
   });
   addLog(`Scouts reported ${formatNumber(target.troops)} troops stationed at ${target.name}.`);
-  playGameSound("notification", {
-    cooldownMs: 500,
-    regionId: getCityRegionId(target),
-    allowCrossMap: true,
-  });
+  if (claimBulkArrivalAudio(attack)) {
+    playGameSound("notification", {
+      cooldownMs: 500,
+      regionId: getCityRegionId(target),
+      allowCrossMap: true,
+    });
+  }
   showToast(`Scout report received from ${target.name}`);
 }
 
 function createScoutReportSnapshot(target) {
   const stats = getCityStats(target);
+  const targetType = isRewardCampTarget(target) ? "camp" : "city";
   const troopCount = Math.max(0, Math.floor(Number(target.troops) || 0));
   const troopDefense = Math.max(0, Math.floor(Number(stats.troopDefense) || troopCount));
   const ownerUsesPlayerSkills = target.owner === "player";
@@ -10157,6 +10675,7 @@ function createScoutReportSnapshot(target) {
   }
   const scoutedAtMs = Date.now();
   return {
+    targetType,
     troops: troopCount,
     totalDefense: Math.floor(stats.totalDefense),
     baseTotalDefense: Math.floor(stats.baseTotalDefense),
@@ -10165,7 +10684,7 @@ function createScoutReportSnapshot(target) {
     ownerUid: String(target.ownerUid || (target.owner === "player" ? getCurrentOnlineUid() : "")).slice(0, 128),
     ownerName: getCityOwnerDisplayName(target),
     ownerFlag: getCityOwnerFlag(target),
-    cityLevel: stats.level,
+    cityLevel: targetType === "camp" ? 0 : stats.level,
     defenseCombatVersion: stats.defenseCombatVersion,
     baseDefensePowerPerTroop: stats.baseDefensePowerPerTroop,
     defensePercent: stats.defensePercent,
@@ -10323,6 +10842,10 @@ function supportsDefenseCombat() {
   return !isOnlineWorldActive() || getRealmCapabilityVersion("defenseCombatVersion") >= DEFENSE_COMBAT_VERSION;
 }
 
+function supportsRealmActivity() {
+  return isOnlineWorldActive() && getRealmCapabilityVersion("realmActivityVersion") >= REALM_ACTIVITY_VERSION;
+}
+
 function canUseBulkArmyOrders() {
   return !isOnlineWorldActive() || supportsBulkArmyOrders();
 }
@@ -10373,8 +10896,12 @@ function normalizeServerScoutReport(report = null) {
   const troops = Math.max(0, Math.floor(Number(report.troops) || 0));
   const reinforcements = normalizeScoutReportReinforcements(report.reinforcements);
   const reinforcementTroops = reinforcements.reduce((total, row) => total + row.troops, 0);
+  const targetType = report.targetType === "camp" || WORLD_CAMPS_BY_ID.has(String(report.cityId || ""))
+    ? "camp"
+    : "city";
   return {
     ...report,
+    targetType,
     troops,
     ownerTroops: Math.max(0, Math.floor(Number(report.ownerTroops ?? Math.max(0, troops - reinforcementTroops)) || 0)),
     reinforcementTroops,
@@ -10387,7 +10914,7 @@ function normalizeServerScoutReport(report = null) {
       Math.max(0, Math.floor(Number(report.totalDefense) || 0)),
       Math.max(0, Math.floor(Number(report.baseTotalDefense ?? report.totalDefense) || 0))
     ),
-    cityLevel: clampCityLevel(report.cityLevel || 1),
+    cityLevel: targetType === "camp" ? 0 : clampCityLevel(report.cityLevel || 1),
     scoutedAt,
     expiresAt: scoutedAt + remainingSeconds,
   };
@@ -10408,6 +10935,8 @@ function mergeServerScoutReport(rawReport = null) {
   state.scoutReports = normalizeScoutReports(state.scoutReports);
   const scoutReport = normalizeServerScoutReport({
     ...rawReport.scoutReport,
+    cityId: rawReport.cityId,
+    targetType: rawReport.targetType || rawReport.scoutReport.targetType,
     ownerUid: rawReport.scoutReport.ownerUid || rawReport.opponentUid,
     ownerName: rawReport.scoutReport.ownerName || rawReport.opponentName,
     ownerFlag: rawReport.scoutReport.ownerFlag || rawReport.opponentFlag,
@@ -10435,6 +10964,7 @@ function mergeServerReports(reports = [], options = {}) {
   let addedReport = false;
   const newDeedCompletionReports = [];
   const newCityCombatReports = [];
+  const notificationCandidates = [];
   const refreshedScoutCityIds = new Set();
   state.battleReports = normalizeBattleReports(state.battleReports);
   state.scoutReports = normalizeScoutReports(state.scoutReports);
@@ -10452,6 +10982,7 @@ function mergeServerReports(reports = [], options = {}) {
       : 0;
     const appliedRevisionMs = Math.max(0, Number(appliedServerReportRevisions.get(normalized.id)) || 0);
     if (revisionMs <= Math.max(existingRevisionMs, appliedRevisionMs)) continue;
+    notificationCandidates.push(normalized);
     if (existingIndex >= 0) state.battleReports[existingIndex] = normalized;
     else {
       state.battleReports.push(normalized);
@@ -10488,7 +11019,12 @@ function mergeServerReports(reports = [], options = {}) {
     }
     renderHud();
   }
-  if (shouldNotify && addedReport && !reportsPanelOpen) {
+  if (
+    shouldNotify
+    && addedReport
+    && !reportsPanelOpen
+    && notificationCandidates.some(report => claimBulkArrivalAudio(report))
+  ) {
     playGameSound("notification", { cooldownMs: 500, allowCrossMap: true });
   }
   if (deedRewardReportsVfxHydrated) {
@@ -10778,7 +11314,7 @@ function applyServerCityUpdates(cityUpdates = []) {
   return changed || cacheChanged;
 }
 
-function applyServerArmyResult(result = null) {
+function applyServerArmyResult(result = null, options = {}) {
   if (!result || typeof result !== "object") return false;
   const preResultReport = Array.isArray(result.reports)
     ? [...result.reports].reverse().find(report => report?.type === "attack" || report?.type === "defense")
@@ -10825,10 +11361,16 @@ function applyServerArmyResult(result = null) {
     cityRenderSignature = "";
     changed = true;
   }
-  if (result.kind === "scout" && result.reports?.some(report => report?.type === "scout")) {
+  const scoutAudioContext = result.reports?.find(report => report?.type === "scout") || options.movement || result;
+  const armyArrivalAudioContext = options.movement || result;
+  if (
+    result.kind === "scout"
+    && result.reports?.some(report => report?.type === "scout")
+    && claimBulkArrivalAudio(scoutAudioContext)
+  ) {
     playGameSound("notification", { cooldownMs: 500, regionId: audioRegionId, allowCrossMap: true });
   }
-  if (result.kind && result.kind !== "scout") {
+  if (result.kind && result.kind !== "scout" && claimBulkArrivalAudio(armyArrivalAudioContext)) {
     playGameSound("army_arrival", { cooldownMs: 80, regionId: audioRegionId });
     if (result.kind === "attack" && audioOnActiveMap) {
       crownlandsAudio?.pulseMusic("battle", 3500, getAmbientMusicState());
@@ -13942,10 +14484,12 @@ function disconnectOnlineWorld() {
   clearOnlineReinforcementWatcher();
   clearOnlineHeldCampWatcher();
   clearOnlineServerReportWatcher();
+  clearOnlineRealmActivityWatcher();
   clearOnlineGlobalStatsWatcher();
   clearOnlineCrownCitadelWatcher();
   appliedServerReportRevisions = new Map();
   audioServerReportsHydrated = false;
+  claimedBulkArrivalAudio = new Map();
   deedRewardReportsVfxHydrated = false;
   reportsViewedPendingAtMs = 0;
   lastAuthoritativeProfileRevisionMs = 0;
@@ -14733,6 +15277,7 @@ async function connectOnlineIsland(regionId, {
     subscribeOnlineReinforcements();
     subscribeOnlineHeldCamps();
     subscribeOnlineServerReports();
+    subscribeOnlineRealmActivity();
     subscribeOnlineGlobalStats();
     subscribeOnlineCrownCitadel();
     await recoverPendingOnlineArmyMovements();
@@ -14998,8 +15543,14 @@ function normalizeOnlineCampState(raw = {}) {
   const config = getRewardCampConfig({ ...raw, ...base, campType });
   if (!config) return null;
   const artSrc = String(base.artSrc || getCampConfigForType(campType).artSrc || "").trim();
+  const holderUid = String(raw.holderUid || "").trim();
+  const legacyNeutralCamp = !holderUid
+    && Math.floor(Number(raw.combatVersion) || 0) < REWARD_CAMP_COMBAT_VERSION;
+  const cleanRaw = { ...raw };
+  delete cleanRaw.level;
+  delete cleanRaw.defenseLevel;
   return {
-    ...raw,
+    ...cleanRaw,
     id,
     campId: id,
     regionId: normalizeRegionId(raw.regionId || raw.mapId || getRegionIdFromOnlineIslandId(raw.islandId)),
@@ -15007,17 +15558,20 @@ function normalizeOnlineCampState(raw = {}) {
     campType: config.type,
     rewardType: config.rewardType,
     holdDurationMs: config.holdSeconds * 1000,
-    holderUid: String(raw.holderUid || "").trim(),
+    holderUid,
     holderName: String(raw.holderName || "").slice(0, 40),
     holderFlag: raw.holderFlag || null,
     heldSinceMs: normalizeTimestampMs(raw.heldSinceMs),
     payoutAtMs: normalizeTimestampMs(raw.payoutAtMs),
     payoutPending: Boolean(raw.payoutPending),
-    currentGarrison: Math.max(0, Math.floor(Number(raw.currentGarrison) || 0)),
+    currentGarrison: legacyNeutralCamp
+      ? config.baseDefenders
+      : Math.max(0, Math.floor(Number(raw.currentGarrison) || 0)),
     alliedReinforcementTroops: Math.max(0, Math.floor(Number(raw.alliedReinforcementTroops) || 0)),
-    baseDefenders: Math.max(1, Math.floor(Number(raw.baseDefenders) || config.baseDefenders)),
+    baseDefenders: config.baseDefenders,
     baseReward: config.baseReward,
-    defenseLevel: Math.max(1, Math.floor(Number(raw.defenseLevel) || config.defenseLevel)),
+    combatVersion: config.combatVersion,
+    troopPower: config.troopPower,
     rewardSchedule: config.rewardSchedule,
     maxDailyRewards: config.maxDailyRewards,
     artSrc,
@@ -15145,13 +15699,13 @@ function getCampTargetById(campId) {
     ownerUid: holderUid || null,
     ownerName: online.holderName || (holderUid ? "Rival ruler" : "Neutral defenders"),
     ownerFlag: online.holderFlag || null,
-    level: Math.max(1, Math.floor(Number(online.defenseLevel) || config.defenseLevel)),
-    defenseLevel: Math.max(1, Math.floor(Number(online.defenseLevel) || config.defenseLevel)),
     troops: currentGarrison,
     troopFloat: currentGarrison,
     currentGarrison,
     alliedReinforcementTroops: Math.max(0, Math.floor(Number(online.alliedReinforcementTroops) || 0)),
-    baseDefenders: Math.max(1, Math.floor(Number(online.baseDefenders) || config.baseDefenders)),
+    baseDefenders: config.baseDefenders,
+    combatVersion: config.combatVersion,
+    troopPower: config.troopPower,
     baseReward: config.baseReward,
     payoutAtMs: normalizeTimestampMs(online.payoutAtMs),
     heldSinceMs: normalizeTimestampMs(online.heldSinceMs),
@@ -15786,6 +16340,7 @@ function toOnlineArmyMovement(mission) {
     attackProtection: normalizeAttackProtectionSnapshot(mission.attackProtection),
     acceptedAttackProtection: normalizeAttackProtectionSnapshot(mission.acceptedAttackProtection),
     demoAttack: normalizeDemoAttackSnapshot(mission.demoAttack),
+    protectionHandling: mission.protectionHandling === "auto_cap" ? "auto_cap" : "reconfirm",
     useSwiftMarchOrder: Boolean(mission.useSwiftMarchOrder),
     rallyJoin: Boolean(mission.rallyJoin),
     rallyAttack: Boolean(mission.rallyAttack),
@@ -15793,6 +16348,12 @@ function toOnlineArmyMovement(mission) {
     rallyClanId: String(mission.rallyClanId || ""),
     rallyParticipantCount: Math.max(0, Math.floor(Number(mission.rallyParticipantCount) || 0)),
     participantUids: Array.isArray(mission.participantUids) ? mission.participantUids.map(String).filter(Boolean).slice(0, 8) : [],
+    bulkAudioVersion: Math.max(0, Math.floor(Number(mission.bulkAudioVersion) || 0)),
+    bulkOrderKind: mission.bulkOrderKind || "",
+    bulkRequestId: mission.bulkRequestId || "",
+    bulkArrivalCue: mission.bulkArrivalCue || "",
+    bulkArrivalIndex: Math.max(0, Math.floor(Number(mission.bulkArrivalIndex) || 0)),
+    bulkOrderCount: Math.max(0, Math.floor(Number(mission.bulkOrderCount) || 0)),
     launchedAtMs: Math.max(0, Number(mission.launchedAtMs) || Date.now()),
     arrivesAtMs: Math.max(0, Number(mission.arrivesAtMs) || Date.now()),
     status: "active",
@@ -15898,6 +16459,8 @@ function applyServerMovementToMission(mission, movement = null) {
     >= getArmyViewerAccessPriority(mission.viewerAccess);
   mission.troops = Math.max(0, Math.floor((Number.isFinite(movementTroops) && movementTroops > 0 ? movementTroops : mission.troops) || 0));
   mission.requestedTroops = Math.max(0, Math.floor(Number(movement.requestedTroops) || mission.requestedTroops || mission.troops || 0));
+  mission.adjustedByProtection = Boolean(movement.adjustedByProtection);
+  mission.protectionHandling = movement.protectionHandling === "auto_cap" ? "auto_cap" : mission.protectionHandling || "reconfirm";
   if (mayApplyTroopVisibility) {
     mission.viewerAccess = movementViewerAccess || mission.viewerAccess || "public";
     mission.troopVisibility = movementViewerAccess === "owner"
@@ -15947,6 +16510,12 @@ function applyServerMovementToMission(mission, movement = null) {
   mission.participantUids = Array.isArray(movement.participantUids)
     ? movement.participantUids.map(String).filter(Boolean).slice(0, 8)
     : mission.participantUids || [];
+  mission.bulkAudioVersion = Math.max(0, Math.floor(Number(movement.bulkAudioVersion) || mission.bulkAudioVersion || 0));
+  mission.bulkOrderKind = movement.bulkOrderKind || mission.bulkOrderKind || "";
+  mission.bulkRequestId = movement.bulkRequestId || mission.bulkRequestId || "";
+  mission.bulkArrivalCue = movement.bulkArrivalCue || mission.bulkArrivalCue || "";
+  mission.bulkArrivalIndex = Math.max(0, Math.floor(Number(movement.bulkArrivalIndex) || mission.bulkArrivalIndex || 0));
+  mission.bulkOrderCount = Math.max(0, Math.floor(Number(movement.bulkOrderCount) || mission.bulkOrderCount || 0));
   mission.attackerKingPower = normalizePowerValue(movement.attackerKingPower || mission.attackerKingPower);
   mission.defenderKingPower = normalizePowerValue(movement.defenderKingPower || mission.defenderKingPower);
   if (movement.attackProtection !== undefined) {
@@ -15971,6 +16540,37 @@ function addServerAcceptedMission(mission) {
   return true;
 }
 
+function restoreRejectedArmyOrderSelection(mission) {
+  const sourceId = String(mission?.fromId || "");
+  const targetId = String(mission?.toId || "");
+  if (!sourceId || !targetId) return;
+  window.setTimeout(() => {
+    if (modal.open || sendMode || selectedSourceId || selectedTargetId) return;
+    const source = cityById(sourceId);
+    const target = getArmyTargetById(targetId);
+    if (!source || !target || source.owner !== "player" || source.troops < 1) return;
+    if (mission.kind === "scout") {
+      void scoutTarget(target);
+      return;
+    }
+    selectedSourceId = source.id;
+    selectedTargetId = target.id;
+    sendMode = true;
+    selectedTroopAmount = clamp(
+      Math.max(1, Math.floor(Number(mission.requestedTroops) || 1)),
+      1,
+      source.troops
+    );
+    void showTroopSliderModalAsync(source, target, { orderKind: mission.kind });
+  }, 0);
+}
+
+function isRetryableArmySubmissionError(error) {
+  const code = String(error?.code || error?.name || "").toLowerCase();
+  const message = String(error?.message || error || "").toLowerCase();
+  return /unavailable|deadline-exceeded|internal|unknown|network|timeout/.test(`${code} ${message}`);
+}
+
 function publishOnlineArmyMovement(mission, options = {}) {
   if (!isOnlineWorldActive() || mission?.owner !== "player") return Promise.resolve(false);
   const api = getOnlineApi();
@@ -15982,6 +16582,15 @@ function publishOnlineArmyMovement(mission, options = {}) {
   prepareOnlineArmyMission(mission);
   const movement = toOnlineArmyMovement(mission);
   if (!movement) return Promise.resolve(false);
+  // The server always rebuilds geometry from the source and target. Keep online
+  // launch payloads compact so confirmation never depends on a client route.
+  const movementPayload = {
+    ...movement,
+    path: [],
+    pathSegments: [],
+    pathLength: 0,
+    routeRegionIds: getMissionRegionIds(mission),
+  };
   const regionIds = movement.routeRegionIds?.length ? movement.routeRegionIds : getMissionRegionIds(mission);
   mission.onlineRegionIds = regionIds;
   const sourceRegionId = getCityRegionId(mission.fromId);
@@ -15992,14 +16601,15 @@ function publishOnlineArmyMovement(mission, options = {}) {
   mission.sourceRegionId = normalizeRegionId(mission.sourceRegionId || sourceRegionId);
   mission.targetRegionId = targetRegionId;
   mission.serverPending = true;
+  mission.clientSubmitStartedAt = performance.now();
   pendingOutgoingMissions.set(movement.id, mission);
   updateOutgoingAttackUi();
 
-  const savePromise = api.sendArmyOrder({
+  const orderPayload = {
     worldId: ONLINE_WORLD_ID,
     resetGeneration: RESET_GENERATION,
     army: {
-      ...movement,
+      ...movementPayload,
       sourceRegionId,
       targetRegionId,
       targetType: movement.targetType,
@@ -16007,11 +16617,21 @@ function publishOnlineArmyMovement(mission, options = {}) {
     sourceRegionId,
     targetRegionId,
     routeRegionIds: regionIds,
-  })
+  };
+  const submitOrder = () => api.sendArmyOrder(orderPayload);
+  const savePromise = submitOrder()
+    .catch(error => {
+      if (!isRetryableArmySubmissionError(error)) throw error;
+      mission.serverRetrying = true;
+      updateOutgoingAttackUi();
+      return new Promise(resolve => window.setTimeout(resolve, 350)).then(submitOrder);
+    })
     .then(result => {
+      recordMarchInteractionTiming("server-order-accepted", mission.clientSubmitStartedAt);
       if (result?.movement) applyServerMovementToMission(mission, result.movement);
       mission.peaceShieldDeactivated = Boolean(result?.peaceShieldDeactivated);
       mission.serverPending = false;
+      mission.serverRetrying = false;
       applyServerArmyResult({
         currentUser: result?.currentUser,
         cityUpdates: Array.isArray(result?.cityUpdates)
@@ -16028,8 +16648,10 @@ function publishOnlineArmyMovement(mission, options = {}) {
       return true;
     })
     .catch(error => {
+      recordMarchInteractionTiming("server-order-rejected", mission.clientSubmitStartedAt);
       pendingOutgoingMissions.delete(movement.id);
       mission.serverPending = false;
+      mission.serverRetrying = false;
       onlineLastError = error?.message || String(error);
       console.warn("Server rejected army movement", error);
       const refreshedProtection = getChangedAttackProtectionFromError(error);
@@ -16038,6 +16660,7 @@ function publishOnlineArmyMovement(mission, options = {}) {
         return false;
       }
       rejectServerArmyMission(mission, onlineLastError, options);
+      restoreRejectedArmyOrderSelection(mission);
       return false;
     })
     .finally(() => {
@@ -16070,6 +16693,14 @@ function getOnlineArmyRemainingSeconds(army) {
     return (army.arrivesAtMs - Date.now()) / 1000;
   }
   return Number(army.remaining) || 0;
+}
+
+function isArrivedScoutMission(army, nowMs = Date.now()) {
+  if (!army || army.kind !== "scout") return false;
+  const arrivesAtMs = normalizeTimestampMs(army.arrivesAtMs);
+  if (arrivesAtMs > 0) return arrivesAtMs <= nowMs;
+  const remaining = Number(army.remaining);
+  return Number.isFinite(remaining) && remaining <= 0;
 }
 
 function isServerArmyNotArrivedError(error) {
@@ -16216,6 +16847,14 @@ function normalizeOnlineArmyMovement(raw) {
     rallyClanId: String(raw.rallyClanId || ""),
     rallyParticipantCount: Math.max(0, Math.floor(Number(raw.rallyParticipantCount) || 0)),
     participantUids: Array.isArray(raw.participantUids) ? raw.participantUids.map(String).filter(Boolean).slice(0, 8) : [],
+    bulkAudioVersion: Math.max(0, Math.floor(Number(raw.bulkAudioVersion) || 0)),
+    bulkOrderKind: raw.bulkOrderKind === "regroup" ? "regroup" : raw.bulkRequestId && rawKind === "scout" ? "nearby_scout" : String(raw.bulkOrderKind || ""),
+    bulkRequestId: String(raw.bulkRequestId || ""),
+    bulkArrivalCue: ["first", "last", "first_last", "mute"].includes(raw.bulkArrivalCue) ? raw.bulkArrivalCue : "",
+    bulkArrivalIndex: Math.max(0, Math.floor(Number(raw.bulkArrivalIndex) || 0)),
+    bulkOrderCount: Math.max(0, Math.floor(Number(raw.bulkOrderCount) || 0)),
+    adjustedByProtection: Boolean(raw.adjustedByProtection),
+    protectionHandling: raw.protectionHandling === "auto_cap" ? "auto_cap" : "reconfirm",
     status: raw.status || "active",
     onlineRegionIds: Array.isArray(raw.routeRegionIds) ? raw.routeRegionIds.map(normalizeRegionId) : [],
   };
@@ -16237,7 +16876,7 @@ function rebuildOnlineArmies() {
       const nextPriority = getArmyViewerAccessPriority(army?.viewerAccess);
       if (!current || nextPriority > currentPriority) armiesById.set(key, army);
     });
-  onlineArmies = [...armiesById.values()];
+  onlineArmies = annotateClientBulkArrivalAudio([...armiesById.values()]);
 }
 
 function clearOnlineArmyWatchers({ clear = true } = {}) {
@@ -16305,6 +16944,129 @@ function clearOnlineIslandArmySnapshots() {
 function clearOnlineServerReportWatcher() {
   if (typeof onlineServerReportsUnsubscribe === "function") onlineServerReportsUnsubscribe();
   onlineServerReportsUnsubscribe = null;
+}
+
+function clearRealmAnnouncementPresentation() {
+  window.clearTimeout(realmAnnouncementTimer);
+  window.clearTimeout(realmAnnouncementExitTimer);
+  realmAnnouncementTimer = 0;
+  realmAnnouncementExitTimer = 0;
+  activeRealmAnnouncement = null;
+  if (!realmAnnouncement) return;
+  realmAnnouncement.hidden = true;
+  realmAnnouncement.classList.remove("is-visible", "is-leaving", "stronghold", "citadel");
+}
+
+function clearRealmAnnouncementQueue() {
+  realmAnnouncementQueue = [];
+  clearRealmAnnouncementPresentation();
+}
+
+function showNextRealmAnnouncement() {
+  if (activeRealmAnnouncement || !realmAnnouncementQueue.length || !realmAnnouncement) return;
+  const event = realmAnnouncementQueue.shift();
+  const copy = getRealmActivityCopy(event);
+  activeRealmAnnouncement = event;
+  realmAnnouncement.classList.remove("is-visible", "is-leaving", "stronghold", "citadel");
+  realmAnnouncement.classList.add(copy.tone);
+  realmAnnouncement.hidden = false;
+  if (realmAnnouncementIcon) realmAnnouncementIcon.src = getRealmActivityArtSrc(event);
+  if (realmAnnouncementTitle) realmAnnouncementTitle.textContent = copy.liveTitle;
+  if (realmAnnouncementMessage) realmAnnouncementMessage.textContent = copy.liveMessage;
+  window.requestAnimationFrame(() => {
+    if (activeRealmAnnouncement?.eventId === event.eventId) {
+      realmAnnouncement.classList.add("is-visible");
+    }
+  });
+  const visibleMs = event.eventType === "CITADEL_CAPTURED"
+    ? REALM_ANNOUNCEMENT_CITADEL_MS
+    : REALM_ANNOUNCEMENT_STRONGHOLD_MS;
+  realmAnnouncementTimer = window.setTimeout(() => {
+    realmAnnouncementTimer = 0;
+    realmAnnouncement.classList.remove("is-visible");
+    realmAnnouncement.classList.add("is-leaving");
+    realmAnnouncementExitTimer = window.setTimeout(() => {
+      realmAnnouncementExitTimer = 0;
+      activeRealmAnnouncement = null;
+      realmAnnouncement.hidden = true;
+      realmAnnouncement.classList.remove("is-leaving", "stronghold", "citadel");
+      showNextRealmAnnouncement();
+    }, getEffectiveAnimationMode() === "off" ? 0 : REALM_ANNOUNCEMENT_TRANSITION_MS);
+  }, visibleMs);
+}
+
+function enqueueRealmAnnouncement(event = null) {
+  const normalized = normalizeRealmActivityEvent(event);
+  if (!normalized) return false;
+  if (activeRealmAnnouncement?.eventId === normalized.eventId) return false;
+  if (realmAnnouncementQueue.some(entry => entry.eventId === normalized.eventId)) return false;
+  realmAnnouncementQueue.push(normalized);
+  realmAnnouncementQueue.sort((a, b) => {
+    const aPriority = a.eventType === "CITADEL_CAPTURED" ? 0 : 1;
+    const bPriority = b.eventType === "CITADEL_CAPTURED" ? 0 : 1;
+    return aPriority - bPriority || a.occurredAtMs - b.occurredAtMs;
+  });
+  showNextRealmAnnouncement();
+  return true;
+}
+
+function mergeRealmActivitySnapshot(events = [], metadata = {}) {
+  const nextEvents = normalizeRealmActivityEvents(events);
+  const previousSignature = onlineRealmActivityEvents
+    .map(event => `${event.eventId}:${event.occurredAtMs}`)
+    .join("|");
+  const nextSignature = nextEvents
+    .map(event => `${event.eventId}:${event.occurredAtMs}`)
+    .join("|");
+  const changed = previousSignature !== nextSignature;
+  onlineRealmActivityEvents = nextEvents;
+
+  const authoritative = metadata.fromCache !== true && metadata.hasPendingWrites !== true;
+  const initial = metadata.initial === true || !realmActivityHydrated;
+  const addedEvents = (Array.isArray(metadata.changes) ? metadata.changes : [])
+    .filter(change => change?.type === "added")
+    .map(change => normalizeRealmActivityEvent(change.event))
+    .filter(Boolean);
+  if (authoritative) {
+    addedEvents.forEach(event => {
+      const newDuringSession = event.occurredAtMs >= realmActivityLiveSinceMs;
+      if (newDuringSession && !seenRealmActivityEventIds.has(event.eventId)) {
+        enqueueRealmAnnouncement(event);
+      }
+    });
+  }
+  nextEvents.forEach(event => seenRealmActivityEventIds.add(event.eventId));
+  if (seenRealmActivityEventIds.size > REALM_ACTIVITY_HISTORY_LIMIT * 2) {
+    seenRealmActivityEventIds = new Set(nextEvents.map(event => event.eventId));
+  }
+  realmActivityHydrated = true;
+
+  if (changed) {
+    updateReportUnreadBadge();
+    const reportsPanelOpen = Boolean(modal?.open && modal.classList.contains("battle-report-modal"));
+    const reportListOpen = reportsPanelOpen && !String(modal.dataset.battleReportDetailId || "");
+    if (reportListOpen && battleReportFilter === "realm_activity") {
+      const scrollTop = modalBody.scrollTop;
+      showLogModal({ silentAudio: true, preserveScrollTop: scrollTop });
+    } else if (reportsPanelOpen) {
+      void markLoadedReportsViewed();
+    }
+  } else if (initial) {
+    updateReportUnreadBadge();
+  }
+  return changed;
+}
+
+function clearOnlineRealmActivityWatcher({ clear = true } = {}) {
+  if (typeof onlineRealmActivityUnsubscribe === "function") onlineRealmActivityUnsubscribe();
+  onlineRealmActivityUnsubscribe = null;
+  if (!clear) return;
+  onlineRealmActivityEvents = [];
+  realmActivityHydrated = false;
+  realmActivityLiveSinceMs = 0;
+  seenRealmActivityEventIds = new Set();
+  clearRealmAnnouncementQueue();
+  updateReportUnreadBadge();
 }
 
 function getArmyRouteSummary(route, source, target) {
@@ -16380,6 +17142,24 @@ function subscribeOnlineServerReports() {
       markOnlineRealtimeRecoveryNeeded(error);
       clearOnlineServerReportWatcher();
       console.warn("Could not subscribe to server reports", error);
+    },
+  });
+}
+
+function subscribeOnlineRealmActivity() {
+  const api = getOnlineApi();
+  if (typeof onlineRealmActivityUnsubscribe === "function") return;
+  if (!state || !supportsRealmActivity() || !api?.subscribeRealmActivity || !api?.isSignedIn?.()) return;
+  realmActivityLiveSinceMs = getClanQuestServerNowMs();
+  onlineRealmActivityUnsubscribe = api.subscribeRealmActivity({
+    onEvents: (events, metadata = {}) => {
+      mergeRealmActivitySnapshot(events, metadata);
+    },
+    onError: error => {
+      onlineLastError = error?.message || String(error);
+      markOnlineRealtimeRecoveryNeeded(error);
+      clearOnlineRealmActivityWatcher({ clear: false });
+      console.warn("Could not subscribe to Realm Activity", error);
     },
   });
 }
@@ -16620,12 +17400,14 @@ async function restartOnlineRealtimeSubscriptionsForResume() {
   clearOnlineReinforcementWatcher({ clear: false });
   clearOnlineHeldCampWatcher({ clear: false });
   clearOnlineServerReportWatcher();
+  clearOnlineRealmActivityWatcher({ clear: false });
   clearOnlineGlobalStatsWatcher();
   clearOnlineCrownCitadelWatcher({ clear: false });
   subscribeOnlineArmyWatchers(islandId);
   subscribeOnlineReinforcements();
   subscribeOnlineHeldCamps();
   subscribeOnlineServerReports();
+  subscribeOnlineRealmActivity();
   subscribeOnlineGlobalStats();
   subscribeOnlineCrownCitadel();
   watchGameServerMembership({ preserve: true });
@@ -16720,6 +17502,12 @@ function createLocalAttackFromOnlineArmy(army, remaining = getOnlineArmyRemainin
     rallyClanId: String(army.rallyClanId || ""),
     rallyParticipantCount: Math.max(0, Math.floor(Number(army.rallyParticipantCount) || 0)),
     participantUids: Array.isArray(army.participantUids) ? army.participantUids.map(String).filter(Boolean).slice(0, 8) : [],
+    bulkAudioVersion: Math.max(0, Math.floor(Number(army.bulkAudioVersion) || 0)),
+    bulkOrderKind: army.bulkOrderKind || "",
+    bulkRequestId: army.bulkRequestId || "",
+    bulkArrivalCue: army.bulkArrivalCue || "",
+    bulkArrivalIndex: Math.max(0, Math.floor(Number(army.bulkArrivalIndex) || 0)),
+    bulkOrderCount: Math.max(0, Math.floor(Number(army.bulkOrderCount) || 0)),
     sourceRegionId: army.sourceRegionId,
     targetRegionId: army.targetRegionId,
     onlineRegionIds: army.onlineRegionIds?.length ? army.onlineRegionIds : getMissionRegionIds(army),
@@ -16780,7 +17568,7 @@ async function resolveServerArmyMission(mission) {
     if (resolutionComplete) {
       resolvedOnlineArmyIds.add(onlineId);
     }
-    applyServerArmyResult(result);
+    applyServerArmyResult(result, { movement: mission });
     if (resolutionComplete) purgeResolvedOnlineArmy(onlineId);
     if (result?.movement) adoptServerArmyMovement(result.movement);
     if (shouldBackfillScoutReports) {
@@ -16916,12 +17704,13 @@ function getRenderableArmies() {
   }
   const localOnlineIds = new Set();
   const currentUid = getCurrentOnlineUid();
-  const localArmies = state.attacks.map(attack => {
+  const localArmies = state.attacks.filter(army => !isArrivedScoutMission(army)).map(attack => {
     if (attack.onlineId) localOnlineIds.add(attack.onlineId);
     return attack;
   });
   const remoteArmies = onlineArmies
     .filter(isOnlineArmyVisible)
+    .filter(army => !isArrivedScoutMission(army))
     .filter(army => !(army.ownerUid === currentUid && localOnlineIds.has(army.id)))
     .map(getRenderableRemoteArmy);
   const knownOnlineIds = new Set();
@@ -16934,6 +17723,7 @@ function getRenderableArmies() {
     if (id) knownOnlineIds.add(id);
   });
   const pendingArmies = Array.from(pendingOutgoingMissions.values())
+    .filter(mission => !isArrivedScoutMission(mission))
     .filter(mission => !knownOnlineIds.has(getOnlineArmyResolutionId(mission)))
     .map(getRenderablePendingArmy);
   const renderableArmies = [...localArmies, ...remoteArmies, ...pendingArmies];
@@ -18327,6 +19117,12 @@ function cloneRoute(route) {
           points: (segment.points || []).map(point => ({ x: point.x, y: point.y })),
         }))
       : undefined,
+    authoritativeDurationSeconds: Math.max(0, Number(route.authoritativeDurationSeconds) || 0),
+    authoritativeArrivesAtMs: normalizeTimestampMs(route.authoritativeArrivesAtMs),
+    authoritativeRequestedTroops: Math.max(0, Math.floor(Number(route.authoritativeRequestedTroops) || 0)),
+    previewStatus: ["estimated", "local", "authoritative"].includes(route.previewStatus)
+      ? route.previewStatus
+      : "local",
   };
 }
 
@@ -18960,6 +19756,7 @@ async function collectHarvestBonus(bonusId, sourceElement = null) {
           sourceAnchor: rewardSourceAnchor,
           tier: "small",
           destinationCityId: type === "troops" ? String(result?.targetCityId || "") : "",
+          destinationRegionId: type === "troops" ? String(result?.targetRegionId || "") : "",
         });
       }
     } catch (error) {
@@ -19003,6 +19800,7 @@ async function collectHarvestBonus(bonusId, sourceElement = null) {
       sourceAnchor: rewardSourceAnchor,
       tier: "small",
       destinationCityId: rewardCity.id,
+      destinationRegionId: getCityRegionId(rewardCity),
     });
     return;
   }
@@ -19580,7 +20378,11 @@ function launchAttack(sourceId, targetId, percent, owner, exactTroops = null, op
     return false;
   }
 
-  const route = options.route?.points?.length ? cloneRoute(options.route) : findRoute(source, target);
+  const route = options.route?.points?.length
+    ? cloneRoute(options.route)
+    : owner === "player" && usesServerArmyAuthority()
+      ? createInstantOrderRoute(source, target)
+      : findRoute(source, target);
   if (!route || !route.points.length) {
     if (owner === "player") rejectGameAction("No land route found around the terrain.");
     return false;
@@ -19625,6 +20427,9 @@ function launchAttack(sourceId, targetId, percent, owner, exactTroops = null, op
     path: route.points,
     pathSegments: getRouteSegments(route, getCityRegionId(source)),
     pathLength: route.length,
+    clientRouteStatus: ["estimated", "local", "authoritative"].includes(route.previewStatus)
+      ? route.previewStatus
+      : "local",
     targetOwnerAtLaunch: target.owner,
     requestedTroops: requestedSend,
     attackerKingPower: owner === "player" ? getKingPower() : 0,
@@ -19633,7 +20438,14 @@ function launchAttack(sourceId, targetId, percent, owner, exactTroops = null, op
     attackProtection,
     acceptedAttackProtection,
     demoAttack: null,
+    protectionHandling: options.protectionHandling === "auto_cap" ? "auto_cap" : "reconfirm",
     useSwiftMarchOrder,
+    bulkAudioVersion: Math.max(0, Math.floor(Number(options.bulkAudioVersion) || 0)),
+    bulkOrderKind: options.bulkOrderKind || "",
+    bulkRequestId: options.bulkRequestId || "",
+    bulkArrivalCue: options.bulkArrivalCue || "",
+    bulkArrivalIndex: Math.max(0, Math.floor(Number(options.bulkArrivalIndex) || 0)),
+    bulkOrderCount: Math.max(0, Math.floor(Number(options.bulkOrderCount) || 0)),
   };
   prepareOnlineArmyMission(mission);
 
@@ -19647,26 +20459,32 @@ function launchAttack(sourceId, targetId, percent, owner, exactTroops = null, op
     publishOnlineArmyMovement(mission, { addLocalMissionOnAccept: true, optimistic: false })
       .then(accepted => {
         if (!accepted) return;
-        playGameSound("troop_dispatch", {
-          cooldownMs: 80,
-          regionId: getCityRegionId(source),
-          allowCrossMap: true,
-        });
+        if (!options.silentAudio) {
+          playGameSound("troop_dispatch", {
+            cooldownMs: 80,
+            regionId: getCityRegionId(source),
+            allowCrossMap: true,
+          });
+        }
         const acceptedKind = mission.kind || kind;
         const acceptedTroops = Math.max(0, Math.floor(Number(mission.troops) || send));
+        const requestedTroops = Math.max(1, Math.floor(Number(mission.requestedTroops) || requestedSend));
+        const adjustedText = acceptedTroops < requestedTroops
+          ? ` Selected ${formatNumber(requestedTroops)}; server sent the legal maximum of ${formatNumber(acceptedTroops)}.`
+          : "";
         const acceptedProtection = normalizeAttackProtectionSnapshot(mission.attackProtection) || attackProtection;
         const peaceShieldDeactivated = Boolean(mission.peaceShieldDeactivated);
         if (acceptedKind === "transfer") {
           const swiftMarchApplied = Math.max(0, Number(mission.swiftMarchUsedAtMs) || 0) > 0;
           if (!options.silent) {
-            addLog(`You moved ${formatNumber(acceptedTroops)} troops from ${source.name} to ${target.name}${swiftMarchApplied ? " with a Swift March Order" : ""}.`);
+            addLog(`You moved ${formatNumber(acceptedTroops)} troops from ${source.name} to ${target.name}${swiftMarchApplied ? " with a Swift March Order" : ""}.${adjustedText}`);
             showToast(swiftMarchApplied
               ? `Swift reinforcements moving: ${source.name} \u2192 ${target.name}`
               : `Reinforcements moving: ${source.name} \u2192 ${target.name}`);
           }
         } else if (acceptedKind === "reinforce") {
           const shieldText = peaceShieldDeactivated ? " Your Royal Peace Shield was removed." : "";
-          addLog(`You sent ${formatNumber(acceptedTroops)} clan reinforcements from ${source.name} to ${target.name}.${shieldText}`);
+          addLog(`You sent ${formatNumber(acceptedTroops)} clan reinforcements from ${source.name} to ${target.name}.${shieldText}${adjustedText}`);
           showToast(peaceShieldDeactivated
             ? "Shield dropped. Clan reinforcements moving."
             : `Clan reinforcements moving: ${source.name} \u2192 ${target.name}`);
@@ -19675,9 +20493,11 @@ function launchAttack(sourceId, targetId, percent, owner, exactTroops = null, op
             ? ` ${getAttackProtectionNotice(acceptedProtection)}`
             : "";
           const shieldText = peaceShieldDeactivated ? " Royal Peace Shield deactivated." : "";
-          addLog(`You sent ${formatNumber(acceptedTroops)} troops from ${source.name} to attack ${target.name}.${protectionText}${shieldText}`);
+          addLog(`You sent ${formatNumber(acceptedTroops)} troops from ${source.name} to attack ${target.name}.${protectionText}${shieldText}${adjustedText}`);
           showToast(peaceShieldDeactivated
             ? "Shield dropped. Attack moving."
+            : acceptedTroops < requestedTroops
+              ? `Selected ${formatNumber(requestedTroops)} · sent ${formatNumber(acceptedTroops)} legal maximum`
             : acceptedProtection?.mode !== "normal"
               ? `${acceptedProtection.label} moving: ${formatNumber(acceptedTroops)} troops`
               : `Attack moving: ${source.name} \u2192 ${target.name}`);
@@ -19699,10 +20519,12 @@ function launchAttack(sourceId, targetId, percent, owner, exactTroops = null, op
     syncCityStateToOnline(source);
   }
   state.attacks.push(mission);
-  if (owner === "player") playGameSound("troop_dispatch", {
-    cooldownMs: 80,
-    regionId: getCityRegionId(source),
-  });
+  if (owner === "player" && !options.silentAudio) {
+    playGameSound("troop_dispatch", {
+      cooldownMs: 80,
+      regionId: getCityRegionId(source),
+    });
+  }
   publishOnlineArmyMovement(mission);
   if (isOnlineWorldActive() && owner === "player" && options.syncOwnedCities !== false && !usesServerArmyAuthority()) syncOwnedCitiesToOnline(true);
 
@@ -19779,7 +20601,9 @@ function resolveAttack(attack) {
 
   const attackRegionId = getCityRegionId(target);
   const attackOnActiveMap = attackRegionId === getActiveMapRegionId();
-  playGameSound("army_arrival", { cooldownMs: 80, regionId: attackRegionId });
+  if (claimBulkArrivalAudio(attack)) {
+    playGameSound("army_arrival", { cooldownMs: 80, regionId: attackRegionId });
+  }
   if (attack.kind === "transfer" && target.owner === attack.owner) {
     target.troopFloat += attack.troops;
     target.troops = Math.floor(target.troopFloat);
@@ -19815,9 +20639,7 @@ function resolveAttack(attack) {
     ? null
     : getCityFortificationSnapshot(target, targetStatsAtStart);
   const targetGarrisonDefenseAtStart = targetFortificationAtStart
-    ? Math.max(0, Math.floor(
-      targetStatsAtStart.troopDefense * (1 + targetStatsAtStart.strongholdDefenseBonusPercent / 100)
-    ))
+    ? Math.max(0, Math.floor(targetFortificationAtStart.ownerGarrisonDefensePower))
     : 0;
   const targetDefenseAtStart = targetFortificationAtStart
     ? targetFortificationAtStart.currentWallPower + targetGarrisonDefenseAtStart
@@ -20880,6 +21702,7 @@ function showProfileView() {
   cancelProfileNameEdit();
   updateProfileTabHeader();
   renderProfileScreen();
+  resetUiScrollTop(profileView);
   animateUiTabPanel(profileView);
 }
 
@@ -20897,6 +21720,7 @@ function showProfileSkills() {
   cancelProfileNameEdit();
   updateProfileTabHeader();
   renderProfileSkills();
+  resetUiScrollTop(skillsView);
   animateUiTabPanel(skillsView);
 }
 
@@ -20914,6 +21738,7 @@ function showProfileSettings() {
   cancelProfileNameEdit();
   updateProfileTabHeader();
   updatePushAlertsUi();
+  resetUiScrollTop(settingsView);
   animateUiTabPanel(settingsView);
 }
 
@@ -20999,7 +21824,7 @@ function getControlledObjectiveBenefitBreakdown(city = null) {
       ["gold", stats.sharedClanGoldBonusPercent],
       ["troops", stats.sharedClanTroopBonusPercent],
       ["speed", stats.sharedClanMarchSpeedBonusPercent],
-      ["defense", stats.sharedClanDefenseBonusPercent],
+      ["soldier defense", stats.sharedClanObjectiveTroopDefenseBonusPercent ?? stats.sharedClanDefenseBonusPercent],
     ].filter(([, percent]) => Number(percent) > 0);
     sharedCategories.forEach(([label, percent]) => {
       parts.push(`Shared clan ${label} +${formatNumber(percent)}%`);
@@ -21405,6 +22230,46 @@ function updateClanNameChangeCountdown() {
   if (renameButton) renameButton.disabled = clanRenameSaving || cooldownMs > 0 || !hasEnoughGold;
 }
 
+function getClanJoinCooldownRemainingMs(nowMs = Date.now()) {
+  return Math.max(0, normalizeTimestampMs(state?.clanJoinCooldownUntilMs) - nowMs);
+}
+
+function formatClanJoinCooldown(remainingMs = 0) {
+  const totalSeconds = Math.max(0, Math.ceil((Number(remainingMs) || 0) / 1000));
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  return `${hours}h ${minutes}m ${seconds}s`;
+}
+
+function stopClanJoinCooldownCountdown() {
+  if (clanJoinCountdownTimer) clearInterval(clanJoinCountdownTimer);
+  clanJoinCountdownTimer = 0;
+}
+
+function updateClanJoinCooldownCountdown() {
+  if (activeProfileTab !== "clan" || state?.clanId) {
+    stopClanJoinCooldownCountdown();
+    return;
+  }
+  const cooldownMs = getClanJoinCooldownRemainingMs();
+  if (cooldownMs <= 0) {
+    state.clanJoinCooldownUntilMs = 0;
+    stopClanJoinCooldownCountdown();
+    renderClanView();
+    return;
+  }
+  const countdownText = formatClanJoinCooldown(cooldownMs);
+  clanContent?.querySelectorAll("[data-clan-join-cooldown]").forEach(label => {
+    label.textContent = `Clan cooldown: ${countdownText} remaining. Joining, applying, and creating unlock when it ends.`;
+  });
+}
+
+function startClanJoinCooldownCountdown() {
+  if (clanJoinCountdownTimer || getClanJoinCooldownRemainingMs() <= 0) return;
+  clanJoinCountdownTimer = window.setInterval(updateClanJoinCooldownCountdown, 1000);
+}
+
 function formatClanMemberLastLogin(lastLoginAtMs = 0, nowMs = Date.now()) {
   const loginAtMs = normalizeTimestampMs(lastLoginAtMs);
   if (!loginAtMs) return "Last logged in: unknown";
@@ -21581,6 +22446,7 @@ function showProfileClan() {
   flagEditorView.hidden = true;
   updateProfileTabHeader();
   renderClanView();
+  resetUiScrollTop(clanView);
   animateUiTabPanel(clanView);
   refreshClanState({ silent: true });
 }
@@ -22443,7 +23309,10 @@ function renderClanView() {
     return;
   }
   if (!state?.clanId || !clanSnapshot) {
-    const cooldownMs = Math.max(0, Number(state?.clanJoinCooldownUntilMs || 0) - Date.now());
+    const cooldownMs = getClanJoinCooldownRemainingMs();
+    const cooldownWarning = cooldownMs
+      ? `<p class="clan-warning" data-clan-join-cooldown>Clan cooldown: ${formatClanJoinCooldown(cooldownMs)} remaining. Joining, applying, and creating unlock when it ends.</p>`
+      : "";
     clanContent.innerHTML = `
       ${renderClanBrowserNavigation()}
       <div class="clan-browser">
@@ -22456,10 +23325,11 @@ function renderClanView() {
             <textarea name="description" maxlength="280" placeholder="Clan description" aria-label="Clan description"></textarea>
             <button class="profile-primary-btn" type="submit" ${cooldownMs ? "disabled" : ""}>Create — 100,000 gold</button>
           </form>
-          ${cooldownMs ? `<p class="clan-warning">You can join or create again in ${formatDuration(Math.ceil(cooldownMs / 1000))}.</p>` : ""}
+          ${cooldownWarning}
         </section>
         <section id="clanBrowserDiscoverPanel" class="clan-browser-panel clan-discovery ${activeClanBrowserSection === "discover" ? "active" : ""}" role="tabpanel" aria-labelledby="clanBrowserTabDiscover">
           <div class="profile-section-heading"><span>Find allies</span><h3>Discover Clans</h3></div>
+          ${cooldownWarning}
           <form data-clan-form="search" class="clan-search"><input name="search" maxlength="24" placeholder="Search by clan name" aria-label="Search clans" /><button type="submit">Search</button></form>
           <div class="clan-list">${clanSearchResults.length ? clanSearchResults.map(clan => `
             <article class="clan-list-row">
@@ -22469,8 +23339,11 @@ function renderClanView() {
             </article>`).join("") : `<p class="clan-muted">No clans matched your search.</p>`}</div>
         </section>
       </div>`;
+    if (cooldownMs > 0) startClanJoinCooldownCountdown();
+    else stopClanJoinCooldownCountdown();
     return;
   }
+  stopClanJoinCooldownCountdown();
   const canManageApplications = ["leader", "officer"].includes(state.clanRole);
   const canLead = state.clanRole === "leader";
   if (canLead && clanShieldEditorOpen) {
@@ -22565,6 +23438,9 @@ async function runClanAction(action, payload = {}) {
     if (!method || !api[method]) return;
     const result = await api[method](payload);
     if (Number.isFinite(Number(result?.gold))) state.gold = Number(result.gold);
+    if (["leave", "disband"].includes(action) && Number(result?.cooldownUntilMs) > Date.now()) {
+      state.clanJoinCooldownUntilMs = Number(result.cooldownUntilMs);
+    }
     showToast(action === "apply"
       ? "Application sent."
       : action === "cancel-application"
@@ -22854,8 +23730,8 @@ function renderProfileScreen() {
     : getControlledStrongholdTroopBonusPercent("player");
   const defenseBonusTarget = ownedCities.find(city => city?.owner === "player" && !isStronghold(city));
   const strongholdDefenseBonusPercent = hasMilitaryBreakdown
-    ? globalStats.strongholdDefenseBonusPercent
-    : getControlledStrongholdCityDefenseBonusPercentForCity(defenseBonusTarget);
+    ? getObjectiveTroopDefenseBonusPercent(globalStats)
+    : getControlledObjectiveTroopDefenseBonusPercentForCity(defenseBonusTarget);
   const xpRequired = getXpRequiredForLevel(state.character.level);
   const xpProgress = clamp(state.character.xp / Math.max(1, xpRequired), 0, 1);
 
@@ -22879,7 +23755,7 @@ function renderProfileScreen() {
   if (profileKingPowerStrongholdBonus) {
     const bonusParts = [];
     if (strongholdTroopBonusPercent > 0) bonusParts.push(`+${formatNumber(strongholdTroopBonusPercent)}% troop production`);
-    if (strongholdDefenseBonusPercent > 0) bonusParts.push(`+${formatNumber(strongholdDefenseBonusPercent)}% defense`);
+    if (strongholdDefenseBonusPercent > 0) bonusParts.push(`+${formatNumber(strongholdDefenseBonusPercent)}% defending-soldier power`);
     profileKingPowerStrongholdBonus.hidden = bonusParts.length === 0;
     profileKingPowerStrongholdBonus.textContent = bonusParts.length ? `Strongholds: ${bonusParts.join(" | ")}` : "";
   }
@@ -22921,8 +23797,15 @@ function isSkillPresetUnlocked(slot = null, character = state?.character) {
 function renderSkillPresetAllocation(upgrades = {}) {
   const allocation = normalizeSkillPresetAllocation(upgrades);
   return `<div class="skill-preset-allocation" aria-label="Saved skill allocation">
-    ${SKILL_ORDER.map(skill => `
-      <span><small>${escapeHtml(SKILL_CONFIG[skill].label)}</small><strong>Lv ${formatNumber(allocation[skill])}</strong></span>
+    ${SKILL_GROUPS.map(group => `
+      <section class="skill-preset-allocation-group skill-group-${group.id}" aria-label="${escapeHtml(group.label)} skills">
+        <h4>${escapeHtml(group.label)}</h4>
+        <div>
+          ${group.skills.map(skill => `
+            <span><small>${escapeHtml(SKILL_CONFIG[skill].label)}</small><strong>Lv ${formatNumber(allocation[skill])}</strong></span>
+          `).join("")}
+        </div>
+      </section>
     `).join("")}
   </div>`;
 }
@@ -22976,11 +23859,11 @@ function renderSkillPresetPanel() {
           : `${selected.saved
               ? renderSkillPresetAllocation(selected.upgrades)
               : `<p class="skill-preset-empty-copy">Save your current skill build into this tab.</p>`}
-            ${selected.saved && valid ? `<p class="skill-preset-points">Applying leaves ${formatNumber(remainingAfterApply)} earned ${remainingAfterApply === 1 ? "point" : "points"} unspent.</p>` : ""}
+            ${selected.saved && valid ? `<p class="skill-preset-points">Applying costs ${formatNumber(SKILL_PRESET_APPLY_COST)} gold and leaves ${formatNumber(remainingAfterApply)} earned ${remainingAfterApply === 1 ? "point" : "points"} unspent.</p>` : ""}
             ${selected.saved && !valid ? `<p class="skill-preset-error">This saved build no longer matches the current skill limits. Save it again before applying.</p>` : ""}
             <footer>
               <button type="button" class="profile-secondary-btn" data-save-skill-preset="${selected.slot}" ${skillActionInFlight ? "disabled" : ""}>Save Current Build</button>
-              <button type="button" class="profile-primary-btn" data-apply-skill-preset="${selected.slot}" ${skillActionInFlight || !selected.saved || !valid || active ? "disabled" : ""}>${active ? "Active" : "Apply"}</button>
+              <button type="button" class="profile-primary-btn" data-apply-skill-preset="${selected.slot}" ${skillActionInFlight || !selected.saved || !valid ? "disabled" : ""}>Apply · ${formatNumber(SKILL_PRESET_APPLY_COST)}</button>
             </footer>`}
       </article>
     </section>`;
@@ -22989,7 +23872,7 @@ function renderSkillPresetPanel() {
 function bindSkillPresetControls() {
   skillsView?.querySelectorAll("[data-skill-preset-slot]").forEach(button => {
     button.addEventListener("click", () => {
-      selectedSkillPresetSlot = Math.max(1, Math.min(3, Math.floor(Number(button.dataset.skillPresetSlot) || 1)));
+      selectedSkillPresetSlot = Math.max(1, Math.min(SKILL_PRESET_SLOTS.length, Math.floor(Number(button.dataset.skillPresetSlot) || 1)));
       renderProfileSkills();
     });
   });
@@ -23046,8 +23929,13 @@ function renderProfileSkills() {
       </div>
       <button id="resetSkillsBtn" type="button" ${canResetSkills ? "" : "disabled"}>Reset</button>
     </section>
-    <div class="profile-skill-list">
-      ${SKILL_ORDER.map(skillRow).join("")}
+    <div class="profile-skill-list" aria-label="Skills by role">
+      ${SKILL_GROUPS.map(group => `
+        <section class="profile-skill-group skill-group-${group.id}" aria-label="${escapeHtml(group.label)} skills">
+          <header><strong>${escapeHtml(group.label)}</strong><small>${group.skills.length} ${group.skills.length === 1 ? "skill" : "skills"}</small></header>
+          <div>${group.skills.map(skillRow).join("")}</div>
+        </section>
+      `).join("")}
     </div>
   `;
   skillsView.querySelectorAll("button[data-skill]").forEach(buttonElement => {
@@ -23118,6 +24006,7 @@ function showFlagEditor() {
   flagEditorView.hidden = false;
   updateProfileTabHeader();
   renderFlagEditor();
+  resetUiScrollTop(flagEditorView);
 }
 
 function renderFlagEditor() {
@@ -24611,46 +25500,15 @@ function showRewardCampInfoModal(campId) {
     ? (() => {
         const troops = holderHasAccess
           ? Math.max(0, Math.floor(Number(camp.currentGarrison) || 0))
+            + Math.max(0, Math.floor(Number(camp.alliedReinforcementTroops) || 0))
           : Math.max(0, Math.floor(Number(report.troops) || 0));
         const liveStats = holderHasAccess ? getCityStats({ ...camp, troops, troopFloat: troops }) : null;
-        const defenseLevel = holderHasAccess
-          ? Math.max(1, Math.floor(Number(liveStats.level) || camp.defenseLevel || config.defenseLevel))
-          : Math.max(1, Math.floor(Number(report.cityLevel) || camp.defenseLevel || config.defenseLevel));
-        const defensePercent = holderHasAccess
-          ? Math.max(0, Number(liveStats.defensePercent) || 0)
-          : Math.max(0, Number(report.defensePercent) || 0);
-        const troopDefense = holderHasAccess
-          ? Math.floor(troops * (1 + defensePercent / 100))
-          : Math.max(0, Math.floor(Number(report.troopDefense) || troops * (1 + defensePercent / 100)));
+        const totalDefense = holderHasAccess
+          ? Math.max(0, Math.floor(Number(liveStats.totalDefense) || 0))
+          : Math.max(0, Math.floor(Number(report.totalDefense) || 0));
         return {
           troops,
-          defenseLevel,
-          defensePercent,
-          troopDefense,
-          baseFortifications: holderHasAccess
-            ? Math.max(0, Math.floor(Number(liveStats.baseCityWalls) || 0))
-            : Math.max(0, Math.floor(
-              Number(report.baseCityWalls)
-              || Math.max(0, (Number(report.cityWalls) || 0) - (Number(report.stoneworksBonus) || 0))
-            )),
-          fortifications: holderHasAccess
-            ? Math.max(0, Math.floor(Number(liveStats.cityWalls) || 0))
-            : Math.max(0, Math.floor(Number(report.cityWalls) || 0)),
-          territoryDefensePercent: holderHasAccess
-            ? Math.max(0, Number(liveStats.strongholdDefenseBonusPercent) || 0)
-            : Math.max(0, Number(report.strongholdDefenseBonusPercent) || 0),
-          totalDefense: holderHasAccess
-            ? Math.max(0, Math.floor(Number(liveStats.totalDefense) || 0))
-            : Math.max(0, Math.floor(Number(report.totalDefense) || 0)),
-          baseTotalDefense: holderHasAccess
-            ? Math.max(0, Math.floor(Number(liveStats.baseTotalDefense) || 0))
-            : Math.max(0, Math.floor(
-              Number(report.baseTotalDefense)
-              || (troopDefense + Math.max(
-                0,
-                (Number(report.cityWalls) || 0) - (Number(report.stoneworksBonus) || 0)
-              ))
-            )),
+          totalDefense,
         };
       })()
     : null;
@@ -24666,17 +25524,17 @@ function showRewardCampInfoModal(campId) {
     ? `
       <div class="gold-camp-info-grid camp-defense-grid">
         <div><span>Stationed troops</span><strong>${formatNumber(visibleStats.troops)}</strong></div>
-        <div><span>Defense level</span><strong>${formatNumber(visibleStats.defenseLevel)}</strong></div>
-        <div><span>Troop defense</span><strong>${formatNumber(visibleStats.troopDefense)}</strong><small>Level bonus +${formatNumber(visibleStats.defensePercent)}%</small></div>
-        <div><span>Fortifications</span><strong>${formatBaseAndBonusStat(visibleStats.baseFortifications, visibleStats.fortifications)}</strong><small>Base walls and skill bonus</small></div>
-        <div class="camp-total-defense"><span>Total defense</span><strong>${formatBaseAndBonusStat(visibleStats.baseTotalDefense, visibleStats.totalDefense)}</strong><small>${visibleStats.territoryDefensePercent > 0 ? `Stronghold +${formatNumber(visibleStats.territoryDefensePercent)}%` : "Base defense and active bonuses"}</small></div>
+        <div><span>Power per troop</span><strong>${REWARD_CAMP_TROOP_POWER.toFixed(2)}</strong></div>
+        <div><span>Camp level</span><strong>None</strong></div>
+        <div><span>Walls</span><strong>None</strong></div>
+        <div class="camp-total-defense"><span>Total defense</span><strong>${formatNumber(visibleStats.totalDefense)}</strong><small>Troops only; no defense bonuses</small></div>
       </div>
       ${report ? `<p class="camp-scout-expiry">Scout snapshot expires in <strong>${formatDuration(reportRemaining)}</strong>. Reinforcements or battles after the scout arrived are not revealed.</p>` : ""}`
     : `
       <div class="camp-stats-locked">
         <span class="camp-stats-lock" aria-hidden="true">&#128274;</span>
         <strong>Camp defenses hidden</strong>
-        <p>Scout this camp to reveal its stationed troops and defense stats.</p>
+        <p>Scout this camp to reveal its stationed troops. Camps have no level or walls, and every stationed troop supplies exactly 1.00 defense power.</p>
       </div>`;
   const rewardPanelMarkup = isDeedCamp
     ? `<div data-deed-history-panel="${escapeHtml(camp.id)}">${deedCampHistoryMarkup([], "loading")}</div>`
@@ -24742,6 +25600,10 @@ function showRewardCampInfoModal(campId) {
       </section>
 
       <section id="campRulesPanel" class="camp-info-tab-panel" role="tabpanel" aria-labelledby="campRulesTab" data-camp-info-panel="rules" hidden>
+        <div class="gold-camp-description">
+          <strong>Camp combat</strong>
+          <p>Every neutral camp starts with 20,000 troops. Camps have no level, walls, Stoneworks, or objective defense bonus; each stationed troop and reinforcement contributes exactly 1.00 defense power.</p>
+        </div>
         ${rulesMarkup}
       </section>
     </div>`;
@@ -24780,16 +25642,24 @@ function showScoutReportModal(cityId) {
   const reportedOwnerUid = String(report.ownerUid || city.ownerUid || "").slice(0, 128);
   const reportedOwnerFlag = report.ownerFlag || getCityOwnerFlag(city) || createDefaultFlag();
   const currentPlayerUid = getCurrentOnlineUid();
-  const cityLevel = clampCityLevel(report.cityLevel || city.level);
-  const soldierDefenseEnabled = Math.floor(Number(report.defenseCombatVersion) || 0) >= DEFENSE_COMBAT_VERSION;
+  const rewardCampTarget = report.targetType === "camp" || isRewardCampTarget(city);
+  const cityLevel = rewardCampTarget ? 0 : clampCityLevel(report.cityLevel || city.level);
+  const soldierDefenseEnabled = !rewardCampTarget
+    && Math.floor(Number(report.defenseCombatVersion) || 0) >= DEFENSE_COMBAT_VERSION;
   const defensePercent = soldierDefenseEnabled ? 0 : Math.max(0, Number(report.defensePercent) || cityLevel * 2);
-  const cityWalls = Math.max(0, Math.floor(Number(report.cityWalls) || getCityStats({ ...city, level: cityLevel, troops: report.troops }).cityWalls));
-  const cityDefenseBonus = Math.max(0, Math.floor(Number(report.cityDefenseBonus) || report.troops * defensePercent / 100));
+  const cityWalls = rewardCampTarget
+    ? 0
+    : Math.max(0, Math.floor(Number(report.cityWalls) || getCityStats({ ...city, level: cityLevel, troops: report.troops }).cityWalls));
+  const cityDefenseBonus = rewardCampTarget
+    ? 0
+    : Math.max(0, Math.floor(Number(report.cityDefenseBonus) || report.troops * defensePercent / 100));
   const stoneworksBonus = Math.max(0, Math.floor(Number(report.stoneworksBonus) || 0));
-  const baseCityWalls = Math.max(0, Math.floor(Number(report.baseCityWalls) || Math.max(0, cityWalls - stoneworksBonus)));
+  const baseCityWalls = rewardCampTarget
+    ? 0
+    : Math.max(0, Math.floor(Number(report.baseCityWalls) || Math.max(0, cityWalls - stoneworksBonus)));
   const baseTotalDefense = Math.max(
     0,
-    Math.floor(Number(report.baseTotalDefense) || report.troops + cityDefenseBonus + baseCityWalls)
+    Math.floor(Number(report.baseTotalDefense) || (rewardCampTarget ? report.totalDefense : report.troops + cityDefenseBonus + baseCityWalls))
   );
   const reinforcements = normalizeScoutReportReinforcements(report.reinforcements);
   const reinforcementTroops = reinforcements.reduce((total, row) => total + row.troops, 0);
@@ -24811,12 +25681,21 @@ function showScoutReportModal(cityId) {
         </div>
         <div class="scout-report-mark" aria-label="Scout mission"><span aria-hidden="true">&#128301;</span><strong>Scout</strong><small>1 troop</small></div>
         <div class="scout-report-ruler enemy">
-          <div>${renderPlayerNameLink(reportedOwnerUid, reportedOwnerName, "scout-report-owner-link")}<small>City Lv ${formatNumber(cityLevel)}</small></div>
+          <div>${renderPlayerNameLink(reportedOwnerUid, reportedOwnerName, "scout-report-owner-link")}<small>${rewardCampTarget ? "Camp defenders" : `City Lv ${formatNumber(cityLevel)}`}</small></div>
           <span id="scoutReportDefenderFlag" class="kingdom-flag scout-report-enemy-flag" aria-hidden="true"><span class="flag-symbol"></span></span>
         </div>
       </div>
 
-      <div class="scout-report-city"><span>${isRewardCampTarget(city) ? "Target camp" : "Target city"}</span><strong>${escapeHtml(city.name)}</strong><b>${isRewardCampTarget(city) ? `Level ${formatNumber(cityLevel)} defense` : `Level ${formatNumber(cityLevel)}`}</b></div>
+      <div class="scout-report-city">
+        <span>${rewardCampTarget ? "Target camp" : "Target city"}</span>
+        <strong>${escapeHtml(city.name)}</strong>
+        <b>${rewardCampTarget ? "No level · No walls" : `Level ${formatNumber(cityLevel)}`}</b>
+        ${renderBattleReportLocateButton({
+          cityId,
+          regionId: report.regionId || getCityRegionId(city),
+          cityName: city.name,
+        }, "scout-report-locate")}
+      </div>
 
       <div class="scout-report-overview">
         <div><span>Scouted troops</span><strong>${formatNumber(report.troops)}</strong></div>
@@ -24824,20 +25703,25 @@ function showScoutReportModal(cityId) {
         ${siege ? `<div><span>Wall integrity at scout time</span><strong>${formatWallIntegrity(siege.startingIntegrityBps)}</strong>${siegeRepair}${siege.repairWindowMinutes > 0 ? `<small>${formatNumber(siege.repairWindowMinutes)}-minute full-breach window; hits add proportional time and handoffs preserve it</small>` : ""}</div>` : ""}
       </div>
 
-      <p class="scout-report-snapshot-note" title="${escapeHtml(report.scoutedAtMs ? new Date(report.scoutedAtMs).toLocaleString() : "Time unavailable")}">This is a fixed intelligence snapshot from when the scout arrived. It does not show the target's current live statistics.</p>
-
       <section class="scout-report-section">
         <h3>Enemy defense</h3>
         <div class="scout-defense-breakdown">
-          ${scoutDefenderRow("&#9817;", reportedOwnerUid, reportedOwnerName, isRewardCampTarget(city) ? "Holding owner" : "City owner", ownerTroops, soldierDefenseEnabled ? siege?.ownerGarrisonDefensePower : 0, soldierDefenseEnabled ? `1.30 base · Shieldwall +${formatNumber(report.shieldwallDisciplinePercent || 0)}% · objective +${formatNumber(siege?.troopObjectiveDefenseBonusPercent || 0)}%` : "")}
-          ${reinforcements.map(row => scoutDefenderRow("&#8649;", row.ownerUid, row.ownerName, "Clan reinforcement", row.troops, soldierDefenseEnabled ? row.effectivePower : 0, soldierDefenseEnabled ? `${row.baseDefensePowerPerTroop.toFixed(2)} base · Shieldwall +${formatNumber(row.shieldwallDisciplinePercent)}% · personal +${formatNumber(row.personalDefenseBonusPercent)}% · clan +${formatNumber(row.sharedDefenseBonusPercent)}%` : "")).join("")}
-          ${siege
+          ${scoutDefenderRow("&#9817;", reportedOwnerUid, reportedOwnerName, rewardCampTarget ? "Camp holder" : "City owner", ownerTroops, rewardCampTarget ? ownerTroops : soldierDefenseEnabled ? siege?.ownerGarrisonDefensePower : 0, rewardCampTarget ? "1.00 power per troop" : soldierDefenseEnabled ? `1.30 base · Shieldwall +${formatNumber(report.shieldwallDisciplinePercent || 0)}% · objective +${formatNumber(siege?.troopObjectiveDefenseBonusPercent || 0)}%` : "")}
+          ${reinforcements.map(row => scoutDefenderRow("&#8649;", row.ownerUid, row.ownerName, "Clan reinforcement", row.troops, rewardCampTarget ? row.troops : soldierDefenseEnabled ? row.effectivePower : 0, rewardCampTarget ? "1.00 power per troop" : soldierDefenseEnabled ? `${row.baseDefensePowerPerTroop.toFixed(2)} base · Shieldwall +${formatNumber(row.shieldwallDisciplinePercent)}% · personal +${formatNumber(row.personalDefenseBonusPercent)}% · clan +${formatNumber(row.sharedDefenseBonusPercent)}%` : "")).join("")}
+          ${rewardCampTarget
+            ? scoutBreakdownRow("&#9819;", "Walls", "Camp objectives have no wall layer", 0)
+            : siege
             ? `${scoutBreakdownRow("&#9819;", "Current wall layer", `${formatWallIntegrity(siege.startingIntegrityBps)} of ${formatNumber(siege.fullWallPower)} full power · base wall + Stoneworks`, siege.startingWallPower)}${scoutBreakdownRow("&#128737;", "Garrison layer", soldierDefenseEnabled ? `${Number(report.baseDefensePowerPerTroop || BASE_TROOP_DEFENSE_POWER).toFixed(2)} base per soldier · Shieldwall +${formatNumber(report.shieldwallDisciplinePercent || 0)}% · objective +${formatNumber(siege.troopObjectiveDefenseBonusPercent || report.strongholdDefenseBonusPercent || 0)}%` : "Owner and reinforcement troop defense", siege.garrisonDefensePower)}`
             : `${scoutBreakdownRow("&#128737;", "City defense", `Lv ${cityLevel} - +${formatNumber(defensePercent)}%`, cityDefenseBonus)}${scoutBreakdownRow("&#9819;", "City walls", `Lv ${cityLevel} base ${formatNumber(baseCityWalls)} (+${formatNumber(Math.max(0, cityWalls - baseCityWalls))})`, cityWalls)}`}
           <div class="scout-breakdown-total"><span>Total</span><strong>${formatBaseAndBonusStat(baseTotalDefense, report.totalDefense)}</strong></div>
         </div>
       </section>
 
+      ${rewardCampTarget ? `
+      <section class="scout-report-section">
+        <h3>Camp combat rules</h3>
+        <div class="scout-stale-note"><strong>Fixed troop power</strong><span>Camp levels, walls, Stoneworks, Shieldwall, and objective bonuses do not apply. Every stationed troop contributes exactly 1.00 defense power.</span></div>
+      </section>` : `
       <div class="scout-skill-columns">
         <section class="scout-report-section">
           <h3>Enemy defense stats</h3>
@@ -24858,13 +25742,14 @@ function showScoutReportModal(cityId) {
             <div class="scout-skill-row base"><span>Base attack</span><strong>+${formatNumber(report.baseAttackPercent || 0)}%</strong></div>
           </div>
         </section>
-      </div>
+      </div>`}
 
       <div class="scout-report-timing"><span>Report age: <b data-scout-report-age>${formatDuration(age)}</b></span><span>Expires in: <b data-scout-report-expires>${formatDuration(remaining)}</b></span></div>
     </div>
   `;
   applyFlagToElement(modalBody.querySelector("#scoutReportPlayerFlag"), state.flag);
   applyFlagToElement(modalBody.querySelector("#scoutReportDefenderFlag"), reportedOwnerFlag);
+  bindBattleReportJumpButtons();
   if (!modal.open) modal.showModal();
 }
 
@@ -25953,8 +26838,32 @@ function beginSendMode(sourceId) {
   renderSelectionChangeNow();
 }
 
+function scheduleOrderRoutePrefetch(targetId = "") {
+  if (!sendMode || !selectedSourceId || !targetId) return;
+  const key = `${selectedSourceId}:${targetId}`;
+  if (key === routePrefetchKey) return;
+  routePrefetchKey = key;
+  if (routePrefetchTimer) window.clearTimeout(routePrefetchTimer);
+  routePrefetchTimer = window.setTimeout(() => {
+    routePrefetchTimer = 0;
+    const source = cityById(selectedSourceId);
+    const target = getArmyTargetById(targetId);
+    if (!source || !target || source.id === target.id) return;
+    void findRouteAsync(source, target).catch(() => null);
+  }, 80);
+}
+
 function showTroopSliderModal(source, target) {
   void showTroopSliderModalAsync(source, target);
+}
+
+function recordMarchInteractionTiming(name, startedAt) {
+  if (!Number.isFinite(startedAt) || typeof performance === "undefined" || typeof performance.measure !== "function") return;
+  try {
+    performance.measure(`crownlands:${name}`, { start: startedAt, end: performance.now() });
+  } catch {
+    // Performance entries are diagnostic only and must never affect gameplay.
+  }
 }
 
 function getTroopOrderKind(target, requestedKind = "") {
@@ -26016,6 +26925,34 @@ function normalizeAuthoritativeRoutePreview(result, sourceRegionId = "", request
     authoritativeDurationSeconds: Math.max(0, Number(raw.durationMs) || 0) / 1000,
     authoritativeArrivesAtMs: normalizeTimestampMs(raw.arrivesAtMs),
     authoritativeRequestedTroops: Math.max(1, Math.floor(Number(raw.requestedTroops) || requestedTroops || 1)),
+    previewStatus: "authoritative",
+  };
+}
+
+function createInstantOrderRoute(source, target) {
+  const cached = getCachedAsyncRoute(source, target);
+  if (cached?.points?.length) {
+    return { ...cached, previewStatus: cached.previewStatus || "local" };
+  }
+  const legs = buildRouteWorkerLegs(source, target);
+  if (!legs?.length) return null;
+  const segments = legs.map(leg => {
+    const points = [leg.start, leg.end].map(point => ({
+      x: Number(point?.x) || 0,
+      y: Number(point?.y) || 0,
+    }));
+    return {
+      regionId: normalizeRegionId(leg.regionId),
+      points,
+      length: routeLength(points),
+    };
+  });
+  const points = segments.flatMap((segment, index) => index ? segment.points.slice(1) : segment.points);
+  return {
+    points,
+    segments,
+    length: segments.reduce((total, segment) => total + segment.length, 0),
+    previewStatus: "estimated",
   };
 }
 
@@ -26042,12 +26979,6 @@ async function requestAuthoritativeOrderRoute(source, target, orderKind = "attac
     console.warn("Could not load the authoritative route preview; the server will still verify launch timing.", error);
   }
   return null;
-}
-
-async function findOrderRouteAsync(source, target, orderKind = "attack") {
-  const route = await requestAuthoritativeOrderRoute(source, target, orderKind, selectedTroopAmount);
-  if (route?.points?.length) return route;
-  return findRouteAsync(source, target);
 }
 
 function cancelAuthoritativeRoutePreviewRefresh() {
@@ -26094,6 +27025,7 @@ function scheduleAuthoritativeRoutePreviewRefresh(source, target, route, orderKi
 }
 
 async function showTroopSliderModalAsync(source, target, options = {}) {
+  const panelStartedAt = performance.now();
   if (!source || !target || source.owner !== "player" || source.id === target.id) return;
   if (source.troops < 1) {
     rejectGameAction("No troops available to send.");
@@ -26106,7 +27038,6 @@ async function showTroopSliderModalAsync(source, target, options = {}) {
   const isTransfer = orderKind === "transfer";
   const isReinforcement = orderKind === "reinforce";
   const campTarget = isRewardCampTarget(target);
-  const needsDefenderPower = orderKind === "attack" && target.owner === "enemy" && !campTarget && !isStronghold(target);
   const needsCombatForecast = orderKind === "attack";
   const mainCityBlockReason = rallyOrder || isTransfer || isReinforcement || campTarget
     ? ""
@@ -26140,71 +27071,52 @@ async function showTroopSliderModalAsync(source, target, options = {}) {
   activeAttackProtectionPreview = providedAttackProtection;
   activeCombatForecastPreview = providedCombatForecast;
   activeTroopOrderKind = orderKind;
-  showTroopRouteLoadingModal(source, target, orderKind);
-
-  await waitForSetupLoadingPaint(0);
-  const [route, defenderPower, protectionResult] = await Promise.all([
-    findOrderRouteAsync(source, target, orderKind),
-    needsDefenderPower ? ensureAuthoritativeCityOwnerKingPower(target) : Promise.resolve(0),
-    needsCombatForecast
-      ? providedAttackProtection && providedCombatForecast
-        ? Promise.resolve({ attackProtection: providedAttackProtection, combatForecast: providedCombatForecast })
-        : loadAttackProtectionPreview(source, target)
-          .catch(error => ({ error }))
-      : Promise.resolve({ attackProtection: null, combatForecast: null }),
-  ]);
-  if (requestId !== activeTroopRouteRequestId) return;
-
-  const freshSource = cityById(source.id);
-  const freshTarget = activeRallyOrderContext?.target?.id === target.id
-    ? activeRallyOrderContext.target
-    : getArmyTargetById(target.id);
-  if (!freshSource || !freshTarget || freshSource.owner !== "player" || freshSource.id === freshTarget.id) {
-    rejectGameAction("Order canceled. The map changed.");
+  const instantRoute = createInstantOrderRoute(source, target);
+  if (!instantRoute?.points?.length) {
+    rejectGameAction("No route is available between those regions.");
     cancelSendMode();
-    if (modal.open) modal.close();
-    renderAll();
     return;
   }
-  if (!modal.open || !modal.classList.contains("troop-slider-modal")) return;
-  if (freshSource.troops < 1) {
-    rejectGameAction("No troops available to send.");
-    cancelSendMode();
-    if (modal.open) modal.close();
-    return;
-  }
-  if (
-    orderKind === "attack"
-    && freshTarget.owner === "enemy"
-    && !isRewardCampTarget(freshTarget)
-    && !isStronghold(freshTarget)
-    && Math.max(
-      normalizePowerValue(defenderPower),
-      getAuthoritativeCityOwnerKingPowerSnapshot(freshTarget)
-    ) <= 0
-  ) {
-    showTroopPowerVerificationError(freshSource, freshTarget);
-    return;
-  }
-  if (protectionResult?.error) {
-    console.warn("Could not preview attack protection", protectionResult.error);
-    showTroopPowerVerificationError(freshSource, freshTarget);
-    return;
-  }
-  if (!route || !route.points.length) {
-    rejectGameAction("No land route found around the terrain.");
-    selectedTargetId = null;
-    cancelSendMode();
-    if (modal.open) modal.close();
-    renderAll();
-    return;
-  }
-
-  showTroopSliderModalWithRoute(freshSource, freshTarget, route, {
-    attackProtection: protectionResult?.attackProtection || null,
-    combatForecast: protectionResult?.combatForecast || null,
+  showTroopSliderModalWithRoute(source, target, instantRoute, {
+    attackProtection: providedAttackProtection,
+    combatForecast: providedCombatForecast,
     orderKind,
   });
+  recordMarchInteractionTiming("troop-panel-interactive", panelStartedAt);
+
+  void findRouteAsync(source, target).then(localRoute => {
+    if (
+      requestId !== activeTroopRouteRequestId
+      || !localRoute?.points?.length
+      || !troopSliderActive
+      || !modal.open
+      || activeTroopSliderRoute?.sourceId !== source.id
+      || activeTroopSliderRoute?.targetId !== target.id
+      || activeTroopSliderRoute?.route?.previewStatus === "authoritative"
+    ) return;
+    const hydratedRoute = { ...localRoute, previewStatus: "local" };
+    activeTroopSliderRoute.route = cloneRoute(hydratedRoute);
+    updateTroopSliderModal(cityById(source.id), getArmyTargetById(target.id), activeTroopSliderRoute.route);
+  }).catch(error => {
+    if (!usesServerArmyAuthority()) console.warn("Could not calculate the local march route", error);
+  });
+
+  if (needsCombatForecast && !(providedAttackProtection && providedCombatForecast)) {
+    void loadAttackProtectionPreview(source, target).then(protectionResult => {
+      if (
+        requestId !== activeTroopRouteRequestId
+        || !troopSliderActive
+        || !modal.open
+        || activeTroopSliderRoute?.sourceId !== source.id
+        || activeTroopSliderRoute?.targetId !== target.id
+      ) return;
+      activeAttackProtectionPreview = normalizeAttackProtectionSnapshot(protectionResult?.attackProtection);
+      activeCombatForecastPreview = normalizeCombatForecast(protectionResult?.combatForecast);
+      updateTroopSliderModal(cityById(source.id), getArmyTargetById(target.id), activeTroopSliderRoute.route);
+    }).catch(error => {
+      console.warn("Could not refresh the optional attack preview", error);
+    });
+  }
 }
 
 function showMainCityProtectedAttackModal(target) {
@@ -26228,94 +27140,6 @@ function showMainCityProtectedAttackModal(target) {
     </div>
   `;
   modalBody.querySelector("#mainCityProtectedClose")?.addEventListener("click", () => modal.close());
-  if (!modal.open) modal.showModal();
-}
-
-function showTroopPowerVerificationError(source, target) {
-  playGameSound("invalid_action", { cooldownMs: 140, regionId: getCityRegionId(target) });
-  modal.classList.add("troop-slider-modal");
-  modalTitle.textContent = "Attack troops";
-  modalBody.innerHTML = `
-    <div class="troop-slider-panel attack">
-      <div class="troop-route-summary">
-        <div class="troop-route-city">
-          <span>From</span>
-          <strong>${escapeHtml(source.name)}</strong>
-          <small>${formatNumber(source.troops)} troops available</small>
-        </div>
-        <div class="troop-command-icon" aria-hidden="true">&#9876;</div>
-        <div class="troop-route-city destination">
-          <span>To</span>
-          <strong>${escapeHtml(target.name)}</strong>
-          <small>Enemy city</small>
-        </div>
-      </div>
-
-      <div class="troop-slider-preview unknown" role="alert">
-        <div><span>Kingdom strength</span><strong>Verification interrupted</strong><small>The attack limit could not be confirmed. No troops were sent.</small></div>
-        <div><span>Next step</span><strong>Try again</strong><small>Your selection will remain active.</small></div>
-      </div>
-
-      <div class="troop-slider-actions">
-        <button id="troopPowerRetry" class="troop-slider-confirm attack" type="button">
-          <span aria-hidden="true">&#8635;</span>Retry
-        </button>
-        <button id="troopSliderCancel" class="troop-slider-cancel" type="button">Cancel</button>
-      </div>
-    </div>
-  `;
-  modalBody.querySelector("#troopPowerRetry")?.addEventListener("click", () => {
-    const freshSource = cityById(source.id);
-    const freshTarget = getArmyTargetById(target.id);
-    if (!freshSource || !freshTarget) {
-      rejectGameAction("Order canceled. The map changed.");
-      if (modal.open) modal.close();
-      return;
-    }
-    void showTroopSliderModalAsync(freshSource, freshTarget);
-  });
-  modalBody.querySelector("#troopSliderCancel")?.addEventListener("click", () => modal.close());
-  if (!modal.open) modal.showModal();
-}
-
-function showTroopRouteLoadingModal(source, target, orderKind = "attack") {
-  const rallyOrder = isRallyTroopOrderKind(orderKind);
-  const isTransfer = orderKind === "transfer";
-  const isReinforcement = orderKind === "reinforce";
-  const commandLabel = orderKind === "rally_create" ? "Create Rally" : orderKind === "rally_join" ? "Join Rally" : isTransfer ? "Transfer" : isReinforcement ? "Reinforce" : "Attack";
-  const commandIcon = rallyOrder ? "&#9873;" : isTransfer ? "&#9822;" : isReinforcement ? "&#8649;" : "&#9876;";
-  modal.classList.add("troop-slider-modal");
-  modalTitle.textContent = `${commandLabel} troops`;
-  modalBody.innerHTML = `
-    <div class="troop-slider-panel ${rallyOrder ? "rally" : isTransfer || isReinforcement ? "transfer reinforce" : "attack"}">
-      <div class="troop-route-summary">
-        <div class="troop-route-city">
-          <span>From</span>
-          <strong>${escapeHtml(source.name)}</strong>
-          <small>${escapeHtml(getRegionLabel(getCityRegionId(source)))} &middot; <b>${formatNumber(source.troops)}</b> available</small>
-        </div>
-        <div class="troop-command-icon" aria-hidden="true">${commandIcon}</div>
-        <div class="troop-route-city destination">
-          <span>To</span>
-          <strong>${escapeHtml(target.name)}</strong>
-          <small>${escapeHtml(getRegionLabel(getCityRegionId(target)))} &middot; ${orderKind === "rally_join" ? "Rally assembly city" : orderKind === "rally_create" ? "Clan rally objective" : isReinforcement ? "Clan allied holding" : isRewardCampTarget(target) ? (isTransfer ? `Your ${escapeHtml(target.name)}` : `${OWNER[target.owner].label} ${escapeHtml(target.name)}`) : isTransfer ? "Your city" : `${OWNER[target.owner].label} city`}</small>
-        </div>
-      </div>
-
-      <div class="troop-slider-preview unknown route-loading-preview" role="status" aria-live="polite">
-        <div><span>Route</span><strong>Calculating...</strong><small>Finding a land path around cities and terrain</small></div>
-        <div><span>Orders</span><strong>Almost ready</strong><small>You can cancel while the route loads</small></div>
-      </div>
-
-      <div class="troop-slider-actions">
-        <button id="troopSliderConfirm" class="troop-slider-confirm ${isTransfer || isReinforcement ? "transfer reinforce" : "attack"}" type="button" disabled>
-          <span aria-hidden="true">${commandIcon}</span>Calculating
-        </button>
-        <button id="troopSliderCancel" class="troop-slider-cancel" type="button">Cancel</button>
-      </div>
-    </div>
-  `;
-  modalBody.querySelector("#troopSliderCancel")?.addEventListener("click", () => modal.close());
   if (!modal.open) modal.showModal();
 }
 
@@ -26513,6 +27337,13 @@ function updateTroopSliderModal(source, target, route) {
   if (maxLabel) maxLabel.textContent = `${demoLimited ? "Protected max" : "Max"} ${formatNumber(sliderSendLimit)}`;
 
   const orderKind = getTroopOrderKind(target, activeTroopOrderKind);
+  const routeIsEstimated = route?.previewStatus === "estimated";
+  const confirmButton = modalBody.querySelector("#troopSliderConfirm");
+  if (confirmButton) {
+    const waitingForOfflineRoute = routeIsEstimated && !usesServerArmyAuthority();
+    confirmButton.disabled = waitingForOfflineRoute;
+    confirmButton.setAttribute("aria-disabled", waitingForOfflineRoute ? "true" : "false");
+  }
   const swiftMarchToggle = modalBody.querySelector("#swiftMarchLaunchToggle");
   const swiftMarchOrderCount = Math.max(
     0,
@@ -26557,7 +27388,7 @@ function updateTroopSliderModal(source, target, route) {
     previewEl.className = "troop-slider-preview transfer reinforce rally";
     previewEl.innerHTML = `
       <div><span>${isJoin ? "Contribution" : "Leader force"}</span><strong>${formatNumber(selectedTroopAmount)} troops</strong><small>${isJoin ? "One participant slot will be reserved immediately" : "Troops wait at the assembly city until you launch or cancel"}</small></div>
-      <div><span>${isJoin ? "Assembly time" : "Final march"}</span><strong>About ${formatDuration(baseTravel)}</strong><small>${escapeHtml(routeSummary)}</small><small>Royal Peace Shields are removed on commitment</small></div>
+      <div><span>${isJoin ? "Assembly time" : "Final march"}</span><strong>${routeIsEstimated ? "Estimated " : "About "}${formatDuration(baseTravel)}</strong><small>${escapeHtml(routeSummary)}</small><small>Royal Peace Shields are removed on commitment</small></div>
     `;
     return;
   }
@@ -26565,7 +27396,7 @@ function updateTroopSliderModal(source, target, route) {
     previewEl.className = "troop-slider-preview transfer";
     previewEl.innerHTML = `
       <div><span>Arrival</span><strong>${formatNumber(target.troops + selectedTroopAmount)} troops</strong></div>
-      <div><span>Travel time</span><strong>About ${formatDuration(travel)}</strong>${activeSwiftMarchOrderSelected ? `<small>Swift March Order &middot; normally ${formatDuration(baseTravel)}</small>` : ""}<small>${escapeHtml(routeSummary)}</small></div>
+      <div><span>Travel time</span><strong>${routeIsEstimated ? "Estimated " : "About "}${formatDuration(travel)}</strong>${activeSwiftMarchOrderSelected ? `<small>Swift March Order &middot; normally ${formatDuration(baseTravel)}</small>` : ""}<small>${escapeHtml(routeSummary)}</small></div>
     `;
     return;
   }
@@ -26577,7 +27408,7 @@ function updateTroopSliderModal(source, target, route) {
     previewEl.className = "troop-slider-preview transfer reinforce";
     previewEl.innerHTML = `
       <div><span>Your stationed support</span><strong>${formatNumber(afterArrival)} troops</strong><small>Owned by you and merged at this holding</small></div>
-      <div><span>Travel time</span><strong>About ${formatDuration(travel)}</strong><small>${escapeHtml(routeSummary)}</small><small>Defends automatically with the holder's bonuses</small></div>
+      <div><span>Travel time</span><strong>${routeIsEstimated ? "Estimated " : "About "}${formatDuration(travel)}</strong><small>${escapeHtml(routeSummary)}</small><small>Defends automatically with the holder's bonuses</small></div>
     `;
     return;
   }
@@ -26602,11 +27433,10 @@ function updateTroopSliderModal(source, target, route) {
       activeCombatForecastPreview,
       report
     );
-    const scoutAge = getScoutReportAgeSeconds(report);
     previewEl.className = `troop-slider-preview ${preview.success ? "win" : "lose"}`;
     previewEl.innerHTML = `
-      <div><span>Scouted total defense</span><strong>${formatNumber(preview.defensePower)} power</strong><small>${formatNumber(report.troops)} defenders &middot; report age ${formatDuration(scoutAge)}</small><small>Includes known walls, bonuses, and reinforcements</small></div>
-      <div><span>Forecast at scout time</span><strong>${preview.success ? "Likely capture" : "Likely defeat"}</strong><small>${formatNumber(preview.attackPower)} attack vs ${formatNumber(preview.defensePower)} defense &middot; ${escapeHtml(preview.label)}</small><small>${formatNumber(preview.attackerLosses)} attacker losses (${formatNumber(Math.round(preview.attackerLossPercent))}%) &middot; ${formatNumber(preview.defenderLosses)} defender losses (${formatNumber(Math.round(preview.defenderLossPercent))}%)</small><small>${preview.success ? `${formatNumber(preview.survivors)} estimated survivors` : `${formatNumber(preview.defendersLeft)} defenders estimated`} &middot; minimum capture force ${formatNumber(preview.minimumCaptureTroops)} troops</small><small>Defense can change before arrival &middot; ${escapeHtml(routeSummary)}</small></div>
+      <div><span>Scouted total defense</span><strong>${formatNumber(preview.defensePower)} power</strong></div>
+      <div><span>Forecast at scout time</span><strong>${preview.success ? "Likely capture" : "Likely defeat"}</strong></div>
     `;
     return;
   }
@@ -26646,10 +27476,7 @@ function updateTroopSliderModal(source, target, route) {
     activeCombatForecastPreview,
     report
   );
-  const protectionNotice = getAttackProtectionNotice(preview.attackProtection);
   const raid = preview.attackProtection?.mode === "raid";
-  const breach = preview.attackProtection?.mode === "assault"
-    && preview.attackProtection?.assaultStage === "breach";
   const favorableOutcome = preview.success || preview.breachCompleted;
   const siege = preview.fortification;
   const forecastOutcome = raid
@@ -26663,51 +27490,25 @@ function updateTroopSliderModal(source, target, route) {
           : siege
             ? "Walls likely hold"
         : "Likely defeat";
-  const scoutAge = getScoutReportAgeSeconds(report);
-  const reinforcementText = report.reinforcementTroops > 0
-    ? `${formatNumber(report.reinforcementTroops)} allied reinforcement troops included`
-    : "No allied reinforcement troops were seen";
-  const stoneworksWallBonus = siege
-    ? Math.max(0, siege.reinforcedCityWalls - siege.baseCityWalls)
-    : 0;
-  const objectiveWallBonus = siege
-    ? Math.max(0, siege.fullWallPower - siege.reinforcedCityWalls)
-    : 0;
-  const wallBreakdown = siege
-    ? siege.defenseCombatVersion >= DEFENSE_COMBAT_VERSION
-      ? `Base wall ${formatNumber(siege.baseCityWalls)} + Stoneworks ${formatNumber(stoneworksWallBonus)} (+${formatNumber(siege.stoneworksPercent)}%)`
-      : `Base wall ${formatNumber(siege.baseCityWalls)} + Stoneworks ${formatNumber(stoneworksWallBonus)} (+${formatNumber(siege.stoneworksPercent)}%)${siege.objectiveDefenseBonusPercent > 0 ? ` + objective ${formatNumber(objectiveWallBonus)} (+${formatNumber(siege.objectiveDefenseBonusPercent)}%)` : ""}`
-    : "";
-  const garrisonBreakdown = siege
-    ? siege.defenseCombatVersion >= DEFENSE_COMBAT_VERSION
-      ? `Owner garrison ${formatNumber(siege.ownerGarrisonDefensePower)} power${siege.reinforcementGarrisonDefensePower > 0 ? ` + reinforcements ${formatNumber(siege.reinforcementGarrisonDefensePower)} power` : ""} · ${Number(siege.baseDefensePowerPerTroop || BASE_TROOP_DEFENSE_POWER).toFixed(2)} base per soldier · Shieldwall +${formatNumber(siege.shieldwallDisciplinePercent)}%${siege.troopObjectiveDefenseBonusPercent > 0 ? ` · objective +${formatNumber(siege.troopObjectiveDefenseBonusPercent)}%` : ""}`
-      : `Owner garrison ${formatNumber(siege.ownerGarrisonDefensePower)} power${siege.reinforcementGarrisonDefensePower > 0 ? ` + reinforcements ${formatNumber(siege.reinforcementGarrisonDefensePower)} power` : ""} · legacy city level defense +${formatNumber(siege.cityLevelDefensePercent)}%${siege.objectiveDefenseBonusPercent > 0 ? ` · objective +${formatNumber(siege.objectiveDefenseBonusPercent)}%` : ""}`
-    : "";
-  const meaningfulWallWarning = preview.belowMeaningfulWallDamage
-    ? `<small class="tiny-warning">Too small to advance this siege: send at least ${formatNumber(preview.minimumMeaningfulWallDamageTroops)} troops to persist ${formatNumber(SIEGE_MEANINGFUL_WALL_DAMAGE_PERCENT)}% wall damage.</small>`
-    : "";
-  const captureThresholdText = raid
-    ? "Weaker-kingdom protection disables capture for this raid."
-    : breach
-      ? "This protected assault can breach the wall but cannot capture on this march."
-      : `Minimum capture force at scout time: ${formatNumber(preview.minimumCaptureTroops)} troops${preview.captureTroopShortfall > 0 ? ` · short by ${formatNumber(preview.captureTroopShortfall)}` : " · threshold met"}.`;
   previewEl.className = `troop-slider-preview ${favorableOutcome ? "win" : "lose"}`;
   previewEl.innerHTML = `
-    <div><span>${siege ? "Scouted siege defense" : "Scouted total defense"}</span><strong>${formatNumber(preview.defensePower)} power</strong><small>${formatNumber(report.troops)} defenders &middot; ${escapeHtml(reinforcementText)}</small>${siege ? `<small>${wallBreakdown}</small><small>Current wall ${formatNumber(siege.startingWallPower)} &rarr; absorbs ${formatNumber(siege.wallDamagePower)} attack · integrity ${formatWallIntegrity(siege.startingIntegrityBps)} &rarr; ${formatWallIntegrity(siege.endingIntegrityBps)}</small><small>${garrisonBreakdown}</small>` : `<small>Report age ${formatDuration(scoutAge)} &middot; includes known walls and defense bonuses</small>`}</div>
-    <div><span>Forecast at scout time</span><strong>${forecastOutcome} · ${escapeHtml(preview.label)}</strong><small>${formatNumber(preview.attackPower)} attack &middot; ${siege ? `${formatNumber(siege.penetratingAttackPower)} reaches ${formatNumber(siege.garrisonDefensePower)} garrison defense` : `${formatNumber(preview.defensePower)} defense`}</small><small>${formatNumber(preview.attackerLosses)} attacker losses (${formatNumber(Math.round(preview.attackerLossPercent))}%) &middot; ${formatNumber(preview.defenderLosses)} defender losses (${formatNumber(Math.round(preview.defenderLossPercent))}%)</small><small>${favorableOutcome ? breach ? `About ${formatNumber(preview.survivors)} troops return after breaching` : `About ${formatNumber(preview.survivors)} survivors` : `About ${formatNumber(preview.defendersLeft)} defenders remain`} &middot; ${formatDuration(preview.travel)} travel</small><small>${captureThresholdText}</small>${meaningfulWallWarning}<small>${siege ? "Capture requires breaching the wall and then exceeding garrison defense." : `Capture requires more than ${formatNumber(preview.defensePower)} live defense at arrival.`} Production, reinforcements, wall repairs, ownership, and bonuses may change before arrival.</small><small>Scout age ${formatDuration(scoutAge)} &middot; ${escapeHtml(routeSummary)}</small>${protectionNotice ? `<small>${escapeHtml(protectionNotice)}</small>` : ""}</div>
+    <div><span>${siege ? "Scouted siege defense" : "Scouted total defense"}</span><strong>${formatNumber(preview.defensePower)} power</strong></div>
+    <div><span>Forecast at scout time</span><strong>${forecastOutcome}</strong></div>
   `;
 }
 
-async function submitClanRallyTroopOrder(source, target, route) {
+function submitClanRallyTroopOrder(source, target, route) {
   const api = getOnlineApi();
   const context = activeRallyOrderContext;
   if (!api || !context || !isRallyTroopOrderKind() || !state?.clanId) return false;
-  const method = activeTroopOrderKind === "rally_create" ? "createClanRally" : "joinClanRally";
+  const submittedOrderKind = activeTroopOrderKind;
+  const submittedTroops = selectedTroopAmount;
+  const method = submittedOrderKind === "rally_create" ? "createClanRally" : "joinClanRally";
   if (!api[method] || !api.isSignedIn?.()) {
     rejectGameAction("Clan rallies require the online Crownlands server.");
     return false;
   }
-  const requestKey = activeTroopOrderKind === "rally_create"
+  const requestKey = submittedOrderKind === "rally_create"
     ? `create:${source.id}:${target.id}`
     : `join:${context.rallyId}`;
   if (rallyActionRequests.has(requestKey)) return false;
@@ -26717,40 +27518,61 @@ async function submitClanRallyTroopOrder(source, target, route) {
     ...segments.map(segment => segment.regionId),
     getCityRegionId(target),
   ].map(normalizeRegionId).filter(Boolean))];
-  const armyId = createOnlineArmyId(activeTroopOrderKind === "rally_create" ? "rally" : "rally_join");
+  const armyId = createOnlineArmyId(submittedOrderKind === "rally_create" ? "rally" : "rally_join");
   const payload = {
     clanId: state.clanId,
-    rallyId: activeTroopOrderKind === "rally_create" ? armyId : context.rallyId,
+    rallyId: submittedOrderKind === "rally_create" ? armyId : context.rallyId,
     armyId,
     sourceRegionId: getCityRegionId(source),
     targetRegionId: getCityRegionId(target),
     routeRegionIds,
     army: {
       id: armyId,
-      kind: activeTroopOrderKind === "rally_join" ? "rally_join" : "attack",
+      kind: submittedOrderKind === "rally_join" ? "rally_join" : "attack",
       fromId: source.id,
       toId: target.id,
       fromName: source.name,
       toName: target.name,
       targetType: isRewardCampTarget(target) ? "camp" : "city",
-      troops: selectedTroopAmount,
-      requestedTroops: selectedTroopAmount,
-      path: normalizeArmyPath(route.points),
-      pathSegments: segments,
+      troops: submittedTroops,
+      requestedTroops: submittedTroops,
+      path: [],
+      pathSegments: [],
       routeRegionIds,
-      pathLength: Math.max(0, Number(route.length) || routeLength(route.points)),
+      pathLength: 0,
       sourceRegionId: getCityRegionId(source),
       targetRegionId: getCityRegionId(target),
     },
   };
   rallyActionRequests.add(requestKey);
-  const confirmButton = modalBody.querySelector("#troopSliderConfirm");
-  if (confirmButton) {
-    confirmButton.disabled = true;
-    confirmButton.textContent = activeTroopOrderKind === "rally_create" ? "Creating..." : "Joining...";
+  if (submittedOrderKind === "rally_join") {
+    const pendingMission = {
+      id: armyId,
+      onlineId: armyId,
+      owner: "player",
+      kind: "rally_join",
+      launchKind: "rally_join",
+      targetType: "city",
+      fromId: source.id,
+      toId: target.id,
+      troops: submittedTroops,
+      requestedTroops: submittedTroops,
+      total: travelTime(source, target, "player", route.length, submittedTroops, "transfer"),
+      remaining: travelTime(source, target, "player", route.length, submittedTroops, "transfer"),
+      path: route.points,
+      pathSegments: segments,
+      pathLength: route.length,
+      sourceRegionId: getCityRegionId(source),
+      targetRegionId: getCityRegionId(target),
+      serverPending: true,
+    };
+    prepareOnlineArmyMission(pendingMission);
+    pendingOutgoingMissions.set(armyId, pendingMission);
+    updateOutgoingAttackUi();
   }
-  try {
-    const result = await api[method](payload);
+  showToast(submittedOrderKind === "rally_create" ? "Sending rally order..." : "Sending rally contribution...");
+  void api[method](payload).then(result => {
+    pendingOutgoingMissions.delete(armyId);
     applyServerArmyResult({
       currentUser: result?.currentUser,
       cityUpdates: Array.isArray(result?.cityUpdates)
@@ -26765,10 +27587,10 @@ async function submitClanRallyTroopOrder(source, target, route) {
       ];
     }
     const shieldText = result?.peaceShieldDeactivated ? " Your Royal Peace Shield was removed." : "";
-    addLog(activeTroopOrderKind === "rally_create"
-      ? `You formed a clan rally against ${target.name} with ${formatNumber(selectedTroopAmount)} troops.${shieldText}`
-      : `You committed ${formatNumber(selectedTroopAmount)} troops to ${context.rally?.leaderName || "your ally"}'s rally.${shieldText}`);
-    showToast(activeTroopOrderKind === "rally_create"
+    addLog(submittedOrderKind === "rally_create"
+      ? `You formed a clan rally against ${target.name} with ${formatNumber(submittedTroops)} troops.${shieldText}`
+      : `You committed ${formatNumber(submittedTroops)} troops to ${context.rally?.leaderName || "your ally"}'s rally.${shieldText}`);
+    showToast(submittedOrderKind === "rally_create"
       ? `Rally formed against ${target.name}.`
       : `Contribution marching to ${target.name}.`);
     playGameSound("troop_dispatch", {
@@ -26779,21 +27601,22 @@ async function submitClanRallyTroopOrder(source, target, route) {
     renderClanHudAccess();
     renderClanView();
     updateOutgoingAttackUi();
-    return true;
-  } catch (error) {
+  }).catch(error => {
+    pendingOutgoingMissions.delete(armyId);
     console.warn("Clan rally order failed", error);
     rejectGameAction(error?.message || "Could not submit the rally order.");
-    if (confirmButton) {
-      confirmButton.disabled = false;
-      confirmButton.textContent = activeTroopOrderKind === "rally_create" ? "Create Rally" : "Join Rally";
-    }
-    return false;
-  } finally {
+  }).finally(() => {
     rallyActionRequests.delete(requestKey);
-  }
+    renderClanHudAccess();
+    renderClanView();
+    renderAll();
+    updateOutgoingAttackUi();
+  });
+  return true;
 }
 
 async function confirmTroopSliderOrder() {
+  const confirmStartedAt = performance.now();
   const source = selectedSourceId ? cityById(selectedSourceId) : null;
   const target = activeRallyOrderContext?.target?.id === selectedTargetId
     ? activeRallyOrderContext.target
@@ -26820,6 +27643,10 @@ async function confirmTroopSliderOrder() {
     rejectGameAction("Route is still calculating.");
     return;
   }
+  if (cachedRoute.previewStatus === "estimated" && !usesServerArmyAuthority()) {
+    rejectGameAction("The local route is still calculating.");
+    return;
+  }
   if (
     activeTroopOrderKind === "attack"
     && activeCombatForecastPreview?.status === "scouted"
@@ -26837,8 +27664,9 @@ async function confirmTroopSliderOrder() {
     return;
   }
   if (isRallyTroopOrderKind()) {
-    const accepted = await submitClanRallyTroopOrder(source, target, cachedRoute);
-    if (!accepted) return;
+    const submitted = submitClanRallyTroopOrder(source, target, cachedRoute);
+    if (!submitted) return;
+    recordMarchInteractionTiming("confirm-to-pending", confirmStartedAt);
     troopSliderActive = false;
     activeTroopSliderRoute = null;
     activeAttackProtectionPreview = null;
@@ -26855,10 +27683,12 @@ async function confirmTroopSliderOrder() {
   const launched = launchAttack(source.id, target.id, 1, "player", selectedTroopAmount, {
     route: cachedRoute,
     attackProtection: activeAttackProtectionPreview,
+    protectionHandling: "auto_cap",
     kind: activeTroopOrderKind,
     useSwiftMarchOrder: activeSwiftMarchOrderSelected && canUseSwiftMarchOrderOnLaunch(source, target),
   });
   if (!launched) return;
+  recordMarchInteractionTiming("confirm-to-pending", confirmStartedAt);
   troopSliderActive = false;
   activeTroopSliderRoute = null;
   activeAttackProtectionPreview = null;
@@ -26876,6 +27706,9 @@ function cancelSendMode() {
   activeTroopRouteRequestId += 1;
   cancelPendingRouteWorkerRequests();
   cancelAuthoritativeRoutePreviewRefresh();
+  if (routePrefetchTimer) window.clearTimeout(routePrefetchTimer);
+  routePrefetchTimer = 0;
+  routePrefetchKey = "";
   sendMode = false;
   selectedTargetId = null;
   selectedTroopAmount = 1;
@@ -27552,7 +28385,7 @@ function showCrownCitadelInfoModal(city) {
       </div>
       <section id="citadelOverviewPanel" class="camp-info-tab-panel" role="tabpanel" aria-labelledby="citadelOverviewTab" data-citadel-info-panel="overview">
         <div class="city-stat-panel modal-city-stats stronghold-stat-panel">
-          <div class="stat-wide stronghold-status"><span>Controlled bonus</span><strong>${getCrownCitadelBonusLabel()}</strong><small>Clanmates receive the shared 5% Citadel package while it is held.</small></div>
+          <div class="stat-wide stronghold-status"><span>Controlled bonus</span><strong>${getCrownCitadelBonusLabel()}</strong><small>The defense portion adds +10% for the controller or +5% for clanmates against each defending soldier's 1.30 base. It never increases walls, Stoneworks, city level, or repair time.</small></div>
           ${renderObjectiveClanAffiliation(city)}
           ${owned ? `<div class="stat-wide"><span>Your active objective benefit</span><strong>${escapeHtml(getControlledObjectiveBenefitBreakdown(city))}</strong><small>Personal and shared clan benefits are calculated separately by the server.</small></div>` : ""}
           <div class="stat-chip"><span>Controller</span><strong>${escapeHtml(controller)}</strong></div>
@@ -27738,7 +28571,7 @@ function getCityFortificationDisplay(city, stats = null, report = null, nowMs = 
   const defenseCombatVersion = Math.max(0, Math.floor(Number(
     scouted?.defenseCombatVersion ?? stats?.defenseCombatVersion
   ) || 0));
-  const objectiveBonusPercent = Math.max(0, Number(stats?.strongholdDefenseBonusPercent) || 0);
+  const objectiveBonusPercent = getObjectiveTroopDefenseBonusPercent(stats);
   const garrisonDefensePower = scouted?.garrisonDefensePower || Math.max(0, Math.floor(
     defenseCombatVersion >= DEFENSE_COMBAT_VERSION
       ? Number(stats?.troopDefense) || 0
@@ -27810,7 +28643,7 @@ function showCityInfoModal(cityId) {
             ? `<div class="stat-wide"><span>Clan</span>${renderClanIdentityLink({ clanId: clanIdentity.clanId, clanName: clanIdentity.clanName, clanTag: clanIdentity.clanTag, className: "city-clan-profile-link" })}</div>`
             : ""}
         ${stronghold ? renderObjectiveClanAffiliation(city) : ""}
-        ${stronghold ? `<div class="stat-wide"><span>Stronghold bonus</span><strong>${strongholdBonusLabel}</strong><small>The controller receives 8%; current clanmates receive 4%, subject to Citadel precedence.</small></div>` : ""}
+        ${stronghold ? `<div class="stat-wide"><span>Stronghold bonus</span><strong>${strongholdBonusLabel}</strong><small>${isDefenseStronghold(city) ? "The controller receives +8% and current clanmates receive +4% against each defending soldier's 1.30 base. Walls, Stoneworks, city level, and repair time are unchanged." : "The controller receives 8%; current clanmates receive 4%, subject to Citadel precedence."}</small></div>` : ""}
         <div class="stat-wide"><span>Owner</span>${renderPlayerNameLink(city.ownerUid || getCurrentOnlineUid(), getCityOwnerDisplayName(city))}</div>
         <div class="stat-chip"><span>${stronghold ? "Defense level" : "City level"}</span><strong>${formatNumber(stats.level)}</strong></div>
         <div class="stat-chip"><span>Troops</span><strong data-live-city-garrison="${escapeHtml(city.id)}">${visibleTroops === undefined ? "Unknown" : formatNumber(visibleTroops)}</strong></div>
@@ -27838,7 +28671,7 @@ function showCityInfoModal(cityId) {
     const effectTargetLabel = isCrownCitadel(city)
       ? "All cities and marches"
       : isDefenseStronghold(city)
-      ? "City defense"
+      ? "Defending soldiers"
       : isSpeedStronghold(city)
       ? "March time"
       : isTrainingStronghold(city)
@@ -27847,7 +28680,7 @@ function showCityInfoModal(cityId) {
     const effectHelp = isCrownCitadel(city)
       ? "replaces other stronghold bonuses while active"
       : isDefenseStronghold(city)
-      ? "boosts defending power, not attack power"
+      ? "adds against each soldier's 1.30 defense base; walls and city stats are unchanged"
       : isSpeedStronghold(city)
       ? "reduces travel time, not attack power"
       : "boosts owned towns while held";
@@ -27910,7 +28743,7 @@ function showCityInfoModal(cityId) {
       ${renderCityFortificationStatus(city, stats)}
       <div class="stat-chip"><span>Owner</span>${renderPlayerNameLink(city.ownerUid || getCurrentOnlineUid(), getCityOwnerDisplayName(city))}</div>
       <div class="stat-chip"><span>Troops</span><strong>${formatNumber(city.troops)}</strong></div>
-      <div class="stat-chip"><span>Soldier defense</span><strong>${formatNumber(stats.troopDefense)}</strong><small>${BASE_TROOP_DEFENSE_POWER.toFixed(2)} base per soldier · Shieldwall +${formatNumber(stats.shieldwallDisciplinePercent)}%${stats.strongholdDefenseBonusPercent ? ` · objective +${formatNumber(stats.strongholdDefenseBonusPercent)}%` : ""}</small></div>
+      <div class="stat-chip"><span>Soldier defense</span><strong>${formatNumber(stats.troopDefense)}</strong><small>${BASE_TROOP_DEFENSE_POWER.toFixed(2)} base per soldier · Shieldwall +${formatNumber(stats.shieldwallDisciplinePercent)}%${getObjectiveTroopDefenseBonusPercent(stats) ? ` · objective +${formatNumber(getObjectiveTroopDefenseBonusPercent(stats))}%` : ""}</small></div>
       <div class="stat-chip"><span>City walls</span><strong>${formatBaseAndBonusStat(stats.baseCityWalls, stats.cityWalls)}</strong><small>${getCityStatBonusSources(stats, "walls")}</small></div>
       <div class="stat-chip"><span>Troops production</span><strong>${formatBaseAndBonusStat(stats.baseTroopProductionPerHour, stats.troopProductionPerHour, "/h")}</strong><small>${getCityStatBonusSources(stats, "troops")}</small></div>
       <div class="stat-chip"><span>Gold production</span><strong>${formatBaseAndBonusStat(stats.baseGoldProductionPerHour, stats.goldProductionPerHour, "/h")}</strong><small>${getCityStatBonusSources(stats, "gold")}</small></div>
@@ -30472,11 +31305,6 @@ function confirmSkillPresetAction(slotNumber = 0, action = "apply") {
   const slot = getSkillPresetSlot(slotNumber);
   if (!slot) return Promise.resolve(false);
   const applying = action === "apply";
-  const allocationChanges = applying && !skillPresetAllocationsMatch(state.upgrades, slot.upgrades);
-  const freeResetAvailable = Math.max(0, Math.floor(Number(state.freeSkillResetCredits) || 0)) > 0;
-  const applyCostCopy = freeResetAvailable
-    ? "uses your free legacy balance reset"
-    : `costs <strong>${formatNumber(SKILL_RESET_COST)} gold</strong>`;
   modal.classList.add("skill-preset-confirmation-modal");
   modalTitle.textContent = applying ? `Apply ${slot.name}?` : `Overwrite ${slot.name}?`;
   modalBody.innerHTML = `
@@ -30486,13 +31314,11 @@ function confirmSkillPresetAction(slotNumber = 0, action = "apply") {
         <h3>${escapeHtml(slot.name)}</h3>
       </div>
       ${applying
-        ? `${allocationChanges
-            ? `<p>This replaces your current skill allocation and ${applyCostCopy}. Any additional earned points remain unspent.</p>`
-            : `<p>Your current allocation already matches this build. Activating this preset is free and moves the active marker to this tab.</p>`}${renderSkillPresetAllocation(slot.upgrades)}`
+        ? `<p>Every preset application costs <strong>${formatNumber(SKILL_PRESET_APPLY_COST)} gold</strong>, including an active or identical build. Additional earned points remain unspent.</p>${renderSkillPresetAllocation(slot.upgrades)}`
         : `<p>This replaces the saved allocation in this tab with your current build. Your active skills and gold will not change.</p>${renderSkillPresetAllocation(state.upgrades)}`}
       <footer>
         <button type="button" class="profile-secondary-btn" data-skill-preset-confirm="cancel">Cancel</button>
-        <button type="button" class="profile-primary-btn" data-skill-preset-confirm="accept">${applying ? allocationChanges && freeResetAvailable ? "Use Free Reset" : allocationChanges ? "Apply for Gold" : "Apply" : "Save Current Build"}</button>
+        <button type="button" class="profile-primary-btn" data-skill-preset-confirm="accept">${applying ? `Apply for ${formatNumber(SKILL_PRESET_APPLY_COST)}` : "Save Current Build"}</button>
       </footer>
     </section>`;
   if (!modal.open) modal.showModal();
@@ -30620,16 +31446,8 @@ async function applySavedSkillPreset(slotNumber = 0) {
     showToast("This preset is no longer valid. Save the current build again.");
     return false;
   }
-  const allocationChanges = !skillPresetAllocationsMatch(state.upgrades, slot.upgrades);
-  const freeResetAvailable = Math.max(0, Math.floor(Number(state.freeSkillResetCredits) || 0)) > 0;
-  const activeSlot = normalizeSkillPresets(state.skillPresets).activeSlot;
-  if (!allocationChanges && activeSlot === slot.slot) {
-    showToast(`${slot.name} is already active.`);
-    renderProfileSkills();
-    return true;
-  }
-  if (allocationChanges && !freeResetAvailable && !usesServerEconomyAuthority() && Math.floor(Number(state.gold) || 0) < SKILL_RESET_COST) {
-    showToast(`Applying this preset costs ${formatNumber(SKILL_RESET_COST)} gold.`);
+  if (!usesServerEconomyAuthority() && Math.floor(Number(state.gold) || 0) < SKILL_PRESET_APPLY_COST) {
+    showToast(`Applying a skill preset costs ${formatNumber(SKILL_PRESET_APPLY_COST)} gold.`);
     return false;
   }
   if (!await confirmSkillPresetAction(slot.slot, "apply")) return false;
@@ -30637,7 +31455,7 @@ async function applySavedSkillPreset(slotNumber = 0) {
   skillActionInFlight = true;
   renderProfileSkills();
   try {
-    let goldCharged = allocationChanges && !freeResetAvailable ? SKILL_RESET_COST : 0;
+    let goldCharged = SKILL_PRESET_APPLY_COST;
     if (usesServerEconomyAuthority()) {
       if (!api?.applySkillPreset) throw new Error("Applying skill presets requires the Crownlands server.");
       const result = await api.applySkillPreset({ slot: slot.slot });
@@ -30645,7 +31463,6 @@ async function applySavedSkillPreset(slotNumber = 0) {
       goldCharged = Math.max(0, Math.floor(Number(result?.skillPreset?.goldCharged) || 0));
     } else {
       state.gold = Math.max(0, Math.floor(Number(state.gold) || 0) - goldCharged);
-      if (allocationChanges && freeResetAvailable) state.freeSkillResetCredits -= 1;
       state.upgrades = normalizeUpgrades(slot.upgrades, state.version);
       state.character = normalizeCharacterProgress(state.character);
       reconcileSkillPoints(state.character, state.upgrades);
@@ -30653,7 +31470,7 @@ async function applySavedSkillPreset(slotNumber = 0) {
       saveGame();
     }
     const remaining = Math.max(0, Math.floor(Number(state.character?.skillPoints) || 0));
-    addLog(`${slot.name} applied${goldCharged > 0 ? ` for ${formatNumber(goldCharged)} gold` : freeResetAvailable && allocationChanges ? " using the free legacy reset" : " for free"}. ${formatNumber(remaining)} skill ${remaining === 1 ? "point remains" : "points remain"}.`);
+    addLog(`${slot.name} applied for ${formatNumber(goldCharged)} gold. ${formatNumber(remaining)} skill ${remaining === 1 ? "point remains" : "points remain"}.`);
     showToast(`${slot.name} applied`);
     return true;
   } catch (error) {
@@ -30816,7 +31633,7 @@ function updateOutgoingAttackUi() {
   const travelingArmies = [...operations.marches, ...operations.reinforcements.filter(entry => !entry.stationed)]
     .sort((a, b) => Math.max(0, Number(a.remaining) || 0) - Math.max(0, Number(b.remaining) || 0));
   const status = travelingArmies.length
-    ? travelingArmies[0].serverPending ? "Sending" : formatDuration(travelingArmies[0].remaining)
+    ? travelingArmies[0].serverPending ? travelingArmies[0].serverRetrying ? "Checking" : "Sending" : formatDuration(travelingArmies[0].remaining)
     : operations.rallies.length
       ? "Rallies"
     : soonestCamp
@@ -31252,7 +32069,7 @@ function renderMarchesOperationPanel(marches) {
       <div class="incoming-attack-summary">
         <strong>${formatNumber(marches.length)}</strong>
         <span>${summary} ${marches.length === 1 ? "is" : "are"} traveling now.</span>
-        <small>${marches[0].serverPending ? "Sending order to server" : marches[0].isResolving ? "Resolving arrived order" : `Soonest arrival: ${formatDuration(marches[0].remaining)}`}</small>
+        <small>${marches[0].serverPending ? marches[0].serverRetrying ? "Checking the same order with the server" : "Sending order to server" : marches[0].isResolving ? "Resolving arrived order" : `Soonest arrival: ${formatDuration(marches[0].remaining)}`}</small>
       </div>
       <div class="incoming-attack-list">${marches.map(renderOutgoingAttackCard).join("")}</div>
     </div>`;
@@ -31547,7 +32364,7 @@ function renderOutgoingAttackCard(mission) {
   return `
     <article class="incoming-attack-card outgoing-attack-card ${isReturning ? "outgoing-return-card" : isScout ? "outgoing-scout-card" : isTransfer || isRallyJoin ? "outgoing-transfer-card" : ""}">
       <div class="incoming-attack-badge">
-        <strong>${mission.serverPending ? "Sending" : mission.isResolving ? "Resolving" : formatDuration(mission.remaining)}</strong>
+        <strong>${mission.serverPending ? mission.serverRetrying ? "Checking" : "Sending" : mission.isResolving ? "Resolving" : formatDuration(mission.remaining)}</strong>
         <small>${missionLabel}</small>
       </div>
       <div class="incoming-attack-city">
@@ -31823,16 +32640,21 @@ function showLogModal(options = {}) {
   delete modal.dataset.battleReportDetailId;
   modal.classList.add("battle-report-modal");
   modalTitle.textContent = "Battle Reports";
+  const realmActivityAvailable = supportsRealmActivity();
+  if (battleReportFilter === "realm_activity" && !realmActivityAvailable) battleReportFilter = "all";
   const filters = [
     { key: "all", label: "All" },
-    { key: "attack", label: "Attacks" },
-    { key: "defense", label: "Defenses" },
-    { key: "scout", label: "Scouts" },
+    { key: "attack", label: "Attack" },
+    { key: "defense", label: "Defense" },
+    { key: "scout", label: "Scout" },
+    ...(realmActivityAvailable ? [{ key: "realm_activity", label: "Realm Activity" }] : []),
   ];
   const filteredReports = state.battleReports
     .filter(report => battleReportFilter === "all" || report.type === battleReportFilter)
     .slice()
     .sort(compareBattleReportsNewestFirst);
+  const showingRealmActivity = battleReportFilter === "realm_activity";
+  const realmActivityEvents = normalizeRealmActivityEvents(onlineRealmActivityEvents);
 
   modalBody.innerHTML = `
     <div class="battle-report-panel">
@@ -31845,14 +32667,18 @@ function showLogModal(options = {}) {
         </div>
       </div>
       <div class="battle-report-list">
-        ${filteredReports.length
-          ? filteredReports.map((report, index) => renderBattleReportCard(report, index)).join("")
-          : `<div class="battle-report-empty">No ${battleReportFilter === "all" ? "battle" : battleReportFilter} reports yet.</div>`}
+        ${showingRealmActivity
+          ? realmActivityEvents.length
+            ? realmActivityEvents.map(renderRealmActivityCard).join("")
+            : `<div class="battle-report-empty">No Realm Activity yet. Major Stronghold and Crown Citadel captures will be recorded here.</div>`
+          : filteredReports.length
+            ? filteredReports.map((report, index) => renderBattleReportCard(report, index)).join("")
+            : `<div class="battle-report-empty">No ${battleReportFilter === "all" ? "battle" : battleReportFilter} reports yet.</div>`}
       </div>
     </div>
   `;
 
-  applyBattleReportTargetFlags(filteredReports);
+  if (!showingRealmActivity) applyBattleReportTargetFlags(filteredReports);
   modalBody.querySelectorAll("[data-report-filter]").forEach(button => {
     button.addEventListener("click", () => {
       battleReportFilter = button.dataset.reportFilter || "all";
@@ -31863,6 +32689,7 @@ function showLogModal(options = {}) {
     button.addEventListener("click", () => showBattleReportDetail(button.dataset.reportDetail));
   });
   bindBattleReportJumpButtons();
+  bindRealmActivityLocationButtons();
   if (Number.isFinite(Number(options.preserveScrollTop))) {
     modalBody.scrollTop = Math.max(0, Number(options.preserveScrollTop) || 0);
   }
@@ -31892,7 +32719,7 @@ function renderBattleReportCard(report, index = 0) {
         ${timingLabel}
       </div>
       <div class="battle-report-city">
-        <span>Lv ${formatNumber(report.cityLevel)}</span>
+        <span>${report.targetType === "camp" ? "Camp" : `Lv ${formatNumber(report.cityLevel)}`}</span>
         <strong>${escapeHtml(report.cityName)}</strong>
       </div>
       <div class="battle-report-troops">
@@ -31968,6 +32795,46 @@ function bindBattleReportJumpButtons() {
   });
 }
 
+async function focusRealmActivityTarget(eventId = "") {
+  const event = normalizeRealmActivityEvents(onlineRealmActivityEvents)
+    .find(entry => entry.eventId === String(eventId || ""));
+  if (!event) {
+    showToast("That Realm Activity location is unavailable.");
+    return;
+  }
+  if (modal.open) modal.close();
+  scoutNearbySourceId = null;
+  regroupSourceId = null;
+  sendMode = false;
+  selectedTargetId = null;
+  const targetRegionId = normalizeRegionId(event.regionId || getCityRegionId(event.objectiveId));
+  if (targetRegionId !== getActiveMapRegionId()) {
+    const switched = await switchOnlineIsland(targetRegionId);
+    if (!switched || targetRegionId !== getActiveMapRegionId()) return;
+  }
+  const target = getArmyTargetById(event.objectiveId);
+  if (target) {
+    selectCity(target.id);
+    centerOnCity(target.id);
+    showToast(`Viewing ${target.name || event.objectiveName}`);
+    return;
+  }
+  if (Number.isFinite(event.x) && Number.isFinite(event.y)) {
+    centerOnWorldPoint({ x: event.x, y: event.y }, targetRegionId);
+    showToast(`Viewing ${event.objectiveName}`);
+    return;
+  }
+  showToast("That objective is no longer available on the map.");
+}
+
+function bindRealmActivityLocationButtons() {
+  modalBody.querySelectorAll("[data-realm-activity-location]").forEach(button => {
+    button.addEventListener("click", () => {
+      void focusRealmActivityTarget(button.dataset.realmActivityLocation || "");
+    });
+  });
+}
+
 function splitBattleBonusPower(totalPower = 0, personalPercent = 0, sharedPercent = 0) {
   const total = Math.max(0, Math.floor(Number(totalPower) || 0));
   const personal = Math.max(0, Number(personalPercent) || 0);
@@ -31996,24 +32863,42 @@ function normalizeBattlePowerBreakdown(value = null, participant = {}, side = "a
   const legacyFortificationPower = Math.max(0, Math.floor(Number(
     raw.legacyFortificationPower ?? participant.fortifications?.totalDefense
   ) || 0));
+  const baseTroopDefensePower = Math.max(0, Math.floor(Number(raw.baseTroopDefensePower) || startingTroops));
+  const baseDefenseBonusPower = Math.max(0, Math.floor(Number(raw.baseDefenseBonusPower) || 0));
+  const shieldwallDisciplineBonusPower = Math.max(0, Math.floor(Number(raw.shieldwallDisciplineBonusPower) || 0));
+  const soldierDefenseEnabled = Math.floor(Number(participant.defenseCombatVersion) || 0) >= DEFENSE_COMBAT_VERSION;
+  const cityLevelDefensePower = Math.max(0, Math.floor(
+    Object.prototype.hasOwnProperty.call(raw, "cityLevelDefensePower")
+      ? Number(raw.cityLevelDefensePower) || 0
+      : soldierDefenseEnabled ? 0 : Math.max(0, basePower - startingTroops - legacyFortificationPower)
+  ));
+  const inferredObjectiveBonusPower = Math.max(0, Math.floor(Number(participant.effectivePower) || 0)
+    - baseTroopDefensePower
+    - baseDefenseBonusPower
+    - shieldwallDisciplineBonusPower
+    - cityLevelDefensePower
+    - legacyFortificationPower);
   const objectiveFallback = splitBattleBonusPower(
-    Math.max(0, (Math.floor(Number(participant.effectivePower) || 0) - basePower)),
+    inferredObjectiveBonusPower,
     participant.personalDefenseBonusPercent,
     participant.sharedDefenseBonusPercent
   );
-  const soldierDefenseEnabled = Math.floor(Number(participant.defenseCombatVersion) || 0) >= DEFENSE_COMBAT_VERSION;
   return {
-    baseTroopDefensePower: Math.max(0, Math.floor(Number(raw.baseTroopDefensePower) || startingTroops)),
-    baseDefenseBonusPower: Math.max(0, Math.floor(Number(raw.baseDefenseBonusPower) || 0)),
-    shieldwallDisciplineBonusPower: Math.max(0, Math.floor(Number(raw.shieldwallDisciplineBonusPower) || 0)),
-    cityLevelDefensePower: Math.max(0, Math.floor(
-      Object.prototype.hasOwnProperty.call(raw, "cityLevelDefensePower")
-        ? Number(raw.cityLevelDefensePower) || 0
-        : soldierDefenseEnabled ? 0 : Math.max(0, basePower - startingTroops - legacyFortificationPower)
-    )),
+    baseTroopDefensePower,
+    baseDefenseBonusPower,
+    shieldwallDisciplineBonusPower,
+    cityLevelDefensePower,
     legacyFortificationPower,
-    personalObjectiveBonusPower: Math.max(0, Math.floor(Number(raw.personalObjectiveBonusPower) || objectiveFallback.personalObjectiveBonusPower)),
-    sharedClanBonusPower: Math.max(0, Math.floor(Number(raw.sharedClanBonusPower) || objectiveFallback.sharedClanBonusPower)),
+    personalObjectiveBonusPower: Math.max(0, Math.floor(
+      Object.prototype.hasOwnProperty.call(raw, "personalObjectiveBonusPower")
+        ? Number(raw.personalObjectiveBonusPower) || 0
+        : objectiveFallback.personalObjectiveBonusPower
+    )),
+    sharedClanBonusPower: Math.max(0, Math.floor(
+      Object.prototype.hasOwnProperty.call(raw, "sharedClanBonusPower")
+        ? Number(raw.sharedClanBonusPower) || 0
+        : objectiveFallback.sharedClanBonusPower
+    )),
     totalDefensePower: Math.max(0, Math.floor(Number(raw.totalDefensePower ?? participant.effectivePower) || 0)),
   };
 }
@@ -32173,7 +33058,7 @@ function normalizeDetailedBattleSnapshot(value = null) {
       regionId: String(target.regionId || "").slice(0, 80),
       targetType: target.targetType === "camp" ? "camp" : "city",
       strongholdType: String(target.strongholdType || "").slice(0, 32),
-      level: clampCityLevel(target.level || 1),
+      level: target.targetType === "camp" ? 0 : clampCityLevel(target.level || 1),
       fortifications: target.fortifications && typeof target.fortifications === "object"
         ? {
             cityLevelDefensePercent: Math.max(0, Number(target.fortifications.cityLevelDefensePercent) || 0),
@@ -32238,390 +33123,569 @@ async function loadDetailedBattleSnapshot(report) {
   return snapshot;
 }
 
-async function loadBattleClanSnapshots(snapshot = null) {
-  const api = getOnlineApi();
-  if (!snapshot || !api?.loadClan || !api?.isSignedIn?.()) return;
-  const ids = [...new Set([
-    snapshot.attacker?.clan?.clanId,
-    snapshot.defender?.clan?.clanId,
-  ].filter(Boolean))];
-  await Promise.all(ids.map(async clanId => {
-    if (getCachedClanPublicSnapshot(clanId)) return;
-    try {
-      const clan = await api.loadClan(clanId);
-      if (clan) clanPublicSnapshotCache.set(clanId, clan);
-    } catch (error) {
-      console.warn("Could not load battle clan shield", error);
-    }
-  }));
-}
-
-function renderBattleKingdomFlag(key, label) {
-  return `<span class="kingdom-flag kingdom-flag-small battle-participant-flag" data-battle-participant-flag="${escapeHtml(key)}" role="img" aria-label="${escapeHtml(label)} kingdom flag"><span class="flag-symbol"></span></span>`;
-}
-
-function renderBattleClanIdentity(participant = {}, key = "") {
-  const identity = participant.clan;
-  if (!identity?.clanId) return "";
-  const clan = getCachedClanPublicSnapshot(identity.clanId);
-  const name = clan?.name || identity.clanName || "Clan";
-  const tag = clan?.tag || identity.clanTag || "";
-  return `
-    <button class="battle-primary-clan" type="button" data-public-clan-id="${escapeHtml(identity.clanId)}" aria-label="Open ${escapeHtml(name)} clan profile">
-      ${renderClanShield(clan?.shield || clan?.banner, { size: "mini", instance: `battle-${key}`, label: `${name} shield` })}
-      <span><strong>${tag ? `[${escapeHtml(tag)}]` : "Clan"}</strong><small>${escapeHtml(name)}</small></span>
-    </button>`;
+function renderBattleKingdomFlag(key, label, className = "") {
+  return `<span class="kingdom-flag kingdom-flag-large battle-participant-flag ${escapeHtml(className)}" data-battle-participant-flag="${escapeHtml(key)}" role="img" aria-label="${escapeHtml(label)} kingdom flag"><span class="flag-symbol"></span></span>`;
 }
 
 function renderBattleMetric(label, value, help = "") {
   return `<div class="battle-participant-metric"><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong>${help ? `<small>${escapeHtml(help)}</small>` : ""}</div>`;
 }
 
-function formatBattlePercent(value) {
-  const amount = Math.max(0, Number(value) || 0);
-  return `${Number.isInteger(amount) ? formatNumber(amount) : amount.toFixed(1)}%`;
-}
-
-function renderBattlePrimaryParticipant(participant, {
-  side = "attacker",
-  title = "",
-  key = "",
-} = {}) {
-  const attacker = side === "attacker";
-  const fortifications = participant.fortifications;
-  const bonusParts = attacker
-    ? [`Swordmastery +${formatBattlePercent(participant.swordmasteryPercent)}`]
-    : participant.defenseCombatVersion >= DEFENSE_COMBAT_VERSION
-      ? [
-        `${Number(participant.baseDefensePowerPerTroop || BASE_TROOP_DEFENSE_POWER).toFixed(2)} base per soldier`,
-        `Shieldwall +${formatBattlePercent(participant.shieldwallDisciplinePercent)}`,
-        `Personal +${formatBattlePercent(participant.personalDefenseBonusPercent)}`,
-        `Clan shared +${formatBattlePercent(participant.sharedDefenseBonusPercent)}`,
-      ]
-      : [
-        `Personal +${formatBattlePercent(participant.personalDefenseBonusPercent)}`,
-        `Clan shared +${formatBattlePercent(participant.sharedDefenseBonusPercent)}`,
-      ];
-  if (!attacker && fortifications) {
-    if (participant.defenseCombatVersion < DEFENSE_COMBAT_VERSION) {
-      bonusParts.unshift(`City level +${formatBattlePercent(fortifications.cityLevelDefensePercent)}`);
-    }
-    bonusParts.unshift(`Stoneworks +${formatBattlePercent(fortifications.stoneworksPercent)}`);
+function getDetailedBattleSideParticipants(snapshot = null, role = "attacker") {
+  if (!snapshot) return [];
+  if (role === "attacker") {
+    return snapshot.attackers?.length ? snapshot.attackers : snapshot.attacker ? [snapshot.attacker] : [];
   }
-  return `
-    <section class="battle-participant-card battle-primary-participant ${attacker ? "attacker" : "defender"}">
-      <h3>${escapeHtml(title)}</h3>
-      <div class="battle-participant-identity">
-        ${renderBattleKingdomFlag(key, participant.ownerName)}
-        <div>${renderPlayerNameLink(participant.ownerUid, participant.ownerName)}<small>${attacker ? "Army commander" : "Holding owner"}</small></div>
-      </div>
-      ${renderBattleClanIdentity(participant, key)}
-      <div class="battle-participant-metrics">
-        ${renderBattleMetric(attacker ? "Starting troops" : "Garrison troops", formatNumber(participant.startingTroops))}
-        ${renderBattleMetric("Base power", formatNumber(participant.basePower))}
-        ${renderBattleMetric(attacker ? "Attack power" : "Defense power", formatNumber(participant.effectivePower))}
-        ${renderBattleMetric("Applied bonuses", bonusParts.join(" · "))}
-        ${!attacker && fortifications ? renderBattleMetric("Fortifications", `${formatNumber(fortifications.cityWalls)} walls`, `Base ${formatNumber(fortifications.baseCityWalls)}`) : ""}
-        ${renderBattleMetric("Troops lost", formatNumber(participant.losses))}
-        ${renderBattleMetric("Survivors", formatNumber(participant.survivors))}
-      </div>
-    </section>`;
+  return [snapshot.defender, ...(snapshot.reinforcements || [])].filter(Boolean);
 }
 
-function renderBattleReinforcementRow(participant, index) {
-  const key = `reinforcement-${index}`;
-  const fortifications = participant.fortifications;
-  const legacyFortificationPower = Math.max(
-    0,
-    Math.floor(Number(fortifications?.cityWallDefense) || 0)
-      + Math.floor(Number(fortifications?.stoneworksBonus) || 0)
+function sumDetailedBattleParticipantPower(participants = [], field = "") {
+  return participants.reduce((total, participant) => (
+    total + Math.max(0, Math.floor(Number(participant?.powerBreakdown?.[field]) || 0))
+  ), 0);
+}
+
+function formatBattleBasePowerHelp(power = 0, troops = 0, role = "attacker") {
+  const count = Math.max(0, Math.floor(Number(troops) || 0));
+  const rate = count > 0 ? Math.max(0, Number(power) || 0) / count : 0;
+  return `${rate.toFixed(2)} base per ${role === "attacker" ? "troop" : "soldier"}`;
+}
+
+function formatBattleWallAfterStatus(siege = null) {
+  if (!siege) return "Not recorded";
+  const integrityBps = clamp(Math.floor(Number(siege.endingIntegrityBps) || 0), 0, 10_000);
+  if (integrityBps >= 10_000) return "Intact — 100%";
+  if (integrityBps <= 0) return "Breached — 0%";
+  return `Damaged — ${formatWallIntegrity(integrityBps)} intact`;
+}
+
+function getBattleSidePresentationModel(snapshot = null, role = "attacker") {
+  const attacker = role === "attacker";
+  const campTarget = snapshot?.target?.targetType === "camp";
+  const participants = getDetailedBattleSideParticipants(snapshot, role);
+  const primary = attacker ? snapshot?.attacker : snapshot?.defender;
+  const totals = snapshot?.totals || {};
+  const defenseBreakdown = totals.defensePowerBreakdown || {};
+  const attackBreakdown = totals.attackPowerBreakdown || {};
+  const modernDefense = Math.floor(Number(snapshot?.defenseCombatVersion) || 0) >= DEFENSE_COMBAT_VERSION;
+  const startingTroops = Math.max(0, Math.floor(Number(attacker ? totals.attackers : totals.defenders) || 0));
+  const participantBasePower = attacker
+    ? sumDetailedBattleParticipantPower(participants, "baseAttackPower")
+    : sumDetailedBattleParticipantPower(participants, "baseTroopDefensePower")
+      + sumDetailedBattleParticipantPower(participants, "baseDefenseBonusPower");
+  const basePower = participantBasePower || Math.max(0, Math.floor(Number(
+    attacker
+      ? attackBreakdown.baseAttackPower
+      : defenseBreakdown.baseTroopDefensePower + (modernDefense ? defenseBreakdown.baseDefenseBonusPower : 0)
+  ) || 0));
+  const participantTrainingBonusPower = attacker
+    ? sumDetailedBattleParticipantPower(participants, "swordmasteryBonusPower")
+    : sumDetailedBattleParticipantPower(
+      participants,
+      modernDefense ? "shieldwallDisciplineBonusPower" : "cityLevelDefensePower"
+    );
+  const trainingBonusPower = participantTrainingBonusPower || Math.max(0, Math.floor(Number(
+    attacker
+      ? attackBreakdown.swordmasteryBonusPower
+      : modernDefense
+        ? defenseBreakdown.shieldwallDisciplineBonusPower
+        : defenseBreakdown.cityLevelDefensePower
+  ) || 0));
+  const personalObjectiveBonusPower = attacker ? 0 : (
+    sumDetailedBattleParticipantPower(participants, "personalObjectiveBonusPower")
+    || Math.max(0, Math.floor(Number(defenseBreakdown.personalObjectiveBonusPower) || 0))
   );
-  return `
-    <article class="battle-reinforcement-row">
-      <div class="battle-participant-identity">
-        ${renderBattleKingdomFlag(key, participant.ownerName)}
-        <div>${renderPlayerNameLink(participant.ownerUid, participant.ownerName)}<small>Clan reinforcement</small></div>
-      </div>
-      <div class="battle-reinforcement-stats">
-        <span><small>Troops</small><strong>${formatNumber(participant.startingTroops)}</strong></span>
-        ${legacyFortificationPower > 0 ? `<span><small>Legacy fortifications</small><strong>Quarter walls +${formatNumber(fortifications.cityWallDefense)} · Stoneworks +${formatNumber(fortifications.stoneworksBonus)}</strong></span>` : `<span><small>Wall contribution</small><strong>Uses the holding's single wall</strong></span>`}
-        <span><small>Bonuses</small><strong>${participant.defenseCombatVersion >= DEFENSE_COMBAT_VERSION ? `Shieldwall +${formatBattlePercent(participant.shieldwallDisciplinePercent)} · ` : ""}Personal +${formatBattlePercent(participant.personalDefenseBonusPercent)} · Shared +${formatBattlePercent(participant.sharedDefenseBonusPercent)}</strong></span>
-        <span><small>Defense</small><strong>${formatNumber(participant.effectivePower)}</strong></span>
-        <span><small>Lost</small><strong>${formatNumber(participant.losses)}</strong></span>
-        <span><small>Survived</small><strong>${formatNumber(participant.survivors)}</strong></span>
-      </div>
-    </article>`;
-}
-
-function renderBattleAttackerRow(participant, index) {
-  const key = `rally-attacker-${index}`;
-  return `
-    <article class="battle-reinforcement-row battle-rally-participant-row">
-      <div class="battle-participant-identity">
-        ${renderBattleKingdomFlag(key, participant.ownerName)}
-        <div>${renderPlayerNameLink(participant.ownerUid, participant.ownerName)}<small>${participant.role === "leader" ? "Rally leader" : "Rally ally"}</small></div>
-      </div>
-      <div class="battle-reinforcement-stats">
-        <span><small>Troops</small><strong>${formatNumber(participant.startingTroops)}</strong></span>
-        <span><small>Swordmastery</small><strong>+${formatBattlePercent(participant.swordmasteryPercent)}</strong></span>
-        <span><small>Attack</small><strong>${formatNumber(participant.effectivePower)}</strong></span>
-        <span><small>Lost</small><strong>${formatNumber(participant.losses)}</strong></span>
-        <span><small>Survived</small><strong>${formatNumber(participant.survivors)}</strong></span>
-      </div>
-    </article>`;
-}
-
-function renderBattlePairedRow(label, attackerValue, defenderValue, attackerHelp = "", defenderHelp = "") {
-  return `
-    <div class="battle-paired-row">
-      <div class="battle-paired-value attacker"><strong>${escapeHtml(attackerValue)}</strong>${attackerHelp ? `<small>${escapeHtml(attackerHelp)}</small>` : ""}</div>
-      <span class="battle-paired-label">${escapeHtml(label)}</span>
-      <div class="battle-paired-value defender"><strong>${escapeHtml(defenderValue)}</strong>${defenderHelp ? `<small>${escapeHtml(defenderHelp)}</small>` : ""}</div>
-    </div>`;
-}
-
-function getBattleObjectiveSourceLabel(source = "", percent = 0) {
-  const normalized = String(source || "").toLowerCase();
-  if (normalized.includes("crown") || normalized.includes("citadel")) return "Crown Citadel";
-  if (Number(percent) > 0) return "Stronghold or Citadel";
-  return "No personal objective bonus";
-}
-
-function getBattleOwnershipResult(snapshot = null) {
-  if (!snapshot) return "Outcome unavailable";
-  if (snapshot.combatRule?.id === "protected_raid") return "Defender kept the holding after a protected raid";
-  if (snapshot.outcome === "breach") return "Defender kept the holding; its walls were breached";
-  if (snapshot.outcome === "victory") {
-    return snapshot.target?.targetType === "camp"
-      ? "Attacker took control of the camp"
-      : snapshot.combatRule?.captureAllowed === false
-        ? "Defender kept the holding"
-        : "Attacker captured the holding";
-  }
-  return "Defender kept the holding";
-}
-
-function renderBattleProtectionExplanation(snapshot = null) {
-  const protection = snapshot?.attackProtection;
-  if (!protection) return "";
-  const requested = Math.max(0, Math.floor(Number(protection.requestedTroops) || 0));
-  const allowed = Math.max(0, Math.floor(Number(protection.effectiveTroops) || Number(protection.maxTroops) || 0));
-  const captureText = protection.captureAllowed
-    ? "Capture was allowed because the earlier protection stage had already been completed."
-    : protection.breachRequired
-      ? "This assault could breach the walls, but it could not capture the city."
-      : "This was a protected raid, so the city could not be captured.";
-  const casualtyText = protection.maxDefenderLossPercent < 100
-    ? `Defender losses were limited to ${formatBattlePercent(protection.maxDefenderLossPercent)} of the troops present.`
-    : "No special defender casualty limit applied to this assault stage.";
-  return `
-    <section class="battle-protection-explanation">
-      <h3>Weaker-kingdom protection</h3>
-      <div class="battle-protection-grid">
-        ${renderBattleMetric("Troops requested", formatNumber(requested), `The order was allowed to use ${formatNumber(allowed)} troops`)}
-        ${renderBattleMetric("Attacker XP", protection.attackerXpMultiplier > 0 ? "Normal XP" : "No XP", "Protected attacks do not reward the stronger attacker")}
-        ${renderBattleMetric("Casualty protection", casualtyText)}
-        ${renderBattleMetric("Capture rule", captureText)}
-      </div>
-    </section>`;
-}
-
-function getBattleOutcomeExplanation(snapshot = null) {
-  const attackPower = Math.max(0, Number(snapshot?.totals?.attackPower) || 0);
-  const defensePower = Math.max(0, Number(snapshot?.totals?.defensePower) || 0);
-  const difference = Math.abs(attackPower - defensePower);
-  const powerSummary = attackPower === defensePower
-    ? `Both sides finished at ${formatNumber(attackPower)} final power.`
-    : `${attackPower > defensePower ? "The attacker" : "The defender"} had ${formatNumber(difference)} more final power at arrival.`;
-  const attackBreakdown = snapshot?.totals?.attackPowerBreakdown || {};
-  const defenseBreakdown = snapshot?.totals?.defensePowerBreakdown || {};
-  const factors = [];
-  if (attackBreakdown.swordmasteryBonusPower > 0) factors.push("Swordmastery increased the attacking army's power.");
-  if (defenseBreakdown.baseDefenseBonusPower > 0) factors.push("Each defending soldier started at 1.30 defense power.");
-  if (defenseBreakdown.shieldwallDisciplineBonusPower > 0) factors.push("Shieldwall Discipline increased the soldiers' defense.");
-  if (defenseBreakdown.cityLevelDefensePower > 0) factors.push("The holding's level strengthened its garrison.");
-  if ((defenseBreakdown.baseWallPower || 0) > 0) factors.push("The walls absorbed attack power before the garrison fought.");
-  if ((defenseBreakdown.stoneworksWallBonusPower || 0) > 0) factors.push("Stoneworks strengthened those walls.");
-  if ((defenseBreakdown.reinforcementDefensePower || 0) > 0) factors.push("Allied reinforcements added to the defense.");
-  if ((defenseBreakdown.personalObjectiveBonusPower || 0) > 0) factors.push("A personal Stronghold or Citadel bonus increased defense.");
-  if ((defenseBreakdown.sharedClanBonusPower || 0) > 0) factors.push("Shared clan objectives increased defense.");
-  if (snapshot?.attackProtection) factors.push("Weaker-kingdom protection changed the allowed force, rewards, or capture rules.");
+  const sharedClanBonusPower = attacker ? 0 : (
+    sumDetailedBattleParticipantPower(participants, "sharedClanBonusPower")
+    || Math.max(0, Math.floor(Number(defenseBreakdown.sharedClanBonusPower) || 0))
+  );
+  const otherBonusPower = attacker ? 0 : Math.max(0, Math.floor(Number(defenseBreakdown.otherDefensePower) || 0));
+  const skillPercents = [...new Set(participants.map(participant => Math.max(0, Number(
+    attacker
+      ? participant?.swordmasteryPercent
+      : modernDefense
+        ? participant?.shieldwallDisciplinePercent
+        : participant?.fortifications?.cityLevelDefensePercent
+  ) || 0)).filter(percent => percent > 0))];
+  const skillPercentText = skillPercents.length === 1
+    ? `+${formatNumber(skillPercents[0])}%`
+    : skillPercents.length > 1
+      ? "Mixed participant rates"
+      : "";
+  const participantSummary = attacker
+    ? participants.length > 1
+      ? `${formatNumber(participants.length)} rally armies`
+      : "1 attacking army"
+    : snapshot?.reinforcements?.length
+      ? `1 garrison + ${formatNumber(snapshot.reinforcements.length)} reinforcements`
+      : "1 defending garrison";
   return {
-    powerSummary,
-    resultSummary: getBattleOwnershipResult(snapshot),
-    factors,
+    role,
+    flagKey: role,
+    primary,
+    startingTroops,
+    basePower,
+    basePowerHelp: formatBattleBasePowerHelp(basePower, startingTroops, role),
+    finalPower: Math.max(0, Math.floor(Number(attacker ? totals.attackPower : totals.defensePower) || 0)),
+    losses: Math.max(0, Math.floor(Number(attacker ? totals.attackerLosses : totals.defenderLosses) || 0)),
+    survivors: Math.max(0, Math.floor(Number(attacker ? totals.attackerSurvivors : totals.defenderSurvivors) || 0)),
+    participantSummary,
+    skillLabel: attacker ? "Swordmastery" : campTarget ? "Camp troop power" : modernDefense ? "Shieldwall Discipline" : "Legacy city defense",
+    skillBonusPower: trainingBonusPower,
+    skillPercentText,
+    personalObjectiveBonusPower,
+    sharedClanBonusPower,
+    otherBonusPower,
+    wallFree: !attacker && campTarget,
+    reinforcementCount: attacker ? 0 : Math.max(0, snapshot?.reinforcements?.length || 0),
+    reinforcementTroops: attacker ? 0 : (snapshot?.reinforcements || []).reduce(
+      (total, participant) => total + Math.max(0, Math.floor(Number(participant?.startingTroops) || 0)),
+      0
+    ),
+    wallPower: attacker ? 0 : Math.max(0, Math.floor(Number(snapshot?.siege?.startingWallPower) || 0)),
+    wallBasePower: attacker ? 0 : Math.max(0, Math.floor(Number(defenseBreakdown.baseWallPower) || 0)),
+    wallStoneworksPower: attacker ? 0 : Math.max(0, Math.floor(Number(defenseBreakdown.stoneworksWallBonusPower) || 0)),
+    wallStoneworksPercent: attacker ? 0 : Math.max(0, Number(snapshot?.target?.fortifications?.stoneworksPercent) || 0),
+    wallHelp: attacker
+      ? ""
+      : Math.max(0, Math.floor(Number(defenseBreakdown.stoneworksWallBonusPower) || 0)) > 0
+        ? `Stoneworks +${formatNumber(defenseBreakdown.stoneworksWallBonusPower)}`
+        : "No Stoneworks bonus",
+    wallAfter: attacker ? "—" : formatBattleWallAfterStatus(snapshot?.siege),
   };
 }
 
-function renderLegacyBattleReportDetail(report, badge, message = "") {
-  const scoutExpiresAtMs = getScoutBattleReportExpiresAtMs(report);
-  const siege = normalizeCombatFortificationSnapshot(report.fortification);
+function formatBattleReportValue(value, fallback = "Not recorded") {
+  if (typeof value === "string") return value || fallback;
+  const numeric = Number(value);
+  return Number.isFinite(numeric) ? formatNumber(Math.max(0, Math.floor(numeric))) : fallback;
+}
+
+function getBattleTargetTypeLabel(target = {}) {
+  if (target.targetType === "camp") return "Reward camp";
+  const strongholdType = String(target.strongholdType || "").toLowerCase();
+  if (strongholdType === "crown" || strongholdType === "crown_citadel") return "Crown Citadel";
+  if (strongholdType) return "Stronghold";
+  return "City";
+}
+
+function renderBattleReportNavigation(report = null, target = {}) {
+  const regionLabel = target.regionId ? getRegionLabel(target.regionId) : "";
+  const metadata = [
+    getBattleTargetTypeLabel(target),
+    target.targetType === "camp" ? "No level · No walls" : `Level ${formatNumber(target.level || report?.cityLevel || 1)}`,
+    regionLabel,
+  ].filter(Boolean).join(" · ");
   return `
-    <div class="battle-report-detail ${badge.tone}">
-      <button id="battleReportBackBtn" class="battle-report-back" type="button" data-audio-effect="none">Back to reports</button>
-      <div class="battle-report-detail-head">
-        <span>${badge.label}</span>
-        <strong>${escapeHtml(report.cityName)}</strong>
-        <small>Level ${formatNumber(report.cityLevel)} - ${renderBattleReportAge(report)}</small>
-        ${scoutExpiresAtMs ? `<small data-scout-report-expires-at-ms="${scoutExpiresAtMs}">Expires in ${formatDuration(Math.max(0, Math.ceil((scoutExpiresAtMs - Date.now()) / 1000)))}</small>` : ""}
-        ${renderBattleReportLocateButton(report, "battle-report-locate-detail")}
+    <div class="battle-visual-navigation">
+      <button id="battleReportBackBtn" class="battle-report-back" type="button" data-audio-effect="none" aria-label="Back to reports">&#9664; Reports</button>
+      <div class="battle-visual-title">
+        <strong>${escapeHtml(getBattleReportTypeLabel(report?.type))}</strong>
+        <small>${renderBattleReportAge(report)}</small>
       </div>
-      ${message ? `<p class="battle-report-detail-notice">${escapeHtml(message)}</p>` : ""}
-      <div class="battle-report-detail-grid">
-        <div><span>Type</span><strong>${escapeHtml(getBattleReportTypeLabel(report.type))}</strong></div>
-        <div><span>Opponent</span>${renderPlayerNameLink(report.opponentUid, report.opponentName || report.ownerName || "Unknown", "battle-report-opponent-link")}</div>
-        <div><span>${report.type === "scout" ? "Scouted troops" : "Troops sent"}</span><strong>${formatNumber(report.type === "scout" ? report.troopCount : report.sentTroops)}</strong></div>
-        <div><span>Total defense</span><strong>${formatBaseAndBonusStat(report.baseTotalDefense, report.totalDefense)}</strong></div>
-        <div><span>Survivors</span><strong>${formatNumber(report.survivors)}</strong></div>
-        <div><span>Defenders left</span><strong>${formatNumber(report.defendersLeft)}</strong></div>
-        <div><span>Attackers lost</span><strong>${formatNumber(report.attackerLosses)}</strong></div>
-        <div><span>Defenders lost</span><strong>${formatNumber(report.defenderLosses)}</strong></div>
-        ${siege ? `<div><span>Wall integrity</span><strong>${formatWallIntegrity(siege.startingIntegrityBps)} → ${formatWallIntegrity(siege.endingIntegrityBps)}</strong></div><div><span>Wall damage</span><strong>${formatNumber(siege.wallDamagePower)}</strong></div>` : ""}
-        ${report.xpAwarded > 0 ? `<div><span>XP earned</span><strong>+${formatNumber(report.xpAwarded)}</strong></div>` : ""}
-        ${report.goldAwarded > 0 ? `<div><span>Gold earned</span><strong>+${formatNumber(report.goldAwarded)}</strong></div>` : ""}
-        ${report.troopsAwarded > 0 ? `<div><span>Level-up troops</span><strong>+${formatNumber(report.troopsAwarded)}</strong></div>` : ""}
-        ${report.fieldMedicsRecovered > 0 ? `<div><span>Field Medics recovered</span><strong>+${formatNumber(report.fieldMedicsRecovered)}</strong></div>` : ""}
-      </div>
-      <p>${renderPlayerLinkedText(report.summary || getBattleReportSummary(report), report.opponentUid, report.opponentName || report.ownerName)}</p>
+      ${renderBattleReportLocateButton(report, "battle-report-locate-detail")}
+    </div>
+    <div class="battle-visual-target">
+      <span>Battle for</span>
+      <strong>${escapeHtml(target.name || report?.cityName || "Unknown holding")}</strong>
+      <small>${escapeHtml(metadata)}</small>
     </div>`;
 }
 
-function renderSiegeBattleSection(siege = null) {
-  if (!siege) return "";
-  const wallOutcome = siege.breached
-    ? "Wall breached"
-    : siege.wallDamagePower > 0
-      ? "Wall held"
-      : "Wall untouched";
-  const repairAddedText = siege.repairAddedMs > 0
-    ? `${formatDuration(Math.max(1, Math.ceil(siege.repairAddedMs / 1000)))} added by this hit`
-    : "";
-  const repairText = siege.persistentDamageApplied
-    ? siege.repairAtMs > Date.now()
-      ? `${repairAddedText ? `${repairAddedText} · ` : ""}Full repair in ${formatDuration(Math.max(0, Math.ceil((siege.repairAtMs - Date.now()) / 1000)))}`
-      : siege.repairWindowMinutes > 0
-        ? `${repairAddedText ? `${repairAddedText}; ` : ""}the wall has since fully repaired`
-        : "The repair window has completed"
-    : siege.wallDamagePower > 0
-      ? "Protected-raid wall damage was not persisted"
-      : "No wall repair was needed";
+function renderBattleHeroSide(side = {}, viewer = false) {
+  const primary = side.primary || {};
+  const roleLabel = side.role === "attacker" ? "Attacker" : "Defender";
+  const powerLabel = side.role === "attacker" ? "Total attack power" : "Total defense power";
   return `
-    <section class="battle-siege-breakdown">
-      <h3>Siege phases</h3>
-      <p class="battle-report-detail-notice">The holding has one physical wall. Reinforcements add garrison defense, but never duplicate its wall or Stoneworks bonus.</p>
-      <div class="battle-formula-grid">
-        ${renderBattleMetric("1. Wall layer", wallOutcome, `${formatNumber(siege.startingWallPower)} starting wall power absorbed ${formatNumber(siege.wallDamagePower)} attack power`)}
-        ${renderBattleMetric("Wall integrity", `${formatWallIntegrity(siege.startingIntegrityBps)} → ${formatWallIntegrity(siege.endingIntegrityBps)}`, repairText)}
-        ${renderBattleMetric("2. Garrison layer", `${formatNumber(siege.penetratingAttackPower)} attack reached troops`, `${formatNumber(siege.garrisonDefensePower)} garrison defense`)}
+    <article class="battle-visual-hero-side ${side.role} ${viewer ? "viewer" : "opponent"}">
+      <span class="battle-visual-side-label">${viewer ? "Your side" : "Opponent side"}</span>
+      ${renderBattleKingdomFlag(side.flagKey, primary.ownerName || roleLabel, "battle-report-hero-flag")}
+      <div class="battle-visual-ruler">
+        ${renderPlayerNameLink(primary.ownerUid, primary.ownerName || "Unknown ruler")}
+        <small>${roleLabel} · ${escapeHtml(side.participantSummary || "")}</small>
+      </div>
+      <div class="battle-visual-power ${side.role}">
+        <span>${escapeHtml(powerLabel)}</span>
+        <strong>${escapeHtml(formatBattleReportValue(side.finalPower))}</strong>
+      </div>
+      <div class="battle-visual-troop-flow" aria-label="Troops before and after battle">
+        <strong>${escapeHtml(formatBattleReportValue(side.startingTroops))}</strong>
+        <span aria-hidden="true">&#10140;</span>
+        <strong>${escapeHtml(formatBattleReportValue(side.survivors))}</strong>
+      </div>
+      <small class="battle-visual-losses">${escapeHtml(formatBattleReportValue(side.losses))} lost</small>
+    </article>`;
+}
+
+function renderBattleReportHero(left = {}, right = {}, badge = {}, resultLabel = "") {
+  return `
+    <section class="battle-visual-hero" aria-label="Your side and opponent side battle summary">
+      ${renderBattleHeroSide(left, true)}
+      <div class="battle-visual-outcome ${escapeHtml(badge.tone || "")}">
+        <span>${escapeHtml(badge.label || "RESULT")}</span>
+        <strong>${escapeHtml(resultLabel || "Outcome unavailable")}</strong>
+      </div>
+      ${renderBattleHeroSide(right, false)}
+    </section>`;
+}
+
+function renderBattleDetailRow(icon, label, value, help = "") {
+  return `
+    <div class="battle-visual-detail-row">
+      <span class="battle-visual-detail-icon" aria-hidden="true">${icon}</span>
+      <div><span>${escapeHtml(label)}</span>${help ? `<small>${escapeHtml(help)}</small>` : ""}</div>
+      <strong>${escapeHtml(formatBattleReportValue(value))}</strong>
+    </div>`;
+}
+
+function renderBattleSideDetails(side = {}) {
+  const roleLabel = side.role === "attacker" ? "Attacking force" : "Defending force";
+  return `
+    <article class="battle-visual-detail-card ${side.role}">
+      <h4>${escapeHtml(roleLabel)}</h4>
+      ${renderBattleDetailRow("&#9817;", "Starting troops", side.startingTroops, side.participantSummary)}
+      ${renderBattleDetailRow(side.role === "attacker" ? "&#9876;" : "&#128737;", "Base troop power", side.basePower, side.basePowerHelp)}
+      ${side.role === "defender" && (side.wallPower || typeof side.wallPower === "string")
+        ? renderBattleDetailRow("&#9820;", "Wall power at battle", side.wallPower, side.wallHelp)
+        : ""}
+      ${renderBattleDetailRow(side.role === "attacker" ? "&#9876;" : "&#128737;", "Final resolved power", side.finalPower, side.role === "attacker" ? "Attack power" : side.wallFree ? "Camp troops and reinforcements only" : "Soldiers, reinforcements, and wall")}
+      ${renderBattleDetailRow("&#8722;", "Troops lost", side.losses)}
+      ${renderBattleDetailRow("&#10003;", "Troops surviving", side.survivors)}
+      ${side.reinforcementCount > 0
+        ? renderBattleDetailRow("&#9876;", "Allied reinforcements", side.reinforcementTroops, `${formatNumber(side.reinforcementCount)} supporting ${side.reinforcementCount === 1 ? "ruler" : "rulers"}`)
+        : ""}
+    </article>`;
+}
+
+function getBattleSideBonusEntries(side = {}) {
+  if (side.bonusRecorded === false) {
+    return [{ icon: "?", label: "Combat bonuses", value: "Not recorded", help: "Historical report" }];
+  }
+  const entries = [];
+  if (Number(side.skillBonusPower) > 0) {
+    entries.push({
+      icon: side.role === "attacker" ? "&#9876;" : "&#128737;",
+      label: side.skillLabel,
+      value: `+${formatNumber(side.skillBonusPower)} power`,
+      help: side.skillPercentText,
+    });
+  }
+  if (side.role === "defender" && Number(side.personalObjectiveBonusPower) > 0) {
+    entries.push({ icon: "&#9813;", label: "Personal objective support", value: `+${formatNumber(side.personalObjectiveBonusPower)} power`, help: "Defending soldiers only" });
+  }
+  if (side.role === "defender" && Number(side.sharedClanBonusPower) > 0) {
+    entries.push({ icon: "&#9823;", label: "Clan objective support", value: `+${formatNumber(side.sharedClanBonusPower)} power`, help: "Defending soldiers only" });
+  }
+  if (side.role === "defender" && Number(side.wallStoneworksPower) > 0) {
+    entries.push({
+      icon: "&#9820;",
+      label: "Stoneworks",
+      value: `+${formatNumber(side.wallStoneworksPower)} wall power`,
+      help: side.wallStoneworksPercent > 0 ? `+${formatNumber(side.wallStoneworksPercent)}% wall strength` : "Wall only",
+    });
+  }
+  if (side.role === "defender" && Number(side.otherBonusPower) > 0) {
+    entries.push({ icon: "+", label: "Other recorded defense", value: `+${formatNumber(side.otherBonusPower)} power`, help: "Authoritative battle snapshot" });
+  }
+  return entries;
+}
+
+function renderBattleBonusCard(side = {}) {
+  const entries = getBattleSideBonusEntries(side);
+  return `
+    <article class="battle-visual-bonus-card ${side.role}">
+      <h4>${side.role === "attacker" ? "Attack bonuses" : "Defense bonuses"}</h4>
+      ${entries.length
+        ? entries.map(entry => `
+          <div class="battle-visual-bonus-row">
+            <span aria-hidden="true">${entry.icon}</span>
+            <div><strong>${escapeHtml(entry.label)}</strong>${entry.help ? `<small>${escapeHtml(entry.help)}</small>` : ""}</div>
+            <b>${escapeHtml(entry.value)}</b>
+          </div>`).join("")
+        : `<div class="battle-visual-no-bonus">No additional combat bonuses</div>`}
+    </article>`;
+}
+
+function renderBattleWallResult(defender = {}, siege = null) {
+  if (!siege) return "";
+  const startingIntegrityBps = clamp(Math.floor(Number(siege.startingIntegrityBps) || 0), 0, 10_000);
+  const repairWindowMinutes = Math.max(0, Math.floor(Number(siege.repairWindowMinutes) || 0));
+  return `
+    <section class="battle-visual-wall ${String(defender.wallAfter || "").startsWith("Breached") ? "breached" : ""}">
+      <div class="battle-visual-section-title"><span aria-hidden="true">&#9820;</span><h3>Wall Result</h3></div>
+      <div class="battle-visual-wall-grid">
+        <div><span>Before battle</span><strong>${escapeHtml(formatWallIntegrity(startingIntegrityBps))}</strong><small>${escapeHtml(formatBattleReportValue(defender.wallPower))} wall power</small></div>
+        <span class="battle-visual-wall-arrow" aria-hidden="true">&#10140;</span>
+        <div><span>After battle</span><strong>${escapeHtml(defender.wallAfter || "Not recorded")}</strong>${repairWindowMinutes > 0 ? `<small>${formatNumber(repairWindowMinutes)} minute repair window</small>` : ""}</div>
       </div>
     </section>`;
 }
 
-function renderDetailedBattleReport(report, snapshot, badge) {
-  const currentUid = getCurrentOnlineUid();
-  const snapshotOpponent = snapshot.attacker?.ownerUid === currentUid ? snapshot.defender : snapshot.attacker;
-  const opponentUid = report.opponentUid || snapshotOpponent?.ownerUid || "";
-  const opponentName = report.opponentName || snapshotOpponent?.ownerName || report.ownerName || "";
-  const rewardMetrics = [
-    report.xpAwarded > 0 ? renderBattleMetric("Your XP", `+${formatNumber(report.xpAwarded)}`) : "",
-    report.fieldMedicsRecovered > 0 ? renderBattleMetric("Field Medics recovered", `+${formatNumber(report.fieldMedicsRecovered)}`) : "",
-    report.goldAwarded > 0 ? renderBattleMetric("Gold earned", `+${formatNumber(report.goldAwarded)}`) : "",
-    report.troopsAwarded > 0 ? renderBattleMetric("Level-up troops", `+${formatNumber(report.troopsAwarded)}`) : "",
-  ].filter(Boolean).join("");
-  const explanation = getBattleOutcomeExplanation(snapshot);
-  const attackBreakdown = snapshot.totals.attackPowerBreakdown || {};
-  const defenseBreakdown = snapshot.totals.defensePowerBreakdown || {};
-  const reinforcementTroops = snapshot.reinforcements.reduce((total, row) => total + row.startingTroops, 0);
-  const attackerRecovery = report.fieldMedicsRecovered > 0
-    ? `${formatNumber(report.fieldMedicsRecovered)} recovered by Field Medics`
-    : "No reported recovery";
-  const objectiveSource = getBattleObjectiveSourceLabel(
-    snapshot.defender.objectiveSource,
-    snapshot.defender.personalDefenseBonusPercent
-  );
-  const modernSoldierDefense = snapshot.defenseCombatVersion >= DEFENSE_COMBAT_VERSION;
-  const combatRuleCopy = snapshot.combatRule.id === "protected_raid"
-    ? "Protected raid: capture was disabled, defender losses were limited, and wall damage was not persisted."
-    : snapshot.combatRule.id === "protected_breach"
-      ? "Protected breach: this first assault could breach the walls, but could not capture the city."
-      : snapshot.combatRule.id === "protected_capture"
-        ? "Protected capture: a prior breach allowed this follow-up assault to capture the city."
-        : snapshot.siege
-          ? "Normal siege: the wall absorbed attack power before any remaining force reached the garrison."
-          : "Legacy battle: the stored arrival-time attack and defense powers determined the result.";
-  const forecast = report.launchCombatForecast?.status === "scouted" ? report.launchCombatForecast : null;
-  const forecastDefenseDelta = forecast ? snapshot.totals.defensePower - forecast.defensePower : 0;
-  const forecastOutcomeLabel = forecast?.expectedOutcome === "capture"
-    ? "Likely capture"
-    : forecast?.expectedOutcome === "breach"
-      ? "Likely wall breach"
-      : forecast?.expectedOutcome === "raid"
-        ? "Protected raid — no capture"
-        : forecast?.expectedOutcome === "wall_hold"
-          ? "Walls likely hold"
-          : forecast?.expectedOutcome === "garrison_hold"
-            ? "Walls breach; garrison holds"
-            : "Likely defeat";
+function renderBattleComparisonSections(left = {}, right = {}, defender = {}, siege = null) {
   return `
-    <div class="battle-report-detail detailed-battle-report ${badge.tone}">
-      <button id="battleReportBackBtn" class="battle-report-back" type="button" data-audio-effect="none">Back to reports</button>
-      <div class="battle-report-detail-head">
-        <span>${badge.label}</span>
-        <strong>${escapeHtml(snapshot.target.name || report.cityName)}</strong>
-        <small>Level ${formatNumber(snapshot.target.level)} ${escapeHtml(snapshot.target.targetType === "camp" ? "reward camp" : snapshot.target.strongholdType ? "objective" : "city")} · ${renderBattleReportAge(report)}</small>
-        ${renderBattleReportLocateButton(report, "battle-report-locate-detail")}
+    <section class="battle-visual-section battle-visual-details">
+      <div class="battle-visual-section-title"><span aria-hidden="true">&#9876;</span><h3>Battle Details</h3></div>
+      <div class="battle-visual-two-column">
+        ${renderBattleSideDetails(left)}
+        ${renderBattleSideDetails(right)}
       </div>
-      <section class="battle-outcome-explanation">
-        <h3>Why this battle ended this way</h3>
-        <strong>${escapeHtml(explanation.resultSummary)}</strong>
-        <p>${escapeHtml(explanation.powerSummary)}</p>
-        ${explanation.factors.length ? `<ul>${explanation.factors.map(factor => `<li>${escapeHtml(factor)}</li>`).join("")}</ul>` : `<p>No additional battle bonuses were recorded.</p>`}
-      </section>
-      <div class="battle-report-comparison" aria-label="Attacker and defender comparison">
-        <div class="battle-attacker-column">
-          ${renderBattlePrimaryParticipant(snapshot.attacker, { side: "attacker", title: "Attacker", key: "attacker" })}
-          ${snapshot.attackers.length > 1 ? `
-            <div class="battle-reinforcement-list battle-rally-list">
-              <h4>Rally participants <span>${formatNumber(snapshot.attackers.length)}</span></h4>
-              ${snapshot.attackers.map(renderBattleAttackerRow).join("")}
-            </div>` : ""}
-        </div>
-        <div class="battle-defender-column">
-          ${renderBattlePrimaryParticipant(snapshot.defender, { side: "defender", title: "Defender", key: "defender" })}
-          ${snapshot.reinforcements.length ? `
-            <div class="battle-reinforcement-list">
-              <h4>Reinforcements <span>${formatNumber(snapshot.reinforcements.length)}</span></h4>
-              ${snapshot.reinforcements.map(renderBattleReinforcementRow).join("")}
-            </div>` : `<p class="battle-no-reinforcements">No allied reinforcements were stationed.</p>`}
-        </div>
+    </section>
+    <section class="battle-visual-section battle-visual-bonuses">
+      <div class="battle-visual-section-title"><span aria-hidden="true">&#9813;</span><h3>Bonuses</h3></div>
+      <div class="battle-visual-two-column">
+        ${renderBattleBonusCard(left)}
+        ${renderBattleBonusCard(right)}
       </div>
-      <section class="battle-explanation-breakdown">
-        <h3>Battle details</h3>
-        <div class="battle-paired-head"><strong>Attacker</strong><span>Compared at arrival</span><strong>Defender</strong></div>
-        <div class="battle-paired-breakdown">
-          ${renderBattlePairedRow("Starting forces", formatNumber(snapshot.totals.attackers), `${formatNumber(snapshot.defender.startingTroops)} + ${formatNumber(reinforcementTroops)}`, "Troops sent", "Garrison + reinforcements")}
-          ${renderBattlePairedRow("Base power", formatNumber(attackBreakdown.baseAttackPower), formatNumber(defenseBreakdown.baseTroopDefensePower + (modernSoldierDefense ? defenseBreakdown.baseDefenseBonusPower : 0)), "1.25 attack per troop", modernSoldierDefense ? "1.30 defense per soldier" : "Legacy garrison base")}
-          ${renderBattlePairedRow("Training", `+${formatNumber(attackBreakdown.swordmasteryBonusPower)}`, `+${formatNumber(modernSoldierDefense ? defenseBreakdown.shieldwallDisciplineBonusPower : defenseBreakdown.cityLevelDefensePower)}`, `Swordmastery +${formatBattlePercent(snapshot.attacker.swordmasteryPercent)}`, modernSoldierDefense ? `Shieldwall Discipline +${formatBattlePercent(snapshot.defender.shieldwallDisciplinePercent)}` : `Legacy city level +${formatBattlePercent(snapshot.defender.fortifications?.cityLevelDefensePercent)}`)}
-          ${defenseBreakdown.historicalWallDetailsAvailable ? renderBattlePairedRow("Attack and walls", `+${formatNumber(attackBreakdown.swordmasteryBonusPower)}`, `${formatNumber(defenseBreakdown.baseWallPower)} (+${formatNumber(defenseBreakdown.stoneworksWallBonusPower)})`, "Recorded attack bonus at arrival", `Base walls + Stoneworks ${formatBattlePercent(snapshot.defender.fortifications?.stoneworksPercent)}`) : ""}
-          ${renderBattlePairedRow("Objectives", "No objective attack bonus", `${formatNumber(defenseBreakdown.personalObjectiveBonusPower)} (+${formatNumber(defenseBreakdown.sharedClanBonusPower)})`, "Swordmastery is the recorded attack skill", `${objectiveSource} + shared clan defense`)}
-          ${defenseBreakdown.otherDefensePower > 0 ? renderBattlePairedRow("Other defense", "No matching attack component", formatNumber(defenseBreakdown.otherDefensePower), "No additional recorded attack power", "Stored battle-time defense adjustment") : ""}
-          ${renderBattlePairedRow("Final power", formatNumber(snapshot.totals.attackPower), formatNumber(snapshot.totals.defensePower), "After all recorded attack bonuses", "Garrison, walls, reinforcements, and bonuses")}
-          ${renderBattlePairedRow("Losses", formatNumber(snapshot.totals.attackerLosses), formatNumber(snapshot.totals.defenderLosses), `${formatNumber(snapshot.totals.attackerSurvivors)} survived`, `${formatNumber(snapshot.totals.defenderSurvivors)} survived`)}
-          ${renderBattlePairedRow("Result", attackerRecovery, getBattleOwnershipResult(snapshot), report.xpAwarded > 0 ? `${formatNumber(report.xpAwarded)} XP earned` : "No XP shown for this report", "Final ownership at battle resolution")}
-        </div>
-        <p class="battle-report-detail-notice">${escapeHtml(combatRuleCopy)}</p>
-        ${renderSiegeBattleSection(snapshot.siege)}
-        ${renderBattleProtectionExplanation(snapshot)}
-        ${forecast ? `
-          <h3>Launch intelligence compared with arrival</h3>
-          <div class="battle-forecast-comparison">
-            ${renderBattleMetric("At launch", forecastOutcomeLabel, `${formatNumber(forecast.attackPower)} attack vs ${formatNumber(forecast.defensePower)} scouted defense`)}
-            ${renderBattleMetric("At arrival", badge.label, `${formatNumber(snapshot.totals.attackPower)} attack vs ${formatNumber(snapshot.totals.defensePower)} live defense`)}
-            ${renderBattleMetric("Defense change", `${forecastDefenseDelta >= 0 ? "+" : "−"}${formatNumber(Math.abs(forecastDefenseDelta))}`, "Production, reinforcements, and bonuses remained live during travel")}
-          </div>` : ""}
-        ${rewardMetrics ? `<div class="battle-viewer-rewards">${rewardMetrics}</div>` : ""}
-        <p>${renderPlayerLinkedText(report.summary || getBattleReportSummary(report), opponentUid, opponentName)}</p>
-      </section>
+    </section>
+    ${renderBattleWallResult(defender, siege)}`;
+}
+
+function getViewerBattleResultLabel(snapshot = null, viewerRole = "attacker", report = null) {
+  if (!snapshot) return "Outcome unavailable";
+  if (report?.eventKind === CITADEL_ASSAULT_EVENT_KIND && report.outcome === "damaged") {
+    return "The Citadel Legion damaged the holding";
+  }
+  if (report?.eventKind === CITADEL_ASSAULT_EVENT_KIND && report.outcome === "lost") {
+    return "The Citadel Legion returned the holding to neutral control";
+  }
+  if (snapshot.combatRule?.id === "protected_raid") return "Protected raid completed — no capture";
+  if (snapshot.outcome === "breach") {
+    return viewerRole === "attacker" ? "Your side breached the wall" : "Opponent breached the wall";
+  }
+  if (snapshot.outcome === "victory" && snapshot.combatRule?.captureAllowed !== false) {
+    const target = snapshot.target?.targetType === "camp" ? "camp" : "holding";
+    return viewerRole === "attacker" ? `Your side captured the ${target}` : `Opponent captured the ${target}`;
+  }
+  return viewerRole === "defender" ? "Your side held the holding" : "Opponent held the holding";
+}
+
+function getDetailedBattleViewerRole(snapshot = null, report = null) {
+  const currentUid = getCurrentOnlineUid();
+  const attackers = getDetailedBattleSideParticipants(snapshot, "attacker");
+  const defenders = getDetailedBattleSideParticipants(snapshot, "defender");
+  if (currentUid && attackers.some(participant => participant.ownerUid === currentUid)) return "attacker";
+  if (currentUid && defenders.some(participant => participant.ownerUid === currentUid)) return "defender";
+  return report?.type === "defense" ? "defender" : "attacker";
+}
+
+function getBattleRuleLabel(snapshot = null) {
+  if (snapshot?.target?.targetType === "camp") return "Camp combat — 1.00 defense per troop, no level or walls";
+  if (snapshot?.combatRule?.id === "protected_raid") return "Protected raid — capture disabled";
+  if (snapshot?.combatRule?.id === "protected_breach") return "Protected breach — wall breach only";
+  if (snapshot?.combatRule?.id === "protected_capture") return "Protected capture — capture allowed";
+  return "";
+}
+
+function getBattleReportCampReward(report = null) {
+  const recordedReward = normalizeCampReportReward(report?.campReward);
+  if (recordedReward) return recordedReward;
+  if (report?.eventKind === "deed_camp_completed" && report.cityId && report.cityName) {
+    return {
+      rewardType: "city",
+      amount: 1,
+      cityId: report.cityId,
+      cityName: report.cityName,
+      cityRegionId: report.regionId || "",
+      cityRegionName: report.regionId ? getRegionLabel(report.regionId) : "",
+    };
+  }
+  const legacyCampPayout = String(report?.id || "").includes("_hold_")
+    && report?.type === "defense"
+    && report?.outcome === "held";
+  if (!legacyCampPayout) return null;
+  if (report.goldAwarded > 0) {
+    return { rewardType: "gold", amount: report.goldAwarded };
+  }
+  if (report.troopsAwarded > 0) {
+    return { rewardType: "troops", amount: report.troopsAwarded };
+  }
+  if (/Relic Camp/i.test(report.opponentName || "")) {
+    const itemMatch = / received (.+?) \([^)]+\)\./i.exec(report.summary || "");
+    if (itemMatch?.[1]) {
+      return {
+        rewardType: "item",
+        amount: 1,
+        itemId: "legacy_relic_reward",
+        itemName: itemMatch[1],
+        itemQuantity: 1,
+      };
+    }
+  }
+  return null;
+}
+
+function renderCampReportRewardMetrics(reward = null) {
+  if (!reward) return "";
+  if (reward.rewardType === "gold") {
+    return renderBattleMetric("Gold", `+${formatNumber(reward.amount)}`);
+  }
+  if (reward.rewardType === "troops") {
+    return renderBattleMetric("Troops", `+${formatNumber(reward.amount)}`);
+  }
+  if (reward.rewardType === "city") {
+    const location = reward.cityRegionName
+      || (reward.cityRegionId ? getRegionLabel(reward.cityRegionId) : "Location unavailable");
+    return `${renderBattleMetric("City", reward.cityName)}${renderBattleMetric("Location", location)}`;
+  }
+  if (reward.rewardType === "item") {
+    return `${renderBattleMetric("Item", reward.itemName)}${renderBattleMetric("Amount", `×${formatNumber(reward.itemQuantity || reward.amount)}`)}`;
+  }
+  return "";
+}
+
+function renderBattleRewards(report = null) {
+  const campReward = getBattleReportCampReward(report);
+  const rewardMetrics = campReward
+    ? renderCampReportRewardMetrics(campReward)
+    : [
+      report?.xpAwarded > 0 ? renderBattleMetric("XP", `+${formatNumber(report.xpAwarded)}`) : "",
+      report?.goldAwarded > 0 ? renderBattleMetric("Gold", `+${formatNumber(report.goldAwarded)}`) : "",
+      report?.fieldMedicsRecovered > 0 ? renderBattleMetric("Field Medics", `+${formatNumber(report.fieldMedicsRecovered)}`) : "",
+      report?.troopsAwarded > 0 ? renderBattleMetric("Level-up troops", `+${formatNumber(report.troopsAwarded)}`) : "",
+    ].filter(Boolean).join("");
+  return rewardMetrics ? `<section class="battle-visual-rewards"><div class="battle-visual-section-title"><span aria-hidden="true">&#9733;</span><h3>Rewards</h3></div><div class="battle-viewer-rewards">${rewardMetrics}</div></section>` : "";
+}
+
+function getLegacyBattleResultLabel(report = null) {
+  if (report?.eventKind === CITADEL_ASSAULT_EVENT_KIND && report.outcome === "damaged") {
+    return "The Citadel Legion damaged the holding";
+  }
+  if (report?.eventKind === CITADEL_ASSAULT_EVENT_KIND && report.outcome === "lost") {
+    return "The Citadel Legion returned the holding to neutral control";
+  }
+  if (report?.type === "defense") {
+    if (report.outcome === "lost") return "Opponent captured the holding";
+    if (report.outcome === "breached") return "Opponent breached the wall";
+    return "Your side held the holding";
+  }
+  if (report?.outcome === "victory") return "Your side captured the holding";
+  if (report?.outcome === "breach") return "Your side breached the wall";
+  if (report?.outcome === "raid") return "Protected raid completed — no capture";
+  return "Opponent held the holding";
+}
+
+function getLegacyBattleSides(report = null, siege = null) {
+  const campTarget = report?.targetType === "camp";
+  const player = {
+    ownerUid: getCurrentOnlineUid(),
+    ownerName: state?.playerName || "You",
+  };
+  const opponent = {
+    ownerUid: report?.opponentUid || "",
+    ownerName: report?.opponentName || report?.ownerName || "Unknown ruler",
+  };
+  const attackerStarting = Math.max(
+    0,
+    Math.floor(Number(report?.sentTroops) || 0),
+    Math.floor(Number(report?.survivors) || 0) + Math.floor(Number(report?.attackerLosses) || 0)
+  );
+  const defenderStarting = Math.max(
+    0,
+    Math.floor(Number(report?.defendersLeft) || 0) + Math.floor(Number(report?.defenderLosses) || 0)
+  );
+  const attacker = {
+    role: "attacker",
+    flagKey: "attacker",
+    primary: report?.type === "defense" ? opponent : player,
+    participantSummary: "Recorded attacking army",
+    startingTroops: attackerStarting,
+    basePower: "Not recorded",
+    basePowerHelp: "Older report",
+    bonusRecorded: false,
+    finalPower: "Not recorded",
+    losses: Math.max(0, Math.floor(Number(report?.attackerLosses) || 0)),
+    survivors: Math.max(0, Math.floor(Number(report?.survivors) || 0)),
+    wallPower: "—",
+    wallHelp: "No attacking wall",
+    wallAfter: "—",
+    skillLabel: "Swordmastery",
+    skillBonusPower: 0,
+    skillPercentText: "",
+    personalObjectiveBonusPower: 0,
+    sharedClanBonusPower: 0,
+    otherBonusPower: 0,
+    reinforcementCount: 0,
+    reinforcementTroops: 0,
+    wallBasePower: 0,
+    wallStoneworksPower: 0,
+    wallStoneworksPercent: 0,
+  };
+  const defender = {
+    role: "defender",
+    flagKey: "defender",
+    primary: report?.type === "defense" ? player : opponent,
+    participantSummary: "Recorded defending garrison",
+    startingTroops: defenderStarting,
+    basePower: "Not recorded",
+    basePowerHelp: "Older report",
+    bonusRecorded: false,
+    finalPower: report?.totalDefense > 0 ? formatNumber(report.totalDefense) : "Not recorded",
+    losses: Math.max(0, Math.floor(Number(report?.defenderLosses) || 0)),
+    survivors: Math.max(0, Math.floor(Number(report?.defendersLeft) || 0)),
+    wallPower: campTarget ? 0 : siege?.startingWallPower > 0 ? formatNumber(siege.startingWallPower) : "Not recorded",
+    wallHelp: campTarget ? "Camps have no walls" : "Stored wall snapshot",
+    wallAfter: campTarget ? "—" : formatBattleWallAfterStatus(siege),
+    skillLabel: campTarget ? "Camp troop power" : "Defense skill",
+    skillBonusPower: 0,
+    skillPercentText: "",
+    personalObjectiveBonusPower: 0,
+    sharedClanBonusPower: 0,
+    otherBonusPower: 0,
+    wallFree: campTarget,
+    reinforcementCount: 0,
+    reinforcementTroops: 0,
+    wallBasePower: 0,
+    wallStoneworksPower: 0,
+    wallStoneworksPercent: 0,
+  };
+  return { attacker, defender };
+}
+
+function renderLegacyBattleComparison(report = null, siege = null) {
+  const { attacker, defender } = getLegacyBattleSides(report, siege);
+  const viewerRole = report?.type === "defense" ? "defender" : "attacker";
+  const left = viewerRole === "defender" ? defender : attacker;
+  const right = viewerRole === "defender" ? attacker : defender;
+  return renderBattleComparisonSections(left, right, defender, siege);
+}
+
+function renderLegacyBattleReportDetail(report, badge, message = "") {
+  const siege = normalizeCombatFortificationSnapshot(report.fortification);
+  const { attacker, defender } = getLegacyBattleSides(report, siege);
+  const viewerRole = report?.type === "defense" ? "defender" : "attacker";
+  const left = viewerRole === "defender" ? defender : attacker;
+  const right = viewerRole === "defender" ? attacker : defender;
+  const target = {
+    name: report.cityName,
+    level: report.cityLevel,
+    regionId: report.regionId,
+    targetType: report.targetType === "camp" ? "camp" : "city",
+    strongholdType: "",
+  };
+  return `
+    <div class="battle-report-detail battle-visual-report detailed-battle-report ${badge.tone}">
+      ${renderBattleReportNavigation(report, target)}
+      ${message ? `<p class="battle-report-detail-notice">${escapeHtml(message)}</p>` : ""}
+      ${renderBattleReportHero(left, right, badge, getLegacyBattleResultLabel(report))}
+      ${renderLegacyBattleComparison(report, siege)}
+      ${renderBattleRewards(report)}
+    </div>`;
+}
+
+function renderDetailedBattleReport(report, snapshot, badge) {
+  const viewerRole = getDetailedBattleViewerRole(snapshot, report);
+  const ruleLabel = getBattleRuleLabel(snapshot);
+  const attacker = getBattleSidePresentationModel(snapshot, "attacker");
+  const defender = getBattleSidePresentationModel(snapshot, "defender");
+  const left = viewerRole === "defender" ? defender : attacker;
+  const right = viewerRole === "defender" ? attacker : defender;
+  return `
+    <div class="battle-report-detail battle-visual-report detailed-battle-report ${badge.tone}">
+      ${renderBattleReportNavigation(report, snapshot.target)}
+      ${ruleLabel ? `<div class="battle-visual-rule">${escapeHtml(ruleLabel)}</div>` : ""}
+      ${renderBattleReportHero(left, right, badge, getViewerBattleResultLabel(snapshot, viewerRole, report))}
+      ${renderBattleComparisonSections(left, right, defender, snapshot.siege)}
+      ${renderBattleRewards(report)}
     </div>`;
 }
 
@@ -32629,9 +33693,18 @@ function applyDetailedBattleFlags(snapshot) {
   const flags = new Map([
     ["attacker", snapshot.attacker.ownerFlag],
     ["defender", snapshot.defender.ownerFlag],
-    ...snapshot.attackers.map((participant, index) => [`rally-attacker-${index}`, participant.ownerFlag]),
-    ...snapshot.reinforcements.map((participant, index) => [`reinforcement-${index}`, participant.ownerFlag]),
   ]);
+  modalBody.querySelectorAll("[data-battle-participant-flag]").forEach(element => {
+    applyFlagToElement(element, flags.get(element.dataset.battleParticipantFlag) || createDefaultFlag());
+  });
+}
+
+function applyLegacyBattleFlags(report = null) {
+  const playerFlag = state?.flag || createDefaultFlag();
+  const opponentFlag = report?.opponentFlag || createDefaultFlag();
+  const flags = report?.type === "defense"
+    ? new Map([["attacker", opponentFlag], ["defender", playerFlag]])
+    : new Map([["attacker", playerFlag], ["defender", opponentFlag]]);
   modalBody.querySelectorAll("[data-battle-participant-flag]").forEach(element => {
     applyFlagToElement(element, flags.get(element.dataset.battleParticipantFlag) || createDefaultFlag());
   });
@@ -32645,7 +33718,7 @@ function renderScoutAttemptReportDetail(report, badge) {
       <div class="battle-report-detail-head">
         <span>${badge.label}</span>
         <strong>${escapeHtml(report.cityName)}</strong>
-        <small>Level ${formatNumber(report.cityLevel)} - ${renderBattleReportAge(report)}</small>
+        <small>${report.targetType === "camp" ? "Reward camp · No level · No walls" : `Level ${formatNumber(report.cityLevel)}`} - ${renderBattleReportAge(report)}</small>
         ${renderBattleReportLocateButton(report, "battle-report-locate-detail")}
       </div>
       <section class="scout-attempt-explanation">
@@ -32685,12 +33758,15 @@ async function showBattleReportDetail(reportId) {
   modalBody.querySelector("#battleReportBackBtn")?.addEventListener("click", showLogModal);
   bindBattleReportJumpButtons();
   if (!modal.open) modal.showModal();
-  if (report.type === "scout" || !report.battleId) return;
+  if (report.type === "scout") return;
+  if (!report.battleId) {
+    applyLegacyBattleFlags(report);
+    return;
+  }
 
   try {
     const snapshot = await loadDetailedBattleSnapshot(report);
     if (!snapshot) throw new Error("The detailed snapshot is unavailable.");
-    await loadBattleClanSnapshots(snapshot);
     if (!modal.open || modal.dataset.battleReportDetailId !== report.id) return;
     modalBody.innerHTML = renderDetailedBattleReport(report, snapshot, badge);
     applyDetailedBattleFlags(snapshot);
@@ -32702,6 +33778,7 @@ async function showBattleReportDetail(reportId) {
       badge,
       "Detailed participant statistics are unavailable for this report."
     );
+    applyLegacyBattleFlags(report);
   }
   modalBody.querySelector("#battleReportBackBtn")?.addEventListener("click", showLogModal);
   bindBattleReportJumpButtons();
@@ -32777,6 +33854,7 @@ function showHelpModal() {
       <li>Each defending soldier starts at ${formatNumber(BASE_TROOP_DEFENSE_POWER)} defense power. Shieldwall Discipline adds up to ${formatNumber(SKILL_CONFIG.shieldwallDiscipline.maxPercent)}%, while personal and shared clan objective support add against that same base. City level never increases soldier defense.</li>
       <li>Stoneworks strengthens the holding's one physical wall. Objective support never strengthens walls, and clan reinforcements contribute their own live Shieldwall and objective bonuses without duplicating the destination wall.</li>
       <li>Each troop starts at ${formatNumber(BASE_TROOP_ATTACK_POWER)} attack power; maximum Swordmastery raises that to ${formatNumber(BASE_TROOP_ATTACK_POWER * 1.6)}. The value is locked when the army launches.</li>
+      <li>Every neutral reward camp starts with 20,000 troops. Camps have no level or walls, and each stationed troop or reinforcement contributes exactly ${REWARD_CAMP_TROOP_POWER.toFixed(2)} defense power without skill or objective bonuses.</li>
       <li>Every city level uses the same linear wall formula: ${formatNumber(CITY_LEVEL_STATS.cityWallsBase)} + ${formatNumber(CITY_LEVEL_STATS.cityWallsPerLevel)} × (level − 1). Each level adds the same base wall power. A full breach takes round(${formatNumber(SIEGE_REPAIR_BASE_MINUTES)} + city level × ${formatNumber(SIEGE_REPAIR_MINUTES_PER_LEVEL)}) minutes to repair; meaningful damage of at least ${formatNumber(SIEGE_MEANINGFUL_WALL_DAMAGE_PERCENT)}% adds its exact share of that window.</li>
       <li>Later meaningful hits preserve elapsed repair progress and add only their own damage time. Combat captures and every player or neutral handoff keep the existing integrity and deadline; a breached wall contributes zero defense until it repairs.</li>
       <li>When an intact wall holds, defender troop losses are capped at ${formatNumber(SIEGE_INTACT_WALL_DEFENDER_LOSS_CAP_PERCENT)}%. Protected raids never persist wall damage.</li>
@@ -32983,8 +34061,9 @@ function getCityStatBonusSources(stats = {}, statType = "") {
   if (statType === "walls" || statType === "defense") {
     if (stats.stoneworksPercent > 0) sources.push(`Stoneworks +${formatNumber(stats.stoneworksPercent)}%`);
   }
-  if (statType === "defense" && stats.strongholdDefenseBonusPercent > 0) {
-    sources.push(`Stronghold +${formatNumber(stats.strongholdDefenseBonusPercent)}%`);
+  const objectiveTroopDefenseBonusPercent = getObjectiveTroopDefenseBonusPercent(stats);
+  if (statType === "defense" && objectiveTroopDefenseBonusPercent > 0) {
+    sources.push(`Objective soldier defense +${formatNumber(objectiveTroopDefenseBonusPercent)}%`);
   }
   if (statType === "troops") {
     if (stats.royalGranariesPercent > 0) sources.push(`Royal Granaries +${formatNumber(stats.royalGranariesPercent)}%`);
@@ -34147,6 +35226,12 @@ document.addEventListener("visibilitychange", () => {
     handleGameForegroundSignal("visibilitychange");
     preloadNearbyIslandMaps(getActiveMapRegionId());
   }
+});
+cityLayer.addEventListener("pointerover", event => {
+  if (!sendMode || event.pointerType === "touch") return;
+  const targetNode = event.target.closest("[data-city-id], [data-camp-id]");
+  const targetId = targetNode?.dataset.cityId || targetNode?.dataset.campId || "";
+  if (targetId) scheduleOrderRoutePrefetch(targetId);
 });
 window.addEventListener("pagehide", markGameBackgrounded);
 window.addEventListener("pagehide", () => crownlandsAnimations?.clearAll?.());

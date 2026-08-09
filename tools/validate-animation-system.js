@@ -129,12 +129,12 @@ requireMatch(gameSource, /prefers-reduced-motion:\s*reduce/, "game.js must honor
 requireMatch(gameSource, /eventKind:\s*String\(report\.eventKind\s*\|\|\s*""\)/, "The client drops Deed completion event metadata.");
 requireMatch(
   gameSource,
-  /function getVisibleMainCityTroopRewardDestination\(fallbackCityId = ""\)[\s\S]*?state\?\.mainCityId \|\| fallbackCityId[\s\S]*?getActiveMapRegionId\(\)[\s\S]*?getBoundingClientRect\(\)/,
+  /function getVisibleMainCityTroopRewardDestination\(destinationCityId = "", destinationRegionId = ""\)[\s\S]*?destinationCityId \|\| state\?\.mainCityId[\s\S]*?getActiveMapRegionId\(\)[\s\S]*?getBoundingClientRect\(\)/,
   "Troop reward effects must target the rendered Main City when it is in the active viewport."
 );
 requireMatch(
   gameSource,
-  /getVisibleMainCityTroopRewardDestination\(destinationCityId\)[\s\S]*?\|\| getVisibleTroopRewardDestination\(\)/,
+  /getVisibleMainCityTroopRewardDestination\(destinationCityId, destinationRegionId\)[\s\S]*?\|\| getVisibleTroopRewardDestination\(\)/,
   "Troop reward effects must fall back to the player profile UI when the Main City is not visible."
 );
 assert.doesNotMatch(

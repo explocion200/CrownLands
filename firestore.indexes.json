@@ -1,6 +1,24 @@
 {
   "indexes": [
     {
+      "collectionGroup": "activity",
+      "queryScope": "COLLECTION",
+      "fields": [
+        {
+          "fieldPath": "resetGeneration",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "worldId",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "occurredAtMs",
+          "order": "DESCENDING"
+        }
+      ]
+    },
+    {
       "collectionGroup": "entries",
       "queryScope": "COLLECTION",
       "fields": [
@@ -890,6 +908,42 @@
       "collectionGroup": "presence",
       "fieldPath": "uid",
       "indexes": [
+        {
+          "order": "ASCENDING",
+          "queryScope": "COLLECTION_GROUP"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "serverReports",
+      "fieldPath": "createdAtMs",
+      "indexes": [
+        {
+          "order": "ASCENDING",
+          "queryScope": "COLLECTION"
+        },
+        {
+          "order": "DESCENDING",
+          "queryScope": "COLLECTION"
+        },
+        {
+          "order": "ASCENDING",
+          "queryScope": "COLLECTION_GROUP"
+        }
+      ]
+    },
+    {
+      "collectionGroup": "serverReports",
+      "fieldPath": "scoutReport.expiresAtMs",
+      "indexes": [
+        {
+          "order": "ASCENDING",
+          "queryScope": "COLLECTION"
+        },
+        {
+          "order": "DESCENDING",
+          "queryScope": "COLLECTION"
+        },
         {
           "order": "ASCENDING",
           "queryScope": "COLLECTION_GROUP"

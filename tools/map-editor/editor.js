@@ -1263,11 +1263,9 @@
       return `
         <article class="economy-card">
           <h3>${title} defaults</h3>
-          <p>These values are used when a placed camp does not have its own override.</p>
+          <p>All camps reset with a fixed 20,000-troop neutral garrison. Camps have no level or walls, and each stationed troop contributes exactly 1.00 defense power.</p>
           <div class="economy-grid">
             ${economyNumberInput(`camps.${campType}.holdMinutes`, "Hold timer (minutes)", config.holdMinutes, { step: 0.1 })}
-            ${economyNumberInput(`camps.${campType}.baseDefenders`, "Neutral defenders", config.baseDefenders)}
-            ${economyNumberInput(`camps.${campType}.defenseLevel`, "Defense level", config.defenseLevel)}
             ${campType === "items" && Number.isFinite(Number(config.maxDailyRewards))
               ? economyNumberInput(`camps.${campType}.maxDailyRewards`, "Items per UTC day", config.maxDailyRewards)
               : ""}
@@ -1314,6 +1312,7 @@
           ${economyNumberInput("playerCosts.nearbyScoutGold", "Scout nearby cost (gold)", economy.playerCosts.nearbyScoutGold)}
           ${economyNumberInput("playerCosts.regroupGold", "Regroup cost (gold)", economy.playerCosts.regroupGold)}
           ${economyNumberInput("playerCosts.skillResetGold", "Reset skills cost (gold)", economy.playerCosts.skillResetGold)}
+          ${economyNumberInput("playerCosts.skillPresetApplyGold", "Apply skill preset cost (gold)", economy.playerCosts.skillPresetApplyGold)}
         </div>
       </section>
       <section class="economy-section wide">

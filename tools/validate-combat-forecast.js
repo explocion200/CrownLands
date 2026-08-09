@@ -42,20 +42,31 @@ const requiredClientSnippets = [
   "getScoutReportForTarget(target)",
   "Scouted siege defense",
   "Forecast at scout time",
-  "Weaker-kingdom protection disables capture for this raid.",
-  "Minimum capture force at scout time",
-  "Too small to advance this siege",
-  "attacker losses",
-  "ownership, and bonuses may change before arrival.",
   "Protected raid — cannot capture",
-  "Capture requires breaching the wall and then exceeding garrison defense.",
-  "Launch intelligence compared with arrival",
   "launchCombatForecast: normalizeCombatForecast(report.launchCombatForecast)",
   "targetType: isRewardCampTarget(target) ? \"camp\" : \"city\"",
   "defenseCombatVersion: Math.max(0, Math.floor(Number(report.defenseCombatVersion) || 0))",
 ];
 requiredClientSnippets.forEach(snippet => {
   if (!clientSource.includes(snippet)) throw new Error(`Missing combat forecast UI behavior: ${snippet}`);
+});
+
+const attackModalSource = readFunction(clientSource, "updateTroopSliderModal");
+[
+  '<div><span>Scouted total defense</span><strong>${formatNumber(preview.defensePower)} power</strong></div>',
+  '<div><span>${siege ? "Scouted siege defense" : "Scouted total defense"}</span><strong>${formatNumber(preview.defensePower)} power</strong></div>',
+  '<div><span>Forecast at scout time</span><strong>${forecastOutcome}</strong></div>',
+].forEach(snippet => {
+  if (!attackModalSource.includes(snippet)) throw new Error(`Missing compact scouted forecast UI: ${snippet}`);
+});
+[
+  "minimum capture force",
+  "attacker losses",
+  "Defense can change before arrival",
+  "Current wall ${formatNumber(siege.startingWallPower)}",
+  "Scout age ${formatDuration(scoutAge)}",
+].forEach(snippet => {
+  if (attackModalSource.includes(snippet)) throw new Error(`Scouted attack forecast still exposes extra detail: ${snippet}`);
 });
 
 const calculateSource = readFunction(clientSource, "calculateCombatResult");

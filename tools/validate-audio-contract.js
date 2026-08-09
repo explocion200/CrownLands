@@ -1062,35 +1062,112 @@ function validateScoutDispatchCueContract(gameSource) {
   );
 }
 
+function validateBulkOrderAudioContract(gameSource, serverSource) {
+  const annotateClient = extractFunction(gameSource, "annotateClientBulkArrivalAudio");
+  check(
+    /bulkOrderKind\s*===\s*["']nearby_scout["']\s*&&\s*arrivalIndex\s*===\s*0[\s\S]{0,80}bulkArrivalCue\s*=\s*["']first["']/.test(annotateClient),
+    "Scout Nearby must mark only its first arrival as audible"
+  );
+  check(
+    /bulkOrderKind\s*===\s*["']regroup["'][\s\S]{0,300}count\s*===\s*1[\s\S]{0,80}["']first_last["'][\s\S]{0,180}arrivalIndex\s*===\s*0[\s\S]{0,80}["']first["'][\s\S]{0,180}arrivalIndex\s*===\s*count\s*-\s*1[\s\S]{0,80}["']last["']/.test(annotateClient),
+    "Regroup must mark only its first and last arrivals as audible"
+  );
+
+  const claimArrival = extractFunction(gameSource, "claimBulkArrivalAudio");
+  check(
+    /cue\s*===\s*["']mute["'][\s\S]{0,50}return\s+false/.test(claimArrival),
+    "muted bulk arrivals must never play an arrival cue"
+  );
+  check(
+    /claimedBulkArrivalAudio\.has\s*\(\s*key\s*\)[\s\S]{0,50}return\s+false/.test(claimArrival)
+      && /claimedBulkArrivalAudio\.set\s*\(\s*key\s*,/.test(claimArrival),
+    "bulk arrival cues must be claimed once across callable and report listeners"
+  );
+
+  const mergeReports = extractFunction(gameSource, "mergeServerReports");
+  check(
+    /notificationCandidates\.some\s*\(\s*report\s*=>\s*claimBulkArrivalAudio\s*\(\s*report\s*\)\s*\)/.test(mergeReports),
+    "realtime report audio must honor the bulk-arrival claim"
+  );
+  const applyArmyResult = extractFunction(gameSource, "applyServerArmyResult");
+  check(
+    /result\.kind\s*===\s*["']scout["'][\s\S]{0,240}claimBulkArrivalAudio\s*\(\s*scoutAudioContext\s*\)[\s\S]{0,160}playGameSound\s*\(\s*["']notification["']/.test(applyArmyResult),
+    "resolved scouts must honor the bulk-arrival claim before notification audio"
+  );
+  check(
+    /result\.kind\s*&&\s*result\.kind\s*!==\s*["']scout["'][\s\S]{0,120}claimBulkArrivalAudio\s*\(\s*armyArrivalAudioContext\s*\)[\s\S]{0,120}playGameSound\s*\(\s*["']army_arrival["']/.test(applyArmyResult),
+    "resolved regroup movements must honor the bulk-arrival claim before arrival audio"
+  );
+
+  const scoutNearby = extractFunction(gameSource, "toggleScoutNearby");
+  const regroup = extractFunction(gameSource, "toggleRegroup");
+  check(
+    countGameCueCalls(scoutNearby, "troop_dispatch") === 1,
+    "an authoritative Scout Nearby batch must play one departure cue"
+  );
+  check(
+    countGameCueCalls(regroup, "troop_dispatch") === 1,
+    "an authoritative Regroup batch must play one departure cue"
+  );
+  check(
+    /silentAudio\s*:\s*launched\s*>\s*0/.test(scoutNearby),
+    "the local Scout Nearby fallback must mute every departure after the first"
+  );
+  check(
+    /silentAudio\s*:\s*launched\s*>\s*0/.test(regroup),
+    "the local Regroup fallback must mute every departure after the first"
+  );
+
+  const annotateServer = extractFunction(serverSource, "annotateBulkArrivalAudio");
+  check(
+    /normalizedKind\s*===\s*["']nearby_scout["']\s*&&\s*arrivalIndex\s*===\s*0[\s\S]{0,80}bulkArrivalCue\s*=\s*["']first["']/.test(annotateServer),
+    "the server must authoritatively mark only the first Scout Nearby arrival"
+  );
+  check(
+    /normalizedKind\s*===\s*["']regroup["'][\s\S]{0,300}count\s*===\s*1[\s\S]{0,80}["']first_last["'][\s\S]{0,180}arrivalIndex\s*===\s*0[\s\S]{0,80}["']first["'][\s\S]{0,180}arrivalIndex\s*===\s*count\s*-\s*1[\s\S]{0,80}["']last["']/.test(annotateServer),
+    "the server must authoritatively mark only first/last Regroup arrivals"
+  );
+  check(
+    serverSource.includes('annotateBulkArrivalAudio(armies, "nearby_scout", requestId);')
+      && serverSource.includes('annotateBulkArrivalAudio(armies, "regroup", requestId);'),
+    "both bulk callables must stamp authoritative arrival-audio metadata"
+  );
+  check(
+    serverSource.includes("...getArmyBulkAudioReportContext(army)"),
+    "scout reports must preserve their bulk audio context"
+  );
+}
+
 function validateClanRallyDispatchCueContract(gameSource) {
   const submitRallyOrder = extractFunction(gameSource, "submitClanRallyTroopOrder");
   check(
-    /\bactiveTroopOrderKind\s*===\s*["']rally_create["'][\s\S]{0,200}["']createClanRally["'][\s\S]{0,200}["']joinClanRally["']/.test(submitRallyOrder),
+    /\bsubmittedOrderKind\s*===\s*["']rally_create["'][\s\S]{0,200}["']createClanRally["'][\s\S]{0,200}["']joinClanRally["']/.test(submitRallyOrder),
     "submitClanRallyTroopOrder() must route both rally creation and rally joining through its shared success path"
   );
-  const submitBlocks = extractTryCatch(
+  const submitSuccess = extractArrowCallback(
     submitRallyOrder,
-    "submitClanRallyTroopOrder()"
+    /\.then\s*\(\s*result\s*=>\s*\{/g,
+    "submitClanRallyTroopOrder() success callback"
   );
-  const submitRequestIndex = submitBlocks.tryBody.search(
-    /\bawait\s+api\s*\[\s*method\s*\]\s*\(/
+  const submitFailure = extractArrowCallback(
+    submitRallyOrder,
+    /\.catch\s*\(\s*error\s*=>\s*\{/g,
+    "submitClanRallyTroopOrder() failure callback"
   );
-  const submitDispatchIndex = submitBlocks.tryBody.search(
+  const submitDispatchIndex = submitSuccess?.body.search(
     /playGameSound\s*\(\s*["']troop_dispatch["']/
-  );
-  const submitSuccessIndex = submitBlocks.tryBody.search(/\breturn\s+true\s*;/);
+  ) ?? -1;
   check(
-    countGameCueCalls(submitBlocks.tryBody, "troop_dispatch") === 1,
+    countGameCueCalls(submitSuccess?.body || "", "troop_dispatch") === 1,
     "successful clan rally creation/join must play troop_dispatch exactly once"
   );
   check(
-    submitRequestIndex >= 0
-      && submitDispatchIndex > submitRequestIndex
-      && submitSuccessIndex > submitDispatchIndex,
-    "clan rally creation/join must play troop_dispatch after server acceptance and before returning success"
+    /void\s+api\s*\[\s*method\s*\]\s*\(\s*payload\s*\)\.then/.test(submitRallyOrder)
+      && submitDispatchIndex >= 0,
+    "clan rally creation/join must play troop_dispatch only inside the server-accepted callback"
   );
   check(
-    countGameCueCalls(submitBlocks.catchBody, "troop_dispatch") === 0,
+    countGameCueCalls(submitFailure?.body || "", "troop_dispatch") === 0,
     "a failed clan rally creation/join must not play troop_dispatch"
   );
   check(
@@ -1389,6 +1466,7 @@ function main() {
 
   const audioManagerSource = readSource("audio-manager.js");
   const gameSource = readSource("game.js");
+  const serverSource = readSource("functions/index.js");
   const indexSource = readSource("index.html");
   const stylesSource = readSource("styles.css");
   const serviceWorkerSource = readSource("service-worker.js");
@@ -1401,6 +1479,7 @@ function main() {
   validateRuntimeCueAndContextContracts(gameSource);
   validateCityUpgradeCueContract(gameSource);
   validateScoutDispatchCueContract(gameSource);
+  validateBulkOrderAudioContract(gameSource, serverSource);
   validateClanRallyDispatchCueContract(gameSource);
   validateRewardedAdCueContract(gameSource);
   validateCampCaptureCueContract(gameSource);

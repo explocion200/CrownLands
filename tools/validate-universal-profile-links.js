@@ -73,7 +73,7 @@ requires(
   ["function renderReinforcementOperationCard", "function renderHeldCampsOperationPanel", /renderPlayerNameLink\(entry\.ownerUid[\s\S]*?renderPlayerNameLink\(entry\.targetOwnerUid/, "Reinforcement activity identities are not linked."],
   ["function renderOutgoingAttackCard", "async function focusOutgoingMarchLocation", /renderPlayerNameLink\(city\.ownerUid/, "Outgoing march target owners are not linked."],
   ["function renderBattleReportCard", "function applyBattleReportTargetFlags", /renderPlayerNameLink\(report\.opponentUid/, "Compact battle opponents are not linked."],
-  ["function renderLegacyBattleReportDetail", "function renderDetailedBattleReport", /renderPlayerNameLink\(report\.opponentUid[\s\S]*?renderPlayerLinkedText/, "Legacy battle details do not safely link known opponents."],
+  ["function renderBattleHeroSide", "function renderBattleReportHero", /renderPlayerNameLink\(primary\.ownerUid,\s*primary\.ownerName/, "Visual battle sides do not link their primary rulers."],
 ].forEach(([start, end, pattern, message]) => requires(between(client, start, end), pattern, message));
 
 requires(client, /function deedCampHistoryMarkup[\s\S]*?renderPlayerNameLink\(entry\.awardedToPlayerId/, "Deed Camp reward recipients are not linked.");
@@ -84,7 +84,7 @@ requires(client, /function renderProfileClanAffiliation[\s\S]*?dataset\.publicCl
 requires(client, /function renderClanOverviewPanel[\s\S]*?clan-hero-shield-link[\s\S]*?renderClanIdentityLink/, "The current clan Overview shield or identity is not linked.");
 requires(client, /clanSearchResults\.map\(clan =>[\s\S]*?clan-shield-link[\s\S]*?renderClanIdentityLink/, "Clan discovery shield or identity is not linked.");
 requires(client, /function renderObjectiveClanAffiliation[\s\S]*?data-public-clan-id/, "Objective clan identities are not linked.");
-requires(client, /function renderBattleClanIdentity[\s\S]*?data-public-clan-id/, "Detailed battle primary-clan identities are not linked.");
+assert.doesNotMatch(client, /function renderBattleClanIdentity/, "Compact battle details still render removed clan branding.");
 requires(client, /function normalizeLeaderboardEntry[\s\S]*?clanId[\s\S]*?clanName[\s\S]*?clanTag/, "Leaderboard normalizers discard canonical clan identity.");
 requires(client, /function renderLeaderboardRow[\s\S]*?renderClanIdentityLink\([\s\S]*?display:\s*"tag"/, "Player leaderboard clan tags are not linked.");
 requires(client, /async function refreshClanLeaderboardRows[\s\S]*?clan-leaderboard-shield-link[\s\S]*?renderClanIdentityLink/, "Clan leaderboard shield, tag, or name is not linked.");

@@ -145,6 +145,13 @@ const defenseContext = {
     : skill === "shieldwallDiscipline"
       ? Math.max(0, Number(profile?.shieldwallPercent) || 0)
       : 0,
+  getObjectiveTroopDefenseBonusPercent(value = {}) {
+    return Math.max(0, Number(
+      value.objectiveTroopDefenseBonusPercent
+      ?? value.strongholdDefenseBonusPercent
+      ?? value.cityDefenseBonusPercent
+    ) || 0);
+  },
   usesSiegeCombat: (version, targetType) => targetType !== "camp" && Number(version) >= 1,
   usesSoldierDefenseModel: (version, target) => target?.type !== "camp" && Number(version) >= 1,
   getFortificationSnapshot(target, stats) {
@@ -294,23 +301,23 @@ requires(
 );
 requires(
   client,
-  /function renderDetailedBattleReport[\s\S]*?battle-report-comparison[\s\S]*?renderBattleReinforcementRow/,
-  "The report UI does not render equal attacker/defender columns with reinforcement rows."
+  /function renderDetailedBattleReport[\s\S]*?renderBattleReportHero[\s\S]*?renderBattleComparisonSections/,
+  "The report UI does not render the heraldic side-by-side comparison."
 );
 requires(
   client,
-  /function renderBattleKingdomFlag[\s\S]*?kingdom-flag[\s\S]*?function renderBattleReinforcementRow[\s\S]*?renderBattleKingdomFlag[\s\S]*?Clan reinforcement/,
-  "Reinforcement rows do not show the contributor kingdom identity."
+  /function getDetailedBattleSideParticipants[\s\S]*?snapshot\.attackers[\s\S]*?snapshot\.reinforcements/,
+  "Visual battle reports do not aggregate rally attackers and reinforcements."
 );
 requires(
   client,
-  /function renderBattleReinforcementRow[\s\S]*?Legacy fortifications[\s\S]*?Quarter walls[\s\S]*?Uses the holding's single wall/i,
-  "Detailed battle reports do not distinguish legacy reinforcement walls from the single-wall siege model."
+  /function renderBattleHeroSide[\s\S]*?renderBattleKingdomFlag[\s\S]*?renderPlayerNameLink[\s\S]*?participantSummary/,
+  "Visual battle sides do not retain the primary ruler flag, profile link, and aggregate participant count."
 );
 assert.doesNotMatch(
-  extractFunction(client, "renderBattleReinforcementRow"),
-  /renderBattleClanIdentity|renderClanShield|clanTag|clanName/,
-  "Reinforcement rows repeat the defending clan's branding."
+  extractFunction(client, "renderDetailedBattleReport"),
+  /renderBattleClanIdentity|renderClanShield|renderBattleReinforcementRow|renderBattleAttackerRow/,
+  "Visual battle details still repeat clan branding or individual participant rosters."
 );
 const compactReportCard = extractFunction(client, "renderBattleReportCard");
 assert.doesNotMatch(
@@ -348,4 +355,4 @@ assert.ok(
   "The clan objective battle validator is not part of the Functions validation suite."
 );
 
-console.log("Validated clan objective precedence, legacy and single-wall siege defense packages, private snapshots, and compact/detailed report presentation.");
+console.log("Validated clan objective precedence, legacy and single-wall siege defense packages, private snapshots, and visual report presentation.");

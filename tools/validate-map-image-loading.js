@@ -152,6 +152,7 @@ const staleCampBases = new Map([...campArtByType].map(([campType, artSrc]) => {
 const normalizeOnlineCampState = vm.runInNewContext(
   `(${extractFunction(game, "normalizeOnlineCampState")})`,
   {
+    REWARD_CAMP_COMBAT_VERSION: 1,
     WORLD_CAMPS_BY_ID: staleCampBases,
     getRewardCampConfig(camp) {
       return {
@@ -159,9 +160,10 @@ const normalizeOnlineCampState = vm.runInNewContext(
         type: camp.campType,
         rewardType: camp.campType,
         holdSeconds: 600,
-        baseDefenders: 10000,
+        baseDefenders: 20000,
         baseReward: 20000,
-        defenseLevel: 30,
+        combatVersion: 1,
+        troopPower: 1,
         rewardSchedule: [],
         maxDailyRewards: 0,
       };

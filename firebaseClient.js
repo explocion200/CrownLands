@@ -1292,16 +1292,25 @@
       strongholdGoldBonusPercent: Math.max(0, Math.floor(Number(stats.strongholdGoldBonusPercent) || 0)),
       strongholdTroopBonusPercent: Math.max(0, Math.floor(Number(stats.strongholdTroopBonusPercent) || 0)),
       strongholdMarchSpeedBonusPercent: Math.max(0, Math.floor(Number(stats.strongholdMarchSpeedBonusPercent) || 0)),
+      objectiveTroopDefenseBonusPercent: Math.max(0, Number(
+        stats.objectiveTroopDefenseBonusPercent ?? stats.strongholdDefenseBonusPercent
+      ) || 0),
       strongholdDefenseBonusPercent: Math.max(0, Math.floor(Number(stats.strongholdDefenseBonusPercent) || 0)),
       strongholdUpgradeCostReductionPercent: Math.max(0, Math.floor(Number(stats.strongholdUpgradeCostReductionPercent) || 0)),
       personalStrongholdGoldBonusPercent: Math.max(0, Number(stats.personalStrongholdGoldBonusPercent) || 0),
       personalStrongholdTroopBonusPercent: Math.max(0, Number(stats.personalStrongholdTroopBonusPercent) || 0),
       personalStrongholdMarchSpeedBonusPercent: Math.max(0, Number(stats.personalStrongholdMarchSpeedBonusPercent) || 0),
+      personalObjectiveTroopDefenseBonusPercent: Math.max(0, Number(
+        stats.personalObjectiveTroopDefenseBonusPercent ?? stats.personalStrongholdDefenseBonusPercent
+      ) || 0),
       personalStrongholdDefenseBonusPercent: Math.max(0, Number(stats.personalStrongholdDefenseBonusPercent) || 0),
       personalStrongholdUpgradeCostReductionPercent: Math.max(0, Number(stats.personalStrongholdUpgradeCostReductionPercent) || 0),
       sharedClanGoldBonusPercent: Math.max(0, Number(stats.sharedClanGoldBonusPercent) || 0),
       sharedClanTroopBonusPercent: Math.max(0, Number(stats.sharedClanTroopBonusPercent) || 0),
       sharedClanMarchSpeedBonusPercent: Math.max(0, Number(stats.sharedClanMarchSpeedBonusPercent) || 0),
+      sharedClanObjectiveTroopDefenseBonusPercent: Math.max(0, Number(
+        stats.sharedClanObjectiveTroopDefenseBonusPercent ?? stats.sharedClanDefenseBonusPercent
+      ) || 0),
       sharedClanDefenseBonusPercent: Math.max(0, Number(stats.sharedClanDefenseBonusPercent) || 0),
       sharedClanUpgradeCostReductionPercent: Math.max(0, Number(stats.sharedClanUpgradeCostReductionPercent) || 0),
       clanCitadelBonusPercent: Math.max(0, Number(stats.clanCitadelBonusPercent) || 0),
@@ -1972,6 +1981,46 @@
       : null;
   }
 
+  function subscribeRealmActivity(handlers = {}) {
+    if (!client.configured || !client.db || !client.user?.uid) return () => {};
+    const { collection, onSnapshot, query: firestoreQuery, where, orderBy, limit } = client.modules.firestore;
+    if (!collection || !onSnapshot || !firestoreQuery || !where || !orderBy || !limit) return () => {};
+    const activityRef = collection(client.db, "realmEvents", RESET_GENERATION, "activity");
+    const activityQuery = firestoreQuery(
+      activityRef,
+      where("resetGeneration", "==", RESET_GENERATION),
+      where("worldId", "==", ONLINE_WORLD_ID),
+      orderBy("occurredAtMs", "desc"),
+      limit(250)
+    );
+    let deliveredInitialSnapshot = false;
+    return onSnapshot(
+      activityQuery,
+      { includeMetadataChanges: true },
+      snapshot => {
+        const metadata = {
+          initial: !deliveredInitialSnapshot,
+          fromCache: Boolean(snapshot.metadata?.fromCache),
+          hasPendingWrites: Boolean(snapshot.metadata?.hasPendingWrites),
+          changes: snapshot.docChanges().map(change => ({
+            type: change.type,
+            event: { id: change.doc.id, ...change.doc.data() },
+          })),
+        };
+        deliveredInitialSnapshot = true;
+        if (typeof handlers.onEvents === "function") {
+          handlers.onEvents(
+            snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })),
+            metadata
+          );
+        }
+      },
+      error => {
+        if (typeof handlers.onError === "function") handlers.onError(error, "realmActivity");
+      }
+    );
+  }
+
   function subscribeServerReports(handlers = {}) {
     if (!client.configured || !client.db || !client.user?.uid) return () => {};
     const { collection, onSnapshot, query: firestoreQuery, where, orderBy, limit } = client.modules.firestore;
@@ -2409,6 +2458,7 @@
     subscribePlayerReinforcements,
     subscribePlayerCamps,
     subscribeCrownCitadel,
+    subscribeRealmActivity,
     subscribeServerReports,
     isPushSupported,
     getNotificationPermission,
