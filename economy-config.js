@@ -241,7 +241,8 @@ window.CROWNLANDS_ECONOMY_CONFIG = {
   "playerCosts": {
     "nearbyScoutGold": 250000,
     "regroupGold": 250000,
-    "skillResetGold": 1000000
+    "skillResetGold": 1000000,
+    "skillPresetApplyGold": 1000000
   },
   "skills": {
     "swordmastery": {

@@ -83,6 +83,9 @@ const cityInfoContext = {
     currentWallPower: 200,
   }),
   getCityStats: () => ({ defenseCombatVersion: 1, troopDefense: 13 }),
+  getObjectiveTroopDefenseBonusPercent: stats => Math.max(0, Number(
+    stats?.objectiveTroopDefenseBonusPercent ?? stats?.strongholdDefenseBonusPercent
+  ) || 0),
   normalizeCombatFortificationSnapshot: raw => raw || null,
   getSiegeRepairWindowMinutes: () => 15,
   getSiegeRepairLevel: () => 1,

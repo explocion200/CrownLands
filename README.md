@@ -27,7 +27,8 @@ Landscape / horizontal medieval island-conquest game inspired by the core loop o
 - Neutral captures are also blocked once the player owns 30 cities; after that, expansion must come from player-owned cities.
 - Hero XP keeps the early progression curve through level 25, then each level requires 10% more XP. A single battle can award up to 100% of a level through level 50, declining smoothly to 50% at level 100 and 35% at level 150.
 - Hero levels award skill points.
-- The skill tree includes Swordmastery, Shieldwall Discipline, Stoneworks, Tax Stewardship, Royal Granaries, Guild Charters, March Orders, and Field Medics.
+- The skill tree is grouped by role: Attack contains Swordmastery, March Orders, and Field Medics; Defense contains Shieldwall Discipline and Stoneworks; Utility contains Tax Stewardship, Royal Granaries, and Guild Charters.
+- Four private skill presets unlock at Hero Levels 25, 50, 75, and 100. Saving, renaming, and inspecting presets are free; every confirmed Apply costs 1,000,000 gold, even when the allocation already matches. Legacy Shieldwall reset credits remain exclusive to Reset Skills.
 - Field Medics returns a percentage of battle losses to the main city.
 - Failed player attacks and lost defenses still award one-third of the matching victory XP.
 - The Citadel Legion selects up to 20 random regular non-main cities in the Crown Citadel region at 9:45 AM and 6:15 PM Eastern Time, then attacks each with 100,000 NPC troops at 10:00 AM and 6:30 PM Eastern. The `America/New_York` schedule follows daylight-saving changes. Peace Shields do not block the event. Held defenses preserve city level and award no XP; failed defenses remove five levels, with Level 5-or-lower cities returning to neutral at Level 1 with 10 troops.
@@ -36,10 +37,10 @@ Landscape / horizontal medieval island-conquest game inspired by the core loop o
 - Forecast strength labels use the same resolved power values as combat: defeat at or below the capture threshold, costly victory below 1.5x defense, advantage below 2x, strong advantage below 3x, and overwhelming only at 3x defense or higher. The send panel also shows projected losses, the minimum force needed to capture, any shortfall, and the minimum force needed to cause persistent wall damage.
 - Daily login rewards use the current UTC calendar month rather than a fixed 30-day loop. February and 29-, 30-, and 31-day months each distribute the same monthly budget: 111 hours of gold production, 111 hours of troop production, and six rotating items. Missed days pause progress, at most two earned rewards wait for collection, and unclaimed rewards expire at month rollover.
 - The public Battle and Economy Guide provides config-backed city charts, a two-stage siege explorer, skill references, economy flows, and wall-repair timelines without affecting live game state.
-- The bottom `Reports` button opens battle reports filtered by attack, defense, and scout results.
+- The bottom `Reports` button opens battle reports filtered by attack, defense, and scout results. Successful scout entries leave Reports when their ten-minute intelligence expires; attack and defense reports remain available for 24 hours after combat.
 - Attack reports distinguish captures, protected wall breaches, protected raids, and defeats. Detailed reports explain the applicable capture rule and compare the launch forecast with live arrival power when scout intelligence was available.
 - Defense reports show held defenses or lost cities.
-- Scout reports show the latest revealed troop and defense totals for ten minutes after arrival. A newer successful scout replaces the snapshot for that target and restarts its timer.
+- Scout reports show the latest revealed troop and defense totals for ten minutes after arrival. A newer successful scout replaces the snapshot for that target and restarts its timer; when the timer ends, the expired scout entry is removed from Reports.
 
 ## Map Rules
 
@@ -89,7 +90,7 @@ The live game is online-first and uses Firebase Auth, Firestore, and callable Fu
 - The Clan War Room is the clan home for rallies. Members can form, join, inspect, withdraw from, launch, and cancel the same server-authoritative rallies available under Kingdom Activity, without a separate operation-planning system.
 - Server-written reports are stored under `players/{uid}/serverReports/{reportId}` and merged into the in-game Reports UI.
 - Kingdom-wide totals are server-derived in `players/{uid}/stats/global`. King Power, total city count, marching troops, gold/hour, troop/hour, per-island owned counts, and leaderboard rows should read this aggregate instead of scanning every island during normal login.
-- King Power v10 is a server-authoritative military-readiness score made from controlled troops, 12 hours of sustainable troop replacement, and 25% of defensive advantage above the base troop count. City, Stronghold, camp, active-march, stationed reinforcement, and committed rally troops count exactly once. Combined rally armies are excluded from the leader's personal marching count so committed troops are never double-counted. Training, Defense, and Crown Citadel bonuses affect their matching military components; gold, raw city count, skills, and temporary items do not change King Power.
+- King Power v11 is a server-authoritative military-readiness score made from controlled troops, 12 hours of sustainable troop replacement, and 25% of defensive advantage above the base troop count. City, Stronghold, camp, active-march, stationed reinforcement, and committed rally troops count exactly once. Combined rally armies are excluded from the leader's personal marching count so committed troops are never double-counted. Training bonuses affect replacement power, while Defense Stronghold and Crown Citadel percentages affect only the 1.30 base of defending soldiers and never wall power. Gold, raw city count, skills, and temporary items do not change King Power.
 - Admin-only callables `recalculatePlayerGlobalStats` and `recalculateAllPlayerGlobalStats` rebuild the aggregate and leaderboard rows when old player data needs repair.
 
 See `FIREBASE_SETUP.md` for the Firebase project steps and the planned shared-world collections.

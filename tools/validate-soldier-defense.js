@@ -86,8 +86,9 @@ for (const [source, label] of [[server, "Server"], [client, "Client"]]) {
   const stats = extractFunction(source, "getCityStats");
   assert.match(stats, /defensePercent = soldierDefenseEnabled \? 0 : level \* 2/, `${label} removed the legacy fallback needed by in-flight armies.`);
   assert.match(stats, /cityWalls = Math\.floor\(baseCityWalls \* \(1 \+ stoneworksPercent \/ 100\)\)/, `${label} wall does not use Stoneworks alone.`);
-  assert.match(stats, /BASE_TROOP_DEFENSE_POWER \* \([\s\S]*?shieldwallDisciplinePercent \+ strongholdDefenseBonusPercent/, `${label} soldier defense does not add Shieldwall and objective support against 1.30.`);
+  assert.match(stats, /BASE_TROOP_DEFENSE_POWER \* \([\s\S]*?shieldwallDisciplinePercent \+ objectiveTroopDefenseBonusPercent/, `${label} soldier defense does not add Shieldwall and objective support against 1.30.`);
   assert.match(stats, /totalDefense = soldierDefenseEnabled[\s\S]*?cityWalls \+ troopDefense/, `${label} modern total defense does not keep walls separate from soldiers.`);
+  assert.match(stats, /objectiveTroopDefenseBonusPercent/, `${label} does not expose the soldier-only objective-defense field.`);
 }
 assert.match(
   extractFunction(client, "getCityStats"),
@@ -95,6 +96,14 @@ assert.match(
   "Client city stats do not use the defined reward-camp helper."
 );
 assert.doesNotMatch(client, /\bisRewardCamp\(/, "Client references the server-only isRewardCamp helper.");
+assert.match(client, /targetFortificationAtStart\.ownerGarrisonDefensePower/, "Demo combat does not consume the already-resolved modern garrison power.");
+assert.doesNotMatch(
+  client,
+  /targetStatsAtStart\.troopDefense\s*\*\s*\(1\s*\+\s*targetStatsAtStart\.strongholdDefenseBonusPercent/,
+  "Demo combat applies objective defense a second time."
+);
+assert.match(server, /function getObjectiveTroopDefenseBonusPercent/);
+assert.match(client, /function getObjectiveTroopDefenseBonusPercent/);
 
 assert.match(server, /const DEFENSE_STRONGHOLD_BONUS_PERCENT = 8;/);
 assert.match(server, /const CROWN_CITADEL_DEFENSE_BONUS_PERCENT = 10;/);
@@ -112,10 +121,10 @@ assert.match(server, /baseWallPower[\s\S]*?stoneworksWallBonusPower/);
 assert.match(server, /baseDefenseBonusPower[\s\S]*?shieldwallDisciplineBonusPower/);
 assert.match(server, /personalObjectiveBonusPower[\s\S]*?sharedClanBonusPower/);
 
-assert.match(server, /const SKILL_PRESET_MODEL_VERSION = 3;/);
+assert.match(server, /const SKILL_PRESET_MODEL_VERSION = 4;/);
 assert.match(server, /const DEFENSE_SKILL_FREE_RESET_GRANT_VERSION = 1;/);
 assert.match(server, /function normalizeFreeSkillResetState[\s\S]*?createdAtMs < DEFENSE_SKILL_FREE_RESET_ROLLOUT_AT_MS/);
-assert.match(server, /freeResetConsumed = changed && freeSkillResetCredits > 0/);
+assert.match(server, /goldCharged: SKILL_PRESET_APPLY_COST[\s\S]*?freeResetConsumed: false/);
 assert.match(server, /freeResetConsumed = spentPoints > 0 && freeSkillResetCredits > 0/);
 assert.match(client, /Shieldwall Discipline/);
 

@@ -320,7 +320,9 @@ assert.doesNotMatch(server, /fortificationState:\s*null/, "Ownership and neutral
 assert.match(server, /capabilities:[\s\S]*?siegeCombatVersion: SIEGE_COMBAT_VERSION/);
 assert.match(client, /function renderCityFortificationStatus[\s\S]*?Wall integrity[\s\S]*?Walls absorb attack power before the garrison fights/);
 assert.match(client, /function supportsSiegeCombat[\s\S]*?getRealmCapabilityVersion\("siegeCombatVersion"\)/);
-assert.match(client, /function renderSiegeBattleSection[\s\S]*?Siege phases[\s\S]*?one physical wall/);
+assert.match(client, /function renderBattleSideDetails[\s\S]*?Wall power at battle/);
+assert.match(client, /function renderBattleWallResult[\s\S]*?Before battle[\s\S]*?After battle[\s\S]*?repair window/);
+assert.match(client, /function formatBattleWallAfterStatus[\s\S]*?Intact — 100%[\s\S]*?Breached — 0%[\s\S]*?Damaged —/);
 assert.match(client, /New scout required[\s\S]*?predates the current wall-and-garrison combat model/);
 assert.match(client, /function applyOnlineCities[\s\S]*?hasOwnProperty\.call\(online, "fortificationState"\)/);
 assert.match(client, /function applyServerCityUpdates[\s\S]*?hasOwnProperty\.call\(update, "fortificationState"\)/);

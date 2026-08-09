@@ -171,7 +171,7 @@
           <tbody id="skillGuideRows"></tbody>
         </table>
       </div>
-      <div class="guide-callout"><strong>One skill point per hero level.</strong> Presets change how earned points are allocated; they do not create extra points. Stoneworks affects only the wall, Shieldwall Discipline affects only defending soldiers, and Swordmastery is locked into an army&rsquo;s attack power when it launches.</div>
+      <div class="guide-callout"><strong>One skill point per hero level.</strong> Attack skills are Swordmastery, March Orders, and Field Medics; Defense skills are Shieldwall Discipline and Stoneworks; Utility skills are Tax Stewardship, Royal Granaries, and Guild Charters. Four presets unlock at Levels 25, 50, 75, and 100, and every confirmed Apply costs 1,000,000 gold. Presets change how earned points are allocated; they do not create extra points.</div>
     </section>
 
     <section id="battle-explorer" class="content-section guide-section battle-guide-section" aria-labelledby="battleExplorerTitle">
@@ -198,7 +198,7 @@
           <label for="battleReinforcementTroops"><span>Clan reinforcement troops</span><input id="battleReinforcementTroops" type="number" min="0" step="1000" value="0" inputmode="numeric" /></label>
           <label for="battleReinforcementBonus"><span>Reinforcement Shieldwall + objective bonus</span><input id="battleReinforcementBonus" type="number" min="0" max="100" step="1" value="0" inputmode="numeric" /><small>This combined percentage applies to that contributor&rsquo;s 1.30 soldier base. It never adds another wall.</small></label>
           <label for="battleStoneLevel"><span>Stoneworks <output id="battleStoneOutput" for="battleStoneLevel">Lv 0</output></span><input id="battleStoneLevel" type="range" min="0" max="25" step="1" value="0" /></label>
-          <label for="battleObjectiveDefense"><span>Objective defense</span><select id="battleObjectiveDefense"><option value="0">None</option><option value="4">Clan-shared Defense Stronghold +4%</option><option value="5">Clan-shared Citadel +5%</option><option value="8">Controlled Defense Stronghold +8%</option><option value="10">Controlled Citadel +10%</option><option value="14">Citadel plus half Stronghold +14%</option></select></label>
+          <label for="battleObjectiveDefense"><span>Objective soldier defense</span><select id="battleObjectiveDefense"><option value="0">None</option><option value="4">Clan-shared Defense Stronghold +4%</option><option value="5">Clan-shared Citadel +5%</option><option value="8">Controlled Defense Stronghold +8%</option><option value="10">Controlled Citadel +10%</option><option value="14">Citadel plus half Stronghold +14%</option></select></label>
           <label for="battleWallIntegrity"><span>Current wall integrity <output id="battleWallOutput" for="battleWallIntegrity">100%</output></span><input id="battleWallIntegrity" type="range" min="0" max="100" step="1" value="100" /></label>
         </fieldset>
       </form>
