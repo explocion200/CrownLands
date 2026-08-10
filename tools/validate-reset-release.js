@@ -26,7 +26,7 @@ if (!/^[a-f0-9]{64}$/.test(serverRealm.apiContractHash)) {
 }
 requireMatch(
   manifestGenerator,
-  /const contractHash = String\(release\.apiContractHash[\s\S]*contractHash,\n\s+serverSourceHash/,
+  /const contractHash = String\(release\.apiContractHash[\s\S]*contractHash,\r?\n\s+serverSourceHash/,
   "Release compatibility must use the explicit API contract instead of the environment-dependent source hash.",
 );
 if (/\.update\(serverSourceHash\)[\s\S]*JSON\.stringify\(callableNames\)/.test(manifestGenerator)) {

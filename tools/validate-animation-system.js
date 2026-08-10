@@ -160,11 +160,11 @@ requireMatch(
 );
 requireMatch(gameSource, /seenWorldAnimationEventIds/, "Cross-channel city effects need a bounded game-level dedupe ledger.");
 requireMatch(gameSource, /cityId:\s*String\(options\.cityId\s*\|\|\s*rewardCity\?\.id/, "Level-up reward bundles must retain their credited troop city ID.");
-requireMatch(gameSource, /levelUpCityId:\s*result\.troopRewardCityId/, "Combat rewards must use the server-confirmed troop destination.");
+requireMatch(gameSource, /levelUpReward:\s*result\.currentUser\.levelUpReward/, "Combat rewards must use the server-confirmed level-up receipt and troop destination.");
 requireMatch(
   serverSource,
-  /troopRewardDestinationForCaller[\s\S]*?troopRewardCityId:[\s\S]*?troopRewardCityName:/,
-  "Combat resolution must expose the caller's authoritative level-up troop destination."
+  /function finalizeLevelUpReward[\s\S]*?troopCredit\?\.cityId[\s\S]*?troopCredit\?\.cityName/,
+  "Combat resolution must embed the caller's authoritative troop destination in its level-up receipt."
 );
 requireMatch(gameSource, /requestedHost\s*=\s*host\?\.isConnected[\s\S]*?host\.open/, "Reward effects must not render inside a closed dialog.");
 requireMatch(
