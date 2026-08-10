@@ -260,7 +260,11 @@ requireMatch(styles, /@media \(max-width: 700px\)[\s\S]*\.daily-reward-tabs\s*\{
 requireMatch(styles, /@media \(max-height: 640px\) and \(orientation: landscape\)[\s\S]*\.daily-reward-tabs\s*\{[\s\S]*right:\s*5rem[\s\S]*repeat\(2,\s*34px\)[\s\S]*gap:\s*\.75rem/, "Short-landscape icon tabs no longer preserve clearance from the close button.");
 requireMatch(styles, /\.daily-login-reward-modal \.modal-close\s*\{[\s\S]*z-index:\s*6/, "The close button is not kept above reward content.");
 requireMatch(html, /daily-rewards\.css\?v=20260810-reference-refresh-v1/, "The page does not request the refreshed Daily Rewards stylesheet version.");
-requireMatch(serviceWorker, /CACHE_VERSION = "20260810-daily-mission-camp-fix-v1"[\s\S]*daily-rewards\.css\?v=20260810-reference-refresh-v1/, "The service worker does not precache the refreshed Daily Rewards stylesheet.");
+requireMatch(
+  serviceWorker,
+  /function isNetworkFirstAsset[\s\S]*?\.endsWith\("\.css"\)[\s\S]*?if \(isNetworkFirstAsset\(url\)\)[\s\S]*?networkFirst\(request, null\)/,
+  "The service worker does not runtime-cache the refreshed Daily Rewards stylesheet."
+);
 assert.doesNotMatch(html, /id="dailyMissionsSection"/, "Daily Missions are still embedded in the Player Profile UI.");
 assert.doesNotMatch(`${html}\n${styles}`, /profile-dashboard/, "The removed profile dashboard structure or compact CSS returned.");
 requireMatch(html, /economy-config\.js\?v=20260805-linear-walls-v1/, "Frontend does not load the current economy release.");

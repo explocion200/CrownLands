@@ -177,8 +177,10 @@ assert.match(applyCallable, /remainingSkillPoints: character\.skillPoints/, "App
 
 const spendStart = serverSource.indexOf("exports.spendSkillPoint");
 const resetStart = serverSource.indexOf("exports.resetSkills", spendStart);
-assert.match(serverSource.slice(spendStart, resetStart), /setActiveSkillPresetSlot\(economy\.profileAfter\.skillPresets, 0\)/, "Spending a point does not clear the active preset.");
-assert.doesNotMatch(serverSource.slice(spendStart, resetStart), /replaceSkillPresetSlot/, "Spending a point overwrites a saved preset.");
+const spendHelper = extractFunction(serverSource, "spendSkillAllocations");
+assert.match(spendHelper, /prepareEconomyCollection[\s\S]*?setActiveSkillPresetSlot\(economy\.profileAfter\.skillPresets, 0\)[\s\S]*?writePreparedEconomy/, "Skill spending does not settle production and clear the active preset atomically.");
+assert.doesNotMatch(spendHelper, /replaceSkillPresetSlot/, "Spending points overwrites a saved preset.");
+assert.match(serverSource.slice(spendStart, resetStart), /exports\.spendSkillPoints[\s\S]*?normalizeSkillSpendAllocations[\s\S]*?spendSkillAllocations/, "The batched skill callable is missing its shared authoritative path.");
 assert.match(serverSource.slice(resetStart, saveStart), /spentPoints > 0[\s\S]*?setActiveSkillPresetSlot\(economy\.profileAfter\.skillPresets, 0\)/, "Reset Skills does not clear the active preset.");
 assert.match(serverSource.slice(resetStart, saveStart), /freeResetConsumed = spentPoints > 0 && freeSkillResetCredits > 0[\s\S]*?freeSkillResetCreditsAfter/, "Reset Skills does not consume the legacy credit atomically.");
 assert.doesNotMatch(serverSource.slice(resetStart, saveStart), /replaceSkillPresetSlot/, "Reset Skills overwrites a saved preset.");
@@ -187,18 +189,21 @@ for (const endpoint of ["saveSkillPreset", "renameSkillPreset", "applySkillPrese
   assert.match(firebaseSource, new RegExp(`async function ${endpoint}\\([\\s\\S]*?callServerFunction\\("${endpoint}"`), `Missing ${endpoint} client wrapper.`);
   assert.match(firebaseSource, new RegExp(`window\\.CrownlandsOnline = \\{[\\s\\S]*?${endpoint},`), `${endpoint} is not exported to the game.`);
 }
+assert.match(firebaseSource, /async function spendSkillPoints\([\s\S]*?callServerFunction\("spendSkillPoints"/, "Missing batched skill client wrapper.");
+assert.match(firebaseSource, /window\.CrownlandsOnline = \{[\s\S]*?spendSkillPoint,[\s\S]*?spendSkillPoints,/, "The batched skill wrapper is not exported to the game.");
 assert.match(firebaseSource, /delete cleanProfile\.skillPresets;/, "Cloud-profile saves can overwrite server presets.");
 assert.match(firebaseSource, /delete cleanProfile\.freeSkillResetGrantVersion;[\s\S]*?delete cleanProfile\.freeSkillResetCredits;/, "Cloud-profile saves can overwrite server reset credits.");
 assert.match(rulesSource, /validPlayerProfileCreate[\s\S]*?'skillPresets'/, "Creation rules do not protect presets.");
-assert.match(rulesSource, /validPlayerProfileUpdate[\s\S]*?profileFieldUnchanged\('skillPresets'\)/, "Update rules do not protect presets.");
-assert.match(rulesSource, /validPlayerProfileUpdate[\s\S]*?profileFieldUnchanged\('freeSkillResetGrantVersion'\)[\s\S]*?profileFieldUnchanged\('freeSkillResetCredits'\)/, "Update rules do not protect legacy reset credits.");
+const playerProfileUpdateRule = extractFunction(rulesSource, "validPlayerProfileUpdate");
+assert.match(playerProfileUpdateRule, /affected\.hasOnly\(/, "Profile updates are not bounded by a changed-field allowlist.");
+assert.doesNotMatch(playerProfileUpdateRule, /skillPresets|freeSkillResetGrantVersion|freeSkillResetCredits/, "Client profile updates can change presets or legacy reset credits.");
 
 assert.match(gameSource, /renderSkillPresetPanel[\s\S]*?skill-preset-tabs[\s\S]*?Save Current Build[\s\S]*?data-apply-skill-preset/, "Skills UI does not include all preset controls.");
 assert.match(extractFunction(gameSource, "renderSkillPresetPanel"), /presets\.activeSlot === selected\.slot[\s\S]*?presets\.activeSlot === slot\.slot/, "The UI does not limit the active marker to one explicit preset slot.");
 assert.doesNotMatch(extractFunction(gameSource, "renderSkillPresetPanel"), /!valid \|\| active/, "The active preset cannot be deliberately applied for the configured price.");
 assert.match(extractFunction(gameSource, "renderSkillPresetPanel"), /Applying costs[\s\S]*?SKILL_PRESET_APPLY_COST[\s\S]*?Apply · \$\{formatNumber\(SKILL_PRESET_APPLY_COST\)\}/, "The preset panel does not show the unconditional price.");
-assert.match(extractFunction(gameSource, "renderProfileSkills"), /isSkillPresetNameEditorActive\(\)[\s\S]*?return;/, "Periodic profile refreshes can replace the focused preset name input and dismiss the mobile keyboard.");
-assert.match(extractFunction(gameSource, "bindSkillPresetControls"), /event\.currentTarget\.blur\(\)[\s\S]*?renameSkillPreset/, "Submitting a preset rename with Enter does not intentionally release the keyboard before refreshing.");
+assert.match(extractFunction(gameSource, "renderProfileSkills"), /nextPresetSignature !== skillPresetMarkupSignature && !isSkillPresetNameEditorActive\(\)/, "Periodic profile refreshes can replace the focused preset name input and dismiss the mobile keyboard.");
+assert.match(extractFunction(gameSource, "bindSkillPresetControls"), /event\.target\.blur\(\)[\s\S]*?renameSkillPreset/, "Submitting a preset rename with Enter does not intentionally release the keyboard before refreshing.");
 assert.match(extractFunction(gameSource, "confirmSkillPresetAction"), /Overwrite[\s\S]*?Every preset application costs[\s\S]*?including an active or identical build/, "Preset confirmation does not explain unconditional charging.");
 assert.match(gameSource, /applySavedSkillPreset[\s\S]*?usesServerEconomyAuthority[\s\S]*?api\.applySkillPreset[\s\S]*?state\.gold =/, "Local and server-authoritative application paths are not both present.");
 assert.doesNotMatch(extractFunction(gameSource, "applySavedSkillPreset"), /already active|freeResetAvailable|allocationChanges/, "The client can bypass the unconditional preset price.");
@@ -207,6 +212,9 @@ assert.match(gameSource, /const SKILL_GROUPS = Object\.freeze\([\s\S]*?Attack[\s
 assert.match(stylesSource, /\.skill-preset-tabs[\s\S]*?grid-template-columns: repeat\(4,[\s\S]*?@media \(max-width: 640px\)[\s\S]*?\.skill-preset-tabs \{ grid-template-columns: repeat\(2,/, "Four preset tabs are not responsive as a mobile 2x2 grid.");
 assert.match(gameSource, /renderSkillPresetAllocation[\s\S]*?SKILL_GROUPS\.map[\s\S]*?skill-preset-allocation-group/, "Saved allocations are not grouped by role.");
 assert.match(extractFunction(gameSource, "renderProfileSkills"), /SKILL_GROUPS\.map[\s\S]*?profile-skill-group/, "The current skill list is not grouped by role.");
+assert.match(extractFunction(gameSource, "flushSkillSpendQueue"), /pendingSkillSpendAllocations[\s\S]*?spendSkillBatchWithLegacyFallback[\s\S]*?renderCities: false[\s\S]*?renderProfile: false/, "Queued skill spending is not batched or is forcing broad renders.");
+assert.doesNotMatch(extractFunction(gameSource, "buySkill"), /skillActionInFlight = true|renderAll\(/, "A skill-point click still blocks the full Skills UI or forces a full map render.");
+assert.match(extractFunction(gameSource, "updateProfileSkillState"), /setTextIfChanged[\s\S]*?button\.disabled[\s\S]*?row\?\.classList\.toggle/, "Skill clicks are not patched into stable row nodes.");
 
 assert.match(howToSource, /preset tabs unlock at Hero Levels 25, 50, 75, and 100[\s\S]*?Every confirmed[\s\S]*?1,000,000 gold/i);
 assert.match(gameRulesSource, /preset slots unlock at Hero Levels 25, 50, 75, and 100[\s\S]*?Every confirmed Apply costs 1,000,000 gold[\s\S]*?never overwrites a preset automatically/i);

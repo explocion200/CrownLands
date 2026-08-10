@@ -8528,6 +8528,18 @@ button.inventory-slot {
 .profile-skill-summary strong { display: block; }
 .profile-skill-summary span { overflow: hidden; color: #9ed5ff; font-size: .68rem; font-weight: 900; text-overflow: ellipsis; white-space: nowrap; }
 .profile-skill-summary strong { overflow: hidden; color: #fff4c8; font-size: 1rem; text-overflow: ellipsis; white-space: nowrap; }
+.profile-skill-summary [data-skill-sync-status] {
+  display: block;
+  margin-top: .08rem;
+  color: #a8ec84;
+  font-size: .6rem;
+  font-weight: 850;
+}
+.profile-skill-summary [data-skill-sync-status][hidden] { display: none; }
+.profile-skill-list .skill-row.syncing {
+  border-color: rgba(137,215,126,.48);
+  box-shadow: inset 0 0 0 1px rgba(137,215,126,.08);
+}
 .skill-preset-panel {
   display: grid;
   gap: .45rem;

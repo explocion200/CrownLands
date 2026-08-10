@@ -185,9 +185,9 @@ requires(
   /match \/reinforcementBattleReceipts\/\{resetId\}\/entries\/\{receiptId\}[\s\S]*?allow read, create, update, delete: if false/,
   "Battle settlement receipts are not server-only."
 );
-requires(
-  rules,
-  /profileFieldUnchanged\('activeClanReinforcementTargets'\)[\s\S]*?profileFieldUnchanged\('activeClanReinforcementAssignments'\)[\s\S]*?profileFieldUnchanged\('clanReinforcementLimitVersion'\)/,
+assert.doesNotMatch(
+  rules.slice(rules.indexOf("function validPlayerProfileUpdate"), rules.indexOf("function ownsCityOwnerIdentity")),
+  /'activeClanReinforcementTargets'|'activeClanReinforcementAssignments'|'clanReinforcementLimitVersion'/,
   "Clients can mutate the server-authoritative reinforcement slot state."
 );
 requires(

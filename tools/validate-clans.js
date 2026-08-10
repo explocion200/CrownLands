@@ -114,8 +114,11 @@ requires(rules, /match \/memberRewards\/\{uid\}[\s\S]*?request\.auth\.uid == uid
 requires(rules, /match \/giftActivity\/\{resetId\}[\s\S]*?allow get: if clanMember\(clanId\)[\s\S]*?resetId == currentResetGeneration\(\)[\s\S]*?allow list: if false[\s\S]*?allow create, update, delete: if false;/, "Clan gift donor history is not restricted to current clan members and the active world.");
 requires(rules, /match \/questCaptureReceipts\/\{eventId\}[\s\S]*?allow read, create, update, delete: if false;/, "Clan capture receipts are not server-only.");
 requires(rules, /match \/messages\/\{messageId\}[\s\S]*?allow read, create, update, delete: if false;/, "Legacy clan messages are still accessible.");
-requires(rules, /profileFieldUnchanged\('clanId'\)/, "Players can mutate canonical clan membership directly.");
-requires(rules, /profileFieldUnchanged\('clanIdentityRevision'\)/, "Players can mutate the server-owned clan identity revision.");
+assert.doesNotMatch(
+  rules.slice(rules.indexOf("function validPlayerProfileUpdate"), rules.indexOf("function ownsCityOwnerIdentity")),
+  /'clanId'|'clanIdentityRevision'/,
+  "Players can mutate canonical clan membership or its server-owned identity revision directly."
+);
 
 requires(firebaseClient, /createClan[\s\S]*?joinOpenClan[\s\S]*?reviewClanApplication[\s\S]*?sendClanGift[\s\S]*?claimClanGiftPool[\s\S]*?claimClanQuestReward/, "Firebase client does not expose clan membership, gift, and quest callables.");
 requires(firebaseClient, /function subscribeClanSocialState[\s\S]*?memberRewards[\s\S]*?worldBenefits[\s\S]*?function subscribeClanQuestProgress/, "Firebase client is missing realtime clan gift and benefit state.");

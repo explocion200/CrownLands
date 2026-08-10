@@ -284,9 +284,9 @@ requires(
   /match \/battleSnapshots\/\{resetId\}\/entries\/\{battleId\}[\s\S]*?request\.auth\.uid in resource\.data\.participantUids[\s\S]*?allow create, update, delete: if false/,
   "Battle snapshots are not restricted to battle participants."
 );
-requires(
-  rules,
-  /profileFieldUnchanged\('clanObjectiveAccrual'\)[\s\S]*?profileFieldUnchanged\('pendingClanObjectiveAccrual'\)/,
+assert.doesNotMatch(
+  extractFunction(rules, "validPlayerProfileUpdate"),
+  /'clanObjectiveAccrual'|'pendingClanObjectiveAccrual'/,
   "Clients can mutate server-authoritative objective accrual baselines."
 );
 requires(

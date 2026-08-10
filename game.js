@@ -25,6 +25,7 @@ const LEGACY_STORAGE_KEYS = [];
 const SAVE_EVERY_SECONDS = 30;
 const ONLINE_SAVE_SECONDS = 20;
 const ONLINE_SAVE_SLOT = `default-${RESET_GENERATION}`;
+const ONLINE_SAVE_RETRY_DELAYS_MS = [2000, 4000, 8000, 16000, 30000];
 const ONLINE_WORLD_ID = String(REALM_CONFIG.worldId || `main-${RESET_GENERATION}`);
 const ONLINE_LEGACY_ISLAND_ID = ONLINE_WORLD_ID;
 const GAME_SERVER_ID = "crown-marches";
@@ -2700,6 +2701,16 @@ let saveTimer = 0;
 let onlineSaveTimer = 0;
 let onlineSaveQueued = false;
 let onlineSaveInFlight = false;
+let onlineSavePromise = null;
+let onlineSaveRetryTimer = 0;
+let onlineSaveRetryAtMs = 0;
+let onlineSaveRetryIndex = 0;
+let onlineSaveAuthUid = "";
+let onlineSaveGeneration = 0;
+const onlineSaveTargets = {
+  profile: { queued: false, blocked: false },
+  snapshot: { queued: false, blocked: false },
+};
 let onlineLastSaveAt = 0;
 let onlineLastError = "";
 let verifiedRealmInfo = null;
@@ -2881,6 +2892,12 @@ let rewardedAdShopCountdownTimer = 0;
 let googlePublisherServicesEnabled = false;
 let googlePublisherTagLoadPromise = null;
 let skillActionInFlight = false;
+const pendingSkillSpendAllocations = new Map();
+let activeSkillSpendBatch = null;
+let skillSpendFlushTimer = 0;
+let skillsViewMarkupReady = false;
+let skillsViewEventsBound = false;
+let skillPresetMarkupSignature = "";
 let selectedSkillPresetSlot = 1;
 let serverCityUpgradeInFlightIds = new Set();
 let serverCityRelinquishInFlightIds = new Set();
@@ -7699,7 +7716,7 @@ function applyGlobalStatsSnapshot(raw = null, options = {}) {
     updateIslandSwitcherUi();
     renderCities();
     if (modal.open && modal.classList.contains("city-list-modal")) renderCityListModal();
-    if (profileScreen?.classList.contains("open")) renderProfileScreen();
+    if (options.renderProfile !== false && profileScreen?.classList.contains("open")) renderProfileScreen();
   }
   return changed;
 }
@@ -11647,7 +11664,7 @@ function applyServerEconomyResult(result = null, options = {}) {
     if (modal.open && modal.classList.contains("shop-modal")) renderShopModal();
     if (modal.open && modal.classList.contains("inventory-modal")) showInventoryModal();
     if (modal.open && modal.classList.contains("city-list-modal")) renderCityListModal();
-    if (profileScreen?.classList.contains("open")) renderProfileScreen();
+    if (options.renderProfile !== false && profileScreen?.classList.contains("open")) renderProfileScreen();
   }
   return changed;
 }
@@ -11771,33 +11788,27 @@ function getPlayerCloudStateSnapshot() {
 
 function stripServerEconomyProfileFields(profile = {}) {
   if (!usesServerEconomyAuthority()) return profile;
-  const clean = { ...profile };
-  delete clean.gold;
-  delete clean.goldFloat;
-  delete clean.shopItems;
-  delete clean.itemEffects;
-  delete clean.itemPurchaseCooldowns;
-  delete clean.dailyLoginReward;
-  delete clean.offlineProductionCities;
-  delete clean.harvestBonuses;
-  delete clean.harvestSpawnTimer;
-  delete clean.harvestNextSpawnAtMs;
-  delete clean.harvestNextBonusType;
-  delete clean.character;
-  delete clean.upgrades;
-  delete clean.skillPresets;
-  delete clean.mainCityId;
-  delete clean.mainIslandId;
-  delete clean.mainRegionId;
-  delete clean.mainCityChangedAtMs;
-  delete clean.lastCityRelinquishedAtMs;
-  delete clean.globalStats;
-  delete clean.kingPower;
-  delete clean.cityCount;
-  delete clean.reportsViewedAtMs;
-  delete clean.realmAnnouncementSeenThroughMs;
-  delete clean.lastRealmAnnouncementEventId;
-  return clean;
+  const clientWritableFields = [
+    "version",
+    "snapshotKind",
+    "activeIslandId",
+    "activeRegionId",
+    "playerName",
+    "flag",
+    "daily",
+    "scoutReports",
+    "battleReports",
+    "marchPercent",
+    "lastSelectedOwnedCityId",
+    "gameSeconds",
+    "localGameSeconds",
+    "lastRealTimeMs",
+    "lastSeenAtMs",
+  ];
+  return clientWritableFields.reduce((clean, field) => {
+    if (profile[field] !== undefined) clean[field] = profile[field];
+    return clean;
+  }, {});
 }
 
 function getPlayerProfileSnapshot() {
@@ -12065,36 +12076,129 @@ async function prepareOfflineProgressFromProfile(profile = null) {
 function queueOnlineSave() {
   const api = getOnlineApi();
   if (!api?.isConfigured?.() || !api?.isSignedIn?.()) return;
-  onlineSaveQueued = true;
+  Object.values(onlineSaveTargets).forEach(target => {
+    if (!target.blocked) target.queued = true;
+  });
+  onlineSaveQueued = Object.values(onlineSaveTargets).some(target => target.queued && !target.blocked);
+}
+
+function getOnlineSaveErrorCode(error = null) {
+  return String(error?.code || "").toLowerCase().replace(/^firestore\//, "");
+}
+
+function isPermanentOnlineSaveError(error = null) {
+  return getOnlineSaveErrorCode(error) === "permission-denied";
+}
+
+function clearOnlineSaveRetry() {
+  onlineSaveRetryIndex = 0;
+  onlineSaveRetryAtMs = 0;
+  if (onlineSaveRetryTimer) window.clearTimeout(onlineSaveRetryTimer);
+  onlineSaveRetryTimer = 0;
+}
+
+function scheduleOnlineSaveRetry() {
+  if (onlineSaveRetryTimer || !onlineSaveQueued) return;
+  const baseDelay = ONLINE_SAVE_RETRY_DELAYS_MS[Math.min(onlineSaveRetryIndex, ONLINE_SAVE_RETRY_DELAYS_MS.length - 1)];
+  const delayMs = Math.round(baseDelay * (0.9 + Math.random() * 0.2));
+  onlineSaveRetryIndex += 1;
+  onlineSaveRetryAtMs = Date.now() + delayMs;
+  onlineSaveRetryTimer = window.setTimeout(() => {
+    onlineSaveRetryTimer = 0;
+    onlineSaveRetryAtMs = 0;
+    flushOnlineSave();
+  }, delayMs);
+}
+
+function resetOnlineSaveCircuitForAuth(uid = "") {
+  const nextUid = String(uid || "");
+  if (nextUid === onlineSaveAuthUid) return;
+  onlineSaveAuthUid = nextUid;
+  onlineSaveGeneration += 1;
+  clearOnlineSaveRetry();
+  onlineSavePromise = null;
+  onlineSaveInFlight = false;
+  onlineSaveQueued = false;
+  Object.values(onlineSaveTargets).forEach(target => {
+    target.queued = false;
+    target.blocked = false;
+  });
 }
 
 async function flushOnlineSave(force = false) {
-  if (!state || onlineSaveInFlight) return false;
+  if (!state) return false;
+  if (onlineSaveInFlight) return onlineSavePromise || false;
   const api = getOnlineApi();
   if (!api?.isConfigured?.() || !api?.isSignedIn?.()) return false;
   if (!force && !onlineSaveQueued) return false;
+  if (onlineSaveRetryAtMs > Date.now()) return false;
+
+  const requestedTargets = Object.entries(onlineSaveTargets)
+    .filter(([, target]) => !target.blocked && (force || target.queued))
+    .filter(([name]) => name === "profile" ? typeof api.savePlayerProfile === "function" : typeof api.saveGameSnapshot === "function")
+    .map(([name]) => name);
+  if (!requestedTargets.length) return false;
 
   onlineSaveInFlight = true;
-  onlineSaveQueued = false;
-  try {
+  const saveGeneration = onlineSaveGeneration;
+  requestedTargets.forEach(name => {
+    onlineSaveTargets[name].queued = false;
+  });
+  onlineSaveQueued = Object.values(onlineSaveTargets).some(target => target.queued && !target.blocked);
+  const operationPromise = (async () => {
     const cloudState = getPlayerCloudStateSnapshot();
-    const writes = [api.savePlayerProfile(stripServerEconomyProfileFields(cloudState))];
-    if (typeof api.saveGameSnapshot === "function") writes.push(api.saveGameSnapshot(cloudState, ONLINE_SAVE_SLOT));
-    await Promise.all(writes);
-    await syncOwnedCitiesToOnline();
-    publishKingPowerLeaderboard();
-    onlineLastSaveAt = Date.now();
-    onlineLastError = "";
+    const writes = requestedTargets.map(name => ({
+      name,
+      promise: name === "profile"
+        ? api.savePlayerProfile(stripServerEconomyProfileFields(cloudState))
+        : api.saveGameSnapshot(cloudState, ONLINE_SAVE_SLOT),
+    }));
+    const results = await Promise.allSettled(writes.map(write => write.promise));
+    if (saveGeneration !== onlineSaveGeneration) return false;
+    let successCount = 0;
+    let failureCount = 0;
+    let transientFailure = false;
+    let lastFailure = null;
+    results.forEach((result, index) => {
+      const targetName = writes[index].name;
+      const target = onlineSaveTargets[targetName];
+      if (result.status === "fulfilled") {
+        successCount += 1;
+        return;
+      }
+      failureCount += 1;
+      lastFailure = result.reason;
+      if (isPermanentOnlineSaveError(result.reason)) {
+        target.blocked = true;
+        target.queued = false;
+        console.warn(`Cloud ${targetName} save paused after a permission failure`, result.reason);
+        showToast(`Cloud ${targetName} sync paused for this session.`);
+      } else {
+        transientFailure = true;
+        target.queued = true;
+        console.warn(`Cloud ${targetName} save failed`, result.reason);
+      }
+    });
+    onlineSaveQueued = Object.values(onlineSaveTargets).some(target => target.queued && !target.blocked);
+    if (transientFailure) scheduleOnlineSaveRetry();
+    else clearOnlineSaveRetry();
+    if (successCount > 0) {
+      await syncOwnedCitiesToOnline();
+      publishKingPowerLeaderboard();
+      onlineLastSaveAt = Date.now();
+    }
+    onlineLastError = transientFailure ? lastFailure?.message || String(lastFailure || "Cloud save failed") : "";
     updateOnlineUi();
-    return true;
-  } catch (error) {
-    onlineLastError = error?.message || String(error);
-    onlineSaveQueued = true;
-    updateOnlineUi();
-    console.warn("Cloud save failed", error);
-    return false;
+    return failureCount === 0;
+  })();
+  onlineSavePromise = operationPromise;
+  try {
+    return await operationPromise;
   } finally {
-    onlineSaveInFlight = false;
+    if (saveGeneration === onlineSaveGeneration && onlineSavePromise === operationPromise) {
+      onlineSaveInFlight = false;
+      onlineSavePromise = null;
+    }
   }
 }
 
@@ -22167,6 +22271,7 @@ function closeProfileScreen() {
   profileScreen.setAttribute("aria-hidden", "true");
   flagDraft = null;
   activeProfileTab = "profile";
+  skillPresetMarkupSignature = "";
   cancelProfileNameEdit();
 }
 
@@ -24197,6 +24302,14 @@ function renderProfileScreen() {
   updateProfileTabHeader();
   state.character = normalizeCharacterProgress(state.character);
   state.flag = normalizeFlag(state.flag);
+  if (activeProfileTab === "skills") {
+    renderProfileSkills();
+    return;
+  }
+  if (activeProfileTab !== "profile") {
+    if (activeProfileTab === "settings") updatePushAlertsUi();
+    return;
+  }
   const summary = getKingdomSummary();
   const xpRequired = getXpRequiredForLevel(state.character.level);
   const xpProgress = clamp(state.character.xp / Math.max(1, xpRequired), 0, 1);
@@ -24235,7 +24348,6 @@ function renderProfileScreen() {
   applyFlagToElement(profileKingdomFlag, state.flag);
   renderProfileClanAffiliation();
   updatePushAlertsUi();
-  if (activeProfileTab === "skills") renderProfileSkills();
 }
 
 function getSkillPresetSlot(slot = selectedSkillPresetSlot) {
@@ -24268,11 +24380,13 @@ function renderSkillPresetPanel() {
   const level = Math.max(1, Math.floor(Number(state?.character?.level) || 1));
   const presets = normalizeSkillPresets(state?.skillPresets);
   state.skillPresets = presets;
+  const controlsBlocked = skillActionInFlight || isSkillSpendSyncing();
   const selected = presets.slots.find(slot => slot.slot === selectedSkillPresetSlot) || presets.slots[0];
   selectedSkillPresetSlot = selected.slot;
   const unlocked = isSkillPresetUnlocked(selected, state.character);
   const valid = selected.saved && isValidLocalSkillPresetAllocation(selected.upgrades, state.character);
   const active = valid
+    && !isSkillSpendSyncing()
     && presets.activeSlot === selected.slot
     && skillPresetAllocationsMatch(state.upgrades, selected.upgrades);
   const remainingAfterApply = valid ? getAvailableSkillPoints(state.character, selected.upgrades) : 0;
@@ -24291,6 +24405,7 @@ function renderSkillPresetPanel() {
         ${presets.slots.map(slot => {
           const slotUnlocked = level >= slot.unlockLevel;
           const slotActive = slot.saved
+            && !isSkillSpendSyncing()
             && presets.activeSlot === slot.slot
             && isValidLocalSkillPresetAllocation(slot.upgrades, state.character)
             && skillPresetAllocationsMatch(state.upgrades, slot.upgrades);
@@ -24304,8 +24419,8 @@ function renderSkillPresetPanel() {
         <header>
           <div><strong>${escapeHtml(selected.name)}</strong><small>${escapeHtml(status)}</small></div>
           ${unlocked ? `<div class="skill-preset-rename">
-            <input id="skillPresetNameInput" type="text" maxlength="${SKILL_PRESET_NAME_MAX_LENGTH}" value="${escapeHtml(selected.name)}" aria-label="Rename preset ${selected.slot}" ${skillActionInFlight ? "disabled" : ""}>
-            <button type="button" data-rename-skill-preset="${selected.slot}" ${skillActionInFlight ? "disabled" : ""}>Rename</button>
+            <input id="skillPresetNameInput" type="text" maxlength="${SKILL_PRESET_NAME_MAX_LENGTH}" value="${escapeHtml(selected.name)}" aria-label="Rename preset ${selected.slot}" ${controlsBlocked ? "disabled" : ""}>
+            <button type="button" data-rename-skill-preset="${selected.slot}" ${controlsBlocked ? "disabled" : ""}>Rename</button>
           </div>` : ""}
         </header>
         ${!unlocked
@@ -24316,36 +24431,94 @@ function renderSkillPresetPanel() {
             ${selected.saved && valid ? `<p class="skill-preset-points">Applying costs ${formatNumber(SKILL_PRESET_APPLY_COST)} gold and leaves ${formatNumber(remainingAfterApply)} earned ${remainingAfterApply === 1 ? "point" : "points"} unspent.</p>` : ""}
             ${selected.saved && !valid ? `<p class="skill-preset-error">This saved build no longer matches the current skill limits. Save it again before applying.</p>` : ""}
             <footer>
-              <button type="button" class="profile-secondary-btn" data-save-skill-preset="${selected.slot}" ${skillActionInFlight ? "disabled" : ""}>Save Current Build</button>
-              <button type="button" class="profile-primary-btn" data-apply-skill-preset="${selected.slot}" ${skillActionInFlight || !selected.saved || !valid ? "disabled" : ""}>Apply · ${formatNumber(SKILL_PRESET_APPLY_COST)}</button>
+              <button type="button" class="profile-secondary-btn" data-save-skill-preset="${selected.slot}" ${controlsBlocked ? "disabled" : ""}>Save Current Build</button>
+              <button type="button" class="profile-primary-btn" data-apply-skill-preset="${selected.slot}" ${controlsBlocked || !selected.saved || !valid ? "disabled" : ""}>Apply · ${formatNumber(SKILL_PRESET_APPLY_COST)}</button>
             </footer>`}
       </article>
     </section>`;
 }
 
+function isSkillSpendSyncing() {
+  return Boolean(activeSkillSpendBatch || pendingSkillSpendAllocations.size || skillSpendFlushTimer);
+}
+
+function getSkillSpendOverlayPoints(skill = "") {
+  const activePoints = activeSkillSpendBatch?.allocations
+    ?.find(allocation => allocation.skillId === skill)?.points || 0;
+  return activePoints + (pendingSkillSpendAllocations.get(skill) || 0);
+}
+
+function getDisplayedSkillUpgrades() {
+  const upgrades = normalizeUpgrades(state?.upgrades, state?.version);
+  SKILL_ORDER.forEach(skill => {
+    upgrades[skill] = normalizeSkillUpgradeLevel(skill, upgrades[skill] + getSkillSpendOverlayPoints(skill));
+  });
+  return upgrades;
+}
+
+function getDisplayedSkillPoints() {
+  return getAvailableSkillPoints(state?.character, getDisplayedSkillUpgrades());
+}
+
+function getDisplayedSkillLevel(skill = "") {
+  return normalizeSkillUpgradeLevel(skill, getDisplayedSkillUpgrades()[skill]);
+}
+
+function isDisplayedSkillAtCap(skill = "") {
+  return getDisplayedSkillLevel(skill) >= getSkillMaxLevel(skill);
+}
+
+function getSkillPresetMarkupSignature() {
+  const presets = normalizeSkillPresets(state?.skillPresets);
+  const activeAllocation = presets.activeSlot > 0
+    ? normalizeSkillPresetAllocation(state?.upgrades)
+    : null;
+  return JSON.stringify({
+    level: Math.max(1, Math.floor(Number(state?.character?.level) || 1)),
+    selectedSkillPresetSlot,
+    controlsBlocked: skillActionInFlight || isSkillSpendSyncing(),
+    presets,
+    activeAllocation,
+  });
+}
+
 function bindSkillPresetControls() {
-  skillsView?.querySelectorAll("[data-skill-preset-slot]").forEach(button => {
-    button.addEventListener("click", () => {
+  if (!skillsView || skillsViewEventsBound) return;
+  skillsViewEventsBound = true;
+  skillsView.addEventListener("click", event => {
+    const button = event.target.closest("button");
+    if (!button || !skillsView.contains(button)) return;
+    if (button.dataset.skill) {
+      buySkill(button.dataset.skill);
+      return;
+    }
+    if (button.dataset.skillPresetSlot) {
       selectedSkillPresetSlot = Math.max(1, Math.min(SKILL_PRESET_SLOTS.length, Math.floor(Number(button.dataset.skillPresetSlot) || 1)));
+      skillPresetMarkupSignature = "";
       renderProfileSkills();
-    });
+      return;
+    }
+    if (button.dataset.renameSkillPreset) {
+      const slot = Math.floor(Number(button.dataset.renameSkillPreset) || 0);
+      renameSkillPreset(slot, skillsView.querySelector("#skillPresetNameInput")?.value || "");
+      return;
+    }
+    if (button.dataset.saveSkillPreset) {
+      saveCurrentSkillPreset(Math.floor(Number(button.dataset.saveSkillPreset) || 0));
+      return;
+    }
+    if (button.dataset.applySkillPreset) {
+      applySavedSkillPreset(Math.floor(Number(button.dataset.applySkillPreset) || 0));
+      return;
+    }
+    if (button.id === "resetSkillsBtn") resetSkills();
   });
-  skillsView?.querySelector("[data-rename-skill-preset]")?.addEventListener("click", event => {
-    const slot = Math.floor(Number(event.currentTarget.dataset.renameSkillPreset) || 0);
-    renameSkillPreset(slot, skillsView.querySelector("#skillPresetNameInput")?.value || "");
-  });
-  skillsView?.querySelector("[data-save-skill-preset]")?.addEventListener("click", event => {
-    saveCurrentSkillPreset(Math.floor(Number(event.currentTarget.dataset.saveSkillPreset) || 0));
-  });
-  skillsView?.querySelector("[data-apply-skill-preset]")?.addEventListener("click", event => {
-    applySavedSkillPreset(Math.floor(Number(event.currentTarget.dataset.applySkillPreset) || 0));
-  });
-  skillsView?.querySelector("#skillPresetNameInput")?.addEventListener("keydown", event => {
-    if (event.key !== "Enter") return;
+  skillsView.addEventListener("keydown", event => {
+    if (event.key !== "Enter" || event.target?.id !== "skillPresetNameInput") return;
     event.preventDefault();
     const slot = getSkillPresetSlot()?.slot || 0;
-    event.currentTarget.blur();
-    renameSkillPreset(slot, event.currentTarget.value);
+    event.target.blur();
+    renameSkillPreset(slot, event.target.value);
   });
 }
 
@@ -24354,34 +24527,65 @@ function isSkillPresetNameEditorActive() {
   return Boolean(input && document.activeElement === input);
 }
 
-function renderProfileSkills() {
-  if (!state || !skillsView || skillsView.hidden) return;
-  // The HUD refreshes the open profile every second. Replacing this input while
-  // it is focused dismisses mobile keyboards and discards the in-progress name.
-  if (isSkillPresetNameEditorActive()) return;
-  state.character = normalizeCharacterProgress(state.character);
-  state.upgrades = normalizeUpgrades(state.upgrades, state.version);
-  reconcileSkillPoints(state.character, state.upgrades);
-  const points = Math.max(0, Math.floor(Number(state.character.skillPoints) || 0));
-  const spentPoints = getSpentSkillPoints();
+function updateProfileSkillState() {
+  if (!state || !skillsView) return;
+  const displayedUpgrades = getDisplayedSkillUpgrades();
+  const points = getAvailableSkillPoints(state.character, displayedUpgrades);
+  const spentPoints = getSpentSkillPoints(displayedUpgrades);
   const freeSkillResetCredits = Math.max(0, Math.floor(Number(state.freeSkillResetCredits) || 0));
   const resetPriceText = freeSkillResetCredits > 0
     ? `Your legacy balance reset is free. ${formatNumber(freeSkillResetCredits)} credit remains.`
     : `Costs ${formatNumber(SKILL_RESET_COST)} gold.`;
-  const canResetSkills = !skillActionInFlight
-    && spentPoints > 0;
-  skillsView.innerHTML = `
+  const syncing = isSkillSpendSyncing();
+  setTextIfChanged(skillsView.querySelector("[data-skill-points]"), formatNumber(points));
+  setTextIfChanged(skillsView.querySelector("[data-skill-spent]"), formatNumber(spentPoints));
+  const syncStatus = skillsView.querySelector("[data-skill-sync-status]");
+  if (syncStatus) {
+    syncStatus.hidden = !syncing;
+    setTextIfChanged(syncStatus, activeSkillSpendBatch ? "Syncing with the realm…" : "Preparing skill update…");
+  }
+  const resetCopy = skillsView.querySelector("[data-skill-reset-copy]");
+  setTextIfChanged(resetCopy, `${resetPriceText} Returns ${formatNumber(spentPoints)} spent ${spentPoints === 1 ? "point" : "points"}.`);
+  const resetButton = skillsView.querySelector("#resetSkillsBtn");
+  if (resetButton) resetButton.disabled = skillActionInFlight || syncing || spentPoints < 1;
+  SKILL_ORDER.forEach(skill => {
+    const config = SKILL_CONFIG[skill];
+    const level = normalizeSkillUpgradeLevel(skill, displayedUpgrades[skill]);
+    const rawPercent = level * config.percentPerLevel;
+    const percent = Number.isFinite(config.maxPercent) ? Math.min(rawPercent, config.maxPercent) : rawPercent;
+    const capped = level >= getSkillMaxLevel(skill);
+    const row = skillsView.querySelector(`[data-skill-row="${skill}"]`);
+    const label = row?.querySelector("[data-skill-level]");
+    const button = row?.querySelector("button[data-skill]");
+    setTextIfChanged(label, `${config.label} Lv ${level} - +${percent}%`);
+    if (button) {
+      button.disabled = skillActionInFlight || points < 1 || capped;
+      setTextIfChanged(button, capped ? "Max" : "+1");
+    }
+    row?.classList.toggle("syncing", getSkillSpendOverlayPoints(skill) > 0);
+  });
+}
+
+function renderProfileSkills() {
+  if (!state || !skillsView || skillsView.hidden) return;
+  state.character = normalizeCharacterProgress(state.character);
+  state.upgrades = normalizeUpgrades(state.upgrades, state.version);
+  reconcileSkillPoints(state.character, state.upgrades);
+  const needsMarkup = !skillsViewMarkupReady || !skillsView.querySelector("[data-skill-points]");
+  if (needsMarkup) {
+    skillsViewMarkupReady = true;
+    skillsView.innerHTML = `
     <div class="profile-skill-summary" aria-label="Hero skill progress">
-      <div><span>Skill points</span><strong>${formatNumber(points)}</strong></div>
-      <div><span>Points spent</span><strong>${formatNumber(spentPoints)}</strong></div>
+      <div><span>Skill points</span><strong data-skill-points></strong><small data-skill-sync-status hidden></small></div>
+      <div><span>Points spent</span><strong data-skill-spent></strong></div>
     </div>
-    ${renderSkillPresetPanel()}
+    <div data-skill-preset-panel-root>${renderSkillPresetPanel()}</div>
     <section class="profile-skill-reset">
       <div>
         <strong>Reset skills</strong>
-        <small>${resetPriceText} Returns ${formatNumber(spentPoints)} spent ${spentPoints === 1 ? "point" : "points"}.</small>
+        <small data-skill-reset-copy></small>
       </div>
-      <button id="resetSkillsBtn" type="button" ${canResetSkills ? "" : "disabled"}>Reset</button>
+      <button id="resetSkillsBtn" type="button">Reset</button>
     </section>
     <div class="profile-skill-list" aria-label="Skills by role">
       ${SKILL_GROUPS.map(group => `
@@ -24392,11 +24596,17 @@ function renderProfileSkills() {
       `).join("")}
     </div>
   `;
-  skillsView.querySelectorAll("button[data-skill]").forEach(buttonElement => {
-    buttonElement.addEventListener("click", () => buySkill(buttonElement.dataset.skill));
-  });
-  bindSkillPresetControls();
-  skillsView.querySelector("#resetSkillsBtn")?.addEventListener("click", resetSkills);
+    skillPresetMarkupSignature = getSkillPresetMarkupSignature();
+    bindSkillPresetControls();
+  } else {
+    const nextPresetSignature = getSkillPresetMarkupSignature();
+    if (nextPresetSignature !== skillPresetMarkupSignature && !isSkillPresetNameEditorActive()) {
+      const presetRoot = skillsView.querySelector("[data-skill-preset-panel-root]");
+      if (presetRoot) presetRoot.innerHTML = renderSkillPresetPanel();
+      skillPresetMarkupSignature = nextPresetSignature;
+    }
+  }
+  updateProfileSkillState();
 }
 
 function beginProfileNameEdit() {
@@ -32423,16 +32633,11 @@ function showEmpireModal() {
 
 function skillRow(key) {
   const config = SKILL_CONFIG[key];
-  const level = getSkillLevel(key);
-  const percent = getSkillPercent(key);
   const capText = Number.isFinite(config.maxPercent) ? `, cap ${config.maxPercent}%` : "";
-  const capped = isSkillAtCap(key);
-  const disabled = skillActionInFlight || Math.max(0, Math.floor(Number(state.character?.skillPoints) || 0)) < 1 || capped ? "disabled" : "";
-  const buttonLabel = capped ? "Max" : "+1";
   return `
-    <div class="skill-row">
-      <div><strong>${config.label} Lv ${level} - +${percent}%</strong><br><small>${config.description}${capText}</small></div>
-      <button data-skill="${key}" ${disabled}>${buttonLabel}</button>
+    <div class="skill-row" data-skill-row="${key}">
+      <div><strong data-skill-level></strong><br><small>${config.description}${capText}</small></div>
+      <button data-skill="${key}">+1</button>
     </div>
   `;
 }
@@ -32480,6 +32685,10 @@ function confirmSkillPresetAction(slotNumber = 0, action = "apply") {
 
 async function renameSkillPreset(slotNumber = 0, value = "") {
   if (!state || skillActionInFlight) return false;
+  if (isSkillSpendSyncing()) {
+    showToast("Wait for skill points to finish syncing.");
+    return false;
+  }
   const slot = getSkillPresetSlot(slotNumber);
   if (!slot || !isSkillPresetUnlocked(slot, state.character)) {
     showToast(slot ? `Preset ${slot.slot} unlocks at Hero Level ${slot.unlockLevel}.` : "Choose a valid preset tab.");
@@ -32509,7 +32718,7 @@ async function renameSkillPreset(slotNumber = 0, value = "") {
     if (usesServerEconomyAuthority()) {
       if (!api?.renameSkillPreset) throw new Error("Skill preset renaming requires the Crownlands server.");
       const result = await api.renameSkillPreset({ slot: slot.slot, name });
-      applyServerEconomyResult(result);
+      applyServerEconomyResult(result, { renderCities: false, renderProfile: false });
     } else {
       state.skillPresets = replaceLocalSkillPresetSlot(state.skillPresets, { ...slot, name });
       saveGame();
@@ -32523,12 +32732,18 @@ async function renameSkillPreset(slotNumber = 0, value = "") {
     return false;
   } finally {
     skillActionInFlight = false;
-    renderAll();
+    skillPresetMarkupSignature = "";
+    renderHud();
+    renderProfileSkills();
   }
 }
 
 async function saveCurrentSkillPreset(slotNumber = 0) {
   if (!state || skillActionInFlight) return false;
+  if (isSkillSpendSyncing()) {
+    showToast("Wait for skill points to finish syncing.");
+    return false;
+  }
   const slot = getSkillPresetSlot(slotNumber);
   if (!slot || !isSkillPresetUnlocked(slot, state.character)) {
     showToast(slot ? `Preset ${slot.slot} unlocks at Hero Level ${slot.unlockLevel}.` : "Choose a valid preset tab.");
@@ -32542,7 +32757,7 @@ async function saveCurrentSkillPreset(slotNumber = 0) {
     if (usesServerEconomyAuthority()) {
       if (!api?.saveSkillPreset) throw new Error("Saving skill presets requires the Crownlands server.");
       const result = await api.saveSkillPreset({ slot: slot.slot });
-      applyServerEconomyResult(result);
+      applyServerEconomyResult(result, { renderCities: false, renderProfile: false });
     } else {
       const upgrades = normalizeUpgrades(state.upgrades, state.version);
       state.skillPresets = replaceLocalSkillPresetSlot(state.skillPresets, {
@@ -32563,12 +32778,18 @@ async function saveCurrentSkillPreset(slotNumber = 0) {
     return false;
   } finally {
     skillActionInFlight = false;
-    renderAll();
+    skillPresetMarkupSignature = "";
+    renderHud();
+    renderProfileSkills();
   }
 }
 
 async function applySavedSkillPreset(slotNumber = 0) {
   if (!state || skillActionInFlight) return false;
+  if (isSkillSpendSyncing()) {
+    showToast("Wait for skill points to finish syncing.");
+    return false;
+  }
   const slot = getSkillPresetSlot(slotNumber);
   if (!slot || !isSkillPresetUnlocked(slot, state.character)) {
     showToast(slot ? `Preset ${slot.slot} unlocks at Hero Level ${slot.unlockLevel}.` : "Choose a valid preset tab.");
@@ -32595,7 +32816,7 @@ async function applySavedSkillPreset(slotNumber = 0) {
     if (usesServerEconomyAuthority()) {
       if (!api?.applySkillPreset) throw new Error("Applying skill presets requires the Crownlands server.");
       const result = await api.applySkillPreset({ slot: slot.slot });
-      applyServerEconomyResult(result);
+      applyServerEconomyResult(result, { renderCities: false, renderProfile: false });
       goldCharged = Math.max(0, Math.floor(Number(result?.skillPreset?.goldCharged) || 0));
     } else {
       state.gold = Math.max(0, Math.floor(Number(state.gold) || 0) - goldCharged);
@@ -32615,52 +32836,144 @@ async function applySavedSkillPreset(slotNumber = 0) {
     return false;
   } finally {
     skillActionInFlight = false;
-    renderAll();
+    skillPresetMarkupSignature = "";
+    renderHud();
+    renderProfileSkills();
+  }
+}
+
+function isMissingSkillBatchCallable(error = null) {
+  const code = String(error?.code || "").toLowerCase().replace(/^functions\//, "");
+  return code === "not-found" || code === "unimplemented";
+}
+
+function scheduleSkillSpendFlush(delayMs = 125) {
+  if (skillSpendFlushTimer || activeSkillSpendBatch || !pendingSkillSpendAllocations.size) return;
+  skillSpendFlushTimer = window.setTimeout(() => {
+    skillSpendFlushTimer = 0;
+    flushSkillSpendQueue();
+  }, Math.max(0, delayMs));
+}
+
+function trimPendingSkillSpendAllocations() {
+  if (!state || !pendingSkillSpendAllocations.size) return false;
+  let available = getAvailableSkillPoints(state.character, state.upgrades);
+  let trimmed = false;
+  const next = new Map();
+  pendingSkillSpendAllocations.forEach((points, skill) => {
+    const capRoom = Math.max(0, getSkillMaxLevel(skill) - getSkillLevel(skill));
+    const kept = Math.min(Math.max(0, Math.floor(Number(points) || 0)), capRoom, available);
+    if (kept > 0) {
+      next.set(skill, kept);
+      available -= kept;
+    }
+    if (kept !== points) trimmed = true;
+  });
+  pendingSkillSpendAllocations.clear();
+  next.forEach((points, skill) => pendingSkillSpendAllocations.set(skill, points));
+  return trimmed;
+}
+
+async function spendSkillBatchWithLegacyFallback(allocations = []) {
+  const api = getOnlineApi();
+  if (!api?.spendSkillPoint) throw new Error("Skill upgrades require the Crownlands server.");
+  if (api.spendSkillPoints) {
+    try {
+      return await api.spendSkillPoints({ allocations });
+    } catch (error) {
+      if (!isMissingSkillBatchCallable(error)) throw error;
+    }
+  }
+  let result = null;
+  for (const allocation of allocations) {
+    for (let point = 0; point < allocation.points; point += 1) {
+      result = await api.spendSkillPoint({ skillId: allocation.skillId });
+    }
+  }
+  return result;
+}
+
+async function flushSkillSpendQueue() {
+  if (!state || activeSkillSpendBatch || !pendingSkillSpendAllocations.size) return false;
+  const allocations = [...pendingSkillSpendAllocations.entries()]
+    .map(([skillId, points]) => ({ skillId, points }));
+  pendingSkillSpendAllocations.clear();
+  const batch = { allocations };
+  activeSkillSpendBatch = batch;
+  skillPresetMarkupSignature = "";
+  renderProfileSkills();
+  try {
+    const result = await spendSkillBatchWithLegacyFallback(allocations);
+    applyServerEconomyResult(result, { renderCities: false, renderProfile: false });
+    activeSkillSpendBatch = null;
+    const trimmed = trimPendingSkillSpendAllocations();
+    allocations.forEach(allocation => {
+      const config = SKILL_CONFIG[allocation.skillId];
+      addLog(`${config.label} improved by ${formatNumber(allocation.points)} to level ${getSkillLevel(allocation.skillId)}.`);
+    });
+    const totalPoints = allocations.reduce((total, allocation) => total + allocation.points, 0);
+    showToast(`${formatNumber(totalPoints)} skill ${totalPoints === 1 ? "point" : "points"} applied`);
+    if (trimmed) showToast("Some queued skill points were no longer available.");
+    return true;
+  } catch (error) {
+    activeSkillSpendBatch = null;
+    console.warn("Could not spend queued skill points on server", error);
+    const refreshed = await Promise.resolve(refreshServerEconomy(true, {
+      renderCities: false,
+      renderProfile: false,
+    }));
+    const trimmed = trimPendingSkillSpendAllocations();
+    showToast(refreshed
+      ? "Skill update was not confirmed. Your current build was refreshed."
+      : error?.message || "Skill upgrade failed.");
+    if (trimmed) showToast("Some queued skill points were no longer available.");
+    return false;
+  } finally {
+    skillPresetMarkupSignature = "";
+    renderHud();
+    renderProfileSkills();
+    if (pendingSkillSpendAllocations.size) scheduleSkillSpendFlush();
   }
 }
 
 async function buySkill(skill) {
   const config = SKILL_CONFIG[skill];
-  if (!config) return;
+  if (!config || skillActionInFlight) return;
   state.character = normalizeCharacterProgress(state.character);
   state.upgrades = normalizeUpgrades(state.upgrades, state.version);
   reconcileSkillPoints(state.character, state.upgrades);
-  if (isSkillAtCap(skill)) {
+  if (isDisplayedSkillAtCap(skill)) {
     rejectGameAction(`${config.label} is capped at ${config.maxPercent}%.`);
     return;
   }
-  if (state.character.skillPoints < 1) {
+  if (getDisplayedSkillPoints() < 1) {
     rejectGameAction("Earn a hero level for another skill point.");
     return;
   }
   if (usesServerEconomyAuthority() && getOnlineApi()?.spendSkillPoint) {
-    if (skillActionInFlight) return;
-    skillActionInFlight = true;
+    pendingSkillSpendAllocations.set(skill, (pendingSkillSpendAllocations.get(skill) || 0) + 1);
+    skillPresetMarkupSignature = "";
     renderProfileSkills();
-    try {
-      const result = await getOnlineApi().spendSkillPoint({ skillId: skill });
-      applyServerEconomyResult(result);
-      addLog(`${config.label} improved to level ${getSkillLevel(skill)}.`);
-      showToast(`${config.label} improved`);
-    } catch (error) {
-      console.warn("Could not spend skill point on server", error);
-      showToast(error?.message || "Skill upgrade failed.");
-    } finally {
-      skillActionInFlight = false;
-      renderAll();
-    }
-    return;
+    scheduleSkillSpendFlush();
+    return true;
   }
   state.character.skillPoints -= 1;
   state.upgrades[skill] = getSkillLevel(skill) + 1;
   state.skillPresets = setActiveSkillPresetSlot(state.skillPresets, 0);
   addLog(`${SKILL_CONFIG[skill].label} improved to level ${state.upgrades[skill]}.`);
   saveGame();
-  renderAll();
+  skillPresetMarkupSignature = "";
+  renderHud();
+  renderProfileSkills();
+  return true;
 }
 
 async function resetSkills() {
   if (!state) return;
+  if (isSkillSpendSyncing()) {
+    showToast("Wait for skill points to finish syncing.");
+    return;
+  }
   state.character = normalizeCharacterProgress(state.character);
   state.upgrades = normalizeUpgrades(state.upgrades, state.version);
   const repairedPoints = reconcileSkillPoints(state.character, state.upgrades);
@@ -32676,7 +32989,7 @@ async function resetSkills() {
     renderProfileSkills();
     try {
       const result = await getOnlineApi().resetSkills();
-      applyServerEconomyResult(result);
+      applyServerEconomyResult(result, { renderCities: false, renderProfile: false });
       const resetCost = Number.isFinite(Number(result?.resetCost)) ? Math.max(0, Math.floor(Number(result.resetCost))) : SKILL_RESET_COST;
       const refundedPoints = Number.isFinite(Number(result?.spentPoints)) ? Math.max(0, Math.floor(Number(result.spentPoints))) : spentPoints;
       if (refundedPoints > 0) {
@@ -32691,7 +33004,9 @@ async function resetSkills() {
       showToast(error?.message || "Skill reset failed.");
     } finally {
       skillActionInFlight = false;
-      renderAll();
+      skillPresetMarkupSignature = "";
+      renderHud();
+      renderProfileSkills();
     }
     return;
   }
@@ -32714,7 +33029,9 @@ async function resetSkills() {
     addLog("Skill points repaired to match hero level.");
   }
   saveGame();
-  renderAll();
+  skillPresetMarkupSignature = "";
+  renderHud();
+  renderProfileSkills();
   showToast(spentPoints > 0 ? `Skills reset: +${formatNumber(spentPoints)} points` : "Skill points repaired");
 }
 
@@ -36260,6 +36577,7 @@ window.addEventListener("crownlands:online-ready", () => {
   if (getOnlineApi()?.isSignedIn?.()) watchGameServerMembership();
 });
 window.addEventListener("crownlands:auth", async () => {
+  resetOnlineSaveCircuitForAuth(getOnlineApi()?.getUser?.()?.uid || "");
   if (getOnlineApi()?.isSignedIn?.()) {
     watchGameServerMembership();
   } else {

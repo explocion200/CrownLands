@@ -19,6 +19,11 @@ requireMatch(game, /GOOGLE_SIGN_IN_POPUP_GRACE_MS\s*=\s*12_000/, "Popup recovery
 requireMatch(game, /armGoogleSignInRedirectFallback[\s\S]*Continue sign-in in this tab/, "A stalled popup does not expose redirect recovery.");
 requireMatch(game, /getGoogleSignInErrorDetail[\s\S]*auth\/unauthorized-domain[\s\S]*auth\/network-request-failed[\s\S]*auth\/web-storage-unsupported/, "Player-facing authentication diagnostics are incomplete.");
 requireMatch(game, /handleGoogleSignIn[\s\S]*api\.signInWithGoogleRedirect\(\)[\s\S]*api\.signInWithGoogle\(\)/, "The login handler does not support both redirect and popup paths.");
+requireMatch(client, /activeSessionActivationPromise[\s\S]*activeSessionActivationBlockedUid[\s\S]*activeSessionRetryAtMs/, "Session activation is not deduplicated or circuit-broken.");
+requireMatch(client, /async function activateCurrentSession[\s\S]*if \(client\.activeSessionActivationPromise\) return client\.activeSessionActivationPromise[\s\S]*permission-denied[\s\S]*scheduleActiveSessionRetry/, "Session activation does not coalesce duplicate calls and separate permanent from transient failures.");
+requireMatch(game, /function stripServerEconomyProfileFields[\s\S]*clientWritableFields[\s\S]*lastSeenAtMs/, "Authoritative cloud-profile saves are not restricted to an explicit client-owned allowlist.");
+requireMatch(game, /async function flushOnlineSave[\s\S]*Promise\.allSettled[\s\S]*isPermanentOnlineSaveError[\s\S]*target\.blocked = true[\s\S]*scheduleOnlineSaveRetry/, "Cloud saves do not isolate endpoints, circuit-break permission failures, and back off transient failures.");
+requireMatch(game, /if \(onlineSaveInFlight\) return onlineSavePromise \|\| false/, "Forced cloud flushes do not share the active save request.");
 
 const buildId = "20260810-daily-mission-camp-fix-v1";
 for (const [label, source] of [["index", index], ["service worker", worker]]) {

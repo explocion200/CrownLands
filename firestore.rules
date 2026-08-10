@@ -107,65 +107,34 @@ service cloud.firestore {
       return request.resource.data.get(field, resource.data.get(field, null)) == resource.data.get(field, null);
     }
 
-    function playerEconomyUnchanged() {
-      return profileFieldUnchanged('gold')
-        && profileFieldUnchanged('goldFloat')
-        && profileFieldUnchanged('shopItems')
-        && profileFieldUnchanged('itemEffects')
-        && profileFieldUnchanged('itemPurchaseCooldowns')
-        && profileFieldUnchanged('dailyLoginReward')
-        && profileFieldUnchanged('economyUpdatedAtMs')
-        && profileFieldUnchanged('pendingAwayProduction')
-        && profileFieldUnchanged('offlineProductionCities')
-        && profileFieldUnchanged('kingPower')
-        && profileFieldUnchanged('kingPowerVersion')
-        && profileFieldUnchanged('kingPowerUpdatedAtMs')
-        && profileFieldUnchanged('stationedReinforcementTroops')
-        && profileFieldUnchanged('reinforcementResetGeneration')
-        && profileFieldUnchanged('committedRallyTroops')
-        && profileFieldUnchanged('rallyResetGeneration')
-        && profileFieldUnchanged('activeClanReinforcementTargets')
-        && profileFieldUnchanged('activeClanReinforcementAssignments')
-        && profileFieldUnchanged('clanReinforcementLimitResetGeneration')
-        && profileFieldUnchanged('clanReinforcementLimitVersion')
-        && profileFieldUnchanged('clanObjectiveAccrual')
-        && profileFieldUnchanged('pendingClanObjectiveAccrual')
-        && profileFieldUnchanged('cityCount')
-        && profileFieldUnchanged('globalStats');
-    }
-
     function validPlayerProfileUpdate() {
-      return playerEconomyUnchanged()
-        && profileFieldUnchanged('reportsViewedAtMs')
-        && profileFieldUnchanged('realmAnnouncementSeenThroughMs')
-        && profileFieldUnchanged('lastRealmAnnouncementEventId')
-        && profileFieldUnchanged('inactivityNotice')
-        && profileFieldUnchanged('worldSlotResetAtMs')
-        && (profileFieldUnchanged('playerName') || validPlayerNameValue(request.resource.data.playerName))
-        && profileFieldUnchanged('character')
-        && profileFieldUnchanged('upgrades')
-        && profileFieldUnchanged('skillPresets')
-        && profileFieldUnchanged('freeSkillResetGrantVersion')
-        && profileFieldUnchanged('freeSkillResetCredits')
-        && profileFieldUnchanged('mainCityId')
-        && profileFieldUnchanged('mainIslandId')
-        && profileFieldUnchanged('mainRegionId')
-        && profileFieldUnchanged('mainCityChangedAtMs')
-        && profileFieldUnchanged('lastCityRelinquishedAtMs')
-        && profileFieldUnchanged('mainCityAssignmentVersion')
-        && profileFieldUnchanged('clanId')
-        && profileFieldUnchanged('clanName')
-        && profileFieldUnchanged('clanTag')
-        && profileFieldUnchanged('clanRole')
-        && profileFieldUnchanged('clanIdentityRevision')
-        && profileFieldUnchanged('clanIdentityRevisionVersion')
-        && profileFieldUnchanged('clanIdentityUpdatedAtMs')
-        && profileFieldUnchanged('clanJoinCooldownUntilMs')
-        && profileFieldUnchanged('pendingClanApplicationId')
-        && profileFieldUnchanged('resetGeneration')
-        && profileFieldUnchanged('worldId')
-        && profileFieldUnchanged('releaseId')
-        && profileFieldUnchanged('cloudSaveSlot');
+      let affected = request.resource.data.diff(resource.data).affectedKeys();
+      return affected.hasOnly([
+          'uid',
+          'displayName',
+          'email',
+          'photoURL',
+          'activeSession',
+          'lastLoginAt',
+          'updatedAt',
+          'version',
+          'snapshotKind',
+          'activeIslandId',
+          'activeRegionId',
+          'playerName',
+          'flag',
+          'daily',
+          'scoutReports',
+          'battleReports',
+          'marchPercent',
+          'lastSelectedOwnedCityId',
+          'gameSeconds',
+          'localGameSeconds',
+          'lastRealTimeMs',
+          'lastSeenAtMs'
+        ])
+        && (!affected.hasAny(['uid']) || request.resource.data.uid == request.auth.uid)
+        && (!affected.hasAny(['playerName']) || validPlayerNameValue(request.resource.data.playerName));
     }
 
     function ownsCityOwnerIdentity() {
