@@ -3420,8 +3420,32 @@ function normalizeFortificationState(city = {}, nowMs = Date.now()) {
   };
 }
 
+function getFortificationIntegrityBpsAt(state = {}, nowMs = Date.now()) {
+  const integrityBps = clampInt(state.integrityBps, 0, 10_000);
+  if (integrityBps >= 10_000) return 10_000;
+  const repairAtMs = Math.max(0, timestampToMs(state.repairAtMs));
+  if (!repairAtMs) return integrityBps;
+  const sampledAtMs = Math.max(0, Math.floor(safeNumber(nowMs, Date.now())));
+  if (sampledAtMs >= repairAtMs) return 10_000;
+  const lastDamagedAtMs = Math.max(0, timestampToMs(state.lastDamagedAtMs));
+  if (!lastDamagedAtMs || repairAtMs <= lastDamagedAtMs || sampledAtMs <= lastDamagedAtMs) {
+    return integrityBps;
+  }
+  const repairProgress = clamp(
+    (sampledAtMs - lastDamagedAtMs) / (repairAtMs - lastDamagedAtMs),
+    0,
+    1
+  );
+  return clampInt(
+    integrityBps + Math.floor((10_000 - integrityBps) * repairProgress),
+    integrityBps,
+    10_000
+  );
+}
+
 function getFortificationSnapshot(city = {}, ownerStats = {}, nowMs = Date.now()) {
   const state = normalizeFortificationState(city, nowMs);
+  const currentIntegrityBps = getFortificationIntegrityBpsAt(state, nowMs);
   const troopObjectiveDefenseBonusPercent = getObjectiveTroopDefenseBonusPercent(ownerStats);
   const objectiveDefenseBonusPercent = Math.floor(safeNumber(ownerStats.defenseCombatVersion, 0)) >= DEFENSE_COMBAT_VERSION
     ? 0
@@ -3430,7 +3454,7 @@ function getFortificationSnapshot(city = {}, ownerStats = {}, nowMs = Date.now()
     Math.max(0, safeNumber(ownerStats.cityWalls, 0))
       * (1 + objectiveDefenseBonusPercent / 100)
   ));
-  const currentWallPower = Math.max(0, Math.floor(fullWallPower * state.integrityBps / 10_000));
+  const currentWallPower = Math.max(0, Math.floor(fullWallPower * currentIntegrityBps / 10_000));
   return {
     modelVersion: SIEGE_COMBAT_VERSION,
     stateVersion: FORTIFICATION_STATE_VERSION,
@@ -3443,7 +3467,7 @@ function getFortificationSnapshot(city = {}, ownerStats = {}, nowMs = Date.now()
     objectiveDefenseBonusPercent,
     troopObjectiveDefenseBonusPercent,
     fullWallPower,
-    integrityBps: state.integrityBps,
+    integrityBps: currentIntegrityBps,
     currentWallPower,
     repairAtMs: state.repairAtMs,
     repairWindowMinutes: state.repairWindowMinutes,
@@ -4459,6 +4483,7 @@ function normalizeCharacterProgress(character = {}) {
 
 function applyXpToCharacter(character = {}, amount = 0) {
   const next = normalizeCharacterProgress(character);
+  const fromLevel = next.level;
   let xp = Math.max(0, Math.floor(safeNumber(amount, 0)));
   let goldReward = 0;
   let troopReward = 0;
@@ -4472,7 +4497,26 @@ function applyXpToCharacter(character = {}, amount = 0) {
     goldReward += getLevelUpGoldReward(next.level);
     troopReward += getLevelUpTroopReward(next.level);
   }
-  return { character: next, xp, levelsGained, goldReward, troopReward };
+  return {
+    character: next,
+    xp,
+    levelsGained,
+    goldReward,
+    troopReward,
+    levelUpReward: levelsGained > 0
+      ? {
+        fromLevel,
+        toLevel: next.level,
+        levelsGained,
+        skillPointsAwarded: levelsGained,
+        goldAwarded: goldReward,
+        troopsAwarded: troopReward,
+        cityId: "",
+        cityName: "",
+        regionId: "",
+      }
+      : null,
+  };
 }
 
 function getBattleXpTroopCredit(target = {}, troops = 0, defenderProfile = null) {
@@ -7184,6 +7228,7 @@ function makeReport({
   goldAwarded = 0,
   troopsAwarded = 0,
   characterAfter = null,
+  levelUpReward = null,
   goldAfter = null,
   campReward = null,
   attackProtection = null,
@@ -7252,6 +7297,19 @@ function makeReport({
     goldAwarded: Math.max(0, Math.floor(safeNumber(goldAwarded, 0))),
     troopsAwarded: Math.max(0, Math.floor(safeNumber(troopsAwarded, 0))),
     characterAfter,
+    levelUpReward: levelUpReward && levelUpReward.toLevel > levelUpReward.fromLevel
+      ? {
+        fromLevel: Math.max(1, Math.floor(safeNumber(levelUpReward.fromLevel, 1))),
+        toLevel: Math.max(1, Math.floor(safeNumber(levelUpReward.toLevel, 1))),
+        levelsGained: Math.max(1, Math.floor(safeNumber(levelUpReward.levelsGained, 1))),
+        skillPointsAwarded: Math.max(0, Math.floor(safeNumber(levelUpReward.skillPointsAwarded, 0))),
+        goldAwarded: Math.max(0, Math.floor(safeNumber(levelUpReward.goldAwarded, 0))),
+        troopsAwarded: Math.max(0, Math.floor(safeNumber(levelUpReward.troopsAwarded, 0))),
+        cityId: safeString(levelUpReward.cityId, 96),
+        cityName: safeString(levelUpReward.cityName, 80),
+        regionId: levelUpReward.regionId ? normalizeRegionId(levelUpReward.regionId) : "",
+      }
+      : null,
     goldAfter,
     campReward: normalizeCampReportReward(campReward),
     attackProtection: normalizeAttackProtectionSnapshot(attackProtection),
@@ -7750,7 +7808,29 @@ function buildPlayerProgressPatch(profile = {}, { xp = 0, gold = 0 } = {}) {
     xpAwarded: xpResult.xp,
     goldAwarded: Math.max(0, Math.floor(safeNumber(gold, 0))) + xpResult.goldReward,
     levelTroopReward: xpResult.troopReward,
+    levelUpReward: xpResult.levelUpReward,
   };
+}
+
+function finalizeLevelUpReward(progress = null, troopCredit = null) {
+  const reward = progress?.levelUpReward;
+  if (!reward || reward.toLevel <= reward.fromLevel) return null;
+  const fromLevel = Math.max(1, Math.floor(safeNumber(reward.fromLevel, 1)));
+  const toLevel = Math.max(1, Math.floor(safeNumber(reward.toLevel, 1)));
+  if (toLevel <= fromLevel) return null;
+  const finalized = {
+    fromLevel,
+    toLevel,
+    levelsGained: toLevel - fromLevel,
+    skillPointsAwarded: Math.max(0, Math.floor(safeNumber(reward.skillPointsAwarded, 0))),
+    goldAwarded: Math.max(0, Math.floor(safeNumber(reward.goldAwarded, 0))),
+    troopsAwarded: Math.max(0, Math.floor(safeNumber(troopCredit?.credited, 0))),
+    cityId: safeString(troopCredit?.cityId, 96),
+    cityName: safeString(troopCredit?.cityName, 80),
+    regionId: troopCredit?.regionId ? normalizeRegionId(troopCredit.regionId) : "",
+  };
+  progress.levelUpReward = finalized;
+  return finalized;
 }
 
 function writeReport(transaction, uid, report, profileSnap = null, extraProfilePatch = {}) {
@@ -18820,6 +18900,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
           economyUpdatedAtMs: timestampToMs(attackerEconomy?.profilePatch?.economyUpdatedAtMs),
           upgrades: normalizeSkillUpgrades(attackerProfile.upgrades),
           globalStats: globalStatsForClient(attackerEconomy?.lastGlobalStats || attackerEconomy?.globalStats),
+          ...(attackerPatch.levelUpReward ? { levelUpReward: attackerPatch.levelUpReward } : {}),
         };
       }
       if (callerUid === defenderUid && defenderPatch) {
@@ -18830,6 +18911,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
           economyUpdatedAtMs: timestampToMs(defenderEconomy?.profilePatch?.economyUpdatedAtMs),
           upgrades: normalizeSkillUpgrades(defenderProfile?.upgrades),
           globalStats: globalStatsForClient(defenderEconomy?.lastGlobalStats || defenderEconomy?.globalStats),
+          ...(defenderPatch.levelUpReward ? { levelUpReward: defenderPatch.levelUpReward } : {}),
         };
       }
       return null;
@@ -19978,6 +20060,8 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
           nowMs
         )
         : null;
+      finalizeLevelUpReward(attackerProgress, attackerLevelTroopReward);
+      if (defenderProgress) finalizeLevelUpReward(defenderProgress, defenderLevelTroopReward);
       const attackerRecoveredTroops = recoverBattleLossesToMainCity({
         uid: attackerUid,
         profile: attackerProfile,
@@ -20091,6 +20175,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
         goldAwarded: attackerProgress.goldAwarded,
         troopsAwarded: attackerLevelTroopReward?.credited || 0,
         characterAfter: attackerProgress.character,
+        levelUpReward: attackerProgress.levelUpReward,
         goldAfter: attackerProgress.gold,
         battleId: currentBattleId,
         fieldMedicsRecovered: attackerRecoveredTroops,
@@ -20165,6 +20250,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
           goldAwarded: defenderProgress.goldAwarded,
           troopsAwarded: defenderLevelTroopReward?.credited || 0,
           characterAfter: defenderProgress.character,
+          levelUpReward: defenderProgress.levelUpReward,
           goldAfter: defenderProgress.gold,
           battleId: currentBattleId,
           fieldMedicsRecovered: defenderRecoveredTroops,
@@ -20987,6 +21073,8 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
         nowMs
       )
       : null;
+    finalizeLevelUpReward(attackerProgress, attackerLevelTroopReward);
+    if (defenderProgress) finalizeLevelUpReward(defenderProgress, defenderLevelTroopReward);
 
     if (result.breachCompleted) {
       const targetPatch = {
@@ -21063,6 +21151,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
         goldAwarded: attackerProgress.goldAwarded,
         troopsAwarded: attackerLevelTroopReward?.credited || 0,
         characterAfter: attackerProgress.character,
+        levelUpReward: attackerProgress.levelUpReward,
         goldAfter: attackerProgress.gold,
         attackProtection,
         launchCombatForecast: army.launchCombatForecast,
@@ -21099,6 +21188,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
           goldAwarded: defenderProgress.goldAwarded,
           troopsAwarded: defenderLevelTroopReward?.credited || 0,
           characterAfter: defenderProgress.character,
+          levelUpReward: defenderProgress.levelUpReward,
           goldAfter: defenderProgress.gold,
           attackProtection,
           defenderXpMultiplierApplied,
@@ -21240,6 +21330,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
         goldAwarded: attackerProgress.goldAwarded,
         troopsAwarded: attackerLevelTroopReward?.credited || 0,
         characterAfter: attackerProgress.character,
+        levelUpReward: attackerProgress.levelUpReward,
         goldAfter: attackerProgress.gold,
         attackProtection,
         launchCombatForecast: army.launchCombatForecast,
@@ -21318,6 +21409,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
           goldAwarded: defenderProgress.goldAwarded,
           troopsAwarded: defenderLevelTroopReward?.credited || 0,
           characterAfter: defenderProgress.character,
+          levelUpReward: defenderProgress.levelUpReward,
           goldAfter: defenderProgress.gold,
           attackProtection,
           defenderXpMultiplierApplied,
@@ -21383,6 +21475,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
       goldAwarded: attackerProgress.goldAwarded,
       troopsAwarded: attackerLevelTroopReward?.credited || 0,
       characterAfter: attackerProgress.character,
+      levelUpReward: attackerProgress.levelUpReward,
       goldAfter: attackerProgress.gold,
       attackProtection,
       launchCombatForecast: army.launchCombatForecast,
@@ -21450,6 +21543,7 @@ async function resolveArmyOrderById({ armyId = "", requestedRegions = [], caller
         goldAwarded: defenderProgress.goldAwarded,
         troopsAwarded: defenderLevelTroopReward?.credited || 0,
         characterAfter: defenderProgress.character,
+        levelUpReward: defenderProgress.levelUpReward,
         goldAfter: defenderProgress.gold,
         attackProtection,
         defenderXpMultiplierApplied,
@@ -22094,6 +22188,7 @@ async function settleReinforcementBattleReceipt(event) {
       progress.levelTroopReward,
       nowMs
     );
+    finalizeLevelUpReward(progress, levelTroopReward);
     const recoveredTroops = Math.floor(
       Math.max(0, safeNumber(receipt.losses, 0))
       * Math.max(0, safeNumber(receipt.fieldMedicsPercent, getSkillPercent(profile, "fieldMedics")))
@@ -22142,6 +22237,7 @@ async function settleReinforcementBattleReceipt(event) {
       goldAwarded: progress.goldAwarded,
       troopsAwarded: levelTroopReward?.credited || 0,
       characterAfter: progress.character,
+      levelUpReward: progress.levelUpReward,
       goldAfter: progress.gold,
       battleId: safeString(receipt.battleId, 160),
       fieldMedicsRecovered: recovery?.credited || 0,
@@ -22227,6 +22323,7 @@ async function settleRallyBattleReceipt(event) {
       progress.levelTroopReward,
       nowMs
     );
+    finalizeLevelUpReward(progress, levelTroopReward);
     const recoveredTroops = Math.floor(
       Math.max(0, safeNumber(receipt.losses, 0))
       * Math.max(0, safeNumber(receipt.fieldMedicsPercent, getSkillPercent(profile, "fieldMedics")))
@@ -22342,6 +22439,7 @@ async function settleRallyBattleReceipt(event) {
       goldAwarded: progress.goldAwarded,
       troopsAwarded: levelTroopReward?.credited || 0,
       characterAfter: progress.character,
+      levelUpReward: progress.levelUpReward,
       goldAfter: progress.gold,
       battleId: safeString(receipt.battleId, 160),
       fieldMedicsRecovered: recovery?.credited || 0,

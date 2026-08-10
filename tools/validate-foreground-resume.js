@@ -46,6 +46,7 @@ for (const eventName of ["visibilitychange", "pagehide", "pageshow", "focus", "f
 }
 
 const foregroundSync = functionSource("synchronizeForegroundGame");
+const applyEconomyResult = functionSource("applyServerEconomyResult");
 for (const operation of [
   "refreshServerEconomy(true",
   "refreshAllOwnedCities(true)",
@@ -60,8 +61,28 @@ for (const operation of [
 }
 assert.ok(
   foregroundSync.includes("awayMs >= FOREGROUND_LONG_RESUME_MS")
-    && foregroundSync.includes("longRefresh || onlineRealtimeRecoveryNeeded"),
+    && foregroundSync.includes("longRefresh || onlineRealtimeRecoveryNeeded")
+    && foregroundSync.includes("Boolean(pendingWelcomeBackSession?.eligible)"),
   "Foreground synchronization does not separate silent short resumes from long/listener recovery."
+);
+assert.doesNotMatch(
+  foregroundSync,
+  /requestWelcomeBack:\s*shouldShowWelcomeBack/,
+  "A foreground resume can request and redisplay a cached login summary."
+);
+assert.match(
+  applyEconomyResult,
+  /const awaySummary = options\.requestWelcomeBack === true[\s\S]*?result\.awaySummary/,
+  "An unsolicited cached login summary can replace fresh foreground production."
+);
+
+const rewardFormatContext = { Math, Number };
+vm.createContext(rewardFormatContext);
+vm.runInContext(functionSource("formatOfflineRewardAmount"), rewardFormatContext, { filename: "game.js" });
+assert.equal(
+  rewardFormatContext.formatOfflineRewardAmount(12_345.9),
+  "12,345",
+  "Welcome Back rewards are abbreviated instead of showing the exact credited amount."
 );
 
 const realtimeRestart = functionSource("restartOnlineRealtimeSubscriptionsForResume");
@@ -109,9 +130,13 @@ const economyContext = {
   console,
 };
 const economyRequests = [];
+const economyRequestPayloads = [];
 const appliedResults = [];
 economyContext.getOnlineApi = () => ({
-  collectEconomy: () => new Promise(resolve => economyRequests.push(resolve)),
+  collectEconomy: payload => {
+    economyRequestPayloads.push(payload);
+    return new Promise(resolve => economyRequests.push(resolve));
+  },
 });
 economyContext.applyServerEconomyResult = (result, options) => appliedResults.push({ result, options });
 vm.createContext(economyContext);
@@ -137,6 +162,77 @@ async function validateAsyncBehavior() {
   economyRequests[1]({ ok: true, production: { goldGained: 0, troopsGained: 0, elapsedSeconds: 0 } });
   assert.equal(await initialRefresh, true, "The shared economy drain did not report success.");
   assert.equal(economyContext.serverEconomyRefreshInFlight, false, "Economy refresh remained locked after draining.");
+
+  economyContext.pendingWelcomeBackSession = { eligible: true };
+  const welcomeRefresh = economyContext.refreshServerEconomy(true, {
+    requestWelcomeBack: true,
+    showOfflineRewards: true,
+  });
+  economyContext.refreshServerEconomy(true, {
+    requestWelcomeBack: true,
+    showOfflineRewards: true,
+    resumeCatchUp: true,
+  });
+  assert.equal(economyRequestPayloads[2].includeWelcomeBack, true);
+  economyRequests[2]({
+    ok: true,
+    awaySummary: { goldGained: 500, troopsGained: 20, elapsedSeconds: 300 },
+    production: { goldGained: 500, troopsGained: 20, elapsedSeconds: 300 },
+  });
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(economyRequestPayloads[3].includeWelcomeBack, false, "A queued economy refresh can claim the same Welcome Back summary twice.");
+  economyRequests[3]({ ok: true, production: { goldGained: 0, troopsGained: 0, elapsedSeconds: 0 } });
+  assert.equal(await welcomeRefresh, true);
+  assert.equal(economyContext.pendingWelcomeBackSession, null);
+
+  const foregroundEconomyOptions = [];
+  const foregroundContext = {
+    FOREGROUND_LONG_RESUME_MS: 60_000,
+    pendingWelcomeBackSession: null,
+    onlineRealtimeRecoveryNeeded: false,
+    navigator: { onLine: true },
+    gameBackgroundProductionCities: [],
+    getOnlineApi: () => ({ isSignedIn: () => true }),
+    isOnlineWorldActive: () => true,
+    usesServerEconomyAuthority: () => true,
+    getActiveOnlineRegionId: () => "center",
+    refreshServerEconomy: (_force, options) => {
+      foregroundEconomyOptions.push(options);
+      return true;
+    },
+    refreshAllOwnedCities: () => true,
+    loadOnlineRegionCitiesForResolution: () => true,
+    loadServerReportsOnce: () => true,
+    heartbeatGameServerMembership: () => true,
+    publishOnlinePresence: () => true,
+    restartOnlineRealtimeSubscriptionsForResume: () => true,
+    refreshDailyLoginRewardStatus: () => {},
+    retryPendingRewardedAdClaim: () => {},
+    recoverPendingOnlineArmyMovements: () => {},
+    retryOverdueOnlineArmyResolutions: () => {},
+    renderAll: () => {},
+    updateIncomingAttackUi: () => {},
+    updateOutgoingAttackUi: () => {},
+    refreshOpenServerDrivenPanels: () => {},
+    applyLocalForegroundCatchUp: () => true,
+    Promise,
+    Boolean,
+  };
+  vm.createContext(foregroundContext);
+  vm.runInContext(functionSource("synchronizeForegroundGame"), foregroundContext, { filename: "game.js" });
+  assert.equal(await foregroundContext.synchronizeForegroundGame(120_000), true);
+  assert.deepEqual(
+    { ...foregroundEconomyOptions[0] },
+    { requestWelcomeBack: false, showOfflineRewards: true, resumeCatchUp: true },
+    "A normal foreground resume requests the stale one-use login summary."
+  );
+  foregroundContext.pendingWelcomeBackSession = { eligible: true };
+  assert.equal(await foregroundContext.synchronizeForegroundGame(5_000), true);
+  assert.deepEqual(
+    { ...foregroundEconomyOptions[1] },
+    { requestWelcomeBack: true, showOfflineRewards: true, resumeCatchUp: true },
+    "An unclaimed login summary is not requested independently of foreground duration."
+  );
 
   let nowMs = 1_201_000;
   let nextTimerId = 1;

@@ -6907,6 +6907,35 @@ function getMainRewardCity(excludeCityId = null) {
   return playerRegularCities().find(city => city.id !== excludeCityId) || null;
 }
 
+function normalizeLevelUpRewardReceipt(raw = null) {
+  if (!raw || typeof raw !== "object") return null;
+  const fromLevel = Math.max(1, Math.floor(Number(raw.fromLevel) || 1));
+  const toLevel = Math.max(1, Math.floor(Number(raw.toLevel) || 1));
+  if (toLevel <= fromLevel) return null;
+  const levelsGained = toLevel - fromLevel;
+  return {
+    fromLevel,
+    toLevel,
+    levelsGained,
+    skillPoints: Math.max(0, Math.floor(Number(raw.skillPointsAwarded ?? raw.skillPoints ?? levelsGained) || 0)),
+    gold: Math.max(0, Math.floor(Number(raw.goldAwarded ?? raw.gold) || 0)),
+    troops: Math.max(0, Math.floor(Number(raw.troopsAwarded ?? raw.troops) || 0)),
+    cityId: String(raw.cityId || "").trim(),
+    cityName: String(raw.cityName || "your main city").trim() || "your main city",
+    regionId: raw.regionId ? normalizeRegionId(raw.regionId) : "",
+  };
+}
+
+function getLevelUpRewardAnnouncement(patch = null, previousLevel = 1, options = {}) {
+  if (!patch?.character || options.announceLevelUp === false) return null;
+  const reward = normalizeLevelUpRewardReceipt(options.levelUpReward || patch.levelUpReward);
+  if (!reward) return null;
+  const prior = Math.max(1, Math.floor(Number(previousLevel) || 1));
+  const next = Math.max(1, Math.floor(Number(patch.character.level) || 1));
+  if (next <= prior || reward.toLevel !== next || reward.toLevel <= prior) return null;
+  return reward;
+}
+
 function getLevelUpRewardBundle(fromLevel, toLevel, options = {}) {
   const startLevel = Math.max(1, Math.floor(Number(fromLevel) || 1));
   const endLevel = Math.max(startLevel, Math.floor(Number(toLevel) || startLevel));
@@ -6918,12 +6947,13 @@ function getLevelUpRewardBundle(fromLevel, toLevel, options = {}) {
   }
   const hasGoldOverride = Number.isFinite(Number(options.gold));
   const hasTroopOverride = Number.isFinite(Number(options.troops));
+  const hasSkillPointOverride = Number.isFinite(Number(options.skillPoints));
   const rewardCity = options.cityId ? cityById(options.cityId) : getMainRewardCity();
   return {
     fromLevel: startLevel,
     toLevel: endLevel,
     levelsGained: endLevel - startLevel,
-    skillPoints: endLevel - startLevel,
+    skillPoints: Math.max(0, Math.floor(hasSkillPointOverride ? Number(options.skillPoints) : endLevel - startLevel)),
     gold: Math.max(0, Math.floor(hasGoldOverride ? Number(options.gold) : calculatedGold)),
     troops: Math.max(0, Math.floor(hasTroopOverride ? Number(options.troops) : calculatedTroops)),
     cityId: String(options.cityId || rewardCity?.id || ""),
@@ -8852,9 +8882,36 @@ function normalizeFortificationState(city = {}, nowMs = Date.now()) {
   };
 }
 
+function getFortificationIntegrityBpsAt(state = {}, nowMs = Date.now()) {
+  const integrityBps = clamp(Math.floor(Number(state.integrityBps) || 0), 0, 10_000);
+  if (integrityBps >= 10_000) return 10_000;
+  const repairAtMs = normalizeTimestampMs(state.repairAtMs);
+  if (!repairAtMs) return integrityBps;
+  const sampledAtMs = Math.max(
+    0,
+    Math.floor(Number.isFinite(Number(nowMs)) ? Number(nowMs) : Date.now())
+  );
+  if (sampledAtMs >= repairAtMs) return 10_000;
+  const lastDamagedAtMs = normalizeTimestampMs(state.lastDamagedAtMs);
+  if (!lastDamagedAtMs || repairAtMs <= lastDamagedAtMs || sampledAtMs <= lastDamagedAtMs) {
+    return integrityBps;
+  }
+  const repairProgress = clamp(
+    (sampledAtMs - lastDamagedAtMs) / (repairAtMs - lastDamagedAtMs),
+    0,
+    1
+  );
+  return clamp(
+    integrityBps + Math.floor((10_000 - integrityBps) * repairProgress),
+    integrityBps,
+    10_000
+  );
+}
+
 function getCityFortificationSnapshot(city = {}, statsOverride = null, nowMs = Date.now()) {
   const stats = statsOverride || getCityStats(city);
   const state = normalizeFortificationState(city, nowMs);
+  const currentIntegrityBps = getFortificationIntegrityBpsAt(state, nowMs);
   const troopObjectiveDefenseBonusPercent = getObjectiveTroopDefenseBonusPercent(stats);
   const objectiveDefenseBonusPercent = Math.floor(Number(stats.defenseCombatVersion) || 0) >= DEFENSE_COMBAT_VERSION
     ? 0
@@ -8880,8 +8937,8 @@ function getCityFortificationSnapshot(city = {}, statsOverride = null, nowMs = D
     objectiveDefenseBonusPercent,
     troopObjectiveDefenseBonusPercent,
     fullWallPower,
-    currentWallPower: Math.max(0, Math.floor(fullWallPower * state.integrityBps / 10_000)),
-    integrityBps: state.integrityBps,
+    currentWallPower: Math.max(0, Math.floor(fullWallPower * currentIntegrityBps / 10_000)),
+    integrityBps: currentIntegrityBps,
     repairAtMs: state.repairAtMs,
     repairWindowMinutes: state.repairWindowMinutes,
     repairReductionPercent: state.repairReductionPercent,
@@ -9598,6 +9655,7 @@ function normalizeBattleReports(reports) {
         xpAwarded: Math.max(0, Math.floor(Number(report.xpAwarded) || 0)),
         goldAwarded: Math.max(0, Math.floor(Number(report.goldAwarded) || 0)),
         troopsAwarded: Math.max(0, Math.floor(Number(report.troopsAwarded) || 0)),
+        levelUpReward: normalizeLevelUpRewardReceipt(report.levelUpReward),
         campReward: normalizeCampReportReward(report.campReward),
         eventKind: String(report.eventKind || "").replace(/[^a-zA-Z0-9_-]/g, "_").slice(0, 48),
         rewardEventId: String(report.rewardEventId || "").replace(/[^a-zA-Z0-9_-]/g, "_").slice(0, 160),
@@ -9781,6 +9839,67 @@ function getScoutReportAgeSeconds(report = null, nowMs = Date.now()) {
   return Math.max(0, Math.floor((Number(state?.gameSeconds) || 0) - (Number(report?.scoutedAt) || 0)));
 }
 
+function updateVisibleFortificationRepairStatus(nowMs = Date.now()) {
+  if (!modal?.open || !modalBody) return;
+  const label = modalBody.querySelector("[data-fortification-repair-at-ms]");
+  if (!label || label.dataset.fortificationRepairComplete === "true") return;
+  const repairAtMs = normalizeTimestampMs(label.dataset.fortificationRepairAtMs);
+  const remaining = Math.max(0, Math.ceil((repairAtMs - nowMs) / 1000));
+  setTextIfChanged(
+    label,
+    remaining > 0
+      ? `Full repair in ${formatDuration(remaining)}`
+      : "Fully repaired — wall integrity restored"
+  );
+  const status = label.closest(".fortification-status");
+  if (!status) {
+    if (remaining <= 0) label.dataset.fortificationRepairComplete = "true";
+    return;
+  }
+  const displayedAtMs = normalizeTimestampMs(status.dataset.fortificationDisplayedAtMs);
+  if (!displayedAtMs && remaining > 0) return;
+  const displayedIntegrityBps = clamp(
+    Math.floor(Number(status.dataset.fortificationDisplayedIntegrityBps) || 0),
+    0,
+    10_000
+  );
+  const integrityBps = displayedAtMs
+    ? getFortificationIntegrityBpsAt({
+      integrityBps: displayedIntegrityBps,
+      lastDamagedAtMs: displayedAtMs,
+      repairAtMs,
+    }, nowMs)
+    : 10_000;
+  const lastRenderedIntegrityBps = Math.floor(
+    Number(status.dataset.fortificationRenderedIntegrityBps) || 0
+  );
+  if (integrityBps !== lastRenderedIntegrityBps) {
+    status.dataset.fortificationRenderedIntegrityBps = String(integrityBps);
+    const breached = integrityBps <= 0;
+    const damaged = integrityBps < 10_000;
+    const nextClass = breached ? "breached" : damaged ? "damaged" : "intact";
+    if (!status.classList.contains(nextClass)) {
+      status.classList.remove("intact", "damaged", "breached");
+      status.classList.add(nextClass);
+    }
+    const integrity = status.querySelector("[data-fortification-integrity]");
+    setTextIfChanged(
+      integrity,
+      `${formatWallIntegrity(integrityBps)} · ${breached ? "Breached" : damaged ? "Damaged" : "Intact"}`
+    );
+    const fullWallPower = Math.max(0, Math.floor(Number(status.dataset.fortificationFullWallPower) || 0));
+    const power = status.querySelector("[data-fortification-power]");
+    if (power && fullWallPower > 0) {
+      const currentWallPower = Math.max(0, Math.floor(fullWallPower * integrityBps / 10_000));
+      setTextIfChanged(
+        power,
+        `${formatNumber(currentWallPower)} / ${formatNumber(fullWallPower)} wall power. Walls absorb attack power before the garrison fights.`
+      );
+    }
+  }
+  if (remaining <= 0) label.dataset.fortificationRepairComplete = "true";
+}
+
 function updateScoutReportLifecycle(nowMs = Date.now()) {
   if (!state) return false;
   const beforeScoutIds = Object.keys(state.scoutReports || {}).sort().join("|");
@@ -9798,27 +9917,7 @@ function updateScoutReportLifecycle(nowMs = Date.now()) {
     label.title = new Date(occurredAtMs).toLocaleString();
   });
 
-  modalBody?.querySelectorAll?.("[data-fortification-repair-at-ms]").forEach(label => {
-    const repairAtMs = normalizeTimestampMs(label.dataset.fortificationRepairAtMs);
-    const remaining = Math.max(0, Math.ceil((repairAtMs - nowMs) / 1000));
-    label.textContent = remaining > 0
-      ? `Full repair in ${formatDuration(remaining)}`
-      : "Fully repaired — wall integrity restored";
-    if (remaining <= 0) {
-      const status = label.closest(".fortification-status");
-      if (status) {
-        status.classList.remove("damaged", "breached");
-        status.classList.add("intact");
-        const integrity = status.querySelector("[data-fortification-integrity]");
-        if (integrity) integrity.textContent = "100% · Intact";
-        const fullWallPower = Math.max(0, Math.floor(Number(status.dataset.fortificationFullWallPower) || 0));
-        const power = status.querySelector("[data-fortification-power]");
-        if (power && fullWallPower > 0) {
-          power.textContent = `${formatNumber(fullWallPower)} / ${formatNumber(fullWallPower)} wall power. Walls absorb attack power before the garrison fights.`;
-        }
-      }
-    }
-  });
+  updateVisibleFortificationRepairStatus(nowMs);
 
   const activeScoutCityId = String(modal?.dataset?.scoutReportCityId || "");
   if (modal?.open && modal.classList.contains("scout-report-modal")) {
@@ -10998,6 +11097,17 @@ function mergeServerReports(reports = [], options = {}) {
       }
     }
     appliedServerReportRevisions.set(normalized.id, revisionMs);
+    if (shouldNotify && normalized.levelUpReward) {
+      const reward = normalized.levelUpReward;
+      queueLevelUpReward(reward.fromLevel, reward.toLevel, {
+        skillPoints: reward.skillPoints,
+        gold: reward.gold,
+        troops: reward.troops,
+        cityId: reward.cityId,
+        cityName: reward.cityName,
+        audioDelayMs: REWARD_FOLLOWUP_AUDIO_DELAY_MS,
+      });
+    }
     changed = true;
     addedReport = true;
   }
@@ -11173,13 +11283,14 @@ function applyServerProfilePatch(patch = null, options = {}) {
     renderHud();
     if (profileScreen?.classList.contains("open")) renderProfileScreen();
   }
-  const nextLevel = Math.max(1, Math.floor(Number(state.character?.level) || 1));
-  if (patch.character && nextLevel > previousLevel && options.announceLevelUp !== false) {
-    queueLevelUpReward(previousLevel, nextLevel, {
-      gold: options.levelUpGold,
-      troops: options.levelUpTroops,
-      cityId: options.levelUpCityId || getMainRewardCity()?.id || "",
-      cityName: options.levelUpCityName || getMainRewardCity()?.name || "your main city",
+  const levelUpReward = getLevelUpRewardAnnouncement(patch, previousLevel, options);
+  if (levelUpReward) {
+    queueLevelUpReward(levelUpReward.fromLevel, levelUpReward.toLevel, {
+      skillPoints: levelUpReward.skillPoints,
+      gold: levelUpReward.gold,
+      troops: levelUpReward.troops,
+      cityId: levelUpReward.cityId || getMainRewardCity()?.id || "",
+      cityName: levelUpReward.cityName || getMainRewardCity()?.name || "your main city",
       audioDelayMs: options.levelUpAudioDelayMs,
     });
   }
@@ -11441,18 +11552,8 @@ function applyServerArmyResult(result = null, options = {}) {
     showToast(`${config?.name || normalizedCampUpdate.name} captured. Hold for ${Math.floor((config?.holdSeconds || 0) / 60)} minutes to claim ${formatNumber(config?.baseReward || 0)} ${config?.rewardLabel || "reward"}.`);
   }
   if (result.currentUser) {
-    const nextLevel = Math.max(1, Math.floor(Number(result.currentUser?.character?.level) || 1));
-    const levelRewardReport = Array.isArray(result.reports)
-      ? [...result.reports].reverse().find(report => (
-        Math.max(1, Math.floor(Number(report?.characterAfter?.level) || 1)) === nextLevel
-        && Math.max(0, Math.floor(Number(report?.xpAwarded) || 0)) > 0
-      ))
-      : null;
     changed = applyServerProfilePatch(result.currentUser, {
-      levelUpGold: levelRewardReport?.goldAwarded,
-      levelUpTroops: levelRewardReport?.troopsAwarded,
-      levelUpCityId: result.troopRewardCityId || result.currentUser?.mainCityId || state?.mainCityId || "",
-      levelUpCityName: result.troopRewardCityName,
+      levelUpReward: result.currentUser.levelUpReward,
       levelUpAudioDelayMs: newestPlayerReport || (result.kind && result.kind !== "scout")
         ? REWARD_FOLLOWUP_AUDIO_DELAY_MS
         : 0,
@@ -11467,14 +11568,13 @@ function applyServerEconomyResult(result = null, options = {}) {
   if (result.globalStats) changed = applyGlobalStatsSnapshot(result.globalStats, { render: false }) || changed;
   if (result.currentUser) {
     changed = applyServerProfilePatch(result.currentUser, {
-      levelUpGold: result.levelUpGoldAwarded,
-      levelUpTroops: result.troopsAwarded,
-      levelUpCityId: result.troopRewardCityId || result.currentUser?.mainCityId || state?.mainCityId || "",
-      levelUpCityName: result.troopRewardCityName,
+      levelUpReward: result.currentUser.levelUpReward || result.levelUpReward,
     }) || changed;
   }
   if (Array.isArray(result.cityUpdates)) changed = applyServerCityUpdates(result.cityUpdates) || changed;
-  const awaySummary = result.awaySummary && typeof result.awaySummary === "object"
+  const awaySummary = options.requestWelcomeBack === true
+    && result.awaySummary
+    && typeof result.awaySummary === "object"
     ? result.awaySummary
     : null;
   const resumeProduction = options.resumeCatchUp && result.production && typeof result.production === "object"
@@ -11540,7 +11640,15 @@ async function performServerEconomyRefresh(options = {}) {
       includeWelcomeBack: options.requestWelcomeBack === true,
     });
     applyServerEconomyResult(result, mergeServerEconomyRefreshOptions(options, serverEconomyRefreshActiveOptions));
-    if (options.requestWelcomeBack === true) pendingWelcomeBackSession = null;
+    if (options.requestWelcomeBack === true) {
+      pendingWelcomeBackSession = null;
+      if (serverEconomyRefreshQueuedOptions?.requestWelcomeBack) {
+        serverEconomyRefreshQueuedOptions = {
+          ...serverEconomyRefreshQueuedOptions,
+          requestWelcomeBack: false,
+        };
+      }
+    }
     serverEconomyLastSyncAt = Date.now();
     onlineLastError = "";
     updateOnlineUi();
@@ -19996,6 +20104,10 @@ function showPendingOfflineRewardsSummary() {
   return true;
 }
 
+function formatOfflineRewardAmount(value) {
+  return Math.max(0, Math.floor(Number(value) || 0)).toLocaleString("en-US");
+}
+
 function showOfflineRewardsModal({ goldGained = 0, troopsGained = 0, elapsed = 0, lostCities = [], lostCityCount = 0 } = {}) {
   const lostList = Array.isArray(lostCities) ? lostCities : [];
   const totalLostCities = Math.max(lostList.length, Math.floor(Number(lostCityCount) || 0));
@@ -20011,8 +20123,8 @@ function showOfflineRewardsModal({ goldGained = 0, troopsGained = 0, elapsed = 0
     <div class="offline-reward-panel">
       <p>Your kingdom kept producing while you were away for ${formatDuration(elapsed)}.</p>
       <div class="offline-reward-grid">
-        <div><span>Gold collected</span><strong>${formatNumber(goldGained)}</strong></div>
-        <div><span>Troops produced</span><strong>${formatNumber(troopsGained)}</strong><small>Remaining in cities you still own</small></div>
+        <div><span>Gold collected</span><strong>${formatOfflineRewardAmount(goldGained)}</strong></div>
+        <div><span>Troops produced</span><strong>${formatOfflineRewardAmount(troopsGained)}</strong><small>Remaining in cities you still own</small></div>
       </div>
       ${getGameServerInactivityNoticeMarkup(inactivityNotice)}
       ${lostSummary}
@@ -20107,9 +20219,10 @@ async function synchronizeForegroundGame(awayMs = 0, { longRefresh = false } = {
   const targetRegionId = getActiveOnlineRegionId();
   const shouldRestartRealtime = longRefresh || onlineRealtimeRecoveryNeeded;
   const shouldShowWelcomeBack = awayMs >= FOREGROUND_LONG_RESUME_MS;
+  const shouldRequestWelcomeBack = Boolean(pendingWelcomeBackSession?.eligible);
   const economyPromise = Promise.resolve(refreshServerEconomy(true, {
-    requestWelcomeBack: shouldShowWelcomeBack,
-    showOfflineRewards: shouldShowWelcomeBack,
+    requestWelcomeBack: shouldRequestWelcomeBack,
+    showOfflineRewards: shouldShowWelcomeBack || shouldRequestWelcomeBack,
     resumeCatchUp: true,
   }));
   const refreshTasks = [
@@ -28593,18 +28706,20 @@ function getCityFortificationDisplay(city, stats = null, report = null, nowMs = 
 
 function renderCityFortificationStatus(city, stats = null, report = null) {
   if (!supportsSiegeCombat()) return "";
-  const fortification = getCityFortificationDisplay(city, stats, report);
+  const displayedAtMs = Date.now();
+  const fortification = getCityFortificationDisplay(city, stats, report, displayedAtMs);
   const breached = fortification.integrityBps <= 0;
   const damaged = fortification.integrityBps < 10_000;
   const status = breached ? "Breached" : damaged ? "Damaged" : "Intact";
   const powerText = fortification.powerVisible
     ? `${formatNumber(fortification.currentWallPower)} / ${formatNumber(fortification.fullWallPower)} wall power`
     : "Wall power requires a scout report";
-  const repairText = damaged && fortification.repairAtMs > Date.now()
-    ? `<small data-fortification-repair-at-ms="${fortification.repairAtMs}">Full repair in ${formatDuration(Math.max(0, Math.ceil((fortification.repairAtMs - Date.now()) / 1000)))}</small>`
+  const liveRepair = !report && damaged && fortification.repairAtMs > displayedAtMs;
+  const repairText = damaged && fortification.repairAtMs > displayedAtMs
+    ? `<small data-fortification-repair-at-ms="${fortification.repairAtMs}">Full repair in ${formatDuration(Math.max(0, Math.ceil((fortification.repairAtMs - displayedAtMs) / 1000)))}</small>`
     : `<small>Fully repaired · Full-breach repair window ${formatDuration(fortification.repairWindowMinutes * 60)}</small>`;
   return `
-    <div class="stat-wide fortification-status ${breached ? "breached" : damaged ? "damaged" : "intact"}"${fortification.powerVisible ? ` data-fortification-full-wall-power="${fortification.fullWallPower}"` : ""}>
+    <div class="stat-wide fortification-status ${breached ? "breached" : damaged ? "damaged" : "intact"}"${fortification.powerVisible ? ` data-fortification-full-wall-power="${fortification.fullWallPower}"` : ""}${liveRepair ? ` data-fortification-displayed-at-ms="${displayedAtMs}" data-fortification-displayed-integrity-bps="${fortification.integrityBps}" data-fortification-rendered-integrity-bps="${fortification.integrityBps}"` : ""}>
       <span>Wall integrity</span>
       <strong data-fortification-integrity>${formatWallIntegrity(fortification.integrityBps)} · ${status}</strong>
       <small data-fortification-power>${powerText}. Walls absorb attack power before the garrison fights.</small>

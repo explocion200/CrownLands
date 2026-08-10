@@ -1,6 +1,7 @@
 const fs = require("fs");
 const path = require("path");
 const assert = require("node:assert/strict");
+const vm = require("node:vm");
 
 const root = path.resolve(__dirname, "..");
 const serverSource = fs.readFileSync(path.join(root, "functions", "index.js"), "utf8");
@@ -9,6 +10,19 @@ const economyConfig = JSON.parse(fs.readFileSync(path.join(root, "functions", "e
 
 function requireMatch(source, pattern, message) {
   if (!pattern.test(source)) throw new Error(message);
+}
+
+function extractFunction(source, name) {
+  const start = source.indexOf(`function ${name}(`);
+  assert.ok(start >= 0, `Missing ${name}.`);
+  const bodyStart = source.indexOf("{", source.indexOf(")", start));
+  let depth = 0;
+  for (let index = bodyStart; index < source.length; index += 1) {
+    if (source[index] === "{") depth += 1;
+    if (source[index] === "}") depth -= 1;
+    if (depth === 0) return source.slice(start, index + 1);
+  }
+  throw new Error(`Could not parse ${name}.`);
 }
 
 function readConstant(source, name) {
@@ -216,6 +230,149 @@ requireMatch(
   /for\s*\(let level = startLevel \+ 1; level <= endLevel; level \+= 1\)[\s\S]*?calculatedGold\s*\+=\s*getLevelUpGoldReward\(level\)[\s\S]*?calculatedTroops\s*\+=\s*getLevelUpTroopReward\(level\)/,
   "Client multi-level reward bundles must add each crossed level reward exactly once."
 );
+requireMatch(
+  serverSource,
+  /function applyXpToCharacter[\s\S]*?levelUpReward:\s*levelsGained > 0[\s\S]*?goldAwarded:\s*goldReward[\s\S]*?function finalizeLevelUpReward/,
+  "The server does not create an explicit receipt for genuine level gains."
+);
+requireMatch(
+  serverSource,
+  /profilePatchForCaller[\s\S]*?attackerPatch\.levelUpReward[\s\S]*?defenderPatch\.levelUpReward/,
+  "Combat responses do not carry the authoritative level-up receipt."
+);
+requireMatch(
+  serverSource,
+  /function makeReport\([\s\S]*?levelUpReward = null[\s\S]*?levelUpReward:\s*levelUpReward/,
+  "Battle reports do not preserve the authoritative level-up receipt."
+);
+requireMatch(
+  clientSource,
+  /function applyServerProfilePatch[\s\S]*?getLevelUpRewardAnnouncement\(patch, previousLevel, options\)[\s\S]*?if \(levelUpReward\)/,
+  "Profile synchronization can still open the prompt without an explicit level-up receipt."
+);
+requireMatch(
+  clientSource,
+  /if \(shouldNotify && normalized\.levelUpReward\)[\s\S]*?queueLevelUpReward/,
+  "New asynchronous battle level-ups do not queue their verified reward prompt."
+);
+assert.doesNotMatch(
+  clientSource,
+  /const levelRewardReport = Array\.isArray\(result\.reports\)/,
+  "The client still guesses level-up rewards from the newest generic battle report."
+);
+
+const promptSandbox = {
+  Math,
+  Number,
+  String,
+  normalizeRegionId: value => String(value || "center").trim().toLowerCase(),
+};
+vm.createContext(promptSandbox);
+vm.runInContext(
+  `${extractFunction(clientSource, "normalizeLevelUpRewardReceipt")};`
+  + `${extractFunction(clientSource, "getLevelUpRewardAnnouncement")};`
+  + "this.normalizeLevelUpRewardReceipt = normalizeLevelUpRewardReceipt;"
+  + "this.getLevelUpRewardAnnouncement = getLevelUpRewardAnnouncement;",
+  promptSandbox,
+  { filename: "game.js" }
+);
+
+const verifiedReceipt = {
+  fromLevel: 24,
+  toLevel: 25,
+  levelsGained: 1,
+  skillPointsAwarded: 1,
+  goldAwarded: 8986,
+  troopsAwarded: 36400,
+  cityId: "center_1",
+  cityName: "Ashford",
+  regionId: "center",
+};
+assert.equal(
+  promptSandbox.getLevelUpRewardAnnouncement({ character: { level: 25 } }, 24, {}),
+  null,
+  "A profile correction without a level-up receipt can open the prompt."
+);
+assert.equal(
+  promptSandbox.getLevelUpRewardAnnouncement(
+    { character: { level: 25 }, levelUpReward: verifiedReceipt },
+    25,
+    {}
+  ),
+  null,
+  "A replayed receipt can reopen the prompt when the level did not increase."
+);
+assert.equal(
+  promptSandbox.getLevelUpRewardAnnouncement(
+    { character: { level: 26 }, levelUpReward: verifiedReceipt },
+    25,
+    {}
+  ),
+  null,
+  "A receipt for a different destination level can open the prompt."
+);
+const verifiedAnnouncement = promptSandbox.getLevelUpRewardAnnouncement(
+  { character: { level: 25 }, levelUpReward: verifiedReceipt },
+  24,
+  {}
+);
+assert.deepEqual(
+  { ...verifiedAnnouncement },
+  {
+    fromLevel: 24,
+    toLevel: 25,
+    levelsGained: 1,
+    skillPoints: 1,
+    gold: 8986,
+    troops: 36400,
+    cityId: "center_1",
+    cityName: "Ashford",
+    regionId: "center",
+  },
+  "The prompt does not display the exact authoritative level-up receipt."
+);
+assert.equal(
+  promptSandbox.getLevelUpRewardAnnouncement(
+    { character: { level: 25 }, levelUpReward: verifiedReceipt },
+    24,
+    { announceLevelUp: false }
+  ),
+  null,
+  "Callers cannot explicitly suppress a level-up prompt."
+);
+
+const serverReceiptSandbox = {
+  Math,
+  Number,
+  safeNumber(value, fallback = 0) {
+    const number = Number(value);
+    return Number.isFinite(number) ? number : fallback;
+  },
+  safeString(value, maxLength = 160) {
+    return String(value || "").trim().slice(0, maxLength);
+  },
+  normalizeRegionId(value = "") {
+    return String(value || "center").trim().toLowerCase() || "center";
+  },
+};
+vm.createContext(serverReceiptSandbox);
+vm.runInContext(
+  `${extractFunction(serverSource, "finalizeLevelUpReward")};`
+  + "this.finalizeLevelUpReward = finalizeLevelUpReward;",
+  serverReceiptSandbox,
+  { filename: "functions/index.js" }
+);
+const serverProgress = { levelUpReward: { ...verifiedReceipt, troopsAwarded: 99999 } };
+const finalizedReceipt = serverReceiptSandbox.finalizeLevelUpReward(serverProgress, {
+  credited: 36400,
+  cityId: "center_1",
+  cityName: "Ashford",
+  regionId: "center",
+});
+assert.equal(finalizedReceipt.troopsAwarded, 36400, "The receipt shows calculated troops instead of the amount actually credited.");
+assert.equal(finalizedReceipt.cityId, "center_1");
+assert.equal(finalizedReceipt.cityName, "Ashford");
+assert.equal(serverReceiptSandbox.finalizeLevelUpReward({}, null), null, "A non-level-up progress result creates a receipt.");
 
 const constants = Object.fromEntries([
   "HERO_XP_SOFT_CAP_LEVEL",
