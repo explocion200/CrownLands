@@ -179,6 +179,9 @@ async function validateAsyncBehavior() {
   const modalContext = {
     modal: { open: true },
     pendingOfflineRewardsSummary: null,
+    loginPresentationSequence: null,
+    isLoginPresentationSequenceActive: () => false,
+    advanceLoginPresentationSequence() {},
     screenRewardAnimationBlockUntilMs: 0,
     showOfflineRewardsModal: summary => shownSummaries.push(summary),
     window: { setTimeout: callback => callback() },

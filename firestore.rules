@@ -54,6 +54,8 @@ service cloud.firestore {
           'itemPurchaseCooldowns',
           'dailyLoginReward',
           'reportsViewedAtMs',
+          'realmAnnouncementSeenThroughMs',
+          'lastRealmAnnouncementEventId',
           'inactivityNotice',
           'worldSlotResetAtMs',
           'economyUpdatedAtMs',
@@ -135,6 +137,8 @@ service cloud.firestore {
     function validPlayerProfileUpdate() {
       return playerEconomyUnchanged()
         && profileFieldUnchanged('reportsViewedAtMs')
+        && profileFieldUnchanged('realmAnnouncementSeenThroughMs')
+        && profileFieldUnchanged('lastRealmAnnouncementEventId')
         && profileFieldUnchanged('inactivityNotice')
         && profileFieldUnchanged('worldSlotResetAtMs')
         && (profileFieldUnchanged('playerName') || validPlayerNameValue(request.resource.data.playerName))
@@ -213,6 +217,11 @@ service cloud.firestore {
         allow create, update, delete: if false;
       }
 
+      match /dailyMissions/{cycleKey} {
+        allow read: if ownsPlayerDoc(uid) && isCurrentGeneration(resource.data);
+        allow create, update, delete: if false;
+      }
+
       match /serverMembership/{membershipId} {
         allow read: if ownsPlayerDoc(uid) && isCurrentGeneration(resource.data);
         allow create, update, delete: if false;
@@ -245,6 +254,10 @@ service cloud.firestore {
         && resetGeneration == currentResetGeneration()
         && isCurrentGeneration(resource.data);
       allow create, update, delete: if false;
+    }
+
+    match /dailyMissionEvents/{eventId} {
+      allow read, create, update, delete: if false;
     }
 
     match /leaderboards/{boardId}/entries/{uid} {

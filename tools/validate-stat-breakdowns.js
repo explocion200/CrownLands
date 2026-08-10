@@ -139,8 +139,8 @@ requireMatch(
 );
 requireMatch(
   clientSource,
-  /profileKingPowerStat\.textContent = formatBaseAndBonusStat/,
-  "Profile King Power does not use the shared base-plus-bonus display."
+  /profileKingPowerStat\.textContent = formatNumber\(summary\.kingPower\)/,
+  "Profile King Power does not use the approved number-only display."
 );
 requireMatch(
   clientSource,
@@ -253,4 +253,4 @@ assert.equal(cleanedStats.baseKingPower, 1_000, "Firebase live stats dropped bas
 assert.equal(cleanedStats.baseReplacementPower, 400, "Firebase live stats dropped base replacement power.");
 assert.equal(cleanedStats.baseDefensivePower, 450, "Firebase live stats dropped base defensive power.");
 
-console.log("Validated base-plus-bonus stats across profile, city, Stronghold, camp, and report data.");
+console.log("Validated compact profile Power and detailed city, Stronghold, camp, and report stat breakdowns.");
