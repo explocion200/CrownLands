@@ -7121,9 +7121,6 @@ button.inventory-slot {
 }
 .profile-tabs button.active { color: #211508; background: #f2b84b; box-shadow: inset 0 0 0 1px rgba(255,255,255,.5); }
 .profile-tabs { grid-template-columns: repeat(4, minmax(64px, 1fr)); }
-.daily-reward-tabs.profile-tabs{grid-template-columns:repeat(2,minmax(0,1fr));margin-bottom:.72rem}
-.daily-reward-tabs.profile-tabs button{min-height:44px}
-
 .clan-view {
   min-height: 0;
   overflow: auto;
@@ -9043,71 +9040,8 @@ button.inventory-slot {
   .profile-notification-row { min-height: 46px; padding: .45rem .55rem; }
 }
 
-/* Compact profile dashboard and Daily Missions --------------------------- */
-.profile-view {
-  grid-template-columns: minmax(0, 1fr);
-  grid-template-rows: auto minmax(0, 1fr);
-  gap: .48rem;
-  padding: .52rem .58rem .58rem;
-  overflow: hidden;
-}
-
-.profile-identity {
-  min-width: 0;
-  min-height: 76px;
-  display: grid;
-  grid-template-columns: auto minmax(180px, 1fr) minmax(145px, .58fr);
-  justify-items: stretch;
-  align-items: center;
-  align-content: center;
-  gap: .62rem;
-  padding: .28rem .5rem;
-  border: 1px solid rgba(158, 213, 255, .14);
-  border-radius: 8px;
-  background: linear-gradient(100deg, rgba(13, 44, 69, .82), rgba(5, 22, 37, .68));
-}
-
-.profile-identity .profile-flag-button {
-  grid-template-columns: auto;
-  gap: .08rem;
-  padding: .15rem;
-}
-
-.profile-identity .kingdom-flag-large {
-  width: 78px;
-  height: 58px;
-}
-
-.profile-identity .kingdom-flag-large .flag-symbol { font-size: 1.7rem; }
-.profile-identity .profile-flag-edit { font-size: .57rem; text-align: center; }
-.profile-identity .profile-name-block { width: 100%; gap: .3rem; }
-.profile-identity .profile-name-row { gap: .35rem; }
-.profile-identity .profile-name-row h3 { font-size: 1.05rem; }
-.profile-identity .profile-edit-btn { width: 32px; height: 32px; font-size: .9rem; }
-.profile-identity .profile-level-row span { font-size: .68rem; }
-.profile-identity .profile-xp-track { height: 10px; }
-.profile-identity .profile-clan-affiliation {
-  width: 100%;
-  min-height: 50px;
-  grid-template-columns: 38px minmax(0, 1fr);
-  gap: .4rem;
-  padding: .3rem .42rem;
-}
-.profile-identity .profile-clan-shield .clan-shield-size-mini { width: 32px; height: 36px; }
-.profile-identity .profile-clan-affiliation small { font-size: .57rem; }
-.profile-identity .profile-clan-affiliation strong { font-size: .72rem; }
-
-.profile-dashboard {
-  min-width: 0;
-  min-height: 0;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  align-items: stretch;
-  gap: .48rem;
-}
-
-.daily-missions-section,
-.profile-dashboard .kingdom-overview {
+/* Daily Missions --------------------------------------------------------- */
+.daily-missions-section {
   min-width: 0;
   min-height: 0;
   overflow: hidden;
@@ -9233,18 +9167,6 @@ button.inventory-slot {
 button.daily-mission-placeholder { width: 100%; cursor: pointer; }
 .daily-missions-status { margin: 0; color: #ffb2a6; font-size: .58rem; font-weight: 800; }
 
-.profile-dashboard .kingdom-overview {
-  align-content: stretch;
-  grid-template-rows: auto minmax(0, 1fr);
-  gap: .35rem;
-  padding: .5rem;
-}
-.profile-dashboard .kingdom-stat-grid { min-height: 0; gap: .34rem; }
-.profile-dashboard .kingdom-stat { min-height: 48px; padding: .34rem .46rem; gap: .08rem; }
-.profile-dashboard .kingdom-stat span { font-size: .58rem; }
-.profile-dashboard .kingdom-stat strong { font-size: .84rem; }
-.profile-dashboard .kingdom-stat-power { position: relative; min-height: 54px; }
-
 .modal.daily-mission-modal { width: min(480px, calc(100% - 1.2rem)); }
 .daily-mission-detail {
   display: grid;
@@ -9276,24 +9198,52 @@ button.daily-mission-placeholder { width: 100%; cursor: pointer; }
 .daily-mission-confirmation p strong { color: #f2c768; }
 .daily-mission-confirmation footer { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .5rem; }
 .daily-mission-confirmation footer button { min-height: 42px; }
-@media (max-width: 640px) {
-  .profile-view { gap: .34rem; padding: .36rem; }
-  .profile-identity {
-    min-height: 68px;
-    grid-template-columns: 58px minmax(0, 1fr) minmax(92px, .46fr);
-    gap: .36rem;
-    padding: .24rem .32rem;
+@media (max-width: 640px) and (orientation: portrait) {
+  .profile-view {
+    grid-template-columns: minmax(0, 1fr);
+    align-content: start;
+    gap: .42rem;
+    padding: .42rem;
+    overflow-y: auto;
   }
-  .profile-identity .kingdom-flag-large { width: 54px; height: 42px; }
+  .profile-identity {
+    min-width: 0;
+    min-height: 0;
+    grid-template-columns: 68px minmax(0, 1fr);
+    justify-items: stretch;
+    align-content: center;
+    gap: .42rem;
+    padding: .48rem;
+    border: 1px solid rgba(158, 213, 255, .14);
+    border-radius: 8px;
+    background: linear-gradient(100deg, rgba(13, 44, 69, .82), rgba(5, 22, 37, .68));
+  }
+  .profile-identity .profile-flag-button { grid-column: 1; grid-row: 1; padding: .1rem; }
+  .profile-identity .kingdom-flag-large { width: 64px; height: 48px; }
   .profile-identity .profile-flag-edit { display: none; }
-  .profile-identity .profile-name-row h3 { font-size: .86rem; }
-  .profile-identity .profile-edit-btn { width: 28px; height: 28px; }
+  .profile-identity .profile-name-block { width: 100%; gap: .3rem; }
+  .profile-identity .profile-name-row { gap: .3rem; }
+  .profile-identity .profile-name-row h3 { font-size: .96rem; }
+  .profile-identity .profile-edit-btn { width: 30px; height: 30px; font-size: .9rem; }
   .profile-identity .profile-level-row { gap: .25rem; }
   .profile-identity .profile-level-row strong,
-  .profile-identity .profile-level-row span { font-size: .58rem; }
-  .profile-identity .profile-clan-affiliation { min-height: 42px; grid-template-columns: 28px minmax(0, 1fr); padding: .2rem .28rem; }
-  .profile-identity .profile-clan-shield .clan-shield-size-mini { width: 25px; height: 28px; }
-  .profile-dashboard { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(126px, 1fr); gap: .34rem; }
+  .profile-identity .profile-level-row span { font-size: .62rem; }
+  .profile-identity .profile-xp-track { height: 9px; }
+  .profile-identity .profile-clan-affiliation {
+    grid-column: 1 / -1;
+    width: 100%;
+    min-height: 44px;
+    grid-template-columns: 30px minmax(0, 1fr);
+    gap: .36rem;
+    padding: .24rem .36rem;
+  }
+  .profile-identity .profile-clan-shield .clan-shield-size-mini { width: 27px; height: 30px; }
+  .kingdom-overview { gap: .38rem; padding: .48rem; }
+  .kingdom-stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .36rem; }
+  .kingdom-stat,
+  .kingdom-stat-power { min-height: 58px; padding: .4rem .48rem; }
+  .kingdom-stat span { font-size: .61rem; }
+  .kingdom-stat strong { font-size: .84rem; }
   .daily-missions-section { gap: .24rem; padding: .34rem; }
   .daily-missions-heading .profile-section-heading span { font-size: .54rem; }
   .daily-missions-heading .profile-section-heading h3 { font-size: .76rem; }
@@ -9309,25 +9259,11 @@ button.daily-mission-placeholder { width: 100%; cursor: pointer; }
   .daily-mission-action button { min-width: 42px; min-height: 28px; padding: 0 .22rem; font-size: .54rem; }
   .daily-mission-action .daily-mission-reroll { min-width: 28px; width: 28px; min-height: 28px; }
   .daily-mission-completed { font-size: .47rem; }
-  .profile-dashboard .kingdom-overview { gap: .22rem; padding: .3rem; }
-  .profile-dashboard .kingdom-overview .profile-section-heading { display: none; }
-  .profile-dashboard .kingdom-stat-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .22rem; }
-  .profile-dashboard .kingdom-stat { min-height: 45px; padding: .25rem .3rem; }
-  .profile-dashboard .kingdom-stat-wide { grid-column: auto; }
-  .profile-dashboard .kingdom-stat span { font-size: .5rem; }
-  .profile-dashboard .kingdom-stat strong { font-size: .68rem; }
-  .profile-dashboard .kingdom-stat-power { min-height: 45px; }
   .profile-stat-info { right: .2rem; top: .2rem; width: 18px; height: 18px; font-size: .55rem; }
 }
 
 @media (max-width: 900px) and (orientation: landscape) {
-  .profile-view { grid-template-columns: minmax(0, 1fr); grid-template-rows: 58px minmax(0, 1fr); }
-  .profile-identity { min-height: 58px; grid-template-columns: 54px minmax(0, 1fr) minmax(120px, .45fr); }
-  .profile-identity .kingdom-flag-large { width: 50px; height: 38px; }
-  .profile-identity .profile-flag-edit { display: none; }
-  .profile-dashboard { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); }
   .daily-mission-row { min-height: 50px; }
-  .profile-dashboard .kingdom-stat { min-height: 40px; }
 }
 
 /* Main-menu patch notes ---------------------------------------------------- */
