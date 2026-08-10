@@ -20,11 +20,11 @@ requireMatch(game, /armGoogleSignInRedirectFallback[\s\S]*Continue sign-in in th
 requireMatch(game, /getGoogleSignInErrorDetail[\s\S]*auth\/unauthorized-domain[\s\S]*auth\/network-request-failed[\s\S]*auth\/web-storage-unsupported/, "Player-facing authentication diagnostics are incomplete.");
 requireMatch(game, /handleGoogleSignIn[\s\S]*api\.signInWithGoogleRedirect\(\)[\s\S]*api\.signInWithGoogle\(\)/, "The login handler does not support both redirect and popup paths.");
 
-const buildId = "20260809-daily-missions-v1";
+const buildId = "20260810-daily-mission-camp-fix-v1";
 for (const [label, source] of [["index", index], ["service worker", worker]]) {
   requireMatch(source, new RegExp(buildId), `The ${label} does not carry the login-resilience cache version.`);
-  requireMatch(source, /firebaseClient\.js\?v=20260809-daily-missions-v1/, `The ${label} does not refresh the Firebase client.`);
-  requireMatch(source, /game\.js\?v=20260809-daily-missions-v1/, `The ${label} does not refresh the login UI.`);
+  requireMatch(source, /firebaseClient\.js\?v=20260810-daily-mission-camp-fix-v1/, `The ${label} does not refresh the Firebase client.`);
+  requireMatch(source, /game\.js\?v=20260810-daily-mission-camp-fix-v1/, `The ${label} does not refresh the login UI.`);
 }
 
 console.log("Validated bounded Google popup recovery, redirect completion, actionable errors, and cache refresh.");

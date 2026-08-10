@@ -182,8 +182,42 @@ async function main() {
     claimedAtMs: 0,
     reward: { type: "gold", lockedAmount: 12_345, productionHours: 0.5, itemId: "" },
   };
+  const goldCampMission = {
+    ...state.missions[1],
+    id: `emulator_gold_camp_${player.uid}`,
+    family: "GOLD_CAMP_CAPTURE",
+    activityGroup: "camps",
+    activityKey: "GOLD_CAMP_CAPTURE",
+    difficulty: "easy",
+    icon: "gold",
+    title: "Seize the Tribute",
+    description: "Capture the Gold Camp once",
+    target: 1,
+    progress: 0,
+    uniqueProgressKeys: [],
+    completedAtMs: 0,
+    claimedAtMs: 0,
+    reward: { type: "gold", lockedAmount: 10_000, productionHours: 0.5, itemId: "" },
+  };
+  const anyCampMission = {
+    ...state.missions[2],
+    id: `emulator_any_camp_${player.uid}`,
+    family: "CAMP_CAPTURE_COUNT",
+    activityGroup: "camps",
+    activityKey: "CAMP_CAPTURE_COUNT",
+    difficulty: "easy",
+    icon: "camp",
+    title: "Camp Raider",
+    description: "Capture 1 camp",
+    target: 1,
+    progress: 0,
+    uniqueProgressKeys: [],
+    completedAtMs: 0,
+    claimedAtMs: 0,
+    reward: { type: "troops", lockedAmount: 10_000, productionHours: 0.5, itemId: "" },
+  };
   await stateRef.set({
-    missions: [testMission, ...state.missions.slice(1)],
+    missions: [testMission, goldCampMission, anyCampMission],
     completedCount: 0,
     claimedCount: 0,
     capacitySnapshot: {
@@ -235,6 +269,55 @@ async function main() {
   );
   assert(Number(completedState.completedCount) >= 1, "Completed mission count did not update.");
 
+  const failedCampEventRef = db.doc(`dailyMissionEvents/failed_camp_${player.uid}`);
+  await failedCampEventRef.set({
+    eventId: `failed_camp_${player.uid}`,
+    uid: player.uid,
+    worldId: realm.worldId,
+    resetGeneration: realm.resetGeneration,
+    type: "CAMP_CAPTURED",
+    occurredAtMs: Date.now(),
+    targetCategory: "camp",
+    campType: "gold",
+    committedTroops: 50_000,
+    campCaptured: true,
+    success: false,
+    processedAtMs: 0,
+    expiresAtMs: Date.now() + 86_400_000,
+  });
+  await pollUntil(
+    () => failedCampEventRef.get().then(snapshot => snapshot.data() || {}),
+    event => Number(event.processedAtMs) > 0,
+    "The failed camp-capture mission event was not processed."
+  );
+  assert(Number((await stateRef.get()).data()?.missions?.[1]?.progress || 0) === 0, "A failed camp battle progressed a Daily Mission.");
+
+  const campEventRef = db.doc(`dailyMissionEvents/gold_camp_${player.uid}`);
+  await campEventRef.set({
+    eventId: `gold_camp_${player.uid}`,
+    uid: player.uid,
+    worldId: realm.worldId,
+    resetGeneration: realm.resetGeneration,
+    type: "CAMP_CAPTURED",
+    occurredAtMs: Date.now(),
+    targetCategory: "camp",
+    campType: "gold",
+    committedTroops: 1,
+    campCaptured: true,
+    success: true,
+    processedAtMs: 0,
+    expiresAtMs: Date.now() + 86_400_000,
+  });
+  const campCompletedState = await pollUntil(
+    () => stateRef.get().then(snapshot => snapshot.data() || {}),
+    next => Number(next.missions?.[1]?.progress || 0) === 1
+      && Number(next.missions?.[2]?.progress || 0) === 1
+      && Number(next.missions?.[1]?.completedAtMs || 0) > 0
+      && Number(next.missions?.[2]?.completedAtMs || 0) > 0,
+    "A successful Gold Camp capture did not complete both the specific and any-camp Daily Missions."
+  );
+  assert(Number(campCompletedState.completedCount) === 3, "Daily Mission completion totals did not include both camp missions.");
+
   const outboxRead = await clientDocumentRequest(player, `dailyMissionEvents/valid_${player.uid}`);
   assert(outboxRead.status === 403, "A client read the protected Daily Mission event outbox.");
 
@@ -264,7 +347,7 @@ async function main() {
   const claimedState = (await stateRef.get()).data() || {};
   assert(Number(claimedState.missions?.[0]?.claimedAtMs || 0) > 0, "The claimed mission did not persist its claimed state.");
 
-  console.log("Daily Missions emulator gate passed: private state, UTC persistence, one reroll, 5% combat threshold, event progress, and idempotent claims are enforced.");
+  console.log("Daily Missions emulator gate passed: private state, UTC persistence, one reroll, PvP thresholds, successful camp progress, event processing, and idempotent claims are enforced.");
 }
 
 main().catch(error => {
