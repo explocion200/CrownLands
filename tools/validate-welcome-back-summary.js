@@ -193,7 +193,11 @@ requireMatch(
   /async function collectEconomy[\s\S]*?sessionId:\s*getActiveSessionId\(\)/,
   "Economy collection does not bind Welcome back to the active browser session."
 );
-requireMatch(rulesSource, /profileFieldUnchanged\('pendingAwayProduction'\)/, "Away-production state is writable by clients.");
+assert.doesNotMatch(
+  extractFunction(rulesSource, "validPlayerProfileUpdate"),
+  /'pendingAwayProduction'/,
+  "Away-production state is writable by clients."
+);
 assert.ok(
   indexes.indexes.some(index => (
     index.collectionGroup === "ownershipChanges"

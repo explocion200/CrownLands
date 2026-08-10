@@ -164,11 +164,11 @@ assert.match(
   /validPlayerProfileCreate[\s\S]*?'lastCityRelinquishedAtMs'/,
   "Profile creation rules do not reject client-supplied relinquishment timestamps."
 );
-assert.match(
-  rulesSource,
-  /validPlayerProfileUpdate[\s\S]*?profileFieldUnchanged\('lastCityRelinquishedAtMs'\)/,
-  "Profile update rules do not protect the relinquishment timestamp."
-);
+const profileUpdateRuleStart = rulesSource.indexOf("function validPlayerProfileUpdate");
+const profileUpdateRuleEnd = rulesSource.indexOf("function ownsCityOwnerIdentity", profileUpdateRuleStart);
+const profileUpdateRule = rulesSource.slice(profileUpdateRuleStart, profileUpdateRuleEnd);
+assert.match(profileUpdateRule, /affected\.hasOnly\(/, "Profile updates are not bounded by an allowlist.");
+assert.doesNotMatch(profileUpdateRule, /lastCityRelinquishedAtMs/, "Profile update rules allow client relinquishment timestamp changes.");
 assert.match(
   gameRulesSource,
   /one holding per UTC day[\s\S]*?Regular cities, Strongholds, and the Crown Citadel[\s\S]*?00:00 UTC/,

@@ -141,7 +141,11 @@ requires(
   /match \/armies\/\{armyId\}[\s\S]*?resource\.data\.rallyAttack == true[\s\S]*?resource\.data\.targetOwnerUid == request\.auth\.uid[\s\S]*?participantUids/,
   "Launched rally armies are not visible to their defender while preserving canonical normal-army privacy."
 );
-requires(rules, /profileFieldUnchanged\('committedRallyTroops'\)[\s\S]*?profileFieldUnchanged\('rallyResetGeneration'\)/, "Clients can mutate committed rally troop state.");
+assert.doesNotMatch(
+  extractFunction(rules, "validPlayerProfileUpdate", "ownsCityOwnerIdentity"),
+  /'committedRallyTroops'|'rallyResetGeneration'/,
+  "Clients can mutate committed rally troop state."
+);
 
 const rallyIndexes = indexes.indexes.filter(index => index.collectionGroup === "rallies");
 assert(rallyIndexes.some(index => index.queryScope === "COLLECTION"), "The live clan rally query index is missing.");

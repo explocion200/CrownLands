@@ -41,7 +41,11 @@ assert.match(api, /function subscribeRealmActivity[\s\S]*?realmEvents[\s\S]*?act
 assert.match(api, /snapshot\.docChanges\(\)/, "Realtime Realm Activity changes are not exposed for live announcements.");
 assert.match(api, /function markRealmAnnouncementSeen[\s\S]*?callServerFunction\("markRealmAnnouncementSeen"/, "The Realm announcement cursor callable is not exposed by the Firebase client.");
 assert.match(rules, /match \/realmEvents\/\{resetGeneration\}\/activity\/\{eventId\}[\s\S]*?allow read:[\s\S]*?signedIn\(\)[\s\S]*?allow create, update, delete: if false;/, "Realm Activity rules are not authenticated and server-owned.");
-assert.match(rules, /profileFieldUnchanged\('realmAnnouncementSeenThroughMs'\)[\s\S]*?profileFieldUnchanged\('lastRealmAnnouncementEventId'\)/, "Players can write their own Realm announcement cursor.");
+assert.doesNotMatch(
+  rules.slice(rules.indexOf("function validPlayerProfileUpdate"), rules.indexOf("function ownsCityOwnerIdentity")),
+  /'realmAnnouncementSeenThroughMs'|'lastRealmAnnouncementEventId'/,
+  "Players can write their own Realm announcement cursor."
+);
 assert.ok(indexes.indexes.some(index => (
   index.collectionGroup === "activity"
   && index.queryScope === "COLLECTION"

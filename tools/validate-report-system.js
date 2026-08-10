@@ -23,7 +23,11 @@ function functionBody(source, name) {
 assert.match(server, /occurredAtMs:\s*nowMs,[\s\S]*?createdAtMs:\s*nowMs/, "Server reports lack an authoritative occurrence timestamp.");
 assert.match(server, /exports\.markReportsViewed\s*=\s*onCall[\s\S]*?reportsViewedAtMs[\s\S]*?Math\.min\(nowMs/, "The server read marker is missing or not bounded by server time.");
 assert.match(api, /async function markReportsViewed[\s\S]*?callServerFunction\("markReportsViewed"/, "The report read marker is not exposed by the Firebase client.");
-assert.match(rules, /profileFieldUnchanged\('reportsViewedAtMs'\)/, "Players can write their own authoritative report read marker.");
+assert.doesNotMatch(
+  rules.slice(rules.indexOf("function validPlayerProfileUpdate"), rules.indexOf("function ownsCityOwnerIdentity")),
+  /'reportsViewedAtMs'/,
+  "Players can write their own authoritative report read marker."
+);
 assert.match(markup, /id="reportUnreadBadge"[\s\S]*?report-unread-badge/, "The Reports button unread badge is missing.");
 assert.match(styles, /\.report-unread-badge[\s\S]*?position:\s*absolute/, "The unread badge is not positioned on the Reports button.");
 

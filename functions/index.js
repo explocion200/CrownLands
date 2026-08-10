@@ -12764,27 +12764,49 @@ exports.collectHarvestBonus = onCall({ region: "us-central1", maxInstances: 30, 
   });
 });
 
-exports.spendSkillPoint = onCall({ region: "us-central1", maxInstances: 20, invoker: "public" }, async request => {
-  const uid = requireAuth(request);
-  const data = request.data || {};
-  const skillId = safeString(data.skillId || data.skill, 64);
-  const config = SKILL_CONFIG[skillId];
-  if (!config) throw new HttpsError("invalid-argument", "Choose a valid skill.");
+function normalizeSkillSpendAllocations(rawAllocations = []) {
+  if (!Array.isArray(rawAllocations) || rawAllocations.length < 1) {
+    throw new HttpsError("invalid-argument", "Choose at least one skill to improve.");
+  }
+  if (rawAllocations.length > Object.keys(SKILL_CONFIG).length) {
+    throw new HttpsError("invalid-argument", "Too many skill allocations were submitted.");
+  }
+  const totals = new Map();
+  const order = [];
+  rawAllocations.forEach(rawAllocation => {
+    const skillId = safeString(rawAllocation?.skillId || rawAllocation?.skill, 64);
+    if (!SKILL_CONFIG[skillId]) throw new HttpsError("invalid-argument", "Choose a valid skill.");
+    const rawPoints = Number(rawAllocation?.points ?? rawAllocation?.count ?? 0);
+    const points = Math.floor(rawPoints);
+    if (!Number.isFinite(rawPoints) || rawPoints !== points || points < 1) {
+      throw new HttpsError("invalid-argument", "Skill point counts must be positive whole numbers.");
+    }
+    if (!totals.has(skillId)) order.push(skillId);
+    totals.set(skillId, (totals.get(skillId) || 0) + points);
+  });
+  return order.map(skillId => ({ skillId, points: totals.get(skillId) }));
+}
 
+async function spendSkillAllocations(uid, allocations, legacySkillId = "") {
   const nowMs = Date.now();
   return runTransactionWithInfrastructureRetry(async transaction => {
     const economy = await prepareEconomyCollection(transaction, uid, nowMs);
     if (!economy.profileSnap.exists) throw new HttpsError("not-found", "Player profile was not found.");
     const upgrades = normalizeSkillUpgrades(economy.profileAfter.upgrades);
     const character = reconcileSkillPoints(economy.profileAfter.character, upgrades);
-    const currentLevel = normalizeSkillLevelForSkill(skillId, upgrades[skillId]);
-    if (currentLevel >= getSkillMaxLevel(skillId)) {
-      throw new HttpsError("failed-precondition", "That skill is already capped.");
-    }
-    if (character.skillPoints < 1) {
+    const totalPoints = allocations.reduce((total, allocation) => total + allocation.points, 0);
+    if (character.skillPoints < totalPoints) {
       throw new HttpsError("failed-precondition", "Earn a hero level for another skill point.");
     }
-    upgrades[skillId] = currentLevel + 1;
+    const appliedAllocations = allocations.map(allocation => {
+      const currentLevel = normalizeSkillLevelForSkill(allocation.skillId, upgrades[allocation.skillId]);
+      const nextLevel = currentLevel + allocation.points;
+      if (nextLevel > getSkillMaxLevel(allocation.skillId)) {
+        throw new HttpsError("failed-precondition", "That skill is already capped.");
+      }
+      upgrades[allocation.skillId] = nextLevel;
+      return { ...allocation, level: nextLevel };
+    });
     character.skillPoints = getAvailableSkillPoints(character, upgrades);
     const skillPresets = setActiveSkillPresetSlot(economy.profileAfter.skillPresets, 0);
     writePreparedEconomy(transaction, economy, {
@@ -12793,12 +12815,27 @@ exports.spendSkillPoint = onCall({ region: "us-central1", maxInstances: 20, invo
       skillPresets,
     });
     return createEconomyResponse(economy, {
-      skillId,
+      skillId: legacySkillId || (appliedAllocations.length === 1 ? appliedAllocations[0].skillId : ""),
+      skillAllocations: appliedAllocations,
       character,
       upgrades,
       skillPresets,
     });
   });
+}
+
+exports.spendSkillPoint = onCall({ region: "us-central1", maxInstances: 20, invoker: "public" }, async request => {
+  const uid = requireAuth(request);
+  const data = request.data || {};
+  const skillId = safeString(data.skillId || data.skill, 64);
+  const allocations = normalizeSkillSpendAllocations([{ skillId, points: 1 }]);
+  return spendSkillAllocations(uid, allocations, skillId);
+});
+
+exports.spendSkillPoints = onCall({ region: "us-central1", maxInstances: 20, invoker: "public" }, async request => {
+  const uid = requireAuth(request);
+  const allocations = normalizeSkillSpendAllocations(request.data?.allocations);
+  return spendSkillAllocations(uid, allocations);
 });
 
 exports.resetSkills = onCall({ region: "us-central1", maxInstances: 20, invoker: "public" }, async request => {

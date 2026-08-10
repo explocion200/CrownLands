@@ -38,6 +38,15 @@
     foregroundPushListenerReady: false,
     activeSessionId: "",
     activeSessionUnsubscribe: null,
+    activeSessionActivationPromise: null,
+    activeSessionActivationUid: "",
+    activeSessionActivationGeneration: 0,
+    activeSessionActivatedUid: "",
+    activeSessionActivationBlockedUid: "",
+    activeSessionSnapshot: null,
+    activeSessionRetryTimer: 0,
+    activeSessionRetryAtMs: 0,
+    activeSessionRetryIndex: 0,
     sessionReplacementInFlight: false,
     installationRegisteredAtMs: 0,
     installationRegistrationPromise: null,
@@ -134,6 +143,39 @@
     client.activeSessionUnsubscribe = null;
   }
 
+  function resetActiveSessionActivation(uid = "") {
+    const nextUid = String(uid || "");
+    if (nextUid === client.activeSessionActivationUid) return;
+    if (client.activeSessionRetryTimer) window.clearTimeout(client.activeSessionRetryTimer);
+    client.activeSessionRetryTimer = 0;
+    client.activeSessionRetryAtMs = 0;
+    client.activeSessionRetryIndex = 0;
+    client.activeSessionActivationPromise = null;
+    client.activeSessionActivationUid = nextUid;
+    client.activeSessionActivationGeneration += 1;
+    client.activeSessionActivatedUid = "";
+    client.activeSessionActivationBlockedUid = "";
+    client.activeSessionSnapshot = null;
+  }
+
+  function getFirebaseErrorCode(error = null) {
+    return String(error?.code || "").toLowerCase().replace(/^firestore\//, "");
+  }
+
+  function scheduleActiveSessionRetry(uid = "") {
+    if (!uid || uid !== client.activeSessionActivationUid || client.activeSessionRetryTimer || client.activeSessionActivationBlockedUid === uid) return;
+    const delays = [2000, 4000, 8000, 16000, 30000];
+    const baseDelay = delays[Math.min(client.activeSessionRetryIndex, delays.length - 1)];
+    const delayMs = Math.round(baseDelay * (0.9 + Math.random() * 0.2));
+    client.activeSessionRetryIndex += 1;
+    client.activeSessionRetryAtMs = Date.now() + delayMs;
+    client.activeSessionRetryTimer = window.setTimeout(() => {
+      client.activeSessionRetryTimer = 0;
+      client.activeSessionRetryAtMs = 0;
+      activateCurrentSession("retry");
+    }, delayMs);
+  }
+
   async function signOutForSessionReplacement(remoteSession = {}) {
     if (client.sessionReplacementInFlight) return;
     client.sessionReplacementInFlight = true;
@@ -199,27 +241,59 @@
     await init();
     const uid = requireSignedIn();
     if (!uid) return null;
-    const { doc, setDoc, serverTimestamp } = client.modules.firestore;
-    const now = Date.now();
-    const activeSession = {
-      id: getActiveSessionId(),
-      device: getSessionDeviceLabel(),
-      reason: String(reason || "login").slice(0, 32),
-      userAgent: String(navigator.userAgent || "").slice(0, 180),
-      loginAtMs: now,
-      lastSeenAtMs: now,
-    };
-    await setDoc(doc(client.db, "players", uid), {
-      uid,
-      displayName: client.user?.displayName || "",
-      email: client.user?.email || "",
-      photoURL: client.user?.photoURL || "",
-      activeSession,
-      lastLoginAt: now,
-      updatedAt: serverTimestamp(),
-    }, { merge: true });
+    resetActiveSessionActivation(uid);
+    if (client.activeSessionActivationBlockedUid === uid) return null;
+    if (client.activeSessionActivatedUid === uid && client.activeSessionSnapshot) return client.activeSessionSnapshot;
+    if (client.activeSessionRetryAtMs > Date.now()) return null;
+    if (client.activeSessionActivationPromise) return client.activeSessionActivationPromise;
     startActiveSessionWatcher(uid);
-    return activeSession;
+    const activationGeneration = client.activeSessionActivationGeneration;
+    const activationPromise = (async () => {
+      const { doc, setDoc, serverTimestamp } = client.modules.firestore;
+      const now = Date.now();
+      const activeSession = {
+        id: getActiveSessionId(),
+        device: getSessionDeviceLabel(),
+        reason: String(reason || "login").slice(0, 32),
+        userAgent: String(navigator.userAgent || "").slice(0, 180),
+        loginAtMs: now,
+        lastSeenAtMs: now,
+      };
+      try {
+        await setDoc(doc(client.db, "players", uid), {
+          uid,
+          displayName: client.user?.displayName || "",
+          email: client.user?.email || "",
+          photoURL: client.user?.photoURL || "",
+          activeSession,
+          lastLoginAt: now,
+          updatedAt: serverTimestamp(),
+        }, { merge: true });
+        if (activationGeneration !== client.activeSessionActivationGeneration) return null;
+        client.activeSessionActivatedUid = uid;
+        client.activeSessionSnapshot = activeSession;
+        client.activeSessionRetryIndex = 0;
+        client.activeSessionRetryAtMs = 0;
+        return activeSession;
+      } catch (error) {
+        if (activationGeneration !== client.activeSessionActivationGeneration) return null;
+        if (getFirebaseErrorCode(error) === "permission-denied") {
+          client.activeSessionActivationBlockedUid = uid;
+          console.warn("Current session activation paused after a permission failure", error);
+        } else {
+          console.warn("Current session activation failed; retrying with backoff", error);
+          scheduleActiveSessionRetry(uid);
+        }
+        return null;
+      }
+    })();
+    client.activeSessionActivationPromise = activationPromise;
+    activationPromise.finally(() => {
+      if (activationGeneration === client.activeSessionActivationGeneration && client.activeSessionActivationPromise === activationPromise) {
+        client.activeSessionActivationPromise = null;
+      }
+    });
+    return activationPromise;
   }
 
   async function loadModules() {
@@ -280,6 +354,7 @@
             });
           } else if (!client.user?.uid) {
             stopActiveSessionWatcher();
+            resetActiveSessionActivation("");
             client.installationRegisteredAtMs = 0;
           }
           dispatch("auth", { user: client.user });
@@ -581,6 +656,10 @@
 
   async function spendSkillPoint(payload = {}) {
     return callServerFunction("spendSkillPoint", payload);
+  }
+
+  async function spendSkillPoints(payload = {}) {
+    return callServerFunction("spendSkillPoints", payload);
   }
 
   async function resetSkills(payload = {}) {
@@ -2461,6 +2540,7 @@
     collectHarvestBonus,
     upgradeCity,
     spendSkillPoint,
+    spendSkillPoints,
     resetSkills,
     saveSkillPreset,
     renameSkillPreset,

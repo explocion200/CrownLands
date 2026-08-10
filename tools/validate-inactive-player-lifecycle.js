@@ -135,7 +135,11 @@ requireMatch(clientSource, /normalizeGameServerMembership[\s\S]*?territory-surre
 requireMatch(clientSource, /showGameServerInactivityNotice[\s\S]*?getGameServerInactivityNoticeMarkup[\s\S]*?World slot reset[\s\S]*?holdings surrendered/, "The game does not explain inactivity actions in a re-entry modal.");
 requireMatch(clientSource, /showOfflineRewardsModal[\s\S]*?getGameServerInactivityNoticeMarkup\(inactivityNotice\)/, "The inactivity notice is not integrated with the existing Welcome back dialog.");
 requireMatch(firebaseClientSource, /delete cleanProfile\.inactivityNotice[\s\S]*?delete cleanProfile\.worldSlotResetAtMs/, "Client saves can accidentally overwrite server inactivity fields.");
-requireMatch(rulesSource, /profileFieldUnchanged\('inactivityNotice'\)[\s\S]*?profileFieldUnchanged\('worldSlotResetAtMs'\)/, "Inactivity notices are not server-owned in Firestore rules.");
+assert.doesNotMatch(
+  extractFunction(rulesSource, "validPlayerProfileUpdate"),
+  /'inactivityNotice'|'worldSlotResetAtMs'/,
+  "Inactivity notices are not server-owned in Firestore rules."
+);
 requireMatch(rulesSource, /match \/realmMaintenance\/\{resetId\}\/inactivePlayers\/\{uid\}[\s\S]*?allow read, create, update, delete: if false;/, "Inactivity maintenance receipts are not explicitly server-only.");
 requireMatch(gameRulesSource, /15 consecutive days[\s\S]*?20 consecutive inactive days/, "The public rules do not disclose both inactivity thresholds.");
 

@@ -12,7 +12,6 @@ const STATIC_CACHE_URLS = [
   "/index.html",
   "/manifest.webmanifest",
   "/styles.css?v=20260810-daily-mission-camp-fix-v1",
-  "/daily-rewards.css?v=20260810-reference-refresh-v1",
   "/release-config.js",
   "/patch-notes.js?v=20260807-login-resilience-v1",
   "/world-config.js",

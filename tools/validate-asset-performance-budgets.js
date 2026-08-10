@@ -174,7 +174,7 @@ assert.deepEqual(
     .sort(),
   "Only login-critical artwork and the lightweight map-transition clouds belong in the installation cache."
 );
-for (const runtimeOnlyPage of ["about.html", "how-to-play.html", "game-rules.html", "support.html", "privacy.html", "site-info.css"]) {
+for (const runtimeOnlyPage of ["about.html", "how-to-play.html", "game-rules.html", "support.html", "privacy.html", "site-info.css", "daily-rewards.css"]) {
   assert(
     !staticCacheUrls.some(url => localPathFromUrl(url) === runtimeOnlyPage),
     `${runtimeOnlyPage} should be cached on demand, not during service-worker installation.`

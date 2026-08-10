@@ -241,9 +241,39 @@ async function main() {
   const reactivated = await callFunction("applySkillPreset", user.token, { slot: 1 });
   assert(Number(reactivated.currentUser?.skillPresets?.activeSlot || 0) === 1, "A matching allocation could not reactivate its preset.");
   assert(Number(reactivated.skillPreset?.goldCharged || 0) === Number(economyConfig.playerCosts.skillPresetApplyGold), "A matching allocation was not charged.");
+  const batched = await callFunction("spendSkillPoints", user.token, {
+    allocations: [
+      { skillId: "guildCharters", points: 2 },
+      { skillId: "marchOrders", points: 3 },
+      { skillId: "guildCharters", points: 1 },
+    ],
+  });
+  assert(Number(batched.currentUser?.upgrades?.guildCharters || 0) === 3, "A repeated batched skill allocation was not coalesced.");
+  assert(Number(batched.currentUser?.upgrades?.marchOrders || 0) === 3, "A mixed batched skill allocation lost points.");
+  assert(Number(batched.currentUser?.skillPresets?.activeSlot || 0) === 0, "A batched skill spend did not clear the active preset.");
+  assert(batched.skillAllocations?.length === 2, "The batched skill receipt did not report normalized allocations.");
+  const beforeInvalidBatch = (await profileRef.get()).data() || {};
+  assertRejected(await invokeFunction("spendSkillPoints", user.token, {
+    allocations: [
+      { skillId: "royalGranaries", points: 1 },
+      { skillId: "stoneworks", points: 99 },
+    ],
+  }), "FAILED_PRECONDITION", "An over-cap skill batch was accepted");
+  const afterInvalidBatch = (await profileRef.get()).data() || {};
+  assert(Number(afterInvalidBatch.upgrades?.royalGranaries || 0) === Number(beforeInvalidBatch.upgrades?.royalGranaries || 0), "A rejected batch partially spent a valid point.");
   const spent = await callFunction("spendSkillPoint", user.token, { skillId: "guildCharters" });
   assert(Number(spent.currentUser?.skillPresets?.activeSlot || 0) === 0, "Spending a skill point did not clear the active preset.");
   assert(spent.currentUser?.skillPresets?.slots?.filter(slot => slot.saved).length === 4, "Spending a skill point overwrote a saved preset.");
+
+  await setBuild(profileRef, cityRef, { level: 6, upgrades: zeroBuild(), gold: 2_000_000 });
+  const competingBatches = await Promise.all([
+    invokeFunction("spendSkillPoints", user.token, { allocations: [{ skillId: "swordmastery", points: 5 }] }),
+    invokeFunction("spendSkillPoints", user.token, { allocations: [{ skillId: "taxStewardship", points: 5 }] }),
+  ]);
+  assert(competingBatches.filter(response => response.ok).length === 1, `Concurrent batches did not consume the five available points exactly once: ${JSON.stringify(competingBatches)}`);
+  profile = (await profileRef.get()).data() || {};
+  assert(SKILL_ORDER.reduce((total, skill) => total + Number(profile.upgrades?.[skill] || 0), 0) === 5, "Concurrent skill batches partially or doubly spent points.");
+  assert(Number(profile.character?.skillPoints || 0) === 0, "Concurrent skill batches left an incorrect available-point balance.");
 
   await setBuild(profileRef, cityRef, { level: 100, upgrades: alternateBuild, gold: 999_999 });
   const beforeInsufficient = (await profileRef.get()).data() || {};
