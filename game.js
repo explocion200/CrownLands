@@ -2712,6 +2712,8 @@ const deedCampHistoryCache = new Map();
 const deedCampHistoryRequests = new Map();
 let crownCitadelReignCache = [];
 let crownCitadelReignRequest = null;
+const strongholdLegacyCache = new Map();
+const strongholdLegacyRequests = new Map();
 let onlineCityStateSavePromises = new Set();
 let pendingServerArmyLaunchKeys = new Set();
 let onlineIslandUnsubscribe = null;
@@ -8180,6 +8182,7 @@ function normalizeCombatFortificationSnapshot(raw = null) {
     troopObjectiveDefenseBonusPercent: Math.max(0, Number(raw.troopObjectiveDefenseBonusPercent) || 0),
     objectiveDefenseBonusPercent: Math.max(0, Number(raw.objectiveDefenseBonusPercent) || 0),
     fullWallPower: Math.max(0, Math.floor(Number(raw.fullWallPower) || 0)),
+    wallDefenseIgnored: raw.wallDefenseIgnored === true,
     currentWallPower: Math.max(0, Math.floor(Number(raw.currentWallPower ?? raw.startingWallPower) || 0)),
     startingWallPower: Math.max(0, Math.floor(Number(raw.startingWallPower ?? raw.currentWallPower) || 0)),
     wallDamagePower: Math.max(0, Math.floor(Number(raw.wallDamagePower) || 0)),
@@ -14661,6 +14664,8 @@ function disconnectOnlineWorld() {
   deedCampHistoryRequests.clear();
   crownCitadelReignCache = [];
   crownCitadelReignRequest = null;
+  strongholdLegacyCache.clear();
+  strongholdLegacyRequests.clear();
   onlineGlobalStats = null;
   onlineIslandSummaries = new Map();
   onlineIslandSummaryRefreshInFlight = false;
@@ -15592,6 +15597,17 @@ function applyOnlineCities(onlineCities, regionId = getActiveOnlineRegionId(), {
   const byId = new Map(onlineCities.map(city => [city.id, city]));
   const currentUid = getCurrentOnlineUid();
   const localById = new Map(state.cities.map(city => [city.id, city]));
+  const openStrongholdId = modal?.open ? String(modal.dataset.cityInfoId || "") : "";
+  const previousOpenStronghold = localById.get(openStrongholdId);
+  const previousStrongholdLegacySignature = previousOpenStronghold
+    && isStronghold(previousOpenStronghold)
+    && !isCrownCitadel(previousOpenStronghold)
+      ? `${String(previousOpenStronghold.ownerUid || "")}:${normalizeTimestampMs(previousOpenStronghold.lastCapturedAtMs ?? previousOpenStronghold.lastCapturedAt)}`
+      : "";
+  const wasStrongholdLegacyTabOpen = Boolean(
+    openStrongholdId
+    && modalBody?.querySelector('[data-stronghold-info-panel="legacy"]:not([hidden])')
+  );
   const previousVfxById = new Map(state.cities.map(city => [city.id, getCityVfxSnapshot(city)]));
   const activeRegionId = normalizeRegionId(regionId);
   const inactiveCities = state.cities.filter(city => getCityRegionId(city) !== activeRegionId);
@@ -15690,6 +15706,21 @@ function applyOnlineCities(onlineCities, regionId = getActiveOnlineRegionId(), {
   const nextActiveCities = state.cities.filter(city => getCityRegionId(city) === activeRegionId);
   emitOnlineCityStateAnimations(previousVfxById, nextActiveCities, onlineCityVfxHydrated);
   onlineCityVfxHydrated = true;
+  const nextOpenStronghold = openStrongholdId ? cityById(openStrongholdId) : null;
+  const nextStrongholdLegacySignature = nextOpenStronghold
+    && isStronghold(nextOpenStronghold)
+    && !isCrownCitadel(nextOpenStronghold)
+      ? `${String(nextOpenStronghold.ownerUid || "")}:${normalizeTimestampMs(nextOpenStronghold.lastCapturedAtMs ?? nextOpenStronghold.lastCapturedAt)}`
+      : "";
+  if (previousStrongholdLegacySignature
+      && nextStrongholdLegacySignature
+      && previousStrongholdLegacySignature !== nextStrongholdLegacySignature) {
+    strongholdLegacyCache.delete(openStrongholdId);
+    showCityInfoModal(openStrongholdId);
+    if (wasStrongholdLegacyTabOpen) {
+      modalBody?.querySelector('[data-stronghold-info-tab="legacy"]')?.click();
+    }
+  }
 }
 
 function normalizeOnlineCampState(raw = {}) {
@@ -24869,7 +24900,7 @@ function updateVisibleCityDynamicText() {
         : "Neutral";
     }
   }
-  modalBody?.querySelectorAll("[data-citadel-reign-score]").forEach(score => {
+  modalBody?.querySelectorAll("[data-citadel-reign-score], [data-stronghold-legacy-score]").forEach(score => {
     const totalHeldMs = Math.max(0, Number(score.dataset.totalHeldMs) || 0);
     const currentHeldSinceMs = Math.max(0, Number(score.dataset.currentHeldSinceMs) || 0);
     const liveHeldMs = currentHeldSinceMs > 0 ? Math.max(0, Date.now() - currentHeldSinceMs) : 0;
@@ -28605,6 +28636,195 @@ async function refreshCrownCitadelReignPanel({ force = false } = {}) {
   return crownCitadelReignRequest;
 }
 
+function normalizeStrongholdLegacyEntry(raw = {}) {
+  return {
+    strongholdId: String(raw.strongholdId || ""),
+    strongholdName: cleanName(raw.strongholdName || "Stronghold") || "Stronghold",
+    strongholdType: String(raw.strongholdType || ""),
+    regionId: normalizeRegionId(raw.regionId),
+    playerId: String(raw.playerId || raw.id || ""),
+    playerName: cleanName(raw.playerName || raw.displayName || "Ruler") || "Ruler",
+    worldId: String(raw.worldId || ""),
+    resetGeneration: String(raw.resetGeneration || ""),
+    totalHeldMs: Math.max(0, Math.floor(Number(raw.totalHeldMs) || 0)),
+    currentHeldSinceMs: Math.max(0, Math.floor(Number(raw.currentHeldSinceMs) || 0)),
+    isCurrentHolder: Boolean(raw.isCurrentHolder),
+  };
+}
+
+function getStrongholdLegacyScoreMs(entry, nowMs = Date.now()) {
+  const totalHeldMs = Math.max(0, Number(entry?.totalHeldMs) || 0);
+  const currentHeldSinceMs = Math.max(0, Number(entry?.currentHeldSinceMs) || 0);
+  return totalHeldMs + (currentHeldSinceMs > 0 ? Math.max(0, nowMs - currentHeldSinceMs) : 0);
+}
+
+function getStrongholdCurrentHeldSinceMs(stronghold) {
+  if (!stronghold || stronghold.owner === "neutral") return 0;
+  return normalizeTimestampMs(stronghold.lastCapturedAtMs ?? stronghold.lastCapturedAt);
+}
+
+function getRankedStrongholdLegacies(entries = [], stronghold = null) {
+  const strongholdId = String(stronghold?.id || "");
+  const currentUid = getCurrentOnlineUid();
+  const holderUid = stronghold?.owner === "neutral"
+    ? ""
+    : String(stronghold?.ownerUid || (stronghold?.owner === "player" ? currentUid : ""));
+  const holderName = cleanName(
+    stronghold?.ownerName || (holderUid === currentUid ? state?.playerName : "")
+  ) || "Ruler";
+  const heldSinceMs = getStrongholdCurrentHeldSinceMs(stronghold);
+  const byPlayer = new Map((Array.isArray(entries) ? entries : [])
+    .map(normalizeStrongholdLegacyEntry)
+    .filter(entry => (!strongholdId || entry.strongholdId === strongholdId)
+      && (!entry.worldId || entry.worldId === ONLINE_WORLD_ID)
+      && (!entry.resetGeneration || entry.resetGeneration === RESET_GENERATION))
+    .filter(entry => entry.playerId)
+    .map(entry => [entry.playerId, {
+      ...entry,
+      currentHeldSinceMs: 0,
+      isCurrentHolder: false,
+    }]));
+
+  if (holderUid) {
+    const sourceEntry = (Array.isArray(entries) ? entries : [])
+      .map(normalizeStrongholdLegacyEntry)
+      .find(entry => entry.playerId === holderUid && (!strongholdId || entry.strongholdId === strongholdId));
+    const current = byPlayer.get(holderUid) || normalizeStrongholdLegacyEntry({
+      strongholdId,
+      strongholdName: stronghold?.name,
+      strongholdType: stronghold?.strongholdType,
+      regionId: getCityRegionId(stronghold),
+      playerId: holderUid,
+      playerName: holderName,
+    });
+    byPlayer.set(holderUid, {
+      ...current,
+      playerName: holderName || current.playerName,
+      currentHeldSinceMs: heldSinceMs || sourceEntry?.currentHeldSinceMs || 0,
+      isCurrentHolder: true,
+    });
+  }
+
+  const nowMs = Date.now();
+  return [...byPlayer.values()]
+    .sort((a, b) => getStrongholdLegacyScoreMs(b, nowMs) - getStrongholdLegacyScoreMs(a, nowMs)
+      || a.playerName.localeCompare(b.playerName))
+    .slice(0, 100);
+}
+
+function strongholdLegacyLeaderboardMarkup(stronghold, entries = [], status = "ready") {
+  if (status === "loading") {
+    return `<div class="citadel-reign-empty">Loading the Stronghold Legacy...</div>`;
+  }
+  if (status === "error") {
+    return `<div class="citadel-reign-empty">The Stronghold Legacy could not be loaded right now.</div>`;
+  }
+  const ranked = getRankedStrongholdLegacies(entries, stronghold);
+  if (!ranked.length) {
+    return `<div class="citadel-reign-empty">No ruler has held this Stronghold yet.</div>`;
+  }
+  return `
+    <div class="citadel-reign-heading">
+      <span>Rank</span><span>Ruler</span><span>Time held</span>
+    </div>
+    <div class="citadel-reign-list">
+      ${ranked.map((entry, index) => `
+        <article class="citadel-reign-row ${entry.isCurrentHolder ? "current" : ""}">
+          <strong class="citadel-reign-rank">#${formatNumber(index + 1)}</strong>
+          <span class="citadel-reign-ruler">
+            ${renderPlayerNameLink(entry.playerId, entry.playerName, "stronghold-legacy-player-link")}
+            ${entry.isCurrentHolder ? `<small>Current holder</small>` : ""}
+          </span>
+          <strong class="citadel-reign-time" data-stronghold-legacy-score data-total-held-ms="${entry.totalHeldMs}" data-current-held-since-ms="${entry.currentHeldSinceMs}">${formatDuration(Math.floor(getStrongholdLegacyScoreMs(entry) / 1000))}</strong>
+        </article>`).join("")}
+    </div>
+    <p class="citadel-reign-note">Scores are cumulative for this Stronghold. The current holder's time continues rising until control changes.</p>`;
+}
+
+async function refreshStrongholdLegacyPanel(stronghold, { force = false } = {}) {
+  const strongholdId = String(stronghold?.id || "");
+  const findActivePanel = () => [...(modalBody?.querySelectorAll("[data-stronghold-legacy-panel]") || [])]
+    .find(candidate => candidate.dataset.strongholdLegacyPanel === strongholdId);
+  const panel = findActivePanel();
+  if (!strongholdId || !panel) return false;
+  if (!force && strongholdLegacyCache.has(strongholdId)) {
+    panel.innerHTML = strongholdLegacyLeaderboardMarkup(stronghold, strongholdLegacyCache.get(strongholdId));
+    return true;
+  }
+  if (strongholdLegacyRequests.has(strongholdId)) return strongholdLegacyRequests.get(strongholdId);
+  const api = getOnlineApi();
+  if (!api?.loadStrongholdLegacyLeaderboard || !api?.isSignedIn?.()) {
+    panel.innerHTML = strongholdLegacyLeaderboardMarkup(stronghold);
+    return false;
+  }
+  panel.innerHTML = strongholdLegacyLeaderboardMarkup(stronghold, [], "loading");
+  const holderUid = stronghold?.owner === "neutral"
+    ? ""
+    : String(stronghold?.ownerUid || (stronghold?.owner === "player" ? getCurrentOnlineUid() : ""));
+  const request = api.loadStrongholdLegacyLeaderboard(strongholdId, 100, holderUid)
+    .then(entries => {
+      strongholdLegacyCache.set(strongholdId, Array.isArray(entries) ? entries : []);
+      const activePanel = findActivePanel();
+      if (activePanel) {
+        const activeStronghold = cityById(strongholdId) || stronghold;
+        activePanel.innerHTML = strongholdLegacyLeaderboardMarkup(
+          activeStronghold,
+          strongholdLegacyCache.get(strongholdId)
+        );
+      }
+      return true;
+    })
+    .catch(error => {
+      console.warn("Could not load Stronghold Legacy", error);
+      const activePanel = findActivePanel();
+      if (activePanel) activePanel.innerHTML = strongholdLegacyLeaderboardMarkup(stronghold, [], "error");
+      return false;
+    })
+    .finally(() => {
+      strongholdLegacyRequests.delete(strongholdId);
+    });
+  strongholdLegacyRequests.set(strongholdId, request);
+  return request;
+}
+
+function strongholdInfoPanelMarkup(stronghold, overviewMarkup) {
+  const strongholdId = String(stronghold?.id || "");
+  const cachedMarkup = strongholdLegacyCache.has(strongholdId)
+    ? strongholdLegacyLeaderboardMarkup(stronghold, strongholdLegacyCache.get(strongholdId))
+    : strongholdLegacyLeaderboardMarkup(stronghold, [], "loading");
+  return `
+    <div class="gold-camp-info-panel stronghold-legacy-info-panel">
+      <div class="camp-info-tabs citadel-info-tabs" role="tablist" aria-label="${escapeHtml(stronghold?.name || "Stronghold")} information">
+        <button id="strongholdOverviewTab" class="camp-info-tab active" type="button" role="tab" aria-selected="true" aria-controls="strongholdOverviewPanel" data-stronghold-info-tab="overview">Overview</button>
+        <button id="strongholdLegacyTab" class="camp-info-tab" type="button" role="tab" aria-selected="false" aria-controls="strongholdLegacyPanel" data-stronghold-info-tab="legacy">Stronghold Legacy</button>
+      </div>
+      <section id="strongholdOverviewPanel" class="camp-info-tab-panel" role="tabpanel" aria-labelledby="strongholdOverviewTab" data-stronghold-info-panel="overview">
+        ${overviewMarkup}
+      </section>
+      <section id="strongholdLegacyPanel" class="camp-info-tab-panel" role="tabpanel" aria-labelledby="strongholdLegacyTab" data-stronghold-info-panel="legacy" hidden>
+        <div class="citadel-reign-ledger stronghold-legacy-ledger" data-stronghold-legacy-panel="${escapeHtml(strongholdId)}">${cachedMarkup}</div>
+      </section>
+    </div>`;
+}
+
+function bindStrongholdInfoTabs(stronghold) {
+  const tabs = [...modalBody.querySelectorAll("[data-stronghold-info-tab]")];
+  const panels = [...modalBody.querySelectorAll("[data-stronghold-info-panel]")];
+  tabs.forEach(tab => tab.addEventListener("click", () => {
+    const selectedTab = tab.dataset.strongholdInfoTab;
+    tabs.forEach(candidate => {
+      const selected = candidate === tab;
+      candidate.classList.toggle("active", selected);
+      candidate.setAttribute("aria-selected", selected ? "true" : "false");
+    });
+    panels.forEach(panel => {
+      panel.hidden = panel.dataset.strongholdInfoPanel !== selectedTab;
+    });
+    animateUiTabPanel(panels.find(panel => panel.dataset.strongholdInfoPanel === selectedTab));
+    if (selectedTab === "legacy") void refreshStrongholdLegacyPanel(stronghold, { force: true });
+  }));
+}
+
 function getStationedReinforcementsForTarget(target) {
   if (!target) return [];
   const targetType = isRewardCampTarget(target) ? "camp" : "city";
@@ -29044,7 +29264,7 @@ function showCityInfoModal(cityId) {
       ? `<div class="stat-chip"><span>Neutral base</span><strong>${formatNumber(getStrongholdStartTroops(city))}</strong><small>one-time starting defenders</small></div>`
       : "";
     modalTitle.textContent = stronghold ? `${city.name} - Stronghold` : `${city.name} - Level ${city.level}`;
-    modalBody.innerHTML = `
+    const overviewMarkup = `
       <div class="city-stat-panel modal-city-stats">
         ${clanAlly
           ? `<div class="stat-wide clan-ally-status"><span>Relationship</span><strong>Clan Ally</strong>${renderClanIdentityLink({ clanId: clanIdentity.clanId, clanName: clanIdentity.clanName, clanTag: clanIdentity.clanTag, className: "city-clan-profile-link" })}<small>Scout and Attack are disabled. You may send clan reinforcements.</small></div>`
@@ -29069,6 +29289,10 @@ function showCityInfoModal(cityId) {
         ${renderHoldingReinforcementPanel(city)}
       </div>
     `;
+    modalBody.innerHTML = stronghold
+      ? strongholdInfoPanelMarkup(city, overviewMarkup)
+      : overviewMarkup;
+    if (stronghold) bindStrongholdInfoTabs(city);
     bindHoldingReinforcementButtons();
     if (!modal.open) modal.showModal();
     if (stronghold) void hydrateObjectiveClanAffiliation(city);
@@ -29094,7 +29318,7 @@ function showCityInfoModal(cityId) {
       ? "reduces travel time, not attack power"
       : "boosts owned towns while held";
     modalTitle.textContent = `${city.name} - Stronghold`;
-    modalBody.innerHTML = `
+    const overviewMarkup = `
       <div class="city-stat-panel modal-city-stats stronghold-stat-panel">
         <div class="stat-wide stronghold-status"><span>Controlled bonus</span><strong>${strongholdBonusLabel}</strong><small>Your clanmates receive half of this benefit while your clan controls it.</small></div>
         ${renderObjectiveClanAffiliation(city)}
@@ -29111,6 +29335,8 @@ function showCityInfoModal(cityId) {
         ${renderHoldingReinforcementPanel(city)}
       </div>
     `;
+    modalBody.innerHTML = strongholdInfoPanelMarkup(city, overviewMarkup);
+    bindStrongholdInfoTabs(city);
     bindRelinquishCityButton(city);
     bindHoldingReinforcementButtons();
     if (!modal.open) modal.showModal();
@@ -30427,24 +30653,31 @@ function renderDailyLoginRewardModal() {
   const rewardTrack = DAILY_LOGIN_REWARD_TRACKS[String(status.monthLengthDays)]
     || DAILY_LOGIN_REWARD_TRACKS["30"];
   const monthLabel = getDailyLoginRewardMonthLabel(status.monthKey);
+  const completedDays = Math.min(status.monthLengthDays, Math.max(0, status.nextDay - 1));
+  const progressPercent = Math.round(completedDays / Math.max(1, status.monthLengthDays) * 100);
   modalBody.innerHTML = `${tabsMarkup}
     <section id="dailyRewardPanelRewards" class="daily-reward-panel" role="tabpanel" aria-labelledby="dailyRewardTabRewards">
       <header class="daily-reward-hero">
         <img src="assets/optimized/daily-reward-160x151-f4cebc4a7ccb.webp" alt="" decoding="async" />
-        <div>
+        <div class="daily-reward-hero-copy">
           <span>Royal Attendance · ${escapeHtml(monthLabel)}</span>
           <h3>${escapeHtml(pendingLabel)}</h3>
           <p>${escapeHtml(attendanceMessage)}</p>
+          <div class="daily-reward-progress" role="progressbar" aria-label="Monthly reward progress" aria-valuemin="0" aria-valuemax="${status.monthLengthDays}" aria-valuenow="${completedDays}">
+            <i style="--daily-reward-progress:${progressPercent}%"></i>
+          </div>
         </div>
       </header>
-      ${status.claimedToday ? renderDailyLoginRewardReceipt(status.lastReceipt) : ""}
-      <div class="daily-reward-status-row">
-        <strong>${status.eligible
-          ? `Next: Day ${formatNumber(status.nextDay)}`
-          : status.nextDay > status.monthLengthDays
-            ? `${escapeHtml(monthLabel)} complete`
-            : "Next reward is not earned yet"}</strong>
-        <span data-daily-reward-countdown>${escapeHtml(getDailyLoginRewardCountdownText(status))}</span>
+      <div class="daily-reward-meta">
+        ${status.claimedToday ? renderDailyLoginRewardReceipt(status.lastReceipt) : ""}
+        <div class="daily-reward-status-row">
+          <strong>${status.eligible
+            ? `Next: Day ${formatNumber(status.nextDay)}`
+            : status.nextDay > status.monthLengthDays
+              ? `${escapeHtml(monthLabel)} complete`
+              : "Next reward is not earned yet"}</strong>
+          <span data-daily-reward-countdown>${escapeHtml(getDailyLoginRewardCountdownText(status))}</span>
+        </div>
       </div>
       <div class="daily-reward-grid" aria-label="${status.monthLengthDays}-day daily reward track">
         ${rewardTrack.map(reward => {
@@ -30479,7 +30712,7 @@ function renderDailyLoginRewardModal() {
       </div>
       <footer class="daily-reward-actions">
         <button class="primary daily-reward-claim-btn" type="button" data-daily-reward-claim ${!status.eligible || dailyLoginRewardClaimInFlight ? "disabled" : ""}>${escapeHtml(claimLabel)}</button>
-        <small>Log in once per UTC day to earn the next reward. Up to ${formatNumber(status.maxPendingRewards)} earned rewards can wait. Missing a day pauses progress; unclaimed rewards expire when ${escapeHtml(monthLabel)} ends at the UTC month boundary.</small>
+        <small>One UTC-day login advances one step. Up to ${formatNumber(status.maxPendingRewards)} rewards can wait; missed days pause progress, and unclaimed rewards expire at month end.</small>
       </footer>
     </section>
   `;
@@ -34111,6 +34344,7 @@ function formatBattleBasePowerHelp(power = 0, troops = 0, role = "attacker") {
 function formatBattleWallAfterStatus(siege = null) {
   if (!siege) return "Not recorded";
   const integrityBps = clamp(Math.floor(Number(siege.endingIntegrityBps) || 0), 0, 10_000);
+  if (siege.wallDefenseIgnored) return `Bypassed — ${formatWallIntegrity(integrityBps)} unchanged`;
   if (integrityBps >= 10_000) return "Intact — 100%";
   if (integrityBps <= 0) return "Breached — 0%";
   return `Damaged — ${formatWallIntegrity(integrityBps)} intact`;
@@ -34580,7 +34814,11 @@ function getLegacyBattleSides(report = null, siege = null) {
     losses: Math.max(0, Math.floor(Number(report?.defenderLosses) || 0)),
     survivors: Math.max(0, Math.floor(Number(report?.defendersLeft) || 0)),
     wallPower: campTarget ? 0 : siege?.startingWallPower > 0 ? formatNumber(siege.startingWallPower) : "Not recorded",
-    wallHelp: campTarget ? "Camps have no walls" : "Stored wall snapshot",
+    wallHelp: campTarget
+      ? "Camps have no walls"
+      : siege?.wallDefenseIgnored
+        ? "Citadel Legion ignored all wall defense"
+        : "Stored wall snapshot",
     wallAfter: campTarget ? "—" : formatBattleWallAfterStatus(siege),
     skillLabel: campTarget ? "Camp troop power" : "Defense skill",
     skillBonusPower: 0,
@@ -34823,7 +35061,8 @@ function showHelpModal() {
       <li>Daily login rewards follow the current UTC calendar month. Missing a day pauses progress instead of skipping a reward, up to two earned rewards may wait for collection, and unclaimed rewards expire when the next UTC month begins.</li>
       <li>Swordmastery boosts outgoing attack, Guild Charters reduces city upgrade cost, and Field Medics returns part of battle losses to your main city.</li>
       <li>Main cities cannot be attacked. Use your main city as a protected home base while expanding from other cities.</li>
-      <li>The Citadel Legion attacks up to 20 random regular non-main cities in the Crown Citadel map at 10:00 AM and 6:30 PM Eastern Time. Targets receive 15 minutes of warning beginning at 9:45 AM and 6:15 PM Eastern. A lost defense removes five city levels; Level 5-or-lower cities become Level 1 neutral cities with 10 troops. Peace Shields do not block these attacks, and defenders receive no XP.</li>
+      <li>The Citadel Legion attacks up to 20 random regular non-main cities in the Crown Citadel map at 10:00 AM and 6:30 PM Eastern Time. Targets receive 15 minutes of warning beginning at 9:45 AM and 6:15 PM Eastern. Citadel attacks ignore 100% of city-wall defense without damaging the wall. If the Legion defeats every stationed and reinforcing troop, the city loses five levels; Level 5-or-lower cities become Level 1 neutral cities with 10 troops. Peace Shields do not block these attacks, and defenders receive no XP.</li>
+      <li>Each regular Stronghold has its own Stronghold Legacy tab. It ranks rulers by cumulative time held, adds repeat tenures together, and updates the current holder's timer live. The Crown Citadel uses its separate Reign Ledger.</li>
       <li>Demo Attacks protect weaker kingdoms: much stronger attackers send fewer effective troops, march slower, earn 0 XP, and defenders earn bonus XP.</li>
       <li>Shop items have UTC daily purchase limits. Reward Camp items are earned separately through contested objectives.</li>
     </ul>

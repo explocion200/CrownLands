@@ -12,6 +12,7 @@ const rootFiles = [
   "about.html", "ads.txt", "ads-config.js", "animation-manager.js", "audio-manager.js",
   "battle-economy-guide.css", "battle-economy-guide.html", "battle-economy-guide.js",
   "battle-guide-calculations.js", "economy-config.js", "firebase-config.js",
+  "daily-rewards.css",
   "firebase-messaging-sw.js", "firebaseClient.js", "game-rules.html", "game.js",
   "how-to-play.html", "index.html", "manifest.webmanifest", "patch-notes.js",
   "privacy.html", "release-config.js", "release-manifest.js", "robots.txt",
