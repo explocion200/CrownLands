@@ -268,6 +268,7 @@ function siegeResult({
   attackProtection = null,
   nowMs = 1_800_000,
   version = 1,
+  ignoreWallDefense = false,
 } = {}) {
   return context.calculateCombatResult(troops, { level, troops: defenders, legacyDefense: wall + garrison }, {}, {}, {
     attackPower,
@@ -281,6 +282,7 @@ function siegeResult({
       repairAtMs,
     },
     garrisonDefensePower: garrison,
+    ignoreWallDefense,
     attackProtection,
     nowMs,
   });
@@ -306,6 +308,23 @@ assert.equal(level100.fortification.endingIntegrityBps, 5_999);
 assert.equal(level100.fortification.repairWindowMinutes, 45);
 assert.equal(level100.fortification.repairAddedMs, 1_080_000);
 assert.equal(level100.fortification.repairAtMs, 2_880_000);
+
+const wallBypass = siegeResult({
+  attackPower: 500,
+  troops: 500,
+  defenders: 100,
+  wall: 1_000,
+  garrison: 400,
+  ignoreWallDefense: true,
+});
+assert.equal(wallBypass.success, true, "A wall-bypassing attack must resolve against the garrison only.");
+assert.equal(wallBypass.defensePower, 400, "Ignored wall power must contribute zero defense.");
+assert.equal(wallBypass.defendersLeft, 0, "A successful wall-bypassing attack must defeat the full garrison.");
+assert.equal(wallBypass.fortification.wallDefenseIgnored, true);
+assert.equal(wallBypass.fortification.startingWallPower, 1_000, "The report must retain the wall that was bypassed.");
+assert.equal(wallBypass.fortification.wallDamagePower, 0, "Bypassing a wall must not damage it.");
+assert.equal(wallBypass.fortification.endingIntegrityBps, 10_000, "Bypassing a wall must preserve its integrity.");
+assert.equal(wallBypass.fortification.persistentDamageApplied, false);
 
 const exactThreshold = siegeResult({ attackPower: 50, troops: 50, defenders: 100, wall: 1_000, garrison: 200 });
 assert.equal(exactThreshold.fortification.meaningfulWallDamage, true, "Exactly 5% wall damage must reset repair.");

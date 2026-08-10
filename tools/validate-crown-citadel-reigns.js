@@ -28,7 +28,7 @@ requireMatch(serverSource, /if \(isCrownCitadel\(source\)\)[\s\S]*?recordCrownCi
 const reignWriterSource = sourceBetween(
   serverSource,
   "function recordCrownCitadelControlChange",
-  "function getStrongholdBonusPercent",
+  "function isStrongholdLegacyTarget",
   "Could not isolate the Citadel reign writer."
 );
 if (/transaction\.get\(/.test(reignWriterSource)) {

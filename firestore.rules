@@ -396,6 +396,11 @@ service cloud.firestore {
       allow create, update, delete: if false;
     }
 
+    match /strongholdLegacies/{resetId}/entries/{entryId} {
+      allow read: if signedIn() && resetId == currentResetGeneration() && isCurrentGeneration(resource.data);
+      allow create, update, delete: if false;
+    }
+
     match /gameServers/{serverId} {
       allow read, create, update, delete: if false;
 

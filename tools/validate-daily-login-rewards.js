@@ -11,7 +11,7 @@ const server = read("functions/index.js");
 const client = read("firebaseClient.js");
 const game = read("game.js");
 const html = read("index.html");
-const styles = read("styles.css");
+const styles = `${read("styles.css")}\n${read("daily-rewards.css")}`;
 const rules = read("firestore.rules");
 const serviceWorker = read("service-worker.js");
 const emulatorResetGate = read("functions/test/emulator-reset-gate.js");
@@ -219,7 +219,7 @@ requireMatch(client, /dispatch\("daily-login-reward"[\s\S]*profile\.dailyLoginRe
 
 requireMatch(html, /id="clanHudBtn"[\s\S]*id="dailyLoginRewardBtn"/, "Daily reward icon is not immediately after the clan icon.");
 requireMatch(game, /expectedMonthKey:\s*dailyLoginRewardStatus\.monthKey/, "Client claims are not guarded by UTC month.");
-requireMatch(game, /unclaimed rewards expire when[\s\S]*UTC month boundary/, "Monthly expiry is not explained in the UI.");
+requireMatch(game, /unclaimed rewards expire at month end/, "Monthly expiry is not explained in the UI.");
 requireMatch(game, /DAILY_LOGIN_REWARD_TRACKS\[String\(status\.monthLengthDays\)\]/, "UI does not select the live month-length track.");
 requireMatch(game, /getDailyLoginRewardCardState[\s\S]*"queued"[\s\S]*getDailyLoginRewardPresentation/, "Reward cards lost their queue states.");
 requireMatch(game, /startLoginPresentationDailyRefresh\(presentationGeneration\)[\s\S]*?markLoginPresentationMapReady\(presentationGeneration\)/, "Startup does not route attendance through the login presentation sequence.");
@@ -233,7 +233,10 @@ const clanRewardsPanelSource = game.slice(
 );
 assert.match(clanRewardsPanelSource, /renderClanQuestPanel/, "Clan Weekly Conquest is missing from the Player Profile Clan Rewards panel.");
 requireMatch(styles, /\.daily-login-reward-btn[\s\S]*dailyRewardHudGlow/, "Daily reward HUD styles are incomplete.");
-requireMatch(styles, /\.daily-reward-grid[\s\S]*repeat\(6,[\s\S]*@media \(max-width: 700px\)[\s\S]*repeat\(5,[\s\S]*@media \(max-width: 520px\)[\s\S]*repeat\(3,/, "Daily reward grid responsiveness changed.");
+requireMatch(styles, /\.daily-login-reward-modal \.modal-card #modalBody\s*\{[\s\S]*?overflow:\s*hidden/, "Daily rewards can still scroll inside the modal.");
+requireMatch(styles, /\.daily-reward-grid[\s\S]*repeat\(8,[\s\S]*@media \(max-width: 700px\)[\s\S]*repeat\(7,[\s\S]*@media \(max-height: 640px\)[\s\S]*repeat\(8,/, "Daily reward calendar does not preserve a full-month compact grid across desktop, phone, and short viewports.");
+requireMatch(styles, /\.daily-reward-card[\s\S]*min-height:\s*0[\s\S]*grid-auto-rows:\s*minmax\(48px,\s*1fr\)/, "Daily reward cards can grow tall enough to force month scrolling.");
+requireMatch(game, /daily-reward-progress[\s\S]*aria-valuenow="\$\{completedDays\}"/, "Daily reward UI is missing its compact monthly progress indicator.");
 requireMatch(styles, /\.daily-reward-tabs\.profile-tabs[\s\S]*repeat\(2,[\s\S]*\.daily-reward-tabs\.profile-tabs button[\s\S]*min-height:\s*44px/, "Reward modal tabs are not a touch-safe two-column switcher.");
 assert.doesNotMatch(html, /id="dailyMissionsSection"/, "Daily Missions are still embedded in the Player Profile UI.");
 requireMatch(html, /economy-config\.js\?v=20260805-linear-walls-v1/, "Frontend does not load the current economy release.");

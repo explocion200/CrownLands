@@ -21,6 +21,19 @@ function sourceBetween(source, startMarker, endMarker) {
   return source.slice(start, end);
 }
 
+function extractFunction(source, name) {
+  const start = source.indexOf(`function ${name}(`);
+  assert.ok(start >= 0, `Missing ${name}.`);
+  const bodyStart = source.indexOf("{", source.indexOf(")", start));
+  let depth = 0;
+  for (let index = bodyStart; index < source.length; index += 1) {
+    if (source[index] === "{") depth += 1;
+    if (source[index] === "}") depth -= 1;
+    if (depth === 0) return source.slice(start, index + 1);
+  }
+  throw new Error(`Could not parse ${name}.`);
+}
+
 requireMatch(server, /CITADEL_ASSAULT_TROOPS\s*=\s*100_000/, "Citadel assault force must remain 100,000 troops.");
 requireMatch(server, /CITADEL_ASSAULT_TARGET_LIMIT\s*=\s*20/, "Citadel assault target cap must remain 20.");
 requireMatch(server, /CITADEL_ASSAULT_TIME_ZONE\s*=\s*"America\/New_York"/, "Citadel assaults must follow Eastern wall-clock time through daylight-saving changes.");
@@ -39,6 +52,15 @@ requireMatch(eligibility, /CITADEL_ASSAULT_REGION_ID[\s\S]*?!isStronghold\(city\
 if (/shield/i.test(eligibility)) throw new Error("Peace Shields must not affect Citadel assault eligibility.");
 
 requireMatch(server, /previousLevel <= CITADEL_ASSAULT_LEVEL_LOSS/, "Level 5-or-lower neutralization threshold is missing.");
+const resolver = sourceBetween(
+  server,
+  "async function resolveCitadelAssaultTarget",
+  "async function resolveCitadelAssaultWave"
+);
+requireMatch(resolver, /defensePower:\s*defensePackages\.totalGarrisonDefense/, "Citadel assaults must exclude all wall power from total defense.");
+requireMatch(resolver, /ignoreWallDefense:\s*true/, "Citadel assaults must explicitly bypass city walls.");
+requireMatch(resolver, /getCitadelAssaultOutcome\(result, previousLevel\)/, "Citadel level loss must use the full-garrison defeat gate.");
+requireMatch(resolver, /totalDefense:\s*defensePackages\.totalGarrisonDefense/, "Citadel reports must show garrison-only effective defense.");
 requireMatch(server, /ownerKind:\s*"neutral"[\s\S]*?level:\s*1[\s\S]*?troops:\s*CITADEL_ASSAULT_NEUTRAL_TROOPS/, "Low-level losses must create a Level 1 neutral city with 10 troops.");
 requireMatch(server, /xpAwarded:\s*0[\s\S]*?goldAwarded:\s*0[\s\S]*?troopsAwarded:\s*0/, "Citadel assault defense reports must award no progression rewards.");
 requireMatch(server, /recoverCitadelAssaultLosses[\s\S]*?fieldMedics/, "Field Medics recovery is missing.");
@@ -48,6 +70,7 @@ requireMatch(server, /writeOwnershipChangeEvent[\s\S]*?reason:\s*CITADEL_ASSAULT
 requireMatch(client, /CITADEL_ASSAULT_TIME_ZONE\s*=\s*"America\/New_York"[\s\S]*?CITADEL_ASSAULT_EASTERN_TIMES[\s\S]*?hour:\s*10,\s*minute:\s*0[\s\S]*?hour:\s*18,\s*minute:\s*30/, "Client Eastern assault times are incomplete.");
 requireMatch(client, /getNextCitadelAssaultAtMs[\s\S]*?getCitadelAssaultEasternWallTimeMs/, "Client daylight-saving-aware countdown calculation is missing.");
 requireMatch(client, /eventKind !== CITADEL_ASSAULT_EVENT_KIND[\s\S]*?troopVisibility === "estimate"/, "NPC troop visibility must remain exact.");
+requireMatch(client, /function formatBattleWallAfterStatus[\s\S]*?wallDefenseIgnored[\s\S]*?Bypassed/, "Citadel battle reports must identify the untouched bypassed wall.");
 requireMatch(client, /getActiveMapRegionId\(\) === CITADEL_ASSAULT_REGION_ID/, "Countdown must only appear on the Citadel map.");
 requireMatch(html, /id="citadelAssaultCountdown"[\s\S]*?role="timer"/, "Citadel assault countdown markup is missing.");
 requireMatch(html, /id="dailyLoginRewardBtn"[\s\S]*?id="citadelAssaultCountdown"[\s\S]*?<div class="resource-bar">/, "Countdown must remain between Daily Login and the Home-button resource group.");
@@ -60,7 +83,44 @@ const countdownStyles = sourceBetween(
 requireMatch(countdownStyles, /position:\s*static[\s\S]*?flex:\s*0 1 clamp\(84px, 15vw, 126px\)/, "Countdown must participate in the top HUD layout between adjacent controls.");
 requireMatch(countdownStyles, /width:\s*clamp\(84px, 15vw, 126px\)[\s\S]*?max-width:\s*126px[\s\S]*?min-height:\s*44px/, "Countdown must remain a compact, bounded HUD badge.");
 assert.doesNotMatch(countdownStyles, /(?:top|left|right|bottom|transform|z-index):/, "Countdown must not float over other HUD controls.");
-requireMatch(rules, /10:00 AM and 6:30 PM Eastern Time[\s\S]*?9:45 AM and 6:15 PM Eastern[\s\S]*?no defense experience is awarded/i, "Public Citadel assault rules are incomplete.");
+requireMatch(rules, /10:00 AM and 6:30 PM Eastern Time[\s\S]*?9:45 AM and 6:15 PM Eastern[\s\S]*?ignore 100% of city-wall defense[\s\S]*?every stationed and reinforcing troop is defeated[\s\S]*?no defense experience is awarded/i, "Public Citadel assault rules are incomplete.");
+
+const outcomeSandbox = {
+  CITADEL_ASSAULT_LEVEL_LOSS: 5,
+  Math,
+  Number,
+  clampCityLevel(value) {
+    return Math.max(1, Math.floor(Number(value) || 1));
+  },
+  safeNumber(value, fallback = 0) {
+    return Number.isFinite(Number(value)) ? Number(value) : fallback;
+  },
+};
+vm.createContext(outcomeSandbox);
+vm.runInContext(
+  `${extractFunction(server, "getCitadelAssaultOutcome")}; this.getOutcome = getCitadelAssaultOutcome;`,
+  outcomeSandbox
+);
+assert.deepEqual(
+  { ...outcomeSandbox.getOutcome({ success: true, defendersLeft: 0 }, 20) },
+  { defendersDefeated: true, neutralized: false, outcome: "damaged", nextLevel: 15 },
+  "Defeating the full garrison must remove exactly five city levels."
+);
+assert.deepEqual(
+  { ...outcomeSandbox.getOutcome({ success: true, defendersLeft: 1 }, 20) },
+  { defendersDefeated: false, neutralized: false, outcome: "held", nextLevel: 20 },
+  "A surviving defender must prevent the five-level penalty."
+);
+assert.deepEqual(
+  { ...outcomeSandbox.getOutcome({ success: false, defendersLeft: 0 }, 20) },
+  { defendersDefeated: false, neutralized: false, outcome: "held", nextLevel: 20 },
+  "The level penalty must require a Citadel victory as well as zero defenders."
+);
+assert.deepEqual(
+  { ...outcomeSandbox.getOutcome({ success: true, defendersLeft: 0 }, 5) },
+  { defendersDefeated: true, neutralized: true, outcome: "lost", nextLevel: 1 },
+  "A fully defeated Level 5 city must still return to neutral at Level 1."
+);
 
 const clientScheduleSource = sourceBetween(
   client,
@@ -117,4 +177,4 @@ const eveningWave = serverWaveSandbox.getWave(Date.parse("2026-08-01T22:15:00Z")
 assert.equal(eveningWave.id, "20260801-2230", "The evening warning must share the 6:30 PM EDT wave ID.");
 assert.equal(eveningWave.scheduledAtMs, Date.parse("2026-08-01T22:30:00Z"));
 
-console.log("Validated Citadel Legion schedules, selection, combat penalties, zero-XP settlement, incoming threats, and center-map countdown.");
+console.log("Validated Citadel Legion wall bypass, full-garrison level penalty, schedules, zero-XP settlement, incoming threats, and center-map countdown.");

@@ -1483,6 +1483,60 @@
     }).filter(reign => reign.playerId);
   }
 
+  async function loadStrongholdLegacyLeaderboard(strongholdId = "", limitCount = 100, currentHolderUid = "") {
+    await init();
+    const uid = requireSignedIn();
+    if (!uid) return [];
+    const safeStrongholdId = String(strongholdId || "").trim().replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 96);
+    const safeCurrentHolderUid = String(currentHolderUid || "").trim().replace(/[^a-zA-Z0-9_-]/g, "_").slice(0, 128);
+    if (!safeStrongholdId) throw new Error("Missing Stronghold ID.");
+    const safeLimit = Math.max(1, Math.min(100, Math.floor(Number(limitCount) || 100)));
+    const { collection, doc, getDoc, getDocs, query: firestoreQuery, where, orderBy, limit } = client.modules.firestore;
+    const legaciesRef = collection(client.db, "strongholdLegacies", RESET_GENERATION, "entries");
+    const legaciesQuery = firestoreQuery && where && orderBy && limit
+      ? firestoreQuery(
+          legaciesRef,
+          where("strongholdId", "==", safeStrongholdId),
+          where("resetGeneration", "==", RESET_GENERATION),
+          where("worldId", "==", ONLINE_WORLD_ID),
+          orderBy("totalHeldMs", "desc"),
+          limit(safeLimit)
+        )
+      : legaciesRef;
+    const currentHolderRef = safeCurrentHolderUid
+      ? doc(client.db, "strongholdLegacies", RESET_GENERATION, "entries", `${safeStrongholdId}__${safeCurrentHolderUid}`)
+      : null;
+    const [snapshot, currentHolderSnapshot] = await Promise.all([
+      getDocs(legaciesQuery),
+      currentHolderRef ? getDoc(currentHolderRef) : Promise.resolve(null),
+    ]);
+    const legacyDocs = snapshot.docs.slice(0, safeLimit);
+    if (currentHolderSnapshot?.exists() && !legacyDocs.some(legacyDoc => legacyDoc.id === currentHolderSnapshot.id)) {
+      legacyDocs.push(currentHolderSnapshot);
+    }
+    return legacyDocs.map(legacyDoc => {
+      const legacy = legacyDoc.data() || {};
+      return {
+        id: legacyDoc.id,
+        strongholdId: String(legacy.strongholdId || "").slice(0, 96),
+        strongholdName: String(legacy.strongholdName || "Stronghold").slice(0, 80),
+        strongholdType: String(legacy.strongholdType || "").slice(0, 32),
+        regionId: String(legacy.regionId || "").slice(0, 80),
+        playerId: String(legacy.playerId || "").slice(0, 128),
+        playerName: cleanPlayerName(legacy.playerName || "Ruler"),
+        playerFlag: legacy.playerFlag || null,
+        worldId: String(legacy.worldId || "").slice(0, 120),
+        resetGeneration: String(legacy.resetGeneration || "").slice(0, 120),
+        totalHeldMs: Math.max(0, Math.floor(Number(legacy.totalHeldMs) || 0)),
+        currentHeldSinceMs: Math.max(0, Math.floor(Number(legacy.currentHeldSinceMs) || 0)),
+        isCurrentHolder: Boolean(legacy.isCurrentHolder),
+        lastCapturedAtMs: Math.max(0, Math.floor(Number(legacy.lastCapturedAtMs) || 0)),
+        lastLostAtMs: Math.max(0, Math.floor(Number(legacy.lastLostAtMs) || 0)),
+        updatedAtMs: Math.max(0, Math.floor(Number(legacy.updatedAtMs) || timestampToMs(legacy.updatedAt))),
+      };
+    }).filter(legacy => legacy.strongholdId === safeStrongholdId && legacy.playerId);
+  }
+
   function subscribePlayerGlobalStats(handlers = {}) {
     if (!client.db || !client.modules?.firestore?.onSnapshot || !client.user?.uid) return null;
     const { doc, onSnapshot } = client.modules.firestore;
@@ -2457,6 +2511,7 @@
     loadRewardCampProgress,
     loadRewardCampHistory,
     loadCrownCitadelReignLeaderboard,
+    loadStrongholdLegacyLeaderboard,
     subscribePlayerGlobalStats,
     sendArmyOrder,
     previewArmyRoute,
